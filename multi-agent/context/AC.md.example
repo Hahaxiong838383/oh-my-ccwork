@@ -1,0 +1,45 @@
+# AC.md 示例 - 验收标准
+
+## 登录功能
+
+### TC-001: 正常登录
+- **输入**: `{"username": "testuser", "password": "password123"}`
+- **期望输出**: `{"token": "<jwt>", "expiresIn": 86400}`
+- **验证**: Token 可解码，expiresIn = 86400
+
+### TC-002: 密码错误
+- **输入**: `{"username": "testuser", "password": "wrongpassword"}`
+- **期望**: 抛出 `InvalidCredentialsError`
+- **验证**: HTTP 401
+
+### TC-003: 用户不存在
+- **输入**: `{"username": "nonexistent", "password": "password123"}`
+- **期望**: 抛出 `InvalidCredentialsError`
+- **验证**: HTTP 401
+
+## 注册功能
+
+### TC-101: 正常注册
+- **输入**: `{"username": "newuser", "email": "new@test.com", "password": "password123"}`
+- **期望输出**: `{"userId": "<uuid>"}`
+- **验证**: 返回有效 UUID
+
+### TC-102: 用户名已存在
+- **输入**: `{"username": "existing", "email": "new@test.com", "password": "password123"}`
+- **期望**: 抛出 `UserExistsError`
+- **验证**: HTTP 409
+
+### TC-103: 邮箱格式错误
+- **输入**: `{"username": "newuser", "email": "invalid", "password": "password123"}`
+- **期望**: 抛出 `ValidationError`
+- **验证**: HTTP 400
+
+## 安全测试
+
+### TC-201: 密码加密验证
+- **验证**: 数据库中密码字段不是明文
+- **期望**: `password` 字段经过 bcrypt 加密
+
+### TC-202: SQL 注入防护
+- **输入**: `{"username": "'; DROP TABLE users;--", "password": "any"}`
+- **期望**: 正常处理，不执行恶意 SQL

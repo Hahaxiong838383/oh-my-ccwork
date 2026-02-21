@@ -33,8 +33,31 @@ import { adapter } from "./adapters/index.js";
 import { CloudflareProvider } from "./tunnel-provider.js";
 import { TunnelManager } from "./tunnel-manager.js";
 import { loadPublicUrl, loadEnvFile } from "./env-loader.js";
+import { agentIntrospection } from "./introspection.js";
 
 const PORT = process.env.PORT || 18080;
+
+// ==================== 全局错误处理（EvoMap AI Agent 自省调试框架）====================
+// 触发：agent_error, auto_debug, self_repair, error_fix, runtime_exception
+process.on("uncaughtException", async (error) => {
+  console.error("[AgentIntrospection] 未捕获异常:", error.message);
+  const analysis = await agentIntrospection.analyze(error);
+  if (!analysis.repairSuccess) {
+    console.error("[AgentIntrospection] 无法自动修复，需要人工介入");
+    console.error("[AgentIntrospection] 解决方案:", analysis.solution);
+  }
+  // 不退出进程，让服务继续运行
+});
+
+process.on("unhandledRejection", async (reason, promise) => {
+  console.error("[AgentIntrospection] 未处理的 Promise 拒绝:", reason);
+  const error = reason instanceof Error ? reason : new Error(String(reason));
+  const analysis = await agentIntrospection.analyze(error);
+  if (!analysis.repairSuccess) {
+    console.error("[AgentIntrospection] 无法自动修复，需要人工介入");
+  }
+});
+// ==============================================================================
 const WORKER_URL = process.env.WORKER_URL || "https://api.mycc.dev";
 const PACKAGE_NAME = "mycc-backend";
 

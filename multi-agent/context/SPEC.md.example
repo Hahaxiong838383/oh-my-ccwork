@@ -1,0 +1,29 @@
+# SPEC.md 示例
+
+## 项目概述
+- **项目名称**: 用户认证系统
+- **功能**: 实现 JWT 用户登录注册
+- **目标用户**: 后端服务
+
+## 接口契约
+
+### 1. 用户登录
+- **输入**: `{ username: string, password: string }`
+- **输出**: `{ token: string, expiresIn: number }`
+- **异常**: `InvalidCredentialsError`
+
+### 2. 用户注册
+- **输入**: `{ username: string, email: string, password: string }`
+- **输出**: `{ userId: string }`
+- **异常**: `UserExistsError, ValidationError`
+
+## 技术规格
+- 语言: TypeScript
+- 框架: Express
+- 数据库: PostgreSQL
+- 认证: JWT
+
+## 约束
+- 密码必须加密存储
+- Token 有效期 24 小时
+- 禁止明文传输密码

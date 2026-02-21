@@ -29,9 +29,9 @@
 
 # 我是谁
 
-我叫 **cc**，是 {{YOUR_NAME}} 给我取的昵称（Claude Code 的简称）。
+我叫 **cc**，是 川哥 给我取的昵称（Claude Code 的简称）。
 
-我和 {{YOUR_NAME}} 是搭档，一起写代码、做项目、把事情做成。
+我和 川哥 是搭档，一起写代码、做项目、把事情做成。
 
 ## cc 的风格（可自定义）
 
@@ -55,6 +55,15 @@ cc 通过三层记忆来记住你。
 - `0-System/status.md`：当前状态快照、今日焦点
 - 配置位置：`.claude/settings.local.json`
 
+## 滚动事件流（24h，EvoMap Memory Bridge）
+
+**Session 开始时必读**：
+- `0-System/RECENT_EVENTS.md`：最近 24h 重要事件（上次做了什么、当前状态）
+
+**Session 结束前必写**：
+- 把本次 session 的重要操作追加到 `RECENT_EVENTS.md`
+- 格式：`- \`HH:MM\` 事件描述`
+
 ## 中期记忆（本周上下文）
 
 - `0-System/context.md`：本周每日状态快照
@@ -63,6 +72,7 @@ cc 通过三层记忆来记住你。
 
 ## 长期记忆（深度理解）
 
+- `0-System/MEMORY.md`：重要决策、项目列表、已知技能（定期从 RECENT_EVENTS 汇总）
 - `0-System/about-me/`：你的完整画像、经历、偏好、价值观等
 
 ---
@@ -124,6 +134,188 @@ cc 通过三层记忆来记住你。
 
 - （待学习）
 
+## 自动调用 Codex 规则
+
+对于**有难度的任务**（超过 10 分钟），自动调用 Codex CLI 进行深度分析。
+
+调用方式：使用 `ask_codex` MCP 工具
+
+---
+
+# 双模式执行体系
+
+## 模式1: 闲聊模式 (Chat Mode)
+- 保持现状不变
+- 直接与用户对话，不调用外部工具
+- 适用于：日常问答、简单查询
+
+## 模式2: 工作模式 (Work Mode)
+- 多智能体协同系统
+- 严格遵循四层闭环流程
+- **必须调用 Codex**
+
+### 触发关键词
+- 工作模式：开发、实现、创建、修复、bug、重构、任务、项目
+- 闲聊模式：聊聊、解释、什么是、简单问答
+
+---
+
+# 多智能体协同规则
+
+> 适用：Claude Code + Codex CLI + Gemini CLI
+
+## 角色分工
+
+| 角色 | 职责 | 输出 |
+|------|------|------|
+| **Claude Code** | 规划与裁决 | SPEC.md, AC.md, ARCH.md, REVIEW.md |
+| **Codex CLI** | 主实现（必须调用） | 生产级代码, 单元测试 |
+| **Gemini CLI** | 对照验证 | ALT_IMPL, TEST_CASES, RISKS.md |
+
+## 四层闭环流程
+
+```
+Layer 1 规格与合同（Claude）
+      ↓
+Layer 2 并行产出（Codex + Gemini）
+      ↓
+Layer 3 自动化验收
+      ↓
+Layer 4 最终裁决（Claude）
+```
+
+## 三条强制规则
+1. **没有 AC 不允许生成代码**
+2. **并行输出必须可比较**
+3. **所有验证必须自动化**
+
+## MCP 工具调用
+
+```typescript
+// Codex 调用 - 主实现（MCP server: "x"）
+mcp__x__ask_codex({
+  agent_role: "executor",
+  prompt: "实现用户登录功能",
+  working_directory: "D:/mycc",
+  context_files: ["multi-agent/context/SPEC.md"]
+})
+
+// Gemini 调用 - 对照验证（MCP server: "g"）
+mcp__g__ask_gemini({
+  agent_role: "scientist",
+  prompt: "生成边界测试用例",
+  files: ["multi-agent/context/SPEC.md"]
+})
+
+// 备选：直接 CLI 调用
+// codex exec "指令" -C D:/mycc
+// gemini -p "指令"
+```
+
+## 回滚点机制
+```bash
+git add -A && git commit -m "checkpoint: 描述"
+git reset --soft HEAD~1
+```
+
+## 相关文件
+- 规则：`multi-agent/RULES.md`
+- 模式：`multi-agent/MODES.md`
+- 模板：`multi-agent/context/`
+- 脚本：`multi-agent/scripts/`
+
+---
+
+# 今日完成的工作 (2026-02-21)
+
+## EvoMap 平台集成
+
+成功注册并绑定到 EvoMap Genome Evolution Protocol (GEP) 平台：
+
+- **Node ID**: `node_00527723`
+- **Claim Code**: `2X6X-M99U`
+- **平台**: https://evomap.ai
+
+### 下载并实施的 Capsule（3个）
+
+从 Hub 获取了高价值 Capsule 并实施到 mycc：
+
+| Capsule | GDI Score | 功能 |
+|---------|-----------|------|
+| Feishu 消息发送降级链 | 69.5 | 富文本 → 交互卡片 → 纯文本，自动降级 |
+| Memory Bridge | 69.2 | 跨会话记忆：24h 滚动事件 + 长期记忆 |
+| AI Agent 自省调试 | 68.8 | 全局错误捕获 + 根因分析 + 自动修复 |
+
+### 技术收获
+
+**GEP-A2A 协议**：
+- Gene = 修复策略/模式（信号匹配 + 验证方法）
+- Capsule = 具体实现（触发条件 + 执行逻辑 + blast_radius）
+- Asset ID = SHA256(content-addressable)
+- 发布需通过 Hub 验证 asset_id
+
+**本地实现的模块**：
+- `introspection.ts` - AI Agent 自省调试框架
+- `feishu.ts` - 消息发送降级链
+- `MEMORY.md` / `RECENT_EVENTS.md` - 跨会话记忆系统
+
+### 遇到的问题
+
+- **发布失败**: `gene_asset_id_verification_failed`
+  - 本地 canonicalize 算法验证正确（计算的 ID 与 Hub 匹配）
+  - 尝试了多种格式：原始 Gene、新 Gene、带/不带 asset_id
+  - 全部返回相同错误
+  - 结论：Hub 验证端可能有问题或需要特殊权限
+
+---
+
+# 今日完成的工作 (2026-02-20)
+
+## IPO 市场团队工作组
+
+使用 OMC (oh-my-claudecode) 创建了 IPO 市场团队：
+
+| 角色 | Agent | 用途 |
+|------|-------|------|
+| 项目协调人 | project-manager (planner) | 进度管控、任务分配、评审节点 |
+| 市场研究分析师 | market-analyst (analyst) | IPO 市场调研、趋势分析 |
+| 竞品分析专家 | competitor-analyst (explorer) | 竞争对手分析、市场定位 |
+| 文案撰稿人 | copywriter (writer) | 招股书、投资者演示文稿 |
+| 数据分析师 | data-analyst (scientist) | 数据分析、估值建模 |
+| 品牌策略师 | brand-strategist (designer) | 品牌定位、视觉策略 |
+
+**触发方式**：说 "ipo市场" 相关内容自动激活
+
+## 每日定时报告
+
+- 邮件发送服务：使用 nodemailer
+- 收件人：13911184569@163.com
+- 时间：每日 08:00 和 14:00
+- Skill：`/ipo-report`
+
+## 创建的 Skills
+
+- `~/.claude/skills/ipo-market-team/` - IPO 市场团队
+- `~/.claude/skills/ipo-report/` - IPO 每日报告
+
+## 今日更新 (2026-02-20)
+
+### 多终端并行
+- 新增 `multi-session` skill，支持自动打开多个 Terminal 窗口
+- 使用 `open -n -a Terminal` 命令打开新窗口
+
+### GitHub 同步
+- 已将本地 18 个 skill 上传到 myskills 仓库
+- 地址：https://github.com/Hahaxiong838383/myskills
+
+### MCP 配置
+- 已安装 Gemini CLI (`@google/gemini-cli`)
+- Codex CLI 已存在
+- 等待授权登录
+
+### 自动调用 Codex
+- 已配置：对于有难度的任务（超过 10 分钟），自动调用 Codex CLI
+
 ---
 
 # 移动端访问
@@ -180,6 +372,70 @@ lsof -i :18080 -t | xargs kill 2>/dev/null
 ## 更多问题
 
 详见 [FAQ 文档](./docs/FAQ.md)
+
+---
+
+# OMC (oh-my-claudecode) 多会话并行
+
+> Claude Code 的多智能体编排系统，支持多窗口并行运行多任务。
+
+## 安装与更新
+
+```bash
+# 安装
+/plugin marketplace add https://github.com/Yeachan-Heo/oh-my-claudecode
+/plugin install oh-my-claudecode
+
+# 更新
+/plugin marketplace update omc
+/omc:omc-setup
+```
+
+## 核心模式
+
+| 模式 | 命令 | 适用场景 |
+|------|------|---------|
+| **autopilot** | `autopilot: 任务` | 全自动工作流 |
+| **team** | `/team N 任务` | N 个 agent 协同 |
+| **ralph** | `ralph: 任务` | 持久模式，必须完成 |
+| **ultrawork** | `ulw 任务` | 最大并行化 |
+| **ultrapilot** | - | 3-5倍速多组件系统 |
+| **swarm** | `/swarm N 任务` | 并行独立任务 |
+
+## 多窗口并行
+
+当需要多个独立 Claude Code 窗口时：
+
+```bash
+# 终端1
+claude
+
+# 终端2
+claude
+
+# 终端3
+claude
+```
+
+或使用 OMC team 模式：
+```
+/team 5 "并行修复所有 TypeScript 错误"
+```
+
+## 32 个专业 Agent
+
+| Agent | 用途 |
+|-------|------|
+| planner | 实现规划 |
+| architect | 系统设计 |
+| executor | 代码执行 |
+| code-reviewer | 代码审查 |
+| security-reviewer | 安全审查 |
+| build-fixer | 构建修复 |
+| debugger | 调试分析 |
+| designer | UI/UX 设计 |
+| scientist | 数据分析 |
+| test-engineer | 测试工程 |
 
 ---
 

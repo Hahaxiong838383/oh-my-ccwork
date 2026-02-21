@@ -1,0 +1,44 @@
+# ARCH.md 示例 - 架构设计
+
+## 系统架构
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Client    │────▶│   API GW    │────▶│   Auth Svc  │
+└─────────────┘     └─────────────┘     └─────────────┘
+                                                  │
+                                                  ▼
+                                           ┌─────────────┐
+                                           │   Postgres  │
+                                           └─────────────┘
+```
+
+## 核心模块
+
+### AuthService
+- `login(username, password): Token`
+- `register(username, email, password): UserId`
+- `verify(token): UserId`
+- `refresh(token): Token`
+
+### TokenService
+- `generate(userId): Token`
+- `decode(token): Payload`
+- `validate(token): boolean`
+
+### UserRepository
+- `findByUsername(username): User`
+- `findById(id): User`
+- `create(user): User`
+- `update(id, data): User`
+
+## 技术选型
+
+| 组件 | 选型 | 理由 |
+|------|------|------|
+| 语言 | TypeScript | 类型安全 |
+| 框架 | Express | 轻量灵活 |
+| ORM | Prisma | 类型安全 |
+| DB | PostgreSQL | 可靠 |
+| 密码 | bcrypt | 安全 |
+| Token | JWT | 无状态 |

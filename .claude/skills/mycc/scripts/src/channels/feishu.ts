@@ -667,15 +667,67 @@ export class FeishuChannel implements MessageChannel {
       const tableData = this.parseMarkdownTable(text);
 
       if (tableData) {
-        // 使用交互卡片 + 表格组件
+        // 降级链：交互卡片 → Markdown → 纯文本
         const cardContent = this.buildTableCard(tableData.beforeTable, tableData.headers, tableData.rows, tableData.afterTable);
-        return await this.sendInteractiveCard(userId, cardContent);
+        const cardSent = await this.sendInteractiveCard(userId, cardContent);
+        if (cardSent) return true;
+        console.warn("[FeishuChannel] 交互卡片发送失败，降级到 Markdown");
+        const mdSent = await this.sendMarkdownMessage(userId, text);
+        if (mdSent) return true;
+        console.warn("[FeishuChannel] Markdown 发送失败，降级到纯文本");
+        return await this.sendPlainText(userId, text);
       }
 
-      // 没有表格，使用普通 Markdown 消息
-      return await this.sendMarkdownMessage(userId, text);
+      // 降级链：Markdown → 纯文本
+      const mdSent = await this.sendMarkdownMessage(userId, text);
+      if (mdSent) return true;
+      console.warn("[FeishuChannel] Markdown 发送失败，降级到纯文本");
+      return await this.sendPlainText(userId, text);
     } catch (error) {
       console.error("[FeishuChannel] ✗ Send error:", error);
+      return false;
+    }
+  }
+
+  /**
+   * 发送纯文本消息（最终兜底，去除 Markdown 格式符号）
+   * 来源：EvoMap Capsule gene_feishu_post_fallback_chain
+   */
+  private async sendPlainText(userId: string, text: string): Promise<boolean> {
+    try {
+      const receiveIdType = this.config.receiveIdType || "open_id";
+      // 去除常见 Markdown 格式符，保留可读文本
+      const plainText = text
+        .replace(/\*\*([^*]+)\*\*/g, "$1")   // **bold**
+        .replace(/\*([^*]+)\*/g, "$1")        // *italic*
+        .replace(/`([^`]+)`/g, "$1")          // `code`
+        .replace(/```[\s\S]*?```/g, "[代码块]") // ```code block```
+        .replace(/#{1,6}\s/g, "")             // # headings
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1"); // [link](url)
+
+      const response = await fetch(`https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=${receiveIdType}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${this.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          receive_id: userId,
+          msg_type: "text",
+          content: JSON.stringify({ text: plainText }),
+        }),
+      });
+
+      const result = await response.json();
+      if (result.code === 0) {
+        console.log("[FeishuChannel] ✓ Sent as plain text (fallback)");
+        await sleep(1000);
+        return true;
+      }
+      console.error("[FeishuChannel] ✗ Plain text fallback also failed:", result.msg);
+      return false;
+    } catch (error) {
+      console.error("[FeishuChannel] ✗ Plain text error:", error);
       return false;
     }
   }
