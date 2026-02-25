@@ -13,6 +13,7 @@ import { adapter } from "./adapters/index.js";
 import type { PairState } from "./types.js";
 import { validateImages, type ImageData } from "./image-utils.js";
 import { renameSession } from "./history.js";
+import { getOrBuildIndex, searchBM25 } from "./bm25.js";
 import { listSkills } from "./skills.js";
 import { ChannelManager, WebChannel, FeishuChannel } from "./channels/index.js";
 import { loadConfig } from "./config.js";
@@ -318,9 +319,15 @@ export class HttpServer {
 
     const trimmedMessage = message.trim();
 
-    // 检查是否是命令
+    // 检查是否是命令（以 / 开头）
     if (trimmedMessage.startsWith("/")) {
       await this.handleFeishuCommand(trimmedMessage);
+      return;
+    }
+
+    // 检查是否是运维关键字（不带 / 前缀）
+    if (this.isOperationCommand(trimmedMessage)) {
+      await this.handleOperationCommand(trimmedMessage);
       return;
     }
 
@@ -463,12 +470,121 @@ export class HttpServer {
           await this.handleHelp();
           break;
 
+        case "/搜索":
+        case "/search":
+          await this.handleSearch(args.join(" "));
+          break;
+
         default:
           await this.sendToFeishu(`❓ 未知命令: ${cmd}\n\n发送 /help 查看可用命令。`);
       }
     } catch (err) {
       console.error(`[CC] 命令处理错误:`, err);
       await this.sendToFeishu(`❌ 执行命令时出错: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  /**
+   * 检查是否是运维命令（不带 / 前缀）
+   */
+  private isOperationCommand(message: string): boolean {
+    const opCommands = [
+      "重启mycc", "重启mycc后端", "重启后端",
+      "重启", "停止", "停止mycc",
+      "状态", "状态查询", "查看状态",
+      "启动mycc", "启动后端"
+    ];
+    return opCommands.some(cmd => message.includes(cmd));
+  }
+
+  /**
+   * 处理运维命令（不带 / 前缀）
+   */
+  private async handleOperationCommand(message: string): Promise<void> {
+    console.log(`[CC] 处理运维命令: ${message}`);
+
+    const lowerMessage = message.toLowerCase();
+
+    try {
+      if (lowerMessage.includes("重启") || lowerMessage.includes("启动")) {
+        await this.handleRestart();
+      } else if (lowerMessage.includes("停止")) {
+        await this.handleStop();
+      } else if (lowerMessage.includes("状态")) {
+        await this.handleStatus();
+      } else {
+        await this.sendToFeishu(`❓ 无法识别运维命令: ${message}`);
+      }
+    } catch (err) {
+      console.error(`[CC] 运维命令处理错误:`, err);
+      await this.sendToFeishu(`❌ 执行运维命令时出错: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  /**
+   * 处理重启命令
+   */
+  private async handleRestart(): Promise<void> {
+    await this.sendToFeishu("🔄 正在重启 mycc 后端...");
+
+    try {
+      // 杀掉当前进程
+      const { execSync } = await import("child_process");
+      execSync("lsof -i :18080 -t | xargs kill 2>/dev/null", { stdio: "ignore" });
+
+      await this.sendToFeishu("✅ 已停止旧进程");
+
+      // 延迟一下再启动新进程
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // 启动新进程
+      const { spawn } = await import("child_process");
+      spawn("npx", ["tsx", "./.claude/skills/mycc/scripts/src/index.ts", "start"], {
+        cwd: process.cwd(),
+        detached: true,
+        stdio: "ignore"
+      }).unref();
+
+      await this.sendToFeishu("✅ 已启动新进程，请稍候...");
+    } catch (err) {
+      console.error("[CC] 重启失败:", err);
+      await this.sendToFeishu(`❌ 重启失败: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  /**
+   * 处理停止命令
+   */
+  private async handleStop(): Promise<void> {
+    await this.sendToFeishu("🔄 正在停止 mycc 后端...");
+
+    try {
+      const { execSync } = await import("child_process");
+      execSync("lsof -i :18080 -t | xargs kill 2>/dev/null", { stdio: "ignore" });
+
+      await this.sendToFeishu("✅ mycc 后端已停止");
+    } catch (err) {
+      console.error("[CC] 停止失败:", err);
+      await this.sendToFeishu(`❌ 停止失败: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  /**
+   * 处理状态查询命令
+   */
+  private async handleStatus(): Promise<void> {
+    try {
+      const { execSync } = await import("child_process");
+      const pid = execSync("lsof -i :18080 -t 2>/dev/null", { encoding: "utf8" }).trim();
+
+      if (pid) {
+        const status = execSync(`ps -p ${pid} -o pid,etime,comm 2>/dev/null`, { encoding: "utf8" });
+        await this.sendToFeishu(`✅ mycc 后端运行中\n\n\`\`\`\n${status}\n\`\`\``);
+      } else {
+        await this.sendToFeishu("❌ mycc 后端未运行");
+      }
+    } catch {
+      await this.sendToFeishu("❌ mycc 后端未运行");
     }
   }
 
@@ -754,6 +870,7 @@ export class HttpServer {
       "/new [标题] - 创建新会话\n" +
       "/sessions - 查看历史会话\n" +
       "/switch <序号> - 切换到某个会话\n" +
+      "/search <关键词> - 搜索历史会话\n" +
       "/current - 显示当前会话信息\n\n" +
       "**设备管理**\n" +
       "/device - 查看当前设备信息\n\n" +
@@ -767,6 +884,61 @@ export class HttpServer {
       "💡 提示：非命令消息会发送到当前活跃会话";
 
     await this.sendToFeishu(helpText);
+  }
+
+  /**
+   * 搜索历史会话（BM25 关键词检索）
+   */
+  private async handleSearch(query: string): Promise<void> {
+    const trimmedQuery = query?.trim();
+    if (!trimmedQuery) {
+      await this.sendToFeishu(
+        "🔍 用法: /搜索 <关键词>\n\n" +
+        "示例: /搜索 IPO报告\n" +
+        "      /搜索 飞书机器人配置"
+      );
+      return;
+    }
+
+    console.log(`[CC] 搜索历史会话: ${trimmedQuery}`);
+
+    try {
+      // 获取当前项目路径
+      const projectDir = this.cwd;
+
+      // 构建/获取 BM25 索引
+      const index = getOrBuildIndex(projectDir);
+
+      if (index.N === 0) {
+        await this.sendToFeishu("📭 暂无历史会话记录");
+        return;
+      }
+
+      // 执行搜索
+      const results = searchBM25(trimmedQuery, index, 10);
+
+      if (results.length === 0) {
+        await this.sendToFeishu(`🔍 没有找到包含 "${trimmedQuery}" 的历史会话`);
+        return;
+      }
+
+      // 格式化结果
+      let response = `🔍 搜索 "${trimmedQuery}" 找到 ${results.length} 个相关会话:\n\n`;
+
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i];
+        const preview = r.preview.length > 60 ? r.preview.substring(0, 60) + "..." : r.preview;
+        response += `${i + 1}. ${preview}\n`;
+        response += `   └ 会话ID: ${r.sessionId}\n\n`;
+      }
+
+      response += "💡 回复 [序号] 可切换到对应会话";
+
+      await this.sendToFeishu(response);
+    } catch (err) {
+      console.error(`[CC] 搜索出错:`, err);
+      await this.sendToFeishu(`❌ 搜索失败: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   /**

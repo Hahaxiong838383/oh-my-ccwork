@@ -62,6 +62,13 @@ export class FeishuChannel implements MessageChannel {
   private eventDispatcher: Lark.EventDispatcher | null = null;
   private messageCallback: ((message: string, images?: Array<{ data: string; mediaType: string }>, messageId?: string) => void) | null = null;
 
+  // 重连相关
+  private reconnectAttempts = 0;
+  private readonly maxReconnectAttempts = 10;
+  private readonly reconnectDelay = 5000; // 5秒
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  private isReconnecting = false;
+
   // 表态相关（"正在输入" emoji）
   private currentMessageId: string | null = null;
   private currentReactionId: string | null = null;
@@ -348,9 +355,46 @@ export class FeishuChannel implements MessageChannel {
       this.wsClient.start({ eventDispatcher: this.eventDispatcher });
       console.log("[FeishuChannel] ✓ WebSocket 已启动");
       console.log("[FeishuChannel] [INFO] 已注册事件: im.message.receive_v1, im.message.message_read_v1, im.chat.member.bot.added_v1, im.chat.member.bot.deleted_v1");
+
+      // 重置重连计数
+      this.reconnectAttempts = 0;
+
+      // 监听连接关闭事件，触发重连
+      this.wsClient.on("close", () => {
+        console.log("[FeishuChannel] WebSocket 连接已关闭");
+        this.scheduleReconnect();
+      });
+
+      this.wsClient.on("error", (err: Error) => {
+        console.error("[FeishuChannel] WebSocket 错误:", err);
+        this.scheduleReconnect();
+      });
     } catch (err) {
       console.error("[FeishuChannel] ✗ WebSocket 启动失败:", err);
+      this.scheduleReconnect();
     }
+  }
+
+  /**
+   * 安排重连
+   */
+  private scheduleReconnect(): void {
+    if (this.isReconnecting) return;
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error(`[FeishuChannel] 达到最大重连次数 (${this.maxReconnectAttempts})，停止重连`);
+      return;
+    }
+
+    this.isReconnecting = true;
+    this.reconnectAttempts++;
+
+    console.log(`[FeishuChannel] 将在 ${this.reconnectDelay / 1000}s 后重连 (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+
+    this.reconnectTimer = setTimeout(async () => {
+      this.isReconnecting = false;
+      console.log("[FeishuChannel] 开始重连...");
+      await this.startWebSocket();
+    }, this.reconnectDelay);
   }
 
   /**
@@ -408,6 +452,14 @@ export class FeishuChannel implements MessageChannel {
   stop() {
     this.accessToken = null;
     this.pendingImages.clear();
+
+    // 清除重连定时器
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.isReconnecting = false;
+    this.reconnectAttempts = 0;
 
     // 停止 WebSocket
     if (this.wsClient) {
