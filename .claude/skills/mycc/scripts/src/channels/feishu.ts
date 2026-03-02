@@ -637,56 +637,79 @@ export class FeishuChannel implements MessageChannel {
   }
 
   /**
-   * 发送消息到飞书
+   * 发送消息到飞书（带重试机制）
+   * 来自：EvoMap Capsule "OpenAI Agent: Robust Error Handling"
    */
   private async sendMessageToFeishu(text: string, sessionId?: string): Promise<boolean> {
-    try {
-      // 获取访问令牌（如果需要）
-      if (!this.accessToken || Date.now() > this.tokenExpireTime) {
-        this.accessToken = await this.getAccessToken();
-        if (!this.accessToken) {
-          return false;
+    const maxRetries = 3;
+    const baseDelay = 1000;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // 获取访问令牌（如果需要）
+        if (!this.accessToken || Date.now() > this.tokenExpireTime) {
+          this.accessToken = await this.getAccessToken();
+          if (!this.accessToken) {
+            return false;
+          }
         }
-      }
 
-      const userId = this.config.receiveUserId!;
+        const userId = this.config.receiveUserId!;
 
-      // 如果有待发送的图片，先发送图片
-      if (sessionId && this.pendingImages.has(sessionId)) {
-        const imageKey = this.pendingImages.get(sessionId)!;
-        const imageSent = await this.sendImageMessage(userId, imageKey);
-        if (imageSent) {
-          // 图片发送成功后，移除记录
-          this.pendingImages.delete(sessionId);
+        // 如果有待发送的图片，先发送图片
+        if (sessionId && this.pendingImages.has(sessionId)) {
+          const imageKey = this.pendingImages.get(sessionId)!;
+          const imageSent = await this.sendImageMessage(userId, imageKey);
+          if (imageSent) {
+            // 图片发送成功后，移除记录
+            this.pendingImages.delete(sessionId);
+          }
         }
-      }
 
-      const receiveIdType = this.config.receiveIdType || "open_id";
+        const receiveIdType = this.config.receiveIdType || "open_id";
 
-      // 检查文本中是否包含表格
-      const tableData = this.parseMarkdownTable(text);
+        // 检查文本中是否包含表格
+        const tableData = this.parseMarkdownTable(text);
 
-      if (tableData) {
-        // 降级链：交互卡片 → Markdown → 纯文本
-        const cardContent = this.buildTableCard(tableData.beforeTable, tableData.headers, tableData.rows, tableData.afterTable);
-        const cardSent = await this.sendInteractiveCard(userId, cardContent);
-        if (cardSent) return true;
-        console.warn("[FeishuChannel] 交互卡片发送失败，降级到 Markdown");
+        if (tableData) {
+          // 降级链：交互卡片 → Markdown → 纯文本
+          const cardContent = this.buildTableCard(tableData.beforeTable, tableData.headers, tableData.rows, tableData.afterTable);
+          const cardSent = await this.sendInteractiveCard(userId, cardContent);
+          if (cardSent) return true;
+          console.warn("[FeishuChannel] 交互卡片发送失败，降级到 Markdown");
+          const mdSent = await this.sendMarkdownMessage(userId, text);
+          if (mdSent) return true;
+          console.warn("[FeishuChannel] Markdown 发送失败，降级到纯文本");
+          return await this.sendPlainText(userId, text);
+        }
+
+        // 降级链：Markdown → 纯文本
         const mdSent = await this.sendMarkdownMessage(userId, text);
         if (mdSent) return true;
         console.warn("[FeishuChannel] Markdown 发送失败，降级到纯文本");
         return await this.sendPlainText(userId, text);
-      }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
 
-      // 降级链：Markdown → 纯文本
-      const mdSent = await this.sendMarkdownMessage(userId, text);
-      if (mdSent) return true;
-      console.warn("[FeishuChannel] Markdown 发送失败，降级到纯文本");
-      return await this.sendPlainText(userId, text);
-    } catch (error) {
-      console.error("[FeishuChannel] ✗ Send error:", error);
-      return false;
+        // 检查是否是可重试的错误
+        const isRetryable = errorMessage.includes('429') ||
+          errorMessage.includes('rate limit') ||
+          errorMessage.includes('ETIMEDOUT') ||
+          errorMessage.includes('ECONNRESET') ||
+          errorMessage.includes('5');
+
+        if (isRetryable && attempt < maxRetries - 1) {
+          const delay = baseDelay * Math.pow(2, attempt);
+          console.warn(`[FeishuChannel] 发送失败 (${attempt + 1}/${maxRetries}), ${delay}ms 后重试: ${errorMessage}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        console.error("[FeishuChannel] ✗ Send error:", error);
+        return false;
+      }
     }
+    return false;
   }
 
   /**

@@ -9,6 +9,7 @@
  * 2. 根因分析 - 基于规则库匹配 80%+ 常见错误
  * 3. 自动修复 - 自动创建缺失文件、修复权限、安装依赖、避免限流
  * 4. 自省报告 - 无法修复时通知人类
+ * 5. API 健壮性 - 指数退避重试、速率限制监控（集成自 EvoMap OpenAI Agent: Robust Error Handling）
  */
 
 import { FeishuChannel } from './channels/feishu.js';
@@ -249,6 +250,123 @@ export class AgentIntrospection {
 }
 
 /**
+ * API 速率限制监控
+ * 来自：EvoMap Capsule "OpenAI Agent: Robust Error Handling"
+ */
+export class APIMonitor {
+  private requestCounts = new Map<string, { count: number; resetTime: number }>();
+  private rateLimitHeaders = new Map<string, string>();
+
+  /**
+   * 更新速率限制信息
+   */
+  updateRateLimit(endpoint: string, limit: number, remaining: number, resetTime: number): void {
+    this.requestCounts.set(endpoint, { count: limit - remaining, resetTime });
+    console.log(`[APIMonitor] ${endpoint}: ${remaining}/${limit} 请求剩余, 重置于 ${new Date(resetTime * 1000).toISOString()}`);
+  }
+
+  /**
+   * 检查是否接近速率限制
+   */
+  isApproachingLimit(endpoint: string, threshold = 0.8): boolean {
+    const info = this.requestCounts.get(endpoint);
+    if (!info) return false;
+    return Date.now() / 1000 > info.resetTime - 60; // 1分钟内将重置
+  }
+
+  /**
+   * 获取等待时间（如果需要等待）
+   */
+  getWaitTime(endpoint: string): number {
+    const info = this.requestCounts.get(endpoint);
+    if (!info) return 0;
+    const now = Date.now() / 1000;
+    if (now >= info.resetTime) return 0;
+    return (info.resetTime - now) * 1000;
+  }
+
+  /**
+   * 清除过期的速率限制信息
+   */
+  cleanup(): void {
+    const now = Date.now() / 1000;
+    for (const [endpoint, info] of this.requestCounts.entries()) {
+      if (now > info.resetTime) {
+        this.requestCounts.delete(endpoint);
+      }
+    }
+  }
+}
+
+/**
+ * 指数退避重试装饰器
+ * 来自：EvoMap Capsule "OpenAI Agent: Robust Error Handling"
+ */
+export function withRetry<T extends (...args: any[]) => Promise<any>>(
+  fn: T,
+  options: {
+    maxRetries?: number;
+    baseDelay?: number;
+    maxDelay?: number;
+    retryableErrors?: string[];
+  } = {}
+): T {
+  const {
+    maxRetries = 3,
+    baseDelay = 1000,
+    maxDelay = 30000,
+    retryableErrors = [
+      'ECONNRESET',
+      'ETIMEDOUT',
+      'ENOTFOUND',
+      'ENETUNREACH',
+      '429',
+      'rate limit',
+      'TooManyRequests',
+      'Service Unavailable',
+      'Gateway Timeout',
+    ],
+  } = options;
+
+  return (async (...args: Parameters<T>): Promise<ReturnType<T>> => {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn(...args);
+      } catch (error) {
+        lastError = error as Error;
+        const errorMessage = lastError.message || String(error);
+
+        // 检查是否是可重试的错误
+        const isRetryable = retryableErrors.some(e => errorMessage.includes(e));
+
+        if (!isRetryable || attempt === maxRetries) {
+          console.error(`[Retry] 最终失败 (${attempt + 1}/${maxRetries + 1}): ${errorMessage}`);
+          throw lastError;
+        }
+
+        // 计算指数退避延迟
+        const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
+        // 添加随机抖动 (±25%)
+        const jitter = delay * 0.25 * (Math.random() * 2 - 1);
+        const totalDelay = delay + jitter;
+
+        console.log(`[Retry] 尝试 ${attempt + 1}/${maxRetries + 1} 失败, ${Math.round(totalDelay)}ms 后重试: ${errorMessage}`);
+        await new Promise(resolve => setTimeout(resolve, totalDelay));
+      }
+    }
+
+    throw lastError;
+  }) as T;
+}
+
+/**
  * 全局单例
  */
 export const agentIntrospection = new AgentIntrospection();
+
+/**
+ * 全局 API 监控单例
+ */
+export const apiMonitor = new APIMonitor();
