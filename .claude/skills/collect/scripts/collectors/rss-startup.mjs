@@ -9,17 +9,37 @@
  *   node rss-startup.mjs --index /path/to/rss-startup.json             # 输出索引列表
  */
 
+import { readFile } from 'fs/promises';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { fetchFeeds } from '../lib/rss-parser.mjs';
 import { makeResult, extractItems } from '../lib/fetcher.mjs';
 
 const SOURCE_NAME = 'rss-startup';
+const __dir = dirname(fileURLToPath(import.meta.url));
+const SOURCES_PATH = join(__dir, '..', 'sources.json');
 
-const FEEDS = [
+// 硬编码兜底
+const FEEDS_FALLBACK = [
   { name: 'TechCrunch', url: 'https://techcrunch.com/feed/', enabled: true },
   { name: '极客公园', url: 'http://www.geekpark.net/rss', enabled: true },
-  { name: '36氪', url: 'https://36kr.com/feed', enabled: false }, // 预留
-  { name: '虎嗅网', url: 'https://www.huxiu.com/rss/0.xml', enabled: false }, // 预留
+  { name: 'VentureBeat', url: 'https://venturebeat.com/feed/', enabled: true },
+  { name: '36氪', url: 'https://36kr.com/feed', enabled: true },
+  { name: '虎嗅网', url: 'https://www.huxiu.com/rss/0.xml', enabled: true },
 ];
+
+async function loadActiveSources(group, fallback) {
+  try {
+    const raw = await readFile(SOURCES_PATH, 'utf-8');
+    const data = JSON.parse(raw);
+    const sources = data[group];
+    if (!Array.isArray(sources) || sources.length === 0) return fallback;
+    const active = sources.filter(s => s.active).map(s => ({ name: s.name, url: s.url, enabled: true }));
+    return active.length > 0 ? active : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 // ── --extract 格式化 ──
 function formatExtract(item, idx) {
@@ -74,11 +94,12 @@ async function main() {
     return formatIndex(data.items || []);
   }
 
-  // 采集模式（默认）
-  const { items, errors } = await fetchFeeds(FEEDS, { hoursBack: 48 });
+  // 采集模式（默认）：优先从 sources.json 读取 active 源，找不到则用硬编码兜底
+  const feeds = await loadActiveSources('rss-startup', FEEDS_FALLBACK);
+  const { items, errors } = await fetchFeeds(feeds, { hoursBack: 48 });
 
   const metadata = {
-    feeds: FEEDS.filter(f => f.enabled !== false).map(f => f.name),
+    feeds: feeds.map(f => f.name),
     errors: errors.length > 0 ? errors : undefined,
   };
 

@@ -9,16 +9,37 @@
  *   node rss-ai.mjs --index /path/to/rss-ai.json              # 打印索引列表
  */
 
+import { readFile } from 'fs/promises';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { fetchFeeds } from '../lib/rss-parser.mjs';
 import { makeResult, extractItems } from '../lib/fetcher.mjs';
 
 const SOURCE_NAME = 'rss-ai';
+const __dir = dirname(fileURLToPath(import.meta.url));
+const SOURCES_PATH = join(__dir, '..', 'sources.json');
 
-const FEEDS = [
+// 硬编码兜底
+const FEEDS_FALLBACK = [
   { name: "Ben's Bites", url: 'https://www.bensbites.com/feed', enabled: true },
   { name: 'MIT科技评论中文', url: 'https://plink.anyfeeder.com/mittrchina/hot', enabled: true },
-  { name: '新智元', url: 'https://plink.anyfeeder.com/weixin/AI_era', enabled: false }, // 预留
+  { name: 'VentureBeat AI', url: 'https://venturebeat.com/category/ai/feed/', enabled: true },
+  { name: 'Ars Technica', url: 'https://feeds.arstechnica.com/arstechnica/index/', enabled: true },
+  { name: '新智元', url: 'https://plink.anyfeeder.com/weixin/AI_era', enabled: true },
 ];
+
+async function loadActiveSources(group, fallback) {
+  try {
+    const raw = await readFile(SOURCES_PATH, 'utf-8');
+    const data = JSON.parse(raw);
+    const sources = data[group];
+    if (!Array.isArray(sources) || sources.length === 0) return fallback;
+    const active = sources.filter(s => s.active).map(s => ({ name: s.name, url: s.url, enabled: true }));
+    return active.length > 0 ? active : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 // ── --extract 格式化 ──
 function formatExtract(item, idx) {
@@ -75,11 +96,12 @@ async function main() {
     return;
   }
 
-  // 采集模式
-  const { items, errors } = await fetchFeeds(FEEDS, { hoursBack: 48 });
+  // 采集模式：优先从 sources.json 读取 active 源，找不到则用硬编码兜底
+  const feeds = await loadActiveSources('rss-ai', FEEDS_FALLBACK);
+  const { items, errors } = await fetchFeeds(feeds, { hoursBack: 48 });
 
   const metadata = {
-    feeds: FEEDS.filter(f => f.enabled !== false).map(f => f.name),
+    feeds: feeds.map(f => f.name),
   };
   if (errors.length > 0) {
     metadata.errors = errors;

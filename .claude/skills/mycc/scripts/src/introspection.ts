@@ -11,7 +11,11 @@
  * 4. 自省报告 - 无法修复时通知人类
  */
 
+import { spawnSync } from 'child_process';
+import path from 'path';
 import { FeishuChannel } from './channels/feishu.js';
+
+const SEND_JS = path.resolve('/Users/rayman.chen/mycc/.claude/skills/tell-me/send.js');
 
 /**
  * 错误类型分类
@@ -202,9 +206,14 @@ export class AgentIntrospection {
 `.trim();
 
     try {
-      // 通过飞书发送通知
       console.log('[Introspection] 发送人工介入通知');
-      // 注意：这里需要通过 SSE 事件触发飞书发送，实际实现需要结合 HTTP server
+      const result = spawnSync('node', [SEND_JS, 'Agent 故障告警', message, 'red'], {
+        timeout: 10_000,
+        encoding: 'utf8',
+      });
+      if (result.status !== 0) {
+        console.error('[Introspection] 飞书通知失败:', result.stderr);
+      }
     } catch (e) {
       console.error('[Introspection] 通知发送失败:', e);
     }

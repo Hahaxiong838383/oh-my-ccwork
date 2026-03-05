@@ -154,6 +154,63 @@ FEISHU_VERIFICATION_TOKEN=your_verification_token
 - **端口被占用**：`lsof -i :18080 -t | xargs kill`
 - **cloudflared 未安装**：按上面的依赖说明安装
 - **tunnel 启动失败**：检查网络，重试即可
+- **飞书 WS 返回 400**：系统代理冲突，代码已自动设置 `NO_PROXY=*.feishu.cn`
+- **后台日志看不到**：macOS 上 nohup 导致 stdout 全缓冲，用 `fs.appendFileSync` 写临时文件调试
+- **残留进程**：`ps aux | grep -E "tsx|cloudflared" | grep -v grep` 检查并 kill
+
+## 飞书多通道架构
+
+mycc 支持同时运行多个飞书通道（最多 3 个），每个通道独立 bot、独立会话、独立回复目标。
+
+### 通道配置
+
+| 通道 | 环境变量前缀 | 说明 |
+|------|------------|------|
+| feishu-personal | `FEISHU_` | 个人飞书 bot |
+| feishu-futurus-rayman | `FEISHU2_` | 公司 bot（陈川） |
+| feishu-futurus-alex | `FEISHU3_` | 公司 bot（Alex） |
+
+### 会话隔离机制
+
+- **SessionOwnership**（`session-ownership.ts`）：维护 sessionId → channelId 映射
+- `claim(sessionId, channelId)` 返回 boolean，拒绝跨通道抢占
+- 自动选择会话时：遍历历史，跳过 claim 失败的
+- `/switch` 命令：claim 失败则提示用户
+
+### 回复路由
+
+- 收到消息时记录来源 `chat_id`（`lastIncomingChatId`）
+- 回复优先用 `chat_id`（回到原窗口），否则 fallback 到配置的 `open_id`
+- API 区分：`open_id` → P2P 单聊；`chat_id` → 指定聊天（支持群聊）
+
+## 飞书通道排查指南
+
+### 1. 通道能收消息但不回复
+
+```bash
+# 查 daemon.log 确认收到消息
+tail -100 .claude/skills/mycc/daemon.log | grep "收到消息"
+# 看回复是否发成功
+tail -100 .claude/skills/mycc/daemon.log | grep "FeishuChannel:"
+```
+
+**常见原因**：回复发到了错误的 chat_id
+- 诊断：查消息历史 `GET /im/v1/messages?container_id_type=chat&container_id=<chat_id>`
+- 若历史中只有 Bot 消息没有 User 消息 → 回复目标不对
+
+### 2. 多通道串台
+
+**症状**：A 通道发消息，B 通道收到回复
+**原因**：多通道共享同一个 Claude Code session
+**检查**：`daemon.log` 中 `[SessionOwnership] claim` 日志
+
+### 3. Lark SDK 注意事项
+
+- **WSClient 不是 EventEmitter**，不能 `.on("close")`
+- SDK 自动管理重连，只需 `wsClient.start({ eventDispatcher })`
+- 系统代理会导致 400 错误，代码已自动设置 `NO_PROXY=*.feishu.cn`
+- 使用 `Lark.Client` 自动管理 token，不要手动 fetch
+- 合并多 block 为单条消息发送（避免逐条 1s 延迟）
 
 ---
 

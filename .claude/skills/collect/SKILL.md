@@ -45,9 +45,9 @@ node "$PROJECT_ROOT/.claude/skills/collect/scripts/collect.mjs" --save "$SAVE_DI
 - **其他错误** → 记录在简报中，不阻断流程
 - **全部失败** → 发错误通知，终止
 
-### Step 3：并行分析（8 个 Agent 各跑各的）
+### Step 3：并行分析（9 个 Agent 各跑各的）
 
-用 **Task 工具**同时派遣 8 个 subagent，**在同一条消息里发出 8 个 Task 调用**实现并行。每个 agent 独立分析一个源，写出自己的报告。
+用 **Task 工具**同时派遣 9 个 subagent，**在同一条消息里发出 9 个 Task 调用**实现并行。每个 agent 独立分析一个源，写出自己的报告。
 
 #### Agent 配置
 
@@ -61,6 +61,7 @@ node "$PROJECT_ROOT/.claude/skills/collect/scripts/collect.mjs" --save "$SAVE_DI
 | rss-ai-analyst | sonnet | `$SAVE_DIR/rss-ai.json` | `analysis/rss-ai-analyst.md` | `$SAVE_DIR/rss-ai-analysis.md` |
 | rss-dev-analyst | sonnet | `$SAVE_DIR/rss-dev.json` | `analysis/rss-dev-analyst.md` | `$SAVE_DIR/rss-dev-analysis.md` |
 | rss-startup-analyst | sonnet | `$SAVE_DIR/rss-startup.json` | `analysis/rss-startup-analyst.md` | `$SAVE_DIR/rss-startup-analysis.md` |
+| rss-ipo-analyst | sonnet | `$SAVE_DIR/rss-ipo.json` | `analysis/rss-ipo-analyst.md` | `$SAVE_DIR/rss-ipo-analysis.md` |
 
 #### 每个 Agent 的 prompt 模板
 
@@ -220,6 +221,7 @@ node "$PROJECT_ROOT/.claude/skills/collect/scripts/collect.mjs" --sources fxb,gh
 │   ├── rss-ai-analyst.md           # AI 前沿 RSS 分析师
 │   ├── rss-dev-analyst.md          # 开发者工具 RSS 分析师
 │   ├── rss-startup-analyst.md      # 创业商业 RSS 分析师
+│   ├── rss-ipo-analyst.md          # IPO/融资 RSS 分析师
 │   └── synthesizer.md               # 综合分析师（跨源汇总）
 └── scripts/
     ├── collect.mjs                  # 协调器

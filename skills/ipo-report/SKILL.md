@@ -54,11 +54,16 @@ trigger: IPO报告
 
 ## 技术实现
 
-1. 调用 web search 获取最新 IPO 市场信息
+1. **数据采集**：调用 collect skill 的 rss-ipo collector 获取 TechCrunch IPO/融资/科技相关新闻
 2. 使用 ipo-market-team 团队进行分析
 3. 生成 HTML 报告
 4. 调用邮件发送服务发送
 5. **自动发送飞书通知，带报告原文链接**
+
+### 数据源
+
+- **rss-ipo**：TechCrunch RSS，过滤 IPO、融资、并购、科技、AI、汽车、AR/MR 等关键词
+- 数据路径：`1-Inbox/_collect/{日期}/rss-ipo.json`
 
 ## 飞书通知（自动）
 

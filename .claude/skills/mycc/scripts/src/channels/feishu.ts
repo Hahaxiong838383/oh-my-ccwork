@@ -14,6 +14,8 @@ import Lark from "@larksuiteoapi/node-sdk";
  * 飞书通道配置
  */
 export interface FeishuChannelConfig {
+  /** 通道 ID，用于多实例区分，默认 "feishu" */
+  id?: string;
   /** 飞书应用 ID */
   appId: string;
   /** 飞书应用密钥 */
@@ -50,10 +52,11 @@ interface FeishuUploadResponse {
  * 支持双向通信：发送 Claude 回复到飞书，接收飞书消息并转发给 Claude
  */
 export class FeishuChannel implements MessageChannel {
-  readonly id = "feishu";
+  readonly id: string;
 
   private config: FeishuChannelConfig;
-  private accessToken: string | null = null;
+  private client: Lark.Client; // SDK Client，自动管理 token
+  private accessToken: string | null = null; // 仅用于图片上传/下载等 SDK 未覆盖的操作
   private tokenExpireTime: number = 0;
   private pendingImages = new Map<string, string>(); // sessionId → image_key
 
@@ -62,18 +65,15 @@ export class FeishuChannel implements MessageChannel {
   private eventDispatcher: Lark.EventDispatcher | null = null;
   private messageCallback: ((message: string, images?: Array<{ data: string; mediaType: string }>, messageId?: string) => void) | null = null;
 
-  // 重连相关
-  private reconnectAttempts = 0;
-  private readonly maxReconnectAttempts = 10;
-  private readonly reconnectDelay = 5000; // 5秒
-  private reconnectTimer: NodeJS.Timeout | null = null;
-  private isReconnecting = false;
-
   // 表态相关（"正在输入" emoji）
   private currentMessageId: string | null = null;
   private currentReactionId: string | null = null;
 
+  // 动态回复目标：优先回复到来源 chat_id，而不是固定的 open_id
+  private lastIncomingChatId: string | null = null;
+
   constructor(config?: FeishuChannelConfig) {
+    this.id = config?.id ?? 'feishu';
     // 从环境变量读取配置
     this.config = config || {
       appId: process.env.FEISHU_APP_ID || "",
@@ -85,6 +85,13 @@ export class FeishuChannel implements MessageChannel {
       verificationToken: process.env.FEISHU_VERIFICATION_TOKEN,
       showToolUse: process.env.FEISHU_SHOW_TOOL_USE === "false" ? false : true, // 默认 true
     };
+
+    // 初始化 SDK Client（自动管理 token，无需手动 getAccessToken）
+    this.client = new Lark.Client({
+      appId: this.config.appId,
+      appSecret: this.config.appSecret,
+      domain: Lark.Domain.Feishu,
+    });
   }
 
   /**
@@ -94,8 +101,6 @@ export class FeishuChannel implements MessageChannel {
    */
   filter(event: SSEEvent): boolean {
     const eventType = event.type as string;
-    // 调试：记录所有事件类型（包括被过滤的）
-    console.log(`[FeishuChannel] [FILTER] 收到事件类型: ${eventType}`);
 
     const textOnlyTypes = ["text", "content_block_delta", "system", "assistant"];
     const allTypes = ["text", "content_block_delta", "system", "assistant", "tool_use"];
@@ -113,11 +118,6 @@ export class FeishuChannel implements MessageChannel {
    * @param event - SSE 事件
    */
   async send(event: SSEEvent): Promise<void> {
-    // 调试：记录所有事件类型
-    if (event.type) {
-      console.log(`[FeishuChannel] [DEBUG] 收到事件: ${event.type}${event.type === "assistant" ? " (检查 tool_use)" : ""}`);
-    }
-
     // 如果没有配置飞书凭证，静默跳过
     if (!this.config.appId || !this.config.appSecret) {
       return;
@@ -154,66 +154,35 @@ export class FeishuChannel implements MessageChannel {
     }
 
     // 处理 v2 SDK 的 assistant 事件（包含消息内容）
+    // P1 优化：将所有 content blocks 合并为单条消息发送，而非逐条发送
     if (event.type === "assistant") {
       const assistantEvent = event as Record<string, unknown>;
-      console.log(`[FeishuChannel] [DEBUG] assistant 事件完整结构:`, JSON.stringify(assistantEvent).substring(0, 500));
-
-      // 提取消息内容
-      const textParts: string[] = [];
-      const toolCalls: string[] = [];
 
       if ("message" in assistantEvent && typeof assistantEvent.message === "object") {
         const message = assistantEvent.message as Record<string, unknown>;
         if ("content" in message && Array.isArray(message.content)) {
-          console.log(`[FeishuChannel] [DEBUG] assistant.content 有 ${message.content.length} 个 block`);
-          // content 是一个数组，包含多个 block
+          // 按原始顺序收集所有 blocks 到一个数组
+          const parts: string[] = [];
+
           for (const block of message.content) {
             if (typeof block === "object" && block !== null) {
-              const blockType = (block as any).type;
-              console.log(`[FeishuChannel] [DEBUG] block type: ${blockType}`, JSON.stringify(block).substring(0, 200));
               if ("type" in block && block.type === "text" && "text" in block) {
-                // 纯文本内容 - 逐条保存
-                textParts.push(String(block.text));
+                parts.push(String(block.text));
               } else if ("type" in block && block.type === "tool_use" && this.config.showToolUse) {
-                // 工具调用，格式化显示
-                console.log(`[FeishuChannel] [DEBUG] 找到 tool_use block，showToolUse=${this.config.showToolUse}`);
                 const toolCall = this.formatToolUseBlock(block as Record<string, unknown>);
                 if (toolCall) {
-                  toolCalls.push(toolCall);
+                  parts.push(toolCall);
                 }
               }
             }
           }
-        } else {
-          console.log(`[FeishuChannel] [DEBUG] assistant.message 没有 content 数组，有字段:`, Object.keys(message));
-        }
-      } else {
-        console.log(`[FeishuChannel] [DEBUG] assistant 事件没有 message 字段，有字段:`, Object.keys(assistantEvent));
-      }
 
-      const sessionId = this.extractSessionId(event);
-
-      // 按原始顺序交替发送文本和工具调用
-      // 由于 content 数组中的元素已经是按顺序排列的，我们需要重建原始顺序
-      if ("message" in assistantEvent && typeof assistantEvent.message === "object") {
-        const message = assistantEvent.message as Record<string, unknown>;
-        if ("content" in message && Array.isArray(message.content)) {
-          let textIndex = 0;
-          let toolIndex = 0;
-
-          for (const block of message.content) {
-            if (typeof block === "object" && block !== null) {
-              if ("type" in block && block.type === "text" && "text" in block && textIndex < textParts.length) {
-                // 发送文本
-                await this.sendMessageToFeishu(textParts[textIndex], sessionId);
-                textIndex++;
-              } else if ("type" in block && block.type === "tool_use" && this.config.showToolUse && toolIndex < toolCalls.length) {
-                // 发送工具调用
-                console.log(`[FeishuChannel] [DEBUG] 发送工具调用: ${toolCalls[toolIndex].substring(0, 50)}...`);
-                await this.sendMessageToFeishu(toolCalls[toolIndex], sessionId);
-                toolIndex++;
-              }
-            }
+          // 合并所有内容为单条消息发送（1 次 API 调用代替 N 次）
+          if (parts.length > 0) {
+            const combined = parts.join("\n\n");
+            const sessionId = this.extractSessionId(event);
+            console.log(`[FeishuChannel] 合并 ${parts.length} 个 block 为单条消息发送`);
+            await this.sendMessageToFeishu(combined, sessionId);
           }
         }
       }
@@ -292,9 +261,16 @@ export class FeishuChannel implements MessageChannel {
         // 消息接收事件
         "im.message.receive_v1": async (data) => {
           try {
-            console.log("[FeishuChannel] [DEBUG] 收到 im.message.receive_v1 事件");
+            console.log(`[FeishuChannel:${this.id}] [DEBUG] 收到 im.message.receive_v1 事件`);
             const event = data as any;
             const messageId = event?.message?.message_id;
+            const chatId = event?.message?.chat_id;
+
+            // 记录来源 chat_id，回复时使用同一个聊天窗口
+            if (chatId) {
+              this.lastIncomingChatId = chatId;
+              console.log(`[FeishuChannel:${this.id}] 来源 chat_id: ${chatId}`);
+            }
 
             // 添加"正在输入"表态（敲键盘 emoji）
             if (messageId) {
@@ -343,6 +319,15 @@ export class FeishuChannel implements MessageChannel {
         },
       });
 
+      // 飞书是国内服务，不走代理（axios 通过 HTTP 代理发 HTTPS 会导致 400）
+      const noProxy = process.env.NO_PROXY || process.env.no_proxy || "";
+      if (!noProxy.includes("feishu.cn")) {
+        const updated = [noProxy, "*.feishu.cn"].filter(Boolean).join(",");
+        process.env.NO_PROXY = updated;
+        process.env.no_proxy = updated;
+        console.log(`[FeishuChannel] 已设置 NO_PROXY=${updated}`);
+      }
+
       // 创建 WebSocket 客户端
       this.wsClient = new Lark.WSClient({
         appId: this.config.appId,
@@ -351,50 +336,13 @@ export class FeishuChannel implements MessageChannel {
         loggerLevel: Lark.LoggerLevel.info,
       });
 
-      // 启动连接
+      // 启动连接（SDK 内部管理重连，无需手动监听 close/error）
       this.wsClient.start({ eventDispatcher: this.eventDispatcher });
-      console.log("[FeishuChannel] ✓ WebSocket 已启动");
+      console.log("[FeishuChannel] ✓ WebSocket 已启动（SDK 自动管理重连）");
       console.log("[FeishuChannel] [INFO] 已注册事件: im.message.receive_v1, im.message.message_read_v1, im.chat.member.bot.added_v1, im.chat.member.bot.deleted_v1");
-
-      // 重置重连计数
-      this.reconnectAttempts = 0;
-
-      // 监听连接关闭事件，触发重连
-      this.wsClient.on("close", () => {
-        console.log("[FeishuChannel] WebSocket 连接已关闭");
-        this.scheduleReconnect();
-      });
-
-      this.wsClient.on("error", (err: Error) => {
-        console.error("[FeishuChannel] WebSocket 错误:", err);
-        this.scheduleReconnect();
-      });
     } catch (err) {
       console.error("[FeishuChannel] ✗ WebSocket 启动失败:", err);
-      this.scheduleReconnect();
     }
-  }
-
-  /**
-   * 安排重连
-   */
-  private scheduleReconnect(): void {
-    if (this.isReconnecting) return;
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error(`[FeishuChannel] 达到最大重连次数 (${this.maxReconnectAttempts})，停止重连`);
-      return;
-    }
-
-    this.isReconnecting = true;
-    this.reconnectAttempts++;
-
-    console.log(`[FeishuChannel] 将在 ${this.reconnectDelay / 1000}s 后重连 (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-
-    this.reconnectTimer = setTimeout(async () => {
-      this.isReconnecting = false;
-      console.log("[FeishuChannel] 开始重连...");
-      await this.startWebSocket();
-    }, this.reconnectDelay);
   }
 
   /**
@@ -452,14 +400,6 @@ export class FeishuChannel implements MessageChannel {
   stop() {
     this.accessToken = null;
     this.pendingImages.clear();
-
-    // 清除重连定时器
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-    this.isReconnecting = false;
-    this.reconnectAttempts = 0;
 
     // 停止 WebSocket
     if (this.wsClient) {
@@ -693,27 +633,19 @@ export class FeishuChannel implements MessageChannel {
    */
   private async sendMessageToFeishu(text: string, sessionId?: string): Promise<boolean> {
     try {
-      // 获取访问令牌（如果需要）
-      if (!this.accessToken || Date.now() > this.tokenExpireTime) {
-        this.accessToken = await this.getAccessToken();
-        if (!this.accessToken) {
-          return false;
-        }
-      }
-
-      const userId = this.config.receiveUserId!;
+      // 优先回复到来源 chat_id（保证回到同一聊天窗口），否则用配置的 open_id
+      const receiveId = this.lastIncomingChatId || this.config.receiveUserId!;
+      const receiveIdType = this.lastIncomingChatId ? "chat_id" : (this.config.receiveIdType || "open_id");
+      const userId = receiveId;
 
       // 如果有待发送的图片，先发送图片
       if (sessionId && this.pendingImages.has(sessionId)) {
         const imageKey = this.pendingImages.get(sessionId)!;
-        const imageSent = await this.sendImageMessage(userId, imageKey);
+        const imageSent = await this.sendViaSDK(userId, "image", JSON.stringify({ image_key: imageKey }), receiveIdType);
         if (imageSent) {
-          // 图片发送成功后，移除记录
           this.pendingImages.delete(sessionId);
         }
       }
-
-      const receiveIdType = this.config.receiveIdType || "open_id";
 
       // 检查文本中是否包含表格
       const tableData = this.parseMarkdownTable(text);
@@ -721,141 +653,25 @@ export class FeishuChannel implements MessageChannel {
       if (tableData) {
         // 降级链：交互卡片 → Markdown → 纯文本
         const cardContent = this.buildTableCard(tableData.beforeTable, tableData.headers, tableData.rows, tableData.afterTable);
-        const cardSent = await this.sendInteractiveCard(userId, cardContent);
+        const cardSent = await this.sendViaSDK(userId, "interactive", JSON.stringify(cardContent), receiveIdType);
         if (cardSent) return true;
         console.warn("[FeishuChannel] 交互卡片发送失败，降级到 Markdown");
-        const mdSent = await this.sendMarkdownMessage(userId, text);
-        if (mdSent) return true;
-        console.warn("[FeishuChannel] Markdown 发送失败，降级到纯文本");
-        return await this.sendPlainText(userId, text);
       }
 
       // 降级链：Markdown → 纯文本
-      const mdSent = await this.sendMarkdownMessage(userId, text);
+      const mdContent = JSON.stringify({ zh_cn: { content: [[{ tag: "md", text }]] } });
+      const mdSent = await this.sendViaSDK(userId, "post", mdContent, receiveIdType);
       if (mdSent) return true;
+
       console.warn("[FeishuChannel] Markdown 发送失败，降级到纯文本");
-      return await this.sendPlainText(userId, text);
-    } catch (error) {
-      console.error("[FeishuChannel] ✗ Send error:", error);
-      return false;
-    }
-  }
-
-  /**
-   * 发送纯文本消息（最终兜底，去除 Markdown 格式符号）
-   * 来源：EvoMap Capsule gene_feishu_post_fallback_chain
-   */
-  private async sendPlainText(userId: string, text: string): Promise<boolean> {
-    try {
-      const receiveIdType = this.config.receiveIdType || "open_id";
-      // 去除常见 Markdown 格式符，保留可读文本
       const plainText = text
-        .replace(/\*\*([^*]+)\*\*/g, "$1")   // **bold**
-        .replace(/\*([^*]+)\*/g, "$1")        // *italic*
-        .replace(/`([^`]+)`/g, "$1")          // `code`
-        .replace(/```[\s\S]*?```/g, "[代码块]") // ```code block```
-        .replace(/#{1,6}\s/g, "")             // # headings
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1"); // [link](url)
-
-      const response = await fetch(`https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=${receiveIdType}`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          receive_id: userId,
-          msg_type: "text",
-          content: JSON.stringify({ text: plainText }),
-        }),
-      });
-
-      const result = await response.json();
-      if (result.code === 0) {
-        console.log("[FeishuChannel] ✓ Sent as plain text (fallback)");
-        await sleep(1000);
-        return true;
-      }
-      console.error("[FeishuChannel] ✗ Plain text fallback also failed:", result.msg);
-      return false;
-    } catch (error) {
-      console.error("[FeishuChannel] ✗ Plain text error:", error);
-      return false;
-    }
-  }
-
-  /**
-   * 发送交互卡片消息
-   */
-  private async sendInteractiveCard(userId: string, card: any): Promise<boolean> {
-    try {
-      const receiveIdType = this.config.receiveIdType || "open_id";
-
-      const responseBody = {
-        receive_id: userId,
-        msg_type: "interactive",
-        content: JSON.stringify(card)
-      };
-
-      const response = await fetch(`https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=${receiveIdType}`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(responseBody),
-      });
-
-      const result = await response.json();
-      if (result.code === 0) {
-        console.log(`[FeishuChannel] ✓ Sent interactive card`);
-        await sleep(1000);
-        return true;
-      } else {
-        console.error("[FeishuChannel] ✗ Send failed:", result.msg);
-        return false;
-      }
-    } catch (error) {
-      console.error("[FeishuChannel] ✗ Send interactive card error:", error);
-      return false;
-    }
-  }
-
-  /**
-   * 发送 Markdown 消息
-   */
-  private async sendMarkdownMessage(userId: string, text: string): Promise<boolean> {
-    try {
-      const receiveIdType = this.config.receiveIdType || "open_id";
-
-      const responseBody = {
-        receive_id: userId,
-        msg_type: "post",
-        content: JSON.stringify({
-          zh_cn: {
-            content: [[{ tag: "md", text }]]
-          }
-        })
-      };
-
-      const response = await fetch(`https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=${receiveIdType}`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(responseBody),
-      });
-
-      const result = await response.json();
-      if (result.code === 0) {
-        console.log(`[FeishuChannel] ✓ Sent: ${text.substring(0, 30)}${text.length > 30 ? "..." : ""}`);
-        await sleep(1000);
-        return true;
-      } else {
-        console.error("[FeishuChannel] ✗ Send failed:", result.msg);
-        return false;
-      }
+        .replace(/\*\*([^*]+)\*\*/g, "$1")
+        .replace(/\*([^*]+)\*/g, "$1")
+        .replace(/`([^`]+)`/g, "$1")
+        .replace(/```[\s\S]*?```/g, "[代码块]")
+        .replace(/#{1,6}\s/g, "")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+      return await this.sendViaSDK(userId, "text", JSON.stringify({ text: plainText }), receiveIdType);
     } catch (error) {
       console.error("[FeishuChannel] ✗ Send error:", error);
       return false;
@@ -863,34 +679,24 @@ export class FeishuChannel implements MessageChannel {
   }
 
   /**
-   * 发送图片消息到飞书
+   * 通过 SDK 发送消息（统一入口，SDK 自动管理 token）
    */
-  private async sendImageMessage(userId: string, imageKey: string): Promise<boolean> {
+  private async sendViaSDK(receiveId: string, msgType: string, content: string, overrideIdType?: string): Promise<boolean> {
     try {
-      const receiveIdType = this.config.receiveIdType || "open_id";
-      const response = await fetch(`https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=${receiveIdType}`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          receive_id: userId,
-          msg_type: "image",
-          content: JSON.stringify({ image_key: imageKey }),
-        }),
+      const idType = overrideIdType || this.config.receiveIdType || "open_id";
+      const res = await this.client.im.message.create({
+        params: { receive_id_type: idType },
+        data: { receive_id: receiveId, msg_type: msgType, content },
       });
 
-      const result = await response.json();
-      if (result.code === 0) {
-        console.log(`[FeishuChannel] ✓ Image sent: ${imageKey}`);
+      if (res.code === 0) {
+        console.log(`[FeishuChannel:${this.id}] ✓ Sent (${msgType}) to ${receiveId}: ${content.substring(0, 40)}...`);
         return true;
-      } else {
-        console.error("[FeishuChannel] ✗ Image send failed:", result.msg);
-        return false;
       }
+      console.error(`[FeishuChannel:${this.id}] ✗ Send failed (${msgType}) to ${receiveId}:`, res.code, res.msg);
+      return false;
     } catch (error) {
-      console.error("[FeishuChannel] ✗ Image send error:", error);
+      console.error(`[FeishuChannel:${this.id}] ✗ SDK send error (${msgType}) to ${receiveId}:`, error);
       return false;
     }
   }
@@ -925,71 +731,37 @@ export class FeishuChannel implements MessageChannel {
   }
 
   /**
-   * 添加"正在输入"表态（敲键盘 emoji）
-   * 参照 C:\Users\wannago\.openclaw\extensions\feishu\src\typing.ts
-   * @returns reactionId - 表态 ID，用于后续删除
+   * 添加"正在输入"表态（SDK 自动管理 token）
    */
   private async addTypingIndicator(messageId: string): Promise<string | null> {
     try {
-      // 获取访问令牌
-      if (!this.accessToken || Date.now() > this.tokenExpireTime) {
-        this.accessToken = await this.getAccessToken();
-        if (!this.accessToken) {
-          return null;
-        }
-      }
-
-      // 使用飞书 API 添加表态（reaction）
-      // emoji_type: "Typing" 是飞书内置的"正在输入"表情
-      const response = await fetch(`https://open.feishu.cn/open-apis/im/v1/messages/${messageId}/reactions`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          reaction_type: {
-            emoji_type: "Typing",
-          },
-        }),
+      const res = await this.client.im.messageReaction.create({
+        path: { message_id: messageId },
+        data: { reaction_type: { emoji_type: "Typing" } },
       });
 
-      const result = await response.json();
-      if (result.code === 0 && result.data?.reaction_id) {
-        // 保存 messageId 和 reactionId
+      if (res.code === 0 && res.data?.reaction_id) {
         this.currentMessageId = messageId;
-        this.currentReactionId = result.data.reaction_id;
+        this.currentReactionId = res.data.reaction_id;
         console.log(`[FeishuChannel] ✓ 已添加正在输入表态 (${this.currentReactionId})`);
         return this.currentReactionId;
       }
-      // 静默失败 - 表态不是关键功能
       return null;
     } catch (error) {
-      // 静默失败 - 表态不是关键功能
       console.log(`[FeishuChannel] 添加表态失败（非关键）: ${error}`);
       return null;
     }
   }
 
   /**
-   * 移除表态（可选功能）
+   * 移除表态（SDK 自动管理 token）
    */
   private async removeTypingIndicator(messageId: string, reactionId: string): Promise<void> {
     try {
-      if (!this.accessToken || Date.now() > this.tokenExpireTime) {
-        this.accessToken = await this.getAccessToken();
-        if (!this.accessToken) {
-          return;
-        }
-      }
-
-      await fetch(`https://open.feishu.cn/open-apis/im/v1/messages/${messageId}/reactions/${reactionId}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${this.accessToken}`,
-        },
+      await this.client.im.messageReaction.delete({
+        path: { message_id: messageId, reaction_id: reactionId },
       });
-    } catch (error) {
+    } catch {
       // 静默失败 - 清理不是关键功能
     }
   }
@@ -1146,55 +918,4 @@ export class FeishuChannel implements MessageChannel {
     return trimmed.split("|").map(cell => cell.trim());
   }
 
-  /**
-   * 将 Markdown 表格转换为文本列表格式（飞书兼容）
-   */
-  private convertMarkdownTables(text: string): string {
-    const lines = text.split("\n");
-    const result: string[] = [];
-    let i = 0;
-
-    while (i < lines.length) {
-      const line = lines[i].trim();
-
-      // 检测表格开始
-      if (line.startsWith("|") && i + 1 < lines.length && lines[i + 1].trim().match(/^\|?[\s\-:]+\|/)) {
-        // 解析表头
-        const headers = this.parseTableRow(line);
-
-        // 跳过分隔线
-        i += 2;
-
-        // 解析数据行
-        const rows: string[][] = [];
-        while (i < lines.length && (lines[i].trim().startsWith("|") || lines[i].trim().includes("|"))) {
-          rows.push(this.parseTableRow(lines[i]));
-          i++;
-        }
-
-        // 转换为列表格式
-        result.push("📋 **" + (headers[0] || "表格") + "**");
-        for (const row of rows) {
-          if (row.length > 0) {
-            const rowText = row.map((cell, idx) => {
-              const header = headers[idx] || "";
-              return `${header}: ${cell}`.trim();
-            }).filter(s => s).join(" | ");
-            result.push(`• ${rowText}`);
-          }
-        }
-        result.push(""); // 空行分隔
-      } else {
-        result.push(lines[i]);
-        i++;
-      }
-    }
-
-    return result.join("\n");
-  }
-}
-
-/** sleep 辅助函数 */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
