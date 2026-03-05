@@ -13,73 +13,40 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 HISTORY_FILE = "/tmp/gold-price-history.json"
-API_FALLBACK = "https://latest.currency-api.pages.dev/v1/currencies/xau.json"
+API_GOLDPRICE = "https://data-asg.goldprice.org/dbXRates/CNY"
+API_SINA_XAU  = "https://hq.sinajs.cn/list=hf_XAU"
+API_FALLBACK  = "https://latest.currency-api.pages.dev/v1/currencies/xau.json"
 TROY_OZ_TO_GRAM = 31.1035  # 1 troy ounce = 31.1035 克
 BJ_TZ = timezone(timedelta(hours=8))
+GOLDPRICE_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+    "Origin": "https://goldprice.org",
+    "Referer": "https://goldprice.org/",
+}
 
 
-def is_shfe_trading():
-    """判断当前是否在上期所黄金交易时段（北京时间）"""
-    now = datetime.now(BJ_TZ)
-    t = now.hour * 100 + now.minute
-    # 日盘 09:00-15:30，夜盘 21:00-次日 02:30
-    return (900 <= t <= 1530) or (t >= 2100) or (t <= 230)
-
-
-def get_au_contracts():
-    """生成最近 3 个沪金期货合约代码（双月：2/4/6/8/10/12）"""
-    now = datetime.now(BJ_TZ)
-    year, month = now.year, now.month
-    contracts = []
-    # 往后找最近的双月合约
-    m = month
-    y = year
-    while len(contracts) < 3:
-        m += 1
-        if m > 12:
-            m = 1
-            y += 1
-        if m % 2 == 0:
-            contracts.append(f"AU{str(y)[2:]}{m:02d}")
-    return contracts
-
-
-def fetch_price_sina():
-    """盘中优先：从新浪财经拉取 SHFE 沪金实时价（CNY/克）"""
-    if not is_shfe_trading():
+def fetch_price_goldprice():
+    """主源：goldprice.org 实时 CNY/oz（24/7 更新，分钟级）"""
+    try:
+        req = urllib.request.Request(API_GOLDPRICE, headers=GOLDPRICE_HEADERS)
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read())
+        item = data["items"][0]
+        cny_per_oz = item["xauPrice"]
+        usd_per_oz = round(cny_per_oz / 7.3, 2)   # 粗算，仅展示用
+        return {
+            "cny_per_gram": round(cny_per_oz / TROY_OZ_TO_GRAM, 2),
+            "usd_per_oz": usd_per_oz,
+            "date": datetime.now(BJ_TZ).strftime("%Y-%m-%d"),
+            "source": "goldprice.org(实时)",
+        }
+    except Exception as e:
+        print(f"[WARN] goldprice fetch failed: {e}", file=sys.stderr)
         return None
-    for contract in get_au_contracts():
-        try:
-            url = f"https://hq.sinajs.cn/list=nf_{contract}.XSGE"
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0",
-                "Referer": "https://finance.sina.com.cn",
-            })
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                raw = resp.read().decode("gbk", errors="replace")
-            match = re.search(r'"([^"]+)"', raw)
-            if not match:
-                continue
-            fields = match.group(1).split(",")
-            # 字段5（index 4）为最新成交价，SHFE 金价单位：元/克
-            if len(fields) < 5 or not fields[4]:
-                continue
-            price = float(fields[4])
-            if not (300 < price < 5000):   # 合理区间校验
-                continue
-            return {
-                "cny_per_gram": round(price, 2),
-                "usd_per_oz": round(price * TROY_OZ_TO_GRAM / 7.3, 2),
-                "date": datetime.now(BJ_TZ).strftime("%Y-%m-%d"),
-                "source": f"SHFE {contract}(实时)",
-            }
-        except Exception as e:
-            print(f"[WARN] Sina {contract} failed: {e}", file=sys.stderr)
-    return None
 
 
 def fetch_price_fallback():
-    """盘间兜底：fawazahmed0 日线数据"""
+    """兜底：fawazahmed0 日线数据"""
     try:
         req = urllib.request.Request(API_FALLBACK, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -98,7 +65,7 @@ def fetch_price_fallback():
 
 
 def fetch_price():
-    return fetch_price_sina() or fetch_price_fallback()
+    return fetch_price_goldprice() or fetch_price_fallback()
 
 def load_history():
     try:
