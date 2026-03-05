@@ -61,12 +61,16 @@ node /Users/rayman.chen/mycc/.claude/skills/tell-me/send.js \
 
 ## 数据说明
 
-- **数据源**：fawazahmed0 currency API（免费，每日更新）
+| 数据源 | 更新频率 | 覆盖时段 | 角色 |
+|--------|---------|---------|------|
+| goldprice.org | 分钟级实时 | 24/7 | 主源 |
+| fawazahmed0 currency API | 每日一次 | 全天 | 兜底 |
+
 - **历史数据**：存储于 `/tmp/gold-price-history.json`（最近30条）
-- **局限性**：该 API 为每日频率，4h 内价格相同属正常，趋势分析以跨日数据为主
+- **goldprice.org 接口**：`https://data-asg.goldprice.org/dbXRates/CNY`，返回 `items[0].xauPrice`（CNY/oz）
+- **需带 Referer/Origin 头**：`Origin: https://goldprice.org`，否则被拒绝
 
 ## 注意事项
 
 - 所有分析仅为参考，不构成投资建议
-- 免费 API 为日线数据，无法做真正的4小时K线分析
-- 如需分钟级数据，需付费 API（如 Polygon.io、TwelveData）
+- 历史数据不足时（首日）涨跌幅显示"积累中"
