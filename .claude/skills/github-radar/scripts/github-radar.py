@@ -5,7 +5,6 @@ GitHub AI 风向标 - 每日23:30执行
 输出: 飞书通知（卡片分区版）
 """
 import json
-import subprocess
 import sys
 import time
 import urllib.parse
@@ -49,55 +48,45 @@ def fmt_stars(n: int) -> str:
     return f"{n/1000:.1f}k" if n >= 1000 else str(n)
 
 
-def build_report() -> tuple[str, str]:
-    now = datetime.now(BJ_TZ)
-    date_str = now.strftime("%m-%d")
+OUTPUT_FILE = "/tmp/github-radar-data.json"
 
-    sections = []
-    total = 0
+
+def fetch_all() -> dict:
+    now = datetime.now(BJ_TZ)
+    result = {
+        "date": now.strftime("%Y-%m-%d"),
+        "generated_at": now.isoformat(),
+        "categories": []
+    }
 
     for label, query in CATEGORIES:
         items = search_github(query)
         time.sleep(1)  # 避免触发 GitHub rate limit
-        if not items:
-            continue
-        lines = [label]
+        repos = []
         for repo in items:
-            stars = fmt_stars(repo["stargazers_count"])
-            name = repo["full_name"]
-            desc = (repo.get("description") or "").strip()
-            if len(desc) > 45:
-                desc = desc[:45] + "…"
-            lines.append(f"  ★{stars}  {name}")
-            if desc:
-                lines.append(f"        {desc}")
-        sections.append("\n".join(lines))
-        total += len(items)
+            repos.append({
+                "name": repo["full_name"],
+                "stars": repo["stargazers_count"],
+                "description": (repo.get("description") or "").strip(),
+                "url": repo["html_url"],
+                "language": repo.get("language", ""),
+                "updated": repo.get("pushed_at", "")[:10],
+                "topics": repo.get("topics", []),
+            })
+        result["categories"].append({
+            "label": label,
+            "query": query,
+            "repos": repos
+        })
 
-    title = f"GitHub AI 风向标 {date_str}"
-    body = (
-        "━━━━━━━━━━━━━━━━\n"
-        + "\n\n".join(sections)
-        + f"\n\n━━━━━━━━━━━━━━━━\n共 {total} 个活跃项目 | 近7天更新"
-    )
-    return title, body
-
-
-def send_feishu(title: str, body: str):
-    result = subprocess.run(
-        ["node", SEND_JS, title, body, "blue"],
-        capture_output=True, text=True
-    )
-    if result.returncode == 0:
-        print("✅ 发送成功")
-    else:
-        print(f"❌ 发送失败: {result.stderr}", file=sys.stderr)
-        sys.exit(1)
+    return result
 
 
 def main():
-    title, body = build_report()
-    send_feishu(title, body)
+    data = fetch_all()
+    with open(OUTPUT_FILE, "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    print(json.dumps(data, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
