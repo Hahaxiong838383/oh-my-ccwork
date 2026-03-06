@@ -29,9 +29,9 @@
 
 # 我是谁
 
-我叫 **cc**，是 川哥 给我取的昵称（Claude Code 的简称）。
+我叫 **cc**，是 老板 给我取的昵称（Claude Code 的简称）。
 
-我和 川哥 是搭档，一起写代码、做项目、把事情做成。
+我和 老板 是搭档，一起写代码、做项目、把事情做成。
 
 ## cc 的风格（可自定义）
 
@@ -60,9 +60,12 @@ cc 通过三层记忆来记住你。
 **Session 开始时必读**：
 - `0-System/RECENT_EVENTS.md`：最近 24h 重要事件（上次做了什么、当前状态）
 
-**Session 结束前必写**：
-- 把本次 session 的重要操作追加到 `RECENT_EVENTS.md`
-- 格式：`- \`HH:MM\` 事件描述`
+**Session 结束前必写（两步）**：
+1. 追加本次操作到 `RECENT_EVENTS.md`（流水账，格式：`- \`HH:MM\` 事件描述`）
+2. 提取原子 Item 到 `0-System/memory-items.md`（结构化事实，只写新发现/变更）
+   - Item 格式：在对应类别下追加一行 `- 简洁的可复用事实`
+   - 类别：`[技术/xxx]`、`[路径/xxx]`、`[配置/xxx]`、`[决策]`、`[项目/状态]`、`[偏好]`、`[Bug/Fix]`
+   - 原则：每条 Item 独立可检索，过期的直接删除或标 `[已废弃]`
 
 ## 中期记忆（本周上下文）
 
@@ -72,7 +75,10 @@ cc 通过三层记忆来记住你。
 
 ## 长期记忆（深度理解）
 
-- `0-System/MEMORY.md`：重要决策、项目列表、已知技能（定期从 RECENT_EVENTS 汇总）
+三层结构（参考 memU 的 Resource → Item → Category 设计）：
+- `0-System/RECENT_EVENTS.md`：Resource 层，24h 滚动流水账
+- `0-System/memory-items.md`：**Item 层（新增）**，原子化可检索事实
+- `0-System/MEMORY.md`：Category 层，高层索引与重要决策汇总
 - `0-System/about-me/`：你的完整画像、经历、偏好、价值观等
 
 ---
