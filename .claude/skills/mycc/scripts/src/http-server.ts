@@ -16,6 +16,7 @@ import { renameSession } from "./history.js";
 import { getOrBuildIndex, searchBM25 } from "./bm25.js";
 import { listSkills } from "./skills.js";
 import { ChannelManager, WebChannel, FeishuChannel } from "./channels/index.js";
+import type { ProgressCard, ProgressEngine } from "./channels/feishu.js";
 import { runCliEngine, type EngineType } from "./adapters/cli-engine.js";
 import { loadConfig } from "./config.js";
 import type { DeviceConfig } from "./types.js";
@@ -440,15 +441,32 @@ export class HttpServer {
 
     console.log(`[CC][${ctx.channelId}] 使用会话: ${ctx.currentSessionId}`);
 
+    const startTime = Date.now();
+    const taskPreview = trimmedMessage.substring(0, 60);
+
+    // 发送单引擎进度卡片
+    const engineState: ProgressEngine = { name: "cc (Claude)", status: "running" };
+    const card: ProgressCard = {
+      title: "cc 处理中",
+      task: taskPreview + (taskPreview.length >= 60 ? "..." : ""),
+      engines: [engineState],
+      footer: "思考中...",
+    };
+
+    const feishuChannel = ctx.channel as FeishuChannel;
+    let cardMessageId: string | null = null;
+    if (typeof feishuChannel.sendProgressCard === "function") {
+      cardMessageId = await feishuChannel.sendProgressCard(card, ctx.replyChatId);
+    }
+
     try {
-      // 收集所有文本输出，最后统一发送（避免中间过程刷屏）
       const replyParts: string[] = [];
       const toolNames: string[] = [];
-      let statusSent = false;
+      let lastCardUpdate = 0;
 
       for await (const data of adapter.chat({
         message: contextPrefix + trimmedMessage,
-        sessionId: ctx.currentSessionId,
+        sessionId: ctx.currentSessionId ?? undefined,
         cwd: this.cwd,
         images: images,
       })) {
@@ -471,10 +489,12 @@ export class HttpServer {
                   const name = block.name || "unknown";
                   toolNames.push(name);
                   console.log(`[CC][${ctx.channelId}] 工具调用: ${name}`);
-                  // 首次工具调用时发一条状态提示
-                  if (!statusSent) {
-                    statusSent = true;
-                    await this.sendToChannel(ctx, `⏳ 正在处理（${name}）...`);
+                  // 更新卡片显示当前工具调用（节流 2s）
+                  if (cardMessageId && Date.now() - lastCardUpdate > 2000) {
+                    lastCardUpdate = Date.now();
+                    engineState.detail = `${toolNames.length} 个工具 (${name})`;
+                    card.footer = `耗时 ${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+                    await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
                   }
                 }
               }
@@ -483,7 +503,18 @@ export class HttpServer {
         }
       }
 
-      // 统一发送最终结果
+      // 更新卡片为完成状态
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      engineState.status = "done";
+      engineState.elapsed = `${elapsed}s`;
+      engineState.detail = toolNames.length > 0 ? `${toolNames.length} 个工具调用` : undefined;
+      card.title = "cc 完成";
+      card.footer = `总耗时 ${elapsed}s`;
+      if (cardMessageId) {
+        await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+      }
+
+      // 发送最终结果
       const finalReply = replyParts.join("\n").trim();
       if (finalReply) {
         const MAX_CHUNK = 3500;
@@ -497,6 +528,14 @@ export class HttpServer {
       }
     } catch (err) {
       console.error(`[CC][${ctx.channelId}] 处理消息错误:`, err);
+      // 更新卡片为错误状态
+      engineState.status = "error";
+      engineState.elapsed = `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+      engineState.detail = String(err).substring(0, 60);
+      card.title = "cc 出错";
+      if (cardMessageId) {
+        await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+      }
       await this.sendToChannel(ctx, "❌ 处理消息时出错，请重试。");
     } finally {
       await ctx.channel.clearTypingIndicator();
@@ -511,17 +550,52 @@ export class HttpServer {
     const engine = ctx.engine as EngineType;
     console.log(`[CC][${ctx.channelId}] CLI 引擎: ${engine}, 消息: ${message.substring(0, 50)}...`);
 
+    const startTime = Date.now();
+    const taskPreview = message.replace(/\[以下是群聊.*?\[对话记录结束\]\n\n/s, "").substring(0, 60);
+
+    // 发送进度卡片
+    const engineState: ProgressEngine = { name: engine, status: "running" };
+    const card: ProgressCard = {
+      title: `${engine} 处理中`,
+      task: taskPreview + (taskPreview.length >= 60 ? "..." : ""),
+      engines: [engineState],
+      footer: "执行中...",
+    };
+
+    const feishuChannel = ctx.channel as FeishuChannel;
+    let cardMessageId: string | null = null;
+    if (typeof feishuChannel.sendProgressCard === "function") {
+      cardMessageId = await feishuChannel.sendProgressCard(card, ctx.replyChatId);
+    }
+
     try {
       const result = await runCliEngine(engine, message, this.cwd);
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
       if (result.error && !result.output) {
+        engineState.status = "error";
+        engineState.elapsed = `${elapsed}s`;
+        engineState.detail = result.error.substring(0, 60);
+        card.title = `${engine} 出错`;
+        if (cardMessageId) {
+          await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+        }
         await this.sendToChannel(ctx, `❌ ${engine} 执行出错:\n${result.error.substring(0, 500)}`);
         return;
       }
 
+      // 更新卡片为完成状态
       const output = result.output.trim();
+      engineState.status = "done";
+      engineState.elapsed = `${elapsed}s`;
+      engineState.detail = output ? `${output.length} 字` : "无输出";
+      card.title = `${engine} 完成`;
+      card.footer = `总耗时 ${elapsed}s`;
+      if (cardMessageId) {
+        await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+      }
+
       if (output) {
-        // 长输出分片发送（飞书单条消息限约 4000 字符）
         const MAX_CHUNK = 3500;
         if (output.length <= MAX_CHUNK) {
           await this.sendToChannel(ctx, output);
@@ -539,6 +613,14 @@ export class HttpServer {
       }
     } catch (err: any) {
       console.error(`[CC][${ctx.channelId}] CLI 引擎错误:`, err);
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      engineState.status = "error";
+      engineState.elapsed = `${elapsed}s`;
+      engineState.detail = err.message?.substring(0, 60);
+      card.title = `${engine} 异常`;
+      if (cardMessageId) {
+        await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+      }
       await this.sendToChannel(ctx, `❌ ${engine} 异常: ${err.message}`);
     } finally {
       await ctx.channel.clearTypingIndicator();
@@ -562,32 +644,115 @@ export class HttpServer {
   }
 
   /**
-   * 团队模式：cc 主控，并行调用三引擎，汇总输出
+   * 团队模式：cc 主控，并行调用三引擎，卡片实时更新进度
    */
   private async processTeamMode(ctx: ChannelContext, message: string, images?: Array<{ data: string; mediaType: string }>): Promise<void> {
     console.log(`[CC][${ctx.channelId}] 团队模式: ${message.substring(0, 50)}...`);
-    await this.sendToChannel(ctx, "🤝 **团队模式启动** — cc + codex + gemini 并行思考中...");
 
-    let doneCount = 0;
-    const total = 3;
-    const reportProgress = async (name: string) => {
-      doneCount++;
-      if (doneCount < total) {
-        await this.sendToChannel(ctx, `✅ ${name} 已完成（${doneCount}/${total}），等待其余引擎...`);
-      }
+    const taskPreview = message.replace(/\[以下是群聊.*?\[对话记录结束\]\n\n/s, "").substring(0, 60);
+    const startTime = Date.now();
+
+    // 引擎状态跟踪
+    const engineStates: ProgressEngine[] = [
+      { name: "cc (Claude)", status: "running" },
+      { name: "codex", status: "running" },
+      { name: "gemini", status: "running" },
+    ];
+    const engineStartTimes = [startTime, startTime, startTime];
+
+    const card: ProgressCard = {
+      title: "团队模式",
+      task: taskPreview + (taskPreview.length >= 60 ? "..." : ""),
+      engines: engineStates,
+      footer: "三引擎并行处理中",
     };
 
-    const ccPromise = this.runCcEngine(ctx, message, images).then(async (v) => { await reportProgress("cc"); return v; });
-    const codexPromise = runCliEngine("codex", message, this.cwd).then(async (v) => { await reportProgress("codex"); return v; });
-    const geminiPromise = runCliEngine("gemini", message, this.cwd).then(async (v) => { await reportProgress("gemini"); return v; });
+    // Phase A: 发送初始进度卡片
+    const feishuChannel = ctx.channel as FeishuChannel;
+    let cardMessageId: string | null = null;
+    if (typeof feishuChannel.sendProgressCard === "function") {
+      cardMessageId = await feishuChannel.sendProgressCard(card, ctx.replyChatId);
+    }
+    if (!cardMessageId) {
+      // 降级：卡片发送失败，用文本
+      await this.sendToChannel(ctx, "🤝 **团队模式启动** — cc + codex + gemini 并行思考中...");
+    }
+
+    const formatElapsed = (idx: number) => {
+      const ms = Date.now() - engineStartTimes[idx];
+      return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+    };
+
+    // 更新卡片的辅助函数（带节流，最多 1 次/秒）
+    let lastUpdate = 0;
+    const updateCard = async () => {
+      if (!cardMessageId) return;
+      const now = Date.now();
+      if (now - lastUpdate < 1000) return;
+      lastUpdate = now;
+      card.footer = `耗时 ${((now - startTime) / 1000).toFixed(1)}s`;
+      await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+    };
+
+    // Phase B: 并行执行三引擎，每个完成时更新卡片
+    const ccPromise = this.runCcEngine(ctx, message, images).then(async (v) => {
+      engineStates[0].status = "done";
+      engineStates[0].elapsed = formatElapsed(0);
+      engineStates[0].detail = v ? `${v.length} 字` : "无输出";
+      await updateCard();
+      return v;
+    }).catch(async (err) => {
+      engineStates[0].status = "error";
+      engineStates[0].elapsed = formatElapsed(0);
+      engineStates[0].detail = String(err).substring(0, 60);
+      await updateCard();
+      throw err;
+    });
+
+    const codexPromise = runCliEngine("codex", message, this.cwd).then(async (v) => {
+      engineStates[1].status = "done";
+      engineStates[1].elapsed = formatElapsed(1);
+      engineStates[1].detail = v.output?.trim() ? `${v.output.trim().length} 字` : "无输出";
+      await updateCard();
+      return v;
+    }).catch(async (err) => {
+      engineStates[1].status = "error";
+      engineStates[1].elapsed = formatElapsed(1);
+      engineStates[1].detail = String(err).substring(0, 60);
+      await updateCard();
+      throw err;
+    });
+
+    const geminiPromise = runCliEngine("gemini", message, this.cwd).then(async (v) => {
+      engineStates[2].status = "done";
+      engineStates[2].elapsed = formatElapsed(2);
+      engineStates[2].detail = v.output?.trim() ? `${v.output.trim().length} 字` : "无输出";
+      await updateCard();
+      return v;
+    }).catch(async (err) => {
+      engineStates[2].status = "error";
+      engineStates[2].elapsed = formatElapsed(2);
+      engineStates[2].detail = String(err).substring(0, 60);
+      await updateCard();
+      throw err;
+    });
 
     const [ccResult, codexResult, geminiResult] = await Promise.allSettled([
       ccPromise, codexPromise, geminiPromise,
     ]);
 
+    // Phase C: 最终更新卡片为完成状态
+    const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    const hasError = engineStates.some(e => e.status === "error");
+    card.title = hasError ? "团队模式（部分失败）" : "团队模式完成";
+    card.footer = `总耗时 ${totalElapsed}s`;
+    if (cardMessageId) {
+      await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+    }
+
+    // Phase D: 发送各引擎的详细输出
     const parts: string[] = [];
 
-    // cc
     parts.push("## 🧠 cc（Claude）");
     if (ccResult.status === "fulfilled") {
       parts.push(ccResult.value || "（无输出）");
@@ -595,7 +760,6 @@ export class HttpServer {
       parts.push(`❌ 出错: ${ccResult.reason}`);
     }
 
-    // codex
     parts.push("\n## 💻 codex");
     if (codexResult.status === "fulfilled") {
       const r = codexResult.value;
@@ -605,7 +769,6 @@ export class HttpServer {
       parts.push(`❌ 出错: ${codexResult.reason}`);
     }
 
-    // gemini
     parts.push("\n## ✨ gemini");
     if (geminiResult.status === "fulfilled") {
       const r = geminiResult.value;
@@ -617,17 +780,41 @@ export class HttpServer {
 
     const combined = parts.join("\n");
 
-    // 长输出分片发送
+    // Phase E: 发送 Mermaid 流程总结图（文本版，飞书不支持 Mermaid 渲染）
+    const mermaidSummary = this.buildMermaidSummary(engineStates, totalElapsed);
+    const fullOutput = combined + "\n\n---\n" + mermaidSummary;
+
     const MAX_CHUNK = 3500;
-    if (combined.length <= MAX_CHUNK) {
-      await this.sendToChannel(ctx, combined);
+    if (fullOutput.length <= MAX_CHUNK) {
+      await this.sendToChannel(ctx, fullOutput);
     } else {
-      for (let i = 0; i < combined.length; i += MAX_CHUNK) {
-        await this.sendToChannel(ctx, combined.substring(i, i + MAX_CHUNK));
+      for (let i = 0; i < fullOutput.length; i += MAX_CHUNK) {
+        await this.sendToChannel(ctx, fullOutput.substring(i, i + MAX_CHUNK));
       }
     }
 
     await ctx.channel.clearTypingIndicator();
+  }
+
+  /**
+   * 生成 Mermaid 风格的文本流程总结
+   */
+  private buildMermaidSummary(engines: ProgressEngine[], totalElapsed: string): string {
+    const statusIcon = (e: ProgressEngine) =>
+      e.status === "done" ? "✅" : e.status === "error" ? "❌" : "⬜";
+
+    const lines = [
+      "**流程总结**",
+      "```",
+      `用户提问 ──▶ 团队模式分发`,
+      `             ├── ${statusIcon(engines[0])} cc      ${engines[0].elapsed || ""} ${engines[0].detail || ""}`,
+      `             ├── ${statusIcon(engines[1])} codex   ${engines[1].elapsed || ""} ${engines[1].detail || ""}`,
+      `             └── ${statusIcon(engines[2])} gemini  ${engines[2].elapsed || ""} ${engines[2].detail || ""}`,
+      `                      ▼`,
+      `              汇总输出 (${totalElapsed}s)`,
+      "```",
+    ];
+    return lines.join("\n");
   }
 
   /**
@@ -638,7 +825,7 @@ export class HttpServer {
 
     for await (const data of adapter.chat({
       message,
-      sessionId: ctx.currentSessionId,
+      sessionId: ctx.currentSessionId ?? undefined,
       cwd: this.cwd,
       images,
     })) {

@@ -46,6 +46,31 @@ interface FeishuUploadResponse {
 }
 
 /**
+ * 进度卡片数据结构（用于可视化多引擎工作流）
+ */
+export interface ProgressCard {
+  /** 卡片标题 */
+  title?: string;
+  /** 任务描述 */
+  task?: string;
+  /** 各引擎状态 */
+  engines: ProgressEngine[];
+  /** 底部备注 */
+  footer?: string;
+}
+
+export interface ProgressEngine {
+  /** 引擎名称 */
+  name: string;
+  /** 状态 */
+  status: "waiting" | "running" | "done" | "error";
+  /** 耗时（如 "3.2s"） */
+  elapsed?: string;
+  /** 补充信息（如 "调用了 3 个工具"） */
+  detail?: string;
+}
+
+/**
  * 飞书消息通道
  *
  * 实现消息过滤、发送和接收功能
@@ -695,7 +720,7 @@ export class FeishuChannel implements MessageChannel {
       if (sessionId && this.pendingImages.has(sessionId)) {
         const imageKey = this.pendingImages.get(sessionId)!;
         const imageSent = await this.sendViaSDK(userId, "image", JSON.stringify({ image_key: imageKey }), receiveIdType);
-        if (imageSent) {
+        if (imageSent.ok) {
           this.pendingImages.delete(sessionId);
         }
       }
@@ -707,14 +732,14 @@ export class FeishuChannel implements MessageChannel {
         // 降级链：交互卡片 → Markdown → 纯文本
         const cardContent = this.buildTableCard(tableData.beforeTable, tableData.headers, tableData.rows, tableData.afterTable);
         const cardSent = await this.sendViaSDK(userId, "interactive", JSON.stringify(cardContent), receiveIdType);
-        if (cardSent) return true;
+        if (cardSent.ok) return true;
         console.warn("[FeishuChannel] 交互卡片发送失败，降级到 Markdown");
       }
 
       // 降级链：Markdown → 纯文本
       const mdContent = JSON.stringify({ zh_cn: { content: [[{ tag: "md", text }]] } });
       const mdSent = await this.sendViaSDK(userId, "post", mdContent, receiveIdType);
-      if (mdSent) return true;
+      if (mdSent.ok) return true;
 
       console.warn("[FeishuChannel] Markdown 发送失败，降级到纯文本");
       const plainText = text
@@ -724,7 +749,7 @@ export class FeishuChannel implements MessageChannel {
         .replace(/```[\s\S]*?```/g, "[代码块]")
         .replace(/#{1,6}\s/g, "")
         .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-      return await this.sendViaSDK(userId, "text", JSON.stringify({ text: plainText }), receiveIdType);
+      return (await this.sendViaSDK(userId, "text", JSON.stringify({ text: plainText }), receiveIdType)).ok;
     } catch (error) {
       console.error("[FeishuChannel] ✗ Send error:", error);
       return false;
@@ -734,24 +759,136 @@ export class FeishuChannel implements MessageChannel {
   /**
    * 通过 SDK 发送消息（统一入口，SDK 自动管理 token）
    */
-  private async sendViaSDK(receiveId: string, msgType: string, content: string, overrideIdType?: string): Promise<boolean> {
+  private async sendViaSDK(receiveId: string, msgType: string, content: string, overrideIdType?: string): Promise<{ ok: boolean; messageId?: string }> {
     try {
       const idType = overrideIdType || this.config.receiveIdType || "open_id";
       const res = await this.client.im.message.create({
-        params: { receive_id_type: idType },
+        params: { receive_id_type: idType as any },
         data: { receive_id: receiveId, msg_type: msgType, content },
       });
 
       if (res.code === 0) {
+        const messageId = res.data?.message_id;
         console.log(`[FeishuChannel:${this.id}] ✓ Sent (${msgType}) to ${receiveId}: ${content.substring(0, 40)}...`);
-        return true;
+        return { ok: true, messageId };
       }
       console.error(`[FeishuChannel:${this.id}] ✗ Send failed (${msgType}) to ${receiveId}:`, res.code, res.msg);
-      return false;
+      return { ok: false };
     } catch (error) {
       console.error(`[FeishuChannel:${this.id}] ✗ SDK send error (${msgType}) to ${receiveId}:`, error);
+      return { ok: false };
+    }
+  }
+
+  /**
+   * 发送进度卡片（可更新）
+   * 返回 messageId，后续用 updateProgressCard 原地更新
+   */
+  async sendProgressCard(card: ProgressCard, overrideChatId?: string): Promise<string | null> {
+    try {
+      const effectiveTarget = overrideChatId || this.lastIncomingChatId;
+      const receiveId = effectiveTarget || this.config.receiveUserId!;
+      const receiveIdType = effectiveTarget ? "chat_id" : (this.config.receiveIdType || "open_id");
+
+      const cardJson = this.buildProgressCardJson(card);
+      const result = await this.sendViaSDK(receiveId, "interactive", JSON.stringify(cardJson), receiveIdType);
+      if (result.ok && result.messageId) {
+        console.log(`[FeishuChannel:${this.id}] ✓ 进度卡片已发送 (${result.messageId})`);
+        return result.messageId;
+      }
+      return null;
+    } catch (error) {
+      console.error(`[FeishuChannel:${this.id}] ✗ 进度卡片发送失败:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 原地更新进度卡片
+   */
+  async updateProgressCard(messageId: string, card: ProgressCard): Promise<boolean> {
+    try {
+      const cardJson = this.buildProgressCardJson(card);
+      const res = await this.client.im.message.patch({
+        path: { message_id: messageId },
+        data: { content: JSON.stringify(cardJson) },
+      });
+      if (res.code === 0) {
+        console.log(`[FeishuChannel:${this.id}] ✓ 进度卡片已更新 (${messageId})`);
+        return true;
+      }
+      console.error(`[FeishuChannel:${this.id}] ✗ 卡片更新失败:`, res.code, res.msg);
+      return false;
+    } catch (error) {
+      console.error(`[FeishuChannel:${this.id}] ✗ 卡片更新异常:`, error);
       return false;
     }
+  }
+
+  /**
+   * 构建进度卡片 JSON
+   */
+  private buildProgressCardJson(card: ProgressCard): any {
+    const elements: any[] = [];
+
+    // 任务描述
+    if (card.task) {
+      elements.push({
+        tag: "div",
+        text: { tag: "lark_md", content: `**任务**: ${card.task}` }
+      });
+      elements.push({ tag: "hr" });
+    }
+
+    // 各引擎状态
+    for (const engine of card.engines) {
+      const icon = engine.status === "done" ? "✅"
+        : engine.status === "running" ? "⏳"
+        : engine.status === "error" ? "❌"
+        : "⬜";
+      const elapsed = engine.elapsed ? ` (${engine.elapsed})` : "";
+      const detail = engine.detail ? `\n  ${engine.detail}` : "";
+      elements.push({
+        tag: "div",
+        text: { tag: "lark_md", content: `${icon} **${engine.name}**${elapsed}${detail}` }
+      });
+    }
+
+    // 进度条
+    const doneCount = card.engines.filter(e => e.status === "done" || e.status === "error").length;
+    const total = card.engines.length;
+    const pct = Math.round((doneCount / total) * 100);
+    const filled = Math.round(pct / 10);
+    const bar = "▰".repeat(filled) + "▱".repeat(10 - filled);
+    elements.push({ tag: "hr" });
+    elements.push({
+      tag: "div",
+      text: { tag: "lark_md", content: `${bar} **${pct}%** (${doneCount}/${total})` }
+    });
+
+    // 底部备注
+    if (card.footer) {
+      elements.push({
+        tag: "note",
+        elements: [{ tag: "plain_text", content: card.footer }]
+      });
+    }
+
+    // 卡片颜色
+    const headerColor = doneCount === total
+      ? (card.engines.some(e => e.status === "error") ? "orange" : "green")
+      : "blue";
+
+    const headerTitle = doneCount === total ? "任务完成" : "任务处理中...";
+
+    return {
+      config: { wide_screen_mode: true },
+      header: {
+        title: { tag: "plain_text", content: card.title || headerTitle },
+        template: headerColor
+      },
+      elements
+    };
   }
 
   /**
