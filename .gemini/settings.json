@@ -1,23 +1,13 @@
 {
   "mcpServers": {
-    "fetch": {
-      "command": "uvx",
+    "feishu": {
+      "command": "node",
       "args": [
-        "mcp-server-fetch"
-      ]
-    },
-    "time": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-time"
-      ]
-    },
-    "memory": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
+        "/Users/rayman.chen/mycc/open-feishu-mcp-server/dist/local.js",
+        "--app-id",
+        "cli_a9f1cd1366751bc7",
+        "--app-secret",
+        "RCCkaaPGkGn9n3pEDkjjzhrUDEWhmioy"
       ]
     },
     "context7": {
@@ -25,6 +15,13 @@
       "args": [
         "-y",
         "@upstash/context7-mcp"
+      ]
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
       ]
     },
     "sequential-thinking": {
