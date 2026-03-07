@@ -48,6 +48,8 @@ interface ChannelContext {
   currentSessionId: string | null;
   /** 引擎类型：undefined/claude = Claude SDK, codex/gemini = CLI */
   engine?: "codex" | "gemini";
+  /** 当前正在处理的消息来源 chat_id（请求级，防止异步期间被后续消息覆盖） */
+  replyChatId?: string;
 }
 
 export class HttpServer {
@@ -153,8 +155,12 @@ export class HttpServer {
       const engine = (slot as any).engine as "codex" | "gemini" | undefined;
       const ctx: ChannelContext = { channelId: slot.id, channel: ch, currentSessionId: null, engine };
       this.channelContexts.set(slot.id, ctx);
-      ch.onMessage(async (message: string, images?: Array<{ data: string; mediaType: string }>) => {
-        await this.processFeishuMessage(ctx, message, images);
+      ch.onMessage(async (message: string, images?: Array<{ data: string; mediaType: string }>, _messageId?: string, chatId?: string) => {
+        // 记录请求级 replyChatId，防止异步处理期间被后续消息覆盖
+        const requestCtx = { ...ctx, replyChatId: chatId || ctx.replyChatId };
+        await this.processFeishuMessage(requestCtx, message, images);
+        // 同步回 ctx 的 session（processFeishuMessage 可能更新了 currentSessionId）
+        ctx.currentSessionId = requestCtx.currentSessionId;
       });
       this.channelManager.register(ch);
       if (!this.feishuChannel) this.feishuChannel = ch; // 第一个通道用于 introspection
@@ -395,6 +401,15 @@ export class HttpServer {
       return;
     }
 
+    // 团队模式检测（仅 cc 通道）：并行调用三引擎，汇总输出
+    if (!ctx.engine) {
+      const teamResult = this.detectTeamMode(trimmedMessage);
+      if (teamResult.isTeamMode && teamResult.cleanMessage) {
+        await this.processTeamMode(ctx, teamResult.cleanMessage, images);
+        return;
+      }
+    }
+
     // CLI 引擎分流：codex/gemini 走 CLI 子进程，无 session 概念
     if (ctx.engine === "codex" || ctx.engine === "gemini") {
       await this.processCliEngineMessage(ctx, trimmedMessage);
@@ -412,6 +427,11 @@ export class HttpServer {
     console.log(`[CC][${ctx.channelId}] 使用会话: ${ctx.currentSessionId}`);
 
     try {
+      // 收集所有文本输出，最后统一发送（避免中间过程刷屏）
+      const replyParts: string[] = [];
+      const toolNames: string[] = [];
+      let statusSent = false;
+
       for await (const data of adapter.chat({
         message: trimmedMessage,
         sessionId: ctx.currentSessionId,
@@ -425,24 +445,39 @@ export class HttpServer {
             console.log(`[CC][${ctx.channelId}] 会话更新: ${ctx.currentSessionId}`);
           }
           if (data.type === "text" && data.text) {
-            await this.sendToChannel(ctx, String(data.text));
+            replyParts.push(String(data.text));
           } else if (data.type === "assistant") {
             const assistantEvent = data as any;
             if (assistantEvent.message?.content) {
               for (const block of assistantEvent.message.content) {
                 if (block.type === "text" && block.text) {
-                  await this.sendToChannel(ctx, String(block.text));
-                } else if (block.type === "tool_use") {
+                  replyParts.push(String(block.text));
+                }
+                if (block.type === "tool_use") {
                   const name = block.name || "unknown";
-                  let toolCallText = `🔧 **使用工具: ${name}**`;
-                  if (block.input && Object.keys(block.input).length > 0) {
-                    const inputStr = JSON.stringify(block.input, null, 2);
-                    toolCallText += `\n\`\`\`\n${inputStr.length > 300 ? inputStr.substring(0, 300) + "..." : inputStr}\n\`\`\``;
+                  toolNames.push(name);
+                  console.log(`[CC][${ctx.channelId}] 工具调用: ${name}`);
+                  // 首次工具调用时发一条状态提示
+                  if (!statusSent) {
+                    statusSent = true;
+                    await this.sendToChannel(ctx, `⏳ 正在处理（${name}）...`);
                   }
-                  await this.sendToChannel(ctx, toolCallText);
                 }
               }
             }
+          }
+        }
+      }
+
+      // 统一发送最终结果
+      const finalReply = replyParts.join("\n").trim();
+      if (finalReply) {
+        const MAX_CHUNK = 3500;
+        if (finalReply.length <= MAX_CHUNK) {
+          await this.sendToChannel(ctx, finalReply);
+        } else {
+          for (let i = 0; i < finalReply.length; i += MAX_CHUNK) {
+            await this.sendToChannel(ctx, finalReply.substring(i, i + MAX_CHUNK));
           }
         }
       }
@@ -496,6 +531,126 @@ export class HttpServer {
     }
   }
 
+  /**
+   * 团队模式关键词检测
+   */
+  private static TEAM_MODE_KEYWORDS = ["团队模式", "三人组", "一起干", "team mode", "team"];
+
+  private detectTeamMode(message: string): { isTeamMode: boolean; cleanMessage: string } {
+    const lower = message.toLowerCase();
+    for (const keyword of HttpServer.TEAM_MODE_KEYWORDS) {
+      if (lower.includes(keyword.toLowerCase())) {
+        const cleanMessage = message.replace(new RegExp(keyword, "gi"), "").replace(/[：:]\s*/, "").trim();
+        return { isTeamMode: true, cleanMessage };
+      }
+    }
+    return { isTeamMode: false, cleanMessage: message };
+  }
+
+  /**
+   * 团队模式：cc 主控，并行调用三引擎，汇总输出
+   */
+  private async processTeamMode(ctx: ChannelContext, message: string, images?: Array<{ data: string; mediaType: string }>): Promise<void> {
+    console.log(`[CC][${ctx.channelId}] 团队模式: ${message.substring(0, 50)}...`);
+    await this.sendToChannel(ctx, "🤝 **团队模式启动** — cc + codex + gemini 并行思考中...");
+
+    let doneCount = 0;
+    const total = 3;
+    const reportProgress = async (name: string) => {
+      doneCount++;
+      if (doneCount < total) {
+        await this.sendToChannel(ctx, `✅ ${name} 已完成（${doneCount}/${total}），等待其余引擎...`);
+      }
+    };
+
+    const ccPromise = this.runCcEngine(ctx, message, images).then(async (v) => { await reportProgress("cc"); return v; });
+    const codexPromise = runCliEngine("codex", message, this.cwd).then(async (v) => { await reportProgress("codex"); return v; });
+    const geminiPromise = runCliEngine("gemini", message, this.cwd).then(async (v) => { await reportProgress("gemini"); return v; });
+
+    const [ccResult, codexResult, geminiResult] = await Promise.allSettled([
+      ccPromise, codexPromise, geminiPromise,
+    ]);
+
+    const parts: string[] = [];
+
+    // cc
+    parts.push("## 🧠 cc（Claude）");
+    if (ccResult.status === "fulfilled") {
+      parts.push(ccResult.value || "（无输出）");
+    } else {
+      parts.push(`❌ 出错: ${ccResult.reason}`);
+    }
+
+    // codex
+    parts.push("\n## 💻 codex");
+    if (codexResult.status === "fulfilled") {
+      const r = codexResult.value;
+      parts.push(r.output?.trim() || "（无输出）");
+      if (r.error) parts.push(`⚠️ ${r.error.substring(0, 200)}`);
+    } else {
+      parts.push(`❌ 出错: ${codexResult.reason}`);
+    }
+
+    // gemini
+    parts.push("\n## ✨ gemini");
+    if (geminiResult.status === "fulfilled") {
+      const r = geminiResult.value;
+      parts.push(r.output?.trim() || "（无输出）");
+      if (r.error) parts.push(`⚠️ ${r.error.substring(0, 200)}`);
+    } else {
+      parts.push(`❌ 出错: ${geminiResult.reason}`);
+    }
+
+    const combined = parts.join("\n");
+
+    // 长输出分片发送
+    const MAX_CHUNK = 3500;
+    if (combined.length <= MAX_CHUNK) {
+      await this.sendToChannel(ctx, combined);
+    } else {
+      for (let i = 0; i < combined.length; i += MAX_CHUNK) {
+        await this.sendToChannel(ctx, combined.substring(i, i + MAX_CHUNK));
+      }
+    }
+
+    await ctx.channel.clearTypingIndicator();
+  }
+
+  /**
+   * 运行 cc 引擎并收集文本输出（供团队模式使用）
+   */
+  private async runCcEngine(ctx: ChannelContext, message: string, images?: Array<{ data: string; mediaType: string }>): Promise<string> {
+    const parts: string[] = [];
+
+    for await (const data of adapter.chat({
+      message,
+      sessionId: ctx.currentSessionId,
+      cwd: this.cwd,
+      images,
+    })) {
+      if (data && typeof data === "object") {
+        if (data.type === "system" && "session_id" in data) {
+          ctx.currentSessionId = data.session_id as string;
+          this.sessionOwnership.claim(ctx.currentSessionId, ctx.channelId);
+        }
+        if (data.type === "text" && data.text) {
+          parts.push(String(data.text));
+        } else if (data.type === "assistant") {
+          const assistantEvent = data as any;
+          if (assistantEvent.message?.content) {
+            for (const block of assistantEvent.message.content) {
+              if (block.type === "text" && block.text) {
+                parts.push(String(block.text));
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return parts.join("\n").trim();
+  }
+
   private async handleFeishuCommand(ctx: ChannelContext, command: string): Promise<void> {
     const parts = command.split(/\s+/);
     const cmd = parts[0].toLowerCase();
@@ -542,13 +697,15 @@ export class HttpServer {
   }
 
   private isOperationCommand(message: string): boolean {
+    // 严格匹配：消息去掉标点空格后必须完全等于命令，防止"看看状态"误匹配
+    const normalized = message.replace(/[，。！？\s]/g, "").toLowerCase();
     const opCommands = [
       "重启mycc", "重启mycc后端", "重启后端",
       "重启", "停止", "停止mycc",
       "状态", "状态查询", "查看状态",
       "启动mycc", "启动后端"
     ];
-    return opCommands.some(cmd => message.includes(cmd));
+    return opCommands.some(cmd => normalized === cmd);
   }
 
   private async handleOperationCommand(ctx: ChannelContext, message: string): Promise<void> {
@@ -864,7 +1021,7 @@ export class HttpServer {
         role: "assistant",
         content: [{ type: "text", text }],
       },
-    } as any);
+    } as any, ctx.replyChatId);
   }
 
   /**

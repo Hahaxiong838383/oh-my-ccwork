@@ -63,7 +63,7 @@ export class FeishuChannel implements MessageChannel {
   // WebSocket 相关
   private wsClient: Lark.WSClient | null = null;
   private eventDispatcher: Lark.EventDispatcher | null = null;
-  private messageCallback: ((message: string, images?: Array<{ data: string; mediaType: string }>, messageId?: string) => void) | null = null;
+  private messageCallback: ((message: string, images?: Array<{ data: string; mediaType: string }>, messageId?: string, chatId?: string) => void) | null = null;
 
   // 表态相关（"正在输入" emoji）
   private currentMessageId: string | null = null;
@@ -72,8 +72,9 @@ export class FeishuChannel implements MessageChannel {
   // 动态回复目标：优先回复到来源 chat_id，而不是固定的 open_id
   private lastIncomingChatId: string | null = null;
 
-  // 机器人自身的 open_id，用于群聊 @mention 过滤
+  // 机器人自身的 open_id 和名称，用于群聊 @mention 过滤
   private botOpenId: string | null = null;
+  private botName: string | null = null;
 
   constructor(config?: FeishuChannelConfig) {
     this.id = config?.id ?? 'feishu';
@@ -120,16 +121,19 @@ export class FeishuChannel implements MessageChannel {
    * 发送消息到飞书
    * @param event - SSE 事件
    */
-  async send(event: SSEEvent): Promise<void> {
+  async send(event: SSEEvent, targetChatId?: string): Promise<void> {
     // 如果没有配置飞书凭证，静默跳过
     if (!this.config.appId || !this.config.appSecret) {
       return;
     }
 
     // 没有配置接收用户且没有动态回复目标，跳过
-    if (!this.config.receiveUserId && !this.lastIncomingChatId) {
+    if (!this.config.receiveUserId && !this.lastIncomingChatId && !targetChatId) {
       return;
     }
+
+    // 请求级 targetChatId 优先于 channel 级 lastIncomingChatId
+    const effectiveChatId = targetChatId || this.lastIncomingChatId;
 
     // 处理 system 事件（提取图片信息）
     if (event.type === "system") {
@@ -151,7 +155,7 @@ export class FeishuChannel implements MessageChannel {
       const toolContent = this.formatToolUse(toolEvent);
       if (toolContent) {
         const sessionId = this.extractSessionId(event);
-        await this.sendMessageToFeishu(toolContent, sessionId);
+        await this.sendMessageToFeishu(toolContent, sessionId, effectiveChatId);
       }
       return;
     }
@@ -185,7 +189,7 @@ export class FeishuChannel implements MessageChannel {
             const combined = parts.join("\n\n");
             const sessionId = this.extractSessionId(event);
             console.log(`[FeishuChannel] 合并 ${parts.length} 个 block 为单条消息发送`);
-            await this.sendMessageToFeishu(combined, sessionId);
+            await this.sendMessageToFeishu(combined, sessionId, effectiveChatId);
           }
         }
       }
@@ -202,14 +206,14 @@ export class FeishuChannel implements MessageChannel {
     }
 
     // 发送消息到飞书（先发送图片，再发送文字）
-    await this.sendMessageToFeishu(text, sessionId);
+    await this.sendMessageToFeishu(text, sessionId, effectiveChatId);
   }
 
   /**
    * 设置消息接收回调
    * @param callback - 收到飞书消息时的回调函数
    */
-  onMessage(callback: (message: string, images?: Array<{ data: string; mediaType: string }>, messageId?: string) => void): void {
+  onMessage(callback: (message: string, images?: Array<{ data: string; mediaType: string }>, messageId?: string, chatId?: string) => void): void {
     this.messageCallback = callback;
   }
 
@@ -240,7 +244,8 @@ export class FeishuChannel implements MessageChannel {
       }) as any;
       if (botInfoRes?.bot?.open_id) {
         this.botOpenId = botInfoRes.bot.open_id;
-        console.log(`[FeishuChannel:${this.id}] 机器人 open_id: ${this.botOpenId}`);
+        this.botName = botInfoRes.bot?.app_name || null;
+        console.log(`[FeishuChannel:${this.id}] 机器人 open_id: ${this.botOpenId}, 名称: ${this.botName}`);
       }
     } catch (err) {
       console.warn(`[FeishuChannel:${this.id}] 获取机器人 open_id 失败（群聊 @mention 过滤将不可用）:`, err);
@@ -291,10 +296,14 @@ export class FeishuChannel implements MessageChannel {
 
             // 群聊 @mention 过滤：只处理 @自己 的消息
             const chatType = event?.message?.chat_type;
-            if (chatType === "group" && this.botOpenId) {
-              const mentions: Array<{ id?: { open_id?: string }; key?: string }> = event?.message?.mentions || [];
-              console.log(`[FeishuChannel:${this.id}] 群聊 mentions: ${JSON.stringify(mentions.map(m => ({ key: m.key, open_id: m.id?.open_id })))}, 本机器人: ${this.botOpenId}`);
-              const isMentioned = mentions.some(m => m.id?.open_id === this.botOpenId);
+            if (chatType === "group" && (this.botOpenId || this.botName)) {
+              const mentions: Array<{ id?: { open_id?: string }; key?: string; name?: string }> = event?.message?.mentions || [];
+              console.log(`[FeishuChannel:${this.id}] 群聊 mentions: ${JSON.stringify(mentions.map(m => ({ key: m.key, open_id: m.id?.open_id, name: m.name })))}, 本机器人: ${this.botOpenId} (${this.botName})`);
+              // 双重匹配：open_id 或 bot 名称（飞书 open_id 跨应用不稳定）
+              const isMentioned = mentions.some(m =>
+                (this.botOpenId && m.id?.open_id === this.botOpenId) ||
+                (this.botName && m.name === this.botName)
+              );
               if (!isMentioned) {
                 console.log(`[FeishuChannel:${this.id}] 群聊消息未 @本机器人，跳过`);
                 return;
@@ -319,7 +328,7 @@ export class FeishuChannel implements MessageChannel {
               if (text || images) {
                 console.log(`[FeishuChannel] ✓ 收到消息: ${text ? text.substring(0, 50) : "[图片]"}...`);
                 // 传递消息 ID，以便后续可以删除表态
-                this.messageCallback(text, images, messageId);
+                this.messageCallback(text, images, messageId, chatId);
               } else {
                 console.log("[FeishuChannel] [DEBUG] 解析消息内容为空");
               }
@@ -664,11 +673,12 @@ export class FeishuChannel implements MessageChannel {
   /**
    * 发送消息到飞书
    */
-  private async sendMessageToFeishu(text: string, sessionId?: string): Promise<boolean> {
+  private async sendMessageToFeishu(text: string, sessionId?: string, overrideChatId?: string): Promise<boolean> {
     try {
-      // 优先回复到来源 chat_id（保证回到同一聊天窗口），否则用配置的 open_id
-      const receiveId = this.lastIncomingChatId || this.config.receiveUserId!;
-      const receiveIdType = this.lastIncomingChatId ? "chat_id" : (this.config.receiveIdType || "open_id");
+      // 优先用请求级 overrideChatId，再用 channel 级 lastIncomingChatId，最后用配置的 open_id
+      const effectiveTarget = overrideChatId || this.lastIncomingChatId;
+      const receiveId = effectiveTarget || this.config.receiveUserId!;
+      const receiveIdType = effectiveTarget ? "chat_id" : (this.config.receiveIdType || "open_id");
       const userId = receiveId;
 
       // 如果有待发送的图片，先发送图片
