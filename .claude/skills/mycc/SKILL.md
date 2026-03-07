@@ -204,7 +204,23 @@ tail -100 .claude/skills/mycc/daemon.log | grep "FeishuChannel:"
 **原因**：多通道共享同一个 Claude Code session
 **检查**：`daemon.log` 中 `[SessionOwnership] claim` 日志
 
-### 3. Lark SDK 注意事项
+### 3. "Claude CLI 登录已过期"（实际正常）
+
+**症状**：飞书通道提示 auth 过期，但终端 CLI 正常
+**三层根因**（2026-03-07 修复）：
+1. **Session 冲突**（已修复）：auto-select 选中当前终端活跃 session → `resumeSession` 卡死。修复：飞书通道每次创建新会话
+2. **CLAUDECODE 继承**（已修复）：后端继承 `CLAUDECODE=1` → HealthMonitor 子进程被拒。修复：启动时 `delete process.env.CLAUDECODE` + `getCleanEnv()`
+3. **detectAuthError 误报**（已修复）：Claude 回复中含 "not logged in" 等关键词触发。修复：只检查 `type: "error"|"system"` 的 SDK 消息
+
+**排查方法**：
+```bash
+# 查 SDK 日志看是否有真实 auth 错误
+tail -200 /tmp/mycc-debug.log | grep "\[Auth\]"
+# 检查 HealthMonitor token 刷新
+tail -200 /tmp/mycc-debug.log | grep "Token"
+```
+
+### 4. Lark SDK 注意事项
 
 - **WSClient 不是 EventEmitter**，不能 `.on("close")`
 - SDK 自动管理重连，只需 `wsClient.start({ eventDispatcher })`

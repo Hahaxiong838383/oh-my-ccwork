@@ -13,6 +13,7 @@ import type { ChatParams, ConversationSummary, ConversationHistory } from "../ty
 import { getConversationList, getConversation } from "../history.js";
 import { detectClaudeCliPath } from "../platform.js";
 import { buildMessageContent, type MessageContent } from "../image-utils.js";
+import { execSync } from "child_process";
 
 // 检测 Claude CLI 路径（跨平台）
 const { executable: CLAUDE_EXECUTABLE, cliPath: CLAUDE_CLI_PATH } = detectClaudeCliPath();
@@ -70,6 +71,12 @@ export class OfficialAdapter implements CCAdapter {
 
   /** 超时清理定时器 */
   private cleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+  /** Auth 状态缓存 */
+  private _authOk = true;
+
+  /** Auth 失败通知回调（由外部注册，用于飞书通知等） */
+  private _onAuthFailed: ((msg: string) => void) | null = null;
 
   constructor() {
     // 启动定时清理
@@ -175,6 +182,63 @@ export class OfficialAdapter implements CCAdapter {
   }
 
   /**
+   * 注册 auth 失败回调（飞书通知等）
+   */
+  onAuthFailed(callback: (msg: string) => void): void {
+    this._onAuthFailed = callback;
+  }
+
+  /**
+   * 构造干净的环境变量（移除 CLAUDECODE）
+   * 后端从 Claude Code session 启动时继承 CLAUDECODE=1，
+   * 会导致 claude 子进程报 "Cannot be launched inside another Claude Code session"
+   */
+  private getCleanEnv(): Record<string, string | undefined> {
+    const env = { ...process.env };
+    delete env.CLAUDECODE;
+    return env;
+  }
+
+  /**
+   * 检查 Claude CLI auth 状态
+   * 返回 true = 已登录，false = 未登录或检查失败
+   */
+  checkAuth(): boolean {
+    try {
+      const output = execSync("claude auth status --json 2>/dev/null", {
+        timeout: 10000,
+        encoding: "utf-8",
+        env: this.getCleanEnv(),
+      });
+      const status = JSON.parse(output);
+      const ok = status.loggedIn === true;
+      if (!ok && this._authOk) {
+        console.error("[Auth] Claude CLI 未登录");
+        this._onAuthFailed?.("Claude CLI 登录已过期，请在终端执行 /login 后重启 mycc 后端");
+      }
+      this._authOk = ok;
+      return ok;
+    } catch {
+      if (this._authOk) {
+        console.error("[Auth] 无法检查 Claude CLI auth 状态");
+        this._onAuthFailed?.("无法检查 Claude CLI 登录状态，请确认 claude 命令可用");
+      }
+      this._authOk = false;
+      return false;
+    }
+  }
+
+  /** 获取当前 auth 状态（不执行检查） */
+  get authOk(): boolean {
+    return this._authOk;
+  }
+
+  /** 设置 auth 状态（由 HealthMonitor 调用） */
+  set authOk(ok: boolean) {
+    this._authOk = ok;
+  }
+
+  /**
    * 发送消息，返回 SSE 事件流（v2 Session 模式）
    *
    * 支持多轮推送（Agent Teams + 后台 Task subagent）：
@@ -194,6 +258,16 @@ export class OfficialAdapter implements CCAdapter {
    */
   async *chat(params: ChatParams): AsyncIterable<SSEEvent> {
     const { message, sessionId, images, model, cwd } = params;
+
+    // Auth 前置检查：如果已知 auth 失效，先检查一次是否恢复
+    if (!this._authOk) {
+      const recovered = this.checkAuth();
+      if (!recovered) {
+        yield { type: "text", text: "⚠️ Claude CLI 未登录，无法处理消息。请在终端执行 `/login` 后重启 mycc 后端。" } as SSEEvent;
+        return;
+      }
+      console.log("[Auth] 登录状态已恢复");
+    }
 
     // 获取或创建 session
     const session = this.getOrCreateSession({ sessionId, model, cwd });
@@ -251,6 +325,18 @@ export class OfficialAdapter implements CCAdapter {
           // 调试：记录所有 SDK 发送的事件类型
           const msgType = sdkMessage?.type || "unknown";
           console.log(`[SDK] 发送事件类型: ${msgType}`);
+
+          // Auth 错误检测：拦截 "Not logged in" 等 auth 相关错误
+          if (detectAuthError(sdkMessage)) {
+            // 详细日志：记录触发 auth 错误的完整 SDK 消息
+            const msgDump = JSON.stringify(sdkMessage).substring(0, 2000);
+            console.error(`[Auth] 检测到 auth 错误！完整消息: ${msgDump}`);
+            console.error(`[Auth] 消息类型: ${(sdkMessage as any)?.type}, sessionId: ${resolvedSessionId}`);
+            this._authOk = false;
+            this._onAuthFailed?.("Claude CLI 登录已过期，飞书通道暂停服务。请在终端执行 /login 后重启 mycc 后端。");
+            yield { type: "text", text: "⚠️ Claude CLI 登录已过期，请在终端执行 `/login` 后重启 mycc 后端。" } as SSEEvent;
+            return;
+          }
 
           this.extractSessionId(sdkMessage, resolvedSessionId, session, (id) => { resolvedSessionId = id; });
           const signals = detectMultiTurnSignals(sdkMessage);
@@ -397,6 +483,31 @@ const TIMEOUT_SENTINEL = Symbol("TIMEOUT");
  * - Task + run_in_background：后台 subagent 启动
  * - task-notification + completed：后台 subagent 完成
  */
+/**
+ * 检测 SDK 消息中的 auth 错误
+ * Claude CLI 未登录时会在 stream 中返回包含 "Not logged in" 的消息
+ */
+function detectAuthError(msg: unknown): boolean {
+  if (!msg || typeof msg !== "object") return false;
+  const m = msg as Record<string, unknown>;
+
+  // 只检查 error 类型的 SDK 消息，避免把 Claude 回复内容中的 "not logged in" 误判为 auth 错误
+  if (m.type !== "error" && m.type !== "system") return false;
+
+  try {
+    const str = JSON.stringify(msg);
+    const lower = str.toLowerCase();
+    return (
+      lower.includes("not logged in") ||
+      lower.includes("please run /login") ||
+      lower.includes("authentication required") ||
+      lower.includes("auth_error")
+    );
+  } catch {
+    return false;
+  }
+}
+
 function detectMultiTurnSignals(msg: unknown): {
   teamsStarted: boolean;
   teamsFinished: boolean;

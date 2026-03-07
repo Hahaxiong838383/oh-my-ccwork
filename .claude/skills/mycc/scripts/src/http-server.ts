@@ -16,6 +16,7 @@ import { renameSession } from "./history.js";
 import { getOrBuildIndex, searchBM25 } from "./bm25.js";
 import { listSkills } from "./skills.js";
 import { ChannelManager, WebChannel, FeishuChannel } from "./channels/index.js";
+import { runCliEngine, type EngineType } from "./adapters/cli-engine.js";
 import { loadConfig } from "./config.js";
 import type { DeviceConfig } from "./types.js";
 import { SessionOwnership } from "./session-ownership.js";
@@ -45,6 +46,8 @@ interface ChannelContext {
   channelId: string;
   channel: FeishuChannel;
   currentSessionId: string | null;
+  /** 引擎类型：undefined/claude = Claude SDK, codex/gemini = CLI */
+  engine?: "codex" | "gemini";
 }
 
 export class HttpServer {
@@ -105,6 +108,30 @@ export class HttpServer {
         verificationToken: process.env.FEISHU3_VERIFICATION_TOKEN,
         showToolUse: process.env.FEISHU3_SHOW_TOOL_USE !== 'false',
       },
+      {
+        id: 'feishu-codex',
+        appId: process.env.FEISHU4_APP_ID,
+        appSecret: process.env.FEISHU4_APP_SECRET,
+        receiveUserId: process.env.FEISHU4_RECEIVE_USER_ID,
+        receiveIdType: process.env.FEISHU4_RECEIVE_ID_TYPE as "open_id" | "chat_id" | undefined,
+        connectionMode: process.env.FEISHU4_CONNECTION_MODE as "websocket" | "poll" | undefined,
+        encryptKey: process.env.FEISHU4_ENCRYPT_KEY,
+        verificationToken: process.env.FEISHU4_VERIFICATION_TOKEN,
+        showToolUse: process.env.FEISHU4_SHOW_TOOL_USE !== 'false',
+        engine: process.env.FEISHU4_ENGINE as string | undefined,
+      },
+      {
+        id: 'feishu-gemini',
+        appId: process.env.FEISHU5_APP_ID,
+        appSecret: process.env.FEISHU5_APP_SECRET,
+        receiveUserId: process.env.FEISHU5_RECEIVE_USER_ID,
+        receiveIdType: process.env.FEISHU5_RECEIVE_ID_TYPE as "open_id" | "chat_id" | undefined,
+        connectionMode: process.env.FEISHU5_CONNECTION_MODE as "websocket" | "poll" | undefined,
+        encryptKey: process.env.FEISHU5_ENCRYPT_KEY,
+        verificationToken: process.env.FEISHU5_VERIFICATION_TOKEN,
+        showToolUse: process.env.FEISHU5_SHOW_TOOL_USE !== 'false',
+        engine: process.env.FEISHU5_ENGINE as string | undefined,
+      },
     ];
 
     let registeredCount = 0;
@@ -123,14 +150,15 @@ export class HttpServer {
       };
       const ch = new FeishuChannel(cfg);
       // 每个通道独立上下文，会话和回复完全隔离
-      const ctx: ChannelContext = { channelId: slot.id, channel: ch, currentSessionId: null };
+      const engine = (slot as any).engine as "codex" | "gemini" | undefined;
+      const ctx: ChannelContext = { channelId: slot.id, channel: ch, currentSessionId: null, engine };
       this.channelContexts.set(slot.id, ctx);
       ch.onMessage(async (message: string, images?: Array<{ data: string; mediaType: string }>) => {
         await this.processFeishuMessage(ctx, message, images);
       });
       this.channelManager.register(ch);
       if (!this.feishuChannel) this.feishuChannel = ch; // 第一个通道用于 introspection
-      console.log(`[Channels] 飞书通道 ${slot.id} 已注册（启动时将激活）`);
+      console.log(`[Channels] 飞书通道 ${slot.id} 已注册${engine ? ` [引擎: ${engine}]` : ""}（启动时将激活）`);
       registeredCount++;
     }
     if (registeredCount === 0) {
@@ -367,35 +395,18 @@ export class HttpServer {
       return;
     }
 
+    // CLI 引擎分流：codex/gemini 走 CLI 子进程，无 session 概念
+    if (ctx.engine === "codex" || ctx.engine === "gemini") {
+      await this.processCliEngineMessage(ctx, trimmedMessage);
+      return;
+    }
+
     if (!ctx.currentSessionId) {
-      console.log(`[CC][${ctx.channelId}] 无活跃会话，尝试自动选择最近的历史会话`);
-      try {
-        const result = await adapter.listHistory(this.cwd, 50);
-        const filtered = this.sessionOwnership.filterForChannel(result.conversations, ctx.channelId);
-        // 找到第一个能成功 claim 的会话（跳过已被其他通道占用的）
-        let selectedSession = null;
-        for (const session of filtered) {
-          if (this.sessionOwnership.claim(session.sessionId, ctx.channelId)) {
-            selectedSession = session;
-            break;
-          }
-        }
-        if (selectedSession) {
-          ctx.currentSessionId = selectedSession.sessionId;
-          const title = selectedSession.customTitle || selectedSession.firstPrompt?.substring(0, 30) || "历史会话";
-          const timeAgo = this.formatTimeAgo(selectedSession.lastTime || selectedSession.modified || Date.now());
-          console.log(`[CC][${ctx.channelId}] 自动选择会话: ${ctx.currentSessionId}`);
-          await this.sendToChannel(ctx, `✅ 自动使用最近的会话：${title}\n🕒 ${timeAgo}\n\n继续你的对话...`);
-        } else {
-          console.log(`[CC][${ctx.channelId}] 没有可用历史会话`);
-          await this.sendToChannel(ctx, "💡 还没有会话记录。\n\n• 发送任意消息开始新对话\n• 发送 /help 查看所有命令");
-          return;
-        }
-      } catch (err) {
-        console.error(`[CC][${ctx.channelId}] 获取历史会话失败:`, err);
-        await this.sendToChannel(ctx, "❌ 无法加载历史会话，请重试或发送 /new 创建新会话。");
-        return;
-      }
+      // 飞书通道不 auto-select 历史会话，直接创建新会话。
+      // 原因：auto-select 会选中当前终端的活跃 session，unstable_v2_resumeSession
+      // 尝试 resume 已被占用的 session 会导致 SDK 卡死，最终被误判为 auth 过期。
+      console.log(`[CC][${ctx.channelId}] 无活跃会话，将创建新会话`);
+      await this.sendToChannel(ctx, "💡 开始新对话...");
     }
 
     console.log(`[CC][${ctx.channelId}] 使用会话: ${ctx.currentSessionId}`);
@@ -438,6 +449,48 @@ export class HttpServer {
     } catch (err) {
       console.error(`[CC][${ctx.channelId}] 处理消息错误:`, err);
       await this.sendToChannel(ctx, "❌ 处理消息时出错，请重试。");
+    } finally {
+      await ctx.channel.clearTypingIndicator();
+    }
+  }
+
+  /**
+   * CLI 引擎消息处理（codex / gemini）
+   * 无 session 概念，每次调用都是独立的子进程。
+   */
+  private async processCliEngineMessage(ctx: ChannelContext, message: string): Promise<void> {
+    const engine = ctx.engine as EngineType;
+    console.log(`[CC][${ctx.channelId}] CLI 引擎: ${engine}, 消息: ${message.substring(0, 50)}...`);
+
+    try {
+      const result = await runCliEngine(engine, message, this.cwd);
+
+      if (result.error && !result.output) {
+        await this.sendToChannel(ctx, `❌ ${engine} 执行出错:\n${result.error.substring(0, 500)}`);
+        return;
+      }
+
+      const output = result.output.trim();
+      if (output) {
+        // 长输出分片发送（飞书单条消息限约 4000 字符）
+        const MAX_CHUNK = 3500;
+        if (output.length <= MAX_CHUNK) {
+          await this.sendToChannel(ctx, output);
+        } else {
+          for (let i = 0; i < output.length; i += MAX_CHUNK) {
+            await this.sendToChannel(ctx, output.substring(i, i + MAX_CHUNK));
+          }
+        }
+      } else {
+        await this.sendToChannel(ctx, `✅ ${engine} 执行完成（无输出）`);
+      }
+
+      if (result.error) {
+        await this.sendToChannel(ctx, `⚠️ ${engine} 警告:\n${result.error.substring(0, 300)}`);
+      }
+    } catch (err: any) {
+      console.error(`[CC][${ctx.channelId}] CLI 引擎错误:`, err);
+      await this.sendToChannel(ctx, `❌ ${engine} 异常: ${err.message}`);
     } finally {
       await ctx.channel.clearTypingIndicator();
     }
@@ -812,6 +865,19 @@ export class HttpServer {
         content: [{ type: "text", text }],
       },
     } as any);
+  }
+
+  /**
+   * 向所有飞书通道广播消息（用于系统级通知，如 auth 过期）
+   */
+  async broadcastToFeishu(text: string): Promise<void> {
+    for (const ctx of this.channelContexts.values()) {
+      try {
+        await this.sendToChannel(ctx, text);
+      } catch (err) {
+        console.error(`[CC][${ctx.channelId}] 广播失败:`, err);
+      }
+    }
   }
 
   private formatTimeAgo(timestamp: string | number): string {

@@ -55,6 +55,27 @@ python3 .claude/skills/github-radar/scripts/github-radar.py
 node .claude/skills/tell-me/send.js "GitHub AI 风向标 $(date +%Y-%m-%d)" "报告内容"
 ```
 
+### Step 3：升级建议通知（独立发一条）
+
+在日报发完后，对比当前已有 skill 列表，额外发一条升级建议：
+
+**对比维度**：
+- 当前已有 skill：`agent-orchestration`, `mem0-patterns`, `configure-ecc`, `browser-use`（如有）等
+- 发现的新项目是否与现有 skill 重叠？是否填补空白？是否有架构升级价值？
+
+**建议等级**：
+- 🔴 强烈建议升级：新架构/新范式，现有 skill 已落后
+- 🟡 可以考虑：补充现有 skill 的空白
+- ⚪ 暂不需要：与现有 skill 重叠，或与技术栈不符
+
+**发送格式**：
+```bash
+node .claude/skills/tell-me/send.js \
+  "🧬 cc 自进化建议 MM-DD" \
+  "━━━━━━━━━━━━━━━━\n🧬 cc 每日自进化检查\n━━━━━━━━━━━━━━━━\n\n📦 今日发现的升级候选：\n\n🟡 项目名 ★Xk\n  理由：...\n  建议：...\n\n⚪ 项目名 ★Xk\n  已有 skill 覆盖，暂不需要\n\n━━━━━━━━━━━━━━━━\n💬 说\"升级 [项目名]\"告诉我要不要装" \
+  green
+```
+
 ## 监控分类
 
 | 分类 | 关注方向 |

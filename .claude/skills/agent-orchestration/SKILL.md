@@ -1,13 +1,13 @@
 ---
 name: agent-orchestration
-description: Agent 编排模式 - 基于 ruflo(★19.3k) + oh-my-claudecode(★8.6k) 的多智能体协同设计。触发词："多Agent"、"编排"、"swarm"、"agent协作"
+description: Agent 编排模式 - 基于 ruflo(★19.3k) + oh-my-claudecode(★8.6k) + deer-flow(★25k) 的多智能体协同设计。触发词："多Agent"、"编排"、"swarm"、"agent协作"
 ---
 
 # Agent 编排模式
 
-> 参考项目：ruvnet/ruflo ★19.3k + Yeachan-Heo/oh-my-claudecode ★8.6k
+> 参考项目：ruvnet/ruflo ★19.3k + Yeachan-Heo/oh-my-claudecode ★8.6k + bytedance/deer-flow ★25k
 
-## 两种主流编排模式
+## 三种主流编排模式
 
 ### 模式1：Swarm（蜂群）
 - **特点**：Agent 之间直接通信，动态分工
@@ -63,15 +63,114 @@ autopilot: 完成 github-radar 数据分析并发飞书
 ralph: 修复飞书发送失败的 bug，不成功不停止
 ```
 
+### 模式3：Harness（指挥官）★ deer-flow 新增
+- **特点**：主 Agent（Harness）统一分配资源，根据任务时长动态派发 subagent
+- **适用**：需要数分钟到数小时的复杂长任务，任务内部有研究→执行→产出的层次
+- **deer-flow 实现**：研究(deep-research) → 编码(coding) → 创作(creation) 三阶段流水线
+- **核心机制**：
+  - **任务时长感知**：快任务（秒级）vs 慢任务（分钟/小时级）走不同调度路径
+  - **沙箱隔离**：每个 subagent 在独立沙箱中运行，失败不污染主流程
+  - **步骤间记忆**：每个阶段的输出作为结构化记忆注入下一阶段，非简单文件传递
+
+```
+任务输入
+  ↓
+Harness 评估任务时长 + 分解阶段
+  ↓
+[研究 subagent] → 结构化记忆 → [执行 subagent] → 结构化记忆 → [输出 subagent]
+  ↓                             （沙箱隔离）
+最终产出
+```
+
+## cc 的编排选择
+
+| 场景 | 推荐模式 | 工具 |
+|------|---------|------|
+| IPO 报告（固定角色：采集/分析/写作） | Team | OMC `/team` |
+| 代码审查（并行独立） | Swarm | OMC `/swarm` |
+| 复杂任务规划 | 单 Agent + Codex 验证 | Claude + Codex CLI |
+| 全自动工作流 | Autopilot | OMC `autopilot:` |
+| **深度研究+执行（长任务）** | **Harness** | **手动分阶段 + /tmp 结构化传递** |
+
+## ruflo 的关键设计（值得借鉴）
+
+### 1. RAG + Agent 集成
+Agent 执行前先检索相关记忆/文档，避免幻觉：
+```
+用户请求 → 语义检索(relevant context) → 注入 prompt → Agent 执行
+```
+
+### 2. MCP Native 支持
+ruflo 原生支持 MCP server，Agent 可以直接调用：
+- 飞书 MCP（lark-mcp）
+- 本地工具 MCP（文件/代码执行）
+
+### 3. 失败降级
+单个 Agent 失败不影响整体：
+```
+Agent-A 超时 → 标记失败 → 其他 Agent 接管 → 记录失败原因
+```
+
+## deer-flow 的关键设计（新增）
+
+### 1. 任务时长分层
+```
+快任务（<1min）：直接单 Agent 处理
+中任务（1-10min）：Team 模式，固定角色流水线
+慢任务（>10min）：Harness 模式，动态 subagent + 沙箱隔离
+```
+
+### 2. 步骤间结构化记忆
+不同于简单的文件传递，deer-flow 的阶段间记忆是有 schema 的：
+```json
+{
+  "phase": "research",
+  "findings": [...],       // 研究发现，供执行阶段使用
+  "constraints": [...],    // 发现的限制条件
+  "next_hints": [...]      // 对下一阶段的提示
+}
+```
+**cc 应用**：`/tmp/` 下的中间 JSON 应包含 `phase` + `findings` + `next_hints`，不只是原始数据。
+
+### 3. 研究优先原则（Research-First）
+任何复杂任务，先做研究阶段，再做执行：
+```
+❌ 直接执行 "帮我写一个爬虫分析竞品"
+✅ 先研究（竞品有哪些？数据在哪？反爬策略？） → 再执行
+```
+
+## cc 可直接用的编排命令
+
+```bash
+# OMC 团队模式（固定角色）
+/team 3 "分析 IPO 市场并生成报告"
+
+# OMC 并行模式（独立任务）
+/swarm 4 "并行修复所有 TypeScript 类型错误"
+
+# OMC 全自动模式
+autopilot: 完成 github-radar 数据分析并发飞书
+
+# OMC 持久模式（必须完成）
+ralph: 修复飞书发送失败的 bug，不成功不停止
+
+# Harness 模式（手动实现，适合长任务）
+# Step1: 研究阶段 → /tmp/research.json（含 findings + next_hints）
+# Step2: 执行阶段（读取 research.json）→ /tmp/execution.json
+# Step3: 输出阶段（读取 execution.json）→ 最终产出
+```
+
 ## 编排的核心原则
 
 1. **最小化 Agent 数量**：1 个 Agent 能解决的，不用 3 个
 2. **任务原子化**：每个 Agent 的任务必须可以独立成功/失败
-3. **共享状态用文件**：Agent 之间通过 `/tmp/` 下的 JSON 文件交换数据
+3. **共享状态用结构化 JSON**：Agent 之间通过 `/tmp/` 下的 JSON 文件交换数据，包含 `phase`/`findings`/`next_hints`
 4. **结果可比较**：并行 Agent 的输出格式要一致，方便 cc 裁决
+5. **按时长选模式**：快→单 Agent，中→Team，慢→Harness
 
 ## 与 cc 现有工作流的集成点
 
 - `github-radar` 的 Step2 分析 → 可以用 OMC swarm 并行分析各分类
 - IPO 报告生成 → 可以用 OMC team 角色化（采集/分析/写作/发送）
 - 复杂 bug 修复 → ralph 模式持久运行直到成功
+- **深度研究任务**（如竞品分析、技术调研）→ Harness 模式，研究 → 执行 → 产出三阶段

@@ -72,6 +72,9 @@ export class FeishuChannel implements MessageChannel {
   // 动态回复目标：优先回复到来源 chat_id，而不是固定的 open_id
   private lastIncomingChatId: string | null = null;
 
+  // 机器人自身的 open_id，用于群聊 @mention 过滤
+  private botOpenId: string | null = null;
+
   constructor(config?: FeishuChannelConfig) {
     this.id = config?.id ?? 'feishu';
     // 从环境变量读取配置
@@ -123,8 +126,8 @@ export class FeishuChannel implements MessageChannel {
       return;
     }
 
-    // 没有配置接收用户，跳过
-    if (!this.config.receiveUserId) {
+    // 没有配置接收用户且没有动态回复目标，跳过
+    if (!this.config.receiveUserId && !this.lastIncomingChatId) {
       return;
     }
 
@@ -229,6 +232,20 @@ export class FeishuChannel implements MessageChannel {
     console.log("[FeishuChannel] ✓ Credentials validated");
     console.log(`[FeishuChannel] Will send to: ${this.config.receiveUserId || "未配置接收用户"}`);
 
+    // 获取机器人自身的 open_id（用于群聊 @mention 过滤）
+    try {
+      const botInfoRes = await this.client.request({
+        method: "GET",
+        url: "https://open.feishu.cn/open-apis/bot/v3/info",
+      }) as any;
+      if (botInfoRes?.bot?.open_id) {
+        this.botOpenId = botInfoRes.bot.open_id;
+        console.log(`[FeishuChannel:${this.id}] 机器人 open_id: ${this.botOpenId}`);
+      }
+    } catch (err) {
+      console.warn(`[FeishuChannel:${this.id}] 获取机器人 open_id 失败（群聊 @mention 过滤将不可用）:`, err);
+    }
+
     // 启动 WebSocket 连接（如果配置了）
     if (this.config.connectionMode === "websocket") {
       await this.startWebSocket();
@@ -272,6 +289,18 @@ export class FeishuChannel implements MessageChannel {
               console.log(`[FeishuChannel:${this.id}] 来源 chat_id: ${chatId}`);
             }
 
+            // 群聊 @mention 过滤：只处理 @自己 的消息
+            const chatType = event?.message?.chat_type;
+            if (chatType === "group" && this.botOpenId) {
+              const mentions: Array<{ id?: { open_id?: string }; key?: string }> = event?.message?.mentions || [];
+              console.log(`[FeishuChannel:${this.id}] 群聊 mentions: ${JSON.stringify(mentions.map(m => ({ key: m.key, open_id: m.id?.open_id })))}, 本机器人: ${this.botOpenId}`);
+              const isMentioned = mentions.some(m => m.id?.open_id === this.botOpenId);
+              if (!isMentioned) {
+                console.log(`[FeishuChannel:${this.id}] 群聊消息未 @本机器人，跳过`);
+                return;
+              }
+            }
+
             // 添加"正在输入"表态（敲键盘 emoji）
             if (messageId) {
               this.addTypingIndicator(messageId).catch(() => {
@@ -282,7 +311,11 @@ export class FeishuChannel implements MessageChannel {
             // await 解析结果（图片下载是异步的）
             const parsed = await this.parseFeishuMessage(event, messageId);
             if (parsed && this.messageCallback) {
-              const { text, images } = parsed;
+              let { text, images } = parsed;
+              // 群聊中去掉 @mention 占位符（如 @_user_1）
+              if (chatType === "group" && text) {
+                text = text.replace(/@_user_\d+/g, "").trim();
+              }
               if (text || images) {
                 console.log(`[FeishuChannel] ✓ 收到消息: ${text ? text.substring(0, 50) : "[图片]"}...`);
                 // 传递消息 ID，以便后续可以删除表态

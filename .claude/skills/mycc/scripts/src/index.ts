@@ -29,11 +29,16 @@ import qrcode from "qrcode-terminal";
 import chalk from "chalk";
 import { HttpServer } from "./http-server.js";
 import { startScheduler, stopScheduler, type Task } from "./scheduler.js";
-import { adapter } from "./adapters/index.js";
+import { adapter, officialAdapter } from "./adapters/index.js";
+import { HealthMonitor } from "./health-monitor.js";
 import { CloudflareProvider } from "./tunnel-provider.js";
 import { TunnelManager } from "./tunnel-manager.js";
 import { loadPublicUrl, loadEnvFile } from "./env-loader.js";
 import { agentIntrospection } from "./introspection.js";
+
+// 清除 CLAUDECODE 环境变量：后端从 Claude Code session 启动时会继承此变量，
+// 导致所有 claude 子进程（HealthMonitor、SDK session）被误判为嵌套会话而拒绝启动
+delete process.env.CLAUDECODE;
 
 const PORT = process.env.PORT || 18080;
 
@@ -238,6 +243,19 @@ async function startServer(args: string[]) {
     }
     throw error;
   }
+
+  // 注册 auth 失败回调：通过所有飞书通道通知用户
+  officialAdapter.onAuthFailed((msg: string) => {
+    console.error(chalk.red(`[Auth] ${msg}`));
+    // 通过 server 的飞书通道广播通知
+    server.broadcastToFeishu?.(`⚠️ ${msg}`);
+  });
+
+  // 启动健康监控（含 auth 定期检查）
+  const healthMonitor = new HealthMonitor();
+  healthMonitor.setHttpServer(server);
+  healthMonitor.setAdapter(officialAdapter);
+  // healthMonitor 在 tunnel 启动后再 start，见下方
 
   // 记录任务执行历史到 history.md
   const recordHistory = (taskCwd: string, taskName: string, status: string) => {
@@ -476,6 +494,11 @@ ${skillLine}
   } else {
     console.log(chalk.green("✓ 服务已就绪，扫码配对后即可使用\n"));
   }
+
+  // 启动健康监控（含 auth 定期检查）
+  healthMonitor.setTunnelManager(tunnelManager);
+  healthMonitor.start();
+
   console.log(chalk.gray("按回车键重新显示连接信息"));
   console.log(chalk.gray("按 Ctrl+C 退出\n"));
 
@@ -489,6 +512,7 @@ ${skillLine}
         console.log(chalk.yellow("\n正在退出..."));
         adapter.closeAllSessions();
         tunnelManager?.stop();
+        healthMonitor.stop();
         stopScheduler();
         server.stop();
         process.exit(0);
@@ -505,6 +529,7 @@ ${skillLine}
     console.log(chalk.yellow("\n正在退出..."));
     adapter.closeAllSessions();
     tunnelManager?.stop();
+    healthMonitor.stop();
     stopScheduler();
     server.stop();
     process.exit(0);
@@ -513,6 +538,7 @@ ${skillLine}
   process.on("SIGTERM", () => {
     adapter.closeAllSessions();
     tunnelManager?.stop();
+    healthMonitor.stop();
     stopScheduler();
     server.stop();
     process.exit(0);
