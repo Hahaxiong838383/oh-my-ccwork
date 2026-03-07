@@ -76,6 +76,10 @@ export class FeishuChannel implements MessageChannel {
   private botOpenId: string | null = null;
   private botName: string | null = null;
 
+  // 群聊消息内存缓存：chatId → 最近 N 条消息（从 WebSocket 事件实时采集，不依赖 API 权限）
+  private chatMessageBuffer: Map<string, Array<{ sender: string; text: string; timestamp: number }>> = new Map();
+  private readonly CHAT_BUFFER_MAX = 30; // 每个群最多缓存 30 条
+
   constructor(config?: FeishuChannelConfig) {
     this.id = config?.id ?? 'feishu';
     // 从环境变量读取配置
@@ -226,6 +230,16 @@ export class FeishuChannel implements MessageChannel {
       return;
     }
 
+    // 飞书是国内服务，不走代理（axios 通过 HTTP 代理发 HTTPS 会导致 400）
+    // 必须在任何 API 调用之前设置，否则第一个通道的 getAccessToken 会走代理失败
+    const noProxy = process.env.NO_PROXY || process.env.no_proxy || "";
+    if (!noProxy.includes("feishu.cn")) {
+      const updated = [noProxy, "*.feishu.cn"].filter(Boolean).join(",");
+      process.env.NO_PROXY = updated;
+      process.env.no_proxy = updated;
+      console.log(`[FeishuChannel] 已设置 NO_PROXY=${updated}`);
+    }
+
     // 验证凭证
     const token = await this.getAccessToken();
     if (!token) {
@@ -294,8 +308,13 @@ export class FeishuChannel implements MessageChannel {
               console.log(`[FeishuChannel:${this.id}] 来源 chat_id: ${chatId}`);
             }
 
-            // 群聊 @mention 过滤：只处理 @自己 的消息
+            // 群聊消息缓存：所有群聊消息都缓存（@mention 过滤之前），用于上下文注入
             const chatType = event?.message?.chat_type;
+            if (chatType === "group" && chatId) {
+              this.bufferChatMessage(chatId, event);
+            }
+
+            // 群聊 @mention 过滤：只处理 @自己 的消息
             if (chatType === "group" && (this.botOpenId || this.botName)) {
               const mentions: Array<{ id?: { open_id?: string }; key?: string; name?: string }> = event?.message?.mentions || [];
               console.log(`[FeishuChannel:${this.id}] 群聊 mentions: ${JSON.stringify(mentions.map(m => ({ key: m.key, open_id: m.id?.open_id, name: m.name })))}, 本机器人: ${this.botOpenId} (${this.botName})`);
@@ -360,15 +379,6 @@ export class FeishuChannel implements MessageChannel {
           }
         },
       });
-
-      // 飞书是国内服务，不走代理（axios 通过 HTTP 代理发 HTTPS 会导致 400）
-      const noProxy = process.env.NO_PROXY || process.env.no_proxy || "";
-      if (!noProxy.includes("feishu.cn")) {
-        const updated = [noProxy, "*.feishu.cn"].filter(Boolean).join(",");
-        process.env.NO_PROXY = updated;
-        process.env.no_proxy = updated;
-        console.log(`[FeishuChannel] 已设置 NO_PROXY=${updated}`);
-      }
 
       // 创建 WebSocket 客户端
       this.wsClient = new Lark.WSClient({
@@ -806,6 +816,142 @@ export class FeishuChannel implements MessageChannel {
       });
     } catch {
       // 静默失败 - 清理不是关键功能
+    }
+  }
+
+  /**
+   * 获取群聊最近消息历史（用于给机器人注入上下文）
+   * @param chatId - 群聊 ID
+   * @param count - 获取条数，默认 20
+   * @returns 格式化的聊天历史文本
+   */
+  /**
+   * 缓存群聊消息到内存 buffer（从 WebSocket 事件实时采集）
+   */
+  private bufferChatMessage(chatId: string, event: any): void {
+    try {
+      const message = event?.message;
+      // 飞书 WebSocket 事件字段是 message_type，不是 msg_type
+      const msgType = message?.message_type;
+      const senderType = event?.sender?.sender_type;
+      const sender = senderType === "app" ? "[机器人]" : "[用户]";
+      let text = "";
+
+      if (msgType === "text") {
+        const content = typeof message?.content === "string"
+          ? JSON.parse(message.content)
+          : (message?.content || {});
+        text = (content.text || "").replace(/@_user_\d+/g, "").trim();
+      } else if (msgType === "post") {
+        // 富文本消息（带 @mention 的消息会变成 post 类型）
+        const content = typeof message?.content === "string"
+          ? JSON.parse(message.content)
+          : (message?.content || {});
+        // post 结构: { title, content: [[{tag:"text",text:"..."},{tag:"at",...}]] }
+        const paragraphs = content.content || content.zh_cn?.content || [];
+        const parts: string[] = [];
+        for (const para of paragraphs) {
+          if (Array.isArray(para)) {
+            for (const node of para) {
+              if (node.tag === "text" && node.text) {
+                parts.push(node.text);
+              }
+            }
+          }
+        }
+        text = parts.join("").trim();
+      } else if (msgType === "image") {
+        text = "[图片]";
+      } else {
+        text = `[${msgType || "unknown"}]`;
+      }
+
+      if (!text) return;
+
+      const buffer = this.chatMessageBuffer.get(chatId) || [];
+      buffer.push({ sender, text, timestamp: Date.now() });
+
+      // 超过上限时移除最旧的
+      while (buffer.length > this.CHAT_BUFFER_MAX) {
+        buffer.shift();
+      }
+
+      this.chatMessageBuffer.set(chatId, buffer);
+    } catch {
+      // 缓存失败不影响主流程
+    }
+  }
+
+  /**
+   * 获取群聊历史：优先从内存 buffer 读取（可靠），API 作为补充
+   */
+  async fetchChatHistory(chatId: string, count: number = 20): Promise<string> {
+    // 优先使用内存 buffer（不依赖 API 权限，实时性更好）
+    const buffer = this.chatMessageBuffer.get(chatId);
+    if (buffer && buffer.length > 0) {
+      const recent = buffer.slice(-count);
+      const lines = recent.map(m => `${m.sender}: ${m.text}`);
+      console.log(`[FeishuChannel:${this.id}] 从内存 buffer 获取群聊上下文: ${lines.length} 条`);
+      return lines.join("\n");
+    }
+
+    // buffer 为空时尝试 API（首次启动后、bot 刚加入群时可能需要）
+    try {
+      console.log(`[FeishuChannel:${this.id}] buffer 为空，尝试 API 获取群聊历史 (chatId: ${chatId})`);
+      const res = await this.client.im.message.list({
+        params: {
+          container_id_type: "chat",
+          container_id: chatId,
+          page_size: count,
+          sort_type: "ByCreateTimeDesc",
+        },
+      }) as any;
+
+      console.log(`[FeishuChannel:${this.id}] API 返回: code=${res.code}, items=${res.data?.items?.length || 0}, msg=${res.msg || ''}`);
+
+      if (res.code !== 0 || !res.data?.items?.length) {
+        return "";
+      }
+
+      const messages = res.data.items.reverse();
+      const lines: string[] = [];
+
+      for (const msg of messages) {
+        const sender = msg.sender?.sender_type === "app" ? `[机器人]` : `[用户]`;
+        const msgType = msg.msg_type;
+
+        if (msgType === "text") {
+          try {
+            const content = JSON.parse(msg.body?.content || "{}");
+            const text = (content.text || "").replace(/@_user_\d+/g, "").trim();
+            if (text) lines.push(`${sender}: ${text}`);
+          } catch { }
+        } else if (msgType === "post") {
+          try {
+            const content = JSON.parse(msg.body?.content || "{}");
+            const paragraphs = content.content || content.zh_cn?.content || [];
+            const parts: string[] = [];
+            for (const para of paragraphs) {
+              if (Array.isArray(para)) {
+                for (const node of para) {
+                  if (node.tag === "text" && node.text) parts.push(node.text);
+                }
+              }
+            }
+            const text = parts.join("").trim();
+            if (text) lines.push(`${sender}: ${text}`);
+          } catch { }
+        } else if (msgType === "image") {
+          lines.push(`${sender}: [图片]`);
+        } else {
+          lines.push(`${sender}: [${msgType}]`);
+        }
+      }
+
+      return lines.join("\n");
+    } catch (err) {
+      console.warn(`[FeishuChannel:${this.id}] 获取群聊历史失败:`, err);
+      return "";
     }
   }
 

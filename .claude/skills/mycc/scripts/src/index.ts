@@ -9,7 +9,7 @@
  */
 
 import { execSync } from "child_process";
-import { mkdirSync, writeFileSync, existsSync, appendFileSync } from "fs";
+import { mkdirSync, writeFileSync, existsSync, appendFileSync, readFileSync } from "fs";
 import { homedir } from "os";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
@@ -318,11 +318,40 @@ ${skillLine}
     recordHistory(taskCwd, task.name, "执行中...");
 
     try {
-      for await (const _event of adapter.chat({ message, cwd: taskCwd })) {
-        // 忽略输出，只需要执行
+      if (task.engine === "gemini" || task.engine === "codex") {
+        const engineType = task.engine as EngineType;
+        console.log(chalk.cyan(`[Scheduler] 路由到 ${engineType}: ${task.name}`));
+
+        // 内联 SKILL.md：让 gemini/codex 知道完整执行步骤
+        let fullMessage = message;
+        if (task.skill && task.skill !== "-") {
+          const skillMdPath = join(taskCwd, ".claude", "skills", task.skill, "SKILL.md");
+          if (existsSync(skillMdPath)) {
+            try {
+              const skillContent = readFileSync(skillMdPath, "utf-8");
+              fullMessage = `${message}\n\n---\n# 技能执行指南（SKILL.md）\n\n${skillContent}`;
+              console.log(chalk.gray(`[Scheduler] 已内联 ${task.skill}/SKILL.md`));
+            } catch {
+              // 读取失败，使用原始 message
+            }
+          }
+        }
+
+        const result = await runCliEngine(engineType, fullMessage, taskCwd);
+        if (result.error) {
+          console.error(chalk.red(`[Scheduler][${engineType}] 执行错误: ${result.error}`));
+          recordHistory(taskCwd, task.name, `❌ 失败(${engineType})`);
+        } else {
+          console.log(chalk.green(`[Scheduler] 任务完成: ${task.name} (${engineType})`));
+          recordHistory(taskCwd, task.name, `✅ 成功(${engineType})`);
+        }
+      } else {
+        for await (const _event of adapter.chat({ message, cwd: taskCwd })) {
+          // 忽略输出，只需要执行
+        }
+        console.log(chalk.green(`[Scheduler] 任务完成: ${task.name}`));
+        recordHistory(taskCwd, task.name, "✅ 成功");
       }
-      console.log(chalk.green(`[Scheduler] 任务完成: ${task.name}`));
-      recordHistory(taskCwd, task.name, "✅ 成功");
     } catch (error) {
       console.error(chalk.red(`[Scheduler] 任务失败: ${task.name}`), error);
       recordHistory(taskCwd, task.name, "❌ 失败");

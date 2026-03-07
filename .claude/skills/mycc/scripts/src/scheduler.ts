@@ -23,6 +23,7 @@ export interface Task {
   desc: string;
   type: "daily" | "weekly" | "once" | "interval";
   activeHours?: { start: number; end: number }; // 活跃时段（小时），如 {start: 9, end: 24}
+  engine?: "claude" | "codex" | "gemini"; // 执行引擎，默认 claude
 }
 
 // ============================================
@@ -55,7 +56,7 @@ export function parseTasks(content: string | null | undefined): Task[] {
 
     if (cells.length < 4) continue;
 
-    const [time, name, skill, desc] = cells;
+    const [time, name, skill, desc, engineCell] = cells;
 
     // 跳过无效时间格式
     if (!isValidTimeFormat(time)) continue;
@@ -66,7 +67,14 @@ export function parseTasks(content: string | null | undefined): Task[] {
     // 解析活跃时段（从说明中提取"活跃时段 HH:MM-HH:MM"）
     const activeHours = parseActiveHours(desc);
 
-    tasks.push({ time, name, skill, desc, type, activeHours });
+    // 解析执行引擎（第5列，可选，默认 claude）
+    const validEngines = ["claude", "codex", "gemini"] as const;
+    const engineVal = engineCell?.toLowerCase().trim();
+    const engine = validEngines.includes(engineVal as typeof validEngines[number])
+      ? (engineVal as Task["engine"])
+      : undefined;
+
+    tasks.push({ time, name, skill, desc, type, activeHours, engine });
   }
 
   return tasks;

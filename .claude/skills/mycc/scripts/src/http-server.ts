@@ -401,18 +401,32 @@ export class HttpServer {
       return;
     }
 
+    // 群聊上下文注入：如果消息来自群聊，获取最近聊天记录作为上下文
+    let contextPrefix = "";
+    if (ctx.replyChatId && ctx.replyChatId.startsWith("oc_")) {
+      try {
+        const history = await ctx.channel.fetchChatHistory(ctx.replyChatId, 15);
+        if (history) {
+          contextPrefix = `[以下是群聊最近的对话记录，供你了解上下文]\n${history}\n[对话记录结束]\n\n`;
+          console.log(`[CC][${ctx.channelId}] 已注入群聊上下文 (${history.split("\n").length} 条)`);
+        }
+      } catch (err) {
+        console.warn(`[CC][${ctx.channelId}] 获取群聊上下文失败:`, err);
+      }
+    }
+
     // 团队模式检测（仅 cc 通道）：并行调用三引擎，汇总输出
     if (!ctx.engine) {
       const teamResult = this.detectTeamMode(trimmedMessage);
       if (teamResult.isTeamMode && teamResult.cleanMessage) {
-        await this.processTeamMode(ctx, teamResult.cleanMessage, images);
+        await this.processTeamMode(ctx, contextPrefix + teamResult.cleanMessage, images);
         return;
       }
     }
 
     // CLI 引擎分流：codex/gemini 走 CLI 子进程，无 session 概念
     if (ctx.engine === "codex" || ctx.engine === "gemini") {
-      await this.processCliEngineMessage(ctx, trimmedMessage);
+      await this.processCliEngineMessage(ctx, contextPrefix + trimmedMessage);
       return;
     }
 
@@ -433,7 +447,7 @@ export class HttpServer {
       let statusSent = false;
 
       for await (const data of adapter.chat({
-        message: trimmedMessage,
+        message: contextPrefix + trimmedMessage,
         sessionId: ctx.currentSessionId,
         cwd: this.cwd,
         images: images,
