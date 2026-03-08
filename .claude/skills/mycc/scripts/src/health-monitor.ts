@@ -10,15 +10,27 @@
 
 import chalk from "chalk";
 import { execSync } from "child_process";
+import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync } from "fs";
+import { homedir } from "os";
+import { join } from "path";
 import { HttpServer } from "./http-server.js";
 import { TunnelManager } from "./tunnel-manager.js";
 import type { OfficialAdapter } from "./adapters/official.js";
 
 const HEALTH_CHECK_INTERVAL = 30000; // 30秒检查一次
 const AUTH_REFRESH_INTERVAL = 10 * 60 * 1000; // 10分钟主动刷新一次 token（在过期前刷新）
+const FEISHU_MCP_CHECK_INTERVAL = 5 * 60 * 1000; // 5分钟检查一次飞书 MCP token
+const FEISHU_MCP_REFRESH_BUFFER = 30 * 60 * 1000; // token 过期前 30 分钟主动刷新
 const FEISHU_HEARTBEAT_INTERVAL = 300000; // 5分钟发送一次飞书心跳
 const MAX_RESTART_ATTEMPTS = 3; // 最大重启次数
 const RESTART_COOLDOWN = 60000; // 重启冷却时间（1分钟）
+const AUTH_FAIL_THRESHOLD = 3; // 连续失败 N 次才报警（防止单次网络波动误报）
+
+// 飞书 MCP token 相关路径
+const FEISHU_MCP_DIR = join(homedir(), ".feishu-mcp");
+const FEISHU_MCP_TOKEN_FILE = join(FEISHU_MCP_DIR, "tokens.json");
+const FEISHU_MCP_TOKEN_BACKUP = join(FEISHU_MCP_DIR, "tokens.backup.json");
+const FEISHU_MCP_TOKEN_URL = "https://open.feishu.cn/open-apis/authen/v2/oauth/token";
 
 export interface HealthMonitorConfig {
   /** 健康检查间隔（毫秒） */
@@ -38,6 +50,7 @@ export interface HealthMonitorConfig {
 export class HealthMonitor {
   private timer: ReturnType<typeof setInterval> | null = null;
   private authCheckTimer: ReturnType<typeof setInterval> | null = null;
+  private feishuMcpCheckTimer: ReturnType<typeof setInterval> | null = null;
   private feishuHeartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private restartCount = 0;
   private lastRestartTime = 0;
@@ -46,6 +59,8 @@ export class HealthMonitor {
   private adapter: OfficialAdapter | null = null;
   private config: Required<HealthMonitorConfig>;
   private onRestartCallback: (() => Promise<void>) | null = null;
+  private authFailCount = 0; // 连续 auth 刷新失败计数
+  private feishuMcpOk = true; // 飞书 MCP token 状态
 
   constructor(config: HealthMonitorConfig = {}) {
     this.config = {
@@ -124,6 +139,16 @@ export class HealthMonitor {
     if (this.authCheckTimer.unref) this.authCheckTimer.unref();
     console.log(chalk.gray(`  Auth 主动刷新间隔: ${AUTH_REFRESH_INTERVAL / 60000}min`));
 
+    // 启动飞书 MCP token 监控定时器
+    this.feishuMcpCheckTimer = setInterval(() => {
+      this.checkFeishuMcpToken();
+    }, FEISHU_MCP_CHECK_INTERVAL);
+    if (this.feishuMcpCheckTimer.unref) this.feishuMcpCheckTimer.unref();
+    console.log(chalk.gray(`  飞书 MCP Token 检查间隔: ${FEISHU_MCP_CHECK_INTERVAL / 60000}min`));
+
+    // 启动时立即检查一次飞书 MCP token
+    this.checkFeishuMcpToken();
+
     // 启动飞书心跳定时器
     if (this.config.feishuChannel) {
       this.feishuHeartbeatTimer = setInterval(() => {
@@ -163,7 +188,12 @@ export class HealthMonitor {
         console.warn(chalk.yellow("[HealthMonitor] ⚠️ Claude CLI auth 已失效"));
       }
 
-      // 5. 如果 Tunnel 断开且达到重启条件，触发重启
+      // 5. 飞书 MCP token 状态（轻量检查，详细检查由独立定时器负责）
+      if (!this.feishuMcpOk) {
+        console.warn(chalk.yellow("[HealthMonitor] ⚠️ 飞书 MCP token 异常"));
+      }
+
+      // 6. 如果 Tunnel 断开且达到重启条件，触发重启
       if (!tunnelOk && this.shouldRestart()) {
         await this.triggerRestart();
       }
@@ -282,15 +312,181 @@ export class HealthMonitor {
         env: this.getCleanEnv(),
       });
       console.log(chalk.green(`[HealthMonitor] ✓ Token 刷新成功 (${new Date().toLocaleTimeString()})`));
+      this.authFailCount = 0; // 成功则重置计数
       if (this.adapter) {
         this.adapter.authOk = true;
       }
     } catch (err) {
-      console.error(chalk.red("[HealthMonitor] ✗ Token 强制刷新失败，可能需要手动 /login"));
-      if (this.adapter) {
-        this.adapter.authOk = false;
-        (this.adapter as any)._onAuthFailed?.("Claude CLI token 过期且自动刷新失败，请在终端执行 /login");
+      this.authFailCount++;
+      console.error(chalk.red(`[HealthMonitor] ✗ Token 刷新失败 (${this.authFailCount}/${AUTH_FAIL_THRESHOLD})`));
+      if (this.authFailCount >= AUTH_FAIL_THRESHOLD) {
+        console.error(chalk.red("[HealthMonitor] ✗ 连续多次刷新失败，可能需要手动 /login"));
+        if (this.adapter) {
+          this.adapter.authOk = false;
+          (this.adapter as any)._onAuthFailed?.("Claude CLI token 过期且自动刷新失败，请在终端执行 /login");
+        }
       }
+    }
+  }
+
+  /**
+   * 检查飞书 MCP token 状态
+   * 三层防护：1.检测文件存在 2.检测过期并刷新 3.备份恢复
+   */
+  private async checkFeishuMcpToken(): Promise<void> {
+    try {
+      // 第一层：token 文件是否存在
+      if (!existsSync(FEISHU_MCP_TOKEN_FILE)) {
+        console.warn(chalk.yellow("[HealthMonitor] ⚠️ 飞书 MCP token 文件丢失"));
+
+        // 尝试从备份恢复
+        if (existsSync(FEISHU_MCP_TOKEN_BACKUP)) {
+          console.log(chalk.cyan("[HealthMonitor] 从备份恢复 token..."));
+          mkdirSync(FEISHU_MCP_DIR, { recursive: true });
+          copyFileSync(FEISHU_MCP_TOKEN_BACKUP, FEISHU_MCP_TOKEN_FILE);
+          console.log(chalk.green("[HealthMonitor] ✓ token 已从备份恢复"));
+        } else {
+          console.error(chalk.red("[HealthMonitor] ✗ 无备份可恢复，飞书 MCP 需要手动重新授权"));
+          console.error(chalk.red("[HealthMonitor]   运行: node /tmp/feishu-reauth.mjs"));
+          this.feishuMcpOk = false;
+          // 通过飞书通道告警
+          this.httpServer && (this.httpServer as any).broadcastToFeishu?.("⚠️ 飞书 MCP token 丢失，三机器人群聊无法调用飞书工具，需在终端手动重新授权");
+          return;
+        }
+      }
+
+      // 第二层：读取并检查 token 有效性
+      const all = JSON.parse(readFileSync(FEISHU_MCP_TOKEN_FILE, "utf-8"));
+      const appId = Object.keys(all)[0];
+      if (!appId || !all[appId]) {
+        console.warn(chalk.yellow("[HealthMonitor] ⚠️ 飞书 MCP token 文件内容无效"));
+        this.feishuMcpOk = false;
+        return;
+      }
+
+      const token = all[appId];
+      const now = Date.now();
+      const expiresAt = token.expiresAt || 0;
+      const timeLeft = expiresAt - now;
+
+      if (timeLeft <= 0) {
+        // token 已过期，尝试用 refresh_token 刷新
+        console.warn(chalk.yellow("[HealthMonitor] ⚠️ 飞书 MCP token 已过期，尝试刷新..."));
+        await this.refreshFeishuMcpToken(token, appId, all);
+      } else if (timeLeft < FEISHU_MCP_REFRESH_BUFFER) {
+        // token 即将过期（30分钟内），主动刷新
+        const minutesLeft = Math.round(timeLeft / 60000);
+        console.log(chalk.cyan(`[HealthMonitor] 飞书 MCP token 将在 ${minutesLeft} 分钟后过期，主动刷新...`));
+        await this.refreshFeishuMcpToken(token, appId, all);
+      } else {
+        // token 有效
+        this.feishuMcpOk = true;
+        // 第三层：创建/更新备份
+        this.backupFeishuMcpToken();
+      }
+    } catch (error) {
+      console.error(chalk.red("[HealthMonitor] 飞书 MCP token 检查异常:"), error);
+      this.feishuMcpOk = false;
+    }
+  }
+
+  /**
+   * 用 refresh_token 刷新飞书 MCP access_token
+   */
+  private async refreshFeishuMcpToken(
+    token: { refreshToken?: string; appId: string },
+    appId: string,
+    allTokens: Record<string, any>
+  ): Promise<void> {
+    if (!token.refreshToken) {
+      console.error(chalk.red("[HealthMonitor] ✗ 无 refresh_token，无法自动刷新"));
+      this.feishuMcpOk = false;
+      return;
+    }
+
+    try {
+      // 从 .mcp.json 读取 app_secret（不硬编码）
+      let appSecret = "";
+      const mcpConfigPaths = [
+        join(process.cwd(), ".mcp.json"),
+        join(homedir(), ".mcp.json"),
+      ];
+      for (const p of mcpConfigPaths) {
+        if (existsSync(p)) {
+          try {
+            const cfg = JSON.parse(readFileSync(p, "utf-8"));
+            const feishuMcp = cfg.mcpServers?.["open-feishu-mcp"];
+            if (feishuMcp?.args) {
+              const secretIdx = feishuMcp.args.indexOf("--app-secret");
+              if (secretIdx !== -1 && feishuMcp.args[secretIdx + 1]) {
+                appSecret = feishuMcp.args[secretIdx + 1];
+                break;
+              }
+            }
+          } catch {}
+        }
+      }
+
+      if (!appSecret) {
+        console.error(chalk.red("[HealthMonitor] ✗ 未找到飞书 MCP app_secret，无法刷新"));
+        this.feishuMcpOk = false;
+        return;
+      }
+
+      const resp = await fetch(FEISHU_MCP_TOKEN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify({
+          grant_type: "refresh_token",
+          refresh_token: token.refreshToken,
+          client_id: appId,
+          client_secret: appSecret,
+        }),
+      });
+
+      const data = await resp.json() as any;
+
+      if (!data.access_token) {
+        console.error(chalk.red("[HealthMonitor] ✗ 飞书 MCP token 刷新失败:"), data.error || data.msg || "unknown");
+        this.feishuMcpOk = false;
+        // 刷新失败告警
+        this.httpServer && (this.httpServer as any).broadcastToFeishu?.("⚠️ 飞书 MCP token 刷新失败，需在终端手动重新授权");
+        return;
+      }
+
+      // 更新 token
+      const newToken = {
+        ...allTokens[appId],
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token || token.refreshToken,
+        expiresAt: Date.now() + (data.expires_in || 7200) * 1000,
+        appId,
+      };
+      allTokens[appId] = newToken;
+      mkdirSync(FEISHU_MCP_DIR, { recursive: true });
+      writeFileSync(FEISHU_MCP_TOKEN_FILE, JSON.stringify(allTokens, null, 2), "utf-8");
+
+      console.log(chalk.green(`[HealthMonitor] ✓ 飞书 MCP token 刷新成功 (${new Date().toLocaleTimeString()})`));
+      this.feishuMcpOk = true;
+
+      // 刷新成功后立即备份
+      this.backupFeishuMcpToken();
+    } catch (error) {
+      console.error(chalk.red("[HealthMonitor] ✗ 飞书 MCP token 刷新异常:"), error);
+      this.feishuMcpOk = false;
+    }
+  }
+
+  /**
+   * 备份飞书 MCP token 文件
+   */
+  private backupFeishuMcpToken(): void {
+    try {
+      if (existsSync(FEISHU_MCP_TOKEN_FILE)) {
+        copyFileSync(FEISHU_MCP_TOKEN_FILE, FEISHU_MCP_TOKEN_BACKUP);
+      }
+    } catch {
+      // 备份失败不影响主流程
     }
   }
 
@@ -364,6 +560,7 @@ export class HealthMonitor {
     httpOk: boolean;
     tunnelOk: boolean;
     authOk: boolean;
+    feishuMcpOk: boolean;
   } {
     return {
       running: this.timer !== null,
@@ -372,6 +569,7 @@ export class HealthMonitor {
       httpOk: this.checkHttpServer(),
       tunnelOk: this.checkTunnel(),
       authOk: this.adapter?.authOk ?? true,
+      feishuMcpOk: this.feishuMcpOk,
     };
   }
 
@@ -395,6 +593,11 @@ export class HealthMonitor {
     if (this.authCheckTimer) {
       clearInterval(this.authCheckTimer);
       this.authCheckTimer = null;
+    }
+
+    if (this.feishuMcpCheckTimer) {
+      clearInterval(this.feishuMcpCheckTimer);
+      this.feishuMcpCheckTimer = null;
     }
 
     if (this.feishuHeartbeatTimer) {
