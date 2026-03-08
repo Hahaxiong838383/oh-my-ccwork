@@ -113,7 +113,7 @@ export class FeishuChannel implements MessageChannel {
       appSecret: process.env.FEISHU_APP_SECRET || "",
       receiveUserId: process.env.FEISHU_RECEIVE_USER_ID,
       receiveIdType: (process.env.FEISHU_RECEIVE_ID_TYPE as "open_id" | "chat_id") || "open_id",
-      connectionMode: (process.env.FEISHU_CONNECTION_MODE as "websocket" | "poll") || "poll",
+      connectionMode: (process.env.FEISHU_CONNECTION_MODE as "websocket" | "poll") || "websocket",
       encryptKey: process.env.FEISHU_ENCRYPT_KEY,
       verificationToken: process.env.FEISHU_VERIFICATION_TOKEN,
       showToolUse: process.env.FEISHU_SHOW_TOOL_USE === "false" ? false : true, // 默认 true

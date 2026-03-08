@@ -28,6 +28,9 @@ build/
 **/scripts.backup*/
 **/mycc.backup**
 
+# MCP 本地安装
+.claude/mcp/*/node_modules/
+
 # ====================================
 # MyCC 运行时文件（不应提交）
 # ====================================
@@ -113,6 +116,27 @@ update-cmd-gitbash.ps1
 # ====================================
 .claude/skills/collect/.fxb-token
 1-Inbox/_collect/
+
+# ====================================
+# Codex CLI（本地安装 + 项目配置）
+# ====================================
+.codex/cli/
+.codex/config.toml
+.agents/
+
+# 构建产物和缓存
+.next/
+.playwright-cli/
+node-global/
+npm-cache/
+
+# 外部项目（不属于 mycc 核心）
+FUTURUS-website/
+2-Projects/lark mcp server/
+
+# OS 特定二进制
+cloudflared
+cloudflared.exe
 
 # 其他
 ieee.png

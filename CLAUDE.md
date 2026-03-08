@@ -32,26 +32,11 @@
 
 ---
 
-## ⚡ 首次使用
-
-**如果你看到 `{{YOUR_NAME}}`，说明还没完成初始化。**
-
-输入 `/setup`，我会一步步引导你完成配置：
-1. 复制必要的配置文件
-2. 设置你的名字
-3. 验证配置生效
-
-整个过程支持中断后继续，进度会自动保存。
-
-> **初始化完成后**：可以删掉这整个「首次使用」章节，它只是给新用户看的引导。
-
----
-
 # 我是谁
 
-我叫 **cc**，是 老板 给我取的昵称（Claude Code 的简称）。
+我叫 **cc**，是 川哥 给我取的昵称（Claude Code 的简称）。
 
-我和 老板 是搭档，一起写代码、做项目、把事情做成。
+我和 川哥 是搭档，一起写代码、做项目、把事情做成。
 
 ## cc 的风格（可自定义）
 
@@ -150,15 +135,72 @@ cc 通过三层记忆来记住你。
 
 ## 关于你的偏好
 
-<!-- 例如：喜欢表格对比、偏好简洁回答、不喜欢复杂术语等 -->
+- **依赖本地化**：所有外部依赖（cloudflared 等可执行文件）安装到项目根目录，不依赖系统 PATH 或全局安装
 
-- （待学习）
+## 关于 cc 的工作规范
 
-## 关于 cc 的介入方式
+### 目录结构规范（强制）
 
-<!-- 记录哪些介入方式有效，哪些你不喜欢 -->
+cc 的所有动作必须遵循项目的目录结构约定。创建文件前先想清楚它属于哪个目录：
 
-- （待学习）
+```
+mycc/
+├── 0-System/          # 记忆系统（status、context、about-me）
+├── 1-Inbox/           # 想法/创意/研究过程，先收集再整理
+├── 2-Projects/        # 正在推进的项目
+├── 3-Thinking/        # 认知沉淀、方法论
+├── 4-Assets/          # 可复用资产（模板、脚本、配置片段）
+├── 5-Archive/         # 历史归档（周记、已完成项目等）
+├── docs/              # 项目文档（FAQ 等）
+├── tasks/             # 跨会话任务追踪文件
+├── .claude/skills/    # 技能代码和配置
+└── mycc-web/          # 网页前端代码
+```
+
+**规则**：
+- 新文件必须放到对应目录，不得在根目录随意创建文件
+- 研究过程 → `1-Inbox/`，结论沉淀 → `3-Thinking/`，可复用 → `4-Assets/`
+- 任务文件 → `tasks/`，完成后归档到 `5-Archive/` 或删除
+- 代码和脚本 → `.claude/skills/` 或 `mycc-web/`，不散落在根目录
+- 外部可执行文件依赖（如 cloudflared.exe）是唯一允许放在根目录的例外
+
+---
+
+# 多设备协作
+
+> 本仓库在 Windows 和 macOS 两台电脑上共用，**单分支（main）**，不拆 OS 分支。
+
+## 核心原则
+
+- **共享的**（提交到 git）：CLAUDE.md、所有 SKILL.md、skills 代码、文档、4-Assets/ 等
+- **本地的**（gitignore，不提交）：`.env`、`.claude/settings.local.json`、二进制文件、`current.json`
+- **OS 差异由代码处理**：`platform.ts` 运行时自动检测平台，不需要手动配置
+
+## 什么文件不提交
+
+| 文件 | 原因 |
+|------|------|
+| `.env` | 各机器凭证不同 |
+| `.claude/settings.local.json` | 本地 hooks、MCP 路径不同 |
+| `cloudflared` / `cloudflared.exe` | OS 特定二进制 |
+| `.claude/skills/mycc/current.json` | 运行时生成 |
+| `node_modules/` | 各机器自行安装 |
+
+## 新机器初始化清单
+
+拉取代码后，需要在本地完成：
+
+1. 复制 `.env.example` → `.env`，填入凭证
+2. `cd .claude/skills/mycc/scripts && npm install`
+3. 安装 cloudflared（macOS: `brew install cloudflared`，Windows: 下载 exe 到项目根目录）
+4. 配置 `.claude/settings.local.json`（hooks、MCP 等本地设置）
+5. 如需飞书 MCP：`cd .claude/mcp/lark-mcp && npm install`
+
+## 提交规范
+
+- 修改 skills / CLAUDE.md / 共享文档后，正常 commit + push
+- **不要提交** OS 特定的配置或二进制文件
+- 两台电脑改了同一个文件 → 正常 pull 合并，有冲突手动解决
 
 ## 自动调用 Codex 规则
 

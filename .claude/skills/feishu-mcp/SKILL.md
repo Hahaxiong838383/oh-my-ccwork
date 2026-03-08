@@ -93,6 +93,14 @@ description: 飞书 MCP 工具使用指南。当用户提到飞书相关操作�
 
 > 以上工具不够用时，用 `feishu_openapi_call` 传入 method + path 调用任意飞书 OpenAPI。
 
+### 画板/白板 (Whiteboard)
+
+| 工具 | 用途 | 必填参数 |
+|------|------|----------|
+| `feishu_openapi_call` | 读取画板节点 | `GET /board/v1/whiteboards/<token>/nodes` |
+
+> 画板是文档中 block_type=43 的嵌入块，需 `board:whiteboard:node:read` 权限。详见 `/read-whiteboard` skill。
+
 ---
 
 ## 常用操作示例

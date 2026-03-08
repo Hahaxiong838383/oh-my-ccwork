@@ -7,7 +7,8 @@
 
 import { execSync, spawn } from "child_process";
 import { existsSync } from "fs";
-import { parse, join } from "path";
+import { parse, join, resolve } from "path";
+import { findProjectRoot } from "./config.js";
 import {
   resolveExecutable,
   envVar,
@@ -132,11 +133,18 @@ export function detectCloudflaredPath(): string {
     [
       envVar("CLOUDFLARED_PATH"),
       knownPaths((ctx) => {
-        if (ctx.platform === "win32") return [];
-        return [
-          "/opt/homebrew/bin/cloudflared", // macOS ARM
-          "/usr/local/bin/cloudflared",    // macOS Intel / Linux
-        ];
+        const paths: string[] = [];
+        // 项目根目录下的 cloudflared（Windows 本地安装）
+        const root = findProjectRoot(process.cwd());
+        if (root) {
+          const ext = ctx.platform === "win32" ? ".exe" : "";
+          paths.push(resolve(root, `cloudflared${ext}`));
+        }
+        if (ctx.platform !== "win32") {
+          paths.push("/opt/homebrew/bin/cloudflared"); // macOS ARM
+          paths.push("/usr/local/bin/cloudflared");    // macOS Intel / Linux
+        }
+        return paths;
       }),
       whichCommand("cloudflared"),
       fallback("cloudflared"),
@@ -165,7 +173,12 @@ export function detectClaudeCliPath(): { executable: string; cliPath: string } {
       // 已知 cli.js 路径（npm root -g 失败时的 fallback）
       knownPaths(
         (ctx) => {
-          if (ctx.platform === "win32") return [];
+          if (ctx.platform === "win32") {
+            const appData = ctx.env.APPDATA || "";
+            return [
+              join(appData, "npm", "node_modules", "@anthropic-ai", "claude-code", "cli.js"),
+            ];
+          }
           return [
             "/usr/local/lib/node_modules/@anthropic-ai/claude-code/cli.js",
             "/opt/homebrew/lib/node_modules/@anthropic-ai/claude-code/cli.js",
