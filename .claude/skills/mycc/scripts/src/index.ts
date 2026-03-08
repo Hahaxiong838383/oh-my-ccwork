@@ -9,7 +9,7 @@
  */
 
 import { execSync } from "child_process";
-import { mkdirSync, writeFileSync, existsSync, appendFileSync, readFileSync } from "fs";
+import { mkdirSync, writeFileSync, existsSync, appendFileSync } from "fs";
 import { homedir } from "os";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
@@ -29,40 +29,12 @@ import qrcode from "qrcode-terminal";
 import chalk from "chalk";
 import { HttpServer } from "./http-server.js";
 import { startScheduler, stopScheduler, type Task } from "./scheduler.js";
-import { adapter, officialAdapter } from "./adapters/index.js";
-import { HealthMonitor } from "./health-monitor.js";
+import { adapter } from "./adapters/index.js";
 import { CloudflareProvider } from "./tunnel-provider.js";
 import { TunnelManager } from "./tunnel-manager.js";
 import { loadPublicUrl, loadEnvFile } from "./env-loader.js";
-import { agentIntrospection } from "./introspection.js";
-
-// 清除 CLAUDECODE 环境变量：后端从 Claude Code session 启动时会继承此变量，
-// 导致所有 claude 子进程（HealthMonitor、SDK session）被误判为嵌套会话而拒绝启动
-delete process.env.CLAUDECODE;
 
 const PORT = process.env.PORT || 18080;
-
-// ==================== 全局错误处理（EvoMap AI Agent 自省调试框架）====================
-// 触发：agent_error, auto_debug, self_repair, error_fix, runtime_exception
-process.on("uncaughtException", async (error) => {
-  console.error("[AgentIntrospection] 未捕获异常:", error.message);
-  const analysis = await agentIntrospection.analyze(error);
-  if (!analysis.repairSuccess) {
-    console.error("[AgentIntrospection] 无法自动修复，需要人工介入");
-    console.error("[AgentIntrospection] 解决方案:", analysis.solution);
-  }
-  // 不退出进程，让服务继续运行
-});
-
-process.on("unhandledRejection", async (reason, promise) => {
-  console.error("[AgentIntrospection] 未处理的 Promise 拒绝:", reason);
-  const error = reason instanceof Error ? reason : new Error(String(reason));
-  const analysis = await agentIntrospection.analyze(error);
-  if (!analysis.repairSuccess) {
-    console.error("[AgentIntrospection] 无法自动修复，需要人工介入");
-  }
-});
-// ==============================================================================
 const WORKER_URL = process.env.WORKER_URL || "https://api.mycc.dev";
 const PACKAGE_NAME = "mycc-backend";
 
@@ -244,19 +216,6 @@ async function startServer(args: string[]) {
     throw error;
   }
 
-  // 注册 auth 失败回调：通过所有飞书通道通知用户
-  officialAdapter.onAuthFailed((msg: string) => {
-    console.error(chalk.red(`[Auth] ${msg}`));
-    // 通过 server 的飞书通道广播通知
-    server.broadcastToFeishu?.(`⚠️ ${msg}`);
-  });
-
-  // 启动健康监控（含 auth 定期检查）
-  const healthMonitor = new HealthMonitor();
-  healthMonitor.setHttpServer(server);
-  healthMonitor.setAdapter(officialAdapter);
-  // healthMonitor 在 tunnel 启动后再 start，见下方
-
   // 记录任务执行历史到 history.md
   const recordHistory = (taskCwd: string, taskName: string, status: string) => {
     const historyPath = join(taskCwd, ".claude", "skills", "scheduler", "history.md");
@@ -318,40 +277,11 @@ ${skillLine}
     recordHistory(taskCwd, task.name, "执行中...");
 
     try {
-      if (task.engine === "gemini" || task.engine === "codex") {
-        const engineType = task.engine as EngineType;
-        console.log(chalk.cyan(`[Scheduler] 路由到 ${engineType}: ${task.name}`));
-
-        // 内联 SKILL.md：让 gemini/codex 知道完整执行步骤
-        let fullMessage = message;
-        if (task.skill && task.skill !== "-") {
-          const skillMdPath = join(taskCwd, ".claude", "skills", task.skill, "SKILL.md");
-          if (existsSync(skillMdPath)) {
-            try {
-              const skillContent = readFileSync(skillMdPath, "utf-8");
-              fullMessage = `${message}\n\n---\n# 技能执行指南（SKILL.md）\n\n${skillContent}`;
-              console.log(chalk.gray(`[Scheduler] 已内联 ${task.skill}/SKILL.md`));
-            } catch {
-              // 读取失败，使用原始 message
-            }
-          }
-        }
-
-        const result = await runCliEngine(engineType, fullMessage, taskCwd);
-        if (result.error) {
-          console.error(chalk.red(`[Scheduler][${engineType}] 执行错误: ${result.error}`));
-          recordHistory(taskCwd, task.name, `❌ 失败(${engineType})`);
-        } else {
-          console.log(chalk.green(`[Scheduler] 任务完成: ${task.name} (${engineType})`));
-          recordHistory(taskCwd, task.name, `✅ 成功(${engineType})`);
-        }
-      } else {
-        for await (const _event of adapter.chat({ message, cwd: taskCwd })) {
-          // 忽略输出，只需要执行
-        }
-        console.log(chalk.green(`[Scheduler] 任务完成: ${task.name}`));
-        recordHistory(taskCwd, task.name, "✅ 成功");
+      for await (const _event of adapter.chat({ message, cwd: taskCwd, sessionId: task.sessionId })) {
+        // 忽略输出，只需要执行
       }
+      console.log(chalk.green(`[Scheduler] 任务完成: ${task.name}`));
+      recordHistory(taskCwd, task.name, "✅ 成功");
     } catch (error) {
       console.error(chalk.red(`[Scheduler] 任务失败: ${task.name}`), error);
       recordHistory(taskCwd, task.name, "❌ 失败");
@@ -414,7 +344,7 @@ ${skillLine}
   let token: string | null = null;
   let mpUrl: string;
 
-  if (tunnelManager === null) {
+  if (tunnelManager === null && !isPublicMode) {
     // Tunnel 不可用，跳过 Worker 注册
     console.warn(chalk.yellow("Tunnel 不可用，跳过 Worker 注册"));
     console.warn(chalk.yellow("Web 通道不可用，仅飞书通道可用\n"));
@@ -429,24 +359,24 @@ ${skillLine}
       console.log(chalk.gray("（直接访问 tunnel URL 仍可用于测试）\n"));
       mpUrl = tunnelUrl; // fallback
     } else {
-    // 注册成功，更新并保存配置
-    if (registerResult?.isNewDevice) {
-      console.log(chalk.green("✓ 新设备注册成功\n"));
-    } else {
-      console.log(chalk.green("✓ 设备已识别，连接码保持不变\n"));
-    }
+      // 注册成功，更新并保存配置
+      if (registerResult?.isNewDevice) {
+        console.log(chalk.green("✓ 新设备注册成功\n"));
+      } else {
+        console.log(chalk.green("✓ 设备已识别，连接码保持不变\n"));
+      }
 
-    // 验证 Worker 是否真的更新了 tunnelUrl
-    console.log(chalk.gray("验证 Worker 映射..."));
-    const verified = await verifyWorkerMapping(token, tunnelUrl);
-    if (verified) {
-      console.log(chalk.green("✓ Worker 映射验证成功\n"));
-    } else {
-      console.error(chalk.red("❌ Worker 映射验证失败"));
-      console.error(chalk.yellow("   建议：请重新启动后端\n"));
-    }
+      // 验证 Worker 是否真的更新了 tunnelUrl
+      console.log(chalk.gray("验证 Worker 映射..."));
+      const verified = await verifyWorkerMapping(token, tunnelUrl);
+      if (verified) {
+        console.log(chalk.green("✓ Worker 映射验证成功\n"));
+      } else {
+        console.error(chalk.red("Worker 映射验证失败"));
+        console.error(chalk.yellow("   建议：请重新启动后端\n"));
+      }
 
-    mpUrl = `${WORKER_URL}/${token}`;
+      mpUrl = `${WORKER_URL}/${token}`;
     }
   }
 
@@ -523,11 +453,6 @@ ${skillLine}
   } else {
     console.log(chalk.green("✓ 服务已就绪，扫码配对后即可使用\n"));
   }
-
-  // 启动健康监控（含 auth 定期检查）
-  healthMonitor.setTunnelManager(tunnelManager);
-  healthMonitor.start();
-
   console.log(chalk.gray("按回车键重新显示连接信息"));
   console.log(chalk.gray("按 Ctrl+C 退出\n"));
 
@@ -541,7 +466,6 @@ ${skillLine}
         console.log(chalk.yellow("\n正在退出..."));
         adapter.closeAllSessions();
         tunnelManager?.stop();
-        healthMonitor.stop();
         stopScheduler();
         server.stop();
         process.exit(0);
@@ -558,7 +482,6 @@ ${skillLine}
     console.log(chalk.yellow("\n正在退出..."));
     adapter.closeAllSessions();
     tunnelManager?.stop();
-    healthMonitor.stop();
     stopScheduler();
     server.stop();
     process.exit(0);
@@ -567,7 +490,6 @@ ${skillLine}
   process.on("SIGTERM", () => {
     adapter.closeAllSessions();
     tunnelManager?.stop();
-    healthMonitor.stop();
     stopScheduler();
     server.stop();
     process.exit(0);
@@ -718,6 +640,27 @@ ${chalk.yellow("示例:")}
   cc-mp start --reset   # 重置配置，需要重新配对
 `);
 }
+
+// === 全局异常兜底：防止 SDK 子进程崩溃杀死整个 Node 进程 ===
+process.on("unhandledRejection", (reason) => {
+  console.error("[全局] unhandledRejection，清理所有 session:", reason);
+  try {
+    adapter.closeAllSessions();
+  } catch {
+    // 静默处理
+  }
+  // 不 process.exit —— 让 HTTP 服务继续运行
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("[全局] uncaughtException，清理所有 session:", err);
+  try {
+    adapter.closeAllSessions();
+  } catch {
+    // 静默处理
+  }
+  // 不 process.exit —— 让 HTTP 服务继续运行
+});
 
 main().catch((error) => {
   console.error(chalk.red("启动失败:"), error);

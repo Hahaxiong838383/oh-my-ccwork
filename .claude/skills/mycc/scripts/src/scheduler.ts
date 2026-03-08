@@ -23,7 +23,7 @@ export interface Task {
   desc: string;
   type: "daily" | "weekly" | "once" | "interval";
   activeHours?: { start: number; end: number }; // 活跃时段（小时），如 {start: 9, end: 24}
-  engine?: "claude" | "codex" | "gemini"; // 执行引擎，默认 claude
+  sessionId?: string; // 指定 sessionId 可唤起已有对话
 }
 
 // ============================================
@@ -45,8 +45,9 @@ export function parseTasks(content: string | null | undefined): Task[] {
     // 跳过非表格行
     if (!line.startsWith("|")) continue;
 
-    // 跳过表头和分隔行
-    if (line.includes("时间") || line.includes("日期时间") || line.includes("---")) continue;
+    // 跳过表头和分隔行（只检查第一列是否是表头关键词，避免误杀数据行）
+    const firstCell = line.split("|")[1]?.trim();
+    if (!firstCell || firstCell === "时间" || firstCell === "日期时间" || line.includes("---")) continue;
 
     // 解析表格行：| 时间 | 任务 | Skill | 说明 |
     const cells = line
@@ -56,7 +57,7 @@ export function parseTasks(content: string | null | undefined): Task[] {
 
     if (cells.length < 4) continue;
 
-    const [time, name, skill, desc, engineCell] = cells;
+    const [time, name, skill, desc] = cells;
 
     // 跳过无效时间格式
     if (!isValidTimeFormat(time)) continue;
@@ -67,17 +68,22 @@ export function parseTasks(content: string | null | undefined): Task[] {
     // 解析活跃时段（从说明中提取"活跃时段 HH:MM-HH:MM"）
     const activeHours = parseActiveHours(desc);
 
-    // 解析执行引擎（第5列，可选，默认 claude）
-    const validEngines = ["claude", "codex", "gemini"] as const;
-    const engineVal = engineCell?.toLowerCase().trim();
-    const engine = validEngines.includes(engineVal as typeof validEngines[number])
-      ? (engineVal as Task["engine"])
-      : undefined;
+    // 解析 sessionId（从说明中提取"session:xxx"）
+    const sessionId = parseSessionId(desc);
 
-    tasks.push({ time, name, skill, desc, type, activeHours, engine });
+    tasks.push({ time, name, skill, desc, type, activeHours, sessionId });
   }
 
   return tasks;
+}
+
+/**
+ * 从说明中解析 sessionId
+ * 格式：session:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+ */
+function parseSessionId(desc: string): string | undefined {
+  const match = desc.match(/session:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  return match ? match[1] : undefined;
 }
 
 /**

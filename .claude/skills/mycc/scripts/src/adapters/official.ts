@@ -13,25 +13,36 @@ import type { ChatParams, ConversationSummary, ConversationHistory } from "../ty
 import { getConversationList, getConversation } from "../history.js";
 import { detectClaudeCliPath } from "../platform.js";
 import { buildMessageContent, type MessageContent } from "../image-utils.js";
-import { execSync } from "child_process";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+import { ensurePatchedCli } from "../cli-patch.js";
 
-// 检测 Claude CLI 路径（跨平台）
-const { executable: CLAUDE_EXECUTABLE, cliPath: CLAUDE_CLI_PATH } = detectClaudeCliPath();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// ============ CLI lP Patch（Agent Teams 死锁修复）============
+// CLI 2.1.63 的 lP 函数不检查 isIdle，导致 do-while 主循环死锁
+// idle 的 teammate 被当成活跃 → 循环不退出 → inbox 轮询不执行 → 消息投递断裂
+// 具体实现见 src/cli-patch.ts
+
+// 检测 Claude CLI 路径（跨平台）+ 自动 patch
+const { executable: CLAUDE_EXECUTABLE, cliPath: _systemCliPath } = detectClaudeCliPath();
+const _patchedPath = resolve(__dirname, "..", "..", "cli-patched.js");
+const CLAUDE_CLI_PATH = ensurePatchedCli(_systemCliPath, _patchedPath);
 
 /** v2 SDKSessionOptions 必须提供 model，这是默认值 */
 const DEFAULT_MODEL = "sonnet";
 
-/** Session 超时时间：30 分钟无活动自动关闭 */
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+/** Session 超时时间：15 分钟无活动自动关闭 */
+const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
 
-/** 总安全阀超时：防止异常时 SSE 永远不关闭（30 分钟） */
-const MAX_DURATION_MS = 30 * 60 * 1000;
+/** 总安全阀超时：防止异常时 SSE 永远不关闭（60 分钟） */
+const MAX_DURATION_MS = 60 * 60 * 1000;
 
-/** 轮间超时：两轮之间等待的最长时间（5 分钟） */
-const BETWEEN_TURN_TIMEOUT_MS = 5 * 60 * 1000;
+/** 轮间超时：两轮之间等待的最长时间（15 分钟，Teams 队员干活需要时间） */
+const BETWEEN_TURN_TIMEOUT_MS = 15 * 60 * 1000;
 
-/** 超时清理间隔：每 5 分钟检查一次 */
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+/** 超时清理间隔：每 2 分钟检查一次 */
+const CLEANUP_INTERVAL_MS = 2 * 60 * 1000;
 
 /**
  * 构造 v2 SDKSessionOptions
@@ -41,13 +52,21 @@ function buildSessionOptions(model?: string) {
   const cleanEnv = { ...process.env };
   delete cleanEnv.CLAUDECODE;
 
+  // root 用户不能用 --dangerously-skip-permissions（CLI 安全限制）
+  const isRoot = process.getuid?.() === 0;
+
   const options: Parameters<typeof unstable_v2_createSession>[0] = {
     model: model || DEFAULT_MODEL,
     pathToClaudeCodeExecutable: CLAUDE_CLI_PATH,
     permissionMode: "bypassPermissions",
+    ...(!isRoot && { allowDangerouslySkipPermissions: true }),
     env: {
       ...cleanEnv,
       CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: "1",
+      // CLI 2.1.39+ InboxPoller 新增 enabled 守卫，依赖 GrowthBook feature flag (tengu_amber_flint)
+      // 在 SDK 模式下 GrowthBook 可能返回 false，导致 InboxPoller 被禁用、Agent Teams 消息无法投递
+      // 此 env 让 CLI 跳过 GrowthBook 检查，使用默认值 true，确保 InboxPoller 始终启用
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
     },
   };
 
@@ -72,11 +91,11 @@ export class OfficialAdapter implements CCAdapter {
   /** 超时清理定时器 */
   private cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
-  /** Auth 状态缓存 */
-  private _authOk = true;
-
-  /** Auth 失败通知回调（由外部注册，用于飞书通知等） */
-  private _onAuthFailed: ((msg: string) => void) | null = null;
+  /** Session 生命周期回调 */
+  private lifecycleCallbacks?: {
+    onSessionCreate?: (sessionId: string) => void;
+    onSessionClose?: (sessionId: string) => void;
+  };
 
   constructor() {
     // 启动定时清理
@@ -142,6 +161,7 @@ export class OfficialAdapter implements CCAdapter {
   registerSession(sessionId: string, session: SDKSession): void {
     this.sessions.set(sessionId, session);
     this.lastActivity.set(sessionId, Date.now());
+    this.lifecycleCallbacks?.onSessionCreate?.(sessionId);
   }
 
   /**
@@ -157,6 +177,7 @@ export class OfficialAdapter implements CCAdapter {
       }
       this.sessions.delete(sessionId);
       this.lastActivity.delete(sessionId);
+      this.lifecycleCallbacks?.onSessionClose?.(sessionId);
     }
   }
 
@@ -182,60 +203,13 @@ export class OfficialAdapter implements CCAdapter {
   }
 
   /**
-   * 注册 auth 失败回调（飞书通知等）
+   * 设置 session 生命周期回调
    */
-  onAuthFailed(callback: (msg: string) => void): void {
-    this._onAuthFailed = callback;
-  }
-
-  /**
-   * 构造干净的环境变量（移除 CLAUDECODE）
-   * 后端从 Claude Code session 启动时继承 CLAUDECODE=1，
-   * 会导致 claude 子进程报 "Cannot be launched inside another Claude Code session"
-   */
-  private getCleanEnv(): Record<string, string | undefined> {
-    const env = { ...process.env };
-    delete env.CLAUDECODE;
-    return env;
-  }
-
-  /**
-   * 检查 Claude CLI auth 状态
-   * 返回 true = 已登录，false = 未登录或检查失败
-   */
-  checkAuth(): boolean {
-    try {
-      const output = execSync("claude auth status --json 2>/dev/null", {
-        timeout: 10000,
-        encoding: "utf-8",
-        env: this.getCleanEnv(),
-      });
-      const status = JSON.parse(output);
-      const ok = status.loggedIn === true;
-      if (!ok && this._authOk) {
-        console.error("[Auth] Claude CLI 未登录");
-        this._onAuthFailed?.("Claude CLI 登录已过期，请在终端执行 /login 后重启 mycc 后端");
-      }
-      this._authOk = ok;
-      return ok;
-    } catch {
-      if (this._authOk) {
-        console.error("[Auth] 无法检查 Claude CLI auth 状态");
-        this._onAuthFailed?.("无法检查 Claude CLI 登录状态，请确认 claude 命令可用");
-      }
-      this._authOk = false;
-      return false;
-    }
-  }
-
-  /** 获取当前 auth 状态（不执行检查） */
-  get authOk(): boolean {
-    return this._authOk;
-  }
-
-  /** 设置 auth 状态（由 HealthMonitor 调用） */
-  set authOk(ok: boolean) {
-    this._authOk = ok;
+  setLifecycleCallbacks(callbacks: {
+    onSessionCreate?: (sessionId: string) => void;
+    onSessionClose?: (sessionId: string) => void;
+  }): void {
+    this.lifecycleCallbacks = callbacks;
   }
 
   /**
@@ -259,28 +233,9 @@ export class OfficialAdapter implements CCAdapter {
   async *chat(params: ChatParams): AsyncIterable<SSEEvent> {
     const { message, sessionId, images, model, cwd } = params;
 
-    // Auth 前置检查：如果已知 auth 失效，先检查一次是否恢复
-    if (!this._authOk) {
-      const recovered = this.checkAuth();
-      if (!recovered) {
-        yield { type: "text", text: "⚠️ Claude CLI 未登录，无法处理消息。请在终端执行 `/login` 后重启 mycc 后端。" } as SSEEvent;
-        return;
-      }
-      console.log("[Auth] 登录状态已恢复");
-    }
-
     // 获取或创建 session
     const session = this.getOrCreateSession({ sessionId, model, cwd });
     const isNewSession = !sessionId;
-
-    // 如果有图片，先发送一个 system 事件通知通道
-    if (images && images.length > 0) {
-      yield {
-        type: "system",
-        session_id: sessionId || "",
-        images: images,
-      } as SSEEvent;
-    }
 
     // 构造消息内容（纯文本或图文混合）
     const content = buildMessageContent(message, images);
@@ -312,93 +267,113 @@ export class OfficialAdapter implements CCAdapter {
     const startTime = Date.now();
     let isFirstTurn = true;
 
-    while (true) {
-      // 总安全阀
-      if (Date.now() - startTime > MAX_DURATION_MS) {
-        console.log("[CC] 总安全阀触发，强制结束 SSE");
-        break;
-      }
-
-      if (isFirstTurn) {
-        // 第一轮：直接消费 stream
-        for await (const sdkMessage of session.stream()) {
-          // 调试：记录所有 SDK 发送的事件类型
-          const msgType = sdkMessage?.type || "unknown";
-          console.log(`[SDK] 发送事件类型: ${msgType}`);
-
-          // Auth 错误检测：拦截 "Not logged in" 等 auth 相关错误
-          if (detectAuthError(sdkMessage)) {
-            // 详细日志：记录触发 auth 错误的完整 SDK 消息
-            const msgDump = JSON.stringify(sdkMessage).substring(0, 2000);
-            console.error(`[Auth] 检测到 auth 错误！完整消息: ${msgDump}`);
-            console.error(`[Auth] 消息类型: ${(sdkMessage as any)?.type}, sessionId: ${resolvedSessionId}`);
-            this._authOk = false;
-            this._onAuthFailed?.("Claude CLI 登录已过期，飞书通道暂停服务。请在终端执行 /login 后重启 mycc 后端。");
-            yield { type: "text", text: "⚠️ Claude CLI 登录已过期，请在终端执行 `/login` 后重启 mycc 后端。" } as SSEEvent;
-            return;
-          }
-
-          this.extractSessionId(sdkMessage, resolvedSessionId, session, (id) => { resolvedSessionId = id; });
-          const signals = detectMultiTurnSignals(sdkMessage);
-          if (signals.teamsStarted) { isTeamsMode = true; isMultiTurnMode = true; }
-          if (signals.teamsFinished) teamsFinished = true;
-          if (signals.bgTaskLaunched) { pendingBgTasks++; isMultiTurnMode = true; }
-          if (signals.bgTaskCompleted) pendingBgTasks--;
-          yield sdkMessage as SSEEvent;
-        }
-        isFirstTurn = false;
-      } else {
-        // 后续轮：用 Promise.race 加轮间超时
-        // 防止 stream() 永远阻塞（没有更多消息时）
-        const streamGen = session.stream();
-        const firstResult = await Promise.race([
-          streamGen.next(),
-          sleep(BETWEEN_TURN_TIMEOUT_MS).then(() => TIMEOUT_SENTINEL),
-        ]);
-
-        if (firstResult === TIMEOUT_SENTINEL) {
-          console.log("[CC] 轮间超时（5分钟无新消息），结束 SSE");
+    try {
+      while (true) {
+        // 总安全阀
+        if (Date.now() - startTime > MAX_DURATION_MS) {
+          console.log("[CC] 总安全阀触发，强制结束 SSE");
           break;
         }
 
-        const { done, value } = firstResult as IteratorResult<unknown>;
-        if (done) break;
+        if (isFirstTurn) {
+          // 第一轮：直接消费 stream
+          for await (const sdkMessage of session.stream()) {
+            this.extractSessionId(sdkMessage, resolvedSessionId, session, (id) => { resolvedSessionId = id; });
+            const signals = detectMultiTurnSignals(sdkMessage);
+            if (signals.teamsStarted) { isTeamsMode = true; isMultiTurnMode = true; }
+            if (signals.teamsFinished) teamsFinished = true;
+            if (signals.bgTaskLaunched) { pendingBgTasks++; isMultiTurnMode = true; }
+            if (signals.bgTaskCompleted) pendingBgTasks--;
+            yield sdkMessage as SSEEvent;
+          }
+          isFirstTurn = false;
+        } else {
+          // 后续轮：用心跳循环等待，防止前端 SSE 连接看起来"死了"
+          const streamGen = session.stream();
+          const HEARTBEAT_INTERVAL_MS = 15_000; // 每 15 秒发一次心跳
+          // Teams 模式下不用轮间超时，队员干活时 SDK 不产生 turn，只靠总安全阀兜底
+          const timeoutMs = isTeamsMode
+            ? Math.max(0, MAX_DURATION_MS - (Date.now() - startTime))
+            : BETWEEN_TURN_TIMEOUT_MS;
+          const deadline = Date.now() + timeoutMs;
+          let gotData = false;
+          let firstIterResult: IteratorResult<unknown> | null = null;
 
-        // 处理首条消息
-        this.extractSessionId(value, resolvedSessionId, session, (id) => { resolvedSessionId = id; });
-        const firstSignals = detectMultiTurnSignals(value);
-        if (firstSignals.teamsStarted) { isTeamsMode = true; isMultiTurnMode = true; }
-        if (firstSignals.teamsFinished) teamsFinished = true;
-        if (firstSignals.bgTaskLaunched) { pendingBgTasks++; isMultiTurnMode = true; }
-        if (firstSignals.bgTaskCompleted) pendingBgTasks--;
-        yield value as SSEEvent;
+          while (Date.now() < deadline) {
+            const remaining = deadline - Date.now();
+            const waitMs = Math.min(HEARTBEAT_INTERVAL_MS, remaining);
 
-        // 消费本轮剩余消息
-        for await (const sdkMessage of streamGen) {
-          this.extractSessionId(sdkMessage, resolvedSessionId, session, (id) => { resolvedSessionId = id; });
-          const signals = detectMultiTurnSignals(sdkMessage);
-          if (signals.teamsStarted) { isTeamsMode = true; isMultiTurnMode = true; }
-          if (signals.teamsFinished) teamsFinished = true;
-          if (signals.bgTaskLaunched) { pendingBgTasks++; isMultiTurnMode = true; }
-          if (signals.bgTaskCompleted) pendingBgTasks--;
-          yield sdkMessage as SSEEvent;
+            const raceResult = await Promise.race([
+              streamGen.next(),
+              sleep(waitMs).then(() => TIMEOUT_SENTINEL),
+            ]);
+
+            if (raceResult !== TIMEOUT_SENTINEL) {
+              firstIterResult = raceResult as IteratorResult<unknown>;
+              gotData = true;
+              break;
+            }
+
+            // 超时片段到了但总超时未到 → 发心跳，继续等
+            yield { type: "heartbeat", ts: Date.now() } as SSEEvent;
+          }
+
+          if (!gotData) {
+            console.log(`[CC] 轮间超时（${isTeamsMode ? '安全阀' : Math.round(BETWEEN_TURN_TIMEOUT_MS/60000)+'分钟'}无新消息），结束 SSE`);
+            break;
+          }
+
+          const { done, value } = firstIterResult!;
+          if (done) break;
+
+          // 处理首条消息
+          this.extractSessionId(value, resolvedSessionId, session, (id) => { resolvedSessionId = id; });
+          const firstSignals = detectMultiTurnSignals(value);
+          if (firstSignals.teamsStarted) { isTeamsMode = true; isMultiTurnMode = true; }
+          if (firstSignals.teamsFinished) teamsFinished = true;
+          if (firstSignals.bgTaskLaunched) { pendingBgTasks++; isMultiTurnMode = true; }
+          if (firstSignals.bgTaskCompleted) pendingBgTasks--;
+          yield value as SSEEvent;
+
+          // 消费本轮剩余消息
+          for await (const sdkMessage of streamGen) {
+            this.extractSessionId(sdkMessage, resolvedSessionId, session, (id) => { resolvedSessionId = id; });
+            const signals = detectMultiTurnSignals(sdkMessage);
+            if (signals.teamsStarted) { isTeamsMode = true; isMultiTurnMode = true; }
+            if (signals.teamsFinished) teamsFinished = true;
+            if (signals.bgTaskLaunched) { pendingBgTasks++; isMultiTurnMode = true; }
+            if (signals.bgTaskCompleted) pendingBgTasks--;
+            yield sdkMessage as SSEEvent;
+          }
         }
+
+        // 通知前端一轮结束
+        yield { type: "turn_complete" } as SSEEvent;
+
+        // 更新活跃时间
+        if (resolvedSessionId) {
+          this.lastActivity.set(resolvedSessionId, Date.now());
+        }
+
+        // === 退出判断 ===
+        if (!isMultiTurnMode) break;                           // 普通对话
+        if (isTeamsMode && teamsFinished) break;                // Teams 已结束
+        if (!isTeamsMode && pendingBgTasks <= 0) break;         // 后台 Task 全部完成
+
+        console.log(`[CC] 多轮模式：等待下一轮（teams=${isTeamsMode}, pending=${pendingBgTasks}）`);
       }
+    } catch (err) {
+      // SDK 子进程崩溃（ProcessTransport is not ready for writing 等）
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[CC] stream 异常，清理 session: ${errMsg}`);
 
-      // 通知前端一轮结束
-      yield { type: "turn_complete" } as SSEEvent;
-
-      // 更新活跃时间
+      // 主动关闭死 session，防止污染池
       if (resolvedSessionId) {
-        this.lastActivity.set(resolvedSessionId, Date.now());
+        this.closeSession(resolvedSessionId);
       }
 
-      // === 退出判断 ===
-      if (!isMultiTurnMode) break;                           // 普通对话
-      if (isTeamsMode && teamsFinished) break;                // Teams 已结束
-      if (!isTeamsMode && pendingBgTasks <= 0) break;         // 后台 Task 全部完成
-
-      console.log(`[CC] 多轮模式：等待下一轮（teams=${isTeamsMode}, pending=${pendingBgTasks}）`);
+      // 继续向上抛，让 HTTP handler 发送 SSE error 帧
+      throw err;
     }
 
     // 最终更新活跃时间
@@ -483,31 +458,6 @@ const TIMEOUT_SENTINEL = Symbol("TIMEOUT");
  * - Task + run_in_background：后台 subagent 启动
  * - task-notification + completed：后台 subagent 完成
  */
-/**
- * 检测 SDK 消息中的 auth 错误
- * Claude CLI 未登录时会在 stream 中返回包含 "Not logged in" 的消息
- */
-function detectAuthError(msg: unknown): boolean {
-  if (!msg || typeof msg !== "object") return false;
-  const m = msg as Record<string, unknown>;
-
-  // 只检查 error 类型的 SDK 消息，避免把 Claude 回复内容中的 "not logged in" 误判为 auth 错误
-  if (m.type !== "error" && m.type !== "system") return false;
-
-  try {
-    const str = JSON.stringify(msg);
-    const lower = str.toLowerCase();
-    return (
-      lower.includes("not logged in") ||
-      lower.includes("please run /login") ||
-      lower.includes("authentication required") ||
-      lower.includes("auth_error")
-    );
-  } catch {
-    return false;
-  }
-}
-
 function detectMultiTurnSignals(msg: unknown): {
   teamsStarted: boolean;
   teamsFinished: boolean;
