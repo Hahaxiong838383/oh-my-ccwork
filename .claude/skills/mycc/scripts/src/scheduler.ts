@@ -21,8 +21,9 @@ export interface Task {
   name: string;
   skill: string;
   desc: string;
-  type: "daily" | "weekly" | "once" | "interval";
+  type: "daily" | "weekly" | "once" | "interval" | "ndays";
   activeHours?: { start: number; end: number }; // 活跃时段（小时），如 {start: 9, end: 24}
+  engine?: "claude" | "codex" | "gemini"; // 执行引擎，默认 claude
   sessionId?: string; // 指定 sessionId 可唤起已有对话
 }
 
@@ -57,7 +58,7 @@ export function parseTasks(content: string | null | undefined): Task[] {
 
     if (cells.length < 4) continue;
 
-    const [time, name, skill, desc] = cells;
+    const [time, name, skill, desc, engineCell] = cells;
 
     // 跳过无效时间格式
     if (!isValidTimeFormat(time)) continue;
@@ -68,10 +69,17 @@ export function parseTasks(content: string | null | undefined): Task[] {
     // 解析活跃时段（从说明中提取"活跃时段 HH:MM-HH:MM"）
     const activeHours = parseActiveHours(desc);
 
+    // 解析执行引擎（第5列，可选，默认 claude）
+    const validEngines = ["claude", "codex", "gemini"] as const;
+    const engineVal = engineCell?.toLowerCase().trim();
+    const engine = validEngines.includes(engineVal as typeof validEngines[number])
+      ? (engineVal as Task["engine"])
+      : undefined;
+
     // 解析 sessionId（从说明中提取"session:xxx"）
     const sessionId = parseSessionId(desc);
 
-    tasks.push({ time, name, skill, desc, type, activeHours, sessionId });
+    tasks.push({ time, name, skill, desc, type, activeHours, engine, sessionId });
   }
 
   return tasks;
@@ -125,13 +133,17 @@ function isValidTimeFormat(time: string): boolean {
     return interval > 0; // 间隔必须大于 0
   }
 
+  // 每N天任务：每N天 HH:MM
+  if (/^每\d+天\s+\d{1,2}:\d{2}$/.test(time)) return true;
+
   return false;
 }
 
 /**
  * 检测任务类型
  */
-function detectTaskType(time: string): "daily" | "weekly" | "once" | "interval" {
+function detectTaskType(time: string): "daily" | "weekly" | "once" | "interval" | "ndays" {
+  if (/^每\d+天\s+\d{1,2}:\d{2}$/.test(time)) return "ndays";
   if (/^每\d+(分钟|m|小时|h)$/.test(time)) return "interval";
   if (/^周[一二三四五六日]/.test(time)) return "weekly";
   if (/^\d{4}-\d{2}-\d{2}/.test(time)) return "once";
@@ -161,6 +173,8 @@ export function matchTime(taskTime: string, now: Date): boolean {
       return matchWeeklyTime(taskTime, now);
     case "once":
       return matchOnceTime(taskTime, now);
+    case "ndays":
+      return matchNDaysTime(taskTime, now);
     case "interval":
       return matchIntervalTime(taskTime, now);
     default:
@@ -244,6 +258,32 @@ function matchOnceTime(taskTime: string, now: Date): boolean {
 
   // 检查时间（带误差）
   return isWithinTolerance(taskHour, taskMinute, nowHour, nowMinute);
+}
+
+/**
+ * 匹配每N天任务
+ * 格式：每N天 HH:MM
+ * 算法：用 epoch day（自 2026-01-01 起的天数）对 N 取模，余数为 0 时执行
+ */
+function matchNDaysTime(taskTime: string, now: Date): boolean {
+  const match = taskTime.match(/^每(\d+)天\s+(\d{1,2}):(\d{2})$/);
+  if (!match) return false;
+
+  const nDays = parseInt(match[1], 10);
+  const taskHour = parseInt(match[2], 10);
+  const taskMinute = parseInt(match[3], 10);
+
+  if (nDays <= 0) return false;
+
+  // epoch day: 自 2026-01-01 起的天数
+  const epoch = new Date(2026, 0, 1); // 2026-01-01
+  const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const daysSinceEpoch = Math.floor((todayMs - epoch.getTime()) / (24 * 60 * 60 * 1000));
+
+  if (daysSinceEpoch % nDays !== 0) return false;
+
+  // 日期匹配，再检查时间
+  return isWithinTolerance(taskHour, taskMinute, now.getHours(), now.getMinutes());
 }
 
 /**
@@ -347,6 +387,12 @@ export class TaskLock {
   private buildKey(taskName: string, taskTime: string, now: Date): string {
     // 日期部分
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+    // 每N天任务：用日期作为 key
+    const nDaysMatch = taskTime.match(/^每(\d+)天\s+(\d{1,2}):(\d{2})$/);
+    if (nDaysMatch) {
+      return `${taskName}|ndays-${nDaysMatch[1]}d-${nDaysMatch[2]}:${nDaysMatch[3]}|${dateStr}`;
+    }
 
     // 间隔任务需要计算触发点
     const intervalMatch = taskTime.match(/^每(\d+)(分钟|m|小时|h)$/);

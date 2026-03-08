@@ -162,7 +162,7 @@ export class FeishuChannel implements MessageChannel {
     }
 
     // 请求级 targetChatId 优先于 channel 级 lastIncomingChatId
-    const effectiveChatId = targetChatId || this.lastIncomingChatId;
+    const effectiveChatId = targetChatId || this.lastIncomingChatId || undefined;
 
     // 处理 system 事件（提取图片信息）
     if (event.type === "system") {

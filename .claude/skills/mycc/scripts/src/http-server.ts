@@ -12,13 +12,17 @@ import { generateToken } from "./utils.js";
 import { adapter } from "./adapters/index.js";
 import type { PairState } from "./types.js";
 import { validateImages, type ImageData } from "./image-utils.js";
-import { renameSession, getHistoryDir, scanSessionFiles } from "./history.js";
+import { renameSession } from "./history.js";
+import { getOrBuildIndex, searchBM25 } from "./bm25.js";
 import { listSkills } from "./skills.js";
-import { ChannelManager } from "./channels/manager.js";
-import { WebChannel } from "./channels/web.js";
+import { ChannelManager, WebChannel, FeishuChannel } from "./channels/index.js";
+import type { ProgressCard, ProgressEngine } from "./channels/feishu.js";
+import { runCliEngine, type EngineType } from "./adapters/cli-engine.js";
+import { getAdaptiveTimeout, recordExecution } from "./adaptive-timeout.js";
 import { loadConfig } from "./config.js";
-import { SessionStats } from "./session-stats.js";
-import { FeishuCommands } from "./channels/feishu-commands.js";
+import type { DeviceConfig } from "./types.js";
+import { SessionOwnership } from "./session-ownership.js";
+import { classifyMessage, taskQueueManager } from "./task-queue.js";
 
 const PORT = process.env.PORT || 18080;
 
@@ -35,6 +39,22 @@ const pairAttempts = new Map<string, { count: number; lockedUntil: number }>();
 /** 测试用：重置速率限制状态 */
 export function _resetPairAttempts() { pairAttempts.clear(); }
 
+/**
+ * 每个飞书通道的独立上下文。
+ *
+ * 隔离范围：会话历史、任务、记忆（均绑定 sessionId）
+ * 共享范围：MCP 工具、skills、多智能体调用链（进程级共享）
+ */
+interface ChannelContext {
+  channelId: string;
+  channel: FeishuChannel;
+  currentSessionId: string | null;
+  /** 引擎类型：undefined/claude = Claude SDK, codex/gemini = CLI */
+  engine?: "codex" | "gemini";
+  /** 当前正在处理的消息来源 chat_id（请求级，防止异步期间被后续消息覆盖） */
+  replyChatId?: string;
+}
+
 export class HttpServer {
   private server: http.Server | https.Server;
   private state: PairState;
@@ -42,64 +62,122 @@ export class HttpServer {
   private onPaired?: (token: string) => void;
   private isTls: boolean;
   private channelManager: ChannelManager;
-  private feishuChannel: any = null;
-  private feishuCommands: FeishuCommands;
-  private stats: SessionStats;
-
-  /** 代理：暴露底层 Map 供内部/测试访问 */
-  private get toolStats() { return this.stats.toolStatsMap; }
-  private get messageCount() { return this.stats.messageCountMap; }
-
-  /** SSE 事件监听者集合 */
-  private eventListeners: Set<http.ServerResponse> = new Set();
-
-  /** 后端启动时间（用于 uptime 计算） */
-  private startTime: number = Date.now();
-
-  /** 心跳定时器 */
-  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-
-  /** 心跳间隔：30 秒 */
-  private static readonly HEARTBEAT_INTERVAL_MS = 30 * 1000;
-
-  /** 最近一次 tool_use 的时间（用于计算 duration） */
-  private lastToolUseTime: number = 0;
-
-  /** 最近一次 tool_use 的工具名 */
-  private lastToolName: string = "";
-
-  /** tunnel 状态获取函数 */
-  private getTunnelStatusFn: (() => string) | null = null;
+  /** 每通道独立上下文：会话 + 回复路由完全隔离 */
+  private channelContexts: Map<string, ChannelContext> = new Map();
+  private feishuChannel: FeishuChannel | null = null; // 第一个通道，供 introspection 使用
+  private sessionOwnership: SessionOwnership;
 
   constructor(pairCode: string, cwd: string, authToken?: string, tls?: TlsConfig) {
     this.cwd = cwd;
-    // 如果传入了 authToken，说明之前已配对过
     this.state = {
       pairCode,
       paired: !!authToken,
       token: authToken || null,
     };
 
-    // 初始化通道管理器
     this.channelManager = new ChannelManager();
+    this.sessionOwnership = new SessionOwnership(cwd);
 
-    // 初始化统计模块
-    this.stats = new SessionStats();
+    // 注册飞书通道（每个通道独立会话，互不干扰；MCP/skills/多智能体共用底层进程）
+    const feishuSlots = [
+      {
+        id: 'feishu-personal',
+        appId: process.env.FEISHU_APP_ID,
+        appSecret: process.env.FEISHU_APP_SECRET,
+        receiveUserId: process.env.FEISHU_RECEIVE_USER_ID,
+        receiveIdType: process.env.FEISHU_RECEIVE_ID_TYPE as "open_id" | "chat_id" | undefined,
+        connectionMode: process.env.FEISHU_CONNECTION_MODE as "websocket" | "poll" | undefined,
+        encryptKey: process.env.FEISHU_ENCRYPT_KEY,
+        verificationToken: process.env.FEISHU_VERIFICATION_TOKEN,
+        showToolUse: process.env.FEISHU_SHOW_TOOL_USE !== 'false',
+      },
+      {
+        id: 'feishu-futurus-rayman',
+        appId: process.env.FEISHU2_APP_ID,
+        appSecret: process.env.FEISHU2_APP_SECRET,
+        receiveUserId: process.env.FEISHU2_RECEIVE_USER_ID,
+        receiveIdType: process.env.FEISHU2_RECEIVE_ID_TYPE as "open_id" | "chat_id" | undefined,
+        connectionMode: process.env.FEISHU2_CONNECTION_MODE as "websocket" | "poll" | undefined,
+        encryptKey: process.env.FEISHU2_ENCRYPT_KEY,
+        verificationToken: process.env.FEISHU2_VERIFICATION_TOKEN,
+        showToolUse: process.env.FEISHU2_SHOW_TOOL_USE !== 'false',
+      },
+      {
+        id: 'feishu-futurus-alex',
+        appId: process.env.FEISHU3_APP_ID,
+        appSecret: process.env.FEISHU3_APP_SECRET,
+        receiveUserId: process.env.FEISHU3_RECEIVE_USER_ID,
+        receiveIdType: process.env.FEISHU3_RECEIVE_ID_TYPE as "open_id" | "chat_id" | undefined,
+        connectionMode: process.env.FEISHU3_CONNECTION_MODE as "websocket" | "poll" | undefined,
+        encryptKey: process.env.FEISHU3_ENCRYPT_KEY,
+        verificationToken: process.env.FEISHU3_VERIFICATION_TOKEN,
+        showToolUse: process.env.FEISHU3_SHOW_TOOL_USE !== 'false',
+      },
+      {
+        id: 'feishu-codex',
+        appId: process.env.FEISHU4_APP_ID,
+        appSecret: process.env.FEISHU4_APP_SECRET,
+        receiveUserId: process.env.FEISHU4_RECEIVE_USER_ID,
+        receiveIdType: process.env.FEISHU4_RECEIVE_ID_TYPE as "open_id" | "chat_id" | undefined,
+        connectionMode: process.env.FEISHU4_CONNECTION_MODE as "websocket" | "poll" | undefined,
+        encryptKey: process.env.FEISHU4_ENCRYPT_KEY,
+        verificationToken: process.env.FEISHU4_VERIFICATION_TOKEN,
+        showToolUse: process.env.FEISHU4_SHOW_TOOL_USE !== 'false',
+        engine: process.env.FEISHU4_ENGINE as string | undefined,
+      },
+      {
+        id: 'feishu-gemini',
+        appId: process.env.FEISHU5_APP_ID,
+        appSecret: process.env.FEISHU5_APP_SECRET,
+        receiveUserId: process.env.FEISHU5_RECEIVE_USER_ID,
+        receiveIdType: process.env.FEISHU5_RECEIVE_ID_TYPE as "open_id" | "chat_id" | undefined,
+        connectionMode: process.env.FEISHU5_CONNECTION_MODE as "websocket" | "poll" | undefined,
+        encryptKey: process.env.FEISHU5_ENCRYPT_KEY,
+        verificationToken: process.env.FEISHU5_VERIFICATION_TOKEN,
+        showToolUse: process.env.FEISHU5_SHOW_TOOL_USE !== 'false',
+        engine: process.env.FEISHU5_ENGINE as string | undefined,
+      },
+    ];
 
-    // 初始化飞书命令模块（feishuChannel 延迟注入，start() 中完成）
-    this.feishuCommands = new FeishuCommands({
-      adapter,
-      channelManager: this.channelManager,
-      cwd: this.cwd,
-      feishuChannel: null,
-      loadConfig,
-    });
+    let registeredCount = 0;
+    for (const slot of feishuSlots) {
+      if (!slot.appId || !slot.appSecret) continue;
+      const cfg = {
+        id: slot.id,
+        appId: slot.appId,
+        appSecret: slot.appSecret,
+        receiveUserId: slot.receiveUserId,
+        receiveIdType: slot.receiveIdType,
+        connectionMode: slot.connectionMode,
+        encryptKey: slot.encryptKey,
+        verificationToken: slot.verificationToken,
+        showToolUse: slot.showToolUse,
+      };
+      const ch = new FeishuChannel(cfg);
+      // 每个通道独立上下文，会话和回复完全隔离
+      const engine = (slot as any).engine as "codex" | "gemini" | undefined;
+      const ctx: ChannelContext = { channelId: slot.id, channel: ch, currentSessionId: null, engine };
+      this.channelContexts.set(slot.id, ctx);
+      ch.onMessage(async (message: string, images?: Array<{ data: string; mediaType: string }>, _messageId?: string, chatId?: string) => {
+        // 记录请求级 replyChatId，防止异步处理期间被后续消息覆盖
+        const requestCtx = { ...ctx, replyChatId: chatId || ctx.replyChatId };
+        await this.processFeishuMessage(requestCtx, message, images);
+        // 同步回 ctx 的 session（processFeishuMessage 可能更新了 currentSessionId）
+        ctx.currentSessionId = requestCtx.currentSessionId;
+      });
+      this.channelManager.register(ch);
+      if (!this.feishuChannel) this.feishuChannel = ch; // 第一个通道用于 introspection
+      console.log(`[Channels] 飞书通道 ${slot.id} 已注册${engine ? ` [引擎: ${engine}]` : ""}（启动时将激活）`);
+      registeredCount++;
+    }
+    if (registeredCount === 0) {
+      console.log("[Channels] 飞书通道未配置（设置 FEISHU_APP_ID 和 FEISHU_APP_SECRET 环境变量以启用）");
+    }
 
     const handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
       this.handleRequest(req, res);
     };
 
-    // 如果提供了 TLS 证书，使用 HTTPS
     if (tls && existsSync(tls.certPath) && existsSync(tls.keyPath)) {
       this.server = https.createServer({
         cert: readFileSync(tls.certPath),
@@ -110,22 +188,6 @@ export class HttpServer {
       this.server = http.createServer(handler);
       this.isTls = false;
     }
-
-    // 注册 session 生命周期回调
-    adapter.setLifecycleCallbacks({
-      onSessionCreate: (sessionId: string) => {
-        this.broadcastEvent("sessionStart", { sessionId, ts: Date.now() });
-      },
-      onSessionClose: (sessionId: string) => {
-        this.broadcastEvent("sessionEnd", {
-          sessionId,
-          finalState: "completed",
-          ts: Date.now(),
-        });
-        // 清理统计数据
-        this.stats.cleanup(sessionId);
-      },
-    });
   }
 
   /** 设置配对成功回调（用于持久化 authToken） */
@@ -139,7 +201,6 @@ export class HttpServer {
   }
 
   private async handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-    // CORS
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -167,10 +228,6 @@ export class HttpServer {
         await this.handleRename(req, res);
       } else if (url.pathname === "/skills/list" && req.method === "GET") {
         await this.handleSkillsList(req, res, url);
-      } else if (url.pathname === "/events" && req.method === "GET") {
-        this.handleEvents(req, res);
-      } else if (url.pathname === "/status" && req.method === "GET") {
-        await this.handleStatus(req, res);
       } else {
         res.writeHead(404, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Not Found" }));
@@ -188,7 +245,6 @@ export class HttpServer {
   }
 
   private async handlePair(req: http.IncomingMessage, res: http.ServerResponse) {
-    // 速率限制检查
     const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
     const record = pairAttempts.get(ip);
     if (record && Date.now() < record.lockedUntil) {
@@ -211,7 +267,6 @@ export class HttpServer {
     const { pairCode } = parsed;
 
     if (pairCode !== this.state.pairCode) {
-      // 记录失败次数
       const attempts = record || { count: 0, lockedUntil: 0 };
       attempts.count++;
       if (attempts.count >= PAIR_MAX_ATTEMPTS) {
@@ -220,17 +275,14 @@ export class HttpServer {
         console.log(`[Pair] IP ${ip} 失败 ${PAIR_MAX_ATTEMPTS} 次，锁定 5 分钟`);
       }
       pairAttempts.set(ip, attempts);
-
       console.log(`[Pair] 配对失败: 配对码错误 (${attempts.count}/${PAIR_MAX_ATTEMPTS})`);
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "配对码错误" }));
       return;
     }
 
-    // 配对成功，清除该 IP 的失败记录
     pairAttempts.delete(ip);
 
-    // 如果已配对，返回相同 token（不覆盖）
     if (this.state.paired && this.state.token) {
       console.log("[Pair] 重复配对，返回现有 token");
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -238,14 +290,11 @@ export class HttpServer {
       return;
     }
 
-    // 首次配对，生成 token
     const token = generateToken();
     this.state.paired = true;
     this.state.token = token;
-
     console.log("[Pair] 首次配对成功");
 
-    // 通知外部保存 authToken
     if (this.onPaired) {
       this.onPaired(token);
     }
@@ -255,7 +304,6 @@ export class HttpServer {
   }
 
   private async handleChat(req: http.IncomingMessage, res: http.ServerResponse) {
-    // 验证 token
     const authHeader = req.headers.authorization;
     const token = authHeader?.replace("Bearer ", "");
 
@@ -281,7 +329,6 @@ export class HttpServer {
       model?: string;
     };
 
-    // 校验图片
     const imageValidation = validateImages(images);
     if (!imageValidation.valid) {
       res.writeHead(imageValidation.code || 400, { "Content-Type": "application/json" });
@@ -289,23 +336,15 @@ export class HttpServer {
       return;
     }
 
-    // INJECT_HOSTNAME：可选，默认关闭
-    const injectHostname = process.env.INJECT_HOSTNAME === "true";
-    const chatMessage = injectHostname
-      ? `[当前机器: ${os.hostname()}] ${message}`
-      : message;
-
     const hasImages = images && images.length > 0;
     console.log(`[CC] 收到消息: ${message.substring(0, 50)}...${hasImages ? ` (附带 ${images.length} 张图片)` : ""}`);
 
-    // 设置 SSE 响应头
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
     });
 
-    // 创建 Web 通道
     const webChannel = new WebChannel({ res });
     const webChannelId = `web-${Date.now()}-${Math.random()}`;
     Object.defineProperty(webChannel, 'id', { value: webChannelId, writable: false });
@@ -313,105 +352,1073 @@ export class HttpServer {
 
     let currentSessionId = sessionId;
 
-    // 独立心跳定时器：防止 CLI 长时间无输出导致浏览器 SSE 超时断连
-    const chatHeartbeatInterval = setInterval(() => {
-      if (!res.writableEnded) {
-        res.write(`data: ${JSON.stringify({ type: "heartbeat", ts: Date.now() })}\n\n`);
-      }
-    }, 30_000);
-
     try {
-      // 使用 adapter 的 chat 方法（返回 AsyncIterable）
-      for await (const data of adapter.chat({ message: chatMessage, sessionId, cwd: this.cwd, images, model: model || undefined })) {
+      for await (const data of adapter.chat({ message, sessionId, cwd: this.cwd, images, model: model || undefined })) {
         if (data && typeof data === "object" && "type" in data) {
-          // 提取 session_id
           if (data.type === "system" && "session_id" in data) {
             currentSessionId = data.session_id as string;
-            this.feishuCommands.currentSessionId = currentSessionId;
             webChannel.setSessionId(currentSessionId);
           }
-
-          // 拦截 tool_use 事件 → 广播 + 统计
-          if (data.type === "tool_use" && "name" in data) {
-            const toolName = data.name as string;
-            this.incrementToolStat(currentSessionId, toolName);
-            this.broadcastEvent("toolUse", {
-              sessionId: currentSessionId,
-              tool: toolName,
-              ts: Date.now(),
-            });
-          }
-
-          // 拦截 tool_result 事件 → 广播
-          if (data.type === "tool_result") {
-            const isError = !!(data as any).is_error;
-            this.broadcastEvent("toolResult", {
-              sessionId: currentSessionId,
-              tool: (data as any).name || "",
-              status: isError ? "error" : "success",
-              ts: Date.now(),
-            });
-          }
-
-          // 拦截 assistant 消息 → 累计消息计数
-          if (data.type === "assistant") {
-            this.incrementMessageCount(currentSessionId);
-          }
         }
-
-        // 发送到 Web 通道（不广播到飞书，飞书走自己的流程）
+        // Web 通道专用，不广播到飞书
         await webChannel.send(data);
       }
 
-      // user 消息也算一条
-      this.incrementMessageCount(currentSessionId);
-
-      // 完成
-      clearInterval(chatHeartbeatInterval);
-      await webChannel.sendDone();
+      await webChannel.send({ type: "done", sessionId: currentSessionId } as any);
       this.channelManager.unregister(webChannelId);
+      res.end();
       console.log(`[CC] 完成`);
     } catch (error) {
-      clearInterval(chatHeartbeatInterval);
       const errMsg = error instanceof Error ? error.message : String(error);
-
-      // 关闭死掉的 session，防止污染池（下次请求复用死 session 导致级联崩溃）
-      if (currentSessionId) {
-        adapter.closeSession(currentSessionId);
-        console.log(`[CC] 已关闭异常 session: ${currentSessionId}`);
-      }
-
       try {
-        await webChannel.sendError(errMsg);
+        await webChannel.send({ type: "error", error: errMsg } as any);
       } catch {
         // 忽略发送错误
       }
       this.channelManager.unregister(webChannelId);
+      res.end();
       console.error(`[CC] 错误: ${errMsg}`);
     }
   }
 
+  /**
+   * 处理飞书收到的消息
+   *
+   * 隔离机制：
+   * - ctx.currentSessionId 每通道独立，互不影响
+   * - sendToChannel(ctx, ...) 只回给发消息的通道
+   * - adapter/MCP/skills 共用底层进程
+   */
+  private async processFeishuMessage(ctx: ChannelContext, message: string, images?: Array<{ data: string; mediaType: string }>): Promise<void> {
+    console.log(`[CC][${ctx.channelId}] 收到消息: ${message.substring(0, 50)}...${images ? ` [${images.length} 张图片]` : ""}`);
+
+    const trimmedMessage = message.trim();
+
+    if (trimmedMessage.startsWith("/")) {
+      await this.handleFeishuCommand(ctx, trimmedMessage);
+      return;
+    }
+
+    if (this.isOperationCommand(trimmedMessage)) {
+      await this.handleOperationCommand(ctx, trimmedMessage);
+      return;
+    }
+
+    // 群聊上下文注入：如果消息来自群聊，获取最近聊天记录作为上下文
+    let contextPrefix = "";
+    if (ctx.replyChatId && ctx.replyChatId.startsWith("oc_")) {
+      try {
+        const history = await ctx.channel.fetchChatHistory(ctx.replyChatId, 15);
+        if (history) {
+          contextPrefix = `[以下是群聊最近的对话记录，供你了解上下文]\n${history}\n[对话记录结束]\n\n`;
+          console.log(`[CC][${ctx.channelId}] 已注入群聊上下文 (${history.split("\n").length} 条)`);
+        }
+      } catch (err) {
+        console.warn(`[CC][${ctx.channelId}] 获取群聊上下文失败:`, err);
+      }
+    }
+
+    // 团队模式检测（仅 cc 通道）：并行调用三引擎，汇总输出
+    if (!ctx.engine) {
+      const teamResult = this.detectTeamMode(trimmedMessage);
+      if (teamResult.isTeamMode && teamResult.cleanMessage) {
+        await this.processTeamMode(ctx, contextPrefix + teamResult.cleanMessage, images);
+        return;
+      }
+    }
+
+    // CLI 引擎分流：codex/gemini 走 CLI 子进程，无 session 概念
+    if (ctx.engine === "codex" || ctx.engine === "gemini") {
+      await this.processCliEngineMessage(ctx, contextPrefix + trimmedMessage);
+      return;
+    }
+
+    // 双主分离：任务型消息异步入队，立即 ack，不阻塞对话通道
+    if (!ctx.engine) {
+      const msgType = classifyMessage(trimmedMessage);
+      if (msgType === "task") {
+        const pending = taskQueueManager.getPendingCount(ctx.channelId);
+        const busy = taskQueueManager.isChannelBusy(ctx.channelId);
+        const queueTip = pending > 0 ? `，队列中还有 ${pending} 个任务` : "";
+        const busyTip = busy ? "，当前有任务正在执行" : "";
+
+        // 快速 ack
+        await this.sendToChannel(ctx, `📋 任务已接收${busyTip}${queueTip}，后台处理中，完成后通知你。`);
+
+        // 冻结 ctx 快照（避免异步执行期间 replyChatId 被后续消息覆盖）
+        const frozenCtx = { ...ctx };
+
+        taskQueueManager.submit(ctx.channelId, trimmedMessage, async (_task) => {
+          await this.runTaskAsync(frozenCtx, contextPrefix + trimmedMessage, images);
+        });
+        return;
+      }
+    }
+
+    if (!ctx.currentSessionId) {
+      // 飞书通道不 auto-select 历史会话，直接创建新会话。
+      // 原因：auto-select 会选中当前终端的活跃 session，unstable_v2_resumeSession
+      // 尝试 resume 已被占用的 session 会导致 SDK 卡死，最终被误判为 auth 过期。
+      console.log(`[CC][${ctx.channelId}] 无活跃会话，将创建新会话`);
+      await this.sendToChannel(ctx, "💡 开始新对话...");
+    }
+
+    console.log(`[CC][${ctx.channelId}] 使用会话: ${ctx.currentSessionId}`);
+
+    const startTime = Date.now();
+    const taskPreview = trimmedMessage.substring(0, 60);
+
+    // 发送单引擎进度卡片
+    const engineState: ProgressEngine = { name: "cc (Claude)", status: "running" };
+    const card: ProgressCard = {
+      title: "cc 处理中",
+      task: taskPreview + (taskPreview.length >= 60 ? "..." : ""),
+      engines: [engineState],
+      footer: "思考中...",
+    };
+
+    const feishuChannel = ctx.channel as FeishuChannel;
+    let cardMessageId: string | null = null;
+    if (typeof feishuChannel.sendProgressCard === "function") {
+      cardMessageId = await feishuChannel.sendProgressCard(card, ctx.replyChatId);
+    }
+
+    try {
+      const replyParts: string[] = [];
+      const toolNames: string[] = [];
+      let lastCardUpdate = 0;
+
+      for await (const data of adapter.chat({
+        message: contextPrefix + trimmedMessage,
+        sessionId: ctx.currentSessionId ?? undefined,
+        cwd: this.cwd,
+        images: images,
+      })) {
+        if (data && typeof data === "object") {
+          if (data.type === "system" && "session_id" in data) {
+            ctx.currentSessionId = data.session_id as string;
+            this.sessionOwnership.claim(ctx.currentSessionId, ctx.channelId);
+            console.log(`[CC][${ctx.channelId}] 会话更新: ${ctx.currentSessionId}`);
+          }
+          if (data.type === "text" && data.text) {
+            replyParts.push(String(data.text));
+          } else if (data.type === "assistant") {
+            const assistantEvent = data as any;
+            if (assistantEvent.message?.content) {
+              for (const block of assistantEvent.message.content) {
+                if (block.type === "text" && block.text) {
+                  replyParts.push(String(block.text));
+                }
+                if (block.type === "tool_use") {
+                  const name = block.name || "unknown";
+                  toolNames.push(name);
+                  console.log(`[CC][${ctx.channelId}] 工具调用: ${name}`);
+                  // 更新卡片显示当前工具调用（节流 2s）
+                  if (cardMessageId && Date.now() - lastCardUpdate > 2000) {
+                    lastCardUpdate = Date.now();
+                    engineState.detail = `${toolNames.length} 个工具 (${name})`;
+                    card.footer = `耗时 ${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+                    await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 更新卡片为完成状态
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      engineState.status = "done";
+      engineState.elapsed = `${elapsed}s`;
+      engineState.detail = toolNames.length > 0 ? `${toolNames.length} 个工具调用` : undefined;
+      card.title = "cc 完成";
+      card.footer = `总耗时 ${elapsed}s`;
+      if (cardMessageId) {
+        await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+      }
+
+      // 发送最终结果
+      const finalReply = replyParts.join("\n").trim();
+      if (finalReply) {
+        const MAX_CHUNK = 3500;
+        if (finalReply.length <= MAX_CHUNK) {
+          await this.sendToChannel(ctx, finalReply);
+        } else {
+          for (let i = 0; i < finalReply.length; i += MAX_CHUNK) {
+            await this.sendToChannel(ctx, finalReply.substring(i, i + MAX_CHUNK));
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`[CC][${ctx.channelId}] 处理消息错误:`, err);
+      // 更新卡片为错误状态
+      engineState.status = "error";
+      engineState.elapsed = `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+      engineState.detail = String(err).substring(0, 60);
+      card.title = "cc 出错";
+      if (cardMessageId) {
+        await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+      }
+      await this.sendToChannel(ctx, "❌ 处理消息时出错，请重试。");
+    } finally {
+      await ctx.channel.clearTypingIndicator();
+    }
+  }
+
+  /**
+   * 后台异步任务执行（双主分离 - 任务主 Agent）
+   *
+   * 关键设计：
+   * - 使用独立 session（sessionId: undefined），不占用对话 session
+   * - 任务完成/失败后主动回飞书
+   * - 不更新 ctx.currentSessionId（避免污染对话状态）
+   */
+  private async runTaskAsync(
+    ctx: ChannelContext,
+    message: string,
+    images?: Array<{ data: string; mediaType: string }>,
+  ): Promise<void> {
+    const startTime = Date.now();
+    const taskPreview = message.replace(/\[以下是群聊.*?\[对话记录结束\]\n\n/s, "").substring(0, 60);
+
+    const feishuChannel = ctx.channel as FeishuChannel;
+    const engineState: ProgressEngine = { name: "cc (后台任务)", status: "running" };
+    const card: ProgressCard = {
+      title: "后台任务执行中",
+      task: taskPreview + (taskPreview.length >= 60 ? "..." : ""),
+      engines: [engineState],
+      footer: "思考中...",
+    };
+
+    let cardMessageId: string | null = null;
+    if (typeof feishuChannel.sendProgressCard === "function") {
+      cardMessageId = await feishuChannel.sendProgressCard(card, ctx.replyChatId).catch(() => null);
+    }
+
+    try {
+      const replyParts: string[] = [];
+      const toolNames: string[] = [];
+      let lastCardUpdate = 0;
+
+      for await (const data of adapter.chat({
+        message,
+        sessionId: undefined, // 独立 session，不复用对话 session
+        cwd: this.cwd,
+        images,
+      })) {
+        if (data && typeof data === "object") {
+          if (data.type === "text" && data.text) {
+            replyParts.push(String(data.text));
+          } else if (data.type === "assistant") {
+            const assistantEvent = data as any;
+            if (assistantEvent.message?.content) {
+              for (const block of assistantEvent.message.content) {
+                if (block.type === "text" && block.text) {
+                  replyParts.push(String(block.text));
+                }
+                if (block.type === "tool_use") {
+                  const name = block.name || "unknown";
+                  toolNames.push(name);
+                  if (cardMessageId && Date.now() - lastCardUpdate > 2000) {
+                    lastCardUpdate = Date.now();
+                    engineState.detail = `${toolNames.length} 个工具 (${name})`;
+                    card.footer = `耗时 ${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+                    await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      engineState.status = "done";
+      engineState.elapsed = `${elapsed}s`;
+      engineState.detail = toolNames.length > 0 ? `${toolNames.length} 个工具调用` : undefined;
+      card.title = "后台任务完成";
+      card.footer = `总耗时 ${elapsed}s`;
+      if (cardMessageId) {
+        await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+      }
+
+      const finalReply = replyParts.join("\n").trim();
+      if (finalReply) {
+        const MAX_CHUNK = 3500;
+        if (finalReply.length <= MAX_CHUNK) {
+          await this.sendToChannel(ctx, finalReply);
+        } else {
+          for (let i = 0; i < finalReply.length; i += MAX_CHUNK) {
+            await this.sendToChannel(ctx, finalReply.substring(i, i + MAX_CHUNK));
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`[CC][${ctx.channelId}] 后台任务出错:`, err);
+      engineState.status = "error";
+      engineState.elapsed = `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+      engineState.detail = String(err).substring(0, 60);
+      card.title = "后台任务出错";
+      if (cardMessageId) {
+        await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+      }
+      await this.sendToChannel(ctx, `❌ 后台任务执行出错：${String(err).substring(0, 100)}`);
+      throw err; // 让 TaskQueue 记录 error 状态
+    }
+  }
+
+  /**
+   * CLI 引擎消息处理（codex / gemini）
+   * 无 session 概念，每次调用都是独立的子进程。
+   */
+  private async processCliEngineMessage(ctx: ChannelContext, message: string): Promise<void> {
+    const engine = ctx.engine as EngineType;
+    console.log(`[CC][${ctx.channelId}] CLI 引擎: ${engine}, 消息: ${message.substring(0, 50)}...`);
+
+    const startTime = Date.now();
+    const taskPreview = message.replace(/\[以下是群聊.*?\[对话记录结束\]\n\n/s, "").substring(0, 60);
+
+    // 发送进度卡片
+    const engineState: ProgressEngine = { name: engine, status: "running" };
+    const card: ProgressCard = {
+      title: `${engine} 处理中`,
+      task: taskPreview + (taskPreview.length >= 60 ? "..." : ""),
+      engines: [engineState],
+      footer: "执行中...",
+    };
+
+    const feishuChannel = ctx.channel as FeishuChannel;
+    let cardMessageId: string | null = null;
+    if (typeof feishuChannel.sendProgressCard === "function") {
+      cardMessageId = await feishuChannel.sendProgressCard(card, ctx.replyChatId);
+    }
+
+    try {
+      // SOP 自动注入：识别任务关键词，注入对应的标准操作流程
+      let sopPrefix = "";
+      let matchedSopKey = "default"; // 用于自适应超时的 pattern key
+      const sopMap: Array<{ keywords: RegExp; sopPath: string }> = [
+        { keywords: /理论雷达|theory.?radar|前沿论文|论文调研|每日论文|arxiv/i, sopPath: join(this.cwd, ".claude/skills/theory-radar/SOP.md") },
+      ];
+      for (const { keywords, sopPath } of sopMap) {
+        if (keywords.test(message) && existsSync(sopPath)) {
+          const sopContent = readFileSync(sopPath, "utf-8");
+          sopPrefix = `[标准操作流程 - 必须严格按此执行，禁止自由发挥]\n\n${sopContent}\n\n[用户指令]\n`;
+          matchedSopKey = sopPath; // 用 SOP 文件路径作为任务标识
+          console.log(`[CC][${ctx.channelId}] 已注入 SOP: ${sopPath}`);
+          break;
+        }
+      }
+
+      // 自适应超时：基于历史执行数据动态计算
+      const adaptiveTimeout = getAdaptiveTimeout(matchedSopKey, engine);
+
+      // 注入署名规则：任务完成后必须署名，便于追溯和排查问题
+      const engineLabel = engine === "codex" ? "codex（OpenAI Codex）" : "gemini（Google Gemini）";
+      const now = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }).replace(/\//g, "-").replace(",", "");
+      const signatureRule = `\n\n[系统规则] 完成任务后，在回复最末尾必须附上署名，格式严格如下（不得省略）：\n---\n署名：${engineLabel} | ${now}`;
+      const result = await runCliEngine(engine, sopPrefix + message + signatureRule, this.cwd, { timeout: adaptiveTimeout });
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+      // 记录执行结果，供自适应超时学习
+      recordExecution(matchedSopKey, engine, Date.now() - startTime, !!result.timedOut);
+
+      if (result.error && !result.output) {
+        engineState.status = "error";
+        engineState.elapsed = `${elapsed}s`;
+        engineState.detail = result.error.substring(0, 60);
+        card.title = `${engine} 出错`;
+        if (cardMessageId) {
+          await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+        }
+        await this.sendToChannel(ctx, `❌ ${engine} 执行出错:\n${result.error.substring(0, 500)}`);
+        return;
+      }
+
+      // 更新卡片为完成状态
+      const output = result.output.trim();
+      engineState.status = "done";
+      engineState.elapsed = `${elapsed}s`;
+      engineState.detail = output ? `${output.length} 字` : "无输出";
+      card.title = `${engine} 完成`;
+      card.footer = `总耗时 ${elapsed}s`;
+      if (cardMessageId) {
+        await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+      }
+
+      if (output) {
+        const MAX_CHUNK = 3500;
+        if (output.length <= MAX_CHUNK) {
+          await this.sendToChannel(ctx, output);
+        } else {
+          for (let i = 0; i < output.length; i += MAX_CHUNK) {
+            await this.sendToChannel(ctx, output.substring(i, i + MAX_CHUNK));
+          }
+        }
+      } else {
+        await this.sendToChannel(ctx, `✅ ${engine} 执行完成（无输出）`);
+      }
+
+      if (result.error) {
+        await this.sendToChannel(ctx, `⚠️ ${engine} 警告:\n${result.error.substring(0, 300)}`);
+      }
+    } catch (err: any) {
+      console.error(`[CC][${ctx.channelId}] CLI 引擎错误:`, err);
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      engineState.status = "error";
+      engineState.elapsed = `${elapsed}s`;
+      engineState.detail = err.message?.substring(0, 60);
+      card.title = `${engine} 异常`;
+      if (cardMessageId) {
+        await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+      }
+      await this.sendToChannel(ctx, `❌ ${engine} 异常: ${err.message}`);
+    } finally {
+      await ctx.channel.clearTypingIndicator();
+    }
+  }
+
+  /**
+   * 团队模式关键词检测
+   */
+  private static TEAM_MODE_KEYWORDS = ["团队模式", "三人组", "一起干", "team mode", "team"];
+
+  private detectTeamMode(message: string): { isTeamMode: boolean; cleanMessage: string } {
+    const lower = message.toLowerCase();
+    for (const keyword of HttpServer.TEAM_MODE_KEYWORDS) {
+      if (lower.includes(keyword.toLowerCase())) {
+        const cleanMessage = message.replace(new RegExp(keyword, "gi"), "").replace(/[：:]\s*/, "").trim();
+        return { isTeamMode: true, cleanMessage };
+      }
+    }
+    return { isTeamMode: false, cleanMessage: message };
+  }
+
+  /**
+   * 团队模式：cc 主控，并行调用三引擎，卡片实时更新进度
+   */
+  private async processTeamMode(ctx: ChannelContext, message: string, images?: Array<{ data: string; mediaType: string }>): Promise<void> {
+    console.log(`[CC][${ctx.channelId}] 团队模式: ${message.substring(0, 50)}...`);
+
+    const taskPreview = message.replace(/\[以下是群聊.*?\[对话记录结束\]\n\n/s, "").substring(0, 60);
+    const startTime = Date.now();
+
+    // 引擎状态跟踪
+    const engineStates: ProgressEngine[] = [
+      { name: "cc (Claude)", status: "running" },
+      { name: "codex", status: "running" },
+      { name: "gemini", status: "running" },
+    ];
+    const engineStartTimes = [startTime, startTime, startTime];
+
+    const card: ProgressCard = {
+      title: "团队模式",
+      task: taskPreview + (taskPreview.length >= 60 ? "..." : ""),
+      engines: engineStates,
+      footer: "三引擎并行处理中",
+    };
+
+    // Phase A: 发送初始进度卡片
+    const feishuChannel = ctx.channel as FeishuChannel;
+    let cardMessageId: string | null = null;
+    if (typeof feishuChannel.sendProgressCard === "function") {
+      cardMessageId = await feishuChannel.sendProgressCard(card, ctx.replyChatId);
+    }
+    if (!cardMessageId) {
+      // 降级：卡片发送失败，用文本
+      await this.sendToChannel(ctx, "🤝 **团队模式启动** — cc + codex + gemini 并行思考中...");
+    }
+
+    const formatElapsed = (idx: number) => {
+      const ms = Date.now() - engineStartTimes[idx];
+      return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+    };
+
+    // 更新卡片的辅助函数（带节流，最多 1 次/秒）
+    let lastUpdate = 0;
+    const updateCard = async () => {
+      if (!cardMessageId) return;
+      const now = Date.now();
+      if (now - lastUpdate < 1000) return;
+      lastUpdate = now;
+      card.footer = `耗时 ${((now - startTime) / 1000).toFixed(1)}s`;
+      await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+    };
+
+    // Phase B: 并行执行三引擎，每个完成时更新卡片
+    const ccPromise = this.runCcEngine(ctx, message, images).then(async (v) => {
+      engineStates[0].status = "done";
+      engineStates[0].elapsed = formatElapsed(0);
+      engineStates[0].detail = v ? `${v.length} 字` : "无输出";
+      await updateCard();
+      return v;
+    }).catch(async (err) => {
+      engineStates[0].status = "error";
+      engineStates[0].elapsed = formatElapsed(0);
+      engineStates[0].detail = String(err).substring(0, 60);
+      await updateCard();
+      throw err;
+    });
+
+    const codexPromise = runCliEngine("codex", message, this.cwd).then(async (v) => {
+      engineStates[1].status = "done";
+      engineStates[1].elapsed = formatElapsed(1);
+      engineStates[1].detail = v.output?.trim() ? `${v.output.trim().length} 字` : "无输出";
+      await updateCard();
+      return v;
+    }).catch(async (err) => {
+      engineStates[1].status = "error";
+      engineStates[1].elapsed = formatElapsed(1);
+      engineStates[1].detail = String(err).substring(0, 60);
+      await updateCard();
+      throw err;
+    });
+
+    const geminiPromise = runCliEngine("gemini", message, this.cwd).then(async (v) => {
+      engineStates[2].status = "done";
+      engineStates[2].elapsed = formatElapsed(2);
+      engineStates[2].detail = v.output?.trim() ? `${v.output.trim().length} 字` : "无输出";
+      await updateCard();
+      return v;
+    }).catch(async (err) => {
+      engineStates[2].status = "error";
+      engineStates[2].elapsed = formatElapsed(2);
+      engineStates[2].detail = String(err).substring(0, 60);
+      await updateCard();
+      throw err;
+    });
+
+    const [ccResult, codexResult, geminiResult] = await Promise.allSettled([
+      ccPromise, codexPromise, geminiPromise,
+    ]);
+
+    // Phase C: 最终更新卡片为完成状态
+    const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    const hasError = engineStates.some(e => e.status === "error");
+    card.title = hasError ? "团队模式（部分失败）" : "团队模式完成";
+    card.footer = `总耗时 ${totalElapsed}s`;
+    if (cardMessageId) {
+      await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+    }
+
+    // Phase D: 发送各引擎的详细输出
+    const parts: string[] = [];
+
+    parts.push("## 🧠 cc（Claude）");
+    if (ccResult.status === "fulfilled") {
+      parts.push(ccResult.value || "（无输出）");
+    } else {
+      parts.push(`❌ 出错: ${ccResult.reason}`);
+    }
+
+    parts.push("\n## 💻 codex");
+    if (codexResult.status === "fulfilled") {
+      const r = codexResult.value;
+      parts.push(r.output?.trim() || "（无输出）");
+      if (r.error) parts.push(`⚠️ ${r.error.substring(0, 200)}`);
+    } else {
+      parts.push(`❌ 出错: ${codexResult.reason}`);
+    }
+
+    parts.push("\n## ✨ gemini");
+    if (geminiResult.status === "fulfilled") {
+      const r = geminiResult.value;
+      parts.push(r.output?.trim() || "（无输出）");
+      if (r.error) parts.push(`⚠️ ${r.error.substring(0, 200)}`);
+    } else {
+      parts.push(`❌ 出错: ${geminiResult.reason}`);
+    }
+
+    const combined = parts.join("\n");
+
+    // Phase E: 发送 Mermaid 流程总结图（文本版，飞书不支持 Mermaid 渲染）
+    const mermaidSummary = this.buildMermaidSummary(engineStates, totalElapsed);
+    const fullOutput = combined + "\n\n---\n" + mermaidSummary;
+
+    const MAX_CHUNK = 3500;
+    if (fullOutput.length <= MAX_CHUNK) {
+      await this.sendToChannel(ctx, fullOutput);
+    } else {
+      for (let i = 0; i < fullOutput.length; i += MAX_CHUNK) {
+        await this.sendToChannel(ctx, fullOutput.substring(i, i + MAX_CHUNK));
+      }
+    }
+
+    await ctx.channel.clearTypingIndicator();
+  }
+
+  /**
+   * 生成 Mermaid 风格的文本流程总结
+   */
+  private buildMermaidSummary(engines: ProgressEngine[], totalElapsed: string): string {
+    const statusIcon = (e: ProgressEngine) =>
+      e.status === "done" ? "✅" : e.status === "error" ? "❌" : "⬜";
+
+    const lines = [
+      "**流程总结**",
+      "```",
+      `用户提问 ──▶ 团队模式分发`,
+      `             ├── ${statusIcon(engines[0])} cc      ${engines[0].elapsed || ""} ${engines[0].detail || ""}`,
+      `             ├── ${statusIcon(engines[1])} codex   ${engines[1].elapsed || ""} ${engines[1].detail || ""}`,
+      `             └── ${statusIcon(engines[2])} gemini  ${engines[2].elapsed || ""} ${engines[2].detail || ""}`,
+      `                      ▼`,
+      `              汇总输出 (${totalElapsed}s)`,
+      "```",
+    ];
+    return lines.join("\n");
+  }
+
+  /**
+   * 运行 cc 引擎并收集文本输出（供团队模式使用）
+   */
+  private async runCcEngine(ctx: ChannelContext, message: string, images?: Array<{ data: string; mediaType: string }>): Promise<string> {
+    const parts: string[] = [];
+
+    for await (const data of adapter.chat({
+      message,
+      sessionId: ctx.currentSessionId ?? undefined,
+      cwd: this.cwd,
+      images,
+    })) {
+      if (data && typeof data === "object") {
+        if (data.type === "system" && "session_id" in data) {
+          ctx.currentSessionId = data.session_id as string;
+          this.sessionOwnership.claim(ctx.currentSessionId, ctx.channelId);
+        }
+        if (data.type === "text" && data.text) {
+          parts.push(String(data.text));
+        } else if (data.type === "assistant") {
+          const assistantEvent = data as any;
+          if (assistantEvent.message?.content) {
+            for (const block of assistantEvent.message.content) {
+              if (block.type === "text" && block.text) {
+                parts.push(String(block.text));
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return parts.join("\n").trim();
+  }
+
+  private async handleFeishuCommand(ctx: ChannelContext, command: string): Promise<void> {
+    const parts = command.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+
+    console.log(`[CC][${ctx.channelId}] 命令: ${cmd}`);
+
+    try {
+      switch (cmd) {
+        case "/new":
+        case "/create":
+          await this.handleNewSession(ctx, args.join(" "));
+          break;
+        case "/sessions":
+        case "/list":
+        case "/history":
+          await this.handleListSessions(ctx);
+          break;
+        case "/switch":
+          await this.handleSwitchSession(ctx, args[0]);
+          break;
+        case "/current":
+          await this.handleCurrentSession(ctx);
+          break;
+        case "/device":
+        case "/devices":
+          await this.handleDevice(ctx);
+          break;
+        case "/help":
+        case "/?":
+          await this.handleHelp(ctx);
+          break;
+        case "/搜索":
+        case "/search":
+          await this.handleSearch(ctx, args.join(" "));
+          break;
+        default:
+          await this.sendToChannel(ctx, `❓ 未知命令: ${cmd}\n\n发送 /help 查看可用命令。`);
+      }
+    } catch (err) {
+      console.error(`[CC][${ctx.channelId}] 命令处理错误:`, err);
+      await this.sendToChannel(ctx, `❌ 执行命令时出错: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  private isOperationCommand(message: string): boolean {
+    // 严格匹配：消息去掉标点空格后必须完全等于命令，防止"看看状态"误匹配
+    const normalized = message.replace(/[，。！？\s]/g, "").toLowerCase();
+    const opCommands = [
+      "重启mycc", "重启mycc后端", "重启后端",
+      "重启", "停止", "停止mycc",
+      "状态", "状态查询", "查看状态",
+      "启动mycc", "启动后端"
+    ];
+    return opCommands.some(cmd => normalized === cmd);
+  }
+
+  private async handleOperationCommand(ctx: ChannelContext, message: string): Promise<void> {
+    console.log(`[CC][${ctx.channelId}] 运维命令: ${message}`);
+    const lowerMessage = message.toLowerCase();
+    try {
+      if (lowerMessage.includes("重启") || lowerMessage.includes("启动")) {
+        await this.handleRestart(ctx);
+      } else if (lowerMessage.includes("停止")) {
+        await this.handleStop(ctx);
+      } else if (lowerMessage.includes("状态")) {
+        await this.handleStatus(ctx);
+      } else {
+        await this.sendToChannel(ctx, `❓ 无法识别运维命令: ${message}`);
+      }
+    } catch (err) {
+      console.error(`[CC][${ctx.channelId}] 运维命令错误:`, err);
+      await this.sendToChannel(ctx, `❌ 执行运维命令时出错: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  private async handleRestart(ctx: ChannelContext): Promise<void> {
+    await this.sendToChannel(ctx, "🔄 正在重启 mycc 后端...");
+    try {
+      const { execSync } = await import("child_process");
+      execSync("lsof -i :18080 -t | xargs kill 2>/dev/null", { stdio: "ignore" });
+      await this.sendToChannel(ctx, "✅ 已停止旧进程");
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const { spawn } = await import("child_process");
+      spawn("npx", ["tsx", "./.claude/skills/mycc/scripts/src/index.ts", "start"], {
+        cwd: process.cwd(),
+        detached: true,
+        stdio: "ignore"
+      }).unref();
+      await this.sendToChannel(ctx, "✅ 已启动新进程，请稍候...");
+    } catch (err) {
+      console.error("[CC] 重启失败:", err);
+      await this.sendToChannel(ctx, `❌ 重启失败: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  private async handleStop(ctx: ChannelContext): Promise<void> {
+    await this.sendToChannel(ctx, "🔄 正在停止 mycc 后端...");
+    try {
+      const { execSync } = await import("child_process");
+      execSync("lsof -i :18080 -t | xargs kill 2>/dev/null", { stdio: "ignore" });
+      await this.sendToChannel(ctx, "✅ mycc 后端已停止");
+    } catch (err) {
+      console.error("[CC] 停止失败:", err);
+      await this.sendToChannel(ctx, `❌ 停止失败: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  private async handleStatus(ctx: ChannelContext): Promise<void> {
+    try {
+      const { execSync } = await import("child_process");
+      const pid = execSync("lsof -i :18080 -t 2>/dev/null", { encoding: "utf8" }).trim();
+      if (pid) {
+        const status = execSync(`ps -p ${pid} -o pid,etime,comm 2>/dev/null`, { encoding: "utf8" });
+        await this.sendToChannel(ctx, `✅ mycc 后端运行中\n\n\`\`\`\n${status}\n\`\`\``);
+      } else {
+        await this.sendToChannel(ctx, "❌ mycc 后端未运行");
+      }
+    } catch {
+      await this.sendToChannel(ctx, "❌ mycc 后端未运行");
+    }
+  }
+
+  private async handleNewSession(ctx: ChannelContext, title?: string): Promise<void> {
+    console.log(`[CC][${ctx.channelId}] 创建新会话${title ? `: ${title}` : ''}`);
+    try {
+      const replyParts: string[] = [];
+      let newSessionId: string | undefined;
+
+      for await (const data of adapter.chat({
+        message: title || "开始新对话",
+        cwd: this.cwd,
+      })) {
+        if (data && typeof data === "object") {
+          if (data.type === "system" && "session_id" in data) {
+            ctx.currentSessionId = data.session_id as string;
+            newSessionId = data.session_id as string;
+            this.sessionOwnership.claim(newSessionId, ctx.channelId);
+            console.log(`[CC][${ctx.channelId}] 新会话: ${ctx.currentSessionId}`);
+          }
+          if (data.type === "text" && data.text) {
+            replyParts.push(String(data.text));
+          } else if (data.type === "assistant") {
+            const assistantEvent = data as any;
+            if (assistantEvent.message?.content) {
+              for (const block of assistantEvent.message.content) {
+                if (block.type === "text" && block.text) {
+                  replyParts.push(String(block.text));
+                }
+              }
+            }
+          }
+        }
+      }
+
+      let response = "";
+      if (newSessionId) {
+        response = `✅ 新会话已创建\n\n📌 会话 ID: ${newSessionId}\n`;
+        if (title) response += `📝 标题: ${title}\n`;
+        response += "\n";
+      }
+      response += replyParts.length > 0 ? replyParts.join("").trim() : (newSessionId ? "💡 现在发送的消息将使用此会话。" : "");
+
+      await this.sendToChannel(ctx, response);
+    } catch (err) {
+      console.error(`[CC][${ctx.channelId}] 创建会话错误:`, err);
+      await this.sendToChannel(ctx, "❌ 创建会话失败，请重试。");
+    }
+  }
+
+  private async handleListSessions(ctx: ChannelContext): Promise<void> {
+    console.log(`[CC][${ctx.channelId}] 列出历史会话`);
+    try {
+      const result = await adapter.listHistory(this.cwd);
+      const allVisible = this.sessionOwnership.filterForChannel(result.conversations, ctx.channelId);
+      const conversations = allVisible.slice(0, 10);
+
+      if (conversations.length === 0) {
+        await this.sendToChannel(ctx, "📋 还没有历史会话。\n\n发送 /new 创建第一个会话。");
+        return;
+      }
+
+      let output = `📋 历史会话 (共 ${allVisible.length} 个，显示最近 ${conversations.length} 个)\n\n`;
+
+      conversations.forEach((conv, index) => {
+        const isCurrent = conv.sessionId === ctx.currentSessionId ? " [当前]" : "";
+        let title = "未命名会话";
+        if (conv.customTitle) {
+          title = conv.customTitle;
+        } else if (conv.firstPrompt) {
+          title = conv.firstPrompt.substring(0, 30);
+        } else if (conv.lastMessagePreview) {
+          title = conv.lastMessagePreview.substring(0, 30);
+        }
+        const timeAgo = this.formatTimeAgo(conv.lastTime || conv.modified || Date.now());
+        output += `${index + 1}. ${title}${isCurrent}\n   🕒 ${timeAgo}\n\n`;
+      });
+
+      output += `💡 使用 /switch <序号> 切换到某个会话`;
+      await this.sendToChannel(ctx, output);
+    } catch (err) {
+      console.error(`[CC][${ctx.channelId}] 获取会话列表错误:`, err);
+      await this.sendToChannel(ctx, "❌ 获取会话列表失败，请重试。");
+    }
+  }
+
+  private async handleSwitchSession(ctx: ChannelContext, target: string | undefined): Promise<void> {
+    console.log(`[CC][${ctx.channelId}] 切换会话: ${target}`);
+    if (!target) {
+      await this.sendToChannel(ctx, "❓ 请指定要切换的会话序号。\n\n使用 /sessions 查看所有会话。");
+      return;
+    }
+    try {
+      const result = await adapter.listHistory(this.cwd);
+      const conversations = this.sessionOwnership.filterForChannel(result.conversations, ctx.channelId);
+      const index = parseInt(target, 10) - 1;
+      if (isNaN(index) || index < 0 || index >= conversations.length) {
+        await this.sendToChannel(ctx, `❓ 无效的序号: ${target}\n\n使用 /sessions 查看有效序号。`);
+        return;
+      }
+      const targetSession = conversations[index];
+      if (targetSession.sessionId === ctx.currentSessionId) {
+        const title = targetSession.customTitle || targetSession.firstPrompt?.substring(0, 30) || "未命名";
+        await this.sendToChannel(ctx, `ℹ️ 已经在这个会话中了：${title}`);
+        return;
+      }
+      if (!this.sessionOwnership.claim(targetSession.sessionId, ctx.channelId)) {
+        const owner = this.sessionOwnership.getOwner(targetSession.sessionId);
+        await this.sendToChannel(ctx, `❌ 该会话已被通道 ${owner} 占用，无法切换。\n\n使用 /new 创建新会话。`);
+        return;
+      }
+      ctx.currentSessionId = targetSession.sessionId;
+      const title = targetSession.customTitle || targetSession.firstPrompt?.substring(0, 30) || "未命名";
+      const timeAgo = this.formatTimeAgo(targetSession.lastTime || targetSession.modified || Date.now());
+      await this.sendToChannel(ctx,
+        `✅ 已切换到会话：${title}\n\n🕒 最后更新: ${timeAgo}\n\n💡 现在发送的消息将使用这个会话。`
+      );
+    } catch (err) {
+      console.error(`[CC][${ctx.channelId}] 切换会话错误:`, err);
+      await this.sendToChannel(ctx, "❌ 切换会话失败，请重试。");
+    }
+  }
+
+  private async handleCurrentSession(ctx: ChannelContext): Promise<void> {
+    console.log(`[CC][${ctx.channelId}] 显示当前会话`);
+    if (!ctx.currentSessionId) {
+      await this.sendToChannel(ctx, "ℹ️ 当前没有活跃的会话。\n\n使用 /new 创建会话，或 /sessions 选择一个历史会话。");
+      return;
+    }
+    try {
+      const conversation = await adapter.getHistory(this.cwd, ctx.currentSessionId);
+      if (!conversation) {
+        await this.sendToChannel(ctx, "❌ 当前会话不存在。\n\n使用 /new 创建新会话。");
+        return;
+      }
+      let title = "未命名会话";
+      let lastMessageTime: string | undefined;
+      for (const msg of conversation.messages) {
+        if (msg.type === "custom-title" && msg.customTitle) title = msg.customTitle;
+        if (msg.timestamp) lastMessageTime = msg.timestamp;
+      }
+      if (title === "未命名会话") {
+        const firstUserMsg = conversation.messages.find(m => m.type === "user" && m.message);
+        if (firstUserMsg?.message?.content) {
+          const content = firstUserMsg.message.content;
+          if (typeof content === "string") {
+            title = content.substring(0, 30);
+          } else if (Array.isArray(content)) {
+            const textBlock = content.find((b: any) => b.type === "text" && b.text);
+            if (textBlock) title = textBlock.text.substring(0, 30);
+          }
+        }
+      }
+      const timeStr = lastMessageTime ? this.formatTimeAgo(lastMessageTime) : "未知";
+      await this.sendToChannel(ctx,
+        `📌 当前会话信息\n\n标题: ${title}\nID: ${conversation.sessionId}\n消息数: ${conversation.messages.length}\n最后活动: ${timeStr}`
+      );
+    } catch (err) {
+      console.error(`[CC][${ctx.channelId}] 获取会话信息错误:`, err);
+      await this.sendToChannel(ctx, "❌ 获取会话信息失败，请重试。");
+    }
+  }
+
+  private async handleDevice(ctx: ChannelContext): Promise<void> {
+    console.log(`[CC][${ctx.channelId}] 查询设备信息`);
+    try {
+      const config = loadConfig(this.cwd) as DeviceConfig;
+      if (!config) {
+        await this.sendToChannel(ctx, "❌ 未找到设备配置");
+        return;
+      }
+      const createdAt = new Date(config.createdAt);
+      const createdTimeStr = createdAt.toLocaleString("zh-CN", {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit",
+      });
+      let output = "📱 当前设备信息\n\n";
+      output += `设备 ID: ${config.deviceId}\n配对码: ${config.pairCode}\n`;
+      if (config.routeToken) output += `连接码: ${config.routeToken}\n`;
+      output += config.authToken ? "状态: ✅ 已配对\n" : "状态: ⏳ 未配对\n";
+      output += `\n创建时间: ${createdTimeStr}`;
+      await this.sendToChannel(ctx, output);
+    } catch (err) {
+      console.error(`[CC][${ctx.channelId}] 获取设备信息错误:`, err);
+      await this.sendToChannel(ctx, "❌ 获取设备信息失败，请重试。");
+    }
+  }
+
+  private async handleHelp(ctx: ChannelContext): Promise<void> {
+    const helpText =
+      "📖 飞书命令帮助\n\n" +
+      "**会话管理**\n" +
+      "/new [标题] - 创建新会话\n" +
+      "/sessions - 查看历史会话\n" +
+      "/switch <序号> - 切换到某个会话\n" +
+      "/search <关键词> - 搜索历史会话\n" +
+      "/current - 显示当前会话信息\n\n" +
+      "**设备管理**\n" +
+      "/device - 查看当前设备信息\n\n" +
+      "**其他**\n" +
+      "/help - 显示此帮助信息\n\n" +
+      "**示例**\n" +
+      "/new 分析代码\n/sessions\n/switch 1\n/device\n\n" +
+      "💡 提示：非命令消息会发送到当前活跃会话";
+    await this.sendToChannel(ctx, helpText);
+  }
+
+  private async handleSearch(ctx: ChannelContext, query: string): Promise<void> {
+    const trimmedQuery = query?.trim();
+    if (!trimmedQuery) {
+      await this.sendToChannel(ctx, "🔍 用法: /搜索 <关键词>\n\n示例: /搜索 IPO报告\n      /搜索 飞书机器人配置");
+      return;
+    }
+    console.log(`[CC][${ctx.channelId}] 搜索: ${trimmedQuery}`);
+    try {
+      const index = getOrBuildIndex(this.cwd);
+      if (index.N === 0) {
+        await this.sendToChannel(ctx, "📭 暂无历史会话记录");
+        return;
+      }
+      const rawResults = searchBM25(trimmedQuery, index, 50);
+      const results = this.sessionOwnership.filterForChannel(rawResults, ctx.channelId).slice(0, 10);
+      if (results.length === 0) {
+        await this.sendToChannel(ctx, `🔍 没有找到包含 "${trimmedQuery}" 的历史会话`);
+        return;
+      }
+      let response = `🔍 搜索 "${trimmedQuery}" 找到 ${results.length} 个相关会话:\n\n`;
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i];
+        const preview = r.preview.length > 60 ? r.preview.substring(0, 60) + "..." : r.preview;
+        response += `${i + 1}. ${preview}\n   └ 会话ID: ${r.sessionId}\n\n`;
+      }
+      response += "💡 回复 [序号] 可切换到对应会话";
+      await this.sendToChannel(ctx, response);
+    } catch (err) {
+      console.error(`[CC][${ctx.channelId}] 搜索出错:`, err);
+      await this.sendToChannel(ctx, `❌ 搜索失败: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  /**
+   * 发送消息到指定飞书通道（隔离路由，不广播到其他通道）
+   */
+  private async sendToChannel(ctx: ChannelContext, text: string): Promise<void> {
+    await ctx.channel.send({
+      type: "assistant",
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text }],
+      },
+    } as any, ctx.replyChatId);
+  }
+
+  /**
+   * 向所有飞书通道广播消息（用于系统级通知，如 auth 过期）
+   */
+  async broadcastToFeishu(text: string): Promise<void> {
+    for (const ctx of this.channelContexts.values()) {
+      try {
+        await this.sendToChannel(ctx, text);
+      } catch (err) {
+        console.error(`[CC][${ctx.channelId}] 广播失败:`, err);
+      }
+    }
+  }
+
+  private formatTimeAgo(timestamp: string | number): string {
+    const now = Date.now();
+    const time = typeof timestamp === "string" ? new Date(timestamp).getTime() : timestamp;
+    const diff = now - time;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (minutes < 1) return "刚刚";
+    if (minutes < 60) return `${minutes}分钟前`;
+    if (hours < 24) return `${hours}小时前`;
+    if (days < 7) return `${days}天前`;
+    const date = new Date(time);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  }
+
   private async handleHistoryList(req: http.IncomingMessage, res: http.ServerResponse) {
-    // 验证 token
     const authHeader = req.headers.authorization;
     const token = authHeader?.replace("Bearer ", "");
-
     if (!this.state.paired || token !== this.state.token) {
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "未授权" }));
       return;
     }
-
     try {
-      // 解析 limit 参数（默认 20，传 0 或不传数字则返回全部）
       const url = new URL(req.url || "", `http://${req.headers.host}`);
       const limitParam = url.searchParams.get("limit");
       const limit = limitParam ? parseInt(limitParam, 10) : 20;
-
-      // 使用 adapter 的 listHistory 方法
       const result = await adapter.listHistory(this.cwd, limit);
-
-      console.log(`[History] 返回 ${result.conversations.length}/${result.total} 条历史记录 (cwd: ${this.cwd})`);
+      console.log(`[History] 返回 ${result.conversations.length}/${result.total} 条历史记录`);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
     } catch (error) {
@@ -422,27 +1429,20 @@ export class HttpServer {
   }
 
   private async handleHistoryDetail(req: http.IncomingMessage, res: http.ServerResponse, pathname: string) {
-    // 验证 token
     const authHeader = req.headers.authorization;
     const token = authHeader?.replace("Bearer ", "");
-
     if (!this.state.paired || token !== this.state.token) {
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "未授权" }));
       return;
     }
-
-    // 提取 sessionId: /history/{sessionId}
     const sessionId = pathname.replace("/history/", "");
-
     if (!sessionId || sessionId === "list") {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "无效的 sessionId" }));
       return;
     }
-
     try {
-      // 使用 adapter 的 getHistory 方法
       const conversation = await adapter.getHistory(this.cwd, sessionId);
       if (!conversation) {
         res.writeHead(404, { "Content-Type": "application/json" });
@@ -459,16 +1459,13 @@ export class HttpServer {
   }
 
   private async handleRename(req: http.IncomingMessage, res: http.ServerResponse) {
-    // 验证 token
     const authHeader = req.headers.authorization;
     const token = authHeader?.replace("Bearer ", "");
-
     if (!this.state.paired || token !== this.state.token) {
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "未授权" }));
       return;
     }
-
     try {
       const body = await this.readBody(req);
       let parsed;
@@ -480,17 +1477,12 @@ export class HttpServer {
         return;
       }
       const { sessionId, newTitle } = parsed;
-
-      // 验证输入
       if (!sessionId || typeof newTitle !== "string") {
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "sessionId and newTitle are required" }));
         return;
       }
-
-      // 执行重命名
       const success = renameSession(sessionId, newTitle, this.cwd);
-
       if (success) {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ success: true }));
@@ -508,176 +1500,21 @@ export class HttpServer {
   private async handleSkillsList(req: http.IncomingMessage, res: http.ServerResponse, url: URL) {
     const authHeader = req.headers.authorization;
     const token = authHeader?.replace("Bearer ", "");
-
     if (!this.state.paired || token !== this.state.token) {
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "未授权" }));
       return;
     }
-
     const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10) || 1);
     const pageSize = Math.min(200, Math.max(1, parseInt(url.searchParams.get("pageSize") || "20", 10) || 20));
-
     const skillsDir = join(this.cwd, ".claude", "skills");
     const allItems = listSkills(skillsDir);
     const total = allItems.length;
     const start = (page - 1) * pageSize;
     const items = allItems.slice(start, start + pageSize);
     const hasMore = start + pageSize < total;
-
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ items, total, page, pageSize, hasMore }));
-  }
-
-  /**
-   * 向所有 /events 监听者广播事件
-   */
-  private broadcastEvent(eventType: string, data: Record<string, unknown>): void {
-    if (this.eventListeners.size === 0) return;
-
-    const payload = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
-    for (const res of this.eventListeners) {
-      try {
-        res.write(payload);
-      } catch {
-        this.eventListeners.delete(res);
-      }
-    }
-  }
-
-  /**
-   * SSE 实时广播端点
-   */
-  private handleEvents(req: http.IncomingMessage, res: http.ServerResponse): void {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.replace("Bearer ", "");
-
-    if (!this.state.paired || token !== this.state.token) {
-      res.writeHead(401, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "未授权" }));
-      return;
-    }
-
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
-    });
-
-    this.eventListeners.add(res);
-
-    req.on("close", () => {
-      this.eventListeners.delete(res);
-    });
-
-    // 发送初始心跳
-    this.sendHeartbeat(res);
-  }
-
-  /**
-   * 系统状态快照端点
-   */
-  private async handleStatus(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.replace("Bearer ", "");
-
-    if (!this.state.paired || token !== this.state.token) {
-      res.writeHead(401, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "未授权" }));
-      return;
-    }
-
-    // 构建 sessions 列表
-    const sessions: Array<{
-      id: string;
-      title: string;
-      lastActive: string;
-      state: string;
-      toolStats: { Write: number; Read: number; Bash: number };
-      messageCount: number;
-    }> = [];
-
-    const knownSessionIds = this.stats.getAllSessionIds();
-    const now = Date.now();
-
-    for (const id of knownSessionIds) {
-      const stats = this.stats.getToolStats(id);
-      const msgCount = this.stats.getMessageCount(id);
-
-      sessions.push({
-        id,
-        title: "Untitled",
-        lastActive: new Date(now).toISOString(),
-        state: "working", // 已知 sessions 默认 working
-        toolStats: stats,
-        messageCount: msgCount,
-      });
-    }
-
-    // 历史统计
-    let totalCompleted = 0;
-    try {
-      const historyDir = getHistoryDir(this.cwd);
-      const files = scanSessionFiles(historyDir);
-      totalCompleted = files.size;
-    } catch {
-      // 忽略
-    }
-
-    const status = {
-      sessions,
-      system: {
-        hostname: os.hostname(),
-        uptime: Math.floor((Date.now() - this.startTime) / 1000),
-        tunnelStatus: this.getTunnelStatusFn ? this.getTunnelStatusFn() : "disconnected",
-      },
-      history: {
-        totalCompleted,
-      },
-    };
-
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(status));
-  }
-
-  /**
-   * 向所有连接广播心跳
-   */
-  private broadcastHeartbeat(): void {
-    this.broadcastEvent("heartbeat", {
-      uptime: Math.floor((Date.now() - this.startTime) / 1000),
-      tunnelStatus: this.getTunnelStatusFn ? this.getTunnelStatusFn() : "disconnected",
-      activeSessions: this.stats.getActiveCount(),
-      ts: Date.now(),
-    });
-  }
-
-  /**
-   * 向单个连接发送心跳（用于新连接初始化）
-   */
-  private sendHeartbeat(res: http.ServerResponse): void {
-    const payload = `event: heartbeat\ndata: ${JSON.stringify({
-      uptime: Math.floor((Date.now() - this.startTime) / 1000),
-      tunnelStatus: this.getTunnelStatusFn ? this.getTunnelStatusFn() : "disconnected",
-      activeSessions: this.stats.getActiveCount(),
-      ts: Date.now(),
-    })}\n\n`;
-    res.write(payload);
-  }
-
-  /** 代理：工具统计累计（供测试访问） */
-  private incrementToolStat(sessionId: string | undefined, toolName: string): void {
-    this.stats.incrementToolStat(sessionId, toolName);
-  }
-
-  /** 代理：消息计数累计（供测试访问） */
-  private incrementMessageCount(sessionId: string | undefined): void {
-    this.stats.incrementMessageCount(sessionId);
-  }
-
-  /** 设置 tunnel 状态获取函数 */
-  setTunnelStatusFn(fn: () => string): void {
-    this.getTunnelStatusFn = fn;
   }
 
   private readBody(req: http.IncomingMessage, maxBytes: number = 10 * 1024 * 1024): Promise<string> {
@@ -700,67 +1537,103 @@ export class HttpServer {
 
   async start(): Promise<number> {
     return new Promise((resolve, reject) => {
-      // 监听错误事件
       this.server.once('error', (err) => {
         reject(err);
       });
-
       const port = Number(process.env.PORT || 18080);
       this.server.listen(port, async () => {
         console.log(`[${this.isTls ? "HTTPS" : "HTTP"}] 服务启动在端口 ${port}`);
-
-        // 动态加载并注册飞书通道（如果配置了环境变量）
-        if (process.env.FEISHU_APP_ID && process.env.FEISHU_APP_SECRET) {
-          try {
-            const { FeishuChannel } = await import("./channels/feishu.js");
-            this.feishuChannel = new FeishuChannel();
-            this.feishuChannel.onMessage(async (message: string, images?: Array<{ data: string; mediaType: string }>) => {
-              await this.feishuCommands.processMessage(message, images);
-            });
-            this.channelManager.register(this.feishuChannel);
-            // 注入 feishuChannel 到 FeishuCommands（延迟注入）
-            (this.feishuCommands as any).deps.feishuChannel = this.feishuChannel;
-            console.log("[Channels] 飞书通道已注册");
-          } catch (err) {
-            console.warn("[Channels] 飞书通道加载失败:", err);
-          }
-        } else {
-          console.log("[Channels] 飞书通道未配置");
-        }
-
-        // 启动所有通道（包括飞书长连接）
         await this.channelManager.startAll();
-
-        // 启动心跳定时器
-        this.heartbeatTimer = setInterval(() => {
-          this.broadcastHeartbeat();
-        }, HttpServer.HEARTBEAT_INTERVAL_MS);
-
-        if (this.heartbeatTimer.unref) {
-          this.heartbeatTimer.unref();
-        }
-
+        this.startTokenKeepalive();
         resolve(port);
       });
     });
   }
 
+  /**
+   * 飞书 MCP Token 保活 — 每 30 分钟刷新一次
+   *
+   * 飞书 OAuth access_token 有效期 2h，refresh_token 有效期 30 天。
+   * 定期调用一次简单 API，触发 MCP server 内部的 auto-refresh 机制，
+   * 确保 token 文件始终有效，3 个机器人随时可调用。
+   */
+  private tokenKeepaliveTimer: ReturnType<typeof setInterval> | null = null;
+
+  private startTokenKeepalive(): void {
+    const INTERVAL = 30 * 60_000; // 30 min
+    const TOKEN_FILE = join(process.env.HOME || "/tmp", ".feishu-mcp/tokens.json");
+
+    const refreshToken = async () => {
+      try {
+        if (!existsSync(TOKEN_FILE)) {
+          console.log("[TokenKeepalive] tokens.json 不存在，跳过（需手动授权）");
+          return;
+        }
+        const tokens = JSON.parse(readFileSync(TOKEN_FILE, "utf-8"));
+        const appId = "cli_a9f1cd1366751bc7";
+        const cached = tokens[appId];
+        if (!cached) {
+          console.log("[TokenKeepalive] 无 MCP token 缓存，跳过");
+          return;
+        }
+
+        const remainingMin = (cached.expiresAt - Date.now()) / 60_000;
+        console.log(`[TokenKeepalive] token 剩余 ${remainingMin.toFixed(1)} 分钟`);
+
+        // 如果还有超过 60 分钟有效期，不需要刷新
+        if (remainingMin > 60) {
+          console.log("[TokenKeepalive] token 充足，无需刷新");
+          return;
+        }
+
+        // 用 refresh_token 主动刷新
+        if (!cached.refreshToken) {
+          console.log("[TokenKeepalive] 无 refresh_token，需手动重新授权");
+          return;
+        }
+
+        console.log("[TokenKeepalive] token 即将过期，主动刷新...");
+        const resp = await fetch("https://open.feishu.cn/open-apis/authen/v2/oauth/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            grant_type: "refresh_token",
+            refresh_token: cached.refreshToken,
+            client_id: appId,
+            client_secret: "RCCkaaPGkGn9n3pEDkjjzhrUDEWhmioy",
+          }),
+        });
+        const data = await resp.json() as any;
+
+        if (data.access_token) {
+          tokens[appId] = {
+            ...cached,
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token || cached.refreshToken,
+            expiresAt: Date.now() + (data.expires_in || 7200) * 1000,
+          };
+          const { writeFileSync: ws, mkdirSync: md } = await import("fs");
+          const dir = join(process.env.HOME || "/tmp", ".feishu-mcp");
+          if (!existsSync(dir)) md(dir, { recursive: true });
+          ws(TOKEN_FILE, JSON.stringify(tokens, null, 2), "utf-8");
+          console.log("[TokenKeepalive] token 刷新成功 ✓");
+        } else {
+          console.error("[TokenKeepalive] 刷新失败:", JSON.stringify(data));
+        }
+      } catch (err: any) {
+        console.error("[TokenKeepalive] 异常:", err.message);
+      }
+    };
+
+    // 启动后立即检查一次
+    refreshToken();
+    this.tokenKeepaliveTimer = setInterval(refreshToken, INTERVAL);
+    console.log("[TokenKeepalive] 已启动，每 30 分钟检查一次");
+  }
+
   stop() {
-    // 清理心跳定时器
-    if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer);
-      this.heartbeatTimer = null;
-    }
-
-    // 关闭所有 SSE 连接
-    for (const res of this.eventListeners) {
-      try { res.end(); } catch {}
-    }
-    this.eventListeners.clear();
-
-    // 停止所有通道
+    if (this.tokenKeepaliveTimer) clearInterval(this.tokenKeepaliveTimer);
     this.channelManager.stopAll();
-
     this.server.close();
   }
 }

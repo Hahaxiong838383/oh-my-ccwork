@@ -13,10 +13,12 @@ export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
 interface CliEngineResult {
   output: string;
   error?: string;
+  timedOut?: boolean;
 }
 
 interface CliEngineOptions {
   reasoningEffort?: ReasoningEffort;
+  timeout?: number; // ms, 由 adaptive-timeout 模块提供
 }
 
 const ENGINE_CONFIG: Record<EngineType, { bin: string; buildArgs: (prompt: string, cwd: string, opts?: CliEngineOptions) => string[] }> = {
@@ -49,7 +51,7 @@ function classifyEffort(prompt: string): ReasoningEffort {
 /**
  * Execute a prompt via CLI engine (codex or gemini).
  * Returns the stdout output as a string.
- * Timeout: 5 minutes.
+ * Timeout: adaptive (learned from history), fallback 5 min.
  * For codex: auto-classifies reasoning effort if not explicitly provided.
  */
 export function runCliEngine(engine: EngineType, prompt: string, cwd: string, opts?: CliEngineOptions): Promise<CliEngineResult> {
@@ -59,22 +61,25 @@ export function runCliEngine(engine: EngineType, prompt: string, cwd: string, op
     console.log(`[CliEngine][codex] auto reasoning: ${effort}`);
   }
   const config = ENGINE_CONFIG[engine];
+  const timeout = opts?.timeout || 300_000; // adaptive timeout or 5 min default
 
   return new Promise((resolve) => {
     const args = config.buildArgs(prompt, cwd, opts);
-    console.log(`[CliEngine][${engine}] exec: ${config.bin} ${args.join(" ").substring(0, 100)}...`);
+    console.log(`[CliEngine][${engine}] exec (timeout=${(timeout/1000).toFixed(0)}s): ${config.bin} ${args.join(" ").substring(0, 100)}...`);
 
     const child = execFile(config.bin, args, {
       cwd,
-      timeout: 300_000, // 5 min
+      timeout,
       maxBuffer: 1024 * 1024 * 10, // 10MB
       env: { ...process.env, CLAUDECODE: undefined },
     }, (error, stdout, stderr) => {
       if (error) {
-        console.error(`[CliEngine][${engine}] error:`, error.message);
+        const isTimeout = error.message.includes("TIMEOUT") || (error as any).killed;
+        console.error(`[CliEngine][${engine}] ${isTimeout ? "TIMEOUT" : "error"}:`, error.message);
         resolve({
           output: stdout || "",
           error: error.message + (stderr ? `\n${stderr}` : ""),
+          timedOut: isTimeout,
         });
         return;
       }

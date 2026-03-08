@@ -43,13 +43,13 @@ python3 .claude/skills/theory-radar/scripts/arxiv-theory-radar.py
 
 读取 JSON 数据，对每篇论文生成深度分析。从所有 sections 中**合并去重**，选出最相关的 8-10 篇，按以下格式逐篇分析：
 
-**单篇格式模板**：
+**单篇格式模板**（所有文字输出必须使用中文）：
 ```
-【N】论文标题（精简版，20字以内）
+【N】论文标题（中文精简版，≤20字）
 📍 arxiv.org/abs/XXXXX | 分类：XX.XX
-🔬 核心发现：[2-3句，论文的核心研究结论或实验发现]
-🔗 与LLM的连接：[1-2句，该发现如何映射到大模型机制或启发AI设计]
-💡 研究启示：[1-2句，对认知AI/类脑计算的潜在价值]
+🔬 核心发现：[2-3句中文，论文的核心研究结论或实验发现]
+🔗 与LLM的连接：[1-2句中文，该发现如何映射到大模型机制或启发AI设计]
+💡 研究启示：[1-2句中文，对认知AI/类脑计算的潜在价值]
 ```
 
 **选篇标准**（优先级从高到低）：
@@ -96,9 +96,40 @@ node /Users/rayman.chen/mycc/.claude/skills/tell-me/send.js \
 - `FEISHU_WIKI_URL`：Step 4 创建 wiki 页面时，从 API 返回的 `node_token` 拼接：`https://b2kj9e7u26m.feishu.cn/wiki/{node_token}`
 - `BITABLE_URL`：固定值（论文索引表），填入：`https://b2kj9e7u26m.feishu.cn/base/CzwzbwKuBadUa3s7BPHcdTDYnGg?table=tblb4S7JAqz9lVDm`
 
+### Step 3.5: 去重过滤（归档前必做）
+
+在 Wiki 存档和多维表格写入之前，**必须**先查询现有索引，过滤已归档论文。
+
+**3.5a. 查询现有 arxiv_id 列表**：
+
+使用 `list_bitable_records`（open-feishu-mcp）查询论文索引表所有记录：
+- app_token: `CzwzbwKuBadUa3s7BPHcdTDYnGg`
+- table_id: `tblb4S7JAqz9lVDm`
+- 需分页拉取全量（page_size=500，循环直到 has_more=false）
+- 从每条记录的「文档链接」字段提取 arxiv_id（link URL 格式：`https://arxiv.org/abs/{arxiv_id}`）
+- 或从「论文名称」字段首部提取 arxiv_id（若标题格式为 `[arxiv_id] 标题`）
+
+**3.5b. 过滤重复论文**：
+
+从待归档论文列表中，移除 arxiv_id 已存在于索引表的论文：
+```
+待归档论文 → 过滤掉 arxiv_id 在现有索引中的 → 新论文列表
+```
+
+**3.5c. 输出去重报告**：
+
+```
+📋 去重结果：
+- 本次抓取：N 篇
+- 已存在（跳过）：M 篇  [列出 arxiv_id 列表]
+- 新增待归档：K 篇
+```
+
+若全部重复（K=0），跳过 Step 4-5，直接结束并通知用户。
+
 ### Step 4: 飞书 Wiki 存档（每篇一页）
 
-发送完成后，为每篇论文在对应分类目录下创建独立 Wiki 页面。
+发送完成后，为**去重后的新论文**在对应分类目录下创建独立 Wiki 页面。
 
 **知识库结构**（space_id: `7589885788549024719`）：
 
@@ -112,6 +143,7 @@ node /Users/rayman.chen/mycc/.claude/skills/tell-me/send.js \
 
 **4a. 为每篇论文创建 Wiki 页面**：
 - API：`POST /wiki/v2/spaces/7589885788549024719/nodes`
+- **必须同时传 `obj_type: "docx"` 和 `node_type: "origin"`**，否则返回 99992402 错误
 - 使用 `feishu_openapi_call` 工具（open-feishu-mcp，user OAuth token）
 - 父节点：根据论文领域选择对应分类目录的 node_token
 - 页面标题格式：`[arxiv_id] 中文精简标题`
@@ -153,16 +185,29 @@ node /Users/rayman.chen/mycc/.claude/skills/tell-me/send.js \
 
 在多维表格（app_token: `CzwzbwKuBadUa3s7BPHcdTDYnGg`，table_id: `tblb4S7JAqz9lVDm`）中，为当日每篇论文新增一条记录：
 
-字段映射：
-| 字段名 | 内容 |
-|--------|------|
-| 论文名称 | 精简标题（中文，≤20字） |
-| 日期 | 发布日期（Unix 毫秒时间戳） |
-| 领域 | 多选标签（神经科学/LLM机制/AI安全/推理机制/认知科学/多模态/训练优化/记忆系统/AI评测） |
-| 文档链接 | `{"link": "https://b2kj9e7u26m.feishu.cn/wiki/{node_token}", "text": "Wiki · 论文简称"}` |
-| 亮点 | 一句话核心结论（≤50字） |
+**全部字段必须使用中文输出**（论文名称、亮点等，不使用英文原文）。
 
-使用 `batch_create` 一次性提交当日所有论文，去重已有记录（按 arxiv_id 判断）。
+字段映射：
+| 字段名 | 类型 | 内容 |
+|--------|------|------|
+| 论文名称 | 文本 | **中文**精简标题（≤20字），不含 arxiv_id 前缀 |
+| arxiv_id | 文本 | arXiv 论文 ID（如 `2503.12345v1`） |
+| 日期 | 日期 | 发布日期（Unix 毫秒时间戳） |
+| 类型 | 单选 | 根据内容自动适配：`论文` / `综述` / `技术报告` / `预印本` / `视频` / `PDF` |
+| 领域 | 多选 | 根据论文内容自动匹配，可选标签：神经科学 / 认知科学 / LLM机制 / 推理机制 / 记忆系统 / 训练优化 / 算法理论 / 多模态 / AI评测 / AI安全 / 产业趋势 / 使用行为 / 开源生态 |
+| 亮点 | 文本 | **中文**一句话核心结论（≤50字） |
+| 文档链接 | 链接 | **仅 Wiki 知识库页面链接**：`{"link": "https://b2kj9e7u26m.feishu.cn/wiki/{node_token}", "text": "Wiki · 论文简称"}`。无 Wiki 页面时**留空** |
+| 原文链接 | 链接 | 论文原始链接：`{"link": "https://arxiv.org/abs/{arxiv_id}", "text": "arXiv · {arxiv_id}"}` |
+
+**领域自动适配规则**：根据论文 abstract 和 categories 判断，每篇选 1-3 个最相关标签。不要硬编码映射，而是理解论文内容后选择。
+
+**类型自动适配规则**：
+- arXiv 论文默认为 `论文`
+- 标题含 survey/review/overview → `综述`
+- 标题含 technical report → `技术报告`
+- 非学术来源（产业报告、白皮书等） → 根据实际类型选择
+
+使用 `batch_create` 一次性提交**Step 3.5 过滤后的新论文**（已在 Step 3.5 完成去重，此处直接写入无需再次判断）。
 
 ## 数据源
 
@@ -179,38 +224,27 @@ node /Users/rayman.chen/mycc/.claude/skills/tell-me/send.js \
 - **关键词过滤**：abstract/title 必须含认知/神经/LLM 相关词
 - **去重机制**：按 arxiv_id 跨分区去重
 
-## 多引擎协作模式（推荐）
+## 跨引擎标准操作流程
 
-cc 负责 Step 1-3（抓取 + 分析 + 飞书通知），Gemini 负责 Step 4-5（Wiki 存档 + 多维表格索引）。
+详见 **[SOP.md](./SOP.md)**。
 
-### Gemini 委托流程
+当 codex/gemini 通过飞书群 @mention 接到 theory-radar 任务时，mycc 后端会**自动注入 SOP.md** 到 prompt 中，确保任何引擎都按标准流程执行。
 
-1. cc 完成 Step 1-3 后，将精选论文列表 + Step 4-5 指令写入 prompt 文件
-2. 以 headless 模式启动 Gemini：
+### 多引擎协作（推荐）
 
+- **cc** 执行 Step 1→2→3（抓取 + 分析 + 飞书通知）
+- **gemini** 执行 Step 3.5→4→5（去重 + Wiki 存档 + 索引更新）
+
+### Gemini 委托方式
+
+方式 1：在群聊中 @gemini，SOP 会自动注入
+方式 2：cc 直接调 headless 模式
 ```bash
-# 写 prompt 到临时文件
-cat > /tmp/gemini-step4-5-prompt.txt << 'PROMPT'
-... Step 4-5 指令 + 论文数据 ...
-PROMPT
-
-# 以 headless + YOLO + 纯文本输出模式启动
 gemini -p "$(cat /tmp/gemini-step4-5-prompt.txt)" -y -o text > /tmp/gemini-step4-5-output.txt 2>&1 &
 ```
-
-3. 查看进展：`tail -f /tmp/gemini-step4-5-output.txt`
-
-### 关键注意事项
-
-- **必须用 `-p` headless 模式**：Gemini CLI 默认是 TUI 交互模式，后台运行时 TUI 无法输出到文件
-- **必须用 `-o text`**：确保输出为纯文本而非 TUI 渲染
-- **必须用 `-y`**：YOLO 模式自动审批所有 MCP 工具调用
-- **Wiki 创建需加 `node_type`**：body 中必须包含 `"node_type": "origin"`，否则报错
-- **Wiki 内容写入必须顺序**：不能并发写多个 doc，否则触发 9499 错误
 
 ## 注意事项
 
 - arXiv 限速：查询间隔 ≥ 3 秒，每次最多查 10 条
 - 论文数量视当日不同，通常 8-15 篇；若不足 8 篇，降低过滤门槛（扩大到 7 天）
-- 标题翻译：保留英文原标题，可附中文摘要
 - 内容为学术参考，不代表任何观点
