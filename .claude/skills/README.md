@@ -59,7 +59,11 @@ description: 做什么 + 什么时候触发（这是最重要的字段）
 | `setup` | 首次使用引导，交互式完成配置 | `/setup` |
 | `dashboard` | 能力看板可视化 | `/dashboard` |
 | `skill-creator` | 帮助创建新的 Skill | `/skill-creator` |
+| `decision` | 决策记录，从对话上下文自动提取生成结构化决策条目 | `/decision` |
+| `goal-plan-p2` | 公司&部门目标/计划/任务管理表（P2）全局规则与校验 | `/goal-plan-p2` |
 | `mycc` | 移动端访问后端，在手机上使用 CC | `/mycc` |
+| `feishu-mcp-setup` | 飞书 MCP 配置引导，从零配置 lark-mcp | `/feishu-mcp-setup` |
+| `feishu-ops` | 飞书操作手册，文档/表格/Wiki 操作指南 | `/feishu-ops` |
 
 ### mycc - 移动端访问
 

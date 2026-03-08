@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>软件开发的四个时代</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0a0a0f;
+    color: #e0e0e0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .hero {
+    text-align: center;
+    padding: 80px 20px 40px;
+    position: relative;
+  }
+  .hero h1 {
+    font-size: 48px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 16px;
+    letter-spacing: 2px;
+  }
+  .hero p {
+    font-size: 18px;
+    color: #888;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.8;
+  }
+
+  .timeline {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 20px 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 80px;
+    position: relative;
+  }
+
+  /* 中间竖线 */
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 60px;
+    bottom: 120px;
+    width: 2px;
+    background: linear-gradient(to bottom, transparent, #333, #333, transparent);
+    transform: translateX(-50%);
+  }
+
+  .era {
+    position: relative;
+    padding: 48px;
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(20px);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .era:hover {
+    transform: translateY(-4px);
+  }
+
+  /* ── Era 1 ── */
+  .era-1 {
+    background: linear-gradient(135deg, rgba(255,107,107,0.08), rgba(255,107,107,0.02));
+    box-shadow: 0 0 60px rgba(255,107,107,0.05);
+  }
+  .era-1:hover { box-shadow: 0 0 80px rgba(255,107,107,0.1); }
+  .era-1 .era-badge { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+  .era-1 .node.human { border-color: #ff6b6b; }
+  .era-1 .arrow { color: #ff6b6b; }
+  .era-1 .role-tag.human-tag { background: rgba(255,107,107,0.15); color: #ff6b6b; }
+
+  /* ── Era 2 ── */
+  .era-2 {
+    background: linear-gradient(135deg, rgba(116,75,162,0.08), rgba(116,75,162,0.02));
+    box-shadow: 0 0 60px rgba(116,75,162,0.05);
+  }
+  .era-2:hover { box-shadow: 0 0 80px rgba(116,75,162,0.1); }
+  .era-2 .era-badge { background: linear-gradient(135deg, #764ba2, #667eea); }
+  .era-2 .node.human { border-color: #667eea; }
+  .era-2 .node.ai { border-color: #a855f7; }
+  .era-2 .arrow { color: #667eea; }
+  .era-2 .role-tag.human-tag { background: rgba(102,126,234,0.15); color: #667eea; }
+  .era-2 .role-tag.ai-tag { background: rgba(168,85,247,0.15); color: #a855f7; }
+
+  /* ── Era 3 ── */
+  .era-3 {
+    background: linear-gradient(135deg, rgba(0,206,209,0.08), rgba(0,206,209,0.02));
+    box-shadow: 0 0 60px rgba(0,206,209,0.05);
+  }
+  .era-3:hover { box-shadow: 0 0 80px rgba(0,206,209,0.12); }
+  .era-3 .era-badge { background: linear-gradient(135deg, #00ced1, #00b894); }
+  .era-3 .node.human { border-color: #00ced1; }
+  .era-3 .node.ai { border-color: #00b894; }
+  .era-3 .arrow { color: #00b894; }
+  .era-3 .arrow.ai-drive { color: #00b894; font-weight: 700; }
+  .era-3 .role-tag.human-tag { background: rgba(0,206,209,0.15); color: #00ced1; }
+  .era-3 .role-tag.ai-tag { background: rgba(0,184,148,0.15); color: #00b894; }
+
+  /* ── Era 4 ── */
+  .era-4 {
+    background: linear-gradient(135deg, rgba(246,173,85,0.08), rgba(246,173,85,0.02));
+    box-shadow: 0 0 60px rgba(246,173,85,0.05);
+  }
+  .era-4:hover { box-shadow: 0 0 80px rgba(246,173,85,0.12); }
+  .era-4 .era-badge { background: linear-gradient(135deg, #f6ad55, #dd6b20); }
+  .era-4 .node.human { border-color: #f6ad55; }
+  .era-4 .node.ai { border-color: #ed8936; }
+  .era-4 .arrow { color: #ed8936; }
+  .era-4 .arrow.ai-drive { color: #ed8936; font-weight: 700; }
+  .era-4 .role-tag.human-tag { background: rgba(246,173,85,0.15); color: #f6ad55; }
+  .era-4 .role-tag.ai-tag { background: rgba(237,137,54,0.15); color: #ed8936; }
+  .era-4 .era-insight { border-left-color: #f6ad55; }
+
+  /* Era 4 循环流程图 */
+  .era-4-flow-wrapper {
+    position: relative;
+    padding-bottom: 24px;
+  }
+
+  .flow-cycle {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 16px;
+    padding: 12px 0 20px;
+  }
+
+  .cycle-return {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 10px 24px;
+    border: 1.5px dashed rgba(237,137,54,0.4);
+    border-radius: 100px;
+    color: #ed8936;
+    font-size: 13px;
+    font-weight: 600;
+    animation: cycleGlow 3s ease-in-out infinite;
+  }
+
+  .cycle-return .cycle-icon {
+    font-size: 18px;
+    animation: spin 4s linear infinite;
+  }
+
+  @keyframes cycleGlow {
+    0%, 100% { border-color: rgba(237,137,54,0.3); background: rgba(237,137,54,0.02); }
+    50% { border-color: rgba(237,137,54,0.6); background: rgba(237,137,54,0.06); }
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── 场景推演 ── */
+  .scenarios {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px 80px;
+  }
+  .scenarios h2 {
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 12px;
+    color: #fff;
+  }
+  .scenarios .scenarios-sub {
+    text-align: center;
+    font-size: 15px;
+    color: #888;
+    margin-bottom: 40px;
+    line-height: 1.6;
+  }
+  .scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .scenario-card {
+    padding: 28px 24px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .scenario-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0 40px rgba(237,137,54,0.08);
+  }
+  .scenario-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .scenario-icon {
+    font-size: 32px;
+    line-height: 1;
+  }
+  .scenario-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .scenario-pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .pipeline-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 13px;
+    color: #bbb;
+  }
+  .pipeline-step .step-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .step-human {
+    background: rgba(246,173,85,0.15);
+    border: 1px solid rgba(246,173,85,0.3);
+  }
+  .step-ai {
+    background: rgba(237,137,54,0.1);
+    border: 1px solid rgba(237,137,54,0.2);
+  }
+  .pipeline-arrow {
+    display: flex;
+    align-items: center;
+    padding-left: 9px;
+    color: rgba(237,137,54,0.4);
+    font-size: 11px;
+  }
+  .scenario-badge {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #ed8936;
+    background: rgba(237,137,54,0.1);
+    border: 1px solid rgba(237,137,54,0.2);
+  }
+  .scenario-footnote {
+    text-align: center;
+    margin-top: 32px;
+    padding: 16px 24px;
+    border-radius: 12px;
+    background: rgba(237,137,54,0.04);
+    border: 1px dashed rgba(237,137,54,0.2);
+    color: #aaa;
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  .scenario-footnote strong { color: #f6ad55; }
+  @media (max-width: 768px) {
+    .scenario-grid { grid-template-columns: 1fr; }
+  }
+
+  .era-badge {
+    display: inline-block;
+    padding: 6px 20px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+
+  .era-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+
+  .era-subtitle {
+    font-size: 15px;
+    color: #888;
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  .era-insight {
+    margin-top: 28px;
+    padding: 20px 24px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border-left: 3px solid;
+    font-size: 15px;
+    line-height: 1.8;
+    color: #aaa;
+  }
+  .era-1 .era-insight { border-left-color: #ff6b6b; }
+  .era-2 .era-insight { border-left-color: #764ba2; }
+  .era-3 .era-insight { border-left-color: #00ced1; }
+  .era-insight strong { color: #fff; }
+
+  /* ── 流程链 ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    padding: 12px 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 16px;
+  }
+
+  .node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1.5px solid;
+    background: rgba(255,255,255,0.03);
+    min-width: 88px;
+    text-align: center;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .node:hover {
+    background: rgba(255,255,255,0.06);
+  }
+
+  .node-icon {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .node-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #ccc;
+    white-space: nowrap;
+  }
+
+  .role-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .arrow {
+    font-size: 20px;
+    margin: 0 4px;
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+  .arrow.ai-drive {
+    opacity: 1;
+    font-size: 22px;
+    position: relative;
+  }
+  .arrow-label {
+    font-size: 9px;
+    position: absolute;
+    bottom: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  /* ── 对比条 ── */
+  .comparison {
+    max-width: 1100px;
+    margin: 0 auto 80px;
+    padding: 0 20px;
+  }
+  .comparison h2 {
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 40px;
+    color: #fff;
+  }
+  .compare-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+  .compare-card {
+    padding: 32px 24px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+    text-align: center;
+  }
+  .compare-card:nth-child(1) { background: rgba(255,107,107,0.06); }
+  .compare-card:nth-child(2) { background: rgba(116,75,162,0.06); }
+  .compare-card:nth-child(3) { background: rgba(0,206,209,0.06); }
+  .compare-card:nth-child(4) { background: rgba(237,137,54,0.06); }
+
+  .compare-card h3 {
+    font-size: 16px;
+    margin-bottom: 20px;
+    color: #fff;
+  }
+  .metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 14px;
+  }
+  .metric:last-child { border-bottom: none; }
+  .metric-label { color: #888; }
+  .metric-value { color: #fff; font-weight: 600; }
+
+  /* ── 底部 ── */
+  .footer {
+    text-align: center;
+    padding: 40px 20px 60px;
+    color: #555;
+    font-size: 13px;
+  }
+
+  /* ── 动画 ── */
+  .era { opacity: 0; transform: translateY(40px); animation: fadeUp 0.6s ease forwards; }
+  .era-1 { animation-delay: 0.1s; }
+  .era-2 { animation-delay: 0.3s; }
+  .era-3 { animation-delay: 0.5s; }
+  .era-4 { animation-delay: 0.7s; }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  .era-3 .arrow.ai-drive { animation: pulse 2s infinite; }
+  .era-4 .arrow.ai-drive { animation: pulse 2s infinite; }
+
+  /* ── 响应式 ── */
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 32px; }
+    .era { padding: 28px 20px; }
+    .era-title { font-size: 22px; }
+    .compare-grid { grid-template-columns: 1fr; }
+    .timeline::before { display: none; }
+    .node { min-width: 72px; padding: 10px 10px; }
+    .node-icon { font-size: 20px; }
+    .node-label { font-size: 11px; }
+    .arrow { font-size: 16px; margin: 0 2px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>软件开发的四个时代</h1>
+  <p>从人力驱动到 AI 自治，不只是"谁在干活"变了，而是"谁在推动"和"谁在启动"都变了</p>
+</div>
+
+<div class="timeline">
+
+  <!-- ═══════ Era 1 ═══════ -->
+  <div class="era era-1">
+    <span class="era-badge">Era 1</span>
+    <div class="era-title">纯人力时代</div>
+    <div class="era-subtitle">人是执行者，也是推动者。每一步都靠人力完成，每一次衔接也靠人去推动。</div>
+
+    <div class="flow">
+      <div class="node human">
+        <div class="node-icon">📋</div>
+        <div class="node-label">写需求文档</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node human">
+        <div class="node-icon">🎨</div>
+        <div class="node-label">设计方案</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node human">
+        <div class="node-icon">💻</div>
+        <div class="node-label">写代码</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node human">
+        <div class="node-icon">🧪</div>
+        <div class="node-label">写测试</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node human">
+        <div class="node-icon">🐛</div>
+        <div class="node-label">改 Bug</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node human">
+        <div class="node-icon">🚀</div>
+        <div class="node-label">部署上线</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node human">
+        <div class="node-icon">📄</div>
+        <div class="node-label">更新文档</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+    </div>
+
+    <div class="era-insight">
+      <strong>核心特征：</strong>人既是「执行者」也是「推动者」。每个节点人亲自干，节点之间的衔接也全靠人——写完需求自己想着去写代码，测完自己想着去改 bug。效率完全取决于这个人的能力和精力。
+    </div>
+  </div>
+
+  <!-- ═══════ Era 2 ═══════ -->
+  <div class="era era-2">
+    <span class="era-badge">Era 2</span>
+    <div class="era-title">人指挥 AI 时代</div>
+    <div class="era-subtitle">人退出执行，变成指令发出者。但节点之间的推动，仍然靠人。</div>
+
+    <div class="flow">
+      <div class="node human">
+        <div class="node-icon">🗣️</div>
+        <div class="node-label">发指令</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node ai">
+        <div class="node-icon">📋</div>
+        <div class="node-label">写需求文档</div>
+        <span class="role-tag ai-tag">AI</span>
+      </div>
+
+      <div class="arrow">→</div>
+      <div class="node human">
+        <div class="node-icon">🗣️</div>
+        <div class="node-label">发指令</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node ai">
+        <div class="node-icon">💻</div>
+        <div class="node-label">写代码</div>
+        <span class="role-tag ai-tag">AI</span>
+      </div>
+
+      <div class="arrow">→</div>
+      <div class="node human">
+        <div class="node-icon">🗣️</div>
+        <div class="node-label">发指令</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node ai">
+        <div class="node-icon">🧪</div>
+        <div class="node-label">测试+改 Bug</div>
+        <span class="role-tag ai-tag">AI</span>
+      </div>
+
+      <div class="arrow">→</div>
+      <div class="node human">
+        <div class="node-icon">🗣️</div>
+        <div class="node-label">发指令</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node ai">
+        <div class="node-icon">📄</div>
+        <div class="node-label">更新文档</div>
+        <span class="role-tag ai-tag">AI</span>
+      </div>
+    </div>
+
+    <div class="era-insight">
+      <strong>核心特征：</strong>人从「执行者」变成「指挥官」，AI 干活。但问题是——<strong>人还是那个推手</strong>。AI 写完需求不会自己去写代码，得等人说一句"现在去写代码"。每一步之间的衔接还是人在推。人的时间被从"干活"释放了，但被"推动"锁住了。
+    </div>
+  </div>
+
+  <!-- ═══════ Era 3 ═══════ -->
+  <div class="era era-3">
+    <span class="era-badge">Era 3</span>
+    <div class="era-title">AI 自驱时代</div>
+    <div class="era-subtitle">人只负责起点（想法）和终点（验收），中间全链路 AI 自动推动。</div>
+
+    <div class="flow">
+      <div class="node human" style="border-width: 2.5px;">
+        <div class="node-icon">💡</div>
+        <div class="node-label">给出想法</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+
+      <div class="arrow ai-drive" style="position:relative;">
+        ⚡
+        <span class="arrow-label" style="color:#00b894;">AI 自动推进</span>
+      </div>
+
+      <div class="node ai">
+        <div class="node-icon">📋</div>
+        <div class="node-label">拆需求</div>
+        <span class="role-tag ai-tag">AI</span>
+      </div>
+      <div class="arrow ai-drive">⚡</div>
+      <div class="node ai">
+        <div class="node-icon">💻</div>
+        <div class="node-label">写代码</div>
+        <span class="role-tag ai-tag">AI</span>
+      </div>
+      <div class="arrow ai-drive">⚡</div>
+      <div class="node ai">
+        <div class="node-icon">🧪</div>
+        <div class="node-label">测试</div>
+        <span class="role-tag ai-tag">AI</span>
+      </div>
+      <div class="arrow ai-drive">⚡</div>
+      <div class="node ai">
+        <div class="node-icon">🐛</div>
+        <div class="node-label">改 Bug</div>
+        <span class="role-tag ai-tag">AI</span>
+      </div>
+      <div class="arrow ai-drive">⚡</div>
+      <div class="node ai">
+        <div class="node-icon">🚀</div>
+        <div class="node-label">部署</div>
+        <span class="role-tag ai-tag">AI</span>
+      </div>
+      <div class="arrow ai-drive">⚡</div>
+      <div class="node ai">
+        <div class="node-icon">📄</div>
+        <div class="node-label">更新文档</div>
+        <span class="role-tag ai-tag">AI</span>
+      </div>
+
+      <div class="arrow ai-drive" style="position:relative;">
+        ⚡
+        <span class="arrow-label" style="color:#00b894;">自动交付</span>
+      </div>
+
+      <div class="node human" style="border-width: 2.5px;">
+        <div class="node-icon">✅</div>
+        <div class="node-label">验收审核</div>
+        <span class="role-tag human-tag">人</span>
+      </div>
+    </div>
+
+    <div class="era-insight">
+      <strong>核心特征：</strong>人连「推动」也不干了。关键变化是——<strong>节点之间的箭头变成了 AI 驱动</strong>。AI 写完需求会自己去写代码，测完会自己去改 bug，改完会自己去部署。人只在最前面给想法、最后面做验收。这才是真正的效率质变——人的时间从「推动流程」中彻底释放。
+    </div>
+  </div>
+
+  <!-- ═══════ Era 4 ═══════ -->
+  <div class="era era-4">
+    <span class="era-badge">Era 4</span>
+    <div class="era-title">AI 自治时代</div>
+    <div class="era-subtitle">人只定义「要什么」，AI 自己醒来、自己找活、自己干完、自己验收。永动机模式。</div>
+
+    <div class="era-4-flow-wrapper">
+      <div class="flow-cycle">
+        <div class="node human" style="border-width: 2.5px;">
+          <div class="node-icon">📝</div>
+          <div class="node-label">写功能清单</div>
+          <span class="role-tag human-tag">人（仅一次）</span>
+        </div>
+
+        <div class="arrow ai-drive" style="position:relative;">
+          ⚡
+          <span class="arrow-label" style="color:#ed8936;">写入待办</span>
+        </div>
+
+        <div class="node ai">
+          <div class="node-icon">⏰</div>
+          <div class="node-label">定时唤醒</div>
+          <span class="role-tag ai-tag">AI</span>
+        </div>
+        <div class="arrow ai-drive">⚡</div>
+        <div class="node ai">
+          <div class="node-icon">📋</div>
+          <div class="node-label">读功能清单</div>
+          <span class="role-tag ai-tag">AI</span>
+        </div>
+        <div class="arrow ai-drive">⚡</div>
+        <div class="node ai">
+          <div class="node-icon">🎨</div>
+          <div class="node-label">产品设计</div>
+          <span class="role-tag ai-tag">AI</span>
+        </div>
+        <div class="arrow ai-drive">⚡</div>
+        <div class="node ai">
+          <div class="node-icon">💻</div>
+          <div class="node-label">写代码</div>
+          <span class="role-tag ai-tag">AI</span>
+        </div>
+        <div class="arrow ai-drive">⚡</div>
+        <div class="node ai">
+          <div class="node-icon">🧪</div>
+          <div class="node-label">测试</div>
+          <span class="role-tag ai-tag">AI</span>
+        </div>
+        <div class="arrow ai-drive">⚡</div>
+        <div class="node ai">
+          <div class="node-icon">🐛</div>
+          <div class="node-label">改 Bug</div>
+          <span class="role-tag ai-tag">AI</span>
+        </div>
+        <div class="arrow ai-drive">⚡</div>
+        <div class="node ai">
+          <div class="node-icon">🚀</div>
+          <div class="node-label">部署</div>
+          <span class="role-tag ai-tag">AI</span>
+        </div>
+        <div class="arrow ai-drive">⚡</div>
+        <div class="node ai">
+          <div class="node-icon">✅</div>
+          <div class="node-label">自验收</div>
+          <span class="role-tag ai-tag">AI</span>
+        </div>
+      </div>
+
+      <div class="cycle-return">
+        <span class="cycle-icon">🔄</span>
+        循环：自验收完成 → 回到定时唤醒 → 继续下一个功能
+        <span class="cycle-icon">🔄</span>
+      </div>
+    </div>
+
+    <div class="era-insight">
+      <strong>核心特征：</strong>人连「启动每一轮」都不做了。关键变化是——<strong>AI 自己定时醒来、自己读待办找活干、自己验收</strong>。人只在最开始写了一份功能清单，之后就是 AI 的永动循环。定时唤醒 → 找任务 → 设计 → 开发 → 测试 → 部署 → 验收 → 等下一个闹钟。人从「推动者」和「启动者」中彻底消失，变成纯粹的「方向定义者」。
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════ 场景推演 ═══════ -->
+<div class="scenarios">
+  <h2>Era 4 不只是写代码</h2>
+  <p class="scenarios-sub">同一个模式，推演到你生活和工作的方方面面。核心不变：<strong style="color:#f6ad55;">人定义方向，AI 永动循环。</strong></p>
+
+  <div class="scenario-grid">
+    <!-- 场景1：软件开发 -->
+    <div class="scenario-card">
+      <div class="scenario-header">
+        <span class="scenario-icon">💻</span>
+        <span class="scenario-title">软件开发</span>
+      </div>
+      <div class="scenario-pipeline">
+        <div class="pipeline-step"><span class="step-icon step-human">📝</span> 人写一次功能清单</div>
+        <div class="pipeline-arrow">↓ AI 接管</div>
+        <div class="pipeline-step"><span class="step-icon step-ai">⏰</span> 定时唤醒</div>
+        <div class="pipeline-arrow">↓</div>
+        <div class="pipeline-step"><span class="step-icon step-ai">📖</span> 读清单 → 选功能</div>
+        <div class="pipeline-arrow">↓</div>
+        <div class="pipeline-step"><span class="step-icon step-ai">🎨</span> 产品设计 → 写代码 → 测试</div>
+        <div class="pipeline-arrow">↓</div>
+        <div class="pipeline-step"><span class="step-icon step-ai">🚀</span> 部署 → 自验收 → 循环</div>
+      </div>
+      <span class="scenario-badge">已实现 · /dev-team</span>
+    </div>
+
+    <!-- 场景2：公众号创作 -->
+    <div class="scenario-card">
+      <div class="scenario-header">
+        <span class="scenario-icon">✍️</span>
+        <span class="scenario-title">公众号创作</span>
+      </div>
+      <div class="scenario-pipeline">
+        <div class="pipeline-step"><span class="step-icon step-human">🎯</span> 人定一次选题方向</div>
+        <div class="pipeline-arrow">↓ AI 接管</div>
+        <div class="pipeline-step"><span class="step-icon step-ai">🔍</span> 全网采集 AI 热点</div>
+        <div class="pipeline-arrow">↓</div>
+        <div class="pipeline-step"><span class="step-icon step-ai">📋</span> 筛选 → 写入草稿箱</div>
+        <div class="pipeline-arrow">↓</div>
+        <div class="pipeline-step"><span class="step-icon step-ai">✨</span> 打磨 → 精修 → 排版</div>
+        <div class="pipeline-arrow">↓</div>
+        <div class="pipeline-step"><span class="step-icon step-ai">📱</span> 推送到公众号草稿 → 循环</div>
+      </div>
+      <span class="scenario-badge">已实现 · /collect + /create</span>
+    </div>
+
+    <!-- 场景3：生活管理 -->
+    <div class="scenario-card">
+      <div class="scenario-header">
+        <span class="scenario-icon">🧬</span>
+        <span class="scenario-title">生活全局</span>
+      </div>
+      <div class="scenario-pipeline">
+        <div class="pipeline-step"><span class="step-icon step-human">📅</span> 人录入日程和待办</div>
+        <div class="pipeline-arrow">↓ AI 接管</div>
+        <div class="pipeline-step"><span class="step-icon step-ai">⏰</span> 定时扫描日程</div>
+        <div class="pipeline-arrow">↓</div>
+        <div class="pipeline-step"><span class="step-icon step-ai">🔔</span> 识别出行 → 提前提醒</div>
+        <div class="pipeline-arrow">↓</div>
+        <div class="pipeline-step"><span class="step-icon step-ai">📋</span> 自动准备：订票、清单、资料</div>
+        <div class="pipeline-arrow">↓</div>
+        <div class="pipeline-step"><span class="step-icon step-ai">✅</span> 确认就绪 → 通知人 → 循环</div>
+      </div>
+      <span class="scenario-badge">已实现 · /heartbeat + cc-todo</span>
+    </div>
+  </div>
+
+  <div class="scenario-footnote">
+    <strong>规律：</strong>任何可以拆成「清单 → 循环执行 → 自验收」的流程，都能进入 Era 4。<br>
+    写代码、写文章、管日程，只是最先跑通的三个场景。下一个是什么？
+  </div>
+</div>
+
+<!-- ═══════ 对比 ═══════ -->
+<div class="comparison">
+  <h2>四个时代对比</h2>
+  <div class="compare-grid">
+    <div class="compare-card">
+      <h3>🔴 Era 1 · 纯人力</h3>
+      <div class="metric"><span class="metric-label">执行者</span><span class="metric-value">人</span></div>
+      <div class="metric"><span class="metric-label">推动者</span><span class="metric-value">人</span></div>
+      <div class="metric"><span class="metric-label">启动者</span><span class="metric-value">人</span></div>
+      <div class="metric"><span class="metric-label">人的角色</span><span class="metric-value">全干</span></div>
+      <div class="metric"><span class="metric-label">瓶颈</span><span class="metric-value">人的能力和精力</span></div>
+      <div class="metric"><span class="metric-label">并行度</span><span class="metric-value">极低</span></div>
+    </div>
+    <div class="compare-card">
+      <h3>🟣 Era 2 · 人指挥 AI</h3>
+      <div class="metric"><span class="metric-label">执行者</span><span class="metric-value">AI</span></div>
+      <div class="metric"><span class="metric-label">推动者</span><span class="metric-value">人</span></div>
+      <div class="metric"><span class="metric-label">启动者</span><span class="metric-value">人</span></div>
+      <div class="metric"><span class="metric-label">人的角色</span><span class="metric-value">指挥官</span></div>
+      <div class="metric"><span class="metric-label">瓶颈</span><span class="metric-value">人的推动速度</span></div>
+      <div class="metric"><span class="metric-label">并行度</span><span class="metric-value">中等</span></div>
+    </div>
+    <div class="compare-card">
+      <h3>🟢 Era 3 · AI 自驱</h3>
+      <div class="metric"><span class="metric-label">执行者</span><span class="metric-value">AI</span></div>
+      <div class="metric"><span class="metric-label">推动者</span><span class="metric-value">AI</span></div>
+      <div class="metric"><span class="metric-label">启动者</span><span class="metric-value">人</span></div>
+      <div class="metric"><span class="metric-label">人的角色</span><span class="metric-value">想法 + 验收</span></div>
+      <div class="metric"><span class="metric-label">瓶颈</span><span class="metric-value">AI 能力上限</span></div>
+      <div class="metric"><span class="metric-label">并行度</span><span class="metric-value">极高</span></div>
+    </div>
+    <div class="compare-card">
+      <h3>🟠 Era 4 · AI 自治</h3>
+      <div class="metric"><span class="metric-label">执行者</span><span class="metric-value">AI</span></div>
+      <div class="metric"><span class="metric-label">推动者</span><span class="metric-value">AI</span></div>
+      <div class="metric"><span class="metric-label">启动者</span><span class="metric-value">AI（定时）</span></div>
+      <div class="metric"><span class="metric-label">人的角色</span><span class="metric-value">只写一次清单</span></div>
+      <div class="metric"><span class="metric-label">瓶颈</span><span class="metric-value">AI 判断力 + 自纠错</span></div>
+      <div class="metric"><span class="metric-label">并行度</span><span class="metric-value">无限</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  真正的终局不是「AI 替人干活」，而是「AI 替人思考下一步该干什么」
+</div>
+
+</body>
+</html>
