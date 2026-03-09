@@ -24,6 +24,7 @@ interface CliEngineResult {
 interface CliEngineOptions {
   reasoningEffort?: ReasoningEffort;
   timeout?: number; // ms
+  signal?: AbortSignal; // 外部中止信号
 }
 
 /**
@@ -68,16 +69,30 @@ function runCodex(prompt: string, cwd: string, opts?: CliEngineOptions): Promise
     const timer = setTimeout(() => {
       killed = true;
       child.kill("SIGTERM");
-      // 给 2s 优雅退出，然后 SIGKILL
       setTimeout(() => child.kill("SIGKILL"), 2000);
     }, timeout);
+
+    // 外部中止信号
+    const onAbort = () => {
+      if (!killed) {
+        killed = true;
+        console.log("[CliEngine][codex] 收到外部中止信号");
+        child.kill("SIGTERM");
+        setTimeout(() => child.kill("SIGKILL"), 2000);
+      }
+    };
+    opts?.signal?.addEventListener("abort", onAbort, { once: true });
 
     child.stdout.on("data", (data: Buffer) => { stdout += data.toString(); });
     child.stderr.on("data", (data: Buffer) => { stderr += data.toString(); });
 
     child.on("close", (code) => {
       clearTimeout(timer);
-      if (killed) {
+      opts?.signal?.removeEventListener("abort", onAbort);
+      if (killed && opts?.signal?.aborted) {
+        console.log("[CliEngine][codex] 已被用户中止");
+        resolve({ output: stdout, error: "USER_ABORTED" });
+      } else if (killed) {
         console.error(`[CliEngine][codex] TIMEOUT after ${(timeout / 1000).toFixed(0)}s`);
         resolve({ output: stdout, error: `TIMEOUT after ${timeout / 1000}s\n${stderr}`, timedOut: true });
       } else if (code !== 0) {
@@ -111,13 +126,19 @@ function runGemini(prompt: string, cwd: string, opts?: CliEngineOptions): Promis
   console.log(`[CliEngine][gemini] exec (timeout=${(timeout / 1000).toFixed(0)}s): gemini ${args[0]} ${args[1].substring(0, 80)}...`);
 
   return new Promise((resolve) => {
-    execFile("gemini", args, {
+    const child = execFile("gemini", args, {
       cwd,
       timeout,
       maxBuffer: 1024 * 1024 * 10,
       env: { ...process.env, CLAUDECODE: undefined },
     }, (error, stdout, stderr) => {
+      opts?.signal?.removeEventListener("abort", onAbort);
       if (error) {
+        if (opts?.signal?.aborted) {
+          console.log("[CliEngine][gemini] 已被用户中止");
+          resolve({ output: stdout || "", error: "USER_ABORTED" });
+          return;
+        }
         const isTimeout = error.message.includes("TIMEOUT") || (error as any).killed;
         console.error(`[CliEngine][gemini] ${isTimeout ? "TIMEOUT" : "error"}:`, error.message);
         resolve({
@@ -130,6 +151,13 @@ function runGemini(prompt: string, cwd: string, opts?: CliEngineOptions): Promis
       console.log(`[CliEngine][gemini] done, output length: ${stdout.length}`);
       resolve({ output: stdout });
     });
+
+    // 外部中止信号
+    const onAbort = () => {
+      console.log("[CliEngine][gemini] 收到外部中止信号");
+      child.kill("SIGTERM");
+    };
+    opts?.signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
 

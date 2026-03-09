@@ -57,6 +57,8 @@ export interface ProgressCard {
   engines: ProgressEngine[];
   /** 底部备注 */
   footer?: string;
+  /** 手动指定进度百分比（0-100），覆盖引擎计数默认值 */
+  progress?: number;
 }
 
 export interface ProgressEngine {
@@ -337,6 +339,13 @@ export class FeishuChannel implements MessageChannel {
             const chatType = event?.message?.chat_type;
             if (chatType === "group" && chatId) {
               this.bufferChatMessage(chatId, event);
+            }
+
+            // 过滤机器人消息：忽略其他机器人（app）发送的消息，避免群内机器人互相触发
+            const senderType = event?.sender?.sender_type;
+            if (senderType === "app") {
+              console.log(`[FeishuChannel:${this.id}] 忽略来自机器人的消息（sender_type=app）`);
+              return;
             }
 
             // 群聊 @mention 过滤：只处理 @自己 的消息
@@ -854,10 +863,10 @@ export class FeishuChannel implements MessageChannel {
       });
     }
 
-    // 进度条
+    // 进度条：优先用 card.progress（工具调用驱动），否则按引擎完成数算
     const doneCount = card.engines.filter(e => e.status === "done" || e.status === "error").length;
     const total = card.engines.length;
-    const pct = Math.round((doneCount / total) * 100);
+    const pct = card.progress != null ? card.progress : Math.round((doneCount / total) * 100);
     const filled = Math.round(pct / 10);
     const bar = "▰".repeat(filled) + "▱".repeat(10 - filled);
     elements.push({ tag: "hr" });

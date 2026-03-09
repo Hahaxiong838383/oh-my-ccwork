@@ -23,6 +23,7 @@ import { loadConfig } from "./config.js";
 import type { DeviceConfig } from "./types.js";
 import { SessionOwnership } from "./session-ownership.js";
 import { classifyMessage, taskQueueManager } from "./task-queue.js";
+import { triggerAutoCapture } from "./services/auto-capture.js";
 
 const PORT = process.env.PORT || 18080;
 
@@ -66,6 +67,8 @@ export class HttpServer {
   private channelContexts: Map<string, ChannelContext> = new Map();
   private feishuChannel: FeishuChannel | null = null; // 第一个通道，供 introspection 使用
   private sessionOwnership: SessionOwnership;
+  /** 每通道的中止控制器（非队列任务用） */
+  private channelAbortControllers: Map<string, AbortController> = new Map();
 
   constructor(pairCode: string, cwd: string, authToken?: string, tls?: TlsConfig) {
     this.cwd = cwd;
@@ -449,8 +452,8 @@ export class HttpServer {
         // 冻结 ctx 快照（避免异步执行期间 replyChatId 被后续消息覆盖）
         const frozenCtx = { ...ctx };
 
-        taskQueueManager.submit(ctx.channelId, trimmedMessage, async (_task) => {
-          await this.runTaskAsync(frozenCtx, contextPrefix + trimmedMessage, images);
+        taskQueueManager.submit(ctx.channelId, trimmedMessage, async (_task, signal) => {
+          await this.runTaskAsync(frozenCtx, contextPrefix + trimmedMessage, images, signal);
         });
         return;
       }
@@ -514,10 +517,13 @@ export class HttpServer {
                   const name = block.name || "unknown";
                   toolNames.push(name);
                   console.log(`[CC][${ctx.channelId}] 工具调用: ${name}`);
-                  // 更新卡片显示当前工具调用（节流 2s）
-                  if (cardMessageId && Date.now() - lastCardUpdate > 2000) {
+                  // 智能节流：首次立即更新，后续 500ms 节流
+                  const throttle = lastCardUpdate === 0 ? 0 : 500;
+                  if (cardMessageId && Date.now() - lastCardUpdate > throttle) {
                     lastCardUpdate = Date.now();
                     engineState.detail = `${toolNames.length} 个工具 (${name})`;
+                    // 渐近进度：每个工具调用递增，上限 95%（完成时才 100%）
+                    card.progress = Math.min(95, Math.round(100 * (1 - Math.exp(-toolNames.length / 10))));
                     card.footer = `耗时 ${((Date.now() - startTime) / 1000).toFixed(1)}s`;
                     await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
                   }
@@ -533,6 +539,7 @@ export class HttpServer {
       engineState.status = "done";
       engineState.elapsed = `${elapsed}s`;
       engineState.detail = toolNames.length > 0 ? `${toolNames.length} 个工具调用` : undefined;
+      card.progress = 100;
       card.title = "cc 完成";
       card.footer = `总耗时 ${elapsed}s`;
       if (cardMessageId) {
@@ -550,6 +557,11 @@ export class HttpServer {
             await this.sendToChannel(ctx, finalReply.substring(i, i + MAX_CHUNK));
           }
         }
+      }
+
+      // Auto-Capture：fire-and-forget，不阻塞
+      if (ctx.currentSessionId && finalReply) {
+        triggerAutoCapture(ctx.currentSessionId, trimmedMessage, finalReply, this.cwd);
       }
     } catch (err) {
       console.error(`[CC][${ctx.channelId}] 处理消息错误:`, err);
@@ -579,6 +591,7 @@ export class HttpServer {
     ctx: ChannelContext,
     message: string,
     images?: Array<{ data: string; mediaType: string }>,
+    signal?: AbortSignal,
   ): Promise<void> {
     const startTime = Date.now();
     const taskPreview = message.replace(/\[以下是群聊.*?\[对话记录结束\]\n\n/s, "").substring(0, 60);
@@ -608,6 +621,19 @@ export class HttpServer {
         cwd: this.cwd,
         images,
       })) {
+        // 检查中止信号
+        if (signal?.aborted) {
+          console.log(`[CC][${ctx.channelId}] 后台任务被用户中止`);
+          engineState.status = "error";
+          engineState.elapsed = `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+          engineState.detail = "用户中止";
+          card.title = "后台任务已中止";
+          card.footer = `已中止`;
+          if (cardMessageId) {
+            await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+          }
+          return;
+        }
         if (data && typeof data === "object") {
           if (data.type === "text" && data.text) {
             replyParts.push(String(data.text));
@@ -621,9 +647,12 @@ export class HttpServer {
                 if (block.type === "tool_use") {
                   const name = block.name || "unknown";
                   toolNames.push(name);
-                  if (cardMessageId && Date.now() - lastCardUpdate > 2000) {
+                  // 智能节流：首次立即更新，后续 500ms 节流
+                  const taskThrottle = lastCardUpdate === 0 ? 0 : 500;
+                  if (cardMessageId && Date.now() - lastCardUpdate > taskThrottle) {
                     lastCardUpdate = Date.now();
                     engineState.detail = `${toolNames.length} 个工具 (${name})`;
+                    card.progress = Math.min(95, Math.round(100 * (1 - Math.exp(-toolNames.length / 10))));
                     card.footer = `耗时 ${((Date.now() - startTime) / 1000).toFixed(1)}s`;
                     await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
                   }
@@ -638,6 +667,7 @@ export class HttpServer {
       engineState.status = "done";
       engineState.elapsed = `${elapsed}s`;
       engineState.detail = toolNames.length > 0 ? `${toolNames.length} 个工具调用` : undefined;
+      card.progress = 100;
       card.title = "后台任务完成";
       card.footer = `总耗时 ${elapsed}s`;
       if (cardMessageId) {
@@ -719,11 +749,24 @@ export class HttpServer {
       const engineLabel = engine === "codex" ? "codex（OpenAI Codex）" : "gemini（Google Gemini）";
       const now = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }).replace(/\//g, "-").replace(",", "");
       const signatureRule = `\n\n[系统规则] 完成任务后，在回复最末尾必须附上署名，格式严格如下（不得省略）：\n---\n署名：${engineLabel} | ${now}`;
-      const result = await runCliEngine(engine, sopPrefix + message + signatureRule, this.cwd, { timeout: adaptiveTimeout });
+      const channelAbort = this.getChannelAbort(ctx.channelId);
+      const result = await runCliEngine(engine, sopPrefix + message + signatureRule, this.cwd, { timeout: adaptiveTimeout, signal: channelAbort.signal });
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
       // 记录执行结果，供自适应超时学习
       recordExecution(matchedSopKey, engine, Date.now() - startTime, !!result.timedOut);
+
+      // 用户中止
+      if (result.error === "USER_ABORTED") {
+        engineState.status = "error";
+        engineState.elapsed = `${elapsed}s`;
+        engineState.detail = "已被用户中止";
+        card.title = `${engine} 已中止`;
+        if (cardMessageId) {
+          await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+        }
+        return; // /stop 已回复了用户，不重复
+      }
 
       if (result.error && !result.output) {
         engineState.status = "error";
@@ -869,7 +912,8 @@ export class HttpServer {
     // 团队模式: codex 固定 high reasoning（xhigh 太慢），超时 15 分钟
     const teamTimeout = 15 * 60 * 1000;
 
-    const codexPromise = runCliEngine("codex", cliMessage, this.cwd, { timeout: teamTimeout, reasoningEffort: "high" }).then(async (v) => {
+    const channelAbort = this.getChannelAbort(ctx.channelId);
+    const codexPromise = runCliEngine("codex", cliMessage, this.cwd, { timeout: teamTimeout, reasoningEffort: "high", signal: channelAbort.signal }).then(async (v) => {
       if (v.error || v.timedOut) {
         engineStates[1].status = "error";
         engineStates[1].elapsed = formatElapsed(1);
@@ -883,7 +927,7 @@ export class HttpServer {
       return v;
     });
 
-    const geminiPromise = runCliEngine("gemini", cliMessage, this.cwd, { timeout: teamTimeout }).then(async (v) => {
+    const geminiPromise = runCliEngine("gemini", cliMessage, this.cwd, { timeout: teamTimeout, signal: channelAbort.signal }).then(async (v) => {
       if (v.error || v.timedOut) {
         engineStates[2].status = "error";
         engineStates[2].elapsed = formatElapsed(2);
@@ -1040,6 +1084,22 @@ export class HttpServer {
         case "/devices":
           await this.handleDevice(ctx);
           break;
+        case "/stop":
+        case "/停止":
+          await this.handleStopTask(ctx);
+          break;
+        case "/reset":
+        case "/重置":
+          await this.handleResetSession(ctx);
+          break;
+        case "/queue":
+        case "/队列":
+          await this.handleQueueInfo(ctx);
+          break;
+        case "/restart":
+        case "/重启":
+          await this.handleRestart(ctx);
+          break;
         case "/help":
         case "/?":
           await this.handleHelp(ctx);
@@ -1062,7 +1122,7 @@ export class HttpServer {
     const normalized = message.replace(/[，。！？\s]/g, "").toLowerCase();
     const opCommands = [
       "重启mycc", "重启mycc后端", "重启后端",
-      "重启", "停止", "停止mycc",
+      "重启", "停止mycc", "停止后端",
       "状态", "状态查询", "查看状态",
       "启动mycc", "启动后端"
     ];
@@ -1320,6 +1380,110 @@ export class HttpServer {
     }
   }
 
+  /** 获取或创建通道的 AbortController */
+  private getChannelAbort(channelId: string): AbortController {
+    let ac = this.channelAbortControllers.get(channelId);
+    if (!ac || ac.signal.aborted) {
+      ac = new AbortController();
+      this.channelAbortControllers.set(channelId, ac);
+    }
+    return ac;
+  }
+
+  /**
+   * /stop - 一键停止当前正在执行的任务
+   * 1. 中止任务队列（当前任务 + 待执行）
+   * 2. 关闭当前 Claude session（打断 stream）
+   * 3. CLI 引擎子进程由 AbortSignal 自动 kill
+   */
+  private async handleStopTask(ctx: ChannelContext): Promise<void> {
+    console.log(`[CC][${ctx.channelId}] /stop 一键停止`);
+    const parts: string[] = [];
+
+    // 1. 中止任务队列
+    const queueResult = taskQueueManager.abort(ctx.channelId);
+    if (queueResult.abortedRunning) {
+      parts.push("已中止正在执行的后台任务");
+    }
+    if (queueResult.cancelledCount > 0) {
+      parts.push(`已取消 ${queueResult.cancelledCount} 个排队任务`);
+    }
+
+    // 2. 中止非队列任务（CLI 引擎等）
+    const ac = this.channelAbortControllers.get(ctx.channelId);
+    if (ac && !ac.signal.aborted) {
+      ac.abort();
+      parts.push("已中止 CLI 引擎任务");
+    }
+    // 重置 abort controller
+    this.channelAbortControllers.set(ctx.channelId, new AbortController());
+
+    // 3. 关闭当前 Claude session（打断正在进行的 stream）
+    if (ctx.currentSessionId) {
+      adapter.closeSession(ctx.currentSessionId);
+      parts.push(`已关闭会话 ${ctx.currentSessionId.substring(0, 8)}...`);
+      ctx.currentSessionId = null;
+    }
+
+    if (parts.length === 0) {
+      await this.sendToChannel(ctx, "当前没有正在执行的任务。");
+    } else {
+      await this.sendToChannel(ctx, `⏹️ 已停止\n\n${parts.map(p => `• ${p}`).join("\n")}`);
+    }
+  }
+
+  /**
+   * /reset - 重置会话（比 /new 更彻底：关闭 session + 清空上下文）
+   */
+  private async handleResetSession(ctx: ChannelContext): Promise<void> {
+    console.log(`[CC][${ctx.channelId}] /reset 重置会话`);
+
+    // 先停止任务
+    const queueResult = taskQueueManager.abort(ctx.channelId);
+
+    // 关闭当前 session
+    if (ctx.currentSessionId) {
+      adapter.closeSession(ctx.currentSessionId);
+    }
+    ctx.currentSessionId = null;
+
+    const extra = queueResult.abortedRunning || queueResult.cancelledCount > 0
+      ? `（同时停止了 ${queueResult.abortedRunning ? "当前任务" : ""}${queueResult.cancelledCount > 0 ? ` + ${queueResult.cancelledCount} 个排队任务` : ""}）`
+      : "";
+
+    await this.sendToChannel(ctx, `🔄 会话已重置${extra}\n\n下一条消息将开始全新对话。`);
+  }
+
+  /**
+   * /queue - 查看当前通道的任务队列状态
+   */
+  private async handleQueueInfo(ctx: ChannelContext): Promise<void> {
+    const info = taskQueueManager.getQueueInfo(ctx.channelId);
+
+    if (!info.running && info.pending === 0) {
+      await this.sendToChannel(ctx, "📭 当前没有任务在队列中。");
+      return;
+    }
+
+    const lines: string[] = ["📋 任务队列状态\n"];
+
+    if (info.currentTask) {
+      const elapsed = info.currentTask.startedAt
+        ? ((Date.now() - info.currentTask.startedAt.getTime()) / 1000).toFixed(0)
+        : "?";
+      const preview = info.currentTask.message.substring(0, 50);
+      lines.push(`▶️ 正在执行: ${preview}${preview.length >= 50 ? "..." : ""}`);
+      lines.push(`   已运行 ${elapsed}s`);
+    }
+
+    if (info.pending > 0) {
+      lines.push(`\n⏳ 排队中: ${info.pending} 个任务`);
+    }
+
+    lines.push(`\n💡 发送 /stop 可中止所有任务`);
+    await this.sendToChannel(ctx, lines.join("\n"));
+  }
+
   private async handleHelp(ctx: ChannelContext): Promise<void> {
     const helpText =
       "📖 飞书命令帮助\n\n" +
@@ -1331,10 +1495,15 @@ export class HttpServer {
       "/current - 显示当前会话信息\n\n" +
       "**设备管理**\n" +
       "/device - 查看当前设备信息\n\n" +
+      "**任务控制**\n" +
+      "/stop - 停止当前任务（一键中止）\n" +
+      "/queue - 查看任务队列状态\n" +
+      "/reset - 重置会话（关闭 session + 清空上下文）\n" +
+      "/restart - 重启 mycc 后端\n\n" +
       "**其他**\n" +
       "/help - 显示此帮助信息\n\n" +
       "**示例**\n" +
-      "/new 分析代码\n/sessions\n/switch 1\n/device\n\n" +
+      "/new 分析代码\n/sessions\n/switch 1\n/stop\n/restart\n\n" +
       "💡 提示：非命令消息会发送到当前活跃会话";
     await this.sendToChannel(ctx, helpText);
   }
