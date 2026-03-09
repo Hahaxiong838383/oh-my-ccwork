@@ -419,10 +419,11 @@ export class HttpServer {
     }
 
     // 团队模式检测（仅 cc 通道）：并行调用三引擎，汇总输出
+    // 注意：cc 引擎接收完整上下文，codex/gemini 只接收任务本体（群聊上下文是噪音，浪费 token 且拖慢执行）
     if (!ctx.engine) {
       const teamResult = this.detectTeamMode(trimmedMessage);
       if (teamResult.isTeamMode && teamResult.cleanMessage) {
-        await this.processTeamMode(ctx, contextPrefix + teamResult.cleanMessage, images);
+        await this.processTeamMode(ctx, teamResult.cleanMessage, contextPrefix, images);
         return;
       }
     }
@@ -798,10 +799,14 @@ export class HttpServer {
   /**
    * 团队模式：cc 主控，并行调用三引擎，卡片实时更新进度
    */
-  private async processTeamMode(ctx: ChannelContext, message: string, images?: Array<{ data: string; mediaType: string }>): Promise<void> {
-    console.log(`[CC][${ctx.channelId}] 团队模式: ${message.substring(0, 50)}...`);
+  private async processTeamMode(ctx: ChannelContext, taskMessage: string, contextPrefix: string, images?: Array<{ data: string; mediaType: string }>): Promise<void> {
+    console.log(`[CC][${ctx.channelId}] 团队模式: ${taskMessage.substring(0, 50)}...`);
 
-    const taskPreview = message.replace(/\[以下是群聊.*?\[对话记录结束\]\n\n/s, "").substring(0, 60);
+    // cc 引擎拿完整上下文 + 任务，codex/gemini 只拿任务（减少 prompt 体积，避免超时）
+    const ccMessage = contextPrefix ? contextPrefix + taskMessage : taskMessage;
+    const cliMessage = taskMessage;
+
+    const taskPreview = taskMessage.substring(0, 60);
     const startTime = Date.now();
 
     // 引擎状态跟踪
@@ -847,7 +852,7 @@ export class HttpServer {
     };
 
     // Phase B: 并行执行三引擎，每个完成时更新卡片
-    const ccPromise = this.runCcEngine(ctx, message, images).then(async (v) => {
+    const ccPromise = this.runCcEngine(ctx, ccMessage, images).then(async (v) => {
       engineStates[0].status = "done";
       engineStates[0].elapsed = formatElapsed(0);
       engineStates[0].detail = v ? `${v.length} 字` : "无输出";
@@ -861,32 +866,35 @@ export class HttpServer {
       throw err;
     });
 
-    const codexPromise = runCliEngine("codex", message, this.cwd).then(async (v) => {
-      engineStates[1].status = "done";
-      engineStates[1].elapsed = formatElapsed(1);
-      engineStates[1].detail = v.output?.trim() ? `${v.output.trim().length} 字` : "无输出";
+    // 团队模式: codex 固定 high reasoning（xhigh 太慢），超时 15 分钟
+    const teamTimeout = 15 * 60 * 1000;
+
+    const codexPromise = runCliEngine("codex", cliMessage, this.cwd, { timeout: teamTimeout, reasoningEffort: "high" }).then(async (v) => {
+      if (v.error || v.timedOut) {
+        engineStates[1].status = "error";
+        engineStates[1].elapsed = formatElapsed(1);
+        engineStates[1].detail = v.timedOut ? "超时" : (v.error?.substring(0, 60) || "未知错误");
+      } else {
+        engineStates[1].status = "done";
+        engineStates[1].elapsed = formatElapsed(1);
+        engineStates[1].detail = v.output?.trim() ? `${v.output.trim().length} 字` : "无输出";
+      }
       await updateCard();
       return v;
-    }).catch(async (err) => {
-      engineStates[1].status = "error";
-      engineStates[1].elapsed = formatElapsed(1);
-      engineStates[1].detail = String(err).substring(0, 60);
-      await updateCard();
-      throw err;
     });
 
-    const geminiPromise = runCliEngine("gemini", message, this.cwd).then(async (v) => {
-      engineStates[2].status = "done";
-      engineStates[2].elapsed = formatElapsed(2);
-      engineStates[2].detail = v.output?.trim() ? `${v.output.trim().length} 字` : "无输出";
+    const geminiPromise = runCliEngine("gemini", cliMessage, this.cwd, { timeout: teamTimeout }).then(async (v) => {
+      if (v.error || v.timedOut) {
+        engineStates[2].status = "error";
+        engineStates[2].elapsed = formatElapsed(2);
+        engineStates[2].detail = v.timedOut ? "超时" : (v.error?.substring(0, 60) || "未知错误");
+      } else {
+        engineStates[2].status = "done";
+        engineStates[2].elapsed = formatElapsed(2);
+        engineStates[2].detail = v.output?.trim() ? `${v.output.trim().length} 字` : "无输出";
+      }
       await updateCard();
       return v;
-    }).catch(async (err) => {
-      engineStates[2].status = "error";
-      engineStates[2].elapsed = formatElapsed(2);
-      engineStates[2].detail = String(err).substring(0, 60);
-      await updateCard();
-      throw err;
     });
 
     const [ccResult, codexResult, geminiResult] = await Promise.allSettled([
