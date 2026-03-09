@@ -83,14 +83,31 @@ node /Users/rayman.chen/mycc/.claude/skills/tell-me/send.js \
 
 **消息 3（收尾）**：
 
-尾部采用方案C格式，融合今日总结 + 飞书存档链接 + 论文索引表链接：
+尾部采用方案C格式，融合今日总结 + 知识图谱热点 + 飞书存档链接 + 论文索引表链接：
 
 ```bash
 node /Users/rayman.chen/mycc/.claude/skills/tell-me/send.js \
   "🧬 理论雷达 第3批 + 总结" \
-  "【7】...\n\n【8】...\n\n━━━━━━━━━━━━━━━━\n📊 今日覆盖：神经科学 · 认知计算 · LLM机制\n🔥 今日亮点：[2-3个核心亮点关键词]\n\n📁 知识库存档：https://FEISHU_WIKI_URL（当日报告全文）\n🗂️ 论文索引表：https://BITABLE_URL（按领域筛选）\n⏰ 生成时间：HH:MM\n━━━━━━━━━━━━━━━━" \
+  "【7】...\n\n【8】...\n\n━━━━━━━━━━━━━━━━\n📊 今日覆盖：神经科学 · 认知计算 · LLM机制\n🔥 今日亮点：[2-3个核心亮点关键词]\n\n🕸️ 知识图谱热点\n[若 graph.hot_clusters 非空，按以下格式输出，否则省略此区块]\n🌱 新兴方向（今日新增，按热度排序）：\n  · [topic]（[N]篇，热度×[growth_rate]）\n  · ...\n👥 关键人物：[author]（[papers]篇·[connections]连接）...\n图谱规模：共 [total_nodes] 篇论文，[total_edges] 条关联边\n\n📁 知识库存档：https://FEISHU_WIKI_URL（当日报告全文）\n🗂️ 论文索引表：https://BITABLE_URL（按领域筛选）\n⏰ 生成时间：HH:MM\n━━━━━━━━━━━━━━━━" \
   purple
 ```
+
+**知识图谱数据来源**：从 `/tmp/theory-radar-data.json` 的 `graph` 字段读取：
+```json
+{
+  "graph": {
+    "enabled": true,
+    "hot_clusters": [{"topic": "...", "papers": ["id1", "id2"], "growth_rate": 2.0}],
+    "key_authors": [{"author": "...", "papers": 3, "connections": 5}],
+    "total_nodes": 42,
+    "total_edges": 18
+  }
+}
+```
+- `hot_clusters`：今日新增论文所在的连通分量，按规模×热度排序，取 top 3
+- `key_authors`：今日论文作者中，参与论文数×连接数最多的 top 5
+- `growth_rate`：该方向今日新增论文数 / 历史论文数（越大越新兴）
+- 若 `enabled=false` 或列表为空，省略知识图谱区块
 
 **链接来源说明**：
 - `FEISHU_WIKI_URL`：Step 4 创建 wiki 页面时，从 API 返回的 `node_token` 拼接：`https://b2kj9e7u26m.feishu.cn/wiki/{node_token}`

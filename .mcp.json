@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "open-feishu-mcp": {
+      "command": "node",
+      "args": [
+        "/Users/rayman.chen/mycc/open-feishu-mcp-server/dist/local.js",
+        "--app-id", "cli_a9f1cd1366751bc7",
+        "--app-secret", "RCCkaaPGkGn9n3pEDkjjzhrUDEWhmioy"
+      ],
+      "type": "stdio"
+    }
+  }
+}

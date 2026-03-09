@@ -12,10 +12,21 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+# 加载 graph_builder（与本脚本同目录）
+sys.path.insert(0, str(Path(__file__).parent))
+try:
+    from graph_builder import TheoryGraphBuilder
+    _GRAPH_ENABLED = True
+except ImportError:
+    _GRAPH_ENABLED = False
+    print("[WARN] graph_builder 未找到，跳过知识图谱功能", file=sys.stderr)
 
 BJ_TZ = timezone(timedelta(hours=8))
 OUTPUT_FILE = "/tmp/theory-radar-data.json"
 ARXIV_API = "http://export.arxiv.org/api/query"
+GRAPH_PATH = Path(__file__).parent.parent.parent.parent.parent / "tasks" / "theory-radar" / "graph.json"
 
 # arXiv XML 命名空间
 NS = {
@@ -189,8 +200,34 @@ def main():
         print(f"[INFO]   找到 {len(papers)} 篇", file=sys.stderr)
 
     # 去重后计算总数
-    unique_count = len(deduplicate(all_papers_flat))
+    unique_papers = deduplicate(all_papers_flat)
+    unique_count = len(unique_papers)
     result["total"] = unique_count
+
+    # ── 知识图谱构建（增量） ───────────────────────────────────────────────────
+    graph_data = {"enabled": False, "hot_clusters": [], "key_authors": [], "total_nodes": 0, "total_edges": 0}
+    if _GRAPH_ENABLED:
+        try:
+            print("[INFO] 构建知识图谱...", file=sys.stderr)
+            graph = TheoryGraphBuilder(graph_path=GRAPH_PATH)
+            graph.load()
+            for paper in unique_papers:
+                graph.add_paper(paper)
+            graph.save()
+            hot_clusters = graph.get_hot_clusters(top_n=3)
+            key_authors = graph.get_key_authors(top_n=5)
+            graph_data = {
+                "enabled": True,
+                "hot_clusters": hot_clusters,
+                "key_authors": key_authors,
+                "total_nodes": graph.graph.number_of_nodes(),
+                "total_edges": graph.graph.number_of_edges(),
+            }
+            print(f"[INFO] 图谱更新完成：{graph_data['total_nodes']} 节点，{graph_data['total_edges']} 边，{len(hot_clusters)} 个热点簇", file=sys.stderr)
+        except Exception as e:
+            print(f"[WARN] 知识图谱构建失败：{e}", file=sys.stderr)
+
+    result["graph"] = graph_data
 
     with open(OUTPUT_FILE, "w") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)

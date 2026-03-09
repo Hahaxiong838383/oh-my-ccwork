@@ -156,10 +156,35 @@ path 无需加 `/open-apis/` 前缀，后端自动补。
 
 ---
 
+## ⛔ 已知陷阱（必读，已多次触发）
+
+### 9499 Bad Request —— 文档写入
+
+**触发场景**：通过飞书 MCP 向飞书文档写入内容时。
+
+**两个必须遵守的规则**：
+
+1. **禁止并发写多个文档** —— 必须逐篇顺序执行，并发会触发 9499
+2. **body 不加 index 字段** —— 写块时 body 只能是 `{"children":[...blocks]}` 格式，加了 `index` 就 9499
+
+**唯一可靠的写入方式**：
+```
+feishu_openapi_call(
+  method="POST",
+  path="/open-apis/docx/v1/documents/{doc_id}/blocks/{doc_id}/children",
+  body={"children": [...blocks]}   # ← 不加 index
+)
+```
+
+**注意**：`create_blocks` MCP 工具有参数解析 bug（descendants 参数被当字符串处理），优先用 `feishu_openapi_call`。
+
+---
+
 ## 错误处理
 
 | 状态码 | 含义 | 处理 |
 |--------|------|------|
+| 9499 | Bad Request（文档写入） | 检查：1) body 有无 index 字段（删掉）2) 是否并发写多个 doc（改顺序执行）|
 | 401 | 未授权或 token 过期 | 提示用户重新授权（Sign in） |
 | 404 | 路径错误 | 检查 path 是否正确 |
 | 403 | 无权限 | 提示用户在飞书后台给应用授权 |

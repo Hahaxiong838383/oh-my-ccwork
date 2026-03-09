@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>dev.mycc.backend</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__CWD__/.claude/skills/mycc/daemon/run.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__CWD__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>__HOME__</string>
+        <key>USER</key>
+        <string>__USER__</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <!-- 崩溃/退出均重启 -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- 加载即启动 -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- 崩溃后等 30s 再重启，防止死循环 -->
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>__CWD__/.claude/skills/mycc/daemon.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__CWD__/.claude/skills/mycc/daemon.log</string>
+</dict>
+</plist>
