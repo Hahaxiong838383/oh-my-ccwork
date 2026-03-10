@@ -333,6 +333,67 @@ def score_factors(price_usd, indicators, macro, chg_1d, chg_4h):
     return round(score), details
 
 
+def predict_1h(current_cny_gram, current_usd_oz, score, indicators, macro, changes):
+    """
+    基于多因子信号预测未来1小时价格
+    模型：动量外推 + 评分方向偏移 + RSI均值回归修正
+    历史统计：黄金1小时正常波动率约 0.05~0.2%，极端行情可达 0.5%
+    """
+    # 动量外推：4h涨跌幅线性外推到1h（取1/4）
+    momentum_4h = changes.get("4h", 0)
+    base_1h = momentum_4h / 4
+
+    # 评分方向偏移：score每10分对应约0.05%
+    score_bias = score * 0.005
+
+    # RSI均值回归修正
+    rsi = indicators.get("rsi")
+    rsi_adj = 0.0
+    if rsi is not None:
+        if rsi >= 70:
+            rsi_adj = -0.05   # 超买，轻微回调倾向
+        elif rsi <= 30:
+            rsi_adj = +0.05   # 超卖，轻微反弹倾向
+
+    # 合并，限幅 ±0.5%（黄金1h极少超过）
+    total_pct = max(-0.5, min(0.5, base_1h + score_bias + rsi_adj))
+
+    predicted_cny = round(current_cny_gram * (1 + total_pct / 100), 2)
+    predicted_usd = round(current_usd_oz  * (1 + total_pct / 100), 2)
+
+    # 条件假设
+    assumptions = []
+    dxy = macro.get("dxy")
+    bond = macro.get("bond10y")
+    if dxy is not None:
+        assumptions.append(f"DXY维持{dxy:.1f}区间")
+    if bond is not None:
+        assumptions.append(f"10Y美债维持{bond:.2f}%附近")
+    assumptions.append("无突发宏观事件")
+
+    # 预测逻辑拼装
+    logic = []
+    if abs(base_1h) > 0.01:
+        direction = "上行" if base_1h > 0 else "下行"
+        logic.append(f"4h动量延续{direction}（{momentum_4h:+.2f}%→1h外推）")
+    if abs(score_bias) > 0.02:
+        direction = "正向" if score_bias > 0 else "负向"
+        logic.append(f"综合评分{score}分提供{direction}偏移")
+    if rsi_adj != 0 and rsi is not None:
+        direction = "超卖反弹" if rsi_adj > 0 else "超买回调"
+        logic.append(f"RSI {rsi:.1f} {direction}修正")
+    if not logic:
+        logic.append("各因子信号中性，预测维持当前价格")
+
+    return {
+        "predicted_cny_per_gram": predicted_cny,
+        "predicted_usd_per_oz": predicted_usd,
+        "predicted_change_pct": round(total_pct, 3),
+        "assumptions": assumptions,
+        "logic": logic,
+    }
+
+
 def score_to_signal(score):
     """评分转信号"""
     if score >= 40:
@@ -413,6 +474,13 @@ def analyze(current, intraday_history, gold_closes, macro):
     result["signal_emoji"] = signal_emoji
     result["reason"] = details
     result["reason"].append("⚠️ 仅供参考，非投资建议")
+
+    # 1小时价格预测
+    result["prediction_1h"] = predict_1h(
+        price_cny_gram, price_usd,
+        score, result["indicators"], macro,
+        result["changes"],
+    )
 
     return result
 

@@ -90,7 +90,7 @@ export class FeishuChannel implements MessageChannel {
   // WebSocket 相关
   private wsClient: Lark.WSClient | null = null;
   private eventDispatcher: Lark.EventDispatcher | null = null;
-  private messageCallback: ((message: string, images?: Array<{ data: string; mediaType: string }>, messageId?: string, chatId?: string) => void) | null = null;
+  private messageCallback: ((message: string, images?: Array<{ data: string; mediaType: string }>, messageId?: string, chatId?: string, chatType?: string, parentId?: string) => void) | null = null;
 
   // 表态相关（"正在输入" emoji）
   private currentMessageId: string | null = null;
@@ -244,7 +244,7 @@ export class FeishuChannel implements MessageChannel {
    * 设置消息接收回调
    * @param callback - 收到飞书消息时的回调函数
    */
-  onMessage(callback: (message: string, images?: Array<{ data: string; mediaType: string }>, messageId?: string, chatId?: string) => void): void {
+  onMessage(callback: (message: string, images?: Array<{ data: string; mediaType: string }>, messageId?: string, chatId?: string, chatType?: string, parentId?: string) => void): void {
     this.messageCallback = callback;
   }
 
@@ -328,12 +328,8 @@ export class FeishuChannel implements MessageChannel {
             const event = data as any;
             const messageId = event?.message?.message_id;
             const chatId = event?.message?.chat_id;
-
-            // 记录来源 chat_id，回复时使用同一个聊天窗口
-            if (chatId) {
-              this.lastIncomingChatId = chatId;
-              console.log(`[FeishuChannel:${this.id}] 来源 chat_id: ${chatId}`);
-            }
+            const parentId = event?.message?.parent_id; // 回复消息的父消息 ID
+            const upperMessageId = event?.message?.upper_message_id; // 合并转发/多选的上层消息 ID
 
             // 群聊消息缓存：所有群聊消息都缓存（@mention 过滤之前），用于上下文注入
             const chatType = event?.message?.chat_type;
@@ -363,6 +359,12 @@ export class FeishuChannel implements MessageChannel {
               }
             }
 
+            // 记录来源 chat_id（移到过滤器之后，防止 bot 消息/未 @mention 的群聊消息覆盖路由）
+            if (chatId) {
+              this.lastIncomingChatId = chatId;
+              console.log(`[FeishuChannel:${this.id}] 来源 chat_id: ${chatId} (${chatType || "p2p"})`);
+            }
+
             // 添加"正在输入"表态（敲键盘 emoji）
             if (messageId) {
               this.addTypingIndicator(messageId).catch(() => {
@@ -381,7 +383,7 @@ export class FeishuChannel implements MessageChannel {
               if (text || images) {
                 console.log(`[FeishuChannel] ✓ 收到消息: ${text ? text.substring(0, 50) : "[图片]"}...`);
                 // 传递消息 ID，以便后续可以删除表态
-                this.messageCallback(text, images, messageId, chatId);
+                this.messageCallback(text, images, messageId, chatId, chatType, parentId || upperMessageId);
               } else {
                 console.log("[FeishuChannel] [DEBUG] 解析消息内容为空");
               }
@@ -719,8 +721,12 @@ export class FeishuChannel implements MessageChannel {
    */
   private async sendMessageToFeishu(text: string, sessionId?: string, overrideChatId?: string): Promise<boolean> {
     try {
-      // 优先用请求级 overrideChatId，再用 channel 级 lastIncomingChatId，最后用配置的 open_id
+      // overrideChatId 已包含完整 fallback 链（由 send() 传入），此处不再二次 fallback lastIncomingChatId
+      // 仅在 overrideChatId 为空时（如 broadcastToFeishu 等无来源的发送）才 fallback
       const effectiveTarget = overrideChatId || this.lastIncomingChatId;
+      if (!overrideChatId && this.lastIncomingChatId) {
+        console.log(`[FeishuChannel:${this.id}] ⚠️ sendMessageToFeishu: 无 overrideChatId，fallback 到 lastIncomingChatId=${this.lastIncomingChatId}`);
+      }
       const receiveId = effectiveTarget || this.config.receiveUserId!;
       const receiveIdType = effectiveTarget ? "chat_id" : (this.config.receiveIdType || "open_id");
       const userId = receiveId;
@@ -796,6 +802,9 @@ export class FeishuChannel implements MessageChannel {
   async sendProgressCard(card: ProgressCard, overrideChatId?: string): Promise<string | null> {
     try {
       const effectiveTarget = overrideChatId || this.lastIncomingChatId;
+      if (!overrideChatId && this.lastIncomingChatId) {
+        console.log(`[FeishuChannel:${this.id}] ⚠️ sendProgressCard: 无 overrideChatId，fallback 到 lastIncomingChatId=${this.lastIncomingChatId}`);
+      }
       const receiveId = effectiveTarget || this.config.receiveUserId!;
       const receiveIdType = effectiveTarget ? "chat_id" : (this.config.receiveIdType || "open_id");
 
@@ -1097,6 +1106,49 @@ export class FeishuChannel implements MessageChannel {
       return lines.join("\n");
     } catch (err) {
       console.warn(`[FeishuChannel:${this.id}] 获取群聊历史失败:`, err);
+      return "";
+    }
+  }
+
+  /**
+   * 根据 message_id 获取单条消息内容（用于回复场景，获取被回复的消息）
+   */
+  async fetchMessageById(messageId: string): Promise<string> {
+    try {
+      console.log(`[FeishuChannel:${this.id}] 获取消息内容: ${messageId}`);
+      const res = await this.client.im.message.get({
+        path: { message_id: messageId },
+      }) as any;
+
+      if (res.code !== 0 || !res.data) {
+        console.warn(`[FeishuChannel:${this.id}] 获取消息失败: code=${res.code}, msg=${res.msg}`);
+        return "";
+      }
+
+      const msg = res.data.items?.[0] || res.data;
+      const msgType = msg.msg_type;
+      const sender = msg.sender?.sender_type === "app" ? "[机器人]" : "[用户]";
+
+      if (msgType === "text") {
+        const content = JSON.parse(msg.body?.content || "{}");
+        return `${sender}: ${(content.text || "").replace(/@_user_\d+/g, "").trim()}`;
+      } else if (msgType === "post") {
+        const content = JSON.parse(msg.body?.content || "{}");
+        const paragraphs = content.content || content.zh_cn?.content || [];
+        const parts: string[] = [];
+        for (const para of paragraphs) {
+          if (Array.isArray(para)) {
+            for (const node of para) {
+              if (node.tag === "text" && node.text) parts.push(node.text);
+            }
+          }
+        }
+        return `${sender}: ${parts.join("").trim()}`;
+      } else {
+        return `${sender}: [${msgType}]`;
+      }
+    } catch (err) {
+      console.warn(`[FeishuChannel:${this.id}] 获取消息 ${messageId} 失败:`, err);
       return "";
     }
   }

@@ -54,6 +54,10 @@ interface ChannelContext {
   engine?: "codex" | "gemini";
   /** 当前正在处理的消息来源 chat_id（请求级，防止异步期间被后续消息覆盖） */
   replyChatId?: string;
+  /** 消息来源类型：p2p（私聊）或 group（群聊） */
+  replyChatType?: string;
+  /** 回复/多选的父消息 ID（飞书原生信号，用于判断是否注入上下文） */
+  replyParentId?: string;
 }
 
 export class HttpServer {
@@ -161,9 +165,9 @@ export class HttpServer {
       const engine = (slot as any).engine as "codex" | "gemini" | undefined;
       const ctx: ChannelContext = { channelId: slot.id, channel: ch, currentSessionId: null, engine };
       this.channelContexts.set(slot.id, ctx);
-      ch.onMessage(async (message: string, images?: Array<{ data: string; mediaType: string }>, _messageId?: string, chatId?: string) => {
-        // 记录请求级 replyChatId，防止异步处理期间被后续消息覆盖
-        const requestCtx = { ...ctx, replyChatId: chatId || ctx.replyChatId };
+      ch.onMessage(async (message: string, images?: Array<{ data: string; mediaType: string }>, _messageId?: string, chatId?: string, chatType?: string, parentId?: string) => {
+        // 记录请求级 replyChatId + replyChatType + replyParentId，防止异步处理期间被后续消息覆盖
+        const requestCtx = { ...ctx, replyChatId: chatId || ctx.replyChatId, replyChatType: chatType, replyParentId: parentId };
         await this.processFeishuMessage(requestCtx, message, images);
         // 同步回 ctx 的 session（processFeishuMessage 可能更新了 currentSessionId）
         ctx.currentSessionId = requestCtx.currentSessionId;
@@ -407,9 +411,11 @@ export class HttpServer {
       return;
     }
 
-    // 群聊上下文注入：如果消息来自群聊，获取最近聊天记录作为上下文
+    // 上下文注入策略：
+    // - 群聊：始终注入最近 15 条历史
+    // - 私聊：仅在飞书"回复"或"多选"操作时，获取被回复的那条消息作为上下文；其他情况不注入
     let contextPrefix = "";
-    if (ctx.replyChatId && ctx.replyChatId.startsWith("oc_")) {
+    if (ctx.replyChatType === "group" && ctx.replyChatId) {
       try {
         const history = await ctx.channel.fetchChatHistory(ctx.replyChatId, 15);
         if (history) {
@@ -418,6 +424,16 @@ export class HttpServer {
         }
       } catch (err) {
         console.warn(`[CC][${ctx.channelId}] 获取群聊上下文失败:`, err);
+      }
+    } else if (ctx.replyChatType === "p2p" && ctx.replyParentId) {
+      try {
+        const parentMsg = await ctx.channel.fetchMessageById(ctx.replyParentId);
+        if (parentMsg) {
+          contextPrefix = `[以下是用户回复的原始消息]\n${parentMsg}\n[原始消息结束]\n\n`;
+          console.log(`[CC][${ctx.channelId}] 已注入回复上下文: ${parentMsg.substring(0, 80)}...`);
+        }
+      } catch (err) {
+        console.warn(`[CC][${ctx.channelId}] 获取回复消息失败:`, err);
       }
     }
 

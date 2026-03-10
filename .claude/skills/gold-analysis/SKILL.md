@@ -79,9 +79,27 @@ python3 .claude/skills/gold-analysis/scripts/gold-analysis.py
   [emoji] [信号文字]
   [因子明细1]
   [因子明细2]
+
+🔮 1小时预测
+  预测价格  ¥X,XXX.XX /克  ($X,XXX)  [X.XX%]
+  条件假设  DXY维持XXX区间 / 10Y美债维持X.XX% / 无突发事件
+  预测逻辑  [主要逻辑，如：4h动量延续上行 + 评分正向偏移]
 ━━━━━━━━━━━━━━━━
-⚠️ 非投资建议
+⚠️ 非投资建议，预测仅供参考
 ```
+
+**prediction_1h 字段说明**：
+- `predicted_cny_per_gram`：预测人民币价格（/克）
+- `predicted_usd_per_oz`：预测美元价格（/盎司）
+- `predicted_change_pct`：预测变动百分比（正=涨，负=跌）
+- `assumptions`：条件假设列表（宏观环境不变假设）
+- `logic`：预测逻辑描述列表（驱动因子说明）
+
+**预测模型三层叠加**：
+1. 动量外推：4h涨跌幅 ÷ 4，线性外推到1h
+2. 评分偏移：综合评分 × 0.005%（score=20 → +0.1%偏移）
+3. RSI均值回归：RSI≥70扣0.05%，RSI≤30加0.05%
+4. 限幅 ±0.5%（黄金1h正常波动范围）
 
 调用命令：
 ```bash
