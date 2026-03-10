@@ -24,6 +24,7 @@ import type { DeviceConfig } from "./types.js";
 import { SessionOwnership } from "./session-ownership.js";
 import { classifyMessage, taskQueueManager } from "./task-queue.js";
 import { triggerAutoCapture } from "./services/auto-capture.js";
+import { saveChatAndExtractMemory } from "./services/chat-history.js";
 
 const PORT = process.env.PORT || 18080;
 
@@ -50,6 +51,8 @@ interface ChannelContext {
   channelId: string;
   channel: FeishuChannel;
   currentSessionId: string | null;
+  /** 按 chat_id 隔离的 session 表（群聊各群独立，私聊每次新建不存储） */
+  chatSessions: Map<string, string>;
   /** 引擎类型：undefined/claude = Claude SDK, codex/gemini = CLI */
   engine?: "codex" | "gemini";
   /** 当前正在处理的消息来源 chat_id（请求级，防止异步期间被后续消息覆盖） */
@@ -163,13 +166,14 @@ export class HttpServer {
       const ch = new FeishuChannel(cfg);
       // 每个通道独立上下文，会话和回复完全隔离
       const engine = (slot as any).engine as "codex" | "gemini" | undefined;
-      const ctx: ChannelContext = { channelId: slot.id, channel: ch, currentSessionId: null, engine };
+      const ctx: ChannelContext = { channelId: slot.id, channel: ch, currentSessionId: null, chatSessions: new Map(), engine };
       this.channelContexts.set(slot.id, ctx);
       ch.onMessage(async (message: string, images?: Array<{ data: string; mediaType: string }>, _messageId?: string, chatId?: string, chatType?: string, parentId?: string) => {
         // 记录请求级 replyChatId + replyChatType + replyParentId，防止异步处理期间被后续消息覆盖
+        // chatSessions 是引用类型，processFeishuMessage 内的写入直接生效
         const requestCtx = { ...ctx, replyChatId: chatId || ctx.replyChatId, replyChatType: chatType, replyParentId: parentId };
         await this.processFeishuMessage(requestCtx, message, images);
-        // 同步回 ctx 的 session（processFeishuMessage 可能更新了 currentSessionId）
+        // 同步兼容字段
         ctx.currentSessionId = requestCtx.currentSessionId;
       });
       this.channelManager.register(ch);
@@ -475,15 +479,22 @@ export class HttpServer {
       }
     }
 
-    if (!ctx.currentSessionId) {
-      // 飞书通道不 auto-select 历史会话，直接创建新会话。
-      // 原因：auto-select 会选中当前终端的活跃 session，unstable_v2_resumeSession
-      // 尝试 resume 已被占用的 session 会导致 SDK 卡死，最终被误判为 auth 过期。
-      console.log(`[CC][${ctx.channelId}] 无活跃会话，将创建新会话`);
-      await this.sendToChannel(ctx, "💡 开始新对话...");
+    // Session 隔离策略（按 chat_id）：
+    // - 私聊（p2p）：每条消息创建新 session（无状态，不串上下文）
+    // - 群聊（group）：按 chat_id 隔离，同一个群复用 session，不同群独立
+    const chatId = ctx.replyChatId || "default";
+    let effectiveSessionId: string | null = null;
+    if (ctx.replyChatType === "p2p") {
+      effectiveSessionId = null; // 私聊：强制新 session
+      console.log(`[CC][${ctx.channelId}] 私聊 ${chatId}：创建独立 session（无状态）`);
+    } else {
+      effectiveSessionId = ctx.chatSessions.get(chatId) || null; // 群聊：按 chat_id 查找
+      console.log(`[CC][${ctx.channelId}] 群聊 ${chatId}：session=${effectiveSessionId || "新建"}`);
     }
 
-    console.log(`[CC][${ctx.channelId}] 使用会话: ${ctx.currentSessionId}`);
+    if (!effectiveSessionId) {
+      console.log(`[CC][${ctx.channelId}] 将创建新会话`);
+    }
 
     const startTime = Date.now();
     const taskPreview = trimmedMessage.substring(0, 60);
@@ -510,15 +521,21 @@ export class HttpServer {
 
       for await (const data of adapter.chat({
         message: contextPrefix + trimmedMessage,
-        sessionId: ctx.currentSessionId ?? undefined,
+        sessionId: effectiveSessionId ?? undefined,
         cwd: this.cwd,
         images: images,
       })) {
         if (data && typeof data === "object") {
           if (data.type === "system" && "session_id" in data) {
-            ctx.currentSessionId = data.session_id as string;
-            this.sessionOwnership.claim(ctx.currentSessionId, ctx.channelId);
-            console.log(`[CC][${ctx.channelId}] 会话更新: ${ctx.currentSessionId}`);
+            const newSessionId = data.session_id as string;
+            // 群聊：按 chat_id 存储 session，供同群后续消息复用
+            // 私聊：不存储（每次独立）
+            if (ctx.replyChatType !== "p2p") {
+              ctx.chatSessions.set(chatId, newSessionId);
+              ctx.currentSessionId = newSessionId; // 兼容旧引用
+              this.sessionOwnership.claim(newSessionId, ctx.channelId);
+            }
+            console.log(`[CC][${ctx.channelId}] 会话更新: ${newSessionId} [chat=${chatId}]${ctx.replyChatType === "p2p" ? "（私聊，不持久化）" : ""}`);
           }
           if (data.type === "text" && data.text) {
             replyParts.push(String(data.text));
@@ -575,9 +592,14 @@ export class HttpServer {
         }
       }
 
-      // Auto-Capture：fire-and-forget，不阻塞
-      if (ctx.currentSessionId && finalReply) {
-        triggerAutoCapture(ctx.currentSessionId, trimmedMessage, finalReply, this.cwd);
+      // 私聊：归档聊天记录 + 记忆提取（含 auto-capture）
+      // 群聊：仅 auto-capture（有 sessionId 时）
+      if (finalReply) {
+        if (ctx.replyChatType === "p2p" && ctx.replyChatId) {
+          saveChatAndExtractMemory(ctx.replyChatId, trimmedMessage, finalReply, this.cwd);
+        } else if (ctx.currentSessionId) {
+          triggerAutoCapture(ctx.currentSessionId, trimmedMessage, finalReply, this.cwd);
+        }
       }
     } catch (err) {
       console.error(`[CC][${ctx.channelId}] 处理消息错误:`, err);
@@ -1042,17 +1064,23 @@ export class HttpServer {
    */
   private async runCcEngine(ctx: ChannelContext, message: string, images?: Array<{ data: string; mediaType: string }>): Promise<string> {
     const parts: string[] = [];
+    const chatId = ctx.replyChatId || "default";
+    const sessionForChat = ctx.replyChatType === "p2p" ? undefined : (ctx.chatSessions.get(chatId) ?? undefined);
 
     for await (const data of adapter.chat({
       message,
-      sessionId: ctx.currentSessionId ?? undefined,
+      sessionId: sessionForChat,
       cwd: this.cwd,
       images,
     })) {
       if (data && typeof data === "object") {
         if (data.type === "system" && "session_id" in data) {
-          ctx.currentSessionId = data.session_id as string;
-          this.sessionOwnership.claim(ctx.currentSessionId, ctx.channelId);
+          const newSid = data.session_id as string;
+          if (ctx.replyChatType !== "p2p") {
+            ctx.chatSessions.set(chatId, newSid);
+            ctx.currentSessionId = newSid;
+          }
+          this.sessionOwnership.claim(newSid, ctx.channelId);
         }
         if (data.type === "text" && data.text) {
           parts.push(String(data.text));
