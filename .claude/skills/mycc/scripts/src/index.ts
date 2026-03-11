@@ -36,6 +36,7 @@ import { CloudflareProvider } from "./tunnel-provider.js";
 import { TunnelManager } from "./tunnel-manager.js";
 import { loadPublicUrl, loadEnvFile } from "./env-loader.js";
 import { agentIntrospection } from "./introspection.js";
+import { startStatusUpdater, stopStatusUpdater, refreshStatus, addStatusEvent } from "./services/status-updater.js";
 
 // 清除 CLAUDECODE 环境变量：后端从 Claude Code session 启动时会继承此变量，
 // 导致所有 claude 子进程（HealthMonitor、SDK session）被误判为嵌套会话而拒绝启动
@@ -345,6 +346,8 @@ ${skillLine}
         } else {
           console.log(chalk.green(`[Scheduler] 任务完成: ${task.name} (${engineType})`));
           recordHistory(taskCwd, task.name, `✅ 成功(${engineType})`);
+          addStatusEvent(`${task.name} 定时任务完成（${engineType}）`);
+          refreshStatus(taskCwd);
         }
       } else {
         for await (const _event of adapter.chat({ message, cwd: taskCwd })) {
@@ -352,6 +355,8 @@ ${skillLine}
         }
         console.log(chalk.green(`[Scheduler] 任务完成: ${task.name}`));
         recordHistory(taskCwd, task.name, "✅ 成功");
+        addStatusEvent(`${task.name} 定时任务完成`);
+        refreshStatus(taskCwd);
       }
     } catch (error) {
       console.error(chalk.red(`[Scheduler] 任务失败: ${task.name}`), error);
@@ -359,6 +364,9 @@ ${skillLine}
     }
   };
   startScheduler(cwd, executeTask);
+
+  // 启动 status.md 自动更新（每 30 分钟刷新系统状态）
+  startStatusUpdater(cwd);
 
   // tunnelUrl 需要可变，因为重启时会更新
   let tunnelUrl: string;
@@ -544,6 +552,7 @@ ${skillLine}
         tunnelManager?.stop();
         healthMonitor.stop();
         stopScheduler();
+        stopStatusUpdater();
         server.stop();
         process.exit(0);
       }

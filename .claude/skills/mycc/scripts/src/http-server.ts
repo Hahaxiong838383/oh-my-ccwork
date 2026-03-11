@@ -25,6 +25,8 @@ import { SessionOwnership } from "./session-ownership.js";
 import { classifyMessage, taskQueueManager } from "./task-queue.js";
 import { triggerAutoCapture } from "./services/auto-capture.js";
 import { saveChatAndExtractMemory } from "./services/chat-history.js";
+import { loadSharedContext } from "./services/context-loader.js";
+import { buildCrossSessionContext, recordConversationTurn, onSessionEnd, extractAndStoreFacts, clearChatMemory } from "./services/chat-memory.js";
 
 const PORT = process.env.PORT || 18080;
 
@@ -51,8 +53,10 @@ interface ChannelContext {
   channelId: string;
   channel: FeishuChannel;
   currentSessionId: string | null;
-  /** 按 chat_id 隔离的 session 表（群聊各群独立，私聊每次新建不存储） */
+  /** 按 chat_id 隔离的 session 表（群聊/私聊均按 chat_id 独立） */
   chatSessions: Map<string, string>;
+  /** 每个 chat_id 的最后活跃时间（用于 session 空闲超时） */
+  chatSessionLastActive: Map<string, number>;
   /** 引擎类型：undefined/claude = Claude SDK, codex/gemini = CLI */
   engine?: "codex" | "gemini";
   /** 当前正在处理的消息来源 chat_id（请求级，防止异步期间被后续消息覆盖） */
@@ -166,7 +170,7 @@ export class HttpServer {
       const ch = new FeishuChannel(cfg);
       // 每个通道独立上下文，会话和回复完全隔离
       const engine = (slot as any).engine as "codex" | "gemini" | undefined;
-      const ctx: ChannelContext = { channelId: slot.id, channel: ch, currentSessionId: null, chatSessions: new Map(), engine };
+      const ctx: ChannelContext = { channelId: slot.id, channel: ch, currentSessionId: null, chatSessions: new Map(), chatSessionLastActive: new Map(), engine };
       this.channelContexts.set(slot.id, ctx);
       ch.onMessage(async (message: string, images?: Array<{ data: string; mediaType: string }>, _messageId?: string, chatId?: string, chatType?: string, parentId?: string) => {
         // 记录请求级 replyChatId + replyChatType + replyParentId，防止异步处理期间被后续消息覆盖
@@ -405,12 +409,31 @@ export class HttpServer {
 
     const trimmedMessage = message.trim();
 
+    // 检查是否是对待确认操作的回复
+    if (await this.checkPendingConfirm(ctx, trimmedMessage)) {
+      return;
+    }
+
     if (trimmedMessage.startsWith("/")) {
       await this.handleFeishuCommand(ctx, trimmedMessage);
       return;
     }
 
     if (this.isOperationCommand(trimmedMessage)) {
+      // 高风险操作（重启/停止）需要确认，查询类（状态）直接执行
+      if (this.isHighRiskOperation(trimmedMessage)) {
+        const chatId = ctx.replyChatId || "default";
+        const actionName = trimmedMessage.includes("停止") ? "停止 mycc 后端" : "重启 mycc 后端";
+        this.pendingConfirm.set(chatId, {
+          action: actionName,
+          handler: async () => {
+            await this.handleOperationCommand(ctx, trimmedMessage);
+          },
+          timestamp: Date.now(),
+        });
+        await this.sendToChannel(ctx, `⚠️ 即将执行「${actionName}」，确认执行吗？\n\n回复「确认」执行，「取消」放弃（60秒内有效）`);
+        return;
+      }
       await this.handleOperationCommand(ctx, trimmedMessage);
       return;
     }
@@ -480,16 +503,55 @@ export class HttpServer {
     }
 
     // Session 隔离策略（按 chat_id）：
-    // - 私聊（p2p）：每条消息创建新 session（无状态，不串上下文）
-    // - 群聊（group）：按 chat_id 隔离，同一个群复用 session，不同群独立
+    // - 私聊和群聊统一按 chat_id 隔离，复用 session
+    // - 私聊增加 30min 空闲超时（对齐 Claude SDK SESSION_TIMEOUT_MS）
+    // - 支持 /clear 或「新对话」手动重置 session
     const chatId = ctx.replyChatId || "default";
+    const SESSION_TTL_MS = 30 * 60 * 1000; // 30min
     let effectiveSessionId: string | null = null;
-    if (ctx.replyChatType === "p2p") {
-      effectiveSessionId = null; // 私聊：强制新 session
-      console.log(`[CC][${ctx.channelId}] 私聊 ${chatId}：创建独立 session（无状态）`);
+
+    // 检查是否请求清除会话
+    const clearCommands = ["/clear", "新对话", "重置对话", "清除上下文"];
+    if (clearCommands.some(cmd => trimmedMessage.trim() === cmd)) {
+      // session 结束前生成摘要
+      onSessionEnd(chatId, this.cwd);
+      clearChatMemory(chatId);
+      ctx.chatSessions.delete(chatId);
+      ctx.chatSessionLastActive.delete(chatId);
+      console.log(`[CC][${ctx.channelId}] 会话已重置 [chat=${chatId}]`);
+      await this.sendToChannel(ctx, "会话已重置，下一条消息将开始新对话。");
+      return;
+    }
+
+    const existingSession = ctx.chatSessions.get(chatId) || null;
+    const lastActive = ctx.chatSessionLastActive.get(chatId) || 0;
+    const isExpired = ctx.replyChatType === "p2p" && (Date.now() - lastActive > SESSION_TTL_MS);
+
+    let isNewSession = false;
+    if (existingSession && !isExpired) {
+      effectiveSessionId = existingSession;
+      console.log(`[CC][${ctx.channelId}] ${ctx.replyChatType === "p2p" ? "私聊" : "群聊"} ${chatId}：复用 session=${effectiveSessionId}`);
     } else {
-      effectiveSessionId = ctx.chatSessions.get(chatId) || null; // 群聊：按 chat_id 查找
-      console.log(`[CC][${ctx.channelId}] 群聊 ${chatId}：session=${effectiveSessionId || "新建"}`);
+      isNewSession = true;
+      if (existingSession && isExpired) {
+        // session 超时：先生成摘要再清除
+        onSessionEnd(chatId, this.cwd);
+        ctx.chatSessions.delete(chatId);
+        ctx.chatSessionLastActive.delete(chatId);
+        console.log(`[CC][${ctx.channelId}] 私聊 ${chatId}：session 已超时（30min），已生成摘要，将创建新会话`);
+      } else {
+        console.log(`[CC][${ctx.channelId}] ${ctx.replyChatType === "p2p" ? "私聊" : "群聊"} ${chatId}：首次对话，将创建新会话`);
+      }
+    }
+    ctx.chatSessionLastActive.set(chatId, Date.now());
+
+    // 跨 session 记忆注入（三层：摘要 + 共享记忆 + per-chat facts）
+    let crossSessionContext = "";
+    if (!ctx.engine) {
+      crossSessionContext = buildCrossSessionContext(chatId, trimmedMessage, this.cwd, isNewSession);
+      if (crossSessionContext) {
+        console.log(`[CC][${ctx.channelId}] 注入跨 session 记忆 (${crossSessionContext.length} chars, isNew=${isNewSession})`);
+      }
     }
 
     if (!effectiveSessionId) {
@@ -520,7 +582,7 @@ export class HttpServer {
       let lastCardUpdate = 0;
 
       for await (const data of adapter.chat({
-        message: contextPrefix + trimmedMessage,
+        message: crossSessionContext + contextPrefix + trimmedMessage,
         sessionId: effectiveSessionId ?? undefined,
         cwd: this.cwd,
         images: images,
@@ -528,14 +590,12 @@ export class HttpServer {
         if (data && typeof data === "object") {
           if (data.type === "system" && "session_id" in data) {
             const newSessionId = data.session_id as string;
-            // 群聊：按 chat_id 存储 session，供同群后续消息复用
-            // 私聊：不存储（每次独立）
-            if (ctx.replyChatType !== "p2p") {
-              ctx.chatSessions.set(chatId, newSessionId);
-              ctx.currentSessionId = newSessionId; // 兼容旧引用
-              this.sessionOwnership.claim(newSessionId, ctx.channelId);
-            }
-            console.log(`[CC][${ctx.channelId}] 会话更新: ${newSessionId} [chat=${chatId}]${ctx.replyChatType === "p2p" ? "（私聊，不持久化）" : ""}`);
+            // 按 chat_id 存储 session，供后续消息复用（私聊和群聊统一处理）
+            ctx.chatSessions.set(chatId, newSessionId);
+            ctx.chatSessionLastActive.set(chatId, Date.now());
+            ctx.currentSessionId = newSessionId; // 兼容旧引用
+            this.sessionOwnership.claim(newSessionId, ctx.channelId);
+            console.log(`[CC][${ctx.channelId}] 会话更新: ${newSessionId} [chat=${chatId}]`);
           }
           if (data.type === "text" && data.text) {
             replyParts.push(String(data.text));
@@ -595,6 +655,10 @@ export class HttpServer {
       // 私聊：归档聊天记录 + 记忆提取（含 auto-capture）
       // 群聊：仅 auto-capture（有 sessionId 时）
       if (finalReply) {
+        // 跨 session 记忆：记录对话轮次 + 提取 per-chat 事实
+        recordConversationTurn(chatId, trimmedMessage, finalReply);
+        extractAndStoreFacts(chatId, trimmedMessage, finalReply, this.cwd);
+
         if (ctx.replyChatType === "p2p" && ctx.replyChatId) {
           saveChatAndExtractMemory(ctx.replyChatId, trimmedMessage, finalReply, this.cwd);
         } else if (ctx.currentSessionId) {
@@ -787,8 +851,11 @@ export class HttpServer {
       const engineLabel = engine === "codex" ? "codex（OpenAI Codex）" : "gemini（Google Gemini）";
       const now = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }).replace(/\//g, "-").replace(",", "");
       const signatureRule = `\n\n[系统规则] 完成任务后，在回复最末尾必须附上署名，格式严格如下（不得省略）：\n---\n署名：${engineLabel} | ${now}`;
+      // 动态注入共享记忆上下文（RECENT_EVENTS + keyword 匹配的 memory-items）
+      const sharedContext = loadSharedContext(message, this.cwd);
+
       const channelAbort = this.getChannelAbort(ctx.channelId);
-      const result = await runCliEngine(engine, sopPrefix + message + signatureRule, this.cwd, { timeout: adaptiveTimeout, signal: channelAbort.signal });
+      const result = await runCliEngine(engine, sharedContext + sopPrefix + message + signatureRule, this.cwd, { timeout: adaptiveTimeout, signal: channelAbort.signal });
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
       // 记录执行结果，供自适应超时学习
@@ -883,9 +950,10 @@ export class HttpServer {
   private async processTeamMode(ctx: ChannelContext, taskMessage: string, contextPrefix: string, images?: Array<{ data: string; mediaType: string }>): Promise<void> {
     console.log(`[CC][${ctx.channelId}] 团队模式: ${taskMessage.substring(0, 50)}...`);
 
-    // cc 引擎拿完整上下文 + 任务，codex/gemini 只拿任务（减少 prompt 体积，避免超时）
+    // cc 引擎拿完整上下文 + 任务，codex/gemini 拿共享记忆 + 任务
     const ccMessage = contextPrefix ? contextPrefix + taskMessage : taskMessage;
-    const cliMessage = taskMessage;
+    const sharedContext = loadSharedContext(taskMessage, this.cwd);
+    const cliMessage = sharedContext + taskMessage;
 
     const taskPreview = taskMessage.substring(0, 60);
     const startTime = Date.now();
@@ -1065,7 +1133,15 @@ export class HttpServer {
   private async runCcEngine(ctx: ChannelContext, message: string, images?: Array<{ data: string; mediaType: string }>): Promise<string> {
     const parts: string[] = [];
     const chatId = ctx.replyChatId || "default";
-    const sessionForChat = ctx.replyChatType === "p2p" ? undefined : (ctx.chatSessions.get(chatId) ?? undefined);
+    const SESSION_TTL_MS = 30 * 60 * 1000;
+    const lastActive = ctx.chatSessionLastActive.get(chatId) || 0;
+    const isExpired = ctx.replyChatType === "p2p" && (Date.now() - lastActive > SESSION_TTL_MS);
+    const sessionForChat = isExpired ? undefined : (ctx.chatSessions.get(chatId) ?? undefined);
+    if (isExpired) {
+      ctx.chatSessions.delete(chatId);
+      ctx.chatSessionLastActive.delete(chatId);
+    }
+    ctx.chatSessionLastActive.set(chatId, Date.now());
 
     for await (const data of adapter.chat({
       message,
@@ -1076,10 +1152,9 @@ export class HttpServer {
       if (data && typeof data === "object") {
         if (data.type === "system" && "session_id" in data) {
           const newSid = data.session_id as string;
-          if (ctx.replyChatType !== "p2p") {
-            ctx.chatSessions.set(chatId, newSid);
-            ctx.currentSessionId = newSid;
-          }
+          ctx.chatSessions.set(chatId, newSid);
+          ctx.chatSessionLastActive.set(chatId, Date.now());
+          ctx.currentSessionId = newSid;
           this.sessionOwnership.claim(newSid, ctx.channelId);
         }
         if (data.type === "text" && data.text) {
@@ -1159,6 +1234,55 @@ export class HttpServer {
       console.error(`[CC][${ctx.channelId}] 命令处理错误:`, err);
       await this.sendToChannel(ctx, `❌ 执行命令时出错: ${err instanceof Error ? err.message : String(err)}`);
     }
+  }
+
+  // 待确认操作缓存：chatId → { action, timestamp }
+  private pendingConfirm: Map<string, { action: string; handler: () => Promise<void>; timestamp: number }> = new Map();
+
+  /**
+   * 检查是否是对待确认操作的回复
+   */
+  private async checkPendingConfirm(ctx: ChannelContext, message: string): Promise<boolean> {
+    const chatId = ctx.replyChatId || "default";
+    const pending = this.pendingConfirm.get(chatId);
+    if (!pending) return false;
+
+    // 超过 60 秒自动过期
+    if (Date.now() - pending.timestamp > 60_000) {
+      this.pendingConfirm.delete(chatId);
+      return false;
+    }
+
+    const normalized = message.replace(/[，。！？\s]/g, "").toLowerCase();
+    const confirmWords = ["确认", "是", "yes", "y", "ok", "确定", "执行", "好"];
+    const cancelWords = ["取消", "否", "no", "n", "算了", "不要"];
+
+    if (confirmWords.includes(normalized)) {
+      this.pendingConfirm.delete(chatId);
+      await pending.handler();
+      return true;
+    }
+    if (cancelWords.includes(normalized)) {
+      this.pendingConfirm.delete(chatId);
+      await this.sendToChannel(ctx, "❌ 操作已取消");
+      return true;
+    }
+
+    // 不是确认/取消词，清除待确认状态，让消息继续正常流程
+    this.pendingConfirm.delete(chatId);
+    return false;
+  }
+
+  /**
+   * 高风险运维操作需要确认
+   */
+  private isHighRiskOperation(message: string): boolean {
+    const normalized = message.replace(/[，。！？\s]/g, "").toLowerCase();
+    const highRiskCommands = [
+      "重启mycc", "重启mycc后端", "重启后端", "重启",
+      "停止mycc", "停止后端"
+    ];
+    return highRiskCommands.some(cmd => normalized === cmd);
   }
 
   private isOperationCommand(message: string): boolean {

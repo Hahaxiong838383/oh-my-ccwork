@@ -1,5 +1,10 @@
 {
   "mcpServers": {
+    "ghost-os": {
+      "command": "/Users/rayman.chen/mycc/ghost-os/.build/release/ghost",
+      "args": ["mcp"],
+      "type": "stdio"
+    },
     "open-feishu-mcp": {
       "command": "node",
       "args": [

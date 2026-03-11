@@ -1,0 +1,389 @@
+{
+  "version": 1,
+  "saved_at": "2026-03-11T07:59:45",
+  "graph": {
+    "directed": false,
+    "multigraph": false,
+    "graph": {},
+    "nodes": [
+      {
+        "arxiv_id": "2603.08398v1",
+        "title": "Revealing Behavioral Plasticity in Large Language Models: A Token-Conditional Perspective",
+        "abstract": "In this work, we reveal that Large Language Models (LLMs) possess intrinsic behavioral plasticity-akin to chameleons adapting their coloration to environmental cues-that can be exposed through token-conditional generation and stabilized via reinforcement learning. Specifically, by conditioning generation on carefully selected token prefixes sampled from responses exhibiting desired behaviors, LLMs seamlessly adapt their behavioral modes at inference time (e.g., switching from step-by-step reasoning to direct answering) without retraining. Based on this insight, we propose Token-Conditioned Rei",
+        "authors": [
+          "Liyuan Mao",
+          "Le Yu",
+          "Jing Zhou"
+        ],
+        "references": [],
+        "categories": [
+          "cs.CL",
+          "cs.AI",
+          "cs.LG"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08398v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08398v1"
+      },
+      {
+        "arxiv_id": "2603.07524v1",
+        "title": "Neural Dynamics-Informed Pre-trained Framework for Personalized Brain Functional Network Construction",
+        "abstract": "Brain activity is intrinsically a neural dynamic process constrained by anatomical space. This leads to significant variations in spatial distribution patterns and correlation patterns of neural activity across variable and heterogeneous scenarios. However, dominant brain functional network construction methods, which relies on pre-defined brain atlases and linear assumptions, fails to precisely capture varying neural activity patterns in heterogeneous scenarios. This limits the consistency and generalizability of the brain functional networks constructed by dominant methods. Here, a neural dy",
+        "authors": [
+          "Hongjie Jiang",
+          "Yifei Tang",
+          "Shuqiang Wang"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG",
+          "cs.AI"
+        ],
+        "published": "2026-03-08",
+        "url": "https://arxiv.org/abs/2603.07524v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.07524v1"
+      },
+      {
+        "arxiv_id": "2603.08659v1",
+        "title": "CODA: Difficulty-Aware Compute Allocation for Adaptive Reasoning",
+        "abstract": "The emergence of large reasoning models demonstrates that scaling inference-time compute significantly enhances performance on complex tasks. However, it often falls into another trap: overthinking simple problems, where repetitive rationales yield minimal accuracy gains at a disproportionately high cost. This motivates adaptive reasoning: dynamically aligning reasoning depth with instance difficulty. In this paper, we study adaptive reasoning from an optimality perspective, formalizing it as a utility maximization problem where tokens are allocated until the marginal accuracy gain falls below",
+        "authors": [
+          "Siye Wu",
+          "Jian Xie",
+          "Yikai Zhang"
+        ],
+        "references": [],
+        "categories": [
+          "cs.CL"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08659v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08659v1"
+      },
+      {
+        "arxiv_id": "2603.08655v1",
+        "title": "OfficeQA Pro: An Enterprise Benchmark for End-to-End Grounded Reasoning",
+        "abstract": "We introduce OfficeQA Pro, a benchmark for evaluating AI agents on grounded, multi-document reasoning over a large and heterogeneous document corpus. The corpus consists of U.S. Treasury Bulletins spanning nearly 100 years, comprising 89,000 pages and over 26 million numerical values. OfficeQA Pro consists of 133 questions that require precise document parsing, retrieval, and analytical reasoning across both unstructured text and tabular data. Frontier LLMs including Claude Opus 4.6, GPT-5.4, and Gemini 3.1 Pro Preview achieve less than 5% accuracy on OfficeQA Pro when relying on parametric kn",
+        "authors": [
+          "Krista Opsahl-Ong",
+          "Arnav Singhvi",
+          "Jasmine Collins"
+        ],
+        "references": [],
+        "categories": [
+          "cs.AI",
+          "cs.CL",
+          "cs.IR"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08655v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08655v1"
+      },
+      {
+        "arxiv_id": "2603.08391v1",
+        "title": "Adaptive Loops and Memory in Transformers: Think Harder or Know More?",
+        "abstract": "Chain-of-thought (CoT) prompting enables reasoning in language models but requires explicit verbalization of intermediate steps. Looped transformers offer an alternative by iteratively refining representations within hidden states. This parameter efficiency comes at a cost, as looped models lack the storage capacity of deeper models which use unique weights per layer. In this work, we investigate transformer models that feature both adaptive per-layer looping, where each transformer block learns to iterate its hidden state via a learned halting mechanism, and gated memory banks, that provide a",
+        "authors": [
+          "Markus Frey",
+          "Behzad Shomali",
+          "Ali Hamza Bashir"
+        ],
+        "references": [],
+        "categories": [
+          "cs.CL"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08391v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08391v1"
+      },
+      {
+        "arxiv_id": "2603.08343v1",
+        "title": "Rethinking Attention Output Projection: Structured Hadamard Transforms for Efficient Transformers",
+        "abstract": "The dense output projection in multi-head attention scales quadratically with model dimension, contributing significantly to parameter count, memory footprint, and inference cost. We propose replacing this projection with a fixed, parameter-free Walsh Hadamard Transform followed by a lightweight learnable affine rescaling, eliminating approximately 25 percent of attention parameters per block while preserving global cross head interaction through an orthogonal, norm-preserving transformation. Across different model sizes, we demonstrate that this structured substitution maintains comparable or",
+        "authors": [
+          "Shubham Aggarwal",
+          "Lokendra Kumar"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG",
+          "cs.CL"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08343v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08343v1"
+      },
+      {
+        "arxiv_id": "2603.08707v1",
+        "title": "Impermanent: A Live Benchmark for Temporal Generalization in Time Series Forecasting",
+        "abstract": "Recent advances in time-series forecasting increasingly rely on pre-trained foundation-style models. While these models often claim broad generalization, existing evaluation protocols provide limited evidence. Indeed, most current benchmarks use static train-test splits that can easily lead to contamination as foundation models can inadvertently train on test data or perform model selection using test scores, which can inflate performance. We introduce Impermanent, a live benchmark that evaluates forecasting models under open-world temporal change by scoring forecasts sequentially over time on",
+        "authors": [
+          "Azul Garza",
+          "Renée Rosillo",
+          "Rodrigo Mendoza-Smith"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08707v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08707v1"
+      },
+      {
+        "arxiv_id": "2603.08645v1",
+        "title": "Retrieval-Augmented Gaussian Avatars: Improving Expression Generalization",
+        "abstract": "Template-free animatable head avatars can achieve high visual fidelity by learning expression-dependent facial deformation directly from a subject's capture, avoiding parametric face templates and hand-designed blendshape spaces. However, since learned deformation is supervised only by the expressions observed for a single identity, these models suffer from limited expression coverage and often struggle when driven by motions that deviate from the training distribution. We introduce RAF (Retrieval-Augmented Faces), a simple training-time augmentation designed for template-free head avatars tha",
+        "authors": [
+          "Matan Levy",
+          "Gavriel Habib",
+          "Issar Tzachor"
+        ],
+        "references": [],
+        "categories": [
+          "cs.CV",
+          "cs.GR",
+          "cs.LG"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08645v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08645v1"
+      },
+      {
+        "arxiv_id": "2603.08553v1",
+        "title": "Generative Adversarial Regression (GAR): Learning Conditional Risk Scenarios",
+        "abstract": "We propose Generative Adversarial Regression (GAR), a framework for learning conditional risk scenarios through generators aligned with downstream risk objectives. GAR builds on a regression characterization of conditional risk for elicitable functionals, including quantiles, expectiles, and jointly elicitable pairs. We extend this principle from point prediction to generative modeling by training generators whose policy-induced risk matches that of real data under the same context. To ensure robustness across all policies, GAR adopts a minimax formulation in which an adversarial policy identi",
+        "authors": [
+          "Saeed Asadi",
+          "Jonathan Yu-Meng Li"
+        ],
+        "references": [],
+        "categories": [
+          "stat.ML",
+          "cs.LG",
+          "math.OC"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08553v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08553v1"
+      },
+      {
+        "arxiv_id": "2603.08526v1",
+        "title": "Towards Effective and Efficient Graph Alignment without Supervision",
+        "abstract": "Unsupervised graph alignment aims to find the node correspondence across different graphs without any anchor node pairs. Despite the recent efforts utilizing deep learning-based techniques, such as the embedding and optimal transport (OT)-based approaches, we observe their limitations in terms of model accuracy-efficiency tradeoff. By focusing on the exploitation of local and global graph information, we formalize them as the ``local representation, global alignment'' paradigm, and present a new ``global representation and alignment'' paradigm to resolve the mismatch between the two phases in",
+        "authors": [
+          "Songyang Chen",
+          "Youfang Lin",
+          "Yu Liu"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG",
+          "cs.AI"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08526v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08526v1"
+      },
+      {
+        "arxiv_id": "2603.08495v1",
+        "title": "Efficient Credal Prediction through Decalibration",
+        "abstract": "A reliable representation of uncertainty is essential for the application of modern machine learning methods in safety-critical settings. In this regard, the use of credal sets (i.e., convex sets of probability distributions) has recently been proposed as a suitable approach to representing epistemic uncertainty. However, as with other approaches to epistemic uncertainty, training credal predictors is computationally complex and usually involves (re-)training an ensemble of models. The resulting computational complexity prevents their adoption for complex models such as foundation models and m",
+        "authors": [
+          "Paul Hofman",
+          "Timo Löhr",
+          "Maximilian Muschalik"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG",
+          "stat.ML"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08495v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08495v1"
+      },
+      {
+        "arxiv_id": "2603.08377v1",
+        "title": "Beyond the Markovian Assumption: Robust Optimization via Fractional Weyl Integrals in Imbalanced Data",
+        "abstract": "Standard Gradient Descent and its modern variants assume local, Markovian weight updates, making them highly susceptible to noise and overfitting. This limitation becomes critically severe in extremely imbalanced datasets such as financial fraud detection where dominant class gradients systematically overwrite the subtle signals of the minority class. In this paper, we introduce a novel optimization algorithm grounded in Fractional Calculus. By isolating the core memory engine of the generalized fractional derivative, the Weighted Fractional Weyl Integral, we replace the instantaneous gradient",
+        "authors": [
+          "Gustavo A. Dorrego"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG",
+          "stat.ML"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08377v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08377v1"
+      },
+      {
+        "arxiv_id": "2603.08287v1",
+        "title": "Posterior Sampling Reinforcement Learning with Gaussian Processes for Continuous Control: Sublinear Regret Bounds for Unbounded State Spaces",
+        "abstract": "We analyze the Bayesian regret of the Gaussian process posterior sampling reinforcement learning (GP-PSRL) algorithm. Posterior sampling is an effective heuristic for decision-making under uncertainty that has been used to develop successful algorithms for a variety of continuous control problems. However, theoretical work on GP-PSRL is limited. All known regret bounds either fail to achieve a tight dependence on a kernel-dependent quantity called the maximum information gain or fail to properly account for the fact that the set of possible system states is unbounded. Through a recursive appli",
+        "authors": [
+          "Hamish Flynn",
+          "Joe Watson",
+          "Ingmar Posner"
+        ],
+        "references": [],
+        "categories": [
+          "stat.ML",
+          "cs.LG"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08287v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08287v1"
+      },
+      {
+        "arxiv_id": "2603.07965v1",
+        "title": "Local Constrained Bayesian Optimization",
+        "abstract": "Bayesian optimization (BO) for high-dimensional constrained problems remains a significant challenge due to the curse of dimensionality. We propose Local Constrained Bayesian Optimization (LCBO), a novel framework tailored for such settings. Unlike trust-region methods that are prone to premature shrinking when confronting tight or complex constraints, LCBO leverages the differentiable landscape of constraint-penalized surrogates to alternate between rapid local descent and uncertainty-driven exploration. Theoretically, we prove that LCBO achieves a convergence rate for the Karush-Kuhn-Tucker",
+        "authors": [
+          "Jing Jingzhe",
+          "Fan Zheyi",
+          "Szu Hui Ng"
+        ],
+        "references": [],
+        "categories": [
+          "stat.ML",
+          "cs.LG"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.07965v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.07965v1"
+      },
+      {
+        "arxiv_id": "2603.08706v1",
+        "title": "Agentic Critical Training",
+        "abstract": "Training large language models (LLMs) as autonomous agents often begins with imitation learning, but it only teaches agents what to do without understanding why: agents never contrast successful actions against suboptimal alternatives and thus lack awareness of action quality. Recent approaches attempt to address this by introducing self-reflection supervision derived from contrasts between expert and alternative actions. However, the training paradigm fundamentally remains imitation learning: the model imitates pre-constructed reflection text rather than learning to reason autonomously. We pr",
+        "authors": [
+          "Weize Liu",
+          "Minghui Liu",
+          "Sy-Tuyen Ho"
+        ],
+        "references": [],
+        "categories": [
+          "cs.AI",
+          "cs.CL",
+          "cs.LG"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08706v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08706v1"
+      },
+      {
+        "arxiv_id": "2603.08704v1",
+        "title": "Evaluating Financial Intelligence in Large Language Models: Benchmarking SuperInvesting AI with LLM Engines",
+        "abstract": "Large language models are increasingly used for financial analysis and investment research, yet systematic evaluation of their financial reasoning capabilities remains limited. In this work, we introduce the AI Financial Intelligence Benchmark (AFIB), a multi-dimensional evaluation framework designed to assess financial analysis capabilities across five dimensions: factual accuracy, analytical completeness, data recency, model consistency, and failure patterns. We evaluate five AI systems: GPT, Gemini, Perplexity, Claude, and SuperInvesting, using a dataset of 95+ structured financial analysis",
+        "authors": [
+          "Akshay Gulati",
+          "Kanha Singhania",
+          "Tushar Banga"
+        ],
+        "references": [],
+        "categories": [
+          "cs.AI"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08704v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08704v1"
+      },
+      {
+        "arxiv_id": "2603.08683v1",
+        "title": "Benchmarking Language Modeling for Lossless Compression of Full-Fidelity Audio",
+        "abstract": "Autoregressive \"language\" models (LMs) trained on raw waveforms can be repurposed for lossless audio compression, but prior work is limited to 8-bit audio, leaving open whether such approaches work for practical settings (16/24-bit) and can compete with existing codecs. We benchmark LM-based compression on full-fidelity audio across diverse domains (music, speech, bioacoustics), sampling rates (16kHz-48kHz), and bit depths (8, 16, 24-bit). Standard sample-level tokenization becomes intractable at higher bit depths due to vocabulary size (65K for 16-bit; 16.7M for 24-bit). We propose Trilobyte,",
+        "authors": [
+          "Phillip Long",
+          "Zachary Novack",
+          "Chris Donahue"
+        ],
+        "references": [],
+        "categories": [
+          "cs.SD",
+          "cs.AI",
+          "cs.LG"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08683v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08683v1"
+      },
+      {
+        "arxiv_id": "2603.08640v1",
+        "title": "PostTrainBench: Can LLM Agents Automate LLM Post-Training?",
+        "abstract": "AI agents have become surprisingly proficient at software engineering over the past year, largely due to improvements in reasoning capabilities. This raises a deeper question: can these systems extend their capabilities to automate AI research itself? In this paper, we explore post-training, the critical phase that turns base LLMs into useful assistants. We introduce PostTrainBench to benchmark how well LLM agents can perform post-training autonomously under bounded compute constraints (10 hours on one H100 GPU). We ask frontier agents (e.g., Claude Code with Opus 4.6) to optimize the performa",
+        "authors": [
+          "Ben Rank",
+          "Hardik Bhatnagar",
+          "Ameya Prabhu"
+        ],
+        "references": [],
+        "categories": [
+          "cs.SE",
+          "cs.AI",
+          "cs.LG"
+        ],
+        "published": "2026-03-09",
+        "url": "https://arxiv.org/abs/2603.08640v1",
+        "embedding": null,
+        "ingested_on": "2026-03-11",
+        "updated_at": "2026-03-11T07:59:45",
+        "id": "2603.08640v1"
+      }
+    ],
+    "links": []
+  }
+}
