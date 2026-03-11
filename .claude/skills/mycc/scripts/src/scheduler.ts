@@ -357,13 +357,43 @@ function isWithinTolerance(
 // 防重复执行
 // ============================================
 
+const LOCK_EXPIRY_MS = 10 * 60 * 1000; // 锁条目 10 分钟后过期
+
 /**
  * 任务锁 - 防止同一任务在同一时间窗口内重复执行
  *
+ * 内存锁 + 可选持久化文件，防止服务重启后在时间窗口内重复触发。
  * key 格式：`${taskName}|${taskTime}|${dateStr}`
  */
 export class TaskLock {
   private executed: Set<string> = new Set();
+  private lockEntries: Map<string, number> = new Map(); // key -> timestamp
+  private lockFilePath: string | null;
+
+  constructor(lockFilePath?: string) {
+    this.lockFilePath = lockFilePath ?? null;
+  }
+
+  /** 从持久化文件加载锁状态（启动时调用）*/
+  loadFromFile(): void {
+    if (!this.lockFilePath || !fs.existsSync(this.lockFilePath)) return;
+    try {
+      const data = JSON.parse(fs.readFileSync(this.lockFilePath, "utf-8"));
+      const now = Date.now();
+      const entries: Array<{ key: string; timestamp: number }> = data.entries ?? [];
+      for (const entry of entries) {
+        if (now - entry.timestamp < LOCK_EXPIRY_MS) {
+          this.executed.add(entry.key);
+          this.lockEntries.set(entry.key, entry.timestamp);
+        }
+      }
+      if (this.lockEntries.size > 0) {
+        console.log(`[TaskLock] 恢复 ${this.lockEntries.size} 个持久化锁条目`);
+      }
+    } catch {
+      // 文件损坏，忽略，从空状态开始
+    }
+  }
 
   /**
    * 尝试获取锁
@@ -377,7 +407,19 @@ export class TaskLock {
     }
 
     this.executed.add(key);
+    this.lockEntries.set(key, Date.now());
+    this.persistToFile();
     return true;
+  }
+
+  private persistToFile(): void {
+    if (!this.lockFilePath) return;
+    try {
+      const entries = Array.from(this.lockEntries.entries()).map(([key, timestamp]) => ({ key, timestamp }));
+      fs.writeFileSync(this.lockFilePath, JSON.stringify({ entries }, null, 2), "utf-8");
+    } catch {
+      // 写文件失败不影响主流程
+    }
   }
 
   /**
@@ -425,6 +467,10 @@ export class TaskLock {
    */
   clear(): void {
     this.executed.clear();
+    this.lockEntries.clear();
+    if (this.lockFilePath && fs.existsSync(this.lockFilePath)) {
+      try { fs.unlinkSync(this.lockFilePath); } catch { /* 忽略 */ }
+    }
   }
 }
 
@@ -451,7 +497,9 @@ export function startScheduler(cwd: string, executeTask: ExecuteTaskFn): void {
     return;
   }
 
-  taskLock = new TaskLock();
+  const lockFilePath = path.join(cwd, ".claude/skills/scheduler/.tasks.lock.json");
+  taskLock = new TaskLock(lockFilePath);
+  taskLock.loadFromFile();
   const tasksPath = path.join(cwd, ".claude/skills/scheduler/tasks.md");
 
   console.log("[Scheduler] 定时任务模块已启动");

@@ -341,8 +341,22 @@ ${skillLine}
 
         const result = await runCliEngine(engineType, fullMessage, taskCwd);
         if (result.error) {
-          console.error(chalk.red(`[Scheduler][${engineType}] 执行错误: ${result.error}`));
-          recordHistory(taskCwd, task.name, `❌ 失败(${engineType})`);
+          // 主引擎失败 → 自动转移到备用引擎
+          const fallbackEngine: EngineType = engineType === "codex" ? "gemini" : "codex";
+          console.warn(chalk.yellow(`[Scheduler][${engineType}] 失败，自动转移到 ${fallbackEngine}: ${task.name}`));
+          recordHistory(taskCwd, task.name, `⚠️ 转移(${engineType}→${fallbackEngine})`);
+
+          const fallbackResult = await runCliEngine(fallbackEngine, fullMessage, taskCwd);
+          if (fallbackResult.error) {
+            console.error(chalk.red(`[Scheduler] 双引擎全部失败: ${task.name}`));
+            recordHistory(taskCwd, task.name, `❌ 全部失败(${engineType}+${fallbackEngine})`);
+            server.broadcastToFeishu?.(`⚠️ 定时任务双引擎全部失败：${task.name}\n主引擎 ${engineType} 失败 → 备引擎 ${fallbackEngine} 也失败，需要人工介入`);
+          } else {
+            console.log(chalk.green(`[Scheduler] 任务完成(fallback): ${task.name} (${fallbackEngine})`));
+            recordHistory(taskCwd, task.name, `✅ 成功(fallback:${fallbackEngine})`);
+            addStatusEvent(`${task.name} 定时任务完成（fallback:${fallbackEngine}）`);
+            refreshStatus(taskCwd);
+          }
         } else {
           console.log(chalk.green(`[Scheduler] 任务完成: ${task.name} (${engineType})`));
           recordHistory(taskCwd, task.name, `✅ 成功(${engineType})`);

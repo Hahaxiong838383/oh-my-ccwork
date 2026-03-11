@@ -39,6 +39,55 @@ const CHAT_KEYWORDS = [
 
 export type MessageType = "chat" | "task";
 
+// ---- 半自动引擎路由 ----
+
+export type AutoRouteEngine = "cc" | "codex" | "gemini";
+
+/** 适合 codex 的任务：代码编写/调试/重构 */
+const CODEX_ROUTE_KEYWORDS = [
+  "写代码", "写个", "写一个", "帮我写", "编程", "写程序",
+  "调试", "debug", "fix bug", "修复bug", "修复 bug",
+  "实现功能", "实现一个", "实现这个", "代码实现",
+  "开发一个", "开发功能",
+  "重构", "code review", "代码审查",
+  "单元测试", "写测试",
+  "typescript", "javascript", "python", "golang", "rust", "java",
+  "函数", "算法", "接口定义", "类定义",
+];
+
+/** 适合 gemini 的任务：调研/采集/论文/知识库 */
+const GEMINI_ROUTE_KEYWORDS = [
+  // 调研/论文
+  "论文", "调研", "研究现状", "文献", "综述", "arxiv",
+  "理论雷达", "theory-radar", "前沿论文", "/theory-radar",
+  // 采集/新闻
+  "采集", "抓取", "爬取", "新闻", "资讯", "早报", "简报",
+  "github风向标", "github-radar", "/github-radar", "ai新闻",
+  "ipo报告", "/ipo-report", "/collect",
+  // 知识库
+  "知识库", "wiki", "写入知识库", "futurus",
+  // 大型分析
+  "总结全文", "全文分析", "深度分析全文",
+];
+
+/**
+ * 半自动任务路由：根据消息内容推荐最合适的引擎。
+ * 优先级：codex（代码任务）> gemini（调研/采集）> cc（默认）
+ */
+export function autoRouteEngine(message: string): AutoRouteEngine {
+  const text = message.trim().toLowerCase();
+
+  if (CODEX_ROUTE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()))) {
+    return "codex";
+  }
+
+  if (GEMINI_ROUTE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()))) {
+    return "gemini";
+  }
+
+  return "cc";
+}
+
 /**
  * 判断消息类型。
  * 启发式规则，不追求完美，误判代价低（无非同步变同步）。

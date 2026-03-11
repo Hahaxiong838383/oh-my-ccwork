@@ -107,6 +107,41 @@ export class FeishuChannel implements MessageChannel {
   private chatMessageBuffer: Map<string, Array<{ sender: string; text: string; timestamp: number }>> = new Map();
   private readonly CHAT_BUFFER_MAX = 30; // 每个群最多缓存 30 条
 
+  // 消息去重：防止飞书 WebSocket 重复投递同一条消息
+  private processedMessageIds: Set<string> = new Set();
+  private readonly DEDUP_MAX = 200; // 最多缓存 200 条 message_id
+
+  /**
+   * 从飞书 interactive 卡片 JSON 中递归提取文本内容
+   */
+  private static extractCardText(cardJson: string): string {
+    try {
+      const card = JSON.parse(cardJson);
+      const textParts: string[] = [];
+      if (card.header?.title?.content) textParts.push(card.header.title.content);
+      const extract = (elements: any[]): void => {
+        if (!Array.isArray(elements)) return;
+        for (const el of elements) {
+          if (el.tag === "markdown" && el.content) textParts.push(el.content);
+          else if (el.tag === "div" && el.text?.content) textParts.push(el.text.content);
+          else if (el.tag === "plain_text" && el.content) textParts.push(el.content);
+          else if (el.tag === "lark_md" && el.content) textParts.push(el.content);
+          if (el.columns) {
+            for (const col of el.columns) {
+              if (col.elements) extract(col.elements);
+            }
+          }
+          if (el.elements) extract(el.elements);
+        }
+      };
+      if (card.elements) extract(card.elements);
+      if (card.body?.elements) extract(card.body.elements);
+      return textParts.join("\n").trim();
+    } catch {
+      return "";
+    }
+  }
+
   constructor(config?: FeishuChannelConfig) {
     this.id = config?.id ?? 'feishu';
     // 从环境变量读取配置
@@ -327,12 +362,36 @@ export class FeishuChannel implements MessageChannel {
             console.log(`[FeishuChannel:${this.id}] [DEBUG] 收到 im.message.receive_v1 事件`);
             const event = data as any;
             const messageId = event?.message?.message_id;
+
+            // 消息去重：飞书 WebSocket 可能重复投递同一条消息
+            if (messageId && this.processedMessageIds.has(messageId)) {
+              console.log(`[FeishuChannel:${this.id}] [DEDUP] 跳过重复消息: ${messageId}`);
+              return;
+            }
+            if (messageId) {
+              this.processedMessageIds.add(messageId);
+              // 超过上限时清理最早的（Set 按插入顺序迭代）
+              if (this.processedMessageIds.size > this.DEDUP_MAX) {
+                const first = this.processedMessageIds.values().next().value;
+                if (first) this.processedMessageIds.delete(first);
+              }
+            }
+
             const chatId = event?.message?.chat_id;
             const parentId = event?.message?.parent_id; // 回复消息的父消息 ID
+            const rootId = event?.message?.root_id; // 回复线程的根消息 ID
             const upperMessageId = event?.message?.upper_message_id; // 合并转发/多选的上层消息 ID
 
-            // 群聊消息缓存：所有群聊消息都缓存（@mention 过滤之前），用于上下文注入
+            // 回复消息诊断日志（始终打印 p2p 的关键字段，方便排查回复上下文注入）
             const chatType = event?.message?.chat_type;
+            if (chatType === "p2p") {
+              console.log(`[FeishuChannel:${this.id}] [P2P-MSG] message keys: ${Object.keys(event?.message || {}).join(",")}`);
+              console.log(`[FeishuChannel:${this.id}] [P2P-MSG] parent_id=${parentId}, root_id=${rootId}, upper_message_id=${upperMessageId}`);
+            } else if (parentId || rootId || upperMessageId) {
+              console.log(`[FeishuChannel:${this.id}] [REPLY] parent_id=${parentId}, root_id=${rootId}, upper_message_id=${upperMessageId}, chat_type=${chatType}`);
+            }
+
+            // 群聊消息缓存：所有群聊消息都缓存（@mention 过滤之前），用于上下文注入
             if (chatType === "group" && chatId) {
               this.bufferChatMessage(chatId, event);
             }
@@ -383,7 +442,7 @@ export class FeishuChannel implements MessageChannel {
               if (text || images) {
                 console.log(`[FeishuChannel] ✓ 收到消息: ${text ? text.substring(0, 50) : "[图片]"}...`);
                 // 传递消息 ID，以便后续可以删除表态
-                this.messageCallback(text, images, messageId, chatId, chatType, parentId || upperMessageId);
+                this.messageCallback(text, images, messageId, chatId, chatType, parentId || rootId || upperMessageId);
               } else {
                 console.log("[FeishuChannel] [DEBUG] 解析消息内容为空");
               }
@@ -1015,6 +1074,10 @@ export class FeishuChannel implements MessageChannel {
           }
         }
         text = parts.join("").trim();
+      } else if (msgType === "interactive") {
+        const rawContent = typeof message?.content === "string" ? message.content : JSON.stringify(message?.content || "{}");
+        const extracted = FeishuChannel.extractCardText(rawContent);
+        text = extracted || "[卡片消息]";
       } else if (msgType === "image") {
         text = "[图片]";
       } else {
@@ -1096,6 +1159,9 @@ export class FeishuChannel implements MessageChannel {
             const text = parts.join("").trim();
             if (text) lines.push(`${sender}: ${text}`);
           } catch { }
+        } else if (msgType === "interactive") {
+          const extracted = FeishuChannel.extractCardText(msg.body?.content || "{}");
+          lines.push(`${sender}: ${extracted || "[卡片消息]"}`);
         } else if (msgType === "image") {
           lines.push(`${sender}: [图片]`);
         } else {
@@ -1115,19 +1181,22 @@ export class FeishuChannel implements MessageChannel {
    */
   async fetchMessageById(messageId: string): Promise<string> {
     try {
-      console.log(`[FeishuChannel:${this.id}] 获取消息内容: ${messageId}`);
+      console.log(`[FeishuChannel:${this.id}] [REPLY] 获取消息内容: ${messageId}`);
       const res = await this.client.im.message.get({
         path: { message_id: messageId },
       }) as any;
 
+      console.log(`[FeishuChannel:${this.id}] [REPLY] API 响应: code=${res?.code}, hasData=${!!res?.data}, items=${res?.data?.items?.length || 0}`);
+
       if (res.code !== 0 || !res.data) {
-        console.warn(`[FeishuChannel:${this.id}] 获取消息失败: code=${res.code}, msg=${res.msg}`);
+        console.warn(`[FeishuChannel:${this.id}] [REPLY] 获取消息失败: code=${res.code}, msg=${res.msg}`);
         return "";
       }
 
       const msg = res.data.items?.[0] || res.data;
-      const msgType = msg.msg_type;
+      const msgType = msg.msg_type || msg.message_type;
       const sender = msg.sender?.sender_type === "app" ? "[机器人]" : "[用户]";
+      console.log(`[FeishuChannel:${this.id}] [REPLY] 消息类型: ${msgType}, sender: ${sender}`);
 
       if (msgType === "text") {
         const content = JSON.parse(msg.body?.content || "{}");
@@ -1144,6 +1213,9 @@ export class FeishuChannel implements MessageChannel {
           }
         }
         return `${sender}: ${parts.join("").trim()}`;
+      } else if (msgType === "interactive") {
+        const extracted = FeishuChannel.extractCardText(msg.body?.content || "{}");
+        return extracted ? `${sender}: ${extracted}` : `${sender}: [卡片消息]`;
       } else {
         return `${sender}: [${msgType}]`;
       }

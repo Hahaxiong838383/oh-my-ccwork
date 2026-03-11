@@ -14,7 +14,7 @@ import type { PairState } from "./types.js";
 import { validateImages, type ImageData } from "./image-utils.js";
 import { renameSession } from "./history.js";
 import { getOrBuildIndex, searchBM25 } from "./bm25.js";
-import { listSkills } from "./skills.js";
+import { listSkills, clearSkillsCache } from "./skills.js";
 import { ChannelManager, WebChannel, FeishuChannel } from "./channels/index.js";
 import type { ProgressCard, ProgressEngine } from "./channels/feishu.js";
 import { runCliEngine, type EngineType } from "./adapters/cli-engine.js";
@@ -22,7 +22,7 @@ import { getAdaptiveTimeout, recordExecution } from "./adaptive-timeout.js";
 import { loadConfig } from "./config.js";
 import type { DeviceConfig } from "./types.js";
 import { SessionOwnership } from "./session-ownership.js";
-import { classifyMessage, taskQueueManager } from "./task-queue.js";
+import { classifyMessage, taskQueueManager, autoRouteEngine } from "./task-queue.js";
 import { triggerAutoCapture } from "./services/auto-capture.js";
 import { saveChatAndExtractMemory } from "./services/chat-history.js";
 import { loadSharedContext } from "./services/context-loader.js";
@@ -243,6 +243,8 @@ export class HttpServer {
         await this.handleRename(req, res);
       } else if (url.pathname === "/skills/list" && req.method === "GET") {
         await this.handleSkillsList(req, res, url);
+      } else if (url.pathname === "/skills/reload" && req.method === "POST") {
+        await this.handleSkillsReload(req, res);
       } else {
         res.writeHead(404, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Not Found" }));
@@ -452,15 +454,19 @@ export class HttpServer {
       } catch (err) {
         console.warn(`[CC][${ctx.channelId}] 获取群聊上下文失败:`, err);
       }
-    } else if (ctx.replyChatType === "p2p" && ctx.replyParentId) {
-      try {
-        const parentMsg = await ctx.channel.fetchMessageById(ctx.replyParentId);
-        if (parentMsg) {
-          contextPrefix = `[以下是用户回复的原始消息]\n${parentMsg}\n[原始消息结束]\n\n`;
-          console.log(`[CC][${ctx.channelId}] 已注入回复上下文: ${parentMsg.substring(0, 80)}...`);
+    } else if (ctx.replyChatType === "p2p") {
+      console.log(`[CC][${ctx.channelId}] [REPLY-DEBUG] p2p 回复检测: replyParentId=${ctx.replyParentId || "无"}`);
+      if (ctx.replyParentId) {
+        try {
+          const parentMsg = await ctx.channel.fetchMessageById(ctx.replyParentId);
+          console.log(`[CC][${ctx.channelId}] [REPLY-DEBUG] fetchMessageById 结果: "${parentMsg ? parentMsg.substring(0, 100) : "空"}"`);
+          if (parentMsg) {
+            contextPrefix = `[以下是用户回复的原始消息，请结合此上下文理解用户当前的问题]\n${parentMsg}\n[原始消息结束]\n\n`;
+            console.log(`[CC][${ctx.channelId}] 已注入回复上下文: ${parentMsg.substring(0, 80)}...`);
+          }
+        } catch (err) {
+          console.warn(`[CC][${ctx.channelId}] 获取回复消息失败:`, err);
         }
-      } catch (err) {
-        console.warn(`[CC][${ctx.channelId}] 获取回复消息失败:`, err);
       }
     }
 
@@ -489,14 +495,27 @@ export class HttpServer {
         const queueTip = pending > 0 ? `，队列中还有 ${pending} 个任务` : "";
         const busyTip = busy ? "，当前有任务正在执行" : "";
 
+        // 半自动路由：根据任务内容自动选择最合适的引擎
+        const routedEngine = autoRouteEngine(trimmedMessage);
+        const engineTip = routedEngine !== "cc" ? `（→ ${routedEngine}）` : "";
+        if (routedEngine !== "cc") {
+          console.log(`[CC][${ctx.channelId}] 半自动路由: "${trimmedMessage.substring(0, 40)}..." → ${routedEngine}`);
+        }
+
         // 快速 ack
-        await this.sendToChannel(ctx, `📋 任务已接收${busyTip}${queueTip}，后台处理中，完成后通知你。`);
+        await this.sendToChannel(ctx, `📋 任务已接收${busyTip}${queueTip}${engineTip}，后台处理中，完成后通知你。`);
 
         // 冻结 ctx 快照（避免异步执行期间 replyChatId 被后续消息覆盖）
         const frozenCtx = { ...ctx };
 
         taskQueueManager.submit(ctx.channelId, trimmedMessage, async (_task, signal) => {
-          await this.runTaskAsync(frozenCtx, contextPrefix + trimmedMessage, images, signal);
+          if (routedEngine === "codex" || routedEngine === "gemini") {
+            // 路由到 CLI 引擎（继承 processCliEngineMessage 的完整逻辑）
+            const routedCtx = { ...frozenCtx, engine: routedEngine as "codex" | "gemini" };
+            await this.processCliEngineMessage(routedCtx, contextPrefix + trimmedMessage);
+          } else {
+            await this.runTaskAsync(frozenCtx, contextPrefix + trimmedMessage, images, signal);
+          }
         });
         return;
       }
@@ -712,6 +731,11 @@ export class HttpServer {
       cardMessageId = await feishuChannel.sendProgressCard(card, ctx.replyChatId).catch(() => null);
     }
 
+    // Token budget 预警阈值（仅警告，不限制）
+    const TOKEN_BUDGET_WARN_TOOLS = 40;
+    const TOKEN_BUDGET_WARN_MS = 8 * 60 * 1000; // 8 分钟
+    let tokenBudgetWarned = false;
+
     try {
       const replyParts: string[] = [];
       const toolNames: string[] = [];
@@ -749,6 +773,16 @@ export class HttpServer {
                 if (block.type === "tool_use") {
                   const name = block.name || "unknown";
                   toolNames.push(name);
+
+                  // Token budget 预警：工具调用次数或运行时间超阈值时发一次警告
+                  const elapsed = Date.now() - startTime;
+                  if (!tokenBudgetWarned && (toolNames.length >= TOKEN_BUDGET_WARN_TOOLS || elapsed >= TOKEN_BUDGET_WARN_MS)) {
+                    tokenBudgetWarned = true;
+                    const elapsedMin = (elapsed / 60000).toFixed(0);
+                    this.sendToChannel(ctx, `⚠️ 任务运行时间较长（已调用 ${toolNames.length} 次工具，耗时 ${elapsedMin} 分钟），如需中止请发送 /stop`).catch(() => {});
+                    console.log(`[CC][${ctx.channelId}] Token budget 预警: tools=${toolNames.length}, elapsed=${elapsed}ms`);
+                  }
+
                   // 智能节流：首次立即更新，后续 500ms 节流
                   const taskThrottle = lastCardUpdate === 0 ? 0 : 500;
                   if (cardMessageId && Date.now() - lastCardUpdate > taskThrottle) {
@@ -1860,6 +1894,22 @@ export class HttpServer {
     const hasMore = start + pageSize < total;
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ items, total, page, pageSize, hasMore }));
+  }
+
+  private async handleSkillsReload(req: http.IncomingMessage, res: http.ServerResponse) {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace("Bearer ", "");
+    if (!this.state.paired || token !== this.state.token) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "未授权" }));
+      return;
+    }
+    clearSkillsCache();
+    const skillsDir = join(this.cwd, ".claude", "skills");
+    const items = listSkills(skillsDir);
+    console.log(`[Skills] 热加载完成，共 ${items.length} 个 skill`);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ success: true, count: items.length, reloadedAt: new Date().toISOString() }));
   }
 
   private readBody(req: http.IncomingMessage, maxBytes: number = 10 * 1024 * 1024): Promise<string> {
