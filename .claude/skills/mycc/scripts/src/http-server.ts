@@ -27,6 +27,7 @@ import { triggerAutoCapture } from "./services/auto-capture.js";
 import { saveChatAndExtractMemory } from "./services/chat-history.js";
 import { loadSharedContext } from "./services/context-loader.js";
 import { buildCrossSessionContext, recordConversationTurn, onSessionEnd, extractAndStoreFacts, clearChatMemory } from "./services/chat-memory.js";
+import { preprocessMultimodal } from "./services/multimodal-preprocessor.js";
 
 const PORT = process.env.PORT || 18080;
 
@@ -889,7 +890,28 @@ export class HttpServer {
       const sharedContext = loadSharedContext(message, this.cwd);
 
       const channelAbort = this.getChannelAbort(ctx.channelId);
-      const result = await runCliEngine(engine, sharedContext + sopPrefix + message + signatureRule, this.cwd, { timeout: adaptiveTimeout, signal: channelAbort.signal });
+
+      // Gemini 多模态预处理：检测飞书文档引用，提取媒体文件（内存中转，不落盘）
+      let finalPrompt = sharedContext + sopPrefix + message + signatureRule;
+      let mediaBuffers: Array<{ data: Buffer; mimeType: string }> | undefined;
+      if (engine === "gemini") {
+        console.log(`[CC][${ctx.channelId}] Gemini 预处理开始, message 长度: ${message.length}, 前100字: ${message.substring(0, 100)}`);
+        try {
+          const preprocessed = await preprocessMultimodal(message);
+          console.log(`[CC][${ctx.channelId}] 预处理结果: hasDocRef=${preprocessed.hasDocRef}, mediaCount=${preprocessed.mediaBuffers.length}`);
+          if (preprocessed.hasDocRef && preprocessed.mediaBuffers.length > 0) {
+            mediaBuffers = preprocessed.mediaBuffers.map(m => ({ data: m.data, mimeType: m.mimeType }));
+            finalPrompt = sharedContext + sopPrefix + preprocessed.cleanedPrompt + signatureRule;
+            console.log(`[CC][${ctx.channelId}] 多模态预处理: ${mediaBuffers.length} 个媒体文件已提取, 总大小: ${mediaBuffers.reduce((s, m) => s + m.data.length, 0) / 1024 / 1024}MB`);
+          } else if (preprocessed.hasDocRef) {
+            console.log(`[CC][${ctx.channelId}] 检测到文档引用但无媒体文件（可能文档中没有视频/图片）`);
+          }
+        } catch (err: any) {
+          console.error(`[CC][${ctx.channelId}] 多模态预处理失败（降级为纯文本）:`, err.message);
+        }
+      }
+
+      const result = await runCliEngine(engine, finalPrompt, this.cwd, { timeout: adaptiveTimeout, signal: channelAbort.signal, mediaBuffers });
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
       // 记录执行结果，供自适应超时学习

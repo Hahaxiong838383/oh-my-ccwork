@@ -156,7 +156,92 @@ path 无需加 `/open-apis/` 前缀，后端自动补。
 
 ---
 
+## FUTURUS 知识库归档闭环（强制）
+
+> 任何内容归档到 FUTURUS AI 知识库后，**最后一步必须**更新知识库索引表。无论是论文、视频、文章，都不例外。
+
+### 索引表信息
+
+| 参数 | 值 |
+|------|-----|
+| wiki 节点 | `https://futurus.feishu.cn/wiki/TqNjw8KI9i0pRSk2oggcBuVenhs` |
+| bitable app_token | `CzwzbwKuBadUa3s7BPHcdTDYnGg` |
+| table_id | `tblb4S7JAqz9lVDm` |
+
+### 字段映射
+
+| 字段名 | 类型 | 内容说明 |
+|--------|------|---------|
+| 论文名称 | 文本（主键） | 内容标题（论文/视频/文章均用此字段） |
+| 类型 | 单选 | `论文` / `综述` / `技术报告` / `预印本` / `视频` / `PDF` |
+| 领域 | 多选 | 神经科学 / 认知科学 / LLM机制 / 推理机制 / 记忆系统 / 训练优化 / 算法理论 / 多模态 / **AI评测** / AI安全 / 产业趋势 / **使用行为** / 开源生态 |
+| 发表日期 | 日期 | Unix 毫秒时间戳（如 `1773273600000` = 2026-03-12） |
+| 文档链接 | 链接 | `{"link": "https://futurus.feishu.cn/wiki/{node_token}", "text": "描述"}` |
+| 原文链接 | 链接 | `{"link": "原始来源URL", "text": "描述"}` |
+| 亮点 | 文本 | 一句话核心亮点（≤50字） |
+| 篇数 | 数字 | 通常填 `1` |
+| arxiv_id | 文本 | 论文填 arxiv_id，视频/文章留空 |
+
+### 归档后更新索引表（标准调用）
+
+```
+# 写入记录
+create_bitable_record(
+  app_token="CzwzbwKuBadUa3s7BPHcdTDYnGg",
+  table_id="tblb4S7JAqz9lVDm",
+  fields={
+    "论文名称": "内容标题",
+    "类型": "视频",           # 或 论文/综述/PDF 等
+    "领域": ["AI评测", "使用行为"],
+    "发表日期": 1773273600000, # 毫秒时间戳
+    "文档链接": {"link": "https://futurus.feishu.cn/wiki/XXX", "text": "FUTURUS 知识库"},
+    "原文链接": {"link": "原始链接", "text": "来源平台"},
+    "亮点": "一句话摘要",
+    "篇数": 1
+  }
+)
+```
+
+---
+
 ## ⛔ 已知陷阱（必读，已多次触发）
+
+### 飞书文档嵌入大文件（>20MB）
+
+**正确方案**（已验证，2026-03-12）：
+
+```python
+# Step 1: 创建空文件块
+# POST /docx/v1/documents/{doc_id}/blocks/{parent_block_id}/children
+# body: {"children": [{"block_type": 23, "file": {"token": ""}}]}
+# → 返回 container_block_id 和 child_block_id（两层！）
+
+# Step 2: 媒体分块上传（支持任意大小）
+# POST /drive/v1/medias/upload_prepare
+# body: {"file_name": "x.mp4", "parent_type": "docx_file", "parent_node": child_block_id, "size": N, "block_size": 4MB, "block_num": N}
+# → 返回 upload_id
+
+# Step 3: 上传各分块（Python requests multipart）
+# POST /drive/v1/medias/upload_part
+# files: {upload_id, seq, size, file}
+
+# Step 4: 完成上传
+# POST /drive/v1/medias/upload_finish
+# body: {"upload_id": "...", "block_num": N}
+# → 返回 file_token（docx 专用）
+
+# Step 5: 更新块内容
+# PATCH /docx/v1/documents/{doc_id}/blocks/{child_block_id}
+# body: {"replace_file": {"token": file_token}}
+```
+
+**关键陷阱**：
+- `files/upload_prepare` 只支持 `parent_type=explorer`，**不支持 docx_file**（报 99992402）
+- `medias/upload_all` 有 ~20MB 上限，大文件必须用 `medias/upload_prepare` 分块
+- Drive token（files/ 系列）和 docx token（medias/ 系列）不可互换，混用报 1770013
+- 所有步骤必须用**同一个 user_token**（OAuth token，取自 `~/.feishu-mcp/tokens.json`）
+
+---
 
 ### 9499 Bad Request —— 文档写入
 

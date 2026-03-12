@@ -1,16 +1,17 @@
 /**
- * CLI Engine Adapter - Codex / Gemini CLI
+ * CLI Engine Adapter - Codex CLI / Gemini API
  *
  * Spawns child processes for non-Claude engines.
  * Each call is stateless (no session).
  *
- * 优化记录 (2026-03-09):
- * - codex: 用 spawn + stdin 传 prompt（避免超长命令行参数）
- * - codex: 加 --ephemeral 跳过 session 持久化
- * - gemini: 仍用 -p 参数（gemini 不支持 stdin）
+ * 优化记录:
+ * - 2026-03-09: codex 用 spawn + stdin 传 prompt（避免超长命令行参数）
+ * - 2026-03-09: codex 加 --ephemeral 跳过 session 持久化
+ * - 2026-03-12: gemini 从 CLI 切换到 API（支持多模态，分散 cc 负载）
  */
 
-import { spawn, execFile } from "child_process";
+import { spawn } from "child_process";
+import { runGeminiApi, type MediaBuffer } from "./gemini-api.js";
 
 export type EngineType = "codex" | "gemini";
 export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
@@ -25,6 +26,8 @@ interface CliEngineOptions {
   reasoningEffort?: ReasoningEffort;
   timeout?: number; // ms
   signal?: AbortSignal; // 外部中止信号
+  filePaths?: string[]; // 多模态本地文件路径（仅 gemini）
+  mediaBuffers?: MediaBuffer[]; // 内存中的媒体数据（飞书文档下载，不落盘）
 }
 
 /**
@@ -117,56 +120,17 @@ function runCodex(prompt: string, cwd: string, opts?: CliEngineOptions): Promise
 }
 
 /**
- * Execute gemini via execFile (short prompts via -p arg).
- */
-function runGemini(prompt: string, cwd: string, opts?: CliEngineOptions): Promise<CliEngineResult> {
-  const timeout = opts?.timeout || 300_000;
-  const args = ["-p", prompt, "-y"];
-
-  console.log(`[CliEngine][gemini] exec (timeout=${(timeout / 1000).toFixed(0)}s): gemini ${args[0]} ${args[1].substring(0, 80)}...`);
-
-  return new Promise((resolve) => {
-    const child = execFile("gemini", args, {
-      cwd,
-      timeout,
-      maxBuffer: 1024 * 1024 * 10,
-      env: { ...process.env, CLAUDECODE: undefined },
-    }, (error, stdout, stderr) => {
-      opts?.signal?.removeEventListener("abort", onAbort);
-      if (error) {
-        if (opts?.signal?.aborted) {
-          console.log("[CliEngine][gemini] 已被用户中止");
-          resolve({ output: stdout || "", error: "USER_ABORTED" });
-          return;
-        }
-        const isTimeout = error.message.includes("TIMEOUT") || (error as any).killed;
-        console.error(`[CliEngine][gemini] ${isTimeout ? "TIMEOUT" : "error"}:`, error.message);
-        resolve({
-          output: stdout || "",
-          error: error.message + (stderr ? `\n${stderr}` : ""),
-          timedOut: isTimeout,
-        });
-        return;
-      }
-      console.log(`[CliEngine][gemini] done, output length: ${stdout.length}`);
-      resolve({ output: stdout });
-    });
-
-    // 外部中止信号
-    const onAbort = () => {
-      console.log("[CliEngine][gemini] 收到外部中止信号");
-      child.kill("SIGTERM");
-    };
-    opts?.signal?.addEventListener("abort", onAbort, { once: true });
-  });
-}
-
-/**
  * Execute a prompt via CLI engine (codex or gemini).
  */
 export function runCliEngine(engine: EngineType, prompt: string, cwd: string, opts?: CliEngineOptions): Promise<CliEngineResult> {
   if (engine === "codex") {
     return runCodex(prompt, cwd, opts);
   }
-  return runGemini(prompt, cwd, opts);
+  // gemini: 直接调 API（支持多模态，含内存中的媒体数据）
+  return runGeminiApi(prompt, {
+    timeout: opts?.timeout,
+    signal: opts?.signal,
+    filePaths: opts?.filePaths,
+    mediaBuffers: opts?.mediaBuffers,
+  });
 }

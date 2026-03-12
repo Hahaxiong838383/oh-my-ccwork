@@ -149,6 +149,32 @@ cc 通过三层记忆来记住你。
 1. 协助整理、提问、找资料
 2. 研究结束要收口——结论是什么？存到哪里？
 
+## 任务接收协议（BRO-PDCA）
+
+> 来源：FUTURUS BRO-PDCA 方法论，详见 `3-Thinking/01-BRO-PDCA方法论.md`
+> 沉淀时间：2026-03-11
+
+**核心原则：动手前先对齐目标（O1 + O2），缺 O2 是最常见的执行偏差根因。**
+
+### 三档模式
+
+| 档位 | 适用场景 | 输入格式 | cc 的动作 |
+|------|---------|---------|---------|
+| 简洁模式（70%） | 简单任务，<30min | `O1（做什么）+ O2（不做什么/约束）` | 直接执行，完成后汇报 |
+| 普通模式（20%） | 需要背景，30-60min | `B1（背景）+ O1 + O2` | 复述理解，确认后执行 |
+| 完整模式（10%） | 新系统/架构变更 | `B → R1（cc 提方案）→ 你拍板 O` | 先输出 P1 拆解，等确认再执行 |
+
+### cc 的执行承诺
+
+- 只有 O1 没有 O2 → 先问约束，或复述假设让你确认
+- 复杂任务（>30min）→ 先输出 P1（逻辑拆解），等你确认再执行
+- 执行中发现理解偏差 → 立即暂停同步，不硬跑
+- 简单任务 → 一句话就够，不要求写背景文档
+
+### 判断标准
+
+**做错了代价 > 30 分钟返工 → 值得先对齐。否则直接干。**
+
 ---
 
 # 从对话中学到的规则
@@ -175,6 +201,16 @@ cc 通过三层记忆来记住你。
 
 一句话：**安装部署 = Bash，流程编排 = Pencil**。
 
+## 任务优先级规则（Goal Cascading）
+
+收到新任务时，先对照 `0-System/status.md` 的「当前焦点」判断：
+
+- **与焦点对齐** → 直接执行
+- **偏离焦点但合理** → 执行，完成后简短说明
+- **明显偏离焦点且非紧急** → 提示用户，询问是否优先处理，或放入暂缓项
+
+「阶段目标」> 「今日焦点」> 「暂缓项」，优先级依次降低。用户明确要求时，任何暂缓项可立即激活。
+
 ## 飞书通道指令确认规则（强制）
 
 当通过飞书通道收到的用户指令存在以下情况时，**必须先通过飞书回复确认，不要直接执行**：
@@ -193,17 +229,73 @@ cc 通过三层记忆来记住你。
 cc 的所有动作必须遵循项目的目录结构约定。创建文件前先想清楚它属于哪个目录：
 
 ```
-mycc/
-├── 0-System/          # 记忆系统（status、context、about-me）
-├── 1-Inbox/           # 想法/创意/研究过程，先收集再整理
-├── 2-Projects/        # 正在推进的项目
-├── 3-Thinking/        # 认知沉淀、方法论
-├── 4-Assets/          # 可复用资产（模板、脚本、配置片段）
-├── 5-Archive/         # 历史归档（周记、已完成项目等）
-├── docs/              # 项目文档（FAQ 等）
-├── tasks/             # 跨会话任务追踪文件
-├── .claude/skills/    # 技能代码和配置
-└── mycc-web/          # 网页前端代码
+mycc/                                  # 项目根目录
+│
+├── 0-System/                          # 记忆系统 — cc 的大脑
+│   ├── about-me/                      #   川哥的完整画像、经历、偏好、价值观
+│   ├── chat-history/                  #   飞书对话归档
+│   │   └── p2p/                       #     私聊记录（按日期存储）
+│   ├── chat-memory/                   #   跨 session 记忆（per-chat 事实 + 对话轮次）
+│   ├── status.md                      #   短期记忆（每 30 分钟自动刷新，hooks 注入）
+│   ├── context.md                     #   中期记忆（本周每日状态快照）
+│   ├── MEMORY.md                      #   长期记忆（高层索引 + 重要决策汇总）
+│   ├── RECENT_EVENTS.md               #   滚动事件流（24h 流水账）
+│   ├── memory-items.md                #   原子化可检索事实（Item 层）
+│   └── task-log.md                    #   任务执行日志（引擎 + 状态追溯）
+│
+├── 1-Inbox/                           # 收件箱 — 想法/创意/研究过程，先收集再整理
+├── 2-Projects/                        # 进行中项目
+│   ├── ai-commit/                     #   AI 智能提交工具
+│   ├── ai-diff-review/                #   AI 代码 Diff 审查
+│   ├── ai-sentinel/                   #   AI 哨兵（监控/告警）
+│   └── futurus-rebuild/               #   FUTURUS 知识库重建
+│
+├── 3-Thinking/                        # 认知沉淀 — 方法论、深度思考
+├── 4-Assets/                          # 可复用资产 — 模板、脚本片段、设计文档
+├── 5-Archive/                         # 历史归档
+│   ├── legacy-scripts/                #   旧版脚本
+│   └── 周记/                          #   每周复盘归档
+│
+├── .claude/                           # Claude Code 配置
+│   └── skills/                        #   技能系统（每个子目录 = 一个 skill）
+│       ├── mycc/                      #     ★ 核心：mycc 后端服务（飞书通道 + HTTP 服务 + 适配器）
+│       │   ├── scripts/src/           #       TypeScript 源码（feishu.ts / http-server.ts / index.ts 等）
+│       │   └── daemon/                #       launchd daemon 配置
+│       ├── scheduler/                 #     定时任务系统（tasks.md 驱动，每 60s 检查）
+│       ├── agent-orchestration/       #     多智能体编排模式（路由 / 协作规则）
+│       ├── theory-radar/              #     AI 前沿理论雷达（arXiv 论文 → 飞书日报）
+│       ├── github-radar/              #     GitHub AI 风向标（热点开源项目日报）
+│       ├── gold-analysis/             #     黄金走势分析（实时金价 + 多因子评分）
+│       ├── collect/                   #     每日信息采集（多源并行 → AI 分析 → 飞书简报）
+│       ├── ai-news-radar/             #     AI/科技新闻聚合（静态网页 + 24h 增量更新）
+│       ├── dashboard/                 #     能力看板可视化
+│       ├── cc-usage/                  #     Token 用量统计
+│       ├── desktop/                   #     桌面操控（Ghost OS MCP，macOS 原生 OCR）
+│       ├── feishu-mcp/                #     飞书 MCP 工具使用指南
+│       ├── tell-me/                   #     飞书通知（总结对话 → 发群）
+│       ├── read-gzh/                  #     微信公众号文章阅读 + 总结
+│       ├── evomap-assets/             #     EvoMap 协作进化市场
+│       ├── mem0-patterns/             #     记忆架构模式参考
+│       ├── decision/                  #     决策记录自动提取
+│       ├── multi-session/             #     多终端并行（多窗口 Claude Code）
+│       ├── skill-creator/             #     Skill 创建向导
+│       ├── setup/                     #     首次使用引导
+│       ├── restart/                   #     服务重启与状态验证
+│       └── daily-tech-pulse/          #     科技脉搏日报
+│
+├── docs/                              # 项目文档（FAQ 等）
+├── tasks/                             # 跨会话任务追踪文件
+├── multi-agent/                       # 多智能体协同规则
+│   ├── context/                       #   SPEC / AC / ARCH 模板
+│   ├── hooks/                         #   协同 hooks
+│   └── scripts/                       #   协同脚本
+│
+├── open-feishu-mcp-server/            # 飞书 MCP 本地服务（独立 git 仓库，stdio 模式）
+├── ghost-os/                          # Ghost OS 桌面自动化（Swift 构建，26 个 MCP 工具）
+├── mycc-web/                          # 网页前端代码
+├── rules/                             # Claude Code 规则集（common + 语言特定）
+├── skills/                            # 全局 skills（区别于 .claude/skills/）
+└── img/                               # 图片资源
 ```
 
 **规则**：
@@ -259,87 +351,47 @@ mycc/
 
 ---
 
-# 双模式执行体系
+# 多智能体协同（精简版）
 
-## 模式1: 闲聊模式 (Chat Mode)
-- 保持现状不变
-- 直接与用户对话，不调用外部工具
-- 适用于：日常问答、简单查询
+> 适用：cc (Claude) + codex (OpenAI) + gemini (Google)，飞书三机器人群聊
 
-## 模式2: 工作模式 (Work Mode)
-- 多智能体协同系统
-- 严格遵循四层闭环流程
-- **必须调用 Codex**
+## 路由规则
 
-### 触发关键词
-- 工作模式：开发、实现、创建、修复、bug、重构、任务、项目
-- 闲聊模式：聊聊、解释、什么是、简单问答
+| 任务类型 | 路由 | 示例 |
+|---------|------|------|
+| 代码实现、批量改仓库 | → codex | "实现登录功能"、"重构这个模块" |
+| 调研、知识库同步、论文 | → gemini | "调研 XX 技术"、"同步到知识库" |
+| 规划、决策、编排、其余 | → cc | "设计架构"、"帮我看看这个" |
 
----
+路由由 `autoRouteEngine()` 自动判断，也可手动指定。
 
-# 多智能体协同规则
+## 强制规则（仅 2 条）
 
-> 适用：Claude Code + Codex CLI + Gemini CLI
+1. **大任务（预估 >10 分钟）必须拆分** — 分发给 codex/gemini 并行执行，cc 只编排不硬啃
+2. **cc 不负责批量实现** — cc 做规划和关键决策，写代码交给 codex
 
-## 角色分工
+## 角色定位
 
-| 角色 | 职责 | 输出 |
-|------|------|------|
-| **Claude Code** | 规划与裁决 | SPEC.md, AC.md, ARCH.md, REVIEW.md |
-| **Codex CLI** | 主实现（必须调用） | 生产级代码, 单元测试 |
-| **Gemini CLI** | 对照验证 | ALT_IMPL, TEST_CASES, RISKS.md |
+| 角色 | 一句话 |
+|------|--------|
+| cc (Claude) | 想清楚、做决策、编排任务 |
+| codex (OpenAI) | 写代码、改仓库、跑测试 |
+| gemini (Google) | 搜资料、写报告、找问题 |
 
-## 四层闭环流程
-
-```
-Layer 1 规格与合同（Claude）
-      ↓
-Layer 2 并行产出（Codex + Gemini）
-      ↓
-Layer 3 自动化验收
-      ↓
-Layer 4 最终裁决（Claude）
-```
-
-## 三条强制规则
-1. **没有 AC 不允许生成代码**
-2. **并行输出必须可比较**
-3. **所有验证必须自动化**
-
-## MCP 工具调用
+## MCP 调用
 
 ```typescript
-// Codex 调用 - 主实现（MCP server: "x"）
-mcp__x__ask_codex({
-  agent_role: "executor",
-  prompt: "实现用户登录功能",
-  working_directory: "D:/mycc",
-  context_files: ["multi-agent/context/SPEC.md"]
-})
+// Codex（MCP server: "x"）
+mcp__x__ask_codex({ agent_role: "executor", prompt: "..." })
 
-// Gemini 调用 - 对照验证（MCP server: "g"）
-mcp__g__ask_gemini({
-  agent_role: "scientist",
-  prompt: "生成边界测试用例",
-  files: ["multi-agent/context/SPEC.md"]
-})
-
-// 备选：直接 CLI 调用
-// codex exec "指令" -C D:/mycc
-// gemini -p "指令"
+// Gemini（MCP server: "g"）
+mcp__g__ask_gemini({ agent_role: "scientist", prompt: "..." })
 ```
 
-## 回滚点机制
-```bash
-git add -A && git commit -m "checkpoint: 描述"
-git reset --soft HEAD~1
-```
+## 正式项目模式（按需启用）
 
-## 相关文件
-- 规则：`multi-agent/RULES.md`
-- 模式：`multi-agent/MODES.md`
-- 模板：`multi-agent/context/`
-- 脚本：`multi-agent/scripts/`
+对于大型正式项目，可启用四层闭环流程，详见 `multi-agent/RULES.md`。
+日常任务不需要 SPEC/AC 四件套，直接干就行。
 
 ---
 
