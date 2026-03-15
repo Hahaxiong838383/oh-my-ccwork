@@ -29,12 +29,15 @@
     "@larksuiteoapi/node-sdk": "^1.59.0",
     "chalk": "^4.1.2",
     "nanoid": "^5.0.0",
+    "node-pty": "^1.0.0",
     "qrcode-terminal": "^0.12.0",
     "undici": "^7.19.1",
+    "ws": "^8.19.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^2.1.9",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",

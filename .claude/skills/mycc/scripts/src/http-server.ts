@@ -81,6 +81,7 @@ export class HttpServer {
   private sessionOwnership: SessionOwnership;
   /** 每通道的中止控制器（非队列任务用） */
   private channelAbortControllers: Map<string, AbortController> = new Map();
+  private terminalPassword: string | null = null; // 终端访问密码
 
   constructor(pairCode: string, cwd: string, authToken?: string, tls?: TlsConfig) {
     this.cwd = cwd;
@@ -246,6 +247,10 @@ export class HttpServer {
         await this.handleSkillsList(req, res, url);
       } else if (url.pathname === "/skills/reload" && req.method === "POST") {
         await this.handleSkillsReload(req, res);
+      } else if (url.pathname === "/terminal/auth" && req.method === "POST") {
+        await this.handleTerminalAuth(req, res);
+      } else if (url.pathname.startsWith("/terminal") && req.method === "GET") {
+        this.serveTerminalFrontend(req, res, url.pathname);
       } else {
         res.writeHead(404, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Not Found" }));
@@ -1933,6 +1938,184 @@ export class HttpServer {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ success: true, count: items.length, reloadedAt: new Date().toISOString() }));
   }
+
+  // ==================== 远程终端功能 ====================
+
+  setTerminalPassword(password: string) {
+    this.terminalPassword = password;
+  }
+
+  getHttpServer(): http.Server | https.Server {
+    return this.server;
+  }
+
+  validateTerminalToken(token: string): boolean {
+    // 支持 mycc authToken
+    if (this.state.token && token === this.state.token) {
+      return true;
+    }
+    // 支持终端密码
+    if (this.terminalPassword && token === this.terminalPassword) {
+      return true;
+    }
+    return false;
+  }
+
+  private async handleTerminalAuth(req: http.IncomingMessage, res: http.ServerResponse) {
+    try {
+      const bodyStr = await this.readBody(req, 1024);
+      const body = JSON.parse(bodyStr);
+      const password = body.password;
+
+      if (password && this.terminalPassword && password === this.terminalPassword) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: true, token: this.terminalPassword }));
+      } else {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: false, error: "Invalid password" }));
+      }
+    } catch {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, error: "Bad request" }));
+    }
+  }
+
+  private serveTerminalFrontend(_req: http.IncomingMessage, res: http.ServerResponse, _pathname: string) {
+    // 直接返回内嵌 HTML（无需单独前端构建）
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(this.getInlineTerminalHtml());
+  }
+
+  private getInlineTerminalHtml(): string {
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>cc-remote terminal</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,monospace;height:100vh;overflow:hidden}
+#login{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px}
+#login h1{font-size:1.5rem;color:#58a6ff}
+#login input{background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:12px 16px;border-radius:6px;width:280px;font-size:16px}
+#login button{background:#238636;color:#fff;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-size:14px}
+#login button:hover{background:#2ea043}
+#login .error{color:#f85149;font-size:13px}
+#app{display:none;flex-direction:column;height:100vh}
+#topbar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#161b22;border-bottom:1px solid #30363d;overflow-x:auto;flex-shrink:0}
+.cli-btn{background:#21262d;color:#8b949e;border:1px solid #30363d;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:13px;white-space:nowrap}
+.cli-btn:hover{background:#30363d;color:#c9d1d9}
+.cli-btn.active{background:#1f6feb;color:#fff;border-color:#1f6feb}
+.tab{display:flex;align-items:center;gap:4px;background:#21262d;color:#8b949e;border:1px solid #30363d;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px}
+.tab.active{background:#0d1117;color:#c9d1d9;border-color:#58a6ff}
+.tab .close{cursor:pointer;margin-left:4px;opacity:0.5}
+.tab .close:hover{opacity:1;color:#f85149}
+#term-area{flex:1;position:relative;overflow:hidden}
+.term-container{position:absolute;inset:0;display:none}
+.term-container.active{display:block}
+#actions{display:flex;gap:6px;padding:6px 12px;background:#161b22;border-top:1px solid #30363d;overflow-x:auto;flex-shrink:0}
+.act-btn{background:#21262d;color:#8b949e;border:1px solid #30363d;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap}
+.act-btn:hover{background:#30363d;color:#c9d1d9}
+</style>
+</head>
+<body>
+<div id="login">
+<h1>cc-remote</h1>
+<input id="pwd" type="password" placeholder="Password" autofocus>
+<button onclick="doLogin()">Connect</button>
+<div id="err" class="error"></div>
+</div>
+<div id="app">
+<div id="topbar"></div>
+<div id="term-area"></div>
+<div id="actions"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+<script>
+const WS_PATH="/ws";
+let ws,token,clis=[],sessions={},activeId=null;
+function wsUrl(){const p=location.protocol==="https:"?"wss:":"ws:";return p+"//"+location.host+WS_PATH}
+function doLogin(){const p=document.getElementById("pwd").value;if(!p)return;connect(p)}
+document.getElementById("pwd").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
+function connect(pwd){
+ws=new WebSocket(wsUrl());
+ws.onopen=()=>{ws.send(JSON.stringify({type:"auth",password:pwd}))};
+ws.onmessage=e=>{const m=JSON.parse(e.data);handleMsg(m)};
+ws.onclose=()=>{setTimeout(()=>connect(pwd),3000)};
+ws.onerror=()=>{};
+}
+function handleMsg(m){
+switch(m.type){
+case"auth_ok":token=m.token||true;clis=m.clis||[];
+document.getElementById("login").style.display="none";
+document.getElementById("app").style.display="flex";
+renderTopbar();break;
+case"auth_fail":document.getElementById("err").textContent="Password incorrect";break;
+case"created":addSession(m.sessionId,m.cli);break;
+case"output":if(sessions[m.sessionId])sessions[m.sessionId].term.write(m.data);break;
+case"exit":if(sessions[m.sessionId]){sessions[m.sessionId].term.write("\\r\\n[Process exited]\\r\\n");
+setTimeout(()=>removeSession(m.sessionId),2000)}break;
+case"closed":removeSession(m.sessionId);break;
+case"error":console.error("WS error:",m.error);break;
+}
+}
+function renderTopbar(){
+const bar=document.getElementById("topbar");
+let h="";
+clis.filter(c=>c.available).forEach(c=>{h+=\`<button class="cli-btn" onclick="createSession('\${c.name}')">\${c.name}</button>\`});
+h+='<span style="flex:1"></span>';
+Object.values(sessions).forEach(s=>{
+const cls=s.id===activeId?"tab active":"tab";
+h+=\`<div class="\${cls}" onclick="switchSession('\${s.id}')">\${s.cli} <span class="close" onclick="event.stopPropagation();closeSession('\${s.id}')">x</span></div>\`;
+});
+bar.innerHTML=h;
+}
+function createSession(cli){ws.send(JSON.stringify({type:"create",cli,cols:80,rows:24}))}
+function addSession(id,cli){
+const area=document.getElementById("term-area");
+const div=document.createElement("div");
+div.className="term-container";div.id="tc-"+id;
+area.appendChild(div);
+const t=new window.Terminal({cursorBlink:true,fontSize:14,theme:{background:"#0d1117",foreground:"#c9d1d9"},allowProposedApi:true});
+const fit=new window.FitAddon.FitAddon();
+t.loadAddon(fit);t.open(div);
+sessions[id]={id,cli,term:t,fit,div};
+switchSession(id);
+setTimeout(()=>{fit.fit();
+const dims={cols:t.cols,rows:t.rows};
+ws.send(JSON.stringify({type:"resize",sessionId:id,...dims}))},100);
+t.onData(d=>ws.send(JSON.stringify({type:"input",sessionId:id,data:d})));
+t.onResize(s=>ws.send(JSON.stringify({type:"resize",sessionId:id,cols:s.cols,rows:s.rows})));
+window.addEventListener("resize",()=>fit.fit());
+renderTopbar();renderActions(cli);
+}
+function switchSession(id){
+activeId=id;
+Object.values(sessions).forEach(s=>{s.div.classList.toggle("active",s.id===id)});
+if(sessions[id])sessions[id].fit.fit();
+renderTopbar();renderActions(sessions[id]?.cli);
+}
+function closeSession(id){ws.send(JSON.stringify({type:"close",sessionId:id}))}
+function removeSession(id){
+if(sessions[id]){sessions[id].term.dispose();sessions[id].div.remove();delete sessions[id]}
+if(activeId===id){const k=Object.keys(sessions);activeId=k.length?k[k.length-1]:null;if(activeId)switchSession(activeId)}
+renderTopbar();
+}
+function renderActions(cli){
+const bar=document.getElementById("actions");
+const acts=[{l:"Enter",c:"\\r"},{l:"Ctrl+C",c:"\\x03"},{l:"Ctrl+Z",c:"\\x1a"},{l:"Ctrl+L",c:"\\x0c"},{l:"Tab",c:"\\t"},{l:"ESC",c:"\\x1b"},{l:"/help",c:"/help\\r"},{l:"y",c:"y"},{l:"yes",c:"yes\\r"}];
+bar.innerHTML=acts.map(a=>\`<button class="act-btn" onclick="sendAct('\${a.c.replace(/'/g,"\\\\\\'")}')">\${a.l}</button>\`).join("");
+}
+function sendAct(c){if(activeId&&ws)ws.send(JSON.stringify({type:"input",sessionId:activeId,data:c}))}
+</script>
+</body>
+</html>`;
+  }
+
+  // ==================== 远程终端功能结束 ====================
 
   private readBody(req: http.IncomingMessage, maxBytes: number = 10 * 1024 * 1024): Promise<string> {
     return new Promise((resolve, reject) => {

@@ -37,6 +37,8 @@ import { TunnelManager } from "./tunnel-manager.js";
 import { loadPublicUrl, loadEnvFile } from "./env-loader.js";
 import { agentIntrospection } from "./introspection.js";
 import { startStatusUpdater, stopStatusUpdater, refreshStatus, addStatusEvent } from "./services/status-updater.js";
+import { TerminalWsHandler } from "./terminal-ws.js";
+import { updateDnsRecord, loadDnsConfig } from "./cf-dns.js";
 
 // 清除 CLAUDECODE 环境变量：后端从 Claude Code session 启动时会继承此变量，
 // 导致所有 claude 子进程（HealthMonitor、SDK session）被误判为嵌套会话而拒绝启动
@@ -228,6 +230,13 @@ async function startServer(args: string[]) {
 
   const server = new HttpServer(pairCode, cwd, authToken, tlsConfig);
 
+  // 设置终端密码（从环境变量读取）
+  const terminalPassword = process.env.TERMINAL_PASSWORD || process.env.CC_REMOTE_PASSWORD;
+  if (terminalPassword) {
+    server.setTerminalPassword(terminalPassword);
+    console.log(chalk.green("✓ 终端远程访问密码已设置\n"));
+  }
+
   // 如果之前已配对，显示状态
   if (authToken) {
     console.log(chalk.green("✓ 已恢复配对状态\n"));
@@ -244,6 +253,29 @@ async function startServer(args: string[]) {
       process.exit(1);
     }
     throw error;
+  }
+
+  // 初始化终端 WebSocket（挂载到已有 HTTP server 上）
+  let terminalWs: TerminalWsHandler | null = null;
+  if (terminalPassword) {
+    try {
+      const httpServer = server.getHttpServer();
+      terminalWs = new TerminalWsHandler(
+        httpServer as any,
+        (token: string) => server.validateTerminalToken(token),
+        Number(process.env.CC_REMOTE_MAX_SESSIONS || 10)
+      );
+      console.log(chalk.green("✓ 终端 WebSocket 已启动 (路径: /ws)\n"));
+    } catch (err) {
+      console.error(chalk.yellow("⚠️ 终端 WebSocket 启动失败:"), (err as Error).message);
+      console.error(chalk.yellow("  远程终端功能不可用\n"));
+    }
+  }
+
+  // 加载 Cloudflare DNS 配置
+  const dnsConfig = loadDnsConfig();
+  if (dnsConfig) {
+    console.log(chalk.cyan(`[CF-DNS] 域名: ${dnsConfig.subdomain ? `${dnsConfig.subdomain}.${dnsConfig.domain}` : dnsConfig.domain}`));
   }
 
   // 注册 auth 失败回调：通过所有飞书通道通知用户
@@ -402,6 +434,11 @@ ${skillLine}
         console.log(chalk.cyan(`[TunnelManager] 更新 tunnelUrl: ${newUrl}`));
         tunnelUrl = newUrl;
 
+        // 更新 DNS 指向新 tunnel
+        if (dnsConfig) {
+          updateDnsRecord(newUrl, dnsConfig).catch(() => {});
+        }
+
         console.log(chalk.gray("重新注册到中转服务器..."));
         const newRegisterResult = await registerToWorker(newUrl, pairCode, deviceId);
         if (newRegisterResult?.token) {
@@ -423,6 +460,16 @@ ${skillLine}
       tunnelUrl = await tunnelManager.start(tunnelProvider);
       console.log(chalk.green(`✓ Tunnel 已启动: ${tunnelUrl}`));
       console.log(chalk.gray(`  保活监控已开启（心跳间隔 60s，失败阈值 3 次）\n`));
+
+      // 自动更新 Cloudflare DNS 指向新的 tunnel URL
+      if (dnsConfig) {
+        updateDnsRecord(tunnelUrl, dnsConfig).then((ok) => {
+          if (ok) {
+            const domain = dnsConfig.subdomain ? `${dnsConfig.subdomain}.${dnsConfig.domain}` : dnsConfig.domain;
+            console.log(chalk.green(`✓ DNS 已更新: ${domain} → tunnel`));
+          }
+        });
+      }
     } catch (error) {
       console.error(chalk.red("警告: 无法启动 tunnel"), error);
       console.warn(chalk.yellow("  Web 通道将不可用，但飞书通道仍可正常工作\n"));
@@ -535,6 +582,12 @@ ${skillLine}
     }
     console.log(`配对码: ${chalk.cyan(pairCode)}`);
     console.log(chalk.gray(`\nTunnel: ${tunnelUrl}`));
+    if (terminalPassword && dnsConfig) {
+      const domain = dnsConfig.subdomain ? `${dnsConfig.subdomain}.${dnsConfig.domain}` : dnsConfig.domain;
+      console.log(chalk.cyan(`\n终端: https://${domain}/terminal`));
+    } else if (terminalPassword) {
+      console.log(chalk.cyan(`\n终端: ${tunnelUrl}/terminal`));
+    }
     console.log(chalk.yellow("\n==============================\n"));
   };
 
@@ -562,6 +615,7 @@ ${skillLine}
       // Ctrl+C
       if (key[0] === 3) {
         console.log(chalk.yellow("\n正在退出..."));
+        terminalWs?.stop();
         adapter.closeAllSessions();
         tunnelManager?.stop();
         healthMonitor.stop();
@@ -580,6 +634,7 @@ ${skillLine}
   // 处理退出
   process.on("SIGINT", () => {
     console.log(chalk.yellow("\n正在退出..."));
+    terminalWs?.stop();
     adapter.closeAllSessions();
     tunnelManager?.stop();
     healthMonitor.stop();
@@ -589,6 +644,7 @@ ${skillLine}
   });
 
   process.on("SIGTERM", () => {
+    terminalWs?.stop();
     adapter.closeAllSessions();
     tunnelManager?.stop();
     healthMonitor.stop();
