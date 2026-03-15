@@ -9,7 +9,7 @@
  */
 
 import { execSync } from "child_process";
-import { mkdirSync, writeFileSync, existsSync, appendFileSync } from "fs";
+import { mkdirSync, writeFileSync, existsSync, appendFileSync, readFileSync } from "fs";
 import { homedir } from "os";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
@@ -29,11 +29,20 @@ import qrcode from "qrcode-terminal";
 import chalk from "chalk";
 import { HttpServer } from "./http-server.js";
 import { startScheduler, stopScheduler, type Task } from "./scheduler.js";
-import { adapter } from "./adapters/index.js";
-import { CloudflareProvider } from "./tunnel-provider.js";
+import { adapter, officialAdapter } from "./adapters/index.js";
+import { runCliEngine, type EngineType } from "./adapters/cli-engine.js";
+import { HealthMonitor } from "./health-monitor.js";
+import { CloudflareProvider, NamedCloudflareProvider } from "./tunnel-provider.js";
 import { TunnelManager } from "./tunnel-manager.js";
 import { loadPublicUrl, loadEnvFile } from "./env-loader.js";
 import { agentIntrospection } from "./introspection.js";
+import { startStatusUpdater, stopStatusUpdater, refreshStatus, addStatusEvent } from "./services/status-updater.js";
+import { TerminalWsHandler } from "./terminal-ws.js";
+import { updateDnsRecord, loadDnsConfig } from "./cf-dns.js";
+
+// 清除 CLAUDECODE 环境变量：后端从 Claude Code session 启动时会继承此变量，
+// 导致所有 claude 子进程（HealthMonitor、SDK session）被误判为嵌套会话而拒绝启动
+delete process.env.CLAUDECODE;
 
 const PORT = process.env.PORT || 18080;
 
@@ -221,6 +230,13 @@ async function startServer(args: string[]) {
 
   const server = new HttpServer(pairCode, cwd, authToken, tlsConfig);
 
+  // 设置终端密码（从环境变量读取）
+  const terminalPassword = process.env.TERMINAL_PASSWORD || process.env.CC_REMOTE_PASSWORD;
+  if (terminalPassword) {
+    server.setTerminalPassword(terminalPassword);
+    console.log(chalk.green("✓ 终端远程访问密码已设置\n"));
+  }
+
   // 如果之前已配对，显示状态
   if (authToken) {
     console.log(chalk.green("✓ 已恢复配对状态\n"));
@@ -238,6 +254,42 @@ async function startServer(args: string[]) {
     }
     throw error;
   }
+
+  // 初始化终端 WebSocket（挂载到已有 HTTP server 上）
+  let terminalWs: TerminalWsHandler | null = null;
+  if (terminalPassword) {
+    try {
+      const httpServer = server.getHttpServer();
+      terminalWs = new TerminalWsHandler(
+        httpServer as any,
+        (token: string) => server.validateTerminalToken(token),
+        Number(process.env.CC_REMOTE_MAX_SESSIONS || 10)
+      );
+      console.log(chalk.green("✓ 终端 WebSocket 已启动 (路径: /ws)\n"));
+    } catch (err) {
+      console.error(chalk.yellow("⚠️ 终端 WebSocket 启动失败:"), (err as Error).message);
+      console.error(chalk.yellow("  远程终端功能不可用\n"));
+    }
+  }
+
+  // 加载 Cloudflare DNS 配置
+  const dnsConfig = loadDnsConfig();
+  if (dnsConfig) {
+    console.log(chalk.cyan(`[CF-DNS] 域名: ${dnsConfig.subdomain ? `${dnsConfig.subdomain}.${dnsConfig.domain}` : dnsConfig.domain}`));
+  }
+
+  // 注册 auth 失败回调：通过所有飞书通道通知用户
+  officialAdapter.onAuthFailed((msg: string) => {
+    console.error(chalk.red(`[Auth] ${msg}`));
+    // 通过 server 的飞书通道广播通知
+    server.broadcastToFeishu?.(`⚠️ ${msg}`);
+  });
+
+  // 启动健康监控（含 auth 定期检查）
+  const healthMonitor = new HealthMonitor();
+  healthMonitor.setHttpServer(server);
+  healthMonitor.setAdapter(officialAdapter);
+  // healthMonitor 在 tunnel 启动后再 start，见下方
 
   // 记录任务执行历史到 history.md
   const recordHistory = (taskCwd: string, taskName: string, status: string) => {
@@ -300,17 +352,67 @@ ${skillLine}
     recordHistory(taskCwd, task.name, "执行中...");
 
     try {
-      for await (const _event of adapter.chat({ message, cwd: taskCwd })) {
-        // 忽略输出，只需要执行
+      if (task.engine === "gemini" || task.engine === "codex") {
+        const engineType = task.engine as EngineType;
+        console.log(chalk.cyan(`[Scheduler] 路由到 ${engineType}: ${task.name}`));
+
+        // 内联 SKILL.md：让 gemini/codex 知道完整执行步骤
+        let fullMessage = message;
+        if (task.skill && task.skill !== "-") {
+          const skillMdPath = join(taskCwd, ".claude", "skills", task.skill, "SKILL.md");
+          if (existsSync(skillMdPath)) {
+            try {
+              const skillContent = readFileSync(skillMdPath, "utf-8");
+              fullMessage = `${message}\n\n---\n# 技能执行指南（SKILL.md）\n\n${skillContent}`;
+              console.log(chalk.gray(`[Scheduler] 已内联 ${task.skill}/SKILL.md`));
+            } catch {
+              // 读取失败，使用原始 message
+            }
+          }
+        }
+
+        const result = await runCliEngine(engineType, fullMessage, taskCwd);
+        if (result.error) {
+          // 主引擎失败 → 自动转移到备用引擎
+          const fallbackEngine: EngineType = engineType === "codex" ? "gemini" : "codex";
+          console.warn(chalk.yellow(`[Scheduler][${engineType}] 失败，自动转移到 ${fallbackEngine}: ${task.name}`));
+          recordHistory(taskCwd, task.name, `⚠️ 转移(${engineType}→${fallbackEngine})`);
+
+          const fallbackResult = await runCliEngine(fallbackEngine, fullMessage, taskCwd);
+          if (fallbackResult.error) {
+            console.error(chalk.red(`[Scheduler] 双引擎全部失败: ${task.name}`));
+            recordHistory(taskCwd, task.name, `❌ 全部失败(${engineType}+${fallbackEngine})`);
+            server.broadcastToFeishu?.(`⚠️ 定时任务双引擎全部失败：${task.name}\n主引擎 ${engineType} 失败 → 备引擎 ${fallbackEngine} 也失败，需要人工介入`);
+          } else {
+            console.log(chalk.green(`[Scheduler] 任务完成(fallback): ${task.name} (${fallbackEngine})`));
+            recordHistory(taskCwd, task.name, `✅ 成功(fallback:${fallbackEngine})`);
+            addStatusEvent(`${task.name} 定时任务完成（fallback:${fallbackEngine}）`);
+            refreshStatus(taskCwd);
+          }
+        } else {
+          console.log(chalk.green(`[Scheduler] 任务完成: ${task.name} (${engineType})`));
+          recordHistory(taskCwd, task.name, `✅ 成功(${engineType})`);
+          addStatusEvent(`${task.name} 定时任务完成（${engineType}）`);
+          refreshStatus(taskCwd);
+        }
+      } else {
+        for await (const _event of adapter.chat({ message, cwd: taskCwd })) {
+          // 忽略输出，只需要执行
+        }
+        console.log(chalk.green(`[Scheduler] 任务完成: ${task.name}`));
+        recordHistory(taskCwd, task.name, "✅ 成功");
+        addStatusEvent(`${task.name} 定时任务完成`);
+        refreshStatus(taskCwd);
       }
-      console.log(chalk.green(`[Scheduler] 任务完成: ${task.name}`));
-      recordHistory(taskCwd, task.name, "✅ 成功");
     } catch (error) {
       console.error(chalk.red(`[Scheduler] 任务失败: ${task.name}`), error);
       recordHistory(taskCwd, task.name, "❌ 失败");
     }
   };
   startScheduler(cwd, executeTask);
+
+  // 启动 status.md 自动更新（每 30 分钟刷新系统状态）
+  startStatusUpdater(cwd);
 
   // tunnelUrl 需要可变，因为重启时会更新
   let tunnelUrl: string;
@@ -324,13 +426,51 @@ ${skillLine}
     // 内网模式：启动 cloudflared tunnel（使用 TunnelManager 保活）
     console.log(chalk.yellow("启动 tunnel...\n"));
 
-    const tunnelProvider = new CloudflareProvider(120000);
+    // 选择 Tunnel Provider：Named Tunnel（CF_TUNNEL_TOKEN）或 Quick Tunnel
+    const tunnelToken = process.env.CF_TUNNEL_TOKEN;
+    const isNamedTunnel = !!(tunnelToken && dnsConfig);
+    let tunnelProvider;
+
+    if (isNamedTunnel) {
+      // Named Tunnel: 解决 CNAME Cross-User Banned (Error 1014)
+      const hostname = dnsConfig!.subdomain
+        ? `${dnsConfig!.subdomain}.${dnsConfig!.domain}`
+        : dnsConfig!.domain;
+      const namedProvider = new NamedCloudflareProvider(tunnelToken!, hostname, 120000);
+      tunnelProvider = namedProvider;
+
+      console.log(chalk.cyan(`[Named Tunnel] 模式已启用`));
+      console.log(chalk.gray(`  Tunnel ID: ${namedProvider.getTunnelId()}`));
+      console.log(chalk.gray(`  域名: ${hostname}`));
+
+      // 设置 CNAME 指向 {uuid}.cfargotunnel.com（固定不变，一次性设置）
+      updateDnsRecord(
+        `https://${namedProvider.getTunnelId()}.cfargotunnel.com`,
+        dnsConfig!
+      ).then((ok) => {
+        if (ok) {
+          console.log(chalk.green(`✓ DNS 已设置: ${hostname} → ${namedProvider.getTunnelId()}.cfargotunnel.com`));
+        }
+      });
+    } else {
+      // Quick Tunnel: 随机 URL，适合无自定义域名场景
+      tunnelProvider = new CloudflareProvider(120000);
+      if (tunnelToken && !dnsConfig) {
+        console.warn(chalk.yellow("⚠️  已设置 CF_TUNNEL_TOKEN 但缺少 CF_DOMAIN/CF_ZONE_ID，降级为 Quick Tunnel"));
+      }
+    }
 
     tunnelManager = new TunnelManager({
       localPort: Number(PORT),
       onRestartSuccess: async (newUrl: string) => {
         console.log(chalk.cyan(`[TunnelManager] 更新 tunnelUrl: ${newUrl}`));
         tunnelUrl = newUrl;
+
+        // Quick Tunnel: URL 每次重启都变，需要更新 DNS
+        // Named Tunnel: CNAME 指向固定的 cfargotunnel.com，无需更新
+        if (!isNamedTunnel && dnsConfig) {
+          updateDnsRecord(newUrl, dnsConfig).catch(() => {});
+        }
 
         console.log(chalk.gray("重新注册到中转服务器..."));
         const newRegisterResult = await registerToWorker(newUrl, pairCode, deviceId);
@@ -352,7 +492,20 @@ ${skillLine}
     try {
       tunnelUrl = await tunnelManager.start(tunnelProvider);
       console.log(chalk.green(`✓ Tunnel 已启动: ${tunnelUrl}`));
+      console.log(chalk.gray(`  模式: ${isNamedTunnel ? 'Named Tunnel（固定域名）' : 'Quick Tunnel（随机 URL）'}`));
       console.log(chalk.gray(`  保活监控已开启（心跳间隔 60s，失败阈值 3 次）\n`));
+
+      // Quick Tunnel + DNS 配置：更新 CNAME（注意：这会触发 Error 1014！）
+      if (!isNamedTunnel && dnsConfig) {
+        console.warn(chalk.yellow("⚠️  Quick Tunnel + CNAME 可能触发 Cloudflare Error 1014"));
+        console.warn(chalk.yellow("   建议：设置 CF_TUNNEL_TOKEN 使用 Named Tunnel"));
+        updateDnsRecord(tunnelUrl, dnsConfig).then((ok) => {
+          if (ok) {
+            const domain = dnsConfig.subdomain ? `${dnsConfig.subdomain}.${dnsConfig.domain}` : dnsConfig.domain;
+            console.log(chalk.green(`✓ DNS 已更新: ${domain} → tunnel`));
+          }
+        });
+      }
     } catch (error) {
       console.error(chalk.red("警告: 无法启动 tunnel"), error);
       console.warn(chalk.yellow("  Web 通道将不可用，但飞书通道仍可正常工作\n"));
@@ -465,6 +618,12 @@ ${skillLine}
     }
     console.log(`配对码: ${chalk.cyan(pairCode)}`);
     console.log(chalk.gray(`\nTunnel: ${tunnelUrl}`));
+    if (terminalPassword && dnsConfig) {
+      const domain = dnsConfig.subdomain ? `${dnsConfig.subdomain}.${dnsConfig.domain}` : dnsConfig.domain;
+      console.log(chalk.cyan(`\n终端: https://${domain}/terminal`));
+    } else if (terminalPassword) {
+      console.log(chalk.cyan(`\n终端: ${tunnelUrl}/terminal`));
+    }
     console.log(chalk.yellow("\n==============================\n"));
   };
 
@@ -476,6 +635,11 @@ ${skillLine}
   } else {
     console.log(chalk.green("✓ 服务已就绪，扫码配对后即可使用\n"));
   }
+
+  // 启动健康监控（含 auth 定期检查）
+  healthMonitor.setTunnelManager(tunnelManager);
+  healthMonitor.start();
+
   console.log(chalk.gray("按回车键重新显示连接信息"));
   console.log(chalk.gray("按 Ctrl+C 退出\n"));
 
@@ -487,9 +651,12 @@ ${skillLine}
       // Ctrl+C
       if (key[0] === 3) {
         console.log(chalk.yellow("\n正在退出..."));
+        terminalWs?.stop();
         adapter.closeAllSessions();
         tunnelManager?.stop();
+        healthMonitor.stop();
         stopScheduler();
+        stopStatusUpdater();
         server.stop();
         process.exit(0);
       }
@@ -503,16 +670,20 @@ ${skillLine}
   // 处理退出
   process.on("SIGINT", () => {
     console.log(chalk.yellow("\n正在退出..."));
+    terminalWs?.stop();
     adapter.closeAllSessions();
     tunnelManager?.stop();
+    healthMonitor.stop();
     stopScheduler();
     server.stop();
     process.exit(0);
   });
 
   process.on("SIGTERM", () => {
+    terminalWs?.stop();
     adapter.closeAllSessions();
     tunnelManager?.stop();
+    healthMonitor.stop();
     stopScheduler();
     server.stop();
     process.exit(0);
