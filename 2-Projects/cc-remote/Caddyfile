@@ -1,13 +1,4 @@
-:8443 {
-	# ============ mycc 后端（不需要 Basic Auth）============
-	# mycc 有自己的认证体系（pairCode/authToken）
-	handle /health {
-		reverse_proxy localhost:18080
-	}
-	handle_path /mycc/* {
-		reverse_proxy localhost:18080
-	}
-
+:19443 {
 	# ============ cc-remote 终端（需要 Basic Auth）============
 	basic_auth /claude/* {
 		admin HASH_PLACEHOLDER
@@ -40,22 +31,32 @@
 
 	# 按键注入 API
 	handle /api/* {
-		reverse_proxy localhost:7100
+		reverse_proxy localhost:19100
 	}
 
-	# ttyd 实例反代
+	# ttyd 实例反代（WebSocket 长连接，禁用超时）
 	handle /claude/* {
-		reverse_proxy localhost:7001
+		reverse_proxy localhost:19001 {
+			transport http {
+				read_timeout 0
+				write_timeout 0
+			}
+		}
 	}
 	handle /codex/* {
-		reverse_proxy localhost:7002
+		reverse_proxy localhost:19002 {
+			transport http {
+				read_timeout 0
+				write_timeout 0
+			}
+		}
 	}
 	handle /gemini/* {
-		reverse_proxy localhost:7003
-	}
-
-	# 其他路径 → mycc 后端（兜底）
-	handle /* {
-		reverse_proxy localhost:18080
+		reverse_proxy localhost:19003 {
+			transport http {
+				read_timeout 0
+				write_timeout 0
+			}
+		}
 	}
 }

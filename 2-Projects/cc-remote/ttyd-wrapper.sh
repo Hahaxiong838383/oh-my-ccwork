@@ -1,13 +1,16 @@
 #!/bin/bash
-# ttyd 启动包装器 — Tokyo Night 终端主题
+# ttyd 启动包装器 — Apple 风格终端主题 + 自动重连
 PORT=$1
 BASE=$2
 SESSION=$3
 
 exec ttyd -p "$PORT" -W -b "$BASE" \
-  -t 'fontFamily=Menlo, SF Mono, Monaco, Consolas, monospace' \
+  -t 'fontFamily=SF Mono, SFMono-Regular, ui-monospace, Menlo, Monaco, monospace' \
   -t 'fontSize=14' \
   -t 'cursorBlink=true' \
   -t 'cursorStyle=bar' \
-  -t 'theme={"background":"#1a1b26","foreground":"#c0caf5","cursor":"#c0caf5","selectionBackground":"#33467c","black":"#15161e","red":"#f7768e","green":"#9ece6a","yellow":"#e0af68","blue":"#7aa2f7","magenta":"#bb9af7","cyan":"#7dcfff","white":"#a9b1d6","brightBlack":"#414868","brightRed":"#f7768e","brightGreen":"#9ece6a","brightYellow":"#e0af68","brightBlue":"#7aa2f7","brightMagenta":"#bb9af7","brightCyan":"#7dcfff","brightWhite":"#c0caf5"}' \
-  tmux attach-session -t "$SESSION"
+  -t 'scrollback=10000' \
+  -t 'reconnect=2' \
+  -t 'disableReconnect=false' \
+  -t 'theme={"background":"#1e1e1e","foreground":"#cccccc","cursor":"#ffffff","selectionBackground":"#264f78","black":"#000000","red":"#cd3131","green":"#0dbc79","yellow":"#e5e510","blue":"#2472c8","magenta":"#bc3fbc","cyan":"#11a8cd","white":"#e5e5e5","brightBlack":"#666666","brightRed":"#f14c4c","brightGreen":"#23d18b","brightYellow":"#f5f543","brightBlue":"#3b8eea","brightMagenta":"#d670d6","brightCyan":"#29b8db","brightWhite":"#ffffff"}' \
+  "$(dirname "$0")/tmux-session.sh" "$SESSION" "$(echo $SESSION | sed 's/cc-//')"

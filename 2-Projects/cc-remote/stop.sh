@@ -4,8 +4,8 @@
 # 加 --kill-sessions 同时杀掉 tmux session
 
 echo "停止 cc-remote Web 服务..."
-pkill -f "ttyd -p 700" 2>/dev/null
-lsof -i :7100 -t | xargs kill -9 2>/dev/null  # API
+pkill -f "ttyd -p 1900" 2>/dev/null
+lsof -i :19100 -t | xargs kill -9 2>/dev/null  # API
 pkill -f "caddy run.*cc-remote" 2>/dev/null
 pkill -f "cloudflared tunnel run" 2>/dev/null
 pkill -f "watchdog.sh" 2>/dev/null

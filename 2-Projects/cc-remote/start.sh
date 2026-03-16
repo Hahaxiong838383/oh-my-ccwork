@@ -58,18 +58,18 @@ fi
 echo "启动 ttyd 实例（连接 tmux）..."
 
 if tmux has-session -t "cc-claude" 2>/dev/null; then
-  "$DIR/ttyd-wrapper.sh" 7001 /claude cc-claude &
-  echo "  ✓ claude → :7001 (tmux: cc-claude)"
+  "$DIR/ttyd-wrapper.sh" 19001 /claude cc-claude &
+  echo "  ✓ claude → :19001 (tmux: cc-claude)"
 fi
 
 if tmux has-session -t "cc-codex" 2>/dev/null; then
-  "$DIR/ttyd-wrapper.sh" 7002 /codex cc-codex &
-  echo "  ✓ codex → :7002 (tmux: cc-codex)"
+  "$DIR/ttyd-wrapper.sh" 19002 /codex cc-codex &
+  echo "  ✓ codex → :19002 (tmux: cc-codex)"
 fi
 
 if tmux has-session -t "cc-gemini" 2>/dev/null; then
-  "$DIR/ttyd-wrapper.sh" 7003 /gemini cc-gemini &
-  echo "  ✓ gemini → :7003 (tmux: cc-gemini)"
+  "$DIR/ttyd-wrapper.sh" 19003 /gemini cc-gemini &
+  echo "  ✓ gemini → :19003 (tmux: cc-gemini)"
 fi
 
 sleep 1
@@ -77,14 +77,14 @@ sleep 1
 # ============ 按键注入 API ============
 echo "启动按键注入 API..."
 python3 "$DIR/api.py" &
-echo "  ✓ API → :7100"
+echo "  ✓ API → :19100"
 
 # ============ Caddy 反代 + 认证 ============
 echo "启动 Caddy 反代..."
 HASH=$(caddy hash-password --plaintext "$PASSWORD")
 sed "s|HASH_PLACEHOLDER|$HASH|g" Caddyfile > /tmp/cc-remote-Caddyfile
 caddy run --config /tmp/cc-remote-Caddyfile --adapter caddyfile &
-echo "  ✓ Caddy → :8443"
+echo "  ✓ Caddy → :19443"
 
 sleep 1
 

@@ -10,10 +10,10 @@ import cgi
 import tempfile
 import shutil
 
-PORT = 7100
+PORT = 19100
 DEVICES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'devices.json')
 ALLOWED_CLIS = {'claude', 'codex', 'gemini'}
-PORT_RANGE = range(7010, 7100)  # 动态端口池（7001-7003 保留给默认 session）
+PORT_RANGE = range(19010, 19100)  # 动态端口池（7001-7003 保留给默认 session）
 WRAPPER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ttyd-wrapper.sh')
 PROJECT_DIR = os.environ.get('CC_REMOTE_CWD', '/Users/rayman.chen/mycc')
 
@@ -22,7 +22,7 @@ PROJECT_DIR = os.environ.get('CC_REMOTE_CWD', '/Users/rayman.chen/mycc')
 sessions = {}
 
 # 启动时扫描已有的默认 session
-for cli, port in [('claude', 7001), ('codex', 7002), ('gemini', 7003)]:
+for cli, port in [('claude', 19001), ('codex', 19002), ('gemini', 19003)]:
     tmux_name = f'cc-{cli}'
     result = subprocess.run(['tmux', 'has-session', '-t', tmux_name], capture_output=True)
     if result.returncode == 0:
