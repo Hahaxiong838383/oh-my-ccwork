@@ -532,6 +532,35 @@ export class FeishuChannel implements MessageChannel {
         return Promise.resolve({ text: "" });
       }
 
+      if (messageType === "post") {
+        // 富文本消息 - 提取所有 text 节点
+        if (typeof content === "string") {
+          const parsed = JSON.parse(content);
+          // post 结构: { zh_cn: { content: [[{tag:"text",text:"..."}, {tag:"at",...}]] } }
+          // 也可能是 { content: [[...]] }
+          const paragraphs = parsed?.zh_cn?.content || parsed?.content || [];
+          const texts: string[] = [];
+          for (const para of paragraphs) {
+            if (Array.isArray(para)) {
+              for (const node of para) {
+                if (node.tag === "text" && node.text) {
+                  texts.push(node.text);
+                } else if (node.tag === "a" && node.text) {
+                  // 超链接节点也提取文本
+                  texts.push(node.text);
+                }
+              }
+            }
+          }
+          const combined = texts.join("").replace(/@_user_\d+/g, "").trim();
+          if (combined) {
+            return Promise.resolve({ text: combined });
+          }
+        }
+        console.log(`[FeishuChannel] post 消息解析为空`);
+        return Promise.resolve(null);
+      }
+
       // 其他类型消息暂不支持
       console.log(`[FeishuChannel] 暂不支持的消息类型: ${messageType}`);
       return Promise.resolve(null);

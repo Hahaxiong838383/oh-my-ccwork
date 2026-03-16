@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>cc-remote</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body { background: #1a1b26; color: #c0caf5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; display: flex; flex-direction: column; }
+
+/* 顶栏 */
+.topbar { display: flex; align-items: center; background: #16161e; border-bottom: 1px solid #292e42; flex-shrink: 0; height: 44px; padding: 0 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.topbar::-webkit-scrollbar { display: none; }
+
+/* 设备选择器 */
+.device-select { background: #1f2335; border: 1px solid #292e42; color: #7aa2f7; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; margin-right: 8px; flex-shrink: 0; outline: none; cursor: pointer; }
+
+.tab { padding: 0 14px; height: 100%; display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 500; color: #565f89; border-bottom: 2px solid transparent; transition: all 0.15s; user-select: none; white-space: nowrap; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+.tab:hover { color: #a9b1d6; }
+.tab.active { border-bottom-color: #7aa2f7; color: #7aa2f7; }
+.tab .close { margin-left: 4px; opacity: 0.4; font-size: 0.7rem; }
+.tab .close:hover { opacity: 1; color: #f7768e; }
+.add-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px dashed #292e42; background: none; color: #565f89; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin: 0 4px; }
+.add-btn:hover { color: #7aa2f7; border-color: #7aa2f7; }
+.spacer { flex: 1; min-width: 8px; }
+.conn-status { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; padding: 0 8px; flex-shrink: 0; }
+.conn-status .dot { width: 6px; height: 6px; border-radius: 50%; }
+.conn-status.ok { color: #9ece6a; }
+.conn-status.ok .dot { background: #9ece6a; }
+.conn-status.off { color: #565f89; }
+.conn-status.off .dot { background: #565f89; }
+.conn-status.err { color: #f7768e; }
+.conn-status.err .dot { background: #f7768e; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0.3; } }
+
+/* 断线重连横幅 */
+.reconnect-bar { display: none; background: #f7768e22; border-bottom: 1px solid #f7768e44; color: #f7768e; font-size: 0.78rem; padding: 6px 12px; text-align: center; flex-shrink: 0; }
+.reconnect-bar.show { display: block; }
+
+/* 终端区域 */
+.term-area { flex: 1; position: relative; background: #1a1b26; }
+.term-frame { position: absolute; inset: 0; border: none; display: none; width: 100%; height: 100%; background: #1a1b26; }
+.term-frame.active { display: block; }
+.empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.empty.hidden { display: none; }
+.empty h2 { font-size: 1.4rem; color: #7aa2f7; font-weight: 600; }
+.empty p { font-size: 0.85rem; color: #565f89; }
+.empty .hint { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
+.hint-btn { padding: 8px 20px; border-radius: 8px; border: 1px solid #292e42; background: #1f2335; color: #c0caf5; cursor: pointer; font-size: 0.85rem; -webkit-tap-highlight-color: transparent; }
+.hint-btn:hover { background: #292e42; border-color: #7aa2f7; }
+
+/* 弹窗 */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; display: none; align-items: center; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: #1f2335; border: 1px solid #292e42; border-radius: 12px; padding: 24px; min-width: 280px; margin: 0 16px; }
+.modal h3 { color: #c0caf5; margin-bottom: 16px; font-size: 1rem; }
+.modal .cli-list { display: flex; flex-direction: column; gap: 8px; }
+.modal .cli-item { padding: 12px 16px; border-radius: 8px; border: 1px solid #292e42; background: #16161e; cursor: pointer; color: #c0caf5; font-size: 0.9rem; -webkit-tap-highlight-color: transparent; }
+.modal .cli-item:hover { border-color: #7aa2f7; background: #292e42; }
+.modal .cancel { margin-top: 12px; text-align: center; color: #565f89; font-size: 0.8rem; cursor: pointer; }
+
+/* 底栏 */
+.bottombar { display: none; flex-direction: column; background: #16161e; border-top: 1px solid #292e42; flex-shrink: 0; }
+.bottombar.show { display: flex; }
+.shortcuts { display: flex; gap: 6px; padding: 8px 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.shortcuts::-webkit-scrollbar { display: none; }
+.key-btn { padding: 10px 14px; border-radius: 8px; border: 1px solid #292e42; background: #1f2335; color: #c0caf5; cursor: pointer; font-size: 0.85rem; white-space: nowrap; font-family: monospace; transition: all 0.1s; -webkit-tap-highlight-color: transparent; }
+.key-btn:active { background: #292e42; transform: scale(0.95); }
+.key-btn.danger { color: #f7768e; border-color: #f7768e33; }
+.input-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px 12px; }
+.input-row input { flex: 1; background: #1f2335; border: 1px solid #292e42; color: #c0caf5; padding: 10px 14px; border-radius: 20px; font-size: 16px; font-family: monospace; outline: none; }
+.input-row input::placeholder { color: #565f89; }
+.input-row input:focus { border-color: #7aa2f7; }
+.attach-btn { width: 40px; height: 40px; border-radius: 50%; background: none; border: none; font-size: 1.2rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+.attach-btn:active { transform: scale(0.9); }
+.input-row .send { width: 40px; height: 40px; border-radius: 50%; background: #f7768e; border: none; color: #fff; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.input-row .send:active { transform: scale(0.9); }
+.input-row .send svg { width: 18px; height: 18px; }
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) { .input-row { padding-bottom: calc(12px + env(safe-area-inset-bottom)); } }
+@supports (padding-top: env(safe-area-inset-top)) { .topbar { padding-top: env(safe-area-inset-top); } }
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar"></div>
+<div class="reconnect-bar" id="reconnect-bar">连接已断开，正在重连...</div>
+
+<div class="term-area" id="term-area">
+  <div class="empty" id="empty-state">
+    <h2>cc-remote</h2>
+    <p>选择一个终端开始</p>
+    <div class="hint">
+      <button class="hint-btn" onclick="openDefault('claude')">Claude</button>
+      <button class="hint-btn" onclick="openDefault('codex')">Codex</button>
+      <button class="hint-btn" onclick="openDefault('gemini')">Gemini</button>
+    </div>
+  </div>
+</div>
+
+<div class="bottombar" id="bottombar">
+  <div class="shortcuts">
+    <button class="key-btn danger" onclick="sendKey('ctrl-c')">Stop</button>
+    <button class="key-btn" onclick="sendKey('enter')">Enter</button>
+    <button class="key-btn" onclick="sendKey('tab')">Tab</button>
+    <button class="key-btn" onclick="sendKey('escape')">Esc</button>
+    <button class="key-btn" onclick="sendKey('up')">↑</button>
+    <button class="key-btn" onclick="sendKey('down')">↓</button>
+    <button class="key-btn" onclick="sendKey('ctrl-l')">Clear</button>
+    <button class="key-btn" onclick="sendKey('y-enter')">y</button>
+  </div>
+  <div class="input-row">
+    <input type="file" id="file-input" style="display:none" multiple onchange="handleFiles(this.files)">
+    <button class="attach-btn" onclick="document.getElementById('file-input').click()" title="上传文件">📎</button>
+    <input id="cmd-input" type="text" placeholder="输入命令..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <button class="send" onclick="sendCommand()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>新建终端</h3>
+    <div class="cli-list">
+      <div class="cli-item" onclick="createNew('claude')">Claude Code</div>
+      <div class="cli-item" onclick="createNew('codex')">Codex CLI</div>
+      <div class="cli-item" onclick="createNew('gemini')">Gemini CLI</div>
+    </div>
+    <div class="cancel" onclick="closeModal()">取消</div>
+  </div>
+</div>
+
+<script>
+let activeSession = null;
+let allSessions = [];
+let devices = [];
+let currentDevice = null;
+let connected = false;
+
+async function init() {
+  await Promise.all([loadDevices(), loadSessions()]);
+  renderTopbar();
+  document.getElementById('cmd-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); sendCommand(); }
+  });
+  // 断线检测：每 15 秒 ping
+  setInterval(checkConnection, 15000);
+}
+
+async function loadDevices() {
+  try {
+    const r = await fetch('/api/devices');
+    const data = await r.json();
+    devices = data.devices || [];
+    currentDevice = devices.find(d => d.active) || devices[0] || null;
+  } catch { devices = []; }
+}
+
+async function loadSessions() {
+  try {
+    const r = await fetch('/api/sessions');
+    const data = await r.json();
+    allSessions = data.sessions || [];
+    connected = true;
+    updateConnectionStatus();
+  } catch {
+    allSessions = [];
+    connected = false;
+    updateConnectionStatus();
+  }
+}
+
+async function checkConnection() {
+  try {
+    const r = await fetch('/api/sessions', { signal: AbortSignal.timeout(5000) });
+    if (r.ok) {
+      if (!connected) {
+        connected = true;
+        updateConnectionStatus();
+        await loadSessions();
+        renderTopbar();
+      }
+    } else { throw new Error(); }
+  } catch {
+    connected = false;
+    updateConnectionStatus();
+  }
+}
+
+function updateConnectionStatus() {
+  const bar = document.getElementById('reconnect-bar');
+  bar.classList.toggle('show', !connected);
+}
+
+function renderTopbar() {
+  const bar = document.getElementById('topbar');
+  let html = '';
+
+  // 设备选择器
+  if (devices.length > 0) {
+    html += '<select class="device-select" onchange="switchDevice(this.value)">';
+    devices.forEach(d => {
+      html += `<option value="${d.id}" ${d.id === currentDevice?.id ? 'selected' : ''}>${d.name}</option>`;
+    });
+    html += '</select>';
+  }
+
+  // Session tabs
+  allSessions.forEach(s => {
+    const isActive = s.id === activeSession;
+    const label = s.default ? s.cli : `${s.cli} #${s.id.split('-').pop()}`;
+    const closeBtn = s.default ? '' : `<span class="close" onclick="event.stopPropagation();destroySession('${s.id}')">✕</span>`;
+    html += `<div class="tab ${isActive ? 'active' : ''}" onclick="switchTo('${s.id}')">${label}${closeBtn}</div>`;
+  });
+
+  html += `<button class="add-btn" onclick="showModal()" title="新建终端">+</button>`;
+  html += `<div class="spacer"></div>`;
+
+  // 连接状态
+  const cls = connected ? 'ok' : 'err';
+  const txt = connected ? 'Connected' : 'Disconnected';
+  html += `<div class="conn-status ${cls}"><span class="dot"></span>${txt}</div>`;
+
+  bar.innerHTML = html;
+}
+
+function switchDevice(deviceId) {
+  const d = devices.find(d => d.id === deviceId);
+  if (d && d.host !== location.host) {
+    location.href = `https://${d.host}/`;
+  }
+}
+
+function openDefault(cli) {
+  const s = allSessions.find(s => s.cli === cli && s.default);
+  if (s) switchTo(s.id);
+}
+
+function switchTo(sessionId) {
+  const s = allSessions.find(s => s.id === sessionId);
+  if (!s) return;
+  const termArea = document.getElementById('term-area');
+  let frame = document.getElementById('frame-' + sessionId);
+  if (!frame) {
+    frame = document.createElement('iframe');
+    frame.className = 'term-frame';
+    frame.id = 'frame-' + sessionId;
+    frame.src = s.path + '/';
+    termArea.appendChild(frame);
+  }
+  document.querySelectorAll('.term-frame').forEach(f => f.classList.remove('active'));
+  frame.classList.add('active');
+  document.getElementById('empty-state').classList.add('hidden');
+  document.getElementById('bottombar').classList.add('show');
+  activeSession = sessionId;
+  renderTopbar();
+}
+
+function showModal() { document.getElementById('modal').classList.add('show'); }
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+async function createNew(cli) {
+  closeModal();
+  try {
+    const r = await fetch('/api/session/create', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cli }),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await loadSessions();
+      renderTopbar();
+      switchTo(data.session.id);
+    }
+  } catch {}
+}
+
+async function destroySession(sessionId) {
+  try {
+    await fetch('/api/session/' + sessionId, { method: 'DELETE' });
+    const frame = document.getElementById('frame-' + sessionId);
+    if (frame) frame.remove();
+    await loadSessions();
+    if (activeSession === sessionId) {
+      activeSession = allSessions.length > 0 ? allSessions[0].id : null;
+      if (activeSession) switchTo(activeSession);
+    }
+    renderTopbar();
+  } catch {}
+}
+
+// 按键发送
+const KEYS = { 'ctrl-c': '\x03', 'enter': '\r', 'tab': '\t', 'escape': '\x1b', 'up': '\x1b[A', 'down': '\x1b[B', 'ctrl-l': '\x0c', 'ctrl-z': '\x1a', 'y-enter': 'y\r' };
+function getActiveTmuxSession() { if (!activeSession) return null; return activeSession; }
+async function sendToTerminal(keys) {
+  const session = getActiveTmuxSession();
+  if (!session) return;
+  try { await fetch('/api/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session, keys }) }); } catch {}
+}
+function sendKey(name) { sendToTerminal(KEYS[name] || name); }
+function sendCommand() {
+  const input = document.getElementById('cmd-input');
+  const cmd = input.value;
+  if (!cmd || !activeSession) return;
+  sendToTerminal(cmd).then(() => sendToTerminal('\r'));
+  input.value = '';
+}
+
+// 文件上传处理
+async function handleFiles(files) {
+  if (!files.length || !activeSession) return;
+  const paths = [];
+  for (const file of files) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('session', activeSession);
+    try {
+      const r = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await r.json();
+      if (data.ok) {
+        paths.push(data.path);
+      }
+    } catch (e) {
+      console.error('Upload failed:', e);
+    }
+  }
+  document.getElementById('file-input').value = '';
+  if (paths.length) {
+    const input = document.getElementById('cmd-input');
+    input.value = paths.join(' ');
+    input.focus();
+    showToast(`已上传 ${paths.length} 个文件`);
+  }
+}
+
+// Toast 提示
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:#9ece6a;color:#1a1b26;padding:8px 20px;border-radius:20px;font-size:0.82rem;z-index:300;opacity:0;transition:opacity 0.3s;pointer-events:none;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(() => { t.style.opacity = '0'; }, 2000);
+}
+
+init();
+</script>
+</body>
+</html>

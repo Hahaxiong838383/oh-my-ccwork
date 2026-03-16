@@ -46,11 +46,20 @@ fi
 
 NODE_ID=$(cat "$NODE_ID_FILE")
 
+# 读取 node_secret（每次 hello 后更新）
+NODE_SECRET_FILE="$ASSETS_DIR/.node_secret"
+AUTH_HEADER=""
+if [ -f "$NODE_SECRET_FILE" ]; then
+    NODE_SECRET=$(cat "$NODE_SECRET_FILE")
+    AUTH_HEADER="-H \"Authorization: Bearer $NODE_SECRET\""
+fi
+
 # 发送心跳
 echo "$(date): 发送心跳，node_id: $NODE_ID" >> "$LOG_FILE"
 
 HEARTBEAT_RESPONSE=$(curl -s -X POST https://evomap.ai/a2a/heartbeat \
     -H "Content-Type: application/json" \
+    -H "Authorization: Bearer ${NODE_SECRET:-}" \
     -d "{
         \"node_id\": \"$NODE_ID\",
         \"worker_enabled\": true,

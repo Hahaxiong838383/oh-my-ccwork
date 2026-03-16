@@ -4,6 +4,16 @@
 
 ---
 
+## 第零步：VIP 人物扫描（最高优先级）
+
+在开始常规分析前，先扫描所有源，检查是否有以下人物/组织的动态：
+
+**Ilya Sutskever / SSI (Safe Superintelligence)** · **李飞飞 / World Labs** · **杨立昆 / LeCun** · **辛顿 / Hinton** · **本吉奥 / Bengio** · **哈萨比斯 / Hassabis / DeepMind**
+
+命中任何一个 → 自动标记为 `🔴 VIP`，直接进入简报头条位置，不受常规筛选规则过滤。
+
+---
+
 ## 第一步：实体提取
 
 从每份报告中提取四类实体：

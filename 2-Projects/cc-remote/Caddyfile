@@ -1,0 +1,61 @@
+:8443 {
+	# ============ mycc 后端（不需要 Basic Auth）============
+	# mycc 有自己的认证体系（pairCode/authToken）
+	handle /health {
+		reverse_proxy localhost:18080
+	}
+	handle_path /mycc/* {
+		reverse_proxy localhost:18080
+	}
+
+	# ============ cc-remote 终端（需要 Basic Auth）============
+	basic_auth /claude/* {
+		admin HASH_PLACEHOLDER
+	}
+	basic_auth /codex/* {
+		admin HASH_PLACEHOLDER
+	}
+	basic_auth /gemini/* {
+		admin HASH_PLACEHOLDER
+	}
+	basic_auth /api/* {
+		admin HASH_PLACEHOLDER
+	}
+	basic_auth / {
+		admin HASH_PLACEHOLDER
+	}
+	basic_auth /panel/* {
+		admin HASH_PLACEHOLDER
+	}
+
+	# 管理面板
+	handle / {
+		root * /Users/rayman.chen/mycc/2-Projects/cc-remote/panel
+		file_server
+	}
+	handle /panel/* {
+		root * /Users/rayman.chen/mycc/2-Projects/cc-remote/panel
+		file_server
+	}
+
+	# 按键注入 API
+	handle /api/* {
+		reverse_proxy localhost:7100
+	}
+
+	# ttyd 实例反代
+	handle /claude/* {
+		reverse_proxy localhost:7001
+	}
+	handle /codex/* {
+		reverse_proxy localhost:7002
+	}
+	handle /gemini/* {
+		reverse_proxy localhost:7003
+	}
+
+	# 其他路径 → mycc 后端（兜底）
+	handle /* {
+		reverse_proxy localhost:18080
+	}
+}

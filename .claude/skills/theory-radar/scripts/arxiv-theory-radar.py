@@ -73,6 +73,24 @@ QUERIES = [
     },
 ]
 
+# ── 专家追踪列表 ──────────────────────────────────────────────────────────────
+# 按作者搜索（arXiv au: 字段），不受 RELEVANCE_KEYWORDS 过滤
+EXPERT_QUERIES = [
+    {
+        "label": "👤 专家追踪",
+        "authors": [
+            ("Fei-Fei Li", "李飞飞"),
+            ("Yann LeCun", "杨立昆"),
+            ("Geoffrey Hinton", "辛顿"),
+            ("Yoshua Bengio", "本吉奥"),
+            ("Demis Hassabis", "哈萨比斯"),
+            ("Ilya Sutskever", "Ilya"),
+        ],
+        "days": 180,  # 回溯 6 个月
+        "max_per_author": 5,
+    },
+]
+
 # 关键词过滤：abstract 中必须包含至少一个（提升相关性）
 RELEVANCE_KEYWORDS = [
     "cognitive", "cognition", "neuroscience", "neural", "brain", "memory",
@@ -166,6 +184,78 @@ def fetch_arxiv(query: str, max_results: int = 5) -> list:
     return papers
 
 
+def fetch_arxiv_by_author(author_en: str, author_cn: str, max_results: int = 5, days: int = 180) -> list:
+    """按作者名查询 arXiv，返回最近 N 天内的论文列表（不受关键词过滤）"""
+    query = f'au:"{author_en}"'
+    params = {
+        "search_query": query,
+        "sortBy": "submittedDate",
+        "sortOrder": "descending",
+        "max_results": max_results * 3,
+    }
+    url = f"{ARXIV_API}?{urllib.parse.urlencode(params)}"
+    req = urllib.request.Request(url, headers={"User-Agent": "cc-theory-radar/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            xml_text = resp.read().decode("utf-8")
+    except Exception as e:
+        print(f"[WARN] arXiv author fetch failed ({author_en}): {e}", file=sys.stderr)
+        return []
+
+    root = ET.fromstring(xml_text)
+    papers = []
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+    for entry in root.findall("atom:entry", NS):
+        title_el = entry.find("atom:title", NS)
+        summary_el = entry.find("atom:summary", NS)
+        published_el = entry.find("atom:published", NS)
+        id_el = entry.find("atom:id", NS)
+
+        if not all([title_el is not None, summary_el is not None, published_el is not None, id_el is not None]):
+            continue
+
+        title = title_el.text.strip().replace("\n", " ")
+        abstract = summary_el.text.strip().replace("\n", " ")
+        published_str = published_el.text.strip()
+        arxiv_url = id_el.text.strip()
+        arxiv_id = arxiv_url.split("/abs/")[-1] if "/abs/" in arxiv_url else arxiv_url
+
+        try:
+            published_dt = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
+            if published_dt < cutoff:
+                continue
+        except ValueError:
+            pass
+
+        authors = [
+            a.find("atom:name", NS).text
+            for a in entry.findall("atom:author", NS)
+            if a.find("atom:name", NS) is not None
+        ]
+
+        categories = [
+            c.get("term", "")
+            for c in entry.findall("atom:category", NS)
+        ]
+
+        papers.append({
+            "title": title,
+            "authors": authors[:5],
+            "abstract": abstract[:600],
+            "arxiv_id": arxiv_id,
+            "url": f"https://arxiv.org/abs/{arxiv_id}",
+            "published": published_str[:10],
+            "categories": categories[:3],
+            "tracked_expert": f"{author_cn} ({author_en})",
+        })
+
+        if len(papers) >= max_results:
+            break
+
+    return papers
+
+
 def deduplicate(all_papers: list) -> list:
     """按 arxiv_id 去重"""
     seen = set()
@@ -198,6 +288,26 @@ def main():
         })
         all_papers_flat.extend(papers)
         print(f"[INFO]   找到 {len(papers)} 篇", file=sys.stderr)
+
+    # ── 专家追踪 ──────────────────────────────────────────────────────────────
+    for expert_section in EXPERT_QUERIES:
+        for author_en, author_cn in expert_section["authors"]:
+            print(f"[INFO] 专家追踪: {author_cn} ({author_en})", file=sys.stderr)
+            papers = fetch_arxiv_by_author(
+                author_en, author_cn,
+                max_results=expert_section["max_per_author"],
+                days=expert_section["days"],
+            )
+            time.sleep(3)
+            if papers:
+                result["sections"].append({
+                    "label": f"👤 {author_cn}",
+                    "papers": papers,
+                })
+                all_papers_flat.extend(papers)
+                print(f"[INFO]   找到 {len(papers)} 篇", file=sys.stderr)
+            else:
+                print(f"[INFO]   无近期论文", file=sys.stderr)
 
     # 去重后计算总数
     unique_papers = deduplicate(all_papers_flat)

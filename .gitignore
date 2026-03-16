@@ -145,3 +145,38 @@ package-lock.json
 
 # EvoMap 调试文件
 .omc/
+
+# ====================================
+# 敏感文件和本地配置（绝对不能提交）
+# ====================================
+.gemini/settings.json
+.claude/skills/evomap-assets/.node_secret
+.uploads/
+
+# ====================================
+# 系统/编辑器文件
+# ====================================
+.DS_Store
+**/.DS_Store
+.obsidian/
+.vscode/
+
+# ====================================
+# 外部独立仓库（有自己的 git）
+# ====================================
+ghost-os/
+open-feishu-mcp-server/
+
+# ====================================
+# 临时脚本和二进制
+# ====================================
+download_video.sh
+export-myaiopc.sh
+video.mp4
+*.png
+!2-Projects/cc-remote/panel/*.png
+
+# ====================================
+# cc-remote 运行时
+# ====================================
+2-Projects/cc-remote/cc-remote.plist

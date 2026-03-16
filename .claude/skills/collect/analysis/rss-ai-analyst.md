@@ -28,6 +28,21 @@
 - 融资、并购、监管政策
 - 市场格局变化
 
+### 🔴 高优先级人物追踪
+
+以下人物/组织的**任何动态**都是最高优先级，一旦出现必须入选精选：
+
+| 人物 | 关键词 | 关注原因 |
+|------|--------|---------|
+| Ilya Sutskever | Ilya、SSI、Safe Superintelligence | 离开 OpenAI 后创办 SSI，极度低调，任何公开动向都有重大信号价值 |
+| 李飞飞 (Fei-Fei Li) | Fei-Fei Li、World Labs | 空间智能、具身 AI 方向领军人物 |
+| 杨立昆 (Yann LeCun) | LeCun、JEPA | JEPA 架构倡导者，Meta AI 首席科学家 |
+| 辛顿 (Geoffrey Hinton) | Hinton | AI 安全、深度学习之父 |
+| 本吉奥 (Yoshua Bengio) | Bengio | AI 安全、GFlowNet 创始人 |
+| 哈萨比斯 (Demis Hassabis) | Hassabis、DeepMind | AGI 路线、AlphaFold/Gemini 架构师 |
+
+匹配到上述人物时，在条目前加 `🔴` 标记，并在价值点中说明该人物的最新动向。
+
 ## 排除
 
 - 重复的摘要型资讯（同一事件多源重复）

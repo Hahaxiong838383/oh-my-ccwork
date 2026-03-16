@@ -14,7 +14,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import * as path from "path";
-import { loadSharedContext } from "./context-loader.js";
+import { loadSharedContextLight } from "./context-loader.js";
 
 // ============================================================
 // 第1层：Session Summary（内存 + 文件持久化）
@@ -161,7 +161,34 @@ const MAX_FACTS_PER_CHAT = 15;
 const perChatFacts = new Map<string, string[]>();
 
 /**
+ * 简易分词（中英文混合，用于 Jaccard 去重）
+ */
+function tokenizeForDedup(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[，。！？、；：""''（）【】《》\-\[\]\(\)\/\\|@#\$%\^&\*=\+`~]/g, " ")
+      .split(/\s+/)
+      .filter((t) => t.length >= 2),
+  );
+}
+
+/**
+ * Jaccard 相似度（0~1）
+ */
+function jaccardSim(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let intersection = 0;
+  Array.from(a).forEach((t) => {
+    if (b.has(t)) intersection++;
+  });
+  const union = a.size + b.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+
+/**
  * 添加 per-chat 事实（由 auto-capture 回调或手动添加）
+ * v2：Jaccard 去重（阈值 0.5），替代简单 string.includes
  */
 export function addChatFact(chatId: string, fact: string, cwd: string): void {
   if (!perChatFacts.has(chatId)) {
@@ -169,11 +196,10 @@ export function addChatFact(chatId: string, fact: string, cwd: string): void {
   }
   const facts = perChatFacts.get(chatId)!;
 
-  // 去重：如果已有相似事实则跳过
-  const normalized = fact.trim().toLowerCase();
-  if (facts.some(f => f.toLowerCase().includes(normalized) || normalized.includes(f.toLowerCase()))) {
-    return;
-  }
+  // Jaccard 去重：与已有事实相似度 > 0.5 则视为重复
+  const newTokens = tokenizeForDedup(fact);
+  const isDuplicate = facts.some((f) => jaccardSim(newTokens, tokenizeForDedup(f)) > 0.5);
+  if (isDuplicate) return;
 
   facts.push(fact.trim());
   if (facts.length > MAX_FACTS_PER_CHAT) {
@@ -270,10 +296,9 @@ export function buildCrossSessionContext(
     }
   }
 
-  // 第2层：共享记忆（context-loader）
-  const sharedCtx = loadSharedContext(message, cwd);
+  // 第2层：共享记忆（轻量版，不含 RECENT_EVENTS，避免历史事件被当成当前任务）
+  const sharedCtx = loadSharedContextLight(message, cwd);
   if (sharedCtx) {
-    // 已有截断逻辑（3000 chars），这里二次截断确保预算
     const trimmed = sharedCtx.length > BUDGET.sharedContext
       ? sharedCtx.substring(0, BUDGET.sharedContext) + "\n...(截断)"
       : sharedCtx;

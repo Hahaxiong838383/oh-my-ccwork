@@ -30,7 +30,11 @@ const AUTH_FAIL_THRESHOLD = 3; // 连续失败 N 次才报警（防止单次网�
 const FEISHU_MCP_DIR = join(homedir(), ".feishu-mcp");
 const FEISHU_MCP_TOKEN_FILE = join(FEISHU_MCP_DIR, "tokens.json");
 const FEISHU_MCP_TOKEN_BACKUP = join(FEISHU_MCP_DIR, "tokens.backup.json");
+// 第二处备份（异目录，防止 ~/.feishu-mcp/ 整目录丢失）
+const FEISHU_MCP_TOKEN_BACKUP2 = join(homedir(), ".claude", "feishu-token.backup.json");
 const FEISHU_MCP_TOKEN_URL = "https://open.feishu.cn/open-apis/authen/v2/oauth/token";
+// 重授权脚本的绝对路径（用于告警消息）
+const FEISHU_REAUTH_SCRIPT = join(homedir(), "mycc", ".claude", "skills", "mycc", "scripts", "scripts", "feishu-oauth-auth.mjs");
 
 export interface HealthMonitorConfig {
   /** 健康检查间隔（毫秒） */
@@ -339,18 +343,26 @@ export class HealthMonitor {
       if (!existsSync(FEISHU_MCP_TOKEN_FILE)) {
         console.warn(chalk.yellow("[HealthMonitor] ⚠️ 飞书 MCP token 文件丢失"));
 
-        // 尝试从备份恢复
-        if (existsSync(FEISHU_MCP_TOKEN_BACKUP)) {
-          console.log(chalk.cyan("[HealthMonitor] 从备份恢复 token..."));
+        // 尝试从备份恢复（先尝试主备份，再尝试异目录备份）
+        const backupToRestore = existsSync(FEISHU_MCP_TOKEN_BACKUP)
+          ? FEISHU_MCP_TOKEN_BACKUP
+          : existsSync(FEISHU_MCP_TOKEN_BACKUP2)
+          ? FEISHU_MCP_TOKEN_BACKUP2
+          : null;
+
+        if (backupToRestore) {
+          console.log(chalk.cyan(`[HealthMonitor] 从备份恢复 token (${backupToRestore})...`));
           mkdirSync(FEISHU_MCP_DIR, { recursive: true });
-          copyFileSync(FEISHU_MCP_TOKEN_BACKUP, FEISHU_MCP_TOKEN_FILE);
+          copyFileSync(backupToRestore, FEISHU_MCP_TOKEN_FILE);
           console.log(chalk.green("[HealthMonitor] ✓ token 已从备份恢复"));
         } else {
           console.error(chalk.red("[HealthMonitor] ✗ 无备份可恢复，飞书 MCP 需要手动重新授权"));
-          console.error(chalk.red("[HealthMonitor]   运行: node /tmp/feishu-reauth.mjs"));
+          console.error(chalk.red(`[HealthMonitor]   运行: node ${FEISHU_REAUTH_SCRIPT}`));
           this.feishuMcpOk = false;
           // 通过飞书通道告警
-          this.httpServer && (this.httpServer as any).broadcastToFeishu?.("⚠️ 飞书 MCP token 丢失，三机器人群聊无法调用飞书工具，需在终端手动重新授权");
+          this.httpServer && (this.httpServer as any).broadcastToFeishu?.(
+            `⚠️ 飞书 MCP token 丢失，三机器人群聊无法调用飞书工具，需在终端手动重新授权\n运行: node ${FEISHU_REAUTH_SCRIPT}`
+          );
           return;
         }
       }
@@ -478,15 +490,21 @@ export class HealthMonitor {
   }
 
   /**
-   * 备份飞书 MCP token 文件
+   * 备份飞书 MCP token 文件（主备份 + 异目录第二备份）
    */
   private backupFeishuMcpToken(): void {
+    if (!existsSync(FEISHU_MCP_TOKEN_FILE)) return;
     try {
-      if (existsSync(FEISHU_MCP_TOKEN_FILE)) {
-        copyFileSync(FEISHU_MCP_TOKEN_FILE, FEISHU_MCP_TOKEN_BACKUP);
-      }
+      copyFileSync(FEISHU_MCP_TOKEN_FILE, FEISHU_MCP_TOKEN_BACKUP);
     } catch {
       // 备份失败不影响主流程
+    }
+    try {
+      // 第二处备份：~/.claude/ 目录，与主目录隔离
+      mkdirSync(join(homedir(), ".claude"), { recursive: true });
+      copyFileSync(FEISHU_MCP_TOKEN_FILE, FEISHU_MCP_TOKEN_BACKUP2);
+    } catch {
+      // 第二处备份失败不影响主流程
     }
   }
 

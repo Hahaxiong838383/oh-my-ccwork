@@ -25,9 +25,10 @@ import { SessionOwnership } from "./session-ownership.js";
 import { classifyMessage, taskQueueManager, autoRouteEngine } from "./task-queue.js";
 import { triggerAutoCapture } from "./services/auto-capture.js";
 import { saveChatAndExtractMemory } from "./services/chat-history.js";
-import { loadSharedContext } from "./services/context-loader.js";
+import { loadSharedContext, loadSharedContextLight } from "./services/context-loader.js";
 import { buildCrossSessionContext, recordConversationTurn, onSessionEnd, extractAndStoreFacts, clearChatMemory } from "./services/chat-memory.js";
 import { preprocessMultimodal } from "./services/multimodal-preprocessor.js";
+import { fetchUrlContent } from "./services/url-content-fetcher.js";
 
 const PORT = process.env.PORT || 18080;
 
@@ -496,10 +497,8 @@ export class HttpServer {
     if (!ctx.engine) {
       const msgType = classifyMessage(trimmedMessage);
       if (msgType === "task") {
-        const pending = taskQueueManager.getPendingCount(ctx.channelId);
-        const busy = taskQueueManager.isChannelBusy(ctx.channelId);
-        const queueTip = pending > 0 ? `，队列中还有 ${pending} 个任务` : "";
-        const busyTip = busy ? "，当前有任务正在执行" : "";
+        const queueInfo = taskQueueManager.getQueueInfo(ctx.channelId);
+        const pending = queueInfo.pending;
 
         // 半自动路由：根据任务内容自动选择最合适的引擎
         const routedEngine = autoRouteEngine(trimmedMessage);
@@ -508,14 +507,27 @@ export class HttpServer {
           console.log(`[CC][${ctx.channelId}] 半自动路由: "${trimmedMessage.substring(0, 40)}..." → ${routedEngine}`);
         }
 
+        // 构建队列状态提示（包含正在执行的任务信息，避免用户困惑）
+        let queueTip = "";
+        if (queueInfo.running && queueInfo.currentTask) {
+          const runningPreview = queueInfo.currentTask.message.substring(0, 30);
+          queueTip = `\n⏳ 前方有任务正在执行（${queueInfo.currentTask.engine}: ${runningPreview}...）`;
+          if (pending > 0) {
+            queueTip += `，还有 ${pending} 个排队中`;
+          }
+        }
+
         // 快速 ack
-        await this.sendToChannel(ctx, `📋 任务已接收${busyTip}${queueTip}${engineTip}，后台处理中，完成后通知你。`);
+        await this.sendToChannel(ctx, `📋 任务已接收${engineTip}，后台处理中，完成后通知你。${queueTip}`);
 
         // 冻结 ctx 快照（避免异步执行期间 replyChatId 被后续消息覆盖）
         const frozenCtx = { ...ctx };
 
-        taskQueueManager.submit(ctx.channelId, trimmedMessage, async (_task, signal) => {
-          if (routedEngine === "codex" || routedEngine === "gemini") {
+        taskQueueManager.submit(ctx.channelId, trimmedMessage, routedEngine, async (_task, signal) => {
+          if (routedEngine === "pipeline") {
+            // 管道模式：Gemini 分析 → Codex 写入飞书
+            await this.runPipeline(frozenCtx, contextPrefix + trimmedMessage, signal);
+          } else if (routedEngine === "codex" || routedEngine === "gemini") {
             // 路由到 CLI 引擎（继承 processCliEngineMessage 的完整逻辑）
             const routedCtx = { ...frozenCtx, engine: routedEngine as "codex" | "gemini" };
             await this.processCliEngineMessage(routedCtx, contextPrefix + trimmedMessage);
@@ -570,13 +582,18 @@ export class HttpServer {
     }
     ctx.chatSessionLastActive.set(chatId, Date.now());
 
-    // 跨 session 记忆注入（三层：摘要 + 共享记忆 + per-chat facts）
+    // 跨 session 记忆注入策略（对齐 Claude Code 终端体验）：
+    // - 新 session：注入完整跨会话记忆（摘要 + 共享记忆 + per-chat facts）
+    // - 复用 session：不注入（Claude SDK 会话已有完整对话历史，与终端行为一致）
+    // 这样避免每条消息都前缀大量上下文，让模型专注于当前任务
     let crossSessionContext = "";
-    if (!ctx.engine) {
+    if (!ctx.engine && isNewSession) {
       crossSessionContext = buildCrossSessionContext(chatId, trimmedMessage, this.cwd, isNewSession);
       if (crossSessionContext) {
-        console.log(`[CC][${ctx.channelId}] 注入跨 session 记忆 (${crossSessionContext.length} chars, isNew=${isNewSession})`);
+        console.log(`[CC][${ctx.channelId}] 新会话：注入跨 session 记忆 (${crossSessionContext.length} chars)`);
       }
+    } else if (!ctx.engine && !isNewSession) {
+      console.log(`[CC][${ctx.channelId}] 复用会话：跳过记忆注入（对齐终端体验）`);
     }
 
     if (!effectiveSessionId) {
@@ -842,6 +859,92 @@ export class HttpServer {
   }
 
   /**
+   * 管道模式：Gemini 分析 → Codex 写入飞书
+   *
+   * 分摊 cc 负担：
+   * - Gemini 负责内容分析/生成（多模态能力强，token 便宜）
+   * - Codex 负责飞书 MCP 写入（有完整 MCP 权限）
+   * - cc 只做编排，不消耗 token
+   */
+  private async runPipeline(ctx: ChannelContext, message: string, signal: AbortSignal): Promise<void> {
+    const startTime = Date.now();
+    console.log(`[Pipeline][${ctx.channelId}] 启动管道模式: "${message.substring(0, 60)}..."`);
+
+    try {
+      // === Step 1: Gemini 分析 ===
+      await this.sendToChannel(ctx, "🔬 Step 1/2: Gemini 正在分析内容...");
+
+      // 多模态预处理：检测飞书文档引用，提取媒体文件
+      let geminiPrompt = message;
+      let mediaBuffers: Array<{ data: Buffer; mimeType: string }> | undefined;
+      try {
+        const preprocessed = await preprocessMultimodal(message);
+        if (preprocessed.hasDocRef && preprocessed.mediaBuffers.length > 0) {
+          mediaBuffers = preprocessed.mediaBuffers.map(m => ({ data: m.data, mimeType: m.mimeType }));
+          geminiPrompt = preprocessed.cleanedPrompt;
+          console.log(`[Pipeline][${ctx.channelId}] 多模态预处理: ${mediaBuffers.length} 个媒体文件`);
+        }
+      } catch (err: any) {
+        console.error(`[Pipeline][${ctx.channelId}] 多模态预处理失败（降级为纯文本）:`, err.message);
+      }
+
+      // 给 Gemini 的 prompt：只做分析，输出结构化内容
+      const analysisPrompt = `${geminiPrompt}\n\n[系统指令] 你是内容分析助手。请根据以上内容进行深度分析和总结。输出结构化的分析结果（Markdown 格式），包含关键要点、核心观点、详细内容。不需要写入任何文档，只输出分析内容本身。`;
+
+      if (signal.aborted) return;
+
+      const geminiResult = await runCliEngine("gemini", analysisPrompt, this.cwd, {
+        timeout: 300_000,
+        signal,
+        mediaBuffers,
+      });
+
+      if (signal.aborted) return;
+
+      if (geminiResult.error && !geminiResult.output) {
+        await this.sendToChannel(ctx, `❌ Gemini 分析失败: ${geminiResult.error.substring(0, 100)}`);
+        return;
+      }
+
+      const analysisContent = geminiResult.output.trim();
+      const step1Elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`[Pipeline][${ctx.channelId}] Step 1 完成 (${step1Elapsed}s), 分析结果: ${analysisContent.length} 字符`);
+
+      // === Step 2: Codex 写入飞书 ===
+      await this.sendToChannel(ctx, `📝 Step 2/2: Codex 正在写入飞书文档...（分析内容 ${analysisContent.length} 字符）`);
+
+      // 给 Codex 的 prompt：拿到分析结果，执行写入操作
+      const writePrompt = `${message}\n\n[Gemini 分析结果 - 请将以下内容写入飞书文档]\n\n${analysisContent}\n\n[系统指令] 以上是 Gemini 对内容的分析结果。请根据用户的原始指令，使用飞书 MCP 工具（open-feishu-mcp）将分析结果写入对应的飞书文档中。写入完成后请确认。`;
+
+      if (signal.aborted) return;
+
+      const codexResult = await runCliEngine("codex", writePrompt, this.cwd, {
+        timeout: 300_000,
+        signal,
+      });
+
+      if (signal.aborted) return;
+
+      const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+      if (codexResult.error && !codexResult.output) {
+        await this.sendToChannel(ctx, `⚠️ 管道完成（部分）(${totalElapsed}s)\n\nGemini 分析成功，但 Codex 写入失败: ${codexResult.error.substring(0, 100)}\n\n分析结果已生成（${analysisContent.length} 字符），可手动重试写入。`);
+        return;
+      }
+
+      // 拼接最终结果
+      const finalOutput = codexResult.output?.trim() || "写入完成";
+      await this.sendToChannel(ctx, `✅ 管道任务完成 (${totalElapsed}s)\n\n**Step 1 - Gemini 分析**: ${analysisContent.length} 字符 (${step1Elapsed}s)\n**Step 2 - Codex 写入**: ${finalOutput.substring(0, 500)}`);
+
+      console.log(`[Pipeline][${ctx.channelId}] 管道完成 (${totalElapsed}s)`);
+    } catch (err: any) {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.error(`[Pipeline][${ctx.channelId}] 管道异常 (${elapsed}s):`, err.message);
+      await this.sendToChannel(ctx, `❌ 管道任务异常 (${elapsed}s): ${err.message?.substring(0, 200)}`);
+    }
+  }
+
+  /**
    * CLI 引擎消息处理（codex / gemini）
    * 无 session 概念，每次调用都是独立的子进程。
    */
@@ -867,6 +970,9 @@ export class HttpServer {
       cardMessageId = await feishuChannel.sendProgressCard(card, ctx.replyChatId);
     }
 
+    // 心跳 timer 声明在 try 外面，确保 finally 能访问
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
     try {
       // SOP 自动注入：识别任务关键词，注入对应的标准操作流程
       let sopPrefix = "";
@@ -891,13 +997,64 @@ export class HttpServer {
       const engineLabel = engine === "codex" ? "codex（OpenAI Codex）" : "gemini（Google Gemini）";
       const now = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }).replace(/\//g, "-").replace(",", "");
       const signatureRule = `\n\n[系统规则] 完成任务后，在回复最末尾必须附上署名，格式严格如下（不得省略）：\n---\n署名：${engineLabel} | ${now}`;
-      // 动态注入共享记忆上下文（RECENT_EVENTS + keyword 匹配的 memory-items）
-      const sharedContext = loadSharedContext(message, this.cwd);
+      // 飞书群消息安全规则：禁止自主向三机器人群以外的群发消息
+      const groupSafetyRule = `\n\n[安全规则 - 强制] 你可以自由地向三机器人协作群（chat_id: oc_f4a09ffbd709b39c917b927ecb9d96b6）发送消息。但向任何其他飞书群发送消息前，必须先回复用户确认，说明要发到哪个群、发什么内容，获得用户同意后才可执行。未经用户同意，绝对不能向其他群发消息。`;
+      // CLI 引擎用轻量上下文（不含 RECENT_EVENTS，避免历史事件被当成当前任务）
+      const sharedContext = loadSharedContextLight(message, this.cwd);
 
       const channelAbort = this.getChannelAbort(ctx.channelId);
 
+      // 阶段性进展心跳：每 2 分钟更新进度卡片，让用户知道任务还在跑
+      const HEARTBEAT_INTERVAL_MS = 2 * 60 * 1000; // 2 分钟
+      if (cardMessageId && typeof feishuChannel.updateProgressCard === "function") {
+        heartbeatTimer = setInterval(async () => {
+          const elapsedMin = ((Date.now() - startTime) / 60000).toFixed(1);
+          card.footer = `⏳ 已执行 ${elapsedMin} 分钟，仍在处理中...`;
+          try {
+            await feishuChannel.updateProgressCard(cardMessageId!, card);
+          } catch {
+            // 静默失败，不影响主流程
+          }
+        }, HEARTBEAT_INTERVAL_MS);
+      }
+
+      // Gemini 工具使用提示：让 Gemini 知道它有飞书 MCP 工具可用
+      const toolHint = engine === "gemini"
+        ? `\n\n[可用工具] 你已接入飞书 MCP 工具，可以直接调用以下能力（不要说"我没有工具"，直接调用即可）：
+- create_document: 创建飞书文档
+- get_document / get_document_raw_content: 读取飞书文档内容
+- convert_content_to_blocks + create_blocks: 向文档写入格式化内容
+- list_bitable_records / create_bitable_record: 查询/写入多维表格
+- list_bitable_fields / list_bitable_tables: 查看多维表格结构
+- send_message: 发送飞书消息
+- feishu_openapi_call: 调用任意飞书 OpenAPI
+- list_chats: 列出群聊列表
+当任务涉及飞书文档操作时，必须使用这些工具完成，不要只回复文字说明。\n`
+        : "";
+
+      // URL 内容预取：CLI 引擎无法直接访问外部 URL，提前拉取内容注入 prompt
+      let enrichedMessage = message;
+      let urlMediaBuffers: Array<{ data: Buffer; mimeType: string }> | undefined;
+      try {
+        const urlResult = await fetchUrlContent(message);
+        if (urlResult.hasContent) {
+          enrichedMessage = urlResult.enrichedPrompt;
+          console.log(
+            `[CC][${ctx.channelId}] URL 预取: ${urlResult.items.length} 个文本 URL` +
+            (urlResult.mediaBuffers?.length ? ` + ${urlResult.mediaBuffers.length} 个 PDF` : "") +
+            `, 类型: ${urlResult.items.map(i => i.type).join(", ")}`
+          );
+          // PDF 文件作为 mediaBuffers 传给 Gemini
+          if (urlResult.mediaBuffers?.length && engine === "gemini") {
+            urlMediaBuffers = urlResult.mediaBuffers.map(m => ({ data: m.data, mimeType: m.mimeType }));
+          }
+        }
+      } catch (err: any) {
+        console.error(`[CC][${ctx.channelId}] URL 预取失败（降级为原始消息）:`, err.message);
+      }
+
       // Gemini 多模态预处理：检测飞书文档引用，提取媒体文件（内存中转，不落盘）
-      let finalPrompt = sharedContext + sopPrefix + message + signatureRule;
+      let finalPrompt = sharedContext + sopPrefix + toolHint + enrichedMessage + groupSafetyRule + signatureRule;
       let mediaBuffers: Array<{ data: Buffer; mimeType: string }> | undefined;
       if (engine === "gemini") {
         console.log(`[CC][${ctx.channelId}] Gemini 预处理开始, message 长度: ${message.length}, 前100字: ${message.substring(0, 100)}`);
@@ -906,7 +1063,7 @@ export class HttpServer {
           console.log(`[CC][${ctx.channelId}] 预处理结果: hasDocRef=${preprocessed.hasDocRef}, mediaCount=${preprocessed.mediaBuffers.length}`);
           if (preprocessed.hasDocRef && preprocessed.mediaBuffers.length > 0) {
             mediaBuffers = preprocessed.mediaBuffers.map(m => ({ data: m.data, mimeType: m.mimeType }));
-            finalPrompt = sharedContext + sopPrefix + preprocessed.cleanedPrompt + signatureRule;
+            finalPrompt = sharedContext + sopPrefix + toolHint + preprocessed.cleanedPrompt + groupSafetyRule + signatureRule;
             console.log(`[CC][${ctx.channelId}] 多模态预处理: ${mediaBuffers.length} 个媒体文件已提取, 总大小: ${mediaBuffers.reduce((s, m) => s + m.data.length, 0) / 1024 / 1024}MB`);
           } else if (preprocessed.hasDocRef) {
             console.log(`[CC][${ctx.channelId}] 检测到文档引用但无媒体文件（可能文档中没有视频/图片）`);
@@ -914,9 +1071,19 @@ export class HttpServer {
         } catch (err: any) {
           console.error(`[CC][${ctx.channelId}] 多模态预处理失败（降级为纯文本）:`, err.message);
         }
+        // 合并 URL 预取的 PDF 和飞书文档提取的媒体
+        if (urlMediaBuffers?.length) {
+          mediaBuffers = [...(mediaBuffers || []), ...urlMediaBuffers];
+          console.log(`[CC][${ctx.channelId}] 合并 URL PDF: 总共 ${mediaBuffers.length} 个媒体文件`);
+        }
       }
 
-      const result = await runCliEngine(engine, finalPrompt, this.cwd, { timeout: adaptiveTimeout, signal: channelAbort.signal, mediaBuffers });
+      const result = await runCliEngine(engine, finalPrompt, this.cwd, {
+        timeout: adaptiveTimeout,
+        signal: channelAbort.signal,
+        mediaBuffers,
+        enableTools: engine === "gemini", // gemini 自动启用 MCP 工具调用
+      });
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
       // 记录执行结果，供自适应超时学习
@@ -985,6 +1152,7 @@ export class HttpServer {
       }
       await this.sendToChannel(ctx, `❌ ${engine} 异常: ${err.message}`);
     } finally {
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
       await ctx.channel.clearTypingIndicator();
     }
   }
@@ -1014,7 +1182,10 @@ export class HttpServer {
     // cc 引擎拿完整上下文 + 任务，codex/gemini 拿共享记忆 + 任务
     const ccMessage = contextPrefix ? contextPrefix + taskMessage : taskMessage;
     const sharedContext = loadSharedContext(taskMessage, this.cwd);
-    const cliMessage = sharedContext + taskMessage;
+    const geminiToolHint = `\n\n[可用工具] 你已接入飞书 MCP 工具，可以直接调用：create_document / get_document_raw_content / create_blocks / list_bitable_records / create_bitable_record / send_message / feishu_openapi_call 等。涉及飞书操作时必须使用工具，不要只回复文字。\n`;
+    const teamGroupSafety = `\n\n[安全规则 - 强制] 你可以自由地向三机器人协作群（chat_id: oc_f4a09ffbd709b39c917b927ecb9d96b6）发送消息。但向任何其他飞书群发送消息前，必须先回复用户确认，获得同意后才可执行。`;
+    const cliMessage = sharedContext + teamGroupSafety + taskMessage;
+    const geminiMessage = sharedContext + geminiToolHint + teamGroupSafety + taskMessage;
 
     const taskPreview = taskMessage.substring(0, 60);
     const startTime = Date.now();
@@ -1094,7 +1265,7 @@ export class HttpServer {
       return v;
     });
 
-    const geminiPromise = runCliEngine("gemini", cliMessage, this.cwd, { timeout: teamTimeout, signal: channelAbort.signal }).then(async (v) => {
+    const geminiPromise = runCliEngine("gemini", geminiMessage, this.cwd, { timeout: teamTimeout, signal: channelAbort.signal, enableTools: true }).then(async (v) => {
       if (v.error || v.timedOut) {
         engineStates[2].status = "error";
         engineStates[2].elapsed = formatElapsed(2);
@@ -1629,10 +1800,13 @@ export class HttpServer {
     console.log(`[CC][${ctx.channelId}] /stop 一键停止`);
     const parts: string[] = [];
 
-    // 1. 中止任务队列
+    // 1. 中止任务队列（返回被中止的任务详情）
     const queueResult = taskQueueManager.abort(ctx.channelId);
     if (queueResult.abortedRunning) {
-      parts.push("已中止正在执行的后台任务");
+      const taskInfo = queueResult.runningTaskEngine && queueResult.runningTaskPreview
+        ? `（${queueResult.runningTaskEngine}: ${queueResult.runningTaskPreview}...）`
+        : "";
+      parts.push(`已中止正在执行的任务${taskInfo}`);
     }
     if (queueResult.cancelledCount > 0) {
       parts.push(`已取消 ${queueResult.cancelledCount} 个排队任务`);

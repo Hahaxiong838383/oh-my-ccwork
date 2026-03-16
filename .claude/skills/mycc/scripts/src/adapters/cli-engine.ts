@@ -8,10 +8,15 @@
  * - 2026-03-09: codex 用 spawn + stdin 传 prompt（避免超长命令行参数）
  * - 2026-03-09: codex 加 --ephemeral 跳过 session 持久化
  * - 2026-03-12: gemini 从 CLI 切换到 API（支持多模态，分散 cc 负载）
+ * - 2026-03-15: 接入 RunManager（ACP Run 生命周期 + 并发控制）
  */
 
 import { spawn } from "child_process";
 import { runGeminiApi, type MediaBuffer } from "./gemini-api.js";
+import {
+  createRun, startRun, completeRun, failRun,
+  canAcceptRun, type Run,
+} from "../services/run-manager.js";
 
 export type EngineType = "codex" | "gemini";
 export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
@@ -28,6 +33,13 @@ interface CliEngineOptions {
   signal?: AbortSignal; // 外部中止信号
   filePaths?: string[]; // 多模态本地文件路径（仅 gemini）
   mediaBuffers?: MediaBuffer[]; // 内存中的媒体数据（飞书文档下载，不落盘）
+  enableTools?: boolean; // 启用 MCP 工具调用（仅 gemini，function calling）
+  source?: string; // Run 来源标识（飞书 chatId / scheduler / CLI）
+}
+
+export interface CliEngineResultWithRun extends CliEngineResult {
+  /** RunManager 分配的 Run 对象（可用于状态查询） */
+  run: Run;
 }
 
 /**
@@ -121,16 +133,53 @@ function runCodex(prompt: string, cwd: string, opts?: CliEngineOptions): Promise
 
 /**
  * Execute a prompt via CLI engine (codex or gemini).
+ *
+ * 自动接入 RunManager：
+ * - 并发控制（每引擎最多 2 个并发 Run）
+ * - Run 生命周期跟踪（created → in-progress → completed/failed）
+ * - 超时、取消、错误 全部归口到 Run 状态
  */
-export function runCliEngine(engine: EngineType, prompt: string, cwd: string, opts?: CliEngineOptions): Promise<CliEngineResult> {
-  if (engine === "codex") {
-    return runCodex(prompt, cwd, opts);
+export async function runCliEngine(
+  engine: EngineType,
+  prompt: string,
+  cwd: string,
+  opts?: CliEngineOptions,
+): Promise<CliEngineResultWithRun> {
+  // 并发控制
+  if (!canAcceptRun(engine)) {
+    const run = createRun(engine, prompt, opts?.source);
+    failRun(run.id, "CONCURRENCY_LIMIT");
+    return {
+      output: "",
+      error: `[RunManager] ${engine} 已达并发上限，请稍后重试`,
+      run,
+    };
   }
-  // gemini: 直接调 API（支持多模态，含内存中的媒体数据）
-  return runGeminiApi(prompt, {
-    timeout: opts?.timeout,
-    signal: opts?.signal,
-    filePaths: opts?.filePaths,
-    mediaBuffers: opts?.mediaBuffers,
-  });
+
+  // 创建 & 启动 Run
+  const run = createRun(engine, prompt, opts?.source);
+  startRun(run.id);
+
+  // 执行引擎
+  let result: CliEngineResult;
+  if (engine === "codex") {
+    result = await runCodex(prompt, cwd, opts);
+  } else {
+    result = await runGeminiApi(prompt, {
+      timeout: opts?.timeout,
+      signal: opts?.signal,
+      filePaths: opts?.filePaths,
+      mediaBuffers: opts?.mediaBuffers,
+      enableTools: opts?.enableTools,
+    });
+  }
+
+  // 更新 Run 状态
+  if (result.error) {
+    failRun(run.id, result.error, result.timedOut);
+  } else {
+    completeRun(run.id, result.output);
+  }
+
+  return { ...result, run };
 }

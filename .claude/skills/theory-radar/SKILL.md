@@ -250,15 +250,14 @@ node /Users/rayman.chen/mycc/.claude/skills/tell-me/send.js \
 ### 多引擎协作（推荐）
 
 - **cc** 执行 Step 1→2→3（抓取 + 分析 + 飞书通知）
-- **gemini** 执行 Step 3.5→4→5（去重 + Wiki 存档 + 索引更新）
+- **codex** 执行 Step 3.5→4→5（去重 + Wiki 存档 + 索引更新）
 
-### Gemini 委托方式
+> 2026-03-15：论文调研归档从 Gemini 迁移到 Codex，Gemini 输出质量不稳定（PDF 空输出、自主发群等问题）。
 
-方式 1：在群聊中 @gemini，SOP 会自动注入
-方式 2：cc 直接调 headless 模式
-```bash
-gemini -p "$(cat /tmp/gemini-step4-5-prompt.txt)" -y -o text > /tmp/gemini-step4-5-output.txt 2>&1 &
-```
+### Codex 委托方式
+
+方式 1：在群聊中 @codex，SOP 会自动注入
+方式 2：通过飞书消息路由（含"论文"/"arxiv"关键词自动路由到 codex）
 
 ## 注意事项
 
