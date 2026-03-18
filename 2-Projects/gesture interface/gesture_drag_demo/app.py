@@ -1,0 +1,202 @@
+"""
+app.py - 手势拖拽 Demo 主循环
+
+使用 OpenCV 窗口 + MediaPipe Hands 实现：
+- 摄像头实时画面
+- 手部关键点检测
+- Pinch（捏住）/ Release（松开）状态判定
+- 4 个底部桌面 + 12 张卡片
+- 拖拽卡片交互（支持跨桌面）
+"""
+
+import cv2
+import time
+import numpy as np
+
+from hand_tracker import HandTracker
+from gesture_state import GestureStateMachine, GesturePhase
+from ui import (
+    create_desktops, create_desktop_cards, draw_desktops,
+    draw_cards, draw_debug_overlay, handle_card_swap,
+    find_desktop_at, DragManager,
+)
+
+
+# ============================================================
+# 可调参数集中配置区（修改这里即可调节行为）
+# ============================================================
+
+CAMERA_INDEX = 0            # 摄像头索引
+CAMERA_WIDTH = 1280          # 摄像头宽度
+CAMERA_HEIGHT = 720          # 摄像头高度
+MAX_NUM_HANDS = 1            # 最大检测手数
+
+PINCH_ON_THRESHOLD = 0.33   # pinch_ratio 低于此值视为"捏住"
+PINCH_OFF_THRESHOLD = 0.45  # pinch_ratio 高于此值视为"松开"
+CONFIRM_FRAMES = 3           # 连续多少帧确认后才切换状态
+LOST_FRAMES_RELEASE = 5     # 丢手多少帧后自动释放
+SMOOTHING_ALPHA = 0.6        # EMA 平滑系数（越大越跟手，越小越平滑）
+
+WINDOW_NAME = "Gesture Drag Demo"
+
+# ============================================================
+
+
+def main():
+    print("=" * 50)
+    print("  Gesture Drag Demo")
+    print("  4 Desktops x 3 Cards = 12 Cards")
+    print("  ESC: 退出 | R: 重置卡片位置")
+    print("=" * 50)
+
+    # 初始化手部追踪器
+    tracker = HandTracker(
+        camera_index=CAMERA_INDEX,
+        width=CAMERA_WIDTH,
+        height=CAMERA_HEIGHT,
+        max_num_hands=MAX_NUM_HANDS,
+    )
+    print(f"摄像头已打开: {tracker.frame_w}x{tracker.frame_h}")
+
+    # 初始化状态机
+    gesture = GestureStateMachine(
+        pinch_on_threshold=PINCH_ON_THRESHOLD,
+        pinch_off_threshold=PINCH_OFF_THRESHOLD,
+        confirm_frames=CONFIRM_FRAMES,
+        lost_frames_release=LOST_FRAMES_RELEASE,
+        smoothing_alpha=SMOOTHING_ALPHA,
+    )
+
+    # 初始化桌面和卡片
+    desktops = create_desktops(tracker.frame_w, tracker.frame_h)
+    cards = create_desktop_cards(desktops)
+    drag_mgr = DragManager()
+
+    print(f"已创建 {len(desktops)} 个桌面, {len(cards)} 张卡片")
+    for d in desktops:
+        print(f"  桌面 {d.index + 1}: ({d.x}, {d.y}) {d.w}x{d.h}")
+
+    # FPS 计算
+    prev_time = time.time()
+    fps = 0.0
+
+    # 创建窗口
+    cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(WINDOW_NAME, tracker.frame_w, tracker.frame_h)
+
+    try:
+        while True:
+            # 读取一帧
+            frame = tracker.read_frame()
+            if frame is None:
+                print("摄像头读取失败")
+                break
+
+            # 手部检测
+            hand_data = tracker.detect(frame)
+            hand_detected = hand_data is not None
+
+            # 更新状态机
+            if hand_detected:
+                gesture.update(
+                    hand_detected=True,
+                    pinch_ratio=hand_data.pinch_ratio,
+                    raw_center=hand_data.pinch_center,
+                )
+            else:
+                gesture.update(hand_detected=False)
+
+            # --- 拖拽逻辑 ---
+            smooth = gesture.smooth_center
+
+            if gesture.phase == GesturePhase.PINCHING and smooth is not None:
+                px, py = float(smooth[0]), float(smooth[1])
+                if drag_mgr.dragging_card is None:
+                    # 尝试抓住卡片
+                    drag_mgr.try_grab(cards, px, py)
+                else:
+                    # 更新拖拽位置
+                    drag_mgr.update_drag(px, py)
+
+            elif gesture.phase == GesturePhase.RELEASED:
+                drag_mgr.release()
+                # released 只是短暂状态，下一帧会变成 hovering/idle
+
+            elif gesture.phase == GesturePhase.IDLE:
+                drag_mgr.release()
+
+            # 更新 hover 状态
+            if smooth is not None and drag_mgr.dragging_card is None:
+                drag_mgr.update_hover(cards, float(smooth[0]), float(smooth[1]))
+            elif drag_mgr.dragging_card is None:
+                drag_mgr.hover_card = None
+
+            # --- 卡片物理：交叠挤压 ---
+            handle_card_swap(cards, desktops, drag_mgr.dragging_card)
+
+            # --- 绘制 ---
+
+            # 1. 绘制桌面背景（黑色区域）
+            #    如果正在拖拽，高亮拖拽卡片所在的目标桌面
+            highlight_idx = -1
+            if drag_mgr.dragging_card is not None:
+                dc = drag_mgr.dragging_card
+                card_cx = dc.x + dc.w // 2
+                card_cy = dc.y + dc.h // 2
+                highlight_idx = find_desktop_at(desktops, card_cx, card_cy)
+
+            draw_desktops(frame, desktops, highlight_idx)
+
+            # 2. 绘制卡片（拖拽中的卡片放大 + 阴影，最后绘制在最上层）
+            draw_cards(frame, cards, drag_mgr)
+
+            # 3. 绘制手部关键点
+            if hand_detected:
+                tracker.draw_landmarks(frame, hand_data)
+
+            # 4. 绘制平滑后的 pinch 中点
+            if smooth is not None:
+                cv2.circle(frame, (int(smooth[0]), int(smooth[1])), 12, (255, 0, 255), 2)
+
+            # 计算 FPS
+            now = time.time()
+            dt = now - prev_time
+            if dt > 0:
+                fps = 0.9 * fps + 0.1 * (1.0 / dt)
+            prev_time = now
+
+            # 5. 绘制调试信息
+            draw_debug_overlay(
+                frame,
+                hand_detected=hand_detected,
+                phase=gesture.phase,
+                pinch_ratio=gesture.pinch_ratio,
+                is_grabbing=(drag_mgr.dragging_card is not None),
+                smooth_center=smooth,
+                fps=fps,
+            )
+
+            # 显示画面
+            cv2.imshow(WINDOW_NAME, frame)
+
+            # 按键处理
+            key = cv2.waitKey(1) & 0xFF
+            if key == 27:  # ESC
+                print("用户按下 ESC，退出")
+                break
+            elif key == ord('r') or key == ord('R'):
+                # 重置卡片位置
+                for card in cards:
+                    card.reset()
+                drag_mgr.release()
+                gesture.reset()
+                print("卡片位置已重置")
+
+    finally:
+        tracker.release()
+        cv2.destroyAllWindows()
+        print("资源已释放，程序退出")
+
+
+if __name__ == "__main__":
+    main()
