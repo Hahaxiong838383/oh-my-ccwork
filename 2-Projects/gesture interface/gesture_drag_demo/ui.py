@@ -1017,17 +1017,31 @@ def draw_debug_overlay(
             put_r(f"Gaze Dir: {dir_label}",
                   dir_colors.get(dir_label, (200, 200, 200)))
 
-            # 原始 gaze_x
+            # 水平注视
             put_r(f"Gaze X: {gaze_result.gaze_x:+.2f}", (200, 200, 200))
+
+            # 垂直注视
+            dir_label_y = gaze_result.direction_label_y
+            dir_colors_y = {
+                "UP": (255, 150, 50),
+                "CENTER-U": (200, 200, 100),
+                "CENTER": (100, 255, 100),
+                "CENTER-D": (200, 200, 100),
+                "DOWN": (255, 150, 50),
+            }
+            put_r(f"Gaze Y: {gaze_result.gaze_y:+.2f}  [{dir_label_y}]",
+                  dir_colors_y.get(dir_label_y, (200, 200, 200)))
 
             # 可信度
             conf = gaze_result.confidence
             conf_color = (0, 255, 0) if conf > 0.5 else (0, 200, 255) if conf > 0.25 else (0, 0, 255)
             put_r(f"Confidence: {conf:.2f}", conf_color)
 
-            # 头部 vs 虹膜分量
-            put_r(f"Head: {gaze_result.head_direction:+.2f}  "
-                  f"Iris: {gaze_result.iris_direction:+.2f}", (150, 150, 150))
+            # 头部 vs 虹膜分量（X + Y）
+            put_r(f"Head: X{gaze_result.head_direction:+.2f} "
+                  f"Y{gaze_result.head_direction_y:+.2f}  "
+                  f"Iris: X{gaze_result.iris_direction:+.2f} "
+                  f"Y{gaze_result.iris_direction_y:+.2f}", (150, 150, 150))
 
             # 绘制虹膜标记
             if gaze_result.left_iris is not None:
@@ -1077,5 +1091,5 @@ def draw_debug_overlay(
 
     # 操作提示
     h = frame.shape[0]
-    cv2.putText(frame, "ESC: Quit | R: Reset | G: Toggle Gaze",
+    cv2.putText(frame, "ESC: Quit | R: Reset | G: Toggle Gaze | C: Recalibrate",
                 (15, h - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 150), 1)

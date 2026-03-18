@@ -20,6 +20,8 @@ from config import (
     FACE_CONF_THRESHOLD, FACE_TRACK_THRESHOLD,
     GAZE_SMOOTHING_ALPHA, HEAD_WEIGHT,
     HEAD_SCALE, IRIS_SCALE, MIN_FACE_WIDTH,
+    GAZE_SMOOTHING_ALPHA_Y, HEAD_WEIGHT_Y,
+    HEAD_SCALE_Y, IRIS_SCALE_Y,
 )
 
 
@@ -32,6 +34,12 @@ _RIGHT_EYE_OUTER = 263
 _LEFT_IRIS_CENTER = 468
 _RIGHT_IRIS_CENTER = 473
 
+# 上下眼睑（用于垂直注视估计）
+_LEFT_EYE_UPPER = 159     # 左眼上睑
+_LEFT_EYE_LOWER = 145     # 左眼下睑
+_RIGHT_EYE_UPPER = 386    # 右眼上睑
+_RIGHT_EYE_LOWER = 374    # 右眼下睑
+
 
 @dataclass
 class GazeResult:
@@ -41,6 +49,10 @@ class GazeResult:
     raw_gaze_x: float = 0.0      # 未平滑的原始值
     head_direction: float = 0.0   # 头部朝向分量
     iris_direction: float = 0.0   # 虹膜朝向分量
+    gaze_y: float = 0.0          # 平滑后的垂直注视方向 [-1, 1]（-1=上, +1=下）
+    raw_gaze_y: float = 0.0      # 未平滑的垂直原始值
+    head_direction_y: float = 0.0 # 垂直头部朝向分量
+    iris_direction_y: float = 0.0 # 垂直虹膜朝向分量
     confidence: float = 0.0       # 估计可信度 [0, 1]
     face_center: Optional[tuple] = None   # 面部中心像素坐标 (x, y)
     nose_tip: Optional[tuple] = None      # 鼻尖像素坐标
@@ -49,7 +61,7 @@ class GazeResult:
 
     @property
     def direction_label(self) -> str:
-        """返回可读的方向标签"""
+        """返回可读的水平方向标签"""
         g = self.gaze_x
         if g < -0.35:
             return "LEFT"
@@ -61,6 +73,21 @@ class GazeResult:
             return "CENTER-R"
         else:
             return "RIGHT"
+
+    @property
+    def direction_label_y(self) -> str:
+        """返回可读的垂直方向标签"""
+        g = self.gaze_y
+        if g < -0.35:
+            return "UP"
+        elif g < -0.12:
+            return "CENTER-U"
+        elif g <= 0.12:
+            return "CENTER"
+        elif g <= 0.35:
+            return "CENTER-D"
+        else:
+            return "DOWN"
 
 
 class GazeEstimator:
@@ -76,11 +103,14 @@ class GazeEstimator:
             min_tracking_confidence=FACE_TRACK_THRESHOLD,
         )
         self._smooth_gaze_x: Optional[float] = None
+        self._smooth_gaze_y: Optional[float] = None
         self._lost_count = 0
 
-        # 校准参数（线性：calibrated = (raw - offset) * scale）
-        self._calib_offset: float = 0.0
-        self._calib_scale: float = 1.0
+        # 2D 校准参数（仿射：calibrated = a * raw + b）
+        self._calib_a_x: float = 1.0
+        self._calib_b_x: float = 0.0
+        self._calib_a_y: float = 1.0
+        self._calib_b_y: float = 0.0
         self._calibrated: bool = False
 
     # ---------- 校准接口 ----------
@@ -88,13 +118,31 @@ class GazeEstimator:
     def is_calibrated(self) -> bool:
         return self._calibrated
 
-    def set_calibration(self, offset: float, scale: float):
-        """设置校准参数（由 calibration.py 调用）"""
-        self._calib_offset = offset
-        self._calib_scale = scale
+    def set_calibration(self, a_x: float, b_x: float,
+                        a_y: float, b_y: float):
+        """设置 2D 仿射校准参数（calibrated = a * raw + b）"""
+        self._calib_a_x = a_x
+        self._calib_b_x = b_x
+        self._calib_a_y = a_y
+        self._calib_b_y = b_y
         self._calibrated = True
         self._smooth_gaze_x = None  # 重置平滑，避免旧值残留
-        print(f"[Gaze] 校准已应用: offset={offset:.3f}, scale={scale:.2f}")
+        self._smooth_gaze_y = None
+        print(f"[Gaze] 2D 校准已应用: "
+              f"X: a={a_x:.3f} b={b_x:.3f}, "
+              f"Y: a={a_y:.3f} b={b_y:.3f}")
+
+    def clear_calibration(self):
+        """清除校准参数，回到未校准状态（重新校准前必须调用）"""
+        self._calib_a_x = 1.0
+        self._calib_b_x = 0.0
+        self._calib_a_y = 1.0
+        self._calib_b_y = 0.0
+        self._calibrated = False
+        self._smooth_gaze_x = None
+        self._smooth_gaze_y = None
+        self._lost_count = 0
+        print("[Gaze] 校准已清除，回到原始状态")
 
     def update(self, frame: np.ndarray) -> GazeResult:
         """
@@ -109,6 +157,7 @@ class GazeEstimator:
             self._lost_count += 1
             if self._lost_count > 10:
                 self._smooth_gaze_x = None
+                self._smooth_gaze_y = None
             return GazeResult(face_detected=False)
 
         self._lost_count = 0
@@ -126,6 +175,11 @@ class GazeEstimator:
         right_eye_outer = _px(_RIGHT_EYE_OUTER)
         left_iris = _px(_LEFT_IRIS_CENTER)
         right_iris = _px(_RIGHT_IRIS_CENTER)
+        # 上下眼睑（垂直注视用）
+        left_eye_upper = _px(_LEFT_EYE_UPPER)
+        left_eye_lower = _px(_LEFT_EYE_LOWER)
+        right_eye_upper = _px(_RIGHT_EYE_UPPER)
+        right_eye_lower = _px(_RIGHT_EYE_LOWER)
 
         # --- 面部宽度（双眼外角距离）---
         face_width = abs(right_eye_outer[0] - left_eye_outer[0])
@@ -175,22 +229,75 @@ class GazeEstimator:
             iris_dir = max(-1.0, min(1.0, iris_dir))
 
         # ============================================================
-        # 3. 加权融合
+        # 3. 水平加权融合
         # ============================================================
         raw_gaze_x = HEAD_WEIGHT * head_dir + (1 - HEAD_WEIGHT) * iris_dir
         raw_gaze_x = max(-1.0, min(1.0, raw_gaze_x))
 
-        # 应用校准（在平滑之前）
-        if self._calibrated:
-            raw_gaze_x = (raw_gaze_x - self._calib_offset) * self._calib_scale
-            raw_gaze_x = max(-1.0, min(1.0, raw_gaze_x))
+        # ============================================================
+        # 4. 垂直注视估计
+        # ============================================================
+        # 4a. 头部垂直朝向（鼻尖 y 相对面部中心 y）
+        #     鼻子偏下 → 用户低头 → 正值
+        # 用双眼外角 y 差的 2 倍近似面部高度
+        eye_y_span = abs(left_eye_outer[1] - right_eye_outer[1])
+        half_face_h = max(face_width * 0.6, eye_y_span * 2.0, 1.0)
+        head_dir_y = (nose_tip[1] - face_center_y) / half_face_h * HEAD_SCALE_Y
+        head_dir_y = max(-1.0, min(1.0, head_dir_y))
 
-        # EMA 平滑
+        # 4b. 虹膜垂直朝向（虹膜在上下眼睑之间的位置）
+        iris_dir_y = 0.0
+        iris_count_y = 0
+
+        # 左眼垂直
+        left_eye_h = left_eye_lower[1] - left_eye_upper[1]
+        if left_eye_h > 3:
+            left_ratio_y = (left_iris[1] - left_eye_upper[1]) / left_eye_h
+            left_dir_y = (left_ratio_y - 0.5) * 2.0  # 映射到 [-1, 1]
+            iris_dir_y += left_dir_y
+            iris_count_y += 1
+
+        # 右眼垂直
+        right_eye_h = right_eye_lower[1] - right_eye_upper[1]
+        if right_eye_h > 3:
+            right_ratio_y = (right_iris[1] - right_eye_upper[1]) / right_eye_h
+            right_dir_y = (right_ratio_y - 0.5) * 2.0
+            iris_dir_y += right_dir_y
+            iris_count_y += 1
+
+        if iris_count_y > 0:
+            iris_dir_y = iris_dir_y / iris_count_y * IRIS_SCALE_Y
+            iris_dir_y = max(-1.0, min(1.0, iris_dir_y))
+
+        # 4c. 垂直加权融合
+        raw_gaze_y = HEAD_WEIGHT_Y * head_dir_y + (1 - HEAD_WEIGHT_Y) * iris_dir_y
+        raw_gaze_y = max(-1.0, min(1.0, raw_gaze_y))
+
+        # ============================================================
+        # 5. 应用 2D 校准（在平滑之前）
+        # ============================================================
+        if self._calibrated:
+            raw_gaze_x = self._calib_a_x * raw_gaze_x + self._calib_b_x
+            raw_gaze_x = max(-1.0, min(1.0, raw_gaze_x))
+            raw_gaze_y = self._calib_a_y * raw_gaze_y + self._calib_b_y
+            raw_gaze_y = max(-1.0, min(1.0, raw_gaze_y))
+
+        # ============================================================
+        # 6. EMA 平滑
+        # ============================================================
+        # 水平
         if self._smooth_gaze_x is None:
             self._smooth_gaze_x = raw_gaze_x
         else:
-            alpha = GAZE_SMOOTHING_ALPHA
-            self._smooth_gaze_x = alpha * raw_gaze_x + (1 - alpha) * self._smooth_gaze_x
+            self._smooth_gaze_x = (GAZE_SMOOTHING_ALPHA * raw_gaze_x
+                                   + (1 - GAZE_SMOOTHING_ALPHA) * self._smooth_gaze_x)
+
+        # 垂直
+        if self._smooth_gaze_y is None:
+            self._smooth_gaze_y = raw_gaze_y
+        else:
+            self._smooth_gaze_y = (GAZE_SMOOTHING_ALPHA_Y * raw_gaze_y
+                                   + (1 - GAZE_SMOOTHING_ALPHA_Y) * self._smooth_gaze_y)
 
         # 可信度：基于面部宽度（太小 → 太远 → 不可靠）
         confidence = min(1.0, face_width / 150.0)
@@ -201,6 +308,10 @@ class GazeEstimator:
             raw_gaze_x=raw_gaze_x,
             head_direction=head_dir,
             iris_direction=iris_dir,
+            gaze_y=self._smooth_gaze_y,
+            raw_gaze_y=raw_gaze_y,
+            head_direction_y=head_dir_y,
+            iris_direction_y=iris_dir_y,
             confidence=confidence,
             face_center=(int(face_center_x), int(face_center_y)),
             nose_tip=nose_tip,
@@ -211,6 +322,7 @@ class GazeEstimator:
     def reset(self):
         """重置平滑状态"""
         self._smooth_gaze_x = None
+        self._smooth_gaze_y = None
         self._lost_count = 0
 
     def close(self):
