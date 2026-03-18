@@ -122,24 +122,51 @@ def main():
             # --- 气泡更新 ---
             bubble_mgr.update()
 
+            # --- 气泡注视候选更新 ---
+            attn_sel.update_bubbles(
+                gaze_x=gaze_result.gaze_x,
+                confidence=gaze_result.confidence,
+                bubbles=bubble_mgr.bubbles,
+            )
+            # 同步气泡候选到 attn_state（update_bubbles 直接修改内部状态，
+            # 但 attn_state 快照在 update() 时已生成，需要补刷）
+            attn_state.candidate_bubble = attn_sel._bubble_candidate
+            attn_state.candidate_bubble_locked = attn_sel._bubble_locked
+            attn_state.bubble_lock_progress = min(
+                1.0, attn_sel._bubble_lock_count / max(1, 5))
+
             # --- 拖拽逻辑 ---
             smooth = gesture.smooth_center
 
             if gesture.phase == GesturePhase.PINCHING and smooth is not None:
                 px, py = float(smooth[0]), float(smooth[1])
                 if not drag_mgr.is_dragging:
-                    # 先尝试抓气泡（气泡在最上层）
-                    if not drag_mgr.try_grab_bubble(bubble_mgr.bubbles, px, py):
-                        # 候选优先抓取：注视锁定的卡片优先
+                    grabbed = False
+                    # 优先级 1：注视锁定的气泡
+                    if (attn_state.candidate_bubble_locked
+                            and attn_state.candidate_bubble is not None):
+                        bubble = attn_state.candidate_bubble
+                        drag_mgr.dragging_bubble = bubble
+                        bubble.being_dragged = True
+                        drag_mgr.offset_x = bubble.cx - px
+                        drag_mgr.offset_y = bubble.cy - py
+                        grabbed = True
+                    # 优先级 2：位置命中气泡
+                    if not grabbed:
+                        grabbed = drag_mgr.try_grab_bubble(
+                            bubble_mgr.bubbles, px, py)
+                    # 优先级 3：注视锁定的卡片
+                    if not grabbed:
                         if (attn_state.candidate_locked
                                 and attn_state.candidate_card is not None):
                             card = attn_state.candidate_card
                             drag_mgr.dragging_card = card
                             drag_mgr.offset_x = card.x - px
                             drag_mgr.offset_y = card.y - py
-                        else:
-                            # 回退到原始命中测试
-                            drag_mgr.try_grab(cards, px, py)
+                            grabbed = True
+                    # 优先级 4：位置命中卡片
+                    if not grabbed:
+                        drag_mgr.try_grab(cards, px, py)
                 else:
                     # 更新拖拽位置
                     drag_mgr.update_drag(px, py)
@@ -190,8 +217,9 @@ def main():
             # 2. 绘制卡片（含注视候选高亮）
             draw_cards(frame, cards, drag_mgr, attn_state)
 
-            # 3. 绘制气泡（在卡片之上）
-            draw_bubbles(frame, bubble_mgr, drag_mgr.dragging_bubble)
+            # 3. 绘制气泡（在卡片之上，含注视候选高亮）
+            draw_bubbles(frame, bubble_mgr, drag_mgr.dragging_bubble,
+                         attn_state)
 
             # 4. 绘制手部关键点
             if hand_detected:

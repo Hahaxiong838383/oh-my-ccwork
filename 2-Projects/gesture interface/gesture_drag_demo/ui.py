@@ -736,8 +736,9 @@ def draw_cards(frame: np.ndarray, cards: list[Card], drag_mgr: DragManager,
         draw_card(frame, drag_mgr.dragging_card, False, True)
 
 
-def draw_bubble(frame: np.ndarray, bubble: Bubble, now: float):
-    """绘制单个气泡（半透明圆 + 浮动动画 + 淡出 + 捏住动效）"""
+def draw_bubble(frame: np.ndarray, bubble: Bubble, now: float,
+                is_candidate: bool = False, candidate_locked: bool = False):
+    """绘制单个气泡（半透明圆 + 浮动动画 + 淡出 + 捏住动效 + 注视候选高亮）"""
     alpha = bubble.alpha(now)
     if alpha <= 0:
         return
@@ -776,6 +777,55 @@ def draw_bubble(frame: np.ndarray, bubble: Bubble, now: float):
         cv2.ellipse(frame, (cx, cy), (rx, ry), 0, 0, 360,
                      (255, 255, 255), border_thick)
 
+    elif candidate_locked:
+        # === 注视锁定候选：金色脉冲 + 高频蹦跳 ===
+        # 加速蹦跳：频率 5Hz，振幅 12px
+        bounce_y = int(abs(math.sin(age * 5.0)) * 12)
+        cy = cy - bounce_y  # 向上蹦
+
+        pulse = 0.5 + 0.5 * math.sin(now * 8.0)
+
+        # 外层金色发光光圈（脉冲呼吸）
+        glow_overlay = frame.copy()
+        glow_r = r + 8 + int(pulse * 4)
+        gold_color = (0, 200, 255)  # BGR: 金黄色
+        cv2.circle(glow_overlay, (cx, cy), glow_r, gold_color, -1)
+        glow_blend = 0.12 + pulse * 0.10
+        cv2.addWeighted(glow_overlay, glow_blend, frame, 1 - glow_blend, 0, frame)
+
+        # 半透明圆形填充（比普通更亮）
+        overlay = frame.copy()
+        bright_color = tuple(min(c + 40, 255) for c in bubble.color)
+        cv2.circle(overlay, (cx, cy), r, bright_color, -1)
+        blend = alpha * 0.70
+        cv2.addWeighted(overlay, blend, frame, 1 - blend, 0, frame)
+
+        # 金色脉冲边框
+        border_thick = 2 + int(pulse * 2)
+        cv2.circle(frame, (cx, cy), r, gold_color, border_thick)
+
+    elif is_candidate:
+        # === 注视候选（未锁定）：淡金色提示 + 稍大蹦跳 ===
+        # 稍快蹦跳：频率 3Hz，振幅 8px
+        bounce_y = int(math.sin(age * 3.0) * 8)
+        cy = cy + bounce_y
+
+        # 淡金色外圈提示
+        glow_overlay = frame.copy()
+        glow_r = r + 4
+        dark_gold = (0, 160, 200)  # BGR: 暗金色
+        cv2.circle(glow_overlay, (cx, cy), glow_r, dark_gold, -1)
+        cv2.addWeighted(glow_overlay, 0.10, frame, 0.90, 0, frame)
+
+        # 半透明圆形填充
+        overlay = frame.copy()
+        cv2.circle(overlay, (cx, cy), r, bubble.color, -1)
+        blend = alpha * 0.60
+        cv2.addWeighted(overlay, blend, frame, 1 - blend, 0, frame)
+
+        # 淡金色边框
+        cv2.circle(frame, (cx, cy), r, dark_gold, 2)
+
     else:
         # === 普通状态：圆形 + 浮动 + 淡出 ===
         bob_y = int(math.sin(age * 2.0) * 5)
@@ -791,7 +841,7 @@ def draw_bubble(frame: np.ndarray, bubble: Bubble, now: float):
         border_color = tuple(min(c + 60, 255) for c in bubble.color)
         cv2.circle(frame, (cx, cy), r, border_color, 1)
 
-    # 标题文字（两种状态共用）
+    # 标题文字（所有状态共用）
     font_scale = r / 80.0
     text_size = cv2.getTextSize(bubble.title, cv2.FONT_HERSHEY_SIMPLEX,
                                  font_scale, 1)[0]
@@ -802,13 +852,21 @@ def draw_bubble(frame: np.ndarray, bubble: Bubble, now: float):
 
 
 def draw_bubbles(frame: np.ndarray, bubble_mgr: 'BubbleManager',
-                 dragging_bubble: Optional[Bubble] = None):
-    """绘制所有气泡（拖拽中的最后绘制）"""
+                 dragging_bubble: Optional[Bubble] = None,
+                 attn_state=None):
+    """绘制所有气泡（拖拽中的最后绘制，含注视候选高亮）"""
     now = time.time()
+    # 从 attn_state 取出候选气泡信息
+    cand_bubble = attn_state.candidate_bubble if attn_state else None
+    cand_locked = attn_state.candidate_bubble_locked if attn_state else False
+
     for bubble in bubble_mgr.bubbles:
         if bubble is dragging_bubble:
             continue
-        draw_bubble(frame, bubble, now)
+        is_cand = (bubble is cand_bubble) if cand_bubble is not None else False
+        is_locked = is_cand and cand_locked
+        draw_bubble(frame, bubble, now,
+                    is_candidate=is_cand, candidate_locked=is_locked)
 
     # 拖拽中的气泡最后画（最上层）
     if dragging_bubble is not None:
