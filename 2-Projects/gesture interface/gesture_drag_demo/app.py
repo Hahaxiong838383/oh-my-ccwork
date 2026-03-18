@@ -1,12 +1,13 @@
 """
-app.py - 手势拖拽 Demo 主循环
+app.py - 手势拖拽 Demo 主循环 (v2.0)
 
-使用 OpenCV 窗口 + MediaPipe Hands 实现：
+使用 OpenCV 窗口 + MediaPipe Hands + FaceMesh 实现：
 - 摄像头实时画面
-- 手部关键点检测
+- 手部关键点检测 + 面部注视方向估计
 - Pinch（捏住）/ Release（松开）状态判定
+- 注视候选卡片预选（看哪里 → 高亮哪张）
 - 4 个底部桌面 + 12 张卡片
-- 拖拽卡片交互（支持跨桌面）
+- 拖拽卡片交互（注视预选 + pinch 融合）
 """
 
 import cv2
@@ -15,39 +16,27 @@ import numpy as np
 
 from hand_tracker import HandTracker
 from gesture_state import GestureStateMachine, GesturePhase
+from gaze_estimator import GazeEstimator
+from attention_selector import AttentionSelector
 from ui import (
     create_desktops, create_desktop_cards, draw_desktops,
     draw_cards, draw_debug_overlay, handle_card_swap,
     find_desktop_at, DragManager, BubbleManager,
     draw_bubbles, drop_bubble_on_desktop,
 )
-
-
-# ============================================================
-# 可调参数集中配置区（修改这里即可调节行为）
-# ============================================================
-
-CAMERA_INDEX = 0            # 摄像头索引
-CAMERA_WIDTH = 1280          # 摄像头宽度
-CAMERA_HEIGHT = 720          # 摄像头高度
-MAX_NUM_HANDS = 1            # 最大检测手数
-
-PINCH_ON_THRESHOLD = 0.33   # pinch_ratio 低于此值视为"捏住"
-PINCH_OFF_THRESHOLD = 0.45  # pinch_ratio 高于此值视为"松开"
-CONFIRM_FRAMES = 3           # 连续多少帧确认后才切换状态
-LOST_FRAMES_RELEASE = 5     # 丢手多少帧后自动释放
-SMOOTHING_ALPHA = 0.6        # EMA 平滑系数（越大越跟手，越小越平滑）
-
-WINDOW_NAME = "Gesture Drag Demo"
-
-# ============================================================
+from config import (
+    CAMERA_INDEX, CAMERA_WIDTH, CAMERA_HEIGHT,
+    MAX_NUM_HANDS, PINCH_ON_THRESHOLD, PINCH_OFF_THRESHOLD,
+    CONFIRM_FRAMES, LOST_FRAMES_RELEASE, SMOOTHING_ALPHA,
+    WINDOW_NAME,
+)
 
 
 def main():
     print("=" * 50)
-    print("  Gesture Drag Demo")
+    print("  Gesture Drag Demo v2.0")
     print("  4 Desktops x 3 Cards = 12 Cards")
-    print("  ESC: 退出 | R: 重置卡片位置")
+    print("  ESC: 退出 | R: 重置 | G: 切换注视调试")
     print("=" * 50)
 
     # 初始化手部追踪器
@@ -67,6 +56,12 @@ def main():
         lost_frames_release=LOST_FRAMES_RELEASE,
         smoothing_alpha=SMOOTHING_ALPHA,
     )
+
+    # 初始化注视估计器 & 候选选择器
+    gaze_est = GazeEstimator()
+    attn_sel = AttentionSelector(tracker.frame_w)
+    show_gaze_debug = True  # 'G' 键切换注视调试可视化
+    print("注视估计器已初始化（FaceMesh + Iris）")
 
     # 初始化桌面和卡片
     desktops = create_desktops(tracker.frame_w, tracker.frame_h)
@@ -112,6 +107,18 @@ def main():
             else:
                 gesture.update(hand_detected=False)
 
+            # --- 注视估计 ---
+            gaze_result = gaze_est.update(frame)
+
+            # --- 注视候选更新 ---
+            attn_sel.set_dragging(drag_mgr.is_dragging)
+            attn_state = attn_sel.update(
+                gaze_x=gaze_result.gaze_x,
+                confidence=gaze_result.confidence,
+                cards=cards,
+                direction_label=gaze_result.direction_label,
+            )
+
             # --- 气泡更新 ---
             bubble_mgr.update()
 
@@ -121,9 +128,18 @@ def main():
             if gesture.phase == GesturePhase.PINCHING and smooth is not None:
                 px, py = float(smooth[0]), float(smooth[1])
                 if not drag_mgr.is_dragging:
-                    # 先尝试抓气泡（气泡在最上层），再尝试抓卡片
+                    # 先尝试抓气泡（气泡在最上层）
                     if not drag_mgr.try_grab_bubble(bubble_mgr.bubbles, px, py):
-                        drag_mgr.try_grab(cards, px, py)
+                        # 候选优先抓取：注视锁定的卡片优先
+                        if (attn_state.candidate_locked
+                                and attn_state.candidate_card is not None):
+                            card = attn_state.candidate_card
+                            drag_mgr.dragging_card = card
+                            drag_mgr.offset_x = card.x - px
+                            drag_mgr.offset_y = card.y - py
+                        else:
+                            # 回退到原始命中测试
+                            drag_mgr.try_grab(cards, px, py)
                 else:
                     # 更新拖拽位置
                     drag_mgr.update_drag(px, py)
@@ -171,8 +187,8 @@ def main():
 
             draw_desktops(frame, desktops, highlight_idx)
 
-            # 2. 绘制卡片
-            draw_cards(frame, cards, drag_mgr)
+            # 2. 绘制卡片（含注视候选高亮）
+            draw_cards(frame, cards, drag_mgr, attn_state)
 
             # 3. 绘制气泡（在卡片之上）
             draw_bubbles(frame, bubble_mgr, drag_mgr.dragging_bubble)
@@ -192,7 +208,7 @@ def main():
                 fps = 0.9 * fps + 0.1 * (1.0 / dt)
             prev_time = now
 
-            # 6. 绘制调试信息
+            # 6. 绘制调试信息（含注视 & 注意力状态）
             draw_debug_overlay(
                 frame,
                 hand_detected=hand_detected,
@@ -201,6 +217,9 @@ def main():
                 is_grabbing=drag_mgr.is_dragging,
                 smooth_center=smooth,
                 fps=fps,
+                attn_state=attn_state,
+                gaze_result=gaze_result,
+                show_gaze=show_gaze_debug,
             )
 
             # 显示画面
@@ -217,11 +236,17 @@ def main():
                     card.reset()
                 drag_mgr.release()
                 gesture.reset()
+                attn_sel.reset()
+                gaze_est.reset()
                 bubble_mgr.bubbles.clear()
                 print("卡片位置已重置")
+            elif key == ord('g') or key == ord('G'):
+                show_gaze_debug = not show_gaze_debug
+                print(f"注视调试: {'ON' if show_gaze_debug else 'OFF'}")
 
     finally:
         tracker.release()
+        gaze_est.close()
         cv2.destroyAllWindows()
         print("资源已释放，程序退出")
 

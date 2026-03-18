@@ -1,6 +1,14 @@
-# Gesture Drag Demo
+# Gesture Drag Demo v2.0
 
-基于 OpenCV + MediaPipe 的手势拖拽交互 Demo。使用普通 USB 摄像头，通过拇指和食指的"捏住（pinch）"手势来拖拽屏幕上的卡片。
+基于 OpenCV + MediaPipe 的手势拖拽交互 Demo。使用普通 USB 摄像头，通过 **注视预选 + 捏住拖拽** 实现自然的卡片交互。
+
+## v2.0 新特性：注视预选（Gaze-Attention Pre-selection）
+
+- **粗粒度注视方向估计**：MediaPipe FaceMesh + 虹膜关键点，实时判断用户注视方向
+- **候选卡片高亮**：看向某个区域 → 对应卡片淡金色提示 → 持续注视 → 金色脉冲锁定
+- **注视 + 捏住融合**：锁定的候选卡片优先被捏住抓取，无需精确对准
+- **拖拽不被打断**：拖拽期间注视冻结，释放后自动恢复候选选择
+- **全参数可配置**：所有阈值集中在 `config.py`，方便调试
 
 ## 环境要求
 
@@ -25,61 +33,107 @@ python app.py
 
 | 操作 | 效果 |
 |------|------|
-| 拇指 + 食指捏住 | 如果 pinch 点在卡片上，抓住卡片 |
+| **注视**（看向屏幕某侧） | 对应区域卡片高亮为候选 |
+| 持续注视同一区域 | 候选锁定（金色脉冲边框） |
+| 拇指 + 食指捏住 | 抓住锁定的候选卡片（优先）或最近的卡片 |
 | 捏住状态下移动手 | 卡片跟随移动 |
-| 拇指 + 食指松开 | 释放卡片 |
+| 拇指 + 食指松开 | 释放卡片，恢复注视候选 |
 | 手移出画面 | 自动释放卡片 |
 | 按 ESC | 退出程序 |
 | 按 R | 重置卡片到初始位置 |
+| 按 G | 切换注视调试可视化 |
 
 ## 画面信息说明
 
-左上角会显示实时调试信息：
+### 左上角：手势状态
 - **FPS**：帧率
 - **Hand**：手部检测状态（DETECTED / LOST）
-- **Pinch Ratio**：拇指尖与食指尖距离 / 手部尺度（越小 = 捏得越紧）
+- **Pinch Ratio**：拇指尖与食指尖距离比例
 - **State**：当前状态（idle / hovering / pinching / released）
-- **Grabbing**：是否正在拖拽卡片
+- **Grabbing**：是否正在拖拽
+
+### 右上角：注视 & 注意力状态（按 G 切换）
+- **Face**：面部检测状态
+- **Direction**：注视方向（LEFT / CENTER-L / CENTER / CENTER-R / RIGHT）
+- **Gaze X**：水平注视值 [-1, 1]
+- **Confidence**：注视可信度
+- **Head / Iris**：头部与虹膜方向分量
+- **Mode**：注意力模式（free / candidate / dragging）
+- **Candidate**：候选卡片 + 锁定状态
+- **Lock Progress**：锁定进度条
 
 ## 参数调节
 
-所有可调参数集中在 `app.py` 顶部的配置区域：
+所有可调参数集中在 `config.py`：
 
-```python
-CAMERA_INDEX = 0            # 摄像头索引（多摄像头时修改）
-CAMERA_WIDTH = 1280          # 分辨率宽度
-CAMERA_HEIGHT = 720          # 分辨率高度
+### 手势参数
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `PINCH_ON_THRESHOLD` | 0.33 | 低于此值判定为"捏住" |
+| `PINCH_OFF_THRESHOLD` | 0.45 | 高于此值判定为"松开" |
+| `CONFIRM_FRAMES` | 3 | 连续几帧确认后切换状态 |
+| `SMOOTHING_ALPHA` | 0.6 | 坐标平滑系数（越大越跟手） |
 
-PINCH_ON_THRESHOLD = 0.33   # 低于此值判定为"捏住"
-PINCH_OFF_THRESHOLD = 0.45  # 高于此值判定为"松开"
-CONFIRM_FRAMES = 3           # 连续几帧确认后切换状态
-LOST_FRAMES_RELEASE = 5     # 丢手几帧后自动释放
-SMOOTHING_ALPHA = 0.6        # 坐标平滑系数（0.3=更平滑，0.9=更跟手）
-```
+### 注视参数
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `GAZE_SMOOTHING_ALPHA` | 0.35 | 注视方向平滑（越小越稳） |
+| `HEAD_WEIGHT` | 0.35 | 头部朝向权重（剩余给虹膜） |
+| `HEAD_SCALE` | 2.5 | 头部偏移放大系数 |
+| `IRIS_SCALE` | 1.8 | 虹膜偏移放大系数 |
+
+### 候选选择参数
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `CANDIDATE_LOCK_FRAMES` | 8 | 连续多少帧锁定候选 |
+| `CANDIDATE_RELEASE_FRAMES` | 12 | 连续多少帧释放候选 |
+| `ATTENTION_SWITCH_MARGIN` | 0.15 | 候选切换迟滞余量（防抖动） |
+| `ATTENTION_SCORE_SIGMA` | 0.12 | 高斯评分标准差 |
 
 ### 调参建议
 
+- **候选切换太频繁**：增大 `ATTENTION_SWITCH_MARGIN` 或 `CANDIDATE_LOCK_FRAMES`
+- **候选锁定太慢**：减小 `CANDIDATE_LOCK_FRAMES`（如 5）
+- **注视方向抖动**：减小 `GAZE_SMOOTHING_ALPHA`（如 0.2）
+- **注视反应太慢**：增大 `GAZE_SMOOTHING_ALPHA`（如 0.5）
 - **捏住太灵敏**：调大 `PINCH_ON_THRESHOLD`（如 0.38）
-- **松开太慢**：调小 `PINCH_OFF_THRESHOLD`（如 0.40）
-- **卡片跳动**：调小 `SMOOTHING_ALPHA`（如 0.4）或增大 `CONFIRM_FRAMES`
-- **反应太慢**：调大 `SMOOTHING_ALPHA`（如 0.8）或减小 `CONFIRM_FRAMES`
+- **卡片跳动**：调小 `SMOOTHING_ALPHA`（如 0.4）
 
 ## 项目结构
 
 ```
 gesture_drag_demo/
-  app.py              # 主循环与整合
-  hand_tracker.py      # 摄像头与手部关键点检测
-  gesture_state.py     # Pinch/Release 状态机
-  ui.py                # 卡片绘制、命中测试、拖拽逻辑
-  requirements.txt     # Python 依赖
-  README.md            # 本文件
+  app.py                # 主循环：融合注视预选 + 手势拖拽
+  config.py             # 集中参数配置
+  hand_tracker.py       # 摄像头与手部关键点检测
+  gesture_state.py      # Pinch/Release 状态机
+  gaze_estimator.py     # 粗粒度注视方向估计（FaceMesh + Iris）
+  attention_selector.py # 注视候选卡片选择器（评分 + 锁定）
+  ui.py                 # 桌面/卡片绘制、拖拽、调试可视化
+  requirements.txt      # Python 依赖
+  README.md             # 本文件
 ```
 
 ## 技术原理
 
-1. **手部检测**：MediaPipe Hands 检测 21 个手部关键点
-2. **Pinch 判定**：计算 `pinch_ratio = 拇指尖到食指尖距离 / 手腕到中指根部距离`，使用相对比例而非固定像素
-3. **迟滞机制**：捏住阈值（0.33）< 松开阈值（0.45），避免边界抖动
-4. **帧确认**：连续 3 帧满足条件才切换状态
-5. **EMA 平滑**：对 pinch 中点坐标做指数移动平均，减少抖动
+### 手势检测（v1.0）
+1. MediaPipe Hands 检测 21 个手部关键点
+2. `pinch_ratio = 拇指尖到食指尖距离 / 手腕到中指根部距离`
+3. 迟滞机制：捏住阈值 < 松开阈值，避免边界抖动
+4. 帧确认 + EMA 平滑
+
+### 注视预选（v2.0）
+1. **面部检测**：MediaPipe FaceMesh（含虹膜关键点 468-477）
+2. **头部朝向**：鼻尖相对双眼中心的水平偏移比例
+3. **虹膜朝向**：虹膜中心在眼白中的水平位置比例
+4. **加权融合**：`gaze_x = 0.35 × head + 0.65 × iris`，EMA 平滑
+5. **候选评分**：高斯函数评估卡片与注视方向的接近度
+6. **帧计数锁定**：连续 8 帧最高分 → 锁定候选（金色脉冲高亮）
+7. **迟滞切换**：新候选需超出当前候选 0.15 分才切换，防止抖动
+8. **融合抓取**：pinch 时优先抓取锁定候选 → 回退到位置命中测试
+
+## 版本历史
+
+- **v2.0**：注视预选（FaceMesh + Iris → 候选锁定 → 融合抓取）
+- **v1.2**：气泡系统 + 捏住动效 + 拖拽立体感
+- **v1.0**：基础手势拖拽（MediaPipe Hands + Pinch 状态机）

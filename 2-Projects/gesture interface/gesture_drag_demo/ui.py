@@ -483,8 +483,9 @@ def draw_desktops(frame: np.ndarray, desktops: list[Desktop],
 
 
 def draw_card(frame: np.ndarray, card: Card, is_hover: bool, is_dragging: bool,
-              is_drop_target: bool = False):
-    """绘制单张卡片（支持拖拽放大 + 阴影 + 放置目标高亮）"""
+              is_drop_target: bool = False,
+              is_candidate: bool = False, candidate_locked: bool = False):
+    """绘制单张卡片（支持拖拽放大 + 阴影 + 放置目标高亮 + 注视候选高亮）"""
     cx_card = card.x + card.w / 2.0
     cy_card = card.y + card.h / 2.0
     # 字体大小根据卡片宽度动态缩放
@@ -561,6 +562,29 @@ def draw_card(frame: np.ndarray, card: Card, is_hover: bool, is_dragging: bool,
             blend = 0.15 + pulse * 0.15
             cv2.addWeighted(overlay_glow, blend, frame, 1 - blend, 0, frame)
 
+        # 注视候选：已锁定 → 金色脉冲边框 + 外发光 + 上浮
+        elif candidate_locked:
+            y = y - 5  # 上浮 5px
+            pulse = 0.5 + 0.5 * math.sin(time.time() * 4.0)
+            glow_pad = 3
+            overlay_glow = frame.copy()
+            gold = (0, 200, 255)  # BGR 金色
+            _draw_rounded_rect(overlay_glow, x - glow_pad, y - glow_pad,
+                                w + glow_pad * 2, h + glow_pad * 2,
+                                gold, -1, 10)
+            blend = 0.12 + pulse * 0.12
+            cv2.addWeighted(overlay_glow, blend, frame, 1 - blend, 0, frame)
+
+        # 注视候选：未锁定 → 淡金色外框提示
+        elif is_candidate:
+            glow_pad = 2
+            overlay_glow = frame.copy()
+            gold_dim = (0, 160, 200)  # 暗金
+            _draw_rounded_rect(overlay_glow, x - glow_pad, y - glow_pad,
+                                w + glow_pad * 2, h + glow_pad * 2,
+                                gold_dim, -1, 10)
+            cv2.addWeighted(overlay_glow, 0.10, frame, 0.90, 0, frame)
+
         if card.has_bubble:
             # --- 气泡内容卡片 ---
             fill_color = tuple(max(c // 3, 15) for c in card.bubble_color)
@@ -619,6 +643,12 @@ def draw_card(frame: np.ndarray, card: Card, is_hover: bool, is_dragging: bool,
             thick = 2 + int(pulse)
             _draw_rounded_rect(frame, x - 1, y - 1, w + 2, h + 2,
                                 (0, 255, 255), thick, 9)
+        # 注视候选已锁定：金色边框叠加（在卡片内容之后绘制）
+        elif candidate_locked:
+            pulse = 0.5 + 0.5 * math.sin(time.time() * 4.0)
+            thick = 2 + int(pulse)
+            _draw_rounded_rect(frame, x - 1, y - 1, w + 2, h + 2,
+                                (0, 200, 255), thick, 9)  # 金色 BGR
 
 
 def get_slot_xy(desk: Desktop, slot_idx: int, card_w: int, card_h: int) -> tuple:
@@ -684,7 +714,8 @@ def handle_card_swap(cards: list[Card], desktops: list[Desktop],
             card.y += step if dy > 0 else -step
 
 
-def draw_cards(frame: np.ndarray, cards: list[Card], drag_mgr: DragManager):
+def draw_cards(frame: np.ndarray, cards: list[Card], drag_mgr: DragManager,
+               attn_state=None):
     """绘制所有卡片（被拖拽的最后绘制，确保在最上层）"""
     # 先画非拖拽卡片
     for card in cards:
@@ -692,7 +723,13 @@ def draw_cards(frame: np.ndarray, cards: list[Card], drag_mgr: DragManager):
             continue
         is_hover = (card is drag_mgr.hover_card)
         is_target = (card is drag_mgr.drop_target_card)
-        draw_card(frame, card, is_hover, False, is_target)
+        # 注视候选状态
+        is_cand = False
+        cand_locked = False
+        if attn_state is not None and attn_state.candidate_card is card:
+            is_cand = True
+            cand_locked = attn_state.candidate_locked
+        draw_card(frame, card, is_hover, False, is_target, is_cand, cand_locked)
 
     # 最后画拖拽中的卡片（在最上层）
     if drag_mgr.dragging_card is not None:
@@ -826,8 +863,11 @@ def draw_debug_overlay(
     is_grabbing: bool,
     smooth_center: Optional[np.ndarray],
     fps: float,
+    attn_state=None,
+    gaze_result=None,
+    show_gaze: bool = True,
 ):
-    """绘制调试信息叠加层"""
+    """绘制调试信息叠加层（含注视 & 注意力状态）"""
     y_offset = 30
     line_h = 28
 
@@ -870,7 +910,101 @@ def draw_debug_overlay(
         cx, cy = int(smooth_center[0]), int(smooth_center[1])
         put(f"Pinch Pos: ({cx}, {cy})", (0, 255, 0))
 
+    # ============================================================
+    # 右侧：注视 & 注意力调试面板
+    # ============================================================
+    if show_gaze:
+        frame_w = frame.shape[1]
+        rx = frame_w - 300  # 右侧面板起始 x
+        ry = 30
+        rline_h = 24
+
+        def put_r(text: str, color=(255, 255, 255)):
+            nonlocal ry
+            cv2.putText(frame, text, (rx, ry),
+                         cv2.FONT_HERSHEY_SIMPLEX, 0.50, color, 1)
+            ry += rline_h
+
+        put_r("--- Gaze & Attention ---", (180, 180, 180))
+
+        if gaze_result is not None:
+            # 面部检测
+            if gaze_result.face_detected:
+                put_r("Face: DETECTED", (0, 255, 0))
+            else:
+                put_r("Face: LOST", (0, 0, 255))
+
+            # 注视方向
+            dir_label = gaze_result.direction_label
+            dir_colors = {
+                "LEFT": (255, 150, 50),
+                "CENTER-L": (200, 200, 100),
+                "CENTER": (100, 255, 100),
+                "CENTER-R": (200, 200, 100),
+                "RIGHT": (255, 150, 50),
+            }
+            put_r(f"Gaze Dir: {dir_label}",
+                  dir_colors.get(dir_label, (200, 200, 200)))
+
+            # 原始 gaze_x
+            put_r(f"Gaze X: {gaze_result.gaze_x:+.2f}", (200, 200, 200))
+
+            # 可信度
+            conf = gaze_result.confidence
+            conf_color = (0, 255, 0) if conf > 0.5 else (0, 200, 255) if conf > 0.25 else (0, 0, 255)
+            put_r(f"Confidence: {conf:.2f}", conf_color)
+
+            # 头部 vs 虹膜分量
+            put_r(f"Head: {gaze_result.head_direction:+.2f}  "
+                  f"Iris: {gaze_result.iris_direction:+.2f}", (150, 150, 150))
+
+            # 绘制虹膜标记
+            if gaze_result.left_iris is not None:
+                cv2.circle(frame, gaze_result.left_iris, 3, (0, 255, 255), -1)
+            if gaze_result.right_iris is not None:
+                cv2.circle(frame, gaze_result.right_iris, 3, (0, 255, 255), -1)
+            # 鼻尖标记
+            if gaze_result.nose_tip is not None:
+                cv2.circle(frame, gaze_result.nose_tip, 3, (0, 200, 200), -1)
+
+        if attn_state is not None:
+            ry += 4  # 间隔
+            put_r(f"Mode: {attn_state.mode}", (180, 180, 180))
+
+            # 候选卡片
+            if attn_state.candidate_card is not None:
+                card_label = attn_state.candidate_card.label
+                if attn_state.candidate_locked:
+                    put_r(f"Candidate: {card_label} [LOCKED]", (0, 200, 255))
+                else:
+                    prog = attn_state.lock_progress
+                    put_r(f"Candidate: {card_label} ({prog:.0%})", (0, 160, 200))
+
+                    # 锁定进度条
+                    bar_x = rx
+                    bar_y = ry
+                    bar_w = 160
+                    bar_h = 10
+                    cv2.rectangle(frame, (bar_x, bar_y),
+                                  (bar_x + bar_w, bar_y + bar_h),
+                                  (60, 60, 60), -1)
+                    fill_w = int(bar_w * prog)
+                    if fill_w > 0:
+                        cv2.rectangle(frame, (bar_x, bar_y),
+                                      (bar_x + fill_w, bar_y + bar_h),
+                                      (0, 200, 255), -1)
+                    ry += rline_h
+            else:
+                put_r("Candidate: None", (100, 100, 100))
+
+            # 评分排名（前 3）
+            if attn_state.scores:
+                sorted_scores = sorted(attn_state.scores.items(),
+                                       key=lambda x: x[1], reverse=True)[:3]
+                score_text = "  ".join(f"{lbl}:{s:.2f}" for lbl, s in sorted_scores)
+                put_r(f"Top: {score_text}", (120, 120, 120))
+
     # 操作提示
     h = frame.shape[0]
-    cv2.putText(frame, "ESC: Quit | R: Reset Cards",
+    cv2.putText(frame, "ESC: Quit | R: Reset | G: Toggle Gaze",
                 (15, h - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 150), 1)
