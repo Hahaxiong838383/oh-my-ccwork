@@ -273,3 +273,35 @@ feishu_openapi_call(
 | 401 | 未授权或 token 过期 | 提示用户重新授权（Sign in） |
 | 404 | 路径错误 | 检查 path 是否正确 |
 | 403 | 无权限 | 提示用户在飞书后台给应用授权 |
+
+---
+
+## 2026-03-09 Addendum (open-feishu-mcp)
+
+- Default path: use `open-feishu-mcp` (`feishu_openapi_call`) first; do not fallback to legacy Feishu MCP configs in this workspace.
+- Wiki child doc creation flow:
+  - `GET /wiki/v2/spaces/get_node?token={wiki_token}&obj_type=wiki` (resolve `space_id`)
+  - `POST /wiki/v2/spaces/{space_id}/nodes` (`obj_type=docx`, `node_type=origin`, `parent_node_token`, `title`)
+- If title is garbled after create, fix immediately:
+  - `POST /wiki/v2/spaces/{space_id}/nodes/{node_token}/update_title`
+- For Chinese title parameters, use Unicode escapes or UTF-8 script files.
+
+## 2026-03-10 Addendum (bitable index maintenance)
+
+- Prefer script files over inline PowerShell when updating Chinese field names. Inline commands can garble field keys and silently fail.
+- For bitable record CRUD, these OpenAPI paths worked reliably:
+  - `GET /bitable/v1/apps/{app_token}/tables/{table_id}/records/{record_id}`
+  - `PUT /bitable/v1/apps/{app_token}/tables/{table_id}/records/{record_id}`
+  - `DELETE /bitable/v1/apps/{app_token}/tables/{table_id}/records/{record_id}`
+- URL fields read back as `{ link, text }`.
+- DateTime fields accept epoch milliseconds.
+- Multi-select fields can be updated with an array of option names.
+- Single-select fields can be updated with the option name string.
+- For wiki index cleanup, validate `文档链接` by extracting `/wiki/{token}` and checking:
+  - `GET /wiki/v2/spaces/get_node?token={token}&obj_type=wiki`
+  - ensure returned `space_id` matches the target knowledge base.
+- For arXiv preprints, `export.arxiv.org/api/query` was inconsistent on some ids. The stable fallback was:
+  - fetch `https://arxiv.org/abs/{arxiv_id}`
+  - parse the first `[v1]` date from `submission-history`
+  - write that day into the table as the publish date.
+- For large wiki-to-bitable sync jobs in this workspace, keep reusable scripts under `tasks/` and prefer Unicode escapes for Chinese constants.

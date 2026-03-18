@@ -132,7 +132,6 @@ npm-cache/
 
 # 外部项目（不属于 mycc 核心）
 FUTURUS-website/
-2-Projects/lark mcp server/
 
 # OS 特定二进制
 cloudflared

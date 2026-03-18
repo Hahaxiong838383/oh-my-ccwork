@@ -335,7 +335,7 @@ mycc/                                  # 项目根目录
 2. `cd .claude/skills/mycc/scripts && npm install`
 3. 安装 cloudflared（macOS: `brew install cloudflared`，Windows: 下载 exe 到项目根目录）
 4. 配置 `.claude/settings.local.json`（hooks、MCP 等本地设置）
-5. 如需飞书 MCP：`cd .claude/mcp/lark-mcp && npm install`
+5. 如需飞书 MCP：使用 `open-feishu-mcp`，不要再安装或调用旧的官方飞书 MCP
 
 ## 提交规范
 

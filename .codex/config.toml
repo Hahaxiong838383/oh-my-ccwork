@@ -3,11 +3,6 @@ model_reasoning_effort = "high"
 personality = "pragmatic"
 [mcp_servers]
 
-[mcp_servers.feishu]
-type = "stdio"
-command = "node"
-args = ["/Users/rayman.chen/mycc/open-feishu-mcp-server/dist/local.js", "--app-id", "cli_a9f1cd1366751bc7", "--app-secret", "RCCkaaPGkGn9n3pEDkjjzhrUDEWhmioy"]
-
 [mcp_servers.memory]
 type = "stdio"
 command = "npx"
@@ -22,3 +17,4 @@ args = ["-y", "@upstash/context7-mcp"]
 type = "stdio"
 command = "npx"
 args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+

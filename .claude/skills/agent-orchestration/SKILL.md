@@ -38,7 +38,7 @@ Agent 执行前先检索相关记忆/文档，避免幻觉：
 
 ### 2. MCP Native 支持
 ruflo 原生支持 MCP server，Agent 可以直接调用：
-- 飞书 MCP（lark-mcp）
+- 飞书 MCP（open-feishu-mcp）
 - 本地工具 MCP（文件/代码执行）
 
 ### 3. 失败降级
@@ -102,7 +102,7 @@ Agent 执行前先检索相关记忆/文档，避免幻觉：
 
 ### 2. MCP Native 支持
 ruflo 原生支持 MCP server，Agent 可以直接调用：
-- 飞书 MCP（lark-mcp）
+- 飞书 MCP（open-feishu-mcp）
 - 本地工具 MCP（文件/代码执行）
 
 ### 3. 失败降级
