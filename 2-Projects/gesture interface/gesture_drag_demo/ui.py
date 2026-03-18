@@ -793,16 +793,29 @@ def draw_bubble(frame: np.ndarray, bubble: Bubble, now: float,
         glow_blend = 0.12 + pulse * 0.10
         cv2.addWeighted(glow_overlay, glow_blend, frame, 1 - glow_blend, 0, frame)
 
-        # 半透明圆形填充（比普通更亮）
+        # 半透明圆形填充（比普通更亮更实）
         overlay = frame.copy()
-        bright_color = tuple(min(c + 40, 255) for c in bubble.color)
+        bright_color = tuple(min(c + 80, 255) for c in bubble.color)
         cv2.circle(overlay, (cx, cy), r, bright_color, -1)
-        blend = alpha * 0.70
+        blend = alpha * 0.85
         cv2.addWeighted(overlay, blend, frame, 1 - blend, 0, frame)
 
         # 金色脉冲边框
         border_thick = 2 + int(pulse * 2)
         cv2.circle(frame, (cx, cy), r, gold_color, border_thick)
+
+        # 向下箭头 ▼（气泡上方，表示"被盯上了"）
+        arrow_color = (0, 200, 255)  # BGR: 金色
+        arrow_tip_y = cy - r - 6
+        arrow_top_y = arrow_tip_y - 16
+        arrow_half_w = 8
+        pts = np.array([
+            [cx, arrow_tip_y],
+            [cx - arrow_half_w, arrow_top_y],
+            [cx + arrow_half_w, arrow_top_y],
+        ], dtype=np.int32)
+        cv2.fillPoly(frame, [pts], arrow_color)
+        cv2.polylines(frame, [pts], True, (255, 255, 255), 1)
 
     elif is_candidate:
         # === 注视候选（未锁定）：淡金色提示 + 稍大蹦跳 ===

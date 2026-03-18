@@ -78,6 +78,24 @@ class GazeEstimator:
         self._smooth_gaze_x: Optional[float] = None
         self._lost_count = 0
 
+        # 校准参数（线性：calibrated = (raw - offset) * scale）
+        self._calib_offset: float = 0.0
+        self._calib_scale: float = 1.0
+        self._calibrated: bool = False
+
+    # ---------- 校准接口 ----------
+    @property
+    def is_calibrated(self) -> bool:
+        return self._calibrated
+
+    def set_calibration(self, offset: float, scale: float):
+        """设置校准参数（由 calibration.py 调用）"""
+        self._calib_offset = offset
+        self._calib_scale = scale
+        self._calibrated = True
+        self._smooth_gaze_x = None  # 重置平滑，避免旧值残留
+        print(f"[Gaze] 校准已应用: offset={offset:.3f}, scale={scale:.2f}")
+
     def update(self, frame: np.ndarray) -> GazeResult:
         """
         处理一帧，返回注视估计结果。
@@ -161,6 +179,11 @@ class GazeEstimator:
         # ============================================================
         raw_gaze_x = HEAD_WEIGHT * head_dir + (1 - HEAD_WEIGHT) * iris_dir
         raw_gaze_x = max(-1.0, min(1.0, raw_gaze_x))
+
+        # 应用校准（在平滑之前）
+        if self._calibrated:
+            raw_gaze_x = (raw_gaze_x - self._calib_offset) * self._calib_scale
+            raw_gaze_x = max(-1.0, min(1.0, raw_gaze_x))
 
         # EMA 平滑
         if self._smooth_gaze_x is None:

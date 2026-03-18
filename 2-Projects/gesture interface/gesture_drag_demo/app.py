@@ -18,6 +18,7 @@ from hand_tracker import HandTracker
 from gesture_state import GestureStateMachine, GesturePhase
 from gaze_estimator import GazeEstimator
 from attention_selector import AttentionSelector
+from calibration import run_calibration
 from ui import (
     create_desktops, create_desktop_cards, draw_desktops,
     draw_cards, draw_debug_overlay, handle_card_swap,
@@ -34,9 +35,9 @@ from config import (
 
 def main():
     print("=" * 50)
-    print("  Gesture Drag Demo v2.0")
+    print("  Gesture Drag Demo v2.2")
     print("  4 Desktops x 3 Cards = 12 Cards")
-    print("  ESC: 退出 | R: 重置 | G: 切换注视调试")
+    print("  ESC: 退出 | R: 重置 | G: 注视调试 | C: 重新校准")
     print("=" * 50)
 
     # 初始化手部追踪器
@@ -84,6 +85,9 @@ def main():
     # 创建窗口
     cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(WINDOW_NAME, tracker.frame_w, tracker.frame_h)
+
+    # 启动校准（可按 ESC/S 跳过）
+    run_calibration(tracker, gaze_est, WINDOW_NAME)
 
     try:
         while True:
@@ -271,6 +275,9 @@ def main():
             elif key == ord('g') or key == ord('G'):
                 show_gaze_debug = not show_gaze_debug
                 print(f"注视调试: {'ON' if show_gaze_debug else 'OFF'}")
+            elif key == ord('c') or key == ord('C'):
+                # 重新校准
+                run_calibration(tracker, gaze_est, WINDOW_NAME)
 
     finally:
         tracker.release()
