@@ -11,6 +11,9 @@ ui.py - 桌面、卡片绘制、命中测试、拖拽逻辑
 """
 
 import cv2
+import time
+import random
+import math
 import numpy as np
 from dataclasses import dataclass, field
 from typing import Optional
@@ -39,6 +42,27 @@ CARD_STYLES = [
     ((70, 70, 70), (180, 180, 180)),    # 灰
     ((90, 50, 60), (220, 100, 140)),    # 粉
     ((50, 70, 40), (100, 160, 80)),     # 青柠
+]
+
+# --- 气泡样本数据 ---
+BUBBLE_SAMPLES = [
+    {"title": "Meeting", "content": "Team standup 10am\nSprint review"},
+    {"title": "Task", "content": "Review PR #42\nFix login bug"},
+    {"title": "Remind", "content": "Call client 3pm\nPrepare slides"},
+    {"title": "Note", "content": "New API endpoint\n/api/v2/users"},
+    {"title": "Alert", "content": "Server CPU > 90%\nCheck logs"},
+    {"title": "Mail", "content": "From: boss\nQ3 report due"},
+    {"title": "Event", "content": "Product launch\nFriday 2pm"},
+    {"title": "Update", "content": "v2.1 released\n3 bug fixes"},
+]
+
+BUBBLE_COLORS = [
+    (80, 180, 255),   # 橙 (BGR)
+    (255, 180, 80),   # 蓝
+    (80, 255, 180),   # 绿
+    (180, 80, 255),   # 紫
+    (80, 255, 255),   # 黄
+    (255, 80, 180),   # 粉
 ]
 
 
@@ -84,6 +108,11 @@ class Card:
     slot_index: int = 0
     init_desktop_index: int = 0
     init_slot_index: int = 0
+    # 气泡内容（当卡片被气泡替换时）
+    has_bubble: bool = False
+    bubble_title: str = ""
+    bubble_content: str = ""
+    bubble_color: tuple = (0, 0, 0)
 
     def __post_init__(self):
         self.init_x = self.x
@@ -109,6 +138,41 @@ class Card:
         self.vy = 0.0
         self.desktop_index = self.init_desktop_index
         self.slot_index = self.init_slot_index
+        self.has_bubble = False
+        self.bubble_title = ""
+        self.bubble_content = ""
+        self.bubble_color = (0, 0, 0)
+
+
+@dataclass
+class Bubble:
+    """随机出现的气泡，可拖拽到桌面替换卡片"""
+    cx: int             # 中心 x
+    cy: int             # 中心 y
+    radius: int = 35
+    color: tuple = (200, 100, 50)
+    title: str = ""
+    content: str = ""
+    spawn_time: float = 0.0
+    lifetime: float = 5.0
+    being_dragged: bool = False
+
+    def contains(self, px: int, py: int) -> bool:
+        dx = px - self.cx
+        dy = py - self.cy
+        return dx * dx + dy * dy <= self.radius * self.radius
+
+    def is_expired(self, now: float) -> bool:
+        return now - self.spawn_time >= self.lifetime
+
+    def alpha(self, now: float) -> float:
+        """返回 0.0~1.0，最后 1 秒淡出"""
+        remaining = self.lifetime - (now - self.spawn_time)
+        if remaining <= 0:
+            return 0.0
+        if remaining <= 1.0:
+            return remaining
+        return 1.0
 
 
 # ================================================================
@@ -116,20 +180,38 @@ class Card:
 # ================================================================
 
 class DragManager:
-    """拖拽管理器"""
+    """拖拽管理器（支持卡片和气泡）"""
 
     def __init__(self):
         self.dragging_card: Optional[Card] = None
+        self.dragging_bubble: Optional[Bubble] = None
         self.offset_x: float = 0.0
         self.offset_y: float = 0.0
         self.hover_card: Optional[Card] = None
+        self.drop_target_card: Optional[Card] = None  # 气泡拖拽时的目标卡片
+
+    @property
+    def is_dragging(self) -> bool:
+        return self.dragging_card is not None or self.dragging_bubble is not None
+
+    def try_grab_bubble(self, bubbles: list, px: float, py: float) -> bool:
+        """尝试抓住气泡（优先于卡片）。返回是否成功。"""
+        if self.is_dragging:
+            return self.dragging_bubble is not None
+        for bubble in reversed(bubbles):
+            if bubble.contains(int(px), int(py)):
+                self.dragging_bubble = bubble
+                bubble.being_dragged = True
+                self.offset_x = bubble.cx - px
+                self.offset_y = bubble.cy - py
+                return True
+        return False
 
     def try_grab(self, cards: list[Card], px: float, py: float) -> bool:
         """尝试抓住卡片。返回是否成功抓住。"""
-        if self.dragging_card is not None:
-            return True  # 已经在拖拽
+        if self.is_dragging:
+            return self.dragging_card is not None
 
-        # 从上到下检测（后绘制的在上面）
         for card in reversed(cards):
             if card.contains(int(px), int(py)):
                 self.dragging_card = card
@@ -139,16 +221,26 @@ class DragManager:
         return False
 
     def update_drag(self, px: float, py: float):
-        """更新拖拽位置"""
+        """更新拖拽位置（卡片或气泡）"""
         if self.dragging_card is not None:
             self.dragging_card.x = int(px + self.offset_x)
             self.dragging_card.y = int(py + self.offset_y)
+        elif self.dragging_bubble is not None:
+            self.dragging_bubble.cx = int(px + self.offset_x)
+            self.dragging_bubble.cy = int(py + self.offset_y)
 
-    def release(self):
-        """释放拖拽"""
+    def release(self) -> Optional[Bubble]:
+        """释放拖拽。如果释放的是气泡，返回该气泡。"""
+        released_bubble = None
+        if self.dragging_bubble is not None:
+            self.dragging_bubble.being_dragged = False
+            released_bubble = self.dragging_bubble
+            self.dragging_bubble = None
         self.dragging_card = None
         self.offset_x = 0.0
         self.offset_y = 0.0
+        self.drop_target_card = None
+        return released_bubble
 
     def update_hover(self, cards: list[Card], px: float, py: float):
         """更新 hover 状态（pinch 点靠近哪张卡片）"""
@@ -157,6 +249,107 @@ class DragManager:
             if card.contains(int(px), int(py)):
                 self.hover_card = card
                 break
+
+    def update_drop_target(self, cards: list[Card], desktops: list):
+        """更新气泡拖拽时的放置目标卡片（桌面内最近的卡片）"""
+        self.drop_target_card = None
+        if self.dragging_bubble is None:
+            return
+
+        desk_idx = find_desktop_at(desktops, self.dragging_bubble.cx,
+                                    self.dragging_bubble.cy)
+        if desk_idx < 0:
+            return
+
+        desk = desktops[desk_idx]
+        best_card = None
+        best_dist = float('inf')
+        for card in cards:
+            if card.desktop_index != desk_idx:
+                continue
+            sx, sy = get_slot_xy(desk, card.slot_index, card.w, card.h)
+            ccx = sx + card.w // 2
+            ccy = sy + card.h // 2
+            dx = self.dragging_bubble.cx - ccx
+            dy = self.dragging_bubble.cy - ccy
+            dist = dx * dx + dy * dy
+            if dist < best_dist:
+                best_dist = dist
+                best_card = card
+        self.drop_target_card = best_card
+
+
+# ================================================================
+# 气泡管理
+# ================================================================
+
+class BubbleManager:
+    """气泡生成与生命周期管理"""
+
+    def __init__(self, frame_w: int, frame_h: int, desktop_top_y: int):
+        self.frame_w = frame_w
+        self.frame_h = frame_h
+        self.spawn_y_max = desktop_top_y - 30  # 不在桌面区域生成
+        self.bubbles: list[Bubble] = []
+        self.max_bubbles = 2
+        self.next_spawn_time = time.time() + 2.0  # 2 秒后开始生成
+        self._used_samples: list[int] = []  # 避免连续重复
+
+    def update(self):
+        """更新气泡：移除过期的，生成新的"""
+        now = time.time()
+
+        # 移除过期的气泡（正在拖拽的不移除）
+        self.bubbles = [
+            b for b in self.bubbles
+            if not b.is_expired(now) or b.being_dragged
+        ]
+
+        # 生成新气泡
+        active_count = len([b for b in self.bubbles if not b.being_dragged])
+        if active_count < self.max_bubbles and now >= self.next_spawn_time:
+            self._spawn()
+            # 下次生成间隔 1~3 秒
+            self.next_spawn_time = now + random.uniform(1.0, 3.0)
+
+    def _spawn(self):
+        """生成一个新气泡"""
+        margin = 80
+        cx = random.randint(margin, self.frame_w - margin)
+        cy = random.randint(margin, min(self.spawn_y_max, self.frame_h * 3 // 4))
+        radius = random.randint(30, 45)
+
+        # 选择不重复的样本
+        available = [i for i in range(len(BUBBLE_SAMPLES)) if i not in self._used_samples]
+        if not available:
+            self._used_samples.clear()
+            available = list(range(len(BUBBLE_SAMPLES)))
+        idx = random.choice(available)
+        self._used_samples.append(idx)
+        if len(self._used_samples) > 4:
+            self._used_samples.pop(0)
+
+        sample = BUBBLE_SAMPLES[idx]
+        color = random.choice(BUBBLE_COLORS)
+
+        bubble = Bubble(
+            cx=cx, cy=cy, radius=radius, color=color,
+            title=sample["title"], content=sample["content"],
+            spawn_time=time.time(),
+        )
+        self.bubbles.append(bubble)
+
+    def remove(self, bubble: Bubble):
+        """移除指定气泡"""
+        if bubble in self.bubbles:
+            self.bubbles.remove(bubble)
+
+    def find_at(self, px: float, py: float) -> Optional[Bubble]:
+        """查找指定位置的气泡"""
+        for bubble in reversed(self.bubbles):
+            if bubble.contains(int(px), int(py)):
+                return bubble
+        return None
 
 
 # ================================================================
@@ -289,8 +482,9 @@ def draw_desktops(frame: np.ndarray, desktops: list[Desktop],
                     cv2.FONT_HERSHEY_SIMPLEX, 0.35, (70, 70, 70), 1)
 
 
-def draw_card(frame: np.ndarray, card: Card, is_hover: bool, is_dragging: bool):
-    """绘制单张卡片（支持拖拽放大 + 阴影）"""
+def draw_card(frame: np.ndarray, card: Card, is_hover: bool, is_dragging: bool,
+              is_drop_target: bool = False):
+    """绘制单张卡片（支持拖拽放大 + 阴影 + 放置目标高亮）"""
     cx_card = card.x + card.w / 2.0
     cy_card = card.y + card.h / 2.0
     # 字体大小根据卡片宽度动态缩放
@@ -304,52 +498,127 @@ def draw_card(frame: np.ndarray, card: Card, is_hover: bool, is_dragging: bool):
         sx = int(cx_card - sw / 2)
         sy = int(cy_card - sh / 2)
 
-        # --- 绘制阴影（半透明） ---
+        # --- 第一层：扩散阴影（远、大、柔）= 悬浮深度感 ---
+        overlay_far = frame.copy()
+        far_dx, far_dy = 10, 14
+        far_pad = 6
+        _draw_rounded_rect(overlay_far,
+                            sx + far_dx - far_pad, sy + far_dy - far_pad,
+                            sw + far_pad * 2, sh + far_pad * 2,
+                            (0, 0, 0), -1, 14)
+        cv2.addWeighted(overlay_far, 0.18, frame, 0.82, 0, frame)
+
+        # --- 第二层：近阴影（紧、实）= 接触面感 ---
         sdx, sdy = SHADOW_OFFSET
         overlay = frame.copy()
         _draw_rounded_rect(overlay, sx + sdx, sy + sdy, sw, sh, SHADOW_COLOR, -1, 10)
         cv2.addWeighted(overlay, SHADOW_ALPHA, frame, 1 - SHADOW_ALPHA, 0, frame)
 
-        # 填充（提亮）
-        fill_color = tuple(min(c + 50, 255) for c in card.color)
+        # --- 填充（提亮）---
+        base_color = card.bubble_color if card.has_bubble else card.color
+        fill_color = tuple(min(c + 50, 255) for c in base_color)
         _draw_rounded_rect(frame, sx, sy, sw, sh, fill_color, -1, 10)
 
-        # 边框 - 黄色发光
-        _draw_rounded_rect(frame, sx, sy, sw, sh, (0, 255, 255), 2, 10)
+        # --- 顶部高光条（模拟从上方打来的光照）---
+        highlight_color = tuple(min(c + 120, 255) for c in base_color)
+        hl_h = max(4, sh // 7)
+        overlay_hl = frame.copy()
+        _draw_rounded_rect(overlay_hl, sx, sy, sw, hl_h, highlight_color, -1, 10)
+        cv2.addWeighted(overlay_hl, 0.30, frame, 0.70, 0, frame)
+
+        # --- 底部暗边（加深底部模拟厚度/立体感）---
+        dk_h = max(3, sh // 8)
+        overlay_dk = frame.copy()
+        _draw_rounded_rect(overlay_dk, sx, sy + sh - dk_h, sw, dk_h, (0, 0, 0), -1, 10)
+        cv2.addWeighted(overlay_dk, 0.15, frame, 0.85, 0, frame)
+
+        # 边框 - 发光
+        glow = card.bubble_color if card.has_bubble else (0, 255, 255)
+        _draw_rounded_rect(frame, sx, sy, sw, sh, glow, 2, 10)
 
         # 文字
+        drag_label = card.bubble_title if card.has_bubble else card.label
         font_scale = base_font * scale
-        text_size = cv2.getTextSize(card.label, cv2.FONT_HERSHEY_SIMPLEX,
+        text_size = cv2.getTextSize(drag_label, cv2.FONT_HERSHEY_SIMPLEX,
                                      font_scale, 2)[0]
         text_x = sx + (sw - text_size[0]) // 2
         text_y = sy + (sh + text_size[1]) // 2
-        cv2.putText(frame, card.label,
-                    (text_x, text_y),
-                    cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 255), 2)
-    else:
-        x, y, w, h = card.x, card.y, card.w, card.h
-        fill_color = card.color
-
-        _draw_rounded_rect(frame, x, y, w, h, fill_color, -1, 8)
-
-        # 边框
-        if is_hover:
-            border = (0, 255, 0)
-            thickness = 2
-        else:
-            border = card.border_color
-            thickness = 1
-        _draw_rounded_rect(frame, x, y, w, h, border, thickness, 8)
-
-        # 文字（居中）
-        font_scale = base_font
-        text_size = cv2.getTextSize(card.label, cv2.FONT_HERSHEY_SIMPLEX,
-                                     font_scale, 2)[0]
-        text_x = x + (w - text_size[0]) // 2
-        text_y = y + (h + text_size[1]) // 2
-        cv2.putText(frame, card.label,
+        cv2.putText(frame, drag_label,
                     (text_x, text_y),
                     cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 2)
+    else:
+        x, y, w, h = card.x, card.y, card.w, card.h
+
+        # 放置目标：上浮 + 外发光效果（在卡片内容之前绘制）
+        if is_drop_target:
+            y = y - 8  # 上浮几像素，模拟被"顶起"
+            pulse = 0.5 + 0.5 * math.sin(time.time() * 6.0)
+            glow_pad = 4
+            overlay_glow = frame.copy()
+            _draw_rounded_rect(overlay_glow, x - glow_pad, y - glow_pad,
+                                w + glow_pad * 2, h + glow_pad * 2,
+                                (0, 220, 255), -1, 10)
+            blend = 0.15 + pulse * 0.15
+            cv2.addWeighted(overlay_glow, blend, frame, 1 - blend, 0, frame)
+
+        if card.has_bubble:
+            # --- 气泡内容卡片 ---
+            fill_color = tuple(max(c // 3, 15) for c in card.bubble_color)
+            _draw_rounded_rect(frame, x, y, w, h, fill_color, -1, 8)
+
+            # 边框用气泡颜色
+            border = (0, 255, 0) if is_hover else card.bubble_color
+            thickness = 2 if is_hover else 1
+            _draw_rounded_rect(frame, x, y, w, h, border, thickness, 8)
+
+            # 标题
+            title_font = base_font * 0.9
+            tt_size = cv2.getTextSize(card.bubble_title, cv2.FONT_HERSHEY_SIMPLEX,
+                                       title_font, 1)[0]
+            tt_x = x + (w - tt_size[0]) // 2
+            tt_y = y + h // 3 + tt_size[1] // 2
+            cv2.putText(frame, card.bubble_title, (tt_x, tt_y),
+                        cv2.FONT_HERSHEY_SIMPLEX, title_font, card.bubble_color, 1)
+
+            # 内容第一行
+            content_line = card.bubble_content.split('\n')[0] if card.bubble_content else ""
+            if content_line:
+                small_font = base_font * 0.6
+                ct_size = cv2.getTextSize(content_line, cv2.FONT_HERSHEY_SIMPLEX,
+                                           small_font, 1)[0]
+                ct_x = x + (w - ct_size[0]) // 2
+                ct_y = y + h * 2 // 3 + ct_size[1] // 2
+                cv2.putText(frame, content_line, (ct_x, ct_y),
+                            cv2.FONT_HERSHEY_SIMPLEX, small_font, (200, 200, 200), 1)
+        else:
+            # --- 普通卡片 ---
+            fill_color = card.color
+            _draw_rounded_rect(frame, x, y, w, h, fill_color, -1, 8)
+
+            if is_hover:
+                border = (0, 255, 0)
+                thickness = 2
+            else:
+                border = card.border_color
+                thickness = 1
+            _draw_rounded_rect(frame, x, y, w, h, border, thickness, 8)
+
+            # 文字（居中）
+            font_scale = base_font
+            text_size = cv2.getTextSize(card.label, cv2.FONT_HERSHEY_SIMPLEX,
+                                         font_scale, 2)[0]
+            text_x = x + (w - text_size[0]) // 2
+            text_y = y + (h + text_size[1]) // 2
+            cv2.putText(frame, card.label,
+                        (text_x, text_y),
+                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 2)
+
+        # 放置目标：脉冲边框叠加（在卡片内容之后绘制）
+        if is_drop_target:
+            pulse = 0.5 + 0.5 * math.sin(time.time() * 6.0)
+            thick = 2 + int(pulse)
+            _draw_rounded_rect(frame, x - 1, y - 1, w + 2, h + 2,
+                                (0, 255, 255), thick, 9)
 
 
 def get_slot_xy(desk: Desktop, slot_idx: int, card_w: int, card_h: int) -> tuple:
@@ -422,11 +691,131 @@ def draw_cards(frame: np.ndarray, cards: list[Card], drag_mgr: DragManager):
         if card is drag_mgr.dragging_card:
             continue
         is_hover = (card is drag_mgr.hover_card)
-        draw_card(frame, card, is_hover, False)
+        is_target = (card is drag_mgr.drop_target_card)
+        draw_card(frame, card, is_hover, False, is_target)
 
     # 最后画拖拽中的卡片（在最上层）
     if drag_mgr.dragging_card is not None:
         draw_card(frame, drag_mgr.dragging_card, False, True)
+
+
+def draw_bubble(frame: np.ndarray, bubble: Bubble, now: float):
+    """绘制单个气泡（半透明圆 + 浮动动画 + 淡出 + 捏住动效）"""
+    alpha = bubble.alpha(now)
+    if alpha <= 0:
+        return
+
+    age = now - bubble.spawn_time
+    cx = bubble.cx
+    cy = bubble.cy
+    r = bubble.radius
+
+    if bubble.being_dragged:
+        # === 被捏住状态：椭圆挤压 + 脉冲光圈 ===
+        squeeze_x = 0.80  # 水平压缩
+        squeeze_y = 1.18  # 垂直拉伸
+        rx = int(r * squeeze_x)
+        ry = int(r * squeeze_y)
+
+        pulse = 0.5 + 0.5 * math.sin(now * 6.0)
+
+        # 外发光光圈（脉冲呼吸）
+        glow_overlay = frame.copy()
+        glow_rx = rx + 6
+        glow_ry = ry + 6
+        cv2.ellipse(glow_overlay, (cx, cy), (glow_rx, glow_ry), 0, 0, 360,
+                     (255, 255, 255), -1)
+        glow_blend = 0.08 + pulse * 0.10
+        cv2.addWeighted(glow_overlay, glow_blend, frame, 1 - glow_blend, 0, frame)
+
+        # 半透明椭圆填充
+        overlay = frame.copy()
+        cv2.ellipse(overlay, (cx, cy), (rx, ry), 0, 0, 360, bubble.color, -1)
+        blend = alpha * 0.65
+        cv2.addWeighted(overlay, blend, frame, 1 - blend, 0, frame)
+
+        # 白色脉冲边框
+        border_thick = 2 + int(pulse)
+        cv2.ellipse(frame, (cx, cy), (rx, ry), 0, 0, 360,
+                     (255, 255, 255), border_thick)
+
+    else:
+        # === 普通状态：圆形 + 浮动 + 淡出 ===
+        bob_y = int(math.sin(age * 2.0) * 5)
+        cy = cy + bob_y
+
+        # 半透明圆形填充
+        overlay = frame.copy()
+        cv2.circle(overlay, (cx, cy), r, bubble.color, -1)
+        blend = alpha * 0.55
+        cv2.addWeighted(overlay, blend, frame, 1 - blend, 0, frame)
+
+        # 外圈边框
+        border_color = tuple(min(c + 60, 255) for c in bubble.color)
+        cv2.circle(frame, (cx, cy), r, border_color, 1)
+
+    # 标题文字（两种状态共用）
+    font_scale = r / 80.0
+    text_size = cv2.getTextSize(bubble.title, cv2.FONT_HERSHEY_SIMPLEX,
+                                 font_scale, 1)[0]
+    tx = cx - text_size[0] // 2
+    ty = cy + text_size[1] // 2
+    cv2.putText(frame, bubble.title, (tx, ty),
+                cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 1)
+
+
+def draw_bubbles(frame: np.ndarray, bubble_mgr: 'BubbleManager',
+                 dragging_bubble: Optional[Bubble] = None):
+    """绘制所有气泡（拖拽中的最后绘制）"""
+    now = time.time()
+    for bubble in bubble_mgr.bubbles:
+        if bubble is dragging_bubble:
+            continue
+        draw_bubble(frame, bubble, now)
+
+    # 拖拽中的气泡最后画（最上层）
+    if dragging_bubble is not None:
+        draw_bubble(frame, dragging_bubble, now)
+
+
+def drop_bubble_on_desktop(bubble: Bubble, cards: list[Card],
+                           desktops: list[Desktop]) -> bool:
+    """
+    尝试将气泡放到桌面上，替换最近的卡片。
+    返回是否成功放置。
+    """
+    # 找到气泡中心所在的桌面
+    desk_idx = find_desktop_at(desktops, bubble.cx, bubble.cy)
+    if desk_idx < 0:
+        return False
+
+    desk = desktops[desk_idx]
+
+    # 找该桌面上最近的卡片
+    best_card = None
+    best_dist = float('inf')
+    for card in cards:
+        if card.desktop_index != desk_idx:
+            continue
+        slot_x, slot_y = get_slot_xy(desk, card.slot_index, card.w, card.h)
+        card_cx = slot_x + card.w // 2
+        card_cy = slot_y + card.h // 2
+        dx = bubble.cx - card_cx
+        dy = bubble.cy - card_cy
+        dist = dx * dx + dy * dy
+        if dist < best_dist:
+            best_dist = dist
+            best_card = card
+
+    if best_card is None:
+        return False
+
+    # 替换卡片内容
+    best_card.has_bubble = True
+    best_card.bubble_title = bubble.title
+    best_card.bubble_content = bubble.content
+    best_card.bubble_color = bubble.color
+    return True
 
 
 def draw_debug_overlay(

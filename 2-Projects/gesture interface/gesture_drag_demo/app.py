@@ -18,7 +18,8 @@ from gesture_state import GestureStateMachine, GesturePhase
 from ui import (
     create_desktops, create_desktop_cards, draw_desktops,
     draw_cards, draw_debug_overlay, handle_card_swap,
-    find_desktop_at, DragManager,
+    find_desktop_at, DragManager, BubbleManager,
+    draw_bubbles, drop_bubble_on_desktop,
 )
 
 
@@ -72,7 +73,12 @@ def main():
     cards = create_desktop_cards(desktops)
     drag_mgr = DragManager()
 
+    # 初始化气泡管理器
+    desktop_top_y = desktops[0].y  # 桌面顶部 y 坐标
+    bubble_mgr = BubbleManager(tracker.frame_w, tracker.frame_h, desktop_top_y)
+
     print(f"已创建 {len(desktops)} 个桌面, {len(cards)} 张卡片")
+    print(f"气泡区域: y=[80, {desktop_top_y - 30}]")
     for d in desktops:
         print(f"  桌面 {d.index + 1}: ({d.x}, {d.y}) {d.w}x{d.h}")
 
@@ -106,55 +112,76 @@ def main():
             else:
                 gesture.update(hand_detected=False)
 
+            # --- 气泡更新 ---
+            bubble_mgr.update()
+
             # --- 拖拽逻辑 ---
             smooth = gesture.smooth_center
 
             if gesture.phase == GesturePhase.PINCHING and smooth is not None:
                 px, py = float(smooth[0]), float(smooth[1])
-                if drag_mgr.dragging_card is None:
-                    # 尝试抓住卡片
-                    drag_mgr.try_grab(cards, px, py)
+                if not drag_mgr.is_dragging:
+                    # 先尝试抓气泡（气泡在最上层），再尝试抓卡片
+                    if not drag_mgr.try_grab_bubble(bubble_mgr.bubbles, px, py):
+                        drag_mgr.try_grab(cards, px, py)
                 else:
                     # 更新拖拽位置
                     drag_mgr.update_drag(px, py)
 
             elif gesture.phase == GesturePhase.RELEASED:
-                drag_mgr.release()
-                # released 只是短暂状态，下一帧会变成 hovering/idle
+                released_bubble = drag_mgr.release()
+                # 如果释放了气泡，检查是否落在桌面上
+                if released_bubble is not None:
+                    if drop_bubble_on_desktop(released_bubble, cards, desktops):
+                        bubble_mgr.remove(released_bubble)
+                    # else: 气泡没落在桌面上，自然消失
 
             elif gesture.phase == GesturePhase.IDLE:
-                drag_mgr.release()
+                released_bubble = drag_mgr.release()
+                if released_bubble is not None:
+                    if drop_bubble_on_desktop(released_bubble, cards, desktops):
+                        bubble_mgr.remove(released_bubble)
 
             # 更新 hover 状态
-            if smooth is not None and drag_mgr.dragging_card is None:
+            if smooth is not None and not drag_mgr.is_dragging:
                 drag_mgr.update_hover(cards, float(smooth[0]), float(smooth[1]))
-            elif drag_mgr.dragging_card is None:
+            elif not drag_mgr.is_dragging:
                 drag_mgr.hover_card = None
 
             # --- 卡片物理：交叠挤压 ---
             handle_card_swap(cards, desktops, drag_mgr.dragging_card)
 
+            # --- 气泡放置目标检测 ---
+            drag_mgr.update_drop_target(cards, desktops)
+
             # --- 绘制 ---
 
             # 1. 绘制桌面背景（黑色区域）
-            #    如果正在拖拽，高亮拖拽卡片所在的目标桌面
+            #    拖拽卡片或气泡时，高亮目标桌面
             highlight_idx = -1
             if drag_mgr.dragging_card is not None:
                 dc = drag_mgr.dragging_card
                 card_cx = dc.x + dc.w // 2
                 card_cy = dc.y + dc.h // 2
                 highlight_idx = find_desktop_at(desktops, card_cx, card_cy)
+            elif drag_mgr.dragging_bubble is not None:
+                highlight_idx = find_desktop_at(
+                    desktops, drag_mgr.dragging_bubble.cx,
+                    drag_mgr.dragging_bubble.cy)
 
             draw_desktops(frame, desktops, highlight_idx)
 
-            # 2. 绘制卡片（拖拽中的卡片放大 + 阴影，最后绘制在最上层）
+            # 2. 绘制卡片
             draw_cards(frame, cards, drag_mgr)
 
-            # 3. 绘制手部关键点
+            # 3. 绘制气泡（在卡片之上）
+            draw_bubbles(frame, bubble_mgr, drag_mgr.dragging_bubble)
+
+            # 4. 绘制手部关键点
             if hand_detected:
                 tracker.draw_landmarks(frame, hand_data)
 
-            # 4. 绘制平滑后的 pinch 中点
+            # 5. 绘制平滑后的 pinch 中点
             if smooth is not None:
                 cv2.circle(frame, (int(smooth[0]), int(smooth[1])), 12, (255, 0, 255), 2)
 
@@ -165,13 +192,13 @@ def main():
                 fps = 0.9 * fps + 0.1 * (1.0 / dt)
             prev_time = now
 
-            # 5. 绘制调试信息
+            # 6. 绘制调试信息
             draw_debug_overlay(
                 frame,
                 hand_detected=hand_detected,
                 phase=gesture.phase,
                 pinch_ratio=gesture.pinch_ratio,
-                is_grabbing=(drag_mgr.dragging_card is not None),
+                is_grabbing=drag_mgr.is_dragging,
                 smooth_center=smooth,
                 fps=fps,
             )
@@ -185,11 +212,12 @@ def main():
                 print("用户按下 ESC，退出")
                 break
             elif key == ord('r') or key == ord('R'):
-                # 重置卡片位置
+                # 重置卡片位置和气泡
                 for card in cards:
                     card.reset()
                 drag_mgr.release()
                 gesture.reset()
+                bubble_mgr.bubbles.clear()
                 print("卡片位置已重置")
 
     finally:
