@@ -1,0 +1,520 @@
+/**
+ * 官方 Claude Code SDK 实现（v2 Session API）
+ */
+import { unstable_v2_createSession, unstable_v2_resumeSession, } from "@anthropic-ai/claude-agent-sdk";
+import { getConversationList, getConversation } from "../history.js";
+import { detectClaudeCliPath } from "../platform.js";
+import { buildMessageContent } from "../image-utils.js";
+import { execSync } from "child_process";
+// 检测 Claude CLI 路径（跨平台）
+const { executable: CLAUDE_EXECUTABLE, cliPath: CLAUDE_CLI_PATH } = detectClaudeCliPath();
+/** v2 SDKSessionOptions 必须提供 model，这是默认值 */
+const DEFAULT_MODEL = "sonnet";
+/** Session 超时时间：30 分钟无活动自动关闭 */
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+/** 总安全阀超时：防止异常时 SSE 永远不关闭（30 分钟） */
+const MAX_DURATION_MS = 30 * 60 * 1000;
+/** 轮间超时：两轮之间等待的最长时间（5 分钟） */
+const BETWEEN_TURN_TIMEOUT_MS = 5 * 60 * 1000;
+/** 超时清理间隔：每 5 分钟检查一次 */
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+/**
+ * 构造 v2 SDKSessionOptions
+ */
+function buildSessionOptions(model) {
+    // 清除 CLAUDECODE 环境变量，避免子进程被误判为嵌套会话 (#16)
+    const cleanEnv = { ...process.env };
+    delete cleanEnv.CLAUDECODE;
+    const options = {
+        model: model || DEFAULT_MODEL,
+        pathToClaudeCodeExecutable: CLAUDE_CLI_PATH,
+        permissionMode: "bypassPermissions",
+        env: {
+            ...cleanEnv,
+            CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: "1",
+        },
+    };
+    // 如果检测到需要用 node 执行（npm 全局安装），设置 executable
+    if (CLAUDE_EXECUTABLE === "node") {
+        options.executable = "node";
+    }
+    return options;
+}
+/**
+ * 官方 Claude Code SDK Adapter（v2 Session 模式）
+ */
+export class OfficialAdapter {
+    /** Session 池 */
+    sessions = new Map();
+    /** 每个 session 最后活跃时间 */
+    lastActivity = new Map();
+    /** 超时清理定时器 */
+    cleanupTimer = null;
+    /** Auth 状态缓存 */
+    _authOk = true;
+    /** Auth 失败通知回调（由外部注册，用于飞书通知等） */
+    _onAuthFailed = null;
+    constructor() {
+        // 启动定时清理
+        this.cleanupTimer = setInterval(() => {
+            this.cleanupExpiredSessions();
+        }, CLEANUP_INTERVAL_MS);
+        // 不阻止进程退出
+        if (this.cleanupTimer.unref) {
+            this.cleanupTimer.unref();
+        }
+    }
+    setLifecycleCallbacks(_callbacks) {
+        // stub: OfficialAdapter manages sessions internally
+    }
+    /**
+     * 获取或创建 v2 Session
+     * 注意：新建的 session 不立即存池（sessionId 要收到第一条消息后才可用）
+     * 由 chat() 在 stream 中拿到 sessionId 后调 registerSession 存入池
+     */
+    getOrCreateSession(params) {
+        const { sessionId, model, cwd } = params;
+        // 池中有 → 复用
+        if (sessionId && this.sessions.has(sessionId)) {
+            this.lastActivity.set(sessionId, Date.now());
+            return this.sessions.get(sessionId);
+        }
+        const options = buildSessionOptions(model);
+        // v2 SDKSessionOptions 没有 cwd 字段，子进程通过 process.cwd() 继承工作目录
+        // 必须在创建 session（spawn 子进程）前 chdir 到正确目录，否则 skills 等功能失效
+        const originalCwd = process.cwd();
+        const needsChdir = cwd && cwd !== originalCwd;
+        if (needsChdir) {
+            process.chdir(cwd);
+        }
+        let session;
+        try {
+            if (sessionId) {
+                // 有 sessionId 但不在池中 → resumeSession（sessionId 立即可用）
+                session = unstable_v2_resumeSession(sessionId, options);
+                this.sessions.set(sessionId, session);
+                this.lastActivity.set(sessionId, Date.now());
+            }
+            else {
+                // 全新对话 → createSession（sessionId 要等第一条消息后才可用）
+                session = unstable_v2_createSession(options);
+                // 不存池，等 chat() 中从 stream 拿到 sessionId 后再存
+            }
+        }
+        finally {
+            // 恢复原始 cwd
+            if (needsChdir) {
+                process.chdir(originalCwd);
+            }
+        }
+        return session;
+    }
+    /**
+     * 将 session 注册到池中（新 session 收到 sessionId 后调用）
+     */
+    registerSession(sessionId, session) {
+        this.sessions.set(sessionId, session);
+        this.lastActivity.set(sessionId, Date.now());
+    }
+    /**
+     * 关闭指定 session
+     */
+    closeSession(sessionId) {
+        const session = this.sessions.get(sessionId);
+        if (session) {
+            try {
+                session.close();
+            }
+            catch {
+                // 静默处理
+            }
+            this.sessions.delete(sessionId);
+            this.lastActivity.delete(sessionId);
+        }
+    }
+    /**
+     * 关闭所有 session
+     */
+    closeAllSessions() {
+        for (const session of this.sessions.values()) {
+            try {
+                session.close();
+            }
+            catch {
+                // 静默处理，继续关闭其他 session
+            }
+        }
+        this.sessions.clear();
+        this.lastActivity.clear();
+        // 停止清理定时器
+        if (this.cleanupTimer) {
+            clearInterval(this.cleanupTimer);
+            this.cleanupTimer = null;
+        }
+    }
+    /**
+     * 注册 auth 失败回调（飞书通知等）
+     */
+    onAuthFailed(callback) {
+        this._onAuthFailed = callback;
+    }
+    /**
+     * 构造干净的环境变量（移除 CLAUDECODE）
+     * 后端从 Claude Code session 启动时继承 CLAUDECODE=1，
+     * 会导致 claude 子进程报 "Cannot be launched inside another Claude Code session"
+     */
+    getCleanEnv() {
+        const env = { ...process.env };
+        delete env.CLAUDECODE;
+        return env;
+    }
+    /**
+     * 检查 Claude CLI auth 状态
+     * 返回 true = 已登录，false = 未登录或检查失败
+     */
+    checkAuth() {
+        try {
+            const output = execSync("claude auth status --json 2>/dev/null", {
+                timeout: 10000,
+                encoding: "utf-8",
+                env: this.getCleanEnv(),
+            });
+            const status = JSON.parse(output);
+            const ok = status.loggedIn === true;
+            if (!ok && this._authOk) {
+                console.error("[Auth] Claude CLI 未登录");
+                this._onAuthFailed?.("Claude CLI 登录已过期，请在终端执行 /login 后重启 mycc 后端");
+            }
+            this._authOk = ok;
+            return ok;
+        }
+        catch {
+            if (this._authOk) {
+                console.error("[Auth] 无法检查 Claude CLI auth 状态");
+                this._onAuthFailed?.("无法检查 Claude CLI 登录状态，请确认 claude 命令可用");
+            }
+            this._authOk = false;
+            return false;
+        }
+    }
+    /** 获取当前 auth 状态（不执行检查） */
+    get authOk() {
+        return this._authOk;
+    }
+    /** 设置 auth 状态（由 HealthMonitor 调用） */
+    set authOk(ok) {
+        this._authOk = ok;
+    }
+    /**
+     * 发送消息，返回 SSE 事件流（v2 Session 模式）
+     *
+     * 支持多轮推送（Agent Teams + 后台 Task subagent）：
+     * - 普通对话：一轮 result 后直接结束 SSE
+     * - Teams 对话：检测到 TeamCreate → 持续等待 → TeamDelete 后结束
+     * - 后台 Task：检测到 Task(run_in_background) → 持续等待 → 所有任务完成后结束
+     *
+     * stream() 遇到 result 就 return，但底层 queryIterator 是共享的，
+     * 每次调 stream() 从断点继续消费。后续消息由 CLI 内部注入触发新一轮处理。
+     *
+     * 退出条件（按优先级）：
+     * 1. 非多轮模式 → 第一轮结束即退出
+     * 2. Teams + TeamDelete → 退出
+     * 3. 后台 Task + 全部完成（pending 计数归零）→ 退出
+     * 4. 轮间超时（5 分钟无新消息）→ 退出
+     * 5. 总安全阀（30 分钟）→ 强制退出
+     */
+    async *chat(params) {
+        const { message, sessionId, images, model, cwd } = params;
+        // Auth 前置检查：如果已知 auth 失效，先检查一次是否恢复
+        if (!this._authOk) {
+            const recovered = this.checkAuth();
+            if (!recovered) {
+                yield { type: "text", text: "⚠️ Claude CLI 未登录，无法处理消息。请在终端执行 `/login` 后重启 mycc 后端。" };
+                return;
+            }
+            console.log("[Auth] 登录状态已恢复");
+        }
+        // 获取或创建 session（可能在 send 失败后重建）
+        let session = this.getOrCreateSession({ sessionId, model, cwd });
+        let isNewSession = !sessionId;
+        // 如果有图片，先发送一个 system 事件通知通道
+        if (images && images.length > 0) {
+            yield {
+                type: "system",
+                session_id: sessionId || "",
+                images: images,
+            };
+        }
+        // 构造消息内容（纯文本或图文混合）
+        const content = buildMessageContent(message, images);
+        // 发送消息（带死 session 恢复：进程被 kill 后 transport 不可用）
+        try {
+            if (typeof content === "string") {
+                await session.send(content);
+            }
+            else {
+                const userMessage = {
+                    type: "user",
+                    session_id: sessionId || "",
+                    message: {
+                        role: "user",
+                        content: content,
+                    },
+                    parent_tool_use_id: null,
+                };
+                await session.send(userMessage);
+            }
+        }
+        catch (sendError) {
+            const errMsg = sendError?.message || String(sendError);
+            if (errMsg.includes("not ready") || errMsg.includes("terminated") || errMsg.includes("SIGTERM")) {
+                // Session 进程已死，清理并创建全新 session
+                console.log(`[SDK] Session ${sessionId} 进程已死 (${errMsg})，创建新 session`);
+                if (sessionId) {
+                    this.sessions.delete(sessionId);
+                    this.lastActivity.delete(sessionId);
+                }
+                session = this.getOrCreateSession({ model, cwd }); // 不传 sessionId → 新建
+                isNewSession = true;
+                // 重试发送
+                if (typeof content === "string") {
+                    await session.send(content);
+                }
+                else {
+                    const userMessage = {
+                        type: "user",
+                        session_id: "",
+                        message: {
+                            role: "user",
+                            content: content,
+                        },
+                        parent_tool_use_id: null,
+                    };
+                    await session.send(userMessage);
+                }
+            }
+            else {
+                throw sendError; // 非 transport 问题，原样抛出
+            }
+        }
+        // === 多轮循环核心 ===
+        let resolvedSessionId = sessionId;
+        let isTeamsMode = false;
+        let teamsFinished = false;
+        let pendingBgTasks = 0; // 后台 Task 计数
+        let isMultiTurnMode = false; // 是否进入多轮模式
+        const startTime = Date.now();
+        let isFirstTurn = true;
+        while (true) {
+            // 总安全阀
+            if (Date.now() - startTime > MAX_DURATION_MS) {
+                console.log("[CC] 总安全阀触发，强制结束 SSE");
+                break;
+            }
+            if (isFirstTurn) {
+                // 第一轮：直接消费 stream
+                for await (const sdkMessage of session.stream()) {
+                    // 调试：记录所有 SDK 发送的事件类型
+                    const msgType = sdkMessage?.type || "unknown";
+                    console.log(`[SDK] 发送事件类型: ${msgType}`);
+                    // Auth 错误检测：拦截 "Not logged in" 等 auth 相关错误
+                    if (detectAuthError(sdkMessage)) {
+                        // 详细日志：记录触发 auth 错误的完整 SDK 消息
+                        const msgDump = JSON.stringify(sdkMessage).substring(0, 2000);
+                        console.error(`[Auth] 检测到 auth 错误！完整消息: ${msgDump}`);
+                        console.error(`[Auth] 消息类型: ${sdkMessage?.type}, sessionId: ${resolvedSessionId}`);
+                        this._authOk = false;
+                        this._onAuthFailed?.("Claude CLI 登录已过期，飞书通道暂停服务。请在终端执行 /login 后重启 mycc 后端。");
+                        yield { type: "text", text: "⚠️ Claude CLI 登录已过期，请在终端执行 `/login` 后重启 mycc 后端。" };
+                        return;
+                    }
+                    this.extractSessionId(sdkMessage, resolvedSessionId, session, (id) => { resolvedSessionId = id; });
+                    const signals = detectMultiTurnSignals(sdkMessage);
+                    if (signals.teamsStarted) {
+                        isTeamsMode = true;
+                        isMultiTurnMode = true;
+                    }
+                    if (signals.teamsFinished)
+                        teamsFinished = true;
+                    if (signals.bgTaskLaunched) {
+                        pendingBgTasks++;
+                        isMultiTurnMode = true;
+                    }
+                    if (signals.bgTaskCompleted)
+                        pendingBgTasks--;
+                    yield sdkMessage;
+                }
+                isFirstTurn = false;
+            }
+            else {
+                // 后续轮：用 Promise.race 加轮间超时
+                // 防止 stream() 永远阻塞（没有更多消息时）
+                const streamGen = session.stream();
+                const firstResult = await Promise.race([
+                    streamGen.next(),
+                    sleep(BETWEEN_TURN_TIMEOUT_MS).then(() => TIMEOUT_SENTINEL),
+                ]);
+                if (firstResult === TIMEOUT_SENTINEL) {
+                    console.log("[CC] 轮间超时（5分钟无新消息），结束 SSE");
+                    break;
+                }
+                const { done, value } = firstResult;
+                if (done)
+                    break;
+                // 处理首条消息
+                this.extractSessionId(value, resolvedSessionId, session, (id) => { resolvedSessionId = id; });
+                const firstSignals = detectMultiTurnSignals(value);
+                if (firstSignals.teamsStarted) {
+                    isTeamsMode = true;
+                    isMultiTurnMode = true;
+                }
+                if (firstSignals.teamsFinished)
+                    teamsFinished = true;
+                if (firstSignals.bgTaskLaunched) {
+                    pendingBgTasks++;
+                    isMultiTurnMode = true;
+                }
+                if (firstSignals.bgTaskCompleted)
+                    pendingBgTasks--;
+                yield value;
+                // 消费本轮剩余消息
+                for await (const sdkMessage of streamGen) {
+                    this.extractSessionId(sdkMessage, resolvedSessionId, session, (id) => { resolvedSessionId = id; });
+                    const signals = detectMultiTurnSignals(sdkMessage);
+                    if (signals.teamsStarted) {
+                        isTeamsMode = true;
+                        isMultiTurnMode = true;
+                    }
+                    if (signals.teamsFinished)
+                        teamsFinished = true;
+                    if (signals.bgTaskLaunched) {
+                        pendingBgTasks++;
+                        isMultiTurnMode = true;
+                    }
+                    if (signals.bgTaskCompleted)
+                        pendingBgTasks--;
+                    yield sdkMessage;
+                }
+            }
+            // 通知前端一轮结束
+            yield { type: "turn_complete" };
+            // 更新活跃时间
+            if (resolvedSessionId) {
+                this.lastActivity.set(resolvedSessionId, Date.now());
+            }
+            // === 退出判断 ===
+            if (!isMultiTurnMode)
+                break; // 普通对话
+            if (isTeamsMode && teamsFinished)
+                break; // Teams 已结束
+            if (!isTeamsMode && pendingBgTasks <= 0)
+                break; // 后台 Task 全部完成
+            console.log(`[CC] 多轮模式：等待下一轮（teams=${isTeamsMode}, pending=${pendingBgTasks}）`);
+        }
+        // 最终更新活跃时间
+        if (resolvedSessionId) {
+            this.lastActivity.set(resolvedSessionId, Date.now());
+        }
+    }
+    /**
+     * 从 system 消息中提取 sessionId
+     */
+    extractSessionId(msg, current, session, setter) {
+        if (current)
+            return;
+        if (!msg || typeof msg !== "object" || !("type" in msg))
+            return;
+        const m = msg;
+        if (m.type === "system" && "session_id" in m && typeof m.session_id === "string") {
+            setter(m.session_id);
+            this.registerSession(m.session_id, session);
+        }
+    }
+    /**
+     * 获取历史记录列表
+     */
+    async listHistory(cwd, limit) {
+        let conversations = getConversationList(cwd);
+        const total = conversations.length;
+        // 如果 limit > 0，只返回前 limit 条
+        if (limit && limit > 0) {
+            conversations = conversations.slice(0, limit);
+        }
+        return {
+            conversations,
+            total,
+            hasMore: conversations.length < total,
+        };
+    }
+    /**
+     * 获取单个对话详情
+     */
+    async getHistory(cwd, sessionId) {
+        return getConversation(cwd, sessionId);
+    }
+    /**
+     * 清理超时 session
+     */
+    cleanupExpiredSessions() {
+        const now = Date.now();
+        for (const [id, lastTime] of this.lastActivity.entries()) {
+            if (now - lastTime > SESSION_TIMEOUT_MS) {
+                console.log(`[Session] 清理超时 session: ${id}`);
+                this.closeSession(id);
+            }
+        }
+    }
+}
+/** sleep 辅助 */
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+/** 超时哨兵值 */
+const TIMEOUT_SENTINEL = Symbol("TIMEOUT");
+/**
+ * 检测多轮信号
+ * - TeamCreate/TeamDelete：Agent Teams 生命周期
+ * - Task + run_in_background：后台 subagent 启动
+ * - task-notification + completed：后台 subagent 完成
+ */
+/**
+ * 检测 SDK 消息中的 auth 错误
+ * Claude CLI 未登录时会在 stream 中返回包含 "Not logged in" 的消息
+ */
+function detectAuthError(msg) {
+    if (!msg || typeof msg !== "object")
+        return false;
+    const m = msg;
+    // 只检查 error 类型的 SDK 消息，避免把 Claude 回复内容中的 "not logged in" 误判为 auth 错误
+    if (m.type !== "error" && m.type !== "system")
+        return false;
+    try {
+        const str = JSON.stringify(msg);
+        const lower = str.toLowerCase();
+        return (lower.includes("not logged in") ||
+            lower.includes("please run /login") ||
+            lower.includes("authentication required") ||
+            lower.includes("auth_error"));
+    }
+    catch {
+        return false;
+    }
+}
+function detectMultiTurnSignals(msg) {
+    const none = { teamsStarted: false, teamsFinished: false, bgTaskLaunched: false, bgTaskCompleted: false };
+    if (!msg || typeof msg !== "object")
+        return none;
+    try {
+        const str = JSON.stringify(msg);
+        return {
+            teamsStarted: str.includes('"name":"TeamCreate"'),
+            teamsFinished: str.includes('"name":"TeamDelete"'),
+            bgTaskLaunched: str.includes('"name":"Task"') && str.includes('"run_in_background":true'),
+            bgTaskCompleted: str.includes("task-notification") && str.includes("completed"),
+        };
+    }
+    catch {
+        return none;
+    }
+}
+//# sourceMappingURL=official.js.map

@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../src/adapters/index.ts"],"names":[],"mappings":"AAAA;;;;;GAKG;AAEH,OAAO,EAAE,eAAe,EAAE,MAAM,eAAe,CAAC;AAChD,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,gBAAgB,CAAC;AAGhD,YAAY,EAAE,SAAS,EAAE,QAAQ,EAAE,MAAM,gBAAgB,CAAC;AAI1D,eAAO,MAAM,OAAO,EAAE,SAAoB,CAAC;AAC3C,eAAO,MAAM,eAAe,iBAAW,CAAC;AAGxC,OAAO,EAAE,eAAe,EAAE,CAAC"}
