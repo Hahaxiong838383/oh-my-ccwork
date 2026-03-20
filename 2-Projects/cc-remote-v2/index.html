@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI CLI Console</title>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div class="left">
+      <span class="title">AI CLI Console</span>
+      <span id="engine-bar"></span>
+    </div>
+    <div class="right">
+      <span id="device-info" class="device-info"></span>
+      <span id="session-tabs"></span>
+      <button class="header-btn" id="font-dec" title="缩小字体 (Ctrl+-)">A-</button>
+      <button class="header-btn" id="font-inc" title="放大字体 (Ctrl+=)">A+</button>
+      <button class="header-btn" id="search-toggle" title="搜索 (Ctrl+F)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button class="header-btn header-stop-btn" id="stop-btn" title="停止生成 (Ctrl+C)">
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+      </button>
+      <button class="header-btn header-upload-btn" id="header-upload-btn" title="上传文件">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+      </button>
+      <span id="status-text" class="status-text">Connecting</span>
+      <span id="status-dot" class="dot"></span>
+    </div>
+  </div>
+
+  <div id="search-bar" class="search-bar hidden">
+    <input id="search-input" type="text" placeholder="搜索终端内容..." autocomplete="off" spellcheck="false">
+    <span id="search-status" class="search-status"></span>
+    <button class="search-nav-btn" id="search-prev" title="上一个 (Shift+Enter)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+    </button>
+    <button class="search-nav-btn" id="search-next" title="下一个 (Enter)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <button class="search-nav-btn" id="search-close" title="关闭 (Esc)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <div id="terminal-wrap">
+    <div id="empty" style="display:none">
+      <div class="empty-icon">⌘</div>
+      <div class="empty-text">选择引擎创建终端</div>
+    </div>
+    <div id="touch-scroll-layer"></div>
+    <div id="touch-debug">touch: waiting</div>
+    <div id="drop-overlay"><div class="drop-msg">松开以上传文件</div></div>
+    <button id="scroll-bottom-btn" class="scroll-bottom-btn hidden" title="滚动到底部">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+  </div>
+
+  <input type="file" id="file-input" multiple style="display:none">
+
+  <div id="mobile-bar">
+    <div class="quick-keys" id="quick-keys"></div>
+    <div class="input-row">
+      <button class="attach-btn" id="attach-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+      </button>
+      <textarea id="mobile-input" rows="1" placeholder="输入命令..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+      <button class="send-btn" id="send-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="shortcuts-overlay" class="shortcuts-overlay hidden">
+    <div class="shortcuts-card">
+      <h3>键盘快捷键</h3>
+      <div class="shortcut-row"><kbd>Ctrl+F</kbd><span>搜索</span></div>
+      <div class="shortcut-row"><kbd>Ctrl+=</kbd><span>放大字体</span></div>
+      <div class="shortcut-row"><kbd>Ctrl+-</kbd><span>缩小字体</span></div>
+      <div class="shortcut-row"><kbd>Ctrl+0</kbd><span>重置字体</span></div>
+      <div class="shortcut-row"><kbd>Ctrl+/</kbd><span>显示快捷键</span></div>
+      <p class="shortcuts-hint">按任意键关闭</p>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
