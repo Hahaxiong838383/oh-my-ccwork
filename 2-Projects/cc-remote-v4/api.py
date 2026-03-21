@@ -161,10 +161,36 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         'port': s['port'],
                         'path': s.get('base_path', f'/{s["cli"]}'),
                         'default': s.get('default', False),
+                        'display_name': s.get('display_name', ''),
                     }
                     for s in sessions.values()
                 ]
             })
+        else:
+            self.send_error(404)
+
+    def do_PUT(self):
+        length = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(length).decode()
+        try:
+            data = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            self.send_error(400, 'Invalid JSON')
+            return
+
+        # PUT /api/session/cc-claude-2/rename
+        if '/api/session/' in self.path and self.path.endswith('/rename'):
+            parts = self.path.split('/')
+            session_id = parts[-2]
+            new_name = data.get('name', '').strip()
+            if not new_name:
+                self.send_json(400, {'error': 'Empty name'})
+                return
+            if session_id not in sessions:
+                self.send_json(404, {'error': 'Session not found'})
+                return
+            sessions[session_id]['display_name'] = new_name
+            self.send_json(200, {'ok': True})
         else:
             self.send_error(404)
 
@@ -206,7 +232,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, DELETE')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 

@@ -13,16 +13,16 @@ body { background: #1e1e1e; color: #e5e5e5; font-family: 'SF Pro Display', 'SF P
 .topbar { display: flex; align-items: center; background: #252526; border-bottom: 1px solid #3c3c3c; flex-shrink: 0; height: 44px; padding: 0 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .topbar::-webkit-scrollbar { display: none; }
 
-/* 设备选择器 */
-.device-select { background: #2c2c2e; border: 1px solid #3c3c3c; color: #0a84ff; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; margin-right: 8px; flex-shrink: 0; outline: none; cursor: pointer; }
+/* Session 选择器（下拉） */
+.session-select { background: #2c2c2e; border: 1px solid #3c3c3c; color: #0a84ff; padding: 6px 10px; border-radius: 6px; font-size: 0.82rem; font-family: inherit; flex: 1; max-width: 220px; outline: none; cursor: pointer; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6' fill='%238e8e93'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; padding-right: 24px; }
+.session-select option { background: #2c2c2e; color: #e5e5e5; }
 
-.tab { padding: 0 14px; height: 100%; display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 500; color: #8e8e93; border-bottom: 2px solid transparent; transition: all 0.15s; user-select: none; white-space: nowrap; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
-.tab:hover { color: #d1d1d6; }
-.tab.active { border-bottom-color: #0a84ff; color: #0a84ff; }
-.tab .close { margin-left: 4px; opacity: 0.4; font-size: 0.7rem; }
-.tab .close:hover { opacity: 1; color: #ff453a; }
-.add-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px dashed #3c3c3c; background: none; color: #8e8e93; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin: 0 4px; }
-.add-btn:hover { color: #0a84ff; border-color: #0a84ff; }
+/* 工具按钮组 */
+.toolbar-btn { width: 32px; height: 32px; border-radius: 6px; border: 1px solid #3c3c3c; background: #2c2c2e; color: #8e8e93; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+.toolbar-btn:active { background: #3c3c3c; transform: scale(0.95); }
+.toolbar-btn.primary { color: #0a84ff; border-color: #0a84ff44; }
+.toolbar-btn.danger { color: #ff453a; border-color: #ff453a44; }
+.toolbar-gap { width: 4px; flex-shrink: 0; }
 .spacer { flex: 1; min-width: 8px; }
 .conn-status { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; padding: 0 8px; flex-shrink: 0; }
 .conn-status .dot { width: 6px; height: 6px; border-radius: 50%; }
@@ -372,28 +372,37 @@ function updateConnectionStatus() {
   bar.classList.toggle('show', !connected);
 }
 
+function getSessionLabel(s) {
+  if (s.display_name) return s.display_name;
+  if (s.default) return s.cli;
+  return `${s.cli} #${s.id.split('-').pop()}`;
+}
+
 function renderTopbar() {
   const bar = document.getElementById('topbar');
   let html = '';
 
-  // 设备选择器
-  if (devices.length > 0) {
-    html += '<select class="device-select" onchange="switchDevice(this.value)">';
-    devices.forEach(d => {
-      html += `<option value="${d.id}" ${d.id === currentDevice?.id ? 'selected' : ''}>${d.name}</option>`;
-    });
-    html += '</select>';
+  // Session 下拉选择器
+  html += '<select class="session-select" id="session-select" onchange="switchTo(this.value)">';
+  if (allSessions.length === 0) {
+    html += '<option value="">无 Session</option>';
   }
-
-  // Session tabs
   allSessions.forEach(s => {
-    const isActive = s.id === activeSession;
-    const label = s.default ? s.cli : `${s.cli} #${s.id.split('-').pop()}`;
-    const closeBtn = s.default ? '' : `<span class="close" onclick="event.stopPropagation();destroySession('${s.id}')">✕</span>`;
-    html += `<div class="tab ${isActive ? 'active' : ''}" onclick="switchTo('${s.id}')">${label}${closeBtn}</div>`;
+    const selected = s.id === activeSession ? 'selected' : '';
+    const icon = s.cli === 'claude' ? '◆' : s.cli === 'codex' ? '◇' : '○';
+    html += `<option value="${s.id}" ${selected}>${icon} ${getSessionLabel(s)}</option>`;
   });
+  html += '</select>';
 
-  html += `<button class="add-btn" onclick="showModal()" title="新建终端">+</button>`;
+  html += '<div class="toolbar-gap"></div>';
+
+  // 工具按钮组
+  html += `<button class="toolbar-btn primary" onclick="showModal()" title="新建">+</button>`;
+  html += '<div class="toolbar-gap"></div>';
+  html += `<button class="toolbar-btn" onclick="renameCurrentSession()" title="重命名">✎</button>`;
+  html += '<div class="toolbar-gap"></div>';
+  html += `<button class="toolbar-btn danger" onclick="deleteCurrentSession()" title="删除">✕</button>`;
+
   html += `<div class="spacer"></div>`;
 
   // 连接状态
@@ -403,6 +412,37 @@ function renderTopbar() {
   html += `<div class="conn-status ${cls}"><span class="dot"></span>${txt}${latTxt}</div>`;
 
   bar.innerHTML = html;
+}
+
+function renameCurrentSession() {
+  if (!activeSession) return;
+  const s = allSessions.find(s => s.id === activeSession);
+  if (!s) return;
+  const currentName = getSessionLabel(s);
+  const newName = prompt('重命名 Session:', currentName);
+  if (!newName || newName === currentName) return;
+  fetch(`/api/session/${s.id}/rename`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: newName }),
+  }).then(r => r.json()).then(data => {
+    if (data.ok) {
+      s.display_name = newName;
+      renderTopbar();
+    }
+  }).catch(() => {});
+}
+
+function deleteCurrentSession() {
+  if (!activeSession) return;
+  const s = allSessions.find(s => s.id === activeSession);
+  if (!s) return;
+  if (s.default) {
+    if (!confirm(`确定删除默认 session "${getSessionLabel(s)}"？\n(tmux session 将被关闭)`)) return;
+  } else {
+    if (!confirm(`删除 "${getSessionLabel(s)}"？`)) return;
+  }
+  destroySession(s.id);
 }
 
 function switchDevice(deviceId) {
