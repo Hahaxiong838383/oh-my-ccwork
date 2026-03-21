@@ -90,10 +90,16 @@ class SessionManager {
     const sessionCwd = cwd || WORK_DIR;
 
     // Create tmux session running the engine CLI
-    // 使用 env 传递当前 PATH，确保 CLI 可被找到
-    const cmd = ENGINES[engine].cmd;
+    // 用 which 解析完整路径，避免 tmux 找不到命令
+    const cmdName = ENGINES[engine].cmd;
+    let fullCmd;
+    try {
+      fullCmd = execSync(`which ${cmdName} 2>/dev/null`, { encoding: "utf8" }).trim();
+    } catch {
+      fullCmd = cmdName; // fallback to bare name
+    }
     execSync(
-      `${TMUX} new-session -d -s ${tmuxName} -c "${sessionCwd}" "PATH=${process.env.PATH} ${cmd}"`,
+      `${TMUX} new-session -d -s ${tmuxName} -c "${sessionCwd}" "${fullCmd}"`,
     );
 
     const entry = {
