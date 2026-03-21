@@ -58,64 +58,59 @@ def find_free_port():
     return None
 
 
+DEFAULT_PORTS = {'claude': 19001, 'codex': 19002, 'gemini': 19003}
+DEFAULT_PATHS = {'claude': '/claude', 'codex': '/codex', 'gemini': '/gemini'}
+
 def create_session(cli):
     if cli not in ALLOWED_CLIS:
         return None, f'Unknown CLI: {cli}'
 
-    port = find_free_port()
-    if port is None:
-        return None, 'No free ports'
+    # 强制复用默认路径和端口（Caddy 只有 3 条静态路由）
+    port = DEFAULT_PORTS[cli]
+    base_path = DEFAULT_PATHS[cli]
 
-    # 生成唯一 session ID（避免重名）
-    idx = 1
-    while True:
-        session_id = f'cc-{cli}-{idx}'
-        # 检查 api 内存和 tmux 都不存在
-        tmux_exists = subprocess.run(
-            ['/opt/homebrew/bin/tmux', 'has-session', '-t', session_id],
-            capture_output=True
-        ).returncode == 0
-        if session_id not in sessions and not tmux_exists:
-            break
-        idx += 1
-    tmux_name = session_id
+    # 如果该 CLI 已有 session，先销毁旧的
+    old_ids = [sid for sid, s in sessions.items() if s['cli'] == cli]
+    for old_id in old_ids:
+        destroy_session(old_id)
 
-    # 创建 tmux session
+    # 生成 session ID
+    session_id = f'cc-{cli}'
+    # 如果 tmux 里还有残留，先杀掉
+    subprocess.run(['/opt/homebrew/bin/tmux', 'kill-session', '-t', session_id], capture_output=True)
+
+    # 杀掉该端口上的旧 ttyd
+    try:
+        old_pid = subprocess.run(['lsof', '-ti', f':{port}'], capture_output=True, text=True, timeout=3)
+        if old_pid.stdout.strip():
+            for pid in old_pid.stdout.strip().split('\n'):
+                try:
+                    os.kill(int(pid), signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+            time.sleep(1)
+    except Exception:
+        pass
+
+    # 创建新 tmux session
     subprocess.run([
-        '/opt/homebrew/bin/tmux', 'new-session', '-d', '-s', tmux_name, '-c', PROJECT_DIR, cli
+        '/opt/homebrew/bin/tmux', 'new-session', '-d', '-s', session_id, '-c', PROJECT_DIR, cli
     ], check=True)
 
-    # 启动 ttyd（用 wrapper 带主题）
-    base_path = f'/{cli}-{idx}'
+    # 启动新 ttyd
     proc = subprocess.Popen([
-        WRAPPER, str(port), base_path, tmux_name
+        WRAPPER, str(port), base_path, session_id
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     sessions[session_id] = {
         'id': session_id,
         'cli': cli,
         'port': port,
-        'tmux_session': tmux_name,
+        'tmux_session': session_id,
         'pid': proc.pid,
         'default': False,
         'base_path': base_path,
     }
-
-    # 动态添加 Caddy 路由
-    try:
-        caddy_cfg = {
-            "@id": f"route-{session_id}",
-            "handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": f"localhost:{port}"}]}],
-            "match": [{"path": [f"{base_path}/*"]}],
-        }
-        subprocess.run([
-            'curl', '-s', '-X', 'POST',
-            'http://localhost:2019/config/apps/http/servers/srv0/routes',
-            '-H', 'Content-Type: application/json',
-            '-d', json.dumps(caddy_cfg),
-        ], capture_output=True, timeout=5)
-    except Exception:
-        pass  # Caddy 动态路由失败不影响，可以直接访问端口
 
     return sessions[session_id], None
 

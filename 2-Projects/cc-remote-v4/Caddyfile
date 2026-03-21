@@ -1,6 +1,5 @@
 :19443 {
 	# V4: Basic Auth 由 nginx 外层处理，Caddy 不再认证
-	# 这样 ttyd WebSocket 不会被 401 拦截
 
 	# 管理面板
 	handle / {
@@ -17,7 +16,8 @@
 		reverse_proxy localhost:19100
 	}
 
-	# ttyd 实例反代（WebSocket 长连接）
+	# ttyd 实例反代（固定 3 个路径 → 3 个端口）
+	# 新建 session 会复用这些路径（替换旧 ttyd 进程）
 	handle /claude/* {
 		reverse_proxy localhost:19001 {
 			transport http {
