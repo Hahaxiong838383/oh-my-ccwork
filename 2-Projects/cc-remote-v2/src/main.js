@@ -333,7 +333,6 @@ function createTerminal(id) {
     scrollback: 50000,
     theme: TERM_THEME,
     allowProposedApi: true,
-    convertEol: true,
   });
 
   var fit = new FitAddon();

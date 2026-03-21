@@ -90,8 +90,10 @@ class SessionManager {
     const sessionCwd = cwd || WORK_DIR;
 
     // Create tmux session running the engine CLI
+    // 使用 env 传递当前 PATH，确保 CLI 可被找到
+    const cmd = ENGINES[engine].cmd;
     execSync(
-      `${TMUX} new-session -d -s ${tmuxName} -c "${sessionCwd}" "${ENGINES[engine].cmd}"`,
+      `${TMUX} new-session -d -s ${tmuxName} -c "${sessionCwd}" "PATH=${process.env.PATH} ${cmd}"`,
     );
 
     const entry = {
