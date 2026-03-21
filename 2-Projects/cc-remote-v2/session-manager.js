@@ -91,10 +91,10 @@ class SessionManager {
 
     // Create tmux session running the engine CLI
     // 用 login shell 启动，确保完整环境（PATH、Keychain、auth token）可用
-    // 解决 Claude Code 每次新 session 需要重新授权的问题
+    // unset CLAUDECODE 防止 Claude Code 误判为嵌套会话（403 forbidden）
     const cmdName = ENGINES[engine].cmd;
     execSync(
-      `${TMUX} new-session -d -s ${tmuxName} -c "${sessionCwd}" "$SHELL -lc '${cmdName}'"`,
+      `${TMUX} new-session -d -s ${tmuxName} -c "${sessionCwd}" "$SHELL -lc 'unset CLAUDECODE; ${cmdName}'"`,
     );
 
     const entry = {

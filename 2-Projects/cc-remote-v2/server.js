@@ -5,6 +5,9 @@
  * 支持 Claude Code / Codex / Gemini CLI 远程访问
  */
 
+// 清除 CLAUDECODE 环境变量：防止 tmux 启动的 claude 被误判为嵌套会话（403 forbidden）
+delete process.env.CLAUDECODE;
+
 const express = require("express");
 const { WebSocketServer } = require("ws");
 const http = require("http");
