@@ -66,9 +66,18 @@ def create_session(cli):
     if port is None:
         return None, 'No free ports'
 
-    # 生成唯一 session ID
-    idx = sum(1 for s in sessions.values() if s['cli'] == cli) + 1
-    session_id = f'cc-{cli}-{idx}'
+    # 生成唯一 session ID（避免重名）
+    idx = 1
+    while True:
+        session_id = f'cc-{cli}-{idx}'
+        # 检查 api 内存和 tmux 都不存在
+        tmux_exists = subprocess.run(
+            ['/opt/homebrew/bin/tmux', 'has-session', '-t', session_id],
+            capture_output=True
+        ).returncode == 0
+        if session_id not in sessions and not tmux_exists:
+            break
+        idx += 1
     tmux_name = session_id
 
     # 创建 tmux session
@@ -299,7 +308,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def handle_create(self, data):
         cli = data.get('cli', '')
-        session, err = create_session(cli)
+        try:
+            session, err = create_session(cli)
+        except Exception as e:
+            self.send_json(500, {'error': str(e)})
+            return
         if err:
             self.send_json(400, {'error': err})
         else:
