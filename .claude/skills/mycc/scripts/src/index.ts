@@ -421,6 +421,7 @@ ${skillLine}
   // tunnelUrl 需要可变，因为重启时会更新
   let tunnelUrl: string;
   let tunnelManager: TunnelManager | null = null;
+  let tunnelProvider: TunnelProvider | null = null;
   const isRelayMode = !!process.env.RELAY_URL;
 
   if (isPublicMode) {
@@ -435,7 +436,6 @@ ${skillLine}
     const relayUrl = process.env.RELAY_URL;
     const tunnelToken = process.env.CF_TUNNEL_TOKEN;
     const isNamedTunnel = !isRelayMode && !!(tunnelToken && dnsConfig);
-    let tunnelProvider;
 
     if (isRelayMode) {
       // V2 Relay 模式：自建中继服务器（URL 固定、国内低延迟、无外部依赖）

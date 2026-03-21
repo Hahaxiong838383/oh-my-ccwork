@@ -428,14 +428,17 @@ function handleTunnelHttpResponse(msg: Record<string, unknown>, pending: Pending
 function handleWsProxy(clientWs: WebSocket, token: string, path: string) {
   const device = findDeviceByToken(token);
   if (!device || !device.online || !device.tunnelWs || device.tunnelWs.readyState !== WebSocket.OPEN) {
+    console.log(`[WsProxy] ${ts()} 设备 ${token.slice(0, 8)}... 离线，拒绝 WS`);
     clientWs.close(4002, "Device offline");
     return;
   }
 
   const reqId = generateReqId();
+  console.log(`[WsProxy] ${ts()} 新连接 reqId=${reqId} path=${path} device=${device.deviceId}`);
 
   // WS 建连超时
   const timer = setTimeout(() => {
+    console.log(`[WsProxy] ${ts()} 超时 reqId=${reqId}`);
     pendingRequests.delete(reqId);
     clientWs.close(4003, "WS open timeout");
   }, WS_OPEN_TIMEOUT);
@@ -447,6 +450,8 @@ function handleWsProxy(clientWs: WebSocket, token: string, path: string) {
 
   // 客户端 → 隧道
   clientWs.on("message", (data) => {
+    const preview = data.toString().slice(0, 100);
+    console.log(`[WsProxy] ${ts()} 浏览器→设备 reqId=${reqId} data=${preview}`);
     if (device.tunnelWs && device.tunnelWs.readyState === WebSocket.OPEN) {
       device.tunnelWs.send(JSON.stringify({
         reqId,
@@ -458,6 +463,7 @@ function handleWsProxy(clientWs: WebSocket, token: string, path: string) {
 
   // 客户端断开 → 通知设备
   clientWs.on("close", (code, reason) => {
+    console.log(`[WsProxy] ${ts()} 浏览器断开 reqId=${reqId} code=${code}`);
     pendingRequests.delete(reqId);
     if (device.tunnelWs && device.tunnelWs.readyState === WebSocket.OPEN) {
       device.tunnelWs.send(JSON.stringify({
@@ -469,7 +475,8 @@ function handleWsProxy(clientWs: WebSocket, token: string, path: string) {
     }
   });
 
-  clientWs.on("error", () => {
+  clientWs.on("error", (err) => {
+    console.log(`[WsProxy] ${ts()} 浏览器错误 reqId=${reqId} err=${err.message}`);
     pendingRequests.delete(reqId);
   });
 }
@@ -480,12 +487,14 @@ function handleTunnelWsResponse(msg: Record<string, unknown>, pending: PendingWs
 
   switch (msg.type) {
     case "ws-opened": {
-      // 建连成功，清除超时
+      console.log(`[WsProxy] ${ts()} 设备确认 WS 打开 reqId=${msg.reqId}`);
       if (timer) clearTimeout(timer);
       break;
     }
 
     case "ws-data": {
+      const preview = String(msg.data).slice(0, 100);
+      console.log(`[WsProxy] ${ts()} 设备→浏览器 reqId=${msg.reqId} data=${preview}`);
       if (clientWs.readyState === WebSocket.OPEN) {
         clientWs.send(msg.data as string);
       }
