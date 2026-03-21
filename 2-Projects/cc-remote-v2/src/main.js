@@ -4,6 +4,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
+import { CanvasAddon } from "@xterm/addon-canvas";
 
 var isMobile =
   /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
@@ -347,7 +348,10 @@ function createTerminal(id) {
 
   term.open(el);
 
-  // 使用 DOM 渲染器（默认），WebGL 在 Relay 代理场景下渲染不稳定
+  // Canvas 渲染器：Unicode 块状字符 + CJK 中文支持好，比 WebGL 稳定
+  if (!isMobile) {
+    try { term.loadAddon(new CanvasAddon()); } catch (e) { console.warn("Canvas renderer failed:", e); }
+  }
 
   // 选中文本自动复制到剪贴板（解决终端内链接无法复制的问题）
   term.onSelectionChange(function () {
