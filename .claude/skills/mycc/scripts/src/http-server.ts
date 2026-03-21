@@ -2210,7 +2210,7 @@ body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
 <script>
 let ws,token,clis=[],sessions={},activeId=null;
-function wsUrl(){const p=location.protocol==="https:"?"wss:":"ws:";const base=location.pathname.replace(/\/terminal\/?$/,"/ws");return p+"//"+location.host+base}
+function wsUrl(){const p=location.protocol==="https:"?"wss:":"ws:";const base=location.pathname.replace(/\\/terminal\\/?$/,"/ws");return p+"//"+location.host+base}
 function doLogin(){const p=document.getElementById("pwd").value;if(!p)return;connect(p)}
 document.getElementById("pwd").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
 function connect(pwd){
