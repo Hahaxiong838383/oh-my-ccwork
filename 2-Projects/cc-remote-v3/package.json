@@ -1,17 +1,13 @@
 {
   "name": "cc-remote-v3",
   "version": "3.0.0",
-  "description": "AI CLI Remote Console — Binary Protocol Edition",
-  "main": "server.js",
+  "description": "AI CLI Remote Console — ttyd + Relay Tunnel",
   "scripts": {
-    "start": "node server.js",
-    "tunnel": "node tunnel-client.js",
-    "all": "node server.js & node tunnel-client.js"
+    "start": "./start.sh",
+    "tunnel": "./start.sh --tunnel",
+    "tunnel-only": "node tunnel-client.js"
   },
   "dependencies": {
-    "express": "^5.2.1",
-    "msgpackr": "^1.11.0",
-    "node-pty": "^0.10.1",
     "ws": "^8.19.0"
   },
   "engines": {

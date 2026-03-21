@@ -1,22 +1,23 @@
 /**
- * cc-remote v3 — Relay Tunnel Client (Layered Binary Protocol)
+ * cc-remote v3 — Relay Tunnel Client (ttyd edition)
  *
- * Relay ↔ Tunnel 之间用完整帧 [opcode][reqId][payload]
- * Tunnel ↔ Local Server 之间用简单帧 [opcode][payload]
- * Tunnel 在边界做 reqId 插入/剥离。
+ * 透明代理：ttyd 的 HTTP + WS 流量通过 Relay 中转到公网。
+ * Binary WS 数据用 [16 bytes reqId][payload] 前缀路由，无自定义协议。
+ *
+ * 用法: RELAY_URL=https://relay.hahaxiong.cc DEVICE_ID=mac-mini node tunnel-client.js
  */
 
 const WebSocket = require("ws");
-const { insertReqId, stripReqId } = require("./protocol");
 
 const RELAY_URL = process.env.RELAY_URL || "https://relay.hahaxiong.cc";
 const LOCAL_PORT = parseInt(process.env.PORT || "7681");
 const DEVICE_ID = process.env.DEVICE_ID || `cc-v3-${require("os").hostname()}`;
+const REQ_ID_LEN = 16; // bytes
 
 let token = null;
 let tunnelWs = null;
 let heartbeatTimer = null;
-const localWsMap = new Map(); // reqId → local WebSocket
+const localWsMap = new Map(); // reqId(hex) → local WebSocket
 
 // ============ 注册 ============
 
@@ -29,8 +30,8 @@ async function register() {
   });
   const data = await res.json();
   token = data.token;
-  console.log(`[Tunnel] 注册${data.isNewDevice ? "（新设备）" : ""} device=${DEVICE_ID} token=${token.slice(0, 8)}...`);
-  console.log(`[Tunnel] 公网访问地址: ${RELAY_URL}/api/${token}/`);
+  console.log(`[Tunnel] 注册${data.isNewDevice ? "（新设备）" : ""} device=${DEVICE_ID}`);
+  console.log(`[Tunnel] 公网地址: ${RELAY_URL}/api/${token}/`);
 }
 
 // ============ 隧道连接 ============
@@ -50,14 +51,17 @@ function connect() {
 
   tunnelWs.on("message", (raw, isBinary) => {
     if (isBinary) {
-      // 完整帧 [opcode][reqId][payload] → 剥离 reqId → 简单帧转发到本地
-      const { reqId, simple } = stripReqId(raw);
+      // Binary: [16 bytes reqId][payload] → strip reqId → forward payload to local WS
+      const buf = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+      if (buf.length < REQ_ID_LEN) return;
+      const reqId = buf.slice(0, REQ_ID_LEN).toString("hex");
+      const payload = buf.slice(REQ_ID_LEN);
       const ws = localWsMap.get(reqId);
       if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(simple);
+        ws.send(payload);
       }
     } else {
-      handleJsonFromRelay(raw);
+      handleJson(raw);
     }
   });
 
@@ -74,7 +78,7 @@ function connect() {
 
 // ============ JSON 控制消息 ============
 
-function handleJsonFromRelay(raw) {
+function handleJson(raw) {
   try {
     const msg = JSON.parse(raw.toString());
     if (msg.type === "heartbeat-ack") return;
@@ -87,6 +91,7 @@ function handleJsonFromRelay(raw) {
         handleWsOpen(msg);
         break;
       case "ws-data": {
+        // V2 兼容：JSON 封装的文本 WS 数据
         const ws = localWsMap.get(msg.reqId);
         if (ws && ws.readyState === WebSocket.OPEN) ws.send(msg.data);
         break;
@@ -98,11 +103,9 @@ function handleJsonFromRelay(raw) {
       }
     }
   } catch (e) {
-    console.error("[Tunnel] JSON 解析错误:", e.message);
+    console.error("[Tunnel] JSON 错误:", e.message);
   }
 }
-
-// ============ 发送 ============
 
 function sendJson(msg) {
   if (tunnelWs && tunnelWs.readyState === WebSocket.OPEN) {
@@ -148,12 +151,11 @@ async function handleHttp(msg) {
   }
 }
 
-// ============ WS 代理（边界 reqId 插入/剥离）============
+// ============ WS 代理（透明 Binary 转发）============
 
 function handleWsOpen(msg) {
   try {
-    const localUrl = `ws://localhost:${LOCAL_PORT}${msg.path}`;
-    const ws = new WebSocket(localUrl);
+    const ws = new WebSocket(`ws://localhost:${LOCAL_PORT}${msg.path}`);
 
     ws.on("open", () => {
       localWsMap.set(msg.reqId, ws);
@@ -162,19 +164,22 @@ function handleWsOpen(msg) {
 
     ws.on("message", (data, isBinary) => {
       if (isBinary) {
-        // 本地 Server 发来简单帧 [opcode][payload]
-        // 插入 reqId → 完整帧 [opcode][reqId][payload] → 发给 Relay
-        const fullFrame = insertReqId(data, msg.reqId);
-        sendBinary(fullFrame);
+        // ttyd binary → prepend [reqId] → send to relay
+        const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
+        const reqIdBuf = Buffer.from(msg.reqId, "hex");
+        const full = Buffer.allocUnsafe(REQ_ID_LEN + buf.length);
+        reqIdBuf.copy(full, 0);
+        buf.copy(full, REQ_ID_LEN);
+        sendBinary(full);
       } else {
-        // JSON 控制消息
+        // Text WS data → JSON wrap
         sendJson({ reqId: msg.reqId, type: "ws-data", data: data.toString() });
       }
     });
 
     ws.on("close", (code) => {
       localWsMap.delete(msg.reqId);
-      sendJson({ reqId: msg.reqId, type: "ws-close", code });
+      sendJson({ reqId: msg.reqId, type: "ws-close", code: typeof code === "number" ? code : 1000 });
     });
 
     ws.on("error", (e) => {

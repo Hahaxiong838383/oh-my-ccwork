@@ -267,18 +267,16 @@ function handleTunnelConnection(ws: WebSocket, token: string) {
 
   ws.on("message", (raw, isBinary) => {
     if (isBinary) {
-      // ===== V3: Binary 帧 — 终端数据直传 =====
-      // 二进制帧格式: [1 byte opcode][16 bytes reqId][payload...]
-      // Relay 不解析内容，从 reqId 查找对应的浏览器 WS 连接，直接转发
+      // ===== V3 ttyd: 透明 Binary 代理 =====
+      // 格式: [16 bytes reqId][payload] → 提取 reqId 路由，payload 直发浏览器
       const buf = Buffer.isBuffer(raw) ? raw : Buffer.from(raw as ArrayBuffer);
-      if (buf.length < 17) return; // 至少 1 + 16 bytes
+      if (buf.length < 16) return;
 
-      // 完整帧 [opcode(1)][reqId(16)][payload] → 剥离 reqId → 简单帧 [opcode][payload] 发给浏览器
-      const reqId = buf.slice(1, 17).toString("hex");
+      const reqId = buf.slice(0, 16).toString("hex");
+      const payload = buf.slice(16);
       const pending = pendingRequests.get(reqId);
       if (pending && pending.kind === "ws" && pending.clientWs.readyState === WebSocket.OPEN) {
-        const simple = Buffer.concat([buf.slice(0, 1), buf.slice(17)]); // [opcode][payload]
-        pending.clientWs.send(simple);
+        pending.clientWs.send(payload); // 原始 payload 直发浏览器
       }
       return;
     }
@@ -476,13 +474,12 @@ function handleWsProxy(clientWs: WebSocket, token: string, path: string) {
     if (!device.tunnelWs || device.tunnelWs.readyState !== WebSocket.OPEN) return;
 
     if (isBinary) {
-      // V3: 浏览器发来简单帧 [opcode][payload] → 插入 reqId → 完整帧 [opcode][reqId][payload]
+      // V3 ttyd: 浏览器原始 binary → prepend [16B reqId] → 转发给设备
       const buf = Buffer.isBuffer(data) ? data : Buffer.from(data as ArrayBuffer);
       const reqIdBuf = Buffer.from(reqId, "hex");
-      const full = Buffer.allocUnsafe(1 + 16 + buf.length - 1);
-      full[0] = buf[0]; // opcode
-      reqIdBuf.copy(full, 1);
-      buf.copy(full, 17, 1); // payload (skip opcode)
+      const full = Buffer.allocUnsafe(16 + buf.length);
+      reqIdBuf.copy(full, 0);
+      buf.copy(full, 16);
       device.tunnelWs.send(full);
     } else {
       // V2 兼容：JSON 封装的终端数据
@@ -539,7 +536,8 @@ function handleTunnelWsResponse(msg: Record<string, unknown>, pending: PendingWs
       if (timer) clearTimeout(timer);
       pendingRequests.delete(msg.reqId as string);
       if (clientWs.readyState === WebSocket.OPEN) {
-        clientWs.close((msg.code as number) || 1000, (msg.reason as string) || "");
+        const closeCode = typeof msg.code === "number" && msg.code >= 1000 ? msg.code : 1000;
+        clientWs.close(closeCode as number, (msg.reason as string) || "");
       }
       break;
     }
