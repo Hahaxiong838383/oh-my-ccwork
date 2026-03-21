@@ -359,6 +359,14 @@ function createTerminal(id) {
     }
   }
 
+  // 选中文本自动复制到剪贴板（解决终端内链接无法复制的问题）
+  term.onSelectionChange(function () {
+    var sel = term.getSelection();
+    if (sel && navigator.clipboard) {
+      navigator.clipboard.writeText(sel).catch(function () {});
+    }
+  });
+
   sessions[id] = { term: term, fit: fit, search: search, ws: null, el: el, userScrolledUp: false, pingTimer: null };
 
   // Desktop keyboard → terminal
