@@ -77,17 +77,7 @@ body { background: #1e1e1e; color: #e5e5e5; font-family: 'SF Pro Display', 'SF P
 .key-btn { padding: 10px 14px; border-radius: 8px; border: 1px solid #3c3c3c; background: #2c2c2e; color: #e5e5e5; cursor: pointer; font-size: 0.85rem; white-space: nowrap; font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Monaco, monospace; transition: all 0.1s; -webkit-tap-highlight-color: transparent; }
 .key-btn:active { background: #3c3c3c; transform: scale(0.95); }
 .key-btn.danger { color: #ff453a; border-color: #ff453a33; }
-.input-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px 12px; }
-.input-row input { flex: 1; background: #2c2c2e; border: 1px solid #3c3c3c; color: #e5e5e5; padding: 10px 14px; border-radius: 20px; font-size: 16px; font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Monaco, monospace; outline: none; }
-.input-row input::placeholder { color: #8e8e93; }
-.input-row input:focus { border-color: #0a84ff; }
-.attach-btn { width: 40px; height: 40px; border-radius: 50%; background: none; border: none; font-size: 1.2rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
-.attach-btn:active { transform: scale(0.9); }
-.input-row .send { width: 40px; height: 40px; border-radius: 50%; background: #0a84ff; border: none; color: #fff; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-.input-row .send:active { transform: scale(0.9); }
-.input-row .send svg { width: 18px; height: 18px; }
-
-@supports (padding-bottom: env(safe-area-inset-bottom)) { .input-row { padding-bottom: calc(12px + env(safe-area-inset-bottom)); } }
+@supports (padding-bottom: env(safe-area-inset-bottom)) { .shortcuts { padding-bottom: calc(8px + env(safe-area-inset-bottom)); } }
 @supports (padding-top: env(safe-area-inset-top)) { .topbar { padding-top: env(safe-area-inset-top); } }
 </style>
 </head>
@@ -117,13 +107,12 @@ body { background: #1e1e1e; color: #e5e5e5; font-family: 'SF Pro Display', 'SF P
     <button class="key-btn" onclick="sendKey('escape')">Esc</button>
     <button class="key-btn" onclick="sendKey('ctrl-l')">Clear</button>
     <button class="key-btn" onclick="sendKey('y-enter')">y</button>
+    <button class="key-btn" style="color:#30d158" onclick="focusInput()">键盘</button>
+    <button class="key-btn" onclick="document.getElementById('file-input').click()">📎</button>
     <button class="key-btn" style="color:#0a84ff" onclick="showAgentModal()">Agents</button>
   </div>
-  <div class="input-row">
-    <input type="file" id="file-input" style="display:none" multiple onchange="handleFiles(this.files)">
-    <button class="attach-btn" onclick="document.getElementById('file-input').click()" title="上传文件">📎</button>
-    <input id="cmd-input" type="text" placeholder="点击输入，直接发到终端..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="ime-mode:active">
-  </div>
+  <input type="file" id="file-input" style="display:none" multiple onchange="handleFiles(this.files)">
+  <input id="cmd-input" type="text" style="position:absolute;left:-9999px;opacity:0" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 </div>
 
 <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
@@ -553,6 +542,7 @@ async function destroySession(sessionId) {
 // 按键发送
 const KEYS = { 'ctrl-c': '\x03', 'enter': '\r', 'tab': '\t', 'escape': '\x1b', 'up': '\x1b[A', 'down': '\x1b[B', 'left': '\x1b[D', 'right': '\x1b[C', 'ctrl-l': '\x0c', 'ctrl-z': '\x1a', 'backspace': '\x7f', 'y-enter': 'y\r' };
 function getActiveTmuxSession() { if (!activeSession) return null; return activeSession; }
+function focusInput() { document.getElementById('cmd-input').focus(); }
 async function sendToTerminal(keys) {
   const session = getActiveTmuxSession();
   if (!session) return;
