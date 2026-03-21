@@ -116,10 +116,8 @@ def destroy_session(session_id):
         return False, 'Session not found'
 
     s = sessions[session_id]
-    if s.get('default'):
-        return False, 'Cannot destroy default session'
 
-    # 杀 ttyd
+    # 杀 ttyd（非默认 session 才有独立 ttyd）
     if s.get('pid'):
         try:
             os.kill(s['pid'], signal.SIGTERM)
@@ -129,14 +127,15 @@ def destroy_session(session_id):
     # 杀 tmux session
     subprocess.run(['/opt/homebrew/bin/tmux', 'kill-session', '-t', s['tmux_session']], capture_output=True)
 
-    # 移除 Caddy 路由
-    try:
-        subprocess.run([
-            'curl', '-s', '-X', 'DELETE',
-            f'http://localhost:2019/id/route-{session_id}',
-        ], capture_output=True, timeout=5)
-    except Exception:
-        pass
+    # 移除 Caddy 路由（非默认 session）
+    if not s.get('default'):
+        try:
+            subprocess.run([
+                'curl', '-s', '-X', 'DELETE',
+                f'http://localhost:2019/id/route-{session_id}',
+            ], capture_output=True, timeout=5)
+        except Exception:
+            pass
 
     del sessions[session_id]
     return True, None
