@@ -224,33 +224,10 @@ function connectSession(sessionId) {
   container.innerHTML = '';
 
   // Create xterm
+  // xterm.js 默认配置：不设自定义 font/theme，让浏览器处理 CJK 字体回退
   term = new Terminal({
     cursorBlink: true,
     fontSize: 14,
-    // CJK 系统字体优先，Nerd Font 放后面（仅补 icon glyph）
-    fontFamily: "Menlo, Monaco, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans Mono CJK SC', 'JetBrains Mono NF', 'Courier New', monospace",
-    theme: {
-      background: '#1e1e1e',
-      foreground: '#d4d4d4',
-      cursor: '#58a6ff',
-      selectionBackground: '#264f78',
-      black: '#cccccc',        // 必须亮！CLI 用 black 渲染的文字要可见
-      red: '#f44747',
-      green: '#6a9955',
-      yellow: '#dcdcaa',
-      blue: '#569cd6',
-      magenta: '#c586c0',
-      cyan: '#4ec9b0',
-      white: '#d4d4d4',
-      brightBlack: '#808080',
-      brightRed: '#f44747',
-      brightGreen: '#6a9955',
-      brightYellow: '#dcdcaa',
-      brightBlue: '#569cd6',
-      brightMagenta: '#c586c0',
-      brightCyan: '#4ec9b0',
-      brightWhite: '#ffffff',
-    },
     allowProposedApi: true,
   });
 
@@ -334,7 +311,8 @@ function openWs(sessionId) {
       const opcode = view[0];
       const payload = view.slice(1);
       if (opcode === OP_OUTPUT || opcode === OP_REPLAY) {
-        term.write(payload);
+        // UTF-8 解码后传字符串给 xterm（不传原始 Uint8Array，避免 CJK 渲染问题）
+        term.write(new TextDecoder().decode(payload));
       }
     } else {
       // JSON control message
