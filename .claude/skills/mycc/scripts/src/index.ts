@@ -44,7 +44,9 @@ import { updateDnsRecord, loadDnsConfig } from "./cf-dns.js";
 // 导致所有 claude 子进程（HealthMonitor、SDK session）被误判为嵌套会话而拒绝启动
 delete process.env.CLAUDECODE;
 
-const PORT = process.env.PORT || 18080;
+import { findAvailablePort, printPortsTable } from "./services/port-manager.js";
+
+const PREFERRED_PORT = Number(process.env.PORT || 18080);
 
 // ==================== 全局错误处理（EvoMap AI Agent 自省调试框架）====================
 // 触发：agent_error, auto_debug, self_repair, error_fix, runtime_exception
@@ -115,9 +117,15 @@ async function startServer(args: string[]) {
   // 检测版本更新（静默，不阻塞）
   await checkVersionUpdate();
 
-  // 杀掉旧进程，确保端口可用
+  // 端口冲突检测：优先使用首选端口，被占用时自动换冷门端口
   console.log(chalk.gray("检查端口占用..."));
-  await killPortProcess(Number(PORT));
+  const { port: actualPort, changed: portChanged } = findAvailablePort(PREFERRED_PORT);
+  if (!portChanged) {
+    // 首选端口可用，杀掉可能残留的旧 mycc 进程
+    await killPortProcess(actualPort);
+  }
+  // 将实际端口写入环境变量，供 HttpServer 读取
+  process.env.PORT = String(actualPort);
 
   // 检查 CC 是否可用
   console.log("检查 Claude Code CLI...");
@@ -251,13 +259,19 @@ async function startServer(args: string[]) {
     await server.start();
   } catch (error: any) {
     if (error.code === 'EADDRINUSE') {
-      console.error(chalk.red(`错误: 端口 ${PORT} 已被占用`));
-      console.error(chalk.yellow('请检查是否有其他 mycc 实例正在运行'));
-      console.error(chalk.yellow(`提示: lsof -i :${PORT}`));
+      console.error(chalk.red(`错误: 端口 ${actualPort} 已被占用（自动换端口后仍冲突）`));
+      console.error(chalk.yellow('请检查是否有其他服务正在运行'));
+      printPortsTable();
       process.exit(1);
     }
     throw error;
   }
+
+  // 启动成功后打印端口一览
+  if (portChanged) {
+    console.log(chalk.yellow(`📌 注意：mycc 后端运行在非默认端口 ${actualPort}（默认 ${PREFERRED_PORT} 被占用）`));
+  }
+  printPortsTable();
 
   // 初始化终端 WebSocket（挂载到已有 HTTP server 上）
   let terminalWs: TerminalWsHandler | null = null;
@@ -472,7 +486,7 @@ ${skillLine}
     }
 
     tunnelManager = new TunnelManager({
-      localPort: Number(PORT),
+      localPort: actualPort,
       onRestartSuccess: async (newUrl: string) => {
         console.log(chalk.cyan(`[TunnelManager] 更新 tunnelUrl: ${newUrl}`));
         tunnelUrl = newUrl;
