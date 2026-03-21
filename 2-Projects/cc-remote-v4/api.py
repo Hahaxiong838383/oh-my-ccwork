@@ -269,6 +269,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def handle_scroll(self, data):
         session = data.get('session', '')
         direction = data.get('direction', 'up')
+        lines = min(data.get('lines', 0), 50)  # 逐行滚动，最多 50 行
 
         valid_sessions = {s['tmux_session'] for s in sessions.values()}
         if session not in valid_sessions:
@@ -277,13 +278,21 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         try:
             if direction == 'up':
-                # 进入 copy-mode 并向上翻一页
-                subprocess.run(['/opt/homebrew/bin/tmux', 'copy-mode', '-u', '-t', session], check=True, timeout=5)
+                if lines > 0:
+                    # 逐行滚动：先进 copy-mode，再上滚 N 行
+                    subprocess.run(['/opt/homebrew/bin/tmux', 'copy-mode', '-t', session], capture_output=True, timeout=5)
+                    for _ in range(lines):
+                        subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-X', 'scroll-up'], capture_output=True, timeout=5)
+                else:
+                    # 翻页（兼容旧行为）
+                    subprocess.run(['/opt/homebrew/bin/tmux', 'copy-mode', '-u', '-t', session], check=True, timeout=5)
             elif direction == 'down':
-                # 在 copy-mode 中向下翻一页
-                subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-X', 'page-down'], check=True, timeout=5)
+                if lines > 0:
+                    for _ in range(lines):
+                        subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-X', 'scroll-down'], capture_output=True, timeout=5)
+                else:
+                    subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-X', 'page-down'], check=True, timeout=5)
             elif direction == 'exit':
-                # 退出 copy-mode
                 subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-X', 'cancel'], check=True, timeout=5)
             self.send_json(200, {'ok': True})
         except subprocess.CalledProcessError as e:

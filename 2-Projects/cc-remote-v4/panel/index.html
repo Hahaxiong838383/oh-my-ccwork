@@ -249,6 +249,8 @@ async function init() {
   });
   // 预加载所有默认终端 iframe（后台加载，切换时零延迟）
   preloadTerminals();
+  // 触摸滚动（手机端）
+  initTouchScroll();
   // 断线检测：每 30 秒 ping，连续 2 次失败才显示断线
   setInterval(checkConnection, 30000);
 }
@@ -534,13 +536,83 @@ async function sendToTerminal(keys) {
 function sendKey(name) { sendToTerminal(KEYS[name] || name); }
 
 // tmux 翻页：通过 API 发 tmux 命令
-async function scrollTmux(direction) {
+async function scrollTmux(direction, lines) {
   const session = getActiveTmuxSession();
   if (!session) return;
+  const body = lines ? { session, direction, lines } : { session, direction };
   try {
     await fetch('/api/scroll', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session, direction }) });
+      body: JSON.stringify(body) });
   } catch {}
+}
+
+// 触摸滚动：在终端区域滑动 → tmux 逐行滚动
+function initTouchScroll() {
+  const termArea = document.getElementById('term-area');
+  let startY = 0, lastY = 0, scrolling = false, pendingLines = 0, scrollTimer = null;
+  const LINE_PX = 24; // 每滑动 24px = 1 行
+  const THROTTLE_MS = 150; // 节流：每 150ms 最多发一次请求
+
+  function flushScroll() {
+    if (pendingLines === 0) return;
+    const dir = pendingLines > 0 ? 'up' : 'down';
+    const n = Math.abs(pendingLines);
+    pendingLines = 0;
+    scrollTmux(dir, n);
+  }
+
+  termArea.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1) return;
+    startY = lastY = e.touches[0].clientY;
+    scrolling = false;
+    pendingLines = 0;
+  }, { passive: true });
+
+  termArea.addEventListener('touchmove', function(e) {
+    if (e.touches.length !== 1) return;
+    const y = e.touches[0].clientY;
+    const totalDy = startY - y;
+
+    // 超过 10px 才算滚动（区分点击和滑动）
+    if (!scrolling && Math.abs(totalDy) > 10) {
+      scrolling = true;
+    }
+    if (!scrolling) return;
+
+    const dy = lastY - y;
+    lastY = y;
+
+    // 累积行数
+    const addLines = Math.trunc(dy / LINE_PX);
+    if (addLines !== 0) {
+      pendingLines += addLines;
+      lastY += (dy - addLines * LINE_PX); // 保留余量
+
+      // 节流发送
+      if (!scrollTimer) {
+        flushScroll();
+        scrollTimer = setTimeout(() => {
+          scrollTimer = null;
+          flushScroll();
+        }, THROTTLE_MS);
+      }
+    }
+
+    e.preventDefault(); // 阻止页面滚动
+  }, { passive: false });
+
+  termArea.addEventListener('touchend', function() {
+    if (scrolling) {
+      // 发送剩余积累的行
+      setTimeout(flushScroll, 50);
+      // 2 秒无操作自动退出 copy-mode
+      clearTimeout(termArea._exitTimer);
+      termArea._exitTimer = setTimeout(() => {
+        scrollTmux('exit');
+      }, 3000);
+    }
+    scrolling = false;
+  }, { passive: true });
 }
 
 function sendCommand() {
