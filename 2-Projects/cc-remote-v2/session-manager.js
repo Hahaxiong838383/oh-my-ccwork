@@ -90,16 +90,11 @@ class SessionManager {
     const sessionCwd = cwd || WORK_DIR;
 
     // Create tmux session running the engine CLI
-    // 用 which 解析完整路径，避免 tmux 找不到命令
+    // 用 login shell 启动，确保完整环境（PATH、Keychain、auth token）可用
+    // 解决 Claude Code 每次新 session 需要重新授权的问题
     const cmdName = ENGINES[engine].cmd;
-    let fullCmd;
-    try {
-      fullCmd = execSync(`which ${cmdName} 2>/dev/null`, { encoding: "utf8" }).trim();
-    } catch {
-      fullCmd = cmdName; // fallback to bare name
-    }
     execSync(
-      `${TMUX} new-session -d -s ${tmuxName} -c "${sessionCwd}" "${fullCmd}"`,
+      `${TMUX} new-session -d -s ${tmuxName} -c "${sessionCwd}" "$SHELL -lc '${cmdName}'"`,
     );
 
     const entry = {
