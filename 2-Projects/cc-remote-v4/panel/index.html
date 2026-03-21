@@ -48,6 +48,11 @@ body { background: #1e1e1e; color: #e5e5e5; font-family: 'SF Pro Display', 'SF P
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { color: #8e8e93; font-size: 0.85rem; }
 .loading-detail { color: #636366; font-size: 0.72rem; }
+/* 浮动滚动按钮 */
+.scroll-float { position: absolute; bottom: 12px; right: 12px; z-index: 8; display: flex; flex-direction: column; gap: 6px; }
+.scroll-float-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #3c3c3c; background: #2c2c2ecc; color: #ff9f0a; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); -webkit-tap-highlight-color: transparent; }
+.scroll-float-btn:active { background: #3c3c3c; transform: scale(0.9); }
+
 .latency-badge { position: absolute; top: 8px; right: 8px; background: #2c2c2e; border: 1px solid #3c3c3c; color: #8e8e93; padding: 3px 8px; border-radius: 10px; font-size: 0.68rem; z-index: 5; font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Monaco, monospace; }
 .latency-badge.good { color: #30d158; border-color: #30d15844; }
 .latency-badge.mid { color: #ff9f0a; border-color: #ff9f0a44; }
@@ -92,6 +97,10 @@ body { background: #1e1e1e; color: #e5e5e5; font-family: 'SF Pro Display', 'SF P
     <div class="loading-spinner"></div>
     <p>Loading...</p>
   </div>
+  <div class="scroll-float">
+    <button class="scroll-float-btn" onclick="scrollToTop()" title="回到顶部">⇧</button>
+    <button class="scroll-float-btn" onclick="scrollToBottom()" title="回到底部">⇩</button>
+  </div>
 </div>
 
 <div class="bottombar show" id="bottombar">
@@ -110,6 +119,11 @@ body { background: #1e1e1e; color: #e5e5e5; font-family: 'SF Pro Display', 'SF P
     <button class="key-btn" style="color:#30d158" onclick="focusInput()">键盘</button>
     <button class="key-btn" onclick="document.getElementById('file-input').click()">📎</button>
     <button class="key-btn" style="color:#0a84ff" onclick="showAgentModal()">Agents</button>
+  </div>
+  <div class="shortcuts" style="padding-top:0;gap:8px;justify-content:center;">
+    <button class="key-btn" onclick="scrollTmux('up')" style="color:#ff9f0a;flex:1;max-width:120px;">▲ 上翻页</button>
+    <button class="key-btn" onclick="scrollTmux('down')" style="color:#ff9f0a;flex:1;max-width:120px;">▼ 下翻页</button>
+    <button class="key-btn" onclick="scrollTmux('exit')" style="color:#30d158;flex:1;max-width:120px;">⏎ 回实时</button>
   </div>
   <input type="file" id="file-input" style="display:none" multiple onchange="handleFiles(this.files)">
   <input id="cmd-input" type="text" style="position:absolute;left:-9999px;opacity:0" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
@@ -543,6 +557,16 @@ async function destroySession(sessionId) {
 const KEYS = { 'ctrl-c': '\x03', 'enter': '\r', 'tab': '\t', 'escape': '\x1b', 'up': '\x1b[A', 'down': '\x1b[B', 'left': '\x1b[D', 'right': '\x1b[C', 'ctrl-l': '\x0c', 'ctrl-z': '\x1a', 'backspace': '\x7f', 'y-enter': 'y\r' };
 function getActiveTmuxSession() { if (!activeSession) return null; return activeSession; }
 function focusInput() { document.getElementById('cmd-input').focus(); }
+function scrollToTop() {
+  const s = getActiveTmuxSession();
+  if (!s) return;
+  fetch('/api/scroll', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session: s, direction: 'up', lines: 50 }) }).catch(() => {});
+}
+function scrollToBottom() {
+  // 退出 copy-mode 回到实时输出（等同于回到底部）
+  scrollTmux('exit');
+}
 async function sendToTerminal(keys) {
   const session = getActiveTmuxSession();
   if (!session) return;
