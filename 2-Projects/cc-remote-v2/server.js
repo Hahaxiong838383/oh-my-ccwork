@@ -77,12 +77,19 @@ app.get("/api/sessions", (req, res) => {
 // Create session
 app.post("/api/sessions", (req, res) => {
   try {
-    const { engine, cwd } = req.body || {};
-    const session = sm.create(engine || "claude", cwd);
+    const { engine, cwd, name } = req.body || {};
+    const session = sm.create(engine || "claude", cwd, name);
     res.json(session);
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
+});
+
+// Update session
+app.patch("/api/sessions/:id", (req, res) => {
+  const result = sm.update(req.params.id, req.body || {});
+  if (result) res.json(result);
+  else res.status(404).json({ error: "Session not found" });
 });
 
 // Terminate session
@@ -90,6 +97,11 @@ app.delete("/api/sessions/:id", (req, res) => {
   const ok = sm.terminate(req.params.id);
   if (ok) res.json({ ok: true });
   else res.status(404).json({ error: "Session not found" });
+});
+
+// Ping for latency measurement
+app.get("/api/ping", (req, res) => {
+  res.json({ ts: Date.now() });
 });
 
 // File upload
@@ -163,6 +175,8 @@ wss.on("connection", (ws, req) => {
         sm.write(sessionId, msg.data);
       } else if (msg.type === "resize") {
         sm.resize(sessionId, msg.cols, msg.rows);
+      } else if (msg.type === "ping") {
+        ws.send(JSON.stringify({ type: "pong", ts: msg.ts }));
       }
     } catch {}
   });

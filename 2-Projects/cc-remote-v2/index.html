@@ -3,34 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>AI CLI Console</title>
+<title>cc-remote</title>
 </head>
 <body>
 <div id="app">
-  <div id="header">
-    <div class="left">
-      <span class="title">AI CLI Console</span>
-      <span id="engine-bar"></span>
+  <!-- Top bar (V1 style) -->
+  <div class="topbar">
+    <span class="topbar-title">cc-remote</span>
+
+    <!-- Session management dropdown -->
+    <div class="session-mgr" id="session-mgr">
+      <button class="session-mgr-btn" id="session-mgr-btn">
+        <span id="session-mgr-label">Sessions</span>
+        <span class="caret">&#9662;</span>
+      </button>
     </div>
-    <div class="right">
-      <span id="device-info" class="device-info"></span>
-      <span id="session-tabs"></span>
-      <button class="header-btn" id="font-dec" title="缩小字体 (Ctrl+-)">A-</button>
-      <button class="header-btn" id="font-inc" title="放大字体 (Ctrl+=)">A+</button>
-      <button class="header-btn" id="search-toggle" title="搜索 (Ctrl+F)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      </button>
-      <button class="header-btn header-stop-btn" id="stop-btn" title="停止生成 (Ctrl+C)">
-        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-      </button>
-      <button class="header-btn header-upload-btn" id="header-upload-btn" title="上传文件">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-      </button>
-      <span id="status-text" class="status-text">Connecting</span>
-      <span id="status-dot" class="dot"></span>
+
+    <div class="spacer"></div>
+
+    <!-- Header controls -->
+    <span id="device-info" class="device-badge"></span>
+    <button class="topbar-btn" id="font-dec" title="缩小字体 (Ctrl+-)">A-</button>
+    <button class="topbar-btn" id="font-inc" title="放大字体 (Ctrl+=)">A+</button>
+    <button class="topbar-btn" id="search-toggle" title="搜索 (Ctrl+F)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+    <button class="topbar-btn topbar-stop" id="stop-btn" title="停止 (Ctrl+C)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+    </button>
+    <button class="topbar-btn" id="header-upload-btn" title="上传文件">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+    </button>
+
+    <!-- Connection status + latency -->
+    <div class="conn-status" id="conn-status">
+      <span class="dot" id="status-dot"></span>
+      <span id="status-text">Connecting</span>
+      <span class="conn-latency" id="conn-latency"></span>
     </div>
   </div>
 
+  <!-- Session dropdown (positioned fixed, hidden) -->
+  <div class="session-dropdown hidden" id="session-dropdown">
+    <div class="dd-section-title">当前会话</div>
+    <div class="dd-session-list" id="dd-session-list"></div>
+    <div class="dd-divider"></div>
+    <div class="dd-section-title">新建会话</div>
+    <div class="dd-engine-list" id="dd-engine-list"></div>
+    <div class="dd-cwd-row">
+      <span class="dd-cwd-label">工作目录</span>
+      <input type="text" class="dd-cwd-input" id="dd-cwd-input" placeholder="~/mycc">
+    </div>
+  </div>
+
+  <!-- Search bar -->
   <div id="search-bar" class="search-bar hidden">
     <input id="search-input" type="text" placeholder="搜索终端内容..." autocomplete="off" spellcheck="false">
     <span id="search-status" class="search-status"></span>
@@ -45,14 +71,16 @@
     </button>
   </div>
 
+  <!-- Terminal area -->
   <div id="terminal-wrap">
     <div id="empty" style="display:none">
-      <div class="empty-icon">⌘</div>
-      <div class="empty-text">选择引擎创建终端</div>
+      <div class="empty-title">cc-remote</div>
+      <div class="empty-text">点击 Sessions 创建终端</div>
     </div>
     <div id="touch-scroll-layer"></div>
     <div id="touch-debug">touch: waiting</div>
     <div id="drop-overlay"><div class="drop-msg">松开以上传文件</div></div>
+    <div class="latency-badge hidden" id="latency-badge">--</div>
     <button id="scroll-bottom-btn" class="scroll-bottom-btn hidden" title="滚动到底部">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
@@ -60,6 +88,7 @@
 
   <input type="file" id="file-input" multiple style="display:none">
 
+  <!-- Mobile bar -->
   <div id="mobile-bar">
     <div class="quick-keys" id="quick-keys"></div>
     <div class="input-row">
@@ -73,6 +102,34 @@
     </div>
   </div>
 
+  <!-- Edit session modal -->
+  <div class="modal-overlay hidden" id="edit-modal">
+    <div class="modal">
+      <h3>编辑会话</h3>
+      <div class="form-group">
+        <label>名称</label>
+        <input type="text" id="edit-name" class="form-input" placeholder="自定义名称">
+      </div>
+      <div class="form-group">
+        <label>引擎</label>
+        <div class="form-value" id="edit-engine"></div>
+      </div>
+      <div class="form-group">
+        <label>工作目录</label>
+        <div class="form-value" id="edit-cwd"></div>
+      </div>
+      <div class="form-group">
+        <label>创建时间</label>
+        <div class="form-value" id="edit-time"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn" id="edit-cancel">取消</button>
+        <button class="modal-btn primary" id="edit-save">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shortcuts overlay -->
   <div id="shortcuts-overlay" class="shortcuts-overlay hidden">
     <div class="shortcuts-card">
       <h3>键盘快捷键</h3>

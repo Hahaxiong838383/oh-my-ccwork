@@ -9,10 +9,11 @@
 const pty = require("node-pty");
 const { execSync } = require("child_process");
 const os = require("os");
+const path = require("path");
 const crypto = require("crypto");
 
 const TMUX = "/opt/homebrew/bin/tmux";
-const WORK_DIR = process.env.WORK_DIR || os.homedir();
+const WORK_DIR = process.env.WORK_DIR || path.join(os.homedir(), "mycc");
 const MAX_BUFFER = 200 * 1024; // 200KB replay buffer per session
 
 // Supported engines
@@ -65,12 +66,13 @@ class SessionManager {
   list() {
     const result = [];
     for (const [id, s] of this.sessions) {
-      // Check if tmux session still alive
       const alive = this._tmuxAlive(s.tmuxName);
       result.push({
         id,
         engine: s.engine,
         engineName: ENGINES[s.engine]?.name || s.engine,
+        name: s.name || null,
+        cwd: s.cwd,
         connected: s.clients.size,
         alive,
         createdAt: s.createdAt,
@@ -80,7 +82,7 @@ class SessionManager {
   }
 
   /** Create a new session */
-  create(engine, cwd) {
+  create(engine, cwd, name) {
     if (!ENGINES[engine]) throw new Error(`Unknown engine: ${engine}`);
 
     const shortId = crypto.randomBytes(3).toString("hex");
@@ -99,10 +101,25 @@ class SessionManager {
       clients: new Set(),
       buffer: "",
       cwd: sessionCwd,
+      name: name || null,
       createdAt: new Date().toISOString(),
     };
     this.sessions.set(tmuxName, entry);
-    return { id: tmuxName, engine, engineName: ENGINES[engine].name };
+    return { id: tmuxName, engine, engineName: ENGINES[engine].name, name: entry.name, cwd: sessionCwd };
+  }
+
+  /** Update session properties */
+  update(id, opts) {
+    const s = this.sessions.get(id);
+    if (!s) return null;
+    if (opts.name !== undefined) s.name = opts.name;
+    return {
+      id,
+      engine: s.engine,
+      engineName: ENGINES[s.engine]?.name || s.engine,
+      name: s.name,
+      cwd: s.cwd,
+    };
   }
 
   /** Terminate a session */
@@ -246,6 +263,7 @@ class SessionManager {
       memory: Math.round(os.totalmem() / 1024 / 1024 / 1024) + "GB",
       uptime: Math.round(os.uptime() / 3600) + "h",
       node: process.version,
+      defaultCwd: WORK_DIR,
     };
   }
 }

@@ -11,17 +11,30 @@ var isMobile =
   (window.matchMedia("(pointer: coarse)").matches && window.innerWidth <= 768);
 
 // --- State ---
-var sessions = {}; // id → { term, fit, search, ws, el, userScrolledUp }
+var sessions = {}; // id → { term, fit, search, ws, el, userScrolledUp, pingTimer }
 var activeId = null;
 var currentFontSize = parseInt(localStorage.getItem("ccr-font-size")) || (isMobile ? 12 : 14);
 var MIN_FONT = 10;
 var MAX_FONT = 24;
+var sessionList = []; // { id, engine, engineName, name, cwd, alive, createdAt }
+var availableEngines = [];
+var defaultCwd = "~/mycc";
+var currentLatency = -1;
+var editingSessionId = null;
 
 // --- DOM refs ---
 var scrollBtn = document.getElementById("scroll-bottom-btn");
 var searchBar = document.getElementById("search-bar");
 var searchInput = document.getElementById("search-input");
 var searchStatusEl = document.getElementById("search-status");
+var latencyBadge = document.getElementById("latency-badge");
+var sessionDropdown = document.getElementById("session-dropdown");
+var sessionMgrBtn = document.getElementById("session-mgr-btn");
+var sessionMgrLabel = document.getElementById("session-mgr-label");
+var ddSessionList = document.getElementById("dd-session-list");
+var ddEngineList = document.getElementById("dd-engine-list");
+var ddCwdInput = document.getElementById("dd-cwd-input");
+var connLatencyEl = document.getElementById("conn-latency");
 
 // --- API helper ---
 async function api(path, opts) {
@@ -35,172 +48,234 @@ async function init() {
     api("/engines"), api("/sessions"), api("/device"),
   ]);
 
+  // Device info
   var di = document.getElementById("device-info");
   if (di && device.hostname) {
-    di.textContent = device.hostname.split(".")[0] + " | " + device.arch + " | " + device.memory;
+    di.textContent = device.hostname.split(".")[0] + " · " + device.arch + " · " + device.memory;
   }
 
-  renderEngineBar(engines);
-  list.forEach(function (s) { addSessionTab(s.id, s.engine); });
+  // Default CWD from server
+  if (device.defaultCwd) {
+    defaultCwd = device.defaultCwd;
+    ddCwdInput.placeholder = defaultCwd;
+  }
+
+  // Engines
+  availableEngines = engines.filter(function (e) { return e.available; });
+  renderEngineOptions();
+
+  // Sessions
+  sessionList = list;
+  renderSessionDropdown();
 
   if (list.length > 0) switchSession(list[0].id);
   else document.getElementById("empty").style.display = "flex";
 
+  setupSessionMgr();
+  setupEditModal();
   setupQuickKeys();
   setupMobileInput();
   setupDesktopFeatures();
+  startLatencyPing();
 }
 
 // ============================
-// Engine bar
+// Session management dropdown
 // ============================
-var availableEngines = [];
-
-function renderEngineBar(engs) {
-  availableEngines = engs.filter(function (e) { return e.available; });
-  var bar = document.getElementById("engine-bar");
-
-  availableEngines.forEach(function (e) {
-    var btn = document.createElement("button");
-    btn.className = "engine-btn";
-    btn.textContent = e.name;
-    btn.onclick = function () { launchEngine(e.id, btn); };
-    bar.appendChild(btn);
-  });
-
-  // "+" button
-  var addBtn = document.createElement("button");
-  addBtn.className = "add-btn";
-  addBtn.textContent = "+";
-  addBtn.title = "新建终端";
-
-  var dropdown = document.createElement("div");
-  dropdown.className = "engine-dropdown";
-  dropdown.style.display = "none";
-  availableEngines.forEach(function (e) {
-    var item = document.createElement("div");
-    item.className = "engine-item";
-    item.textContent = e.name;
-    item.onclick = function (ev) {
-      ev.stopPropagation(); dropdown.style.display = "none"; launchEngine(e.id, null);
-    };
-    dropdown.appendChild(item);
-  });
-
-  addBtn.onclick = function (ev) {
+function setupSessionMgr() {
+  sessionMgrBtn.onclick = function (ev) {
     ev.stopPropagation();
-    if (dropdown.style.display === "none") {
-      var rect = addBtn.getBoundingClientRect();
-      dropdown.style.top = (rect.bottom + 4) + "px";
-      dropdown.style.left = rect.left + "px";
-      dropdown.style.display = "flex";
+    if (sessionDropdown.classList.contains("hidden")) {
+      openSessionDropdown();
     } else {
-      dropdown.style.display = "none";
+      closeSessionDropdown();
     }
   };
-  document.addEventListener("click", function () {
-    dropdown.style.display = "none";
-    document.querySelectorAll(".session-dropdown").forEach(function (d) { d.style.display = "none"; });
+
+  // Close on click outside
+  document.addEventListener("click", function (ev) {
+    if (!sessionDropdown.contains(ev.target) && ev.target !== sessionMgrBtn && !sessionMgrBtn.contains(ev.target)) {
+      closeSessionDropdown();
+    }
   });
 
-  bar.appendChild(addBtn);
-  document.body.appendChild(dropdown);
+  // Prevent dropdown from closing when clicking inside
+  sessionDropdown.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+  });
 }
 
-async function launchEngine(engineId, btn) {
-  if (btn) { btn.disabled = true; var orig = btn.textContent; btn.textContent = "..."; }
+function openSessionDropdown() {
+  var rect = sessionMgrBtn.getBoundingClientRect();
+  sessionDropdown.style.top = (rect.bottom + 4) + "px";
+  sessionDropdown.style.left = rect.left + "px";
+  sessionDropdown.classList.remove("hidden");
+  renderSessionDropdown();
+}
+
+function closeSessionDropdown() {
+  sessionDropdown.classList.add("hidden");
+}
+
+function renderSessionDropdown() {
+  // Update button label
+  var active = sessionList.find(function (s) { return s.id === activeId; });
+  if (active) {
+    var label = active.name || active.engineName || active.engine;
+    var shortId = active.id.split("-").pop();
+    sessionMgrLabel.textContent = label + " · " + shortId;
+  } else {
+    sessionMgrLabel.textContent = "Sessions";
+  }
+
+  // Render session list
+  ddSessionList.innerHTML = "";
+  if (sessionList.length === 0) {
+    ddSessionList.innerHTML = '<div class="dd-empty-hint">暂无会话</div>';
+  } else {
+    sessionList.forEach(function (s) {
+      var row = document.createElement("div");
+      row.className = "dd-session-row" + (s.id === activeId ? " active" : "");
+
+      var displayName = s.name || s.engineName || s.engine;
+      var shortId = s.id.split("-").pop();
+      var isAlive = s.alive !== false;
+
+      row.innerHTML =
+        '<span class="dd-dot ' + (isAlive ? "alive" : "dead") + '"></span>' +
+        '<div class="dd-session-info">' +
+          '<div class="dd-session-name">' + displayName + '</div>' +
+          '<div class="dd-session-meta">' + s.engine + ' · ' + shortId + (s.cwd ? ' · ' + s.cwd : '') + '</div>' +
+        '</div>' +
+        '<div class="dd-session-actions">' +
+          '<button class="dd-action-btn dd-edit-btn" title="编辑">✎</button>' +
+          '<button class="dd-action-btn danger dd-del-btn" title="删除">✕</button>' +
+        '</div>';
+
+      // Click row → switch session
+      row.querySelector(".dd-session-info").onclick = function () {
+        closeSessionDropdown();
+        switchSession(s.id);
+      };
+
+      // Edit button
+      row.querySelector(".dd-edit-btn").onclick = function (ev) {
+        ev.stopPropagation();
+        closeSessionDropdown();
+        openEditModal(s.id);
+      };
+
+      // Delete button
+      row.querySelector(".dd-del-btn").onclick = async function (ev) {
+        ev.stopPropagation();
+        if (!confirm("终止会话 " + displayName + " (" + shortId + ")?")) return;
+        await api("/sessions/" + s.id, { method: "DELETE" });
+        destroySession(s.id);
+        sessionList = sessionList.filter(function (x) { return x.id !== s.id; });
+        renderSessionDropdown();
+        if (activeId === s.id) {
+          if (sessionList.length) switchSession(sessionList[0].id);
+          else {
+            activeId = null;
+            document.getElementById("empty").style.display = "flex";
+          }
+        }
+      };
+
+      ddSessionList.appendChild(row);
+    });
+  }
+}
+
+function renderEngineOptions() {
+  ddEngineList.innerHTML = "";
+  availableEngines.forEach(function (e) {
+    var item = document.createElement("div");
+    item.className = "dd-engine-item";
+    item.textContent = e.name;
+    item.onclick = function () {
+      launchEngine(e.id);
+    };
+    ddEngineList.appendChild(item);
+  });
+
+  if (availableEngines.length === 0) {
+    ddEngineList.innerHTML = '<div class="dd-empty-hint">无可用引擎</div>';
+  }
+}
+
+async function launchEngine(engineId) {
+  var cwd = ddCwdInput.value.trim() || undefined;
+  closeSessionDropdown();
+
   var s = await api("/sessions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ engine: engineId }),
+    body: JSON.stringify({ engine: engineId, cwd: cwd }),
   });
-  if (btn) { btn.disabled = false; btn.textContent = orig; }
-  if (s.id) { addSessionTab(s.id, s.engine); switchSession(s.id); }
+
+  if (s.id) {
+    sessionList.push(s);
+    renderSessionDropdown();
+    switchSession(s.id);
+  }
 }
 
 // ============================
-// Session selector
+// Edit session modal
 // ============================
-var sessionList = [];
+function setupEditModal() {
+  document.getElementById("edit-cancel").onclick = closeEditModal;
+  document.getElementById("edit-save").onclick = saveEdit;
 
-function addSessionTab(id, engine) {
-  sessionList.push({ id: id, engine: engine });
-  renderSessionSelector();
-}
-
-function removeSessionFromList(id) {
-  sessionList = sessionList.filter(function (s) { return s.id !== id; });
-  renderSessionSelector();
-}
-
-function renderSessionSelector() {
-  var container = document.getElementById("session-tabs");
-  container.innerHTML = "";
-  if (sessionList.length === 0) return;
-
-  var btn = document.createElement("button");
-  btn.className = "session-btn";
-  var active = sessionList.find(function (s) { return s.id === activeId; });
-  btn.textContent = active ? active.engine + " \u25BE" : "Sessions \u25BE";
-
-  var dd = document.createElement("div");
-  dd.className = "session-dropdown";
-  dd.style.display = "none";
-
-  sessionList.forEach(function (s) {
-    var row = document.createElement("div");
-    row.className = "session-row" + (s.id === activeId ? " active" : "");
-    row.innerHTML =
-      '<span class="session-label">' + s.engine + '</span>' +
-      '<span class="session-id">' + s.id.split("-").pop() + '</span>' +
-      '<span class="session-del">\u00d7</span>';
-    row.querySelector(".session-label").onclick = function (ev) {
-      ev.stopPropagation(); dd.style.display = "none"; switchSession(s.id);
-    };
-    row.querySelector(".session-id").onclick = function (ev) {
-      ev.stopPropagation(); dd.style.display = "none"; switchSession(s.id);
-    };
-    row.querySelector(".session-del").onclick = async function (ev) {
-      ev.stopPropagation();
-      if (!confirm("终止 " + s.id + "?")) return;
-      await api("/sessions/" + s.id, { method: "DELETE" });
-      destroySession(s.id);
-      removeSessionFromList(s.id);
-      dd.style.display = "none";
-      if (activeId === s.id) {
-        if (sessionList.length) switchSession(sessionList[0].id);
-        else {
-          activeId = null;
-          document.getElementById("empty").style.display = "flex";
-        }
-      }
-    };
-    dd.appendChild(row);
-  });
-
-  btn.onclick = function (ev) {
-    ev.stopPropagation();
-    if (dd.style.display === "none") {
-      var rect = btn.getBoundingClientRect();
-      dd.style.top = (rect.bottom + 4) + "px";
-      dd.style.right = (window.innerWidth - rect.right) + "px";
-      dd.style.left = "auto";
-      dd.style.display = "flex";
-    } else {
-      dd.style.display = "none";
-    }
+  // Close on overlay click
+  document.getElementById("edit-modal").onclick = function (ev) {
+    if (ev.target === this) closeEditModal();
   };
-  dd.onclick = function (ev) { ev.stopPropagation(); };
-
-  container.appendChild(btn);
-  document.body.appendChild(dd);
-
-  // Cleanup stale dropdowns
-  document.querySelectorAll(".session-dropdown").forEach(function (old) {
-    if (old !== dd) old.remove();
-  });
 }
 
+function openEditModal(id) {
+  var s = sessionList.find(function (x) { return x.id === id; });
+  if (!s) return;
+
+  editingSessionId = id;
+  document.getElementById("edit-name").value = s.name || "";
+  document.getElementById("edit-engine").textContent = s.engineName || s.engine;
+  document.getElementById("edit-cwd").textContent = s.cwd || defaultCwd;
+  document.getElementById("edit-time").textContent = s.createdAt ? new Date(s.createdAt).toLocaleString("zh-CN") : "--";
+  document.getElementById("edit-modal").classList.remove("hidden");
+}
+
+function closeEditModal() {
+  document.getElementById("edit-modal").classList.add("hidden");
+  editingSessionId = null;
+}
+
+async function saveEdit() {
+  if (!editingSessionId) return;
+  var name = document.getElementById("edit-name").value.trim();
+
+  var result = await api("/sessions/" + editingSessionId, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: name || null }),
+  });
+
+  if (result && !result.error) {
+    // Update local state
+    var idx = sessionList.findIndex(function (s) { return s.id === editingSessionId; });
+    if (idx >= 0) {
+      sessionList[idx].name = result.name;
+    }
+    renderSessionDropdown();
+  }
+
+  closeEditModal();
+}
+
+// ============================
+// Session switching
+// ============================
 function switchSession(id) {
   if (!sessions[id]) createTerminal(id);
 
@@ -215,10 +290,11 @@ function switchSession(id) {
   sessions[id].el.style.zIndex = "1";
   activeId = id;
 
-  renderSessionSelector();
+  renderSessionDropdown();
   document.getElementById("empty").style.display = "none";
   closeSearch();
   updateScrollBtn();
+  updateLatencyBadge();
 
   setTimeout(function () {
     doFit(id); sendResize(id);
@@ -227,17 +303,17 @@ function switchSession(id) {
 }
 
 // ============================
-// Terminal creation (with all addons)
+// Terminal creation
 // ============================
 var TERM_THEME = {
-  background: "#1a1a2e", foreground: "#e4e4e4", cursor: "#e94560",
-  cursorAccent: "#1a1a2e",
-  selectionBackground: "rgba(233,69,96,0.30)", selectionForeground: "#fff",
-  black: "#1a1a2e", red: "#e94560", green: "#4ade80", yellow: "#fbbf24",
-  blue: "#60a5fa", magenta: "#c084fc", cyan: "#22d3ee", white: "#e0e0e0",
-  brightBlack: "#5a5a7a", brightRed: "#ff6b81", brightGreen: "#6aff96",
-  brightYellow: "#ffe066", brightBlue: "#82bdff", brightMagenta: "#d8a8ff",
-  brightCyan: "#5aeaea", brightWhite: "#ffffff",
+  background: "#1e1e1e", foreground: "#e5e5e5", cursor: "#0a84ff",
+  cursorAccent: "#1e1e1e",
+  selectionBackground: "rgba(10,132,255,0.30)", selectionForeground: "#fff",
+  black: "#1e1e1e", red: "#ff453a", green: "#30d158", yellow: "#ffd60a",
+  blue: "#0a84ff", magenta: "#bf5af2", cyan: "#64d2ff", white: "#e5e5e5",
+  brightBlack: "#636366", brightRed: "#ff6961", brightGreen: "#4cd964",
+  brightYellow: "#ffe066", brightBlue: "#409cff", brightMagenta: "#da8fff",
+  brightCyan: "#70d7ff", brightWhite: "#ffffff",
 };
 
 function createTerminal(id) {
@@ -250,7 +326,7 @@ function createTerminal(id) {
   var term = new Terminal({
     cursorBlink: true,
     fontSize: currentFontSize,
-    fontFamily: "'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas',monospace",
+    fontFamily: "'SF Mono',SFMono-Regular,ui-monospace,'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas',monospace",
     lineHeight: isMobile ? 1.1 : 1.15,
     scrollback: 50000,
     theme: TERM_THEME,
@@ -262,18 +338,16 @@ function createTerminal(id) {
   term.loadAddon(fit);
   term.loadAddon(new WebLinksAddon());
 
-  // Search addon (per terminal)
   var search = new SearchAddon();
   term.loadAddon(search);
 
-  // Unicode11 for CJK
   var unicode11 = new Unicode11Addon();
   term.loadAddon(unicode11);
   term.unicode.activeVersion = "11";
 
   term.open(el);
 
-  // WebGL renderer — disabled on mobile to use DOM rendering (touch scroll support)
+  // WebGL renderer — disabled on mobile
   if (!isMobile) {
     try {
       var webgl = new WebglAddon();
@@ -284,14 +358,14 @@ function createTerminal(id) {
     }
   }
 
-  sessions[id] = { term: term, fit: fit, search: search, ws: null, el: el, userScrolledUp: false };
+  sessions[id] = { term: term, fit: fit, search: search, ws: null, el: el, userScrolledUp: false, pingTimer: null };
 
   // Desktop keyboard → terminal
   if (!isMobile) {
     term.onData(function (data) { wsSend(id, { type: "input", data: data }); });
   }
 
-  // Scroll-to-bottom detection
+  // Scroll detection
   term.onScroll(function () {
     var buf = term.buffer.active;
     var atBottom = buf.viewportY >= buf.baseY;
@@ -301,13 +375,11 @@ function createTerminal(id) {
     if (id === activeId) updateScrollBtn();
   });
 
-  // Auto-scroll on new content (unless user scrolled up)
   term.onWriteParsed(function () {
     var s = sessions[id];
     if (s && !s.userScrolledUp) term.scrollToBottom();
   });
 
-  // Search result updates (only update UI for active session)
   search.onDidChangeResults(function (e) {
     if (id !== activeId) return;
     if (!e || e.resultCount === 0) {
@@ -317,12 +389,10 @@ function createTerminal(id) {
     }
   });
 
-  // Mobile passive touch (let xterm handle natively)
   if (isMobile) {
     term.element.addEventListener("touchstart", function () {}, { passive: true });
   }
 
-  // Fit
   doFit(id);
   requestAnimationFrame(function () { doFit(id); });
   setTimeout(function () { doFit(id); }, 200);
@@ -336,6 +406,7 @@ function createTerminal(id) {
 
 function destroySession(id) {
   var s = sessions[id]; if (!s) return;
+  if (s.pingTimer) clearInterval(s.pingTimer);
   if (s.ws) s.ws.close();
   s.term.dispose();
   s.el.remove();
@@ -354,7 +425,7 @@ function sendResize(id) {
 }
 
 // ============================
-// Scroll-to-bottom button
+// Scroll-to-bottom
 // ============================
 function updateScrollBtn() {
   var s = activeId && sessions[activeId];
@@ -376,29 +447,58 @@ scrollBtn.addEventListener("click", function (e) {
 });
 
 // ============================
-// WebSocket (per session)
+// WebSocket (per session) + WS ping for latency
 // ============================
 function connectWs(id) {
   var proto = location.protocol === "https:" ? "wss:" : "ws:";
-  var ws = new WebSocket(proto + "//" + location.host + "/ws?sessionId=" + id);
+  var wsUrl = proto + "//" + location.host + "/ws?sessionId=" + id;
+
+  // Add token if stored
+  var token = new URLSearchParams(location.search).get("token");
+  if (token) wsUrl += "&token=" + token;
+
+  var ws = new WebSocket(wsUrl);
   var s = sessions[id]; if (!s) return;
   s.ws = ws;
 
   ws.onopen = function () {
     updateStatus(true);
     doFit(id); sendResize(id);
+
+    // Start WS ping for latency
+    if (s.pingTimer) clearInterval(s.pingTimer);
+    s.pingTimer = setInterval(function () {
+      if (ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: "ping", ts: Date.now() }));
+      }
+    }, 15000);
+
+    // Initial ping
+    ws.send(JSON.stringify({ type: "ping", ts: Date.now() }));
   };
 
   ws.onmessage = function (e) {
     try {
       var msg = JSON.parse(e.data);
-      if (msg.type === "output") s.term.write(msg.data);
-      else if (msg.type === "exit") s.term.write("\r\n\x1b[31m[Session ended]\x1b[0m\r\n");
+      if (msg.type === "output") {
+        s.term.write(msg.data);
+      } else if (msg.type === "exit") {
+        s.term.write("\r\n\x1b[31m[Session ended]\x1b[0m\r\n");
+      } else if (msg.type === "pong" && msg.ts) {
+        var latency = Date.now() - msg.ts;
+        currentLatency = latency;
+        if (id === activeId) updateLatencyBadge();
+        updateConnLatency(latency);
+      }
     } catch (err) {}
   };
 
   ws.onclose = function () {
+    if (s.pingTimer) { clearInterval(s.pingTimer); s.pingTimer = null; }
     updateStatus(false);
+    currentLatency = -1;
+    updateLatencyBadge();
+    updateConnLatency(-1);
     setTimeout(function () { if (sessions[id]) connectWs(id); }, 3000);
   };
 }
@@ -411,9 +511,51 @@ function wsSend(id, msg) {
 function updateStatus(on) {
   var dot = document.getElementById("status-dot");
   var txt = document.getElementById("status-text");
-  dot.className = "dot" + (on ? " on" : "");
-  txt.className = "status-text" + (on ? " on" : "");
+  dot.className = "dot" + (on ? " on" : " err");
+  txt.className = on ? "on" : "";
   txt.textContent = on ? "Connected" : "Reconnecting...";
+}
+
+// ============================
+// Latency display
+// ============================
+function updateLatencyBadge() {
+  if (currentLatency < 0) {
+    latencyBadge.classList.add("hidden");
+    return;
+  }
+  latencyBadge.classList.remove("hidden");
+  var text = currentLatency < 1000 ? currentLatency + "ms" : (currentLatency / 1000).toFixed(1) + "s";
+  latencyBadge.textContent = text;
+  latencyBadge.className = "latency-badge " + (currentLatency < 200 ? "good" : currentLatency < 1000 ? "mid" : "slow");
+}
+
+function updateConnLatency(ms) {
+  if (ms < 0) {
+    connLatencyEl.textContent = "";
+    connLatencyEl.className = "conn-latency";
+    return;
+  }
+  var text = ms < 1000 ? ms + "ms" : (ms / 1000).toFixed(1) + "s";
+  connLatencyEl.textContent = "· " + text;
+  connLatencyEl.className = "conn-latency " + (ms < 200 ? "good" : ms < 1000 ? "mid" : "slow");
+}
+
+function startLatencyPing() {
+  // Also do HTTP ping every 30s as backup
+  setInterval(async function () {
+    try {
+      var t0 = Date.now();
+      await fetch("/api/ping");
+      var lat = Date.now() - t0;
+      // Only use HTTP latency if WS latency is unavailable
+      if (currentLatency < 0) {
+        currentLatency = lat;
+        updateLatencyBadge();
+        updateConnLatency(lat);
+      }
+    } catch {}
+  }, 30000);
 }
 
 // ============================
@@ -429,7 +571,6 @@ function closeSearch() {
   searchBar.classList.add("hidden");
   searchInput.value = "";
   searchStatusEl.textContent = "";
-  // Clear decorations on active terminal
   var s = activeId && sessions[activeId];
   if (s) s.search.clearDecorations();
   setTimeout(function () { if (activeId) doFit(activeId); }, 200);
@@ -442,7 +583,7 @@ function doSearchNext() {
     incremental: true,
     decorations: {
       matchBackground: "#665500", activeMatchBackground: "#886600",
-      matchOverviewRuler: "#fbbf24", activeMatchColorOverviewRuler: "#e94560",
+      matchOverviewRuler: "#ffd60a", activeMatchColorOverviewRuler: "#0a84ff",
     },
   });
 }
@@ -479,7 +620,6 @@ document.getElementById("search-toggle").addEventListener("click", function (e) 
 function changeFontSize(delta) {
   currentFontSize = Math.max(MIN_FONT, Math.min(MAX_FONT, currentFontSize + delta));
   localStorage.setItem("ccr-font-size", currentFontSize);
-  // Apply to all terminals
   Object.keys(sessions).forEach(function (id) {
     sessions[id].term.options.fontSize = currentFontSize;
     doFit(id);
@@ -490,7 +630,7 @@ document.getElementById("font-inc").addEventListener("click", function (e) { e.p
 document.getElementById("font-dec").addEventListener("click", function (e) { e.preventDefault(); changeFontSize(-1); });
 
 // ============================
-// Stop button (Ctrl+C to active session)
+// Stop button
 // ============================
 document.getElementById("stop-btn").addEventListener("click", function (e) {
   e.preventDefault();
@@ -498,7 +638,7 @@ document.getElementById("stop-btn").addEventListener("click", function (e) {
 });
 
 // ============================
-// Upload: toast + shared logic
+// Upload
 // ============================
 var fileInput = document.getElementById("file-input");
 var toast = document.createElement("div");
@@ -553,7 +693,6 @@ function finishUpload(paths, failed, onComplete) {
   }
 }
 
-// File input change
 fileInput.addEventListener("change", function () {
   var files = fileInput.files;
   if (!files.length) return;
@@ -602,7 +741,6 @@ function setupMobileInput() {
   });
   input.addEventListener("input", autoResize);
 
-  // Attach button
   document.getElementById("attach-btn").addEventListener("click", function (e) {
     e.preventDefault(); fileInput.click();
   });
@@ -652,19 +790,18 @@ function setupQuickKeys() {
 function setupDesktopFeatures() {
   if (isMobile) return;
 
-  // Header upload button
   document.getElementById("header-upload-btn").addEventListener("click", function (e) {
     e.preventDefault(); fileInput.click();
   });
 
   // Click anywhere → focus terminal
   document.addEventListener("click", function (e) {
-    if (!e.target.closest("button,textarea,input,.search-bar,.session-btn,.session-row") && activeId && sessions[activeId]) {
+    if (!e.target.closest("button,textarea,input,.search-bar,.session-mgr-btn,.session-dropdown,.dd-session-row,.modal,.modal-overlay") && activeId && sessions[activeId]) {
       sessions[activeId].term.focus();
     }
   });
 
-  // Drag & drop upload
+  // Drag & drop
   var termWrap = document.getElementById("terminal-wrap");
   var dropOverlay = document.getElementById("drop-overlay");
   var dragCounter = 0;
@@ -746,7 +883,7 @@ function setupDesktopFeatures() {
 }
 
 // ============================
-// Mobile: touch scroll via overlay layer on top of xterm
+// Mobile: touch scroll
 // ============================
 if (isMobile) {
   var touchLayer = document.getElementById("touch-scroll-layer");
@@ -754,7 +891,7 @@ if (isMobile) {
   var tLastY = 0;
   var tVel = 0;
   var tMid = null;
-  var tAccum = 0; // accumulate sub-line movements
+  var tAccum = 0;
 
   touchLayer.addEventListener("touchstart", function (e) {
     if (e.touches.length !== 1) return;
@@ -775,13 +912,10 @@ if (isMobile) {
     tLastY = y;
     tAccum += dy;
 
-    var stepPx = 12; // 1 scroll event per 12px
+    var stepPx = 12;
     var lines = Math.trunc(tAccum / stepPx);
     if (lines !== 0) {
-      // Send mouse wheel escape sequences to tmux (SGR extended mode)
-      // Direction reversed: finger up (dy>0) = wheel down (see newer), finger down = wheel up (see older)
       var code = lines > 0 ? 65 : 64;
-      // Cap to 1 event per touchmove — smooth single-line scrolling
       var seq = "\x1b[<" + code + ";1;1M";
       wsSend(activeId, { type: "input", data: seq });
       tAccum -= (lines > 0 ? 1 : -1) * stepPx;
@@ -791,7 +925,6 @@ if (isMobile) {
   }, { passive: false });
 
   touchLayer.addEventListener("touchend", function () {
-    // Momentum scroll
     if (Math.abs(tVel) > 4 && activeId) {
       (function momentum() {
         var s = activeId && sessions[activeId];
