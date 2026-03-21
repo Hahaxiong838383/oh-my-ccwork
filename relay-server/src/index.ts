@@ -1,8 +1,13 @@
 /**
- * MyCC Relay Server
+ * MyCC Relay Server v3
  *
- * 部署在阿里云 ECS，作为用户电脑和手机/网页之间的中继服务器。
+ * 部署在腾讯云 ECS，作为用户电脑和手机/网页之间的中继服务器。
  * 核心链路：手机 ← HTTPS → Nginx → Relay Server ← WS 隧道 → 用户电脑
+ *
+ * V3 优化：
+ *   - 终端数据走 Binary 帧直传（不解包不封装，零拷贝透传）
+ *   - 控制消息（HTTP 代理、SSE、心跳、WS 建连/关闭）走 JSON
+ *   - 向下兼容 V2 JSON-only 客户端
  *
  * 接口：
  *   POST /register          设备注册
@@ -260,7 +265,24 @@ function handleTunnelConnection(ws: WebSocket, token: string) {
   device.lastHeartbeat = Date.now();
   console.log(`[Tunnel] ${ts()} 设备 ${device.deviceId} 已连接`);
 
-  ws.on("message", (raw) => {
+  ws.on("message", (raw, isBinary) => {
+    if (isBinary) {
+      // ===== V3: Binary 帧 — 终端数据直传 =====
+      // 二进制帧格式: [1 byte opcode][16 bytes reqId][payload...]
+      // Relay 不解析内容，从 reqId 查找对应的浏览器 WS 连接，直接转发
+      const buf = Buffer.isBuffer(raw) ? raw : Buffer.from(raw as ArrayBuffer);
+      if (buf.length < 17) return; // 至少 1 + 16 bytes
+
+      const reqId = buf.slice(1, 17).toString("hex");
+      const pending = pendingRequests.get(reqId);
+      if (pending && pending.kind === "ws" && pending.clientWs.readyState === WebSocket.OPEN) {
+        // 直接转发整个二进制帧给浏览器（零拷贝）
+        pending.clientWs.send(buf);
+      }
+      return;
+    }
+
+    // ===== JSON 控制消息（V2 兼容 + 心跳 + HTTP 代理） =====
     try {
       const msg = JSON.parse(raw.toString());
 
@@ -448,11 +470,17 @@ function handleWsProxy(clientWs: WebSocket, token: string, path: string) {
   // 通知设备打开 WS
   device.tunnelWs.send(JSON.stringify({ reqId, type: "ws-open", path }));
 
-  // 客户端 → 隧道
-  clientWs.on("message", (data) => {
-    const preview = data.toString().slice(0, 100);
-    console.log(`[WsProxy] ${ts()} 浏览器→设备 reqId=${reqId} data=${preview}`);
-    if (device.tunnelWs && device.tunnelWs.readyState === WebSocket.OPEN) {
+  // 客户端 → 隧道（V3: Binary 直传 + V2 JSON 兼容）
+  clientWs.on("message", (data, isBinary) => {
+    if (!device.tunnelWs || device.tunnelWs.readyState !== WebSocket.OPEN) return;
+
+    if (isBinary) {
+      // V3: 浏览器发来的二进制帧（终端输入/resize），直接转发给设备
+      device.tunnelWs.send(data as Buffer);
+    } else {
+      // V2 兼容：JSON 封装的终端数据
+      const preview = data.toString().slice(0, 100);
+      console.log(`[WsProxy] ${ts()} 浏览器→设备 reqId=${reqId} data=${preview}`);
       device.tunnelWs.send(JSON.stringify({
         reqId,
         type: "ws-data",
@@ -493,8 +521,7 @@ function handleTunnelWsResponse(msg: Record<string, unknown>, pending: PendingWs
     }
 
     case "ws-data": {
-      const preview = String(msg.data).slice(0, 100);
-      console.log(`[WsProxy] ${ts()} 设备→浏览器 reqId=${msg.reqId} data=${preview}`);
+      // V2 兼容：JSON 封装的终端数据（V3 走 Binary 帧不经过这里）
       if (clientWs.readyState === WebSocket.OPEN) {
         clientWs.send(msg.data as string);
       }
