@@ -1,0 +1,45 @@
+:19443 {
+	# V4: Basic Auth 由 nginx 外层处理，Caddy 不再认证
+	# 这样 ttyd WebSocket 不会被 401 拦截
+
+	# 管理面板
+	handle / {
+		root * /Users/rayman.chen/mycc/2-Projects/cc-remote-v4/panel
+		file_server
+	}
+	handle /panel/* {
+		root * /Users/rayman.chen/mycc/2-Projects/cc-remote-v4/panel
+		file_server
+	}
+
+	# 按键注入 API
+	handle /api/* {
+		reverse_proxy localhost:19100
+	}
+
+	# ttyd 实例反代（WebSocket 长连接）
+	handle /claude/* {
+		reverse_proxy localhost:19001 {
+			transport http {
+				read_timeout 0
+				write_timeout 0
+			}
+		}
+	}
+	handle /codex/* {
+		reverse_proxy localhost:19002 {
+			transport http {
+				read_timeout 0
+				write_timeout 0
+			}
+		}
+	}
+	handle /gemini/* {
+		reverse_proxy localhost:19003 {
+			transport http {
+				read_timeout 0
+				write_timeout 0
+			}
+		}
+	}
+}
