@@ -327,7 +327,7 @@ function createTerminal(id) {
   var term = new Terminal({
     cursorBlink: true,
     fontSize: currentFontSize,
-    fontFamily: "'SF Mono',SFMono-Regular,ui-monospace,'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas',monospace",
+    fontFamily: "'SF Mono',SFMono-Regular,ui-monospace,'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','PingFang SC','Microsoft YaHei','Noto Sans CJK SC',monospace",
     lineHeight: isMobile ? 1.1 : 1.15,
     scrollback: 50000,
     theme: TERM_THEME,
