@@ -3,8 +3,6 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
-import { Unicode11Addon } from "@xterm/addon-unicode11";
-import { CanvasAddon } from "@xterm/addon-canvas";
 
 var isMobile =
   /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
@@ -325,11 +323,10 @@ function createTerminal(id) {
   el.style.visibility = "hidden";
   wrap.appendChild(el);
 
+  // V1 极简配置（与 http-server.ts 内嵌终端一致，验证显示正常）
   var term = new Terminal({
     cursorBlink: true,
     fontSize: currentFontSize,
-    fontFamily: "'JetBrainsMono NF','JetBrainsMono Nerd Font','CaskaydiaCove Nerd Font','FiraCode Nerd Font','SF Mono','Menlo','Consolas','PingFang SC','Microsoft YaHei',monospace",
-    lineHeight: isMobile ? 1.1 : 1.15,
     scrollback: 50000,
     theme: TERM_THEME,
     allowProposedApi: true,
@@ -342,16 +339,7 @@ function createTerminal(id) {
   var search = new SearchAddon();
   term.loadAddon(search);
 
-  var unicode11 = new Unicode11Addon();
-  term.loadAddon(unicode11);
-  term.unicode.activeVersion = "11";
-
   term.open(el);
-
-  // Canvas 渲染器：Unicode 块状字符 + CJK 中文支持好，比 WebGL 稳定
-  if (!isMobile) {
-    try { term.loadAddon(new CanvasAddon()); } catch (e) { console.warn("Canvas renderer failed:", e); }
-  }
 
   // 选中文本自动复制到剪贴板（解决终端内链接无法复制的问题）
   term.onSelectionChange(function () {
