@@ -15,7 +15,7 @@
 </style>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  body { background: #1e1e1e; color: #d4d4d4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
   /* Header */
   .header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #161b22; border-bottom: 1px solid #30363d; flex-shrink: 0; }
@@ -60,7 +60,7 @@
   .dialog-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
   .dialog { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; min-width: 320px; }
   .dialog h3 { margin-bottom: 16px; color: #c9d1d9; font-size: 16px; }
-  .dialog select, .dialog input { width: 100%; padding: 8px 12px; background: #0d1117; color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px; font-size: 14px; margin-bottom: 12px; }
+  .dialog select, .dialog input { width: 100%; padding: 8px 12px; background: #1e1e1e; color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px; font-size: 14px; margin-bottom: 12px; }
   .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
   .dialog-actions button { padding: 6px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; }
   .btn-cancel { background: #21262d; color: #c9d1d9; }
@@ -227,28 +227,28 @@ function connectSession(sessionId) {
   term = new Terminal({
     cursorBlink: true,
     fontSize: 14,
-    fontFamily: "'JetBrains Mono NF', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace",
+    // CJK 系统字体优先，Nerd Font 放后面（仅补 icon glyph）
+    fontFamily: "Menlo, Monaco, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans Mono CJK SC', 'JetBrains Mono NF', 'Courier New', monospace",
     theme: {
-      background: '#0d1117',
-      foreground: '#c9d1d9',
+      background: '#1e1e1e',
+      foreground: '#d4d4d4',
       cursor: '#58a6ff',
       selectionBackground: '#264f78',
-      // 关键：black 必须与 background 有足够对比度，否则中文不可见
-      black: '#8b949e',
-      red: '#ff7b72',
-      green: '#3fb950',
-      yellow: '#d29922',
-      blue: '#58a6ff',
-      magenta: '#bc8cff',
-      cyan: '#39d353',
-      white: '#f0f6fc',
-      brightBlack: '#6e7681',
-      brightRed: '#ffa198',
-      brightGreen: '#56d364',
-      brightYellow: '#e3b341',
-      brightBlue: '#79c0ff',
-      brightMagenta: '#d2a8ff',
-      brightCyan: '#56d364',
+      black: '#cccccc',        // 必须亮！CLI 用 black 渲染的文字要可见
+      red: '#f44747',
+      green: '#6a9955',
+      yellow: '#dcdcaa',
+      blue: '#569cd6',
+      magenta: '#c586c0',
+      cyan: '#4ec9b0',
+      white: '#d4d4d4',
+      brightBlack: '#808080',
+      brightRed: '#f44747',
+      brightGreen: '#6a9955',
+      brightYellow: '#dcdcaa',
+      brightBlue: '#569cd6',
+      brightMagenta: '#c586c0',
+      brightCyan: '#4ec9b0',
       brightWhite: '#ffffff',
     },
     allowProposedApi: true,
