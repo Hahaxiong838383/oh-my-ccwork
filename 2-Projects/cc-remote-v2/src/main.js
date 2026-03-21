@@ -37,8 +37,10 @@ var ddCwdInput = document.getElementById("dd-cwd-input");
 var connLatencyEl = document.getElementById("conn-latency");
 
 // --- API helper ---
+// 获取 API 基路径（兼容 Relay 代理：/api/{token}/ 前缀）
+var basePath = location.pathname.replace(/\/$/, "");
 async function api(path, opts) {
-  var r = await fetch("/api" + path, opts);
+  var r = await fetch(basePath + "/api" + path, opts);
   return r.json();
 }
 
@@ -451,7 +453,7 @@ scrollBtn.addEventListener("click", function (e) {
 // ============================
 function connectWs(id) {
   var proto = location.protocol === "https:" ? "wss:" : "ws:";
-  var wsUrl = proto + "//" + location.host + "/ws?sessionId=" + id;
+  var wsUrl = proto + "//" + location.host + basePath + "/ws?sessionId=" + id;
 
   // Add token if stored
   var token = new URLSearchParams(location.search).get("token");
@@ -546,7 +548,7 @@ function startLatencyPing() {
   setInterval(async function () {
     try {
       var t0 = Date.now();
-      await fetch("/api/ping");
+      await fetch(basePath + "/api/ping");
       var lat = Date.now() - t0;
       // Only use HTTP latency if WS latency is unavailable
       if (currentLatency < 0) {
@@ -663,7 +665,7 @@ function uploadFiles(files, onComplete) {
     form.append("file", file);
     if (activeId) form.append("sessionId", activeId);
 
-    fetch("/api/upload", { method: "POST", body: form })
+    fetch(basePath + "/api/upload", { method: "POST", body: form })
       .then(function (r) { if (!r.ok) throw new Error("fail"); return r.json(); })
       .then(function (data) {
         if (data.path) paths.push(data.path);
