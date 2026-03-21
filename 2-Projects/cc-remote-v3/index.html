@@ -6,6 +6,14 @@
 <title>cc-remote v3</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
 <style>
+  /* Nerd Font for Claude Code logo */
+  @font-face {
+    font-family: 'JetBrains Mono NF';
+    src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@v3.3.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf') format('truetype');
+    font-display: swap;
+  }
+</style>
+<style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
@@ -119,6 +127,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-unicode11@0.8.0/lib/addon-unicode11.min.js"></script>
 <script>
 // ============ Constants ============
 const OP_OUTPUT = 0x01;
@@ -218,14 +227,29 @@ function connectSession(sessionId) {
   term = new Terminal({
     cursorBlink: true,
     fontSize: 14,
-    fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Monaco, 'Courier New', monospace",
+    fontFamily: "'JetBrains Mono NF', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace",
     theme: {
       background: '#0d1117',
       foreground: '#c9d1d9',
       cursor: '#58a6ff',
       selectionBackground: '#264f78',
-      black: '#484f58', red: '#ff7b72', green: '#3fb950', yellow: '#d29922',
-      blue: '#58a6ff', magenta: '#bc8cff', cyan: '#39d353', white: '#b1bac4',
+      // 关键：black 必须与 background 有足够对比度，否则中文不可见
+      black: '#8b949e',
+      red: '#ff7b72',
+      green: '#3fb950',
+      yellow: '#d29922',
+      blue: '#58a6ff',
+      magenta: '#bc8cff',
+      cyan: '#39d353',
+      white: '#f0f6fc',
+      brightBlack: '#6e7681',
+      brightRed: '#ffa198',
+      brightGreen: '#56d364',
+      brightYellow: '#e3b341',
+      brightBlue: '#79c0ff',
+      brightMagenta: '#d2a8ff',
+      brightCyan: '#56d364',
+      brightWhite: '#ffffff',
     },
     allowProposedApi: true,
   });
@@ -233,6 +257,10 @@ function connectSession(sessionId) {
   fitAddon = new FitAddon.FitAddon();
   term.loadAddon(fitAddon);
   term.loadAddon(new WebLinksAddon.WebLinksAddon());
+  // Unicode11 addon：正确处理 CJK 宽字符
+  const unicode11 = new Unicode11Addon.Unicode11Addon();
+  term.loadAddon(unicode11);
+  term.unicode.activeVersion = '11';
   term.open(container);
 
   requestAnimationFrame(() => {
