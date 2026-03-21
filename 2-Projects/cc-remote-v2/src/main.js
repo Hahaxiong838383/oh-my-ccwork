@@ -3,7 +3,6 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
-import { WebglAddon } from "@xterm/addon-webgl";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 
 var isMobile =
@@ -348,16 +347,7 @@ function createTerminal(id) {
 
   term.open(el);
 
-  // WebGL renderer — disabled on mobile
-  if (!isMobile) {
-    try {
-      var webgl = new WebglAddon();
-      webgl.onContextLoss(function () { webgl.dispose(); });
-      term.loadAddon(webgl);
-    } catch (e) {
-      console.warn("WebGL not available, using DOM renderer");
-    }
-  }
+  // 使用 DOM 渲染器（默认），WebGL 在 Relay 代理场景下渲染不稳定
 
   // 选中文本自动复制到剪贴板（解决终端内链接无法复制的问题）
   term.onSelectionChange(function () {
