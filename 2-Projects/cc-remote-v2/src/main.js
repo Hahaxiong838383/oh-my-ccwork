@@ -305,15 +305,11 @@ function switchSession(id) {
 // ============================
 // Terminal creation
 // ============================
+// V1 主题（与 http-server.ts 一致，只设背景前景，其他用 xterm 默认）
+// 关键：不要自定义 black 颜色！自定义 black = background 会导致黑色文字不可见
 var TERM_THEME = {
-  background: "#1e1e1e", foreground: "#e5e5e5", cursor: "#0a84ff",
-  cursorAccent: "#1e1e1e",
-  selectionBackground: "rgba(10,132,255,0.30)", selectionForeground: "#fff",
-  black: "#1e1e1e", red: "#ff453a", green: "#30d158", yellow: "#ffd60a",
-  blue: "#0a84ff", magenta: "#bf5af2", cyan: "#64d2ff", white: "#e5e5e5",
-  brightBlack: "#636366", brightRed: "#ff6961", brightGreen: "#4cd964",
-  brightYellow: "#ffe066", brightBlue: "#409cff", brightMagenta: "#da8fff",
-  brightCyan: "#70d7ff", brightWhite: "#ffffff",
+  background: "#0d1117",
+  foreground: "#c9d1d9",
 };
 
 function createTerminal(id) {
