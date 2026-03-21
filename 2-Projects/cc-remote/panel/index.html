@@ -118,6 +118,10 @@ body { background: #1e1e1e; color: #e5e5e5; font-family: 'SF Pro Display', 'SF P
     <button class="key-btn" style="color:#0a84ff" onclick="showAgentModal()">Agents</button>
   </div>
   <div class="input-row">
+    <div class="scroll-btns" style="display:flex;flex-direction:column;gap:1px;margin-right:4px;flex-shrink:0;">
+      <button onclick="scrollTmux('up')" style="background:#2c2c2e;border:1px solid #3c3c3c;color:#ff9f0a;font-size:10px;padding:2px 6px;border-radius:4px 4px 0 0;cursor:pointer;line-height:1;">▲</button>
+      <button onclick="scrollTmux('down')" style="background:#2c2c2e;border:1px solid #3c3c3c;border-top:none;color:#ff9f0a;font-size:10px;padding:2px 6px;border-radius:0 0 4px 4px;cursor:pointer;line-height:1;">▼</button>
+    </div>
     <input type="file" id="file-input" style="display:none" multiple onchange="handleFiles(this.files)">
     <button class="attach-btn" onclick="document.getElementById('file-input').click()" title="上传文件">📎</button>
     <input id="cmd-input" type="text" placeholder="输入命令..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
@@ -182,6 +186,55 @@ body { background: #1e1e1e; color: #e5e5e5; font-family: 'SF Pro Display', 'SF P
 <script>
 let activeSession = null;
 let allSessions = [];
+// 触摸滚动注入：向 xterm viewport 发 WheelEvent，不依赖 JS 变量
+function injectTouchScroll(frame) {
+  try {
+    const iframeDoc = frame.contentDocument || frame.contentWindow.document;
+    const script = iframeDoc.createElement('script');
+    script.textContent = `(function(){
+      // 延迟等 xterm 渲染完成
+      setTimeout(function(){
+        var vp = document.querySelector('.xterm-viewport') || document.querySelector('.xterm-screen');
+        if(!vp) return;
+        var ly=0, vel=0, mid=null, acc=0;
+        // 在整个 body 上监听触摸（确保捕获到）
+        document.body.style.touchAction = 'none';
+        document.body.addEventListener('touchstart', function(e){
+          if(e.touches.length!==1) return;
+          ly = e.touches[0].clientY; vel=0; acc=0;
+          if(mid){cancelAnimationFrame(mid); mid=null;}
+        }, {passive:true});
+        document.body.addEventListener('touchmove', function(e){
+          if(e.touches.length!==1) return;
+          var y = e.touches[0].clientY;
+          var dy = ly - y;
+          vel = dy; ly = y; acc += dy;
+          // 每 30px 触发一次 wheel 事件
+          if(Math.abs(acc) > 30){
+            var delta = acc > 0 ? 100 : -100;
+            vp.dispatchEvent(new WheelEvent('wheel', {deltaY: delta, bubbles:true, cancelable:true}));
+            acc = 0;
+          }
+          e.preventDefault();
+        }, {passive:false});
+        document.body.addEventListener('touchend', function(){
+          // 惯性
+          if(Math.abs(vel) > 5){
+            (function m(){
+              if(Math.abs(vel) < 2){vel=0; return;}
+              var delta = vel > 0 ? 80 : -80;
+              vp.dispatchEvent(new WheelEvent('wheel', {deltaY: delta, bubbles:true, cancelable:true}));
+              vel *= 0.85;
+              mid = requestAnimationFrame(m);
+            })();
+          }
+        }, {passive:true});
+      }, 1500);
+    })();`;
+    iframeDoc.body.appendChild(script);
+  } catch(e) {}
+}
+
 let devices = [];
 let currentDevice = null;
 let connected = false;
@@ -231,6 +284,8 @@ function preloadTerminals() {
       frame.onload = () => {
         if (progressTimer) clearInterval(progressTimer);
         const latency = Date.now() - startTime;
+
+        try { injectTouchScroll(frame); } catch(e) {}
         if (overlay) overlay.classList.remove('show');
         // claude 加载完自动激活
         if (!activeSession && s.cli === 'claude') {
@@ -378,7 +433,11 @@ function switchTo(sessionId) {
     frame = document.createElement('iframe');
     frame.className = 'term-frame';
     frame.id = 'frame-' + sessionId;
-    frame.onload = () => { setTimeout(() => overlay.classList.remove('show'), 300); };
+    frame.onload = () => {
+      setTimeout(() => overlay.classList.remove('show'), 300);
+      // 注入触摸滚动（V2 方案）
+      try { injectTouchScroll(frame); } catch(e) {}
+    };
     frame.src = s.path + '/';
     termArea.appendChild(frame);
   }
@@ -433,6 +492,17 @@ async function sendToTerminal(keys) {
   try { await fetch('/api/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session, keys }) }); } catch {}
 }
 function sendKey(name) { sendToTerminal(KEYS[name] || name); }
+
+// tmux 翻页：通过 API 发 tmux 命令
+async function scrollTmux(direction) {
+  const session = getActiveTmuxSession();
+  if (!session) return;
+  try {
+    await fetch('/api/scroll', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session, direction }) });
+  } catch {}
+}
+
 function sendCommand() {
   const input = document.getElementById('cmd-input');
   const cmd = input.value;
