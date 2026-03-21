@@ -157,6 +157,15 @@ server.on("upgrade", (req, socket, head) => {
     return;
   }
 
+  // WS /api/:token/* — 终端页面通过 /api/ 路径发起 WS 连接（与 HTTP 代理同路径）
+  const apiWsMatch = pathname.match(/^\/api\/([^/]+)(\/.*)?$/);
+  if (apiWsMatch) {
+    const token = apiWsMatch[1];
+    const path = (apiWsMatch[2] || "/") + (qIdx >= 0 ? rawUrl.slice(qIdx) : "");
+    wss.handleUpgrade(req, socket, head, (ws) => handleWsProxy(ws, token, path));
+    return;
+  }
+
   socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
   socket.destroy();
 });

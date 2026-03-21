@@ -2209,9 +2209,8 @@ body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
 <script>
-const WS_PATH="/ws";
 let ws,token,clis=[],sessions={},activeId=null;
-function wsUrl(){const p=location.protocol==="https:"?"wss:":"ws:";return p+"//"+location.host+WS_PATH}
+function wsUrl(){const p=location.protocol==="https:"?"wss:":"ws:";const base=location.pathname.replace(/\/terminal\/?$/,"/ws");return p+"//"+location.host+base}
 function doLogin(){const p=document.getElementById("pwd").value;if(!p)return;connect(p)}
 document.getElementById("pwd").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
 function connect(pwd){
