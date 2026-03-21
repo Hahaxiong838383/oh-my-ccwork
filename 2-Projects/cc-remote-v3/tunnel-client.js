@@ -144,7 +144,16 @@ async function handleHttp(msg) {
       }
       sendJson({ reqId: msg.reqId, type: "sse-end" });
     } else {
-      sendJson({ reqId: msg.reqId, type: "http-response", status: res.status, headers: Object.fromEntries(res.headers.entries()), body: await res.text() });
+      let body = await res.text();
+      const ct = res.headers.get("content-type") || "";
+
+      // ttyd HTML 注入 <base> 标签：让资源和 WS 路径正确解析到 /api/TOKEN/ 下
+      if (ct.includes("text/html") && token) {
+        const basePath = `/api/${token}/`;
+        body = body.replace("<head>", `<head><base href="${basePath}">`);
+      }
+
+      sendJson({ reqId: msg.reqId, type: "http-response", status: res.status, headers: Object.fromEntries(res.headers.entries()), body });
     }
   } catch (e) {
     sendJson({ reqId: msg.reqId, type: "http-error", error: e.message });
