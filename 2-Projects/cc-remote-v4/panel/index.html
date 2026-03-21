@@ -117,7 +117,6 @@ body { background: #1e1e1e; color: #e5e5e5; font-family: 'SF Pro Display', 'SF P
     <button class="key-btn" onclick="sendKey('ctrl-l')">Clear</button>
     <button class="key-btn" onclick="sendKey('y-enter')">y</button>
     <button class="key-btn" style="color:#30d158" onclick="focusInput()">键盘</button>
-    <button class="key-btn" onclick="document.getElementById('file-input').click()">📎</button>
     <button class="key-btn" style="color:#0a84ff" onclick="showAgentModal()">Agents</button>
   </div>
   <div class="shortcuts" style="padding-top:0;gap:8px;justify-content:center;">
@@ -432,6 +431,8 @@ function renderTopbar() {
   html += `<button class="toolbar-btn" onclick="renameCurrentSession()" title="重命名">✎</button>`;
   html += '<div class="toolbar-gap"></div>';
   html += `<button class="toolbar-btn danger" onclick="deleteCurrentSession()" title="删除">✕</button>`;
+  html += '<div class="toolbar-gap"></div>';
+  html += `<button class="toolbar-btn" onclick="document.getElementById('file-input').click()" title="上传">📎</button>`;
 
   html += `<div class="spacer"></div>`;
 
