@@ -1,0 +1,12 @@
+[Unit]
+Description=FRP Server for cc-remote
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/frps -c /etc/frps.toml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
