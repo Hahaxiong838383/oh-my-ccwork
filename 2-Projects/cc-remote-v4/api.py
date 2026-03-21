@@ -60,44 +60,80 @@ def find_free_port():
 
 DEFAULT_PORTS = {'claude': 19001, 'codex': 19002, 'gemini': 19003}
 DEFAULT_PATHS = {'claude': '/claude', 'codex': '/codex', 'gemini': '/gemini'}
+CADDYFILE_TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Caddyfile')
+CADDYFILE_RUNTIME = '/tmp/cc-remote-v4-Caddyfile'
+
+def regenerate_caddyfile():
+    """根据当前 sessions 重新生成 Caddyfile 并热重载 Caddy"""
+    lines = [':19443 {']
+    lines.append('\thandle / {')
+    lines.append(f'\t\troot * {os.path.dirname(os.path.abspath(__file__))}/panel')
+    lines.append('\t\tfile_server')
+    lines.append('\t}')
+    lines.append('\thandle /panel/* {')
+    lines.append(f'\t\troot * {os.path.dirname(os.path.abspath(__file__))}/panel')
+    lines.append('\t\tfile_server')
+    lines.append('\t}')
+    lines.append('\thandle /api/* {')
+    lines.append('\t\treverse_proxy localhost:19100')
+    lines.append('\t}')
+
+    # 收集所有需要的路由（默认 + 动态）
+    seen_paths = set()
+    for s in sessions.values():
+        path = s.get('base_path', f'/{s["cli"]}')
+        port = s['port']
+        if path in seen_paths:
+            continue
+        seen_paths.add(path)
+        lines.append(f'\thandle {path}/* {{')
+        lines.append(f'\t\treverse_proxy localhost:{port} {{')
+        lines.append('\t\t\ttransport http {')
+        lines.append('\t\t\t\tread_timeout 0')
+        lines.append('\t\t\t\twrite_timeout 0')
+        lines.append('\t\t\t}')
+        lines.append('\t\t}')
+        lines.append('\t}')
+
+    lines.append('}')
+
+    with open(CADDYFILE_RUNTIME, 'w') as f:
+        f.write('\n'.join(lines) + '\n')
+
+    # 热重载 Caddy
+    subprocess.run([
+        'caddy', 'reload', '--config', CADDYFILE_RUNTIME, '--adapter', 'caddyfile'
+    ], capture_output=True, timeout=5)
+
 
 def create_session(cli):
     if cli not in ALLOWED_CLIS:
         return None, f'Unknown CLI: {cli}'
 
-    # 强制复用默认路径和端口（Caddy 只有 3 条静态路由）
-    port = DEFAULT_PORTS[cli]
-    base_path = DEFAULT_PATHS[cli]
+    port = find_free_port()
+    if port is None:
+        return None, 'No free ports'
 
-    # 如果该 CLI 已有 session，先销毁旧的
-    old_ids = [sid for sid, s in sessions.items() if s['cli'] == cli]
-    for old_id in old_ids:
-        destroy_session(old_id)
+    # 生成唯一 session ID
+    idx = 1
+    while True:
+        session_id = f'cc-{cli}-{idx}'
+        tmux_exists = subprocess.run(
+            ['/opt/homebrew/bin/tmux', 'has-session', '-t', session_id],
+            capture_output=True
+        ).returncode == 0
+        if session_id not in sessions and not tmux_exists:
+            break
+        idx += 1
 
-    # 生成 session ID
-    session_id = f'cc-{cli}'
-    # 如果 tmux 里还有残留，先杀掉
-    subprocess.run(['/opt/homebrew/bin/tmux', 'kill-session', '-t', session_id], capture_output=True)
+    base_path = f'/{cli}-{idx}'
 
-    # 杀掉该端口上的旧 ttyd
-    try:
-        old_pid = subprocess.run(['lsof', '-ti', f':{port}'], capture_output=True, text=True, timeout=3)
-        if old_pid.stdout.strip():
-            for pid in old_pid.stdout.strip().split('\n'):
-                try:
-                    os.kill(int(pid), signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-            time.sleep(1)
-    except Exception:
-        pass
-
-    # 创建新 tmux session
+    # 创建 tmux session
     subprocess.run([
         '/opt/homebrew/bin/tmux', 'new-session', '-d', '-s', session_id, '-c', PROJECT_DIR, cli
     ], check=True)
 
-    # 启动新 ttyd
+    # 启动 ttyd
     proc = subprocess.Popen([
         WRAPPER, str(port), base_path, session_id
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -111,6 +147,9 @@ def create_session(cli):
         'default': False,
         'base_path': base_path,
     }
+
+    # 重新生成 Caddyfile 并热重载
+    regenerate_caddyfile()
 
     return sessions[session_id], None
 
@@ -142,6 +181,10 @@ def destroy_session(session_id):
             pass
 
     del sessions[session_id]
+
+    # 重新生成 Caddyfile 并热重载
+    regenerate_caddyfile()
+
     return True, None
 
 
