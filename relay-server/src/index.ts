@@ -65,7 +65,7 @@ const pendingRequests = new Map<string, PendingRequest>(); // reqId → Pending
 // ============ 工具函数 ============
 
 const generateToken = () => crypto.randomBytes(16).toString("hex");
-const generateReqId = () => crypto.randomBytes(8).toString("hex");
+const generateReqId = () => crypto.randomBytes(16).toString("hex"); // 16 bytes = 32 hex chars, 匹配 V3 protocol REQ_ID_LEN
 const ts = () => new Date().toLocaleString("zh-CN", { hour12: false });
 
 function readBody(req: http.IncomingMessage): Promise<string> {
@@ -273,11 +273,12 @@ function handleTunnelConnection(ws: WebSocket, token: string) {
       const buf = Buffer.isBuffer(raw) ? raw : Buffer.from(raw as ArrayBuffer);
       if (buf.length < 17) return; // 至少 1 + 16 bytes
 
+      // 完整帧 [opcode(1)][reqId(16)][payload] → 剥离 reqId → 简单帧 [opcode][payload] 发给浏览器
       const reqId = buf.slice(1, 17).toString("hex");
       const pending = pendingRequests.get(reqId);
       if (pending && pending.kind === "ws" && pending.clientWs.readyState === WebSocket.OPEN) {
-        // 直接转发整个二进制帧给浏览器（零拷贝）
-        pending.clientWs.send(buf);
+        const simple = Buffer.concat([buf.slice(0, 1), buf.slice(17)]); // [opcode][payload]
+        pending.clientWs.send(simple);
       }
       return;
     }
@@ -475,8 +476,14 @@ function handleWsProxy(clientWs: WebSocket, token: string, path: string) {
     if (!device.tunnelWs || device.tunnelWs.readyState !== WebSocket.OPEN) return;
 
     if (isBinary) {
-      // V3: 浏览器发来的二进制帧（终端输入/resize），直接转发给设备
-      device.tunnelWs.send(data as Buffer);
+      // V3: 浏览器发来简单帧 [opcode][payload] → 插入 reqId → 完整帧 [opcode][reqId][payload]
+      const buf = Buffer.isBuffer(data) ? data : Buffer.from(data as ArrayBuffer);
+      const reqIdBuf = Buffer.from(reqId, "hex");
+      const full = Buffer.allocUnsafe(1 + 16 + buf.length - 1);
+      full[0] = buf[0]; // opcode
+      reqIdBuf.copy(full, 1);
+      buf.copy(full, 17, 1); // payload (skip opcode)
+      device.tunnelWs.send(full);
     } else {
       // V2 兼容：JSON 封装的终端数据
       const preview = data.toString().slice(0, 100);

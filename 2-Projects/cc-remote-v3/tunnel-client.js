@@ -1,24 +1,13 @@
 /**
- * cc-remote v3 — Relay Tunnel Client (Binary Protocol Edition)
+ * cc-remote v3 — Relay Tunnel Client (Layered Binary Protocol)
  *
- * V3 核心优化：
- *  1. 终端 WS 数据走 Binary 帧直传（不做 JSON 封装）
- *  2. Relay ↔ Tunnel 之间：Binary frame = 终端数据透传, Text frame = JSON 控制消息
- *  3. HTTP 代理 / SSE 仍走 JSON（与 V2 相同）
- *  4. 心跳也走 Binary 节省解析开销
- *
- * 用法: RELAY_URL=https://relay.hahaxiong.cc DEVICE_ID=mac-mini node tunnel-client.js
+ * Relay ↔ Tunnel 之间用完整帧 [opcode][reqId][payload]
+ * Tunnel ↔ Local Server 之间用简单帧 [opcode][payload]
+ * Tunnel 在边界做 reqId 插入/剥离。
  */
 
 const WebSocket = require("ws");
-const {
-  OP_TERMINAL_OUTPUT,
-  OP_TERMINAL_INPUT,
-  OP_TERMINAL_RESIZE,
-  OP_REPLAY_BUFFER,
-  encodeBinaryFrame,
-  decodeBinaryFrame,
-} = require("./protocol");
+const { insertReqId, stripReqId } = require("./protocol");
 
 const RELAY_URL = process.env.RELAY_URL || "https://relay.hahaxiong.cc";
 const LOCAL_PORT = parseInt(process.env.PORT || "7681");
@@ -27,9 +16,7 @@ const DEVICE_ID = process.env.DEVICE_ID || `cc-v3-${require("os").hostname()}`;
 let token = null;
 let tunnelWs = null;
 let heartbeatTimer = null;
-
-// reqId → local WebSocket (for WS proxy)
-const localWsMap = new Map();
+const localWsMap = new Map(); // reqId → local WebSocket
 
 // ============ 注册 ============
 
@@ -50,17 +37,12 @@ async function register() {
 
 function connect() {
   const wsUrl = RELAY_URL.replace(/^http/, "ws") + `/tunnel?token=${token}`;
-  console.log(`[Tunnel] 连接 Relay...`);
-
   tunnelWs = new WebSocket(wsUrl);
 
   tunnelWs.on("open", () => {
     console.log(`[Tunnel] 已连接 Relay`);
-
-    // 心跳：每 25s 发送一次（Binary 帧，1 byte opcode 0xFF）
     heartbeatTimer = setInterval(() => {
       if (tunnelWs.readyState === WebSocket.OPEN) {
-        // 仍然用 JSON 心跳保持兼容（Relay 可能还需要解析）
         tunnelWs.send(JSON.stringify({ type: "heartbeat" }));
       }
     }, 25000);
@@ -68,11 +50,13 @@ function connect() {
 
   tunnelWs.on("message", (raw, isBinary) => {
     if (isBinary) {
-      // ===== 二进制帧：终端数据 =====
-      // 来自浏览器的输入/resize，直接转发到本地 WS
-      handleBinaryFromRelay(raw);
+      // 完整帧 [opcode][reqId][payload] → 剥离 reqId → 简单帧转发到本地
+      const { reqId, simple } = stripReqId(raw);
+      const ws = localWsMap.get(reqId);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(simple);
+      }
     } else {
-      // ===== JSON 控制消息 =====
       handleJsonFromRelay(raw);
     }
   });
@@ -88,57 +72,28 @@ function connect() {
   tunnelWs.on("error", (e) => console.error("[Tunnel] 错误:", e.message));
 }
 
-// ============ 二进制帧处理 ============
-
-function handleBinaryFromRelay(raw) {
-  const { opcode, reqId, payload } = decodeBinaryFrame(raw);
-
-  switch (opcode) {
-    case OP_TERMINAL_INPUT:
-    case OP_TERMINAL_RESIZE: {
-      // 转发到对应的本地 WS 连接
-      const ws = localWsMap.get(reqId);
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        // 直接转发二进制帧到本地 cc-remote-v3 server
-        ws.send(raw);
-      }
-      break;
-    }
-  }
-}
-
-// ============ JSON 控制消息处理 ============
+// ============ JSON 控制消息 ============
 
 function handleJsonFromRelay(raw) {
   try {
     const msg = JSON.parse(raw.toString());
-
     if (msg.type === "heartbeat-ack") return;
 
     switch (msg.type) {
       case "http-request":
         handleHttp(msg);
         break;
-
       case "ws-open":
         handleWsOpen(msg);
         break;
-
       case "ws-data": {
-        // V2 兼容：JSON 封装的 WS 数据
         const ws = localWsMap.get(msg.reqId);
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(msg.data);
-        }
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send(msg.data);
         break;
       }
-
       case "ws-close": {
         const ws = localWsMap.get(msg.reqId);
-        if (ws) {
-          try { ws.close(msg.code || 1000); } catch {}
-          localWsMap.delete(msg.reqId);
-        }
+        if (ws) { try { ws.close(msg.code || 1000); } catch {} localWsMap.delete(msg.reqId); }
         break;
       }
     }
@@ -147,7 +102,7 @@ function handleJsonFromRelay(raw) {
   }
 }
 
-// ============ 发送到 Relay ============
+// ============ 发送 ============
 
 function sendJson(msg) {
   if (tunnelWs && tunnelWs.readyState === WebSocket.OPEN) {
@@ -161,14 +116,12 @@ function sendBinary(buf) {
   }
 }
 
-// ============ HTTP 代理（与 V2 相同） ============
+// ============ HTTP 代理 ============
 
 async function handleHttp(msg) {
   try {
     const headers = { ...(msg.headers || {}) };
-    delete headers["host"];
-    delete headers["connection"];
-    delete headers["transfer-encoding"];
+    delete headers["host"]; delete headers["connection"]; delete headers["transfer-encoding"];
 
     const res = await fetch(`http://localhost:${LOCAL_PORT}${msg.path}`, {
       method: msg.method,
@@ -178,12 +131,7 @@ async function handleHttp(msg) {
 
     const ct = res.headers.get("content-type") || "";
     if (ct.includes("text/event-stream")) {
-      sendJson({
-        reqId: msg.reqId,
-        type: "sse-start",
-        status: res.status,
-        headers: Object.fromEntries(res.headers.entries()),
-      });
+      sendJson({ reqId: msg.reqId, type: "sse-start", status: res.status, headers: Object.fromEntries(res.headers.entries()) });
       const reader = res.body.getReader();
       const dec = new TextDecoder();
       while (true) {
@@ -193,24 +141,17 @@ async function handleHttp(msg) {
       }
       sendJson({ reqId: msg.reqId, type: "sse-end" });
     } else {
-      sendJson({
-        reqId: msg.reqId,
-        type: "http-response",
-        status: res.status,
-        headers: Object.fromEntries(res.headers.entries()),
-        body: await res.text(),
-      });
+      sendJson({ reqId: msg.reqId, type: "http-response", status: res.status, headers: Object.fromEntries(res.headers.entries()), body: await res.text() });
     }
   } catch (e) {
     sendJson({ reqId: msg.reqId, type: "http-error", error: e.message });
   }
 }
 
-// ============ WS 代理（V3：终端数据走 Binary 直传） ============
+// ============ WS 代理（边界 reqId 插入/剥离）============
 
 function handleWsOpen(msg) {
   try {
-    // 连接本地 cc-remote-v3 server 的 WS（带 binary mode）
     const localUrl = `ws://localhost:${LOCAL_PORT}${msg.path}`;
     const ws = new WebSocket(localUrl);
 
@@ -221,11 +162,12 @@ function handleWsOpen(msg) {
 
     ws.on("message", (data, isBinary) => {
       if (isBinary) {
-        // ===== V3: 终端输出 Binary 帧 → 直接透传给 Relay =====
-        // 不做任何封装，Relay 直接转发给浏览器
-        sendBinary(data);
+        // 本地 Server 发来简单帧 [opcode][payload]
+        // 插入 reqId → 完整帧 [opcode][reqId][payload] → 发给 Relay
+        const fullFrame = insertReqId(data, msg.reqId);
+        sendBinary(fullFrame);
       } else {
-        // JSON 控制消息（exit 等）
+        // JSON 控制消息
         sendJson({ reqId: msg.reqId, type: "ws-data", data: data.toString() });
       }
     });
@@ -251,7 +193,4 @@ async function main() {
   connect();
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main().catch((e) => { console.error(e); process.exit(1); });
