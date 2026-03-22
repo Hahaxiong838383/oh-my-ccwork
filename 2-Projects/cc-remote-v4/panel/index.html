@@ -327,6 +327,12 @@ async function init() {
   }
   // 预加载所有默认终端 iframe（后台加载，切换时零延迟）
   preloadTerminals();
+  // 强制默认激活 claude（不等 iframe onload，立即切换）
+  const claudeSession = allSessions.find(s => s.cli === 'claude');
+  if (claudeSession) {
+    document.getElementById('empty-state').classList.add('hidden');
+    switchTo(claudeSession.id);
+  }
   // 触摸滚动（手机端）
   initTouchScroll();
   // 断线检测：每 30 秒 ping，连续 2 次失败才显示断线
