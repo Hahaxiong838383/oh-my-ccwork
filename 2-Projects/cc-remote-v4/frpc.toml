@@ -1,7 +1,6 @@
 serverAddr = "8.218.26.17"
 serverPort = 7000
 auth.token = "ccremote-v4-2026"
-transport.useCompression = true
 
 [[proxies]]
 name = "cc-remote-v4"
