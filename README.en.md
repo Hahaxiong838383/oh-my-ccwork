@@ -55,7 +55,6 @@ CC will guide you through the initialization step by step.
 # Copy config files
 cp .claude/settings.local.json.example .claude/settings.local.json
 cp 0-System/status.md.example 0-System/status.md
-cp 0-System/context.md.example 0-System/context.md
 
 # Replace {{YOUR_NAME}} with your name
 sed -i '' 's/{{YOUR_NAME}}/YourName/g' CLAUDE.md
@@ -74,7 +73,8 @@ mycc/
 │   └── skills/                # Skill library
 ├── 0-System/                  # Memory system
 │   ├── status.md              # Short-term memory (daily status)
-│   ├── context.md             # Mid-term memory (weekly context)
+│   ├── RECENT_EVENTS.md       # 24h rolling event stream
+│   ├── memory-items.md        # Atomic searchable facts
 │   └── about-me/              # Long-term memory (your profile)
 ├── 1-Inbox/                   # Ideas collection
 ├── 2-Projects/                # Active projects
@@ -99,9 +99,10 @@ Customize it to your preference.
 
 | Layer | File | Purpose |
 |-------|------|---------|
-| Short-term | `status.md` | Daily status, auto-injected via Hooks |
-| Mid-term | `context.md` | Weekly context, appended daily |
-| Long-term | `about-me/` | Your complete profile |
+| Real-time | `status.md` | Current status, auto-injected via Hooks |
+| Recent | `RECENT_EVENTS.md` | 24h rolling event stream |
+| Persistent | `memory-items.md` | Atomic searchable facts |
+| Archive | `5-Archive/周记/` | Weekly review archives |
 
 ### Skills - Extensible Capabilities
 

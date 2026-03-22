@@ -122,22 +122,6 @@ def _start_xray_process():
 
 def restart_xray():
     """重启 xray 服务"""
-    # macOS: 先尝试 launchctl
-    if IS_MACOS:
-        try:
-            uid = os.getuid()
-            subprocess.run(
-                ["launchctl", "kickstart", "-k", f"gui/{uid}/{LAUNCHD_LABEL}"],
-                capture_output=True, text=True, timeout=10
-            )
-            time.sleep(1)
-            status = get_xray_status()
-            if status["running"]:
-                return {"success": True, "method": "launchctl", "pid": status["pid"]}
-        except Exception:
-            pass
-
-    # Linux: 先尝试 systemctl
     if IS_LINUX:
         try:
             subprocess.run(
@@ -147,7 +131,20 @@ def restart_xray():
             time.sleep(1)
             status = get_xray_status()
             if status["running"]:
-                return {"success": True, "method": "systemctl", "pid": status["pid"]}
+                return {"success": True, "method": "systemd", "pid": status["pid"]}
+        except Exception:
+            pass
+    elif IS_MACOS:
+        uid = os.getuid()
+        try:
+            subprocess.run(
+                ["launchctl", "kickstart", "-k", f"gui/{uid}/{LAUNCHD_LABEL}"],
+                capture_output=True, text=True, timeout=10
+            )
+            time.sleep(1)
+            status = get_xray_status()
+            if status["running"]:
+                return {"success": True, "method": "launchctl", "pid": status["pid"]}
         except Exception:
             pass
 
@@ -165,9 +162,20 @@ def restart_xray():
             pass
 
     # 回退：手动杀进程重启
-    _kill_xray()
     try:
-        _start_xray_process()
+        subprocess.run(["pkill", "-f", "xray run"], capture_output=True, timeout=5)
+        time.sleep(1)
+    except Exception:
+        pass
+
+    try:
+        subprocess.Popen(
+            [str(XRAY_BIN), "run", "-c", str(CONFIG_PATH)],
+            stdout=open(LOG_PATH, "a"),
+            stderr=subprocess.STDOUT,
+            cwd=str(XRAY_HOME),
+            start_new_session=True
+        )
         time.sleep(2)
         status = get_xray_status()
         return {"success": status["running"], "method": "manual", "pid": status.get("pid")}
@@ -177,7 +185,13 @@ def restart_xray():
 def stop_xray():
     """停止 xray"""
     try:
-        _kill_xray()
+        if IS_LINUX:
+            subprocess.run(["systemctl", "--user", "stop", SYSTEMD_SERVICE],
+                           capture_output=True, timeout=5)
+        elif IS_MACOS:
+            subprocess.run(["pkill", "-f", "xray run"], capture_output=True, timeout=5)
+        else:
+            subprocess.run(["pkill", "-f", "xray run"], capture_output=True, timeout=5)
         return {"success": True}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -187,16 +201,11 @@ def get_logs(lines=100):
     if not LOG_PATH.exists():
         return ""
     try:
-        if IS_WINDOWS:
-            with open(LOG_PATH, "r", encoding="utf-8", errors="replace") as f:
-                all_lines = f.readlines()
-                return "".join(all_lines[-lines:])
-        else:
-            result = subprocess.run(
-                ["tail", f"-{lines}", str(LOG_PATH)],
-                capture_output=True, text=True, timeout=5
-            )
-            return result.stdout
+        result = subprocess.run(
+            ["tail", f"-{lines}", str(LOG_PATH)],
+            capture_output=True, text=True, timeout=5
+        )
+        return result.stdout
     except Exception:
         return ""
 
@@ -1826,14 +1835,16 @@ class Handler(BaseHTTPRequestHandler):
 # ==================== 主入口 ====================
 
 def main():
-    print(f"Xray Manager starting on http://127.0.0.1:{WEB_PORT}")
+    print(f"Xray Manager starting on http://{('0.0.0.0' if IS_LINUX else '127.0.0.1')}:{WEB_PORT}")
     print(f"Config: {CONFIG_PATH}")
     print(f"Xray: {XRAY_BIN}")
 
     # 确保配置目录存在
     XRAY_HOME.mkdir(parents=True, exist_ok=True)
 
-    server = HTTPServer(("127.0.0.1", WEB_PORT), Handler)
+    # Linux 服务器监听所有接口（方便远程管理），macOS 只监听本地
+    bind_addr = "0.0.0.0" if IS_LINUX else "127.0.0.1"
+    server = HTTPServer((bind_addr, WEB_PORT), Handler)
 
     def shutdown(sig, frame):
         print("\nShutting down...")
@@ -1852,7 +1863,10 @@ def main():
         elif IS_MACOS:
             subprocess.Popen(["open", url])
         elif IS_LINUX:
-            subprocess.Popen(["xdg-open", url], stderr=subprocess.DEVNULL)
+            try:
+                subprocess.Popen(["xdg-open", url], stderr=subprocess.DEVNULL)
+            except FileNotFoundError:
+                pass  # Linux 无桌面环境时跳过
 
     print(f"Web UI: http://127.0.0.1:{WEB_PORT}")
     server.serve_forever()

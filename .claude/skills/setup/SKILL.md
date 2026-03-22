@@ -62,13 +62,11 @@ ls CLAUDE.md
 |--------|----------|------|
 | `.claude/settings.local.json.example` | `.claude/settings.local.json` | Hooks 配置 |
 | `0-System/status.md.example` | `0-System/status.md` | 短期记忆模板 |
-| `0-System/context.md.example` | `0-System/context.md` | 中期记忆模板 |
 
 **执行方式**：
 ```bash
 cp .claude/settings.local.json.example .claude/settings.local.json
 cp 0-System/status.md.example 0-System/status.md
-cp 0-System/context.md.example 0-System/context.md
 ```
 
 **检查点**：确认三个文件都存在
@@ -119,7 +117,6 @@ sed -i '' 's/{{YOUR_NAME}}/用户名字/g' CLAUDE.md
 # 检查文件存在
 ls -la .claude/settings.local.json
 ls -la 0-System/status.md
-ls -la 0-System/context.md
 
 # 检查变量已替换
 grep "{{YOUR_NAME}}" CLAUDE.md || echo "✅ 变量已全部替换"

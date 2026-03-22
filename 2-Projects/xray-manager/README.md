@@ -24,7 +24,7 @@
 
 ### 解决方案
 
-不用 V2RayN，直接用 xray-core + 系统服务 + Python Web UI 管理。
+不用 V2RayN，直接用 xray-core + 系统服务（macOS launchd / Windows Task Scheduler / Linux systemd）+ Python Web UI 管理。
 
 ## 文件结构
 
@@ -170,7 +170,7 @@ Windows 需要重新打开命令行窗口。
 
 ## 注意事项
 
-- **config.json 不提交 git**：包含节点地址和 UUID，属于敏感信息
+- **config.json 不提交 git**：包含节点地址和 UUID，属于敏感信息。模板在 `config/config.json`
 - **xray 二进制不提交 git**：OS 特定，各机器自行安装
 - **V2RayN 可以卸载**：本工具完全替代 V2RayN 的功能
 
@@ -195,5 +195,6 @@ setx https_proxy ""
 ```bash
 systemctl --user disable --now xray-proxy
 rm -rf ~/xray ~/.config/systemd/user/xray-proxy.service
+systemctl --user daemon-reload
 # 从 ~/.bashrc 中删除 "# === Xray Manager ===" 到 "# === End Xray Manager ===" 之间的内容
 ```

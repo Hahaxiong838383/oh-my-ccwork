@@ -1,0 +1,15 @@
+[Unit]
+Description=Xray Proxy Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=__XRAY_BIN__ run -c __CONFIG_PATH__
+WorkingDirectory=__XRAY_HOME__
+StandardOutput=append:__LOG_PATH__
+StandardError=append:__LOG_PATH__
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
