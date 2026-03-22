@@ -341,8 +341,8 @@ async function init() {
 
 function preloadTerminals() {
   const termArea = document.getElementById('term-area');
-  // claude 优先加载
-  const sorted = allSessions.filter(s => s.default).sort((a, b) => a.cli === 'claude' ? -1 : 1);
+  // 只预加载 claude（codex/gemini 延迟到用户切换时才加载，节省带宽）
+  const sorted = allSessions.filter(s => s.default && s.cli === 'claude');
   sorted.forEach(s => {
     if (!document.getElementById('frame-' + s.id)) {
       // 只有 claude 显示 overlay，其他静默加载
