@@ -4,7 +4,9 @@ PORT=$1
 BASE=$2
 SESSION=$3
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 exec ttyd -p "$PORT" -W -b "$BASE" \
+  -I "$SCRIPT_DIR/ttyd-touch.html" \
   -t 'fontFamily=SF Mono, SFMono-Regular, ui-monospace, Menlo, Monaco, monospace' \
   -t 'fontSize=14' \
   -t 'cursorBlink=true' \

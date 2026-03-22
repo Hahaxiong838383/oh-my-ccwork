@@ -1,6 +1,10 @@
 :19443 {
 	# V4: Basic Auth 由 nginx 外层处理，Caddy 不再认证
 
+	# 静态资源缓存（ttyd 的 JS/CSS/WASM 等，7天不变）
+	@static path_regexp \.(js|css|wasm|map|ico|png|svg|ttf|woff2?)$
+	header @static Cache-Control "public, max-age=604800, immutable"
+
 	# 管理面板
 	handle / {
 		root * /Users/rayman.chen/mycc/2-Projects/cc-remote-v4/panel
