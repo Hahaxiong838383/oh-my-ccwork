@@ -3,7 +3,6 @@
 # V0 底座（tmux + ttyd + Caddy）+ FRP 阿里云香港中转
 # 修复：CJK 中文显示 + 手机端触摸体验
 
-set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
@@ -27,7 +26,9 @@ ensure_tmux_session() {
   if tmux has-session -t "cc-$name" 2>/dev/null; then
     echo "  ♻ cc-$name tmux session 已存在（复用）"
   else
-    tmux new-session -d -s "cc-$name" -c "$PROJECT_DIR" "$cmd"
+    # 先创建纯 shell session，再在里面启动 CLI（防止 CLI 退出导致 session 消失）
+    tmux new-session -d -s "cc-$name" -c "$PROJECT_DIR"
+    tmux send-keys -t "cc-$name" "$cmd" Enter
     echo "  ✓ cc-$name tmux session 已创建"
   fi
 }
