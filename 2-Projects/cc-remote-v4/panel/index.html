@@ -317,6 +317,14 @@ async function init() {
       cmdInput.value = '';
     }
   });
+  // 确保有 claude session，没有则自动创建
+  if (!allSessions.find(s => s.cli === 'claude')) {
+    try {
+      const r = await fetch('/api/session/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cli: 'claude' }) });
+      const d = await r.json();
+      if (d.ok) { await new Promise(r => setTimeout(r, 1000)); await loadSessions(); renderTopbar(); }
+    } catch {}
+  }
   // 预加载所有默认终端 iframe（后台加载，切换时零延迟）
   preloadTerminals();
   // 触摸滚动（手机端）
