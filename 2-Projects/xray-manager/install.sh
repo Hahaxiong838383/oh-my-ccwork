@@ -111,10 +111,13 @@ ZSHRC="$HOME/.zshrc"
 MARKER="# === Xray Manager ==="
 if ! grep -q "$MARKER" "$ZSHRC" 2>/dev/null; then
     echo ""
-    echo "📝 添加快捷命令到 ~/.zshrc ..."
+    echo "📝 添加快捷命令和代理环境变量到 ~/.zshrc ..."
     cat >> "$ZSHRC" << 'ALIASES'
 
 # === Xray Manager ===
+export http_proxy=http://127.0.0.1:20171
+export https_proxy=http://127.0.0.1:20171
+export no_proxy=localhost,127.0.0.1
 alias xray-ui='python3 ~/xray/xray-manager.py'
 alias xray-restart='launchctl kickstart -k gui/$(id -u)/com.xray.proxy'
 alias xray-stop='launchctl kill SIGTERM gui/$(id -u)/com.xray.proxy'
@@ -123,7 +126,7 @@ alias xray-log='tail -50 ~/xray/xray.log'
 alias xray-config='nano ~/xray/config.json'
 # === End Xray Manager ===
 ALIASES
-    echo "✅ 快捷命令已添加"
+    echo "✅ 快捷命令和代理变量已添加"
 fi
 
 # 8. 等待 xray 启动
@@ -151,8 +154,13 @@ echo "  xray-status    查看状态"
 echo "  xray-log       查看日志"
 echo "  xray-config    编辑配置"
 echo ""
-echo "Web 管理界面: http://127.0.0.1:8888"
-echo "SOCKS 代理:   127.0.0.1:10808"
+echo "代理端口："
+echo "  SOCKS 代理:  127.0.0.1:10808"
+echo "  HTTP 代理:   127.0.0.1:20171"
+echo "  Web 管理 UI: http://127.0.0.1:8888"
 echo ""
-echo "⚠️  记得在系统设置 → 网络 → Wi-Fi → 代理 中设置 SOCKS 代理为 127.0.0.1:10808"
+echo "环境变量已设置 http_proxy/https_proxy 指向 HTTP 代理 (20171)"
+echo "CLI 工具 (claude, npm, curl 等) 将自动使用此代理"
+echo ""
+echo "⚠️  系统全局代理请在: 系统设置 → 网络 → Wi-Fi → 代理 → SOCKS 代理 → 127.0.0.1:10808"
 echo ""

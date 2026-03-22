@@ -1,0 +1,14 @@
+[Unit]
+Description=Xray Proxy Service
+After=network.target
+
+[Service]
+ExecStart=%h/xray/xray run -c %h/xray/config.json
+WorkingDirectory=%h/xray
+StandardOutput=append:%h/xray/xray.log
+StandardError=append:%h/xray/xray.log
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

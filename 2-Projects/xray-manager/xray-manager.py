@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Xray Manager - macOS Xray 分流代理管理工具
+Xray Manager - 跨平台 Xray 分流代理管理工具
 零依赖单文件 Web UI，仅使用 Python 标准库
+支持 macOS / Windows / Linux
 """
 
 import base64
@@ -22,6 +23,7 @@ from pathlib import Path
 import platform as _platform
 IS_WINDOWS = _platform.system() == "Windows"
 IS_MACOS = _platform.system() == "Darwin"
+IS_LINUX = _platform.system() == "Linux"
 
 # ==================== 配置 ====================
 
@@ -32,6 +34,7 @@ XRAY_BIN = XRAY_HOME / ("xray.exe" if IS_WINDOWS else "xray")
 WEB_PORT = 8888
 LAUNCHD_LABEL = "com.xray.proxy"
 WIN_TASK_NAME = "XrayProxy"
+SYSTEMD_SERVICE = "xray-proxy"
 
 # ==================== 工具函数 ====================
 
@@ -66,12 +69,23 @@ def get_xray_status():
                 pid = int(lines[0].split(",")[1].strip('"'))
                 return {"running": True, "pid": pid, "count": len(lines)}
         else:
-            result = subprocess.run(
-                ["pgrep", "-f", "xray run"],
-                capture_output=True, text=True, timeout=5
-            )
-            pids = result.stdout.strip().split("\n")
-            pids = [p for p in pids if p]
+            # 先尝试 pgrep，不可用则 fallback 到 ps aux | grep
+            try:
+                result = subprocess.run(
+                    ["pgrep", "-f", "xray run"],
+                    capture_output=True, text=True, timeout=5
+                )
+                pids = [p for p in result.stdout.strip().split("\n") if p]
+            except FileNotFoundError:
+                result = subprocess.run(
+                    ["ps", "aux"], capture_output=True, text=True, timeout=5
+                )
+                pids = []
+                for line in result.stdout.split("\n"):
+                    if "xray run" in line and "grep" not in line:
+                        parts = line.split()
+                        if len(parts) > 1:
+                            pids.append(parts[1])
             if pids:
                 return {"running": True, "pid": int(pids[0]), "count": len(pids)}
     except Exception:
@@ -84,7 +98,11 @@ def _kill_xray():
         if IS_WINDOWS:
             subprocess.run(["taskkill", "/F", "/IM", "xray.exe"], capture_output=True, timeout=5)
         else:
-            subprocess.run(["killall", "xray"], capture_output=True, timeout=5)
+            # 先尝试 killall，不可用则 fallback 到 pkill
+            try:
+                subprocess.run(["killall", "xray"], capture_output=True, timeout=5)
+            except FileNotFoundError:
+                subprocess.run(["pkill", "-f", "xray run"], capture_output=True, timeout=5)
         time.sleep(1)
     except Exception:
         pass
@@ -116,6 +134,20 @@ def restart_xray():
             status = get_xray_status()
             if status["running"]:
                 return {"success": True, "method": "launchctl", "pid": status["pid"]}
+        except Exception:
+            pass
+
+    # Linux: 先尝试 systemctl
+    if IS_LINUX:
+        try:
+            subprocess.run(
+                ["systemctl", "--user", "restart", SYSTEMD_SERVICE],
+                capture_output=True, text=True, timeout=10
+            )
+            time.sleep(1)
+            status = get_xray_status()
+            if status["running"]:
+                return {"success": True, "method": "systemctl", "pid": status["pid"]}
         except Exception:
             pass
 
@@ -617,6 +649,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 </div>
 
 <div class="container">
+  <!-- 端口信息栏 -->
+  <div id="portInfo" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;"></div>
+
   <div class="tabs">
     <div class="tab active" onclick="switchTab('nodes')">节点管理</div>
     <div class="tab" onclick="switchTab('routes')">路由规则</div>
@@ -908,6 +943,26 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   </div>
 </div>
 
+<!-- 端口编辑弹窗 -->
+<div class="modal-overlay" id="portModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>编辑代理端口</h3>
+      <button class="btn small" onclick="closeModal('portModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="portEditList"></div>
+      <div style="margin-top:12px;padding:8px;background:#0d1117;border:1px solid #30363d;border-radius:6px;font-size:12px;color:#8b949e;">
+        <b style="color:#d29922;">提示：</b>修改端口后需要重启 Xray 生效。如果修改了 HTTP 代理端口，记得同步更新环境变量 http_proxy/https_proxy。
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('portModal')">取消</button>
+      <button class="btn primary" onclick="savePorts()">保存并重启</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -983,10 +1038,70 @@ function maskUUID(uuid) {
   return uuid.slice(0, 4) + '****' + uuid.slice(-4);
 }
 
+// ========== 端口信息 ==========
+function renderPorts(inbounds) {
+  const el = document.getElementById('portInfo');
+  if (!inbounds || inbounds.length === 0) { el.innerHTML = ''; return; }
+  const colors = { socks: '#3fb950', http: '#58a6ff', mixed: '#d29922' };
+  const labels = { socks: 'SOCKS5', http: 'HTTP', mixed: 'SOCKS5/HTTP' };
+  el.innerHTML = inbounds.map(ib => {
+    const proto = ib.protocol || 'unknown';
+    const color = colors[proto] || '#8b949e';
+    const label = labels[proto] || proto.toUpperCase();
+    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:#161b22;border:1px solid #30363d;border-radius:6px;font-size:13px;">
+      <span style="color:${color};font-weight:600;">${label}</span>
+      <span style="color:#c9d1d9;font-family:monospace;">${ib.listen}:${ib.port}</span>
+      <span style="color:#484f58;font-size:11px;">${ib.tag}</span>
+    </div>`;
+  }).join('') + `<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:#161b22;border:1px solid #30363d;border-radius:6px;font-size:13px;">
+    <span style="color:#bc8cff;font-weight:600;">Web UI</span>
+    <span style="color:#c9d1d9;font-family:monospace;">127.0.0.1:${location.port || 8888}</span>
+  </div>` + `<button class="btn small" onclick="showPortModal()" style="padding:6px 10px;">编辑端口</button>`;
+}
+
+function showPortModal() {
+  const inbounds = (currentConfig && currentConfig.inbounds) || [];
+  const labels = { socks: 'SOCKS5', http: 'HTTP', mixed: 'SOCKS5/HTTP' };
+  document.getElementById('portEditList').innerHTML = inbounds.map((ib, i) => {
+    const label = labels[ib.protocol] || ib.protocol.toUpperCase();
+    return `<div class="form-row" style="margin-bottom:8px;align-items:center;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label>${label} (${ib.tag})</label>
+        <div style="display:flex;gap:8px;">
+          <input id="portListen${i}" value="${ib.listen}" style="width:40%;padding:6px 8px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-family:monospace;font-size:13px;" placeholder="监听地址">
+          <input id="portNum${i}" type="number" value="${ib.port}" min="1" max="65535" style="width:30%;padding:6px 8px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-family:monospace;font-size:13px;" placeholder="端口">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('portModal').classList.add('show');
+}
+
+async function savePorts() {
+  const inbounds = (currentConfig && currentConfig.inbounds) || [];
+  const updated = inbounds.map((ib, i) => ({
+    tag: ib.tag,
+    protocol: ib.protocol,
+    listen: document.getElementById('portListen' + i).value.trim() || '127.0.0.1',
+    port: parseInt(document.getElementById('portNum' + i).value) || ib.port,
+  }));
+  // 前端校验
+  const ports = updated.map(u => u.port);
+  if (ports.some(p => p < 1 || p > 65535)) { showToast('端口范围 1-65535', 'error'); return; }
+  if (new Set(ports).size !== ports.length) { showToast('端口不能重复', 'error'); return; }
+  const data = await api('/inbounds', 'POST', { inbounds: updated });
+  if (data.error) { showToast(data.error, 'error'); return; }
+  closeModal('portModal');
+  showToast('端口已保存，正在重启...', 'success');
+  await restartXray();
+  loadNodes();
+}
+
 // ========== 节点管理 ==========
 async function loadNodes() {
   const data = await api('/config');
   currentConfig = data;
+  renderPorts(data.inbounds || []);
   const nodes = data.nodes || [];
   const list = document.getElementById('nodeList');
   if (nodes.length === 0) {
@@ -1410,13 +1525,22 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/config":
             config = load_config()
             if config:
+                inbounds = []
+                for ib in config.get("inbounds", []):
+                    inbounds.append({
+                        "tag": ib.get("tag", ""),
+                        "protocol": ib.get("protocol", ""),
+                        "listen": ib.get("listen", "0.0.0.0"),
+                        "port": ib.get("port", 0),
+                    })
                 self._json({
                     "nodes": extract_nodes(config),
                     "routes": extract_routes(config),
                     "balancers": extract_balancers(config),
+                    "inbounds": inbounds,
                 })
             else:
-                self._json({"nodes": [], "routes": [], "balancers": []})
+                self._json({"nodes": [], "routes": [], "balancers": [], "inbounds": []})
         elif path == "/api/logs":
             self._json({"logs": get_logs(200)})
         elif path == "/api/test":
@@ -1540,6 +1664,40 @@ class Handler(BaseHTTPRequestHandler):
                 imported += 1
             save_config(config)
             self._json({"success": True, "imported": imported})
+        elif path == "/api/inbounds":
+            config = load_config()
+            if not config:
+                self._json({"error": "no config"}, 400)
+                return
+            new_inbounds = body.get("inbounds", [])
+            if not new_inbounds:
+                self._json({"error": "inbounds 不能为空"}, 400)
+                return
+            # 检查端口冲突
+            ports = [ib["port"] for ib in new_inbounds]
+            if len(ports) != len(set(ports)):
+                self._json({"error": "端口不能重复"}, 400)
+                return
+            # 更新配置中的 inbounds
+            for new_ib in new_inbounds:
+                for i, old_ib in enumerate(config.get("inbounds", [])):
+                    if old_ib.get("tag") == new_ib.get("tag"):
+                        config["inbounds"][i]["port"] = int(new_ib["port"])
+                        if "listen" in new_ib:
+                            config["inbounds"][i]["listen"] = new_ib["listen"]
+                        break
+                else:
+                    # 新增的 inbound
+                    config.setdefault("inbounds", []).append({
+                        "tag": new_ib.get("tag", f"inbound-{new_ib['port']}"),
+                        "port": int(new_ib["port"]),
+                        "listen": new_ib.get("listen", "127.0.0.1"),
+                        "protocol": new_ib.get("protocol", "http"),
+                        "sniffing": {"enabled": True, "destOverride": ["http", "tls"]},
+                        "settings": {"timeout": 300, "allowTransparent": False},
+                    })
+            save_config(config)
+            self._json({"success": True})
         elif path.startswith("/api/route"):
             config = load_config()
             if not config:
@@ -1683,15 +1841,18 @@ def main():
         sys.exit(0)
 
     signal.signal(signal.SIGINT, shutdown)
-    signal.signal(signal.SIGTERM, shutdown)
+    if not IS_WINDOWS:
+        signal.signal(signal.SIGTERM, shutdown)
 
     # 自动打开浏览器
     if "--no-browser" not in sys.argv:
         url = f"http://127.0.0.1:{WEB_PORT}"
         if IS_WINDOWS:
             os.startfile(url)
-        else:
+        elif IS_MACOS:
             subprocess.Popen(["open", url])
+        elif IS_LINUX:
+            subprocess.Popen(["xdg-open", url], stderr=subprocess.DEVNULL)
 
     print(f"Web UI: http://127.0.0.1:{WEB_PORT}")
     server.serve_forever()

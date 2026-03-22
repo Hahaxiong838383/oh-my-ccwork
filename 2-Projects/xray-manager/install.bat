@@ -84,8 +84,15 @@ if !errorlevel! equ 0 (
     echo   [!] 任务计划注册失败，请以管理员身份运行
 )
 
-:: 启动 xray
-echo [7/7] 启动 xray ...
+:: 7. 配置代理环境变量
+echo [7/8] 配置代理环境变量 ...
+setx http_proxy "http://127.0.0.1:20171" >nul 2>&1
+setx https_proxy "http://127.0.0.1:20171" >nul 2>&1
+setx no_proxy "localhost,127.0.0.1" >nul 2>&1
+echo   http_proxy/https_proxy 已设置为 http://127.0.0.1:20171
+
+:: 8. 启动 xray
+echo [8/8] 启动 xray ...
 taskkill /F /IM xray.exe >nul 2>&1
 timeout /t 1 /nobreak >nul
 start /B "" "%XRAY_BIN%" run -c "%CONFIG_PATH%" >"%LOG_PATH%" 2>&1
@@ -109,9 +116,14 @@ echo 使用方法:
 echo   python "%MANAGER%"          启动 Web 管理界面
 echo   浏览器打开 http://127.0.0.1:8888
 echo.
-echo SOCKS 代理: 127.0.0.1:10808
+echo 代理端口:
+echo   SOCKS 代理:  127.0.0.1:10808
+echo   HTTP 代理:   127.0.0.1:20171
 echo.
-echo 记得在 Windows 设置 - 网络 - 代理 中配置:
+echo 环境变量 http_proxy/https_proxy 已设置（新终端窗口生效）
+echo CLI 工具 (claude, npm, curl 等) 将自动使用 HTTP 代理
+echo.
+echo 如需系统全局代理，在 Windows 设置 - 网络 - 代理 中配置:
 echo   手动代理: 127.0.0.1:10808
 echo.
 pause
