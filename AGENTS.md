@@ -24,7 +24,7 @@
 | `0-System/RECENT_EVENTS.md` | 最近 24h 事件流 |
 | `0-System/memory-items.md` | 原子化可检索事实（按类别组织） |
 | `0-System/status.md` | 当前状态快照 |
-| `0-System/context.md` | 本周上下文 |
+| `5-Archive/周记/` | 本周/上周复盘归档 |
 
 **重要**：如果 prompt 中已包含 `[共享记忆]` 块，说明 cc 已注入了相关记忆，无需重复读取。
 

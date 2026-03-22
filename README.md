@@ -59,7 +59,6 @@ CC 会一步步引导你完成初始化，支持中断后继续。
 # 复制配置文件
 cp .claude/settings.local.json.example .claude/settings.local.json
 cp 0-System/status.md.example 0-System/status.md
-cp 0-System/context.md.example 0-System/context.md
 
 # 改名字（把 {{YOUR_NAME}} 换成你的名字）
 sed -i '' 's/{{YOUR_NAME}}/你的名字/g' CLAUDE.md
@@ -78,7 +77,8 @@ mycc/
 │   └── skills/                # 技能库
 ├── 0-System/                  # 记忆系统
 │   ├── status.md              # 短期记忆（每日状态）
-│   ├── context.md             # 中期记忆（本周上下文）
+│   ├── RECENT_EVENTS.md       # 24h 滚动事件流
+│   ├── memory-items.md        # 原子化可检索事实
 │   └── about-me/              # 长期记忆（你的画像）
 ├── 1-Inbox/                   # 想法收集箱
 ├── 2-Projects/                # 进行中的项目
@@ -103,9 +103,10 @@ mycc/
 
 | 层级 | 文件 | 作用 |
 |------|------|------|
-| 短期 | `status.md` | 今日状态，Hooks 自动注入 |
-| 中期 | `context.md` | 本周上下文，每日追加 |
-| 长期 | `about-me/` | 你的完整画像 |
+| 实时 | `status.md` | 当前状态，Hooks 自动注入 |
+| 近期 | `RECENT_EVENTS.md` | 24h 滚动事件流 |
+| 持久 | `memory-items.md` | 原子化可检索事实 |
+| 归档 | `5-Archive/周记/` | 每周复盘归档 |
 
 ### Skills - 可扩展能力
 
