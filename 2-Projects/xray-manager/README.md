@@ -108,10 +108,42 @@ xray-config      # 终端编辑配置文件
 | SOCKS 代理 | 10808 | 系统代理入口 |
 | Web 管理 UI | 8888 | 仅本地访问 |
 
+## 跨平台支持
+
+| | macOS | Windows |
+|--|-------|---------|
+| 安装脚本 | `install.sh` | `install.bat` |
+| 服务管理 | launchd | Task Scheduler |
+| xray 二进制 | `xray` | `xray.exe` |
+| 系统代理 | `networksetup` | 设置 → 网络 → 代理 |
+
+### Windows 安装
+
+```bash
+# 双击 install.bat 或在命令行运行
+install.bat
+```
+
+### 离线部署包
+
+```bash
+# 在有网的机器上打包
+./package.sh both       # 同时打包 macOS + Windows
+./package.sh macos      # 仅 macOS
+./package.sh windows    # 仅 Windows
+
+# 产出：
+# /tmp/xray-manager-build/xray-manager-macos-arm64-v1.1.tar.gz
+# /tmp/xray-manager-build/xray-manager-windows-x64-v1.1.zip
+```
+
+新电脑解压后运行安装脚本即可，不需要网络。
+
 ## 注意事项
 
-- **macOS 系统代理**需手动设置：系统设置 → 网络 → Wi-Fi → 代理 → SOCKS 代理 → `127.0.0.1:10808`
-- **V2RayN 可以卸载**：本工具完全替代 V2RayN 在 macOS 上的功能
+- **macOS 系统代理**：系统设置 → 网络 → Wi-Fi → 代理 → SOCKS 代理 → `127.0.0.1:10808`
+- **Windows 系统代理**：设置 → 网络和 Internet → 代理 → 手动设置 → `127.0.0.1:10808`
+- **V2RayN 可以卸载**：本工具完全替代 V2RayN 的功能
 - **config.json 不提交 git**：包含节点地址和 UUID，属于敏感信息。模板在 `config/config.json`
 - **xray 二进制不提交 git**：OS 特定，各机器自行安装
 

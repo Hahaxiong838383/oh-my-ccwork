@@ -17,14 +17,21 @@ import urllib.request
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
+# ==================== 平台检测 ====================
+
+import platform as _platform
+IS_WINDOWS = _platform.system() == "Windows"
+IS_MACOS = _platform.system() == "Darwin"
+
 # ==================== 配置 ====================
 
 XRAY_HOME = Path.home() / "xray"
 CONFIG_PATH = XRAY_HOME / "config.json"
 LOG_PATH = XRAY_HOME / "xray.log"
-XRAY_BIN = XRAY_HOME / "xray"
+XRAY_BIN = XRAY_HOME / ("xray.exe" if IS_WINDOWS else "xray")
 WEB_PORT = 8888
 LAUNCHD_LABEL = "com.xray.proxy"
+WIN_TASK_NAME = "XrayProxy"
 
 # ==================== 工具函数 ====================
 
@@ -49,49 +56,86 @@ def save_config(config):
 def get_xray_status():
     """获取 xray 运行状态"""
     try:
-        result = subprocess.run(
-            ["pgrep", "-f", "xray run"],
-            capture_output=True, text=True, timeout=5
-        )
-        pids = result.stdout.strip().split("\n")
-        pids = [p for p in pids if p]
-        if pids:
-            return {"running": True, "pid": int(pids[0]), "count": len(pids)}
+        if IS_WINDOWS:
+            result = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq xray.exe", "/FO", "CSV", "/NH"],
+                capture_output=True, text=True, timeout=5
+            )
+            lines = [l for l in result.stdout.strip().split("\n") if "xray.exe" in l]
+            if lines:
+                pid = int(lines[0].split(",")[1].strip('"'))
+                return {"running": True, "pid": pid, "count": len(lines)}
+        else:
+            result = subprocess.run(
+                ["pgrep", "-f", "xray run"],
+                capture_output=True, text=True, timeout=5
+            )
+            pids = result.stdout.strip().split("\n")
+            pids = [p for p in pids if p]
+            if pids:
+                return {"running": True, "pid": int(pids[0]), "count": len(pids)}
     except Exception:
         pass
     return {"running": False, "pid": None, "count": 0}
 
+def _kill_xray():
+    """杀掉所有 xray 进程"""
+    try:
+        if IS_WINDOWS:
+            subprocess.run(["taskkill", "/F", "/IM", "xray.exe"], capture_output=True, timeout=5)
+        else:
+            subprocess.run(["killall", "xray"], capture_output=True, timeout=5)
+        time.sleep(1)
+    except Exception:
+        pass
+
+def _start_xray_process():
+    """手动启动 xray 进程"""
+    kwargs = {
+        "stdout": open(LOG_PATH, "a"),
+        "stderr": subprocess.STDOUT,
+        "cwd": str(XRAY_HOME),
+    }
+    if IS_WINDOWS:
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS
+    else:
+        kwargs["start_new_session"] = True
+    subprocess.Popen([str(XRAY_BIN), "run", "-c", str(CONFIG_PATH)], **kwargs)
+
 def restart_xray():
     """重启 xray 服务"""
-    uid = os.getuid()
-    try:
-        # 先尝试 launchctl
-        subprocess.run(
-            ["launchctl", "kickstart", "-k", f"gui/{uid}/{LAUNCHD_LABEL}"],
-            capture_output=True, text=True, timeout=10
-        )
-        time.sleep(1)
-        status = get_xray_status()
-        if status["running"]:
-            return {"success": True, "method": "launchctl", "pid": status["pid"]}
-    except Exception:
-        pass
+    # macOS: 先尝试 launchctl
+    if IS_MACOS:
+        try:
+            uid = os.getuid()
+            subprocess.run(
+                ["launchctl", "kickstart", "-k", f"gui/{uid}/{LAUNCHD_LABEL}"],
+                capture_output=True, text=True, timeout=10
+            )
+            time.sleep(1)
+            status = get_xray_status()
+            if status["running"]:
+                return {"success": True, "method": "launchctl", "pid": status["pid"]}
+        except Exception:
+            pass
+
+    # Windows: 先尝试 Task Scheduler
+    if IS_WINDOWS:
+        try:
+            subprocess.run(["schtasks", "/End", "/TN", WIN_TASK_NAME], capture_output=True, timeout=5)
+            time.sleep(1)
+            subprocess.run(["schtasks", "/Run", "/TN", WIN_TASK_NAME], capture_output=True, timeout=5)
+            time.sleep(2)
+            status = get_xray_status()
+            if status["running"]:
+                return {"success": True, "method": "schtasks", "pid": status["pid"]}
+        except Exception:
+            pass
 
     # 回退：手动杀进程重启
+    _kill_xray()
     try:
-        subprocess.run(["killall", "xray"], capture_output=True, timeout=5)
-        time.sleep(1)
-    except Exception:
-        pass
-
-    try:
-        subprocess.Popen(
-            [str(XRAY_BIN), "run", "-c", str(CONFIG_PATH)],
-            stdout=open(LOG_PATH, "a"),
-            stderr=subprocess.STDOUT,
-            cwd=str(XRAY_HOME),
-            start_new_session=True
-        )
+        _start_xray_process()
         time.sleep(2)
         status = get_xray_status()
         return {"success": status["running"], "method": "manual", "pid": status.get("pid")}
@@ -101,7 +145,7 @@ def restart_xray():
 def stop_xray():
     """停止 xray"""
     try:
-        subprocess.run(["killall", "xray"], capture_output=True, timeout=5)
+        _kill_xray()
         return {"success": True}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -111,11 +155,16 @@ def get_logs(lines=100):
     if not LOG_PATH.exists():
         return ""
     try:
-        result = subprocess.run(
-            ["tail", f"-{lines}", str(LOG_PATH)],
-            capture_output=True, text=True, timeout=5
-        )
-        return result.stdout
+        if IS_WINDOWS:
+            with open(LOG_PATH, "r", encoding="utf-8", errors="replace") as f:
+                all_lines = f.readlines()
+                return "".join(all_lines[-lines:])
+        else:
+            result = subprocess.run(
+                ["tail", f"-{lines}", str(LOG_PATH)],
+                capture_output=True, text=True, timeout=5
+            )
+            return result.stdout
     except Exception:
         return ""
 
@@ -1638,7 +1687,11 @@ def main():
 
     # 自动打开浏览器
     if "--no-browser" not in sys.argv:
-        subprocess.Popen(["open", f"http://127.0.0.1:{WEB_PORT}"])
+        url = f"http://127.0.0.1:{WEB_PORT}"
+        if IS_WINDOWS:
+            os.startfile(url)
+        else:
+            subprocess.Popen(["open", url])
 
     print(f"Web UI: http://127.0.0.1:{WEB_PORT}")
     server.serve_forever()
