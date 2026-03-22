@@ -29,6 +29,7 @@ import { loadSharedContext, loadSharedContextLight } from "./services/context-lo
 import { buildCrossSessionContext, recordConversationTurn, onSessionEnd, extractAndStoreFacts, clearChatMemory } from "./services/chat-memory.js";
 import { preprocessMultimodal } from "./services/multimodal-preprocessor.js";
 import { fetchUrlContent } from "./services/url-content-fetcher.js";
+import { getPortsSnapshot } from "./services/port-manager.js";
 
 const PORT = process.env.PORT || 18080;
 
@@ -252,6 +253,10 @@ export class HttpServer {
         await this.handleTerminalAuth(req, res);
       } else if (url.pathname.startsWith("/terminal") && req.method === "GET") {
         this.serveTerminalFrontend(req, res, url.pathname);
+      } else if (url.pathname === "/ports" && req.method === "GET") {
+        const snapshot = getPortsSnapshot();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ports: snapshot, total: snapshot.length }));
       } else {
         res.writeHead(404, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Not Found" }));
@@ -1552,7 +1557,7 @@ export class HttpServer {
     await this.sendToChannel(ctx, "🔄 正在重启 mycc 后端...");
     try {
       const { execSync } = await import("child_process");
-      execSync("lsof -i :18080 -t | xargs kill 2>/dev/null", { stdio: "ignore" });
+      execSync("lsof -i :${PORT} -t | xargs kill 2>/dev/null", { stdio: "ignore" });
       await this.sendToChannel(ctx, "✅ 已停止旧进程");
       await new Promise(resolve => setTimeout(resolve, 2000));
       const { spawn } = await import("child_process");
@@ -1572,7 +1577,7 @@ export class HttpServer {
     await this.sendToChannel(ctx, "🔄 正在停止 mycc 后端...");
     try {
       const { execSync } = await import("child_process");
-      execSync("lsof -i :18080 -t | xargs kill 2>/dev/null", { stdio: "ignore" });
+      execSync("lsof -i :${PORT} -t | xargs kill 2>/dev/null", { stdio: "ignore" });
       await this.sendToChannel(ctx, "✅ mycc 后端已停止");
     } catch (err) {
       console.error("[CC] 停止失败:", err);
@@ -1583,7 +1588,7 @@ export class HttpServer {
   private async handleStatus(ctx: ChannelContext): Promise<void> {
     try {
       const { execSync } = await import("child_process");
-      const pid = execSync("lsof -i :18080 -t 2>/dev/null", { encoding: "utf8" }).trim();
+      const pid = execSync("lsof -i :${PORT} -t 2>/dev/null", { encoding: "utf8" }).trim();
       if (pid) {
         const status = execSync(`ps -p ${pid} -o pid,etime,comm 2>/dev/null`, { encoding: "utf8" });
         await this.sendToChannel(ctx, `✅ mycc 后端运行中\n\n\`\`\`\n${status}\n\`\`\``);
@@ -2209,9 +2214,8 @@ body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
 <script>
-const WS_PATH="/ws";
 let ws,token,clis=[],sessions={},activeId=null;
-function wsUrl(){const p=location.protocol==="https:"?"wss:":"ws:";return p+"//"+location.host+WS_PATH}
+function wsUrl(){const p=location.protocol==="https:"?"wss:":"ws:";let b=location.pathname;if(b.endsWith("/terminal"))b=b.slice(0,-9)+"/ws";else if(b.endsWith("/terminal/"))b=b.slice(0,-10)+"/ws";else b="/ws";return p+"//"+location.host+b}
 function doLogin(){const p=document.getElementById("pwd").value;if(!p)return;connect(p)}
 document.getElementById("pwd").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
 function connect(pwd){

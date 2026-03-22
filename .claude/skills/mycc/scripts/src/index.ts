@@ -32,7 +32,7 @@ import { startScheduler, stopScheduler, type Task } from "./scheduler.js";
 import { adapter, officialAdapter } from "./adapters/index.js";
 import { runCliEngine, type EngineType } from "./adapters/cli-engine.js";
 import { HealthMonitor } from "./health-monitor.js";
-import { CloudflareProvider } from "./tunnel-provider.js";
+import { CloudflareProvider, NamedCloudflareProvider, WsRelayProvider } from "./tunnel-provider.js";
 import { TunnelManager } from "./tunnel-manager.js";
 import { loadPublicUrl, loadEnvFile } from "./env-loader.js";
 import { agentIntrospection } from "./introspection.js";
@@ -44,7 +44,9 @@ import { updateDnsRecord, loadDnsConfig } from "./cf-dns.js";
 // 导致所有 claude 子进程（HealthMonitor、SDK session）被误判为嵌套会话而拒绝启动
 delete process.env.CLAUDECODE;
 
-const PORT = process.env.PORT || 18080;
+import { findAvailablePort, printPortsTable } from "./services/port-manager.js";
+
+const PREFERRED_PORT = Number(process.env.PORT || 18080);
 
 // ==================== 全局错误处理（EvoMap AI Agent 自省调试框架）====================
 // 触发：agent_error, auto_debug, self_repair, error_fix, runtime_exception
@@ -115,9 +117,15 @@ async function startServer(args: string[]) {
   // 检测版本更新（静默，不阻塞）
   await checkVersionUpdate();
 
-  // 杀掉旧进程，确保端口可用
+  // 端口冲突检测：优先使用首选端口，被占用时自动换冷门端口
   console.log(chalk.gray("检查端口占用..."));
-  await killPortProcess(Number(PORT));
+  const { port: actualPort, changed: portChanged } = findAvailablePort(PREFERRED_PORT);
+  if (!portChanged) {
+    // 首选端口可用，杀掉可能残留的旧 mycc 进程
+    await killPortProcess(actualPort);
+  }
+  // 将实际端口写入环境变量，供 HttpServer 读取
+  process.env.PORT = String(actualPort);
 
   // 检查 CC 是否可用
   console.log("检查 Claude Code CLI...");
@@ -146,8 +154,12 @@ async function startServer(args: string[]) {
   if (isPublicMode) {
     console.log(chalk.cyan(`\n公网模式: ${publicUrl}`));
     console.log(chalk.gray("  跳过 cloudflared（不需要内网穿透）\n"));
+  } else if (process.env.RELAY_URL) {
+    // Relay 模式：不需要 cloudflared
+    console.log(chalk.cyan(`\nRelay 模式: ${process.env.RELAY_URL}`));
+    console.log(chalk.gray("  跳过 cloudflared（使用 WS Relay）\n"));
   } else {
-    // 只有内网模式才需要 cloudflared
+    // 只有 Cloudflare 模式才需要 cloudflared
     console.log("检查 cloudflared...");
     const cloudflaredAvailable = await checkCloudflared();
     if (!cloudflaredAvailable) {
@@ -247,13 +259,19 @@ async function startServer(args: string[]) {
     await server.start();
   } catch (error: any) {
     if (error.code === 'EADDRINUSE') {
-      console.error(chalk.red(`错误: 端口 ${PORT} 已被占用`));
-      console.error(chalk.yellow('请检查是否有其他 mycc 实例正在运行'));
-      console.error(chalk.yellow(`提示: lsof -i :${PORT}`));
+      console.error(chalk.red(`错误: 端口 ${actualPort} 已被占用（自动换端口后仍冲突）`));
+      console.error(chalk.yellow('请检查是否有其他服务正在运行'));
+      printPortsTable();
       process.exit(1);
     }
     throw error;
   }
+
+  // 启动成功后打印端口一览
+  if (portChanged) {
+    console.log(chalk.yellow(`📌 注意：mycc 后端运行在非默认端口 ${actualPort}（默认 ${PREFERRED_PORT} 被占用）`));
+  }
+  printPortsTable();
 
   // 初始化终端 WebSocket（挂载到已有 HTTP server 上）
   let terminalWs: TerminalWsHandler | null = null;
@@ -417,35 +435,81 @@ ${skillLine}
   // tunnelUrl 需要可变，因为重启时会更新
   let tunnelUrl: string;
   let tunnelManager: TunnelManager | null = null;
+  let tunnelProvider: TunnelProvider | null = null;
+  const isRelayMode = !!process.env.RELAY_URL;
 
   if (isPublicMode) {
     // 公网模式：直接用 PUBLIC_URL，不启动 tunnel
     tunnelUrl = publicUrl!;
     console.log(chalk.green(`✓ 使用公网地址: ${tunnelUrl}\n`));
   } else {
-    // 内网模式：启动 cloudflared tunnel（使用 TunnelManager 保活）
+    // 内网模式：启动隧道（使用 TunnelManager 保活）
     console.log(chalk.yellow("启动 tunnel...\n"));
 
-    const tunnelProvider = new CloudflareProvider(120000);
+    // 选择 Tunnel Provider（优先级：RELAY_URL > CF_TUNNEL_TOKEN > Quick Tunnel）
+    const relayUrl = process.env.RELAY_URL;
+    const tunnelToken = process.env.CF_TUNNEL_TOKEN;
+    const isNamedTunnel = !isRelayMode && !!(tunnelToken && dnsConfig);
+
+    if (isRelayMode) {
+      // V2 Relay 模式：自建中继服务器（URL 固定、国内低延迟、无外部依赖）
+      tunnelProvider = new WsRelayProvider(relayUrl!, deviceId);
+      console.log(chalk.cyan(`[WS Relay] 模式已启用`));
+      console.log(chalk.gray(`  Relay Server: ${relayUrl}`));
+    } else if (isNamedTunnel) {
+      // Named Tunnel: 解决 CNAME Cross-User Banned (Error 1014)
+      const hostname = dnsConfig!.subdomain
+        ? `${dnsConfig!.subdomain}.${dnsConfig!.domain}`
+        : dnsConfig!.domain;
+      const namedProvider = new NamedCloudflareProvider(tunnelToken!, hostname, 120000);
+      tunnelProvider = namedProvider;
+
+      console.log(chalk.cyan(`[Named Tunnel] 模式已启用`));
+      console.log(chalk.gray(`  Tunnel ID: ${namedProvider.getTunnelId()}`));
+      console.log(chalk.gray(`  域名: ${hostname}`));
+
+      // 设置 CNAME 指向 {uuid}.cfargotunnel.com（固定不变，一次性设置）
+      updateDnsRecord(
+        `https://${namedProvider.getTunnelId()}.cfargotunnel.com`,
+        dnsConfig!
+      ).then((ok) => {
+        if (ok) {
+          console.log(chalk.green(`✓ DNS 已设置: ${hostname} → ${namedProvider.getTunnelId()}.cfargotunnel.com`));
+        }
+      });
+    } else {
+      // Quick Tunnel: 随机 URL，适合无自定义域名场景
+      tunnelProvider = new CloudflareProvider(120000);
+      if (tunnelToken && !dnsConfig) {
+        console.warn(chalk.yellow("⚠️  已设置 CF_TUNNEL_TOKEN 但缺少 CF_DOMAIN/CF_ZONE_ID，降级为 Quick Tunnel"));
+      }
+    }
 
     tunnelManager = new TunnelManager({
-      localPort: Number(PORT),
+      localPort: actualPort,
       onRestartSuccess: async (newUrl: string) => {
         console.log(chalk.cyan(`[TunnelManager] 更新 tunnelUrl: ${newUrl}`));
         tunnelUrl = newUrl;
 
-        // 更新 DNS 指向新 tunnel
-        if (dnsConfig) {
-          updateDnsRecord(newUrl, dnsConfig).catch(() => {});
-        }
-
-        console.log(chalk.gray("重新注册到中转服务器..."));
-        const newRegisterResult = await registerToWorker(newUrl, pairCode, deviceId);
-        if (newRegisterResult?.token) {
-          console.log(chalk.green("✓ 重新注册成功"));
+        if (isRelayMode) {
+          // Relay 模式：URL 固定，重连后只需更新连接信息
+          console.log(chalk.green("✓ Relay 重连成功"));
           saveConnectionInfo();
         } else {
-          console.warn(chalk.yellow("⚠️ 重新注册失败，小程序可能无法访问"));
+          // Quick Tunnel: URL 每次重启都变，需要更新 DNS
+          // Named Tunnel: CNAME 指向固定的 cfargotunnel.com，无需更新
+          if (!isNamedTunnel && dnsConfig) {
+            updateDnsRecord(newUrl, dnsConfig).catch(() => {});
+          }
+
+          console.log(chalk.gray("重新注册到中转服务器..."));
+          const newRegisterResult = await registerToWorker(newUrl, pairCode, deviceId);
+          if (newRegisterResult?.token) {
+            console.log(chalk.green("✓ 重新注册成功"));
+            saveConnectionInfo();
+          } else {
+            console.warn(chalk.yellow("⚠️ 重新注册失败，小程序可能无法访问"));
+          }
         }
       },
       onGiveUp: () => {
@@ -459,10 +523,14 @@ ${skillLine}
     try {
       tunnelUrl = await tunnelManager.start(tunnelProvider);
       console.log(chalk.green(`✓ Tunnel 已启动: ${tunnelUrl}`));
+      const modeLabel = isRelayMode ? 'WS Relay（自建中继）' : isNamedTunnel ? 'Named Tunnel（固定域名）' : 'Quick Tunnel（随机 URL）';
+      console.log(chalk.gray(`  模式: ${modeLabel}`));
       console.log(chalk.gray(`  保活监控已开启（心跳间隔 60s，失败阈值 3 次）\n`));
 
-      // 自动更新 Cloudflare DNS 指向新的 tunnel URL
-      if (dnsConfig) {
+      // Quick Tunnel + DNS 配置：更新 CNAME（注意：这会触发 Error 1014！）
+      if (!isRelayMode && !isNamedTunnel && dnsConfig) {
+        console.warn(chalk.yellow("⚠️  Quick Tunnel + CNAME 可能触发 Cloudflare Error 1014"));
+        console.warn(chalk.yellow("   建议：设置 CF_TUNNEL_TOKEN 使用 Named Tunnel"));
         updateDnsRecord(tunnelUrl, dnsConfig).then((ok) => {
           if (ok) {
             const domain = dnsConfig.subdomain ? `${dnsConfig.subdomain}.${dnsConfig.domain}` : dnsConfig.domain;
@@ -480,7 +548,6 @@ ${skillLine}
   }
 
   // 向 Worker 注册，获取 token（带 deviceId）
-  // 只有当 Tunnel 可用时才尝试注册
   let token: string | null = null;
   let mpUrl: string;
 
@@ -489,6 +556,12 @@ ${skillLine}
     console.warn(chalk.yellow("Tunnel 不可用，跳过 Worker 注册"));
     console.warn(chalk.yellow("Web 通道不可用，仅飞书通道可用\n"));
     mpUrl = "http://localhost disabled";
+  } else if (isRelayMode) {
+    // Relay 模式：Relay 自身就是代理，无需 Worker 注册
+    // tunnelUrl 已经是完整的代理 URL：https://relay.mycc.dev/api/{token}
+    mpUrl = tunnelUrl;
+    token = (tunnelProvider as WsRelayProvider).getToken();
+    console.log(chalk.green(`✓ Relay 代理就绪，无需 Worker 注册\n`));
   } else {
     console.log(chalk.yellow("向中转服务器注册...\n"));
     const registerResult = await registerToWorker(tunnelUrl, pairCode, deviceId);

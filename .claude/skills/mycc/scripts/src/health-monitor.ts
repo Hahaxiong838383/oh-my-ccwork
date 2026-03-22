@@ -323,7 +323,8 @@ export class HealthMonitor {
     } catch (err) {
       this.authFailCount++;
       console.error(chalk.red(`[HealthMonitor] ✗ Token 刷新失败 (${this.authFailCount}/${AUTH_FAIL_THRESHOLD})`));
-      if (this.authFailCount >= AUTH_FAIL_THRESHOLD) {
+      if (this.authFailCount === AUTH_FAIL_THRESHOLD) {
+        // 仅在恰好达到阈值时通知一次，避免重复发飞书告警
         console.error(chalk.red("[HealthMonitor] ✗ 连续多次刷新失败，可能需要手动 /login"));
         if (this.adapter) {
           this.adapter.authOk = false;

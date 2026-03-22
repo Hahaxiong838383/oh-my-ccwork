@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>cc-remote v3</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+<style>
+  /* Nerd Font for Claude Code logo */
+  @font-face {
+    font-family: 'JetBrains Mono NF';
+    src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@v3.3.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf') format('truetype');
+    font-display: swap;
+  }
+</style>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1e1e1e; color: #d4d4d4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Header */
+  .header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #161b22; border-bottom: 1px solid #30363d; flex-shrink: 0; }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo { font-size: 16px; font-weight: 700; color: #58a6ff; }
+  .device-info { font-size: 12px; color: #8b949e; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .status { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .status-dot.online { background: #3fb950; }
+  .status-dot.offline { background: #f85149; }
+  .latency { font-size: 12px; color: #8b949e; }
+
+  /* Main layout */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar { width: 220px; background: #161b22; border-right: 1px solid #30363d; display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-header { padding: 12px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: space-between; }
+  .sidebar-title { font-size: 13px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+  .btn-new { background: #238636; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+  .btn-new:hover { background: #2ea043; }
+  .session-list { flex: 1; overflow-y: auto; padding: 4px; }
+  .session-item { padding: 10px; margin: 2px 0; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
+  .session-item:hover { background: #1c2128; }
+  .session-item.active { background: #1c2128; border-color: #58a6ff; }
+  .session-item .engine { font-size: 13px; font-weight: 600; color: #c9d1d9; }
+  .session-item .meta { font-size: 11px; color: #8b949e; margin-top: 2px; }
+  .session-item .status-badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 4px; }
+  .badge-alive { background: #0d3522; color: #3fb950; }
+  .badge-dead { background: #3d1418; color: #f85149; }
+
+  /* Terminal area */
+  .terminal-area { flex: 1; display: flex; flex-direction: column; position: relative; }
+  .terminal-container { flex: 1; padding: 4px; }
+  .terminal-container .xterm { height: 100%; }
+  .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; color: #8b949e; }
+  .empty-state .icon { font-size: 48px; }
+  .empty-state .text { font-size: 14px; }
+
+  /* New session dialog */
+  .dialog-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .dialog { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; min-width: 320px; }
+  .dialog h3 { margin-bottom: 16px; color: #c9d1d9; font-size: 16px; }
+  .dialog select, .dialog input { width: 100%; padding: 8px 12px; background: #1e1e1e; color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px; font-size: 14px; margin-bottom: 12px; }
+  .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  .dialog-actions button { padding: 6px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; }
+  .btn-cancel { background: #21262d; color: #c9d1d9; }
+  .btn-confirm { background: #238636; color: #fff; }
+  .hidden { display: none !important; }
+
+  /* Mobile */
+  @media (max-width: 640px) {
+    .sidebar { width: 100%; position: absolute; top: 44px; bottom: 0; z-index: 50; transform: translateX(-100%); transition: transform 0.2s; }
+    .sidebar.open { transform: translateX(0); }
+    .btn-menu { display: block; background: none; border: none; color: #c9d1d9; font-size: 20px; cursor: pointer; }
+  }
+  @media (min-width: 641px) { .btn-menu { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <button class="btn-menu" onclick="toggleSidebar()">☰</button>
+    <div class="logo">cc-remote v3</div>
+    <div class="device-info" id="deviceInfo">连接中...</div>
+  </div>
+  <div class="header-right">
+    <div class="status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">--</span>
+    </div>
+    <div class="latency" id="latencyText">--</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Sessions</span>
+      <button class="btn-new" onclick="showNewDialog()">+ New</button>
+    </div>
+    <div class="session-list" id="sessionList"></div>
+  </div>
+
+  <div class="terminal-area" id="terminalArea">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">⌨️</div>
+      <div class="text">选择或创建一个 session 开始</div>
+    </div>
+    <div class="terminal-container hidden" id="terminalContainer"></div>
+  </div>
+</div>
+
+<!-- New Session Dialog -->
+<div class="dialog-overlay hidden" id="newDialog">
+  <div class="dialog">
+    <h3>新建 Session</h3>
+    <select id="engineSelect"></select>
+    <input id="sessionName" placeholder="名称（可选）">
+    <div class="dialog-actions">
+      <button class="btn-cancel" onclick="hideNewDialog()">取消</button>
+      <button class="btn-confirm" onclick="createSession()">创建</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-unicode11@0.8.0/lib/addon-unicode11.min.js"></script>
+<script>
+// ============ Constants ============
+const OP_OUTPUT = 0x01;
+const OP_INPUT  = 0x02;
+const OP_RESIZE = 0x03;
+const OP_REPLAY = 0x04;
+
+// ============ State ============
+let sessions = [];
+let activeSessionId = null;
+let ws = null;
+let term = null;
+let fitAddon = null;
+let pingTimer = null;
+let reconnectTimer = null;
+
+// ============ API ============
+const apiBase = location.pathname.replace(/\/+$/, '');
+
+async function api(path, opts) {
+  const res = await fetch(apiBase + path, opts);
+  return res.json();
+}
+
+// ============ Device Info ============
+async function loadDevice() {
+  try {
+    const d = await api('/api/device');
+    document.getElementById('deviceInfo').textContent = `${d.hostname} · ${d.platform}/${d.arch} · ${d.memory}`;
+  } catch { document.getElementById('deviceInfo').textContent = '无法连接'; }
+}
+
+// ============ Sessions ============
+async function loadSessions() {
+  try {
+    sessions = await api('/api/sessions');
+    renderSessions();
+  } catch {}
+}
+
+function renderSessions() {
+  const list = document.getElementById('sessionList');
+  list.innerHTML = sessions.map(s => `
+    <div class="session-item ${s.id === activeSessionId ? 'active' : ''}" onclick="connectSession('${s.id}')">
+      <div class="engine">${s.engineName} <span class="status-badge ${s.alive ? 'badge-alive' : 'badge-dead'}">${s.alive ? 'alive' : 'dead'}</span></div>
+      <div class="meta">${s.name || s.id} · ${s.connected} 连接</div>
+    </div>
+  `).join('');
+}
+
+// ============ New Session ============
+async function loadEngines() {
+  try {
+    const engines = await api('/api/engines');
+    const sel = document.getElementById('engineSelect');
+    sel.innerHTML = engines.filter(e => e.available).map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+  } catch {}
+}
+
+function showNewDialog() { document.getElementById('newDialog').classList.remove('hidden'); }
+function hideNewDialog() { document.getElementById('newDialog').classList.add('hidden'); }
+
+async function createSession() {
+  const engine = document.getElementById('engineSelect').value;
+  const name = document.getElementById('sessionName').value || undefined;
+  try {
+    const s = await api('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ engine, name }),
+    });
+    hideNewDialog();
+    document.getElementById('sessionName').value = '';
+    await loadSessions();
+    connectSession(s.id);
+  } catch (e) { alert('创建失败: ' + e.message); }
+}
+
+// ============ Terminal ============
+function connectSession(sessionId) {
+  if (activeSessionId === sessionId && ws && ws.readyState === WebSocket.OPEN) return;
+  activeSessionId = sessionId;
+
+  // Cleanup old
+  if (ws) { try { ws.close(); } catch {} ws = null; }
+  if (term) { term.dispose(); term = null; }
+  clearInterval(pingTimer);
+  clearTimeout(reconnectTimer);
+
+  // Show terminal
+  document.getElementById('emptyState').classList.add('hidden');
+  const container = document.getElementById('terminalContainer');
+  container.classList.remove('hidden');
+  container.innerHTML = '';
+
+  // Create xterm
+  // xterm.js 默认配置：不设自定义 font/theme，让浏览器处理 CJK 字体回退
+  term = new Terminal({
+    cursorBlink: true,
+    fontSize: 14,
+    allowProposedApi: true,
+  });
+
+  fitAddon = new FitAddon.FitAddon();
+  term.loadAddon(fitAddon);
+  term.loadAddon(new WebLinksAddon.WebLinksAddon());
+  // Unicode11 addon：正确处理 CJK 宽字符
+  const unicode11 = new Unicode11Addon.Unicode11Addon();
+  term.loadAddon(unicode11);
+  term.unicode.activeVersion = '11';
+  term.open(container);
+
+  requestAnimationFrame(() => {
+    fitAddon.fit();
+    openWs(sessionId);
+  });
+
+  // Resize observer
+  const ro = new ResizeObserver(() => { if (fitAddon) fitAddon.fit(); });
+  ro.observe(container);
+
+  // Input → binary frame
+  term.onData(data => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const payload = new TextEncoder().encode(data);
+    const frame = new Uint8Array(1 + payload.length);
+    frame[0] = OP_INPUT;
+    frame.set(payload, 1);
+    ws.send(frame.buffer);
+  });
+
+  // Resize → binary frame
+  term.onResize(({ cols, rows }) => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const frame = new ArrayBuffer(5);
+    const view = new DataView(frame);
+    view.setUint8(0, OP_RESIZE);
+    view.setUint16(1, cols);
+    view.setUint16(3, rows);
+    ws.send(frame);
+  });
+
+  renderSessions();
+  // Mobile: close sidebar after selection
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+function openWs(sessionId) {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${proto}//${location.host}${location.pathname}?sessionId=${sessionId}&mode=binary`;
+
+  ws = new WebSocket(wsUrl);
+  ws.binaryType = 'arraybuffer';
+
+  setStatus('connecting');
+
+  ws.onopen = () => {
+    setStatus('online');
+    // Ping every 10s
+    pingTimer = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        const ts = Date.now();
+        ws.send(JSON.stringify({ type: 'ping', ts }));
+      }
+    }, 10000);
+    // Send initial resize
+    if (term) {
+      const frame = new ArrayBuffer(5);
+      const view = new DataView(frame);
+      view.setUint8(0, OP_RESIZE);
+      view.setUint16(1, term.cols);
+      view.setUint16(3, term.rows);
+      ws.send(frame);
+    }
+  };
+
+  ws.onmessage = (event) => {
+    if (event.data instanceof ArrayBuffer) {
+      // Binary: simple frame [opcode][payload]
+      const view = new Uint8Array(event.data);
+      const opcode = view[0];
+      const payload = view.slice(1);
+      if (opcode === OP_OUTPUT || opcode === OP_REPLAY) {
+        // UTF-8 解码后传字符串给 xterm（不传原始 Uint8Array，避免 CJK 渲染问题）
+        term.write(new TextDecoder().decode(payload));
+      }
+    } else {
+      // JSON control message
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'pong') {
+          const latency = Date.now() - msg.ts;
+          document.getElementById('latencyText').textContent = `${latency}ms`;
+        } else if (msg.type === 'exit') {
+          term.write('\r\n\x1b[33m[Session exited]\x1b[0m\r\n');
+          setStatus('offline');
+        } else if (msg.type === 'error') {
+          term.write(`\r\n\x1b[31m[Error: ${msg.error}]\x1b[0m\r\n`);
+        } else if (msg.type === 'output') {
+          // V2 JSON fallback
+          term.write(msg.data);
+        }
+      } catch {}
+    }
+  };
+
+  ws.onclose = () => {
+    setStatus('offline');
+    clearInterval(pingTimer);
+    // Auto-reconnect after 3s
+    reconnectTimer = setTimeout(() => {
+      if (activeSessionId === sessionId) openWs(sessionId);
+    }, 3000);
+  };
+
+  ws.onerror = () => setStatus('offline');
+}
+
+function setStatus(state) {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  if (state === 'online') { dot.className = 'status-dot online'; text.textContent = 'Connected'; }
+  else if (state === 'connecting') { dot.className = 'status-dot'; dot.style.background = '#d29922'; text.textContent = 'Connecting...'; }
+  else { dot.className = 'status-dot offline'; text.textContent = 'Disconnected'; }
+}
+
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+
+// ============ Init ============
+loadDevice();
+loadEngines();
+loadSessions();
+setInterval(loadSessions, 15000);
+</script>
+</body>
+</html>

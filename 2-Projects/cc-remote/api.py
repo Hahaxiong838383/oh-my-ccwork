@@ -24,7 +24,7 @@ sessions = {}
 # 启动时扫描已有的默认 session
 for cli, port in [('claude', 19001), ('codex', 19002), ('gemini', 19003)]:
     tmux_name = f'cc-{cli}'
-    result = subprocess.run(['tmux', 'has-session', '-t', tmux_name], capture_output=True)
+    result = subprocess.run(['/opt/homebrew/bin/tmux', 'has-session', '-t', tmux_name], capture_output=True)
     if result.returncode == 0:
         sessions[tmux_name] = {
             'id': tmux_name,
@@ -45,6 +45,8 @@ KEY_MAP = {
     '\x1b[B': 'Down',
     '\x0c': 'C-l',
     '\x1a': 'C-z',
+    'PPage': 'PPage',
+    'NPage': 'NPage',
 }
 
 
@@ -71,7 +73,7 @@ def create_session(cli):
 
     # 创建 tmux session
     subprocess.run([
-        'tmux', 'new-session', '-d', '-s', tmux_name, '-c', PROJECT_DIR, cli
+        '/opt/homebrew/bin/tmux', 'new-session', '-d', '-s', tmux_name, '-c', PROJECT_DIR, cli
     ], check=True)
 
     # 启动 ttyd（用 wrapper 带主题）
@@ -125,7 +127,7 @@ def destroy_session(session_id):
             pass
 
     # 杀 tmux session
-    subprocess.run(['tmux', 'kill-session', '-t', s['tmux_session']], capture_output=True)
+    subprocess.run(['/opt/homebrew/bin/tmux', 'kill-session', '-t', s['tmux_session']], capture_output=True)
 
     # 移除 Caddy 路由
     try:
@@ -184,6 +186,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.handle_send(data)
         elif self.path == '/api/session/create':
             self.handle_create(data)
+        elif self.path == '/api/scroll':
+            self.handle_scroll(data)
         else:
             self.send_error(404)
 
@@ -221,17 +225,40 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
 
         if keys in KEY_MAP:
-            cmd = ['tmux', 'send-keys', '-t', session, KEY_MAP[keys]]
+            cmd = ['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, KEY_MAP[keys]]
         elif keys.endswith('\r'):
             text = keys[:-1]
             if text:
-                subprocess.run(['tmux', 'send-keys', '-t', session, '-l', text], check=True, timeout=5)
-            cmd = ['tmux', 'send-keys', '-t', session, 'Enter']
+                subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-l', text], check=True, timeout=5)
+            cmd = ['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, 'Enter']
         else:
-            cmd = ['tmux', 'send-keys', '-t', session, '-l', keys]
+            cmd = ['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-l', keys]
 
         try:
             subprocess.run(cmd, check=True, timeout=5)
+            self.send_json(200, {'ok': True})
+        except subprocess.CalledProcessError as e:
+            self.send_json(500, {'error': str(e)})
+
+    def handle_scroll(self, data):
+        session = data.get('session', '')
+        direction = data.get('direction', 'up')
+
+        valid_sessions = {s['tmux_session'] for s in sessions.values()}
+        if session not in valid_sessions:
+            self.send_json(403, {'error': 'Invalid session'})
+            return
+
+        try:
+            if direction == 'up':
+                # 进入 copy-mode 并向上翻一页
+                subprocess.run(['/opt/homebrew/bin/tmux', 'copy-mode', '-u', '-t', session], check=True, timeout=5)
+            elif direction == 'down':
+                # 在 copy-mode 中向下翻一页
+                subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-X', 'page-down'], check=True, timeout=5)
+            elif direction == 'exit':
+                # 退出 copy-mode
+                subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-X', 'cancel'], check=True, timeout=5)
             self.send_json(200, {'ok': True})
         except subprocess.CalledProcessError as e:
             self.send_json(500, {'error': str(e)})
