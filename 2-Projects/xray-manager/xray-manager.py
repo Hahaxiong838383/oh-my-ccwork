@@ -270,6 +270,7 @@ def extract_routes(config):
     routes = []
     for rule in config.get("routing", {}).get("rules", []):
         tag = rule.get("outboundTag", "")
+        btag = rule.get("balancerTag", "")
         if tag in ("api",):
             continue
         domains = rule.get("domain", [])
@@ -278,12 +279,126 @@ def extract_routes(config):
         network = rule.get("network", "")
         routes.append({
             "outboundTag": tag,
+            "balancerTag": btag,
             "domains": domains,
             "ips": ips,
             "port": port,
             "network": network,
         })
     return routes
+
+def extract_balancers(config):
+    """从配置中提取均衡组信息"""
+    balancers = config.get("routing", {}).get("balancers", [])
+    observatory = config.get("observatory", {})
+    rules = config.get("routing", {}).get("rules", [])
+    result = []
+    for b in balancers:
+        tag = b.get("tag", "")
+        selector = b.get("selector", [])
+        strategy = b.get("strategy", {}).get("type", "leastPing")
+        # 找到使用此 balancer 的路由规则中的域名
+        domains = []
+        ips = []
+        for r in rules:
+            if r.get("balancerTag") == tag:
+                domains.extend(r.get("domain", []))
+                ips.extend(r.get("ip", []))
+        # 匹配 selector 到实际节点 tag
+        node_tags = []
+        for ob in config.get("outbounds", []):
+            ob_tag = ob.get("tag", "")
+            for sel in selector:
+                if ob_tag.startswith(sel):
+                    node_tags.append(ob_tag)
+                    break
+        result.append({
+            "tag": tag,
+            "selector": selector,
+            "strategy": strategy,
+            "nodeTags": node_tags,
+            "domains": domains,
+            "ips": ips,
+            "probeURL": observatory.get("probeURL", "https://www.google.com/generate_204"),
+            "probeInterval": observatory.get("probeInterval", "60s"),
+        })
+    return result
+
+def save_balancer_to_config(config, balancer_data):
+    """保存均衡组到配置（更新 observatory + balancers + routing rules）"""
+    tag = balancer_data["tag"]
+    node_tags = balancer_data.get("nodeTags", [])
+    domains = balancer_data.get("domains", [])
+    ips = balancer_data.get("ips", [])
+    strategy = balancer_data.get("strategy", "leastPing")
+    probe_url = balancer_data.get("probeURL", "https://www.google.com/generate_204")
+    probe_interval = balancer_data.get("probeInterval", "60s")
+
+    # 1. 更新 routing.balancers
+    routing = config.setdefault("routing", {})
+    balancers = routing.setdefault("balancers", [])
+    # 用节点的完整 tag 作为 selector（精确匹配）
+    new_balancer = {
+        "tag": tag,
+        "selector": node_tags,
+        "strategy": {"type": strategy},
+    }
+    existing_idx = next((i for i, b in enumerate(balancers) if b.get("tag") == tag), None)
+    if existing_idx is not None:
+        balancers[existing_idx] = new_balancer
+    else:
+        balancers.append(new_balancer)
+
+    # 2. 更新 observatory（合并所有 balancer 的 selector）
+    all_selectors = []
+    for b in balancers:
+        all_selectors.extend(b.get("selector", []))
+    if all_selectors:
+        config["observatory"] = {
+            "subjectSelector": list(set(all_selectors)),
+            "probeInterval": probe_interval,
+            "probeURL": probe_url,
+        }
+
+    # 3. 更新路由规则
+    rules = routing.setdefault("rules", [])
+    # 删除旧的 balancerTag 规则
+    rules[:] = [r for r in rules if r.get("balancerTag") != tag]
+    # 添加新规则（在 direct 规则之前）
+    if domains or ips:
+        new_rule = {"type": "field", "balancerTag": tag}
+        if domains:
+            new_rule["domain"] = domains
+        if ips:
+            new_rule["ip"] = ips
+        # 插入到 direct/block 规则之前
+        insert_idx = next(
+            (i for i, r in enumerate(rules)
+             if r.get("outboundTag") in ("direct",) and ("domain" not in r or "geoip:private" in r.get("ip", []))),
+            len(rules)
+        )
+        rules.insert(insert_idx, new_rule)
+
+    return config
+
+def delete_balancer_from_config(config, tag):
+    """从配置中删除均衡组"""
+    routing = config.get("routing", {})
+    # 删除 balancer
+    balancers = routing.get("balancers", [])
+    routing["balancers"] = [b for b in balancers if b.get("tag") != tag]
+    # 删除路由规则
+    rules = routing.get("rules", [])
+    routing["rules"] = [r for r in rules if r.get("balancerTag") != tag]
+    # 更新 observatory
+    remaining_selectors = []
+    for b in routing.get("balancers", []):
+        remaining_selectors.extend(b.get("selector", []))
+    if remaining_selectors:
+        config["observatory"]["subjectSelector"] = list(set(remaining_selectors))
+    elif "observatory" in config:
+        del config["observatory"]
+    return config
 
 def build_outbound(node):
     """从节点信息构建 outbound 配置（支持 vless 和 vmess）"""
@@ -456,6 +571,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   <div class="tabs">
     <div class="tab active" onclick="switchTab('nodes')">节点管理</div>
     <div class="tab" onclick="switchTab('routes')">路由规则</div>
+    <div class="tab" onclick="switchTab('balancers')">均衡组</div>
     <div class="tab" onclick="switchTab('logs')">日志</div>
   </div>
 
@@ -482,6 +598,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <button class="btn small primary" onclick="showRouteModal()">编辑规则</button>
       </div>
       <div class="card-body" id="routeList">加载中...</div>
+    </div>
+  </div>
+
+  <!-- 均衡组 -->
+  <div class="tab-content" id="tab-balancers">
+    <div class="card">
+      <div class="card-header">
+        <h2>均衡组（自动选最快节点）</h2>
+        <button class="btn small primary" onclick="showBalancerModal()">+ 创建均衡组</button>
+      </div>
+      <div class="card-body" id="balancerList">加载中...</div>
     </div>
   </div>
 
@@ -650,6 +777,59 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('routeModal')">取消</button>
       <button class="btn primary" onclick="saveRoute()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 均衡组编辑弹窗 -->
+<div class="modal-overlay" id="balancerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="balancerModalTitle">创建均衡组</h3>
+      <button class="btn small" onclick="closeModal('balancerModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>均衡组名称</label>
+          <input id="balancerTag" placeholder="如: youtube-group">
+        </div>
+        <div class="form-group">
+          <label>策略</label>
+          <select id="balancerStrategy">
+            <option value="leastPing">最低延迟 (leastPing)</option>
+            <option value="leastLoad">最低负载 (leastLoad)</option>
+            <option value="random">随机 (random)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>选择节点（勾选加入均衡组）</label>
+        <div id="balancerNodeList" style="max-height:200px;overflow-y:auto;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;"></div>
+      </div>
+      <div class="form-group">
+        <label>适用域名（每行一个，如 domain:youtube.com）</label>
+        <textarea class="import-area" id="balancerDomains" placeholder="domain:youtube.com&#10;domain:youtu.be&#10;domain:ytimg.com"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>测速 URL</label>
+          <input id="balancerProbeURL" value="https://www.google.com/generate_204">
+        </div>
+        <div class="form-group">
+          <label>测速间隔</label>
+          <select id="balancerProbeInterval">
+            <option value="30s">30 秒</option>
+            <option value="60s" selected>60 秒</option>
+            <option value="120s">2 分钟</option>
+            <option value="300s">5 分钟</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('balancerModal')">取消</button>
+      <button class="btn primary" onclick="saveBalancer()">保存并重启</button>
     </div>
   </div>
 </div>
@@ -906,6 +1086,110 @@ async function importVless() {
   loadNodes();
 }
 
+// ========== 均衡组 ==========
+let editingBalancerTag = null;
+
+async function loadBalancers() {
+  const data = await api('/config');
+  currentConfig = data;
+  const balancers = data.balancers || [];
+  const list = document.getElementById('balancerList');
+  if (balancers.length === 0) {
+    list.innerHTML = '<div style="color:#8b949e;text-align:center;padding:20px;">暂无均衡组。创建均衡组后，xray 会自动为指定域名选择延迟最低的节点。</div>';
+    return;
+  }
+  list.innerHTML = balancers.map(b => `
+    <div class="node-item" style="flex-direction:column;align-items:flex-start;gap:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+        <div>
+          <span style="font-size:11px;padding:1px 6px;border-radius:3px;margin-right:6px;background:#d2992233;color:#d29922;">BALANCER</span>
+          <span class="node-tag">${b.tag}</span>
+          <span style="color:#484f58;font-size:12px;margin-left:6px;">${b.strategy} | ${b.probeInterval}</span>
+        </div>
+        <div class="node-actions">
+          <button class="btn small" onclick="editBalancer('${b.tag}')">编辑</button>
+          <button class="btn small danger" onclick="deleteBalancer('${b.tag}')">删除</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#8b949e;padding-left:4px;">
+        <span style="color:#3fb950;">节点(${b.nodeTags.length}):</span> ${b.nodeTags.map(t => '<span style="background:#21262d;padding:1px 6px;border-radius:3px;margin:0 2px;">'+t+'</span>').join('')}
+      </div>
+      <div style="font-size:12px;color:#8b949e;padding-left:4px;">
+        <span style="color:#58a6ff;">域名(${b.domains.length}):</span> <span class="route-domains">${b.domains.slice(0,5).join(', ')}${b.domains.length>5?' +' +(b.domains.length-5):''}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showBalancerModal(tag) {
+  editingBalancerTag = tag || null;
+  document.getElementById('balancerModalTitle').textContent = tag ? '编辑均衡组' : '创建均衡组';
+  const nodes = currentConfig ? currentConfig.nodes || [] : [];
+  let selectedTags = [];
+  if (tag && currentConfig) {
+    const b = (currentConfig.balancers || []).find(x => x.tag === tag);
+    if (b) {
+      document.getElementById('balancerTag').value = b.tag;
+      document.getElementById('balancerStrategy').value = b.strategy || 'leastPing';
+      document.getElementById('balancerDomains').value = b.domains.join('\n');
+      document.getElementById('balancerProbeURL').value = b.probeURL || 'https://www.google.com/generate_204';
+      document.getElementById('balancerProbeInterval').value = b.probeInterval || '60s';
+      selectedTags = b.nodeTags || [];
+    }
+  } else {
+    document.getElementById('balancerTag').value = '';
+    document.getElementById('balancerDomains').value = '';
+    document.getElementById('balancerProbeURL').value = 'https://www.google.com/generate_204';
+    document.getElementById('balancerProbeInterval').value = '60s';
+  }
+  // 渲染节点选择列表
+  document.getElementById('balancerNodeList').innerHTML = nodes.map(n => `
+    <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;">
+      <input type="checkbox" value="${n.tag}" ${selectedTags.includes(n.tag)?'checked':''}>
+      <span style="font-size:11px;padding:1px 4px;border-radius:3px;background:${n.protocol==='vmess'?'#8957e533':'#1f6feb33'};color:${n.protocol==='vmess'?'#bc8cff':'#58a6ff'}">${(n.protocol||'vless').toUpperCase()}</span>
+      <span style="color:#f0883e;font-weight:500;">${n.tag}</span>
+      <span style="color:#484f58;font-size:12px;">${maskAddr(n.address)}:${n.port}</span>
+    </label>
+  `).join('') || '<div style="color:#484f58">无可用节点</div>';
+  document.getElementById('balancerModal').classList.add('show');
+}
+
+function editBalancer(tag) { showBalancerModal(tag); }
+
+async function deleteBalancer(tag) {
+  if (!confirm('确定删除均衡组 "' + tag + '"？')) return;
+  await api('/balancer/' + encodeURIComponent(tag), 'DELETE');
+  showToast('均衡组已删除', 'success');
+  await restartXray();
+  loadBalancers();
+  loadRoutes();
+}
+
+async function saveBalancer() {
+  const tag = document.getElementById('balancerTag').value.trim();
+  if (!tag) { showToast('请输入均衡组名称', 'error'); return; }
+  const checkedNodes = Array.from(document.querySelectorAll('#balancerNodeList input:checked')).map(c => c.value);
+  if (checkedNodes.length < 2) { showToast('至少选择 2 个节点', 'error'); return; }
+  const domains = document.getElementById('balancerDomains').value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (domains.length === 0) { showToast('请输入至少一个域名规则', 'error'); return; }
+  const data = {
+    tag: tag,
+    nodeTags: checkedNodes,
+    domains: domains,
+    strategy: document.getElementById('balancerStrategy').value,
+    probeURL: document.getElementById('balancerProbeURL').value.trim(),
+    probeInterval: document.getElementById('balancerProbeInterval').value,
+  };
+  const method = editingBalancerTag ? 'PUT' : 'POST';
+  const path = editingBalancerTag ? '/balancer/' + encodeURIComponent(editingBalancerTag) : '/balancer';
+  await api(path, method, data);
+  closeModal('balancerModal');
+  showToast('均衡组已保存，正在重启...', 'success');
+  await restartXray();
+  loadBalancers();
+  loadRoutes();
+}
+
 // ========== 订阅导入 ==========
 let subParsedUrls = [];
 
@@ -1025,6 +1309,7 @@ function switchTab(name) {
   event.target.classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'logs') loadLogs();
+  if (name === 'balancers') loadBalancers();
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
@@ -1079,9 +1364,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({
                     "nodes": extract_nodes(config),
                     "routes": extract_routes(config),
+                    "balancers": extract_balancers(config),
                 })
             else:
-                self._json({"nodes": [], "routes": []})
+                self._json({"nodes": [], "routes": [], "balancers": []})
         elif path == "/api/logs":
             self._json({"logs": get_logs(200)})
         elif path == "/api/test":
@@ -1141,6 +1427,14 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"urls": urls, "nodes": nodes, "total": len(lines), "supported": len([u for u in urls if u.startswith("vless://") or u.startswith("vmess://")])} )
             except Exception as e:
                 self._json({"error": f"获取订阅失败: {str(e)}"}, 500)
+        elif path == "/api/balancer":
+            config = load_config()
+            if not config:
+                self._json({"error": "no config"}, 400)
+                return
+            config = save_balancer_to_config(config, body)
+            save_config(config)
+            self._json({"success": True})
         elif path == "/api/node":
             config = load_config()
             if not config:
@@ -1226,7 +1520,19 @@ class Handler(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(content_len)) if content_len > 0 else {}
         path = urllib.parse.urlparse(self.path).path
 
-        if path.startswith("/api/node/"):
+        if path.startswith("/api/balancer/"):
+            old_tag = urllib.parse.unquote(path.split("/api/balancer/")[1])
+            config = load_config()
+            if not config:
+                self._json({"error": "no config"}, 400)
+                return
+            # 先删旧的再保存新的
+            if old_tag != body.get("tag", old_tag):
+                config = delete_balancer_from_config(config, old_tag)
+            config = save_balancer_to_config(config, body)
+            save_config(config)
+            self._json({"success": True})
+        elif path.startswith("/api/node/"):
             old_tag = urllib.parse.unquote(path.split("/api/node/")[1])
             config = load_config()
             if not config:
@@ -1277,7 +1583,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         path = urllib.parse.urlparse(self.path).path
-        if path.startswith("/api/node/"):
+        if path.startswith("/api/balancer/"):
+            tag = urllib.parse.unquote(path.split("/api/balancer/")[1])
+            config = load_config()
+            if not config:
+                self._json({"error": "no config"}, 400)
+                return
+            config = delete_balancer_from_config(config, tag)
+            save_config(config)
+            self._json({"success": True})
+        elif path.startswith("/api/node/"):
             tag = urllib.parse.unquote(path.split("/api/node/")[1])
             config = load_config()
             if not config:
