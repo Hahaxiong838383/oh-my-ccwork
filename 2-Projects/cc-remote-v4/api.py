@@ -9,6 +9,10 @@ import time
 import cgi
 import tempfile
 import shutil
+import glob
+import threading
+from datetime import datetime, timezone
+from urllib.parse import urlparse, parse_qs
 
 PORT = 19100
 DEVICES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'devices.json')
@@ -128,10 +132,8 @@ def create_session(cli):
 
     base_path = f'/{cli}-{idx}'
 
-    # 创建 tmux session
-    subprocess.run([
-        '/opt/homebrew/bin/tmux', 'new-session', '-d', '-s', session_id, '-c', PROJECT_DIR, cli
-    ], check=True)
+    # tmux session 由 tmux-session.sh 在用户首次连接 ttyd 时创建
+    # 避免 claude 命令在非 TTY 环境下启动后立即退出导致 session 消失
 
     # 启动 ttyd
     proc = subprocess.Popen([
@@ -188,6 +190,242 @@ def destroy_session(session_id):
     return True, None
 
 
+# ── History API: session 历史缓存 ──────────────────────────────
+_history_cache = {'claude': None, 'codex': None}
+_history_cache_ts = {'claude': 0, 'codex': 0}
+_history_cache_lock = threading.Lock()
+HISTORY_CACHE_TTL = 60  # 缓存 60 秒
+
+HOME = os.path.expanduser('~')
+CLAUDE_SESSIONS_DIR = os.path.join(HOME, '.claude', 'projects', '-Users-rayman-chen-mycc')
+CLAUDE_STATS_FILE = os.path.join(HOME, '.claude', '.session-stats.json')
+CODEX_SESSIONS_DIR = os.path.join(HOME, '.codex', 'sessions', '2026')
+
+
+def _load_session_stats():
+    """加载 Claude session-stats.json 用于时间戳查询"""
+    try:
+        with open(CLAUDE_STATS_FILE) as f:
+            data = json.load(f)
+        return data.get('sessions', {})
+    except Exception:
+        return {}
+
+
+def _count_lines_fast(filepath):
+    """快速计算文件行数（不读整个文件到内存）"""
+    count = 0
+    try:
+        with open(filepath, 'rb') as f:
+            for _ in f:
+                count += 1
+    except Exception:
+        pass
+    return count
+
+
+def _extract_claude_first_message(filepath):
+    """从 Claude JSONL 读取第一条 user 消息，返回 (sessionId, timestamp, summary, cwd) 或 None"""
+    try:
+        with open(filepath, 'r', errors='replace') as f:
+            for i, line in enumerate(f):
+                if i > 30:  # 只扫描前 30 行
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if obj.get('type') == 'user':
+                    msg = obj.get('message', {})
+                    content = msg.get('content', '')
+                    if isinstance(content, list):
+                        # content 可能是 [{"type":"text","text":"..."}]
+                        texts = [c.get('text', '') for c in content if isinstance(c, dict)]
+                        content = ' '.join(texts)
+                    session_id = obj.get('sessionId', '')
+                    timestamp = obj.get('timestamp', '')
+                    cwd = obj.get('cwd', '')
+                    summary = content[:80] if content else ''
+                    return session_id, timestamp, summary, cwd
+    except Exception:
+        pass
+    return None
+
+
+def _extract_codex_first_message(filepath):
+    """从 Codex JSONL 读取 session_meta + 第一条 user 消息"""
+    session_id = ''
+    timestamp = ''
+    cwd = ''
+    summary = ''
+    try:
+        with open(filepath, 'r', errors='replace') as f:
+            for i, line in enumerate(f):
+                if i > 30:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if obj.get('type') == 'session_meta':
+                    payload = obj.get('payload', {})
+                    session_id = payload.get('id', '')
+                    timestamp = payload.get('timestamp', obj.get('timestamp', ''))
+                    cwd = payload.get('cwd', '')
+                elif obj.get('type') == 'response_item':
+                    payload = obj.get('payload', {})
+                    if payload.get('role') == 'user':
+                        contents = payload.get('content', [])
+                        for c in contents:
+                            text = c.get('text', '')
+                            # 跳过系统注入的内容（以 < 或 # 开头）
+                            if text and not text.startswith('<') and not text.startswith('#'):
+                                summary = text[:80]
+                                break
+                        if summary:
+                            break
+    except Exception:
+        pass
+    if session_id:
+        return session_id, timestamp, summary, cwd
+    return None
+
+
+def _scan_claude_sessions(limit=50, search=''):
+    """扫描 Claude session 文件，返回列表"""
+    pattern = os.path.join(CLAUDE_SESSIONS_DIR, '*.jsonl')
+    files = glob.glob(pattern)
+    if not files:
+        return []
+
+    # 按修改时间排序（最新在前）
+    files.sort(key=lambda f: os.path.getmtime(f), reverse=True)
+
+    # 加载 session stats
+    stats = _load_session_stats()
+
+    results = []
+    for filepath in files:
+        if len(results) >= limit:
+            break
+        try:
+            extracted = _extract_claude_first_message(filepath)
+            if not extracted:
+                continue
+            sid, ts, summary, cwd = extracted
+
+            # 搜索过滤
+            if search and search.lower() not in summary.lower():
+                continue
+
+            # 尝试从 stats 获取更精确的时间戳
+            stat_info = stats.get(sid, {})
+            if stat_info.get('started_at'):
+                ts = datetime.fromtimestamp(stat_info['started_at'], tz=timezone.utc).isoformat()
+
+            msg_count = _count_lines_fast(filepath)
+
+            results.append({
+                'id': sid,
+                'engine': 'claude',
+                'summary': summary,
+                'timestamp': ts,
+                'cwd': cwd,
+                'message_count': msg_count,
+            })
+        except Exception:
+            continue
+    return results
+
+
+def _scan_codex_sessions(limit=50, search=''):
+    """扫描 Codex session 文件，返回列表"""
+    pattern = os.path.join(CODEX_SESSIONS_DIR, '**', '*.jsonl')
+    files = glob.glob(pattern, recursive=True)
+    if not files:
+        return []
+
+    files.sort(key=lambda f: os.path.getmtime(f), reverse=True)
+
+    results = []
+    for filepath in files:
+        if len(results) >= limit:
+            break
+        try:
+            extracted = _extract_codex_first_message(filepath)
+            if not extracted:
+                continue
+            sid, ts, summary, cwd = extracted
+
+            if search and search.lower() not in summary.lower():
+                continue
+
+            msg_count = _count_lines_fast(filepath)
+
+            results.append({
+                'id': sid,
+                'engine': 'codex',
+                'summary': summary,
+                'timestamp': ts,
+                'cwd': cwd,
+                'message_count': msg_count,
+            })
+        except Exception:
+            continue
+    return results
+
+
+def get_history_sessions(engine='claude', search='', limit=50):
+    """获取历史 session 列表（带缓存）"""
+    now = time.time()
+    with _history_cache_lock:
+        # 有搜索词时不用缓存
+        if not search and _history_cache[engine] is not None and (now - _history_cache_ts[engine]) < HISTORY_CACHE_TTL:
+            return _history_cache[engine][:limit]
+
+    if engine == 'claude':
+        result = _scan_claude_sessions(limit=limit, search=search)
+    elif engine == 'codex':
+        result = _scan_codex_sessions(limit=limit, search=search)
+    else:
+        return []
+
+    # 只缓存无搜索词的结果
+    if not search:
+        with _history_cache_lock:
+            _history_cache[engine] = result
+            _history_cache_ts[engine] = now
+
+    return result[:limit]
+
+
+def resume_session(engine, session_id, tmux_session):
+    """在指定 tmux session 中恢复历史会话"""
+    if engine == 'claude':
+        cmd = f'claude -r {session_id}'
+    elif engine == 'codex':
+        cmd = f'codex --resume {session_id}'
+    else:
+        return False, f'Unknown engine: {engine}'
+
+    try:
+        subprocess.run(
+            ['/opt/homebrew/bin/tmux', 'send-keys', '-t', tmux_session, cmd, 'Enter'],
+            check=True, timeout=5
+        )
+        return True, None
+    except subprocess.CalledProcessError as e:
+        return False, str(e)
+    except Exception as e:
+        return False, str(e)
+
+
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/api/devices':
@@ -212,6 +450,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     for s in sessions.values()
                 ]
             })
+        elif self.path.startswith('/api/history/sessions'):
+            self.handle_history_sessions()
         else:
             self.send_error(404)
 
@@ -260,6 +500,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.handle_create(data)
         elif self.path == '/api/scroll':
             self.handle_scroll(data)
+        elif self.path == '/api/history/resume':
+            self.handle_history_resume(data)
         else:
             self.send_error(404)
 
@@ -400,6 +642,31 @@ class Handler(http.server.BaseHTTPRequestHandler):
             shutil.copyfileobj(file_item.file, f)
 
         self.send_json(200, {'ok': True, 'path': filepath, 'filename': filename})
+
+    def handle_history_sessions(self):
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
+        engine = params.get('engine', ['claude'])[0]
+        search = params.get('search', [''])[0]
+        limit = min(int(params.get('limit', ['50'])[0]), 200)
+        try:
+            result = get_history_sessions(engine=engine, search=search, limit=limit)
+            self.send_json(200, {'sessions': result})
+        except Exception as e:
+            self.send_json(500, {'error': str(e)})
+
+    def handle_history_resume(self, data):
+        engine = data.get('engine', '')
+        session_id = data.get('session_id', '')
+        tmux_session = data.get('tmux_session', '')
+        if not engine or not session_id or not tmux_session:
+            self.send_json(400, {'error': 'Missing engine, session_id, or tmux_session'})
+            return
+        ok, err = resume_session(engine, session_id, tmux_session)
+        if ok:
+            self.send_json(200, {'ok': True})
+        else:
+            self.send_json(500, {'error': err})
 
     def send_json(self, code, data):
         self.send_response(code)
