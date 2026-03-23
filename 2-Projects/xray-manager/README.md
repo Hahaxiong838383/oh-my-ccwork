@@ -2,7 +2,7 @@
 
 > Xray 分流代理管理工具（macOS / Linux / Windows）。零依赖，单文件 Python Web UI + 系统服务开机自启。
 >
-> **V1.3**: 配置向导 + 系统代理自动设置
+> **V1.4**: balancer 均衡组 + burstObservatory + 系统代理 Web UI 控制 + v2rayN 一键切换
 
 ## 项目背景
 
@@ -26,36 +26,42 @@
 
 不用 V2RayN，直接用 xray-core + 系统服务（macOS launchd / Linux systemd）+ Python Web UI 管理。
 
-## 当前部署状态（Mac mini）
+## 当前部署状态（MacBook Air）
 
-已于 2026-03-22 部署完成：
+已于 2026-03-23 部署完成：
 
 ```
 ~/xray/
-├── xray              # Xray-core 二进制（从 V2RayN 复制）
-├── config.json        # 分流配置（V3 版）
+├── xray              # Xray-core 二进制
+├── config.json        # 分流配置（含 balancer 均衡组）
 ├── geoip.dat          # IP 地理数据
 ├── geosite.dat        # 域名地理数据
 ├── xray.log           # 运行日志
-└── xray-manager.py    # Web 管理工具
+├── xray-manager.py    # Web 管理工具
+└── switch-to-xray.sh  # v2rayN → xray 一键切换脚本
 ```
 
 **launchd 服务**：`com.xray.proxy`（开机自启，崩溃自动重启）
 
-**分流规则**：
-- `proxy-google` → YouTube、Google AI Studio、Gmail
-- `proxy-claude-gpt` → Claude、ChatGPT、Telegram
-- `direct` → 中国大陆域名/IP、DNS 服务器
-- `block` → UDP 443（QUIC）
+**分流规则（balancer 均衡组）**：
+
+| 分组 | 策略 | 节点池 |
+|------|------|--------|
+| Claude/GPT | 固定出站 | 美宅专用 US |
+| Gemini/AI Studio | leastPing（低延时优先） | US-V1, US-R1, US-R2 |
+| YouTube/视频娱乐 | leastLoad（网速优先） | HK, TW, SG, JP 多节点 |
+| 大陆域名 | direct | 直连 |
+| 其他流量 | 默认 | HK-HKT-A |
 
 ## 文件结构
 
 ```
 2-Projects/xray-manager/        # 项目源码（git 管理）
 ├── xray-manager.py              # Web UI 管理工具（Python 单文件，零依赖）
-├── install.sh                   # 一键安装脚本
-├── config/
-│   └── config.json              # 分流配置模板
+├── install.sh                   # macOS 一键安装脚本
+├── install-linux.sh             # Linux 一键安装脚本
+├── install.bat                  # Windows 一键安装脚本
+├── package.sh                   # 离线安装包打包脚本
 ├── service/
 │   ├── com.xray.proxy.plist     # macOS launchd 服务模板
 │   └── xray.service             # Linux systemd 服务模板
@@ -77,23 +83,62 @@ cd ~/mycc/2-Projects/xray-manager
 5. 注册系统服务（macOS: launchd / Linux: systemd user service）
 6. 添加 shell 快捷命令到 `~/.zshrc`（macOS）或 `~/.bashrc`（Linux）
 
+## 从 v2rayN 迁移到 xray-manager
+
+如果之前使用 v2rayN，迁移步骤：
+
+### 方法一：一键切换（推荐）
+
+1. 关闭 v2rayN 应用
+2. 新开终端，执行：
+   ```bash
+   xray-switch
+   ```
+3. 脚本自动完成：清理旧进程 → launchctl 启动 xray → 启动 Web UI → 设置系统代理 → 验证连通性
+4. 打开浏览器验证 Gemini / YouTube 可访问
+
+### 方法二：开机自动（已配置 launchd 的情况）
+
+重启电脑即可，xray 会通过 launchd 自动启动。如果系统代理未设置，打开 Web UI (`http://127.0.0.1:8888`) 点击「开启系统代理」按钮。
+
+### 迁移注意事项
+
+- **v2rayN 关闭时会清除系统代理**，所以首次切换后需要重新设置
+- **终端代理环境变量**已自动写入 `~/.zshrc`，新终端自动加载
+- **Chrome 如有代理扩展**需移除，否则会覆盖系统代理
+- v2rayN 可以卸载，本工具完全替代其在 macOS 上的功能
+
 ## 日常使用
 
-```bash
-# 启动 Web 管理界面（浏览器自动打开 http://localhost:8888）
-xray-ui
+### 终端快捷命令
 
-# 快捷命令
+```bash
+xray-switch      # 从 v2rayN 一键切换到 xray（最常用）
+xray-ui          # 启动 Web 管理界面（浏览器自动打开 http://localhost:8888）
 xray-restart     # 重启 xray（改配置后用）
 xray-status      # 查看运行状态
 xray-log         # 查看最近日志
 xray-config      # 终端编辑配置文件
 ```
 
-## Web 管理界面功能
+### Claude Code skill 命令
+
+```
+/xray switch     # 从 v2rayN 一键切换到 xray
+/xray status     # 检查代理状态（进程 + 系统代理 + 连通性）
+/xray restart    # 通过 launchctl 重启 xray
+/xray proxy on   # 开启系统代理（SOCKS + HTTP + HTTPS → 10808）
+/xray proxy off  # 关闭系统代理
+/xray log        # 查看最近日志
+```
+
+### Web UI 管理界面
+
+访问 `http://127.0.0.1:8888`，功能包括：
 
 - **节点管理**：添加/编辑/删除 VLESS 节点，支持粘贴 `vless://` 链接一键导入
 - **路由分流**：可视化配置哪些域名走哪个节点
+- **系统代理控制**：一键开启/关闭系统代理（页面居中按钮）
 - **状态监控**：实时查看 xray 运行状态
 - **单节点测速**：测试各节点延迟
 - **日志查看**：查看 xray 运行日志
@@ -108,20 +153,41 @@ xray-config      # 终端编辑配置文件
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
-| SOCKS 代理 | 10808 | 系统代理入口 |
+| SOCKS/HTTP/HTTPS 代理 | 10808 | 系统代理入口 |
 | Web 管理 UI | 8888 | 仅本地访问 |
+
+## 排查指南
+
+当「网络不通」时按顺序检查：
+
+| 步骤 | 检查内容 | 命令 |
+|------|---------|------|
+| 1 | xray 进程在跑吗？ | `ps aux \| grep xray` |
+| 2 | 系统代理开了吗？（三个都要） | `networksetup -getsocksfirewallproxy Wi-Fi` |
+| 3 | 端口对吗？（必须 10808） | `lsof -i :10808` |
+| 4 | Chrome 有代理扩展吗？ | 用 Safari 对比验证 |
+| 5 | v2rayN 残留进程？ | 多个 xray 会抢端口 |
+| 6 | 终端环境变量？ | `echo $ALL_PROXY` |
+
+## 经验教训
+
+1. **Claude 必须走美宅节点**，其他 US 节点会 403
+2. **系统代理必须同时设三个**（SOCKS + HTTP + HTTPS），否则部分应用不走代理
+3. **终端代理需要 6 个环境变量**：`http_proxy` + `https_proxy` + `all_proxy`（大小写各一份）
+4. **xray 进程管理必须用 launchctl**，不能 kill/killall（KeepAlive 会导致多进程抢端口）
+5. **balancer 必须用 burstObservatory**，不能用 observatory（后者会导致路由规则被跳过）
+6. **curl 测 claude.ai 返回 403 是正常的**（Cloudflare challenge），用浏览器验证
 
 ## 注意事项
 
-- **系统代理**：V1.3 起配置向导自动设置系统代理（SOCKS + HTTP/HTTPS），也可在管理界面手动开关
-- **V2RayN 可以卸载**：本工具完全替代 V2RayN 在 macOS 上的功能
-- **config.json 不提交 git**：包含节点地址和 UUID，属于敏感信息。模板在 `config/config.json`
+- **config.json 不提交 git**：包含节点地址和 UUID，属于敏感信息
 - **xray 二进制不提交 git**：OS 特定，各机器自行安装
 
 ## 版本记录
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| V1.4 | 2026-03-23 | balancer 均衡组（Gemini=leastPing, 视频=leastLoad）、burstObservatory、系统代理 Web UI 按钮、v2rayN 一键切换脚本、终端代理环境变量自动配置 |
 | V1.3 | 2026-03-23 | 配置向导、系统代理自动设置、自动更新（订阅每天/内核+GeoIP 每周）、Web UI 更新管理 Tab |
 | V1.2 | 2026-03-22 | 跨平台支持（macOS + Linux + Windows）、离线部署包、VMess 协议、订阅导入、均衡组 |
 | V1.0 | 2026-03-22 | 初始版本：VLESS 节点管理、路由分流、Web UI |
