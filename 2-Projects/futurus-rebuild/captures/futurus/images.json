@@ -1,0 +1,45 @@
+[
+  {
+    "tag": "img",
+    "src": "//31286037.s21i.faiusr.com/4/2/ABUIABAEGAAgmbHypgYo5Oi2zwUw0A84nQQ.png",
+    "alt": "logo",
+    "poster": null
+  },
+  {
+    "tag": "img",
+    "src": "//31286037.s21i.faiusr.com/4/2/ABUIABAEGAAgmbHypgYo5Oi2zwUw0A84nQQ.png",
+    "alt": "logo",
+    "poster": null
+  },
+  {
+    "tag": "video",
+    "src": "//31286037.s21v.faiusr.com/58/2/ABUIABA6GAAgzfShqgYo4I3W6wE.mp4",
+    "alt": null,
+    "poster": "//31286037.s142i.faiusr.com/2/AI4BCJXG9Q4QAhgAIOH0oaoGKPTu8SYwgB448BA.jpg"
+  },
+  {
+    "tag": "i",
+    "backgroundImage": "url(\"https://1.ss.508sys.com/image/rimage/jz/vbg01.png?v=202512301156\")",
+    "classes": "nav_icon_prev nav_icon_direction"
+  },
+  {
+    "tag": "i",
+    "backgroundImage": "url(\"https://1.ss.508sys.com/image/rimage/jz/vbg01.png?v=202512301156\")",
+    "classes": "nav_icon_next nav_icon_direction"
+  },
+  {
+    "tag": "div",
+    "backgroundImage": "url(\"https://31286037.s142i.faiusr.com/2/AI4BCJXG9Q4QAhgAIOH0oaoGKPTu8SYwgB448BA.jpg\")",
+    "classes": "vjs-poster"
+  },
+  {
+    "tag": "div",
+    "backgroundImage": "url(\"https://31286037.s21i.faiusr.com/4/2/ABUIABAEGAAg3OCFqAYogMCnhAEw0A846Ac.png\"), linear-gradient(rgb(0, 0, 0) 0%, rgb(33, 33, 33) 100%)",
+    "classes": "jz_web_row jz_web_row5 pc_row_style jz_module_row jz_web_row_mobi2 jz_web_row_full_site jz_web_row_bg"
+  },
+  {
+    "tag": "span",
+    "backgroundImage": "url(\"https://1.ss.508sys.com/image/rimage/fromSite/v2/national_emblem.png?v=202512301156\")",
+    "classes": "police_record_icon"
+  }
+]

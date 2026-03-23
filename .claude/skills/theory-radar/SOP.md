@@ -210,11 +210,17 @@ node /Users/rayman.chen/mycc/.claude/skills/tell-me/send.js \
 ### 单引擎全流程
 任何一个引擎独立执行 Step 1→2→3→3.5→4→5。
 
-### 双引擎协作（推荐）
-- **cc** 执行 Step 1→2→3（抓取 + 分析 + 飞书通知）
-- **gemini** 执行 Step 3.5→4→5（去重 + Wiki 存档 + 索引更新）
+### 双引擎协作（推荐，已自动化）
+- **cc**（每3天 08:15）执行 Step 1→2→3（抓取 + 分析 + 飞书通知）
+- **codex**（每3天 08:45）执行 Step 3.5→4→5（去重 + Wiki 存档 + 索引更新）
 
-委托 gemini 时，cc 需要将 Step 2 的论文分析结果作为上下文传入。
+两个任务在 tasks.md 中独立配置，间隔 30 分钟自动串联。
+codex 的输入数据来自 `/tmp/theory-radar-data.json`（Step 1 的输出）。
+
+**⚠️ codex 归档任务要点**：
+- 你只需要执行 Step 3.5→4→5，Step 1-3 已由 cc 完成
+- 论文数据在 `/tmp/theory-radar-data.json`
+- 必须先做去重（Step 3.5），再归档
 
 ---
 

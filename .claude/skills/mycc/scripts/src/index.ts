@@ -391,21 +391,41 @@ ${skillLine}
 
         const result = await runCliEngine(engineType, fullMessage, taskCwd);
         if (result.error) {
-          // 主引擎失败 → 自动转移到备用引擎
+          const isNetworkError = /TIMEOUT|ECONNRESET|ECONNREFUSED|EPIPE|socket hang up|network|fetch failed/i.test(result.error);
           const fallbackEngine: EngineType = engineType === "codex" ? "gemini" : "codex";
-          console.warn(chalk.yellow(`[Scheduler][${engineType}] 失败，自动转移到 ${fallbackEngine}: ${task.name}`));
-          recordHistory(taskCwd, task.name, `⚠️ 转移(${engineType}→${fallbackEngine})`);
 
-          const fallbackResult = await runCliEngine(fallbackEngine, fullMessage, taskCwd);
-          if (fallbackResult.error) {
-            console.error(chalk.red(`[Scheduler] 双引擎全部失败: ${task.name}`));
-            recordHistory(taskCwd, task.name, `❌ 全部失败(${engineType}+${fallbackEngine})`);
-            server.broadcastToFeishu?.(`⚠️ 定时任务双引擎全部失败：${task.name}\n主引擎 ${engineType} 失败 → 备引擎 ${fallbackEngine} 也失败，需要人工介入`);
+          if (isNetworkError) {
+            // 网络错误：等代理恢复后用主引擎重试，而非立即切换（两引擎共用代理，切换无意义）
+            console.warn(chalk.yellow(`[Scheduler][${engineType}] 网络错误，等待 90s 后重试: ${task.name}`));
+            recordHistory(taskCwd, task.name, `⚠️ 网络错误，等待重试(${engineType})`);
+            await new Promise(r => setTimeout(r, 90_000));
+            const retryResult = await runCliEngine(engineType, fullMessage, taskCwd);
+            if (retryResult.error) {
+              console.error(chalk.red(`[Scheduler] 网络重试仍失败: ${task.name}`));
+              recordHistory(taskCwd, task.name, `❌ 网络重试失败(${engineType})`);
+              server.broadcastToFeishu?.(`⚠️ 定时任务网络重试失败：${task.name}\n引擎 ${engineType} 两次失败（疑似代理中断），需要人工介入\n错误: ${retryResult.error.substring(0, 200)}`);
+            } else {
+              console.log(chalk.green(`[Scheduler] 任务完成(网络重试): ${task.name} (${engineType})`));
+              recordHistory(taskCwd, task.name, `✅ 成功(网络重试:${engineType})`);
+              addStatusEvent(`${task.name} 定时任务完成（网络重试:${engineType}）`);
+              refreshStatus(taskCwd);
+            }
           } else {
-            console.log(chalk.green(`[Scheduler] 任务完成(fallback): ${task.name} (${fallbackEngine})`));
-            recordHistory(taskCwd, task.name, `✅ 成功(fallback:${fallbackEngine})`);
-            addStatusEvent(`${task.name} 定时任务完成（fallback:${fallbackEngine}）`);
-            refreshStatus(taskCwd);
+            // 非网络错误：走原有 fallback 逻辑
+            console.warn(chalk.yellow(`[Scheduler][${engineType}] 失败，自动转移到 ${fallbackEngine}: ${task.name}`));
+            recordHistory(taskCwd, task.name, `⚠️ 转移(${engineType}→${fallbackEngine})`);
+
+            const fallbackResult = await runCliEngine(fallbackEngine, fullMessage, taskCwd);
+            if (fallbackResult.error) {
+              console.error(chalk.red(`[Scheduler] 双引擎全部失败: ${task.name}`));
+              recordHistory(taskCwd, task.name, `❌ 全部失败(${engineType}+${fallbackEngine})`);
+              server.broadcastToFeishu?.(`⚠️ 定时任务双引擎全部失败：${task.name}\n主引擎 ${engineType} 失败 → 备引擎 ${fallbackEngine} 也失败，需要人工介入`);
+            } else {
+              console.log(chalk.green(`[Scheduler] 任务完成(fallback): ${task.name} (${fallbackEngine})`));
+              recordHistory(taskCwd, task.name, `✅ 成功(fallback:${fallbackEngine})`);
+              addStatusEvent(`${task.name} 定时任务完成（fallback:${fallbackEngine}）`);
+              refreshStatus(taskCwd);
+            }
           }
         } else {
           console.log(chalk.green(`[Scheduler] 任务完成: ${task.name} (${engineType})`));

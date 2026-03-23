@@ -24,7 +24,7 @@ const FEISHU_MCP_REFRESH_BUFFER = 30 * 60 * 1000; // token 过期前 30 分钟�
 const FEISHU_HEARTBEAT_INTERVAL = 300000; // 5分钟发送一次飞书心跳
 const MAX_RESTART_ATTEMPTS = 3; // 最大重启次数
 const RESTART_COOLDOWN = 60000; // 重启冷却时间（1分钟）
-const AUTH_FAIL_THRESHOLD = 3; // 连续失败 N 次才报警（防止单次网络波动误报）
+const AUTH_FAIL_THRESHOLD = 5; // 连续失败 N 次才报警（提升容忍度，防止 CLI 并发/网络波动误报）
 const AUTH_RECOVERY_CHECK_INTERVAL = 2 * 60 * 1000; // auth 失败后每 2 分钟检测恢复
 
 // 飞书 MCP token 相关路径
@@ -341,9 +341,34 @@ export class HealthMonitor {
         this.adapter.authOk = true;
       }
     } catch (err) {
-      this.authFailCount++;
-      console.error(chalk.red(`[HealthMonitor] ✗ Token 刷新失败 (${this.authFailCount}/${AUTH_FAIL_THRESHOLD})`));
-      if (this.authFailCount === AUTH_FAIL_THRESHOLD) {
+      // ping 失败时，二次确认 auth status 区分「真过期」和「暂时不可用」
+      // claude -p "ping" 可能因 CLI 并发、网络波动、系统繁忙等非 auth 原因失败
+      let isRealAuthFailure = true;
+      try {
+        const statusOut = execSync("claude auth status --json 2>/dev/null", {
+          encoding: "utf-8",
+          timeout: 10000,
+          env: this.getCleanEnv(),
+        });
+        const status = JSON.parse(statusOut);
+        if (status.loggedIn === true) {
+          // auth status 说已登录 → ping 失败是暂时性问题（CLI 并发/网络/超时）
+          isRealAuthFailure = false;
+        }
+      } catch {
+        // auth status 本身也失败 → 视为真正的 auth 问题
+      }
+
+      if (isRealAuthFailure) {
+        this.authFailCount++;
+        console.error(chalk.red(`[HealthMonitor] ✗ Token 刷新失败（auth status 也异常） (${this.authFailCount}/${AUTH_FAIL_THRESHOLD})`));
+      } else {
+        // 暂时性失败：只增加 0.5（需要 10 次暂时性失败才等于 5 次真失败）
+        this.authFailCount += 0.5;
+        console.warn(chalk.yellow(`[HealthMonitor] ⚠ ping 失败但 auth status 正常（暂时性，${this.authFailCount}/${AUTH_FAIL_THRESHOLD}）`));
+      }
+
+      if (this.authFailCount >= AUTH_FAIL_THRESHOLD) {
         // 达到阈值：通知 + 标记失败 + 启动恢复探测
         console.error(chalk.red("[HealthMonitor] ✗ 连续多次刷新失败，可能需要手动 /login"));
         this.authWasDown = true;

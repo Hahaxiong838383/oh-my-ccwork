@@ -247,17 +247,16 @@ node /Users/rayman.chen/mycc/.claude/skills/tell-me/send.js \
 
 当 codex/gemini 通过飞书群 @mention 接到 theory-radar 任务时，mycc 后端会**自动注入 SOP.md** 到 prompt 中，确保任何引擎都按标准流程执行。
 
-### 多引擎协作（推荐）
+### 双引擎协作（已自动化）
 
-- **cc** 执行 Step 1→2→3（抓取 + 分析 + 飞书通知）
-- **codex** 执行 Step 3.5→4→5（去重 + Wiki 存档 + 索引更新）
+在 `tasks.md` 中配置为两个独立定时任务，自动串联：
+- **08:15 cc** 执行 Step 1→2→3（抓取 + 分析 + 飞书通知）
+- **08:45 codex** 执行 Step 3.5→4→5（去重 + Wiki 存档 + 索引更新）
 
-> 2026-03-15：论文调研归档从 Gemini 迁移到 Codex，Gemini 输出质量不稳定（PDF 空输出、自主发群等问题）。
+codex 的输入来自 `/tmp/theory-radar-data.json`（Step 1 输出），30 分钟间隔确保 cc 已完成。
 
-### Codex 委托方式
-
-方式 1：在群聊中 @codex，SOP 会自动注入
-方式 2：通过飞书消息路由（含"论文"/"arxiv"关键词自动路由到 codex）
+> 2026-03-15：归档从 Gemini 迁移到 Codex（质量问题）
+> 2026-03-23：从单任务拆为双任务自动串联（codex 之前收到全量 SOP 但只执行到 Step 3 就停了）
 
 ## 注意事项
 

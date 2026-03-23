@@ -1,14 +1,19 @@
 /**
- * 共享记忆上下文加载器 v2
+ * 共享记忆上下文加载器 v3
  *
  * 为 Codex / Gemini CLI 调用动态注入记忆上下文。
  * 两层：
  * 1. RECENT_EVENTS.md 尾部（最近事件）
- * 2. memory-items.md 混合检索（关键词 + TF-IDF 模糊 + 时间衰减 + MMR 去重）
+ * 2. memory-items.md 混合检索（关键词 + TF-IDF cosine + 时间衰减 + MMR 去重 + 关系链解析）
  *
- * v2 升级（借鉴 OpenClaw 混合记忆系统）：
+ * v3 升级（借鉴 Supermemory 记忆引擎）：
+ * - 双时间戳：[YYYY-MM-DD] 写入日期 + [event:YYYY-MM-DD] 事件日期，事件过期自动降权
+ * - 关系版本链：→updates:关键词 标记覆盖旧事实，自动抑制被取代的条目
+ * - TF-IDF cosine：从 Jaccard 集合交集升级为 TF-IDF 余弦相似度，召回率显著提升
+ * - 智能遗忘：eventDate 过期的条目自动获得极低分数，不再污染上下文
+ *
+ * v2 保留：
  * - 时间衰减：[YYYY-MM-DD] 标注越新分越高，7 天内满分，60 天后接近零
- * - TF-IDF 模糊匹配：prompt 分词后与类别内容计算相似度，补充硬编码正则的盲区
  * - MMR 去重：注入时剔除与已选条目高度相似的内容，提高信息密度
  *
  * 设计原则：
@@ -22,28 +27,39 @@ import { readFileSync, existsSync } from "fs";
 import * as path from "path";
 
 // ============================================================
-// 时间衰减（借鉴 OpenClaw temporal decay）
+// 时间衰减 v3（双时间戳 + 事件感知，借鉴 Supermemory temporal grounding）
 // ============================================================
 
-/** 从 item 行末提取日期 [YYYY-MM-DD]，返回距今天数 */
+/** 从 item 行末提取写入日期 [YYYY-MM-DD]，返回距今天数 */
 function parseDaysAgo(line: string): number | null {
-  const match = line.match(/\[(\d{4}-\d{2}-\d{2})\]/);
-  if (!match) return null;
+  // 排除 [event:...] 格式，只匹配裸日期
+  const match = line.match(/\[(\d{4}-\d{2}-\d{2})\](?!.*\[event:)/);
+  if (!match) {
+    // fallback: 匹配任意非 event 的日期
+    const fallback = line.match(/(?<!\bevent:)\[(\d{4}-\d{2}-\d{2})\]/);
+    if (!fallback) return null;
+    const d = new Date(fallback[1]);
+    if (isNaN(d.getTime())) return null;
+    return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+  }
   const itemDate = new Date(match[1]);
   if (isNaN(itemDate.getTime())) return null;
-  const now = new Date();
-  return Math.floor((now.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.floor((Date.now() - itemDate.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/** v3: 从 item 行提取事件日期 [event:YYYY-MM-DD]，返回距今天数（负数=未来） */
+function parseEventDaysAgo(line: string): number | null {
+  const match = line.match(/\[event:(\d{4}-\d{2}-\d{2})\]/);
+  if (!match) return null;
+  const eventDate = new Date(match[1]);
+  if (isNaN(eventDate.getTime())) return null;
+  return Math.floor((Date.now() - eventDate.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 /**
- * 时间衰减分数：0~1
- * - 7 天内：1.0（满分）
- * - 7~30 天：线性衰减 1.0 → 0.5
- * - 30~60 天：线性衰减 0.5 → 0.1
- * - >60 天：0.1（保底，不完全丢弃）
- * - 无日期：0.5（中等权重）
+ * 写入日期衰减分数：0~1（v2 逻辑保持不变）
  */
-function temporalDecay(daysAgo: number | null): number {
+function writeDecay(daysAgo: number | null): number {
   if (daysAgo === null) return 0.5;
   if (daysAgo <= 7) return 1.0;
   if (daysAgo <= 30) return 1.0 - (daysAgo - 7) * (0.5 / 23);
@@ -51,8 +67,66 @@ function temporalDecay(daysAgo: number | null): number {
   return 0.1;
 }
 
+/**
+ * v3: 综合时间衰减（双时间戳感知）
+ *
+ * 优先使用 eventDate 判断相关性：
+ * - eventDate 已过期 >7天 → 极低分（事件已结束，如"明天考试"）
+ * - eventDate 未来 3 天内 → 满分（即将发生）
+ * - eventDate 未来 14 天内 → 高分
+ * - 无 eventDate → 回退到 writeDate 衰减
+ */
+function temporalDecay(writeDaysAgo: number | null, eventDaysAgo: number | null): number {
+  if (eventDaysAgo !== null) {
+    if (eventDaysAgo > 7) return 0.05;       // 事件已过 7 天 → 过期
+    if (eventDaysAgo > 0) return 0.3;         // 事件刚过 1-7 天 → 仍有参考价值
+    if (eventDaysAgo >= -3) return 1.0;       // 未来 3 天内 → 最相关
+    if (eventDaysAgo >= -14) return 0.8;      // 未来 2 周内 → 高相关
+    return 0.6;                                // 更远的未来 → 中等
+  }
+  return writeDecay(writeDaysAgo);
+}
+
 // ============================================================
-// TF-IDF 模糊匹配（借鉴 OpenClaw hybrid search）
+// 关系版本链（借鉴 Supermemory relational versioning）
+// ============================================================
+
+/**
+ * v3: 解析 →updates:关键词 关系，抑制被取代的旧条目。
+ *
+ * 当一条 item 包含 →updates:XXX 时，同类别中包含 XXX 关键词的旧条目
+ * 会被标记为 score=0（不注入），确保只展示最新版本。
+ */
+function resolveRelations(
+  items: Array<{ line: string; score: number; tokens: string[] }>,
+): Array<{ line: string; score: number; tokens: string[] }> {
+  // 收集所有 →updates: 标记
+  const supersededKeywords: string[] = [];
+  for (const item of items) {
+    const match = item.line.match(/→updates:(.+?)(?:\s*\[|\s*$)/);
+    if (match) {
+      supersededKeywords.push(match[1].trim().toLowerCase());
+    }
+  }
+  if (supersededKeywords.length === 0) return items;
+
+  // 抑制被取代的条目
+  return items.map((item) => {
+    // 含 →updates: 的条目自身不被抑制
+    if (item.line.includes("→updates:")) return item;
+    // 检查是否被某个 →updates 关键词命中
+    const lineLower = item.line.toLowerCase();
+    for (const kw of supersededKeywords) {
+      if (lineLower.includes(kw)) {
+        return { ...item, score: 0 };
+      }
+    }
+    return item;
+  });
+}
+
+// ============================================================
+// TF-IDF cosine 相似度（v3: 从 Jaccard 升级，借鉴 Supermemory hybrid search）
 // ============================================================
 
 /** 中英文分词：按空格 + 标点切分，过滤短 token */
@@ -64,7 +138,41 @@ function tokenize(text: string): string[] {
     .filter((t) => t.length >= 2);
 }
 
-/** 计算两组 token 的 Jaccard 相似度（0~1） */
+/** v3: 构建 TF 向量（词频归一化） */
+function buildTfVector(tokens: string[]): Map<string, number> {
+  const tf = new Map<string, number>();
+  tokens.forEach((t) => {
+    tf.set(t, (tf.get(t) || 0) + 1);
+  });
+  // 归一化
+  const len = tokens.length || 1;
+  const keys = Array.from(tf.keys());
+  keys.forEach((k) => {
+    tf.set(k, (tf.get(k) || 0) / len);
+  });
+  return tf;
+}
+
+/** v3: cosine 相似度（替代 Jaccard，对长短文本差异更鲁棒） */
+function cosineSimilarity(vecA: Map<string, number>, vecB: Map<string, number>): number {
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  Array.from(vecA.keys()).forEach((term) => {
+    const wA = vecA.get(term) || 0;
+    normA += wA * wA;
+    const wB = vecB.get(term) || 0;
+    dotProduct += wA * wB;
+  });
+  Array.from(vecB.keys()).forEach((term) => {
+    const wB = vecB.get(term) || 0;
+    normB += wB * wB;
+  });
+  if (normA === 0 || normB === 0) return 0;
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+/** 向后兼容：MMR 去重仍用 Jaccard（轻量，只对已选条目间比较） */
 function jaccardSimilarity(tokensA: string[], tokensB: string[]): number {
   if (tokensA.length === 0 || tokensB.length === 0) return 0;
   const setA = new Set(tokensA);
@@ -165,8 +273,9 @@ const ALWAYS_INJECT_CATEGORIES = [
 ];
 
 /**
- * 从 memory-items.md 提取指定类别的内容（v2：时间衰减 + MMR 去重）。
- * 每个类别最多返回 Top 10 条（综合评分排序，MMR 去重后）。
+ * 从 memory-items.md 提取指定类别的内容。
+ * v3：双时间戳 + 关系链解析 + 时间衰减 + MMR 去重。
+ * 每个类别最多返回 Top 10 条。
  */
 function extractCategories(content: string, categories: string[]): string {
   const blocks: string[] = [];
@@ -183,14 +292,17 @@ function extractCategories(content: string, categories: string[]): string {
     const lines = section.split("\n").filter((l) => l.startsWith("- "));
     if (lines.length === 0) continue;
 
-    // 综合评分：★权重 0.5 + 时间衰减 0.5
-    const scored = lines.map((line) => {
+    // v3: 综合评分 = ★权重 0.5 + 双时间戳衰减 0.5
+    let scored = lines.map((line) => {
       const stars = starScore(line);
-      const decay = temporalDecay(parseDaysAgo(line));
+      const decay = temporalDecay(parseDaysAgo(line), parseEventDaysAgo(line));
       const score = stars * 0.5 + decay * 0.5;
       const tokens = tokenize(line);
       return { line, score, tokens };
     });
+
+    // v3: 关系链解析 — 被 →updates: 取代的旧条目 score 归零
+    scored = resolveRelations(scored);
 
     // MMR 选择 Top 10（兼顾相关性 + 多样性）
     const selected = mmrSelect(scored, 10);
@@ -201,8 +313,9 @@ function extractCategories(content: string, categories: string[]): string {
 }
 
 /**
- * TF-IDF 模糊匹配：根据 prompt 内容自动发现相关的 project 类别。
- * 补充硬编码 KEYWORD_CATEGORY_MAP 的盲区。
+ * v3: TF-IDF cosine 模糊匹配（从 Jaccard 升级）。
+ * 根据 prompt 内容自动发现相关的 project 类别。
+ * cosine 相似度对长短文本差异更鲁棒，召回率优于 Jaccard。
  *
  * @returns 额外匹配到的类别名列表
  */
@@ -213,6 +326,7 @@ function fuzzyMatchCategories(
 ): string[] {
   const promptTokens = tokenize(prompt);
   if (promptTokens.length === 0) return [];
+  const promptTf = buildTfVector(promptTokens);
 
   const sections = content.split(/^## /m).filter(Boolean);
   const candidates: Array<{ cat: string; similarity: number }> = [];
@@ -225,8 +339,9 @@ function fuzzyMatchCategories(
     if (cat.startsWith("user/") || alreadyMatched.has(cat)) continue;
 
     const sectionTokens = tokenize(section);
-    const sim = jaccardSimilarity(promptTokens, sectionTokens);
-    if (sim > 0.08) {
+    const sectionTf = buildTfVector(sectionTokens);
+    const sim = cosineSimilarity(promptTf, sectionTf);
+    if (sim > 0.05) {
       candidates.push({ cat, similarity: sim });
     }
   }

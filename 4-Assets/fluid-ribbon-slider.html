@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fluid Ribbon Slider</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #e6e6ea 0%, #dcdce0 50%, #e8e8ec 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+    overflow: hidden;
+    cursor: default;
+    user-select: none;
+  }
+  .slider-wrap {
+    position: relative;
+    width: 500px;
+    height: 240px;
+  }
+  canvas#c {
+    display: block;
+    width: 500px;
+    height: 240px;
+  }
+</style>
+</head>
+<body>
+<div class="slider-wrap">
+  <canvas id="c"></canvas>
+</div>
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 2;
+  const W = 500, H = 240;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+
+  // ---- Layout ----
+  const TL = 45, TR = W - 45;          // track left / right
+  const TW = TR - TL;                   // track width
+  const TH = 50;                        // track height
+  const TY = H / 2 + 8;                 // track center Y (slightly below center for ribbon room)
+  const R  = TH / 2;                    // track corner radius
+
+  // ---- State ----
+  let val = 0.48, target = 0.48;
+  let vel = 0, prevVal = 0.48;
+  let dragging = false, hovering = false;
+  let stretch = 0;                       // velocity-based stretch
+  let time = 0;
+
+  // ---- Helpers ----
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const thumbX = () => TL + R + val * (TW - R * 2);
+
+  // ---- Draw Track (neumorphic recessed slot) ----
+  function drawTrack() {
+    const y = TY - TH / 2;
+
+    // Drop shadow beneath track
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.18)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 5;
+    ctx.beginPath();
+    ctx.roundRect(TL, y, TW, TH, R);
+    ctx.fillStyle = '#d5d5d9';
+    ctx.fill();
+    ctx.restore();
+
+    // Main track fill
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(TL, y, TW, TH, R);
+    ctx.fillStyle = '#dadadf';
+    ctx.fill();
+
+    // Inset shadow (top darker, bottom lighter)
+    ctx.beginPath();
+    ctx.roundRect(TL, y, TW, TH, R);
+    ctx.clip();
+    const ig = ctx.createLinearGradient(0, y - 2, 0, y + TH + 2);
+    ig.addColorStop(0, 'rgba(0,0,0,0.13)');
+    ig.addColorStop(0.15, 'rgba(0,0,0,0.06)');
+    ig.addColorStop(0.5, 'rgba(0,0,0,0.01)');
+    ig.addColorStop(0.85, 'rgba(255,255,255,0.04)');
+    ig.addColorStop(1, 'rgba(255,255,255,0.12)');
+    ctx.fillStyle = ig;
+    ctx.fillRect(TL, y, TW, TH);
+
+    // Thin border
+    ctx.beginPath();
+    ctx.roundRect(TL + 0.5, y + 0.5, TW - 1, TH - 1, R - 0.5);
+    ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---- Draw Glow (light shining through the slot) ----
+  function drawGlow(cx) {
+    ctx.save();
+    // Main warm glow
+    const g1 = ctx.createRadialGradient(cx, TY + 15, 2, cx, TY + 28, 65);
+    g1.addColorStop(0, 'rgba(255, 120, 20, 0.40)');
+    g1.addColorStop(0.3, 'rgba(255, 90, 10, 0.20)');
+    g1.addColorStop(0.6, 'rgba(255, 60, 0, 0.08)');
+    g1.addColorStop(1, 'rgba(255, 50, 0, 0)');
+    ctx.fillStyle = g1;
+    ctx.beginPath();
+    ctx.ellipse(cx, TY + 30, 70, 45, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tighter bright center
+    const g2 = ctx.createRadialGradient(cx, TY + 8, 1, cx, TY + 12, 20);
+    g2.addColorStop(0, 'rgba(255, 160, 50, 0.35)');
+    g2.addColorStop(1, 'rgba(255, 100, 20, 0)');
+    ctx.fillStyle = g2;
+    ctx.beginPath();
+    ctx.ellipse(cx, TY + 10, 25, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ---- Draw Percentage ----
+  function drawPct(cx) {
+    const pct = Math.round(val * 100);
+    const tx = Math.max(cx + 45, TR - 70);
+    ctx.save();
+    ctx.font = '600 26px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
+    ctx.fillStyle = 'rgba(130,130,135,0.85)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    // Text shadow for neumorphic feel
+    ctx.shadowColor = 'rgba(255,255,255,0.7)';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0.5;
+    ctx.shadowOffsetY = 1;
+    ctx.fillText(pct + '%', TR - 18, TY + 1);
+    ctx.restore();
+  }
+
+  // ---- Draw Ribbon (the core 3D fluid shape) ----
+  function drawRibbon(cx) {
+    const t = time;
+    const idle = dragging ? 0 : Math.sin(t * 1.2) * 2.5;
+    const bend = stretch * 20;
+
+    // Ribbon parameters that change with position
+    const ribbonW = 80 + Math.abs(stretch) * 30;
+    const archH = 55 + Math.abs(stretch) * 8;  // How high the arch goes above track
+
+    const lx = cx - ribbonW * 0.55;  // left anchor
+    const rx = cx + ribbonW * 0.4;   // right anchor
+
+    // ---- Back face: the part visible behind/below (through the slot) ----
+    ctx.save();
+    ctx.beginPath();
+    // Starts from right side, dips below track
+    ctx.moveTo(rx + 5, TY - 3);
+    ctx.bezierCurveTo(
+      rx - 10, TY + TH * 0.25,
+      cx + 10, TY + TH * 0.35,
+      cx - 5, TY + 6
+    );
+    ctx.bezierCurveTo(
+      cx - 15, TY + 3,
+      cx - 25, TY + 2,
+      lx + 15, TY + 1
+    );
+    ctx.lineTo(lx + 15, TY - 2);
+    ctx.bezierCurveTo(
+      cx - 20, TY - 1,
+      cx, TY + 2,
+      cx + 5, TY + 3
+    );
+    ctx.bezierCurveTo(
+      cx + 15, TY + 5,
+      rx - 15, TY + TH * 0.15,
+      rx + 5, TY - 5
+    );
+    ctx.closePath();
+
+    const bg = ctx.createLinearGradient(lx, TY, rx, TY + TH * 0.3);
+    bg.addColorStop(0, '#b85818');
+    bg.addColorStop(0.4, '#c43808');
+    bg.addColorStop(0.7, '#d04510');
+    bg.addColorStop(1, '#cc5015');
+    ctx.fillStyle = bg;
+    ctx.fill();
+    ctx.restore();
+
+    // ---- Main ribbon: the S-curved surface above ----
+    ctx.save();
+    ctx.beginPath();
+
+    // Start: left anchor at track surface level
+    ctx.moveTo(lx, TY - 2 + idle * 0.3);
+
+    // Rise up: the big arch sweeping upward to the left of center
+    const peakX = cx - ribbonW * 0.1 + bend * 0.3;
+    const peakY = TY - archH + idle;
+    ctx.bezierCurveTo(
+      lx + ribbonW * 0.12, TY - archH * 0.75 + idle + bend * 0.4,
+      peakX - ribbonW * 0.15, peakY + archH * 0.05,
+      peakX, peakY
+    );
+
+    // Come back down: sweep down through the slot
+    ctx.bezierCurveTo(
+      peakX + ribbonW * 0.12, peakY + archH * 0.1,
+      cx + ribbonW * 0.08, TY - 15 + idle * 0.5,
+      cx + 8, TY + 2 + idle * 0.2
+    );
+
+    // Continue right: slight dip below and back to track level
+    ctx.bezierCurveTo(
+      cx + 15, TY + 8,
+      rx - 15, TY + 5,
+      rx + 3, TY - 2
+    );
+
+    // ---- Bottom edge (return path, inner surface) ----
+    // Right to center: inner surface below the arch
+    ctx.bezierCurveTo(
+      rx - 10, TY + 3,
+      cx + 20, TY + 10,
+      cx + 5, TY + 5 + idle * 0.2
+    );
+
+    // Center back up through the arch (inner surface)
+    ctx.bezierCurveTo(
+      cx - 5, TY - 8 + idle * 0.4,
+      peakX + ribbonW * 0.05, peakY + archH * 0.25,
+      peakX, peakY + 12
+    );
+
+    // Back to left start (inner surface of the arch)
+    ctx.bezierCurveTo(
+      peakX - ribbonW * 0.12, peakY + archH * 0.2 + 5,
+      lx + ribbonW * 0.1, TY - archH * 0.5 + idle + bend * 0.3,
+      lx, TY + 2 + idle * 0.3
+    );
+
+    ctx.closePath();
+
+    // Metallic gradient: silver top → gold middle → deep orange bottom
+    const mg = ctx.createLinearGradient(lx, TY - archH - 5, rx, TY + 15);
+    mg.addColorStop(0, '#f2f0ec');       // Bright silver
+    mg.addColorStop(0.08, '#eae5da');    // Warm silver
+    mg.addColorStop(0.18, '#e0cca0');    // Light gold
+    mg.addColorStop(0.3, '#e8a030');     // Gold
+    mg.addColorStop(0.45, '#e07818');    // Rich orange
+    mg.addColorStop(0.6, '#d45010');     // Deep orange
+    mg.addColorStop(0.75, '#e06818');    // Orange
+    mg.addColorStop(0.9, '#d85515');     // Dark orange
+    mg.addColorStop(1, '#c04510');       // Deepest
+    ctx.fillStyle = mg;
+    ctx.fill();
+
+    // ---- Shine highlight on top curve ----
+    ctx.beginPath();
+    ctx.moveTo(lx + 3, TY - 5 + idle * 0.3);
+    ctx.bezierCurveTo(
+      lx + ribbonW * 0.1, TY - archH * 0.7 + idle + bend * 0.4,
+      peakX - ribbonW * 0.12, peakY + archH * 0.08,
+      peakX - 3, peakY + 3
+    );
+    // Inner return for thin highlight strip
+    ctx.bezierCurveTo(
+      peakX - ribbonW * 0.08, peakY + archH * 0.15,
+      lx + ribbonW * 0.08, TY - archH * 0.5 + idle + bend * 0.35,
+      lx + 8, TY - 8 + idle * 0.3
+    );
+    ctx.closePath();
+
+    const sg = ctx.createLinearGradient(lx, TY - archH, peakX, peakY + 10);
+    sg.addColorStop(0, 'rgba(255,255,255,0.55)');
+    sg.addColorStop(0.25, 'rgba(255,255,255,0.35)');
+    sg.addColorStop(0.5, 'rgba(255,255,255,0.12)');
+    sg.addColorStop(0.8, 'rgba(255,255,255,0.02)');
+    sg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sg;
+    ctx.fill();
+
+    // ---- Edge highlight (top contour line) ----
+    ctx.beginPath();
+    ctx.moveTo(lx, TY - 2 + idle * 0.3);
+    ctx.bezierCurveTo(
+      lx + ribbonW * 0.12, TY - archH * 0.75 + idle + bend * 0.4,
+      peakX - ribbonW * 0.15, peakY + archH * 0.05,
+      peakX, peakY
+    );
+    ctx.bezierCurveTo(
+      peakX + ribbonW * 0.12, peakY + archH * 0.1,
+      cx + ribbonW * 0.08, TY - 15 + idle * 0.5,
+      cx + 8, TY + 2 + idle * 0.2
+    );
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // ---- Subtle shadow on the inner concave part ----
+    ctx.beginPath();
+    ctx.moveTo(cx + 5, TY + 5 + idle * 0.2);
+    ctx.bezierCurveTo(
+      cx - 5, TY - 8 + idle * 0.4,
+      peakX + ribbonW * 0.05, peakY + archH * 0.25,
+      peakX, peakY + 12
+    );
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // ---- Draw cursor icon ----
+  function drawCursor(cx) {
+    if (!hovering && !dragging) return;
+    const cy = TY + 3;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(0.8, 0.8);
+
+    // Simple grab hand
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1.3;
+
+    // Palm
+    ctx.beginPath();
+    ctx.ellipse(0, 3, 6, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 4 fingers
+    const fx = [-5, -1.8, 1.4, 4.6];
+    for (const x of fx) {
+      ctx.beginPath();
+      ctx.roundRect(x - 1.3, -6, 2.6, 8, 1.3);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    // Thumb
+    ctx.beginPath();
+    ctx.ellipse(-7, 1, 2.5, 3.5, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // ---- Animation Loop ----
+  function frame(ts) {
+    time = ts / 1000;
+    ctx.clearRect(0, 0, W, H);
+
+    // Smooth value
+    val += (target - val) * (dragging ? 0.35 : 0.08);
+    const curVel = val - prevVal;
+    stretch += (curVel * 18 - stretch) * 0.12;
+    prevVal = val;
+
+    const cx = thumbX();
+
+    // Draw order matters: glow under track, track, ribbon on top
+    drawGlow(cx);
+    drawTrack();
+    drawRibbon(cx);
+    drawCursor(cx);
+    drawPct(cx);
+
+    requestAnimationFrame(frame);
+  }
+
+  // ---- Interaction ----
+  function xToVal(clientX) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (clientX - rect.left) * (W / rect.width);
+    return clamp((x - TL - R) / (TW - R * 2), 0, 1);
+  }
+
+  function hitTest(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (clientX - rect.left) * (W / rect.width);
+    const y = (clientY - rect.top) * (H / rect.height);
+    const cx = thumbX();
+    return Math.abs(x - cx) < 55 && y > TY - 70 && y < TY + 30;
+  }
+
+  canvas.addEventListener('mousedown', e => {
+    if (hitTest(e.clientX, e.clientY)) {
+      dragging = true;
+      canvas.style.cursor = 'grabbing';
+      target = xToVal(e.clientX);
+    }
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (dragging) {
+      target = xToVal(e.clientX);
+    } else {
+      const was = hovering;
+      hovering = hitTest(e.clientX, e.clientY);
+      canvas.style.cursor = hovering ? 'grab' : 'default';
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (dragging) {
+      dragging = false;
+      canvas.style.cursor = hovering ? 'grab' : 'default';
+    }
+  });
+
+  // Touch
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    dragging = hovering = true;
+    target = xToVal(e.touches[0].clientX);
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (dragging) target = xToVal(e.touches[0].clientX);
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', () => { dragging = hovering = false; });
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

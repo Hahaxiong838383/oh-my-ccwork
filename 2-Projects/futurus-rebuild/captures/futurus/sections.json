@@ -1,0 +1,2942 @@
+[
+  {
+    "tag": "div",
+    "id": "row3",
+    "classes": "jz_web_row jz_web_row3 pc_row_style jz_section_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 0,
+      "height": 62,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "VR虚拟现实模板       首页   \n                            |\n                         核心产品     WHUD   ARHUD  \n                            |\n                         创新产品     全车窗透明显示器   光场MR HUD  \n                            |\n                         AR Kernel   \n                            |\n                "
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "jz_web_col jz_web_col1 jz_col_sys_section J_multi_cols col_mobi_order_-1 is_col_v2  jz_col_12",
+    "rect": {
+      "top": 0,
+      "height": 62,
+      "width": 1435.90625
+    },
+    "childCount": 1,
+    "textPreview": "首页   \n                            |\n                         核心产品     WHUD   ARHUD  \n                            |\n                         创新产品     全车窗透明显示器   光场MR HUD  \n                            |\n                         AR Kernel   \n                            |\n                         创新研发  "
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "mobi_nav_blocker",
+    "rect": {
+      "top": 62,
+      "height": 0,
+      "width": 1017.328125
+    },
+    "childCount": 0,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module906",
+    "classes": "form jz_module jz_module_style_8 responsive_fontSize jz_project jz_project_906",
+    "rect": {
+      "top": 10.5,
+      "height": 41,
+      "width": 149.375
+    },
+    "childCount": 1,
+    "textPreview": "EN"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 10.5,
+      "height": 41,
+      "width": 149.375
+    },
+    "childCount": 1,
+    "textPreview": "EN"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 10.5,
+      "height": 41,
+      "width": 149.375
+    },
+    "childCount": 1,
+    "textPreview": "EN"
+  },
+  {
+    "tag": "a",
+    "id": "906",
+    "classes": "module_button_content module_content_detail jz_hover jz_theme_border_hover_color jz_theme_font_hover_color module_button_style3 cssLazyFont isFitContent",
+    "rect": {
+      "top": 10.5,
+      "height": 41,
+      "width": 149.375
+    },
+    "childCount": 2,
+    "textPreview": "EN"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_button_text_container",
+    "rect": {
+      "top": 22,
+      "height": 18,
+      "width": 149.375
+    },
+    "childCount": 1,
+    "textPreview": "EN"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_button_inner",
+    "rect": {
+      "top": 22,
+      "height": 18,
+      "width": 16.671875
+    },
+    "childCount": 1,
+    "textPreview": "EN"
+  },
+  {
+    "tag": "span",
+    "id": "",
+    "classes": "module_button_text",
+    "rect": {
+      "top": 22,
+      "height": 18,
+      "width": 16.671875
+    },
+    "childCount": 0,
+    "textPreview": "EN"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "jz_web_banner",
+    "rect": {
+      "top": 0,
+      "height": 1071.25,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "Play VideoPauseUnmuteCurrent Time 0:03/Duration Time 0:11Loaded: 0%Progress: 0%Stream TypeLIVERemaining Time -0:08 Playback Rate1ChaptersChaptersdescriptions off, selectedDescriptionssubtitles off, selectedSubtitlescaptions settings, opens captions settings dialogcaptions off, selectedCaptionsAudio "
+  },
+  {
+    "tag": "div",
+    "id": "jz_banner",
+    "classes": "jz_banner transition_type_0",
+    "rect": {
+      "top": 0,
+      "height": 1071.25,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "Play VideoPauseUnmuteCurrent Time 0:03/Duration Time 0:11Loaded: 0%Progress: 0%Stream TypeLIVERemaining Time -0:08 Playback Rate1ChaptersChaptersdescriptions off, selectedDescriptionssubtitles off, selectedSubtitlescaptions settings, opens captions settings dialogcaptions off, selectedCaptionsAudio "
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "banner_flv",
+    "rect": {
+      "top": 0,
+      "height": 1071.25,
+      "width": 1920
+    },
+    "childCount": 2,
+    "textPreview": "Play VideoPauseUnmuteCurrent Time 0:03/Duration Time 0:11Loaded: 0%Progress: 0%Stream TypeLIVERemaining Time -0:08 Playback Rate1ChaptersChaptersdescriptions off, selectedDescriptionssubtitles off, selectedSubtitlescaptions settings, opens captions settings dialogcaptions off, selectedCaptionsAudio "
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "banner_flv_background",
+    "rect": {
+      "top": 0,
+      "height": 1071.25,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "Play VideoPauseUnmuteCurrent Time 0:03/Duration Time 0:11Loaded: 0%Progress: 0%Stream TypeLIVERemaining Time -0:08 Playback Rate1ChaptersChaptersdescriptions off, selectedDescriptionssubtitles off, selectedSubtitlescaptions settings, opens captions settings dialogcaptions off, selectedCaptionsAudio "
+  },
+  {
+    "tag": "div",
+    "id": "jz_banner_flv",
+    "classes": "video-js vjs-default-skin vjs-big-play-centered vjs-controls-disabled vjs-workinghover vjs-playing vjs-has-started jz_banner_flv-dimensions vjs-user-inactive",
+    "rect": {
+      "top": 0,
+      "height": 1071.25,
+      "width": 1920
+    },
+    "childCount": 9,
+    "textPreview": "Play VideoPauseUnmuteCurrent Time 0:03/Duration Time 0:11Loaded: 0%Progress: 0%Stream TypeLIVERemaining Time -0:08 Playback Rate1ChaptersChaptersdescriptions off, selectedDescriptionssubtitles off, selectedSubtitlescaptions settings, opens captions settings dialogcaptions off, selectedCaptionsAudio "
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "banner_flv_area",
+    "rect": {
+      "top": 0,
+      "height": 1071.25,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "让每一辆智能汽车都成为连接数字世界和物理世界的全新窗口未来人机交互技术引领者"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "banner_module_zone jz_web_rows",
+    "rect": {
+      "top": 0,
+      "height": 1071.25,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "让每一辆智能汽车都成为连接数字世界和物理世界的全新窗口未来人机交互技术引领者"
+  },
+  {
+    "tag": "div",
+    "id": "row104",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_section_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 0,
+      "height": 1071.25,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "让每一辆智能汽车都成为连接数字世界和物理世界的全新窗口未来人机交互技术引领者"
+  },
+  {
+    "tag": "div",
+    "id": "module467",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize jz_project jz_project_467",
+    "rect": {
+      "top": 190.375,
+      "height": 215,
+      "width": 1914
+    },
+    "childCount": 1,
+    "textPreview": "让每一辆智能汽车都成为连接数字世界和物理世界的全新窗口未来人机交互技术引领者"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 190.375,
+      "height": 215,
+      "width": 1914
+    },
+    "childCount": 1,
+    "textPreview": "让每一辆智能汽车都成为连接数字世界和物理世界的全新窗口未来人机交互技术引领者"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 190.375,
+      "height": 215,
+      "width": 1914
+    },
+    "childCount": 1,
+    "textPreview": "让每一辆智能汽车都成为连接数字世界和物理世界的全新窗口未来人机交互技术引领者"
+  },
+  {
+    "tag": "div",
+    "id": "467",
+    "classes": "module_text_content cssLazyFont",
+    "rect": {
+      "top": 190.375,
+      "height": 215,
+      "width": 1914
+    },
+    "childCount": 1,
+    "textPreview": "让每一辆智能汽车都成为连接数字世界和物理世界的全新窗口未来人机交互技术引领者"
+  },
+  {
+    "tag": "div",
+    "id": "row322",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 1071.25,
+      "height": 466.515625,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 产品矩阵    核心产品"
+  },
+  {
+    "tag": "div",
+    "id": "module627",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_627",
+    "rect": {
+      "top": 1371.25,
+      "height": 98,
+      "width": 633.4375
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 产品矩阵"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 1371.25,
+      "height": 98,
+      "width": 633.4375
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 产品矩阵"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 1371.25,
+      "height": 98,
+      "width": 633.4375
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 产品矩阵"
+  },
+  {
+    "tag": "div",
+    "id": "627",
+    "classes": "module_text_content cssLazyFont",
+    "rect": {
+      "top": 1371.25,
+      "height": 98,
+      "width": 633.4375
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 产品矩阵"
+  },
+  {
+    "tag": "div",
+    "id": "module473",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_473",
+    "rect": {
+      "top": 1506.765625,
+      "height": 31,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "核心产品"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 1506.765625,
+      "height": 31,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "核心产品"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 1506.765625,
+      "height": 31,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "核心产品"
+  },
+  {
+    "tag": "div",
+    "id": "473",
+    "classes": "module_text_content cssLazyFont",
+    "rect": {
+      "top": 1506.765625,
+      "height": 31,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "核心产品"
+  },
+  {
+    "tag": "div",
+    "id": "row316",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 1537.765625,
+      "height": 457.765625,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module468",
+    "classes": "form jz_module !border-none jz_module_style_3 jz_project jz_project_468",
+    "rect": {
+      "top": 1537.765625,
+      "height": 457.765625,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 1537.765625,
+      "height": 457.765625,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 1537.765625,
+      "height": 457.765625,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "468",
+    "classes": "module_content_detail",
+    "rect": {
+      "top": 1537.765625,
+      "height": 457.765625,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "list_photos_basic_style module_list_photos_content list_photos_list_style",
+    "rect": {
+      "top": 1537.765625,
+      "height": 457.765625,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row320",
+    "classes": "jz_web_row jz_web_row2 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 1995.53125,
+      "height": 253.75,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "WHUD极致光学  极致体验全面替代传统仪表，可显示智能仪表所有功能和智能中控所有高频场景，帮助驾驶者将注意力集中在前方道路，提高驾驶安全性。    ARHUD实时融合  真AR体验独家3D光场显示技术，结合独家自研引擎算法，保证高帧率实时渲染和低延时姿态补偿，实现HUD画面与现实场景实时、动态融合，提供真AR体验。"
+  },
+  {
+    "tag": "div",
+    "id": "module469",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_469",
+    "rect": {
+      "top": 1995.53125,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "WHUD极致光学  极致体验全面替代传统仪表，可显示智能仪表所有功能和智能中控所有高频场景，帮助驾驶者将注意力集中在前方道路，提高驾驶安全性。"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 1995.53125,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "WHUD极致光学  极致体验全面替代传统仪表，可显示智能仪表所有功能和智能中控所有高频场景，帮助驾驶者将注意力集中在前方道路，提高驾驶安全性。"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 1995.53125,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "WHUD极致光学  极致体验全面替代传统仪表，可显示智能仪表所有功能和智能中控所有高频场景，帮助驾驶者将注意力集中在前方道路，提高驾驶安全性。"
+  },
+  {
+    "tag": "div",
+    "id": "469",
+    "classes": "module_text_content cssLazyFont opacity-0",
+    "rect": {
+      "top": 1995.53125,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "WHUD极致光学  极致体验全面替代传统仪表，可显示智能仪表所有功能和智能中控所有高频场景，帮助驾驶者将注意力集中在前方道路，提高驾驶安全性。"
+  },
+  {
+    "tag": "div",
+    "id": "module470",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_470",
+    "rect": {
+      "top": 1995.53125,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "ARHUD实时融合  真AR体验独家3D光场显示技术，结合独家自研引擎算法，保证高帧率实时渲染和低延时姿态补偿，实现HUD画面与现实场景实时、动态融合，提供真AR体验。"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 1995.53125,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "ARHUD实时融合  真AR体验独家3D光场显示技术，结合独家自研引擎算法，保证高帧率实时渲染和低延时姿态补偿，实现HUD画面与现实场景实时、动态融合，提供真AR体验。"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 1995.53125,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "ARHUD实时融合  真AR体验独家3D光场显示技术，结合独家自研引擎算法，保证高帧率实时渲染和低延时姿态补偿，实现HUD画面与现实场景实时、动态融合，提供真AR体验。"
+  },
+  {
+    "tag": "div",
+    "id": "470",
+    "classes": "module_text_content cssLazyFont opacity-0",
+    "rect": {
+      "top": 1995.53125,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "ARHUD实时融合  真AR体验独家3D光场显示技术，结合独家自研引擎算法，保证高帧率实时渲染和低延时姿态补偿，实现HUD画面与现实场景实时、动态融合，提供真AR体验。"
+  },
+  {
+    "tag": "div",
+    "id": "row505",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 2249.28125,
+      "height": 548.765625,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "创新产品"
+  },
+  {
+    "tag": "div",
+    "id": "module731",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_731",
+    "rect": {
+      "top": 2309.28125,
+      "height": 31,
+      "width": 1339.328125
+    },
+    "childCount": 1,
+    "textPreview": "创新产品"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 2309.28125,
+      "height": 31,
+      "width": 1339.328125
+    },
+    "childCount": 1,
+    "textPreview": "创新产品"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 2309.28125,
+      "height": 31,
+      "width": 1339.328125
+    },
+    "childCount": 1,
+    "textPreview": "创新产品"
+  },
+  {
+    "tag": "div",
+    "id": "731",
+    "classes": "module_text_content cssLazyFont opacity-0",
+    "rect": {
+      "top": 2309.28125,
+      "height": 31,
+      "width": 1339.328125
+    },
+    "childCount": 1,
+    "textPreview": "创新产品"
+  },
+  {
+    "tag": "div",
+    "id": "module728",
+    "classes": "form jz_module !border-none jz_module_style_3 animateModule jz_project jz_project_728",
+    "rect": {
+      "top": 2340.28125,
+      "height": 457.765625,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 2340.28125,
+      "height": 457.765625,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 2340.28125,
+      "height": 457.765625,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "728",
+    "classes": "module_content_detail",
+    "rect": {
+      "top": 2340.28125,
+      "height": 457.765625,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "list_photos_basic_style module_list_photos_content list_photos_list_style",
+    "rect": {
+      "top": 2340.28125,
+      "height": 457.765625,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row506",
+    "classes": "jz_web_row jz_web_row2 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 2798.046875,
+      "height": 542.5,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "全车窗透明显示器纳米光学  刷新视界防反光纳米光学超材料设计，汽车的前挡风玻璃将变成一整块透明屏幕，满足用户在新出行空间下的个性化需求。    光场MRHUD智能汽车终局 提前布局结合3D光场显示技术和超薄纳米超材料技术，实现既有深度又有广度的全景光场MR显示，充分满足用户在车载娱乐移动场景下的各种需求。"
+  },
+  {
+    "tag": "div",
+    "id": "module729",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_729",
+    "rect": {
+      "top": 2799.546875,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "全车窗透明显示器纳米光学  刷新视界防反光纳米光学超材料设计，汽车的前挡风玻璃将变成一整块透明屏幕，满足用户在新出行空间下的个性化需求。"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 2799.546875,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "全车窗透明显示器纳米光学  刷新视界防反光纳米光学超材料设计，汽车的前挡风玻璃将变成一整块透明屏幕，满足用户在新出行空间下的个性化需求。"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 2799.546875,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "全车窗透明显示器纳米光学  刷新视界防反光纳米光学超材料设计，汽车的前挡风玻璃将变成一整块透明屏幕，满足用户在新出行空间下的个性化需求。"
+  },
+  {
+    "tag": "div",
+    "id": "729",
+    "classes": "module_text_content cssLazyFont opacity-0",
+    "rect": {
+      "top": 2799.546875,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "全车窗透明显示器纳米光学  刷新视界防反光纳米光学超材料设计，汽车的前挡风玻璃将变成一整块透明屏幕，满足用户在新出行空间下的个性化需求。"
+  },
+  {
+    "tag": "div",
+    "id": "module730",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_730",
+    "rect": {
+      "top": 2799.546875,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "光场MRHUD智能汽车终局 提前布局结合3D光场显示技术和超薄纳米超材料技术，实现既有深度又有广度的全景光场MR显示，充分满足用户在车载娱乐移动场景下的各种需求。"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 2799.546875,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "光场MRHUD智能汽车终局 提前布局结合3D光场显示技术和超薄纳米超材料技术，实现既有深度又有广度的全景光场MR显示，充分满足用户在车载娱乐移动场景下的各种需求。"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 2799.546875,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "光场MRHUD智能汽车终局 提前布局结合3D光场显示技术和超薄纳米超材料技术，实现既有深度又有广度的全景光场MR显示，充分满足用户在车载娱乐移动场景下的各种需求。"
+  },
+  {
+    "tag": "div",
+    "id": "730",
+    "classes": "module_text_content cssLazyFont opacity-0",
+    "rect": {
+      "top": 2799.546875,
+      "height": 241,
+      "width": 694.703125
+    },
+    "childCount": 1,
+    "textPreview": "光场MRHUD智能汽车终局 提前布局结合3D光场显示技术和超薄纳米超材料技术，实现既有深度又有广度的全景光场MR显示，充分满足用户在车载娱乐移动场景下的各种需求。"
+  },
+  {
+    "tag": "div",
+    "id": "row107",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_bg",
+    "rect": {
+      "top": 3340.546875,
+      "height": 1077.84375,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 未来黑科技    FUTURUS未来（北京）黑科技有限公司是专注于汽车领域增强现实显示技术研发及应用的新锐企业，也是中国首批将HUD产品带入量产的企业之一。目前已形成以汽车挡风玻璃为介质，以光场光学、计算光学、全息光学、微纳和衍射光学、波导光学、自由曲面光学、AR引擎等技术为核心的汽车抬头显示产品（HUD）系列。产品覆盖WHUD、ARHUD、全车窗透明显示器等诸多产品线，可适配L2到L5不同自动驾驶阶段的用户对车内智能交互的需求。"
+  },
+  {
+    "tag": "div",
+    "id": "module530",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_530",
+    "rect": {
+      "top": 3690.796875,
+      "height": 72,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 未来黑科技"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 3690.796875,
+      "height": 72,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 未来黑科技"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 3690.796875,
+      "height": 72,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 未来黑科技"
+  },
+  {
+    "tag": "div",
+    "id": "530",
+    "classes": "module_text_content cssLazyFont opacity-0",
+    "rect": {
+      "top": 3690.796875,
+      "height": 72,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 未来黑科技"
+  },
+  {
+    "tag": "div",
+    "id": "module303",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_303",
+    "rect": {
+      "top": 3789.640625,
+      "height": 175,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS未来（北京）黑科技有限公司是专注于汽车领域增强现实显示技术研发及应用的新锐企业，也是中国首批将HUD产品带入量产的企业之一。目前已形成以汽车挡风玻璃为介质，以光场光学、计算光学、全息光学、微纳和衍射光学、波导光学、自由曲面光学、AR引擎等技术为核心的汽车抬头显示产品（HUD）系列。产品覆盖WHUD、ARHUD、全车窗透明显示器等诸多产品线，可适配L2到L5不同自动驾驶阶段的用户对车内智能交互的需求。"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 3789.640625,
+      "height": 175,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS未来（北京）黑科技有限公司是专注于汽车领域增强现实显示技术研发及应用的新锐企业，也是中国首批将HUD产品带入量产的企业之一。目前已形成以汽车挡风玻璃为介质，以光场光学、计算光学、全息光学、微纳和衍射光学、波导光学、自由曲面光学、AR引擎等技术为核心的汽车抬头显示产品（HUD）系列。产品覆盖WHUD、ARHUD、全车窗透明显示器等诸多产品线，可适配L2到L5不同自动驾驶阶段的用户对车内智能交互的需求。"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 3789.640625,
+      "height": 175,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS未来（北京）黑科技有限公司是专注于汽车领域增强现实显示技术研发及应用的新锐企业，也是中国首批将HUD产品带入量产的企业之一。目前已形成以汽车挡风玻璃为介质，以光场光学、计算光学、全息光学、微纳和衍射光学、波导光学、自由曲面光学、AR引擎等技术为核心的汽车抬头显示产品（HUD）系列。产品覆盖WHUD、ARHUD、全车窗透明显示器等诸多产品线，可适配L2到L5不同自动驾驶阶段的用户对车内智能交互的需求。"
+  },
+  {
+    "tag": "div",
+    "id": "303",
+    "classes": "module_text_content cssLazyFont opacity-0",
+    "rect": {
+      "top": 3789.640625,
+      "height": 175,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS未来（北京）黑科技有限公司是专注于汽车领域增强现实显示技术研发及应用的新锐企业，也是中国首批将HUD产品带入量产的企业之一。目前已形成以汽车挡风玻璃为介质，以光场光学、计算光学、全息光学、微纳和衍射光学、波导光学、自由曲面光学、AR引擎等技术为核心的汽车抬头显示产品（HUD）系列。产品覆盖WHUD、ARHUD、全车窗透明显示器等诸多产品线，可适配L2到L5不同自动驾驶阶段的用户对车内智能交互的需求。"
+  },
+  {
+    "tag": "div",
+    "id": "row611",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 4418.390625,
+      "height": 343.5,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row400",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 4761.890625,
+      "height": 159,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "融资历史"
+  },
+  {
+    "tag": "div",
+    "id": "module596",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_596",
+    "rect": {
+      "top": 4836.890625,
+      "height": 54,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "融资历史"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 4836.890625,
+      "height": 54,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "融资历史"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 4836.890625,
+      "height": 54,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "融资历史"
+  },
+  {
+    "tag": "div",
+    "id": "596",
+    "classes": "module_text_content cssLazyFont opacity-0",
+    "rect": {
+      "top": 4836.890625,
+      "height": 54,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "融资历史"
+  },
+  {
+    "tag": "div",
+    "id": "row308",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1",
+    "rect": {
+      "top": 4920.890625,
+      "height": 1044.015625,
+      "width": 1250
+    },
+    "childCount": 1,
+    "textPreview": "2025 C轮 获亦庄产投融资     2022 B轮 获南方建信，经纬创投融资     2021 Pre-B轮  获中金资本，亦庄国投融资     2018 A轮  获德厚资本，凯辉基金融资     2017 Pre-A轮  获凯辉基金，软银中国融资     2016 天使轮 获英诺天使基金、软银中国融资"
+  },
+  {
+    "tag": "div",
+    "id": "module459",
+    "classes": "form jz_module !border-none shadow-none jz_module_style_37 animateModule jz_project jz_project_459",
+    "rect": {
+      "top": 4971.140625,
+      "height": 887.125,
+      "width": 1250
+    },
+    "childCount": 1,
+    "textPreview": "2025 C轮 获亦庄产投融资     2022 B轮 获南方建信，经纬创投融资     2021 Pre-B轮  获中金资本，亦庄国投融资     2018 A轮  获德厚资本，凯辉基金融资     2017 Pre-A轮  获凯辉基金，软银中国融资     2016 天使轮 获英诺天使基金、软银中国融资"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 4971.140625,
+      "height": 887.125,
+      "width": 1250
+    },
+    "childCount": 1,
+    "textPreview": "2025 C轮 获亦庄产投融资     2022 B轮 获南方建信，经纬创投融资     2021 Pre-B轮  获中金资本，亦庄国投融资     2018 A轮  获德厚资本，凯辉基金融资     2017 Pre-A轮  获凯辉基金，软银中国融资     2016 天使轮 获英诺天使基金、软银中国融资"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 4971.140625,
+      "height": 887.125,
+      "width": 1250
+    },
+    "childCount": 1,
+    "textPreview": "2025 C轮 获亦庄产投融资     2022 B轮 获南方建信，经纬创投融资     2021 Pre-B轮  获中金资本，亦庄国投融资     2018 A轮  获德厚资本，凯辉基金融资     2017 Pre-A轮  获凯辉基金，软银中国融资     2016 天使轮 获英诺天使基金、软银中国融资"
+  },
+  {
+    "tag": "div",
+    "id": "459",
+    "classes": "module_content_detail module_timeline_content",
+    "rect": {
+      "top": 4971.140625,
+      "height": 887.125,
+      "width": 1250
+    },
+    "childCount": 1,
+    "textPreview": "2025 C轮 获亦庄产投融资     2022 B轮 获南方建信，经纬创投融资     2021 Pre-B轮  获中金资本，亦庄国投融资     2018 A轮  获德厚资本，凯辉基金融资     2017 Pre-A轮  获凯辉基金，软银中国融资     2016 天使轮 获英诺天使基金、软银中国融资"
+  },
+  {
+    "tag": "div",
+    "id": "row401",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 5964.90625,
+      "height": 123,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "合作伙伴"
+  },
+  {
+    "tag": "div",
+    "id": "module597",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_597",
+    "rect": {
+      "top": 6018.90625,
+      "height": 54,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "合作伙伴"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6018.90625,
+      "height": 54,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "合作伙伴"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6018.90625,
+      "height": 54,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "合作伙伴"
+  },
+  {
+    "tag": "div",
+    "id": "597",
+    "classes": "module_text_content cssLazyFont opacity-0",
+    "rect": {
+      "top": 6018.90625,
+      "height": 54,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "合作伙伴"
+  },
+  {
+    "tag": "div",
+    "id": "row588",
+    "classes": "jz_web_row jz_web_row4 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6087.90625,
+      "height": 430.828125,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row589",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6135.90625,
+      "height": 51.046875,
+      "width": 348.4375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module434",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_434",
+    "rect": {
+      "top": 6156.953125,
+      "height": 30,
+      "width": 171.125
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6156.953125,
+      "height": 30,
+      "width": 171.125
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6156.953125,
+      "height": 30,
+      "width": 171.125
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "434",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6156.953125,
+      "height": 1,
+      "width": 171.125
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6156.953125,
+      "height": 1,
+      "width": 171.125
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row590",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6186.953125,
+      "height": 84.75,
+      "width": 348.4375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module510",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_510",
+    "rect": {
+      "top": 6241.703125,
+      "height": 30,
+      "width": 100.21875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6241.703125,
+      "height": 30,
+      "width": 100.21875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6241.703125,
+      "height": 30,
+      "width": 100.21875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "510",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6241.703125,
+      "height": 1,
+      "width": 100.21875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6241.703125,
+      "height": 1,
+      "width": 100.21875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row591",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6271.703125,
+      "height": 81.0625,
+      "width": 348.4375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module509",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_509",
+    "rect": {
+      "top": 6322.765625,
+      "height": 30,
+      "width": 140.359375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6322.765625,
+      "height": 30,
+      "width": 140.359375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6322.765625,
+      "height": 30,
+      "width": 140.359375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "509",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6322.765625,
+      "height": 1,
+      "width": 140.359375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6322.765625,
+      "height": 1,
+      "width": 140.359375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row592",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6135.90625,
+      "height": 30,
+      "width": 348.4375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module870",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_870",
+    "rect": {
+      "top": 6135.90625,
+      "height": 30,
+      "width": 138.9375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6135.90625,
+      "height": 30,
+      "width": 138.9375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6135.90625,
+      "height": 30,
+      "width": 138.9375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "870",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6135.90625,
+      "height": 1,
+      "width": 138.9375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6135.90625,
+      "height": 1,
+      "width": 138.9375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row593",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6165.90625,
+      "height": 75.546875,
+      "width": 348.4375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module507",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_507",
+    "rect": {
+      "top": 6211.453125,
+      "height": 30,
+      "width": 116.9375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6211.453125,
+      "height": 30,
+      "width": 116.9375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6211.453125,
+      "height": 30,
+      "width": 116.9375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "507",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6211.453125,
+      "height": 1,
+      "width": 116.9375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6211.453125,
+      "height": 1,
+      "width": 116.9375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row594",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6241.453125,
+      "height": 75.328125,
+      "width": 348.4375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module435",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_435",
+    "rect": {
+      "top": 6286.78125,
+      "height": 30,
+      "width": 101.34375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6286.78125,
+      "height": 30,
+      "width": 101.34375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6286.78125,
+      "height": 30,
+      "width": 101.34375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "435",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6286.78125,
+      "height": 1,
+      "width": 101.34375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6286.78125,
+      "height": 1,
+      "width": 101.34375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row595",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6135.90625,
+      "height": 40.203125,
+      "width": 348.4375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module505",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_505",
+    "rect": {
+      "top": 6146.109375,
+      "height": 30,
+      "width": 116.71875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6146.109375,
+      "height": 30,
+      "width": 116.71875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6146.109375,
+      "height": 30,
+      "width": 116.71875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "505",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6146.109375,
+      "height": 1,
+      "width": 116.71875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6146.109375,
+      "height": 1,
+      "width": 116.71875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row596",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6176.109375,
+      "height": 46.53125,
+      "width": 348.4375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module508",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_508",
+    "rect": {
+      "top": 6192.640625,
+      "height": 30,
+      "width": 176.421875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6192.640625,
+      "height": 30,
+      "width": 176.421875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6192.640625,
+      "height": 30,
+      "width": 176.421875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "508",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6192.640625,
+      "height": 1,
+      "width": 176.421875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6192.640625,
+      "height": 1,
+      "width": 176.421875
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row597",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6222.640625,
+      "height": 89.171875,
+      "width": 348.4375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module516",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_516",
+    "rect": {
+      "top": 6281.8125,
+      "height": 30,
+      "width": 174.484375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6281.8125,
+      "height": 30,
+      "width": 174.484375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6281.8125,
+      "height": 30,
+      "width": 174.484375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "516",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6281.8125,
+      "height": 1,
+      "width": 174.484375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6281.8125,
+      "height": 1,
+      "width": 174.484375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row630",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6155.90625,
+      "height": 40.203125,
+      "width": 348.4375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module911",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_911",
+    "rect": {
+      "top": 6166.109375,
+      "height": 30,
+      "width": 170.765625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6166.109375,
+      "height": 30,
+      "width": 170.765625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6166.109375,
+      "height": 30,
+      "width": 170.765625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "911",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6166.109375,
+      "height": 1,
+      "width": 170.765625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6166.109375,
+      "height": 1,
+      "width": 170.765625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row631",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6196.109375,
+      "height": 73.625,
+      "width": 348.4375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module912",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_912",
+    "rect": {
+      "top": 6239.734375,
+      "height": 30,
+      "width": 120.140625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6239.734375,
+      "height": 30,
+      "width": 120.140625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6239.734375,
+      "height": 30,
+      "width": 120.140625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "912",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6239.734375,
+      "height": 1,
+      "width": 120.140625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6239.734375,
+      "height": 1,
+      "width": 120.140625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row632",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6269.734375,
+      "height": 156,
+      "width": 348.4375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row187",
+    "classes": "jz_web_row jz_web_row3 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6518.734375,
+      "height": 357.953125,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "0  总部（北京）           0 家 生产基地（重庆、新乡、北京）           0 + 专利授权（国内、国际全球布局）"
+  },
+  {
+    "tag": "div",
+    "id": "module309",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_309",
+    "rect": {
+      "top": 6648.984375,
+      "height": 30,
+      "width": 104
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6648.984375,
+      "height": 30,
+      "width": 104
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6648.984375,
+      "height": 30,
+      "width": 104
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "309",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6648.984375,
+      "height": 1,
+      "width": 104
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6648.984375,
+      "height": 1,
+      "width": 104
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module528",
+    "classes": "form jz_module jz_module_style_35 animateModule jz_project jz_project_528",
+    "rect": {
+      "top": 6718.6875,
+      "height": 93,
+      "width": 463.125
+    },
+    "childCount": 1,
+    "textPreview": "0  总部（北京）"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6718.6875,
+      "height": 93,
+      "width": 463.125
+    },
+    "childCount": 1,
+    "textPreview": "0  总部（北京）"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6718.6875,
+      "height": 93,
+      "width": 463.125
+    },
+    "childCount": 1,
+    "textPreview": "0  总部（北京）"
+  },
+  {
+    "tag": "div",
+    "id": "528",
+    "classes": "module_content_detail module_dynamicnumber",
+    "rect": {
+      "top": 6718.6875,
+      "height": 93,
+      "width": 463.125
+    },
+    "childCount": 1,
+    "textPreview": "0  总部（北京）"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "number-count module_text_content",
+    "rect": {
+      "top": 6718.6875,
+      "height": 72,
+      "width": 28.8125
+    },
+    "childCount": 1,
+    "textPreview": "0"
+  },
+  {
+    "tag": "div",
+    "id": "module305",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_305",
+    "rect": {
+      "top": 6638.984375,
+      "height": 30,
+      "width": 92.890625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6638.984375,
+      "height": 30,
+      "width": 92.890625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6638.984375,
+      "height": 30,
+      "width": 92.890625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "305",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6638.984375,
+      "height": 1,
+      "width": 92.890625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6638.984375,
+      "height": 1,
+      "width": 92.890625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module527",
+    "classes": "form jz_module jz_module_style_35 animateModule jz_project jz_project_527",
+    "rect": {
+      "top": 6728.6875,
+      "height": 93,
+      "width": 463.125
+    },
+    "childCount": 1,
+    "textPreview": "0 家 生产基地（重庆、新乡、北京）"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6728.6875,
+      "height": 93,
+      "width": 463.125
+    },
+    "childCount": 1,
+    "textPreview": "0 家 生产基地（重庆、新乡、北京）"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6728.6875,
+      "height": 93,
+      "width": 463.125
+    },
+    "childCount": 1,
+    "textPreview": "0 家 生产基地（重庆、新乡、北京）"
+  },
+  {
+    "tag": "div",
+    "id": "527",
+    "classes": "module_content_detail module_dynamicnumber",
+    "rect": {
+      "top": 6728.6875,
+      "height": 93,
+      "width": 463.125
+    },
+    "childCount": 1,
+    "textPreview": "0 家 生产基地（重庆、新乡、北京）"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "number-count module_text_content",
+    "rect": {
+      "top": 6728.6875,
+      "height": 72,
+      "width": 28.8125
+    },
+    "childCount": 1,
+    "textPreview": "0"
+  },
+  {
+    "tag": "div",
+    "id": "module307",
+    "classes": "form jz_module jz_module_style_7 animateModule jz_project jz_project_307",
+    "rect": {
+      "top": 6641.828125,
+      "height": 30,
+      "width": 86
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6641.828125,
+      "height": 30,
+      "width": 86
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6641.828125,
+      "height": 30,
+      "width": 86
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "307",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 6641.828125,
+      "height": 1,
+      "width": 86
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 6641.828125,
+      "height": 1,
+      "width": 86
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module526",
+    "classes": "form jz_module jz_module_style_35 animateModule jz_project jz_project_526",
+    "rect": {
+      "top": 6725.828125,
+      "height": 93,
+      "width": 463.125
+    },
+    "childCount": 1,
+    "textPreview": "0 + 专利授权（国内、国际全球布局）"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 6725.828125,
+      "height": 93,
+      "width": 463.125
+    },
+    "childCount": 1,
+    "textPreview": "0 + 专利授权（国内、国际全球布局）"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 6725.828125,
+      "height": 93,
+      "width": 463.125
+    },
+    "childCount": 1,
+    "textPreview": "0 + 专利授权（国内、国际全球布局）"
+  },
+  {
+    "tag": "div",
+    "id": "526",
+    "classes": "module_content_detail module_dynamicnumber",
+    "rect": {
+      "top": 6725.828125,
+      "height": 93,
+      "width": 463.125
+    },
+    "childCount": 1,
+    "textPreview": "0 + 专利授权（国内、国际全球布局）"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "number-count module_text_content",
+    "rect": {
+      "top": 6725.828125,
+      "height": 72,
+      "width": 28.8125
+    },
+    "childCount": 1,
+    "textPreview": "0"
+  },
+  {
+    "tag": "div",
+    "id": "row190",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 6876.6875,
+      "height": 1016.296875,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "新闻资讯       \n                            FUTURUS 助力领克 900，打造中国智造的“技术旗舰”\n                         2025-04-30 4月28日，领克品牌旗舰车型——领克 900 正式上市，成为诠释中国智造新高度的标杆之作。领克900以千里浩瀚智驾、Super AI 数字底盘、标配 95 英寸超画幅 ARHUD、骁遥超级增混电池等一系列前沿核心技术成果，重新定义高端出行，打造“全舱平权”的奢适体验 。作为全球 HUD 技术领导者，国内领军企业，FUTURUS 为领克 900 独家提供全球领先的 ARHUD 产品——"
+  },
+  {
+    "tag": "div",
+    "id": "module335",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_335",
+    "rect": {
+      "top": 7098.765625,
+      "height": 35,
+      "width": 196.6875
+    },
+    "childCount": 1,
+    "textPreview": "新闻资讯"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 7098.765625,
+      "height": 35,
+      "width": 196.6875
+    },
+    "childCount": 1,
+    "textPreview": "新闻资讯"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 7098.765625,
+      "height": 35,
+      "width": 196.6875
+    },
+    "childCount": 1,
+    "textPreview": "新闻资讯"
+  },
+  {
+    "tag": "div",
+    "id": "335",
+    "classes": "module_text_content cssLazyFont opacity-0",
+    "rect": {
+      "top": 7098.765625,
+      "height": 35,
+      "width": 196.6875
+    },
+    "childCount": 1,
+    "textPreview": "新闻资讯"
+  },
+  {
+    "tag": "div",
+    "id": "module336",
+    "classes": "form jz_module jz_module_style_17 animateModule jz_project jz_project_336",
+    "rect": {
+      "top": 7144.28125,
+      "height": 630.953125,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 助力领克 900，打造中国智造的“技术旗舰”\n                         2025-04-30 4月28日，领克品牌旗舰车型——领克 900 正式上市，成为诠释中国智造新高度的标杆之作。领克900以千里浩瀚智驾、Super AI 数字底盘、标配 95 英寸超画幅 ARHUD、骁遥超级增混电池等一系列前沿核心技术成果，重新定义高端出行，打造“全舱平权”的奢适体验 。作为全球 HUD 技术领导者，国内领军企业，FUTURUS 为领克 900 独家提供全球领先的 ARHUD 产品——FUTU...      \n                          "
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 7144.28125,
+      "height": 630.953125,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 助力领克 900，打造中国智造的“技术旗舰”\n                         2025-04-30 4月28日，领克品牌旗舰车型——领克 900 正式上市，成为诠释中国智造新高度的标杆之作。领克900以千里浩瀚智驾、Super AI 数字底盘、标配 95 英寸超画幅 ARHUD、骁遥超级增混电池等一系列前沿核心技术成果，重新定义高端出行，打造“全舱平权”的奢适体验 。作为全球 HUD 技术领导者，国内领军企业，FUTURUS 为领克 900 独家提供全球领先的 ARHUD 产品——FUTU...      \n                          "
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 7144.28125,
+      "height": 630.953125,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 助力领克 900，打造中国智造的“技术旗舰”\n                         2025-04-30 4月28日，领克品牌旗舰车型——领克 900 正式上市，成为诠释中国智造新高度的标杆之作。领克900以千里浩瀚智驾、Super AI 数字底盘、标配 95 英寸超画幅 ARHUD、骁遥超级增混电池等一系列前沿核心技术成果，重新定义高端出行，打造“全舱平权”的奢适体验 。作为全球 HUD 技术领导者，国内领军企业，FUTURUS 为领克 900 独家提供全球领先的 ARHUD 产品——FUTU...      \n                          "
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content_detail module_news_list_content module_news_list_style1 new_list_new_module_after_20210707",
+    "rect": {
+      "top": 7144.28125,
+      "height": 630.953125,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "FUTURUS 助力领克 900，打造中国智造的“技术旗舰”\n                         2025-04-30 4月28日，领克品牌旗舰车型——领克 900 正式上市，成为诠释中国智造新高度的标杆之作。领克900以千里浩瀚智驾、Super AI 数字底盘、标配 95 英寸超画幅 ARHUD、骁遥超级增混电池等一系列前沿核心技术成果，重新定义高端出行，打造“全舱平权”的奢适体验 。作为全球 HUD 技术领导者，国内领军企业，FUTURUS 为领克 900 独家提供全球领先的 ARHUD 产品——FUTU...      \n                          "
+  },
+  {
+    "tag": "div",
+    "id": "row191",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 7892.984375,
+      "height": 679.296875,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "科技探索   追求更好未来地址 : 北京市亦庄经济技术开发区康定街15号院4号楼      电话：010 - 6789 4088                市场合作：marketing@futurus.co    销售业务：sales@futurus.co    供应链平台：sourcing@futurus.co    简历投递：cv@futurus.co"
+  },
+  {
+    "tag": "div",
+    "id": "module337",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize animateModule jz_project jz_project_337",
+    "rect": {
+      "top": 8086.9375,
+      "height": 208,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "科技探索   追求更好未来地址 : 北京市亦庄经济技术开发区康定街15号院4号楼      电话：010 - 6789 4088"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 8086.9375,
+      "height": 208,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "科技探索   追求更好未来地址 : 北京市亦庄经济技术开发区康定街15号院4号楼      电话：010 - 6789 4088"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 8086.9375,
+      "height": 208,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "科技探索   追求更好未来地址 : 北京市亦庄经济技术开发区康定街15号院4号楼      电话：010 - 6789 4088"
+  },
+  {
+    "tag": "div",
+    "id": "337",
+    "classes": "module_text_content cssLazyFont opacity-0",
+    "rect": {
+      "top": 8086.9375,
+      "height": 208,
+      "width": 1389.40625
+    },
+    "childCount": 1,
+    "textPreview": "科技探索   追求更好未来地址 : 北京市亦庄经济技术开发区康定街15号院4号楼      电话：010 - 6789 4088"
+  },
+  {
+    "tag": "div",
+    "id": "module598",
+    "classes": "form jz_module jz_module_style_33 jz_project jz_project_598",
+    "rect": {
+      "top": 8339.8125,
+      "height": 77.21875,
+      "width": 1075.09375
+    },
+    "childCount": 1,
+    "textPreview": "市场合作：marketing@futurus.co    销售业务：sales@futurus.co    供应链平台：sourcing@futurus.co    简历投递：cv@futurus.co"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 8339.8125,
+      "height": 77.21875,
+      "width": 1075.09375
+    },
+    "childCount": 1,
+    "textPreview": "市场合作：marketing@futurus.co    销售业务：sales@futurus.co    供应链平台：sourcing@futurus.co    简历投递：cv@futurus.co"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 8339.8125,
+      "height": 77.21875,
+      "width": 1075.09375
+    },
+    "childCount": 1,
+    "textPreview": "市场合作：marketing@futurus.co    销售业务：sales@futurus.co    供应链平台：sourcing@futurus.co    简历投递：cv@futurus.co"
+  },
+  {
+    "tag": "div",
+    "id": "598",
+    "classes": "module_content_detail icon_combination icon_combination_new_module_after_20210707",
+    "rect": {
+      "top": 8339.8125,
+      "height": 77.21875,
+      "width": 1075.09375
+    },
+    "childCount": 1,
+    "textPreview": "市场合作：marketing@futurus.co    销售业务：sales@futurus.co    供应链平台：sourcing@futurus.co    简历投递：cv@futurus.co"
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "icon_module_item second_style_item count4",
+    "rect": {
+      "top": 8350.5625,
+      "height": 55.71875,
+      "width": 247.59375
+    },
+    "childCount": 1,
+    "textPreview": "市场合作：marketing@futurus.co"
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "icon_module_item second_style_item count4",
+    "rect": {
+      "top": 8350.5625,
+      "height": 55.71875,
+      "width": 247.59375
+    },
+    "childCount": 1,
+    "textPreview": "销售业务：sales@futurus.co"
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "icon_module_item second_style_item count4",
+    "rect": {
+      "top": 8350.5625,
+      "height": 55.71875,
+      "width": 247.59375
+    },
+    "childCount": 1,
+    "textPreview": "供应链平台：sourcing@futurus.co"
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "icon_module_item second_style_item count4",
+    "rect": {
+      "top": 8350.5625,
+      "height": 55.71875,
+      "width": 247.59375
+    },
+    "childCount": 1,
+    "textPreview": "简历投递：cv@futurus.co"
+  },
+  {
+    "tag": "div",
+    "id": "row633",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_module_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 8572.28125,
+      "height": 30,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "请输入文本"
+  },
+  {
+    "tag": "div",
+    "id": "module914",
+    "classes": "form jz_module jz_module_style_6 responsive_fontSize jz_project jz_project_914",
+    "rect": {
+      "top": 8572.28125,
+      "height": 30,
+      "width": 1439.328125
+    },
+    "childCount": 1,
+    "textPreview": "请输入文本"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 8572.28125,
+      "height": 30,
+      "width": 1439.328125
+    },
+    "childCount": 1,
+    "textPreview": "请输入文本"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 8572.28125,
+      "height": 30,
+      "width": 1439.328125
+    },
+    "childCount": 1,
+    "textPreview": "请输入文本"
+  },
+  {
+    "tag": "div",
+    "id": "914",
+    "classes": "module_text_content",
+    "rect": {
+      "top": 8572.28125,
+      "height": 30,
+      "width": 1439.328125
+    },
+    "childCount": 1,
+    "textPreview": "请输入文本"
+  },
+  {
+    "tag": "div",
+    "id": "row498",
+    "classes": "jz_web_row jz_web_row5 pc_row_style jz_module_row jz_web_row_mobi2 jz_web_row_full_site jz_web_row_bg",
+    "rect": {
+      "top": 8602.28125,
+      "height": 729.296875,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "核心产品-‍WHUD-ARHUD          创新产品AR Kerne‍l®          ‍创新研发公司动态‍公司介绍"
+  },
+  {
+    "tag": "div",
+    "id": "module758",
+    "classes": "form jz_module jz_module_style_7 jz_project jz_project_758",
+    "rect": {
+      "top": 8934.546875,
+      "height": 30,
+      "width": 134.65625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 8934.546875,
+      "height": 30,
+      "width": 134.65625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 8934.546875,
+      "height": 30,
+      "width": 134.65625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "758",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 8934.546875,
+      "height": 1,
+      "width": 134.65625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 8934.546875,
+      "height": 1,
+      "width": 134.65625
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module713",
+    "classes": "form jz_module jz_module_style_1 responsive_fontSize jz_project jz_project_713",
+    "rect": {
+      "top": 8925.53125,
+      "height": 160.796875,
+      "width": 262.609375
+    },
+    "childCount": 1,
+    "textPreview": "核心产品-‍WHUD-ARHUD"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 8925.53125,
+      "height": 160.796875,
+      "width": 262.609375
+    },
+    "childCount": 1,
+    "textPreview": "核心产品-‍WHUD-ARHUD"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 8925.53125,
+      "height": 160.796875,
+      "width": 262.609375
+    },
+    "childCount": 1,
+    "textPreview": "核心产品-‍WHUD-ARHUD"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content_detail module_rich_content rich_img_none",
+    "rect": {
+      "top": 8925.53125,
+      "height": 160.796875,
+      "width": 262.609375
+    },
+    "childCount": 2,
+    "textPreview": "核心产品-‍WHUD-ARHUD"
+  },
+  {
+    "tag": "div",
+    "id": "module716",
+    "classes": "form jz_module jz_module_style_1 responsive_fontSize jz_project jz_project_716",
+    "rect": {
+      "top": 8925.53125,
+      "height": 127.65625,
+      "width": 262.609375
+    },
+    "childCount": 1,
+    "textPreview": "创新产品AR Kerne‍l®"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 8925.53125,
+      "height": 127.65625,
+      "width": 262.609375
+    },
+    "childCount": 1,
+    "textPreview": "创新产品AR Kerne‍l®"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 8925.53125,
+      "height": 127.65625,
+      "width": 262.609375
+    },
+    "childCount": 1,
+    "textPreview": "创新产品AR Kerne‍l®"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content_detail module_rich_content rich_img_none",
+    "rect": {
+      "top": 8925.53125,
+      "height": 127.65625,
+      "width": 262.609375
+    },
+    "childCount": 2,
+    "textPreview": "创新产品AR Kerne‍l®"
+  },
+  {
+    "tag": "div",
+    "id": "module714",
+    "classes": "form jz_module jz_module_style_1 responsive_fontSize jz_project jz_project_714",
+    "rect": {
+      "top": 8925.53125,
+      "height": 137,
+      "width": 262.609375
+    },
+    "childCount": 1,
+    "textPreview": "‍创新研发公司动态‍公司介绍"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 8925.53125,
+      "height": 137,
+      "width": 262.609375
+    },
+    "childCount": 1,
+    "textPreview": "‍创新研发公司动态‍公司介绍"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 8925.53125,
+      "height": 137,
+      "width": 262.609375
+    },
+    "childCount": 1,
+    "textPreview": "‍创新研发公司动态‍公司介绍"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content_detail module_rich_content rich_img_none",
+    "rect": {
+      "top": 8925.53125,
+      "height": 137,
+      "width": 262.609375
+    },
+    "childCount": 2,
+    "textPreview": "‍创新研发公司动态‍公司介绍"
+  },
+  {
+    "tag": "div",
+    "id": "module707",
+    "classes": "form jz_module jz_module_style_7 jz_project jz_project_707",
+    "rect": {
+      "top": 8949.375,
+      "height": 30,
+      "width": 40
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 8949.375,
+      "height": 30,
+      "width": 40
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 8949.375,
+      "height": 30,
+      "width": 40
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "707",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 8949.375,
+      "height": 1,
+      "width": 40
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 8949.375,
+      "height": 1,
+      "width": 40
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "module708",
+    "classes": "form jz_module jz_module_style_7 jz_project jz_project_708",
+    "rect": {
+      "top": 8989.890625,
+      "height": 30,
+      "width": 40
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_wrap J_project_sort_handle",
+    "rect": {
+      "top": 8989.890625,
+      "height": 30,
+      "width": 40
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "module_content",
+    "rect": {
+      "top": 8989.890625,
+      "height": 30,
+      "width": 40
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "708",
+    "classes": "module_image_content",
+    "rect": {
+      "top": 8989.890625,
+      "height": 1,
+      "width": 40
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "module_img_wrap",
+    "rect": {
+      "top": 8989.890625,
+      "height": 1,
+      "width": 40
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "row4",
+    "classes": "jz_web_row jz_web_row1 pc_row_style jz_section_row jz_web_row_mobi1 jz_web_row_bg",
+    "rect": {
+      "top": 9331.578125,
+      "height": 130,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "京公网安备 11030102010710号 \n        ©2023 - FUTURUS 版权所有\n     京ICP备2022024770号-1"
+  }
+]

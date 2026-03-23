@@ -1,0 +1,878 @@
+[
+  {
+    "tag": "header",
+    "id": "",
+    "classes": "",
+    "rect": {
+      "top": 0,
+      "height": 99.984375,
+      "width": 1920
+    },
+    "childCount": 2,
+    "textPreview": "HOME\n            \n            \n                COMPANY\n            \n            \n                BUSINESS\n            \n            \n                SUSTAINABILITY\n            \n            \n       "
+  },
+  {
+    "tag": "nav",
+    "id": "",
+    "classes": "pcNav pc",
+    "rect": {
+      "top": 0,
+      "height": 99.984375,
+      "width": 1920
+    },
+    "childCount": 4,
+    "textPreview": "HOME\n            \n            \n                COMPANY\n            \n            \n                BUSINESS\n            \n            \n                SUSTAINABILITY\n            \n            \n       "
+  },
+  {
+    "tag": "nav",
+    "id": "",
+    "classes": "appNav app",
+    "rect": {
+      "top": 0,
+      "height": 0,
+      "width": 0
+    },
+    "childCount": 3,
+    "textPreview": "\n            \n                \n            \n            \n                CN\n               \n            \n            \n                    Menu\n                    \n                        "
+  },
+  {
+    "tag": "nav",
+    "id": "",
+    "classes": "menu",
+    "rect": {
+      "top": 0,
+      "height": 1080,
+      "width": 1920
+    },
+    "childCount": 2,
+    "textPreview": "HOME\n            COMPANY\n            BUSINESS\n            SUSTAINABILITY\n            NEWS\n            CONTACT\n            JOIN US"
+  },
+  {
+    "tag": "section",
+    "id": "",
+    "classes": "app loadMediaTs",
+    "rect": {
+      "top": 0,
+      "height": 0,
+      "width": 0
+    },
+    "childCount": 0,
+    "textPreview": ""
+  },
+  {
+    "tag": "section",
+    "id": "",
+    "classes": "row banner",
+    "rect": {
+      "top": 0,
+      "height": 1170,
+      "width": 1920
+    },
+    "childCount": 2,
+    "textPreview": "For more people to live\nA flavourful life.\n                        \n                        \n                            \n                            More\n                        \n                   "
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "bannerPic full on",
+    "rect": {
+      "top": 0,
+      "height": 1170,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "bannerPic full",
+    "rect": {
+      "top": 0,
+      "height": 1170,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "bannerPic full",
+    "rect": {
+      "top": 0,
+      "height": 1170,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "list bannerList",
+    "rect": {
+      "top": 708.046875,
+      "height": 261.96875,
+      "width": 822.921875
+    },
+    "childCount": 2,
+    "textPreview": "For more people to live\nA flavourful life.\n                        \n                        \n                            \n                            More"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "list bannerList",
+    "rect": {
+      "top": 632.046875,
+      "height": 337.96875,
+      "width": 1490.828125
+    },
+    "childCount": 2,
+    "textPreview": "We foucus on\noil and oil seeds, raw food materials,\nagricultural materials and other products.\n                        \n                        \n                            \n                          "
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "list bannerList",
+    "rect": {
+      "top": 632.046875,
+      "height": 337.96875,
+      "width": 1374.515625
+    },
+    "childCount": 2,
+    "textPreview": "We provide one-stop\nLIFT supply chain services for logistics,\ninformation, finance, and trade.\n                        \n                        \n                            \n                          "
+  },
+  {
+    "tag": "section",
+    "id": "",
+    "classes": "row r1",
+    "rect": {
+      "top": 1170,
+      "height": 1127.921875,
+      "width": 1920
+    },
+    "childCount": 2,
+    "textPreview": "98th\n                            \n                            C&D Corporation ranked 98th in the\n2025 list of Fortune Global 500\n                        \n                    \n                    \n    "
+  },
+  {
+    "tag": "section",
+    "id": "",
+    "classes": "row r2",
+    "rect": {
+      "top": 2297.921875,
+      "height": 1080,
+      "width": 1920
+    },
+    "childCount": 2,
+    "textPreview": "We foucus on oil and oil seeds,\nraw food materials, agricultural materials\nand other products."
+  },
+  {
+    "tag": "section",
+    "id": "",
+    "classes": "row r3",
+    "rect": {
+      "top": 3377.921875,
+      "height": 1224.421875,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "Business\n                    \n                        \n                            \n                            \n                        \n                        \n                            \n       "
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "r3Prev layer-set swiper-button-disabled",
+    "rect": {
+      "top": 3609.921875,
+      "height": 69.984375,
+      "width": 69.984375
+    },
+    "childCount": 2,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "r3Sw swiper swiper-initialized swiper-horizontal swiper-pointer-events",
+    "rect": {
+      "top": 3729.890625,
+      "height": 822.46875,
+      "width": 1422.703125
+    },
+    "childCount": 2,
+    "textPreview": "\n                                    \n                                \n                                \n                                    Oil\n                                    Edible Vegetable Oi"
+  },
+  {
+    "tag": "div",
+    "id": "swiper-wrapper-d4139f101f2d8c10c2",
+    "classes": "swiper-wrapper",
+    "rect": {
+      "top": 3729.890625,
+      "height": 822.46875,
+      "width": 1422.703125
+    },
+    "childCount": 9,
+    "textPreview": "\n                                    \n                                \n                                \n                                    Oil\n                                    Edible Vegetable Oi"
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "swiper-slide swiper-slide-active",
+    "rect": {
+      "top": 3729.890625,
+      "height": 822.46875,
+      "width": 442.328125
+    },
+    "childCount": 2,
+    "textPreview": "\n                                    \n                                \n                                \n                                    Oil\n                                    Edible Vegetable Oi"
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "swiper-slide swiper-slide-next",
+    "rect": {
+      "top": 3729.890625,
+      "height": 822.46875,
+      "width": 442.328125
+    },
+    "childCount": 2,
+    "textPreview": "\n                                    \n                                \n                                \n                                    Oilseed\n                                    Soybeans Canola"
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 3729.890625,
+      "height": 822.46875,
+      "width": 442.328125
+    },
+    "childCount": 2,
+    "textPreview": "\n                                    \n                                \n                                \n                                    Energy\n                                    Corn Sorghum Bar"
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 3729.890625,
+      "height": 822.46875,
+      "width": 442.328125
+    },
+    "childCount": 2,
+    "textPreview": "\n                                    \n                                \n                                \n                                    Protein\n                                    Sunflower Meal "
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 3729.890625,
+      "height": 822.46875,
+      "width": 442.328125
+    },
+    "childCount": 2,
+    "textPreview": "\n                                    \n                                \n                                \n                                    Cotton\n                                    Cotton Seed Cott"
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 3729.890625,
+      "height": 822.46875,
+      "width": 442.328125
+    },
+    "childCount": 2,
+    "textPreview": "\n                                    \n                                \n                                \n                                    Agricultural Materials\n                                    "
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 3729.890625,
+      "height": 822.46875,
+      "width": 442.328125
+    },
+    "childCount": 2,
+    "textPreview": "\n                                    \n                                \n                                \n                                    Food Raw Material\n                                    Aquat"
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 3729.890625,
+      "height": 822.46875,
+      "width": 442.328125
+    },
+    "childCount": 2,
+    "textPreview": "\n                                    \n                                \n                                \n                                    Agriculture Research Institute\n                            "
+  },
+  {
+    "tag": "a",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 3729.890625,
+      "height": 822.46875,
+      "width": 442.328125
+    },
+    "childCount": 2,
+    "textPreview": "\n                                    \n                                \n                                \n                                    EasyAgri\n                                    Agricultural E"
+  },
+  {
+    "tag": "span",
+    "id": "",
+    "classes": "swiper-notification",
+    "rect": {
+      "top": 4552.359375,
+      "height": 0,
+      "width": 0
+    },
+    "childCount": 0,
+    "textPreview": ""
+  },
+  {
+    "tag": "section",
+    "id": "",
+    "classes": "row r4",
+    "rect": {
+      "top": 4602.34375,
+      "height": 1080,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "C&DAgriculturalProductsGroup\n                            Industry chain digital sanbox\n                        \n                        \n                            \n                            \n     "
+  },
+  {
+    "tag": "section",
+    "id": "",
+    "classes": "app MediaTs",
+    "rect": {
+      "top": 0,
+      "height": 0,
+      "width": 0
+    },
+    "childCount": 0,
+    "textPreview": ""
+  },
+  {
+    "tag": "section",
+    "id": "",
+    "classes": "row r5",
+    "rect": {
+      "top": 5682.34375,
+      "height": 1345.953125,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": "Global layout\n                \n                \n                    \n                    \n                    \n                        \n                            Europe\n                            \n"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "imgBox r5SwApp swiper",
+    "rect": {
+      "top": 5862.328125,
+      "height": 1165.96875,
+      "width": 1680.984375
+    },
+    "childCount": 2,
+    "textPreview": "Europe\n                            \n                        \n                        \n                            Black Sea Region\n                            \n                        \n               "
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "items swiper-wrapper",
+    "rect": {
+      "top": 5862.328125,
+      "height": 945.546875,
+      "width": 1680.984375
+    },
+    "childCount": 8,
+    "textPreview": "Europe\n                            \n                        \n                        \n                            Black Sea Region\n                            \n                        \n               "
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide list alanDownEl alanGo",
+    "rect": {
+      "top": 6038.4296875,
+      "height": 43.359375,
+      "width": 101.328125
+    },
+    "childCount": 2,
+    "textPreview": "Europe"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide list alanDownEl alanGo",
+    "rect": {
+      "top": 5939.53125,
+      "height": 43.359375,
+      "width": 190.328125
+    },
+    "childCount": 2,
+    "textPreview": "Black Sea Region"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide list alanUpEl alanGo",
+    "rect": {
+      "top": 6734.458984375,
+      "height": 49.685546875,
+      "width": 95.00311279296875
+    },
+    "childCount": 2,
+    "textPreview": "Africa"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide list alanUpEl alanGo",
+    "rect": {
+      "top": 6649.92626953125,
+      "height": 60.8857421875,
+      "width": 205.99093627929688
+    },
+    "childCount": 2,
+    "textPreview": "One Belt One Road"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide list alanDownEl alanGo",
+    "rect": {
+      "top": 6002.1640625,
+      "height": 43.359375,
+      "width": 78.421875
+    },
+    "childCount": 2,
+    "textPreview": "Asia"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide list alanUpEl alanGo",
+    "rect": {
+      "top": 6764.56787109375,
+      "height": 57.65478515625,
+      "width": 124.34320068359375
+    },
+    "childCount": 2,
+    "textPreview": "Australia"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide list alanDownEl alanGo",
+    "rect": {
+      "top": 5927.3046875,
+      "height": 43.359375,
+      "width": 168.546875
+    },
+    "childCount": 2,
+    "textPreview": "North America"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide list alanUpEl alanGo",
+    "rect": {
+      "top": 6784.6728515625,
+      "height": 69.5615234375,
+      "width": 175.5850830078125
+    },
+    "childCount": 2,
+    "textPreview": "South America"
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper r5Sw",
+    "rect": {
+      "top": 6828.3125,
+      "height": 199.984375,
+      "width": 1920
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-wrapper",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 4577.21875
+    },
+    "childCount": 28,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "div",
+    "id": "",
+    "classes": "swiper-slide",
+    "rect": {
+      "top": 6900.8125,
+      "height": 54.984375,
+      "width": 157.984375
+    },
+    "childCount": 1,
+    "textPreview": ""
+  },
+  {
+    "tag": "section",
+    "id": "",
+    "classes": "row r6",
+    "rect": {
+      "top": 7028.296875,
+      "height": 1080,
+      "width": 1920
+    },
+    "childCount": 2,
+    "textPreview": "Let win-win cooperation beneifit\nthe world, and let more people to\nlive a flavourful life.\n                                            \n                                        \n                       "
+  },
+  {
+    "tag": "footer",
+    "id": "",
+    "classes": "",
+    "rect": {
+      "top": 8108.296875,
+      "height": 762.0625,
+      "width": 1920
+    },
+    "childCount": 2,
+    "textPreview": "\n          \n          \n            \n            \n          \n        \n        \n          \n            HOME\n          \n          \n            COMPANY\n          \n          \n            BUSINESS\n    "
+  }
+]

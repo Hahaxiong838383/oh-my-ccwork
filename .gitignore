@@ -180,3 +180,18 @@ video.mp4
 # ====================================
 2-Projects/cc-remote/cc-remote.plist
 2-Projects/vps-proxy/README.md
+4-Assets/xray-manager-macos-arm64-v1.3.tar.gz
+
+# 二进制和大文件
+*.tar.gz
+*.zip
+2-Projects/xray-core/
+2-Projects/cc-remote-v3/frpc
+.local/
+
+# 嵌套 git 仓库（独立管理）
+2-Projects/ai-commit/
+2-Projects/ai-diff-review/
+2-Projects/ai-sentinel/
+2-Projects/app-needs-claw/
+2-Projects/futurus-rebuild/

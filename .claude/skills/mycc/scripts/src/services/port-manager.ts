@@ -24,9 +24,6 @@ export interface PortEntry {
 /** mycc 生态已知端口（静态声明） */
 const KNOWN_PORTS: Omit<PortEntry, "status" | "pid" | "process">[] = [
   { port: 18080, service: "mycc 后端", owner: "mycc" },
-  { port: 7681, service: "cc-remote v2", owner: "cc-remote" },
-  { port: 7682, service: "cc-remote v2 (备)", owner: "cc-remote" },
-  { port: 7683, service: "cc-remote v2 (备)", owner: "cc-remote" },
   { port: 19001, service: "ttyd 终端 #1", owner: "cc-remote" },
   { port: 19002, service: "ttyd 终端 #2", owner: "cc-remote" },
   { port: 19003, service: "ttyd 终端 #3", owner: "cc-remote" },

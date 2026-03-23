@@ -19,6 +19,14 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
+# 代理设置：确保 SDK 子进程通过 xray 代理访问 Anthropic API
+# 不设置会导致直连 api.anthropic.com → 403 forbidden
+export http_proxy="http://127.0.0.1:10808"
+export https_proxy="http://127.0.0.1:10808"
+export HTTP_PROXY="http://127.0.0.1:10808"
+export HTTPS_PROXY="http://127.0.0.1:10808"
+export ALL_PROXY="socks5://127.0.0.1:10808"
+
 CWD="/Users/rayman.chen/mycc"
 SCRIPTS_DIR="$CWD/.claude/skills/mycc/scripts"
 LOG="$CWD/.claude/skills/mycc/daemon.log"

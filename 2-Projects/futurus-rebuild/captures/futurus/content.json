@@ -1,0 +1,856 @@
+{
+  "title": "FUTURUS未来黑科技 — 未来人机交互技术引领者",
+  "meta": {
+    "keywords": "FUTURUS 未来黑科技,人机交互,HUD",
+    "description": "FUTURUS是一家专注于光学显示与增强现实技术研发及商业化应用的创新高科技企业，也是国内率先实现智能抬头显示（HUD）产品量产化的先锋企业。",
+    "viewport": "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0",
+    "format-detection": "telephone=no,email=no,address=no",
+    "renderer": "webkit",
+    "og:url": "https://www.futurus.co",
+    "referrer": "always"
+  },
+  "nav": [],
+  "sections": [
+    {
+      "tag": "h1",
+      "text": "VR虚拟现实模板",
+      "classes": "title_h1",
+      "parent": "website_title_content"
+    },
+    {
+      "tag": "a",
+      "text": "VR虚拟现实模板",
+      "classes": "",
+      "parent": "fk-editor"
+    },
+    {
+      "tag": "span",
+      "text": "VR虚拟现实模板",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "li",
+      "text": "核心产品     WHUD   ARHUD",
+      "classes": "jz_nav_item jz_hover nav_item101 jz_theme_font_color jz_theme_border_hover_color nav_child_item jz_theme_border_color jz_theme_bg_color",
+      "parent": "jz_nav_list"
+    },
+    {
+      "tag": "a",
+      "text": "核心产品",
+      "classes": "nav_item_text nav_child_item_text jz_theme_font_hover_color",
+      "parent": "nav_item_text_wrap jz_theme_font_color"
+    },
+    {
+      "tag": "span",
+      "text": "核心产品",
+      "classes": "nav_main_name nav_name_wrapper not-italic font-normal no-underline",
+      "parent": "nav_item_text nav_child_item_text jz_theme_font_hover_color"
+    },
+    {
+      "tag": "li",
+      "text": "WHUD",
+      "classes": "sub_nav_item nav_sub_item106 jz_theme_font_color",
+      "parent": "sub_nav_wrap"
+    },
+    {
+      "tag": "a",
+      "text": "WHUD",
+      "classes": "sub_nav_item_text child_nav_item_text jz_theme_font_hover_color not-italic font-normal no-underline",
+      "parent": "sub_nav_item_text_wrap jz_hover jz_theme_font_hover_color"
+    },
+    {
+      "tag": "li",
+      "text": "ARHUD",
+      "classes": "sub_nav_item nav_sub_item110 jz_theme_font_color",
+      "parent": "sub_nav_wrap"
+    },
+    {
+      "tag": "a",
+      "text": "ARHUD",
+      "classes": "sub_nav_item_text child_nav_item_text jz_theme_font_hover_color not-italic font-normal no-underline",
+      "parent": "sub_nav_item_text_wrap jz_hover jz_theme_font_hover_color"
+    },
+    {
+      "tag": "li",
+      "text": "创新产品     全车窗透明显示器   光场MR HUD",
+      "classes": "jz_nav_item jz_hover nav_item122 jz_theme_font_color jz_theme_border_hover_color nav_child_item jz_theme_border_color jz_theme_bg_color",
+      "parent": "jz_nav_list"
+    },
+    {
+      "tag": "a",
+      "text": "创新产品",
+      "classes": "nav_item_text nav_child_item_text jz_theme_font_hover_color",
+      "parent": "nav_item_text_wrap jz_theme_font_color"
+    },
+    {
+      "tag": "span",
+      "text": "创新产品",
+      "classes": "nav_main_name nav_name_wrapper not-italic font-normal no-underline",
+      "parent": "nav_item_text nav_child_item_text jz_theme_font_hover_color"
+    },
+    {
+      "tag": "li",
+      "text": "全车窗透明显示器",
+      "classes": "sub_nav_item nav_sub_item125 jz_theme_font_color",
+      "parent": "sub_nav_wrap"
+    },
+    {
+      "tag": "a",
+      "text": "全车窗透明显示器",
+      "classes": "sub_nav_item_text child_nav_item_text jz_theme_font_hover_color not-italic font-normal no-underline",
+      "parent": "sub_nav_item_text_wrap jz_hover jz_theme_font_hover_color"
+    },
+    {
+      "tag": "li",
+      "text": "光场MR HUD",
+      "classes": "sub_nav_item nav_sub_item126 jz_theme_font_color",
+      "parent": "sub_nav_wrap"
+    },
+    {
+      "tag": "a",
+      "text": "光场MR HUD",
+      "classes": "sub_nav_item_text child_nav_item_text jz_theme_font_hover_color not-italic font-normal no-underline",
+      "parent": "sub_nav_item_text_wrap jz_hover jz_theme_font_hover_color"
+    },
+    {
+      "tag": "li",
+      "text": "AR Kernel",
+      "classes": "jz_nav_item jz_hover nav_item111 jz_theme_font_color jz_theme_border_hover_color jz_theme_border_color jz_theme_bg_color",
+      "parent": "jz_nav_list"
+    },
+    {
+      "tag": "a",
+      "text": "AR Kernel",
+      "classes": "nav_item_text jz_theme_font_hover_color",
+      "parent": "nav_item_text_wrap jz_theme_font_color"
+    },
+    {
+      "tag": "span",
+      "text": "AR Kernel",
+      "classes": "nav_main_name nav_name_wrapper not-italic font-normal no-underline",
+      "parent": "nav_item_text jz_theme_font_hover_color"
+    },
+    {
+      "tag": "li",
+      "text": "创新研发",
+      "classes": "jz_nav_item jz_hover nav_item112 jz_theme_font_color jz_theme_border_hover_color jz_theme_border_color jz_theme_bg_color",
+      "parent": "jz_nav_list"
+    },
+    {
+      "tag": "a",
+      "text": "创新研发",
+      "classes": "nav_item_text jz_theme_font_hover_color",
+      "parent": "nav_item_text_wrap jz_theme_font_color"
+    },
+    {
+      "tag": "span",
+      "text": "创新研发",
+      "classes": "nav_main_name nav_name_wrapper not-italic font-normal no-underline",
+      "parent": "nav_item_text jz_theme_font_hover_color"
+    },
+    {
+      "tag": "li",
+      "text": "公司动态",
+      "classes": "jz_nav_item jz_hover nav_item102 jz_theme_font_color jz_theme_border_hover_color jz_theme_border_color jz_theme_bg_color",
+      "parent": "jz_nav_list"
+    },
+    {
+      "tag": "a",
+      "text": "公司动态",
+      "classes": "nav_item_text jz_theme_font_hover_color",
+      "parent": "nav_item_text_wrap jz_theme_font_color"
+    },
+    {
+      "tag": "span",
+      "text": "公司动态",
+      "classes": "nav_main_name nav_name_wrapper not-italic font-normal no-underline",
+      "parent": "nav_item_text jz_theme_font_hover_color"
+    },
+    {
+      "tag": "li",
+      "text": "关于未来",
+      "classes": "jz_nav_item jz_hover nav_item113 jz_theme_font_color jz_theme_border_hover_color jz_theme_border_color jz_theme_bg_color",
+      "parent": "jz_nav_list"
+    },
+    {
+      "tag": "a",
+      "text": "关于未来",
+      "classes": "nav_item_text jz_theme_font_hover_color",
+      "parent": "nav_item_text_wrap jz_theme_font_color"
+    },
+    {
+      "tag": "span",
+      "text": "关于未来",
+      "classes": "nav_main_name nav_name_wrapper not-italic font-normal no-underline",
+      "parent": "nav_item_text jz_theme_font_hover_color"
+    },
+    {
+      "tag": "button",
+      "text": "Play Video",
+      "classes": "vjs-big-play-button",
+      "parent": "video-js vjs-default-skin vjs-big-play-centered vjs-controls-disabled vjs-workinghover vjs-playing vjs-has-started jz_banner_flv-dimensions vjs-user-inactive"
+    },
+    {
+      "tag": "span",
+      "text": "Play Video",
+      "classes": "vjs-control-text",
+      "parent": "vjs-big-play-button"
+    },
+    {
+      "tag": "button",
+      "text": "Pause",
+      "classes": "vjs-play-control vjs-control vjs-button vjs-playing",
+      "parent": "vjs-control-bar"
+    },
+    {
+      "tag": "span",
+      "text": "Pause",
+      "classes": "vjs-control-text",
+      "parent": "vjs-play-control vjs-control vjs-button vjs-playing"
+    },
+    {
+      "tag": "span",
+      "text": "Unmute",
+      "classes": "vjs-control-text",
+      "parent": "vjs-volume-menu-button vjs-menu-button vjs-menu-button-inline vjs-control vjs-button vjs-volume-menu-button-horizontal vjs-vol-0"
+    },
+    {
+      "tag": "span",
+      "text": "Current Time",
+      "classes": "vjs-control-text",
+      "parent": "vjs-current-time-display"
+    },
+    {
+      "tag": "span",
+      "text": "Duration Time",
+      "classes": "vjs-control-text",
+      "parent": "vjs-duration-display"
+    },
+    {
+      "tag": "span",
+      "text": "Loaded: 0%",
+      "classes": "vjs-control-text",
+      "parent": "vjs-load-progress"
+    },
+    {
+      "tag": "span",
+      "text": "Loaded",
+      "classes": "",
+      "parent": "vjs-control-text"
+    },
+    {
+      "tag": "span",
+      "text": "Progress: 0%",
+      "classes": "vjs-control-text",
+      "parent": "vjs-play-progress vjs-slider-bar"
+    },
+    {
+      "tag": "span",
+      "text": "Progress",
+      "classes": "",
+      "parent": "vjs-control-text"
+    },
+    {
+      "tag": "span",
+      "text": "Stream Type",
+      "classes": "vjs-control-text",
+      "parent": "vjs-live-display"
+    },
+    {
+      "tag": "span",
+      "text": "Remaining Time",
+      "classes": "vjs-control-text",
+      "parent": "vjs-remaining-time-display"
+    },
+    {
+      "tag": "span",
+      "text": "Playback Rate",
+      "classes": "vjs-control-text",
+      "parent": "vjs-playback-rate vjs-menu-button vjs-menu-button-popup vjs-control vjs-button vjs-hidden"
+    },
+    {
+      "tag": "li",
+      "text": "Chapters",
+      "classes": "vjs-menu-title",
+      "parent": "vjs-menu-content"
+    },
+    {
+      "tag": "span",
+      "text": "Chapters",
+      "classes": "vjs-control-text",
+      "parent": "vjs-chapters-button vjs-menu-button vjs-menu-button-popup vjs-control vjs-button vjs-hidden"
+    },
+    {
+      "tag": "li",
+      "text": "descriptions off, selected",
+      "classes": "vjs-menu-item vjs-selected",
+      "parent": "vjs-menu-content"
+    },
+    {
+      "tag": "span",
+      "text": ", selected",
+      "classes": "vjs-control-text",
+      "parent": "vjs-menu-item vjs-selected"
+    },
+    {
+      "tag": "span",
+      "text": "Descriptions",
+      "classes": "vjs-control-text",
+      "parent": "vjs-descriptions-button vjs-menu-button vjs-menu-button-popup vjs-control vjs-button vjs-hidden"
+    },
+    {
+      "tag": "li",
+      "text": "subtitles off, selected",
+      "classes": "vjs-menu-item vjs-selected",
+      "parent": "vjs-menu-content"
+    },
+    {
+      "tag": "span",
+      "text": ", selected",
+      "classes": "vjs-control-text",
+      "parent": "vjs-menu-item vjs-selected"
+    },
+    {
+      "tag": "span",
+      "text": "Subtitles",
+      "classes": "vjs-control-text",
+      "parent": "vjs-subtitles-button vjs-menu-button vjs-menu-button-popup vjs-control vjs-button vjs-hidden"
+    },
+    {
+      "tag": "li",
+      "text": "captions settings, opens captions settings dialog",
+      "classes": "vjs-menu-item vjs-texttrack-settings",
+      "parent": "vjs-menu-content"
+    },
+    {
+      "tag": "span",
+      "text": ", opens captions settings dialog",
+      "classes": "vjs-control-text",
+      "parent": "vjs-menu-item vjs-texttrack-settings"
+    },
+    {
+      "tag": "li",
+      "text": "captions off, selected",
+      "classes": "vjs-menu-item vjs-selected",
+      "parent": "vjs-menu-content"
+    },
+    {
+      "tag": "span",
+      "text": ", selected",
+      "classes": "vjs-control-text",
+      "parent": "vjs-menu-item vjs-selected"
+    },
+    {
+      "tag": "span",
+      "text": "Captions",
+      "classes": "vjs-control-text",
+      "parent": "vjs-captions-button vjs-menu-button vjs-menu-button-popup vjs-control vjs-button vjs-hidden"
+    },
+    {
+      "tag": "span",
+      "text": "Audio Track",
+      "classes": "vjs-control-text",
+      "parent": "vjs-audio-button vjs-menu-button vjs-menu-button-popup vjs-control vjs-button vjs-hidden"
+    },
+    {
+      "tag": "button",
+      "text": "Fullscreen",
+      "classes": "vjs-fullscreen-control vjs-control vjs-button",
+      "parent": "vjs-control-bar"
+    },
+    {
+      "tag": "span",
+      "text": "Fullscreen",
+      "classes": "vjs-control-text",
+      "parent": "vjs-fullscreen-control vjs-control vjs-button"
+    },
+    {
+      "tag": "p",
+      "text": "This is a modal window.",
+      "classes": "vjs-modal-dialog-description vjs-offscreen",
+      "parent": "vjs-error-display vjs-modal-dialog vjs-hidden "
+    },
+    {
+      "tag": "span",
+      "text": "TransparencyOpaqueSemi-Transparent",
+      "classes": "vjs-text-opacity vjs-opacity",
+      "parent": "vjs-fg-color vjs-tracksetting"
+    },
+    {
+      "tag": "span",
+      "text": "TransparencyOpaqueSemi-TransparentTransparent",
+      "classes": "vjs-bg-opacity vjs-opacity",
+      "parent": "vjs-bg-color vjs-tracksetting"
+    },
+    {
+      "tag": "span",
+      "text": "TransparencyTransparentSemi-TransparentOpaque",
+      "classes": "vjs-window-opacity vjs-opacity",
+      "parent": "vjs-window-color vjs-tracksetting"
+    },
+    {
+      "tag": "button",
+      "text": "Defaults",
+      "classes": "vjs-default-button",
+      "parent": "vjs-tracksettings-controls"
+    },
+    {
+      "tag": "button",
+      "text": "Done",
+      "classes": "vjs-done-button",
+      "parent": "vjs-tracksettings-controls"
+    },
+    {
+      "tag": "span",
+      "text": "让每一辆智能汽车都成为连接数",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "字世界和物理世界的全新",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "未来人机交互技术引领者",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "FUTURUS 产品矩阵",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "产品矩阵",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "核心产品",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "可显示智能仪表所有功能和智能中控所有高频场景，",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "和智能中控所有高频场景，",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "帮助驾驶者将注意力集中在前方道路，提高驾驶安全性。",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "提供真AR体验。",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "创新产品",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "汽车的前挡风玻璃将变成一整块透明屏幕，",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "满足用户在新出行空间下的个性化需求。",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "充分满足用户在车载娱乐移动场景下的各种需求。",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "充分满足用户在车载娱乐移动场景下的各种需求。",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "FUTURUS",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "未来黑科技",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "FUTURUS未来（北京）黑科技有限公司是专注于汽车领域增强现实显示技术研发及应用的新锐企业，",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "也是中国首批将HUD产品带入量产的企业之一。",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "目前已形成以汽车挡风玻璃为介质，以光场光学、计算光学、全息光学、微纳和衍射光学、波导光学、自由曲面光学、",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "AR引擎等技术为核心的汽车抬头显示产品（HUD）系列。",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "产品覆盖WHUD、ARHUD、全车窗透明显示器等诸多产品线，可适配L2到L5不同自动驾驶阶段的用户对车内智能交互的需求。",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "融资历史",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "合作伙伴",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "0  总部（北京）",
+      "classes": "number-link",
+      "parent": "module_content_detail module_dynamicnumber"
+    },
+    {
+      "tag": "span",
+      "text": "0 家 生产基地（重庆、新乡、北京）",
+      "classes": "number-link",
+      "parent": "module_content_detail module_dynamicnumber"
+    },
+    {
+      "tag": "span",
+      "text": "0 + 专利授权（国内、国际全球布局）",
+      "classes": "number-link",
+      "parent": "module_content_detail module_dynamicnumber"
+    },
+    {
+      "tag": "span",
+      "text": "新闻资讯",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "a",
+      "text": "FUTURUS 助力领克 900，打造中国智造的“技术旗舰”\n                         2025-04-30 4月28日，领克品牌旗舰车型——领克 900 正式上市，成为诠释中国智造新高度的标杆之作。领克900以千里浩瀚智驾、Super AI 数字底盘、标配 95 英寸超画幅 ARHUD、骁遥超级增混电池等一系列前沿核心技术成果，重新定义高端出行，打造“全舱平权”的奢适体验 。作为全球 HUD 技术领导者，国内领军企业，FUTURUS 为领克 900 独家提供全球领先的 ARHUD 产品——FUTU...",
+      "classes": "news_list_item_inner",
+      "parent": "news_list_item_line jz_hover jz_theme_font_hover_color news_list_item_line_num news_list_item_line_num4 news_list_item_line_pic"
+    },
+    {
+      "tag": "h4",
+      "text": "FUTURUS 助力领克 900，打造中国智造的“技术旗舰”",
+      "classes": "news_list_item_title jz_theme_font_hover_color jz_hover",
+      "parent": "news_list_item_header"
+    },
+    {
+      "tag": "span",
+      "text": "2025-04-30",
+      "classes": "news_list_item_date",
+      "parent": "news_list_item_header"
+    },
+    {
+      "tag": "a",
+      "text": "《品质优先x交互跃迁:双轮驱动下的HUD千亿市场确定性增长》| FUTURUS受邀出席2025智能座舱技术高峰论坛\n                         2025-04-17 4月11日，FUTURUS受邀参加由亚洲新能源汽车网携手智能座舱产业联盟共同主办的2025智能座舱技术高峰论坛。FUTURUS已在智能汽车抬头显示（HUD）领域深耕近十年，已经形成从WHUD到AR-HUD，再到PHUD的完善技术储备和产品矩阵。在本次论坛中，FUTURUS市场洞察专家赵梓聪也带来了《品质优先x交互跃迁:双轮驱动下的HUD千亿市场确定性增长》这一主题的演讲。高品质HUD是市场扩...",
+      "classes": "news_list_item_inner",
+      "parent": "news_list_item_line jz_hover jz_theme_font_hover_color news_list_item_line_num news_list_item_line_num4 news_list_item_line_pic"
+    },
+    {
+      "tag": "h4",
+      "text": "《品质优先x交互跃迁:双轮驱动下的HUD千亿市场确定性增长》| FUTURUS受邀出席2025智能座舱技术高峰论坛",
+      "classes": "news_list_item_title jz_theme_font_hover_color jz_hover",
+      "parent": "news_list_item_header"
+    },
+    {
+      "tag": "span",
+      "text": "2025-04-17",
+      "classes": "news_list_item_date",
+      "parent": "news_list_item_header"
+    },
+    {
+      "tag": "a",
+      "text": "引领科技创新！解析 ET9 全球领先的 ARHUD\n                         2024-12-23 在 12 月 21 日的 NIO Day 2024 发布会上，NIO重磅发布的 ET9 旗舰车型，配备了全球领先的 ARHUD 产品！行业首发蓝宝石全焦段 AR 平视显示系统Sapphire Full-Range ARHUD全球最高标准空间贴合算法<20ms 端到端延时如此引领行业科技创新的产品，正是由 FUTURUS 未来（北京）黑科技有限公司为其定制开发的。这一切的背后，有着 FUTUR...",
+      "classes": "news_list_item_inner",
+      "parent": "news_list_item_line jz_hover jz_theme_font_hover_color news_list_item_line_num news_list_item_line_num4 news_list_item_line_pic"
+    },
+    {
+      "tag": "h4",
+      "text": "引领科技创新！解析 ET9 全球领先的 ARHUD",
+      "classes": "news_list_item_title jz_theme_font_hover_color jz_hover",
+      "parent": "news_list_item_header"
+    },
+    {
+      "tag": "span",
+      "text": "2024-12-23",
+      "classes": "news_list_item_date",
+      "parent": "news_list_item_header"
+    },
+    {
+      "tag": "a",
+      "text": "FUTURUS荣获第九届“创客中国”中小企业创新创业大赛全国总决赛一等奖\n                         2024-12-13 科技创新引领制造业升级，未来科技助力智能汽车发展近年来，中国汽车产业的智能化进程持续加速，国家政策的有力推动成为技术创新和产业升级的核心驱动力。“十四五”规划明确指出，要以科技创新为引擎，推动制造业向高端化、智能化方向迈进，为中国制造注入强劲动能。12月12日，第九届“创客中国”中小企业创新创业大赛全国总决赛圆满落幕。FUTURUS未来黑科技凭借创新项目《AR车载抬头显示技术开发及产业化》荣...",
+      "classes": "news_list_item_inner",
+      "parent": "news_list_item_line jz_hover jz_theme_font_hover_color news_list_item_line_num news_list_item_line_num4 news_list_item_line_pic"
+    },
+    {
+      "tag": "h4",
+      "text": "FUTURUS荣获第九届“创客中国”中小企业创新创业大赛全国总决赛一等奖",
+      "classes": "news_list_item_title jz_theme_font_hover_color jz_hover",
+      "parent": "news_list_item_header"
+    },
+    {
+      "tag": "span",
+      "text": "2024-12-13",
+      "classes": "news_list_item_date",
+      "parent": "news_list_item_header"
+    },
+    {
+      "tag": "span",
+      "text": "科技探索   追求更好未来",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "地址 : 北京市亦庄经济技术开发区康定街15号院4号楼      电话：010 - 6789 4088",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "电话：010 - 6789 4088",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "a",
+      "text": "市场合作：marketing@futurus.co",
+      "classes": "icon_module_item second_style_item count4",
+      "parent": "second_style style_container"
+    },
+    {
+      "tag": "a",
+      "text": "销售业务：sales@futurus.co",
+      "classes": "icon_module_item second_style_item count4",
+      "parent": "second_style style_container"
+    },
+    {
+      "tag": "a",
+      "text": "供应链平台：sourcing@futurus.co",
+      "classes": "icon_module_item second_style_item count4",
+      "parent": "second_style style_container"
+    },
+    {
+      "tag": "a",
+      "text": "简历投递：cv@futurus.co",
+      "classes": "icon_module_item second_style_item count4",
+      "parent": "second_style style_container"
+    },
+    {
+      "tag": "p",
+      "text": "核心产品",
+      "classes": "",
+      "parent": "rich_article_wrap_html"
+    },
+    {
+      "tag": "span",
+      "text": "核心产品",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "p",
+      "text": "-‍WHUD",
+      "classes": "",
+      "parent": "rich_article_wrap_html"
+    },
+    {
+      "tag": "a",
+      "text": "WHUD",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "WHUD",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "WHUD",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "p",
+      "text": "-ARHUD",
+      "classes": "",
+      "parent": "rich_article_wrap_html"
+    },
+    {
+      "tag": "a",
+      "text": "-ARHUD",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "-ARHUD",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "p",
+      "text": "创新产品",
+      "classes": "",
+      "parent": "rich_article_wrap_html"
+    },
+    {
+      "tag": "a",
+      "text": "创新产品",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "创新产品",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "p",
+      "text": "AR Kerne‍l®",
+      "classes": "",
+      "parent": "rich_article_wrap_html"
+    },
+    {
+      "tag": "a",
+      "text": "AR Kerne",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "AR Kerne",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "‍l®",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "p",
+      "text": "‍创新研发",
+      "classes": "",
+      "parent": "rich_article_wrap_html"
+    },
+    {
+      "tag": "a",
+      "text": "创新研发",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "p",
+      "text": "公司动态",
+      "classes": "",
+      "parent": "rich_article_wrap_html"
+    },
+    {
+      "tag": "a",
+      "text": "公司动态",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "p",
+      "text": "‍公司介绍",
+      "classes": "",
+      "parent": "rich_article_wrap_html"
+    },
+    {
+      "tag": "a",
+      "text": "公司介绍",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "span",
+      "text": "公司介绍",
+      "classes": "",
+      "parent": ""
+    },
+    {
+      "tag": "p",
+      "text": "京公网安备 11030102010710号",
+      "classes": "s_footer_police",
+      "parent": "s_footer jz_project jz_project_152"
+    },
+    {
+      "tag": "a",
+      "text": "京公网安备 11030102010710号",
+      "classes": "",
+      "parent": "s_footer_police"
+    },
+    {
+      "tag": "p",
+      "text": "©2023 - FUTURUS 版权所有",
+      "classes": "s_footer_copyright",
+      "parent": "s_footer jz_project jz_project_152"
+    },
+    {
+      "tag": "p",
+      "text": "京ICP备2022024770号-1",
+      "classes": "s_footer_support_container",
+      "parent": "s_footer jz_project jz_project_152"
+    },
+    {
+      "tag": "a",
+      "text": "京ICP备2022024770号-1",
+      "classes": "s_footer_anchor jz_hover jz_theme_font_hover_color",
+      "parent": "s_footer_support_container"
+    }
+  ],
+  "footer": null
+}

@@ -1,0 +1,393 @@
+{
+  "tag": "body",
+  "children": [
+    {
+      "tag": "style",
+      "id": "themeControl",
+      "text": ":root {\n\t\t\t--theme-color:#2b2b2b;\n\t\t}\n\t\t.jz_theme_font_color {\n\t\t\tcolor: #2b2b2b;\n\t\t}\n\n\t\t.jz_theme_bg_color {\n\t\t\tbackground-color: #2b2b2b;\n\t\t}\n\n\t\t.jz_theme_border_color {\n\t\t\tborder-color: #2b2b2b;\n\t\t"
+    },
+    {
+      "tag": "div",
+      "id": "jzRoot",
+      "classes": [
+        "jz_root",
+        "jz_root_pc",
+        "jz_visitor_web"
+      ],
+      "style": "--setting-bar-height: 0px; --fixed-header-height: 0px; --fixed-mobi-header-height: 0px; --site-tips-height: 0px;",
+      "children": [
+        {
+          "tag": "div",
+          "id": "jz_web",
+          "classes": [
+            "jz_web",
+            "jz_manage_web_pc"
+          ],
+          "children": [
+            {
+              "tag": "div",
+              "id": "jzBackTopCompon",
+              "classes": [
+                "back_top_wrapper"
+              ],
+              "style": "display: none;",
+              "children": [
+                {
+                  "tag": "div",
+                  "classes": [
+                    "back_top_content"
+                  ],
+                  "children": [
+                    {
+                      "tag": "div",
+                      "classes": [
+                        "back_top_system"
+                      ],
+                      "children": [
+                        {
+                          "tag": "div",
+                          "classes": [
+                            "svg_0"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "div",
+              "id": "jzWebContainer",
+              "classes": [
+                "jz_web_container",
+                "jz_col_2"
+              ],
+              "style": "background-color:rgba(0, 0, 0, 1);background-image:none;background-size:auto;background-repeat:repeat;background-position:top left;",
+              "children": [
+                {
+                  "tag": "div",
+                  "id": "gridHeader",
+                  "classes": [
+                    "jz_web_header",
+                    "g_header",
+                    "g_header__static",
+                    "use_pc_header"
+                  ],
+                  "style": "background-color:rgba(255, 255, 255, 0);background-size:auto;background-repeat:repeat;background-position:top left;",
+                  "children": [
+                    {
+                      "tag": "div",
+                      "classes": [
+                        "header_content",
+                        "g_header_content",
+                        "g_header_content__fixed"
+                      ],
+                      "style": "background-color: rgba(255, 255, 255, 0); background-size: auto; background-repeat: repeat; background-position: left top;",
+                      "children": [
+                        {
+                          "tag": "div",
+                          "classes": [
+                            "jz_web_rows"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "tag": "div",
+                  "classes": [
+                    "jz_web_banner"
+                  ],
+                  "children": [
+                    {
+                      "tag": "div",
+                      "id": "jz_banner",
+                      "classes": [
+                        "jz_banner",
+                        "transition_type_0"
+                      ],
+                      "children": [
+                        {
+                          "tag": "div",
+                          "classes": [
+                            "banner_flv"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "tag": "div",
+                  "classes": [
+                    "jz_web_content"
+                  ],
+                  "children": [
+                    {
+                      "tag": "div",
+                      "classes": [
+                        "jz_web_rows"
+                      ],
+                      "children": [
+                        {
+                          "tag": "div",
+                          "id": "rowline322",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline316",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline320",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline505",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline506",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline107",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline611",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline400",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline308",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1",
+                            "jz_web_row_bg"
+                          ],
+                          "style": "--row-max-width:1250px;border:none;background:none;"
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline401",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline588",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline187",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1",
+                            "jz_web_row_line--colAlignCenter",
+                            "jz_web_row_line--colAlign"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline190",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline191",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline633",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "id": "rowline498",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "tag": "div",
+                  "id": "gridFooter",
+                  "classes": [
+                    "jz_web_footer",
+                    "g_footer"
+                  ],
+                  "style": "background-color:rgba(13,13,13,1);background-size:auto;background-repeat:repeat;background-position:top left;",
+                  "children": [
+                    {
+                      "tag": "div",
+                      "classes": [
+                        "jz_web_rows"
+                      ],
+                      "children": [
+                        {
+                          "tag": "div",
+                          "id": "rowline4",
+                          "classes": [
+                            "jz_web_row_line",
+                            "jz_web_row_line_pc1"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "tag": "div",
+                  "id": "jzBackTopCompon",
+                  "text": ""
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "script",
+      "text": "window.__INITIAL_STATE__={\"memberLogin\":false,\"currentWebUrl\":\"https://www.futurus.co/\",\"jzVersion\":4,\"isOverseas\":false,\"colId\":2,\"extId\":0,\"siteVer\":40,\"aid\":31286037,\"lcid\":2052,\"resRoot\":\"//0.ss.5"
+    },
+    {
+      "tag": "script",
+      "text": "window.Hosts = {\"portal\":\"i.fkw.com\",\"home\":\"www.fkw.com\",\"mHome\":\"m.fkw.com\",\"jzHome\":\"jz.fkw.com\",\"jzPortal\":\"i.jz.fkw.com\",\"qzHome\":\"qz.fkw.com\",\"qzPortal\":\"i.qz.fkw.com\",\"mallHome\":\"mall.fkw.com\","
+    },
+    {
+      "tag": "script",
+      "text": "window._resDistRoot = '//1.ss.508sys.com/js/rjs' + '/dist/v2/visitor/';\n\n\t\tFai = {};\n\t\tFai.top = window;\n\t\tRoot = {};\n\t\tJZ = {};\n\t\tComm = {};\n\t\t_temporary = {};    //临时数据T\n\t\tFai.top._curLanCode = 'cn'"
+    },
+    {
+      "tag": "script",
+      "text": "",
+      "src": "//1.ss.508sys.com/js/rjs/comm/jquery.min.js?v=202412301640"
+    },
+    {
+      "tag": "script",
+      "text": "",
+      "src": "//1.ss.508sys.com/js/rjs/comm/vue-2.7.14.min.js?v=202307141526"
+    },
+    {
+      "tag": "script",
+      "text": "var __jzFrontendResRoot__ = '//jzfe.faisys.com', __jzFrontendConfVersion__ = '202603041400';"
+    },
+    {
+      "tag": "script",
+      "text": "",
+      "src": "//jzfe.faisys.com/dist/jz/request/jzRequest.min.js?v=202603041400"
+    },
+    {
+      "tag": "script",
+      "text": "",
+      "src": "//jzfe.faisys.com/dist/jz/utils/jzUtils.min.js?v=202603041400"
+    },
+    {
+      "tag": "script",
+      "text": "",
+      "src": "//jzfe.faisys.com/dist/jz/biz-shared/bizShared.min.js?v=202603041400"
+    },
+    {
+      "tag": "link",
+      "text": "",
+      "href": "//jzfe.faisys.com/dist/jz/biz-shared/bizShared.min.css?v=202603041400"
+    },
+    {
+      "tag": "script",
+      "text": "",
+      "src": "//jzfe.faisys.com/dist/jz/locale/responsive/2052.min.js?v=202603041400"
+    },
+    {
+      "tag": "script",
+      "text": "",
+      "src": "//1.ss.508sys.com/js/rjs/comm/video.min.js?v=202307141526"
+    },
+    {
+      "tag": "div",
+      "classes": [
+        "jz_clear"
+      ],
+      "text": ""
+    },
+    {
+      "tag": "div",
+      "id": "tmpPreloadFontFace",
+      "text": "未来人机交互技术引领者",
+      "style": "height: 0px; width: 0px; overflow: hidden; font-family: fontface__思源黑体Regular__184__1554818986238;"
+    },
+    {
+      "tag": "style",
+      "text": ".jz_full_nav_wrap_expend_1.jz_full_nav_wrap_active{\n                    transform: translate3d(0, calc(100% + 0px), 0);\n                }"
+    },
+    {
+      "tag": "iframe",
+      "id": "crashIframe",
+      "text": "",
+      "style": "display: none;",
+      "src": "https://fe.faisco.cn/hawkEye/crash.jsp"
+    },
+    {
+      "tag": "style",
+      "text": ".jz_full_nav_wrap_expend_1.jz_full_nav_wrap_active{\n                    transform: translate3d(0, calc(100% + 0px), 0);\n                }"
+    }
+  ]
+}

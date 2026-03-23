@@ -1,0 +1,134 @@
+[
+  {
+    "href": null,
+    "rules": [
+      ".video-js { width: 300px; height: 150px; }",
+      ".vjs-fluid { padding-top: 56.25%; }"
+    ]
+  },
+  {
+    "href": null,
+    "rules": [
+      ".jz_banner_flv-dimensions { width: 100%; height: auto; }",
+      ".jz_banner_flv-dimensions.vjs-fluid { padding-top: 56.25%; }"
+    ]
+  },
+  {
+    "href": "https://1.ss.508sys.com/js/rjs/dist/v2/visitor/dist/main.ca1b5850.css",
+    "error": "CORS blocked"
+  },
+  {
+    "href": null,
+    "rules": [
+      ".jz_toolbar .wx_qr_logo { background-image: url(\"//jzas.508sys.com/image/v2/jz_logo.jpg\"); }"
+    ]
+  },
+  {
+    "href": null,
+    "rules": [
+      ".jz_nav_wrap { margin-top: 0vw; }",
+      ".jz_nav_wrap { margin-right: 0%; }",
+      ".jz_nav_wrap { margin-bottom: 0vw; }",
+      ".jz_nav_wrap { margin-left: 0%; }",
+      ".jz_web_header .jz_nav { }",
+      ".jz_web_header .jz_nav_list { text-align: left; }",
+      ".jz_web_header .m_nav_logo_img { height: 65px; }",
+      ".jz_web_header .jz_nav_item { min-width: 80px; height: 65px; line-height: 65px; border-width: 0px; border-style: solid; }",
+      ".jz_web_header .jz_nav_item:not(.jz_nav_item_selected):not(.jz_nav_item_active) { background-color: rgba(0, 0, 0, 0); }",
+      ".jz_web_header .jz_nav_item:hover, .jz_web_header .jz_nav_item_selected { background-color: rgba(0, 0, 0, 0); }",
+      ".jz_web_header .jz_nav_item .nav_item_text .nav_main_name { }",
+      ".jz_web_header .nav_item_septal { }",
+      ".jz_web_header .jz_nav_layout0 .sub_nav_list, .jz_web_header .jz_nav_layout0 .three_nav_list { }",
+      ".jz_web_header .jz_nav_layout0 .sub_nav_item, .jz_web_header .jz_nav_layout0 .three_nav_item { }",
+      ".jz_web_header .sub_nav_list, .jz_web_header .three_nav_list { background-color: rgb(255, 255, 255); }",
+      ".jz_web_header .sub_nav_item, .jz_web_header .three_nav_item { text-decoration: none; font-weight: normal; font-style: normal; }",
+      ".jz_mobi_header .jz_nav_item { }",
+      ".jz_mobi_header .sub_nav_item { }",
+      ".jz_mobi_header .sub_nav_item_text { }",
+      ".jz_mobi_header .three_nav_item { }",
+      ".jz_mobi_header .three_nav_item_text { }",
+      ".jz_web_header li.jz_nav_item:not(.jz_nav_item_selected):not(.jz_nav_item_active) { border-color: rgb(0, 0, 0); }",
+      ".jz_web_header li.jz_nav_item_selected, .jz_web_header .jz_nav_list .jz_nav_item:hover { border-color: rgb(33, 33, 33); }",
+      ".jz_screen_pc .jz_nav_item:not(.jz_nav_item_active):not(.jz_nav_item_selected) .nav_item_text_wrap .nav_main_name { --s_n-cf-c-color: #333; }",
+      ".jz_web_header .nav_item_septal .jz_nav_partition_line { color: rgb(229, 229, 229); }",
+      ".jz_web_header .jz_nav_partition_line { display: none; }",
+      ".jz_web_header .jz_nav_partition_line_style1 { display: block; }"
+    ]
+  },
+  {
+    "href": null,
+    "rules": [
+      ".animateModule { opacity: 0 !important; }",
+      ".jz_hidden_content_Animate { opacity: 0; }"
+    ]
+  },
+  {
+    "href": "https://1.ss.508sys.com/js/rjs/dist/v2/visitor/dist/datepicker-styles.7e2e6d4c.css",
+    "error": "CORS blocked"
+  },
+  {
+    "href": null,
+    "rules": [
+      "@font-face { font-family: fontface__思源黑体Regular__184__877190826444; src: url(\"//31286037.s21i.faiusr.com/76/2/ABUIlcb1DhBMGAAg_JeEygYo6ej0qQQ\") format(\"truetype\"); font-weight: normal; font-style: normal; font-display: block; }"
+    ]
+  },
+  {
+    "href": null,
+    "rules": [
+      "@font-face { font-family: fontface__思源黑体Regular__184__564641145375; src: url(\"//31286037.s21i.faiusr.com/76/2/ABUIlcb1DhBMGAAg_ZeEygYozIXy-wc\") format(\"truetype\"); font-weight: normal; font-style: normal; font-display: block; }"
+    ]
+  },
+  {
+    "href": null,
+    "rules": [
+      "@font-face { font-family: fontface__思源黑体Light__17__540192890378; src: url(\"//31286037.s21i.faiusr.com/76/2/ABUIlcb1DhBMGAAg_ZeEygYo3rDZlwU\") format(\"truetype\"); font-weight: normal; font-style: normal; font-display: block; }"
+    ]
+  },
+  {
+    "href": null,
+    "rules": [
+      "@font-face { font-family: fontface__思源黑体Regular__184__1554818986238; src: url(\"//31286037.s21i.faiusr.com/76/2/ABUIlcb1DhBMGAAg_ZeEygYogOiZ3wI\") format(\"truetype\"); font-weight: normal; font-style: normal; font-display: block; }"
+    ]
+  },
+  {
+    "href": null,
+    "rules": [
+      ":root { --theme-color: #2b2b2b; }",
+      ".jz_theme_font_color { color: rgb(43, 43, 43); }",
+      ".jz_theme_bg_color { background-color: rgb(43, 43, 43); }",
+      ".jz_theme_border_color { border-color: rgb(43, 43, 43); }",
+      ".jz_theme_fill_color { fill: rgb(43, 43, 43); }",
+      ".jz_theme_focus_border_color:focus { border-color: rgb(43, 43, 43); }",
+      ".jz_theme_hover_font_color:hover { color: rgb(43, 43, 43); }",
+      ".pagination_style2 .pagination_item.active::after { border-color: rgb(43, 43, 43) !important; }",
+      ".pagination_style3 .pagination_item.active, .pagination_style2 .pagination_item.active { color: rgb(43, 43, 43) !important; }",
+      ".pagination_style3 .pagination_item.active::after, .pagination_style2 .pagination_item.active::before, .full_screen_row .pagination_style1 .pagination_item.active::after { background-color: rgb(43, 43, 43) !important; }",
+      ".jz_hover.jz_theme_bg_hover_color:hover { background-color: rgb(43, 43, 43); }",
+      ".jz_hover.jz_theme_font_hover_color:hover { color: rgb(43, 43, 43); }",
+      ".jz_hover.jz_theme_border_hover_color:hover { border-color: rgb(43, 43, 43); }",
+      ".jz_focus.jz_theme_focus_border_color:focus { border-color: rgb(43, 43, 43); }",
+      ".jz_secondary_bg_color { background-color: rgb(80, 80, 80); }",
+      ".jz_screen_pc .submit_btn_style_1:hover .form_submit, .submit_btn_style_3:hover .form_submit { color: rgb(43, 43, 43); border-color: rgb(43, 43, 43); }",
+      ".submit_btn_style_4 .form_submit, .submit_btn_style_5 .form_submit { color: rgb(43, 43, 43); border-color: rgb(43, 43, 43); }",
+      ".submit_btn_style_0 .form_submit, .submit_btn_style_1 .form_submit, .submit_btn_style_2 .form_submit { background-color: rgb(43, 43, 43); }",
+      ".jz_screen_pc .submit_btn_style_4:hover .form_submit { background-color: rgb(43, 43, 43); }",
+      ".jz_screen_pc .submit_btn_style_2:hover .form_submit { background-color: rgb(40, 40, 40); }"
+    ]
+  },
+  {
+    "href": "https://jzfe.faisys.com/dist/jz/biz-shared/bizShared.min.css?v=202603041400",
+    "error": "CORS blocked"
+  },
+  {
+    "href": null,
+    "rules": [
+      ".jz_full_nav_wrap_expend_1.jz_full_nav_wrap_active { transform: translate3d(0px, calc(100% + 0px), 0px); }"
+    ]
+  },
+  {
+    "href": null,
+    "rules": [
+      ".jz_full_nav_wrap_expend_1.jz_full_nav_wrap_active { transform: translate3d(0px, calc(100% + 0px), 0px); }"
+    ]
+  }
+]
