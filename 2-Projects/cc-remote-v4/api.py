@@ -20,6 +20,7 @@ ALLOWED_CLIS = {'claude', 'codex', 'gemini'}
 PORT_RANGE = range(19010, 19100)  # 动态端口池（7001-7003 保留给默认 session）
 WRAPPER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ttyd-wrapper.sh')
 PROJECT_DIR = os.environ.get('CC_REMOTE_CWD', '/Users/rayman.chen/mycc')
+TMUX = shutil.which('tmux') or '/opt/homebrew/bin/tmux'
 
 # 活跃 session 追踪
 # {session_id: {cli, port, tmux_session, pid}}
@@ -28,7 +29,7 @@ sessions = {}
 # 启动时扫描已有的默认 session
 for cli, port in [('claude', 19001), ('codex', 19002), ('gemini', 19003)]:
     tmux_name = f'cc-{cli}'
-    result = subprocess.run(['/opt/homebrew/bin/tmux', 'has-session', '-t', tmux_name], capture_output=True)
+    result = subprocess.run([TMUX, 'has-session', '-t', tmux_name], capture_output=True)
     if result.returncode == 0:
         sessions[tmux_name] = {
             'id': tmux_name,
@@ -123,7 +124,7 @@ def create_session(cli):
     while True:
         session_id = f'cc-{cli}-{idx}'
         tmux_exists = subprocess.run(
-            ['/opt/homebrew/bin/tmux', 'has-session', '-t', session_id],
+            [TMUX, 'has-session', '-t', session_id],
             capture_output=True
         ).returncode == 0
         if session_id not in sessions and not tmux_exists:
@@ -170,7 +171,7 @@ def destroy_session(session_id):
             pass
 
     # 杀 tmux session
-    subprocess.run(['/opt/homebrew/bin/tmux', 'kill-session', '-t', s['tmux_session']], capture_output=True)
+    subprocess.run([TMUX, 'kill-session', '-t', s['tmux_session']], capture_output=True)
 
     # 移除 Caddy 路由（非默认 session）
     if not s.get('default'):
@@ -416,7 +417,7 @@ def resume_session(engine, session_id, tmux_session):
 
     try:
         subprocess.run(
-            ['/opt/homebrew/bin/tmux', 'send-keys', '-t', tmux_session, cmd, 'Enter'],
+            [TMUX, 'send-keys', '-t', tmux_session, cmd, 'Enter'],
             check=True, timeout=5
         )
         return True, None
@@ -539,14 +540,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
 
         if keys in KEY_MAP:
-            cmd = ['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, KEY_MAP[keys]]
+            cmd = [TMUX, 'send-keys', '-t', session, KEY_MAP[keys]]
         elif keys.endswith('\r'):
             text = keys[:-1]
             if text:
-                subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-l', text], check=True, timeout=5)
-            cmd = ['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, 'Enter']
+                subprocess.run([TMUX, 'send-keys', '-t', session, '-l', text], check=True, timeout=5)
+            cmd = [TMUX, 'send-keys', '-t', session, 'Enter']
         else:
-            cmd = ['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-l', keys]
+            cmd = [TMUX, 'send-keys', '-t', session, '-l', keys]
 
         try:
             subprocess.run(cmd, check=True, timeout=5)
@@ -568,20 +569,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if direction == 'up':
                 if lines > 0:
                     # 逐行滚动：先进 copy-mode，再上滚 N 行
-                    subprocess.run(['/opt/homebrew/bin/tmux', 'copy-mode', '-t', session], capture_output=True, timeout=5)
+                    subprocess.run([TMUX, 'copy-mode', '-t', session], capture_output=True, timeout=5)
                     for _ in range(lines):
-                        subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-X', 'scroll-up'], capture_output=True, timeout=5)
+                        subprocess.run([TMUX, 'send-keys', '-t', session, '-X', 'scroll-up'], capture_output=True, timeout=5)
                 else:
                     # 翻页（兼容旧行为）
-                    subprocess.run(['/opt/homebrew/bin/tmux', 'copy-mode', '-u', '-t', session], check=True, timeout=5)
+                    subprocess.run([TMUX, 'copy-mode', '-u', '-t', session], check=True, timeout=5)
             elif direction == 'down':
                 if lines > 0:
                     for _ in range(lines):
-                        subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-X', 'scroll-down'], capture_output=True, timeout=5)
+                        subprocess.run([TMUX, 'send-keys', '-t', session, '-X', 'scroll-down'], capture_output=True, timeout=5)
                 else:
-                    subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-X', 'page-down'], check=True, timeout=5)
+                    subprocess.run([TMUX, 'send-keys', '-t', session, '-X', 'page-down'], check=True, timeout=5)
             elif direction == 'exit':
-                subprocess.run(['/opt/homebrew/bin/tmux', 'send-keys', '-t', session, '-X', 'cancel'], check=True, timeout=5)
+                subprocess.run([TMUX, 'send-keys', '-t', session, '-X', 'cancel'], check=True, timeout=5)
             self.send_json(200, {'ok': True})
         except subprocess.CalledProcessError as e:
             self.send_json(500, {'error': str(e)})

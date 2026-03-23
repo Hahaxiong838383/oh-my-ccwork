@@ -40,7 +40,7 @@ while true; do
   # 4. 确保 Caddy 在线
   if ! lsof -i :19443 -t &>/dev/null; then
     echo "[watchdog] $(date '+%H:%M:%S') Caddy 端口 19443 不在线，重启..."
-    caddy run --config /tmp/cc-remote-Caddyfile --adapter caddyfile &
+    caddy run --config /tmp/cc-remote-v4-Caddyfile --adapter caddyfile &
     sleep 2
   fi
 

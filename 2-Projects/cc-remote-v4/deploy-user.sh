@@ -207,20 +207,20 @@ cat > "$OUTDIR/Caddyfile" << EOF
 		file_server
 	}
 	handle /api/* {
-		reverse_proxy localhost:${CADDY_PORT}1
+		reverse_proxy localhost:$((CADDY_PORT + 100))
 	}
 	handle /claude/* {
-		reverse_proxy localhost:${CADDY_PORT}1 {
+		reverse_proxy localhost:$((CADDY_PORT + 1)) {
 			transport http { read_timeout 0; write_timeout 0 }
 		}
 	}
 	handle /codex/* {
-		reverse_proxy localhost:${CADDY_PORT}2 {
+		reverse_proxy localhost:$((CADDY_PORT + 2)) {
 			transport http { read_timeout 0; write_timeout 0 }
 		}
 	}
 	handle /gemini/* {
-		reverse_proxy localhost:${CADDY_PORT}3 {
+		reverse_proxy localhost:$((CADDY_PORT + 3)) {
 			transport http { read_timeout 0; write_timeout 0 }
 		}
 	}
@@ -253,8 +253,25 @@ command -v claude &>/dev/null && ensure_tmux claude
 command -v codex &>/dev/null && ensure_tmux codex
 command -v gemini &>/dev/null && ensure_tmux gemini
 
-# ttyd（略，用户自行配置端口）
-echo "请根据 Caddyfile 中的端口配置启动 ttyd"
+# 启动 ttyd 实例
+PORT_BASE=$((CADDY_PORT + 1))
+for cli in claude codex gemini; do
+  session="cc-$cli"
+  if tmux has-session -t "$session" 2>/dev/null; then
+    "$DIR/ttyd-wrapper.sh" "$PORT_BASE" "/$cli" "$session" &
+    echo "  ✓ $cli → :$PORT_BASE"
+  fi
+  PORT_BASE=$((PORT_BASE + 1))
+done
+
+# 启动 API
+python3 "$DIR/api.py" &
+echo "  ✓ API → :$((CADDY_PORT + 100))"
+
+# 启动 Caddy
+caddy run --config "$DIR/Caddyfile" --adapter caddyfile &
+echo "  ✓ Caddy → :$CADDY_PORT"
+
 echo "=== 就绪 ==="
 STARTEOF
 chmod +x "$OUTDIR/start.sh"

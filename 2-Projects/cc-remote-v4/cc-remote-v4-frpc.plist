@@ -6,7 +6,7 @@
     <string>cc.remote.v4.frpc</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/rayman.chen/mycc/2-Projects/cc-remote-v3/frpc</string>
+        <string>/Users/rayman.chen/mycc/2-Projects/cc-remote-v4/frpc</string>
         <string>-c</string>
         <string>/Users/rayman.chen/mycc/2-Projects/cc-remote-v4/frpc.toml</string>
     </array>
