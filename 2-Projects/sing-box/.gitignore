@@ -1,0 +1,11 @@
+# 二进制（OS 特定，各机器自行安装）
+sing-box
+
+# 配置（含节点地址和 UUID，敏感信息）
+config.json
+
+# 运行日志
+*.log
+
+# rule-set 数据文件（安装时下载）
+*.srs
