@@ -1,9 +1,9 @@
 {
   "deviceId": "2qy20kjpe7t5",
   "pairCode": "6FPNYF",
-  "routeToken": "64faa92fcc8b83c9f7b08c3e0fdf01b9",
-  "tunnelUrl": "https://relay.hahaxiong.cc/api/64faa92fcc8b83c9f7b08c3e0fdf01b9",
-  "mpUrl": "https://relay.hahaxiong.cc/api/64faa92fcc8b83c9f7b08c3e0fdf01b9",
-  "cwd": "D:/mycc",
-  "startedAt": "2026-03-21T11:26:20.335Z"
+  "routeToken": null,
+  "tunnelUrl": "http://localhost disabled",
+  "mpUrl": "http://localhost disabled",
+  "cwd": "/Users/rayman.chen/mycc",
+  "startedAt": "2026-03-22T06:01:24.506Z"
 }

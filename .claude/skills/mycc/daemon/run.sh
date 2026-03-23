@@ -30,4 +30,19 @@ if [ -f "$LOG" ] && [ "$(wc -c < "$LOG")" -gt 10485760 ]; then
 fi
 
 cd "$CWD" || exit 1
+
+# === 端口互斥：防止多实例 ===
+PORT=18080
+EXISTING_PID=$(lsof -i :$PORT -t 2>/dev/null | head -1)
+if [ -n "$EXISTING_PID" ]; then
+  # 检查是否是 mycc 后端进程（而不是其他服务占端口）
+  EXISTING_CMD=$(ps -p "$EXISTING_PID" -o command= 2>/dev/null || true)
+  if echo "$EXISTING_CMD" | grep -q "index.ts"; then
+    echo "[$(date)] 端口 $PORT 已被 mycc 后端占用 (PID $EXISTING_PID)，跳过启动" >> "$LOG"
+    # 退出码 0，让 launchd 不要立即重试（ThrottleInterval 生效）
+    sleep 30
+    exit 0
+  fi
+fi
+
 exec "$TSX" "$SCRIPTS_DIR/src/index.ts" start >> "$LOG" 2>&1

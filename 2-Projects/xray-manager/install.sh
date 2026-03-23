@@ -99,11 +99,11 @@ cp "$SCRIPT_DIR/xray-manager.py" "$MANAGER_PATH"
 chmod +x "$MANAGER_PATH"
 echo "✅ 管理工具已安装"
 
-# 6. 配置开机自启服务
-echo "⚙️  配置开机自启服务 ..."
+# 6. 准备系统服务文件（配置完成后由向导启动）
+echo "⚙️  准备系统服务文件 ..."
 
 if [ "$OS" = "Darwin" ]; then
-    # macOS: launchd
+    # macOS: launchd（只生成 plist，不注册，由配置向导完成后启动）
     PLIST_NAME="com.xray.proxy"
     PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
     launchctl bootout "gui/$(id -u)/$PLIST_NAME" 2>/dev/null || true
@@ -112,21 +112,17 @@ if [ "$OS" = "Darwin" ]; then
         -e "s|__XRAY_HOME__|$XRAY_HOME|g" \
         -e "s|__LOG_PATH__|$LOG_PATH|g" \
         "$SCRIPT_DIR/service/com.xray.proxy.plist" > "$PLIST_PATH"
-    launchctl bootstrap "gui/$(id -u)" "$PLIST_PATH"
-    echo "✅ launchd 服务已注册"
+    echo "✅ launchd 服务文件已生成（将在配置完成后启动）"
 else
-    # Linux: systemd user service
-    SERVICE_PATH="$HOME/.config/systemd/user/xray-proxy.service"
+    # Linux: systemd user service（只生成 unit 文件，不启动）
+    SERVICE_PATH="$HOME/.config/systemd/user/xray.service"
     sed -e "s|__XRAY_BIN__|$XRAY_BIN|g" \
         -e "s|__CONFIG_PATH__|$CONFIG_PATH|g" \
         -e "s|__XRAY_HOME__|$XRAY_HOME|g" \
         -e "s|__LOG_PATH__|$LOG_PATH|g" \
-        "$SCRIPT_DIR/service/xray-proxy.service" > "$SERVICE_PATH"
+        "$SCRIPT_DIR/service/xray.service" > "$SERVICE_PATH"
     systemctl --user daemon-reload
-    systemctl --user enable xray-proxy.service
-    systemctl --user restart xray-proxy.service
-    echo "✅ systemd user 服务已注册并启动"
-    # 确保用户服务在退出登录后仍运行
+    echo "✅ systemd 服务文件已生成（将在配置完成后启动）"
     loginctl enable-linger "$(whoami)" 2>/dev/null || true
 fi
 
@@ -139,55 +135,59 @@ fi
 MARKER="# === Xray Manager ==="
 if ! grep -q "$MARKER" "$RCFILE" 2>/dev/null; then
     echo ""
-    echo "📝 添加快捷命令和代理环境变量到 $RCFILE ..."
+    echo "📝 添加快捷命令到 $RCFILE ..."
 
     if [ "$OS" = "Darwin" ]; then
         cat >> "$RCFILE" << 'ALIASES'
 
 # === Xray Manager ===
-export http_proxy=http://127.0.0.1:20171
-export https_proxy=http://127.0.0.1:20171
-export no_proxy=localhost,127.0.0.1
 alias xray-ui='python3 ~/xray/xray-manager.py'
 alias xray-restart='launchctl kickstart -k gui/$(id -u)/com.xray.proxy'
 alias xray-stop='launchctl kill SIGTERM gui/$(id -u)/com.xray.proxy'
 alias xray-status='launchctl print gui/$(id -u)/com.xray.proxy 2>/dev/null | head -5; echo "---"; ps aux | grep "xray run" | grep -v grep'
 alias xray-log='tail -50 ~/xray/xray.log'
 alias xray-config='nano ~/xray/config.json'
+alias xray-update-subs='python3 ~/xray/xray-manager.py --update-subs'
+alias xray-update-core='python3 ~/xray/xray-manager.py --update-core'
 # === End Xray Manager ===
 ALIASES
     else
         cat >> "$RCFILE" << 'ALIASES'
 
 # === Xray Manager ===
-export http_proxy=http://127.0.0.1:20171
-export https_proxy=http://127.0.0.1:20171
-export no_proxy=localhost,127.0.0.1
 alias xray-ui='python3 ~/xray/xray-manager.py'
-alias xray-restart='systemctl --user restart xray-proxy'
-alias xray-stop='systemctl --user stop xray-proxy'
-alias xray-status='systemctl --user status xray-proxy --no-pager; echo "---"; ps aux | grep "xray run" | grep -v grep'
+alias xray-restart='systemctl --user restart xray.service'
+alias xray-stop='systemctl --user stop xray.service'
+alias xray-status='systemctl --user status xray.service --no-pager; echo "---"; ps aux | grep "xray run" | grep -v grep'
 alias xray-log='tail -50 ~/xray/xray.log'
 alias xray-config='nano ~/xray/config.json'
+alias xray-update-subs='python3 ~/xray/xray-manager.py --update-subs'
+alias xray-update-core='python3 ~/xray/xray-manager.py --update-core'
 # === End Xray Manager ===
 ALIASES
     fi
-    echo "✅ 快捷命令和代理变量已添加"
+    echo "✅ 快捷命令已添加"
 fi
 
-# 8. 等待 xray 启动
-echo ""
-echo "⏳ 等待 xray 启动 ..."
-sleep 2
-
-# 验证
-if ps aux | grep -q "[x]ray run"; then
-    PID=$(ps aux | grep "[x]ray run" | awk '{print $2}' | head -1)
-    echo "✅ Xray 运行中 (PID: $PID)"
+# 8. 配置自动更新定时任务 (crontab)
+echo "⏰ 配置自动更新定时任务 ..."
+CRON_MARKER="# === Xray Auto Update ==="
+if ! crontab -l 2>/dev/null | grep -q "$CRON_MARKER"; then
+    (crontab -l 2>/dev/null; cat << CRON
+$CRON_MARKER
+# 每天凌晨 3 点自动更新订阅节点
+0 3 * * * /usr/bin/python3 $XRAY_HOME/xray-manager.py --update-subs >> $XRAY_HOME/update.log 2>&1
+# 每周一凌晨 4 点更新 xray 内核和 GeoIP
+0 4 * * 1 /usr/bin/python3 $XRAY_HOME/xray-manager.py --update-core >> $XRAY_HOME/update.log 2>&1
+# === End Xray Auto Update ===
+CRON
+    ) | crontab -
+    echo "✅ 自动更新已注册: 订阅每天 03:00 / 内核每周一 04:00"
 else
-    echo "⚠️  Xray 未启动，查看日志: cat $LOG_PATH"
+    echo "✅ 自动更新任务已存在"
 fi
 
+# 9. 启动配置向导
 echo ""
 echo "=============================="
 echo "  安装完成！"
@@ -200,17 +200,30 @@ echo "  xray-status    查看状态"
 echo "  xray-log       查看日志"
 echo "  xray-config    编辑配置"
 echo ""
-echo "代理端口："
-echo "  SOCKS 代理:  127.0.0.1:10808"
-echo "  HTTP 代理:   127.0.0.1:20171"
-echo "  Web 管理 UI: http://$(hostname -I 2>/dev/null | awk '{print $1}' || echo '127.0.0.1'):8888"
-echo ""
-echo "环境变量已设置 http_proxy/https_proxy 指向 HTTP 代理 (20171)"
-echo "CLI 工具 (claude, npm, curl 等) 将自动使用此代理"
-echo ""
-if [ "$OS" = "Darwin" ]; then
-    echo "⚠️  系统全局代理请在: 系统设置 → 网络 → Wi-Fi → 代理 → SOCKS 代理 → 127.0.0.1:10808"
-else
-    echo "⚠️  Linux 使用代理: export ALL_PROXY=socks5://127.0.0.1:10808"
+
+# 检测是否需要配置向导
+HAS_NODES=0
+if [ -f "$CONFIG_PATH" ]; then
+    HAS_NODES=$(python3 -c "
+import json
+try:
+    c=json.load(open('$CONFIG_PATH'))
+    print(sum(1 for o in c.get('outbounds',[]) if o.get('protocol') in ('vless','vmess')))
+except: print(0)
+" 2>/dev/null)
 fi
-echo ""
+
+if [ "$HAS_NODES" = "0" ] || [ -z "$HAS_NODES" ]; then
+    echo "🧙 首次安装，启动配置向导..."
+    echo "   请在浏览器中完成节点和路由配置"
+    echo "   配置完成后将自动启动代理服务并设置系统代理"
+    echo ""
+    python3 "$MANAGER_PATH"
+else
+    echo "✅ 检测到已有 $HAS_NODES 个节点配置"
+    echo "   如需重新配置，运行: xray-ui"
+    echo ""
+    echo "Web 管理界面: http://$(hostname -I 2>/dev/null | awk '{print $1}' || echo '127.0.0.1'):8888"
+    echo "SOCKS + HTTP 代理: 127.0.0.1:10808"
+    echo ""
+fi

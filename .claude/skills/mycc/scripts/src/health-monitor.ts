@@ -25,6 +25,7 @@ const FEISHU_HEARTBEAT_INTERVAL = 300000; // 5分钟发送一次飞书心跳
 const MAX_RESTART_ATTEMPTS = 3; // 最大重启次数
 const RESTART_COOLDOWN = 60000; // 重启冷却时间（1分钟）
 const AUTH_FAIL_THRESHOLD = 3; // 连续失败 N 次才报警（防止单次网络波动误报）
+const AUTH_RECOVERY_CHECK_INTERVAL = 2 * 60 * 1000; // auth 失败后每 2 分钟检测恢复
 
 // 飞书 MCP token 相关路径
 const FEISHU_MCP_DIR = join(homedir(), ".feishu-mcp");
@@ -64,6 +65,8 @@ export class HealthMonitor {
   private config: Required<HealthMonitorConfig>;
   private onRestartCallback: (() => Promise<void>) | null = null;
   private authFailCount = 0; // 连续 auth 刷新失败计数
+  private authRecoveryTimer: ReturnType<typeof setInterval> | null = null; // auth 恢复探测定时器
+  private authWasDown = false; // auth 曾经失败过（用于恢复通知）
   private feishuMcpOk = true; // 飞书 MCP token 状态
 
   constructor(config: HealthMonitorConfig = {}) {
@@ -307,16 +310,33 @@ export class HealthMonitor {
    * 强制触发 token 刷新
    * 启动一个临时 claude 进程发送空消息，迫使 CLI 完成 OAuth refresh flow。
    * 关键：必须移除 CLAUDECODE 环境变量，否则 claude CLI 会拒绝启动。
+   *
+   * 守护机制：
+   * - 失败达到阈值后，启动独立的恢复探测定时器（每 2 分钟轻量检查 auth status）
+   * - 用户手动 /login 后，探测器自动感知恢复，发飞书通知，停止探测
    */
   private forceTokenRefresh(): void {
     try {
       execSync('claude -p "ping" --max-turns 1 2>/dev/null', {
         encoding: "utf-8",
-        timeout: 30000,
+        timeout: 60000, // 从 30s 提升到 60s，避免网络慢时误判
         env: this.getCleanEnv(),
       });
       console.log(chalk.green(`[HealthMonitor] ✓ Token 刷新成功 (${new Date().toLocaleTimeString()})`));
-      this.authFailCount = 0; // 成功则重置计数
+
+      // 如果之前失败过，清理旧 session 并通知恢复
+      if (this.authWasDown) {
+        if (this.adapter) {
+          this.adapter.closeAllSessions();
+          console.log(chalk.cyan("[HealthMonitor] 已关闭所有旧 SDK session（清除过期 token 缓存）"));
+        }
+        this.notifyAuthRecovered();
+      }
+
+      this.authFailCount = 0;
+      this.authWasDown = false;
+      this.stopAuthRecoveryProbe();
+
       if (this.adapter) {
         this.adapter.authOk = true;
       }
@@ -324,14 +344,89 @@ export class HealthMonitor {
       this.authFailCount++;
       console.error(chalk.red(`[HealthMonitor] ✗ Token 刷新失败 (${this.authFailCount}/${AUTH_FAIL_THRESHOLD})`));
       if (this.authFailCount === AUTH_FAIL_THRESHOLD) {
-        // 仅在恰好达到阈值时通知一次，避免重复发飞书告警
+        // 达到阈值：通知 + 标记失败 + 启动恢复探测
         console.error(chalk.red("[HealthMonitor] ✗ 连续多次刷新失败，可能需要手动 /login"));
+        this.authWasDown = true;
         if (this.adapter) {
           this.adapter.authOk = false;
           (this.adapter as any)._onAuthFailed?.("Claude CLI token 过期且自动刷新失败，请在终端执行 /login");
         }
+        this.startAuthRecoveryProbe();
       }
     }
+  }
+
+  /**
+   * 启动 auth 恢复探测定时器
+   * auth 失败后，每 2 分钟用轻量级 `claude auth status` 检查是否用户已手动 /login 恢复
+   * 一旦检测到恢复，立即通知飞书并停止探测
+   */
+  private startAuthRecoveryProbe(): void {
+    if (this.authRecoveryTimer) return; // 已经在探测中
+
+    console.log(chalk.cyan("[HealthMonitor] 启动 auth 恢复探测（每 2 分钟）..."));
+    this.authRecoveryTimer = setInterval(() => {
+      try {
+        const output = execSync("claude auth status --json 2>/dev/null", {
+          encoding: "utf-8",
+          timeout: 10000,
+          env: this.getCleanEnv(),
+        });
+        const status = JSON.parse(output);
+        if (status.loggedIn === true) {
+          // 用户已手动 /login，尝试一次完整刷新确认
+          console.log(chalk.cyan("[HealthMonitor] 检测到登录状态恢复，尝试完整刷新验证..."));
+          try {
+            execSync('claude -p "ping" --max-turns 1 2>/dev/null', {
+              encoding: "utf-8",
+              timeout: 60000,
+              env: this.getCleanEnv(),
+            });
+            // 完整刷新成功 → 恢复
+            this.authFailCount = 0;
+            this.authWasDown = false;
+            if (this.adapter) {
+              this.adapter.authOk = true;
+              // 关键：杀掉所有旧 SDK session（子进程缓存了过期 token，不会重读 Keychain）
+              // 新消息会 spawn 新子进程，自动读取最新 token
+              this.adapter.closeAllSessions();
+              console.log(chalk.cyan("[HealthMonitor] 已关闭所有旧 SDK session（清除过期 token 缓存）"));
+            }
+            this.notifyAuthRecovered();
+            this.stopAuthRecoveryProbe();
+          } catch {
+            // auth status 说已登录但 ping 失败，可能是 access_token 还没完全生效，下次再试
+            console.warn(chalk.yellow("[HealthMonitor] auth status 已登录但 ping 失败，等待下次探测"));
+          }
+        }
+      } catch {
+        // 检查本身失败，静默等下次
+      }
+    }, AUTH_RECOVERY_CHECK_INTERVAL);
+    if (this.authRecoveryTimer.unref) this.authRecoveryTimer.unref();
+  }
+
+  /**
+   * 停止 auth 恢复探测
+   */
+  private stopAuthRecoveryProbe(): void {
+    if (this.authRecoveryTimer) {
+      clearInterval(this.authRecoveryTimer);
+      this.authRecoveryTimer = null;
+      console.log(chalk.gray("[HealthMonitor] auth 恢复探测已停止"));
+    }
+  }
+
+  /**
+   * 通知 auth 已恢复（飞书 + 控制台）
+   */
+  private notifyAuthRecovered(): void {
+    const now = new Date().toLocaleTimeString();
+    console.log(chalk.green(`[HealthMonitor] ✓ Auth 已恢复！飞书通道恢复服务 (${now})`));
+    // 通过飞书通知用户
+    this.httpServer && (this.httpServer as any).broadcastToFeishu?.(
+      `✅ Claude CLI 登录已恢复，飞书通道恢复正常服务 (${now})`
+    );
   }
 
   /**
@@ -613,6 +708,8 @@ export class HealthMonitor {
       clearInterval(this.authCheckTimer);
       this.authCheckTimer = null;
     }
+
+    this.stopAuthRecoveryProbe();
 
     if (this.feishuMcpCheckTimer) {
       clearInterval(this.feishuMcpCheckTimer);
