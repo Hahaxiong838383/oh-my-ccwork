@@ -1,6 +1,6 @@
 # xray - Xray 代理管理
 
-> 管理 Xray 代理服务：启动/停止/切换/状态检查/从 v2rayN 迁移。触发词："/xray"、"切换到 xray"、"关掉 v2ray"、"代理状态"、"网络不通"
+> 管理 Xray+mihomo 双代理引擎：启动/停止/切换/状态检查/分流测试。触发词："/xray"、"代理状态"、"网络不通"、"mihomo"、"clash"
 
 ## 触发条件
 
@@ -94,10 +94,30 @@ strings ~/xray/xray.log | tail -30
 | 分组 | 策略 | 节点池 |
 |------|------|--------|
 | Claude/GPT | 固定 | 美宅专用 US (VLESS+Reality) |
-| Gemini/AI Studio | leastPing | US-V1, US-R1, US-R2 |
-| YouTube/视频娱乐 | leastLoad | HK×5, TW×2, SG×2, JP×5 |
+| **Gemini/AI Studio** | **Xray→mihomo 链式转发** | mihomo GoogleAI 组 (US-GIA-D/B/C + US-V1/R1/R2, round-robin) |
+| YouTube/视频娱乐 | leastPing | HK×5, TW×2, SG×2, JP×5 |
 | 大陆域名 | direct | 直连 |
 | 其他 | 默认 | HK-HKT-A |
+
+## mihomo (Clash Meta) 管理
+
+**配置文件**：`/opt/homebrew/etc/mihomo/config.yaml`
+**服务管理**：`brew services start/stop/restart mihomo`
+**Web UI**：http://127.0.0.1:9090/ui
+
+### mihomo 状态检查
+```bash
+brew services list | grep mihomo
+curl -s http://127.0.0.1:9090/proxies | python3 -m json.tool | head -30
+```
+
+### Xray→mihomo 链式转发回滚
+```bash
+# 改回 Xray 自己的 GoogleAI-US balancer
+# config.json 中 "outboundTag": "mihomo-proxy" → "balancerTag": "GoogleAI-US"
+# 然后重启 xray
+kill $(pgrep -f "/Users/rayman.chen/xray/xray run")
+```
 
 ## 排查清单
 
