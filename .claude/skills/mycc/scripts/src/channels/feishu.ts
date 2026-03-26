@@ -931,6 +931,158 @@ export class FeishuChannel implements MessageChannel {
     }
   }
 
+  // ========== CardKit 流式卡片 ==========
+
+  /**
+   * 创建 CardKit 流式卡片实体并发送到飞书
+   * 返回 cardId（用于后续流式更新）和 messageId
+   */
+  async createStreamingCard(overrideChatId?: string): Promise<{ cardId: string; messageId: string } | null> {
+    try {
+      const effectiveTarget = overrideChatId || this.lastIncomingChatId;
+      const receiveId = effectiveTarget || this.config.receiveUserId!;
+      const receiveIdType = effectiveTarget ? "chat_id" : (this.config.receiveIdType || "open_id");
+
+      // 1. 创建 CardKit 卡片实体（Thinking 状态）
+      const thinkingCard = {
+        type: "card",
+        header: {
+          template: "blue",
+          title: { tag: "plain_text", content: "cc 思考中..." },
+        },
+        config: { wide_screen_mode: true },
+        elements: [
+          {
+            tag: "markdown",
+            element_id: "streaming_content",
+            content: "⏳ 正在思考...",
+          },
+        ],
+      };
+
+      const createRes = await (this.client as any).cardkit.v1.card.create({
+        data: {
+          type: "card_json",
+          data: JSON.stringify(thinkingCard),
+        },
+      });
+
+      if (createRes.code !== 0 || !createRes.data?.card_id) {
+        console.error(`[FeishuChannel:${this.id}] ✗ CardKit create 失败:`, createRes.code, createRes.msg);
+        return null;
+      }
+
+      const cardId = createRes.data.card_id;
+      console.log(`[FeishuChannel:${this.id}] ✓ CardKit 卡片已创建: ${cardId}`);
+
+      // 2. 通过 card_id 发送消息到飞书
+      const contentPayload = JSON.stringify({
+        type: "card",
+        data: { card_id: cardId },
+      });
+      const sendRes = await this.sendViaSDK(receiveId, "interactive", contentPayload, receiveIdType);
+      if (!sendRes.ok || !sendRes.messageId) {
+        console.error(`[FeishuChannel:${this.id}] ✗ CardKit 卡片发送失败`);
+        return null;
+      }
+
+      console.log(`[FeishuChannel:${this.id}] ✓ CardKit 流式卡片已发送 (card=${cardId}, msg=${sendRes.messageId})`);
+      return { cardId, messageId: sendRes.messageId };
+    } catch (error) {
+      console.error(`[FeishuChannel:${this.id}] ✗ createStreamingCard 异常:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 流式更新卡片内容（打字机效果）
+   * 通过 CardKit cardElement.content API 只更新指定元素
+   */
+  async streamCardContent(cardId: string, content: string, sequence: number): Promise<boolean> {
+    try {
+      const res = await (this.client as any).cardkit.v1.cardElement.content({
+        data: {
+          content: JSON.stringify({
+            tag: "markdown",
+            content,
+          }),
+          sequence,
+        },
+        path: {
+          card_id: cardId,
+          element_id: "streaming_content",
+        },
+      });
+
+      if (res.code === 0) {
+        return true;
+      }
+      console.error(`[FeishuChannel:${this.id}] ✗ streamCardContent 失败:`, res.code, res.msg);
+      return false;
+    } catch (error) {
+      console.error(`[FeishuChannel:${this.id}] ✗ streamCardContent 异常:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * 完成流式卡片（更新整张卡片为绿色完成状态）
+   */
+  async completeStreamingCard(cardId: string, content: string, metadata: { elapsed: string; toolCount?: number }, sequence: number): Promise<boolean> {
+    try {
+      const elements: any[] = [
+        {
+          tag: "markdown",
+          element_id: "streaming_content",
+          content,
+        },
+      ];
+
+      // 底部元信息
+      const metaParts: string[] = [];
+      if (metadata.elapsed) metaParts.push(`耗时 ${metadata.elapsed}`);
+      if (metadata.toolCount && metadata.toolCount > 0) metaParts.push(`${metadata.toolCount} 个工具调用`);
+      if (metaParts.length > 0) {
+        elements.push({
+          tag: "markdown",
+          text_size: "notation",
+          content: metaParts.join(" · "),
+        });
+      }
+
+      const completeCard = {
+        type: "card",
+        header: {
+          template: "green",
+          title: { tag: "plain_text", content: "cc" },
+        },
+        config: { wide_screen_mode: true },
+        elements,
+      };
+
+      const res = await (this.client as any).cardkit.v1.card.update({
+        data: {
+          card: {
+            type: "card_json",
+            data: JSON.stringify(completeCard),
+          },
+          sequence,
+        },
+        path: { card_id: cardId },
+      });
+
+      if (res.code === 0) {
+        console.log(`[FeishuChannel:${this.id}] ✓ CardKit 卡片已完成 (${cardId})`);
+        return true;
+      }
+      console.error(`[FeishuChannel:${this.id}] ✗ completeStreamingCard 失败:`, res.code, res.msg);
+      return false;
+    } catch (error) {
+      console.error(`[FeishuChannel:${this.id}] ✗ completeStreamingCard 异常:`, error);
+      return false;
+    }
+  }
+
   /**
    * 构建进度卡片 JSON
    */

@@ -64,8 +64,6 @@ echo "启动 FRP 隧道..."
 FRPC=""
 if [ -f "$DIR/frpc" ]; then
   FRPC="$DIR/frpc"
-elif [ -f "$DIR/../cc-remote-v3/frpc" ]; then
-  FRPC="$DIR/../cc-remote-v3/frpc"
 elif command -v frpc &>/dev/null; then
   FRPC="frpc"
 fi
