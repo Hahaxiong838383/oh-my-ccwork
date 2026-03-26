@@ -2348,7 +2348,7 @@ function sendAct(c){if(activeId&&ws)ws.send(JSON.stringify({type:"input",session
           return;
         }
         const tokens = JSON.parse(readFileSync(TOKEN_FILE, "utf-8"));
-        const appId = "cli_a9f1cd1366751bc7";
+        const appId = process.env.FEISHU_APP_ID || "";
         const cached = tokens[appId];
         if (!cached) {
           console.log("[TokenKeepalive] 无 MCP token 缓存，跳过");
@@ -2378,7 +2378,7 @@ function sendAct(c){if(activeId&&ws)ws.send(JSON.stringify({type:"input",session
             grant_type: "refresh_token",
             refresh_token: cached.refreshToken,
             client_id: appId,
-            client_secret: "RCCkaaPGkGn9n3pEDkjjzhrUDEWhmioy",
+            client_secret: process.env.FEISHU_APP_SECRET || "",
           }),
         });
         const data = await resp.json() as any;

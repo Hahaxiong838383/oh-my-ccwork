@@ -7,7 +7,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
 # 配置
-PASSWORD="${CC_REMOTE_PASSWORD:-Hahaxiong83*#}"
+PASSWORD="${CC_REMOTE_PASSWORD:?请设置环境变量 CC_REMOTE_PASSWORD}"
 PROJECT_DIR="${CC_REMOTE_CWD:-/Users/rayman.chen/mycc}"
 
 echo "=== cc-remote V4 启动 ==="
@@ -76,7 +76,7 @@ if [ -z "$FRPC" ]; then
 else
   HTTP_PROXY="" HTTPS_PROXY="" ALL_PROXY="" NO_PROXY="*" \
     "$FRPC" -c "$DIR/frpc.toml" &
-  echo "  ✓ frpc → 8.218.26.17:7000 (阿里云香港)"
+  echo "  ✓ frpc → 阿里云香港:7000 (阿里云香港)"
 fi
 
 sleep 2
@@ -91,7 +91,7 @@ echo ""
 echo "  用户名: admin"
 echo "  密码: (CC_REMOTE_PASSWORD)"
 echo ""
-echo "  中转: 阿里云香港 8.218.26.17（FRP）"
+echo "  中转: 阿里云香港 阿里云香港（FRP）"
 echo "  tmux session: cc-claude, cc-codex, cc-gemini"
 echo "  关浏览器后 CLI 继续运行，重新打开自动恢复"
 echo "========================================="

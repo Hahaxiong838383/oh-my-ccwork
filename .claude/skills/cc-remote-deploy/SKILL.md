@@ -28,7 +28,7 @@ cd 2-Projects/cc-remote-v4
 ## 脚本自动完成的工作
 
 ### 阿里云 relay 端（自动）
-1. 添加 DNS A 记录：`cli-<用户名>.hahaxiong.cc → 8.218.26.17`
+1. 添加 DNS A 记录：`cli-<用户名>.hahaxiong.cc → ${RELAY_IP}`
 2. nginx vhost 配置 + Basic Auth
 3. Let's Encrypt SSL 证书申请
 4. 防火墙端口开放
@@ -50,8 +50,8 @@ cd 2-Projects/cc-remote-v4
 
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
-| relay | 8.218.26.17:7000 | 阿里云香港 ECS |
-| frp token | ccremote-v4-2026 | 共享认证 |
+| relay | ${RELAY_IP}:7000 | 阿里云香港 ECS |
+| frp token | ${FRP_TOKEN} | 共享认证（见 .env） |
 | 域名 | cli-<用户名>.hahaxiong.cc | 自动生成 |
 | Caddy 端口 | 基于用户名 hash | 自动分配 |
 

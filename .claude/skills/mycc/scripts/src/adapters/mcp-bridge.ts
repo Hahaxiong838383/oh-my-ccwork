@@ -87,8 +87,8 @@ function getMcpConfig(): { command: string; args: string[] } {
       command: "node",
       args: [
         "/Users/rayman.chen/mycc/open-feishu-mcp-server/dist/local.js",
-        "--app-id", "cli_a9f1cd1366751bc7",
-        "--app-secret", "RCCkaaPGkGn9n3pEDkjjzhrUDEWhmioy",
+        "--app-id", process.env.FEISHU_APP_ID || "",
+        "--app-secret", process.env.FEISHU_APP_SECRET || "",
       ],
     };
   }

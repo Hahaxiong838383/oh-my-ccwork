@@ -4,6 +4,7 @@
 为 top 论文创建飞书 Wiki 页面（含结构化内容）。
 """
 import json
+import os
 import sys
 import time
 import urllib.request
@@ -15,7 +16,7 @@ SPACE_ID = "7589885788549024719"
 PROGRESS_FILE = "/tmp/theory-radar-wiki-progress.json"
 
 # bitable 配置
-APP_TOKEN = "CzwzbwKuBadUa3s7BPHcdTDYnGg"
+APP_TOKEN = os.environ.get("FEISHU_BITABLE_APP_TOKEN", "")
 TABLE_ID = "tblb4S7JAqz9lVDm"
 
 # 分类目录映射
@@ -33,7 +34,7 @@ CATEGORY_MAP = {
 def get_access_token():
     with open(TOKEN_FILE) as f:
         data = json.load(f)
-    return data["cli_a9f1cd1366751bc7"]["accessToken"]
+    return data["${FEISHU_APP_ID}"]["accessToken"]
 
 
 def feishu_api(method, path, body=None, token=None):

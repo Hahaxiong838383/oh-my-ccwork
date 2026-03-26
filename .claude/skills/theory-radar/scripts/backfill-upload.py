@@ -4,6 +4,7 @@
 读取 backfill JSON，分类、生成元数据，批量写入飞书 bitable。
 """
 import json
+import os
 import sys
 import time
 import urllib.request
@@ -11,7 +12,7 @@ import urllib.request
 # ===== 配置 =====
 BACKFILL_FILE = "/tmp/theory-radar-backfill.json"
 TOKEN_FILE = "/Users/rayman.chen/.feishu-mcp/tokens.json"
-APP_TOKEN = "CzwzbwKuBadUa3s7BPHcdTDYnGg"
+APP_TOKEN = os.environ.get("FEISHU_BITABLE_APP_TOKEN", "")
 TABLE_ID = "tblb4S7JAqz9lVDm"
 BATCH_SIZE = 100  # 飞书 batch_create 单次上限 500
 
@@ -42,7 +43,7 @@ KEYWORD_TAGS = {
 def get_access_token():
     with open(TOKEN_FILE) as f:
         data = json.load(f)
-    return data["cli_a9f1cd1366751bc7"]["accessToken"]
+    return data["${FEISHU_APP_ID}"]["accessToken"]
 
 
 def classify_paper(paper):

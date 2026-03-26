@@ -21,7 +21,8 @@ const crypto = require("crypto");
 const PORT = parseInt(process.env.PORT || "7681");
 const WORK_DIR = process.env.WORK_DIR || path.join(os.homedir(), "mycc");
 const AUTH_USER = process.env.CC_REMOTE_USER || "admin";
-const AUTH_PASS = process.env.CC_REMOTE_PASS || "Hahaxiong83*#";
+const AUTH_PASS = process.env.CC_REMOTE_PASS;
+if (!AUTH_PASS) { console.error("请设置环境变量 CC_REMOTE_PASS"); process.exit(1); }
 const MAX_BUFFER = 200 * 1024; // 200KB 回放缓冲
 
 // 跨平台 tmux 检测

@@ -7,8 +7,8 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
 # 配置
-PASSWORD="${CC_REMOTE_PASSWORD:-Hahaxiong83*#}"
-CF_TUNNEL_TOKEN="${CF_TUNNEL_TOKEN:-eyJhIjoiMGFmZjQyZTVkMDA2ODExMzg3MGNlNWUwZmI0MzlkMGIiLCJ0IjoiZDMxYjdiZGItNjdiYi00MjQwLTlhOTItOThhNDM4ODU5NWFhIiwicyI6ImcxMUZNM1hlVkdiQ0w1WTJIc2FROGc5akI2ZEdaclJKTlI5NGVJWVoxTm89In0=}"
+PASSWORD="${CC_REMOTE_PASSWORD:?请设置环境变量 CC_REMOTE_PASSWORD}"
+CF_TUNNEL_TOKEN="${CF_TUNNEL_TOKEN:?请设置环境变量 CF_TUNNEL_TOKEN}"
 PROJECT_DIR="${CC_REMOTE_CWD:-/Users/rayman.chen/mycc}"
 
 echo "=== cc-remote 启动 ==="

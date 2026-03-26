@@ -16,7 +16,7 @@
         <key>HOME</key>
         <string>/Users/rayman.chen</string>
         <key>CC_REMOTE_PASSWORD</key>
-        <string>Hahaxiong83*#</string>
+        <string>${CC_REMOTE_PASSWORD}</string>
     </dict>
     <key>RunAtLoad</key>
     <true/>

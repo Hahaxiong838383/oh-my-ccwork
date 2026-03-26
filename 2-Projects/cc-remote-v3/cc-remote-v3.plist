@@ -17,7 +17,7 @@
         <key>CC_REMOTE_USER</key>
         <string>admin</string>
         <key>CC_REMOTE_PASS</key>
-        <string>Hahaxiong83*#</string>
+        <string>${CC_REMOTE_PASS}</string>
         <key>PATH</key>
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>

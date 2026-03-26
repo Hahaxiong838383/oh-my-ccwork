@@ -17,8 +17,8 @@ PASSWORD="${2:?缺少密码参数}"
 SUBDOMAIN="${3:-cli-${USERNAME}}"
 CADDY_PORT="${4:-$(( 19443 + $(echo "$USERNAME" | cksum | cut -d' ' -f1) % 10000 + 10000 ))}"
 DOMAIN="${SUBDOMAIN}.hahaxiong.cc"
-RELAY_IP="8.218.26.17"
-FRP_TOKEN="ccremote-v4-2026"
+RELAY_IP="${RELAY_IP:?请设置环境变量 RELAY_IP}"
+FRP_TOKEN="${FRP_TOKEN:?请设置环境变量 FRP_TOKEN}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "=== cc-remote V4 新用户部署 ==="
@@ -36,8 +36,11 @@ echo "  添加 DNS: $DOMAIN → $RELAY_IP"
 python3 << PYEOF
 import hmac, hashlib, base64, urllib.parse, urllib.request, json, uuid, time
 
-AK_ID = "${ALIBABA_AK_ID:-LTAI5tSDb***6Aus}"
-AK_SECRET = "${ALIBABA_AK_SECRET:-WkfsofFxSu9Awu9YVnwHYmgfNViBTr}"
+AK_ID = "${ALIBABA_AK_ID}"
+AK_SECRET = "${ALIBABA_AK_SECRET}"
+if not AK_ID or not AK_SECRET:
+    print("错误：请设置环境变量 ALIBABA_AK_ID 和 ALIBABA_AK_SECRET")
+    exit(1)
 
 def sign_request(params, secret):
     sorted_qs = urllib.parse.urlencode(sorted(params.items()), quote_via=urllib.parse.quote)
@@ -69,8 +72,8 @@ echo "  配置 nginx + SSL..."
 python3 << PYEOF
 import hmac, hashlib, base64, urllib.parse, urllib.request, json, uuid, time
 
-AK_ID = "${ALIBABA_AK_ID:-LTAI5tSDb***6Aus}"
-AK_SECRET = "${ALIBABA_AK_SECRET:-WkfsofFxSu9Awu9YVnwHYmgfNViBTr}"
+AK_ID = "${ALIBABA_AK_ID}"
+AK_SECRET = "${ALIBABA_AK_SECRET}"
 
 def sign_request(params, secret):
     sorted_qs = urllib.parse.urlencode(sorted(params.items()), quote_via=urllib.parse.quote)
