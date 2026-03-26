@@ -606,21 +606,33 @@ export class HttpServer {
     }
 
     const startTime = Date.now();
-    const taskPreview = trimmedMessage.substring(0, 60);
-
-    // 发送单引擎进度卡片
-    const engineState: ProgressEngine = { name: "cc (Claude)", status: "running" };
-    const card: ProgressCard = {
-      title: "cc 处理中",
-      task: taskPreview + (taskPreview.length >= 60 ? "..." : ""),
-      engines: [engineState],
-      footer: "思考中...",
-    };
-
     const feishuChannel = ctx.channel as FeishuChannel;
+
+    // CardKit 流式卡片：创建 → 流式更新 → 完成
+    let streamingCard: { cardId: string; messageId: string } | null = null;
+    let streamSeq = 1; // CardKit sequence 必须单调递增
+    let lastStreamFlush = 0;
+    const STREAM_THROTTLE_MS = 500; // 流式更新节流间隔
+
+    // 尝试创建 CardKit 流式卡片
+    if (typeof feishuChannel.createStreamingCard === "function") {
+      streamingCard = await feishuChannel.createStreamingCard(ctx.replyChatId);
+    }
+
+    // CardKit 失败时降级到旧进度卡片
     let cardMessageId: string | null = null;
-    if (typeof feishuChannel.sendProgressCard === "function") {
-      cardMessageId = await feishuChannel.sendProgressCard(card, ctx.replyChatId);
+    if (!streamingCard) {
+      console.log(`[CC][${ctx.channelId}] CardKit 不可用，降级到进度卡片`);
+      const engineState: ProgressEngine = { name: "cc (Claude)", status: "running" };
+      const card: ProgressCard = {
+        title: "cc 处理中",
+        task: trimmedMessage.substring(0, 60) + (trimmedMessage.length >= 60 ? "..." : ""),
+        engines: [engineState],
+        footer: "思考中...",
+      };
+      if (typeof feishuChannel.sendProgressCard === "function") {
+        cardMessageId = await feishuChannel.sendProgressCard(card, ctx.replyChatId);
+      }
     }
 
     try {
@@ -637,10 +649,9 @@ export class HttpServer {
         if (data && typeof data === "object") {
           if (data.type === "system" && "session_id" in data) {
             const newSessionId = data.session_id as string;
-            // 按 chat_id 存储 session，供后续消息复用（私聊和群聊统一处理）
             ctx.chatSessions.set(chatId, newSessionId);
             ctx.chatSessionLastActive.set(chatId, Date.now());
-            ctx.currentSessionId = newSessionId; // 兼容旧引用
+            ctx.currentSessionId = newSessionId;
             this.sessionOwnership.claim(newSessionId, ctx.channelId);
             console.log(`[CC][${ctx.channelId}] 会话更新: ${newSessionId} [chat=${chatId}]`);
           }
@@ -657,14 +668,37 @@ export class HttpServer {
                   const name = block.name || "unknown";
                   toolNames.push(name);
                   console.log(`[CC][${ctx.channelId}] 工具调用: ${name}`);
-                  // 智能节流：首次立即更新，后续 500ms 节流
+                }
+              }
+            }
+          }
+
+          // CardKit 流式更新：有新文本时节流推送
+          if (streamingCard && replyParts.length > 0 && Date.now() - lastStreamFlush > STREAM_THROTTLE_MS) {
+            const currentText = replyParts.join("\n").trim();
+            if (currentText) {
+              const toolSuffix = toolNames.length > 0 ? `\n\n---\n🔧 ${toolNames.length} 个工具调用 · 耗时 ${((Date.now() - startTime) / 1000).toFixed(1)}s` : "";
+              await feishuChannel.streamCardContent(streamingCard.cardId, currentText + toolSuffix, streamSeq++).catch(() => {});
+              lastStreamFlush = Date.now();
+            }
+          }
+
+          // 降级模式：旧进度卡片更新（仅在无 CardKit 时）
+          if (!streamingCard && cardMessageId && data.type === "assistant") {
+            const assistantEvent = data as any;
+            if (assistantEvent.message?.content) {
+              for (const block of assistantEvent.message.content) {
+                if (block.type === "tool_use") {
                   const throttle = lastCardUpdate === 0 ? 0 : 500;
-                  if (cardMessageId && Date.now() - lastCardUpdate > throttle) {
+                  if (Date.now() - lastCardUpdate > throttle) {
                     lastCardUpdate = Date.now();
-                    engineState.detail = `${toolNames.length} 个工具 (${name})`;
-                    // 渐近进度：每个工具调用递增，上限 95%（完成时才 100%）
-                    card.progress = Math.min(95, Math.round(100 * (1 - Math.exp(-toolNames.length / 10))));
-                    card.footer = `耗时 ${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+                    const engineState: ProgressEngine = { name: "cc (Claude)", status: "running", detail: `${toolNames.length} 个工具 (${block.name || "unknown"})` };
+                    const card: ProgressCard = {
+                      title: "cc 处理中",
+                      engines: [engineState],
+                      progress: Math.min(95, Math.round(100 * (1 - Math.exp(-toolNames.length / 10)))),
+                      footer: `耗时 ${((Date.now() - startTime) / 1000).toFixed(1)}s`,
+                    };
                     await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
                   }
                 }
@@ -674,27 +708,46 @@ export class HttpServer {
         }
       }
 
-      // 更新卡片为完成状态
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      engineState.status = "done";
-      engineState.elapsed = `${elapsed}s`;
-      engineState.detail = toolNames.length > 0 ? `${toolNames.length} 个工具调用` : undefined;
-      card.progress = 100;
-      card.title = "cc 完成";
-      card.footer = `总耗时 ${elapsed}s`;
-      if (cardMessageId) {
-        await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
-      }
-
-      // 发送最终结果
       const finalReply = replyParts.join("\n").trim();
-      if (finalReply) {
-        const MAX_CHUNK = 3500;
-        if (finalReply.length <= MAX_CHUNK) {
-          await this.sendToChannel(ctx, finalReply);
+
+      if (streamingCard) {
+        // CardKit 模式：完成卡片（绿色 header + 最终内容）
+        if (finalReply) {
+          await feishuChannel.completeStreamingCard(
+            streamingCard.cardId,
+            finalReply,
+            { elapsed: `${elapsed}s`, toolCount: toolNames.length },
+            streamSeq++,
+          ).catch(() => {});
         } else {
-          for (let i = 0; i < finalReply.length; i += MAX_CHUNK) {
-            await this.sendToChannel(ctx, finalReply.substring(i, i + MAX_CHUNK));
+          // 无回复内容，也标记为完成
+          await feishuChannel.completeStreamingCard(
+            streamingCard.cardId,
+            "（无回复内容）",
+            { elapsed: `${elapsed}s` },
+            streamSeq++,
+          ).catch(() => {});
+        }
+      } else {
+        // 降级模式：更新进度卡片 + 发送最终文本
+        if (cardMessageId) {
+          const doneCard: ProgressCard = {
+            title: "cc 完成",
+            engines: [{ name: "cc (Claude)", status: "done", elapsed: `${elapsed}s`, detail: toolNames.length > 0 ? `${toolNames.length} 个工具调用` : undefined }],
+            progress: 100,
+            footer: `总耗时 ${elapsed}s`,
+          };
+          await feishuChannel.updateProgressCard(cardMessageId, doneCard).catch(() => {});
+        }
+        if (finalReply) {
+          const MAX_CHUNK = 3500;
+          if (finalReply.length <= MAX_CHUNK) {
+            await this.sendToChannel(ctx, finalReply);
+          } else {
+            for (let i = 0; i < finalReply.length; i += MAX_CHUNK) {
+              await this.sendToChannel(ctx, finalReply.substring(i, i + MAX_CHUNK));
+            }
           }
         }
       }
@@ -714,13 +767,23 @@ export class HttpServer {
       }
     } catch (err) {
       console.error(`[CC][${ctx.channelId}] 处理消息错误:`, err);
-      // 更新卡片为错误状态
-      engineState.status = "error";
-      engineState.elapsed = `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
-      engineState.detail = String(err).substring(0, 60);
-      card.title = "cc 出错";
-      if (cardMessageId) {
-        await feishuChannel.updateProgressCard(cardMessageId, card).catch(() => {});
+      const errElapsed = `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+      if (streamingCard) {
+        // CardKit 模式：完成卡片为错误状态（橙色）
+        await feishuChannel.completeStreamingCard(
+          streamingCard.cardId,
+          `❌ 处理消息时出错\n\n${String(err).substring(0, 200)}`,
+          { elapsed: errElapsed },
+          streamSeq++,
+        ).catch(() => {});
+      } else if (cardMessageId) {
+        // 降级模式：更新进度卡片为错误
+        const errCard: ProgressCard = {
+          title: "cc 出错",
+          engines: [{ name: "cc (Claude)", status: "error", elapsed: errElapsed, detail: String(err).substring(0, 60) }],
+          progress: 100,
+        };
+        await feishuChannel.updateProgressCard(cardMessageId, errCard).catch(() => {});
       }
       await this.sendToChannel(ctx, "❌ 处理消息时出错，请重试。");
     } finally {

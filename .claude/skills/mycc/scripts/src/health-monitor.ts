@@ -26,6 +26,7 @@ const MAX_RESTART_ATTEMPTS = 3; // 最大重启次数
 const RESTART_COOLDOWN = 60000; // 重启冷却时间（1分钟）
 const AUTH_FAIL_THRESHOLD = 5; // 连续失败 N 次才报警（提升容忍度，防止 CLI 并发/网络波动误报）
 const AUTH_RECOVERY_CHECK_INTERVAL = 2 * 60 * 1000; // auth 失败后每 2 分钟检测恢复
+const AUTH_FAIL_DECAY_INTERVAL = 30 * 60 * 1000; // 30 分钟无失败则衰减 authFailCount
 
 // 飞书 MCP token 相关路径
 const FEISHU_MCP_DIR = join(homedir(), ".feishu-mcp");
@@ -67,6 +68,8 @@ export class HealthMonitor {
   private authFailCount = 0; // 连续 auth 刷新失败计数
   private authRecoveryTimer: ReturnType<typeof setInterval> | null = null; // auth 恢复探测定时器
   private authWasDown = false; // auth 曾经失败过（用于恢复通知）
+  private authAlerted = false; // 是否已发过告警（防重复发飞书通知）
+  private lastAuthFailTime = 0; // 上次 auth 失败时间（用于衰减）
   private feishuMcpOk = true; // 飞书 MCP token 状态
 
   constructor(config: HealthMonitorConfig = {}) {
@@ -307,6 +310,46 @@ export class HealthMonitor {
   }
 
   /**
+   * 判断错误是否为超时或网络错误（不应计入 auth 失败）
+   */
+  private isTimeoutOrNetworkError(err: unknown): boolean {
+    if (!err || typeof err !== "object") return false;
+    const e = err as Record<string, unknown>;
+    // execSync 超时 → killed = true 或 signal = 'SIGTERM'
+    if (e.killed === true || e.signal === "SIGTERM") return true;
+    // 网络相关错误码
+    const msg = String(e.message || e.stderr || "").toLowerCase();
+    if (
+      msg.includes("etimedout") ||
+      msg.includes("econnrefused") ||
+      msg.includes("econnreset") ||
+      msg.includes("enotfound") ||
+      msg.includes("network") ||
+      msg.includes("socket hang up") ||
+      msg.includes("timed out")
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 衰减 authFailCount：距上次失败超过 30 分钟，衰减一半
+   * 防止偶发的间歇性失败长期累积最终误触阈值
+   */
+  private decayAuthFailCount(): void {
+    if (this.authFailCount <= 0) return;
+    const now = Date.now();
+    if (this.lastAuthFailTime > 0 && now - this.lastAuthFailTime > AUTH_FAIL_DECAY_INTERVAL) {
+      const oldCount = this.authFailCount;
+      this.authFailCount = Math.max(0, this.authFailCount - 1);
+      if (oldCount !== this.authFailCount) {
+        console.log(chalk.gray(`[HealthMonitor] authFailCount 衰减: ${oldCount} → ${this.authFailCount}（距上次失败 ${Math.round((now - this.lastAuthFailTime) / 60000)}min）`));
+      }
+    }
+  }
+
+  /**
    * 强制触发 token 刷新
    * 启动一个临时 claude 进程发送空消息，迫使 CLI 完成 OAuth refresh flow。
    * 关键：必须移除 CLAUDECODE 环境变量，否则 claude CLI 会拒绝启动。
@@ -314,8 +357,17 @@ export class HealthMonitor {
    * 守护机制：
    * - 失败达到阈值后，启动独立的恢复探测定时器（每 2 分钟轻量检查 auth status）
    * - 用户手动 /login 后，探测器自动感知恢复，发飞书通知，停止探测
+   *
+   * 防误报机制（v2）：
+   * - 超时/网络错误不计入 authFailCount（仅日志记录）
+   * - 暂时性失败（ping 失败但 auth status 正常）计 +0.5
+   * - authFailCount 有时间衰减（30 分钟无失败减 1）
+   * - 飞书告警只发一次（authAlerted 标记），恢复后重置
    */
   private forceTokenRefresh(): void {
+    // 每次刷新前先衰减
+    this.decayAuthFailCount();
+
     try {
       execSync('claude -p "ping" --max-turns 1 2>/dev/null', {
         encoding: "utf-8",
@@ -335,14 +387,23 @@ export class HealthMonitor {
 
       this.authFailCount = 0;
       this.authWasDown = false;
+      this.authAlerted = false; // 恢复后重置告警标记
       this.stopAuthRecoveryProbe();
 
       if (this.adapter) {
         this.adapter.authOk = true;
       }
     } catch (err) {
-      // ping 失败时，二次确认 auth status 区分「真过期」和「暂时不可用」
-      // claude -p "ping" 可能因 CLI 并发、网络波动、系统繁忙等非 auth 原因失败
+      this.lastAuthFailTime = Date.now();
+
+      // 第一步：判断是否为超时/网络错误
+      if (this.isTimeoutOrNetworkError(err)) {
+        // 超时/网络错误：不计入 authFailCount，只记日志
+        console.warn(chalk.gray(`[HealthMonitor] ping 超时或网络错误（不计入失败计数）: ${String((err as any)?.message || "timeout").substring(0, 100)}`));
+        return;
+      }
+
+      // 第二步：二次确认 auth status 区分「真过期」和「暂时不可用」
       let isRealAuthFailure = true;
       try {
         const statusOut = execSync("claude auth status --json 2>/dev/null", {
@@ -352,7 +413,7 @@ export class HealthMonitor {
         });
         const status = JSON.parse(statusOut);
         if (status.loggedIn === true) {
-          // auth status 说已登录 → ping 失败是暂时性问题（CLI 并发/网络/超时）
+          // auth status 说已登录 → ping 失败是暂时性问题（CLI 并发/系统繁忙）
           isRealAuthFailure = false;
         }
       } catch {
@@ -363,19 +424,27 @@ export class HealthMonitor {
         this.authFailCount++;
         console.error(chalk.red(`[HealthMonitor] ✗ Token 刷新失败（auth status 也异常） (${this.authFailCount}/${AUTH_FAIL_THRESHOLD})`));
       } else {
-        // 暂时性失败：只增加 0.5（需要 10 次暂时性失败才等于 5 次真失败）
-        this.authFailCount += 0.5;
+        // 暂时性失败：只增加 0.25（需要 20 次暂时性失败才等于 5 次真失败）
+        this.authFailCount += 0.25;
         console.warn(chalk.yellow(`[HealthMonitor] ⚠ ping 失败但 auth status 正常（暂时性，${this.authFailCount}/${AUTH_FAIL_THRESHOLD}）`));
       }
 
       if (this.authFailCount >= AUTH_FAIL_THRESHOLD) {
-        // 达到阈值：通知 + 标记失败 + 启动恢复探测
-        console.error(chalk.red("[HealthMonitor] ✗ 连续多次刷新失败，可能需要手动 /login"));
+        // 达到阈值：标记失败 + 启动恢复探测
         this.authWasDown = true;
         if (this.adapter) {
           this.adapter.authOk = false;
-          (this.adapter as any)._onAuthFailed?.("Claude CLI token 过期且自动刷新失败，请在终端执行 /login");
         }
+
+        // 告警只发一次，防止重复骚扰用户
+        if (!this.authAlerted) {
+          this.authAlerted = true;
+          console.error(chalk.red("[HealthMonitor] ✗ 连续多次刷新失败，可能需要手动 /login（告警已发送，不再重复）"));
+          if (this.adapter) {
+            (this.adapter as any)._onAuthFailed?.("Claude CLI token 过期且自动刷新失败，请在终端执行 /login");
+          }
+        }
+
         this.startAuthRecoveryProbe();
       }
     }
@@ -410,6 +479,7 @@ export class HealthMonitor {
             // 完整刷新成功 → 恢复
             this.authFailCount = 0;
             this.authWasDown = false;
+            this.authAlerted = false; // 重置告警标记
             if (this.adapter) {
               this.adapter.authOk = true;
               // 关键：杀掉所有旧 SDK session（子进程缓存了过期 token，不会重读 Keychain）

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 飞书通知脚本 - 跨平台版本（支持签名验证）
- * 用法: node send.js "标题" "内容" [颜色]
+ * 用法: node send.js "标题" "内容" [颜色] [note]
  * 颜色: blue(默认), green, orange, red
  */
 
@@ -9,8 +9,9 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const [,, title, rawContent, color = 'blue'] = process.argv;
+const [,, title, rawContent, color = 'blue', noteContentArg] = process.argv;
 const content = rawContent ? rawContent.replace(/\\n/g, '\n') : rawContent;
+const noteContent = noteContentArg || `⏰ ${new Date().toLocaleString('zh-CN')}`;
 
 if (!title || !content) {
   console.error('用法: node send.js "标题" "内容" [颜色]');
@@ -67,7 +68,7 @@ const card = {
       },
       {
         tag: 'note',
-        elements: [{ tag: 'plain_text', content: `⏰ ${new Date().toLocaleString('zh-CN')}` }]
+        elements: [{ tag: 'plain_text', content: noteContent }]
       }
     ]
   }

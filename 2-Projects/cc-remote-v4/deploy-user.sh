@@ -12,6 +12,16 @@
 
 set -e
 
+# 加载本地凭证（.env 已被 .gitignore 排除）
+DIR_SELF="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$DIR_SELF/.env" ]; then
+  set -a; source "$DIR_SELF/.env"; set +a
+fi
+
+# 验证必要凭证
+: "${ALIBABA_AK_ID:?缺少 ALIBABA_AK_ID，请在 .env 文件中配置}"
+: "${ALIBABA_AK_SECRET:?缺少 ALIBABA_AK_SECRET，请在 .env 文件中配置}"
+
 USERNAME="${1:?用法: $0 <用户名> <密码> [子域名前缀] [caddy端口]}"
 PASSWORD="${2:?缺少密码参数}"
 SUBDOMAIN="${3:-cli-${USERNAME}}"
@@ -100,6 +110,28 @@ SETUP = r"""#!/bin/bash
 set -e
 htpasswd -cb /etc/nginx/.htpasswd-$USERNAME '$PASSWORD'
 
+# Step A: 写纯 HTTP 配置，让 certbot 能完成 ACME 验证
+cat > /etc/nginx/sites-available/cc-remote-$USERNAME << 'NGXEOF'
+server {
+    listen 80;
+    server_name $DOMAIN;
+    location / { return 200 "cc-remote ok"; add_header Content-Type text/plain; }
+}
+NGXEOF
+
+ln -sf /etc/nginx/sites-available/cc-remote-$USERNAME /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+sleep 3
+
+# Step B: 申请证书，失败则清理并退出（不用 || true）
+if ! certbot certonly --nginx -d $DOMAIN --non-interactive --agree-tos --email admin@hahaxiong.cc 2>&1; then
+    echo "ERROR: 证书申请失败，清理配置"
+    rm -f /etc/nginx/sites-enabled/cc-remote-$USERNAME
+    nginx -t && systemctl reload nginx
+    exit 1
+fi
+
+# Step C: 证书申请成功，写入完整 SSL 配置
 cat > /etc/nginx/sites-available/cc-remote-$USERNAME << 'NGXEOF'
 server {
     listen 80;
@@ -129,13 +161,6 @@ server {
 }
 NGXEOF
 
-ln -sf /etc/nginx/sites-available/cc-remote-$USERNAME /etc/nginx/sites-enabled/
-# 先用 HTTP 模式申请证书
-sed -i '/ssl_certificate/d' /etc/nginx/sites-available/cc-remote-$USERNAME
-sed -i 's/listen 443 ssl/listen 443/' /etc/nginx/sites-available/cc-remote-$USERNAME
-nginx -t && systemctl reload nginx
-sleep 5
-certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email admin@hahaxiong.cc --redirect 2>&1 || true
 nginx -t && systemctl reload nginx
 
 # 开放端口

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "saved_at": "2026-03-23T08:37:35",
+  "saved_at": "2026-03-26T08:15:28",
   "graph": {
     "directed": false,
     "multigraph": false,
@@ -973,8 +973,8 @@
         "published": "2026-02-24",
         "url": "https://arxiv.org/abs/2602.21198v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2602.21198v1"
       },
       {
@@ -996,8 +996,8 @@
         "published": "2026-02-11",
         "url": "https://arxiv.org/abs/2602.11401v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2602.11401v1"
       },
       {
@@ -1192,8 +1192,8 @@
         "published": "2026-02-24",
         "url": "https://arxiv.org/abs/2602.21012v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2602.21012v1"
       },
       {
@@ -1214,8 +1214,8 @@
         "published": "2025-11-25",
         "url": "https://arxiv.org/abs/2511.19863v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2511.19863v1"
       },
       {
@@ -1236,8 +1236,8 @@
         "published": "2025-10-15",
         "url": "https://arxiv.org/abs/2510.13653v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2510.13653v1"
       },
       {
@@ -1260,8 +1260,8 @@
         "published": "2026-02-09",
         "url": "https://arxiv.org/abs/2602.08235v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2602.08235v1"
       },
       {
@@ -1283,8 +1283,8 @@
         "published": "2026-02-04",
         "url": "https://arxiv.org/abs/2602.04119v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2602.04119v1"
       },
       {
@@ -1351,8 +1351,8 @@
         "published": "2026-02-10",
         "url": "https://arxiv.org/abs/2602.10177v3",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2602.10177v3"
       },
       {
@@ -1374,8 +1374,8 @@
         "published": "2025-12-04",
         "url": "https://arxiv.org/abs/2512.04797v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2512.04797v1"
       },
       {
@@ -1897,8 +1897,8 @@
         "published": "2026-03-12",
         "url": "https://arxiv.org/abs/2603.12231v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2603.12231v1"
       },
       {
@@ -1917,8 +1917,8 @@
         "published": "2026-03-18",
         "url": "https://arxiv.org/abs/2603.18246v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2603.18246v1"
       },
       {
@@ -1937,8 +1937,8 @@
         "published": "2026-03-16",
         "url": "https://arxiv.org/abs/2603.15381v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2603.15381v1"
       },
       {
@@ -1959,8 +1959,8 @@
         "published": "2026-03-15",
         "url": "https://arxiv.org/abs/2603.14482v2",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2603.14482v2"
       },
       {
@@ -1982,8 +1982,8 @@
         "published": "2026-03-13",
         "url": "https://arxiv.org/abs/2603.13227v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2603.13227v1"
       },
       {
@@ -2005,8 +2005,8 @@
         "published": "2026-03-18",
         "url": "https://arxiv.org/abs/2603.17837v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2603.17837v1"
       },
       {
@@ -2026,9 +2026,681 @@
         "published": "2026-03-14",
         "url": "https://arxiv.org/abs/2603.16928v1",
         "embedding": null,
-        "ingested_on": "2026-03-23",
-        "updated_at": "2026-03-23T08:37:35",
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
         "id": "2603.16928v1"
+      },
+      {
+        "arxiv_id": "2603.23358v1",
+        "title": "A Synchronous EEG-fNIRS BCI: A Proof-of-Concept for Multimodal Avalanche Analysis of Motor Cognition in Older Adults",
+        "abstract": "This proof-of-concept study introduces a novel multimodal framework combining synchronized EEG-fNIRS modalities with neuronal avalanche analysis to identify early network dysfunction in Alzheimer's disease. The approach leverages complementary neural signals to examine motor network dynamics during execution and imagery tasks within an interactive task environment. Preliminary analysis of a small pilot cohort (N=4 subjects, including one with Mild Cognitive Impairment) validated the technical feasibility of the multimodal framework and revealed observable condition-dependent patterns in networ",
+        "authors": [
+          "Eva Guttmann-Flury",
+          "Yun-Hsuan Chen",
+          "Qiaoyuan Xiang"
+        ],
+        "references": [],
+        "categories": [
+          "q-bio.NC"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23358v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23358v1"
+      },
+      {
+        "arxiv_id": "2603.22933v1",
+        "title": "An Open-Access Multi-modal Dataset for Cognitive, Motor, and Cognitive-Motor Tasks",
+        "abstract": "The incorporation of neuroimaging techniques such as electroenchephalography (EEG) and functional near-infrared spectroscopy (fNIRS) has provided new opportunities for the analysis of dynamic brain processes involved in cognitive and motor functions. Despite the great contribution of the open-access neuroimaging datasets to neuroscience studies, they have mainly remained on a single modality and isolated task paradigms performed in a controlled environments. These limitations restrict the analysis of multi-task effects in real-world applications, thus creating a gap in the understanding of how",
+        "authors": [
+          "Zaineb Ajra",
+          "Grégoire Vergotte",
+          "Stéphane Perrey"
+        ],
+        "references": [],
+        "categories": [
+          "q-bio.NC"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.22933v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.22933v1"
+      },
+      {
+        "arxiv_id": "2603.22858v1",
+        "title": "The Coordinate System Problem in Persistent Structural Memory for Neural Architectures",
+        "abstract": "We introduce the Dual-View Pheromone Pathway Network (DPPN), an architecture that routes sparse attention through a persistent pheromone field over latent slot transitions, and use it to discover two independent requirements for persistent structural memory in neural networks. Through five progressively refined experiments using up to 10 seeds per condition across 5 model variants and 4 transfer targets, we identify a core principle: persistent memory requires a stable coordinate system, and any coordinate system learned jointly with the model is inherently unstable. We characterize three obst",
+        "authors": [
+          "Abhinaba Basu"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG",
+          "cs.AI",
+          "cs.NE"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.22858v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.22858v1"
+      },
+      {
+        "arxiv_id": "2603.21542v1",
+        "title": "Brain Learning Principles Utilizing Non-Ideal Factors in Neural Circuits",
+        "abstract": "The human brain achieves its remarkable computational prowess not despite its inherent non-ideal factors noise, heterogeneity, structural irregularities, decentralized plasticity, systematic errors, and chaotic dynamics but precisely because of them. This paper systematically demonstrates that these traits, long dismissed as imperfections in classical neuroscience and eliminated in digital engineering, are evolutionary design principles that endow the brain with robustness, adaptability, and creativity.",
+        "authors": [
+          "Da-Zheng Feng",
+          "Hao-Xuan Du"
+        ],
+        "references": [],
+        "categories": [
+          "q-bio.NC"
+        ],
+        "published": "2026-03-23",
+        "url": "https://arxiv.org/abs/2603.21542v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.21542v1"
+      },
+      {
+        "arxiv_id": "2603.23047v1",
+        "title": "Parametric Knowledge and Retrieval Behavior in RAG Fine-Tuning for Electronic Design Automation",
+        "abstract": "Retrieval-Augmented Generation (RAG) fine-tuning has shown substantial improvements over vanilla RAG, yet most studies target document question answering and often rely on standard NLP metrics that can obscure factual differences. We evaluate RAG fine-tuning for long-form text generation in electronic design automation, adapting a 7B model under five context augmentation strategies with varying retrieval conditions. We introduce TriFEX, a human-validated, triple-based evaluation pipeline that attributes generated claims to their origin-user query, context and reference-and propose Parametric K",
+        "authors": [
+          "Julian Oestreich",
+          "Maximilian Bley",
+          "Frank Binder"
+        ],
+        "references": [],
+        "categories": [
+          "cs.CL",
+          "cs.AI",
+          "cs.CE"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23047v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23047v1"
+      },
+      {
+        "arxiv_id": "2603.22721v1",
+        "title": "HyFI: Hyperbolic Feature Interpolation for Brain-Vision Alignment",
+        "abstract": "Recent progress in artificial intelligence has encouraged numerous attempts to understand and decode human visual system from brain signals. These prior works typically align neural activity independently with semantic and perceptual features extracted from images using pre-trained vision models. However, they fail to account for two key challenges: (1) the modality gap arising from the natural difference in the information level of representation between brain signals and images, and (2) the fact that semantic and perceptual features are highly entangled within neural activity. To address the",
+        "authors": [
+          "Sangmin Jo",
+          "Wootaek Jeong",
+          "Da-Woon Heo"
+        ],
+        "references": [],
+        "categories": [
+          "cs.AI"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.22721v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.22721v1"
+      },
+      {
+        "arxiv_id": "2603.22479v1",
+        "title": "Cognitive Training for Language Models: Towards General Capabilities via Cross-Entropy Games",
+        "abstract": "Defining a constructive process to build general capabilities for language models in an automatic manner is considered an open problem in artificial intelligence. Towards this, we consider the problem of building a curriculum of tasks that grows a model via relevant skill discovery. We provide a concrete framework for this task, using a family of tasks called cross-entropy games, which we postulate is universal in a suitable sense. We show that if it is possible to grow the curriculum for relevant skill discovery by iterating a greedy optimization algorithm, then, under natural assumptions, th",
+        "authors": [
+          "Clément Hongler",
+          "Franck Gabriel",
+          "Valentin Hartmann"
+        ],
+        "references": [],
+        "categories": [
+          "math.OC",
+          "cs.AI"
+        ],
+        "published": "2026-03-23",
+        "url": "https://arxiv.org/abs/2603.22479v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.22479v1"
+      },
+      {
+        "arxiv_id": "2603.21760v1",
+        "title": "Cycle Inverse-Consistent TransMorph: A Balanced Deep Learning Framework for Brain MRI Registration",
+        "abstract": "Deformable image registration plays a fundamental role in medical image analysis by enabling spatial alignment of anatomical structures across subjects. While recent deep learning-based approaches have significantly improved computational efficiency, many existing methods remain limited in capturing long-range anatomical correspondence and maintaining deformation consistency. In this work, we present a cycle inverse-consistent transformer-based framework for deformable brain MRI registration. The model integrates a Swin-UNet architecture with bidirectional consistency constraints, enabling the",
+        "authors": [
+          "Jiaqi Shang",
+          "Haojin Wu",
+          "Yinyi Lai"
+        ],
+        "references": [],
+        "categories": [
+          "eess.IV",
+          "cs.AI",
+          "cs.CV"
+        ],
+        "published": "2026-03-23",
+        "url": "https://arxiv.org/abs/2603.21760v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.21760v1"
+      },
+      {
+        "arxiv_id": "2603.21735v1",
+        "title": "Cognitive Agency Surrender: Defending Epistemic Sovereignty via Scaffolded AI Friction",
+        "abstract": "The proliferation of Generative Artificial Intelligence has transformed benign cognitive offloading into a systemic risk of cognitive agency surrender. Driven by the commercial dogma of \"zero-friction\" design, highly fluent AI interfaces actively exploit human cognitive miserliness, prematurely satisfying the need for cognitive closure and inducing severe automation bias. To empirically quantify this epistemic erosion, we deployed a zero-shot semantic classification pipeline ($τ=0.7$) on 1,223 high-confidence AI-HCI papers from 2023 to early 2026. Our analysis reveals an escalating \"agentic ta",
+        "authors": [
+          "Kuangzhe Xu",
+          "Yu Shen",
+          "Longjie Yan"
+        ],
+        "references": [],
+        "categories": [
+          "cs.HC",
+          "cs.AI"
+        ],
+        "published": "2026-03-23",
+        "url": "https://arxiv.org/abs/2603.21735v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.21735v1"
+      },
+      {
+        "arxiv_id": "2603.23404v1",
+        "title": "Unleashing Spatial Reasoning in Multimodal Large Language Models via Textual Representation Guided Reasoning",
+        "abstract": "Existing Multimodal Large Language Models (MLLMs) struggle with 3D spatial reasoning, as they fail to construct structured abstractions of the 3D environment depicted in video inputs. To bridge this gap, drawing inspiration from cognitive theories of allocentric spatial reasoning, we investigate how to enable MLLMs to model and reason over text-based spatial representations of video. Specifically, we introduce Textual Representation of Allocentric Context from Egocentric Video (TRACE), a prompting method that induces MLLMs to generate text-based representations of 3D environments as intermedia",
+        "authors": [
+          "Jiacheng Hua",
+          "Yishu Yin",
+          "Yuhang Wu"
+        ],
+        "references": [],
+        "categories": [
+          "cs.CV",
+          "cs.CL"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23404v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23404v1"
+      },
+      {
+        "arxiv_id": "2603.23319v1",
+        "title": "WISTERIA: Weak Implicit Signal-based Temporal Relation Extraction with Attention",
+        "abstract": "Temporal Relation Extraction (TRE) requires identifying how two events or temporal expressions are related in time. Existing attention-based models often highlight globally salient tokens but overlook the pair-specific cues that actually determine the temporal relation. We propose WISTERIA (Weak Implicit Signal-based Temporal Relation Extraction with Attention), a framework that examines whether the top-K attention components conditioned on each event pair truly encode interpretable evidence for temporal classification. Unlike prior works assuming explicit markers such as before, after, or whe",
+        "authors": [
+          "Duy Dao Do",
+          "Anaïs Halftermeyer",
+          "Thi-Bich-Hanh Dao"
+        ],
+        "references": [],
+        "categories": [
+          "cs.CL",
+          "cs.AI"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23319v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23319v1"
+      },
+      {
+        "arxiv_id": "2603.23013v1",
+        "title": "Knowledge Access Beats Model Size: Memory Augmented Routing for Persistent AI Agents",
+        "abstract": "Production AI agents frequently receive user-specific queries that are highly repetitive, with up to 47\\% being semantically similar to prior interactions, yet each query is typically processed with the same computational cost. We argue that this redundancy can be exploited through conversational memory, transforming repetition from a cost burden into an efficiency advantage. We propose a memory-augmented inference framework in which a lightweight 8B-parameter model leverages retrieved conversational context to answer all queries via a low-cost inference path. Without any additional training o",
+        "authors": [
+          "Xunzhuo Liu",
+          "Bowei He",
+          "Xue Liu"
+        ],
+        "references": [],
+        "categories": [
+          "cs.CL"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23013v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23013v1"
+      },
+      {
+        "arxiv_id": "2603.22816v1",
+        "title": "When AI Shows Its Work, Is It Actually Working? Step-Level Evaluation Reveals Frontier Language Models Frequently Bypass Their Own Reasoning",
+        "abstract": "Language models increasingly \"show their work\" by writing step-by-step reasoning before answering. But are these reasoning steps genuinely used, or decorative narratives generated after the model has already decided? Consider: a medical AI writes \"The patient's eosinophilia and livedo reticularis following catheterization suggest cholesterol embolization syndrome. Answer: B.\" If we remove the eosinophilia observation, does the diagnosis change? For most frontier models, the answer is no - the step was decorative.   We introduce step-level evaluation: remove one reasoning sentence at a time and",
+        "authors": [
+          "Abhinaba Basu",
+          "Pavan Chakraborty"
+        ],
+        "references": [],
+        "categories": [
+          "cs.CL",
+          "cs.AI",
+          "cs.LG"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.22816v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.22816v1"
+      },
+      {
+        "arxiv_id": "2603.21666v1",
+        "title": "Optimal Memory Encoding Through Fluctuation-Response Structure",
+        "abstract": "Physical reservoir computing exploits the intrinsic dynamics of physical systems for information processing, while keeping the internal dynamics fixed and training only linear readouts; yet the role of input encoding remains poorly understood. We show that optimal input encoding is a geometric problem governed by the system's fluctuation-response structure. By measuring steady-state fluctuations and linear response, we derive an analytical criterion for the input direction that maximizes task-specific linear memory under a fixed power constraint, termed Response-based Optimal Memory Encoding (",
+        "authors": [
+          "Lianxiang Cui",
+          "Kohei Nakajima",
+          "Kazuyuki Aihara"
+        ],
+        "references": [],
+        "categories": [
+          "cs.NE"
+        ],
+        "published": "2026-03-23",
+        "url": "https://arxiv.org/abs/2603.21666v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.21666v1"
+      },
+      {
+        "arxiv_id": "2603.23495v1",
+        "title": "VISion On Request: Enhanced VLLM efficiency with sparse, dynamically selected, vision-language interactions",
+        "abstract": "Existing approaches for improving the efficiency of Large Vision-Language Models (LVLMs) are largely based on the concept of visual token reduction. This approach, however, creates an information bottleneck that impairs performance, especially on challenging tasks that require fine-grained understanding and reasoning. In this work, we challenge this paradigm by introducing VISion On Request (VISOR), a method that reduces inference cost without discarding visual information. Instead of compressing the image, VISOR improves efficiency by sparsifying the interaction between image and text tokens.",
+        "authors": [
+          "Adrian Bulat",
+          "Alberto Baldrati",
+          "Ioannis Maniadis Metaxas"
+        ],
+        "references": [],
+        "categories": [
+          "cs.CV",
+          "cs.AI",
+          "cs.LG"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23495v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23495v1"
+      },
+      {
+        "arxiv_id": "2603.23481v1",
+        "title": "VTAM: Video-Tactile-Action Models for Complex Physical Interaction Beyond VLAs",
+        "abstract": "Video-Action Models (VAMs) have emerged as a promising framework for embodied intelligence, learning implicit world dynamics from raw video streams to produce temporally consistent action predictions. Although such models demonstrate strong performance on long-horizon tasks through visual reasoning, they remain limited in contact-rich scenarios where critical interaction states are only partially observable from vision alone. In particular, fine-grained force modulation and contact transitions are not reliably encoded in visual tokens, leading to unstable or imprecise behaviors. To bridge this",
+        "authors": [
+          "Haoran Yuan",
+          "Weigang Yi",
+          "Zhenyu Zhang"
+        ],
+        "references": [],
+        "categories": [
+          "cs.RO",
+          "cs.AI",
+          "cs.CV"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23481v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23481v1"
+      },
+      {
+        "arxiv_id": "2603.23472v1",
+        "title": "Byzantine-Robust and Differentially Private Federated Optimization under Weaker Assumptions",
+        "abstract": "Federated Learning (FL) enables heterogeneous clients to collaboratively train a shared model without centralizing their raw data, offering an inherent level of privacy. However, gradients and model updates can still leak sensitive information, while malicious servers may mount adversarial attacks such as Byzantine manipulation. These vulnerabilities highlight the need to address differential privacy (DP) and Byzantine robustness within a unified framework. Existing approaches, however, often rely on unrealistic assumptions such as bounded gradients, require auxiliary server-side datasets, or",
+        "authors": [
+          "Rustem Islamov",
+          "Grigory Malinovsky",
+          "Alexander Gaponov"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG",
+          "cs.CR",
+          "math.OC"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23472v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23472v1"
+      },
+      {
+        "arxiv_id": "2603.23461v1",
+        "title": "End-to-End Efficient RL for Linear Bellman Complete MDPs with Deterministic Transitions",
+        "abstract": "We study reinforcement learning (RL) with linear function approximation in Markov Decision Processes (MDPs) satisfying \\emph{linear Bellman completeness} -- a fundamental setting where the Bellman backup of any linear value function remains linear. While statistically tractable, prior computationally efficient algorithms are either limited to small action spaces or require strong oracle assumptions over the feature space. We provide a computationally efficient algorithm for linear Bellman complete MDPs with \\emph{deterministic transitions}, stochastic initial states, and stochastic rewards. Fo",
+        "authors": [
+          "Zakaria Mhammedi",
+          "Alexander Rakhlin",
+          "Nneka Okolo"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23461v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23461v1"
+      },
+      {
+        "arxiv_id": "2603.23436v1",
+        "title": "Similarity-Aware Mixture-of-Experts for Data-Efficient Continual Learning",
+        "abstract": "Machine learning models often need to adapt to new data after deployment due to structured or unstructured real-world dynamics. The Continual Learning (CL) framework enables continuous model adaptation, but most existing approaches either assume each task contains sufficiently many data samples or that the learning tasks are non-overlapping. In this paper, we address the more general setting where each task may have a limited dataset, and tasks may overlap in an arbitrary manner without a priori knowledge. This general setting is substantially more challenging for two reasons. On the one hand,",
+        "authors": [
+          "Connor Mclaughlin",
+          "Nigel Lee",
+          "Lili Su"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23436v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23436v1"
+      },
+      {
+        "arxiv_id": "2603.23397v1",
+        "title": "Kinetic Langevin Splitting Schemes for Constrained Sampling",
+        "abstract": "Constrained sampling is an important and challenging task in computational statistics, concerned with generating samples from a distribution under certain constraints. There are numerous types of algorithm aimed at this task, ranging from general Markov chain Monte Carlo, to unadjusted Langevin methods. In this article we propose a series of new sampling algorithms based on the latter of these, specifically the kinetic Langevin dynamics. Our series of algorithms are motivated on advanced numerical methods which are splitting order schemes, which include the BU and BAO families of splitting sch",
+        "authors": [
+          "Neil K. Chada",
+          "Lu Yu"
+        ],
+        "references": [],
+        "categories": [
+          "stat.ME",
+          "math.NA",
+          "stat.ML"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23397v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23397v1"
+      },
+      {
+        "arxiv_id": "2603.23374v1",
+        "title": "Shape-Adaptive Conditional Calibration for Conformal Prediction via Minimax Optimization",
+        "abstract": "Achieving valid conditional coverage in conformal prediction is challenging due to the theoretical difficulty of satisfying pointwise constraints in finite samples. Building upon the characterization of conditional coverage through marginal moment restrictions, we introduce Minimax Optimization Predictive Inference (MOPI), a framework that generalizes prior work by optimizing over a flexible class of set-valued mappings during the calibration phase, rather than simply calibrating a fixed sublevel set. This minimax formulation effectively circumvents the structural constraints of predefined sco",
+        "authors": [
+          "Yajie Bao",
+          "Chuchen Zhang",
+          "Zhaojun Wang"
+        ],
+        "references": [],
+        "categories": [
+          "stat.ME",
+          "stat.ML"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23374v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23374v1"
+      },
+      {
+        "arxiv_id": "2603.22741v1",
+        "title": "Algorithmic warm starts for Hamiltonian Monte Carlo",
+        "abstract": "Generating samples from a continuous probability density is a central algorithmic problem across statistics, engineering, and the sciences. For high-dimensional settings, Hamiltonian Monte Carlo (HMC) is the default algorithm across mainstream software packages. However, despite the extensive line of work on HMC and its widespread empirical success, it remains unclear how many iterations of HMC are required as a function of the dimension $d$. On one hand, a variety of results show that Metropolized HMC converges in $O(d^{1/4})$ iterations from a warm start close to stationarity. On the other h",
+        "authors": [
+          "Matthew S. Zhang",
+          "Jason M. Altschuler",
+          "Sinho Chewi"
+        ],
+        "references": [],
+        "categories": [
+          "cs.DS",
+          "cs.LG",
+          "math.NA"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.22741v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.22741v1"
+      },
+      {
+        "arxiv_id": "2603.22128v1",
+        "title": "Computationally lightweight classifiers with frequentist bounds on predictions",
+        "abstract": "While both classical and neural network classifiers can achieve high accuracy, they fall short on offering uncertainty bounds on their predictions, making them unfit for safety-critical applications. Existing kernel-based classifiers that provide such bounds scale with $\\mathcal O (n^{\\sim3})$ in time, making them computationally intractable for large datasets. To address this, we propose a novel, computationally efficient classification algorithm based on the Nadaraya-Watson estimator, for whose estimates we derive frequentist uncertainty intervals. We evaluate our classifier on synthetically",
+        "authors": [
+          "Shreeram Murali",
+          "Cristian R. Rojas",
+          "Dominik Baumann"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG",
+          "stat.ML"
+        ],
+        "published": "2026-03-23",
+        "url": "https://arxiv.org/abs/2603.22128v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.22128v1"
+      },
+      {
+        "arxiv_id": "2603.22000v1",
+        "title": "CRPS-Optimal Binning for Conformal Regression",
+        "abstract": "We propose a method for non-parametric conditional distribution estimation based on partitioning covariate-sorted observations into contiguous bins and using the within-bin empirical CDF as the predictive distribution. Bin boundaries are chosen to minimise the total leave-one-out Continuous Ranked Probability Score (LOO-CRPS), which admits a closed-form cost function with $O(n^2 \\log n)$ precomputation and $O(n^2)$ storage; the globally optimal $K$-partition is recovered by a dynamic programme in $O(n^2 K)$ time. Minimisation of Within-sample LOO-CRPS turns out to be inappropriate for selectin",
+        "authors": [
+          "Paolo Toccaceli"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG",
+          "stat.ML"
+        ],
+        "published": "2026-03-23",
+        "url": "https://arxiv.org/abs/2603.22000v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.22000v1"
+      },
+      {
+        "arxiv_id": "2603.23448v1",
+        "title": "Code Review Agent Benchmark",
+        "abstract": "Software engineering agents have shown significant promise in writing code. As AI agents permeate code writing, and generate huge volumes of code automatically -- the matter of code quality comes front and centre. As the automatically generated code gets integrated into huge code-bases -- the issue of code review and broadly quality assurance becomes important. In this paper, we take a fresh look at the problem and curate a code review dataset for AI agents to work with. Our dataset called c-CRAB (pronounced see-crab) can evaluate agents for code review tasks. Specifically given a pull-request",
+        "authors": [
+          "Yuntong Zhang",
+          "Zhiyuan Pan",
+          "Imam Nur Bani Yusuf"
+        ],
+        "references": [],
+        "categories": [
+          "cs.SE",
+          "cs.AI"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23448v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23448v1"
+      },
+      {
+        "arxiv_id": "2603.23443v1",
+        "title": "Evaluating LLM-Based Test Generation Under Software Evolution",
+        "abstract": "Large Language Models (LLMs) are increasingly used for automated unit test generation. However, it remains unclear whether these tests reflect genuine reasoning about program behavior or simply reproduce superficial patterns learned during training. If the latter dominates, LLM-generated tests may exhibit weaknesses such as reduced coverage, missed regressions, and undetected faults. Understanding how LLMs generate tests and how those tests respond to code evolution is therefore essential. We present a large-scale empirical study of LLM-based test generation under program changes. Using an aut",
+        "authors": [
+          "Sabaat Haroon",
+          "Mohammad Taha Khan",
+          "Muhammad Ali Gulzar"
+        ],
+        "references": [],
+        "categories": [
+          "cs.SE",
+          "cs.AI"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23443v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23443v1"
+      },
+      {
+        "arxiv_id": "2603.23419v1",
+        "title": "Biased Error Attribution in Multi-Agent Human-AI Systems Under Delayed Feedback",
+        "abstract": "Human decision-making is strongly influenced by cognitive biases, particularly under conditions of uncertainty and risk. While prior work has examined bias in single-step decisions with immediate outcomes and in human interaction with a single autonomous agent, comparatively little attention has been paid to decision-making under delayed outcomes involving multiple AI agents, where decisions at each step affect subsequent states. In this work, we study how delayed outcomes shape decision-making and responsibility attribution in a multi-agent human-AI task. Using a controlled game-based experim",
+        "authors": [
+          "Teerthaa Parakh",
+          "Karen M. Feigh"
+        ],
+        "references": [],
+        "categories": [
+          "cs.HC",
+          "cs.AI"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23419v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23419v1"
+      },
+      {
+        "arxiv_id": "2603.23406v1",
+        "title": "Beyond Preset Identities: How Agents Form Stances and Boundaries in Generative Societies",
+        "abstract": "While large language models simulate social behaviors, their capacity for stable stance formation and identity negotiation during complex interventions remains unclear. To overcome the limitations of static evaluations, this paper proposes a novel mixed-methods framework combining computational virtual ethnography with quantitative socio-cognitive profiling. By embedding human researchers into generative multiagent communities, controlled discursive interventions are conducted to trace the evolution of collective cognition. To rigorously measure how agents internalize and react to these specif",
+        "authors": [
+          "Hanzhong Zhang",
+          "Siyang Song",
+          "Jindong Wang"
+        ],
+        "references": [],
+        "categories": [
+          "cs.AI",
+          "cs.CL",
+          "cs.HC"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23406v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23406v1"
+      },
+      {
+        "arxiv_id": "2603.23405v1",
+        "title": "Planning over MAPF Agent Dependencies via Multi-Dependency PIBT",
+        "abstract": "Modern Multi-Agent Path Finding (MAPF) algorithms must plan for hundreds to thousands of agents in congested environments within a second, requiring highly efficient algorithms. Priority Inheritance with Backtracking (PIBT) is a popular algorithm capable of effectively planning in such situations. However, PIBT is constrained by its rule-based planning procedure and lacks generality because it restricts its search to paths that conflict with at most one other agent. This limitation also applies to Enhanced PIBT (EPIBT), a recent extension of PIBT. In this paper, we describe a new perspective o",
+        "authors": [
+          "Zixiang Jiang",
+          "Yulun Zhang",
+          "Rishi Veerapaneni"
+        ],
+        "references": [],
+        "categories": [
+          "cs.MA",
+          "cs.AI",
+          "cs.RO"
+        ],
+        "published": "2026-03-24",
+        "url": "https://arxiv.org/abs/2603.23405v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.23405v1"
+      },
+      {
+        "arxiv_id": "2603.22435v1",
+        "title": "CaP-X: A Framework for Benchmarking and Improving Coding Agents for Robot Manipulation",
+        "abstract": "\"Code-as-Policy\" considers how executable code can complement data-intensive Vision-Language-Action (VLA) methods, yet their effectiveness as autonomous controllers for embodied manipulation remains underexplored. We present CaP-X, an open-access framework for systematically studying Code-as-Policy agents in robot manipulation. At its core is CaP-Gym, an interactive environment in which agents control robots by synthesizing and executing programs that compose perception and control primitives. Building on this foundation, CaP-Bench evaluates frontier language and vision-language models across",
+        "authors": [
+          "Max Fu",
+          "Justin Yu",
+          "Karim El-Refai",
+          "Ethan Kou",
+          "Haoru Xue"
+        ],
+        "references": [],
+        "categories": [
+          "cs.RO",
+          "cs.AI"
+        ],
+        "published": "2026-03-23",
+        "url": "https://arxiv.org/abs/2603.22435v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.22435v1"
+      },
+      {
+        "arxiv_id": "2603.21687v1",
+        "title": "Mirage The Illusion of Visual Understanding",
+        "abstract": "Multimodal AI systems have achieved remarkable performance across a broad range of real-world tasks, yet the mechanisms underlying visual-language reasoning remain surprisingly poorly understood. We report three findings that challenge prevailing assumptions about how these systems process and integrate visual information. First, Frontier models readily generate detailed image descriptions and elaborate reasoning traces, including pathology-biased clinical findings, for images never provided; we term this phenomenon mirage reasoning. Second, without any image input, models also attain striking",
+        "authors": [
+          "Mohammad Asadi",
+          "Jack W. O'Sullivan",
+          "Fang Cao",
+          "Tahoura Nedaee",
+          "Kamyar Fardi"
+        ],
+        "references": [],
+        "categories": [
+          "cs.AI"
+        ],
+        "published": "2026-03-23",
+        "url": "https://arxiv.org/abs/2603.21687v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.21687v1"
+      },
+      {
+        "arxiv_id": "2603.19312v1",
+        "title": "LeWorldModel: Stable End-to-End Joint-Embedding Predictive Architecture from Pixels",
+        "abstract": "Joint Embedding Predictive Architectures (JEPAs) offer a compelling framework for learning world models in compact latent spaces, yet existing methods remain fragile, relying on complex multi-term losses, exponential moving averages, pre-trained encoders, or auxiliary supervision to avoid representation collapse. In this work, we introduce LeWorldModel (LeWM), the first JEPA that trains stably end-to-end from raw pixels using only two loss terms: a next-embedding prediction loss and a regularizer enforcing Gaussian-distributed latent embeddings. This reduces tunable loss hyperparameters from s",
+        "authors": [
+          "Lucas Maes",
+          "Quentin Le Lidec",
+          "Damien Scieur",
+          "Yann LeCun",
+          "Randall Balestriero"
+        ],
+        "references": [],
+        "categories": [
+          "cs.LG",
+          "cs.AI"
+        ],
+        "published": "2026-03-13",
+        "url": "https://arxiv.org/abs/2603.19312v1",
+        "embedding": null,
+        "ingested_on": "2026-03-26",
+        "updated_at": "2026-03-26T08:15:28",
+        "id": "2603.19312v1"
       }
     ],
     "links": [
@@ -2052,7 +2724,7 @@
         "shared_authors": [
           "Li Fei-Fei"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2602.21198v1",
         "target": "2603.18246v1"
       },
@@ -2088,7 +2760,7 @@
         "shared_authors": [
           "Yann LeCun"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2603.05498v1",
         "target": "2603.15381v1"
       },
@@ -2098,9 +2770,21 @@
         ],
         "weight": 0.2,
         "shared_authors": [
+          "Yann LeCun"
+        ],
+        "updated_at": "2026-03-26T08:15:28",
+        "source": "2603.05498v1",
+        "target": "2603.19312v1"
+      },
+      {
+        "relation_types": [
+          "coauthor"
+        ],
+        "weight": 0.2,
+        "shared_authors": [
           "Gaoyue Zhou"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2603.03276v1",
         "target": "2603.12231v1"
       },
@@ -2124,7 +2808,7 @@
         "shared_authors": [
           "Yann LeCun"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2602.23643v1",
         "target": "2603.15381v1"
       },
@@ -2134,9 +2818,21 @@
         ],
         "weight": 0.2,
         "shared_authors": [
+          "Yann LeCun"
+        ],
+        "updated_at": "2026-03-26T08:15:28",
+        "source": "2602.23643v1",
+        "target": "2603.19312v1"
+      },
+      {
+        "relation_types": [
+          "coauthor"
+        ],
+        "weight": 0.2,
+        "shared_authors": [
           "Randall Balestriero"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2602.22617v1",
         "target": "2603.12231v1"
       },
@@ -2148,9 +2844,22 @@
         "shared_authors": [
           "Yann LeCun"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2602.22617v1",
         "target": "2603.15381v1"
+      },
+      {
+        "relation_types": [
+          "coauthor"
+        ],
+        "weight": 0.4,
+        "shared_authors": [
+          "Randall Balestriero",
+          "Yann LeCun"
+        ],
+        "updated_at": "2026-03-26T08:15:28",
+        "source": "2602.22617v1",
+        "target": "2603.19312v1"
       },
       {
         "relation_types": [
@@ -2164,7 +2873,7 @@
           "Stephen Clare",
           "Yoshua Bengio"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2602.21012v1",
         "target": "2511.19863v1"
       },
@@ -2179,7 +2888,7 @@
           "Stephen Clare",
           "Yoshua Bengio"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2602.21012v1",
         "target": "2510.13653v1"
       },
@@ -2191,7 +2900,7 @@
         "shared_authors": [
           "Yoshua Bengio"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2602.21012v1",
         "target": "2601.10403v1"
       },
@@ -2203,7 +2912,7 @@
         "shared_authors": [
           "Yoshua Bengio"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2602.21012v1",
         "target": "2603.16928v1"
       },
@@ -2218,7 +2927,7 @@
           "Stephen Clare",
           "Yoshua Bengio"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2511.19863v1",
         "target": "2510.13653v1"
       },
@@ -2230,7 +2939,7 @@
         "shared_authors": [
           "Yoshua Bengio"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2511.19863v1",
         "target": "2601.10403v1"
       },
@@ -2242,7 +2951,7 @@
         "shared_authors": [
           "Yoshua Bengio"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2511.19863v1",
         "target": "2603.16928v1"
       },
@@ -2254,7 +2963,7 @@
         "shared_authors": [
           "Yoshua Bengio"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2510.13653v1",
         "target": "2601.10403v1"
       },
@@ -2266,7 +2975,7 @@
         "shared_authors": [
           "Yoshua Bengio"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2510.13653v1",
         "target": "2603.16928v1"
       },
@@ -2278,9 +2987,45 @@
         "shared_authors": [
           "Yoshua Bengio"
         ],
-        "updated_at": "2026-03-23T08:37:35",
+        "updated_at": "2026-03-26T08:15:28",
         "source": "2601.10403v1",
         "target": "2603.16928v1"
+      },
+      {
+        "relation_types": [
+          "coauthor"
+        ],
+        "weight": 0.2,
+        "shared_authors": [
+          "Randall Balestriero"
+        ],
+        "updated_at": "2026-03-26T08:15:28",
+        "source": "2603.12231v1",
+        "target": "2603.19312v1"
+      },
+      {
+        "relation_types": [
+          "coauthor"
+        ],
+        "weight": 0.2,
+        "shared_authors": [
+          "Yann LeCun"
+        ],
+        "updated_at": "2026-03-26T08:15:28",
+        "source": "2603.15381v1",
+        "target": "2603.19312v1"
+      },
+      {
+        "relation_types": [
+          "coauthor"
+        ],
+        "weight": 0.5,
+        "shared_authors": [
+          "Abhinaba Basu"
+        ],
+        "updated_at": "2026-03-26T08:15:28",
+        "source": "2603.22858v1",
+        "target": "2603.22816v1"
       }
     ]
   }
