@@ -2,7 +2,7 @@
 
 > Xray 分流代理管理工具（macOS / Linux / Windows）。零依赖，单文件 Python Web UI + 系统服务开机自启。
 >
-> **V1.4**: balancer 均衡组 + burstObservatory + 系统代理 Web UI 控制 + v2rayN 一键切换
+> **V1.5**: 路由拆分（搜索/GitHub→亚洲 | AI→美国）+ 系统代理 API + balancer 均衡组
 
 ## 项目背景
 
@@ -45,13 +45,22 @@
 
 **分流规则（balancer 均衡组）**：
 
-| 分组 | 策略 | 节点池 |
-|------|------|--------|
-| Claude/GPT | 固定出站 | 美宅专用 US |
-| Gemini/AI Studio | leastPing（低延时优先） | US-V1, US-R1, US-R2 |
-| YouTube/视频娱乐 | leastLoad（网速优先） | HK, TW, SG, JP 多节点 |
-| 大陆域名 | direct | 直连 |
-| 其他流量 | 默认 | HK-HKT-A |
+| 分组 | 策略 | 节点池 | 说明 |
+|------|------|--------|------|
+| Claude/GPT/Grok | 固定出站 | 美宅专用 US | AI 服务需要稳定美国 IP |
+| Gemini/AI Studio/NotebookLM | leastPing | US-V1, US-R1, US-R2 | Google AI 走美国节点 |
+| Google 搜索/Gmail/通用 | leastPing | HK×4, TW×2, JP×4, SG×2 | 搜索走亚洲低延迟 |
+| GitHub 全系 | leastPing | HK×4, TW×2, JP×4, SG×2 | 代码拉取走亚洲低延迟 |
+| YouTube/视频娱乐 | leastLoad（网速优先） | HK, TW, SG, JP 多节点 | 视频走带宽优先 |
+| 大陆域名 | direct | 直连 | — |
+| 其他流量 | 默认 | HK-HKT-A | — |
+
+**V1.5 路由拆分说明**：
+
+Google 搜索和 GitHub 从美国节点拆分到亚洲节点（`asia-fast-balancer`），原因：
+- 搜索是高频短连接，延迟敏感，亚洲节点 RTT 低 100-200ms
+- GitHub clone/fetch 是大文件传输，亚洲节点吞吐更稳定
+- AI 服务（Claude/GPT/Gemini）保持美国节点，因为部分服务限制非美国 IP
 
 ## 文件结构
 
@@ -187,6 +196,7 @@ xray-config      # 终端编辑配置文件
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| V1.5 | 2026-03-24 | 路由拆分：Google 搜索/GitHub 走亚洲节点（asia-fast-balancer），AI 服务保持美国；系统代理控制 API（get/set/toggle）+ Web UI 实时状态 |
 | V1.4 | 2026-03-23 | balancer 均衡组（Gemini=leastPing, 视频=leastLoad）、burstObservatory、系统代理 Web UI 按钮、v2rayN 一键切换脚本、终端代理环境变量自动配置 |
 | V1.3 | 2026-03-23 | 配置向导、系统代理自动设置、自动更新（订阅每天/内核+GeoIP 每周）、Web UI 更新管理 Tab |
 | V1.2 | 2026-03-22 | 跨平台支持（macOS + Linux + Windows）、离线部署包、VMess 协议、订阅导入、均衡组 |

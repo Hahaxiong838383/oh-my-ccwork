@@ -1,2 +1,5 @@
-# 包含节点地址和UUID的实际配置
+# 密钥文件（包含 UUID，不可上推）
+config/secrets.json
+
+# 旧规则兼容
 config/config.json

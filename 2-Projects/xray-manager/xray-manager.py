@@ -196,6 +196,116 @@ def stop_xray():
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+def get_system_proxy():
+    """获取系统代理状态（macOS only）"""
+    if not IS_MACOS:
+        return {"supported": False}
+    try:
+        # 找到活跃的网络接口
+        result = subprocess.run(
+            ["networksetup", "-listallnetworkservices"],
+            capture_output=True, text=True, timeout=5
+        )
+        services = [l.strip() for l in result.stdout.splitlines()
+                     if l.strip() and not l.startswith("An asterisk")]
+        # 优先 Wi-Fi
+        iface = "Wi-Fi" if "Wi-Fi" in services else (services[0] if services else None)
+        if not iface:
+            return {"supported": True, "enabled": False, "error": "未找到网络接口"}
+
+        # 检查 SOCKS / HTTP / HTTPS 三个代理状态
+        socks_enabled = http_enabled = https_enabled = False
+        port = 0
+        server = ""
+        for cmd, label in [
+            (["-getsocksfirewallproxy"], "socks"),
+            (["-getwebproxy"], "http"),
+            (["-getsecurewebproxy"], "https"),
+        ]:
+            r = subprocess.run(
+                ["networksetup"] + cmd + [iface],
+                capture_output=True, text=True, timeout=5
+            )
+            if "Enabled: Yes" in r.stdout:
+                if label == "socks": socks_enabled = True
+                elif label == "http": http_enabled = True
+                else: https_enabled = True
+            if label == "socks":
+                for line in r.stdout.splitlines():
+                    if line.startswith("Server:"):
+                        server = line.split(":", 1)[1].strip()
+                    elif line.startswith("Port:"):
+                        port = int(line.split(":", 1)[1].strip())
+        enabled = socks_enabled and http_enabled and https_enabled
+        return {
+            "supported": True, "enabled": enabled,
+            "server": server, "port": port, "interface": iface,
+            "detail": {"socks": socks_enabled, "http": http_enabled, "https": https_enabled},
+        }
+    except Exception as e:
+        return {"supported": True, "enabled": False, "error": str(e)}
+
+def set_system_proxy(enable, iface=None):
+    """设置/关闭系统代理：SOCKS + HTTP + HTTPS（macOS only）"""
+    if not IS_MACOS:
+        return {"success": False, "error": "仅支持 macOS"}
+    try:
+        if not iface:
+            iface = get_system_proxy().get("interface", "Wi-Fi")
+        config = load_config()
+        proxy_port = 10808
+        if config:
+            for ib in config.get("inbounds", []):
+                if ib.get("protocol") in ("socks", "mixed"):
+                    proxy_port = ib.get("port", 10808)
+                    break
+        port_str = str(proxy_port)
+        if enable:
+            # SOCKS 代理
+            subprocess.run(
+                ["networksetup", "-setsocksfirewallproxy", iface, "127.0.0.1", port_str],
+                capture_output=True, timeout=5
+            )
+            subprocess.run(
+                ["networksetup", "-setsocksfirewallproxystate", iface, "on"],
+                capture_output=True, timeout=5
+            )
+            # HTTP 代理
+            subprocess.run(
+                ["networksetup", "-setwebproxy", iface, "127.0.0.1", port_str],
+                capture_output=True, timeout=5
+            )
+            subprocess.run(
+                ["networksetup", "-setwebproxystate", iface, "on"],
+                capture_output=True, timeout=5
+            )
+            # HTTPS 代理
+            subprocess.run(
+                ["networksetup", "-setsecurewebproxy", iface, "127.0.0.1", port_str],
+                capture_output=True, timeout=5
+            )
+            subprocess.run(
+                ["networksetup", "-setsecurewebproxystate", iface, "on"],
+                capture_output=True, timeout=5
+            )
+        else:
+            subprocess.run(
+                ["networksetup", "-setsocksfirewallproxystate", iface, "off"],
+                capture_output=True, timeout=5
+            )
+            subprocess.run(
+                ["networksetup", "-setwebproxystate", iface, "off"],
+                capture_output=True, timeout=5
+            )
+            subprocess.run(
+                ["networksetup", "-setsecurewebproxystate", iface, "off"],
+                capture_output=True, timeout=5
+            )
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 def get_logs(lines=100):
     """获取最近日志"""
     if not LOG_PATH.exists():
@@ -471,6 +581,120 @@ def save_balancer_to_config(config, balancer_data):
 
     return config
 
+# ==================== 配置同步（跨设备） ====================
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+SYNC_CONFIG_PATH = SCRIPT_DIR / "config" / "config.sync.json"
+SECRETS_PATH = SCRIPT_DIR / "config" / "secrets.json"
+
+# 平台相关路径占位符
+_PATH_PLACEHOLDER = "{{XRAY_HOME}}"
+
+
+def _collect_uuids(config):
+    """从配置中提取所有唯一 UUID，返回 {uuid: placeholder_name} 映射"""
+    uuids = {}
+    counter = 0
+    for ob in config.get("outbounds", []):
+        for vnext in ob.get("settings", {}).get("vnext", []):
+            for user in vnext.get("users", []):
+                uid = user.get("id", "")
+                if uid and uid not in uuids:
+                    counter += 1
+                    uuids[uid] = f"UUID_{counter}" if counter > 1 else "UUID_MAIN"
+    return uuids
+
+
+def _replace_in_json(obj, replacements):
+    """递归替换 JSON 值中的字符串"""
+    if isinstance(obj, str):
+        for old, new in replacements:
+            obj = obj.replace(old, new)
+        return obj
+    if isinstance(obj, list):
+        return [_replace_in_json(item, replacements) for item in obj]
+    if isinstance(obj, dict):
+        return {k: _replace_in_json(v, replacements) for k, v in obj.items()}
+    return obj
+
+
+def export_config():
+    """导出配置到仓库（脱敏），供其他设备同步"""
+    config = load_config()
+    if not config:
+        return {"success": False, "error": "未找到配置文件"}
+
+    # 1. 提取 UUID 映射
+    uuid_map = _collect_uuids(config)
+    if not uuid_map:
+        return {"success": False, "error": "配置中未找到 UUID"}
+
+    # 2. 构建替换列表：UUID → 占位符, 平台路径 → 通用占位符
+    home_str = str(Path.home())
+    xray_home_str = str(XRAY_HOME)
+    replacements = [(uid, "{{" + name + "}}") for uid, name in uuid_map.items()]
+    replacements.append((xray_home_str, _PATH_PLACEHOLDER))
+    replacements.append((home_str, "{{HOME}}"))
+
+    # 3. 脱敏
+    sanitized = _replace_in_json(config, replacements)
+
+    # 4. 保存模板
+    SYNC_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(SYNC_CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(sanitized, f, indent=2, ensure_ascii=False)
+
+    # 5. 保存密钥文件
+    secrets = {name: uid for uid, name in uuid_map.items()}
+    with open(SECRETS_PATH, "w", encoding="utf-8") as f:
+        json.dump(secrets, f, indent=2, ensure_ascii=False)
+
+    return {
+        "success": True,
+        "sync_file": str(SYNC_CONFIG_PATH),
+        "secrets_file": str(SECRETS_PATH),
+        "uuid_count": len(uuid_map),
+    }
+
+
+def import_config():
+    """从仓库同步文件 + 本地密钥还原完整配置"""
+    if not SYNC_CONFIG_PATH.exists():
+        return {"success": False, "error": f"同步文件不存在: {SYNC_CONFIG_PATH}"}
+    if not SECRETS_PATH.exists():
+        return {"success": False, "error": f"密钥文件不存在: {SECRETS_PATH}\n请从已有设备复制 secrets.json 到 config/ 目录"}
+
+    with open(SYNC_CONFIG_PATH, "r", encoding="utf-8") as f:
+        template = json.load(f)
+    with open(SECRETS_PATH, "r", encoding="utf-8") as f:
+        secrets = json.load(f)
+
+    # 构建替换列表：占位符 → 实际值
+    replacements = [("{{" + name + "}}", uid) for name, uid in secrets.items()]
+    replacements.append((_PATH_PLACEHOLDER, str(XRAY_HOME)))
+    replacements.append(("{{HOME}}", str(Path.home())))
+
+    # 还原
+    config = _replace_in_json(template, replacements)
+
+    # 备份现有配置
+    if CONFIG_PATH.exists():
+        backup = CONFIG_PATH.with_suffix(".json.bak")
+        with open(CONFIG_PATH, "r") as src, open(backup, "w") as dst:
+            dst.write(src.read())
+
+    # 写入
+    XRAY_HOME.mkdir(parents=True, exist_ok=True)
+    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+
+    return {
+        "success": True,
+        "config_path": str(CONFIG_PATH),
+        "message": "配置已还原，请重启 xray 生效",
+    }
+
+
 def delete_balancer_from_config(config, tag):
     """从配置中删除均衡组"""
     routing = config.get("routing", {})
@@ -588,7 +812,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .dot { width: 10px; height: 10px; border-radius: 50%; }
 .dot.on { background: #3fb950; box-shadow: 0 0 8px #3fb950; }
 .dot.off { background: #f85149; box-shadow: 0 0 8px #f85149; }
-.btn { padding: 6px 16px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer; font-size: 13px; transition: all .15s; }
+.btn { padding: 6px 16px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer; font-size: 13px; transition: all .15s; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
 .btn:hover { background: #30363d; border-color: #8b949e; }
 .btn.primary { background: #238636; border-color: #238636; color: #fff; }
 .btn.primary:hover { background: #2ea043; }
@@ -658,6 +882,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 </div>
 
 <div class="container">
+  <!-- 系统代理控制 -->
+  <div class="card" style="margin-bottom:16px;">
+    <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="dot" id="proxyDot"></div>
+        <span style="font-size:14px;font-weight:600;color:#c9d1d9;">系统代理</span>
+        <span id="proxyText" style="font-size:13px;color:#8b949e;">检测中...</span>
+      </div>
+      <button class="btn small primary" id="proxyBtn" onclick="toggleSysProxy()" style="min-width:56px;">开启</button>
+    </div>
+  </div>
+
   <!-- 端口信息栏 -->
   <div id="portInfo" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;"></div>
 
@@ -1003,6 +1239,42 @@ async function checkStatus() {
     dot.className = 'dot off';
     text.textContent = '已停止';
   }
+}
+
+async function checkSysProxy() {
+  const data = await api('/sysproxy');
+  const dot = document.getElementById('proxyDot');
+  const text = document.getElementById('proxyText');
+  const btn = document.getElementById('proxyBtn');
+  if (!data.supported) {
+    text.textContent = '系统代理(不支持)';
+    btn.style.display = 'none';
+    return;
+  }
+  if (data.enabled) {
+    dot.className = 'dot on';
+    text.textContent = `已启用 → ${data.server}:${data.port}`;
+    btn.textContent = '关闭';
+    btn.className = 'btn small danger';
+  } else {
+    dot.className = 'dot off';
+    text.textContent = '未启用';
+    btn.textContent = '开启';
+    btn.className = 'btn small primary';
+  }
+}
+
+async function toggleSysProxy() {
+  const data = await api('/sysproxy');
+  const enable = !data.enabled;
+  showToast(enable ? '正在开启系统代理...' : '正在关闭系统代理...', 'success');
+  const res = await api('/sysproxy', 'POST', { enable });
+  if (res.success) {
+    showToast(enable ? '系统代理已开启' : '系统代理已关闭', 'success');
+  } else {
+    showToast('操作失败: ' + (res.error || ''), 'error');
+  }
+  checkSysProxy();
 }
 
 async function restartXray() {
@@ -1496,9 +1768,11 @@ function showToast(msg, type) {
 
 // ========== 初始化 ==========
 checkStatus();
+checkSysProxy();
 loadNodes();
 loadRoutes();
 setInterval(checkStatus, 10000);
+setInterval(checkSysProxy, 10000);
 </script>
 </body>
 </html>"""
@@ -1550,6 +1824,8 @@ class Handler(BaseHTTPRequestHandler):
                 })
             else:
                 self._json({"nodes": [], "routes": [], "balancers": [], "inbounds": []})
+        elif path == "/api/sysproxy":
+            self._json(get_system_proxy())
         elif path == "/api/logs":
             self._json({"logs": get_logs(200)})
         elif path == "/api/test":
@@ -1568,6 +1844,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json(restart_xray())
         elif path == "/api/stop":
             self._json(stop_xray())
+        elif path == "/api/sysproxy":
+            enable = body.get("enable", True)
+            iface = body.get("interface", None)
+            self._json(set_system_proxy(enable, iface))
         elif path == "/api/subscribe":
             sub_url = body.get("url", "")
             if not sub_url:
@@ -1707,6 +1987,10 @@ class Handler(BaseHTTPRequestHandler):
                     })
             save_config(config)
             self._json({"success": True})
+        elif path == "/api/config/export":
+            self._json(export_config())
+        elif path == "/api/config/import":
+            self._json(import_config())
         elif path.startswith("/api/route"):
             config = load_config()
             if not config:
@@ -1835,6 +2119,28 @@ class Handler(BaseHTTPRequestHandler):
 # ==================== 主入口 ====================
 
 def main():
+    # CLI 子命令
+    if len(sys.argv) > 1 and sys.argv[1] in ("export", "import", "sync"):
+        cmd = sys.argv[1]
+        if cmd == "export":
+            result = export_config()
+            if result["success"]:
+                print(f"✓ 配置已导出（{result['uuid_count']} 个 UUID 已脱敏）")
+                print(f"  模板: {result['sync_file']}")
+                print(f"  密钥: {result['secrets_file']}")
+                print(f"\n提示: secrets.json 已 gitignore，需手动复制到其他设备")
+            else:
+                print(f"✗ 导出失败: {result['error']}")
+            return
+        elif cmd in ("import", "sync"):
+            result = import_config()
+            if result["success"]:
+                print(f"✓ {result['message']}")
+                print(f"  配置: {result['config_path']}")
+            else:
+                print(f"✗ 导入失败: {result['error']}")
+            return
+
     print(f"Xray Manager starting on http://{('0.0.0.0' if IS_LINUX else '127.0.0.1')}:{WEB_PORT}")
     print(f"Config: {CONFIG_PATH}")
     print(f"Xray: {XRAY_BIN}")

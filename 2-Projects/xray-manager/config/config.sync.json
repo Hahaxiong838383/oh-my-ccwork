@@ -1,0 +1,1521 @@
+{
+  "log": {
+    "loglevel": "warning",
+    "access": "{{XRAY_HOME}}/access.log"
+  },
+  "inbounds": [
+    {
+      "tag": "socks",
+      "port": 10808,
+      "listen": "127.0.0.1",
+      "protocol": "mixed",
+      "sniffing": {
+        "enabled": true,
+        "destOverride": [
+          "http",
+          "tls"
+        ],
+        "routeOnly": false
+      },
+      "settings": {
+        "auth": "noauth",
+        "udp": true
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "HK-HKT-A",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "hka.cloudv2a.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray"
+        },
+        "tlsSettings": {
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "HK-HKT-B",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "hkb.cloudv2a.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray"
+        },
+        "tlsSettings": {
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "HK-HKT-C",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "hkc.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "email": "t@t.tt",
+                "security": "auto",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "serverName": "hkc.cloudv2ax.com",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "HK-HKT-D",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "hkd.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "email": "t@t.tt",
+                "security": "auto",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "serverName": "hkd.cloudv2ax.com",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "HK-HKT-Relay-A",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "cfhk443.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray",
+          "headers": {
+            "Host": "cfhkc.008885.xyz"
+          }
+        },
+        "tlsSettings": {
+          "serverName": "cfhkc.008885.xyz",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "TW-Hinet-A",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "twa.cloudv2a.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray"
+        },
+        "tlsSettings": {
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "TW-Hinet-B",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "twb.cloudv2a.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray"
+        },
+        "tlsSettings": {
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "JP-Linode-A",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "ajpa.cloudv2a.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray"
+        },
+        "tlsSettings": {
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "JP-Linode-V1",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "vjpb.cloudv2ax.com",
+            "port": 8980,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "email": "t@t.tt",
+                "security": "auto",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "serverName": "vjpb.cloudv2ax.com",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "JP-Linode-R1",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "rjpe.cloudv2ax.com",
+            "port": 8920,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "email": "t@t.tt",
+                "security": "auto",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "serverName": "www.microsoft.com",
+          "fingerprint": "chrome",
+          "show": false,
+          "publicKey": "4sj2Zjfs7V61ZqASiW1gnx66sKoM-aqkG7U5-uN3vj8",
+          "shortId": "",
+          "spiderX": ""
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "JP-NTT-01",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "djpd.cloudv2a.com",
+            "port": 8891,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "none"
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "JP-Relay-A",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "cfjp443.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray",
+          "headers": {
+            "Host": "cfjpa.008885.xyz"
+          }
+        },
+        "tlsSettings": {
+          "serverName": "cfjpa.008885.xyz",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "US-Relay-A",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "cfusct443.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray",
+          "headers": {
+            "Host": "cfusa.008885.xyz"
+          }
+        },
+        "tlsSettings": {
+          "serverName": "cfusa.008885.xyz",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "US-Relay-B",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "cfuscmcc443.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray",
+          "headers": {
+            "Host": "cfusb1.008885.xyz"
+          }
+        },
+        "tlsSettings": {
+          "serverName": "cfusb1.008885.xyz",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "US-V1",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "vusa.cloudv2ax.com",
+            "port": 8900,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "email": "t@t.tt",
+                "security": "auto",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "serverName": "vusa.cloudv2ax.com",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "US-R1",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "rusa.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "email": "t@t.tt",
+                "security": "auto",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "serverName": "www.microsoft.com",
+          "fingerprint": "chrome",
+          "show": false,
+          "publicKey": "4sj2Zjfs7V61ZqASiW1gnx66sKoM-aqkG7U5-uN3vj8",
+          "shortId": "",
+          "spiderX": ""
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "US-R2",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "rusb.cloudv2ax.com",
+            "port": 8900,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "email": "t@t.tt",
+                "security": "auto",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "serverName": "www.microsoft.com",
+          "fingerprint": "chrome",
+          "show": false,
+          "publicKey": "4sj2Zjfs7V61ZqASiW1gnx66sKoM-aqkG7U5-uN3vj8",
+          "shortId": "",
+          "spiderX": ""
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "US-GIA-D",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "aus.cloudv2a.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray"
+        },
+        "tlsSettings": {
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "US-GIA-B",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "busb.cloudv2a.com",
+            "port": 8901,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "none"
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "US-GIA-C",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "fus.cloudv2a.com",
+            "port": 8911,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray"
+        },
+        "tlsSettings": {
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "SG-LN",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "asg.cloudv2a.com",
+            "port": 8902,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "none"
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "SG-DO",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "rsgb.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "email": "t@t.tt",
+                "security": "auto",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "serverName": "www.microsoft.com",
+          "fingerprint": "chrome",
+          "show": false,
+          "publicKey": "4sj2Zjfs7V61ZqASiW1gnx66sKoM-aqkG7U5-uN3vj8",
+          "shortId": "",
+          "spiderX": ""
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "India-A",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "cfina.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray",
+          "headers": {
+            "Host": "cfina.008885.xyz"
+          }
+        },
+        "tlsSettings": {
+          "serverName": "cfina.008885.xyz",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "Vietnam-A",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "cfvna.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray",
+          "headers": {
+            "Host": "cfvna.008885.xyz"
+          }
+        },
+        "tlsSettings": {
+          "serverName": "cfvna.008885.xyz",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "Indonesia-A",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "cfida.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray",
+          "headers": {
+            "Host": "cfida.008885.xyz"
+          }
+        },
+        "tlsSettings": {
+          "serverName": "cfida.008885.xyz",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "Russia",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "cfru443.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray",
+          "headers": {
+            "Host": "cfv2ruaa.008885.xyz"
+          }
+        },
+        "tlsSettings": {
+          "serverName": "cfv2ruaa.008885.xyz",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "UK-A",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "cfuk443.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray",
+          "headers": {
+            "Host": "cfuka.008885.xyz"
+          }
+        },
+        "tlsSettings": {
+          "serverName": "cfuka.008885.xyz",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "DE-A",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "cfde443.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray",
+          "headers": {
+            "Host": "cfdea.008885.xyz"
+          }
+        },
+        "tlsSettings": {
+          "serverName": "cfdea.008885.xyz",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "FR-A",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "cffr443.cloudv2ax.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID_MAIN}}",
+                "alterId": 0,
+                "email": "t@t.tt",
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/ray",
+          "headers": {
+            "Host": "cffra.008885.xyz"
+          }
+        },
+        "tlsSettings": {
+          "serverName": "cffra.008885.xyz",
+          "fingerprint": "chrome"
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "美宅-Claud-GPT专用US",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "64.186.235.107",
+            "port": 8443,
+            "users": [
+              {
+                "id": "{{UUID_2}}",
+                "email": "t@t.tt",
+                "security": "auto",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "serverName": "www.microsoft.com",
+          "fingerprint": "chrome",
+          "show": false,
+          "publicKey": "c0p7areyRcA7bKLf-G2YWFr4lzAim0zfXX_wmcj2GXM",
+          "shortId": "2b03e9e4e24ac61a",
+          "spiderX": ""
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "direct",
+      "protocol": "freedom"
+    },
+    {
+      "tag": "block",
+      "protocol": "blackhole"
+    }
+  ],
+  "routing": {
+    "domainStrategy": "AsIs",
+    "balancers": [
+      {
+        "tag": "google-ai-balancer",
+        "selector": [
+          "US-V1",
+          "US-R1",
+          "US-R2"
+        ],
+        "strategy": {
+          "type": "leastPing"
+        }
+      },
+      {
+        "tag": "media-balancer",
+        "selector": [
+          "HK-HKT-A",
+          "HK-HKT-B",
+          "HK-HKT-C",
+          "HK-HKT-D",
+          "SG-LN",
+          "SG-DO",
+          "JP-Linode-V1",
+          "JP-Linode-R1",
+          "JP-NTT-01",
+          "JP-Relay-A"
+        ],
+        "strategy": {
+          "type": "leastLoad",
+          "settings": {
+            "healthCheck": {
+              "enabled": true,
+              "interval": 180
+            },
+            "costs": [
+              {
+                "match": "HK-",
+                "value": 0.5
+              }
+            ],
+            "baselines": [
+              "1ms"
+            ],
+            "expected": 3,
+            "maxRTT": "800ms",
+            "tolerance": 0.3
+          }
+        }
+      },
+      {
+        "tag": "asia-fast-balancer",
+        "selector": [
+          "HK-HKT-A",
+          "HK-HKT-B",
+          "HK-HKT-C",
+          "HK-HKT-D",
+          "TW-Hinet-A",
+          "TW-Hinet-B",
+          "JP-Linode-A",
+          "JP-Linode-V1",
+          "JP-Linode-R1",
+          "JP-NTT-01",
+          "SG-LN",
+          "SG-DO"
+        ],
+        "strategy": {
+          "type": "leastPing"
+        }
+      }
+    ],
+    "rules": [
+      {
+        "type": "field",
+        "port": "443",
+        "network": "udp",
+        "outboundTag": "block"
+      },
+      {
+        "type": "field",
+        "outboundTag": "美宅-Claud-GPT专用US",
+        "domain": [
+          "domain:anthropic.com",
+          "domain:openai.com",
+          "domain:chatgpt.com",
+          "domain:oaiusercontent.com",
+          "domain:oaistatic.com",
+          "domain:openaiapi-site.azureedge.net",
+          "domain:auth0.openai.com",
+          "domain:sentry.io",
+          "domain:claude.ai",
+          "domain:claudeusercontent.com",
+          "domain:api.anthropic.com",
+          "domain:statsig.anthropic.com",
+          "domain:auth.anthropic.com",
+          "domain:console.anthropic.com",
+          "domain:registry.npmjs.org",
+          "domain:npmjs.com",
+          "domain:npmjs.org",
+          "domain:claude.com",
+          "domain:platform.claude.com",
+          "domain:datadoghq.com",
+          "domain:segment.io",
+          "domain:intercom.io",
+          "domain:intercomcdn.com",
+          "domain:grok.com"
+        ]
+      },
+      {
+        "type": "field",
+        "domain": [
+          "domain:github.com",
+          "domain:github.io",
+          "domain:githubusercontent.com",
+          "domain:ghcr.io",
+          "domain:objects.githubusercontent.com",
+          "domain:api.github.com",
+          "domain:collector.github.com",
+          "domain:collector.githubapp.com",
+          "domain:github.githubassets.com",
+          "domain:raw.githubusercontent.com",
+          "domain:release-assets.githubusercontent.com",
+          "domain:avatars.githubusercontent.com",
+          "domain:camo.githubusercontent.com"
+        ],
+        "balancerTag": "asia-fast-balancer"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "domain:accounts.google.com",
+          "domain:googleapis.com",
+          "domain:gstatic.com",
+          "domain:googleusercontent.com",
+          "domain:googletag.com",
+          "domain:googletagmanager.com",
+          "domain:google-analytics.com",
+          "domain:googleadservices.com",
+          "domain:myaccount.google.com",
+          "domain:play.google.com",
+          "domain:clients.google.com",
+          "domain:apis.google.com",
+          "domain:cloud.google.com",
+          "domain:www.google.com",
+          "domain:google.com",
+          "domain:clients6.google.com",
+          "domain:signaler-pa.clients6.google.com",
+          "domain:play.googleapis.com",
+          "domain:content-autofill.googleapis.com",
+          "domain:update.googleapis.com",
+          "domain:clientservices.googleapis.com",
+          "domain:optimizationguide-pa.googleapis.com",
+          "domain:safebrowsing.googleapis.com",
+          "domain:oauthaccountmanager.googleapis.com",
+          "domain:people-pa.clients6.google.com",
+          "domain:waa-pa.clients6.google.com",
+          "domain:ogads-pa.clients6.google.com",
+          "domain:jnn-pa.googleapis.com",
+          "domain:developerprofiles-pa.googleapis.com",
+          "domain:content-developerprofiles-pa.googleapis.com",
+          "domain:storage.googleapis.com",
+          "domain:lh3.googleusercontent.com",
+          "domain:encrypted-tbn0.gstatic.com",
+          "domain:csp.withgoogle.com",
+          "domain:gmail.com",
+          "domain:www.google.com.hk",
+          "domain:yt4.ggpht.com"
+        ],
+        "balancerTag": "asia-fast-balancer"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "domain:youtube.com",
+          "domain:youtu.be",
+          "domain:ytimg.com",
+          "domain:googlevideo.com",
+          "domain:yt3.ggpht.com",
+          "domain:youtube-nocookie.com",
+          "domain:x.com",
+          "domain:twitter.com",
+          "domain:twimg.com",
+          "domain:t.co",
+          "domain:facebook.com",
+          "domain:fbcdn.net",
+          "domain:fb.com",
+          "domain:instagram.com",
+          "domain:cdninstagram.com",
+          "domain:tiktok.com",
+          "domain:tiktokv.com",
+          "domain:tiktokcdn.com",
+          "domain:netflix.com",
+          "domain:nflxvideo.net",
+          "domain:nflximg.net",
+          "domain:nflxext.com",
+          "domain:spotify.com",
+          "domain:scdn.co",
+          "domain:twitch.tv",
+          "domain:ttvnw.net",
+          "domain:reddit.com",
+          "domain:redd.it",
+          "domain:redditmedia.com",
+          "domain:telegram.org",
+          "domain:t.me",
+          "domain:telegra.ph",
+          "domain:whatsapp.com",
+          "domain:whatsapp.net",
+          "domain:discord.com",
+          "domain:discord.gg",
+          "domain:discordapp.com",
+          "domain:pornhub.com",
+          "domain:xvideos.com",
+          "domain:wikimedia.org",
+          "domain:wikipedia.org"
+        ],
+        "balancerTag": "media-balancer"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "domain:gemini.google.com",
+          "domain:aistudio.google.com",
+          "domain:generativelanguage.googleapis.com",
+          "domain:ai.google.dev",
+          "domain:deepmind.google",
+          "domain:deepmind.com",
+          "domain:makersuite.google.com",
+          "domain:alkalimakersuite-pa.clients6.google.com",
+          "domain:notebooklm.google.com",
+          "domain:notebooklm.google",
+          "domain:labs.google",
+          "domain:bard.google.com"
+        ],
+        "balancerTag": "google-ai-balancer"
+      },
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "domain": [
+          "domain:hahaxiong.cc",
+          "domain:aliyun.com",
+          "domain:alicdn.com",
+          "domain:aliyuncs.com",
+          "domain:alibabacloud.com",
+          "domain:alibaba.com",
+          "domain:taobao.com",
+          "domain:tmall.com",
+          "domain:alipay.com",
+          "domain:amap.com",
+          "domain:dingtalk.com",
+          "domain:feishu.cn",
+          "domain:larksuite.com",
+          "domain:bytedance.com",
+          "domain:douyin.com",
+          "domain:toutiao.com",
+          "domain:baidu.com",
+          "domain:bdstatic.com",
+          "domain:qq.com",
+          "domain:weixin.qq.com",
+          "domain:wechat.com",
+          "domain:jd.com",
+          "domain:163.com",
+          "domain:126.com",
+          "domain:bilibili.com",
+          "domain:biliapi.net",
+          "domain:hdslb.com",
+          "domain:zhihu.com"
+        ]
+      },
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "domain": [
+          "geosite:cn"
+        ]
+      },
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "ip": [
+          "geoip:cn",
+          "geoip:private"
+        ]
+      }
+    ]
+  },
+  "dns": {
+    "hosts": {
+      "dns.google": [
+        "8.8.8.8",
+        "8.8.4.4",
+        "2001:4860:4860::8888",
+        "2001:4860:4860::8844"
+      ],
+      "dns.alidns.com": [
+        "223.5.5.5",
+        "223.6.6.6",
+        "2400:3200::1",
+        "2400:3200:baba::1"
+      ],
+      "one.one.one.one": [
+        "1.1.1.1",
+        "1.0.0.1",
+        "2606:4700:4700::1111",
+        "2606:4700:4700::1001"
+      ],
+      "1dot1dot1dot1.cloudflare-dns.com": [
+        "1.1.1.1",
+        "1.0.0.1",
+        "2606:4700:4700::1111",
+        "2606:4700:4700::1001"
+      ],
+      "cloudflare-dns.com": [
+        "104.16.249.249",
+        "104.16.248.249",
+        "2606:4700::6810:f8f9",
+        "2606:4700::6810:f9f9"
+      ],
+      "dns.cloudflare.com": [
+        "104.16.132.229",
+        "104.16.133.229",
+        "2606:4700::6810:84e5",
+        "2606:4700::6810:85e5"
+      ],
+      "dot.pub": [
+        "1.12.12.12",
+        "120.53.53.53"
+      ],
+      "doh.pub": [
+        "1.12.12.12",
+        "120.53.53.53"
+      ],
+      "dns.quad9.net": [
+        "9.9.9.9",
+        "149.112.112.112",
+        "2620:fe::fe",
+        "2620:fe::9"
+      ],
+      "dns.yandex.net": [
+        "77.88.8.8",
+        "77.88.8.1",
+        "2a02:6b8::feed:0ff",
+        "2a02:6b8:0:1::feed:0ff"
+      ],
+      "dns.sb": [
+        "185.222.222.222",
+        "2a09::"
+      ],
+      "dns.umbrella.com": [
+        "208.67.220.220",
+        "208.67.222.222",
+        "2620:119:35::35",
+        "2620:119:53::53"
+      ],
+      "dns.sse.cisco.com": [
+        "208.67.220.220",
+        "208.67.222.222",
+        "2620:119:35::35",
+        "2620:119:53::53"
+      ],
+      "engage.cloudflareclient.com": [
+        "162.159.192.1",
+        "2606:4700:d0::a29f:c001"
+      ]
+    },
+    "servers": [
+      {
+        "address": "https://dns.alidns.com/dns-query",
+        "domains": [
+          "domain:alidns.com",
+          "domain:doh.pub",
+          "domain:dot.pub",
+          "domain:360.cn",
+          "domain:onedns.net",
+          "rusa.cloudv2ax.com"
+        ],
+        "skipFallback": true
+      },
+      {
+        "address": "https://cloudflare-dns.com/dns-query",
+        "domains": [
+          "geosite:google"
+        ],
+        "skipFallback": true
+      },
+      {
+        "address": "https://dns.alidns.com/dns-query",
+        "domains": [
+          "geosite:private",
+          "geosite:cn"
+        ],
+        "skipFallback": true
+      },
+      {
+        "address": "223.5.5.5",
+        "domains": [
+          "full:dns.alidns.com",
+          "full:cloudflare-dns.com"
+        ],
+        "skipFallback": true
+      },
+      "https://cloudflare-dns.com/dns-query"
+    ]
+  },
+  "burstObservatory": {
+    "subjectSelector": [
+      "US-V1",
+      "US-R1",
+      "US-R2",
+      "HK-HKT-A",
+      "HK-HKT-B",
+      "HK-HKT-C",
+      "HK-HKT-D",
+      "SG-LN",
+      "SG-DO",
+      "JP-Linode-V1",
+      "JP-Linode-R1",
+      "JP-NTT-01",
+      "JP-Relay-A"
+    ],
+    "pingConfig": {
+      "destination": "http://www.google.com/generate_204",
+      "interval": "5m",
+      "connectivity": "http://connectivitycheck.platform.hicloud.com/generate_204",
+      "timeout": "3s",
+      "sampling": 2
+    }
+  }
+}
