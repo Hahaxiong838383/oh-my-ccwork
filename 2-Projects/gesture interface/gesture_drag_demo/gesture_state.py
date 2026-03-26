@@ -9,6 +9,7 @@ gesture_state.py - Pinch / Release 状态机
 - 对 pinch 中点坐标做 EMA 平滑
 """
 
+from typing import Optional
 import numpy as np
 from enum import Enum
 
@@ -49,10 +50,10 @@ class GestureStateMachine:
         self._lost_count = 0      # 连续丢手帧数
 
         # 平滑后的 pinch 中点
-        self._smooth_center: np.ndarray | None = None
+        self._smooth_center: Optional[np.ndarray] = None
 
     @property
-    def smooth_center(self) -> np.ndarray | None:
+    def smooth_center(self) -> Optional[np.ndarray]:
         return self._smooth_center
 
     @property
@@ -60,7 +61,7 @@ class GestureStateMachine:
         return self.phase == GesturePhase.PINCHING
 
     def update(self, hand_detected: bool, pinch_ratio: float = 0.0,
-               raw_center: np.ndarray | None = None):
+               raw_center: Optional[np.ndarray] = None):
         """
         每帧调用，更新状态机。
 

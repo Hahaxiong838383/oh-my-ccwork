@@ -58,6 +58,7 @@ class GazeResult:
     nose_tip: Optional[tuple] = None      # 鼻尖像素坐标
     left_iris: Optional[tuple] = None     # 左虹膜中心
     right_iris: Optional[tuple] = None    # 右虹膜中心
+    face_landmarks: object = None         # 原始 FaceMesh landmarks（供 FaceTracker 使用）
 
     @property
     def direction_label(self) -> str:
@@ -317,6 +318,7 @@ class GazeEstimator:
             nose_tip=nose_tip,
             left_iris=left_iris,
             right_iris=right_iris,
+            face_landmarks=face_lms,
         )
 
     def reset(self):

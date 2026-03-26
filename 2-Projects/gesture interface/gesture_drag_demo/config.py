@@ -56,6 +56,17 @@ BUBBLE_SCORE_SIGMA = 0.30         # 气泡高斯评分标准差（宽容识别�
 BUBBLE_SWITCH_MARGIN = 0.05       # 气泡候选切换迟滞余量（更容易切换）
 
 # ============================================================
+# 面部特征追踪
+# ============================================================
+EAR_BLINK_THRESHOLD = 0.21      # EAR 低于此值判定为眨眼
+EAR_SMOOTHING_ALPHA = 0.4       # EAR 平滑系数
+BLINK_CONFIRM_FRAMES = 2        # 连续几帧低 EAR 确认眨眼
+BLINK_REFRACTORY_FRAMES = 6     # 眨眼后不应期帧数（防重复计数）
+MAR_OPEN_THRESHOLD = 0.35       # 嘴巴纵横比大于此值判定为张嘴
+FACE_MESH_DRAW_TESSELATION = False  # 是否绘制面部三角网格
+FACE_MESH_DRAW_CONTOURS = True      # 是否绘制面部轮廓线
+
+# ============================================================
 # 窗口
 # ============================================================
 WINDOW_NAME = "Gesture Drag Demo"

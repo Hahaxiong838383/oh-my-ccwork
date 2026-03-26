@@ -104,8 +104,11 @@ export class FeishuChannel implements MessageChannel {
   private botName: string | null = null;
 
   // 群聊消息内存缓存：chatId → 最近 N 条消息（从 WebSocket 事件实时采集，不依赖 API 权限）
-  private chatMessageBuffer: Map<string, Array<{ sender: string; text: string; timestamp: number }>> = new Map();
+  private chatMessageBuffer: Map<string, Array<{ sender: string; senderName: string; text: string; timestamp: number; threadId?: string }>> = new Map();
   private readonly CHAT_BUFFER_MAX = 30; // 每个群最多缓存 30 条
+
+  // 发送者名称缓存：open_id → 显示名（从 mention 或 API 获取）
+  private senderNameCache: Map<string, string> = new Map();
 
   // 消息去重：防止飞书 WebSocket 重复投递同一条消息
   private processedMessageIds: Set<string> = new Set();
@@ -1229,7 +1232,26 @@ export class FeishuChannel implements MessageChannel {
       // 飞书 WebSocket 事件字段是 message_type，不是 msg_type
       const msgType = message?.message_type;
       const senderType = event?.sender?.sender_type;
-      const sender = senderType === "app" ? "[机器人]" : "[用户]";
+      const senderId = event?.sender?.sender_id?.open_id || "";
+
+      // 发送者名称解析：mentions > cache > fallback
+      let senderName = senderType === "app" ? "cc" : "";
+      if (!senderName && senderId) {
+        // 从 mentions 中提取名称（@提及的人有 name 字段）
+        const mentions: Array<{ id?: { open_id?: string }; name?: string }> = message?.mentions || [];
+        for (const m of mentions) {
+          if (m.id?.open_id && m.name) {
+            this.senderNameCache.set(m.id.open_id, m.name);
+          }
+        }
+        senderName = this.senderNameCache.get(senderId) || "";
+      }
+      if (!senderName) {
+        senderName = senderType === "app" ? "cc" : senderId.substring(0, 8) || "用户";
+      }
+
+      const sender = senderId || (senderType === "app" ? "app" : "unknown");
+      const threadId = message?.thread_id || message?.root_id;
       let text = "";
 
       if (msgType === "text") {
@@ -1268,7 +1290,7 @@ export class FeishuChannel implements MessageChannel {
       if (!text) return;
 
       const buffer = this.chatMessageBuffer.get(chatId) || [];
-      buffer.push({ sender, text, timestamp: Date.now() });
+      buffer.push({ sender, senderName, text, timestamp: Date.now(), threadId });
 
       // 超过上限时移除最旧的
       while (buffer.length > this.CHAT_BUFFER_MAX) {
@@ -1284,13 +1306,21 @@ export class FeishuChannel implements MessageChannel {
   /**
    * 获取群聊历史：优先从内存 buffer 读取（可靠），API 作为补充
    */
-  async fetchChatHistory(chatId: string, count: number = 20): Promise<string> {
+  async fetchChatHistory(chatId: string, count: number = 20, threadId?: string): Promise<string> {
     // 优先使用内存 buffer（不依赖 API 权限，实时性更好）
     const buffer = this.chatMessageBuffer.get(chatId);
     if (buffer && buffer.length > 0) {
-      const recent = buffer.slice(-count);
-      const lines = recent.map(m => `${m.sender}: ${m.text}`);
-      console.log(`[FeishuChannel:${this.id}] 从内存 buffer 获取群聊上下文: ${lines.length} 条`);
+      // 话题过滤：如果指定了 threadId，只返回该话题的消息
+      let filtered = threadId
+        ? buffer.filter(m => m.threadId === threadId)
+        : buffer;
+      const recent = filtered.slice(-count);
+      // 信封格式：[发送者名 HH:MM]: 消息内容
+      const lines = recent.map(m => {
+        const time = new Date(m.timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+        return `[${m.senderName} ${time}]: ${m.text}`;
+      });
+      console.log(`[FeishuChannel:${this.id}] 从内存 buffer 获取群聊上下文: ${lines.length} 条${threadId ? ` (话题: ${threadId})` : ""}`);
       return lines.join("\n");
     }
 

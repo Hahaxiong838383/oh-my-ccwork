@@ -1,9 +1,10 @@
 """
-app.py - 手势拖拽 Demo 主循环 (v2.4)
+app.py - 手势拖拽 Demo 主循环 (v3.0)
 
 使用 OpenCV 窗口 + MediaPipe Hands + FaceMesh 实现：
 - 摄像头实时画面
 - 手部关键点检测 + 面部注视方向估计
+- 面部特征识别：眨眼检测、EAR、面部朝向、表情线索
 - Pinch（捏住）/ Release（松开）状态判定
 - 注视候选卡片预选（看哪里 → 高亮哪张）
 - 4 个底部桌面 + 12 张卡片
@@ -18,12 +19,14 @@ from hand_tracker import HandTracker
 from gesture_state import GestureStateMachine, GesturePhase
 from gaze_estimator import GazeEstimator
 from attention_selector import AttentionSelector
+from face_tracker import FaceTracker
 from calibration import run_calibration
 from ui import (
     create_desktops, create_desktop_cards, draw_desktops,
     draw_cards, draw_debug_overlay, handle_card_swap,
     find_desktop_at, DragManager, BubbleManager,
     draw_bubbles, drop_bubble_on_desktop,
+    draw_face_features,
 )
 from config import (
     CAMERA_INDEX, CAMERA_WIDTH, CAMERA_HEIGHT,
@@ -35,9 +38,10 @@ from config import (
 
 def main():
     print("=" * 50)
-    print("  Gesture Drag Demo v2.4")
+    print("  Gesture Drag Demo v3.0")
     print("  4 Desktops x 3 Cards = 12 Cards")
-    print("  ESC: 退出 | R: 重置 | G: 注视调试 | C: 重新校准")
+    print("  ESC: 退出 | R: 重置 | G: 注视调试")
+    print("  F: 面部特征 | C: 重新校准")
     print("=" * 50)
 
     # 初始化手部追踪器
@@ -58,11 +62,13 @@ def main():
         smoothing_alpha=SMOOTHING_ALPHA,
     )
 
-    # 初始化注视估计器 & 候选选择器
+    # 初始化注视估计器 & 候选选择器 & 面部特征追踪器
     gaze_est = GazeEstimator()
     attn_sel = AttentionSelector(tracker.frame_w)
-    show_gaze_debug = True  # 'G' 键切换注视调试可视化
-    print("注视估计器已初始化（FaceMesh + Iris）")
+    face_trk = FaceTracker()
+    show_gaze_debug = True   # 'G' 键切换注视调试可视化
+    show_face_debug = True   # 'F' 键切换面部特征可视化
+    print("注视估计器 + 面部特征追踪器已初始化")
 
     # 初始化桌面和卡片
     desktops = create_desktops(tracker.frame_w, tracker.frame_h)
@@ -113,6 +119,12 @@ def main():
 
             # --- 注视估计 ---
             gaze_result = gaze_est.update(frame)
+
+            # --- 面部特征追踪（复用 gaze_est 的 FaceMesh 结果）---
+            face_features = face_trk.update(
+                gaze_result.face_landmarks,
+                tracker.frame_w, tracker.frame_h,
+            )
 
             # --- 注视候选更新 ---
             attn_sel.set_dragging(drag_mgr.is_dragging)
@@ -225,7 +237,11 @@ def main():
             draw_bubbles(frame, bubble_mgr, drag_mgr.dragging_bubble,
                          attn_state)
 
-            # 4. 绘制手部关键点
+            # 4. 绘制面部特征（眼部轮廓、面部网格、虹膜追踪）
+            if show_face_debug:
+                draw_face_features(frame, face_features)
+
+            # 5. 绘制手部关键点
             if hand_detected:
                 tracker.draw_landmarks(frame, hand_data)
 
@@ -240,7 +256,7 @@ def main():
                 fps = 0.9 * fps + 0.1 * (1.0 / dt)
             prev_time = now
 
-            # 6. 绘制调试信息（含注视 & 注意力状态）
+            # 7. 绘制调试信息（含注视 & 注意力 & 面部特征状态）
             draw_debug_overlay(
                 frame,
                 hand_detected=hand_detected,
@@ -252,6 +268,7 @@ def main():
                 attn_state=attn_state,
                 gaze_result=gaze_result,
                 show_gaze=show_gaze_debug,
+                face_features=face_features if show_face_debug else None,
             )
 
             # 显示画面
@@ -270,11 +287,15 @@ def main():
                 gesture.reset()
                 attn_sel.reset()
                 gaze_est.reset()
+                face_trk.reset()
                 bubble_mgr.bubbles.clear()
                 print("卡片位置已重置")
             elif key == ord('g') or key == ord('G'):
                 show_gaze_debug = not show_gaze_debug
                 print(f"注视调试: {'ON' if show_gaze_debug else 'OFF'}")
+            elif key == ord('f') or key == ord('F'):
+                show_face_debug = not show_face_debug
+                print(f"面部特征: {'ON' if show_face_debug else 'OFF'}")
             elif key == ord('c') or key == ord('C'):
                 # 重新校准
                 run_calibration(tracker, gaze_est, WINDOW_NAME)

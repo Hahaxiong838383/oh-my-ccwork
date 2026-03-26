@@ -29,7 +29,7 @@ import {
   callMcpTool,
 } from "./mcp-bridge.js";
 
-const MODEL = "gemini-2.5-flash";
+const MODEL = "gemini-3-flash-preview";
 const INLINE_SIZE_LIMIT = 19 * 1024 * 1024; // 19MB, 留 1MB 余量
 const MAX_TOOL_ROUNDS = 10; // 最多 10 轮 function calling 来回
 

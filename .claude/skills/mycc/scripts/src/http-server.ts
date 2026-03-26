@@ -452,16 +452,20 @@ export class HttpServer {
       return;
     }
 
-    // 上下文注入策略：
-    // - 群聊：始终注入最近 15 条历史
-    // - 私聊：仅在飞书"回复"或"多选"操作时，获取被回复的那条消息作为上下文；其他情况不注入
+    // 上下文注入策略（参考 OpenClaw 信封格式）：
+    // - 群聊：注入最近 15 条历史，带发送者名称和时间戳（信封格式）
+    // - 话题：如果是话题内消息，只注入该话题的历史
+    // - 私聊：仅在飞书"回复"操作时注入被回复消息
     let contextPrefix = "";
     if (ctx.replyChatType === "group" && ctx.replyChatId) {
       try {
-        const history = await ctx.channel.fetchChatHistory(ctx.replyChatId, 15);
+        // 话题检测：parentId/rootId 标记话题内消息
+        const threadId = ctx.replyParentId || undefined;
+        const history = await ctx.channel.fetchChatHistory(ctx.replyChatId, 15, threadId);
         if (history) {
-          contextPrefix = `[以下是群聊最近的对话记录，供你了解上下文]\n${history}\n[对话记录结束]\n\n`;
-          console.log(`[CC][${ctx.channelId}] 已注入群聊上下文 (${history.split("\n").length} 条)`);
+          const threadNote = threadId ? "（话题内）" : "";
+          contextPrefix = `[飞书群聊${threadNote}最近对话 — 每行格式: [发送者 时间]: 内容]\n${history}\n[对话记录结束]\n\n`;
+          console.log(`[CC][${ctx.channelId}] 已注入群聊上下文${threadNote} (${history.split("\n").length} 条)`);
         }
       } catch (err) {
         console.warn(`[CC][${ctx.channelId}] 获取群聊上下文失败:`, err);
@@ -544,11 +548,15 @@ export class HttpServer {
       }
     }
 
-    // Session 隔离策略（按 chat_id）：
-    // - 私聊和群聊统一按 chat_id 隔离，复用 session
+    // Session 隔离策略（参考 OpenClaw 的 sessionKey 设计）：
+    // - 私聊：按 chatId 隔离
+    // - 群聊：按 chatId 隔离
+    // - 话题：按 chatId:thread:parentId 隔离（话题内消息独立 session）
     // - 私聊增加 30min 空闲超时（对齐 Claude SDK SESSION_TIMEOUT_MS）
-    // - 支持 /clear 或「新对话」手动重置 session
-    const chatId = ctx.replyChatId || "default";
+    const threadId = (ctx.replyChatType === "group" && ctx.replyParentId) ? ctx.replyParentId : undefined;
+    const chatId = threadId
+      ? `${ctx.replyChatId || "default"}:thread:${threadId}`
+      : (ctx.replyChatId || "default");
     const SESSION_TTL_MS = 30 * 60 * 1000; // 30min
     let effectiveSessionId: string | null = null;
 

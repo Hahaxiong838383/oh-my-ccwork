@@ -937,8 +937,9 @@ def draw_debug_overlay(
     attn_state=None,
     gaze_result=None,
     show_gaze: bool = True,
+    face_features=None,
 ):
-    """绘制调试信息叠加层（含注视 & 注意力状态）"""
+    """绘制调试信息叠加层（含注视 & 注意力 & 面部特征状态）"""
     y_offset = 30
     line_h = 28
 
@@ -1089,7 +1090,96 @@ def draw_debug_overlay(
                 score_text = "  ".join(f"{lbl}:{s:.2f}" for lbl, s in sorted_scores)
                 put_r(f"Top: {score_text}", (120, 120, 120))
 
+        # --- 面部特征面板（紧跟注视面板之后）---
+        if face_features is not None and face_features.face_detected:
+            ry += 8
+            put_r("--- Face Features ---", (180, 180, 180))
+
+            # EAR & 眨眼
+            ear_color = (0, 0, 255) if face_features.is_blinking else (0, 255, 0)
+            blink_tag = " BLINK!" if face_features.is_blinking else ""
+            put_r(f"EAR: {face_features.smooth_ear:.3f}{blink_tag}", ear_color)
+            put_r(f"Blinks: {face_features.blink_count}", (200, 200, 200))
+
+            # 眼睛开合度
+            lo = face_features.left_eye.openness
+            ro = face_features.right_eye.openness
+            put_r(f"Eye Open: L{lo:.0%} R{ro:.0%}", (200, 200, 200))
+
+            # 面部朝向
+            put_r(f"Yaw: {face_features.yaw:+.1f}  "
+                  f"Pitch: {face_features.pitch:+.1f}  "
+                  f"Roll: {face_features.roll:+.1f}", (150, 200, 200))
+
+            # 嘴巴
+            mouth_tag = " OPEN" if face_features.mouth_open else ""
+            put_r(f"Mouth: {face_features.mar:.2f}{mouth_tag}",
+                  (0, 200, 255) if face_features.mouth_open else (200, 200, 200))
+
+            # 眉毛
+            put_r(f"Brow: L{face_features.left_eyebrow_height:.2f} "
+                  f"R{face_features.right_eyebrow_height:.2f}", (200, 200, 200))
+
     # 操作提示
     h = frame.shape[0]
-    cv2.putText(frame, "ESC: Quit | R: Reset | G: Toggle Gaze | C: Recalibrate",
+    cv2.putText(frame, "ESC: Quit | R: Reset | G: Gaze | F: Face | C: Recalibrate",
                 (15, h - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 150), 1)
+
+
+def draw_face_features(frame: np.ndarray, face_features) -> None:
+    """
+    在画面上绘制面部特征可视化：
+    - 眼部轮廓（绿色/红色根据眨眼状态）
+    - 虹膜中心（青色大圆点）
+    - 面部轮廓（淡蓝色连线）
+    - 眉毛（黄色连线）
+    - 嘴唇（粉色连线）
+    """
+    if not face_features.face_detected:
+        return
+
+    # 眼部轮廓颜色（眨眼时变红）
+    eye_color = (0, 0, 255) if face_features.is_blinking else (0, 220, 0)
+
+    # 左眼轮廓
+    if face_features.left_eye.contour_px:
+        pts = face_features.left_eye.contour_px
+        for i in range(len(pts)):
+            cv2.line(frame, pts[i], pts[(i + 1) % len(pts)], eye_color, 1)
+
+    # 右眼轮廓
+    if face_features.right_eye.contour_px:
+        pts = face_features.right_eye.contour_px
+        for i in range(len(pts)):
+            cv2.line(frame, pts[i], pts[(i + 1) % len(pts)], eye_color, 1)
+
+    # 虹膜中心（大圆点 + 十字线）
+    for iris in [face_features.left_eye.iris_px, face_features.right_eye.iris_px]:
+        if iris is not None:
+            cv2.circle(frame, iris, 4, (255, 255, 0), -1)
+            cv2.circle(frame, iris, 8, (255, 255, 0), 1)
+
+    # 面部轮廓
+    if face_features.face_oval_px:
+        pts = face_features.face_oval_px
+        for i in range(len(pts)):
+            cv2.line(frame, pts[i], pts[(i + 1) % len(pts)], (180, 140, 80), 1)
+
+    # 眉毛
+    for brow_pts in [face_features.left_eyebrow_px, face_features.right_eyebrow_px]:
+        if brow_pts:
+            for i in range(len(brow_pts) - 1):
+                cv2.line(frame, brow_pts[i], brow_pts[i + 1], (0, 200, 255), 1)
+
+    # 嘴唇外轮廓
+    if face_features.lips_outer_px:
+        pts = face_features.lips_outer_px
+        lip_color = (180, 100, 200) if face_features.mouth_open else (150, 80, 160)
+        for i in range(len(pts)):
+            cv2.line(frame, pts[i], pts[(i + 1) % len(pts)], lip_color, 1)
+
+    # 嘴唇内轮廓
+    if face_features.lips_inner_px:
+        pts = face_features.lips_inner_px
+        for i in range(len(pts)):
+            cv2.line(frame, pts[i], pts[(i + 1) % len(pts)], (200, 120, 220), 1)

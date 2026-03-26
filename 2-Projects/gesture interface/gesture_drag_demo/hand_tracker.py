@@ -47,8 +47,12 @@ class HandTracker:
         min_detection_confidence: float = 0.7,
         min_tracking_confidence: float = 0.6,
     ):
-        # 初始化摄像头
-        self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+        # 初始化摄像头（macOS 用 AVFoundation，Windows 用 DirectShow）
+        import platform
+        if platform.system() == "Darwin":
+            self.cap = cv2.VideoCapture(camera_index)
+        else:
+            self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         self.cap.set(cv2.CAP_PROP_FPS, 30)
