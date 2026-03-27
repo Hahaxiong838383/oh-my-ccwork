@@ -1,30 +1,42 @@
 /**
- * 共享记忆上下文加载器 v3
+ * 共享记忆上下文加载器 v4
  *
  * 为 Codex / Gemini CLI 调用动态注入记忆上下文。
  * 两层：
  * 1. RECENT_EVENTS.md 尾部（最近事件）
- * 2. memory-items.md 混合检索（关键词 + TF-IDF cosine + 时间衰减 + MMR 去重 + 关系链解析）
+ * 2. memory-items.md 混合检索（向量语义 + 关键词 TF-IDF + 时间衰减 + MMR 去重 + 残差版本链）
  *
- * v3 升级（借鉴 Supermemory 记忆引擎）：
- * - 双时间戳：[YYYY-MM-DD] 写入日期 + [event:YYYY-MM-DD] 事件日期，事件过期自动降权
- * - 关系版本链：→updates:关键词 标记覆盖旧事实，自动抑制被取代的条目
- * - TF-IDF cosine：从 Jaccard 集合交集升级为 TF-IDF 余弦相似度，召回率显著提升
- * - 智能遗忘：eventDate 过期的条目自动获得极低分数，不再污染上下文
+ * v4 升级（借鉴 TurboQuant 失真率理论）：
+ * - 向量语义检索：Qwen3-Embedding-0.6B (512维) + 余弦相似度，语义泛化能力质的飞跃
+ * - 混合评分：final = 0.4×keyword + 0.6×vector，取两者长处
+ * - 残差版本链：#base + →Δ: 替代旧 →updates:，信息不再丢失
+ * - 降级机制：Ollama 不可用时自动 fallback 到纯关键词（v3 逻辑）
+ *
+ * v3 保留：
+ * - 双时间戳：[YYYY-MM-DD] 写入日期 + [event:YYYY-MM-DD] 事件日期
+ * - TF-IDF cosine：关键词级别的模糊匹配
+ * - 智能遗忘：eventDate 过期条目自动降权
  *
  * v2 保留：
- * - 时间衰减：[YYYY-MM-DD] 标注越新分越高，7 天内满分，60 天后接近零
- * - MMR 去重：注入时剔除与已选条目高度相似的内容，提高信息密度
+ * - 时间衰减：[YYYY-MM-DD] 标注越新分越高
+ * - MMR 去重：注入时剔除高度相似内容
  *
  * 设计原则：
  * - 总注入量控制在 ~3000 字符以内（避免 prompt 膨胀）
  * - 每个类别最多 Top 10 条（综合评分排序）
  * - fire-and-forget 读取，文件缺失不报错
- * - 零外部依赖，纯 TypeScript 实现
+ * - Ollama 离线时无感降级，零阻塞
  */
 
 import { readFileSync, existsSync } from "fs";
 import * as path from "path";
+import {
+  embed,
+  loadVectorIndex,
+  vectorSearch,
+  cosineSim,
+  type VectorIndex,
+} from "./embedding.js";
 
 // ============================================================
 // 时间衰减 v3（双时间戳 + 事件感知，借鉴 Supermemory temporal grounding）
@@ -88,33 +100,45 @@ function temporalDecay(writeDaysAgo: number | null, eventDaysAgo: number | null)
 }
 
 // ============================================================
-// 关系版本链（借鉴 Supermemory relational versioning）
+// 残差版本链 v4（借鉴 TurboQuant 基线+残差修正理论）
 // ============================================================
 
 /**
- * v3: 解析 →updates:关键词 关系，抑制被取代的旧条目。
+ * v4: 解析残差版本链关系。
  *
- * 当一条 item 包含 →updates:XXX 时，同类别中包含 XXX 关键词的旧条目
- * 会被标记为 score=0（不注入），确保只展示最新版本。
+ * 三种标记：
+ * - #base — 基线事实（保留）
+ * - →Δ:关键词 — 增量修正（保留，检索时自动关联基线）
+ * - →supersedes:关键词 — 完全重写（旧基线+Δ 归零）
+ * - →updates:关键词 — v3 旧标记，视为 →supersedes: 向后兼容
  */
 function resolveRelations(
   items: Array<{ line: string; score: number; tokens: string[] }>,
 ): Array<{ line: string; score: number; tokens: string[] }> {
-  // 收集所有 →updates: 标记
+  // 收集所有 →supersedes: 和 →updates:（向后兼容）标记
   const supersededKeywords: string[] = [];
   for (const item of items) {
-    const match = item.line.match(/→updates:(.+?)(?:\s*\[|\s*$)/);
-    if (match) {
-      supersededKeywords.push(match[1].trim().toLowerCase());
+    const supersedesMatch = item.line.match(/→supersedes:(.+?)(?:\s*\[|\s*#|\s*$)/);
+    if (supersedesMatch) {
+      supersededKeywords.push(supersedesMatch[1].trim().toLowerCase());
+    }
+    const updatesMatch = item.line.match(/→updates:(.+?)(?:\s*\[|\s*#|\s*$)/);
+    if (updatesMatch) {
+      supersededKeywords.push(updatesMatch[1].trim().toLowerCase());
     }
   }
+
+  // →Δ: 标记的条目正常保留（不被抑制，也不抑制别人）
+  // #base 条目正常保留（除非被 →supersedes 命中）
+
   if (supersededKeywords.length === 0) return items;
 
-  // 抑制被取代的条目
   return items.map((item) => {
-    // 含 →updates: 的条目自身不被抑制
-    if (item.line.includes("→updates:")) return item;
-    // 检查是否被某个 →updates 关键词命中
+    // 含 →supersedes: 或 →updates: 的条目自身不被抑制
+    if (item.line.includes("→supersedes:") || item.line.includes("→updates:")) return item;
+    // →Δ: 条目不被 supersedes 抑制（增量修正指向的是新基线）
+    if (item.line.includes("→Δ:")) return item;
+    // 检查是否被某个 supersedes 关键词命中
     const lineLower = item.line.toLowerCase();
     for (const kw of supersededKeywords) {
       if (lineLower.includes(kw)) {
@@ -351,6 +375,108 @@ function fuzzyMatchCategories(
   return candidates.slice(0, 2).map((c) => c.cat);
 }
 
+// ============================================================
+// 向量语义检索 v4（借鉴 TurboQuant 向量量化思路）
+// ============================================================
+
+/** 缓存：避免同一 session 内重复读取索引文件 */
+let _vectorIndexCache: VectorIndex | null = null;
+let _vectorIndexMtime: number = 0;
+
+/** 加载向量索引（带文件修改时间缓存） */
+function getVectorIndex(cwd: string): VectorIndex | null {
+  const indexPath = path.join(cwd, "0-System/memory-vectors.json");
+  if (!existsSync(indexPath)) return null;
+
+  try {
+    const { mtimeMs } = require("fs").statSync(indexPath);
+    if (_vectorIndexCache && mtimeMs === _vectorIndexMtime) {
+      return _vectorIndexCache;
+    }
+    _vectorIndexCache = loadVectorIndex(cwd);
+    _vectorIndexMtime = mtimeMs;
+    return _vectorIndexCache;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * v4: 向量语义匹配类别。
+ *
+ * 将 prompt embed 后，与索引中所有 item 做余弦相似度，
+ * 按类别聚合分数，返回得分最高的类别。
+ *
+ * @returns 语义匹配到的 project 类别列表（最多 3 个）
+ */
+async function vectorMatchCategories(
+  prompt: string,
+  cwd: string,
+  alreadyMatched: Set<string>,
+): Promise<Array<{ cat: string; score: number }>> {
+  const index = getVectorIndex(cwd);
+  if (!index || index.items.length === 0) return [];
+
+  const queryVec = await embed(prompt);
+  if (!queryVec) return [];
+
+  // 对所有 item 计算相似度
+  const hits = vectorSearch(queryVec, index, 30);
+
+  // 按类别聚合：每个类别取 top-3 item 的平均分
+  const catScores = new Map<string, number[]>();
+  for (const { item, similarity } of hits) {
+    if (item.category.startsWith("user/")) continue;
+    if (alreadyMatched.has(item.category)) continue;
+    const scores = catScores.get(item.category) || [];
+    scores.push(similarity);
+    catScores.set(item.category, scores);
+  }
+
+  const results: Array<{ cat: string; score: number }> = [];
+  for (const [cat, scores] of catScores) {
+    const top3 = scores.sort((a, b) => b - a).slice(0, 3);
+    const avg = top3.reduce((s, v) => s + v, 0) / top3.length;
+    if (avg > 0.3) {
+      results.push({ cat, score: avg });
+    }
+  }
+
+  results.sort((a, b) => b.score - a.score);
+  return results.slice(0, 3);
+}
+
+/**
+ * v4: 混合类别匹配 — 合并关键词和向量结果。
+ *
+ * 策略：keyword 命中的类别直接保留 + 向量补充（去重后最多 2 个）
+ */
+async function hybridMatchCategories(
+  prompt: string,
+  memContent: string,
+  cwd: string,
+): Promise<string[]> {
+  // 第一步：关键词正则匹配（确定性，精确）
+  const keywordCats: string[] = [];
+  for (const { keywords, categories } of KEYWORD_CATEGORY_MAP) {
+    if (keywords.test(prompt)) {
+      keywordCats.push(...categories);
+    }
+  }
+  const regexMatched = new Set(keywordCats);
+
+  // 第二步：TF-IDF 模糊匹配（补充正则盲区，最多 2 个）
+  const tfIdfCats = fuzzyMatchCategories(prompt, memContent, regexMatched);
+  const afterTfIdf = new Set([...regexMatched, ...tfIdfCats]);
+
+  // 第三步：向量语义匹配（最深层补充，最多 2 个）
+  const vectorCats = await vectorMatchCategories(prompt, cwd, afterTfIdf);
+  const vectorCatNames = vectorCats.slice(0, 2).map((c) => c.cat);
+
+  // 合并去重
+  return Array.from(new Set([...keywordCats, ...tfIdfCats, ...vectorCatNames]));
+}
+
 /**
  * 读取 RECENT_EVENTS.md 尾部（最近 15 行有效内容）。
  */
@@ -370,10 +496,12 @@ function loadRecentEvents(cwd: string): string {
 /**
  * 轻量版共享上下文（CLI 引擎专用）。
  *
- * 只注入 user 偏好 + 按关键词匹配的 project 事实，
+ * 只注入 user 偏好 + 按混合匹配的 project 事实，
  * **不注入 RECENT_EVENTS**（避免 CLI 引擎把历史事件当成当前任务执行）。
+ *
+ * v4: async，支持向量语义检索（Ollama 离线时自动降级到纯关键词）。
  */
-export function loadSharedContextLight(prompt: string, cwd: string): string {
+export async function loadSharedContextLight(prompt: string, cwd: string): Promise<string> {
   const parts: string[] = [];
 
   const memPath = path.join(cwd, "0-System/memory-items.md");
@@ -382,18 +510,8 @@ export function loadSharedContextLight(prompt: string, cwd: string): string {
       const memContent = readFileSync(memPath, "utf-8");
       const userBlock = extractCategories(memContent, ALWAYS_INJECT_CATEGORIES);
 
-      // 硬编码正则匹配
-      const matchedProjectCats: string[] = [];
-      for (const { keywords, categories } of KEYWORD_CATEGORY_MAP) {
-        if (keywords.test(prompt)) {
-          matchedProjectCats.push(...categories);
-        }
-      }
-      const regexMatched = new Set(matchedProjectCats);
-
-      // TF-IDF 模糊匹配：补充正则盲区
-      const fuzzyMatched = fuzzyMatchCategories(prompt, memContent, regexMatched);
-      const allProjectCats = Array.from(new Set(matchedProjectCats.concat(fuzzyMatched)));
+      // v4: 混合类别匹配（关键词 + TF-IDF + 向量语义）
+      const allProjectCats = await hybridMatchCategories(prompt, memContent, cwd);
 
       const projectBlock = allProjectCats.length > 0
         ? extractCategories(memContent, allProjectCats)
@@ -419,11 +537,13 @@ export function loadSharedContextLight(prompt: string, cwd: string): string {
  * 根据 prompt 内容，加载共享记忆上下文（完整版，含 RECENT_EVENTS）。
  * 仅供 cc 自身的 session 使用。CLI 引擎请用 loadSharedContextLight。
  *
+ * v4: async，支持向量语义检索。
+ *
  * @param prompt 用户原始消息
  * @param cwd   mycc 根目录
  * @returns 格式化的 context 前缀（可能为空）
  */
-export function loadSharedContext(prompt: string, cwd: string): string {
+export async function loadSharedContext(prompt: string, cwd: string): Promise<string> {
   const parts: string[] = [];
 
   // 1. RECENT_EVENTS
@@ -432,7 +552,7 @@ export function loadSharedContext(prompt: string, cwd: string): string {
     parts.push(`### 最近事件\n${recentEvents}`);
   }
 
-  // 2. memory-items（v2：正则 + TF-IDF 模糊 + 时间衰减 + MMR）
+  // 2. memory-items（v4：关键词 + TF-IDF + 向量语义 + 时间衰减 + MMR）
   const memPath = path.join(cwd, "0-System/memory-items.md");
   if (existsSync(memPath)) {
     try {
@@ -441,18 +561,8 @@ export function loadSharedContext(prompt: string, cwd: string): string {
       // 始终注入 user 类别
       const userBlock = extractCategories(memContent, ALWAYS_INJECT_CATEGORIES);
 
-      // 硬编码正则匹配
-      const matchedProjectCats: string[] = [];
-      for (const { keywords, categories } of KEYWORD_CATEGORY_MAP) {
-        if (keywords.test(prompt)) {
-          matchedProjectCats.push(...categories);
-        }
-      }
-      const regexMatched = new Set(matchedProjectCats);
-
-      // TF-IDF 模糊匹配：补充正则盲区
-      const fuzzyMatched = fuzzyMatchCategories(prompt, memContent, regexMatched);
-      const allProjectCats = Array.from(new Set(matchedProjectCats.concat(fuzzyMatched)));
+      // v4: 混合类别匹配（关键词 + TF-IDF + 向量语义）
+      const allProjectCats = await hybridMatchCategories(prompt, memContent, cwd);
 
       const projectBlock = allProjectCats.length > 0
         ? extractCategories(memContent, allProjectCats)

@@ -601,7 +601,7 @@ export class HttpServer {
     // 这样避免每条消息都前缀大量上下文，让模型专注于当前任务
     let crossSessionContext = "";
     if (!ctx.engine && isNewSession) {
-      crossSessionContext = buildCrossSessionContext(chatId, trimmedMessage, this.cwd, isNewSession);
+      crossSessionContext = await buildCrossSessionContext(chatId, trimmedMessage, this.cwd, isNewSession);
       if (crossSessionContext) {
         console.log(`[CC][${ctx.channelId}] 新会话：注入跨 session 记忆 (${crossSessionContext.length} chars)`);
       }
@@ -1076,7 +1076,7 @@ export class HttpServer {
       // 飞书群消息安全规则：禁止自主向三机器人群以外的群发消息
       const groupSafetyRule = `\n\n[安全规则 - 强制] 你可以自由地向三机器人协作群（chat_id: oc_f4a09ffbd709b39c917b927ecb9d96b6）发送消息。但向任何其他飞书群发送消息前，必须先回复用户确认，说明要发到哪个群、发什么内容，获得用户同意后才可执行。未经用户同意，绝对不能向其他群发消息。`;
       // CLI 引擎用轻量上下文（不含 RECENT_EVENTS，避免历史事件被当成当前任务）
-      const sharedContext = loadSharedContextLight(message, this.cwd);
+      const sharedContext = await loadSharedContextLight(message, this.cwd);
 
       const channelAbort = this.getChannelAbort(ctx.channelId);
 
@@ -1257,7 +1257,7 @@ export class HttpServer {
 
     // cc 引擎拿完整上下文 + 任务，codex/gemini 拿共享记忆 + 任务
     const ccMessage = contextPrefix ? contextPrefix + taskMessage : taskMessage;
-    const sharedContext = loadSharedContext(taskMessage, this.cwd);
+    const sharedContext = await loadSharedContext(taskMessage, this.cwd);
     const geminiToolHint = `\n\n[可用工具] 你已接入飞书 MCP 工具，可以直接调用：create_document / get_document_raw_content / create_blocks / list_bitable_records / create_bitable_record / send_message / feishu_openapi_call 等。涉及飞书操作时必须使用工具，不要只回复文字。\n`;
     const teamGroupSafety = `\n\n[安全规则 - 强制] 你可以自由地向三机器人协作群（chat_id: oc_f4a09ffbd709b39c917b927ecb9d96b6）发送消息。但向任何其他飞书群发送消息前，必须先回复用户确认，获得同意后才可执行。`;
     const cliMessage = sharedContext + teamGroupSafety + taskMessage;

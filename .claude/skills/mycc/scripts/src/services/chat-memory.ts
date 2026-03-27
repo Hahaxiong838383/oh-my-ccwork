@@ -273,12 +273,12 @@ const BUDGET = {
  * @param isNewSession  是否是新 session（超时/首次）
  * @returns 格式化的上下文前缀（可能为空）
  */
-export function buildCrossSessionContext(
+export async function buildCrossSessionContext(
   chatId: string,
   message: string,
   cwd: string,
   isNewSession: boolean,
-): string {
+): Promise<string> {
   // 确保从文件加载
   loadFromFile(chatId, cwd);
 
@@ -297,7 +297,7 @@ export function buildCrossSessionContext(
   }
 
   // 第2层：共享记忆（轻量版，不含 RECENT_EVENTS，避免历史事件被当成当前任务）
-  const sharedCtx = loadSharedContextLight(message, cwd);
+  const sharedCtx = await loadSharedContextLight(message, cwd);
   if (sharedCtx) {
     const trimmed = sharedCtx.length > BUDGET.sharedContext
       ? sharedCtx.substring(0, BUDGET.sharedContext) + "\n...(截断)"
