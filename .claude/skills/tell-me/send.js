@@ -5,6 +5,7 @@
  * 颜色: blue(默认), green, orange, red
  */
 
+
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');

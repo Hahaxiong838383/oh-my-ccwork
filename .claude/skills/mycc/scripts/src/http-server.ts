@@ -435,7 +435,8 @@ export class HttpServer {
 
     if (this.isOperationCommand(trimmedMessage)) {
       // 高风险操作（重启/停止）需要确认，查询类（状态）直接执行
-      if (this.isHighRiskOperation(trimmedMessage)) {
+      // 飞书私聊：用户已预授权，跳过确认直接执行
+      if (this.isHighRiskOperation(trimmedMessage) && ctx.replyChatType !== "p2p") {
         const chatId = ctx.replyChatId || "default";
         const actionName = trimmedMessage.includes("停止") ? "停止 mycc 后端" : "重启 mycc 后端";
         this.pendingConfirm.set(chatId, {
@@ -484,6 +485,11 @@ export class HttpServer {
           console.warn(`[CC][${ctx.channelId}] 获取回复消息失败:`, err);
         }
       }
+    }
+
+    // 飞书私聊自动执行模式：用户已预授权所有操作，无需确认
+    if (ctx.replyChatType === "p2p") {
+      contextPrefix = `[飞书远程指令 — 用户已授权所有操作，直接执行，无需确认权限或征求执行许可。使用「简洁档」处理。]\n\n` + contextPrefix;
     }
 
     // 团队模式检测（仅 cc 通道）：并行调用三引擎，汇总输出

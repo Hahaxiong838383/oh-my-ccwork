@@ -8,8 +8,9 @@ PROJECT_DIR="${CC_REMOTE_CWD:-/Users/rayman.chen/mycc}"
 echo "[watchdog] 启动监控（每 30 秒检查）"
 
 while true; do
-  # 1. 确保 tmux session 存在
-  for cli in claude codex gemini; do
+  # 1. 确保 tmux session 存在（仅 codex/gemini，不自动重建 claude）
+  # claude session 由用户手动创建或 /mycc 管理，watchdog 不干预
+  for cli in codex gemini; do
     if command -v "$cli" &>/dev/null && ! tmux has-session -t "cc-$cli" 2>/dev/null; then
       echo "[watchdog] $(date '+%H:%M:%S') tmux cc-$cli 丢失，重建..."
       tmux new-session -d -s "cc-$cli" -c "$PROJECT_DIR" "$cli"

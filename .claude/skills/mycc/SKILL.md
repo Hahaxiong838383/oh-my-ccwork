@@ -69,19 +69,35 @@ description: 启动 mycc 小程序后端服务（后台运行）。触发词："
 
 ## 执行步骤
 
-### 1. 安装依赖（首次）
+### 1. 检查现有实例（必须）
+
+先检查是否已有 mycc 后端在运行（可能由 launchd daemon 管理）：
+
+```bash
+lsof -i :18080 -P -n 2>/dev/null | grep LISTEN
+```
+
+如果已有实例在运行：
+- 告知用户 mycc 后端已在运行，无需重复启动
+- 直接跳到步骤 3 读取连接信息
+
+如果端口空闲，继续以下步骤。
+
+### 2. 安装依赖（首次）
 
 ```bash
 cd .claude/skills/mycc/scripts && npm install && cd -
 ```
 
-### 2. 启动后端
+### 3. 启动后端
 
 ```bash
 npx tsx .claude/skills/mycc/scripts/src/index.ts start
 ```
 
 使用 `run_in_background: true` 让后端在后台持续运行。
+
+> **注意**：代码内置了实例互斥检测。如果端口 18080 已被另一个 mycc 占用，会提示而非自动换端口，防止多实例导致 scheduler 重复执行任务。
 
 > 代码会自动检测项目根目录（向上查找 `.claude/` 或 `claude.md`），无需手动指定 cwd。
 >

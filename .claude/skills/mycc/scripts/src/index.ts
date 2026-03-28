@@ -44,7 +44,7 @@ import { updateDnsRecord, loadDnsConfig } from "./cf-dns.js";
 // 导致所有 claude 子进程（HealthMonitor、SDK session）被误判为嵌套会话而拒绝启动
 delete process.env.CLAUDECODE;
 
-import { findAvailablePort, printPortsTable } from "./services/port-manager.js";
+import { findAvailablePort, isPortInUse, printPortsTable } from "./services/port-manager.js";
 
 const PREFERRED_PORT = Number(process.env.PORT || 18080);
 
@@ -117,8 +117,19 @@ async function startServer(args: string[]) {
   // 检测版本更新（静默，不阻塞）
   await checkVersionUpdate();
 
-  // 端口冲突检测：优先使用首选端口，被占用时自动换冷门端口
+  // 端口冲突检测：mycc 实例互斥（防止多后端 scheduler 重复触发任务）
   console.log(chalk.gray("检查端口占用..."));
+  const existingMycc = isPortInUse(PREFERRED_PORT);
+  if (existingMycc.inUse && existingMycc.process === "node") {
+    // 首选端口已被 node 进程占用，大概率是另一个 mycc 实例（如 launchd daemon）
+    // 不要自动换端口启动第二个实例！多实例会导致 scheduler 重复执行任务
+    console.log(chalk.yellow(`\n⚠️  mycc 后端已在端口 ${PREFERRED_PORT} 运行 (PID: ${existingMycc.pid})`));
+    console.log(chalk.gray("  如需替换，先停止现有实例："));
+    console.log(chalk.gray(`    kill ${existingMycc.pid}`));
+    console.log(chalk.gray("  或卸载 launchd daemon："));
+    console.log(chalk.gray("    launchctl unload ~/Library/LaunchAgents/dev.mycc.backend.plist\n"));
+    process.exit(0);
+  }
   const { port: actualPort, changed: portChanged } = findAvailablePort(PREFERRED_PORT);
   if (!portChanged) {
     // 首选端口可用，杀掉可能残留的旧 mycc 进程
@@ -364,7 +375,8 @@ ${skillLine}
 2. 完成后用 /tell-me 发飞书通知（位置：.claude/skills/tell-me）
 3. 通知标题格式：【定时任务】${task.name}
 4. 卡片底部 note 填写时间戳：${timestamp}
-5. 任务定义位置：.claude/skills/scheduler/tasks.md`;
+
+重要：只执行上述任务，不要执行任何其他定时任务或额外操作。完成后立即结束。`;
 
     // 记录开始执行
     recordHistory(taskCwd, task.name, "执行中...");

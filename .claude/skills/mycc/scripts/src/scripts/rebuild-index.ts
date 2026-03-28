@@ -93,7 +93,7 @@ function simpleHash(str: string): string {
 // ============================================================
 
 async function main(): Promise<void> {
-  const cwd = process.argv[2] || path.resolve(__dirname, "../../../../..");
+  const cwd = process.argv[2] || path.resolve(import.meta.dirname || new URL(".", import.meta.url).pathname, "../../../../..");
   const memPath = path.join(cwd, "0-System/memory-items.md");
 
   console.log("🔍 检查 Ollama 状态...");
