@@ -704,6 +704,97 @@ function parseRerankScores(text: string, expectedLength: number): number[] | nul
 const OLLAMA_BASE = process.env.OLLAMA_HOST || "http://localhost:11434";
 
 // ============================================================
+// 查询扩展 v5.5（借鉴 QMD query expansion）
+// ============================================================
+
+const EXPANSION_MODEL = "qwen2.5:3b";
+const EXPANSION_TIMEOUT_MS = 8_000;
+
+/** 缓存扩展模型可用性 */
+let _expansionAvailable: boolean | null = null;
+let _expansionCheckTime = 0;
+
+/** 检查扩展模型是否可用 */
+async function isExpansionReady(): Promise<boolean> {
+  const now = Date.now();
+  if (_expansionAvailable !== null && now - _expansionCheckTime < RERANKER_CHECK_INTERVAL_MS) {
+    return _expansionAvailable;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3_000);
+    const res = await fetch(`${OLLAMA_BASE}/api/tags`, { signal: controller.signal });
+    clearTimeout(timer);
+
+    if (!res.ok) { _expansionAvailable = false; _expansionCheckTime = now; return false; }
+
+    const data = (await res.json()) as { models?: Array<{ name: string }> };
+    _expansionAvailable = (data.models || []).some((m) => m.name.includes("qwen2.5"));
+    _expansionCheckTime = now;
+    return _expansionAvailable;
+  } catch {
+    _expansionAvailable = false;
+    _expansionCheckTime = now;
+    return false;
+  }
+}
+
+/**
+ * v5.5: 查询扩展 — 将短消息扩展为 2 个语义变体。
+ *
+ * QMD 的核心创新之一：用 LLM 生成同义表述，扩大检索召回面。
+ * 例："卡片报错" → ["飞书卡片 API 签名验证错误", "消息卡片错误码排查"]
+ *
+ * 降级：模型不可用 → 返回空数组，只用原始查询检索。
+ */
+async function expandQuery(query: string): Promise<string[]> {
+  // 太短或太长的查询不扩展
+  if (query.length < 4 || query.length > 200) return [];
+
+  const ready = await isExpansionReady();
+  if (!ready) return [];
+
+  try {
+    const prompt = `你是一个搜索查询扩展器。给定用户查询，生成2个语义相关但用词不同的搜索变体。
+只输出变体，每行一个，不要编号，不要解释。
+
+用户查询：${query.substring(0, 100)}
+
+变体：`;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), EXPANSION_TIMEOUT_MS);
+
+    const res = await fetch(`${OLLAMA_BASE}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: EXPANSION_MODEL,
+        prompt,
+        stream: false,
+        options: { temperature: 0.7, num_predict: 100 },
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timer);
+
+    if (!res.ok) return [];
+
+    const data = (await res.json()) as { response?: string };
+    const lines = (data.response || "")
+      .split("\n")
+      .map((l) => l.replace(/^\d+[.、)\]]\s*/, "").trim())
+      .filter((l) => l.length >= 4 && l.length <= 100);
+
+    return lines.slice(0, 2);
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
 // 检索轨迹 v4.5（借鉴 OpenViking 透明检索 + QMD --explain）
 // ============================================================
 
@@ -711,6 +802,7 @@ const OLLAMA_BASE = process.env.OLLAMA_HOST || "http://localhost:11434";
 interface RetrievalTrace {
   timestamp: string;
   query: string;
+  expansion: string[];  // v5.5: 查询扩展变体
   pipeline: {
     keyword: { matched: string[] };
     tfidf: { matched: string[]; topScore: number };
@@ -786,9 +878,14 @@ async function hybridMatchCategories(
   memContent: string,
   cwd: string,
 ): Promise<{ categories: string[]; trace: RetrievalTrace }> {
+  // v5.5: 查询扩展 — 生成语义变体扩大召回面
+  const expansions = await expandQuery(prompt);
+  const allQueries = [prompt, ...expansions];
+
   const trace: RetrievalTrace = {
     timestamp: new Date().toISOString(),
     query: prompt.substring(0, 100),
+    expansion: expansions,
     pipeline: {
       keyword: { matched: [] },
       tfidf: { matched: [], topScore: 0 },
@@ -799,7 +896,7 @@ async function hybridMatchCategories(
     budget: { used: 0, limit: 3000 },
   };
 
-  // 第一步：关键词正则匹配 → 排名列表
+  // 第一步：关键词正则匹配 → 排名列表（只用原始 prompt，正则是精确匹配）
   const keywordRanked: Array<{ category: string; rank: number }> = [];
   let keywordRank = 0;
   for (const { keywords, categories } of KEYWORD_CATEGORY_MAP) {
@@ -813,17 +910,43 @@ async function hybridMatchCategories(
   }
   trace.pipeline.keyword.matched = keywordRanked.map((r) => r.category);
 
-  // 第二步：TF-IDF 模糊匹配 → 排名列表
+  // 第二步：TF-IDF 模糊匹配 → 排名列表（所有查询变体参与，合并去重）
   const regexMatched = new Set(keywordRanked.map((r) => r.category));
-  const tfidfResults = fuzzyMatchCategoriesWithScores(prompt, memContent, regexMatched);
-  const tfidfRanked = tfidfResults.map((r, i) => ({ category: r.cat, rank: i }));
+  const tfidfCandidates = new Map<string, number>(); // cat → best similarity
+  for (const q of allQueries) {
+    const results = fuzzyMatchCategoriesWithScores(q, memContent, regexMatched);
+    for (const r of results) {
+      const prev = tfidfCandidates.get(r.cat) || 0;
+      if (r.similarity > prev) {
+        tfidfCandidates.set(r.cat, r.similarity);
+      }
+    }
+  }
+  const tfidfSorted = Array.from(tfidfCandidates.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4); // 扩展后允许更多候选
+  const tfidfRanked = tfidfSorted.map(([cat], i) => ({ category: cat, rank: i }));
   trace.pipeline.tfidf.matched = tfidfRanked.map((r) => r.category);
-  trace.pipeline.tfidf.topScore = tfidfResults.length > 0 ? tfidfResults[0].similarity : 0;
+  trace.pipeline.tfidf.topScore = tfidfSorted.length > 0 ? tfidfSorted[0][1] : 0;
 
-  // 第三步：向量语义匹配 → 排名列表
+  // 第三步：向量语义匹配 → 排名列表（所有查询变体参与）
   const afterKeywordAndTfidf = new Set([...regexMatched, ...tfidfRanked.map((r) => r.category)]);
+  // 原始 prompt 的向量匹配
   const vectorResults = await vectorMatchCategories(prompt, cwd, afterKeywordAndTfidf);
-  const vectorRanked = vectorResults.map((r, i) => ({ category: r.cat, rank: i }));
+  // 扩展变体的向量匹配（合并结果）
+  for (const expanded of expansions) {
+    const extraResults = await vectorMatchCategories(expanded, cwd, afterKeywordAndTfidf);
+    for (const r of extraResults) {
+      const existing = vectorResults.find((v) => v.cat === r.cat);
+      if (existing) {
+        existing.score = Math.max(existing.score, r.score);
+      } else if (!vectorResults.some((v) => v.cat === r.cat)) {
+        vectorResults.push(r);
+      }
+    }
+  }
+  vectorResults.sort((a, b) => b.score - a.score);
+  const vectorRanked = vectorResults.slice(0, 5).map((r, i) => ({ category: r.cat, rank: i }));
   trace.pipeline.vector.available = vectorResults.length > 0 || (getVectorIndex(cwd) !== null);
   trace.pipeline.vector.matched = vectorRanked.map((r) => r.category);
   trace.pipeline.vector.topCosine = vectorResults.length > 0 ? vectorResults[0].score : 0;
