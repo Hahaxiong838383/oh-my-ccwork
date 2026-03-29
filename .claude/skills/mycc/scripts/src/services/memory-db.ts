@@ -26,12 +26,20 @@ import * as path from "path";
 export interface ItemRow {
   id: string;
   category: string;
+  scope: string;        // user/project/agent/session
   content: string;
   stars: number;
   write_date: string | null;
   event_date: string | null;
   chain_type: string | null;
   chain_ref: string | null;
+}
+
+export interface CentroidRow {
+  category: string;
+  scope: string;
+  item_count: number;
+  l0_summary: string | null;
 }
 
 export interface VectorRow {
@@ -59,6 +67,7 @@ const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS items (
   id          TEXT PRIMARY KEY,
   category    TEXT NOT NULL,
+  scope       TEXT NOT NULL DEFAULT 'project',  -- user/project/agent/session
   content     TEXT NOT NULL,
   stars       INTEGER DEFAULT 0,
   write_date  TEXT,
@@ -69,6 +78,7 @@ CREATE TABLE IF NOT EXISTS items (
   updated_at  TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_items_category ON items(category);
+CREATE INDEX IF NOT EXISTS idx_items_scope ON items(scope);
 
 -- FTS5 全文索引
 CREATE VIRTUAL TABLE IF NOT EXISTS items_fts USING fts5(
@@ -146,6 +156,18 @@ CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date);
 CREATE TABLE IF NOT EXISTS meta (
   key   TEXT PRIMARY KEY,
   value TEXT
+);
+
+-- 6. L0 类别中心向量（centroid = 类别内所有 item 向量的均值）
+-- 用途：粗筛阶段用 centroid 快速定位相关类别（20 次 float32 vs 274 次）
+-- 后续 RaBitQ 阶段三依赖此表做第一层过滤
+CREATE TABLE IF NOT EXISTS centroids (
+  category        TEXT PRIMARY KEY,
+  scope           TEXT NOT NULL DEFAULT 'project',
+  centroid_vector BLOB,           -- float32[512]，类别均值向量
+  item_count      INTEGER,
+  l0_summary      TEXT,           -- 预生成的 L0 概览文本
+  updated_at      TEXT DEFAULT (datetime('now'))
 );
 `;
 
@@ -245,12 +267,16 @@ function parseItemLine(line: string, category: string, idx: number): ItemRow {
     chainRef = m ? m[1].trim() : null;
   }
 
+  // scope：从 category 前缀提取（user/偏好 → "user"）
+  const scope = category.split("/")[0] || "project";
+
   // ID：category + index（稳定 ID，重建时不变）
   const id = `${category}:${idx}`;
 
   return {
     id,
     category,
+    scope,
     content: line.replace(/^-\s*/, "").trim(),
     stars: starCount,
     write_date: writeDate,
@@ -302,14 +328,14 @@ export function syncItemsFromMd(cwd: string): boolean {
     db.exec("DELETE FROM items_fts");
 
     const insertItem = db.prepare(
-      "INSERT INTO items (id, category, content, stars, write_date, event_date, chain_type, chain_ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO items (id, category, scope, content, stars, write_date, event_date, chain_type, chain_ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     const insertFts = db.prepare(
       "INSERT INTO items_fts (id, content, category) VALUES (?, ?, ?)"
     );
 
     for (const item of items) {
-      insertItem.run(item.id, item.category, item.content, item.stars, item.write_date, item.event_date, item.chain_type, item.chain_ref);
+      insertItem.run(item.id, item.category, item.scope, item.content, item.stars, item.write_date, item.event_date, item.chain_type, item.chain_ref);
       insertFts.run(item.id, item.content, item.category);
     }
 
@@ -367,12 +393,80 @@ export function syncVectorsFromJson(cwd: string): boolean {
     });
 
     rebuild();
+
+    // 向量重建后自动计算 centroids
+    buildCentroids(db, data.items);
+
     console.log(`[MemoryDB] items_vec 表重建完成：${data.items.length} 条向量`);
     return true;
   } catch (err) {
     console.warn("[MemoryDB] 向量同步失败:", err);
     return false;
   }
+}
+
+/**
+ * 计算每个类别的中心向量（centroid = 类别内所有向量的均值）。
+ *
+ * 用途：
+ * 1. L0 粗筛：用 centroid 快速判断哪些类别与 query 相关（20 次比对 vs 274 次）
+ * 2. 阶段三 RaBitQ：centroid 做第一层过滤
+ */
+function buildCentroids(
+  db: Database.Database,
+  items: Array<{ id: string; category: string; vector: number[] }>,
+): void {
+  // 按类别分组
+  const catVecs = new Map<string, number[][]>();
+  for (const item of items) {
+    const vecs = catVecs.get(item.category) || [];
+    vecs.push(item.vector);
+    catVecs.set(item.category, vecs);
+  }
+
+  db.exec("DELETE FROM centroids");
+
+  const insert = db.prepare(
+    "INSERT INTO centroids (category, scope, centroid_vector, item_count, l0_summary) VALUES (?, ?, ?, ?, ?)"
+  );
+
+  const buildTx = db.transaction(() => {
+    for (const [category, vectors] of catVecs) {
+      const dim = vectors[0].length;
+      const mean = new Float32Array(dim);
+
+      // 求均值
+      for (const vec of vectors) {
+        for (let i = 0; i < dim; i++) {
+          mean[i] += vec[i];
+        }
+      }
+      for (let i = 0; i < dim; i++) {
+        mean[i] /= vectors.length;
+      }
+
+      // L2 归一化（cosine 搜索需要单位向量）
+      let norm = 0;
+      for (let i = 0; i < dim; i++) {
+        norm += mean[i] * mean[i];
+      }
+      norm = Math.sqrt(norm);
+      if (norm > 0) {
+        for (let i = 0; i < dim; i++) {
+          mean[i] /= norm;
+        }
+      }
+
+      const scope = category.split("/")[0] || "project";
+      const buf = Buffer.from(mean.buffer);
+
+      // L0 摘要暂存 null，由 context-loader 的 generateL0OverviewFromDB 填充
+      insert.run(category, scope, buf, vectors.length, null);
+    }
+  });
+
+  buildTx();
+  console.log(`[MemoryDB] centroids 重建完成：${catVecs.size} 个类别`);
 }
 
 /**
@@ -408,6 +502,45 @@ export function getCategorySummary(cwd: string): Array<{ category: string; count
   return db.prepare(
     "SELECT category, COUNT(*) as count FROM items GROUP BY category ORDER BY category"
   ).all() as Array<{ category: string; count: number }>;
+}
+
+/**
+ * 用 centroid 向量做类别粗筛：返回与 query 向量最相似的类别。
+ * 比逐条比对快（~20 次 vs ~274 次），后续精排只看命中类别的 items。
+ */
+export function centroidSearch(
+  cwd: string,
+  queryVec: number[],
+  topK: number = 5,
+): Array<{ category: string; similarity: number }> {
+  const db = getDB(cwd);
+  if (!db) return [];
+
+  try {
+    const rows = db.prepare(
+      "SELECT category, centroid_vector FROM centroids WHERE centroid_vector IS NOT NULL"
+    ).all() as Array<{ category: string; centroid_vector: Buffer }>;
+
+    const results: Array<{ category: string; similarity: number }> = [];
+    for (const row of rows) {
+      const centroid = new Float32Array(row.centroid_vector.buffer, row.centroid_vector.byteOffset, 512);
+      // cosine similarity（centroid 已归一化）
+      let dot = 0, normQ = 0;
+      for (let i = 0; i < 512; i++) {
+        dot += queryVec[i] * centroid[i];
+        normQ += queryVec[i] * queryVec[i];
+      }
+      const sim = normQ > 0 ? dot / Math.sqrt(normQ) : 0;
+      if (sim > 0.2) {
+        results.push({ category: row.category, similarity: sim });
+      }
+    }
+
+    results.sort((a, b) => b.similarity - a.similarity);
+    return results.slice(0, topK);
+  } catch {
+    return [];
+  }
 }
 
 /**
