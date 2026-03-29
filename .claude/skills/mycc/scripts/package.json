@@ -28,15 +28,18 @@
     "@esbuild/darwin-arm64": "^0.27.4",
     "@google/generative-ai": "^0.24.1",
     "@larksuiteoapi/node-sdk": "^1.59.0",
+    "better-sqlite3": "^12.8.0",
     "chalk": "^4.1.2",
     "nanoid": "^5.0.0",
     "node-pty": "^1.0.0",
     "qrcode-terminal": "^0.12.0",
+    "sqlite-vec": "^0.1.7",
     "undici": "^7.19.1",
     "ws": "^8.19.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.0.0",
     "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^2.1.9",

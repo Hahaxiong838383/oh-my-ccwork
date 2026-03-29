@@ -1,14 +1,22 @@
 /**
- * 共享记忆上下文加载器 v4
+ * 共享记忆上下文加载器 v5.5
  *
  * 为 Codex / Gemini CLI 调用动态注入记忆上下文。
  * 两层：
  * 1. RECENT_EVENTS.md 尾部（最近事件）
  * 2. memory-items.md 混合检索（向量语义 + 关键词 TF-IDF + 时间衰减 + MMR 去重 + 残差版本链）
  *
- * v4 升级（借鉴 TurboQuant 失真率理论）：
- * - 向量语义检索：Qwen3-Embedding-0.6B (512维) + 余弦相似度，语义泛化能力质的飞跃
- * - 混合评分：final = 0.4×keyword + 0.6×vector，取两者长处
+ * v5.5 升级（借鉴 QMD reranker pipeline）：
+ * - LLM 重排：MMR 后用 Qwen3-Reranker-0.6B 对 Top 20 候选二次打分
+ * - 最终分数 = 0.6 * rerankScore + 0.4 * originalScore
+ * - 降级：Ollama 不可用或 reranker 模型未加载时跳过，直接用 MMR 结果
+ *
+ * v4.5 保留：
+ * - RRF 融合：三路检索结果用 Reciprocal Rank Fusion 统一排序
+ * - 检索轨迹：每次注入记录命中类别/条目/分数，写入 trajectories/recall-*.jsonl
+ *
+ * v4 保留：
+ * - 向量语义检索：Qwen3-Embedding-0.6B (512维) + 余弦相似度
  * - 残差版本链：#base + →Δ: 替代旧 →updates:，信息不再丢失
  * - 降级机制：Ollama 不可用时自动 fallback 到纯关键词（v3 逻辑）
  *
@@ -28,7 +36,7 @@
  * - Ollama 离线时无感降级，零阻塞
  */
 
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from "fs";
 import * as path from "path";
 import {
   embed,
@@ -37,6 +45,16 @@ import {
   cosineSim,
   type VectorIndex,
 } from "./embedding.js";
+import {
+  getDB,
+  syncAll as syncDB,
+  getItemsByCategory,
+  getCategorySummary,
+  searchItems as searchItemsDB,
+  vectorSearchDB,
+  saveTrace as saveTraceDB,
+  type ItemRow,
+} from "./memory-db.js";
 
 // ============================================================
 // 时间衰减 v3（双时间戳 + 事件感知，借鉴 Supermemory temporal grounding）
@@ -288,20 +306,135 @@ const KEYWORD_CATEGORY_MAP: Array<{ keywords: RegExp; categories: string[] }> = 
   { keywords: /状态|进度|运行|接入|更新/i, categories: ["project/状态"] },
 ];
 
-/** 始终注入的 user 类别 */
+/** v5: 始终注入的类别（user + agent scope） */
 const ALWAYS_INJECT_CATEGORIES = [
   "user/topOfMind",
   "user/偏好",
   "user/方法论",
   "user/全局规则",
+  "agent/技能",
+  "agent/踩坑",
 ];
 
+// ============================================================
+// L0/L1/L2 渐进加载 v5（借鉴 OpenViking 三层加载，token 降 91%）
+// ============================================================
+
 /**
- * 从 memory-items.md 提取指定类别的内容。
- * v3：双时间戳 + 关系链解析 + 时间衰减 + MMR 去重。
- * 每个类别最多返回 Top 10 条。
+ * 对 memory-items 中的一个 section 进行评分排序。
+ * 公共逻辑，供 L1/L2 提取共用。
  */
-function extractCategories(content: string, categories: string[]): string {
+function scoreSectionItems(
+  section: string,
+): Array<{ line: string; score: number; tokens: string[] }> {
+  const lines = section.split("\n").filter((l) => l.startsWith("- "));
+  if (lines.length === 0) return [];
+
+  let scored = lines.map((line) => {
+    const stars = starScore(line);
+    const decay = temporalDecay(parseDaysAgo(line), parseEventDaysAgo(line));
+    const score = stars * 0.5 + decay * 0.5;
+    const tokens = tokenize(line);
+    return { line, score, tokens };
+  });
+
+  return resolveRelations(scored);
+}
+
+/**
+ * v5.5 L0: 从 SQLite 生成类别概览（比文件解析快）。
+ * 降级：SQLite 不可用时返回空字符串，回退到 generateL0Overview。
+ */
+function generateL0OverviewFromDB(cwd: string): string {
+  const db = getDB(cwd);
+  if (!db) return "";
+
+  try {
+    const cats = getCategorySummary(cwd);
+    if (cats.length === 0) return "";
+
+    const lines: string[] = [];
+    for (const { category, count } of cats) {
+      if (category.startsWith("user/")) continue;
+
+      // 从 SQLite 取该类别的 top 关键词
+      const items = getItemsByCategory(cwd, category);
+      const allTokens = items.flatMap((i) => tokenize(i.content));
+      const freq = new Map<string, number>();
+      for (const t of allTokens) {
+        freq.set(t, (freq.get(t) || 0) + 1);
+      }
+      const stopWords = new Set(["★★★", "★★", "已", "的", "在", "和", "cc", "了", "是", "为", "不", "有", "这", "到", "也"]);
+      const topKeywords = Array.from(freq.entries())
+        .filter(([w]) => !stopWords.has(w) && w.length >= 2)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([w]) => w);
+
+      lines.push(`[${category}] ${count}条：${topKeywords.join("、")}`);
+    }
+
+    return lines.join("\n");
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * v5 L0: 为所有 project/agent 类别生成一行概览。
+ *
+ * 格式：[类别名] N 条：关键词1、关键词2、关键词3
+ * 不用 LLM，纯 TF-IDF 提取 Top 关键词 + 模板。
+ * 总开销 ~400 token，让 cc 知道"存在哪些记忆类别"。
+ */
+function generateL0Overview(content: string): string {
+  const sections = content.split(/^## /m).filter(Boolean);
+  const overviewLines: string[] = [];
+
+  for (const section of sections) {
+    const headerMatch = section.match(/^\[([^\]]+)\]/);
+    if (!headerMatch) continue;
+    const cat = headerMatch[1];
+    // L0 只覆盖 project/* 和 agent/*（user/* 已始终注入完整内容）
+    if (cat.startsWith("user/")) continue;
+
+    const lines = section.split("\n").filter((l) => l.startsWith("- "));
+    if (lines.length === 0) continue;
+
+    // 提取 Top 5 高频关键词（TF-IDF 简化版：直接统计词频）
+    const allTokens = lines.flatMap((l) => tokenize(l));
+    const freq = new Map<string, number>();
+    for (const t of allTokens) {
+      freq.set(t, (freq.get(t) || 0) + 1);
+    }
+    // 排除过于通用的词
+    const stopWords = new Set(["★★★", "★★", "已", "的", "在", "和", "cc", "了", "是", "为", "不", "有", "这", "到", "也"]);
+    const topKeywords = Array.from(freq.entries())
+      .filter(([w]) => !stopWords.has(w) && w.length >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([w]) => w);
+
+    overviewLines.push(`[${cat}] ${lines.length}条：${topKeywords.join("、")}`);
+  }
+
+  return overviewLines.join("\n");
+}
+
+/**
+ * v5.5 L2: 从 memory-items.md 提取指定类别的完整内容（Top 10）。
+ *
+ * v5.5 升级：MMR 选择后增加 LLM rerank 阶段。
+ * - MMR 先选 Top 20 候选 → reranker 二次打分 → 取 Top 10
+ * - reranker 不可用时降级为直接 MMR Top 10（v4 逻辑）
+ *
+ * @param query  用户原始查询（供 reranker 评估相关性）
+ */
+async function extractCategories(
+  content: string,
+  categories: string[],
+  query?: string,
+): Promise<string> {
   const blocks: string[] = [];
   const categorySet = new Set(categories);
 
@@ -313,67 +446,28 @@ function extractCategories(content: string, categories: string[]): string {
     const cat = headerMatch[1];
     if (!categorySet.has(cat)) continue;
 
-    const lines = section.split("\n").filter((l) => l.startsWith("- "));
-    if (lines.length === 0) continue;
+    const scored = scoreSectionItems(section);
+    if (scored.length === 0) continue;
 
-    // v3: 综合评分 = ★权重 0.5 + 双时间戳衰减 0.5
-    let scored = lines.map((line) => {
-      const stars = starScore(line);
-      const decay = temporalDecay(parseDaysAgo(line), parseEventDaysAgo(line));
-      const score = stars * 0.5 + decay * 0.5;
-      const tokens = tokenize(line);
-      return { line, score, tokens };
-    });
+    let selected: Array<{ line: string; score: number }>;
 
-    // v3: 关系链解析 — 被 →updates: 取代的旧条目 score 归零
-    scored = resolveRelations(scored);
+    if (query && scored.length > 10) {
+      // v5.5: MMR 先选 Top 20 → LLM rerank → 取 Top 10
+      const mmrCandidates = mmrSelect(scored, 20) as Array<{ line: string; score: number; tokens: string[] }>;
+      const reranked = await llmRerank(query, mmrCandidates);
+      selected = reranked.slice(0, 10);
+    } else {
+      // 候选不多或无 query → 直接 MMR Top 10
+      selected = mmrSelect(scored, 10);
+    }
 
-    // MMR 选择 Top 10（兼顾相关性 + 多样性）
-    const selected = mmrSelect(scored, 10);
     blocks.push(`## [${cat}]\n${selected.map((s) => s.line).join("\n")}`);
   }
 
   return blocks.join("\n\n");
 }
 
-/**
- * v3: TF-IDF cosine 模糊匹配（从 Jaccard 升级）。
- * 根据 prompt 内容自动发现相关的 project 类别。
- * cosine 相似度对长短文本差异更鲁棒，召回率优于 Jaccard。
- *
- * @returns 额外匹配到的类别名列表
- */
-function fuzzyMatchCategories(
-  prompt: string,
-  content: string,
-  alreadyMatched: Set<string>,
-): string[] {
-  const promptTokens = tokenize(prompt);
-  if (promptTokens.length === 0) return [];
-  const promptTf = buildTfVector(promptTokens);
-
-  const sections = content.split(/^## /m).filter(Boolean);
-  const candidates: Array<{ cat: string; similarity: number }> = [];
-
-  for (const section of sections) {
-    const headerMatch = section.match(/^\[([^\]]+)\]/);
-    if (!headerMatch) continue;
-    const cat = headerMatch[1];
-    // 跳过 user 类别（已始终注入）和已匹配的
-    if (cat.startsWith("user/") || alreadyMatched.has(cat)) continue;
-
-    const sectionTokens = tokenize(section);
-    const sectionTf = buildTfVector(sectionTokens);
-    const sim = cosineSimilarity(promptTf, sectionTf);
-    if (sim > 0.05) {
-      candidates.push({ cat, similarity: sim });
-    }
-  }
-
-  // 按相似度排序，最多补充 2 个类别
-  candidates.sort((a, b) => b.similarity - a.similarity);
-  return candidates.slice(0, 2).map((c) => c.cat);
-}
+// fuzzyMatchCategories 已被 fuzzyMatchCategoriesWithScores 替代（v4.5 RRF 需要分数）
 
 // ============================================================
 // 向量语义检索 v4（借鉴 TurboQuant 向量量化思路）
@@ -446,35 +540,305 @@ async function vectorMatchCategories(
   return results.slice(0, 3);
 }
 
+// ============================================================
+// RRF 融合 v4.5（借鉴 QMD Reciprocal Rank Fusion）
+// ============================================================
+
+/** RRF k 值：Cormack et al. (2009) 标准推荐值 */
+const RRF_K = 60;
+
 /**
- * v4: 混合类别匹配 — 合并关键词和向量结果。
+ * v4.5: Reciprocal Rank Fusion — 将多路排名列表融合为统一评分。
  *
- * 策略：keyword 命中的类别直接保留 + 向量补充（去重后最多 2 个）
+ * RRF_score(cat) = Σ 1/(k + rank_i)
+ * 比简单 union 去重有理论支撑：位置信息不丢失，多路命中加权。
+ */
+function rrfFuse(
+  rankedLists: Array<Array<{ category: string; rank: number }>>,
+): Array<{ category: string; score: number }> {
+  const scores = new Map<string, number>();
+  for (const list of rankedLists) {
+    for (const { category, rank } of list) {
+      const prev = scores.get(category) || 0;
+      scores.set(category, prev + 1 / (RRF_K + rank));
+    }
+  }
+  return Array.from(scores.entries())
+    .map(([category, score]) => ({ category, score }))
+    .sort((a, b) => b.score - a.score);
+}
+
+// ============================================================
+// LLM 重排 v5.5（借鉴 QMD reranker pipeline）
+// ============================================================
+
+const RERANKER_MODEL = "qwen3-reranker:0.6b";
+const RERANKER_TIMEOUT_MS = 15_000;
+
+/** 缓存 reranker 可用性（避免每次请求都检查） */
+let _rerankerAvailable: boolean | null = null;
+let _rerankerCheckTime = 0;
+const RERANKER_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 分钟重新检查
+
+/** 检查 reranker 模型是否可用 */
+async function isRerankerReady(): Promise<boolean> {
+  const now = Date.now();
+  if (_rerankerAvailable !== null && now - _rerankerCheckTime < RERANKER_CHECK_INTERVAL_MS) {
+    return _rerankerAvailable;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3_000);
+    const res = await fetch(`${OLLAMA_BASE}/api/tags`, { signal: controller.signal });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      _rerankerAvailable = false;
+      _rerankerCheckTime = now;
+      return false;
+    }
+
+    const data = (await res.json()) as { models?: Array<{ name: string }> };
+    _rerankerAvailable = (data.models || []).some((m) => m.name.includes("qwen3-reranker"));
+    _rerankerCheckTime = now;
+    return _rerankerAvailable;
+  } catch {
+    _rerankerAvailable = false;
+    _rerankerCheckTime = now;
+    return false;
+  }
+}
+
+/**
+ * v5.5: 用 Qwen3-Reranker 对候选 items 二次打分。
+ *
+ * 输入 query + items，输出 rerankScore 0~1。
+ * 最终分数 = 0.6 * rerankScore + 0.4 * originalScore（归一化后）。
+ *
+ * 降级：模型不可用 → 直接返回原列表，不阻塞。
+ */
+async function llmRerank(
+  query: string,
+  items: Array<{ line: string; score: number; tokens: string[] }>,
+): Promise<Array<{ line: string; score: number; tokens: string[] }>> {
+  if (items.length === 0) return items;
+
+  const ready = await isRerankerReady();
+  if (!ready) return items;
+
+  try {
+    // 构建 reranker 输入：逐条评估相关性
+    const documents = items.map((item) => item.line.substring(0, 200));
+    const prompt = `Query: ${query.substring(0, 100)}\n\nRate each document's relevance (0.0-1.0):\n${documents.map((d, i) => `[${i}] ${d}`).join("\n")}\n\nOutput JSON array of scores:`;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), RERANKER_TIMEOUT_MS);
+
+    const res = await fetch(`${OLLAMA_BASE}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: RERANKER_MODEL,
+        prompt,
+        stream: false,
+        options: { temperature: 0, num_predict: 200 },
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timer);
+
+    if (!res.ok) return items;
+
+    const data = (await res.json()) as { response?: string };
+    const responseText = data.response || "";
+
+    // 解析分数：尝试提取 JSON 数组 或 逐行浮点数
+    const scores = parseRerankScores(responseText, items.length);
+    if (!scores) return items;
+
+    // 归一化原始分数到 0~1
+    const maxOriginal = Math.max(...items.map((i) => i.score), 0.001);
+    const RERANK_WEIGHT = 0.6;
+    const ORIGINAL_WEIGHT = 0.4;
+
+    const reranked = items.map((item, idx) => ({
+      ...item,
+      score: RERANK_WEIGHT * scores[idx] + ORIGINAL_WEIGHT * (item.score / maxOriginal),
+    }));
+
+    reranked.sort((a, b) => b.score - a.score);
+    return reranked;
+  } catch {
+    return items; // 降级：静默回退
+  }
+}
+
+/** 从 reranker 输出解析分数数组 */
+function parseRerankScores(text: string, expectedLength: number): number[] | null {
+  // 尝试 1：JSON 数组
+  const jsonMatch = text.match(/\[[\d.,\s]+\]/);
+  if (jsonMatch) {
+    try {
+      const arr = JSON.parse(jsonMatch[0]) as number[];
+      if (arr.length === expectedLength && arr.every((n) => typeof n === "number")) {
+        return arr.map((n) => Math.max(0, Math.min(1, n)));
+      }
+    } catch { /* fallthrough */ }
+  }
+
+  // 尝试 2：逐行浮点数
+  const floats = text.match(/\d+\.\d+/g);
+  if (floats && floats.length >= expectedLength) {
+    return floats.slice(0, expectedLength).map((f) => Math.max(0, Math.min(1, parseFloat(f))));
+  }
+
+  return null;
+}
+
+// ============================================================
+// Ollama 配置（与 embedding.ts 共享端点）
+// ============================================================
+
+const OLLAMA_BASE = process.env.OLLAMA_HOST || "http://localhost:11434";
+
+// ============================================================
+// 检索轨迹 v4.5（借鉴 OpenViking 透明检索 + QMD --explain）
+// ============================================================
+
+/** 检索轨迹数据结构 */
+interface RetrievalTrace {
+  timestamp: string;
+  query: string;
+  pipeline: {
+    keyword: { matched: string[] };
+    tfidf: { matched: string[]; topScore: number };
+    vector: { matched: string[]; topCosine: number; available: boolean };
+  };
+  rrf: Array<{ category: string; score: number }>;
+  injected: Array<{
+    category: string;
+    itemCount: number;
+    topItem: string;
+    topScore: number;
+  }>;
+  budget: { used: number; limit: number };
+}
+
+/** 将检索轨迹写入 JSONL（fire-and-forget） */
+function writeTrace(trace: RetrievalTrace, cwd: string): void {
+  try {
+    const dir = path.join(cwd, "0-System/trajectories");
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+    const date = new Date().toISOString().slice(0, 10);
+    const filePath = path.join(dir, `recall-${date}.jsonl`);
+    writeFileSync(filePath, JSON.stringify(trace) + "\n", { flag: "a" });
+  } catch {
+    // 静默失败，不影响注入
+  }
+}
+
+/**
+ * TF-IDF 模糊匹配（带分数版本，供 RRF 排名用）
+ */
+function fuzzyMatchCategoriesWithScores(
+  prompt: string,
+  content: string,
+  alreadyMatched: Set<string>,
+): Array<{ cat: string; similarity: number }> {
+  const promptTokens = tokenize(prompt);
+  if (promptTokens.length === 0) return [];
+  const promptTf = buildTfVector(promptTokens);
+
+  const sections = content.split(/^## /m).filter(Boolean);
+  const candidates: Array<{ cat: string; similarity: number }> = [];
+
+  for (const section of sections) {
+    const headerMatch = section.match(/^\[([^\]]+)\]/);
+    if (!headerMatch) continue;
+    const cat = headerMatch[1];
+    if (cat.startsWith("user/") || alreadyMatched.has(cat)) continue;
+
+    const sectionTokens = tokenize(section);
+    const sectionTf = buildTfVector(sectionTokens);
+    const sim = cosineSimilarity(promptTf, sectionTf);
+    if (sim > 0.05) {
+      candidates.push({ cat, similarity: sim });
+    }
+  }
+
+  candidates.sort((a, b) => b.similarity - a.similarity);
+  return candidates.slice(0, 2);
+}
+
+/**
+ * v4.5: 混合类别匹配 — RRF 融合三路检索结果 + 检索轨迹。
+ *
+ * v4 → v4.5 变化：
+ * - 三路检索各自产出排名列表 → RRF 统一评分（替代简单 union）
+ * - 返回检索轨迹数据用于可观测性
  */
 async function hybridMatchCategories(
   prompt: string,
   memContent: string,
   cwd: string,
-): Promise<string[]> {
-  // 第一步：关键词正则匹配（确定性，精确）
-  const keywordCats: string[] = [];
+): Promise<{ categories: string[]; trace: RetrievalTrace }> {
+  const trace: RetrievalTrace = {
+    timestamp: new Date().toISOString(),
+    query: prompt.substring(0, 100),
+    pipeline: {
+      keyword: { matched: [] },
+      tfidf: { matched: [], topScore: 0 },
+      vector: { matched: [], topCosine: 0, available: false },
+    },
+    rrf: [],
+    injected: [],
+    budget: { used: 0, limit: 3000 },
+  };
+
+  // 第一步：关键词正则匹配 → 排名列表
+  const keywordRanked: Array<{ category: string; rank: number }> = [];
+  let keywordRank = 0;
   for (const { keywords, categories } of KEYWORD_CATEGORY_MAP) {
     if (keywords.test(prompt)) {
-      keywordCats.push(...categories);
+      for (const cat of categories) {
+        if (!keywordRanked.some((r) => r.category === cat)) {
+          keywordRanked.push({ category: cat, rank: keywordRank++ });
+        }
+      }
     }
   }
-  const regexMatched = new Set(keywordCats);
+  trace.pipeline.keyword.matched = keywordRanked.map((r) => r.category);
 
-  // 第二步：TF-IDF 模糊匹配（补充正则盲区，最多 2 个）
-  const tfIdfCats = fuzzyMatchCategories(prompt, memContent, regexMatched);
-  const afterTfIdf = new Set([...regexMatched, ...tfIdfCats]);
+  // 第二步：TF-IDF 模糊匹配 → 排名列表
+  const regexMatched = new Set(keywordRanked.map((r) => r.category));
+  const tfidfResults = fuzzyMatchCategoriesWithScores(prompt, memContent, regexMatched);
+  const tfidfRanked = tfidfResults.map((r, i) => ({ category: r.cat, rank: i }));
+  trace.pipeline.tfidf.matched = tfidfRanked.map((r) => r.category);
+  trace.pipeline.tfidf.topScore = tfidfResults.length > 0 ? tfidfResults[0].similarity : 0;
 
-  // 第三步：向量语义匹配（最深层补充，最多 2 个）
-  const vectorCats = await vectorMatchCategories(prompt, cwd, afterTfIdf);
-  const vectorCatNames = vectorCats.slice(0, 2).map((c) => c.cat);
+  // 第三步：向量语义匹配 → 排名列表
+  const afterKeywordAndTfidf = new Set([...regexMatched, ...tfidfRanked.map((r) => r.category)]);
+  const vectorResults = await vectorMatchCategories(prompt, cwd, afterKeywordAndTfidf);
+  const vectorRanked = vectorResults.map((r, i) => ({ category: r.cat, rank: i }));
+  trace.pipeline.vector.available = vectorResults.length > 0 || (getVectorIndex(cwd) !== null);
+  trace.pipeline.vector.matched = vectorRanked.map((r) => r.category);
+  trace.pipeline.vector.topCosine = vectorResults.length > 0 ? vectorResults[0].score : 0;
 
-  // 合并去重
-  return Array.from(new Set([...keywordCats, ...tfIdfCats, ...vectorCatNames]));
+  // RRF 融合
+  const rankedLists = [keywordRanked, tfidfRanked, vectorRanked].filter((l) => l.length > 0);
+  if (rankedLists.length === 0) {
+    return { categories: [], trace };
+  }
+  const fused = rrfFuse(rankedLists);
+  trace.rrf = fused.slice(0, 10);
+
+  // 取 RRF 最高的类别（上限 8 个，避免过度注入）
+  const categories = fused.slice(0, 8).map((r) => r.category);
+  return { categories, trace };
 }
 
 /**
@@ -504,20 +868,46 @@ function loadRecentEvents(cwd: string): string {
 export async function loadSharedContextLight(prompt: string, cwd: string): Promise<string> {
   const parts: string[] = [];
 
+  // v5.5: 优先同步 SQLite（mtime 变更检测，无变更时零开销）
+  syncDB(cwd);
+
   const memPath = path.join(cwd, "0-System/memory-items.md");
   if (existsSync(memPath)) {
     try {
       const memContent = readFileSync(memPath, "utf-8");
-      const userBlock = extractCategories(memContent, ALWAYS_INJECT_CATEGORIES);
 
-      // v4: 混合类别匹配（关键词 + TF-IDF + 向量语义）
-      const allProjectCats = await hybridMatchCategories(prompt, memContent, cwd);
+      // v5.5 L0: 优先从 SQLite 生成概览（更快），降级到文件解析
+      const l0Overview = generateL0OverviewFromDB(cwd) || generateL0Overview(memContent);
+      if (l0Overview) {
+        parts.push(`### 记忆索引（L0 概览）\n${l0Overview}`);
+      }
 
+      // 始终注入 user + agent 类别（L2 完整内容，无需 rerank）
+      const userBlock = await extractCategories(memContent, ALWAYS_INJECT_CATEGORIES);
+
+      // v4.5: 混合类别匹配（RRF 融合 + 检索轨迹）
+      const { categories: allProjectCats, trace } = await hybridMatchCategories(prompt, memContent, cwd);
+
+      // v5.5: project 类别注入时启用 LLM rerank
       const projectBlock = allProjectCats.length > 0
-        ? extractCategories(memContent, allProjectCats)
+        ? await extractCategories(memContent, allProjectCats, prompt)
         : "";
       if (userBlock) parts.push(userBlock);
       if (projectBlock) parts.push(projectBlock);
+
+      // v5.5: 写检索轨迹到 SQLite（降级到 JSONL）
+      trace.budget.used = parts.join("\n\n").length;
+      trace.budget.limit = 2000;
+      saveTraceDB(cwd, {
+        timestamp: trace.timestamp,
+        query: trace.query,
+        pipeline: trace.pipeline,
+        rrf: trace.rrf,
+        injected: trace.injected,
+        budget_used: trace.budget.used,
+        budget_limit: trace.budget.limit,
+      });
+      writeTrace(trace, cwd); // 同时保留 JSONL（过渡期双写）
     } catch {
       // 静默失败
     }
@@ -546,30 +936,54 @@ export async function loadSharedContextLight(prompt: string, cwd: string): Promi
 export async function loadSharedContext(prompt: string, cwd: string): Promise<string> {
   const parts: string[] = [];
 
+  // v5.5: 同步 SQLite
+  syncDB(cwd);
+
   // 1. RECENT_EVENTS
   const recentEvents = loadRecentEvents(cwd);
   if (recentEvents) {
     parts.push(`### 最近事件\n${recentEvents}`);
   }
 
-  // 2. memory-items（v4：关键词 + TF-IDF + 向量语义 + 时间衰减 + MMR）
+  // 2. memory-items（v5.5：SQLite + L0 概览 + RRF 融合 + rerank + 检索轨迹）
   const memPath = path.join(cwd, "0-System/memory-items.md");
   if (existsSync(memPath)) {
     try {
       const memContent = readFileSync(memPath, "utf-8");
 
-      // 始终注入 user 类别
-      const userBlock = extractCategories(memContent, ALWAYS_INJECT_CATEGORIES);
+      // v5.5 L0: 优先从 SQLite 生成概览
+      const l0Overview = generateL0OverviewFromDB(cwd) || generateL0Overview(memContent);
+      if (l0Overview) {
+        parts.push(`### 记忆索引（L0 概览）\n${l0Overview}`);
+      }
 
-      // v4: 混合类别匹配（关键词 + TF-IDF + 向量语义）
-      const allProjectCats = await hybridMatchCategories(prompt, memContent, cwd);
+      // 始终注入 user + agent 类别（L2 完整内容，无需 rerank）
+      const userBlock = await extractCategories(memContent, ALWAYS_INJECT_CATEGORIES);
 
+      // v4.5: 混合类别匹配（RRF 融合 + 检索轨迹）
+      const { categories: allProjectCats, trace } = await hybridMatchCategories(prompt, memContent, cwd);
+
+      // v5.5: project 类别注入时启用 LLM rerank
       const projectBlock = allProjectCats.length > 0
-        ? extractCategories(memContent, allProjectCats)
+        ? await extractCategories(memContent, allProjectCats, prompt)
         : "";
 
       if (userBlock) parts.push(userBlock);
       if (projectBlock) parts.push(projectBlock);
+
+      // v5.5: 检索轨迹双写（SQLite + JSONL 过渡期）
+      trace.budget.used = parts.join("\n\n").length;
+      trace.budget.limit = 3000;
+      saveTraceDB(cwd, {
+        timestamp: trace.timestamp,
+        query: trace.query,
+        pipeline: trace.pipeline,
+        rrf: trace.rrf,
+        injected: trace.injected,
+        budget_used: trace.budget.used,
+        budget_limit: trace.budget.limit,
+      });
+      writeTrace(trace, cwd);
     } catch {
       // 静默失败
     }

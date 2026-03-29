@@ -15,6 +15,11 @@ build/
 *.seed
 *.pid.lock
 
+# SQLite 派生数据库（本地重建，不提交）
+0-System/memory.db
+0-System/memory.db-wal
+0-System/memory.db-shm
+
 # ====================================
 # 38e628b 新增的不必要文件（仅保留核心功能）
 # ====================================
