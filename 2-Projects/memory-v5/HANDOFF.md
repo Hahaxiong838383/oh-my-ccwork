@@ -94,19 +94,16 @@ QMD / OpenViking / lossless-claw 保持跟踪，有新特性随时分析吸收�
 
 根据你当前 session 的目标，选择：
 
-**继续实施 P0**：
-1. 读 `context-loader.ts`（`.claude/skills/mycc/scripts/src/services/context-loader.ts`）
-2. 找到 `hybridMatchCategories()` 函数
-3. 实现 RRF 融合（公式：`score = Σ 1/(60 + rank_i)`）
-4. 读本文件的 P0 第 1 项状态，更新为进行中
-
-**继续实施 P1**：
-1. 先确认 P0 三项已完成
-2. 读 `plan.md` 中 L0/L1/L2 的详细设计
+**实施 B01 SQLite 迁移**（当前最高优先级）：
+1. 读 `backlog.md` 的 B01 详细规划——三阶段方案 + 完整表结构 + RaBitQ 参数
+2. 阶段一先做：SQLite 统一存储 + FTS5 + md→SQLite 同步
+3. 关键约束：memory-items.md 是主源，SQLite 是加速层，单向同步
+4. 理论参考：`~/Downloads/RaBitQ-TurboQuant-综合分析与优化方案.md`
 
 **只是了解进度**：
-1. 看上面的状态表
+1. P0/P1/P2 全部已完成（v5.5）
 2. 看 `decisions.md` 了解已做的技术决策
+3. 看 `backlog.md` 了解下一步方向
 
 ---
 
@@ -123,6 +120,9 @@ QMD / OpenViking / lossless-claw 保持跟踪，有新特性随时分析吸收�
 | 2026-03-29 | DAG 摘要不调 LLM | 保持轻量原则一致，纯本地规则提取（用户问题 + 结论拼接），DAG 提供结构化回溯能力 |
 | 2026-03-29 | Reranker prompt 格式：批量评分 | 逐条调用 reranker 太慢（10 次 RT），改为一次性传入所有候选让模型批量打分 |
 | 2026-03-29 | Reranker 权重 0.6:0.4 | QMD 默认值，rerank 占 60%、原始分占 40%，后续可调 |
+| 2026-03-29 | 向量压缩三阶段渐进 | float32→int8(4x)→RaBitQ(28x)，按数据量触发，不提前优化 |
+| 2026-03-29 | TurboQuant 管语义、RaBitQ 管向量 | 两个理论不同层面分工：残差版本链管内容版本控制，RaBitQ 管向量存储压缩 |
+| 2026-03-29 | RaBitQ 随机矩阵存种子不存全矩阵 | 512×512 float32 = 1MB > 数据本身，存 8B 种子运行时重建 |
 
 ---
 
@@ -133,13 +133,17 @@ QMD / OpenViking / lossless-claw 保持跟踪，有新特性随时分析吸收�
 ├── README.md        ← 项目总览、当前状态（对外）
 ├── HANDOFF.md       ← 本文件，跨 session 交接（新 session 必读）
 ├── research.md      ← 三项目研究对比详情
-├── plan.md          ← 升级方案详细设计（含伪代码）
+├── plan.md          ← v5 升级方案详细设计（P0/P1/P2，已完成）
+├── backlog.md       ← ⭐ B01 SQLite 三阶段方案 + RaBitQ 参数（下一步重点）
 └── decisions.md     ← 技术决策记录
 
-相关文件（不在本目录）：
-├── 3-Thinking/05-记忆认知自进化架构.md  ← v4 完整架构讲解
-├── .claude/skills/mycc/scripts/src/services/context-loader.ts  ← 检索核心代码
-├── .claude/skills/mycc/scripts/src/services/chat-memory.ts     ← 对话记忆代码
-├── .claude/skills/mycc/scripts/src/services/embedding.ts       ← 向量化代码
-└── 0-System/memory-items.md  ← 记忆数据源
+理论参考（不在本目录）：
+├── ~/Downloads/RaBitQ-TurboQuant-综合分析与优化方案.md  ← RaBitQ×TurboQuant 完整分析
+├── 3-Thinking/05-记忆认知自进化架构.md                  ← v4→v5 完整架构讲解
+
+核心代码（不在本目录）：
+├── .claude/skills/mycc/scripts/src/services/context-loader.ts  ← 检索核心（RRF+L0+轨迹+重排）
+├── .claude/skills/mycc/scripts/src/services/chat-memory.ts     ← 对话记忆（DAG+过滤）
+├── .claude/skills/mycc/scripts/src/services/embedding.ts       ← 向量化
+└── 0-System/memory-items.md  ← 记忆数据主源
 ```

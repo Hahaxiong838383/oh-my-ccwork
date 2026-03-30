@@ -135,3 +135,32 @@ qwen2.5:3b 仅作 cc-eye 降级方案（小概率），正常情况下查询扩�
 - 代码在 `.claude/skills/mycc/scripts/src/services/`（随 mycc 后端走）
 - 架构文档更新 `3-Thinking/05-记忆认知自进化架构.md`
 - 本目录归档到 `5-Archive/memory-v5/`
+
+---
+
+### D12 | 2026-03-30 | AutoResearch 能力引入：P0-P2 三层升级
+
+**背景**：研究 karpathy/autoresearch(60.9k⭐)、codex-autoresearch、claude-autoresearch、AutoResearchClaw(9.5k⭐) 四个项目，提取可迁移到 cc 的能力。
+
+**备选**：
+- A. 直接部署 autoresearch 项目作为独立工具
+- B. 提取核心模式，融入 cc 现有规则/skill/记忆体系
+- C. 只做笔记，不实施
+
+**选择 B**，原因：
+1. autoresearch 核心价值是**设计模式**（自主迭代循环、渐进失败升级、双门验证、原子实验），不是代码实现
+2. cc 已有 evolution-log + friction_skill + 记忆系统 v5.5，融合比独立部署更紧凑
+3. 四个项目的 ML 训练场景不适用，但**迭代优化框架**是通用的
+
+**三层实施**：
+- P0：渐进式失败升级（rules/failure-escalation.md）+ 双门验证（rules/testing.md 追加）
+- P1：`/autoresearch` skill + 原子实验协议（rules/atomic-experiments.md）
+- P2：MetaClaw 自进化（`/metaclaw` skill + friction-patterns.md），从摩擦数据自动提取模式→生成反馈→注入未来行为
+
+**放弃的方案**：
+- A（独立部署）：增加维护负担，且 cc 不做 ML 训练
+- C（不实施）：P0 几乎零成本，不做可惜
+
+**什么条件下该翻**：
+- 如果自进化循环产生噪音（误注入无效规则）→ 回滚 P2
+- 如果 /autoresearch 长期无人使用 → 清理 P1

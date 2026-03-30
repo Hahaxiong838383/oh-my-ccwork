@@ -1213,7 +1213,20 @@
           "domain:raw.githubusercontent.com",
           "domain:release-assets.githubusercontent.com",
           "domain:avatars.githubusercontent.com",
-          "domain:camo.githubusercontent.com"
+          "domain:camo.githubusercontent.com",
+          "domain:pypi.org",
+          "domain:files.pythonhosted.org",
+          "domain:pythonhosted.org",
+          "domain:registry.npmjs.org",
+          "domain:registry.yarnpkg.com",
+          "domain:crates.io",
+          "domain:static.crates.io",
+          "domain:rubygems.org",
+          "domain:micro.mamba.pm",
+          "domain:conda.anaconda.org",
+          "domain:repo.anaconda.com",
+          "domain:dl.google.com",
+          "domain:storage.googleapis.com"
         ],
         "balancerTag": "asia-fast-balancer"
       },
@@ -1322,6 +1335,17 @@
           "domain:notebooklm.google",
           "domain:labs.google",
           "domain:bard.google.com"
+        ],
+        "balancerTag": "google-ai-balancer"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "domain:huggingface.co",
+          "domain:cdn-lfs.huggingface.co",
+          "domain:cdn-lfs-us-1.huggingface.co",
+          "domain:cdn-lfs.hf.co",
+          "domain:hf.co"
         ],
         "balancerTag": "google-ai-balancer"
       },

@@ -5,6 +5,11 @@
       "args": ["mcp"],
       "type": "stdio"
     },
+    "openspace": {
+      "command": "/Users/rayman.chen/mycc/2-Projects/openspace/start-mcp.sh",
+      "type": "stdio",
+      "timeout": 600
+    },
     "open-feishu-mcp": {
       "command": "node",
       "args": [

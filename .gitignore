@@ -229,13 +229,30 @@ video.mp4
 2-Projects/cc-remote-v3/frpc
 .local/
 
-# npx skills 通用 agent 目录（.claude/skills/ 的 lark-* 需要提交）
-skills/lark-*/
+# npx skills 符号链接（指向 .agents/skills/，不提交）
+skills/lark-*
+skills/ncm-cli-setup
+skills/netease-music-*
 
 # lark-cli 运行时
 ~/.lark-cli/
 
+# Xray 手机端配置（含代理凭据）
+2-Projects/xray-manager/config/config.mobile.json
+2-Projects/xray-manager/config/config.singbox.android.json
+2-Projects/xray-manager/config/mobile-links.txt
+
+# ncm-cli 二进制（52MB mpv + dylib）
+2-Projects/ncm-cli/bin/
+
+# Python 缓存和虚拟环境
+**/__pycache__/
+*.pyc
+.venv/
+**/.venv/
+
 # 嵌套 git 仓库（独立管理）
+2-Projects/openspace/
 2-Projects/ai-commit/
 2-Projects/ai-diff-review/
 2-Projects/ai-sentinel/
