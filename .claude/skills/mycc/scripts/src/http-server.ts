@@ -31,6 +31,10 @@ import { buildCrossSessionContext, recordConversationTurn, onSessionEnd, extract
 import { preprocessMultimodal } from "./services/multimodal-preprocessor.js";
 import { fetchUrlContent } from "./services/url-content-fetcher.js";
 import { getPortsSnapshot } from "./services/port-manager.js";
+import { listSnapshots, rollbackToSnapshot } from "./services/memory-rollback.js";
+import { extractFromRecentEvents } from "./services/session-memory.js";
+import { runDream } from "./services/dream-consolidation.js";
+import { loadAgentMemory, recordAgentExperience, type EngineType as AgentEngineType } from "./services/agent-memory.js";
 
 const PORT = process.env.PORT || 18080;
 
@@ -258,6 +262,16 @@ export class HttpServer {
         const snapshot = getPortsSnapshot();
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ ports: snapshot, total: snapshot.length }));
+      } else if (url.pathname === "/memory/snapshots" && req.method === "GET") {
+        const snapshots = listSnapshots(this.cwd);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ snapshots, total: snapshots.length }));
+      } else if (url.pathname === "/memory/rollback" && req.method === "POST") {
+        await this.handleMemoryRollback(req, res);
+      } else if (url.pathname === "/memory/extract-session" && req.method === "POST") {
+        await this.handleMemoryExtract(res);
+      } else if (url.pathname === "/memory/dream" && req.method === "POST") {
+        await this.handleMemoryDream(res);
       } else {
         res.writeHead(404, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Not Found" }));
@@ -266,6 +280,48 @@ export class HttpServer {
       console.error("[HTTP] Error:", error);
       res.writeHead(500, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Internal Server Error" }));
+    }
+  }
+
+  // ── Memory API handlers ──────────────────────────────────────
+
+  private async handleMemoryRollback(req: http.IncomingMessage, res: http.ServerResponse) {
+    try {
+      const body = await this.readBody(req);
+      const { snapshot } = JSON.parse(body);
+      if (!snapshot) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "missing snapshot path" }));
+        return;
+      }
+      const ok = rollbackToSnapshot(this.cwd, snapshot);
+      res.writeHead(ok ? 200 : 404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ success: ok }));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+  }
+
+  private async handleMemoryExtract(res: http.ServerResponse) {
+    try {
+      const result = await extractFromRecentEvents(this.cwd);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+  }
+
+  private async handleMemoryDream(res: http.ServerResponse) {
+    try {
+      const result = await runDream(this.cwd);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: String(err) }));
     }
   }
 
@@ -1178,7 +1234,13 @@ export class HttpServer {
         }
       }
 
-      const result = await runCliEngine(engine, finalPrompt, this.cwd, {
+      // P1-4: Agent Memory 注入 — 引擎调用前 prepend 对应引擎的经验记忆
+      const agentMem = loadAgentMemory(this.cwd, engine as AgentEngineType);
+      const promptWithAgentMemory = agentMem
+        ? `[Agent Memory for ${engine}]\n${agentMem}\n\n${finalPrompt}`
+        : finalPrompt;
+
+      const result = await runCliEngine(engine, promptWithAgentMemory, this.cwd, {
         timeout: adaptiveTimeout,
         signal: channelAbort.signal,
         mediaBuffers,
@@ -1188,6 +1250,17 @@ export class HttpServer {
 
       // 记录执行结果，供自适应超时学习
       recordExecution(matchedSopKey, engine, Date.now() - startTime, !!result.timedOut);
+
+      // P1-5: Agent Memory 实时采集 — 任务完成后记录经验信号
+      try {
+        const isTimeout = !!result.timedOut;
+        const isError = !!result.error && !result.output;
+        const signalType = isTimeout || isError ? "friction" as const : "success" as const;
+        const summary = isError
+          ? `${matchedSopKey || "task"} — ${result.error?.substring(0, 80) ?? "unknown error"}`
+          : `${matchedSopKey || "task"} — ${elapsed}s`;
+        recordAgentExperience(this.cwd, engine as AgentEngineType, { type: signalType, content: summary });
+      } catch { /* agent memory 采集不应阻塞主流程 */ }
 
       // 用户中止
       if (result.error === "USER_ABORTED") {

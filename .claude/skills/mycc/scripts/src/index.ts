@@ -29,6 +29,7 @@ import qrcode from "qrcode-terminal";
 import chalk from "chalk";
 import { HttpServer } from "./http-server.js";
 import { startScheduler, stopScheduler, type Task } from "./scheduler.js";
+import { runDream } from "./services/dream-consolidation.js";
 import { adapter, officialAdapter } from "./adapters/index.js";
 import { runCliEngine, type EngineType } from "./adapters/cli-engine.js";
 import { HealthMonitor } from "./health-monitor.js";
@@ -356,6 +357,26 @@ async function startServer(args: string[]) {
 
   // 启动定时任务调度器
   const executeTask = async (task: Task, taskCwd: string) => {
+    // Dream 记忆巩固：直接调用内部函数，不走 Claude/Codex
+    if (task.skill === "dream") {
+      console.log(chalk.cyan(`[Scheduler] Dream 记忆巩固启动`));
+      recordHistory(taskCwd, task.name, "执行中...");
+      try {
+        const result = await runDream(taskCwd);
+        if (result.success) {
+          recordHistory(taskCwd, task.name, `✅ 成功 (${result.duration}ms, ${result.steps.length} steps)`);
+          addStatusEvent(`记忆巩固完成 (${result.steps.filter(s => s.ok).length}/${result.steps.length} steps)`);
+          refreshStatus(taskCwd);
+        } else {
+          recordHistory(taskCwd, task.name, `⚠️ 部分失败: ${result.error ?? "unknown"}`);
+        }
+      } catch (err) {
+        console.error(chalk.red(`[Scheduler] Dream 失败:`), err);
+        recordHistory(taskCwd, task.name, "❌ 失败");
+      }
+      return;
+    }
+
     // 获取当前时间戳
     const now = new Date();
     const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
