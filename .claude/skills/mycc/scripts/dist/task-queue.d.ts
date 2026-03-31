@@ -12,10 +12,15 @@
  * - 后台任务使用独立 session（不占用对话 session）
  */
 export type MessageType = "chat" | "task";
-export type AutoRouteEngine = "cc" | "codex" | "gemini";
+export type AutoRouteEngine = "cc" | "codex" | "gemini" | "pipeline";
 /**
  * 半自动任务路由：根据消息内容推荐最合适的引擎。
- * 优先级：codex（代码任务）> gemini（调研/采集）> cc（默认）
+ *
+ * 路由优先级：
+ * 1. pipeline（分析+写入组合）→ Gemini 分析 → Codex 写入飞书
+ * 2. codex（纯代码任务）
+ * 3. gemini（纯调研/采集）
+ * 4. cc（默认 / 纯写入操作）
  */
 export declare function autoRouteEngine(message: string): AutoRouteEngine;
 /**
@@ -27,11 +32,14 @@ export interface QueuedTask {
     id: string;
     channelId: string;
     message: string;
+    engine: string;
     submittedAt: Date;
     startedAt?: Date;
     finishedAt?: Date;
     status: "pending" | "running" | "done" | "error" | "aborted";
     error?: string;
+    /** 每个任务独立的执行器（避免共享 executor 导致路由错乱） */
+    executor: TaskExecutor;
 }
 type TaskExecutor = (task: QueuedTask, signal: AbortSignal) => Promise<void>;
 /**
@@ -43,9 +51,10 @@ export declare class TaskQueueManager {
     private getOrCreate;
     /**
      * 将任务加入队列。
+     * @param engine 路由到的引擎名（用于显示和排查）
      * @returns 任务 ID
      */
-    submit(channelId: string, message: string, executor: TaskExecutor): string;
+    submit(channelId: string, message: string, engine: string, executor: TaskExecutor): string;
     /**
      * 获取通道当前队列长度（不含正在运行的任务）。
      */
@@ -60,6 +69,9 @@ export declare class TaskQueueManager {
     abort(channelId: string): {
         cancelledCount: number;
         abortedRunning: boolean;
+        runningTaskPreview?: string;
+        runningTaskEngine?: string;
+        cancelledPreviews: string[];
     };
     /**
      * 获取通道队列状态信息。

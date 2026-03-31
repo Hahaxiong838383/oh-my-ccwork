@@ -33,7 +33,7 @@ const CHAT_KEYWORDS = [
     "好的", "明白", "谢谢", "知道了", "可以", "不用了",
     "进展", "状态", "怎么样", "如何", "情况",
 ];
-/** 适合 codex 的任务：代码编写/调试/重构 */
+/** 适合 codex 的任务：代码编写/调试/重构 + 论文调研归档 */
 const CODEX_ROUTE_KEYWORDS = [
     "写代码", "写个", "写一个", "帮我写", "编程", "写程序",
     "调试", "debug", "fix bug", "修复bug", "修复 bug",
@@ -42,32 +42,73 @@ const CODEX_ROUTE_KEYWORDS = [
     "重构", "code review", "代码审查",
     "单元测试", "写测试",
     "typescript", "javascript", "python", "golang", "rust", "java",
-    "函数", "算法", "接口定义", "类定义",
-];
-/** 适合 gemini 的任务：调研/采集/论文/知识库 */
-const GEMINI_ROUTE_KEYWORDS = [
-    // 调研/论文
+    "函数", "接口定义", "类定义",
+    // 论文调研归档（从 gemini 迁移）
     "论文", "调研", "研究现状", "文献", "综述", "arxiv",
     "理论雷达", "theory-radar", "前沿论文", "/theory-radar",
+];
+/** 需要 MCP 工具的写入操作关键词 */
+const WRITE_KEYWORDS = [
+    "写入文档", "写入飞书", "写到文档", "写到飞书", "写入知识库",
+    "创建文档", "更新文档", "修改文档", "编辑文档",
+    "发消息", "发飞书", "发送到飞书", "发到群",
+    "创建表格", "更新表格", "写入表格",
+];
+/** 分析/研究类关键词（可被 Gemini 处理的前置步骤） */
+const ANALYSIS_KEYWORDS = [
+    "分析", "总结", "调研", "研究", "概括", "提取", "归纳",
+    "论文", "视频", "内容", "全文",
+];
+/** 适合 gemini 的任务：采集/新闻/知识库查询（论文调研已迁移到 codex） */
+const GEMINI_ROUTE_KEYWORDS = [
     // 采集/新闻
     "采集", "抓取", "爬取", "新闻", "资讯", "早报", "简报",
     "github风向标", "github-radar", "/github-radar", "ai新闻",
     "ipo报告", "/ipo-report", "/collect",
-    // 知识库
-    "知识库", "wiki", "写入知识库", "futurus",
+    // 知识库查询（非写入）
+    "知识库", "wiki", "futurus",
     // 大型分析
     "总结全文", "全文分析", "深度分析全文",
 ];
 /**
  * 半自动任务路由：根据消息内容推荐最合适的引擎。
- * 优先级：codex（代码任务）> gemini（调研/采集）> cc（默认）
+ *
+ * 路由优先级：
+ * 1. pipeline（分析+写入组合）→ Gemini 分析 → Codex 写入飞书
+ * 2. codex（纯代码任务）
+ * 3. gemini（纯调研/采集）
+ * 4. cc（默认 / 纯写入操作）
  */
 export function autoRouteEngine(message) {
     const text = message.trim().toLowerCase();
-    if (CODEX_ROUTE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()))) {
+    const hasWrite = WRITE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
+    const hasAnalysis = ANALYSIS_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
+    const hasGemini = GEMINI_ROUTE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
+    const hasUrl = /https?:\/\/\S+/i.test(text);
+    const hasCodex = CODEX_ROUTE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
+    // 最高优先级：分析+写入组合 → pipeline（Gemini 分析 → Codex 写入）
+    if (hasWrite && (hasAnalysis || hasGemini)) {
+        return "pipeline";
+    }
+    // 纯写入操作 → codex（有飞书 MCP 能力，分摊 cc 负担）
+    if (hasWrite) {
         return "codex";
     }
-    if (GEMINI_ROUTE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()))) {
+    // GitHub URL → cc（分析项目对 mycc 的迭代价值，需要 cc 的完整上下文）
+    const hasGitHub = /github\.com/i.test(text);
+    if (hasGitHub) {
+        return "cc";
+    }
+    // arxiv URL / 论文关键词 → codex（论文调研归档）
+    const hasArxiv = /arxiv\.org/i.test(text);
+    if (hasArxiv || hasCodex) {
+        return "codex";
+    }
+    // 非 GitHub/arxiv 的 URL + 分析关键词 → gemini（通用调研类）
+    if (hasUrl && hasAnalysis) {
+        return "gemini";
+    }
+    if (hasGemini) {
         return "gemini";
     }
     return "cc";
@@ -101,17 +142,16 @@ export function classifyMessage(message) {
 }
 /**
  * 单通道任务队列（串行执行，避免 session 并发冲突）。
+ * 每个 task 携带独立的 executor，避免共享 executor 导致路由错乱。
  */
 class ChannelTaskQueue {
     queue = [];
     running = false;
     currentTask = null;
-    executor;
     _abortController = null;
     channelId;
-    constructor(channelId, executor) {
+    constructor(channelId) {
         this.channelId = channelId;
-        this.executor = executor;
     }
     enqueue(task) {
         this.queue.push(task);
@@ -126,7 +166,8 @@ class ChannelTaskQueue {
         next.startedAt = new Date();
         this.currentTask = next;
         this._abortController = new AbortController();
-        this.executor(next, this._abortController.signal)
+        // 使用 task 自带的 executor（每个任务独立，不共享）
+        next.executor(next, this._abortController.signal)
             .then(() => {
             if (next.status === "running")
                 next.status = "done";
@@ -148,9 +189,10 @@ class ChannelTaskQueue {
     }
     /**
      * 中止当前任务 + 清空队列。
-     * 返回被取消的待执行任务数。
+     * 返回被取消的任务详情，便于向用户报告。
      */
     abort() {
+        const cancelledPreviews = this.queue.map(t => `${t.engine}: ${t.message.substring(0, 30)}...`);
         const cancelledCount = this.queue.length;
         // 清空待执行队列
         for (const task of this.queue) {
@@ -160,14 +202,18 @@ class ChannelTaskQueue {
         this.queue = [];
         // 中止正在执行的任务
         let abortedRunning = false;
+        let runningTaskPreview;
+        let runningTaskEngine;
         if (this._abortController && !this._abortController.signal.aborted) {
             this._abortController.abort();
             abortedRunning = true;
             if (this.currentTask) {
                 this.currentTask.status = "aborted";
+                runningTaskPreview = this.currentTask.message.substring(0, 40);
+                runningTaskEngine = this.currentTask.engine;
             }
         }
-        return { cancelledCount, abortedRunning };
+        return { cancelledCount, abortedRunning, runningTaskPreview, runningTaskEngine, cancelledPreviews };
     }
     /** 获取当前任务的 AbortSignal（供外部检查是否被中止） */
     get abortSignal() {
@@ -190,30 +236,33 @@ class ChannelTaskQueue {
 export class TaskQueueManager {
     queues = new Map();
     taskCounter = 0;
-    getOrCreate(channelId, executor) {
+    getOrCreate(channelId) {
         if (!this.queues.has(channelId)) {
-            this.queues.set(channelId, new ChannelTaskQueue(channelId, executor));
+            this.queues.set(channelId, new ChannelTaskQueue(channelId));
         }
         return this.queues.get(channelId);
     }
     /**
      * 将任务加入队列。
+     * @param engine 路由到的引擎名（用于显示和排查）
      * @returns 任务 ID
      */
-    submit(channelId, message, executor) {
+    submit(channelId, message, engine, executor) {
         const id = `task-${++this.taskCounter}-${Date.now()}`;
         const task = {
             id,
             channelId,
             message,
+            engine,
             submittedAt: new Date(),
             status: "pending",
+            executor,
         };
-        const queue = this.getOrCreate(channelId, executor);
+        const queue = this.getOrCreate(channelId);
         const pendingBefore = queue.pendingCount;
         const isRunning = queue.isRunning();
         queue.enqueue(task);
-        console.log(`[TaskQueue][${channelId}] 任务入队 ${id}，` +
+        console.log(`[TaskQueue][${channelId}] 任务入队 ${id} (${engine})，` +
             `队列状态: running=${isRunning}, pending=${pendingBefore}`);
         return id;
     }
@@ -235,9 +284,9 @@ export class TaskQueueManager {
     abort(channelId) {
         const queue = this.queues.get(channelId);
         if (!queue)
-            return { cancelledCount: 0, abortedRunning: false };
+            return { cancelledCount: 0, abortedRunning: false, cancelledPreviews: [] };
         const result = queue.abort();
-        console.log(`[TaskQueue][${channelId}] 中止: cancelled=${result.cancelledCount}, abortedRunning=${result.abortedRunning}`);
+        console.log(`[TaskQueue][${channelId}] 中止: cancelled=${result.cancelledCount}, abortedRunning=${result.abortedRunning}, runningTask=${result.runningTaskPreview || "无"}`);
         return result;
     }
     /**

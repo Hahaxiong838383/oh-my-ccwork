@@ -1,8 +1,8 @@
-"""MiniMax M2.7 流式 LLM + function calling"""
+"""MiniMax M2.7 流式 LLM + function calling（async 版）"""
 
 import json
-import requests
-from typing import Generator
+import aiohttp
+from typing import AsyncGenerator
 from config import MINIMAX_API_KEY, MINIMAX_BASE_URL, MINIMAX_MODEL, FULL_PROMPT
 
 TOOLS = [
@@ -46,9 +46,9 @@ TOOLS = [
 ]
 
 
-def chat_stream(messages: list, use_tools: bool = True) -> Generator:
+async def chat_stream(messages: list, use_tools: bool = True) -> AsyncGenerator:
     """
-    流式调用 MiniMax M2.7。
+    异步流式调用 MiniMax M2.7。
     yield 两种类型：
       ("text", "内容片段")
       ("tool_call", {"name": "xxx", "arguments": {...}})
@@ -58,7 +58,6 @@ def chat_stream(messages: list, use_tools: bool = True) -> Generator:
         "Content-Type": "application/json",
     }
 
-    # 构建请求
     full_messages = [{"role": "system", "content": FULL_PROMPT}] + messages
     data = {
         "model": MINIMAX_MODEL,
@@ -69,48 +68,42 @@ def chat_stream(messages: list, use_tools: bool = True) -> Generator:
     if use_tools:
         data["tools"] = TOOLS
 
-    resp = requests.post(
-        MINIMAX_BASE_URL,
-        headers=headers,
-        json=data,
-        stream=True,
-        proxies={"http": None, "https": None},
-        timeout=30,
-    )
+    tool_calls_acc = {}
 
-    tool_calls_acc = {}  # 累积 tool_call chunks
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            MINIMAX_BASE_URL,
+            headers=headers,
+            json=data,
+            timeout=aiohttp.ClientTimeout(total=30),
+        ) as resp:
+            async for line in resp.content:
+                line = line.decode("utf-8").strip()
+                if not line or not line.startswith("data: ") or line == "data: [DONE]":
+                    continue
 
-    for line in resp.iter_lines():
-        if not line:
-            continue
-        line = line.decode("utf-8")
-        if not line.startswith("data: ") or line == "data: [DONE]":
-            continue
+                try:
+                    d = json.loads(line[6:])
+                    delta = d.get("choices", [{}])[0].get("delta", {})
 
-        try:
-            d = json.loads(line[6:])
-            delta = d.get("choices", [{}])[0].get("delta", {})
+                    content = delta.get("content", "")
+                    if content:
+                        yield ("text", content)
 
-            # 文本内容
-            content = delta.get("content", "")
-            if content:
-                yield ("text", content)
+                    tc_list = delta.get("tool_calls")
+                    if tc_list:
+                        for tc in tc_list:
+                            idx = tc.get("index", 0)
+                            if idx not in tool_calls_acc:
+                                tool_calls_acc[idx] = {"name": "", "arguments": ""}
+                            if "function" in tc:
+                                if "name" in tc["function"]:
+                                    tool_calls_acc[idx]["name"] = tc["function"]["name"]
+                                if "arguments" in tc["function"]:
+                                    tool_calls_acc[idx]["arguments"] += tc["function"]["arguments"]
 
-            # Tool calls
-            tc_list = delta.get("tool_calls")
-            if tc_list:
-                for tc in tc_list:
-                    idx = tc.get("index", 0)
-                    if idx not in tool_calls_acc:
-                        tool_calls_acc[idx] = {"name": "", "arguments": ""}
-                    if "function" in tc:
-                        if "name" in tc["function"]:
-                            tool_calls_acc[idx]["name"] = tc["function"]["name"]
-                        if "arguments" in tc["function"]:
-                            tool_calls_acc[idx]["arguments"] += tc["function"]["arguments"]
-
-        except (json.JSONDecodeError, KeyError, IndexError):
-            continue
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
 
     # 流结束后，输出完整的 tool calls
     for idx, tc in tool_calls_acc.items():

@@ -15,7 +15,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 const STATS_FILE = join(process.env.HOME || "/tmp", ".claude/cli-engine-stats.json");
-const MIN_TIMEOUT = 2 * 60_000; // 2 min
+const MIN_TIMEOUT = 5 * 60_000; // 5 min（codex clone+分析至少要这么久）
 const MAX_TIMEOUT = 30 * 60_000; // 30 min
 const DEFAULT_TIMEOUT = 5 * 60_000; // 5 min
 const MAX_HISTORY = 30; // 每个 pattern 保留最近 30 条

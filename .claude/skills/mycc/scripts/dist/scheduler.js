@@ -43,6 +43,8 @@ export function parseTasks(content) {
             continue;
         // 判断任务类型
         const type = detectTaskType(time);
+        // 解析条件表达式（type === "conditional" 时）
+        const conditionExpr = type === "conditional" ? time.replace(/^条件:\s*/, "").trim() : undefined;
         // 解析活跃时段（从说明中提取"活跃时段 HH:MM-HH:MM"）
         const activeHours = parseActiveHours(desc);
         // 解析执行引擎（第5列，可选，默认 claude）
@@ -53,7 +55,7 @@ export function parseTasks(content) {
             : undefined;
         // 解析 sessionId（从说明中提取"session:xxx"）
         const sessionId = parseSessionId(desc);
-        tasks.push({ time, name, skill, desc, type, activeHours, engine, sessionId });
+        tasks.push({ time, name, skill, desc, type, activeHours, engine, sessionId, conditionExpr });
     }
     return tasks;
 }
@@ -85,6 +87,9 @@ function parseActiveHours(desc) {
  * 检查时间格式是否有效
  */
 function isValidTimeFormat(time) {
+    // 条件化任务：条件: <expr>
+    if (/^条件:\s*.+/.test(time))
+        return true;
     // 每日任务：HH:MM
     if (/^\d{1,2}:\d{2}$/.test(time))
         return true;
@@ -109,6 +114,8 @@ function isValidTimeFormat(time) {
  * 检测任务类型
  */
 function detectTaskType(time) {
+    if (/^条件:\s*.+/.test(time))
+        return "conditional";
     if (/^每\d+天\s+\d{1,2}:\d{2}$/.test(time))
         return "ndays";
     if (/^每\d+(分钟|m|小时|h)$/.test(time))
@@ -292,6 +299,90 @@ function isWithinTolerance(taskHour, taskMinute, nowHour, nowMinute) {
     return diff <= TOLERANCE_MINUTES;
 }
 // ============================================
+// 条件化任务评估
+// ============================================
+/**
+ * 求值条件表达式
+ * 支持：
+ *   fail_count>=N     - task-log.md 近7天失败记录 ≥ N 条
+ *   stale(path, Nd)   - 路径 N 天未修改
+ *   no_msg(Nd)        - N 天无用户消息（chat-history/p2p 最新文件日期）
+ */
+export function evaluateCondition(expr, cwd) {
+    const trimmed = expr.trim();
+    // fail_count>=N
+    const failCountMatch = trimmed.match(/^fail_count\s*>=\s*(\d+)$/);
+    if (failCountMatch) {
+        return checkFailCount(parseInt(failCountMatch[1], 10), cwd);
+    }
+    // stale(path, Nd)
+    const staleMatch = trimmed.match(/^stale\(([^,]+),\s*(\d+)d\)$/);
+    if (staleMatch) {
+        return checkFileStale(staleMatch[1].trim(), parseInt(staleMatch[2], 10), cwd);
+    }
+    // no_msg(Nd)
+    const noMsgMatch = trimmed.match(/^no_msg\((\d+)d\)$/);
+    if (noMsgMatch) {
+        return checkNoMessage(parseInt(noMsgMatch[1], 10), cwd);
+    }
+    console.warn(`[Scheduler] 未知条件表达式: ${expr}`);
+    return false;
+}
+/** 检查 task-log.md 近7天失败记录是否 ≥ threshold */
+function checkFailCount(threshold, cwd) {
+    const taskLogPath = path.join(cwd, "0-System/task-log.md");
+    if (!fs.existsSync(taskLogPath))
+        return false;
+    try {
+        const content = fs.readFileSync(taskLogPath, "utf-8");
+        const weekAgoMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        let count = 0;
+        for (const line of content.split("\n")) {
+            if (!line.includes("失败") && !line.includes("❌"))
+                continue;
+            const dateMatch = line.match(/\|\s*(\d{4}-\d{2}-\d{2})/);
+            if (dateMatch && new Date(dateMatch[1]).getTime() >= weekAgoMs)
+                count++;
+        }
+        return count >= threshold;
+    }
+    catch {
+        return false;
+    }
+}
+/** 检查路径（文件或目录）是否 N 天未修改 */
+function checkFileStale(relPath, days, cwd) {
+    const fullPath = path.resolve(cwd, relPath);
+    const thresholdMs = Date.now() - days * 24 * 60 * 60 * 1000;
+    try {
+        const stat = fs.statSync(fullPath);
+        return stat.mtimeMs < thresholdMs;
+    }
+    catch {
+        return false;
+    }
+}
+/** 检查 chat-history/p2p 是否 N 天无新消息文件 */
+function checkNoMessage(days, cwd) {
+    const chatDir = path.join(cwd, "0-System/chat-history/p2p");
+    if (!fs.existsSync(chatDir))
+        return true;
+    try {
+        const files = fs.readdirSync(chatDir)
+            .filter(f => /^\d{4}-\d{2}-\d{2}\.md$/.test(f))
+            .sort()
+            .reverse();
+        if (files.length === 0)
+            return true;
+        const lastDate = new Date(files[0].replace(".md", ""));
+        const thresholdDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+        return lastDate < thresholdDate;
+    }
+    catch {
+        return false;
+    }
+}
+// ============================================
 // 防重复执行
 // ============================================
 const LOCK_EXPIRY_MS = 10 * 60 * 1000; // 锁条目 10 分钟后过期
@@ -362,6 +453,10 @@ export class TaskLock {
     buildKey(taskName, taskTime, now) {
         // 日期部分
         const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        // 条件化任务：每天最多触发一次
+        if (taskTime.startsWith("条件:")) {
+            return `${taskName}|cond|${dateStr}`;
+        }
         // 每N天任务：用日期作为 key
         const nDaysMatch = taskTime.match(/^每(\d+)天\s+(\d{1,2}):(\d{2})$/);
         if (nDaysMatch) {
@@ -462,6 +557,21 @@ function checkAndExecuteTasks(tasksPath, cwd, executeTask) {
     const now = new Date();
     // 检查每个任务
     for (const task of tasks) {
+        // 条件化任务：跳过时间匹配，改为条件求值
+        if (task.type === "conditional") {
+            if (!evaluateCondition(task.conditionExpr ?? "", cwd))
+                continue;
+            if (!taskLock?.tryAcquire(task.name, task.time, now))
+                continue;
+            console.log(`[Scheduler] 条件触发: ${task.name} (${task.conditionExpr})`);
+            try {
+                executeTask(task, cwd);
+            }
+            catch (error) {
+                console.error(`[Scheduler] 条件任务执行失败: ${task.name}`, error);
+            }
+            continue;
+        }
         // 1. 检查时间是否匹配
         if (!matchTime(task.time, now))
             continue;

@@ -2,6 +2,8 @@
  * HTTP 服务器
  * 提供 REST API 供小程序调用
  */
+import http from "http";
+import https from "https";
 export interface TlsConfig {
     certPath: string;
     keyPath: string;
@@ -21,6 +23,7 @@ export declare class HttpServer {
     private sessionOwnership;
     /** 每通道的中止控制器（非队列任务用） */
     private channelAbortControllers;
+    private terminalPassword;
     constructor(pairCode: string, cwd: string, authToken?: string, tls?: TlsConfig);
     /** 设置配对成功回调（用于持久化 authToken） */
     setOnPaired(callback: (token: string) => void): void;
@@ -48,6 +51,15 @@ export declare class HttpServer {
      * - 不更新 ctx.currentSessionId（避免污染对话状态）
      */
     private runTaskAsync;
+    /**
+     * 管道模式：Gemini 分析 → Codex 写入飞书
+     *
+     * 分摊 cc 负担：
+     * - Gemini 负责内容分析/生成（多模态能力强，token 便宜）
+     * - Codex 负责飞书 MCP 写入（有完整 MCP 权限）
+     * - cc 只做编排，不消耗 token
+     */
+    private runPipeline;
     /**
      * CLI 引擎消息处理（codex / gemini）
      * 无 session 概念，每次调用都是独立的子进程。
@@ -123,6 +135,12 @@ export declare class HttpServer {
     private handleRename;
     private handleSkillsList;
     private handleSkillsReload;
+    setTerminalPassword(password: string): void;
+    getHttpServer(): http.Server | https.Server;
+    validateTerminalToken(token: string): boolean;
+    private handleTerminalAuth;
+    private serveTerminalFrontend;
+    private getInlineTerminalHtml;
     private readBody;
     start(): Promise<number>;
     /**

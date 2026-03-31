@@ -77,13 +77,14 @@ function loadTodayEvents(cwd) {
  */
 function getSystemStatus() {
     const items = [];
-    // mycc 后端
+    // mycc 后端（感知实际端口，优先读 PORT 环境变量）
+    const myccPort = process.env.PORT || "18080";
     try {
-        const pid = execSync("lsof -i :18080 -t 2>/dev/null", { encoding: "utf-8" }).trim();
-        items.push({ name: "mycc 后端 (18080)", status: pid ? "✅ 运行中" : "❌ 未运行", note: pid ? `PID ${pid}` : "" });
+        const pid = execSync(`lsof -i :${myccPort} -t 2>/dev/null`, { encoding: "utf-8" }).trim();
+        items.push({ name: `mycc 后端 (${myccPort})`, status: pid ? "✅ 运行中" : "❌ 未运行", note: pid ? `PID ${pid}` : "" });
     }
     catch {
-        items.push({ name: "mycc 后端 (18080)", status: "❌ 未运行", note: "" });
+        items.push({ name: `mycc 后端 (${myccPort})`, status: "❌ 未运行", note: "" });
     }
     // Ghost OS MCP
     const ghostBin = path.join(process.cwd(), "ghost-os/.build/release/ghost");

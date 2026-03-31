@@ -37,6 +37,10 @@ export declare class HealthMonitor {
     private config;
     private onRestartCallback;
     private authFailCount;
+    private authRecoveryTimer;
+    private authWasDown;
+    private authAlerted;
+    private lastAuthFailTime;
     private feishuMcpOk;
     constructor(config?: HealthMonitorConfig);
     /**
@@ -100,11 +104,44 @@ export declare class HealthMonitor {
      */
     private refreshAuthToken;
     /**
+     * 判断错误是否为超时或网络错误（不应计入 auth 失败）
+     */
+    private isTimeoutOrNetworkError;
+    /**
+     * 衰减 authFailCount：距上次失败超过 30 分钟，衰减一半
+     * 防止偶发的间歇性失败长期累积最终误触阈值
+     */
+    private decayAuthFailCount;
+    /**
      * 强制触发 token 刷新
      * 启动一个临时 claude 进程发送空消息，迫使 CLI 完成 OAuth refresh flow。
      * 关键：必须移除 CLAUDECODE 环境变量，否则 claude CLI 会拒绝启动。
+     *
+     * 守护机制：
+     * - 失败达到阈值后，启动独立的恢复探测定时器（每 2 分钟轻量检查 auth status）
+     * - 用户手动 /login 后，探测器自动感知恢复，发飞书通知，停止探测
+     *
+     * 防误报机制（v2）：
+     * - 超时/网络错误不计入 authFailCount（仅日志记录）
+     * - 暂时性失败（ping 失败但 auth status 正常）计 +0.5
+     * - authFailCount 有时间衰减（30 分钟无失败减 1）
+     * - 飞书告警只发一次（authAlerted 标记），恢复后重置
      */
     private forceTokenRefresh;
+    /**
+     * 启动 auth 恢复探测定时器
+     * auth 失败后，每 2 分钟用轻量级 `claude auth status` 检查是否用户已手动 /login 恢复
+     * 一旦检测到恢复，立即通知飞书并停止探测
+     */
+    private startAuthRecoveryProbe;
+    /**
+     * 停止 auth 恢复探测
+     */
+    private stopAuthRecoveryProbe;
+    /**
+     * 通知 auth 已恢复（飞书 + 控制台）
+     */
+    private notifyAuthRecovered;
     /**
      * 检查飞书 MCP token 状态
      * 三层防护：1.检测文件存在 2.检测过期并刷新 3.备份恢复
@@ -115,7 +152,7 @@ export declare class HealthMonitor {
      */
     private refreshFeishuMcpToken;
     /**
-     * 备份飞书 MCP token 文件
+     * 备份飞书 MCP token 文件（主备份 + 异目录第二备份）
      */
     private backupFeishuMcpToken;
     /**

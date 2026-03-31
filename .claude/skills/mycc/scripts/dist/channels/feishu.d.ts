@@ -78,6 +78,7 @@ export declare class FeishuChannel implements MessageChannel {
     private botName;
     private chatMessageBuffer;
     private readonly CHAT_BUFFER_MAX;
+    private senderNameCache;
     private processedMessageIds;
     private readonly DEDUP_MAX;
     /**
@@ -173,6 +174,26 @@ export declare class FeishuChannel implements MessageChannel {
      */
     updateProgressCard(messageId: string, card: ProgressCard): Promise<boolean>;
     /**
+     * 创建 CardKit 流式卡片实体并发送到飞书
+     * 返回 cardId（用于后续流式更新）和 messageId
+     */
+    createStreamingCard(overrideChatId?: string): Promise<{
+        cardId: string;
+        messageId: string;
+    } | null>;
+    /**
+     * 流式更新卡片内容（打字机效果）
+     * 通过 CardKit cardElement.content API 只更新指定元素
+     */
+    streamCardContent(cardId: string, content: string, sequence: number): Promise<boolean>;
+    /**
+     * 完成流式卡片（更新整张卡片为绿色完成状态）
+     */
+    completeStreamingCard(cardId: string, content: string, metadata: {
+        elapsed: string;
+        toolCount?: number;
+    }, sequence: number): Promise<boolean>;
+    /**
      * 构建进度卡片 JSON
      */
     private buildProgressCardJson;
@@ -201,7 +222,7 @@ export declare class FeishuChannel implements MessageChannel {
     /**
      * 获取群聊历史：优先从内存 buffer 读取（可靠），API 作为补充
      */
-    fetchChatHistory(chatId: string, count?: number): Promise<string>;
+    fetchChatHistory(chatId: string, count?: number, threadId?: string): Promise<string>;
     /**
      * 根据 message_id 获取单条消息内容（用于回复场景，获取被回复的消息）
      */

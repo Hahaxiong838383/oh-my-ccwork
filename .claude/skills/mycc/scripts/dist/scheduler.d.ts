@@ -13,13 +13,14 @@ export interface Task {
     name: string;
     skill: string;
     desc: string;
-    type: "daily" | "weekly" | "once" | "interval" | "ndays";
+    type: "daily" | "weekly" | "once" | "interval" | "ndays" | "conditional";
     activeHours?: {
         start: number;
         end: number;
     };
     engine?: "claude" | "codex" | "gemini";
     sessionId?: string;
+    conditionExpr?: string;
 }
 /**
  * 解析 tasks.md 内容，提取任务列表
@@ -29,6 +30,14 @@ export declare function parseTasks(content: string | null | undefined): Task[];
  * 判断当前时间是否匹配任务时间
  */
 export declare function matchTime(taskTime: string, now: Date): boolean;
+/**
+ * 求值条件表达式
+ * 支持：
+ *   fail_count>=N     - task-log.md 近7天失败记录 ≥ N 条
+ *   stale(path, Nd)   - 路径 N 天未修改
+ *   no_msg(Nd)        - N 天无用户消息（chat-history/p2p 最新文件日期）
+ */
+export declare function evaluateCondition(expr: string, cwd: string): boolean;
 /**
  * 任务锁 - 防止同一任务在同一时间窗口内重复执行
  *

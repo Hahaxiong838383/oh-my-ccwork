@@ -5,10 +5,12 @@
  * - 支持多模态（视频/图片/音频 + 文本）
  * - 不依赖 Gemini CLI 安装
  * - 支持长 prompt（无命令行参数长度限制）
+ * - 支持 function calling（飞书 MCP 工具桥接）
  *
  * 决策记录：2026-03-12，从 CLI 切换到 API
  * 原因：1. Gemini 多模态能力强 2. 分散 cc 负载
  * 更新：大文件（>20MB）自动走 File API 上传
+ * 更新：2026-03-14，增加 function calling 支持（飞书 MCP 工具桥接）
  */
 interface GeminiApiResult {
     output: string;
@@ -25,9 +27,10 @@ interface GeminiApiOptions {
     signal?: AbortSignal;
     filePaths?: string[];
     mediaBuffers?: MediaBuffer[];
+    enableTools?: boolean;
 }
 /**
- * 调用 Gemini API（支持纯文本 + 多模态）
+ * 调用 Gemini API（支持纯文本 + 多模态 + function calling）
  */
 export declare function runGeminiApi(prompt: string, opts?: GeminiApiOptions): Promise<GeminiApiResult>;
 export {};

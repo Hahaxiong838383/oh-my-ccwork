@@ -34,6 +34,8 @@ export class FeishuChannel {
     // 群聊消息内存缓存：chatId → 最近 N 条消息（从 WebSocket 事件实时采集，不依赖 API 权限）
     chatMessageBuffer = new Map();
     CHAT_BUFFER_MAX = 30; // 每个群最多缓存 30 条
+    // 发送者名称缓存：open_id → 显示名（从 mention 或 API 获取）
+    senderNameCache = new Map();
     // 消息去重：防止飞书 WebSocket 重复投递同一条消息
     processedMessageIds = new Set();
     DEDUP_MAX = 200; // 最多缓存 200 条 message_id
@@ -432,6 +434,35 @@ export class FeishuChannel {
                 console.log(`[FeishuChannel] 图片消息没有 image_key`);
                 return Promise.resolve({ text: "" });
             }
+            if (messageType === "post") {
+                // 富文本消息 - 提取所有 text 节点
+                if (typeof content === "string") {
+                    const parsed = JSON.parse(content);
+                    // post 结构: { zh_cn: { content: [[{tag:"text",text:"..."}, {tag:"at",...}]] } }
+                    // 也可能是 { content: [[...]] }
+                    const paragraphs = parsed?.zh_cn?.content || parsed?.content || [];
+                    const texts = [];
+                    for (const para of paragraphs) {
+                        if (Array.isArray(para)) {
+                            for (const node of para) {
+                                if (node.tag === "text" && node.text) {
+                                    texts.push(node.text);
+                                }
+                                else if (node.tag === "a" && node.text) {
+                                    // 超链接节点也提取文本
+                                    texts.push(node.text);
+                                }
+                            }
+                        }
+                    }
+                    const combined = texts.join("").replace(/@_user_\d+/g, "").trim();
+                    if (combined) {
+                        return Promise.resolve({ text: combined });
+                    }
+                }
+                console.log(`[FeishuChannel] post 消息解析为空`);
+                return Promise.resolve(null);
+            }
             // 其他类型消息暂不支持
             console.log(`[FeishuChannel] 暂不支持的消息类型: ${messageType}`);
             return Promise.resolve(null);
@@ -775,6 +806,148 @@ export class FeishuChannel {
             return false;
         }
     }
+    // ========== CardKit 流式卡片 ==========
+    /**
+     * 创建 CardKit 流式卡片实体并发送到飞书
+     * 返回 cardId（用于后续流式更新）和 messageId
+     */
+    async createStreamingCard(overrideChatId) {
+        try {
+            const effectiveTarget = overrideChatId || this.lastIncomingChatId;
+            const receiveId = effectiveTarget || this.config.receiveUserId;
+            const receiveIdType = effectiveTarget ? "chat_id" : (this.config.receiveIdType || "open_id");
+            // 1. 创建 CardKit 卡片实体（Thinking 状态）
+            const thinkingCard = {
+                type: "card",
+                header: {
+                    template: "blue",
+                    title: { tag: "plain_text", content: "cc 思考中..." },
+                },
+                config: { wide_screen_mode: true },
+                elements: [
+                    {
+                        tag: "markdown",
+                        element_id: "streaming_content",
+                        content: "⏳ 正在思考...",
+                    },
+                ],
+            };
+            const createRes = await this.client.cardkit.v1.card.create({
+                data: {
+                    type: "card_json",
+                    data: JSON.stringify(thinkingCard),
+                },
+            });
+            if (createRes.code !== 0 || !createRes.data?.card_id) {
+                console.error(`[FeishuChannel:${this.id}] ✗ CardKit create 失败:`, createRes.code, createRes.msg);
+                return null;
+            }
+            const cardId = createRes.data.card_id;
+            console.log(`[FeishuChannel:${this.id}] ✓ CardKit 卡片已创建: ${cardId}`);
+            // 2. 通过 card_id 发送消息到飞书
+            const contentPayload = JSON.stringify({
+                type: "card",
+                data: { card_id: cardId },
+            });
+            const sendRes = await this.sendViaSDK(receiveId, "interactive", contentPayload, receiveIdType);
+            if (!sendRes.ok || !sendRes.messageId) {
+                console.error(`[FeishuChannel:${this.id}] ✗ CardKit 卡片发送失败`);
+                return null;
+            }
+            console.log(`[FeishuChannel:${this.id}] ✓ CardKit 流式卡片已发送 (card=${cardId}, msg=${sendRes.messageId})`);
+            return { cardId, messageId: sendRes.messageId };
+        }
+        catch (error) {
+            console.error(`[FeishuChannel:${this.id}] ✗ createStreamingCard 异常:`, error);
+            return null;
+        }
+    }
+    /**
+     * 流式更新卡片内容（打字机效果）
+     * 通过 CardKit cardElement.content API 只更新指定元素
+     */
+    async streamCardContent(cardId, content, sequence) {
+        try {
+            const res = await this.client.cardkit.v1.cardElement.content({
+                data: {
+                    content: JSON.stringify({
+                        tag: "markdown",
+                        content,
+                    }),
+                    sequence,
+                },
+                path: {
+                    card_id: cardId,
+                    element_id: "streaming_content",
+                },
+            });
+            if (res.code === 0) {
+                return true;
+            }
+            console.error(`[FeishuChannel:${this.id}] ✗ streamCardContent 失败:`, res.code, res.msg);
+            return false;
+        }
+        catch (error) {
+            console.error(`[FeishuChannel:${this.id}] ✗ streamCardContent 异常:`, error);
+            return false;
+        }
+    }
+    /**
+     * 完成流式卡片（更新整张卡片为绿色完成状态）
+     */
+    async completeStreamingCard(cardId, content, metadata, sequence) {
+        try {
+            const elements = [
+                {
+                    tag: "markdown",
+                    element_id: "streaming_content",
+                    content,
+                },
+            ];
+            // 底部元信息
+            const metaParts = [];
+            if (metadata.elapsed)
+                metaParts.push(`耗时 ${metadata.elapsed}`);
+            if (metadata.toolCount && metadata.toolCount > 0)
+                metaParts.push(`${metadata.toolCount} 个工具调用`);
+            if (metaParts.length > 0) {
+                elements.push({
+                    tag: "markdown",
+                    text_size: "notation",
+                    content: metaParts.join(" · "),
+                });
+            }
+            const completeCard = {
+                type: "card",
+                header: {
+                    template: "green",
+                    title: { tag: "plain_text", content: "cc" },
+                },
+                config: { wide_screen_mode: true },
+                elements,
+            };
+            const res = await this.client.cardkit.v1.card.update({
+                data: {
+                    card: {
+                        type: "card_json",
+                        data: JSON.stringify(completeCard),
+                    },
+                    sequence,
+                },
+                path: { card_id: cardId },
+            });
+            if (res.code === 0) {
+                console.log(`[FeishuChannel:${this.id}] ✓ CardKit 卡片已完成 (${cardId})`);
+                return true;
+            }
+            console.error(`[FeishuChannel:${this.id}] ✗ completeStreamingCard 失败:`, res.code, res.msg);
+            return false;
+        }
+        catch (error) {
+            console.error(`[FeishuChannel:${this.id}] ✗ completeStreamingCard 异常:`, error);
+            return false;
+        }
+    }
     /**
      * 构建进度卡片 JSON
      */
@@ -910,7 +1083,24 @@ export class FeishuChannel {
             // 飞书 WebSocket 事件字段是 message_type，不是 msg_type
             const msgType = message?.message_type;
             const senderType = event?.sender?.sender_type;
-            const sender = senderType === "app" ? "[机器人]" : "[用户]";
+            const senderId = event?.sender?.sender_id?.open_id || "";
+            // 发送者名称解析：mentions > cache > fallback
+            let senderName = senderType === "app" ? "cc" : "";
+            if (!senderName && senderId) {
+                // 从 mentions 中提取名称（@提及的人有 name 字段）
+                const mentions = message?.mentions || [];
+                for (const m of mentions) {
+                    if (m.id?.open_id && m.name) {
+                        this.senderNameCache.set(m.id.open_id, m.name);
+                    }
+                }
+                senderName = this.senderNameCache.get(senderId) || "";
+            }
+            if (!senderName) {
+                senderName = senderType === "app" ? "cc" : senderId.substring(0, 8) || "用户";
+            }
+            const sender = senderId || (senderType === "app" ? "app" : "unknown");
+            const threadId = message?.thread_id || message?.root_id;
             let text = "";
             if (msgType === "text") {
                 const content = typeof message?.content === "string"
@@ -951,7 +1141,7 @@ export class FeishuChannel {
             if (!text)
                 return;
             const buffer = this.chatMessageBuffer.get(chatId) || [];
-            buffer.push({ sender, text, timestamp: Date.now() });
+            buffer.push({ sender, senderName, text, timestamp: Date.now(), threadId });
             // 超过上限时移除最旧的
             while (buffer.length > this.CHAT_BUFFER_MAX) {
                 buffer.shift();
@@ -965,13 +1155,21 @@ export class FeishuChannel {
     /**
      * 获取群聊历史：优先从内存 buffer 读取（可靠），API 作为补充
      */
-    async fetchChatHistory(chatId, count = 20) {
+    async fetchChatHistory(chatId, count = 20, threadId) {
         // 优先使用内存 buffer（不依赖 API 权限，实时性更好）
         const buffer = this.chatMessageBuffer.get(chatId);
         if (buffer && buffer.length > 0) {
-            const recent = buffer.slice(-count);
-            const lines = recent.map(m => `${m.sender}: ${m.text}`);
-            console.log(`[FeishuChannel:${this.id}] 从内存 buffer 获取群聊上下文: ${lines.length} 条`);
+            // 话题过滤：如果指定了 threadId，只返回该话题的消息
+            let filtered = threadId
+                ? buffer.filter(m => m.threadId === threadId)
+                : buffer;
+            const recent = filtered.slice(-count);
+            // 信封格式：[发送者名 HH:MM]: 消息内容
+            const lines = recent.map(m => {
+                const time = new Date(m.timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+                return `[${m.senderName} ${time}]: ${m.text}`;
+            });
+            console.log(`[FeishuChannel:${this.id}] 从内存 buffer 获取群聊上下文: ${lines.length} 条${threadId ? ` (话题: ${threadId})` : ""}`);
             return lines.join("\n");
         }
         // buffer 为空时尝试 API（首次启动后、bot 刚加入群时可能需要）

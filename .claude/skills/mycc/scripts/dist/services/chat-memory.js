@@ -6,6 +6,11 @@
  * 2. Shared Context — 复用 context-loader 注入 memory-items + RECENT_EVENTS
  * 3. Per-Chat Facts — 按 chatId 存储原子事实，新 session 注入 Top N
  *
+ * v5.5 升级（借鉴 lossless-claw DAG 层次摘要）：
+ * - DAG 对话摘要：层次化压缩，支持 expand 回溯到原始消息范围
+ * - 存储格式从 { summary: string } 升级为 ConversationDAG
+ * - 向后兼容：旧格式自动迁移为单节点 DAG
+ *
  * 决策点（2026-03-11）：
  * - 摘要提取用 Claude SDK 内联（不额外调 Codex），保持轻量
  * - per-chat facts 存文件持久化，内存缓存加速读取
@@ -13,7 +18,42 @@
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import * as path from "path";
-import { loadSharedContext } from "./context-loader.js";
+import { loadSharedContextLight } from "./context-loader.js";
+import { getDB, saveSummary as saveSummaryDB, getSummaries as getSummariesDB, saveDAGNodes, addFact as addFactDB, getFacts as getFactsDB, } from "./memory-db.js";
+/** 估算中文+英文混合文本的 token 数（粗略：1 中文字 ≈ 1.5 token，1 英文词 ≈ 1 token） */
+function estimateTokens(text) {
+    const cjk = (text.match(/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/g) || []).length;
+    const rest = text.length - cjk;
+    return Math.ceil(cjk * 1.5 + rest * 0.25);
+}
+/** 生成短 ID（8 字符 hex） */
+function shortId() {
+    return Math.random().toString(16).slice(2, 10);
+}
+// ============================================================
+// 会话过滤 v4.5（借鉴 lossless-claw ignoreSessionPatterns）
+// ============================================================
+/**
+ * 不需要持久化对话记忆的 session 模式。
+ * * 匹配非冒号字符，** 匹配任意字符（含冒号）。
+ */
+const IGNORE_SESSION_PATTERNS = [
+    "scheduler:*", // 定时任务产出
+    "group:*:broadcast", // 群广播
+    "cron:**", // 定时消息
+];
+/** glob 风格匹配（*=非冒号, **=任意） */
+function sessionPatternMatch(sessionId, pattern) {
+    const regexStr = pattern
+        .replace(/\*\*/g, "{{DOUBLESTAR}}")
+        .replace(/\*/g, "[^:]*")
+        .replace(/\{\{DOUBLESTAR\}\}/g, ".*");
+    return new RegExp(`^${regexStr}$`).test(sessionId);
+}
+/** 检查 session 是否应该被持久化 */
+function shouldPersistSession(sessionId) {
+    return !IGNORE_SESSION_PATTERNS.some((pattern) => sessionPatternMatch(sessionId, pattern));
+}
 // ============================================================
 // 第1层：Session Summary（内存 + 文件持久化）
 // ============================================================
@@ -29,6 +69,9 @@ const conversationBuffer = new Map();
  * 记录一轮对话到缓冲区（每次 processFeishuMessage 完成后调用）
  */
 export function recordConversationTurn(chatId, userMsg, assistantReply) {
+    // v4.5: 会话过滤 — 跳过低价值 session
+    if (!shouldPersistSession(chatId))
+        return;
     if (!conversationBuffer.has(chatId)) {
         conversationBuffer.set(chatId, []);
     }
@@ -40,74 +83,240 @@ export function recordConversationTurn(chatId, userMsg, assistantReply) {
     }
 }
 /**
- * Session 结束时调用：从对话缓冲生成摘要并存储
+ * v5.5: 从消息列表构建 DAG 层次摘要。
  *
- * 采用轻量级本地摘要（不调 LLM），直接提取关键信息。
- * 决策原因：调 LLM 会增加延迟和成本，本地提取够用。
+ * 流程：
+ * 1. 按 CHUNK_SIZE 分组消息 → 生成叶子节点（L0）
+ * 2. 叶子数 ≥ 2 → 合并生成中间节点（L1）
+ * 3. 递归直到只有一个根节点
+ *
+ * 摘要提取不调 LLM，纯本地规则（保持轻量）。
+ */
+function buildDAG(chatId, messages) {
+    const CHUNK_SIZE = 8; // 每 8 条消息（4 轮）为一个叶子
+    const nodes = [];
+    // Step 1: 叶子节点 — 每 CHUNK_SIZE 条消息生成一个摘要
+    const leafIds = [];
+    for (let i = 0; i < messages.length; i += CHUNK_SIZE) {
+        const chunk = messages.slice(i, i + CHUNK_SIZE);
+        const nodeId = `leaf-${shortId()}`;
+        const userMsgs = chunk
+            .filter((m) => m.role === "user")
+            .map((m) => m.content.substring(0, 60));
+        const lastReply = chunk
+            .filter((m) => m.role === "assistant")
+            .pop()?.content.substring(0, 100) || "";
+        const summary = `话题: ${userMsgs.join(" / ")}` +
+            (lastReply ? ` → ${lastReply.substring(0, 80)}` : "");
+        const rawText = chunk.map((m) => m.content).join(" ");
+        nodes.push({
+            id: nodeId,
+            level: 0,
+            sourceRange: [i, Math.min(i + CHUNK_SIZE, messages.length)],
+            summary: summary.substring(0, MAX_SUMMARY_CHARS),
+            children: [],
+            tokenCount: estimateTokens(rawText),
+        });
+        leafIds.push(nodeId);
+    }
+    // Step 2+: 递归合并，直到只剩一个根
+    let currentLevel = 0;
+    let currentIds = leafIds;
+    while (currentIds.length > 1) {
+        currentLevel++;
+        const MERGE_SIZE = 3; // 每 3 个子节点合并为一个父节点
+        const parentIds = [];
+        for (let i = 0; i < currentIds.length; i += MERGE_SIZE) {
+            const childIds = currentIds.slice(i, i + MERGE_SIZE);
+            const childNodes = childIds.map((id) => nodes.find((n) => n.id === id));
+            const parentId = `mid-${shortId()}`;
+            const parentSummary = childNodes.map((c) => c.summary.substring(0, 60)).join(" | ");
+            const sourceStart = Math.min(...childNodes.map((c) => c.sourceRange[0]));
+            const sourceEnd = Math.max(...childNodes.map((c) => c.sourceRange[1]));
+            const totalTokens = childNodes.reduce((s, c) => s + c.tokenCount, 0);
+            nodes.push({
+                id: parentId,
+                level: currentLevel,
+                sourceRange: [sourceStart, sourceEnd],
+                summary: parentSummary.substring(0, MAX_SUMMARY_CHARS * 2),
+                children: childIds,
+                tokenCount: totalTokens,
+            });
+            parentIds.push(parentId);
+        }
+        currentIds = parentIds;
+    }
+    const rootId = currentIds[0] || leafIds[0];
+    return { chatId, nodes, rootId, version: "dag-v1" };
+}
+/**
+ * v5.5: expand — 从 DAG 回溯到子节点摘要。
+ *
+ * Agent 可调用此接口从根 → 中间 → 叶子逐层展开，
+ * 定位到原始消息范围。
+ */
+export function expandDAGNode(dag, nodeId) {
+    const node = dag.nodes.find((n) => n.id === nodeId);
+    if (!node)
+        return null;
+    const children = node.children
+        .map((cid) => dag.nodes.find((n) => n.id === cid))
+        .filter((n) => n !== undefined);
+    return { node, children };
+}
+/**
+ * Session 结束时调用：从对话缓冲生成 DAG 摘要并存储。
+ *
+ * v5.5 升级：扁平摘要 → DAG 层次化压缩。
+ * 仍保留兼容的 summaries 字段（供注入层使用）。
+ * 不调 LLM，纯本地提取，保持轻量。
  */
 export function onSessionEnd(chatId, cwd) {
+    // v4.5: 会话过滤 — 跳过低价值 session
+    if (!shouldPersistSession(chatId)) {
+        conversationBuffer.delete(chatId);
+        return;
+    }
     const buffer = conversationBuffer.get(chatId);
     if (!buffer || buffer.length < 2) {
         conversationBuffer.delete(chatId);
         return;
     }
-    // 本地摘要：提取用户问题列表 + 关键结论
-    const userQuestions = buffer
-        .filter(m => m.role === "user")
-        .map(m => m.content.substring(0, 80))
-        .slice(-5); // 最多 5 个问题
-    const lastAssistantReply = buffer
-        .filter(m => m.role === "assistant")
-        .pop()?.content.substring(0, 200) || "";
-    const summary = `[${new Date().toLocaleString("zh-CN", { hour12: false })}] ` +
-        `话题: ${userQuestions.join(" / ")}` +
-        (lastAssistantReply ? ` | 结论: ${lastAssistantReply.substring(0, 100)}` : "");
-    const truncatedSummary = summary.substring(0, MAX_SUMMARY_CHARS);
-    // 存入内存
+    // v5.5: 构建 DAG
+    const dag = buildDAG(chatId, buffer);
+    // 兼容旧注入逻辑：从 DAG 根节点提取扁平摘要
+    const rootNode = dag.nodes.find((n) => n.id === dag.rootId);
+    const flatSummary = rootNode
+        ? `[${new Date().toLocaleString("zh-CN", { hour12: false })}] ${rootNode.summary}`
+        : "";
+    // 存入内存（扁平摘要用于注入，DAG 用于 expand 回溯）
     if (!sessionSummaries.has(chatId)) {
         sessionSummaries.set(chatId, []);
     }
     const summaries = sessionSummaries.get(chatId);
-    summaries.push(truncatedSummary);
+    summaries.push(flatSummary.substring(0, MAX_SUMMARY_CHARS));
     if (summaries.length > MAX_SUMMARIES) {
         summaries.splice(0, summaries.length - MAX_SUMMARIES);
     }
-    // 持久化到文件
-    persistSummaries(chatId, cwd);
+    // 持久化（含 DAG）
+    persistWithDAG(chatId, dag, cwd);
     // 清空缓冲
     conversationBuffer.delete(chatId);
-    console.log(`[ChatMemory] session 结束，已生成摘要 (chatId=${chatId.substring(0, 12)})`);
+    const leafCount = dag.nodes.filter((n) => n.level === 0).length;
+    const depth = dag.nodes.reduce((max, n) => Math.max(max, n.level), 0);
+    console.log(`[ChatMemory] session 结束，DAG 生成完毕 (chatId=${chatId.substring(0, 12)}, 叶子=${leafCount}, 深度=${depth})`);
 }
 /** 摘要持久化目录 */
 function getSummaryDir(cwd) {
     return path.join(cwd, "0-System/chat-memory");
 }
-/** 持久化摘要到文件 */
+/** 持久化摘要到文件（不含 DAG，供 addChatFact 等轻量写入调用） */
 function persistSummaries(chatId, cwd) {
     try {
         const dir = getSummaryDir(cwd);
         if (!existsSync(dir)) {
             mkdirSync(dir, { recursive: true });
         }
-        // chatId 做文件名（取前 20 字符避免过长）
         const safeId = chatId.replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 20);
         const filePath = path.join(dir, `${safeId}.json`);
+        // 读取已有文件保留 DAG
+        let existingDAG;
+        if (existsSync(filePath)) {
+            try {
+                const existing = JSON.parse(readFileSync(filePath, "utf-8"));
+                if (existing.dag?.version === "dag-v1") {
+                    existingDAG = existing.dag;
+                }
+            }
+            catch { /* ignore */ }
+        }
         const data = {
             chatId,
             summaries: sessionSummaries.get(chatId) || [],
             facts: perChatFacts.get(chatId) || [],
             updatedAt: new Date().toISOString(),
         };
+        if (existingDAG) {
+            data.dag = existingDAG;
+        }
         writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
     }
     catch (err) {
         console.warn("[ChatMemory] 持久化失败:", err);
     }
 }
-/** 从文件加载摘要（启动时或首次访问时） */
+/** v5.5: 持久化含 DAG 的完整数据（SQLite 优先 + JSON 备份） */
+function persistWithDAG(chatId, dag, cwd) {
+    // v5.5: 写入 SQLite
+    const db = getDB(cwd);
+    if (db) {
+        try {
+            // 保存 DAG 节点
+            saveDAGNodes(cwd, chatId, dag.nodes.map((n) => ({
+                id: n.id,
+                level: n.level,
+                sourceStart: n.sourceRange[0],
+                sourceEnd: n.sourceRange[1],
+                summary: n.summary,
+                tokenCount: n.tokenCount,
+                isRoot: n.id === dag.rootId,
+                children: n.children,
+            })));
+            // 保存摘要
+            const summaries = sessionSummaries.get(chatId) || [];
+            if (summaries.length > 0) {
+                saveSummaryDB(cwd, chatId, summaries[summaries.length - 1]);
+            }
+        }
+        catch (err) {
+            console.warn("[ChatMemory] SQLite DAG 写入失败，降级到文件:", err);
+        }
+    }
+    // JSON 文件备份（过渡期双写）
+    try {
+        const dir = getSummaryDir(cwd);
+        if (!existsSync(dir)) {
+            mkdirSync(dir, { recursive: true });
+        }
+        const safeId = chatId.replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 20);
+        const filePath = path.join(dir, `${safeId}.json`);
+        const data = {
+            chatId,
+            summaries: sessionSummaries.get(chatId) || [],
+            facts: perChatFacts.get(chatId) || [],
+            dag,
+            updatedAt: new Date().toISOString(),
+        };
+        writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+    }
+    catch (err) {
+        console.warn("[ChatMemory] JSON 持久化失败:", err);
+    }
+}
+/** DAG 内存缓存 */
+const dagCache = new Map();
+/** 加载记忆：SQLite 优先，降级到 JSON 文件 */
 function loadFromFile(chatId, cwd) {
     if (sessionSummaries.has(chatId) || perChatFacts.has(chatId))
         return; // 已加载
+    // v5.5: 优先从 SQLite 加载
+    const db = getDB(cwd);
+    if (db) {
+        try {
+            const summaries = getSummariesDB(cwd, chatId);
+            const facts = getFactsDB(cwd, chatId);
+            if (summaries.length > 0 || facts.length > 0) {
+                sessionSummaries.set(chatId, summaries);
+                perChatFacts.set(chatId, facts);
+                console.log(`[ChatMemory] 从 SQLite 加载记忆 (chatId=${chatId.substring(0, 12)}, summaries=${summaries.length}, facts=${facts.length})`);
+                return;
+            }
+        }
+        catch {
+            // 降级到文件
+        }
+    }
+    // 降级：从 JSON 文件加载
     try {
         const safeId = chatId.replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 20);
         const filePath = path.join(getSummaryDir(cwd), `${safeId}.json`);
@@ -118,11 +327,22 @@ function loadFromFile(chatId, cwd) {
             sessionSummaries.set(chatId, data.summaries);
         if (data.facts)
             perChatFacts.set(chatId, data.facts);
+        if (data.dag?.version === "dag-v1") {
+            dagCache.set(chatId, data.dag);
+        }
         console.log(`[ChatMemory] 从文件加载记忆 (chatId=${chatId.substring(0, 12)}, summaries=${data.summaries?.length || 0}, facts=${data.facts?.length || 0})`);
     }
     catch {
         // 静默失败
     }
+}
+/**
+ * v5.5: 获取指定 chatId 的 DAG（供外部 expand 调用）。
+ * 如果没有 DAG 返回 null。
+ */
+export function getDAG(chatId, cwd) {
+    loadFromFile(chatId, cwd);
+    return dagCache.get(chatId) || null;
 }
 // ============================================================
 // 第3层：Per-Chat Facts（按 chatId 存储的原子事实）
@@ -132,22 +352,49 @@ const MAX_FACTS_PER_CHAT = 15;
 /** chatId → 原子事实列表 */
 const perChatFacts = new Map();
 /**
+ * 简易分词（中英文混合，用于 Jaccard 去重）
+ */
+function tokenizeForDedup(text) {
+    return new Set(text
+        .toLowerCase()
+        .replace(/[，。！？、；：""''（）【】《》\-\[\]\(\)\/\\|@#\$%\^&\*=\+`~]/g, " ")
+        .split(/\s+/)
+        .filter((t) => t.length >= 2));
+}
+/**
+ * Jaccard 相似度（0~1）
+ */
+function jaccardSim(a, b) {
+    if (a.size === 0 || b.size === 0)
+        return 0;
+    let intersection = 0;
+    Array.from(a).forEach((t) => {
+        if (b.has(t))
+            intersection++;
+    });
+    const union = a.size + b.size - intersection;
+    return union === 0 ? 0 : intersection / union;
+}
+/**
  * 添加 per-chat 事实（由 auto-capture 回调或手动添加）
+ * v2：Jaccard 去重（阈值 0.5），替代简单 string.includes
  */
 export function addChatFact(chatId, fact, cwd) {
     if (!perChatFacts.has(chatId)) {
         perChatFacts.set(chatId, []);
     }
     const facts = perChatFacts.get(chatId);
-    // 去重：如果已有相似事实则跳过
-    const normalized = fact.trim().toLowerCase();
-    if (facts.some(f => f.toLowerCase().includes(normalized) || normalized.includes(f.toLowerCase()))) {
+    // Jaccard 去重：与已有事实相似度 > 0.5 则视为重复
+    const newTokens = tokenizeForDedup(fact);
+    const isDuplicate = facts.some((f) => jaccardSim(newTokens, tokenizeForDedup(f)) > 0.5);
+    if (isDuplicate)
         return;
-    }
     facts.push(fact.trim());
     if (facts.length > MAX_FACTS_PER_CHAT) {
         facts.splice(0, facts.length - MAX_FACTS_PER_CHAT);
     }
+    // v5.5: SQLite + 文件双写
+    addFactDB(cwd, chatId, fact.trim());
     persistSummaries(chatId, cwd);
 }
 /**
@@ -203,7 +450,7 @@ const BUDGET = {
  * @param isNewSession  是否是新 session（超时/首次）
  * @returns 格式化的上下文前缀（可能为空）
  */
-export function buildCrossSessionContext(chatId, message, cwd, isNewSession) {
+export async function buildCrossSessionContext(chatId, message, cwd, isNewSession) {
     // 确保从文件加载
     loadFromFile(chatId, cwd);
     const parts = [];
@@ -218,10 +465,9 @@ export function buildCrossSessionContext(chatId, message, cwd, isNewSession) {
             parts.push(`### 之前的对话摘要\n${summaryBlock}`);
         }
     }
-    // 第2层：共享记忆（context-loader）
-    const sharedCtx = loadSharedContext(message, cwd);
+    // 第2层：共享记忆（轻量版，不含 RECENT_EVENTS，避免历史事件被当成当前任务）
+    const sharedCtx = await loadSharedContextLight(message, cwd);
     if (sharedCtx) {
-        // 已有截断逻辑（3000 chars），这里二次截断确保预算
         const trimmed = sharedCtx.length > BUDGET.sharedContext
             ? sharedCtx.substring(0, BUDGET.sharedContext) + "\n...(截断)"
             : sharedCtx;

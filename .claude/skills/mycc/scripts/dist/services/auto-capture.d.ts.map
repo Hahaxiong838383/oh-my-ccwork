@@ -1,1 +1,1 @@
-{"version":3,"file":"auto-capture.d.ts","sourceRoot":"","sources":["../../src/services/auto-capture.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;GAUG;AA4EH;;;;;;;;GAQG;AACH,wBAAgB,kBAAkB,CAChC,SAAS,EAAE,MAAM,EACjB,WAAW,EAAE,MAAM,EACnB,cAAc,EAAE,MAAM,EACtB,GAAG,EAAE,MAAM,GACV,IAAI,CAuCN"}
+{"version":3,"file":"auto-capture.d.ts","sourceRoot":"","sources":["../../src/services/auto-capture.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;GAUG;AAqFH;;;;;;;;GAQG;AACH,wBAAgB,kBAAkB,CAChC,SAAS,EAAE,MAAM,EACjB,WAAW,EAAE,MAAM,EACnB,cAAc,EAAE,MAAM,EACtB,GAAG,EAAE,MAAM,GACV,IAAI,CAuCN"}

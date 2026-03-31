@@ -2,7 +2,7 @@
 # Stop hook: 检查本次 session 是否已写入记忆 + 自动学习提醒
 # 灵感来源：so-c-claude 的 auto_learn 机制（用 fast_model 从对话自动提取用户偏好）
 
-PROJECT_DIR="${CLAUDE_PROJECT_DIR:-/Users/rayman.chen/mycc}"
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-/home/hahaxiong83/mycc}"
 EVENTS_FILE="$PROJECT_DIR/0-System/RECENT_EVENTS.md"
 ITEMS_FILE="$PROJECT_DIR/0-System/memory-items.md"
 TODAY=$(date '+%Y-%m-%d')
