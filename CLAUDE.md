@@ -106,11 +106,12 @@
 
 收到任何错误（403/502/服务不响应/UI 不更新）时，**必须先跑完以下检查，再动代码**：
 
-1. **重复进程**：`ps aux | grep <服务名>` + `launchctl list | grep <服务名>`
-2. **proxy env 变量**：daemon 上下文与交互 shell 的环境变量是否一致
-3. **双侧配置**：FRP/nginx 等双端服务的配置是否同步更新
-4. **端口冲突**：`lsof -i :<port>`
-5. **nginx 实际提供的文件**：`nginx -t` + 检查是否在 serve 旧版本
+1. **代理拦截（最优先）**：`env | grep -i proxy` + `networksetup -getwebproxy <接口>` + `curl -v <目标>` 看是否走了代理。launchd 服务必须在 plist 中显式设 NO_PROXY
+2. **重复进程**：`ps aux | grep <服务名>` + `launchctl list | grep <服务名>`
+3. **proxy env 变量一致性**：daemon 上下文与交互 shell 的环境变量是否一致
+4. **双侧配置**：FRP/nginx 等双端服务的配置是否同步更新
+5. **端口冲突**：`lsof -i :<port>`
+6. **nginx 实际提供的文件**：`nginx -t` + 检查是否在 serve 旧版本
 
 输出检查结果后，再提出修复方案。**禁止跳过检查直接猜测根因。**
 
