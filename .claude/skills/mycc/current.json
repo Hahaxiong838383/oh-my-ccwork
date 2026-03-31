@@ -1,9 +1,9 @@
 {
   "deviceId": "2qy20kjpe7t5",
   "pairCode": "6FPNYF",
-  "routeToken": null,
-  "tunnelUrl": "http://localhost disabled",
-  "mpUrl": "http://localhost disabled",
+  "routeToken": "PATR7X",
+  "tunnelUrl": "https://asset-lovely-supplement-societies.trycloudflare.com",
+  "mpUrl": "https://api.mycc.dev/PATR7X",
   "cwd": "/Users/rayman.chen/mycc",
-  "startedAt": "2026-03-28T06:34:17.969Z"
+  "startedAt": "2026-03-31T15:09:18.465Z"
 }
