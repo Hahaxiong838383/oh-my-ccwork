@@ -27,6 +27,8 @@
   - 配置/后端/端口/mycc/启动 → `[project/配置-mycc后端]`
   - 路径/文件/脚本 → `[project/路径-关键文件]`
   - 产品/需求/PRD/功能设计/做一个/想法/用户/app → `[project/产品-prd]`
+  - 智能家居/HA/HomeAssistant/灯/开关/米家/小爱/传感器 → `[project/智能家居]`
+  - 贾维斯/Jarvis/ESP32/语音终端/唤醒词/小智/xiaomusic/音乐播放 → `[project/贾维斯-语音终端]`
 
 **Session 结束前必写（两步）**：
 1. 追加本次操作到 `RECENT_EVENTS.md`（流水账，格式：`- \`HH:MM\` 事件描述`）
