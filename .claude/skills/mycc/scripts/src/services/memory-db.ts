@@ -65,17 +65,20 @@ export interface TraceRow {
 const SCHEMA_SQL = `
 -- 1. 原子记忆条目（派生自 memory-items.md）
 CREATE TABLE IF NOT EXISTS items (
-  id          TEXT PRIMARY KEY,
-  category    TEXT NOT NULL,
-  scope       TEXT NOT NULL DEFAULT 'project',  -- user/project/agent/session
-  content     TEXT NOT NULL,
-  stars       INTEGER DEFAULT 0,
-  write_date  TEXT,
-  event_date  TEXT,
-  chain_type  TEXT,
-  chain_ref   TEXT,
-  created_at  TEXT DEFAULT (datetime('now')),
-  updated_at  TEXT DEFAULT (datetime('now'))
+  id            TEXT PRIMARY KEY,
+  category      TEXT NOT NULL,
+  scope         TEXT NOT NULL DEFAULT 'project',  -- user/project/agent/session
+  content       TEXT NOT NULL,
+  stars         INTEGER DEFAULT 0,
+  write_date    TEXT,
+  event_date    TEXT,
+  chain_type    TEXT,
+  chain_ref     TEXT,
+  quality_score REAL DEFAULT 0.5,     -- EDM: 记忆质量分 (0-1)
+  last_accessed TEXT,                  -- FadeMem: 最近被检索注入的时间
+  access_count  INTEGER DEFAULT 0,    -- FadeMem: 被检索注入的累计次数
+  created_at    TEXT DEFAULT (datetime('now')),
+  updated_at    TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_items_category ON items(category);
 CREATE INDEX IF NOT EXISTS idx_items_scope ON items(scope);
@@ -133,6 +136,7 @@ CREATE TABLE IF NOT EXISTS traces (
   pipeline   TEXT,
   rrf        TEXT,
   injected   TEXT,
+  predicted  TEXT,
   budget_used INTEGER,
   budget_limit INTEGER,
   created_at TEXT DEFAULT (datetime('now'))
@@ -208,6 +212,29 @@ export function getDB(cwd: string): Database.Database | null {
     // 创建 schema
     db.exec(SCHEMA_SQL);
     db.exec(VEC_TABLE_SQL);
+
+    // Migration: traces 表增加 predicted 列（兼容旧库）
+    try {
+      const cols = db.prepare("PRAGMA table_info(traces)").all() as Array<{ name: string }>;
+      if (!cols.some(c => c.name === "predicted")) {
+        db.exec("ALTER TABLE traces ADD COLUMN predicted TEXT");
+      }
+    } catch { /* 静默 */ }
+
+    // Migration: items 表增加 EDM + FadeMem 列（兼容旧库）
+    try {
+      const itemCols = db.prepare("PRAGMA table_info(items)").all() as Array<{ name: string }>;
+      const colNames = new Set(itemCols.map(c => c.name));
+      if (!colNames.has("quality_score")) {
+        db.exec("ALTER TABLE items ADD COLUMN quality_score REAL DEFAULT 0.5");
+      }
+      if (!colNames.has("last_accessed")) {
+        db.exec("ALTER TABLE items ADD COLUMN last_accessed TEXT");
+      }
+      if (!colNames.has("access_count")) {
+        db.exec("ALTER TABLE items ADD COLUMN access_count INTEGER DEFAULT 0");
+      }
+    } catch { /* 静默 */ }
 
     _db = db;
     _dbPath = dbPath;
@@ -290,6 +317,47 @@ function parseItemLine(line: string, category: string, idx: number): ItemRow {
  * 从 memory-items.md 同步到 SQLite items 表。
  * 检测 mtime 变更，仅在文件被编辑后重建。
  */
+// ============================================================
+// EDM 记忆质量评分（Eval-Driven Memory）
+// ============================================================
+
+/**
+ * 计算单条 item 的质量分（0-1）。
+ *
+ * 评分维度：
+ * - 具体性：包含路径、端口、版本号、URL 等具体值 → 高质量
+ * - 信息量：内容长度适中（15-200 字符最佳）
+ * - 星级：★ 标记反映人类评价
+ * - 结构化：有因果链/版本链标记 → 说明经过整理
+ */
+function computeQualityScore(item: ItemRow): number {
+  let score = 0.5; // 基线
+
+  // 具体性检测（有具体值加分）
+  const hasPath = /\/[a-zA-Z][\w/.-]+/.test(item.content);
+  const hasPort = /:\d{4,5}\b/.test(item.content);
+  const hasVersion = /v?\d+\.\d+/.test(item.content);
+  const hasUrl = /https?:\/\//.test(item.content);
+  const specificityBonus = (hasPath ? 0.05 : 0) + (hasPort ? 0.05 : 0) + (hasVersion ? 0.05 : 0) + (hasUrl ? 0.05 : 0);
+  score += Math.min(specificityBonus, 0.15);
+
+  // 信息量（去掉标记后的纯文本长度）
+  const cleanContent = item.content.replace(/[★#→←\[\]]/g, "").trim();
+  if (cleanContent.length < 10) score -= 0.2;       // 太短，信息不足
+  else if (cleanContent.length < 20) score -= 0.1;  // 偏短
+  else if (cleanContent.length > 200) score -= 0.05; // 偏长（不够原子化）
+
+  // 星级加成
+  if (item.stars >= 3) score += 0.15;
+  else if (item.stars >= 2) score += 0.1;
+  else if (item.stars >= 1) score += 0.05;
+
+  // 结构化标记（有因果链/版本链 → 经过整理的高质量记忆）
+  if (item.chain_type) score += 0.05;
+
+  return Math.max(0, Math.min(1, score));
+}
+
 export function syncItemsFromMd(cwd: string): boolean {
   const db = getDB(cwd);
   if (!db) return false;
@@ -322,20 +390,35 @@ export function syncItemsFromMd(cwd: string): boolean {
     });
   }
 
+  // 保留旧的访问数据（FadeMem：sync 不应清除访问统计）
+  const oldAccess = new Map<string, { last_accessed: string | null; access_count: number }>();
+  try {
+    const rows = db.prepare("SELECT id, last_accessed, access_count FROM items WHERE last_accessed IS NOT NULL").all() as Array<{ id: string; last_accessed: string | null; access_count: number }>;
+    for (const row of rows) {
+      oldAccess.set(row.id, { last_accessed: row.last_accessed, access_count: row.access_count });
+    }
+  } catch { /* 首次运行无数据 */ }
+
   // 事务内全量重建
   const rebuild = db.transaction(() => {
     db.exec("DELETE FROM items");
     db.exec("DELETE FROM items_fts");
 
     const insertItem = db.prepare(
-      "INSERT INTO items (id, category, scope, content, stars, write_date, event_date, chain_type, chain_ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO items (id, category, scope, content, stars, write_date, event_date, chain_type, chain_ref, quality_score, last_accessed, access_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     const insertFts = db.prepare(
       "INSERT INTO items_fts (id, content, category) VALUES (?, ?, ?)"
     );
 
     for (const item of items) {
-      insertItem.run(item.id, item.category, item.scope, item.content, item.stars, item.write_date, item.event_date, item.chain_type, item.chain_ref);
+      const qScore = computeQualityScore(item);
+      const old = oldAccess.get(item.id);
+      insertItem.run(
+        item.id, item.category, item.scope, item.content, item.stars,
+        item.write_date, item.event_date, item.chain_type, item.chain_ref,
+        qScore, old?.last_accessed ?? null, old?.access_count ?? 0,
+      );
       insertFts.run(item.id, item.content, item.category);
     }
 
@@ -704,21 +787,31 @@ export function getFacts(cwd: string, chatId: string): string[] {
 /** 写入检索轨迹（替代 JSONL 文件） */
 export function saveTrace(
   cwd: string,
-  trace: { timestamp: string; query: string; pipeline: unknown; rrf: unknown; injected: unknown; budget_used: number; budget_limit: number },
+  trace: {
+    timestamp: string;
+    query: string;
+    pipeline: unknown;
+    rrf: unknown;
+    injected: unknown;
+    predicted?: string[];
+    budget_used: number;
+    budget_limit: number;
+  },
 ): void {
   const db = getDB(cwd);
   if (!db) return;
 
   try {
     db.prepare(`
-      INSERT INTO traces (timestamp, query, pipeline, rrf, injected, budget_used, budget_limit)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO traces (timestamp, query, pipeline, rrf, injected, predicted, budget_used, budget_limit)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       trace.timestamp,
       trace.query,
       JSON.stringify(trace.pipeline),
       JSON.stringify(trace.rrf),
       JSON.stringify(trace.injected),
+      trace.predicted ? JSON.stringify(trace.predicted) : null,
       trace.budget_used,
       trace.budget_limit,
     );
@@ -731,6 +824,94 @@ export function saveTrace(
     db.prepare("DELETE FROM traces WHERE created_at < datetime('now', '-7 days')").run();
   } catch {
     // 静默失败
+  }
+}
+
+/**
+ * PP 自动验证闭环：聚合最近 N 天有 predicted 的轨迹，
+ * 对比 predicted vs injected，返回预测准确率和偏差模式。
+ *
+ * 准确率 = predicted 中被 injected 命中的比率（precision）
+ * 召回率 = injected 中被 predicted 覆盖的比率（recall）
+ * 偏差大（precision < 0.5）时，应触发预测策略调整。
+ */
+export interface PredictionVerification {
+  readonly totalWithPredictions: number;
+  readonly precision: number;   // predicted 中多少被实际注入
+  readonly recall: number;      // injected 中多少被预测到
+  /** 经常预测但从未注入的类别（幻觉候选） */
+  readonly overPredicted: ReadonlyArray<{ category: string; count: number }>;
+  /** 经常注入但从未预测的类别（盲区候选） */
+  readonly underPredicted: ReadonlyArray<{ category: string; count: number }>;
+}
+
+export function verifyPredictions(cwd: string, days: number = 7): PredictionVerification {
+  const empty: PredictionVerification = {
+    totalWithPredictions: 0, precision: 0, recall: 0,
+    overPredicted: [], underPredicted: [],
+  };
+  const db = getDB(cwd);
+  if (!db) return empty;
+
+  try {
+    const rows = db.prepare(
+      `SELECT predicted, injected FROM traces
+       WHERE predicted IS NOT NULL AND created_at >= datetime('now', '-${days} days')`,
+    ).all() as Array<{ predicted: string; injected: string }>;
+
+    if (rows.length === 0) return empty;
+
+    let totalHits = 0;
+    let totalPredicted = 0;
+    let totalInjected = 0;
+    let totalRecallHits = 0;
+    const overCounts = new Map<string, number>();
+    const underCounts = new Map<string, number>();
+
+    for (const row of rows) {
+      const predicted: string[] = JSON.parse(row.predicted || "[]");
+      const injectedRaw: Array<{ category: string }> = JSON.parse(row.injected || "[]");
+      const injectedSet = new Set(injectedRaw.map(i => i.category));
+
+      totalPredicted += predicted.length;
+      totalInjected += injectedSet.size;
+
+      for (const p of predicted) {
+        if (injectedSet.has(p)) {
+          totalHits++;
+        } else {
+          overCounts.set(p, (overCounts.get(p) || 0) + 1);
+        }
+      }
+
+      for (const cat of injectedSet) {
+        if (predicted.includes(cat)) {
+          totalRecallHits++;
+        } else {
+          underCounts.set(cat, (underCounts.get(cat) || 0) + 1);
+        }
+      }
+    }
+
+    const overPredicted = [...overCounts.entries()]
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const underPredicted = [...underCounts.entries()]
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return {
+      totalWithPredictions: rows.length,
+      precision: totalPredicted > 0 ? totalHits / totalPredicted : 0,
+      recall: totalInjected > 0 ? totalRecallHits / totalInjected : 0,
+      overPredicted,
+      underPredicted,
+    };
+  } catch {
+    return empty;
   }
 }
 
@@ -860,4 +1041,216 @@ export function syncEventsFromMd(cwd: string): boolean {
 
   rebuild();
   return true;
+}
+
+// ============================================================
+// FadeMem 访问频率追踪 + 指数衰减
+// ============================================================
+
+/** FadeMem 衰减参数：λ=0.05 对应半衰期 ≈ 14 天 */
+const FADE_LAMBDA = 0.05;
+
+/**
+ * 记录一批 item 被检索注入（更新 last_accessed + access_count）。
+ * 在 context-loader 的 extractCategories 完成后调用。
+ */
+export function recordItemAccess(cwd: string, categories: ReadonlyArray<string>): void {
+  const db = getDB(cwd);
+  if (!db || categories.length === 0) return;
+
+  try {
+    const now = new Date().toISOString();
+    const stmt = db.prepare(
+      "UPDATE items SET last_accessed = ?, access_count = access_count + 1 WHERE category = ?",
+    );
+    const batch = db.transaction(() => {
+      for (const cat of categories) {
+        stmt.run(now, cat);
+      }
+    });
+    batch();
+  } catch {
+    // 静默
+  }
+}
+
+/**
+ * 获取指定类别下所有 item 的质量分 + 访问衰减系数。
+ *
+ * 返回 Map<itemId, { quality, decayFactor }>
+ * - quality: 0-1 EDM 质量分
+ * - decayFactor: 0-1 FadeMem 衰减系数（1=刚访问，→0=长期未访问）
+ *
+ * decayFactor = e^(-λ * daysSinceLastAccess)
+ * 从未被访问的 item: daysSinceLastAccess = daysSinceCreation，给予基线衰减
+ */
+export function getQualityAndDecayScores(
+  cwd: string,
+  categories: ReadonlyArray<string>,
+): Map<string, { quality: number; decayFactor: number }> {
+  const result = new Map<string, { quality: number; decayFactor: number }>();
+  const db = getDB(cwd);
+  if (!db || categories.length === 0) return result;
+
+  try {
+    const placeholders = categories.map(() => "?").join(",");
+    const rows = db.prepare(
+      `SELECT id, quality_score, last_accessed, access_count, created_at FROM items WHERE category IN (${placeholders})`,
+    ).all(...categories) as Array<{
+      id: string;
+      quality_score: number | null;
+      last_accessed: string | null;
+      access_count: number;
+      created_at: string;
+    }>;
+
+    const now = Date.now();
+    for (const row of rows) {
+      const quality = row.quality_score ?? 0.5;
+
+      // 计算距上次访问的天数
+      let daysSince: number;
+      if (row.last_accessed) {
+        daysSince = Math.max(0, (now - new Date(row.last_accessed).getTime()) / (1000 * 60 * 60 * 24));
+      } else {
+        // 从未被访问：用创建时间，但给更宽容的衰减（λ 减半）
+        daysSince = Math.max(0, (now - new Date(row.created_at).getTime()) / (1000 * 60 * 60 * 24));
+      }
+
+      // FadeMem 指数衰减：e^(-λ * days)
+      // 从未被访问的 item 用 λ/2（更宽容），避免新 item 被过度惩罚
+      const lambda = row.last_accessed ? FADE_LAMBDA : FADE_LAMBDA / 2;
+      const decayFactor = Math.exp(-lambda * daysSince);
+
+      result.set(row.id, { quality, decayFactor });
+    }
+  } catch {
+    // 静默
+  }
+
+  return result;
+}
+
+// ============================================================
+// 行为漂移量化监控（Behavioral Drift Detection）
+// ============================================================
+
+/** 行为漂移统计结果 */
+export interface BehaviorDriftStats {
+  /** 总任务数 */
+  totalTasks: number;
+  /** 引擎分布 { engine: count } */
+  engineDistribution: ReadonlyArray<{ engine: string; count: number; ratio: number }>;
+  /** 摩擦密度：有 friction 标记的任务占比 */
+  frictionDensity: number;
+  /** 摩擦 skill 热点（按频率排序） */
+  frictionHotspots: ReadonlyArray<{ skill: string; count: number }>;
+  /** 任务类型分布 */
+  taskTypeDistribution: ReadonlyArray<{ type: string; count: number; ratio: number }>;
+  /** 每日任务数趋势（最近 N 天） */
+  dailyTaskCounts: ReadonlyArray<{ date: string; count: number }>;
+  /** 分析时间窗口 */
+  windowDays: number;
+}
+
+/**
+ * 从 task-log.md 解析行为指标，用于检测 cc 的行为漂移。
+ *
+ * 数据源：`0-System/task-log.md`
+ * 格式：| 时间 | 任务类型 | 摘要 | 执行引擎 | 状态 | friction_skill |
+ *
+ * @param cwd 项目根目录
+ * @param days 回看天数（默认 14）
+ */
+export function computeBehaviorDrift(cwd: string, days: number = 14): BehaviorDriftStats {
+  const empty: BehaviorDriftStats = {
+    totalTasks: 0,
+    engineDistribution: [],
+    frictionDensity: 0,
+    frictionHotspots: [],
+    taskTypeDistribution: [],
+    dailyTaskCounts: [],
+    windowDays: days,
+  };
+
+  const logPath = path.join(cwd, "0-System/task-log.md");
+  if (!existsSync(logPath)) return empty;
+
+  try {
+    const content = readFileSync(logPath, "utf-8");
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+
+    const engineCounts = new Map<string, number>();
+    const typeCounts = new Map<string, number>();
+    const frictionCounts = new Map<string, number>();
+    const dailyCounts = new Map<string, number>();
+    let totalTasks = 0;
+    let frictionTasks = 0;
+
+    for (const line of content.split("\n")) {
+      const cells = line.split("|").map(c => c.trim()).filter(Boolean);
+      if (cells.length < 5) continue;
+
+      // 解析时间列（格式：2026-03-31 14:00 或 2026-03-31）
+      const timeStr = cells[0];
+      const dateMatch = timeStr.match(/^(\d{4}-\d{2}-\d{2})/);
+      if (!dateMatch) continue;
+
+      const date = dateMatch[1];
+      const taskDate = new Date(date);
+      if (taskDate < cutoff) continue;
+
+      totalTasks++;
+
+      // 任务类型
+      const taskType = cells[1];
+      typeCounts.set(taskType, (typeCounts.get(taskType) ?? 0) + 1);
+
+      // 引擎
+      const engineRaw = cells[3].toLowerCase();
+      let engine = "unknown";
+      if (engineRaw.includes("codex")) engine = "codex";
+      else if (engineRaw.includes("gemini")) engine = "gemini";
+      else if (engineRaw.includes("cc") || engineRaw.includes("claude")) engine = "cc";
+      engineCounts.set(engine, (engineCounts.get(engine) ?? 0) + 1);
+
+      // friction
+      const frictionCol = cells.length >= 6 ? cells[5] : "";
+      if (frictionCol && frictionCol !== "—" && frictionCol !== "-") {
+        frictionTasks++;
+        frictionCounts.set(frictionCol, (frictionCounts.get(frictionCol) ?? 0) + 1);
+      }
+
+      // 每日计数
+      dailyCounts.set(date, (dailyCounts.get(date) ?? 0) + 1);
+    }
+
+    if (totalTasks === 0) return empty;
+
+    const toDistribution = (map: Map<string, number>, nameKey: string) =>
+      [...map.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => ({
+          [nameKey]: name,
+          count,
+          ratio: Math.round((count / totalTasks) * 100) / 100,
+        })) as ReadonlyArray<Record<string, unknown>>;
+
+    return {
+      totalTasks,
+      engineDistribution: toDistribution(engineCounts, "engine") as unknown as BehaviorDriftStats["engineDistribution"],
+      frictionDensity: Math.round((frictionTasks / totalTasks) * 100) / 100,
+      frictionHotspots: [...frictionCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([skill, count]) => ({ skill, count })),
+      taskTypeDistribution: toDistribution(typeCounts, "type") as unknown as BehaviorDriftStats["taskTypeDistribution"],
+      dailyTaskCounts: [...dailyCounts.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([date, count]) => ({ date, count })),
+      windowDays: days,
+    };
+  } catch {
+    return empty;
+  }
 }

@@ -510,14 +510,22 @@ export class HttpServer {
     }
 
     // 双主分离：任务型消息异步入队，立即 ack，不阻塞对话通道
+    // v7 AST: chat 消息如果路由到非 cc 引擎，升级为 task（路由比分类更精准）
     if (!ctx.engine) {
-      const msgType = classifyMessage(trimmedMessage);
+      let msgType = classifyMessage(trimmedMessage);
+      if (msgType === "chat") {
+        const probeRoute = autoRouteEngine(trimmedMessage, this.cwd);
+        if (probeRoute.engine !== "cc") {
+          msgType = "task";
+          console.log(`[CC][${ctx.channelId}] chat→task 升级: 路由到 ${probeRoute.engine} | ${probeRoute.reason}`);
+        }
+      }
       if (msgType === "task") {
         const queueInfo = taskQueueManager.getQueueInfo(ctx.channelId);
         const pending = queueInfo.pending;
 
         // 半自动路由（AST 社会注意力）：根据任务内容自动选择最合适的引擎
-        const routeResult = autoRouteEngine(trimmedMessage);
+        const routeResult = autoRouteEngine(trimmedMessage, this.cwd);
         const routedEngine = routeResult.engine;
         const engineTip = routedEngine !== "cc" ? `（→ ${routedEngine}）` : "";
         if (routedEngine !== "cc") {

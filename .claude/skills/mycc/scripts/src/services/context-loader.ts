@@ -53,7 +53,11 @@ import {
   searchItems as searchItemsDB,
   vectorSearchDB,
   saveTrace as saveTraceDB,
+  verifyPredictions as verifyPredictionsDB,
+  recordItemAccess as recordItemAccessDB,
+  getQualityAndDecayScores,
   type ItemRow,
+  type PredictionVerification,
 } from "./memory-db.js";
 
 // ============================================================
@@ -934,6 +938,16 @@ interface RetrievalTrace {
   budget: { used: number; limit: number };
 }
 
+/**
+ * PP 协议：从 prompt 中解析注意力预测声明。
+ * 格式: [注意力预测] 本任务预计需要关注：类别1, 类别2, 类别3
+ */
+function parsePredictedCategories(prompt: string): string[] | undefined {
+  const match = prompt.match(/\[注意力预测\]\s*(?:本任务预计需要关注：?\s*)?(.+)/);
+  if (!match) return undefined;
+  return match[1].split(/[,，、\s]+/).map(s => s.trim()).filter(Boolean);
+}
+
 /** 将检索轨迹写入 JSONL（fire-and-forget） */
 function writeTrace(trace: RetrievalTrace, cwd: string): void {
   try {
@@ -1139,6 +1153,16 @@ export async function loadSharedContextLight(prompt: string, cwd: string): Promi
       if (userBlock) parts.push(userBlock);
       if (projectBlock) parts.push(projectBlock);
 
+      // v8 FadeMem: 记录被注入的类别的访问（Light 版也追踪）
+      const injectedCatsLight = [...ALWAYS_INJECT_CATEGORIES, ...allProjectCats];
+      recordItemAccessDB(cwd, injectedCatsLight);
+
+      // v7 PP: 从 prompt 中解析注意力预测声明（Light 版也支持）
+      const predicted = parsePredictedCategories(prompt);
+      if (predicted) {
+        trace.predicted = predicted;
+      }
+
       // v5.5: 写检索轨迹到 SQLite（降级到 JSONL）
       trace.budget.used = parts.join("\n\n").length;
       trace.budget.limit = 2000;
@@ -1148,6 +1172,7 @@ export async function loadSharedContextLight(prompt: string, cwd: string): Promi
         pipeline: trace.pipeline,
         rrf: trace.rrf,
         injected: trace.injected,
+        predicted: trace.predicted,
         budget_used: trace.budget.used,
         budget_limit: trace.budget.limit,
       });
@@ -1215,6 +1240,16 @@ export async function loadSharedContext(prompt: string, cwd: string): Promise<st
       if (userBlock) parts.push(userBlock);
       if (projectBlock) parts.push(projectBlock);
 
+      // v8 FadeMem: 记录被注入的类别的访问（更新 last_accessed + access_count）
+      const injectedCats = [...ALWAYS_INJECT_CATEGORIES, ...allProjectCats];
+      recordItemAccessDB(cwd, injectedCats);
+
+      // v7 PP: 从 prompt 中解析注意力预测声明
+      const predicted = parsePredictedCategories(prompt);
+      if (predicted) {
+        trace.predicted = predicted;
+      }
+
       // v5.5: 检索轨迹双写（SQLite + JSONL 过渡期）
       trace.budget.used = parts.join("\n\n").length;
       trace.budget.limit = 3000;
@@ -1224,6 +1259,7 @@ export async function loadSharedContext(prompt: string, cwd: string): Promise<st
         pipeline: trace.pipeline,
         rrf: trace.rrf,
         injected: trace.injected,
+        predicted: trace.predicted,
         budget_used: trace.budget.used,
         budget_limit: trace.budget.limit,
       });
@@ -1242,4 +1278,38 @@ export async function loadSharedContext(prompt: string, cwd: string): Promise<st
   }
 
   return `[共享记忆 — 以下是跨会话记忆，帮助你理解上下文]\n\n${result}\n\n[共享记忆结束]\n\n`;
+}
+
+/**
+ * PP 自动验证闭环：获取预测准确率统计。
+ * 由 attention-audit skill 定期调用，偏差大时输出策略调整建议。
+ */
+export function getVerificationReport(cwd: string, days: number = 7): string {
+  const v = verifyPredictionsDB(cwd, days);
+  if (v.totalWithPredictions === 0) {
+    return "PP 验证：暂无含预测的轨迹数据（预测声明尚未积累）";
+  }
+
+  const lines = [
+    `PP 预测验证报告（最近 ${days} 天，${v.totalWithPredictions} 条含预测轨迹）`,
+    `  精确率: ${(v.precision * 100).toFixed(1)}%（预测类别被实际注入的比率）`,
+    `  召回率: ${(v.recall * 100).toFixed(1)}%（实际注入类别被预测覆盖的比率）`,
+  ];
+
+  if (v.overPredicted.length > 0) {
+    lines.push(`  幻觉类别（经常预测但未注入）: ${v.overPredicted.map(o => `${o.category}(${o.count}次)`).join(", ")}`);
+  }
+  if (v.underPredicted.length > 0) {
+    lines.push(`  盲区类别（经常注入但未预测）: ${v.underPredicted.map(u => `${u.category}(${u.count}次)`).join(", ")}`);
+  }
+
+  // 策略调整建议
+  if (v.precision < 0.5 && v.totalWithPredictions >= 5) {
+    lines.push("  ⚠️ 精确率过低，建议收紧预测范围：只预测高置信度的类别");
+  }
+  if (v.recall < 0.3 && v.totalWithPredictions >= 5) {
+    lines.push("  ⚠️ 召回率过低，建议扩大预测范围：关注盲区类别");
+  }
+
+  return lines.join("\n");
 }

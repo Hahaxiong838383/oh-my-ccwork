@@ -1,15 +1,15 @@
-# attention-audit — 注意力审计与检索策略优化
+# attention-audit — 注意力审计与行为漂移监控
 
-> 理论来源：ASAC（Attention Schema-based Attention Control）— 用轨迹统计抽象注意力状态并反馈控制
-> 触发词："/attention-audit"、"检索审计"、"注意力分析"、"检索盲区"
+> 理论来源：ASAC（Attention Schema-based Attention Control）+ Behavioral Drift Detection
+> 触发词："/attention-audit"、"检索审计"、"注意力分析"、"检索盲区"、"行为漂移"
 
 ## 定位
 
-从 SQLite 检索轨迹中聚合统计，分析 cc 的「注意力分配」是否合理：
-- 哪些记忆类别被高频命中（注意力热点）
-- 哪些类别被 RRF 排名但从未注入（检索盲区）
-- 预算使用效率如何
-- 注意力预测的准确率（Phase 2）
+两个分析轴：
+1. **注意力分析**：从 SQLite 检索轨迹（traces 表）聚合统计，分析记忆检索分配是否合理
+2. **行为漂移监控**：从 task-log.md 提取行为指标，检测 cc 是否偏离预期工作模式
+
+后端支持：`memory-db.ts` 的 `computeBehaviorDrift(cwd, days)` 函数
 
 ## 执行步骤
 
@@ -72,16 +72,45 @@ sqlite3 0-System/memory.db "
 轨迹总数：N 条（7天）
 
 建议：[如有异常给出调整建议]
+
+--- 行为漂移（14天） ---
+任务总数：N | 日均：X
+引擎分布：cc X% | codex Y% | gemini Z%
+摩擦密度：X%（[健康/偏高/危险]）
+摩擦热点：[skill1 ×N, skill2 ×N]（或 无）
+任务类型：[Top 3 类型]
+漂移信号：[正常 / 具体异常描述]
 ```
 
-### 第 5 步：异常检测
+### 第 5 步：行为漂移分析（新增 v2）
+
+从 `0-System/task-log.md` 读取最近 14 天数据（通过 `computeBehaviorDrift(cwd, 14)`）：
+
+| 维度 | 指标 | 健康阈值 | 漂移信号 |
+|------|------|---------|---------|
+| **引擎集中度** | cc 占比 | 70%-90% | >95% 说明 codex/gemini 路由失效 |
+| **摩擦密度** | friction_skill 非空占比 | <10% | >15% 说明系统不稳定 |
+| **摩擦热点** | 同一 skill 出现 ≥3 次 | 0 个 | 有热点则提升为 E-xx 进化项 |
+| **任务类型多样性** | 类型种类数 | ≥3 种 | ≤2 种说明功能利用率低 |
+| **日均产出** | 每日任务数 | ≥2 | 连续 3 天 <1 说明停滞 |
+
+```bash
+# 直接解析 task-log.md（后端不运行时的备用方案）：
+grep -c "^|" 0-System/task-log.md  # 总行数
+grep -c "friction_skill.*[^—-]" 0-System/task-log.md  # 有摩擦的行
+```
+
+### 第 6 步：异常检测
 
 | 异常 | 条件 | 动作 |
 |------|------|------|
 | 注意力过度集中 | Top 1 类别占比 >40% | 建议检查是否有检索偏见 |
 | 预算长期不足 | 平均使用率 >90% | 建议提升 budget_limit 或优化注入密度 |
 | 检索盲区扩大 | 盲区数 >5 | 建议检查 KEYWORD_CATEGORY_MAP 覆盖率 |
-| 零轨迹 | totalTraces = 0 | 正常（冷启动），跳过审计 |
+| 零轨迹 | totalTraces = 0 | 正常（冷启动），跳过注意力审计 |
+| 引擎路由单一 | cc 占比 >95% | 检查 codex/gemini 路由关键词是否匹配实际任务 |
+| 摩擦密度升高 | 14 天内 >15% | 检查近期摩擦根因，提交 evolution-log E-xx |
+| 产出停滞 | 连续 3 天日产出 <1 | 检查定时任务是否正常、是否有阻塞 |
 
 ## 运行模式
 
@@ -99,10 +128,13 @@ sqlite3 0-System/memory.db "
 
 ## 与其他系统的关系
 
+- **memory-db.ts**：`aggregateTraces()` 聚合检索轨迹，`computeBehaviorDrift()` 聚合行为指标
 - **context-loader.ts**：`applyHistoricalBoost()` 消费本 skill 产出的统计数据
-- **MetaClaw**：如果注意力审计发现持续异常，可提升为 friction-pattern
+- **task-log.md**：行为漂移分析的数据源
+- **MetaClaw**：如果审计发现持续异常，可提升为 friction-pattern
 - **evolution-log**：审计结果可触发新的 E-xx 进化项
 - **blackboard.md**：审计结果自动写入注意力状态 section
 
 *创建时间：2026-03-31*
+*v2 更新：2026-03-31 — 新增行为漂移监控维度*
 *理论依据：ASAC (arXiv:2509.16058) + Cognitive Mirror (Frontiers 2025)*
