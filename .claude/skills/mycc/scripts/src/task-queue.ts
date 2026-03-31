@@ -43,6 +43,20 @@ export type MessageType = "chat" | "task";
 
 export type AutoRouteEngine = "cc" | "codex" | "gemini" | "pipeline";
 
+/**
+ * 路由结果（AST — 社会注意力推断）
+ *
+ * 不仅返回目标引擎，还返回路由原因和上下文提示，
+ * 让系统「知道为什么分配给这个引擎」。
+ */
+export interface RouteResult {
+  engine: AutoRouteEngine;
+  /** 路由原因（用于 blackboard 记录 + 日志） */
+  reason: string;
+  /** 传递给目标引擎的上下文提示（如已知的工具偏好、历史表现） */
+  contextHints: string[];
+}
+
 /** 适合 codex 的任务：代码编写/调试/重构 + 论文调研归档 */
 const CODEX_ROUTE_KEYWORDS = [
   "写代码", "写个", "写一个", "帮我写", "编程", "写程序",
@@ -85,15 +99,16 @@ const GEMINI_ROUTE_KEYWORDS = [
 ];
 
 /**
- * 半自动任务路由：根据消息内容推荐最合适的引擎。
+ * 半自动任务路由（AST 社会注意力版）：
+ * 根据消息内容推荐最合适的引擎，并说明路由原因和上下文提示。
  *
  * 路由优先级：
  * 1. pipeline（分析+写入组合）→ Gemini 分析 → Codex 写入飞书
- * 2. codex（纯代码任务）
+ * 2. codex（纯代码任务 / 论文调研）
  * 3. gemini（纯调研/采集）
  * 4. cc（默认 / 纯写入操作）
  */
-export function autoRouteEngine(message: string): AutoRouteEngine {
+export function autoRouteEngine(message: string): RouteResult {
   const text = message.trim().toLowerCase();
 
   const hasWrite = WRITE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
@@ -101,39 +116,69 @@ export function autoRouteEngine(message: string): AutoRouteEngine {
   const hasGemini = GEMINI_ROUTE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
   const hasUrl = /https?:\/\/\S+/i.test(text);
   const hasCodex = CODEX_ROUTE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
+  const hasGitHub = /github\.com/i.test(text);
+  const hasArxiv = /arxiv\.org/i.test(text);
 
   // 最高优先级：分析+写入组合 → pipeline（Gemini 分析 → Codex 写入）
   if (hasWrite && (hasAnalysis || hasGemini)) {
-    return "pipeline";
+    return {
+      engine: "pipeline",
+      reason: "分析+写入组合任务，Gemini 负责分析，Codex 负责写入飞书",
+      contextHints: ["gemini 做前置分析", "codex 做飞书写入", "需要 lark-cli MCP"],
+    };
   }
 
   // 纯写入操作 → codex（有飞书 MCP 能力，分摊 cc 负担）
   if (hasWrite) {
-    return "codex";
+    return {
+      engine: "codex",
+      reason: "飞书写入操作，codex 有 lark-cli MCP 能力",
+      contextHints: ["需要 lark-cli MCP", "写入后验证结果"],
+    };
   }
 
   // GitHub URL → cc（分析项目对 mycc 的迭代价值，需要 cc 的完整上下文）
-  const hasGitHub = /github\.com/i.test(text);
   if (hasGitHub) {
-    return "cc";
+    return {
+      engine: "cc",
+      reason: "GitHub 项目分析需要 cc 的完整项目上下文",
+      contextHints: ["评估对 mycc 的迭代价值", "需要 gh CLI"],
+    };
   }
 
   // arxiv URL / 论文关键词 → codex（论文调研归档）
-  const hasArxiv = /arxiv\.org/i.test(text);
   if (hasArxiv || hasCodex) {
-    return "codex";
+    return {
+      engine: "codex",
+      reason: hasArxiv ? "arxiv 论文调研归档" : "代码/调研任务适合 codex",
+      contextHints: hasArxiv
+        ? ["论文调研模式", "输出归档到 1-Inbox/"]
+        : ["代码任务", "可直接修改仓库"],
+    };
   }
 
   // 非 GitHub/arxiv 的 URL + 分析关键词 → gemini（通用调研类）
   if (hasUrl && hasAnalysis) {
-    return "gemini";
+    return {
+      engine: "gemini",
+      reason: "URL + 分析关键词，gemini 擅长通用调研",
+      contextHints: ["通用 URL 分析", "输出纯文本结果"],
+    };
   }
 
   if (hasGemini) {
-    return "gemini";
+    return {
+      engine: "gemini",
+      reason: "采集/新闻/知识库查询任务",
+      contextHints: ["采集模式", "可能需要 enableTools"],
+    };
   }
 
-  return "cc";
+  return {
+    engine: "cc",
+    reason: "默认路由到 cc（对话/通用任务）",
+    contextHints: [],
+  };
 }
 
 /**

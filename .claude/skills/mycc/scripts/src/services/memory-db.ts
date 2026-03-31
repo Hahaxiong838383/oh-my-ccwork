@@ -734,6 +734,82 @@ export function saveTrace(
   }
 }
 
+/** v6 AST: 轨迹聚合统计 — 从 write-only 到反馈闭环 */
+export interface TraceStats {
+  /** 每个类别被注入的次数（降序） */
+  readonly categoryHitRate: ReadonlyArray<{ category: string; count: number; rate: number }>;
+  /** 被 RRF 排名但未注入的类别（检索盲区候选） */
+  readonly missedCategories: ReadonlyArray<{ category: string; rrfCount: number; injectCount: number }>;
+  /** 平均预算使用率 */
+  readonly avgBudgetUsage: number;
+  /** 轨迹总数 */
+  readonly totalTraces: number;
+}
+
+/**
+ * v6 AST: 聚合最近 N 天的检索轨迹，生成类别命中率统计。
+ *
+ * 用于 ASAC 反馈闭环：历史高命中类别在下次检索中获得 boost。
+ * 冷启动安全：无数据时返回空统计，调用方可安全忽略。
+ */
+export function aggregateTraces(cwd: string, days: number = 7): TraceStats {
+  const empty: TraceStats = { categoryHitRate: [], missedCategories: [], avgBudgetUsage: 0, totalTraces: 0 };
+  const db = getDB(cwd);
+  if (!db) return empty;
+
+  try {
+    // 拉取最近 N 天的轨迹
+    const rows = db.prepare(
+      `SELECT rrf, injected, budget_used, budget_limit FROM traces WHERE created_at >= datetime('now', '-${days} days')`,
+    ).all() as Array<{ rrf: string; injected: string; budget_used: number; budget_limit: number }>;
+
+    if (rows.length === 0) return empty;
+
+    const rrfCounts = new Map<string, number>();
+    const injectCounts = new Map<string, number>();
+    let totalBudgetRatio = 0;
+
+    for (const row of rows) {
+      // RRF 类别统计
+      const rrfList: Array<{ category: string }> = JSON.parse(row.rrf || "[]");
+      for (const item of rrfList) {
+        rrfCounts.set(item.category, (rrfCounts.get(item.category) || 0) + 1);
+      }
+
+      // 注入类别统计
+      const injectedList: Array<{ category: string }> = JSON.parse(row.injected || "[]");
+      for (const item of injectedList) {
+        injectCounts.set(item.category, (injectCounts.get(item.category) || 0) + 1);
+      }
+
+      // 预算使用率
+      if (row.budget_limit > 0) {
+        totalBudgetRatio += row.budget_used / row.budget_limit;
+      }
+    }
+
+    // 类别命中率（注入次数 / 总轨迹数）
+    const categoryHitRate = Array.from(injectCounts.entries())
+      .map(([category, count]) => ({ category, count, rate: count / rows.length }))
+      .sort((a, b) => b.count - a.count);
+
+    // 检索盲区：被 RRF 排到过但从未注入的类别
+    const missedCategories = Array.from(rrfCounts.entries())
+      .filter(([cat]) => !injectCounts.has(cat))
+      .map(([category, rrfCount]) => ({ category, rrfCount, injectCount: 0 }))
+      .sort((a, b) => b.rrfCount - a.rrfCount);
+
+    return {
+      categoryHitRate,
+      missedCategories,
+      avgBudgetUsage: totalBudgetRatio / rows.length,
+      totalTraces: rows.length,
+    };
+  } catch {
+    return empty;
+  }
+}
+
 // ============================================================
 // 事件流接口
 // ============================================================

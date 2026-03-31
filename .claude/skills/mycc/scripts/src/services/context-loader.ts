@@ -168,6 +168,63 @@ function resolveRelations(
 }
 
 // ============================================================
+// 因果关联链 v6（IIT 启发 — 信息因果整合）
+// ============================================================
+
+/**
+ * v6: 解析因果关联标记，扩展检索召回。
+ *
+ * 标记语法：
+ * - →caused:关键词   — 本条导致了某条的产生
+ * - ←caused-by:关键词 — 本条由某条触发
+ * - →evolved:关键词   — 本条演化为某条
+ *
+ * 当一个 item 被检索命中时，沿因果链扩展召回关联 items，
+ * 关联 items 获得原始分数的 0.5 倍加成（不超过原始排名）。
+ */
+function resolveCausalChains(
+  items: ReadonlyArray<{ line: string; score: number; tokens: string[] }>,
+): Array<{ line: string; score: number; tokens: string[] }> {
+  // 收集所有因果标记
+  const causalLinks: Array<{ sourceIdx: number; targetKeyword: string; direction: string }> = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const line = items[i].line;
+    const causedMatch = line.match(/→caused:(.+?)(?:\s*\[|\s*#|\s*→|←|\s*$)/);
+    if (causedMatch) {
+      causalLinks.push({ sourceIdx: i, targetKeyword: causedMatch[1].trim().toLowerCase(), direction: "forward" });
+    }
+    const causedByMatch = line.match(/←caused-by:(.+?)(?:\s*\[|\s*#|\s*→|←|\s*$)/);
+    if (causedByMatch) {
+      causalLinks.push({ sourceIdx: i, targetKeyword: causedByMatch[1].trim().toLowerCase(), direction: "backward" });
+    }
+    const evolvedMatch = line.match(/→evolved:(.+?)(?:\s*\[|\s*#|\s*→|←|\s*$)/);
+    if (evolvedMatch) {
+      causalLinks.push({ sourceIdx: i, targetKeyword: evolvedMatch[1].trim().toLowerCase(), direction: "evolved" });
+    }
+  }
+
+  if (causalLinks.length === 0) return items.map(i => ({ ...i }));
+
+  // 对于有分数的 items，沿因果链给关联 items 加分
+  const boosted = items.map(i => ({ ...i }));
+  for (const link of causalLinks) {
+    const sourceScore = boosted[link.sourceIdx].score;
+    if (sourceScore <= 0) continue; // 源 item 没被命中，不扩展
+
+    const boostAmount = sourceScore * 0.5;
+    for (let j = 0; j < boosted.length; j++) {
+      if (j === link.sourceIdx) continue;
+      if (boosted[j].line.toLowerCase().includes(link.targetKeyword)) {
+        boosted[j] = { ...boosted[j], score: boosted[j].score + boostAmount };
+      }
+    }
+  }
+
+  return boosted;
+}
+
+// ============================================================
 // TF-IDF cosine 相似度（v3: 从 Jaccard 升级，借鉴 Supermemory hybrid search）
 // ============================================================
 
@@ -569,6 +626,64 @@ function rrfFuse(
 }
 
 // ============================================================
+// 历史轨迹加权 v6 AST（ASAC 反馈闭环）
+// ============================================================
+
+/** 缓存历史命中率（每 10 分钟刷新，避免频繁 SQLite 查询） */
+let _hitRateCache: { data: Map<string, number>; timestamp: number } | null = null;
+const HIT_RATE_CACHE_TTL = 10 * 60 * 1000; // 10 分钟
+const HISTORY_BOOST_WEIGHT = 0.2; // 历史 boost 权重（相对于 RRF 原始分数）
+
+/**
+ * v6 AST: 将历史命中率叠加到 RRF 融合结果上。
+ *
+ * 高频被注入的类别获得 boost，让检索策略从经验中学习。
+ * 冷启动安全：无历史数据时直接返回原始结果。
+ */
+function applyHistoricalBoost(
+  fused: ReadonlyArray<{ category: string; score: number }>,
+  cwd: string,
+): Array<{ category: string; score: number }> {
+  // 缓存检查
+  const now = Date.now();
+  if (!_hitRateCache || now - _hitRateCache.timestamp > HIT_RATE_CACHE_TTL) {
+    try {
+      const { aggregateTraces } = require("./memory-db");
+      const stats = aggregateTraces(cwd, 7);
+      if (stats.totalTraces > 0) {
+        const rateMap = new Map<string, number>();
+        for (const item of stats.categoryHitRate) {
+          rateMap.set(item.category, item.rate);
+        }
+        _hitRateCache = { data: rateMap, timestamp: now };
+      } else {
+        _hitRateCache = { data: new Map(), timestamp: now };
+      }
+    } catch {
+      _hitRateCache = { data: new Map(), timestamp: now };
+    }
+  }
+
+  // 无历史数据 → 直接返回
+  if (_hitRateCache.data.size === 0) {
+    return fused.map(item => ({ ...item }));
+  }
+
+  // 叠加历史 boost
+  const boosted = fused.map(item => {
+    const histRate = _hitRateCache!.data.get(item.category) || 0;
+    return {
+      category: item.category,
+      score: item.score + HISTORY_BOOST_WEIGHT * histRate,
+    };
+  });
+
+  // 重新排序
+  boosted.sort((a, b) => b.score - a.score);
+  return boosted;
+}
+
+// ============================================================
 // LLM 重排 v5.5（借鉴 QMD reranker pipeline）
 // ============================================================
 
@@ -803,6 +918,7 @@ interface RetrievalTrace {
   timestamp: string;
   query: string;
   expansion: string[];  // v5.5: 查询扩展变体
+  predicted?: string[];  // v6 AST: 注意力预测 — cc 在 P1 阶段预测的需要关注的类别
   pipeline: {
     keyword: { matched: string[] };
     tfidf: { matched: string[]; topScore: number };
@@ -957,10 +1073,15 @@ async function hybridMatchCategories(
     return { categories: [], trace };
   }
   const fused = rrfFuse(rankedLists);
-  trace.rrf = fused.slice(0, 10);
+
+  // v6 AST: 历史轨迹加权 — ASAC 反馈闭环
+  // 高频被注入的类别获得 boost，让检索策略从经验中学习
+  const boosted = applyHistoricalBoost(fused, cwd);
+
+  trace.rrf = boosted.slice(0, 10);
 
   // 取 RRF 最高的类别（上限 8 个，避免过度注入）
-  const categories = fused.slice(0, 8).map((r) => r.category);
+  const categories = boosted.slice(0, 8).map((r) => r.category);
   return { categories, trace };
 }
 

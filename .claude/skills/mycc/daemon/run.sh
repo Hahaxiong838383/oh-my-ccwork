@@ -15,6 +15,11 @@ if [ -d "$NVM_DIR/versions/node" ]; then
   [ -n "$LATEST_NODE" ] && export PATH="$NVM_DIR/versions/node/$LATEST_NODE/bin:$PATH"
 fi
 
+# 添加本地 node（非 nvm 安装的情况）
+if [ -d "$HOME/local/node/bin" ]; then
+  export PATH="$HOME/local/node/bin:$PATH"
+fi
+
 # 添加 user bin（claude 在这里）
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"

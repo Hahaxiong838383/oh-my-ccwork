@@ -162,6 +162,7 @@ async function startServer(args: string[]) {
   const publicUrl = loadPublicUrl(process.cwd(), scriptsDir);
   const isPublicMode = !!publicUrl;
 
+  let cloudflaredAvailable = true; // 公网/Relay 模式不需要 cloudflared
   if (isPublicMode) {
     console.log(chalk.cyan(`\n公网模式: ${publicUrl}`));
     console.log(chalk.gray("  跳过 cloudflared（不需要内网穿透）\n"));
@@ -172,13 +173,13 @@ async function startServer(args: string[]) {
   } else {
     // 只有 Cloudflare 模式才需要 cloudflared
     console.log("检查 cloudflared...");
-    const cloudflaredAvailable = await checkCloudflared();
+    cloudflaredAvailable = await checkCloudflared();
     if (!cloudflaredAvailable) {
-      console.error(chalk.red("错误: cloudflared 未安装"));
-      console.error(getCloudflaredInstallHint());
-      process.exit(1);
+      console.warn(chalk.yellow("⚠️ cloudflared 未安装，tunnel 不可用（scheduler 和本地 API 正常运行）"));
+      console.warn(chalk.gray(getCloudflaredInstallHint()));
+    } else {
+      console.log(chalk.green("✓ cloudflared 可用\n"));
     }
-    console.log(chalk.green("✓ cloudflared 可用\n"));
   }
 
   // 解析工作目录
@@ -509,14 +510,23 @@ ${skillLine}
           console.log(chalk.green(`✓ DNS 已设置: ${hostname} → ${namedProvider.getTunnelId()}.cfargotunnel.com`));
         }
       });
-    } else {
+    } else if (cloudflaredAvailable) {
       // Quick Tunnel: 随机 URL，适合无自定义域名场景
       tunnelProvider = new CloudflareProvider(120000);
       if (tunnelToken && !dnsConfig) {
         console.warn(chalk.yellow("⚠️  已设置 CF_TUNNEL_TOKEN 但缺少 CF_DOMAIN/CF_ZONE_ID，降级为 Quick Tunnel"));
       }
+    } else {
+      // cloudflared 不可用，跳过 tunnel（scheduler 和本地 API 仍正常工作）
+      console.warn(chalk.yellow("⚠️ 跳过 tunnel 启动（cloudflared 不可用）"));
+      tunnelProvider = null;
     }
 
+    if (!tunnelProvider) {
+      // 无 tunnel provider，仅本地运行（scheduler + 本地 API）
+      tunnelUrl = `http://localhost:${actualPort}`;
+      console.log(chalk.yellow(`⚠️ 仅本地模式: ${tunnelUrl}（tunnel 不可用）\n`));
+    } else {
     tunnelManager = new TunnelManager({
       localPort: actualPort,
       onRestartSuccess: async (newUrl: string) => {
@@ -577,6 +587,7 @@ ${skillLine}
       tunnelUrl = "http://localhost disabled";
       tunnelManager = null; // 标记 tunnel 不可用
     }
+    } // end if (tunnelProvider)
   }
 
   // 向 Worker 注册，获取 token（带 deviceId）

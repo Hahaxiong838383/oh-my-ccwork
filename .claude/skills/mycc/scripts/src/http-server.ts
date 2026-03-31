@@ -22,7 +22,8 @@ import { getAdaptiveTimeout, recordExecution } from "./adaptive-timeout.js";
 import { loadConfig } from "./config.js";
 import type { DeviceConfig } from "./types.js";
 import { SessionOwnership } from "./session-ownership.js";
-import { classifyMessage, taskQueueManager, autoRouteEngine } from "./task-queue.js";
+import { classifyMessage, taskQueueManager, autoRouteEngine, type RouteResult } from "./task-queue.js";
+import { updateBlackboard } from "./services/blackboard.js";
 import { triggerAutoCapture } from "./services/auto-capture.js";
 import { saveChatAndExtractMemory } from "./services/chat-history.js";
 import { loadSharedContext, loadSharedContextLight } from "./services/context-loader.js";
@@ -515,12 +516,21 @@ export class HttpServer {
         const queueInfo = taskQueueManager.getQueueInfo(ctx.channelId);
         const pending = queueInfo.pending;
 
-        // 半自动路由：根据任务内容自动选择最合适的引擎
-        const routedEngine = autoRouteEngine(trimmedMessage);
+        // 半自动路由（AST 社会注意力）：根据任务内容自动选择最合适的引擎
+        const routeResult = autoRouteEngine(trimmedMessage);
+        const routedEngine = routeResult.engine;
         const engineTip = routedEngine !== "cc" ? `（→ ${routedEngine}）` : "";
         if (routedEngine !== "cc") {
-          console.log(`[CC][${ctx.channelId}] 半自动路由: "${trimmedMessage.substring(0, 40)}..." → ${routedEngine}`);
+          console.log(`[CC][${ctx.channelId}] 半自动路由: "${trimmedMessage.substring(0, 40)}..." → ${routedEngine} | 原因: ${routeResult.reason}`);
         }
+
+        // 更新 blackboard 引擎状态（AST — 社会注意力记录）
+        updateBlackboard(this.cwd, {
+          engine: routedEngine,
+          task: trimmedMessage.substring(0, 50),
+          reason: routeResult.reason,
+          contextHints: routeResult.contextHints,
+        });
 
         // 构建队列状态提示（包含正在执行的任务信息，避免用户困惑）
         let queueTip = "";
