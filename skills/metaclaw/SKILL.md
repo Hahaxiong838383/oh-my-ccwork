@@ -105,6 +105,43 @@ arguments:
 3. 注入的规则带 `[metaclaw:{日期}]` 标签，便于追踪和回滚
 4. 注入后在 evolution-log 新增对应 E-xx 条目，状态「已实施待验证」
 
+### 第 4.5 步：规则健康度检查（专家系统"规则爆炸"防护，2026-04-01 起）
+
+> 启发来源：1980s 专家系统规则 >5000 条后维护崩溃的教训。
+> 当规则总量超过 LLM 有效遵循容量时，每增加一条规则反而降低整体质量。
+
+**每次 full 模式运行时**，在注入新规则前先做健康度检查：
+
+```
+规则总量盘点：
+1. CLAUDE.md 行为规则行数：wc -l CLAUDE.md（阈值 ≤ 500 行）
+2. skills 目录 SKILL.md 数量：ls skills/*/SKILL.md | wc -l（阈值 ≤ 40 个）
+3. memory-items 条目数：grep "^- ★" 0-System/memory-items.md | wc -l（阈值 ≤ 300 条）
+4. friction-patterns 活跃模式数：grep "^## F-" 0-System/friction-patterns.md | wc -l（阈值 ≤ 10 个）
+
+健康度判定：
+- 🟢 全部在阈值内 → 正常，可注入新规则
+- 🟡 任一项达 80% 阈值 → 警告，注入前先瘦身
+- 🔴 任一项超阈值 → 阻断注入，触发瘦身流程
+```
+
+**瘦身策略（🟡/🔴 时执行）**：
+1. `memory-items`：归档 access_count=0 且写入 >60 天的条目（Hebbian 反向淘汰）
+2. `CLAUDE.md`：合并语义重复的行为规则（同类规则合并为一条）
+3. `friction-patterns`：已失效 + 超 30 天未触发的模式移入归档
+4. `skills`：14 天内零调用的 skill 降级为按需加载（从 settings 中移除自动注入）
+
+**输出格式**（追加到简报中）：
+```
+📊 规则健康度
+  CLAUDE.md: {N}/500 行 {emoji}
+  skills: {N}/40 个 {emoji}
+  memory-items: {N}/300 条 {emoji}
+  friction-patterns: {N}/10 个 {emoji}
+  整体: {🟢/🟡/🔴}
+  {瘦身建议（如有）}
+```
+
 ### 第 5 步：验证与淘汰
 
 每次运行时，同时检查已注入规则的效果：

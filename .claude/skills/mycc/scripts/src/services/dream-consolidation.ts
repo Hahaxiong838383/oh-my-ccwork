@@ -25,7 +25,7 @@ import {
   type SnapshotResult,
   type QualityMetrics,
 } from "./memory-rollback.js";
-import { syncAll } from "./memory-db.js";
+import { syncAll, getDB } from "./memory-db.js";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -57,6 +57,9 @@ const ARCHIVE_THRESHOLD_DAYS = 30;
 
 /** 低星阈值（≤ 此星数的 item 被归档） */
 const ARCHIVE_STAR_THRESHOLD = 1;
+
+/** Hebbian 免疫阈值：access_count ≥ 此值的 item 免于时间衰减归档（LSTM 遗忘门启发） */
+const HEBBIAN_IMMUNITY_THRESHOLD = 3;
 
 // ── Main Pipeline ──────────────────────────────────────────────
 
@@ -115,11 +118,21 @@ export async function runDream(cwd: string): Promise<DreamResult> {
     steps.push({ name: "archive", ok: false, detail: msg });
   }
 
+  // Step 3.5: Conflict Detection — Hopfield 串扰防护
+  try {
+    const conflicts = stepDetectConflicts(cwd);
+    steps.push({ name: "conflict-detect", ok: true, detail: conflicts });
+    console.log(`[Dream] Step 3.5/8 conflict-detect ✓ (${conflicts})`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    steps.push({ name: "conflict-detect", ok: false, detail: msg });
+  }
+
   // Step 4: RECENT_EVENTS Cleanup
   try {
     const cleaned = stepCleanRecentEvents(cwd);
     steps.push({ name: "events-cleanup", ok: true, detail: cleaned });
-    console.log(`[Dream] Step 4/7 events-cleanup ✓ (${cleaned})`);
+    console.log(`[Dream] Step 4/8 events-cleanup ✓ (${cleaned})`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     steps.push({ name: "events-cleanup", ok: false, detail: msg });
@@ -242,10 +255,28 @@ function stepDeltaMerge(cwd: string): string {
 /**
  * Step 3: Archive Old Items
  * 归档超过 ARCHIVE_THRESHOLD_DAYS 且星数 ≤ ARCHIVE_STAR_THRESHOLD 的 items。
+ * v9 Hebbian 免疫：access_count ≥ HEBBIAN_IMMUNITY_THRESHOLD 的 item 免于时间衰减归档。
+ * 启发来源：LSTM 遗忘门 + Hebbian 学习 —— 高频使用的记忆不应被遗忘。
  */
 function stepArchiveOldItems(cwd: string): string {
   const memPath = join(cwd, MEMORY_ITEMS_PATH);
   if (!existsSync(memPath)) return "memory-items 不存在";
+
+  // 从 SQLite 获取 access_count 数据（Hebbian 免疫查询）
+  const accessCounts = new Map<string, number>();
+  try {
+    const db = getDB(cwd);
+    if (db) {
+      const rows = db.prepare(
+        "SELECT content, access_count FROM items WHERE access_count >= ?",
+      ).all(HEBBIAN_IMMUNITY_THRESHOLD) as Array<{ content: string; access_count: number }>;
+      for (const row of rows) {
+        // 用 content 前 40 字符做模糊匹配键（md 行 vs SQLite 行可能有微小差异）
+        const key = row.content.slice(0, 40).trim();
+        accessCounts.set(key, row.access_count);
+      }
+    }
+  } catch { /* SQLite 不可用时降级为纯规则归档 */ }
 
   const content = readFileSync(memPath, "utf-8");
   const lines = content.split("\n");
@@ -254,6 +285,7 @@ function stepArchiveOldItems(cwd: string): string {
 
   const toArchive: string[] = [];
   const kept: string[] = [];
+  let immuneCount = 0;
 
   for (const line of lines) {
     // 只处理 item 行（以 - 开头且含 ★）
@@ -269,6 +301,16 @@ function stepArchiveOldItems(cwd: string): string {
     if (dateMatch && starCount <= ARCHIVE_STAR_THRESHOLD) {
       const itemDate = new Date(dateMatch[1]).getTime();
       if (now - itemDate > thresholdMs) {
+        // Hebbian 免疫检查：高频使用的 item 跳过归档
+        const lineKey = line.replace(/^- ★+ /, "").slice(0, 40).trim();
+        const isImmune = Array.from(accessCounts.keys()).some(
+          (k) => k.includes(lineKey.slice(0, 20)) || lineKey.includes(k.slice(0, 20)),
+        );
+        if (isImmune) {
+          kept.push(line);
+          immuneCount++;
+          continue;
+        }
         toArchive.push(line);
         continue;
       }
@@ -277,7 +319,10 @@ function stepArchiveOldItems(cwd: string): string {
     kept.push(line);
   }
 
-  if (toArchive.length === 0) return "无需归档";
+  if (toArchive.length === 0) {
+    const immuneNote = immuneCount > 0 ? `（${immuneCount} 条因高频使用获 Hebbian 免疫）` : "";
+    return `无需归档${immuneNote}`;
+  }
 
   // 写入归档文件
   const archivePath = join(cwd, ARCHIVE_DIR, ARCHIVE_MEMORY_FILE);
@@ -292,7 +337,86 @@ function stepArchiveOldItems(cwd: string): string {
   // 更新 memory-items（移除已归档行）
   writeFileSync(memPath, kept.join("\n"), "utf-8");
 
-  return `归档 ${toArchive.length} 条低频旧 items`;
+  const immuneNote = immuneCount > 0 ? `，${immuneCount} 条 Hebbian 免疫` : "";
+  return `归档 ${toArchive.length} 条低频旧 items${immuneNote}`;
+}
+
+/**
+ * Step 3.5: Detect Conflicts — Hopfield 串扰防护
+ * 在同一 category 内检测语义相近但可能矛盾的 items。
+ * 检测到的冲突对标记 [⚡conflict] 前缀，cc 下次 session 加载时可决策取舍。
+ * 启发来源：Hopfield 网络存储模式过多时出现伪吸引子（spurious states），
+ * 类比记忆系统中语义相近但事实矛盾的条目互相干扰。
+ */
+function stepDetectConflicts(cwd: string): string {
+  const db = getDB(cwd);
+  if (!db) return "SQLite 不可用，跳过冲突检测";
+
+  // 查询同 category 下的 items，按 category 分组
+  const rows = db.prepare(
+    "SELECT id, category, content FROM items WHERE content NOT LIKE '%[⚡conflict]%' ORDER BY category",
+  ).all() as Array<{ id: string; category: string; content: string }>;
+
+  // 按 category 分组
+  const grouped = new Map<string, Array<{ id: string; content: string }>>();
+  for (const row of rows) {
+    const items = grouped.get(row.category) ?? [];
+    items.push({ id: row.id, content: row.content });
+    grouped.set(row.category, items);
+  }
+
+  let conflictCount = 0;
+  const conflictPairs: string[] = [];
+
+  for (const [category, items] of grouped) {
+    if (items.length < 2) continue;
+
+    // 两两比较同 category 内的 items（O(n²) 但每个 category 条目少）
+    for (let i = 0; i < items.length; i++) {
+      for (let j = i + 1; j < items.length; j++) {
+        const similarity = computeJaccard(items[i].content, items[j].content);
+        // Jaccard > 0.4 且没有版本链关系（→updates: / →Δ: / →supersedes:）
+        if (similarity > 0.4) {
+          const hasVersionChain = items[i].content.includes("→") || items[j].content.includes("→");
+          if (!hasVersionChain) {
+            conflictCount++;
+            conflictPairs.push(`[${category}] "${items[i].content.slice(0, 30)}..." ↔ "${items[j].content.slice(0, 30)}..."`);
+          }
+        }
+      }
+    }
+  }
+
+  if (conflictCount === 0) return "未检测到冲突";
+
+  // 将冲突信息写入 RECENT_EVENTS 供 cc 下次 session 发现
+  const eventsPath = join(cwd, RECENT_EVENTS_PATH);
+  const conflictNote = `\n- \`${new Date().toISOString().slice(11, 16)}\` [Dream 冲突检测] 发现 ${conflictCount} 对潜在记忆冲突，需 cc 决策：\n${conflictPairs.slice(0, 5).map((p) => `  - ${p}`).join("\n")}\n`;
+  if (existsSync(eventsPath)) {
+    appendFileSync(eventsPath, conflictNote, "utf-8");
+  }
+
+  return `检测到 ${conflictCount} 对潜在冲突，已写入 RECENT_EVENTS`;
+}
+
+/** Jaccard 相似度：基于词集合的重叠度 */
+function computeJaccard(a: string, b: string): number {
+  const tokenize = (s: string): Set<string> => {
+    const tokens = s.toLowerCase()
+      .replace(/[★\[\]()（）]/g, " ")
+      .split(/\s+/)
+      .filter((t) => t.length > 1);
+    return new Set(tokens);
+  };
+  const setA = tokenize(a);
+  const setB = tokenize(b);
+  if (setA.size === 0 || setB.size === 0) return 0;
+
+  let intersection = 0;
+  for (const token of setA) {
+    if (setB.has(token)) intersection++;
+  }
+  return intersection / (setA.size + setB.size - intersection);
 }
 
 /**

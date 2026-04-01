@@ -1090,7 +1090,35 @@ async function hybridMatchCategories(
 
   // v6 AST: 历史轨迹加权 — ASAC 反馈闭环
   // 高频被注入的类别获得 boost，让检索策略从经验中学习
-  const boosted = applyHistoricalBoost(fused, cwd);
+  let boosted = applyHistoricalBoost(fused, cwd);
+
+  // v9 Hopfield 迭代收敛：当首轮 RRF top-1 score 偏低时，用首轮结果反馈修正 query 再检索一轮
+  // 启发来源：Hopfield 网络的多步状态更新 —— 从噪声输入逐步收敛到正确的吸引子
+  const CONVERGENCE_THRESHOLD = 0.025; // RRF score 低于此值视为低置信度
+  if (boosted.length > 0 && boosted[0].score < CONVERGENCE_THRESHOLD && boosted.length >= 2) {
+    // 从首轮 top-3 结果中提取 category 名称的关键词作为补充 query
+    const topCats = boosted.slice(0, 3).map((r) => r.category);
+    const augmentedTerms = topCats
+      .flatMap((cat) => cat.replace(/^(project|user|agent)\//, "").split(/[-_/]/).filter((t) => t.length > 1));
+    const augmentedQuery = `${prompt} ${augmentedTerms.join(" ")}`;
+
+    // 二轮 TF-IDF 检索（轻量，不重复向量检索）
+    const round2Tfidf = fuzzyMatchCategoriesWithScores(augmentedQuery, memContent, new Set<string>());
+    if (round2Tfidf.length > 0) {
+      const round2Ranked = round2Tfidf.slice(0, 5).map((r, i) => ({ category: r.cat, rank: i }));
+      // 融合二轮结果到现有 fused（去重，取最高分）
+      const round2Fused = rrfFuse([round2Ranked]);
+      for (const r2 of round2Fused) {
+        const existing = boosted.find((b) => b.category === r2.category);
+        if (!existing) {
+          boosted.push({ ...r2, score: r2.score * 0.8 }); // 二轮结果降权 20%
+        }
+      }
+      boosted.sort((a, b) => b.score - a.score);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- extend trace with convergence info
+      (trace as any).iterativeConvergence = { triggered: true, augmentedTerms, round2Hits: round2Fused.length };
+    }
+  }
 
   trace.rrf = boosted.slice(0, 10);
 
