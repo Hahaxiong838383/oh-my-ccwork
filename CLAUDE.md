@@ -117,7 +117,9 @@
 
 ## 飞书通知发送规则
 
-发飞书通知时，如遇限速（HTTP 429）或 tell-me skill 失败，**立即切换到 open-feishu-mcp 的 send_message**，不重试原方法。
+发飞书通知时，**直接使用 `mcp__open-feishu-mcp__send_message`（一级路径）**，不走 tell-me skill（webhook 已长期停用）。
+- 消息超过 4000 字符时，自动拆分为多条发送
+- 如遇 open-feishu-mcp 失败（429/网络），再尝试 tell-me，不重试原方法
 
 ## 依赖本地化
 

@@ -1,72 +1,61 @@
 #!/bin/bash
-# Exo 双节点集群启动脚本
-# Mini (192.168.100.1) + Studio (192.168.100.2)
-# 模型: Llama-3.3-70B-Instruct-4bit (37.9GB MLX)
+# Exo 双节点集群一键启动
+# 自动获取 Studio Peer ID，解决每次重启 ID 变化的问题
 
 set -e
 
-MODEL="mlx-community/Llama-3.3-70B-Instruct-4bit"
 STUDIO_IP="192.168.100.2"
-STUDIO_LIBP2P_PORT=52525
-STUDIO_API_PORT=52415
-MINI_LIBP2P_PORT=52526
-MINI_API_PORT=52416
+STUDIO_WIFI="10.9.1.155"
+STUDIO_USER="fu-121"
+STUDIO_API=52415
+MINI_API=52416
 EXO_BIN="/Applications/EXO.app/Contents/Resources/exo/exo"
 
 echo "=== Exo 双节点集群启动 ==="
 
-# Step 1: 杀掉残留进程
-echo "[1/4] 清理残留进程..."
-kill $(pgrep -f "exo.*5241") 2>/dev/null || true
-ssh macstudio 'kill $(pgrep -f "exo.*5241") 2>/dev/null' || true
-sleep 1
+# 1. 确保雷电通
+echo "[1/5] 检查雷电连接..."
+if ! ping -c 1 -W 2 $STUDIO_IP > /dev/null 2>&1; then
+    echo "  雷电不通，修复 IP..."
+    sudo ifconfig en3 192.168.100.1 netmask 255.255.255.0 up 2>/dev/null
+    ssh $STUDIO_USER@$STUDIO_WIFI "echo '1234' | sudo -S ifconfig en5 192.168.100.2 netmask 255.255.255.0 up" 2>/dev/null
+    sleep 2
+    ping -c 1 -W 2 $STUDIO_IP > /dev/null 2>&1 || { echo "雷电修复失败！"; exit 1; }
+fi
+echo "  雷电 OK"
 
-# Step 2: 启动 Studio（Master）
-echo "[2/4] 启动 Studio 节点..."
-ssh macstudio "HF_ENDPOINT=https://hf-mirror.com nohup $EXO_BIN --libp2p-port $STUDIO_LIBP2P_PORT --api-port $STUDIO_API_PORT --offline > /tmp/exo-studio.log 2>&1 &"
+# 2. 杀掉残留
+echo "[2/5] 清理残留进程..."
+kill $(pgrep -f "exo\|start-exo") 2>/dev/null || true
+lsof -ti :$MINI_API 2>/dev/null | xargs kill -9 2>/dev/null || true
+ssh macstudio 'kill $(pgrep -f exo) 2>/dev/null' || true
 sleep 3
 
-# 获取 Studio Peer ID
-STUDIO_PEER_ID=$(ssh macstudio "grep 'Starting node' /tmp/exo-studio.log | tail -1 | awk '{print \$NF}'")
-if [ -z "$STUDIO_PEER_ID" ]; then
-    echo "ERROR: 获取不到 Studio Peer ID"
-    ssh macstudio 'cat /tmp/exo-studio.log'
-    exit 1
-fi
-echo "  Studio Peer ID: $STUDIO_PEER_ID"
+# 3. 启动 Studio
+echo "[3/5] 启动 Studio Exo..."
+ssh macstudio "HF_ENDPOINT=https://hf-mirror.com nohup $EXO_BIN --libp2p-port 52525 --api-port $STUDIO_API > /tmp/exo-studio.log 2>&1 &"
+sleep 8
+PEER=$(ssh macstudio "sed 's/\x1b\[[0-9;]*m//g' /tmp/exo-studio.log | grep 'Starting node' | tail -1 | awk '{print \$NF}'" 2>/dev/null)
+echo "  Studio Peer: $PEER"
+[ -z "$PEER" ] && { echo "获取 Peer ID 失败！"; exit 1; }
 
-# Step 3: 启动 Mini（Worker）— 关键：清除代理！
-echo "[3/4] 启动 Mini 节点（无代理）..."
-env -u http_proxy -u https_proxy -u all_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
-  HF_ENDPOINT=https://hf-mirror.com \
-  $EXO_BIN \
-  --libp2p-port $MINI_LIBP2P_PORT \
-  --api-port $MINI_API_PORT \
-  --offline \
-  --bootstrap-peers "/ip4/$STUDIO_IP/tcp/$STUDIO_LIBP2P_PORT/p2p/$STUDIO_PEER_ID" \
+# 4. 启动 Mini（干净环境）
+echo "[4/5] 启动 Mini Exo..."
+env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin HOME=$HOME HF_ENDPOINT=https://hf-mirror.com \
+  $EXO_BIN --api-port $MINI_API \
+  --bootstrap-peers "/ip4/$STUDIO_IP/tcp/52525/p2p/$PEER" \
   > /tmp/exo-mini.log 2>&1 &
-MINI_PID=$!
-echo "  Mini PID: $MINI_PID"
 
-# Step 4: 等待集群组网
-echo "[4/4] 等待集群组网..."
-for i in $(seq 1 15); do
-    sleep 1
-    if grep -q "demoting self" /tmp/exo-mini.log 2>/dev/null; then
-        echo "  ✅ Mini 降级为 Worker，集群组网成功！"
+# 5. 等待组网
+echo "[5/5] 等待组网..."
+for i in $(seq 1 20); do
+    sleep 2
+    if strings /tmp/exo-mini.log 2>/dev/null | grep -q "demoting self\|RequestEventLog"; then
+        echo "  ✅ 双节点组网成功！"
         echo ""
-        echo "=== 集群就绪 ==="
-        echo "Master API: http://$STUDIO_IP:$STUDIO_API_PORT"
-        echo "Worker API: http://localhost:$MINI_API_PORT"
-        echo ""
-        echo "测试推理:"
-        echo "  curl http://$STUDIO_IP:$STUDIO_API_PORT/v1/chat/completions \\"
-        echo "    -H 'Content-Type: application/json' \\"
-        echo "    -d '{\"model\": \"$MODEL\", \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}]}'"
+        echo "Dashboard: http://localhost:$MINI_API"
+        echo "Studio:    http://$STUDIO_IP:$STUDIO_API"
         exit 0
     fi
 done
-
-echo "  ⚠️ 15秒内未完成组网，检查日志:"
-echo "  Mini: tail -20 /tmp/exo-mini.log"
-echo "  Studio: ssh macstudio 'tail -20 /tmp/exo-studio.log'"
+echo "  ⚠️ 40秒内未完成组网，查日志: strings /tmp/exo-mini.log | tail -10"
