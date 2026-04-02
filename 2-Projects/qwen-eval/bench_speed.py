@@ -1,6 +1,6 @@
-"""Speed benchmark: TTFT, TPS, end-to-end latency."""
+"""Speed benchmark: TPS, end-to-end latency (non-stream, thinking disabled)."""
 import statistics
-from utils import load_config, get_client, chat_stream, print_header
+from utils import load_config, get_client, chat_timed, print_header
 
 PROMPTS = {
     "short": "用一句话解释什么是量子计算。",
@@ -17,35 +17,32 @@ def run(config=None):
     rounds = config["speed"]["test_rounds"]
     warmup = config["speed"].get("warmup_rounds", 1)
 
-    print_header("Speed Benchmark")
+    print_header("Speed Benchmark (thinking disabled)")
     results = {}
 
     for label, prompt in PROMPTS.items():
         max_tok = OUTPUT_MAP[label]
         msgs = [{"role": "user", "content": prompt}]
-        ttfts, tpss, lats = [], [], []
+        tpss, lats = [], []
 
         # warmup
         for _ in range(warmup):
-            chat_stream(client, model, msgs, max_tokens=max_tok)
+            chat_timed(client, model, msgs, max_tokens=max_tok)
 
         for r in range(rounds):
-            text, ttft, total, tokens = chat_stream(client, model, msgs, max_tokens=max_tok)
+            text, total, tokens = chat_timed(client, model, msgs, max_tokens=max_tok)
             tps = tokens / (total / 1000) if total > 0 else 0
-            ttfts.append(ttft)
             tpss.append(tps)
             lats.append(total)
-            print(f"  [{label}] round {r+1}: TTFT={ttft:.0f}ms  TPS={tps:.1f}  latency={total:.0f}ms  tokens={tokens}")
+            print(f"  [{label}] round {r+1}: TPS={tps:.1f}  latency={total:.0f}ms  tokens={tokens}")
 
-        med_ttft = statistics.median(ttfts)
         med_tps = statistics.median(tpss)
         med_lat = statistics.median(lats)
         results[label] = {
-            "ttft_ms": round(med_ttft),
             "tps": round(med_tps, 1),
             "latency_ms": round(med_lat),
         }
-        print(f"  [{label}] median: TTFT={med_ttft:.0f}ms  TPS={med_tps:.1f}  latency={med_lat:.0f}ms")
+        print(f"  [{label}] median: TPS={med_tps:.1f}  latency={med_lat:.0f}ms")
 
     return results
 

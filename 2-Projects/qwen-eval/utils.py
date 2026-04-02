@@ -20,39 +20,40 @@ def get_client(config=None):
 
 
 def chat(client, model, messages, max_tokens=500, temperature=0.0):
+    # Disable thinking mode to get full content in response
+    # Qwen3.5 thinking mode puts answer in reasoning field, content is truncated
     resp = client.chat.completions.create(
         model=model,
         messages=messages,
         max_tokens=max_tokens,
         temperature=temperature,
+        extra_body={"chat_template_kwargs": {"enable_thinking": False}},
     )
-    return resp.choices[0].message.content or ""
+    msg = resp.choices[0].message
+    content = msg.content or ""
+    # If content is empty but reasoning exists, use reasoning
+    reasoning = getattr(msg, "reasoning", None) or getattr(msg, "reasoning_content", None) or ""
+    if not content.strip() and reasoning:
+        content = reasoning
+    return content
 
 
-def chat_stream(client, model, messages, max_tokens=500, temperature=0.0):
-    """Returns (full_text, ttft_ms, total_ms, completion_tokens)."""
-    chunks = []
-    ttft = None
+def chat_timed(client, model, messages, max_tokens=500):
+    """Non-stream timed call. Returns (text, total_ms, completion_tokens)."""
     t0 = time.perf_counter()
-
-    stream = client.chat.completions.create(
+    resp = client.chat.completions.create(
         model=model,
         messages=messages,
         max_tokens=max_tokens,
         temperature=0.7,
-        stream=True,
+        extra_body={"chat_template_kwargs": {"enable_thinking": False}},
     )
-    for chunk in stream:
-        if chunk.choices and chunk.choices[0].delta.content:
-            if ttft is None:
-                ttft = (time.perf_counter() - t0) * 1000
-            chunks.append(chunk.choices[0].delta.content)
-
     total = (time.perf_counter() - t0) * 1000
-    text = "".join(chunks)
-    # rough token count: 1 token ≈ 1.5 chars for Chinese
-    est_tokens = max(len(text) // 2, 1)
-    return text, ttft or total, total, est_tokens
+    msg = resp.choices[0].message
+    text = msg.content or ""
+    usage = resp.usage
+    comp_tokens = usage.completion_tokens if usage else max(len(text) // 2, 1)
+    return text, total, comp_tokens
 
 
 def print_header(title):

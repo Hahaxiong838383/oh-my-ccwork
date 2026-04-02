@@ -121,3 +121,22 @@ mcp__g__ask_gemini({
 | `multi-agent/context/` | SPEC/AC/ARCH 模板（正式项目模式用） |
 | `.claude/skills/agent-orchestration/` | Agent 编排 skill |
 | `.claude/skills/mycc/scripts/src/channels/feishu.ts` | 飞书通道（含 autoRouteEngine） |
+
+---
+
+## 扩展参考：Swarm 分布式编排模式
+
+> 来源：ruvnet/ruflo ★29.1k（2026-04-01 更新）
+
+ruflo 的 Distributed Swarm Intelligence 适合 cc 的场景补充：
+
+| ruflo 特性 | cc 的对应实现 |
+|-----------|-------------|
+| Agent 投票决策 | cc 作为仲裁者，codex+gemini 各提方案，cc 裁决 |
+| 单 Agent 失败接管 | 飞书通道降级（open-feishu-mcp → tell-me） |
+| MCP Native 支持 | 三机器人共用 open-feishu-mcp |
+
+**何时用 Swarm 而非 Team**：
+- Task 数量 > 5 且类型相同 → Swarm（动态分配）
+- 角色固定且 <4 个 → Team（明确分工）
+- 单 Agent 够用 → 不要过度设计
