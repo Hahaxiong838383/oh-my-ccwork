@@ -1,0 +1,404 @@
+{
+  "timestamp": "2026-04-02 11:37",
+  "model": "mlx-community/Qwen3.5-27B-4bit",
+  "no_think": [
+    {
+      "test_id": "math_1",
+      "category": "数学推理",
+      "passed": true,
+      "response": "\n\n10",
+      "latency_ms": 23329.491138458252,
+      "tps": 19.546075707081844,
+      "total_tokens": 510
+    },
+    {
+      "test_id": "math_2",
+      "category": "数学推理",
+      "passed": true,
+      "response": "\n\n2.4 小时",
+      "latency_ms": 36220.749855041504,
+      "tps": 19.712457717123147,
+      "total_tokens": 773
+    },
+    {
+      "test_id": "math_3",
+      "category": "数学推理",
+      "passed": true,
+      "response": "\n\n3",
+      "latency_ms": 62996.36387825012,
+      "tps": 19.905910798654066,
+      "total_tokens": 1311
+    },
+    {
+      "test_id": "math_4",
+      "category": "数学推理",
+      "passed": true,
+      "response": "\n\n192",
+      "latency_ms": 31384.047746658325,
+      "tps": 19.46848937180378,
+      "total_tokens": 655
+    },
+    {
+      "test_id": "math_5",
+      "category": "数学推理",
+      "passed": true,
+      "response": "\n\n108",
+      "latency_ms": 18665.016889572144,
+      "tps": 18.912385779689043,
+      "total_tokens": 394
+    },
+    {
+      "test_id": "comp_math_1",
+      "category": "竞赛数学",
+      "passed": false,
+      "response": "",
+      "latency_ms": 205368.63899230957,
+      "tps": 19.944622606927744,
+      "total_tokens": 4150
+    },
+    {
+      "test_id": "comp_math_2",
+      "category": "竞赛数学",
+      "passed": true,
+      "response": "\n\n4",
+      "latency_ms": 25735.246181488037,
+      "tps": 19.46746483273904,
+      "total_tokens": 545
+    },
+    {
+      "test_id": "comp_math_3",
+      "category": "竞赛数学",
+      "passed": true,
+      "response": "\n\n4",
+      "latency_ms": 54717.77296066284,
+      "tps": 19.86557458728182,
+      "total_tokens": 1149
+    },
+    {
+      "test_id": "comp_math_4",
+      "category": "竞赛数学",
+      "passed": true,
+      "response": "\n\n由递推公式 $a_{n+1} = \\frac{a_n}{1+a_n}$，两边取倒数得：\n$$ \\frac{1}{a_{n+1}} = \\frac{1+a_n}{a_n} = \\frac{1}{a_n} + 1 $$\n令 $b_n = \\frac{1}{a_n}$，则 $b_{n+1} = b_n + 1$。\n这是一个首项 $b_1 = \\frac{1}{a_1} = 1$，公差 $d=1$ 的",
+      "latency_ms": 124640.4640674591,
+      "tps": 20.057691687082663,
+      "total_tokens": 2553
+    },
+    {
+      "test_id": "logic_1",
+      "category": "逻辑推理",
+      "passed": true,
+      "response": "\n\n不能",
+      "latency_ms": 25501.746892929077,
+      "tps": 19.332008982360936,
+      "total_tokens": 536
+    },
+    {
+      "test_id": "logic_2",
+      "category": "逻辑推理",
+      "passed": true,
+      "response": "\n\nB",
+      "latency_ms": 60558.52913856506,
+      "tps": 19.89810547153181,
+      "total_tokens": 1252
+    },
+    {
+      "test_id": "logic_3",
+      "category": "逻辑推理",
+      "passed": true,
+      "response": "\n\nA>B>D>C>E",
+      "latency_ms": 82658.28704833984,
+      "tps": 20.034288867268028,
+      "total_tokens": 1707
+    },
+    {
+      "test_id": "logic_4",
+      "category": "逻辑推理",
+      "passed": true,
+      "response": "\n\n7",
+      "latency_ms": 52351.8500328064,
+      "tps": 19.770074970634564,
+      "total_tokens": 1076
+    },
+    {
+      "test_id": "chinese_1",
+      "category": "中文理解",
+      "passed": false,
+      "response": "",
+      "latency_ms": 205101.80807113647,
+      "tps": 19.970569925835875,
+      "total_tokens": 4148
+    },
+    {
+      "test_id": "chinese_2",
+      "category": "中文理解",
+      "passed": true,
+      "response": "\n\n是",
+      "latency_ms": 17643.582344055176,
+      "tps": 18.817040299747518,
+      "total_tokens": 373
+    },
+    {
+      "test_id": "chinese_3",
+      "category": "中文理解",
+      "passed": false,
+      "response": "",
+      "latency_ms": 205115.6361103058,
+      "tps": 19.969223593452814,
+      "total_tokens": 4143
+    },
+    {
+      "test_id": "halluc_1",
+      "category": "抗幻觉",
+      "passed": true,
+      "response": "\n\n错误",
+      "latency_ms": 15813.86661529541,
+      "tps": 18.71774988374471,
+      "total_tokens": 335
+    },
+    {
+      "test_id": "halluc_2",
+      "category": "抗幻觉",
+      "passed": true,
+      "response": "\n\n您好。经过检索和核实，我目前**无法确认**张伟力教授在 2024 年发表过关于“自旋玻璃与大语言模型”的特定论文。\n\n虽然“自旋玻璃理论”与“大语言模型”的结合是物理学与人工智能交叉领域的一个研究热点（例如用于分析神经网络的损失景观或泛化能力），但在我的知识库中，并没有收录到由“张伟力教授”署名的、发表于 2024 年的相关知名论文。\n\n这可能存在以下几种情况：\n1.  **论文非常新**：",
+      "latency_ms": 185737.06007003784,
+      "tps": 20.006777315193684,
+      "total_tokens": 3762
+    },
+    {
+      "test_id": "halluc_3",
+      "category": "抗幻觉",
+      "passed": true,
+      "response": "\n\nA",
+      "latency_ms": 33765.38181304932,
+      "tps": 19.605879289780656,
+      "total_tokens": 712
+    },
+    {
+      "test_id": "instruct_1",
+      "category": "指令遵循",
+      "passed": true,
+      "response": "\n\n珠穆朗玛峰",
+      "latency_ms": 20686.110973358154,
+      "tps": 19.191620914694898,
+      "total_tokens": 433
+    },
+    {
+      "test_id": "instruct_2",
+      "category": "指令遵循",
+      "passed": true,
+      "response": "\n\n```json\n{\n  \"name\": \"张三\",\n  \"phone\": \"13800138000\",\n  \"email\": \"zhangsan@example.com\"\n}\n```",
+      "latency_ms": 9015.492916107178,
+      "tps": 17.303546400806184,
+      "total_tokens": 215
+    },
+    {
+      "test_id": "code_1",
+      "category": "代码能力",
+      "passed": true,
+      "response": "\n\n初始值 0 大于列表中所有负数，导致无法正确更新最大值。",
+      "latency_ms": 106824.81479644775,
+      "tps": 20.0421597180358,
+      "total_tokens": 2202
+    }
+  ],
+  "think": [
+    {
+      "test_id": "math_1",
+      "category": "数学推理",
+      "passed": true,
+      "response": "\n\n10",
+      "latency_ms": 18592.090845108032,
+      "tps": 18.932781844308735,
+      "total_tokens": 402
+    },
+    {
+      "test_id": "math_2",
+      "category": "数学推理",
+      "passed": false,
+      "response": "",
+      "latency_ms": 102424.86000061035,
+      "tps": 19.995145709623582,
+      "total_tokens": 2103
+    },
+    {
+      "test_id": "math_3",
+      "category": "数学推理",
+      "passed": true,
+      "response": "\n\n3",
+      "latency_ms": 75319.41604614258,
+      "tps": 19.981567555940675,
+      "total_tokens": 1558
+    },
+    {
+      "test_id": "math_4",
+      "category": "数学推理",
+      "passed": true,
+      "response": "\n\n192",
+      "latency_ms": 22667.33694076538,
+      "tps": 19.058259959205124,
+      "total_tokens": 472
+    },
+    {
+      "test_id": "math_5",
+      "category": "数学推理",
+      "passed": true,
+      "response": "\n\n108",
+      "latency_ms": 19864.856958389282,
+      "tps": 19.12925931437524,
+      "total_tokens": 417
+    },
+    {
+      "test_id": "comp_math_1",
+      "category": "竞赛数学",
+      "passed": false,
+      "response": "",
+      "latency_ms": 102219.47312355042,
+      "tps": 20.03532142573879,
+      "total_tokens": 2098
+    },
+    {
+      "test_id": "comp_math_2",
+      "category": "竞赛数学",
+      "passed": true,
+      "response": "\n\n4",
+      "latency_ms": 90514.27817344666,
+      "tps": 20.018941061738143,
+      "total_tokens": 1852
+    },
+    {
+      "test_id": "comp_math_3",
+      "category": "竞赛数学",
+      "passed": true,
+      "response": "\n\n4",
+      "latency_ms": 38450.72937011719,
+      "tps": 19.739547530920785,
+      "total_tokens": 817
+    },
+    {
+      "test_id": "comp_math_4",
+      "category": "竞赛数学",
+      "passed": false,
+      "response": "",
+      "latency_ms": 102159.84177589417,
+      "tps": 20.047016169941347,
+      "total_tokens": 2097
+    },
+    {
+      "test_id": "logic_1",
+      "category": "逻辑推理",
+      "passed": true,
+      "response": "\n\n不能",
+      "latency_ms": 26872.155904769897,
+      "tps": 19.35088505153017,
+      "total_tokens": 559
+    },
+    {
+      "test_id": "logic_2",
+      "category": "逻辑推理",
+      "passed": true,
+      "response": "\n\nB",
+      "latency_ms": 49677.59299278259,
+      "tps": 19.80772297367468,
+      "total_tokens": 1027
+    },
+    {
+      "test_id": "logic_3",
+      "category": "逻辑推理",
+      "passed": true,
+      "response": "\n\n根据题目条件进行逻辑推导：\n\n1.  **A 比 B 快**：A > B\n2.  **B 比 D 快**：B > D\n    *   结合前两点可知：A > B > D\n3.  **C 比 D 慢**：D > C\n    *   结合前序可知：A > B > D > C\n4.  **E 最慢**：E 排在最后\n    *   最终顺序：A > B > D > C > E\n\n**排名结果：**\n",
+      "latency_ms": 49271.76809310913,
+      "tps": 19.889686080436338,
+      "total_tokens": 1027
+    },
+    {
+      "test_id": "logic_4",
+      "category": "逻辑推理",
+      "passed": false,
+      "response": "",
+      "latency_ms": 102135.85805892944,
+      "tps": 20.051723644582914,
+      "total_tokens": 2085
+    },
+    {
+      "test_id": "chinese_1",
+      "category": "中文理解",
+      "passed": false,
+      "response": "",
+      "latency_ms": 102177.51002311707,
+      "tps": 20.043549696373027,
+      "total_tokens": 2096
+    },
+    {
+      "test_id": "chinese_2",
+      "category": "中文理解",
+      "passed": true,
+      "response": "\n\n是",
+      "latency_ms": 15896.150827407837,
+      "tps": 18.746676678872106,
+      "total_tokens": 335
+    },
+    {
+      "test_id": "chinese_3",
+      "category": "中文理解",
+      "passed": false,
+      "response": "",
+      "latency_ms": 102069.50402259827,
+      "tps": 20.064759005261465,
+      "total_tokens": 2091
+    },
+    {
+      "test_id": "halluc_1",
+      "category": "抗幻觉",
+      "passed": true,
+      "response": "\n\n错误",
+      "latency_ms": 21124.181032180786,
+      "tps": 19.503714694186492,
+      "total_tokens": 447
+    },
+    {
+      "test_id": "halluc_2",
+      "category": "抗幻觉",
+      "passed": false,
+      "response": "",
+      "latency_ms": 102417.76585578918,
+      "tps": 19.996530708194864,
+      "total_tokens": 2090
+    },
+    {
+      "test_id": "halluc_3",
+      "category": "抗幻觉",
+      "passed": true,
+      "response": "\n\nA",
+      "latency_ms": 21998.05998802185,
+      "tps": 19.138051274941446,
+      "total_tokens": 467
+    },
+    {
+      "test_id": "instruct_1",
+      "category": "指令遵循",
+      "passed": true,
+      "response": "\n\n珠穆朗玛峰",
+      "latency_ms": 17948.657989501953,
+      "tps": 19.388636197956572,
+      "total_tokens": 380
+    },
+    {
+      "test_id": "instruct_2",
+      "category": "指令遵循",
+      "passed": true,
+      "response": "\n\n```json\n{\n  \"name\": \"张三\",\n  \"phone\": \"13800138000\",\n  \"email\": \"zhangsan@example.com\"\n}\n```",
+      "latency_ms": 10044.697761535645,
+      "tps": 17.422126992225778,
+      "total_tokens": 230
+    },
+    {
+      "test_id": "code_1",
+      "category": "代码能力",
+      "passed": true,
+      "response": "\n\n初始值设为 0 会干扰全负数列表的最大值查找，导致结果错误（应返回 -1 却返回 0）。",
+      "latency_ms": 17651.71194076538,
+      "tps": 18.865025733337514,
+      "total_tokens": 390
+    }
+  ]
+}

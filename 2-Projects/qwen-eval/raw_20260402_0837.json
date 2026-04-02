@@ -1,0 +1,404 @@
+{
+  "timestamp": "2026-04-02 08:37",
+  "model": "mlx-community/Qwen3.5-27B-4bit",
+  "no_think": [
+    {
+      "test_id": "math_1",
+      "category": "数学推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4416.7540073394775,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "math_2",
+      "category": "数学推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4226.838827133179,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "math_3",
+      "category": "数学推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4332.1123123168945,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "math_4",
+      "category": "数学推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4479.897260665894,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "math_5",
+      "category": "数学推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4368.87001991272,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "comp_math_1",
+      "category": "竞赛数学",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4265.481948852539,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "comp_math_2",
+      "category": "竞赛数学",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4325.785875320435,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "comp_math_3",
+      "category": "竞赛数学",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4367.331027984619,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "comp_math_4",
+      "category": "竞赛数学",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4503.275156021118,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "logic_1",
+      "category": "逻辑推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4225.614070892334,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "logic_2",
+      "category": "逻辑推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4398.797988891602,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "logic_3",
+      "category": "逻辑推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4288.544178009033,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "logic_4",
+      "category": "逻辑推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4238.609075546265,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "chinese_1",
+      "category": "中文理解",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4472.769021987915,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "chinese_2",
+      "category": "中文理解",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4280.464172363281,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "chinese_3",
+      "category": "中文理解",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4266.404867172241,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "halluc_1",
+      "category": "抗幻觉",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4289.865016937256,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "halluc_2",
+      "category": "抗幻觉",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4298.743963241577,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "halluc_3",
+      "category": "抗幻觉",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4252.48384475708,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "instruct_1",
+      "category": "指令遵循",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4388.267040252686,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "instruct_2",
+      "category": "指令遵循",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4239.992618560791,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "code_1",
+      "category": "代码能力",
+      "passed": true,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4408.746957778931,
+      "tps": 0.0,
+      "total_tokens": 0
+    }
+  ],
+  "think": [
+    {
+      "test_id": "math_1",
+      "category": "数学推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4258.81290435791,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "math_2",
+      "category": "数学推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4505.2032470703125,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "math_3",
+      "category": "数学推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4291.526079177856,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "math_4",
+      "category": "数学推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4334.834814071655,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "math_5",
+      "category": "数学推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4461.7180824279785,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "comp_math_1",
+      "category": "竞赛数学",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4489.449977874756,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "comp_math_2",
+      "category": "竞赛数学",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4333.519220352173,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "comp_math_3",
+      "category": "竞赛数学",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4458.8048458099365,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "comp_math_4",
+      "category": "竞赛数学",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4277.9700756073,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "logic_1",
+      "category": "逻辑推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4274.929046630859,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "logic_2",
+      "category": "逻辑推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4270.027875900269,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "logic_3",
+      "category": "逻辑推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4394.759893417358,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "logic_4",
+      "category": "逻辑推理",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4404.375791549683,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "chinese_1",
+      "category": "中文理解",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4407.311916351318,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "chinese_2",
+      "category": "中文理解",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4173.42209815979,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "chinese_3",
+      "category": "中文理解",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4361.62805557251,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "halluc_1",
+      "category": "抗幻觉",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4379.440069198608,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "halluc_2",
+      "category": "抗幻觉",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4369.990825653076,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "halluc_3",
+      "category": "抗幻觉",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4281.385898590088,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "instruct_1",
+      "category": "指令遵循",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4285.332918167114,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "instruct_2",
+      "category": "指令遵循",
+      "passed": false,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4412.11199760437,
+      "tps": 0.0,
+      "total_tokens": 0
+    },
+    {
+      "test_id": "code_1",
+      "category": "代码能力",
+      "passed": true,
+      "response": "[ERROR] Error code: 503",
+      "latency_ms": 4335.332870483398,
+      "tps": 0.0,
+      "total_tokens": 0
+    }
+  ]
+}
