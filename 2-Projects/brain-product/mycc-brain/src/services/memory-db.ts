@@ -187,6 +187,15 @@ async function syncVectors(items: ParsedItem[]): Promise<void> {
   console.log(`[memory-db] embedding done: ${embedded} embedded, ${skipped} skipped`);
 }
 
+function sanitizeFtsQuery(query: string): string {
+  // Remove FTS5 special characters that cause syntax errors
+  const cleaned = query.replace(/[.*+\-"(){}[\]^~:@#$%&\\|<>=!?,;]/g, " ");
+  // Split into tokens and wrap each in quotes for exact matching
+  const tokens = cleaned.split(/\s+/).filter((t) => t.length > 0);
+  if (tokens.length === 0) return "";
+  return tokens.map((t) => `"${t}"`).join(" OR ");
+}
+
 export function ftsSearch(
   dataDir: string,
   query: string,
@@ -194,6 +203,9 @@ export function ftsSearch(
 ): MemoryRow[] {
   if (!db) return [];
   if (!query.trim()) return [];
+
+  const ftsQuery = sanitizeFtsQuery(query);
+  if (!ftsQuery) return [];
 
   try {
     const stmt = db.prepare(`
@@ -203,7 +215,7 @@ export function ftsSearch(
       ORDER BY rank
       LIMIT ?
     `);
-    return stmt.all(query, topK) as MemoryRow[];
+    return stmt.all(ftsQuery, topK) as MemoryRow[];
   } catch (err) {
     console.error("[memory-db] ftsSearch failed:", err);
     return [];
@@ -221,9 +233,8 @@ export function vectorSearch(
       SELECT v.id, i.category, i.content, v.distance
       FROM items_vec v
       JOIN items i ON i.id = (CAST(v.id AS INTEGER) + 1)
-      WHERE v.embedding MATCH ?
+      WHERE v.embedding MATCH ? AND k = ?
       ORDER BY v.distance
-      LIMIT ?
     `);
     return stmt.all(new Float32Array(queryVec), topK) as VectorRow[];
   } catch (err) {

@@ -31,7 +31,7 @@ export async function streamOpenAICompat(
     messages: opts.messages,
     stream: true,
     temperature: opts.temperature ?? 0.7,
-    max_tokens: opts.max_tokens ?? 4096,
+    max_tokens: opts.max_tokens ?? 8192,
     enable_thinking: false,
   });
 
@@ -102,7 +102,7 @@ export async function chatCompletion(
       messages: opts.messages,
       stream: false,
       temperature: opts.temperature ?? 0.7,
-      max_tokens: opts.max_tokens ?? 4096,
+      max_tokens: opts.max_tokens ?? 8192,
       enable_thinking: false,
     }),
   });

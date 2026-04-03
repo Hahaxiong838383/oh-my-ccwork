@@ -10,7 +10,7 @@ import { loadConfig } from "./config.js";
 import { BrainApi } from "./brain-api.js";
 import { loadBrainContext } from "./services/brain-context.js";
 import { listPatches, addPatch, togglePatch, deletePatch } from "./services/hot-patch.js";
-import { getTodayStats, getRecentDayStats, getInsights } from "./services/experience-stream.js";
+import { getTodayStats, getRecentDayStats, getInsights, getHealthMetrics } from "./services/experience-stream.js";
 import { getConversationStats } from "./services/conversation.js";
 
 const config = loadConfig();
@@ -185,14 +185,14 @@ const server = http.createServer(async (req, res) => {
           apiKey: rawRoute.apiKey,
           model: rawRoute.model,
           messages: rawMessages,
-          max_tokens: 500,
+          max_tokens: 8192,
         }).then((r) => ({ ...r, latency: Date.now() - rawStart })),
         chatCompletion({
           baseURL: brainRoute.baseURL,
           apiKey: brainRoute.apiKey,
           model: brainRoute.model,
           messages: brainMessages,
-          max_tokens: 500,
+          max_tokens: 8192,
         }).then((r) => ({ ...r, latency: Date.now() - brainStart })),
       ]);
 
@@ -275,6 +275,15 @@ const server = http.createServer(async (req, res) => {
     const days = parseInt(url.searchParams.get("days") ?? "7", 10);
     const clampedDays = Math.max(1, Math.min(days, 90));
     json(res, 200, getInsights(brainRoot, clampedDays));
+    return;
+  }
+
+  // Admin API: health metrics (retrieval path hits, latency percentiles, miss rate)
+  if (path === "/admin/api/health-metrics" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    const days = parseInt(url.searchParams.get("days") ?? "7", 10);
+    const clampedDays = Math.max(1, Math.min(days, 90));
+    json(res, 200, getHealthMetrics(brainRoot, clampedDays));
     return;
   }
 

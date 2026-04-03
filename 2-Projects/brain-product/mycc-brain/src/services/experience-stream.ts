@@ -18,6 +18,7 @@ export interface ExperienceEntry {
   latencyMs: number;
   injectedCategories: string[];
   injectedItemCount: number;
+  retrievalPaths: string[];  // 命中的检索路径：["keyword", "tfidf", "fts", "vector"]
 }
 
 function getExpDir(brainRoot: string): string {
@@ -207,4 +208,54 @@ export function getInsights(brainRoot: string, days = 7): InsightsResult {
     .map(([word]) => word);
 
   return { topQueries, topCategories, missRate, suggestedPatches };
+}
+
+// ─── Health Metrics ───
+
+export interface HealthMetrics {
+  totalRequests: number;
+  avgLatencyMs: number;
+  missRate: number;
+  retrievalPathHits: Record<string, number>;  // keyword: 42, tfidf: 38, fts: 12, vector: 8
+  latencyP50: number;
+  latencyP95: number;
+  latencyP99: number;
+}
+
+export function getHealthMetrics(brainRoot: string, days = 7): HealthMetrics {
+  const entries = readRecentEntries(brainRoot, days);
+
+  const totalRequests = entries.length;
+
+  // 延迟统计
+  const latencies = entries.map(e => e.latencyMs).sort((a, b) => a - b);
+  const avgLatencyMs = totalRequests > 0
+    ? Math.round(latencies.reduce((s, l) => s + l, 0) / totalRequests)
+    : 0;
+  const latencyP50 = totalRequests > 0 ? latencies[Math.floor(totalRequests * 0.5)] : 0;
+  const latencyP95 = totalRequests > 0 ? latencies[Math.floor(totalRequests * 0.95)] : 0;
+  const latencyP99 = totalRequests > 0 ? latencies[Math.floor(totalRequests * 0.99)] : 0;
+
+  // 未命中率
+  const missCount = entries.filter(e => e.injectedCategories.length === 0).length;
+  const missRate = totalRequests > 0 ? missCount / totalRequests : 0;
+
+  // 检索路径命中统计（兼容旧数据：旧 JSONL 条目无 retrievalPaths 字段）
+  const retrievalPathHits: Record<string, number> = {};
+  for (const entry of entries) {
+    const paths = (entry as any).retrievalPaths ?? [];
+    for (const path of paths) {
+      retrievalPathHits[path] = (retrievalPathHits[path] ?? 0) + 1;
+    }
+  }
+
+  return {
+    totalRequests,
+    avgLatencyMs,
+    missRate,
+    retrievalPathHits,
+    latencyP50,
+    latencyP95,
+    latencyP99,
+  };
 }

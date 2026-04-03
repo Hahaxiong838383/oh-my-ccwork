@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "eval": "tsx src/eval/eval.ts",
+    "eval:dry": "tsx src/eval/eval.ts --dry-run"
   },
   "dependencies": {
     "dotenv": "^16.4.0"

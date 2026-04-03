@@ -129,7 +129,12 @@ export class BrainApi {
         const brainRoot = resolve(import.meta.dirname, "..");
         brainResult = await loadBrainContext(userQuery, this.config.dataDir);
         const patches = loadActivePatches(brainRoot);
-        const systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
+        // 检索为空时注入防编造标记
+        let context = brainResult.context;
+        if (brainResult.itemCount === 0) {
+          context += "\n\n[无相关记忆] 以下回答基于模型通用知识，可能不准确。请明确告知用户这一点。";
+        }
+        const systemPrompt = buildBrainSystemPrompt(context, patches);
         messages = [{ role: "system", content: systemPrompt }, ...messages];
         console.log(`[brain] injected ${brainResult.itemCount} items from [${brainResult.matchedCategories.join(", ")}]`);
       } catch (e: unknown) {
@@ -148,7 +153,7 @@ export class BrainApi {
         apiKey: route.apiKey,
         model: route.model,
         messages,
-        temperature: body.temperature,
+        temperature: body.temperature ?? (route.brain ? 0.3 : undefined),
         max_tokens: body.max_tokens,
       });
 
@@ -187,7 +192,7 @@ export class BrainApi {
         apiKey: route.apiKey,
         model: route.model,
         messages,
-        temperature: body.temperature,
+        temperature: body.temperature ?? (route.brain ? 0.3 : undefined),
         max_tokens: body.max_tokens,
       },
       res
@@ -226,6 +231,7 @@ export class BrainApi {
       latencyMs,
       injectedCategories: brainResult?.matchedCategories ?? [],
       injectedItemCount: brainResult?.itemCount ?? 0,
+      retrievalPaths: brainResult?.retrievalPaths ?? [],
     };
     writeExperience(brainRoot, entry).catch(() => {});
   }
