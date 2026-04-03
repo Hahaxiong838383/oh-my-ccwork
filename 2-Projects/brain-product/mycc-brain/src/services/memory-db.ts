@@ -93,7 +93,7 @@ export async function initDB(dataDir: string): Promise<boolean> {
       db.exec(`
         CREATE VIRTUAL TABLE IF NOT EXISTS items_vec USING vec0(
           id TEXT PRIMARY KEY,
-          embedding float[512] distance_metric=cosine
+          embedding float[768] distance_metric=cosine
         );
       `);
     }
