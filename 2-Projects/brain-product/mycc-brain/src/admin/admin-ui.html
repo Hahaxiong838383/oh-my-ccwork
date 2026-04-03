@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mycc-brain Admin</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; padding: 20px; max-width: 900px; margin: 0 auto; }
+h1 { font-size: 24px; margin-bottom: 20px; }
+h1 span { color: #818cf8; }
+.card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #334155; }
+.card h2 { font-size: 16px; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+.stat-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.stat { flex: 1; min-width: 100px; background: #0f172a; border-radius: 8px; padding: 12px; text-align: center; }
+.stat .value { font-size: 28px; font-weight: 700; color: #818cf8; }
+.stat .label { font-size: 12px; color: #64748b; margin-top: 4px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.dot.green { background: #22c55e; }
+.dot.red { background: #ef4444; }
+.dot.yellow { background: #eab308; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #334155; font-size: 14px; }
+th { color: #64748b; font-weight: 500; }
+td code { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
+.badge.brain { background: #312e81; color: #a5b4fc; }
+.badge.raw { background: #1c1917; color: #a8a29e; }
+.badge.ok { background: #064e3b; color: #6ee7b7; }
+.badge.miss { background: #451a03; color: #fbbf24; }
+.btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; }
+.btn-primary { background: #4f46e5; color: white; }
+.btn-primary:hover { background: #4338ca; }
+.btn-danger { background: #991b1b; color: white; }
+.btn-danger:hover { background: #7f1d1d; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-ghost { background: transparent; border: 1px solid #475569; color: #94a3b8; }
+.btn-ghost:hover { background: #334155; }
+.actions { display: flex; gap: 8px; margin-top: 12px; }
+.test-area { margin-top: 12px; }
+.test-area textarea { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; padding: 8px; font-family: monospace; font-size: 13px; resize: vertical; min-height: 60px; }
+.test-area select, .test-area input { background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; padding: 6px 10px; font-size: 13px; }
+.test-area input { flex: 1; }
+#testResult, #memResult { margin-top: 8px; padding: 10px; background: #0f172a; border-radius: 8px; font-family: monospace; font-size: 13px; white-space: pre-wrap; min-height: 40px; display: none; max-height: 300px; overflow-y: auto; }
+.patch-list { list-style: none; }
+.patch-list li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #1e293b; font-size: 13px; }
+.patch-list li .rule { flex: 1; color: #cbd5e1; }
+.patch-list li.inactive .rule { color: #475569; text-decoration: line-through; }
+.exp-bar { display: flex; gap: 4px; align-items: flex-end; height: 40px; }
+.exp-bar .bar { flex: 1; background: #4f46e5; border-radius: 3px 3px 0 0; min-width: 20px; transition: height 0.3s; }
+.exp-bar .bar-label { font-size: 10px; color: #64748b; text-align: center; margin-top: 2px; }
+.exp-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.footer { text-align: center; color: #475569; font-size: 12px; margin-top: 20px; }
+.btn-delete { background: transparent; border: 1px solid #7f1d1d; color: #f87171; padding: 2px 8px; font-size: 11px; border-radius: 6px; cursor: pointer; }
+.btn-delete:hover { background: #7f1d1d; color: white; }
+.btn-export { background: #1e40af; color: #93c5fd; }
+.btn-export:hover { background: #1e3a8a; }
+.exp-detail { margin-top: 8px; padding: 10px; background: #0f172a; border-radius: 8px; font-size: 12px; color: #94a3b8; display: none; }
+.exp-detail .model-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #1e293b; }
+.auth-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 999; }
+.auth-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; width: 340px; text-align: center; }
+.auth-box h3 { margin-bottom: 12px; color: #e2e8f0; }
+.auth-box input { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; padding: 10px; font-size: 14px; margin-bottom: 12px; }
+.auth-box .auth-error { color: #f87171; font-size: 12px; margin-bottom: 8px; display: none; }
+</style>
+</head>
+<body>
+<h1>🧠 <span>mycc-brain</span> Admin</h1>
+
+<div class="tab-bar" style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid #334155;padding-bottom:8px;">
+  <button id="tabBtn-chat" class="tab-btn tab-active" onclick="switchTab('chat')" style="padding:8px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:600;border:none;background:#4f46e5;color:white;">对话</button>
+  <button id="tabBtn-config" class="tab-btn" onclick="switchTab('config')" style="padding:8px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:600;border:none;background:transparent;color:#94a3b8;">配置</button>
+</div>
+
+<div id="tab-chat">
+
+<div class="card">
+  <h2>A/B Compare</h2>
+  <div class="test-area">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <select id="compareModel"></select>
+      <input id="comparePrompt" placeholder="输入对比查询..." value="你叫什么" style="flex:1" />
+      <button class="btn btn-primary btn-sm" onclick="runCompare()">对比</button>
+    </div>
+    <div id="compareResult" style="display:none;">
+      <div style="display:flex;gap:1px;margin-top:8px;">
+        <div style="flex:1;background:#0f172a;border-radius:8px 0 0 8px;padding:12px;min-height:80px;">
+          <div style="font-size:13px;font-weight:600;color:#a8a29e;margin-bottom:8px;">📡 Raw（无记忆）</div>
+          <div id="compareRaw" style="font-size:13px;white-space:pre-wrap;color:#e2e8f0;max-height:300px;overflow-y:auto;">-</div>
+        </div>
+        <div style="width:1px;background:#334155;flex-shrink:0;"></div>
+        <div style="flex:1;background:#0f172a;border-radius:0 8px 8px 0;padding:12px;min-height:80px;">
+          <div style="font-size:13px;font-weight:600;color:#a5b4fc;margin-bottom:8px;">🧠 Brain（记忆注入）</div>
+          <div id="compareBrain" style="font-size:13px;white-space:pre-wrap;color:#e2e8f0;max-height:300px;overflow-y:auto;">-</div>
+          <div id="compareMeta" style="font-size:11px;color:#64748b;margin-top:8px;border-top:1px solid #1e293b;padding-top:6px;display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Quick Test</h2>
+  <div class="test-area">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <select id="testModel"></select>
+      <button class="btn btn-primary btn-sm" onclick="runTest()">发送</button>
+    </div>
+    <textarea id="testPrompt" placeholder="输入测试消息...">你好，请用一句话介绍自己</textarea>
+    <div id="testResult"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Memory Preview</h2>
+  <div class="test-area">
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <input id="memQuery" placeholder="输入查询，预览记忆注入内容..." value="川哥有几台电脑" style="flex:1" />
+      <button class="btn btn-primary btn-sm" onclick="previewMemory()">预览</button>
+    </div>
+    <div id="memResult"></div>
+  </div>
+</div>
+
+</div><!-- end tab-chat -->
+
+<div id="tab-config" style="display:none;">
+
+<div class="card">
+  <h2>Status</h2>
+  <div class="stat-row">
+    <div class="stat"><div class="value" id="sUptime">-</div><div class="label">Uptime</div></div>
+    <div class="stat"><div class="value" id="sRequests">-</div><div class="label">Today Requests</div></div>
+    <div class="stat"><div class="value" id="sErrors">-</div><div class="label">Errors</div></div>
+    <div class="stat"><div class="value" id="sData">-</div><div class="label">Data Dir</div></div>
+    <div class="stat"><div class="value" id="sMemory">-</div><div class="label">Memory</div></div>
+  </div>
+  <div class="actions">
+    <button class="btn btn-primary" onclick="refresh()">刷新状态</button>
+    <button class="btn btn-danger" onclick="restart()">重启服务</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Model Routes</h2>
+  <table>
+    <thead><tr><th>Model</th><th>Type</th><th>Upstream</th><th>API Key</th></tr></thead>
+    <tbody id="routeTable"></tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Hot Patches</h2>
+  <ul class="patch-list" id="patchList"><li style="color:#475569">loading...</li></ul>
+  <div style="display:flex;gap:8px;margin-top:10px;">
+    <input id="newPatchRule" placeholder="新规则（如：川哥的生日是12月25日）" />
+    <button class="btn btn-primary btn-sm" onclick="addPatch()">添加</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Experience Stream</h2>
+  <div class="stat-row">
+    <div class="stat"><div class="value" id="expCount">-</div><div class="label">Today</div></div>
+    <div class="stat"><div class="value" id="expLatency">-</div><div class="label">Avg Latency</div></div>
+    <div class="stat"><div class="value" id="expPatches">-</div><div class="label">Active Patches</div></div>
+  </div>
+  <div id="expChart" style="margin-top:12px;"></div>
+  <div id="expDetail" class="exp-detail"></div>
+  <div id="insightsPanel" class="exp-detail"></div>
+  <div class="actions">
+    <button class="btn btn-sm btn-export" onclick="exportExperiences()">📥 导出 JSONL</button>
+    <button class="btn btn-sm btn-primary" onclick="toggleInsights()">📊 查看洞察</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Conversations</h2>
+  <div class="stat-row">
+    <div class="stat"><div class="value" id="convActive">-</div><div class="label">Active Sessions</div></div>
+    <div class="stat"><div class="value" id="convMessages">-</div><div class="label">Total Messages</div></div>
+  </div>
+</div>
+
+</div><!-- end tab-config -->
+
+<div class="footer">mycc-brain v0.3.0 | <span id="refreshTime">-</span></div>
+
+<script>
+let _status = null;
+let _expHistory = [];
+
+function getAuthToken() {
+  return localStorage.getItem('brain_admin_token') || '';
+}
+
+function authHeaders(extra = {}) {
+  const token = getAuthToken();
+  const headers = { 'Content-Type': 'application/json', ...extra };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  return headers;
+}
+
+async function authFetch(url, opts = {}) {
+  const token = getAuthToken();
+  if (token) {
+    opts.headers = { ...(opts.headers || {}), 'Authorization': 'Bearer ' + token };
+  }
+  const r = await fetch(url, opts);
+  if (r.status === 401) {
+    showAuthPrompt();
+    throw new Error('Unauthorized');
+  }
+  return r;
+}
+
+function showAuthPrompt() {
+  if (document.getElementById('authOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'authOverlay';
+  overlay.className = 'auth-overlay';
+  overlay.innerHTML = `
+    <div class="auth-box">
+      <h3>🔐 需要认证</h3>
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">请输入 Admin 密码</p>
+      <div class="auth-error" id="authError">密码错误，请重试</div>
+      <input type="password" id="authPassword" placeholder="Admin Password" onkeydown="if(event.key==='Enter')submitAuth()" />
+      <button class="btn btn-primary" onclick="submitAuth()" style="width:100%">登录</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('authPassword')?.focus(), 100);
+}
+
+async function submitAuth() {
+  const pw = document.getElementById('authPassword').value.trim();
+  if (!pw) return;
+  localStorage.setItem('brain_admin_token', pw);
+  try {
+    const r = await fetch('/admin/api/status', {
+      headers: { 'Authorization': 'Bearer ' + pw }
+    });
+    if (r.status === 401) {
+      document.getElementById('authError').style.display = 'block';
+      localStorage.removeItem('brain_admin_token');
+      return;
+    }
+    document.getElementById('authOverlay')?.remove();
+    refresh();
+  } catch(e) {
+    document.getElementById('authError').style.display = 'block';
+  }
+}
+
+async function refresh() {
+  try {
+    const r = await authFetch('/admin/api/status');
+    const d = await r.json();
+    _status = d;
+    document.getElementById('sUptime').textContent = formatUptime(d.uptime);
+    document.getElementById('sRequests').textContent = d.stats.todayRequests;
+    document.getElementById('sErrors').textContent = d.stats.errors;
+    document.getElementById('sData').innerHTML = d.dataDirExists
+      ? '<span class="dot green"></span>OK'
+      : '<span class="dot red"></span>Missing';
+    document.getElementById('sMemory').innerHTML = d.memoryItemsExists
+      ? '<span class="dot green"></span>OK'
+      : '<span class="dot red"></span>Missing';
+
+    // Experience stats
+    if (d.experience) {
+      document.getElementById('expCount').textContent = d.experience.today.count;
+      document.getElementById('expLatency').textContent = d.experience.today.avgLatency ? d.experience.today.avgLatency + 'ms' : '-';
+      _expHistory = d.experience.history || [];
+      renderExpChart(_expHistory);
+    }
+    if (d.patches) {
+      document.getElementById('expPatches').textContent = d.patches.active + '/' + d.patches.total;
+    }
+
+    // Conversations
+    if (d.conversations) {
+      document.getElementById('convActive').textContent = d.conversations.active || 0;
+      document.getElementById('convMessages').textContent = d.conversations.totalMessages || 0;
+    }
+
+    // Routes
+    const tb = document.getElementById('routeTable');
+    const sel = document.getElementById('testModel');
+    const compareSel = document.getElementById('compareModel');
+    tb.innerHTML = '';
+    sel.innerHTML = '';
+    compareSel.innerHTML = '';
+    for (const [name, route] of Object.entries(d.routes)) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><code>${name}</code></td>
+        <td><span class="badge ${route.brain ? 'brain' : 'raw'}">${route.brain ? '🧠 brain' : '📡 raw'}</span></td>
+        <td style="font-size:12px;color:#94a3b8">${route.model} @ ${route.baseURL.replace(/https?:\/\//, '').split('/')[0]}</td>
+        <td><span class="badge ${route.hasKey ? 'ok' : 'miss'}">${route.hasKey ? '✓' : '✗'}</span></td>
+      `;
+      tb.appendChild(tr);
+      const host = route.baseURL.replace(/https?:\/\//, '').split('/')[0].split('.')[0];
+      const fullLabel = `${name} — ${route.model} @ ${host}`;
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = fullLabel;
+      sel.appendChild(opt);
+      if (route.brain) {
+        const copt = document.createElement('option');
+        copt.value = name;
+        copt.textContent = fullLabel;
+        compareSel.appendChild(copt);
+      }
+    }
+    document.getElementById('refreshTime').textContent = new Date().toLocaleTimeString();
+
+    // Patches
+    loadPatches();
+  } catch(e) {
+    if (e.message !== 'Unauthorized') console.error(e);
+  }
+}
+
+function renderExpChart(history) {
+  const el = document.getElementById('expChart');
+  if (!history.length) { el.innerHTML = '<span style="color:#475569;font-size:12px">No experience data yet</span>'; return; }
+  const max = Math.max(...history.map(h => h.count), 1);
+  el.innerHTML = '<div class="exp-bar">' + history.map((h, i) => {
+    const pct = Math.max((h.count / max) * 40, 2);
+    return `<div class="exp-bar-wrap" style="cursor:pointer" onclick="showExpDetail(${i})"><div class="bar" style="height:${pct}px" title="${h.date}: ${h.count}"></div><div class="bar-label">${h.date.slice(5)}</div></div>`;
+  }).join('') + '</div>';
+}
+
+function showExpDetail(index) {
+  const el = document.getElementById('expDetail');
+  const h = _expHistory[index];
+  if (!h) return;
+  if (el.style.display === 'block' && el.dataset.index === String(index)) {
+    el.style.display = 'none';
+    return;
+  }
+  el.dataset.index = String(index);
+  const models = h.models || {};
+  const entries = Object.entries(models);
+  if (!entries.length) {
+    el.innerHTML = `<strong>${h.date}</strong> — ${h.count} requests<br><span style="color:#475569">No model breakdown available</span>`;
+  } else {
+    const total = entries.reduce((s, [, c]) => s + c, 0);
+    el.innerHTML = `<strong>${h.date}</strong> — ${h.count} requests<br><br>` +
+      entries.sort((a, b) => b[1] - a[1]).map(([model, count]) => {
+        const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+        return `<div class="model-row"><span><code>${model}</code></span><span>${count} (${pct}%)</span></div>`;
+      }).join('');
+  }
+  el.style.display = 'block';
+}
+
+async function exportExperiences() {
+  try {
+    const r = await authFetch('/admin/api/experiences/export');
+    if (!r.ok) throw new Error('Export failed: ' + r.status);
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const today = new Date().toISOString().slice(0, 10);
+    a.download = `experiences-${today}.jsonl`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    if (e.message !== 'Unauthorized') alert('导出失败: ' + e.message);
+  }
+}
+
+async function loadPatches() {
+  try {
+    const r = await authFetch('/admin/api/patches');
+    const patches = await r.json();
+    const ul = document.getElementById('patchList');
+    if (!patches.length) { ul.innerHTML = '<li style="color:#475569">No patches</li>'; return; }
+    ul.innerHTML = patches.map(p => `
+      <li class="${p.active ? '' : 'inactive'}">
+        <button class="btn btn-ghost btn-sm" onclick="togglePatch('${p.id}', ${!p.active})">${p.active ? '✅' : '⬜'}</button>
+        <span class="rule">${p.rule}</span>
+        <span style="color:#475569;font-size:11px">${new Date(p.created).toLocaleDateString()}</span>
+        <button class="btn-delete" onclick="deletePatch('${p.id}')">删除</button>
+      </li>
+    `).join('');
+  } catch(e) {
+    if (e.message !== 'Unauthorized') console.error(e);
+  }
+}
+
+async function addPatch() {
+  const rule = document.getElementById('newPatchRule').value.trim();
+  if (!rule) return;
+  await authFetch('/admin/api/patches', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ action: 'add', rule })
+  });
+  document.getElementById('newPatchRule').value = '';
+  loadPatches();
+  refresh();
+}
+
+async function togglePatch(id, active) {
+  await authFetch('/admin/api/patches', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ action: 'toggle', id, active })
+  });
+  loadPatches();
+  refresh();
+}
+
+async function deletePatch(id) {
+  if (!confirm('确定删除该 patch？')) return;
+  await authFetch('/admin/api/patches', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ action: 'delete', id })
+  });
+  loadPatches();
+  refresh();
+}
+
+async function previewMemory() {
+  const query = document.getElementById('memQuery').value.trim();
+  const el = document.getElementById('memResult');
+  el.style.display = 'block';
+  el.textContent = 'Loading...';
+  try {
+    const r = await authFetch('/admin/api/memory-preview', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ query })
+    });
+    const d = await r.json();
+    el.textContent = `Categories: [${d.matchedCategories?.join(', ') || 'none'}]\nItems: ${d.itemCount || 0}\n\n${d.context || '(empty)'}`;
+  } catch(e) {
+    if (e.message !== 'Unauthorized') el.textContent = '❌ ' + e.message;
+  }
+}
+
+async function restart() {
+  if (!confirm('确定重启 brain 服务？')) return;
+  await authFetch('/admin/api/restart', { method: 'POST' });
+  alert('服务正在重启，3秒后刷新...');
+  setTimeout(() => location.reload(), 3000);
+}
+
+async function runTest() {
+  const model = document.getElementById('testModel').value;
+  const prompt = document.getElementById('testPrompt').value;
+  const el = document.getElementById('testResult');
+  el.style.display = 'block';
+  el.textContent = '请求中...';
+  try {
+    const r = await authFetch('/admin/api/test', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ model, prompt })
+    });
+    const d = await r.json();
+    if (d.error) { el.textContent = '❌ ' + d.error; return; }
+    el.textContent = d.content + (d.usage ? `\n\n[tokens: ${d.usage.total_tokens}]` : '');
+  } catch(e) {
+    if (e.message !== 'Unauthorized') el.textContent = '❌ ' + e.message;
+  }
+}
+
+async function runCompare() {
+  const model = document.getElementById('compareModel').value;
+  const prompt = document.getElementById('comparePrompt').value.trim();
+  if (!prompt) return;
+  const wrap = document.getElementById('compareResult');
+  const rawEl = document.getElementById('compareRaw');
+  const brainEl = document.getElementById('compareBrain');
+  const metaEl = document.getElementById('compareMeta');
+  wrap.style.display = 'block';
+  rawEl.textContent = '请求中...';
+  brainEl.textContent = '请求中...';
+  metaEl.style.display = 'none';
+  try {
+    const r = await authFetch('/admin/api/compare', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ model, prompt })
+    });
+    const d = await r.json();
+    if (d.error) {
+      rawEl.textContent = '❌ ' + d.error;
+      brainEl.textContent = '❌ ' + d.error;
+      return;
+    }
+    rawEl.textContent = d.raw.content + (d.raw.usage ? '\n\n[tokens: ' + d.raw.usage.total_tokens + ']' : '');
+    brainEl.textContent = d.brain.content + (d.brain.usage ? '\n\n[tokens: ' + d.brain.usage.total_tokens + ']' : '');
+    metaEl.style.display = 'block';
+    metaEl.innerHTML =
+      '注入 categories: ' + (d.brain.injectedCategories?.join(', ') || 'none') +
+      ' | items: ' + (d.brain.itemCount || 0) +
+      ' | latency: raw ' + d.latency.raw + 'ms / brain ' + d.latency.brain + 'ms';
+  } catch(e) {
+    if (e.message !== 'Unauthorized') {
+      rawEl.textContent = '❌ ' + e.message;
+      brainEl.textContent = '❌ ' + e.message;
+    }
+  }
+}
+
+function formatUptime(s) {
+  if (s < 60) return Math.floor(s) + 's';
+  if (s < 3600) return Math.floor(s/60) + 'm';
+  if (s < 86400) return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+  return Math.floor(s/86400) + 'd ' + Math.floor((s%86400)/3600) + 'h';
+}
+
+let _insightsOpen = false;
+
+async function toggleInsights() {
+  const el = document.getElementById('insightsPanel');
+  if (_insightsOpen) {
+    el.style.display = 'none';
+    _insightsOpen = false;
+    return;
+  }
+  el.style.display = 'block';
+  el.innerHTML = '<span style="color:#94a3b8">Loading insights...</span>';
+  _insightsOpen = true;
+  try {
+    const r = await authFetch('/admin/api/insights?days=7');
+    const d = await r.json();
+    let html = '<strong>Experience Insights (7d)</strong><br><br>';
+
+    // Miss rate
+    const missPercent = (d.missRate * 100).toFixed(1);
+    const missColor = d.missRate > 0.5 ? '#f87171' : d.missRate > 0.2 ? '#fbbf24' : '#6ee7b7';
+    html += `<div style="margin-bottom:10px"><span style="color:${missColor};font-weight:600">Miss Rate: ${missPercent}%</span> <span style="color:#64748b">(无类别命中的请求占比)</span></div>`;
+
+    // Top queries
+    if (d.topQueries && d.topQueries.length > 0) {
+      html += '<div style="margin-bottom:8px"><strong style="color:#a5b4fc">Top Queries</strong></div>';
+      html += '<table style="width:100%;margin-bottom:12px"><thead><tr><th style="width:70%">Query</th><th>Count</th></tr></thead><tbody>';
+      for (const q of d.topQueries) {
+        html += `<tr><td style="font-size:12px;color:#cbd5e1;word-break:break-all">${escapeHtml(q.query)}</td><td style="text-align:center;color:#818cf8">${q.count}</td></tr>`;
+      }
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:#475569;margin-bottom:12px">No query data yet</div>';
+    }
+
+    // Top categories
+    if (d.topCategories && d.topCategories.length > 0) {
+      html += '<div style="margin-bottom:8px"><strong style="color:#a5b4fc">Top Categories</strong></div>';
+      html += '<table style="width:100%;margin-bottom:12px"><thead><tr><th style="width:70%">Category</th><th>Hits</th></tr></thead><tbody>';
+      for (const c of d.topCategories) {
+        html += `<tr><td><code style="font-size:12px">${escapeHtml(c.category)}</code></td><td style="text-align:center;color:#818cf8">${c.hitCount}</td></tr>`;
+      }
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:#475569;margin-bottom:12px">No category data yet</div>';
+    }
+
+    // Suggested patches
+    if (d.suggestedPatches && d.suggestedPatches.length > 0) {
+      html += '<div style="margin-bottom:8px"><strong style="color:#fbbf24">Suggested Patches</strong> <span style="color:#64748b;font-size:11px">(高频无命中关键词)</span></div>';
+      html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+      for (const p of d.suggestedPatches) {
+        html += `<span style="background:#312e81;color:#a5b4fc;padding:2px 8px;border-radius:10px;font-size:12px">${escapeHtml(p)}</span>`;
+      }
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    if (e.message !== 'Unauthorized') el.innerHTML = '<span style="color:#f87171">Failed to load insights: ' + e.message + '</span>';
+  }
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function switchTab(name) {
+  const tabs = ['chat', 'config'];
+  tabs.forEach(t => {
+    const panel = document.getElementById('tab-' + t);
+    const btn = document.getElementById('tabBtn-' + t);
+    if (t === name) {
+      panel.style.display = 'block';
+      btn.style.background = '#4f46e5';
+      btn.style.color = 'white';
+    } else {
+      panel.style.display = 'none';
+      btn.style.background = 'transparent';
+      btn.style.color = '#94a3b8';
+    }
+  });
+  history.replaceState(null, '', '#' + name);
+}
+
+// Init tab from URL hash
+const initTab = (location.hash === '#config') ? 'config' : 'chat';
+switchTab(initTab);
+
+// Listen for hash changes
+window.addEventListener('hashchange', () => {
+  const tab = (location.hash === '#config') ? 'config' : 'chat';
+  switchTab(tab);
+});
+
+refresh();
+setInterval(refresh, 30000);
+</script>
+</body>
+</html>
