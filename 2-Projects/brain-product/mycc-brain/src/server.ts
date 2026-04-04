@@ -14,6 +14,11 @@ import { getTodayStats, getRecentDayStats, getInsights, getHealthMetrics } from 
 import { getConversationStats } from "./services/conversation.js";
 import { diagnoseLatestEval } from "./services/evolution-diagnosis.js";
 import { runEvolutionCycle } from "./services/evolution-engine.js";
+import { ToolRegistry } from "./services/tool-registry.js";
+import { runAgentLoop } from "./services/agent-loop.js";
+import { searchMemoryTool } from "./tools/search-memory.js";
+import { listMemoriesTool } from "./tools/list-memories.js";
+import { runDiagnosisTool } from "./tools/run-diagnosis.js";
 
 const config = loadConfig();
 const brainApi = new BrainApi(config);
@@ -333,6 +338,62 @@ const server = http.createServer(async (req, res) => {
     const brainRoot = resolve(import.meta.dirname, "..");
     const result = runEvolutionCycle(brainRoot);
     json(res, 200, result ?? { error: "no diagnosis available" });
+    return;
+  }
+
+  // Admin API: agent — run agent loop with tools
+  if (path === "/admin/api/agent" && req.method === "POST") {
+    try {
+      const body = JSON.parse(await readBody(req));
+      const modelParam: string = body.model ?? "cc-qwen";
+      const prompt: string = body.prompt ?? "";
+      if (!prompt) { json(res, 400, { error: "prompt required" }); return; }
+
+      const route = config.routes[modelParam];
+      if (!route) { json(res, 400, { error: `Model not found: ${modelParam}` }); return; }
+
+      // Build tool registry
+      const registry = new ToolRegistry();
+      registry.register(searchMemoryTool);
+      registry.register(listMemoriesTool);
+      registry.register(runDiagnosisTool);
+
+      const brainRoot = resolve(import.meta.dirname, "..");
+      const toolMap = new Map(registry.list().map(t => [t.name, t]));
+
+      // Build initial messages with memory injection
+      const messages: Array<{ role: string; content: string }> = [];
+      try {
+        const brainResult = await loadBrainContext(prompt, config.dataDir);
+        const { loadActivePatches } = await import("./services/hot-patch.js");
+        const { buildBrainSystemPrompt } = await import("./services/brain-context.js");
+        const patches = loadActivePatches(brainRoot);
+        const systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
+        messages.push({ role: "system", content: systemPrompt });
+      } catch { /* degrade gracefully */ }
+      messages.push({ role: "user", content: prompt });
+
+      const result = await runAgentLoop({
+        baseURL: route.baseURL,
+        apiKey: route.apiKey,
+        model: route.model,
+        messages,
+        tools: toolMap,
+        toolContext: { brainRoot, dataDir: config.dataDir },
+        maxSteps: 10,
+        temperature: 0.7,
+      });
+
+      json(res, 200, {
+        content: result.content,
+        steps: result.steps,
+        totalTokens: result.totalTokens,
+        toolsUsed: result.toolsUsed,
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      json(res, 500, { error: msg });
+    }
     return;
   }
 

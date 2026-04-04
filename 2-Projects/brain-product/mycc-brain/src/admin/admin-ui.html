@@ -101,6 +101,19 @@ td code { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 
 </div>
 
 <div class="card">
+  <h2>Agent Test</h2>
+  <div style="display:flex;gap:8px;align-items:center">
+    <select id="agentModel"></select>
+    <input id="agentPrompt" placeholder="Agent 模式查询（会自动调用工具）..." value="我最近的项目进展怎样？" style="flex:1" />
+    <button class="btn btn-primary btn-sm" onclick="runAgent()">Agent</button>
+  </div>
+  <div id="agentResult" style="display:none;margin-top:12px;">
+    <div style="font-size:13px;white-space:pre-wrap;color:#e2e8f0;max-height:300px;overflow-y:auto;" id="agentContent">-</div>
+    <div id="agentSteps" style="font-size:11px;color:#64748b;margin-top:8px;border-top:1px solid #1e293b;padding-top:6px;display:none;"></div>
+  </div>
+</div>
+
+<div class="card">
   <h2>Quick Test</h2>
   <div class="test-area">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
@@ -329,9 +342,11 @@ async function refresh() {
     const tb = document.getElementById('routeTable');
     const sel = document.getElementById('testModel');
     const compareSel = document.getElementById('compareModel');
+    const agentSel = document.getElementById('agentModel');
     tb.innerHTML = '';
     sel.innerHTML = '';
     compareSel.innerHTML = '';
+    agentSel.innerHTML = '';
     for (const [name, route] of Object.entries(d.routes)) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -352,6 +367,10 @@ async function refresh() {
         copt.value = name;
         copt.textContent = fullLabel;
         compareSel.appendChild(copt);
+        const aopt = document.createElement('option');
+        aopt.value = name;
+        aopt.textContent = fullLabel;
+        agentSel.appendChild(aopt);
       }
     }
     document.getElementById('refreshTime').textContent = new Date().toLocaleTimeString();
@@ -550,6 +569,40 @@ async function runCompare() {
       rawEl.textContent = '❌ ' + e.message;
       brainEl.textContent = '❌ ' + e.message;
     }
+  }
+}
+
+async function runAgent() {
+  const model = document.getElementById('agentModel').value;
+  const prompt = document.getElementById('agentPrompt').value.trim();
+  if (!prompt) return;
+  const wrap = document.getElementById('agentResult');
+  const contentEl = document.getElementById('agentContent');
+  const stepsEl = document.getElementById('agentSteps');
+  wrap.style.display = 'block';
+  contentEl.textContent = 'Agent 思考中...';
+  stepsEl.style.display = 'none';
+  try {
+    const r = await authFetch('/admin/api/agent', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ model, prompt })
+    });
+    const d = await r.json();
+    if (d.error) { contentEl.textContent = '❌ ' + d.error; return; }
+    contentEl.textContent = d.content;
+    if (d.steps && d.steps.length > 0) {
+      stepsEl.style.display = 'block';
+      const toolSteps = d.steps.filter(s => s.type === 'tool_exec');
+      stepsEl.innerHTML = '🔧 工具调用: ' + (d.toolsUsed?.join(', ') || 'none') +
+        ' | 步骤: ' + d.steps.length +
+        ' | tokens: ' + (d.totalTokens || 0) +
+        (toolSteps.length > 0 ? '<br>' + toolSteps.map(s =>
+          '<span style="color:#22d3ee">→ ' + s.toolName + '</span> ' + s.durationMs + 'ms'
+        ).join(' | ') : '');
+    }
+  } catch(e) {
+    if (e.message !== 'Unauthorized') contentEl.textContent = '❌ ' + e.message;
   }
 }
 
