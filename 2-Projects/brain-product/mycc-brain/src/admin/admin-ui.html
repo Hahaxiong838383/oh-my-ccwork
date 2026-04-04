@@ -659,7 +659,7 @@ async function sendAgentSSE(sess, text, model, et) {
   msgEl.appendChild(div); msgEl.scrollTop=msgEl.scrollHeight;
   const stepsEl=div.querySelector('#ssSteps'), contEl=div.querySelector('#ssCont');
   const reader=resp.body.getReader(), dec=new TextDecoder();
-  let buf='',t0=Date.now(),ft=0,sc=0; const steps=[];
+  let buf='',sc=0; const steps=[];
   let finalContent='', finalMeta={};
   while(true){
     const{done,value}=await reader.read(); if(done)break;
@@ -670,7 +670,7 @@ async function sendAgentSSE(sess, text, model, et) {
       for(const l of lines){if(l.startsWith('event: '))ev=l.slice(7);else if(l.startsWith('data: '))ds=l.slice(6)}
       if(!ev||!ds)continue; let data; try{data=JSON.parse(ds)}catch{continue}
       if(ev==='step'){
-        sc++; if(!ft)ft=Date.now()-t0; steps.push(data);
+        sc++; steps.push(data);
         const el=document.createElement('div');
         if(data.type==='llm_call'){el.className='astep llm';el.onclick=()=>el.classList.toggle('exp');
           const pv=data.content?esc(data.content.slice(0,120))+(data.content.length>120?'...':''):'<em style="color:var(--text-dim)">准备调用工具</em>';
@@ -681,8 +681,12 @@ async function sendAgentSSE(sess, text, model, et) {
           el.innerHTML=`<div class="sh">🔧 ${esc(data.toolName||'?')} <span class="st">— ${data.durationMs||0}ms</span></div><div class="sb">输入: ${esc(JSON.stringify(data.toolInput||{}).slice(0,200))}\n输出: ${op}</div>`;}
         stepsEl.appendChild(el); contEl.textContent=''; contEl.style.color=''; msgEl.scrollTop=msgEl.scrollHeight;
       } else if(ev==='done'){
-        const dur=Date.now()-t0,tt=data.totalTokens||0,ts=dur>0?(tt/dur*1000).toFixed(1):'?';
-        finalContent=data.content||''; finalMeta={mode:'agent',model,steps,toolsUsed:data.toolsUsed||[],totalTokens:tt,ttft:ft||dur,tokPerSec:parseFloat(ts)};
+        const tt=data.totalTokens||0;
+        const serverDur=steps.reduce((s,st)=>s+(st.durationMs||0),0);
+        const firstLlm=steps.find(st=>st.type==='llm_call');
+        const ttft=firstLlm?.durationMs||serverDur;
+        const ts=serverDur>0?(tt/serverDur*1000).toFixed(1):'?';
+        finalContent=data.content||''; finalMeta={mode:'agent',model,steps,toolsUsed:data.toolsUsed||[],totalTokens:tt,ttft,tokPerSec:parseFloat(ts)};
         contEl.innerHTML=rMd(finalContent);
       } else if(ev==='error'){finalContent='❌ '+(data.error||'未知错误');contEl.textContent=finalContent;}
     }
