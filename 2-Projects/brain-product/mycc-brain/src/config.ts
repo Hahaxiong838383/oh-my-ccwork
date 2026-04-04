@@ -10,6 +10,7 @@ export interface ModelRoute {
   baseURL: string;
   model: string;
   apiKey: string;
+  maxTokens?: number; // 模型最大输出 token，不设则用适配器默认值 8192
 }
 
 export interface BrainConfig {
@@ -95,6 +96,7 @@ export function loadConfig(): BrainConfig {
         baseURL: `${ollamaBase}/v1`,
         model: "gemma4:26b",
         apiKey: "ollama",
+        maxTokens: 32768,
       },
       "raw-gemma4": {
         adapter: "openai-compat",
@@ -102,6 +104,7 @@ export function loadConfig(): BrainConfig {
         baseURL: `${ollamaBase}/v1`,
         model: "gemma4:26b",
         apiKey: "ollama",
+        maxTokens: 32768,
       },
     },
   };

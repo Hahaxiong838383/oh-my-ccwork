@@ -18,6 +18,7 @@ export interface StreamOptions {
   messages: OpenAIMessage[];
   temperature?: number;
   max_tokens?: number;
+  enable_thinking?: boolean; // 默认 false，开启后模型会输出推理过程
 }
 
 export async function streamOpenAICompat(
@@ -32,7 +33,7 @@ export async function streamOpenAICompat(
     stream: true,
     temperature: opts.temperature ?? 0.7,
     max_tokens: opts.max_tokens ?? 8192,
-    enable_thinking: false,
+    enable_thinking: opts.enable_thinking ?? false,
   });
 
   let upstream: Response;
@@ -119,7 +120,7 @@ export async function chatCompletion(
         stream: false,
         temperature: opts.temperature ?? 0.7,
         max_tokens: opts.max_tokens ?? 8192,
-        enable_thinking: false,
+        enable_thinking: opts.enable_thinking ?? false,
       }),
     });
   } catch (e: unknown) {

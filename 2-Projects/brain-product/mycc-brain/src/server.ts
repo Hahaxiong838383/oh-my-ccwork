@@ -446,6 +446,7 @@ const server = http.createServer(async (req, res) => {
       } catch { /* degrade gracefully */ }
       messages.push({ role: "user", content: prompt });
 
+      const enableThinking = body.enable_thinking ?? false;
       const result = await runAgentLoop({
         baseURL: route.baseURL,
         apiKey: route.apiKey,
@@ -454,7 +455,9 @@ const server = http.createServer(async (req, res) => {
         tools: toolMap,
         toolContext: { brainRoot, dataDir: config.dataDir },
         maxSteps: 10,
+        maxTokens: route.maxTokens,
         temperature: 0.7,
+        enableThinking,
         onStep: (step) => sendSSE("step", step),
       });
 
@@ -505,6 +508,7 @@ const server = http.createServer(async (req, res) => {
       } catch { /* degrade gracefully */ }
       messages.push({ role: "user", content: prompt });
 
+      const enableThinking = body.enable_thinking ?? false;
       const result = await runAgentLoop({
         baseURL: route.baseURL,
         apiKey: route.apiKey,
@@ -513,7 +517,9 @@ const server = http.createServer(async (req, res) => {
         tools: toolMap,
         toolContext: { brainRoot, dataDir: config.dataDir },
         maxSteps: 10,
+        maxTokens: route.maxTokens,
         temperature: 0.7,
+        enableThinking,
       });
 
       json(res, 200, {

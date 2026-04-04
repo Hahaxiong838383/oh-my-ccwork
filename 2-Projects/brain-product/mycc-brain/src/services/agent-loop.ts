@@ -51,6 +51,7 @@ export interface AgentLoopOptions {
   maxSteps?: number;
   maxTokens?: number;
   temperature?: number;
+  enableThinking?: boolean;
   onStep?: (step: AgentStep) => void;
 }
 
@@ -95,6 +96,7 @@ async function chatCompletionWithTools(opts: {
   messages: ChatMessage[];
   temperature: number;
   max_tokens: number;
+  enableThinking?: boolean;
   tools?: Array<{ type: "function"; function: { name: string; description: string; parameters: unknown } }>;
 }): Promise<{
   content: string | null;
@@ -109,6 +111,7 @@ async function chatCompletionWithTools(opts: {
     stream: false,
     temperature: opts.temperature,
     max_tokens: opts.max_tokens,
+    enable_thinking: opts.enableThinking ?? false,
   };
 
   if (opts.tools && opts.tools.length > 0) {
@@ -137,9 +140,11 @@ async function chatCompletionWithTools(opts: {
 
   const data = (await upstream.json()) as ChatCompletionResponse;
   const message = data.choices?.[0]?.message;
+  // Gemma 4 thinking 模式：content 为空时 fallback 到 reasoning
+  const content = message?.content || (message as any)?.reasoning || null;
 
   return {
-    content: message?.content ?? null,
+    content,
     toolCalls: message?.tool_calls ?? [],
     usage: { total_tokens: data.usage?.total_tokens ?? 0 },
   };
@@ -188,6 +193,7 @@ export async function runAgentLoop(opts: AgentLoopOptions): Promise<AgentLoopRes
       messages,
       temperature,
       max_tokens: maxTokens,
+      enableThinking: opts.enableThinking,
       tools: openaiTools.length > 0 ? openaiTools : undefined,
     });
     const llmDuration = Date.now() - llmStart;
