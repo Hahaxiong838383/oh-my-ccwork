@@ -653,7 +653,7 @@ async function sendAgentSSE(sess, text, model, et) {
   if (resp.status===401){showAuth();throw new Error('Unauthorized')}
   if (!resp.ok) throw new Error('HTTP '+resp.status);
   // Stream UI
-  const msgEl = document.getElementById('msgArea'); document.getElementById('emptyState').style.display='none';
+  const msgEl = document.getElementById('msgArea'); getEmpty().style.display='none';
   const div = document.createElement('div'); div.className='msg assistant';
   div.innerHTML='<div class="bubble" style="max-width:90%"><div id="ssSteps"></div><div id="ssCont" class="mc" style="color:var(--warning)">⏳ 请求中，等待模型响应...</div></div>';
   msgEl.appendChild(div); msgEl.scrollTop=msgEl.scrollHeight;
