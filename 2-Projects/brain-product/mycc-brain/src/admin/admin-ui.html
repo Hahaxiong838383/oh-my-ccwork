@@ -699,13 +699,14 @@ function switchTab(name) {
 }
 
 // Init tab from URL hash
-const initTab = (location.hash === '#config') ? 'config' : 'chat';
-switchTab(initTab);
+const validTabs = new Set(['chat', 'config', 'evolution']);
+const hashTab = location.hash.slice(1);
+switchTab(validTabs.has(hashTab) ? hashTab : 'chat');
 
 // Listen for hash changes
 window.addEventListener('hashchange', () => {
-  const tab = (location.hash === '#config') ? 'config' : 'chat';
-  switchTab(tab);
+  const h = location.hash.slice(1);
+  switchTab(validTabs.has(h) ? h : 'chat');
 });
 
 refresh();
