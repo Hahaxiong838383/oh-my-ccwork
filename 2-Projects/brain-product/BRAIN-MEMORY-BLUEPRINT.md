@@ -101,6 +101,92 @@ CLAUDE.md  services/*.ts
 
 ---
 
+## 七、最终方案：规则驱动，而非代码驱动（2026-04-04 确认）
+
+> 关键转折：不把记忆规则翻译成 TypeScript 代码，而是让 brain 的 LLM 直接读同一份规则文档执行。
+
+### 为什么
+
+| 对比 | TypeScript 实现（旧方案） | LLM 规则驱动（新方案） |
+|------|-------------------------|---------------------|
+| 同步成本 | Air 改规则 → 手动改 TS → 跑 eval | Air 改规则 → 自动生效 |
+| 开发量 | 6 个新模块 | 1 个 post-hook + 1 个 scheduler |
+| 版本落后 | 每次 Air 升级都要适配 | 零落后 |
+| 灵活性 | 硬编码 | 改文本即调整 |
+
+### 架构
+
+```
+用户消息 → brain-context.ts 检索 → 主模型回复用户
+                                      ↓ 异步
+                          [post-hook: 记忆处理模型]
+                          prompt = memory-rules.md + 对话
+                          输出 JSON：{facts, keywords, dimension}
+                                      ↓
+                          写入 data/memory-items.md
+
+                          [每日 04:00: 巩固模型]
+                          prompt = memory-rules.md + 全量 items
+                          任务：矛盾检测 + Δ巩固 + 过期清理
+```
+
+### 规则共享
+
+```
+mycc/docs/memory-rules.md ← 单一真相源（Git）
+  ├── Air: CLAUDE.md include
+  └── Brain: post-hook 读取作为 prompt
+```
+
+### LLM 选型
+
+#### 可插拔接口设计
+
+brain 的记忆 LLM 不绑定具体模型，通过配置切换：
+
+```typescript
+// config.ts 中新增
+memoryLLM: {
+  intake: { provider: "ollama", model: "qwen2.5:7b" },      // 每轮对话后提取
+  consolidation: { provider: "dashscope", model: "qwen3.5-27b" }, // 每日巩固
+}
+```
+
+provider 可选：`ollama`（本地）、`dashscope`（通义）、`deepseek`（DeepSeek API）。
+任何场景的模型都可以独立替换，不影响其他场景。
+
+#### 推荐配置
+
+| 场景 | 推荐模型 | 位置 | 理由 |
+|------|---------|------|------|
+| **对话后事实提取** | qwen2.5:7b | Studio 本地 Ollama | 中文强、30tok/s快、零成本、4.7GB不影响主模型 |
+| **每日巩固/遗忘** | qwen3.5-27b | DashScope API | 矛盾检测需强推理、每日1次成本可忽略 |
+| **降级/备选** | qwen2.5:14b | 可安装 | 提取质量不够时升级，多占4GB |
+
+**不推荐 gemma4:26b**：中文指令跟随弱（已验证），且 16GB 内存压力大。
+
+#### 降级策略
+
+| 风险 | 降级 |
+|------|------|
+| 本地模型提取质量不够 | config 切到 qwen2.5:14b 或 API |
+| API 不可用 | 巩固延迟到下一天 |
+| 内存不够并行 | 等主模型空闲后串行 |
+
+---
+
+## 八、实施路线（更新）
+
+| Phase | 做什么 | 工作量 |
+|-------|--------|--------|
+| **P0** | 从 memory-system.md 抽取 `memory-rules.md` | 0.5h |
+| **P1** | post-response hook + memory-items.md 读写器 | 1 session |
+| **P2** | 每日巩固 scheduler（矛盾检测 + 遗忘） | 0.5 session |
+| **P3** | Admin UI 记忆面板（可视化 items + 健康度） | 1 session |
+| **P4** | 多模态 adapter 接入 | 按需 |
+
+---
+
 ## 五、与意识理论的映射
 
 | 理论 | 在记忆系统中的体现 |
