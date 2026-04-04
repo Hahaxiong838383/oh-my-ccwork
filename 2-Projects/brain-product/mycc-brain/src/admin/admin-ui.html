@@ -597,10 +597,14 @@ async function sendMessage() {
 function setSending(v) { S.sending = v; const b = document.getElementById('sendBtn'); b.disabled = v; b.classList.toggle('loading', v); }
 
 /* ─── Chat ─── */
+function getHistory(sess, limit=10) {
+  return sess.messages.slice(-(limit*2)).filter(m=>m.role&&m.content).map(m=>({role:m.role,content:m.content}));
+}
 async function sendChat(sess, text) {
   const model = document.getElementById('modelSel').value, start = Date.now();
+  const history = getHistory(sess);
   const [testR, memR] = await Promise.all([
-    aFetch('/admin/api/test', { method: 'POST', headers: authH(), body: JSON.stringify({ model, prompt: text }) }),
+    aFetch('/admin/api/test', { method: 'POST', headers: authH(), body: JSON.stringify({ model, prompt: text, messages: history }) }),
     aFetch('/admin/api/memory-preview', { method: 'POST', headers: authH(), body: JSON.stringify({ query: text }) }).catch(() => null)
   ]);
   const d = await testR.json(), elapsed = Date.now() - start;
@@ -638,7 +642,8 @@ async function sendAgent(sess, text) {
 
 async function sendAgentSync(sess, text, model, et) {
   const start = Date.now();
-  const r = await aFetch('/admin/api/agent', { method:'POST', headers:authH(), body:JSON.stringify({model,prompt:text,enable_thinking:et}) });
+  const history = getHistory(sess);
+  const r = await aFetch('/admin/api/agent', { method:'POST', headers:authH(), body:JSON.stringify({model,prompt:text,enable_thinking:et,messages:history}) });
   const elapsed = Date.now()-start, d = await r.json(); if (d.error) throw new Error(d.error);
   const tt = d.totalTokens||0, ts = elapsed>0?(tt/elapsed*1000).toFixed(1):'?';
   const fl = d.steps?.find(s=>s.type==='llm_call');
@@ -649,7 +654,8 @@ async function sendAgentSync(sess, text, model, et) {
 async function sendAgentSSE(sess, text, model, et) {
   const token = getToken(), headers = {'Content-Type':'application/json'};
   if (token) headers['Authorization']='Bearer '+token;
-  const resp = await fetch('/admin/api/agent/stream',{method:'POST',headers,body:JSON.stringify({model,prompt:text,enable_thinking:et})});
+  const history = getHistory(sess);
+  const resp = await fetch('/admin/api/agent/stream',{method:'POST',headers,body:JSON.stringify({model,prompt:text,enable_thinking:et,messages:history})});
   if (resp.status===401){showAuth();throw new Error('Unauthorized')}
   if (!resp.ok) throw new Error('HTTP '+resp.status);
   // Stream UI

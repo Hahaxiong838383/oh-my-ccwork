@@ -175,7 +175,17 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const prompt = body.prompt ?? "你好";
-      let messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [{ role: "user", content: prompt }];
+      const historyMsgs: Array<{ role: string; content: string }> = body.messages ?? [];
+      let messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
+
+      // Build conversation: history + current prompt
+      if (historyMsgs.length > 0) {
+        messages = historyMsgs.map((m: { role: string; content: string }) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        }));
+      }
+      messages.push({ role: "user", content: prompt });
 
       // Inject brain context if route.brain=true (same as /v1/chat/completions)
       if (route.brain) {
@@ -195,7 +205,7 @@ const server = http.createServer(async (req, res) => {
         apiKey: route.apiKey,
         model: route.model,
         messages,
-        max_tokens: 200,
+        max_tokens: route.maxTokens ?? 4096,
       });
       json(res, 200, { content: result.content, usage: result.usage, brain: route.brain });
     } catch (e: any) {
@@ -434,7 +444,8 @@ const server = http.createServer(async (req, res) => {
       const brainRoot = resolve(import.meta.dirname, "..");
       const toolMap = new Map(registry.list().map(t => [t.name, t]));
 
-      // Build initial messages with memory injection
+      // Build initial messages with memory injection + conversation history
+      const historyMsgs: Array<{ role: string; content: string }> = body.messages ?? [];
       const messages: Array<{ role: string; content: string }> = [];
       try {
         const brainResult = await loadBrainContext(prompt, config.dataDir);
@@ -444,6 +455,9 @@ const server = http.createServer(async (req, res) => {
         const systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
         messages.push({ role: "system", content: systemPrompt });
       } catch { /* degrade gracefully */ }
+      for (const m of historyMsgs) {
+        if (m.role && m.content) messages.push({ role: m.role, content: m.content });
+      }
       messages.push({ role: "user", content: prompt });
 
       const enableThinking = body.enable_thinking ?? false;
@@ -496,7 +510,8 @@ const server = http.createServer(async (req, res) => {
       const brainRoot = resolve(import.meta.dirname, "..");
       const toolMap = new Map(registry.list().map(t => [t.name, t]));
 
-      // Build initial messages with memory injection
+      // Build initial messages with memory injection + conversation history
+      const historyMsgs: Array<{ role: string; content: string }> = body.messages ?? [];
       const messages: Array<{ role: string; content: string }> = [];
       try {
         const brainResult = await loadBrainContext(prompt, config.dataDir);
@@ -506,6 +521,9 @@ const server = http.createServer(async (req, res) => {
         const systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
         messages.push({ role: "system", content: systemPrompt });
       } catch { /* degrade gracefully */ }
+      for (const m of historyMsgs) {
+        if (m.role && m.content) messages.push({ role: m.role, content: m.content });
+      }
       messages.push({ role: "user", content: prompt });
 
       const enableThinking = body.enable_thinking ?? false;
