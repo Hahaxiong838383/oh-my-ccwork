@@ -62,6 +62,7 @@ td code { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 
 .auth-box h3 { margin-bottom: 12px; color: #e2e8f0; }
 .auth-box input { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; padding: 10px; font-size: 14px; margin-bottom: 12px; }
 .auth-box .auth-error { color: #f87171; font-size: 12px; margin-bottom: 8px; display: none; }
+#agentStepsLive { max-height: 320px; overflow-y: auto; padding: 4px; background: #0f172a; border-radius: 8px; }
 </style>
 </head>
 <body>
@@ -105,9 +106,13 @@ td code { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 
   <div style="display:flex;gap:8px;align-items:center">
     <select id="agentModel"></select>
     <input id="agentPrompt" placeholder="Agent 模式查询（会自动调用工具）..." value="我最近的项目进展怎样？" style="flex:1" />
-    <button class="btn btn-primary btn-sm" onclick="runAgent()">Agent</button>
+    <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#94a3b8;cursor:pointer;white-space:nowrap;" title="开启后实时显示每个推理和工具调用步骤">
+      <input type="checkbox" id="agentStreamToggle" checked style="accent-color:#4f46e5;" /> Stream
+    </label>
+    <button class="btn btn-primary btn-sm" id="agentRunBtn" onclick="runAgent()">Agent</button>
   </div>
   <div id="agentResult" style="display:none;margin-top:12px;">
+    <div id="agentStepsLive" style="font-size:12px;margin-bottom:8px;display:none;"></div>
     <div style="font-size:13px;white-space:pre-wrap;color:#e2e8f0;max-height:300px;overflow-y:auto;" id="agentContent">-</div>
     <div id="agentSteps" style="font-size:11px;color:#64748b;margin-top:8px;border-top:1px solid #1e293b;padding-top:6px;display:none;"></div>
   </div>
@@ -573,15 +578,25 @@ async function runCompare() {
 }
 
 async function runAgent() {
+  const useStream = document.getElementById('agentStreamToggle').checked;
+  if (useStream) return runAgentStream();
+  return runAgentSync();
+}
+
+// 同步模式（兼容旧接口）
+async function runAgentSync() {
   const model = document.getElementById('agentModel').value;
   const prompt = document.getElementById('agentPrompt').value.trim();
   if (!prompt) return;
   const wrap = document.getElementById('agentResult');
   const contentEl = document.getElementById('agentContent');
   const stepsEl = document.getElementById('agentSteps');
+  const liveEl = document.getElementById('agentStepsLive');
   wrap.style.display = 'block';
   contentEl.textContent = 'Agent 思考中...';
   stepsEl.style.display = 'none';
+  liveEl.style.display = 'none';
+  setAgentBtnState(true);
   try {
     const r = await authFetch('/admin/api/agent', {
       method: 'POST',
@@ -603,6 +618,138 @@ async function runAgent() {
     }
   } catch(e) {
     if (e.message !== 'Unauthorized') contentEl.textContent = '❌ ' + e.message;
+  } finally {
+    setAgentBtnState(false);
+  }
+}
+
+// SSE 流式模式
+async function runAgentStream() {
+  const model = document.getElementById('agentModel').value;
+  const prompt = document.getElementById('agentPrompt').value.trim();
+  if (!prompt) return;
+  const wrap = document.getElementById('agentResult');
+  const contentEl = document.getElementById('agentContent');
+  const stepsEl = document.getElementById('agentSteps');
+  const liveEl = document.getElementById('agentStepsLive');
+  wrap.style.display = 'block';
+  contentEl.textContent = '';
+  stepsEl.style.display = 'none';
+  liveEl.style.display = 'block';
+  liveEl.innerHTML = '<div data-loading style="color:#eab308;">⏳ Agent 启动中...</div>';
+  setAgentBtnState(true);
+
+  try {
+    const token = getAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    const response = await fetch('/admin/api/agent/stream', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ model, prompt })
+    });
+
+    if (response.status === 401) { showAuthPrompt(); return; }
+    if (!response.ok) {
+      contentEl.textContent = '❌ HTTP ' + response.status;
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let stepCount = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // 解析 SSE 事件：按双换行分割
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop(); // 最后一段可能不完整，留在 buffer
+
+      for (const part of parts) {
+        if (!part.trim()) continue;
+        const lines = part.split('\n');
+        let eventType = '';
+        let dataStr = '';
+        for (const line of lines) {
+          if (line.startsWith('event: ')) eventType = line.slice(7);
+          else if (line.startsWith('data: ')) dataStr = line.slice(6);
+        }
+        if (!eventType || !dataStr) continue;
+
+        let data;
+        try { data = JSON.parse(dataStr); } catch { continue; }
+
+        if (eventType === 'step') {
+          stepCount++;
+          renderLiveStep(liveEl, data, stepCount);
+        } else if (eventType === 'done') {
+          contentEl.textContent = data.content || '';
+          stepsEl.style.display = 'block';
+          stepsEl.innerHTML = '✅ 完成 | 🔧 工具: ' + (data.toolsUsed?.join(', ') || 'none') +
+            ' | tokens: ' + (data.totalTokens || 0) + ' | 步骤: ' + stepCount;
+        } else if (eventType === 'error') {
+          contentEl.textContent = '❌ ' + (data.error || 'Unknown error');
+        }
+      }
+    }
+  } catch(e) {
+    if (e.message !== 'Unauthorized') contentEl.textContent = '❌ ' + e.message;
+  } finally {
+    setAgentBtnState(false);
+  }
+}
+
+// 渲染单个实时步骤
+function renderLiveStep(container, step, index) {
+  // 移除"启动中"提示
+  const loading = container.querySelector('[data-loading]');
+  if (loading) loading.remove();
+
+  const el = document.createElement('div');
+  el.style.cssText = 'padding:6px 8px;margin-bottom:4px;border-radius:6px;border-left:3px solid;font-size:12px;';
+
+  if (step.type === 'llm_call') {
+    el.style.borderColor = '#818cf8';
+    el.style.background = '#1e1b4b';
+    const preview = step.content ? escapeHtml(step.content.slice(0, 120)) + (step.content.length > 120 ? '...' : '') : '<em style="color:#64748b">无文本输出（准备调用工具）</em>';
+    el.innerHTML = '<span style="color:#a5b4fc;font-weight:600;">🧠 LLM #' + step.stepNumber + '</span>' +
+      ' <span style="color:#475569;">' + step.durationMs + 'ms' + (step.usage ? ' · ' + step.usage.total_tokens + ' tokens' : '') + '</span>' +
+      '<div style="color:#cbd5e1;margin-top:4px;">' + preview + '</div>';
+  } else if (step.type === 'tool_exec') {
+    el.style.borderColor = '#22d3ee';
+    el.style.background = '#0c1a2b';
+    const inputPreview = step.toolInput ? escapeHtml(JSON.stringify(step.toolInput).slice(0, 80)) : '-';
+    const hasError = step.toolOutput && typeof step.toolOutput === 'object' && step.toolOutput.error;
+    const outputPreview = hasError
+      ? '<span style="color:#f87171;">' + escapeHtml(step.toolOutput.error) + '</span>'
+      : (step.toolOutput ? escapeHtml(JSON.stringify(step.toolOutput).slice(0, 100)) + '...' : '-');
+    el.innerHTML = '<span style="color:#22d3ee;font-weight:600;">🔧 ' + escapeHtml(step.toolName || '?') + '</span>' +
+      ' <span style="color:#475569;">' + step.durationMs + 'ms</span>' +
+      '<div style="color:#94a3b8;margin-top:2px;font-size:11px;">输入: ' + inputPreview + '</div>' +
+      '<div style="color:#94a3b8;margin-top:2px;font-size:11px;">输出: ' + outputPreview + '</div>';
+  }
+
+  container.appendChild(el);
+  // 自动滚动到底部
+  container.scrollTop = container.scrollHeight;
+}
+
+// 按钮状态管理
+function setAgentBtnState(running) {
+  const btn = document.getElementById('agentRunBtn');
+  if (running) {
+    btn.disabled = true;
+    btn.textContent = '运行中...';
+    btn.style.opacity = '0.6';
+  } else {
+    btn.disabled = false;
+    btn.textContent = 'Agent';
+    btn.style.opacity = '1';
   }
 }
 

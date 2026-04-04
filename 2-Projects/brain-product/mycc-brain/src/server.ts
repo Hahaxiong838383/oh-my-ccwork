@@ -341,7 +341,77 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Admin API: agent — run agent loop with tools
+  // Admin API: agent/stream — SSE 流式 Agent Loop，实时推送中间步骤
+  if (path === "/admin/api/agent/stream" && req.method === "POST") {
+    // SSE headers
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no", // nginx 不缓冲
+    });
+
+    const sendSSE = (event: string, data: unknown) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    try {
+      const body = JSON.parse(await readBody(req));
+      const modelParam: string = body.model ?? "cc-qwen";
+      const prompt: string = body.prompt ?? "";
+      if (!prompt) { sendSSE("error", { error: "prompt required" }); res.end(); return; }
+
+      const route = config.routes[modelParam];
+      if (!route) { sendSSE("error", { error: `Model not found: ${modelParam}` }); res.end(); return; }
+
+      // Build tool registry
+      const registry = new ToolRegistry();
+      registry.register(searchMemoryTool);
+      registry.register(listMemoriesTool);
+      registry.register(runDiagnosisTool);
+
+      const brainRoot = resolve(import.meta.dirname, "..");
+      const toolMap = new Map(registry.list().map(t => [t.name, t]));
+
+      // Build initial messages with memory injection
+      const messages: Array<{ role: string; content: string }> = [];
+      try {
+        const brainResult = await loadBrainContext(prompt, config.dataDir);
+        const { loadActivePatches } = await import("./services/hot-patch.js");
+        const { buildBrainSystemPrompt } = await import("./services/brain-context.js");
+        const patches = loadActivePatches(brainRoot);
+        const systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
+        messages.push({ role: "system", content: systemPrompt });
+      } catch { /* degrade gracefully */ }
+      messages.push({ role: "user", content: prompt });
+
+      const result = await runAgentLoop({
+        baseURL: route.baseURL,
+        apiKey: route.apiKey,
+        model: route.model,
+        messages,
+        tools: toolMap,
+        toolContext: { brainRoot, dataDir: config.dataDir },
+        maxSteps: 10,
+        temperature: 0.7,
+        onStep: (step) => sendSSE("step", step),
+      });
+
+      sendSSE("done", {
+        content: result.content,
+        totalTokens: result.totalTokens,
+        toolsUsed: result.toolsUsed,
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      sendSSE("error", { error: msg });
+    }
+
+    res.end();
+    return;
+  }
+
+  // Admin API: agent — run agent loop with tools（同步，保留兼容）
   if (path === "/admin/api/agent" && req.method === "POST") {
     try {
       const body = JSON.parse(await readBody(req));
