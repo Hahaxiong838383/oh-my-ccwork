@@ -5,984 +5,895 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>mycc-brain Admin</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; padding: 20px; max-width: 900px; margin: 0 auto; }
-h1 { font-size: 24px; margin-bottom: 20px; }
-h1 span { color: #818cf8; }
-.card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #334155; }
-.card h2 { font-size: 16px; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
-.stat-row { display: flex; gap: 16px; flex-wrap: wrap; }
-.stat { flex: 1; min-width: 100px; background: #0f172a; border-radius: 8px; padding: 12px; text-align: center; }
-.stat .value { font-size: 28px; font-weight: 700; color: #818cf8; }
-.stat .label { font-size: 12px; color: #64748b; margin-top: 4px; }
-.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-.dot.green { background: #22c55e; }
-.dot.red { background: #ef4444; }
-.dot.yellow { background: #eab308; }
-table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #334155; font-size: 14px; }
-th { color: #64748b; font-weight: 500; }
-td code { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
-.badge.brain { background: #312e81; color: #a5b4fc; }
-.badge.raw { background: #1c1917; color: #a8a29e; }
-.badge.ok { background: #064e3b; color: #6ee7b7; }
-.badge.miss { background: #451a03; color: #fbbf24; }
-.btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; }
-.btn-primary { background: #4f46e5; color: white; }
-.btn-primary:hover { background: #4338ca; }
-.btn-danger { background: #991b1b; color: white; }
-.btn-danger:hover { background: #7f1d1d; }
-.btn-sm { padding: 4px 10px; font-size: 12px; }
-.btn-ghost { background: transparent; border: 1px solid #475569; color: #94a3b8; }
-.btn-ghost:hover { background: #334155; }
-.actions { display: flex; gap: 8px; margin-top: 12px; }
-.test-area { margin-top: 12px; }
-.test-area textarea { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; padding: 8px; font-family: monospace; font-size: 13px; resize: vertical; min-height: 60px; }
-.test-area select, .test-area input { background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; padding: 6px 10px; font-size: 13px; }
-.test-area input { flex: 1; }
-#testResult, #memResult { margin-top: 8px; padding: 10px; background: #0f172a; border-radius: 8px; font-family: monospace; font-size: 13px; white-space: pre-wrap; min-height: 40px; display: none; max-height: 300px; overflow-y: auto; }
-.patch-list { list-style: none; }
-.patch-list li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #1e293b; font-size: 13px; }
-.patch-list li .rule { flex: 1; color: #cbd5e1; }
-.patch-list li.inactive .rule { color: #475569; text-decoration: line-through; }
-.exp-bar { display: flex; gap: 4px; align-items: flex-end; height: 40px; }
-.exp-bar .bar { flex: 1; background: #4f46e5; border-radius: 3px 3px 0 0; min-width: 20px; transition: height 0.3s; }
-.exp-bar .bar-label { font-size: 10px; color: #64748b; text-align: center; margin-top: 2px; }
-.exp-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; }
-.footer { text-align: center; color: #475569; font-size: 12px; margin-top: 20px; }
-.btn-delete { background: transparent; border: 1px solid #7f1d1d; color: #f87171; padding: 2px 8px; font-size: 11px; border-radius: 6px; cursor: pointer; }
-.btn-delete:hover { background: #7f1d1d; color: white; }
-.btn-export { background: #1e40af; color: #93c5fd; }
-.btn-export:hover { background: #1e3a8a; }
-.exp-detail { margin-top: 8px; padding: 10px; background: #0f172a; border-radius: 8px; font-size: 12px; color: #94a3b8; display: none; }
-.exp-detail .model-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #1e293b; }
-.auth-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 999; }
-.auth-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; width: 340px; text-align: center; }
-.auth-box h3 { margin-bottom: 12px; color: #e2e8f0; }
-.auth-box input { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; padding: 10px; font-size: 14px; margin-bottom: 12px; }
-.auth-box .auth-error { color: #f87171; font-size: 12px; margin-bottom: 8px; display: none; }
-#agentStepsLive { max-height: 320px; overflow-y: auto; padding: 4px; background: #0f172a; border-radius: 8px; }
+/* ─── CSS Variables ─── */
+:root {
+  --bg-body: #0a0f1a;
+  --bg-sidebar: #0f172a;
+  --bg-main: #111827;
+  --bg-card: #1e293b;
+  --bg-input: #0f172a;
+  --border: #334155;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-dim: #64748b;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #eab308;
+  --info: #22d3ee;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', monospace;
+  --sidebar-w: 260px;
+}
+
+/* ─── Reset ─── */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font-sans);background:var(--bg-body);color:var(--text-primary);font-size:14px;line-height:1.5}
+
+/* ─── App Layout ─── */
+#app{display:flex;height:100vh;width:100%}
+
+/* ─── Sidebar ─── */
+#sidebar{width:var(--sidebar-w);background:var(--bg-sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:width .2s ease;overflow:hidden;flex-shrink:0;position:relative;z-index:10}
+#sidebar.collapsed{width:0;border-right:none}
+.sb-header{padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-toggle{background:none;border:none;color:var(--text-secondary);font-size:18px;cursor:pointer;padding:4px;border-radius:4px;transition:background .15s}
+.sb-toggle:hover{background:var(--bg-card)}
+.sb-brand{font-size:15px;font-weight:700;white-space:nowrap;cursor:pointer;flex:1}
+.sb-brand span{color:#818cf8}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;cursor:help}
+.status-dot.on{background:var(--success)}.status-dot.off{background:var(--danger)}
+.new-chat-btn{margin:12px 16px;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s;white-space:nowrap}
+.new-chat-btn:hover{background:var(--accent-hover)}
+.sess-list{flex:1;overflow-y:auto;padding:4px 8px}
+.sess-item{padding:10px 12px;border-radius:8px;cursor:pointer;transition:background .15s;position:relative;margin-bottom:2px}
+.sess-item:hover{background:var(--bg-card)}
+.sess-item.active{background:var(--bg-card);border-left:3px solid var(--accent);padding-left:9px}
+.sess-title{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess-meta{font-size:11px;color:var(--text-dim);margin-top:2px;display:flex;align-items:center;gap:6px}
+.sess-del{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;display:none;padding:4px;border-radius:4px}
+.sess-item:hover .sess-del{display:block}
+.sess-del:hover{color:var(--danger);background:rgba(239,68,68,.1)}
+.mtag{display:inline-block;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:500}
+.mtag.chat{background:#312e81;color:#a5b4fc}.mtag.agent{background:#0c4a6e;color:#7dd3fc}.mtag.compare{background:#3f3f46;color:#a8a29e}
+.sb-nav{flex-shrink:0;padding:8px;border-top:1px solid var(--border)}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;color:var(--text-secondary);font-size:13px;transition:all .15s;border:none;background:none;width:100%;text-align:left;white-space:nowrap}
+.nav-item:hover{background:var(--bg-card);color:var(--text-primary)}.nav-item.active{background:var(--accent);color:#fff}
+
+/* ─── Main ─── */
+#main{flex:1;background:var(--bg-main);display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.sb-open{position:fixed;top:12px;left:12px;z-index:20;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);font-size:18px;padding:6px 10px;border-radius:8px;cursor:pointer;display:none;transition:background .15s}
+.sb-open:hover{background:var(--border)}
+#sidebar.collapsed~.sb-open{display:block}
+
+/* ─── Chat View ─── */
+#view-chat{display:flex;flex-direction:column;height:100%}
+.chat-top{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.mode-pills{display:flex;background:var(--bg-input);border-radius:8px;padding:2px;border:1px solid var(--border)}
+.mpill{padding:6px 16px;border:none;background:none;color:var(--text-secondary);font-size:13px;font-weight:500;cursor:pointer;border-radius:6px;transition:all .15s;white-space:nowrap}
+.mpill.active{background:var(--accent);color:#fff}
+.model-sel{background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:6px 10px;font-size:13px;max-width:280px}
+.agent-opts{display:flex;align-items:center;gap:12px}
+.agent-opts label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);cursor:pointer;white-space:nowrap}
+.agent-opts input[type=checkbox]{accent-color:var(--accent)}
+.chat-metrics{margin-left:auto;font-size:12px;color:var(--text-dim);white-space:nowrap;display:flex;gap:12px}
+.chat-metrics .mv{color:var(--info);font-weight:600}
+
+/* ─── Messages ─── */
+.messages{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px}
+.empty-st{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-dim);gap:12px}
+.empty-st .logo{font-size:48px}.empty-st .hint{font-size:14px}
+.msg{display:flex;animation:msgIn .15s ease}
+.msg.user{justify-content:flex-end}.msg.assistant{justify-content:flex-start}
+.bubble{padding:12px 16px;font-size:14px;line-height:1.6;word-break:break-word}
+.msg.user .bubble{background:#312e81;border-radius:16px 16px 4px 16px;max-width:75%}
+.msg.assistant .bubble{background:var(--bg-card);border-radius:4px 16px 16px 16px;max-width:85%}
+.msg-meta{font-size:11px;color:var(--text-dim);margin-top:8px;padding-top:6px;border-top:1px solid var(--border)}
+
+/* Compare split */
+.cmp-split{display:flex;gap:1px;background:var(--border);border-radius:4px 16px 16px 16px;overflow:hidden;max-width:90%}
+.cmp-side{flex:1;background:var(--bg-card);padding:12px 16px;min-width:0}
+.cmp-side:first-child{border-radius:4px 0 0 16px}.cmp-side:last-child{border-radius:0 16px 16px 0}
+.cmp-label{font-size:12px;font-weight:600;margin-bottom:8px}
+.cmp-label.raw{color:#a8a29e}.cmp-label.brain{color:#a5b4fc}
+.cmp-content{font-size:13px;line-height:1.6;word-break:break-word;white-space:pre-wrap}
+
+/* Agent steps */
+.astep{border-left:2px solid var(--info);background:var(--bg-input);border-radius:6px;padding:8px 12px;margin-bottom:6px;font-size:12px;cursor:pointer}
+.astep .sh{display:flex;align-items:center;gap:8px;color:var(--info);font-weight:600}
+.astep .sh .st{color:var(--text-dim);font-weight:400}
+.astep .sb{display:none;margin-top:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);white-space:pre-wrap;max-height:200px;overflow-y:auto}
+.astep.exp .sb{display:block}
+.astep.llm{border-left-color:#818cf8}.astep.llm .sh{color:#a5b4fc}
+.think-blk{color:var(--text-dim);font-style:italic;font-size:12px;padding:6px 12px;border-left:2px solid var(--text-dim);margin-bottom:6px;cursor:pointer}
+.think-blk .tc{display:none;margin-top:4px;white-space:pre-wrap}.think-blk.exp .tc{display:block}
+
+/* Memory inject */
+.mem-inj{margin-top:8px;font-size:12px}
+.mem-inj-tog{color:var(--text-dim);cursor:pointer;user-select:none}
+.mem-inj-tog:hover{color:var(--text-secondary)}
+.mem-inj-body{display:none;margin-top:6px;padding:8px;background:var(--bg-input);border-radius:6px;font-size:11px;color:var(--text-secondary);max-height:200px;overflow-y:auto;white-space:pre-wrap}
+.mem-inj.exp .mem-inj-body{display:block}
+
+/* ─── Input Bar ─── */
+.input-bar{padding:16px 20px;flex-shrink:0}
+.input-wrap{background:var(--bg-card);border-radius:12px;border:1px solid var(--border);display:flex;align-items:flex-end;padding:8px 12px;gap:8px;transition:border-color .15s}
+.input-wrap:focus-within{border-color:var(--accent)}
+.input-wrap textarea{flex:1;background:none;border:none;color:var(--text-primary);font-family:var(--font-sans);font-size:14px;line-height:1.5;resize:none;outline:none;min-height:24px;max-height:120px;padding:4px 0}
+.input-wrap textarea::placeholder{color:var(--text-dim)}
+.send-btn{width:36px;height:36px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+.send-btn:hover{background:var(--accent-hover)}.send-btn:disabled{opacity:.5;cursor:not-allowed}
+.send-btn.loading{animation:pulse 1.2s ease-in-out infinite}
+
+/* ─── Panel Views ─── */
+.panel-view{height:100%;overflow-y:auto;padding:24px}
+.panel-view h2{font-size:20px;font-weight:700;margin-bottom:20px}
+.card{background:var(--bg-card);border-radius:12px;padding:20px;margin-bottom:16px;border:1px solid var(--border)}
+.card h3{font-size:14px;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+.stat-row{display:flex;gap:12px;flex-wrap:wrap}
+.stat{flex:1;min-width:100px;background:var(--bg-input);border-radius:8px;padding:12px;text-align:center}
+.stat .value{font-size:24px;font-weight:700;color:#818cf8}.stat .label{font-size:11px;color:var(--text-dim);margin-top:4px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);font-size:13px}
+th{color:var(--text-dim);font-weight:500}
+td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12px;font-family:var(--font-mono)}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.badge.brain{background:#312e81;color:#a5b4fc}.badge.raw{background:#1c1917;color:#a8a29e}
+.badge.ok{background:#064e3b;color:#6ee7b7}.badge.miss{background:#451a03;color:#fbbf24}
+.btn{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-hover)}
+.btn-danger{background:#991b1b;color:#fff}.btn-danger:hover{background:#7f1d1d}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-ghost{background:transparent;border:1px solid #475569;color:var(--text-secondary)}.btn-ghost:hover{background:var(--border)}
+.btn-export{background:#1e40af;color:#93c5fd}.btn-export:hover{background:#1e3a8a}
+.actions{display:flex;gap:8px;margin-top:12px}
+.patch-list{list-style:none}
+.patch-list li{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bg-input);font-size:13px}
+.patch-list li .rule{flex:1;color:#cbd5e1}
+.patch-list li.inactive .rule{color:#475569;text-decoration:line-through}
+.btn-delete{background:transparent;border:1px solid #7f1d1d;color:#f87171;padding:2px 8px;font-size:11px;border-radius:6px;cursor:pointer}.btn-delete:hover{background:#7f1d1d;color:#fff}
+.exp-bar{display:flex;gap:4px;align-items:flex-end;height:40px}
+.exp-bar .bar{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-width:20px;transition:height .3s}
+.exp-bar-wrap{display:flex;flex-direction:column;align-items:center;flex:1;cursor:pointer}
+.bar-label{font-size:10px;color:var(--text-dim);text-align:center;margin-top:2px}
+.exp-detail{margin-top:8px;padding:10px;background:var(--bg-input);border-radius:8px;font-size:12px;color:var(--text-secondary);display:none}
+.model-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bg-card)}
+
+/* ─── Auth ─── */
+.auth-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:999}
+.auth-box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:340px;text-align:center}
+.auth-box h3{margin-bottom:12px}
+.auth-box input{width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);padding:10px;font-size:14px;margin-bottom:12px}
+.auth-box .auth-err{color:var(--danger);font-size:12px;margin-bottom:8px;display:none}
+
+/* ─── Markdown ─── */
+.mc code{background:var(--bg-input);padding:1px 5px;border-radius:4px;font-family:var(--font-mono);font-size:12px}
+.mc pre{background:var(--bg-input);border-radius:6px;padding:10px 12px;margin:8px 0;overflow-x:auto;font-family:var(--font-mono);font-size:12px;line-height:1.4}
+.mc pre code{background:none;padding:0}
+.mc strong{font-weight:700}
+
+/* ─── Responsive ─── */
+@media(max-width:1023px){
+  #sidebar{position:fixed;top:0;left:0;bottom:0;z-index:100;box-shadow:4px 0 24px rgba(0,0,0,.5)}
+  #sidebar.collapsed{box-shadow:none}
+  .sb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:90;display:none}
+  .sb-overlay.vis{display:block}
+}
+@media(max-width:767px){
+  #sidebar{width:100vw}
+  .msg.user .bubble,.msg.assistant .bubble{max-width:95%}
+  .cmp-split{max-width:100%;flex-direction:column}
+  .cmp-side:first-child{border-radius:4px 16px 0 0}.cmp-side:last-child{border-radius:0 0 16px 16px}
+  .chat-top{padding:10px 12px;gap:8px}
+  .messages{padding:16px 12px}
+  .input-bar{padding:12px}
+}
+
+/* ─── Animations ─── */
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--text-dim)}
 </style>
 </head>
 <body>
-<h1>🧠 <span>mycc-brain</span> Admin</h1>
-
-<div class="tab-bar" style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid #334155;padding-bottom:8px;">
-  <button id="tabBtn-chat" class="tab-btn tab-active" onclick="switchTab('chat')" style="padding:8px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:600;border:none;background:#4f46e5;color:white;">对话</button>
-  <button id="tabBtn-config" class="tab-btn" onclick="switchTab('config')" style="padding:8px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:600;border:none;background:transparent;color:#94a3b8;">配置</button>
-  <button id="tabBtn-evolution" class="tab-btn" onclick="switchTab('evolution')" style="padding:8px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:600;border:none;background:transparent;color:#94a3b8;">进化</button>
-</div>
-
-<div id="tab-chat">
-
-<div class="card">
-  <h2>A/B Compare</h2>
-  <div class="test-area">
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-      <select id="compareModel"></select>
-      <input id="comparePrompt" placeholder="输入对比查询..." value="你叫什么" style="flex:1" />
-      <button class="btn btn-primary btn-sm" onclick="runCompare()">对比</button>
+<div id="app">
+  <div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
+  <aside id="sidebar">
+    <div class="sb-header">
+      <button class="sb-toggle" onclick="toggleSidebar()" title="收起侧边栏">☰</button>
+      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span></div>
+      <div class="status-dot off" id="statusDot" title="检查中..."></div>
     </div>
-    <div id="compareResult" style="display:none;">
-      <div style="display:flex;gap:1px;margin-top:8px;">
-        <div style="flex:1;background:#0f172a;border-radius:8px 0 0 8px;padding:12px;min-height:80px;">
-          <div style="font-size:13px;font-weight:600;color:#a8a29e;margin-bottom:8px;">📡 Raw（无记忆）</div>
-          <div id="compareRaw" style="font-size:13px;white-space:pre-wrap;color:#e2e8f0;max-height:300px;overflow-y:auto;">-</div>
+    <button class="new-chat-btn" onclick="newChat()">+ 新对话</button>
+    <div class="sess-list" id="sessList"></div>
+    <div class="sb-nav">
+      <button class="nav-item" data-view="dashboard" onclick="switchView('dashboard')">📊 数据面板</button>
+      <button class="nav-item" data-view="config" onclick="switchView('config')">⚙ 系统配置</button>
+      <button class="nav-item" data-view="evolution" onclick="switchView('evolution')">🧬 进化中心</button>
+      <button class="nav-item" data-view="patches" onclick="switchView('patches')">🔧 热补丁</button>
+    </div>
+  </aside>
+  <button class="sb-open" id="sbOpenBtn" onclick="toggleSidebar()">☰</button>
+  <main id="main">
+    <!-- Chat View -->
+    <div id="view-chat">
+      <div class="chat-top">
+        <div class="mode-pills">
+          <button class="mpill active" data-mode="chat" onclick="switchMode('chat')">Chat</button>
+          <button class="mpill" data-mode="agent" onclick="switchMode('agent')">Agent</button>
+          <button class="mpill" data-mode="compare" onclick="switchMode('compare')">Compare</button>
         </div>
-        <div style="width:1px;background:#334155;flex-shrink:0;"></div>
-        <div style="flex:1;background:#0f172a;border-radius:0 8px 8px 0;padding:12px;min-height:80px;">
-          <div style="font-size:13px;font-weight:600;color:#a5b4fc;margin-bottom:8px;">🧠 Brain（记忆注入）</div>
-          <div id="compareBrain" style="font-size:13px;white-space:pre-wrap;color:#e2e8f0;max-height:300px;overflow-y:auto;">-</div>
-          <div id="compareMeta" style="font-size:11px;color:#64748b;margin-top:8px;border-top:1px solid #1e293b;padding-top:6px;display:none;"></div>
+        <select class="model-sel" id="modelSel"></select>
+        <div class="agent-opts" id="agentOpts" style="display:none">
+          <label title="实时显示每个推理和工具调用步骤"><input type="checkbox" id="streamTog" checked> Stream</label>
+          <label title="开启 thinking 模式"><input type="checkbox" id="thinkTog"> Think</label>
+        </div>
+        <div class="chat-metrics" id="chatMetrics"></div>
+      </div>
+      <div class="messages" id="msgArea">
+        <div class="empty-st" id="emptyState">
+          <div class="logo">🧠</div>
+          <div class="hint">输入消息开始对话</div>
+        </div>
+      </div>
+      <div class="input-bar">
+        <div class="input-wrap">
+          <textarea id="chatInput" placeholder="输入消息..." rows="1" onkeydown="handleKey(event)" oninput="autoGrow(this)"></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
         </div>
       </div>
     </div>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Agent Test</h2>
-  <div style="display:flex;gap:8px;align-items:center">
-    <select id="agentModel"></select>
-    <input id="agentPrompt" placeholder="Agent 模式查询（会自动调用工具）..." value="我最近的项目进展怎样？" style="flex:1" />
-    <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#94a3b8;cursor:pointer;white-space:nowrap;" title="开启后实时显示每个推理和工具调用步骤">
-      <input type="checkbox" id="agentStreamToggle" checked style="accent-color:#4f46e5;" /> Stream
-    </label>
-    <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#94a3b8;cursor:pointer;white-space:nowrap;" title="开启 thinking 模式（Gemma4/Qwen3 等支持推理的模型）">
-      <input type="checkbox" id="thinkingToggle" style="accent-color:#22d3ee;" /> Think
-    </label>
-    <button class="btn btn-primary btn-sm" id="agentRunBtn" onclick="runAgent()">Agent</button>
-  </div>
-  <div id="agentResult" style="display:none;margin-top:12px;">
-    <div id="agentStepsLive" style="font-size:12px;margin-bottom:8px;display:none;"></div>
-    <div style="font-size:13px;white-space:pre-wrap;color:#e2e8f0;max-height:300px;overflow-y:auto;" id="agentContent">-</div>
-    <div id="agentSteps" style="font-size:11px;color:#64748b;margin-top:8px;border-top:1px solid #1e293b;padding-top:6px;display:none;"></div>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Quick Test</h2>
-  <div class="test-area">
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-      <select id="testModel"></select>
-      <button class="btn btn-primary btn-sm" onclick="runTest()">发送</button>
+    <!-- Dashboard -->
+    <div id="view-dashboard" class="panel-view" style="display:none">
+      <h2>📊 数据面板</h2>
+      <div class="card">
+        <h3>Experience Stream</h3>
+        <div class="stat-row">
+          <div class="stat"><div class="value" id="dExpCnt">-</div><div class="label">今日请求</div></div>
+          <div class="stat"><div class="value" id="dExpLat">-</div><div class="label">平均延迟</div></div>
+          <div class="stat"><div class="value" id="dExpPat">-</div><div class="label">活跃补丁</div></div>
+        </div>
+        <div id="dExpChart" style="margin-top:12px"></div>
+        <div id="dExpDetail" class="exp-detail"></div>
+        <div class="actions">
+          <button class="btn btn-sm btn-export" onclick="exportExp()">📥 导出 JSONL</button>
+          <button class="btn btn-sm btn-primary" onclick="togInsights()">📊 查看洞察</button>
+        </div>
+        <div id="dInsights" class="exp-detail"></div>
+      </div>
+      <div class="card">
+        <h3>Health Metrics <span style="font-size:12px;color:var(--text-dim)">(7 天)</span></h3>
+        <div class="stat-row">
+          <div class="stat"><div class="value" id="dTotReqs">-</div><div class="label">请求总量</div></div>
+          <div class="stat"><div class="value" id="dAvgLat">-</div><div class="label">平均延迟</div></div>
+          <div class="stat"><div class="value" id="dMissR">-</div><div class="label">Miss Rate</div></div>
+          <div class="stat"><div class="value" id="dP95">-</div><div class="label">P95 延迟</div></div>
+        </div>
+        <div style="margin-top:12px">
+          <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">检索路径命中分布</div>
+          <div id="dPathBars" class="exp-bar" style="height:60px"></div>
+        </div>
+      </div>
     </div>
-    <textarea id="testPrompt" placeholder="输入测试消息...">你好，请用一句话介绍自己</textarea>
-    <div id="testResult"></div>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Memory Preview</h2>
-  <div class="test-area">
-    <div style="display:flex;gap:8px;margin-bottom:8px;">
-      <input id="memQuery" placeholder="输入查询，预览记忆注入内容..." value="川哥有几台电脑" style="flex:1" />
-      <button class="btn btn-primary btn-sm" onclick="previewMemory()">预览</button>
+    <!-- Config -->
+    <div id="view-config" class="panel-view" style="display:none">
+      <h2>⚙ 系统配置</h2>
+      <div class="card">
+        <h3>系统状态</h3>
+        <div class="stat-row">
+          <div class="stat"><div class="value" id="cUp">-</div><div class="label">运行时间</div></div>
+          <div class="stat"><div class="value" id="cReqs">-</div><div class="label">今日请求</div></div>
+          <div class="stat"><div class="value" id="cErrs">-</div><div class="label">错误</div></div>
+          <div class="stat"><div class="value" id="cData">-</div><div class="label">数据目录</div></div>
+          <div class="stat"><div class="value" id="cMem">-</div><div class="label">记忆文件</div></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary btn-sm" onclick="refreshStatus()">刷新状态</button>
+          <button class="btn btn-danger btn-sm" onclick="restartSvc()">重启服务</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>模型路由</h3>
+        <table><thead><tr><th>模型</th><th>类型</th><th>上游</th><th>API Key</th></tr></thead><tbody id="cRoutes"></tbody></table>
+      </div>
+      <div class="card">
+        <h3>会话统计</h3>
+        <div class="stat-row">
+          <div class="stat"><div class="value" id="cConvA">-</div><div class="label">活跃会话</div></div>
+          <div class="stat"><div class="value" id="cConvM">-</div><div class="label">总消息数</div></div>
+        </div>
+      </div>
     </div>
-    <div id="memResult"></div>
-  </div>
+    <!-- Evolution -->
+    <div id="view-evolution" class="panel-view" style="display:none">
+      <h2>🧬 进化中心</h2>
+      <div class="card"><h3>评估结果</h3><div id="eEval" style="color:var(--text-dim)">加载中...</div></div>
+      <div class="card"><h3>诊断报告</h3><div id="eDiag" style="color:var(--text-dim)">加载中...</div></div>
+      <div class="card"><h3>进化操作 <button class="btn btn-sm btn-primary" onclick="runEvo()" style="margin-left:12px">运行周期</button></h3><div id="eActs" style="color:var(--text-dim)">加载中...</div></div>
+      <div class="card"><h3>进化日志 <span style="font-size:12px;color:var(--text-dim)">(最近 20 条)</span></h3><div id="eLog" style="max-height:300px;overflow-y:auto;font-size:12px;color:var(--text-secondary)">加载中...</div></div>
+    </div>
+    <!-- Patches -->
+    <div id="view-patches" class="panel-view" style="display:none">
+      <h2>🔧 热补丁</h2>
+      <div class="card">
+        <h3>补丁列表</h3>
+        <ul class="patch-list" id="pList"><li style="color:var(--text-dim)">加载中...</li></ul>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <input id="pNewRule" placeholder="新规则（如：川哥的生日是12月25日）" style="flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:6px 10px;font-size:13px">
+          <button class="btn btn-primary btn-sm" onclick="addPatch()">添加</button>
+        </div>
+      </div>
+    </div>
+  </main>
 </div>
-
-</div><!-- end tab-chat -->
-
-<div id="tab-config" style="display:none;">
-
-<div class="card">
-  <h2>Status</h2>
-  <div class="stat-row">
-    <div class="stat"><div class="value" id="sUptime">-</div><div class="label">Uptime</div></div>
-    <div class="stat"><div class="value" id="sRequests">-</div><div class="label">Today Requests</div></div>
-    <div class="stat"><div class="value" id="sErrors">-</div><div class="label">Errors</div></div>
-    <div class="stat"><div class="value" id="sData">-</div><div class="label">Data Dir</div></div>
-    <div class="stat"><div class="value" id="sMemory">-</div><div class="label">Memory</div></div>
-  </div>
-  <div class="actions">
-    <button class="btn btn-primary" onclick="refresh()">刷新状态</button>
-    <button class="btn btn-danger" onclick="restart()">重启服务</button>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Model Routes</h2>
-  <table>
-    <thead><tr><th>Model</th><th>Type</th><th>Upstream</th><th>API Key</th></tr></thead>
-    <tbody id="routeTable"></tbody>
-  </table>
-</div>
-
-<div class="card">
-  <h2>Hot Patches</h2>
-  <ul class="patch-list" id="patchList"><li style="color:#475569">loading...</li></ul>
-  <div style="display:flex;gap:8px;margin-top:10px;">
-    <input id="newPatchRule" placeholder="新规则（如：川哥的生日是12月25日）" />
-    <button class="btn btn-primary btn-sm" onclick="addPatch()">添加</button>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Experience Stream</h2>
-  <div class="stat-row">
-    <div class="stat"><div class="value" id="expCount">-</div><div class="label">Today</div></div>
-    <div class="stat"><div class="value" id="expLatency">-</div><div class="label">Avg Latency</div></div>
-    <div class="stat"><div class="value" id="expPatches">-</div><div class="label">Active Patches</div></div>
-  </div>
-  <div id="expChart" style="margin-top:12px;"></div>
-  <div id="expDetail" class="exp-detail"></div>
-  <div id="insightsPanel" class="exp-detail"></div>
-  <div class="actions">
-    <button class="btn btn-sm btn-export" onclick="exportExperiences()">📥 导出 JSONL</button>
-    <button class="btn btn-sm btn-primary" onclick="toggleInsights()">📊 查看洞察</button>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Conversations</h2>
-  <div class="stat-row">
-    <div class="stat"><div class="value" id="convActive">-</div><div class="label">Active Sessions</div></div>
-    <div class="stat"><div class="value" id="convMessages">-</div><div class="label">Total Messages</div></div>
-  </div>
-</div>
-
-</div><!-- end tab-config -->
-
-<div id="tab-evolution" style="display:none;">
-
-<div class="card">
-  <h2>Eval Result</h2>
-  <div id="evoEvalResult" style="color:#64748b;">Loading...</div>
-</div>
-
-<div class="card">
-  <h2>Health Metrics <span style="font-size:12px;color:#64748b;">(7d)</span></h2>
-  <div class="stat-row" id="evoHealthStats">
-    <div class="stat"><div class="value" id="evoTotalReqs">-</div><div class="label">Requests</div></div>
-    <div class="stat"><div class="value" id="evoAvgLatency">-</div><div class="label">Avg Latency</div></div>
-    <div class="stat"><div class="value" id="evoMissRate">-</div><div class="label">Miss Rate</div></div>
-    <div class="stat"><div class="value" id="evoP95">-</div><div class="label">P95 Latency</div></div>
-  </div>
-  <div style="margin-top:12px;">
-    <h3 style="font-size:13px;color:#64748b;margin-bottom:8px;">Retrieval Path Hits</h3>
-    <div id="evoPathBars" class="exp-bar" style="height:60px;"></div>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Latest Diagnosis</h2>
-  <div id="evoDiagnosis" style="color:#64748b;">Loading...</div>
-</div>
-
-<div class="card">
-  <h2>Evolution Actions
-    <button class="btn btn-sm btn-primary" onclick="triggerEvolution()" style="margin-left:12px;">Run Cycle</button>
-  </h2>
-  <div id="evoActions" style="color:#64748b;">Loading...</div>
-</div>
-
-<div class="card">
-  <h2>Evolution Log <span style="font-size:12px;color:#64748b;">(recent 20)</span></h2>
-  <div id="evoLog" style="max-height:300px;overflow-y:auto;font-size:12px;color:#94a3b8;">Loading...</div>
-</div>
-
-</div><!-- end tab-evolution -->
-
-<div class="footer">mycc-brain v0.3.0 | <span id="refreshTime">-</span></div>
 
 <script>
-let _status = null;
-let _expHistory = [];
+/* ═══════════════════════════════════════════════════
+   State
+   ═══════════════════════════════════════════════════ */
+const S = {
+  sessions: [], activeId: null, collapsed: false,
+  view: 'chat', mode: 'chat', routes: {},
+  sending: false, _expH: [], _insOpen: false,
+};
+const MAX_SESS = 50, MAX_MSG = 100;
 
-function getAuthToken() {
-  return localStorage.getItem('brain_admin_token') || '';
+function loadState() {
+  try { S.sessions = JSON.parse(localStorage.getItem('brain_sessions') || '[]'); } catch { S.sessions = []; }
+  S.activeId = localStorage.getItem('brain_active_session') || null;
+  S.collapsed = localStorage.getItem('brain_sidebar_collapsed') === 'true';
+  S.mode = localStorage.getItem('brain_chat_mode') || 'chat';
 }
-
-function authHeaders(extra = {}) {
-  const token = getAuthToken();
-  const headers = { 'Content-Type': 'application/json', ...extra };
-  if (token) headers['Authorization'] = 'Bearer ' + token;
-  return headers;
+function saveSess() {
+  localStorage.setItem('brain_sessions', JSON.stringify(S.sessions));
+  localStorage.setItem('brain_active_session', S.activeId || '');
 }
+function getSess(id) { return S.sessions.find(s => s.id === id); }
+function curSess() { return getSess(S.activeId); }
 
-async function authFetch(url, opts = {}) {
-  const token = getAuthToken();
-  if (token) {
-    opts.headers = { ...(opts.headers || {}), 'Authorization': 'Bearer ' + token };
-  }
+/* ═══════════════════════════════════════════════════
+   Auth
+   ═══════════════════════════════════════════════════ */
+function getToken() { return localStorage.getItem('brain_admin_token') || ''; }
+function authH(x = {}) {
+  const h = { 'Content-Type': 'application/json', ...x };
+  const t = getToken(); if (t) h['Authorization'] = 'Bearer ' + t;
+  return h;
+}
+async function aFetch(url, opts = {}) {
+  const t = getToken();
+  if (t) opts.headers = { ...(opts.headers || {}), Authorization: 'Bearer ' + t };
   const r = await fetch(url, opts);
-  if (r.status === 401) {
-    showAuthPrompt();
-    throw new Error('Unauthorized');
-  }
+  if (r.status === 401) { showAuth(); throw new Error('Unauthorized'); }
   return r;
 }
-
-function showAuthPrompt() {
-  if (document.getElementById('authOverlay')) return;
-  const overlay = document.createElement('div');
-  overlay.id = 'authOverlay';
-  overlay.className = 'auth-overlay';
-  overlay.innerHTML = `
-    <div class="auth-box">
-      <h3>🔐 需要认证</h3>
-      <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">请输入 Admin 密码</p>
-      <div class="auth-error" id="authError">密码错误，请重试</div>
-      <input type="password" id="authPassword" placeholder="Admin Password" onkeydown="if(event.key==='Enter')submitAuth()" />
-      <button class="btn btn-primary" onclick="submitAuth()" style="width:100%">登录</button>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  setTimeout(() => document.getElementById('authPassword')?.focus(), 100);
+function showAuth() {
+  if (document.getElementById('authOv')) return;
+  const d = document.createElement('div'); d.id = 'authOv'; d.className = 'auth-ov';
+  d.innerHTML = `<div class="auth-box"><h3>🔐 需要认证</h3>
+    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px">请输入 Admin 密码</p>
+    <div class="auth-err" id="authErr">密码错误</div>
+    <input type="password" id="authPw" placeholder="Admin Password" onkeydown="if(event.key==='Enter')submitAuth()">
+    <button class="btn btn-primary" onclick="submitAuth()" style="width:100%">登录</button></div>`;
+  document.body.appendChild(d);
+  setTimeout(() => document.getElementById('authPw')?.focus(), 100);
 }
-
 async function submitAuth() {
-  const pw = document.getElementById('authPassword').value.trim();
-  if (!pw) return;
+  const pw = document.getElementById('authPw').value.trim(); if (!pw) return;
   localStorage.setItem('brain_admin_token', pw);
   try {
-    const r = await fetch('/admin/api/status', {
-      headers: { 'Authorization': 'Bearer ' + pw }
-    });
-    if (r.status === 401) {
-      document.getElementById('authError').style.display = 'block';
-      localStorage.removeItem('brain_admin_token');
-      return;
-    }
-    document.getElementById('authOverlay')?.remove();
-    refresh();
-  } catch(e) {
-    document.getElementById('authError').style.display = 'block';
-  }
+    const r = await fetch('/admin/api/status', { headers: { Authorization: 'Bearer ' + pw } });
+    if (r.status === 401) { document.getElementById('authErr').style.display = 'block'; localStorage.removeItem('brain_admin_token'); return; }
+    document.getElementById('authOv')?.remove(); refreshStatus();
+  } catch { document.getElementById('authErr').style.display = 'block'; }
 }
 
-async function refresh() {
-  try {
-    const r = await authFetch('/admin/api/status');
-    const d = await r.json();
-    _status = d;
-    document.getElementById('sUptime').textContent = formatUptime(d.uptime);
-    document.getElementById('sRequests').textContent = d.stats.todayRequests;
-    document.getElementById('sErrors').textContent = d.stats.errors;
-    document.getElementById('sData').innerHTML = d.dataDirExists
-      ? '<span class="dot green"></span>OK'
-      : '<span class="dot red"></span>Missing';
-    document.getElementById('sMemory').innerHTML = d.memoryItemsExists
-      ? '<span class="dot green"></span>OK'
-      : '<span class="dot red"></span>Missing';
-
-    // Experience stats
-    if (d.experience) {
-      document.getElementById('expCount').textContent = d.experience.today.count;
-      document.getElementById('expLatency').textContent = d.experience.today.avgLatency ? d.experience.today.avgLatency + 'ms' : '-';
-      _expHistory = d.experience.history || [];
-      renderExpChart(_expHistory);
-    }
-    if (d.patches) {
-      document.getElementById('expPatches').textContent = d.patches.active + '/' + d.patches.total;
-    }
-
-    // Conversations
-    if (d.conversations) {
-      document.getElementById('convActive').textContent = d.conversations.active || 0;
-      document.getElementById('convMessages').textContent = d.conversations.totalMessages || 0;
-    }
-
-    // Routes — 重建下拉前保存当前选中值，重建后恢复
-    const tb = document.getElementById('routeTable');
-    const sel = document.getElementById('testModel');
-    const compareSel = document.getElementById('compareModel');
-    const agentSel = document.getElementById('agentModel');
-    const prevTest = sel.value;
-    const prevCompare = compareSel.value;
-    const prevAgent = agentSel.value;
-    tb.innerHTML = '';
-    sel.innerHTML = '';
-    compareSel.innerHTML = '';
-    agentSel.innerHTML = '';
-    for (const [name, route] of Object.entries(d.routes)) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><code>${name}</code></td>
-        <td><span class="badge ${route.brain ? 'brain' : 'raw'}">${route.brain ? '🧠 brain' : '📡 raw'}</span></td>
-        <td style="font-size:12px;color:#94a3b8">${route.model} @ ${route.baseURL.replace(/https?:\/\//, '').split('/')[0]}</td>
-        <td><span class="badge ${route.hasKey ? 'ok' : 'miss'}">${route.hasKey ? '✓' : '✗'}</span></td>
-      `;
-      tb.appendChild(tr);
-      const host = route.baseURL.replace(/https?:\/\//, '').split('/')[0].split('.')[0];
-      const fullLabel = `${name} — ${route.model} @ ${host}`;
-      const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = fullLabel;
-      sel.appendChild(opt);
-      if (route.brain) {
-        const copt = document.createElement('option');
-        copt.value = name;
-        copt.textContent = fullLabel;
-        compareSel.appendChild(copt);
-        const aopt = document.createElement('option');
-        aopt.value = name;
-        aopt.textContent = fullLabel;
-        agentSel.appendChild(aopt);
-      }
-    }
-    // 恢复之前选中的模型
-    if (prevTest) sel.value = prevTest;
-    if (prevCompare) compareSel.value = prevCompare;
-    if (prevAgent) agentSel.value = prevAgent;
-    document.getElementById('refreshTime').textContent = new Date().toLocaleTimeString();
-
-    // Patches
-    loadPatches();
-  } catch(e) {
-    if (e.message !== 'Unauthorized') console.error(e);
-  }
+/* ═══════════════════════════════════════════════════
+   Sidebar
+   ═══════════════════════════════════════════════════ */
+function toggleSidebar() {
+  S.collapsed = !S.collapsed;
+  localStorage.setItem('brain_sidebar_collapsed', S.collapsed);
+  applySB();
+}
+function applySB() {
+  const sb = document.getElementById('sidebar'), ov = document.getElementById('sbOverlay'), btn = document.getElementById('sbOpenBtn');
+  if (S.collapsed) { sb.classList.add('collapsed'); ov.classList.remove('vis'); btn.style.display = 'block'; }
+  else { sb.classList.remove('collapsed'); btn.style.display = 'none'; if (innerWidth < 1024) ov.classList.add('vis'); }
+}
+function renderSess() {
+  const el = document.getElementById('sessList');
+  if (!S.sessions.length) { el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-dim);font-size:12px">暂无对话</div>'; return; }
+  el.innerHTML = S.sessions.map(s => {
+    const ac = s.id === S.activeId ? ' active' : '';
+    const t = new Date(s.updatedAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+    return `<div class="sess-item${ac}" onclick="switchSess('${s.id}')"><div class="sess-title">${esc(s.title)}</div>
+      <div class="sess-meta"><span>${t}</span><span class="mtag ${s.mode}">${s.mode}</span></div>
+      <button class="sess-del" onclick="event.stopPropagation();delSess('${s.id}')" title="删除">×</button></div>`;
+  }).join('');
 }
 
-function renderExpChart(history) {
-  const el = document.getElementById('expChart');
-  if (!history.length) { el.innerHTML = '<span style="color:#475569;font-size:12px">No experience data yet</span>'; return; }
-  const max = Math.max(...history.map(h => h.count), 1);
-  el.innerHTML = '<div class="exp-bar">' + history.map((h, i) => {
-    const pct = Math.max((h.count / max) * 40, 2);
-    return `<div class="exp-bar-wrap" style="cursor:pointer" onclick="showExpDetail(${i})"><div class="bar" style="height:${pct}px" title="${h.date}: ${h.count}"></div><div class="bar-label">${h.date.slice(5)}</div></div>`;
-  }).join('') + '</div>';
+/* ═══════════════════════════════════════════════════
+   Session CRUD
+   ═══════════════════════════════════════════════════ */
+function newChat() {
+  const s = { id: 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), title: '新对话', mode: S.mode,
+    model: document.getElementById('modelSel').value || '', messages: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  S.sessions.unshift(s); S.activeId = s.id; trimSess(); saveSess(); renderSess(); renderMsgs(); switchView('chat');
+  if (innerWidth < 1024) toggleSidebar();
+}
+function switchSess(id) {
+  S.activeId = id; const s = curSess(); if (s) { S.mode = s.mode; applyMode(); }
+  saveSess(); renderSess(); renderMsgs(); switchView('chat');
+  if (innerWidth < 1024) toggleSidebar();
+}
+function delSess(id) {
+  if (!confirm('确定删除此对话？')) return;
+  S.sessions = S.sessions.filter(s => s.id !== id);
+  if (S.activeId === id) S.activeId = S.sessions.length ? S.sessions[0].id : null;
+  saveSess(); renderSess(); renderMsgs();
+}
+function trimSess() { while (S.sessions.length > MAX_SESS) { const old = S.sessions.pop(); archiveSess(old); } }
+function trimMsgs(s) { if (s.messages.length > MAX_MSG) { const rm = s.messages.splice(0, s.messages.length - MAX_MSG); archiveMsgs(s, rm); } }
+
+/* ─── 记忆归档：清理的消息进入 brain 记忆系统 ─── */
+async function archiveSess(sess) {
+  try { await aFetch('/admin/api/sessions/archive', { method: 'POST', headers: authH(),
+    body: JSON.stringify({ sessionId: sess.id, title: sess.title, messages: sess.messages, mode: sess.mode, createdAt: sess.createdAt }) }); } catch { /* 端点待实现 */ }
+}
+async function archiveMsgs(sess, msgs) {
+  try { await aFetch('/admin/api/sessions/archive', { method: 'POST', headers: authH(),
+    body: JSON.stringify({ sessionId: sess.id, title: sess.title, messages: msgs, mode: sess.mode, partial: true }) }); } catch { /* 端点待实现 */ }
 }
 
-function showExpDetail(index) {
-  const el = document.getElementById('expDetail');
-  const h = _expHistory[index];
-  if (!h) return;
-  if (el.style.display === 'block' && el.dataset.index === String(index)) {
-    el.style.display = 'none';
-    return;
-  }
-  el.dataset.index = String(index);
-  const models = h.models || {};
-  const entries = Object.entries(models);
-  if (!entries.length) {
-    el.innerHTML = `<strong>${h.date}</strong> — ${h.count} requests<br><span style="color:#475569">No model breakdown available</span>`;
-  } else {
-    const total = entries.reduce((s, [, c]) => s + c, 0);
-    el.innerHTML = `<strong>${h.date}</strong> — ${h.count} requests<br><br>` +
-      entries.sort((a, b) => b[1] - a[1]).map(([model, count]) => {
-        const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
-        return `<div class="model-row"><span><code>${model}</code></span><span>${count} (${pct}%)</span></div>`;
-      }).join('');
-  }
-  el.style.display = 'block';
-}
-
-async function exportExperiences() {
-  try {
-    const r = await authFetch('/admin/api/experiences/export');
-    if (!r.ok) throw new Error('Export failed: ' + r.status);
-    const blob = await r.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const today = new Date().toISOString().slice(0, 10);
-    a.download = `experiences-${today}.jsonl`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch(e) {
-    if (e.message !== 'Unauthorized') alert('导出失败: ' + e.message);
-  }
-}
-
-async function loadPatches() {
-  try {
-    const r = await authFetch('/admin/api/patches');
-    const patches = await r.json();
-    const ul = document.getElementById('patchList');
-    if (!patches.length) { ul.innerHTML = '<li style="color:#475569">No patches</li>'; return; }
-    ul.innerHTML = patches.map(p => `
-      <li class="${p.active ? '' : 'inactive'}">
-        <button class="btn btn-ghost btn-sm" onclick="togglePatch('${p.id}', ${!p.active})">${p.active ? '✅' : '⬜'}</button>
-        <span class="rule">${p.rule}</span>
-        <span style="color:#475569;font-size:11px">${new Date(p.created).toLocaleDateString()}</span>
-        <button class="btn-delete" onclick="deletePatch('${p.id}')">删除</button>
-      </li>
-    `).join('');
-  } catch(e) {
-    if (e.message !== 'Unauthorized') console.error(e);
-  }
-}
-
-async function addPatch() {
-  const rule = document.getElementById('newPatchRule').value.trim();
-  if (!rule) return;
-  await authFetch('/admin/api/patches', {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({ action: 'add', rule })
-  });
-  document.getElementById('newPatchRule').value = '';
-  loadPatches();
-  refresh();
-}
-
-async function togglePatch(id, active) {
-  await authFetch('/admin/api/patches', {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({ action: 'toggle', id, active })
-  });
-  loadPatches();
-  refresh();
-}
-
-async function deletePatch(id) {
-  if (!confirm('确定删除该 patch？')) return;
-  await authFetch('/admin/api/patches', {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({ action: 'delete', id })
-  });
-  loadPatches();
-  refresh();
-}
-
-async function previewMemory() {
-  const query = document.getElementById('memQuery').value.trim();
-  const el = document.getElementById('memResult');
-  el.style.display = 'block';
-  el.textContent = 'Loading...';
-  try {
-    const r = await authFetch('/admin/api/memory-preview', {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ query })
-    });
-    const d = await r.json();
-    el.textContent = `Categories: [${d.matchedCategories?.join(', ') || 'none'}]\nItems: ${d.itemCount || 0}\n\n${d.context || '(empty)'}`;
-  } catch(e) {
-    if (e.message !== 'Unauthorized') el.textContent = '❌ ' + e.message;
-  }
-}
-
-async function restart() {
-  if (!confirm('确定重启 brain 服务？')) return;
-  await authFetch('/admin/api/restart', { method: 'POST' });
-  alert('服务正在重启，3秒后刷新...');
-  setTimeout(() => location.reload(), 3000);
-}
-
-async function runTest() {
-  const model = document.getElementById('testModel').value;
-  const prompt = document.getElementById('testPrompt').value;
-  const el = document.getElementById('testResult');
-  el.style.display = 'block';
-  el.textContent = '请求中...';
-  try {
-    const r = await authFetch('/admin/api/test', {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ model, prompt })
-    });
-    const d = await r.json();
-    if (d.error) { el.textContent = '❌ ' + d.error; return; }
-    el.textContent = d.content + (d.usage ? `\n\n[tokens: ${d.usage.total_tokens}]` : '');
-  } catch(e) {
-    if (e.message !== 'Unauthorized') el.textContent = '❌ ' + e.message;
-  }
-}
-
-async function runCompare() {
-  const model = document.getElementById('compareModel').value;
-  const prompt = document.getElementById('comparePrompt').value.trim();
-  if (!prompt) return;
-  const wrap = document.getElementById('compareResult');
-  const rawEl = document.getElementById('compareRaw');
-  const brainEl = document.getElementById('compareBrain');
-  const metaEl = document.getElementById('compareMeta');
-  wrap.style.display = 'block';
-  rawEl.textContent = '请求中...';
-  brainEl.textContent = '请求中...';
-  metaEl.style.display = 'none';
-  try {
-    const r = await authFetch('/admin/api/compare', {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ model, prompt })
-    });
-    const d = await r.json();
-    if (d.error) {
-      rawEl.textContent = '❌ ' + d.error;
-      brainEl.textContent = '❌ ' + d.error;
-      return;
-    }
-    const rawToks = d.raw.usage?.completion_tokens || 0;
-    const brainToks = d.brain.usage?.completion_tokens || 0;
-    const rawTokS = d.latency.raw > 0 ? (rawToks / d.latency.raw * 1000).toFixed(1) : '?';
-    const brainTokS = d.latency.brain > 0 ? (brainToks / d.latency.brain * 1000).toFixed(1) : '?';
-    rawEl.textContent = d.raw.content;
-    brainEl.textContent = d.brain.content;
-    metaEl.style.display = 'block';
-    metaEl.innerHTML =
-      '<div style="display:flex;gap:16px;flex-wrap:wrap;">' +
-      '<span>📡 Raw: <b>' + d.latency.raw + 'ms</b> TTFT | <b>' + rawTokS + '</b> tok/s | ' + rawToks + ' tokens</span>' +
-      '<span>🧠 Brain: <b>' + d.latency.brain + 'ms</b> TTFT | <b>' + brainTokS + '</b> tok/s | ' + brainToks + ' tokens</span>' +
-      '</div>' +
-      '<div style="margin-top:4px;">注入: ' + (d.brain.injectedCategories?.join(', ') || 'none') + ' (' + (d.brain.itemCount || 0) + ' items)</div>';
-  } catch(e) {
-    if (e.message !== 'Unauthorized') {
-      rawEl.textContent = '❌ ' + e.message;
-      brainEl.textContent = '❌ ' + e.message;
-    }
-  }
-}
-
-async function runAgent() {
-  const useStream = document.getElementById('agentStreamToggle').checked;
-  if (useStream) return runAgentStream();
-  return runAgentSync();
-}
-
-// 同步模式（兼容旧接口）
-async function runAgentSync() {
-  const model = document.getElementById('agentModel').value;
-  const prompt = document.getElementById('agentPrompt').value.trim();
-  const enableThinking = document.getElementById('thinkingToggle').checked;
-  if (!prompt) return;
-  const wrap = document.getElementById('agentResult');
-  const contentEl = document.getElementById('agentContent');
-  const stepsEl = document.getElementById('agentSteps');
-  const liveEl = document.getElementById('agentStepsLive');
-  wrap.style.display = 'block';
-  contentEl.textContent = 'Agent 思考中...';
-  stepsEl.style.display = 'none';
-  liveEl.style.display = 'none';
-  setAgentBtnState(true);
-  const syncStart = Date.now();
-  try {
-    const r = await authFetch('/admin/api/agent', {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ model, prompt, enable_thinking: enableThinking })
-    });
-    const syncDuration = Date.now() - syncStart;
-    const d = await r.json();
-    if (d.error) { contentEl.textContent = '❌ ' + d.error; return; }
-    contentEl.textContent = d.content;
-    const firstLlm = d.steps?.find(s => s.type === 'llm_call');
-    const ttft = firstLlm?.durationMs || syncDuration;
-    const totalToks = d.totalTokens || 0;
-    const tokS = syncDuration > 0 ? (totalToks / syncDuration * 1000).toFixed(1) : '?';
-    stepsEl.style.display = 'block';
-    const toolSteps = (d.steps || []).filter(s => s.type === 'tool_exec');
-    stepsEl.innerHTML = '<b>' + ttft + 'ms</b> TTFT | <b>' + tokS + '</b> tok/s | ' + totalToks + ' tokens | ' + (d.steps?.length || 0) + ' steps' +
-      (d.toolsUsed?.length > 0 ? ' | 🔧 ' + d.toolsUsed.join(', ') : '') +
-      (toolSteps.length > 0 ? '<br>' + toolSteps.map(s =>
-        '<span style="color:#22d3ee">→ ' + s.toolName + '</span> ' + s.durationMs + 'ms'
-      ).join(' | ') : '');
-  } catch(e) {
-    if (e.message !== 'Unauthorized') contentEl.textContent = '❌ ' + e.message;
-  } finally {
-    setAgentBtnState(false);
-  }
-}
-
-// SSE 流式模式
-async function runAgentStream() {
-  const model = document.getElementById('agentModel').value;
-  const prompt = document.getElementById('agentPrompt').value.trim();
-  const enableThinking = document.getElementById('thinkingToggle').checked;
-  if (!prompt) return;
-  const wrap = document.getElementById('agentResult');
-  const contentEl = document.getElementById('agentContent');
-  const stepsEl = document.getElementById('agentSteps');
-  const liveEl = document.getElementById('agentStepsLive');
-  wrap.style.display = 'block';
-  contentEl.textContent = '';
-  stepsEl.style.display = 'none';
-  liveEl.style.display = 'block';
-  liveEl.innerHTML = '<div data-loading style="color:#eab308;">⏳ 请求中，等待模型响应...</div>';
-  setAgentBtnState(true);
-
-  try {
-    const token = getAuthToken();
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = 'Bearer ' + token;
-
-    const response = await fetch('/admin/api/agent/stream', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ model, prompt, enable_thinking: enableThinking })
-    });
-
-    if (response.status === 401) { showAuthPrompt(); return; }
-    if (!response.ok) {
-      contentEl.textContent = '❌ HTTP ' + response.status;
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    const streamStartTime = Date.now();
-    let firstStepTime = 0;
-    let stepCount = 0;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      // 解析 SSE 事件：按双换行分割
-      const parts = buffer.split('\n\n');
-      buffer = parts.pop(); // 最后一段可能不完整，留在 buffer
-
-      for (const part of parts) {
-        if (!part.trim()) continue;
-        const lines = part.split('\n');
-        let eventType = '';
-        let dataStr = '';
-        for (const line of lines) {
-          if (line.startsWith('event: ')) eventType = line.slice(7);
-          else if (line.startsWith('data: ')) dataStr = line.slice(6);
-        }
-        if (!eventType || !dataStr) continue;
-
-        let data;
-        try { data = JSON.parse(dataStr); } catch { continue; }
-
-        if (eventType === 'step') {
-          stepCount++;
-          if (!firstStepTime) firstStepTime = Date.now() - streamStartTime;
-          renderLiveStep(liveEl, data, stepCount);
-        } else if (eventType === 'done') {
-          const totalDuration = Date.now() - streamStartTime;
-          const totalToks = data.totalTokens || 0;
-          const tokS = totalDuration > 0 ? (totalToks / totalDuration * 1000).toFixed(1) : '?';
-          contentEl.textContent = data.content || '';
-          stepsEl.style.display = 'block';
-          stepsEl.innerHTML = '<b>' + (firstStepTime || totalDuration) + 'ms</b> TTFT | <b>' + tokS + '</b> tok/s | ' + totalToks + ' tokens | ' + stepCount + ' steps' +
-            (data.toolsUsed?.length > 0 ? ' | 🔧 ' + data.toolsUsed.join(', ') : '');
-        } else if (eventType === 'error') {
-          contentEl.textContent = '❌ ' + (data.error || 'Unknown error');
-        }
-      }
-    }
-  } catch(e) {
-    if (e.message !== 'Unauthorized') contentEl.textContent = '❌ ' + e.message;
-  } finally {
-    setAgentBtnState(false);
-  }
-}
-
-// 渲染单个实时步骤
-function renderLiveStep(container, step, index) {
-  // 移除"启动中"提示
-  const loading = container.querySelector('[data-loading]');
-  if (loading) loading.remove();
-
-  const el = document.createElement('div');
-  el.style.cssText = 'padding:6px 8px;margin-bottom:4px;border-radius:6px;border-left:3px solid;font-size:12px;';
-
-  if (step.type === 'llm_call') {
-    el.style.borderColor = '#818cf8';
-    el.style.background = '#1e1b4b';
-    const preview = step.content ? escapeHtml(step.content.slice(0, 120)) + (step.content.length > 120 ? '...' : '') : '<em style="color:#64748b">无文本输出（准备调用工具）</em>';
-    el.innerHTML = '<span style="color:#a5b4fc;font-weight:600;">🧠 LLM #' + step.stepNumber + '</span>' +
-      ' <span style="color:#475569;">' + step.durationMs + 'ms' + (step.usage ? ' · ' + step.usage.total_tokens + ' tokens' : '') + '</span>' +
-      '<div style="color:#cbd5e1;margin-top:4px;">' + preview + '</div>';
-  } else if (step.type === 'tool_exec') {
-    el.style.borderColor = '#22d3ee';
-    el.style.background = '#0c1a2b';
-    const inputPreview = step.toolInput ? escapeHtml(JSON.stringify(step.toolInput).slice(0, 80)) : '-';
-    const hasError = step.toolOutput && typeof step.toolOutput === 'object' && step.toolOutput.error;
-    const outputPreview = hasError
-      ? '<span style="color:#f87171;">' + escapeHtml(step.toolOutput.error) + '</span>'
-      : (step.toolOutput ? escapeHtml(JSON.stringify(step.toolOutput).slice(0, 100)) + '...' : '-');
-    el.innerHTML = '<span style="color:#22d3ee;font-weight:600;">🔧 ' + escapeHtml(step.toolName || '?') + '</span>' +
-      ' <span style="color:#475569;">' + step.durationMs + 'ms</span>' +
-      '<div style="color:#94a3b8;margin-top:2px;font-size:11px;">输入: ' + inputPreview + '</div>' +
-      '<div style="color:#94a3b8;margin-top:2px;font-size:11px;">输出: ' + outputPreview + '</div>';
-  }
-
-  container.appendChild(el);
-  // 自动滚动到底部
-  container.scrollTop = container.scrollHeight;
-}
-
-// 按钮状态管理
-function setAgentBtnState(running) {
-  const btn = document.getElementById('agentRunBtn');
-  if (running) {
-    btn.disabled = true;
-    btn.textContent = '运行中...';
-    btn.style.opacity = '0.6';
-  } else {
-    btn.disabled = false;
-    btn.textContent = 'Agent';
-    btn.style.opacity = '1';
-  }
-}
-
-function formatUptime(s) {
-  if (s < 60) return Math.floor(s) + 's';
-  if (s < 3600) return Math.floor(s/60) + 'm';
-  if (s < 86400) return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
-  return Math.floor(s/86400) + 'd ' + Math.floor((s%86400)/3600) + 'h';
-}
-
-let _insightsOpen = false;
-
-async function toggleInsights() {
-  const el = document.getElementById('insightsPanel');
-  if (_insightsOpen) {
-    el.style.display = 'none';
-    _insightsOpen = false;
-    return;
-  }
-  el.style.display = 'block';
-  el.innerHTML = '<span style="color:#94a3b8">Loading insights...</span>';
-  _insightsOpen = true;
-  try {
-    const r = await authFetch('/admin/api/insights?days=7');
-    const d = await r.json();
-    let html = '<strong>Experience Insights (7d)</strong><br><br>';
-
-    // Miss rate
-    const missPercent = (d.missRate * 100).toFixed(1);
-    const missColor = d.missRate > 0.5 ? '#f87171' : d.missRate > 0.2 ? '#fbbf24' : '#6ee7b7';
-    html += `<div style="margin-bottom:10px"><span style="color:${missColor};font-weight:600">Miss Rate: ${missPercent}%</span> <span style="color:#64748b">(无类别命中的请求占比)</span></div>`;
-
-    // Top queries
-    if (d.topQueries && d.topQueries.length > 0) {
-      html += '<div style="margin-bottom:8px"><strong style="color:#a5b4fc">Top Queries</strong></div>';
-      html += '<table style="width:100%;margin-bottom:12px"><thead><tr><th style="width:70%">Query</th><th>Count</th></tr></thead><tbody>';
-      for (const q of d.topQueries) {
-        html += `<tr><td style="font-size:12px;color:#cbd5e1;word-break:break-all">${escapeHtml(q.query)}</td><td style="text-align:center;color:#818cf8">${q.count}</td></tr>`;
-      }
-      html += '</tbody></table>';
-    } else {
-      html += '<div style="color:#475569;margin-bottom:12px">No query data yet</div>';
-    }
-
-    // Top categories
-    if (d.topCategories && d.topCategories.length > 0) {
-      html += '<div style="margin-bottom:8px"><strong style="color:#a5b4fc">Top Categories</strong></div>';
-      html += '<table style="width:100%;margin-bottom:12px"><thead><tr><th style="width:70%">Category</th><th>Hits</th></tr></thead><tbody>';
-      for (const c of d.topCategories) {
-        html += `<tr><td><code style="font-size:12px">${escapeHtml(c.category)}</code></td><td style="text-align:center;color:#818cf8">${c.hitCount}</td></tr>`;
-      }
-      html += '</tbody></table>';
-    } else {
-      html += '<div style="color:#475569;margin-bottom:12px">No category data yet</div>';
-    }
-
-    // Suggested patches
-    if (d.suggestedPatches && d.suggestedPatches.length > 0) {
-      html += '<div style="margin-bottom:8px"><strong style="color:#fbbf24">Suggested Patches</strong> <span style="color:#64748b;font-size:11px">(高频无命中关键词)</span></div>';
-      html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
-      for (const p of d.suggestedPatches) {
-        html += `<span style="background:#312e81;color:#a5b4fc;padding:2px 8px;border-radius:10px;font-size:12px">${escapeHtml(p)}</span>`;
-      }
-      html += '</div>';
-    }
-
-    el.innerHTML = html;
-  } catch(e) {
-    if (e.message !== 'Unauthorized') el.innerHTML = '<span style="color:#f87171">Failed to load insights: ' + e.message + '</span>';
-  }
-}
-
-function escapeHtml(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function switchTab(name) {
-  const tabs = ['chat', 'config', 'evolution'];
-  tabs.forEach(t => {
-    const panel = document.getElementById('tab-' + t);
-    const btn = document.getElementById('tabBtn-' + t);
-    if (t === name) {
-      panel.style.display = 'block';
-      btn.style.background = '#4f46e5';
-      btn.style.color = 'white';
-      if (t === 'evolution') loadEvolutionData();
-    } else {
-      panel.style.display = 'none';
-      btn.style.background = 'transparent';
-      btn.style.color = '#94a3b8';
-    }
-  });
+/* ═══════════════════════════════════════════════════
+   View Switching
+   ═══════════════════════════════════════════════════ */
+const VIEWS = ['chat', 'dashboard', 'config', 'evolution', 'patches'];
+function switchView(name) {
+  S.view = name;
+  VIEWS.forEach(v => { const el = document.getElementById('view-' + v); if (el) el.style.display = v === name ? (v === 'chat' ? 'flex' : 'block') : 'none'; });
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+  if (name === 'dashboard') loadDash();
+  else if (name === 'config') loadConfig();
+  else if (name === 'evolution') loadEvo();
+  else if (name === 'patches') loadPatches();
   history.replaceState(null, '', '#' + name);
 }
 
-// Init tab from URL hash
-const validTabs = new Set(['chat', 'config', 'evolution']);
-const hashTab = location.hash.slice(1);
-switchTab(validTabs.has(hashTab) ? hashTab : 'chat');
+/* ═══════════════════════════════════════════════════
+   Chat Mode
+   ═══════════════════════════════════════════════════ */
+function switchMode(mode) {
+  S.mode = mode; localStorage.setItem('brain_chat_mode', mode); applyMode();
+  const s = curSess(); if (s && s.messages.length === 0) { s.mode = mode; saveSess(); renderSess(); }
+}
+function applyMode() {
+  document.querySelectorAll('.mpill').forEach(b => b.classList.toggle('active', b.dataset.mode === S.mode));
+  document.getElementById('agentOpts').style.display = S.mode === 'agent' ? 'flex' : 'none';
+  updateModelSel();
+  const ph = { chat: '输入消息...', agent: '输入指令，Agent 将自动调用工具...', compare: '输入对比查询，同时查看 Raw 和 Brain 回复...' };
+  document.getElementById('chatInput').placeholder = ph[S.mode] || ph.chat;
+}
+function updateModelSel() {
+  const sel = document.getElementById('modelSel'), prev = sel.value; sel.innerHTML = '';
+  for (const [n, r] of Object.entries(S.routes)) {
+    if ((S.mode === 'compare' || S.mode === 'agent') && !r.brain) continue;
+    const h = r.baseURL.replace(/https?:\/\//, '').split('/')[0].split('.')[0];
+    const o = document.createElement('option'); o.value = n; o.textContent = `${n} — ${r.model} @ ${h}`; sel.appendChild(o);
+  }
+  if (prev && sel.querySelector(`option[value="${prev}"]`)) sel.value = prev;
+}
 
-// Listen for hash changes
-window.addEventListener('hashchange', () => {
-  const h = location.hash.slice(1);
-  switchTab(validTabs.has(h) ? h : 'chat');
-});
+/* ═══════════════════════════════════════════════════
+   Render Messages
+   ═══════════════════════════════════════════════════ */
+const _emptyHtml = '<div class="logo">🧠</div><div class="hint">输入消息开始对话</div>';
+function getEmpty() {
+  let e = document.getElementById('emptyState');
+  if (!e) { e = document.createElement('div'); e.id = 'emptyState'; e.className = 'empty-st'; e.innerHTML = _emptyHtml; }
+  return e;
+}
+function renderMsgs() {
+  const el = document.getElementById('msgArea'), empty = getEmpty(), s = curSess();
+  if (!s || !s.messages.length) {
+    el.innerHTML = ''; el.appendChild(empty); empty.style.display = 'flex';
+    document.getElementById('chatMetrics').innerHTML = ''; return;
+  }
+  if (empty.parentNode) empty.parentNode.removeChild(empty);
+  empty.style.display = 'none';
+  el.innerHTML = s.messages.map((m, i) => rMsg(m, i)).join('');
+  el.scrollTop = el.scrollHeight;
+  const la = [...s.messages].reverse().find(m => m.role === 'assistant');
+  if (la?.meta) updMetrics(la.meta);
+}
+function rMsg(m, i) {
+  if (m.role === 'user') return `<div class="msg user"><div class="bubble">${esc(m.content)}</div></div>`;
+  const mt = m.meta || {};
+  if (mt.mode === 'compare') return rCmpMsg(m);
+  if (mt.mode === 'agent') return rAgentMsg(m, i);
+  return `<div class="msg assistant"><div class="bubble"><div class="mc">${rMd(m.content)}</div>${rMeta(mt)}${rMemInj(mt)}</div></div>`;
+}
+function rCmpMsg(m) {
+  const mt = m.meta || {}, raw = mt.raw || {}, br = mt.brain || {};
+  let h = `<div class="msg assistant"><div class="cmp-split">
+    <div class="cmp-side"><div class="cmp-label raw">📡 Raw</div><div class="cmp-content">${esc(raw.content || '')}</div>
+      <div class="msg-meta">${raw.latency || '-'}ms TTFT | ${raw.tokPerSec || '-'} tok/s | ${raw.tokens || 0} tokens</div></div>
+    <div class="cmp-side"><div class="cmp-label brain">🧠 Brain</div><div class="cmp-content">${esc(br.content || '')}</div>
+      <div class="msg-meta">${br.latency || '-'}ms TTFT | ${br.tokPerSec || '-'} tok/s | ${br.tokens || 0} tokens</div>`;
+  if (br.injectedCategories || br.itemCount)
+    h += `<div class="mem-inj"><div class="mem-inj-tog" onclick="this.parentElement.classList.toggle('exp')">📎 记忆注入 (${(br.injectedCategories||[]).join(', ')||'无'}, ${br.itemCount||0} 条)</div>
+      <div class="mem-inj-body">${esc(br.context || '无注入内容')}</div></div>`;
+  return h + '</div></div></div>';
+}
+function rAgentMsg(m, idx) {
+  const mt = m.meta || {}, steps = mt.steps || [];
+  let h = '<div class="msg assistant"><div class="bubble" style="max-width:90%">';
+  if (steps.length) { h += '<div style="margin-bottom:8px">'; steps.forEach((s, i) => { h += rStepHtml(s, i); }); h += '</div>'; }
+  h += `<div class="mc">${rMd(m.content)}</div>${rMeta(mt)}</div></div>`;
+  return h;
+}
+function rStepHtml(s, i) {
+  if (s.type === 'thinking') return `<div class="think-blk" onclick="this.classList.toggle('exp')"><span>💭 思考过程</span><div class="tc">${esc(s.content||'')}</div></div>`;
+  if (s.type === 'tool_exec') return `<div class="astep" onclick="this.classList.toggle('exp')"><div class="sh">🔧 ${esc(s.toolName||'?')} <span class="st">— ${s.durationMs||0}ms</span></div>
+    <div class="sb">输入: ${esc(JSON.stringify(s.toolInput||{},null,2))}\n\n输出: ${esc(JSON.stringify(s.toolOutput||{},null,2))}</div></div>`;
+  if (s.type === 'llm_call') return `<div class="astep llm" onclick="this.classList.toggle('exp')"><div class="sh">🧠 LLM #${s.stepNumber||i+1} <span class="st">— ${s.durationMs||0}ms${s.usage?' · '+s.usage.total_tokens+' tokens':''}</span></div>
+    <div class="sb">${esc((s.content||'').slice(0,500))}</div></div>`;
+  return '';
+}
+function rMeta(mt) {
+  const p = [];
+  if (mt.tokens) p.push(mt.tokens + ' tokens');
+  if (mt.totalTokens) p.push(mt.totalTokens + ' tokens');
+  if (mt.ttft) p.push(mt.ttft + 'ms TTFT');
+  if (mt.tokPerSec) p.push(mt.tokPerSec + ' tok/s');
+  if (mt.toolsUsed?.length) p.push('🔧 ' + mt.toolsUsed.join(', '));
+  return p.length ? `<div class="msg-meta">${p.join(' | ')}</div>` : '';
+}
+function rMemInj(mt) {
+  if (!mt.injected) return '';
+  const inj = mt.injected;
+  return `<div class="mem-inj"><div class="mem-inj-tog" onclick="this.parentElement.classList.toggle('exp')">📎 记忆注入 (${(inj.categories||[]).join(', ')||'无'}, ${inj.itemCount||0} 条)</div>
+    <div class="mem-inj-body">${esc(inj.context || '无注入内容')}</div></div>`;
+}
+function updMetrics(mt) {
+  const el = document.getElementById('chatMetrics'), p = [];
+  if (mt.ttft) p.push(`TTFT: <span class="mv">${mt.ttft}ms</span>`);
+  if (mt.tokPerSec) p.push(`<span class="mv">${mt.tokPerSec}</span> tok/s`);
+  el.innerHTML = p.join(' <span style="color:var(--border)">|</span> ');
+}
 
-refresh();
-setInterval(refresh, 30000);
+/* ═══════════════════════════════════════════════════
+   Send Message
+   ═══════════════════════════════════════════════════ */
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoGrow(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
 
-// ─── Evolution Tab ───
-async function loadEvolutionData() {
-  const h = { 'Authorization': 'Bearer ' + (localStorage.getItem('brain_key') || '') };
-  // 1. Health Metrics
+async function sendMessage() {
+  const ta = document.getElementById('chatInput'), text = ta.value.trim();
+  if (!text || S.sending) return;
+  if (!curSess()) newChat();
+  const s = curSess();
+  s.messages.push({ role: 'user', content: text, ts: new Date().toISOString() });
+  if (s.title === '新对话') s.title = text.slice(0, 20);
+  s.mode = S.mode; s.model = document.getElementById('modelSel').value;
+  s.updatedAt = new Date().toISOString();
+  trimMsgs(s); saveSess(); renderSess(); renderMsgs();
+  ta.value = ''; ta.style.height = 'auto';
+  setSending(true);
   try {
-    const m = await (await fetch('/admin/api/health-metrics?days=7', {headers:h})).json();
-    document.getElementById('evoTotalReqs').textContent = m.totalRequests || 0;
-    document.getElementById('evoAvgLatency').textContent = (m.avgLatencyMs||0).toFixed(0) + 'ms';
-    document.getElementById('evoMissRate').textContent = ((m.missRate||0)*100).toFixed(1) + '%';
-    document.getElementById('evoP95').textContent = (m.latencyP95||0).toFixed(0) + 'ms';
-    const paths = m.retrievalPathHits || {};
-    const maxHit = Math.max(1, ...Object.values(paths));
-    document.getElementById('evoPathBars').innerHTML = ['keyword','tfidf','fts','vector'].map(p => {
-      const v = paths[p]||0;
-      const h = Math.max(4, (v/maxHit)*56);
-      const colors = {keyword:'#22c55e',tfidf:'#818cf8',fts:'#eab308',vector:'#f97316'};
+    if (S.mode === 'compare') await sendCmp(s, text);
+    else if (S.mode === 'agent') await sendAgent(s, text);
+    else await sendChat(s, text);
+  } catch (e) {
+    if (e.message !== 'Unauthorized') s.messages.push({ role: 'assistant', content: '❌ ' + e.message, ts: new Date().toISOString(), meta: { mode: S.mode } });
+  } finally { setSending(false); saveSess(); renderSess(); renderMsgs(); }
+}
+function setSending(v) { S.sending = v; const b = document.getElementById('sendBtn'); b.disabled = v; b.classList.toggle('loading', v); }
+
+/* ─── Chat ─── */
+async function sendChat(sess, text) {
+  const model = document.getElementById('modelSel').value, start = Date.now();
+  const [testR, memR] = await Promise.all([
+    aFetch('/admin/api/test', { method: 'POST', headers: authH(), body: JSON.stringify({ model, prompt: text }) }),
+    aFetch('/admin/api/memory-preview', { method: 'POST', headers: authH(), body: JSON.stringify({ query: text }) }).catch(() => null)
+  ]);
+  const d = await testR.json(), elapsed = Date.now() - start;
+  if (d.error) throw new Error(d.error);
+  const toks = d.usage?.total_tokens || 0, tokS = elapsed > 0 ? (toks / elapsed * 1000).toFixed(1) : '?';
+  let injected = null;
+  if (memR) { try { const md = await memR.json(); if (md.matchedCategories?.length || md.itemCount) injected = { categories: md.matchedCategories, itemCount: md.itemCount, context: md.context }; } catch {} }
+  sess.messages.push({ role: 'assistant', content: d.content, ts: new Date().toISOString(),
+    meta: { mode: 'chat', model, ttft: elapsed, tokPerSec: parseFloat(tokS), tokens: toks, injected } });
+}
+
+/* ─── Compare ─── */
+async function sendCmp(sess, text) {
+  const model = document.getElementById('modelSel').value;
+  const r = await aFetch('/admin/api/compare', { method: 'POST', headers: authH(), body: JSON.stringify({ model, prompt: text }) });
+  const d = await r.json(); if (d.error) throw new Error(d.error);
+  const rt = d.raw.usage?.completion_tokens||0, bt = d.brain.usage?.completion_tokens||0;
+  const rts = d.latency.raw>0?(rt/d.latency.raw*1000).toFixed(1):'?', bts = d.latency.brain>0?(bt/d.latency.brain*1000).toFixed(1):'?';
+  let ctx = '';
+  try { const mr = await aFetch('/admin/api/memory-preview',{method:'POST',headers:authH(),body:JSON.stringify({query:text})}); ctx = (await mr.json()).context||''; } catch{}
+  sess.messages.push({ role:'assistant',content:'',ts:new Date().toISOString(),
+    meta:{ mode:'compare',model,
+      raw:{content:d.raw.content,latency:d.latency.raw,tokens:rt,tokPerSec:rts},
+      brain:{content:d.brain.content,latency:d.latency.brain,tokens:bt,tokPerSec:bts,injectedCategories:d.brain.injectedCategories,itemCount:d.brain.itemCount,context:ctx},
+      ttft:d.latency.brain,tokPerSec:parseFloat(bts) }});
+}
+
+/* ─── Agent ─── */
+async function sendAgent(sess, text) {
+  const model = document.getElementById('modelSel').value;
+  const et = document.getElementById('thinkTog').checked;
+  if (document.getElementById('streamTog').checked) return sendAgentSSE(sess, text, model, et);
+  return sendAgentSync(sess, text, model, et);
+}
+
+async function sendAgentSync(sess, text, model, et) {
+  const start = Date.now();
+  const r = await aFetch('/admin/api/agent', { method:'POST', headers:authH(), body:JSON.stringify({model,prompt:text,enable_thinking:et}) });
+  const elapsed = Date.now()-start, d = await r.json(); if (d.error) throw new Error(d.error);
+  const tt = d.totalTokens||0, ts = elapsed>0?(tt/elapsed*1000).toFixed(1):'?';
+  const fl = d.steps?.find(s=>s.type==='llm_call');
+  sess.messages.push({ role:'assistant',content:d.content,ts:new Date().toISOString(),
+    meta:{ mode:'agent',model,steps:d.steps||[],toolsUsed:d.toolsUsed||[],totalTokens:tt,ttft:fl?.durationMs||elapsed,tokPerSec:parseFloat(ts) }});
+}
+
+async function sendAgentSSE(sess, text, model, et) {
+  const token = getToken(), headers = {'Content-Type':'application/json'};
+  if (token) headers['Authorization']='Bearer '+token;
+  const resp = await fetch('/admin/api/agent/stream',{method:'POST',headers,body:JSON.stringify({model,prompt:text,enable_thinking:et})});
+  if (resp.status===401){showAuth();throw new Error('Unauthorized')}
+  if (!resp.ok) throw new Error('HTTP '+resp.status);
+  // Stream UI
+  const msgEl = document.getElementById('msgArea'); document.getElementById('emptyState').style.display='none';
+  const div = document.createElement('div'); div.className='msg assistant';
+  div.innerHTML='<div class="bubble" style="max-width:90%"><div id="ssSteps"></div><div id="ssCont" class="mc" style="color:var(--warning)">⏳ 请求中，等待模型响应...</div></div>';
+  msgEl.appendChild(div); msgEl.scrollTop=msgEl.scrollHeight;
+  const stepsEl=div.querySelector('#ssSteps'), contEl=div.querySelector('#ssCont');
+  const reader=resp.body.getReader(), dec=new TextDecoder();
+  let buf='',t0=Date.now(),ft=0,sc=0; const steps=[];
+  let finalContent='', finalMeta={};
+  while(true){
+    const{done,value}=await reader.read(); if(done)break;
+    buf+=dec.decode(value,{stream:true});
+    const parts=buf.split('\n\n'); buf=parts.pop();
+    for(const p of parts){
+      if(!p.trim())continue; const lines=p.split('\n'); let ev='',ds='';
+      for(const l of lines){if(l.startsWith('event: '))ev=l.slice(7);else if(l.startsWith('data: '))ds=l.slice(6)}
+      if(!ev||!ds)continue; let data; try{data=JSON.parse(ds)}catch{continue}
+      if(ev==='step'){
+        sc++; if(!ft)ft=Date.now()-t0; steps.push(data);
+        const el=document.createElement('div');
+        if(data.type==='llm_call'){el.className='astep llm';el.onclick=()=>el.classList.toggle('exp');
+          const pv=data.content?esc(data.content.slice(0,120))+(data.content.length>120?'...':''):'<em style="color:var(--text-dim)">准备调用工具</em>';
+          el.innerHTML=`<div class="sh">🧠 LLM #${data.stepNumber||sc} <span class="st">— ${data.durationMs||0}ms${data.usage?' · '+data.usage.total_tokens+' tokens':''}</span></div><div class="sb">${pv}</div>`;}
+        else if(data.type==='tool_exec'){el.className='astep';el.onclick=()=>el.classList.toggle('exp');
+          const he=data.toolOutput&&typeof data.toolOutput==='object'&&data.toolOutput.error;
+          const op=he?'<span style="color:var(--danger)">'+esc(data.toolOutput.error)+'</span>':esc(JSON.stringify(data.toolOutput||{}).slice(0,100));
+          el.innerHTML=`<div class="sh">🔧 ${esc(data.toolName||'?')} <span class="st">— ${data.durationMs||0}ms</span></div><div class="sb">输入: ${esc(JSON.stringify(data.toolInput||{}).slice(0,200))}\n输出: ${op}</div>`;}
+        stepsEl.appendChild(el); contEl.textContent=''; contEl.style.color=''; msgEl.scrollTop=msgEl.scrollHeight;
+      } else if(ev==='done'){
+        const dur=Date.now()-t0,tt=data.totalTokens||0,ts=dur>0?(tt/dur*1000).toFixed(1):'?';
+        finalContent=data.content||''; finalMeta={mode:'agent',model,steps,toolsUsed:data.toolsUsed||[],totalTokens:tt,ttft:ft||dur,tokPerSec:parseFloat(ts)};
+        contEl.innerHTML=rMd(finalContent);
+      } else if(ev==='error'){finalContent='❌ '+(data.error||'未知错误');contEl.textContent=finalContent;}
+    }
+  }
+  sess.messages.push({role:'assistant',content:finalContent,ts:new Date().toISOString(),meta:finalMeta});
+  saveSess(); renderMsgs();
+}
+
+/* ═══════════════════════════════════════════════════
+   Markdown (simple)
+   ═══════════════════════════════════════════════════ */
+function rMd(text) {
+  if (!text) return '';
+  let h = esc(text);
+  h = h.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+  h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
+  h = h.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/\n/g, '<br>');
+  h = h.replace(/<pre><code>([\s\S]*?)<\/code><\/pre>/g, (_, c) => '<pre><code>' + c.replace(/<br>/g, '\n') + '</code></pre>');
+  return h;
+}
+
+/* ═══════════════════════════════════════════════════
+   Dashboard
+   ═══════════════════════════════════════════════════ */
+async function loadDash() {
+  await refreshStatus();
+  try {
+    const r = await aFetch('/admin/api/health-metrics?days=7'), m = await r.json();
+    const $ = id => document.getElementById(id);
+    $('dTotReqs').textContent = m.totalRequests||0;
+    $('dAvgLat').textContent = (m.avgLatencyMs||0).toFixed(0)+'ms';
+    $('dMissR').textContent = ((m.missRate||0)*100).toFixed(1)+'%';
+    $('dP95').textContent = (m.latencyP95||0).toFixed(0)+'ms';
+    const paths = m.retrievalPathHits||{}, mx = Math.max(1,...Object.values(paths));
+    $('dPathBars').innerHTML = ['keyword','tfidf','fts','vector'].map(p=>{
+      const v=paths[p]||0,h=Math.max(4,(v/mx)*56),colors={keyword:'#22c55e',tfidf:'#818cf8',fts:'#eab308',vector:'#f97316'};
       return `<div class="exp-bar-wrap"><div class="bar" style="height:${h}px;background:${colors[p]||'#4f46e5'}"></div><div class="bar-label">${p}<br>${v}</div></div>`;
     }).join('');
-  } catch(e) { console.error('health-metrics:', e); }
-
-  // 2. Eval Result
-  try {
-    const r = await (await fetch('/admin/api/evolution/eval-result', {headers:h})).json();
-    if (r.error) {
-      document.getElementById('evoEvalResult').innerHTML = '<span style="color:#64748b">No eval result yet</span>';
-    } else {
-      const icon = r.pass ? '<span style="color:#22c55e">PASS</span>' : '<span style="color:#ef4444">FAIL</span>';
-      const reg = (r.regressions||[]).map(x => {
-        const c = x.severity==='critical' ? '#ef4444' : '#eab308';
-        return `<span style="color:${c}">${x.metric}: ${x.baseline.toFixed(2)} -> ${x.current.toFixed(2)} (${x.deltaPct.toFixed(1)}%)</span>`;
-      }).join('<br>');
-      document.getElementById('evoEvalResult').innerHTML = `
-        <div style="display:flex;gap:16px;align-items:center;margin-bottom:8px;">
-          <span style="font-size:20px;font-weight:700;">${icon}</span>
-          <span style="color:#94a3b8;">hitRate: ${(r.retrieval?.hitRate||0).toFixed(3)} | precision: ${(r.retrieval?.precision||0).toFixed(3)}</span>
-          <span style="color:#64748b;font-size:12px;">${r.timestamp ? new Date(r.timestamp).toLocaleString() : ''}</span>
-        </div>
-        ${Object.entries(r.generation||{}).map(([k,v]) => `<span class="badge ${v>=3.5?'ok':'miss'}" style="margin:2px;">${k}: ${v.toFixed(2)}</span>`).join(' ')}
-        ${reg ? '<div style="margin-top:8px;padding:8px;background:#1c1917;border-radius:6px;">'+reg+'</div>' : ''}`;
-    }
-  } catch(e) { document.getElementById('evoEvalResult').textContent = 'Error: '+e.message; }
-
-  // 3. Diagnosis
-  try {
-    const d = await (await fetch('/admin/api/evolution/diagnosis', {headers:h})).json();
-    if (d.error) {
-      document.getElementById('evoDiagnosis').innerHTML = '<span style="color:#64748b">'+d.error+'</span>';
-    } else {
-      const summary = Object.entries(d.summary||{}).map(([k,v]) => {
-        const colors = {keyword_miss:'#eab308',tfidf_threshold:'#818cf8',hallucination:'#ef4444',prompt_leak:'#f97316',unknown:'#64748b'};
-        return `<span class="badge" style="background:${colors[k]||'#334155'}22;color:${colors[k]||'#94a3b8'};margin:2px;">${k}: ${v}</span>`;
-      }).join(' ');
-      const rows = (d.diagnoses||[]).slice(0,10).map(x => `<tr><td><code>${x.caseId||'-'}</code></td><td>${x.type}</td><td style="color:#94a3b8;font-size:12px;">${(x.detail||'').slice(0,80)}</td></tr>`).join('');
-      document.getElementById('evoDiagnosis').innerHTML = `
-        <div style="margin-bottom:8px;">Failed: <strong>${d.totalFailed||0}</strong> | ${summary}</div>
-        ${rows ? '<table><tr><th>Case</th><th>Type</th><th>Detail</th></tr>'+rows+'</table>' : ''}`;
-    }
-  } catch(e) { document.getElementById('evoDiagnosis').textContent = 'Error: '+e.message; }
-
-  // 4. Evolution Log
-  try {
-    const l = await (await fetch('/admin/api/evolution/log?limit=20', {headers:h})).json();
-    if (!l.entries || l.entries.length === 0) {
-      document.getElementById('evoLog').innerHTML = '<span style="color:#64748b">No log entries yet</span>';
-    } else {
-      document.getElementById('evoLog').innerHTML = l.entries.reverse().map(e => {
-        const ts = e.timestamp ? new Date(e.timestamp).toLocaleString() : '?';
-        const icon = e.type==='eval' ? (e.status==='done'?'<span style="color:#22c55e">eval</span>':'<span style="color:#eab308">'+e.status+'</span>') : '<span style="color:#818cf8">'+e.type+'</span>';
-        return `<div style="padding:4px 0;border-bottom:1px solid #1e293b;"><span style="color:#475569;">${ts}</span> ${icon} <span style="color:#94a3b8;">${e.exitCode!==undefined?'exit='+e.exitCode:''}</span></div>`;
-      }).join('');
-    }
-    document.getElementById('evoActions').innerHTML = '<span style="color:#64748b">Use "Run Cycle" to trigger diagnosis + auto-fix</span>';
-  } catch(e) { document.getElementById('evoLog').textContent = 'Error: '+e.message; }
+  } catch(e){console.error('health-metrics:',e)}
 }
 
-async function triggerEvolution() {
-  const h = { 'Authorization': 'Bearer ' + (localStorage.getItem('brain_key') || ''), 'Content-Type':'application/json' };
-  document.getElementById('evoActions').innerHTML = '<span style="color:#eab308">Running...</span>';
+/* ═══════════════════════════════════════════════════
+   Config
+   ═══════════════════════════════════════════════════ */
+async function loadConfig() { await refreshStatus(); }
+
+/* ═══════════════════════════════════════════════════
+   Evolution
+   ═══════════════════════════════════════════════════ */
+async function loadEvo() {
   try {
-    const r = await (await fetch('/admin/api/evolution/run', {method:'POST',headers:h})).json();
-    if (r.error) {
-      document.getElementById('evoActions').innerHTML = '<span style="color:#ef4444">'+r.error+'</span>';
-    } else {
-      const acts = (r.actions||[]).map(a => {
-        const colors = {auto_patch:'#ef4444',keyword_extend:'#eab308',threshold_adjust:'#818cf8'};
-        return `<div style="padding:4px 0;border-bottom:1px solid #1e293b;">
-          <span class="badge" style="background:${(colors[a.actionType]||'#334155')}22;color:${colors[a.actionType]||'#94a3b8'};">${a.actionType}</span>
-          <span style="color:#94a3b8;font-size:12px;margin-left:8px;">${(a.detail||'').slice(0,100)}</span>
-          <span style="color:${a.applied?'#22c55e':'#64748b'};font-size:11px;margin-left:4px;">${a.applied?'applied':'skipped'}</span>
-        </div>`;
-      }).join('');
-      document.getElementById('evoActions').innerHTML = `
-        <div style="margin-bottom:8px;">Actions: <strong>${r.totalActions||0}</strong> | Skipped: ${r.skipped||0}</div>
-        ${acts || '<span style="color:#64748b">No actions needed</span>'}`;
+    const r = await aFetch('/admin/api/evolution/eval-result'), d = await r.json();
+    if (d.error) { document.getElementById('eEval').innerHTML='<span style="color:var(--text-dim)">暂无评估结果</span>'; }
+    else {
+      const icon=d.pass?'<span style="color:var(--success)">PASS</span>':'<span style="color:var(--danger)">FAIL</span>';
+      const reg=(d.regressions||[]).map(x=>{const c=x.severity==='critical'?'var(--danger)':'var(--warning)';return`<span style="color:${c}">${x.metric}: ${x.baseline.toFixed(2)} → ${x.current.toFixed(2)} (${x.deltaPct.toFixed(1)}%)</span>`;}).join('<br>');
+      document.getElementById('eEval').innerHTML=`<div style="display:flex;gap:16px;align-items:center;margin-bottom:8px">
+        <span style="font-size:20px;font-weight:700">${icon}</span>
+        <span style="color:var(--text-secondary)">hitRate: ${(d.retrieval?.hitRate||0).toFixed(3)} | precision: ${(d.retrieval?.precision||0).toFixed(3)}</span>
+        <span style="color:var(--text-dim);font-size:12px">${d.timestamp?new Date(d.timestamp).toLocaleString():''}</span></div>
+        ${Object.entries(d.generation||{}).map(([k,v])=>`<span class="badge ${v>=3.5?'ok':'miss'}" style="margin:2px">${k}: ${v.toFixed(2)}</span>`).join(' ')}
+        ${reg?'<div style="margin-top:8px;padding:8px;background:var(--bg-input);border-radius:6px">'+reg+'</div>':''}`;
     }
-  } catch(e) { document.getElementById('evoActions').innerHTML = '<span style="color:#ef4444">Error: '+e.message+'</span>'; }
+  } catch(e){document.getElementById('eEval').textContent='错误: '+e.message}
+  try {
+    const r = await aFetch('/admin/api/evolution/diagnosis'), d = await r.json();
+    if (d.error) { document.getElementById('eDiag').innerHTML='<span style="color:var(--text-dim)">'+d.error+'</span>'; }
+    else {
+      const sum=Object.entries(d.summary||{}).map(([k,v])=>{const c={keyword_miss:'#eab308',tfidf_threshold:'#818cf8',hallucination:'#ef4444',prompt_leak:'#f97316',unknown:'#64748b'};return`<span class="badge" style="background:${c[k]||'#334155'}22;color:${c[k]||'#94a3b8'};margin:2px">${k}: ${v}</span>`;}).join(' ');
+      const rows=(d.diagnoses||[]).slice(0,10).map(x=>`<tr><td><code>${x.caseId||'-'}</code></td><td>${x.type}</td><td style="color:var(--text-secondary);font-size:12px">${(x.detail||'').slice(0,80)}</td></tr>`).join('');
+      document.getElementById('eDiag').innerHTML=`<div style="margin-bottom:8px">失败: <strong>${d.totalFailed||0}</strong> | ${sum}</div>${rows?'<table><tr><th>Case</th><th>Type</th><th>Detail</th></tr>'+rows+'</table>':''}`;
+    }
+  } catch(e){document.getElementById('eDiag').textContent='错误: '+e.message}
+  document.getElementById('eActs').innerHTML='<span style="color:var(--text-dim)">点击「运行周期」触发诊断 + 自动修复</span>';
+  try {
+    const r = await aFetch('/admin/api/evolution/log?limit=20'), l = await r.json();
+    if (!l.entries?.length) { document.getElementById('eLog').innerHTML='<span style="color:var(--text-dim)">暂无日志</span>'; }
+    else { document.getElementById('eLog').innerHTML=l.entries.reverse().map(e=>{
+      const ts=e.timestamp?new Date(e.timestamp).toLocaleString():'?';
+      const ic=e.type==='eval'?(e.status==='done'?'<span style="color:var(--success)">eval</span>':'<span style="color:var(--warning)">'+e.status+'</span>'):'<span style="color:#818cf8">'+e.type+'</span>';
+      return`<div style="padding:4px 0;border-bottom:1px solid var(--bg-card)"><span style="color:var(--text-dim)">${ts}</span> ${ic} <span style="color:var(--text-secondary)">${e.exitCode!==undefined?'exit='+e.exitCode:''}</span></div>`;}).join(''); }
+  } catch(e){document.getElementById('eLog').textContent='错误: '+e.message}
 }
+async function runEvo() {
+  document.getElementById('eActs').innerHTML='<span style="color:var(--warning)">运行中...</span>';
+  try {
+    const r = await aFetch('/admin/api/evolution/run',{method:'POST',headers:authH()}), d = await r.json();
+    if (d.error){document.getElementById('eActs').innerHTML='<span style="color:var(--danger)">'+d.error+'</span>';return}
+    const acts=(d.actions||[]).map(a=>{const c={auto_patch:'#ef4444',keyword_extend:'#eab308',threshold_adjust:'#818cf8'};
+      return`<div style="padding:4px 0;border-bottom:1px solid var(--bg-card)"><span class="badge" style="background:${(c[a.actionType]||'#334155')}22;color:${c[a.actionType]||'#94a3b8'}">${a.actionType}</span>
+        <span style="color:var(--text-secondary);font-size:12px;margin-left:8px">${(a.detail||'').slice(0,100)}</span>
+        <span style="color:${a.applied?'var(--success)':'var(--text-dim)'};font-size:11px;margin-left:4px">${a.applied?'已应用':'已跳过'}</span></div>`;}).join('');
+    document.getElementById('eActs').innerHTML=`<div style="margin-bottom:8px">操作数: <strong>${d.totalActions||0}</strong> | 跳过: ${d.skipped||0}</div>${acts||'<span style="color:var(--text-dim)">无需操作</span>'}`;
+  } catch(e){document.getElementById('eActs').innerHTML='<span style="color:var(--danger)">错误: '+e.message+'</span>'}
+}
+
+/* ═══════════════════════════════════════════════════
+   Patches
+   ═══════════════════════════════════════════════════ */
+async function loadPatches() {
+  try {
+    const r = await aFetch('/admin/api/patches'), patches = await r.json();
+    const ul = document.getElementById('pList');
+    if (!patches.length){ul.innerHTML='<li style="color:var(--text-dim)">暂无补丁</li>';return}
+    ul.innerHTML=patches.map(p=>`<li class="${p.active?'':'inactive'}">
+      <button class="btn btn-ghost btn-sm" onclick="togPatch('${p.id}',${!p.active})">${p.active?'✅':'⬜'}</button>
+      <span class="rule">${esc(p.rule)}</span>
+      <span style="color:var(--text-dim);font-size:11px">${new Date(p.created).toLocaleDateString()}</span>
+      <button class="btn-delete" onclick="delPatch('${p.id}')">删除</button></li>`).join('');
+  } catch(e){if(e.message!=='Unauthorized')console.error(e)}
+}
+async function addPatch() {
+  const rule=document.getElementById('pNewRule').value.trim(); if(!rule)return;
+  await aFetch('/admin/api/patches',{method:'POST',headers:authH(),body:JSON.stringify({action:'add',rule})});
+  document.getElementById('pNewRule').value=''; loadPatches();
+}
+async function togPatch(id,active) { await aFetch('/admin/api/patches',{method:'POST',headers:authH(),body:JSON.stringify({action:'toggle',id,active})}); loadPatches(); }
+async function delPatch(id) { if(!confirm('确定删除此补丁？'))return; await aFetch('/admin/api/patches',{method:'POST',headers:authH(),body:JSON.stringify({action:'delete',id})}); loadPatches(); }
+
+/* ═══════════════════════════════════════════════════
+   Experience & Insights
+   ═══════════════════════════════════════════════════ */
+function renderExpChart(hist) {
+  const el=document.getElementById('dExpChart'); if(!el)return;
+  if(!hist.length){el.innerHTML='<span style="color:var(--text-dim);font-size:12px">暂无数据</span>';return}
+  const mx=Math.max(...hist.map(h=>h.count),1);
+  el.innerHTML='<div class="exp-bar">'+hist.map((h,i)=>{const pct=Math.max((h.count/mx)*40,2);
+    return`<div class="exp-bar-wrap" onclick="showExpDet(${i})"><div class="bar" style="height:${pct}px" title="${h.date}: ${h.count}"></div><div class="bar-label">${h.date.slice(5)}</div></div>`;}).join('')+'</div>';
+}
+function showExpDet(i) {
+  const el=document.getElementById('dExpDetail'); if(!el)return;
+  const h=S._expH[i]; if(!h)return;
+  if(el.style.display==='block'&&el.dataset.idx===String(i)){el.style.display='none';return}
+  el.dataset.idx=String(i); const m=h.models||{},ents=Object.entries(m);
+  if(!ents.length){el.innerHTML=`<strong>${h.date}</strong> — ${h.count} 请求<br><span style="color:var(--text-dim)">无模型细分</span>`;}
+  else{const tot=ents.reduce((s,[,c])=>s+c,0);
+    el.innerHTML=`<strong>${h.date}</strong> — ${h.count} 请求<br><br>`+ents.sort((a,b)=>b[1]-a[1]).map(([m,c])=>{const p=tot>0?((c/tot)*100).toFixed(1):0;return`<div class="model-row"><span><code>${m}</code></span><span>${c} (${p}%)</span></div>`;}).join('');}
+  el.style.display='block';
+}
+async function exportExp() {
+  try { const r=await aFetch('/admin/api/experiences/export'); if(!r.ok)throw new Error('导出失败: '+r.status);
+    const blob=await r.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=`experiences-${new Date().toISOString().slice(0,10)}.jsonl`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  } catch(e){if(e.message!=='Unauthorized')alert('导出失败: '+e.message)}
+}
+async function togInsights() {
+  const el=document.getElementById('dInsights'); if(!el)return;
+  if(S._insOpen){el.style.display='none';S._insOpen=false;return}
+  el.style.display='block'; el.innerHTML='<span style="color:var(--text-secondary)">加载洞察数据...</span>'; S._insOpen=true;
+  try {
+    const r=await aFetch('/admin/api/insights?days=7'),d=await r.json();
+    let html='<strong>Experience 洞察 (7天)</strong><br><br>';
+    const mp=((d.missRate||0)*100).toFixed(1),mc=d.missRate>0.5?'var(--danger)':d.missRate>0.2?'var(--warning)':'var(--success)';
+    html+=`<div style="margin-bottom:10px"><span style="color:${mc};font-weight:600">Miss Rate: ${mp}%</span> <span style="color:var(--text-dim)">(无类别命中占比)</span></div>`;
+    if(d.topQueries?.length){html+='<div style="margin-bottom:8px"><strong style="color:#a5b4fc">高频查询</strong></div><table style="width:100%;margin-bottom:12px"><thead><tr><th style="width:70%">Query</th><th>Count</th></tr></thead><tbody>';
+      for(const q of d.topQueries)html+=`<tr><td style="font-size:12px;color:#cbd5e1;word-break:break-all">${esc(q.query)}</td><td style="text-align:center;color:#818cf8">${q.count}</td></tr>`;html+='</tbody></table>';}
+    if(d.topCategories?.length){html+='<div style="margin-bottom:8px"><strong style="color:#a5b4fc">高频分类</strong></div><table style="width:100%;margin-bottom:12px"><thead><tr><th style="width:70%">Category</th><th>Hits</th></tr></thead><tbody>';
+      for(const c of d.topCategories)html+=`<tr><td><code style="font-size:12px">${esc(c.category)}</code></td><td style="text-align:center;color:#818cf8">${c.hitCount}</td></tr>`;html+='</tbody></table>';}
+    if(d.suggestedPatches?.length){html+='<div style="margin-bottom:8px"><strong style="color:var(--warning)">建议补丁</strong></div><div style="display:flex;gap:6px;flex-wrap:wrap">';
+      for(const p of d.suggestedPatches)html+=`<span style="background:#312e81;color:#a5b4fc;padding:2px 8px;border-radius:10px;font-size:12px">${esc(p)}</span>`;html+='</div>';}
+    el.innerHTML=html;
+  } catch(e){if(e.message!=='Unauthorized')el.innerHTML='<span style="color:var(--danger)">加载失败: '+e.message+'</span>'}
+}
+
+/* ═══════════════════════════════════════════════════
+   Status Refresh
+   ═══════════════════════════════════════════════════ */
+async function refreshStatus() {
+  try {
+    const r = await aFetch('/admin/api/status'), d = await r.json();
+    S.routes = d.routes||{};
+    const dot=document.getElementById('statusDot'); dot.className='status-dot on'; dot.title='运行时间: '+fmtUp(d.uptime);
+    const $=id=>document.getElementById(id);
+    if($('cUp'))$('cUp').textContent=fmtUp(d.uptime);
+    if($('cReqs'))$('cReqs').textContent=d.stats?.todayRequests||0;
+    if($('cErrs'))$('cErrs').textContent=d.stats?.errors||0;
+    if($('cData'))$('cData').innerHTML=d.dataDirExists?'<span style="color:var(--success)">●</span> 正常':'<span style="color:var(--danger)">●</span> 缺失';
+    if($('cMem'))$('cMem').innerHTML=d.memoryItemsExists?'<span style="color:var(--success)">●</span> 正常':'<span style="color:var(--danger)">●</span> 缺失';
+    const tb=$('cRoutes'); if(tb){tb.innerHTML='';for(const[n,r]of Object.entries(d.routes||{})){const tr=document.createElement('tr');
+      tr.innerHTML=`<td><code>${n}</code></td><td><span class="badge ${r.brain?'brain':'raw'}">${r.brain?'🧠 brain':'📡 raw'}</span></td>
+        <td style="font-size:12px;color:var(--text-secondary)">${r.model} @ ${r.baseURL.replace(/https?:\/\//,'').split('/')[0]}</td>
+        <td><span class="badge ${r.hasKey?'ok':'miss'}">${r.hasKey?'✓':'✗'}</span></td>`;tb.appendChild(tr);}}
+    if(d.conversations){if($('cConvA'))$('cConvA').textContent=d.conversations.active||0;if($('cConvM'))$('cConvM').textContent=d.conversations.totalMessages||0;}
+    if(d.experience){if($('dExpCnt'))$('dExpCnt').textContent=d.experience.today?.count||0;if($('dExpLat'))$('dExpLat').textContent=d.experience.today?.avgLatency?d.experience.today.avgLatency+'ms':'-';S._expH=d.experience.history||[];renderExpChart(S._expH);}
+    if(d.patches&&$('dExpPat'))$('dExpPat').textContent=(d.patches.active||0)+'/'+(d.patches.total||0);
+    updateModelSel();
+  } catch(e){if(e.message!=='Unauthorized'){console.error(e);const dot=document.getElementById('statusDot');dot.className='status-dot off';dot.title='连接失败';}}
+}
+async function restartSvc(){if(!confirm('确定重启 brain 服务？'))return;await aFetch('/admin/api/restart',{method:'POST'});alert('服务正在重启，3秒后刷新...');setTimeout(()=>location.reload(),3000)}
+
+/* ═══════════════════════════════════════════════════
+   Utilities
+   ═══════════════════════════════════════════════════ */
+function esc(s){if(typeof s!=='string')return String(s||'');return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function fmtUp(s){if(!s)return'-';if(s<60)return Math.floor(s)+'秒';if(s<3600)return Math.floor(s/60)+'分';if(s<86400)return Math.floor(s/3600)+'时 '+Math.floor((s%3600)/60)+'分';return Math.floor(s/86400)+'天 '+Math.floor((s%86400)/3600)+'时'}
+
+/* ═══════════════════════════════════════════════════
+   Init
+   ═══════════════════════════════════════════════════ */
+(function init(){
+  if(!localStorage.getItem('brain_admin_token')) localStorage.setItem('brain_admin_token','sk-brain-dev');
+  loadState(); applySB(); applyMode(); renderSess(); renderMsgs();
+  if(innerWidth<768&&!localStorage.getItem('brain_sidebar_collapsed')){S.collapsed=true;applySB()}
+  // Hash routing
+  const validV=new Set(VIEWS),hv=location.hash.slice(1);
+  if(validV.has(hv))switchView(hv);
+  window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(validV.has(h))switchView(h)});
+  refreshStatus(); setInterval(refreshStatus,30000);
+  addEventListener('resize',()=>{const ov=document.getElementById('sbOverlay');if(innerWidth>=1024&&!S.collapsed)ov.classList.remove('vis');else if(innerWidth<1024&&!S.collapsed)ov.classList.add('vis')});
+})();
 </script>
 </body>
 </html>

@@ -4,7 +4,7 @@
  */
 
 import http from "http";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, appendFileSync, mkdirSync } from "fs";
 import { resolve } from "path";
 import { loadConfig } from "./config.js";
 import { BrainApi } from "./brain-api.js";
@@ -528,6 +528,41 @@ const server = http.createServer(async (req, res) => {
         totalTokens: result.totalTokens,
         toolsUsed: result.toolsUsed,
       });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      json(res, 500, { error: msg });
+    }
+    return;
+  }
+
+  // Admin API: session archive — 前端清理的会话消息归档到 brain 记忆
+  if (path === "/admin/api/sessions/archive" && req.method === "POST") {
+    try {
+      const body = JSON.parse(await readBody(req));
+      const messages: Array<{ role: string; content: string; ts?: string }> = body.messages ?? [];
+      if (!messages.length) { json(res, 200, { archived: 0 }); return; }
+
+      const brainRoot = resolve(import.meta.dirname, "..");
+      const archiveDir = resolve(brainRoot, "data/session-archives");
+      mkdirSync(archiveDir, { recursive: true });
+
+      const date = new Date().toISOString().slice(0, 10);
+      const archivePath = resolve(archiveDir, `${date}.jsonl`);
+      const entry = {
+        sessionId: body.sessionId ?? "unknown",
+        title: body.title ?? "",
+        mode: body.mode ?? "chat",
+        partial: body.partial ?? false,
+        messageCount: messages.length,
+        messages: messages.map((m: { role: string; content: string; ts?: string }) => ({
+          role: m.role,
+          content: (m.content ?? "").slice(0, 2000),
+          ts: m.ts,
+        })),
+        archivedAt: new Date().toISOString(),
+      };
+      appendFileSync(archivePath, JSON.stringify(entry) + "\n", "utf-8");
+      json(res, 200, { archived: messages.length, file: `session-archives/${date}.jsonl` });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       json(res, 500, { error: msg });
