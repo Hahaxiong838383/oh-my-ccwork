@@ -108,16 +108,25 @@ export async function initDB(dataDir: string): Promise<boolean> {
 
 export async function syncFromMd(dataDir: string): Promise<number> {
   const mdPath = join(dataDir, "memory-items.md");
-  if (!existsSync(mdPath)) return 0;
+  const intakePath = join(dataDir, "memory-items-intake.md");
+  if (!existsSync(mdPath) && !existsSync(intakePath)) return 0;
 
-  const mtime = statSync(mdPath).mtimeMs;
-  if (mtime === lastMtime && db) return -1; // no change
+  // 取两个文件中较新的 mtime
+  const mdMtime = existsSync(mdPath) ? statSync(mdPath).mtimeMs : 0;
+  const intakeMtime = existsSync(intakePath) ? statSync(intakePath).mtimeMs : 0;
+  const maxMtime = Math.max(mdMtime, intakeMtime);
+  if (maxMtime === lastMtime && db) return -1; // no change
 
   if (!(await initDB(dataDir))) return 0;
 
   try {
-    const content = readFileSync(mdPath, "utf-8");
-    const items = parseMemoryItems(content);
+    // 合并两个文件的 items
+    const content = existsSync(mdPath) ? readFileSync(mdPath, "utf-8") : "";
+    const intakeContent = existsSync(intakePath) ? readFileSync(intakePath, "utf-8") : "";
+    const items = [
+      ...parseMemoryItems(content),
+      ...parseMemoryItems(intakeContent),
+    ];
 
     const tx = db.transaction(() => {
       db.exec("DELETE FROM items");
@@ -138,7 +147,7 @@ export async function syncFromMd(dataDir: string): Promise<number> {
       );
     }
 
-    lastMtime = mtime;
+    lastMtime = maxMtime;
     return items.length;
   } catch (err) {
     console.error("[memory-db] syncFromMd failed:", err);

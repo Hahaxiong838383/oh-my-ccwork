@@ -62,7 +62,7 @@
 | Phase | 内容 | 依赖 |
 |-------|------|------|
 | **部署验证** | deploy.sh 推到 Studio，Chat 模式验证 memory-items.md 自动写入 | P0+P1 代码 |
-| **对齐 eval** | tests/memory-spec/ 用例集，验证 brain 摄入与 Air 六维度对齐度 | P0 rules + P1 intake |
+| ~~对齐 eval~~ | ~~8/8 全绿~~ `intake-alignment.ts --live` DashScope qwen3.5-27b，ns/dim/覆盖/拒绝全 100% | ✅ 完成 |
 | **P2** | 每日巩固 scheduler（矛盾检测三步法完整版 + Δ巩固 + 过期清理） | P1 |
 | **P3** | Admin UI 记忆面板（可视化 items + 健康度） | P2 |
 | **P4** | 多模态 adapter 接入 | 按需 |

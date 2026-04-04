@@ -121,16 +121,20 @@ export function loadConfig(): BrainConfig {
     },
     memoryLLM: {
       intake: {
-        baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        model: "qwen3.5-27b",
-        apiKey: qwenKey,
+        baseURL: "http://localhost:8001/v1",
+        model: "mlx-community/Qwen3.5-4B-MLX-4bit",
+        apiKey: "mlx",
       },
       consolidation: {
         baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
         model: "qwen3.5-27b",
         apiKey: qwenKey,
       },
-      fallbackIntake: undefined,
+      fallbackIntake: qwenKey ? {
+        baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        model: "qwen3.5-27b",
+        apiKey: qwenKey,
+      } : undefined,
     },
   };
 

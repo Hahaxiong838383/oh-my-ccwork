@@ -186,9 +186,9 @@ export async function runMemoryIntake(
     return null;
   }
 
-  // 写入 memory-items.md
+  // 写入独立的 intake 文件，避免被 rsync 覆盖
   const { written, conflicts } = facts.length > 0
-    ? appendFacts(input.dataDir, facts)
+    ? appendFacts(input.dataDir, facts, "memory-items-intake.md")
     : { written: 0, conflicts: 0 };
 
   const latencyMs = Date.now() - startMs;

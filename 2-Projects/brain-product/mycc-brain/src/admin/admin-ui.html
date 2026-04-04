@@ -877,12 +877,24 @@ async function loadConfig() { await refreshStatus(); await loadModelConfig(); }
    Model Config
    ═══════════════════════════════════════════════════ */
 const MC_PROVIDERS = [
-  { label: 'DashScope (Qwen)', baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
-  { label: 'DeepSeek', baseURL: 'https://api.deepseek.com/v1' },
-  { label: 'Ollama 本地', baseURL: 'http://localhost:11434/v1' },
-  { label: 'MLX 本地', baseURL: 'http://localhost:8000/v1' },
-  { label: '自定义', baseURL: '' },
+  { label: 'DashScope (Qwen)', baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1', models: ['qwen3.5-27b','qwen2.5-7b-instruct','qwen2.5-14b-instruct','qwen-turbo-latest'] },
+  { label: 'DeepSeek', baseURL: 'https://api.deepseek.com/v1', models: ['deepseek-chat','deepseek-reasoner'] },
+  { label: 'Ollama 本地', baseURL: 'http://localhost:11434/v1', models: ['qwen2.5:7b','qwen2.5:14b','gemma4:26b'] },
+  { label: 'MLX 27B (8000)', baseURL: 'http://localhost:8000/v1', models: ['mlx-community/Qwen3.5-27B-4bit'] },
+  { label: 'MLX 4B (8001)', baseURL: 'http://localhost:8001/v1', models: ['mlx-community/Qwen3.5-4B-MLX-4bit'] },
+  { label: '自定义', baseURL: '', models: [] },
 ];
+
+function mcBuildModelOpts(providerIdx, currentModel) {
+  const p = MC_PROVIDERS[providerIdx];
+  const models = (p && p.models) || [];
+  let h = models.map(m => `<option value="${esc(m)}"${m===currentModel?' selected':''}>${esc(m)}</option>`).join('');
+  if (currentModel && !models.includes(currentModel)) {
+    h = `<option value="${esc(currentModel)}" selected>${esc(currentModel)}</option>` + h;
+  }
+  if (!models.length) h += '<option value="">-- 请手动输入 --</option>';
+  return h;
+}
 
 let _mcData = null;
 
@@ -921,9 +933,10 @@ function renderModelConfig(d) {
         </div>
         <div>
           <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">模型名称</label>
-          <input id="mc_${role.key}_model" value="${esc(cfg.model||'')}"
-            style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:6px 8px;font-size:12px"
-            placeholder="e.g. qwen3.5-27b">
+          <select id="mc_${role.key}_model"
+            style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:6px 8px;font-size:12px">
+            ${mcBuildModelOpts(providerIdx, cfg.model||'')}
+          </select>
         </div>
       </div>
       <div style="margin-bottom:8px">
@@ -954,6 +967,9 @@ function mcProviderChange(role) {
   if (provider && provider.baseURL) {
     document.getElementById('mc_' + role + '_baseURL').value = provider.baseURL;
   }
+  const modelSel = document.getElementById('mc_' + role + '_model');
+  modelSel.innerHTML = mcBuildModelOpts(idx, '');
+  if (provider && provider.models && provider.models.length) modelSel.value = provider.models[0];
 }
 
 async function saveModelConfig() {

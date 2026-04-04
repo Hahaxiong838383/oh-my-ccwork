@@ -15,9 +15,9 @@ interface ParsedCategory {
   items: string[];      // 每行原始文本
 }
 
-/** 解析 memory-items.md 为按命名空间分组的结构 */
-export function parseMemoryItems(dataDir: string): ParsedCategory[] {
-  const filePath = join(dataDir, "memory-items.md");
+/** 解析 memory-items.md（或指定文件）为按命名空间分组的结构 */
+export function parseMemoryItems(dataDir: string, filename = "memory-items.md"): ParsedCategory[] {
+  const filePath = join(dataDir, filename);
   if (!existsSync(filePath)) return [];
 
   const content = readFileSync(filePath, "utf-8");
@@ -60,11 +60,11 @@ function checkConflict(existing: string[], newFact: MemoryFact): boolean {
   return false;
 }
 
-/** 将提取的事实追加到 memory-items.md */
-export function appendFacts(dataDir: string, facts: MemoryFact[]): { written: number; conflicts: number } {
+/** 将提取的事实追加到指定文件（默认 memory-items.md） */
+export function appendFacts(dataDir: string, facts: MemoryFact[], filename = "memory-items.md"): { written: number; conflicts: number } {
   if (facts.length === 0) return { written: 0, conflicts: 0 };
 
-  const filePath = join(dataDir, "memory-items.md");
+  const filePath = join(dataDir, filename);
   const today = new Date().toISOString().slice(0, 10);
 
   // 读取或创建文件
@@ -73,7 +73,7 @@ export function appendFacts(dataDir: string, facts: MemoryFact[]): { written: nu
     content = readFileSync(filePath, "utf-8");
   }
 
-  const categories = parseMemoryItems(dataDir);
+  const categories = parseMemoryItems(dataDir, filename);
   let conflicts = 0;
   const appendLines: Map<string, string[]> = new Map();
 

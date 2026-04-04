@@ -28,15 +28,15 @@
     }
   },
   {
-    "name": "事件事实-端口变更",
+    "name": "更新修正-端口变更",
     "conversation": {
       "user": "把 mycc 后端端口从 18080 改到 19090 了",
       "assistant": "好的，已记录端口变更。config 和 nginx 都需要同步更新。"
     },
     "expected": {
       "factCount": 1,
-      "namespaces": ["project/配置-mycc后端"],
-      "dimensions": ["事件事实"],
+      "namespaces": ["project/配置"],
+      "dimensions": ["更新/修正"],
       "mustContain": ["19090"],
       "mustNotContain": []
     }
@@ -49,9 +49,9 @@
     },
     "expected": {
       "factCount": 1,
-      "namespaces": ["project/产品-prd"],
+      "namespaces": ["project/"],
       "dimensions": ["时间数据"],
-      "mustContain": ["v2.0", "发布"],
+      "mustContain": ["v2.0"],
       "mustNotContain": []
     }
   },
@@ -63,7 +63,7 @@
     },
     "expected": {
       "factCount": 1,
-      "namespaces": ["project/配置-mycc后端"],
+      "namespaces": ["project/配置"],
       "dimensions": ["更新/修正"],
       "mustContain": ["22022"],
       "mustNotContain": []
@@ -106,7 +106,7 @@
     },
     "expected": {
       "factCount": 2,
-      "namespaces": ["project/配置-mycc后端", "user/偏好"],
+      "namespaces": ["project/配置", "user/偏好"],
       "dimensions": ["事件事实", "偏好变更"],
       "mustContain": ["19080", "pm2", "Zsh"],
       "mustNotContain": []

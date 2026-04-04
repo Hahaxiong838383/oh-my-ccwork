@@ -1,6 +1,8 @@
 /**
  * brain 记忆摄入对齐 eval
- * 用法：npx tsx tests/memory-spec/intake-alignment.ts
+ * 用法：
+ *   npx tsx tests/memory-spec/intake-alignment.ts           # dry-run（输出用例结构）
+ *   QWEN_API_KEY=sk-xxx npx tsx tests/memory-spec/intake-alignment.ts --live  # 实际调 LLM
  *
  * 验证维度：
  * - 命名空间一致率（brain 提取的 namespace ∈ 预期集合）
@@ -9,11 +11,8 @@
  * - 空对话拒绝率（无可提取时返回空数组 + skipReason）
  */
 
-import { readFileSync } from "fs";
+import { readFileSync, mkdirSync } from "fs";
 import { resolve } from "path";
-
-// 直接导入 intake 的内部解析函数来测试
-// 注意：这里不实际调 LLM，而是如果想跑真实 LLM 测试，需要传入真实 route
 
 interface TestCase {
   name: string;
@@ -97,16 +96,11 @@ function evaluateCase(
   };
 }
 
-// 主函数：加载用例，输出评分模板
-async function main() {
-  const casesPath = resolve(import.meta.dirname!, "intake-cases.json");
-  const cases: TestCase[] = JSON.parse(readFileSync(casesPath, "utf-8"));
-
+function runDryMode(cases: readonly TestCase[]): void {
   console.log(`\n🧪 Brain 记忆摄入对齐 Eval`);
   console.log(`   用例数: ${cases.length}`);
   console.log(`   模式: dry-run（输出用例结构，不调 LLM）\n`);
 
-  // dry-run 模式：输出用例结构供人工 review
   for (const c of cases) {
     console.log(`📋 ${c.name}`);
     console.log(`   user: ${c.conversation.user.slice(0, 60)}...`);
@@ -127,11 +121,108 @@ async function main() {
   console.log(`   事实覆盖率 ≥ 70%`);
   console.log(`   空对话拒绝率 = 100%`);
   console.log(
-    `\n💡 跑真实 eval: 传入 --live 参数（需要 Ollama 或 API 可用）`,
+    `\n💡 跑真实 eval: QWEN_API_KEY=sk-xxx npx tsx tests/memory-spec/intake-alignment.ts --live`,
   );
+}
 
-  // 导出 evaluateCase 供外部使用
-  return { cases, evaluateCase };
+async function runLiveMode(cases: readonly TestCase[]): Promise<void> {
+  const { runMemoryIntake } = await import("../../src/services/memory-intake.js");
+
+  // eval 直接用 DashScope qwen3.5-27b（Air 上没有本地 MLX）
+  const qwenKey = process.env.QWEN_API_KEY;
+  if (!qwenKey) {
+    console.error("❌ QWEN_API_KEY 未设置。用法：QWEN_API_KEY=sk-xxx npx tsx ... --live");
+    process.exit(1);
+  }
+
+  const intakeRoute = {
+    baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    model: "qwen3.5-27b",
+    apiKey: qwenKey,
+    maxTokens: 2048,
+  };
+
+  const tmpDir = `/tmp/brain-eval-${Date.now()}`;
+  mkdirSync(tmpDir, { recursive: true });
+
+  console.log(`\n🧪 Brain 记忆摄入对齐 Eval — LIVE`);
+  console.log(`   用例数: ${cases.length}`);
+  console.log(`   模型: ${intakeRoute.model}`);
+  console.log(`   临时目录: ${tmpDir}\n`);
+
+  const results: ScoreResult[] = [];
+
+  for (const c of cases) {
+    const caseDir = resolve(tmpDir, c.name);
+    mkdirSync(caseDir, { recursive: true });
+
+    const input = {
+      userMessage: c.conversation.user,
+      assistantReply: c.conversation.assistant,
+      dataDir: caseDir,
+    };
+
+    const intakeResult = await runMemoryIntake(input, intakeRoute);
+
+    const facts = intakeResult?.facts ?? [];
+    const skipReason = intakeResult?.skipReason ?? null;
+
+    const score = evaluateCase(c, facts, skipReason);
+    results.push(score);
+
+    const status = score.passed ? "✅" : "❌";
+    console.log(`${status} ${c.name}`);
+    console.log(`   facts: ${facts.length} (期望 ${c.expected.factCount})`);
+    if (facts.length > 0) {
+      for (const f of facts) {
+        console.log(`     [${f.namespace}] ${f.dimension} — ${f.content.slice(0, 60)}`);
+      }
+    }
+    console.log(
+      `   ns: ${score.namespaceMatch ? "✓" : "✗"}  dim: ${score.dimensionMatch ? "✓" : "✗"}  cover: ${(score.coverageScore * 100).toFixed(0)}%  count: ${score.factCountMatch ? "✓" : "✗"}  skip: ${score.skipReasonCorrect ? "✓" : "✗"}`,
+    );
+    if (intakeResult) {
+      console.log(`   model: ${intakeResult.model}  latency: ${intakeResult.latencyMs}ms`);
+    } else {
+      console.log(`   ⚠️ intake 返回 null（LLM 调用失败）`);
+    }
+    console.log("");
+  }
+
+  // 汇总报告
+  const total = results.length;
+  const passed = results.filter((r) => r.passed).length;
+  const nsRate = (results.filter((r) => r.namespaceMatch).length / total) * 100;
+  const dimRate = (results.filter((r) => r.dimensionMatch).length / total) * 100;
+  const avgCoverage = (results.reduce((s, r) => s + r.coverageScore, 0) / total) * 100;
+  const skipCases = results.filter((r) =>
+    cases.find((c) => c.name === r.name)?.expected.mustHaveSkipReason,
+  );
+  const skipRate =
+    skipCases.length > 0
+      ? (skipCases.filter((r) => r.skipReasonCorrect).length / skipCases.length) * 100
+      : 100;
+
+  console.log("=".repeat(50));
+  console.log(`📊 对齐报告`);
+  console.log(`   总通过率: ${passed}/${total} (${((passed / total) * 100).toFixed(0)}%)`);
+  console.log(`   命名空间一致率: ${nsRate.toFixed(0)}% ${nsRate >= 80 ? "✅" : "❌"} (≥80%)`);
+  console.log(`   维度一致率: ${dimRate.toFixed(0)}% ${dimRate >= 80 ? "✅" : "❌"} (≥80%)`);
+  console.log(`   事实覆盖率: ${avgCoverage.toFixed(0)}% ${avgCoverage >= 70 ? "✅" : "❌"} (≥70%)`);
+  console.log(`   空对话拒绝率: ${skipRate.toFixed(0)}% ${skipRate === 100 ? "✅" : "❌"} (=100%)`);
+  console.log(`\n   临时数据: ${tmpDir}`);
+}
+
+async function main(): Promise<void> {
+  const isLive = process.argv.includes("--live");
+  const casesPath = resolve(import.meta.dirname!, "intake-cases.json");
+  const cases: TestCase[] = JSON.parse(readFileSync(casesPath, "utf-8"));
+
+  if (isLive) {
+    await runLiveMode(cases);
+  } else {
+    runDryMode(cases);
+  }
 }
 
 main().catch(console.error);

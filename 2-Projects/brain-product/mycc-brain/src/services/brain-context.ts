@@ -231,12 +231,36 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
   const cached = _cacheGet(cacheKey);
   if (cached) return cached;
   const memPath = join(dataDir, "memory-items.md");
-  if (!existsSync(memPath)) {
+  const intakePath = join(dataDir, "memory-items-intake.md");
+  if (!existsSync(memPath) && !existsSync(intakePath)) {
     return { context: "", matchedCategories: [], itemCount: 0, retrievalPaths: [] };
   }
 
-  const memContent = readFileSync(memPath, "utf-8");
-  const sections = parseMemoryItems(memContent);
+  // 合并主文件和 intake 文件的 sections
+  const memContent = existsSync(memPath) ? readFileSync(memPath, "utf-8") : "";
+  const intakeContent = existsSync(intakePath) ? readFileSync(intakePath, "utf-8") : "";
+  const mainSections = parseMemoryItems(memContent);
+  const intakeSections = parseMemoryItems(intakeContent);
+
+  // 按 category 合并（同 category 的 items 去重合并）
+  const sectionMap = new Map<string, MemorySection>();
+  for (const sec of mainSections) {
+    sectionMap.set(sec.category, { category: sec.category, items: [...sec.items] });
+  }
+  for (const sec of intakeSections) {
+    const existing = sectionMap.get(sec.category);
+    if (existing) {
+      const existingSet = new Set(existing.items);
+      for (const item of sec.items) {
+        if (!existingSet.has(item)) {
+          existing.items.push(item);
+        }
+      }
+    } else {
+      sectionMap.set(sec.category, { category: sec.category, items: [...sec.items] });
+    }
+  }
+  const sections = [...sectionMap.values()];
 
   // 收集命中的检索路径
   const retrievalPaths: string[] = [];
