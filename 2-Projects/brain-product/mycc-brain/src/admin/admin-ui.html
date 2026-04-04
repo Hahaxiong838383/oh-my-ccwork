@@ -346,11 +346,14 @@ async function refresh() {
       document.getElementById('convMessages').textContent = d.conversations.totalMessages || 0;
     }
 
-    // Routes
+    // Routes — 重建下拉前保存当前选中值，重建后恢复
     const tb = document.getElementById('routeTable');
     const sel = document.getElementById('testModel');
     const compareSel = document.getElementById('compareModel');
     const agentSel = document.getElementById('agentModel');
+    const prevTest = sel.value;
+    const prevCompare = compareSel.value;
+    const prevAgent = agentSel.value;
     tb.innerHTML = '';
     sel.innerHTML = '';
     compareSel.innerHTML = '';
@@ -381,6 +384,10 @@ async function refresh() {
         agentSel.appendChild(aopt);
       }
     }
+    // 恢复之前选中的模型
+    if (prevTest) sel.value = prevTest;
+    if (prevCompare) compareSel.value = prevCompare;
+    if (prevAgent) agentSel.value = prevAgent;
     document.getElementById('refreshTime').textContent = new Date().toLocaleTimeString();
 
     // Patches
