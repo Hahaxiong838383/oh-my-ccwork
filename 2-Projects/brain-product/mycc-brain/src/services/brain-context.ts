@@ -102,6 +102,14 @@ const KEYWORD_CATEGORY_MAP: Array<{ pattern: RegExp; categories: string[] }> = [
   { pattern: /决策|技术选择|选型|方案/i, categories: ["project/决策"] },
   { pattern: /意识|认知|理论|HOT|GWT|IIT/i, categories: ["user/偏好"] },
   { pattern: /微调|fine-?tune|训练|dataset/i, categories: ["project/技术-数据"] },
+  { pattern: /智能家居|HA|HomeAssistant|灯|开关|米家|小爱|传感器/i, categories: ["project/智能家居"] },
+  { pattern: /贾维斯|Jarvis|ESP32|语音终端|唤醒词|小智|xiaomusic|音乐播放/i, categories: ["project/贾维斯-语音终端"] },
+  { pattern: /TTS|语音合成|Qwen3-TTS|VITS|发音/i, categories: ["project/贾维斯-语音终端"] },
+  { pattern: /Ollama|模型下载|量化|gguf|mlx/i, categories: ["project/基础设施", "project/技术-数据"] },
+  { pattern: /cc-remote|远程终端|FRP|中转|tunnel/i, categories: ["project/Bug-Fix", "project/配置-mycc后端"] },
+  { pattern: /黄金|金价|贵金属|买入/i, categories: ["project/技术-数据", "project/技术-RSS采集"] },
+  { pattern: /brain|eval|诊断|自进化|evolution/i, categories: ["project/状态", "project/决策"] },
+  { pattern: /日历|日程|会议|agenda/i, categories: ["project/技术-飞书"] },
 ];
 
 // ─── Parser ───
