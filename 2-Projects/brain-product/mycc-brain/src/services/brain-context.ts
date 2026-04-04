@@ -167,6 +167,45 @@ function scoreItem(item: string): number {
   return starScore(item) * 0.5 + timeDecay(item) * 0.5;
 }
 
+// ─── LRU 缓存 ───
+
+interface CacheEntry {
+  result: BrainContextResult;
+  timestamp: number;
+}
+
+const CACHE_TTL_MS = 60_000;  // 60 秒过期
+const CACHE_MAX_SIZE = 50;    // 最多缓存 50 条
+
+const _brainContextCache = new Map<string, CacheEntry>();
+
+/** 清空记忆检索缓存（外部可选调用，如记忆更新后） */
+export function clearBrainContextCache(): void {
+  _brainContextCache.clear();
+}
+
+function _cacheGet(key: string): BrainContextResult | null {
+  const entry = _brainContextCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    _brainContextCache.delete(key);
+    return null;
+  }
+  // LRU：命中后删除再重新插入，保持最近使用在末尾
+  _brainContextCache.delete(key);
+  _brainContextCache.set(key, entry);
+  return entry.result;
+}
+
+function _cacheSet(key: string, result: BrainContextResult): void {
+  // 超过容量时删除最早的（Map 迭代顺序 = 插入顺序）
+  if (_brainContextCache.size >= CACHE_MAX_SIZE) {
+    const oldest = _brainContextCache.keys().next().value;
+    if (oldest !== undefined) _brainContextCache.delete(oldest);
+  }
+  _brainContextCache.set(key, { result, timestamp: Date.now() });
+}
+
 // ─── Main API ───
 
 export interface BrainContextResult {
@@ -179,6 +218,10 @@ export interface BrainContextResult {
 const MAX_BUDGET = 4000; // chars — expanded budget for richer memory injection
 
 export async function loadBrainContext(query: string, dataDir: string): Promise<BrainContextResult> {
+  // LRU 缓存命中检查
+  const cacheKey = `${query}::${dataDir}`;
+  const cached = _cacheGet(cacheKey);
+  if (cached) return cached;
   const memPath = join(dataDir, "memory-items.md");
   if (!existsSync(memPath)) {
     return { context: "", matchedCategories: [], itemCount: 0, retrievalPaths: [] };
@@ -240,31 +283,37 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
   const tfidfMatched = scored.slice(0, 4).map((s) => s.category);
   if (tfidfMatched.length > 0) retrievalPaths.push("tfidf");
 
-  // 3. FTS5 full-text search (third retrieval path, optional — degrades if SQLite unavailable)
+  // 3 & 4. FTS + Vector 并行检索（两者互不依赖，并行可减少 ~50% 检索延迟）
   const ftsCategories = new Set<string>();
   const ftsDirectHits: string[] = [];
-  try {
-    await syncFromMd(dataDir);
-    const ftsResults = ftsSearch(dataDir, query, 8);
-    for (const row of ftsResults) {
-      ftsCategories.add(row.category);
-      ftsDirectHits.push(row.content);
-    }
-    if (ftsCategories.size > 0) retrievalPaths.push("fts");
-  } catch { /* FTS unavailable, continue with keyword + TF-IDF */ }
-
-  // 4. Vector semantic search (fourth retrieval path, optional — degrades if Ollama/sqlite-vec unavailable)
   const vecCategories = new Set<string>();
-  try {
-    const queryVec = await embed(query);
-    if (queryVec) {
-      const vecResults = vectorSearch(dataDir, queryVec, 5);
-      for (const row of vecResults) {
-        vecCategories.add(row.category);
+
+  const ftsTask = (async () => {
+    try {
+      await syncFromMd(dataDir);
+      const ftsResults = ftsSearch(dataDir, query, 8);
+      for (const row of ftsResults) {
+        ftsCategories.add(row.category);
+        ftsDirectHits.push(row.content);
       }
-      if (vecCategories.size > 0) retrievalPaths.push("vector");
-    }
-  } catch { /* vector search unavailable, continue with other paths */ }
+      if (ftsCategories.size > 0) retrievalPaths.push("fts");
+    } catch { /* FTS unavailable, continue with keyword + TF-IDF */ }
+  })();
+
+  const vecTask = (async () => {
+    try {
+      const queryVec = await embed(query);
+      if (queryVec) {
+        const vecResults = vectorSearch(dataDir, queryVec, 5);
+        for (const row of vecResults) {
+          vecCategories.add(row.category);
+        }
+        if (vecCategories.size > 0) retrievalPaths.push("vector");
+      }
+    } catch { /* vector search unavailable, continue with other paths */ }
+  })();
+
+  await Promise.all([ftsTask, vecTask]);
 
   // 5. Merge: keyword + tfidf + fts + vector categories (purely query-driven)
   const allCategories = new Set([...keywordMatched, ...tfidfMatched, ...ftsCategories, ...vecCategories]);
@@ -318,12 +367,17 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
 
   const itemCount = parts.reduce((n, p) => n + (p.match(/^- /gm)?.length ?? 0), 0);
 
-  return {
+  const result: BrainContextResult = {
     context: parts.join("\n\n"),
     matchedCategories: matched,
     itemCount,
     retrievalPaths,
   };
+
+  // 写入 LRU 缓存
+  _cacheSet(cacheKey, result);
+
+  return result;
 }
 
 export function buildBrainSystemPrompt(
