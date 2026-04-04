@@ -859,6 +859,27 @@ const server = http.createServer(async (req, res) => {
   json(res, 404, { error: "not found" });
 });
 
+// ─── 每日巩固定时器（04:00 执行）───
+let lastConsolidationDate = "";
+function scheduleConsolidation() {
+  setInterval(async () => {
+    const now = new Date();
+    const hour = now.getHours();
+    const today = now.toISOString().slice(0, 10);
+    if (hour === 4 && lastConsolidationDate !== today) {
+      lastConsolidationDate = today;
+      console.log(`[consolidation] daily run starting at ${now.toISOString()}`);
+      try {
+        const { runConsolidation } = await import("./services/memory-consolidation.js");
+        const result = await runConsolidation(config.dataDir, config.memoryLLM.consolidation);
+        console.log(`[consolidation] done:`, JSON.stringify(result));
+      } catch (err) {
+        console.error(`[consolidation] failed:`, err instanceof Error ? err.message : err);
+      }
+    }
+  }, 60_000); // 每分钟检查一次
+}
+
 // 启动服务：先初始化 MCP 连接，再监听端口
 initMcpConnections().then(() => {
   server.listen(config.port, "0.0.0.0", () => {
@@ -869,6 +890,8 @@ initMcpConnections().then(() => {
     console.log(`   Data:  ${config.dataDir} (${existsSync(config.dataDir) ? "✅" : "❌ not found"})`);
     console.log(`   Memory: memory-items.md (${memExists ? "✅" : "❌ not found"})`);
     console.log(`   Models: ${Object.keys(config.routes).join(", ")}`);
-    console.log(`   MCP:   ${mcpClients.size} server(s) connected\n`);
+    console.log(`   MCP:   ${mcpClients.size} server(s) connected`);
+    console.log(`   Cron:  consolidation daily @04:00\n`);
+    scheduleConsolidation();
   });
 });
