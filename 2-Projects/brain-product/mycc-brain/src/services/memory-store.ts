@@ -8,6 +8,7 @@ export interface MemoryFact {
   dimension: string;
   tags?: string[];
   star?: number;
+  source?: string; // "brain" | "air-sync" | "manual" — 记忆来源标记
 }
 
 interface ParsedCategory {
@@ -91,7 +92,8 @@ export function appendFacts(dataDir: string, facts: MemoryFact[], filename = "me
     const conflictMark = isConflict ? " [?conflict]" : "";
     if (isConflict) conflicts++;
 
-    const line = `- ${star} ${fact.content} [${today}]${tagStr ? " " + tagStr : ""}${conflictMark}`;
+    const srcTag = fact.source ? ` [src:${fact.source}]` : " [src:brain]";
+    const line = `- ${star} ${fact.content} [${today}]${tagStr ? " " + tagStr : ""}${srcTag}${conflictMark}`;
 
     if (!appendLines.has(ns)) appendLines.set(ns, []);
     appendLines.get(ns)!.push(line);

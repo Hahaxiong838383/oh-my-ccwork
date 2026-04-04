@@ -210,6 +210,86 @@ export function getInsights(brainRoot: string, days = 7): InsightsResult {
   return { topQueries, topCategories, missRate, suggestedPatches };
 }
 
+// ─── Memory Health (供给侧洞察) ───
+
+export interface MemoryHealthResult {
+  totalItems: number;
+  sourceDistribution: Record<string, number>; // brain: 10, air-sync: 25, unknown: 5
+  namespaceCoverage: Array<{ namespace: string; itemCount: number; hitCount: number; source: string }>;
+  coldRate: number; // 从未被命中的命名空间占比
+  coldNamespaces: string[]; // 从未被命中的命名空间列表
+}
+
+export function getMemoryHealth(brainRoot: string, days = 30): MemoryHealthResult {
+  // 直接内联解析 memory-items.md，避免循环依赖
+  const dataDir = join(brainRoot, "data");
+  const filePath = join(dataDir, "memory-items.md");
+  const categories: Array<{ header: string; items: string[] }> = [];
+  if (existsSync(filePath)) {
+    const content = readFileSync(filePath, "utf-8");
+    let current: { header: string; items: string[] } | null = null;
+    for (const line of content.split("\n")) {
+      if (/^###?\s*\[.+?\]/.test(line)) { current = { header: line, items: [] }; categories.push(current); }
+      else if (current && line.startsWith("- ")) { current.items.push(line); }
+    }
+  }
+
+  // 1. 解析完成，categories 已填充
+  const sourceDist: Record<string, number> = {};
+  const nsCoverage: Array<{ namespace: string; itemCount: number; hitCount: number; source: string }> = [];
+
+  for (const cat of categories) {
+    const nsMatch = cat.header.match(/\[(.+?)\]/);
+    const ns = nsMatch ? nsMatch[1] : cat.header;
+    const itemCount = cat.items.length;
+
+    // 统计来源分布
+    let primarySource = "unknown";
+    const srcCounts: Record<string, number> = {};
+    for (const item of cat.items) {
+      const srcMatch = item.match(/\[src:(\S+?)\]/);
+      const src = srcMatch ? srcMatch[1] : "unknown";
+      srcCounts[src] = (srcCounts[src] ?? 0) + 1;
+      sourceDist[src] = (sourceDist[src] ?? 0) + 1;
+    }
+    // 最多来源作为该 namespace 的主来源
+    let maxCount = 0;
+    for (const [src, count] of Object.entries(srcCounts)) {
+      if (count > maxCount) { maxCount = count; primarySource = src; }
+    }
+
+    nsCoverage.push({ namespace: ns, itemCount, hitCount: 0, source: primarySource });
+  }
+
+  // 2. 从 experience 数据中统计命名空间命中次数
+  const entries = readRecentEntries(brainRoot, days);
+  const hitSet = new Set<string>();
+  const hitCounts = new Map<string, number>();
+  for (const entry of entries) {
+    for (const cat of entry.injectedCategories) {
+      hitSet.add(cat);
+      hitCounts.set(cat, (hitCounts.get(cat) ?? 0) + 1);
+    }
+  }
+
+  // 3. 交叉：为每个 namespace 填充 hitCount
+  for (const ns of nsCoverage) {
+    ns.hitCount = hitCounts.get(ns.namespace) ?? 0;
+  }
+
+  // 4. 冷记忆
+  const coldNamespaces = nsCoverage.filter(n => n.hitCount === 0).map(n => n.namespace);
+  const coldRate = nsCoverage.length > 0 ? coldNamespaces.length / nsCoverage.length : 0;
+
+  return {
+    totalItems: categories.reduce((sum, c) => sum + c.items.length, 0),
+    sourceDistribution: sourceDist,
+    namespaceCoverage: nsCoverage.sort((a, b) => b.hitCount - a.hitCount),
+    coldRate,
+    coldNamespaces,
+  };
+}
+
 // ─── Health Metrics ───
 
 export interface HealthMetrics {

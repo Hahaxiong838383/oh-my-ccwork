@@ -1195,7 +1195,8 @@ async function togInsights() {
   if(S._insOpen){el.style.display='none';S._insOpen=false;return}
   el.style.display='block'; el.innerHTML='<span style="color:var(--text-secondary)">加载洞察数据...</span>'; S._insOpen=true;
   try {
-    const r=await aFetch('/admin/api/insights?days=7'),d=await r.json();
+    const [r, mr]=await Promise.all([aFetch('/admin/api/insights?days=7'),aFetch('/admin/api/memory-health?days=30')]);
+    const d=await r.json(), mh=await mr.json();
     let html='<strong>Experience 洞察 (7天)</strong><br><br>';
     const mp=((d.missRate||0)*100).toFixed(1),mc=d.missRate>0.5?'var(--danger)':d.missRate>0.2?'var(--warning)':'var(--success)';
     html+=`<div style="margin-bottom:10px"><span style="color:${mc};font-weight:600">Miss Rate: ${mp}%</span> <span style="color:var(--text-dim)">(无类别命中占比)</span></div>`;
@@ -1205,6 +1206,27 @@ async function togInsights() {
       for(const c of d.topCategories)html+=`<tr><td><code style="font-size:12px">${esc(c.category)}</code></td><td style="text-align:center;color:#818cf8">${c.hitCount}</td></tr>`;html+='</tbody></table>';}
     if(d.suggestedPatches?.length){html+='<div style="margin-bottom:8px"><strong style="color:var(--warning)">建议补丁</strong></div><div style="display:flex;gap:6px;flex-wrap:wrap">';
       for(const p of d.suggestedPatches)html+=`<span style="background:#312e81;color:#a5b4fc;padding:2px 8px;border-radius:10px;font-size:12px">${esc(p)}</span>`;html+='</div>';}
+    // ── 记忆健康度（供给侧） ──
+    html+='<hr style="border-color:var(--border);margin:16px 0"><strong>记忆健康度 (30天)</strong><br><br>';
+    const cp=((mh.coldRate||0)*100).toFixed(0),cc2=mh.coldRate>0.7?'var(--danger)':mh.coldRate>0.4?'var(--warning)':'var(--success)';
+    html+=`<div style="display:flex;gap:16px;margin-bottom:12px">
+      <div><span style="font-size:20px;font-weight:700;color:var(--text-primary)">${mh.totalItems||0}</span><div style="font-size:11px;color:var(--text-dim)">总记忆条目</div></div>
+      <div><span style="font-size:20px;font-weight:700;color:${cc2}">${cp}%</span><div style="font-size:11px;color:var(--text-dim)">冷记忆占比</div></div>
+    </div>`;
+    // 来源分布
+    const srcE=Object.entries(mh.sourceDistribution||{});
+    if(srcE.length){html+='<div style="margin-bottom:8px"><strong style="color:#a5b4fc">来源分布</strong></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">';
+      const srcColors={'brain':'#6366f1','air-sync':'#22d3ee','manual':'#facc15','unknown':'#64748b'};
+      for(const[s,n]of srcE)html+=`<span style="background:${srcColors[s]||'#475569'}22;color:${srcColors[s]||'#94a3b8'};border:1px solid ${srcColors[s]||'#475569'}44;padding:2px 10px;border-radius:10px;font-size:12px">${esc(s)}: ${n}</span>`;
+      html+='</div>';}
+    // 命名空间覆盖度 Top 10
+    const nsTop=(mh.namespaceCoverage||[]).slice(0,10);
+    if(nsTop.length){html+='<div style="margin-bottom:8px"><strong style="color:#a5b4fc">命名空间覆盖度</strong> <span style="font-size:11px;color:var(--text-dim)">(items / hits / source)</span></div><table style="width:100%;margin-bottom:12px"><thead><tr><th>Namespace</th><th>Items</th><th>Hits</th><th>Source</th></tr></thead><tbody>';
+      for(const ns of nsTop){const hc=ns.hitCount>0?'#22c55e':'#ef4444';html+=`<tr><td><code style="font-size:11px">${esc(ns.namespace)}</code></td><td style="text-align:center">${ns.itemCount}</td><td style="text-align:center;color:${hc}">${ns.hitCount}</td><td style="font-size:11px;color:var(--text-dim)">${esc(ns.source)}</td></tr>`;}
+      html+='</tbody></table>';}
+    // 冷命名空间
+    if(mh.coldNamespaces?.length>0&&mh.coldNamespaces.length<=15){html+='<div style="margin-bottom:8px"><strong style="color:var(--warning)">冷命名空间</strong> <span style="font-size:11px;color:var(--text-dim)">(从未被命中)</span></div><div style="display:flex;gap:4px;flex-wrap:wrap">';
+      for(const ns of mh.coldNamespaces)html+=`<span style="background:#7f1d1d33;color:#fca5a5;padding:2px 8px;border-radius:10px;font-size:11px">${esc(ns)}</span>`;html+='</div>';}
     el.innerHTML=html;
   } catch(e){if(e.message!=='Unauthorized')el.innerHTML='<span style="color:var(--danger)">加载失败: '+e.message+'</span>'}
 }

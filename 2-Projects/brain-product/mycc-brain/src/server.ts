@@ -10,7 +10,7 @@ import { loadConfig } from "./config.js";
 import { BrainApi } from "./brain-api.js";
 import { loadBrainContext } from "./services/brain-context.js";
 import { listPatches, addPatch, togglePatch, deletePatch } from "./services/hot-patch.js";
-import { getTodayStats, getRecentDayStats, getInsights, getHealthMetrics } from "./services/experience-stream.js";
+import { getTodayStats, getRecentDayStats, getInsights, getHealthMetrics, getMemoryHealth } from "./services/experience-stream.js";
 import { getConversationStats } from "./services/conversation.js";
 import { diagnoseLatestEval } from "./services/evolution-diagnosis.js";
 import { runEvolutionCycle } from "./services/evolution-engine.js";
@@ -501,6 +501,15 @@ const server = http.createServer(async (req, res) => {
     const days = parseInt(url.searchParams.get("days") ?? "7", 10);
     const clampedDays = Math.max(1, Math.min(days, 90));
     json(res, 200, getHealthMetrics(brainRoot, clampedDays));
+    return;
+  }
+
+  // Admin API: memory health (supply-side insights)
+  if (path === "/admin/api/memory-health" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    const days = parseInt(url.searchParams.get("days") ?? "30", 10);
+    const clampedDays = Math.max(1, Math.min(days, 90));
+    json(res, 200, getMemoryHealth(brainRoot, clampedDays));
     return;
   }
 
