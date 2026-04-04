@@ -12,6 +12,8 @@ import { loadBrainContext } from "./services/brain-context.js";
 import { listPatches, addPatch, togglePatch, deletePatch } from "./services/hot-patch.js";
 import { getTodayStats, getRecentDayStats, getInsights, getHealthMetrics } from "./services/experience-stream.js";
 import { getConversationStats } from "./services/conversation.js";
+import { diagnoseLatestEval } from "./services/evolution-diagnosis.js";
+import { runEvolutionCycle } from "./services/evolution-engine.js";
 
 const config = loadConfig();
 const brainApi = new BrainApi(config);
@@ -284,6 +286,53 @@ const server = http.createServer(async (req, res) => {
     const days = parseInt(url.searchParams.get("days") ?? "7", 10);
     const clampedDays = Math.max(1, Math.min(days, 90));
     json(res, 200, getHealthMetrics(brainRoot, clampedDays));
+    return;
+  }
+
+  // Admin API: evolution — latest diagnosis
+  if (path === "/admin/api/evolution/diagnosis" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    const report = diagnoseLatestEval(brainRoot);
+    json(res, 200, report ?? { error: "no eval data yet" });
+    return;
+  }
+
+  // Admin API: evolution — action log (read evolution-log.jsonl, last N entries)
+  if (path === "/admin/api/evolution/log" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    const limit = parseInt(url.searchParams.get("limit") ?? "50", 10);
+    const logPath = resolve(brainRoot, "data/evolution-log.jsonl");
+    const entries: unknown[] = [];
+    if (existsSync(logPath)) {
+      const lines = readFileSync(logPath, "utf-8").trim().split("\n").filter(Boolean);
+      const start = Math.max(0, lines.length - limit);
+      for (let i = start; i < lines.length; i++) {
+        try { entries.push(JSON.parse(lines[i])); } catch { /* skip malformed */ }
+      }
+    }
+    json(res, 200, { total: entries.length, entries });
+    return;
+  }
+
+  // Admin API: evolution — latest eval result
+  if (path === "/admin/api/evolution/eval-result" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    const resultPath = resolve(brainRoot, "eval/eval-result.json");
+    if (existsSync(resultPath)) {
+      try {
+        json(res, 200, JSON.parse(readFileSync(resultPath, "utf-8")));
+      } catch { json(res, 500, { error: "parse failed" }); }
+    } else {
+      json(res, 200, { error: "no eval result yet" });
+    }
+    return;
+  }
+
+  // Admin API: evolution — trigger one cycle
+  if (path === "/admin/api/evolution/run" && req.method === "POST") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    const result = runEvolutionCycle(brainRoot);
+    json(res, 200, result ?? { error: "no diagnosis available" });
     return;
   }
 

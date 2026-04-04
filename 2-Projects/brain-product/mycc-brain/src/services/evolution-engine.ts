@@ -117,6 +117,19 @@ function handleKeywordMiss(brainRoot: string, item: DiagnosisItem): EvolutionAct
   const categories = catMatch ? catMatch[1].split(", ") : ["project/状态"];
 
   const patternStr = keywords.join("|");
+
+  // Dedup: skip if this pattern (or a superset) already exists
+  const existingPatterns = loadExistingPatterns(extPath);
+  if (existingPatterns.some(p => p === patternStr || patternStr.split("|").every(k => p.includes(k)))) {
+    return {
+      timestamp: new Date().toISOString(),
+      diagnosisCaseId: item.caseId,
+      actionType: "keyword_extend",
+      detail: `跳过重复 pattern: /${patternStr}/`,
+      applied: false,
+    };
+  }
+
   const extension: KeywordExtension = {
     timestamp: new Date().toISOString(),
     pattern: patternStr,
@@ -282,7 +295,23 @@ function loadRecentActions(brainRoot: string, days: number): EvolutionAction[] {
 }
 
 /**
- * 加载关键词扩展列表（供 brain-context.ts 使用）
+ * 加载已有 pattern 字符串（用于去重）
+ */
+function loadExistingPatterns(extPath: string): string[] {
+  if (!existsSync(extPath)) return [];
+  const lines = readFileSync(extPath, "utf-8").split("\n").filter(Boolean);
+  const patterns: string[] = [];
+  for (const line of lines) {
+    try {
+      const ext = JSON.parse(line) as KeywordExtension;
+      patterns.push(ext.pattern);
+    } catch { /* skip */ }
+  }
+  return patterns;
+}
+
+/**
+ * 加载关键词扩展列表（供 brain-context.ts 使用）+ 自动去重
  */
 export function loadKeywordExtensions(brainRoot: string): Array<{ pattern: RegExp; categories: string[] }> {
   const extPath = join(brainRoot, "data", "keyword-extensions.jsonl");
@@ -290,10 +319,13 @@ export function loadKeywordExtensions(brainRoot: string): Array<{ pattern: RegEx
 
   const lines = readFileSync(extPath, "utf-8").split("\n").filter(Boolean);
   const extensions: Array<{ pattern: RegExp; categories: string[] }> = [];
+  const seen = new Set<string>();
 
   for (const line of lines) {
     try {
       const ext = JSON.parse(line) as KeywordExtension;
+      if (seen.has(ext.pattern)) continue;
+      seen.add(ext.pattern);
       extensions.push({
         pattern: new RegExp(ext.pattern, "i"),
         categories: ext.categories,

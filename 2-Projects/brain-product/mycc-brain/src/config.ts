@@ -51,7 +51,7 @@ export function loadConfig(): BrainConfig {
         adapter: "openai-compat",
         brain: true,
         baseURL: `${ollamaBase}/v1`,
-        model: "qwen2.5:latest",
+        model: "qwen2.5:7b",
         apiKey: "ollama",
       },
       "raw-qwen": {
@@ -72,7 +72,7 @@ export function loadConfig(): BrainConfig {
         adapter: "openai-compat",
         brain: false,
         baseURL: `${ollamaBase}/v1`,
-        model: "qwen2.5:latest",
+        model: "qwen2.5:7b",
         apiKey: "ollama",
       },
       "cc-mlx": {

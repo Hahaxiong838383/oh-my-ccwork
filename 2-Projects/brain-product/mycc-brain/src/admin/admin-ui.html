@@ -70,6 +70,7 @@ td code { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 
 <div class="tab-bar" style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid #334155;padding-bottom:8px;">
   <button id="tabBtn-chat" class="tab-btn tab-active" onclick="switchTab('chat')" style="padding:8px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:600;border:none;background:#4f46e5;color:white;">对话</button>
   <button id="tabBtn-config" class="tab-btn" onclick="switchTab('config')" style="padding:8px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:600;border:none;background:transparent;color:#94a3b8;">配置</button>
+  <button id="tabBtn-evolution" class="tab-btn" onclick="switchTab('evolution')" style="padding:8px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:600;border:none;background:transparent;color:#94a3b8;">进化</button>
 </div>
 
 <div id="tab-chat">
@@ -183,6 +184,46 @@ td code { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 
 </div>
 
 </div><!-- end tab-config -->
+
+<div id="tab-evolution" style="display:none;">
+
+<div class="card">
+  <h2>Eval Result</h2>
+  <div id="evoEvalResult" style="color:#64748b;">Loading...</div>
+</div>
+
+<div class="card">
+  <h2>Health Metrics <span style="font-size:12px;color:#64748b;">(7d)</span></h2>
+  <div class="stat-row" id="evoHealthStats">
+    <div class="stat"><div class="value" id="evoTotalReqs">-</div><div class="label">Requests</div></div>
+    <div class="stat"><div class="value" id="evoAvgLatency">-</div><div class="label">Avg Latency</div></div>
+    <div class="stat"><div class="value" id="evoMissRate">-</div><div class="label">Miss Rate</div></div>
+    <div class="stat"><div class="value" id="evoP95">-</div><div class="label">P95 Latency</div></div>
+  </div>
+  <div style="margin-top:12px;">
+    <h3 style="font-size:13px;color:#64748b;margin-bottom:8px;">Retrieval Path Hits</h3>
+    <div id="evoPathBars" class="exp-bar" style="height:60px;"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Latest Diagnosis</h2>
+  <div id="evoDiagnosis" style="color:#64748b;">Loading...</div>
+</div>
+
+<div class="card">
+  <h2>Evolution Actions
+    <button class="btn btn-sm btn-primary" onclick="triggerEvolution()" style="margin-left:12px;">Run Cycle</button>
+  </h2>
+  <div id="evoActions" style="color:#64748b;">Loading...</div>
+</div>
+
+<div class="card">
+  <h2>Evolution Log <span style="font-size:12px;color:#64748b;">(recent 20)</span></h2>
+  <div id="evoLog" style="max-height:300px;overflow-y:auto;font-size:12px;color:#94a3b8;">Loading...</div>
+</div>
+
+</div><!-- end tab-evolution -->
 
 <div class="footer">mycc-brain v0.3.0 | <span id="refreshTime">-</span></div>
 
@@ -306,7 +347,7 @@ async function refresh() {
       opt.value = name;
       opt.textContent = fullLabel;
       sel.appendChild(opt);
-      if (route.brain) {
+      if (route.brain && !route.baseURL.includes('localhost')) {
         const copt = document.createElement('option');
         copt.value = name;
         copt.textContent = fullLabel;
@@ -586,7 +627,7 @@ function escapeHtml(s) {
 }
 
 function switchTab(name) {
-  const tabs = ['chat', 'config'];
+  const tabs = ['chat', 'config', 'evolution'];
   tabs.forEach(t => {
     const panel = document.getElementById('tab-' + t);
     const btn = document.getElementById('tabBtn-' + t);
@@ -594,6 +635,7 @@ function switchTab(name) {
       panel.style.display = 'block';
       btn.style.background = '#4f46e5';
       btn.style.color = 'white';
+      if (t === 'evolution') loadEvolutionData();
     } else {
       panel.style.display = 'none';
       btn.style.background = 'transparent';
@@ -615,6 +657,104 @@ window.addEventListener('hashchange', () => {
 
 refresh();
 setInterval(refresh, 30000);
+
+// ─── Evolution Tab ───
+async function loadEvolutionData() {
+  const h = { 'Authorization': 'Bearer ' + (localStorage.getItem('brain_key') || '') };
+  // 1. Health Metrics
+  try {
+    const m = await (await fetch('/admin/api/health-metrics?days=7', {headers:h})).json();
+    document.getElementById('evoTotalReqs').textContent = m.totalRequests || 0;
+    document.getElementById('evoAvgLatency').textContent = (m.avgLatencyMs||0).toFixed(0) + 'ms';
+    document.getElementById('evoMissRate').textContent = ((m.missRate||0)*100).toFixed(1) + '%';
+    document.getElementById('evoP95').textContent = (m.latencyP95||0).toFixed(0) + 'ms';
+    const paths = m.retrievalPathHits || {};
+    const maxHit = Math.max(1, ...Object.values(paths));
+    document.getElementById('evoPathBars').innerHTML = ['keyword','tfidf','fts','vector'].map(p => {
+      const v = paths[p]||0;
+      const h = Math.max(4, (v/maxHit)*56);
+      const colors = {keyword:'#22c55e',tfidf:'#818cf8',fts:'#eab308',vector:'#f97316'};
+      return `<div class="exp-bar-wrap"><div class="bar" style="height:${h}px;background:${colors[p]||'#4f46e5'}"></div><div class="bar-label">${p}<br>${v}</div></div>`;
+    }).join('');
+  } catch(e) { console.error('health-metrics:', e); }
+
+  // 2. Eval Result
+  try {
+    const r = await (await fetch('/admin/api/evolution/eval-result', {headers:h})).json();
+    if (r.error) {
+      document.getElementById('evoEvalResult').innerHTML = '<span style="color:#64748b">No eval result yet</span>';
+    } else {
+      const icon = r.pass ? '<span style="color:#22c55e">PASS</span>' : '<span style="color:#ef4444">FAIL</span>';
+      const reg = (r.regressions||[]).map(x => {
+        const c = x.severity==='critical' ? '#ef4444' : '#eab308';
+        return `<span style="color:${c}">${x.metric}: ${x.baseline.toFixed(2)} -> ${x.current.toFixed(2)} (${x.deltaPct.toFixed(1)}%)</span>`;
+      }).join('<br>');
+      document.getElementById('evoEvalResult').innerHTML = `
+        <div style="display:flex;gap:16px;align-items:center;margin-bottom:8px;">
+          <span style="font-size:20px;font-weight:700;">${icon}</span>
+          <span style="color:#94a3b8;">hitRate: ${(r.retrieval?.hitRate||0).toFixed(3)} | precision: ${(r.retrieval?.precision||0).toFixed(3)}</span>
+          <span style="color:#64748b;font-size:12px;">${r.timestamp ? new Date(r.timestamp).toLocaleString() : ''}</span>
+        </div>
+        ${Object.entries(r.generation||{}).map(([k,v]) => `<span class="badge ${v>=3.5?'ok':'miss'}" style="margin:2px;">${k}: ${v.toFixed(2)}</span>`).join(' ')}
+        ${reg ? '<div style="margin-top:8px;padding:8px;background:#1c1917;border-radius:6px;">'+reg+'</div>' : ''}`;
+    }
+  } catch(e) { document.getElementById('evoEvalResult').textContent = 'Error: '+e.message; }
+
+  // 3. Diagnosis
+  try {
+    const d = await (await fetch('/admin/api/evolution/diagnosis', {headers:h})).json();
+    if (d.error) {
+      document.getElementById('evoDiagnosis').innerHTML = '<span style="color:#64748b">'+d.error+'</span>';
+    } else {
+      const summary = Object.entries(d.summary||{}).map(([k,v]) => {
+        const colors = {keyword_miss:'#eab308',tfidf_threshold:'#818cf8',hallucination:'#ef4444',prompt_leak:'#f97316',unknown:'#64748b'};
+        return `<span class="badge" style="background:${colors[k]||'#334155'}22;color:${colors[k]||'#94a3b8'};margin:2px;">${k}: ${v}</span>`;
+      }).join(' ');
+      const rows = (d.diagnoses||[]).slice(0,10).map(x => `<tr><td><code>${x.caseId||'-'}</code></td><td>${x.type}</td><td style="color:#94a3b8;font-size:12px;">${(x.detail||'').slice(0,80)}</td></tr>`).join('');
+      document.getElementById('evoDiagnosis').innerHTML = `
+        <div style="margin-bottom:8px;">Failed: <strong>${d.totalFailed||0}</strong> | ${summary}</div>
+        ${rows ? '<table><tr><th>Case</th><th>Type</th><th>Detail</th></tr>'+rows+'</table>' : ''}`;
+    }
+  } catch(e) { document.getElementById('evoDiagnosis').textContent = 'Error: '+e.message; }
+
+  // 4. Evolution Log
+  try {
+    const l = await (await fetch('/admin/api/evolution/log?limit=20', {headers:h})).json();
+    if (!l.entries || l.entries.length === 0) {
+      document.getElementById('evoLog').innerHTML = '<span style="color:#64748b">No log entries yet</span>';
+    } else {
+      document.getElementById('evoLog').innerHTML = l.entries.reverse().map(e => {
+        const ts = e.timestamp ? new Date(e.timestamp).toLocaleString() : '?';
+        const icon = e.type==='eval' ? (e.status==='done'?'<span style="color:#22c55e">eval</span>':'<span style="color:#eab308">'+e.status+'</span>') : '<span style="color:#818cf8">'+e.type+'</span>';
+        return `<div style="padding:4px 0;border-bottom:1px solid #1e293b;"><span style="color:#475569;">${ts}</span> ${icon} <span style="color:#94a3b8;">${e.exitCode!==undefined?'exit='+e.exitCode:''}</span></div>`;
+      }).join('');
+    }
+    document.getElementById('evoActions').innerHTML = '<span style="color:#64748b">Use "Run Cycle" to trigger diagnosis + auto-fix</span>';
+  } catch(e) { document.getElementById('evoLog').textContent = 'Error: '+e.message; }
+}
+
+async function triggerEvolution() {
+  const h = { 'Authorization': 'Bearer ' + (localStorage.getItem('brain_key') || ''), 'Content-Type':'application/json' };
+  document.getElementById('evoActions').innerHTML = '<span style="color:#eab308">Running...</span>';
+  try {
+    const r = await (await fetch('/admin/api/evolution/run', {method:'POST',headers:h})).json();
+    if (r.error) {
+      document.getElementById('evoActions').innerHTML = '<span style="color:#ef4444">'+r.error+'</span>';
+    } else {
+      const acts = (r.actions||[]).map(a => {
+        const colors = {auto_patch:'#ef4444',keyword_extend:'#eab308',threshold_adjust:'#818cf8'};
+        return `<div style="padding:4px 0;border-bottom:1px solid #1e293b;">
+          <span class="badge" style="background:${(colors[a.actionType]||'#334155')}22;color:${colors[a.actionType]||'#94a3b8'};">${a.actionType}</span>
+          <span style="color:#94a3b8;font-size:12px;margin-left:8px;">${(a.detail||'').slice(0,100)}</span>
+          <span style="color:${a.applied?'#22c55e':'#64748b'};font-size:11px;margin-left:4px;">${a.applied?'applied':'skipped'}</span>
+        </div>`;
+      }).join('');
+      document.getElementById('evoActions').innerHTML = `
+        <div style="margin-bottom:8px;">Actions: <strong>${r.totalActions||0}</strong> | Skipped: ${r.skipped||0}</div>
+        ${acts || '<span style="color:#64748b">No actions needed</span>'}`;
+    }
+  } catch(e) { document.getElementById('evoActions').innerHTML = '<span style="color:#ef4444">Error: '+e.message+'</span>'; }
+}
 </script>
 </body>
 </html>

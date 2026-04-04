@@ -35,14 +35,28 @@ export async function streamOpenAICompat(
     enable_thinking: false,
   });
 
-  const upstream = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${opts.apiKey}`,
-    },
-    body,
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${opts.apiKey}`,
+      },
+      body,
+    });
+  } catch (e: unknown) {
+    const cause = e instanceof Error && "cause" in e ? (e as any).cause : undefined;
+    const detail = cause?.message ?? cause?.code ?? (e instanceof Error ? e.message : String(e));
+    res.writeHead(502, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      error: {
+        message: `Network error reaching ${url.split("/v1")[0]}: ${detail}`,
+        type: "network_error",
+      },
+    }));
+    return;
+  }
 
   if (!upstream.ok) {
     const err = await upstream.text();
@@ -91,21 +105,29 @@ export async function chatCompletion(
 ): Promise<{ content: string; usage?: { total_tokens: number } }> {
   const url = `${opts.baseURL}/chat/completions`;
 
-  const upstream = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${opts.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: opts.model,
-      messages: opts.messages,
-      stream: false,
-      temperature: opts.temperature ?? 0.7,
-      max_tokens: opts.max_tokens ?? 8192,
-      enable_thinking: false,
-    }),
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${opts.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: opts.model,
+        messages: opts.messages,
+        stream: false,
+        temperature: opts.temperature ?? 0.7,
+        max_tokens: opts.max_tokens ?? 8192,
+        enable_thinking: false,
+      }),
+    });
+  } catch (e: unknown) {
+    // Node.js fetch throws TypeError with .cause for network errors
+    const cause = e instanceof Error && "cause" in e ? (e as any).cause : undefined;
+    const detail = cause?.message ?? cause?.code ?? (e instanceof Error ? e.message : String(e));
+    throw new Error(`Network error reaching ${url.split("/v1")[0]}: ${detail}`);
+  }
 
   if (!upstream.ok) {
     throw new Error(`Upstream ${upstream.status}: ${await upstream.text()}`);

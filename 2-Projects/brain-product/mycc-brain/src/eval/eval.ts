@@ -25,7 +25,8 @@ config({ path: resolve(import.meta.dirname, "../../.env") });
 import { ALL_TEST_CASES } from "./test-cases.js";
 import { evaluateRetrieval } from "./retrieval-evaluator.js";
 import { evaluateGeneration } from "./judge-evaluator.js";
-import { generateTsv, saveReport, printSummary } from "./eval-report.js";
+import { generateTsv, saveReport, printSummary, checkRegressions, writeEvalResult } from "./eval-report.js";
+import type { EvalResult } from "./eval-report.js";
 import { httpGet } from "./http-direct.js";
 
 // ─── CLI args ───
@@ -42,21 +43,25 @@ const judgeModel = "gemini-2.5-flash";
 const brainModel = "cc-qwen";
 const rawModel = "raw-qwen";
 
+// ─── Helpers ───
+// Human-readable output → stderr; JSON result → stdout
+const log = (...args: unknown[]) => console.error(...args);
+
 // ─── Main ───
 
 async function main() {
-  console.log("🧠 mycc-brain 评测系统 v1.0");
-  console.log(`   Brain URL: ${brainUrl}`);
-  console.log(`   Judge: ${judgeModel} (Gemini)`);
-  console.log(`   用例数: ${ALL_TEST_CASES.length}`);
-  console.log(`   模式: ${dryRun ? "dry-run（仅检索层）" : "完整评测"}`);
-  console.log("");
+  log("🧠 mycc-brain 评测系统 v1.1");
+  log(`   Brain URL: ${brainUrl}`);
+  log(`   Judge: ${judgeModel} (Gemini)`);
+  log(`   用例数: ${ALL_TEST_CASES.length}`);
+  log(`   模式: ${dryRun ? "dry-run（仅检索层）" : "完整评测"}`);
+  log("");
 
   // 0. Health check (http.request 直连，绕过代理)
   try {
     const { status } = await httpGet(`${brainUrl}/health`);
     if (status !== 200) throw new Error(`${status}`);
-    console.log("✅ Brain 服务正常\n");
+    log("✅ Brain 服务正常\n");
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`❌ Brain 服务不可达: ${brainUrl}/health — ${msg}`);
@@ -65,15 +70,12 @@ async function main() {
   }
 
   // 1. 检索层评测
-  console.log("━━━ Phase 1: 检索层评测 ━━━");
+  log("━━━ Phase 1: 检索层评测 ━━━");
   const retrievalSummary = await evaluateRetrieval(ALL_TEST_CASES, brainUrl);
-  console.log(
-    `\n检索层完成: 召回率=${retrievalSummary.avg_hit_rate} 精确率=${retrievalSummary.avg_precision}\n`,
-  );
+  log(`\n检索层完成: 召回率=${retrievalSummary.avg_hit_rate} 精确率=${retrievalSummary.avg_precision}\n`);
 
   if (dryRun) {
-    // Dry-run: just print retrieval results
-    console.log("\n[dry-run] 检索层详情:");
+    log("\n[dry-run] 检索层详情:");
     for (const r of retrievalSummary.results) {
       const icon =
         r.expected_categories.length === 0
@@ -81,12 +83,10 @@ async function main() {
           : r.category_hit_rate >= 0.7
             ? "✅"
             : "❌";
-      console.log(
-        `  ${icon} ${r.id}: hit=${r.category_hit_rate.toFixed(2)} prec=${r.retrieval_precision.toFixed(2)} items=${r.item_count} ${r.latency_ms}ms`,
-      );
+      log(`  ${icon} ${r.id}: hit=${r.category_hit_rate.toFixed(2)} prec=${r.retrieval_precision.toFixed(2)} items=${r.item_count} ${r.latency_ms}ms`);
       if (r.category_hit_rate < 0.7 && r.expected_categories.length > 0) {
-        console.log(`     期望: [${r.expected_categories.join(", ")}]`);
-        console.log(`     实际: [${r.matched_categories.join(", ")}]`);
+        log(`     期望: [${r.expected_categories.join(", ")}]`);
+        log(`     实际: [${r.matched_categories.join(", ")}]`);
       }
     }
     process.exit(0);
@@ -99,7 +99,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log("━━━ Phase 2: 生成层评测 (LLM-as-Judge) ━━━");
+  log("━━━ Phase 2: 生成层评测 (LLM-as-Judge) ━━━");
   const judgeSummary = await evaluateGeneration(
     ALL_TEST_CASES,
     brainUrl,
@@ -121,9 +121,24 @@ async function main() {
     dataDir,
   });
 
-  const { path: reportPath, isBaseline, diff } = saveReport(tsv, evalDir);
+  const { path: reportPath, isBaseline, diff, baselineTsv } = saveReport(tsv, evalDir);
 
-  // 4. 打印总结
+  // 4. P4 回归检测
+  const regressions = baselineTsv ? checkRegressions(baselineTsv, tsv) : [];
+  const needsRollback = regressions.some((r) => r.severity === "critical");
+
+  if (regressions.length > 0) {
+    log("\n⚠️  回归检测:");
+    for (const r of regressions) {
+      const icon = r.severity === "critical" ? "🔴" : "🟡";
+      log(`  ${icon} ${r.metric}: ${r.baseline.toFixed(2)} → ${r.current.toFixed(2)} (${r.deltaPct.toFixed(1)}%)`);
+    }
+    if (needsRollback) {
+      log("\n🚨 存在 CRITICAL 回归，建议回滚！");
+    }
+  }
+
+  // 5. 打印总结（→ stderr）
   printSummary(
     retrievalSummary.avg_hit_rate,
     retrievalSummary.avg_precision,
@@ -135,11 +150,33 @@ async function main() {
   );
 
   if (isBaseline) {
-    console.log("\n📌 首次运行，已保存为 baseline");
+    log("\n📌 首次运行，已保存为 baseline");
   }
 
-  // Exit code: 0 if pass, 1 if fail
-  process.exit(judgeSummary.pass ? 0 : 1);
+  // 6. 构建 JSON 结果
+  const evalResult: EvalResult = {
+    timestamp: new Date().toISOString(),
+    pass: judgeSummary.pass && !needsRollback,
+    retrieval: {
+      hitRate: retrievalSummary.avg_hit_rate,
+      precision: retrievalSummary.avg_precision,
+    },
+    generation: judgeSummary.avg_scores,
+    regressions,
+    needsRollback,
+    reportPath,
+    diff,
+  };
+
+  // 写文件（Admin UI 用）
+  const resultPath = writeEvalResult(evalResult, evalDir);
+  log(`\n📋 JSON 结果: ${resultPath}`);
+
+  // stdout 输出纯 JSON（run-eval.sh 直接捕获）
+  console.log(JSON.stringify(evalResult));
+
+  // Exit code: 0=pass, 1=fail, 3=regression-rollback
+  process.exit(needsRollback ? 3 : judgeSummary.pass ? 0 : 1);
 }
 
 main().catch((err) => {
