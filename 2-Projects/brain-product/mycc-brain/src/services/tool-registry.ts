@@ -19,6 +19,8 @@ export interface ToolDefinition<TInput = unknown, TOutput = unknown> {
   name: string;
   description: string;
   inputSchema: z.ZodType<TInput>;
+  /** MCP 工具可提供原始 JSON Schema，跳过 zodToJsonSchema 转换 */
+  rawJsonSchema?: Record<string, unknown>;
   isReadOnly: boolean;
   isDestructive: boolean;
   timeoutMs: number;
@@ -144,7 +146,8 @@ export class ToolRegistry {
       function: {
         name: tool.name,
         description: tool.description,
-        parameters: zodToJsonSchema(tool.inputSchema),
+        // MCP 工具提供原始 JSON Schema，内置工具走 zodToJsonSchema
+        parameters: tool.rawJsonSchema ?? zodToJsonSchema(tool.inputSchema),
       },
     }));
   }

@@ -19,9 +19,69 @@ import { runAgentLoop } from "./services/agent-loop.js";
 import { searchMemoryTool } from "./tools/search-memory.js";
 import { listMemoriesTool } from "./tools/list-memories.js";
 import { runDiagnosisTool } from "./tools/run-diagnosis.js";
+import { McpClient } from "./services/mcp-client.js";
+import { bridgeMcpTools, type BridgeResult } from "./services/mcp-bridge.js";
+import { getEnabledMcpServers, type McpServerConfig } from "./mcp-config.js";
 
 const config = loadConfig();
 const brainApi = new BrainApi(config);
+
+// ─── MCP 连接池 ───
+
+/** 已连接的 MCP Client 缓存（serverName → client） */
+const mcpClients = new Map<string, McpClient>();
+
+/** 各 MCP Server 的配置缓存 */
+const mcpConfigs = new Map<string, McpServerConfig>();
+
+/** 各 MCP Server 的桥接结果缓存 */
+const mcpBridgeResults = new Map<string, BridgeResult>();
+
+/**
+ * 连接单个 MCP Server（带错误容忍）
+ */
+async function connectMcpServer(name: string, cfg: McpServerConfig): Promise<void> {
+  try {
+    const client = new McpClient(name);
+    await client.connect(cfg.command, cfg.args, cfg.env);
+    mcpClients.set(name, client);
+    mcpConfigs.set(name, cfg);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[mcp] ${name} connect failed: ${msg}`);
+  }
+}
+
+/**
+ * 启动时连接所有已启用的 MCP Server
+ */
+async function initMcpConnections(): Promise<void> {
+  const servers = getEnabledMcpServers();
+  const names = Object.keys(servers);
+  if (names.length === 0) return;
+
+  console.log(`[mcp] connecting ${names.length} servers: ${names.join(", ")}`);
+  await Promise.all(
+    Object.entries(servers).map(([name, cfg]) => connectMcpServer(name, cfg)),
+  );
+  console.log(`[mcp] done, ${mcpClients.size}/${names.length} connected`);
+}
+
+/**
+ * 将所有已连接的 MCP 工具桥接到 ToolRegistry
+ */
+async function bridgeAllMcpTools(registry: ToolRegistry): Promise<void> {
+  for (const [name, client] of mcpClients) {
+    if (!client.isConnected()) continue;
+    try {
+      const result = await bridgeMcpTools(client, registry);
+      mcpBridgeResults.set(name, result);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`[mcp] ${name} bridge failed: ${msg}`);
+    }
+  }
+}
 
 const ADMIN_HTML_PATH = resolve(import.meta.dirname, "admin/admin-ui.html");
 
@@ -364,11 +424,12 @@ const server = http.createServer(async (req, res) => {
       const route = config.routes[modelParam];
       if (!route) { sendSSE("error", { error: `Model not found: ${modelParam}` }); res.end(); return; }
 
-      // Build tool registry
+      // Build tool registry（内置工具 + MCP 桥接工具）
       const registry = new ToolRegistry();
       registry.register(searchMemoryTool);
       registry.register(listMemoriesTool);
       registry.register(runDiagnosisTool);
+      await bridgeAllMcpTools(registry);
 
       const brainRoot = resolve(import.meta.dirname, "..");
       const toolMap = new Map(registry.list().map(t => [t.name, t]));
@@ -422,11 +483,12 @@ const server = http.createServer(async (req, res) => {
       const route = config.routes[modelParam];
       if (!route) { json(res, 400, { error: `Model not found: ${modelParam}` }); return; }
 
-      // Build tool registry
+      // Build tool registry（内置工具 + MCP 桥接工具）
       const registry = new ToolRegistry();
       registry.register(searchMemoryTool);
       registry.register(listMemoriesTool);
       registry.register(runDiagnosisTool);
+      await bridgeAllMcpTools(registry);
 
       const brainRoot = resolve(import.meta.dirname, "..");
       const toolMap = new Map(registry.list().map(t => [t.name, t]));
@@ -467,6 +529,68 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Admin API: MCP status — 返回已连接的 MCP Server 列表和可用工具数
+  if (path === "/admin/api/mcp/status" && req.method === "GET") {
+    const servers: Record<string, { connected: boolean; toolCount: number; tools: string[] }> = {};
+    for (const [name, client] of mcpClients) {
+      const bridge = mcpBridgeResults.get(name);
+      servers[name] = {
+        connected: client.isConnected(),
+        toolCount: bridge?.toolCount ?? 0,
+        tools: bridge?.toolNames ?? [],
+      };
+    }
+    json(res, 200, { servers, totalConnected: mcpClients.size });
+    return;
+  }
+
+  // Admin API: MCP reconnect — 重新连接指定 MCP Server
+  if (path === "/admin/api/mcp/reconnect" && req.method === "POST") {
+    try {
+      const body = JSON.parse(await readBody(req));
+      const serverName: string = body.server ?? "";
+
+      if (serverName) {
+        // 重连指定 Server
+        const oldClient = mcpClients.get(serverName);
+        if (oldClient) {
+          oldClient.disconnect();
+          mcpClients.delete(serverName);
+        }
+        mcpBridgeResults.delete(serverName);
+
+        const cfg = mcpConfigs.get(serverName);
+        if (!cfg) {
+          // 尝试从配置文件重新读取
+          const allCfg = getEnabledMcpServers();
+          const freshCfg = allCfg[serverName];
+          if (!freshCfg) {
+            json(res, 400, { error: `MCP Server "${serverName}" not found in config` });
+            return;
+          }
+          await connectMcpServer(serverName, freshCfg);
+        } else {
+          await connectMcpServer(serverName, cfg);
+        }
+        json(res, 200, { ok: true, server: serverName, connected: mcpClients.get(serverName)?.isConnected() ?? false });
+      } else {
+        // 重连所有
+        for (const [, client] of mcpClients) {
+          client.disconnect();
+        }
+        mcpClients.clear();
+        mcpConfigs.clear();
+        mcpBridgeResults.clear();
+        await initMcpConnections();
+        json(res, 200, { ok: true, totalConnected: mcpClients.size });
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      json(res, 500, { error: msg });
+    }
+    return;
+  }
+
   // Health
   if (path === "/health") {
     json(res, 200, { status: "ok", service: "mycc-brain" });
@@ -477,12 +601,16 @@ const server = http.createServer(async (req, res) => {
   json(res, 404, { error: "not found" });
 });
 
-server.listen(config.port, "0.0.0.0", () => {
-  const memExists = existsSync(resolve(config.dataDir, "memory-items.md"));
-  console.log(`\n🧠 mycc-brain v0.2.0 (D2: memory injection)`);
-  console.log(`   API:   http://0.0.0.0:${config.port}/v1/chat/completions`);
-  console.log(`   Admin: http://0.0.0.0:${config.port}/admin`);
-  console.log(`   Data:  ${config.dataDir} (${existsSync(config.dataDir) ? "✅" : "❌ not found"})`);
-  console.log(`   Memory: memory-items.md (${memExists ? "✅" : "❌ not found"})`);
-  console.log(`   Models: ${Object.keys(config.routes).join(", ")}\n`);
+// 启动服务：先初始化 MCP 连接，再监听端口
+initMcpConnections().then(() => {
+  server.listen(config.port, "0.0.0.0", () => {
+    const memExists = existsSync(resolve(config.dataDir, "memory-items.md"));
+    console.log(`\n🧠 mycc-brain v0.3.0 (D4: Agent Loop + MCP)`);
+    console.log(`   API:   http://0.0.0.0:${config.port}/v1/chat/completions`);
+    console.log(`   Admin: http://0.0.0.0:${config.port}/admin`);
+    console.log(`   Data:  ${config.dataDir} (${existsSync(config.dataDir) ? "✅" : "❌ not found"})`);
+    console.log(`   Memory: memory-items.md (${memExists ? "✅" : "❌ not found"})`);
+    console.log(`   Models: ${Object.keys(config.routes).join(", ")}`);
+    console.log(`   MCP:   ${mcpClients.size} server(s) connected\n`);
+  });
 });

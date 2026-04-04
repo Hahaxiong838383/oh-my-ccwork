@@ -1,0 +1,11 @@
+{
+  "feishu": {
+    "command": "npx",
+    "args": ["-y", "open-feishu-mcp"],
+    "env": {
+      "FEISHU_APP_ID": "your-app-id",
+      "FEISHU_APP_SECRET": "your-app-secret"
+    },
+    "enabled": true
+  }
+}
