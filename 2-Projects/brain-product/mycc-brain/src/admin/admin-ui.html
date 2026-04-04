@@ -572,13 +572,19 @@ async function runCompare() {
       brainEl.textContent = '❌ ' + d.error;
       return;
     }
-    rawEl.textContent = d.raw.content + (d.raw.usage ? '\n\n[tokens: ' + d.raw.usage.total_tokens + ']' : '');
-    brainEl.textContent = d.brain.content + (d.brain.usage ? '\n\n[tokens: ' + d.brain.usage.total_tokens + ']' : '');
+    const rawToks = d.raw.usage?.completion_tokens || 0;
+    const brainToks = d.brain.usage?.completion_tokens || 0;
+    const rawTokS = d.latency.raw > 0 ? (rawToks / d.latency.raw * 1000).toFixed(1) : '?';
+    const brainTokS = d.latency.brain > 0 ? (brainToks / d.latency.brain * 1000).toFixed(1) : '?';
+    rawEl.textContent = d.raw.content;
+    brainEl.textContent = d.brain.content;
     metaEl.style.display = 'block';
     metaEl.innerHTML =
-      '注入 categories: ' + (d.brain.injectedCategories?.join(', ') || 'none') +
-      ' | items: ' + (d.brain.itemCount || 0) +
-      ' | latency: raw ' + d.latency.raw + 'ms / brain ' + d.latency.brain + 'ms';
+      '<div style="display:flex;gap:16px;flex-wrap:wrap;">' +
+      '<span>📡 Raw: <b>' + d.latency.raw + 'ms</b> TTFT | <b>' + rawTokS + '</b> tok/s | ' + rawToks + ' tokens</span>' +
+      '<span>🧠 Brain: <b>' + d.latency.brain + 'ms</b> TTFT | <b>' + brainTokS + '</b> tok/s | ' + brainToks + ' tokens</span>' +
+      '</div>' +
+      '<div style="margin-top:4px;">注入: ' + (d.brain.injectedCategories?.join(', ') || 'none') + ' (' + (d.brain.itemCount || 0) + ' items)</div>';
   } catch(e) {
     if (e.message !== 'Unauthorized') {
       rawEl.textContent = '❌ ' + e.message;
@@ -608,25 +614,28 @@ async function runAgentSync() {
   stepsEl.style.display = 'none';
   liveEl.style.display = 'none';
   setAgentBtnState(true);
+  const syncStart = Date.now();
   try {
     const r = await authFetch('/admin/api/agent', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ model, prompt, enable_thinking: enableThinking })
     });
+    const syncDuration = Date.now() - syncStart;
     const d = await r.json();
     if (d.error) { contentEl.textContent = '❌ ' + d.error; return; }
     contentEl.textContent = d.content;
-    if (d.steps && d.steps.length > 0) {
-      stepsEl.style.display = 'block';
-      const toolSteps = d.steps.filter(s => s.type === 'tool_exec');
-      stepsEl.innerHTML = '🔧 工具调用: ' + (d.toolsUsed?.join(', ') || 'none') +
-        ' | 步骤: ' + d.steps.length +
-        ' | tokens: ' + (d.totalTokens || 0) +
-        (toolSteps.length > 0 ? '<br>' + toolSteps.map(s =>
-          '<span style="color:#22d3ee">→ ' + s.toolName + '</span> ' + s.durationMs + 'ms'
-        ).join(' | ') : '');
-    }
+    const firstLlm = d.steps?.find(s => s.type === 'llm_call');
+    const ttft = firstLlm?.durationMs || syncDuration;
+    const totalToks = d.totalTokens || 0;
+    const tokS = syncDuration > 0 ? (totalToks / syncDuration * 1000).toFixed(1) : '?';
+    stepsEl.style.display = 'block';
+    const toolSteps = (d.steps || []).filter(s => s.type === 'tool_exec');
+    stepsEl.innerHTML = '<b>' + ttft + 'ms</b> TTFT | <b>' + tokS + '</b> tok/s | ' + totalToks + ' tokens | ' + (d.steps?.length || 0) + ' steps' +
+      (d.toolsUsed?.length > 0 ? ' | 🔧 ' + d.toolsUsed.join(', ') : '') +
+      (toolSteps.length > 0 ? '<br>' + toolSteps.map(s =>
+        '<span style="color:#22d3ee">→ ' + s.toolName + '</span> ' + s.durationMs + 'ms'
+      ).join(' | ') : '');
   } catch(e) {
     if (e.message !== 'Unauthorized') contentEl.textContent = '❌ ' + e.message;
   } finally {
@@ -671,6 +680,8 @@ async function runAgentStream() {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    const streamStartTime = Date.now();
+    let firstStepTime = 0;
     let stepCount = 0;
 
     while (true) {
@@ -698,12 +709,16 @@ async function runAgentStream() {
 
         if (eventType === 'step') {
           stepCount++;
+          if (!firstStepTime) firstStepTime = Date.now() - streamStartTime;
           renderLiveStep(liveEl, data, stepCount);
         } else if (eventType === 'done') {
+          const totalDuration = Date.now() - streamStartTime;
+          const totalToks = data.totalTokens || 0;
+          const tokS = totalDuration > 0 ? (totalToks / totalDuration * 1000).toFixed(1) : '?';
           contentEl.textContent = data.content || '';
           stepsEl.style.display = 'block';
-          stepsEl.innerHTML = '✅ 完成 | 🔧 工具: ' + (data.toolsUsed?.join(', ') || 'none') +
-            ' | tokens: ' + (data.totalTokens || 0) + ' | 步骤: ' + stepCount;
+          stepsEl.innerHTML = '<b>' + (firstStepTime || totalDuration) + 'ms</b> TTFT | <b>' + tokS + '</b> tok/s | ' + totalToks + ' tokens | ' + stepCount + ' steps' +
+            (data.toolsUsed?.length > 0 ? ' | 🔧 ' + data.toolsUsed.join(', ') : '');
         } else if (eventType === 'error') {
           contentEl.textContent = '❌ ' + (data.error || 'Unknown error');
         }
