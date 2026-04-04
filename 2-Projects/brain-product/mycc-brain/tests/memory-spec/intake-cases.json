@@ -1,0 +1,115 @@
+[
+  {
+    "name": "个人信息-硬件",
+    "conversation": {
+      "user": "我用的是 MacBook Air M3，16GB 内存",
+      "assistant": "了解了，M3 的 MacBook Air 性能不错。有什么需要帮忙的吗？"
+    },
+    "expected": {
+      "factCount": 1,
+      "namespaces": ["user/基本"],
+      "dimensions": ["个人信息"],
+      "mustContain": ["MacBook Air M3", "16GB"],
+      "mustNotContain": []
+    }
+  },
+  {
+    "name": "偏好变更-工作风格",
+    "conversation": {
+      "user": "以后代码里不要加注释，好代码自己会说话",
+      "assistant": "明白了，后续我会避免添加不必要的注释。"
+    },
+    "expected": {
+      "factCount": 1,
+      "namespaces": ["user/偏好"],
+      "dimensions": ["偏好变更"],
+      "mustContain": ["注释"],
+      "mustNotContain": []
+    }
+  },
+  {
+    "name": "事件事实-端口变更",
+    "conversation": {
+      "user": "把 mycc 后端端口从 18080 改到 19090 了",
+      "assistant": "好的，已记录端口变更。config 和 nginx 都需要同步更新。"
+    },
+    "expected": {
+      "factCount": 1,
+      "namespaces": ["project/配置-mycc后端"],
+      "dimensions": ["事件事实"],
+      "mustContain": ["19090"],
+      "mustNotContain": []
+    }
+  },
+  {
+    "name": "时间数据-截止日期",
+    "conversation": {
+      "user": "下周五之前要把 v2.0 发布上线",
+      "assistant": "收到，v2.0 发布 deadline 是下周五。我会帮你跟进进度。"
+    },
+    "expected": {
+      "factCount": 1,
+      "namespaces": ["project/产品-prd"],
+      "dimensions": ["时间数据"],
+      "mustContain": ["v2.0", "发布"],
+      "mustNotContain": []
+    }
+  },
+  {
+    "name": "更新修正-版本链",
+    "conversation": {
+      "user": "FRP 的端口之前是 22021，现在改成 22022 了",
+      "assistant": "好的，FRP 端口已更新为 22022。"
+    },
+    "expected": {
+      "factCount": 1,
+      "namespaces": ["project/配置-mycc后端"],
+      "dimensions": ["更新/修正"],
+      "mustContain": ["22022"],
+      "mustNotContain": []
+    }
+  },
+  {
+    "name": "助手信息-踩坑",
+    "conversation": {
+      "user": "刚才那个 fetch 报错，记住以后 Node.js 的 fetch 错误要看 error.cause",
+      "assistant": "记住了，Node.js fetch 的真实错误原因在 error.cause 中。"
+    },
+    "expected": {
+      "factCount": 1,
+      "namespaces": ["agent/踩坑"],
+      "dimensions": ["助手信息"],
+      "mustContain": ["error.cause", "fetch"],
+      "mustNotContain": []
+    }
+  },
+  {
+    "name": "空对话-无可提取",
+    "conversation": {
+      "user": "你好",
+      "assistant": "你好，有什么需要帮忙的吗？"
+    },
+    "expected": {
+      "factCount": 0,
+      "namespaces": [],
+      "dimensions": [],
+      "mustContain": [],
+      "mustNotContain": [],
+      "mustHaveSkipReason": true
+    }
+  },
+  {
+    "name": "多事实-复合对话",
+    "conversation": {
+      "user": "我把 brain 部署到 Studio 的 19080 端口了，用的是 pm2 管理。另外我更喜欢用 Zsh 而不是 Bash",
+      "assistant": "收到，brain 在 Studio 19080 端口通过 pm2 运行。Zsh 偏好已记录。"
+    },
+    "expected": {
+      "factCount": 2,
+      "namespaces": ["project/配置-mycc后端", "user/偏好"],
+      "dimensions": ["事件事实", "偏好变更"],
+      "mustContain": ["19080", "pm2", "Zsh"],
+      "mustNotContain": []
+    }
+  }
+]

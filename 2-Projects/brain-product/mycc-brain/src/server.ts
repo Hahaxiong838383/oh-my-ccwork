@@ -20,34 +20,8 @@ import { searchMemoryTool } from "./tools/search-memory.js";
 import { listMemoriesTool } from "./tools/list-memories.js";
 import { runDiagnosisTool } from "./tools/run-diagnosis.js";
 import { addMemoryTool } from "./tools/add-memory.js";
-import { join } from "path";
 
-// ─── 服务端记忆提取（Chat/Compare 模式无工具调用，需服务端自动保存）───
-const REMEMBER_PATTERNS = /记住|记一下|帮我记|remember|请记住|你记一下|别忘了/i;
-function tryAutoSaveMemory(prompt: string, dataDir: string): boolean {
-  if (!REMEMBER_PATTERNS.test(prompt)) return false;
-  const content = prompt.replace(REMEMBER_PATTERNS, "").trim();
-  if (content.length < 4) return false;
-  // 提取关键词：按标点/空格/「是」「的」等拆分，保留有意义的片段
-  const keywords = content
-    .split(/[，,、。！？\s]+/)
-    .flatMap((seg: string) => seg.split(/(?:是|的|了|在|有|和|与|叫|为)/))
-    .map((w: string) => w.trim())
-    .filter((w: string) => w.length >= 2)
-    .slice(0, 8);
-  // 也把原文中的英文单词和名字提取出来
-  const englishWords = content.match(/[A-Za-z]{2,}/g) ?? [];
-  const allKeywords = [...new Set([...keywords, ...englishWords])].slice(0, 10);
-  const entry = {
-    ts: new Date().toISOString(),
-    category: "用户告知",
-    content,
-    keywords: allKeywords,
-  };
-  const filePath = join(dataDir, "user-memories.jsonl");
-  appendFileSync(filePath, JSON.stringify(entry) + "\n", "utf-8");
-  return true;
-}
+import { runMemoryIntake } from "./services/memory-intake.js";
 import { McpClient } from "./services/mcp-client.js";
 import { bridgeMcpTools, type BridgeResult } from "./services/mcp-bridge.js";
 import { getEnabledMcpServers, type McpServerConfig } from "./mcp-config.js";
@@ -216,9 +190,6 @@ const server = http.createServer(async (req, res) => {
       }
       messages.push({ role: "user", content: prompt });
 
-      // 服务端自动记忆保存（Chat/Compare 模式没有工具调用）
-      const memorySaved = tryAutoSaveMemory(prompt, config.dataDir);
-
       // Inject brain context if route.brain=true (same as /v1/chat/completions)
       if (route.brain) {
         try {
@@ -227,10 +198,7 @@ const server = http.createServer(async (req, res) => {
           const { loadActivePatches } = await import("./services/hot-patch.js");
           const { buildBrainSystemPrompt } = await import("./services/brain-context.js");
           const patches = loadActivePatches(brainRoot);
-          let systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
-          if (memorySaved) {
-            systemPrompt += "\n\n[系统提示：用户刚才要求你记住的信息已自动保存到记忆库。请确认已记住，并简短回复。]";
-          }
+          const systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
           messages = [{ role: "system", content: systemPrompt }, ...messages];
         } catch { /* degrade gracefully */ }
       }
@@ -242,7 +210,14 @@ const server = http.createServer(async (req, res) => {
         messages,
         max_tokens: route.maxTokens ?? 4096,
       });
-      json(res, 200, { content: result.content, usage: result.usage, brain: route.brain, memorySaved });
+      json(res, 200, { content: result.content, usage: result.usage, brain: route.brain });
+
+      // 异步记忆提取（不阻塞响应）
+      runMemoryIntake(
+        { userMessage: prompt, assistantReply: result.content, history: historyMsgs, dataDir: config.dataDir },
+        config.memoryLLM.intake,
+        config.memoryLLM.fallbackIntake,
+      ).catch(err => console.error("[memory-intake]", err instanceof Error ? err.message : err));
     } catch (e: any) {
       json(res, 500, { error: e.message });
     }
@@ -269,9 +244,6 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      // 服务端自动记忆保存（Compare 模式无工具调用）
-      const memorySaved = tryAutoSaveMemory(prompt, config.dataDir);
-
       // Prepare brain messages (with memory injection)
       let brainMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [{ role: "user", content: prompt }];
       let injectedCategories: string[] = [];
@@ -282,10 +254,7 @@ const server = http.createServer(async (req, res) => {
         const { loadActivePatches } = await import("./services/hot-patch.js");
         const { buildBrainSystemPrompt } = await import("./services/brain-context.js");
         const patches = loadActivePatches(brainRoot);
-        let systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
-        if (memorySaved) {
-          systemPrompt += "\n\n[系统提示：用户刚才要求你记住的信息已自动保存到记忆库。请确认已记住，并简短回复。]";
-        }
+        const systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
         brainMessages = [{ role: "system", content: systemPrompt }, ...brainMessages];
         injectedCategories = brainResult.matchedCategories;
         itemCount = brainResult.itemCount;
@@ -319,6 +288,13 @@ const server = http.createServer(async (req, res) => {
         brain: { content: brainResultResp.content, usage: brainResultResp.usage, injectedCategories, itemCount },
         latency: { raw: rawResult.latency, brain: brainResultResp.latency },
       });
+
+      // 用 brain 回复做记忆提取（不阻塞响应）
+      runMemoryIntake(
+        { userMessage: prompt, assistantReply: brainResultResp.content, dataDir: config.dataDir },
+        config.memoryLLM.intake,
+        config.memoryLLM.fallbackIntake,
+      ).catch(err => console.error("[memory-intake]", err instanceof Error ? err.message : err));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       json(res, 500, { error: msg });
@@ -362,6 +338,67 @@ const server = http.createServer(async (req, res) => {
       const body = JSON.parse(await readBody(req));
       const result = await loadBrainContext(body.query ?? "你好", config.dataDir);
       json(res, 200, result);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      json(res, 500, { error: msg });
+    }
+    return;
+  }
+
+  // Admin API: model config — GET 返回当前模型配置，POST 保存覆盖
+  if (path === "/admin/api/config/models" && req.method === "GET") {
+    const maskKey = (key: string): string => {
+      if (!key || key.length <= 8) return key ? "***" : "";
+      return key.slice(0, 8) + "...";
+    };
+    const routes = Object.fromEntries(
+      Object.entries(config.routes).map(([k, v]) => [
+        k,
+        { adapter: v.adapter, brain: v.brain, baseURL: v.baseURL, model: v.model, hasKey: !!v.apiKey && v.apiKey !== "" },
+      ])
+    );
+    const memoryLLM = {
+      intake: { baseURL: config.memoryLLM.intake.baseURL, model: config.memoryLLM.intake.model, apiKey: maskKey(config.memoryLLM.intake.apiKey) },
+      consolidation: { baseURL: config.memoryLLM.consolidation.baseURL, model: config.memoryLLM.consolidation.model, apiKey: maskKey(config.memoryLLM.consolidation.apiKey) },
+      fallbackIntake: config.memoryLLM.fallbackIntake
+        ? { baseURL: config.memoryLLM.fallbackIntake.baseURL, model: config.memoryLLM.fallbackIntake.model, apiKey: maskKey(config.memoryLLM.fallbackIntake.apiKey) }
+        : null,
+    };
+    json(res, 200, { routes, memoryLLM });
+    return;
+  }
+
+  if (path === "/admin/api/config/models" && req.method === "POST") {
+    try {
+      const body = JSON.parse(await readBody(req));
+      const brainRoot = resolve(import.meta.dirname, "..");
+      const dataDir = resolve(brainRoot, "data");
+      mkdirSync(dataDir, { recursive: true });
+      const overridesPath = resolve(dataDir, "model-config-overrides.json");
+      const overrides: Record<string, unknown> = {};
+      if (body.memoryLLM) {
+        const mem: Record<string, unknown> = {};
+        if (body.memoryLLM.intake) {
+          mem.intake = {
+            baseURL: String(body.memoryLLM.intake.baseURL ?? ""),
+            model: String(body.memoryLLM.intake.model ?? ""),
+            apiKey: String(body.memoryLLM.intake.apiKey ?? ""),
+          };
+        }
+        if (body.memoryLLM.consolidation) {
+          mem.consolidation = {
+            baseURL: String(body.memoryLLM.consolidation.baseURL ?? ""),
+            model: String(body.memoryLLM.consolidation.model ?? ""),
+            apiKey: String(body.memoryLLM.consolidation.apiKey ?? ""),
+          };
+        }
+        if (body.memoryLLM.fallbackIntake !== undefined) {
+          mem.fallbackIntake = body.memoryLLM.fallbackIntake;
+        }
+        overrides.memoryLLM = mem;
+      }
+      writeFileSync(overridesPath, JSON.stringify(overrides, null, 2), "utf-8");
+      json(res, 200, { ok: true, message: "已保存，需要重启服务生效" });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       json(res, 500, { error: msg });

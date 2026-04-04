@@ -20,6 +20,12 @@ else
   #     User fu-121
 fi
 
+# 同步规则文件（单一真相源 → brain 副本）
+if [ -f "../../docs/memory-rules.md" ]; then
+  cp ../../docs/memory-rules.md docs/memory-rules.md
+  echo "📋 同步 memory-rules.md"
+fi
+
 echo "📦 同步代码到 Studio..."
 rsync -avz --exclude node_modules --exclude dist --exclude .env \
   ./ ${REMOTE}:${APP_DIR}/

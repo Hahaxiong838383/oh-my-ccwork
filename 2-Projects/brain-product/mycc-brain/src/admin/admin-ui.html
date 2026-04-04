@@ -373,6 +373,10 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
           <div class="stat"><div class="value" id="cConvM">-</div><div class="label">总消息数</div></div>
         </div>
       </div>
+      <div class="card">
+        <h3>记忆模型配置 <span style="font-size:11px;color:var(--text-dim);font-weight:400;text-transform:none;letter-spacing:0">(intake / consolidation)</span></h3>
+        <div id="mcModelCfg" style="color:var(--text-dim)">加载中...</div>
+      </div>
     </div>
     <!-- Evolution -->
     <div id="view-evolution" class="panel-view" style="display:none">
@@ -846,7 +850,122 @@ async function loadDash() {
 /* ═══════════════════════════════════════════════════
    Config
    ═══════════════════════════════════════════════════ */
-async function loadConfig() { await refreshStatus(); }
+async function loadConfig() { await refreshStatus(); await loadModelConfig(); }
+
+/* ═══════════════════════════════════════════════════
+   Model Config
+   ═══════════════════════════════════════════════════ */
+const MC_PROVIDERS = [
+  { label: 'DashScope (Qwen)', baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
+  { label: 'DeepSeek', baseURL: 'https://api.deepseek.com/v1' },
+  { label: 'Ollama 本地', baseURL: 'http://localhost:11434/v1' },
+  { label: 'MLX 本地', baseURL: 'http://localhost:8000/v1' },
+  { label: '自定义', baseURL: '' },
+];
+
+let _mcData = null;
+
+async function loadModelConfig() {
+  const el = document.getElementById('mcModelCfg');
+  try {
+    const r = await aFetch('/admin/api/config/models');
+    const d = await r.json();
+    _mcData = d;
+    renderModelConfig(d);
+  } catch (e) {
+    el.innerHTML = '<span style="color:var(--danger)">加载失败: ' + esc(e.message) + '</span>';
+  }
+}
+
+function renderModelConfig(d) {
+  const el = document.getElementById('mcModelCfg');
+  const roles = [
+    { key: 'intake', label: '记忆摄取 (intake)' },
+    { key: 'consolidation', label: '记忆整合 (consolidation)' },
+  ];
+  let h = '';
+  for (const role of roles) {
+    const cfg = d.memoryLLM[role.key] || {};
+    const curProvider = MC_PROVIDERS.find(p => p.baseURL && cfg.baseURL === p.baseURL);
+    const providerIdx = curProvider ? MC_PROVIDERS.indexOf(curProvider) : MC_PROVIDERS.length - 1;
+    h += `<div style="margin-bottom:16px;padding:12px;background:var(--bg-input);border-radius:8px">
+      <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:10px">${role.label}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Provider</label>
+          <select id="mc_${role.key}_provider" onchange="mcProviderChange('${role.key}')"
+            style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:6px 8px;font-size:12px">
+            ${MC_PROVIDERS.map((p,i) => `<option value="${i}"${i===providerIdx?' selected':''}>${p.label}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">模型名称</label>
+          <input id="mc_${role.key}_model" value="${esc(cfg.model||'')}"
+            style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:6px 8px;font-size:12px"
+            placeholder="e.g. qwen3.5-27b">
+        </div>
+      </div>
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Base URL</label>
+        <input id="mc_${role.key}_baseURL" value="${esc(cfg.baseURL||'')}"
+          style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:6px 8px;font-size:12px"
+          placeholder="https://...">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">API Key <span style="color:var(--text-dim)">(${cfg.apiKey ? '当前: '+esc(cfg.apiKey) : '未设置'})</span></label>
+        <input id="mc_${role.key}_apiKey" type="password" value="" placeholder="留空则不修改"
+          style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:6px 8px;font-size:12px">
+      </div>
+    </div>`;
+  }
+  h += `<div class="actions">
+    <button class="btn btn-primary btn-sm" onclick="saveModelConfig()">保存配置</button>
+    <span id="mcSaveMsg" style="font-size:12px;color:var(--text-dim);margin-left:8px"></span>
+  </div>
+  <div style="margin-top:8px;font-size:11px;color:var(--text-dim)">保存后需重启服务才能生效。配置保存到 data/model-config-overrides.json。</div>`;
+  el.innerHTML = h;
+}
+
+function mcProviderChange(role) {
+  const sel = document.getElementById('mc_' + role + '_provider');
+  const idx = parseInt(sel.value, 10);
+  const provider = MC_PROVIDERS[idx];
+  if (provider && provider.baseURL) {
+    document.getElementById('mc_' + role + '_baseURL').value = provider.baseURL;
+  }
+}
+
+async function saveModelConfig() {
+  const msgEl = document.getElementById('mcSaveMsg');
+  msgEl.textContent = '保存中...';
+  msgEl.style.color = 'var(--text-dim)';
+  const payload = { memoryLLM: {} };
+  for (const role of ['intake', 'consolidation']) {
+    const baseURL = document.getElementById('mc_' + role + '_baseURL').value.trim();
+    const model = document.getElementById('mc_' + role + '_model').value.trim();
+    const apiKey = document.getElementById('mc_' + role + '_apiKey').value.trim();
+    if (!baseURL || !model) { msgEl.textContent = role + ': baseURL 和 model 不能为空'; msgEl.style.color = 'var(--danger)'; return; }
+    const entry = { baseURL, model };
+    if (apiKey) entry.apiKey = apiKey;
+    payload.memoryLLM[role] = entry;
+  }
+  try {
+    const r = await aFetch('/admin/api/config/models', {
+      method: 'POST', headers: authH(), body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (d.ok) {
+      msgEl.textContent = d.message || '已保存';
+      msgEl.style.color = 'var(--success)';
+    } else {
+      msgEl.textContent = d.error || '保存失败';
+      msgEl.style.color = 'var(--danger)';
+    }
+  } catch (e) {
+    msgEl.textContent = '保存失败: ' + e.message;
+    msgEl.style.color = 'var(--danger)';
+  }
+}
 
 /* ═══════════════════════════════════════════════════
    Evolution

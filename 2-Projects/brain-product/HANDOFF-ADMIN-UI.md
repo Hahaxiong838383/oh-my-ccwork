@@ -43,9 +43,29 @@
 - 侧边栏「管理会话」按钮 + modal overlay
 - 管理功能：搜索过滤、checkbox 批量删除、导出 JSON
 
-## 待做
+### P0+P1：记忆系统规则驱动升级（2026-04-04）
 
-暂无。Phase 1-3 全部完成并部署。
+**P0：memory-rules.md 规则文档**
+- `docs/memory-rules.md` v1.0：从 memory-system.md 提取纯规则，7 章（六维度摄入/存储格式/矛盾检测/遗忘巩固/失真预算/因果关联/LLM输出Schema）
+- 用途：brain post-hook 的 LLM prompt + Air CLAUDE.md include 源
+
+**P1：post-response 记忆提取**
+- `src/services/memory-intake.ts`：每轮对话后异步调 LLM 提取原子事实，fire-and-forget 不阻塞响应
+- `src/services/memory-store.ts`：解析/追加 memory-items.md，支持命名空间 + 矛盾标记 `[?conflict]`
+- `src/config.ts`：新增 `memoryLLM` 配置（intake/consolidation/fallbackIntake），复用 openai-compat 适配器
+- `src/server.ts`：删除旧 `tryAutoSaveMemory` 正则匹配，test/compare 端点响应后加 `runMemoryIntake()` hook
+- 降级链：本地 Ollama qwen2.5:7b → 云端 DashScope qwen2.5-7b-instruct → 静默跳过
+- **前端零改动**，Admin UI HTML 未触及
+
+## 待做（后续 Session）
+
+| Phase | 内容 | 依赖 |
+|-------|------|------|
+| **部署验证** | deploy.sh 推到 Studio，Chat 模式验证 memory-items.md 自动写入 | P0+P1 代码 |
+| **对齐 eval** | tests/memory-spec/ 用例集，验证 brain 摄入与 Air 六维度对齐度 | P0 rules + P1 intake |
+| **P2** | 每日巩固 scheduler（矛盾检测三步法完整版 + Δ巩固 + 过期清理） | P1 |
+| **P3** | Admin UI 记忆面板（可视化 items + 健康度） | P2 |
+| **P4** | 多模态 adapter 接入 | 按需 |
 
 ## 部署方式
 
@@ -64,16 +84,21 @@ cat /Users/rayman.chen/mycc/2-Projects/brain-product/mycc-brain/src/admin/admin-
 - scp/cat 管道推送时**必须用绝对路径**，CWD 可能变
 - Studio 服务从 `dist/admin/admin-ui.html` 读取（`import.meta.dirname + "/admin/admin-ui.html"`）
 - Studio SSH 跳板：`studio-pub`（ProxyJump mini-pub），pm2 需要 `export PATH=/usr/local/bin:/opt/homebrew/bin:$PATH`
+- memory-rules.md 有两份：mycc/docs/（真相源）和 brain/docs/（副本）。deploy.sh 会自动同步，手动修改只改真相源
 
 ## 关键文件
 
 | 文件 | 说明 |
 |------|------|
-| `src/tools/add-memory.ts` | Phase 2 新增：add_memory 工具 |
-| `src/services/brain-context.ts` | Phase 2 改动：user-memories 检索 + prompt 指令 |
-| `src/server.ts` | Phase 2+3：工具注册 + sessions CRUD 端点 |
-| `src/admin/admin-ui.html` | Phase 3：双写逻辑 + 管理 UI modal |
-| `data/user-memories.jsonl` | Phase 2 数据：用户记忆存储 |
+| `docs/memory-rules.md` | P0：记忆规则规范 v1.0（LLM prompt 源） |
+| `src/services/memory-intake.ts` | P1：LLM 提取引擎（fire-and-forget） |
+| `src/services/memory-store.ts` | P1：memory-items.md 读写 + 矛盾标记 |
+| `src/config.ts` | P1：memoryLLM 配置（intake/consolidation/fallback） |
+| `src/server.ts` | P1：删旧 tryAutoSaveMemory + 加 runMemoryIntake hook |
+| `src/tools/add-memory.ts` | Phase 2 原有：add_memory 工具（Agent 模式仍用） |
+| `src/services/brain-context.ts` | Phase 2 原有：记忆检索 + prompt 注入 |
+| `src/admin/admin-ui.html` | Phase 3 原有：双写逻辑 + 管理 UI modal |
+| `data/user-memories.jsonl` | Phase 2 数据：用户记忆（旧，保留读取） |
 | `data/admin-sessions.json` | Phase 3 数据：会话服务端存储 |
 
 ## Git 状态
