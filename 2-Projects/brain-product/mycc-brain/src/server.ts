@@ -22,6 +22,7 @@ import { runDiagnosisTool } from "./tools/run-diagnosis.js";
 import { addMemoryTool } from "./tools/add-memory.js";
 
 import { runMemoryIntake } from "./services/memory-intake.js";
+import { parseMemoryItems } from "./services/memory-store.js";
 import { McpClient } from "./services/mcp-client.js";
 import { bridgeMcpTools, type BridgeResult } from "./services/mcp-bridge.js";
 import { getEnabledMcpServers, type McpServerConfig } from "./mcp-config.js";
@@ -338,6 +339,67 @@ const server = http.createServer(async (req, res) => {
       const body = JSON.parse(await readBody(req));
       const result = await loadBrainContext(body.query ?? "你好", config.dataDir);
       json(res, 200, result);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      json(res, 500, { error: msg });
+    }
+    return;
+  }
+
+  // Admin API: memory items — 返回 memory-items.md 结构化数据 + 健康指标
+  if (path === "/admin/api/memory/items" && req.method === "GET") {
+    try {
+      const parsed = parseMemoryItems(config.dataDir);
+      const today = new Date();
+      const categories = parsed.map((cat) => {
+        const items = cat.items.map((raw) => {
+          const starMatch = raw.match(/^-\s*(★+)/);
+          const star = starMatch ? starMatch[1].length : 0;
+          const dateMatch = raw.match(/\[(\d{4}-\d{2}-\d{2})\]/);
+          const date = dateMatch ? dateMatch[1] : null;
+          const tagMatches = raw.match(/#(\S+)/g);
+          const tags = tagMatches ? tagMatches.map((t) => t.slice(1)) : [];
+          const hasConflict = raw.includes("[conflict]") || raw.includes("[矛盾]");
+          return { raw, star, date, tags, hasConflict };
+        });
+        return {
+          name: cat.header.match(/\[(.+?)\]/)?.[1] ?? cat.header,
+          items,
+          itemCount: items.length,
+        };
+      });
+
+      const totalItems = categories.reduce((s, c) => s + c.itemCount, 0);
+      let conflictCount = 0;
+      let expiredCount = 0;
+      let totalAge = 0;
+      let datedCount = 0;
+      let lastWriteDate: string | null = null;
+
+      for (const cat of categories) {
+        for (const item of cat.items) {
+          if (item.hasConflict) conflictCount++;
+          if (item.date) {
+            datedCount++;
+            const itemDate = new Date(item.date);
+            const ageDays = (today.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24);
+            totalAge += ageDays;
+            if (ageDays > 180) expiredCount++;
+            if (!lastWriteDate || item.date > lastWriteDate) lastWriteDate = item.date;
+          }
+        }
+      }
+
+      json(res, 200, {
+        categories,
+        totalItems,
+        health: {
+          conflictCount,
+          expiredCount,
+          avgAge: datedCount > 0 ? Math.round((totalAge / datedCount) * 10) / 10 : 0,
+          lastWriteDate,
+        },
+      });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       json(res, 500, { error: msg });
@@ -767,6 +829,19 @@ const server = http.createServer(async (req, res) => {
         await initMcpConnections();
         json(res, 200, { ok: true, totalConnected: mcpClients.size });
       }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      json(res, 500, { error: msg });
+    }
+    return;
+  }
+
+  // Admin API: memory consolidation — 手动触发每日巩固
+  if (path === "/admin/api/memory/consolidation" && req.method === "POST") {
+    try {
+      const { runConsolidation } = await import("./services/memory-consolidation.js");
+      const result = await runConsolidation(config.dataDir, config.memoryLLM.consolidation);
+      json(res, 200, result);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       json(res, 500, { error: msg });

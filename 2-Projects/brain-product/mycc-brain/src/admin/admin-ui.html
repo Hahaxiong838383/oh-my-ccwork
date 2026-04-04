@@ -280,6 +280,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
       <button class="nav-item" data-view="config" onclick="switchView('config')">⚙ 系统配置</button>
       <button class="nav-item" data-view="evolution" onclick="switchView('evolution')">🧬 进化中心</button>
       <button class="nav-item" data-view="patches" onclick="switchView('patches')">🔧 热补丁</button>
+      <button class="nav-item" data-view="memory" onclick="switchView('memory')">🧠 记忆面板</button>
       <button class="nav-item" onclick="openSessionManager()" title="管理会话">📋 管理会话</button>
     </div>
   </aside>
@@ -396,6 +397,25 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
           <input id="pNewRule" placeholder="新规则（如：川哥的生日是12月25日）" style="flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:6px 10px;font-size:13px">
           <button class="btn btn-primary btn-sm" onclick="addPatch()">添加</button>
         </div>
+      </div>
+    </div>
+    <!-- Memory Panel -->
+    <div id="view-memory" class="panel-view" style="display:none">
+      <h2>🧠 记忆面板</h2>
+      <div class="card">
+        <h3>健康概览</h3>
+        <div class="stat-row">
+          <div class="stat"><div class="value" id="mTotalItems">-</div><div class="label">总条目数</div></div>
+          <div class="stat"><div class="value" id="mConflicts">-</div><div class="label">矛盾数</div></div>
+          <div class="stat"><div class="value" id="mExpired">-</div><div class="label">过期数 (&gt;180d)</div></div>
+          <div class="stat"><div class="value" id="mAvgAge">-</div><div class="label">平均年龄</div></div>
+          <div class="stat"><div class="value" id="mLastWrite">-</div><div class="label">最近写入</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>命名空间浏览器</h3>
+        <input type="text" id="memSearchInput" placeholder="搜索记忆条目..." oninput="filterMemItems(this.value)" style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);padding:8px 12px;font-size:13px;margin-bottom:12px;box-sizing:border-box">
+        <div id="memCatList" style="color:var(--text-dim)">加载中...</div>
       </div>
     </div>
   </main>
@@ -565,7 +585,7 @@ async function archiveMsgs(sess, msgs) {
 /* ═══════════════════════════════════════════════════
    View Switching
    ═══════════════════════════════════════════════════ */
-const VIEWS = ['chat', 'dashboard', 'config', 'evolution', 'patches'];
+const VIEWS = ['chat', 'dashboard', 'config', 'evolution', 'patches', 'memory'];
 function switchView(name) {
   S.view = name;
   VIEWS.forEach(v => { const el = document.getElementById('view-' + v); if (el) el.style.display = v === name ? (v === 'chat' ? 'flex' : 'block') : 'none'; });
@@ -574,6 +594,7 @@ function switchView(name) {
   else if (name === 'config') loadConfig();
   else if (name === 'evolution') loadEvo();
   else if (name === 'patches') loadPatches();
+  else if (name === 'memory') loadMemoryPanel();
   history.replaceState(null, '', '#' + name);
 }
 
@@ -1039,6 +1060,93 @@ async function addPatch() {
 }
 async function togPatch(id,active) { await aFetch('/admin/api/patches',{method:'POST',headers:authH(),body:JSON.stringify({action:'toggle',id,active})}); loadPatches(); }
 async function delPatch(id) { if(!confirm('确定删除此补丁？'))return; await aFetch('/admin/api/patches',{method:'POST',headers:authH(),body:JSON.stringify({action:'delete',id})}); loadPatches(); }
+
+/* ═══════════════════════════════════════════════════
+   Memory Panel
+   ═══════════════════════════════════════════════════ */
+let _memData = null;
+let _memFilter = '';
+
+async function loadMemoryPanel() {
+  const listEl = document.getElementById('memCatList');
+  listEl.innerHTML = '<span style="color:var(--text-dim)">加载中...</span>';
+  try {
+    const r = await aFetch('/admin/api/memory/items');
+    const d = await r.json();
+    if (d.error) { listEl.innerHTML = '<span style="color:var(--danger)">'+esc(d.error)+'</span>'; return; }
+    _memData = d;
+    _memFilter = '';
+    document.getElementById('memSearchInput').value = '';
+    renderMemHealth(d);
+    renderMemCategories(d.categories);
+  } catch(e) {
+    if (e.message !== 'Unauthorized') listEl.innerHTML = '<span style="color:var(--danger)">加载失败: '+esc(e.message)+'</span>';
+  }
+}
+
+function renderMemHealth(d) {
+  const $ = id => document.getElementById(id);
+  $('mTotalItems').textContent = d.totalItems || 0;
+  const cc = d.health.conflictCount || 0;
+  $('mConflicts').innerHTML = cc > 0 ? '<span style="color:var(--danger)">'+cc+'</span>' : '0';
+  const ec = d.health.expiredCount || 0;
+  $('mExpired').innerHTML = ec > 0 ? '<span style="color:var(--warning)">'+ec+'</span>' : '0';
+  $('mAvgAge').textContent = d.health.avgAge ? d.health.avgAge + ' 天' : '-';
+  $('mLastWrite').textContent = d.health.lastWriteDate || '-';
+}
+
+function renderMemCategories(categories) {
+  const el = document.getElementById('memCatList');
+  if (!categories || !categories.length) { el.innerHTML = '<span style="color:var(--text-dim)">暂无记忆条目</span>'; return; }
+
+  const filtered = _memFilter ? categories.map(c => {
+    const fItems = c.items.filter(it => it.raw.toLowerCase().includes(_memFilter) || it.tags.some(t => t.toLowerCase().includes(_memFilter)));
+    return { ...c, items: fItems, itemCount: fItems.length };
+  }).filter(c => c.itemCount > 0 || c.name.toLowerCase().includes(_memFilter)) : categories;
+
+  if (!filtered.length) { el.innerHTML = '<span style="color:var(--text-dim)">无匹配结果</span>'; return; }
+
+  el.innerHTML = filtered.map((cat, ci) => {
+    const hasConflict = cat.items.some(it => it.hasConflict);
+    const conflictBadge = hasConflict ? ' <span style="color:var(--danger);font-size:11px">!</span>' : '';
+    return `<div class="mem-cat" style="margin-bottom:8px">
+      <div onclick="togMemCat(${ci})" style="cursor:pointer;padding:8px 12px;background:var(--bg-input);border-radius:8px;display:flex;justify-content:space-between;align-items:center;transition:background .15s"
+        onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg-input)'"
+        id="memCatHdr_${ci}">
+        <span style="font-size:13px;font-weight:600;color:var(--text-primary)">${esc(cat.name)}${conflictBadge}</span>
+        <span style="font-size:12px;color:var(--text-dim)">${cat.itemCount} 条 ▾</span>
+      </div>
+      <div id="memCatBody_${ci}" style="display:none;padding:4px 0 4px 12px">
+        ${cat.items.map(it => renderMemItem(it)).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMemItem(item) {
+  const starColors = ['', '#64748b', '#818cf8', '#eab308', '#f97316', '#ef4444'];
+  const stars = item.star > 0
+    ? '<span style="color:'+( starColors[item.star] || starColors[2] )+';font-weight:700;margin-right:4px">'+'★'.repeat(item.star)+'</span>'
+    : '';
+  const conflict = item.hasConflict ? '<span style="background:#7f1d1d;color:#fca5a5;padding:1px 6px;border-radius:6px;font-size:10px;margin-left:4px">矛盾</span>' : '';
+  const date = item.date ? '<span style="color:var(--text-dim);font-size:11px;margin-left:6px">['+item.date+']</span>' : '';
+  const tags = item.tags.length ? '<span style="margin-left:6px">'+item.tags.map(t => '<span style="background:#312e81;color:#a5b4fc;padding:1px 6px;border-radius:6px;font-size:10px">#'+esc(t)+'</span>').join(' ')+'</span>' : '';
+  // 提取内容：去掉 "- ★★ " 前缀、日期标注、tag
+  let content = item.raw.replace(/^-\s*★*/,'').replace(/\[\d{4}-\d{2}-\d{2}\]/g,'').replace(/#\S+/g,'').replace(/\[conflict\]|\[矛盾\]/gi,'').trim();
+  return `<div style="padding:6px 0;border-bottom:1px solid var(--bg-input);font-size:13px;line-height:1.5;color:var(--text-secondary)">
+    ${stars}<span>${esc(content)}</span>${conflict}${date}${tags}</div>`;
+}
+
+function togMemCat(i) {
+  const body = document.getElementById('memCatBody_' + i);
+  if (!body) return;
+  body.style.display = body.style.display === 'none' ? 'block' : 'none';
+}
+
+function filterMemItems(val) {
+  _memFilter = val.toLowerCase();
+  if (_memData) renderMemCategories(_memData.categories);
+}
 
 /* ═══════════════════════════════════════════════════
    Experience & Insights
