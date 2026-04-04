@@ -25,16 +25,19 @@ rsync -avz --exclude node_modules --exclude dist --exclude .env \
   ./ ${REMOTE}:${APP_DIR}/
 
 echo "📥 安装依赖..."
-ssh ${REMOTE} "${SSH_ENV} && cd ${APP_DIR} && npm install"
+ssh ${REMOTE} "${SSH_ENV} && cd ${APP_DIR} && npm install --ignore-scripts"
 
-echo "🔧 重建 native 模块 (better-sqlite3 + sqlite-vec)..."
-ssh ${REMOTE} "${SSH_ENV} && cd ${APP_DIR} && npm rebuild better-sqlite3 2>/dev/null || true && npm rebuild sqlite-vec 2>/dev/null || true"
+echo "📦 同步 native 模块（从 Air 预编译）..."
+rsync -avz node_modules/better-sqlite3/ ${REMOTE}:${APP_DIR}/node_modules/better-sqlite3/
 
 echo "🔨 构建..."
 ssh ${REMOTE} "${SSH_ENV} && cd ${APP_DIR} && npx tsc && mkdir -p dist/admin && cp src/admin/*.html dist/admin/"
 
 echo "🔄 启动/重启服务..."
 ssh ${REMOTE} "${SSH_ENV} && cd ${APP_DIR} && npx pm2 delete brain 2>/dev/null; npx pm2 start dist/server.js --name brain --interpreter node && npx pm2 save"
+
+echo "🔥 预热 Ollama 模型（后台）..."
+ssh ${REMOTE} "curl -s http://localhost:11434/api/generate -d '{\"model\":\"gemma4:26b\",\"prompt\":\"hi\",\"stream\":false}' > /dev/null 2>&1 &"
 
 echo ""
 echo "✅ 部署完成!"
