@@ -20,6 +20,34 @@ import { searchMemoryTool } from "./tools/search-memory.js";
 import { listMemoriesTool } from "./tools/list-memories.js";
 import { runDiagnosisTool } from "./tools/run-diagnosis.js";
 import { addMemoryTool } from "./tools/add-memory.js";
+import { join } from "path";
+
+// ─── 服务端记忆提取（Chat/Compare 模式无工具调用，需服务端自动保存）───
+const REMEMBER_PATTERNS = /记住|记一下|帮我记|remember|请记住|你记一下|别忘了/i;
+function tryAutoSaveMemory(prompt: string, dataDir: string): boolean {
+  if (!REMEMBER_PATTERNS.test(prompt)) return false;
+  const content = prompt.replace(REMEMBER_PATTERNS, "").trim();
+  if (content.length < 4) return false;
+  // 提取关键词：按标点/空格/「是」「的」等拆分，保留有意义的片段
+  const keywords = content
+    .split(/[，,、。！？\s]+/)
+    .flatMap((seg: string) => seg.split(/(?:是|的|了|在|有|和|与|叫|为)/))
+    .map((w: string) => w.trim())
+    .filter((w: string) => w.length >= 2)
+    .slice(0, 8);
+  // 也把原文中的英文单词和名字提取出来
+  const englishWords = content.match(/[A-Za-z]{2,}/g) ?? [];
+  const allKeywords = [...new Set([...keywords, ...englishWords])].slice(0, 10);
+  const entry = {
+    ts: new Date().toISOString(),
+    category: "用户告知",
+    content,
+    keywords: allKeywords,
+  };
+  const filePath = join(dataDir, "user-memories.jsonl");
+  appendFileSync(filePath, JSON.stringify(entry) + "\n", "utf-8");
+  return true;
+}
 import { McpClient } from "./services/mcp-client.js";
 import { bridgeMcpTools, type BridgeResult } from "./services/mcp-bridge.js";
 import { getEnabledMcpServers, type McpServerConfig } from "./mcp-config.js";
@@ -188,6 +216,9 @@ const server = http.createServer(async (req, res) => {
       }
       messages.push({ role: "user", content: prompt });
 
+      // 服务端自动记忆保存（Chat/Compare 模式没有工具调用）
+      const memorySaved = tryAutoSaveMemory(prompt, config.dataDir);
+
       // Inject brain context if route.brain=true (same as /v1/chat/completions)
       if (route.brain) {
         try {
@@ -196,7 +227,10 @@ const server = http.createServer(async (req, res) => {
           const { loadActivePatches } = await import("./services/hot-patch.js");
           const { buildBrainSystemPrompt } = await import("./services/brain-context.js");
           const patches = loadActivePatches(brainRoot);
-          const systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
+          let systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
+          if (memorySaved) {
+            systemPrompt += "\n\n[系统提示：用户刚才要求你记住的信息已自动保存到记忆库。请确认已记住，并简短回复。]";
+          }
           messages = [{ role: "system", content: systemPrompt }, ...messages];
         } catch { /* degrade gracefully */ }
       }
@@ -208,7 +242,7 @@ const server = http.createServer(async (req, res) => {
         messages,
         max_tokens: route.maxTokens ?? 4096,
       });
-      json(res, 200, { content: result.content, usage: result.usage, brain: route.brain });
+      json(res, 200, { content: result.content, usage: result.usage, brain: route.brain, memorySaved });
     } catch (e: any) {
       json(res, 500, { error: e.message });
     }
@@ -235,6 +269,9 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      // 服务端自动记忆保存（Compare 模式无工具调用）
+      const memorySaved = tryAutoSaveMemory(prompt, config.dataDir);
+
       // Prepare brain messages (with memory injection)
       let brainMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [{ role: "user", content: prompt }];
       let injectedCategories: string[] = [];
@@ -245,7 +282,10 @@ const server = http.createServer(async (req, res) => {
         const { loadActivePatches } = await import("./services/hot-patch.js");
         const { buildBrainSystemPrompt } = await import("./services/brain-context.js");
         const patches = loadActivePatches(brainRoot);
-        const systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
+        let systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
+        if (memorySaved) {
+          systemPrompt += "\n\n[系统提示：用户刚才要求你记住的信息已自动保存到记忆库。请确认已记住，并简短回复。]";
+        }
         brainMessages = [{ role: "system", content: systemPrompt }, ...brainMessages];
         injectedCategories = brainResult.matchedCategories;
         itemCount = brainResult.itemCount;
