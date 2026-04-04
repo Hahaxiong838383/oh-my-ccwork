@@ -198,6 +198,70 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--text-dim)}
+
+/* ─── Session Manager Modal ─── */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6); z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-content {
+  background: var(--bg-card); border-radius: 12px;
+  width: 500px; max-height: 80vh; display: flex; flex-direction: column;
+  border: 1px solid var(--border);
+}
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+}
+.modal-header h3 { margin: 0; color: var(--text-primary); }
+.modal-header button {
+  background: none; border: none; color: var(--text-secondary);
+  font-size: 20px; cursor: pointer;
+}
+.modal-header button:hover { color: var(--text-primary); }
+.modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+.modal-body input[type="text"] {
+  width: 100%; padding: 8px 12px; border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-input); color: var(--text-primary);
+  margin-bottom: 12px; box-sizing: border-box; font-size: 13px;
+}
+.modal-body input[type="text"]::placeholder { color: var(--text-dim); }
+.modal-footer {
+  padding: 12px 20px; border-top: 1px solid var(--border);
+  display: flex; gap: 8px; justify-content: flex-end;
+}
+.modal-footer button {
+  padding: 6px 16px; border-radius: 6px; border: none; cursor: pointer;
+  background: var(--accent); color: white; font-size: 13px; font-weight: 500;
+  transition: background .15s;
+}
+.modal-footer button:hover { opacity: .9; }
+.modal-footer button.btn-modal-danger {
+  background: var(--danger);
+}
+.modal-footer button.btn-modal-export {
+  background: #1e40af;
+}
+.session-mgr-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 0;
+  border-bottom: 1px solid var(--bg-input);
+}
+.session-mgr-item input[type="checkbox"] { accent-color: var(--accent); flex-shrink: 0; }
+.session-mgr-item label {
+  flex: 1; color: var(--text-primary); font-size: 13px;
+  cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.session-mgr-item .session-mgr-meta {
+  color: var(--text-dim); font-size: 11px; flex-shrink: 0;
+}
+.session-mgr-empty {
+  text-align: center; color: var(--text-dim); padding: 24px 0; font-size: 13px;
+}
+.session-mgr-count {
+  font-size: 12px; color: var(--text-dim); margin-bottom: 8px;
+}
 </style>
 </head>
 <body>
@@ -216,6 +280,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
       <button class="nav-item" data-view="config" onclick="switchView('config')">⚙ 系统配置</button>
       <button class="nav-item" data-view="evolution" onclick="switchView('evolution')">🧬 进化中心</button>
       <button class="nav-item" data-view="patches" onclick="switchView('patches')">🔧 热补丁</button>
+      <button class="nav-item" onclick="openSessionManager()" title="管理会话">📋 管理会话</button>
     </div>
   </aside>
   <button class="sb-open" id="sbOpenBtn" onclick="toggleSidebar()">☰</button>
@@ -332,6 +397,25 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
   </main>
 </div>
 
+<!-- Session Manager Modal -->
+<div id="sessionManager" style="display:none" class="modal-overlay" onclick="if(event.target===this)closeSessionManager()">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>管理会话</h3>
+      <button onclick="closeSessionManager()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" id="sessionSearchInput" placeholder="搜索会话..." oninput="filterSessionList(this.value)">
+      <div class="session-mgr-count" id="sessionMgrCount"></div>
+      <div id="sessionMgrList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-danger" onclick="deleteSelectedSessions()">删除选中</button>
+      <button class="btn-modal-export" onclick="exportAllSessions()">导出全部</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ═══════════════════════════════════════════════════
    State
@@ -349,9 +433,30 @@ function loadState() {
   S.collapsed = localStorage.getItem('brain_sidebar_collapsed') === 'true';
   S.mode = localStorage.getItem('brain_chat_mode') || 'chat';
 }
+async function loadSessionsFromServer() {
+  try {
+    const resp = await aFetch('/admin/api/sessions');
+    if (resp.ok) {
+      const data = await resp.json();
+      return data.sessions || [];
+    }
+  } catch (e) {
+    console.warn('服务端会话加载失败，使用本地缓存', e);
+  }
+  // fallback: localStorage
+  const raw = localStorage.getItem('brain_sessions');
+  return raw ? JSON.parse(raw) : [];
+}
 function saveSess() {
+  // 本地先写（确保离线可用）
   localStorage.setItem('brain_sessions', JSON.stringify(S.sessions));
   localStorage.setItem('brain_active_session', S.activeId || '');
+  // 异步写服务端（fire and forget）
+  fetch('/admin/api/sessions', {
+    method: 'POST',
+    headers: authH(),
+    body: JSON.stringify({ sessions: S.sessions }),
+  }).catch(e => console.warn('服务端保存失败', e));
 }
 function getSess(id) { return S.sessions.find(s => s.id === id); }
 function curSess() { return getSess(S.activeId); }
@@ -437,6 +542,8 @@ function delSess(id) {
   S.sessions = S.sessions.filter(s => s.id !== id);
   if (S.activeId === id) S.activeId = S.sessions.length ? S.sessions[0].id : null;
   saveSess(); renderSess(); renderMsgs();
+  // 异步通知服务端删除
+  fetch('/admin/api/sessions/' + encodeURIComponent(id), { method: 'DELETE', headers: authH() }).catch(e => console.warn('服务端删除失败', e));
 }
 function trimSess() { while (S.sessions.length > MAX_SESS) { const old = S.sessions.pop(); archiveSess(old); } }
 function trimMsgs(s) { if (s.messages.length > MAX_MSG) { const rm = s.messages.splice(0, s.messages.length - MAX_MSG); archiveMsgs(s, rm); } }
@@ -892,9 +999,74 @@ function esc(s){if(typeof s!=='string')return String(s||'');return s.replace(/&/
 function fmtUp(s){if(!s)return'-';if(s<60)return Math.floor(s)+'秒';if(s<3600)return Math.floor(s/60)+'分';if(s<86400)return Math.floor(s/3600)+'时 '+Math.floor((s%3600)/60)+'分';return Math.floor(s/86400)+'天 '+Math.floor((s%86400)/3600)+'时'}
 
 /* ═══════════════════════════════════════════════════
+   Session Manager
+   ═══════════════════════════════════════════════════ */
+let _smFilter = '';
+function openSessionManager() {
+  _smFilter = '';
+  document.getElementById('sessionSearchInput').value = '';
+  renderSessionMgrList();
+  document.getElementById('sessionManager').style.display = 'flex';
+}
+function closeSessionManager() {
+  document.getElementById('sessionManager').style.display = 'none';
+}
+function filterSessionList(val) {
+  _smFilter = val.toLowerCase();
+  renderSessionMgrList();
+}
+function renderSessionMgrList() {
+  const listEl = document.getElementById('sessionMgrList');
+  const countEl = document.getElementById('sessionMgrCount');
+  const filtered = _smFilter
+    ? S.sessions.filter(s => (s.title || '').toLowerCase().includes(_smFilter))
+    : S.sessions;
+  countEl.textContent = `共 ${S.sessions.length} 个会话` + (_smFilter ? `，筛选出 ${filtered.length} 个` : '');
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="session-mgr-empty">' + (_smFilter ? '没有匹配的会话' : '暂无会话') + '</div>';
+    return;
+  }
+  listEl.innerHTML = filtered.map(s => {
+    const t = new Date(s.updatedAt).toLocaleDateString('zh-CN', { month:'numeric', day:'numeric', hour:'numeric', minute:'numeric' });
+    const msgCnt = (s.messages || []).length;
+    return `<div class="session-mgr-item">
+      <input type="checkbox" value="${s.id}" id="smcb_${s.id}">
+      <label for="smcb_${s.id}">${esc(s.title || '未命名')}</label>
+      <span class="mtag ${s.mode}">${s.mode}</span>
+      <span class="session-mgr-meta">${msgCnt}条 | ${t}</span>
+    </div>`;
+  }).join('');
+}
+function deleteSelectedSessions() {
+  const cbs = document.querySelectorAll('#sessionMgrList input[type=checkbox]:checked');
+  if (!cbs.length) { alert('请先选择要删除的会话'); return; }
+  if (!confirm(`确定删除选中的 ${cbs.length} 个会话？`)) return;
+  const ids = new Set(Array.from(cbs).map(cb => cb.value));
+  // 异步通知服务端删除每个会话
+  ids.forEach(id => {
+    fetch('/admin/api/sessions/' + encodeURIComponent(id), { method: 'DELETE', headers: authH() }).catch(e => console.warn('服务端删除失败', e));
+  });
+  S.sessions = S.sessions.filter(s => !ids.has(s.id));
+  if (ids.has(S.activeId)) S.activeId = S.sessions.length ? S.sessions[0].id : null;
+  saveSess(); renderSess(); renderMsgs(); renderSessionMgrList();
+}
+function exportAllSessions() {
+  const data = JSON.stringify(S.sessions, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `sessions-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ═══════════════════════════════════════════════════
    Init
    ═══════════════════════════════════════════════════ */
-(function init(){
+(async function init(){
   if(!localStorage.getItem('brain_admin_token')) localStorage.setItem('brain_admin_token','sk-brain-dev');
   loadState(); applySB(); applyMode(); renderSess(); renderMsgs();
   if(innerWidth<768&&!localStorage.getItem('brain_sidebar_collapsed')){S.collapsed=true;applySB()}
@@ -904,6 +1076,18 @@ function fmtUp(s){if(!s)return'-';if(s<60)return Math.floor(s)+'秒';if(s<3600)r
   window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(validV.has(h))switchView(h)});
   refreshStatus(); setInterval(refreshStatus,30000);
   addEventListener('resize',()=>{const ov=document.getElementById('sbOverlay');if(innerWidth>=1024&&!S.collapsed)ov.classList.remove('vis');else if(innerWidth<1024&&!S.collapsed)ov.classList.add('vis')});
+  // 异步从服务端加载会话（服务端优先，localStorage fallback）
+  try {
+    const serverSessions = await loadSessionsFromServer();
+    if (serverSessions.length || !S.sessions.length) {
+      S.sessions = serverSessions;
+      if (S.activeId && !S.sessions.find(s => s.id === S.activeId)) {
+        S.activeId = S.sessions.length ? S.sessions[0].id : null;
+      }
+      localStorage.setItem('brain_sessions', JSON.stringify(S.sessions));
+      renderSess(); renderMsgs();
+    }
+  } catch (e) { console.warn('服务端会话同步失败', e); }
 })();
 </script>
 </body>

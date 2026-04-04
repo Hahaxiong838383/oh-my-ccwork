@@ -4,7 +4,7 @@
  */
 
 import http from "http";
-import { readFileSync, existsSync, appendFileSync, mkdirSync } from "fs";
+import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { loadConfig } from "./config.js";
 import { BrainApi } from "./brain-api.js";
@@ -19,6 +19,7 @@ import { runAgentLoop } from "./services/agent-loop.js";
 import { searchMemoryTool } from "./tools/search-memory.js";
 import { listMemoriesTool } from "./tools/list-memories.js";
 import { runDiagnosisTool } from "./tools/run-diagnosis.js";
+import { addMemoryTool } from "./tools/add-memory.js";
 import { McpClient } from "./services/mcp-client.js";
 import { bridgeMcpTools, type BridgeResult } from "./services/mcp-bridge.js";
 import { getEnabledMcpServers, type McpServerConfig } from "./mcp-config.js";
@@ -439,6 +440,7 @@ const server = http.createServer(async (req, res) => {
       registry.register(searchMemoryTool);
       registry.register(listMemoriesTool);
       registry.register(runDiagnosisTool);
+      registry.register(addMemoryTool);
       await bridgeAllMcpTools(registry);
 
       const brainRoot = resolve(import.meta.dirname, "..");
@@ -505,6 +507,7 @@ const server = http.createServer(async (req, res) => {
       registry.register(searchMemoryTool);
       registry.register(listMemoriesTool);
       registry.register(runDiagnosisTool);
+      registry.register(addMemoryTool);
       await bridgeAllMcpTools(registry);
 
       const brainRoot = resolve(import.meta.dirname, "..");
@@ -551,6 +554,50 @@ const server = http.createServer(async (req, res) => {
       json(res, 500, { error: msg });
     }
     return;
+  }
+
+  // Admin API: sessions CRUD — 前端会话服务端持久化
+  const sessionsFile = resolve(import.meta.dirname, "..", "data", "admin-sessions.json");
+
+  if (path === "/admin/api/sessions" && req.method === "GET") {
+    try {
+      const sessions = existsSync(sessionsFile) ? JSON.parse(readFileSync(sessionsFile, "utf-8")) : [];
+      json(res, 200, { sessions });
+    } catch {
+      json(res, 200, { sessions: [] });
+    }
+    return;
+  }
+
+  if (path === "/admin/api/sessions" && req.method === "POST") {
+    try {
+      const body = JSON.parse(await readBody(req));
+      const sessions = body.sessions ?? [];
+      mkdirSync(resolve(import.meta.dirname, "..", "data"), { recursive: true });
+      writeFileSync(sessionsFile, JSON.stringify(sessions, null, 2), "utf-8");
+      json(res, 200, { ok: true });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      json(res, 500, { error: msg });
+    }
+    return;
+  }
+
+  if (path.startsWith("/admin/api/sessions/") && req.method === "DELETE") {
+    const id = decodeURIComponent(path.slice("/admin/api/sessions/".length));
+    if (id === "archive") { /* fall through to archive handler */ }
+    else {
+      try {
+        const sessions = existsSync(sessionsFile) ? JSON.parse(readFileSync(sessionsFile, "utf-8")) : [];
+        const filtered = sessions.filter((s: { id: string }) => s.id !== id);
+        writeFileSync(sessionsFile, JSON.stringify(filtered, null, 2), "utf-8");
+        json(res, 200, { ok: true });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        json(res, 500, { error: msg });
+      }
+      return;
+    }
   }
 
   // Admin API: session archive — 前端清理的会话消息归档到 brain 记忆
