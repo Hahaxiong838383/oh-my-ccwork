@@ -4,10 +4,14 @@
   "description": "mycc-brain: OpenAI-compatible API proxy with memory injection",
   "type": "module",
   "main": "dist/server.js",
+  "bin": {
+    "mycc-brain-mcp": "dist/mcp-entry.js"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "mcp": "node dist/mcp-entry.js",
     "eval": "tsx src/eval/eval.ts",
     "eval:dry": "tsx src/eval/eval.ts --dry-run"
   },

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mycc-brain": {
+      "command": "node",
+      "args": ["/path/to/mycc-brain/dist/mcp-entry.js"],
+      "env": {
+        "DATA_DIR": "/path/to/mycc-data/0-System"
+      }
+    }
+  }
+}
