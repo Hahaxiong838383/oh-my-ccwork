@@ -89,6 +89,20 @@ export function loadConfig(): BrainConfig {
         model: "mlx-community/Qwen3.5-27B-4bit",
         apiKey: "mlx",
       },
+      "cc-gemma4": {
+        adapter: "openai-compat",
+        brain: true,
+        baseURL: `${ollamaBase}/v1`,
+        model: "gemma4:26b",
+        apiKey: "ollama",
+      },
+      "raw-gemma4": {
+        adapter: "openai-compat",
+        brain: false,
+        baseURL: `${ollamaBase}/v1`,
+        model: "gemma4:26b",
+        apiKey: "ollama",
+      },
     },
   };
 }

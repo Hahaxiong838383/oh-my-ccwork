@@ -134,8 +134,13 @@ export async function chatCompletion(
   }
 
   const data = await upstream.json() as any;
+  const msg = data.choices?.[0]?.message;
+  // Gemma 4 thinking 模式：正文在 content，思考在 reasoning
+  // 当 content 为空但有 reasoning 时，用 reasoning（模型还在"想"没输出正文）
+  const content = msg?.content || "";
+  const reasoning = msg?.reasoning || "";
   return {
-    content: data.choices?.[0]?.message?.content ?? "",
+    content: content || reasoning,
     usage: data.usage,
   };
 }
