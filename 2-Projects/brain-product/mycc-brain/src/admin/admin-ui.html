@@ -682,10 +682,11 @@ async function sendAgentSSE(sess, text, model, et) {
         stepsEl.appendChild(el); contEl.textContent=''; contEl.style.color=''; msgEl.scrollTop=msgEl.scrollHeight;
       } else if(ev==='done'){
         const tt=data.totalTokens||0;
-        const serverDur=steps.reduce((s,st)=>s+(st.durationMs||0),0);
-        const firstLlm=steps.find(st=>st.type==='llm_call');
-        const ttft=firstLlm?.durationMs||serverDur;
-        const ts=serverDur>0?(tt/serverDur*1000).toFixed(1):'?';
+        const llmSteps=steps.filter(st=>st.type==='llm_call');
+        const llmDur=llmSteps.reduce((s,st)=>s+(st.durationMs||0),0);
+        const llmToks=llmSteps.reduce((s,st)=>s+(st.usage?.total_tokens||0),0);
+        const ttft=llmSteps[0]?.durationMs||0;
+        const ts=llmDur>0?((llmToks||tt)/llmDur*1000).toFixed(1):'?';
         finalContent=data.content||''; finalMeta={mode:'agent',model,steps,toolsUsed:data.toolsUsed||[],totalTokens:tt,ttft,tokPerSec:parseFloat(ts)};
         contEl.innerHTML=rMd(finalContent);
       } else if(ev==='error'){finalContent='❌ '+(data.error||'未知错误');contEl.textContent=finalContent;}
