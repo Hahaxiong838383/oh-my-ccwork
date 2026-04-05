@@ -14,6 +14,8 @@ import { loadBrainContext, buildBrainSystemPrompt, type BrainContextResult } fro
 import { loadActivePatches } from "./services/hot-patch.js";
 import { writeExperience, type ExperienceEntry } from "./services/experience-stream.js";
 import { resolveConversation, saveToConversation } from "./services/conversation.js";
+import { inferValenceArousal, updateSessionState, getSessionState, cleanupSessionStates } from "./services/user-state.js";
+import { recordPrediction } from "./services/prediction-engine.js";
 
 // 简单内存统计
 const stats = {
@@ -124,6 +126,11 @@ export class BrainApi {
     let brainResult: BrainContextResult | null = null;
     const userQuery = messages[messages.length - 1]?.content ?? "";
 
+    // GAP4+5: 情感标注 + 用户状态推断（零延迟规则驱动）
+    const va = inferValenceArousal(userQuery);
+    const userState = updateSessionState(conversationId, userQuery);
+    const sessionState = getSessionState(conversationId);
+
     if (route.brain) {
       try {
         const brainRoot = resolve(import.meta.dirname, "..");
@@ -135,8 +142,14 @@ export class BrainApi {
           context += "\n\n[无相关记忆] 以下回答基于模型通用知识，可能不准确。请明确告知用户这一点。";
         }
         const systemPrompt = buildBrainSystemPrompt(context, patches);
-        messages = [{ role: "system", content: systemPrompt }, ...messages];
-        console.log(`[brain] injected ${brainResult.itemCount} items from [${brainResult.matchedCategories.join(", ")}]`);
+
+        // GAP5: 注入会话级用户状态（仅当有有效推断时）
+        const stateHint = sessionState
+          ? `\n\n## 用户状态（本轮推断）\n- 意图: ${userState.intent} | 情绪: ${userState.mood} | 专业度: ${userState.expertise}\n- 会话主导意图: ${sessionState.dominantIntent} | 轮次: ${sessionState.turnCount}\n- 请根据用户状态调整回复风格：受挫时简洁直接，好奇时展开说明，紧急时跳过寒暄。`
+          : "";
+
+        messages = [{ role: "system", content: systemPrompt + stateHint }, ...messages];
+        console.log(`[brain] injected ${brainResult.itemCount} items from [${brainResult.matchedCategories.join(", ")}] | state: ${userState.intent}/${userState.mood}`);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error(`[brain] memory injection failed: ${msg}`);
@@ -160,8 +173,8 @@ export class BrainApi {
       const latency = Date.now() - startMs;
       console.log(`[brain] ${modelName} non-stream ${latency}ms`);
 
-      // 异步写入经验流（不阻塞响应）
-      this.recordExperience(modelName, userQuery, result.content, latency, brainResult);
+      // 异步写入经验流（不阻塞响应）+ GAP4 情感标注
+      this.recordExperience(modelName, userQuery, result.content, latency, brainResult, va.valence, va.arousal);
 
       // Save to conversation history
       const lastUserMsg = messages.filter((m) => m.role === "user").pop();
@@ -201,8 +214,8 @@ export class BrainApi {
     const latency = Date.now() - startMs;
     console.log(`[brain] ${modelName} done ${latency}ms`);
 
-    // 异步写入经验流（流式无法获取完整响应，只记录元数据）
-    this.recordExperience(modelName, userQuery, "[stream]", latency, brainResult);
+    // 异步写入经验流（流式无法获取完整响应，只记录元数据）+ GAP4 情感标注
+    this.recordExperience(modelName, userQuery, "[stream]", latency, brainResult, va.valence, va.arousal);
   }
 
   private handleModels(res: ServerResponse) {
@@ -221,6 +234,8 @@ export class BrainApi {
     response: string,
     latencyMs: number,
     brainResult: BrainContextResult | null,
+    valence?: number,
+    arousal?: number,
   ): void {
     const brainRoot = resolve(import.meta.dirname, "..");
     const entry: ExperienceEntry = {
@@ -232,8 +247,26 @@ export class BrainApi {
       injectedCategories: brainResult?.matchedCategories ?? [],
       injectedItemCount: brainResult?.itemCount ?? 0,
       retrievalPaths: brainResult?.retrievalPaths ?? [],
+      valence,
+      arousal,
     };
     writeExperience(brainRoot, entry).catch(() => {});
+
+    // GAP3: 异步记录预测（fire-and-forget）
+    const primaryCategory = brainResult?.matchedCategories[0] ?? "unknown";
+    const recentCats = brainResult?.matchedCategories ?? [];
+    recordPrediction(
+      brainRoot,
+      "default", // conversationId 在此层不可用，用 default
+      entry.model, // 复用 model 作为 intent 近似（后续由 user-state 驱动）
+      primaryCategory,
+      recentCats,
+    ).catch(() => {});
+
+    // 定期清理过期会话状态（每 100 次请求）
+    if (stats.totalRequests % 100 === 0) {
+      cleanupSessionStates();
+    }
   }
 
   getStats() {

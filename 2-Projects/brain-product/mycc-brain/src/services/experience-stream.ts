@@ -19,6 +19,9 @@ export interface ExperienceEntry {
   injectedCategories: string[];
   injectedItemCount: number;
   retrievalPaths: string[];  // 命中的检索路径：["keyword", "tfidf", "fts", "vector"]
+  // GAP4: 情感维度（由 brain-api 基于规则标注，非 LLM 推断）
+  valence?: number;   // 情感效价 [-1, 1]：-1=负面, 0=中性, 1=正面
+  arousal?: number;   // 情感唤醒度 [0, 1]：0=平静, 1=激动
 }
 
 function getExpDir(brainRoot: string): string {
