@@ -463,3 +463,118 @@ export function getPredictionEngineStats(
     recentPredictionCount: predictions.length,
   };
 }
+
+// ═══════════════════════════════════════════════════
+// 6. P5 SFT Readiness Check — AESL 启发的触发条件
+// ═══════════════════════════════════════════════════
+
+export interface SftReadinessReport {
+  readonly ready: boolean;
+  readonly totalExperiences: number;
+  readonly highQualityCount: number;       // valence >= 0 的（正面/中性交互）
+  readonly namespaceCoverage: number;      // [0, 1] 命名空间覆盖率
+  readonly uniqueNamespaces: number;
+  readonly totalNamespaces: number;
+  readonly conditions: {
+    readonly experienceCount: { met: boolean; actual: number; required: number };
+    readonly qualityRatio: { met: boolean; actual: number; required: number };
+    readonly coverage: { met: boolean; actual: number; required: number };
+  };
+  readonly recommendation: string;
+}
+
+/**
+ * P5 SFT 就绪检查（基于 AESL 论文启示调整）。
+ *
+ * 原条件：经验 >= 1000
+ * 新条件（AESL 启发）：
+ *   1. 高质量经验 >= 500（valence >= 0 的正面/中性交互）
+ *   2. 高质量占比 > 30%
+ *   3. 命名空间覆盖 >= 80%
+ *
+ * 巩固任务每天 04:00 调用，满足条件时通知川哥。
+ */
+export function checkSftReadiness(brainRoot: string): SftReadinessReport {
+  const dir = join(brainRoot, "data", "experiences");
+  if (!existsSync(dir)) {
+    return {
+      ready: false,
+      totalExperiences: 0,
+      highQualityCount: 0,
+      namespaceCoverage: 0,
+      uniqueNamespaces: 0,
+      totalNamespaces: 0,
+      conditions: {
+        experienceCount: { met: false, actual: 0, required: 500 },
+        qualityRatio: { met: false, actual: 0, required: 0.3 },
+        coverage: { met: false, actual: 0, required: 0.8 },
+      },
+      recommendation: "经验流数据为空，需先积累交互数据",
+    };
+  }
+
+  // 读取所有经验
+  const { readdirSync } = require("fs") as typeof import("fs");
+  const files = readdirSync(dir).filter((f: string) => f.endsWith(".jsonl"));
+  let totalExperiences = 0;
+  let highQualityCount = 0;
+  const hitNamespaces = new Set<string>();
+
+  for (const file of files) {
+    const lines = readFileSync(join(dir, file), "utf-8").split("\n").filter(Boolean);
+    for (const line of lines) {
+      try {
+        const entry = JSON.parse(line);
+        totalExperiences++;
+        // 高质量 = valence >= 0（正面或中性交互）
+        const valence = entry.valence ?? 0;
+        if (valence >= 0) highQualityCount++;
+        // 命名空间覆盖
+        for (const cat of (entry.injectedCategories ?? [])) {
+          hitNamespaces.add(cat);
+        }
+      } catch { /* skip */ }
+    }
+  }
+
+  // 总命名空间数（从 memory-items.md 统计）
+  const memPath = join(brainRoot, "data", "memory-items.md");
+  const totalNamespaces = existsSync(memPath)
+    ? (readFileSync(memPath, "utf-8").match(/^## \[/gm) ?? []).length
+    : 1;
+
+  const qualityRatio = totalExperiences > 0 ? highQualityCount / totalExperiences : 0;
+  const namespaceCoverage = totalNamespaces > 0 ? hitNamespaces.size / totalNamespaces : 0;
+
+  const conditions = {
+    experienceCount: { met: highQualityCount >= 500, actual: highQualityCount, required: 500 },
+    qualityRatio: { met: qualityRatio >= 0.3, actual: Math.round(qualityRatio * 100) / 100, required: 0.3 },
+    coverage: { met: namespaceCoverage >= 0.8, actual: Math.round(namespaceCoverage * 100) / 100, required: 0.8 },
+  };
+
+  const ready = conditions.experienceCount.met && conditions.qualityRatio.met && conditions.coverage.met;
+
+  let recommendation: string;
+  if (ready) {
+    recommendation = "所有条件满足！建议启动 AESL 式轻量 SFT（200-500 条高质量样本，监控 entropy early stop）";
+  } else if (totalExperiences === 0) {
+    recommendation = "经验流数据为空，需先积累交互数据";
+  } else if (!conditions.experienceCount.met) {
+    recommendation = `高质量经验不足：${highQualityCount}/500。继续积累，预计还需 ${500 - highQualityCount} 条`;
+  } else if (!conditions.coverage.met) {
+    recommendation = `命名空间覆盖不足：${hitNamespaces.size}/${totalNamespaces} (${Math.round(namespaceCoverage * 100)}%)。需要更多样化的查询`;
+  } else {
+    recommendation = `高质量占比不足：${Math.round(qualityRatio * 100)}% < 30%。需改善交互质量`;
+  }
+
+  return {
+    ready,
+    totalExperiences,
+    highQualityCount,
+    namespaceCoverage,
+    uniqueNamespaces: hitNamespaces.size,
+    totalNamespaces,
+    conditions,
+    recommendation,
+  };
+}
