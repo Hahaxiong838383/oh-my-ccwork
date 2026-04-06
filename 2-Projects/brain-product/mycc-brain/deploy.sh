@@ -37,7 +37,10 @@ echo "📦 同步 native 模块（从 Air 预编译）..."
 rsync -avz node_modules/better-sqlite3/ ${REMOTE}:${APP_DIR}/node_modules/better-sqlite3/
 
 echo "🔨 构建..."
-ssh ${REMOTE} "${SSH_ENV} && cd ${APP_DIR} && npx tsc && mkdir -p dist/admin && cp src/admin/*.html dist/admin/"
+ssh ${REMOTE} "${SSH_ENV} && cd ${APP_DIR} && npx tsc && mkdir -p dist/admin"
+
+echo "📄 推送最新 HTML（Air 本地 → Studio dist，确保不被 rsync 旧版覆盖）..."
+cat src/admin/admin-ui.html | ssh ${REMOTE} "cat > ${APP_DIR}/dist/admin/admin-ui.html"
 
 echo "🔄 启动/重启服务..."
 ssh ${REMOTE} "${SSH_ENV} && cd ${APP_DIR} && npx pm2 delete brain 2>/dev/null; npx pm2 start dist/server.js --name brain --interpreter node && npx pm2 save"
