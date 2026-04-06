@@ -27,14 +27,16 @@ export async function streamOpenAICompat(
 ): Promise<void> {
   const url = `${opts.baseURL}/chat/completions`;
 
-  const body = JSON.stringify({
+  const payload: Record<string, unknown> = {
     model: opts.model,
     messages: opts.messages,
     stream: true,
     temperature: opts.temperature ?? 0.7,
-    max_tokens: opts.max_tokens ?? 8192,
-    enable_thinking: opts.enable_thinking ?? false,
-  });
+  };
+  if (opts.max_tokens != null) payload.max_tokens = opts.max_tokens;
+  if (opts.enable_thinking != null) payload.enable_thinking = opts.enable_thinking;
+
+  const body = JSON.stringify(payload);
 
   let upstream: Response;
   try {
@@ -119,8 +121,8 @@ export async function chatCompletion(
         messages: opts.messages,
         stream: false,
         temperature: opts.temperature ?? 0.7,
-        max_tokens: opts.max_tokens ?? 8192,
-        enable_thinking: opts.enable_thinking ?? false,
+        ...(opts.max_tokens != null && { max_tokens: opts.max_tokens }),
+        ...(opts.enable_thinking != null && { enable_thinking: opts.enable_thinking }),
       }),
     });
   } catch (e: unknown) {

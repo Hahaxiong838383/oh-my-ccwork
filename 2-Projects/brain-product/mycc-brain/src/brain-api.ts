@@ -158,6 +158,11 @@ export class BrainApi {
 
     const startMs = Date.now();
 
+    // thinking 开关：仅对 supportsThinking=true 的路由生效，否则不传（避免不支持的 API 报错）
+    const enableThinking = route.supportsThinking
+      ? (body.enable_thinking ?? false)
+      : undefined;
+
     if (!stream) {
       // 非流式
       const { chatCompletion } = await import("./adapters/openai-compat.js");
@@ -168,6 +173,7 @@ export class BrainApi {
         messages,
         temperature: body.temperature ?? (route.brain ? 0.3 : undefined),
         max_tokens: body.max_tokens,
+        enable_thinking: enableThinking,
       });
 
       const latency = Date.now() - startMs;
@@ -207,6 +213,7 @@ export class BrainApi {
         messages,
         temperature: body.temperature ?? (route.brain ? 0.3 : undefined),
         max_tokens: body.max_tokens,
+        enable_thinking: enableThinking,
       },
       res
     );

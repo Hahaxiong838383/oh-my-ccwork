@@ -111,7 +111,7 @@ async function chatCompletionWithTools(opts: {
     stream: false,
     temperature: opts.temperature,
     max_tokens: opts.max_tokens,
-    enable_thinking: opts.enableThinking ?? false,
+    ...(opts.enableThinking != null && { enable_thinking: opts.enableThinking }),
   };
 
   if (opts.tools && opts.tools.length > 0) {

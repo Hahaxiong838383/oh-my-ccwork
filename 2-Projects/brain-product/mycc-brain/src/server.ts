@@ -204,12 +204,16 @@ const server = http.createServer(async (req, res) => {
         } catch { /* degrade gracefully */ }
       }
 
+      const enableThinking = route.supportsThinking
+        ? (body.enable_thinking ?? false)
+        : undefined;
       const result = await chatCompletion({
         baseURL: route.baseURL,
         apiKey: route.apiKey,
         model: route.model,
         messages,
         max_tokens: route.maxTokens ?? 4096,
+        enable_thinking: enableThinking,
       });
       json(res, 200, { content: result.content, usage: result.usage, brain: route.brain });
 
@@ -263,6 +267,9 @@ const server = http.createServer(async (req, res) => {
 
       const rawMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [{ role: "user", content: prompt }];
 
+      const rawThinking = rawRoute.supportsThinking ? (body.enable_thinking ?? false) : undefined;
+      const brainThinking = brainRoute.supportsThinking ? (body.enable_thinking ?? false) : undefined;
+
       // Parallel calls
       const rawStart = Date.now();
       const brainStart = Date.now();
@@ -274,6 +281,7 @@ const server = http.createServer(async (req, res) => {
           model: rawRoute.model,
           messages: rawMessages,
           max_tokens: 8192,
+          enable_thinking: rawThinking,
         }).then((r) => ({ ...r, latency: Date.now() - rawStart })),
         chatCompletion({
           baseURL: brainRoute.baseURL,
@@ -281,6 +289,7 @@ const server = http.createServer(async (req, res) => {
           model: brainRoute.model,
           messages: brainMessages,
           max_tokens: 8192,
+          enable_thinking: brainThinking,
         }).then((r) => ({ ...r, latency: Date.now() - brainStart })),
       ]);
 
@@ -610,7 +619,7 @@ const server = http.createServer(async (req, res) => {
       }
       messages.push({ role: "user", content: prompt });
 
-      const enableThinking = body.enable_thinking ?? false;
+      const enableThinking = route.supportsThinking ? (body.enable_thinking ?? false) : undefined;
       const result = await runAgentLoop({
         baseURL: route.baseURL,
         apiKey: route.apiKey,
@@ -677,7 +686,7 @@ const server = http.createServer(async (req, res) => {
       }
       messages.push({ role: "user", content: prompt });
 
-      const enableThinking = body.enable_thinking ?? false;
+      const enableThinking = route.supportsThinking ? (body.enable_thinking ?? false) : undefined;
       const result = await runAgentLoop({
         baseURL: route.baseURL,
         apiKey: route.apiKey,
