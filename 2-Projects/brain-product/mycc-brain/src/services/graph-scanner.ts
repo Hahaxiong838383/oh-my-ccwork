@@ -143,6 +143,7 @@ const DATAFLOW_MAP: ReadonlyArray<{ code: string; data: string }> = [
   { code: "memory-intake.ts", data: "memory-items-intake.md" },
   { code: "memory-consolidation.ts", data: "memory-items.md" },
   { code: "experience-stream.ts", data: "memory-items.md" },
+  { code: "brain-context.ts", data: "claude-memory/" },
 ];
 
 // ─── import 解析正则 ─────────────────────────────────
@@ -299,6 +300,36 @@ function scanDataLayer(dataDir: string): { nodes: GraphNode[]; links: GraphLink[
         desc: DATA_DESC_MAP[entry.name] ?? entry.name,
       });
       links.push({ source: rootId, target: fileId, type: "contain" });
+    }
+  }
+
+  // Claude Code 跨设备经验记忆（claude-memory/ 同级目录）
+  const claudeMemDir = join(dataDir, "../claude-memory");
+  if (existsSync(claudeMemDir)) {
+    const cmRootId = "data:claude-memory/";
+    nodes.push({
+      id: cmRootId,
+      label: "claude-memory/",
+      group: "MemoryData",
+      layer: "data",
+      type: "dir",
+      desc: "跨设备 Claude Code 经验记忆（Air+Mini 合并）",
+    });
+    links.push({ source: rootId, target: cmRootId, type: "contain" });
+
+    const cmEntries = readdirSync(claudeMemDir, { withFileTypes: true });
+    for (const entry of cmEntries) {
+      if (!entry.isFile() || !entry.name.endsWith(".md") || entry.name === "MEMORY.md") continue;
+      const fileId = `data:claude-memory/${entry.name}`;
+      nodes.push({
+        id: fileId,
+        label: entry.name,
+        group: "MemoryData",
+        layer: "data",
+        type: "file",
+        desc: entry.name.replace(/\.md$/, "").replace(/-/g, " "),
+      });
+      links.push({ source: cmRootId, target: fileId, type: "contain" });
     }
   }
 

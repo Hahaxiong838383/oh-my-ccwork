@@ -5,7 +5,7 @@
  * 零外部依赖（不需要 SQLite / Ollama），纯文件读取 + 数学计算。
  */
 
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, readdirSync } from "fs";
 import { join, resolve } from "path";
 import { syncFromMd, ftsSearch, vectorSearch } from "./memory-db.js";
 import { embed } from "./embedding.js";
@@ -416,9 +416,38 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
     }
   }
 
-  const itemCount = parts.reduce((n, p) => n + (p.match(/^- /gm)?.length ?? 0), 0) + userMemMatched.length;
+  // 10. Claude Code 记忆检索（来自各设备 cc session 积累的经验）
+  const claudeMemDir = resolve(dataDir, "../claude-memory");
+  const claudeMemMatched: string[] = [];
+  if (existsSync(claudeMemDir)) {
+    try {
+      const queryLower = query.toLowerCase();
+      const queryTokens = queryLower.split(/\s+/).filter((t) => t.length > 1);
+      const files = readdirSync(claudeMemDir).filter((f) => f.endsWith(".md") && f !== "MEMORY.md");
+      for (const file of files) {
+        try {
+          const content = readFileSync(join(claudeMemDir, file), "utf-8");
+          // 从 frontmatter 提取 name 和 description
+          const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+          const name = fmMatch?.[1]?.match(/name:\s*(.+)/)?.[1]?.trim() ?? file;
+          const desc = fmMatch?.[1]?.match(/description:\s*(.+)/)?.[1]?.trim() ?? "";
+          const body = content.replace(/^---\n[\s\S]*?\n---\n?/, "").trim();
+          // TF-IDF 风格匹配：query tokens vs (name + desc + body 前 500 字)
+          const searchable = `${name} ${desc} ${body.slice(0, 500)}`.toLowerCase();
+          const hitCount = queryTokens.filter((t) => searchable.includes(t)).length;
+          if (hitCount >= Math.max(1, Math.min(queryTokens.length * 0.3, 2))) {
+            // 截取 body 前 300 字作为摘要
+            const summary = body.length > 300 ? body.slice(0, 300) + "..." : body;
+            claudeMemMatched.push(`[${name}] ${summary}`);
+          }
+        } catch { /* skip unreadable files */ }
+      }
+    } catch { /* claude-memory dir read failed */ }
+  }
 
-  // 构建最终 context，追加 user-memories（如有命中）
+  const itemCount = parts.reduce((n, p) => n + (p.match(/^- /gm)?.length ?? 0), 0) + userMemMatched.length + claudeMemMatched.length;
+
+  // 构建最终 context，追加 user-memories 和 claude-memory（如有命中）
   let finalContext = parts.join("\n\n");
   const finalRetrievalPaths = [...retrievalPaths];
 
@@ -426,6 +455,12 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
     const userMemContext = userMemMatched.join("\n").slice(0, 1000);
     finalContext += "\n\n## 用户记忆\n" + userMemContext;
     finalRetrievalPaths.push("user-memory");
+  }
+
+  if (claudeMemMatched.length > 0) {
+    const claudeMemContext = claudeMemMatched.slice(0, 5).join("\n\n").slice(0, 2000);
+    finalContext += "\n\n## 跨设备经验（Claude Code 记忆）\n" + claudeMemContext;
+    finalRetrievalPaths.push("claude-memory");
   }
 
   const result: BrainContextResult = {

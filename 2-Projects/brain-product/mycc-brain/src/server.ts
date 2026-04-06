@@ -268,9 +268,13 @@ const server = http.createServer(async (req, res) => {
           language = fileName.endsWith(".ts") ? "typescript" : fileName.endsWith(".html") ? "html" : "text";
         }
       } else if (layer === "data") {
-        const candidate = resolve(dataDir, fileName);
-        // 安全检查：确保在 dataDir 内
-        if (resolve(candidate).startsWith(resolve(dataDir)) && existsSync(candidate)) {
+        // claude-memory/ 文件在 dataDir 的同级目录
+        const baseDir = fileName.startsWith("claude-memory/")
+          ? resolve(dataDir, "..")
+          : dataDir;
+        const candidate = resolve(baseDir, fileName);
+        // 安全检查：确保在 baseDir 内
+        if (resolve(candidate).startsWith(resolve(baseDir)) && existsSync(candidate)) {
           const ext = fileName.split(".").pop() ?? "";
           if (["db", "db-shm", "db-wal", "sqlite"].includes(ext)) {
             content = "[二进制文件，无法直接展示]";
