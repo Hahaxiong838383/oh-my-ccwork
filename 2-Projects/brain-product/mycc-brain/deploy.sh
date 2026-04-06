@@ -29,7 +29,8 @@ fi
 echo "📊 生成配置层图谱快照..."
 MYCC_ROOT="$(cd ../../.. && pwd)"
 mkdir -p data
-node -e "
+NODE_BIN="${NODE_BIN:-$(command -v node || echo "$HOME/local/node/bin/node")}"
+"$NODE_BIN" -e "
 const fs = require('fs');
 const path = require('path');
 const myccRoot = '${MYCC_ROOT}';
@@ -61,6 +62,21 @@ const snapshot = {
   multiAgent: [{path:'multi-agent',type:'dir'}, ...scanDir(path.join(myccRoot, 'multi-agent'), 0, 1)],
   references: {},
 };
+
+// 收集配置层文件内容预览（前 200 行）
+snapshot.contentPreviews = {};
+function addPreview(relPath) {
+  try {
+    const full = path.join(myccRoot, relPath);
+    if (!fs.existsSync(full) || fs.statSync(full).isDirectory()) return;
+    const raw = fs.readFileSync(full, 'utf-8');
+    const lines = raw.split('\\n');
+    snapshot.contentPreviews[relPath] = lines.length > 200 ? lines.slice(0, 200).join('\\n') + '\\n... (截断，共 ' + lines.length + ' 行)' : raw;
+  } catch {}
+}
+if (snapshot.claudeMd) addPreview('CLAUDE.md');
+for (const item of snapshot.docs) { if (item.type === 'file') addPreview(item.path); }
+for (const item of snapshot.multiAgent) { if (item.type === 'file') addPreview(item.path); }
 
 // 解析 CLAUDE.md 引用链
 if (snapshot.claudeMd) {

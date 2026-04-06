@@ -219,6 +219,110 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Admin API: 查看节点文件内容（右键详情）
+  if (path === "/admin/api/graph/content" && req.method === "GET") {
+    if (!checkAdminAuth(req, res)) return;
+    const nodeId = url.searchParams.get("id") ?? "";
+    if (!nodeId) { json(res, 400, { error: "Missing id param" }); return; }
+
+    const brainRoot = resolve(import.meta.dirname, "..");
+    const srcDir = resolve(brainRoot, "src");
+    const dataDir = config.dataDir;
+
+    // 根据 node id 前缀定位文件
+    const colonIdx = nodeId.indexOf(":");
+    if (colonIdx < 0) { json(res, 400, { error: "Invalid id format" }); return; }
+    const layer = nodeId.substring(0, colonIdx) as "code" | "data" | "config";
+    const fileName = nodeId.substring(colonIdx + 1);
+
+    // 目录节点不支持
+    if (fileName.endsWith("/")) {
+      json(res, 200, { content: null, message: "目录节点无文件内容", language: "text", lines: 0 });
+      return;
+    }
+
+    try {
+      let filePath: string | null = null;
+      let content: string | null = null;
+      let language = "text";
+
+      if (layer === "code") {
+        // 在 src/ 下搜索文件
+        const searchDirs = [srcDir];
+        for (const sub of ["services", "adapters", "admin", "eval", "tools"]) {
+          searchDirs.push(resolve(srcDir, sub));
+        }
+        for (const dir of searchDirs) {
+          const candidate = resolve(dir, fileName);
+          if (existsSync(candidate) && !candidate.includes("..")) {
+            filePath = candidate;
+            break;
+          }
+        }
+        if (filePath) {
+          // 安全检查：确保在 src/ 内
+          if (!resolve(filePath).startsWith(resolve(srcDir))) {
+            json(res, 403, { error: "Access denied" }); return;
+          }
+          content = readFileSync(filePath, "utf-8");
+          language = fileName.endsWith(".ts") ? "typescript" : fileName.endsWith(".html") ? "html" : "text";
+        }
+      } else if (layer === "data") {
+        const candidate = resolve(dataDir, fileName);
+        // 安全检查：确保在 dataDir 内
+        if (resolve(candidate).startsWith(resolve(dataDir)) && existsSync(candidate)) {
+          const ext = fileName.split(".").pop() ?? "";
+          if (["db", "db-shm", "db-wal", "sqlite"].includes(ext)) {
+            content = "[二进制文件，无法直接展示]";
+            language = "text";
+          } else {
+            content = readFileSync(candidate, "utf-8");
+            language = fileName.endsWith(".md") ? "markdown" : fileName.endsWith(".json") ? "json" : "text";
+          }
+          filePath = candidate;
+        }
+      } else if (layer === "config") {
+        // 配置层文件在 Air 上，从快照读取内容摘要
+        const snapshotPath = resolve(brainRoot, "data", "graph-config-snapshot.json");
+        if (existsSync(snapshotPath)) {
+          const snapshot = JSON.parse(readFileSync(snapshotPath, "utf-8"));
+          if (snapshot.contentPreviews && snapshot.contentPreviews[fileName]) {
+            content = snapshot.contentPreviews[fileName];
+            language = fileName.endsWith(".md") ? "markdown" : fileName.endsWith(".json") ? "json" : fileName.endsWith(".sh") ? "bash" : "text";
+          } else {
+            content = null;
+          }
+        }
+        if (content === null || content === undefined) {
+          json(res, 200, {
+            content: "⚠️ 配置层文件存储在 Air 开发机上，Studio 无法直接读取。\n\n下次部署时将自动更新快照内容。",
+            language: "text", lines: 2,
+          });
+          return;
+        }
+      }
+
+      if (content === null) {
+        json(res, 404, { error: "File not found" });
+        return;
+      }
+
+      const lines = content.split("\n").length;
+      // 限制返回内容最多 500 行
+      const maxLines = 500;
+      const truncated = lines > maxLines;
+      const displayContent = truncated
+        ? content.split("\n").slice(0, maxLines).join("\n") + `\n\n... (截断，共 ${lines} 行，仅显示前 ${maxLines} 行)`
+        : content;
+
+      json(res, 200, { content: displayContent, language, lines, truncated });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      json(res, 500, { error: `读取失败: ${msg}` });
+    }
+    return;
+  }
+
   if (path === "/admin/api/restart" && req.method === "POST") {
     json(res, 200, { message: "restarting in 1s..." });
     setTimeout(() => process.exit(0), 1000); // pm2 会自动重启

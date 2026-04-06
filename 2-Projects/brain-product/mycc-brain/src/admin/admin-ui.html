@@ -272,7 +272,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
   <aside id="sidebar">
     <div class="sb-header">
       <button class="sb-toggle" onclick="toggleSidebar()" title="收起侧边栏">☰</button>
-      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span><span class="ui-ver">v2.1 · 2026-04-06</span></div>
+      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span><span class="ui-ver">v2.2 · 2026-04-06</span></div>
       <div class="status-dot off" id="statusDot" title="检查中..."></div>
     </div>
     <button class="new-chat-btn" onclick="newChat()">+ 新对话</button>
@@ -1513,6 +1513,10 @@ function _renderGraph(container, data) {
       const d=120,{x,y,z}=node;
       Graph.cameraPosition({x:x+d,y:y+d,z:z+d},{x,y,z},1500);
     })
+    .onNodeRightClick((node, event) => {
+      event.preventDefault();
+      _showNodeContent(node);
+    })
     .onNodeHover(node => {
       graphEl.style.cursor = node ? 'pointer' : 'default';
       Graph.linkWidth(l => {
@@ -1603,6 +1607,90 @@ function _graphToggleLayout() {
     btn.textContent = '层级排列';
     _graphInstance.d3Force('z', null);
     _graphInstance.d3ReheatSimulation();
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   Node Content Modal — v2.2 右键查看文件内容
+   ═══════════════════════════════════════════════════ */
+async function _showNodeContent(node) {
+  // 移除已有 modal
+  const existing = document.getElementById('node-content-modal');
+  if (existing) existing.remove();
+
+  const layerNames = {code:'代码层',data:'数据层',config:'配置层'};
+  const overlay = document.createElement('div');
+  overlay.id = 'node-content-modal';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:var(--bg-secondary,#1e293b);border:1px solid var(--border,#334155);border-radius:12px;width:min(90vw,900px);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 25px 50px rgba(0,0,0,0.5)';
+
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = 'padding:16px 20px;border-bottom:1px solid var(--border,#334155);display:flex;justify-content:space-between;align-items:center;flex-shrink:0';
+  const titleColor = GROUP_COLORS[node.group] || '#ccc';
+  header.innerHTML = `<div>
+    <div style="font-size:16px;font-weight:600;color:var(--text-primary,#f1f5f9)">${node.label || node.id}</div>
+    <div style="font-size:12px;color:var(--text-dim,#64748b);margin-top:4px">
+      <span style="color:${titleColor}">${node.group}</span> · ${layerNames[node.layer]||node.layer} · ${node.desc||''}
+    </div>
+  </div>
+  <button onclick="document.getElementById('node-content-modal').remove()" style="background:none;border:none;color:var(--text-dim,#64748b);font-size:24px;cursor:pointer;padding:4px 8px;line-height:1">&times;</button>`;
+  modal.appendChild(header);
+
+  // Content area
+  const body = document.createElement('div');
+  body.style.cssText = 'padding:16px 20px;overflow-y:auto;flex:1;min-height:0';
+  body.innerHTML = '<div style="color:var(--text-dim,#64748b);text-align:center;padding:40px">加载中...</div>';
+  modal.appendChild(body);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // ESC 关闭
+  const escHandler = (e) => { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escHandler); } };
+  document.addEventListener('keydown', escHandler);
+  // 点击遮罩关闭
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); document.removeEventListener('keydown', escHandler); } });
+
+  // 目录节点不请求 API
+  if (node.type === 'dir') {
+    body.innerHTML = `<div style="color:var(--text-dim,#64748b);text-align:center;padding:40px">
+      <div style="font-size:32px;margin-bottom:12px">📁</div>
+      <div>目录节点，无文件内容可展示</div>
+      <div style="margin-top:8px;font-size:12px">${node.desc||''}</div>
+    </div>`;
+    return;
+  }
+
+  // Fetch content
+  try {
+    const resp = await fetch(`/admin/api/graph/content?id=${encodeURIComponent(node.id)}`, {
+      headers: {'Authorization': `Bearer ${getToken()}`}
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      body.innerHTML = `<div style="color:var(--danger,#ef4444);text-align:center;padding:40px">${data.error || 'Unknown error'}</div>`;
+      return;
+    }
+    if (!data.content) {
+      body.innerHTML = `<div style="color:var(--text-dim,#64748b);text-align:center;padding:40px">${data.message || '文件内容为空'}</div>`;
+      return;
+    }
+
+    // 行数信息
+    const lineInfo = data.lines ? `<span style="color:var(--text-dim,#64748b);font-size:11px">${data.lines} 行${data.truncated ? ' (已截断)' : ''} · ${data.language}</span>` : '';
+
+    // 转义 HTML
+    const escaped = data.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    body.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      ${lineInfo}
+      <button onclick="navigator.clipboard.writeText(document.getElementById('node-content-code').textContent).then(()=>this.textContent='已复制!').catch(()=>{})" style="background:var(--bg-input,#0f172a);border:1px solid var(--border,#334155);color:var(--text-secondary,#94a3b8);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px">复制</button>
+    </div>
+    <pre id="node-content-code" style="background:var(--bg-primary,#0f172a);border:1px solid var(--border,#334155);border-radius:8px;padding:16px;overflow-x:auto;font-size:13px;line-height:1.6;color:var(--text-primary,#f1f5f9);white-space:pre-wrap;word-break:break-all;margin:0;max-height:calc(85vh - 160px)">${escaped}</pre>`;
+  } catch (e) {
+    body.innerHTML = `<div style="color:var(--danger,#ef4444);text-align:center;padding:40px">请求失败: ${e.message}</div>`;
   }
 }
 </script>
