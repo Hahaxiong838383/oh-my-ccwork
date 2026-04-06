@@ -272,7 +272,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
   <aside id="sidebar">
     <div class="sb-header">
       <button class="sb-toggle" onclick="toggleSidebar()" title="收起侧边栏">☰</button>
-      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span><span class="ui-ver">v1.2 · 2026-04-06</span></div>
+      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span><span class="ui-ver">v1.4 · 2026-04-06</span></div>
       <div class="status-dot off" id="statusDot" title="检查中..."></div>
     </div>
     <button class="new-chat-btn" onclick="newChat()">+ 新对话</button>
@@ -283,6 +283,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
       <button class="nav-item" data-view="evolution" onclick="switchView('evolution')">🧬 进化中心</button>
       <button class="nav-item" data-view="patches" onclick="switchView('patches')">🔧 热补丁</button>
       <button class="nav-item" data-view="memory" onclick="switchView('memory')">🧠 记忆面板</button>
+      <button class="nav-item" data-view="graph" onclick="switchView('graph')">🕸 架构图谱</button>
       <button class="nav-item" onclick="openSessionManager()" title="管理会话">📋 管理会话</button>
     </div>
   </aside>
@@ -420,6 +421,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
         <div id="memCatList" style="color:var(--text-dim)">加载中...</div>
       </div>
     </div>
+    <div id="view-graph" class="panel-view" style="display:none;position:relative;height:calc(100vh - 20px);width:100%"></div>
   </main>
 </div>
 
@@ -442,6 +444,8 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
   </div>
 </div>
 
+<script src="/static/vendor/three.min.js"></script>
+<script src="/static/vendor/3d-force-graph.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════
    State
@@ -587,7 +591,7 @@ async function archiveMsgs(sess, msgs) {
 /* ═══════════════════════════════════════════════════
    View Switching
    ═══════════════════════════════════════════════════ */
-const VIEWS = ['chat', 'dashboard', 'config', 'evolution', 'patches', 'memory'];
+const VIEWS = ['chat', 'dashboard', 'config', 'evolution', 'patches', 'memory', 'graph'];
 function switchView(name) {
   S.view = name;
   VIEWS.forEach(v => { const el = document.getElementById('view-' + v); if (el) el.style.display = v === name ? (v === 'chat' ? 'flex' : 'block') : 'none'; });
@@ -597,6 +601,7 @@ function switchView(name) {
   else if (name === 'evolution') loadEvo();
   else if (name === 'patches') loadPatches();
   else if (name === 'memory') loadMemoryPanel();
+  else if (name === 'graph') loadGraph();
   history.replaceState(null, '', '#' + name);
 }
 
@@ -1379,6 +1384,204 @@ function exportAllSessions() {
     }
   } catch (e) { console.warn('服务端会话同步失败', e); }
 })();
+/* ═══════════════════════════════════════════════════
+   Architecture Graph (3D Force Graph)
+   ═══════════════════════════════════════════════════ */
+let _graphInstance = null;
+let _graphLayout = 'free'; // 'free' | 'layered'
+function loadGraph() {
+  if (_graphInstance) return; // 防重复初始化
+  const container = document.getElementById('view-graph');
+  if (typeof ForceGraph3D === 'undefined') {
+    container.innerHTML = '<div style="padding:40px;color:var(--text-dim);text-align:center"><h3 style="color:var(--warning)">3D 库加载失败</h3><p>无法加载 3d-force-graph CDN，请检查网络连接后刷新页面。</p><p style="font-size:12px;opacity:0.5">需要访问 cdn.jsdelivr.net</p></div>';
+    return;
+  }
+
+  // 工具栏
+  const toolbar = document.createElement('div');
+  toolbar.style.cssText = 'position:absolute;top:12px;left:12px;z-index:10;display:flex;gap:8px';
+  toolbar.innerHTML = `<button onclick="_graphResetCamera()" style="padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);cursor:pointer;font-size:12px">重置视角</button>
+    <button id="graphLayoutBtn" onclick="_graphToggleLayout()" style="padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);cursor:pointer;font-size:12px">层级排列</button>`;
+  container.appendChild(toolbar);
+
+  // 图例
+  const legend = document.createElement('div');
+  legend.style.cssText = 'position:absolute;bottom:12px;left:12px;z-index:10;display:flex;flex-wrap:wrap;gap:6px;font-size:11px';
+  const GROUP_COLORS = {Config:'#64748b',Adapters:'#22d3ee',Memory:'#818cf8',State:'#22c55e',Evolution:'#eab308',Processing:'#f97316',Tools:'#4f46e5',ToolImpl:'#a78bfa',Agent:'#ec4899',Entry:'#ef4444'};
+  Object.entries(GROUP_COLORS).forEach(([g,c]) => {
+    const d = document.createElement('span');
+    d.style.cssText = `display:inline-flex;align-items:center;gap:4px;color:${c}`;
+    d.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${c};display:inline-block"></span>${g}`;
+    legend.appendChild(d);
+  });
+  container.appendChild(legend);
+
+  // 节点数据
+  const nodes = [
+    {id:'config',group:'Config',desc:'加载 brain 配置（模型、LLM路由、数据目录）'},
+    {id:'mcp-config',group:'Config',desc:'加载 MCP 服务器配置'},
+    {id:'openai-compat',group:'Adapters',desc:'OpenAI API 兼容层（流式/非流式）'},
+    {id:'embedding',group:'Adapters',desc:'Ollama embedding API 封装'},
+    {id:'memory-store',group:'Memory',desc:'记忆条目解析与冲突检测'},
+    {id:'memory-db',group:'Memory',desc:'SQLite FTS5 + 向量搜索'},
+    {id:'brain-context',group:'Memory',desc:'记忆检索 + TF-IDF + 系统提示注入'},
+    {id:'conversation',group:'Memory',desc:'多轮对话上下文管理'},
+    {id:'user-state',group:'State',desc:'情感标注 + 会话状态推断'},
+    {id:'experience-stream',group:'State',desc:'JSONL 经验日志 + 分析'},
+    {id:'prediction-engine',group:'State',desc:'内在动机 + 预测记录'},
+    {id:'evolution-diagnosis',group:'Evolution',desc:'Eval 失败根因分析'},
+    {id:'hot-patch',group:'Evolution',desc:'JSONL 规则注入系统'},
+    {id:'evolution-engine',group:'Evolution',desc:'自进化：热补丁+关键词扩展+阈值调优'},
+    {id:'memory-intake',group:'Processing',desc:'LLM 驱动的记忆提取'},
+    {id:'memory-consolidation',group:'Processing',desc:'每日巩固：过期+重建+冲突解决'},
+    {id:'tool-registry',group:'Tools',desc:'工具注册中心 + OpenAI function calling'},
+    {id:'mcp-server',group:'Tools',desc:'MCP JSON-RPC 服务端'},
+    {id:'mcp-client',group:'Tools',desc:'MCP 子进程客户端'},
+    {id:'mcp-bridge',group:'Tools',desc:'MCP 工具桥接到 ToolRegistry'},
+    {id:'agent-loop',group:'Agent',desc:'Agent 循环：规划→调用→反应→迭代'},
+    {id:'search-memory',group:'ToolImpl',desc:'搜索记忆工具'},
+    {id:'list-memories',group:'ToolImpl',desc:'列出记忆分类工具'},
+    {id:'run-diagnosis',group:'ToolImpl',desc:'运行诊断工具'},
+    {id:'add-memory',group:'ToolImpl',desc:'添加记忆工具'},
+    {id:'brain-api',group:'Entry',desc:'OpenAI 兼容 API 处理器'},
+    {id:'server',group:'Entry',desc:'HTTP 服务器入口 + Admin UI'},
+    {id:'mcp-entry',group:'Entry',desc:'MCP stdio 入口'},
+  ];
+
+  // 边数据
+  const edgeDefs = {
+    'server':['config','brain-api','brain-context','hot-patch','experience-stream','conversation','evolution-diagnosis','evolution-engine','tool-registry','agent-loop','search-memory','list-memories','run-diagnosis','add-memory','memory-intake','memory-store','mcp-client','mcp-bridge','mcp-config'],
+    'brain-api':['config','openai-compat','brain-context','hot-patch','experience-stream','conversation','user-state','prediction-engine'],
+    'brain-context':['memory-db','embedding','experience-stream','evolution-engine'],
+    'memory-db':['embedding'],
+    'conversation':['openai-compat'],
+    'evolution-engine':['hot-patch','evolution-diagnosis'],
+    'memory-intake':['config','memory-store','openai-compat'],
+    'memory-consolidation':['openai-compat','config'],
+    'mcp-server':['tool-registry'],
+    'mcp-bridge':['mcp-client','tool-registry'],
+    'agent-loop':['tool-registry'],
+    'search-memory':['brain-context','tool-registry'],
+    'list-memories':['tool-registry'],
+    'run-diagnosis':['evolution-diagnosis','tool-registry'],
+    'add-memory':['tool-registry'],
+    'mcp-entry':['tool-registry','mcp-server','search-memory','list-memories','run-diagnosis'],
+  };
+  const links = [];
+  for (const [src, targets] of Object.entries(edgeDefs)) {
+    for (const tgt of targets) links.push({source:src,target:tgt});
+  }
+
+  // fan-in 计算
+  const fanIn = {};
+  nodes.forEach(n => fanIn[n.id] = 0);
+  links.forEach(l => fanIn[l.target] = (fanIn[l.target]||0)+1);
+  const maxFan = Math.max(...Object.values(fanIn), 1);
+
+  // group Z 层级
+  const GROUP_Z = {Config:0,Adapters:1,Memory:2,State:3,Evolution:4,Processing:5,Tools:6,ToolImpl:7,Agent:8,Entry:9};
+
+  const graphEl = document.createElement('div');
+  graphEl.id = 'graph-container';
+  graphEl.style.cssText = 'width:100%;height:100%';
+  container.appendChild(graphEl);
+
+  const Graph = ForceGraph3D()(graphEl)
+    .graphData({nodes,links})
+    .backgroundColor('#111827')
+    .nodeVal(n => 4 + (fanIn[n.id]/maxFan)*8)
+    .nodeColor(n => GROUP_COLORS[n.group]||'#888')
+    .nodeLabel(n => `<div style="background:rgba(0,0,0,0.85);padding:8px 12px;border-radius:6px;color:#fff;font-size:12px;max-width:250px"><b>${n.id}</b><br/><span style="color:#9ca3af">${n.desc}</span><br/><span style="color:${GROUP_COLORS[n.group]}">${n.group}</span> · fan-in: ${fanIn[n.id]}</div>`)
+    .linkColor(l => {
+      const srcNode = nodes.find(n=>n.id===(l.source.id||l.source));
+      return (GROUP_COLORS[srcNode?.group]||'#888')+'4D';
+    })
+    .linkDirectionalArrowLength(4)
+    .linkDirectionalArrowRelPos(1)
+    .linkDirectionalParticles(2)
+    .linkDirectionalParticleWidth(1.5)
+    .linkDirectionalParticleSpeed(0.005)
+    .linkWidth(0.5)
+    .onNodeClick(node => {
+      const dist = 120;
+      const {x,y,z} = node;
+      Graph.cameraPosition({x:x+dist,y:y+dist,z:z+dist},{x,y,z},1500);
+    })
+    .onNodeHover(node => {
+      graphEl.style.cursor = node ? 'pointer' : 'default';
+      // 高亮关联边
+      const connectedIds = new Set();
+      if (node) {
+        links.forEach(l => {
+          const s = l.source.id||l.source, t = l.target.id||l.target;
+          if (s===node.id||t===node.id) { connectedIds.add(s); connectedIds.add(t); }
+        });
+      }
+      Graph.linkWidth(l => {
+        if (!node) return 0.5;
+        const s=l.source.id||l.source, t=l.target.id||l.target;
+        return (s===node.id||t===node.id) ? 2.5 : 0.2;
+      });
+      Graph.linkDirectionalParticleWidth(l => {
+        if (!node) return 1.5;
+        const s=l.source.id||l.source, t=l.target.id||l.target;
+        return (s===node.id||t===node.id) ? 3 : 0.5;
+      });
+    })
+    .width(container.clientWidth)
+    .height(container.clientHeight);
+
+  // Canvas 纹理文字标签（THREE v0.159 UMD 提供 window.THREE）
+  if (window.THREE) {
+    Graph.nodeThreeObject(node => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const fontSize = 28;
+      ctx.font = `bold ${fontSize}px -apple-system,sans-serif`;
+      const w = ctx.measureText(node.id).width + 16;
+      canvas.width = w; canvas.height = fontSize + 12;
+      ctx.font = `bold ${fontSize}px -apple-system,sans-serif`;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(0, 0, w, canvas.height);
+      ctx.fillStyle = GROUP_COLORS[node.group] || '#ccc';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(node.id, w/2, canvas.height/2);
+      const texture = new THREE.CanvasTexture(canvas);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: texture, depthWrite: false}));
+      sprite.scale.set(w/6, (canvas.height)/6, 1);
+      sprite.position.y = 6;
+      return sprite;
+    }).nodeThreeObjectExtend(true);
+  }
+
+  _graphInstance = Graph;
+
+  // resize 响应
+  const ro = new ResizeObserver(() => {
+    if (S.view === 'graph') Graph.width(container.clientWidth).height(container.clientHeight);
+  });
+  ro.observe(container);
+}
+
+function _graphResetCamera() {
+  if (_graphInstance) _graphInstance.cameraPosition({x:0,y:0,z:500},{x:0,y:0,z:0},1000);
+}
+
+function _graphToggleLayout() {
+  if (!_graphInstance) return;
+  _graphLayout = _graphLayout==='free' ? 'layered' : 'free';
+  const btn = document.getElementById('graphLayoutBtn');
+  const GROUP_Z = {Config:0,Adapters:1,Memory:2,State:3,Evolution:4,Processing:5,Tools:6,ToolImpl:7,Agent:8,Entry:9};
+  if (_graphLayout==='layered') {
+    btn.textContent = '自由布局';
+    _graphInstance.d3Force('z', d3.forceZ(n => (GROUP_Z[n.group]||0)*60).strength(0.8));
+    _graphInstance.d3ReheatSimulation();
+  } else {
+    btn.textContent = '层级排列';
+    _graphInstance.d3Force('z', null);
+    _graphInstance.d3ReheatSimulation();
+  }
+}
 </script>
 </body>
 </html>

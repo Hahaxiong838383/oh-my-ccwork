@@ -134,6 +134,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Static vendor files (local 3D libs etc.)
+  if (path.startsWith("/static/")) {
+    const safePath = path.replace(/\.\./g, "");
+    const filePath = resolve(import.meta.dirname, safePath.slice(1));
+    if (existsSync(filePath)) {
+      const ext = filePath.endsWith(".js") ? "application/javascript" : "application/octet-stream";
+      res.writeHead(200, { "Content-Type": ext, "Cache-Control": "public, max-age=31536000" });
+      res.end(readFileSync(filePath));
+    } else {
+      json(res, 404, { error: "Not found" });
+    }
+    return;
+  }
+
   // Admin API — auth check for all /admin/api/* routes
   if (path.startsWith("/admin/api/") && !checkAdminAuth(req, res)) return;
 
