@@ -1,0 +1,162 @@
+{
+  "generatedAt": "2026-04-06T13:32:39.371Z",
+  "claudeMd": true,
+  "docs": [
+    {
+      "path": "docs/BACKEND_SETUP_FOR_AI.md",
+      "type": "file"
+    },
+    {
+      "path": "docs/FAQ.md",
+      "type": "file"
+    },
+    {
+      "path": "docs/harness",
+      "type": "dir"
+    },
+    {
+      "path": "docs/harness/identity.md",
+      "type": "file"
+    },
+    {
+      "path": "docs/harness/lifecycle.md",
+      "type": "file"
+    },
+    {
+      "path": "docs/harness/routing.md",
+      "type": "file"
+    },
+    {
+      "path": "docs/harness/tools.md",
+      "type": "file"
+    },
+    {
+      "path": "docs/harness/verification.md",
+      "type": "file"
+    },
+    {
+      "path": "docs/hooks-fix.md",
+      "type": "file"
+    },
+    {
+      "path": "docs/memory-rules.md",
+      "type": "file"
+    },
+    {
+      "path": "docs/memory-system.md",
+      "type": "file"
+    },
+    {
+      "path": "docs/omc-guide.md",
+      "type": "file"
+    },
+    {
+      "path": "docs/setup-guide.md",
+      "type": "file"
+    }
+  ],
+  "skills": [
+    "agent-orchestration",
+    "ai-news-radar",
+    "attention-audit",
+    "cc-eye",
+    "cc-lite",
+    "cc-remote-deploy",
+    "cc-usage",
+    "collect",
+    "daily-tech-pulse",
+    "dashboard",
+    "decision",
+    "design-review",
+    "design-system",
+    "desktop",
+    "evomap-assets",
+    "feishu-mcp",
+    "fnos-nas",
+    "github-radar",
+    "gold-analysis",
+    "investigate",
+    "mem0-patterns",
+    "multi-session",
+    "mycc",
+    "office-hours",
+    "plan-ceo",
+    "read-gzh",
+    "restart",
+    "retro",
+    "scheduler",
+    "setup",
+    "skill-creator",
+    "ssh-tunnel",
+    "tell-me",
+    "theory-radar",
+    "xray"
+  ],
+  "multiAgent": [
+    {
+      "path": "multi-agent/MODES.md",
+      "type": "file"
+    },
+    {
+      "path": "multi-agent/RULES.md",
+      "type": "file"
+    },
+    {
+      "path": "multi-agent/context",
+      "type": "dir"
+    },
+    {
+      "path": "multi-agent/context/AC.md",
+      "type": "file"
+    },
+    {
+      "path": "multi-agent/context/ARCH.md",
+      "type": "file"
+    },
+    {
+      "path": "multi-agent/context/SPEC.md",
+      "type": "file"
+    },
+    {
+      "path": "multi-agent/hooks",
+      "type": "dir"
+    },
+    {
+      "path": "multi-agent/hooks/mode-detector.mjs",
+      "type": "file"
+    },
+    {
+      "path": "multi-agent/scripts",
+      "type": "dir"
+    },
+    {
+      "path": "multi-agent/scripts/checkpoint.sh",
+      "type": "file"
+    },
+    {
+      "path": "multi-agent/scripts/workflow.sh",
+      "type": "file"
+    },
+    {
+      "path": "multi-agent/scripts/worktree-spawn.sh",
+      "type": "file"
+    }
+  ],
+  "references": {
+    "CLAUDE.md": [
+      "0-System/SOUL.md",
+      "docs/memory-system.md",
+      "docs/setup-guide.md",
+      "docs/FAQ.md",
+      "0-System/data_structure.md",
+      "docs/memory-system.md",
+      "docs/setup-guide.md",
+      "docs/omc-guide.md",
+      "docs/FAQ.md",
+      "multi-agent/RULES.md"
+    ],
+    "docs/harness/tools.md": [
+      "./setup-guide.md"
+    ]
+  }
+}

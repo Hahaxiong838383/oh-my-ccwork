@@ -4,6 +4,7 @@
  */
 
 import http from "http";
+import { randomBytes } from "crypto";
 import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { loadConfig } from "./config.js";
@@ -14,6 +15,7 @@ import { getTodayStats, getRecentDayStats, getInsights, getHealthMetrics, getMem
 import { getConversationStats } from "./services/conversation.js";
 import { diagnoseLatestEval } from "./services/evolution-diagnosis.js";
 import { runEvolutionCycle } from "./services/evolution-engine.js";
+import { buildGraphData } from "./services/graph-scanner.js";
 import { ToolRegistry } from "./services/tool-registry.js";
 import { runAgentLoop } from "./services/agent-loop.js";
 import { searchMemoryTool } from "./tools/search-memory.js";
@@ -27,7 +29,7 @@ import { McpClient } from "./services/mcp-client.js";
 import { bridgeMcpTools, type BridgeResult } from "./services/mcp-bridge.js";
 import { getEnabledMcpServers, type McpServerConfig } from "./mcp-config.js";
 
-const config = loadConfig();
+const config = loadConfig(); // dotenv.config() 在此内部调用
 const brainApi = new BrainApi(config);
 
 // ─── MCP 连接池 ───
@@ -89,12 +91,25 @@ async function bridgeAllMcpTools(registry: ToolRegistry): Promise<void> {
 
 const ADMIN_HTML_PATH = resolve(import.meta.dirname, "admin/admin-ui.html");
 
-// P3: Admin auth — check Authorization: Bearer <BRAIN_API_KEY>
+// Admin auth — username/password login with session token (读取在 loadConfig() 之后，确保 dotenv 已加载)
+let ADMIN_USER = process.env.ADMIN_USER || "admin";
+let ADMIN_PASS = process.env.ADMIN_PASS || "";
+const adminSessions = new Map<string, number>(); // token → expiry timestamp
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
+function generateSessionToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
 function checkAdminAuth(req: http.IncomingMessage, res: http.ServerResponse): boolean {
-  const key = config.brainApiKey;
-  if (!key || key === "sk-brain-dev") return true; // no auth if default key
+  // 无密码配置时不验证（开发模式）
+  if (!ADMIN_PASS) return true;
   const auth = req.headers.authorization;
-  if (auth === `Bearer ${key}`) return true;
+  if (!auth?.startsWith("Bearer ")) { json(res, 401, { error: "Unauthorized" }); return false; }
+  const token = auth.slice(7);
+  const expiry = adminSessions.get(token);
+  if (expiry && expiry > Date.now()) return true;
+  if (expiry) adminSessions.delete(token); // 过期清理
   json(res, 401, { error: "Unauthorized" });
   return false;
 }
@@ -148,7 +163,25 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Admin API — auth check for all /admin/api/* routes
+  // Login endpoint (no auth required)
+  if (path === "/admin/api/login" && req.method === "POST") {
+    try {
+      const body = JSON.parse(await readBody(req));
+      const { username, password } = body;
+      if (username === ADMIN_USER && password === ADMIN_PASS && ADMIN_PASS) {
+        const token = generateSessionToken();
+        adminSessions.set(token, Date.now() + SESSION_TTL_MS);
+        json(res, 200, { token, expiresIn: SESSION_TTL_MS / 1000 });
+      } else {
+        json(res, 401, { error: "用户名或密码错误" });
+      }
+    } catch {
+      json(res, 400, { error: "Invalid request" });
+    }
+    return;
+  }
+
+  // Admin API — auth check for all /admin/api/* routes (except login)
   if (path.startsWith("/admin/api/") && !checkAdminAuth(req, res)) return;
 
   if (path === "/admin/api/status" && req.method === "GET") {
@@ -173,6 +206,16 @@ const server = http.createServer(async (req, res) => {
       patches: { total: patches.length, active: patches.filter((p) => p.active).length },
       conversations: getConversationStats(),
     });
+    return;
+  }
+
+  // Admin API: 项目级架构图谱数据
+  if (path === "/admin/api/graph" && req.method === "GET") {
+    if (!checkAdminAuth(req, res)) return;
+    const brainRoot = resolve(import.meta.dirname, "..");
+    const layer = url.searchParams.get("layer") as "code" | "data" | "config" | null;
+    const data = buildGraphData(brainRoot, config.dataDir, layer ?? undefined);
+    json(res, 200, data);
     return;
   }
 

@@ -272,7 +272,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
   <aside id="sidebar">
     <div class="sb-header">
       <button class="sb-toggle" onclick="toggleSidebar()" title="收起侧边栏">☰</button>
-      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span><span class="ui-ver">v1.5 · 2026-04-06</span></div>
+      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span><span class="ui-ver">v2.0 · 2026-04-06</span></div>
       <div class="status-dot off" id="statusDot" title="检查中..."></div>
     </div>
     <button class="new-chat-btn" onclick="newChat()">+ 新对话</button>
@@ -510,21 +510,32 @@ async function aFetch(url, opts = {}) {
 function showAuth() {
   if (document.getElementById('authOv')) return;
   const d = document.createElement('div'); d.id = 'authOv'; d.className = 'auth-ov';
-  d.innerHTML = `<div class="auth-box"><h3>🔐 需要认证</h3>
-    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px">请输入 Admin 密码</p>
-    <div class="auth-err" id="authErr">密码错误</div>
-    <input type="password" id="authPw" placeholder="Admin Password" onkeydown="if(event.key==='Enter')submitAuth()">
+  d.innerHTML = `<div class="auth-box"><h3>🔐 mycc-brain 登录</h3>
+    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px">请输入账号和密码</p>
+    <div class="auth-err" id="authErr">用户名或密码错误</div>
+    <input type="text" id="authUser" placeholder="用户名" autocomplete="username" style="margin-bottom:8px" onkeydown="if(event.key==='Enter')document.getElementById('authPw').focus()">
+    <input type="password" id="authPw" placeholder="密码" autocomplete="current-password" onkeydown="if(event.key==='Enter')submitAuth()">
     <button class="btn btn-primary" onclick="submitAuth()" style="width:100%">登录</button></div>`;
   document.body.appendChild(d);
-  setTimeout(() => document.getElementById('authPw')?.focus(), 100);
+  setTimeout(() => document.getElementById('authUser')?.focus(), 100);
 }
 async function submitAuth() {
-  const pw = document.getElementById('authPw').value.trim(); if (!pw) return;
-  localStorage.setItem('brain_admin_token', pw);
+  const user = document.getElementById('authUser').value.trim();
+  const pw = document.getElementById('authPw').value.trim();
+  if (!user || !pw) return;
   try {
-    const r = await fetch('/admin/api/status', { headers: { Authorization: 'Bearer ' + pw } });
-    if (r.status === 401) { document.getElementById('authErr').style.display = 'block'; localStorage.removeItem('brain_admin_token'); return; }
-    document.getElementById('authOv')?.remove(); refreshStatus();
+    const r = await fetch('/admin/api/login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({username: user, password: pw})
+    });
+    const d = await r.json();
+    if (r.status === 401 || !d.token) {
+      document.getElementById('authErr').style.display = 'block';
+      return;
+    }
+    localStorage.setItem('brain_admin_token', d.token);
+    document.getElementById('authOv')?.remove();
+    refreshStatus();
   } catch { document.getElementById('authErr').style.display = 'block'; }
 }
 
@@ -1362,7 +1373,7 @@ function exportAllSessions() {
    Init
    ═══════════════════════════════════════════════════ */
 (async function init(){
-  if(!localStorage.getItem('brain_admin_token')) localStorage.setItem('brain_admin_token','sk-brain-dev');
+  // 登录 token 由 /admin/api/login 返回，不再自动设置默认值
   loadState(); applySB(); applyMode(); renderSess(); renderMsgs();
   if(innerWidth<768&&!localStorage.getItem('brain_sidebar_collapsed')){S.collapsed=true;applySB()}
   // Hash routing
@@ -1385,176 +1396,124 @@ function exportAllSessions() {
   } catch (e) { console.warn('服务端会话同步失败', e); }
 })();
 /* ═══════════════════════════════════════════════════
-   Architecture Graph (3D Force Graph)
+   Architecture Graph (3D Force Graph) — v2.0 项目级
    ═══════════════════════════════════════════════════ */
 let _graphInstance = null;
-let _graphLayout = 'free'; // 'free' | 'layered'
-function loadGraph() {
-  if (_graphInstance) return; // 防重复初始化
+let _graphLayout = 'free';
+let _graphFullData = null;
+let _graphActiveFilter = 'all';
+
+const GROUP_COLORS = {
+  Folder:'#94a3b8',Config:'#64748b',Adapters:'#22d3ee',Admin:'#f472b6',Memory:'#818cf8',
+  State:'#22c55e',Evolution:'#eab308',Processing:'#f97316',Tools:'#4f46e5',ToolImpl:'#a78bfa',
+  Agent:'#ec4899',Eval:'#fb923c',Entry:'#ef4444',
+  Identity:'#06b6d4',MemoryData:'#8b5cf6',Events:'#14b8a6',Status:'#6366f1',Archive:'#475569',
+  RootConfig:'#f43f5e',Docs:'#d946ef',Harness:'#a855f7',Skills:'#fb923c',
+  MultiAgent:'#84cc16',AgentContext:'#22d3ee',AgentInfra:'#64748b',
+};
+const LINK_COLORS = {contain:'rgba(148,163,184,0.15)',reference:'rgba(217,70,239,0.4)',dataflow:'rgba(34,211,238,0.5)'};
+const GROUP_Z = {
+  Folder:-1,Config:0,Adapters:1,Admin:1,Memory:2,State:3,Evolution:4,Processing:5,Tools:6,ToolImpl:7,Agent:8,Eval:9,Entry:10,
+  Identity:-3,MemoryData:-2,Events:-1,Status:-1,Archive:-2,
+  RootConfig:12,Docs:13,Harness:14,Skills:15,MultiAgent:16,AgentContext:16,AgentInfra:17,
+};
+
+async function loadGraph() {
+  if (_graphInstance) return;
   const container = document.getElementById('view-graph');
   if (typeof ForceGraph3D === 'undefined') {
-    container.innerHTML = '<div style="padding:40px;color:var(--text-dim);text-align:center"><h3 style="color:var(--warning)">3D 库加载失败</h3><p>无法加载 3d-force-graph CDN，请检查网络连接后刷新页面。</p><p style="font-size:12px;opacity:0.5">需要访问 cdn.jsdelivr.net</p></div>';
+    container.innerHTML = '<div style="padding:40px;color:var(--text-dim);text-align:center"><h3 style="color:var(--warning)">3D 库加载失败</h3><p>请检查 /static/vendor/ 下的 3d-force-graph.min.js</p></div>';
     return;
   }
-
+  container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-dim)">加载图谱数据...</div>';
+  try {
+    const resp = await fetch('/admin/api/graph', {headers:{'Authorization':`Bearer ${getToken()}`}});
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    _graphFullData = await resp.json();
+  } catch(e) {
+    container.innerHTML = `<div style="padding:40px;color:var(--danger)">加载失败: ${e.message}</div>`;
+    return;
+  }
+  container.innerHTML = '';
+  const m = _graphFullData.meta;
+  const total = m.codeCount+m.dataCount+m.configCount;
   // 工具栏
   const toolbar = document.createElement('div');
-  toolbar.style.cssText = 'position:absolute;top:12px;left:12px;z-index:10;display:flex;gap:8px';
-  toolbar.innerHTML = `<button onclick="_graphResetCamera()" style="padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);cursor:pointer;font-size:12px">重置视角</button>
-    <button id="graphLayoutBtn" onclick="_graphToggleLayout()" style="padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);cursor:pointer;font-size:12px">层级排列</button>`;
+  toolbar.style.cssText = 'position:absolute;top:12px;left:12px;z-index:10;display:flex;gap:6px;flex-wrap:wrap';
+  const bs = 'padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);cursor:pointer;font-size:12px';
+  toolbar.innerHTML = `<button onclick="_graphResetCamera()" style="${bs}">重置视角</button>
+    <button id="graphLayoutBtn" onclick="_graphToggleLayout()" style="${bs}">层级排列</button>
+    <span style="width:1px;height:24px;background:var(--border);margin:0 2px;align-self:center"></span>
+    <button class="gf-btn active" data-layer="all" onclick="_graphFilter('all')" style="${bs};background:var(--accent);color:#fff;border-color:var(--accent)">全部 (${total})</button>
+    <button class="gf-btn" data-layer="code" onclick="_graphFilter('code')" style="${bs}">代码 (${m.codeCount})</button>
+    <button class="gf-btn" data-layer="data" onclick="_graphFilter('data')" style="${bs}">数据 (${m.dataCount})</button>
+    <button class="gf-btn" data-layer="config" onclick="_graphFilter('config')" style="${bs}">配置 (${m.configCount})</button>`;
   container.appendChild(toolbar);
-
+  if (m.snapshotAge) {
+    const info = document.createElement('div');
+    info.style.cssText = 'position:absolute;top:12px;right:12px;z-index:10;font-size:11px;color:var(--text-dim);opacity:0.6';
+    info.textContent = `配置层快照: ${m.snapshotAge}`;
+    container.appendChild(info);
+  }
   // 图例
   const legend = document.createElement('div');
-  legend.style.cssText = 'position:absolute;bottom:12px;left:12px;z-index:10;display:flex;flex-wrap:wrap;gap:6px;font-size:11px';
-  const GROUP_COLORS = {Folder:'#94a3b8',Config:'#64748b',Adapters:'#22d3ee',Admin:'#f472b6',Memory:'#818cf8',State:'#22c55e',Evolution:'#eab308',Processing:'#f97316',Tools:'#4f46e5',ToolImpl:'#a78bfa',Agent:'#ec4899',Eval:'#fb923c',Entry:'#ef4444'};
-  Object.entries(GROUP_COLORS).forEach(([g,c]) => {
-    const d = document.createElement('span');
-    d.style.cssText = `display:inline-flex;align-items:center;gap:4px;color:${c}`;
-    d.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${c};display:inline-block"></span>${g}`;
-    legend.appendChild(d);
+  legend.style.cssText = 'position:absolute;bottom:12px;left:12px;z-index:10;display:flex;gap:16px;font-size:10px;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:8px';
+  [{t:'代码层',g:['Entry','Memory','Processing','Evolution','State','Tools','Agent','Eval','Adapters']},
+   {t:'数据层',g:['Identity','MemoryData','Events','Status','Archive']},
+   {t:'配置层',g:['RootConfig','Docs','Harness','Skills','MultiAgent']}].forEach(sec => {
+    const col = document.createElement('div');
+    col.innerHTML = `<div style="font-weight:600;margin-bottom:3px;color:var(--text-secondary)">${sec.t}</div>` +
+      sec.g.filter(g=>GROUP_COLORS[g]).map(g => `<span style="display:inline-flex;align-items:center;gap:3px;margin-right:6px;color:${GROUP_COLORS[g]}"><span style="width:6px;height:6px;border-radius:50%;background:${GROUP_COLORS[g]};display:inline-block"></span>${g}</span>`).join('');
+    legend.appendChild(col);
   });
+  const ec = document.createElement('div');
+  ec.innerHTML = '<div style="font-weight:600;margin-bottom:3px;color:var(--text-secondary)">边</div>' +
+    [{l:'import',c:'#818cf8'},{l:'reference',c:'#d946ef'},{l:'dataflow',c:'#22d3ee'}].map(x=>`<span style="color:${x.c};margin-right:6px">— ${x.l}</span>`).join('');
+  legend.appendChild(ec);
   container.appendChild(legend);
+  _renderGraph(container, _graphFullData);
+}
 
-  // 节点数据
-  // 文件夹节点（大）+ 文件节点（小），type: 'dir'|'file'
-  const nodes = [
-    // 文件夹（大节点）
-    {id:'src/',group:'Folder',desc:'源码根目录',type:'dir'},
-    {id:'adapters/',group:'Folder',desc:'外部 API 适配器',type:'dir'},
-    {id:'admin/',group:'Folder',desc:'Admin UI 管理界面',type:'dir'},
-    {id:'eval/',group:'Folder',desc:'评估与测试框架',type:'dir'},
-    {id:'services/',group:'Folder',desc:'核心业务服务（记忆/进化/状态/MCP）',type:'dir'},
-    {id:'tools/',group:'Folder',desc:'Agent 工具实现',type:'dir'},
-    // src/ 根文件
-    {id:'config.ts',group:'Config',desc:'加载 brain 配置（模型、LLM路由、数据目录）',type:'file'},
-    {id:'mcp-config.ts',group:'Config',desc:'加载 MCP 服务器配置',type:'file'},
-    {id:'brain-api.ts',group:'Entry',desc:'OpenAI 兼容 API 处理器',type:'file'},
-    {id:'server.ts',group:'Entry',desc:'HTTP 服务器入口 + Admin UI + 静态文件',type:'file'},
-    {id:'mcp-entry.ts',group:'Entry',desc:'MCP stdio 入口',type:'file'},
-    // adapters/
-    {id:'openai-compat.ts',group:'Adapters',desc:'OpenAI API 兼容层（流式/非流式）',type:'file'},
-    // admin/
-    {id:'admin-ui.html',group:'Admin',desc:'Admin UI 单文件（Chat/Agent/Compare/图谱）',type:'file'},
-    // eval/
-    {id:'eval.ts',group:'Eval',desc:'评估主入口',type:'file'},
-    {id:'eval-report.ts',group:'Eval',desc:'评估报告生成',type:'file'},
-    {id:'http-direct.ts',group:'Eval',desc:'直连 HTTP 测试',type:'file'},
-    {id:'judge-evaluator.ts',group:'Eval',desc:'LLM 评审评估器',type:'file'},
-    {id:'rate-limiter.ts',group:'Eval',desc:'请求限速器',type:'file'},
-    {id:'retrieval-evaluator.ts',group:'Eval',desc:'检索质量评估器',type:'file'},
-    {id:'test-cases.ts',group:'Eval',desc:'测试用例定义',type:'file'},
-    // services/
-    {id:'brain-context.ts',group:'Memory',desc:'记忆检索 + TF-IDF + 系统提示注入',type:'file'},
-    {id:'memory-db.ts',group:'Memory',desc:'SQLite FTS5 + 向量搜索',type:'file'},
-    {id:'memory-store.ts',group:'Memory',desc:'记忆条目解析与冲突检测',type:'file'},
-    {id:'conversation.ts',group:'Memory',desc:'多轮对话上下文管理',type:'file'},
-    {id:'embedding.ts',group:'Adapters',desc:'Ollama embedding API 封装',type:'file'},
-    {id:'user-state.ts',group:'State',desc:'情感标注 + 会话状态推断',type:'file'},
-    {id:'experience-stream.ts',group:'State',desc:'JSONL 经验日志 + 分析',type:'file'},
-    {id:'prediction-engine.ts',group:'State',desc:'内在动机 + 预测记录',type:'file'},
-    {id:'evolution-diagnosis.ts',group:'Evolution',desc:'Eval 失败根因分析',type:'file'},
-    {id:'hot-patch.ts',group:'Evolution',desc:'JSONL 规则注入系统',type:'file'},
-    {id:'evolution-engine.ts',group:'Evolution',desc:'自进化：热补丁+关键词扩展+阈值调优',type:'file'},
-    {id:'memory-intake.ts',group:'Processing',desc:'LLM 驱动的记忆提取',type:'file'},
-    {id:'memory-consolidation.ts',group:'Processing',desc:'每日巩固：过期+重建+冲突解决',type:'file'},
-    {id:'tool-registry.ts',group:'Tools',desc:'工具注册中心 + OpenAI function calling',type:'file'},
-    {id:'mcp-server.ts',group:'Tools',desc:'MCP JSON-RPC 服务端',type:'file'},
-    {id:'mcp-client.ts',group:'Tools',desc:'MCP 子进程客户端',type:'file'},
-    {id:'mcp-bridge.ts',group:'Tools',desc:'MCP 工具桥接到 ToolRegistry',type:'file'},
-    {id:'agent-loop.ts',group:'Agent',desc:'Agent 循环：规划→调用→反应→迭代',type:'file'},
-    // tools/
-    {id:'search-memory.ts',group:'ToolImpl',desc:'搜索记忆工具',type:'file'},
-    {id:'list-memories.ts',group:'ToolImpl',desc:'列出记忆分类工具',type:'file'},
-    {id:'run-diagnosis.ts',group:'ToolImpl',desc:'运行诊断工具',type:'file'},
-    {id:'add-memory.ts',group:'ToolImpl',desc:'添加记忆工具',type:'file'},
-  ];
-
-  // 边数据：包含关系（虚线）+ import 依赖（实线）
-  const containEdges = {
-    'src/':['adapters/','admin/','eval/','services/','tools/','config.ts','mcp-config.ts','brain-api.ts','server.ts','mcp-entry.ts'],
-    'adapters/':['openai-compat.ts'],
-    'admin/':['admin-ui.html'],
-    'eval/':['eval.ts','eval-report.ts','http-direct.ts','judge-evaluator.ts','rate-limiter.ts','retrieval-evaluator.ts','test-cases.ts'],
-    'services/':['brain-context.ts','memory-db.ts','memory-store.ts','conversation.ts','embedding.ts','user-state.ts','experience-stream.ts','prediction-engine.ts','evolution-diagnosis.ts','hot-patch.ts','evolution-engine.ts','memory-intake.ts','memory-consolidation.ts','tool-registry.ts','mcp-server.ts','mcp-client.ts','mcp-bridge.ts','agent-loop.ts'],
-    'tools/':['search-memory.ts','list-memories.ts','run-diagnosis.ts','add-memory.ts'],
-  };
-  const importEdges = {
-    'server.ts':['config.ts','brain-api.ts','brain-context.ts','hot-patch.ts','experience-stream.ts','conversation.ts','evolution-diagnosis.ts','evolution-engine.ts','tool-registry.ts','agent-loop.ts','search-memory.ts','list-memories.ts','run-diagnosis.ts','add-memory.ts','memory-intake.ts','memory-store.ts','mcp-client.ts','mcp-bridge.ts','mcp-config.ts'],
-    'brain-api.ts':['config.ts','openai-compat.ts','brain-context.ts','hot-patch.ts','experience-stream.ts','conversation.ts','user-state.ts','prediction-engine.ts'],
-    'brain-context.ts':['memory-db.ts','embedding.ts','experience-stream.ts','evolution-engine.ts'],
-    'memory-db.ts':['embedding.ts'],
-    'conversation.ts':['openai-compat.ts'],
-    'evolution-engine.ts':['hot-patch.ts','evolution-diagnosis.ts'],
-    'memory-intake.ts':['config.ts','memory-store.ts','openai-compat.ts'],
-    'memory-consolidation.ts':['openai-compat.ts','config.ts'],
-    'mcp-server.ts':['tool-registry.ts'],
-    'mcp-bridge.ts':['mcp-client.ts','tool-registry.ts'],
-    'agent-loop.ts':['tool-registry.ts'],
-    'search-memory.ts':['brain-context.ts','tool-registry.ts'],
-    'list-memories.ts':['tool-registry.ts'],
-    'run-diagnosis.ts':['evolution-diagnosis.ts','tool-registry.ts'],
-    'add-memory.ts':['tool-registry.ts'],
-    'mcp-entry.ts':['tool-registry.ts','mcp-server.ts','search-memory.ts','list-memories.ts','run-diagnosis.ts'],
-    'eval.ts':['test-cases.ts','http-direct.ts','judge-evaluator.ts','retrieval-evaluator.ts','eval-report.ts','rate-limiter.ts'],
-  };
-  const links = [];
-  for (const [src, targets] of Object.entries(containEdges)) {
-    for (const tgt of targets) links.push({source:src,target:tgt,type:'contain'});
-  }
-  for (const [src, targets] of Object.entries(importEdges)) {
-    for (const tgt of targets) links.push({source:src,target:tgt,type:'import'});
-  }
-
-  // fan-in 计算（只算 import 边）
+function _renderGraph(container, data) {
+  const {nodes, links} = data;
   const fanIn = {};
   nodes.forEach(n => fanIn[n.id] = 0);
-  links.filter(l=>l.type==='import').forEach(l => fanIn[l.target] = (fanIn[l.target]||0)+1);
+  links.filter(l=>l.type==='import'||l.type==='dataflow').forEach(l => fanIn[l.target] = (fanIn[l.target]||0)+1);
   const maxFan = Math.max(...Object.values(fanIn), 1);
-
-  // group Z 层级
-  const GROUP_Z = {Folder:-1,Config:0,Adapters:1,Admin:1,Memory:2,State:3,Evolution:4,Processing:5,Tools:6,ToolImpl:7,Agent:8,Eval:9,Entry:10};
-
   const graphEl = document.createElement('div');
   graphEl.id = 'graph-container';
   graphEl.style.cssText = 'width:100%;height:100%';
   container.appendChild(graphEl);
-
   const Graph = ForceGraph3D()(graphEl)
     .graphData({nodes,links})
     .backgroundColor('#111827')
     .nodeVal(n => n.type==='dir' ? 18 : 3 + (fanIn[n.id]/maxFan)*7)
     .nodeColor(n => GROUP_COLORS[n.group]||'#888')
-    .nodeLabel(n => `<div style="background:rgba(0,0,0,0.85);padding:8px 12px;border-radius:6px;color:#fff;font-size:12px;max-width:250px"><b>${n.id}</b><br/><span style="color:#9ca3af">${n.desc}</span><br/><span style="color:${GROUP_COLORS[n.group]}">${n.group}</span> · fan-in: ${fanIn[n.id]}</div>`)
-    .linkColor(l => {
-      if ((l.type||l.__type)==='contain') return 'rgba(148,163,184,0.15)';
-      const srcNode = nodes.find(n=>n.id===(l.source.id||l.source));
-      return (GROUP_COLORS[srcNode?.group]||'#888')+'4D';
+    .nodeLabel(n => {
+      const ll = {code:'代码层',data:'数据层',config:'配置层'}[n.layer]||'';
+      return `<div style="background:rgba(0,0,0,0.85);padding:8px 12px;border-radius:6px;color:#fff;font-size:12px;max-width:280px"><b>${n.label||n.id}</b><br/><span style="color:#9ca3af">${n.desc||''}</span><br/><span style="color:${GROUP_COLORS[n.group]}">${n.group}</span> · ${ll} · fan-in: ${fanIn[n.id]||0}</div>`;
     })
-    .linkWidth(l => (l.type||l.__type)==='contain' ? 0.3 : 0.5)
-    .linkDirectionalArrowLength(3)
+    .linkColor(l => {
+      const t = l.type||'import';
+      if (LINK_COLORS[t]) return LINK_COLORS[t];
+      const sn = nodes.find(n=>n.id===(l.source.id||l.source));
+      return (GROUP_COLORS[sn?.group]||'#888')+'4D';
+    })
+    .linkWidth(l => ({contain:0.3,dataflow:0.8,reference:0.6}[l.type]||0.5))
+    .linkDirectionalArrowLength(l => l.type==='contain'?0:3)
     .linkDirectionalArrowRelPos(1)
-    .linkDirectionalParticles(2)
+    .linkDirectionalParticles(l => ({contain:0,dataflow:3,reference:1}[l.type]??2))
     .linkDirectionalParticleWidth(1.5)
-    .linkDirectionalParticleSpeed(0.005)
-    .linkWidth(0.5)
+    .linkDirectionalParticleSpeed(l => l.type==='dataflow'?0.008:0.005)
+    .linkDirectionalParticleColor(l => ({dataflow:'#22d3ee',reference:'#d946ef'}[l.type]||null))
     .onNodeClick(node => {
-      const dist = 120;
-      const {x,y,z} = node;
-      Graph.cameraPosition({x:x+dist,y:y+dist,z:z+dist},{x,y,z},1500);
+      const d=120,{x,y,z}=node;
+      Graph.cameraPosition({x:x+d,y:y+d,z:z+d},{x,y,z},1500);
     })
     .onNodeHover(node => {
       graphEl.style.cursor = node ? 'pointer' : 'default';
-      // 高亮关联边
-      const connectedIds = new Set();
-      if (node) {
-        links.forEach(l => {
-          const s = l.source.id||l.source, t = l.target.id||l.target;
-          if (s===node.id||t===node.id) { connectedIds.add(s); connectedIds.add(t); }
-        });
-      }
       Graph.linkWidth(l => {
-        if (!node) return 0.5;
+        if (!node) return {contain:0.3,dataflow:0.8,reference:0.6}[l.type]||0.5;
         const s=l.source.id||l.source, t=l.target.id||l.target;
         return (s===node.id||t===node.id) ? 2.5 : 0.2;
       });
@@ -1566,33 +1525,30 @@ function loadGraph() {
     })
     .width(container.clientWidth)
     .height(container.clientHeight);
-
-  // Canvas 纹理文字标签（THREE v0.159 UMD 提供 window.THREE）
   if (window.THREE) {
     Graph.nodeThreeObject(node => {
+      if (node.type==='file' && (fanIn[node.id]||0) <= 1) return null;
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const fontSize = 28;
-      ctx.font = `bold ${fontSize}px -apple-system,sans-serif`;
-      const w = ctx.measureText(node.id).width + 16;
-      canvas.width = w; canvas.height = fontSize + 12;
-      ctx.font = `bold ${fontSize}px -apple-system,sans-serif`;
+      const fs = node.type==='dir'?28:24;
+      const text = node.label||node.id;
+      ctx.font = `bold ${fs}px -apple-system,sans-serif`;
+      const w = ctx.measureText(text).width + 16;
+      canvas.width = w; canvas.height = fs + 12;
+      ctx.font = `bold ${fs}px -apple-system,sans-serif`;
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillRect(0, 0, w, canvas.height);
       ctx.fillStyle = GROUP_COLORS[node.group] || '#ccc';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(node.id, w/2, canvas.height/2);
+      ctx.fillText(text, w/2, canvas.height/2);
       const texture = new THREE.CanvasTexture(canvas);
       const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: texture, depthWrite: false}));
-      sprite.scale.set(w/6, (canvas.height)/6, 1);
+      sprite.scale.set(w/6, canvas.height/6, 1);
       sprite.position.y = 6;
       return sprite;
     }).nodeThreeObjectExtend(true);
   }
-
   _graphInstance = Graph;
-
-  // resize 响应
   const ro = new ResizeObserver(() => {
     if (S.view === 'graph') Graph.width(container.clientWidth).height(container.clientHeight);
   });
@@ -1600,17 +1556,40 @@ function loadGraph() {
 }
 
 function _graphResetCamera() {
-  if (_graphInstance) _graphInstance.cameraPosition({x:0,y:0,z:500},{x:0,y:0,z:0},1000);
+  if (_graphInstance) _graphInstance.cameraPosition({x:0,y:0,z:600},{x:0,y:0,z:0},1000);
+}
+
+function _graphFilter(layer) {
+  if (!_graphFullData || !_graphInstance) return;
+  _graphActiveFilter = layer;
+  document.querySelectorAll('.gf-btn').forEach(b => {
+    const act = b.dataset.layer === layer;
+    b.style.background = act ? 'var(--accent)' : 'var(--bg-input)';
+    b.style.color = act ? '#fff' : 'var(--text-primary)';
+    b.style.borderColor = act ? 'var(--accent)' : 'var(--border)';
+  });
+  if (layer === 'all') {
+    _graphInstance.graphData({nodes:_graphFullData.nodes, links:_graphFullData.links});
+  } else {
+    const ids = new Set(_graphFullData.nodes.filter(n=>n.layer===layer).map(n=>n.id));
+    _graphInstance.graphData({
+      nodes: _graphFullData.nodes.filter(n=>n.layer===layer),
+      links: _graphFullData.links.filter(l=>{
+        const s=typeof l.source==='object'?l.source.id:l.source;
+        const t=typeof l.target==='object'?l.target.id:l.target;
+        return ids.has(s)&&ids.has(t);
+      })
+    });
+  }
 }
 
 function _graphToggleLayout() {
   if (!_graphInstance) return;
   _graphLayout = _graphLayout==='free' ? 'layered' : 'free';
   const btn = document.getElementById('graphLayoutBtn');
-  const GROUP_Z = {Config:0,Adapters:1,Memory:2,State:3,Evolution:4,Processing:5,Tools:6,ToolImpl:7,Agent:8,Entry:9};
   if (_graphLayout==='layered') {
     btn.textContent = '自由布局';
-    _graphInstance.d3Force('z', d3.forceZ(n => (GROUP_Z[n.group]||0)*60).strength(0.8));
+    _graphInstance.d3Force('z', d3.forceZ(n => (GROUP_Z[n.group]??0)*60).strength(0.8));
     _graphInstance.d3ReheatSimulation();
   } else {
     btn.textContent = '层级排列';
