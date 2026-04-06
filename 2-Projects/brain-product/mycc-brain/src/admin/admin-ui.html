@@ -272,7 +272,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
   <aside id="sidebar">
     <div class="sb-header">
       <button class="sb-toggle" onclick="toggleSidebar()" title="收起侧边栏">☰</button>
-      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span><span class="ui-ver">v2.0 · 2026-04-06</span></div>
+      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span><span class="ui-ver">v2.1 · 2026-04-06</span></div>
       <div class="status-dot off" id="statusDot" title="检查中..."></div>
     </div>
     <button class="new-chat-btn" onclick="newChat()">+ 新对话</button>
@@ -1411,7 +1411,7 @@ const GROUP_COLORS = {
   RootConfig:'#f43f5e',Docs:'#d946ef',Harness:'#a855f7',Skills:'#fb923c',
   MultiAgent:'#84cc16',AgentContext:'#22d3ee',AgentInfra:'#64748b',
 };
-const LINK_COLORS = {contain:'rgba(148,163,184,0.15)',reference:'rgba(217,70,239,0.4)',dataflow:'rgba(34,211,238,0.5)'};
+const LINK_COLORS = {contain:'rgba(148,163,184,0.3)',reference:'rgba(217,70,239,0.4)',dataflow:'rgba(34,211,238,0.5)'};
 const GROUP_Z = {
   Folder:-1,Config:0,Adapters:1,Admin:1,Memory:2,State:3,Evolution:4,Processing:5,Tools:6,ToolImpl:7,Agent:8,Eval:9,Entry:10,
   Identity:-3,MemoryData:-2,Events:-1,Status:-1,Archive:-2,
@@ -1487,8 +1487,11 @@ function _renderGraph(container, data) {
   const Graph = ForceGraph3D()(graphEl)
     .graphData({nodes,links})
     .backgroundColor('#111827')
-    .nodeVal(n => n.type==='dir' ? 18 : 3 + (fanIn[n.id]/maxFan)*7)
-    .nodeColor(n => GROUP_COLORS[n.group]||'#888')
+    .nodeVal(n => n.type==='dir' ? 10 : 2 + (fanIn[n.id]/maxFan)*4)
+    .nodeColor(n => {
+      const c = GROUP_COLORS[n.group]||'#888888';
+      return c.length===7 ? c+'80' : c; // 50% alpha via hex
+    })
     .nodeLabel(n => {
       const ll = {code:'代码层',data:'数据层',config:'配置层'}[n.layer]||'';
       return `<div style="background:rgba(0,0,0,0.85);padding:8px 12px;border-radius:6px;color:#fff;font-size:12px;max-width:280px"><b>${n.label||n.id}</b><br/><span style="color:#9ca3af">${n.desc||''}</span><br/><span style="color:${GROUP_COLORS[n.group]}">${n.group}</span> · ${ll} · fan-in: ${fanIn[n.id]||0}</div>`;
@@ -1499,7 +1502,7 @@ function _renderGraph(container, data) {
       const sn = nodes.find(n=>n.id===(l.source.id||l.source));
       return (GROUP_COLORS[sn?.group]||'#888')+'4D';
     })
-    .linkWidth(l => ({contain:0.3,dataflow:0.8,reference:0.6}[l.type]||0.5))
+    .linkWidth(l => ({contain:0.5,dataflow:0.8,reference:0.6}[l.type]||0.5))
     .linkDirectionalArrowLength(l => l.type==='contain'?0:3)
     .linkDirectionalArrowRelPos(1)
     .linkDirectionalParticles(l => ({contain:0,dataflow:3,reference:1}[l.type]??2))
@@ -1513,7 +1516,7 @@ function _renderGraph(container, data) {
     .onNodeHover(node => {
       graphEl.style.cursor = node ? 'pointer' : 'default';
       Graph.linkWidth(l => {
-        if (!node) return {contain:0.3,dataflow:0.8,reference:0.6}[l.type]||0.5;
+        if (!node) return {contain:0.5,dataflow:0.8,reference:0.6}[l.type]||0.5;
         const s=l.source.id||l.source, t=l.target.id||l.target;
         return (s===node.id||t===node.id) ? 2.5 : 0.2;
       });
@@ -1525,26 +1528,31 @@ function _renderGraph(container, data) {
     })
     .width(container.clientWidth)
     .height(container.clientHeight);
+  // 关联紧密度自动调距
+  Graph.d3Force('link')
+    .distance(l => ({contain:15,dataflow:25,import:35,reference:55}[l.type]||40))
+    .strength(l => ({contain:1.0,dataflow:0.6,import:0.4,reference:0.2}[l.type]||0.4));
+  Graph.d3Force('charge').strength(-50);
+  // 所有节点显示名称标签
   if (window.THREE) {
     Graph.nodeThreeObject(node => {
-      if (node.type==='file' && (fanIn[node.id]||0) <= 1) return null;
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const fs = node.type==='dir'?28:24;
+      const fs = node.type==='dir' ? 26 : 18;
       const text = node.label||node.id;
       ctx.font = `bold ${fs}px -apple-system,sans-serif`;
-      const w = ctx.measureText(text).width + 16;
-      canvas.width = w; canvas.height = fs + 12;
+      const w = ctx.measureText(text).width + 12;
+      canvas.width = w; canvas.height = fs + 8;
       ctx.font = `bold ${fs}px -apple-system,sans-serif`;
-      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(0, 0, w, canvas.height);
       ctx.fillStyle = GROUP_COLORS[node.group] || '#ccc';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(text, w/2, canvas.height/2);
       const texture = new THREE.CanvasTexture(canvas);
-      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: texture, depthWrite: false}));
-      sprite.scale.set(w/6, canvas.height/6, 1);
-      sprite.position.y = 6;
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: texture, depthWrite: false, transparent: true}));
+      sprite.scale.set(w/7, canvas.height/7, 1);
+      sprite.position.y = node.type==='dir' ? 12 : 8;
       return sprite;
     }).nodeThreeObjectExtend(true);
   }
@@ -1556,7 +1564,7 @@ function _renderGraph(container, data) {
 }
 
 function _graphResetCamera() {
-  if (_graphInstance) _graphInstance.cameraPosition({x:0,y:0,z:600},{x:0,y:0,z:0},1000);
+  if (_graphInstance) _graphInstance.cameraPosition({x:0,y:0,z:350},{x:0,y:0,z:0},1000);
 }
 
 function _graphFilter(layer) {

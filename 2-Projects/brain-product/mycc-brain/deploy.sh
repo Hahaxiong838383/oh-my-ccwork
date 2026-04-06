@@ -53,12 +53,12 @@ function scanDir(dir, depth, maxDepth) {
 const snapshot = {
   generatedAt: new Date().toISOString(),
   claudeMd: fs.existsSync(path.join(myccRoot, 'CLAUDE.md')),
-  docs: scanDir(path.join(myccRoot, 'docs'), 0, 1),
+  docs: [{path:'docs',type:'dir'}, ...scanDir(path.join(myccRoot, 'docs'), 0, 1)],
   skills: fs.existsSync(path.join(myccRoot, '.claude/skills'))
     ? fs.readdirSync(path.join(myccRoot, '.claude/skills'), { withFileTypes: true })
         .filter(d => d.isDirectory()).map(d => d.name)
     : [],
-  multiAgent: scanDir(path.join(myccRoot, 'multi-agent'), 0, 1),
+  multiAgent: [{path:'multi-agent',type:'dir'}, ...scanDir(path.join(myccRoot, 'multi-agent'), 0, 1)],
   references: {},
 };
 
