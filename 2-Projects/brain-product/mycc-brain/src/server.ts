@@ -1063,6 +1063,31 @@ function scheduleConsolidation() {
   }, 60_000); // 每分钟检查一次
 }
 
+// ─── 每日进化定时器（07:00 执行，eval 06:00 + 同步后数据到位）───
+let lastEvolutionDate = "";
+function scheduleEvolution() {
+  setInterval(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    const today = now.toISOString().slice(0, 10);
+    if (hour === 7 && lastEvolutionDate !== today) {
+      lastEvolutionDate = today;
+      console.log(`[evolution] daily cycle starting at ${now.toISOString()}`);
+      try {
+        const brainRoot = resolve(import.meta.dirname, "..");
+        const result = runEvolutionCycle(brainRoot);
+        if (result) {
+          console.log(`[evolution] done: ${result.totalActions} actions, ${result.skipped} skipped`);
+        } else {
+          console.log(`[evolution] no failures found, nothing to do`);
+        }
+      } catch (err) {
+        console.error(`[evolution] failed:`, err instanceof Error ? err.message : err);
+      }
+    }
+  }, 60_000);
+}
+
 // 启动服务：先初始化 MCP 连接，再监听端口
 initMcpConnections().then(() => {
   server.listen(config.port, "0.0.0.0", () => {
@@ -1074,7 +1099,8 @@ initMcpConnections().then(() => {
     console.log(`   Memory: memory-items.md (${memExists ? "✅" : "❌ not found"})`);
     console.log(`   Models: ${Object.keys(config.routes).join(", ")}`);
     console.log(`   MCP:   ${mcpClients.size} server(s) connected`);
-    console.log(`   Cron:  consolidation daily @04:00\n`);
+    console.log(`   Cron:  consolidation @04:00, evolution @07:00\n`);
     scheduleConsolidation();
+    scheduleEvolution();
   });
 });

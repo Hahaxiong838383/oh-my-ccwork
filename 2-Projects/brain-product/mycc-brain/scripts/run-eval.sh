@@ -40,21 +40,30 @@ echo "[$TIMESTAMP] Running eval..."
 cd "$BRAIN_DIR"
 
 # 运行 eval — stdout=JSON, stderr=人类可读日志
-# eval.ts v1.1: console.log → JSON, console.error → 人类日志
 EVAL_EXIT=0
-EVAL_JSON=$(npx tsx src/eval/eval.ts 2>"$BRAIN_DIR/data/eval-stderr.log") || EVAL_EXIT=$?
+EVAL_STDOUT=$(npx tsx src/eval/eval.ts 2>"$BRAIN_DIR/data/eval-stderr.log") || EVAL_EXIT=$?
 
-# stdout 为空时降级读文件
-if [ -z "$EVAL_JSON" ]; then
-  if [ -f "$EVAL_RESULT" ]; then
-    EVAL_JSON=$(cat "$EVAL_RESULT")
-  else
-    STDERR_ESCAPED=$(tail -5 "$BRAIN_DIR/data/eval-stderr.log" 2>/dev/null | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))' 2>/dev/null || echo '"(read failed)"')
-    EVAL_JSON="{\"error\":\"empty_output\",\"stderr\":$STDERR_ESCAPED}"
+# 验证 stdout 是否为有效 JSON（修复：混入非 JSON 文本时降级到 eval-result.json）
+EVAL_JSON=""
+if [ -n "$EVAL_STDOUT" ]; then
+  # 尝试用 python3 验证 JSON
+  if echo "$EVAL_STDOUT" | python3 -c 'import json,sys; json.load(sys.stdin)' 2>/dev/null; then
+    EVAL_JSON="$EVAL_STDOUT"
   fi
 fi
 
-# 追加结果到 evolution-log.jsonl
+# stdout 无效时降级到 eval-result.json
+if [ -z "$EVAL_JSON" ] && [ -f "$EVAL_RESULT" ]; then
+  EVAL_JSON=$(cat "$EVAL_RESULT")
+fi
+
+# 仍然为空时构造错误 JSON
+if [ -z "$EVAL_JSON" ]; then
+  STDERR_ESCAPED=$(tail -5 "$BRAIN_DIR/data/eval-stderr.log" 2>/dev/null | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))' 2>/dev/null || echo '"(read failed)"')
+  EVAL_JSON="{\"error\":\"empty_output\",\"stderr\":$STDERR_ESCAPED}"
+fi
+
+# 追加结果到 evolution-log.jsonl（确保是有效 JSONL）
 echo "{\"timestamp\":\"$TIMESTAMP\",\"type\":\"eval\",\"status\":\"done\",\"exitCode\":$EVAL_EXIT,\"result\":$EVAL_JSON}" >> "$LOG_FILE"
 echo "[$TIMESTAMP] Eval complete (exit=$EVAL_EXIT), results appended to evolution-log.jsonl"
 
@@ -74,10 +83,7 @@ send_feishu() {
 }
 
 if [ $EVAL_EXIT -eq 3 ]; then
-  # CRITICAL 回归 → 飞书告警 + 回滚
-  echo "[$TIMESTAMP] 🚨 CRITICAL regression detected! Triggering rollback..."
-
-  # 提取回归详情
+  echo "[$TIMESTAMP] CRITICAL regression detected! Triggering rollback..."
   REGRESSIONS=$(echo "$EVAL_JSON" | python3 -c '
 import json,sys
 d = json.load(sys.stdin)
@@ -87,35 +93,23 @@ for r in d.get("regressions", []):
     lines.append(f"{icon} {r[\"metric\"]}: {r[\"baseline\"]:.2f} → {r[\"current\"]:.2f} ({r[\"deltaPct\"]:+.1f}%)")
 print("\\n".join(lines))
 ' 2>/dev/null || echo "parse failed")
-
-  # 飞书告警
   send_feishu "🚨 Brain Eval 回归告警" "**时间**: $TIMESTAMP\\n**状态**: CRITICAL 回归，已触发回滚\\n\\n$REGRESSIONS"
-
-  # 回滚：恢复上一个稳定版本
   if [ -f "$BRAIN_DIR/data/last-stable-commit.txt" ]; then
     STABLE_COMMIT=$(cat "$BRAIN_DIR/data/last-stable-commit.txt")
     echo "[$TIMESTAMP] Rolling back to stable commit: $STABLE_COMMIT"
     echo "{\"timestamp\":\"$TIMESTAMP\",\"type\":\"rollback\",\"target\":\"$STABLE_COMMIT\",\"reason\":\"regression\"}" >> "$LOG_FILE"
-    # 注意：实际回滚需要在 Studio 上执行 git checkout + rebuild + pm2 restart
-    # 这里仅记录标记，由 deploy-to-studio.sh 根据此文件决定是否回退
     echo "$STABLE_COMMIT" > "$BRAIN_DIR/data/rollback-target.txt"
-  else
-    echo "[$TIMESTAMP] No last-stable-commit.txt found, cannot auto-rollback"
   fi
 
 elif [ $EVAL_EXIT -eq 0 ]; then
-  # 通过 → 记录稳定版本
   CURRENT_COMMIT=$(git -C "$BRAIN_DIR" log -1 --format=%h 2>/dev/null || echo "unknown")
   echo "$CURRENT_COMMIT" > "$BRAIN_DIR/data/last-stable-commit.txt"
-  echo "[$TIMESTAMP] ✅ Eval passed, stable commit: $CURRENT_COMMIT"
-
-  # 检查是否有非 critical 的 warning 回归
+  echo "[$TIMESTAMP] Eval passed, stable commit: $CURRENT_COMMIT"
   WARNING_COUNT=$(echo "$EVAL_JSON" | python3 -c '
 import json,sys
 d = json.load(sys.stdin)
 print(len([r for r in d.get("regressions", []) if r["severity"] == "warning"]))
 ' 2>/dev/null || echo "0")
-
   if [ "$WARNING_COUNT" -gt 0 ]; then
     WARNINGS=$(echo "$EVAL_JSON" | python3 -c '
 import json,sys
@@ -130,8 +124,7 @@ print("\\n".join(lines))
   fi
 
 elif [ $EVAL_EXIT -eq 1 ]; then
-  # 评测未通过（但非回归）
-  echo "[$TIMESTAMP] ❌ Eval failed (not a regression, thresholds not met)"
+  echo "[$TIMESTAMP] Eval failed (not a regression, thresholds not met)"
   FAILURES=$(echo "$EVAL_JSON" | python3 -c '
 import json,sys
 d = json.load(sys.stdin)
