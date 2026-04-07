@@ -1148,7 +1148,7 @@ const server = http.createServer(async (req, res) => {
   if (path === "/admin/api/memory/consolidation" && req.method === "POST") {
     try {
       const { runConsolidation } = await import("./services/memory-consolidation.js");
-      const result = await runConsolidation(config.dataDir, config.memoryLLM.consolidation);
+      const result = await runConsolidation(config.dataDir, config.memoryLLM.consolidation, config.search);
       json(res, 200, result);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -1179,7 +1179,7 @@ function scheduleConsolidation() {
       console.log(`[consolidation] daily run starting at ${now.toISOString()}`);
       try {
         const { runConsolidation } = await import("./services/memory-consolidation.js");
-        const result = await runConsolidation(config.dataDir, config.memoryLLM.consolidation);
+        const result = await runConsolidation(config.dataDir, config.memoryLLM.consolidation, config.search);
         console.log(`[consolidation] done:`, JSON.stringify(result));
       } catch (err) {
         console.error(`[consolidation] failed:`, err instanceof Error ? err.message : err);

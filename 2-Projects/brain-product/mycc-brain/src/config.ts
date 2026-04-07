@@ -21,6 +21,14 @@ export interface MemoryLLMRoute {
   maxTokens?: number;
 }
 
+export interface SearchConfig {
+  baseURL: string;
+  model: string;
+  apiKey: string;
+  maxTasksPerDay: number;       // 每日最大搜索次数
+  minPriority: number;          // 最低优先级阈值
+}
+
 export interface BrainConfig {
   port: number;
   brainApiKey: string;
@@ -31,6 +39,7 @@ export interface BrainConfig {
     consolidation: MemoryLLMRoute;
     fallbackIntake?: MemoryLLMRoute;
   };
+  search: SearchConfig;
 }
 
 function env(key: string, fallback = ""): string {
@@ -215,6 +224,13 @@ export function loadConfig(): BrainConfig {
         model: "qwen3.5-27b",
         apiKey: qwenKey,
       } : undefined,
+    },
+    search: {
+      baseURL: GEMINI_PROXY_BASE,
+      model: "gemini-2.5-flash",
+      apiKey: env("GEMINI_PROXY_KEY"),
+      maxTasksPerDay: 5,
+      minPriority: 0.2,
     },
   };
 

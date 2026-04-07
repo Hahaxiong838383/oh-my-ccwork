@@ -10,8 +10,10 @@
 import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { chatCompletion } from "../adapters/openai-compat.js";
-import type { MemoryLLMRoute } from "../config.js";
+import type { MemoryLLMRoute, SearchConfig } from "../config.js";
 import { mineUserPatterns } from "./pattern-miner.js";
+import { runKnowledgeCompletion } from "./knowledge-completion.js";
+import { setSearchConfig } from "../tools/web-search.js";
 import { checkSftReadiness, computeLearningPriority } from "./prediction-engine.js";
 
 // ─── 类型定义 ───
@@ -477,6 +479,7 @@ async function runConflictResolution(
 export async function runConsolidation(
   dataDir: string,
   consolidationRoute: MemoryLLMRoute,
+  searchConfig?: SearchConfig,
 ): Promise<ConsolidationResult> {
   const filePath = join(dataDir, "memory-items.md");
   const archivePath = join(dataDir, "..", "data", "memory-archive.md");
@@ -552,6 +555,34 @@ export async function runConsolidation(
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     result.errors.push(`Phase 5 (SFT/learning) failed: ${msg}`);
+  }
+
+  // Phase 6: 知识补全 — 搜索补全记忆盲区（走 Gemini Search）
+  try {
+    if (searchConfig && searchConfig.apiKey) {
+      const brainRoot = join(dataDir, "..");
+      setSearchConfig({
+        baseURL: searchConfig.baseURL,
+        model: searchConfig.model,
+        apiKey: searchConfig.apiKey,
+      });
+
+      console.log("[consolidation] Phase 6: running knowledge completion...");
+      const kcResult = await runKnowledgeCompletion(brainRoot, {
+        maxTasksPerDay: searchConfig.maxTasksPerDay,
+        minPriority: searchConfig.minPriority,
+        memoryItemsPath: filePath,
+      });
+      console.log(`[consolidation] Phase 6 done: ${kcResult.tasksCompleted}/${kcResult.tasksPlanned} tasks, ${kcResult.itemsWritten} items written`);
+      if (kcResult.errors.length > 0) {
+        result.errors.push(...kcResult.errors);
+      }
+    } else {
+      console.log("[consolidation] Phase 6 skipped: no search config or apiKey");
+    }
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    result.errors.push(`Knowledge completion failed: ${msg}`);
   }
 
   // 写回文件
