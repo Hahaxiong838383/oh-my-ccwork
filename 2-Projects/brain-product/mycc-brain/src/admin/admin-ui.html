@@ -1626,33 +1626,31 @@ function _renderGraph(container, data) {
     .distance(l => ({contain:15,dataflow:25,import:35,govern:35,reference:55,'shared-tag':30}[l.type]||40))
     .strength(l => ({contain:1.0,dataflow:0.6,govern:0.5,import:0.4,reference:0.2,'shared-tag':0.5}[l.type]||0.4));
   Graph.d3Force('charge').strength(-50);
-  // 所有节点显示名称标签（复用单个 canvas 避免 Safari context 数量限制）
+  // 所有节点显示名称标签（每节点独立 canvas，CanvasTexture 持有引用不可复用）
   if (window.THREE) {
-    const _labelCanvas = document.createElement('canvas');
-    const _labelCtx = _labelCanvas.getContext('2d');
-    if (_labelCtx) {
-      Graph.nodeThreeObject(node => {
-        try {
-          const fs = node.type==='dir' ? 26 : node.type==='namespace' ? 22 : 18;
-          const text = node.label||node.id;
-          _labelCtx.font = `bold ${fs}px -apple-system,sans-serif`;
-          const w = Math.min(_labelCtx.measureText(text).width + 12, 512);
-          _labelCanvas.width = w; _labelCanvas.height = fs + 8;
-          _labelCtx.font = `bold ${fs}px -apple-system,sans-serif`;
-          _labelCtx.fillStyle = 'rgba(0,0,0,0.5)';
-          _labelCtx.fillRect(0, 0, w, _labelCanvas.height);
-          _labelCtx.fillStyle = node.type==='namespace' ? GROUP_COLORS.Namespace : (GROUP_COLORS[node.group] || '#ccc');
-          _labelCtx.textAlign = 'center'; _labelCtx.textBaseline = 'middle';
-          _labelCtx.fillText(text, w/2, _labelCanvas.height/2);
-          const texture = new THREE.CanvasTexture(_labelCanvas);
-          texture.needsUpdate = true;
-          const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: texture, depthWrite: false, transparent: true}));
-          sprite.scale.set(w/7, _labelCanvas.height/7, 1);
-          sprite.position.y = node.type==='dir' ? 12 : 8;
-          return sprite;
-        } catch(e) { return null; }
-      }).nodeThreeObjectExtend(true);
-    }
+    Graph.nodeThreeObject(node => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+        const fs = node.type==='dir' ? 26 : node.type==='namespace' ? 22 : 18;
+        const text = node.label||node.id;
+        ctx.font = `bold ${fs}px -apple-system,sans-serif`;
+        const w = Math.min(ctx.measureText(text).width + 12, 512);
+        canvas.width = w; canvas.height = fs + 8;
+        ctx.font = `bold ${fs}px -apple-system,sans-serif`;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, w, canvas.height);
+        ctx.fillStyle = node.type==='namespace' ? GROUP_COLORS.Namespace : (GROUP_COLORS[node.group] || '#ccc');
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(text, w/2, canvas.height/2);
+        const texture = new THREE.CanvasTexture(canvas);
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: texture, depthWrite: false, transparent: true}));
+        sprite.scale.set(w/7, canvas.height/7, 1);
+        sprite.position.y = node.type==='dir' ? 12 : 8;
+        return sprite;
+      } catch(e) { return null; }
+    }).nodeThreeObjectExtend(true);
   }
   _graphInstance = Graph;
   const ro = new ResizeObserver(() => {
