@@ -385,9 +385,14 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
     <!-- Evolution -->
     <div id="view-evolution" class="panel-view" style="display:none">
       <h2>🧬 进化中心</h2>
+      <!-- v2: 预测引擎 + SFT 就绪 + 置信度 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="card"><h3>🎯 预测引擎</h3><div id="ePrediction" style="color:var(--text-dim)">加载中...</div></div>
+        <div class="card"><h3>🧪 SFT 就绪</h3><div id="eSft" style="color:var(--text-dim)">加载中...</div></div>
+      </div>
       <div class="card"><h3>评估结果</h3><div id="eEval" style="color:var(--text-dim)">加载中...</div></div>
       <div class="card"><h3>诊断报告</h3><div id="eDiag" style="color:var(--text-dim)">加载中...</div></div>
-      <div class="card"><h3>进化操作 <button class="btn btn-sm btn-primary" onclick="runEvo()" style="margin-left:12px">运行周期</button></h3><div id="eActs" style="color:var(--text-dim)">加载中...</div></div>
+      <div class="card"><h3>进化操作 <button class="btn btn-sm btn-primary" onclick="runEvo()" style="margin-left:12px">运行周期</button> <span style="font-size:11px;color:var(--text-dim);margin-left:8px">v2: ROI Top 3</span></h3><div id="eActs" style="color:var(--text-dim)">加载中...</div></div>
       <div class="card"><h3>进化日志 <span style="font-size:12px;color:var(--text-dim)">(最近 20 条)</span></h3><div id="eLog" style="max-height:300px;overflow-y:auto;font-size:12px;color:var(--text-secondary)">加载中...</div></div>
     </div>
     <!-- Patches -->
@@ -1033,6 +1038,42 @@ async function saveModelConfig() {
    Evolution
    ═══════════════════════════════════════════════════ */
 async function loadEvo() {
+  // v2: 预测引擎 + SFT 就绪（并行加载）
+  Promise.all([aFetch('/admin/api/prediction-stats'),aFetch('/admin/api/sft-readiness')]).then(async([pr,sr])=>{
+    try{
+      const p=await pr.json();
+      if(p.error){document.getElementById('ePrediction').innerHTML='<span style="color:var(--text-dim)">'+p.error+'</span>';} else {
+        const res=p.resolutionState||{}, reso=p.resonance||{};
+        const lvlColor={R1:'#64748b',R2:'#eab308',R3:'#22c55e',R4:'#3b82f6'};
+        document.getElementById('ePrediction').innerHTML=`
+          <div class="stat-row" style="margin-bottom:8px">
+            <div class="stat"><div class="value" style="color:${lvlColor[res.currentLevel]||'#94a3b8'}">${res.currentLevel||'R1'}</div><div class="label">分辨率</div></div>
+            <div class="stat"><div class="value">${(reso.predictionAccuracy||0).toFixed(0)}%</div><div class="label">预测准确率</div></div>
+            <div class="stat"><div class="value">${p.recentPredictionCount||0}</div><div class="label">近7天预测</div></div>
+            <div class="stat"><div class="value">${p.pendingResourceRequests||0}</div><div class="label">资源请求</div></div>
+          </div>
+          ${(p.topCuriosityItems||[]).length?'<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">好奇心: '+(p.topCuriosityItems||[]).slice(0,3).map(c=>'<span class="badge" style="margin:1px">'+c.category+' '+c.score.toFixed(2)+'</span>').join(' ')+'</div>':''}
+          ${(p.topLearningItems||[]).length?'<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">学习优先: '+(p.topLearningItems||[]).slice(0,3).map(l=>'<span class="badge" style="margin:1px">'+l.category+' p='+l.priority.toFixed(2)+'</span>').join(' ')+'</div>':''}`;
+      }
+    }catch(e){document.getElementById('ePrediction').textContent='error: '+e.message}
+    try{
+      const s=await sr.json();
+      if(s.error){document.getElementById('eSft').innerHTML='<span style="color:var(--text-dim)">'+s.error+'</span>';} else {
+        const conds=s.conditions||{};
+        const bar=(label,met,actual,required)=>{
+          const pct=Math.min(100,Math.round((actual/Math.max(required,1))*100));
+          const color=met?'var(--success)':'var(--warning)';
+          return`<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span>${label}</span><span style="color:${color}">${typeof actual==='number'&&actual<1?(actual*100).toFixed(0)+'%':actual} / ${typeof required==='number'&&required<1?(required*100).toFixed(0)+'%':required} ${met?'OK':'...'}</span></div><div style="background:var(--bg-input);border-radius:4px;height:6px;overflow:hidden"><div style="background:${color};height:100%;width:${pct}%;border-radius:4px;transition:width .3s"></div></div></div>`;
+        };
+        document.getElementById('eSft').innerHTML=`
+          <div style="font-size:18px;font-weight:700;margin-bottom:8px;color:${s.ready?'var(--success)':'var(--text-dim)'}">${s.ready?'READY':'NOT READY'}</div>
+          ${bar('高质量经验',conds.experienceCount?.met,conds.experienceCount?.actual,conds.experienceCount?.required)}
+          ${bar('质量占比',conds.qualityRatio?.met,conds.qualityRatio?.actual,conds.qualityRatio?.required)}
+          ${bar('命名空间覆盖',conds.coverage?.met,conds.coverage?.actual,conds.coverage?.required)}
+          <div style="font-size:11px;color:var(--text-dim);margin-top:6px">${s.recommendation||''}</div>`;
+      }
+    }catch(e){document.getElementById('eSft').textContent='error: '+e.message}
+  });
   try {
     const r = await aFetch('/admin/api/evolution/eval-result'), d = await r.json();
     if (d.error) { document.getElementById('eEval').innerHTML='<span style="color:var(--text-dim)">暂无评估结果</span>'; }
@@ -1072,10 +1113,14 @@ async function runEvo() {
     const r = await aFetch('/admin/api/evolution/run',{method:'POST',headers:authH()}), d = await r.json();
     if (d.error){document.getElementById('eActs').innerHTML='<span style="color:var(--danger)">'+d.error+'</span>';return}
     const acts=(d.actions||[]).map(a=>{const c={auto_patch:'#ef4444',keyword_extend:'#eab308',threshold_adjust:'#818cf8'};
-      return`<div style="padding:4px 0;border-bottom:1px solid var(--bg-card)"><span class="badge" style="background:${(c[a.actionType]||'#334155')}22;color:${c[a.actionType]||'#94a3b8'}">${a.actionType}</span>
+      const rankBadge=a.rank?`<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--bg-input);color:var(--text-primary);font-size:10px;font-weight:700;margin-right:4px">#${a.rank}</span>`:'';
+      const priBadge=a.priority!=null?`<span style="color:var(--text-dim);font-size:10px;margin-left:4px">ROI=${a.priority.toFixed(3)}</span>`:'';
+      const testBadge=a.testsGenerated?`<span style="color:#22c55e;font-size:10px;margin-left:4px">+${a.testsGenerated} tests</span>`:'';
+      const patchBadge=(a.relatedPatchIds||[]).length?`<span style="color:#818cf8;font-size:10px;margin-left:4px">patch:${a.relatedPatchIds.join(',')}</span>`:'';
+      return`<div style="padding:4px 0;border-bottom:1px solid var(--bg-card)">${rankBadge}<span class="badge" style="background:${(c[a.actionType]||'#334155')}22;color:${c[a.actionType]||'#94a3b8'}">${a.actionType}</span>
         <span style="color:var(--text-secondary);font-size:12px;margin-left:8px">${(a.detail||'').slice(0,100)}</span>
-        <span style="color:${a.applied?'var(--success)':'var(--text-dim)'};font-size:11px;margin-left:4px">${a.applied?'已应用':'已跳过'}</span></div>`;}).join('');
-    document.getElementById('eActs').innerHTML=`<div style="margin-bottom:8px">操作数: <strong>${d.totalActions||0}</strong> | 跳过: ${d.skipped||0}</div>${acts||'<span style="color:var(--text-dim)">无需操作</span>'}`;
+        <span style="color:${a.applied?'var(--success)':'var(--text-dim)'};font-size:11px;margin-left:4px">${a.applied?'OK':'skip'}</span>${priBadge}${testBadge}${patchBadge}</div>`;}).join('');
+    document.getElementById('eActs').innerHTML=`<div style="margin-bottom:8px">操作数: <strong>${d.totalActions||0}</strong> / Top 3 | 跳过: ${d.skipped||0}</div>${acts||'<span style="color:var(--text-dim)">无需操作</span>'}`;
   } catch(e){document.getElementById('eActs').innerHTML='<span style="color:var(--danger)">错误: '+e.message+'</span>'}
 }
 
