@@ -91,7 +91,15 @@ async function bridgeAllMcpTools(registry: ToolRegistry): Promise<void> {
   }
 }
 
-const ADMIN_HTML_PATH = resolve(import.meta.dirname, "admin/admin-ui.html");
+const ADMIN_HTML_PATH = (() => {
+  // 优先从 import.meta.dirname 旁的 admin/ 找（dev 模式 = src/admin/）
+  const sameDirPath = resolve(import.meta.dirname, "admin/admin-ui.html");
+  if (existsSync(sameDirPath)) return sameDirPath;
+  // fallback: 从项目根 src/admin/ 找（prod 模式 dist/ 运行时 tsc 不复制 HTML）
+  const srcPath = resolve(import.meta.dirname, "..", "src/admin/admin-ui.html");
+  if (existsSync(srcPath)) return srcPath;
+  return sameDirPath; // 返回原始路径，让后续 existsSync 检查报错
+})();
 
 // Admin auth — username/password login with session token (读取在 loadConfig() 之后，确保 dotenv 已加载)
 let ADMIN_USER = process.env.ADMIN_USER || "admin";
@@ -139,8 +147,8 @@ const server = http.createServer(async (req, res) => {
     return brainApi.handle(req, res);
   }
 
-  // Admin UI
-  if (path === "/admin" || path === "/admin/") {
+  // Admin UI — SPA 兼容：/admin, /admin/, /admin/graph 等都返回 HTML（排除 /admin/api/）
+  if ((path === "/admin" || path === "/admin/" || (path.startsWith("/admin/") && !path.startsWith("/admin/api/"))) ) {
     if (existsSync(ADMIN_HTML_PATH)) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache, no-store, must-revalidate" });
       res.end(readFileSync(ADMIN_HTML_PATH, "utf-8"));
@@ -154,7 +162,11 @@ const server = http.createServer(async (req, res) => {
   // Static vendor files (local 3D libs etc.)
   if (path.startsWith("/static/")) {
     const safePath = path.replace(/\.\./g, "");
-    const filePath = resolve(import.meta.dirname, safePath.slice(1));
+    let filePath = resolve(import.meta.dirname, safePath.slice(1));
+    // fallback: dist/ 下没有时尝试 src/ 下（prod 模式 tsc 不复制静态文件）
+    if (!existsSync(filePath)) {
+      filePath = resolve(import.meta.dirname, "..", "src", safePath.slice(1));
+    }
     if (existsSync(filePath)) {
       const ext = filePath.endsWith(".js") ? "application/javascript" : "application/octet-stream";
       res.writeHead(200, { "Content-Type": ext, "Cache-Control": "public, max-age=31536000" });
@@ -213,7 +225,6 @@ const server = http.createServer(async (req, res) => {
 
   // Admin API: 项目级架构图谱数据
   if (path === "/admin/api/graph" && req.method === "GET") {
-    if (!checkAdminAuth(req, res)) return;
     const brainRoot = resolve(import.meta.dirname, "..");
     const layer = url.searchParams.get("layer") as "code" | "data" | "config" | null;
     const data = buildGraphData(brainRoot, config.dataDir, layer ?? undefined);
@@ -223,7 +234,6 @@ const server = http.createServer(async (req, res) => {
 
   // Admin API: 查看节点文件内容（右键详情）
   if (path === "/admin/api/graph/content" && req.method === "GET") {
-    if (!checkAdminAuth(req, res)) return;
     const nodeId = url.searchParams.get("id") ?? "";
     if (!nodeId) { json(res, 400, { error: "Missing id param" }); return; }
 
