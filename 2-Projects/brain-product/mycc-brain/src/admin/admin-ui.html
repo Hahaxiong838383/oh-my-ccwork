@@ -1412,7 +1412,7 @@ const GROUP_COLORS = {
   RootConfig:'#f43f5e',Docs:'#d946ef',Harness:'#a855f7',Skills:'#fb923c',
   MultiAgent:'#84cc16',AgentContext:'#22d3ee',AgentInfra:'#64748b',
 };
-const LINK_COLORS = {contain:'rgba(148,163,184,0.3)',reference:'rgba(217,70,239,0.4)',dataflow:'rgba(34,211,238,0.5)','shared-tag':'rgba(232,121,249,0.5)'};
+const LINK_COLORS = {contain:'rgba(148,163,184,0.3)',reference:'rgba(217,70,239,0.4)',dataflow:'rgba(34,211,238,0.5)','shared-tag':'rgba(232,121,249,0.5)',govern:'rgba(251,146,60,0.5)'};
 const GROUP_Z = {
   Folder:-1,Config:0,Adapters:1,Admin:1,Memory:2,State:3,Evolution:4,Processing:5,Tools:6,ToolImpl:7,Agent:8,Eval:9,Entry:10,
   Identity:-3,MemoryData:-2,Events:-1,Status:-1,Archive:-2,Namespace:-2,
@@ -1471,7 +1471,7 @@ async function loadGraph() {
   });
   const ec = document.createElement('div');
   ec.innerHTML = '<div style="font-weight:600;margin-bottom:3px;color:var(--text-secondary)">边</div>' +
-    [{l:'import',c:'#818cf8'},{l:'reference',c:'#d946ef'},{l:'dataflow',c:'#22d3ee'},{l:'shared-tag',c:'#e879f9'}].map(x=>`<span style="color:${x.c};margin-right:6px">— ${x.l}</span>`).join('');
+    [{l:'import',c:'#818cf8'},{l:'reference',c:'#d946ef'},{l:'dataflow',c:'#22d3ee'},{l:'govern',c:'#fb923c'},{l:'shared-tag',c:'#e879f9'}].map(x=>`<span style="color:${x.c};margin-right:6px">— ${x.l}</span>`).join('');
   legend.appendChild(ec);
   container.appendChild(legend);
   _renderGraph(container, _graphFullData);
@@ -1481,7 +1481,7 @@ function _renderGraph(container, data) {
   const {nodes, links} = data;
   const fanIn = {};
   nodes.forEach(n => fanIn[n.id] = 0);
-  links.filter(l=>l.type==='import'||l.type==='dataflow').forEach(l => fanIn[l.target] = (fanIn[l.target]||0)+1);
+  links.filter(l=>l.type==='import'||l.type==='dataflow'||l.type==='govern').forEach(l => fanIn[l.target] = (fanIn[l.target]||0)+1);
   const maxFan = Math.max(...Object.values(fanIn), 1);
   const graphEl = document.createElement('div');
   graphEl.id = 'graph-container';
@@ -1507,13 +1507,13 @@ function _renderGraph(container, data) {
       const sn = nodes.find(n=>n.id===(l.source.id||l.source));
       return (GROUP_COLORS[sn?.group]||'#888')+'4D';
     })
-    .linkWidth(l => ({contain:0.5,dataflow:0.8,reference:0.6,'shared-tag':0.7}[l.type]||0.5))
+    .linkWidth(l => ({contain:0.5,dataflow:0.8,reference:0.6,'shared-tag':0.7,govern:0.9}[l.type]||0.5))
     .linkDirectionalArrowLength(l => l.type==='contain'?0:3)
     .linkDirectionalArrowRelPos(1)
-    .linkDirectionalParticles(l => ({contain:0,dataflow:3,reference:1,'shared-tag':2}[l.type]??2))
+    .linkDirectionalParticles(l => ({contain:0,dataflow:3,reference:1,'shared-tag':2,govern:2}[l.type]??2))
     .linkDirectionalParticleWidth(1.5)
-    .linkDirectionalParticleSpeed(l => l.type==='dataflow'?0.008:0.005)
-    .linkDirectionalParticleColor(l => ({dataflow:'#22d3ee',reference:'#d946ef','shared-tag':'#e879f9'}[l.type]||null))
+    .linkDirectionalParticleSpeed(l => ({dataflow:0.008,govern:0.006}[l.type]||0.005))
+    .linkDirectionalParticleColor(l => ({dataflow:'#22d3ee',reference:'#d946ef','shared-tag':'#e879f9',govern:'#fb923c'}[l.type]||null))
     .onNodeClick(node => {
       const d=120,{x,y,z}=node;
       Graph.cameraPosition({x:x+d,y:y+d,z:z+d},{x,y,z},1500);
@@ -1539,8 +1539,8 @@ function _renderGraph(container, data) {
     .height(container.clientHeight);
   // 关联紧密度自动调距
   Graph.d3Force('link')
-    .distance(l => ({contain:15,dataflow:25,import:35,reference:55,'shared-tag':30}[l.type]||40))
-    .strength(l => ({contain:1.0,dataflow:0.6,import:0.4,reference:0.2,'shared-tag':0.5}[l.type]||0.4));
+    .distance(l => ({contain:15,dataflow:25,import:35,govern:35,reference:55,'shared-tag':30}[l.type]||40))
+    .strength(l => ({contain:1.0,dataflow:0.6,govern:0.5,import:0.4,reference:0.2,'shared-tag':0.5}[l.type]||0.4));
   Graph.d3Force('charge').strength(-50);
   // 所有节点显示名称标签
   if (window.THREE) {

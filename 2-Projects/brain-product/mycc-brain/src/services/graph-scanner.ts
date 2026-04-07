@@ -25,7 +25,7 @@ export interface GraphNode {
 export interface GraphLink {
   source: string;
   target: string;
-  type: "contain" | "import" | "reference" | "dataflow" | "shared-tag";
+  type: "contain" | "import" | "reference" | "dataflow" | "shared-tag" | "govern";
 }
 
 export interface GraphData {
@@ -146,6 +146,34 @@ const DATAFLOW_MAP: ReadonlyArray<{ code: string; data: string }> = [
   { code: "memory-consolidation.ts", data: "memory-items.md" },
   { code: "experience-stream.ts", data: "memory-items.md" },
   { code: "brain-context.ts", data: "claude-memory/" },
+];
+
+// ─── 配置治理映射（配置层→代码层/数据层） ─────────────
+
+const GOVERN_MAP: ReadonlyArray<{ config: string; target: string; targetLayer: "code" | "data" }> = [
+  // CLAUDE.md 治理核心入口和上下文构建
+  { config: "CLAUDE.md", target: "server.ts", targetLayer: "code" },
+  { config: "CLAUDE.md", target: "brain-context.ts", targetLayer: "code" },
+  { config: "CLAUDE.md", target: "config.ts", targetLayer: "code" },
+  // 记忆系统文档治理记忆实现
+  { config: "docs/memory-system.md", target: "memory-store.ts", targetLayer: "code" },
+  { config: "docs/memory-system.md", target: "memory-intake.ts", targetLayer: "code" },
+  { config: "docs/memory-system.md", target: "memory-consolidation.ts", targetLayer: "code" },
+  { config: "docs/memory-system.md", target: "memory-items.md", targetLayer: "data" },
+  // Harness 各模块治理对应实现
+  { config: "docs/harness/lifecycle.md", target: "experience-stream.ts", targetLayer: "code" },
+  { config: "docs/harness/lifecycle.md", target: "RECENT_EVENTS.md", targetLayer: "data" },
+  { config: "docs/harness/tools.md", target: "tool-registry.ts", targetLayer: "code" },
+  { config: "docs/harness/routing.md", target: "brain-api.ts", targetLayer: "code" },
+  { config: "docs/harness/identity.md", target: "brain-context.ts", targetLayer: "code" },
+  { config: "docs/harness/verification.md", target: "evolution-engine.ts", targetLayer: "code" },
+  // 多智能体规则治理 Agent 循环
+  { config: "multi-agent/RULES.md", target: "agent-loop.ts", targetLayer: "code" },
+  { config: "multi-agent/RULES.md", target: "blackboard.md", targetLayer: "data" },
+  // Skills 聚合节点治理 API 入口
+  { config: ".claude/skills/", target: "brain-api.ts", targetLayer: "code" },
+  // MCP 配置治理 MCP 桥接
+  { config: "docs/harness/tools.md", target: "mcp-bridge.ts", targetLayer: "code" },
 ];
 
 // ─── import 解析正则 ─────────────────────────────────
@@ -655,6 +683,15 @@ export function buildGraphData(
       const targetId = `data:${df.data}`;
       if (nodeIds.has(sourceId) && nodeIds.has(targetId)) {
         allLinks.push({ source: sourceId, target: targetId, type: "dataflow" });
+      }
+    }
+
+    // 治理边（配置层→代码层/数据层）
+    for (const gv of GOVERN_MAP) {
+      const sourceId = `config:${gv.config}`;
+      const targetId = `${gv.targetLayer}:${gv.target}`;
+      if (nodeIds.has(sourceId) && nodeIds.has(targetId)) {
+        allLinks.push({ source: sourceId, target: targetId, type: "govern" });
       }
     }
 
