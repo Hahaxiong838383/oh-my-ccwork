@@ -242,6 +242,27 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // namespace 节点：返回该命名空间下的记忆条目列表
+    if (fileName.startsWith("memory-ns:")) {
+      const ns = fileName.substring("memory-ns:".length);
+      const memFiles = ["memory-items.md", "memory-items-intake.md", "memory-items-claude.md"];
+      const items: string[] = [];
+      for (const mf of memFiles) {
+        const cats = parseMemoryItems(config.dataDir, mf);
+        for (const cat of cats) {
+          const nsMatch = cat.header.match(/\[(.+?)\]/);
+          if (nsMatch && nsMatch[1] === ns) {
+            items.push(...cat.items);
+          }
+        }
+      }
+      const content = items.length > 0
+        ? `## [${ns}]\n\n${items.join("\n")}`
+        : `命名空间 [${ns}] 下无记忆条目`;
+      json(res, 200, { content, language: "markdown", lines: items.length + 2, isNamespace: true });
+      return;
+    }
+
     try {
       let filePath: string | null = null;
       let content: string | null = null;

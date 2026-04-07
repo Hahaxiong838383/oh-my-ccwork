@@ -272,7 +272,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
   <aside id="sidebar">
     <div class="sb-header">
       <button class="sb-toggle" onclick="toggleSidebar()" title="收起侧边栏">☰</button>
-      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span><span class="ui-ver">v2.2 · 2026-04-06</span></div>
+      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span><span class="ui-ver">v2.3 · 2026-04-07</span></div>
       <div class="status-dot off" id="statusDot" title="检查中..."></div>
     </div>
     <button class="new-chat-btn" onclick="newChat()">+ 新对话</button>
@@ -1396,7 +1396,7 @@ function exportAllSessions() {
   } catch (e) { console.warn('服务端会话同步失败', e); }
 })();
 /* ═══════════════════════════════════════════════════
-   Architecture Graph (3D Force Graph) — v2.0 项目级
+   Architecture Graph (3D Force Graph) — v2.3 记忆命名空间
    ═══════════════════════════════════════════════════ */
 let _graphInstance = null;
 let _graphLayout = 'free';
@@ -1408,13 +1408,14 @@ const GROUP_COLORS = {
   State:'#22c55e',Evolution:'#eab308',Processing:'#f97316',Tools:'#4f46e5',ToolImpl:'#a78bfa',
   Agent:'#ec4899',Eval:'#fb923c',Entry:'#ef4444',
   Identity:'#06b6d4',MemoryData:'#8b5cf6',Events:'#14b8a6',Status:'#6366f1',Archive:'#475569',
+  Namespace:'#e879f9',
   RootConfig:'#f43f5e',Docs:'#d946ef',Harness:'#a855f7',Skills:'#fb923c',
   MultiAgent:'#84cc16',AgentContext:'#22d3ee',AgentInfra:'#64748b',
 };
-const LINK_COLORS = {contain:'rgba(148,163,184,0.3)',reference:'rgba(217,70,239,0.4)',dataflow:'rgba(34,211,238,0.5)'};
+const LINK_COLORS = {contain:'rgba(148,163,184,0.3)',reference:'rgba(217,70,239,0.4)',dataflow:'rgba(34,211,238,0.5)','shared-tag':'rgba(232,121,249,0.5)'};
 const GROUP_Z = {
   Folder:-1,Config:0,Adapters:1,Admin:1,Memory:2,State:3,Evolution:4,Processing:5,Tools:6,ToolImpl:7,Agent:8,Eval:9,Entry:10,
-  Identity:-3,MemoryData:-2,Events:-1,Status:-1,Archive:-2,
+  Identity:-3,MemoryData:-2,Events:-1,Status:-1,Archive:-2,Namespace:-2,
   RootConfig:12,Docs:13,Harness:14,Skills:15,MultiAgent:16,AgentContext:16,AgentInfra:17,
 };
 
@@ -1441,13 +1442,15 @@ async function loadGraph() {
   const toolbar = document.createElement('div');
   toolbar.style.cssText = 'position:absolute;top:12px;left:12px;z-index:10;display:flex;gap:6px;flex-wrap:wrap';
   const bs = 'padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);cursor:pointer;font-size:12px';
+  const nsCount = _graphFullData.nodes.filter(n=>n.type==='namespace').length;
   toolbar.innerHTML = `<button onclick="_graphResetCamera()" style="${bs}">重置视角</button>
     <button id="graphLayoutBtn" onclick="_graphToggleLayout()" style="${bs}">层级排列</button>
     <span style="width:1px;height:24px;background:var(--border);margin:0 2px;align-self:center"></span>
     <button class="gf-btn active" data-layer="all" onclick="_graphFilter('all')" style="${bs};background:var(--accent);color:#fff;border-color:var(--accent)">全部 (${total})</button>
     <button class="gf-btn" data-layer="code" onclick="_graphFilter('code')" style="${bs}">代码 (${m.codeCount})</button>
     <button class="gf-btn" data-layer="data" onclick="_graphFilter('data')" style="${bs}">数据 (${m.dataCount})</button>
-    <button class="gf-btn" data-layer="config" onclick="_graphFilter('config')" style="${bs}">配置 (${m.configCount})</button>`;
+    <button class="gf-btn" data-layer="config" onclick="_graphFilter('config')" style="${bs}">配置 (${m.configCount})</button>
+    <button class="gf-btn" data-layer="memory" onclick="_graphFilter('memory')" style="${bs}">记忆 (${nsCount})</button>`;
   container.appendChild(toolbar);
   if (m.snapshotAge) {
     const info = document.createElement('div');
@@ -1459,7 +1462,7 @@ async function loadGraph() {
   const legend = document.createElement('div');
   legend.style.cssText = 'position:absolute;bottom:12px;left:12px;z-index:10;display:flex;gap:16px;font-size:10px;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:8px';
   [{t:'代码层',g:['Entry','Memory','Processing','Evolution','State','Tools','Agent','Eval','Adapters']},
-   {t:'数据层',g:['Identity','MemoryData','Events','Status','Archive']},
+   {t:'数据层',g:['Identity','MemoryData','Namespace','Events','Status','Archive']},
    {t:'配置层',g:['RootConfig','Docs','Harness','Skills','MultiAgent']}].forEach(sec => {
     const col = document.createElement('div');
     col.innerHTML = `<div style="font-weight:600;margin-bottom:3px;color:var(--text-secondary)">${sec.t}</div>` +
@@ -1468,7 +1471,7 @@ async function loadGraph() {
   });
   const ec = document.createElement('div');
   ec.innerHTML = '<div style="font-weight:600;margin-bottom:3px;color:var(--text-secondary)">边</div>' +
-    [{l:'import',c:'#818cf8'},{l:'reference',c:'#d946ef'},{l:'dataflow',c:'#22d3ee'}].map(x=>`<span style="color:${x.c};margin-right:6px">— ${x.l}</span>`).join('');
+    [{l:'import',c:'#818cf8'},{l:'reference',c:'#d946ef'},{l:'dataflow',c:'#22d3ee'},{l:'shared-tag',c:'#e879f9'}].map(x=>`<span style="color:${x.c};margin-right:6px">— ${x.l}</span>`).join('');
   legend.appendChild(ec);
   container.appendChild(legend);
   _renderGraph(container, _graphFullData);
@@ -1487,14 +1490,16 @@ function _renderGraph(container, data) {
   const Graph = ForceGraph3D()(graphEl)
     .graphData({nodes,links})
     .backgroundColor('#111827')
-    .nodeVal(n => n.type==='dir' ? 10 : 2 + (fanIn[n.id]/maxFan)*4)
+    .nodeVal(n => n.type==='dir' ? 10 : n.type==='namespace' ? 3 + Math.min((n.itemCount||1)/5, 6) : 2 + (fanIn[n.id]/maxFan)*4)
     .nodeColor(n => {
-      const c = GROUP_COLORS[n.group]||'#888888';
+      const c = n.type==='namespace' ? GROUP_COLORS.Namespace : (GROUP_COLORS[n.group]||'#888888');
       return c.length===7 ? c+'80' : c; // 50% alpha via hex
     })
     .nodeLabel(n => {
       const ll = {code:'代码层',data:'数据层',config:'配置层'}[n.layer]||'';
-      return `<div style="background:rgba(0,0,0,0.85);padding:8px 12px;border-radius:6px;color:#fff;font-size:12px;max-width:280px"><b>${n.label||n.id}</b><br/><span style="color:#9ca3af">${n.desc||''}</span><br/><span style="color:${GROUP_COLORS[n.group]}">${n.group}</span> · ${ll} · fan-in: ${fanIn[n.id]||0}</div>`;
+      const extra = n.type==='namespace' ? ` · ${n.itemCount||0} 条` : ` · fan-in: ${fanIn[n.id]||0}`;
+      const col = n.type==='namespace' ? GROUP_COLORS.Namespace : GROUP_COLORS[n.group];
+      return `<div style="background:rgba(0,0,0,0.85);padding:8px 12px;border-radius:6px;color:#fff;font-size:12px;max-width:280px"><b>${n.label||n.id}</b><br/><span style="color:#9ca3af">${n.desc||''}</span><br/><span style="color:${col}">${n.type==='namespace'?'Namespace':n.group}</span> · ${ll}${extra}</div>`;
     })
     .linkColor(l => {
       const t = l.type||'import';
@@ -1502,13 +1507,13 @@ function _renderGraph(container, data) {
       const sn = nodes.find(n=>n.id===(l.source.id||l.source));
       return (GROUP_COLORS[sn?.group]||'#888')+'4D';
     })
-    .linkWidth(l => ({contain:0.5,dataflow:0.8,reference:0.6}[l.type]||0.5))
+    .linkWidth(l => ({contain:0.5,dataflow:0.8,reference:0.6,'shared-tag':0.7}[l.type]||0.5))
     .linkDirectionalArrowLength(l => l.type==='contain'?0:3)
     .linkDirectionalArrowRelPos(1)
-    .linkDirectionalParticles(l => ({contain:0,dataflow:3,reference:1}[l.type]??2))
+    .linkDirectionalParticles(l => ({contain:0,dataflow:3,reference:1,'shared-tag':2}[l.type]??2))
     .linkDirectionalParticleWidth(1.5)
     .linkDirectionalParticleSpeed(l => l.type==='dataflow'?0.008:0.005)
-    .linkDirectionalParticleColor(l => ({dataflow:'#22d3ee',reference:'#d946ef'}[l.type]||null))
+    .linkDirectionalParticleColor(l => ({dataflow:'#22d3ee',reference:'#d946ef','shared-tag':'#e879f9'}[l.type]||null))
     .onNodeClick(node => {
       const d=120,{x,y,z}=node;
       Graph.cameraPosition({x:x+d,y:y+d,z:z+d},{x,y,z},1500);
@@ -1534,8 +1539,8 @@ function _renderGraph(container, data) {
     .height(container.clientHeight);
   // 关联紧密度自动调距
   Graph.d3Force('link')
-    .distance(l => ({contain:15,dataflow:25,import:35,reference:55}[l.type]||40))
-    .strength(l => ({contain:1.0,dataflow:0.6,import:0.4,reference:0.2}[l.type]||0.4));
+    .distance(l => ({contain:15,dataflow:25,import:35,reference:55,'shared-tag':30}[l.type]||40))
+    .strength(l => ({contain:1.0,dataflow:0.6,import:0.4,reference:0.2,'shared-tag':0.5}[l.type]||0.4));
   Graph.d3Force('charge').strength(-50);
   // 所有节点显示名称标签
   if (window.THREE) {
@@ -1543,7 +1548,7 @@ function _renderGraph(container, data) {
       Graph.nodeThreeObject(node => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        const fs = node.type==='dir' ? 26 : 18;
+        const fs = node.type==='dir' ? 26 : node.type==='namespace' ? 22 : 18;
         const text = node.label||node.id;
         ctx.font = `bold ${fs}px -apple-system,sans-serif`;
         const w = ctx.measureText(text).width + 12;
@@ -1551,7 +1556,7 @@ function _renderGraph(container, data) {
         ctx.font = `bold ${fs}px -apple-system,sans-serif`;
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(0, 0, w, canvas.height);
-        ctx.fillStyle = GROUP_COLORS[node.group] || '#ccc';
+        ctx.fillStyle = node.type==='namespace' ? GROUP_COLORS.Namespace : (GROUP_COLORS[node.group] || '#ccc');
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(text, w/2, canvas.height/2);
         const texture = new THREE.CanvasTexture(canvas);
@@ -1584,6 +1589,21 @@ function _graphFilter(layer) {
   });
   if (layer === 'all') {
     _graphInstance.graphData({nodes:_graphFullData.nodes, links:_graphFullData.links});
+  } else if (layer === 'memory') {
+    // 记忆筛选：memory-items 文件 + namespace 节点 + 它们之间的边
+    const memFileNames = new Set(['memory-items.md','memory-items-intake.md','memory-items-claude.md']);
+    const memNodes = _graphFullData.nodes.filter(n =>
+      n.type==='namespace' || (n.layer==='data' && memFileNames.has(n.label))
+    );
+    const ids = new Set(memNodes.map(n=>n.id));
+    _graphInstance.graphData({
+      nodes: memNodes,
+      links: _graphFullData.links.filter(l=>{
+        const s=typeof l.source==='object'?l.source.id:l.source;
+        const t=typeof l.target==='object'?l.target.id:l.target;
+        return ids.has(s)&&ids.has(t);
+      })
+    });
   } else {
     const ids = new Set(_graphFullData.nodes.filter(n=>n.layer===layer).map(n=>n.id));
     _graphInstance.graphData({

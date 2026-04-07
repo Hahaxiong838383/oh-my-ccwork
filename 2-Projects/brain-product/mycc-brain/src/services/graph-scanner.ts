@@ -8,6 +8,7 @@
  */
 import { readdirSync, readFileSync, existsSync, statSync } from "fs";
 import { join, resolve, relative, extname, basename } from "path";
+import { parseMemoryItems } from "./memory-store.js";
 
 // ─── 类型定义 ───────────────────────────────────────
 
@@ -16,14 +17,15 @@ export interface GraphNode {
   label: string;
   group: string;
   layer: "code" | "data" | "config";
-  type: "dir" | "file";
+  type: "dir" | "file" | "namespace";
   desc: string;
+  itemCount?: number; // namespace 节点：条目数量
 }
 
 export interface GraphLink {
   source: string;
   target: string;
-  type: "contain" | "import" | "reference" | "dataflow";
+  type: "contain" | "import" | "reference" | "dataflow" | "shared-tag";
 }
 
 export interface GraphData {
@@ -330,6 +332,79 @@ function scanDataLayer(dataDir: string): { nodes: GraphNode[]; links: GraphLink[
         desc: entry.name.replace(/\.md$/, "").replace(/-/g, " "),
       });
       links.push({ source: cmRootId, target: fileId, type: "contain" });
+    }
+  }
+
+  // ─── 记忆命名空间子节点 ────────────────────────────────
+  const memoryFiles = ["memory-items.md", "memory-items-intake.md", "memory-items-claude.md"];
+  // namespace → { itemCount, tags, sourceFiles }
+  const nsMap = new Map<string, { itemCount: number; tags: Set<string>; sourceFiles: Set<string> }>();
+
+  for (const filename of memoryFiles) {
+    const categories = parseMemoryItems(dataDir, filename);
+    if (categories.length === 0) continue;
+    for (const cat of categories) {
+      // 从 header 提取 namespace，如 "## [user/topOfMind]" → "user/topOfMind"
+      const nsMatch = cat.header.match(/\[(.+?)\]/);
+      if (!nsMatch) continue;
+      const ns = nsMatch[1];
+      const existing = nsMap.get(ns);
+      if (existing) {
+        existing.itemCount += cat.items.length;
+        existing.sourceFiles.add(filename);
+        for (const item of cat.items) {
+          const tagMatches = item.match(/#(\S+)/g);
+          if (tagMatches) tagMatches.forEach(t => existing.tags.add(t.slice(1)));
+        }
+      } else {
+        const tags = new Set<string>();
+        for (const item of cat.items) {
+          const tagMatches = item.match(/#(\S+)/g);
+          if (tagMatches) tagMatches.forEach(t => tags.add(t.slice(1)));
+        }
+        nsMap.set(ns, { itemCount: cat.items.length, tags, sourceFiles: new Set([filename]) });
+      }
+    }
+  }
+
+  // 创建 namespace 节点 + contain 边
+  const nodeIds = new Set(nodes.map(n => n.id));
+  for (const [ns, info] of nsMap) {
+    const nsId = `data:memory-ns:${ns}`;
+    const prefix = ns.split("/")[0];
+    const group = prefix === "user" ? "Identity" : "MemoryData";
+    nodes.push({
+      id: nsId,
+      label: ns,
+      group,
+      layer: "data",
+      type: "namespace",
+      desc: `${info.itemCount} 条记忆`,
+      itemCount: info.itemCount,
+    });
+    // 从对应的 memory-items 文件节点 → namespace 节点
+    for (const srcFile of info.sourceFiles) {
+      const fileNodeId = `data:${srcFile}`;
+      if (nodeIds.has(fileNodeId)) {
+        links.push({ source: fileNodeId, target: nsId, type: "contain" });
+      }
+    }
+  }
+
+  // ─── 跨命名空间共享 tag 关联边 ───────────────────────────
+  const nsEntries = [...nsMap.entries()];
+  for (let i = 0; i < nsEntries.length; i++) {
+    for (let j = i + 1; j < nsEntries.length; j++) {
+      const [nsA, infoA] = nsEntries[i];
+      const [nsB, infoB] = nsEntries[j];
+      const shared = [...infoA.tags].filter(t => infoB.tags.has(t));
+      if (shared.length >= 2) {
+        links.push({
+          source: `data:memory-ns:${nsA}`,
+          target: `data:memory-ns:${nsB}`,
+          type: "shared-tag",
+        });
+      }
     }
   }
 
