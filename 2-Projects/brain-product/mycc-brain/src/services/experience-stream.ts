@@ -95,7 +95,7 @@ interface BoostCache {
 const BOOST_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 let _boostCache: BoostCache | null = null;
 
-function readRecentEntries(brainRoot: string, days: number): ExperienceEntry[] {
+export function readRecentEntries(brainRoot: string, days: number): ExperienceEntry[] {
   const dir = getExpDir(brainRoot);
   if (!existsSync(dir)) return [];
 

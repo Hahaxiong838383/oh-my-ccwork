@@ -15,6 +15,7 @@ import { getTodayStats, getRecentDayStats, getInsights, getHealthMetrics, getMem
 import { getConversationStats } from "./services/conversation.js";
 import { diagnoseLatestEval } from "./services/evolution-diagnosis.js";
 import { runEvolutionCycle } from "./services/evolution-engine.js";
+import { getPredictionEngineStats, checkSftReadiness } from "./services/prediction-engine.js";
 import { buildGraphData } from "./services/graph-scanner.js";
 import { ToolRegistry } from "./services/tool-registry.js";
 import { runAgentLoop } from "./services/agent-loop.js";
@@ -724,6 +725,20 @@ const server = http.createServer(async (req, res) => {
     const days = parseInt(url.searchParams.get("days") ?? "30", 10);
     const clampedDays = Math.max(1, Math.min(days, 90));
     json(res, 200, getMemoryHealth(brainRoot, clampedDays));
+    return;
+  }
+
+  // Admin API: prediction engine stats (resonance, resolution, learning priorities, curiosity)
+  if (path === "/admin/api/prediction-stats" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    json(res, 200, getPredictionEngineStats(brainRoot));
+    return;
+  }
+
+  // Admin API: SFT readiness check (AESL conditions)
+  if (path === "/admin/api/sft-readiness" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    json(res, 200, checkSftReadiness(brainRoot));
     return;
   }
 

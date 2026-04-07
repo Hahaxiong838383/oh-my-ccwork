@@ -28,6 +28,8 @@ import { evaluateGeneration } from "./judge-evaluator.js";
 import { generateTsv, saveReport, printSummary, checkRegressions, writeEvalResult } from "./eval-report.js";
 import type { EvalResult } from "./eval-report.js";
 import { httpGet } from "./http-direct.js";
+import { loadEvolutionTestCases } from "../services/evolution-test-gen.js";
+import { revertAction } from "../services/evolution-engine.js";
 
 // ─── CLI args ───
 
@@ -50,10 +52,15 @@ const log = (...args: unknown[]) => console.error(...args);
 // ─── Main ───
 
 async function main() {
-  log("🧠 mycc-brain 评测系统 v1.1");
+  // Track C: 加载动态用例
+  const brainRootForTests = resolve(import.meta.dirname, "../..");
+  const evolutionTests = loadEvolutionTestCases(brainRootForTests);
+  const allCases = ALL_TEST_CASES;  // 动态用例统计单独处理
+
+  log("🧠 mycc-brain 评测系统 v1.2");
   log(`   Brain URL: ${brainUrl}`);
   log(`   Judge: ${judgeModel} (Gemini)`);
-  log(`   用例数: ${ALL_TEST_CASES.length}`);
+  log(`   固定用例: ${ALL_TEST_CASES.length}  动态用例: ${evolutionTests.length}`);
   log(`   模式: ${dryRun ? "dry-run（仅检索层）" : "完整评测"}`);
   log("");
 
@@ -134,7 +141,34 @@ async function main() {
       log(`  ${icon} ${r.metric}: ${r.baseline.toFixed(2)} → ${r.current.toFixed(2)} (${r.deltaPct.toFixed(1)}%)`);
     }
     if (needsRollback) {
-      log("\n🚨 存在 CRITICAL 回归，建议回滚！");
+      log("\n🚨 存在 CRITICAL 回归，尝试自动回滚最近 patch...");
+      // Track D: 自动回滚最近 24h 内的 evolution actions
+      try {
+        const { readFileSync, existsSync } = await import("fs");
+        const actionsPath = resolve(brainRootForTests, "data/evolution-actions.jsonl");
+        if (existsSync(actionsPath)) {
+          const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          const lines = readFileSync(actionsPath, "utf-8").split("\n").filter(Boolean);
+          let reverted = 0;
+          for (const line of lines) {
+            try {
+              const action = JSON.parse(line);
+              if (new Date(action.timestamp) >= cutoff && action.applied && action.relatedPatchIds && !action.revertedAt) {
+                const regressedMetrics = regressions.map(r => r.metric).join(", ");
+                if (revertAction(brainRootForTests, action.diagnosisCaseId, `auto-rollback: regression in ${regressedMetrics}`)) {
+                  reverted++;
+                }
+              }
+            } catch { /* skip */ }
+          }
+          if (reverted > 0) {
+            log(`  ↩️  自动回滚了 ${reverted} 个 patch`);
+          }
+        }
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        log(`  ⚠️  自动回滚失败: ${msg}`);
+      }
     }
   }
 

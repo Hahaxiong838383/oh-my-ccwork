@@ -50,9 +50,76 @@ const KEYWORD_PATTERNS: Array<{ pattern: RegExp; categories: string[] }> = [
   { pattern: /微调|fine-?tune|训练|dataset/i, categories: ["project/技术-数据"] },
 ];
 
+// ─── 动态置信度 ───
+
+interface DiagnosisConfidenceEntry {
+  confidence: number;
+  total: number;
+  effective: number;
+}
+
+type DiagnosisConfidenceMap = Record<string, DiagnosisConfidenceEntry>;
+
+const DEFAULT_CONFIDENCE: Record<DiagnosisType, number> = {
+  keyword_miss: 0.8,
+  tfidf_threshold: 0.6,
+  hallucination: 0.7,
+  prompt_leak: 0.9,
+  unknown: 0.3,
+};
+
+function loadDiagnosisConfidence(brainRoot: string): DiagnosisConfidenceMap {
+  const p = join(brainRoot, "data", "diagnosis-confidence.json");
+  if (!existsSync(p)) return {};
+  try {
+    return JSON.parse(readFileSync(p, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+function getConfidence(brainRoot: string, diagType: DiagnosisType, fallback: number): number {
+  const map = loadDiagnosisConfidence(brainRoot);
+  return map[diagType]?.confidence ?? fallback;
+}
+
+/** 更新置信度：effective +1 时提升，仅 total +1 时下降 */
+export function updateDiagnosisConfidence(
+  brainRoot: string,
+  diagType: DiagnosisType,
+  wasEffective: boolean,
+): void {
+  const p = join(brainRoot, "data", "diagnosis-confidence.json");
+  const map = loadDiagnosisConfidence(brainRoot);
+
+  const entry = map[diagType] ?? {
+    confidence: DEFAULT_CONFIDENCE[diagType] ?? 0.5,
+    total: 0,
+    effective: 0,
+  };
+
+  const updated: DiagnosisConfidenceEntry = {
+    total: entry.total + 1,
+    effective: wasEffective ? entry.effective + 1 : entry.effective,
+    confidence: 0,
+  };
+  // 限制在 [0.2, 0.95]
+  updated.confidence = Math.max(0.2, Math.min(0.95, updated.effective / updated.total));
+
+  const newMap: DiagnosisConfidenceMap = { ...map, [diagType]: updated };
+  const dir = join(brainRoot, "data");
+  if (!existsSync(dir)) {
+    const { mkdirSync } = require("fs") as typeof import("fs");
+    mkdirSync(dir, { recursive: true });
+  }
+  const { writeFileSync } = require("fs") as typeof import("fs");
+  writeFileSync(p, JSON.stringify(newMap, null, 2) + "\n");
+}
+
 // ─── Diagnosis Logic ───
 
 function diagnoseRetrievalFailure(
+  brainRoot: string,
   query: string,
   expectedCategories: string[],
   actualCategories: string[],
@@ -69,7 +136,7 @@ function diagnoseRetrievalFailure(
       caseId,
       query,
       diagnosis: "keyword_miss",
-      confidence: 0.8,
+      confidence: getConfidence(brainRoot, "keyword_miss", DEFAULT_CONFIDENCE.keyword_miss),
       detail: `查询 "${query}" 期望命中 [${expectedCategories.join(", ")}]，但关键词规则无匹配`,
     };
   }
@@ -79,12 +146,13 @@ function diagnoseRetrievalFailure(
     caseId,
     query,
     diagnosis: "tfidf_threshold",
-    confidence: 0.6,
+    confidence: getConfidence(brainRoot, "tfidf_threshold", DEFAULT_CONFIDENCE.tfidf_threshold),
     detail: `查询 "${query}" 关键词可匹配，但 TF-IDF 相似度低于阈值被过滤`,
   };
 }
 
 function diagnoseGenerationFailure(
+  brainRoot: string,
   prompt: string,
   reason?: string,
 ): DiagnosisItem {
@@ -95,7 +163,7 @@ function diagnoseGenerationFailure(
       caseId,
       query: prompt,
       diagnosis: "prompt_leak",
-      confidence: 0.9,
+      confidence: getConfidence(brainRoot, "prompt_leak", DEFAULT_CONFIDENCE.prompt_leak),
       detail: `模型泄露了 system prompt 或内部配置: ${reason}`,
     };
   }
@@ -105,17 +173,17 @@ function diagnoseGenerationFailure(
       caseId,
       query: prompt,
       diagnosis: "hallucination",
-      confidence: 0.7,
+      confidence: getConfidence(brainRoot, "hallucination", DEFAULT_CONFIDENCE.hallucination),
       detail: `模型编造了记忆中不存在的内容: ${reason}`,
     };
   }
 
-  // 低分但无明确原因 → 默认归为幻觉
+  // 低分但无明确原因 → 默认归为幻觉（使用较低置信度）
   return {
     caseId,
     query: prompt,
     diagnosis: "hallucination",
-    confidence: 0.4,
+    confidence: Math.max(0.2, getConfidence(brainRoot, "hallucination", DEFAULT_CONFIDENCE.hallucination) * 0.6),
     detail: `生成质量低但原因不明确，暂归为幻觉`,
   };
 }
@@ -153,6 +221,7 @@ export function diagnoseLatestEval(brainRoot: string): DiagnosisReport | null {
     for (const c of result.retrieval.cases) {
       if (c.pass) continue;
       const d = diagnoseRetrievalFailure(
+        brainRoot,
         c.query,
         c.expectedCategories ?? [],
         c.actualCategories ?? [],
@@ -166,7 +235,7 @@ export function diagnoseLatestEval(brainRoot: string): DiagnosisReport | null {
   if (result.generation?.cases) {
     for (const c of result.generation.cases) {
       if (c.pass) continue;
-      const d = diagnoseGenerationFailure(c.prompt, c.reason);
+      const d = diagnoseGenerationFailure(brainRoot, c.prompt, c.reason);
       d.caseId = c.id;
       diagnoses.push(d);
     }

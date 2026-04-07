@@ -12,6 +12,7 @@ import { join, dirname } from "path";
 import { chatCompletion } from "../adapters/openai-compat.js";
 import type { MemoryLLMRoute } from "../config.js";
 import { mineUserPatterns } from "./pattern-miner.js";
+import { checkSftReadiness, computeLearningPriority } from "./prediction-engine.js";
 
 // ─── 类型定义 ───
 
@@ -20,6 +21,8 @@ export interface ConsolidationResult {
   archived: number;
   basesRebuilt: number;
   conflictsResolved: number;
+  sftReady: boolean;
+  learningPriorities: number;
   errors: string[];
 }
 
@@ -484,6 +487,8 @@ export async function runConsolidation(
     archived: 0,
     basesRebuilt: 0,
     conflictsResolved: 0,
+    sftReady: false,
+    learningPriorities: 0,
     errors: [],
   };
 
@@ -518,6 +523,35 @@ export async function runConsolidation(
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     result.errors.push(`Pattern mining failed: ${msg}`);
+  }
+
+  // Phase 5: SFT 就绪检查 + 学习优先级
+  try {
+    const brainRoot = join(dataDir, "..");
+    const sftReport = checkSftReadiness(brainRoot);
+    result.sftReady = sftReport.ready;
+
+    if (sftReport.ready) {
+      const logPath = join(brainRoot, "data", "evolution-log.jsonl");
+      const logDir = join(brainRoot, "data");
+      if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
+      appendFileSync(logPath, JSON.stringify({
+        type: "sft_ready",
+        timestamp: new Date().toISOString(),
+        report: sftReport,
+      }) + "\n");
+    }
+
+    const priorities = computeLearningPriority(brainRoot, 14);
+    result.learningPriorities = priorities.length;
+
+    const prioritiesPath = join(brainRoot, "data", "learning-priorities.json");
+    writeFileSync(prioritiesPath, JSON.stringify(priorities, null, 2) + "\n");
+
+    console.log(`[consolidation] Phase 5 done: sftReady=${sftReport.ready}, ${priorities.length} learning priorities`);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    result.errors.push(`Phase 5 (SFT/learning) failed: ${msg}`);
   }
 
   // 写回文件

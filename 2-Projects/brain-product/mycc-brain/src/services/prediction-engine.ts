@@ -52,15 +52,71 @@ function generatePredictionId(): string {
   return `pred_${Date.now()}_${_predictionIdCounter++}`;
 }
 
+/** 加载 user-patterns.json（由 pattern-miner 每日巩固时生成） */
+function loadUserPatterns(brainRoot: string): {
+  temporal: ReadonlyArray<{ dayOfWeek: number; timeSlot: string; intent: string; category: string; count: number }>;
+  transitions: ReadonlyArray<{ from: string; to: string; count: number; probability: number }>;
+} | null {
+  const patternsPath = join(brainRoot, "data", "user-patterns.json");
+  if (!existsSync(patternsPath)) return null;
+  try {
+    return JSON.parse(readFileSync(patternsPath, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
 /**
- * 基于当前用户状态 + 最近查询模式，预测下一步需求。
+ * 基于当前用户状态 + 最近查询模式 + 离线挖掘模式，预测下一步需求。
  * 纯规则驱动，零 LLM 调用。
  */
 export function predictNextNeed(
   currentIntent: string,
   currentCategory: string,
   recentCategories: readonly string[],
+  brainRoot?: string,
 ): { predictedIntent: string; predictedCategory: string; confidence: number; basis: string } {
+  // 尝试用 user-patterns.json 提升预测（如果存在）
+  if (brainRoot) {
+    const patterns = loadUserPatterns(brainRoot);
+    if (patterns) {
+      // 先验 1：转换模式（intent A → intent B 的概率）
+      const matchingTransition = patterns.transitions
+        .filter(t => t.from === currentIntent)
+        .sort((a, b) => b.probability - a.probability)[0];
+
+      if (matchingTransition && matchingTransition.probability > 0.4) {
+        return {
+          predictedIntent: matchingTransition.to,
+          predictedCategory: currentCategory,
+          confidence: Math.min(0.8, matchingTransition.probability),
+          basis: `transition pattern: ${matchingTransition.from}→${matchingTransition.to} (p=${matchingTransition.probability.toFixed(2)})`,
+        };
+      }
+
+      // 先验 2：时间模式（当前时间段 × 星期几 的高频 intent/category）
+      const now = new Date();
+      const hour = now.getHours();
+      const timeSlot = hour >= 6 && hour < 12 ? "morning"
+        : hour >= 12 && hour < 18 ? "afternoon"
+        : hour >= 18 && hour < 23 ? "evening" : "night";
+      const dayOfWeek = now.getDay();
+
+      const temporalMatch = patterns.temporal
+        .filter(t => t.dayOfWeek === dayOfWeek && t.timeSlot === timeSlot)
+        .sort((a, b) => b.count - a.count)[0];
+
+      if (temporalMatch && temporalMatch.count >= 3) {
+        return {
+          predictedIntent: temporalMatch.intent,
+          predictedCategory: temporalMatch.category,
+          confidence: Math.min(0.7, 0.3 + temporalMatch.count * 0.05),
+          basis: `temporal pattern: ${timeSlot}+day${dayOfWeek} → ${temporalMatch.intent}/${temporalMatch.category} (${temporalMatch.count}x)`,
+        };
+      }
+    }
+  }
+
   // 规则 1：debug 之后通常是 build（修完就接着干）
   if (currentIntent === "debug") {
     return {
