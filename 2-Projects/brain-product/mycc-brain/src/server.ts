@@ -24,7 +24,8 @@ import { runDiagnosisTool } from "./tools/run-diagnosis.js";
 import { addMemoryTool } from "./tools/add-memory.js";
 
 import { runMemoryIntake } from "./services/memory-intake.js";
-import { parseMemoryItems } from "./services/memory-store.js";
+import { syncClaudeMemory } from "./services/claude-memory-sync.js";
+import { parseMemoryItems, type ParsedCategory } from "./services/memory-store.js";
 import { McpClient } from "./services/mcp-client.js";
 import { bridgeMcpTools, type BridgeResult } from "./services/mcp-bridge.js";
 import { getEnabledMcpServers, type McpServerConfig } from "./mcp-config.js";
@@ -140,7 +141,7 @@ const server = http.createServer(async (req, res) => {
   // Admin UI
   if (path === "/admin" || path === "/admin/") {
     if (existsSync(ADMIN_HTML_PATH)) {
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache, no-store, must-revalidate" });
       res.end(readFileSync(ADMIN_HTML_PATH, "utf-8"));
     } else {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
@@ -520,10 +521,28 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Admin API: memory items — 返回 memory-items.md 结构化数据 + 健康指标
+  // Admin API: memory items — 返回 memory-items.md + intake 合并数据 + 健康指标
   if (path === "/admin/api/memory/items" && req.method === "GET") {
     try {
-      const parsed = parseMemoryItems(config.dataDir);
+      const mainItems = parseMemoryItems(config.dataDir);
+      const intakeItems = parseMemoryItems(config.dataDir, "memory-items-intake.md");
+      const claudeItems = parseMemoryItems(config.dataDir, "memory-items-claude.md");
+      // 合并：intake + claude 条目按 namespace 追加到主文件分类中
+      const merged = new Map<string, ParsedCategory>();
+      for (const cat of mainItems) {
+        const ns = cat.header.match(/\[(.+?)\]/)?.[1] ?? cat.header;
+        merged.set(ns, { ...cat, items: [...cat.items] });
+      }
+      for (const cat of [...intakeItems, ...claudeItems]) {
+        const ns = cat.header.match(/\[(.+?)\]/)?.[1] ?? cat.header;
+        const existing = merged.get(ns);
+        if (existing) {
+          existing.items.push(...cat.items);
+        } else {
+          merged.set(ns, { ...cat, items: [...cat.items] });
+        }
+      }
+      const parsed = [...merged.values()];
       const today = new Date();
       const categories = parsed.map((cat) => {
         const items = cat.items.map((raw) => {
@@ -1088,6 +1107,30 @@ function scheduleEvolution() {
   }, 60_000);
 }
 
+// ─── Claude 记忆同步定时器（每 30 分钟）───
+function scheduleClaudeMemorySync() {
+  // 启动时立即执行一次（fire-and-forget）
+  try {
+    const result = syncClaudeMemory(config.dataDir);
+    if (!result.skipped) {
+      console.log(`[claude-sync] converted ${result.converted} items from ${result.filesProcessed} files`);
+    }
+  } catch (err) {
+    console.error(`[claude-sync] initial run failed:`, err instanceof Error ? err.message : err);
+  }
+
+  setInterval(() => {
+    try {
+      const result = syncClaudeMemory(config.dataDir);
+      if (!result.skipped) {
+        console.log(`[claude-sync] converted ${result.converted} items from ${result.filesProcessed} files`);
+      }
+    } catch (err) {
+      console.error(`[claude-sync] failed:`, err instanceof Error ? err.message : err);
+    }
+  }, 30 * 60_000); // 每 30 分钟
+}
+
 // 启动服务：先初始化 MCP 连接，再监听端口
 initMcpConnections().then(() => {
   server.listen(config.port, "0.0.0.0", () => {
@@ -1099,8 +1142,9 @@ initMcpConnections().then(() => {
     console.log(`   Memory: memory-items.md (${memExists ? "✅" : "❌ not found"})`);
     console.log(`   Models: ${Object.keys(config.routes).join(", ")}`);
     console.log(`   MCP:   ${mcpClients.size} server(s) connected`);
-    console.log(`   Cron:  consolidation @04:00, evolution @07:00\n`);
+    console.log(`   Cron:  consolidation @04:00, evolution @07:00, claude-sync @30min\n`);
     scheduleConsolidation();
     scheduleEvolution();
+    scheduleClaudeMemorySync();
   });
 });

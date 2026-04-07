@@ -11,7 +11,7 @@ export interface MemoryFact {
   source?: string; // "brain" | "air-sync" | "manual" — 记忆来源标记
 }
 
-interface ParsedCategory {
+export interface ParsedCategory {
   header: string;       // e.g. "[project/技术-飞书]"
   items: string[];      // 每行原始文本
 }

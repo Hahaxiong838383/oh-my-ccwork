@@ -15,7 +15,14 @@ import { loadActivePatches } from "./services/hot-patch.js";
 import { writeExperience, type ExperienceEntry } from "./services/experience-stream.js";
 import { resolveConversation, saveToConversation } from "./services/conversation.js";
 import { inferValenceArousal, updateSessionState, getSessionState, cleanupSessionStates } from "./services/user-state.js";
-import { recordPrediction } from "./services/prediction-engine.js";
+import {
+  recordPrediction,
+  verifyLastPrediction,
+  predictNextNeed,
+  computeResonance,
+  decideProactiveAction,
+  formatProactiveSuggestion,
+} from "./services/prediction-engine.js";
 
 // 简单内存统计
 const stats = {
@@ -153,6 +160,39 @@ export class BrainApi {
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error(`[brain] memory injection failed: ${msg}`);
+      }
+    }
+
+    // GAP3: 异步验证上一次预测（fire-and-forget）
+    const brainRoot = resolve(import.meta.dirname, "..");
+    const actualCategory = brainResult?.matchedCategories[0] ?? "unknown";
+    verifyLastPrediction(brainRoot, conversationId, userState.intent, actualCategory)
+      .then((v) => {
+        if (v) console.log(`[brain] prediction verified: ${v.hit ? "✅ hit" : "❌ miss"} (${v.id})`);
+      })
+      .catch(() => {});
+
+    // GAP3: 主动行为决策 — 基于预测置信度 + 共振度决定是否注入建议
+    if (route.brain && messages.length > 0 && messages[0].role === "system") {
+      const prediction = predictNextNeed(
+        userState.intent,
+        actualCategory,
+        brainResult?.matchedCategories ?? [],
+      );
+      // recentValences: 当前会话无充足历史时用空数组（共振度=0 → 保守决策，正确行为）
+      const resonance = computeResonance(brainRoot, 14, []);
+      const proactive = decideProactiveAction(prediction.confidence, resonance.resonanceScore);
+      if (proactive.level === "suggest" || proactive.level === "act") {
+        const suggestion = formatProactiveSuggestion(
+          prediction.predictedIntent,
+          prediction.predictedCategory,
+          proactive.level,
+        );
+        messages = [
+          { ...messages[0], content: messages[0].content + suggestion },
+          ...messages.slice(1),
+        ];
+        console.log(`[brain] proactive: ${proactive.level} (conf=${proactive.adjustedConfidence.toFixed(2)}, ${proactive.reason})`);
       }
     }
 

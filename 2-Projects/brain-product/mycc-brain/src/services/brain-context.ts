@@ -120,7 +120,7 @@ function parseMemoryItems(content: string): MemorySection[] {
   let current: MemorySection | null = null;
 
   for (const line of lines) {
-    const headerMatch = line.match(/^##\s+\[([^\]]+)\]/);
+    const headerMatch = line.match(/^###?\s*\[([^\]]+)\]/);
     if (headerMatch) {
       if (current && current.items.length > 0) sections.push(current);
       current = { category: headerMatch[1], items: [] };
@@ -232,22 +232,25 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
   if (cached) return cached;
   const memPath = join(dataDir, "memory-items.md");
   const intakePath = join(dataDir, "memory-items-intake.md");
-  if (!existsSync(memPath) && !existsSync(intakePath)) {
+  const claudePath = join(dataDir, "memory-items-claude.md");
+  if (!existsSync(memPath) && !existsSync(intakePath) && !existsSync(claudePath)) {
     return { context: "", matchedCategories: [], itemCount: 0, retrievalPaths: [] };
   }
 
-  // 合并主文件和 intake 文件的 sections
+  // 合并主文件、intake 和 claude-sync 文件的 sections
   const memContent = existsSync(memPath) ? readFileSync(memPath, "utf-8") : "";
   const intakeContent = existsSync(intakePath) ? readFileSync(intakePath, "utf-8") : "";
+  const claudeContent = existsSync(claudePath) ? readFileSync(claudePath, "utf-8") : "";
   const mainSections = parseMemoryItems(memContent);
   const intakeSections = parseMemoryItems(intakeContent);
+  const claudeSections = parseMemoryItems(claudeContent);
 
   // 按 category 合并（同 category 的 items 去重合并）
   const sectionMap = new Map<string, MemorySection>();
   for (const sec of mainSections) {
     sectionMap.set(sec.category, { category: sec.category, items: [...sec.items] });
   }
-  for (const sec of intakeSections) {
+  for (const sec of [...intakeSections, ...claudeSections]) {
     const existing = sectionMap.get(sec.category);
     if (existing) {
       const existingSet = new Set(existing.items);
@@ -417,7 +420,7 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
   }
 
   // 10. Claude Code 记忆检索（来自各设备 cc session 积累的经验）
-  const claudeMemDir = resolve(dataDir, "../claude-memory");
+  const claudeMemDir = join(dataDir, "claude-memory");
   const claudeMemMatched: string[] = [];
   if (existsSync(claudeMemDir)) {
     try {

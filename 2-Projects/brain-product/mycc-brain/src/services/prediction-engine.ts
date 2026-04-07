@@ -154,6 +154,68 @@ export async function recordPrediction(
   return entry;
 }
 
+/**
+ * 验证同一会话中最近一条未验证的预测。
+ * 在每次新请求到来时调用，用当前实际 intent/category 与预测值对比。
+ *
+ * 验证规则：
+ * - intent 完全匹配 → hit=true
+ * - intent 不匹配但 category 匹配 → hit=true（宽松匹配）
+ * - 都不匹配 → hit=false
+ * - 预测时间超过 30 分钟未验证 → 跳过（超时不算）
+ *
+ * 不修改原 JSONL 行，而是追加一条 verification 记录到同一文件。
+ */
+export async function verifyLastPrediction(
+  brainRoot: string,
+  conversationId: string,
+  actualIntent: string,
+  actualCategory: string,
+): Promise<PredictionEntry | null> {
+  try {
+    const filePath = todayPredictionFile(brainRoot);
+    if (!existsSync(filePath)) return null;
+
+    const lines = readFileSync(filePath, "utf-8").split("\n").filter(Boolean);
+
+    // 从后往前找同一会话中最近一条未验证的预测
+    let target: PredictionEntry | null = null;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      try {
+        const entry: PredictionEntry = JSON.parse(lines[i]);
+        if (entry.conversationId === conversationId && entry.hit === undefined) {
+          target = entry;
+          break;
+        }
+      } catch { /* skip malformed */ }
+    }
+
+    if (!target) return null;
+
+    // 超时检查：30 分钟
+    const elapsed = Date.now() - new Date(target.timestamp).getTime();
+    if (elapsed > 30 * 60 * 1000) return null;
+
+    // 验证规则：intent 匹配或 category 匹配均算 hit
+    const hit = target.predictedIntent === actualIntent
+      || target.predictedCategory === actualCategory;
+
+    const verification: PredictionEntry = {
+      ...target,
+      actualIntent,
+      actualCategory,
+      hit,
+      verifiedAt: new Date().toISOString(),
+    };
+
+    await appendFile(filePath, JSON.stringify(verification) + "\n");
+    return verification;
+  } catch {
+    // fire-and-forget
+    return null;
+  }
+}
+
 /** 读取最近 N 天的预测记录 */
 function readRecentPredictions(brainRoot: string, days: number): PredictionEntry[] {
   const dir = getPredictionDir(brainRoot);
@@ -442,6 +504,7 @@ export interface PredictionEngineStats {
   readonly pendingResourceRequests: number;
   readonly topLearningItems: LearningItem[];
   readonly recentPredictionCount: number;
+  readonly topCuriosityItems: readonly CuriosityEntry[];
 }
 
 /** 获取预测引擎综合状态（Admin UI / 巩固任务用） */
@@ -454,6 +517,10 @@ export function getPredictionEngineStats(
   const resourceRequests = loadResourceRequests(brainRoot);
   const learningItems = computeLearningPriority(brainRoot, 14);
   const predictions = readRecentPredictions(brainRoot, 7);
+  const curiosityItems = computeCuriosityScores(brainRoot);
+
+  // 异步持久化好奇心状态（fire-and-forget）
+  persistCuriosityState(brainRoot, curiosityItems).catch(() => {});
 
   return {
     resolutionState,
@@ -461,6 +528,7 @@ export function getPredictionEngineStats(
     pendingResourceRequests: resourceRequests.length,
     topLearningItems: learningItems.slice(0, 5),
     recentPredictionCount: predictions.length,
+    topCuriosityItems: curiosityItems.slice(0, 5),
   };
 }
 
@@ -577,4 +645,173 @@ export function checkSftReadiness(brainRoot: string): SftReadinessReport {
     conditions,
     recommendation,
   };
+}
+
+// ═══════════════════════════════════════════════════
+// 7. Proactive Action Threshold — 主动行为决策
+// ═══════════════════════════════════════════════════
+
+export type ProactiveLevel = "silent" | "prepare" | "suggest" | "act";
+
+/**
+ * 基于预测置信度和共振度，决定是否主动行为。
+ *
+ * 阈值矩阵（来自 SOUL.md 和 GAP3 设计文档）：
+ * - confidence < 0.3 → silent（静默，不做任何主动行为）
+ * - 0.3 <= confidence < 0.6 → prepare（备选，预加载相关记忆但不提示）
+ * - 0.6 <= confidence < 0.8 → suggest（提示，在 system prompt 注入建议）
+ * - confidence >= 0.8 → act（执行，直接在回复中融入预判内容）
+ *
+ * 动态调整：resonance score 作为乘数
+ * - resonance > 0.7 → 阈值下移 0.1（更积极）
+ * - resonance < 0.3 → 阈值上移 0.1（更保守）
+ */
+export function decideProactiveAction(
+  confidence: number,
+  resonanceScore: number,
+): { readonly level: ProactiveLevel; readonly adjustedConfidence: number; readonly reason: string } {
+  const adjustment = resonanceScore > 0.7
+    ? 0.1   // 共振度高 → 更积极
+    : resonanceScore < 0.3
+      ? -0.1  // 共振度低 → 更保守
+      : 0;
+
+  const adjustedConfidence = Math.max(0, Math.min(1, confidence + adjustment));
+
+  if (adjustedConfidence < 0.3) {
+    return { level: "silent", adjustedConfidence, reason: "置信度过低，静默观察" };
+  }
+  if (adjustedConfidence < 0.6) {
+    return { level: "prepare", adjustedConfidence, reason: "中低置信度，预加载记忆但不提示" };
+  }
+  if (adjustedConfidence < 0.8) {
+    return { level: "suggest", adjustedConfidence, reason: "中高置信度，注入建议到 system prompt" };
+  }
+  return { level: "act", adjustedConfidence, reason: "高置信度，直接融入预判内容" };
+}
+
+/**
+ * 根据主动行为等级，格式化注入 system prompt 的建议文本。
+ * - suggest: 温和提示，不强推
+ * - act: 直接融入预判
+ * - 其他等级返回空字符串
+ */
+export function formatProactiveSuggestion(
+  predictedIntent: string,
+  predictedCategory: string,
+  level: ProactiveLevel,
+): string {
+  if (level === "suggest") {
+    return `\n\n[主动建议] 基于近期交互模式，用户可能接下来需要 ${predictedIntent} 相关的 ${predictedCategory} 支持。可在回复中自然提及，但不要强推。`;
+  }
+  if (level === "act") {
+    return `\n\n[主动预判] 高置信度预判：用户下一步需要 ${predictedIntent} 相关的 ${predictedCategory} 支持。请在回复中主动融入相关信息，自然展开，无需等用户追问。`;
+  }
+  return "";
+}
+
+// ═══════════════════════════════════════════════════
+// 8. Curiosity Score — Schmidhuber 好奇心
+// ═══════════════════════════════════════════════════
+
+export interface CuriosityEntry {
+  readonly category: string;
+  readonly recentAccuracy: number;      // 近 7 天准确率
+  readonly previousAccuracy: number;    // 前 7 天准确率
+  readonly delta: number;               // recentAccuracy - previousAccuracy
+  readonly trend: "improving" | "stable" | "declining";
+}
+
+const CURIOSITY_STATE_FILE = "curiosity-state.json";
+
+/**
+ * 按类别计算好奇心分数 = Δprediction_accuracy。
+ *
+ * Schmidhuber 定义：好奇心 = 学习进度（不是对新事物的兴趣，是对"能学到东西的方向"的兴趣）
+ * - delta > 0 且大 → 学习最快，最好奇，应继续投入
+ * - delta ≈ 0 → 已掌握或无进展
+ * - delta < 0 → 退步，需要重新审视
+ *
+ * 输入：近 14 天的预测记录（已验证的）
+ * 输出：按 |delta| 降序排列（delta > 0 的在前）
+ */
+export function computeCuriosityScores(brainRoot: string): CuriosityEntry[] {
+  const predictions = readRecentPredictions(brainRoot, 14);
+  const verified = predictions.filter(p => p.hit !== undefined);
+
+  if (verified.length === 0) return [];
+
+  // 按 predictedCategory 分组
+  const byCategory = new Map<string, readonly PredictionEntry[]>();
+  for (const p of verified) {
+    const cat = p.predictedCategory || "unknown";
+    const existing = byCategory.get(cat) ?? [];
+    byCategory.set(cat, [...existing, p]);
+  }
+
+  // 时间分界：7 天前
+  const now = Date.now();
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+  const midpoint = now - sevenDaysMs;
+
+  const results: CuriosityEntry[] = [];
+
+  for (const [category, entries] of byCategory) {
+    const recent = entries.filter(
+      e => new Date(e.verifiedAt ?? e.timestamp).getTime() >= midpoint,
+    );
+    const previous = entries.filter(
+      e => new Date(e.verifiedAt ?? e.timestamp).getTime() < midpoint,
+    );
+
+    // 至少一侧有数据才有意义
+    if (recent.length === 0 && previous.length === 0) continue;
+
+    const recentAccuracy = recent.length > 0
+      ? recent.filter(e => e.hit === true).length / recent.length
+      : 0;
+    const previousAccuracy = previous.length > 0
+      ? previous.filter(e => e.hit === true).length / previous.length
+      : 0;
+
+    const delta = recentAccuracy - previousAccuracy;
+
+    const trend: CuriosityEntry["trend"] =
+      delta > 0.05 ? "improving"
+        : delta < -0.05 ? "declining"
+          : "stable";
+
+    results.push({
+      category,
+      recentAccuracy: Math.round(recentAccuracy * 1000) / 1000,
+      previousAccuracy: Math.round(previousAccuracy * 1000) / 1000,
+      delta: Math.round(delta * 1000) / 1000,
+      trend,
+    });
+  }
+
+  // 排序：delta > 0 的在前（最好奇），按 |delta| 降序
+  return results.sort((a, b) => {
+    if (a.delta > 0 && b.delta <= 0) return -1;
+    if (a.delta <= 0 && b.delta > 0) return 1;
+    return Math.abs(b.delta) - Math.abs(a.delta);
+  });
+}
+
+/** 持久化好奇心状态到 data/curiosity-state.json */
+async function persistCuriosityState(
+  brainRoot: string,
+  entries: readonly CuriosityEntry[],
+): Promise<void> {
+  try {
+    const dir = join(brainRoot, "data");
+    if (!existsSync(dir)) await mkdir(dir, { recursive: true });
+    const { writeFile } = await import("fs/promises");
+    await writeFile(
+      join(dir, CURIOSITY_STATE_FILE),
+      JSON.stringify({ updatedAt: new Date().toISOString(), entries }, null, 2),
+    );
+  } catch {
+    // fire-and-forget
+  }
 }

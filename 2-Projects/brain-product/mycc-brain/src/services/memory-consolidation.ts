@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync } fr
 import { join, dirname } from "path";
 import { chatCompletion } from "../adapters/openai-compat.js";
 import type { MemoryLLMRoute } from "../config.js";
+import { mineUserPatterns } from "./pattern-miner.js";
 
 // ─── 类型定义 ───
 
@@ -507,6 +508,17 @@ export async function runConsolidation(
   const conflict = await runConflictResolution(sections, consolidationRoute);
   result.conflictsResolved = conflict.conflictsResolved;
   result.errors.push(...conflict.errors);
+
+  // Phase 4: 离线学习 — 模式挖掘
+  try {
+    const brainRoot = join(dataDir, "..");
+    console.log("[consolidation] Phase 4: mining user patterns...");
+    const patterns = await mineUserPatterns(brainRoot, 30);
+    console.log(`[consolidation] Phase 4 done: ${patterns.temporal.length} temporal + ${patterns.transitions.length} transition patterns from ${patterns.experienceCount} experiences`);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    result.errors.push(`Pattern mining failed: ${msg}`);
+  }
 
   // 写回文件
   const newContent = serializeFile(preamble, sections);

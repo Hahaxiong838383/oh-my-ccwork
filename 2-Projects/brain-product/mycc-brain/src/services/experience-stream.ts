@@ -224,18 +224,26 @@ export interface MemoryHealthResult {
 }
 
 export function getMemoryHealth(brainRoot: string, days = 30): MemoryHealthResult {
-  // 直接内联解析 memory-items.md，避免循环依赖
+  // 解析 memory-items.md + memory-items-intake.md 并合并
   const dataDir = join(brainRoot, "data");
-  const filePath = join(dataDir, "memory-items.md");
-  const categories: Array<{ header: string; items: string[] }> = [];
-  if (existsSync(filePath)) {
+  const files = ["memory-items.md", "memory-items-intake.md", "memory-items-claude.md"];
+  const merged = new Map<string, { header: string; items: string[] }>();
+  for (const filename of files) {
+    const filePath = join(dataDir, filename);
+    if (!existsSync(filePath)) continue;
     const content = readFileSync(filePath, "utf-8");
     let current: { header: string; items: string[] } | null = null;
     for (const line of content.split("\n")) {
-      if (/^###?\s*\[.+?\]/.test(line)) { current = { header: line, items: [] }; categories.push(current); }
+      if (/^###?\s*\[.+?\]/.test(line)) {
+        const ns = line.match(/\[(.+?)\]/)?.[1] ?? line;
+        const existing = merged.get(ns);
+        if (existing) { current = existing; }
+        else { current = { header: line, items: [] }; merged.set(ns, current); }
+      }
       else if (current && line.startsWith("- ")) { current.items.push(line); }
     }
   }
+  const categories = [...merged.values()];
 
   // 1. 解析完成，categories 已填充
   const sourceDist: Record<string, number> = {};
