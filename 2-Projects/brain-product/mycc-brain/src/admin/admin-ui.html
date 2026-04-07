@@ -390,6 +390,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
         <div class="card"><h3>🎯 预测引擎</h3><div id="ePrediction" style="color:var(--text-dim)">加载中...</div></div>
         <div class="card"><h3>🧪 SFT 就绪</h3><div id="eSft" style="color:var(--text-dim)">加载中...</div></div>
       </div>
+      <div class="card" id="ePhase1Card" style="border:1px solid var(--border)"><h3>🚀 代码级自改进 Phase 1</h3><div id="ePhase1" style="color:var(--text-dim)">加载中...</div></div>
       <div class="card"><h3>评估结果</h3><div id="eEval" style="color:var(--text-dim)">加载中...</div></div>
       <div class="card"><h3>诊断报告</h3><div id="eDiag" style="color:var(--text-dim)">加载中...</div></div>
       <div class="card"><h3>进化操作 <button class="btn btn-sm btn-primary" onclick="runEvo()" style="margin-left:12px">运行周期</button> <span style="font-size:11px;color:var(--text-dim);margin-left:8px">v2: ROI Top 3</span></h3><div id="eActs" style="color:var(--text-dim)">加载中...</div></div>
@@ -1038,6 +1039,35 @@ async function saveModelConfig() {
    Evolution
    ═══════════════════════════════════════════════════ */
 async function loadEvo() {
+  // v2: Phase 1 readiness
+  aFetch('/admin/api/evolution/phase1-readiness').then(async r=>{
+    try{
+      const d=await r.json();
+      const card=document.getElementById('ePhase1Card');
+      const el=document.getElementById('ePhase1');
+      if(d.ready){
+        card.style.border='2px solid var(--success)';
+        card.style.background='rgba(34,197,94,0.08)';
+        el.innerHTML=`<div style="font-size:20px;font-weight:700;color:var(--success);margin-bottom:8px">ALL CONDITIONS MET</div>
+          <div style="font-size:14px;margin-bottom:12px">代码级自改进 Phase 1 已就绪，等待确认启动</div>
+          <button class="btn btn-primary" onclick="if(confirm('确认启动 Phase 1: Prompt Template 自改进？')){alert('TODO: 启动 Phase 1（当前需在 CC session 中手动执行）')}">启动 Phase 1</button>`;
+      } else {
+        const c=d.conditions||{};
+        const row=(label,cond,unit)=>{
+          const pct=Math.min(100,Math.round((cond.actual/Math.max(cond.required,1))*100));
+          const color=cond.met?'var(--success)':'var(--text-dim)';
+          const icon=cond.met?'✅':'⬜';
+          return`<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span>${icon} ${label}</span><span style="color:${color}">${cond.actual}${unit||''} / ${cond.required}${unit||''}</span></div><div style="background:var(--bg-input);border-radius:4px;height:5px;overflow:hidden"><div style="background:${color};height:100%;width:${pct}%;border-radius:4px;transition:width .5s"></div></div></div>`;
+        };
+        const metCount=Object.values(c).filter(x=>x.met).length;
+        el.innerHTML=`<div style="font-size:14px;color:var(--text-secondary);margin-bottom:8px">${metCount}/4 条件已满足</div>
+          ${row('稳定运行天数'+(c.stableDays?.hasRevert?' <span style="color:var(--danger)">(有回滚!)</span>':''),c.stableDays,'天')}
+          ${row('动态测试用例',c.dynamicTests,'条')}
+          ${row('置信度学习轮次',c.confidenceTotal,'轮')}
+          ${row('Eval 通过率',c.evalPassRate,'%')}`;
+      }
+    }catch(e){document.getElementById('ePhase1').textContent='error: '+e.message}
+  });
   // v2: 预测引擎 + SFT 就绪（并行加载）
   Promise.all([aFetch('/admin/api/prediction-stats'),aFetch('/admin/api/sft-readiness')]).then(async([pr,sr])=>{
     try{

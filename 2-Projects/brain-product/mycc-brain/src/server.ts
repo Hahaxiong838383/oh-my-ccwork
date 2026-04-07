@@ -742,6 +742,66 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Admin API: Phase 1 readiness (代码级自改进启动条件)
+  if (path === "/admin/api/evolution/phase1-readiness" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    const actionsPath = resolve(brainRoot, "data/evolution-actions.jsonl");
+    const testsDir = resolve(brainRoot, "data/evolution-tests");
+    const confPath = resolve(brainRoot, "data/diagnosis-confidence.json");
+    const evalResultPath = resolve(brainRoot, "eval/eval-result.json");
+
+    // 条件1: 14天无回滚
+    let stableDays = 0;
+    let hasRevert = false;
+    if (existsSync(actionsPath)) {
+      const lines = readFileSync(actionsPath, "utf-8").split("\n").filter(Boolean);
+      const firstAction = lines.length > 0 ? JSON.parse(lines[0])?.timestamp : null;
+      if (firstAction) stableDays = Math.floor((Date.now() - new Date(firstAction).getTime()) / 86400000);
+      hasRevert = lines.some(l => { try { return JSON.parse(l).revertedAt; } catch { return false; } });
+    }
+
+    // 条件2: 动态用例 >= 30
+    let testCount = 0;
+    if (existsSync(testsDir)) {
+      const { readdirSync } = await import("fs");
+      for (const f of readdirSync(testsDir).filter((x: string) => x.endsWith(".jsonl"))) {
+        testCount += readFileSync(resolve(testsDir, f), "utf-8").split("\n").filter(Boolean).length;
+      }
+    }
+
+    // 条件3: confidence total >= 10
+    let minConfTotal = 0;
+    if (existsSync(confPath)) {
+      try {
+        const conf = JSON.parse(readFileSync(confPath, "utf-8"));
+        const totals = Object.values(conf).map((v: any) => v.total || 0);
+        minConfTotal = totals.length > 0 ? Math.min(...totals) : 0;
+      } catch { /* ignore */ }
+    }
+
+    // 条件4: eval >= 85%
+    let evalPass = false;
+    let evalScore = 0;
+    if (existsSync(evalResultPath)) {
+      try {
+        const er = JSON.parse(readFileSync(evalResultPath, "utf-8"));
+        evalPass = er.pass === true;
+        evalScore = er.retrieval?.hitRate ?? 0;
+      } catch { /* ignore */ }
+    }
+
+    const conditions = {
+      stableDays: { met: stableDays >= 14 && !hasRevert, actual: stableDays, required: 14, hasRevert },
+      dynamicTests: { met: testCount >= 30, actual: testCount, required: 30 },
+      confidenceTotal: { met: minConfTotal >= 10, actual: minConfTotal, required: 10 },
+      evalPassRate: { met: evalPass && evalScore >= 0.85, actual: Math.round(evalScore * 100), required: 85 },
+    };
+    const allMet = Object.values(conditions).every(c => c.met);
+
+    json(res, 200, { ready: allMet, conditions });
+    return;
+  }
+
   // Admin API: evolution — latest diagnosis
   if (path === "/admin/api/evolution/diagnosis" && req.method === "GET") {
     const brainRoot = resolve(import.meta.dirname, "..");
