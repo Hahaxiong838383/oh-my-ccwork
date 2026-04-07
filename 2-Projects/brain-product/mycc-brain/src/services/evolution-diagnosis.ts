@@ -6,7 +6,7 @@
  * 输出诊断报告供 evolution-engine.ts 消费。
  */
 
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 
 // ─── Types ───
@@ -108,11 +108,7 @@ export function updateDiagnosisConfidence(
 
   const newMap: DiagnosisConfidenceMap = { ...map, [diagType]: updated };
   const dir = join(brainRoot, "data");
-  if (!existsSync(dir)) {
-    const { mkdirSync } = require("fs") as typeof import("fs");
-    mkdirSync(dir, { recursive: true });
-  }
-  const { writeFileSync } = require("fs") as typeof import("fs");
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   writeFileSync(p, JSON.stringify(newMap, null, 2) + "\n");
 }
 

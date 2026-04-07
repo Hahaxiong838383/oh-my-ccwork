@@ -15,7 +15,7 @@
  */
 
 import { appendFile, mkdir, readFile } from "fs/promises";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 
 // ═══════════════════════════════════════════════════
@@ -281,7 +281,7 @@ function readRecentPredictions(brainRoot: string, days: number): PredictionEntry
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
 
-  const { readdirSync } = require("fs") as typeof import("fs");
+  // readdirSync already imported at top level
   const files = readdirSync(dir)
     .filter((f: string) => f.endsWith(".jsonl") && f.replace(".jsonl", "") >= cutoffStr)
     .sort();
@@ -638,7 +638,7 @@ export function checkSftReadiness(brainRoot: string): SftReadinessReport {
   }
 
   // 读取所有经验
-  const { readdirSync } = require("fs") as typeof import("fs");
+  // readdirSync already imported at top level
   const files = readdirSync(dir).filter((f: string) => f.endsWith(".jsonl"));
   let totalExperiences = 0;
   let highQualityCount = 0;
