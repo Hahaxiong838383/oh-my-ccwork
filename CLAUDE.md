@@ -199,6 +199,7 @@ cc 通过三层记忆工作，详见 [`docs/memory-system.md`](./docs/memory-sys
 1. 开始时读 `0-System/RECENT_EVENTS.md`
 2. 涉及服务/部署/调试时，先执行环境引导（详见 `docs/harness/lifecycle.md`）
 3. 结束前追加事件到 `RECENT_EVENTS.md` + 提取原子 Item 到 `memory-items.md`
+4. 记忆文件有新增/修改后，立即执行 `bash scripts/memory-sync-all.sh`（统一同步到 Mini/Studio，并校验 health）
 
 ## 记忆实时写入门（LSTM 输入门启发，2026-04-01 起）
 

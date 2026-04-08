@@ -2,5 +2,8 @@
   "dependencies": {
     "@larksuite/cli": "^1.0.0",
     "keytar": "^7.9.0"
+  },
+  "devDependencies": {
+    "@google/gemini-cli": "^0.36.0"
   }
 }

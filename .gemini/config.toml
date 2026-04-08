@@ -10,20 +10,20 @@ args = ["mcp-server-fetch"]
 
 [mcp_servers.time]
 type = "stdio"
-command = "cmd"
-args = ["/c", "npx", "-y", "@modelcontextprotocol/server-time"]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-time"]
 
 [mcp_servers.memory]
 type = "stdio"
-command = "cmd"
-args = ["/c", "npx", "-y", "@modelcontextprotocol/server-memory"]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-memory"]
 
 [mcp_servers.context7]
 type = "stdio"
-command = "cmd"
-args = ["/c", "npx", "-y", "@upstash/context7-mcp"]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
 
 [mcp_servers.sequential-thinking]
 type = "stdio"
-command = "cmd"
-args = ["/c", "npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]
