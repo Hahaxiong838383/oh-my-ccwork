@@ -1552,8 +1552,14 @@ async function loadGraph() {
   try {
     _renderGraph(container, _graphFullData);
   } catch(e) {
-    container.innerHTML = `<div style="padding:40px;color:var(--text-dim);text-align:center"><h3 style="color:var(--warning)">图谱渲染失败</h3><p>${e.message}</p><p style="margin-top:12px;font-size:12px">刷新页面重试，如持续出现请检查浏览器 WebGL/硬件加速设置</p></div>`;
     _graphInstance = null;
+    const isWebGL = /webgl|context/i.test(e.message);
+    container.innerHTML = `<div style="padding:40px;color:var(--text-dim);text-align:center">
+      <h3 style="color:var(--warning)">${isWebGL ? 'WebGL 暂时不可用' : '图谱渲染失败'}</h3>
+      <p style="color:var(--text-secondary);margin:8px 0">${e.message}</p>
+      ${isWebGL ? '<p style="font-size:13px;margin:12px 0">浏览器 GPU 进程可能已崩溃，<b>完全退出浏览器后重新打开</b>即可恢复（仅刷新无效）</p>' : ''}
+      <button onclick="_graphInstance=null;loadGraph()" style="margin-top:16px;padding:8px 20px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:13px">重试渲染</button>
+    </div>`;
   }
 }
 
