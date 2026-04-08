@@ -280,7 +280,7 @@ const server = http.createServer(async (req, res) => {
     const expHistory = getRecentDayStats(brainRoot, 7);
     const patches = listPatches(brainRoot);
     json(res, 200, {
-      version: "0.2.0",
+      version: "0.6.0",
       uptime: process.uptime(),
       stats: brainApi.getStats(),
       routes: Object.fromEntries(
@@ -1388,7 +1388,7 @@ function scheduleWeeklyVisionReview() {
 initMcpConnections().then(() => {
   server.listen(config.port, "0.0.0.0", () => {
     const memExists = existsSync(resolve(config.dataDir, "memory-items.md"));
-    console.log(`\n🧠 mycc-brain v0.3.0 (D4: Agent Loop + MCP)`);
+    console.log(`\n🧠 mycc-brain v0.6.0 (D4 + Vision P0-P2)`);
     console.log(`   API:   http://0.0.0.0:${config.port}/v1/chat/completions`);
     console.log(`   Admin: http://0.0.0.0:${config.port}/admin`);
     console.log(`   Data:  ${config.dataDir} (${existsSync(config.dataDir) ? "✅" : "❌ not found"})`);
