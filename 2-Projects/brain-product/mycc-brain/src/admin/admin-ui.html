@@ -1501,15 +1501,6 @@ async function loadGraph() {
     container.innerHTML = '<div style="padding:40px;color:var(--text-dim);text-align:center"><h3 style="color:var(--warning)">3D 库加载失败</h3><p>请检查 /static/vendor/ 下的 3d-force-graph.min.js</p></div>';
     return;
   }
-  // WebGL 可用性检测
-  try {
-    const c = document.createElement('canvas');
-    const gl = c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl');
-    if (!gl) throw new Error('no context');
-  } catch(e) {
-    container.innerHTML = '<div style="padding:40px;color:var(--text-dim);text-align:center"><h3 style="color:var(--warning)">WebGL 不可用</h3><p>请在浏览器设置中开启硬件加速<br/>Brave: Settings → System → Hardware acceleration</p></div>';
-    return;
-  }
   container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-dim)">加载图谱数据...</div>';
   try {
     const resp = await fetch('/admin/api/graph', {headers:{'Authorization':`Bearer ${getToken()}`}});
@@ -1558,7 +1549,12 @@ async function loadGraph() {
     [{l:'import',c:'#818cf8'},{l:'reference',c:'#d946ef'},{l:'dataflow',c:'#22d3ee'},{l:'govern',c:'#fb923c'},{l:'shared-tag',c:'#e879f9'}].map(x=>`<span style="color:${x.c};margin-right:6px">— ${x.l}</span>`).join('');
   legend.appendChild(ec);
   container.appendChild(legend);
-  _renderGraph(container, _graphFullData);
+  try {
+    _renderGraph(container, _graphFullData);
+  } catch(e) {
+    container.innerHTML = `<div style="padding:40px;color:var(--text-dim);text-align:center"><h3 style="color:var(--warning)">图谱渲染失败</h3><p>${e.message}</p><p style="margin-top:12px;font-size:12px">刷新页面重试，如持续出现请检查浏览器 WebGL/硬件加速设置</p></div>`;
+    _graphInstance = null;
+  }
 }
 
 function _renderGraph(container, data) {
