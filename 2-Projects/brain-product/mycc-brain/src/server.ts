@@ -30,6 +30,8 @@ import { parseMemoryItems, type ParsedCategory } from "./services/memory-store.j
 import { McpClient } from "./services/mcp-client.js";
 import { bridgeMcpTools, type BridgeResult } from "./services/mcp-bridge.js";
 import { getEnabledMcpServers, type McpServerConfig } from "./mcp-config.js";
+import { startVisualStatePolling } from "./services/visual-state.js";
+import { getVisualStatusReport } from "./services/activity-observability.js";
 
 const config = loadConfig(); // dotenv.config() 在此内部调用
 const brainApi = new BrainApi(config);
@@ -1157,6 +1159,14 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Admin API: visual status (Phase 2B-1)
+  if (path === "/admin/api/visual-status" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    const report = getVisualStatusReport(resolve(brainRoot, "data"));
+    json(res, 200, report);
+    return;
+  }
+
   // Health
   if (path === "/health") {
     json(res, 200, { status: "ok", service: "mycc-brain" });
@@ -1252,5 +1262,7 @@ initMcpConnections().then(() => {
     scheduleConsolidation();
     scheduleEvolution();
     scheduleClaudeMemorySync();
+    // Phase 2B-1: 视觉状态轮询
+    startVisualStatePolling(resolve(import.meta.dirname, "..", "data"));
   });
 });

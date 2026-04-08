@@ -23,6 +23,8 @@ import {
   decideProactiveAction,
   formatProactiveSuggestion,
 } from "./services/prediction-engine.js";
+import { getVisualState } from "./services/visual-state.js";
+import { applyVisualGate } from "./services/visual-gate.js";
 
 // 简单内存统计
 const stats = {
@@ -182,17 +184,29 @@ export class BrainApi {
       // recentValences: 当前会话无充足历史时用空数组（共振度=0 → 保守决策，正确行为）
       const resonance = computeResonance(brainRoot, 14, []);
       const proactive = decideProactiveAction(prediction.confidence, resonance.resonanceScore);
-      if (proactive.level === "suggest" || proactive.level === "act") {
+
+      // Phase 2B-1: 视觉门控（fail-open）
+      let gatedLevel = proactive.level;
+      try {
+        const visual = getVisualState();
+        const gated = applyVisualGate(proactive.level, visual);
+        gatedLevel = gated.level;
+        if (gated.applied) {
+          console.log(`[brain] visual gate: ${proactive.level} → ${gated.level} (${gated.reason})`);
+        }
+      } catch { /* fail-open: 视觉异常不影响主链路 */ }
+
+      if (gatedLevel === "suggest" || gatedLevel === "act") {
         const suggestion = formatProactiveSuggestion(
           prediction.predictedIntent,
           prediction.predictedCategory,
-          proactive.level,
+          gatedLevel,
         );
         messages = [
           { ...messages[0], content: messages[0].content + suggestion },
           ...messages.slice(1),
         ];
-        console.log(`[brain] proactive: ${proactive.level} (conf=${proactive.adjustedConfidence.toFixed(2)}, ${proactive.reason})`);
+        console.log(`[brain] proactive: ${gatedLevel} (conf=${proactive.adjustedConfidence.toFixed(2)}, ${proactive.reason})`);
       }
     }
 
