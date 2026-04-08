@@ -18,6 +18,13 @@
         "--app-secret", "RCCkaaPGkGn9n3pEDkjjzhrUDEWhmioy"
       ],
       "type": "stdio"
+    },
+    "mcdonalds": {
+      "type": "url",
+      "url": "https://mcp.mcd.cn",
+      "headers": {
+        "Authorization": "Bearer [REDACTED_MCD_TOKEN]"
+      }
     }
   }
 }

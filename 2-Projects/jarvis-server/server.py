@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 """
-贾维斯语音后端 v1 — 兼容小智 ESP32 全协议
+贾维斯语音后端 v2.1 — 服务端唤醒词检测
 
-关键修复：
-1. 服务端 VAD — 设备用 auto 模式，服务端检测静默触发 ASR
-2. 二进制协议头 — 支持 v1(纯Opus)/v2(14字节头)/v3(4字节头)
-3. hello 带 session_id
+架构：
+  ESP32 持续 stream 音频 → NAS 服务端两层检测：
+  1. idle 状态：openWakeWord 检测"贾维斯" → 激活
+  2. active 状态：Silero VAD → 静默触发 ASR → LLM → TTS → 回到 idle
 """
 
 import asyncio
 import json
+import os
 import re
 import struct
 import time
 import uuid
 import logging
-import math
+import numpy as np
+import onnxruntime
 import opuslib
 from typing import Optional
 
@@ -26,31 +28,67 @@ from config import WS_HOST, WS_PORT
 from llm import chat_stream
 from ha import control_device, find_device, play_music, stop_music
 from tts import TTSPipeline
+from rate_controller import AudioRateController
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [jarvis] %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger("jarvis")
 
-# FunASR 模型全局加载（启动时加载一次，~5s）
+# ── 全局模型加载 ──
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# FunASR
 log.info("加载 FunASR SenseVoice 模型...")
 import sys
-sys.path.insert(0, "/home/hahaxiong83/mycc/2-Projects/jarvis-server/venv/lib/python3.11/site-packages")
+sys.path.insert(0, os.path.join(BASE_DIR, "venv/lib/python3.11/site-packages"))
 from funasr import AutoModel
 _funasr_model = AutoModel(model="iic/SenseVoiceSmall", device="cpu", disable_update=True)
 log.info("FunASR 模型加载完成")
 
-# Opus 编解码参数
+# Silero VAD
+log.info("加载 Silero VAD 模型...")
+_vad_opts = onnxruntime.SessionOptions()
+_vad_opts.inter_op_num_threads = 1
+_vad_opts.intra_op_num_threads = 1
+_vad_session = onnxruntime.InferenceSession(
+    os.path.join(BASE_DIR, "silero_vad.onnx"),
+    providers=["CPUExecutionProvider"],
+    sess_options=_vad_opts,
+)
+log.info("Silero VAD 模型加载完成")
+
+# Porcupine 唤醒词检测（Picovoice 训练的"贾维斯"中文模型）
+log.info("加载 Porcupine 唤醒词模型...")
+import pvporcupine
+PORCUPINE_ACCESS_KEY = "0NgHE/XRblus7MeH1ICRzeUKAqsEifMNLII8AdPvYI4L7WQaFsvjyg=="
+_porcupine = pvporcupine.create(
+    access_key=PORCUPINE_ACCESS_KEY,
+    model_path=os.path.join(BASE_DIR, "porcupine_params_zh.pv"),
+    keyword_paths=[os.path.join(BASE_DIR, "jarvis_zh.ppn")],
+    sensitivities=[0.6],
+)
+PORCUPINE_FRAME_LENGTH = _porcupine.frame_length  # 512 samples
+log.info(f"Porcupine 加载完成 (帧={PORCUPINE_FRAME_LENGTH} samples, {PORCUPINE_FRAME_LENGTH/16000*1000:.0f}ms)")
+
+# ── 常量 ──
+
 SAMPLE_RATE = 16000
 CHANNELS = 1
 FRAME_MS = 60
-FRAME_SIZE = SAMPLE_RATE * FRAME_MS // 1000  # 960 samples
-FRAME_BYTES = FRAME_SIZE * 2  # 16bit = 2 bytes/sample
+FRAME_SIZE = SAMPLE_RATE * FRAME_MS // 1000
+FRAME_BYTES = FRAME_SIZE * 2
 
-# 服务端 VAD 参数
-SILENCE_THRESHOLD = 200       # PCM 能量阈值（低于此视为静默）
-SPEECH_MIN_FRAMES = 3         # 至少连续 3 帧有声音才算开始说话
-SILENCE_DURATION_MS = 800     # 说话后静默超过此时间 → 自动停止
+# Silero VAD 参数
+VAD_THRESHOLD_HIGH = 0.5
+VAD_THRESHOLD_LOW = 0.2
+VAD_WINDOW_SIZE = 5
+VAD_WINDOW_MIN = 3
+SILENCE_DURATION_MS = 800
 
-# emoji 过滤
+# 唤醒词检测参数
+WAKEWORD_COOLDOWN_S = 3   # 唤醒后冷却时间（避免重复触发）
+
+# 文本清理
 EMOJI_PATTERN = re.compile(
     "[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF"
     "\U0001F1E0-\U0001F1FF\U00002702-\U000027B0\U0001F900-\U0001F9FF"
@@ -58,47 +96,60 @@ EMOJI_PATTERN = re.compile(
     "\U0000FE00-\U0000FE0F\U0000200D]+",
     flags=re.UNICODE,
 )
-
-# 句子切分
+MARKDOWN_PATTERNS = [
+    (re.compile(r"```.*?```", re.DOTALL), ""),
+    (re.compile(r"^#+\s*", re.MULTILINE), ""),
+    (re.compile(r"(\*\*|__)(.*?)\1"), r"\2"),
+    (re.compile(r"(\*|_)(?=\S)(.*?)(?<=\S)\1"), r"\2"),
+    (re.compile(r"!\[.*?\]\(.*?\)"), ""),
+    (re.compile(r"\[(.*?)\]\(.*?\)"), r"\1"),
+    (re.compile(r"^\s*>+\s*", re.MULTILINE), ""),
+    (re.compile(r"^\s*[*+-]\s*", re.MULTILINE), ""),
+    (re.compile(r"\n{2,}"), "\n"),
+]
 SENTENCE_DELIMITERS = re.compile(r"[。！？；\n]|[.!?;]\s")
 COMMA_DELIMITERS = re.compile(r"[，,]")
 MAX_BUFFER_LEN = 30
 
 
-def pcm_rms(pcm_bytes: bytes) -> float:
-    """计算 PCM 数据的 RMS 能量"""
-    if len(pcm_bytes) < 2:
-        return 0
-    n = len(pcm_bytes) // 2
-    total = 0
-    for i in range(n):
-        sample = struct.unpack_from("<h", pcm_bytes, i * 2)[0]
-        total += sample * sample
-    return math.sqrt(total / n)
+def clean_for_tts(text: str) -> str:
+    for pattern, replacement in MARKDOWN_PATTERNS:
+        text = pattern.sub(replacement, text)
+    text = EMOJI_PATTERN.sub("", text)
+    return text.strip()
 
 
 class JarvisSession:
-    """一个设备连接的会话"""
-
     def __init__(self, ws):
         self.ws = ws
         self.device_id = "unknown"
         self.session_id = str(uuid.uuid4())
-        self.protocol_version = 1  # 从 hello 协商
+        self.protocol_version = 1
         self.opus_decoder = opuslib.Decoder(SAMPLE_RATE, CHANNELS)
         self.opus_encoder = opuslib.Encoder(SAMPLE_RATE, CHANNELS, opuslib.APPLICATION_VOIP)
         self.pcm_buffer = bytearray()
         self.is_listening = False
         self.is_speaking = False
-        self.listen_mode = "auto"  # auto / manual / realtime
+        self.listen_mode = "auto"
         self.messages = []
         self.abort_event = asyncio.Event()
         self.tts_pipe = TTSPipeline()
 
-        # VAD 状态
+        # 状态机：idle（等唤醒词） / active（对话中）
+        self._state = "idle"
+        self._last_wakeword_time = 0
+
+        # Porcupine 唤醒词检测缓冲
+        self._porcupine_buffer = bytearray()
+
+        # Silero VAD 状态
+        self._vad_state = np.zeros((2, 1, 128), dtype=np.float32)
+        self._vad_context = np.zeros((1, 64), dtype=np.float32)
+        self._vad_audio_buffer = bytearray()
+        self._voice_window = []
+        self._have_voice = False
+        self._last_voice_time = 0
         self._speech_detected = False
-        self._speech_frames = 0
-        self._last_speech_time = 0
         self._vad_task: Optional[asyncio.Task] = None
 
     async def handle(self):
@@ -119,14 +170,11 @@ class JarvisSession:
         msg_type = data.get("type", "")
 
         if msg_type == "hello":
-            # 解析设备 hello
             self.device_id = data.get("device_id", data.get("mac_addr", "unknown"))
             self.protocol_version = data.get("version", 1)
             client_audio = data.get("audio_params", {})
             log.info(f"设备连接: {self.device_id}, 协议v{self.protocol_version}, "
                      f"音频: {client_audio.get('sample_rate', '?')}Hz/{client_audio.get('frame_duration', '?')}ms")
-
-            # 回复 hello（带 session_id）
             await self.ws.send(json.dumps({
                 "type": "hello",
                 "version": 1,
@@ -147,123 +195,195 @@ class JarvisSession:
             if state == "start":
                 self.is_listening = True
                 self.listen_mode = mode
-                self.pcm_buffer.clear()
-                self._speech_detected = False
-                self._speech_frames = 0
-                self._abort_speaking()
-                log.info(f"开始聆听 (mode={mode})")
-
-                # auto 模式：启动 VAD 定时器
-                if mode == "auto":
-                    self._start_vad_timer()
+                log.info(f"开始聆听 (mode={mode}, state={self._state})")
+                if self._state == "active":
+                    # 对话模式：清空缓冲，启动 VAD
+                    self.pcm_buffer.clear()
+                    self._vad_audio_buffer.clear()
+                    self._voice_window.clear()
+                    self._have_voice = False
+                    self._speech_detected = False
+                    self._abort_speaking()
+                    if mode == "auto":
+                        self._start_vad_timer()
 
             elif state == "stop":
-                # 手动停止
                 self.is_listening = False
                 if self._vad_task:
                     self._vad_task.cancel()
-                log.info("停止聆听 (手动)")
-                asyncio.create_task(self._process_audio())
+                if self._state == "active":
+                    log.info("停止聆听 (手动)")
+                    asyncio.create_task(self._process_audio())
 
             elif state == "detect":
-                # 唤醒词检测到
+                # 设备端唤醒词（如果仍有的话）
                 wake_text = data.get("text", "")
-                log.info(f"唤醒词: {wake_text}")
+                log.info(f"设备端唤醒词: {wake_text}")
+                self._activate()
 
         elif msg_type == "abort":
-            reason = data.get("reason", "")
             self._abort_speaking()
-            log.info(f"客户端打断: {reason}")
+            log.info(f"客户端打断: {data.get('reason', '')}")
+
+        elif msg_type == "ping":
+            await self.ws.send(json.dumps({
+                "type": "pong",
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            }))
 
     async def _handle_binary(self, data: bytes):
-        """处理二进制消息：根据协议版本解析音频"""
         opus_data = self._extract_opus(data)
         if not opus_data:
             return
 
         if not self.is_listening:
+            # 不在聆听但在说话中收到音频 = 打断
             if self.is_speaking:
                 self._abort_speaking()
             return
 
         try:
             pcm = self.opus_decoder.decode(opus_data, FRAME_SIZE)
+        except Exception:
+            return
+
+        if self._state == "idle":
+            # idle 状态：送 openWakeWord 检测唤醒词
+            self._check_wakeword(pcm)
+
+        elif self._state == "active":
+            # active 状态：积累音频 + Silero VAD
             self.pcm_buffer.extend(pcm)
+            self._vad_audio_buffer.extend(pcm)
+            self._run_silero_vad()
 
-            # VAD：检测语音能量
-            if self.listen_mode == "auto":
-                rms = pcm_rms(pcm)
-                if rms > SILENCE_THRESHOLD:
-                    self._speech_frames += 1
-                    if self._speech_frames >= SPEECH_MIN_FRAMES:
-                        self._speech_detected = True
-                    self._last_speech_time = time.time()
-                else:
-                    self._speech_frames = max(0, self._speech_frames - 1)
+    # ── 唤醒词检测 ──
 
-        except Exception as e:
-            log.debug(f"Opus 解码异常: {e}, 数据长度={len(opus_data)}")
+    def _check_wakeword(self, pcm: bytes):
+        """用 Porcupine 检测唤醒词"""
+        if time.time() - self._last_wakeword_time < WAKEWORD_COOLDOWN_S:
+            return
+
+        self._porcupine_buffer.extend(pcm)
+        frame_bytes = PORCUPINE_FRAME_LENGTH * 2  # 512 samples * 2 bytes
+
+        while len(self._porcupine_buffer) >= frame_bytes:
+            frame = self._porcupine_buffer[:frame_bytes]
+            self._porcupine_buffer = self._porcupine_buffer[frame_bytes:]
+            audio_frame = np.frombuffer(frame, dtype=np.int16)
+            result = _porcupine.process(audio_frame)
+            if result >= 0:
+                log.info("唤醒词 '贾维斯' 检测到! (Porcupine)")
+                self._activate()
+                return
+
+    def _activate(self):
+        """进入对话模式"""
+        self._state = "active"
+        self._last_wakeword_time = time.time()
+        self.pcm_buffer.clear()
+        self._vad_audio_buffer.clear()
+        self._voice_window.clear()
+        self._have_voice = False
+        self._speech_detected = False
+        log.info("进入对话模式")
+
+        # 启动 VAD 检测
+        if self.listen_mode == "auto":
+            self._start_vad_timer()
+
+    def _deactivate(self):
+        """回到 idle 模式"""
+        self._state = "idle"
+        self._porcupine_buffer.clear()
+        log.info("回到待命模式")
+
+    # ── Silero VAD ──
+
+    def _run_silero_vad(self):
+        while len(self._vad_audio_buffer) >= 512 * 2:
+            chunk = self._vad_audio_buffer[:512 * 2]
+            self._vad_audio_buffer = self._vad_audio_buffer[512 * 2:]
+
+            audio_int16 = np.frombuffer(chunk, dtype=np.int16)
+            audio_float32 = audio_int16.astype(np.float32) / 32768.0
+            audio_input = np.concatenate(
+                [self._vad_context, audio_float32.reshape(1, -1)], axis=1
+            ).astype(np.float32)
+
+            out, state = _vad_session.run(None, {
+                "input": audio_input,
+                "state": self._vad_state,
+                "sr": np.array(16000, dtype=np.int64),
+            })
+            self._vad_state = state
+            self._vad_context = audio_input[:, -64:]
+            speech_prob = out.item()
+
+            if speech_prob >= VAD_THRESHOLD_HIGH:
+                is_voice = True
+            elif speech_prob <= VAD_THRESHOLD_LOW:
+                is_voice = False
+            else:
+                is_voice = self._have_voice
+
+            self._voice_window.append(is_voice)
+            if len(self._voice_window) > VAD_WINDOW_SIZE:
+                self._voice_window.pop(0)
+            have_voice = self._voice_window.count(True) >= VAD_WINDOW_MIN
+
+            if have_voice:
+                self._have_voice = True
+                self._speech_detected = True
+                self._last_voice_time = time.time()
+            else:
+                self._have_voice = have_voice
 
     def _extract_opus(self, data: bytes) -> Optional[bytes]:
-        """根据协议版本提取 Opus 数据"""
         if len(data) < 2:
             return None
-
         if self.protocol_version >= 3 and len(data) >= 4:
-            # v3: 4 字节头 [type(1) | reserved(1) | payload_size(2)] + payload
             ptype = data[0]
             payload_size = struct.unpack("!H", data[2:4])[0]
             if ptype == 0 and len(data) >= 4 + payload_size:
                 return data[4:4 + payload_size]
             elif ptype == 1:
-                # JSON 消息通过二进制通道
                 try:
-                    text = data[4:4 + payload_size].decode("utf-8")
-                    asyncio.create_task(self._handle_text(json.loads(text)))
+                    asyncio.create_task(self._handle_text(
+                        json.loads(data[4:4 + payload_size].decode("utf-8"))))
                 except Exception:
                     pass
                 return None
-
         elif self.protocol_version == 2 and len(data) >= 16:
-            # v2: 16 字节头 [version(2) | type(2) | reserved(4) | timestamp(4) | payload_size(4)] + payload
             ptype = struct.unpack("!H", data[2:4])[0]
             payload_size = struct.unpack("!I", data[12:16])[0]
             if ptype == 0 and len(data) >= 16 + payload_size:
                 return data[16:16 + payload_size]
             elif ptype == 1:
                 try:
-                    text = data[16:16 + payload_size].decode("utf-8")
-                    asyncio.create_task(self._handle_text(json.loads(text)))
+                    asyncio.create_task(self._handle_text(
+                        json.loads(data[16:16 + payload_size].decode("utf-8"))))
                 except Exception:
                     pass
                 return None
-
-        # v1 或回退：纯 Opus 数据
         return data
 
     def _start_vad_timer(self):
-        """启动 VAD 轮询定时器"""
         if self._vad_task:
             self._vad_task.cancel()
         self._vad_task = asyncio.create_task(self._vad_loop())
 
     async def _vad_loop(self):
-        """VAD 轮询：检测到语音后，静默超时则触发处理"""
         try:
-            while self.is_listening:
-                await asyncio.sleep(0.1)  # 100ms 轮询
-
+            while self.is_listening and self._state == "active":
+                await asyncio.sleep(0.1)
                 if not self._speech_detected:
                     continue
-
-                # 说话后，检查静默时长
-                silence_ms = (time.time() - self._last_speech_time) * 1000
+                silence_ms = (time.time() - self._last_voice_time) * 1000
                 if silence_ms >= SILENCE_DURATION_MS:
-                    self.is_listening = False
-                    log.info(f"VAD 检测到静默 ({silence_ms:.0f}ms)，停止聆听")
+                    log.info(f"VAD 静默 ({silence_ms:.0f}ms)，触发 ASR")
                     asyncio.create_task(self._process_audio())
                     return
-
         except asyncio.CancelledError:
             pass
 
@@ -275,19 +395,15 @@ class JarvisSession:
     # ── 核心管线 ──
 
     async def _process_audio(self):
-        """录音 → ASR（+TTS预热） → LLM流式 → 句子切分 → 流式TTS"""
         if len(self.pcm_buffer) < FRAME_SIZE * 2:
-            log.info("音频太短，忽略")
+            self._deactivate()
             return
-
-        # 未检测到有效语音 → 跳过（防止 Whisper 幻听）
         if not self._speech_detected:
-            log.info("未检测到语音，跳过 ASR")
+            self._deactivate()
             return
 
         start = time.time()
 
-        # 1. ASR + TTS 预热并行
         asr_task = asyncio.create_task(self._asr(self.pcm_buffer))
         warmup_task = asyncio.create_task(self.tts_pipe.warmup())
         text = await asr_task
@@ -295,20 +411,18 @@ class JarvisSession:
 
         if not text:
             log.info("ASR 无结果")
+            self._deactivate()
             return
-        asr_ms = (time.time() - start) * 1000
-        log.info(f"ASR ({asr_ms:.0f}ms): {text}")
+        log.info(f"ASR ({(time.time()-start)*1000:.0f}ms): {text}")
 
         await self.ws.send(json.dumps({
             "type": "stt", "text": text, "session_id": self.session_id,
         }))
 
-        # 2. LLM 流式 + 句子切分 + 流式 TTS
         self.messages.append({"role": "user", "content": text})
         self.is_speaking = True
         self.abort_event.clear()
 
-        # 通知设备 TTS 开始
         await self.ws.send(json.dumps({
             "type": "tts", "state": "start", "session_id": self.session_id,
         }))
@@ -325,14 +439,12 @@ class JarvisSession:
             if chunk_type == "text":
                 reply_text += chunk_data
                 sentence_buffer += chunk_data
-
                 sentences = self._split_sentences(sentence_buffer)
                 if len(sentences) > 1:
                     for sent in sentences[:-1]:
                         if sent.strip():
                             if not first_audio_sent:
-                                llm_ms = (time.time() - start) * 1000
-                                log.info(f"首句 ({llm_ms:.0f}ms): {sent}")
+                                log.info(f"首句 ({(time.time()-start)*1000:.0f}ms): {sent}")
                                 first_audio_sent = True
                             await self.ws.send(json.dumps({
                                 "type": "tts", "state": "sentence_start",
@@ -349,7 +461,6 @@ class JarvisSession:
                 reply_text += tool_result
                 sentence_buffer += tool_result
 
-        # 处理剩余 buffer
         if sentence_buffer.strip() and not self.abort_event.is_set():
             await self.ws.send(json.dumps({
                 "type": "tts", "state": "sentence_start",
@@ -357,7 +468,6 @@ class JarvisSession:
             }))
             await self._speak_sentence(sentence_buffer)
 
-        # 保存对话
         if reply_text:
             self.messages.append({"role": "assistant", "content": reply_text})
         if len(self.messages) > 10:
@@ -366,107 +476,100 @@ class JarvisSession:
         self.is_speaking = False
         await self.tts_pipe.close()
 
-        total_ms = (time.time() - start) * 1000
-        log.info(f"总耗时: {total_ms:.0f}ms | 回复: {reply_text[:60]}")
+        log.info(f"总耗时: {(time.time()-start)*1000:.0f}ms | 回复: {reply_text[:60]}")
 
         await self.ws.send(json.dumps({
             "type": "tts", "state": "stop", "session_id": self.session_id,
         }))
 
+        # 对话结束，回到 idle
+        self._deactivate()
+
     def _split_sentences(self, text: str) -> list[str]:
         parts = SENTENCE_DELIMITERS.split(text)
         if len(parts) > 1:
-            result = []
-            pos = 0
+            result, pos = [], 0
             for part in parts[:-1]:
-                end = pos + len(part)
-                m = SENTENCE_DELIMITERS.search(text, end)
+                m = SENTENCE_DELIMITERS.search(text, pos + len(part))
                 if m:
                     result.append(text[pos:m.end()])
                     pos = m.end()
                 else:
                     result.append(part)
-                    pos = end
+                    pos += len(part)
             result.append(text[pos:])
             return [r for r in result if r]
-
         if len(text) > MAX_BUFFER_LEN:
             parts = COMMA_DELIMITERS.split(text)
             if len(parts) > 1:
-                result = []
-                pos = 0
+                result, pos = [], 0
                 for part in parts[:-1]:
-                    end = pos + len(part)
-                    m = COMMA_DELIMITERS.search(text, end)
+                    m = COMMA_DELIMITERS.search(text, pos + len(part))
                     if m:
                         result.append(text[pos:m.end()])
                         pos = m.end()
                     else:
                         result.append(part)
-                        pos = end
+                        pos += len(part)
                 result.append(text[pos:])
                 return [r for r in result if r]
-
         return [text]
 
     async def _speak_sentence(self, text: str):
-        """流式 TTS 一句话"""
-        text = EMOJI_PATTERN.sub("", text).strip()
+        text = clean_for_tts(text)
         if not text:
             return
+        rc = AudioRateController(FRAME_MS)
         pcm_remainder = bytearray()
 
+        async def send_opus(encoded):
+            if not self.abort_event.is_set():
+                await self.ws.send(encoded)
+
+        await rc.start(send_opus)
         try:
             async for pcm_chunk in self.tts_pipe.speak(text):
                 if self.abort_event.is_set():
                     break
-
                 pcm_remainder.extend(pcm_chunk)
-
                 while len(pcm_remainder) >= FRAME_BYTES:
                     if self.abort_event.is_set():
-                        return
+                        break
                     frame = bytes(pcm_remainder[:FRAME_BYTES])
                     pcm_remainder = pcm_remainder[FRAME_BYTES:]
                     encoded = self.opus_encoder.encode(frame, FRAME_SIZE)
-                    await self.ws.send(encoded)
-                    await asyncio.sleep(FRAME_MS / 1000 * 0.8)
-
+                    if rc.is_prebuffer:
+                        await rc.send_immediate(send_opus, encoded)
+                    else:
+                        rc.add(encoded)
             if pcm_remainder and not self.abort_event.is_set():
                 frame = bytes(pcm_remainder) + b"\x00" * (FRAME_BYTES - len(pcm_remainder))
                 encoded = self.opus_encoder.encode(frame, FRAME_SIZE)
-                await self.ws.send(encoded)
-
+                if rc.is_prebuffer:
+                    await rc.send_immediate(send_opus, encoded)
+                else:
+                    rc.add(encoded)
+            await rc.wait_empty()
         except Exception as e:
             log.error(f"TTS 发送失败: {e}")
+        finally:
+            rc.stop()
 
     # ── ASR ──
 
     async def _asr(self, pcm_data: bytearray) -> Optional[str]:
-        """语音识别 — FunASR SenseVoice（在线程池中运行避免阻塞）"""
         try:
-            result = await asyncio.to_thread(self._asr_sync, bytes(pcm_data))
-            return result
+            return await asyncio.to_thread(self._asr_sync, bytes(pcm_data))
         except Exception as e:
             log.warning(f"ASR 失败: {e}")
             return None
 
     def _asr_sync(self, pcm_data: bytes) -> Optional[str]:
-        """FunASR 同步识别"""
-        import tempfile
-        import wave
-
-        wav_path = tempfile.mktemp(suffix=".wav")
-        with wave.open(wav_path, "w") as wf:
-            wf.setnchannels(CHANNELS)
-            wf.setsampwidth(2)
-            wf.setframerate(SAMPLE_RATE)
-            wf.writeframes(pcm_data)
-
-        res = _funasr_model.generate(input=wav_path, language="zh")
+        res = _funasr_model.generate(
+            input=pcm_data, language="auto", use_itn=True, batch_size_s=60,
+        )
         if res and len(res) > 0:
             text = res[0].get("text", "")
-            # SenseVoice 输出带语言标签，去掉
             text = re.sub(r"<\|[^|]+\|>", "", text).strip()
             return text if text else None
         return None
@@ -477,25 +580,20 @@ class JarvisSession:
         name = tool_call["name"]
         args = tool_call["arguments"]
         log.info(f"工具调用: {name}({args})")
-
         if name == "control_device":
             entity_id = find_device(args.get("device_name", ""))
             if entity_id:
                 result = await asyncio.to_thread(
-                    control_device, entity_id, args.get("action", "turn_on")
-                )
+                    control_device, entity_id, args.get("action", "turn_on"))
                 action_cn = "打开" if args.get("action") == "turn_on" else "关闭"
                 return f"已{action_cn}{args.get('device_name', '')}" if "done" in result else "操作失败"
             return "找不到该设备"
-
         elif name == "play_music":
             await asyncio.to_thread(play_music, args.get("song", ""))
             return f"正在播放{args.get('song', '')}"
-
         elif name == "stop_music":
             await asyncio.to_thread(stop_music)
             return "已停止播放"
-
         return "未知工具"
 
 
@@ -505,8 +603,9 @@ async def handler(websocket):
 
 
 async def main():
-    log.info(f"贾维斯语音后端启动: ws://{WS_HOST}:{WS_PORT}")
-    async with serve(handler, WS_HOST, WS_PORT):
+    log.info(f"贾维斯语音后端 v2.1 启动: ws://{WS_HOST}:{WS_PORT}")
+    log.info("唤醒词: 贾维斯 (Porcupine 服务端检测)")
+    async with serve(handler, WS_HOST, WS_PORT, ping_interval=None, ping_timeout=None):
         await asyncio.Future()
 
 
