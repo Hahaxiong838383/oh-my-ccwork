@@ -8,6 +8,7 @@
 import type { IncomingMessage, ServerResponse } from "http";
 import { randomBytes } from "crypto";
 import { resolve } from "path";
+import { readFileSync, existsSync } from "fs";
 import { type BrainConfig, type ModelRoute } from "./config.js";
 import { DEFAULT_BRAIN_MODEL } from "./env.js";
 import { streamOpenAICompat, type OpenAIMessage } from "./adapters/openai-compat.js";
@@ -26,6 +27,42 @@ import {
 } from "./services/prediction-engine.js";
 import { getVisualState } from "./services/visual-state.js";
 import { applyVisualGate } from "./services/visual-gate.js";
+
+// ─── 视觉习惯缓存 ───
+
+interface VisualHabits {
+  updatedAt: string;
+  avgArrival: string;
+  avgDeparture: string;
+  avgPresentHours: number;
+  typicalBreak: string;
+  frequentObjects: string[];
+  daysAnalyzed: number;
+}
+
+let _visualHabitsCache: VisualHabits | null = null;
+let _visualHabitsLoadedAt = 0;
+const HABITS_CACHE_TTL = 3600_000; // 1 小时
+
+function loadVisualHabits(): VisualHabits | null {
+  const now = Date.now();
+  if (_visualHabitsCache && (now - _visualHabitsLoadedAt) < HABITS_CACHE_TTL) {
+    return _visualHabitsCache;
+  }
+  try {
+    const habitsPath = resolve(import.meta.dirname, "..", "data", "patterns", "visual-habits.json");
+    if (!existsSync(habitsPath)) return null;
+    const data = JSON.parse(readFileSync(habitsPath, "utf-8"));
+    // 检查 updatedAt 在 7 天内
+    const updatedAt = new Date(data.updatedAt);
+    if (Date.now() - updatedAt.getTime() > 7 * 86400_000) return null;
+    _visualHabitsCache = data;
+    _visualHabitsLoadedAt = now;
+    return data;
+  } catch {
+    return null;
+  }
+}
 
 // 简单内存统计
 const stats = {
@@ -128,6 +165,17 @@ function formatEnvironmentHint(visual: ReturnType<typeof getVisualState>): strin
     }
     if (historyEntries.length > 0) {
       semanticLines.push(`\n### 最近视觉观察\n${historyEntries.join("\n")}`);
+    }
+  }
+
+  // 注入视觉习惯数据（来自每日聚合）
+  const habits = loadVisualHabits();
+  if (habits) {
+    semanticLines.push(`\n### 用户习惯（视觉学习）`);
+    semanticLines.push(`- 通常到达: ${habits.avgArrival} | 通常离开: ${habits.avgDeparture} | 日均在位: ${habits.avgPresentHours}h`);
+    semanticLines.push(`- 午休时段: ${habits.typicalBreak}`);
+    if (habits.frequentObjects?.length > 0) {
+      semanticLines.push(`- 工位常见物品: ${habits.frequentObjects.join("、")}`);
     }
   }
 

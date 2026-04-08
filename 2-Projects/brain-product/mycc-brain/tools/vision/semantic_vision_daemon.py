@@ -151,6 +151,20 @@ def append_jsonl(path: Path, record: dict[str, Any]) -> None:
         pass
 
 
+def load_prompt_config(data_dir: Path) -> dict[str, Any] | None:
+    """从 vision-prompt-config.json 加载 prompt 配置，失败返回 None（降级到硬编码）"""
+    config_path = data_dir.parent / "patterns" / "vision-prompt-config.json"
+    try:
+        if not config_path.exists():
+            return None
+        data = json.loads(config_path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict) or "templates" not in data:
+            return None
+        return data
+    except Exception:
+        return None
+
+
 class SemanticScanner:
     """场景语义扫描器 — Ollama minicpm-v（主）/ mlx_vlm（降级）"""
 
@@ -227,23 +241,49 @@ class SemanticScanner:
         }
 
     @staticmethod
-    def _build_prompt(present: bool | None) -> str:
-        """构建中文自然语言 prompt（参考 cc-eye 精扫 prompt）"""
+    def _build_prompt(present: bool | None, config: dict[str, Any] | None = None) -> str:
+        """构建 prompt，优先读 config，降级到硬编码"""
+        templates = config.get("templates", {}) if config else {}
+        emphasis = config.get("emphasis", {}) if config else {}
+
+        # 选择模板
         if present is False:
-            return "描述这个工位场景：桌上有什么物品，环境怎样。1-2句话。"
-        base = (
-            "简洁描述这个场景：\n"
-            "1) 有谁在，在做什么\n"
-            "2) 桌上/房间里的重要物品\n"
-            "3) 有什么变化或异常。\n"
-            "2-3句话。"
-        )
-        if present is True:
-            return (
-                "[重要提示：画面中的人是川哥（我的老板）。"
-                "描述时请直接称呼他的名字，不要说'一名男子'。]\n" + base
+            prompt = templates.get("present_false", "")
+        elif present is True:
+            prompt = templates.get("present_true", "")
+        else:
+            prompt = templates.get("present_unknown", "")
+
+        # 如果配置为空，降级到硬编码
+        if not prompt:
+            if present is False:
+                return "描述这个工位场景：桌上有什么物品，环境怎样。1-2句话。"
+            base = (
+                "简洁描述这个场景：\n"
+                "1) 有谁在，在做什么\n"
+                "2) 桌上/房间里的重要物品\n"
+                "3) 有什么变化或异常。\n"
+                "2-3句话。"
             )
-        return base
+            if present is True:
+                return (
+                    "[重要提示：画面中的人是川哥（我的老板）。"
+                    "描述时请直接称呼他的名字，不要说'一名男子'。]\n" + base
+                )
+            return base
+
+        # 追加 emphasis（如果有）
+        suffix_parts = []
+        if emphasis.get("objects"):
+            suffix_parts.append(emphasis["objects"])
+        if emphasis.get("actions"):
+            suffix_parts.append(emphasis["actions"])
+        if emphasis.get("environment"):
+            suffix_parts.append(emphasis["environment"])
+        if suffix_parts:
+            prompt += "\n" + "\n".join(suffix_parts)
+
+        return prompt
 
     @staticmethod
     def _extract_from_natural_language(raw_text: str) -> dict[str, Any]:
@@ -287,12 +327,12 @@ class SemanticScanner:
             "raw_text": raw_text[:500],
         }
 
-    def describe(self, image_path: str, present: bool | None = None) -> dict[str, Any]:
+    def describe(self, image_path: str, present: bool | None = None, prompt_config: dict[str, Any] | None = None) -> dict[str, Any]:
         """
         描述场景。主路径: Ollama minicpm-v，降级: mlx_vlm。
         无论 present 真假都调模型描述画面。
         """
-        prompt = self._build_prompt(present)
+        prompt = self._build_prompt(present, config=prompt_config)
 
         # 主路径: Ollama minicpm-v
         try:
@@ -365,6 +405,10 @@ def main() -> None:
     # 变化检测状态
     prev_raw_text: str = ""
     prev_present: bool | None = None
+    # 自适应 interval 状态
+    current_interval: float = float(args.interval)
+    # prompt 配置版本（每轮更新）
+    prompt_version: int | None = None
 
     def handle_signal(_sig, _frame):
         nonlocal running
@@ -381,6 +425,8 @@ def main() -> None:
             "lastError": last_error,
             "model": active_method,
             "version": VERSION,
+            "currentInterval": current_interval,
+            "promptVersion": prompt_version,
         })
 
     write_status()
@@ -393,6 +439,16 @@ def main() -> None:
         loop_started = time.time()
         timestamp = now_iso()
         last_error = None
+        change_event: str | None = None
+        present: bool | None = None
+
+        # --- 每轮热加载 prompt 配置 ---
+        prompt_config = load_prompt_config(data_dir)
+        new_version = prompt_config.get("version") if prompt_config else None
+        if new_version != prompt_version:
+            prompt_version = new_version
+            if args.debug and prompt_config is not None:
+                print(f"[semantic-vision] prompt config loaded: version={prompt_version}")
 
         try:
             if not latest_frame_path.exists() or not latest_state_path.exists():
@@ -405,7 +461,7 @@ def main() -> None:
             if image_age > SEMANTIC_STALE_SECONDS:
                 raise RuntimeError(f"latest.jpg stale: {image_age:.1f}s")
 
-            result = scanner.describe(str(latest_frame_path), present=present)
+            result = scanner.describe(str(latest_frame_path), present=present, prompt_config=prompt_config)
             active_method = result.get("method", "unknown")
             raw_text: str = result.get("raw_text", "")
 
@@ -470,6 +526,24 @@ def main() -> None:
             if args.debug:
                 print(f"[semantic-vision] 失败: {exc}")
 
+        # --- 自适应 interval 计算 ---
+        old_interval = current_interval
+        if change_event:
+            # 检测到变化事件 → 3s 立即重扫确认
+            current_interval = 3.0
+            interval_reason = f"change_event={change_event}"
+        elif present is True:
+            # 有人 → 使用 --interval 基准值
+            current_interval = float(args.interval)
+            interval_reason = "present=True"
+        else:
+            # 无人 → 60s 省 GPU
+            current_interval = 60.0
+            interval_reason = "present=False"
+
+        if args.debug and old_interval != current_interval:
+            print(f"[semantic-vision] interval: {old_interval:.0f}s → {current_interval:.0f}s ({interval_reason})")
+
         write_status()
 
         if args.once:
@@ -477,7 +551,7 @@ def main() -> None:
                 print(semantic_latest_path.read_text())
             break
 
-        sleep_time = max(0.0, args.interval - (time.time() - loop_started))
+        sleep_time = max(0.0, current_interval - (time.time() - loop_started))
         if sleep_time > 0:
             time.sleep(sleep_time)
 

@@ -7,6 +7,7 @@ import http from "http";
 import { randomBytes } from "crypto";
 import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync } from "fs";
 import { resolve } from "path";
+import { exec } from "child_process";
 import { loadConfig } from "./config.js";
 import { BrainApi } from "./brain-api.js";
 import { DEFAULT_BRAIN_MODEL } from "./env.js";
@@ -32,6 +33,7 @@ import { McpClient } from "./services/mcp-client.js";
 import { bridgeMcpTools, type BridgeResult } from "./services/mcp-bridge.js";
 import { getEnabledMcpServers, type McpServerConfig } from "./mcp-config.js";
 import { getVisualState, startVisualStatePolling } from "./services/visual-state.js";
+import { startVisualMemory } from "./services/visual-memory.js";
 import { getVisualStatusReport } from "./services/activity-observability.js";
 import { inferUserState } from "./services/user-state.js";
 
@@ -1309,6 +1311,79 @@ function scheduleClaudeMemorySync() {
   }, 30 * 60_000); // 每 30 分钟
 }
 
+// ─── 每日视觉行为摘要（04:30 执行）───
+let lastVisualDigestDate = "";
+function scheduleVisualDigest() {
+  setInterval(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    const today = now.toISOString().slice(0, 10);
+    if (hour === 4 && minute >= 30 && lastVisualDigestDate !== today) {
+      lastVisualDigestDate = today;
+      console.log(`[visual-digest] daily run starting at ${now.toISOString()}`);
+      const brainRoot = resolve(import.meta.dirname, "..");
+      const cmd = `npx tsx scripts/daily-visual-digest.ts`;
+      exec(cmd, { cwd: brainRoot, timeout: 30_000 }, (err, stdout, stderr) => {
+        if (err) {
+          console.error(`[visual-digest] failed:`, err.message);
+          if (stderr) console.error(`[visual-digest] stderr:`, stderr.trim());
+        } else {
+          console.log(`[visual-digest] ${stdout.trim()}`);
+        }
+      });
+    }
+  }, 60_000);
+}
+
+// ─── 每日视觉质量评分 + prompt 微调（04:45 执行）───
+let lastVisionQualityDate = "";
+function scheduleVisionQuality() {
+  setInterval(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    const today = now.toISOString().slice(0, 10);
+    if (hour === 4 && minute >= 45 && lastVisionQualityDate !== today) {
+      lastVisionQualityDate = today;
+      console.log(`[vision-quality] daily run starting at ${now.toISOString()}`);
+      const brainRoot = resolve(import.meta.dirname, "..");
+      exec(`npx tsx scripts/daily-vision-quality.ts`, { cwd: brainRoot, timeout: 30_000 }, (err, stdout, stderr) => {
+        if (err) {
+          console.error(`[vision-quality] failed:`, err.message);
+          if (stderr) console.error(`[vision-quality] stderr:`, stderr.trim());
+        } else {
+          console.log(`[vision-quality] ${stdout.trim()}`);
+        }
+      });
+    }
+  }, 60_000);
+}
+
+// ─── 每周视觉系统复盘（周日 05:00 执行）───
+let lastWeeklyReviewDate = "";
+function scheduleWeeklyVisionReview() {
+  setInterval(() => {
+    const now = new Date();
+    const day = now.getDay(); // 0=Sunday
+    const hour = now.getHours();
+    const today = now.toISOString().slice(0, 10);
+    if (day === 0 && hour === 5 && lastWeeklyReviewDate !== today) {
+      lastWeeklyReviewDate = today;
+      console.log(`[weekly-vision-review] starting at ${now.toISOString()}`);
+      const brainRoot = resolve(import.meta.dirname, "..");
+      exec(`npx tsx scripts/weekly-vision-review.ts`, { cwd: brainRoot, timeout: 60_000 }, (err, stdout, stderr) => {
+        if (err) {
+          console.error(`[weekly-vision-review] failed:`, err.message);
+          if (stderr) console.error(`[weekly-vision-review] stderr:`, stderr.trim());
+        } else {
+          console.log(`[weekly-vision-review] ${stdout.trim()}`);
+        }
+      });
+    }
+  }, 60_000);
+}
+
 // 启动服务：先初始化 MCP 连接，再监听端口
 initMcpConnections().then(() => {
   server.listen(config.port, "0.0.0.0", () => {
@@ -1320,11 +1395,15 @@ initMcpConnections().then(() => {
     console.log(`   Memory: memory-items.md (${memExists ? "✅" : "❌ not found"})`);
     console.log(`   Models: ${Object.keys(config.routes).join(", ")}`);
     console.log(`   MCP:   ${mcpClients.size} server(s) connected`);
-    console.log(`   Cron:  consolidation @04:00, evolution @07:00, claude-sync @30min\n`);
+    console.log(`   Cron:  consolidation @04:00, visual-digest @04:30, vision-quality @04:45, evolution @07:00, weekly-review @Sun05:00, claude-sync @30min\n`);
     scheduleConsolidation();
+    scheduleVisualDigest();
+    scheduleVisionQuality();
+    scheduleWeeklyVisionReview();
     scheduleEvolution();
     scheduleClaudeMemorySync();
     // Phase 2B-1: 视觉状态轮询
     startVisualStatePolling(resolve(import.meta.dirname, "..", "data"));
+    startVisualMemory(resolve(import.meta.dirname, "..", "data"));
   });
 });
