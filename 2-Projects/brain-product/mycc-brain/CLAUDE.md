@@ -41,6 +41,12 @@ grep 'mycc-brain v' src/server.ts
 | 0.5.1 | 2026-04-07 | P0 TTFT 优化 |
 | 0.6.0 | 2026-04-08 | Vision P0-P2（感知+自进化+prompt自调优） |
 
+## Admin UI 版本
+
+**版本号位置：`src/admin/admin-ui.html` 的 `ADMIN_UI_VERSION` 常量。**
+
+Admin UI 独立于后端版本，前端有改动时升版（minor +1）。当前 v2.6。
+
 ## 部署
 
 - Studio SSH: `studio-pub`（经 Mini 跳板）
