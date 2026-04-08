@@ -11,18 +11,41 @@ LOG_FILE="$BRAIN_DIR/data/evolution-log.jsonl"
 EVAL_RESULT="$BRAIN_DIR/eval/eval-result.json"
 TIMESTAMP=$(date '+%Y-%m-%dT%H:%M:%S')
 
+# 加载项目运行时环境（优先 .env.local，再 .env；现有 shell env 优先级更高）
+if [ -f "$BRAIN_DIR/.env.local" ]; then
+  set -a
+  . "$BRAIN_DIR/.env.local"
+  set +a
+elif [ -f "$BRAIN_DIR/.env" ]; then
+  set -a
+  . "$BRAIN_DIR/.env"
+  set +a
+fi
+
 # 飞书 webhook（进化日报群）
 FEISHU_WEBHOOK="${FEISHU_EVAL_WEBHOOK:-}"
 
 # 加载 nvm
 source "$HOME/.nvm/nvm.sh"
 
-# 代理设置（Mini 环境，访问 Gemini API 需要代理）
+# 代理设置（Mini 环境，访问 Gemini Proxy VPS 需要代理）
 export http_proxy="${http_proxy:-http://127.0.0.1:7890}"
 export https_proxy="${https_proxy:-http://127.0.0.1:7890}"
-# Studio 内网不走代理
-export NO_PROXY="10.9.1.155,localhost,127.0.0.1"
+# Studio 内网 + Gemini Proxy VPS 不走代理
+export NO_PROXY="10.9.1.155,23.226.135.149,localhost,127.0.0.1"
 export no_proxy="$NO_PROXY"
+
+# Admin 认证（eval 需要调 /admin/api/memory-preview）
+export ADMIN_USER="${ADMIN_USER:-admin}"
+export ADMIN_PASS="${ADMIN_PASS:-}"
+
+# Gemini Judge 走 Proxy（litellm OpenAI 兼容格式）
+export GEMINI_PROXY_BASE="${GEMINI_PROXY_BASE:-http://23.226.135.149:4000/v1}"
+
+if [ -z "${GEMINI_PROXY_KEY:-}" ] && [ -z "${GEMINI_API_KEY:-}" ]; then
+  echo "[$TIMESTAMP] GEMINI_PROXY_KEY / GEMINI_API_KEY 未配置，无法运行 eval"
+  exit 1
+fi
 
 # 确保 data 目录存在
 mkdir -p "$BRAIN_DIR/data"

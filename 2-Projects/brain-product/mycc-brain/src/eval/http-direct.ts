@@ -10,6 +10,7 @@ import http from "http";
 function httpPostOnce(
   url: string,
   payload: string,
+  extraHeaders?: Record<string, string>,
 ): Promise<{ status: number; data: unknown }> {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
@@ -22,6 +23,7 @@ function httpPostOnce(
         headers: {
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(payload),
+          ...extraHeaders,
         },
       },
       (res) => {
@@ -50,11 +52,12 @@ export async function httpPost(
   url: string,
   body: unknown,
   retries = 2,
+  headers?: Record<string, string>,
 ): Promise<{ status: number; data: unknown }> {
   const payload = JSON.stringify(body);
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      return await httpPostOnce(url, payload);
+      return await httpPostOnce(url, payload, headers);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (attempt < retries && (msg.includes("socket hang up") || msg.includes("ECONNRESET"))) {

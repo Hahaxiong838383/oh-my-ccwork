@@ -10,6 +10,7 @@ import type { TestCase } from "./test-cases.js";
 import { execSync } from "child_process";
 import { dashscopeLimit, geminiLimit } from "./rate-limiter.js";
 import { httpPost } from "./http-direct.js";
+import { DEFAULT_BRAIN_MODEL, DEFAULT_RAW_MODEL } from "../env.js";
 
 // ─── Types ───
 
@@ -48,17 +49,16 @@ export interface JudgeSummary {
   failures: string[];
 }
 
-// ─── Gemini API ───
+// ─── Gemini API（支持 Native 和 Proxy 两种模式）───
 
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
+const GEMINI_NATIVE_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
-async function callGemini(
+async function callGeminiNative(
   apiKey: string,
   model: string,
   prompt: string,
 ): Promise<string> {
-  // Use curl to call Gemini API — it respects system proxy (googleapis.com needs proxy)
-  const url = `${GEMINI_BASE}/models/${model}:generateContent?key=${apiKey}`;
+  const url = `${GEMINI_NATIVE_BASE}/models/${model}:generateContent?key=${apiKey}`;
   const body = JSON.stringify({
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: { temperature: 0.1, maxOutputTokens: 4096, responseMimeType: "application/json" },
@@ -75,6 +75,47 @@ async function callGemini(
     throw new Error(`Gemini: ${data.error.message}`);
   }
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+}
+
+async function callGeminiProxy(
+  proxyBase: string,
+  apiKey: string,
+  model: string,
+  prompt: string,
+): Promise<string> {
+  // OpenAI-compatible format via litellm proxy
+  const url = `${proxyBase}/chat/completions`;
+  const body = JSON.stringify({
+    model,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.1,
+    max_tokens: 4096,
+    response_format: { type: "json_object" },
+  });
+  const raw = execSync(
+    `curl -s --connect-timeout 30 --max-time 120 -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${apiKey}" -d @- "${url}"`,
+    { input: body, timeout: 130_000, encoding: "utf-8" },
+  );
+  const data = JSON.parse(raw) as {
+    choices?: Array<{ message?: { content?: string } }>;
+    error?: { message?: string };
+  };
+  if (data.error) {
+    throw new Error(`Gemini Proxy: ${data.error.message}`);
+  }
+  return data.choices?.[0]?.message?.content ?? "";
+}
+
+async function callGemini(
+  apiKey: string,
+  model: string,
+  prompt: string,
+  proxyBase?: string,
+): Promise<string> {
+  if (proxyBase) {
+    return callGeminiProxy(proxyBase, apiKey, model, prompt);
+  }
+  return callGeminiNative(apiKey, model, prompt);
 }
 
 // ─── Brain API call ───
@@ -189,6 +230,7 @@ export async function evaluateGeneration(
   brainUrl: string,
   geminiApiKey: string,
   judgeModel = "gemini-2.0-flash",
+  geminiProxyBase?: string,
 ): Promise<JudgeSummary> {
   const results: JudgeResult[] = [];
 
@@ -197,8 +239,8 @@ export async function evaluateGeneration(
 
     try {
       // 1. Get brain + raw responses (sequential to avoid socket hang up on brain)
-      const brainResp = await callBrainChat(brainUrl, "cc-qwen", tc.query);
-      const rawResp = await callBrainChat(brainUrl, "raw-qwen", tc.query);
+      const brainResp = await callBrainChat(brainUrl, DEFAULT_BRAIN_MODEL, tc.query);
+      const rawResp = await callBrainChat(brainUrl, DEFAULT_RAW_MODEL, tc.query);
 
       // 2. Handle multi-turn follow-up
       let brainContent = brainResp.content;
@@ -207,8 +249,8 @@ export async function evaluateGeneration(
       let rawLatency = rawResp.latency;
 
       if (tc.follow_up) {
-        const brainF = await callBrainChat(brainUrl, "cc-qwen", tc.follow_up!, brainResp.conversationId);
-        const rawF = await callBrainChat(brainUrl, "raw-qwen", tc.follow_up!);
+        const brainF = await callBrainChat(brainUrl, DEFAULT_BRAIN_MODEL, tc.follow_up!, brainResp.conversationId);
+        const rawF = await callBrainChat(brainUrl, DEFAULT_RAW_MODEL, tc.follow_up!);
         brainContent += `\n\n[Follow-up: ${tc.follow_up}]\n${brainF.content}`;
         rawContent += `\n\n[Follow-up: ${tc.follow_up}]\n${rawF.content}`;
         brainLatency += brainF.latency;
@@ -224,7 +266,7 @@ export async function evaluateGeneration(
       const dims = tc.judge_dimensions as Dimension[];
       const judgePrompt = buildJudgePrompt(tc, answerA, answerB, dims);
       const judgeText = await geminiLimit(() =>
-        callGemini(geminiApiKey, judgeModel, judgePrompt),
+        callGemini(geminiApiKey, judgeModel, judgePrompt, geminiProxyBase),
       );
 
       // 5. Parse scores

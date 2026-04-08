@@ -7,22 +7,18 @@
  */
 
 import { resolve } from "path";
-import { config } from "dotenv";
 import { ToolRegistry } from "./services/tool-registry.js";
 import { McpServer } from "./services/mcp-server.js";
 import { searchMemoryTool } from "./tools/search-memory.js";
 import { listMemoriesTool } from "./tools/list-memories.js";
 import { runDiagnosisTool } from "./tools/run-diagnosis.js";
-
-// ─── 加载 .env ───
-
-config({ path: resolve(import.meta.dirname, "../.env") });
+import { lookAtTool } from "./services/vision-tool.js";
+import { DEFAULT_DATA_DIR } from "./env.js";
 
 // ─── 配置 ───
 
 const brainRoot = resolve(import.meta.dirname, "..");
-const dataDir = process.env.DATA_DIR
-  ?? resolve(import.meta.dirname, "../../mycc-data/0-System");
+const dataDir = DEFAULT_DATA_DIR;
 
 // ─── 注册工具 ───
 
@@ -30,6 +26,7 @@ const registry = new ToolRegistry();
 registry.register(searchMemoryTool);
 registry.register(listMemoriesTool);
 registry.register(runDiagnosisTool);
+registry.register(lookAtTool);
 
 // ─── 启动 MCP Server ───
 

@@ -9,6 +9,7 @@ import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync } fr
 import { resolve } from "path";
 import { loadConfig } from "./config.js";
 import { BrainApi } from "./brain-api.js";
+import { DEFAULT_BRAIN_MODEL } from "./env.js";
 import { loadBrainContext } from "./services/brain-context.js";
 import { listPatches, addPatch, togglePatch, deletePatch } from "./services/hot-patch.js";
 import { getTodayStats, getRecentDayStats, getInsights, getHealthMetrics, getMemoryHealth } from "./services/experience-stream.js";
@@ -30,10 +31,11 @@ import { parseMemoryItems, type ParsedCategory } from "./services/memory-store.j
 import { McpClient } from "./services/mcp-client.js";
 import { bridgeMcpTools, type BridgeResult } from "./services/mcp-bridge.js";
 import { getEnabledMcpServers, type McpServerConfig } from "./mcp-config.js";
-import { startVisualStatePolling } from "./services/visual-state.js";
+import { getVisualState, startVisualStatePolling } from "./services/visual-state.js";
 import { getVisualStatusReport } from "./services/activity-observability.js";
+import { inferUserState } from "./services/user-state.js";
 
-const config = loadConfig(); // dotenv.config() 在此内部调用
+const config = loadConfig(); // 运行时配置由 env.ts 统一加载（.env.local → .env）
 const brainApi = new BrainApi(config);
 
 // ─── MCP 连接池 ───
@@ -103,7 +105,7 @@ const ADMIN_HTML_PATH = (() => {
   return sameDirPath; // 返回原始路径，让后续 existsSync 检查报错
 })();
 
-// Admin auth — username/password login with session token (读取在 loadConfig() 之后，确保 dotenv 已加载)
+// Admin auth — username/password login with session token（读取在 loadConfig() 之后，确保运行时环境已加载）
 let ADMIN_USER = process.env.ADMIN_USER || "admin";
 let ADMIN_PASS = process.env.ADMIN_PASS || "";
 const adminSessions = new Map<string, number>(); // token → expiry timestamp
@@ -138,6 +140,76 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 function json(res: http.ServerResponse, status: number, data: unknown) {
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(data));
+}
+
+function formatEnvironmentHint(visual: ReturnType<typeof getVisualState>): string {
+  if (!visual.available || visual.stale) {
+    return "";
+  }
+
+  const positionLabel = visual.present === true
+    ? "在工位"
+    : visual.present === false
+      ? "离开"
+      : "未知";
+  const noiseLabel = !visual.audioAvailable
+    ? "未知"
+    : visual.audioLevel === null || !Number.isFinite(visual.audioLevel)
+      ? "未知"
+      : visual.audioLevel < 0.03
+        ? "安静"
+        : visual.audioLevel < 0.12
+          ? "有环境声"
+          : "较嘈杂";
+
+  const semanticLines: string[] = [];
+  if (visual.semanticAvailable && !visual.semanticStale) {
+    if (visual.sceneSummary && visual.sceneSummary !== "unknown") {
+      semanticLines.push(`- 场景摘要: ${visual.sceneSummary}`);
+    }
+    if (visual.personAppearance && visual.personAppearance !== "unknown") {
+      semanticLines.push(`- 人物外观: ${visual.personAppearance}`);
+    }
+    if (visual.personAction && visual.personAction !== "unknown" && visual.personAction !== visual.activity) {
+      semanticLines.push(`- 人物动作: ${visual.personAction}`);
+    }
+    if (visual.nearbyObjects.length > 0) {
+      semanticLines.push(`- 附近物体: ${visual.nearbyObjects.join("、")}`);
+    }
+  }
+
+  return `\n\n## 用户环境感知\n- 位置状态: ${positionLabel}\n- 活动状态: ${visual.activity}\n- 环境音量: ${noiseLabel}${semanticLines.length > 0 ? `\n${semanticLines.join("\n")}` : ""}`;
+}
+
+async function buildAdminBrainMessages(
+  prompt: string,
+  baseMessages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+  dataDir: string,
+): Promise<{
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  injectedCategories: string[];
+  itemCount: number;
+}> {
+  const brainRoot = resolve(import.meta.dirname, "..");
+  const brainResult = await loadBrainContext(prompt, dataDir);
+  const { loadActivePatches } = await import("./services/hot-patch.js");
+  const { buildBrainSystemPrompt } = await import("./services/brain-context.js");
+  const patches = loadActivePatches(brainRoot);
+  const systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
+
+  const visual = getVisualState();
+  const userState = inferUserState(prompt, visual.available ? visual : undefined);
+  const contextStateHint = (userState.attention !== "unknown" || userState.noiseLevel !== "unknown")
+    ? `\n- 注意力状态: ${userState.attention} | 环境音量: ${userState.noiseLevel}`
+    : "";
+  const stateHint = `\n\n## 用户状态（本轮推断）\n- 意图: ${userState.intent} | 情绪: ${userState.mood} | 专业度: ${userState.expertise}${contextStateHint}\n- 请根据用户状态调整回复风格：受挫时简洁直接，好奇时展开说明，紧急时跳过寒暄。`;
+  const environmentHint = formatEnvironmentHint(visual);
+
+  return {
+    messages: [{ role: "system", content: systemPrompt + stateHint + environmentHint }, ...baseMessages],
+    injectedCategories: brainResult.matchedCategories,
+    itemCount: brainResult.itemCount,
+  };
 }
 
 const server = http.createServer(async (req, res) => {
@@ -372,7 +444,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = JSON.parse(await readBody(req));
       const { chatCompletion } = await import("./adapters/openai-compat.js");
-      const modelName = body.model ?? "cc-qwen";
+      const modelName = body.model ?? config.defaultBrainModel ?? DEFAULT_BRAIN_MODEL;
       const route = config.routes[modelName];
       if (!route) {
         json(res, 400, { error: "Unknown model" });
@@ -391,16 +463,11 @@ const server = http.createServer(async (req, res) => {
       }
       messages.push({ role: "user", content: prompt });
 
-      // Inject brain context if route.brain=true (same as /v1/chat/completions)
+      // Inject brain context if route.brain=true (admin test now mirrors main route env/state hints)
       if (route.brain) {
         try {
-          const brainRoot = resolve(import.meta.dirname, "..");
-          const brainResult = await loadBrainContext(prompt, config.dataDir);
-          const { loadActivePatches } = await import("./services/hot-patch.js");
-          const { buildBrainSystemPrompt } = await import("./services/brain-context.js");
-          const patches = loadActivePatches(brainRoot);
-          const systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
-          messages = [{ role: "system", content: systemPrompt }, ...messages];
+          const result = await buildAdminBrainMessages(prompt, messages, config.dataDir);
+          messages = result.messages;
         } catch { /* degrade gracefully */ }
       }
 
@@ -434,10 +501,10 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = JSON.parse(await readBody(req));
       const { chatCompletion } = await import("./adapters/openai-compat.js");
-      const modelParam: string = body.model ?? "cc-qwen";
+      const modelParam: string = body.model ?? config.defaultBrainModel ?? DEFAULT_BRAIN_MODEL;
       const prompt: string = body.prompt ?? "你好";
 
-      // Extract suffix: cc-qwen → qwen, raw-deepseek → deepseek
+      // Extract suffix: cc-gemini-3.1-flash → gemini-3.1-flash, raw-deepseek → deepseek
       const suffix = modelParam.replace(/^(cc|raw)-/, "");
       const brainModelName = `cc-${suffix}`;
       const rawModelName = `raw-${suffix}`;
@@ -449,20 +516,15 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      // Prepare brain messages (with memory injection)
+      // Prepare brain messages (with memory + state + environment injection)
       let brainMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [{ role: "user", content: prompt }];
       let injectedCategories: string[] = [];
       let itemCount = 0;
       try {
-        const brainRoot = resolve(import.meta.dirname, "..");
-        const brainResult = await loadBrainContext(prompt, config.dataDir);
-        const { loadActivePatches } = await import("./services/hot-patch.js");
-        const { buildBrainSystemPrompt } = await import("./services/brain-context.js");
-        const patches = loadActivePatches(brainRoot);
-        const systemPrompt = buildBrainSystemPrompt(brainResult.context, patches);
-        brainMessages = [{ role: "system", content: systemPrompt }, ...brainMessages];
-        injectedCategories = brainResult.matchedCategories;
-        itemCount = brainResult.itemCount;
+        const result = await buildAdminBrainMessages(prompt, brainMessages, config.dataDir);
+        brainMessages = result.messages;
+        injectedCategories = result.injectedCategories;
+        itemCount = result.itemCount;
       } catch { /* degrade gracefully */ }
 
       const rawMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [{ role: "user", content: prompt }];
@@ -877,7 +939,7 @@ const server = http.createServer(async (req, res) => {
 
     try {
       const body = JSON.parse(await readBody(req));
-      const modelParam: string = body.model ?? "cc-qwen";
+      const modelParam: string = body.model ?? config.defaultBrainModel ?? DEFAULT_BRAIN_MODEL;
       const prompt: string = body.prompt ?? "";
       if (!prompt) { sendSSE("error", { error: "prompt required" }); res.end(); return; }
 
@@ -944,7 +1006,7 @@ const server = http.createServer(async (req, res) => {
   if (path === "/admin/api/agent" && req.method === "POST") {
     try {
       const body = JSON.parse(await readBody(req));
-      const modelParam: string = body.model ?? "cc-qwen";
+      const modelParam: string = body.model ?? config.defaultBrainModel ?? DEFAULT_BRAIN_MODEL;
       const prompt: string = body.prompt ?? "";
       if (!prompt) { json(res, 400, { error: "prompt required" }); return; }
 

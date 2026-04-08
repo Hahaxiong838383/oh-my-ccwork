@@ -30,8 +30,9 @@ export interface RetrievalSummary {
 async function callMemoryPreview(
   brainUrl: string,
   query: string,
+  authHeaders?: Record<string, string>,
 ): Promise<{ matchedCategories: string[]; itemCount: number }> {
-  const { status, data } = await httpPost(`${brainUrl}/admin/api/memory-preview`, { query });
+  const { status, data } = await httpPost(`${brainUrl}/admin/api/memory-preview`, { query }, 2, authHeaders);
   if (status !== 200) {
     throw new Error(`memory-preview ${status}: ${JSON.stringify(data)}`);
   }
@@ -54,6 +55,7 @@ function calcPrecision(matched: string[], expected: string[]): number {
 export async function evaluateRetrieval(
   cases: TestCase[],
   brainUrl: string,
+  authHeaders?: Record<string, string>,
 ): Promise<RetrievalSummary> {
   const results: RetrievalResult[] = [];
 
@@ -63,6 +65,7 @@ export async function evaluateRetrieval(
       const { matchedCategories, itemCount } = await callMemoryPreview(
         brainUrl,
         tc.query,
+        authHeaders,
       );
       const latency = Date.now() - start;
 

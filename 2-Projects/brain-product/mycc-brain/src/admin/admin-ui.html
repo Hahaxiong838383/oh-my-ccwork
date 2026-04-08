@@ -144,6 +144,19 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
 .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
 .badge.brain{background:#312e81;color:#a5b4fc}.badge.raw{background:#1c1917;color:#a8a29e}
 .badge.ok{background:#064e3b;color:#6ee7b7}.badge.miss{background:#451a03;color:#fbbf24}
+.eval-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:10px}
+.eval-item{background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.eval-item-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.eval-item-name{font-size:13px;font-weight:600;color:var(--text-primary)}
+.eval-item-score{font-size:16px;font-weight:700}
+.eval-item-meta{font-size:11px;color:var(--text-secondary);margin-top:4px;line-height:1.5}
+.eval-item-note{font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.5}
+.eval-summary{margin-top:10px;padding:10px 12px;background:var(--bg-input);border-radius:8px;color:var(--text-secondary);font-size:12px;line-height:1.6}
+.eval-reg-list{margin-top:10px;padding:10px 12px;background:var(--bg-input);border-radius:8px}
+.eval-reg-title{font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px}
+.eval-reg-item{font-size:12px;line-height:1.6;margin-bottom:6px}
+.eval-reg-item:last-child{margin-bottom:0}
+.eval-reg-note{color:var(--text-dim)}
 .btn{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s}
 .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-hover)}
 .btn-danger{background:#991b1b;color:#fff}.btn-danger:hover{background:#7f1d1d}
@@ -272,7 +285,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
   <aside id="sidebar">
     <div class="sb-header">
       <button class="sb-toggle" onclick="toggleSidebar()" title="收起侧边栏">☰</button>
-      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span><span class="ui-ver">v2.3 · 2026-04-07</span></div>
+      <div class="sb-brand" onclick="switchView('chat')">🧠 <span>mycc-brain</span><span class="ui-ver" id="uiVersionBadge"></span></div>
       <div class="status-dot off" id="statusDot" title="检查中..."></div>
     </div>
     <button class="new-chat-btn" onclick="newChat()">+ 新对话</button>
@@ -453,6 +466,10 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
 <script src="/static/vendor/three.min.js"></script>
 <script src="/static/vendor/3d-force-graph.min.js"></script>
 <script>
+const ADMIN_UI_VERSION = 'v2.5';
+const ADMIN_UI_DATE = '2026-04-08';
+const ADMIN_UI_LABEL = `${ADMIN_UI_VERSION} · ${ADMIN_UI_DATE}`;
+
 /* ═══════════════════════════════════════════════════
    State
    ═══════════════════════════════════════════════════ */
@@ -1039,6 +1056,75 @@ async function saveModelConfig() {
    Evolution
    ═══════════════════════════════════════════════════ */
 async function loadEvo() {
+  const evalMetricMeta = {
+    retrieval_hit_rate: { label: '检索召回率', note: '该找的记忆有没有被找出来，越高越好。', target: 0.7, digits: 3 },
+    retrieval_precision: { label: '检索精确率', note: '找出来的记忆里有多少是真的相关，越高越好。', target: 0.6, digits: 3 },
+    generation_overall: { label: '生成层总平均', note: '生成层各项评分的平均值，决定整体回答质量。', target: 3.5, digits: 2 },
+    relevance: { label: '回答相关性', note: '回答是否贴题，是否围绕问题本身展开。', target: 2.5, digits: 2 },
+    precision: { label: '回答精确度', note: '回答是否准确、不空泛。这里不是检索精确率。', target: 2.5, digits: 2 },
+    faithfulness: { label: '忠实度', note: '回答是否忠于记忆与事实，不乱编。', target: 4.0, digits: 2 },
+    completeness: { label: '完整度', note: '回答是否覆盖了用户问题里应答的关键点。', target: 2.5, digits: 2 },
+    creative_freedom: { label: '创造灵活度', note: '在不跑偏的前提下，表达是否自然灵活。', target: 2.5, digits: 2 },
+    safety: { label: '安全性', note: '是否避免泄露敏感信息、提示词和危险内容。', target: 4.0, digits: 2 },
+    adversarial_resist: { label: '对抗攻击抵抗力', note: '是否能扛住诱导越权、提示注入等攻击。', target: 3.5, digits: 2 },
+  };
+  const diffKeyMap = {
+    '检索召回率': 'retrieval_hit_rate',
+    '检索精确率': 'retrieval_precision',
+    relevance: 'relevance',
+    precision: 'precision',
+    faithfulness: 'faithfulness',
+    completeness: 'completeness',
+    creative_freedom: 'creative_freedom',
+    safety: 'safety',
+    adversarial_resist: 'adversarial_resist',
+  };
+  const formatMetricLabel = (key) => (evalMetricMeta[key] || {}).label || key;
+  const formatMetricNote = (key) => (evalMetricMeta[key] || {}).note || '该指标暂无额外说明。';
+  const formatMetricValue = (key, value) => {
+    const digits = (evalMetricMeta[key] || {}).digits ?? 2;
+    return Number(value || 0).toFixed(digits);
+  };
+  const parseBaselineMap = (diffText = '') => {
+    const result = {};
+    for (const line of diffText.split('\n').map(s => s.trim()).filter(Boolean)) {
+      const m = line.match(/^([^:]+):\s*([0-9.]+)\s*→\s*([0-9.]+)\s*\(([+-]?[0-9.]+)%\)$/);
+      if (!m) continue;
+      const key = diffKeyMap[m[1]];
+      if (!key) continue;
+      result[key] = {
+        baseline: parseFloat(m[2]),
+        current: parseFloat(m[3]),
+        deltaPct: parseFloat(m[4]),
+      };
+    }
+    return result;
+  };
+  const formatRegressionLine = (x) => {
+    const color = x.severity === 'critical' ? 'var(--danger)' : 'var(--warning)';
+    const deltaWord = x.deltaPct <= 0 ? '下降' : '上升';
+    return `<div class="eval-reg-item" style="color:${color}">
+      <strong>${formatMetricLabel(x.metric)}</strong>：${x.baseline.toFixed(2)} → ${x.current.toFixed(2)}（${deltaWord} ${Math.abs(x.deltaPct).toFixed(1)}%）
+      <div class="eval-reg-note">${formatMetricNote(x.metric)}</div>
+    </div>`;
+  };
+  const renderMetricCard = (key, value, baselineMap) => {
+    const target = (evalMetricMeta[key] || {}).target ?? 0;
+    const scoreColor = value >= target ? 'var(--success)' : 'var(--danger)';
+    const baseline = baselineMap[key];
+    const deltaText = baseline
+      ? `${baseline.deltaPct >= 0 ? '+' : ''}${baseline.deltaPct.toFixed(1)}%`
+      : '';
+    return `<div class="eval-item">
+      <div class="eval-item-head">
+        <span class="eval-item-name">${formatMetricLabel(key)}</span>
+        <span class="eval-item-score" style="color:${scoreColor}">${formatMetricValue(key, value)}</span>
+      </div>
+      <div class="eval-item-meta">目标值：≥ ${formatMetricValue(key, target)}</div>
+      ${baseline ? `<div class="eval-item-meta">baseline：${formatMetricValue(key, baseline.baseline)} <span style="color:${baseline.deltaPct >= 0 ? 'var(--success)' : 'var(--danger)'}">(${deltaText})</span></div>` : '<div class="eval-item-meta">baseline：当前结果未提供</div>'}
+      <div class="eval-item-note">${formatMetricNote(key)}</div>
+    </div>`;
+  };
   // v2: Phase 1 readiness
   aFetch('/admin/api/evolution/phase1-readiness').then(async r=>{
     try{
@@ -1108,14 +1194,31 @@ async function loadEvo() {
     const r = await aFetch('/admin/api/evolution/eval-result'), d = await r.json();
     if (d.error) { document.getElementById('eEval').innerHTML='<span style="color:var(--text-dim)">暂无评估结果</span>'; }
     else {
-      const icon=d.pass?'<span style="color:var(--success)">PASS</span>':'<span style="color:var(--danger)">FAIL</span>';
-      const reg=(d.regressions||[]).map(x=>{const c=x.severity==='critical'?'var(--danger)':'var(--warning)';return`<span style="color:${c}">${x.metric}: ${x.baseline.toFixed(2)} → ${x.current.toFixed(2)} (${x.deltaPct.toFixed(1)}%)</span>`;}).join('<br>');
-      document.getElementById('eEval').innerHTML=`<div style="display:flex;gap:16px;align-items:center;margin-bottom:8px">
-        <span style="font-size:20px;font-weight:700">${icon}</span>
-        <span style="color:var(--text-secondary)">hitRate: ${(d.retrieval?.hitRate||0).toFixed(3)} | precision: ${(d.retrieval?.precision||0).toFixed(3)}</span>
+      const baselineMap = parseBaselineMap(d.diff || '');
+      const generationEntries = Object.entries(d.generation||{});
+      const overallGeneration = generationEntries.length
+        ? generationEntries.reduce((sum, [, value]) => sum + value, 0) / generationEntries.length
+        : 0;
+      const status=d.pass
+        ? '<span style="color:var(--success)">通过</span>'
+        : '<span style="color:var(--danger)">未通过</span>';
+      const reg=(d.regressions||[]).map(formatRegressionLine).join('');
+      document.getElementById('eEval').innerHTML=`<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-size:20px;font-weight:700">${status}</span>
+        <span style="color:var(--text-secondary)">检索召回率：${(d.retrieval?.hitRate||0).toFixed(3)} | 检索精确率：${(d.retrieval?.precision||0).toFixed(3)}</span>
         <span style="color:var(--text-dim);font-size:12px">${d.timestamp?new Date(d.timestamp).toLocaleString():''}</span></div>
-        ${Object.entries(d.generation||{}).map(([k,v])=>`<span class="badge ${v>=3.5?'ok':'miss'}" style="margin:2px">${k}: ${v.toFixed(2)}</span>`).join(' ')}
-        ${reg?'<div style="margin-top:8px;padding:8px;background:var(--bg-input);border-radius:6px">'+reg+'</div>':''}`;
+        <div class="eval-summary">
+          <div><strong>总评含义：</strong>${d.pass?'本次评估已达当前通过线。':'本次评估未达当前通过线，通常意味着关键质量指标或关键回归项未过线。'}</div>
+          <div><strong>目标线：</strong>检索召回率 ≥ 0.700，检索精确率 ≥ 0.600，生成层总平均 ≥ 3.50。</div>
+          <div><strong>单项硬底线：</strong>大多数生成指标 ≥ 2.50；忠实度/安全性 ≥ 4.00；对抗攻击抵抗力 ≥ 3.50。</div>
+        </div>
+        <div class="eval-grid">
+          ${renderMetricCard('retrieval_hit_rate', d.retrieval?.hitRate||0, baselineMap)}
+          ${renderMetricCard('retrieval_precision', d.retrieval?.precision||0, baselineMap)}
+          ${renderMetricCard('generation_overall', overallGeneration, baselineMap)}
+          ${generationEntries.map(([key, value])=>renderMetricCard(key, value, baselineMap)).join('')}
+        </div>
+        ${reg?`<div class="eval-reg-list"><div class="eval-reg-title">相对 baseline 的回归项</div>${reg}</div>`:''}`;
     }
   } catch(e){document.getElementById('eEval').textContent='错误: '+e.message}
   try {
@@ -1449,6 +1552,8 @@ function exportAllSessions() {
    ═══════════════════════════════════════════════════ */
 (async function init(){
   // 登录 token 由 /admin/api/login 返回，不再自动设置默认值
+  const uiVersionBadge = document.getElementById('uiVersionBadge');
+  if (uiVersionBadge) uiVersionBadge.textContent = ADMIN_UI_LABEL;
   loadState(); applySB(); applyMode(); renderSess(); renderMsgs();
   if(innerWidth<768&&!localStorage.getItem('brain_sidebar_collapsed')){S.collapsed=true;applySB()}
   // Hash routing
@@ -1471,7 +1576,7 @@ function exportAllSessions() {
   } catch (e) { console.warn('服务端会话同步失败', e); }
 })();
 /* ═══════════════════════════════════════════════════
-   Architecture Graph (3D Force Graph) — v2.3 记忆命名空间
+   Architecture Graph (3D Force Graph) — v2.5 记忆命名空间
    ═══════════════════════════════════════════════════ */
 var _graphInstance = null;
 var _graphLayout = 'free';

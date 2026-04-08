@@ -1,8 +1,6 @@
-import { config } from "dotenv";
 import { resolve } from "path";
 import { existsSync, readFileSync, writeFileSync } from "fs";
-
-config({ path: resolve(import.meta.dirname, "../.env") });
+import { DEFAULT_BRAIN_MODEL, DEFAULT_DATA_DIR } from "./env.js";
 
 export interface ModelRoute {
   adapter: "openai-compat";
@@ -32,6 +30,7 @@ export interface SearchConfig {
 export interface BrainConfig {
   port: number;
   brainApiKey: string;
+  defaultBrainModel: string;
   dataDir: string;
   routes: Record<string, ModelRoute>;
   memoryLLM: {
@@ -40,6 +39,20 @@ export interface BrainConfig {
     fallbackIntake?: MemoryLLMRoute;
   };
   search: SearchConfig;
+}
+
+function validateDefaultModel(config: BrainConfig): void {
+  const model = config.defaultBrainModel;
+  if (!model.startsWith("cc-")) {
+    throw new Error(`BRAIN_DEFAULT_MODEL must use a brain route (cc-*), got: ${model}`);
+  }
+  if (!config.routes[model]) {
+    throw new Error(`BRAIN_DEFAULT_MODEL route not found: ${model}`);
+  }
+  const rawModel = model.replace(/^cc-/, "raw-");
+  if (!config.routes[rawModel]) {
+    throw new Error(`Missing raw counterpart for default brain model: ${rawModel}`);
+  }
 }
 
 function env(key: string, fallback = ""): string {
@@ -61,7 +74,8 @@ export function loadConfig(): BrainConfig {
   const result: BrainConfig = {
     port: parseInt(env("BRAIN_PORT", "19080"), 10),
     brainApiKey: env("BRAIN_API_KEY", "sk-brain-dev"),
-    dataDir: env("DATA_DIR", resolve(import.meta.dirname, "../../mycc-data/0-System")),
+    defaultBrainModel: DEFAULT_BRAIN_MODEL,
+    dataDir: DEFAULT_DATA_DIR,
     routes: {
       "cc-qwen": {
         adapter: "openai-compat",
@@ -247,5 +261,6 @@ export function loadConfig(): BrainConfig {
     } catch { /* ignore malformed overrides */ }
   }
 
+  validateDefaultModel(result);
   return result;
 }

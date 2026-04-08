@@ -11,10 +11,12 @@ import { getVisualState, type VisualState } from "./visual-state.js";
 export interface VisualStatusReport {
   readonly visual: VisualState;
   readonly daemon: Record<string, unknown> | null;
+  readonly semanticDaemon: Record<string, unknown> | null;
   readonly todayEventCount: number;
   readonly oldestLogDate: string | null;
   readonly statusFileExists: boolean;
   readonly latestFileExists: boolean;
+  readonly semanticFileExists: boolean;
   readonly latestEventAgeMs: number;
 }
 
@@ -22,6 +24,8 @@ export function getVisualStatusReport(dataDir: string): VisualStatusReport {
   const activityDir = join(dataDir, "activity");
   const latestPath = join(activityDir, "latest.json");
   const statusPath = join(activityDir, "status.json");
+  const semanticLatestPath = join(activityDir, "semantic-latest.json");
+  const semanticStatusPath = join(activityDir, "semantic-status.json");
 
   const visual = getVisualState();
 
@@ -30,6 +34,13 @@ export function getVisualStatusReport(dataDir: string): VisualStatusReport {
   if (existsSync(statusPath)) {
     try {
       daemon = JSON.parse(readFileSync(statusPath, "utf-8"));
+    } catch { /* ignore parse error */ }
+  }
+
+  let semanticDaemon: Record<string, unknown> | null = null;
+  if (existsSync(semanticStatusPath)) {
+    try {
+      semanticDaemon = JSON.parse(readFileSync(semanticStatusPath, "utf-8"));
     } catch { /* ignore parse error */ }
   }
 
@@ -60,10 +71,12 @@ export function getVisualStatusReport(dataDir: string): VisualStatusReport {
   return {
     visual,
     daemon,
+    semanticDaemon,
     todayEventCount,
     oldestLogDate,
     statusFileExists: existsSync(statusPath),
     latestFileExists: existsSync(latestPath),
+    semanticFileExists: existsSync(semanticLatestPath),
     latestEventAgeMs: visual.staleMs === Infinity ? -1 : Math.round(visual.staleMs),
   };
 }

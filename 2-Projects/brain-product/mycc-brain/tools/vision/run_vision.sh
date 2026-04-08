@@ -19,19 +19,20 @@ if [ ! -f "$VPYTHON" ]; then
 fi
 
 if [ "$1" = "--pm2" ]; then
+  shift
   echo "以 PM2 启动 vision daemon..."
-  pm2 start "$VPYTHON" \
+  pm2 start "$DAEMON" \
+    --interpreter "$VPYTHON" \
     --name "vision-daemon" \
     --cwd "$BRAIN_ROOT" \
-    -- "$DAEMON" \
+    -- \
     --data-dir "$BRAIN_ROOT/data/activity" \
-    --debug
+    "$@"
   pm2 save
   echo "PM2 启动完成。查看日志: pm2 logs vision-daemon"
 else
   echo "前台启动 vision daemon..."
   exec "$VPYTHON" "$DAEMON" \
     --data-dir "$BRAIN_ROOT/data/activity" \
-    --debug \
     "$@"
 fi

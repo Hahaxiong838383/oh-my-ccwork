@@ -50,13 +50,41 @@ function parseFrontmatter(content: string): { name: string; description: string;
 
 // ─── Type → Namespace 映射 ───
 
-function typeToNamespace(type: string): string {
+function normalizeNamespaceSegment(segment: string): string {
+  return segment
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function deriveProjectNamespace(filename: string): string {
+  const stem = filename
+    .replace(/\.md$/i, "")
+    .toLowerCase()
+    .replace(/^project[-_]/, "");
+  const tokens = stem.split(/[^a-z0-9]+/).filter(Boolean);
+  if (tokens.length === 0) return "project/claude-project";
+
+  const hasAny = (candidates: string[]) => candidates.some(c => tokens.includes(c));
+  if (hasAny(["brain", "evolution", "eval", "context"])) return "project/claude-brain";
+  if (hasAny(["xray", "singbox", "proxy", "network", "nas", "tunnel", "hardware", "macbook", "remote", "vps"])) {
+    return "project/claude-infra";
+  }
+  if (hasAny(["feishu", "lark", "wechat", "openclaw", "mcp"])) return "project/claude-integration";
+  if (hasAny(["scheduler", "sync", "automation", "workflow", "cron", "harness"])) return "project/claude-automation";
+
+  const primary = normalizeNamespaceSegment(tokens[0] ?? "");
+  return primary ? `project/claude-${primary}` : "project/claude-project";
+}
+
+function typeToNamespace(type: string, filename: string): string {
   switch (type) {
     case "user": return "user/claude-cc";
-    case "project": return "project/claude-cc";
+    case "project": return deriveProjectNamespace(filename);
     case "feedback": return "user/claude-feedback";
     case "reference": return "project/claude-ref";
-    default: return "project/claude-cc";
+    default: return "project/claude-project";
   }
 }
 
@@ -66,7 +94,7 @@ function typeToStar(type: string): number {
     case "feedback":
       return 3;
     case "project":
-      return 2;
+      return 1;
     case "reference":
       return 1;
     default:
@@ -89,9 +117,31 @@ function extractTags(name: string): string[] {
 
 // ─── 段落拆分 ───
 
+function stripCodeBlocks(text: string): string {
+  return text.replace(/```[\s\S]*?```/g, "\n");
+}
+
+function shouldSkipParagraph(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+
+  const lines = trimmed.split("\n").map(l => l.trim());
+  const tableLineCount = lines.filter(l => l.startsWith("|")).length;
+  if (tableLineCount >= 2) return true;
+  if (lines.some(l => /^\|?[-: ]+\|[-|: ]+\|?$/.test(l))) return true;
+
+  if (/```/.test(trimmed)) return true;
+  if (/^\s*(diff --git|index [0-9a-f]{7,}\.\.[0-9a-f]{7,}|\+\+\+ b\/|--- a\/|@@)\b/im.test(trimmed)) return true;
+  if (/\b(cherry-pick|commit|commit hash|sha)\b/i.test(trimmed) && /\b[0-9a-f]{7,40}\b/.test(trimmed)) return true;
+  if (/\b[0-9a-f]{32,40}\b/.test(trimmed)) return true;
+
+  return false;
+}
+
 function splitIntoParagraphs(body: string): string[] {
+  const cleanedBody = stripCodeBlocks(body);
   // 先按 ## 标题拆分
-  const sections = body.split(/\n(?=##\s)/);
+  const sections = cleanedBody.split(/\n(?=##\s)/);
   const paragraphs: string[] = [];
 
   for (const section of sections) {
@@ -108,10 +158,11 @@ function splitIntoParagraphs(body: string): string[] {
     for (const p of subParagraphs) {
       const trimmed = p.trim();
       if (!trimmed || trimmed.length < 8) continue;
+      if (shouldSkipParagraph(trimmed)) continue;
       // 压缩为单行（去掉换行）
       const oneLine = trimmed.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
-      // 截断超长段落（保留前 200 字）
-      const capped = oneLine.length > 200 ? oneLine.slice(0, 200) + "…" : oneLine;
+      // 截断超长段落（保留前 150 字）
+      const capped = oneLine.length > 150 ? oneLine.slice(0, 150) + "…" : oneLine;
       paragraphs.push(prefix + capped);
     }
   }
@@ -124,7 +175,7 @@ function splitIntoParagraphs(body: string): string[] {
 function convertFile(file: ClaudeMemoryFile, today: string): ConvertedItem[] {
   // 跳过无 frontmatter 的文件（type 为空 = 没有有效的 YAML frontmatter）
   if (!file.type) return [];
-  const namespace = typeToNamespace(file.type);
+  const namespace = typeToNamespace(file.type, file.filename);
   const star = typeToStar(file.type);
   const tags = extractTags(file.name);
   const paragraphs = splitIntoParagraphs(file.body);

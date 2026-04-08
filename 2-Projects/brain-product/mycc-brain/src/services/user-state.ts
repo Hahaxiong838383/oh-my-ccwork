@@ -10,6 +10,8 @@
  * - 向后兼容：旧的 experience JSONL 无 valence/arousal 字段也能正常解析
  */
 
+import type { VisualState } from "./visual-state.js";
+
 // ─── GAP4: 情感标注（规则驱动） ───
 
 interface ValenceArousal {
@@ -87,11 +89,25 @@ export type ExpertiseLevel =
   | "learning"    // 正在学习
   | "unknown";
 
+export type AttentionState =
+  | "engaged"
+  | "settled"
+  | "away"
+  | "unknown";
+
+export type EnvironmentNoise =
+  | "quiet"
+  | "ambient"
+  | "loud"
+  | "unknown";
+
 export interface UserState {
   readonly intent: UserIntent;
   readonly mood: UserMood;
   readonly expertise: ExpertiseLevel;
   readonly confidence: number;  // [0, 1] 推断置信度
+  readonly attention: AttentionState;
+  readonly noiseLevel: EnvironmentNoise;
   readonly updatedAt: string;   // ISO timestamp
 }
 
@@ -134,20 +150,70 @@ function inferExpertise(query: string): ExpertiseLevel {
   return "unknown";
 }
 
+export function classifyNoiseLevel(
+  audioLevel: number | null,
+  audioAvailable: boolean,
+): EnvironmentNoise {
+  if (!audioAvailable || audioLevel === null || !Number.isFinite(audioLevel)) {
+    return "unknown";
+  }
+  if (audioLevel < 0.03) return "quiet";
+  if (audioLevel < 0.12) return "ambient";
+  return "loud";
+}
+
+function deriveAttentionState(visualState?: VisualState): AttentionState {
+  if (!visualState || !visualState.available || visualState.stale) {
+    return "unknown";
+  }
+  if (visualState.present === false || visualState.activity === "away") {
+    return "away";
+  }
+  if (visualState.activity === "active") {
+    return "engaged";
+  }
+  if (visualState.activity === "idle") {
+    return "settled";
+  }
+  return "unknown";
+}
+
+function applyVisualContext(baseState: UserState, visualState?: VisualState): UserState {
+  const attention = deriveAttentionState(visualState);
+  const noiseLevel = classifyNoiseLevel(
+    visualState?.audioLevel ?? null,
+    visualState?.audioAvailable ?? false,
+  );
+
+  let mood = baseState.mood;
+  if (mood === "neutral" && attention === "engaged") {
+    mood = "focused";
+  }
+
+  return {
+    ...baseState,
+    mood,
+    attention,
+    noiseLevel,
+  };
+}
+
 /** 从单条 query 推断完整用户状态 */
-export function inferUserState(query: string): UserState {
+export function inferUserState(query: string, visualState?: VisualState): UserState {
   const va = inferValenceArousal(query);
   const { intent, confidence } = inferIntent(query);
   const mood = inferMood(va);
   const expertise = inferExpertise(query);
 
-  return {
+  return applyVisualContext({
     intent,
     mood,
     expertise,
     confidence,
+    attention: "unknown",
+    noiseLevel: "unknown",
     updatedAt: new Date().toISOString(),
-  };
+  }, visualState);
 }
 
 // ─── 会话级状态聚合 ───
@@ -164,8 +230,12 @@ const SESSION_STATE_MAX = 20; // 最多保留最近 20 次状态
 const _sessionStates = new Map<string, SessionStateAccumulator>();
 
 /** 更新会话级状态（每次请求调用） */
-export function updateSessionState(conversationId: string, query: string): UserState {
-  const state = inferUserState(query);
+export function updateSessionState(
+  conversationId: string,
+  query: string,
+  visualState?: VisualState,
+): UserState {
+  const state = inferUserState(query, visualState);
 
   const acc = _sessionStates.get(conversationId) ?? {
     states: [],

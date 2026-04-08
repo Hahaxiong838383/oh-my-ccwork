@@ -9,6 +9,7 @@ import type { IncomingMessage, ServerResponse } from "http";
 import { randomBytes } from "crypto";
 import { resolve } from "path";
 import { type BrainConfig, type ModelRoute } from "./config.js";
+import { DEFAULT_BRAIN_MODEL } from "./env.js";
 import { streamOpenAICompat, type OpenAIMessage } from "./adapters/openai-compat.js";
 import { loadBrainContext, buildBrainSystemPrompt, type BrainContextResult } from "./services/brain-context.js";
 import { loadActivePatches } from "./services/hot-patch.js";
@@ -62,6 +63,77 @@ function json(res: ServerResponse, status: number, data: unknown) {
   res.end(JSON.stringify(data));
 }
 
+function formatEnvironmentHint(visual: ReturnType<typeof getVisualState>): string {
+  if (!visual.available || visual.stale) {
+    return "";
+  }
+
+  const positionLabel = visual.present === true
+    ? "在工位"
+    : visual.present === false
+      ? "离开"
+      : "未知";
+  const noiseLabel = !visual.audioAvailable
+    ? "未知"
+    : visual.audioLevel === null || !Number.isFinite(visual.audioLevel)
+      ? "未知"
+      : visual.audioLevel < 0.03
+        ? "安静"
+        : visual.audioLevel < 0.12
+          ? "有环境声"
+          : "较嘈杂";
+
+  const semanticLines: string[] = [];
+  if (visual.semanticAvailable && !visual.semanticStale) {
+    if (visual.sceneSummary && visual.sceneSummary !== "unknown") {
+      semanticLines.push(`- 场景摘要: ${visual.sceneSummary}`);
+    }
+    if (visual.personAppearance && visual.personAppearance !== "unknown") {
+      semanticLines.push(`- 人物外观: ${visual.personAppearance}`);
+    }
+    if (visual.personAction && visual.personAction !== "unknown" && visual.personAction !== visual.activity) {
+      semanticLines.push(`- 人物动作: ${visual.personAction}`);
+    }
+    if (visual.nearbyObjects.length > 0) {
+      semanticLines.push(`- 附近物体: ${visual.nearbyObjects.join("、")}`);
+    }
+    if (visual.rawText && visual.rawText !== "unknown" && visual.rawText !== "当前工位无人" && visual.rawText !== "模型不可用") {
+      semanticLines.push(`- 摄像头实时画面: ${visual.rawText}`);
+    }
+  }
+
+  // 最近变化事件
+  if (visual.lastChange) {
+    const changeLabels: Record<string, string> = {
+      person_arrived: "有人来了",
+      person_left: "人走了",
+      scene_changed: "场景变化",
+    };
+    const label = changeLabels[visual.lastChange.event] ?? visual.lastChange.event;
+    semanticLines.push(`- 最近变化: [${label}] ${visual.lastChange.detail}`);
+  }
+
+  // 最近视觉观察历史（去重，最多 3 条与当前不同的）
+  if (visual.recentObservations.length > 1) {
+    const currentRaw = visual.rawText ?? "";
+    const historyEntries: string[] = [];
+    for (let i = visual.recentObservations.length - 2; i >= 0 && historyEntries.length < 3; i--) {
+      const obs = visual.recentObservations[i];
+      if (obs.rawText && obs.rawText !== currentRaw) {
+        const timeStr = obs.ts ? new Date(obs.ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }) : "??:??";
+        const presenceLabel = obs.present === true ? "在工位" : obs.present === false ? "离开" : "未知";
+        const changeTag = obs.change ? `（${obs.change}）` : "";
+        historyEntries.push(`- ${timeStr} [${presenceLabel}] ${obs.rawText.slice(0, 60)}...${changeTag}`);
+      }
+    }
+    if (historyEntries.length > 0) {
+      semanticLines.push(`\n### 最近视觉观察\n${historyEntries.join("\n")}`);
+    }
+  }
+
+  return `\n\n## 用户环境感知\n- 位置状态: ${positionLabel}\n- 活动状态: ${visual.activity}\n- 环境音量: ${noiseLabel}${semanticLines.length > 0 ? `\n${semanticLines.join("\n")}` : ""}`;
+}
+
 export class BrainApi {
   constructor(private config: BrainConfig) {}
 
@@ -100,7 +172,7 @@ export class BrainApi {
     stats.todayRequests++;
 
     const body = JSON.parse(await readBody(req));
-    const modelName: string = body.model ?? "cc-qwen";
+    const modelName: string = body.model ?? this.config.defaultBrainModel ?? DEFAULT_BRAIN_MODEL;
     const stream: boolean = body.stream ?? true;
 
     // P2: Multi-turn conversation
@@ -137,7 +209,8 @@ export class BrainApi {
 
     // GAP4+5: 情感标注 + 用户状态推断（零延迟规则驱动）
     const va = inferValenceArousal(userQuery);
-    const userState = updateSessionState(conversationId, userQuery);
+    const visual = route.brain ? getVisualState() : null;
+    const userState = updateSessionState(conversationId, userQuery, visual ?? undefined);
     const sessionState = getSessionState(conversationId);
 
     if (route.brain) {
@@ -153,11 +226,15 @@ export class BrainApi {
         const systemPrompt = buildBrainSystemPrompt(context, patches);
 
         // GAP5: 注入会话级用户状态（仅当有有效推断时）
-        const stateHint = sessionState
-          ? `\n\n## 用户状态（本轮推断）\n- 意图: ${userState.intent} | 情绪: ${userState.mood} | 专业度: ${userState.expertise}\n- 会话主导意图: ${sessionState.dominantIntent} | 轮次: ${sessionState.turnCount}\n- 请根据用户状态调整回复风格：受挫时简洁直接，好奇时展开说明，紧急时跳过寒暄。`
+        const contextStateHint = (userState.attention !== "unknown" || userState.noiseLevel !== "unknown")
+          ? `\n- 注意力状态: ${userState.attention} | 环境音量: ${userState.noiseLevel}`
           : "";
+        const stateHint = sessionState
+          ? `\n\n## 用户状态（本轮推断）\n- 意图: ${userState.intent} | 情绪: ${userState.mood} | 专业度: ${userState.expertise}${contextStateHint}\n- 会话主导意图: ${sessionState.dominantIntent} | 轮次: ${sessionState.turnCount}\n- 请根据用户状态调整回复风格：受挫时简洁直接，好奇时展开说明，紧急时跳过寒暄。`
+          : "";
+        const environmentHint = visual ? formatEnvironmentHint(visual) : "";
 
-        messages = [{ role: "system", content: systemPrompt + stateHint }, ...messages];
+        messages = [{ role: "system", content: systemPrompt + stateHint + environmentHint }, ...messages];
         console.log(`[brain] injected ${brainResult.itemCount} items from [${brainResult.matchedCategories.join(", ")}] | state: ${userState.intent}/${userState.mood}`);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -188,8 +265,7 @@ export class BrainApi {
       // Phase 2B-1: 视觉门控（fail-open）
       let gatedLevel = proactive.level;
       try {
-        const visual = getVisualState();
-        const gated = applyVisualGate(proactive.level, visual);
+        const gated = applyVisualGate(proactive.level, visual ?? getVisualState());
         gatedLevel = gated.level;
         if (gated.applied) {
           console.log(`[brain] visual gate: ${proactive.level} → ${gated.level} (${gated.reason})`);

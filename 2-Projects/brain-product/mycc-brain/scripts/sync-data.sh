@@ -47,5 +47,24 @@ if [[ -d "$CLAUDE_MEM" ]]; then
     fi
 fi
 
+# 3. evolution-log + eval 数据 → Studio brain
+BRAIN_DATA="$HOME/mycc/2-Projects/brain-product/mycc-brain/data"
+if [[ -f "$BRAIN_DATA/evolution-log.jsonl" ]]; then
+    if do_sync "$BRAIN_DATA/evolution-log.jsonl" "mycc-brain/data/evolution-log.jsonl"; then
+        RESULT="${RESULT} evo-log=ok"
+    else
+        RESULT="${RESULT} evo-log=FAIL"
+    fi
+fi
+
+EVAL_RESULT="$HOME/mycc/2-Projects/brain-product/mycc-brain/eval/eval-result.json"
+if [[ -f "$EVAL_RESULT" ]]; then
+    if do_sync "$EVAL_RESULT" "mycc-brain/eval/eval-result.json"; then
+        RESULT="${RESULT} eval-result=ok"
+    else
+        RESULT="${RESULT} eval-result=FAIL"
+    fi
+fi
+
 log "$RESULT"
 exit 0

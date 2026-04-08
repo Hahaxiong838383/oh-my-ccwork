@@ -12,22 +12,19 @@
  *   BRAIN_URL        — brain 服务地址（默认 http://10.9.1.155:19080）
  */
 
-import { config } from "dotenv";
 import { resolve } from "path";
+import { DEFAULT_BRAIN_MODEL, DEFAULT_DATA_DIR, DEFAULT_RAW_MODEL } from "../env.js";
 
 // Ensure internal network bypasses proxy
 process.env.NO_PROXY = [process.env.NO_PROXY, "10.9.1.155"].filter(Boolean).join(",");
 process.env.no_proxy = process.env.NO_PROXY;
-
-// Load .env from project root
-config({ path: resolve(import.meta.dirname, "../../.env") });
 
 import { ALL_TEST_CASES } from "./test-cases.js";
 import { evaluateRetrieval } from "./retrieval-evaluator.js";
 import { evaluateGeneration } from "./judge-evaluator.js";
 import { generateTsv, saveReport, printSummary, checkRegressions, writeEvalResult } from "./eval-report.js";
 import type { EvalResult } from "./eval-report.js";
-import { httpGet } from "./http-direct.js";
+import { httpGet, httpPost } from "./http-direct.js";
 import { loadEvolutionTestCases } from "../services/evolution-test-gen.js";
 import { revertAction } from "../services/evolution-engine.js";
 
@@ -40,10 +37,17 @@ const brainUrl = brainUrlArg
   ? brainUrlArg.split("=")[1]
   : process.env.BRAIN_URL ?? "http://10.9.1.155:19080";
 
-const geminiKey = process.env.GEMINI_API_KEY ?? "";
+// Gemini Judge: 优先用 Proxy（OpenAI 兼容），fallback 到原生 API
+const geminiProxyBase = process.env.GEMINI_PROXY_BASE ?? "http://23.226.135.149:4000/v1";
+const geminiProxyKey = process.env.GEMINI_PROXY_KEY ?? "";
+const geminiKey = geminiProxyKey || process.env.GEMINI_API_KEY || "";
 const judgeModel = "gemini-2.5-flash";
-const brainModel = "cc-qwen";
-const rawModel = "raw-qwen";
+const brainModel = DEFAULT_BRAIN_MODEL;
+const rawModel = DEFAULT_RAW_MODEL;
+
+// Admin 认证（eval 需要调用 /admin/api/memory-preview）
+const adminUser = process.env.ADMIN_USER ?? "admin";
+const adminPass = process.env.ADMIN_PASS ?? "";
 
 // ─── Helpers ───
 // Human-readable output → stderr; JSON result → stdout
@@ -76,9 +80,32 @@ async function main() {
     process.exit(1);
   }
 
+  // 0.5 Admin 认证（获取 Bearer token）
+  let authHeaders: Record<string, string> | undefined;
+  if (adminPass) {
+    try {
+      const { status, data } = await httpPost(`${brainUrl}/admin/api/login`, {
+        username: adminUser,
+        password: adminPass,
+      });
+      const token = (data as { token?: string })?.token;
+      if (status === 200 && token) {
+        authHeaders = { Authorization: `Bearer ${token}` };
+        log("✅ Admin 认证成功\n");
+      } else {
+        log(`⚠️  Admin 认证失败 (${status})，检索评测可能受影响\n`);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log(`⚠️  Admin 登录异常: ${msg}\n`);
+    }
+  } else {
+    log("⚠️  ADMIN_PASS 未设置，检索评测可能因 401 失败\n");
+  }
+
   // 1. 检索层评测
   log("━━━ Phase 1: 检索层评测 ━━━");
-  const retrievalSummary = await evaluateRetrieval(ALL_TEST_CASES, brainUrl);
+  const retrievalSummary = await evaluateRetrieval(ALL_TEST_CASES, brainUrl, authHeaders);
   log(`\n检索层完成: 召回率=${retrievalSummary.avg_hit_rate} 精确率=${retrievalSummary.avg_precision}\n`);
 
   if (dryRun) {
@@ -99,24 +126,26 @@ async function main() {
     process.exit(0);
   }
 
-  // 2. 生成层评测（需要 Gemini Key）
+  // 2. 生成层评测（需要 Gemini Proxy Key 或原生 Key）
   if (!geminiKey) {
-    console.error("❌ GEMINI_API_KEY 未设置，无法运行生成层评测");
-    console.error("   设置: export GEMINI_API_KEY=AIza...");
+    console.error("❌ GEMINI_PROXY_KEY / GEMINI_API_KEY 均未设置，无法运行生成层评测");
+    console.error("   设置: export GEMINI_PROXY_KEY=xxx（推荐）或 export GEMINI_API_KEY=AIza...");
     process.exit(1);
   }
 
-  log("━━━ Phase 2: 生成层评测 (LLM-as-Judge) ━━━");
+  const useProxy = !!geminiProxyKey;
+  log(`━━━ Phase 2: 生成层评测 (LLM-as-Judge via ${useProxy ? "Proxy" : "Native"}) ━━━`);
   const judgeSummary = await evaluateGeneration(
     ALL_TEST_CASES,
     brainUrl,
     geminiKey,
     judgeModel,
+    useProxy ? geminiProxyBase : undefined,
   );
 
   // 3. 生成 TSV 报告
   const evalDir = resolve(import.meta.dirname, "../../eval");
-  const dataDir = process.env.DATA_DIR ?? resolve(import.meta.dirname, "../../../mycc-data/0-System");
+  const dataDir = DEFAULT_DATA_DIR;
 
   const tsv = generateTsv({
     cases: ALL_TEST_CASES,
