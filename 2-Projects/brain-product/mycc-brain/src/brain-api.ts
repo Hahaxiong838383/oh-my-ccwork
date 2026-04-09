@@ -27,6 +27,9 @@ import {
 } from "./services/prediction-engine.js";
 import { getVisualState } from "./services/visual-state.js";
 import { applyVisualGate } from "./services/visual-gate.js";
+import { detectCorrection, recordCorrection, type CorrectionEvent } from "./services/steering-tax.js";
+import { loadSoul } from "./services/soul-loader.js";
+import { writeAuditLog } from "./services/audit-log.js";
 
 // ─── 视觉习惯缓存 ───
 
@@ -261,6 +264,27 @@ export class BrainApi {
     const userState = updateSessionState(conversationId, userQuery, visual ?? undefined);
     const sessionState = getSessionState(conversationId);
 
+    // Phase 1 P0: steering_tax — 检测用户纠正模式
+    if (route.brain) {
+      const rawCorrection = detectCorrection(userQuery);
+      if (rawCorrection) {
+        const brainRootForTax = resolve(import.meta.dirname, "..");
+        // detectCorrection 返回 readonly，用扩展创建含 conversationId 的新对象
+        const correctionWithId: CorrectionEvent = {
+          ...rawCorrection,
+          conversationId,
+        };
+        recordCorrection(brainRootForTax, correctionWithId);
+        writeAuditLog(brainRootForTax, {
+          ts: new Date().toISOString(),
+          type: "steering",
+          action: rawCorrection.correctionType,
+          detail: `correction detected (${rawCorrection.confidence.toFixed(2)}): ${userQuery.slice(0, 80)}`,
+        });
+        console.log(`[brain] steering_tax: ${rawCorrection.correctionType} (conf=${rawCorrection.confidence.toFixed(2)})`);
+      }
+    }
+
     if (route.brain) {
       try {
         const brainRoot = resolve(import.meta.dirname, "..");
@@ -273,6 +297,9 @@ export class BrainApi {
         }
         const systemPrompt = buildBrainSystemPrompt(context, patches);
 
+        // Phase 1 P0: SOUL.md 身份内核注入（每轮 fresh load，防人格漂移）
+        const soulHint = loadSoul(brainRoot) ?? "";
+
         // GAP5: 注入会话级用户状态（仅当有有效推断时）
         const contextStateHint = (userState.attention !== "unknown" || userState.noiseLevel !== "unknown")
           ? `\n- 注意力状态: ${userState.attention} | 环境音量: ${userState.noiseLevel}`
@@ -282,8 +309,9 @@ export class BrainApi {
           : "";
         const environmentHint = visual ? formatEnvironmentHint(visual) : "";
 
-        messages = [{ role: "system", content: systemPrompt + stateHint + environmentHint }, ...messages];
-        console.log(`[brain] injected ${brainResult.itemCount} items from [${brainResult.matchedCategories.join(", ")}] | state: ${userState.intent}/${userState.mood}`);
+        const soulSection = soulHint ? `\n\n${soulHint}` : "";
+        messages = [{ role: "system", content: systemPrompt + soulSection + stateHint + environmentHint }, ...messages];
+        console.log(`[brain] injected ${brainResult.itemCount} items from [${brainResult.matchedCategories.join(", ")}] | state: ${userState.intent}/${userState.mood} | soul: ${soulHint ? "✓" : "—"}`);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error(`[brain] memory injection failed: ${msg}`);

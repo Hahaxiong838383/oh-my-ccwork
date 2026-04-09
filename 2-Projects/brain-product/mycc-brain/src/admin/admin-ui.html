@@ -277,6 +277,60 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
 .session-mgr-count {
   font-size: 12px; color: var(--text-dim); margin-bottom: 8px;
 }
+
+/* ─── Observe Panel ─── */
+.ob-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+@media(max-width:900px){ .ob-grid{grid-template-columns:1fr} }
+.ob-card { min-height: 160px; }
+.ob-big-num { font-size: 36px; font-weight: 700; line-height: 1.1; }
+.ob-trend-tag {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 600; margin-left: 8px; vertical-align: middle;
+}
+.ob-trend-improving { background: rgba(34,197,94,0.15); color: var(--success); }
+.ob-trend-stable { background: rgba(100,116,139,0.2); color: var(--text-dim); }
+.ob-trend-degrading { background: rgba(239,68,68,0.15); color: var(--danger); }
+.ob-bar-stack {
+  display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 8px 0;
+  background: var(--bg-input);
+}
+.ob-bar-stack > div { height: 100%; transition: width .3s; }
+.ob-bar-legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; }
+.ob-bar-legend span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.ob-svg-chart { width: 100%; height: 100px; margin: 8px 0; }
+.ob-corrections-list, .ob-audit-timeline, .ob-fail-list {
+  max-height: 180px; overflow-y: auto; font-size: 12px;
+}
+.ob-corr-item, .ob-audit-item, .ob-fail-item {
+  padding: 4px 0; border-bottom: 1px solid var(--bg-input);
+  color: var(--text-secondary); line-height: 1.4;
+}
+.ob-type-tag {
+  display: inline-block; padding: 1px 6px; border-radius: 3px;
+  font-size: 10px; font-weight: 600; margin-right: 4px;
+  background: var(--bg-input); color: var(--text-secondary);
+}
+.ob-verdict-allow { color: var(--success); }
+.ob-verdict-deny { color: var(--danger); }
+.ob-risk-bar-wrap {
+  background: var(--bg-input); border-radius: 6px; height: 14px; overflow: hidden; margin: 6px 0;
+}
+.ob-risk-bar {
+  height: 100%; border-radius: 6px; transition: width .3s;
+  background: var(--success);
+}
+.ob-risk-bar.warn { background: var(--warning); }
+.ob-risk-bar.crit { background: var(--danger); }
+.ob-ring-wrap { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.ob-ring {
+  width: 90px; height: 90px; border-radius: 50%; flex-shrink: 0;
+}
+.ob-ring-stats { font-size: 13px; color: var(--text-secondary); line-height: 1.8; }
+.ob-tool-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+.ob-tool-table th { text-align: left; color: var(--text-dim); font-weight: 500; padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.ob-tool-table td { padding: 4px 8px; color: var(--text-secondary); border-bottom: 1px solid var(--bg-input); }
 </style>
 </head>
 <body>
@@ -297,6 +351,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
       <button class="nav-item" data-view="patches" onclick="switchView('patches')">🔧 热补丁</button>
       <button class="nav-item" data-view="memory" onclick="switchView('memory')">🧠 记忆面板</button>
       <button class="nav-item" data-view="graph" onclick="switchView('graph')">🕸 架构图谱</button>
+      <button class="nav-item" data-view="observe" onclick="switchView('observe')">👁 可观测</button>
       <button class="nav-item" onclick="openSessionManager()" title="管理会话">📋 管理会话</button>
     </div>
   </aside>
@@ -441,6 +496,32 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
       </div>
     </div>
     <div id="view-graph" class="panel-view" style="display:none;position:relative;height:calc(100vh - 20px);width:100%"></div>
+    <!-- Observe View -->
+    <div id="view-observe" class="panel-view" style="display:none;padding:24px;overflow-y:auto;height:calc(100vh - 20px)">
+      <h2 style="margin-bottom:16px;font-size:18px">👁 可观测面板</h2>
+      <div class="ob-grid">
+        <!-- Card 1: Steering Tax -->
+        <div class="card ob-card">
+          <h3>纠正税 Steering Tax</h3>
+          <div id="obTaxContent" style="color:var(--text-dim)">加载中...</div>
+        </div>
+        <!-- Card 2: SOUL.md -->
+        <div class="card ob-card">
+          <h3>SOUL.md 身份内核</h3>
+          <div id="obSoulContent" style="color:var(--text-dim)">加载中...</div>
+        </div>
+        <!-- Card 3: Audit Log -->
+        <div class="card ob-card">
+          <h3>审计日志</h3>
+          <div id="obAuditContent" style="color:var(--text-dim)">加载中...</div>
+        </div>
+        <!-- Card 4: Trajectories -->
+        <div class="card ob-card">
+          <h3>轨迹双流</h3>
+          <div id="obTrajContent" style="color:var(--text-dim)">加载中...</div>
+        </div>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -466,7 +547,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
 <script src="/static/vendor/three.min.js"></script>
 <script src="/static/vendor/3d-force-graph.min.js"></script>
 <script>
-const ADMIN_UI_VERSION = 'v2.6';
+const ADMIN_UI_VERSION = 'v2.7';
 const ADMIN_UI_DATE = '2026-04-08';
 const ADMIN_UI_LABEL = `${ADMIN_UI_VERSION} · ${ADMIN_UI_DATE}`;
 
@@ -625,7 +706,7 @@ async function archiveMsgs(sess, msgs) {
 /* ═══════════════════════════════════════════════════
    View Switching
    ═══════════════════════════════════════════════════ */
-const VIEWS = ['chat', 'dashboard', 'config', 'evolution', 'patches', 'memory', 'graph'];
+const VIEWS = ['chat', 'dashboard', 'config', 'evolution', 'patches', 'memory', 'graph', 'observe'];
 function switchView(name) {
   S.view = name;
   VIEWS.forEach(v => { const el = document.getElementById('view-' + v); if (el) el.style.display = v === name ? (v === 'chat' ? 'flex' : 'block') : 'none'; });
@@ -636,6 +717,8 @@ function switchView(name) {
   else if (name === 'patches') loadPatches();
   else if (name === 'memory') loadMemoryPanel();
   else if (name === 'graph') loadGraph();
+  else if (name === 'observe') loadObserve();
+  if (name !== 'observe' && _observeTimer) { clearInterval(_observeTimer); _observeTimer = null; }
   history.replaceState(null, '', '#' + name);
 }
 
@@ -1906,6 +1989,197 @@ async function _showNodeContent(node) {
   } catch (e) {
     body.innerHTML = `<div style="color:var(--danger,#ef4444);text-align:center;padding:40px">请求失败: ${e.message}</div>`;
   }
+}
+
+/* ═══════════════════════════════════════════════════
+   Observe Panel
+   ═══════════════════════════════════════════════════ */
+let _observeTimer = null;
+
+async function loadObserve() {
+  await _refreshObserve();
+  if (_observeTimer) clearInterval(_observeTimer);
+  _observeTimer = setInterval(_refreshObserve, 30000);
+}
+
+async function _refreshObserve() {
+  const [taxRes, soulRes, auditRes, trajRes] = await Promise.allSettled([
+    aFetch('/admin/api/steering-tax').then(r => r.json()),
+    aFetch('/admin/api/soul-status').then(r => r.json()),
+    aFetch('/admin/api/audit-log').then(r => r.json()),
+    aFetch('/admin/api/trajectories').then(r => r.json()),
+  ]);
+  _renderTax(taxRes.status === 'fulfilled' ? taxRes.value : null);
+  _renderSoul(soulRes.status === 'fulfilled' ? soulRes.value : null);
+  _renderAudit(auditRes.status === 'fulfilled' ? auditRes.value : null);
+  _renderTraj(trajRes.status === 'fulfilled' ? trajRes.value : null);
+}
+
+function _renderTax(d) {
+  const el = document.getElementById('obTaxContent');
+  if (!d) { el.innerHTML = '<span style="color:var(--danger)">加载失败</span>'; return; }
+  const c = d.current || {};
+  const taxPct = ((c.steeringTax || 0) * 100).toFixed(1);
+  const trendCls = c.trend === 'improving' ? 'ob-trend-improving' : c.trend === 'degrading' ? 'ob-trend-degrading' : 'ob-trend-stable';
+  const trendLabel = c.trend === 'improving' ? '改善中' : c.trend === 'degrading' ? '恶化中' : '稳定';
+
+  // correction type bar
+  const ct = c.correctionsByType || {};
+  const ctTotal = (ct.explicit_deny||0) + (ct.redirect||0) + (ct.repeat_request||0) + (ct.undo_request||0) + (ct.frustration||0);
+  const barSegments = [
+    { key: 'explicit_deny', label: '明确拒绝', color: '#ef4444' },
+    { key: 'redirect', label: '重定向', color: '#eab308' },
+    { key: 'repeat_request', label: '重复请求', color: '#f97316' },
+    { key: 'undo_request', label: '撤回', color: '#8b5cf6' },
+    { key: 'frustration', label: '挫折', color: '#ec4899' },
+  ];
+  const barHtml = ctTotal > 0 ? `
+    <div class="ob-bar-legend">${barSegments.map(s => `<span style="--c:${s.color}"><span style="background:${s.color};width:8px;height:8px;display:inline-block;border-radius:2px;margin-right:3px;vertical-align:middle"></span>${s.label} ${ct[s.key]||0}</span>`).join('')}</div>
+    <div class="ob-bar-stack">${barSegments.map(s => `<div style="width:${((ct[s.key]||0)/ctTotal*100).toFixed(1)}%;background:${s.color}" title="${s.label}: ${ct[s.key]||0}"></div>`).join('')}</div>
+  ` : '<div style="font-size:12px;color:var(--text-dim);margin:8px 0">暂无纠正数据</div>';
+
+  // SVG trend chart
+  const trend = d.dailyTrend || [];
+  let svgHtml = '';
+  if (trend.length >= 2) {
+    const maxTax = Math.max(...trend.map(t => t.tax), 0.01);
+    const w = 400, h = 80, pad = 4;
+    const points = trend.map((t, i) => {
+      const x = pad + (i / (trend.length - 1)) * (w - pad * 2);
+      const y = h - pad - (t.tax / maxTax) * (h - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const labels = trend.length <= 14 ? trend.map((t, i) => {
+      const x = pad + (i / (trend.length - 1)) * (w - pad * 2);
+      return `<text x="${x.toFixed(1)}" y="${h}" fill="var(--text-dim)" font-size="8" text-anchor="middle">${t.date.slice(5)}</text>`;
+    }).join('') : '';
+    svgHtml = `<svg class="ob-svg-chart" viewBox="0 0 ${w} ${h+10}" preserveAspectRatio="none">
+      <polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+      ${trend.map((t, i) => {
+        const x = pad + (i / (trend.length - 1)) * (w - pad * 2);
+        const y = h - pad - (t.tax / maxTax) * (h - pad * 2);
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--accent)"><title>${t.date}: ${(t.tax*100).toFixed(1)}%</title></circle>`;
+      }).join('')}
+      ${labels}
+    </svg>`;
+  }
+
+  // recent corrections
+  const rc = (d.recentCorrections || []).slice(0, 5);
+  const rcHtml = rc.length > 0 ? `<div class="ob-corrections-list">${rc.map(r => `<div class="ob-corr-item"><span class="ob-type-tag">${r.correctionType}</span> ${_escHtml(r.userMessage || '').slice(0, 60)} <span style="color:var(--text-dim);font-size:11px">${_fmtTime(r.timestamp)}</span></div>`).join('')}</div>` : '';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+      <span class="ob-big-num">${taxPct}%</span>
+      <span class="ob-trend-tag ${trendCls}">${trendLabel}</span>
+    </div>
+    <div class="stat-row" style="display:flex;gap:16px;margin-bottom:8px">
+      <div class="stat"><div class="value">${c.totalInteractions || 0}</div><div class="label">总交互</div></div>
+      <div class="stat"><div class="value">${c.totalCorrections || 0}</div><div class="label">总纠正</div></div>
+    </div>
+    ${barHtml}
+    ${svgHtml}
+    ${rcHtml}
+  `;
+}
+
+function _renderSoul(d) {
+  const el = document.getElementById('obSoulContent');
+  if (!d) { el.innerHTML = '<span style="color:var(--danger)">加载失败</span>'; return; }
+  const dot = d.loaded ? '<span style="color:var(--success);font-size:16px">&#10003;</span> 已加载' : '<span style="color:var(--danger);font-size:16px">&#10007;</span> 未加载';
+  const cached = d.cachedAt ? _fmtTime(d.cachedAt) : '无缓存';
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:16px;font-size:13px">
+    <span>${dot}</span>
+    <span style="color:var(--text-secondary)">${d.contentLength || 0} 字符</span>
+    <span style="color:var(--text-dim)">缓存于 ${cached}</span>
+  </div>`;
+}
+
+function _renderAudit(d) {
+  const el = document.getElementById('obAuditContent');
+  if (!d) { el.innerHTML = '<span style="color:var(--danger)">加载失败</span>'; return; }
+  const risk = d.todayRiskScore || 0;
+  const barCls = risk > 100 ? 'crit' : risk > 80 ? 'warn' : '';
+  const barW = Math.min(risk, 120);
+
+  const byType = d.byType || {};
+  const typeColors = { evolution: '#8b5cf6', trust: '#22c55e', steering: '#eab308', trajectory: '#22d3ee', l0_boundary: '#ef4444' };
+  const typeLabels = { evolution: '进化', trust: '信任', steering: '纠正', trajectory: '轨迹', l0_boundary: 'L0边界' };
+  const typeDots = Object.entries(byType).map(([k, v]) => `<span style="font-size:12px;color:var(--text-secondary)"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${typeColors[k]||'var(--text-dim)'};margin-right:3px;vertical-align:middle"></span>${typeLabels[k]||k} ${v}</span>`).join('&nbsp;&nbsp;');
+
+  const entries = (d.recentEntries || []).slice(0, 10);
+  const timeline = entries.map(e => {
+    const verdictCls = e.verdict === 'allow' ? 'ob-verdict-allow' : e.verdict === 'deny' ? 'ob-verdict-deny' : '';
+    const verdictText = e.verdict === 'allow' ? '允许' : e.verdict === 'deny' ? '拒绝' : (e.verdict || '');
+    const riskText = e.riskScore != null ? ` <span style="color:var(--text-dim)">[${e.riskScore}]</span>` : '';
+    return `<div class="ob-audit-item">
+      <span style="color:var(--text-dim)">${_fmtTime(e.ts)}</span>
+      <span class="ob-type-tag" style="background:${typeColors[e.type]||'var(--bg-input)'}20;color:${typeColors[e.type]||'var(--text-dim)'}">${typeLabels[e.type]||e.type}</span>
+      ${_escHtml(e.action || '')}${riskText}
+      ${verdictText ? `<span class="${verdictCls}" style="margin-left:4px;font-weight:600">${verdictText}</span>` : ''}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="font-size:13px;color:var(--text-secondary)">当日风险分</span>
+      <span style="font-weight:700;color:${risk>100?'var(--danger)':risk>80?'var(--warning)':'var(--text-primary)'}">${risk}</span>
+      <span style="color:var(--text-dim);font-size:12px">/ 100</span>
+    </div>
+    <div class="ob-risk-bar-wrap"><div class="ob-risk-bar ${barCls}" style="width:${barW}%"></div></div>
+    <div style="margin:8px 0">${typeDots}</div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px">总条目 ${d.totalEntries || 0}</div>
+    <div class="ob-audit-timeline">${timeline || '<div style="color:var(--text-dim)">暂无审计事件</div>'}</div>
+  `;
+}
+
+function _renderTraj(d) {
+  const el = document.getElementById('obTrajContent');
+  if (!d) { el.innerHTML = '<span style="color:var(--danger)">加载失败</span>'; return; }
+  const ds = d.dualStream || {};
+  const total = ds.totalEntries || 0;
+  const suc = ds.successCount || 0;
+  const fail = ds.failureCount || 0;
+  const unk = ds.unknownCount || 0;
+  const sucPct = total > 0 ? (suc / total * 100) : 0;
+  const failPct = total > 0 ? (fail / total * 100) : 0;
+  const unkPct = total > 0 ? (unk / total * 100) : 0;
+
+  // conic-gradient ring
+  const ringStyle = total > 0
+    ? `background:conic-gradient(var(--success) 0% ${sucPct}%, var(--danger) ${sucPct}% ${sucPct+failPct}%, #64748b ${sucPct+failPct}% 100%)`
+    : 'background:#1e293b';
+  const ringInner = 'position:absolute;top:50%;left:50%;width:60px;height:60px;border-radius:50%;background:var(--bg-card);transform:translate(-50%,-50%)';
+
+  // per-tool table
+  const pt = d.perTool || [];
+  const toolTable = pt.length > 0 ? `<table class="ob-tool-table"><thead><tr><th>工具</th><th>调用</th><th>成功率</th></tr></thead><tbody>${pt.map(t => `<tr><td>${_escHtml(t.toolName)}</td><td>${t.totalCalls}</td><td style="color:${t.successRate>=0.8?'var(--success)':'var(--danger)'}">${(t.successRate*100).toFixed(0)}%</td></tr>`).join('')}</tbody></table>` : '';
+
+  // recent failures
+  const rf = (ds.recentFailures || []).slice(0, 5);
+  const rfHtml = rf.length > 0 ? `<div style="font-size:12px;color:var(--text-dim);margin:8px 0 4px">最近失败</div><div class="ob-fail-list">${rf.map(f => `<div class="ob-fail-item"><span style="color:var(--text-dim)">${_fmtTime(f.timestamp)}</span> ${_escHtml((f.query||'').slice(0,50))} <span style="color:var(--danger)">${_escHtml(f.failureReason||'')}</span></div>`).join('')}</div>` : '';
+
+  el.innerHTML = `
+    <div class="ob-ring-wrap">
+      <div class="ob-ring" style="${ringStyle};position:relative"><div style="${ringInner}"></div></div>
+      <div class="ob-ring-stats">
+        总条目 <strong>${total}</strong><br>
+        <span style="color:var(--success)">成功 ${(ds.successRate*100||0).toFixed(1)}%</span><br>
+        <span style="color:var(--danger)">失败 ${(ds.failureRate*100||0).toFixed(1)}%</span>
+      </div>
+    </div>
+    ${toolTable}
+    ${rfHtml}
+  `;
+}
+
+function _fmtTime(ts) {
+  if (!ts) return '-';
+  try { const d = new Date(ts); return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }); } catch { return ts; }
+}
+
+function _escHtml(s) {
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
 }
 </script>
 </body>

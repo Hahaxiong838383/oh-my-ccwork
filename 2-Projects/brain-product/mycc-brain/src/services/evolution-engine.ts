@@ -16,6 +16,7 @@ import { addPatch, togglePatch } from "./hot-patch.js";
 import { diagnoseLatestEval, type DiagnosisReport, type DiagnosisItem, type DiagnosisType, updateDiagnosisConfidence } from "./evolution-diagnosis.js";
 import { getCategoryBoosts, readRecentEntries } from "./experience-stream.js";
 import { generateTestsForAction } from "./evolution-test-gen.js";
+import { writeAuditLog, isRiskLimitExceeded } from "./audit-log.js";
 
 // ─── Types ───
 
@@ -301,6 +302,15 @@ export function revertAction(brainRoot: string, actionId: string, reason: string
         updated.push(JSON.stringify(reverted));
         found = true;
         console.log(`[evolution] Reverted action ${actionId}: ${reason}`);
+        writeAuditLog(brainRoot, {
+          ts: new Date().toISOString(),
+          type: "evolution",
+          layer: "rule",
+          action: "revert",
+          detail: `Reverted ${actionId}: ${reason}`,
+          riskScore: 3,
+          verdict: "allow",
+        });
       } else {
         updated.push(line);
       }
@@ -321,6 +331,19 @@ export function revertAction(brainRoot: string, actionId: string, reason: string
  * 执行一轮自进化：诊断 → ROI 排序 → Top 3 执行 → 测试生成 → 置信度更新
  */
 export function runEvolutionCycle(brainRoot: string): EvolutionResult | null {
+  // 审计：检查每日风险上限
+  if (isRiskLimitExceeded(brainRoot)) {
+    console.log("[evolution] Daily risk limit exceeded, skipping cycle");
+    writeAuditLog(brainRoot, {
+      ts: new Date().toISOString(),
+      type: "evolution",
+      action: "cycle_skipped",
+      detail: "Daily risk limit (100) exceeded",
+      verdict: "deny",
+    });
+    return null;
+  }
+
   const report = diagnoseLatestEval(brainRoot);
   if (!report || report.totalFailed === 0) return null;
 
@@ -394,6 +417,24 @@ export function runEvolutionCycle(brainRoot: string): EvolutionResult | null {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   for (const action of actions) {
     appendFileSync(actionsLogPath, JSON.stringify(action) + "\n");
+  }
+
+  // 写入不可变审计日志
+  for (const action of actions) {
+    const riskMap: Record<string, number> = {
+      auto_patch: 3,
+      keyword_extend: 1,
+      threshold_adjust: 1,
+    };
+    writeAuditLog(brainRoot, {
+      ts: action.timestamp,
+      type: "evolution",
+      layer: "rule",
+      action: action.actionType,
+      detail: action.detail,
+      riskScore: riskMap[action.actionType] ?? 3,
+      verdict: action.applied ? "allow" : "deny",
+    });
   }
 
   console.log(`[evolution] Cycle complete: ${actions.length} actions executed (${skipped} skipped)`);

@@ -40,12 +40,21 @@ grep 'mycc-brain v' src/server.ts
 | 0.5.0 | 2026-04-07 | 在线模型接入 + 图谱 |
 | 0.5.1 | 2026-04-07 | P0 TTFT 优化 |
 | 0.6.0 | 2026-04-08 | Vision P0-P2（感知+自进化+prompt自调优） |
+| 0.7.0 | 2026-04-09 | Phase 1 可观测面板（Admin UI observe Tab） |
 
 ## Admin UI 版本
 
 **版本号位置：`src/admin/admin-ui.html` 的 `ADMIN_UI_VERSION` 常量。**
 
 Admin UI 独立于后端版本，前端有改动时升版（minor +1）。当前 v2.6。
+
+## Thinking 模式（强制）
+
+**新增模型路由时，`supportsThinking` 默认设为 `false`。**
+
+原则：thinking 由前端用户主动开启（Admin UI 的 Think 开关），后端不预开。`supportsThinking: true` 仅用于明确需要 thinking 且前端已适配 `<think>` 标签剥离的云端模型（如 Gemini、MiniMax）。本地 MLX 模型一律 `false`，避免生成大量隐藏 reasoning token 导致响应缓慢。
+
+**踩坑**：Qwen3.5 默认开启 thinking，9B 模型一个简单问题要 2 分钟才返回，关闭后 10 秒内响应。
 
 ## 部署
 

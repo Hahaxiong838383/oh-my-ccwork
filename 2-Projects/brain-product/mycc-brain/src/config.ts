@@ -80,10 +80,10 @@ export function loadConfig(): BrainConfig {
       "cc-qwen": {
         adapter: "openai-compat",
         brain: true,
-        baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        model: "qwen3.5-27b",
-        apiKey: qwenKey,
-        supportsThinking: true,
+        baseURL: "http://localhost:8002/v1",
+        model: "mlx-community/Qwen3.5-9B-MLX-4bit",
+        apiKey: "mlx",
+        supportsThinking: false,
       },
       "cc-deepseek": {
         adapter: "openai-compat",
@@ -104,10 +104,10 @@ export function loadConfig(): BrainConfig {
       "raw-qwen": {
         adapter: "openai-compat",
         brain: false,
-        baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        model: "qwen3.5-27b",
-        apiKey: qwenKey,
-        supportsThinking: true,
+        baseURL: "http://localhost:8002/v1",
+        model: "mlx-community/Qwen3.5-9B-MLX-4bit",
+        apiKey: "mlx",
+        supportsThinking: false,
       },
       "raw-deepseek": {
         adapter: "openai-compat",
@@ -229,15 +229,15 @@ export function loadConfig(): BrainConfig {
         apiKey: "mlx",
       },
       consolidation: {
-        baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        model: "qwen3.5-27b",
-        apiKey: qwenKey,
+        baseURL: "http://localhost:8002/v1",
+        model: "mlx-community/Qwen3.5-9B-MLX-4bit",
+        apiKey: "mlx",
       },
-      fallbackIntake: qwenKey ? {
-        baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        model: "qwen3.5-27b",
-        apiKey: qwenKey,
-      } : undefined,
+      fallbackIntake: {
+        baseURL: "http://localhost:8002/v1",
+        model: "mlx-community/Qwen3.5-9B-MLX-4bit",
+        apiKey: "mlx",
+      },
     },
     search: {
       baseURL: GEMINI_PROXY_BASE,

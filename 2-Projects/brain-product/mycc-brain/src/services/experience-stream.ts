@@ -10,6 +10,8 @@ import { appendFile, mkdir } from "fs/promises";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { join } from "path";
 
+export type TrajectoryOutcome = "success" | "failure" | "unknown";
+
 export interface ExperienceEntry {
   timestamp: string;
   model: string;
@@ -22,6 +24,10 @@ export interface ExperienceEntry {
   // GAP4: 情感维度（由 brain-api 基于规则标注，非 LLM 推断）
   valence?: number;   // 情感效价 [-1, 1]：-1=负面, 0=中性, 1=正面
   arousal?: number;   // 情感唤醒度 [0, 1]：0=平静, 1=激动
+  // 轨迹双流
+  outcome?: TrajectoryOutcome;    // 轨迹结果：success/failure/unknown
+  failureReason?: string;         // 失败原因（仅 outcome=failure 时有值）
+  toolsUsed?: string[];           // 使用的工具列表（agent loop 场景）
 }
 
 function getExpDir(brainRoot: string): string {
@@ -40,7 +46,16 @@ export async function writeExperience(
   try {
     const dir = getExpDir(brainRoot);
     if (!existsSync(dir)) await mkdir(dir, { recursive: true });
+    // 原有文件继续写入（保持兼容）
     await appendFile(todayFile(brainRoot), JSON.stringify(entry) + "\n");
+
+    // 双流分流
+    if (entry.outcome === "success" || entry.outcome === "failure") {
+      const trajDir = join(brainRoot, "data", "trajectories", entry.outcome);
+      if (!existsSync(trajDir)) await mkdir(trajDir, { recursive: true });
+      const d = new Date().toISOString().slice(0, 10);
+      await appendFile(join(trajDir, `${d}.jsonl`), JSON.stringify(entry) + "\n");
+    }
   } catch {
     // fire-and-forget: never block the response
   }
@@ -348,5 +363,85 @@ export function getHealthMetrics(brainRoot: string, days = 7): HealthMetrics {
     latencyP50,
     latencyP95,
     latencyP99,
+  };
+}
+
+// ─── Per-Tool Statistics ───
+
+export interface ToolStats {
+  toolName: string;
+  totalCalls: number;
+  successCount: number;
+  failureCount: number;
+  successRate: number;
+}
+
+export function getPerToolStats(brainRoot: string, days = 7): ToolStats[] {
+  const entries = readRecentEntries(brainRoot, days);
+  const toolMap = new Map<string, { total: number; success: number; failure: number }>();
+
+  for (const entry of entries) {
+    const tools = entry.toolsUsed ?? [];
+    for (const tool of tools) {
+      const stats = toolMap.get(tool) ?? { total: 0, success: 0, failure: 0 };
+      stats.total++;
+      if (entry.outcome === "success") stats.success++;
+      if (entry.outcome === "failure") stats.failure++;
+      toolMap.set(tool, stats);
+    }
+  }
+
+  return [...toolMap.entries()]
+    .map(([toolName, s]) => ({
+      toolName,
+      totalCalls: s.total,
+      successCount: s.success,
+      failureCount: s.failure,
+      successRate: s.total > 0 ? s.success / s.total : 0,
+    }))
+    .sort((a, b) => b.totalCalls - a.totalCalls);
+}
+
+// ─── Trajectory Dual-Stream Stats ───
+
+export interface DualStreamStats {
+  totalEntries: number;
+  successCount: number;
+  failureCount: number;
+  unknownCount: number;
+  successRate: number;
+  failureRate: number;
+  recentFailures: Array<{ timestamp: string; query: string; failureReason?: string }>;
+}
+
+export function getDualStreamStats(brainRoot: string, days = 7): DualStreamStats {
+  const entries = readRecentEntries(brainRoot, days);
+  let successCount = 0;
+  let failureCount = 0;
+  let unknownCount = 0;
+  const failures: Array<{ timestamp: string; query: string; failureReason?: string }> = [];
+
+  for (const entry of entries) {
+    if (entry.outcome === "success") successCount++;
+    else if (entry.outcome === "failure") {
+      failureCount++;
+      failures.push({
+        timestamp: entry.timestamp,
+        query: entry.query.slice(0, 100),
+        failureReason: entry.failureReason,
+      });
+    }
+    else unknownCount++;
+  }
+
+  const total = entries.length;
+  return {
+    totalEntries: total,
+    successCount,
+    failureCount,
+    unknownCount,
+    successRate: total > 0 ? successCount / total : 0,
+    failureRate: total > 0 ? failureCount / total : 0,
+    recentFailures: failures.slice(-10),
   };
 }

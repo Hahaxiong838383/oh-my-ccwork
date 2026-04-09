@@ -36,6 +36,10 @@ import { getVisualState, startVisualStatePolling } from "./services/visual-state
 import { startVisualMemory } from "./services/visual-memory.js";
 import { getVisualStatusReport } from "./services/activity-observability.js";
 import { inferUserState } from "./services/user-state.js";
+import { getSteeringTaxReport } from "./services/steering-tax.js";
+import { getAuditSummary } from "./services/audit-log.js";
+import { getSoulStatus } from "./services/soul-loader.js";
+import { getDualStreamStats, getPerToolStats } from "./services/experience-stream.js";
 
 const config = loadConfig(); // 运行时配置由 env.ts 统一加载（.env.local → .env）
 const brainApi = new BrainApi(config);
@@ -280,7 +284,7 @@ const server = http.createServer(async (req, res) => {
     const expHistory = getRecentDayStats(brainRoot, 7);
     const patches = listPatches(brainRoot);
     json(res, 200, {
-      version: "0.6.0",
+      version: "0.7.0",
       uptime: process.uptime(),
       stats: brainApi.getStats(),
       routes: Object.fromEntries(
@@ -1231,6 +1235,35 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ─── Phase 1 可观测 Admin APIs ───
+
+  if (path === "/admin/api/steering-tax" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    json(res, 200, getSteeringTaxReport(brainRoot));
+    return;
+  }
+
+  if (path === "/admin/api/audit-log" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    json(res, 200, getAuditSummary(brainRoot));
+    return;
+  }
+
+  if (path === "/admin/api/soul-status" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    json(res, 200, getSoulStatus(brainRoot));
+    return;
+  }
+
+  if (path === "/admin/api/trajectories" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    json(res, 200, {
+      dualStream: getDualStreamStats(brainRoot),
+      perTool: getPerToolStats(brainRoot),
+    });
+    return;
+  }
+
   // Health
   if (path === "/health") {
     json(res, 200, { status: "ok", service: "mycc-brain" });
@@ -1388,7 +1421,7 @@ function scheduleWeeklyVisionReview() {
 initMcpConnections().then(() => {
   server.listen(config.port, "0.0.0.0", () => {
     const memExists = existsSync(resolve(config.dataDir, "memory-items.md"));
-    console.log(`\n🧠 mycc-brain v0.6.0 (D4 + Vision P0-P2)`);
+    console.log(`\n🧠 mycc-brain v0.7.0 (D4 + Vision P0-P2)`);
     console.log(`   API:   http://0.0.0.0:${config.port}/v1/chat/completions`);
     console.log(`   Admin: http://0.0.0.0:${config.port}/admin`);
     console.log(`   Data:  ${config.dataDir} (${existsSync(config.dataDir) ? "✅" : "❌ not found"})`);
