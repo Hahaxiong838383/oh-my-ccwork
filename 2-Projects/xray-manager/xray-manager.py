@@ -203,7 +203,7 @@ def get_system_proxy():
     try:
         # 找到活跃的网络接口
         result = subprocess.run(
-            ["networksetup", "-listallnetworkservices"],
+            ["/usr/sbin/networksetup", "-listallnetworkservices"],
             capture_output=True, text=True, timeout=5
         )
         services = [l.strip() for l in result.stdout.splitlines()
@@ -223,7 +223,7 @@ def get_system_proxy():
             (["-getsecurewebproxy"], "https"),
         ]:
             r = subprocess.run(
-                ["networksetup"] + cmd + [iface],
+                ["/usr/sbin/networksetup"] + cmd + [iface],
                 capture_output=True, text=True, timeout=5
             )
             if "Enabled: Yes" in r.stdout:
@@ -263,42 +263,42 @@ def set_system_proxy(enable, iface=None):
         if enable:
             # SOCKS 代理
             subprocess.run(
-                ["networksetup", "-setsocksfirewallproxy", iface, "127.0.0.1", port_str],
+                ["/usr/sbin/networksetup", "-setsocksfirewallproxy", iface, "127.0.0.1", port_str],
                 capture_output=True, timeout=5
             )
             subprocess.run(
-                ["networksetup", "-setsocksfirewallproxystate", iface, "on"],
+                ["/usr/sbin/networksetup", "-setsocksfirewallproxystate", iface, "on"],
                 capture_output=True, timeout=5
             )
             # HTTP 代理
             subprocess.run(
-                ["networksetup", "-setwebproxy", iface, "127.0.0.1", port_str],
+                ["/usr/sbin/networksetup", "-setwebproxy", iface, "127.0.0.1", port_str],
                 capture_output=True, timeout=5
             )
             subprocess.run(
-                ["networksetup", "-setwebproxystate", iface, "on"],
+                ["/usr/sbin/networksetup", "-setwebproxystate", iface, "on"],
                 capture_output=True, timeout=5
             )
             # HTTPS 代理
             subprocess.run(
-                ["networksetup", "-setsecurewebproxy", iface, "127.0.0.1", port_str],
+                ["/usr/sbin/networksetup", "-setsecurewebproxy", iface, "127.0.0.1", port_str],
                 capture_output=True, timeout=5
             )
             subprocess.run(
-                ["networksetup", "-setsecurewebproxystate", iface, "on"],
+                ["/usr/sbin/networksetup", "-setsecurewebproxystate", iface, "on"],
                 capture_output=True, timeout=5
             )
         else:
             subprocess.run(
-                ["networksetup", "-setsocksfirewallproxystate", iface, "off"],
+                ["/usr/sbin/networksetup", "-setsocksfirewallproxystate", iface, "off"],
                 capture_output=True, timeout=5
             )
             subprocess.run(
-                ["networksetup", "-setwebproxystate", iface, "off"],
+                ["/usr/sbin/networksetup", "-setwebproxystate", iface, "off"],
                 capture_output=True, timeout=5
             )
             subprocess.run(
-                ["networksetup", "-setsecurewebproxystate", iface, "off"],
+                ["/usr/sbin/networksetup", "-setsecurewebproxystate", iface, "off"],
                 capture_output=True, timeout=5
             )
         return {"success": True}
@@ -580,120 +580,6 @@ def save_balancer_to_config(config, balancer_data):
         rules.insert(insert_idx, new_rule)
 
     return config
-
-# ==================== 配置同步（跨设备） ====================
-
-SCRIPT_DIR = Path(__file__).resolve().parent
-SYNC_CONFIG_PATH = SCRIPT_DIR / "config" / "config.sync.json"
-SECRETS_PATH = SCRIPT_DIR / "config" / "secrets.json"
-
-# 平台相关路径占位符
-_PATH_PLACEHOLDER = "{{XRAY_HOME}}"
-
-
-def _collect_uuids(config):
-    """从配置中提取所有唯一 UUID，返回 {uuid: placeholder_name} 映射"""
-    uuids = {}
-    counter = 0
-    for ob in config.get("outbounds", []):
-        for vnext in ob.get("settings", {}).get("vnext", []):
-            for user in vnext.get("users", []):
-                uid = user.get("id", "")
-                if uid and uid not in uuids:
-                    counter += 1
-                    uuids[uid] = f"UUID_{counter}" if counter > 1 else "UUID_MAIN"
-    return uuids
-
-
-def _replace_in_json(obj, replacements):
-    """递归替换 JSON 值中的字符串"""
-    if isinstance(obj, str):
-        for old, new in replacements:
-            obj = obj.replace(old, new)
-        return obj
-    if isinstance(obj, list):
-        return [_replace_in_json(item, replacements) for item in obj]
-    if isinstance(obj, dict):
-        return {k: _replace_in_json(v, replacements) for k, v in obj.items()}
-    return obj
-
-
-def export_config():
-    """导出配置到仓库（脱敏），供其他设备同步"""
-    config = load_config()
-    if not config:
-        return {"success": False, "error": "未找到配置文件"}
-
-    # 1. 提取 UUID 映射
-    uuid_map = _collect_uuids(config)
-    if not uuid_map:
-        return {"success": False, "error": "配置中未找到 UUID"}
-
-    # 2. 构建替换列表：UUID → 占位符, 平台路径 → 通用占位符
-    home_str = str(Path.home())
-    xray_home_str = str(XRAY_HOME)
-    replacements = [(uid, "{{" + name + "}}") for uid, name in uuid_map.items()]
-    replacements.append((xray_home_str, _PATH_PLACEHOLDER))
-    replacements.append((home_str, "{{HOME}}"))
-
-    # 3. 脱敏
-    sanitized = _replace_in_json(config, replacements)
-
-    # 4. 保存模板
-    SYNC_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(SYNC_CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(sanitized, f, indent=2, ensure_ascii=False)
-
-    # 5. 保存密钥文件
-    secrets = {name: uid for uid, name in uuid_map.items()}
-    with open(SECRETS_PATH, "w", encoding="utf-8") as f:
-        json.dump(secrets, f, indent=2, ensure_ascii=False)
-
-    return {
-        "success": True,
-        "sync_file": str(SYNC_CONFIG_PATH),
-        "secrets_file": str(SECRETS_PATH),
-        "uuid_count": len(uuid_map),
-    }
-
-
-def import_config():
-    """从仓库同步文件 + 本地密钥还原完整配置"""
-    if not SYNC_CONFIG_PATH.exists():
-        return {"success": False, "error": f"同步文件不存在: {SYNC_CONFIG_PATH}"}
-    if not SECRETS_PATH.exists():
-        return {"success": False, "error": f"密钥文件不存在: {SECRETS_PATH}\n请从已有设备复制 secrets.json 到 config/ 目录"}
-
-    with open(SYNC_CONFIG_PATH, "r", encoding="utf-8") as f:
-        template = json.load(f)
-    with open(SECRETS_PATH, "r", encoding="utf-8") as f:
-        secrets = json.load(f)
-
-    # 构建替换列表：占位符 → 实际值
-    replacements = [("{{" + name + "}}", uid) for name, uid in secrets.items()]
-    replacements.append((_PATH_PLACEHOLDER, str(XRAY_HOME)))
-    replacements.append(("{{HOME}}", str(Path.home())))
-
-    # 还原
-    config = _replace_in_json(template, replacements)
-
-    # 备份现有配置
-    if CONFIG_PATH.exists():
-        backup = CONFIG_PATH.with_suffix(".json.bak")
-        with open(CONFIG_PATH, "r") as src, open(backup, "w") as dst:
-            dst.write(src.read())
-
-    # 写入
-    XRAY_HOME.mkdir(parents=True, exist_ok=True)
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2, ensure_ascii=False)
-
-    return {
-        "success": True,
-        "config_path": str(CONFIG_PATH),
-        "message": "配置已还原，请重启 xray 生效",
-    }
-
 
 def delete_balancer_from_config(config, tag):
     """从配置中删除均衡组"""
@@ -1987,10 +1873,6 @@ class Handler(BaseHTTPRequestHandler):
                     })
             save_config(config)
             self._json({"success": True})
-        elif path == "/api/config/export":
-            self._json(export_config())
-        elif path == "/api/config/import":
-            self._json(import_config())
         elif path.startswith("/api/route"):
             config = load_config()
             if not config:
@@ -2119,28 +2001,6 @@ class Handler(BaseHTTPRequestHandler):
 # ==================== 主入口 ====================
 
 def main():
-    # CLI 子命令
-    if len(sys.argv) > 1 and sys.argv[1] in ("export", "import", "sync"):
-        cmd = sys.argv[1]
-        if cmd == "export":
-            result = export_config()
-            if result["success"]:
-                print(f"✓ 配置已导出（{result['uuid_count']} 个 UUID 已脱敏）")
-                print(f"  模板: {result['sync_file']}")
-                print(f"  密钥: {result['secrets_file']}")
-                print(f"\n提示: secrets.json 已 gitignore，需手动复制到其他设备")
-            else:
-                print(f"✗ 导出失败: {result['error']}")
-            return
-        elif cmd in ("import", "sync"):
-            result = import_config()
-            if result["success"]:
-                print(f"✓ {result['message']}")
-                print(f"  配置: {result['config_path']}")
-            else:
-                print(f"✗ 导入失败: {result['error']}")
-            return
-
     print(f"Xray Manager starting on http://{('0.0.0.0' if IS_LINUX else '127.0.0.1')}:{WEB_PORT}")
     print(f"Config: {CONFIG_PATH}")
     print(f"Xray: {XRAY_BIN}")

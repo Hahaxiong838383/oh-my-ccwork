@@ -38,6 +38,10 @@ export async function streamOpenAICompat(
 
   const body = JSON.stringify(payload);
 
+  // prompt 大小诊断日志
+  const totalChars = opts.messages.reduce((n, m) => n + m.content.length, 0);
+  console.log(`[openai-compat] → ${opts.baseURL.split('/v1')[0]} | model=${opts.model} | msgs=${opts.messages.length} | ~${Math.ceil(totalChars / 2)}tok (${totalChars}chars)`);
+
   let upstream: Response;
   try {
     upstream = await fetch(url, {

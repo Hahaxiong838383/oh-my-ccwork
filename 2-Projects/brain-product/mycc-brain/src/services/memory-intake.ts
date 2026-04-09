@@ -106,18 +106,51 @@ function parseFactsFromResponse(content: string): { facts: MemoryFact[]; skipRea
 
   // 找到匹配的闭合括号，截断多余文本
   const openChar = jsonStr[0];
-  const closeChar = openChar === "{" ? "}" : "]";
   let depth = 0;
   let endPos = -1;
+  let inString = false;
+  let escaped = false;
   for (let i = 0; i < jsonStr.length; i++) {
     const ch = jsonStr[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === "\\") { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
     if (ch === "{" || ch === "[") depth++;
     else if (ch === "}" || ch === "]") {
       depth--;
       if (depth === 0) { endPos = i; break; }
     }
   }
-  if (endPos > 0) jsonStr = jsonStr.slice(0, endPos + 1);
+  if (endPos > 0) {
+    jsonStr = jsonStr.slice(0, endPos + 1);
+  } else {
+    // JSON 被截断：尝试补全闭合括号
+    // 找到最后一个完整的 } 或 ] 后截断，然后补全外层
+    const lastCompleteObj = jsonStr.lastIndexOf("}");
+    const lastCompleteArr = jsonStr.lastIndexOf("]");
+    const lastComplete = Math.max(lastCompleteObj, lastCompleteArr);
+    if (lastComplete > 0) {
+      jsonStr = jsonStr.slice(0, lastComplete + 1);
+      // 重新计算需要补几个闭合括号
+      let d = 0;
+      let inStr = false;
+      let esc = false;
+      for (const c of jsonStr) {
+        if (esc) { esc = false; continue; }
+        if (c === "\\") { esc = true; continue; }
+        if (c === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (c === "{" || c === "[") d++;
+        else if (c === "}" || c === "]") d--;
+      }
+      // 按层级补全（优先 }，外层按 openChar 补）
+      for (let i = 0; i < d; i++) {
+        jsonStr += i === d - 1 ? (openChar === "{" ? "}" : "]") : "}";
+      }
+    }
+    // 如果还是无法解析，让下面的 JSON.parse 报错
+  }
 
   const parsed = JSON.parse(jsonStr);
 

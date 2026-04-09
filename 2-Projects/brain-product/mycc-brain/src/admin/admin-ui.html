@@ -1539,7 +1539,7 @@ async function refreshStatus() {
     if(d.experience){if($('dExpCnt'))$('dExpCnt').textContent=d.experience.today?.count||0;if($('dExpLat'))$('dExpLat').textContent=d.experience.today?.avgLatency?d.experience.today.avgLatency+'ms':'-';S._expH=d.experience.history||[];renderExpChart(S._expH);}
     if(d.patches&&$('dExpPat'))$('dExpPat').textContent=(d.patches.active||0)+'/'+(d.patches.total||0);
     updateModelSel();
-  } catch(e){if(e.message!=='Unauthorized'){console.error(e);const dot=document.getElementById('statusDot');dot.className='status-dot off';dot.title='连接失败';}}
+  } catch(e){const dot=document.getElementById('statusDot');dot.className='status-dot off';dot.title=e.message==='Unauthorized'?'需要登录':'连接失败: '+e.message;if(e.message!=='Unauthorized')showAuth();}
 }
 async function restartSvc(){if(!confirm('确定重启 brain 服务？'))return;await aFetch('/admin/api/restart',{method:'POST'});alert('服务正在重启，3秒后刷新...');setTimeout(()=>location.reload(),3000)}
 
@@ -1643,7 +1643,8 @@ function exportAllSessions() {
   const validV=new Set(VIEWS),hv=location.hash.slice(1);
   if(validV.has(hv))switchView(hv);
   window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(validV.has(h))switchView(h)});
-  refreshStatus(); setInterval(refreshStatus,30000);
+  if(location.search.includes('logout')){localStorage.removeItem('brain_admin_token');history.replaceState(null,'',location.pathname+location.hash);}
+  if(!getToken())showAuth(); refreshStatus(); setInterval(refreshStatus,30000);
   addEventListener('resize',()=>{const ov=document.getElementById('sbOverlay');if(innerWidth>=1024&&!S.collapsed)ov.classList.remove('vis');else if(innerWidth<1024&&!S.collapsed)ov.classList.add('vis')});
   // 异步从服务端加载会话（服务端优先，localStorage fallback）
   try {

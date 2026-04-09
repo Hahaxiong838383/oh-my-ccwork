@@ -136,6 +136,8 @@ kill $(pgrep -f "/Users/rayman.chen/xray/xray run")
 - **curl 测 claude.ai 返回 403 是正常的**（Cloudflare challenge），用浏览器验证
 - **balancer 必须用 burstObservatory**，不能用 observatory（会导致规则被跳过）
 - **代理重启会中断所有 API 调用** 1-2 秒，修改前检查有无执行中的任务
+- **launchd 进程 PATH 精简**：subprocess 调用系统命令必须用绝对路径（如 `/usr/sbin/networksetup`），裸命令名会报 `No such file or directory`
+- **xray-manager 有独立 launchd 守护**：`com.xray.manager`，KeepAlive=true，崩溃自动拉起
 
 ## 相关文件
 
@@ -145,5 +147,8 @@ kill $(pgrep -f "/Users/rayman.chen/xray/xray run")
 | `~/xray/xray-manager.py` | Web UI + API |
 | `~/xray/switch-to-xray.sh` | 一键切换脚本 |
 | `~/xray/xray.log` | 运行日志 |
-| `~/Library/LaunchAgents/com.xray.proxy.plist` | launchd 服务 |
+| `~/Library/LaunchAgents/com.xray.proxy.plist` | launchd: xray 核心 (KeepAlive) |
+| `~/Library/LaunchAgents/com.xray.manager.plist` | launchd: Web 管理面板 (KeepAlive) |
+| `~/Library/LaunchAgents/com.xray.proxy-setup.plist` | launchd: 开机设置系统代理 (一次性) |
+| `~/xray/manager.log` | xray-manager 日志 |
 | `~/.zshrc` | 终端代理环境变量 |

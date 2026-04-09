@@ -41,6 +41,8 @@ grep 'mycc-brain v' src/server.ts
 | 0.5.1 | 2026-04-07 | P0 TTFT 优化 |
 | 0.6.0 | 2026-04-08 | Vision P0-P2（感知+自进化+prompt自调优） |
 | 0.7.0 | 2026-04-09 | Phase 1 可观测面板（Admin UI observe Tab） |
+| 0.8.0 | 2026-04-09 | Phase 2 可量化系统（TrustState+Guard+VetoSpiral） |
+| 0.9.0 | 2026-04-09 | 算力重规划（Studio主力27B + Mini辅助intake/consolidation） |
 
 ## Admin UI 版本
 

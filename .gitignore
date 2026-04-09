@@ -252,6 +252,22 @@ skills/netease-music-*
 .venv/
 **/.venv/
 
+# ====================================
+# Brain 运行时数据（不应提交）
+# ====================================
+2-Projects/brain-product/mycc-brain/data/activity/*.jsonl
+2-Projects/brain-product/mycc-brain/data/activity/latest.*
+2-Projects/brain-product/mycc-brain/data/activity/semantic-*
+2-Projects/brain-product/mycc-brain/data/activity/status.json
+2-Projects/brain-product/mycc-brain/data/experiences/
+2-Projects/brain-product/mycc-brain/data/predictions/
+2-Projects/brain-product/mycc-brain/tools/vision/models/
+.claude/skills/scheduler/.tasks.lock.json
+data/
+
+# cc-eye（独立子项目）
+2-Projects/cc-eye/
+
 # 嵌套 git 仓库（独立管理）
 2-Projects/openspace/
 2-Projects/ai-commit/

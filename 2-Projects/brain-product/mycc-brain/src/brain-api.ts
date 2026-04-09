@@ -313,7 +313,30 @@ export class BrainApi {
         const environmentHint = visual ? formatEnvironmentHint(visual) : "";
 
         const soulSection = soulHint ? `\n\n${soulHint}` : "";
-        messages = [{ role: "system", content: systemPrompt + soulSection + stateHint + environmentHint }, ...messages];
+
+        // ── prompt 分层注入（按模型 token 预算控制注入量） ──
+        const budget = route.promptBudgetTokens ?? Infinity;
+        let systemContent: string;
+
+        if (budget < 1000) {
+          // minimal: 一句话人设 + 最相关的一条记忆
+          const firstBlock = brainResult?.context
+            ?.split('\n\n')
+            .find(s => s.startsWith('[')) ?? '';
+          systemContent = `你是 cc，川哥的搭档。简洁回答，不编造。${firstBlock ? '\n\n' + firstBlock : ''}`;
+        } else if (budget < 3000) {
+          // standard: 完整记忆 + SOUL + 状态，跳过环境感知
+          systemContent = systemPrompt + soulSection + stateHint;
+        } else {
+          // full: 全量注入（当前行为，不变）
+          systemContent = systemPrompt + soulSection + stateHint + environmentHint;
+        }
+
+        // 日志：记录分层结果
+        const estimatedTokens = Math.ceil(systemContent.length / 2);
+        console.log(`[brain] prompt layer: budget=${budget === Infinity ? 'full' : budget} | injected ~${estimatedTokens}tok (${systemContent.length}chars) | layers: ${budget < 1000 ? 'L0+L1' : budget < 3000 ? 'L0-L3' : 'L0-L4'}`);
+
+        messages = [{ role: "system", content: systemContent }, ...messages];
         console.log(`[brain] injected ${brainResult.itemCount} items from [${brainResult.matchedCategories.join(", ")}] | state: ${userState.intent}/${userState.mood} | soul: ${soulHint ? "✓" : "—"}`);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);

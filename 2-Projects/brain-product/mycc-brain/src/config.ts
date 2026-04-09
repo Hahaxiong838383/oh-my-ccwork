@@ -10,6 +10,7 @@ export interface ModelRoute {
   apiKey: string;
   maxTokens?: number; // 模型最大输出 token，不设则用适配器默认值 8192
   supportsThinking?: boolean; // 是否支持 enable_thinking 参数（MiniMax/Qwen/DeepSeek/Ollama 支持，Gemini 不支持）
+  promptBudgetTokens?: number; // prompt 分层注入预算（<1000=minimal, <3000=standard, 不设=full）
 }
 
 export interface MemoryLLMRoute {
@@ -80,10 +81,11 @@ export function loadConfig(): BrainConfig {
       "cc-qwen": {
         adapter: "openai-compat",
         brain: true,
-        baseURL: "http://localhost:8002/v1",
-        model: "mlx-community/Qwen3.5-9B-MLX-4bit",
+        baseURL: "http://localhost:8000/v1",
+        model: "mlx-community/Qwen3.5-27B-4bit",
         apiKey: "mlx",
         supportsThinking: false,
+        promptBudgetTokens: 2500, // standard 模式
       },
       "cc-deepseek": {
         adapter: "openai-compat",
@@ -93,19 +95,12 @@ export function loadConfig(): BrainConfig {
         apiKey: deepseekKey,
         supportsThinking: true,
       },
-      "cc-local": {
-        adapter: "openai-compat",
-        brain: true,
-        baseURL: `${ollamaBase}/v1`,
-        model: "qwen2.5:7b",
-        apiKey: "ollama",
-        supportsThinking: true,
-      },
+      // cc-local 已移除（Ollama 仅用于视觉，不作为聊天路由）
       "raw-qwen": {
         adapter: "openai-compat",
         brain: false,
-        baseURL: "http://localhost:8002/v1",
-        model: "mlx-community/Qwen3.5-9B-MLX-4bit",
+        baseURL: "http://localhost:8000/v1",
+        model: "mlx-community/Qwen3.5-27B-4bit",
         apiKey: "mlx",
         supportsThinking: false,
       },
@@ -117,48 +112,43 @@ export function loadConfig(): BrainConfig {
         apiKey: deepseekKey,
         supportsThinking: true,
       },
-      "raw-local": {
-        adapter: "openai-compat",
-        brain: false,
-        baseURL: `${ollamaBase}/v1`,
-        model: "qwen2.5:7b",
-        apiKey: "ollama",
-        supportsThinking: true,
-      },
+      // raw-local 已移除
       "cc-mlx": {
         adapter: "openai-compat",
         brain: true,
         baseURL: "http://localhost:8000/v1",
-        model: "mlx-community/Qwen3.5-27B-4bit",
+        model: "mlx-community/Qwen3.5-9B-MLX-4bit",
         apiKey: "mlx",
-        supportsThinking: true,
+        supportsThinking: false,
+        promptBudgetTokens: 500, // minimal 模式
       },
       "raw-mlx": {
         adapter: "openai-compat",
         brain: false,
         baseURL: "http://localhost:8000/v1",
-        model: "mlx-community/Qwen3.5-27B-4bit",
+        model: "mlx-community/Qwen3.5-9B-MLX-4bit",
         apiKey: "mlx",
-        supportsThinking: true,
+        supportsThinking: false,
       },
-      "cc-gemma4": {
+      // Qwen3-30B-A3B（MoE，激活 3B 参数，速度接近 9B，能力接近 27B）
+      "cc-qwen30b": {
         adapter: "openai-compat",
         brain: true,
-        baseURL: `${ollamaBase}/v1`,
-        model: "gemma4:26b",
-        apiKey: "ollama",
-        maxTokens: 32768,
-        supportsThinking: true,
+        baseURL: "http://localhost:8000/v1",
+        model: "mlx-community/Qwen3-30B-A3B-4bit",
+        apiKey: "mlx",
+        supportsThinking: false,
+        promptBudgetTokens: 2500,
       },
-      "raw-gemma4": {
+      "raw-qwen30b": {
         adapter: "openai-compat",
         brain: false,
-        baseURL: `${ollamaBase}/v1`,
-        model: "gemma4:26b",
-        apiKey: "ollama",
-        maxTokens: 32768,
-        supportsThinking: true,
+        baseURL: "http://localhost:8000/v1",
+        model: "mlx-community/Qwen3-30B-A3B-4bit",
+        apiKey: "mlx",
+        supportsThinking: false,
       },
+      // cc-gemma4 / raw-gemma4 已移除（Ollama 仅用于视觉）
       // Gemini 在线模型（通过中转服务）
       "cc-gemini-2.5-flash": {
         adapter: "openai-compat",
@@ -224,18 +214,18 @@ export function loadConfig(): BrainConfig {
     },
     memoryLLM: {
       intake: {
-        baseURL: "http://localhost:8001/v1",
-        model: "mlx-community/Qwen3.5-4B-MLX-4bit",
-        apiKey: "mlx",
+        baseURL: "http://192.168.100.1:11434/v1",  // Mini via Thunderbolt
+        model: "qwen3:4b",
+        apiKey: "ollama",
       },
       consolidation: {
-        baseURL: "http://localhost:8002/v1",
-        model: "mlx-community/Qwen3.5-9B-MLX-4bit",
-        apiKey: "mlx",
+        baseURL: "http://192.168.100.1:11434/v1",  // Mini via Thunderbolt
+        model: "qwen3:4b",
+        apiKey: "ollama",
       },
       fallbackIntake: {
-        baseURL: "http://localhost:8002/v1",
-        model: "mlx-community/Qwen3.5-9B-MLX-4bit",
+        baseURL: "http://localhost:8000/v1",  // Studio 27B fallback
+        model: "mlx-community/Qwen3.5-27B-4bit",
         apiKey: "mlx",
       },
     },

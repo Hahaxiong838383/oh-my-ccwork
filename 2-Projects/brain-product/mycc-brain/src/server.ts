@@ -43,6 +43,7 @@ import { getDualStreamStats, getPerToolStats } from "./services/experience-strea
 import { getTrustState, getTrustReport } from "./services/trust-state.js";
 import { getVetoState } from "./services/veto-spiral.js";
 import { loadRules, reloadRules } from "./services/constitutional-guard.js";
+import { getSkillSummary, runAgingCheck } from "./services/skill-lifecycle.js";
 
 const config = loadConfig(); // 运行时配置由 env.ts 统一加载（.env.local → .env）
 const brainApi = new BrainApi(config);
@@ -287,7 +288,7 @@ const server = http.createServer(async (req, res) => {
     const expHistory = getRecentDayStats(brainRoot, 7);
     const patches = listPatches(brainRoot);
     json(res, 200, {
-      version: "0.8.0",
+      version: "0.9.0",
       uptime: process.uptime(),
       stats: brainApi.getStats(),
       routes: Object.fromEntries(
@@ -1317,6 +1318,24 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // P1-B: Skill Lifecycle APIs
+  if (path === "/admin/api/skills" && req.method === "GET") {
+    const brainRoot = resolve(import.meta.dirname, "..");
+    json(res, 200, getSkillSummary(brainRoot));
+    return;
+  }
+
+  if (path === "/admin/api/skills/aging-check" && req.method === "POST") {
+    try {
+      const brainRoot = resolve(import.meta.dirname, "..");
+      const result = runAgingCheck(brainRoot);
+      json(res, 200, { success: true, data: result });
+    } catch (err: unknown) {
+      json(res, 500, { success: false, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+    return;
+  }
+
   // Health
   if (path === "/health") {
     json(res, 200, { status: "ok", service: "mycc-brain" });
@@ -1474,7 +1493,7 @@ function scheduleWeeklyVisionReview() {
 initMcpConnections().then(() => {
   server.listen(config.port, "0.0.0.0", () => {
     const memExists = existsSync(resolve(config.dataDir, "memory-items.md"));
-    console.log(`\n🧠 mycc-brain v0.8.0 (D4 + Vision P0-P2 + Phase 2)`);
+    console.log(`\n🧠 mycc-brain v0.9.0 (算力重规划 — Studio 主力 + Mini 辅助)`);
     console.log(`   API:   http://0.0.0.0:${config.port}/v1/chat/completions`);
     console.log(`   Admin: http://0.0.0.0:${config.port}/admin`);
     console.log(`   Data:  ${config.dataDir} (${existsSync(config.dataDir) ? "✅" : "❌ not found"})`);
