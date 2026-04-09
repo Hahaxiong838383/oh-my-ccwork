@@ -40,6 +40,9 @@ import { getSteeringTaxReport } from "./services/steering-tax.js";
 import { getAuditSummary } from "./services/audit-log.js";
 import { getSoulStatus } from "./services/soul-loader.js";
 import { getDualStreamStats, getPerToolStats } from "./services/experience-stream.js";
+import { getTrustState, getTrustReport } from "./services/trust-state.js";
+import { getVetoState } from "./services/veto-spiral.js";
+import { loadRules, reloadRules } from "./services/constitutional-guard.js";
 
 const config = loadConfig(); // 运行时配置由 env.ts 统一加载（.env.local → .env）
 const brainApi = new BrainApi(config);
@@ -284,7 +287,7 @@ const server = http.createServer(async (req, res) => {
     const expHistory = getRecentDayStats(brainRoot, 7);
     const patches = listPatches(brainRoot);
     json(res, 200, {
-      version: "0.7.0",
+      version: "0.8.0",
       uptime: process.uptime(),
       stats: brainApi.getStats(),
       routes: Object.fromEntries(
@@ -1264,6 +1267,56 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Phase 2: Trust State API
+  if (path === "/admin/api/trust" && req.method === "GET") {
+    try {
+      const brainRoot = resolve(import.meta.dirname, "..");
+      const report = getTrustReport(brainRoot, 7);
+      const vetoState = getVetoState(brainRoot);
+      json(res, 200, { success: true, data: { ...report, veto: vetoState } });
+    } catch (err: unknown) {
+      json(res, 500, { success: false, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+    return;
+  }
+
+  // Phase 2: Veto Spiral API
+  if (path === "/admin/api/veto-spiral" && req.method === "GET") {
+    try {
+      const brainRoot = resolve(import.meta.dirname, "..");
+      const state = getVetoState(brainRoot);
+      json(res, 200, { success: true, data: state });
+    } catch (err: unknown) {
+      json(res, 500, { success: false, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+    return;
+  }
+
+  // Phase 2: Constitutional Guard Rules API
+  if (path === "/admin/api/guard-rules" && req.method === "GET") {
+    try {
+      const brainRoot = resolve(import.meta.dirname, "..");
+      const rules = loadRules(brainRoot);
+      json(res, 200, { success: true, data: { rules, count: rules.length } });
+    } catch (err: unknown) {
+      json(res, 500, { success: false, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+    return;
+  }
+
+  // Phase 2: Reload Guard Rules
+  if (path === "/admin/api/guard-rules/reload" && req.method === "POST") {
+    try {
+      const brainRoot = resolve(import.meta.dirname, "..");
+      reloadRules(brainRoot);
+      const rules = loadRules(brainRoot);
+      json(res, 200, { success: true, data: { reloaded: true, count: rules.length } });
+    } catch (err: unknown) {
+      json(res, 500, { success: false, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+    return;
+  }
+
   // Health
   if (path === "/health") {
     json(res, 200, { status: "ok", service: "mycc-brain" });
@@ -1421,7 +1474,7 @@ function scheduleWeeklyVisionReview() {
 initMcpConnections().then(() => {
   server.listen(config.port, "0.0.0.0", () => {
     const memExists = existsSync(resolve(config.dataDir, "memory-items.md"));
-    console.log(`\n🧠 mycc-brain v0.7.0 (D4 + Vision P0-P2)`);
+    console.log(`\n🧠 mycc-brain v0.8.0 (D4 + Vision P0-P2 + Phase 2)`);
     console.log(`   API:   http://0.0.0.0:${config.port}/v1/chat/completions`);
     console.log(`   Admin: http://0.0.0.0:${config.port}/admin`);
     console.log(`   Data:  ${config.dataDir} (${existsSync(config.dataDir) ? "✅" : "❌ not found"})`);

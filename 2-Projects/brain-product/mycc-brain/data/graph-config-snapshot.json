@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-08T05:30:50.783Z",
+  "generatedAt": "2026-04-09T05:19:12.400Z",
   "claudeMd": true,
   "docs": [
     {
@@ -63,10 +63,16 @@
     "agent-orchestration",
     "ai-news-radar",
     "attention-audit",
+    "brain-review",
     "cc-eye",
     "cc-lite",
     "cc-remote-deploy",
     "cc-usage",
+    "codex-adversarial-review",
+    "codex-cancel",
+    "codex-result",
+    "codex-review",
+    "codex-status",
     "collect",
     "daily-tech-pulse",
     "dashboard",

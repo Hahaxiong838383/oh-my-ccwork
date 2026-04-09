@@ -16,7 +16,8 @@ import { addPatch, togglePatch } from "./hot-patch.js";
 import { diagnoseLatestEval, type DiagnosisReport, type DiagnosisItem, type DiagnosisType, updateDiagnosisConfidence } from "./evolution-diagnosis.js";
 import { getCategoryBoosts, readRecentEntries } from "./experience-stream.js";
 import { generateTestsForAction } from "./evolution-test-gen.js";
-import { writeAuditLog, isRiskLimitExceeded } from "./audit-log.js";
+import { writeAuditLog, isRiskLimitExceeded, getTodayRiskScore } from "./audit-log.js";
+import { evaluate } from "./constitutional-guard.js";
 
 // ─── Types ───
 
@@ -340,6 +341,25 @@ export function runEvolutionCycle(brainRoot: string): EvolutionResult | null {
       action: "cycle_skipped",
       detail: "Daily risk limit (100) exceeded",
       verdict: "deny",
+    });
+    return null;
+  }
+
+  // Constitutional Guard: 声明式规则引擎额外检查
+  const guardResult = evaluate(brainRoot, {
+    action: "evolution:execute",
+    dailyRiskScore: getTodayRiskScore(brainRoot),
+  });
+
+  if (guardResult.verdict === "deny") {
+    console.log(`[evolution] Constitutional Guard denied: ${guardResult.reason}`);
+    writeAuditLog(brainRoot, {
+      ts: new Date().toISOString(),
+      type: "l0_boundary",
+      action: "evolution:execute",
+      detail: `Constitutional Guard denied: ${guardResult.reason}`,
+      verdict: "deny",
+      riskScore: 0,
     });
     return null;
   }

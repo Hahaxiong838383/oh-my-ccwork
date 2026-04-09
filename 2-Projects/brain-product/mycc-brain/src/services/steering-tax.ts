@@ -13,6 +13,8 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync } from "fs";
 import { appendFile } from "fs/promises";
 import { join } from "path";
+import { recordTrustEvent } from "./trust-state.js";
+import { incrementDenial } from "./veto-spiral.js";
 
 // ─── Types ───
 
@@ -120,6 +122,24 @@ function ensureDir(dirPath: string): void {
   }
 }
 
+// ─── Trust / Veto Integration ───
+
+const TRUST_CATEGORY_MAP: Record<string, string> = {
+  explicit_deny: "corrected",
+  redirect: "corrected",
+  undo_request: "rollback",
+  repeat_request: "rejected",
+  frustration: "rejected",
+};
+
+const TRUST_WEIGHT_MAP: Record<string, number> = {
+  explicit_deny: -2,
+  redirect: -2,
+  undo_request: -5,
+  repeat_request: -1,
+  frustration: -1,
+};
+
 /** 记录纠正事件到 JSONL（异步写入，fire-and-forget） */
 export function recordCorrection(brainRoot: string, event: CorrectionEvent): void {
   const dir = getSteeringTaxDir(brainRoot);
@@ -132,6 +152,25 @@ export function recordCorrection(brainRoot: string, event: CorrectionEvent): voi
   appendFile(filePath, line, "utf-8").catch(() => {
     // fire-and-forget: 写入失败不影响主流程
   });
+
+  // 触发 trust deny 事件 + veto spiral 检测
+  try {
+    const category = TRUST_CATEGORY_MAP[event.correctionType];
+    const weight = TRUST_WEIGHT_MAP[event.correctionType];
+    if (category && weight !== undefined) {
+      recordTrustEvent(brainRoot, {
+        timestamp: event.timestamp,
+        eventType: "deny",
+        category: category as "corrected" | "rejected" | "rollback",
+        weight,
+        source: "steering-tax",
+        conversationId: event.conversationId,
+      });
+      incrementDenial(brainRoot, event.correctionType);
+    }
+  } catch {
+    // fire-and-forget: trust/veto 写入失败不影响主流程
+  }
 }
 
 // ─── JSONL Reading Helpers ───

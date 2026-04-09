@@ -100,7 +100,7 @@ console.log('快照完成: docs=' + snapshot.docs.length + ' skills=' + snapshot
 " || echo "⚠️  快照生成失败，图谱将缺少配置层数据"
 
 echo "📦 同步代码到 Studio..."
-rsync -avz --exclude node_modules --exclude dist --exclude .env \
+rsync -avz --exclude node_modules --exclude dist --exclude .env --exclude .env.local \
   ./ ${REMOTE}:${APP_DIR}/
 
 echo "📥 安装依赖..."

@@ -30,6 +30,9 @@ import { applyVisualGate } from "./services/visual-gate.js";
 import { detectCorrection, recordCorrection, type CorrectionEvent } from "./services/steering-tax.js";
 import { loadSoul } from "./services/soul-loader.js";
 import { writeAuditLog } from "./services/audit-log.js";
+import { recordTrustEvent, getTrustState, getTrustReport } from "./services/trust-state.js";
+import { resetCounter, getVetoState } from "./services/veto-spiral.js";
+import { evaluate as guardEvaluate } from "./services/constitutional-guard.js";
 
 // ─── 视觉习惯缓存 ───
 
@@ -405,6 +408,19 @@ export class BrainApi {
         }],
         usage: result.usage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
       });
+
+      // Phase 2: 信任状态后处理（fire-and-forget）
+      try {
+        recordTrustEvent(brainRoot, {
+          timestamp: new Date().toISOString(),
+          eventType: "approve",
+          category: "routine_ok",
+          weight: 1,
+          source: "brain-api",
+        });
+        resetCounter(brainRoot);
+      } catch { /* fire-and-forget */ }
+
       return;
     }
 
@@ -429,6 +445,18 @@ export class BrainApi {
 
     // 异步写入经验流（流式无法获取完整响应，只记录元数据）+ GAP4 情感标注
     this.recordExperience(modelName, userQuery, "[stream]", latency, brainResult, va.valence, va.arousal);
+
+    // Phase 2: 信任状态后处理（fire-and-forget）
+    try {
+      recordTrustEvent(brainRoot, {
+        timestamp: new Date().toISOString(),
+        eventType: "approve",
+        category: "routine_ok",
+        weight: 1,
+        source: "brain-api",
+      });
+      resetCounter(brainRoot);
+    } catch { /* fire-and-forget */ }
   }
 
   private handleModels(res: ServerResponse) {

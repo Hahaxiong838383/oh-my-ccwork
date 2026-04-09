@@ -1,0 +1,38 @@
+# Constitutional Guard 规则集
+# version: 1
+# 规则按优先级排列，最严格优先
+
+rules:
+  - id: l0-write-deny
+    scope: "file:write"
+    target:
+      - "MANIFESTO.md"
+      - "SOUL.md"
+      - "constitutional.yaml"
+    verdict: deny
+    reason: "L0 宪法文件不可被任何进化操作修改"
+
+  - id: l1-evolution-fitness
+    scope: "evolution:execute"
+    condition: "fitness_delta <= 0"
+    verdict: deny
+    reason: "进化操作必须改善联合适应度"
+
+  - id: daily-risk-limit
+    scope: "evolution:execute"
+    condition: "daily_risk_score >= 100"
+    verdict: deny
+    reason: "单日累积风险分超过上限 100"
+
+  - id: trust-conservative-gate
+    scope: "action:non-readonly"
+    condition: "trust_mode == conservative"
+    verdict: requires_confirmation
+    reason: "保守模式下非只读操作需用户确认"
+
+  - id: audit-log-protect
+    scope: "file:write"
+    target:
+      - "audit-log.jsonl"
+    verdict: deny
+    reason: "审计日志文件不可覆盖或删除，只可追加"
