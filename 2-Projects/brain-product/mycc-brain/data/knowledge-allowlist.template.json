@@ -1,0 +1,12 @@
+{
+  "__doc__": "Copy this file to knowledge-allowlist.json and fill in. This file controls which Feishu wiki spaces the knowledge crawler may access. Each entry: space_id (from /open-apis/wiki/v2/spaces), name (human reference), enabled (bool), root_tokens (array of node_token to limit crawl scope; empty = all root nodes).",
+  "__schema__": "See src/knowledge/allowlist.ts for zod schema.",
+  "spaces": [
+    {
+      "space_id": "REPLACE_WITH_SPACE_ID",
+      "name": "Example Wiki Space (rename per space)",
+      "enabled": false,
+      "root_tokens": []
+    }
+  ]
+}

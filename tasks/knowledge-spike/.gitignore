@@ -1,0 +1,5 @@
+# 原始 API 响应 + 文档正文 + Gemini 抽取 raw 结果（含商业敏感信息）
+# 只在本地保留，不入库
+samples/
+wiki-nodes/
+wiki-spaces-raw.json
