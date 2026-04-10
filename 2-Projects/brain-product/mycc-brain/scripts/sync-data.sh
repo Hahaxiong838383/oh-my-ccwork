@@ -47,16 +47,6 @@ if [[ -d "$CLAUDE_MEM" ]]; then
     fi
 fi
 
-# 3. evolution-log + eval 数据 → Studio brain
-BRAIN_DATA="$HOME/mycc/2-Projects/brain-product/mycc-brain/data"
-if [[ -f "$BRAIN_DATA/evolution-log.jsonl" ]]; then
-    if do_sync "$BRAIN_DATA/evolution-log.jsonl" "mycc-brain/data/evolution-log.jsonl"; then
-        RESULT="${RESULT} evo-log=ok"
-    else
-        RESULT="${RESULT} evo-log=FAIL"
-    fi
-fi
-
 # [已停用 2026-04-10] eval-result.json 的单向覆盖被移除。
 # 原因：Mini 上若 eval cron 因环境问题失败，会把 stale/错误数据覆盖 Studio 的正确版本。
 # 架构原则：Studio 是 source of truth，Mini/Air 的数据应该上报给 Studio 由其合并整合，

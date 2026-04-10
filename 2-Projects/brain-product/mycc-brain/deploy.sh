@@ -1,5 +1,7 @@
 #!/bin/bash
 # mycc-brain 一键部署到 Studio
+# 遵循 Studio SSOT 原则（详见 mycc-brain/docs/architecture-ssot.md）
+# 本脚本只同步代码/脚本/模板/图谱快照，绝不同步 data/ 和 eval/ 下的运行时数据
 # 支持内网(studio)和公网(mini-pub→studio)两种路径
 set -e
 

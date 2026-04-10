@@ -315,6 +315,7 @@ Phase 4: 分辨率阶梯推进
 5. **失败经验 ≥ 成功经验**：失败轨迹的训练价值不低于成功轨迹
 6. **实时沉淀 > 批量整理**：信息在产生时最新鲜，不要攒到最后
 7. **三层递进，不跳级**：先稳定规则层，再优化配置层，最后触碰模型层
+8. **Studio SSOT > 分布式写入**：brain 运行时数据只在 Studio 本地进程写入，Air/Mini 通过事件上报（API POST），禁止文件 rsync 覆盖。详见 [mycc-brain/docs/architecture-ssot.md](./mycc-brain/docs/architecture-ssot.md)
 
 ---
 

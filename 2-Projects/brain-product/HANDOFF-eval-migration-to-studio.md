@@ -233,3 +233,107 @@ scripts/sync-data.sh            # 已停 eval-result.json 同步
 
 **创建时间**：2026-04-10 12:20 CST
 **创建者**：cc（Claude claude-opus-4-6）
+
+---
+
+## ✅ Session 2026-04-10 14:00-14:45 执行结果
+
+> 5-Agent 并行执行 + 基线 commit + 收尾 commit，SSOT 架构落地完成。
+
+### Phase 1 停止错误同步 — ✅ 完成
+- **1.1** Mini crontab 删除 `run-eval.sh` 行（12 → 11 条），备份 /tmp/mini-crontab-20260410.bak.txt
+- **1.2** Air 本地 `scripts/sync-data.sh` 删除 evolution-log.jsonl 同步块（76 → 67 行），rsync 部署到 Mini
+- **1.3** Mini sync-cron.log 14:15 / 14:30 两轮 cron 已跑新版，`evo-log=ok` 标记消失
+
+### Phase 2 Studio 端验证 — ✅ 完成
+- **2.5** Studio 手动 `bash scripts/run-eval.sh` 14:05 启动，14:20:51 完成（exit=3 CRITICAL regression）
+- **2.6** inode 稳定性验证：eval 后 inode=53981746 / mtime=14:20:51，跨过 14:30 Mini sync 后 inode 未变 ✅
+- **SSOT 三铁律生效验证**通过
+
+### Phase 3 架构规范化 — ✅ 完成
+- **3.1** 创建 `mycc-brain/docs/architecture-ssot.md`（16949 字节，8 章节：背景/定义/三铁律/数据流/5 违反示例/事件 API 草案/纲领关系/修订记录）
+- **3.2** MANIFESTO.md 第十节追加第 8 条 "Studio SSOT > 分布式写入" 决策原则
+- **3.4** deploy.sh 头部注释追加 SSOT 引用
+
+### Phase 4 Air/Mini 数据整合 — 留后
+- 短期方案已落地（mycc-data/ 只读镜像），中长期事件上报 API 推荐方案 B（Studio cron pull + append-only jsonl），详见 Agent-4 对抗审查报告
+
+### Agent 执行结果
+
+| Agent | 状态 | 耗时 | 核心产出 |
+|-------|------|------|---------|
+| Agent-1 Mini 清理 | ✅ | 68s | crontab + sync-data.sh 清理完成 |
+| Agent-2 Studio eval 验证 | ✅ | 主线接管 | eval exit=3，inode 稳定验证通过 |
+| Agent-3 架构文档 | ✅ | 180s | architecture-ssot.md + MANIFESTO + deploy.sh |
+| Agent-4 对抗审查 | ✅ | 184s | 4 挑战报告 + 3 阻塞问题发现 |
+| Agent-5 Phase 1 排查 | ✅ | 102s | 函数名 runEvolutionCycle + scheduleEvolution 分析（注：evolution-log.jsonl 报告 0 字节有误，实际 5061 字节） |
+
+### Agent-4 对抗审查的遗留风险（待后续处理）
+
+| 风险 | 严重度 | 现状 |
+|------|--------|------|
+| env.ts:19 `DEFAULT_DATA_DIR = "../../../0-System"` 默认值陷阱 | 🟡 中 | Studio `.env` 显式设置 `DATA_DIR=/Users/fu-121/mycc-data/0-System` 救场，但需加代码 safeguard |
+| deploy.sh 黑名单 exclude 未来漏新增 data/ 文件 | 🟡 中 | 建议改白名单（`--include 'src/***'` 等） |
+| eval 和生产流量无隔离，SLA spike | 🟡 中 | 建议 eval 用独立 cc-eval-route |
+| scheduleClaudeMemorySync 与 rsync race | 🟢 低 | 观察 |
+| 事件上报 API 推荐方案 B | — | 长期演进 |
+
+### 🚨 Session 意外发现：brain 存在真实质量 regression
+
+**今天 14:20 Studio eval 结果**：
+- `pass=false`
+- retrieval_precision: 0.76 → 0.55 (**-27.5%**, critical)
+- completeness: 3.6 → 2.5 (**-30.5%**, warning)
+- retrieval_hitRate: 0.80 → 0.99 (+23%)
+- relevance: 2.94 → 3.52 (+20%)
+- safety: 3.00 → 4.90 (+63%)
+- creative_freedom/adversarial_resist 均大幅提升
+
+**诊断**：brain 现在召回拉得很高（0.99）但把无关结果也拉进来了，**precision 掉了**，导致 completeness 连带下降（信息稀释）。典型的"召回/精确度权衡失衡"。
+
+**这个 regression 就是 Phase 1 Eval 通过率显示 "98%/85% ⬜" 的真实原因**（不是 UI bug，server.ts:881 的 `evalPass && evalScore >= 0.85` 因 pass=false 返回 false）。
+
+**runEvolutionCycle 因 pass=false 按设计跳过 evolution pipeline** → 未产出 evolution-actions.jsonl / evolution-tests/ / diagnosis-confidence.json。这是安全机制，不是 bug。
+
+### 🎯 下个 Session 待办（brain regression 排查）
+
+1. **查 regression 源头**：
+   - 对比 eval-2026-04-10T06-20-51.tsv 和 baseline.tsv，看具体哪些 case 掉了
+   - git log 近 3-7 天 brain 代码改动（特别是 memory retrieval / brain-context / prompt 分层注入）
+   - 重点怀疑：Ollama /no_think 注入（brain-api.ts 本次 commit）/ 分层注入 budget 变化 / memory-items 内容变化
+
+2. **如果确认是近期 commit 导致**：考虑 revert 或调参
+
+3. **如果是数据层问题**（memory-items 质量下降）：查 Air→Mini→Studio 的记忆同步是否有脏数据
+
+4. **验证改动**：在 Studio 跑 `bash scripts/run-eval.sh --dry-run` 或 full 看 pass 是否恢复 true
+
+5. **Phase 1 解锁条件**：eval pass=true 后，手动触发 `runEvolutionCycle(brainRoot)` 应该能产生 evolution-actions.jsonl / evolution-tests/ / diagnosis-confidence.json 三文件
+
+### 可粘贴的 Prompt（下个 session）
+
+```
+继续处理 mycc-brain 的 eval regression（retrieval_precision -27%, completeness -30%）。
+
+背景：2026-04-10 的 SSOT 架构迁移已完成（HANDOFF-eval-migration-to-studio.md 末尾 Session 结果）。Studio 跑 eval 成功但 pass=false 是真实质量回归，不是 bug。Phase 1 零数据是 evolution pipeline 因 pass=false 按设计跳过的结果。
+
+任务：
+1. 读 HANDOFF-eval-migration-to-studio.md 末尾的 Session 结果 + 🚨 brain regression section
+2. git log -10 看近期 brain 代码改动
+3. SSH studio-pub 看 eval/eval-2026-04-10T06-20-51.tsv 具体哪些 case 掉了
+4. 定位 regression 源头（召回拉高但 precision 掉）
+5. 如果是代码问题，出 diff 方案；如果是数据问题，排查记忆同步
+
+约束：
+- 不要跑 deploy.sh 直到 regression 解决
+- SSOT 铁律不可违反（任何写入都通过 Studio 本地进程或未来 API）
+- 本次 session 的 Agent-4 对抗审查遗留 3 个中等风险也可顺便处理
+
+/brain-review 先跑一次再开始
+```
+
+---
+
+**收尾时间**：2026-04-10 14:45 CST
+**收尾者**：cc（claude-opus-4-6[1m]）
+**基线 commit**：`eedbc67` (v0.9.1) + tag `v0.9.1-baseline-before-ssot`
