@@ -134,6 +134,12 @@ async function callBrainChat(
     max_tokens: 8192,
   };
   if (conversationId) body.conversation_id = conversationId;
+  // v0.9.3: EVAL_TEMPERATURE 覆盖 brain 默认 temperature，用于方差研究
+  const evalTempRaw = process.env.EVAL_TEMPERATURE;
+  if (evalTempRaw !== undefined && evalTempRaw !== "") {
+    const evalTemp = Number(evalTempRaw);
+    if (Number.isFinite(evalTemp)) body.temperature = evalTemp;
+  }
 
   // Use http.request directly to bypass system proxy for LAN access
   const { status, data } = await httpPost(`${brainUrl}/v1/chat/completions`, body);

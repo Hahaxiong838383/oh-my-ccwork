@@ -45,6 +45,7 @@ grep 'mycc-brain v' src/server.ts
 | 0.9.0 | 2026-04-09 | 算力重规划（Studio主力27B + Mini辅助intake/consolidation） |
 | 0.9.1 | 2026-04-10 | eval 链路加固 + Studio SSOT 架构 |
 | 0.9.2 | 2026-04-10 | retrieval cap=20 + tfidf topK=2 恢复生成质量 + eval generation_override |
+| 0.9.3 | 2026-04-10 | eval 方差研究 (10 runs, EVAL_TEMPERATURE 支持) + claude-memory 阈值收紧（保护中文短 query） |
 
 ## Admin UI 版本
 

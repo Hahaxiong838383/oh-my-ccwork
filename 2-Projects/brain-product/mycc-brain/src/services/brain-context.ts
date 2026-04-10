@@ -449,7 +449,14 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
           // TF-IDF 风格匹配：query tokens vs (name + desc + body 前 500 字)
           const searchable = `${name} ${desc} ${body.slice(0, 500)}`.toLowerCase();
           const hitCount = queryTokens.filter((t) => searchable.includes(t)).length;
-          if (hitCount >= Math.max(1, Math.min(queryTokens.length * 0.3, 2))) {
+          // v0.9.3: 收紧 claude-memory 匹配阈值（但保护短 query）
+          // 原阈值 max(1, min(tokens*0.3, 2)) 偏松，4/5 query 假阳性命中，matchedCategories 膨胀到 4.6
+          // 注意：queryTokens 用 split(/\s+/) 切分，纯中文 query 只有 1 token → 必须保护短 query
+          // 策略：tokens < 3 保持阈值 1（兼容中文），tokens >= 3 收紧到 max(2, floor(tokens*0.5))
+          const threshold = queryTokens.length < 3
+            ? 1
+            : Math.max(2, Math.floor(queryTokens.length * 0.5));
+          if (hitCount >= threshold) {
             // 截取 body 前 300 字作为摘要
             const summary = body.length > 300 ? body.slice(0, 300) + "..." : body;
             claudeMemMatched.push(`[${name}] ${summary}`);
