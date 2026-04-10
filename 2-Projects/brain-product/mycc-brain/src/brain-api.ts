@@ -336,6 +336,11 @@ export class BrainApi {
         const estimatedTokens = Math.ceil(systemContent.length / 2);
         console.log(`[brain] prompt layer: budget=${budget === Infinity ? 'full' : budget} | injected ~${estimatedTokens}tok (${systemContent.length}chars) | layers: ${budget < 1000 ? 'L0+L1' : budget < 3000 ? 'L0-L3' : 'L0-L4'}`);
 
+        // Ollama Qwen3 不支持 enable_thinking 参数，用 /no_think 标签关闭 thinking
+        if (route.baseURL.includes("11434")) {
+          systemContent = "/no_think\n" + systemContent;
+        }
+
         messages = [{ role: "system", content: systemContent }, ...messages];
         console.log(`[brain] injected ${brainResult.itemCount} items from [${brainResult.matchedCategories.join(", ")}] | state: ${userState.intent}/${userState.mood} | soul: ${soulHint ? "✓" : "—"}`);
       } catch (e: unknown) {
@@ -445,6 +450,15 @@ export class BrainApi {
       } catch { /* fire-and-forget */ }
 
       return;
+    }
+
+    // Ollama Qwen3: 对所有路由（含 raw）注入 /no_think 关闭 thinking
+    if (route.baseURL.includes("11434") && messages.length > 0) {
+      if (messages[0].role === "system") {
+        messages = [{ ...messages[0], content: "/no_think\n" + messages[0].content }, ...messages.slice(1)];
+      } else {
+        messages = [{ role: "system", content: "/no_think" }, ...messages];
+      }
     }
 
     // 流式

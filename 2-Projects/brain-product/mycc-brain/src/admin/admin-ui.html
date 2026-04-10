@@ -608,7 +608,7 @@ async function aFetch(url, opts = {}) {
   const t = getToken();
   if (t) opts.headers = { ...(opts.headers || {}), Authorization: 'Bearer ' + t };
   const r = await fetch(url, opts);
-  if (r.status === 401) { showAuth(); throw new Error('Unauthorized'); }
+  if (r.status === 401) { localStorage.removeItem('brain_admin_token'); showAuth(); throw new Error('Unauthorized'); }
   return r;
 }
 function showAuth() {
@@ -919,7 +919,7 @@ async function sendAgentSSE(sess, text, model, et) {
   if (token) headers['Authorization']='Bearer '+token;
   const history = getHistory(sess);
   const resp = await fetch('/admin/api/agent/stream',{method:'POST',headers,body:JSON.stringify({model,prompt:text,enable_thinking:et,messages:history})});
-  if (resp.status===401){showAuth();throw new Error('Unauthorized')}
+  if (resp.status===401){localStorage.removeItem('brain_admin_token');showAuth();throw new Error('Unauthorized')}
   if (!resp.ok) throw new Error('HTTP '+resp.status);
   // Stream UI
   const msgEl = document.getElementById('msgArea'); getEmpty().style.display='none';
@@ -1539,7 +1539,7 @@ async function refreshStatus() {
     if(d.experience){if($('dExpCnt'))$('dExpCnt').textContent=d.experience.today?.count||0;if($('dExpLat'))$('dExpLat').textContent=d.experience.today?.avgLatency?d.experience.today.avgLatency+'ms':'-';S._expH=d.experience.history||[];renderExpChart(S._expH);}
     if(d.patches&&$('dExpPat'))$('dExpPat').textContent=(d.patches.active||0)+'/'+(d.patches.total||0);
     updateModelSel();
-  } catch(e){const dot=document.getElementById('statusDot');dot.className='status-dot off';dot.title=e.message==='Unauthorized'?'需要登录':'连接失败: '+e.message;if(e.message!=='Unauthorized')showAuth();}
+  } catch(e){const dot=document.getElementById('statusDot');if(e.message==='Unauthorized'){dot.className='status-dot';dot.style.background='var(--warning)';dot.title='需要登录（点击登录后自动刷新）';}else{dot.className='status-dot off';dot.title='连接失败: '+e.message;}}
 }
 async function restartSvc(){if(!confirm('确定重启 brain 服务？'))return;await aFetch('/admin/api/restart',{method:'POST'});alert('服务正在重启，3秒后刷新...');setTimeout(()=>location.reload(),3000)}
 

@@ -22,6 +22,7 @@ process.env.no_proxy = process.env.NO_PROXY;
 import { ALL_TEST_CASES } from "./test-cases.js";
 import { evaluateRetrieval } from "./retrieval-evaluator.js";
 import { evaluateGeneration } from "./judge-evaluator.js";
+import type { JudgeResult } from "./judge-evaluator.js";
 import { generateTsv, saveReport, printSummary, checkRegressions, writeEvalResult } from "./eval-report.js";
 import type { EvalResult } from "./eval-report.js";
 import { httpGet, httpPost } from "./http-direct.js";
@@ -127,21 +128,27 @@ async function main() {
   }
 
   // 2. 生成层评测（需要 Gemini Proxy Key 或原生 Key）
+  let skipGeneration = false;
   if (!geminiKey) {
-    console.error("❌ GEMINI_PROXY_KEY / GEMINI_API_KEY 均未设置，无法运行生成层评测");
-    console.error("   设置: export GEMINI_PROXY_KEY=xxx（推荐）或 export GEMINI_API_KEY=AIza...");
-    process.exit(1);
+    log("⚠️  GEMINI_PROXY_KEY / GEMINI_API_KEY 均未设置，跳过生成层评测");
+    log("   设置: export GEMINI_PROXY_KEY=xxx（推荐）或 export GEMINI_API_KEY=AIza...");
+    skipGeneration = true;
   }
 
-  const useProxy = !!geminiProxyKey;
-  log(`━━━ Phase 2: 生成层评测 (LLM-as-Judge via ${useProxy ? "Proxy" : "Native"}) ━━━`);
-  const judgeSummary = await evaluateGeneration(
-    ALL_TEST_CASES,
-    brainUrl,
-    geminiKey,
-    judgeModel,
-    useProxy ? geminiProxyBase : undefined,
-  );
+  let judgeSummary: { results: JudgeResult[]; avg_scores: Record<string, number>; pass: boolean; failures: string[] } | undefined;
+  if (!skipGeneration) {
+    const useProxy = !!geminiProxyKey;
+    log(`━━━ Phase 2: 生成层评测 (LLM-as-Judge via ${useProxy ? "Proxy" : "Native"}) ━━━`);
+    judgeSummary = await evaluateGeneration(
+      ALL_TEST_CASES,
+      brainUrl,
+      geminiKey,
+      judgeModel,
+      useProxy ? geminiProxyBase : undefined,
+    );
+  } else {
+    log("━━━ Phase 2: 生成层评测（已跳过）━━━");
+  }
 
   // 3. 生成 TSV 报告
   const evalDir = resolve(import.meta.dirname, "../../eval");
@@ -150,7 +157,7 @@ async function main() {
   const tsv = generateTsv({
     cases: ALL_TEST_CASES,
     retrievalResults: retrievalSummary.results,
-    judgeResults: judgeSummary.results,
+    judgeResults: judgeSummary?.results ?? [],
     judgeModel,
     brainModel,
     rawModel,
@@ -159,8 +166,8 @@ async function main() {
 
   const { path: reportPath, isBaseline, diff, baselineTsv } = saveReport(tsv, evalDir);
 
-  // 4. P4 回归检测
-  const regressions = baselineTsv ? checkRegressions(baselineTsv, tsv) : [];
+  // 4. P4 回归检测（skipGeneration 时只检测检索维度）
+  const regressions = baselineTsv ? checkRegressions(baselineTsv, tsv, skipGeneration) : [];
   const needsRollback = regressions.some((r) => r.severity === "critical");
 
   if (regressions.length > 0) {
@@ -202,33 +209,53 @@ async function main() {
   }
 
   // 5. 打印总结（→ stderr）
-  printSummary(
-    retrievalSummary.avg_hit_rate,
-    retrievalSummary.avg_precision,
-    judgeSummary.avg_scores,
-    judgeSummary.pass,
-    judgeSummary.failures,
-    reportPath,
-    diff,
-  );
+  if (!skipGeneration && judgeSummary) {
+    printSummary(
+      retrievalSummary.avg_hit_rate,
+      retrievalSummary.avg_precision,
+      judgeSummary.avg_scores,
+      judgeSummary.pass,
+      judgeSummary.failures,
+      reportPath,
+      diff,
+    );
+  } else {
+    log("\n" + "=".repeat(60));
+    log("  mycc-brain 评测报告（仅检索层）");
+    log("=".repeat(60));
+    log(`\n📊 检索层指标:`);
+    const hitIcon = retrievalSummary.avg_hit_rate >= 0.7 ? "✅" : "❌";
+    const precIcon = retrievalSummary.avg_precision >= 0.6 ? "✅" : "❌";
+    log(`  ${hitIcon} 召回率: ${retrievalSummary.avg_hit_rate.toFixed(3)} (≥0.7)`);
+    log(`  ${precIcon} 精确率: ${retrievalSummary.avg_precision.toFixed(3)} (≥0.6)`);
+    log(`\n⚠️  生成层评测已跳过（GEMINI KEY 缺失）`);
+    if (diff) {
+      log("\n📈 与 baseline 对比:");
+      log(diff);
+    }
+    log(`\n📄 报告: ${reportPath}`);
+    log("=".repeat(60));
+  }
 
   if (isBaseline) {
     log("\n📌 首次运行，已保存为 baseline");
   }
 
   // 6. 构建 JSON 结果
+  const judgePass = judgeSummary?.pass ?? true; // 跳过时视为通过
   const evalResult: EvalResult = {
     timestamp: new Date().toISOString(),
-    pass: judgeSummary.pass && !needsRollback,
+    pass: judgePass && !needsRollback,
     retrieval: {
       hitRate: retrievalSummary.avg_hit_rate,
       precision: retrievalSummary.avg_precision,
     },
-    generation: judgeSummary.avg_scores,
+    generation: judgeSummary?.avg_scores ?? {},
     regressions,
     needsRollback,
     reportPath,
     diff,
+    ...(skipGeneration ? { generationSkipped: true } : {}),
   };
 
   // 写文件（Admin UI 用）
@@ -239,7 +266,7 @@ async function main() {
   console.log(JSON.stringify(evalResult));
 
   // Exit code: 0=pass, 1=fail, 3=regression-rollback
-  process.exit(needsRollback ? 3 : judgeSummary.pass ? 0 : 1);
+  process.exit(needsRollback ? 3 : judgePass ? 0 : 1);
 }
 
 main().catch((err) => {

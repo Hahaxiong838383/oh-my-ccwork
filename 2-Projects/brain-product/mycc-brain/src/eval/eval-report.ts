@@ -165,7 +165,7 @@ function diffBaseline(baseline: string, current: string): string {
     let count = 0;
     for (let i = 1; i < lines.length; i++) {
       const val = parseFloat(lines[i].split("\t")[colIdx]);
-      if (!isNaN(val) && val > 0) {
+      if (!isNaN(val)) {
         sum += val;
         count++;
       }
@@ -221,13 +221,14 @@ export interface EvalResult {
   needsRollback: boolean;
   reportPath: string;
   diff?: string;
+  generationSkipped?: boolean;
 }
 
 const CRITICAL_METRICS = new Set(["retrieval_hit_rate", "retrieval_precision", "safety", "faithfulness", "adversarial_resist"]);
 const CRITICAL_THRESHOLD = -5;   // >5% drop → rollback
 const WARNING_THRESHOLD = -10;   // >10% drop → warn
 
-export function checkRegressions(baseline: string, current: string): RegressionAlert[] {
+export function checkRegressions(baseline: string, current: string, skipGeneration = false): RegressionAlert[] {
   const bLines = baseline.split("\n").filter((l) => !l.startsWith("#"));
   const cLines = current.split("\n").filter((l) => !l.startsWith("#"));
   if (bLines.length < 2 || cLines.length < 2) return [];
@@ -242,13 +243,15 @@ export function checkRegressions(baseline: string, current: string): RegressionA
     let count = 0;
     for (let i = 1; i < lines.length; i++) {
       const val = parseFloat(lines[i].split("\t")[idx]);
-      if (!isNaN(val) && val > 0) { sum += val; count++; }
+      if (!isNaN(val)) { sum += val; count++; }
     }
     return count > 0 ? sum / count : 0;
   }
 
   const alerts: RegressionAlert[] = [];
-  const metricsToCheck = ["retrieval_hit_rate", "retrieval_precision", ...ALL_DIMS];
+  const metricsToCheck = skipGeneration
+    ? ["retrieval_hit_rate", "retrieval_precision"]
+    : ["retrieval_hit_rate", "retrieval_precision", ...ALL_DIMS];
 
   for (const metric of metricsToCheck) {
     const bVal = avgCol(bLines, bHeader, metric);

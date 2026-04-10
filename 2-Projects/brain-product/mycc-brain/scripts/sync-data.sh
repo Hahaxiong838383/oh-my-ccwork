@@ -57,14 +57,20 @@ if [[ -f "$BRAIN_DATA/evolution-log.jsonl" ]]; then
     fi
 fi
 
-EVAL_RESULT="$HOME/mycc/2-Projects/brain-product/mycc-brain/eval/eval-result.json"
-if [[ -f "$EVAL_RESULT" ]]; then
-    if do_sync "$EVAL_RESULT" "mycc-brain/eval/eval-result.json"; then
-        RESULT="${RESULT} eval-result=ok"
-    else
-        RESULT="${RESULT} eval-result=FAIL"
-    fi
-fi
+# [已停用 2026-04-10] eval-result.json 的单向覆盖被移除。
+# 原因：Mini 上若 eval cron 因环境问题失败，会把 stale/错误数据覆盖 Studio 的正确版本。
+# 架构原则：Studio 是 source of truth，Mini/Air 的数据应该上报给 Studio 由其合并整合，
+# 而不是直接覆盖 Studio 上的运行时数据。
+# 长期方案：改为 POST 到 brain API 的 /admin/api/eval/report 端点，由 brain 按时间戳合并。
+# EVAL_RESULT="$HOME/mycc/2-Projects/brain-product/mycc-brain/eval/eval-result.json"
+# if [[ -f "$EVAL_RESULT" ]]; then
+#     if do_sync "$EVAL_RESULT" "mycc-brain/eval/eval-result.json"; then
+#         RESULT="${RESULT} eval-result=ok"
+#     else
+#         RESULT="${RESULT} eval-result=FAIL"
+#     fi
+# fi
+RESULT="${RESULT} eval-result=DISABLED"
 
 log "$RESULT"
 exit 0

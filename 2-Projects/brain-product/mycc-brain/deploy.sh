@@ -99,9 +99,72 @@ fs.writeFileSync('data/graph-config-snapshot.json', JSON.stringify(snapshot, nul
 console.log('快照完成: docs=' + snapshot.docs.length + ' skills=' + snapshot.skills.length + ' multiAgent=' + snapshot.multiAgent.length);
 " || echo "⚠️  快照生成失败，图谱将缺少配置层数据"
 
-echo "📦 同步代码到 Studio..."
-rsync -avz --exclude node_modules --exclude dist --exclude .env --exclude .env.local \
+echo "📦 同步代码到 Studio（精细排除运行时数据，避免覆盖 Studio 产生的最新数据）..."
+# 关键原则：
+# - 保留 Air 上的代码/模板文件（需要部署到 Studio）
+# - 排除 Studio 运行时产生的数据（eval 结果、trust state、审计日志等）
+# - 排除不该部署的临时文件（log、virtual env、.DS_Store）
+#
+# data/ 目录特殊情况：
+#   - graph-config-snapshot.json  ← deploy.sh 前面刚生成，必须同步
+#   - SOUL.md, constitutional.yaml ← 模板，首次部署时复制，之后不覆盖（--ignore-existing 单独处理）
+#   - 其他全部排除（运行时数据）
+# eval/ 目录特殊情况：
+#   - baseline.tsv  ← 首次部署时复制，之后不覆盖
+#   - 其他全部排除
+rsync -avz \
+  --exclude node_modules \
+  --exclude dist \
+  --exclude .env \
+  --exclude .env.local \
+  --exclude .git \
+  --exclude '.DS_Store' \
+  --exclude '*.log' \
+  --exclude 'tools/vision/.venv-vision' \
+  --exclude 'data/activity' \
+  --exclude 'data/experiences' \
+  --exclude 'data/predictions' \
+  --exclude 'data/session-archives' \
+  --exclude 'data/skills' \
+  --exclude 'data/evolution-tests' \
+  --exclude 'data/evolution-log.jsonl' \
+  --exclude 'data/evolution-actions.jsonl' \
+  --exclude 'data/audit-log.jsonl' \
+  --exclude 'data/trust-events.jsonl' \
+  --exclude 'data/trust-state.json' \
+  --exclude 'data/veto-state.json' \
+  --exclude 'data/curiosity-state.json' \
+  --exclude 'data/diagnosis-confidence.json' \
+  --exclude 'data/admin-sessions.json' \
+  --exclude 'data/last-stable-commit.txt' \
+  --exclude 'data/rollback-target.txt' \
+  --exclude 'data/status.json' \
+  --exclude 'data/visual-memory-last.json' \
+  --exclude 'data/latest.json' \
+  --exclude 'data/latest.jpg' \
+  --exclude 'data/eval-stderr.log' \
+  --exclude 'data/eval-stdout.log' \
+  --exclude 'data/eval-cron.log' \
+  --exclude 'data/deploy-cron.log' \
+  --exclude 'data/deploy.log' \
+  --exclude 'data/health.log' \
+  --exclude 'data/sync-cron.log' \
+  --exclude 'data/sync.log' \
+  --exclude 'data/2026-*.jsonl' \
+  --exclude 'data/model-config-overrides.json' \
+  --exclude 'eval/eval-result.json' \
+  --exclude 'eval/eval-*.tsv' \
+  --exclude 'eval/EVAL-REPORT.md' \
   ./ ${REMOTE}:${APP_DIR}/
+
+# 确保必需目录存在（首次部署时 Studio 可能没有）
+ssh ${REMOTE} "mkdir -p ${APP_DIR}/data ${APP_DIR}/eval"
+
+# SOUL.md 和 constitutional.yaml 仅在 Studio 不存在时同步（不覆盖 Studio 上的运行时版本）
+rsync -az --ignore-existing data/SOUL.md ${REMOTE}:${APP_DIR}/data/SOUL.md 2>/dev/null || true
+rsync -az --ignore-existing data/constitutional.yaml ${REMOTE}:${APP_DIR}/data/constitutional.yaml 2>/dev/null || true
+rsync -az --ignore-existing eval/baseline.tsv ${REMOTE}:${APP_DIR}/eval/baseline.tsv 2>/dev/null || true
+# graph-config-snapshot.json 是 deploy.sh 每次生成的，必须同步（已经在上面的 rsync 中未被排除）
 
 echo "📥 安装依赖..."
 ssh ${REMOTE} "${SSH_ENV} && cd ${APP_DIR} && npm install --ignore-scripts"

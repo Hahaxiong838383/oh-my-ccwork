@@ -113,21 +113,22 @@ export function loadConfig(): BrainConfig {
         supportsThinking: true,
       },
       // raw-local 已移除
-      "cc-mlx": {
+      // 本地 Ollama 模型（实测 full prompt TTFT 4.3s，替代 MLX 的 86-93s）
+      // Ollama 不支持 enable_thinking 参数，用 /no_think 标签关闭 Qwen3 thinking
+      "cc-local": {
         adapter: "openai-compat",
         brain: true,
-        baseURL: "http://localhost:8000/v1",
-        model: "mlx-community/Qwen3.5-9B-MLX-4bit",
-        apiKey: "mlx",
+        baseURL: "http://localhost:11434/v1",
+        model: "qwen3:4b",
+        apiKey: "ollama",
         supportsThinking: false,
-        promptBudgetTokens: 500, // minimal 模式
       },
-      "raw-mlx": {
+      "raw-local": {
         adapter: "openai-compat",
         brain: false,
-        baseURL: "http://localhost:8000/v1",
-        model: "mlx-community/Qwen3.5-9B-MLX-4bit",
-        apiKey: "mlx",
+        baseURL: "http://localhost:11434/v1",
+        model: "qwen3:4b",
+        apiKey: "ollama",
         supportsThinking: false,
       },
       // Qwen3-30B-A3B（MoE，激活 3B 参数，速度接近 9B，能力接近 27B）
@@ -214,20 +215,16 @@ export function loadConfig(): BrainConfig {
     },
     memoryLLM: {
       intake: {
-        baseURL: "http://192.168.100.1:11434/v1",  // Mini via Thunderbolt
+        baseURL: "http://localhost:11434/v1",  // Studio Ollama（全量本地，不依赖雷电）
         model: "qwen3:4b",
         apiKey: "ollama",
       },
       consolidation: {
-        baseURL: "http://192.168.100.1:11434/v1",  // Mini via Thunderbolt
+        baseURL: "http://localhost:11434/v1",  // Studio Ollama
         model: "qwen3:4b",
         apiKey: "ollama",
       },
-      fallbackIntake: {
-        baseURL: "http://localhost:8000/v1",  // Studio 27B fallback
-        model: "mlx-community/Qwen3.5-27B-4bit",
-        apiKey: "mlx",
-      },
+      fallbackIntake: undefined,  // 不需要 fallback，主路径就是本地
     },
     search: {
       baseURL: GEMINI_PROXY_BASE,
