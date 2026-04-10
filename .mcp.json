@@ -1,5 +1,30 @@
 {
   "mcpServers": {
+    "wiki": {
+      "command": "python3",
+      "args": ["/home/hahaxiong83/mycc/2-Projects/cc-agent/wiki_mcp/server.py"],
+      "env": {
+        "PG_URL": "postgresql://cc:ccagent2026@127.0.0.1:5433/cc_agent"
+      },
+      "type": "stdio"
+    },
+    "llm-gateway": {
+      "command": "python3",
+      "args": ["/home/hahaxiong83/mycc/2-Projects/cc-agent/gateway_mcp/server.py"],
+      "env": {
+        "PG_URL": "postgresql://cc:ccagent2026@127.0.0.1:5433/cc_agent",
+        "ONE_API_KEY": "your-api-key-here"
+      },
+      "type": "stdio"
+    },
+    "skill": {
+      "command": "python3",
+      "args": ["/home/hahaxiong83/mycc/2-Projects/cc-agent/skill_mcp/server.py"],
+      "env": {
+        "PG_URL": "postgresql://cc:ccagent2026@127.0.0.1:5433/cc_agent"
+      },
+      "type": "stdio"
+    },
     "ghost-os": {
       "command": "/Users/rayman.chen/mycc/ghost-os/.build/release/ghost",
       "args": ["mcp"],

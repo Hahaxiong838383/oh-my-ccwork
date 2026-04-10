@@ -1,0 +1,44 @@
+services:
+  cc-postgres:
+    image: groonga/pgroonga:latest
+    container_name: cc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cc
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-ccagent2026}
+      POSTGRES_DB: cc_agent
+    volumes:
+      - ./data/postgres:/var/lib/postgresql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "127.0.0.1:5433:5432"
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    command: >
+      postgres
+        -c shared_buffers=96MB
+        -c work_mem=4MB
+        -c maintenance_work_mem=32MB
+        -c effective_cache_size=256MB
+        -c max_wal_size=256MB
+
+  one-api:
+    image: justsong/one-api:latest
+    container_name: cc-one-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
+    volumes:
+      - ./data/one-api:/data
+    environment:
+      TZ: Asia/Shanghai
+      # 默认 SQLite，轻量够用
+      # tiktoken 离线缓存目录（已预下载文件，避免启动时联网失败）
+      TIKTOKEN_CACHE_DIR: /data/tiktoken_cache
+      DATA_GYM_CACHE_DIR: /data/tiktoken_cache
+    deploy:
+      resources:
+        limits:
+          memory: 256M

@@ -1,0 +1,47 @@
+# cc-agent 模型网关配置
+# Gemini（中转）+ MiniMax（直连）
+
+one_api_base: "http://23.226.135.149:4000/v1"
+one_api_key: "${ONE_API_KEY}"
+
+# 可用模型
+# - gemini-2.5-flash     Gemini（中转，偶尔 500）
+# - gemini-2.0-flash     Gemini 备用（中转）
+# - MiniMax-M2.7         MiniMax（直连，稳定，有 think 链）
+
+# 任务路由规则
+routing:
+  default: gemini-2.5-flash
+  rules:
+    wiki_compile:
+      model: gemini-2.5-flash
+      fallback: MiniMax-M2.7
+    wiki_query:
+      model: gemini-2.5-flash
+      fallback: MiniMax-M2.7
+    summarize:
+      model: gemini-2.5-flash
+      fallback: MiniMax-M2.7
+    translate:
+      model: MiniMax-M2.7
+    code_review:
+      model: gemini-2.5-flash
+      fallback: MiniMax-M2.7
+    research:
+      model: MiniMax-M2.7
+    casual:
+      model: gemini-2.5-flash
+      fallback: MiniMax-M2.7
+
+# 辅助 Agent 模型分配
+agents:
+  researcher:
+    model: MiniMax-M2.7
+  compiler:
+    model: gemini-2.5-flash
+    fallback: MiniMax-M2.7
+  assistant:
+    model: gemini-2.5-flash
+    fallback: MiniMax-M2.7
+  reviewer:
+    model: MiniMax-M2.7

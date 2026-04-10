@@ -38,6 +38,13 @@ build/
 .claude/mcp/*/node_modules/
 
 # ====================================
+# cc-agent 运行时数据（不提交）
+# ====================================
+2-Projects/cc-agent/data/
+2-Projects/cc-agent/.env
+2-Projects/cc-agent/**/__pycache__/
+
+# ====================================
 # MyCC 运行时文件（不应提交）
 # ====================================
 .claude/skills/mycc/current.json
