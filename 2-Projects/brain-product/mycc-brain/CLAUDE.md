@@ -43,6 +43,8 @@ grep 'mycc-brain v' src/server.ts
 | 0.7.0 | 2026-04-09 | Phase 1 可观测面板（Admin UI observe Tab） |
 | 0.8.0 | 2026-04-09 | Phase 2 可量化系统（TrustState+Guard+VetoSpiral） |
 | 0.9.0 | 2026-04-09 | 算力重规划（Studio主力27B + Mini辅助intake/consolidation） |
+| 0.9.1 | 2026-04-10 | eval 链路加固 + Studio SSOT 架构 |
+| 0.9.2 | 2026-04-10 | retrieval cap=20 + tfidf topK=2 恢复生成质量 + eval generation_override |
 
 ## Admin UI 版本
 

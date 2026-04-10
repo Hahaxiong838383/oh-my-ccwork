@@ -270,7 +270,7 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
 
   // 加载自进化扩展（动态关键词 + 配置覆盖）
   let dynamicKeywords: Array<{ pattern: RegExp; categories: string[] }> = [];
-  let configOverrides: { tfidfThreshold?: number; tfidfTopK?: number; maxBudget?: number } = {};
+  let configOverrides: { tfidfThreshold?: number; tfidfTopK?: number; maxBudget?: number; maxItemsPerQuery?: number } = {};
   try {
     const brainRoot = resolve(import.meta.dirname, "../..");
     dynamicKeywords = loadKeywordExtensions(brainRoot);
@@ -315,7 +315,8 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
   } catch { /* experience boost unavailable, continue without */ }
 
   scored.sort((a, b) => b.score - a.score);
-  const tfidfMatched = scored.slice(0, 4).map((s) => s.category);
+  // tfidf topK: baseline 时代=2, v0.9.0 提到 4 导致 precision 下降，回退到 2
+  const tfidfMatched = scored.slice(0, 2).map((s) => s.category);
   if (tfidfMatched.length > 0) retrievalPaths.push("tfidf");
 
   // 3 & 4. FTS + Vector 并行检索（两者互不依赖，并行可减少 ~50% 检索延迟）
@@ -354,25 +355,34 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
   const allCategories = new Set([...keywordMatched, ...tfidfMatched, ...ftsCategories, ...vecCategories]);
 
   // 6. Extract and score items per matched category
+  // Global item cap: 防止四路检索并集无限膨胀导致 precision 崩塌
+  // baseline 时代 avg ~10 items; v0.9.1 regression 时 avg 73，峰值 103
+  // cap=20 目标：保留头部高质量 categories，砍掉尾部噪音
+  const maxItemsPerQuery = configOverrides.maxItemsPerQuery ?? 20;
   const parts: string[] = [];
   let totalLen = 0;
+  let emittedItems = 0;
   const matched: string[] = [];
 
   // If FTS returned direct hits not covered by category extraction, inject them first
   if (ftsDirectHits.length > 0 && allCategories.size === 0) {
-    const block = `[FTS 直接命中]\n${ftsDirectHits.slice(0, 5).map((h) => `- ${h}`).join("\n")}`;
+    const ftsHitSlice = ftsDirectHits.slice(0, Math.min(5, maxItemsPerQuery));
+    const block = `[FTS 直接命中]\n${ftsHitSlice.map((h) => `- ${h}`).join("\n")}`;
     parts.push(block);
     totalLen += block.length;
+    emittedItems += ftsHitSlice.length;
     matched.push("fts-direct");
   }
 
   for (const cat of allCategories) {
+    if (emittedItems >= maxItemsPerQuery) break;
     const sec = sections.find((s) => s.category === cat);
     if (!sec || sec.items.length === 0) continue;
 
     const scoredItems = sec.items.map((item) => ({ item, score: scoreItem(item) }));
     scoredItems.sort((a, b) => b.score - a.score);
-    const topItems = scoredItems.slice(0, 8);
+    const remainingSlots = maxItemsPerQuery - emittedItems;
+    const topItems = scoredItems.slice(0, Math.min(8, remainingSlots));
 
     const block = `[${cat}]\n${topItems.map((i) => `- ${i.item}`).join("\n")}`;
     const effectiveBudget = configOverrides.maxBudget ?? MAX_BUDGET;
@@ -380,6 +390,7 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
 
     parts.push(block);
     totalLen += block.length;
+    emittedItems += topItems.length;
     matched.push(cat);
   }
 

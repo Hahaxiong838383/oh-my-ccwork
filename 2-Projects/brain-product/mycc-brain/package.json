@@ -1,6 +1,6 @@
 {
   "name": "mycc-brain",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "mycc-brain: OpenAI-compatible API proxy with memory injection",
   "type": "module",
   "main": "dist/server.js",
