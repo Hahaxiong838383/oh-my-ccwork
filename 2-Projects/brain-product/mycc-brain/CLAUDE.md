@@ -56,6 +56,7 @@ grep 'mycc-brain v' src/server.ts
 | 0.12.5 | 2026-04-11 | fix: 清理 judge-evaluator 2.0/1.5 遗留（Vertex 404）+ 新建 `src/llm/gemini-client.ts` 统一入口（白名单 + thinking 映射）|
 | 0.13.0 | 2026-04-11 | feat: Gemini 6 模型全接入 Admin UI（+8 条路由：2.5-pro、2.5-flash-lite、3-flash-preview、3.1-pro-preview 各 cc/raw 双版本）+ config.ts baseURL 收敛到 gemini-client.ts 常量 |
 | 0.13.1 | 2026-04-11 | fix: 命名漂移修复 `cc/raw-gemini-3.1-flash` → `cc/raw-gemini-3.1-flash-lite`（底层 model 本就是 `gemini-3.1-flash-lite-preview`，路由 key 现在忠实反映）+ 同步 docs/runtime-env.md & docs/vision-daemon.md |
+| 0.13.2 | 2026-04-11 | SQLITE_MISMATCH 修复（items_vec schema 自动迁移 + embed 维度校验 → 1024 对齐 qwen3-embedding:0.6b）|
 
 ## Admin UI 版本
 

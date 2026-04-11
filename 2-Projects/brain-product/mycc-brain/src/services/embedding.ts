@@ -1,6 +1,7 @@
 /** embedding.ts — Ollama embedding 调用封装 */
 
 const DEFAULT_MODEL = "qwen3-embedding:0.6b";
+export const EMBEDDING_DIM = 1024;
 const TIMEOUT_MS = 10_000;
 
 function getOllamaBase(override?: string): string {
@@ -33,6 +34,12 @@ export async function embed(
     const vec = data.embeddings?.[0];
     if (!vec || vec.length === 0) {
       console.error("[embedding] empty embeddings response");
+      return null;
+    }
+    if (vec.length !== EMBEDDING_DIM) {
+      console.warn(
+        `[embedding] dimension mismatch: got ${vec.length}, expected ${EMBEDDING_DIM} (model=${DEFAULT_MODEL}). Returning null.`
+      );
       return null;
     }
     return vec;

@@ -1,11 +1,12 @@
 /** memory-db.ts — 精简版 SQLite 记忆数据库（FTS5 全文搜索 + sqlite-vec 向量检索） */
 import { readFileSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { embed, isOllamaReady } from "./embedding.js";
+import { embed, isOllamaReady, EMBEDDING_DIM } from "./embedding.js";
 
 interface MemoryRow { category: string; content: string; rank: number }
 interface VectorRow { id: string; category: string; content: string; distance: number }
 interface ParsedItem { category: string; content: string }
+type DB = any;
 
 let db: any = null;
 let lastMtime = 0;
@@ -60,6 +61,29 @@ async function loadVec(): Promise<boolean> {
   }
 }
 
+/**
+ * 检测 items_vec 历史 schema 的嵌入维度。
+ * 如果不是当前 EMBEDDING_DIM，DROP 旧表让后续 CREATE IF NOT EXISTS 重建。
+ * 历史向量数据丢失是可接受的（会通过 syncFromMd → syncVectors 重新生成）。
+ */
+function ensureVecSchemaVersion(db: DB): void {
+  try {
+    const row = db.prepare(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='items_vec'"
+    ).get() as { sql?: string } | undefined;
+    if (!row?.sql) return;
+    const expected = `float[${EMBEDDING_DIM}]`;
+    if (!row.sql.includes(expected)) {
+      console.warn(
+        `[memory-db] items_vec schema outdated (current: ${row.sql.slice(0, 120)}...), rebuilding for ${expected}`
+      );
+      db.exec("DROP TABLE items_vec");
+    }
+  } catch (err) {
+    console.error("[memory-db] ensureVecSchemaVersion failed:", err);
+  }
+}
+
 export async function initDB(dataDir: string): Promise<boolean> {
   if (db) return true;
   if (!(await loadDriver())) return false;
@@ -90,10 +114,11 @@ export async function initDB(dataDir: string): Promise<boolean> {
 
     // sqlite-vec: 加载扩展并创建向量表（降级不影响 FTS）
     if (await loadVec()) {
+      ensureVecSchemaVersion(db);
       db.exec(`
         CREATE VIRTUAL TABLE IF NOT EXISTS items_vec USING vec0(
           id TEXT PRIMARY KEY,
-          embedding float[768] distance_metric=cosine
+          embedding float[${EMBEDDING_DIM}] distance_metric=cosine
         );
       `);
     }
@@ -177,11 +202,15 @@ async function syncVectors(items: ParsedItem[]): Promise<void> {
     const text = `${item.category}: ${item.content}`;
     const vec = await embed(text);
     if (vec) {
+      if (vec.length !== EMBEDDING_DIM) {
+        skipped++;
+        continue;
+      }
       try {
         insertVec.run(`${i}`, new Float32Array(vec));
         embedded++;
       } catch (err) {
-        console.error(`[memory-db] vec insert failed for item ${i}:`, err);
+        console.warn(`[memory-db] vec insert failed for item ${i}:`, err);
         skipped++;
       }
     } else {
@@ -226,7 +255,7 @@ export function ftsSearch(
     `);
     return stmt.all(ftsQuery, topK) as MemoryRow[];
   } catch (err) {
-    console.error("[memory-db] ftsSearch failed:", err);
+    console.warn("[memory-db] ftsSearch failed:", err);
     return [];
   }
 }
@@ -237,6 +266,12 @@ export function vectorSearch(
   topK = 5,
 ): VectorRow[] {
   if (!db || !vecLoaded) return [];
+  if (queryVec.length !== EMBEDDING_DIM) {
+    console.warn(
+      `[memory-db] vectorSearch dim mismatch: got ${queryVec.length}, expected ${EMBEDDING_DIM}`
+    );
+    return [];
+  }
   try {
     const stmt = db.prepare(`
       SELECT v.id, i.category, i.content, v.distance
@@ -247,7 +282,7 @@ export function vectorSearch(
     `);
     return stmt.all(new Float32Array(queryVec), topK) as VectorRow[];
   } catch (err) {
-    console.error("[memory-db] vectorSearch failed:", err);
+    console.warn("[memory-db] vectorSearch failed:", err);
     return [];
   }
 }

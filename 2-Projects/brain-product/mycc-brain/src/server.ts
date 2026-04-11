@@ -288,7 +288,7 @@ const server = http.createServer(async (req, res) => {
     const expHistory = getRecentDayStats(brainRoot, 7);
     const patches = listPatches(brainRoot);
     json(res, 200, {
-      version: "0.13.1",
+      version: "0.13.2",
       uptime: process.uptime(),
       stats: brainApi.getStats(),
       routes: Object.fromEntries(
@@ -1357,7 +1357,7 @@ const server = http.createServer(async (req, res) => {
       const db = await openK(dbPath);
       if (!db) {
         json(res, 200, {
-          version: "0.13.1",
+          version: "0.13.2",
           items: { total: 0, byNamespace: [] },
           docs: { total: 0, byStatus: { pending: 0, synced: 0, extracted: 0, failed: 0 } },
           lastSync: 0,
@@ -1378,7 +1378,7 @@ const server = http.createServer(async (req, res) => {
         const events = await readSearchLog(logPath, 24 * 60 * 60 * 1000);
         const agg = aggregateSearchLog(events, 24 * 60 * 60 * 1000);
         json(res, 200, {
-          version: "0.13.1",
+          version: "0.13.2",
           items: { total, byNamespace },
           docs: { total: docsTotal, byStatus },
           lastSync,
@@ -1731,7 +1731,7 @@ function scheduleWeeklyVisionReview() {
 initMcpConnections().then(() => {
   server.listen(config.port, "0.0.0.0", () => {
     const memExists = existsSync(resolve(config.dataDir, "memory-items.md"));
-    console.log(`\n🧠 mycc-brain v0.13.1 (Gemini 6 模型全接入 + 命名漂移修复 cc-gemini-3.1-flash → flash-lite)`);
+    console.log(`\n🧠 mycc-brain v0.13.2 (SQLITE_MISMATCH 修复 + 嵌入维度对齐 1024)`);
     console.log(`   API:   http://0.0.0.0:${config.port}/v1/chat/completions`);
     console.log(`   Admin: http://0.0.0.0:${config.port}/admin`);
     console.log(`   Data:  ${config.dataDir} (${existsSync(config.dataDir) ? "✅" : "❌ not found"})`);
