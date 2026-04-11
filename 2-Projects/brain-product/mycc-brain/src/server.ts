@@ -1465,6 +1465,42 @@ function scheduleVisionQuality() {
   }, 60_000);
 }
 
+// ─── 外挂知识系统同步（每日 03:00 执行）───
+let lastKnowledgeSyncDate = "";
+function scheduleKnowledgeSync() {
+  setInterval(async () => {
+    const now = new Date();
+    const hour = now.getHours();
+    const today = now.toISOString().slice(0, 10);
+    if (hour === 3 && lastKnowledgeSyncDate !== today) {
+      lastKnowledgeSyncDate = today;
+      console.log(`[knowledge-sync] daily run starting at ${now.toISOString()}`);
+      try {
+        const { runKnowledgeSyncJob } = await import("./knowledge/knowledge-sync-job.js");
+        const brainRoot = resolve(import.meta.dirname, "..");
+        const result = await runKnowledgeSyncJob({
+          budgetUsd: 0.5,
+          maxDocs: 200,
+          allowlistPath: resolve(brainRoot, "data", "knowledge-allowlist.json"),
+          knowledgeDbPath: resolve(config.dataDir, "knowledge.db"),
+          geminiApiKey: process.env.GEMINI_PROXY_KEY ?? "",
+        });
+        console.log("[knowledge-sync]", JSON.stringify({
+          docsProcessed: result.docsProcessed,
+          docsExtracted: result.docsExtracted,
+          docsFailed: result.docsFailed,
+          factsInserted: result.factsInserted,
+          totalCostUsd: Number(result.totalCostUsd.toFixed(6)),
+          stoppedByBudget: result.stoppedByBudget,
+          errorCount: result.errors.length,
+        }));
+      } catch (err) {
+        console.error(`[knowledge-sync] failed:`, err instanceof Error ? err.message : err);
+      }
+    }
+  }, 60_000);
+}
+
 // ─── 每周视觉系统复盘（周日 05:00 执行）───
 let lastWeeklyReviewDate = "";
 function scheduleWeeklyVisionReview() {
@@ -1500,13 +1536,14 @@ initMcpConnections().then(() => {
     console.log(`   Memory: memory-items.md (${memExists ? "✅" : "❌ not found"})`);
     console.log(`   Models: ${Object.keys(config.routes).join(", ")}`);
     console.log(`   MCP:   ${mcpClients.size} server(s) connected`);
-    console.log(`   Cron:  consolidation @04:00, visual-digest @04:30, vision-quality @04:45, evolution @07:00, weekly-review @Sun05:00, claude-sync @30min\n`);
+    console.log(`   Cron:  knowledge-sync @03:00, consolidation @04:00, visual-digest @04:30, vision-quality @04:45, evolution @07:00, weekly-review @Sun05:00, claude-sync @30min\n`);
     scheduleConsolidation();
     scheduleVisualDigest();
     scheduleVisionQuality();
     scheduleWeeklyVisionReview();
     scheduleEvolution();
     scheduleClaudeMemorySync();
+    scheduleKnowledgeSync();
     // Phase 2B-1: 视觉状态轮询
     startVisualStatePolling(resolve(import.meta.dirname, "..", "data"));
     startVisualMemory(resolve(import.meta.dirname, "..", "data"));

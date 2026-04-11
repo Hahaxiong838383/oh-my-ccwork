@@ -11,6 +11,8 @@ import { syncFromMd, ftsSearch, vectorSearch } from "./memory-db.js";
 import { embed } from "./embedding.js";
 import { getCategoryBoosts } from "./experience-stream.js";
 import { loadKeywordExtensions, loadConfigOverrides } from "./evolution-engine.js";
+import { knowledgeSearch } from "../knowledge/search.js";
+import type { KnowledgeSearchHit } from "../knowledge/types.js";
 
 // ─── Types ───
 
@@ -221,6 +223,7 @@ export interface BrainContextResult {
   matchedCategories: string[];
   itemCount: number;
   retrievalPaths: string[];  // 命中的检索路径
+  readonly knowledge?: readonly KnowledgeSearchHit[];  // 第五路：外挂知识库命中（默认 off）
 }
 
 const MAX_BUDGET = 4000; // chars — expanded budget for richer memory injection
@@ -484,11 +487,24 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
     finalRetrievalPaths.push("claude-memory");
   }
 
+  // 11. 第五路：外挂知识库（默认 off，由 KNOWLEDGE_SEARCH_ENABLED + 关键词白名单共同触发）
+  // 完全独立于现有四路的 category 聚合，以 knowledge 字段旁路返回，不污染 matchedCategories / itemCount
+  let knowledgeHits: readonly KnowledgeSearchHit[] = [];
+  try {
+    knowledgeHits = await knowledgeSearch(query, 5);
+  } catch (err) {
+    console.error("[brain-context] knowledgeSearch failed:", err);
+  }
+  if (knowledgeHits.length > 0) {
+    finalRetrievalPaths.push("knowledge");
+  }
+
   const result: BrainContextResult = {
     context: finalContext,
     matchedCategories: matched,
     itemCount,
     retrievalPaths: finalRetrievalPaths,
+    knowledge: knowledgeHits.length > 0 ? knowledgeHits : undefined,
   };
 
   // 写入 LRU 缓存
