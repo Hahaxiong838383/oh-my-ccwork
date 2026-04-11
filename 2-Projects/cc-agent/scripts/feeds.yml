@@ -1,0 +1,7 @@
+feeds:
+  - name: "Simon Willison"
+    url: "https://simonwillison.net/atom/everything/"
+    tags: ["ai", "blog"]
+  - name: "Lilian Weng"
+    url: "https://lilianweng.github.io/index.xml"
+    tags: ["ai", "research"]

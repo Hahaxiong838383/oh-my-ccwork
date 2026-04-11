@@ -157,6 +157,23 @@
 - RPT 验证发现偏差时，如果偏差可自行修正 → 修正后继续
 - 如果连续 3 次 RPT 验证失败 → 自动进入 failure-escalation 的 REFINE 阶段
 
+## 轨迹记录（普通档/完整档任务自动触发）
+
+**触发条件**：任务复杂度 ≥ 普通档（预估 >30min 或涉及多步操作）
+
+**流程**（参数名与 skill MCP 工具一致）：
+1. 任务开始 → `trajectory_open(session_id="当前session", task_title="简短标题", task_description="详细描述")` → 返回 `trajectory_id`，后续步骤都需要它
+2. 每个关键里程碑 → `trajectory_step(trajectory_id=tid, step_no=N, phase="execute", step_type="tool_call", title="做了什么")`
+3. 做了重要决策 → `trajectory_decision(trajectory_id=tid, question="问题", chosen_option="选择", rationale="理由")`
+4. 遇到错误/摩擦 → `trajectory_friction(trajectory_id=tid, friction_type="tool_error", description="发生了什么")`
+5. 任务结束 → `trajectory_close(trajectory_id=tid, outcome="success", summary="一句话总结")`
+
+**不记录**：简洁档（日常问答、简单查询、<10 分钟的小任务）
+
+**Session 结束自检**：如果本次有普通档以上任务但没有开启轨迹 → 在 RECENT_EVENTS 标注 `[轨迹缺失]`
+
+**auto_draft 默认关**：当前处于采样期，只积累数据，不自动生成 Skill。
+
 ---
 
 # 记忆系统

@@ -108,7 +108,9 @@ CREATE TABLE IF NOT EXISTS agent_outbox (
     event_type TEXT NOT NULL,     -- skill_draft_created/scan_blocked/trajectory_completed
     payload JSONB NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
+    retry_count INT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     sent_at TIMESTAMPTZ
 );
 

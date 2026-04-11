@@ -117,7 +117,7 @@ async def sync_verified_skills() -> dict:
     # ── 读取数据库中所有 verified_fs skill ───────────────────────────
     db_rows = await pool.fetch(
         """
-        SELECT slug, content_hash, status
+        SELECT slug, content, status
         FROM skill_registry
         WHERE source_type = 'verified_fs'
         """
@@ -138,45 +138,47 @@ async def sync_verified_skills() -> dict:
                 await pool.execute(
                     """
                     INSERT INTO skill_registry
-                        (name, slug, description, status, source_type, trust_level,
-                         content, tags, file_path, content_hash)
-                    VALUES ($1, $2, $3, 'active', 'verified_fs', 'verified',
-                            $4, $5, $6, $7)
+                        (skill_name, slug, title, summary, status, source_type,
+                         content, tags, fs_path, scan_status)
+                    VALUES ($1, $2, $3, $4, 'active', 'verified_fs',
+                            $5, $6, $7, 'pass')
                     ON CONFLICT (slug) DO NOTHING
                     """,
                     info["name"],
                     slug,
+                    info["description"] or info["name"],
                     info["description"],
                     info["content"],
                     info["tags"],
                     info["file_path"],
-                    new_hash,
                 )
                 added += 1
             else:
                 existing = db_slugs[slug]
-                if existing.get("content_hash") != new_hash or existing.get("status") == "archived":
+                existing_hash = _content_hash(existing.get("content") or "")
+                if existing_hash != new_hash or existing.get("status") == "archived":
                     # 内容变了或曾被 archived → UPDATE
                     await pool.execute(
                         """
                         UPDATE skill_registry
-                        SET name = $2,
-                            description = $3,
+                        SET skill_name = $2,
+                            title = $3,
+                            summary = $4,
                             status = 'active',
-                            content = $4,
-                            tags = $5,
-                            file_path = $6,
-                            content_hash = $7,
+                            content = $5,
+                            tags = $6,
+                            fs_path = $7,
+                            scan_status = 'pass',
                             updated_at = now()
                         WHERE slug = $1 AND source_type = 'verified_fs'
                         """,
                         slug,
                         info["name"],
+                        info["description"] or info["name"],
                         info["description"],
                         info["content"],
                         info["tags"],
                         info["file_path"],
-                        new_hash,
                     )
                     updated += 1
         except Exception as e:
