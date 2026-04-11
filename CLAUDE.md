@@ -20,6 +20,7 @@
 | cc | Claude (claude-sonnet-4-6) | cli_a91f0b3677f8dcc4 |
 | codex | OpenAI Codex | cli_a92166c624f85bc6 |
 | gemini | Google Gemini | cli_a92167071e385bc0 |
+| hermes | Nous Research Hermes | — |
 
 **重要任务完成后追加到 `0-System/task-log.md`**：
 
@@ -215,6 +216,7 @@ cc 通过三层记忆工作，详见 [`docs/memory-system.md`](./docs/memory-sys
 | cc (Claude) | 规划、决策、编排 | — |
 | codex (OpenAI) | 写代码、改仓库、跑测试 | `mcp__x__ask_codex(...)` |
 | gemini (Google) | 搜资料、写报告、调研 | `mcp__g__ask_gemini(...)` |
+| hermes (Nous) | 多平台消息、长时任务、非Claude推理 | `mcp__hermes__messages_send(...)` |
 
 **强制规则**：
 1. 大任务（>10 分钟）必须拆分，分发给 codex/gemini 并行执行
