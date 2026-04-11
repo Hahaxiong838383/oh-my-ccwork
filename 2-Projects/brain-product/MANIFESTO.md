@@ -266,32 +266,40 @@ Phase 4: 分辨率阶梯推进
 
 ## 九、迭代路线图
 
-### Phase 1: 可观测（当前 → +2 周）
+> **状态更新授权**（2026-04-11 新增）：cc 可以自主更新本节的 checkbox 状态（`[ ]` ↔ `[x]` ↔ `🚧`），无需人工确认，但每次变更必须在 commit message 中引用支撑状态变更的代码 commit 或源文件路径。**不得修改 Phase 结构、P0/P1/P2 分级、项目名称或时间窗口**——这些属于规则层，仍需人工确认。本授权是 L0 公理第四条"宪法不可变"的显式例外：checkbox 是状态标记，不是规则本体。
+
+### Phase 1: 可观测（已完成 ✅）
 
 > 先看清自己，才能改进自己
 
-- [ ] **P0** steering_tax 指标采集（每次交互记录 correction 事件）
-- [ ] **P0** 轨迹双流记录（成功/失败分流 + per-tool 统计）
-- [ ] **P0** 不可变审计日志（append-only JSONL）
-- [ ] **P0** SOUL.md 每轮加载（身份防漂移）
+- [x] **P0** steering_tax 指标采集（每次交互记录 correction 事件）— `src/services/steering-tax.ts`
+- [x] **P0** 轨迹双流记录（成功/失败分流 + per-tool 统计）— `src/services/experience-stream.ts`
+- [x] **P0** 不可变审计日志（append-only JSONL）— `src/services/audit-log.ts`
+- [x] **P0** SOUL.md 每轮加载（身份防漂移）— `src/services/soul-loader.ts`
 
-### Phase 2: 可量化（+2 周 → +4 周）
+> 完成标志：commit `8763ce2 feat(brain): Phase 1 可观测系统 + Admin UI observe 面板 v0.7.0`
+
+### Phase 2: 可量化（已完成 ✅）
 
 > 能量化才能优化
 
-- [ ] **P1** TrustState 量化（trust_score 自动计算 + 衰减）
-- [ ] **P1** Skill 自主沉淀（>5 工具调用触发判断）
-- [ ] **P1** Constitutional Guard（声明式规则引擎）
-- [ ] **P1** 否决螺旋检测（接入元认知触发器）
+- [x] **P1** TrustState 量化（trust_score 自动计算 + 衰减）— `src/services/trust-state.ts`
+- [x] **P1** Skill 自主沉淀（>5 工具调用触发判断）— `src/services/skill-lifecycle.ts`
+- [x] **P1** Constitutional Guard（声明式规则引擎）— `src/services/constitutional-guard.ts`
+- [x] **P1** 否决螺旋检测（接入元认知触发器）— `src/services/veto-spiral.ts`
+
+> 完成标志：commit `7a84018 feat(brain): Phase 2 可量化系统 v0.8.0 — TrustState + Constitutional Guard + VetoSpiral`
 
 ### Phase 3: 可自主（+4 周 → +8 周）
 
 > 从被动响应到主动进化
 
 - [ ] **P2** 辩证用户建模（Peer Card + 双向推理）
-- [ ] **P2** 三层进化递进（规则/配置/模型三速并行）
+- [ ] 🚧 **P2** 三层进化递进（规则/配置/模型三速并行）— 规则层 `src/services/skill-lifecycle.ts` ✓ / 配置层 `src/services/evolution-engine.ts` ✓ / 模型层（SFT 微调）未启动
 - [ ] **P2** 验证引擎（防自欺三件套）
 - [ ] **P2** 轨迹继承增殖（基因包标准化）
+
+> 进度备注：外挂知识系统 v0.10.0-v0.11.0（crawler + extractor + FTS + 方舟 Coding Plan）是 Phase 2/3 跨期基础设施，为后续"辩证用户建模"和"三层进化"提供数据底座，但不在本节 P2 计数范围内。
 
 ### Phase 4: 可涌现（+8 周 →）
 
@@ -338,3 +346,4 @@ Phase 4: 分辨率阶梯推进
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | 1.0 | 2026-04-09 | 初版，基于四项目（claude-code-harness / OpenHarness / AutoHarness / hermes-agent）深度分析 |
+| 1.1 | 2026-04-11 | cc 自主同步：Phase 1/2 checkbox 全勾（P0×4 + P1×4，附源文件引用）；第九节新增"状态更新授权"条款（L0 宪法第四条显式例外）；Phase 3 三层进化递进标 🚧 进行中 |
