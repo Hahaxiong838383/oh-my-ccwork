@@ -22,13 +22,29 @@ import type {
 // 类型
 // ---------------------------------------------------------------------------
 
-/** OpenAI 兼容 proxy 客户端配置 */
+/**
+ * OpenAI 兼容 proxy 客户端配置。
+ *
+ * 命名保留 "Gemini"（P0.1/P0.2 遗留），实际可以指向任何 openai-compat endpoint。
+ * 2026-04-11 切换到火山方舟 Coding Plan（doubao-seed-2.0-pro）替代 Gemini Flash，
+ * 原因：Gemini proxy 429 限流阻塞冷启动；方舟订阅制无限流 + thinking 可关。
+ */
 export interface GeminiClientConfig {
   readonly baseUrl: string;
   readonly apiKey: string;
   readonly model: string;
   readonly maxTokens: number;
   readonly temperature: number;
+  /**
+   * 厂商专属字段透传（可选）。
+   * 例如火山方舟 doubao 支持 `thinking: { type: "disabled" }` 关闭推理思考链；
+   * Gemini proxy 不支持这类字段，留 undefined 即可。
+   *
+   * 注意：feedback_openai_compat_fields 规则——发给第三方不能含非标准字段。
+   * 此字段由调用方**主动**设置，只有在目标 endpoint 明确支持时才注入，
+   * 默认走 openai 标准 body。
+   */
+  readonly extraBody?: Readonly<Record<string, unknown>>;
 }
 
 export interface ExtractorOptions {
@@ -152,7 +168,10 @@ export async function callGeminiFlash(
   userMsg: string,
   fetchImpl: FetchFn = fetch,
 ): Promise<GeminiChatResponse> {
-  const body = {
+  // 注意：`response_format: { type: "json_object" }` 不再默认开启，因为火山方舟
+  // Coding Plan（doubao-seed-2.0-pro）不支持该参数；parser 靠 SYSTEM_PROMPT +
+  // parseFactsJson 的 fence/JSON 清洗即可可靠提取。
+  const body: Record<string, unknown> = {
     model: client.model,
     messages: [
       { role: "system", content: systemPrompt },
@@ -160,7 +179,7 @@ export async function callGeminiFlash(
     ],
     max_tokens: client.maxTokens,
     temperature: client.temperature,
-    response_format: { type: "json_object" },
+    ...(client.extraBody ?? {}),
   };
   const resp = await fetchImpl(`${client.baseUrl}/chat/completions`, {
     method: "POST",

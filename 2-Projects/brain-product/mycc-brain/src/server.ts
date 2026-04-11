@@ -1478,12 +1478,16 @@ function scheduleKnowledgeSync() {
       try {
         const { runKnowledgeSyncJob } = await import("./knowledge/knowledge-sync-job.js");
         const brainRoot = resolve(import.meta.dirname, "..");
+        // 2026-04-11 起默认走火山方舟 Coding Plan；优先 ARK_CODING_API_KEY，
+        // fallback GEMINI_PROXY_KEY（历史兼容）
+        const apiKey =
+          process.env.ARK_CODING_API_KEY ?? process.env.GEMINI_PROXY_KEY ?? "";
         const result = await runKnowledgeSyncJob({
           budgetUsd: 0.5,
           maxDocs: 200,
           allowlistPath: resolve(brainRoot, "data", "knowledge-allowlist.json"),
           knowledgeDbPath: resolve(config.dataDir, "knowledge.db"),
-          geminiApiKey: process.env.GEMINI_PROXY_KEY ?? "",
+          geminiApiKey: apiKey,
         });
         console.log("[knowledge-sync]", JSON.stringify({
           docsProcessed: result.docsProcessed,

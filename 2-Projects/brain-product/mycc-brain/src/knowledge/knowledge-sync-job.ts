@@ -87,8 +87,22 @@ export const defaultSyncJobDeps: SyncJobDeps = {
 // 默认值
 // ---------------------------------------------------------------------------
 
-const DEFAULT_GEMINI_BASE_URL = "http://23.226.135.149:4000/v1";
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+/**
+ * 默认 LLM endpoint：火山方舟 Coding Plan（2026-04-11 起替代 Gemini Flash proxy）。
+ *
+ * 切换原因：
+ * - Gemini proxy 429 限流，27/30 docs 冷启动失败
+ * - 方舟 Coding Plan 订阅制，无单次成本，无 rate limit 阻塞
+ * - doubao-seed-2.0-pro 关 thinking 后 latency 5s，质量与 Gemini Flash 相当
+ *
+ * 关键字段：
+ * - thinking: { type: "disabled" } —— 关掉 reasoning_tokens，把延迟从 18s 降到 5s
+ */
+const DEFAULT_GEMINI_BASE_URL = "https://ark.cn-beijing.volces.com/api/coding/v3";
+const DEFAULT_GEMINI_MODEL = "doubao-seed-2.0-pro";
+const DEFAULT_EXTRA_BODY: Readonly<Record<string, unknown>> = Object.freeze({
+  thinking: { type: "disabled" },
+});
 const DEFAULT_PENDING_BATCH_SIZE = 50;
 const DEFAULT_MAX_TOKENS = 4096;
 const DEFAULT_TEMPERATURE = 0.2;
@@ -180,12 +194,17 @@ async function runWithDb(
   const pendingBatchSize = options.pendingBatchSize ?? DEFAULT_PENDING_BATCH_SIZE;
   const pendings = listDocSyncStatesByStatus(db, "pending", pendingBatchSize);
 
+  // 仅在使用方舟默认 baseUrl 时注入 thinking 字段——切回其它 openai-compat
+  // 端点时（如 Gemini proxy）不会污染 body（feedback_openai_compat_fields）
+  const usingArkDefault =
+    (options.geminiBaseUrl ?? DEFAULT_GEMINI_BASE_URL) === DEFAULT_GEMINI_BASE_URL;
   const client: GeminiClientConfig = {
     baseUrl: options.geminiBaseUrl ?? DEFAULT_GEMINI_BASE_URL,
     apiKey: options.geminiApiKey,
     model: options.geminiModel ?? DEFAULT_GEMINI_MODEL,
     maxTokens: DEFAULT_MAX_TOKENS,
     temperature: DEFAULT_TEMPERATURE,
+    extraBody: usingArkDefault ? DEFAULT_EXTRA_BODY : undefined,
   };
 
   let accumulatedCost = 0;
