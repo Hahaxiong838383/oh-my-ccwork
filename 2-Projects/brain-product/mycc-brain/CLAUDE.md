@@ -57,6 +57,7 @@ grep 'mycc-brain v' src/server.ts
 | 0.13.0 | 2026-04-11 | feat: Gemini 6 模型全接入 Admin UI（+8 条路由：2.5-pro、2.5-flash-lite、3-flash-preview、3.1-pro-preview 各 cc/raw 双版本）+ config.ts baseURL 收敛到 gemini-client.ts 常量 |
 | 0.13.1 | 2026-04-11 | fix: 命名漂移修复 `cc/raw-gemini-3.1-flash` → `cc/raw-gemini-3.1-flash-lite`（底层 model 本就是 `gemini-3.1-flash-lite-preview`，路由 key 现在忠实反映）+ 同步 docs/runtime-env.md & docs/vision-daemon.md |
 | 0.13.2 | 2026-04-11 | SQLITE_MISMATCH 修复（items_vec schema 自动迁移 + embed 维度校验 → 1024 对齐 qwen3-embedding:0.6b）|
+| 0.13.3 | 2026-04-11 | items 表 schema 漂移修复：生产遗留 14 列 TEXT PK 版本与代码 3 列 INT PK 不兼容，syncFromMd 长期 datatype mismatch / 'delete-all' 报错。新增 `ensureMemoryItemsSchema`（备份为 items_legacy_{ts} 后 DROP）和 `ensureFtsSchemaVersion`（检测非 external content FTS5 后 DROP），在 CREATE IF NOT EXISTS 前运行，让 initDB 每次可检测 + 重建。数据从 memory-items.md 派生，零丢失。 |
 
 ## Admin UI 版本
 

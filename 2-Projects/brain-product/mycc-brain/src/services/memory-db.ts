@@ -84,6 +84,96 @@ function ensureVecSchemaVersion(db: DB): void {
   }
 }
 
+/**
+ * v0.13.3: 检测 items 表 schema 是否为当前代码期望的 3 列 INTEGER PK 结构。
+ * 不匹配（如生产遗留的 14 列 TEXT PK 版本）则备份到 items_legacy_{ts} 并 DROP，
+ * 让后续 CREATE IF NOT EXISTS 重建为干净 schema。
+ *
+ * 数据损失评估：items 表数据从 memory-items.md 派生，syncFromMd 会重新填充。
+ * 备份仅用于审计/回滚，非生产路径不读取。
+ */
+function ensureMemoryItemsSchema(db: DB): void {
+  try {
+    const row = db.prepare(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='items'"
+    ).get() as { sql?: string } | undefined;
+    if (!row?.sql) return; // 表不存在，CREATE IF NOT EXISTS 会正常建
+
+    const sql = row.sql;
+    // 期望签名：INTEGER PRIMARY KEY AUTOINCREMENT + 仅 3 列（无 scope/quality_score 等遗留列）
+    const isCurrentSchema =
+      sql.includes("INTEGER PRIMARY KEY AUTOINCREMENT") &&
+      !sql.includes("scope") &&
+      !sql.includes("quality_score");
+
+    if (isCurrentSchema) return;
+
+    // 漂移：备份 + DROP
+    const ts = Date.now();
+    const backupName = `items_legacy_${ts}`;
+    console.warn(
+      `[memory-db] items schema outdated (${sql.slice(0, 120)}...), backing up to ${backupName} and rebuilding`
+    );
+    try {
+      db.exec(`CREATE TABLE ${backupName} AS SELECT * FROM items`);
+      const cnt = (db.prepare(
+        `SELECT COUNT(*) as n FROM ${backupName}`
+      ).get() as { n: number }).n;
+      console.log(`[memory-db] ${backupName} backed up ${cnt} rows`);
+    } catch (err) {
+      console.error(`[memory-db] backup to ${backupName} failed:`, err);
+    }
+
+    // 先 DROP items_fts（可能引用 items 作为 external content）
+    try {
+      db.exec("DROP TABLE IF EXISTS items_fts");
+    } catch (err) {
+      console.warn("[memory-db] DROP items_fts during items rebuild:", err);
+    }
+    // 再 DROP items
+    try {
+      db.exec("DROP TABLE IF EXISTS items");
+    } catch (err) {
+      console.error("[memory-db] DROP items failed:", err);
+    }
+  } catch (err) {
+    console.error("[memory-db] ensureMemoryItemsSchema failed:", err);
+  }
+}
+
+/**
+ * v0.13.3: 检测 items_fts 虚表是否为代码期望的 external content FTS5（content='items'）。
+ * 不是则 DROP，让后续 CREATE IF NOT EXISTS 重建。
+ *
+ * 触发场景：items 表本身是当前 schema 但 items_fts 仍是老 contentless 或 regular FTS5 版本。
+ * （如果 items 表漂移，ensureMemoryItemsSchema 已经同时 DROP items_fts 了，本函数无操作）
+ */
+function ensureFtsSchemaVersion(db: DB): void {
+  try {
+    const row = db.prepare(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='items_fts'"
+    ).get() as { sql?: string } | undefined;
+    if (!row?.sql) return;
+
+    const sql = row.sql;
+    const isExternalContent =
+      sql.includes("content='items'") || sql.includes('content="items"');
+
+    if (isExternalContent) return;
+
+    console.warn(
+      `[memory-db] items_fts schema outdated (${sql.slice(0, 120)}...), rebuilding as external content`
+    );
+    try {
+      db.exec("DROP TABLE IF EXISTS items_fts");
+    } catch (err) {
+      console.error("[memory-db] DROP items_fts failed:", err);
+    }
+  } catch (err) {
+    console.error("[memory-db] ensureFtsSchemaVersion failed:", err);
+  }
+}
+
 export async function initDB(dataDir: string): Promise<boolean> {
   if (db) return true;
   if (!(await loadDriver())) return false;
@@ -92,6 +182,10 @@ export async function initDB(dataDir: string): Promise<boolean> {
     const dbPath = join(dataDir, "memory.db");
     db = new Database(dbPath);
     db.pragma("journal_mode = DELETE");
+
+    // v0.13.3: 先检测 items / items_fts schema 漂移并重建（生产遗留的 14 列 TEXT PK 修复）
+    ensureMemoryItemsSchema(db);
+    ensureFtsSchemaVersion(db);
 
     db.exec(`
       CREATE TABLE IF NOT EXISTS items (
