@@ -7,4 +7,6 @@ data/knowledge-completion/
 data/knowledge.db
 data/knowledge.db-*
 data/knowledge-allowlist.json
+# Python venv for vision tools（166M 本地环境，不提交）
+tools/vision/.venv-vision/
 
