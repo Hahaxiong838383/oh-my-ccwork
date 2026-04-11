@@ -14,9 +14,12 @@ import {
   softDeleteByDocToken,
   countKnowledgeItems,
   closeKnowledgeDB,
+  upsertDocSyncState,
+  getDocSyncState,
+  listDocSyncStatesByStatus,
   type KnowledgeDatabase,
 } from "./store.js";
-import type { KnowledgeItemInput } from "./types.js";
+import type { DocSyncState, KnowledgeItemInput } from "./types.js";
 
 const SAMPLE: KnowledgeItemInput = {
   docToken: "tok_1",
@@ -147,5 +150,78 @@ test("keywords persist as JSON string and round-trip correctly", async () => {
       hits.length >= 1,
       "keyword 'fts5' should be indexed into FTS via trigger",
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// doc_sync_state CRUD (P0.1)
+// ---------------------------------------------------------------------------
+
+const SYNC_SAMPLE: DocSyncState = {
+  docToken: "doc_a",
+  docTitle: "知识库入口",
+  spaceId: "space_1",
+  contentHash: "a".repeat(64),
+  lastSyncedAt: 1_700_000_000_000,
+  lastExtractedAt: 0,
+  status: "pending",
+  errorMessage: "",
+};
+
+test("upsertDocSyncState inserts new row and getDocSyncState reads it", async () => {
+  await withDB(async (db) => {
+    upsertDocSyncState(db, SYNC_SAMPLE);
+    const loaded = getDocSyncState(db, "doc_a");
+    assert.ok(loaded);
+    assert.equal(loaded?.docTitle, "知识库入口");
+    assert.equal(loaded?.contentHash, "a".repeat(64));
+    assert.equal(loaded?.status, "pending");
+  });
+});
+
+test("upsertDocSyncState updates existing row via ON CONFLICT", async () => {
+  await withDB(async (db) => {
+    upsertDocSyncState(db, SYNC_SAMPLE);
+    upsertDocSyncState(db, {
+      ...SYNC_SAMPLE,
+      contentHash: "b".repeat(64),
+      status: "extracted",
+      lastExtractedAt: 1_700_000_100_000,
+    });
+    const loaded = getDocSyncState(db, "doc_a");
+    assert.equal(loaded?.contentHash, "b".repeat(64));
+    assert.equal(loaded?.status, "extracted");
+    assert.equal(loaded?.lastExtractedAt, 1_700_000_100_000);
+  });
+});
+
+test("getDocSyncState returns undefined for missing token", async () => {
+  await withDB(async (db) => {
+    assert.equal(getDocSyncState(db, "nope"), undefined);
+  });
+});
+
+test("listDocSyncStatesByStatus filters and limits correctly", async () => {
+  await withDB(async (db) => {
+    upsertDocSyncState(db, { ...SYNC_SAMPLE, docToken: "p1", lastSyncedAt: 1 });
+    upsertDocSyncState(db, { ...SYNC_SAMPLE, docToken: "p2", lastSyncedAt: 2 });
+    upsertDocSyncState(db, { ...SYNC_SAMPLE, docToken: "p3", lastSyncedAt: 3 });
+    upsertDocSyncState(db, {
+      ...SYNC_SAMPLE,
+      docToken: "ex1",
+      status: "extracted",
+    });
+
+    const pending = listDocSyncStatesByStatus(db, "pending");
+    assert.equal(pending.length, 3);
+    // ORDER BY last_synced_at ASC → p1 先
+    assert.equal(pending[0].docToken, "p1");
+
+    const limited = listDocSyncStatesByStatus(db, "pending", 2);
+    assert.equal(limited.length, 2);
+
+    const extracted = listDocSyncStatesByStatus(db, "extracted");
+    assert.equal(extracted.length, 1);
+    assert.equal(extracted[0].docToken, "ex1");
   });
 });

@@ -12,6 +12,7 @@
  * 参考：src/services/memory-db.ts（相同的 FTS5 + 触发器模式）。
  */
 import type {
+  DocSyncState,
   KnowledgeItemInput,
   KnowledgeSearchHit,
 } from "./types.js";
@@ -76,6 +77,21 @@ const SCHEMA_SQL = `
     INSERT INTO knowledge_fts(rowid, namespace, content, keywords)
     VALUES (new.id, new.namespace, new.content, new.keywords);
   END;
+
+  CREATE TABLE IF NOT EXISTS doc_sync_state (
+    doc_token         TEXT PRIMARY KEY,
+    doc_title         TEXT NOT NULL,
+    space_id          TEXT NOT NULL,
+    content_hash      TEXT NOT NULL DEFAULT '',
+    last_synced_at    INTEGER NOT NULL DEFAULT 0,
+    last_extracted_at INTEGER NOT NULL DEFAULT 0,
+    status            TEXT NOT NULL,
+    error_message     TEXT NOT NULL DEFAULT ''
+  );
+  CREATE INDEX IF NOT EXISTS idx_doc_sync_status
+    ON doc_sync_state(status);
+  CREATE INDEX IF NOT EXISTS idx_doc_sync_space
+    ON doc_sync_state(space_id);
 `;
 
 /** 打开（或创建）knowledge.db；`:memory:` 可用于测试 */
@@ -237,4 +253,86 @@ export function closeKnowledgeDB(db: KnowledgeDatabase): void {
   } catch {
     /* ignore */
   }
+}
+
+// ---------------------------------------------------------------------------
+// doc_sync_state CRUD（P0.1 crawler 用）
+// ---------------------------------------------------------------------------
+
+const DOC_SYNC_COLUMNS =
+  "doc_token, doc_title, space_id, content_hash, last_synced_at, last_extracted_at, status, error_message";
+
+function rowToDocSyncState(row: Record<string, unknown>): DocSyncState {
+  return {
+    docToken: row.doc_token as string,
+    docTitle: row.doc_title as string,
+    spaceId: row.space_id as string,
+    contentHash: row.content_hash as string,
+    lastSyncedAt: row.last_synced_at as number,
+    lastExtractedAt: row.last_extracted_at as number,
+    status: row.status as DocSyncState["status"],
+    errorMessage: row.error_message as string,
+  };
+}
+
+/** 插入或更新一条 doc_sync_state（P0.1 crawler 用） */
+export function upsertDocSyncState(
+  db: KnowledgeDatabase,
+  state: DocSyncState,
+): void {
+  const h = db as DbHandle;
+  const stmt = h.prepare(`
+    INSERT INTO doc_sync_state (
+      doc_token, doc_title, space_id, content_hash,
+      last_synced_at, last_extracted_at, status, error_message
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(doc_token) DO UPDATE SET
+      doc_title = excluded.doc_title,
+      space_id = excluded.space_id,
+      content_hash = excluded.content_hash,
+      last_synced_at = excluded.last_synced_at,
+      last_extracted_at = excluded.last_extracted_at,
+      status = excluded.status,
+      error_message = excluded.error_message
+  `);
+  stmt.run(
+    state.docToken,
+    state.docTitle,
+    state.spaceId,
+    state.contentHash,
+    state.lastSyncedAt,
+    state.lastExtractedAt,
+    state.status,
+    state.errorMessage,
+  );
+}
+
+/** 查单条状态，不存在返回 undefined */
+export function getDocSyncState(
+  db: KnowledgeDatabase,
+  docToken: string,
+): DocSyncState | undefined {
+  const h = db as DbHandle;
+  const row = h
+    .prepare(
+      `SELECT ${DOC_SYNC_COLUMNS} FROM doc_sync_state WHERE doc_token = ?`,
+    )
+    .get(docToken) as Record<string, unknown> | undefined;
+  if (!row) return undefined;
+  return rowToDocSyncState(row);
+}
+
+/** 列某个 status 下的所有文档（extractor 用来拉 pending 队列） */
+export function listDocSyncStatesByStatus(
+  db: KnowledgeDatabase,
+  status: DocSyncState["status"],
+  limit = 100,
+): readonly DocSyncState[] {
+  const h = db as DbHandle;
+  const rows = h
+    .prepare(
+      `SELECT ${DOC_SYNC_COLUMNS} FROM doc_sync_state WHERE status = ? ORDER BY last_synced_at ASC LIMIT ?`,
+    )
+    .all(status, limit) as Array<Record<string, unknown>>;
+  return rows.map(rowToDocSyncState);
 }
