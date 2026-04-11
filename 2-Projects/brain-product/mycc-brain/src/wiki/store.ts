@@ -133,17 +133,34 @@ export function tokenizeCjk2Gram(text: string): string {
   return out.join(" ");
 }
 
+const CJK_RE = /[\u4e00-\u9fff\u3400-\u4dbf]/;
+
 /**
  * 把用户 query 转成 FTS5 MATCH 表达式。
  *
  * 策略：tokenize 后每个 token 作为 phrase，OR 拼接。空白或无有效 token → null。
- * 转义双引号避免 FTS5 语法错误。
+ *
+ * **codex HIGH-2 fix**：**查询时过滤 CJK 单字**。
+ * 写入时 `tokenizeCjk2Gram` 把 "公司战略" 扩成 "公司 公 司战 司 战略 战"，
+ * 单字（"公"/"司"/"战"）是为了兜底极端 query 的召回。但如果查询时也把这些单字
+ * OR 进 MATCH，任何 wiki 页只要包含这 1 个高频汉字就能命中，rank 被弱相关噪音污染，
+ * 严重破坏 Phase 2 MCP search 工具的结果质量。
+ *
+ * 保留的 token：① 所有 ASCII / 数字 / 混合段（length ≥ 1）② CJK bigram（length ≥ 2）
+ * 丢弃的 token：CJK 单字。
  */
 function buildFtsQuery(query: string): string | null {
   const cleaned = query.trim();
   if (!cleaned) return null;
   const tokenized = tokenizeCjk2Gram(cleaned);
-  const tokens = tokenized.split(/\s+/).filter((t) => t.length > 0);
+  const tokens = tokenized
+    .split(/\s+/)
+    .filter((t) => t.length > 0)
+    .filter((t) => {
+      if (t.length >= 2) return true;
+      // 单字符：只保留 ASCII（数字/字母），丢弃 CJK 单字
+      return !CJK_RE.test(t);
+    });
   if (tokens.length === 0) return null;
   return tokens
     .map((t) => `"${t.replace(/"/g, "")}"`)
@@ -173,9 +190,12 @@ export async function openWikiDb(dbPath: string): Promise<WikiDatabase | null> {
 
   const p = (async (): Promise<WikiDatabase | null> => {
     if (!(await loadDriver())) return null;
+    // codex HIGH-1 fix：init 任一步失败时必须 close 已创建的连接，
+    // 否则会留下悬空文件句柄/锁，后续重试越来越难恢复
+    let db: unknown = null;
     try {
       const Ctor = DatabaseCtor as new (path: string) => unknown;
-      const db = new Ctor(dbPath);
+      db = new Ctor(dbPath);
       const d = db as {
         pragma: (stmt: string, opts?: { simple?: boolean }) => unknown;
       };
@@ -187,6 +207,14 @@ export async function openWikiDb(dbPath: string): Promise<WikiDatabase | null> {
       return db;
     } catch (err) {
       console.error("[wiki-store] openWikiDb failed:", err);
+      // 资源回收：无论哪一步失败都关闭已打开的 db 句柄
+      if (db) {
+        try {
+          (db as { close: () => void }).close();
+        } catch {
+          /* ignore close failure，主错误已记录 */
+        }
+      }
       return null;
     }
   })();
@@ -422,7 +450,16 @@ export function searchByFts(
 
 /**
  * Soft delete：tombstone=1，同时从 FTS 索引里清掉 rowid 避免命中。
- * @returns 是否找到并删除了 row
+ *
+ * **codex MEDIUM-1 fix：幂等语义**。返回 true 表示"最终状态 = tombstoned"，
+ * 返回 false 表示"路径从未存在"。调用方重试时（含 MCP 客户端网络重放）
+ * 不会因为第二次调用返回 false 而误以为"不存在" —— 真正的 not_found 和
+ * already_deleted 被区分开：
+ *   - 活 row → 首次删除 → 返回 true
+ *   - 已 tombstone → 幂等成功 → 返回 true
+ *   - 不存在该 path → 返回 false
+ *
+ * @returns true 表示路径处于 tombstone 状态；false 表示路径从未存在
  */
 export function softDeleteByPath(db: WikiDatabase, path: string): boolean {
   const d = db as {
@@ -434,13 +471,16 @@ export function softDeleteByPath(db: WikiDatabase, path: string): boolean {
   };
 
   const tx = d.transaction((): boolean => {
+    // 注意：SELECT 不过滤 tombstone —— 需要区分 not_found vs already_deleted
     const row = d
-      .prepare(
-        "SELECT id FROM wiki_documents WHERE path = ? AND tombstone = 0",
-      )
-      .get(path) as { id: number } | undefined;
-    if (!row) return false;
+      .prepare("SELECT id, tombstone FROM wiki_documents WHERE path = ?")
+      .get(path) as { id: number; tombstone: number } | undefined;
+    if (!row) return false; // not_found
 
+    // 已 tombstone：幂等成功，不重复写 db
+    if (row.tombstone === 1) return true;
+
+    // 首次删除：更新 tombstone + 清 FTS 索引
     const now = new Date().toISOString();
     d.prepare(
       "UPDATE wiki_documents SET tombstone = 1, updated_at = ? WHERE id = ?",

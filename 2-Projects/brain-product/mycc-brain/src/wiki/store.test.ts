@@ -336,11 +336,15 @@ test("softDeleteByPath: returns false for non-existent path", async () => {
   });
 });
 
-test("softDeleteByPath: idempotent on already-tombstoned row", async () => {
+test("softDeleteByPath: idempotent on already-tombstoned row (codex MEDIUM-1)", async () => {
   await withMemDb(async (db) => {
     upsertDocument(db, SAMPLE_EN);
+    // 首次删除：true（首次改变状态）
     assert.equal(softDeleteByPath(db, SAMPLE_EN.path), true);
-    // 第二次 delete 时 tombstone=1 已经筛掉，返回 false（没找到"活"的 row）
-    assert.equal(softDeleteByPath(db, SAMPLE_EN.path), false);
+    // 第二次对同一 path：true（幂等成功，路径确实处于 tombstone）
+    // 这样 MCP delete 工具的网络重试不会把已删除误报为 "not_found"
+    assert.equal(softDeleteByPath(db, SAMPLE_EN.path), true);
+    // 对从未存在的 path：false（明确的 not_found 信号）
+    assert.equal(softDeleteByPath(db, "/wiki/never-existed.md"), false);
   });
 });
