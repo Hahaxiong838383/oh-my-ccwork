@@ -1,47 +1,53 @@
-# cc-agent 模型网关配置
-# Gemini（中转）+ MiniMax（直连）
+# cc-agent 模型网关配置 v5.3
+# Gemini 自建中转（6 模型）+ MiniMax 直连
 
 one_api_base: "http://23.226.135.149:4000/v1"
 one_api_key: "${ONE_API_KEY}"
 
-# 可用模型
-# - gemini-2.5-flash     Gemini（中转，偶尔 500）
-# - gemini-2.0-flash     Gemini 备用（中转）
-# - MiniMax-M2.7         MiniMax（直连，稳定，有 think 链）
+# 可用 Gemini 模型（禁用 2.0-*/1.5-*/带日期后缀的）
+# gemini-2.5-flash-lite    0.63s  极速分类/路由
+# gemini-2.5-flash         0.92s  日常首选
+# gemini-2.5-pro           2.00s  深度推理
+# gemini-3-flash-preview   1.43s  3.x 快速
+# gemini-3.1-flash-lite-preview  1.57s  3.x 轻量
+# gemini-3.1-pro-preview   2-15s  最强推理（波动大，慎用）
 
-# 任务路由规则
+# 任务路由：按场景匹配最优模型
 routing:
   default: gemini-2.5-flash
   rules:
-    wiki_compile:
-      model: gemini-2.5-flash
-      fallback: MiniMax-M2.7
-    wiki_query:
-      model: gemini-2.5-flash
-      fallback: MiniMax-M2.7
-    summarize:
-      model: gemini-2.5-flash
-      fallback: MiniMax-M2.7
-    translate:
-      model: MiniMax-M2.7
-    code_review:
-      model: gemini-2.5-flash
-      fallback: MiniMax-M2.7
-    research:
-      model: MiniMax-M2.7
     casual:
-      model: gemini-2.5-flash
+      model: gemini-2.5-flash-lite    # 闲聊秒回 0.63s
+      fallback: gemini-2.5-flash
+    wiki_query:
+      model: gemini-2.5-flash-lite    # 知识检索快速回答
+      fallback: gemini-2.5-flash
+    wiki_compile:
+      model: gemini-2.5-flash         # 知识编译需要质量
+      fallback: gemini-3-flash-preview
+    summarize:
+      model: gemini-2.5-flash         # 摘要平衡速度和质量
+      fallback: gemini-3-flash-preview
+    translate:
+      model: gemini-2.5-flash         # 翻译
+    code_review:
+      model: gemini-2.5-pro           # 代码审查需要推理
+      fallback: gemini-3-flash-preview
+    research:
+      model: gemini-2.5-pro           # 深度调研
       fallback: MiniMax-M2.7
 
 # 辅助 Agent 模型分配
 agents:
-  researcher:
-    model: MiniMax-M2.7
-  compiler:
-    model: gemini-2.5-flash
-    fallback: MiniMax-M2.7
   assistant:
-    model: gemini-2.5-flash
-    fallback: MiniMax-M2.7
+    model: gemini-2.5-flash-lite      # 日常交互，极速
+    fallback: gemini-2.5-flash
+  compiler:
+    model: gemini-2.5-flash           # 知识编译
+    fallback: gemini-3-flash-preview
+  researcher:
+    model: gemini-2.5-pro             # 深度调研
+    fallback: gemini-3-flash-preview
   reviewer:
-    model: MiniMax-M2.7
+    model: gemini-2.5-pro             # 方案评审
+    fallback: MiniMax-M2.7
