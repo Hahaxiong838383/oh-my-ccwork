@@ -167,7 +167,7 @@ export function loadConfig(): BrainConfig {
       // ─── Gemini 在线模型（通过 Gemini Proxy wrapper v5.3）───
       // 唯一事实来源：docs/gemini-calling-rules.md §2.1（6 个生产可用模型）
       // 路由命名：cc- 前缀 = brain 人格注入版，raw- 前缀 = 裸调版
-      // 注：cc-gemini-3.1-flash 底层是 gemini-3.1-flash-lite-preview（历史命名，保留以免前端已保存选择失效）
+      // 命名规则：路由 key 的 suffix 与底层 model 保持语义一致（preview 后缀省略）
 
       // 2.5 系列 — 稳定、成本可控、延迟低
       "cc-gemini-2.5-pro": {
@@ -230,14 +230,14 @@ export function loadConfig(): BrainConfig {
         model: "gemini-3-flash-preview",
         apiKey: GEMINI_API_KEY,
       },
-      "cc-gemini-3.1-flash": {
+      "cc-gemini-3.1-flash-lite": {
         adapter: "openai-compat",
         brain: true,
         baseURL: GEMINI_BASE_URL,
         model: "gemini-3.1-flash-lite-preview",
         apiKey: GEMINI_API_KEY,
       },
-      "raw-gemini-3.1-flash": {
+      "raw-gemini-3.1-flash-lite": {
         adapter: "openai-compat",
         brain: false,
         baseURL: GEMINI_BASE_URL,

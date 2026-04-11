@@ -69,10 +69,10 @@ npm start
 NO_PROXY='*' no_proxy='*' curl --noproxy '*' -s http://127.0.0.1:19080/v1/models
 ```
 
-4. 用 `cc-gemini-3.1-flash` 做 brain 路由验证，用 `raw-gemini-3.1-flash` 做对照验证
+4. 用 `cc-gemini-3.1-flash-lite` 做 brain 路由验证，用 `raw-gemini-3.1-flash-lite` 做对照验证
 
 ## 当前结论
 
-- `cc-gemini-3.1-flash` 已验证能正确消费环境感知上下文
-- `raw-gemini-3.1-flash` 不知道环境状态
+- `cc-gemini-3.1-flash-lite` 已验证能正确消费环境感知上下文
+- `raw-gemini-3.1-flash-lite` 不知道环境状态
 - 这说明默认模型、环境变量加载、brain/raw 路由分流三者都已经打通

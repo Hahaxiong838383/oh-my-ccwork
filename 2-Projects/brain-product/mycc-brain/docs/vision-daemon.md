@@ -164,5 +164,5 @@ stale(>60s) ──→ brain 忽略视觉（fail-open）
 - `latest.json` 已验证能写出 `audioLevel/audioMethod/audioAvailable`
 - `/admin/api/visual-status` 已验证能返回音频字段
 - `user-state.ts` 已验证能从视觉/音频上下文推断 `attention` 和 `noiseLevel`
-- `cc-gemini-3.1-flash` 已验证能正确消费环境感知上下文，当前推荐作为默认 brain 模型
-- `raw-gemini-3.1-flash` 对照验证明确表示“不知道环境状态”，证明环境感知只注入 brain 路由
+- `cc-gemini-3.1-flash-lite` 已验证能正确消费环境感知上下文，当前推荐作为默认 brain 模型
+- `raw-gemini-3.1-flash-lite` 对照验证明确表示“不知道环境状态”，证明环境感知只注入 brain 路由
