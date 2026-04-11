@@ -288,7 +288,7 @@ const server = http.createServer(async (req, res) => {
     const expHistory = getRecentDayStats(brainRoot, 7);
     const patches = listPatches(brainRoot);
     json(res, 200, {
-      version: "0.11.0",
+      version: "0.13.0",
       uptime: process.uptime(),
       stats: brainApi.getStats(),
       routes: Object.fromEntries(
@@ -1339,6 +1339,201 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ─── 知识库面板 API（v0.12.0+，v0.12.2 起带预算约束） ───
+  // 独立于 knowledgeSearch 的 singleton DB 连接，每次 open+close；SQLite WAL 支持多连接
+  if (path === "/admin/api/knowledge/stats" && req.method === "GET") {
+    try {
+      const {
+        openKnowledgeDB: openK,
+        closeKnowledgeDB: closeK,
+        countKnowledgeItems,
+        topNamespaces,
+        countByDocSyncStatus,
+        dailyItemTrend,
+        lastSyncedAt,
+      } = await import("./knowledge/store.js");
+      const { readSearchLog, aggregateSearchLog } = await import("./knowledge/search-log.js");
+      const dbPath = resolve(config.dataDir, "knowledge.db");
+      const db = await openK(dbPath);
+      if (!db) {
+        json(res, 200, {
+          version: "0.13.0",
+          items: { total: 0, byNamespace: [] },
+          docs: { total: 0, byStatus: { pending: 0, synced: 0, extracted: 0, failed: 0 } },
+          lastSync: 0,
+          trend7d: [],
+          searchLog24h: { total: 0, triggered: 0, hit: 0, miss: 0, untriggered: 0, avgLatencyMs: 0 },
+          warning: "knowledge.db 未找到或 better-sqlite3 不可用",
+        });
+        return;
+      }
+      try {
+        const total = countKnowledgeItems(db);
+        const byNamespace = topNamespaces(db, 10);
+        const byStatus = countByDocSyncStatus(db);
+        const docsTotal = Object.values(byStatus).reduce((s, n) => s + n, 0);
+        const trend7d = dailyItemTrend(db, 7);
+        const lastSync = lastSyncedAt(db);
+        const logPath = resolve(config.dataDir, "knowledge-search.jsonl");
+        const events = await readSearchLog(logPath, 24 * 60 * 60 * 1000);
+        const agg = aggregateSearchLog(events, 24 * 60 * 60 * 1000);
+        json(res, 200, {
+          version: "0.13.0",
+          items: { total, byNamespace },
+          docs: { total: docsTotal, byStatus },
+          lastSync,
+          trend7d,
+          searchLog24h: {
+            total: agg.total,
+            triggered: agg.triggered,
+            hit: agg.hit,
+            miss: agg.miss,
+            untriggered: agg.untriggered,
+            avgLatencyMs: agg.avgLatencyMs,
+          },
+        });
+      } finally {
+        closeK(db);
+      }
+    } catch (err: unknown) {
+      json(res, 500, { error: err instanceof Error ? err.message : "Unknown error" });
+    }
+    return;
+  }
+
+  if (path === "/admin/api/knowledge/docs" && req.method === "GET") {
+    try {
+      const {
+        openKnowledgeDB: openK,
+        closeKnowledgeDB: closeK,
+        listAllDocSync,
+        countItemsByDocToken,
+      } = await import("./knowledge/store.js");
+      const status = url.searchParams.get("status") as
+        | "pending"
+        | "synced"
+        | "extracted"
+        | "failed"
+        | null;
+      const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50", 10) || 50, 200);
+      const offset = Math.max(parseInt(url.searchParams.get("offset") ?? "0", 10) || 0, 0);
+      const dbPath = resolve(config.dataDir, "knowledge.db");
+      const db = await openK(dbPath);
+      if (!db) {
+        json(res, 200, { docs: [], total: 0, warning: "knowledge.db 未找到" });
+        return;
+      }
+      try {
+        const docs = listAllDocSync(db, { status: status ?? undefined, limit, offset });
+        const withCounts = docs.map((d) => ({
+          docToken: d.docToken,
+          docTitle: d.docTitle,
+          spaceId: d.spaceId,
+          status: d.status,
+          lastSyncedAt: d.lastSyncedAt,
+          lastExtractedAt: d.lastExtractedAt,
+          errorMessage: d.errorMessage,
+          itemsCount: countItemsByDocToken(db, d.docToken),
+          sourceUrl: `https://f.wps.cn/l/${d.docToken}`, // 飞书 wiki 直链占位（实际 URL 由 extractor 写入 source_url，docs 表没存；这里给跳转）
+        }));
+        json(res, 200, { docs: withCounts, total: withCounts.length });
+      } finally {
+        closeK(db);
+      }
+    } catch (err: unknown) {
+      json(res, 500, { error: err instanceof Error ? err.message : "Unknown error" });
+    }
+    return;
+  }
+
+  if (path === "/admin/api/knowledge/items" && req.method === "GET") {
+    try {
+      const {
+        openKnowledgeDB: openK,
+        closeKnowledgeDB: closeK,
+        listItemsByDocToken,
+        listItemsByNamespace,
+      } = await import("./knowledge/store.js");
+      const docToken = url.searchParams.get("docToken");
+      const namespace = url.searchParams.get("namespace");
+      const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50", 10) || 50, 200);
+      if (!docToken && !namespace) {
+        json(res, 400, { error: "Missing docToken or namespace param" });
+        return;
+      }
+      const dbPath = resolve(config.dataDir, "knowledge.db");
+      const db = await openK(dbPath);
+      if (!db) {
+        json(res, 200, { items: [], warning: "knowledge.db 未找到" });
+        return;
+      }
+      try {
+        const items = docToken
+          ? listItemsByDocToken(db, docToken, limit)
+          : listItemsByNamespace(db, namespace as string, limit);
+        json(res, 200, { items });
+      } finally {
+        closeK(db);
+      }
+    } catch (err: unknown) {
+      json(res, 500, { error: err instanceof Error ? err.message : "Unknown error" });
+    }
+    return;
+  }
+
+  if (path === "/admin/api/knowledge/search-log" && req.method === "GET") {
+    try {
+      const { readSearchLog, aggregateSearchLog, filterEvents, parseWindow } = await import(
+        "./knowledge/search-log.js"
+      );
+      const windowMs = parseWindow(url.searchParams.get("window"));
+      const filter = (url.searchParams.get("filter") ?? "all") as
+        | "all"
+        | "hit"
+        | "miss"
+        | "untriggered";
+      const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "100", 10) || 100, 500);
+      const logPath = resolve(config.dataDir, "knowledge-search.jsonl");
+      const allEvents = await readSearchLog(logPath, windowMs);
+      const filtered = filterEvents(allEvents, filter);
+      const agg = aggregateSearchLog(allEvents, windowMs);
+      // 只返回最近 limit 条（倒序）
+      const recent = filtered.slice(-limit).reverse();
+      json(res, 200, { aggregate: agg, events: recent });
+    } catch (err: unknown) {
+      json(res, 500, { error: err instanceof Error ? err.message : "Unknown error" });
+    }
+    return;
+  }
+
+  // POST /admin/api/knowledge/docs/:docToken/mark-stale
+  {
+    const markStaleMatch = /^\/admin\/api\/knowledge\/docs\/([^/]+)\/mark-stale$/.exec(path);
+    if (markStaleMatch && req.method === "POST") {
+      try {
+        const docToken = decodeURIComponent(markStaleMatch[1]);
+        const { openKnowledgeDB: openK, closeKnowledgeDB: closeK, markDocStale } = await import(
+          "./knowledge/store.js"
+        );
+        const dbPath = resolve(config.dataDir, "knowledge.db");
+        const db = await openK(dbPath);
+        if (!db) {
+          json(res, 500, { error: "knowledge.db 不可用" });
+          return;
+        }
+        try {
+          const result = markDocStale(db, docToken);
+          json(res, 200, { success: true, ...result });
+        } finally {
+          closeK(db);
+        }
+      } catch (err: unknown) {
+        json(res, 500, { error: err instanceof Error ? err.message : "Unknown error" });
+      }
+      return;
+    }
+  }
+
   // Health
   if (path === "/health") {
     json(res, 200, { status: "ok", service: "mycc-brain" });
@@ -1536,7 +1731,7 @@ function scheduleWeeklyVisionReview() {
 initMcpConnections().then(() => {
   server.listen(config.port, "0.0.0.0", () => {
     const memExists = existsSync(resolve(config.dataDir, "memory-items.md"));
-    console.log(`\n🧠 mycc-brain v0.11.0 (方舟 Coding Plan 进 Admin UI + extraBody adapter)`);
+    console.log(`\n🧠 mycc-brain v0.13.0 (Gemini 6 模型全接入 + 统一入口 src/llm/gemini-client.ts)`);
     console.log(`   API:   http://0.0.0.0:${config.port}/v1/chat/completions`);
     console.log(`   Admin: http://0.0.0.0:${config.port}/admin`);
     console.log(`   Data:  ${config.dataDir} (${existsSync(config.dataDir) ? "✅" : "❌ not found"})`);

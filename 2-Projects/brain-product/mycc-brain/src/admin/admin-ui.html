@@ -118,6 +118,8 @@ body{font-family:var(--font-sans);background:var(--bg-body);color:var(--text-pri
 .mem-inj-tog:hover{color:var(--text-secondary)}
 .mem-inj-body{display:none;margin-top:6px;padding:8px;background:var(--bg-input);border-radius:6px;font-size:11px;color:var(--text-secondary);max-height:200px;overflow-y:auto;white-space:pre-wrap}
 .mem-inj.exp .mem-inj-body{display:block}
+.k-hit{padding:4px 6px;margin-bottom:4px;background:rgba(139,92,246,0.12);border-left:2px solid #8b5cf6;border-radius:3px;color:var(--text-primary);font-size:11px;white-space:normal}
+.k-hit b{color:#a78bfa}
 
 /* ─── Input Bar ─── */
 .input-bar{padding:16px 20px;flex-shrink:0}
@@ -352,6 +354,7 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
       <button class="nav-item" data-view="memory" onclick="switchView('memory')">🧠 记忆面板</button>
       <button class="nav-item" data-view="graph" onclick="switchView('graph')">🕸 架构图谱</button>
       <button class="nav-item" data-view="observe" onclick="switchView('observe')">👁 可观测</button>
+      <button class="nav-item" data-view="knowledge" onclick="switchView('knowledge')">📚 知识库</button>
       <button class="nav-item" onclick="openSessionManager()" title="管理会话">📋 管理会话</button>
     </div>
   </aside>
@@ -522,6 +525,38 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
         </div>
       </div>
     </div>
+    <!-- Knowledge View (v0.12.0 — 外挂知识系统面板) -->
+    <div id="view-knowledge" class="panel-view" style="display:none;padding:24px;overflow-y:auto;height:calc(100vh - 20px)">
+      <h2 style="margin-bottom:16px;font-size:18px">📚 知识库面板</h2>
+      <!-- 召回日志（头牌，最能降 steering_tax） -->
+      <div class="card">
+        <h3>召回日志 <span style="font-size:11px;color:var(--text-dim);font-weight:400">(24h，第五路检索 knowledge-search.jsonl)</span></h3>
+        <div id="kwLogContent" style="color:var(--text-dim)">加载中...</div>
+      </div>
+      <!-- 概览 -->
+      <div class="card">
+        <h3>健康概览</h3>
+        <div class="stat-row">
+          <div class="stat"><div class="value" id="kwTotal">-</div><div class="label">知识条目</div></div>
+          <div class="stat"><div class="value" id="kwDocs">-</div><div class="label">文档</div></div>
+          <div class="stat"><div class="value" id="kwNs">-</div><div class="label">命名空间</div></div>
+          <div class="stat"><div class="value" id="kwLast">-</div><div class="label">最近同步</div></div>
+          <div class="stat"><div class="value" id="kwFailed">-</div><div class="label">失败</div></div>
+        </div>
+        <div id="kwTopNs" style="margin-top:12px"></div>
+      </div>
+      <!-- 同步队列 -->
+      <div class="card">
+        <h3>同步队列 <span style="font-size:11px;color:var(--text-dim);font-weight:400">点击状态切换筛选</span></h3>
+        <div id="kwDocsFilter" style="margin-bottom:8px"></div>
+        <div id="kwDocsList" style="color:var(--text-dim)">加载中...</div>
+      </div>
+      <!-- Namespace 浏览器 -->
+      <div class="card">
+        <h3>Namespace 浏览器</h3>
+        <div id="kwNsList" style="color:var(--text-dim)">加载中...</div>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -547,8 +582,8 @@ td code{background:var(--border);padding:2px 6px;border-radius:4px;font-size:12p
 <script src="/static/vendor/three.min.js"></script>
 <script src="/static/vendor/3d-force-graph.min.js"></script>
 <script>
-const ADMIN_UI_VERSION = 'v2.7';
-const ADMIN_UI_DATE = '2026-04-08';
+const ADMIN_UI_VERSION = 'v2.8';
+const ADMIN_UI_DATE = '2026-04-11';
 const ADMIN_UI_LABEL = `${ADMIN_UI_VERSION} · ${ADMIN_UI_DATE}`;
 
 /* ═══════════════════════════════════════════════════
@@ -706,7 +741,7 @@ async function archiveMsgs(sess, msgs) {
 /* ═══════════════════════════════════════════════════
    View Switching
    ═══════════════════════════════════════════════════ */
-const VIEWS = ['chat', 'dashboard', 'config', 'evolution', 'patches', 'memory', 'graph', 'observe'];
+const VIEWS = ['chat', 'dashboard', 'config', 'evolution', 'patches', 'memory', 'graph', 'observe', 'knowledge'];
 function switchView(name) {
   S.view = name;
   VIEWS.forEach(v => { const el = document.getElementById('view-' + v); if (el) el.style.display = v === name ? (v === 'chat' ? 'flex' : 'block') : 'none'; });
@@ -718,6 +753,7 @@ function switchView(name) {
   else if (name === 'memory') loadMemoryPanel();
   else if (name === 'graph') loadGraph();
   else if (name === 'observe') loadObserve();
+  else if (name === 'knowledge') loadKnowledge();
   if (name !== 'observe' && _observeTimer) { clearInterval(_observeTimer); _observeTimer = null; }
   history.replaceState(null, '', '#' + name);
 }
@@ -787,9 +823,16 @@ function rCmpMsg(m) {
       <div class="msg-meta">${raw.latency || '-'}ms TTFT | ${raw.tokPerSec || '-'} tok/s | ${raw.tokens || 0} tokens</div></div>
     <div class="cmp-side"><div class="cmp-label brain">🧠 Brain</div>${brThinkHtml}<div class="cmp-content">${esc(brSplit.body)}</div>
       <div class="msg-meta">${br.latency || '-'}ms TTFT | ${br.tokPerSec || '-'} tok/s | ${br.tokens || 0} tokens</div>`;
-  if (br.injectedCategories || br.itemCount)
-    h += `<div class="mem-inj"><div class="mem-inj-tog" onclick="this.parentElement.classList.toggle('exp')">📎 记忆注入 (${(br.injectedCategories||[]).join(', ')||'无'}, ${br.itemCount||0} 条)</div>
-      <div class="mem-inj-body">${esc(br.context || '无注入内容')}</div></div>`;
+  if (br.injectedCategories || br.itemCount || (br.retrievalPaths||[]).includes('knowledge')) {
+    const paths = br.retrievalPaths || [];
+    const hasK = paths.includes('knowledge');
+    const catLabel = [...(br.injectedCategories||[]), ...(hasK ? ['🔖knowledge'] : [])].join(', ') || '无';
+    const kHits = (br.knowledge || []).map(k =>
+      `<div class="k-hit">[${esc(k.namespace||'')}] <b>${esc(k.docTitle||'')}</b>: ${esc((k.content||'').slice(0,120))}${(k.content||'').length>120?'…':''}</div>`
+    ).join('');
+    h += `<div class="mem-inj"><div class="mem-inj-tog" onclick="this.parentElement.classList.toggle('exp')">📎 记忆注入 (${catLabel}, ${br.itemCount||0} 条)</div>
+      <div class="mem-inj-body">${kHits}${esc(br.context || '无注入内容')}</div></div>`;
+  }
   return h + '</div></div></div>';
 }
 function rAgentMsg(m, idx) {
@@ -819,8 +862,14 @@ function rMeta(mt) {
 function rMemInj(mt) {
   if (!mt.injected) return '';
   const inj = mt.injected;
-  return `<div class="mem-inj"><div class="mem-inj-tog" onclick="this.parentElement.classList.toggle('exp')">📎 记忆注入 (${(inj.categories||[]).join(', ')||'无'}, ${inj.itemCount||0} 条)</div>
-    <div class="mem-inj-body">${esc(inj.context || '无注入内容')}</div></div>`;
+  const paths = inj.retrievalPaths || [];
+  const hasK = paths.includes('knowledge');
+  const catLabel = [...(inj.categories||[]), ...(hasK ? ['🔖knowledge'] : [])].join(', ') || '无';
+  const kHits = (inj.knowledge || []).map(k =>
+    `<div class="k-hit">[${esc(k.namespace||'')}] <b>${esc(k.docTitle||'')}</b>: ${esc((k.content||'').slice(0,120))}${(k.content||'').length>120?'…':''}</div>`
+  ).join('');
+  return `<div class="mem-inj"><div class="mem-inj-tog" onclick="this.parentElement.classList.toggle('exp')">📎 记忆注入 (${catLabel}, ${inj.itemCount||0} 条)</div>
+    <div class="mem-inj-body">${kHits}${esc(inj.context || '无注入内容')}</div></div>`;
 }
 function updMetrics(mt) {
   const el = document.getElementById('chatMetrics'), p = [];
@@ -873,7 +922,7 @@ async function sendChat(sess, text) {
   if (d.error) throw new Error(d.error);
   const toks = d.usage?.total_tokens || 0, tokS = elapsed > 0 ? (toks / elapsed * 1000).toFixed(1) : '?';
   let injected = null;
-  if (memR) { try { const md = await memR.json(); if (md.matchedCategories?.length || md.itemCount) injected = { categories: md.matchedCategories, itemCount: md.itemCount, context: md.context }; } catch {} }
+  if (memR) { try { const md = await memR.json(); if (md.matchedCategories?.length || md.itemCount || (md.retrievalPaths||[]).includes('knowledge')) injected = { categories: md.matchedCategories, itemCount: md.itemCount, context: md.context, retrievalPaths: md.retrievalPaths || [], knowledge: md.knowledge || [] }; } catch {} }
   sess.messages.push({ role: 'assistant', content: d.content, ts: new Date().toISOString(),
     meta: { mode: 'chat', model, ttft: elapsed, tokPerSec: parseFloat(tokS), tokens: toks, injected } });
 }
@@ -1448,6 +1497,179 @@ function togMemCat(i) {
 function filterMemItems(val) {
   _memFilter = val.toLowerCase();
   if (_memData) renderMemCategories(_memData.categories);
+}
+
+/* ═══════════════════════════════════════════════════
+   Knowledge Panel (v0.12.0 — 外挂知识系统)
+   ═══════════════════════════════════════════════════ */
+let _kwDocFilter = 'all';
+let _kwStats = null;
+
+async function loadKnowledge() {
+  // 并行拉 stats + docs + search-log
+  try {
+    const [sR, dR, lR] = await Promise.all([
+      aFetch('/admin/api/knowledge/stats'),
+      aFetch('/admin/api/knowledge/docs?limit=100'),
+      aFetch('/admin/api/knowledge/search-log?window=24h&filter=all&limit=50'),
+    ]);
+    const stats = await sR.json();
+    const docs = await dR.json();
+    const log = await lR.json();
+    _kwStats = stats;
+    renderKwOverview(stats);
+    renderKwSearchLog(log);
+    renderKwDocs(docs.docs || []);
+    renderKwNamespaces(stats);
+  } catch (e) {
+    if (e.message !== 'Unauthorized') {
+      const c = document.getElementById('kwLogContent');
+      if (c) c.innerHTML = '<span style="color:var(--danger)">加载失败: '+esc(e.message)+'</span>';
+    }
+  }
+}
+
+function renderKwOverview(stats) {
+  const $ = id => document.getElementById(id);
+  $('kwTotal').textContent = (stats.items && stats.items.total) || 0;
+  $('kwDocs').textContent = (stats.docs && stats.docs.total) || 0;
+  const byNs = (stats.items && stats.items.byNamespace) || [];
+  $('kwNs').textContent = byNs.length;
+  const lastSync = stats.lastSync || 0;
+  $('kwLast').textContent = lastSync > 0 ? new Date(lastSync).toLocaleDateString('zh-CN', {month:'numeric',day:'numeric'}) : '—';
+  const byStatus = (stats.docs && stats.docs.byStatus) || {};
+  const failed = byStatus.failed || 0;
+  $('kwFailed').innerHTML = failed > 0 ? '<span style="color:var(--danger)">'+failed+'</span>' : '0';
+  // Top namespace bars
+  const el = $('kwTopNs');
+  if (byNs.length === 0) { el.innerHTML = ''; return; }
+  const max = Math.max(...byNs.map(n => n.count), 1);
+  el.innerHTML = '<div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">Top Namespaces</div>' +
+    byNs.map(n => {
+      const pct = Math.max((n.count/max)*100, 2);
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px">
+        <code style="color:var(--text-secondary);min-width:200px;word-break:break-all">${esc(n.namespace)}</code>
+        <div style="flex:1;height:6px;background:var(--bg-input);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#818cf8"></div></div>
+        <span style="color:#818cf8;min-width:30px;text-align:right">${n.count}</span>
+      </div>`;
+    }).join('');
+}
+
+function renderKwSearchLog(log) {
+  const el = document.getElementById('kwLogContent');
+  if (!el) return;
+  const a = log && log.aggregate ? log.aggregate : null;
+  if (!a || a.total === 0) {
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:8px 0">24h 内无第五路检索流量<br><br><span style="font-size:11px">（需 KNOWLEDGE_SEARCH_ENABLED=true 才会记录；知识库检索默认 off）</span></div>';
+    return;
+  }
+  const triggeredRate = a.total > 0 ? ((a.triggered / a.total) * 100).toFixed(0) : 0;
+  const hitRate = a.triggered > 0 ? ((a.hit / a.triggered) * 100).toFixed(0) : 0;
+  let html = `<div class="stat-row" style="margin-bottom:12px">
+    <div class="stat"><div class="value">${a.total}</div><div class="label">总检索</div></div>
+    <div class="stat"><div class="value" style="color:#818cf8">${triggeredRate}%</div><div class="label">触发率</div></div>
+    <div class="stat"><div class="value" style="color:${hitRate>50?'var(--success)':'var(--warning)'}">${hitRate}%</div><div class="label">命中率</div></div>
+    <div class="stat"><div class="value">${a.avgLatencyMs}<span style="font-size:11px">ms</span></div><div class="label">平均延迟</div></div>
+  </div>`;
+  html += renderKwLogSection('🔴 未触发（疑似漏过白名单）', a.topUntriggeredQueries, 'var(--danger)');
+  html += renderKwLogSection('🟠 触发零召回（该补 wiki）', a.topMissQueries, 'var(--warning)');
+  html += renderKwLogSection('🟢 触发命中', a.topHitQueries, 'var(--success)');
+  el.innerHTML = html;
+}
+
+function renderKwLogSection(title, items, color) {
+  if (!items || items.length === 0) return '';
+  let h = `<div style="margin-top:10px"><div style="font-size:12px;color:${color};font-weight:600;margin-bottom:6px">${title}</div><table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left;color:var(--text-dim);font-weight:500;padding:4px 0">Query</th><th style="text-align:right;color:var(--text-dim);font-weight:500">次数</th></tr></thead><tbody>`;
+  for (const it of items) {
+    h += `<tr><td style="padding:4px 0;color:var(--text-secondary);word-break:break-all">${esc(it.sample || '(空)')} <span style="color:var(--text-dim);font-size:10px">${it.hash}</span></td><td style="text-align:right;color:#818cf8">${it.count}</td></tr>`;
+  }
+  h += '</tbody></table></div>';
+  return h;
+}
+
+function renderKwDocs(docs) {
+  const filterEl = document.getElementById('kwDocsFilter');
+  const listEl = document.getElementById('kwDocsList');
+  if (!filterEl || !listEl) return;
+  // Filter buttons
+  const statuses = ['all', 'extracted', 'synced', 'pending', 'failed'];
+  filterEl.innerHTML = statuses.map(s => {
+    const active = _kwDocFilter === s;
+    return `<button onclick="setKwDocFilter('${s}')" style="background:${active?'#818cf8':'var(--bg-input)'};color:${active?'#fff':'var(--text-secondary)'};border:1px solid var(--border);border-radius:6px;padding:4px 10px;margin-right:6px;font-size:11px;cursor:pointer">${s}</button>`;
+  }).join('');
+  const filtered = _kwDocFilter === 'all' ? docs : docs.filter(d => d.status === _kwDocFilter);
+  if (filtered.length === 0) { listEl.innerHTML = '<span style="color:var(--text-dim);font-size:12px">无匹配文档</span>'; return; }
+  const statusColor = { extracted: 'var(--success)', synced: '#818cf8', pending: 'var(--warning)', failed: 'var(--danger)' };
+  listEl.innerHTML = '<table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left;color:var(--text-dim);font-weight:500;padding:4px 0">标题</th><th style="text-align:left;color:var(--text-dim);font-weight:500">状态</th><th style="text-align:right;color:var(--text-dim);font-weight:500">条目</th><th style="text-align:right;color:var(--text-dim);font-weight:500">最近同步</th><th></th></tr></thead><tbody>' +
+    filtered.map(d => {
+      const dt = d.lastSyncedAt > 0 ? new Date(d.lastSyncedAt).toLocaleDateString('zh-CN', {month:'numeric',day:'numeric'}) : '—';
+      const color = statusColor[d.status] || 'var(--text-dim)';
+      const err = d.errorMessage ? `<span style="color:var(--danger);font-size:10px" title="${esc(d.errorMessage)}">⚠</span>` : '';
+      const canStale = d.status !== 'pending';
+      const btn = canStale ? `<button onclick="kwMarkStale('${esc(d.docToken)}')" style="background:var(--bg-input);color:var(--warning);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer">标记 stale</button>` : '';
+      return `<tr><td style="padding:6px 4px 6px 0;color:var(--text-secondary);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(d.docTitle)}">${esc(d.docTitle)} ${err}</td><td style="padding:6px 0;color:${color}">${d.status}</td><td style="text-align:right;color:#818cf8">${d.itemsCount}</td><td style="text-align:right;color:var(--text-dim);font-size:11px">${dt}</td><td style="text-align:right;padding:6px 0 6px 8px">${btn}</td></tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+function setKwDocFilter(s) {
+  _kwDocFilter = s;
+  aFetch('/admin/api/knowledge/docs?limit=100').then(r => r.json()).then(d => renderKwDocs(d.docs || [])).catch(()=>{});
+}
+
+async function kwMarkStale(docToken) {
+  if (!confirm('确认标记此文档为 pending？下次 cron（03:00）会重爬。')) return;
+  try {
+    const r = await aFetch('/admin/api/knowledge/docs/' + encodeURIComponent(docToken) + '/mark-stale', { method: 'POST', headers: authH() });
+    const d = await r.json();
+    if (d.success) {
+      alert('已标记 stale（prev=' + (d.prevStatus || 'unknown') + '）。下次 cron 重爬。');
+      loadKnowledge();
+    } else {
+      alert('操作失败: ' + (d.error || 'unknown'));
+    }
+  } catch (e) {
+    if (e.message !== 'Unauthorized') alert('操作失败: ' + e.message);
+  }
+}
+
+function renderKwNamespaces(stats) {
+  const el = document.getElementById('kwNsList');
+  if (!el) return;
+  const byNs = (stats.items && stats.items.byNamespace) || [];
+  if (byNs.length === 0) { el.innerHTML = '<span style="color:var(--text-dim);font-size:12px">无数据</span>'; return; }
+  el.innerHTML = byNs.map((n, i) => `<div class="mem-cat" style="margin-bottom:6px">
+    <div onclick="togKwNs(${i}, '${esc(n.namespace).replace(/'/g,"\\'")}')" style="cursor:pointer;padding:8px 12px;background:var(--bg-input);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+      <code style="font-size:12px;color:var(--text-primary);word-break:break-all">${esc(n.namespace)}</code>
+      <span style="font-size:12px;color:var(--text-dim)">${n.count} 条 ▾</span>
+    </div>
+    <div id="kwNsBody_${i}" style="display:none;padding:4px 0 4px 12px;font-size:12px;color:var(--text-secondary)"></div>
+  </div>`).join('');
+}
+
+async function togKwNs(i, namespace) {
+  const body = document.getElementById('kwNsBody_' + i);
+  if (!body) return;
+  if (body.style.display === 'block') { body.style.display = 'none'; return; }
+  body.style.display = 'block';
+  if (body.dataset.loaded) return;
+  body.innerHTML = '<span style="color:var(--text-dim)">加载中...</span>';
+  try {
+    const r = await aFetch('/admin/api/knowledge/items?namespace=' + encodeURIComponent(namespace) + '&limit=30');
+    const d = await r.json();
+    const items = d.items || [];
+    if (items.length === 0) { body.innerHTML = '<span style="color:var(--text-dim)">暂无条目</span>'; return; }
+    body.innerHTML = items.map(it => `<div style="padding:6px 0;border-bottom:1px solid var(--bg-input)">
+      <div>${esc(it.content)}</div>
+      <div style="margin-top:2px;font-size:10px;color:var(--text-dim)">
+        ${(it.keywords || []).map(k => '<span style="background:#312e81;color:#a5b4fc;padding:1px 5px;border-radius:4px;margin-right:4px">#'+esc(k)+'</span>').join('')}
+        <span style="margin-left:6px">conf: ${(it.confidence||0).toFixed(2)}</span>
+        ${it.sourceUrl ? `<a href="${esc(it.sourceUrl)}" target="_blank" style="color:#818cf8;margin-left:6px">原文 ↗</a>` : ''}
+      </div>
+    </div>`).join('');
+    body.dataset.loaded = '1';
+  } catch(e) {
+    body.innerHTML = '<span style="color:var(--danger)">加载失败</span>';
+  }
 }
 
 /* ═══════════════════════════════════════════════════

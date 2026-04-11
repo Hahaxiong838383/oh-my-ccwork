@@ -1,16 +1,23 @@
 /**
  * judge-evaluator.ts — 生成层 LLM-as-Judge 评测
  *
- * Judge: Gemini 2.0 Flash（跨家族，消除同源偏差）
+ * Judge: Gemini 2.5 Flash（跨家族，消除同源偏差）
  * A/B 顺序随机化（防位置偏差）
  * 5+2 维度评分
+ *
+ * 所有 Gemini 调用走 `src/llm/gemini-client.ts` 统一入口，白名单 + thinking
+ * 映射 + 超时 + 错误归一化由 gemini-client 处理。遵守 docs/gemini-calling-rules.md。
  */
 
 import type { TestCase } from "./test-cases.js";
-import { execSync } from "child_process";
-import { dashscopeLimit, geminiLimit } from "./rate-limiter.js";
+import { geminiLimit } from "./rate-limiter.js";
 import { httpPost } from "./http-direct.js";
 import { DEFAULT_BRAIN_MODEL, DEFAULT_RAW_MODEL } from "../env.js";
+import {
+  callGemini,
+  isAllowedGeminiModel,
+  type GeminiModel,
+} from "../llm/gemini-client.js";
 
 // ─── Types ───
 
@@ -49,73 +56,38 @@ export interface JudgeSummary {
   failures: string[];
 }
 
-// ─── Gemini API（支持 Native 和 Proxy 两种模式）───
+// ─── Judge 调用（统一走 gemini-client）───
 
-const GEMINI_NATIVE_BASE = "https://generativelanguage.googleapis.com/v1beta";
-
-async function callGeminiNative(
-  apiKey: string,
-  model: string,
-  prompt: string,
-): Promise<string> {
-  const url = `${GEMINI_NATIVE_BASE}/models/${model}:generateContent?key=${apiKey}`;
-  const body = JSON.stringify({
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.1, maxOutputTokens: 4096, responseMimeType: "application/json" },
-  });
-  const raw = execSync(
-    `curl -s --connect-timeout 30 --max-time 120 -X POST -H "Content-Type: application/json" -d @- "${url}"`,
-    { input: body, timeout: 130_000, encoding: "utf-8" },
+/**
+ * 调用 Judge LLM 并返回裁判输出原文。
+ *
+ * 务实映射（保留原 curl 版的语义）：
+ *   - model: 调用方动态传（默认 gemini-2.5-flash），非白名单由 gemini-client 抛错
+ *   - temperature: 0.1（judge 需要稳定打分）
+ *   - max_tokens: 4096
+ *   - response_format: json_object（原 curl 版 proxy 分支已设置）
+ *   - thinkingMode: "off"（原代码未传 thinking 字段，保持行为一致，避免 judge 被 reasoning token 污染）
+ *   - timeoutMs: 120_000（对齐原 curl `--max-time 120`）
+ */
+async function callJudgeLLM(judgeModel: string, prompt: string): Promise<string> {
+  if (!isAllowedGeminiModel(judgeModel)) {
+    throw new Error(
+      `judge model "${judgeModel}" not in Gemini allow-list; see docs/gemini-calling-rules.md`,
+    );
+  }
+  const resolvedModel: GeminiModel = judgeModel;
+  const { content } = await callGemini(
+    [{ role: "user", content: prompt }],
+    {
+      model: resolvedModel,
+      thinkingMode: "off",
+      temperature: 0.1,
+      maxTokens: 4096,
+      responseFormat: { type: "json_object" },
+      timeoutMs: 120_000,
+    },
   );
-  const data = JSON.parse(raw) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    error?: { message?: string };
-  };
-  if (data.error) {
-    throw new Error(`Gemini: ${data.error.message}`);
-  }
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-}
-
-async function callGeminiProxy(
-  proxyBase: string,
-  apiKey: string,
-  model: string,
-  prompt: string,
-): Promise<string> {
-  // OpenAI-compatible format via litellm proxy
-  const url = `${proxyBase}/chat/completions`;
-  const body = JSON.stringify({
-    model,
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.1,
-    max_tokens: 4096,
-    response_format: { type: "json_object" },
-  });
-  const raw = execSync(
-    `curl -s --connect-timeout 30 --max-time 120 -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${apiKey}" -d @- "${url}"`,
-    { input: body, timeout: 130_000, encoding: "utf-8" },
-  );
-  const data = JSON.parse(raw) as {
-    choices?: Array<{ message?: { content?: string } }>;
-    error?: { message?: string };
-  };
-  if (data.error) {
-    throw new Error(`Gemini Proxy: ${data.error.message}`);
-  }
-  return data.choices?.[0]?.message?.content ?? "";
-}
-
-async function callGemini(
-  apiKey: string,
-  model: string,
-  prompt: string,
-  proxyBase?: string,
-): Promise<string> {
-  if (proxyBase) {
-    return callGeminiProxy(proxyBase, apiKey, model, prompt);
-  }
-  return callGeminiNative(apiKey, model, prompt);
+  return content;
 }
 
 // ─── Brain API call ───
@@ -234,10 +206,15 @@ function parseJudgeResponse(text: string): JudgeParsed | null {
 export async function evaluateGeneration(
   cases: TestCase[],
   brainUrl: string,
-  geminiApiKey: string,
-  judgeModel = "gemini-2.0-flash",
-  geminiProxyBase?: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _geminiApiKey: string,
+  judgeModel = "gemini-2.5-flash",
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _geminiProxyBase?: string,
 ): Promise<JudgeSummary> {
+  // 注：`_geminiApiKey` 和 `_geminiProxyBase` 仅为保持与 eval.ts 上游调用签名兼容，
+  // 实际传输层由 src/llm/gemini-client.ts 统一管理（GEMINI_PROXY_KEY/GEMINI_PROXY_BASE
+  // 从 env.ts 加载）。保留形参避免上游大规模改动。
   const results: JudgeResult[] = [];
 
   for (const tc of cases) {
@@ -268,11 +245,11 @@ export async function evaluateGeneration(
       const answerA = swapped ? brainContent : rawContent;
       const answerB = swapped ? rawContent : brainContent;
 
-      // 4. Call Judge (rate limited)
+      // 4. Call Judge (rate limited) — 统一走 gemini-client
       const dims = tc.judge_dimensions as Dimension[];
       const judgePrompt = buildJudgePrompt(tc, answerA, answerB, dims);
       const judgeText = await geminiLimit(() =>
-        callGemini(geminiApiKey, judgeModel, judgePrompt, geminiProxyBase),
+        callJudgeLLM(judgeModel, judgePrompt),
       );
 
       // 5. Parse scores

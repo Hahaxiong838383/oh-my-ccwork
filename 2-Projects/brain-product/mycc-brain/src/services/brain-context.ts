@@ -230,7 +230,10 @@ const MAX_BUDGET = 4000; // chars — expanded budget for richer memory injectio
 
 export async function loadBrainContext(query: string, dataDir: string): Promise<BrainContextResult> {
   // LRU 缓存命中检查
-  const cacheKey = `${query}::${dataDir}`;
+  // v0.12.4 修复 Codex MED：cacheKey 含 KNOWLEDGE_SEARCH_ENABLED 状态，
+  // 避免开关切换/FTS 重建后读到旧 knowledge miss 结果误导排障。
+  const kEnabled = process.env.KNOWLEDGE_SEARCH_ENABLED === "true" ? "1" : "0";
+  const cacheKey = `${query}::${dataDir}::k${kEnabled}`;
   const cached = _cacheGet(cacheKey);
   if (cached) return cached;
   const memPath = join(dataDir, "memory-items.md");
@@ -469,7 +472,8 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
     } catch { /* claude-memory dir read failed */ }
   }
 
-  const itemCount = parts.reduce((n, p) => n + (p.match(/^- /gm)?.length ?? 0), 0) + userMemMatched.length + claudeMemMatched.length;
+  // v0.12.2：改为 let 以便后续知识库注入时累加（见 L498 修复 HIGH1）
+  let itemCount = parts.reduce((n, p) => n + (p.match(/^- /gm)?.length ?? 0), 0) + userMemMatched.length + claudeMemMatched.length;
 
   // 构建最终 context，追加 user-memories 和 claude-memory（如有命中）
   let finalContext = parts.join("\n\n");
@@ -497,6 +501,37 @@ export async function loadBrainContext(query: string, dataDir: string): Promise<
   }
   if (knowledgeHits.length > 0) {
     finalRetrievalPaths.push("knowledge");
+    // v0.12.2 修复（codex HIGH1+HIGH2）：
+    //   HIGH1 — 把成功注入的 knowledge hits 数量计入 itemCount，避免 brain-api.ts:298
+    //           "[无相关记忆]" 否定提示与知识库注入内容自相矛盾。
+    //   HIGH2 — 并入统一预算：单条 content 硬截断、知识库整块上限、总长不超过 MAX_BUDGET。
+    //           避免 cc-qwen/cc-qwen30b 2500 token 档被 5 条完整 content 挤爆。
+    const KNOWLEDGE_BLOCK_MAX = 1200;
+    const KNOWLEDGE_ITEM_MAX = 300;
+    const effectiveBudgetK = configOverrides.maxBudget ?? MAX_BUDGET;
+    const remainingBudget = Math.max(0, effectiveBudgetK - totalLen);
+    const knowledgeBudget = Math.min(KNOWLEDGE_BLOCK_MAX, remainingBudget);
+
+    if (knowledgeBudget >= 100) {
+      const header = "\n\n## 外挂知识库（飞书 wiki 抽取）\n";
+      const lines: string[] = [];
+      let used = header.length;
+      for (const h of knowledgeHits) {
+        const truncated = h.content.length > KNOWLEDGE_ITEM_MAX
+          ? h.content.slice(0, KNOWLEDGE_ITEM_MAX) + "…"
+          : h.content;
+        const line = `- [${h.namespace}] ${truncated}（来源：${h.docTitle}）`;
+        if (used + line.length + 1 > knowledgeBudget) break;
+        lines.push(line);
+        used += line.length + 1;
+      }
+      if (lines.length > 0) {
+        const block = header + lines.join("\n");
+        finalContext += block;
+        totalLen += block.length;
+        itemCount += lines.length;
+      }
+    }
   }
 
   const result: BrainContextResult = {

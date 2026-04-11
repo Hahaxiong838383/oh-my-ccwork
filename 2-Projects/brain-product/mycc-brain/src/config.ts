@@ -1,6 +1,7 @@
 import { resolve } from "path";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { DEFAULT_BRAIN_MODEL, DEFAULT_DATA_DIR } from "./env.js";
+import { GEMINI_BASE_URL, GEMINI_API_KEY } from "./llm/gemini-client.js";
 
 export interface ModelRoute {
   adapter: "openai-compat";
@@ -67,8 +68,8 @@ function env(key: string, fallback = ""): string {
   return process.env[key] ?? fallback;
 }
 
-// Gemini 中转服务（OpenAI 兼容格式）
-const GEMINI_PROXY_BASE = "http://23.226.135.149:4000/v1";
+// Gemini 中转服务的 baseURL / apiKey 统一由 src/llm/gemini-client.ts 导出
+// （GEMINI_BASE_URL / GEMINI_API_KEY），避免 wrapper 端点两处配置。
 
 // MiniMax 在线模型（直连官方 API，OpenAI 兼容格式）
 const MINIMAX_BASE = "https://api.minimaxi.com/v1";
@@ -163,34 +164,99 @@ export function loadConfig(): BrainConfig {
         supportsThinking: false,
       },
       // cc-gemma4 / raw-gemma4 已移除（Ollama 仅用于视觉）
-      // Gemini 在线模型（通过中转服务）
+      // ─── Gemini 在线模型（通过 Gemini Proxy wrapper v5.3）───
+      // 唯一事实来源：docs/gemini-calling-rules.md §2.1（6 个生产可用模型）
+      // 路由命名：cc- 前缀 = brain 人格注入版，raw- 前缀 = 裸调版
+      // 注：cc-gemini-3.1-flash 底层是 gemini-3.1-flash-lite-preview（历史命名，保留以免前端已保存选择失效）
+
+      // 2.5 系列 — 稳定、成本可控、延迟低
+      "cc-gemini-2.5-pro": {
+        adapter: "openai-compat",
+        brain: true,
+        baseURL: GEMINI_BASE_URL,
+        model: "gemini-2.5-pro",
+        apiKey: GEMINI_API_KEY,
+      },
+      "raw-gemini-2.5-pro": {
+        adapter: "openai-compat",
+        brain: false,
+        baseURL: GEMINI_BASE_URL,
+        model: "gemini-2.5-pro",
+        apiKey: GEMINI_API_KEY,
+      },
       "cc-gemini-2.5-flash": {
         adapter: "openai-compat",
         brain: true,
-        baseURL: GEMINI_PROXY_BASE,
+        baseURL: GEMINI_BASE_URL,
         model: "gemini-2.5-flash",
-        apiKey: env("GEMINI_PROXY_KEY"),
+        apiKey: GEMINI_API_KEY,
       },
       "raw-gemini-2.5-flash": {
         adapter: "openai-compat",
         brain: false,
-        baseURL: GEMINI_PROXY_BASE,
+        baseURL: GEMINI_BASE_URL,
         model: "gemini-2.5-flash",
-        apiKey: env("GEMINI_PROXY_KEY"),
+        apiKey: GEMINI_API_KEY,
+      },
+      "cc-gemini-2.5-flash-lite": {
+        adapter: "openai-compat",
+        brain: true,
+        baseURL: GEMINI_BASE_URL,
+        model: "gemini-2.5-flash-lite",
+        apiKey: GEMINI_API_KEY,
+        supportsThinking: false, // 2.5-flash-lite 不支持 thinking（docs §3.4）
+      },
+      "raw-gemini-2.5-flash-lite": {
+        adapter: "openai-compat",
+        brain: false,
+        baseURL: GEMINI_BASE_URL,
+        model: "gemini-2.5-flash-lite",
+        apiKey: GEMINI_API_KEY,
+        supportsThinking: false,
+      },
+
+      // 3.x preview 系列 — wrapper 自动路由到 Vertex global endpoint
+      "cc-gemini-3-flash": {
+        adapter: "openai-compat",
+        brain: true,
+        baseURL: GEMINI_BASE_URL,
+        model: "gemini-3-flash-preview",
+        apiKey: GEMINI_API_KEY,
+      },
+      "raw-gemini-3-flash": {
+        adapter: "openai-compat",
+        brain: false,
+        baseURL: GEMINI_BASE_URL,
+        model: "gemini-3-flash-preview",
+        apiKey: GEMINI_API_KEY,
       },
       "cc-gemini-3.1-flash": {
         adapter: "openai-compat",
         brain: true,
-        baseURL: GEMINI_PROXY_BASE,
+        baseURL: GEMINI_BASE_URL,
         model: "gemini-3.1-flash-lite-preview",
-        apiKey: env("GEMINI_PROXY_KEY"),
+        apiKey: GEMINI_API_KEY,
       },
       "raw-gemini-3.1-flash": {
         adapter: "openai-compat",
         brain: false,
-        baseURL: GEMINI_PROXY_BASE,
+        baseURL: GEMINI_BASE_URL,
         model: "gemini-3.1-flash-lite-preview",
-        apiKey: env("GEMINI_PROXY_KEY"),
+        apiKey: GEMINI_API_KEY,
+      },
+      "cc-gemini-3.1-pro": {
+        adapter: "openai-compat",
+        brain: true,
+        baseURL: GEMINI_BASE_URL,
+        model: "gemini-3.1-pro-preview",
+        apiKey: GEMINI_API_KEY,
+      },
+      "raw-gemini-3.1-pro": {
+        adapter: "openai-compat",
+        brain: false,
+        baseURL: GEMINI_BASE_URL,
+        model: "gemini-3.1-pro-preview",
+        apiKey: GEMINI_API_KEY,
       },
       // MiniMax 在线模型（主力 highspeed ~100 TPS，标准 ~60 TPS）
       "cc-minimax-m2.7-hs": {
@@ -258,9 +324,9 @@ export function loadConfig(): BrainConfig {
       fallbackIntake: undefined,  // 不需要 fallback，主路径就是本地
     },
     search: {
-      baseURL: GEMINI_PROXY_BASE,
+      baseURL: GEMINI_BASE_URL,
       model: "gemini-2.5-flash",
-      apiKey: env("GEMINI_PROXY_KEY"),
+      apiKey: GEMINI_API_KEY,
       maxTasksPerDay: 5,
       minPriority: 0.2,
     },
