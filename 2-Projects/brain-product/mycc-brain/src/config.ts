@@ -11,6 +11,13 @@ export interface ModelRoute {
   maxTokens?: number; // 模型最大输出 token，不设则用适配器默认值 8192
   supportsThinking?: boolean; // 是否支持 enable_thinking 参数（MiniMax/Qwen/DeepSeek/Ollama 支持，Gemini 不支持）
   promptBudgetTokens?: number; // prompt 分层注入预算（<1000=minimal, <3000=standard, 不设=full）
+  /**
+   * 厂商专属字段透传（非 OpenAI 标准），由 adapter 合并进 request body。
+   * 示例：方舟 Coding Plan 用 `{ thinking: { type: "disabled" } }` 关掉 reasoning
+   * 以把 doubao-seed-2.0-pro 的 latency 从 18s 降到 5s。
+   * 仅限确认兼容该字段的 baseURL，其它第三方 openai-compat endpoint 会被拒绝。
+   */
+  extraBody?: Record<string, unknown>;
 }
 
 export interface MemoryLLMRoute {
@@ -65,6 +72,12 @@ const GEMINI_PROXY_BASE = "http://23.226.135.149:4000/v1";
 
 // MiniMax 在线模型（直连官方 API，OpenAI 兼容格式）
 const MINIMAX_BASE = "https://api.minimaxi.com/v1";
+
+// 火山方舟 Coding Plan（OpenAI 兼容，订阅制无并发限流）
+// 2026-04-11 上线替代 Gemini proxy 429 blocker，与 knowledge pipeline 共用入口
+const ARK_CODING_BASE = "https://ark.cn-beijing.volces.com/api/coding/v3";
+// 关闭 reasoning_tokens：doubao-seed-2.0-pro 默认开 thinking → latency 18s；关了 5s
+const ARK_THINKING_DISABLED: Record<string, unknown> = { thinking: { type: "disabled" } };
 
 export function loadConfig(): BrainConfig {
   const qwenKey = env("QWEN_API_KEY");
@@ -211,6 +224,24 @@ export function loadConfig(): BrainConfig {
         model: "MiniMax-M2.7",
         apiKey: minimaxKey,
         supportsThinking: true,
+      },
+      // 火山方舟 Coding Plan — 订阅制稳定入口，用于替代 Gemini proxy 429 blocker
+      // doubao-seed-2.0-pro: 能力接近 Gemini Flash；thinking 关掉后 TTFT ~5s
+      "cc-doubao-seed-pro": {
+        adapter: "openai-compat",
+        brain: true,
+        baseURL: ARK_CODING_BASE,
+        model: "doubao-seed-2.0-pro",
+        apiKey: env("ARK_CODING_API_KEY"),
+        extraBody: ARK_THINKING_DISABLED,
+      },
+      "raw-doubao-seed-pro": {
+        adapter: "openai-compat",
+        brain: false,
+        baseURL: ARK_CODING_BASE,
+        model: "doubao-seed-2.0-pro",
+        apiKey: env("ARK_CODING_API_KEY"),
+        extraBody: ARK_THINKING_DISABLED,
       },
     },
     memoryLLM: {

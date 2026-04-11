@@ -19,6 +19,13 @@ export interface StreamOptions {
   temperature?: number;
   max_tokens?: number;
   enable_thinking?: boolean; // 默认 false，开启后模型会输出推理过程
+  /**
+   * 非 OpenAI 标准字段透传（谨慎使用）。
+   * 仅在目标 baseURL 确定支持该字段时注入，例如方舟 Coding Plan 的
+   * `thinking: { type: "disabled" }` 用于关闭 reasoning_tokens 以降低延迟。
+   * 其它第三方 openai-compat endpoint 可能会 400 拒绝，切忌默认启用。
+   */
+  extraBody?: Record<string, unknown>;
 }
 
 export async function streamOpenAICompat(
@@ -35,6 +42,8 @@ export async function streamOpenAICompat(
   };
   if (opts.max_tokens != null) payload.max_tokens = opts.max_tokens;
   if (opts.enable_thinking != null) payload.enable_thinking = opts.enable_thinking;
+  // 厂商专属字段透传（例如方舟 Coding Plan 的 thinking: { type: "disabled" }）
+  if (opts.extraBody) Object.assign(payload, opts.extraBody);
 
   const body = JSON.stringify(payload);
 
@@ -112,6 +121,17 @@ export async function chatCompletion(
 ): Promise<{ content: string; usage?: { total_tokens: number } }> {
   const url = `${opts.baseURL}/chat/completions`;
 
+  const payload: Record<string, unknown> = {
+    model: opts.model,
+    messages: opts.messages,
+    stream: false,
+    temperature: opts.temperature ?? 0.7,
+  };
+  if (opts.max_tokens != null) payload.max_tokens = opts.max_tokens;
+  if (opts.enable_thinking != null) payload.enable_thinking = opts.enable_thinking;
+  // 厂商专属字段透传（例如方舟 Coding Plan 的 thinking: { type: "disabled" }）
+  if (opts.extraBody) Object.assign(payload, opts.extraBody);
+
   let upstream: Response;
   try {
     upstream = await fetch(url, {
@@ -120,14 +140,7 @@ export async function chatCompletion(
         "Content-Type": "application/json",
         Authorization: `Bearer ${opts.apiKey}`,
       },
-      body: JSON.stringify({
-        model: opts.model,
-        messages: opts.messages,
-        stream: false,
-        temperature: opts.temperature ?? 0.7,
-        ...(opts.max_tokens != null && { max_tokens: opts.max_tokens }),
-        ...(opts.enable_thinking != null && { enable_thinking: opts.enable_thinking }),
-      }),
+      body: JSON.stringify(payload),
     });
   } catch (e: unknown) {
     // Node.js fetch throws TypeError with .cause for network errors
@@ -142,10 +155,12 @@ export async function chatCompletion(
 
   const data = await upstream.json() as any;
   const msg = data.choices?.[0]?.message;
-  // Gemma 4 thinking 模式：正文在 content，思考在 reasoning
-  // 当 content 为空但有 reasoning 时，用 reasoning（模型还在"想"没输出正文）
+  // content 为空时的 fallback 优先级：
+  //   1. reasoning_content —— 方舟 Coding Plan / DeepSeek R1 的 reasoning 字段
+  //   2. reasoning          —— Gemma 4 / 部分 Ollama 模型的 thinking 字段
+  // 正常情况下 content 有值；若两者都空，返回空串让上层判定为 0 tokens / 失败。
   const content = msg?.content || "";
-  const reasoning = msg?.reasoning || "";
+  const reasoning = msg?.reasoning_content || msg?.reasoning || "";
   return {
     content: content || reasoning,
     usage: data.usage,

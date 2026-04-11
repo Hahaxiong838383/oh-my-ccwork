@@ -288,7 +288,7 @@ const server = http.createServer(async (req, res) => {
     const expHistory = getRecentDayStats(brainRoot, 7);
     const patches = listPatches(brainRoot);
     json(res, 200, {
-      version: "0.10.0",
+      version: "0.11.0",
       uptime: process.uptime(),
       stats: brainApi.getStats(),
       routes: Object.fromEntries(
@@ -491,6 +491,7 @@ const server = http.createServer(async (req, res) => {
         messages,
         max_tokens: route.maxTokens ?? 4096,
         enable_thinking: enableThinking,
+        extraBody: route.extraBody,
       });
       json(res, 200, { content: result.content, usage: result.usage, brain: route.brain });
 
@@ -554,6 +555,7 @@ const server = http.createServer(async (req, res) => {
           messages: rawMessages,
           max_tokens: 8192,
           enable_thinking: rawThinking,
+          extraBody: rawRoute.extraBody,
         }).then((r) => ({ ...r, latency: Date.now() - rawStart })),
         chatCompletion({
           baseURL: brainRoute.baseURL,
@@ -562,6 +564,7 @@ const server = http.createServer(async (req, res) => {
           messages: brainMessages,
           max_tokens: 8192,
           enable_thinking: brainThinking,
+          extraBody: brainRoute.extraBody,
         }).then((r) => ({ ...r, latency: Date.now() - brainStart })),
       ]);
 
@@ -1533,7 +1536,7 @@ function scheduleWeeklyVisionReview() {
 initMcpConnections().then(() => {
   server.listen(config.port, "0.0.0.0", () => {
     const memExists = existsSync(resolve(config.dataDir, "memory-items.md"));
-    console.log(`\n🧠 mycc-brain v0.10.0 (外挂知识系统 + 方舟 Coding Plan)`);
+    console.log(`\n🧠 mycc-brain v0.11.0 (方舟 Coding Plan 进 Admin UI + extraBody adapter)`);
     console.log(`   API:   http://0.0.0.0:${config.port}/v1/chat/completions`);
     console.log(`   Admin: http://0.0.0.0:${config.port}/admin`);
     console.log(`   Data:  ${config.dataDir} (${existsSync(config.dataDir) ? "✅" : "❌ not found"})`);

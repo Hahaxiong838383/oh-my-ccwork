@@ -411,6 +411,7 @@ export class BrainApi {
         temperature: body.temperature ?? (route.brain ? 0.3 : undefined),
         max_tokens: body.max_tokens,
         enable_thinking: enableThinking,
+        extraBody: route.extraBody,
       });
 
       const latency = Date.now() - startMs;
@@ -473,6 +474,7 @@ export class BrainApi {
         temperature: body.temperature ?? (route.brain ? 0.3 : undefined),
         max_tokens: body.max_tokens,
         enable_thinking: enableThinking,
+        extraBody: route.extraBody,
       },
       res
     );
