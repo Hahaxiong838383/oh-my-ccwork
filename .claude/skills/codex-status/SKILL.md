@@ -18,6 +18,18 @@ output_levels: L1（简洁输出）
 
 ---
 
+## 全局默认配置（归属声明）
+
+本 skill 追踪的 Codex 任务运行在 codex-* 插件统一默认值下：
+
+- `model = gpt-5.4`
+- `model_reasoning_effort = xhigh`
+- `service_tier = fast`（仅能在 `~/.codex/config.toml` 设置）
+
+完整规则见 `codex-review` / `codex-adversarial-review` 的「全局默认配置（codex 优先要求）」章节。status 表格中若看到非 gpt-5.4 model，说明 task 被显式覆盖，需在输出中标注。
+
+---
+
 ## 执行
 
 ```bash

@@ -19,6 +19,34 @@ output_levels: L3（原样输出 Codex 结果）
 
 ---
 
+## 全局默认配置（codex 优先要求）
+
+**所有 codex-* skills 共享的强制默认值**，cc 不得擅自更改：
+
+| 配置项 | 值 | 设置位置 | 覆盖方式 |
+|--------|----|----|----|
+| `model` | `gpt-5.4` | 命令行 `--model` + `~/.codex/config.toml` | 用户显式 `--model <other>` |
+| `model_reasoning_effort` | `xhigh` | `~/.codex/config.toml` | 仅能改 config.toml |
+| `service_tier` | `fast` | `~/.codex/config.toml` | 仅能改 config.toml |
+
+**启动前自检**（任何 codex 调用第一次运行时跑一次）：
+
+```bash
+grep -E "^(model|model_reasoning_effort|service_tier)" ~/.codex/config.toml
+```
+
+期望输出：
+
+```
+model = "gpt-5.4"
+model_reasoning_effort = "xhigh"
+service_tier = "fast"
+```
+
+缺失或漂移时，cc **必须先补齐 config.toml 再执行对抗审查**，并在输出中说明补齐动作。用户显式要求其他 model / effort 时才可偏离默认。
+
+---
+
 ## 前置检查
 
 ```bash
@@ -73,14 +101,16 @@ Codex 对抗性审查重点关注：
 ## 前台执行
 
 ```bash
-node "$HOME/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" adversarial-review $ARGUMENTS
+node "$HOME/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" adversarial-review --model gpt-5.4 $ARGUMENTS
 ```
+
+`--model gpt-5.4` 是全局优先默认值，用户 `$ARGUMENTS` 里显式再传 `--model <other>` 时以用户为准（parseArgs 后值覆盖前值）。
 
 ## 后台执行
 
 ```bash
 # 使用 Bash 工具的 run_in_background: true
-node "$HOME/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" adversarial-review $ARGUMENTS
+node "$HOME/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" adversarial-review --model gpt-5.4 $ARGUMENTS
 ```
 
 启动后告知用户："Codex 对抗性审查已在后台启动。使用 `/codex-status` 查看进度。"

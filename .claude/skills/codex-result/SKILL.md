@@ -18,6 +18,18 @@ output_levels: L3（完整输出）
 
 ---
 
+## 全局默认配置（归属声明）
+
+本 skill 读取的 Codex 任务结果来自 codex-* 插件统一默认值产生的运行：
+
+- `model = gpt-5.4`
+- `model_reasoning_effort = xhigh`
+- `service_tier = fast`（仅能在 `~/.codex/config.toml` 设置）
+
+完整规则见 `codex-review` / `codex-adversarial-review` 的「全局默认配置（codex 优先要求）」章节。若 result 输出中看到非 gpt-5.4 的 model 字段，说明有人覆盖了默认，需告知用户。
+
+---
+
 ## 执行
 
 ```bash

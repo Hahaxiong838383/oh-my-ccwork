@@ -18,6 +18,18 @@ output_levels: L1（简洁输出）
 
 ---
 
+## 全局默认配置（归属声明）
+
+本 skill 管理的 Codex 任务遵循 codex-* 插件统一默认值：
+
+- `model = gpt-5.4`
+- `model_reasoning_effort = xhigh`
+- `service_tier = fast`（仅能在 `~/.codex/config.toml` 设置）
+
+完整规则见 `codex-review` / `codex-adversarial-review` 的「全局默认配置（codex 优先要求）」章节。cancel 不直接调模型，但被取消的任务就是这些默认值创建的。
+
+---
+
 ## 执行
 
 ```bash
