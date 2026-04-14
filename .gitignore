@@ -3,6 +3,10 @@
 # ====================================
 .idea/
 .secrets/
+.mcp.json
+
+# HANDOFF 交接文档（含敏感凭据，仅本地使用）
+**/HANDOFF-*
 node_modules/
 dist/
 build/
