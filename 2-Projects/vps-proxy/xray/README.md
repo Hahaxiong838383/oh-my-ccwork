@@ -25,7 +25,14 @@ Client (xray / v2ray / NekoBox / Shadowrocket)
                                    └── :50971  3x-ui 管理面板
 ```
 
-**端口选型教训（2026-04-17）**：部分 5G ISP 对落地端口 443 的 TLS 做 DPI/QoS 导致手机端 `context deadline exceeded`。直连落地 :443 或中转 :443 都会命中。解决：落地机另开 :8443 Reality 入站 + 中转用 :9443 → :8443 错位映射（避开中转原有的 :8443 → 丽萨链路）。丽萨主机长期稳定用的也是 :8443 而非 :443。
+**部署教训（2026-04-17）**：最大坑是**分享链接里用了不相关的域名**——该域名解析到国内某无关 IP，客户端怎么连都 timeout，耗了一整天才定位。教训：
+
+1. **翻墙节点分享链接一律用公网 IP，不要用域名**（SSH 别名可以用域名，客户端 share link 必须 IP）
+2. **故障第一步 `nc -zv IP port`** 裸 TCP 测试，不猜 SNI/DPI/端口封锁
+3. **Reality 部署后用 `xray x25519 -i <privateKey>`** 反推 publicKey（输出字段叫 `Password`），跟 inbound JSON 的 `settings.publicKey` 比对是否一致
+4. **Reality 握手验证必须从客户端真实网络发起**，服务端 127.0.0.1 回环能拿到 dest 证书不代表外部能握手
+
+当前生产配置：落地机开 :443 和 :8443 两个 VLESS-Reality inbound，Reality dest `www.microsoft.com:443`。中转端 `:443→landing:443` 和 `:9443→landing:8443` 并存，客户端用任一均可。
 
 **Kernel**: Ubuntu 24.04 LTS, kernel 6.8（落地+中转同配）  
 **BBR**: ✅ 双端启用（`tcp_congestion_control=bbr`, `qdisc=fq`）  
