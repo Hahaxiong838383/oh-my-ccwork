@@ -1,32 +1,43 @@
-# Xray 翻墙代理节点
+# Xray 翻墙代理节点（带 LAX 中转）
 
-> US VPS 上的 3x-ui + Xray 双协议代理（VLESS-Reality + VMess-WS）。  
-> 部署日期：2026-04-17 · 面板版本：3x-ui v2.8.11 + xray-core 26.2.6
+> US VPS 上的 3x-ui + Xray 双协议代理 + DMIT LAX gost 中转  
+> 部署日期：2026-04-17 · 面板版本：3x-ui v2.8.11 + xray-core 26.2.6 · gost 3.0.0-rc10
 
 ## 架构
 
 ```
-Client（xray / v2ray / NekoBox / Shadowrocket）
-       ↓
-US VPS (Colocrossing, 198.46.146.238)
-  ├── :443    VLESS + TCP + Reality  （伪装 www.cloudflare.com）
-  ├── :10086  VMess + WebSocket       （v2ray 通用）
-  └── :50971  3x-ui 管理面板           （HTTPS, Let's Encrypt 自动续签）
+Client (xray / v2ray / NekoBox / Shadowrocket)
+   │
+   ├─── [直连] ────────────────────────────────────┐
+   │                                              │
+   └─── [推荐中转] ─→ LAX Relay (DMIT LAX.AN4)     │
+                     fqzz.hahaxiong.cc             │
+                     64.186.235.107                │
+                     gost TCP forward              │
+                      :443  → 198.46.146.238:443   │
+                      :10086 → 198.46.146.238:10086│
+                                                   ▼
+                                 US VPS 落地机 (Colocrossing, 198.46.146.238)
+                                   ├── :443    VLESS + TCP + Reality
+                                   ├── :10086  VMess + WebSocket
+                                   └── :50971  3x-ui 管理面板
 ```
 
-**Kernel**: Ubuntu 24.04 LTS, 6.8  
-**BBR**: ✅ 已启用（`tcp_congestion_control=bbr`, `qdisc=fq`）
+**Kernel**: Ubuntu 24.04 LTS, kernel 6.8（落地+中转同配）  
+**BBR**: ✅ 双端启用（`tcp_congestion_control=bbr`, `qdisc=fq`）  
+**IPv6**: ✅ 中转机有全局 IPv6（`2605:52c0:2:c1a::/64`）
 
 ## 本地配置（已 gitignore，不入 git）
 
-所有凭据、UUID、密钥、分享链接保存在以下文件：
-
 | 文件 | 内容 |
 |------|------|
-| `.env` | VPS IP/密码 · 面板 URL/用户名/密码 · WS path · UUID · Reality 密钥对 · shortId |
-| `subscription.txt` | VLESS + VMess 分享链接（扫码/粘贴导入客户端） |
+| `.env` | 落地机 + 中转机 · SSH/密码/IP/面板凭据 · UUID / Reality 密钥 / WS path / shortId |
+| `subscription.txt` | 4 条分享链接（直连 × 中转 × VLESS × VMess） |
 | `xray-outbounds.json` | 本机 xray `config.json` 的 outbounds 片段 |
 | `scripts/add-inbounds.sh` | 通过 3x-ui API 创建入站的部署脚本 |
+| `scripts/gost-us-vps.service` | 中转机的 gost systemd unit 备份 |
+
+SSH 私钥：`~/.ssh/dmit_fqzz_ed25519`（DMIT 下发的 key，仓库外存储）
 
 ## 协议选型
 
@@ -35,28 +46,44 @@ US VPS (Colocrossing, 198.46.146.238)
 | 老版 v2ray-core / 最大兼容性 | **VMess-WS** |
 | xray / 追求抗封锁 + 速度 / 无域名 | **VLESS-Reality** |
 
-VLESS-Reality 不支持老版 v2ray-core（仅 xray），但性能更好、无需域名、抗主动探测。
+VLESS-Reality 不支持老版 v2ray-core（仅 xray），但性能更好、无需域名、抗主动探测。**Reality 在中转之后的伪装仍然成立** — 2026-04-17 实测 openssl s_client 从 Mac → 中转 :443 返回 `CN=www.cloudflare.com` 证书链，穿透完美。
 
 ## SSH 快捷方式
 
 ```bash
-ssh us-vps              # 已加 alias 到 ~/.ssh/config
-ssh us-vps "x-ui"       # 面板交互菜单
+ssh us-vps              # 落地机（198.46.146.238）
+ssh lax-relay           # LAX 中转机（64.186.235.107 / fqzz.hahaxiong.cc）
+ssh us-vps "x-ui"       # 落地机面板交互菜单
 ssh us-vps "x-ui status"
-ssh us-vps "journalctl -u x-ui -n 50 --no-pager"
 ```
 
 ## 运维常用
 
-- **查监听**: `ssh us-vps "ss -tlnp | grep -E ':(443|10086|50971)'"`
-- **查流量**: 面板 → Inbounds 列表
-- **重启 xray**: `ssh us-vps "x-ui restart"`
-- **更新 3x-ui**: `ssh us-vps "x-ui update"`
+```bash
+# 落地机
+ssh us-vps "ss -tlnp | grep -E ':(443|10086|50971)'"
+ssh us-vps "x-ui restart"
+
+# 中转机
+ssh lax-relay "ss -tlnp | grep -E ':(443|10086|8443)'"
+ssh lax-relay "systemctl status gost-us-vps --no-pager"
+ssh lax-relay "journalctl -u gost-us-vps -n 50 --no-pager"
+```
+
+## 中转机的 gost 配置
+
+```ini
+# /etc/systemd/system/gost-us-vps.service
+[Service]
+ExecStart=/usr/local/bin/gost -L tcp://:443/198.46.146.238:443 -L tcp://:10086/198.46.146.238:10086
+```
+
+原有的 `gost.service`（:8443 → 154.44.3.170:8443 到丽萨主机）保留未动，两个 unit 并存。
 
 ## 同族项目
 
 本项目属于 `2-Projects/vps-proxy/` 家族，姊妹服务：
 - `../` (根目录 gemini-proxy / codex-proxy) — **LLM API 代理**（23.226.135.149）
-- `./` (本目录 xray) — **翻墙代理节点**（198.46.146.238）
+- `./` (本目录 xray) — **翻墙代理节点 + 中转**
 
 两者同属"美国 VPS 服务栈"，部署在不同实例上。
