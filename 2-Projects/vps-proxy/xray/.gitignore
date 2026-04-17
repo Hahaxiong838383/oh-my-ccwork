@@ -1,0 +1,11 @@
+# 节点明文分享链接（含 UUID / publicKey）
+subscription.txt
+
+# 本机 xray outbound 配置（含节点密钥）
+xray-outbounds.json
+
+# 运维脚本（含面板凭据）
+scripts/
+
+# 环境变量（双重保险，根 .gitignore 也排除 .env）
+.env
