@@ -16,12 +16,16 @@ Client (xray / v2ray / NekoBox / Shadowrocket)
                      gost TCP forward              │
                       :443  → 198.46.146.238:443   │
                       :10086 → 198.46.146.238:10086│
+                      :9443  → 198.46.146.238:8443 │ ★ 推荐（绕 443 DPI）
                                                    ▼
                                  US VPS 落地机 (Colocrossing, 198.46.146.238)
-                                   ├── :443    VLESS + TCP + Reality
+                                   ├── :443    VLESS + TCP + Reality (易被 5G ISP DPI)
+                                   ├── :8443   VLESS + TCP + Reality (备用端口, 与丽萨同款)
                                    ├── :10086  VMess + WebSocket
                                    └── :50971  3x-ui 管理面板
 ```
+
+**端口选型教训（2026-04-17）**：部分 5G ISP 对落地端口 443 的 TLS 做 DPI/QoS 导致手机端 `context deadline exceeded`。直连落地 :443 或中转 :443 都会命中。解决：落地机另开 :8443 Reality 入站 + 中转用 :9443 → :8443 错位映射（避开中转原有的 :8443 → 丽萨链路）。丽萨主机长期稳定用的也是 :8443 而非 :443。
 
 **Kernel**: Ubuntu 24.04 LTS, kernel 6.8（落地+中转同配）  
 **BBR**: ✅ 双端启用（`tcp_congestion_control=bbr`, `qdisc=fq`）  
@@ -75,10 +79,12 @@ ssh lax-relay "journalctl -u gost-us-vps -n 50 --no-pager"
 ```ini
 # /etc/systemd/system/gost-us-vps.service
 [Service]
-ExecStart=/usr/local/bin/gost -L tcp://:443/198.46.146.238:443 -L tcp://:10086/198.46.146.238:10086
+ExecStart=/usr/local/bin/gost -L tcp://:443/198.46.146.238:443 \
+          -L tcp://:10086/198.46.146.238:10086 \
+          -L tcp://:9443/198.46.146.238:8443
 ```
 
-原有的 `gost.service`（:8443 → 154.44.3.170:8443 到丽萨主机）保留未动，两个 unit 并存。
+原有的 `gost.service`（:8443 → 154.44.3.170:8443 到丽萨主机）保留未动，两个 unit 并存。新增的 `:9443 → 198.46.146.238:8443` 是**端口错位映射**——中转端用 :9443 是为了避开 `gost.service` 占用的 :8443，让丽萨链路和新落地机 :8443 Reality 入站共存互不干扰。
 
 ## 同族项目
 
