@@ -79,8 +79,10 @@ build_memory_sync() {
 build_memory_sync
 
 mkdir -p "$HOME/.gemini"
-cp "$ROOT/.gemini/settings.json" "$HOME/.gemini/settings.json"
-cp "$ROOT/.gemini/config.toml" "$HOME/.gemini/config.toml"
+
+# Gemini CLI 本身会自动合并用户级 ~/.gemini/settings.json 和项目级
+# $ROOT/.gemini/settings.json。不要在启动时覆盖用户设置，否则会清掉
+# CLI 持久化写入的认证选择，导致每次启动都重新弹浏览器授权。
 
 if [[ "${PWD}" != "$ROOT"* ]]; then
   cd "$ROOT"
