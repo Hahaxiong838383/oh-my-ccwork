@@ -119,7 +119,15 @@ Agent({
 
 ### Step 4 — commit 后**立即**派 codex adversarial-review（后台）
 
-**Bash 工具调用模板**（`run_in_background: true`）：
+⚠️ **踩坑记（2026-04-19）**：不要用 `Agent({ subagent_type: "codex:codex-rescue" })` 作为对抗审查入口 —— subagent 会把 codex CLI 再 dispatch 一次，它自己 return 时 codex 还没跑完，主线拿到的 task output 只有 skill 加载日志 + 「I'll wait」自白，零实质内容。改用**主线 Bash 直调** `codex exec` 或官方 `codex-companion.mjs adversarial-review`。详见 `feedback_codex_rescue_subagent_trap.md`。
+
+**主线 Bash 直调模板**（最稳，推荐，`run_in_background: true` 配合通知）：
+```bash
+codex exec --cd <repo> --skip-git-repo-check "$(cat /tmp/codex-prompt.md)" \
+  > /tmp/codex-review-<commit_short>.md 2>&1
+```
+
+**或官方 codex-companion.mjs**（`run_in_background: true`）：
 ```bash
 node "$HOME/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" \
   adversarial-review \
@@ -222,6 +230,7 @@ cat /private/tmp/claude-501/.../tasks/{task-id}.output
 5. ❌ **让 Explore 和 cc 写同一文件**：分工要不重叠
 6. ❌ **Explore 启动太晚**：代码写完才启动，结果回来时只能做"设计验证"
 7. ❌ **codex 发现 HIGH 不修硬发版**：这是 production hazard，不能用"时间紧"当借口
+8. ❌ **写新文件 prompt 里内嵌现有代码块**：codex 把大段代码块当「当前代码库状态」→ 进入读/展示模式，staging 目录空白，不写文件。**写文件任务的 prompt 铁律**：①第一句是强制写指令（"写文件到 <绝对路径>"）②只给接口签名不给实现③现有代码用路径引用不内嵌④末尾加 `cat <path>` 验证指令。（2026-04-19 实战踩坑：dispatcher.ts 任务，1256 行输出但 staging 为空）
 
 ---
 
