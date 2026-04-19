@@ -6,6 +6,7 @@
 import http from "http";
 import https from "https";
 import os from "os";
+import { timingSafeEqual } from "crypto";
 import { join } from "path";
 import { readFileSync, existsSync } from "fs";
 import { generateToken } from "./utils.js";
@@ -275,7 +276,7 @@ export class HttpServer {
       } else if (url.pathname === "/memory/dream" && req.method === "POST") {
         await this.handleMemoryDream(res);
       } else if (url.pathname.startsWith("/api/task-status/") && req.method === "GET") {
-        await this.handleTaskStatus(res, url.pathname);
+        await this.handleTaskStatus(req, res, url.pathname);
       } else if (url.pathname === "/api/task-dispatch" && req.method === "POST") {
         await this.handleTaskDispatch(req, res);
       } else {
@@ -334,12 +335,38 @@ export class HttpServer {
   // ── Agent Swarm dispatcher API ──────────────────────────────────────
 
   /**
-   * GET /api/task-status/:run_id
-   * 查询 dispatcher 后台任务结果。文件存在返回 envelope(200)，不存在返回 pending(202)。
+   * 常时比较 Bearer token：长度不等直接 false，等长才用 timingSafeEqual。
+   * 避免按字符短路泄露的时序侧信道。
    */
-  private async handleTaskStatus(res: http.ServerResponse, pathname: string) {
+  private checkBearer(req: http.IncomingMessage): boolean {
+    if (!this.state.paired || !this.state.token) return false;
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith("Bearer ")) return false;
+    const token = header.slice("Bearer ".length);
+    const a = Buffer.from(token, "utf8");
+    const b = Buffer.from(this.state.token, "utf8");
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  }
+
+  /** UUID v4 / v7 都是 36 位 hex-dash；此处只要求 hex/dash、长度 ≤64，防路径穿越/注入。 */
+  private isValidRunId(s: string): boolean {
+    return /^[A-Za-z0-9_-]{1,64}$/.test(s);
+  }
+
+  /**
+   * GET /api/task-status/:run_id
+   * 需鉴权（Bearer）。文件存在返回 envelope(200)，不存在返回 pending(202)。
+   * run_id 泄露会导致任务元数据被读取，因此不作为唯一安全边界。
+   */
+  private async handleTaskStatus(req: http.IncomingMessage, res: http.ServerResponse, pathname: string) {
+    if (!this.checkBearer(req)) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "未授权" }));
+      return;
+    }
     const run_id = pathname.slice("/api/task-status/".length);
-    if (!run_id || run_id.includes("/")) {
+    if (!this.isValidRunId(run_id)) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "invalid run_id" }));
       return;
@@ -354,20 +381,19 @@ export class HttpServer {
         res.end(JSON.stringify({ status: "pending", run_id }));
       }
     } catch (err) {
+      console.error("[HTTP] task-status error:", err);
       res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: String(err) }));
+      res.end(JSON.stringify({ error: "internal_error" }));
     }
   }
 
   /**
    * POST /api/task-dispatch
    * body: { task_id, engine: "codex"|"gemini", prompt, attempt? }
-   * 立即返回 DispatchHandle，任务在后台执行。
+   * 立即返回 DispatchHandle，任务在后台执行。响应带 Location 头指向轮询端点。
    */
   private async handleTaskDispatch(req: http.IncomingMessage, res: http.ServerResponse) {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.replace("Bearer ", "");
-    if (!this.state.paired || token !== this.state.token) {
+    if (!this.checkBearer(req)) {
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "未授权" }));
       return;
@@ -402,11 +428,15 @@ export class HttpServer {
     const attempt = typeof payload.attempt === "number" ? payload.attempt : undefined;
     try {
       const handle = dispatch({ task_id, engine, prompt, attempt });
-      res.writeHead(202, { "Content-Type": "application/json" });
+      res.writeHead(202, {
+        "Content-Type": "application/json",
+        "Location": `/api/task-status/${handle.run_id}`,
+      });
       res.end(JSON.stringify(handle));
     } catch (err) {
+      console.error("[HTTP] task-dispatch error:", err);
       res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: String(err) }));
+      res.end(JSON.stringify({ error: "internal_error" }));
     }
   }
 

@@ -1,10 +1,20 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync, unlinkSync } from "node:fs";
 import type { ContextCache } from "./context-cache.js";
 import { openEventsDB, type EventsDB } from "./events.js";
-import type { Engine, ResultEnvelope } from "./envelope.js";
+import { isValidEnvelope, type Engine, type ResultEnvelope } from "./envelope.js";
 
 const DISPATCH_RESULT_PREFIX = "/tmp/dispatch-result-";
+
+/**
+ * 原子写：先写 .tmp，再 rename 到目标路径。
+ * POSIX rename 在同分区是原子操作，poll 侧永远读到完整文件或读不到（ENOENT）。
+ */
+function atomicWriteEnvelope(targetPath: string, envelope: ResultEnvelope): void {
+  const tmpPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
+  writeFileSync(tmpPath, JSON.stringify(envelope), "utf8");
+  renameSync(tmpPath, targetPath);
+}
 
 export interface DispatchOptions {
   task_id: string;
@@ -63,7 +73,7 @@ async function executeInBackground(
         contextCache: opts.contextCache,
       });
     }
-    writeFileSync(resultPath, JSON.stringify(result), "utf8");
+    atomicWriteEnvelope(resultPath, result);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "dispatch failed";
     const failure: ResultEnvelope = {
@@ -82,6 +92,33 @@ async function executeInBackground(
   }
 }
 
+/**
+ * 读侧容错：文件不存在返回 null（视为 pending）；
+ * 文件存在但 JSON.parse 失败或 envelope 结构非法 → 视为残留，unlink 后返回 null。
+ * 确保任何 poller 都不会因为 corrupt 文件而抛异常。
+ */
+function tryLoadEnvelope(resultPath: string): ResultEnvelope | null {
+  if (!existsSync(resultPath)) return null;
+  let raw: string;
+  try {
+    raw = readFileSync(resultPath, "utf8");
+  } catch {
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    try { unlinkSync(resultPath); } catch { /* ignore */ }
+    return null;
+  }
+  if (!isValidEnvelope(parsed)) {
+    try { unlinkSync(resultPath); } catch { /* ignore */ }
+    return null;
+  }
+  return parsed;
+}
+
 export async function poll(
   run_id: string,
   opts: PollOptions = {}
@@ -92,18 +129,14 @@ export async function poll(
   const deadline = Date.now() + timeoutMs;
 
   // 先做一次同步探测：支持 timeoutMs=0 作为"存在性检查"单次调用
-  if (existsSync(resultPath)) {
-    const raw = readFileSync(resultPath, "utf8");
-    return JSON.parse(raw) as ResultEnvelope;
-  }
+  const immediate = tryLoadEnvelope(resultPath);
+  if (immediate) return immediate;
   if (timeoutMs <= 0) return null;
 
   while (Date.now() < deadline) {
     await new Promise<void>((resolve) => setTimeout(resolve, intervalMs));
-    if (existsSync(resultPath)) {
-      const raw = readFileSync(resultPath, "utf8");
-      return JSON.parse(raw) as ResultEnvelope;
-    }
+    const got = tryLoadEnvelope(resultPath);
+    if (got) return got;
   }
 
   return null;
