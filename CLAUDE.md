@@ -114,6 +114,39 @@
 
 **反模式**：输出「Phase 3-5 留到后续」然后签名结束 ← 禁止。
 
+## Context / Session 管理（1M 时代）
+
+> 源：Thariq @trq212《Using Claude Code: Session Management & 1M Context》（2026-04-19 读过）。
+> 前提：1M context 不是"无脑塞"的许可，而是"精细管理"的新基线。context rot 在 ~300-400k 就开始。
+
+**R1 · 主动 compact（需老板确认门）**
+当任务阶段性收尾 + 估算已过 300k tokens 时，cc 提出 `/compact` 计划，**不得直接执行**。格式：
+```
+[compact 计划] focus on <下一步的 1 句话目标>, drop <要丢的区域>
+→ 等老板点头再执行。
+```
+理由：compact 时模型正处于 context rot 最严重的点，cc 对"下一步是什么"可能判断错，需老板一票确认防止丢关键信息。
+
+**R2 · 优先 rewind 而非"再试一下"**
+方案失败且 context 里已有昂贵的文件/调试信息时，优先 `/rewind`（Esc Esc）回到 **踩坑前 / 读文件后** 的那一刻，再重 prompt 并带上"为什么不走 A，直接走 B 因为 X"。禁止在污染的 context 里直接说"那个不对再试试"。
+辅助：可用 `summarize from here` 让 Claude 给过去的自己写交接信。
+
+**R3 · Subagent 路由测试**
+delegate 前自问一句：**"我还需要这个 tool output，还是只要结论？"**
+- 只要结论 → 子 Agent（Explore / Plan / verification / codex-rescue）
+- 需要过程/中间产物 → 主线自己做
+
+**与现有规则的衔接**
+- R1/R2/R3 不替代 `跨 session 交接`（HANDOFF 仍是跨 session 的正道）
+- R2 的 rewind 优先级在 `failure-escalation` 的 RETRY 之前：先 rewind 清污染，再 RETRY
+
+**对 codex / gemini 的等效映射**（三方协同时适用）
+codex/gemini 不具备 `/compact` `/rewind` 这类 Claude Code CLI UI 命令，按"等效行为"执行：
+- **R1 等效**：codex/gemini 长链路任务阶段性收尾时，**主动输出一行 intent 声明**（"next: <下一步 1 句>; dropped: <不再相关的区域>"），让下次 ask_codex/ask_gemini 调用有明确上下文；不得擅自让 cc 启动新 session（应返回给 cc 决策）。
+- **R2 等效**：方案失败时，**不在同一 prompt 里追问"那个不对再试 X"**，应让 cc 用 **新的一次性 prompt** 带上"不要走 A，走 B 因为 X"重新调用，相当于 rewind。
+- **R3**：完全通用，任何一方 delegate 前都自问「要结论 or 要过程」。
+- 路由原则：R1/R2/R3 的触发与决策归 cc；codex/gemini 作为被调用方按等效行为配合。
+
 ## 飞书通道确认规则
 
 飞书收到的指令存在歧义、冲突、高风险、上下文不足时，**必须先回复确认，不直接执行**。

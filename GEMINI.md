@@ -78,3 +78,12 @@
 - **AI 前沿理论论文调研收集** + **同步到 FUTURUS AI 知识库**
 - 采集/新闻/知识库查询等通用调研任务
 - 对照验证：与 codex 并行输出，提供不同视角
+
+## Context 管理规则（与 cc 协同）
+
+> 源：Thariq @trq212《Using Claude Code: Session Management & 1M Context》，CLAUDE.md 同步小节。Gemini 不具备 /compact /rewind 这类 Claude Code UI 命令，按"等效行为"执行。
+
+- **R3（强制 · 三方通用）**：delegate / 拆分工作前自问「**要结论 or 要过程**？」只要结论 → 交出子任务或让 cc 用另一次 ask_gemini 调用；要过程 → 主线做完整路径。
+- **R1 等效**：长链路调研任务阶段性收尾时，**主动输出一行 intent 声明**格式 `next: <下一步 1 句>; dropped: <不再相关的区域>`，让下次调用上下文对齐。不得擅自让 cc 启动新 session（决策权在 cc）。
+- **R2 等效**：方案/路径失败时，**不在同一回合追问"换 X 试试"**；如实把"A 为什么不行 + 建议换 B 因为 Y"报告给 cc，由 cc 用新的一次性 prompt 重新调用你。
+- 触发决策与 compact 时机归 cc，gemini 作为被调用方按等效行为配合。
