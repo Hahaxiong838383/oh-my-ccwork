@@ -1534,6 +1534,13 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // Root redirect → Admin UI
+  if (path === "/" || path === "") {
+    res.writeHead(302, { Location: "/admin" });
+    res.end();
+    return;
+  }
+
   // Health
   if (path === "/health") {
     json(res, 200, { status: "ok", service: "mycc-brain" });
