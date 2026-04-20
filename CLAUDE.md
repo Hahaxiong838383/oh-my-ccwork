@@ -114,18 +114,25 @@
 
 **反模式**：输出「Phase 3-5 留到后续」然后签名结束 ← 禁止。
 
-## Context / Session 管理（1M 时代）
+## Context / Session 管理
 
 > 源：Thariq @trq212《Using Claude Code: Session Management & 1M Context》（2026-04-19 读过）。
-> 前提：1M context 不是"无脑塞"的许可，而是"精细管理"的新基线。context rot 在 ~300-400k 就开始。
+> 前提：context 不是"无脑塞"的许可，而是"精细管理"的新基线。context rot 在使用量超过 30% 时开始。
 
 **R1 · 主动 compact（需老板确认门）**
-当任务阶段性收尾 + 估算已过 300k tokens 时，cc 提出 `/compact` 计划，**不得直接执行**。格式：
+当任务阶段性收尾 + 估算已过 **当前模型上下文窗口的 30%** 时，cc 提出 `/compact` 计划，**不得直接执行**。
+- 200k 模型 → 阈值 ~60k tokens
+- 1M 模型 → 阈值 ~300k tokens
+- 判断方式：估算本 session 工具调用数 × 平均 token 量，或观察 Claude Code 界面 context 用量指示
+
+格式：
 ```
 [compact 计划] focus on <下一步的 1 句话目标>, drop <要丢的区域>
 → 等老板点头再执行。
 ```
 理由：compact 时模型正处于 context rot 最严重的点，cc 对"下一步是什么"可能判断错，需老板一票确认防止丢关键信息。
+
+**⚠️ 已知失效模式（2026-04-20 修复）**：原规格硬编码 300k，在 200k 模型上阈值高了 5 倍，导致上一 session 直接撞 context limit 才被系统强制截断。修复为动态比例。
 
 **R2 · 优先 rewind 而非"再试一下"**
 方案失败且 context 里已有昂贵的文件/调试信息时，优先 `/rewind`（Esc Esc）回到 **踩坑前 / 读文件后** 的那一刻，再重 prompt 并带上"为什么不走 A，直接走 B 因为 X"。禁止在污染的 context 里直接说"那个不对再试试"。
