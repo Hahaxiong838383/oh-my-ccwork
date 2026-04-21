@@ -302,8 +302,15 @@ export async function runAgentStateMachine(
     }
 
     const duration = now() - enterTs;
-    pushStageResult(stageResults, stage, true, duration);
-    emitter.emitStageExit(effectiveCtx, stage, true, duration, now());
+    // P2d: written=0 表示审计层 DB 写入未实际发生，记录为警告态（ok=false）但不终止流程
+    const written = (outputs.commit as CommitStageOutput).written ?? -1;
+    if (written === 0) {
+      pushStageResult(stageResults, stage, false, duration, 'COMMIT_AUDIT_SKIPPED');
+      emitter.emitStageExit(effectiveCtx, stage, false, duration, now());
+    } else {
+      pushStageResult(stageResults, stage, true, duration);
+      emitter.emitStageExit(effectiveCtx, stage, true, duration, now());
+    }
   }
 
   return {
