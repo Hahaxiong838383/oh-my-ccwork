@@ -14,7 +14,7 @@ import type { EvidencePayload } from "./cheap-signals.js";
 import type { Criterion } from "./policy.js";
 
 const PROXY_URL = (process.env.GEMINI_PROXY_URL ?? "http://23.226.135.149:4000").replace(/\/$/, "");
-const MODEL = "gemini-2.5-flash-preview";
+const MODEL = "gemini-2.5-flash";
 const LLM_TIMEOUT_MS = 15_000;
 // 每次调用的 token 估算：~300 input + 5 output（Gemini Flash）
 const TOKENS_PER_CALL = 305;
