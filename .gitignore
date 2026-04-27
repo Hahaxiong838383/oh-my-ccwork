@@ -21,6 +21,9 @@ build/
 0-System/memory.db-wal
 0-System/memory.db-shm
 
+# HANDOFF 文档（含 SSH/API Key/IP 等敏感信息，永远只留本地）
+**/HANDOFF-*.md
+
 # ====================================
 # 38e628b 新增的不必要文件（仅保留核心功能）
 # ====================================
