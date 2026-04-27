@@ -22,7 +22,11 @@ build/
 0-System/memory.db-shm
 
 # HANDOFF 文档（含 SSH/API Key/IP 等敏感信息，永远只留本地）
+# 命中 HANDOFF-*.md 和 HANDOFF.md（纯名）；不命中 progress/events/2026-*-handoff-*.md（小写日期前缀=事件流）
 **/HANDOFF-*.md
+/2-Projects/*/HANDOFF.md
+/0-System/HANDOFF.md
+HANDOFF.md
 
 # ====================================
 # 38e628b 新增的不必要文件（仅保留核心功能）
