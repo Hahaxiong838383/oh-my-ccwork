@@ -26,3 +26,4 @@
 | 日期时间 | 任务 | Skill | 说明 |
 |----------|------|-------|------|
 | 2026-05-05 18:00 | BFO V0.1 一周校准 | - | 你是 cc，读取 `.claude/skills/scheduler/prompts/bfo-v0.1-week-calibration.md` 的完整内容并按其执行：扫一周 BFO 自检数据（no-guessing 违规案例 + task-log friction + memory 反馈 + git log），按 4 维度（推断扣 −0.3 / 转述扣 −0.2 / 短路滥用 / load-bearing 边界）给校准建议；输出三件套：飞书简报推 cc 群 + 写 feedback_bfo_v0.1_calibration.md memory + task-log 追加一行 + git push 到 mycc origin。数据不足时输出"延后 2 周再校准"并提示老板。约束：不准改规则文件，所有阈值建议必附数据依据。 |
+| 2026-05-05 09:00 | 万能公式 v1 一周复盘 | /tell-me | 你是 cc，读取 `.claude/skills/scheduler/prompts/wanneng-v1-week-calibration.md` 的完整内容并按其执行：4 项检查（主文件压缩比 / codex 召回率实测 2 个 / 分叉事故 / 新增规则 SCHEMA 遵守度），输出三件套：飞书简报推 cc 群 + 写 feedback_wanneng_v1_calibration.md memory + task-log 追加一行。verdict 4/4→推广；3/4→修复后推广；≤1/4→回滚到 .bak.20260428。约束：不准改规则文件，结论必附数据。 |

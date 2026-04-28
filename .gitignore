@@ -281,3 +281,7 @@ skills/netease-music-*
 2-Projects/cc2wechat/
 0-System/chat-history/
 0-System/snapshots/
+
+# 热回滚备份（试运行窗口期不进 git；复盘通过后归档到 5-Archive/）
+CLAUDE.md.bak.*
+AGENTS.md.bak.*
