@@ -163,3 +163,4 @@ cc 通过三层记忆工作。**每次 Session 必做**：
 | [`multi-agent/RULES.md`](./multi-agent/RULES.md) | 多智能体协同完整规则 |
 | [`3-Thinking/01-BRO-PDCA方法论.md`](./3-Thinking/01-BRO-PDCA方法论.md) | BRO-PDCA 方法论详细 |
 | [`3-Thinking/06-意识理论与认知架构映射.md`](./3-Thinking/06-意识理论与认知架构映射.md) | 六大意识理论 × mycc 架构（HOT/GWT/IIT/RPT/AST/PP） |
+| [`.claude/skills/rule-compress/SKILL.md`](./.claude/skills/rule-compress/SKILL.md) | **万能公式 v1 规则压缩 skill**（`/rule-compress`） |

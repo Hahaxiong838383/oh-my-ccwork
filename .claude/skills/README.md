@@ -65,6 +65,7 @@ description: 鍋氫粈涔?+ 浠€涔堟椂鍊欒Е鍙戯紙杩欐槸鏈€閲�
 | `mycc` | 绉诲姩绔闂悗绔紝鍦ㄦ墜鏈轰笂浣跨敤 CC | `/mycc` |
 | `feishu-mcp-setup` | 椋炰功 MCP 閰嶇疆寮曞锛屼粠闆堕厤缃?open-feishu-mcp | `/feishu-mcp-setup` |
 | `feishu-ops` | 椋炰功鎿嶄綔鎵嬪唽锛屾枃妗?琛ㄦ牸/Wiki 鎿嶄綔鎸囧崡 | `/feishu-ops` |
+| `rule-compress` | 万能公式 v1 规则压缩引擎，对散文式规则文件做 4 维优先级分析 + P0-P3 分层 + 索引下沉无损压缩 | `/rule-compress` |
 
 ### mycc - 绉诲姩绔闂?
 
