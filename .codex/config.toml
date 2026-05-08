@@ -1,6 +1,7 @@
 model = "gpt-5.3-codex"
 model_reasoning_effort = "high"
 personality = "pragmatic"
+sandbox_mode = "danger-full-access"
 [mcp_servers]
 
 [mcp_servers.memory]
