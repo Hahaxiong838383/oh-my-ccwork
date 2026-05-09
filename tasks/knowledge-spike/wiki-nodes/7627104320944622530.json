@@ -1,0 +1,27 @@
+{
+  "code": 0,
+  "data": {
+    "has_more": false,
+    "items": [
+      {
+        "creator": "ou_6bde3a204c8499a3b6c26677c7c9a070",
+        "has_child": true,
+        "node_create_time": "1775823608",
+        "node_token": "ENIFwz1z6iYwACkSTlDcKcSunPg",
+        "node_type": "origin",
+        "obj_create_time": "1775823608",
+        "obj_edit_time": "1775825031",
+        "obj_token": "L2gydygYNoNByHx9dEJceViOnMg",
+        "obj_type": "docx",
+        "origin_node_token": "ENIFwz1z6iYwACkSTlDcKcSunPg",
+        "origin_space_id": "7627104320944622530",
+        "owner": "ou_6bde3a204c8499a3b6c26677c7c9a070",
+        "parent_node_token": "",
+        "space_id": "7627104320944622530",
+        "title": "首页"
+      }
+    ],
+    "page_token": ""
+  },
+  "msg": "success"
+}

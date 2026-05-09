@@ -1,0 +1,27 @@
+{
+  "code": 0,
+  "data": {
+    "has_more": false,
+    "items": [
+      {
+        "creator": "ou_6bde3a204c8499a3b6c26677c7c9a070",
+        "has_child": true,
+        "node_create_time": "1767157993",
+        "node_token": "CiDwwr4cIiZI9Aksyc1cVjjyndf",
+        "node_type": "origin",
+        "obj_create_time": "1767157993",
+        "obj_edit_time": "1774861027",
+        "obj_token": "Hqc2dRw54oPTlBxrDQVchLtwnLe",
+        "obj_type": "docx",
+        "origin_node_token": "CiDwwr4cIiZI9Aksyc1cVjjyndf",
+        "origin_space_id": "7589885788549024719",
+        "owner": "ou_6bde3a204c8499a3b6c26677c7c9a070",
+        "parent_node_token": "",
+        "space_id": "7589885788549024719",
+        "title": "FUTURUS AI 首页"
+      }
+    ],
+    "page_token": ""
+  },
+  "msg": "success"
+}

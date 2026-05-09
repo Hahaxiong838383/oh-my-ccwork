@@ -1,0 +1,61 @@
+{
+  "code": 0,
+  "data": {
+    "has_more": false,
+    "items": [
+      {
+        "creator": "ou_621d25c398d96f8aed18ef323cdb3a38",
+        "has_child": true,
+        "node_create_time": "1763530681",
+        "node_token": "GGwbwNsZ1iRVBdkCUo2c4gSyn3e",
+        "node_type": "origin",
+        "obj_create_time": "1763530681",
+        "obj_edit_time": "1764223282",
+        "obj_token": "NoWCdcgHgoFNqDxKEZ9cCOuQnKh",
+        "obj_type": "docx",
+        "origin_node_token": "GGwbwNsZ1iRVBdkCUo2c4gSyn3e",
+        "origin_space_id": "7574306600597651460",
+        "owner": "ou_621d25c398d96f8aed18ef323cdb3a38",
+        "parent_node_token": "",
+        "space_id": "7574306600597651460",
+        "title": "集团化文件待发布库"
+      },
+      {
+        "creator": "ou_f3b26e6d732098cd29b4a2f54e0d4bde",
+        "has_child": true,
+        "node_create_time": "1773302623",
+        "node_token": "Y8CdwHG46ikK9WkQabdcIGqBnpG",
+        "node_type": "origin",
+        "obj_create_time": "1773302623",
+        "obj_edit_time": "1774318831",
+        "obj_token": "ARDzdfgrqoP7phx135wcPzsinIb",
+        "obj_type": "docx",
+        "origin_node_token": "Y8CdwHG46ikK9WkQabdcIGqBnpG",
+        "origin_space_id": "7574306600597651460",
+        "owner": "ou_f3b26e6d732098cd29b4a2f54e0d4bde",
+        "parent_node_token": "",
+        "space_id": "7574306600597651460",
+        "title": "old版-已发布文件"
+      },
+      {
+        "creator": "ou_563115987c8b0fc70d8fe1f31ccb84f7",
+        "has_child": false,
+        "node_create_time": "1775802673",
+        "node_token": "V3tDw7BpJi1Pj6k96BWc8Em2n0b",
+        "node_type": "origin",
+        "obj_create_time": "1775802673",
+        "obj_edit_time": "1775811731",
+        "obj_token": "LwXPdKKGpo9dIDxcDogcRyNqnfb",
+        "obj_type": "docx",
+        "origin_node_token": "V3tDw7BpJi1Pj6k96BWc8Em2n0b",
+        "origin_space_id": "7574306600597651460",
+        "owner": "ou_563115987c8b0fc70d8fe1f31ccb84f7",
+        "parent_node_token": "",
+        "space_id": "7574306600597651460",
+        "title": "FUTU-02-21 产品检验和试验控制程序 副本"
+      }
+    ],
+    "page_token": ""
+  },
+  "msg": "success"
+}

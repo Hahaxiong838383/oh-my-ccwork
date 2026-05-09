@@ -1,0 +1,181 @@
+[page 1] fetching...
+[page 2] fetching...
+[page 3] fetching...
+[pagination] merged 3 pages, 21 total items
+{
+  "code": 0,
+  "data": {
+    "has_more": false,
+    "items": [
+      {
+        "description": "",
+        "name": "Queen Brain Wiki",
+        "open_sharing": "closed",
+        "space_id": "7627104320944622530",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "协作办公信息枢纽",
+        "name": "⌘FUTURUS知识库",
+        "open_sharing": "closed",
+        "space_id": "7224326117803425820",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "非车载业务知识库。\n官网：www.futurus-ai.co\n400-",
+        "name": "非车载业务_www.futurus-ai.co",
+        "open_sharing": "closed",
+        "space_id": "7537506066851037187",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "关于创新所需要了解的一切",
+        "name": "【产品研究部】部门知识库",
+        "open_sharing": "closed",
+        "space_id": "7094894681045090306",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "游戏视觉数字资产库",
+        "name": "游戏视觉数字资产库",
+        "open_sharing": "closed",
+        "space_id": "7614880775405603808",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "AI 认知与知识的沉淀",
+        "name": "FUTURUS AI 知识库",
+        "open_sharing": "closed",
+        "space_id": "7589885788549024719",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "知识沉淀 | 学习提高的资料库",
+        "name": "✲Futurus技术知识库",
+        "open_sharing": "closed",
+        "space_id": "7216899129681641500",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "让光学与智能，被世界感知",
+        "name": "市场Marketing",
+        "open_sharing": "closed",
+        "space_id": "7624457841599941564",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "信息中央厨房，公司点滴发展的记录者、参与者、见证者。",
+        "name": "市场部",
+        "open_sharing": "closed",
+        "space_id": "7095914462376411164",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "用于编辑中、待评审的集团化文件",
+        "name": "集团化文件待发布库",
+        "open_sharing": "closed",
+        "space_id": "7574306600597651460",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "制造LLs沉淀",
+        "name": "FUTURUS CQ 知识库",
+        "open_sharing": "closed",
+        "space_id": "7495650091707383812",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "由Codex自动创建",
+        "name": "陈川测试用知识库",
+        "open_sharing": "closed",
+        "space_id": "7611047302408473542",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "",
+        "name": "陈川个人管理空间",
+        "open_sharing": "closed",
+        "space_id": "7182033775629713436",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "轻松搭建项目知识资产库",
+        "name": "项目部",
+        "open_sharing": "closed",
+        "space_id": "7258067124382400515",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "",
+        "name": "未来黑科技开发资料共享库",
+        "open_sharing": "closed",
+        "space_id": "7311540843507171330",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "公司级管理文档中心 | 知识管理",
+        "name": "✲DCC",
+        "open_sharing": "closed",
+        "space_id": "7016946088171012099",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "售后管理流程、问题管理、绩效统计",
+        "name": "售后质量",
+        "open_sharing": "closed",
+        "space_id": "7519336285702488065",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "供应链管理的知乎",
+        "name": "供应链管理知识库",
+        "open_sharing": "closed",
+        "space_id": "7029604225466302465",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "创意沉淀之处",
+        "name": "产品及交互设计知识库（搭建中）",
+        "open_sharing": "closed",
+        "space_id": "7242524593376722946",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "",
+        "name": "Isa的个人知识库",
+        "open_sharing": "closed",
+        "space_id": "7331628343857250308",
+        "space_type": "team",
+        "visibility": "private"
+      },
+      {
+        "description": "",
+        "name": "123",
+        "open_sharing": "closed",
+        "space_id": "7587714795957210055",
+        "space_type": "team",
+        "visibility": "private"
+      }
+    ]
+  },
+  "msg": "success"
+}

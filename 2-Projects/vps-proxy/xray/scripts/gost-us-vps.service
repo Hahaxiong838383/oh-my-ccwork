@@ -1,0 +1,13 @@
+[Unit]
+Description=gost relay to US VPS (198.46.146.238)
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=3
+ExecStart=/usr/local/bin/gost -L tcp://:443/198.46.146.238:443 -L tcp://:10086/198.46.146.238:10086 -L tcp://:9443/198.46.146.238:8443
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

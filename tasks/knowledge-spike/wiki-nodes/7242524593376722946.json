@@ -1,0 +1,44 @@
+{
+  "code": 0,
+  "data": {
+    "has_more": false,
+    "items": [
+      {
+        "creator": "ou_6bde3a204c8499a3b6c26677c7c9a070",
+        "has_child": true,
+        "node_create_time": "1686281663",
+        "node_token": "CXA7wtW6qivn6PkCelmc5c5OnId",
+        "node_type": "origin",
+        "obj_create_time": "1686281663",
+        "obj_edit_time": "1686291499",
+        "obj_token": "doccnTZEWpjiOkeWczoRDChhK4f",
+        "obj_type": "doc",
+        "origin_node_token": "CXA7wtW6qivn6PkCelmc5c5OnId",
+        "origin_space_id": "7242524593376722946",
+        "owner": "ou_6bde3a204c8499a3b6c26677c7c9a070",
+        "parent_node_token": "",
+        "space_id": "7242524593376722946",
+        "title": "产品及交互设计知识库首页（搭建中）"
+      },
+      {
+        "creator": "ou_6bde3a204c8499a3b6c26677c7c9a070",
+        "has_child": true,
+        "node_create_time": "1686281663",
+        "node_token": "DS2iwf8HJi8SvMkUecAcu5A0nfh",
+        "node_type": "origin",
+        "obj_create_time": "1686281663",
+        "obj_edit_time": "1686290772",
+        "obj_token": "doccnX7OThEGu79vo09VQKM8krd",
+        "obj_type": "doc",
+        "origin_node_token": "DS2iwf8HJi8SvMkUecAcu5A0nfh",
+        "origin_space_id": "7242524593376722946",
+        "owner": "ou_6bde3a204c8499a3b6c26677c7c9a070",
+        "parent_node_token": "",
+        "space_id": "7242524593376722946",
+        "title": "2.0 产品知识库"
+      }
+    ],
+    "page_token": ""
+  },
+  "msg": "success"
+}

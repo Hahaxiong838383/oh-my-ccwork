@@ -1,0 +1,1 @@
+{"choices":[{"finish_reason":"stop","index":0,"message":{"content":"{\n  \"facts\": []\n}","role":"assistant"}}],"created":1775831491,"id":"wQnZabXpOb6s1MkPi_nemQ8","model":"gemini-2.5-flash","object":"chat.completion","usage":{"completion_tokens":9,"prompt_tokens":254,"total_tokens":379}}

@@ -1,0 +1,26 @@
+{
+  "facts": [
+    {
+      "content": "Futurus技术知识库是一个独立于FUTURUS知识库的公司技术知识库。",
+      "keywords": [
+        "Futurus技术知识库",
+        "独立",
+        "公司",
+        "技术知识库"
+      ],
+      "confidence": 0.9,
+      "namespace": "公司/技术/知识库"
+    },
+    {
+      "content": "Futurus技术知识库的入口链接是 https://futurus.feishu.cn/wiki/space/7216899129681641500。",
+      "keywords": [
+        "Futurus技术知识库",
+        "入口链接",
+        "飞书",
+        "知识库链接"
+      ],
+      "confidence": 0.9,
+      "namespace": "公司/技术/知识库"
+    }
+  ]
+}

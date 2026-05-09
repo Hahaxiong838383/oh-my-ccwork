@@ -1,0 +1,2 @@
+timestamp	skill	total_score	structure_score	effect_score	eval_mode	top_weakness	note
+2026-04-14T09:40	restart	78	58	20	dry_run	frontmatter	自测基线-缺YAML头但流程完整

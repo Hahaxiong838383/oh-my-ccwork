@@ -1,0 +1,44 @@
+{
+  "code": 0,
+  "data": {
+    "has_more": false,
+    "items": [
+      {
+        "creator": "ou_6bde3a204c8499a3b6c26677c7c9a070",
+        "has_child": true,
+        "node_create_time": "1773992542",
+        "node_token": "TksfwfI2hibq8ukPeLycKjq0nhb",
+        "node_type": "origin",
+        "obj_create_time": "1773992542",
+        "obj_edit_time": "1773995010",
+        "obj_token": "M50adgHbFoqiyqx6W7xcKVfFnyg",
+        "obj_type": "docx",
+        "origin_node_token": "TksfwfI2hibq8ukPeLycKjq0nhb",
+        "origin_space_id": "7614880775405603808",
+        "owner": "ou_6bde3a204c8499a3b6c26677c7c9a070",
+        "parent_node_token": "",
+        "space_id": "7614880775405603808",
+        "title": "游戏策划文档库"
+      },
+      {
+        "creator": "ou_6bde3a204c8499a3b6c26677c7c9a070",
+        "has_child": true,
+        "node_create_time": "1772977592",
+        "node_token": "ZfSQwNuVBi1yhekh0Wmca00gnCb",
+        "node_type": "origin",
+        "obj_create_time": "1772977592",
+        "obj_edit_time": "1774341093",
+        "obj_token": "HKoBdRbFZoOWbixJuRvcBZv8n5d",
+        "obj_type": "docx",
+        "origin_node_token": "ZfSQwNuVBi1yhekh0Wmca00gnCb",
+        "origin_space_id": "7614880775405603808",
+        "owner": "ou_6bde3a204c8499a3b6c26677c7c9a070",
+        "parent_node_token": "",
+        "space_id": "7614880775405603808",
+        "title": "游戏视觉数字资产库首页"
+      }
+    ],
+    "page_token": ""
+  },
+  "msg": "success"
+}

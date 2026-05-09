@@ -1,0 +1,1 @@
+Ultra-detailed macro photograph of a vibrant red-orange Atlantic lobster on dark wet slate stone, natural studio lighting from upper left, dramatic side shadows, glistening water droplets on the shell, sharp focus on antennae and claws, hyperrealistic texture, professional food photography style, cinematic depth of field, 8K resolution

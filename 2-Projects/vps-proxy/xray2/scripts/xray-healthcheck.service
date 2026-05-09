@@ -1,0 +1,7 @@
+[Unit]
+Description=Xray proxy healthcheck (auto-heal if xray/ports down)
+After=network-online.target x-ui.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/xray-healthcheck.sh

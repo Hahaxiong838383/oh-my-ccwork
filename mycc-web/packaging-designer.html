@@ -1,0 +1,2281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Futurus Packaging Designer</title>
+    <style>
+      :root {
+        --bg: #f5f0e8;
+        --panel: rgba(255, 252, 246, 0.8);
+        --panel-strong: #fffdfa;
+        --ink: #171717;
+        --muted: #5a554c;
+        --line: rgba(23, 23, 23, 0.14);
+        --accent: #a45d38;
+        --accent-strong: #7f4120;
+        --accent-soft: rgba(164, 93, 56, 0.12);
+        --ok: #1d6b49;
+        --shadow: 0 20px 60px rgba(77, 52, 39, 0.14);
+        --radius-xl: 28px;
+        --radius-lg: 20px;
+        --radius-md: 14px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background:
+          radial-gradient(circle at top left, rgba(164, 93, 56, 0.16), transparent 28%),
+          radial-gradient(circle at 85% 0%, rgba(97, 113, 77, 0.12), transparent 20%),
+          linear-gradient(180deg, #fbf7ef 0%, var(--bg) 100%);
+        color: var(--ink);
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(23, 23, 23, 0.018) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(23, 23, 23, 0.018) 1px, transparent 1px);
+        background-size: 24px 24px;
+        mask-image: radial-gradient(circle at center, black 60%, transparent 95%);
+      }
+
+      .app-shell {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: 420px minmax(0, 1fr);
+        gap: 16px;
+        min-height: 100vh;
+        padding: 16px;
+      }
+
+      .panel {
+        backdrop-filter: blur(20px);
+        background: var(--panel);
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar {
+        padding: 18px;
+        overflow: auto;
+        max-height: calc(100vh - 32px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 54px;
+        height: 54px;
+        border-radius: 18px;
+        background:
+          linear-gradient(135deg, #1d1d1d 0%, #36302d 100%);
+        color: #f6f1e8;
+        font-family: "Iowan Old Style", "Palatino Linotype", serif;
+        font-size: 20px;
+        letter-spacing: 0.08em;
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-family: "Iowan Old Style", "Palatino Linotype", serif;
+        font-size: 30px;
+        line-height: 1;
+      }
+
+      .brand p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .hero-copy {
+        padding: 16px 18px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,247,238,0.65));
+        border: 1px solid rgba(23, 23, 23, 0.08);
+        border-radius: 22px;
+      }
+
+      .hero-copy h2 {
+        margin: 0 0 10px;
+        font-size: 15px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .hero-copy p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 14px;
+      }
+
+      .control-group {
+        margin-top: 18px;
+        padding: 18px;
+        border-radius: var(--radius-lg);
+        background: rgba(255, 253, 249, 0.88);
+        border: 1px solid rgba(23, 23, 23, 0.08);
+      }
+
+      .group-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 14px;
+      }
+
+      .group-title h3 {
+        margin: 0;
+        font-size: 16px;
+      }
+
+      .group-title span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .preset-grid,
+      .button-row {
+        display: grid;
+        gap: 10px;
+      }
+
+      .preset-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      button,
+      select,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      .preset,
+      .ghost-button,
+      .solid-button {
+        border: 1px solid rgba(23, 23, 23, 0.1);
+        border-radius: 16px;
+        cursor: pointer;
+        transition:
+          transform 180ms ease,
+          box-shadow 180ms ease,
+          border-color 180ms ease,
+          background 180ms ease;
+      }
+
+      .preset {
+        padding: 12px;
+        text-align: left;
+        background: #fffdf8;
+      }
+
+      .preset:hover,
+      .ghost-button:hover,
+      .solid-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(56, 31, 20, 0.12);
+      }
+
+      .preset.active {
+        background: linear-gradient(135deg, rgba(164, 93, 56, 0.16), rgba(164, 93, 56, 0.04));
+        border-color: rgba(164, 93, 56, 0.42);
+      }
+
+      .preset strong,
+      .metric strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 14px;
+      }
+
+      .preset small,
+      .metric small {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .field-grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .field label {
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.03em;
+      }
+
+      .field input,
+      .field textarea,
+      .field select {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(23, 23, 23, 0.12);
+        background: rgba(255, 255, 255, 0.95);
+        outline: none;
+      }
+
+      .field input:focus,
+      .field textarea:focus,
+      .field select:focus {
+        border-color: rgba(164, 93, 56, 0.6);
+        box-shadow: 0 0 0 4px rgba(164, 93, 56, 0.12);
+      }
+
+      .field textarea {
+        min-height: 86px;
+        resize: vertical;
+        line-height: 1.6;
+      }
+
+      .ghost-button,
+      .solid-button {
+        padding: 13px 14px;
+      }
+
+      .ghost-button:disabled,
+      .solid-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.48;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .ghost-button {
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      .solid-button {
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #fff8f1;
+        border-color: transparent;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .metric {
+        padding: 14px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(247,241,233,0.8));
+        border: 1px solid rgba(23, 23, 23, 0.07);
+      }
+
+      .metric em {
+        display: block;
+        margin-top: 8px;
+        color: var(--ok);
+        font-style: normal;
+        font-size: 12px;
+      }
+
+      .asset-status {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(164, 93, 56, 0.08);
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .module-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .module-chip {
+        padding: 10px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(23, 23, 23, 0.1);
+        background: rgba(255, 255, 255, 0.84);
+        color: var(--muted);
+        cursor: pointer;
+      }
+
+      .module-chip.active {
+        border-color: rgba(164, 93, 56, 0.4);
+        background: rgba(164, 93, 56, 0.12);
+        color: var(--accent-strong);
+      }
+
+      .module-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .mini-note {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .workspace {
+        min-width: 0;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 18px;
+      }
+
+      .headline,
+      .canvas-card {
+        padding: 20px;
+      }
+
+      .headline {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+
+      .headline h2 {
+        margin: 0;
+        font-family: "Iowan Old Style", "Palatino Linotype", serif;
+        font-size: clamp(30px, 4vw, 48px);
+        line-height: 1;
+      }
+
+      .headline p {
+        margin: 12px 0 0;
+        max-width: 720px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .status-chip {
+        align-self: center;
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(23, 23, 23, 0.08);
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .canvas-card h3 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+
+      .summary-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .summary-tile {
+        padding: 14px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(23, 23, 23, 0.07);
+      }
+
+      .summary-tile strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+
+      .summary-tile span {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .canvas-card {
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr);
+        gap: 16px;
+        min-height: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .toolbar .ghost-button,
+      .toolbar .solid-button {
+        padding: 11px 14px;
+      }
+
+      .toolbar .mini {
+        padding: 8px 12px;
+        border-radius: 999px;
+      }
+
+      .toolbar-note {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .canvas-frame {
+        position: relative;
+        min-height: 560px;
+        overflow: hidden;
+        border-top: 1px solid rgba(23, 23, 23, 0.08);
+        background:
+          radial-gradient(rgba(23, 23, 23, 0.18) 1px, transparent 1.2px),
+          linear-gradient(180deg, #eef1f5 0%, #e6ebf0 100%);
+        background-size: 22px 22px, auto;
+        background-position: 0 0, 0 0;
+        cursor: default;
+        touch-action: none;
+      }
+
+      .canvas-frame.pan-ready { cursor: grab; }
+      .canvas-frame.panning { cursor: grabbing; }
+      .canvas-frame.dragging-item { cursor: grabbing; }
+
+      #canvasMount {
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform-origin: 0 0;
+      }
+
+      #canvasMount svg [data-drag-type] {
+        cursor: grab;
+      }
+      #canvasMount svg [data-drag-type]:hover {
+        filter: drop-shadow(0 0 0 rgba(37, 99, 235, 0.6));
+        outline: none;
+      }
+      #canvasMount svg .selection-ring {
+        fill: none;
+        stroke: #2563eb;
+        stroke-width: 1.4;
+        stroke-dasharray: 6 4;
+        pointer-events: none;
+      }
+      #canvasMount svg .hover-ring {
+        fill: none;
+        stroke: rgba(37, 99, 235, 0.55);
+        stroke-width: 1;
+        stroke-dasharray: 3 3;
+        pointer-events: none;
+      }
+
+      .inline-editor {
+        position: absolute;
+        z-index: 20;
+        min-width: 60px;
+        padding: 4px 8px;
+        border: 1.5px solid #2563eb;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #111;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+        outline: none;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        white-space: nowrap;
+      }
+
+      .canvas-hint {
+        position: absolute;
+        right: 16px;
+        bottom: 14px;
+        display: flex;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(23, 23, 23, 0.08);
+        color: var(--muted);
+        font-size: 12px;
+        backdrop-filter: blur(10px);
+        pointer-events: none;
+      }
+
+      .canvas-hint kbd {
+        padding: 1px 6px;
+        border: 1px solid rgba(23, 23, 23, 0.14);
+        border-bottom-width: 2px;
+        border-radius: 4px;
+        background: #fff;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 11px;
+        color: #111;
+      }
+
+      .spec-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .spec-item {
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(23, 23, 23, 0.07);
+      }
+
+      .spec-item strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 13px;
+      }
+
+      .spec-item span {
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .spec-block {
+        padding: 16px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(249,242,233,0.8));
+        border: 1px solid rgba(23, 23, 23, 0.07);
+      }
+
+      .spec-block h4 {
+        margin: 0 0 8px;
+        font-size: 14px;
+      }
+
+      .spec-block pre {
+        margin: 0;
+        white-space: pre-wrap;
+        line-height: 1.7;
+        color: var(--muted);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+      }
+
+      .sidebar-section-copy {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 14px;
+      }
+
+      .preview-panel {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        min-height: calc(100vh - 32px);
+        overflow: hidden;
+      }
+
+      .preview-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 18px;
+        border-bottom: 1px solid rgba(23, 23, 23, 0.08);
+        background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(250,246,239,0.68));
+      }
+
+      .preview-header-copy {
+        min-width: 0;
+      }
+
+      .preview-header-copy h2 {
+        margin: 0;
+        font-family: "Iowan Old Style", "Palatino Linotype", serif;
+        font-size: clamp(28px, 2.8vw, 40px);
+        line-height: 1;
+      }
+
+      .preview-header-copy p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.7;
+        max-width: 760px;
+      }
+
+      .preview-stage {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        min-height: 0;
+      }
+
+      .stage-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 14px 18px;
+        background: rgba(255,255,255,0.58);
+      }
+
+      .stage-toolbar-left,
+      .stage-toolbar-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      @media (max-width: 1320px) {
+        .app-shell {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .app-shell {
+          padding: 14px;
+        }
+
+        .sidebar,
+        .headline,
+        .canvas-card {
+          padding: 16px;
+        }
+
+        .field-grid,
+        .field-grid.two,
+        .metrics,
+        .summary-grid,
+        .preset-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .headline,
+        .preview-header {
+          flex-direction: column;
+          gap: 12px;
+          align-items: flex-start;
+        }
+
+        .canvas-frame {
+          min-height: 420px;
+        }
+
+        .stage-toolbar {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="panel sidebar">
+        <div class="brand">
+          <div class="brand-mark">FD</div>
+          <div>
+            <h1>Packaging Lab</h1>
+            <p>Futurus 13.3 寸护眼屏包装设计软件</p>
+          </div>
+        </div>
+
+        <section class="hero-copy">
+          <h2>设计方向</h2>
+          <p>
+            把包装 BOM 文档转成一套真正能编辑的网页版工具：实时改尺寸、切换内胆方案、预览三视图与内胆布置，并导出 SVG 继续进 Figma 或 Illustrator。
+          </p>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title">
+            <h3>项目摘要</h3>
+            <span>左侧只管编辑</span>
+          </div>
+          <p id="summaryCopy" class="sidebar-section-copy"></p>
+          <div class="summary-grid">
+            <div class="summary-tile">
+              <strong>外盒结构</strong>
+              <span id="summaryOuter"></span>
+            </div>
+            <div class="summary-tile">
+              <strong>内胆方案</strong>
+              <span id="summaryInsert"></span>
+            </div>
+            <div class="summary-tile">
+              <strong>导出格式</strong>
+              <span>矢量 SVG / 参数 JSON / 文本规格</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title">
+            <h3>预设方案</h3>
+            <span>一键切换基线</span>
+          </div>
+          <div id="presetGrid" class="preset-grid"></div>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title">
+            <h3>外盒尺寸</h3>
+            <span>单位 mm</span>
+          </div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="outerLength">长度 L</label>
+              <input id="outerLength" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="outerWidth">宽度 W</label>
+              <input id="outerWidth" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="outerHeight">高度 H</label>
+              <input id="outerHeight" type="number" step="0.1" />
+            </div>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title">
+            <h3>内胆与配件</h3>
+            <span>产品腔 / 配件层</span>
+          </div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="cavityLength">产品腔 L</label>
+              <input id="cavityLength" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="cavityWidth">产品腔 W</label>
+              <input id="cavityWidth" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="cavityHeight">产品腔 H</label>
+              <input id="cavityHeight" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="accessoryLength">配件层 L</label>
+              <input id="accessoryLength" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="accessoryWidth">配件层 W</label>
+              <input id="accessoryWidth" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="accessoryHeight">配件层 H</label>
+              <input id="accessoryHeight" type="number" step="0.1" />
+            </div>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title">
+            <h3>结构参数</h3>
+            <span>控制包装结构</span>
+          </div>
+          <div class="field-grid two">
+            <div class="field">
+              <label for="glueFlap">糊口宽度</label>
+              <input id="glueFlap" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="lidFlap">上下翻盖</label>
+              <input id="lidFlap" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="insertType">内胆类型</label>
+              <select id="insertType">
+                <option value="硬纸壳">硬纸壳</option>
+                <option value="吸塑 PET">吸塑 PET</option>
+                <option value="EPE 泡棉">EPE 泡棉</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="closureType">封箱方式</label>
+              <select id="closureType">
+                <option value="易撕贴">易撕贴</option>
+                <option value="直接开合">直接开合</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title">
+            <h3>文案与工艺</h3>
+            <span>同步到规格卡</span>
+          </div>
+          <div class="field-grid two">
+            <div class="field">
+              <label for="projectName">项目名</label>
+              <input id="projectName" type="text" />
+            </div>
+            <div class="field">
+              <label for="logoStyle">Logo 工艺</label>
+              <input id="logoStyle" type="text" />
+            </div>
+          </div>
+          <div class="field" style="margin-top: 12px;">
+            <label for="summaryText">设计说明</label>
+            <textarea id="summaryText"></textarea>
+          </div>
+          <div class="field" style="margin-top: 12px;">
+            <label for="notesText">生产备注（每行一条）</label>
+            <textarea id="notesText"></textarea>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title">
+            <h3>图片资产</h3>
+            <span>Logo / 图形导入</span>
+          </div>
+          <div class="field">
+            <label for="logoUpload">导入图片</label>
+            <input id="logoUpload" type="file" accept="image/*" />
+          </div>
+          <div class="field-grid two" style="margin-top: 12px;">
+            <div class="field">
+              <label for="logoSurface">落位面</label>
+              <select id="logoSurface">
+                <option value="top">顶面</option>
+                <option value="front">前视</option>
+                <option value="right">右视</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="logoOpacity">透明度</label>
+              <input id="logoOpacity" type="number" step="0.05" min="0" max="1" />
+            </div>
+            <div class="field">
+              <label for="logoX">X 坐标</label>
+              <input id="logoX" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="logoY">Y 坐标</label>
+              <input id="logoY" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="logoWidth">宽度</label>
+              <input id="logoWidth" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="logoHeight">高度</label>
+              <input id="logoHeight" type="number" step="0.1" />
+            </div>
+          </div>
+          <div class="module-actions">
+            <button class="ghost-button" id="clearLogoButton">清空图片</button>
+          </div>
+          <div class="asset-status" id="assetStatus">当前未导入图片</div>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title">
+            <h3>文字模块</h3>
+            <span>可多块编辑</span>
+          </div>
+          <div class="module-list" id="textModuleList"></div>
+          <div class="module-actions" style="margin-top: 0;">
+            <button class="solid-button" id="addTextModuleButton">新增文字模块</button>
+            <button class="ghost-button" id="deleteTextModuleButton">删除当前模块</button>
+          </div>
+          <div class="field" style="margin-top: 12px;">
+            <label for="textModuleContent">文字内容</label>
+            <textarea id="textModuleContent"></textarea>
+          </div>
+          <div class="field-grid two" style="margin-top: 12px;">
+            <div class="field">
+              <label for="textModuleSurface">落位面</label>
+              <select id="textModuleSurface">
+                <option value="top">顶面</option>
+                <option value="front">前视</option>
+                <option value="right">右视</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="textModuleAlign">对齐</label>
+              <select id="textModuleAlign">
+                <option value="start">左对齐</option>
+                <option value="middle">居中</option>
+                <option value="end">右对齐</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="textModuleX">X 坐标</label>
+              <input id="textModuleX" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="textModuleY">Y 坐标</label>
+              <input id="textModuleY" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="textModuleFontSize">字号</label>
+              <input id="textModuleFontSize" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="textModuleLetterSpacing">字距</label>
+              <input id="textModuleLetterSpacing" type="number" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="textModuleRotation">旋转角度</label>
+              <input id="textModuleRotation" type="number" step="1" />
+            </div>
+            <div class="field">
+              <label for="textModuleColor">颜色</label>
+              <input id="textModuleColor" type="text" />
+            </div>
+          </div>
+          <p class="mini-note">坐标单位为 mm，基于当前所在面的左上角。文字会直接嵌入导出的 SVG。</p>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title">
+            <h3>实时指标</h3>
+            <span>自动计算</span>
+          </div>
+          <div id="metrics" class="metrics"></div>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title">
+            <h3>导出</h3>
+            <span>交给设计 / 打样</span>
+          </div>
+          <div class="button-row">
+            <button class="solid-button" id="exportSvgButton">导出 SVG</button>
+            <button class="ghost-button" id="exportJsonButton">导出 JSON</button>
+            <button class="ghost-button" id="copySpecButton">复制规格摘要</button>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title">
+            <h3>规格输出</h3>
+            <span>面向设计与供应链</span>
+          </div>
+          <div id="specList" class="spec-list"></div>
+          <div class="spec-block" style="margin-top: 12px;">
+            <h4>可复制规格</h4>
+            <pre id="specBlockText"></pre>
+          </div>
+        </section>
+      </aside>
+
+      <main class="panel preview-panel">
+        <section class="preview-header">
+          <div class="preview-header-copy">
+            <h2 id="headlineTitle"></h2>
+            <p id="headlineDescription"></p>
+          </div>
+          <div class="status-chip" id="statusChip"></div>
+        </section>
+        <section class="preview-stage">
+          <div class="stage-toolbar">
+            <div class="stage-toolbar-left">
+              <strong>实时预览</strong>
+              <span class="toolbar-note">右侧只保留三视图和内胆布置图，像 Figma 一样把编辑和预览拆开。</span>
+            </div>
+            <div class="stage-toolbar-right">
+              <button class="ghost-button mini" id="zoomOutButton">缩小</button>
+              <button class="ghost-button mini" id="zoomResetButton">100%</button>
+              <button class="ghost-button mini" id="zoomInButton">放大</button>
+              <button class="solid-button mini" id="downloadCanvasSvgButton">下载当前画布 SVG</button>
+              <span class="toolbar-note" id="zoomLabel">画布缩放 100%</span>
+            </div>
+          </div>
+          <section class="canvas-card">
+            <div class="canvas-frame" id="canvasFrame">
+              <div id="canvasMount"></div>
+              <div class="canvas-hint">
+                <span><kbd>拖</kbd> 移动元素</span>
+                <span><kbd>双击</kbd> 编辑文字</span>
+                <span><kbd>空格+拖</kbd> 平移画布</span>
+                <span><kbd>滚轮</kbd> 缩放</span>
+              </div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const presets = [
+        {
+          id: "scheme1-rigid",
+          label: "方案一 / 硬纸壳",
+          accent: "上市节奏优先",
+          data: {
+            projectName: "Futurus 13.3 寸护眼屏 - 方案一（硬纸壳）",
+            outerLength: 328,
+            outerWidth: 221,
+            outerHeight: 35,
+            cavityLength: 321,
+            cavityWidth: 214,
+            cavityHeight: 22,
+            accessoryLength: 320,
+            accessoryWidth: 215,
+            accessoryHeight: 10,
+            glueFlap: 15,
+            lidFlap: 35,
+            insertType: "硬纸壳",
+            closureType: "易撕贴",
+            logoStyle: "黑色 logo 高精度丝印（居中，无彩印）",
+            summaryText:
+              "白盒品质版，结构克制，适合首批量产和节奏紧张场景。顶面极简，重点放在开箱秩序和参数可控。",
+            notesText:
+              "顶面黑色 Logo 高精度丝印\n侧面黑色 Logo 丝印\n硬纸壳内胆预留 1-2mm 间隙\n底面标签建议 60×30",
+          },
+        },
+        {
+          id: "scheme1-pet",
+          label: "方案一 / 吸塑 PET",
+          accent: "仪式感优先",
+          data: {
+            projectName: "Futurus 13.3 寸护眼屏 - 方案一（吸塑 PET）",
+            outerLength: 328,
+            outerWidth: 221,
+            outerHeight: 35,
+            cavityLength: 321,
+            cavityWidth: 214,
+            cavityHeight: 22,
+            accessoryLength: 320,
+            accessoryWidth: 215,
+            accessoryHeight: 10,
+            glueFlap: 15,
+            lidFlap: 35,
+            insertType: "吸塑 PET",
+            closureType: "易撕贴",
+            logoStyle: "黑色 logo 高精度丝印（居中，无彩印）",
+            summaryText:
+              "沿用品质版外盒，但内胆切到吸塑 PET，强化精密贴合与原厂感。适合零售和礼品感更强的场景。",
+            notesText:
+              "顶面黑色 Logo 高精度丝印\n吸塑近零间隙贴合屏体\n可直接成型独立配件腔\n注意吸塑模具周期 5-6 周",
+          },
+        },
+        {
+          id: "scheme2-epe",
+          label: "方案二 / EPE",
+          accent: "套装与运输优先",
+          data: {
+            projectName: "Futurus 13.3 寸护眼屏 - 方案二（EPE 泡棉）",
+            outerLength: 340,
+            outerWidth: 230,
+            outerHeight: 55,
+            cavityLength: 330,
+            cavityWidth: 224,
+            cavityHeight: 40,
+            accessoryLength: 320,
+            accessoryWidth: 215,
+            accessoryHeight: 15,
+            glueFlap: 15,
+            lidFlap: 55,
+            insertType: "EPE 泡棉",
+            closureType: "直接开合",
+            logoStyle: "黑色 logo 标准丝印",
+            summaryText:
+              "更厚、更稳、更偏工程运输逻辑。适合套装、加购和内部保护优先的打法，代价是体积明显增加。",
+            notesText:
+              "上下 EPE 泡棉各 20 厚\n中心切槽 315×208×12\n不织布袋内径约 320×215\n无易撕贴，直接开合",
+          },
+        },
+      ];
+
+      const defaultLogoState = () => ({
+        fileName: "",
+        dataUrl: "",
+        surface: "top",
+        x: 20,
+        y: 18,
+        width: 52,
+        height: 22,
+        opacity: 1,
+      });
+
+      const SCREEN_REFERENCE = {
+        fileUrl: "file:///Users/rayman.chen/Downloads/%E5%B1%8F%E5%B9%95.png",
+        pixelWidth: 1280,
+        pixelHeight: 697,
+        actualWidthMm: 310.9,
+        actualHeightMm: 204.0,
+        crop: {
+          x: 92,
+          y: 198,
+          width: 256,
+          height: 168,
+        },
+      };
+
+      let textModuleSeed = 1;
+
+      function createTextModule(overrides = {}) {
+        return {
+          id: `text-module-${textModuleSeed++}`,
+          name: "文字模块",
+          content: "Futurus",
+          surface: "top",
+          x: 40,
+          y: 30,
+          fontSize: 18,
+          letterSpacing: 0.6,
+          rotation: 0,
+          color: "#171717",
+          align: "middle",
+          ...overrides,
+        };
+      }
+
+      const state = {
+        zoom: 1,
+        pan: { x: 0, y: 0 },
+        activePresetId: presets[0].id,
+        values: structuredClone(presets[0].data),
+        logoAsset: defaultLogoState(),
+        textModules: [],
+        selectedTextModuleId: "",
+        selection: { type: null, id: "" }, // type: 'logo' | 'text' | null
+        dragging: null, // { type, id, startMm, startClient, scaleX, scaleY, surfaceKey }
+        spaceDown: false,
+      };
+
+      const fieldIds = [
+        "projectName",
+        "outerLength",
+        "outerWidth",
+        "outerHeight",
+        "cavityLength",
+        "cavityWidth",
+        "cavityHeight",
+        "accessoryLength",
+        "accessoryWidth",
+        "accessoryHeight",
+        "glueFlap",
+        "lidFlap",
+        "insertType",
+        "closureType",
+        "logoStyle",
+        "summaryText",
+        "notesText",
+      ];
+
+      const numericIds = new Set([
+        "outerLength",
+        "outerWidth",
+        "outerHeight",
+        "cavityLength",
+        "cavityWidth",
+        "cavityHeight",
+        "accessoryLength",
+        "accessoryWidth",
+        "accessoryHeight",
+        "glueFlap",
+        "lidFlap",
+      ]);
+
+      const logoFieldIds = ["logoSurface", "logoX", "logoY", "logoWidth", "logoHeight", "logoOpacity"];
+      const logoNumericIds = new Set(["logoX", "logoY", "logoWidth", "logoHeight", "logoOpacity"]);
+      const textModuleFieldIds = [
+        "textModuleContent",
+        "textModuleSurface",
+        "textModuleX",
+        "textModuleY",
+        "textModuleFontSize",
+        "textModuleLetterSpacing",
+        "textModuleRotation",
+        "textModuleColor",
+        "textModuleAlign",
+      ];
+      const textModuleNumericIds = new Set([
+        "textModuleX",
+        "textModuleY",
+        "textModuleFontSize",
+        "textModuleLetterSpacing",
+        "textModuleRotation",
+      ]);
+
+      const presetGrid = document.getElementById("presetGrid");
+      const canvasMount = document.getElementById("canvasMount");
+      const metricsMount = document.getElementById("metrics");
+      const textModuleList = document.getElementById("textModuleList");
+      const assetStatus = document.getElementById("assetStatus");
+
+      function toFixedSmart(value) {
+        const rounded = Math.round(value * 10) / 10;
+        return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+      }
+
+      function escapeXml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&apos;");
+      }
+
+      function getSurfaceLabel(surface) {
+        return {
+          top: "顶面",
+          front: "前视",
+          right: "右视",
+          back: "背面",
+        }[surface] || surface;
+      }
+
+      function ensureSelectedTextModule() {
+        if (state.textModules.length === 0) {
+          state.selectedTextModuleId = "";
+          return null;
+        }
+        const existing = state.textModules.find((item) => item.id === state.selectedTextModuleId);
+        if (existing) return existing;
+        state.selectedTextModuleId = state.textModules[0].id;
+        return state.textModules[0];
+      }
+
+      function setActivePreset(id) {
+        const preset = presets.find((item) => item.id === id);
+        if (!preset) return;
+        state.activePresetId = id;
+        state.values = structuredClone(preset.data);
+        hydrateControls();
+        render();
+      }
+
+      function hydrateControls() {
+        fieldIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.value = state.values[id];
+        });
+        logoFieldIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const key = id.replace("logo", "").replace(/^./, (char) => char.toLowerCase());
+          el.value = state.logoAsset[key];
+        });
+        hydrateTextModuleEditor();
+      }
+
+      function collectControlValues() {
+        fieldIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          state.values[id] = numericIds.has(id) ? Number(el.value || 0) : el.value;
+        });
+      }
+
+      function collectLogoValues() {
+        logoFieldIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const key = id.replace("logo", "").replace(/^./, (char) => char.toLowerCase());
+          state.logoAsset[key] = logoNumericIds.has(id) ? Number(el.value || 0) : el.value;
+        });
+      }
+
+      function hydrateTextModuleEditor() {
+        const active = ensureSelectedTextModule();
+        const hasActive = Boolean(active);
+        document.getElementById("deleteTextModuleButton").disabled = !hasActive;
+        textModuleFieldIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.disabled = !hasActive;
+        });
+        if (!hasActive) {
+          textModuleFieldIds.forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.value = "";
+          });
+          return;
+        }
+        document.getElementById("textModuleContent").value = active.content;
+        document.getElementById("textModuleSurface").value = active.surface;
+        document.getElementById("textModuleX").value = active.x;
+        document.getElementById("textModuleY").value = active.y;
+        document.getElementById("textModuleFontSize").value = active.fontSize;
+        document.getElementById("textModuleLetterSpacing").value = active.letterSpacing;
+        document.getElementById("textModuleRotation").value = active.rotation;
+        document.getElementById("textModuleColor").value = active.color;
+        document.getElementById("textModuleAlign").value = active.align;
+      }
+
+      function updateSelectedTextModuleField(field, value) {
+        const active = ensureSelectedTextModule();
+        if (!active) return;
+        active[field] = value;
+      }
+
+      function mmToPx(mm, scale = 2.2) {
+        return mm * scale;
+      }
+
+      function calcMetrics() {
+        const v = state.values;
+        const outerVolume = (v.outerLength * v.outerWidth * v.outerHeight) / 1000000;
+        const cavityVolume = (v.cavityLength * v.cavityWidth * v.cavityHeight) / 1000000;
+        const accessoryVolume =
+          (v.accessoryLength * v.accessoryWidth * v.accessoryHeight) / 1000000;
+        const transport10 = (v.outerLength + 12) * (v.outerWidth + 12) * ((v.outerHeight + 2) * 10 + 20) / 1000000;
+        return {
+          outerVolume,
+          cavityVolume,
+          accessoryVolume,
+          transport10,
+        };
+      }
+
+      function createMetricCard(title, value, note) {
+        return `
+          <div class="metric">
+            <strong>${title}</strong>
+            <small>${value}</small>
+            <em>${note}</em>
+          </div>
+        `;
+      }
+
+      function renderPresetButtons() {
+        presetGrid.innerHTML = presets
+          .map((preset) => {
+            const active = preset.id === state.activePresetId ? "active" : "";
+            return `
+              <button class="preset ${active}" data-preset-id="${preset.id}">
+                <strong>${preset.label}</strong>
+                <small>${preset.accent}</small>
+              </button>
+            `;
+          })
+          .join("");
+      }
+
+      function dimensionLine(x1, y1, x2, y2, text, vertical = false, offset = 18) {
+        const stroke = "#1f2937";
+        const arrow = 7;
+        if (!vertical) {
+          const y = y1 - offset;
+          return `
+            <line x1="${x1}" y1="${y1}" x2="${x1}" y2="${y}" stroke="${stroke}" stroke-width="1" />
+            <line x1="${x2}" y1="${y2}" x2="${x2}" y2="${y}" stroke="${stroke}" stroke-width="1" />
+            <line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${stroke}" stroke-width="1.5" />
+            <polygon points="${x1},${y} ${x1 + arrow},${y - arrow / 2} ${x1 + arrow},${y + arrow / 2}" fill="${stroke}" />
+            <polygon points="${x2},${y} ${x2 - arrow},${y - arrow / 2} ${x2 - arrow},${y + arrow / 2}" fill="${stroke}" />
+            <text x="${(x1 + x2) / 2}" y="${y - 8}" text-anchor="middle" font-size="14" fill="${stroke}">${text}</text>
+          `;
+        }
+        const x = x1 - offset;
+        return `
+          <line x1="${x1}" y1="${y1}" x2="${x}" y2="${y1}" stroke="${stroke}" stroke-width="1" />
+          <line x1="${x2}" y1="${y2}" x2="${x}" y2="${y2}" stroke="${stroke}" stroke-width="1" />
+          <line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="${stroke}" stroke-width="1.5" />
+          <polygon points="${x},${y1} ${x - arrow / 2},${y1 + arrow} ${x + arrow / 2},${y1 + arrow}" fill="${stroke}" />
+          <polygon points="${x},${y2} ${x - arrow / 2},${y2 - arrow} ${x + arrow / 2},${y2 - arrow}" fill="${stroke}" />
+          <text x="${x - 10}" y="${(y1 + y2) / 2}" text-anchor="middle" font-size="14" fill="${stroke}" transform="rotate(-90 ${x - 10},${(y1 + y2) / 2})">${text}</text>
+        `;
+      }
+
+      function surfaceScale(surface) {
+        return {
+          x: surface.w / surface.mmWidth,
+          y: surface.h / surface.mmHeight,
+        };
+      }
+
+      function resolveTextAnchor(align) {
+        return {
+          start: "start",
+          middle: "middle",
+          end: "end",
+        }[align] || "start";
+      }
+
+      function buildCroppedImageMarkup(imageHref, crop, natural, frame) {
+        return `
+          <svg
+            x="${frame.x}"
+            y="${frame.y}"
+            width="${frame.width}"
+            height="${frame.height}"
+            viewBox="${crop.x} ${crop.y} ${crop.width} ${crop.height}"
+            preserveAspectRatio="none"
+          >
+            <image
+              href="${imageHref}"
+              x="0"
+              y="0"
+              width="${natural.width}"
+              height="${natural.height}"
+              preserveAspectRatio="none"
+            />
+          </svg>
+        `;
+      }
+
+      function buildSvgMarkup() {
+        const v = state.values;
+        const metrics = calcMetrics();
+        const scale = 2.05 * state.zoom;
+        const width = 1900 * state.zoom;
+        const height = 1160 * state.zoom;
+        const topX = 70 * state.zoom;
+        const topY = 120 * state.zoom;
+        const topW = mmToPx(v.outerLength, scale);
+        const topH = mmToPx(v.outerWidth, scale);
+        const frontY = topY + topH + 120 * state.zoom;
+        const sideX = topX + topW + 150 * state.zoom;
+        const frontH = mmToPx(v.outerHeight, scale);
+        const sideW = mmToPx(v.outerWidth, scale);
+        const cardX = 1180 * state.zoom;
+        const cardY = 120 * state.zoom;
+        const topSurface = {
+          key: "top",
+          x: topX,
+          y: topY,
+          w: topW,
+          h: topH,
+          mmWidth: v.outerLength,
+          mmHeight: v.outerWidth,
+        };
+        const frontSurface = {
+          key: "front",
+          x: topX,
+          y: frontY,
+          w: topW,
+          h: frontH,
+          mmWidth: v.outerLength,
+          mmHeight: v.outerHeight,
+        };
+        const rightSurface = {
+          key: "right",
+          x: sideX,
+          y: frontY,
+          w: sideW,
+          h: frontH,
+          mmWidth: v.outerWidth,
+          mmHeight: v.outerHeight,
+        };
+        const surfaces = {
+          top: topSurface,
+          front: frontSurface,
+          right: rightSurface,
+        };
+        const cardNotes = v.notesText
+          .split("\n")
+          .filter(Boolean)
+          .map((note, index) => {
+            const y = cardY + 230 * state.zoom + index * 30 * state.zoom;
+            return `<text x="${cardX + 20 * state.zoom}" y="${y}" font-size="${14 * state.zoom}" fill="#475569">- ${escapeXml(note)}</text>`;
+          })
+          .join("");
+
+        const insertVisual = (() => {
+          const insertX = 70 * state.zoom;
+          const insertY = frontY + frontH + 90 * state.zoom;
+          const outerW = 760 * state.zoom;
+          const outerH = 210 * state.zoom;
+          const safePadding = 18 * state.zoom;
+          const cavityW = Math.min(outerW - safePadding * 2, mmToPx(v.cavityLength, 1.2 * state.zoom));
+          const cavityH = Math.min(outerH - safePadding * 2, mmToPx(v.cavityWidth, 1.2 * state.zoom));
+          const accessoryW = Math.min(outerW - safePadding * 2, mmToPx(v.accessoryLength, 1.1 * state.zoom));
+          const accessoryH = Math.min(86 * state.zoom, mmToPx(v.accessoryHeight * 4, 1.1 * state.zoom));
+          const cavityX = insertX + (outerW - cavityW) / 2;
+          const cavityY = insertY + 28 * state.zoom;
+          const accessoryX = insertX + (outerW - accessoryW) / 2;
+          const accessoryY = insertY + outerH - accessoryH - 20 * state.zoom;
+          return `
+            <text x="${insertX}" y="${insertY - 10 * state.zoom}" font-size="${16 * state.zoom}" fill="#1f2937">内胆布置</text>
+            <rect x="${insertX}" y="${insertY}" width="${outerW}" height="${outerH}" rx="${16 * state.zoom}" fill="rgba(255,255,255,0.88)" stroke="#cbd5e1" stroke-width="1.6" />
+            <rect x="${cavityX}" y="${cavityY}" width="${cavityW}" height="${cavityH}" rx="${14 * state.zoom}" fill="rgba(164, 93, 56, 0.12)" stroke="#a45d38" stroke-width="1.6" />
+            <text x="${insertX + outerW / 2}" y="${cavityY + cavityH / 2}" text-anchor="middle" font-size="${14 * state.zoom}" fill="#7f4120">产品腔 ${toFixedSmart(v.cavityLength)}×${toFixedSmart(v.cavityWidth)}×${toFixedSmart(v.cavityHeight)}</text>
+            <rect x="${accessoryX}" y="${accessoryY}" width="${accessoryW}" height="${accessoryH}" rx="${12 * state.zoom}" fill="rgba(29, 107, 73, 0.1)" stroke="#1d6b49" stroke-width="1.6" />
+            <text x="${insertX + outerW / 2}" y="${accessoryY + accessoryH / 2}" text-anchor="middle" font-size="${14 * state.zoom}" fill="#1d6b49">配件层 ${toFixedSmart(v.accessoryLength)}×${toFixedSmart(v.accessoryWidth)}×${toFixedSmart(v.accessoryHeight)}</text>
+          `;
+        })();
+
+        const packagingVisual = (() => {
+          const packX = cardX;
+          const packY = cardY + 380 * state.zoom;
+          const packW = 560 * state.zoom;
+          const packH = 270 * state.zoom;
+          const cavityScale = Math.min((packW - 110 * state.zoom) / v.cavityLength, (packH - 96 * state.zoom) / v.cavityWidth);
+          const cavityW = v.cavityLength * cavityScale;
+          const cavityH = v.cavityWidth * cavityScale;
+          const cavityX = packX + 28 * state.zoom;
+          const cavityY = packY + 46 * state.zoom;
+          const screenW = SCREEN_REFERENCE.actualWidthMm * cavityScale;
+          const screenH = SCREEN_REFERENCE.actualHeightMm * cavityScale;
+          const screenX = cavityX + (cavityW - screenW) / 2;
+          const screenY = cavityY + (cavityH - screenH) / 2;
+          const accessoryX = cavityX + cavityW + 28 * state.zoom;
+          const accessoryY = cavityY;
+          const accessoryW = Math.max(84 * state.zoom, packX + packW - accessoryX - 22 * state.zoom);
+          const accessoryH = cavityH;
+          const cropFrame = {
+            x: screenX,
+            y: screenY,
+            width: screenW,
+            height: screenH,
+          };
+          const imageMarkup = buildCroppedImageMarkup(
+            SCREEN_REFERENCE.fileUrl,
+            SCREEN_REFERENCE.crop,
+            {
+              width: SCREEN_REFERENCE.pixelWidth,
+              height: SCREEN_REFERENCE.pixelHeight,
+            },
+            cropFrame,
+          );
+          return `
+            <text x="${packX}" y="${packY - 12 * state.zoom}" font-size="${16 * state.zoom}" fill="#1f2937">包装示意图</text>
+            <rect x="${packX}" y="${packY}" width="${packW}" height="${packH}" rx="${20 * state.zoom}" fill="rgba(255,255,255,0.9)" stroke="#cbd5e1" stroke-width="1.6" />
+            <rect x="${cavityX}" y="${cavityY}" width="${cavityW}" height="${cavityH}" rx="${16 * state.zoom}" fill="rgba(164, 93, 56, 0.08)" stroke="#a45d38" stroke-width="1.6" />
+            ${imageMarkup}
+            <rect x="${screenX}" y="${screenY}" width="${screenW}" height="${screenH}" rx="${12 * state.zoom}" fill="none" stroke="#111827" stroke-width="1.4" />
+            <text x="${cavityX}" y="${cavityY + cavityH + 20 * state.zoom}" font-size="${13 * state.zoom}" fill="#7f4120">腔体 ${toFixedSmart(v.cavityLength)} × ${toFixedSmart(v.cavityWidth)} mm</text>
+            <text x="${cavityX}" y="${cavityY + cavityH + 42 * state.zoom}" font-size="${13 * state.zoom}" fill="#111827">屏幕实物 ${toFixedSmart(SCREEN_REFERENCE.actualWidthMm)} × ${toFixedSmart(SCREEN_REFERENCE.actualHeightMm)} mm</text>
+            <text x="${screenX + screenW / 2}" y="${screenY + screenH + 18 * state.zoom}" text-anchor="middle" font-size="${13 * state.zoom}" fill="#111827">严格按外轮廓尺寸缩放</text>
+            <rect x="${accessoryX}" y="${accessoryY}" width="${accessoryW}" height="${accessoryH}" rx="${14 * state.zoom}" fill="rgba(29, 107, 73, 0.08)" stroke="#1d6b49" stroke-width="1.4" stroke-dasharray="${6 * state.zoom} ${5 * state.zoom}" />
+            <text x="${accessoryX + accessoryW / 2}" y="${accessoryY + accessoryH / 2 - 4 * state.zoom}" text-anchor="middle" font-size="${14 * state.zoom}" fill="#1d6b49">附件 / 线材区</text>
+            <text x="${accessoryX + accessoryW / 2}" y="${accessoryY + accessoryH / 2 + 18 * state.zoom}" text-anchor="middle" font-size="${12 * state.zoom}" fill="#1d6b49">示意尺寸随左侧参数联动</text>
+          `;
+        })();
+
+        const logoMarkup = (() => {
+          const logo = state.logoAsset;
+          if (!logo.dataUrl) return { img: "", selection: "", bbox: null };
+          const surface = surfaces[logo.surface];
+          if (!surface) return { img: "", selection: "", bbox: null };
+          const scaleRatio = surfaceScale(surface);
+          const x = surface.x + logo.x * scaleRatio.x;
+          const y = surface.y + logo.y * scaleRatio.y;
+          const w = Math.max(8 * state.zoom, logo.width * scaleRatio.x);
+          const h = Math.max(8 * state.zoom, logo.height * scaleRatio.y);
+          const img = `
+            <image
+              href="${logo.dataUrl}"
+              x="${x}" y="${y}" width="${w}" height="${h}"
+              opacity="${logo.opacity}"
+              preserveAspectRatio="xMidYMid meet"
+              data-drag-type="logo"
+              data-drag-id="logo"
+            />
+          `;
+          const isSelected = state.selection.type === "logo";
+          const pad = 4;
+          const selection = isSelected
+            ? `<rect class="selection-ring" x="${x - pad}" y="${y - pad}" width="${w + pad * 2}" height="${h + pad * 2}" rx="6" />`
+            : "";
+          return { img, selection, bbox: { x, y, w, h } };
+        })();
+
+        const textPieces = state.textModules
+          .map((module) => {
+            const surface = surfaces[module.surface];
+            if (!surface) return null;
+            const scaleRatio = surfaceScale(surface);
+            const x = surface.x + module.x * scaleRatio.x;
+            const y = surface.y + module.y * scaleRatio.y;
+            const fontSize = Math.max(10 * state.zoom, module.fontSize * ((scaleRatio.x + scaleRatio.y) / 2));
+            const rotation = Number(module.rotation || 0);
+            const anchor = resolveTextAnchor(module.align);
+            const content = module.content.trim() ? escapeXml(module.content) : "点击编辑文字";
+            const letterSpacing = module.letterSpacing * scaleRatio.x;
+            const fillColor = module.content.trim() ? escapeXml(module.color) : "rgba(100,116,139,0.7)";
+            const text = `
+              <text
+                x="${x}"
+                y="${y}"
+                text-anchor="${anchor}"
+                font-size="${fontSize}"
+                letter-spacing="${letterSpacing}"
+                fill="${fillColor}"
+                transform="rotate(${rotation} ${x} ${y})"
+                font-family="Avenir Next, Segoe UI, sans-serif"
+                data-drag-type="text"
+                data-drag-id="${module.id}"
+              >${content}</text>
+            `;
+            const isSelected = state.selection.type === "text" && state.selection.id === module.id;
+            return { text, isSelected, module, x, y, fontSize, rotation };
+          })
+          .filter(Boolean);
+
+        const textModulesMarkup = textPieces.map((p) => p.text).join("");
+
+        const selectionOverlay = (() => {
+          const pieces = [];
+          if (logoMarkup.bbox && state.selection.type === "logo") {
+            const { x, y, w, h } = logoMarkup.bbox;
+            pieces.push(renderSelection({ x, y, w, h, handles: true, resizeType: "logo" }));
+          }
+          textPieces.forEach((p) => {
+            if (!p.isSelected) return;
+            // approximate text bbox (text-anchor affects x position)
+            const widthEstimate = Math.max(40 * state.zoom, p.module.content.length * p.fontSize * 0.6);
+            const heightEstimate = p.fontSize * 1.2;
+            const anchor = p.module.align;
+            const tx = anchor === "middle" ? p.x - widthEstimate / 2 : anchor === "end" ? p.x - widthEstimate : p.x;
+            const ty = p.y - heightEstimate * 0.9;
+            pieces.push(renderSelection({
+              x: tx,
+              y: ty,
+              w: widthEstimate,
+              h: heightEstimate,
+              handles: false,
+              resizeType: "text",
+              rotation: p.rotation,
+              pivotX: p.x,
+              pivotY: p.y,
+            }));
+          });
+          return pieces.join("");
+        })();
+
+        return `
+          <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+            <defs>
+              <linearGradient id="paperWash" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="rgba(255,255,255,0.95)" />
+                <stop offset="100%" stop-color="rgba(249,242,233,0.98)" />
+              </linearGradient>
+              <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="rgba(56, 31, 20, 0.14)" />
+              </filter>
+            </defs>
+
+            <rect width="100%" height="100%" fill="transparent" />
+            <text x="${70 * state.zoom}" y="${58 * state.zoom}" font-size="${42 * state.zoom}" font-family="Iowan Old Style, Palatino Linotype, serif" fill="#111827">${escapeXml(v.projectName)}</text>
+            <text x="${70 * state.zoom}" y="${88 * state.zoom}" font-size="${18 * state.zoom}" fill="#6b7280">单位：mm | 结构类型：${escapeXml(v.insertType)} | 封箱：${escapeXml(v.closureType)}</text>
+
+            <text x="${topX}" y="${topY - 18 * state.zoom}" font-size="${16 * state.zoom}" fill="#1f2937">外盒三视图</text>
+            <text x="${topX}" y="${topY - 44 * state.zoom}" font-size="${14 * state.zoom}" fill="#6b7280">顶面</text>
+            <rect x="${topX}" y="${topY}" width="${topW}" height="${topH}" fill="url(#paperWash)" stroke="#1f2937" stroke-width="2" filter="url(#softShadow)" />
+            ${dimensionLine(topX, topY + topH, topX + topW, topY + topH, `L=${toFixedSmart(v.outerLength)}`)}
+            ${dimensionLine(topX, topY, topX, topY + topH, `W=${toFixedSmart(v.outerWidth)}`, true)}
+
+            <text x="${topX}" y="${frontY - 14 * state.zoom}" font-size="${14 * state.zoom}" fill="#6b7280">前视</text>
+            <rect x="${topX}" y="${frontY}" width="${topW}" height="${frontH}" fill="url(#paperWash)" stroke="#1f2937" stroke-width="2" />
+            ${dimensionLine(topX, frontY + frontH, topX + topW, frontY + frontH, `L=${toFixedSmart(v.outerLength)}`)}
+            ${dimensionLine(topX, frontY, topX, frontY + frontH, `H=${toFixedSmart(v.outerHeight)}`, true)}
+
+            <text x="${sideX}" y="${frontY - 14 * state.zoom}" font-size="${14 * state.zoom}" fill="#6b7280">右视</text>
+            <rect x="${sideX}" y="${frontY}" width="${sideW}" height="${frontH}" fill="url(#paperWash)" stroke="#1f2937" stroke-width="2" />
+            ${dimensionLine(sideX, frontY + frontH, sideX + sideW, frontY + frontH, `W=${toFixedSmart(v.outerWidth)}`)}
+            ${dimensionLine(sideX, frontY, sideX, frontY + frontH, `H=${toFixedSmart(v.outerHeight)}`, true)}
+
+            <rect x="${cardX}" y="${cardY}" width="${560 * state.zoom}" height="${330 * state.zoom}" rx="${24 * state.zoom}" fill="url(#paperWash)" stroke="#cbd5e1" stroke-width="1.6" />
+            <text x="${cardX + 20 * state.zoom}" y="${cardY + 28 * state.zoom}" font-size="${18 * state.zoom}" fill="#1f2937">关键尺寸卡</text>
+            <text x="${cardX + 20 * state.zoom}" y="${cardY + 70 * state.zoom}" font-size="${14 * state.zoom}" fill="#475569">外盒：${toFixedSmart(v.outerLength)} × ${toFixedSmart(v.outerWidth)} × ${toFixedSmart(v.outerHeight)}</text>
+            <text x="${cardX + 20 * state.zoom}" y="${cardY + 102 * state.zoom}" font-size="${14 * state.zoom}" fill="#475569">产品腔：${toFixedSmart(v.cavityLength)} × ${toFixedSmart(v.cavityWidth)} × ${toFixedSmart(v.cavityHeight)}</text>
+            <text x="${cardX + 20 * state.zoom}" y="${cardY + 134 * state.zoom}" font-size="${14 * state.zoom}" fill="#475569">配件层：${toFixedSmart(v.accessoryLength)} × ${toFixedSmart(v.accessoryWidth)} × ${toFixedSmart(v.accessoryHeight)}</text>
+            <text x="${cardX + 20 * state.zoom}" y="${cardY + 166 * state.zoom}" font-size="${14 * state.zoom}" fill="#475569">工艺：${escapeXml(v.logoStyle)}</text>
+            <text x="${cardX + 20 * state.zoom}" y="${cardY + 198 * state.zoom}" font-size="${14 * state.zoom}" fill="#475569">预览：顶面 / 前视 / 右视 / 内胆布置 / 包装示意</text>
+            ${cardNotes}
+
+            ${logoMarkup.img}
+            ${textModulesMarkup}
+            ${insertVisual}
+            ${packagingVisual}
+
+            <text x="${70 * state.zoom}" y="${1122 * state.zoom}" font-size="${16 * state.zoom}" fill="#6b7280">动态计算：外盒体积 ${toFixedSmart(metrics.outerVolume)} L | 产品腔体积 ${toFixedSmart(metrics.cavityVolume)} L | 10台运输体积约 ${toFixedSmart(metrics.transport10)} L</text>
+            ${selectionOverlay}
+          </svg>
+        `;
+      }
+
+      // OpenPencil / Figma 风格选中框：实心蓝色 outline + 四角方形 handle
+      function renderSelection({ x, y, w, h, handles = true, rotation = 0, pivotX, pivotY }) {
+        const hs = Math.max(6, 8 * state.zoom); // handle size
+        const ring = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#2563eb" stroke-width="${1.4}" />`;
+        let handleMarkup = "";
+        if (handles) {
+          const corners = [
+            [x, y], [x + w, y], [x, y + h], [x + w, y + h],
+          ];
+          handleMarkup = corners
+            .map(
+              ([cx, cy]) =>
+                `<rect x="${cx - hs / 2}" y="${cy - hs / 2}" width="${hs}" height="${hs}" fill="#ffffff" stroke="#2563eb" stroke-width="1.4" />`,
+            )
+            .join("");
+        }
+        const inner = `${ring}${handleMarkup}`;
+        if (rotation && Number.isFinite(pivotX)) {
+          return `<g transform="rotate(${rotation} ${pivotX} ${pivotY})" style="pointer-events:none">${inner}</g>`;
+        }
+        return `<g style="pointer-events:none">${inner}</g>`;
+      }
+
+      function buildSpecText() {
+        const v = state.values;
+        const notes = v.notesText
+          .split("\n")
+          .filter(Boolean)
+          .map((note) => `- ${note}`)
+          .join("\n");
+        return `${v.projectName}
+外盒外形：${toFixedSmart(v.outerLength)} × ${toFixedSmart(v.outerWidth)} × ${toFixedSmart(v.outerHeight)} mm
+产品腔：${toFixedSmart(v.cavityLength)} × ${toFixedSmart(v.cavityWidth)} × ${toFixedSmart(v.cavityHeight)} mm
+配件层：${toFixedSmart(v.accessoryLength)} × ${toFixedSmart(v.accessoryWidth)} × ${toFixedSmart(v.accessoryHeight)} mm
+内胆类型：${v.insertType}
+封箱方式：${v.closureType}
+预览内容：三视图（顶面 / 前视 / 右视）+ 内胆布置图 + 包装示意图
+屏幕基线：实际屏幕按 310.90 × 204.00 mm 外轮廓映射到包装示意图
+Logo 工艺：${v.logoStyle}
+图片资产：${state.logoAsset.fileName ? `${state.logoAsset.fileName}（${getSurfaceLabel(state.logoAsset.surface)} ${toFixedSmart(state.logoAsset.width)}×${toFixedSmart(state.logoAsset.height)}）` : "无"}
+文字模块：${state.textModules.length ? state.textModules.map((module) => `${module.content} @ ${getSurfaceLabel(module.surface)} (${toFixedSmart(module.x)}, ${toFixedSmart(module.y)})`).join("；") : "无"}
+设计说明：${v.summaryText}
+生产备注：
+${notes || "- 无"}`;
+      }
+
+      function downloadFile(filename, content, type) {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+
+      function render() {
+        renderPresetButtons();
+        ensureSelectedTextModule();
+        const v = state.values;
+        const metrics = calcMetrics();
+        const specText = buildSpecText();
+
+        document.getElementById("headlineTitle").textContent = v.projectName;
+        document.getElementById("headlineDescription").textContent = v.summaryText;
+        document.getElementById("statusChip").textContent = `${v.insertType} · ${v.closureType} · 外盒 ${toFixedSmart(v.outerLength)}×${toFixedSmart(v.outerWidth)}×${toFixedSmart(v.outerHeight)}`;
+        document.getElementById("summaryCopy").textContent =
+          "当前工具以包装 BOM 里的尺寸基线为中心，把工程信息压缩成设计可读、供应链可执行、继续可编辑的同一张画布。";
+        document.getElementById("summaryOuter").textContent =
+          `${toFixedSmart(v.outerLength)} × ${toFixedSmart(v.outerWidth)} × ${toFixedSmart(v.outerHeight)} mm，翻盖 ${toFixedSmart(v.lidFlap)}，糊口 ${toFixedSmart(v.glueFlap)}`;
+        document.getElementById("summaryInsert").textContent =
+          `${v.insertType}，产品腔 ${toFixedSmart(v.cavityLength)} × ${toFixedSmart(v.cavityWidth)} × ${toFixedSmart(v.cavityHeight)} mm，文字模块 ${state.textModules.length} 个`;
+        document.getElementById("specBlockText").textContent = specText;
+        assetStatus.textContent = state.logoAsset.fileName
+          ? `已导入：${state.logoAsset.fileName}，落在${getSurfaceLabel(state.logoAsset.surface)}，尺寸 ${toFixedSmart(state.logoAsset.width)} × ${toFixedSmart(state.logoAsset.height)} mm`
+          : "当前未导入图片";
+
+        document.getElementById("specList").innerHTML = `
+          <div class="spec-item">
+            <strong>预览构成</strong>
+            <span>顶面、前视、右视、内胆布置图、包装示意图</span>
+          </div>
+          <div class="spec-item">
+            <strong>体积占用</strong>
+            <span>单盒约 ${toFixedSmart(metrics.outerVolume)} L，10 台约 ${toFixedSmart(metrics.transport10)} L</span>
+          </div>
+          <div class="spec-item">
+            <strong>工艺建议</strong>
+            <span>${v.logoStyle}</span>
+          </div>
+          <div class="spec-item">
+            <strong>资产落位</strong>
+            <span>${state.logoAsset.fileName ? `图片：${state.logoAsset.fileName}` : "图片：无"}；文字模块：${state.textModules.length} 个</span>
+          </div>
+        `;
+
+        metricsMount.innerHTML = [
+          createMetricCard("单盒体积", `${toFixedSmart(metrics.outerVolume)} L`, "运输和陈列最直观的体量指标"),
+          createMetricCard("产品腔体积", `${toFixedSmart(metrics.cavityVolume)} L`, "验证腔体与保护结构是否匹配"),
+          createMetricCard("配件层体积", `${toFixedSmart(metrics.accessoryVolume)} L`, "线材与说明书是否放得下"),
+          createMetricCard("预览模块", "5 块", "三视图 + 内胆布置图 + 包装示意图"),
+          createMetricCard("文字模块", `${state.textModules.length} 个`, "支持多块独立排版"),
+          createMetricCard("图片资产", state.logoAsset.fileName || "未导入", "导出 SVG 时会内嵌图片"),
+          createMetricCard("屏幕实物", "310.90 × 204.00 mm", "包装示意图按真实外轮廓缩放"),
+        ].join("");
+
+        textModuleList.innerHTML = state.textModules.length
+          ? state.textModules
+              .map((module) => {
+                const active = module.id === state.selectedTextModuleId ? "active" : "";
+                const label = module.content.trim() || module.name;
+                return `<button class="module-chip ${active}" data-module-id="${module.id}">${escapeXml(label.slice(0, 16))}</button>`;
+              })
+              .join("")
+          : `<span class="mini-note">还没有文字模块，先点“新增文字模块”。</span>`;
+
+        hydrateTextModuleEditor();
+        canvasMount.style.transformOrigin = "0 0";
+        canvasMount.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px)`;
+        canvasMount.innerHTML = buildSvgMarkup();
+        document.getElementById("zoomLabel").textContent = `画布缩放 ${Math.round(state.zoom * 100)}%`;
+        syncSidebarWithSelection();
+      }
+
+      // ========== Figma / OpenPencil 风格的画布交互 ==========
+      const DRAG_SCALE_BASE = 2.05; // 和 buildSvgMarkup 里的 scale 保持一致 (不含 zoom)
+
+      function getSurfaceForKey(key) {
+        // 复算一次当前各面在画布坐标系里的位置(和 buildSvgMarkup 保持同步)
+        const v = state.values;
+        const scale = DRAG_SCALE_BASE * state.zoom;
+        const topX = 70 * state.zoom;
+        const topY = 120 * state.zoom;
+        const topW = v.outerLength * scale;
+        const topH = v.outerWidth * scale;
+        const frontY = topY + topH + 120 * state.zoom;
+        const sideX = topX + topW + 150 * state.zoom;
+        const frontH = v.outerHeight * scale;
+        const sideW = v.outerWidth * scale;
+        const surfaces = {
+          top:   { x: topX, y: topY,   w: topW, h: topH,   mmWidth: v.outerLength, mmHeight: v.outerWidth  },
+          front: { x: topX, y: frontY, w: topW, h: frontH, mmWidth: v.outerLength, mmHeight: v.outerHeight },
+          right: { x: sideX, y: frontY, w: sideW, h: frontH, mmWidth: v.outerWidth,  mmHeight: v.outerHeight },
+        };
+        return surfaces[key] || null;
+      }
+
+      function getClientToCanvasTransform() {
+        // 画布容器的左上角 -> 客户端坐标
+        const rect = canvasMount.getBoundingClientRect();
+        return { ox: rect.left, oy: rect.top };
+      }
+
+      function clientToCanvas(clientX, clientY) {
+        const { ox, oy } = getClientToCanvasTransform();
+        return { x: clientX - ox, y: clientY - oy };
+      }
+
+      function setSelection(type, id) {
+        state.selection = { type, id: id || "" };
+        if (type === "text" && id) {
+          state.selectedTextModuleId = id;
+        }
+        render();
+      }
+
+      function syncSidebarWithSelection() {
+        // 选中文字模块时,自动滚动 sidebar 的文字模块列表高亮(已由 active class 处理)
+        // 选中 logo 时暂不做特殊处理
+      }
+
+      function beginItemDrag(type, id, clientX, clientY) {
+        let startMm, surfaceKey;
+        if (type === "logo") {
+          startMm = { x: state.logoAsset.x, y: state.logoAsset.y };
+          surfaceKey = state.logoAsset.surface;
+        } else if (type === "text") {
+          const m = state.textModules.find((t) => t.id === id);
+          if (!m) return;
+          startMm = { x: m.x, y: m.y };
+          surfaceKey = m.surface;
+        } else {
+          return;
+        }
+        const surface = getSurfaceForKey(surfaceKey);
+        if (!surface) return;
+        const pxPerMmX = surface.w / surface.mmWidth;
+        const pxPerMmY = surface.h / surface.mmHeight;
+        state.dragging = {
+          mode: "item",
+          type,
+          id,
+          startMm,
+          startClient: { x: clientX, y: clientY },
+          pxPerMmX,
+          pxPerMmY,
+          surfaceKey,
+        };
+        canvasFrame.classList.add("dragging-item");
+      }
+
+      function beginPan(clientX, clientY) {
+        state.dragging = {
+          mode: "pan",
+          startClient: { x: clientX, y: clientY },
+          startPan: { x: state.pan.x, y: state.pan.y },
+        };
+        canvasFrame.classList.add("panning");
+      }
+
+      function updateDrag(clientX, clientY, shiftKey) {
+        const d = state.dragging;
+        if (!d) return;
+        if (d.mode === "item") {
+          let dxPx = clientX - d.startClient.x;
+          let dyPx = clientY - d.startClient.y;
+          // Shift 约束:按移动主方向锁轴
+          if (shiftKey) {
+            if (Math.abs(dxPx) > Math.abs(dyPx)) dyPx = 0;
+            else dxPx = 0;
+          }
+          const dxMm = dxPx / d.pxPerMmX;
+          const dyMm = dyPx / d.pxPerMmY;
+          let nx = d.startMm.x + dxMm;
+          let ny = d.startMm.y + dyMm;
+          // 简单 snap 到 0.1mm
+          nx = Math.round(nx * 10) / 10;
+          ny = Math.round(ny * 10) / 10;
+          if (d.type === "logo") {
+            state.logoAsset.x = nx;
+            state.logoAsset.y = ny;
+          } else if (d.type === "text") {
+            const m = state.textModules.find((t) => t.id === d.id);
+            if (m) { m.x = nx; m.y = ny; }
+          }
+          hydrateControls();
+          render();
+        } else if (d.mode === "pan") {
+          state.pan.x = d.startPan.x + (clientX - d.startClient.x);
+          state.pan.y = d.startPan.y + (clientY - d.startClient.y);
+          canvasMount.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px)`;
+        }
+      }
+
+      function endDrag() {
+        state.dragging = null;
+        canvasFrame.classList.remove("dragging-item", "panning");
+      }
+
+      // 双击文字 -> 浮层 contentEditable
+      function beginInlineTextEdit(moduleId) {
+        const module = state.textModules.find((m) => m.id === moduleId);
+        if (!module) return;
+        setSelection("text", moduleId);
+        // 等 render 结束后,定位浮层
+        requestAnimationFrame(() => {
+          const surface = getSurfaceForKey(module.surface);
+          if (!surface) return;
+          const pxPerMmX = surface.w / surface.mmWidth;
+          const pxPerMmY = surface.h / surface.mmHeight;
+          const px = surface.x + module.x * pxPerMmX + state.pan.x;
+          const py = surface.y + module.y * pxPerMmY + state.pan.y;
+          const fontSize = Math.max(10 * state.zoom, module.fontSize * ((pxPerMmX + pxPerMmY) / 2));
+          const editor = document.createElement("div");
+          editor.className = "inline-editor";
+          editor.contentEditable = "true";
+          editor.style.fontSize = `${fontSize}px`;
+          editor.style.color = module.color;
+          editor.style.letterSpacing = `${module.letterSpacing * pxPerMmX}px`;
+          editor.textContent = module.content;
+          // 基于 text-anchor 的 x 偏移
+          let left = px;
+          if (module.align === "middle") left = px - 50;
+          else if (module.align === "end") left = px - 100;
+          editor.style.left = `${left}px`;
+          editor.style.top = `${py - fontSize * 1.1}px`;
+          if (module.rotation) {
+            editor.style.transformOrigin = "left top";
+            editor.style.transform = `rotate(${module.rotation}deg)`;
+          }
+          canvasFrame.appendChild(editor);
+          // 全选文本
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          editor.focus();
+
+          const commit = () => {
+            module.content = editor.textContent;
+            editor.remove();
+            render();
+          };
+          const cancel = () => {
+            editor.remove();
+            render();
+          };
+          editor.addEventListener("blur", commit);
+          editor.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter" && !ev.shiftKey) {
+              ev.preventDefault();
+              editor.blur();
+            } else if (ev.key === "Escape") {
+              ev.preventDefault();
+              editor.removeEventListener("blur", commit);
+              cancel();
+            }
+          });
+        });
+      }
+
+      function nudgeSelection(dx, dy) {
+        const sel = state.selection;
+        if (!sel.type) return;
+        const target =
+          sel.type === "logo" ? state.logoAsset :
+          sel.type === "text" ? state.textModules.find((m) => m.id === sel.id) :
+          null;
+        if (!target) return;
+        target.x = Math.round((target.x + dx) * 10) / 10;
+        target.y = Math.round((target.y + dy) * 10) / 10;
+        hydrateControls();
+        render();
+      }
+
+      function bindCanvasInteraction() {
+        canvasFrame = document.getElementById("canvasFrame");
+
+        canvasFrame.addEventListener("pointerdown", (e) => {
+          // 忽略在 inline-editor 上的点击
+          if (e.target.closest(".inline-editor")) return;
+          const target = e.target.closest("[data-drag-type]");
+          if (target) {
+            const type = target.getAttribute("data-drag-type");
+            const id = target.getAttribute("data-drag-id");
+            setSelection(type, id);
+            beginItemDrag(type, id, e.clientX, e.clientY);
+            e.preventDefault();
+          } else if (state.spaceDown) {
+            beginPan(e.clientX, e.clientY);
+            e.preventDefault();
+          } else {
+            // 点空白处取消选中
+            if (state.selection.type) setSelection(null, "");
+          }
+        });
+
+        window.addEventListener("pointermove", (e) => {
+          if (state.dragging) updateDrag(e.clientX, e.clientY, e.shiftKey);
+        });
+
+        window.addEventListener("pointerup", () => {
+          if (state.dragging) endDrag();
+        });
+
+        // 双击文字进入编辑
+        canvasFrame.addEventListener("dblclick", (e) => {
+          const target = e.target.closest('[data-drag-type="text"]');
+          if (!target) return;
+          const id = target.getAttribute("data-drag-id");
+          beginInlineTextEdit(id);
+          e.preventDefault();
+        });
+
+        // 滚轮缩放(以光标为锚点;Figma 风格:普通滚轮就缩放,因为这里没有长内容需要滚)
+        canvasFrame.addEventListener("wheel", (e) => {
+          if (!e.deltaY) return;
+          e.preventDefault();
+          const { x: mx, y: my } = clientToCanvas(e.clientX, e.clientY);
+          // 光标在"内容坐标"里的位置(减掉 pan)
+          const contentX = mx - state.pan.x;
+          const contentY = my - state.pan.y;
+          const oldZoom = state.zoom;
+          const delta = e.deltaY > 0 ? -0.08 : 0.08;
+          const newZoom = Math.min(2, Math.max(0.4, oldZoom + delta));
+          if (newZoom === oldZoom) return;
+          const ratio = newZoom / oldZoom;
+          // 调整 pan,让光标下的内容点保持在原位
+          state.pan.x = mx - contentX * ratio;
+          state.pan.y = my - contentY * ratio;
+          state.zoom = newZoom;
+          render();
+        }, { passive: false });
+
+        // 键盘:空格 = pan ready,方向键 = 微调,Esc = 取消选中
+        window.addEventListener("keydown", (e) => {
+          // 正在输入时忽略
+          const tag = (e.target.tagName || "").toLowerCase();
+          if (tag === "input" || tag === "textarea" || tag === "select" || e.target.isContentEditable) return;
+          if (e.code === "Space" && !state.spaceDown) {
+            state.spaceDown = true;
+            canvasFrame.classList.add("pan-ready");
+            e.preventDefault();
+          } else if (e.key === "Escape") {
+            if (state.selection.type) setSelection(null, "");
+          } else if (state.selection.type && ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
+            const step = e.shiftKey ? 5 : 1; // mm
+            const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
+            const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+            nudgeSelection(dx, dy);
+            e.preventDefault();
+          }
+        });
+        window.addEventListener("keyup", (e) => {
+          if (e.code === "Space") {
+            state.spaceDown = false;
+            canvasFrame.classList.remove("pan-ready");
+          }
+        });
+      }
+      // 全局引用供上面函数使用
+      let canvasFrame;
+
+      function bindEvents() {
+        presetGrid.addEventListener("click", (event) => {
+          const button = event.target.closest("[data-preset-id]");
+          if (!button) return;
+          setActivePreset(button.dataset.presetId);
+        });
+
+        fieldIds.forEach((id) => {
+          const el = document.getElementById(id);
+          el.addEventListener("input", () => {
+            collectControlValues();
+            render();
+          });
+        });
+
+        logoFieldIds.forEach((id) => {
+          const el = document.getElementById(id);
+          el.addEventListener("input", () => {
+            collectLogoValues();
+            render();
+          });
+        });
+
+        document.getElementById("logoUpload").addEventListener("change", (event) => {
+          const [file] = event.target.files || [];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            state.logoAsset.dataUrl = reader.result;
+            state.logoAsset.fileName = file.name;
+            render();
+          };
+          reader.readAsDataURL(file);
+        });
+
+        document.getElementById("clearLogoButton").addEventListener("click", () => {
+          state.logoAsset = defaultLogoState();
+          document.getElementById("logoUpload").value = "";
+          hydrateControls();
+          render();
+        });
+
+        document.getElementById("addTextModuleButton").addEventListener("click", () => {
+          const module = createTextModule({
+            name: `文字 ${state.textModules.length + 1}`,
+            content: `文字 ${state.textModules.length + 1}`,
+            surface: state.logoAsset.surface || "top",
+          });
+          state.textModules.push(module);
+          state.selectedTextModuleId = module.id;
+          render();
+        });
+
+        document.getElementById("deleteTextModuleButton").addEventListener("click", () => {
+          if (!state.selectedTextModuleId) return;
+          state.textModules = state.textModules.filter((item) => item.id !== state.selectedTextModuleId);
+          state.selectedTextModuleId = state.textModules[0]?.id || "";
+          render();
+        });
+
+        textModuleList.addEventListener("click", (event) => {
+          const button = event.target.closest("[data-module-id]");
+          if (!button) return;
+          state.selectedTextModuleId = button.dataset.moduleId;
+          render();
+        });
+
+        document.getElementById("textModuleContent").addEventListener("input", (event) => {
+          updateSelectedTextModuleField("content", event.target.value);
+          render();
+        });
+        document.getElementById("textModuleSurface").addEventListener("input", (event) => {
+          updateSelectedTextModuleField("surface", event.target.value);
+          render();
+        });
+        document.getElementById("textModuleAlign").addEventListener("input", (event) => {
+          updateSelectedTextModuleField("align", event.target.value);
+          render();
+        });
+        document.getElementById("textModuleColor").addEventListener("input", (event) => {
+          updateSelectedTextModuleField("color", event.target.value);
+          render();
+        });
+        ["textModuleX", "textModuleY", "textModuleFontSize", "textModuleLetterSpacing", "textModuleRotation"].forEach((id) => {
+          const el = document.getElementById(id);
+          el.addEventListener("input", (event) => {
+            const key = id.replace("textModule", "").replace(/^./, (char) => char.toLowerCase());
+            updateSelectedTextModuleField(key, textModuleNumericIds.has(id) ? Number(event.target.value || 0) : event.target.value);
+            render();
+          });
+        });
+
+        document.getElementById("zoomOutButton").addEventListener("click", () => {
+          state.zoom = Math.max(0.65, state.zoom - 0.1);
+          render();
+        });
+
+        document.getElementById("zoomInButton").addEventListener("click", () => {
+          state.zoom = Math.min(1.6, state.zoom + 0.1);
+          render();
+        });
+
+        document.getElementById("zoomResetButton").addEventListener("click", () => {
+          state.zoom = 1;
+          render();
+        });
+
+        document.getElementById("downloadCanvasSvgButton").addEventListener("click", () => {
+          downloadFile("packaging-design-canvas.svg", buildSvgMarkup(), "image/svg+xml;charset=utf-8");
+        });
+
+        document.getElementById("exportSvgButton").addEventListener("click", () => {
+          downloadFile("packaging-design-export.svg", buildSvgMarkup(), "image/svg+xml;charset=utf-8");
+        });
+
+        document.getElementById("exportJsonButton").addEventListener("click", () => {
+          const payload = JSON.stringify(
+            {
+              exportedAt: new Date().toISOString(),
+              presetId: state.activePresetId,
+              values: state.values,
+              logoAsset: state.logoAsset,
+              textModules: state.textModules,
+            },
+            null,
+            2,
+          );
+          downloadFile("packaging-design-export.json", payload, "application/json;charset=utf-8");
+        });
+
+        document.getElementById("copySpecButton").addEventListener("click", async () => {
+          const text = buildSpecText();
+          try {
+            await navigator.clipboard.writeText(text);
+            document.getElementById("statusChip").textContent = "规格摘要已复制到剪贴板";
+            setTimeout(render, 1100);
+          } catch {
+            alert("当前浏览器不支持自动复制，请改用导出 JSON / SVG。");
+          }
+        });
+      }
+
+      hydrateControls();
+      bindEvents();
+      bindCanvasInteraction();
+      render();
+    </script>
+  </body>
+</html>

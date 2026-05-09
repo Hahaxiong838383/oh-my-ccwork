@@ -285,3 +285,25 @@ skills/netease-music-*
 # 热回滚备份（试运行窗口期不进 git；复盘通过后归档到 5-Archive/）
 CLAUDE.md.bak.*
 AGENTS.md.bak.*
+
+# EvoDesk 独立项目（太大，应独立管理）
+2-Projects/evo-desktop-ai/
+1-Inbox/tmp-repos/
+2-Projects/brain-product/
+
+# 临时文件
+tmp/
+*.canvas
+2-Projects/LnMem/
+2-Projects/personalt-test/
+data/
+src/
+
+# 二进制设计文件
+1-Inbox/*.pdf
+1-Inbox/*.op
+
+# 嵌套 git 仓库（独立管理）- 补充
+.claude/skills/fireworks-tech-graph/
+2-Projects/LnMem-poc/
+4-Assets/external-skills/garden-skills/

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run xray-healthcheck every 2 minutes
+After=network-online.target
+
+[Timer]
+OnBootSec=60s
+OnUnitActiveSec=2min
+Unit=xray-healthcheck.service
+
+[Install]
+WantedBy=timers.target
