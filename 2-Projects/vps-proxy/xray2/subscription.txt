@@ -1,9 +1,0 @@
-# US2 翻墙节点（Cogent 美国 / 38.49.38.237）
-# 部署：2026-04-17 / Ubuntu 24.04 / 3x-ui v2.8.11 + xray 26.2.6 / BBR 已开
-# 严格按今天的教训：公网 IP 不用域名
-
-# ① VLESS-Reality :443（推荐）
-vless://6E03C02A-4FE3-4C3B-9340-687B9DCFEBDE@38.49.38.237:443?security=reality&sni=www.microsoft.com&fp=chrome&pbk=yAthpFGYov36WfO6SpZlIGEKXrbFABTRt6Bf9jejUAo&sid=9f550f9b&type=tcp&flow=xtls-rprx-vision#US2-VLESS-Reality-IP
-
-# ② VMess-WS :10086（老版兼容）
-vmess://eyJ2IjoiMiIsInBzIjoiVVMyLVZNZXNzLVdTLUlQIiwiYWRkIjoiMzguNDkuMzguMjM3IiwicG9ydCI6IjEwMDg2IiwiaWQiOiI4RjVEODJGQS00RTA0LTQ0ODUtODhBMi1BMzVGNEY0QzhGMjMiLCJhaWQiOiIwIiwic2N5IjoiYXV0byIsIm5ldCI6IndzIiwidHlwZSI6Im5vbmUiLCJob3N0IjoiIiwicGF0aCI6Ii80ZTA5NDYwOSIsInRscyI6IiJ9

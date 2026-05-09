@@ -307,3 +307,11 @@ src/
 .claude/skills/fireworks-tech-graph/
 2-Projects/LnMem-poc/
 4-Assets/external-skills/garden-skills/
+
+# VPS 代理配置（含凭据）
+2-Projects/vps-proxy/xray/.env
+2-Projects/vps-proxy/xray2/.env
+2-Projects/vps-proxy/xray/subscription.txt
+2-Projects/vps-proxy/xray2/subscription.txt
+2-Projects/vps-proxy/xray/scripts/add-inbounds.sh
+tasks/knowledge-spike/HANDOFF*.md
