@@ -33,6 +33,24 @@ description: 将调查、修复或后续任务委派给 Codex 执行。当用户
 | `--effort <level>` | 推理力度：none/minimal/low/medium/high/xhigh |
 | `[task text]` | 要 Codex 执行的任务描述 |
 
+## 难度自动路由（默认开启）
+
+**完整路由表（5 档：极简/普通/复杂/困难/极难，含模型 + effort + 降级链）已沉淀为全局规则**：[`~/.claude/rules/engine-routing.md`](../../../../../.claude/rules/engine-routing.md) 的「Codex 模型选择」节。
+
+该全局规则会被所有 cc session 自动加载（不限于 mycc 项目）。本 skill 只负责「执行入口」语义，不重复维护表格。
+
+**速查（精简版，详细见全局规则）**：
+
+| 档位 | 模型 | effort |
+|------|------|--------|
+| 极简 | `spark` | `minimal` |
+| 普通 | `gpt-5.3-codex` | `medium` |
+| **复杂（默认）** | **`gpt-5.3-codex`** | **`high`** |
+| 困难 | `gpt-5.4` | `high` |
+| 极难 | `gpt-5.5` | `xhigh` |
+
+调用前一行自报：`[难度] <档位> → --model X --effort Y`
+
 ## 执行步骤
 
 1. 定位插件运行时：
@@ -72,5 +90,6 @@ node "$CODEX_PLUGIN_ROOT/scripts/codex-companion.mjs" task "$ARGUMENTS"
 - cc 只做转发，不做独立分析。不要在发送 Codex 之前自己读文件、查 grep。
 - 不要在 Codex 运行后主动轮询 status、获取 result、取消任务。
 - 原样返回输出。如果 Bash 调用失败，不返回任何内容。
-- 不设 `--effort` 除非用户明确要求。
-- 不设 `--model` 除非用户明确要求。
+- **默认按"难度自动路由"表选 `--model`/`--effort` 并显式传入**（不再依赖 config.toml 全局默认，让选择对老板可见）。
+- 用户显式传 `--model`/`--effort` 时直接转发，不二次评估。
+- 调用前简短一行自报：`[难度] <档位> → --model X --effort Y`，方便老板纠偏。
