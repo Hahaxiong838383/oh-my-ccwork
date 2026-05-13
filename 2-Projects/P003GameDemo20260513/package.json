@@ -1,0 +1,17 @@
+{
+  "name": "p003-k1-game-demo",
+  "private": true,
+  "version": "0.0.1",
+  "description": "K1 product V1.0 MVP web demo (mobile-first PWA)",
+  "packageManager": "pnpm@9.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm -F web dev",
+    "dev:host": "pnpm -F web dev --host",
+    "build": "pnpm -F web build",
+    "preview": "pnpm -F web preview"
+  }
+}
