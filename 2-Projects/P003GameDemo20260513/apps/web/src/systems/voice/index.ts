@@ -1,12 +1,19 @@
-// AI 语音陪伴 —— M4 milestone 实现
-// Web Speech API（SpeechRecognition + SpeechSynthesis）
-// 关键约束：所有语音指令必须有等效按钮 fallback（iOS Safari 支持不稳定）
+/**
+ * 语音对话（来自 1.9）
+ *
+ * 唤醒词：小可小可 / 你好小可 / 爱视可
+ * 命令集（demo 子集）：开始学习 / 结束探索 / 开箱 / 给小可换装 / 关闭设置
+ * 二次确认场景：结束专注（必须 30s 内确认）
+ *
+ * iOS Safari 限制：Web Speech API 不稳定，所有命令必须有按钮 fallback
+ */
 
-export type VoiceCommand = 'start-focus' | 'end-focus' | 'open-box';
+const WAKE_WORDS = ['小可小可', '你好小可', '爱视可'];
 
 export function isVoiceSupported(): boolean {
+  if (typeof window === 'undefined') return false;
   // @ts-expect-error webkit prefix
-  return typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
 export function speak(text: string, lang = 'zh-CN'): void {
@@ -18,4 +25,9 @@ export function speak(text: string, lang = 'zh-CN'): void {
   window.speechSynthesis.speak(u);
 }
 
-// TODO M4: startListening / parseCommand / stopListening
+export function isWakeWord(transcript: string): boolean {
+  const normalized = transcript.trim().replace(/\s+/g, '');
+  return WAKE_WORDS.some((w) => normalized.includes(w));
+}
+
+// TODO M6: VAD / 唤醒后 listening / 命令解析 / 二次确认
