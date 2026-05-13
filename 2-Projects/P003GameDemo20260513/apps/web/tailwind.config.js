@@ -36,10 +36,10 @@ export default {
         'screen-canvas': '800px',
       },
       height: {
-        'screen-canvas': '300px',
+        'screen-canvas': '480px',
       },
       aspectRatio: {
-        'screen-canvas': '8 / 3', // V0.4 真实硬件 800×300（宽屏）
+        'screen-canvas': '5 / 3', // 真实硬件 800×480 横屏（来自 1.6 主界面规格）
       },
       animation: {
         'xiaoke-breathe': 'breathe 3s ease-in-out infinite',
