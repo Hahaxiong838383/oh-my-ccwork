@@ -19,10 +19,15 @@ dist-ssr
 *.sln
 *.sw?
 
-# env
+# env / secrets（严禁入库）
 .env
 .env.local
 .env.*.local
+*.secret
+*.key
+*.pem
+secrets/
+credentials/
 
 # logs
 *.log

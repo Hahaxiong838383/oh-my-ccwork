@@ -1,0 +1,17 @@
+{
+  "name": "server",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "probe:xfyun": "node --env-file=.env.local scripts/xfyun-tts-probe.mjs",
+    "probe:xfyun:custom": "node --env-file=.env.local scripts/xfyun-tts-probe.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.4.5"
+  }
+}
