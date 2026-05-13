@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "probe:xfyun": "node --env-file=.env.local scripts/xfyun-tts-probe.mjs",
-    "probe:xfyun:custom": "node --env-file=.env.local scripts/xfyun-tts-probe.mjs"
+    "probe:gemini": "NO_PROXY=* HTTPS_PROXY= HTTP_PROXY= node --env-file=.env.local scripts/gemini-probe.mjs"
   },
   "dependencies": {
     "ws": "^8.18.0"
