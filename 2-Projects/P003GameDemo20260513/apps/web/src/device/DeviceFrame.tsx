@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { LEDIndicator } from './LEDIndicator';
 import { PowerButton } from './PowerButton';
-import { useSettingsStore } from '../store/settings-store';
-import { Tips } from '../ui/Tips';
+import { useAppStore } from '../store/app-store';
+import { Tips } from '../components/Tips';
 
 /**
  * DeviceFrame —— 读写台设备外壳
@@ -17,7 +17,7 @@ import { Tips } from '../ui/Tips';
  *         └ Tips     (z=50 反馈层全局浮层)
  */
 export function DeviceFrame({ children }: { children: ReactNode }) {
-  const led = useSettingsStore((s) => s.led);
+  const led = useAppStore((s) => s.led);
 
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-shell-bg">
@@ -42,7 +42,7 @@ export function DeviceFrame({ children }: { children: ReactNode }) {
       </div>
 
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[10px] tracking-[0.3em] text-white/20">
-        FUTURUS · K1 · DEMO V0.3
+        FUTURUS · K1 · DEMO V0.4
       </div>
     </div>
   );

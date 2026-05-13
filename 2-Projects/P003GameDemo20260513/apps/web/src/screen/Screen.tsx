@@ -1,20 +1,15 @@
-import { useDeviceStore } from '../store/device-store';
-import { useUserStore } from '../store/user-store';
-import { OnboardingScene } from '../scenes/Onboarding';
-import { MainScene } from '../scenes/Main';
-import { ShutdownScene } from '../scenes/Shutdown';
+import { useAppStore } from '../store/app-store';
+import { MainScreen } from '../components/MainScreen';
+import { ShutdownScreen } from '../components/ShutdownScreen';
 
 /**
- * Screen —— 800×480 屏幕路由器
+ * Screen —— 800×480 屏幕路由器（V0.4 简化版）
  *
- * 根据顶层状态机当前 state 选择渲染哪个 scene。
- * M1 接入 XState 之前，先用简单条件路由占位。
+ * V0.4 砍掉 Onboarding（4 天范围太重），demo 默认直接进主界面。
+ * 仅保留"开关盖"切换（lidOpen=false 时显示息屏）。
  */
 export function Screen() {
-  const lidOpen = useDeviceStore((s) => s.lidOpen);
-  const onboarded = useUserStore((s) => s.onboarded);
-
-  if (!lidOpen) return <ShutdownScene />;
-  if (!onboarded) return <OnboardingScene />;
-  return <MainScene />;
+  const lidOpen = useAppStore((s) => s.lidOpen);
+  if (!lidOpen) return <ShutdownScreen />;
+  return <MainScreen />;
 }

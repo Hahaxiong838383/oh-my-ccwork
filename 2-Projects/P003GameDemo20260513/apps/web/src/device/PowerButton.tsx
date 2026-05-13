@@ -1,4 +1,4 @@
-import { useDeviceStore } from '../store/device-store';
+import { useAppStore } from '../store/app-store';
 
 /**
  * 物理待机按键模拟
@@ -6,8 +6,8 @@ import { useDeviceStore } from '../store/device-store';
  * 长按 2s：完全关机（demo 不做）
  */
 export function PowerButton() {
-  const lidOpen = useDeviceStore((s) => s.lidOpen);
-  const toggleLid = useDeviceStore((s) => s.toggleLid);
+  const lidOpen = useAppStore((s) => s.lidOpen);
+  const toggleLid = useAppStore((s) => s.toggleLid);
 
   return (
     <button
