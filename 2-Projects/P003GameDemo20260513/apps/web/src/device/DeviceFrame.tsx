@@ -3,18 +3,14 @@ import { LEDIndicator } from './LEDIndicator';
 import { PowerButton } from './PowerButton';
 import { useAppStore } from '../store/app-store';
 import { Tips } from '../components/Tips';
+import { VoiceButton } from '../components/VoiceButton';
 
 /**
  * DeviceFrame —— 读写台设备外壳
  *
- * 设计目标：让用户在手机/电脑浏览器里看到"真实读写台"的形态。
- * 内部嵌一个 800×480 横屏 5:3 画布，按视口可用空间自适应缩放。
- *
- * 组件树关系：
- *   DeviceFrame 设备外壳（LED/按键/麦克风孔）
- *     └ 屏幕区域 (800×480 5:3)
- *         ├ children (Screen 路由器 → 各 scene)
- *         └ Tips     (z=50 反馈层全局浮层)
+ * 800×480 横屏 5:3 画布只显示游戏主界面。
+ * VoiceButton（按住说话）属于 demo 模拟工具，挂在外壳"下沿条"上，
+ * 模拟真机的实体按键，不污染屏幕画面。真机里用户用"小可小可"唤醒。
  */
 export function DeviceFrame({ children }: { children: ReactNode }) {
   const led = useAppStore((s) => s.led);
@@ -22,27 +18,33 @@ export function DeviceFrame({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-shell-bg">
       <div
-        className="relative flex items-center gap-4 rounded-[24px] border border-shell-trim bg-shell-frame p-4 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
+        className="relative flex flex-col gap-3 rounded-[24px] border border-shell-trim bg-shell-frame p-4 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
         style={{ touchAction: 'none' }}
       >
-        <div className="flex flex-col items-center gap-3 px-1">
-          <LEDIndicator on={led.on} brightness={led.brightness} colorTemp={led.colorTemp} />
-          <MicrophoneVent />
+        {/* 主行：屏幕 + 两侧外壳元素 */}
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-center gap-3 px-1">
+            <LEDIndicator on={led.on} brightness={led.brightness} colorTemp={led.colorTemp} />
+            <MicrophoneVent />
+          </div>
+
+          <div className="relative aspect-screen-canvas h-[min(78vh,calc(82vw*3/5))] w-auto overflow-hidden rounded-lg bg-screen-bg ring-1 ring-shell-trim">
+            {children}
+            <Tips />
+          </div>
+
+          <div className="flex flex-col items-center gap-3 px-1">
+            <PowerButton />
+            <div className="text-[8px] tracking-widest text-white/30">K1</div>
+          </div>
         </div>
 
-        <div className="relative aspect-screen-canvas h-[min(80vh,calc(85vw*3/5))] w-auto overflow-hidden rounded-lg bg-screen-bg ring-1 ring-shell-trim">
-          {children}
-          <Tips />
+        {/* 下沿条：实体按键 + 品牌印 */}
+        <div className="flex items-center justify-between px-2">
+          <div className="text-[9px] tracking-[0.3em] text-white/25">FUTURUS · K1</div>
+          <VoiceButton />
+          <div className="text-[9px] tracking-[0.3em] text-white/25">DEMO V0.4</div>
         </div>
-
-        <div className="flex flex-col items-center gap-3 px-1">
-          <PowerButton />
-          <div className="text-[8px] tracking-widest text-white/30">K1</div>
-        </div>
-      </div>
-
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[10px] tracking-[0.3em] text-white/20">
-        FUTURUS · K1 · DEMO V0.4
       </div>
     </div>
   );

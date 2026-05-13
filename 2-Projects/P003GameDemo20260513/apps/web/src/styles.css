@@ -20,7 +20,23 @@
 
   body {
     font-family: theme('fontFamily.sans');
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/*
+ * 强制横屏（V0.4 demo 第一原则）
+ * iOS/Android 普通网页 API 锁不了横屏，用 CSS rotate 把内容"画"成横向。
+ * 用户竖着拿手机也能看到横屏 demo（脸要侧着看，但比黑屏强）。
+ * 提示"请横屏"由屏幕内 UI 角标处理（OrientationHint 组件）。
+ */
+@media screen and (orientation: portrait) and (max-width: 1024px) {
+  #root {
+    position: fixed;
+    top: 0;
+    left: 100vw;
+    width: 100vh;
+    height: 100vw;
+    transform-origin: top left;
+    transform: rotate(90deg);
   }
 }

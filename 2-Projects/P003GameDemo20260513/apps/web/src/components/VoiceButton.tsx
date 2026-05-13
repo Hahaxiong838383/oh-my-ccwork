@@ -66,14 +66,17 @@ export function VoiceButton(_props: VoiceButtonProps) {
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       onPointerLeave={onPointerUp}
-      className={`relative h-16 w-16 rounded-full text-2xl text-white shadow-lg transition-all duration-150 active:scale-105 ${
+      className={`relative inline-flex h-9 select-none items-center gap-2 rounded-full px-5 text-[11px] tracking-widest transition-all duration-150 ${
         pressed
-          ? 'scale-110 bg-red-500 ring-4 ring-red-300/50 animate-pulse'
-          : 'bg-gradient-to-br from-xiaoke-primary to-xiaoke-accent ring-2 ring-white/20'
+          ? 'bg-red-500/90 text-white shadow-[0_0_18px_rgba(239,68,68,0.6)] ring-2 ring-red-300/50'
+          : 'bg-shell-trim text-white/70 shadow-inner shadow-black/40 ring-1 ring-white/5 hover:text-white/90'
       }`}
     >
-      <span className="relative z-10">🎤</span>
-      {pressed && <span className="absolute inset-0 rounded-full border border-red-200/60 animate-ping" />}
+      <span className={`text-[14px] leading-none ${pressed ? '' : 'opacity-80'}`}>🎤</span>
+      <span>{pressed ? '聆听中…' : '按住说话'}</span>
+      {pressed && (
+        <span className="absolute inset-0 rounded-full border border-red-200/40 animate-ping" />
+      )}
     </button>
   );
 }
