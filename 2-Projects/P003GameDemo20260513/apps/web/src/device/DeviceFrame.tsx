@@ -10,30 +10,41 @@ import { SettingsButton } from '../components/SettingsButton';
 import { SetupGuide } from '../scenes/SetupGuide';
 
 /**
- * DeviceFrame —— 读写台设备外壳
+ * DeviceFrame —— 读写台 demo 模拟器外壳（V0.6 竖屏布局）
  *
- * 800×480 横屏 5:3 画布只显示游戏主界面。
- * VoiceButton（按住说话）属于 demo 模拟工具，挂在外壳"下沿条"上，
- * 模拟真机的实体按键，不污染屏幕画面。真机里用户用"小可小可"唤醒。
+ * 按川哥草图：手机竖屏整体布局，分 4 段堆叠：
+ *   1. 顶部标题：FUTURUS + DEMO
+ *   2. 屏幕区：LED + 麦克风 在 800×480 画布左侧
+ *   3. 操作按钮区：talk + K1 开关 居中
+ *   4. 底部调试区：配网 / WiFi / 跳关
+ *
+ * 800×480 游戏画布**像素锁定**（aspect 5:3 + max-width 撑满），
+ * 内部坐标系永远是 800×480，外层 CSS 按比例缩放。
+ *
+ * 画内/画外铁律：data-scope="screen-canvas" 标记的 div 子树只放游戏 UI，
+ * 模拟器/调试控件（VoiceButton/PowerButton/DebugBar/LED）严禁进入。
  */
 export function DeviceFrame({ children }: { children: ReactNode }) {
   const led = useAppStore((s) => s.led);
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-shell-bg">
-      <div
-        className="relative flex flex-col gap-3 rounded-[24px] border border-shell-trim bg-shell-frame p-4 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
-        style={{ touchAction: 'none' }}
-      >
-        {/* 主行：屏幕 + 两侧外壳元素 */}
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col items-center gap-3 px-1">
+    <div className="flex min-h-full w-full flex-col items-stretch bg-shell-bg px-3 py-4 sm:px-6">
+      <div className="mx-auto flex w-full max-w-[480px] flex-col gap-4 rounded-2xl border border-shell-trim bg-shell-frame p-3 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+        {/* 1. 顶部标题 */}
+        <div className="flex items-center justify-between px-1 text-[10px] tracking-[0.35em] text-white/40">
+          <span>FUTURUS · K1</span>
+          <span>DEMO V0.6</span>
+        </div>
+
+        {/* 2. 屏幕区：LED + 麦克风 + 800×480 画布 */}
+        <div className="flex items-stretch gap-2">
+          <div className="flex flex-col items-center justify-center gap-3 px-1 py-1">
             <LEDIndicator on={led.on} brightness={led.brightness} colorTemp={led.colorTemp} />
             <MicrophoneVent />
           </div>
 
           <div
-            className="relative aspect-screen-canvas h-[min(78vh,calc(82vw*3/5))] w-auto overflow-hidden rounded-lg bg-screen-bg ring-1 ring-shell-trim"
+            className="relative aspect-screen-canvas flex-1 overflow-hidden rounded-lg bg-screen-bg ring-1 ring-shell-trim"
             data-scope="screen-canvas"
           >
             {children}
@@ -42,20 +53,18 @@ export function DeviceFrame({ children }: { children: ReactNode }) {
             <SetupGuide />
             <Tips />
           </div>
+        </div>
 
-          <div className="flex flex-col items-center gap-3 px-1">
+        {/* 3. 操作按钮区：talk + K1 开关 */}
+        <div className="flex items-center justify-center gap-10 px-2">
+          <VoiceButton />
+          <div className="flex flex-col items-center gap-1">
             <PowerButton />
-            <div className="text-[8px] tracking-widest text-white/30">K1</div>
+            <span className="text-[9px] tracking-[0.25em] text-white/35">K1 开关</span>
           </div>
         </div>
 
-        {/* 下沿条：实体按键 + 品牌印 */}
-        <div className="flex items-center justify-between px-2">
-          <div className="text-[9px] tracking-[0.3em] text-white/25">FUTURUS · K1</div>
-          <VoiceButton />
-          <div className="text-[9px] tracking-[0.3em] text-white/25">DEMO V0.6</div>
-        </div>
-
+        {/* 4. 底部调试区 */}
         <DebugBar />
       </div>
     </div>
@@ -64,7 +73,7 @@ export function DeviceFrame({ children }: { children: ReactNode }) {
 
 function MicrophoneVent() {
   return (
-    <div className="flex flex-col gap-[3px]">
+    <div className="flex flex-col gap-[3px]" aria-label="麦克风孔">
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="h-[3px] w-3 rounded-full bg-shell-trim" />
       ))}
