@@ -156,6 +156,13 @@ export function defaultTimerRouter(key: string): void {
     case 'openAnim':
       internalDispatchReward({ type: 'OPEN_ANIM_END' });
       break;
+    case 'rewardShown': {
+      // showingReward → ECO_CHECK：legendary 必触发 ecoUnlock，其它级走 askMode
+      // （demo 演示节奏可控，避免每次 OPEN_BOX 都进 ecoUnlock 节奏过密）
+      const level = useAppStore.getState().currentBoxLevel;
+      internalDispatchReward({ type: 'ECO_CHECK', hasUnlock: level === 'legendary' });
+      break;
+    }
     case 'ecoAnim':
       internalDispatchReward({ type: 'ECO_DONE' });
       break;
@@ -174,7 +181,6 @@ export function defaultTimerRouter(key: string): void {
  */
 export function jumpToScene(scene: SceneId): void {
   // 中断任何在途 ASR/LLM/TTS 会话，避免旧 turn 的回包污染新场景的 subtitle/voiceStatus
-  // （bargeIn 内部会 server 端 turn ID++ 让在途回包失效 + 客户端清 mp3Buffer/playbackSources）
   try {
     const client = getSharedVoiceClient();
     client.bargeIn();
@@ -189,19 +195,42 @@ export function jumpToScene(scene: SceneId): void {
 
   const preset = getScenePreset(scene);
   const store = useAppStore.getState();
+
+  // box* / farewell preset 走"先 hydrate 基线 → 再 dispatch 启动动画"模式
+  // 让 reward/farewell timer 真正起来，避免 stuck 在 openingBox 静止状态
+  const isBoxScene =
+    scene === 'boxCommon' || scene === 'boxRare' ||
+    scene === 'boxEpic' || scene === 'boxLegendary';
+  const isFarewellScene = scene === 'farewell';
+
   store.setBootState(preset.bootState);
   store.setFocusMachine(preset.focusMachine);
-  store.setRewardMachine(preset.rewardMachine);
-  store.setCurrentBoxLevel(preset.currentBoxLevel);
+  // box scene 先 reward=idle + boxLevel=null，下面 dispatch OPEN_BOX 走完整 transition
+  store.setRewardMachine(isBoxScene ? 'idle' : preset.rewardMachine);
+  store.setCurrentBoxLevel(isBoxScene ? null : preset.currentBoxLevel);
   store.setVoiceStatus(preset.voiceStatus);
   store.setSubtitle(preset.subtitle);
   store.setXiaokeEmotion(preset.xiaokeEmotion);
   store.setSetupComplete(preset.setupComplete);
-  // stardust/familyCoin 用 set 直接覆盖（add* 是增量）
+  store.setFarewellState('hidden');
   useAppStore.setState({
     stardust: preset.stardust,
     familyCoin: preset.familyCoin,
   });
+
+  if (isBoxScene && preset.currentBoxLevel) {
+    internalDispatchReward({ type: 'OPEN_BOX', level: preset.currentBoxLevel });
+  }
+
+  if (isFarewellScene) {
+    // 1.5s wave → 0.5s shutdown 过渡 → 停在 shutdown 黑屏（演示退场）
+    store.setFarewellState('waving');
+    const wavingId = window.setTimeout(() => {
+      activeTimers.delete('farewellWave');
+      useAppStore.getState().setFarewellState('shutdown');
+    }, 1_500);
+    activeTimers.set('farewellWave', wavingId);
+  }
 
   if (import.meta.env.DEV) console.debug('[jumpToScene]', scene);
 }

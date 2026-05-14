@@ -191,6 +191,40 @@ async function main() {
   console.log(`  settings 占位 Tip 显示: ${settingsTipShown}`);
   if (!settingsTipShown) errors.push('C3 SettingsButton 点击未弹 Tip（死按钮回归）');
 
+  // C4. D3 场景多时点截图：OpenBox/EcoUnlock/Farewell 看完整动画
+  console.log('\nC4. D3 三场景动画多时点截图');
+  for (const level of ['common', 'rare', 'epic', 'legendary']) {
+    const sceneId = `box${level[0].toUpperCase()}${level.slice(1)}`;
+    await page.selectOption('select[aria-label="跳关选择"]', sceneId);
+    await page.waitForTimeout(300);
+    await step(page, `c4-${level}-t0`, null, 0);          // 进入开箱
+    await page.waitForTimeout(1500);
+    await step(page, `c4-${level}-t1`, null, 0);          // 1.8s（震屏中段）
+    // openAnim: common 2s / rare 2.5s / epic 3s / legendary 4s
+    await page.waitForTimeout(1500);
+    await step(page, `c4-${level}-t2`, null, 0);          // 3.3s（reward HUD）
+    await page.waitForTimeout(2500);
+    await step(page, `c4-${level}-t3`, null, 0);          // 5.8s（ecoUnlock 或 askMode）
+  }
+
+  await page.selectOption('select[aria-label="跳关选择"]', 'ecoUnlock');
+  for (const [t, dur] of [['t0', 500], ['t1', 1500], ['t2', 1500], ['t3', 500]]) {
+    await page.waitForTimeout(dur);
+    await step(page, `c4-eco-${t}`, null, 0);
+  }
+
+  await page.selectOption('select[aria-label="跳关选择"]', 'farewell');
+  await step(page, 'c4-farewell-waving', null, 800);   // waving 中段
+  await page.waitForTimeout(1000);                      // → shutdown
+  await step(page, 'c4-farewell-shutdown-t0', null, 0); // shutdown 进入瞬间
+  await page.waitForTimeout(800);
+  await step(page, 'c4-farewell-shutdown-t1', null, 0); // slogan 显著时点（duration 1.8s 内）
+  const farewellFinal = await page.evaluate(() => {
+    return window.__APP_STORE__?.getState?.().farewellState;
+  });
+  console.log(`  farewell 最终 state: ${farewellFinal}`);
+  if (farewellFinal !== 'shutdown') errors.push(`farewell 未进入 shutdown: ${farewellFinal}`);
+
   // D. 按住说话按钮（mock 阶段）
   console.log('\nD. VoiceButton 交互（mock）');
   await page.keyboard.press('1');

@@ -9,6 +9,7 @@ const OPEN_ANIM_MS: Record<BoxLevel, number> = {
   legendary: 4_000,
 };
 
+const REWARD_SHOWN_MS = 2_500;  // showingReward 自动倒计时，timer-router 会读 store 决定 hasUnlock
 const ECO_ANIM_MS = 4_000;
 const ASK_TIMEOUT_MS = 30_000;
 
@@ -30,6 +31,7 @@ export function rewardTransition(
           state: 'openingBox',
           effects: [
             { type: 'setCurrentBoxLevel', level: event.level },
+            { type: 'setXiaokeEmotion', emotion: REWARD_TABLE[event.level].emotion },
             { type: 'playSfx', id: `box-${event.level}` },
             { type: 'startTimer', key: 'openAnim', ms: OPEN_ANIM_MS[event.level] },
           ],
@@ -41,7 +43,12 @@ export function rewardTransition(
       if (event.type === 'OPEN_ANIM_END') {
         return {
           state: 'showingReward',
-          effects: showRewardEffects(getRequiredLevel(event)),
+          // 进入 showingReward 自动 startTimer 'rewardShown'，
+          // timer-router 读 store.currentBoxLevel 决定 ECO_CHECK 的 hasUnlock
+          effects: [
+            ...showRewardEffects(getRequiredLevel(event)),
+            { type: 'startTimer', key: 'rewardShown', ms: REWARD_SHOWN_MS },
+          ],
         };
       }
       break;
@@ -51,6 +58,7 @@ export function rewardTransition(
         return {
           state: 'idle',
           effects: [
+            { type: 'clearTimer', key: 'rewardShown' },
             { type: 'setCurrentBoxLevel', level: null },
             { type: 'setSubtitle', text: '' },
           ],
@@ -61,6 +69,7 @@ export function rewardTransition(
           return {
             state: 'ecoUnlock',
             effects: [
+              { type: 'clearTimer', key: 'rewardShown' },
               { type: 'setSubtitle', text: '生态缸有新解锁...' },
               { type: 'setXiaokeEmotion', emotion: 'excited' },
               { type: 'startTimer', key: 'ecoAnim', ms: ECO_ANIM_MS },
@@ -70,6 +79,7 @@ export function rewardTransition(
         return {
           state: 'askMode',
           effects: [
+            { type: 'clearTimer', key: 'rewardShown' },
             { type: 'setSubtitle', text: '继续出航 还是 返舱？' },
             { type: 'startTimer', key: 'rewardAsk', ms: ASK_TIMEOUT_MS },
           ],
@@ -109,6 +119,7 @@ export function rewardTransition(
           state: 'openingBox',
           effects: [
             { type: 'setCurrentBoxLevel', level: event.level },
+            { type: 'setXiaokeEmotion', emotion: REWARD_TABLE[event.level].emotion },
             { type: 'playSfx', id: `box-${event.level}` },
             { type: 'startTimer', key: 'openAnim', ms: OPEN_ANIM_MS[event.level] },
           ],

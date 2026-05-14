@@ -9,6 +9,7 @@ import { create } from 'zustand';
 
 export type VoiceStatus = 'idle' | 'listening' | 'thinking' | 'speaking';
 export type XiaokeEmotion = 'happy' | 'curious' | 'warm' | 'calm' | 'excited';
+export type FarewellState = 'hidden' | 'waving' | 'shutdown';
 
 export type WifiSignal = 'strong' | 'medium' | 'weak' | 'disconnected';
 
@@ -102,6 +103,10 @@ interface AppState {
   settingsOpen: boolean;
   setSettingsOpen: (b: boolean) => void;
 
+  // —— Farewell 关盖告别状态（D3 新增）——
+  farewellState: FarewellState;
+  setFarewellState: (s: FarewellState) => void;
+
   // —— 设置（外壳 LED 联动）——
   led: LEDState;
   toggleLED: () => void;
@@ -190,6 +195,9 @@ export const useAppStore = create<AppState>((set) => ({
 
   settingsOpen: false,
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+
+  farewellState: 'hidden',
+  setFarewellState: (farewellState) => set({ farewellState }),
 
   led: { on: true, brightness: 2, colorTemp: 1 },
   toggleLED: () => set((s) => ({ led: { ...s.led, on: !s.led.on } })),

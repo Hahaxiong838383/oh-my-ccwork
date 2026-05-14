@@ -11,6 +11,9 @@ import { SetupGuide } from '../scenes/SetupGuide';
 import { Welcome } from '../scenes/Welcome';
 import { NightReport } from '../scenes/NightReport';
 import { AskMode } from '../scenes/AskMode';
+import { OpenBox } from '../scenes/OpenBox';
+import { EcoUnlock } from '../scenes/EcoUnlock';
+import { Farewell } from '../scenes/Farewell';
 
 /**
  * DeviceFrame —— 读写台 demo 模拟器外壳（V0.6 竖屏布局）
@@ -57,6 +60,9 @@ export function DeviceFrame({ children }: { children: ReactNode }) {
             <Welcome />
             <NightReport />
             <AskMode />
+            <OpenBox />
+            <EcoUnlock />
+            <Farewell />
             <Tips />
           </div>
         </div>
