@@ -28,6 +28,9 @@ class VolcAsrClientImpl implements VolcAsrClient {
   private opts: AsrStartOptions | null = null;
   private lastPartial = '';
   private lastFinal = '';
+  private isOpen = false;
+  private pendingChunks: Buffer[] = [];
+  private pendingFinish = false;
 
   async start(opts: AsrStartOptions): Promise<void> {
     const appId = process.env.VOLC_ASR_APP_ID;
@@ -74,15 +77,34 @@ class VolcAsrClientImpl implements VolcAsrClient {
           },
         };
         ws.send(buildJsonFrame(0b0001, 0b0000, startPayload));
+        this.isOpen = true;
+        // flush 任何在 open 前缓存的 audio chunks
+        for (const chunk of this.pendingChunks) {
+          ws.send(buildAudioFrame(chunk, 0b0000));
+        }
+        this.pendingChunks = [];
+        if (this.pendingFinish) {
+          this.pendingFinish = false;
+          ws.send(buildAudioFrame(Buffer.alloc(0), 0b0010));
+          ws.send(buildJsonFrame(0b0001, 0b0000, { request: { audio_end: true } }));
+        }
         resolve();
       });
 
       ws.on('message', (data, isBinary) => {
         if (!isBinary || !Buffer.isBuffer(data)) return;
         try {
+          const flags = data[1] & 0x0f;
+          const isLast = (flags & 0b0010) !== 0;
+          if (process.env.DEBUG_ASR === '1') {
+            console.log(`[asr.raw] mt=${(data[1] >> 4) & 0xf} flags=${flags} isLast=${isLast} len=${data.length}`);
+          }
           const parsed = parseAsrFrame(data);
+          if (process.env.DEBUG_ASR === '1') {
+            console.log('[asr.parsed]', JSON.stringify(parsed)?.slice(0, 200));
+          }
           if (!parsed) return;
-          this.handleServerPayload(parsed);
+          this.handleServerPayload(parsed, isLast);
         } catch (err) {
           onError(toError(err));
         }
@@ -102,18 +124,30 @@ class VolcAsrClientImpl implements VolcAsrClient {
   }
 
   feed(pcm16: Buffer): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || pcm16.length === 0) return;
+    if (pcm16.length === 0) return;
+    if (!this.ws) return;
+    // ws 还在 connecting：缓存到 open 后 flush
+    if (!this.isOpen || this.ws.readyState !== WebSocket.OPEN) {
+      this.pendingChunks.push(pcm16);
+      return;
+    }
     this.ws.send(buildAudioFrame(pcm16, 0b0000));
   }
 
   finishAudio(): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    // 按流式协议发送最后一帧 + audio_end 通知，兼容不同服务端分支。
+    if (!this.ws) return;
+    if (!this.isOpen || this.ws.readyState !== WebSocket.OPEN) {
+      this.pendingFinish = true;
+      return;
+    }
     this.ws.send(buildAudioFrame(Buffer.alloc(0), 0b0010));
     this.ws.send(buildJsonFrame(0b0001, 0b0000, { request: { audio_end: true } }));
   }
 
   close(): void {
+    this.isOpen = false;
+    this.pendingChunks = [];
+    this.pendingFinish = false;
     if (!this.ws) return;
     try {
       this.ws.close();
@@ -123,20 +157,21 @@ class VolcAsrClientImpl implements VolcAsrClient {
     this.ws = null;
   }
 
-  private handleServerPayload(payload: unknown): void {
+  private handleServerPayload(payload: unknown, framedAsLast = false): void {
     if (!this.opts) return;
 
     const text = extractText(payload);
-    if (!text) return;
 
-    if (isFinalPayload(payload)) {
-      if (text !== this.lastFinal) {
+    // 帧标志为 isLast 或 payload 含 final 字段 → final（即使 text 为空，也通知 pipeline 结束这一轮）
+    if (framedAsLast || isFinalPayload(payload)) {
+      if (text !== this.lastFinal || text === '') {
         this.lastFinal = text;
         this.opts.onFinal(text);
       }
       return;
     }
 
+    if (!text) return;
     if (text !== this.lastPartial) {
       this.lastPartial = text;
       this.opts.onPartial(text);
@@ -172,10 +207,18 @@ function buildAudioFrame(audioPayload: Buffer, flags: number): Buffer {
 function parseAsrFrame(data: Buffer): unknown {
   if (data.length < 8) return null;
   const headerSize = (data[0] & 0x0f) * 4;
-  const payloadSizeOffset = headerSize;
-  if (payloadSizeOffset + 4 > data.length) return null;
-  const payloadSize = data.readUInt32BE(payloadSizeOffset);
-  const payloadStart = payloadSizeOffset + 4;
+  const flags = data[1] & 0x0f;
+  // 火山 ASR v3：flags & 0b0001 = MsgTypeFlagWithEvent，在 payload_size 前多 4 字节 sequence_number
+  // flags & 0b0100 = MsgTypeFlagWithConnectionId（罕见），暂不处理
+  let cursor = headerSize;
+  if (flags & 0b0001) {
+    // 跳过 4 字节 sequence_number
+    if (cursor + 4 > data.length) return null;
+    cursor += 4;
+  }
+  if (cursor + 4 > data.length) return null;
+  const payloadSize = data.readUInt32BE(cursor);
+  const payloadStart = cursor + 4;
   const payloadEnd = payloadStart + payloadSize;
   if (payloadEnd > data.length) return null;
   const payload = data.subarray(payloadStart, payloadEnd).toString('utf8').trim();

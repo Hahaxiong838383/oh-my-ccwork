@@ -37,6 +37,7 @@ class VoiceClientImpl implements VoiceClient {
   private frameTimer: number | null = null;
 
   private workletLoaded = false;
+  private isRecording = false;
   private readonly targetSampleRate = 16_000;
 
   private audioQueue: string[] = [];
@@ -114,7 +115,8 @@ class VoiceClientImpl implements VoiceClient {
       this.workletLoaded = true;
     }
 
-    this.stopRecording();
+    // 清资源但不发 audio.end（避免 session.start 之前的错误信号）
+    this.cleanupRecordingResources();
 
     this.captureBuffer = new Float32Array(0);
     this.micStream = await navigator.mediaDevices.getUserMedia({
@@ -147,18 +149,17 @@ class VoiceClientImpl implements VoiceClient {
       }),
     );
 
+    this.isRecording = true;
     this.frameTimer = window.setInterval(() => {
       this.flushOneFrame();
     }, 100);
   }
 
-  stopRecording(): void {
+  private cleanupRecordingResources(): void {
     if (this.frameTimer !== null) {
       window.clearInterval(this.frameTimer);
       this.frameTimer = null;
     }
-
-    this.flushOneFrame();
 
     if (this.workletNode) {
       try {
@@ -194,8 +195,20 @@ class VoiceClientImpl implements VoiceClient {
       }
       this.micStream = null;
     }
+  }
 
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+  stopRecording(): void {
+    // 只在真正录过音时才发 audio.end（防止连接刚开就发错误信号）
+    const wasRecording = this.isRecording;
+    this.isRecording = false;
+
+    if (wasRecording) {
+      this.flushOneFrame();
+    }
+
+    this.cleanupRecordingResources();
+
+    if (wasRecording && this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type: 'audio.end' }));
     }
   }

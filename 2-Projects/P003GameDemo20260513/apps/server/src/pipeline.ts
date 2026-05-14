@@ -86,7 +86,12 @@ export class VoicePipeline {
         },
         onFinal: (text) => {
           this.send({ type: 'asr.final', text });
-          this.startLlmAndTts(text);
+          if (text.trim()) {
+            this.startLlmAndTts(text);
+          } else {
+            // 用户没说话 → 立刻发 tts.end，让 client 重置 voiceStatus 到 idle
+            this.send({ type: 'tts.end' });
+          }
         },
         onError: (err) => {
           this.sendError('ASR_ERROR', err.message);
