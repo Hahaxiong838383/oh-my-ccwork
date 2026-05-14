@@ -8,6 +8,8 @@
     "probe:gemini": "NO_PROXY=* HTTPS_PROXY= HTTP_PROXY= node --env-file=.env.local scripts/gemini-probe.mjs"
   },
   "dependencies": {
+    "@hono/node-server": "^1.0.0",
+    "hono": "^4.12.18",
     "ws": "^8.18.0"
   },
   "devDependencies": {

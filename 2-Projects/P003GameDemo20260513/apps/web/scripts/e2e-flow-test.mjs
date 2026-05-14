@@ -1,0 +1,137 @@
+#!/usr/bin/env node
+/**
+ * e2e-flow-test.mjs —— P003 V0.6 端到端流程自动验收
+ *
+ * cc 主线交付验收脚本（不让川哥当人肉测试机）：
+ *   1. 自动打开 dev server 页面
+ *   2. 模拟点 [✅完成配网] → 等待 Welcome → NightReport → AskMode 自动推进
+ *   3. 截图每个阶段
+ *   4. 检查 React Hook 错误 / 渲染异常 / 状态机 transition 日志
+ *   5. 跳关下拉条覆盖测试 10 个剧情节点
+ *   6. 输出验收报告
+ *
+ * 用法：node apps/web/scripts/e2e-flow-test.mjs [--url=http://localhost:5173]
+ * 依赖：playwright（在 /tmp/node_modules）
+ */
+
+import pkg from '/tmp/node_modules/playwright/index.js';
+const { chromium } = pkg;
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SCREENSHOT_DIR = join(__dirname, '..', '..', '..', '.scratch', 'e2e-screenshots');
+mkdirSync(SCREENSHOT_DIR, { recursive: true });
+
+const URL = process.env.E2E_URL ?? 'http://localhost:5173/';
+const VIEWPORT = { width: 412, height: 915 };
+
+const errors = [];
+const transitions = [];
+const sfxEvents = [];
+
+function recordConsole(msg) {
+  const text = msg.text();
+  if (msg.type() === 'error' && !text.includes('react-devtools')) {
+    errors.push(text);
+  }
+  if (text.includes('[boot]') || text.includes('[focus]') || text.includes('[reward]')) {
+    transitions.push(text.replace(/^.*?\[/, '['));
+  }
+  if (text.includes('[sfx]') || text.includes('[jumpToScene]') || text.includes('[timer]')) {
+    sfxEvents.push(text);
+  }
+}
+
+async function step(page, name, action, delayMs) {
+  if (action) await action();
+  if (delayMs) await page.waitForTimeout(delayMs);
+  const path = join(SCREENSHOT_DIR, `${name}.png`);
+  await page.screenshot({ path });
+  console.log(`  📸 ${name}.png`);
+  return path;
+}
+
+async function main() {
+  const browser = await chromium.launch({
+    headless: true,
+    executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  });
+  const ctx = await browser.newContext({ viewport: VIEWPORT });
+  const page = await ctx.newPage();
+  page.on('console', recordConsole);
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+
+  console.log(`\n=== P003 E2E 验收 · ${URL} ===\n`);
+
+  await page.goto(URL);
+  await page.waitForLoadState('networkidle');
+
+  // A. 配网流程
+  console.log('A. 配网流程');
+  await step(page, 'a01-init-setupguide', null, 500);
+  await step(page, 'a02-after-setup', async () => {
+    await page.click('button:has-text("✅ 完成配网")');
+  }, 800);
+  await step(page, 'a03-welcome-2s', null, 1500);
+  await step(page, 'a04-nightreport-5s', null, 2500);
+  await step(page, 'a05-askmode-12s', null, 6500);
+
+  // B. 跳关下拉条全 10 项
+  console.log('\nB. 跳关下拉条全 10 项');
+  const scenes = [
+    'welcome', 'nightReport', 'askMode', 'focusRunning',
+    'boxCommon', 'boxRare', 'boxEpic', 'boxLegendary',
+    'ecoUnlock', 'farewell',
+  ];
+  for (const scene of scenes) {
+    await step(page, `b-${scene}`, async () => {
+      await page.selectOption('select[aria-label="跳关选择"]', scene);
+    }, 800);
+  }
+
+  // C. 键盘快捷键 0-9
+  console.log('\nC. 键盘快捷键 0-9');
+  for (const key of ['1', '5', '8', '9', '0']) {
+    await step(page, `c-key-${key}`, async () => {
+      await page.keyboard.press(key);
+    }, 500);
+  }
+
+  // D. 按住说话按钮（mock 阶段）
+  console.log('\nD. VoiceButton 交互（mock）');
+  await page.keyboard.press('1');
+  await page.waitForTimeout(1000);
+  const voiceBtn = page.locator('button[aria-label="按住说话"]');
+  await step(page, 'd01-press-voice', async () => {
+    await voiceBtn.dispatchEvent('pointerdown');
+  }, 600);
+  await step(page, 'd02-release-voice', async () => {
+    await voiceBtn.dispatchEvent('pointerup');
+  }, 2000);
+
+  await browser.close();
+
+  // === 验收报告 ===
+  console.log('\n=== 验收报告 ===\n');
+  console.log(`截图：${SCREENSHOT_DIR}`);
+  console.log(`\n状态机 transitions (${transitions.length}):`);
+  transitions.forEach((t) => console.log('  ' + t));
+
+  console.log(`\nSFX/timer events (${sfxEvents.length}):`);
+  sfxEvents.slice(0, 10).forEach((e) => console.log('  ' + e));
+
+  console.log(`\n❌ 错误 (${errors.length}):`);
+  errors.forEach((e) => console.log('  ' + e.slice(0, 200)));
+
+  // 验收门
+  const passed = errors.length === 0 && transitions.length > 0;
+  console.log(`\n=== ${passed ? '✅ PASS' : '❌ FAIL'} ===`);
+  process.exit(passed ? 0 : 1);
+}
+
+main().catch((err) => {
+  console.error('e2e-flow-test crashed:', err);
+  process.exit(2);
+});

@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store/app-store';
 import { useAudioFx } from '../hooks/useAudioFx';
+import { createVoiceClient, type VoiceClient } from '../services/voice-client';
 
 interface VoiceButtonProps {}
+
+function getVoiceWsUrl(): string {
+  const envUrl = import.meta.env.VITE_VOICE_WS_URL as string | undefined;
+  if (envUrl && envUrl.trim()) return envUrl;
+
+  const isHttps = window.location.protocol === 'https:';
+  const protocol = isHttps ? 'wss' : 'ws';
+  return `${protocol}://${window.location.hostname}:3001/ws/voice`;
+}
 
 export function VoiceButton(_props: VoiceButtonProps) {
   const setVoiceStatus = useAppStore((s) => s.setVoiceStatus);
@@ -11,63 +21,106 @@ export function VoiceButton(_props: VoiceButtonProps) {
   const { unlock, playThinking } = useAudioFx();
 
   const [pressed, setPressed] = useState(false);
-  const speakingTimerRef = useRef<number | null>(null);
-  const idleTimerRef = useRef<number | null>(null);
+  const clientRef = useRef<VoiceClient | null>(null);
+  const connectedRef = useRef(false);
+  const llmTextRef = useRef('');
 
-  const clearFlowTimers = () => {
-    if (speakingTimerRef.current !== null) {
-      window.clearTimeout(speakingTimerRef.current);
-      speakingTimerRef.current = null;
-    }
-    if (idleTimerRef.current !== null) {
-      window.clearTimeout(idleTimerRef.current);
-      idleTimerRef.current = null;
-    }
-  };
+  if (!clientRef.current) {
+    clientRef.current = createVoiceClient();
+  }
 
-  const runReleaseFlow = () => {
-    setPressed(false);
-    clearFlowTimers();
+  useEffect(() => {
+    const client = clientRef.current;
+    if (!client) return;
 
-    setVoiceStatus('thinking');
-    setXiaokeEmotion('calm');
-    // 立刻播"嗯..."占位音效掩盖 AI 延迟（gemini 评审 wow 项）
-    playThinking();
+    client.on('asr.partial', (msg: { text: string }) => {
+      setSubtitle(msg.text);
+    });
 
-    speakingTimerRef.current = window.setTimeout(() => {
+    client.on('asr.final', (msg: { text: string }) => {
+      setSubtitle(`${msg.text}...`);
+      llmTextRef.current = '';
+    });
+
+    client.on('llm.delta', (msg: { text: string }) => {
+      if (!msg.text) return;
+      llmTextRef.current += msg.text;
+      setSubtitle(llmTextRef.current);
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
-      setSubtitle('你好指挥官，今天想做什么呀？');
-    }, 600);
+    });
 
-    idleTimerRef.current = window.setTimeout(() => {
+    client.on('tts.audio', (msg: { mp3Base64: string }) => {
+      void client.playAudioChunk(msg.mp3Base64);
+      setVoiceStatus('speaking');
+      setXiaokeEmotion('happy');
+    });
+
+    client.on('tts.end', () => {
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
-    }, 2100);
-  };
+      llmTextRef.current = '';
+    });
 
-  const onPointerDown = () => {
+    client.on('error', (msg: { message?: string }) => {
+      setVoiceStatus('idle');
+      setSubtitle(msg.message ?? '语音服务异常，请重试');
+    });
+
+    return () => {
+      client.close();
+      connectedRef.current = false;
+    };
+  }, [setSubtitle, setVoiceStatus, setXiaokeEmotion]);
+
+  const onPointerDown = async () => {
     setPressed(true);
-    clearFlowTimers();
     unlock();
-    setVoiceStatus('listening');
-    setXiaokeEmotion('curious');
+
+    const client = clientRef.current;
+    if (!client) return;
+
+    try {
+      if (!connectedRef.current) {
+        await client.connect(getVoiceWsUrl());
+        connectedRef.current = true;
+      }
+
+      client.bargeIn();
+      await client.startRecording();
+      setVoiceStatus('listening');
+      setXiaokeEmotion('curious');
+    } catch (err) {
+      setPressed(false);
+      connectedRef.current = false;
+      setVoiceStatus('idle');
+      setSubtitle(err instanceof Error ? err.message : '麦克风启动失败');
+    }
   };
 
   const onPointerUp = () => {
     if (!pressed) return;
-    runReleaseFlow();
-  };
+    setPressed(false);
 
-  useEffect(() => {
-    return () => clearFlowTimers();
-  }, []);
+    const client = clientRef.current;
+    if (!client) return;
+
+    client.stopRecording();
+    setVoiceStatus('thinking');
+    setXiaokeEmotion('calm');
+
+    // thinking 占位音：等真实 TTS chunk 到达后自动切 speaking。
+    playThinking();
+  };
 
   return (
     <button
       type="button"
       aria-label="按住说话"
-      onPointerDown={onPointerDown}
+      onPointerDown={(evt) => {
+        evt.preventDefault();
+        void onPointerDown();
+      }}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       onPointerLeave={onPointerUp}
@@ -79,9 +132,7 @@ export function VoiceButton(_props: VoiceButtonProps) {
     >
       <span className={`text-[14px] leading-none ${pressed ? '' : 'opacity-80'}`}>🎤</span>
       <span>{pressed ? '聆听中…' : '按住说话'}</span>
-      {pressed && (
-        <span className="absolute inset-0 rounded-full border border-red-200/40 animate-ping" />
-      )}
+      {pressed && <span className="absolute inset-0 rounded-full border border-red-200/40 animate-ping" />}
     </button>
   );
 }
