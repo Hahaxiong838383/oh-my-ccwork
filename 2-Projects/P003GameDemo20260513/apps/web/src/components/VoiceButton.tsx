@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store/app-store';
 import { useAudioFx } from '../hooks/useAudioFx';
-import { createVoiceClient, type VoiceClient } from '../services/voice-client';
+import { getSharedVoiceClient, type VoiceClient } from '../services/voice-client';
 
 interface VoiceButtonProps {}
 
@@ -24,7 +24,6 @@ export function VoiceButton(_props: VoiceButtonProps) {
 
   const [pressed, setPressed] = useState(false);
   const clientRef = useRef<VoiceClient | null>(null);
-  const connectedRef = useRef(false);
   const llmTextRef = useRef('');
   // 异步竞态防护：pressedRef 反映"用户当前是否按住"，startInFlightRef 标启动中，
   // needStopRef 标"启动期间用户已松手，启动完成后必须立刻 stop"。
@@ -32,8 +31,9 @@ export function VoiceButton(_props: VoiceButtonProps) {
   const startInFlightRef = useRef(false);
   const needStopRef = useRef(false);
 
+  // 用 module-level 单例，让 jumpToScene 等非组件代码也能 bargeIn 中断在途会话
   if (!clientRef.current) {
-    clientRef.current = createVoiceClient();
+    clientRef.current = getSharedVoiceClient();
   }
 
   useEffect(() => {
@@ -104,9 +104,9 @@ export function VoiceButton(_props: VoiceButtonProps) {
 
     startInFlightRef.current = true;
     try {
-      if (!connectedRef.current) {
+      // 实时查 ws 状态，避免"上次连过就跳过 connect 但 ws 已断"的首按失败
+      if (!client.isConnected()) {
         await client.connect(getVoiceWsUrl());
-        connectedRef.current = true;
       }
 
       client.bargeIn();
@@ -127,7 +127,6 @@ export function VoiceButton(_props: VoiceButtonProps) {
       pressedRef.current = false;
       needStopRef.current = false;
       setPressed(false);
-      connectedRef.current = false;
       setVoiceStatus('idle');
       setSubtitle(err instanceof Error ? err.message : '麦克风启动失败');
     } finally {

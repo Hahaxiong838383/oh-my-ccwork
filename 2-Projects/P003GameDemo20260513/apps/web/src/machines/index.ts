@@ -25,6 +25,7 @@ import { getScenePreset } from './jump-to-scene';
 import { bootTransition } from './boot-machine';
 import { focusTransition } from './focus-machine';
 import { rewardTransition } from './reward-machine';
+import { getSharedVoiceClient } from '../services/voice-client';
 import type { SceneId, Effect, BootEvent, FocusEvent, RewardEvent } from './types';
 
 const activeTimers = new Map<string, number>();
@@ -172,6 +173,16 @@ export function defaultTimerRouter(key: string): void {
  * clearAllTimers + hydrate 所有相关字段 + 切机器状态
  */
 export function jumpToScene(scene: SceneId): void {
+  // 中断任何在途 ASR/LLM/TTS 会话，避免旧 turn 的回包污染新场景的 subtitle/voiceStatus
+  // （bargeIn 内部会 server 端 turn ID++ 让在途回包失效 + 客户端清 mp3Buffer/playbackSources）
+  try {
+    const client = getSharedVoiceClient();
+    client.bargeIn();
+    client.stopRecording();
+  } catch {
+    // voice-client 还没初始化或环境不支持，跳关本身仍然可推进
+  }
+
   // 清所有 timer
   for (const id of activeTimers.values()) clearTimeout(id);
   activeTimers.clear();

@@ -172,6 +172,25 @@ async function main() {
     familyCoinAdded;
   if (!c2Pass) errors.push(`C2 状态机收敛断言失败：pick=${focusAfterPick} launch=${focusAfterLaunch} confirm=${confirmStateShown} coin=${familyCoinAdded}`);
 
+  // C3. SettingsButton 占位反馈：点击应弹 Tip（跳到 focusRunning 避免 Welcome 全屏 overlay 拦截）
+  console.log('\nC3. SettingsButton 占位反馈');
+  await page.selectOption('select[aria-label="跳关选择"]', 'focusRunning');
+  await page.waitForTimeout(400);
+  const settingsBtn = page.locator('button[aria-label="设置"]');
+  let settingsTipShown = false;
+  if (await settingsBtn.count() > 0) {
+    await settingsBtn.click();
+    await page.waitForTimeout(300);
+    settingsTipShown = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('div')).some((el) =>
+        el.textContent?.includes('设置面板开发中'),
+      );
+    });
+    await step(page, 'c3-settings-tip', null, 0);
+  }
+  console.log(`  settings 占位 Tip 显示: ${settingsTipShown}`);
+  if (!settingsTipShown) errors.push('C3 SettingsButton 点击未弹 Tip（死按钮回归）');
+
   // D. 按住说话按钮（mock 阶段）
   console.log('\nD. VoiceButton 交互（mock）');
   await page.keyboard.press('1');

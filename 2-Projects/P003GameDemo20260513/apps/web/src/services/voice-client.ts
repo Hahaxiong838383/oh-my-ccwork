@@ -1,5 +1,6 @@
 export interface VoiceClient {
   connect(url: string): Promise<void>;
+  isConnected(): boolean;
   startRecording(): Promise<void>;
   stopRecording(): void;
   playAudioChunk(mp3Base64: string): Promise<void>;
@@ -52,6 +53,10 @@ class VoiceClientImpl implements VoiceClient {
   private playbackScheduledAt = 0;
   private playbackSources: AudioBufferSourceNode[] = [];
   private readonly mp3FlushDelayMs = 350;
+
+  isConnected(): boolean {
+    return !!(this.ws && this.ws.readyState === WebSocket.OPEN);
+  }
 
   async connect(url: string): Promise<void> {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
@@ -467,4 +472,19 @@ function floatToPcm16(input: Float32Array<ArrayBufferLike>): Int16Array {
 
 export function createVoiceClient(): VoiceClient {
   return new VoiceClientImpl();
+}
+
+// module-level 单例：让 jumpToScene 等非组件代码也能 bargeIn 中断在途会话。
+// VoiceButton 也用这个 getter，保证全局只有一份 ws + audio 状态。
+let sharedInstance: VoiceClient | null = null;
+
+export function getSharedVoiceClient(): VoiceClient {
+  if (!sharedInstance) sharedInstance = createVoiceClient();
+  return sharedInstance;
+}
+
+/** 仅测试用：清掉单例（让 unit test 之间互不污染） */
+export function __resetSharedVoiceClientForTesting(): void {
+  sharedInstance?.close();
+  sharedInstance = null;
 }

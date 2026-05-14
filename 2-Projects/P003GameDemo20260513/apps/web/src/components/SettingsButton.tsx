@@ -1,12 +1,16 @@
-import { useAppStore } from '../store/app-store';
+import { useFeedbackQueue } from '../store/feedback-queue';
 
 export function SettingsButton() {
-  const setSettingsOpen = useAppStore((s) => s.setSettingsOpen);
+  // 占位反馈：完整 SettingsPanel 是 D4 下午任务，
+  // 当前先 pushTip 让按钮有可见反馈，避免演示时"按了无反应"。
+  const handleClick = () => {
+    useFeedbackQueue.getState().pushTip('设置面板开发中…');
+  };
 
   return (
     <button
       type="button"
-      onClick={() => setSettingsOpen(true)}
+      onClick={handleClick}
       aria-label="设置"
       className="absolute right-3 top-3 z-layer-ui-normal inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white/90 ring-1 ring-white/10 backdrop-blur-sm transition hover:bg-black/60 active:scale-95"
     >
