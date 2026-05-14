@@ -56,6 +56,8 @@ export function VoiceButton(_props: VoiceButtonProps) {
       setXiaokeEmotion('happy');
     };
     const onTtsEnd = () => {
+      // 立刻 flush 还在缓冲的 mp3，避免末段被 350ms 防抖延迟
+      client.flushTtsBufferNow();
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
       llmTextRef.current = '';

@@ -3,6 +3,7 @@ export interface VoiceClient {
   startRecording(): Promise<void>;
   stopRecording(): void;
   playAudioChunk(mp3Base64: string): Promise<void>;
+  flushTtsBufferNow(): void;
   bargeIn(): void;
   on(
     event: 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'error',
@@ -44,9 +45,13 @@ class VoiceClientImpl implements VoiceClient {
   private isRecording = false;
   private readonly targetSampleRate = 16_000;
 
-  // 用 AudioContext 流式调度替代 new Audio() onended 切换，消除 chunk 间 gap
+  // 累积整段 mp3 后一次性 decode + 播放（mp3 chunk 独立 decode 边界会有 silence artifact）
+  // 第一个 chunk 到达后启动短缓冲定时器，超时或 tts.end 触发整段 decode 播放
+  private mp3Buffer: Uint8Array[] = [];
+  private mp3FlushTimer: number | null = null;
   private playbackScheduledAt = 0;
   private playbackSources: AudioBufferSourceNode[] = [];
+  private readonly mp3FlushDelayMs = 350;
 
   async connect(url: string): Promise<void> {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
@@ -229,8 +234,12 @@ class VoiceClientImpl implements VoiceClient {
   }
 
   /**
-   * 用 AudioContext 流式调度：每个 mp3 chunk decode 成 AudioBuffer，
-   * 用 source.start(t) 接续上一段的尾部，无 gap。
+   * 累积所有 mp3 chunk，350ms 内没新 chunk 就 flush 整段：
+   *   - 把每句话的所有 chunk 拼成一个完整 mp3 再 decode → 无 chunk 边界 silence
+   *   - 350ms 防抖：第一段 chunk 到达后等其它 chunk 跟上再统一解码
+   *   - 多句话场景：每句 sentence 之间靠新一轮 350ms 触发分段播放，仍丝滑
+   *
+   * tts.end 直接触发 flush（不等 350ms）让最后一段立刻播。
    */
   async playAudioChunk(mp3Base64: string): Promise<void> {
     const ctx = this.ensureAudioContext();
@@ -243,12 +252,46 @@ class VoiceClientImpl implements VoiceClient {
       }
     }
 
+    this.mp3Buffer.push(base64ToUint8Array(mp3Base64));
+
+    if (this.mp3FlushTimer !== null) {
+      window.clearTimeout(this.mp3FlushTimer);
+    }
+    this.mp3FlushTimer = window.setTimeout(() => {
+      this.mp3FlushTimer = null;
+      void this.flushMp3Buffer();
+    }, this.mp3FlushDelayMs);
+  }
+
+  /**
+   * 由 tts.end 事件触发整段立刻播放
+   */
+  flushTtsBufferNow(): void {
+    if (this.mp3FlushTimer !== null) {
+      window.clearTimeout(this.mp3FlushTimer);
+      this.mp3FlushTimer = null;
+    }
+    void this.flushMp3Buffer();
+  }
+
+  private async flushMp3Buffer(): Promise<void> {
+    if (this.mp3Buffer.length === 0) return;
+    const ctx = this.ensureAudioContext();
+    if (!ctx) return;
+
+    const totalLen = this.mp3Buffer.reduce((s, b) => s + b.byteLength, 0);
+    const merged = new Uint8Array(totalLen);
+    let cursor = 0;
+    for (const b of this.mp3Buffer) {
+      merged.set(b, cursor);
+      cursor += b.byteLength;
+    }
+    this.mp3Buffer = [];
+
     try {
-      const bytes = base64ToUint8Array(mp3Base64);
-      // decodeAudioData 需要可分离 ArrayBuffer
-      const arrayBuffer = bytes.buffer.slice(
-        bytes.byteOffset,
-        bytes.byteOffset + bytes.byteLength,
+      const arrayBuffer = merged.buffer.slice(
+        merged.byteOffset,
+        merged.byteOffset + merged.byteLength,
       ) as ArrayBuffer;
       const buffer = await ctx.decodeAudioData(arrayBuffer);
 
@@ -261,13 +304,12 @@ class VoiceClientImpl implements VoiceClient {
       src.start(startAt);
       this.playbackScheduledAt = startAt + buffer.duration;
       this.playbackSources.push(src);
-
       src.onended = () => {
         const idx = this.playbackSources.indexOf(src);
         if (idx >= 0) this.playbackSources.splice(idx, 1);
       };
     } catch {
-      // 单 chunk decode 失败：忽略（继续播下一个）
+      // decode 失败：忽略本段
     }
   }
 
@@ -275,6 +317,12 @@ class VoiceClientImpl implements VoiceClient {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type: 'barge.in' }));
     }
+    // 清掉待 flush 的 mp3 buffer
+    if (this.mp3FlushTimer !== null) {
+      window.clearTimeout(this.mp3FlushTimer);
+      this.mp3FlushTimer = null;
+    }
+    this.mp3Buffer = [];
     // 立刻停掉所有已调度的 audio source
     for (const src of this.playbackSources) {
       try {
