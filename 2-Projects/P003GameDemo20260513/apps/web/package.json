@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/check-scope-boundary.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
+    "check:scope": "node scripts/check-scope-boundary.mjs",
     "config:validate": "tsx src/config/validate.ts"
   },
   "dependencies": {

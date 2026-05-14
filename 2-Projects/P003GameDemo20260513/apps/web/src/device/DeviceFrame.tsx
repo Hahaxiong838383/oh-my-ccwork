@@ -4,6 +4,10 @@ import { PowerButton } from './PowerButton';
 import { useAppStore } from '../store/app-store';
 import { Tips } from '../components/Tips';
 import { VoiceButton } from '../components/VoiceButton';
+import { DebugBar } from './DebugBar';
+import { WifiHud } from '../components/WifiHud';
+import { SettingsButton } from '../components/SettingsButton';
+import { SetupGuide } from '../scenes/SetupGuide';
 
 /**
  * DeviceFrame —— 读写台设备外壳
@@ -28,8 +32,14 @@ export function DeviceFrame({ children }: { children: ReactNode }) {
             <MicrophoneVent />
           </div>
 
-          <div className="relative aspect-screen-canvas h-[min(78vh,calc(82vw*3/5))] w-auto overflow-hidden rounded-lg bg-screen-bg ring-1 ring-shell-trim">
+          <div
+            className="relative aspect-screen-canvas h-[min(78vh,calc(82vw*3/5))] w-auto overflow-hidden rounded-lg bg-screen-bg ring-1 ring-shell-trim"
+            data-scope="screen-canvas"
+          >
             {children}
+            <WifiHud />
+            <SettingsButton />
+            <SetupGuide />
             <Tips />
           </div>
 
@@ -43,8 +53,10 @@ export function DeviceFrame({ children }: { children: ReactNode }) {
         <div className="flex items-center justify-between px-2">
           <div className="text-[9px] tracking-[0.3em] text-white/25">FUTURUS · K1</div>
           <VoiceButton />
-          <div className="text-[9px] tracking-[0.3em] text-white/25">DEMO V0.4</div>
+          <div className="text-[9px] tracking-[0.3em] text-white/25">DEMO V0.6</div>
         </div>
+
+        <DebugBar />
       </div>
     </div>
   );
