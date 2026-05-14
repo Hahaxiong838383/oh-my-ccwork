@@ -1,0 +1,236 @@
+---
+name: p003-scene-art
+description: P003 K1 demo 场景美术化标准方法论：把抽象 CSS 占位场景替换为静态写实 PNG + 3 轻动效（星点漂移 / 表情屏绿光呼吸 / 字幕暖光晕）+ TTS sayDirect 开口，与状态机解耦零侵入。触发词："/p003-scene-art"、"把 XX 场景换成美术"、"P003 场景美术化"、"按 Welcome 风格做 YY 场景"、"用美术资源替换 ZZ"
+---
+
+# P003 场景美术化 Skill · V1.0
+
+> 2026-05-14 D3.5 沉淀的方法论。已实施 SetupGuide / Welcome / AskMode 三场景，川哥实测"效果不错"。
+
+## 适用场景
+
+P003 K1 demo (`/Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/`) 内任何一个 boot scene / reward scene / focus scene 需要从"抽象 CSS 占位"升级为"静态写实 PNG + 轻动效 + 真实 TTS 开口"。
+
+**已实施**：SetupGuide / Welcome / AskMode（boot）
+**待实施**：NightReport / OpenBox 4 级 / EcoUnlock / Farewell / focusRunning
+
+## 核心思路（4 条铁律）
+
+1. **状态机零侵入**：不改 boot-machine / focus-machine / reward-machine / jumpToScene。只换视图层 PNG + 透明 hit area，事件链完全保留。
+2. **PNG 自包含 UI 元素**：按钮文案 / 字幕 / 装饰图案都烧进 PNG。代码只渲染必要的动效叠加层 + 透明 hit area。**减少代码与图的耦合**。
+3. **3 轻动效黄金组合**（gemini 立场 B + codex 立场 C 综合）：
+   - 舷窗外星点漂移（5-6 颗，clipPath 限制在舷窗形状内防穿帮）
+   - 表情屏绿光呼吸（绿色径向渐变 + mix-blend-mode screen + iOS Safari @supports 降级）
+   - 字幕进场淡入 + 暖白光晕呼吸（场景配色统一暖色调）
+4. **TTS sayDirect 开口**：场景 mount 后 useEffect 立即 sayDirect，与字幕进场动画重叠。AudioContext 解锁由 SetupGuide 完成配网按钮 onClick 提前完成（用户手势栈内 unlockAudio）。
+
+## 7 步实施流程
+
+### Step 1 · 资产准备（川哥负责）
+
+约定路径：`apps/web/public/assets/<scene>-bg.png`
+
+| 场景 | 文件名 |
+|---|---|
+| 配网 | `setup-bg.png` + `setup-success.mp4`（过渡视频）|
+| 欢迎 | `welcome-bg.png` |
+| 询问 | `askmode-bg.png` |
+| （新场景） | `<scene>-bg.png` 命名 |
+
+要求：800×480 PNG（与画布尺寸对齐，object-cover 自动 cover），含场景全部 UI 元素（按钮/装饰/文字）。
+
+⚠️ **macOS Finder 双 .png 后缀陷阱**：川哥用 Finder 保存常有 `welcome-bg.png.png` 问题，cc 收到后必检 + `mv` 重命名。
+
+### Step 2 · 读图测量坐标（cc 负责）
+
+用 Read tool 直接读 PNG，肉眼测量以下区域（800×480 画布坐标 → 转 cqw/cqh）：
+
+| 测量目标 | 用途 |
+|---|---|
+| 小可表情屏中心 + 尺寸 | 绿光呼吸 div 的 left/top/width/height |
+| 舷窗范围 | 星点 clipPath ellipse 参数 |
+| 按钮位置（如有）| 透明 hit area 的 left/top/width/height |
+
+cqw/cqh 换算：`x_cqw = x_pixel / 800 × 100`，`y_cqh = y_pixel / 480 × 100`。
+
+### Step 3 · 套模板 + 替换参数
+
+参考 `examples/template-scene.tsx`，把以下 6 个参数替换：
+
+| 参数 | 例 |
+|---|---|
+| `SCENE_BG` | `'/assets/<scene>-bg.png'` |
+| `SCENE_LINE` | TTS 开口文案，如 `'指挥官，今天想出航，还是静思呢？'` |
+| `STARS` 配置 | 星点位置（仅放舷窗范围内）|
+| `clipPath` 椭圆 | 舷窗形状 |
+| 表情屏绿光 left/top/width/height | 测量值 |
+| Hit areas（如有按钮）| 测量值 + 派发对应事件 |
+
+### Step 4 · 状态机集成（保持事件链）
+
+只在视图层里调 `dispatchBoot` / `dispatchFocus` / `dispatchReward`，不改任何 machine 文件：
+
+```tsx
+// 例：AskMode 选择
+const onPickLeft = useCallback(() => {
+  dispatchBoot({ type: 'ASK_MODE_PICK', mode: 'explore' });
+  dispatchFocus({ type: 'LAUNCH', mode: 'explore' });
+}, [dispatchBoot, dispatchFocus]);
+```
+
+### Step 5 · TTS 集成
+
+每个场景统一 useEffect 模板：
+
+```tsx
+const spokenRef = useRef(false);
+useEffect(() => {
+  if (!isActive) {
+    spokenRef.current = false;
+    return;
+  }
+  if (spokenRef.current) return;
+  spokenRef.current = true;
+  const client = getSharedVoiceClient();
+  void (async () => {
+    try {
+      await client.connect(getVoiceWsUrl());
+    } catch (err) {
+      console.warn('[<scene>] voice ws connect failed', err);
+      return;
+    }
+    client.sayDirect(SCENE_LINE);
+  })();
+}, [isActive]);
+```
+
+注意：
+- `isActive` 是该场景的 boolean（如 `bootState === 'welcome'`），用作 useEffect dependency
+- `spokenRef` 防止 StrictMode 双触发 + 同场景重入时重复 TTS
+- `getVoiceWsUrl()` 复制到每个 scene 文件（utility 函数，未来可提到 shared）
+
+### Step 6 · AudioContext 解锁
+
+⚠️ iOS Safari 强约束：`AudioContext.resume()` 必须在**用户手势同步栈内**调用。
+
+P003 唯一入口：DebugBar `✅ 完成配网` onClick handler 内**立即** `client.unlockAudio()`。后续所有自动播 TTS 路径都借此 resume。
+
+如果新场景的入口不经过完成配网按钮，需要：
+- 在该场景入口的按钮 onClick 内加 unlockAudio
+- 或在 App 顶层加一次性 touchstart/click listener
+
+详见：`~/.claude/projects/-Users-rayman-chen-mycc/memory/feedback_audio_context_user_gesture_chain.md`
+
+### Step 7 · 验证
+
+```bash
+# tsc check
+cd apps/web && npx tsc --noEmit | grep -iE "error|<scene>"
+
+# 静态资产 200
+curl -sk -o /dev/null -w "HTTP %{http_code}\n" "https://localhost:5173/assets/<scene>-bg.png"
+
+# 川哥手机刷新 + 跳关到该场景 + 听 TTS + 按钮点测
+```
+
+如果 hit area 不精准（点不到按钮 / 边界差几个 pixel）：用 playwright probe 拿 getBoundingClientRect 实测，比肉眼快 10x。
+
+## 3 个已实施案例索引
+
+| 场景 | 关键参数 | 代码 |
+|---|---|---|
+| SetupGuide | 视频过渡 + 字幕条注释 + DebugBar 触发 | [examples/setup.md](examples/setup.md) |
+| Welcome | 6 颗星点 / 表情屏 (46cqw,36cqh) / 字幕暖白光晕 | [examples/welcome.md](examples/welcome.md) |
+| AskMode | 5 颗左舷窗星点 / 表情屏 (47cqw,28cqh) / 双 hit area + 倒计时小圆环 | [examples/askmode.md](examples/askmode.md) |
+
+完整模板：[template-scene.tsx](template-scene.tsx)
+
+## 常见参数对照表
+
+### 星点动效（4s 短窗口下能感知的下限）
+
+```
+drift: 3-4cqw（横向位移 24-32px）
+duration: 3.0-3.8s（4s 窗口内能完成 1 个完整周期）
+opacity: 0.25 → 1.0（差值要大，不然看不见）
+scale: 0.65 → 1.25（同上）
+delay: -0.4 ~ -3.0s 负延迟错开相位
+数量: 5-6 颗（不能更多，过密像噪声）
+boxShadow: 0 0 5px rgba(255,255,255,0.85)
+```
+
+### 表情屏绿光呼吸
+
+```
+位置: 测图取小可表情屏中心
+尺寸: 14-18cqw × 11-13cqh
+background: radial-gradient(ellipse at center, rgba(110,255,170,0.85) 0%, rgba(110,255,170,0.3) 40%, transparent 70%)
+filter: blur(2.2-2.4cqh)
+duration: 1.8s
+opacity: 0.25 → 0.85
+scale: 0.9 → 1.12
+mix-blend-mode: screen + @supports not 降级
+父层 isolation: isolate（防止 iOS Safari 染色）
+```
+
+### 字幕条（仅 Welcome 用，其它场景 PNG 自带文案则跳过）
+
+```
+位置: bottom 6cqh / 居中
+样式: rounded-full bg-black/40 backdrop-blur-md / 内边距 5cqw × 1.6cqh
+字号: clamp(12px, 3.4cqw, 18px)
+进场: 0.8s ease-out fade + translateY(8px → 0)
+光晕呼吸: 2.6s 周期 / text-shadow 暖白 rgba(255,240,210)
+```
+
+## 不推荐的反模式（gemini 反复警告）
+
+- ❌ 整图呼吸缩放（scale 1→1.02 8s）→ 800×480 小画布会看到边缘锯齿"晕车感"
+- ❌ 高频粒子 / 闪烁（周期 <1s）→ 焦躁感，破坏治愈基调
+- ❌ 高饱和度色彩闪烁 → 必须保持原图漫反射柔光高级色相
+- ❌ 字幕用冷蓝光晕配暖色场景（黄沙发/粉花/绿表情屏）→ 显"脏蓝"，必须暖白
+- ❌ 没 isolation 父层就用 mix-blend-mode → iOS Safari 整图被染绿
+- ❌ 星点不用 clipPath 裁到舷窗 → drift 后跑到舱壁穿帮
+- ❌ 周期 6s+ 但 4s 窗口下完成不到半周期 → 动效无效
+
+## 与 codex / gemini 团队协作模式
+
+派 codex 写新 scene 代码时 prompt 必带：
+
+```
+- 不改 boot-machine / focus-machine / reward-machine / jumpToScene
+- 不改 voice-client（除非新增公共方法，否则严禁动 onmessage / playAudioChunk）
+- 不改 server pipeline（除非新增 message type，必须同时改 server/src/index.ts 的 decodeClientMessage 白名单）
+- 输出 ## Summary 含改动行号 + 任何潜在风险
+```
+
+派 gemini 视觉品味审：先描述图内容 + 列动效候选 + 问 A/B/C 立场。
+
+派 codex 对抗审查：列 P1/P2/P3 分级，要求至少 2 个改进建议（不许只夸）。
+
+## 迭代历史
+
+- **V1.0**（2026-05-14 23:00）：D3.5 沉淀，3 场景实施完成，方法论稳定
+- V1.x：每次新场景实施完，更新 [iteration-log.md](iteration-log.md) 记录新经验
+
+## 触发协议
+
+cc 收到任何形如以下任务时主动按本 skill 执行：
+- "把 XX 场景换成 PNG 美术"
+- "按 Welcome 风格做 YY 场景"
+- "把 ZZ 改成 D3.5 风格"
+- "用美术资源替换 ZZ"
+
+收到 PNG 文件后自动：
+1. 检查双扩展名 + 重命名
+2. Read PNG 测坐标
+3. 套模板 + 状态机集成 + TTS 集成
+4. tsc check + curl 资产
+5. commit + push（如果川哥让上推）
+
+## 关联记忆
+
+- [feedback_codex_protocol_whitelist_gate.md](../../../projects/-Users-rayman-chen-mycc/memory/feedback_codex_protocol_whitelist_gate.md)
+- [feedback_audio_context_user_gesture_chain.md](../../../projects/-Users-rayman-chen-mycc/memory/feedback_audio_context_user_gesture_chain.md)
+- [feedback_voice_client_internal_dispatch.md](../../../projects/-Users-rayman-chen-mycc/memory/feedback_voice_client_internal_dispatch.md)
+- [project_p003_k1_demo.md](../../../projects/-Users-rayman-chen-mycc/memory/project_p003_k1_demo.md)
