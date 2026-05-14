@@ -44,9 +44,9 @@ class VoiceClientImpl implements VoiceClient {
   private isRecording = false;
   private readonly targetSampleRate = 16_000;
 
-  private audioQueue: string[] = [];
-  private isPlaying = false;
-  private currentAudio: HTMLAudioElement | null = null;
+  // 用 AudioContext 流式调度替代 new Audio() onended 切换，消除 chunk 间 gap
+  private playbackScheduledAt = 0;
+  private playbackSources: AudioBufferSourceNode[] = [];
 
   async connect(url: string): Promise<void> {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
@@ -228,41 +228,63 @@ class VoiceClientImpl implements VoiceClient {
     }
   }
 
+  /**
+   * 用 AudioContext 流式调度：每个 mp3 chunk decode 成 AudioBuffer，
+   * 用 source.start(t) 接续上一段的尾部，无 gap。
+   */
   async playAudioChunk(mp3Base64: string): Promise<void> {
-    const dataUrl = `data:audio/mpeg;base64,${mp3Base64}`;
-    this.audioQueue.push(dataUrl);
-    if (this.isPlaying) return;
-
-    this.isPlaying = true;
-    while (this.audioQueue.length > 0) {
-      const nextUrl = this.audioQueue.shift();
-      if (!nextUrl) continue;
-
-      const audio = new Audio(nextUrl);
-      this.currentAudio = audio;
-
-      await new Promise<void>((resolve) => {
-        audio.onended = () => resolve();
-        audio.onerror = () => resolve();
-        void audio.play().catch(() => resolve());
-      });
-
-      this.currentAudio = null;
+    const ctx = this.ensureAudioContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume();
+      } catch {
+        // ignore
+      }
     }
-    this.isPlaying = false;
+
+    try {
+      const bytes = base64ToUint8Array(mp3Base64);
+      // decodeAudioData 需要可分离 ArrayBuffer
+      const arrayBuffer = bytes.buffer.slice(
+        bytes.byteOffset,
+        bytes.byteOffset + bytes.byteLength,
+      ) as ArrayBuffer;
+      const buffer = await ctx.decodeAudioData(arrayBuffer);
+
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(ctx.destination);
+
+      const now = ctx.currentTime;
+      const startAt = Math.max(now, this.playbackScheduledAt);
+      src.start(startAt);
+      this.playbackScheduledAt = startAt + buffer.duration;
+      this.playbackSources.push(src);
+
+      src.onended = () => {
+        const idx = this.playbackSources.indexOf(src);
+        if (idx >= 0) this.playbackSources.splice(idx, 1);
+      };
+    } catch {
+      // 单 chunk decode 失败：忽略（继续播下一个）
+    }
   }
 
   bargeIn(): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type: 'barge.in' }));
     }
-
-    this.audioQueue = [];
-    if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio.src = '';
-      this.currentAudio = null;
+    // 立刻停掉所有已调度的 audio source
+    for (const src of this.playbackSources) {
+      try {
+        src.stop();
+      } catch {
+        // ignore
+      }
     }
+    this.playbackSources = [];
+    this.playbackScheduledAt = 0;
   }
 
   on(event: VoiceEvent, cb: (data: any) => void): void {
@@ -344,6 +366,13 @@ class VoiceClientImpl implements VoiceClient {
     const pcm16 = floatToPcm16(resampled);
     this.ws.send(pcm16.buffer);
   }
+}
+
+function base64ToUint8Array(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
+  return out;
 }
 
 function appendFloat32(
