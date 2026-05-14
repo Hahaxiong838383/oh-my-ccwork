@@ -1,80 +1,76 @@
-import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store/app-store';
-import { useFeedbackQueue } from '../store/feedback-queue';
+import { useTransitionRunner } from '../hooks/useTransitionRunner';
 
-interface FocusToggleProps {}
+/**
+ * FocusToggle —— focusMachine 驱动的返舱/确认按钮
+ *
+ * idle      → 不显示（启航走 AskMode）
+ * launching → 显示"出航中..."（disabled）
+ * running   → 显示"返舱"按钮（点击 EXIT_REQUEST → confirmExit）
+ * confirmExit → 显示"确定/取消"两个按钮
+ * paused    → 显示"等待归来..."（disabled）
+ *
+ * 家族币 +10 由 focus-machine confirmExit→idle 的 effect 自动发放。
+ */
+export function FocusToggle() {
+  const focusMachine = useAppStore((s) => s.focusMachine);
+  const { dispatchFocus } = useTransitionRunner();
 
-export function FocusToggle(_props: FocusToggleProps) {
-  const focusStatus = useAppStore((s) => s.focusStatus);
-  const setFocusStatus = useAppStore((s) => s.setFocusStatus);
-  const addFamilyCoin = useAppStore((s) => s.addFamilyCoin);
+  if (focusMachine === 'idle') return null;
 
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const intervalRef = useRef<number | null>(null);
-  const finishTimerRef = useRef<number | null>(null);
+  if (focusMachine === 'launching') {
+    return (
+      <button
+        type="button"
+        disabled
+        className="h-10 min-w-[120px] rounded-2xl border border-white/30 bg-white/5 px-4 text-sm font-semibold text-white/70"
+      >
+        出航中...
+      </button>
+    );
+  }
 
-  const clearCountdown = () => {
-    if (intervalRef.current !== null) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (finishTimerRef.current !== null) {
-      window.clearTimeout(finishTimerRef.current);
-      finishTimerRef.current = null;
-    }
-  };
+  if (focusMachine === 'paused') {
+    return (
+      <button
+        type="button"
+        disabled
+        className="h-10 min-w-[120px] rounded-2xl border border-amber-300/40 bg-amber-500/10 px-4 text-sm font-semibold text-amber-200"
+      >
+        等待归来...
+      </button>
+    );
+  }
 
-  const finishFocus = () => {
-    clearCountdown();
-    setCountdown(null);
-    addFamilyCoin(10);
-    setFocusStatus('idle');
-    useFeedbackQueue.getState().pushTip('获得家族币 +10');
-  };
+  if (focusMachine === 'confirmExit') {
+    return (
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => dispatchFocus({ type: 'EXIT_CONFIRM' })}
+          className="h-10 min-w-[80px] rounded-2xl bg-porthole-glow/90 px-3 text-sm font-semibold text-shell-bg shadow-[0_0_18px_rgba(79,209,255,0.4)] hover:brightness-110 active:scale-[0.98]"
+        >
+          确定
+        </button>
+        <button
+          type="button"
+          onClick={() => dispatchFocus({ type: 'EXIT_CANCEL' })}
+          className="h-10 min-w-[80px] rounded-2xl border border-white/30 bg-white/10 px-3 text-sm font-semibold text-white hover:bg-white/20 active:scale-[0.98]"
+        >
+          取消
+        </button>
+      </div>
+    );
+  }
 
-  const startReturnCountdown = () => {
-    if (countdown !== null) return;
-
-    setCountdown(4);
-    intervalRef.current = window.setInterval(() => {
-      setCountdown((prev) => {
-        if (prev === null || prev <= 1) return prev;
-        return prev - 1;
-      });
-    }, 1000);
-    finishTimerRef.current = window.setTimeout(() => {
-      finishFocus();
-    }, 5000);
-  };
-
-  const onClick = () => {
-    if (focusStatus === 'idle') {
-      setFocusStatus('running');
-      setCountdown(null);
-      return;
-    }
-    startReturnCountdown();
-  };
-
-  useEffect(() => {
-    return () => clearCountdown();
-  }, []);
-
-  const running = focusStatus === 'running';
-
+  // running
   return (
     <button
       type="button"
-      onClick={onClick}
-      className={`h-10 min-w-[120px] rounded-2xl px-4 text-sm font-semibold transition active:scale-[0.98] ${
-        running
-          ? 'border border-white/50 bg-white/10 text-white shadow-[0_0_18px_rgba(255,255,255,0.15)]'
-          : 'bg-porthole-glow/80 text-white shadow-[0_0_22px_rgba(79,209,255,0.45)] hover:bg-porthole-glow'
-      }`}
+      onClick={() => dispatchFocus({ type: 'EXIT_REQUEST' })}
+      className="h-10 min-w-[120px] rounded-2xl border border-white/50 bg-white/10 px-4 text-sm font-semibold text-white shadow-[0_0_18px_rgba(255,255,255,0.15)] transition hover:bg-white/15 active:scale-[0.98]"
     >
-      {!running && '启航'}
-      {running && countdown === null && '返舱'}
-      {running && countdown !== null && `专注中 ${countdown}..`}
+      返舱
     </button>
   );
 }

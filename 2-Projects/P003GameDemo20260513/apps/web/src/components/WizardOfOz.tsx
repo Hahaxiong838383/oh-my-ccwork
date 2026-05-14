@@ -7,7 +7,6 @@ export function WizardOfOz(_props: WizardOfOzProps) {
   const setSubtitle = useAppStore((s) => s.setSubtitle);
   const setXiaokeEmotion = useAppStore((s) => s.setXiaokeEmotion);
   const setVoiceStatus = useAppStore((s) => s.setVoiceStatus);
-  const setFocusStatus = useAppStore((s) => s.setFocusStatus);
   const addStardust = useAppStore((s) => s.addStardust);
 
   const resetVoiceTimerRef = useRef<number | null>(null);
@@ -79,7 +78,8 @@ export function WizardOfOz(_props: WizardOfOzProps) {
         setVoiceStatus('idle');
         setSubtitle('');
         setXiaokeEmotion('happy');
-        setFocusStatus('idle');
+        // 注：focusMachine 不在此处强制重置，DebugBar 的 jumpToScene(scene) 才是完整复位入口
+        // （SCENE_KEYBOARD_MAP['0'] 当前是 'farewell'，跳关入口在 device/DebugBar.tsx）
         return;
       }
 
@@ -122,7 +122,7 @@ export function WizardOfOz(_props: WizardOfOzProps) {
       clearFlowTimers();
       holdActiveRef.current = false;
     };
-  }, [addStardust, setFocusStatus, setSubtitle, setVoiceStatus, setXiaokeEmotion]);
+  }, [addStardust, setSubtitle, setVoiceStatus, setXiaokeEmotion]);
 
   return null;
 }

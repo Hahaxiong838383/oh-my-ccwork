@@ -109,6 +109,69 @@ async function main() {
     }, 500);
   }
 
+  // C2. 状态机收敛：askMode → 选"探索" → focusMachine 进 launching → 4s 后 running → 点"返舱" → confirmExit → 点"确定" → familyCoin +10
+  console.log('\nC2. 状态机收敛验证（boot askMode → focusMachine → familyCoin）');
+  await page.selectOption('select[aria-label="跳关选择"]', 'askMode');
+  await page.waitForTimeout(400);
+  const focusBefore = await page.evaluate(() => {
+    const w = window;
+    return w.__APP_STORE__?.getState?.().focusMachine ?? 'unknown';
+  });
+
+  await page.click('button:has-text("探索")');
+  await page.waitForTimeout(300);
+  const focusAfterPick = await page.evaluate(() => {
+    return window.__APP_STORE__?.getState?.().focusMachine ?? 'unknown';
+  });
+  await step(page, 'c2-after-pick-explore', null, 0);
+
+  // 等 LAUNCH_ANIM_END timer fire（focus-machine.ts LAUNCH_ANIM_MS = 2500ms）
+  await page.waitForTimeout(2800);
+  const focusAfterLaunch = await page.evaluate(() => {
+    return window.__APP_STORE__?.getState?.().focusMachine ?? 'unknown';
+  });
+  await step(page, 'c2-after-launch-anim', null, 0);
+
+  // 点返舱
+  const returnBtn = page.locator('button:has-text("返舱")');
+  let confirmStateShown = false;
+  let familyCoinAdded = false;
+  if (await returnBtn.count() > 0) {
+    const familyCoinBefore = await page.evaluate(() => {
+      return window.__APP_STORE__?.getState?.().familyCoin ?? 0;
+    });
+    await returnBtn.click();
+    await page.waitForTimeout(300);
+    const focusAfterRequest = await page.evaluate(() => {
+      return window.__APP_STORE__?.getState?.().focusMachine ?? 'unknown';
+    });
+    confirmStateShown = focusAfterRequest === 'confirmExit';
+    await step(page, 'c2-confirm-exit', null, 0);
+
+    if (confirmStateShown) {
+      await page.click('button:has-text("确定")');
+      await page.waitForTimeout(300);
+      const familyCoinAfter = await page.evaluate(() => {
+        return window.__APP_STORE__?.getState?.().familyCoin ?? 0;
+      });
+      familyCoinAdded = familyCoinAfter - familyCoinBefore === 10;
+      await step(page, 'c2-after-confirm', null, 0);
+    }
+  }
+
+  console.log(`  focusMachine before pick: ${focusBefore}`);
+  console.log(`  focusMachine after pick:  ${focusAfterPick} (期望: launching)`);
+  console.log(`  focusMachine after 2.8s:  ${focusAfterLaunch} (期望: running)`);
+  console.log(`  confirmExit shown:        ${confirmStateShown}`);
+  console.log(`  familyCoin +10 added:     ${familyCoinAdded}`);
+
+  const c2Pass =
+    focusAfterPick === 'launching' &&
+    focusAfterLaunch === 'running' &&
+    confirmStateShown &&
+    familyCoinAdded;
+  if (!c2Pass) errors.push(`C2 状态机收敛断言失败：pick=${focusAfterPick} launch=${focusAfterLaunch} confirm=${confirmStateShown} coin=${familyCoinAdded}`);
+
   // D. 按住说话按钮（mock 阶段）
   console.log('\nD. VoiceButton 交互（mock）');
   await page.keyboard.press('1');

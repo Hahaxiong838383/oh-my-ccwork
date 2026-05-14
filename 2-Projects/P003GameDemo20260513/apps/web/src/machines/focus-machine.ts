@@ -78,7 +78,10 @@ export function focusTransition(
           state: 'idle',
           effects: [
             { type: 'clearTimer', key: 'exitConfirm' },
-            { type: 'setSubtitle', text: '' },
+            { type: 'setSubtitle', text: '太棒了！获得家族币 +10' },
+            { type: 'setXiaokeEmotion', emotion: 'happy' },
+            { type: 'addFamilyCoin', amount: 10 },
+            { type: 'playSfx', id: 'reward-familycoin' },
           ],
         };
       }

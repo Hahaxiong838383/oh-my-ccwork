@@ -8,7 +8,6 @@ import { create } from 'zustand';
  */
 
 export type VoiceStatus = 'idle' | 'listening' | 'thinking' | 'speaking';
-export type FocusStatus = 'idle' | 'running';
 export type XiaokeEmotion = 'happy' | 'curious' | 'warm' | 'calm' | 'excited';
 
 export type WifiSignal = 'strong' | 'medium' | 'weak' | 'disconnected';
@@ -70,11 +69,7 @@ interface AppState {
   setSubtitle: (s: string) => void;
   setXiaokeEmotion: (e: XiaokeEmotion) => void;
 
-  // —— 专注循环（旧字段，过渡保留，新代码用 focusMachine）——
-  focusStatus: FocusStatus;
-  setFocusStatus: (s: FocusStatus) => void;
-
-  // —— 三机器状态（V0.6 新增）——
+  // —— 三机器状态（V0.6）——
   bootState: BootState;
   focusMachine: FocusMachineState;
   rewardMachine: RewardMachineState;
@@ -155,9 +150,6 @@ export const useAppStore = create<AppState>((set) => ({
   setSubtitle: (subtitle) => set({ subtitle }),
   setXiaokeEmotion: (xiaokeEmotion) => set({ xiaokeEmotion }),
 
-  focusStatus: 'idle',
-  setFocusStatus: (focusStatus) => set({ focusStatus }),
-
   bootState: 'unconfigured',
   focusMachine: 'idle',
   rewardMachine: 'idle',
@@ -212,3 +204,9 @@ export const useAppStore = create<AppState>((set) => ({
   volume: 70,
   setVolume: (v) => set({ volume: Math.round(Math.max(0, Math.min(100, v)) / 5) * 5 }),
 }));
+
+// dev/e2e 验证用：暴露 store 到 window，方便 playwright 断言状态机字段
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as { __APP_STORE__: typeof useAppStore }).__APP_STORE__ = useAppStore;
+}
+

@@ -8,33 +8,39 @@ export function AskMode() {
   const rewardMachine = useAppStore((s) => s.rewardMachine);
   const isBootAsk = bootState === 'askMode';
   const isRewardAsk = rewardMachine === 'askMode';
-  const { dispatchBoot, dispatchReward } = useTransitionRunner();
+  const { dispatchBoot, dispatchFocus, dispatchReward } = useTransitionRunner();
 
   // ⚠️ Rules of Hooks: 所有 useCallback 必须在 early return 之前，
   // 否则 hook 顺序变化导致 React 渲染崩溃（黑屏 bug 根因，2026-05-14）。
+  // boot askMode 选完后同时启动 focusMachine（LAUNCH），让 focus 接管专注流程。
+  const pickBootMode = useCallback((mode: 'explore' | 'companion') => {
+    dispatchBoot({ type: 'ASK_MODE_PICK', mode });
+    dispatchFocus({ type: 'LAUNCH', mode });
+  }, [dispatchBoot, dispatchFocus]);
+
   const onTimeout = useCallback(() => {
     if (isBootAsk) {
-      dispatchBoot({ type: 'ASK_MODE_PICK', mode: 'companion' });
+      pickBootMode('companion');
       return;
     }
     dispatchReward({ type: 'ASK_PICK', choice: 'return' });
-  }, [dispatchBoot, dispatchReward, isBootAsk]);
+  }, [dispatchReward, isBootAsk, pickBootMode]);
 
   const onPickLeft = useCallback(() => {
     if (isBootAsk) {
-      dispatchBoot({ type: 'ASK_MODE_PICK', mode: 'explore' });
+      pickBootMode('explore');
       return;
     }
     dispatchReward({ type: 'ASK_PICK', choice: 'continue' });
-  }, [dispatchBoot, dispatchReward, isBootAsk]);
+  }, [dispatchReward, isBootAsk, pickBootMode]);
 
   const onPickRight = useCallback(() => {
     if (isBootAsk) {
-      dispatchBoot({ type: 'ASK_MODE_PICK', mode: 'companion' });
+      pickBootMode('companion');
       return;
     }
     dispatchReward({ type: 'ASK_PICK', choice: 'return' });
-  }, [dispatchBoot, dispatchReward, isBootAsk]);
+  }, [dispatchReward, isBootAsk, pickBootMode]);
 
   if (!isBootAsk && !isRewardAsk) return null;
 
