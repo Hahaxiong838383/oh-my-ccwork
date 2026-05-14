@@ -13,11 +13,13 @@ export function StatusBar(_props: StatusBarProps) {
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 12 }}
+          // framer-motion 的 animate.y 会 inline transform 覆盖 tailwind -translate-x-1/2，
+          // 必须把 x: '-50%' 也写进 motion 的 keyframes，否则字幕容器溢出画布右边。
+          initial={{ opacity: 0, y: 12, x: '-50%' }}
+          animate={{ opacity: 1, y: 0, x: '-50%' }}
+          exit={{ opacity: 0, y: 12, x: '-50%' }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="pointer-events-none absolute bottom-24 left-1/2 z-layer-feedback w-[92%] max-w-[620px] -translate-x-1/2"
+          className="pointer-events-none absolute bottom-24 left-1/2 z-layer-feedback w-[92%] max-w-[620px]"
         >
           <div className="rounded-2xl bg-black/55 px-4 py-2 text-center text-sm text-white backdrop-blur-sm ring-1 ring-white/10">
             {subtitle || '...'}
