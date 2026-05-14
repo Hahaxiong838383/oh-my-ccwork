@@ -89,6 +89,11 @@ function decodeClientMessage(data: RawData, isBinary: boolean): ClientMessage | 
       return { type: 'audio.end' };
     case 'barge.in':
       return { type: 'barge.in' };
+    case 'tts.say': {
+      const text = typeof rec.text === 'string' ? rec.text : '';
+      if (!text.trim()) return null;
+      return { type: 'tts.say', text };
+    }
     default:
       return null;
   }

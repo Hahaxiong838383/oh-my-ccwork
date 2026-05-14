@@ -7,7 +7,8 @@ export type ClientMessage =
   | { type: 'session.start'; sampleRate: number }
   | { type: 'audio.chunk'; pcm16: ArrayBuffer }
   | { type: 'audio.end' }
-  | { type: 'barge.in' };
+  | { type: 'barge.in' }
+  | { type: 'tts.say'; text: string };
 
 export type ServerMessage =
   | { type: 'asr.partial'; text: string }
@@ -53,6 +54,10 @@ export class VoicePipeline {
         return;
       case 'barge.in':
         this.bargein();
+        return;
+      case 'tts.say':
+        console.log('[pipeline] tts.say received:', msg.text.slice(0, 30));
+        this.speakDirect(msg.text);
         return;
       default:
         this.sendError('BAD_MESSAGE', '未知客户端消息');
@@ -188,6 +193,66 @@ export class VoicePipeline {
         this.tts = null;
       }
     }
+  }
+
+  private async speakDirect(text: string): Promise<void> {
+    const finalText = text.trim();
+    if (!finalText) {
+      this.send({ type: 'tts.end' });
+      return;
+    }
+
+    // 先中断正在进行的会话，避免语音叠加
+    this.bargein();
+    const turn = this.activeTurn;
+    let endSent = false;
+
+    const ensureEnd = () => {
+      if (endSent || turn !== this.activeTurn) return;
+      endSent = true;
+      this.send({ type: 'tts.end' });
+    };
+
+    const closeTtsAfterError = () => {
+      if (this.tts) {
+        this.tts.close();
+        this.tts = null;
+      }
+    };
+
+    try {
+      if (!this.tts) {
+        this.tts = createVolcTtsClient();
+      }
+      await this.tts.start({
+        onAudio: (chunk) => {
+          if (turn !== this.activeTurn || endSent) return;
+          this.send({ type: 'tts.audio', mp3Base64: chunk.toString('base64') });
+        },
+        onSentenceBreak: () => {
+          if (turn !== this.activeTurn || endSent) return;
+          this.send({ type: 'tts.sentence_break' });
+        },
+        onSentenceEnd: () => {
+          if (turn !== this.activeTurn || endSent) return;
+          endSent = true;
+          this.send({ type: 'tts.end' });
+        },
+        onError: (err) => {
+          this.sendError('TTS_ERROR', err.message);
+          ensureEnd();
+          closeTtsAfterError();
+        },
+      });
+    } catch (err) {
+      this.sendError('TTS_START_FAILED', toError(err).message);
+      this.tts = null;
+      ensureEnd();
+      return;
+    }
+
+    this.tts.feed(finalText);
+    this.tts.finish();
   }
 
   private send(msg: ServerMessage): void {

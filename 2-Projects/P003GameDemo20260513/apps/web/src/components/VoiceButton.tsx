@@ -55,14 +55,13 @@ export function VoiceButton(_props: VoiceButtonProps) {
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
     };
-    const onTtsAudio = (msg: { mp3Base64: string }) => {
-      void client.playAudioChunk(msg.mp3Base64);
+    const onTtsAudio = (_msg: { mp3Base64: string }) => {
+      // 播放由 voice-client 内部统一处理（兼容 sayDirect 等无 VoiceButton 的路径）
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
     };
     const onTtsEnd = () => {
-      // 立刻 flush 还在缓冲的 mp3，避免末段被 350ms 防抖延迟
-      client.flushTtsBufferNow();
+      // flush 由 voice-client 内部处理
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
       llmTextRef.current = '';

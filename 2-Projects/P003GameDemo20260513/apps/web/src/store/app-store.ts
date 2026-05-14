@@ -99,6 +99,10 @@ interface AppState {
   setupComplete: boolean;
   setSetupComplete: (b: boolean) => void;
 
+  // —— 配网过渡视频请求（DebugBar 触发，SetupGuide 消费）——
+  setupVideoRequested: boolean;
+  setSetupVideoRequested: (b: boolean) => void;
+
   // —— 设置面板（V0.6 新增，D4 实现 UI）——
   settingsOpen: boolean;
   setSettingsOpen: (b: boolean) => void;
@@ -192,6 +196,9 @@ export const useAppStore = create<AppState>((set) => ({
       // 注意：bootState 由 dispatchBoot(SETUP_DONE/SETUP_RESET) 切换，
       // 走 bootTransition 触发 startTimer welcome 等 effects
     }),
+
+  setupVideoRequested: false,
+  setSetupVideoRequested: (setupVideoRequested) => set({ setupVideoRequested }),
 
   settingsOpen: false,
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),

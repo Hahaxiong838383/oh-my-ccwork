@@ -1,88 +1,65 @@
-# P003 K1 Game Demo · V0.4 (4 天交付版)
+# P003 K1 Game Demo
 
-> ⚠️ **决策前必读：[`docs/DEMO-PRINCIPLES.md`](docs/DEMO-PRINCIPLES.md)** —— 4 个绝对目标 + 范围裁剪表
+> 儿童陪伴机器人 K1 web 模拟器 · 800×480 像素锁定 · 4.5 天交付
 
----
+## 进展速览（2026-05-14 22:30 · D3.5 完工）
 
-## 4 个绝对目标（不可变更）
+**版本 V0.7 · 真机端到端跑通 + 美术化首两幕**
 
-1. **手机横版** · 浏览器内模拟真实硬件 **800×480** 横屏画布
-2. **小可 AI 实时语音对话**（豆包级实时交互，端到端 ≤ 1.5s 理想）
-3. **4 天交付** · 后端先本地 → 验收后迁云端供手机访问
-4. **demo 第一原则** · 跑起来 > 优雅，砍一切生产化设计
+| 完成度 | 内容 |
+|---|---|
+| ✅ D1 V0.4 | 框架 + 9 组件 + 凭据探针（[D1-log](docs/D1-log.md)） |
+| ✅ D2 V0.6 | 整体竖屏 + 三段闭环（ASR + LLM + TTS）+ 真机通（[D2-log](docs/D2-log.md)） |
+| ✅ D3 V0.7 | OpenBox 4 级 + EcoUnlock + Farewell + 4 大调试链修复（[D3-log](docs/D3-log.md)） |
+| ✅ D3.5 | **配网美术化 + 视频过渡 + Welcome 写实图（C 档动效）+ TTS sayDirect 通道**（[D3.5-log](docs/D3.5-log.md)） |
+| ⏳ D4 上 | 部署阿里云 VPS + HTTPS/WSS 反代 + iOS Safari 真机测 |
+| ⏳ D4 下 | SettingsPanel + 录 90s demo 视频 |
+| ⏳ D5 | buffer：兼容性修复 + Polish + 锦上添花 |
 
-→ 任一偏离 = 立即砍范围。详见 [`docs/DEMO-PRINCIPLES.md`](docs/DEMO-PRINCIPLES.md) §四 复盘检查清单。
+**当前可演**：手机访问 `https://192.168.1.193:5173/` → DebugBar 完成配网 → 视频过渡 → 写实 Welcome 场景（小可在飞船舷窗读书 + 星点漂移 + 表情屏绿光 + 真实 TTS"你好，指挥官！欢迎回到方舟"）→ NightReport → AskMode → focusRunning → OpenBox 4 级 → EcoUnlock → Farewell
 
----
+## 技术栈
 
-## 当前状态（2026-05-13 晚）
-
-- [x] V0.1-V0.3 完成产品对齐与扩展架构设计（保留作为长期路线参考）
-- [x] **V0.4 目标重定为 4 天 demo**，4 个原则锚定到文档
-- [ ] codex 调研实时语音技术选型（进行中）
-- [ ] gemini 评审 4 天范围裁剪可行性（进行中）
-- [ ] 出 V0.4 实施计划（合并 codex+gemini 结论）
-- [ ] D1-D4 具体开发
-
----
+- **前端**：React 18 + Vite 5 + TypeScript strict + Tailwind + Zustand + framer-motion + CSS container query units (cqw/cqh)
+- **后端**：Hono + Node `ws` + tsx + ESM
+- **三段语音链路**：
+  - **ASR**：火山大模型 sauc v3（`wss://openspeech.bytedance.com/api/v3/sauc/bigmodel`）
+  - **LLM**：gemini-3.1-flash-lite-preview via 川哥代理 `http://23.226.135.149:4000/v1`（TTFT 0.80s，max_tokens 65535）
+  - **TTS**：Doubao-TTS 2.0 双向流（音色 `zh_female_tianmeixiaoyuan_moon_bigtts` 甜美小源）
+- **新增 TTS sayDirect 通道**：绕过 ASR+LLM 直接 `{ type:'tts.say', text }`，用于开机欢迎语等无 ASR 触发场景
 
 ## 文档导航
 
-| 文档 | 作用 | V0.4 状态 |
-|---|---|---|
-| [`DEMO-PRINCIPLES.md`](docs/DEMO-PRINCIPLES.md) | **目标锚定（必读）** | ✅ 新增 |
-| [`00-product-spec.md`](docs/00-product-spec.md) | 产品规格 + 术语表 | 保留（V1.0 参考） |
-| [`01-tech-architecture.md`](docs/01-tech-architecture.md) | 技术架构（V0.3 完整版） | 保留（长期参考） |
-| [`02-roadmap.md`](docs/02-roadmap.md) | V1.0 完整 roadmap | **将被 V0.4 4 天计划覆盖** |
-| [`03-state-machine.md`](docs/03-state-machine.md) | XState 详图 | 保留（V1.0+ 重启用） |
-| [`04-config-tables.md`](docs/04-config-tables.md) | 9 张配置表 | 保留（V1.0+ 重启用） |
-| [`05-server-contracts.md`](docs/05-server-contracts.md) | C/S 接口契约 | 保留（参考） |
-| [`06-evolution-roadmap.md`](docs/06-evolution-roadmap.md) | 版本演进 + 扩展钩子 | 保留（长期路线图） |
-| [`07-v04-implementation-plan.md`](docs/07-v04-implementation-plan.md) | **V0.4 4 天实施计划** | 🚧 待 codex+gemini 出结论后落地 |
+| 文档 | 作用 |
+|---|---|
+| [`DEMO-PRINCIPLES.md`](docs/DEMO-PRINCIPLES.md) | **目标锚定（必读）** —— 4 个绝对目标 + 范围裁剪表 |
+| [`D1-log.md`](docs/D1-log.md) | D1 V0.1-V0.4：框架 + 9 组件 + 凭据探针 |
+| [`D2-log.md`](docs/D2-log.md) | D2 V0.6：B+C 方案 + 整体竖屏 + 三段端到端 + 9 真机 bug 复盘 |
+| [`D3-log.md`](docs/D3-log.md) | D3 V0.7：三场景 + 4 大调试链路 + 团队协作产出 |
+| [`D3.5-log.md`](docs/D3.5-log.md) | **D3.5：美术化 + Welcome 写实图 + TTS sayDirect + 5 大踩坑** |
+| [`TECH-DEBT.md`](docs/TECH-DEBT.md) | 技术债清单（demo→优化阶段路线图）|
+| [`00-product-spec.md`](docs/00-product-spec.md) | 产品规格 + 术语表（V1.0 参考） |
+| [`05-server-contracts.md`](docs/05-server-contracts.md) | C/S 接口契约（含新增 tts.say） |
 
-**重要约定**：V0.1-V0.3 的文档**不删**，保留作为产品完整愿景的参考（这是 K1 真实的 V1.0-V1.70 路线）。但**V0.4 4 天 demo 实际开发只看 DEMO-PRINCIPLES + 07-v04-implementation-plan**。
-
----
-
-## 关键术语对齐
-
-| 中文 | 英文 | 注意 |
-|---|---|---|
-| K1 | k1_product | **产品代号**，不是角色 |
-| **小可** | xiaoke | **主角机器人**，用户看到的 IP |
-| **指挥官** | commander | 用户称呼 |
-| 方舟 | ark | 世界观载体 |
-| 探索 / 陪伴 | explore / companion | 专注模式两分支 |
-| 星尘 / 家族币 | stardust / family_coin | 双货币 |
-
----
-
-## V0.4 范围速览（详见 DEMO-PRINCIPLES §二）
-
-### ✅ 4 天内必做（P0+P1）
-- 设备外壳 + 800×480 横屏
-- 小可 AI 实时语音（核心）
-- 主界面：生态缸 + 小可 + 双货币 UI
-- 专注循环（启动 → 计时 → 退出 → 奖励）
-
-### ❌ 4 天内不做（推迟到 V1.0+）
-- 9 层 LayerManager / XState / 9 张配置表 / 3 份存档冗余
-- 唤醒词 + 完整 VAD / 4 级宝箱 + 男女差异化 / 5 个生态缸部件 × 3 级
-- 性别选择 / 新手期 3 阶段 / 设置面板硬件 / PWA / 抽卡 / 任务 / 收藏馆 / 所有 V1.5+ 模块
-
----
-
-## 快速开始（结构未变，V0.4 后端待加）
+## 启动
 
 ```bash
-cd apps/web
-pnpm install
-pnpm dev --host
+# 后端（apps/server）：HTTPS 端口 3001
+cd apps/server && npm start
+
+# 前端（apps/web）：HTTPS dev server 5173 + WSS vite proxy
+cd apps/web && npm run dev
+
+# 手机扫码：https://<本机 IP>:5173/
 ```
 
-后端（D2 启动）：
+凭据放 `apps/server/.env.local`（chmod 600，gitignored）。
 
-```bash
-cd apps/server          # 待创建
-bun dev                 # 或 node --watch
-```
+## 4 个绝对目标（达成情况）
+
+1. ✅ 手机竖屏外壳 + 800×480 像素锁定 5:3 画布
+2. ✅ 小可 AI 实时语音对话：端到端 ~2.4s（达标 ≤2.5s）
+3. ✅ 4.5 天交付（D1+D2+D3+D3.5 已完成，D4-D5 收尾）
+4. ✅ demo 第一原则，砍 9 层 / XState / MSW / Dexie，纯 CSS + cqw/cqh
+
+详见 [`docs/DEMO-PRINCIPLES.md`](docs/DEMO-PRINCIPLES.md)。

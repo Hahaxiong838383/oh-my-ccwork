@@ -6,6 +6,8 @@ export interface VoiceClient {
   playAudioChunk(mp3Base64: string): Promise<void>;
   flushTtsBufferNow(): void;
   bargeIn(): void;
+  sayDirect(text: string): void;
+  unlockAudio(): Promise<void>;
   on(
     event: 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'error',
     cb: (data: any) => void,
@@ -95,8 +97,17 @@ class VoiceClientImpl implements VoiceClient {
           case 'asr.partial':
           case 'asr.final':
           case 'llm.delta':
+            this.emit(msg.type, msg);
+            break;
           case 'tts.audio':
+            // voice-client 内部统一播放（任意触发路径：按住说话 / sayDirect / 未来其它）
+            // 同时 emit 给外部用于 UI 状态更新（VoiceButton 等）
+            void this.playAudioChunk(msg.mp3Base64);
+            this.emit(msg.type, msg);
+            break;
           case 'tts.end':
+            // 流末立刻 flush 缓冲段，避免末段被 600ms 防抖延迟
+            this.flushTtsBufferNow();
             this.emit(msg.type, msg);
             break;
           case 'tts.sentence_break':
@@ -348,6 +359,29 @@ class VoiceClientImpl implements VoiceClient {
     }
     this.playbackSources = [];
     this.playbackScheduledAt = 0;
+  }
+
+  sayDirect(text: string): void {
+    this.bargeIn();
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.warn('[voice-client] sayDirect skipped: websocket not open');
+      return;
+    }
+    console.log('[voice-client] sayDirect →', text);
+    this.ws.send(JSON.stringify({ type: 'tts.say', text }));
+  }
+
+  async unlockAudio(): Promise<void> {
+    const ctx = this.ensureAudioContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume();
+        console.log('[voice-client] AudioContext resumed via unlockAudio');
+      } catch (err) {
+        console.warn('[voice-client] unlockAudio resume failed', err);
+      }
+    }
   }
 
   on(event: VoiceEvent, cb: (data: any) => void): void {

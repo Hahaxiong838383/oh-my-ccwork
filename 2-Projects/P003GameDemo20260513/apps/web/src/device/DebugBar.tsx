@@ -3,6 +3,14 @@ import { SCENE_KEYBOARD_MAP, SCENE_LABELS, SCENE_ORDER } from '../machines/jump-
 import { jumpToScene } from '../machines';
 import { useTransitionRunner } from '../hooks/useTransitionRunner';
 import { useAppStore, type SceneId } from '../store/app-store';
+import { getSharedVoiceClient } from '../services/voice-client';
+
+function getVoiceWsUrl(): string {
+  const envUrl = import.meta.env.VITE_VOICE_WS_URL as string | undefined;
+  if (envUrl && envUrl.trim()) return envUrl;
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${protocol}://${window.location.host}/ws/voice`;
+}
 
 const MAIN_FLOW_SCENES: SceneId[] = ['welcome', 'nightReport', 'askMode', 'focusRunning'];
 const OPEN_BOX_SCENES: SceneId[] = ['boxCommon', 'boxRare', 'boxEpic', 'boxLegendary'];
@@ -50,8 +58,20 @@ export function DebugBar() {
         <button
           type="button"
           onClick={() => {
-            useAppStore.getState().setSetupComplete(true);
-            dispatchBoot({ type: 'SETUP_DONE' });
+            const client = getSharedVoiceClient();
+            // 用户手势栈内：提前解锁 AudioContext + 预连 ws，
+            // 让 Welcome 后续 sayDirect 能直接播音
+            void client.unlockAudio();
+            void client.connect(getVoiceWsUrl()).catch((err) => {
+              console.warn('[DebugBar] ws pre-connect failed', err);
+            });
+            const store = useAppStore.getState();
+            if (store.bootState === 'unconfigured') {
+              store.setSetupVideoRequested(true);
+            } else {
+              store.setSetupComplete(true);
+              dispatchBoot({ type: 'SETUP_DONE' });
+            }
           }}
           className={`h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10 ${
             setupComplete ? activeClass : ''
