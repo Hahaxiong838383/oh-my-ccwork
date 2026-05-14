@@ -24,7 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCREENSHOT_DIR = join(__dirname, '..', '..', '..', '.scratch', 'e2e-screenshots');
 mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
-const URL = process.env.E2E_URL ?? 'http://localhost:5173/';
+const URL = process.env.E2E_URL ?? 'https://localhost:5173/';
 const VIEWPORT = { width: 412, height: 915 };
 
 const errors = [];
@@ -33,8 +33,14 @@ const sfxEvents = [];
 
 function recordConsole(msg) {
   const text = msg.text();
-  if (msg.type() === 'error' && !text.includes('react-devtools')) {
-    errors.push(text);
+  if (msg.type() === 'error') {
+    // 过滤无害噪音：react-devtools 提示 + PWA dev 静态资源 404（白名单收窄，避免吞掉真 API 404）
+    const sourceUrl = msg.location()?.url ?? '';
+    const isStaticNoise =
+      text.includes('Failed to load resource') &&
+      /favicon\.ico|apple-touch-icon|icon-\d+x\d+\.png|robots\.txt/i.test(sourceUrl);
+    const isNoise = text.includes('react-devtools') || isStaticNoise;
+    if (!isNoise) errors.push(`${text} [src=${sourceUrl}]`);
   }
   if (text.includes('[boot]') || text.includes('[focus]') || text.includes('[reward]')) {
     transitions.push(text.replace(/^.*?\[/, '['));
@@ -58,10 +64,14 @@ async function main() {
     headless: true,
     executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   });
-  const ctx = await browser.newContext({ viewport: VIEWPORT });
+  const ctx = await browser.newContext({ viewport: VIEWPORT, ignoreHTTPSErrors: true });
   const page = await ctx.newPage();
   page.on('console', recordConsole);
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  const failed404s = [];
+  page.on('response', (resp) => {
+    if (resp.status() === 404) failed404s.push(resp.url());
+  });
 
   console.log(`\n=== P003 E2E 验收 · ${URL} ===\n`);
 
@@ -121,6 +131,9 @@ async function main() {
 
   console.log(`\nSFX/timer events (${sfxEvents.length}):`);
   sfxEvents.slice(0, 10).forEach((e) => console.log('  ' + e));
+
+  console.log(`\n📦 404 资源 (${failed404s.length}):`);
+  failed404s.forEach((u) => console.log('  ' + u));
 
   console.log(`\n❌ 错误 (${errors.length}):`);
   errors.forEach((e) => console.log('  ' + e.slice(0, 200)));

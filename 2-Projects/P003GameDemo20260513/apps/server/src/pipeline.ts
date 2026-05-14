@@ -108,45 +108,78 @@ export class VoicePipeline {
 
     this.bargein();
     const turn = this.activeTurn;
+    let endSent = false;
+
+    // 整个流程任何环节失败都必须发 tts.end，前端不能卡 thinking
+    const ensureEnd = () => {
+      if (endSent || turn !== this.activeTurn) return;
+      endSent = true;
+      this.send({ type: 'tts.end' });
+    };
 
     try {
-      this.tts = createVolcTtsClient();
-      await this.tts.start({
-        onAudio: (chunk) => {
+      // 错误后断开 TTS 输入流并防止 onAudio 继续吐音频包（codex P1 finding）
+      const closeTtsAfterError = () => {
+        if (this.tts) {
+          this.tts.close();
+          this.tts = null;
+        }
+      };
+
+      try {
+        this.tts = createVolcTtsClient();
+        await this.tts.start({
+          onAudio: (chunk) => {
+            if (turn !== this.activeTurn || endSent) return;
+            this.send({ type: 'tts.audio', mp3Base64: chunk.toString('base64') });
+          },
+          onSentenceEnd: () => {
+            if (turn !== this.activeTurn) return;
+            if (endSent) return;
+            endSent = true;
+            this.send({ type: 'tts.end' });
+          },
+          onError: (err) => {
+            this.sendError('TTS_ERROR', err.message);
+            ensureEnd();
+            closeTtsAfterError();
+          },
+        });
+      } catch (err) {
+        this.sendError('TTS_START_FAILED', toError(err).message);
+        this.tts = null;
+        ensureEnd();
+        return;
+      }
+
+      await this.llm.streamChat({
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        userText: finalText,
+        onDelta: (delta) => {
           if (turn !== this.activeTurn) return;
-          this.send({ type: 'tts.audio', mp3Base64: chunk.toString('base64') });
+          this.send({ type: 'llm.delta', text: delta });
+          this.tts?.feed(delta);
         },
-        onSentenceEnd: () => {
+        onDone: (fullText) => {
           if (turn !== this.activeTurn) return;
-          this.send({ type: 'tts.end' });
+          this.send({ type: 'llm.done', text: fullText });
+          this.tts?.finish();
         },
         onError: (err) => {
-          this.sendError('TTS_ERROR', err.message);
+          this.sendError('LLM_ERROR', err.message);
+          ensureEnd();
+          closeTtsAfterError();
         },
       });
     } catch (err) {
-      this.sendError('TTS_START_FAILED', toError(err).message);
-      this.tts = null;
-      return;
+      // streamChat 同步 throw（如 env 缺失）走这里，避免 unhandled rejection
+      this.sendError('LLM_FATAL', toError(err).message);
+      ensureEnd();
+      if (this.tts) {
+        this.tts.close();
+        this.tts = null;
+      }
     }
-
-    await this.llm.streamChat({
-      systemPrompt: DEFAULT_SYSTEM_PROMPT,
-      userText: finalText,
-      onDelta: (delta) => {
-        if (turn !== this.activeTurn) return;
-        this.send({ type: 'llm.delta', text: delta });
-        this.tts?.feed(delta);
-      },
-      onDone: (fullText) => {
-        if (turn !== this.activeTurn) return;
-        this.send({ type: 'llm.done', text: fullText });
-        this.tts?.finish();
-      },
-      onError: (err) => {
-        this.sendError('LLM_ERROR', err.message);
-      },
-    });
   }
 
   private send(msg: ServerMessage): void {

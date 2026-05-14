@@ -26,6 +26,11 @@ export function VoiceButton(_props: VoiceButtonProps) {
   const clientRef = useRef<VoiceClient | null>(null);
   const connectedRef = useRef(false);
   const llmTextRef = useRef('');
+  // 异步竞态防护：pressedRef 反映"用户当前是否按住"，startInFlightRef 标启动中，
+  // needStopRef 标"启动期间用户已松手，启动完成后必须立刻 stop"。
+  const pressedRef = useRef(false);
+  const startInFlightRef = useRef(false);
+  const needStopRef = useRef(false);
 
   if (!clientRef.current) {
     clientRef.current = createVoiceClient();
@@ -86,12 +91,18 @@ export function VoiceButton(_props: VoiceButtonProps) {
   }, [setSubtitle, setVoiceStatus, setXiaokeEmotion]);
 
   const onPointerDown = async () => {
+    // 重入防护：启动中再次按下忽略
+    if (startInFlightRef.current || pressedRef.current) return;
+
+    pressedRef.current = true;
+    needStopRef.current = false;
     setPressed(true);
     unlock();
 
     const client = clientRef.current;
     if (!client) return;
 
+    startInFlightRef.current = true;
     try {
       if (!connectedRef.current) {
         await client.connect(getVoiceWsUrl());
@@ -100,28 +111,47 @@ export function VoiceButton(_props: VoiceButtonProps) {
 
       client.bargeIn();
       await client.startRecording();
-      setVoiceStatus('listening');
-      setXiaokeEmotion('curious');
+
+      // 启动期间用户已松手 → 立刻补 stop，不让麦克风继续录
+      if (needStopRef.current) {
+        client.stopRecording();
+        needStopRef.current = false;
+        setVoiceStatus('thinking');
+        setXiaokeEmotion('calm');
+        playThinking();
+      } else {
+        setVoiceStatus('listening');
+        setXiaokeEmotion('curious');
+      }
     } catch (err) {
+      pressedRef.current = false;
+      needStopRef.current = false;
       setPressed(false);
       connectedRef.current = false;
       setVoiceStatus('idle');
       setSubtitle(err instanceof Error ? err.message : '麦克风启动失败');
+    } finally {
+      startInFlightRef.current = false;
     }
   };
 
   const onPointerUp = () => {
-    if (!pressed) return;
+    if (!pressedRef.current) return;
+    pressedRef.current = false;
     setPressed(false);
 
     const client = clientRef.current;
     if (!client) return;
 
+    // 启动还在飞行中 → 标记 needStop，让 startRecording 完成后立刻补 stop
+    if (startInFlightRef.current) {
+      needStopRef.current = true;
+      return;
+    }
+
     client.stopRecording();
     setVoiceStatus('thinking');
     setXiaokeEmotion('calm');
-
-    // thinking 占位音：等真实 TTS chunk 到达后自动切 speaking。
     playThinking();
   };
 
