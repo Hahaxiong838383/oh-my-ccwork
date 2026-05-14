@@ -35,43 +35,51 @@ export function VoiceButton(_props: VoiceButtonProps) {
     const client = clientRef.current;
     if (!client) return;
 
-    client.on('asr.partial', (msg: { text: string }) => {
+    // React StrictMode 在 dev 跑 useEffect 两次，必须用 off 解绑避免重复触发
+    const onAsrPartial = (msg: { text: string }) => {
       setSubtitle(msg.text);
-    });
-
-    client.on('asr.final', (msg: { text: string }) => {
+    };
+    const onAsrFinal = (msg: { text: string }) => {
       setSubtitle(`${msg.text}...`);
       llmTextRef.current = '';
-    });
-
-    client.on('llm.delta', (msg: { text: string }) => {
+    };
+    const onLlmDelta = (msg: { text: string }) => {
       if (!msg.text) return;
       llmTextRef.current += msg.text;
       setSubtitle(llmTextRef.current);
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
-    });
-
-    client.on('tts.audio', (msg: { mp3Base64: string }) => {
+    };
+    const onTtsAudio = (msg: { mp3Base64: string }) => {
       void client.playAudioChunk(msg.mp3Base64);
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
-    });
-
-    client.on('tts.end', () => {
+    };
+    const onTtsEnd = () => {
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
       llmTextRef.current = '';
-    });
-
-    client.on('error', (msg: { message?: string }) => {
+    };
+    const onError = (msg: { message?: string }) => {
       setVoiceStatus('idle');
       setSubtitle(msg.message ?? '语音服务异常，请重试');
-    });
+    };
+
+    client.on('asr.partial', onAsrPartial);
+    client.on('asr.final', onAsrFinal);
+    client.on('llm.delta', onLlmDelta);
+    client.on('tts.audio', onTtsAudio);
+    client.on('tts.end', onTtsEnd);
+    client.on('error', onError);
 
     return () => {
-      client.close();
-      connectedRef.current = false;
+      client.off('asr.partial', onAsrPartial);
+      client.off('asr.final', onAsrFinal);
+      client.off('llm.delta', onLlmDelta);
+      client.off('tts.audio', onTtsAudio);
+      client.off('tts.end', onTtsEnd);
+      client.off('error', onError);
+      // 注意：不 client.close()，让 client 跨 effect 复用（避免 StrictMode 关掉 ws）
     };
   }, [setSubtitle, setVoiceStatus, setXiaokeEmotion]);
 

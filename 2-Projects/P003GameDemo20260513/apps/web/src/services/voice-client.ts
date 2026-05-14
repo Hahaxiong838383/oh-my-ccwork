@@ -8,6 +8,10 @@ export interface VoiceClient {
     event: 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'error',
     cb: (data: any) => void,
   ): void;
+  off(
+    event: 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'error',
+    cb: (data: any) => void,
+  ): void;
   close(): void;
 }
 
@@ -265,6 +269,11 @@ class VoiceClientImpl implements VoiceClient {
     const set = this.listeners.get(event) ?? new Set<(data: any) => void>();
     set.add(cb);
     this.listeners.set(event, set);
+  }
+
+  off(event: VoiceEvent, cb: (data: any) => void): void {
+    const set = this.listeners.get(event);
+    if (set) set.delete(cb);
   }
 
   close(): void {
