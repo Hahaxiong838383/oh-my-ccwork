@@ -119,6 +119,17 @@ class VoiceClientImpl implements VoiceClient {
     this.cleanupRecordingResources();
 
     this.captureBuffer = new Float32Array(0);
+
+    // 防御：HTTP 非安全上下文下 navigator.mediaDevices 不存在（getUserMedia 不可用）
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      const protocol = typeof window !== 'undefined' ? window.location.protocol : '?';
+      throw new Error(
+        protocol === 'http:'
+          ? '需要 HTTPS 才能用麦克风（当前是 HTTP）。请用 https://... 访问'
+          : '当前浏览器不支持麦克风 API',
+      );
+    }
+
     this.micStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,

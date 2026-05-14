@@ -9,9 +9,11 @@ function getVoiceWsUrl(): string {
   const envUrl = import.meta.env.VITE_VOICE_WS_URL as string | undefined;
   if (envUrl && envUrl.trim()) return envUrl;
 
+  // 同 origin WSS：dev 时 vite proxy 转发到本地 3001，
+  // 部署后由 nginx/反代终结 wss。避免 HTTPS 页面连 ws:// 的 mixed content 拦截。
   const isHttps = window.location.protocol === 'https:';
   const protocol = isHttps ? 'wss' : 'ws';
-  return `${protocol}://${window.location.hostname}:3001/ws/voice`;
+  return `${protocol}://${window.location.host}/ws/voice`;
 }
 
 export function VoiceButton(_props: VoiceButtonProps) {
