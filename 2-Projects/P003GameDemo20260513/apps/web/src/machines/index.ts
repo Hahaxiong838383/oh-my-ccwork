@@ -205,6 +205,7 @@ export function jumpToScene(scene: SceneId): void {
 
   store.setBootState(preset.bootState);
   store.setFocusMachine(preset.focusMachine);
+  store.setFocusMode(preset.focusMode);
   // box scene 先 reward=idle + boxLevel=null，下面 dispatch OPEN_BOX 走完整 transition
   store.setRewardMachine(isBoxScene ? 'idle' : preset.rewardMachine);
   store.setCurrentBoxLevel(isBoxScene ? null : preset.currentBoxLevel);

@@ -27,6 +27,14 @@ export function useTransitionRunner() {
     const current = useAppStore.getState().focusMachine;
     const { state, effects } = focusTransition(current, event);
     if (state !== current) useAppStore.getState().setFocusMachine(state);
+    // focusMode 副作用：LAUNCH 设置 mode（用户从 askMode 选完进入 launching），
+    // 退回 idle 清空。让 focus 场景视图能根据 focusMode 区分出航/静思 UI 差异，
+    // 不依赖 jumpToScene 一次性 hydrate。
+    if (event.type === 'LAUNCH') {
+      useAppStore.getState().setFocusMode(event.mode);
+    } else if (state === 'idle' && current !== 'idle') {
+      useAppStore.getState().setFocusMode(null);
+    }
     applyEffects(effects, defaultTimerRouter);
   }, []);
 

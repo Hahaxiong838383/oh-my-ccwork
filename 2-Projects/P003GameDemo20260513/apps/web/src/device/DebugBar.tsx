@@ -12,7 +12,7 @@ function getVoiceWsUrl(): string {
   return `${protocol}://${window.location.host}/ws/voice`;
 }
 
-const MAIN_FLOW_SCENES: SceneId[] = ['welcome', 'nightReport', 'askMode', 'focusRunning'];
+const MAIN_FLOW_SCENES: SceneId[] = ['welcome', 'nightReport', 'askMode', 'focusRunning', 'focusCompanion'];
 const OPEN_BOX_SCENES: SceneId[] = ['boxCommon', 'boxRare', 'boxEpic', 'boxLegendary'];
 const OTHER_SCENES: SceneId[] = ['ecoUnlock', 'farewell'];
 

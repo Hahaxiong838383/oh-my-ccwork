@@ -42,12 +42,17 @@ export type SceneId =
   | 'nightReport'
   | 'askMode'
   | 'focusRunning'
+  | 'focusCompanion'
   | 'boxCommon'
   | 'boxRare'
   | 'boxEpic'
   | 'boxLegendary'
   | 'ecoUnlock'
   | 'farewell';
+
+// focus 模式：出航（explore）/ 静思（companion）/ 未进入（null）
+// 由 jumpToScene 或 dispatchFocus(LAUNCH) 设置
+export type FocusMode = 'explore' | 'companion' | null;
 
 export interface LEDState {
   on: boolean;
@@ -77,6 +82,10 @@ interface AppState {
   setBootState: (s: BootState) => void;
   setFocusMachine: (s: FocusMachineState) => void;
   setRewardMachine: (s: RewardMachineState) => void;
+
+  // —— focus 当前模式（V0.7 新增，跳关 + LAUNCH 都会设置）——
+  focusMode: FocusMode;
+  setFocusMode: (m: FocusMode) => void;
 
   // —— 当前正在演的宝箱等级（V0.6 新增）——
   currentBoxLevel: BoxLevel | null;
@@ -165,6 +174,9 @@ export const useAppStore = create<AppState>((set) => ({
   setBootState: (bootState) => set({ bootState }),
   setFocusMachine: (focusMachine) => set({ focusMachine }),
   setRewardMachine: (rewardMachine) => set({ rewardMachine }),
+
+  focusMode: null,
+  setFocusMode: (focusMode) => set({ focusMode }),
 
   currentBoxLevel: null,
   setCurrentBoxLevel: (currentBoxLevel) => set({ currentBoxLevel }),

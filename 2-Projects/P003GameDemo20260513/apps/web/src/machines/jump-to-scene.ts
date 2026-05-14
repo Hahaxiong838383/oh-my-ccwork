@@ -1,4 +1,4 @@
-import type { SceneId, BootState, FocusMachineState, RewardMachineState, BoxLevel, VoiceStatus, XiaokeEmotion } from '../store/app-store';
+import type { SceneId, BootState, FocusMachineState, RewardMachineState, BoxLevel, VoiceStatus, XiaokeEmotion, FocusMode } from '../store/app-store';
 
 export interface ScenePreset {
   bootState: BootState;
@@ -11,6 +11,7 @@ export interface ScenePreset {
   stardust: number;
   familyCoin: number;
   setupComplete: boolean;
+  focusMode: FocusMode;
 }
 
 const BASE: ScenePreset = {
@@ -24,6 +25,7 @@ const BASE: ScenePreset = {
   stardust: 1280,
   familyCoin: 50,
   setupComplete: true,
+  focusMode: null,
 };
 
 export const SCENE_PRESETS: Record<SceneId, ScenePreset> = {
@@ -48,6 +50,13 @@ export const SCENE_PRESETS: Record<SceneId, ScenePreset> = {
   focusRunning: {
     ...BASE,
     focusMachine: 'running',
+    focusMode: 'explore',
+    xiaokeEmotion: 'excited',
+  },
+  focusCompanion: {
+    ...BASE,
+    focusMachine: 'running',
+    focusMode: 'companion',
     xiaokeEmotion: 'warm',
   },
   boxCommon: {
@@ -106,13 +115,14 @@ export const SCENE_LABELS: Record<SceneId, string> = {
   welcome: '1. 开机欢迎',
   nightReport: '2. 夜航报告',
   askMode: '3. 状态询问（开机）',
-  focusRunning: '4. 进入专注',
-  boxCommon: '5. 普通宝箱',
-  boxRare: '6. 精品宝箱',
-  boxEpic: '7. 史诗宝箱',
-  boxLegendary: '8. 传说宝箱',
-  ecoUnlock: '9. 生态缸升级',
-  farewell: '0. 关盖告别',
+  focusRunning: '4. 进入专注（出航）',
+  focusCompanion: '5. 进入专注（静思）',
+  boxCommon: '6. 普通宝箱',
+  boxRare: '7. 精品宝箱',
+  boxEpic: '8. 史诗宝箱',
+  boxLegendary: '9. 传说宝箱',
+  ecoUnlock: '0. 生态缸升级',
+  farewell: 'F. 关盖告别',
 };
 
 export const SCENE_ORDER: SceneId[] = [
@@ -120,6 +130,7 @@ export const SCENE_ORDER: SceneId[] = [
   'nightReport',
   'askMode',
   'focusRunning',
+  'focusCompanion',
   'boxCommon',
   'boxRare',
   'boxEpic',
@@ -128,15 +139,20 @@ export const SCENE_ORDER: SceneId[] = [
   'farewell',
 ];
 
+// 键盘快捷键：1-5 = 主流程，6-9 = 4 级宝箱，0 = ecoUnlock，F = farewell
+// （focusCompanion 新增挤占了 boxCommon 原来的 5 号位，box* 整体后移；
+//  ecoUnlock 从 9 移到 0；farewell 改 'f' 键避免冲突）
 export const SCENE_KEYBOARD_MAP: Record<string, SceneId> = {
   '1': 'welcome',
   '2': 'nightReport',
   '3': 'askMode',
   '4': 'focusRunning',
-  '5': 'boxCommon',
-  '6': 'boxRare',
-  '7': 'boxEpic',
-  '8': 'boxLegendary',
-  '9': 'ecoUnlock',
-  '0': 'farewell',
+  '5': 'focusCompanion',
+  '6': 'boxCommon',
+  '7': 'boxRare',
+  '8': 'boxEpic',
+  '9': 'boxLegendary',
+  '0': 'ecoUnlock',
+  f: 'farewell',
+  F: 'farewell',
 };
