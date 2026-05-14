@@ -49,9 +49,10 @@ class VolcTtsClientImpl implements VolcTtsClient {
 
     await new Promise<void>((resolve, reject) => {
       const connectId = randomUUID();
+      // Doubao-TTS 2.0 API Key 鉴权：用小写 x-api-key（不是 X-Api-Access-Key，那是应用模式）
       const ws = new WebSocket(wsUrl, {
         headers: {
-          'X-Api-Access-Key': apiKey,
+          'x-api-key': apiKey,
           'X-Api-Resource-Id': resourceId,
           'X-Api-Connect-Id': connectId,
         },
@@ -82,6 +83,12 @@ class VolcTtsClientImpl implements VolcTtsClient {
         try {
           const parsed = parseTtsFrame(data);
           if (!parsed) return;
+          if (process.env.DEBUG_TTS === '1') {
+            console.log(`[tts.recv] mt=${parsed.messageType} event=${parsed.event} payload=${parsed.payload.length}B`);
+            if (parsed.payload.length > 0 && parsed.messageType !== 0b1011) {
+              console.log(`  payload utf8: ${parsed.payload.toString('utf8').slice(0, 200)}`);
+            }
+          }
 
           if (parsed.messageType === 0b1011 && parsed.payload.length > 0) {
             opts.onAudio(parsed.payload);
