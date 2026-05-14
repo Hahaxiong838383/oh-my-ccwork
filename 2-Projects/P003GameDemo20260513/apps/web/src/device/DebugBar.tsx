@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SCENE_KEYBOARD_MAP, SCENE_LABELS, SCENE_ORDER } from '../machines/jump-to-scene';
 import { jumpToScene } from '../machines';
+import { useTransitionRunner } from '../hooks/useTransitionRunner';
 import { useAppStore, type SceneId } from '../store/app-store';
 
 const MAIN_FLOW_SCENES: SceneId[] = ['welcome', 'nightReport', 'askMode', 'focusRunning'];
@@ -11,6 +12,7 @@ export function DebugBar() {
   const setupComplete = useAppStore((s) => s.setupComplete);
   const wifiSignal = useAppStore((s) => s.wifiSignal);
   const [sceneValue, setSceneValue] = useState<SceneId | ''>('');
+  const { dispatchBoot } = useTransitionRunner();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -35,7 +37,10 @@ export function DebugBar() {
         <span className={labelClass}>配网：</span>
         <button
           type="button"
-          onClick={() => useAppStore.getState().setSetupComplete(false)}
+          onClick={() => {
+            useAppStore.getState().setSetupComplete(false);
+            dispatchBoot({ type: 'SETUP_RESET' });
+          }}
           className={`h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10 ${
             !setupComplete ? activeClass : ''
           }`}
@@ -44,7 +49,10 @@ export function DebugBar() {
         </button>
         <button
           type="button"
-          onClick={() => useAppStore.getState().setSetupComplete(true)}
+          onClick={() => {
+            useAppStore.getState().setSetupComplete(true);
+            dispatchBoot({ type: 'SETUP_DONE' });
+          }}
           className={`h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10 ${
             setupComplete ? activeClass : ''
           }`}

@@ -192,7 +192,8 @@ export const useAppStore = create<AppState>((set) => ({
     set({
       setupComplete,
       wifiSignal: setupComplete ? 'strong' : 'disconnected',
-      bootState: setupComplete ? 'welcome' : 'unconfigured',
+      // 注意：bootState 由 dispatchBoot(SETUP_DONE/SETUP_RESET) 切换，
+      // 走 bootTransition 触发 startTimer welcome 等 effects
     }),
 
   settingsOpen: false,

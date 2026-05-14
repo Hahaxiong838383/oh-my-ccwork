@@ -8,6 +8,9 @@ import { DebugBar } from './DebugBar';
 import { WifiHud } from '../components/WifiHud';
 import { SettingsButton } from '../components/SettingsButton';
 import { SetupGuide } from '../scenes/SetupGuide';
+import { Welcome } from '../scenes/Welcome';
+import { NightReport } from '../scenes/NightReport';
+import { AskMode } from '../scenes/AskMode';
 
 /**
  * DeviceFrame —— 读写台 demo 模拟器外壳（V0.6 竖屏布局）
@@ -51,6 +54,9 @@ export function DeviceFrame({ children }: { children: ReactNode }) {
             <WifiHud />
             <SettingsButton />
             <SetupGuide />
+            <Welcome />
+            <NightReport />
+            <AskMode />
             <Tips />
           </div>
         </div>

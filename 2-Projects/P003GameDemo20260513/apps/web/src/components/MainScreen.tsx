@@ -5,6 +5,7 @@ import { NewbieHalo } from './NewbieHalo';
 import { StatusBar } from './StatusBar';
 import { WizardOfOz } from './WizardOfOz';
 import { Xiaoke } from './Xiaoke';
+import { XiaokeBlink } from './XiaokeBlink';
 
 interface MainScreenProps {
   showHalo?: boolean;
@@ -24,7 +25,9 @@ export function MainScreen({ showHalo = true }: MainScreenProps) {
 
       <div className="absolute left-1/2 top-[57%] z-layer-char -translate-x-1/2 -translate-y-1/2">
         <NewbieHalo on={showHalo}>
-          <Xiaoke />
+          <XiaokeBlink>
+            <Xiaoke />
+          </XiaokeBlink>
         </NewbieHalo>
       </div>
 

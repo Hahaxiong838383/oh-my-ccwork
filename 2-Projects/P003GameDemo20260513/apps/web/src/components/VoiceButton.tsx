@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store/app-store';
+import { useAudioFx } from '../hooks/useAudioFx';
 
 interface VoiceButtonProps {}
 
@@ -7,6 +8,7 @@ export function VoiceButton(_props: VoiceButtonProps) {
   const setVoiceStatus = useAppStore((s) => s.setVoiceStatus);
   const setSubtitle = useAppStore((s) => s.setSubtitle);
   const setXiaokeEmotion = useAppStore((s) => s.setXiaokeEmotion);
+  const { unlock, playThinking } = useAudioFx();
 
   const [pressed, setPressed] = useState(false);
   const speakingTimerRef = useRef<number | null>(null);
@@ -29,6 +31,8 @@ export function VoiceButton(_props: VoiceButtonProps) {
 
     setVoiceStatus('thinking');
     setXiaokeEmotion('calm');
+    // 立刻播"嗯..."占位音效掩盖 AI 延迟（gemini 评审 wow 项）
+    playThinking();
 
     speakingTimerRef.current = window.setTimeout(() => {
       setVoiceStatus('speaking');
@@ -45,6 +49,7 @@ export function VoiceButton(_props: VoiceButtonProps) {
   const onPointerDown = () => {
     setPressed(true);
     clearFlowTimers();
+    unlock();
     setVoiceStatus('listening');
     setXiaokeEmotion('curious');
   };
