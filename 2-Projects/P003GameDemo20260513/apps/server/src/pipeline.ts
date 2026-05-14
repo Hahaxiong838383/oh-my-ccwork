@@ -15,11 +15,14 @@ export type ServerMessage =
   | { type: 'llm.delta'; text: string }
   | { type: 'llm.done'; text: string }
   | { type: 'tts.audio'; mp3Base64: string }
+  | { type: 'tts.sentence_break' }
   | { type: 'tts.end' }
   | { type: 'error'; code: string; message: string };
 
 const DEFAULT_SYSTEM_PROMPT =
-  '你是儿童陪伴机器人小可（K1）。用户是 5-12 岁孩子，叫他"指挥官"。简短、温暖、活泼。每次回复 ≤30 字。';
+  '你是儿童陪伴机器人小可（K1）。用户是 5-12 岁孩子，叫他"指挥官"。语气温暖、活泼、有耐心。' +
+  '日常聊天保持简短自然（30-50 字）；如果指挥官请你讲故事、科普知识、详细解释，可以讲完整（200-500 字，分段叙述）。' +
+  '不要刻意凑字数，自然就好。';
 
 export class VoicePipeline {
   private readonly ws: WebSocket;
@@ -132,6 +135,11 @@ export class VoicePipeline {
           onAudio: (chunk) => {
             if (turn !== this.activeTurn || endSent) return;
             this.send({ type: 'tts.audio', mp3Base64: chunk.toString('base64') });
+          },
+          onSentenceBreak: () => {
+            // 句末标点信号 → 让客户端 flush 当前段播放，实现字幕与 TTS 同步
+            if (turn !== this.activeTurn || endSent) return;
+            this.send({ type: 'tts.sentence_break' });
           },
           onSentenceEnd: () => {
             if (turn !== this.activeTurn) return;

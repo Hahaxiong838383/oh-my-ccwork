@@ -25,6 +25,7 @@ type ServerMessage =
   | { type: 'llm.delta'; text: string }
   | { type: 'llm.done'; text: string }
   | { type: 'tts.audio'; mp3Base64: string }
+  | { type: 'tts.sentence_break' }
   | { type: 'tts.end' }
   | { type: 'error'; code: string; message: string };
 
@@ -52,7 +53,10 @@ class VoiceClientImpl implements VoiceClient {
   private mp3FlushTimer: number | null = null;
   private playbackScheduledAt = 0;
   private playbackSources: AudioBufferSourceNode[] = [];
-  private readonly mp3FlushDelayMs = 350;
+  // 600ms 绝对延迟（不 reset）兜底：正常流靠 server 端 tts.sentence_break 信号优先 flush
+  // （每句话标点触发，段是完整一句话，mp3 priming silence 占比 < 2% 不可感）
+  // 600ms 仅在「一句话没标点 / sentence_break 信号缺失」边界场景触发兜底
+  private readonly mp3FlushDelayMs = 600;
 
   isConnected(): boolean {
     return !!(this.ws && this.ws.readyState === WebSocket.OPEN);
@@ -94,6 +98,11 @@ class VoiceClientImpl implements VoiceClient {
           case 'tts.audio':
           case 'tts.end':
             this.emit(msg.type, msg);
+            break;
+          case 'tts.sentence_break':
+            // 句末信号：立刻 flush 当前段（按句切，每段是完整一句话音频，
+            // chunk 边界 priming silence 占比小不可感，比 250ms 时间切更稳）
+            this.flushTtsBufferNow();
             break;
           case 'error':
             this.emit('error', msg);
@@ -259,9 +268,10 @@ class VoiceClientImpl implements VoiceClient {
 
     this.mp3Buffer.push(base64ToUint8Array(mp3Base64));
 
-    if (this.mp3FlushTimer !== null) {
-      window.clearTimeout(this.mp3FlushTimer);
-    }
+    // 关键：已有 pending timer 时 NOT reset，让计时自然到期 flush 第一段。
+    // 旧版本 clearTimeout + reset 是防抖模式，导致 TTS chunk 持续就永不 flush。
+    if (this.mp3FlushTimer !== null) return;
+
     this.mp3FlushTimer = window.setTimeout(() => {
       this.mp3FlushTimer = null;
       void this.flushMp3Buffer();

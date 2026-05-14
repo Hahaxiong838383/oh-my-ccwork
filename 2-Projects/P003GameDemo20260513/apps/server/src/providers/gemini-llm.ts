@@ -8,8 +8,25 @@ export interface GeminiLlmClient {
   }): Promise<void>;
 }
 
-const DEFAULT_SYSTEM_PROMPT = '你是儿童陪伴机器人小可（K1）。用户是 5-12 岁孩子，叫他"指挥官"。简短、温暖、活泼。每次回复 ≤30 字。';
+const DEFAULT_SYSTEM_PROMPT =
+  '你是儿童陪伴机器人小可（K1）。用户是 5-12 岁孩子，叫他"指挥官"。语气温暖、活泼、有耐心。' +
+  '日常聊天保持简短自然（30-50 字）；讲故事/科普可以讲完整（200-500 字，分段叙述）。';
 const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+
+/**
+ * 各模型 max_tokens 上限（实测，部分来自 reference_gemini_proxy memory）：
+ * - gemini-2.5-pro: 32768（Google 上限）
+ * - gemini-2.5-flash / 2.5-flash-lite / 3.x 系列: 65535（Vertex AI exclusive [1,65536)）
+ * - MiniMax-M2.7-highspeed: 8192（OpenAI 兼容默认）
+ * - 未知模型: 8192（保守安全值）
+ */
+function getMaxTokensForModel(model: string): number {
+  const lower = model.toLowerCase();
+  if (lower.includes('minimax')) return 8192;
+  if (lower.includes('gemini-2.5-pro')) return 32768;
+  if (lower.startsWith('gemini-2.5') || lower.startsWith('gemini-3')) return 65535;
+  return 8192;
+}
 
 class GeminiLlmClientImpl implements GeminiLlmClient {
   private activeAbort: AbortController | null = null;
@@ -47,7 +64,8 @@ class GeminiLlmClientImpl implements GeminiLlmClient {
           model,
           stream: true,
           temperature: 0.6,
-          max_tokens: 120,
+          // 按模型动态取上限：2.5-pro 32768 / 2.5+3.x 系列 65535 / MiniMax 8192
+          max_tokens: getMaxTokensForModel(model),
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: opts.userText },

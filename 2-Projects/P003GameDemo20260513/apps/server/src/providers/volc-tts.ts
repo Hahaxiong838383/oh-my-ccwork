@@ -4,6 +4,9 @@ import WebSocket from 'ws';
 export interface VolcTtsClient {
   start(opts: {
     onAudio: (chunk: Buffer) => void;
+    /** 句末标点信号（中段，event 351），客户端用来 flush 当前段播放，与字幕同步 */
+    onSentenceBreak?: () => void;
+    /** 整流真正结束（event 152 SessionFinished 或 ws.close） */
     onSentenceEnd: () => void;
     onError: (err: Error) => void;
   }): Promise<void>;
@@ -14,6 +17,7 @@ export interface VolcTtsClient {
 
 interface TtsStartOptions {
   onAudio: (chunk: Buffer) => void;
+  onSentenceBreak?: () => void;
   onSentenceEnd: () => void;
   onError: (err: Error) => void;
 }
@@ -26,7 +30,11 @@ const EVENT_START_CONNECTION = 1;
 const EVENT_START_SESSION = 100;
 const EVENT_FINISH_SESSION = 102;
 const EVENT_TASK_REQUEST = 200;
-const EVENT_TTS_SENTENCE_END = 351;
+// 注：Doubao-TTS 2.0 event 351 是「句末标点中段」（每个逗号/句号都会发），
+// 不是流结束。真正的流结束是 event 152 (SessionFinished) 或 ws.close。
+// 之前误把 351 当 stream end → 第一个标点就锁死后续 audio chunk = 老板"只播指挥官"bug。
+const EVENT_TTS_SENTENCE_END_MID = 351;
+const EVENT_SESSION_FINISHED = 152;
 
 class VolcTtsClientImpl implements VolcTtsClient {
   private ws: WebSocket | null = null;
@@ -95,15 +103,24 @@ class VolcTtsClientImpl implements VolcTtsClient {
             return;
           }
 
-          if (parsed.event === EVENT_TTS_SENTENCE_END) {
+          // 真正的整流结束：event 152 SessionFinished
+          if (parsed.event === EVENT_SESSION_FINISHED) {
             this.emitSentenceEndOnce();
             return;
           }
 
+          // event 351 是「句末标点中段」（每个标点都会发），不是流结束
+          // 触发 onSentenceBreak 让客户端 flush 当前段播放，实现字幕与 TTS 同步
+          if (parsed.event === EVENT_TTS_SENTENCE_END_MID) {
+            opts.onSentenceBreak?.();
+            return;
+          }
+
+          // 兜底：JSON payload 含明确的 session_finished / tts_done 才触发
+          // （避免误把中段 sentence_end JSON 当流结束）
           const json = tryParseJson(parsed.payload);
           if (!json) return;
-
-          if (containsSentenceEnd(json)) {
+          if (containsStreamEnd(json)) {
             this.emitSentenceEndOnce();
           }
         } catch (err) {
@@ -236,21 +253,26 @@ function parseTtsFrame(data: Buffer): {
   };
 }
 
-function containsSentenceEnd(payload: unknown): boolean {
+/**
+ * 只匹配「整流结束」类型的 JSON 标志，排除中段 sentence_end。
+ * 中段 sentence_end 是 Doubao-TTS 2.0 每个标点都发的中间状态。
+ */
+function containsStreamEnd(payload: unknown): boolean {
   if (!payload || typeof payload !== 'object') return false;
   const rec = payload as Record<string, unknown>;
 
-  const tags = ['sentence_end', 'tts_end', 'audio_end', 'is_end', 'finish', 'completed'];
+  // 注意：不要匹配 'sentence_end'，那是中段标点信号
+  const tags = ['session_finished', 'tts_done', 'audio_end', 'all_done'];
   for (const [k, v] of Object.entries(rec)) {
     const key = k.toLowerCase();
     if (tags.includes(key)) {
       if (v === true || v === 1 || v === '1') return true;
       if (typeof v === 'string' && ['true', 'end', 'done', 'completed'].includes(v.toLowerCase())) return true;
     }
-    if (typeof v === 'string' && /sentence_end|tts_end|audio_end|finished|completed/i.test(v)) {
+    if (typeof v === 'string' && /session_finished|tts_done|all_done/i.test(v)) {
       return true;
     }
-    if (v && typeof v === 'object' && containsSentenceEnd(v)) {
+    if (v && typeof v === 'object' && containsStreamEnd(v)) {
       return true;
     }
   }
