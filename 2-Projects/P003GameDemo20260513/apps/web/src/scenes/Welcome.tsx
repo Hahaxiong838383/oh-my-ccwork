@@ -9,6 +9,9 @@ export function Welcome() {
       className="absolute inset-0 z-layer-mask flex flex-col items-center justify-center bg-gradient-to-b from-screen-bg to-eco-deep"
       style={{ containerType: 'size', gap: 'clamp(1.8cqh, 2.8cqh, 3.8cqh)' }}
     >
+      <div className="pointer-events-none absolute right-2 top-2 rounded-full bg-newbie-gold/30 px-2 py-0.5 text-[9px] font-bold text-newbie-gold ring-1 ring-newbie-gold/50">
+        WELCOME · 4s
+      </div>
       <div
         className="relative flex items-center justify-center"
         style={{

@@ -96,6 +96,7 @@ export function applyEffects(effects: readonly Effect[], onTimer: (key: string) 
 function internalDispatchBoot(event: BootEvent): void {
   const current = useAppStore.getState().bootState;
   const { state, effects } = bootTransition(current, event);
+  if (import.meta.env.DEV) console.debug('[boot]', current, '→', state, 'event=', event.type);
   if (state !== current) useAppStore.getState().setBootState(state);
   applyEffects(effects, defaultTimerRouter);
 }
@@ -103,6 +104,7 @@ function internalDispatchBoot(event: BootEvent): void {
 function internalDispatchFocus(event: FocusEvent): void {
   const current = useAppStore.getState().focusMachine;
   const { state, effects } = focusTransition(current, event);
+  if (import.meta.env.DEV) console.debug('[focus]', current, '→', state, 'event=', event.type);
   if (state !== current) useAppStore.getState().setFocusMachine(state);
   applyEffects(effects, defaultTimerRouter);
 }
@@ -110,6 +112,7 @@ function internalDispatchFocus(event: FocusEvent): void {
 function internalDispatchReward(event: RewardEvent): void {
   const current = useAppStore.getState().rewardMachine;
   const { state, effects } = rewardTransition(current, event);
+  if (import.meta.env.DEV) console.debug('[reward]', current, '→', state, 'event=', event.type);
   if (state !== current) useAppStore.getState().setRewardMachine(state);
   applyEffects(effects, defaultTimerRouter);
 }

@@ -10,13 +10,8 @@ export function AskMode() {
   const isRewardAsk = rewardMachine === 'askMode';
   const { dispatchBoot, dispatchReward } = useTransitionRunner();
 
-  if (!isBootAsk && !isRewardAsk) return null;
-
-  const title = isBootAsk ? '想要 探索 还是 陪伴？' : '继续出航 还是 返舱？';
-  const leftLabel = isBootAsk ? '探索' : '继续出航';
-  const rightLabel = isBootAsk ? '陪伴' : '返舱';
-  const ringKey = isBootAsk ? 'boot-ask' : 'reward-ask';
-
+  // ⚠️ Rules of Hooks: 所有 useCallback 必须在 early return 之前，
+  // 否则 hook 顺序变化导致 React 渲染崩溃（黑屏 bug 根因，2026-05-14）。
   const onTimeout = useCallback(() => {
     if (isBootAsk) {
       dispatchBoot({ type: 'ASK_MODE_PICK', mode: 'companion' });
@@ -41,6 +36,13 @@ export function AskMode() {
     dispatchReward({ type: 'ASK_PICK', choice: 'return' });
   }, [dispatchBoot, dispatchReward, isBootAsk]);
 
+  if (!isBootAsk && !isRewardAsk) return null;
+
+  const title = isBootAsk ? '想要 探索 还是 陪伴？' : '继续出航 还是 返舱？';
+  const leftLabel = isBootAsk ? '探索' : '继续出航';
+  const rightLabel = isBootAsk ? '陪伴' : '返舱';
+  const ringKey = isBootAsk ? 'boot-ask' : 'reward-ask';
+
   return (
     <div
       className="absolute inset-0 z-layer-mask flex flex-col items-center justify-center bg-gradient-to-b from-screen-bg via-eco-deep to-screen-bg text-white"
@@ -50,6 +52,9 @@ export function AskMode() {
         paddingInline: 'clamp(4cqh, 6cqw, 8cqh)',
       }}
     >
+      <div className="pointer-events-none absolute right-2 top-2 rounded-full bg-porthole-glow/30 px-2 py-0.5 text-[9px] font-bold text-porthole-glow ring-1 ring-porthole-glow/50">
+        ASK MODE · 30s
+      </div>
       <h2
         className="text-center font-semibold tracking-[0.07em]"
         style={{ fontSize: 'clamp(2.2cqh, 3.9cqw, 4.6cqh)' }}

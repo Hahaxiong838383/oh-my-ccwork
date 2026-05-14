@@ -67,6 +67,9 @@ export function NightReport() {
       className="absolute inset-0 z-layer-mask flex flex-col items-center justify-center bg-gradient-to-b from-screen-bg via-eco-deep to-eco-mid text-white"
       style={{ containerType: 'size', gap: 'clamp(1.4cqh, 2.1cqh, 3.1cqh)' }}
     >
+      <div className="pointer-events-none absolute right-2 top-2 rounded-full bg-newbie-blue/30 px-2 py-0.5 text-[9px] font-bold text-newbie-blue ring-1 ring-newbie-blue/50">
+        NIGHT REPORT · 6s
+      </div>
       <h2
         className="font-semibold tracking-[0.14em]"
         style={{

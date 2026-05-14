@@ -11,6 +11,9 @@
 
 import WebSocket from 'ws';
 import { randomUUID } from 'node:crypto';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const APP_ID = process.env.VOLC_TTS_APP_ID;
 const ACCESS_TOKEN = process.env.VOLC_TTS_ACCESS_TOKEN;
@@ -43,6 +46,13 @@ const ws = new WebSocket(WS_URL, {
 let closed = false;
 let firstAudioChunkAt = null;
 let totalAudioBytes = 0;
+const audioChunks = [];
+const TEXT = process.env.VOLC_TTS_TEXT ?? '你好，指挥官！欢迎回到方舟。我是小可，今天我们一起开始今天的探索旅程吧。';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const OUTPUT_DIR = join(__dirname, '..', 'audio-samples');
+mkdirSync(OUTPUT_DIR, { recursive: true });
+const VOICE_LABEL = (process.env.VOLC_TTS_VOICE_TYPE ?? 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
+const outputPath = join(OUTPUT_DIR, `tts-${VOICE_LABEL}-${Date.now()}.mp3`);
 
 ws.on('upgrade', (res) => {
   console.log(`[volc-tts] upgrade status=${res.statusCode}`);
@@ -122,7 +132,7 @@ ws.on('open', () => {
       const taskReq = {
         namespace: 'BidirectionalTTS',
         req_params: {
-          text: '你好，指挥官，欢迎回到方舟。',
+          text: TEXT,
           speaker: VOICE,
           audio_params: {
             format: 'mp3',
@@ -131,7 +141,7 @@ ws.on('open', () => {
         },
       };
       ws.send(buildFrame(0b0001, 0b0100, 200, sessionId, JSON.stringify(taskReq)));
-      console.log('[volc-tts] → task_request (event=200, text=你好指挥官...)');
+      console.log(`[volc-tts] → task_request (event=200, text="${TEXT.slice(0, 20)}...")`);
 
       // 4. finish_session（event=102）
       setTimeout(() => {
@@ -142,37 +152,63 @@ ws.on('open', () => {
   }, 100);
 });
 
+function parseFrame(data) {
+  // header(4) + event(4) + [session_size(4) + session]? + payload_size(4) + payload
+  const headerSize = (data[0] & 0xf) * 4;
+  const messageType = (data[1] >> 4) & 0xf;
+  const flags = data[1] & 0xf;
+  let cursor = headerSize;
+
+  // event 字段（4 bytes）
+  if (cursor + 4 > data.length) return { messageType, flags, event: null, payload: Buffer.alloc(0) };
+  const event = data.readInt32BE(cursor);
+  cursor += 4;
+
+  // 试读 session_size + session_id（如果有的话）
+  // 启发式：如果剩余 ≥ 8 bytes，先读 4 字节当 sessionSize，再判断它合理性
+  if (cursor + 4 <= data.length) {
+    const maybeSessionSize = data.readUInt32BE(cursor);
+    if (maybeSessionSize >= 0 && maybeSessionSize < 256 && cursor + 4 + maybeSessionSize + 4 <= data.length) {
+      // 看起来合理：跳过 session
+      cursor += 4 + maybeSessionSize;
+    }
+  }
+
+  // payload_size
+  if (cursor + 4 > data.length) return { messageType, flags, event, payload: Buffer.alloc(0) };
+  const payloadSize = data.readUInt32BE(cursor);
+  cursor += 4;
+  const payload = data.slice(cursor, cursor + payloadSize);
+  return { messageType, flags, event, payload };
+}
+
 ws.on('message', (data) => {
-  if (Buffer.isBuffer(data) && data.length >= 4) {
-    const messageType = (data[1] >> 4) & 0xf;
-    const flags = data[1] & 0xf;
-    const isAudio = messageType === 0b1011; // audio-only server response
+  if (!Buffer.isBuffer(data) || data.length < 16) return;
+  let frame;
+  try {
+    frame = parseFrame(data);
+  } catch (err) {
+    console.log('[volc-tts] ← parse error:', err.message);
+    return;
+  }
 
-    if (isAudio) {
-      // header(4) + event(4) + session_size(4) + session_str + payload_size(4) + payload
-      // 简化：直接计算 audio 字节数
-      if (firstAudioChunkAt === null) {
-        firstAudioChunkAt = Date.now();
-        console.log(`[volc-tts] ← first audio chunk (TTFB ${firstAudioChunkAt - startedAt}ms)`);
-      }
-      totalAudioBytes += data.length;
-      return;
+  const isAudio = frame.messageType === 0b1011;
+  if (isAudio) {
+    if (firstAudioChunkAt === null) {
+      firstAudioChunkAt = Date.now();
+      console.log(`[volc-tts] ← first audio chunk (TTFB ${firstAudioChunkAt - startedAt}ms, ${frame.payload.length} bytes)`);
     }
+    audioChunks.push(frame.payload);
+    totalAudioBytes += frame.payload.length;
+    return;
+  }
 
-    // 控制消息：找 JSON body
-    try {
-      // 找 payload JSON：从 data 末尾往前找最后一个完整 JSON
-      const tail = data.slice(8).toString('utf8');
-      const lastBraceIdx = tail.lastIndexOf('{');
-      if (lastBraceIdx !== -1) {
-        const jsonStr = tail.slice(lastBraceIdx);
-        console.log(`[volc-tts] ← ctrl mt=${messageType} flags=${flags.toString(2)}: ${jsonStr.slice(0, 300)}`);
-      } else {
-        console.log(`[volc-tts] ← ctrl mt=${messageType} flags=${flags.toString(2)} (${data.length} bytes)`);
-      }
-    } catch {
-      console.log(`[volc-tts] ← ctrl mt=${messageType} (${data.length} bytes)`);
-    }
+  // 控制消息
+  try {
+    const txt = frame.payload.toString('utf8');
+    console.log(`[volc-tts] ← ctrl mt=${frame.messageType} event=${frame.event}: ${txt.slice(0, 300)}`);
+  } catch {
+    console.log(`[volc-tts] ← ctrl mt=${frame.messageType} event=${frame.event} (${frame.payload.length} bytes binary)`);
   }
 });
 
@@ -184,14 +220,23 @@ ws.on('close', (code, reason) => {
   closed = true;
   const totalMs = Date.now() - startedAt;
   console.log(`[volc-tts] close code=${code} reason=${reason?.toString()}`);
-  console.log(`[volc-tts] summary: total=${totalMs}ms audio_bytes=${totalAudioBytes} TTFB=${firstAudioChunkAt ? firstAudioChunkAt - startedAt : 'N/A'}ms`);
+  console.log(`[volc-tts] summary: total=${totalMs}ms audio_bytes=${totalAudioBytes} TTFB=${firstAudioChunkAt ? firstAudioChunkAt - startedAt : 'N/A'}ms chunks=${audioChunks.length}`);
+
+  if (audioChunks.length > 0) {
+    const merged = Buffer.concat(audioChunks);
+    writeFileSync(outputPath, merged);
+    console.log(`[volc-tts] 🎧 saved mp3: ${outputPath}`);
+    console.log(`[volc-tts]    file size: ${merged.length} bytes`);
+  } else {
+    console.log('[volc-tts] ⚠️ 没收到音频，未保存');
+  }
   process.exit(0);
 });
 
-// 8s 超时
+const TIMEOUT_MS = Number(process.env.VOLC_TTS_PROBE_TIMEOUT_MS ?? 8000);
 setTimeout(() => {
   if (!closed) {
-    console.log('[volc-tts] (probe timeout, closing)');
+    console.log(`[volc-tts] (probe timeout ${TIMEOUT_MS}ms, closing)`);
     ws.close();
   }
-}, 8000);
+}, TIMEOUT_MS);
