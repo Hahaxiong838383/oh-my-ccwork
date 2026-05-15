@@ -112,7 +112,29 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 - **冗余备注**：FOCUS_PROGRESS_TICK event + tickFocusProgress effect 是按 prompt 加的，但 hook 实际选择直接调 setter，event 路径目前 dead code。P4 reward-machine 交接时可能用上，先保留
 | P2 动效 | ✅ done | a47049124 | 2026-05-15 14:12 |
 | P3 过渡 | ✅ done | 9f207bd6e | 2026-05-15 14:20 |
-| P4 交接 | ✅ done | TBD（本 commit） | 2026-05-15 14:42 |
+| P4 交接 | ✅ done | abc5bd389 | 2026-05-15 14:42 |
+| P5 字幕修复 | ✅ done | TBD（本 commit） | 2026-05-15 17:22 |
+
+## 13. P5 验收摘要
+
+- **Codex**：2 文件改动（Screen.tsx Fragment 包 + MainScreen 删除内部 StatusBar）
+- **Gemini Review R1**：5/5 R1-R5+TS PASS，R6 **CONCERN** — z-layer-feedback (50) < z-layer-mask (70) 会被 OpenBox/Welcome 遮挡
+- **CC 修衍生缺陷**：tailwind.config.js `layer-feedback` 50 → 75（高于 mask 70，低于 modal 80）
+- **Gemini Review R2**：3/3 PASS，APPROVE
+- **CC 验证**：写 `apps/web/scripts/p5-subtitle-test.mjs` mini E2E，注入 subtitle 截图 focusRunning/focusCompanion 两个 scene，字幕条**真显示** ✅
+- **Welcome 截图字幕不显示**：是 Welcome 自渲染字幕（不依赖 StatusBar），不在 P5 范围，技术债存档
+
+## 12. P5 任务（字幕跨场景修复）
+
+**问题**：P1 路由分流后 FocusRunning/FocusCompanion 没渲染 StatusBar 组件，字幕条消失。
+
+**决策**：StatusBar 从 MainScreen 提升到 Screen.tsx 层级，所有 scene 共享。
+
+**改动文件**：
+- `apps/web/src/screen/Screen.tsx`：Fragment 包 scene + StatusBar（ShutdownScreen 不带）
+- `apps/web/src/components/MainScreen.tsx`：删除内部 StatusBar import + JSX
+
+**回滚锚点**：P5 失败 → `git revert <P5 commit>`，回到 abc5bd389（功能不变，字幕仍缺失）。
 
 ## 11. P4 验收摘要
 

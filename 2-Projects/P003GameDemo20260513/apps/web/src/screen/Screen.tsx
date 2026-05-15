@@ -1,6 +1,7 @@
 import { useAppStore } from '../store/app-store';
 import { MainScreen } from '../components/MainScreen';
 import { ShutdownScreen } from '../components/ShutdownScreen';
+import { StatusBar } from '../components/StatusBar';
 import { FocusRunning } from '../scenes/FocusRunning';
 import { FocusCompanion } from '../scenes/FocusCompanion';
 import { useFocusProgressTick } from '../hooks/useFocusProgressTick';
@@ -21,7 +22,18 @@ export function Screen() {
   useFocusArtPreload(focusMode);
 
   if (!lidOpen) return <ShutdownScreen />;
-  if (focusMachine !== 'idle' && focusMode === 'explore') return <FocusRunning />;
-  if (focusMachine !== 'idle' && focusMode === 'companion') return <FocusCompanion />;
-  return <MainScreen />;
+
+  const scene =
+    focusMachine !== 'idle' && focusMode === 'explore'
+      ? <FocusRunning />
+      : focusMachine !== 'idle' && focusMode === 'companion'
+        ? <FocusCompanion />
+        : <MainScreen />;
+
+  return (
+    <>
+      {scene}
+      <StatusBar />
+    </>
+  );
 }

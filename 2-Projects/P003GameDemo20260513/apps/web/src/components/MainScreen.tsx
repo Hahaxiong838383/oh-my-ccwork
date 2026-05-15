@@ -2,7 +2,6 @@ import { CoinHud } from './CoinHud';
 import { EcoBackground } from './EcoBackground';
 import { FocusToggle } from './FocusToggle';
 import { NewbieHalo } from './NewbieHalo';
-import { StatusBar } from './StatusBar';
 import { WizardOfOz } from './WizardOfOz';
 import { Xiaoke } from './Xiaoke';
 import { XiaokeBlink } from './XiaokeBlink';
@@ -30,9 +29,6 @@ export function MainScreen({ showHalo = true }: MainScreenProps) {
           </XiaokeBlink>
         </NewbieHalo>
       </div>
-
-      <StatusBar />
-
       <div className="absolute bottom-3 left-4 z-layer-ui-normal">
         <FocusToggle />
       </div>

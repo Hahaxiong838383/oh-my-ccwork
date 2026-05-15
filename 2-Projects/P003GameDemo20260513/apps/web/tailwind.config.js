@@ -62,7 +62,7 @@ export default {
         'layer-fx-weak': '30',
         'layer-ui-normal': '40',
         'layer-ui-focus': '45',
-        'layer-feedback': '50',
+        'layer-feedback': '75',
         'layer-fx-strong': '60',
         'layer-mask': '70',
         'layer-modal': '80',
