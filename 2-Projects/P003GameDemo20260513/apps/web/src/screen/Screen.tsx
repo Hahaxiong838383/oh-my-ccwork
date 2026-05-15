@@ -4,6 +4,7 @@ import { ShutdownScreen } from '../components/ShutdownScreen';
 import { FocusRunning } from '../scenes/FocusRunning';
 import { FocusCompanion } from '../scenes/FocusCompanion';
 import { useFocusProgressTick } from '../hooks/useFocusProgressTick';
+import { useFocusArtPreload } from '../hooks/useFocusArtPreload';
 
 /**
  * Screen —— 800×480 屏幕路由器（V0.4 简化版）
@@ -17,6 +18,7 @@ export function Screen() {
   const lidOpen = useAppStore((s) => s.lidOpen);
   const focusMachine = useAppStore((s) => s.focusMachine);
   const focusMode = useAppStore((s) => s.focusMode);
+  useFocusArtPreload(focusMode);
 
   if (!lidOpen) return <ShutdownScreen />;
   if (focusMachine !== 'idle' && focusMode === 'explore') return <FocusRunning />;

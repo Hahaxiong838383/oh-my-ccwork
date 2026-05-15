@@ -23,7 +23,7 @@ export function DebugBar() {
   const focusSpeed = useAppStore((s) => s.focusSpeed);
   const [sceneValue, setSceneValue] = useState<SceneId | ''>('');
   const [progressStart, setProgressStart] = useState<string>('');
-  const { dispatchBoot } = useTransitionRunner();
+  const { dispatchBoot, dispatchFocus } = useTransitionRunner();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -138,6 +138,32 @@ export function DebugBar() {
           </optgroup>
         </select>
       </div>
+
+      {focusMachine === 'idle' && (
+        <div className="mt-2 flex items-center gap-2">
+          <span className={labelClass}>过渡：</span>
+          <button
+            type="button"
+            onClick={() => {
+              jumpToScene('askMode');
+              dispatchFocus({ type: 'LAUNCH', mode: 'explore' });
+            }}
+            className="h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10"
+          >
+            ▶ 演示出航过渡
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              jumpToScene('askMode');
+              dispatchFocus({ type: 'LAUNCH', mode: 'companion' });
+            }}
+            className="h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10"
+          >
+            ▶ 演示静思过渡
+          </button>
+        </div>
+      )}
 
       {focusMachine !== 'idle' && (
         <>

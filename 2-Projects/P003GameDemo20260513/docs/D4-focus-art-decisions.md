@@ -110,6 +110,19 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 - **CC 视觉确认**：DebugBar 速度滑块 + 进度输入框只在 focus 场景显示，welcome/askMode 等场景不污染
 - **Gemini Review**：10/10 PASS，0 concerns，APPROVE
 - **冗余备注**：FOCUS_PROGRESS_TICK event + tickFocusProgress effect 是按 prompt 加的，但 hook 实际选择直接调 setter，event 路径目前 dead code。P4 reward-machine 交接时可能用上，先保留
-| P2 动效 | ⏸ pending | — | — |
-| P3 过渡 | ⏸ pending | — | — |
+| P2 动效 | ✅ done | a47049124 | 2026-05-15 14:12 |
+| P3 过渡 | ✅ done | TBD（本 commit） | 2026-05-15 14:20 |
 | P4 交接 | ⏸ pending | — | — |
+
+## 9. P2 验收摘要
+
+- **Codex**：3 个文件改动（新建 useStageCrossfade hook + 2 scene 加 CSS keyframe）
+- **CC**：build/scope-check PASS，e2e 七段 PASS（0 errors）
+- **Gemini Review**：5/5 PASS, APPROVE
+
+## 10. P3 验收摘要
+
+- **Codex**：5 个文件改动（FocusRunning launching 双图层 + FocusCompanion 简化 + useFocusArtPreload + Screen 接入 + DebugBar 演示按钮）
+- **CC 发现并修复 typo**：codex 写的 `08-near-full.png` 实际磁盘是 `08-handoff.png`，cc 手修
+- **CC**：build/scope-check PASS，e2e 七段 PASS
+- **Gemini Review**：6/6 PASS, APPROVE + 3 个好评观察（80ms linear 平滑过渡 / 1700ms 切换姿态锁定 / Companion 静思简化合理）

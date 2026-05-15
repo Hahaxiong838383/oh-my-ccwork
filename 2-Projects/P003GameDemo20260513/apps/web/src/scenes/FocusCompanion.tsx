@@ -1,4 +1,6 @@
+import { useEffect, useRef } from 'react';
 import { FocusToggle } from '../components/FocusToggle';
+import { getSharedVoiceClient } from '../services/voice-client';
 import { useStageCrossfade } from '../hooks/useStageCrossfade';
 import { useAppStore, type FocusStage } from '../store/app-store';
 
@@ -8,6 +10,7 @@ const STAGE_IMAGE_MAP: Record<FocusStage, string> = {
   openable: '/art/focus-companion/03-openable.png',
   full: '/art/focus-companion/04-full.png',
 };
+const LAUNCH_TTS_LINE = '慢慢来，深呼吸放松一下。';
 
 function getStageMotionClass(stage: FocusStage): string {
   if (stage === 'locked') return 'fc-motion-locked';
@@ -17,7 +20,9 @@ function getStageMotionClass(stage: FocusStage): string {
 }
 
 export function FocusCompanion() {
+  const focusMachine = useAppStore((s) => s.focusMachine);
   const focusStage = useAppStore((s) => s.focusStage);
+  const launchSpokenRef = useRef(false);
   const { currentSrc, previousSrc, isFading, currentOpacity } = useStageCrossfade(
     focusStage,
     STAGE_IMAGE_MAP,
@@ -25,6 +30,46 @@ export function FocusCompanion() {
       fadeDurationMs: 300,
     },
   );
+
+  useEffect(() => {
+    if (focusMachine !== 'launching') {
+      launchSpokenRef.current = false;
+      return;
+    }
+    if (launchSpokenRef.current) return;
+    launchSpokenRef.current = true;
+    getSharedVoiceClient().sayDirect(LAUNCH_TTS_LINE);
+  }, [focusMachine]);
+
+  if (focusMachine === 'launching') {
+    return (
+      <div className="absolute inset-0 overflow-hidden bg-screen-bg">
+        <img
+          src={STAGE_IMAGE_MAP.locked}
+          alt="静思启动中"
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{
+            opacity: 0,
+            animation: 'fc-launch-fade-in 600ms ease-out forwards',
+          }}
+          draggable={false}
+        />
+        <div className="absolute bottom-3 left-4 z-layer-ui-normal">
+          <FocusToggle />
+        </div>
+        <style>{`
+          @keyframes fc-launch-fade-in {
+            from {
+              opacity: 0;
+            }
+            to {
+              opacity: 1;
+            }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-screen-bg">
