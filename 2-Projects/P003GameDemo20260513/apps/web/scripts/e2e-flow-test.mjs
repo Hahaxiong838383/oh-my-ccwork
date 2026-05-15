@@ -11,11 +11,10 @@
  *   6. 输出验收报告
  *
  * 用法：node apps/web/scripts/e2e-flow-test.mjs [--url=http://localhost:5173]
- * 依赖：playwright（在 /tmp/node_modules）
+ * 依赖：playwright（apps/web devDependency）
  */
 
-import pkg from '/tmp/node_modules/playwright/index.js';
-const { chromium } = pkg;
+import { chromium } from 'playwright';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -109,7 +108,7 @@ async function main() {
     }, 500);
   }
 
-  // C2. 状态机收敛：askMode → 选"探索" → focusMachine 进 launching → 4s 后 running → 点"返舱" → confirmExit → 点"确定" → familyCoin +10
+  // C2. 状态机收敛：askMode → 选"出航"（aria-label，美术化后无可见文字）→ focusMachine 进 launching → 4s 后 running → 点"返舱" → confirmExit → 点"确定" → familyCoin +10
   console.log('\nC2. 状态机收敛验证（boot askMode → focusMachine → familyCoin）');
   await page.selectOption('select[aria-label="跳关选择"]', 'askMode');
   await page.waitForTimeout(400);
@@ -118,7 +117,7 @@ async function main() {
     return w.__APP_STORE__?.getState?.().focusMachine ?? 'unknown';
   });
 
-  await page.click('button:has-text("探索")');
+  await page.click('button[aria-label="出航"]');
   await page.waitForTimeout(300);
   const focusAfterPick = await page.evaluate(() => {
     return window.__APP_STORE__?.getState?.().focusMachine ?? 'unknown';
