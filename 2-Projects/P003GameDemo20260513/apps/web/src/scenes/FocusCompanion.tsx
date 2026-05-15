@@ -1,4 +1,5 @@
 import { FocusToggle } from '../components/FocusToggle';
+import { useStageCrossfade } from '../hooks/useStageCrossfade';
 import { useAppStore, type FocusStage } from '../store/app-store';
 
 const STAGE_IMAGE_MAP: Record<FocusStage, string> = {
@@ -8,21 +9,130 @@ const STAGE_IMAGE_MAP: Record<FocusStage, string> = {
   full: '/art/focus-companion/04-full.png',
 };
 
+function getStageMotionClass(stage: FocusStage): string {
+  if (stage === 'locked') return 'fc-motion-locked';
+  if (stage === 'active') return 'fc-motion-active';
+  if (stage === 'openable') return 'fc-motion-openable';
+  return 'fc-motion-full';
+}
+
 export function FocusCompanion() {
   const focusStage = useAppStore((s) => s.focusStage);
+  const { currentSrc, previousSrc, isFading, currentOpacity } = useStageCrossfade(
+    focusStage,
+    STAGE_IMAGE_MAP,
+    {
+      fadeDurationMs: 300,
+    },
+  );
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-screen-bg">
-      <img
-        src={STAGE_IMAGE_MAP[focusStage]}
-        alt="静思专注"
-        className="h-full w-full object-cover"
-        draggable={false}
-      />
+      <div className={`relative h-full w-full ${getStageMotionClass(focusStage)}`}>
+        {previousSrc ? (
+          <img
+            src={previousSrc}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{
+              opacity: isFading ? 0 : 1,
+              transition: 'opacity 300ms ease-in-out',
+            }}
+            draggable={false}
+          />
+        ) : null}
+
+        <img
+          src={currentSrc}
+          alt="静思专注"
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{
+            opacity: currentOpacity,
+            transition: 'opacity 300ms ease-in-out',
+          }}
+          draggable={false}
+        />
+      </div>
 
       <div className="absolute bottom-3 left-4 z-layer-ui-normal">
         <FocusToggle />
       </div>
+
+      <style>{`
+        .fc-motion-locked,
+        .fc-motion-active,
+        .fc-motion-openable,
+        .fc-motion-full {
+          transform-origin: center center;
+          will-change: transform, filter;
+        }
+
+        .fc-motion-locked {
+          animation: fc-lock-shake 4s ease-in-out infinite;
+        }
+
+        .fc-motion-active {
+          animation: fc-active-breathe 2.5s ease-in-out infinite;
+        }
+
+        .fc-motion-openable {
+          animation: fc-openable-call 1.4s ease-in-out infinite;
+        }
+
+        .fc-motion-full {
+          animation: fc-full-call 1s ease-in-out infinite;
+        }
+
+        @keyframes fc-lock-shake {
+          0%, 70%, 100% {
+            transform: rotate(0deg);
+          }
+          73% {
+            transform: rotate(-1.5deg);
+          }
+          76% {
+            transform: rotate(1.5deg);
+          }
+          79% {
+            transform: rotate(-1deg);
+          }
+          82% {
+            transform: rotate(0deg);
+          }
+        }
+
+        @keyframes fc-active-breathe {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.005);
+          }
+        }
+
+        @keyframes fc-openable-call {
+          0%, 100% {
+            transform: scale(1);
+            filter: brightness(1);
+          }
+          50% {
+            transform: scale(1.025);
+            filter: brightness(1.08);
+          }
+        }
+
+        @keyframes fc-full-call {
+          0%, 100% {
+            transform: scale(1);
+            filter: brightness(1);
+          }
+          50% {
+            transform: scale(1.04);
+            filter: brightness(1.15);
+          }
+        }
+      `}</style>
     </div>
   );
 }
