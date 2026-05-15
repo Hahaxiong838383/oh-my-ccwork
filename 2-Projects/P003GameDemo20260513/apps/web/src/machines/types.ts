@@ -6,6 +6,8 @@ import type {
   VoiceStatus,
   XiaokeEmotion,
   SceneId,
+  FocusStage,
+  FocusMode,
 } from '../store/app-store';
 
 export type { BootState, FocusMachineState, RewardMachineState, SceneId };
@@ -24,6 +26,8 @@ export type FocusEvent =
   | { type: 'LAUNCH'; mode: 'explore' | 'companion' }
   | { type: 'LAUNCH_ANIM_END' }
   | { type: 'FOCUS_PROGRESS_TICK'; progress: number }
+  | { type: 'FOCUS_REWARD_READY' }
+  | { type: 'REWARD_FLOW_DONE' }
   | { type: 'PRESENCE_LOST' }
   | { type: 'PRESENCE_BACK' }
   | { type: 'EXIT_REQUEST' }
@@ -55,7 +59,11 @@ export type Effect =
   | { type: 'setCurrentBoxLevel'; level: BoxLevel | null }
   | { type: 'pushOpenedBoxLevel'; level: BoxLevel }
   | { type: 'tickFocusProgress'; progress: number }
-  | { type: 'setFocusStartedAt'; timestamp: number | null };
+  | { type: 'setFocusProgress'; progress: number }
+  | { type: 'setFocusStage'; stage: FocusStage }
+  | { type: 'setFocusMode'; mode: FocusMode }
+  | { type: 'setFocusStartedAt'; timestamp: number | null }
+  | { type: 'dispatchRewardEvent'; event: RewardEvent };
 
 export interface TransitionResult<S> {
   state: S;

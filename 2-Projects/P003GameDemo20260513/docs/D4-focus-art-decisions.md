@@ -111,8 +111,17 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 - **Gemini Review**：10/10 PASS，0 concerns，APPROVE
 - **冗余备注**：FOCUS_PROGRESS_TICK event + tickFocusProgress effect 是按 prompt 加的，但 hook 实际选择直接调 setter，event 路径目前 dead code。P4 reward-machine 交接时可能用上，先保留
 | P2 动效 | ✅ done | a47049124 | 2026-05-15 14:12 |
-| P3 过渡 | ✅ done | TBD（本 commit） | 2026-05-15 14:20 |
-| P4 交接 | ⏸ pending | — | — |
+| P3 过渡 | ✅ done | 9f207bd6e | 2026-05-15 14:20 |
+| P4 交接 | ✅ done | TBD（本 commit） | 2026-05-15 14:42 |
+
+## 11. P4 验收摘要
+
+- **Codex**：8 个文件改动（store + types + focus-machine + machines/index + hook + 2 scene + DebugBar）
+- **rewarding state 完整闭环**：running → rewarding (FOCUS_REWARD_READY) → idle (REWARD_FLOW_DONE)
+- **边沿检测**：useFocusProgressTick 用 `rewardLeftIdleRef + rewardDoneSentRef` 跟踪 reward 离开 idle 后回 'idle' 或 'done'，避免误触发
+- **CC P4 mini E2E**：写了 `apps/web/scripts/p4-reward-handoff-test.mjs`，模拟一键满进度 → 整套链路 → 最终 focus.idle / reward.done。**PASS**（0 errors, favicon 404 已过滤）
+- **截图证据**：`.scratch/p4-screenshots/`，02-after-quick-full 出航场景 + OpenBox overlay 显示，05-final-state 已回 MainScreen
+- **Gemini Review**：8/8 PASS, APPROVE, 0 concerns
 
 ## 9. P2 验收摘要
 

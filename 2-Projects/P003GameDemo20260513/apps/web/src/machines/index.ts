@@ -89,8 +89,20 @@ export function applyEffects(effects: readonly Effect[], onTimer: (key: string) 
       case 'tickFocusProgress':
         store.setFocusProgress(effect.progress);
         break;
+      case 'setFocusProgress':
+        store.setFocusProgress(effect.progress);
+        break;
+      case 'setFocusStage':
+        store.setFocusStage(effect.stage);
+        break;
+      case 'setFocusMode':
+        store.setFocusMode(effect.mode);
+        break;
       case 'setFocusStartedAt':
         store.setFocusStartedAt(effect.timestamp);
+        break;
+      case 'dispatchRewardEvent':
+        internalDispatchReward(effect.event);
         break;
     }
   }

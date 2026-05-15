@@ -26,6 +26,7 @@ export type FocusMachineState =
   | 'idle'
   | 'launching'
   | 'running'
+  | 'rewarding'
   | 'paused'
   | 'confirmExit';
 

@@ -39,6 +39,16 @@ export function focusTransition(
       break;
 
     case 'running':
+      if (event.type === 'FOCUS_REWARD_READY') {
+        return {
+          state: 'rewarding',
+          effects: [
+            { type: 'setFocusStage', stage: 'full' },
+            { type: 'dispatchRewardEvent', event: { type: 'OPEN_BOX', level: 'rare' } },
+            { type: 'playSfx', id: 'reward-flow-start' },
+          ],
+        };
+      }
       if (event.type === 'FOCUS_PROGRESS_TICK') {
         return {
           state: 'running',
@@ -61,6 +71,21 @@ export function focusTransition(
           effects: [
             { type: 'setSubtitle', text: '确定结束学习吗？' },
             { type: 'startTimer', key: 'exitConfirm', ms: EXIT_CONFIRM_TIMEOUT_MS },
+          ],
+        };
+      }
+      break;
+
+    case 'rewarding':
+      if (event.type === 'REWARD_FLOW_DONE') {
+        return {
+          state: 'idle',
+          effects: [
+            { type: 'setFocusProgress', progress: 0 },
+            { type: 'setFocusStartedAt', timestamp: null },
+            { type: 'setFocusStage', stage: 'locked' },
+            { type: 'setFocusMode', mode: null },
+            { type: 'setSubtitle', text: '' },
           ],
         };
       }

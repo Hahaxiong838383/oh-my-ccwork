@@ -14,6 +14,7 @@ const STAGE_IMAGE_MAP: Record<FocusStage, string> = {
 const ACTIVE_ROTATING_RING_SRC = '/art/focus-running/05-active-rotating.png';
 const LAUNCHING_PRIMARY_SRC = '/art/focus-running/01-launching.png';
 const LAUNCHING_TRANSITION_SRC = '/art/focus-running/02-transition.png';
+const REWARDING_STATIC_SRC = '/art/focus-running/08-handoff.png';
 const LAUNCH_TTS_LINE = '坐稳啦，我们要出发咯！';
 
 function getStageMotionClass(stage: FocusStage): string {
@@ -109,6 +110,7 @@ function FocusRunningLaunching({ focusMachine }: { focusMachine: FocusMachineSta
 export function FocusRunning() {
   const focusMachine = useAppStore((s) => s.focusMachine);
   const focusStage = useAppStore((s) => s.focusStage);
+  const [showRewardFlash, setShowRewardFlash] = useState(false);
   const { currentSrc, previousSrc, isFading, currentOpacity } = useStageCrossfade(
     focusStage,
     STAGE_IMAGE_MAP,
@@ -120,6 +122,18 @@ export function FocusRunning() {
     },
   );
 
+  useEffect(() => {
+    if (focusMachine !== 'rewarding') {
+      setShowRewardFlash(false);
+      return;
+    }
+    setShowRewardFlash(true);
+    const id = window.setTimeout(() => {
+      setShowRewardFlash(false);
+    }, 200);
+    return () => window.clearTimeout(id);
+  }, [focusMachine]);
+
   if (focusMachine === 'launching') {
     return (
       <div className="absolute inset-0 overflow-hidden bg-screen-bg">
@@ -127,6 +141,33 @@ export function FocusRunning() {
         <div className="absolute bottom-3 left-4 z-layer-ui-normal">
           <FocusToggle />
         </div>
+      </div>
+    );
+  }
+
+  if (focusMachine === 'rewarding') {
+    return (
+      <div className="absolute inset-0 overflow-hidden bg-screen-bg">
+        <img
+          src={REWARDING_STATIC_SRC}
+          alt="出航奖励结算中"
+          className="absolute inset-0 h-full w-full object-cover"
+          draggable={false}
+        />
+        {showRewardFlash ? (
+          <div
+            className="pointer-events-none absolute inset-0 bg-white"
+            style={{ animation: 'fr-reward-flash 200ms ease-out both' }}
+            aria-hidden="true"
+          />
+        ) : null}
+        <style>{`
+          @keyframes fr-reward-flash {
+            0% { opacity: 0; }
+            40% { opacity: 0.7; }
+            100% { opacity: 0; }
+          }
+        `}</style>
       </div>
     );
   }

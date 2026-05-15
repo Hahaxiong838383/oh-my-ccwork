@@ -10,6 +10,7 @@ const STAGE_IMAGE_MAP: Record<FocusStage, string> = {
   openable: '/art/focus-companion/03-openable.png',
   full: '/art/focus-companion/04-full.png',
 };
+const REWARDING_STATIC_SRC = '/art/focus-companion/04-full.png';
 const LAUNCH_TTS_LINE = '慢慢来，深呼吸放松一下。';
 
 function getStageMotionClass(stage: FocusStage): string {
@@ -67,6 +68,19 @@ export function FocusCompanion() {
             }
           }
         `}</style>
+      </div>
+    );
+  }
+
+  if (focusMachine === 'rewarding') {
+    return (
+      <div className="absolute inset-0 overflow-hidden bg-screen-bg">
+        <img
+          src={REWARDING_STATIC_SRC}
+          alt="静思奖励结算中"
+          className="absolute inset-0 h-full w-full object-cover"
+          draggable={false}
+        />
       </div>
     );
   }

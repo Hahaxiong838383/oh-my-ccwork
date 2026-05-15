@@ -212,6 +212,17 @@ export function DebugBar() {
             >
               跳到
             </button>
+            {focusMachine === 'running' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  useAppStore.getState().setFocusProgress(100);
+                }}
+                className="h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10"
+              >
+                ⏩ 一键满进度
+              </button>
+            ) : null}
           </div>
         </>
       )}
