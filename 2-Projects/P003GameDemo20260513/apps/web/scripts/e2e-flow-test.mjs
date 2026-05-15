@@ -88,11 +88,11 @@ async function main() {
   await step(page, 'a04-nightreport-5s', null, 2500);
   await step(page, 'a05-askmode-12s', null, 6500);
 
-  // B. 跳关下拉条全 10 项
-  console.log('\nB. 跳关下拉条全 10 项');
+  // B. 跳关下拉条全 11 项
+  console.log('\nB. 跳关下拉条全 11 项');
   const scenes = [
     'welcome', 'nightReport', 'askMode', 'focusRunning',
-    'boxCommon', 'boxRare', 'boxEpic', 'boxLegendary',
+    'focusCompanion', 'boxCommon', 'boxRare', 'boxEpic', 'boxLegendary',
     'ecoUnlock', 'farewell',
   ];
   for (const scene of scenes) {
@@ -101,9 +101,9 @@ async function main() {
     }, 800);
   }
 
-  // C. 键盘快捷键 0-9
-  console.log('\nC. 键盘快捷键 0-9');
-  for (const key of ['1', '5', '8', '9', '0']) {
+  // C. 键盘快捷键 1-9/0/f
+  console.log('\nC. 键盘快捷键 1-9/0/f');
+  for (const key of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'f']) {
     await step(page, `c-key-${key}`, async () => {
       await page.keyboard.press(key);
     }, 500);

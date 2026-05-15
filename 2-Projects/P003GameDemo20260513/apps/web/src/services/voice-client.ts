@@ -33,6 +33,10 @@ type ServerMessage =
 
 class VoiceClientImpl implements VoiceClient {
   private ws: WebSocket | null = null;
+  private connectPromise: Promise<void> | null = null;
+  // 追踪「在途连接」（new WebSocket 已创建但 onopen 未触发）
+  // 用于：close() 时能取消在途 ws；onerror/onclose 身份比对，防止 stale 事件误清当前缓存
+  private pendingWs: WebSocket | null = null;
 
   private readonly listeners = new Map<VoiceEvent, Set<(data: any) => void>>();
 
@@ -66,22 +70,60 @@ class VoiceClientImpl implements VoiceClient {
 
   async connect(url: string): Promise<void> {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
+    if (this.connectPromise) return this.connectPromise;
 
-    await new Promise<void>((resolve, reject) => {
+    this.connectPromise = new Promise<void>((resolve, reject) => {
       const ws = new WebSocket(url);
       ws.binaryType = 'arraybuffer';
+      this.pendingWs = ws;
+      // closure 内局部变量：防止 onerror→onclose 双触发重复 reject，
+      // 或 resolve 之后 onclose 再次 settle 已结算的 promise
+      let settled = false;
+
+      const clearPendingIfSelf = () => {
+        if (this.pendingWs === ws) {
+          this.pendingWs = null;
+          this.connectPromise = null;
+        }
+      };
 
       ws.onopen = () => {
+        // close() 已被调用 / 已有新 connect 接管 → 当前 ws 不再是 pending，
+        // 直接收尾 ws 并丢弃，避免把僵尸连接放进 this.ws
+        if (this.pendingWs !== ws) {
+          try {
+            ws.close();
+          } catch {
+            // ignore
+          }
+          return;
+        }
+        settled = true;
         this.ws = ws;
+        clearPendingIfSelf();
         resolve();
       };
 
       ws.onerror = () => {
-        reject(new Error('WebSocket 连接失败'));
+        clearPendingIfSelf();
+        if (!settled) {
+          settled = true;
+          reject(new Error('WebSocket 连接失败'));
+        }
       };
 
       ws.onclose = () => {
-        this.ws = null;
+        // 握手期断（未 settled）必须 reject 并清缓存，否则 connectPromise 永远 pending 死锁
+        if (!settled) {
+          settled = true;
+          clearPendingIfSelf();
+          reject(new Error('WebSocket 连接关闭'));
+          return;
+        }
+        // settled 之后的 onclose：身份比对，防止 stale 连接关闭把活的 this.ws 吹掉
+        if (this.ws === ws) {
+          this.ws = null;
+        }
       };
 
       ws.onmessage = (evt) => {
@@ -127,6 +169,8 @@ class VoiceClientImpl implements VoiceClient {
         }
       };
     });
+
+    return this.connectPromise;
   }
 
   async startRecording(): Promise<void> {
@@ -398,6 +442,20 @@ class VoiceClientImpl implements VoiceClient {
   close(): void {
     this.stopRecording();
     this.bargeIn();
+
+    // 关掉在途连接（connect 已调用但 onopen 未触发），
+    // 否则后续 onopen 会把僵尸连接放进 this.ws
+    if (this.pendingWs && this.pendingWs !== this.ws) {
+      try {
+        this.pendingWs.close();
+      } catch {
+        // ignore
+      }
+      this.pendingWs = null;
+      // 同步清掉 connectPromise：pendingWs 已被 null，之后 ws.onclose 走身份比对
+      // 会失败，无法在那时清理 connectPromise，否则下次 connect 会返回 reject 旧 promise 死链
+      this.connectPromise = null;
+    }
 
     if (this.ws) {
       this.ws.close();

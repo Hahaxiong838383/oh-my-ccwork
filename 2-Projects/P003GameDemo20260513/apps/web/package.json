@@ -9,8 +9,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "check:scope": "node scripts/check-scope-boundary.mjs",
-    "config:validate": "tsx src/config/validate.ts"
+    "check:scope": "node scripts/check-scope-boundary.mjs"
   },
   "dependencies": {
     "@xstate/react": "^4.1.1",
