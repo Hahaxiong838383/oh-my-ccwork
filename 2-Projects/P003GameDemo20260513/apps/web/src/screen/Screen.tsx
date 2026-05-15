@@ -1,6 +1,9 @@
 import { useAppStore } from '../store/app-store';
 import { MainScreen } from '../components/MainScreen';
 import { ShutdownScreen } from '../components/ShutdownScreen';
+import { FocusRunning } from '../scenes/FocusRunning';
+import { FocusCompanion } from '../scenes/FocusCompanion';
+import { useFocusProgressTick } from '../hooks/useFocusProgressTick';
 
 /**
  * Screen —— 800×480 屏幕路由器（V0.4 简化版）
@@ -9,7 +12,14 @@ import { ShutdownScreen } from '../components/ShutdownScreen';
  * 仅保留"开关盖"切换（lidOpen=false 时显示息屏）。
  */
 export function Screen() {
+  useFocusProgressTick();
+
   const lidOpen = useAppStore((s) => s.lidOpen);
+  const focusMachine = useAppStore((s) => s.focusMachine);
+  const focusMode = useAppStore((s) => s.focusMode);
+
   if (!lidOpen) return <ShutdownScreen />;
+  if (focusMachine !== 'idle' && focusMode === 'explore') return <FocusRunning />;
+  if (focusMachine !== 'idle' && focusMode === 'companion') return <FocusCompanion />;
   return <MainScreen />;
 }

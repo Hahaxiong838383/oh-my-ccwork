@@ -32,12 +32,19 @@ export function focusTransition(
             { type: 'clearTimer', key: 'launch' },
             { type: 'setSubtitle', text: '' },
             { type: 'setVoiceStatus', status: 'idle' },
+            { type: 'setFocusStartedAt', timestamp: Date.now() },
           ],
         };
       }
       break;
 
     case 'running':
+      if (event.type === 'FOCUS_PROGRESS_TICK') {
+        return {
+          state: 'running',
+          effects: [{ type: 'tickFocusProgress', progress: event.progress }],
+        };
+      }
       if (event.type === 'PRESENCE_LOST') {
         return {
           state: 'paused',

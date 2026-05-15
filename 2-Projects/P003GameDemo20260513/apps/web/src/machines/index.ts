@@ -86,6 +86,12 @@ export function applyEffects(effects: readonly Effect[], onTimer: (key: string) 
       case 'pushOpenedBoxLevel':
         store.pushOpenedBoxLevel(effect.level);
         break;
+      case 'tickFocusProgress':
+        store.setFocusProgress(effect.progress);
+        break;
+      case 'setFocusStartedAt':
+        store.setFocusStartedAt(effect.timestamp);
+        break;
     }
   }
 }
@@ -202,6 +208,7 @@ export function jumpToScene(scene: SceneId): void {
     scene === 'boxCommon' || scene === 'boxRare' ||
     scene === 'boxEpic' || scene === 'boxLegendary';
   const isFarewellScene = scene === 'farewell';
+  const isFocusScene = scene === 'focusRunning' || scene === 'focusCompanion';
 
   store.setBootState(preset.bootState);
   store.setFocusMachine(preset.focusMachine);
@@ -214,6 +221,11 @@ export function jumpToScene(scene: SceneId): void {
   store.setXiaokeEmotion(preset.xiaokeEmotion);
   store.setSetupComplete(preset.setupComplete);
   store.setFarewellState('hidden');
+  if (isFocusScene) {
+    store.setFocusStartedAt(Date.now());
+    store.setFocusProgress(0);
+    store.setFocusStage('locked');
+  }
   useAppStore.setState({
     stardust: preset.stardust,
     familyCoin: preset.familyCoin,

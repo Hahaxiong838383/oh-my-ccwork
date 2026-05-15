@@ -23,6 +23,7 @@ export type BootEvent =
 export type FocusEvent =
   | { type: 'LAUNCH'; mode: 'explore' | 'companion' }
   | { type: 'LAUNCH_ANIM_END' }
+  | { type: 'FOCUS_PROGRESS_TICK'; progress: number }
   | { type: 'PRESENCE_LOST' }
   | { type: 'PRESENCE_BACK' }
   | { type: 'EXIT_REQUEST' }
@@ -52,7 +53,9 @@ export type Effect =
   | { type: 'addFamilyCoin'; amount: number }
   | { type: 'setXiaokeEmotion'; emotion: XiaokeEmotion }
   | { type: 'setCurrentBoxLevel'; level: BoxLevel | null }
-  | { type: 'pushOpenedBoxLevel'; level: BoxLevel };
+  | { type: 'pushOpenedBoxLevel'; level: BoxLevel }
+  | { type: 'tickFocusProgress'; progress: number }
+  | { type: 'setFocusStartedAt'; timestamp: number | null };
 
 export interface TransitionResult<S> {
   state: S;

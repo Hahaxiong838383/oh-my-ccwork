@@ -100,8 +100,16 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 
 | Phase | 状态 | Commit | 完成时间 |
 |---|---|---|---|
-| P0 决策记录 | ⏳ in-progress | TBD | 2026-05-15 13:10 |
-| P1 基建 | ⏸ pending | — | — |
+| P0 决策记录 | ✅ done | c07959cfd | 2026-05-15 13:10 |
+| P1 基建 | ✅ done | TBD（本 commit） | 2026-05-15 14:02 |
+
+## 8. P1 验收摘要
+
+- **Codex**：9 个文件改动一次性产出，build/scope-check 双门 PASS
+- **CC E2E**：完整跑 A/B/C/C2/C3/C4/D 七段，21 transitions / 50 SFX / 0 errors / 0 404s，截图 `b-focusRunning.png` 和 `b-focusCompanion.png` 美术真正渲染（出航 4 锁宝箱 + 静思 4 礼物宝箱）
+- **CC 视觉确认**：DebugBar 速度滑块 + 进度输入框只在 focus 场景显示，welcome/askMode 等场景不污染
+- **Gemini Review**：10/10 PASS，0 concerns，APPROVE
+- **冗余备注**：FOCUS_PROGRESS_TICK event + tickFocusProgress effect 是按 prompt 加的，但 hook 实际选择直接调 setter，event 路径目前 dead code。P4 reward-machine 交接时可能用上，先保留
 | P2 动效 | ⏸ pending | — | — |
 | P3 过渡 | ⏸ pending | — | — |
 | P4 交接 | ⏸ pending | — | — |

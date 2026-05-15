@@ -53,6 +53,7 @@ export type SceneId =
 // focus 模式：出航（explore）/ 静思（companion）/ 未进入（null）
 // 由 jumpToScene 或 dispatchFocus(LAUNCH) 设置
 export type FocusMode = 'explore' | 'companion' | null;
+export type FocusStage = 'locked' | 'active' | 'openable' | 'full';
 
 export interface LEDState {
   on: boolean;
@@ -86,6 +87,14 @@ interface AppState {
   // —— focus 当前模式（V0.7 新增，跳关 + LAUNCH 都会设置）——
   focusMode: FocusMode;
   setFocusMode: (m: FocusMode) => void;
+  focusProgress: number;
+  focusStage: FocusStage;
+  focusStartedAt: number | null;
+  focusSpeed: number;
+  setFocusProgress: (p: number) => void;
+  setFocusStage: (s: FocusStage) => void;
+  setFocusStartedAt: (t: number | null) => void;
+  setFocusSpeed: (s: number) => void;
 
   // —— 当前正在演的宝箱等级（V0.6 新增）——
   currentBoxLevel: BoxLevel | null;
@@ -155,6 +164,18 @@ function saveOpenedBoxLevels(levels: BoxLevel[]): void {
   }
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+export function deriveFocusStage(progress: number): FocusStage {
+  const p = clamp(progress, 0, 100);
+  if (p < 25) return 'locked';
+  if (p < 60) return 'active';
+  if (p < 95) return 'openable';
+  return 'full';
+}
+
 export const useAppStore = create<AppState>((set) => ({
   stardust: 1280,
   familyCoin: 50,
@@ -177,6 +198,21 @@ export const useAppStore = create<AppState>((set) => ({
 
   focusMode: null,
   setFocusMode: (focusMode) => set({ focusMode }),
+  focusProgress: 0,
+  focusStage: 'locked',
+  focusStartedAt: null,
+  focusSpeed: 1,
+  setFocusProgress: (p) =>
+    set(() => {
+      const progress = clamp(p, 0, 100);
+      return {
+        focusProgress: progress,
+        focusStage: deriveFocusStage(progress),
+      };
+    }),
+  setFocusStage: (focusStage) => set({ focusStage }),
+  setFocusStartedAt: (focusStartedAt) => set({ focusStartedAt }),
+  setFocusSpeed: (s) => set({ focusSpeed: clamp(s, 0.5, 20) }),
 
   currentBoxLevel: null,
   setCurrentBoxLevel: (currentBoxLevel) => set({ currentBoxLevel }),
@@ -236,4 +272,3 @@ export const useAppStore = create<AppState>((set) => ({
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   (window as unknown as { __APP_STORE__: typeof useAppStore }).__APP_STORE__ = useAppStore;
 }
-

@@ -19,7 +19,10 @@ const OTHER_SCENES: SceneId[] = ['ecoUnlock', 'farewell'];
 export function DebugBar() {
   const setupComplete = useAppStore((s) => s.setupComplete);
   const wifiSignal = useAppStore((s) => s.wifiSignal);
+  const focusMachine = useAppStore((s) => s.focusMachine);
+  const focusSpeed = useAppStore((s) => s.focusSpeed);
   const [sceneValue, setSceneValue] = useState<SceneId | ''>('');
+  const [progressStart, setProgressStart] = useState<string>('');
   const { dispatchBoot } = useTransitionRunner();
 
   useEffect(() => {
@@ -135,6 +138,57 @@ export function DebugBar() {
           </optgroup>
         </select>
       </div>
+
+      {focusMachine !== 'idle' && (
+        <>
+          <div className="mt-2 flex items-center gap-2">
+            <span className={labelClass}>速度：</span>
+            <input
+              type="range"
+              min="0.5"
+              max="20"
+              step="0.5"
+              value={focusSpeed}
+              onChange={(event) => {
+                useAppStore.getState().setFocusSpeed(Number(event.target.value));
+              }}
+              className="h-6 min-w-[170px]"
+              aria-label="专注速度"
+            />
+            <span className="min-w-[42px] text-[10px] text-white/75">×{focusSpeed.toFixed(1)}</span>
+          </div>
+
+          <div className="mt-2 flex items-center gap-2">
+            <span className={labelClass}>进度：</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="5"
+              value={progressStart}
+              onChange={(event) => setProgressStart(event.target.value)}
+              placeholder="进度%"
+              className={`${debugInputClass} w-[88px]`}
+              aria-label="专注进度起点"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const rawValue = Number(progressStart);
+                if (!Number.isFinite(rawValue)) return;
+                const progress = Math.max(0, Math.min(100, rawValue));
+                const startedAt = Date.now() - (progress / focusSpeed) * 1000;
+                const store = useAppStore.getState();
+                store.setFocusProgress(progress);
+                store.setFocusStartedAt(startedAt);
+              }}
+              className="h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10"
+            >
+              跳到
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
