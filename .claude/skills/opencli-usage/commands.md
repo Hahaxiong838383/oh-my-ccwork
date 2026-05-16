@@ -1,8 +1,9 @@
-# Website Adapter Commands
+# Website Adapter Commands (v1.7.22 · 141 adapters)
 
-Detailed usage examples for all website adapters, sorted alphabetically by site.
+Detailed usage examples for website adapters, sorted alphabetically.
+For the latest list, run `opencli list`. For any adapter's help, run `opencli <site> --help`.
 
-Type legend: 🌐 = Browser (needs Chrome login) · ✅ = Public API (no browser)
+Type legend: 🌐 = Browser (needs Chrome login) · ✅ = Public API (no browser) · 🖥️ = Desktop App (CDP)
 
 ## 1688 🌐
 
@@ -123,6 +124,8 @@ opencli bluesky starter-packs             # Starter packs
 
 ## BOSS直聘 🌐
 
+**内置 14 命令**（API 拦截 + cookie）：
+
 ```bash
 opencli boss search "AI agent"          # 搜索职位 (query positional)
 opencli boss detail --security-id xxx    # 职位详情
@@ -139,6 +142,25 @@ opencli boss exchange --security-id xxx  # 交换联系方式
 opencli boss resume                    # 简历管理
 opencli boss stats                     # 数据统计
 ```
+
+**自定义增强 3 命令**（`~/.opencli/clis/boss/`，专注**求职端**生命周期；借鉴 boss-agent-cli / boss-cli 项目）：
+
+```bash
+# 求职端"看-投-面"生命周期
+opencli boss interviews --limit 20         # 面试邀请列表
+opencli boss history --limit 20            # 浏览过的职位历史
+opencli boss deliver-list --limit 20       # 简历投递记录
+```
+
+| 命令 | 类型 | API 端点 | referer |
+|------|------|----------|---------|
+| `interviews` | 读 | `/wapi/zpinterview/geek/interview/data.json` | `/web/geek/job` |
+| `history` | 读 | `/wapi/zpgeek/history/joblist.json?page=N` | `/web/geek/history` |
+| `deliver-list` | 读 | `/wapi/zprelation/resume/geekDeliverList?page=N` | `/web/geek/chat` |
+
+**共享基础设施 `utils-extra.js`**：bossFetch（page.evaluate + XHR + cookie 复刻）+ 反风控节流工具（gaussian/createBurstTracker/sleep — 备用于未来求职端批量投递功能）。
+
+> **关于批量招呼**：BOSS 的 `batchgreet` / `greetRecSortList` 是**招聘端**功能（HR 批量招呼系统推荐候选人），求职端账号调用会返回 `code=24 请切换身份后再试`。求职者投简历是 `search` → 拿 `securityId` → 单个 `greet`。
 
 ## Chaoxing (超星学习通) 🌐
 
@@ -814,3 +836,151 @@ opencli zsxq topics <group-id>            # 主题列表
 opencli zsxq topic <topic-id>             # 主题详情
 opencli zsxq search "关键词"              # 搜索
 ```
+
+## Liepin (猎聘) 🌐 + ✅
+
+```bash
+# 搜索职位（DOM 抓取，需浏览器登录）
+opencli liepin search "AI产品经理" --limit 10
+opencli liepin search "前端工程师" --salary "21-30万" --experience "3-5年"
+
+# 搜索职位（官方 MCP API，无需浏览器，需 token）
+opencli liepin api-search "产品经理" --address "北京" --salary "20-30万"
+opencli liepin api-search "前端" --education "本科" --experience "3-5年" --company-type "外企"
+
+# 职位详情（传 job ID 或完整 URL）
+opencli liepin detail 1982318719
+opencli liepin detail "https://www.liepin.com/job/1982318719.shtml"
+
+# 当前登录用户信息
+opencli liepin me
+
+# 投递简历（MCP API）
+opencli liepin apply 1982318719
+
+# 查看简历（MCP API）
+opencli liepin resume
+
+# 编辑简历模块（MCP API）
+opencli liepin resume-edit expectations '{"salary":"80000-100000"}'
+```
+
+| Command | Args | Description |
+|---------|------|-------------|
+| `search` 🌐 | `query`, `--city`, `--salary`, `--experience`, `--page`, `--limit` | 职位搜索（DOM 抓取，支持薪资/经验筛选） |
+| `api-search` ✅ | `query`, `--address`, `--salary`, `--education`, `--experience`, `--company-type`, `--company-name` | 职位搜索（官方 MCP API，无需浏览器） |
+| `detail` 🌐 | `job-id` (ID 或 URL) | 职位详情（含 JD/要求/公司） |
+| `me` 🌐 | — | 当前登录用户信息 |
+| `apply` ✅ | `job-id` (ID 或 URL), `--job-kind` | 投递简历（MCP API） |
+| `resume` ✅ | — | 查看我的简历（MCP API） |
+| `resume-edit` ✅ | `module`, `data` (JSON) | 编辑简历模块（basic/experience/expectations/self-assessment） |
+
+> **Token 配置**: MCP API 命令需要 `LIEPIN_MCP_TOKEN` 环境变量或 `~/.opencli/.env` 配置。获取方式：登录 https://www.liepin.com/mcp/server → 生成凭证（90 天有效）。
+
+---
+
+## New Adapters (v1.7.1 — v1.7.22)
+
+Below are adapters added since the original commands list. Run `opencli <site> --help` for full usage.
+
+### AI & Desktop Apps 🖥️
+
+| Site | Commands |
+|------|----------|
+| `antigravity` | `dump` `extract-code` `model` `new` `read` `send` `status` `watch` |
+| `chatgpt` | browser-based ChatGPT interaction |
+| `chatgpt-app` | desktop ChatGPT app control |
+| `chatwise` | ChatWise desktop app |
+| `claude` | Claude web/app interaction |
+| `codex` | Codex CLI integration |
+| `cursor` | Cursor IDE control |
+| `deepseek` | DeepSeek web chat |
+| `doubao-app` | 豆包桌面端 |
+| `discord-app` | Discord desktop app |
+| `qwen` | Qwen/通义千问 web chat |
+
+### Developer Tools ✅
+
+| Site | Commands |
+|------|----------|
+| `crates` | Rust crates.io search |
+| `dockerhub` | Docker Hub image search |
+| `endoflife` | endoflife.date — product lifecycle |
+| `flathub` | Flatpak app search |
+| `gitee` | Gitee repos/issues |
+| `goproxy` | Go module proxy search |
+| `homebrew` | Homebrew formulae search |
+| `maven` | Maven Central search |
+| `mdn` | MDN Web Docs search |
+| `npm` | npm package search |
+| `nuget` | NuGet package search |
+| `packagist` | PHP Packagist search |
+| `pypi` | PyPI package search |
+| `rubygems` | RubyGems search |
+
+### Academic & Research ✅
+
+| Site | Commands |
+|------|----------|
+| `baidu-scholar` | 百度学术搜索 |
+| `cnki` | 中国知网搜索 |
+| `dblp` | DBLP 计算机科学论文库 |
+| `google-scholar` | Google Scholar 论文搜索 |
+| `openalex` | OpenAlex 开放学术数据 |
+| `openreview` | OpenReview 论文评审 |
+| `pubmed` | PubMed 生物医学文献 |
+| `wanfang` | 万方数据搜索 |
+
+### Finance & Crypto 🌐
+
+| Site | Commands |
+|------|----------|
+| `binance` | Binance 币安行情 |
+| `coingecko` | CoinGecko 加密货币数据 |
+| `defillama` | DeFiLlama TVL 数据 |
+| `eastmoney` | 东方财富行情/资讯 |
+| `tdx` | 通达信行情 |
+| `ths` | 同花顺行情/资讯 |
+
+### News & Content ✅/🌐
+
+| Site | Commands |
+|------|----------|
+| `aibase` | AIbase AI 日报 |
+| `brave` | Brave Search |
+| `duckduckgo` | DuckDuckGo 搜索 |
+| `rednote` | 小红书（别名） |
+| `toutiao` | 今日头条 |
+| `uisdc` | 优设网（设计资讯） |
+
+### Life & Services 🌐
+
+| Site | Commands |
+|------|----------|
+| `dianping` | 大众点评 |
+| `indeed` | Indeed 求职搜索 |
+| `ke` | 贝壳找房 |
+| `maimai` | 脉脉职场 |
+| `mubu` | 幕布笔记 |
+| `nowcoder` | 牛客网 |
+| `powerchina` | 国网招聘 |
+| `taobao` | 淘宝搜索 |
+| `zlibrary` | Z-Library 电子书 |
+
+### Reference & Data ✅
+
+| Site | Commands |
+|------|----------|
+| `gov-law` | 中国法律法规检索 |
+| `gov-policy` | 中国政策文件检索 |
+| `lichess` | Lichess 国际象棋 |
+| `nvd` | NVD 安全漏洞库 |
+| `oeis` | OEIS 整数数列 |
+| `openfda` | OpenFDA 药品/设备数据 |
+| `osv` | OSV 开源漏洞数据库 |
+| `rest-countries` | REST Countries 国家数据 |
+| `rfc` | IETF RFC 文档 |
+| `tvmaze` | TVmaze 电视节目数据 |
+| `uiverse` | UIverse UI 组件库 |
+| `wikidata` | Wikidata 结构化数据 |
+| `wttr` | wttr.in 天气查询 |

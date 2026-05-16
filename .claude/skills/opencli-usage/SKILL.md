@@ -1,7 +1,7 @@
 ---
 name: opencli-usage
-description: "Use when running OpenCLI commands to interact with websites (Bilibili, Twitter, Reddit, Xiaohongshu, etc.), desktop apps (Cursor, Notion), or public APIs (HackerNews, arXiv). Covers installation, command reference, and output formats for 87+ adapters."
-version: 1.7.0
+description: "Use when running OpenCLI commands to interact with websites (Bilibili, Twitter, Reddit, Xiaohongshu, etc.), desktop apps (Cursor, Notion), or public APIs (HackerNews, arXiv). Covers installation, command reference, and output formats for 140+ adapters. Works with cc/codex/gemini."
+version: 1.7.22
 author: jackwener
 tags: [opencli, cli, browser, web, chrome-extension, cdp, bilibili, twitter, reddit, xiaohongshu, github, youtube, AI, agent, automation]
 ---
@@ -199,6 +199,41 @@ All commands support: `--format` / `-f` with `table` `json` `yaml` `md` `csv`
 ## Self-Repair
 
 If a command fails due to a site change (selector, API, or response schema), **automatically fix the adapter and retry** instead of reporting failure. Re-run the command with `OPENCLI_DIAGNOSTIC=1` to get structured diagnostic context, then fix the adapter file at `RepairContext.adapter.sourcePath` and retry. Max 3 repair rounds. See the `opencli-autofix` skill for the full workflow.
+
+## Writing Custom Adapters
+
+User-level custom adapters live in `~/.opencli/clis/<site>/`. Backup copies tracked in `mycc/4-Assets/opencli-adapters/` (synced via NAS daily).
+
+**Checklist before writing a new adapter command**:
+
+1. **Reference-repo grep first**（必须）— 不要凭模板猜 API。对每个要调的 endpoint 必须 grep 源仓取：
+   ```bash
+   grep -rn 'method:.*<endpoint_name>' <ref_repo>/api/      # HTTP method
+   grep -rn '<endpoint_name>.*referer\|Referer.*<endpoint_name>' <ref_repo>   # required Referer
+   grep -rn 'def <function_name>\|params=' <ref_repo>/api/client.py            # required params
+   grep -rn '.get("<list_name>"\|data.zpData.\|jobList\|cardList' <ref_repo>/commands/  # response top-level
+   grep -B2 -A 20 'def from_api\|_render\|def to_dict' <ref_repo>/api/models.py        # response nested
+   ```
+
+2. **Vendor utils 不在 npm exports**：内置 `clis/<site>/utils.js` 无法 import，需在 `utils-extra.js` 复刻关键函数（bossFetch / navigate / business helpers）。允许的 import 只有 `@jackwener/opencli/{registry,errors,utils,types,logger,launcher,browser/*,download/*}`。
+
+3. **API 调用模式**：带 cookie 的内部 API 用 `page.evaluate + XMLHttpRequest + withCredentials=true`，不要用 Node 端 fetch（会丢 cookie + 触发反爬）。模板见 `~/.opencli/clis/boss/utils-extra.js#bossFetch`。
+
+4. **Domain pre-check**：`cli({domain: 'www.example.com', ...})` 配置后 opencli 强制先 navigate 主域；想跳子域用 `navigateBefore: false`。
+
+5. **Referer 严格校验**：每个 endpoint 有独立 referer 要求（BOSS 的 history 要 `/web/geek/history`，deliver-list 要 `/web/geek/chat`，interview 要 `/web/geek/job`）。在 func 开头先 `navigateTo(page, '<referer-url>', 2)` 建立上下文。
+
+6. **不要 DOM 抓 SPA**：搜索结果页/动态列表是客户端渲染，`page.goto(url)` 大概率被反爬识别并重定向到首页。改用 API 拦截 + browser-context XHR。
+
+7. **CodexExec 在自定义目录跑必须 `--skip-git-repo-check`**（`~/.opencli/clis/` 不是 git 仓库），否则 codex 静默退出。
+
+8. **Node 18+ 第三方 API 调用避坑**：如果系统有 `HTTP_PROXY` env（V2Ray/Clash），undici fetch 会把所有外网请求路由到本地代理可能返 406；用 `node:https` 直调绕过。详见 `feedback_undici_proxy_bypass.md`。
+
+**Reference templates**:
+- `4-Assets/opencli-adapters/liepin/utils.js` — PUBLIC + COOKIE 双策略（MCP API + DOM scraping）
+- `4-Assets/opencli-adapters/boss/utils-extra.js` — COOKIE 策略 + browser-context XHR + 节流工具
+
+详细工程教训见 memory: `feedback_opencli_custom_adapter.md` / `feedback_codex_api_template_guess.md` / `feedback_undici_proxy_bypass.md`。
 
 ## Related Skills
 
