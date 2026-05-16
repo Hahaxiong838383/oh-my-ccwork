@@ -114,7 +114,30 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 | P3 过渡 | ✅ done | 9f207bd6e | 2026-05-15 14:20 |
 | P4 交接 | ✅ done | abc5bd389 | 2026-05-15 14:42 |
 | P5 字幕修复 | ✅ done | b8806fa16 | 2026-05-15 17:22 |
-| P6 静思图替换 | ✅ done | TBD（本 commit） | 2026-05-16 13:38 |
+| P6 静思图替换 | ✅ done | 33f693771 | 2026-05-16 13:38 |
+| P7 出航图替换 | ✅ done | TBD（本 commit） | 2026-05-16 13:58 |
+
+## 15. P7 出航图替换（川哥指定 7 张新素材）
+
+**川哥决策**：源路径 `/Users/rayman.chen/Documents/P003 Game demo/UI界面/出航模式/` 共 7 张新图。
+
+**映射策略**：**按视觉用途**（不是文件名数字 1-7 严格对应），保证代码 launching/transition/locked/active/active-rotating/openable/full 各 stage 视觉链路正确。
+
+| 新文件 | → 落盘 | 用途 | 视觉 |
+|---|---|---|---|
+| 出航2.png | 01-launching.png | launching 主图 | 近景小可飞船舱 + "出航"霓虹大字 |
+| 出航1.png | 02-transition.png | launching→running 过渡 | 远景缩略小可 + 螺旋星空 |
+| 出航3.png | 03-locked.png | locked | 4 锁宝箱 + 灰按钮 |
+| 出航4.png | 04-active.png | active 第 2 圈 | 金色旋转环 |
+| 出航5.png | 05-active-rotating.png | active 伪旋转环辅助 | 第 3 圈中间宝箱形状（灰）|
+| 出航6.png | 06-openable.png | openable | 中间宝箱蓝色光晕 |
+| 出航7.png | 07-full.png | full | x2 宝箱 + 橙色"收获奖励"按钮 |
+| —（不替换）| 08-handoff.png | rewarding state 静止图 | 旧版保留（新源未提供对应）|
+
+**老 8 张备份**：`/tmp/focus-running-old/`（不进库）。
+**FocusRunning.tsx 代码零修改**（文件名不变所以映射 STAGE_IMAGE_MAP 不动）。
+**潜在体验风险**：04 (第 2 圈) 和 05 (第 3 圈) 视觉位置不同，做伪旋转环 crossfade 可能"穿帮"。先上让川哥真机看，必要时关闭 alternateEnabled 或重做映射。
+**验收**：check:scope + build + e2e + p5 subtitle test 全 PASS，0 errors。
 
 ## 14. P6 静思图重制（川哥指定新素材）
 
