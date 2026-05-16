@@ -13,6 +13,7 @@ export interface BoxConfig {
   shakePx: number;
   shouldShake: boolean;
   shouldFireworks: boolean;
+  imageSrc: string;
 }
 
 export const BOX_LEVELS: Record<BoxLevel, BoxConfig> = {
@@ -29,6 +30,7 @@ export const BOX_LEVELS: Record<BoxLevel, BoxConfig> = {
     shakePx: 5,
     shouldShake: false,
     shouldFireworks: false,
+    imageSrc: '/art/box/1-common.png',
   },
   rare: {
     level: 'rare',
@@ -43,6 +45,7 @@ export const BOX_LEVELS: Record<BoxLevel, BoxConfig> = {
     shakePx: 10,
     shouldShake: false,
     shouldFireworks: false,
+    imageSrc: '/art/box/2-rare.png',
   },
   epic: {
     level: 'epic',
@@ -57,6 +60,7 @@ export const BOX_LEVELS: Record<BoxLevel, BoxConfig> = {
     shakePx: 15,
     shouldShake: true,
     shouldFireworks: false,
+    imageSrc: '/art/box/3-epic.png',
   },
   legendary: {
     level: 'legendary',
@@ -72,6 +76,7 @@ export const BOX_LEVELS: Record<BoxLevel, BoxConfig> = {
     shakePx: 20,
     shouldShake: true,
     shouldFireworks: true,
+    imageSrc: '/art/box/4-legendary.png',
   },
 };
 

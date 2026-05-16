@@ -106,17 +106,14 @@ export function OpenBox() {
                 width: 'clamp(12cqh, 20cqw, 23cqh)',
                 height: 'clamp(12cqh, 20cqw, 23cqh)',
                 backgroundColor: config.ringColor,
-                // gemini 建议：legendary 强化"爆金"质感
-                filter: currentBoxLevel === 'legendary' ? 'brightness(1.5)' : undefined,
               }}
               animate={
                 reducedMotion
                   ? { opacity: isOpening ? 0.45 : 0.18 }
                   : {
-                      // legendary 圆环扩散倍率 1.95 → 3.5（gemini 评审）
-                      scale: isOpening
-                        ? [0.55, currentBoxLevel === 'legendary' ? 3.5 : 1.95]
-                        : [0.9, 1.3],
+                      // 圆环统一扩散 1.95 倍（之前 legendary 3.5+brightness 1.5 在 emoji 时
+                      // 视觉爆金，切换到不透明 img 后会完全染色遮住宝箱本体）
+                      scale: isOpening ? [0.55, 1.95] : [0.9, 1.3],
                       opacity: isOpening ? [0.85, 0.05] : [0.4, 0.15],
                     }
               }
@@ -127,9 +124,13 @@ export function OpenBox() {
               }
             />
 
-            <motion.span
-              className="select-none drop-shadow-[0_0_1.6cqh_rgba(255,255,255,0.35)]"
-              style={{ fontSize: 'clamp(8.5cqh, 12cqw, 13.5cqh)', filter: `drop-shadow(0 0 0.8cqh ${config.color})` }}
+            <motion.div
+              className="relative z-10 select-none drop-shadow-[0_0_1.6cqh_rgba(255,255,255,0.35)] flex items-center justify-center"
+              style={{
+                width: 'clamp(11cqh, 16cqw, 18cqh)',
+                height: 'clamp(11cqh, 16cqw, 18cqh)',
+                filter: `drop-shadow(0 0 0.8cqh ${config.color})`,
+              }}
               initial={{ scale: 0.9, rotate: 0, opacity: 0 }}
               animate={
                 isOpening
@@ -146,8 +147,13 @@ export function OpenBox() {
                   : { duration: reducedMotion ? 0.35 : 0.7, ease: 'easeInOut' }
               }
             >
-              📦
-            </motion.span>
+              <img
+                src={config.imageSrc}
+                alt={config.name}
+                className="h-full w-full object-contain"
+                draggable={false}
+              />
+            </motion.div>
 
             {isShowing && particles.map((particle) => (
               <motion.span

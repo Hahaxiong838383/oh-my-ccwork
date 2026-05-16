@@ -115,7 +115,26 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 | P4 交接 | ✅ done | abc5bd389 | 2026-05-15 14:42 |
 | P5 字幕修复 | ✅ done | b8806fa16 | 2026-05-15 17:22 |
 | P6 静思图替换 | ✅ done | 33f693771 | 2026-05-16 13:38 |
-| P7 出航图替换 | ✅ done | TBD（本 commit） | 2026-05-16 13:58 |
+| P7 出航图替换 | ✅ done | 906128ead | 2026-05-16 13:58 |
+| P8 宝箱 PNG | ✅ done | TBD（本 commit） | 2026-05-16 14:18 |
+
+## 16. P8 宝箱视觉从 emoji 升级到 PNG（川哥指定新素材）
+
+**川哥决策**：源路径 `/Users/rayman.chen/Documents/P003 Game demo/UI界面/宝箱/` 共 4 张宝箱 PNG。
+
+**关键发现**：原先 OpenBox.tsx 用 emoji `📦` + 彩色光环渲染宝箱，川哥这次给的不是替换 PNG（之前没有），而是**首次加入 PNG 美术**。
+
+**实施**：
+1. cp 4 张到 `apps/web/public/art/box/`，规范命名为 `1-common.png / 2-rare.png / 3-epic.png / 4-legendary.png`（数字 + 等级英文，避免中文 URL encoding）
+2. `boxes.ts`：BoxConfig 接口加 `imageSrc: string`，4 等级补对应 PNG 路径
+3. `OpenBox.tsx`：把 `<motion.span>📦</motion.span>` 改为 `<motion.div><img src={config.imageSrc} ...></motion.div>`，width/height 替代 fontSize，保留 motion animate / filter drop-shadow / 入退场动画
+
+**衍生修复**：legendary 圆环原来 scale 3.5×+brightness 1.5（emoji 时代 gemini 评审建议"爆金"），切换到不透明 img 后金色染色把宝箱完全遮住 → 撤销 legendary 特殊化（统一 1.95×、去 brightness），同时给宝箱 `motion.div` 加 `z-10` 保险层级。
+
+**验收**：
+- check:scope + build PASS
+- E2E 七段 PASS，0 errors，0 404s
+- 4 等级 e2e 截图：rare/epic/legendary 宝箱清晰可见（蓝/橙/深蓝水晶各色）。common 在 t1 时段被 c3 SettingsTip 残留挤压时序，疑似边角时序问题（jumpToScene 间隔短），川哥真机演示如有异常会再调
 
 ## 15. P7 出航图替换（川哥指定 7 张新素材）
 
