@@ -117,7 +117,25 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 | P6 静思图替换 | ✅ done | 33f693771 | 2026-05-16 13:38 |
 | P7 出航图替换 | ✅ done | 906128ead | 2026-05-16 13:58 |
 | P8 宝箱 PNG | ✅ done | cc0f09a88 | 2026-05-16 14:18 |
-| P9 生态缸 mp4 | ✅ done | TBD（本 commit） | 2026-05-16 15:58 |
+| P9 生态缸 mp4 | ✅ done | e71494eee | 2026-05-16 15:58 |
+| P9.5 视频全屏 | ✅ done | TBD（本 commit） | 2026-05-16 16:10 |
+
+## 18. P9.5 EcoUnlock 视频改全屏（川哥反馈）
+
+**川哥反馈**：原 P9 把视频塞在 27cqw 圆形小窗里看不清，要求改成 800×480 游戏画面全屏 + 宽度顶满 + 长度超出自动裁切。
+
+**改动**（EcoUnlock.tsx）：
+- 删除外层 `clamp(18cqh, 27cqw, 31cqh)` 圆形容器 + 双层 cyan border + bg gradient 水缸 mask
+- video 改成 `absolute inset-0 h-full w-full object-cover object-center`（宽度顶满，长度超出自动裁切，居中）
+- video 套 motion.video 直接绑 phase 入场动画（opacity 0→1, scale 1.04→1）
+- 加顶部暗色 gradient mask（高 22%，rgba(4,8,20) 0.78→0.45→0）增强标题可读
+- 标题字号 1.6→2.8→3.4 cqh 加粗 + text-shadow 黑色阴影
+- 左上角 amber 小点（解锁强调）保留 + boxShadow 暖光晕
+
+**验收**：
+- check:scope + build PASS
+- E2E 七段 PASS 0 errors
+- P9 mini E2E 4 等级全 PASS，截图证据 `.scratch/p9-screenshots/eco-lv1.png ~ eco-lv4.png` 全屏视频铺满，4 等级视觉完整可见（沙发太空舱 / 雪景 / 水母水景 / 多元素）
 
 ## 17. P9 生态缸 mp4 动态升级演示
 
