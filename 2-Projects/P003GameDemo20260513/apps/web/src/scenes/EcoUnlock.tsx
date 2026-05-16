@@ -60,16 +60,24 @@ export function EcoUnlock() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.45 }}
     >
-      {/* 视频全屏：宽度顶满，长度方向超出自动裁切（object-cover + center） */}
+      {/* 视频全屏：宽度顶满，长度方向超出自动裁切（object-cover + center）
+          有声播放：默认 muted=false 让 demo 带声。autoplay 被浏览器拦截时
+          onCanPlay 兜底退回 muted=true 静音播放，避免"完全不播"。 */}
       <motion.video
         key={ecoLevel}
         src={`/art/eco/${ecoLevel}.mp4`}
         className="absolute inset-0 h-full w-full object-cover object-center"
         autoPlay
         loop
-        muted
         playsInline
         preload="auto"
+        onCanPlay={(evt) => {
+          const v = evt.currentTarget;
+          void v.play().catch(() => {
+            v.muted = true;
+            void v.play().catch(() => {});
+          });
+        }}
         initial={{ opacity: 0, scale: 1.04 }}
         animate={{
           opacity: phase === 0 ? 0 : 1,
