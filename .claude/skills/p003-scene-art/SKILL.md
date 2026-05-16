@@ -210,8 +210,126 @@ mix-blend-mode: screen + @supports not 降级
 
 ## 迭代历史
 
-- **V1.0**（2026-05-14 23:00）：D3.5 沉淀，3 场景实施完成，方法论稳定
-- V1.x：每次新场景实施完，更新 [iteration-log.md](iteration-log.md) 记录新经验
+- **V1.0**（2026-05-14 23:00）：D3.5 沉淀，3 场景实施完成（SetupGuide / Welcome / AskMode）
+- **V2.0**（2026-05-16）：D4 focus 美术化 + 视频升级，13 commit 完整 Phase（P0~P9.7）
+- V2.x：每次新场景实施完，更新 [iteration-log.md](iteration-log.md) 记录新经验
+
+## V2.0 增量（focus 多阶段 + 视频升级 + 跨场景共享 UI）
+
+V1.0 只覆盖单一静态 PNG boot scene。D4 引入了 focus 多 stage / mp4 视频 / 跨 scene 共享 UI 几类新场景，方法论补充：
+
+### N1. 多阶段 stage 切换（focus 类场景）
+
+适用：focusRunning / focusCompanion / 任何"进度推进+视觉演变"场景
+
+**模式**：
+- store 加 `xxxProgress: 0-100` + `xxxStage: 'A'|'B'|'C'|'D'` + `xxxStartedAt: timestamp` + `xxxSpeed: 0.5-20`
+- hook `useXxxProgressTick`：监听 startedAt + speed，1s setInterval 推 progress，progress ≥ 100 触发 state machine event
+- scene `<XxxRunning />`：按 stage 切 PNG，用 `useStageCrossfade(stage, imageMap, options)` hook 做 300ms opacity crossfade（避免硬切闪烁）
+- 可选 `alternateSrc + alternateIntervalMs` 实现伪旋转环（两张同主题图 1.5s 切换）
+- CSS @keyframes 4 stage 动效（不依赖图内元素坐标，只对整张图 transform/filter）：
+  - locked: rotate ±1.5° 微震 4s 周期
+  - active: scale 1→1.005→1 缓慢呼吸 2.5s
+  - openable: scale 1→1.025→1 + brightness 1→1.08 召唤 1.4s
+  - full: scale 1→1.04→1 + brightness 1→1.15 强召唤 1s
+
+### N2. launching 双图层过渡
+
+适用：state machine 进 launching state（如 `idle → launching → running`）的"启航"过渡视觉
+
+**模式**：
+- launching 子组件用 `useState elapsedMs + setInterval 16ms` 跟踪自身进度（不依赖 state machine timer）
+- 0~主图持续时间：显示启航主图 + CSS enter 动画（scale 1.05→1, opacity 0→1）+ 浮动 keyframe
+- 后半段过渡：crossfade 到过渡帧 PNG，opacity 1→0 / 0→1 + scale 1.05→1.0 + filter blur 4→0px
+- 总时长**严格对齐 state machine** LAUNCH_ANIM_MS（如 2500ms）避免 React rerender 慢一拍
+
+### N3. 资源预加载 hook
+
+```ts
+// hooks/useXxxArtPreload.ts
+useEffect(() => {
+  if (mode === null) return;
+  for (const src of artSources[mode]) {
+    const img = new Image(); img.src = src;
+  }
+}, [mode]);
+```
+
+调用点：Screen.tsx 顶层。new Image() 不阻塞主线程，浏览器自动缓存。
+
+### N4. state machine 桥接其他 machine（rewarding state）
+
+适用：xxx state machine 满进度自动触发 reward / open / 其他 machine 接管
+
+**模式**：
+- xxx-machine 加 `rewarding` state + `XXX_REWARD_READY / REWARD_FLOW_DONE` event
+- 在 effect runner 加新 effect type `dispatchRewardEvent`（同步派发其他 machine event）
+- progress hook 检测 `progress >= 100` 一次性 dispatch `XXX_REWARD_READY`（用 `ref` 防重）
+- rewarding 退出条件：边沿检测 `rewardLeftIdleRef + rewardDoneSentRef` 双 ref 跟踪 reward machine 离开 idle 再回到 `idle | done` 时 dispatch `REWARD_FLOW_DONE`
+- ⚠️ **重要**：reward machine 完成后可能停在 `done` 而不是 `idle`，必须同时检测两个终态
+
+### N5. mp4 视频集成
+
+适用：动态升级演示、循环背景、解锁动画
+
+**模式**：
+- 资源放 `public/art/<topic>/<level>.mp4`，按数字命名（避免中文 URL encoding）
+- `<video key={level} src="/art/.../{level}.mp4" autoPlay loop playsInline preload="auto" className="absolute inset-0 h-full w-full object-cover object-center">`
+- `key={level}` 强制 remount 重播切换等级
+- 默认不写 muted（带声播放）+ `onCanPlay` 兜底：
+  ```tsx
+  onCanPlay={(e) => {
+    void e.currentTarget.play().catch(() => {
+      e.currentTarget.muted = true;
+      void e.currentTarget.play().catch(() => {});
+    });
+  }}
+  ```
+  iOS Safari 拦截 unmuted autoplay 时退回 muted 重试，避免"完全不播"死锁
+- 全屏铺满 800×480：`object-cover + object-center` 宽度顶满，长度方向超出自动裁切
+- 顶部叠暗色 gradient mask 增强标题可读：`background: linear-gradient(rgba(4,8,20,0.78) → 0)`，高度 22%
+
+### N6. 跨场景共享 UI（Screen 路由分流必查）
+
+**坑**：当 Screen.tsx 加路由分流到新 scene（替代 MainScreen），原本在 MainScreen 内的共享组件（StatusBar / WizardOfOz / etc）会**完全消失**。
+
+**修复**：把共享 UI 提到 Screen.tsx 层级用 Fragment 包：
+
+```tsx
+if (!lidOpen) return <ShutdownScreen />;
+const scene = ...; // 路由选 FocusRunning / FocusCompanion / MainScreen
+return <>{scene}<StatusBar /></>;
+```
+
+**z-index 审计**：共享 UI 的 z-layer 必须高于覆盖 mask（OpenBox / Welcome z-70），低于 modal（z-80）。当前推荐 `z-layer-feedback: 75`。
+
+### N7. 资源类型切换的视觉栈冲突预警
+
+emoji `📦` → img PNG 类型切换暴露老逻辑 bug：
+- emoji 是字符渲染，filter brightness 1.5 / drop-shadow 都在字外部生效，不影响字本身
+- 不透明 img 是矩形位图，filter brightness 1.5 整张图过曝 + scale 3.5 圆环把图染色遮死
+
+**铁律**：切换素材类型时**重审整个视觉栈**——filter / blend-mode / scale 在新素材下的行为可能完全不同。必看截图，不要只信 build PASS。
+
+### N8. 资源命名规范
+
+| 类别 | 命名 |
+|---|---|
+| 场景背景 PNG | `<scene>-bg.png`（V1.0） |
+| 多阶段 PNG | `01-stageA.png ~ NN-stageN.png`（数字 + 英文等级，无 URL encoding 风险） |
+| 视频 mp4 | `1.mp4 ~ N.mp4`（纯数字简洁） |
+| 临时用川哥源名 | 拷贝时改名，源文件留 `/Users/rayman.chen/Documents/` 不动 |
+
+### N9. DebugBar 演示控件模式
+
+每个新场景类型应该在 DebugBar 提供"现场切换"控件，仅在该场景活跃时显示（条件渲染避免污染其他流程）：
+
+| 场景类型 | DebugBar 控件 |
+|---|---|
+| focus 多阶段 | 速度滑块 0.5-20× / 进度起点输入框 / 一键满进度 / 演示过渡按钮 |
+| 多等级视频 | N 个等级按钮 [Lv1] [Lv2] ... 高亮当前 |
+
+显示条件：`focusMachine === 'idle' && (rewardMachine === 'idle' || rewardMachine === 'specific-state')`，让相关流程中也可见但其他流程隐藏。
 
 ## 触发协议
 
@@ -220,6 +338,7 @@ cc 收到任何形如以下任务时主动按本 skill 执行：
 - "按 Welcome 风格做 YY 场景"
 - "把 ZZ 改成 D3.5 风格"
 - "用美术资源替换 ZZ"
+- "把 XX 场景加 mp4 动态升级演示"（V2.0 新增）
 
 收到 PNG 文件后自动：
 1. 检查双扩展名 + 重命名
