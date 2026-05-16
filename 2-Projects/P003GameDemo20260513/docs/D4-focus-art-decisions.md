@@ -116,7 +116,25 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 | P5 字幕修复 | ✅ done | b8806fa16 | 2026-05-15 17:22 |
 | P6 静思图替换 | ✅ done | 33f693771 | 2026-05-16 13:38 |
 | P7 出航图替换 | ✅ done | 906128ead | 2026-05-16 13:58 |
-| P8 宝箱 PNG | ✅ done | TBD（本 commit） | 2026-05-16 14:18 |
+| P8 宝箱 PNG | ✅ done | cc0f09a88 | 2026-05-16 14:18 |
+| P9 生态缸 mp4 | ✅ done | TBD（本 commit） | 2026-05-16 15:58 |
+
+## 17. P9 生态缸 mp4 动态升级演示
+
+**川哥决策**：源路径 `/Users/rayman.chen/Documents/P003 Game demo/UI界面/生态缸/生态缸动态/` 4 个 mp4 共 6.8MB。
+
+**实施**（codex 写 + gemini APPROVE）：
+- `apps/web/public/art/eco/1.mp4 ~ 4.mp4`（数字命名延续川哥风格）
+- store 加 `EcoLevel = 1|2|3|4` + `ecoLevel: EcoLevel = 1` + setter
+- EcoUnlock.tsx：原圆框 emoji 🐟 → `<video key={ecoLevel} src="/art/eco/${ecoLevel}.mp4" autoPlay loop muted playsInline preload="auto" object-cover>`，外层保留 cyan border + gradient 水缸玻璃效果。标题从硬编码 "Lv2" 改为动态 `Lv${ecoLevel}`。reducedMotion 路径也用动态文字 + 跳过 video（无障碍）
+- DebugBar：4 个等级按钮 [🌱 Lv1] [🌿 Lv2] [🌳 Lv3] [✨ Lv4]，仅 `focusMachine === 'idle' && rewardMachine === 'idle'` 时显示
+
+**验收**：
+- check:scope + build PASS
+- E2E 七段（含 C4 eco 段）PASS, 0 errors, 0 404s
+- P9 mini E2E（`scripts/p9-eco-levels-test.mjs`）4 等级切换 PASS：截图证据 `.scratch/p9-screenshots/eco-lv1.png ~ eco-lv4.png`，4 个视频视觉各异（Lv1 室内 → Lv2 雪景 → Lv3 太空舱 → Lv4 多元素）
+- Gemini Review 8/8 PASS APPROVE 0 concerns
+- iOS Safari 自动播放硬要求（muted + playsInline）全齐
 
 ## 16. P8 宝箱视觉从 emoji 升级到 PNG（川哥指定新素材）
 

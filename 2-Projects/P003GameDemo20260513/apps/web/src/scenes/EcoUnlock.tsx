@@ -11,6 +11,7 @@ function getReducedMotion(): boolean {
 
 export function EcoUnlock() {
   const rewardMachine = useAppStore((s) => s.rewardMachine);
+  const ecoLevel = useAppStore((s) => s.ecoLevel);
   const reducedMotion = getReducedMotion();
   const [phase, setPhase] = useState(0);
 
@@ -43,7 +44,7 @@ export function EcoUnlock() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.28 }}>
           <p className="text-white/85" style={{ fontSize: 'clamp(1.4cqh,2.4cqw,2.8cqh)' }}>生态缸有新解锁...</p>
           <p className="mt-[clamp(0.8cqh,1.2cqw,1.8cqh)] font-semibold text-emerald-100" style={{ fontSize: 'clamp(1.8cqh,3.2cqw,3.8cqh)' }}>
-            灯光鱼缸 Lv2 解锁！
+            灯光鱼缸 Lv{ecoLevel} 解锁！
           </p>
         </motion.div>
       </motion.div>
@@ -69,7 +70,7 @@ export function EcoUnlock() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
       >
-        {phase >= 2 ? '灯光鱼缸 Lv2 解锁！' : '生态缸有新解锁...'}
+        {phase >= 2 ? `灯光鱼缸 Lv${ecoLevel} 解锁！` : '生态缸有新解锁...'}
       </motion.p>
 
       <motion.div
@@ -83,20 +84,18 @@ export function EcoUnlock() {
         transition={{ duration: phase >= 3 ? 0.8 : 0.4, ease: 'easeInOut' }}
       >
         <div className="absolute inset-0 rounded-full border border-cyan-100/30 bg-cyan-100/10 shadow-[inset_0_0_3cqh_rgba(255,255,255,0.22),0_0_2.6cqh_rgba(56,189,248,0.35)] backdrop-blur-[2px]" />
-        <div className="absolute inset-[10%] rounded-full border border-cyan-200/20 bg-gradient-to-b from-cyan-100/12 via-cyan-200/4 to-emerald-200/14" />
-
-        <motion.span
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none"
-          style={{ fontSize: 'clamp(4.8cqh, 7.2cqw, 8.8cqh)' }}
-          animate={{
-            x: ['-50%', '-34%', '-50%', '-62%', '-50%'],
-            y: ['-50%', '-54%', '-46%', '-50%'],
-            rotate: [0, 6, -7, 0],
-          }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          🐟
-        </motion.span>
+        <div className="absolute inset-[5%] overflow-hidden rounded-full border border-cyan-200/20 bg-gradient-to-b from-cyan-100/12 via-cyan-200/4 to-emerald-200/14">
+          <video
+            key={ecoLevel}
+            src={`/art/eco/${ecoLevel}.mp4`}
+            className="h-full w-full object-cover"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+          />
+        </div>
 
         <motion.div
           className="absolute left-1/2 top-[4%] -translate-x-1/2 rounded-full bg-amber-200/80"

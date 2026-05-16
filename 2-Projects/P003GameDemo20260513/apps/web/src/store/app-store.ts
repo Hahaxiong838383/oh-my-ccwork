@@ -14,6 +14,7 @@ export type FarewellState = 'hidden' | 'waving' | 'shutdown';
 export type WifiSignal = 'strong' | 'medium' | 'weak' | 'disconnected';
 
 export type BoxLevel = 'common' | 'rare' | 'epic' | 'legendary';
+export type EcoLevel = 1 | 2 | 3 | 4;
 
 export type BootState =
   | 'unconfigured'
@@ -100,6 +101,10 @@ interface AppState {
   // —— 当前正在演的宝箱等级（V0.6 新增）——
   currentBoxLevel: BoxLevel | null;
   setCurrentBoxLevel: (level: BoxLevel | null) => void;
+
+  // —— 生态缸等级（D4 P9 新增）——
+  ecoLevel: EcoLevel;
+  setEcoLevel: (n: EcoLevel) => void;
 
   // —— 首次保证 4 级宝箱队列（V0.6 新增）——
   openedBoxLevels: BoxLevel[];
@@ -217,6 +222,9 @@ export const useAppStore = create<AppState>((set) => ({
 
   currentBoxLevel: null,
   setCurrentBoxLevel: (currentBoxLevel) => set({ currentBoxLevel }),
+
+  ecoLevel: 1,
+  setEcoLevel: (ecoLevel) => set({ ecoLevel }),
 
   openedBoxLevels: loadOpenedBoxLevels(),
   pushOpenedBoxLevel: (level) =>

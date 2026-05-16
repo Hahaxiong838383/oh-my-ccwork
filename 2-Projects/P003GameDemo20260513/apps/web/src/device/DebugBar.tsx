@@ -20,7 +20,9 @@ export function DebugBar() {
   const setupComplete = useAppStore((s) => s.setupComplete);
   const wifiSignal = useAppStore((s) => s.wifiSignal);
   const focusMachine = useAppStore((s) => s.focusMachine);
+  const rewardMachine = useAppStore((s) => s.rewardMachine);
   const focusSpeed = useAppStore((s) => s.focusSpeed);
+  const ecoLevel = useAppStore((s) => s.ecoLevel);
   const [sceneValue, setSceneValue] = useState<SceneId | ''>('');
   const [progressStart, setProgressStart] = useState<string>('');
   const { dispatchBoot, dispatchFocus } = useTransitionRunner();
@@ -162,6 +164,33 @@ export function DebugBar() {
           >
             ▶ 演示静思过渡
           </button>
+        </div>
+      )}
+
+      {focusMachine === 'idle' && rewardMachine === 'idle' && (
+        <div className="mt-2 flex items-center gap-2">
+          <span className={labelClass}>生态缸：</span>
+          {([
+            { level: 1, label: '🌱 Lv1' },
+            { level: 2, label: '🌿 Lv2' },
+            { level: 3, label: '🌳 Lv3' },
+            { level: 4, label: '✨ Lv4' },
+          ] as const).map(({ level, label }) => (
+            <button
+              key={level}
+              type="button"
+              onClick={() => {
+                const store = useAppStore.getState();
+                store.setEcoLevel(level);
+                jumpToScene('ecoUnlock');
+              }}
+              className={`h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10 ${
+                ecoLevel === level ? activeClass : ''
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
 
