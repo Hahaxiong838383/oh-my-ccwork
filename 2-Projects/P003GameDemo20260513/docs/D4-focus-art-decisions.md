@@ -113,7 +113,24 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 | P2 动效 | ✅ done | a47049124 | 2026-05-15 14:12 |
 | P3 过渡 | ✅ done | 9f207bd6e | 2026-05-15 14:20 |
 | P4 交接 | ✅ done | abc5bd389 | 2026-05-15 14:42 |
-| P5 字幕修复 | ✅ done | TBD（本 commit） | 2026-05-15 17:22 |
+| P5 字幕修复 | ✅ done | b8806fa16 | 2026-05-15 17:22 |
+| P6 静思图替换 | ✅ done | TBD（本 commit） | 2026-05-16 13:38 |
+
+## 14. P6 静思图重制（川哥指定新素材）
+
+**川哥决策**：源路径 `/Users/rayman.chen/Documents/P003 Game demo/UI界面/静思模式/` 下的 4 张已重制，要求按文件名顺序替换。
+
+**新 4 张映射**：
+| stage | 文件名 | 视觉 |
+|---|---|---|
+| locked | 静思1.png | 4 锁宝箱 + 进度条低 + 小可坐椅子读书（暖光室内）|
+| active | 静思2-进度条满.png | 4 锁宝箱 + 进度条满 + "收获奖励"按钮亮 |
+| openable | 静思3-获得宝箱.png | 左上礼物变 x28 宝物 + 橙色"收获奖励"按钮 |
+| full | 静思4 -获得更多宝箱.png | 4 礼物全开 x28 + 全部领完 |
+
+**实施**：cp 覆盖 `apps/web/public/art/focus-companion/01-04.png`，文件名不变（不动 FocusCompanion.tsx 代码）。
+**老 4 张备份**：`/tmp/focus-companion-old/`（不进库）。
+**验收**：check:scope + build + e2e 七段 + p5 subtitle test 全 PASS，0 errors，截图证据 `.scratch/e2e-screenshots/b-focusCompanion.png`。
 
 ## 13. P5 验收摘要
 
