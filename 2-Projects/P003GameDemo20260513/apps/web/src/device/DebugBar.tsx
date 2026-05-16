@@ -167,7 +167,7 @@ export function DebugBar() {
         </div>
       )}
 
-      {focusMachine === 'idle' && rewardMachine === 'idle' && (
+      {focusMachine === 'idle' && (rewardMachine === 'idle' || rewardMachine === 'ecoUnlock') && (
         <div className="mt-2 flex items-center gap-2">
           <span className={labelClass}>生态缸：</span>
           {([
