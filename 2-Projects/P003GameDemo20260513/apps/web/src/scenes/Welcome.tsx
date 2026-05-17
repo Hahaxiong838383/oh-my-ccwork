@@ -33,6 +33,7 @@ const STARS: readonly StarSpec[] = [
 
 export function Welcome() {
   const bootState = useAppStore((s) => s.bootState);
+  const setSubtitle = useAppStore((s) => s.setSubtitle);
   const spokenRef = useRef(false);
 
   useEffect(() => {
@@ -43,6 +44,9 @@ export function Welcome() {
     if (spokenRef.current) return;
     spokenRef.current = true;
 
+    // 字幕统一走 StatusBar（D5 川哥要求）：不再 baked 胶囊
+    setSubtitle(WELCOME_LINE);
+
     const client = getSharedVoiceClient();
     void (async () => {
       try {
@@ -52,10 +56,15 @@ export function Welcome() {
         return;
       }
       // 立即触发：TTS TTFB ~500ms + 首段 flush ~600ms ≈ 1.1s 出声，
-      // 与字幕 0.8s 进场动画几乎重叠
+      // 与字幕进场动画几乎重叠
       client.sayDirect(WELCOME_LINE);
     })();
-  }, [bootState]);
+
+    return () => {
+      // 离开 welcome state 时清字幕（避免污染下一个 scene）
+      setSubtitle('');
+    };
+  }, [bootState, setSubtitle]);
 
   if (bootState !== 'welcome') return null;
 
@@ -116,25 +125,7 @@ export function Welcome() {
         aria-hidden
       />
 
-      <div
-        className="absolute left-1/2 flex items-center justify-center rounded-full bg-black/40 px-[5cqw] py-[1.6cqh] backdrop-blur-md"
-        style={{
-          bottom: '6cqh',
-          transform: 'translateX(-50%)',
-          maxWidth: 'min(86cqw, 560px)',
-        }}
-      >
-        <p
-          className="welcome-caption font-light text-white"
-          style={{
-            fontSize: 'clamp(12px, 3.4cqw, 18px)',
-            letterSpacing: '0.08em',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          你好，指挥官！欢迎回到方舟
-        </p>
-      </div>
+      {/* 字幕统一走 StatusBar（D5 川哥要求），删除内嵌胶囊 */}
 
       <style>{`
         @keyframes welcome-star-drift {
