@@ -93,7 +93,7 @@ export function NightReport() {
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 z-layer-mask flex items-center justify-center"
+      className="pointer-events-none absolute inset-0 z-layer-modal flex items-center justify-center"
       style={{ containerType: 'size' }}
     >
       <motion.div
