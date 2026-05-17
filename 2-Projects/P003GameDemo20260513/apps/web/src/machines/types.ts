@@ -63,7 +63,9 @@ export type Effect =
   | { type: 'setFocusStage'; stage: FocusStage }
   | { type: 'setFocusMode'; mode: FocusMode }
   | { type: 'setFocusStartedAt'; timestamp: number | null }
-  | { type: 'dispatchRewardEvent'; event: RewardEvent };
+  | { type: 'dispatchRewardEvent'; event: RewardEvent }
+  // D5 P16：随机宝箱品质，effect runner 内用 boxes.pickNextBoxLevel
+  | { type: 'dispatchRandomBox' };
 
 export interface TransitionResult<S> {
   state: S;

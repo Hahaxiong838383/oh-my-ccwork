@@ -26,6 +26,7 @@ import { bootTransition } from './boot-machine';
 import { focusTransition } from './focus-machine';
 import { rewardTransition } from './reward-machine';
 import { getSharedVoiceClient } from '../services/voice-client';
+import { pickNextBoxLevel } from '../config/boxes';
 import type { SceneId, Effect, BootEvent, FocusEvent, RewardEvent } from './types';
 
 const activeTimers = new Map<string, number>();
@@ -154,6 +155,12 @@ export function applyEffects(effects: readonly Effect[], onTimer: (key: string) 
       case 'dispatchRewardEvent':
         internalDispatchReward(effect.event);
         break;
+      case 'dispatchRandomBox': {
+        // D5 P16：每次出航奖励的宝箱品质都随机（加权 + 首次保证 4 级队列）
+        const level = pickNextBoxLevel(useAppStore.getState().openedBoxLevels);
+        internalDispatchReward({ type: 'OPEN_BOX', level });
+        break;
+      }
     }
   }
 }

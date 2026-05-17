@@ -44,9 +44,10 @@ export function focusTransition(
       if (event.type === 'FOCUS_REWARD_READY') {
         return {
           state: 'rewarding',
+          // D5 P16：用 dispatchRandomBox effect，runner 内随机品质（每次不同）
           effects: [
             { type: 'setFocusStage', stage: 'full' },
-            { type: 'dispatchRewardEvent', event: { type: 'OPEN_BOX', level: 'rare' } },
+            { type: 'dispatchRandomBox' },
             { type: 'playSfx', id: 'reward-flow-start' },
           ],
         };

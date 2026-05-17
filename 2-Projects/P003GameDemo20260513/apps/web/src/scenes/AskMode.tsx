@@ -53,12 +53,14 @@ export function AskMode() {
     returnToWelcome();
   }, [isBootAsk, pickBootMode, returnToWelcome]);
 
+  // D5 P16：继续出航 → 回到进入专注（出航）界面，重置 reward + focus 状态
   const onPickLeft = useCallback(() => {
     if (isBootAsk) {
       pickBootMode('explore');
       return;
     }
     dispatchReward({ type: 'ASK_PICK', choice: 'continue' });
+    window.setTimeout(() => jumpToScene('focusRunning'), 400);
   }, [dispatchReward, isBootAsk, pickBootMode]);
 
   const onPickRight = useCallback(() => {
