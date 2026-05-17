@@ -57,7 +57,7 @@ export function Welcome() {
     })();
   }, [bootState]);
 
-  if (bootState !== 'welcome') return null;
+  if (bootState !== 'welcome' && bootState !== 'nightReport') return null;
 
   return (
     <div
