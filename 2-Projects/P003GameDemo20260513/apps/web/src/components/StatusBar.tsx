@@ -23,42 +23,35 @@ export function StatusBar(_props: StatusBarProps) {
 
   const visible = subtitle.trim().length > 0 || voiceStatus !== 'idle';
 
-  // marquee 长文字纵向向上滚动检测：JS 算溢出像素（scrollHeight - clientHeight） + CSS variable
+  // D5 P22：跨句重挂 key 触发 fade-up 动画（打字机推进过程中 prefix 共享 key 不重挂）
+  // 检测规则：新文本不是旧文本的 prefix → 跨句了 → key++
   const containerRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLSpanElement>(null);
-  const [scrollState, setScrollState] = useState<{ dur: number; offset: number }>({ dur: 0, offset: 0 });
+  const prevTextRef = useRef('');
+  const [sentenceKey, setSentenceKey] = useState(0);
+  const scrollState = { dur: 0, offset: 0 } as const;
 
   useEffect(() => {
-    if (!containerRef.current || !textRef.current) {
-      setScrollState({ dur: 0, offset: 0 });
+    const text = subtitle;
+    if (text.length === 0) {
+      prevTextRef.current = '';
       return;
     }
-    const id = window.requestAnimationFrame(() => {
-      const c = containerRef.current;
-      if (!c) {
-        setScrollState({ dur: 0, offset: 0 });
-        return;
-      }
-      // border-box 下用 container 自身 scrollHeight - clientHeight，
-      // 自动扣除 padding，避免 span vs div 维度错位（gemini D5 P6 R3 修正）
-      const overflow = c.scrollHeight - c.clientHeight;
-      if (overflow > 4) {
-        const dur = Math.max(4, Math.min(20, overflow / 16 + 3));
-        setScrollState({ dur, offset: overflow });
-      } else {
-        setScrollState({ dur: 0, offset: 0 });
-      }
-    });
-    return () => window.cancelAnimationFrame(id);
+    const prev = prevTextRef.current;
+    if (prev.length > 0 && !text.startsWith(prev)) {
+      // 不是 prev 的 prefix → 是新句，触发 key++
+      setSentenceKey((k) => k + 1);
+    }
+    prevTextRef.current = text;
   }, [subtitle]);
 
-  // 字幕说完自动消失：N 秒后清空（time = 字数×130ms + 1500ms，clamp [2.5s, 8s]）
-  // 包含长文 marquee 完整滚一遍所需时间
+  // 字幕说完自动消失：N 秒后清空
+  // D5 P22：公式 text.length × 240ms + 1500ms buffer，匹配打字机/TTS 5 字/秒
+  // 旧公式 130ms/字 太短，字幕在 TTS 说完前就消失了
+  // clamp [3500ms, 12000ms]
   useEffect(() => {
     const text = subtitle.trim();
     if (text.length === 0) return;
-    const baseMs = Math.max(2500, Math.min(8000, text.length * 130 + 1500));
-    // 长文滚动情况延长到滚一遍 + 缓冲
+    const baseMs = Math.max(3_500, Math.min(12_000, text.length * 240 + 1500));
     const totalMs = scrollState.dur > 0 ? Math.max(baseMs, scrollState.dur * 1000 + 1000) : baseMs;
     const id = window.setTimeout(() => {
       setSubtitle('');
@@ -120,41 +113,42 @@ export function StatusBar(_props: StatusBarProps) {
             </div>
           )}
 
-          {/* 字幕色块：4 圆角统一 3px + 磨砂玻璃半透 + 垂直尺寸减半 + 字号缩小
-              D5 P6：whitespace normal 允许换行，容器固定为约 2 行高，长字幕向上滚动 */}
+          {/* 字幕色块：D5 P22 改用单句显示 + 跨句 fade-up，单句容器只显示一行，
+              逐字打字 + 跨句滑动效果由 AnimatePresence key={sentenceKey} 驱动 */}
           {subtitle.trim().length > 0 && (
             <div
               ref={containerRef}
-              className="overflow-hidden bg-black/50 px-[3.5cqw] py-[0.4cqh] backdrop-blur-md"
+              className="relative overflow-hidden bg-black/50 px-[3.5cqw] py-[0.4cqh] backdrop-blur-md"
               style={{
                 borderRadius: '3px',
                 width: '100%',
                 maxWidth: '100%',
-                // D5 P18：maxHeight 固定单行 + 上下 padding（用 px 不依赖 cqh fallback）
-                // 字幕过 2 行时容器溢出，触发 subtitle-marquee-y 向上滚动
-                maxHeight: 'calc(clamp(10px, 2.6cqw, 14px) * 1.4 + 6px)',
+                height: 'calc(clamp(10px, 2.6cqw, 14px) * 1.4 + 8px)',
                 lineHeight: 1.4,
                 boxSizing: 'border-box',
                 textAlign: 'center',
               }}
             >
-              <span
-                ref={textRef}
-                className="block font-light text-white"
-                style={{
-                  fontSize: 'clamp(10px, 2.6cqw, 14px)',
-                  letterSpacing: '0.06em',
-                  whiteSpace: 'normal',
-                  wordBreak: 'break-word',
-                  ['--marquee-offset-y' as string]: `-${scrollState.offset}px`,
-                  animation:
-                    scrollState.dur > 0
-                      ? `subtitle-marquee-y ${scrollState.dur}s linear infinite`
-                      : 'none',
-                }}
-              >
-                {subtitle}
-              </span>
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={sentenceKey}
+                  initial={{ y: '60%', opacity: 0 }}
+                  animate={{ y: '0%', opacity: 1 }}
+                  exit={{ y: '-60%', opacity: 0 }}
+                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute inset-0 flex items-center justify-center font-light text-white"
+                  style={{
+                    fontSize: 'clamp(10px, 2.6cqw, 14px)',
+                    letterSpacing: '0.06em',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    padding: '0 1cqw',
+                  }}
+                >
+                  {subtitle}
+                </motion.span>
+              </AnimatePresence>
             </div>
           )}
 
@@ -166,10 +160,6 @@ export function StatusBar(_props: StatusBarProps) {
             @keyframes status-speaking-wave {
               0%, 100% { height: 3px; opacity: 0.6; }
               50% { height: 8px; opacity: 1; }
-            }
-            @keyframes subtitle-marquee-y {
-              0%, 15% { transform: translateY(0); }
-              85%, 100% { transform: translateY(var(--marquee-offset-y, 0px)); }
             }
           `}</style>
         </motion.div>

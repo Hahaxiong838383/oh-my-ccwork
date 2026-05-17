@@ -49,8 +49,23 @@ export function VoiceButton(_props: VoiceButtonProps) {
     const onAsrPartial = (msg: { text: string }) => {
       setSubtitle(msg.text);
     };
-    // D5 P21：打字机字幕推进——按时间显示 LLM 累积全文的 prefix
+    // D5 P22：打字机按句推进——setSubtitle 设当前句 prefix，跨句时触发字幕重挂 fade-up
     // 速度 5 字/秒，与 Doubao TTS 平均字速相近
+    const splitSentences = (text: string): string[] => {
+      const out: string[] = [];
+      let buf = '';
+      for (const ch of text) {
+        buf += ch;
+        if (/[。！？!?\n]/.test(ch)) {
+          const trimmed = buf.trim();
+          if (trimmed) out.push(trimmed);
+          buf = '';
+        }
+      }
+      const tail = buf.trim();
+      if (tail) out.push(tail);
+      return out;
+    };
     const stopTypewriter = () => {
       if (typewriterTimerRef.current !== null) {
         window.clearInterval(typewriterTimerRef.current);
@@ -66,10 +81,19 @@ export function VoiceButton(_props: VoiceButtonProps) {
         if (startedAt === null) return;
         const elapsedSec = (Date.now() - startedAt) / 1000;
         const targetChars = Math.floor(elapsedSec * TYPEWRITER_CHARS_PER_SEC);
-        const text = llmTextRef.current;
-        if (text.length === 0) return;
-        const displayChars = Math.min(targetChars, text.length);
-        setSubtitle(text.slice(0, displayChars));
+        const sentences = splitSentences(llmTextRef.current);
+        if (sentences.length === 0) return;
+        // 累计每句字数定位当前正在播的句和句内位置
+        let cum = 0;
+        let i = 0;
+        for (; i < sentences.length; i++) {
+          if (cum + sentences[i].length >= targetChars) break;
+          cum += sentences[i].length;
+        }
+        const sIdx = Math.min(i, sentences.length - 1);
+        const sentence = sentences[sIdx];
+        const inSentence = Math.min(Math.max(0, targetChars - cum), sentence.length);
+        setSubtitle(sentence.slice(0, inSentence));
       }, 80);
     };
 
@@ -95,9 +119,10 @@ export function VoiceButton(_props: VoiceButtonProps) {
     const onTtsEnd = () => {
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
-      // 兜底：打字机停下时确保显示完整文本（防止打字机速度慢未跑完）
-      const text = llmTextRef.current;
-      if (text.length > 0) setSubtitle(text);
+      // 兜底：打字机停下时确保显示最后一句完整文本
+      const sentences = splitSentences(llmTextRef.current);
+      const last = sentences[sentences.length - 1];
+      if (last) setSubtitle(last);
       llmTextRef.current = '';
       stopTypewriter();
     };
