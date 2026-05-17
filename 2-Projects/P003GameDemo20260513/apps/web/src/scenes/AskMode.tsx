@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { CountdownRing } from '../components/CountdownRing';
 import { useTransitionRunner } from '../hooks/useTransitionRunner';
 import { useAppStore } from '../store/app-store';
+import { jumpToScene } from '../machines';
 
 const ASKMODE_BG = '/assets/askmode-bg.png';
 
@@ -38,13 +39,19 @@ export function AskMode() {
     dispatchFocus({ type: 'LAUNCH', mode });
   }, [dispatchBoot, dispatchFocus]);
 
+  // D5 P15：reward 询问中选"返舱"或超时 → 回到开机欢迎
+  const returnToWelcome = useCallback(() => {
+    dispatchReward({ type: 'ASK_PICK', choice: 'return' });
+    window.setTimeout(() => jumpToScene('welcome'), 400);
+  }, [dispatchReward]);
+
   const onTimeout = useCallback(() => {
     if (isBootAsk) {
       pickBootMode('companion');
       return;
     }
-    dispatchReward({ type: 'ASK_PICK', choice: 'return' });
-  }, [dispatchReward, isBootAsk, pickBootMode]);
+    returnToWelcome();
+  }, [isBootAsk, pickBootMode, returnToWelcome]);
 
   const onPickLeft = useCallback(() => {
     if (isBootAsk) {
@@ -59,8 +66,8 @@ export function AskMode() {
       pickBootMode('companion');
       return;
     }
-    dispatchReward({ type: 'ASK_PICK', choice: 'return' });
-  }, [dispatchReward, isBootAsk, pickBootMode]);
+    returnToWelcome();
+  }, [isBootAsk, pickBootMode, returnToWelcome]);
 
   if (!isBootAsk && !isRewardAsk) return null;
 

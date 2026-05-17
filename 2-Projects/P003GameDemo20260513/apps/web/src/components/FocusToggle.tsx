@@ -1,5 +1,6 @@
 import { useAppStore } from '../store/app-store';
 import { useTransitionRunner } from '../hooks/useTransitionRunner';
+import { jumpToScene } from '../machines';
 
 /**
  * FocusToggle —— focusMachine 驱动的返舱/确认按钮
@@ -47,7 +48,11 @@ export function FocusToggle() {
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={() => dispatchFocus({ type: 'EXIT_CONFIRM' })}
+          onClick={() => {
+            dispatchFocus({ type: 'EXIT_CONFIRM' });
+            // D5 P15：确认返舱 → 让"太棒了 +10"字幕和 TTS 播 1.8s → 回开机欢迎
+            window.setTimeout(() => jumpToScene('welcome'), 1_800);
+          }}
           className="h-10 min-w-[80px] rounded-2xl bg-porthole-glow/90 px-3 text-sm font-semibold text-shell-bg shadow-[0_0_18px_rgba(79,209,255,0.4)] hover:brightness-110 active:scale-[0.98]"
         >
           确定
