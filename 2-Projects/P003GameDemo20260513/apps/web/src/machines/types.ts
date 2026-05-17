@@ -38,7 +38,7 @@ export type FocusEvent =
 
 export type RewardEvent =
   | { type: 'OPEN_BOX'; level: BoxLevel }
-  | { type: 'OPEN_ANIM_END' }
+  | { type: 'OPEN_ANIM_END'; level: BoxLevel }
   | { type: 'REWARD_SHOWN' }
   | { type: 'ECO_CHECK'; hasUnlock: boolean }
   | { type: 'ECO_DONE' }
@@ -52,7 +52,7 @@ export type Effect =
   | { type: 'clearAllTimers' }
   | { type: 'playSfx'; id: string }
   | { type: 'setVoiceStatus'; status: VoiceStatus }
-  | { type: 'setSubtitle'; text: string; tts?: boolean }
+  | { type: 'setSubtitle'; text: string; silent?: boolean }
   | { type: 'addStardust'; amount: number }
   | { type: 'addFamilyCoin'; amount: number }
   | { type: 'setXiaokeEmotion'; emotion: XiaokeEmotion }

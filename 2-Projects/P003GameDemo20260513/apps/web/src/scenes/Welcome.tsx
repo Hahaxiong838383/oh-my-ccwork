@@ -1,16 +1,8 @@
-import { useEffect, useRef } from 'react';
 import { useAppStore } from '../store/app-store';
-import { getSharedVoiceClient } from '../services/voice-client';
 
 const WELCOME_BG = '/assets/welcome-bg.png';
-const WELCOME_LINE = '你好，指挥官！欢迎回到方舟';
 
-function getVoiceWsUrl(): string {
-  const envUrl = import.meta.env.VITE_VOICE_WS_URL as string | undefined;
-  if (envUrl && envUrl.trim()) return envUrl;
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${protocol}://${window.location.host}/ws/voice`;
-}
+// D5 P7：sayDirect 已收归 applyEffects 默认 TTS，scene 不再重复触发
 
 interface StarSpec {
   id: string;
@@ -33,29 +25,6 @@ const STARS: readonly StarSpec[] = [
 
 export function Welcome() {
   const bootState = useAppStore((s) => s.bootState);
-  const spokenRef = useRef(false);
-
-  useEffect(() => {
-    if (bootState !== 'welcome') {
-      spokenRef.current = false;
-      return;
-    }
-    if (spokenRef.current) return;
-    spokenRef.current = true;
-
-    // 字幕由 boot-machine 在 transitions 里统一管（不要 scene 插手 setSubtitle，
-    // 否则 cleanup 会覆盖下一个 scene 刚设的字幕）。这里只触发 TTS 朗读。
-    const client = getSharedVoiceClient();
-    void (async () => {
-      try {
-        await client.connect(getVoiceWsUrl());
-      } catch (err) {
-        console.warn('[Welcome] voice ws connect failed', err);
-        return;
-      }
-      client.sayDirect(WELCOME_LINE);
-    })();
-  }, [bootState]);
 
   if (bootState !== 'welcome' && bootState !== 'nightReport') return null;
 

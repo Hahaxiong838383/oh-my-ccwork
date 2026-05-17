@@ -15,7 +15,7 @@ export function focusTransition(
         return {
           state: 'launching',
           effects: [
-            { type: 'setSubtitle', text: event.mode === 'explore' ? '出航中...' : '小可来陪你读书' },
+            { type: 'setSubtitle', text: event.mode === 'explore' ? '坐稳啦，我们要出发咯！' : '慢慢来，深呼吸放松一下。' },
             { type: 'setXiaokeEmotion', emotion: event.mode === 'explore' ? 'excited' : 'warm' },
             { type: 'playSfx', id: event.mode === 'explore' ? 'focus-launch' : 'focus-companion' },
             { type: 'startTimer', key: 'launch', ms: LAUNCH_ANIM_MS },

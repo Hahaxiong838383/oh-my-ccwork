@@ -75,7 +75,7 @@ export function StatusBar(_props: StatusBarProps) {
           exit={{ opacity: 0, y: 8, x: '-50%' }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
           className="pointer-events-none absolute left-1/2 z-layer-feedback flex flex-col items-center gap-[0.6cqh]"
-          style={{ bottom: '1cqh', maxWidth: 'min(94cqw, 760px)' }}
+          style={{ bottom: '1cqh', width: '98cqw', maxWidth: '98cqw' }}
         >
           {/* voiceStatus 指示器悬浮在字幕上方 */}
           {voiceStatus !== 'idle' && (
@@ -125,15 +125,16 @@ export function StatusBar(_props: StatusBarProps) {
           {subtitle.trim().length > 0 && (
             <div
               ref={containerRef}
-              className="overflow-hidden bg-black/50 px-[3.5cqw] py-[0.8cqh] backdrop-blur-md"
+              className="overflow-hidden bg-black/50 px-[3.5cqw] py-[0.4cqh] backdrop-blur-md"
               style={{
                 borderRadius: '3px',
+                width: '100%',
                 maxWidth: '100%',
-                // border-box：maxHeight 必须包含上下 padding（py-[0.8cqh]）
-                // 否则 2 行字会被裁断（gemini D5 P6 R3 修正）
-                maxHeight: 'calc((clamp(10px, 2.6cqw, 14px) * 1.5) * 2 + 0.8cqh * 2)',
-                lineHeight: 1.5,
+                // D5 P7：垂直尺寸再缩半 (py-[0.4cqh] + maxHeight 改 1.5 行)
+                maxHeight: 'calc((clamp(10px, 2.6cqw, 14px) * 1.4) * 1.5 + 0.4cqh * 2)',
+                lineHeight: 1.4,
                 boxSizing: 'border-box',
+                textAlign: 'center',
               }}
             >
               <span

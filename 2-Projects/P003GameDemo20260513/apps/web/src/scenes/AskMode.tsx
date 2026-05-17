@@ -1,18 +1,11 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { CountdownRing } from '../components/CountdownRing';
 import { useTransitionRunner } from '../hooks/useTransitionRunner';
 import { useAppStore } from '../store/app-store';
-import { getSharedVoiceClient } from '../services/voice-client';
 
 const ASKMODE_BG = '/assets/askmode-bg.png';
-const ASKMODE_LINE = '指挥官，今天想出航，还是静思呢？';
 
-function getVoiceWsUrl(): string {
-  const envUrl = import.meta.env.VITE_VOICE_WS_URL as string | undefined;
-  if (envUrl && envUrl.trim()) return envUrl;
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${protocol}://${window.location.host}/ws/voice`;
-}
+// D5 P7：sayDirect 已收归 applyEffects 默认 TTS，scene 不再重复触发
 
 interface StarSpec {
   id: string;
@@ -39,27 +32,6 @@ export function AskMode() {
   const isBootAsk = bootState === 'askMode';
   const isRewardAsk = rewardMachine === 'askMode';
   const { dispatchBoot, dispatchFocus, dispatchReward } = useTransitionRunner();
-  const spokenRef = useRef(false);
-
-  // ⚠️ Rules of Hooks: 所有 useCallback/useEffect 必须在 early return 之前。
-  useEffect(() => {
-    if (!isBootAsk) {
-      spokenRef.current = false;
-      return;
-    }
-    if (spokenRef.current) return;
-    spokenRef.current = true;
-    const client = getSharedVoiceClient();
-    void (async () => {
-      try {
-        await client.connect(getVoiceWsUrl());
-      } catch (err) {
-        console.warn('[AskMode] voice ws connect failed', err);
-        return;
-      }
-      client.sayDirect(ASKMODE_LINE);
-    })();
-  }, [isBootAsk]);
 
   const pickBootMode = useCallback((mode: 'explore' | 'companion') => {
     dispatchBoot({ type: 'ASK_MODE_PICK', mode });

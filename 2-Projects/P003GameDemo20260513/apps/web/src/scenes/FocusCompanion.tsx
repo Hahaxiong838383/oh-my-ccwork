@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
 import { FocusToggle } from '../components/FocusToggle';
-import { getSharedVoiceClient } from '../services/voice-client';
 import { useStageCrossfade } from '../hooks/useStageCrossfade';
 import { useAppStore, type FocusStage } from '../store/app-store';
+
+// D5 P7：sayDirect 已收归 applyEffects 默认 TTS
 
 const STAGE_IMAGE_MAP: Record<FocusStage, string> = {
   locked: '/art/focus-companion/01-locked.png',
@@ -11,7 +11,6 @@ const STAGE_IMAGE_MAP: Record<FocusStage, string> = {
   full: '/art/focus-companion/04-full.png',
 };
 const REWARDING_STATIC_SRC = '/art/focus-companion/04-full.png';
-const LAUNCH_TTS_LINE = '慢慢来，深呼吸放松一下。';
 
 function getStageMotionClass(stage: FocusStage): string {
   if (stage === 'locked') return 'fc-motion-locked';
@@ -23,7 +22,6 @@ function getStageMotionClass(stage: FocusStage): string {
 export function FocusCompanion() {
   const focusMachine = useAppStore((s) => s.focusMachine);
   const focusStage = useAppStore((s) => s.focusStage);
-  const launchSpokenRef = useRef(false);
   const { currentSrc, previousSrc, isFading, currentOpacity } = useStageCrossfade(
     focusStage,
     STAGE_IMAGE_MAP,
@@ -31,16 +29,6 @@ export function FocusCompanion() {
       fadeDurationMs: 300,
     },
   );
-
-  useEffect(() => {
-    if (focusMachine !== 'launching') {
-      launchSpokenRef.current = false;
-      return;
-    }
-    if (launchSpokenRef.current) return;
-    launchSpokenRef.current = true;
-    getSharedVoiceClient().sayDirect(LAUNCH_TTS_LINE);
-  }, [focusMachine]);
 
   if (focusMachine === 'launching') {
     return (

@@ -1,18 +1,10 @@
 import { motion } from 'framer-motion';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DEMO_DATA } from '../config/demo-data';
 import { type BoxLevel, useAppStore } from '../store/app-store';
-import { getSharedVoiceClient } from '../services/voice-client';
 import { ALL_BOX_LEVELS, BOX_LEVELS } from '../config/boxes';
 
-const NIGHT_REPORT_LINE = '夜航报告出炉，这是你不在的时候我去赚来的哦！';
-
-function getVoiceWsUrl(): string {
-  const envUrl = import.meta.env.VITE_VOICE_WS_URL as string | undefined;
-  if (envUrl && envUrl.trim()) return envUrl;
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${protocol}://${window.location.host}/ws/voice`;
-}
+// D5 P7：sayDirect 已收归 applyEffects 默认 TTS，scene 不再重复触发
 
 interface NumberRollProps {
   value: number;
@@ -71,32 +63,15 @@ export function NightReport() {
   const [phase, setPhase] = useState<1 | 2 | 3>(1);
   const [renderOverlay, setRenderOverlay] = useState(isActive);
   const [isExiting, setIsExiting] = useState(false);
-  const spokenRef = useRef(false);
   // D5 P6：每次 isActive 触发时随机生成 1-4 个宝箱，跳出后清空
   const [randomBoxes, setRandomBoxes] = useState<BoxLevel[]>(() =>
     isActive ? generateRandomBoxes() : [],
   );
 
-  // D5 P5：nightReport 出现时小可开口 TTS
-  // D5 P6：同时刷新随机宝箱列表
+  // D5 P6/P7：每次 isActive 触发时刷新随机宝箱列表（TTS 已收归 applyEffects）
   useEffect(() => {
-    if (!isActive) {
-      spokenRef.current = false;
-      return;
-    }
-    if (spokenRef.current) return;
-    spokenRef.current = true;
+    if (!isActive) return;
     setRandomBoxes(generateRandomBoxes());
-    const client = getSharedVoiceClient();
-    void (async () => {
-      try {
-        await client.connect(getVoiceWsUrl());
-      } catch (err) {
-        console.warn('[NightReport] voice ws connect failed', err);
-        return;
-      }
-      client.sayDirect(NIGHT_REPORT_LINE);
-    })();
   }, [isActive]);
 
   useEffect(() => {

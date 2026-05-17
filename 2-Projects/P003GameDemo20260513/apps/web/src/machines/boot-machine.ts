@@ -54,7 +54,7 @@ export function bootTransition(
           state: 'askMode',
           effects: [
             { type: 'clearTimer', key: 'nightReport' },
-            { type: 'setSubtitle', text: '今天想 探索 还是 陪伴？' },
+            { type: 'setSubtitle', text: '指挥官，今天想出航，还是静思呢？' },
             { type: 'setXiaokeEmotion', emotion: 'curious' },
           ],
         };

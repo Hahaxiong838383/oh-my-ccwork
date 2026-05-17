@@ -30,6 +30,51 @@ import type { SceneId, Effect, BootEvent, FocusEvent, RewardEvent } from './type
 
 const activeTimers = new Map<string, number>();
 
+// D5 P7：短期去重，防 jumpToScene preset.subtitle 与 effect setSubtitle 同句重复 TTS
+let lastTtsText = '';
+let lastTtsAt = 0;
+const TTS_DEDUP_MS = 800;
+
+function getVoiceWsUrlInternal(): string {
+  const envUrl = import.meta.env.VITE_VOICE_WS_URL as string | undefined;
+  if (envUrl && envUrl.trim()) return envUrl;
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${protocol}://${window.location.host}/ws/voice`;
+}
+
+export function ttsSpeak(text: string): void {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return;
+  const now = Date.now();
+  if (trimmed === lastTtsText && now - lastTtsAt < TTS_DEDUP_MS) return;
+  lastTtsText = trimmed;
+  lastTtsAt = now;
+  try {
+    const client = getSharedVoiceClient();
+    void (async () => {
+      try {
+        await client.connect(getVoiceWsUrlInternal());
+        client.sayDirect(trimmed);
+      } catch (err) {
+        console.warn('[ttsSpeak] failed', err);
+      }
+    })();
+  } catch (err) {
+    console.warn('[ttsSpeak] voice client unavailable', err);
+  }
+}
+
+export function prewarmVoiceClient(): void {
+  try {
+    const client = getSharedVoiceClient();
+    void client.connect(getVoiceWsUrlInternal()).catch((err) => {
+      console.warn('[prewarmVoiceClient] connect failed', err);
+    });
+  } catch (err) {
+    console.warn('[prewarmVoiceClient] unavailable', err);
+  }
+}
+
 /**
  * applyEffects —— 执行 transition 返回的 effects 列表
  * timer 在 module-scope Map 里集中管理，避免多 useEffect 各自持有 setTimeout。
@@ -70,27 +115,10 @@ export function applyEffects(effects: readonly Effect[], onTimer: (key: string) 
         break;
       case 'setSubtitle':
         store.setSubtitle(effect.text);
-        if (effect.tts && effect.text.trim().length > 0) {
-          // D5 P6：reward-machine 等需要"字幕同步发声"的场景标 tts:true
-          // 自动调 sharedVoiceClient.sayDirect，避免每个 scene 重复装监听
-          try {
-            const client = getSharedVoiceClient();
-            const envUrl = import.meta.env.VITE_VOICE_WS_URL as string | undefined;
-            const wsUrl =
-              envUrl && envUrl.trim()
-                ? envUrl
-                : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/voice`;
-            void (async () => {
-              try {
-                await client.connect(wsUrl);
-                client.sayDirect(effect.text);
-              } catch (err) {
-                console.warn('[applyEffects] tts setSubtitle failed', err);
-              }
-            })();
-          } catch (err) {
-            console.warn('[applyEffects] voice client unavailable', err);
-          }
+        // D5 P7：默认所有非空字幕同步 TTS（川哥铁律：字幕出现就要小可说）
+        // silent: true 时跳过（用于纯清空 / 已有外部 TTS 的边缘场景）
+        if (!effect.silent && effect.text.trim().length > 0) {
+          ttsSpeak(effect.text);
         }
         break;
       case 'addStardust':
@@ -193,9 +221,12 @@ export function defaultTimerRouter(key: string): void {
       break;
 
     // reward machine
-    case 'openAnim':
-      internalDispatchReward({ type: 'OPEN_ANIM_END' });
+    case 'openAnim': {
+      // D5 P7：携带 store.currentBoxLevel，让 reward-machine 拿到正确文案触发 TTS
+      const level = useAppStore.getState().currentBoxLevel ?? 'common';
+      internalDispatchReward({ type: 'OPEN_ANIM_END', level });
       break;
+    }
     case 'rewardShown': {
       // showingReward → ECO_CHECK：legendary 必触发 ecoUnlock，其它级走 askMode
       // （demo 演示节奏可控，避免每次 OPEN_BOX 都进 ecoUnlock 节奏过密）
@@ -277,6 +308,12 @@ export function jumpToScene(scene: SceneId): void {
       useAppStore.getState().setFarewellState('shutdown');
     }, 1_500);
     activeTimers.set('farewellWave', wavingId);
+  }
+
+  // D5 P7：跳关字幕也要 TTS（含关盖告别的"指挥官，明天见～"等）
+  // 短期去重保护 vs effect 重复触发同一文本
+  if (preset.subtitle && preset.subtitle.trim().length > 0) {
+    ttsSpeak(preset.subtitle);
   }
 
   if (import.meta.env.DEV) console.debug('[jumpToScene]', scene);

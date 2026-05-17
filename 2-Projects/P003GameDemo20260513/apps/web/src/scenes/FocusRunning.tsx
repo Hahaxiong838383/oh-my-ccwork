@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FocusToggle } from '../components/FocusToggle';
-import { getSharedVoiceClient } from '../services/voice-client';
 import { useStageCrossfade } from '../hooks/useStageCrossfade';
 import { useAppStore, type FocusMachineState, type FocusStage } from '../store/app-store';
+// D5 P7：sayDirect 已收归 applyEffects 默认 TTS
 
 const STAGE_IMAGE_MAP: Record<FocusStage, string> = {
   locked: '/art/focus-running/03-locked.png',
@@ -15,7 +15,6 @@ const ACTIVE_ROTATING_RING_SRC = '/art/focus-running/05-active-rotating.png';
 const LAUNCHING_PRIMARY_SRC = '/art/focus-running/01-launching.png';
 const LAUNCHING_TRANSITION_SRC = '/art/focus-running/02-transition.png';
 const REWARDING_STATIC_SRC = '/art/focus-running/08-handoff.png';
-const LAUNCH_TTS_LINE = '坐稳啦，我们要出发咯！';
 
 function getStageMotionClass(stage: FocusStage): string {
   if (stage === 'locked') return 'fr-motion-locked';
@@ -24,9 +23,8 @@ function getStageMotionClass(stage: FocusStage): string {
   return 'fr-motion-full';
 }
 
-function FocusRunningLaunching({ focusMachine }: { focusMachine: FocusMachineState }) {
+function FocusRunningLaunching({ focusMachine: _focusMachine }: { focusMachine: FocusMachineState }) {
   const [elapsedMs, setElapsedMs] = useState(0);
-  const launchSpokenRef = useRef(false);
 
   useEffect(() => {
     const startedAt = Date.now();
@@ -35,16 +33,6 @@ function FocusRunningLaunching({ focusMachine }: { focusMachine: FocusMachineSta
     }, 16);
     return () => window.clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    if (focusMachine !== 'launching') {
-      launchSpokenRef.current = false;
-      return;
-    }
-    if (launchSpokenRef.current) return;
-    launchSpokenRef.current = true;
-    getSharedVoiceClient().sayDirect(LAUNCH_TTS_LINE);
-  }, [focusMachine]);
 
   const showTransition = elapsedMs >= 1_700;
   const transitionOpacity = Math.max(0, Math.min(1, (elapsedMs - 1_700) / 800));

@@ -1,4 +1,4 @@
-import type { RewardMachineState, RewardEvent, TransitionResult, Effect } from './types';
+import type { RewardMachineState, RewardEvent, TransitionResult } from './types';
 import type { BoxLevel } from '../store/app-store';
 import { warnInvalid, noop } from './types';
 
@@ -43,10 +43,10 @@ export function rewardTransition(
       if (event.type === 'OPEN_ANIM_END') {
         return {
           state: 'showingReward',
-          // 进入 showingReward 自动 startTimer 'rewardShown'，
-          // timer-router 读 store.currentBoxLevel 决定 ECO_CHECK 的 hasUnlock
+          // D5 P7：OPEN_ANIM_END 带 level，setSubtitle 用奖励语→自动 TTS
           effects: [
-            ...showRewardEffects(getRequiredLevel(event)),
+            { type: 'setSubtitle', text: REWARD_TABLE[event.level].line },
+            { type: 'playSfx', id: 'reward-coin-flying' },
             { type: 'startTimer', key: 'rewardShown', ms: REWARD_SHOWN_MS },
           ],
         };
@@ -80,7 +80,7 @@ export function rewardTransition(
           state: 'askMode',
           effects: [
             { type: 'clearTimer', key: 'rewardShown' },
-            { type: 'setSubtitle', text: '继续出航 还是 返舱？', tts: true },
+            { type: 'setSubtitle', text: '继续出航 还是 返舱？' },
             { type: 'startTimer', key: 'rewardAsk', ms: ASK_TIMEOUT_MS },
           ],
         };
@@ -93,7 +93,7 @@ export function rewardTransition(
           state: 'askMode',
           effects: [
             { type: 'clearTimer', key: 'ecoAnim' },
-            { type: 'setSubtitle', text: '继续出航 还是 返舱？', tts: true },
+            { type: 'setSubtitle', text: '继续出航 还是 返舱？' },
             { type: 'startTimer', key: 'rewardAsk', ms: ASK_TIMEOUT_MS },
           ],
         };
@@ -130,20 +130,6 @@ export function rewardTransition(
 
   warnInvalid('reward', current, event);
   return noop(current);
-}
-
-function getRequiredLevel(_event: RewardEvent): BoxLevel {
-  // openingBox 状态下，OPEN_ANIM_END 事件不带 level，需要从外部状态读
-  // 但 transition 是纯函数，不能读 store。所以 effects 里用占位 level，
-  // 真实奖励数字在 effect runner 里根据 store.currentBoxLevel 查表替换。
-  return 'common';
-}
-
-function showRewardEffects(_placeholder: BoxLevel): Effect[] {
-  return [
-    { type: 'setSubtitle', text: '' },
-    { type: 'playSfx', id: 'reward-coin-flying' },
-  ];
 }
 
 export { REWARD_TABLE, OPEN_ANIM_MS };
