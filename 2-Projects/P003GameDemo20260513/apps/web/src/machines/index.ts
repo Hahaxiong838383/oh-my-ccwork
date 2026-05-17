@@ -70,6 +70,28 @@ export function applyEffects(effects: readonly Effect[], onTimer: (key: string) 
         break;
       case 'setSubtitle':
         store.setSubtitle(effect.text);
+        if (effect.tts && effect.text.trim().length > 0) {
+          // D5 P6：reward-machine 等需要"字幕同步发声"的场景标 tts:true
+          // 自动调 sharedVoiceClient.sayDirect，避免每个 scene 重复装监听
+          try {
+            const client = getSharedVoiceClient();
+            const envUrl = import.meta.env.VITE_VOICE_WS_URL as string | undefined;
+            const wsUrl =
+              envUrl && envUrl.trim()
+                ? envUrl
+                : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/voice`;
+            void (async () => {
+              try {
+                await client.connect(wsUrl);
+                client.sayDirect(effect.text);
+              } catch (err) {
+                console.warn('[applyEffects] tts setSubtitle failed', err);
+              }
+            })();
+          } catch (err) {
+            console.warn('[applyEffects] voice client unavailable', err);
+          }
+        }
         break;
       case 'addStardust':
         store.addStardust(effect.amount);

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEMO_DATA } from '../config/demo-data';
 import { type BoxLevel, useAppStore } from '../store/app-store';
 import { getSharedVoiceClient } from '../services/voice-client';
+import { ALL_BOX_LEVELS, BOX_LEVELS } from '../config/boxes';
 
 const NIGHT_REPORT_LINE = '夜航报告出炉，这是你不在的时候我去赚来的哦！';
 
@@ -45,18 +46,25 @@ function NumberRoll({ value, durationMs }: NumberRollProps) {
 const PHASE_2_AT_MS = 500;
 const PHASE_3_AT_MS = 1200;
 const EXIT_ANIM_MS = 680;
-const BOX_ORDER: BoxLevel[] = ['common', 'rare', 'epic', 'legendary'];
 
-const BOX_STYLE: Record<BoxLevel, { label: string; icon: string; tone: string }> = {
-  common: { label: '普通', icon: '📦', tone: '#d8c5a8' },
-  rare: { label: '精品', icon: '🎁', tone: '#c8b087' },
-  epic: { label: '史诗', icon: '💎', tone: '#b68e5f' },
-  legendary: { label: '传说', icon: '👑', tone: '#9e743d' },
+// D5 P6：宝箱条目用美术 PNG（来自 config/boxes.ts），label/tone 仅用于报告内显示
+const BOX_STYLE: Record<BoxLevel, { label: string; tone: string }> = {
+  common: { label: '普通', tone: '#d8c5a8' },
+  rare: { label: '精品', tone: '#c8b087' },
+  epic: { label: '史诗', tone: '#b68e5f' },
+  legendary: { label: '传说', tone: '#9e743d' },
 };
+
+// D5 P6：每次 nightReport 进入时随机 1-4 个宝箱，每个品质独立随机
+function generateRandomBoxes(): BoxLevel[] {
+  const count = 1 + Math.floor(Math.random() * 4);
+  return Array.from({ length: count }, () =>
+    ALL_BOX_LEVELS[Math.floor(Math.random() * ALL_BOX_LEVELS.length)],
+  );
+}
 
 export function NightReport() {
   const bootState = useAppStore((s) => s.bootState);
-  const openedBoxLevels = useAppStore((s) => s.openedBoxLevels);
   const ecoLevel = useAppStore((s) => s.ecoLevel);
   const bonus = DEMO_DATA.nightReportBonus;
   const isActive = bootState === 'nightReport';
@@ -64,8 +72,13 @@ export function NightReport() {
   const [renderOverlay, setRenderOverlay] = useState(isActive);
   const [isExiting, setIsExiting] = useState(false);
   const spokenRef = useRef(false);
+  // D5 P6：每次 isActive 触发时随机生成 1-4 个宝箱，跳出后清空
+  const [randomBoxes, setRandomBoxes] = useState<BoxLevel[]>(() =>
+    isActive ? generateRandomBoxes() : [],
+  );
 
   // D5 P5：nightReport 出现时小可开口 TTS
+  // D5 P6：同时刷新随机宝箱列表
   useEffect(() => {
     if (!isActive) {
       spokenRef.current = false;
@@ -73,6 +86,7 @@ export function NightReport() {
     }
     if (spokenRef.current) return;
     spokenRef.current = true;
+    setRandomBoxes(generateRandomBoxes());
     const client = getSharedVoiceClient();
     void (async () => {
       try {
@@ -112,13 +126,13 @@ export function NightReport() {
     };
   }, [isActive]);
 
-  const openedSet = useMemo(() => new Set(openedBoxLevels), [openedBoxLevels]);
+  const hasLegendary = useMemo(() => randomBoxes.includes('legendary'), [randomBoxes]);
   const extraUnlocks = useMemo(() => {
     const items: string[] = [];
     if (ecoLevel >= 2) items.push(`灯光鱼缸 Lv${ecoLevel} 可用`);
-    if (openedSet.has('legendary')) items.push('传奇补给权限已激活');
+    if (hasLegendary) items.push('传奇补给权限已激活');
     return items;
-  }, [ecoLevel, openedSet]);
+  }, [ecoLevel, hasLegendary]);
 
   if (!renderOverlay) return null;
 
@@ -141,7 +155,8 @@ export function NightReport() {
         className="relative"
         style={{
           width: 'clamp(60cqw, 70cqw, 75cqw)',
-          height: 'clamp(33cqh, 40cqw, 37cqh)',
+          // D5 P6：弹窗加高，确保 1-4 个宝箱（PNG 缩略 + 标签）放得下
+          height: 'clamp(58cqh, 60cqw, 72cqh)',
           perspective: '1400px',
         }}
       >
@@ -173,24 +188,40 @@ export function NightReport() {
             <p className="font-medium">家族币 +{bonus.familyCoin}</p>
 
             <div className="mt-[clamp(0.3cqh,0.6cqw,0.8cqh)]">
-              <p className="mb-[clamp(0.3cqh,0.5cqw,0.6cqh)] font-semibold">已开宝箱</p>
-              <div className="grid grid-cols-4 gap-[clamp(0.4cqh,0.7cqw,0.9cqh)]">
-                {BOX_ORDER.map((level) => {
+              <p className="mb-[clamp(0.3cqh,0.5cqw,0.6cqh)] font-semibold">
+                已开宝箱 <span className="opacity-60">×{randomBoxes.length}</span>
+              </p>
+              {/* D5 P6：列数 = 宝箱数（1-4），cell 居中、缩小 PNG 适配 */}
+              <div
+                className="grid gap-[clamp(0.4cqh,0.7cqw,0.9cqh)]"
+                style={{
+                  gridTemplateColumns: `repeat(${Math.max(1, randomBoxes.length)}, minmax(0, 1fr))`,
+                }}
+              >
+                {randomBoxes.map((level, idx) => {
                   const item = BOX_STYLE[level];
-                  const active = openedSet.has(level);
+                  const cfg = BOX_LEVELS[level];
                   return (
                     <div
-                      key={level}
-                      className="flex flex-col items-center justify-center rounded-[clamp(0.6cqh,1cqw,1.2cqh)] px-[clamp(0.35cqh,0.6cqw,0.8cqh)] py-[clamp(0.35cqh,0.6cqw,0.8cqh)] text-center ring-1"
+                      key={`${level}-${idx}`}
+                      className="flex flex-col items-center justify-center rounded-[clamp(0.6cqh,1cqw,1.2cqh)] px-[clamp(0.35cqh,0.6cqw,0.8cqh)] py-[clamp(0.5cqh,0.8cqw,1cqh)] text-center ring-1"
                       style={{
-                        backgroundColor: active ? item.tone : 'rgba(255,248,226,0.45)',
-                        opacity: active ? 1 : 0.55,
+                        backgroundColor: item.tone,
                         borderColor: 'rgba(110, 74, 36, 0.24)',
                         fontSize: 'clamp(1cqh,1.6cqw,1.9cqh)',
                       }}
                     >
-                      <span aria-hidden>{item.icon}</span>
-                      <span className="mt-[clamp(0.1cqh,0.2cqw,0.3cqh)]">{item.label}</span>
+                      <img
+                        src={cfg.imageSrc}
+                        alt={item.label}
+                        draggable={false}
+                        style={{
+                          width: 'clamp(3.2cqh, 5cqw, 6cqh)',
+                          height: 'clamp(3.2cqh, 5cqw, 6cqh)',
+                          objectFit: 'contain',
+                        }}
+                      />
+                      <span className="mt-[clamp(0.2cqh,0.3cqw,0.4cqh)] font-medium">{item.label}</span>
                     </div>
                   );
                 })}

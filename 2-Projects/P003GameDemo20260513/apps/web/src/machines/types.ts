@@ -52,7 +52,7 @@ export type Effect =
   | { type: 'clearAllTimers' }
   | { type: 'playSfx'; id: string }
   | { type: 'setVoiceStatus'; status: VoiceStatus }
-  | { type: 'setSubtitle'; text: string }
+  | { type: 'setSubtitle'; text: string; tts?: boolean }
   | { type: 'addStardust'; amount: number }
   | { type: 'addFamilyCoin'; amount: number }
   | { type: 'setXiaokeEmotion'; emotion: XiaokeEmotion }
