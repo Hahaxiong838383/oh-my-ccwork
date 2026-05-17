@@ -1,9 +1,11 @@
 import type { FocusMachineState, FocusEvent, TransitionResult } from './types';
 import { warnInvalid, noop } from './types';
 
-// D5 P12：02 完全显示后再停 4s 再切到 running
+// D5 P12：出航 02 完全显示后再停 4s 再切到 running
 // 01 显示 2.7s + 1.8s 过渡到 02 + 02 停 4s = 8.5s
-const LAUNCH_ANIM_MS = 8_500;
+const LAUNCH_ANIM_EXPLORE_MS = 8_500;
+// D5 P17：静思 launching 单图淡入 → 2.5s 足够，不要陪出航拖时间
+const LAUNCH_ANIM_COMPANION_MS = 2_500;
 const PRESENCE_LOST_TO_PAUSED_MS = 30_000;
 const EXIT_CONFIRM_TIMEOUT_MS = 30_000;
 
@@ -20,7 +22,7 @@ export function focusTransition(
             { type: 'setSubtitle', text: event.mode === 'explore' ? '坐稳啦，我们要出发咯！' : '慢慢来，深呼吸放松一下。' },
             { type: 'setXiaokeEmotion', emotion: event.mode === 'explore' ? 'excited' : 'warm' },
             { type: 'playSfx', id: event.mode === 'explore' ? 'focus-launch' : 'focus-companion' },
-            { type: 'startTimer', key: 'launch', ms: LAUNCH_ANIM_MS },
+            { type: 'startTimer', key: 'launch', ms: event.mode === 'explore' ? LAUNCH_ANIM_EXPLORE_MS : LAUNCH_ANIM_COMPANION_MS },
           ],
         };
       }
