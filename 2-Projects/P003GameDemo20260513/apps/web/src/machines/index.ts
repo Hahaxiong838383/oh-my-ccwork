@@ -183,6 +183,16 @@ export function applyEffects(effects: readonly Effect[], onTimer: (key: string) 
         internalDispatchReward({ type: 'OPEN_BOX', level });
         break;
       }
+      case 'askReturnSubtitle': {
+        // D5 P23：按 focusMode 选字幕（静思/出航）
+        const mode = useAppStore.getState().focusMode;
+        const text = mode === 'companion' ? '继续静思 还是 返舱？' : '继续出航 还是 返舱？';
+        store.setSubtitle('');
+        ttsSpeak(text, () => {
+          useAppStore.getState().setSubtitle(text);
+        });
+        break;
+      }
     }
   }
 }

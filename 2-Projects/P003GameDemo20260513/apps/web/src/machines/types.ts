@@ -65,7 +65,9 @@ export type Effect =
   | { type: 'setFocusStartedAt'; timestamp: number | null }
   | { type: 'dispatchRewardEvent'; event: RewardEvent }
   // D5 P16：随机宝箱品质，effect runner 内用 boxes.pickNextBoxLevel
-  | { type: 'dispatchRandomBox' };
+  | { type: 'dispatchRandomBox' }
+  // D5 P23：奖励询问字幕按 focusMode 区分（继续出航/继续静思 还是 返舱？）
+  | { type: 'askReturnSubtitle' };
 
 export interface TransitionResult<S> {
   state: S;

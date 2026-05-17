@@ -196,9 +196,11 @@ export function AskMode() {
     );
   }
 
-  // 奖励后询问：保留原 UI（继续出航 / 返舱）
-  const title = '继续出航 还是 返舱？';
-  const leftLabel = '继续出航';
+  // D5 P23：奖励后询问按 focusMode 区分文案（静思/出航）
+  const focusMode = useAppStore.getState().focusMode;
+  const isCompanion = focusMode === 'companion';
+  const title = isCompanion ? '继续静思 还是 返舱？' : '继续出航 还是 返舱？';
+  const leftLabel = isCompanion ? '继续静思' : '继续出航';
   const rightLabel = '返舱';
 
   return (

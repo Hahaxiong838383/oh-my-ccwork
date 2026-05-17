@@ -87,7 +87,7 @@ export function rewardTransition(
           state: 'askMode',
           effects: [
             { type: 'clearTimer', key: 'rewardShown' },
-            { type: 'setSubtitle', text: '继续出航 还是 返舱？' },
+            { type: 'askReturnSubtitle' },
             { type: 'startTimer', key: 'rewardAsk', ms: ASK_TIMEOUT_MS },
           ],
         };
@@ -100,7 +100,7 @@ export function rewardTransition(
           state: 'askMode',
           effects: [
             { type: 'clearTimer', key: 'ecoAnim' },
-            { type: 'setSubtitle', text: '继续出航 还是 返舱？' },
+            { type: 'askReturnSubtitle' },
             { type: 'startTimer', key: 'rewardAsk', ms: ASK_TIMEOUT_MS },
           ],
         };
