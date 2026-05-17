@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FocusToggle } from '../components/FocusToggle';
 import { FocusProgressBar } from '../components/FocusProgressBar';
+import { RewardClaimButton } from '../components/RewardClaimButton';
 import { useStageCrossfade } from '../hooks/useStageCrossfade';
 import { useAppStore, type FocusMachineState, type FocusStage } from '../store/app-store';
 // D5 P7：sayDirect 已收归 applyEffects 默认 TTS
@@ -195,6 +196,7 @@ export function FocusRunning() {
         <FocusToggle />
       </div>
 
+      <RewardClaimButton />
       <FocusProgressBar />
 
       <style>{`

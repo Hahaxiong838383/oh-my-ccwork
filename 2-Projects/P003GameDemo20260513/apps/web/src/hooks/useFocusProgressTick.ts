@@ -19,18 +19,10 @@ export function useFocusProgressTick() {
   const rewardLeftIdleRef = useRef(false);
   const rewardDoneSentRef = useRef(false);
 
-  useEffect(() => {
-    if (focusMachine === 'running') return;
-    rewardReadySentRef.current = false;
-  }, [focusMachine]);
-
-  useEffect(() => {
-    if (focusMachine !== 'running') return;
-    if (focusProgress < 100) return;
-    if (rewardReadySentRef.current) return;
-    rewardReadySentRef.current = true;
-    dispatchFocus({ type: 'FOCUS_REWARD_READY' });
-  }, [dispatchFocus, focusMachine, focusProgress]);
+  // D5 P24：进度满后不自动 dispatch FOCUS_REWARD_READY
+  // 改为用户点击「收获奖励」按钮（RewardClaimButton）触发
+  // 保留 rewardReadySentRef 仅为兼容，不再用作 dispatch 闸门
+  void rewardReadySentRef;
 
   useEffect(() => {
     if (focusMachine !== 'running' || focusStartedAt === null) return;

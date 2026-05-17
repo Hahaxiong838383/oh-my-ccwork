@@ -1,5 +1,6 @@
 import { FocusToggle } from '../components/FocusToggle';
 import { FocusProgressBar } from '../components/FocusProgressBar';
+import { RewardClaimButton } from '../components/RewardClaimButton';
 import { useStageCrossfade } from '../hooks/useStageCrossfade';
 import { useAppStore, type FocusStage } from '../store/app-store';
 
@@ -107,6 +108,7 @@ export function FocusCompanion() {
         <FocusToggle />
       </div>
 
+      <RewardClaimButton />
       <FocusProgressBar />
 
       <style>{`
