@@ -1,4 +1,4 @@
-import type { SceneId, BootState, FocusMachineState, RewardMachineState, BoxLevel, VoiceStatus, XiaokeEmotion, FocusMode } from '../store/app-store';
+import type { SceneId, BootState, FocusMachineState, RewardMachineState, BoxLevel, VoiceStatus, XiaokeEmotion, FocusMode, FarewellState } from '../store/app-store';
 
 export interface ScenePreset {
   bootState: BootState;
@@ -139,6 +139,39 @@ export const SCENE_ORDER: SceneId[] = [
   'ecoUnlock',
   'farewell',
 ];
+
+/**
+ * D5 P9：从 store 状态反推当前 SceneId
+ * 用于 debug 下一步按钮 + 左下角数字标注
+ * 中间态（unconfigured / 切换瞬间）返 null
+ */
+export interface DeriveSceneInput {
+  bootState: BootState;
+  focusMachine: FocusMachineState;
+  focusMode: FocusMode;
+  rewardMachine: RewardMachineState;
+  currentBoxLevel: BoxLevel | null;
+  farewellState: FarewellState;
+}
+
+export function deriveCurrentScene(s: DeriveSceneInput): SceneId | null {
+  if (s.farewellState === 'waving' || s.farewellState === 'shutdown') return 'farewell';
+  if (s.rewardMachine === 'ecoUnlock') return 'ecoUnlock';
+  if (
+    (s.rewardMachine === 'openingBox' || s.rewardMachine === 'showingReward') &&
+    s.currentBoxLevel !== null
+  ) {
+    return ('box' + s.currentBoxLevel.charAt(0).toUpperCase() + s.currentBoxLevel.slice(1)) as SceneId;
+  }
+  if (s.bootState === 'welcome') return 'welcome';
+  if (s.bootState === 'nightReport') return 'nightReport';
+  if (s.bootState === 'askMode') return 'askMode';
+  if (s.focusMachine !== 'idle') {
+    if (s.focusMode === 'explore') return 'focusRunning';
+    if (s.focusMode === 'companion') return 'focusCompanion';
+  }
+  return null;
+}
 
 // 键盘快捷键：1-5 = 主流程，6-9 = 4 级宝箱，0 = ecoUnlock，F = farewell
 // （focusCompanion 新增挤占了 boxCommon 原来的 5 号位，box* 整体后移；

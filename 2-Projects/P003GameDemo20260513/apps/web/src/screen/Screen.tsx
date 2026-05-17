@@ -2,6 +2,7 @@ import { useAppStore } from '../store/app-store';
 import { MainScreen } from '../components/MainScreen';
 import { ShutdownScreen } from '../components/ShutdownScreen';
 import { StatusBar } from '../components/StatusBar';
+import { SceneNumberBadge } from '../components/SceneNumberBadge';
 import { FocusRunning } from '../scenes/FocusRunning';
 import { FocusCompanion } from '../scenes/FocusCompanion';
 import { useFocusProgressTick } from '../hooks/useFocusProgressTick';
@@ -34,6 +35,7 @@ export function Screen() {
     <>
       {scene}
       <StatusBar />
+      <SceneNumberBadge />
     </>
   );
 }

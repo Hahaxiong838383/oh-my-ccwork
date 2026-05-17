@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { LEDIndicator } from './LEDIndicator';
 import { PowerButton } from './PowerButton';
+import { NextStepButton } from './NextStepButton';
 import { useAppStore } from '../store/app-store';
 import { Tips } from '../components/Tips';
 import { VoiceButton } from '../components/VoiceButton';
@@ -67,13 +68,14 @@ export function DeviceFrame({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* 3. 操作按钮区：talk + K1 开关 */}
-        <div className="flex items-center justify-center gap-10 px-2">
+        {/* 3. 操作按钮区：talk + K1 开关 + 下一步 (D5 P9 debug) */}
+        <div className="flex items-center justify-center gap-8 px-2">
           <VoiceButton />
           <div className="flex flex-col items-center gap-1">
             <PowerButton />
             <span className="text-[9px] tracking-[0.25em] text-white/35">K1 开关</span>
           </div>
+          <NextStepButton />
         </div>
 
         {/* 4. 底部调试区 */}
