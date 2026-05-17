@@ -1,11 +1,11 @@
 import { useAppStore } from '../store/app-store';
 
 /**
- * FocusProgressBar —— 专注进度条（D5 P8 新增）
+ * FocusProgressBar —— 专注进度条（D5 P8 新增，D5 P12 对齐美术槽）
  *
  * 跟随 focusProgress（0-100）平滑增长，到 100% 触发 reward。
- * 4 阶段切图同步由 deriveFocusStage(progress) 在 setFocusProgress 内做。
- * 位置：底部贴 status 字幕条上方，宽 90cqw + 高 0.8cqh，左右居中。
+ * 位置：与背景图美术里画好的进度槽垂直重合（bottom ~7cqh + width 90cqw）。
+ * z-index：z-layer-fx-weak（30），位于返舱按钮 z-layer-ui-normal（40）之下。
  */
 export function FocusProgressBar() {
   const focusMachine = useAppStore((s) => s.focusMachine);
@@ -17,16 +17,16 @@ export function FocusProgressBar() {
 
   return (
     <div
-      className="pointer-events-none absolute left-1/2 z-layer-feedback"
+      className="pointer-events-none absolute left-1/2 z-layer-fx-weak"
       style={{
-        bottom: '5.5cqh',
+        bottom: '7cqh',
         transform: 'translateX(-50%)',
         width: '90cqw',
       }}
     >
       <div
-        className="overflow-hidden rounded-full bg-white/12 backdrop-blur-sm ring-1 ring-white/15"
-        style={{ height: '0.9cqh' }}
+        className="overflow-hidden rounded-full"
+        style={{ height: '1.2cqh' }}
       >
         <div
           className="h-full rounded-full bg-gradient-to-r from-porthole-glow via-cyan-300 to-emerald-300 transition-[width] duration-200 ease-out"
