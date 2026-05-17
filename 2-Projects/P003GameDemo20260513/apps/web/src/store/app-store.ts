@@ -93,10 +93,13 @@ interface AppState {
   focusStage: FocusStage;
   focusStartedAt: number | null;
   focusSpeed: number;
+  // D5 P8：每个 focus stage 切图间隔（ms），默认 2000；4 阶段共 4×N 秒满
+  focusStageDurationMs: number;
   setFocusProgress: (p: number) => void;
   setFocusStage: (s: FocusStage) => void;
   setFocusStartedAt: (t: number | null) => void;
   setFocusSpeed: (s: number) => void;
+  setFocusStageDurationMs: (ms: number) => void;
 
   // —— 当前正在演的宝箱等级（V0.6 新增）——
   currentBoxLevel: BoxLevel | null;
@@ -208,6 +211,7 @@ export const useAppStore = create<AppState>((set) => ({
   focusStage: 'locked',
   focusStartedAt: null,
   focusSpeed: 1,
+  focusStageDurationMs: 2_000,
   setFocusProgress: (p) =>
     set(() => {
       const progress = clamp(p, 0, 100);
@@ -219,6 +223,7 @@ export const useAppStore = create<AppState>((set) => ({
   setFocusStage: (focusStage) => set({ focusStage }),
   setFocusStartedAt: (focusStartedAt) => set({ focusStartedAt }),
   setFocusSpeed: (s) => set({ focusSpeed: clamp(s, 0.5, 20) }),
+  setFocusStageDurationMs: (ms) => set({ focusStageDurationMs: clamp(ms, 500, 10_000) }),
 
   currentBoxLevel: null,
   setCurrentBoxLevel: (currentBoxLevel) => set({ currentBoxLevel }),

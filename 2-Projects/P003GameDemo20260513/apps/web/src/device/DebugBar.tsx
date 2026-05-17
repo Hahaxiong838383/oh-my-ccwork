@@ -21,7 +21,7 @@ export function DebugBar() {
   const wifiSignal = useAppStore((s) => s.wifiSignal);
   const focusMachine = useAppStore((s) => s.focusMachine);
   const rewardMachine = useAppStore((s) => s.rewardMachine);
-  const focusSpeed = useAppStore((s) => s.focusSpeed);
+  const focusStageDurationMs = useAppStore((s) => s.focusStageDurationMs);
   const ecoLevel = useAppStore((s) => s.ecoLevel);
   const [sceneValue, setSceneValue] = useState<SceneId | ''>('');
   const [progressStart, setProgressStart] = useState<string>('');
@@ -196,21 +196,22 @@ export function DebugBar() {
 
       {focusMachine !== 'idle' && (
         <>
+          {/* D5 P8：原"速度"slider 改为"切图间隔"，复用位置驱动 focus 4 阶段轮换 + 进度条 */}
           <div className="mt-2 flex items-center gap-2">
-            <span className={labelClass}>速度：</span>
+            <span className={labelClass}>切图间隔：</span>
             <input
               type="range"
-              min="0.5"
-              max="20"
-              step="0.5"
-              value={focusSpeed}
+              min="500"
+              max="5000"
+              step="100"
+              value={focusStageDurationMs}
               onChange={(event) => {
-                useAppStore.getState().setFocusSpeed(Number(event.target.value));
+                useAppStore.getState().setFocusStageDurationMs(Number(event.target.value));
               }}
               className="h-6 min-w-[170px]"
-              aria-label="专注速度"
+              aria-label="专注切图间隔"
             />
-            <span className="min-w-[42px] text-[10px] text-white/75">×{focusSpeed.toFixed(1)}</span>
+            <span className="min-w-[42px] text-[10px] text-white/75">{(focusStageDurationMs / 1000).toFixed(1)}s</span>
           </div>
 
           <div className="mt-2 flex items-center gap-2">
@@ -232,7 +233,9 @@ export function DebugBar() {
                 const rawValue = Number(progressStart);
                 if (!Number.isFinite(rawValue)) return;
                 const progress = Math.max(0, Math.min(100, rawValue));
-                const startedAt = Date.now() - (progress / focusSpeed) * 1000;
+                // D5 P8：jumpProgress 时根据 focusStageDurationMs * 4 反推 startedAt
+                const cycleMs = focusStageDurationMs * 4;
+                const startedAt = Date.now() - (progress / 100) * cycleMs;
                 const store = useAppStore.getState();
                 store.setFocusProgress(progress);
                 store.setFocusStartedAt(startedAt);

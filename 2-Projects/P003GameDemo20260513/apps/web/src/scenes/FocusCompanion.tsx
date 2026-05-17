@@ -1,4 +1,5 @@
 import { FocusToggle } from '../components/FocusToggle';
+import { FocusProgressBar } from '../components/FocusProgressBar';
 import { useStageCrossfade } from '../hooks/useStageCrossfade';
 import { useAppStore, type FocusStage } from '../store/app-store';
 
@@ -105,6 +106,8 @@ export function FocusCompanion() {
       <div className="absolute bottom-3 left-4 z-layer-ui-normal">
         <FocusToggle />
       </div>
+
+      <FocusProgressBar />
 
       <style>{`
         .fc-motion-locked,

@@ -38,13 +38,14 @@ export const SCENE_PRESETS: Record<SceneId, ScenePreset> = {
   nightReport: {
     ...BASE,
     bootState: 'nightReport',
-    subtitle: '夜航报告',
+    // D5 P8：preset 字幕必须与 boot-machine transition 文本一致，否则 TTS 被截断
+    subtitle: '夜航报告出炉，这是你不在的时候我去赚来的哦！',
     xiaokeEmotion: 'calm',
   },
   askMode: {
     ...BASE,
     bootState: 'askMode',
-    subtitle: '今天想 探索 还是 陪伴？',
+    subtitle: '指挥官，今天想出航，还是静思呢？',
     xiaokeEmotion: 'curious',
   },
   focusRunning: {

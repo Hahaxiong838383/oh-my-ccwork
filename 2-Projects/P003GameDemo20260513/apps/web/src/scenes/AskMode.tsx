@@ -198,9 +198,6 @@ export function AskMode() {
         paddingInline: 'clamp(4cqh, 6cqw, 8cqh)',
       }}
     >
-      <div className="pointer-events-none absolute right-2 top-2 rounded-full bg-porthole-glow/30 px-2 py-0.5 text-[9px] font-bold text-porthole-glow ring-1 ring-porthole-glow/50">
-        ASK MODE · 30s
-      </div>
       <h2
         className="text-center font-semibold tracking-[0.07em]"
         style={{ fontSize: 'clamp(2.2cqh, 3.9cqw, 4.6cqh)' }}
@@ -208,21 +205,18 @@ export function AskMode() {
         {title}
       </h2>
 
+      {/* D5 P8：倒计时位置/尺寸与 isBootAsk 一致——右下小 ring 36px */}
       <div
-        className="grid place-items-center rounded-full bg-white/5 ring-1 ring-white/20"
-        style={{
-          width: 'clamp(15cqh, 21cqw, 24cqh)',
-          height: 'clamp(15cqh, 21cqw, 24cqh)',
-          padding: 'clamp(1.2cqh, 1.8cqw, 2.2cqh)',
-        }}
+        className="pointer-events-none absolute"
+        style={{ right: '3cqw', bottom: '4cqh', opacity: 0.6 }}
       >
         <CountdownRing
           key="reward-ask"
           seconds={30}
           active
           onTimeout={onTimeout}
-          label="倒计时"
-          size={80}
+          label=""
+          size={36}
         />
       </div>
 

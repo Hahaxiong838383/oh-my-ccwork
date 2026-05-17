@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FocusToggle } from '../components/FocusToggle';
+import { FocusProgressBar } from '../components/FocusProgressBar';
 import { useStageCrossfade } from '../hooks/useStageCrossfade';
 import { useAppStore, type FocusMachineState, type FocusStage } from '../store/app-store';
 // D5 P7：sayDirect 已收归 applyEffects 默认 TTS
@@ -192,6 +193,8 @@ export function FocusRunning() {
       <div className="absolute bottom-3 left-4 z-layer-ui-normal">
         <FocusToggle />
       </div>
+
+      <FocusProgressBar />
 
       <style>{`
         .fr-motion-locked,

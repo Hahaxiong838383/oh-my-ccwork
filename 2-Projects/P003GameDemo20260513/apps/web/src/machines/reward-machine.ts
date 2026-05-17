@@ -9,7 +9,12 @@ const OPEN_ANIM_MS: Record<BoxLevel, number> = {
   legendary: 4_000,
 };
 
-const REWARD_SHOWN_MS = 2_500;  // showingReward 自动倒计时，timer-router 会读 store 决定 hasUnlock
+// D5 P8：showingReward 时长按奖励语字数动态计算，确保小可说完 + 留 800ms 静默
+// 公式：length × 220ms + 800ms，clamp [3000, 6000]
+function rewardShownMsFor(level: BoxLevel): number {
+  const text = REWARD_TABLE[level].line;
+  return Math.max(3_000, Math.min(6_000, text.length * 220 + 800));
+}
 const ECO_ANIM_MS = 4_000;
 const ASK_TIMEOUT_MS = 30_000;
 
@@ -44,10 +49,11 @@ export function rewardTransition(
         return {
           state: 'showingReward',
           // D5 P7：OPEN_ANIM_END 带 level，setSubtitle 用奖励语→自动 TTS
+          // D5 P8：时长按字数动态，避免小可没说完就切倒计时
           effects: [
             { type: 'setSubtitle', text: REWARD_TABLE[event.level].line },
             { type: 'playSfx', id: 'reward-coin-flying' },
-            { type: 'startTimer', key: 'rewardShown', ms: REWARD_SHOWN_MS },
+            { type: 'startTimer', key: 'rewardShown', ms: rewardShownMsFor(event.level) },
           ],
         };
       }

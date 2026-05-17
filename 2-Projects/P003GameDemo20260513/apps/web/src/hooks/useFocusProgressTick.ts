@@ -2,14 +2,17 @@ import { useEffect, useRef } from 'react';
 import { useTransitionRunner } from './useTransitionRunner';
 import { useAppStore } from '../store/app-store';
 
-const BASE_RATE = 1.0;
+// D5 P8：focus 进度按 focusStageDurationMs 驱动
+// 4 阶段（locked/active/openable/full）共 4 × N 秒满；tick 200ms 让进度条平滑
+const TICK_INTERVAL_MS = 200;
+const STAGE_COUNT = 4;
 
 export function useFocusProgressTick() {
   const focusMachine = useAppStore((s) => s.focusMachine);
   const rewardMachine = useAppStore((s) => s.rewardMachine);
   const focusStartedAt = useAppStore((s) => s.focusStartedAt);
   const focusProgress = useAppStore((s) => s.focusProgress);
-  const focusSpeed = useAppStore((s) => s.focusSpeed);
+  const focusStageDurationMs = useAppStore((s) => s.focusStageDurationMs);
   const setFocusProgress = useAppStore((s) => s.setFocusProgress);
   const { dispatchFocus } = useTransitionRunner();
   const rewardReadySentRef = useRef(false);
@@ -33,12 +36,11 @@ export function useFocusProgressTick() {
     if (focusMachine !== 'running' || focusStartedAt === null) return;
     if (focusProgress >= 100) return;
 
+    const cycleMs = focusStageDurationMs * STAGE_COUNT;
     let timer: number | null = null;
     const tick = () => {
-      const nextProgress = Math.min(
-        100,
-        ((Date.now() - focusStartedAt) / 1000) * focusSpeed * BASE_RATE,
-      );
+      const elapsed = Date.now() - focusStartedAt;
+      const nextProgress = Math.min(100, (elapsed / cycleMs) * 100);
       setFocusProgress(nextProgress);
       if (nextProgress >= 100 && timer !== null) {
         window.clearInterval(timer);
@@ -46,11 +48,11 @@ export function useFocusProgressTick() {
     };
 
     tick();
-    timer = window.setInterval(tick, 1_000);
+    timer = window.setInterval(tick, TICK_INTERVAL_MS);
     return () => {
       if (timer !== null) window.clearInterval(timer);
     };
-  }, [focusMachine, focusProgress, focusStartedAt, focusSpeed, setFocusProgress]);
+  }, [focusMachine, focusProgress, focusStartedAt, focusStageDurationMs, setFocusProgress]);
 
   useEffect(() => {
     if (focusMachine !== 'rewarding') {
