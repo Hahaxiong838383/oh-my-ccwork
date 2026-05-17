@@ -3,9 +3,16 @@ name: p003-scene-art
 description: P003 K1 demo 场景美术化标准方法论：把抽象 CSS 占位场景替换为静态写实 PNG + 3 轻动效（星点漂移 / 表情屏绿光呼吸 / 字幕暖光晕）+ TTS sayDirect 开口，与状态机解耦零侵入。触发词："/p003-scene-art"、"把 XX 场景换成美术"、"P003 场景美术化"、"按 Welcome 风格做 YY 场景"、"用美术资源替换 ZZ"
 ---
 
-# P003 场景美术化 Skill · V1.0
+# P003 场景美术化 Skill · V1.2 (D5 update)
 
-> 2026-05-14 D3.5 沉淀的方法论。已实施 SetupGuide / Welcome / AskMode 三场景，川哥实测"效果不错"。
+> 2026-05-14 D3.5 V1.0 → D5 2026-05-17 V1.2 实战补充
+>
+> **V1.2 新增**：
+> - 字幕/TTS 严同步范式（见 `feedback_subtitle_tts_strict_sync_pattern.md`）
+> - 状态机 effect 抽象（dispatchRandomBox / askReturnSubtitle）
+> - debug 工具最小集（SceneNumberBadge + NextStepButton）
+> - 美术槽位 overlay 模式（RewardClaimButton 透明按钮覆盖背景图按钮）
+> - 反模式：containerType 全局副作用 / useEffect cleanup 取消延迟 setState
 
 ## 适用场景
 
@@ -347,9 +354,48 @@ cc 收到任何形如以下任务时主动按本 skill 执行：
 4. tsc check + curl 资产
 5. commit + push（如果川哥让上推）
 
+## D5 V1.2 补充：4 个工程范式（必读）
+
+### 范式 A：字幕 + TTS 严同步（3 个对齐点）
+- **出现**：字幕等 voice-client `flushMp3Buffer` 内 `src.start()` 之后才显示（用 AudioContext clock 精确对齐，非 tts.audio chunk 到达）。在 `ttsSpeak(text, onAudioStart)` 内 set 字幕
+- **推进**：打字机按时间字速 5 字/秒（匹配 Doubao 平均）推 setSubtitle(currentSentence.slice(0, charsByElapsedTime))
+- **消失**：StatusBar 自动消失公式 `text.length × 240ms + 1500ms buffer`，clamp [3500, 12000]
+- 详见 `feedback_subtitle_tts_strict_sync_pattern.md`
+
+### 范式 B：状态机 effect 抽象（让纯函数也能"按 context 动态决策"）
+- transition 返简单 effect (`'dispatchRandomBox'` / `'askReturnSubtitle'`)
+- applyEffects 内读 store 决定具体行为（随机宝箱品质 / 按 focusMode 拼字幕）
+- 保持 transition 纯函数同时支持动态
+
+### 范式 C：debug 工具最小集（demo 期必加）
+- `SceneNumberBadge` 左下紫色徽章（场景编号 + focus state overlay）
+- `NextStepButton` K1 右侧"下一步"按钮（SCENE_ORDER 循环跳关）
+- `deriveCurrentScene(store)` 反推当前 SceneId（统一推导）
+- **交付前一行删除组件调用即清理**
+
+### 范式 D：美术槽位 overlay 模式
+- 美术 PNG 里画好"按钮"的视觉（如"收获奖励"）
+- React 端透明 `<button>` 用 % 定位精确覆盖美术按钮（`left: 50% top: 74% width: 38% height: 15%`）
+- z-layer-ui-focus (45) 在背景上方
+- 优点：美术控视觉 + React 控交互，零图标资源 + 易动态显隐
+
+## D5 反模式（必避）
+
+### 反模式 1：useEffect cleanup 取消"延迟 setState 的 raf/timer"
+deps 含被自己 set 的 state → cleanup 取消 raf → setOpacity 永远卡 0 → 画面全黑
+（D5 P11 useStageCrossfade 死锁，背景全黑）
+
+### 反模式 2：containerType 全局副作用
+为对齐单点元素加 `containerType: 'size'` → 所有 cqh fallback 元素从 vh 切到真容器值 → 全部按比例缩
+（D5 P13 加 containerType → P14 撤回 + 改用 %）
+
 ## 关联记忆
 
 - [feedback_codex_protocol_whitelist_gate.md](../../../projects/-Users-rayman-chen-mycc/memory/feedback_codex_protocol_whitelist_gate.md)
 - [feedback_audio_context_user_gesture_chain.md](../../../projects/-Users-rayman-chen-mycc/memory/feedback_audio_context_user_gesture_chain.md)
 - [feedback_voice_client_internal_dispatch.md](../../../projects/-Users-rayman-chen-mycc/memory/feedback_voice_client_internal_dispatch.md)
+- [feedback_subtitle_tts_centralize_in_effect.md](../../../projects/-Users-rayman-chen-mycc/memory/feedback_subtitle_tts_centralize_in_effect.md) — D5 P7
+- [feedback_useeffect_cleanup_cancels_raf_timer.md](../../../projects/-Users-rayman-chen-mycc/memory/feedback_useeffect_cleanup_cancels_raf_timer.md) — D5 P11
+- [feedback_cq_unit_fallback_pitfall.md](../../../projects/-Users-rayman-chen-mycc/memory/feedback_cq_unit_fallback_pitfall.md) — D5 P13/P14
+- [feedback_subtitle_tts_strict_sync_pattern.md](../../../projects/-Users-rayman-chen-mycc/memory/feedback_subtitle_tts_strict_sync_pattern.md) — D5 P20-P22
 - [project_p003_k1_demo.md](../../../projects/-Users-rayman-chen-mycc/memory/project_p003_k1_demo.md)
