@@ -1,5 +1,4 @@
 import { useAppStore } from '../store/app-store';
-import { MainScreen } from '../components/MainScreen';
 import { ShutdownScreen } from '../components/ShutdownScreen';
 import { StatusBar } from '../components/StatusBar';
 import { SceneNumberBadge } from '../components/SceneNumberBadge';
@@ -24,12 +23,14 @@ export function Screen() {
 
   if (!lidOpen) return <ShutdownScreen />;
 
+  // D5 P20：删 MainScreen 兜底（川哥要求去掉）；focus 模式时显示出航/静思 scene
+  // 其它状态由 DeviceFrame 渲染的 Welcome/AskMode/NightReport/OpenBox/EcoUnlock/Farewell 接管
   const scene =
     focusMachine !== 'idle' && focusMode === 'explore'
       ? <FocusRunning />
       : focusMachine !== 'idle' && focusMode === 'companion'
         ? <FocusCompanion />
-        : <MainScreen />;
+        : null;
 
   return (
     <>

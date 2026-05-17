@@ -6,7 +6,9 @@ export interface VoiceClient {
   playAudioChunk(mp3Base64: string): Promise<void>;
   flushTtsBufferNow(): void;
   bargeIn(): void;
-  sayDirect(text: string): void;
+  // D5 P20：sayDirect 第二参 onAudioStart 在第一段 mp3 到达时 fire
+  // 让字幕等 TTS 真发声再显示（修字幕提前 TTS）
+  sayDirect(text: string, onAudioStart?: () => void): void;
   unlockAudio(): Promise<void>;
   on(
     event: 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'tts.sentence_break' | 'error',
@@ -37,6 +39,9 @@ class VoiceClientImpl implements VoiceClient {
   // 追踪「在途连接」（new WebSocket 已创建但 onopen 未触发）
   // 用于：close() 时能取消在途 ws；onerror/onclose 身份比对，防止 stale 事件误清当前缓存
   private pendingWs: WebSocket | null = null;
+
+  // D5 P20：sayDirect 注册的"TTS 真发声"回调，下次第一段 tts.audio 到达时 fire 然后清空
+  private pendingOnAudioStart: (() => void) | null = null;
 
   private readonly listeners = new Map<VoiceEvent, Set<(data: any) => void>>();
 
@@ -145,6 +150,12 @@ class VoiceClientImpl implements VoiceClient {
             // voice-client 内部统一播放（任意触发路径：按住说话 / sayDirect / 未来其它）
             // 同时 emit 给外部用于 UI 状态更新（VoiceButton 等）
             void this.playAudioChunk(msg.mp3Base64);
+            // D5 P20：第一段音频到达就 fire onAudioStart（让字幕等到这里再显示）
+            if (this.pendingOnAudioStart) {
+              const cb = this.pendingOnAudioStart;
+              this.pendingOnAudioStart = null;
+              try { cb(); } catch (err) { console.warn('[voice-client] onAudioStart cb failed', err); }
+            }
             this.emit(msg.type, msg);
             break;
           case 'tts.end':
@@ -407,13 +418,15 @@ class VoiceClientImpl implements VoiceClient {
     this.playbackScheduledAt = 0;
   }
 
-  sayDirect(text: string): void {
+  sayDirect(text: string, onAudioStart?: () => void): void {
     this.bargeIn();
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       console.warn('[voice-client] sayDirect skipped: websocket not open');
       return;
     }
     console.log('[voice-client] sayDirect →', text);
+    // D5 P20：注册"第一段音频到达"回调（覆盖之前 pending，bargeIn 已断旧会话）
+    this.pendingOnAudioStart = onAudioStart ?? null;
     this.ws.send(JSON.stringify({ type: 'tts.say', text }));
   }
 

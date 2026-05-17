@@ -43,25 +43,40 @@ function getVoiceWsUrlInternal(): string {
   return `${protocol}://${window.location.host}/ws/voice`;
 }
 
-export function ttsSpeak(text: string): void {
+export function ttsSpeak(text: string, onAudioStart?: () => void): void {
   const trimmed = text.trim();
   if (trimmed.length === 0) return;
   const now = Date.now();
   if (trimmed === lastTtsText && now - lastTtsAt < TTS_DEDUP_MS) return;
   lastTtsText = trimmed;
   lastTtsAt = now;
+  // D5 P20 兜底：若 3s 内 TTS 未到达，仍然显示字幕（防 server 出错字幕永远不显示）
+  let fired = false;
+  const fireOnce = () => {
+    if (fired) return;
+    fired = true;
+    try { onAudioStart?.(); } catch (err) { console.warn('[ttsSpeak] cb fail', err); }
+  };
+  const fallback = onAudioStart ? window.setTimeout(fireOnce, 3_000) : 0;
   try {
     const client = getSharedVoiceClient();
     void (async () => {
       try {
         await client.connect(getVoiceWsUrlInternal());
-        client.sayDirect(trimmed);
+        client.sayDirect(trimmed, () => {
+          if (fallback) window.clearTimeout(fallback);
+          fireOnce();
+        });
       } catch (err) {
         console.warn('[ttsSpeak] failed', err);
+        if (fallback) window.clearTimeout(fallback);
+        fireOnce();
       }
     })();
   } catch (err) {
     console.warn('[ttsSpeak] voice client unavailable', err);
+    if (fallback) window.clearTimeout(fallback);
+    fireOnce();
   }
 }
 
@@ -114,14 +129,21 @@ export function applyEffects(effects: readonly Effect[], onTimer: (key: string) 
       case 'setVoiceStatus':
         store.setVoiceStatus(effect.status);
         break;
-      case 'setSubtitle':
-        store.setSubtitle(effect.text);
-        // D5 P7：默认所有非空字幕同步 TTS（川哥铁律：字幕出现就要小可说）
-        // silent: true 时跳过（用于纯清空 / 已有外部 TTS 的边缘场景）
-        if (!effect.silent && effect.text.trim().length > 0) {
-          ttsSpeak(effect.text);
+      case 'setSubtitle': {
+        const text = effect.text;
+        if (effect.silent || text.trim().length === 0) {
+          // 静默或空文本：立即 set（清字幕场景）
+          store.setSubtitle(text);
+        } else {
+          // D5 P20：字幕等到 TTS 第一段音频到达再显示，修字幕提前 TTS
+          // 先清掉旧字幕（避免错位旧文本停留），等 callback 再 set 新字幕
+          store.setSubtitle('');
+          ttsSpeak(text, () => {
+            useAppStore.getState().setSubtitle(text);
+          });
         }
         break;
+      }
       case 'addStardust':
         store.addStardust(effect.amount);
         break;

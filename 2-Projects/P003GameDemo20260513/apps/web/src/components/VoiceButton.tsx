@@ -26,8 +26,10 @@ export function VoiceButton(_props: VoiceButtonProps) {
   const clientRef = useRef<VoiceClient | null>(null);
   const llmTextRef = useRef('');
   // D5 P19：字幕按 TTS sentence_break 推进，避免显示 LLM 全文超前 TTS 进度
+  // D5 P20：firstAudioFiredRef 标"首段 tts.audio 已到"，之前 onLlmDelta 不 setSubtitle
   const sentenceListRef = useRef<string[]>([]);
   const sentenceIdxRef = useRef(0);
+  const firstAudioFiredRef = useRef(false);
   // 异步竞态防护：pressedRef 反映"用户当前是否按住"，startInFlightRef 标启动中，
   // needStopRef 标"启动期间用户已松手，启动完成后必须立刻 stop"。
   const pressedRef = useRef(false);
@@ -52,6 +54,7 @@ export function VoiceButton(_props: VoiceButtonProps) {
       llmTextRef.current = '';
       sentenceListRef.current = [];
       sentenceIdxRef.current = 0;
+      firstAudioFiredRef.current = false;
     };
     // D5 P19：累积 LLM 全文 + 按句切分，字幕只显示当前正在 TTS 的句
     const splitSentences = (text: string): string[] => {
@@ -73,17 +76,27 @@ export function VoiceButton(_props: VoiceButtonProps) {
       if (!msg.text) return;
       llmTextRef.current += msg.text;
       sentenceListRef.current = splitSentences(llmTextRef.current);
-      // 字幕显示当前正在 TTS 的那一句（如果 TTS 还没开始，显示第 1 句）
-      const idx = Math.min(sentenceIdxRef.current, sentenceListRef.current.length - 1);
-      const current = sentenceListRef.current[idx];
-      if (current) setSubtitle(current);
+      // D5 P20：LLM 比 TTS 先到，这里只累积+切句，不 setSubtitle
+      // 等首段 tts.audio 触发 onTtsAudio 时才显示第 1 句
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
+      // 如果首段音频已到（LLM delta 晚于首段音频的罕见情况），立即推当前句
+      if (firstAudioFiredRef.current) {
+        const idx = Math.min(sentenceIdxRef.current, sentenceListRef.current.length - 1);
+        const current = sentenceListRef.current[idx];
+        if (current) setSubtitle(current);
+      }
     };
     const onTtsAudio = (_msg: { mp3Base64: string }) => {
       // 播放由 voice-client 内部统一处理（兼容 sayDirect 等无 VoiceButton 的路径）
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
+      // D5 P20：首段音频到达 → 字幕显示第 1 句（与 TTS 真发声同步）
+      if (!firstAudioFiredRef.current) {
+        firstAudioFiredRef.current = true;
+        const first = sentenceListRef.current[0];
+        if (first) setSubtitle(first);
+      }
     };
     const onTtsSentenceBreak = () => {
       // 每收到一句 TTS 句末信号，字幕推进到下一句
@@ -99,6 +112,7 @@ export function VoiceButton(_props: VoiceButtonProps) {
       llmTextRef.current = '';
       sentenceListRef.current = [];
       sentenceIdxRef.current = 0;
+      firstAudioFiredRef.current = false;
     };
     const onError = (msg: { message?: string }) => {
       setVoiceStatus('idle');
