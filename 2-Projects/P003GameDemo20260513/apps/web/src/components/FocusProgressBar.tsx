@@ -19,15 +19,16 @@ export function FocusProgressBar() {
     <div
       className="pointer-events-none absolute left-1/2 z-layer-fx-weak"
       style={{
-        // D5 P13：cq 单位下 7cqh = ~33px from bottom，对齐美术槽（~6-8% from bottom）
-        bottom: '6.5cqh',
+        // D5 P14：用 % 相对 screen-canvas 父级（800×480），避免依赖 containerType
+        // 撤回 D5 P13 的 containerType 副作用——字幕/padding 都跟着缩了
+        bottom: '6%',
         transform: 'translateX(-50%)',
-        width: '88cqw',
+        width: '88%',
       }}
     >
       <div
         className="overflow-hidden rounded-full"
-        style={{ height: '1.5cqh' }}
+        style={{ height: '6px' }}
       >
         <div
           className="h-full rounded-full bg-gradient-to-r from-porthole-glow via-cyan-300 to-emerald-300 transition-[width] duration-200 ease-out"
