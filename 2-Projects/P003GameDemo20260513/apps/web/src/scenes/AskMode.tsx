@@ -53,14 +53,17 @@ export function AskMode() {
     returnToWelcome();
   }, [isBootAsk, pickBootMode, returnToWelcome]);
 
-  // D5 P16：继续出航 → 回到进入专注（出航）界面，重置 reward + focus 状态
+  // D5 P16：继续出航 → 回到对应专注界面，重置 reward + focus 状态
+  // D5 P18：按 store.focusMode 判断回出航还是静思
   const onPickLeft = useCallback(() => {
     if (isBootAsk) {
       pickBootMode('explore');
       return;
     }
     dispatchReward({ type: 'ASK_PICK', choice: 'continue' });
-    window.setTimeout(() => jumpToScene('focusRunning'), 400);
+    const mode = useAppStore.getState().focusMode;
+    const scene = mode === 'companion' ? 'focusCompanion' : 'focusRunning';
+    window.setTimeout(() => jumpToScene(scene), 400);
   }, [dispatchReward, isBootAsk, pickBootMode]);
 
   const onPickRight = useCallback(() => {

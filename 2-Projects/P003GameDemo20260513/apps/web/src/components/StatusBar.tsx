@@ -130,8 +130,9 @@ export function StatusBar(_props: StatusBarProps) {
                 borderRadius: '3px',
                 width: '100%',
                 maxWidth: '100%',
-                // D5 P7：垂直尺寸再缩半 (py-[0.4cqh] + maxHeight 改 1.5 行)
-                maxHeight: 'calc((clamp(10px, 2.6cqw, 14px) * 1.4) * 1.5 + 0.4cqh * 2)',
+                // D5 P18：maxHeight 固定单行 + 上下 padding（用 px 不依赖 cqh fallback）
+                // 字幕过 2 行时容器溢出，触发 subtitle-marquee-y 向上滚动
+                maxHeight: 'calc(clamp(10px, 2.6cqw, 14px) * 1.4 + 6px)',
                 lineHeight: 1.4,
                 boxSizing: 'border-box',
                 textAlign: 'center',
