@@ -53,6 +53,7 @@ export function DeviceFrame({ children }: { children: ReactNode }) {
           <div
             className="relative aspect-screen-canvas flex-1 overflow-hidden rounded-lg bg-screen-bg ring-1 ring-shell-trim"
             data-scope="screen-canvas"
+            style={{ containerType: 'size' }}
           >
             {children}
             <WifiHud />
