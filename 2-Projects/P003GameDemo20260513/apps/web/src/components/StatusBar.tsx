@@ -9,7 +9,7 @@ interface StatusBarProps {}
  *
  * 视觉规范（2026-05-17 D5 P4 川哥统一标准）：
  *   - 位置：bottom: 1cqh（贴屏幕底部）
- *   - 形状：rounded-[3px] 4 圆角统一 + bg-black/30 + backdrop-blur-md 磨砂玻璃
+ *   - 形状：rounded-[3px] 4 圆角统一 + bg-black/50 + backdrop-blur-md 磨砂玻璃
  *   - 垂直尺寸缩小一半：py-[0.8cqh]
  *   - 字号缩小：fontSize clamp(10px, 2.6cqw, 14px)
  *   - 宽度根据文字长度自适应，maxWidth: min(94cqw, 760px)
@@ -119,7 +119,7 @@ export function StatusBar(_props: StatusBarProps) {
           {subtitle.trim().length > 0 && (
             <div
               ref={containerRef}
-              className="overflow-hidden bg-black/30 px-[3.5cqw] py-[0.8cqh] backdrop-blur-md"
+              className="overflow-hidden bg-black/50 px-[3.5cqw] py-[0.8cqh] backdrop-blur-md"
               style={{ borderRadius: '3px', maxWidth: '100%' }}
             >
               <span

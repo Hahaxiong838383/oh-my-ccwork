@@ -1,9 +1,8 @@
 import type { BootState, BootEvent, TransitionResult } from './types';
 import { warnInvalid, noop } from './types';
 
-const ASK_MODE_TIMEOUT_MS = 30_000;
-const WELCOME_ANIM_MS = 4_000;
-const NIGHT_REPORT_ANIM_MS = 6_000;
+// D5 P5：川哥要求取消 demo 自动推进，删除 boot 链路的所有 autoTimer
+// 仍保留 transition event 类型，靠 DebugBar 跳关或用户主动操作触发
 
 export function bootTransition(
   current: BootState,
@@ -19,7 +18,6 @@ export function bootTransition(
             { type: 'setSubtitle', text: '你好，指挥官！欢迎回到方舟' },
             { type: 'setXiaokeEmotion', emotion: 'happy' },
             { type: 'playSfx', id: 'boot-welcome' },
-            { type: 'startTimer', key: 'welcome', ms: WELCOME_ANIM_MS },
           ],
         };
       }
@@ -37,9 +35,8 @@ export function bootTransition(
           state: 'nightReport',
           effects: [
             { type: 'clearTimer', key: 'welcome' },
-            { type: 'setSubtitle', text: '夜航报告' },
+            { type: 'setSubtitle', text: '夜航报告出炉，这是你不在的时候我去赚来的哦！' },
             { type: 'setXiaokeEmotion', emotion: 'calm' },
-            { type: 'startTimer', key: 'nightReport', ms: NIGHT_REPORT_ANIM_MS },
           ],
         };
       }
@@ -59,7 +56,6 @@ export function bootTransition(
             { type: 'clearTimer', key: 'nightReport' },
             { type: 'setSubtitle', text: '今天想 探索 还是 陪伴？' },
             { type: 'setXiaokeEmotion', emotion: 'curious' },
-            { type: 'startTimer', key: 'askMode', ms: ASK_MODE_TIMEOUT_MS },
           ],
         };
       }

@@ -1,7 +1,17 @@
 import { motion } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEMO_DATA } from '../config/demo-data';
 import { type BoxLevel, useAppStore } from '../store/app-store';
+import { getSharedVoiceClient } from '../services/voice-client';
+
+const NIGHT_REPORT_LINE = '夜航报告出炉，这是你不在的时候我去赚来的哦！';
+
+function getVoiceWsUrl(): string {
+  const envUrl = import.meta.env.VITE_VOICE_WS_URL as string | undefined;
+  if (envUrl && envUrl.trim()) return envUrl;
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${protocol}://${window.location.host}/ws/voice`;
+}
 
 interface NumberRollProps {
   value: number;
@@ -53,6 +63,27 @@ export function NightReport() {
   const [phase, setPhase] = useState<1 | 2 | 3>(1);
   const [renderOverlay, setRenderOverlay] = useState(isActive);
   const [isExiting, setIsExiting] = useState(false);
+  const spokenRef = useRef(false);
+
+  // D5 P5：nightReport 出现时小可开口 TTS
+  useEffect(() => {
+    if (!isActive) {
+      spokenRef.current = false;
+      return;
+    }
+    if (spokenRef.current) return;
+    spokenRef.current = true;
+    const client = getSharedVoiceClient();
+    void (async () => {
+      try {
+        await client.connect(getVoiceWsUrl());
+      } catch (err) {
+        console.warn('[NightReport] voice ws connect failed', err);
+        return;
+      }
+      client.sayDirect(NIGHT_REPORT_LINE);
+    })();
+  }, [isActive]);
 
   useEffect(() => {
     if (isActive) {
@@ -181,23 +212,7 @@ export function NightReport() {
           </div>
         </motion.div>
 
-        <div
-          className="absolute bottom-[9%] left-[7%] right-[7%] h-[39%] rounded-b-[clamp(1.2cqh,2cqw,2.4cqh)] bg-amber-100/85 shadow-[0_12px_26px_rgba(66,40,16,0.32)]"
-          aria-hidden
-        />
-
-        <motion.div
-          className="absolute left-[7%] right-[7%] top-[32%] h-[23%] origin-top"
-          style={{
-            clipPath: 'polygon(50% 100%, 0 0, 100% 0)',
-            background: 'rgba(252, 230, 187, 0.9)',
-            transformStyle: 'preserve-3d',
-            boxShadow: '0 5px 16px rgba(66, 40, 16, 0.22)',
-          }}
-          animate={{ rotateX: phase >= 2 && !isExiting ? -170 : 0 }}
-          transition={{ duration: isExiting ? 0.35 : 0.7, ease: [0.2, 0.8, 0.2, 1] }}
-          aria-hidden
-        />
+        {/* D5 P5：川哥要求去掉信封身和封口三角（视觉上像上下箭头），只保留信纸 */}
       </motion.div>
     </div>
   );
