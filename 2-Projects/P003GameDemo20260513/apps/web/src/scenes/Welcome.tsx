@@ -33,7 +33,6 @@ const STARS: readonly StarSpec[] = [
 
 export function Welcome() {
   const bootState = useAppStore((s) => s.bootState);
-  const setSubtitle = useAppStore((s) => s.setSubtitle);
   const spokenRef = useRef(false);
 
   useEffect(() => {
@@ -44,9 +43,8 @@ export function Welcome() {
     if (spokenRef.current) return;
     spokenRef.current = true;
 
-    // 字幕统一走 StatusBar（D5 川哥要求）：不再 baked 胶囊
-    setSubtitle(WELCOME_LINE);
-
+    // 字幕由 boot-machine 在 transitions 里统一管（不要 scene 插手 setSubtitle，
+    // 否则 cleanup 会覆盖下一个 scene 刚设的字幕）。这里只触发 TTS 朗读。
     const client = getSharedVoiceClient();
     void (async () => {
       try {
@@ -55,16 +53,9 @@ export function Welcome() {
         console.warn('[Welcome] voice ws connect failed', err);
         return;
       }
-      // 立即触发：TTS TTFB ~500ms + 首段 flush ~600ms ≈ 1.1s 出声，
-      // 与字幕进场动画几乎重叠
       client.sayDirect(WELCOME_LINE);
     })();
-
-    return () => {
-      // 离开 welcome state 时清字幕（避免污染下一个 scene）
-      setSubtitle('');
-    };
-  }, [bootState, setSubtitle]);
+  }, [bootState]);
 
   if (bootState !== 'welcome') return null;
 

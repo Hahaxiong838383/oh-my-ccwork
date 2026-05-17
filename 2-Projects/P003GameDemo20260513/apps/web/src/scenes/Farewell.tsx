@@ -1,9 +1,6 @@
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Xiaoke } from '../components/Xiaoke';
 import { useAppStore } from '../store/app-store';
-
-const FAREWELL_LINE = '指挥官，明天见～';
 
 function getReducedMotion(): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -14,21 +11,13 @@ function getReducedMotion(): boolean {
 
 export function Farewell() {
   const farewellState = useAppStore((s) => s.farewellState);
-  const setSubtitle = useAppStore((s) => s.setSubtitle);
   const reducedMotion = getReducedMotion();
 
-  const isWaving = farewellState === 'waving';
-
-  // 对话字幕统一走 StatusBar（D5 川哥要求）
-  useEffect(() => {
-    if (isWaving) {
-      setSubtitle(FAREWELL_LINE);
-    } else {
-      setSubtitle('');
-    }
-  }, [isWaving, setSubtitle]);
-
   if (farewellState !== 'waving' && farewellState !== 'shutdown') return null;
+
+  const isWaving = farewellState === 'waving';
+  // 字幕"指挥官，明天见～"由 jumpToScene 的 farewell preset.subtitle 统一管，
+  // scene 组件不插手 setSubtitle（避免 React useEffect cleanup 覆盖下一个 scene 字幕）
 
   return (
     <motion.div
