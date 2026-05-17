@@ -211,7 +211,8 @@ export const useAppStore = create<AppState>((set) => ({
   focusStage: 'locked',
   focusStartedAt: null,
   focusSpeed: 1,
-  focusStageDurationMs: 2_000,
+  // D5 P10：默认 4 秒/张，4 张共 16s 满 → 不再"切换太快"
+  focusStageDurationMs: 4_000,
   setFocusProgress: (p) =>
     set(() => {
       const progress = clamp(p, 0, 100);
