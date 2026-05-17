@@ -25,11 +25,11 @@ export function VoiceButton(_props: VoiceButtonProps) {
   const [pressed, setPressed] = useState(false);
   const clientRef = useRef<VoiceClient | null>(null);
   const llmTextRef = useRef('');
-  // D5 P19：字幕按 TTS sentence_break 推进，避免显示 LLM 全文超前 TTS 进度
-  // D5 P20：firstAudioFiredRef 标"首段 tts.audio 已到"，之前 onLlmDelta 不 setSubtitle
-  const sentenceListRef = useRef<string[]>([]);
-  const sentenceIdxRef = useRef(0);
-  const firstAudioFiredRef = useRef(false);
+  // D5 P21：字幕用打字机跟随时间推进，速度匹配 TTS 字速 (~5 字/秒)
+  // 不再按 sentence_break 跳句（容易跟 TTS 实际播放节奏错位）
+  const typewriterStartedAtRef = useRef<number | null>(null);
+  const typewriterTimerRef = useRef<number | null>(null);
+  const TYPEWRITER_CHARS_PER_SEC = 5;
   // 异步竞态防护：pressedRef 反映"用户当前是否按住"，startInFlightRef 标启动中，
   // needStopRef 标"启动期间用户已松手，启动完成后必须立刻 stop"。
   const pressedRef = useRef(false);
@@ -49,70 +49,57 @@ export function VoiceButton(_props: VoiceButtonProps) {
     const onAsrPartial = (msg: { text: string }) => {
       setSubtitle(msg.text);
     };
+    // D5 P21：打字机字幕推进——按时间显示 LLM 累积全文的 prefix
+    // 速度 5 字/秒，与 Doubao TTS 平均字速相近
+    const stopTypewriter = () => {
+      if (typewriterTimerRef.current !== null) {
+        window.clearInterval(typewriterTimerRef.current);
+        typewriterTimerRef.current = null;
+      }
+      typewriterStartedAtRef.current = null;
+    };
+    const startTypewriter = () => {
+      if (typewriterTimerRef.current !== null) return;
+      typewriterStartedAtRef.current = Date.now();
+      typewriterTimerRef.current = window.setInterval(() => {
+        const startedAt = typewriterStartedAtRef.current;
+        if (startedAt === null) return;
+        const elapsedSec = (Date.now() - startedAt) / 1000;
+        const targetChars = Math.floor(elapsedSec * TYPEWRITER_CHARS_PER_SEC);
+        const text = llmTextRef.current;
+        if (text.length === 0) return;
+        const displayChars = Math.min(targetChars, text.length);
+        setSubtitle(text.slice(0, displayChars));
+      }, 80);
+    };
+
     const onAsrFinal = (msg: { text: string }) => {
       setSubtitle(`${msg.text}...`);
       llmTextRef.current = '';
-      sentenceListRef.current = [];
-      sentenceIdxRef.current = 0;
-      firstAudioFiredRef.current = false;
-    };
-    // D5 P19：累积 LLM 全文 + 按句切分，字幕只显示当前正在 TTS 的句
-    const splitSentences = (text: string): string[] => {
-      const out: string[] = [];
-      let buf = '';
-      for (const ch of text) {
-        buf += ch;
-        if (/[。！？!?\n]/.test(ch)) {
-          const trimmed = buf.trim();
-          if (trimmed) out.push(trimmed);
-          buf = '';
-        }
-      }
-      const tail = buf.trim();
-      if (tail) out.push(tail);
-      return out;
+      stopTypewriter();
     };
     const onLlmDelta = (msg: { text: string }) => {
       if (!msg.text) return;
       llmTextRef.current += msg.text;
-      sentenceListRef.current = splitSentences(llmTextRef.current);
-      // D5 P20：LLM 比 TTS 先到，这里只累积+切句，不 setSubtitle
-      // 等首段 tts.audio 触发 onTtsAudio 时才显示第 1 句
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
-      // 如果首段音频已到（LLM delta 晚于首段音频的罕见情况），立即推当前句
-      if (firstAudioFiredRef.current) {
-        const idx = Math.min(sentenceIdxRef.current, sentenceListRef.current.length - 1);
-        const current = sentenceListRef.current[idx];
-        if (current) setSubtitle(current);
-      }
+      // D5 P21：不在 LLM delta 时 setSubtitle，由打字机推进
     };
     const onTtsAudio = (_msg: { mp3Base64: string }) => {
-      // 播放由 voice-client 内部统一处理（兼容 sayDirect 等无 VoiceButton 的路径）
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
-      // D5 P20：首段音频到达 → 字幕显示第 1 句（与 TTS 真发声同步）
-      if (!firstAudioFiredRef.current) {
-        firstAudioFiredRef.current = true;
-        const first = sentenceListRef.current[0];
-        if (first) setSubtitle(first);
-      }
-    };
-    const onTtsSentenceBreak = () => {
-      // 每收到一句 TTS 句末信号，字幕推进到下一句
-      sentenceIdxRef.current += 1;
-      const idx = Math.min(sentenceIdxRef.current, sentenceListRef.current.length - 1);
-      const current = sentenceListRef.current[idx];
-      if (current) setSubtitle(current);
+      // D5 P21：首段音频到达启动打字机（onAudioStart 在 voice-client flushMp3Buffer 内
+      // 准确 fire，但 LLM-flow 没用 sayDirect onStart，需要这里启动）
+      startTypewriter();
     };
     const onTtsEnd = () => {
-      // flush 由 voice-client 内部处理
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
+      // 兜底：打字机停下时确保显示完整文本（防止打字机速度慢未跑完）
+      const text = llmTextRef.current;
+      if (text.length > 0) setSubtitle(text);
       llmTextRef.current = '';
-      sentenceListRef.current = [];
-      sentenceIdxRef.current = 0;
-      firstAudioFiredRef.current = false;
+      stopTypewriter();
     };
     const onError = (msg: { message?: string }) => {
       setVoiceStatus('idle');
@@ -123,7 +110,6 @@ export function VoiceButton(_props: VoiceButtonProps) {
     client.on('asr.final', onAsrFinal);
     client.on('llm.delta', onLlmDelta);
     client.on('tts.audio', onTtsAudio);
-    client.on('tts.sentence_break', onTtsSentenceBreak);
     client.on('tts.end', onTtsEnd);
     client.on('error', onError);
 
@@ -132,9 +118,9 @@ export function VoiceButton(_props: VoiceButtonProps) {
       client.off('asr.final', onAsrFinal);
       client.off('llm.delta', onLlmDelta);
       client.off('tts.audio', onTtsAudio);
-      client.off('tts.sentence_break', onTtsSentenceBreak);
       client.off('tts.end', onTtsEnd);
       client.off('error', onError);
+      stopTypewriter();
       // 注意：不 client.close()，让 client 跨 effect 复用（避免 StrictMode 关掉 ws）
     };
   }, [setSubtitle, setVoiceStatus, setXiaokeEmotion]);

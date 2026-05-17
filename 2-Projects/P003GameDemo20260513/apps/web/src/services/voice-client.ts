@@ -149,13 +149,9 @@ class VoiceClientImpl implements VoiceClient {
           case 'tts.audio':
             // voice-client 内部统一播放（任意触发路径：按住说话 / sayDirect / 未来其它）
             // 同时 emit 给外部用于 UI 状态更新（VoiceButton 等）
+            // D5 P21：onAudioStart 不在这里 fire（mp3 chunk 到达离实际播放还有 350ms 防抖）
+            // 移到 flushMp3Buffer 内 src.start() 之后才 fire
             void this.playAudioChunk(msg.mp3Base64);
-            // D5 P20：第一段音频到达就 fire onAudioStart（让字幕等到这里再显示）
-            if (this.pendingOnAudioStart) {
-              const cb = this.pendingOnAudioStart;
-              this.pendingOnAudioStart = null;
-              try { cb(); } catch (err) { console.warn('[voice-client] onAudioStart cb failed', err); }
-            }
             this.emit(msg.type, msg);
             break;
           case 'tts.end':
@@ -391,6 +387,21 @@ class VoiceClientImpl implements VoiceClient {
         const idx = this.playbackSources.indexOf(src);
         if (idx >= 0) this.playbackSources.splice(idx, 1);
       };
+
+      // D5 P21：实际 src.start() 已调度——首段播放点真到了，fire pendingOnAudioStart
+      // 用 setTimeout 等到 (startAt - now) * 1000 ms 后才 fire（精确对齐 AudioContext clock）
+      if (this.pendingOnAudioStart) {
+        const cb = this.pendingOnAudioStart;
+        this.pendingOnAudioStart = null;
+        const delayMs = Math.max(0, (startAt - now) * 1000);
+        if (delayMs > 0) {
+          window.setTimeout(() => {
+            try { cb(); } catch (err) { console.warn('[voice-client] onAudioStart cb failed', err); }
+          }, delayMs);
+        } else {
+          try { cb(); } catch (err) { console.warn('[voice-client] onAudioStart cb failed', err); }
+        }
+      }
     } catch {
       // decode 失败：忽略本段
     }
