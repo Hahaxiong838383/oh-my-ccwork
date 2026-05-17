@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { type FocusStage } from '../store/app-store';
 
 interface UseStageCrossfadeOptions {
@@ -43,19 +43,17 @@ export function useStageCrossfade(
   const [currentSrc, setCurrentSrc] = useState(targetSrc);
   const [previousSrc, setPreviousSrc] = useState<string | null>(null);
   const [isFading, setIsFading] = useState(false);
-  // D5 P10：初始 opacity 0 → mount 后 raf 切 1，让首帧也有淡入
-  // 修复 launching→running 切场景时 03 图视觉断帧的"没图"错觉
-  const [currentOpacity, setCurrentOpacity] = useState(0);
+  // D5 P11：恢复初始 opacity 1，立即可见，避免 mount 首帧黑屏
+  const [currentOpacity, setCurrentOpacity] = useState(1);
+
+  // D5 P11：用 ref 跟踪 lastSrc，让 effect deps 只依赖 targetSrc
+  // 否则每次 setCurrentSrc(targetSrc) 触发 deps 变化 → cleanup 取消 raf/timer
+  // → opacity 永远停在 0 → 背景全黑（截图见 D5 P10 反馈）
+  const lastSrcRef = useRef(targetSrc);
 
   useEffect(() => {
     setAlternateOn(false);
   }, [focusStage]);
-
-  // D5 P10：mount 后立即把 opacity 拉到 1（首帧 fade-in 300ms）
-  useEffect(() => {
-    const raf = window.requestAnimationFrame(() => setCurrentOpacity(1));
-    return () => window.cancelAnimationFrame(raf);
-  }, []);
 
   useEffect(() => {
     if (!shouldAlternate) return;
@@ -80,29 +78,26 @@ export function useStageCrossfade(
   }, [alternateIntervalMs, shouldAlternate]);
 
   useEffect(() => {
-    if (targetSrc === currentSrc) return;
+    if (targetSrc === lastSrcRef.current) return;
+    const prevSrc = lastSrcRef.current;
+    lastSrcRef.current = targetSrc;
 
-    let raf = 0;
-    const cleanupTimer = window.setTimeout(() => {
-      setPreviousSrc(null);
-      setIsFading(false);
-      setCurrentOpacity(1);
-    }, fadeDurationMs);
-
-    setPreviousSrc(currentSrc);
+    setPreviousSrc(prevSrc);
     setCurrentSrc(targetSrc);
     setCurrentOpacity(0);
     setIsFading(true);
 
-    raf = window.requestAnimationFrame(() => {
+    // D5 P11：raf + timer 不挂 cleanup，避免下次 effect 触发时被 cancel
+    // 即使切换很快，最终 opacity 一定 = 1
+    window.requestAnimationFrame(() => {
       setCurrentOpacity(1);
     });
-
-    return () => {
-      window.clearTimeout(cleanupTimer);
-      window.cancelAnimationFrame(raf);
-    };
-  }, [currentSrc, fadeDurationMs, targetSrc]);
+    window.setTimeout(() => {
+      setPreviousSrc(null);
+      setIsFading(false);
+      setCurrentOpacity(1);
+    }, fadeDurationMs);
+  }, [targetSrc, fadeDurationMs]);
 
   return {
     currentSrc,

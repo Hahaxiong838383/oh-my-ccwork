@@ -35,8 +35,9 @@ function FocusRunningLaunching({ focusMachine: _focusMachine }: { focusMachine: 
     return () => window.clearInterval(id);
   }, []);
 
-  const showTransition = elapsedMs >= 1_700;
-  const transitionOpacity = Math.max(0, Math.min(1, (elapsedMs - 1_700) / 800));
+  // D5 P11：跟 LAUNCH_ANIM_MS=4500 对齐，01 显示 2.7s + 1.8s 过渡 → 02
+  const showTransition = elapsedMs >= 2_700;
+  const transitionOpacity = Math.max(0, Math.min(1, (elapsedMs - 2_700) / 1_800));
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-screen-bg">

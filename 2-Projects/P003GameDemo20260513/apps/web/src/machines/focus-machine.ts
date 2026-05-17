@@ -1,7 +1,8 @@
 import type { FocusMachineState, FocusEvent, TransitionResult } from './types';
 import { warnInvalid, noop } from './types';
 
-const LAUNCH_ANIM_MS = 2_500;
+// D5 P11：从 2500 拉到 4500，让飞船 01→02 过渡更舒缓
+const LAUNCH_ANIM_MS = 4_500;
 const PRESENCE_LOST_TO_PAUSED_MS = 30_000;
 const EXIT_CONFIRM_TIMEOUT_MS = 30_000;
 
