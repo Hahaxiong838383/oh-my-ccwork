@@ -1,27 +1,68 @@
 # P003 K1 Game Demo
 
-> 儿童陪伴机器人 K1 web 模拟器 · 800×480 像素锁定 · 4.5 天交付
+> 儿童陪伴机器人 K1 web 模拟器 · 800×480 像素锁定 · 5 天交付
 
-## 进展速览（2026-05-16 · D4 美术化全线完工）
+## 🚀 进展速览（2026-05-17 · D5 V0.9 完工）
 
-**版本 V0.8 · 真机端到端跑通 + 全场景美术化 + 视频升级演示**
+**当前 V0.9** · D1→D5 共 5 天 / 80+ commits / 真机演示节奏校准到位
 
-| 完成度 | 内容 |
+```
+✅ D1 V0.4    框架 + 9 组件 + 凭据探针
+✅ D2 V0.6    整体竖屏 + ASR/LLM/TTS 三段闭环 + 真机通
+✅ D3 V0.7    OpenBox 4 级 + EcoUnlock + Farewell + 4 大调试链修复
+✅ D3.5       配网美术化 + 视频过渡 + Welcome 写实图 + TTS sayDirect 通道
+✅ D4 V0.8    全场景美术化（12 PNG + 4 MP4）+ focus 4 stage 链路
+✅ D5 V0.9    25 commits · 字幕 TTS 严同步 + 专注流程闭环 + debug 工具集
+```
+
+### D5 24 轮迭代（按系统分组）
+
+| 系统 | Phase | 关键改动 |
+|---|---|---|
+| 字幕条统一 | P1-P4 | StatusBar 胶囊 + 字幕统一走 z-90 层 + 修字幕全消失 + 磨砂方块贴底 |
+| 取消自动推进 | P5 | 删 demo autoTimer（要 jumpToScene/用户触发）+ NightReport 去信封壳 |
+| **字幕 TTS 集中化** | **P6-P7** | applyEffects 默认非空 → sayDirect；删 5 处 scene-level sayDirect；App mount prewarm ws 修首次卡顿 |
+| 进度条 + 切图 | P8-P14 | focusStageDurationMs 控制 4 阶段时长 + FocusProgressBar 美术槽对齐 + 修 useStageCrossfade cleanup race + cqh 单位 fallback 陷阱 |
+| 返舱/继续闭环 | P15-P18 | EXIT_CONFIRM 跳 welcome / 继续按 focusMode 选出航or静思 / 静思 launching 时长独立 |
+| **字幕 TTS 严同步** | **P19-P22** | onAudioStart at flushMp3Buffer 内 src.start() / 打字机 5 字/秒 / 跨句 fade-up / 消失公式 240ms/字 |
+| 文案差异化 | P23 | 静思后说"继续静思 还是 返舱"（出航保持不变）|
+| **宝箱手动触发** | **P24** | 进度满后透明覆盖按钮叠在美术"收获奖励" 用户点击触发 |
+
+### 沉淀的 3 大工程范式
+1. **字幕 + TTS 严同步**：出现等 `src.start()` AudioContext clock / 推进用打字机字速 / 消失公式匹配字速 + buffer · [feedback_subtitle_tts_strict_sync_pattern.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/)
+2. **useEffect cleanup race**：deps 含自 set state → cleanup 取消 raf → setOpacity 永远卡 0 · [feedback_useeffect_cleanup_cancels_raf_timer.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/)
+3. **cq 单位 fallback 陷阱**：加 containerType 会全局缩 cqh 元素 · [feedback_cq_unit_fallback_pitfall.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/)
+
+### 真机演示流程（V0.9）
+
+```
+手机 https://192.168.1.193:5173/ → 完成配网
+  ↓ 跳关 1: 开机欢迎 (字幕+TTS 同步)
+  ↓ 跳关 2: 夜航报告 (1-4 随机宝箱 PNG)
+  ↓ 跳关 3: 状态询问 → 选出航/静思
+  ↓ 出航 4.5s 飞船过渡 / 静思 2.5s 单图过渡
+  ↓ 4 阶段切图 + 进度条 16s 满
+  ↓ 手动点击"收获奖励" → 随机宝箱品质 → 字幕+TTS 同步
+  ↓ 询问"继续出航/静思 还是 返舱?"
+     ├ 继续 → 回出航/静思
+     └ 返舱 → 太棒了 +10 → 回欢迎
+
+debug: 左下紫色徽章实时显示场景编号 + focus state
+       K1 右侧"下一步"循环跳关
+```
+
+### 后续 TODO（按优先级）
+
+| P | 项 |
 |---|---|
-| ✅ D1 V0.4 | 框架 + 9 组件 + 凭据探针（[D1-log](docs/D1-log.md)） |
-| ✅ D2 V0.6 | 整体竖屏 + 三段闭环（ASR + LLM + TTS）+ 真机通（[D2-log](docs/D2-log.md)） |
-| ✅ D3 V0.7 | OpenBox 4 级 + EcoUnlock + Farewell + 4 大调试链修复（[D3-log](docs/D3-log.md)） |
-| ✅ D3.5 | 配网美术化 + 视频过渡 + Welcome 写实图（C 档动效）+ TTS sayDirect 通道（[D3.5-log](docs/D3.5-log.md)） |
-| ✅ **D4** | **focusRunning/Companion 美术化 10 stage + 静思 4 图 + 出航 7 图 + 宝箱 4 PNG + 生态缸 4 mp4 升级演示**（[D4-art-final-summary](docs/D4-art-final-summary.md)） |
-| ⏳ D4 后续 | 出航视觉链路修复（按"出航1-7"统一命名 + 修 04/05 伪旋转穿帮）+ Welcome 字幕技术债 + 真机演练 |
-| ⏳ D5 | buffer：性能优化 + 真机 60fps 验证 + mkcert 真证书替换 |
+| P1 | 真机 D5 演练（iOS Safari HTTPS + mkcert + 字幕同步实测）|
+| P1 | sayDirect 路径下 onAudioStart 完整接通（让 boot 字幕也走 voice-client cb 同步）|
+| P2 | RewardClaimButton 位置/尺寸真机微调（用 % 估的）|
+| P2 | FocusProgressBar 不同 stage 美术槽位差异校准 |
+| P3 | 清理 stale 注释 + 删 `focusSpeed` store 字段（已无消费方）|
+| P3 | Welcome scene STARS 星点装饰可外提复用组件 |
 
-**当前可演**（13 个 commit 落地）：手机访问 `https://<LAN-IP>:5173/` → 完成配网 →
-全 11 个 scene（welcome / nightReport / askMode / focusRunning 出航 / focusCompanion 静思 /
-boxCommon/Rare/Epic/Legendary 4 PNG / ecoUnlock 4 mp4 升级 / farewell）+ DebugBar 调试控件
-（跳关 / 速度滑块 / 进度起点 / 一键满进度 / 演示出航过渡 / 演示静思过渡 / 生态缸 4 等级切换）。
-
-**当前可演**：手机访问 `https://192.168.1.193:5173/` → DebugBar 完成配网 → 视频过渡 → 写实 Welcome 场景（小可在飞船舷窗读书 + 星点漂移 + 表情屏绿光 + 真实 TTS"你好，指挥官！欢迎回到方舟"）→ NightReport → AskMode → focusRunning → OpenBox 4 级 → EcoUnlock → Farewell
+详见 [`docs/D5-log.md`](docs/D5-log.md) 完整复盘（25 commit 时间线 + 3 大踩坑根因 + 工程范式沉淀）。
 
 ## 技术栈
 
@@ -42,8 +83,9 @@ boxCommon/Rare/Epic/Legendary 4 PNG / ecoUnlock 4 mp4 升级 / farewell）+ Debu
 | [`D2-log.md`](docs/D2-log.md) | D2 V0.6：B+C 方案 + 整体竖屏 + 三段端到端 + 9 真机 bug 复盘 |
 | [`D3-log.md`](docs/D3-log.md) | D3 V0.7：三场景 + 4 大调试链路 + 团队协作产出 |
 | [`D3.5-log.md`](docs/D3.5-log.md) | D3.5：美术化 + Welcome 写实图 + TTS sayDirect + 5 大踩坑 |
-| [`D4-focus-art-decisions.md`](docs/D4-focus-art-decisions.md) | **D4 决策记录档（P0~P9.7 完整 Phase 拆分 + 回滚锚点）** |
-| [`D4-art-final-summary.md`](docs/D4-art-final-summary.md) | **D4 最终总结（commit 时间线 + 能力增量 + 踩坑沉淀 + 后续 todo）** |
+| [`D4-focus-art-decisions.md`](docs/D4-focus-art-decisions.md) | D4 决策记录档（P0~P9.7 完整 Phase 拆分 + 回滚锚点）|
+| [`D4-art-final-summary.md`](docs/D4-art-final-summary.md) | D4 最终总结（commit 时间线 + 能力增量 + 踩坑沉淀）|
+| [`D5-log.md`](docs/D5-log.md) | **D5 完整复盘（P1-P24 时间线 + 3 大踩坑根因 + 工程范式沉淀）** |
 | [`TECH-DEBT.md`](docs/TECH-DEBT.md) | 技术债清单（demo→优化阶段路线图）|
 | [`00-product-spec.md`](docs/00-product-spec.md) | 产品规格 + 术语表（V1.0 参考） |
 | [`05-server-contracts.md`](docs/05-server-contracts.md) | C/S 接口契约（含新增 tts.say） |
