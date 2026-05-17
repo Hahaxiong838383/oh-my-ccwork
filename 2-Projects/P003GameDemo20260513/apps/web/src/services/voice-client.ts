@@ -9,17 +9,17 @@ export interface VoiceClient {
   sayDirect(text: string): void;
   unlockAudio(): Promise<void>;
   on(
-    event: 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'error',
+    event: 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'tts.sentence_break' | 'error',
     cb: (data: any) => void,
   ): void;
   off(
-    event: 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'error',
+    event: 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'tts.sentence_break' | 'error',
     cb: (data: any) => void,
   ): void;
   close(): void;
 }
 
-type VoiceEvent = 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'error';
+type VoiceEvent = 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'tts.sentence_break' | 'error';
 
 type ServerMessage =
   | { type: 'asr.partial'; text: string }
@@ -156,6 +156,8 @@ class VoiceClientImpl implements VoiceClient {
             // 句末信号：立刻 flush 当前段（按句切，每段是完整一句话音频，
             // chunk 边界 priming silence 占比小不可感，比 250ms 时间切更稳）
             this.flushTtsBufferNow();
+            // D5 P19：emit 给 UI 用于字幕按句推进（修字幕跟 TTS 不同步）
+            this.emit('tts.sentence_break', msg);
             break;
           case 'error':
             this.emit('error', msg);

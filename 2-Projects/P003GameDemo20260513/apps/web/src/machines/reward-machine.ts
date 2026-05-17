@@ -9,11 +9,12 @@ const OPEN_ANIM_MS: Record<BoxLevel, number> = {
   legendary: 4_000,
 };
 
-// D5 P8：showingReward 时长按奖励语字数动态计算，确保小可说完 + 留 800ms 静默
-// 公式：length × 220ms + 800ms，clamp [3000, 6000]
+// D5 P19：showingReward 时长按奖励语字数动态计算 + 静默缓冲
+// 公式：length × 220ms + 2200ms buffer，clamp [4500, 7500]
+// 之前 800ms 缓冲太短，奖励语刚说完立刻倒计时太生硬，川哥要求加长
 function rewardShownMsFor(level: BoxLevel): number {
   const text = REWARD_TABLE[level].line;
-  return Math.max(3_000, Math.min(6_000, text.length * 220 + 800));
+  return Math.max(4_500, Math.min(7_500, text.length * 220 + 2_200));
 }
 const ECO_ANIM_MS = 4_000;
 const ASK_TIMEOUT_MS = 30_000;

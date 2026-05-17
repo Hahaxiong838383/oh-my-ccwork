@@ -25,6 +25,9 @@ export function VoiceButton(_props: VoiceButtonProps) {
   const [pressed, setPressed] = useState(false);
   const clientRef = useRef<VoiceClient | null>(null);
   const llmTextRef = useRef('');
+  // D5 P19：字幕按 TTS sentence_break 推进，避免显示 LLM 全文超前 TTS 进度
+  const sentenceListRef = useRef<string[]>([]);
+  const sentenceIdxRef = useRef(0);
   // 异步竞态防护：pressedRef 反映"用户当前是否按住"，startInFlightRef 标启动中，
   // needStopRef 标"启动期间用户已松手，启动完成后必须立刻 stop"。
   const pressedRef = useRef(false);
@@ -47,11 +50,33 @@ export function VoiceButton(_props: VoiceButtonProps) {
     const onAsrFinal = (msg: { text: string }) => {
       setSubtitle(`${msg.text}...`);
       llmTextRef.current = '';
+      sentenceListRef.current = [];
+      sentenceIdxRef.current = 0;
+    };
+    // D5 P19：累积 LLM 全文 + 按句切分，字幕只显示当前正在 TTS 的句
+    const splitSentences = (text: string): string[] => {
+      const out: string[] = [];
+      let buf = '';
+      for (const ch of text) {
+        buf += ch;
+        if (/[。！？!?\n]/.test(ch)) {
+          const trimmed = buf.trim();
+          if (trimmed) out.push(trimmed);
+          buf = '';
+        }
+      }
+      const tail = buf.trim();
+      if (tail) out.push(tail);
+      return out;
     };
     const onLlmDelta = (msg: { text: string }) => {
       if (!msg.text) return;
       llmTextRef.current += msg.text;
-      setSubtitle(llmTextRef.current);
+      sentenceListRef.current = splitSentences(llmTextRef.current);
+      // 字幕显示当前正在 TTS 的那一句（如果 TTS 还没开始，显示第 1 句）
+      const idx = Math.min(sentenceIdxRef.current, sentenceListRef.current.length - 1);
+      const current = sentenceListRef.current[idx];
+      if (current) setSubtitle(current);
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
     };
@@ -60,11 +85,20 @@ export function VoiceButton(_props: VoiceButtonProps) {
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
     };
+    const onTtsSentenceBreak = () => {
+      // 每收到一句 TTS 句末信号，字幕推进到下一句
+      sentenceIdxRef.current += 1;
+      const idx = Math.min(sentenceIdxRef.current, sentenceListRef.current.length - 1);
+      const current = sentenceListRef.current[idx];
+      if (current) setSubtitle(current);
+    };
     const onTtsEnd = () => {
       // flush 由 voice-client 内部处理
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
       llmTextRef.current = '';
+      sentenceListRef.current = [];
+      sentenceIdxRef.current = 0;
     };
     const onError = (msg: { message?: string }) => {
       setVoiceStatus('idle');
@@ -75,6 +109,7 @@ export function VoiceButton(_props: VoiceButtonProps) {
     client.on('asr.final', onAsrFinal);
     client.on('llm.delta', onLlmDelta);
     client.on('tts.audio', onTtsAudio);
+    client.on('tts.sentence_break', onTtsSentenceBreak);
     client.on('tts.end', onTtsEnd);
     client.on('error', onError);
 
@@ -83,6 +118,7 @@ export function VoiceButton(_props: VoiceButtonProps) {
       client.off('asr.final', onAsrFinal);
       client.off('llm.delta', onLlmDelta);
       client.off('tts.audio', onTtsAudio);
+      client.off('tts.sentence_break', onTtsSentenceBreak);
       client.off('tts.end', onTtsEnd);
       client.off('error', onError);
       // 注意：不 client.close()，让 client 跨 effect 复用（避免 StrictMode 关掉 ws）
