@@ -8,6 +8,9 @@ const LAUNCH_ANIM_EXPLORE_MS = 8_500;
 const LAUNCH_ANIM_COMPANION_MS = 2_500;
 const PRESENCE_LOST_TO_PAUSED_MS = 30_000;
 const EXIT_CONFIRM_TIMEOUT_MS = 30_000;
+// D6 P2：FOCUS_REWARD_READY 点击后给"变黄"美术 1.5s 展示，再切到开宝箱场景
+// 川哥反馈出航模式切换太快，加缓冲让用户看到收获瞬间
+const REWARD_OPEN_DELAY_MS = 1_500;
 
 export function focusTransition(
   current: FocusMachineState,
@@ -44,13 +47,15 @@ export function focusTransition(
 
     case 'running':
       if (event.type === 'FOCUS_REWARD_READY') {
+        // D6 P2：点击"收获奖励"后先 setFocusStage='full' 让"变黄"美术展示 1.5s，
+        // 再由 rewardOpenDelay timer 触发 dispatchRandomBox 进入开箱场景。
+        // 修川哥反馈"出航模式宝箱领取后切换太快"。
         return {
           state: 'rewarding',
-          // D5 P16：用 dispatchRandomBox effect，runner 内随机品质（每次不同）
           effects: [
             { type: 'setFocusStage', stage: 'full' },
-            { type: 'dispatchRandomBox' },
             { type: 'playSfx', id: 'reward-flow-start' },
+            { type: 'startTimer', key: 'rewardOpenDelay', ms: REWARD_OPEN_DELAY_MS },
           ],
         };
       }

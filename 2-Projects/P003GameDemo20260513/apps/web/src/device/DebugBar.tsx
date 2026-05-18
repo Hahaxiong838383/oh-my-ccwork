@@ -26,7 +26,6 @@ export function DebugBar() {
   const setupComplete = useAppStore((s) => s.setupComplete);
   const wifiSignal = useAppStore((s) => s.wifiSignal);
   const focusMachine = useAppStore((s) => s.focusMachine);
-  const rewardMachine = useAppStore((s) => s.rewardMachine);
   const focusStageDurationMs = useAppStore((s) => s.focusStageDurationMs);
   const cameraUnavailable = useAppStore((s) => s.cameraUnavailable);
   // D6 P1 debug：实时显示当前表情快照（每 500ms 刷新）
@@ -247,32 +246,32 @@ export function DebugBar() {
         </div>
       )}
 
-      {focusMachine === 'idle' && (rewardMachine === 'idle' || rewardMachine === 'ecoUnlock') && (
-        <div className="mt-2 flex items-center gap-2">
-          <span className={labelClass}>生态缸：</span>
-          {([
-            { level: 1, label: '🌱 Lv1' },
-            { level: 2, label: '🌿 Lv2' },
-            { level: 3, label: '🌳 Lv3' },
-            { level: 4, label: '✨ Lv4' },
-          ] as const).map(({ level, label }) => (
-            <button
-              key={level}
-              type="button"
-              onClick={() => {
-                const store = useAppStore.getState();
-                store.setEcoLevel(level);
-                jumpToScene('ecoUnlock');
-              }}
-              className={`h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10 ${
-                ecoLevel === level ? activeClass : ''
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* D6 P2：川哥反馈"生态缸选择按钮要一直在，确保在各个关卡都可以选择"
+          移除外层 focusMachine/rewardMachine 条件包裹，按钮永久显示。 */}
+      <div className="mt-2 flex items-center gap-2">
+        <span className={labelClass}>生态缸：</span>
+        {([
+          { level: 1, label: '🌱 Lv1' },
+          { level: 2, label: '🌿 Lv2' },
+          { level: 3, label: '🌳 Lv3' },
+          { level: 4, label: '✨ Lv4' },
+        ] as const).map(({ level, label }) => (
+          <button
+            key={level}
+            type="button"
+            onClick={() => {
+              const store = useAppStore.getState();
+              store.setEcoLevel(level);
+              jumpToScene('ecoUnlock');
+            }}
+            className={`h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10 ${
+              ecoLevel === level ? activeClass : ''
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       {focusMachine !== 'idle' && (
         <>

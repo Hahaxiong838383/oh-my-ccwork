@@ -264,6 +264,14 @@ export function defaultTimerRouter(key: string): void {
       internalDispatchFocus({ type: 'EXIT_TIMEOUT' });
       break;
 
+    // D6 P2：FOCUS_REWARD_READY 点击后等 1.5s 才开宝箱（让 stage='full' 黄色美术
+    // 有展示时间）。timer 到了立即 dispatchRandomBox，跟原 D5 P16 逻辑一致。
+    case 'rewardOpenDelay': {
+      const level = pickNextBoxLevel(useAppStore.getState().openedBoxLevels);
+      internalDispatchReward({ type: 'OPEN_BOX', level });
+      break;
+    }
+
     // reward machine
     case 'openAnim': {
       // D5 P7：携带 store.currentBoxLevel，让 reward-machine 拿到正确文案触发 TTS
