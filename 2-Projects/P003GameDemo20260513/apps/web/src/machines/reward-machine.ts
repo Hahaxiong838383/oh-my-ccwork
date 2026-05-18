@@ -9,12 +9,14 @@ const OPEN_ANIM_MS: Record<BoxLevel, number> = {
   legendary: 4_000,
 };
 
-// D5 P19：showingReward 时长按奖励语字数动态计算 + 静默缓冲
-// 公式：length × 220ms + 2200ms buffer，clamp [4500, 7500]
-// 之前 800ms 缓冲太短，奖励语刚说完立刻倒计时太生硬，川哥要求加长
+// D5 P19 / D6 P3：showingReward 时长按奖励语字数动态计算 + 静默缓冲
+// 公式：length × 280ms + 3500ms buffer，clamp [6500, 10000]
+// 川哥 D6 P3 反馈"开完宝箱跳转太快"，要"等小可话说完，然后缓一缓"。
+// 280ms/字 对齐 TTS 真实语速（D5 打字机 5 字/秒 = 200ms，加 80ms 间隔），
+// buffer 3.5s 让小可话末尾 + 视觉收尾后再有 1-2s 静默欣赏时间。
 function rewardShownMsFor(level: BoxLevel): number {
   const text = REWARD_TABLE[level].line;
-  return Math.max(4_500, Math.min(7_500, text.length * 220 + 2_200));
+  return Math.max(6_500, Math.min(10_000, text.length * 280 + 3_500));
 }
 const ECO_ANIM_MS = 4_000;
 const ASK_TIMEOUT_MS = 30_000;

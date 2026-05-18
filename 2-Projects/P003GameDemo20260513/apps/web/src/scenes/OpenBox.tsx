@@ -88,10 +88,13 @@ export function OpenBox() {
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(255,255,255,0.18),rgba(5,12,24,0.9)_60%)]" />
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-[clamp(1.2cqh,1.8cqw,2.8cqh)] px-[clamp(3cqh,5cqw,6cqh)]">
+        {/* D6 P3：川哥反馈"宝箱 UI 和提示文字过小看不清"。整体放大 ~1.4 倍：
+            品质标签 2.4→3.4cqw / 容器 grid 30→40cqw / 圆环 20→27cqw /
+            宝箱 img 16→22cqw / 奖励数额块 2.5→3.4cqw / 小可文案 2.1→3cqw */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-[clamp(1.6cqh,2.4cqw,3.6cqh)] px-[clamp(3cqh,5cqw,6cqh)]">
           <motion.p
             className="text-center font-semibold tracking-[0.04em]"
-            style={{ fontSize: 'clamp(1.3cqh, 2.4cqw, 2.8cqh)', color: config.color }}
+            style={{ fontSize: 'clamp(1.9cqh, 3.4cqw, 4cqh)', color: config.color }}
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
@@ -99,12 +102,12 @@ export function OpenBox() {
             ✨ {config.name}
           </motion.p>
 
-          <div className="relative grid place-items-center" style={{ width: 'clamp(20cqh, 30cqw, 34cqh)', height: 'clamp(20cqh, 30cqw, 34cqh)' }}>
+          <div className="relative grid place-items-center" style={{ width: 'clamp(28cqh, 40cqw, 46cqh)', height: 'clamp(28cqh, 40cqw, 46cqh)' }}>
             <motion.div
               className="absolute rounded-full"
               style={{
-                width: 'clamp(12cqh, 20cqw, 23cqh)',
-                height: 'clamp(12cqh, 20cqw, 23cqh)',
+                width: 'clamp(17cqh, 27cqw, 31cqh)',
+                height: 'clamp(17cqh, 27cqw, 31cqh)',
                 backgroundColor: config.ringColor,
               }}
               animate={
@@ -127,8 +130,8 @@ export function OpenBox() {
             <motion.div
               className="relative z-10 select-none drop-shadow-[0_0_1.6cqh_rgba(255,255,255,0.35)] flex items-center justify-center"
               style={{
-                width: 'clamp(11cqh, 16cqw, 18cqh)',
-                height: 'clamp(11cqh, 16cqw, 18cqh)',
+                width: 'clamp(15cqh, 22cqw, 25cqh)',
+                height: 'clamp(15cqh, 22cqw, 25cqh)',
                 filter: `drop-shadow(0 0 0.8cqh ${config.color})`,
               }}
               initial={{ scale: 0.9, rotate: 0, opacity: 0 }}
@@ -169,20 +172,20 @@ export function OpenBox() {
 
           {isShowing ? (
             <motion.div
-              className="rounded-[2.2cqh] border border-yellow-200/60 bg-black/32 px-[clamp(1.8cqh,3cqw,3.4cqh)] py-[clamp(1.1cqh,1.8cqw,2.2cqh)] text-center text-yellow-100 shadow-[0_0_2.2cqh_rgba(255,215,0,0.4)]"
-              style={{ fontSize: 'clamp(1.5cqh, 2.5cqw, 2.9cqh)' }}
+              className="rounded-[2.2cqh] border border-yellow-200/60 bg-black/32 px-[clamp(2.4cqh,4cqw,4.6cqh)] py-[clamp(1.5cqh,2.4cqw,3cqh)] text-center text-yellow-100 shadow-[0_0_2.2cqh_rgba(255,215,0,0.4)]"
+              style={{ fontSize: 'clamp(2.1cqh, 3.4cqw, 4cqh)' }}
               initial={{ opacity: 0, scale: 0.7, y: 18 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ duration: reducedMotion ? 0.3 : 0.45, ease: 'easeOut' }}
             >
               <p className="font-semibold tracking-[0.04em]">+{config.rewards.stardust} ⭐</p>
-              <p className="mt-[clamp(0.25cqh,0.5cqw,0.7cqh)] font-semibold tracking-[0.04em]">+{config.rewards.familyCoin} 🪙</p>
+              <p className="mt-[clamp(0.4cqh,0.7cqw,1cqh)] font-semibold tracking-[0.04em]">+{config.rewards.familyCoin} 🪙</p>
             </motion.div>
           ) : null}
 
           <motion.p
             className="text-center text-white/85"
-            style={{ fontSize: 'clamp(1.2cqh, 2.1cqw, 2.6cqh)' }}
+            style={{ fontSize: 'clamp(1.7cqh, 3cqw, 3.5cqh)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: isShowing ? 1 : 0 }}
             transition={{ duration: 0.28 }}

@@ -1,7 +1,10 @@
 import { useAppStore } from '../store/app-store';
 import { ShutdownScreen } from '../components/ShutdownScreen';
 import { StatusBar } from '../components/StatusBar';
-import { SceneNumberBadge } from '../components/SceneNumberBadge';
+// D6 P3：川哥反馈"去除左下角 debug 数字和提示文字"。SceneNumberBadge 是 D5 P9 debug
+// 工具（显示 scene 编号 + focusMachine·focusStage·progress%），demo 上线前移除。
+// 组件本身保留供后续 debug，仅不渲染。
+// import { SceneNumberBadge } from '../components/SceneNumberBadge';
 import { FocusRunning } from '../scenes/FocusRunning';
 import { FocusCompanion } from '../scenes/FocusCompanion';
 import { useFocusProgressTick } from '../hooks/useFocusProgressTick';
@@ -36,7 +39,7 @@ export function Screen() {
     <>
       {scene}
       <StatusBar />
-      <SceneNumberBadge />
+      {/* D6 P3: SceneNumberBadge debug 角标已移除，需 debug 时取消上面 import 并加回 */}
     </>
   );
 }

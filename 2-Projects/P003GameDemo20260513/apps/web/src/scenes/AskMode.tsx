@@ -234,16 +234,19 @@ export function AskMode() {
         />
       </div>
 
-      <div className="flex w-full items-center justify-center gap-[clamp(1.2cqh,2cqw,2.6cqh)]">
+      {/* D6 P3：川哥反馈"继续出航还是返舱按钮过小"。
+          minWidth 16→22cqw / paddingBlock 1.9→3cqw / paddingInline 3.1→4.5cqw /
+          fontSize 2.6→3.6cqw。手指点按友好，标准 iOS HIG ≥44pt 触达。 */}
+      <div className="flex w-full items-center justify-center gap-[clamp(2cqh,3cqw,3.6cqh)]">
         <button
           type="button"
           onClick={onPickLeft}
           className="rounded-full bg-porthole-glow/90 font-semibold text-shell-bg shadow-[0_0_1.8cqh_rgba(79,209,255,0.35)] transition hover:brightness-110"
           style={{
-            minWidth: 'clamp(10cqh, 16cqw, 18cqh)',
-            paddingBlock: 'clamp(1.3cqh, 1.9cqw, 2.3cqh)',
-            paddingInline: 'clamp(2.2cqh, 3.1cqw, 3.8cqh)',
-            fontSize: 'clamp(1.6cqh, 2.6cqw, 3cqh)',
+            minWidth: 'clamp(14cqh, 22cqw, 24cqh)',
+            paddingBlock: 'clamp(2cqh, 3cqw, 3.4cqh)',
+            paddingInline: 'clamp(3cqh, 4.5cqw, 5.4cqh)',
+            fontSize: 'clamp(2.2cqh, 3.6cqw, 4cqh)',
           }}
         >
           {leftLabel}
@@ -253,10 +256,10 @@ export function AskMode() {
           onClick={onPickRight}
           className="rounded-full bg-white/12 font-semibold text-white ring-1 ring-white/24 transition hover:bg-white/18"
           style={{
-            minWidth: 'clamp(10cqh, 16cqw, 18cqh)',
-            paddingBlock: 'clamp(1.3cqh, 1.9cqw, 2.3cqh)',
-            paddingInline: 'clamp(2.2cqh, 3.1cqw, 3.8cqh)',
-            fontSize: 'clamp(1.6cqh, 2.6cqw, 3cqh)',
+            minWidth: 'clamp(14cqh, 22cqw, 24cqh)',
+            paddingBlock: 'clamp(2cqh, 3cqw, 3.4cqh)',
+            paddingInline: 'clamp(3cqh, 4.5cqw, 5.4cqh)',
+            fontSize: 'clamp(2.2cqh, 3.6cqw, 4cqh)',
           }}
         >
           {rightLabel}
