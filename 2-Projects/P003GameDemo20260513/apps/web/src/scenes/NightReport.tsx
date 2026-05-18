@@ -59,6 +59,7 @@ function generateRandomBoxes(): BoxLevel[] {
 export function NightReport() {
   const bootState = useAppStore((s) => s.bootState);
   const ecoLevel = useAppStore((s) => s.ecoLevel);
+  const rewardMachine = useAppStore((s) => s.rewardMachine);
   const bonus = DEMO_DATA.nightReportBonus;
   const isActive = bootState === 'nightReport';
   const { dispatchBoot, dispatchReward } = useTransitionRunner();
@@ -112,6 +113,10 @@ export function NightReport() {
   }, [ecoLevel, hasLegendary]);
 
   if (!renderOverlay) return null;
+  // D6 P7：z 层冲突修复 — NightReport(z-layer-modal=80) 会盖住 OpenBox(z-layer-mask=70)，
+  // 川哥点"收取奖励"触发开宝箱但视觉看不到（被信纸盖住）。reward 进 openingBox/
+  // showingReward 时立即让位，让 OpenBox 独占视觉。
+  if (rewardMachine === 'openingBox' || rewardMachine === 'showingReward') return null;
 
   return (
     <div
