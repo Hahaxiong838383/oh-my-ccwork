@@ -2,6 +2,53 @@
 
 > 儿童陪伴机器人 K1 web 模拟器 · 800×480 像素锁定 · 6 天交付
 
+---
+
+## 📌 项目一眼看清（AI 接手者必读）
+
+**🎯 是什么**：FUTURUS 自研儿童陪伴机器人 **K1** 的 web demo 模拟器。设备形态是飞船舷窗造型 + 一只拟人化星灵小可。Demo 目标是给投资人 / 合作方 / 现场演示用，让他们 **5 分钟体验完 K1 主要能力**：开机欢迎 → 夜航报告 → 选模式（出航/静思）→ 4 阶段专注 → 开宝箱 → 选择继续/返舱 → 关盖告别。
+
+**🌐 现状（V1.0）**：[https://p003.hahaxiong.cc/](https://p003.hahaxiong.cc/)（公网 HTTPS，HK 阿里云 8.218.26.17 部署），打开手机扫即可演示。
+
+**🏗 技术栈**：
+- 前端 React 18 + Vite 5 + TypeScript strict + Tailwind + Zustand + framer-motion + CSS container queries (cqw/cqh)
+- 后端 Hono + Node `ws` + tsx + ESM（端口 :3001）
+- 三段语音链路：ASR 火山 SAUC v3 + LLM Gemini via 川哥代理 4000（`gemini-3.1-flash-lite-preview`）+ TTS Doubao 2.0 双向流
+- **D6 新增**表情感知：Gemini Vision (`gemini-2.5-flash` + `thinking_budget=0`) + A' 架构（scene 切换瞬间预抓拍 + 5s 后台兜底）
+- 部署：阿里云 HK + nginx + systemd + Let's Encrypt
+
+**🎨 4 个绝对目标**（[`docs/DEMO-PRINCIPLES.md`](docs/DEMO-PRINCIPLES.md)）：
+1. 手机竖屏外壳 + 800×480 像素锁定 5:3 画布
+2. 小可 AI 实时语音对话 ≤2.5s 端到端
+3. 4.5 天交付（实际 6 天，含 D5/D6 抛光）
+4. **demo 第一原则**：砍 9 层 / XState / MSW / Dexie，纯 CSS + cqw/cqh
+
+**💎 设计原则**：
+- 演示节奏 > 工程完美：宁可写死 timer 别引入状态机层级
+- 字幕 / TTS / 视觉**严同步**：见 [feedback_subtitle_tts_strict_sync_pattern](../../.claude/projects/-Users-rayman-chen-mycc/memory/)
+- 摄像头隐私：server 即用即抛不存图（demo 可云，商业化必转端侧）
+- 真机驱动迭代：川哥手机反馈 → cc 主线快速修 → rsync VPS → 公网验证
+
+**🗺 后续路线（D6 完工之后）**：
+
+| P | 项 | 触发条件 |
+|---|---|---|
+| P1 | 暗光 / 逆光 / 侧光压测 + confidence 分布统计 | 演示场地确定后 |
+| P2 | 多帧投票（最近 3 帧滑动窗口取 mode） | 命中率不稳时 |
+| P2 | "看到你啦" 首次抓拍 trigger / "我看不到你呢" 0.3 概率回退语 | 视演示场景 |
+| P3 | DebugBar 5 flag 行清理（demo 上线前隐藏） | 投资人 demo 前 |
+| P4 商业化 | 端侧 MediaPipe Tasks Vision 替换云端 Gemini | 合规 + 零延迟，产品化路线 |
+
+**🧭 关键导航文档**：
+- [`docs/D1-log.md`](docs/D1-log.md) ~ [`docs/D6-log.md`](docs/D6-log.md) 6 天迭代完整复盘
+- [`docs/D6-vision-expression-plan.md`](docs/D6-vision-expression-plan.md) — D6 表情感知 V0.2 规划（codex + gemini 双评审整合）
+- [`docs/DEMO-PRINCIPLES.md`](docs/DEMO-PRINCIPLES.md) — 4 绝对目标 + 范围裁剪表
+- [`docs/00-product-spec.md`](docs/00-product-spec.md) — 产品规格 + 术语表
+- [`docs/05-server-contracts.md`](docs/05-server-contracts.md) — C/S 接口契约（ASR/LLM/TTS/Vision）
+- [`docs/TECH-DEBT.md`](docs/TECH-DEBT.md) — 技术债清单（demo→优化阶段路线图）
+
+---
+
 ## 🚀 进展速览（2026-05-18 · **D6 V1.0 完工**）
 
 **当前 V1.0** · D1→D6 共 6 天 / 96+ commits / 表情感知打通

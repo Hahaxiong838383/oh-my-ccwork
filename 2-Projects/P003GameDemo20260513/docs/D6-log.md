@@ -133,4 +133,63 @@ D6 16 commit 里只有 1 commit（codex A + B 并行实施）是 codex 真正写
 
 ---
 
-**川哥总评**：D6 P1 表情感知功能上线，端到端通畅，小可终于"看得见你"了。从 6s → 1.6-2.1s + 12 标签 + 100% 带前缀，符合"小可能感知用户面部表情状态"的产品目标。
+## D6 P2：VPS 公网部署（8 commit）
+
+D6 P1 完工当晚川哥同步：部署到阿里云 HK 8.218.26.17，域名 p003.hahaxiong.cc。
+
+| Phase | Commit | 改动 | 真凶 / 踩坑 |
+|---|---|---|---|
+| **现状探查** | — | SSH 8.218.26.17 看：1.6Gi 内存 / cc-remote V4 frps + nginx 80/443 已占 / 无 node/npm | 资源紧但 1.1Gi 可用够，避开 7000/19080/19443/22022/29443 端口选 :3001 |
+| **基础设施** | — | nodesource setup_22.x → Node v22.22 + 装 + 建 /opt/p003/{server,web/dist} | rsync + certbot 系统已装 |
+| **代码上传** | — | rsync web/dist + apps/server → VPS（含 24 PNG+MP4 美术资产）| 17M / 24 asset 全到位 |
+| **systemd unit 起步崩 #1** | — | exit 127 = command not found | `--omit=dev` 跳过 tsx（tsx 是 devDep），改 npm install 完整装 |
+| **真凶逮捕 #3** | `a72f47284` | server/package.json **漏 zod dependency** → ERR_MODULE_NOT_FOUND | codex B 写 vision.ts 用 zod 但忘加 dep；本地 monorepo root 共享 zod 掩盖了，独立部署 VPS 才暴露 |
+| **nginx 语法陷阱** | — | reload 失败 `unknown directive "http2"` | nginx 1.24 不支持 `http2 on;` (nginx 1.25+ 语法)；改老语法 `listen 443 ssl http2;` |
+| **certbot 装证书失败** | — | "Could not automatically find a matching server block for p003.hahaxiong.cc" | vhost 只有 listen 80 没 listen 443，certbot --nginx 找不到。手写完整 80+443 vhost 后重 reload，证书自然挂上 |
+| **SSL 不匹配假象** | — | Mac 端 curl 首次报 SSL 不匹配，VPS 端 5/5 都 200 | Mac 端 SSL session resumption 缓存旧 TLS ticket；重试或 keep-alive 自然恢复 |
+
+**端到端时延实测**：
+- /health: VPS 端 5/5 全 200，5ms 内
+- POST /api/vision/expression: 公网 1.1s（含 Gemini 0.85s）
+- 静态 PNG: HTTP/2 200，nginx 30d expires 缓存
+- 80→443 redirect: 301 OK
+- 证书: Let's Encrypt CN=p003.hahaxiong.cc, 2026-08-16 到期
+
+## D6 P2 + P3：川哥真机迭代两轮（4+4 反馈）
+
+### 第一轮 D6 P2（commit `65f5e29eb`）
+| Q | 修复 |
+|---|---|
+| Q1 出航宝箱切换太快 | focus-machine `FOCUS_REWARD_READY` → 加 `rewardOpenDelay=1500ms` timer，setFocusStage='full' 后等"变黄"美术展示完再 dispatchRandomBox |
+| Q2 收获奖励变黄就能点 | RewardClaimButton 条件改 `focusStage ∈ {openable, full}`（≥60% 起，原 ≥100%）|
+| Q3 生态缸按钮各关卡都能选 | DebugBar 去掉外层 `focusMachine === 'idle' && rewardMachine === ...` 包裹常驻 |
+
+### 第二轮 D6 P3（commit `1aa3ea88b`）
+| Q | 修复 |
+|---|---|
+| Q1 开宝箱后跳转还是太快 | rewardShownMsFor 公式从 `220ms/字 + 2.2s buffer` 提到 `280ms/字 + 3.5s buffer`，clamp [4.5s,7.5s] → [6.5s,10s] |
+| Q2 继续/返舱按钮过小 | AskMode 按钮 minWidth 16→22cqw, fontSize 2.6→3.6cqw, paddingBlock 1.9→3cqw |
+| Q3 宝箱 UI + 文字过小 | OpenBox 整体 ~1.4 倍放大：品质标签 2.4→3.4cqw, 圆环 20→27cqw, 宝箱 16→22cqw, 奖励块 2.5→3.4cqw, 小可文案 2.1→3cqw |
+| Q4 去左下角 debug 角标 | Screen.tsx 删 `<SceneNumberBadge />` 渲染（组件保留方便回切） |
+
+## D6 整体复盘（P1 + P2 + P3 + VPS = 24 commit）
+
+| 阶段 | Commit 数 | 关键产出 |
+|---|---|---|
+| P1 表情感知（含规划）| 16 | A' 架构 + 12 标签 + 1.6s 延迟 + 7 commits 真凶链 |
+| VPS 部署 | 2 | p003.hahaxiong.cc HTTPS 上线 + zod fix |
+| P2 真机反馈第 1 轮 | 1 | reward 缓冲 + 变黄即点 + 生态缸常驻 |
+| P3 真机反馈第 2 轮 | 1 | reward 再加长 + 按钮 + UI 放大 + 去 debug |
+| 文档收尾 | 4 | D6-log + README + RECENT_EVENTS + memory |
+
+## 关键新沉淀 memory（D6 P2/P3 + VPS）
+
+- [feedback_monorepo_deps_vs_standalone_deploy.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — monorepo root node_modules 共享掩盖 sub-package.json 漏 dep，VPS 独立部署才暴露
+- [feedback_nginx_1_24_vs_1_25_http2_syntax.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — nginx 1.24 `listen 443 ssl http2;` 老语法 vs 1.25+ `http2 on;` 新语法
+- [feedback_certbot_nginx_needs_443_block.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — certbot --nginx 自动装证书前必须先有 listen 443 ssl server block
+- [feedback_pwa_sw_deploy_verify.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — PWA SW 新版上线靠 JS hash 对比验证（curl `/` grep index-XXX.js）
+
+---
+
+**川哥总评（D6 完整）**：D6 P1 表情感知功能上线 → 一夜 VPS 部署 + 川哥真机迭代两轮节奏抛光。**小可既能"看见"用户表情，也能在公网 demo 现场流畅交互**——demo 第一原则全程守住。
+
