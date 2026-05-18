@@ -4,7 +4,12 @@ import { jumpToScene } from '../machines';
 import { useTransitionRunner } from '../hooks/useTransitionRunner';
 import { useAppStore, type SceneId } from '../store/app-store';
 import { getSharedVoiceClient } from '../services/voice-client';
-import { requestCameraPermissionAndSnap } from '../services/expression-snapshot';
+import {
+  getExpressionDebug,
+  getExpressionRef,
+  requestCameraPermissionAndSnap,
+  snap,
+} from '../services/expression-snapshot';
 
 function getVoiceWsUrl(): string {
   const envUrl = import.meta.env.VITE_VOICE_WS_URL as string | undefined;
@@ -23,6 +28,16 @@ export function DebugBar() {
   const focusMachine = useAppStore((s) => s.focusMachine);
   const rewardMachine = useAppStore((s) => s.rewardMachine);
   const focusStageDurationMs = useAppStore((s) => s.focusStageDurationMs);
+  const cameraUnavailable = useAppStore((s) => s.cameraUnavailable);
+  // D6 P1 debug：实时显示当前表情快照（每 500ms 刷新）
+  const [exprTick, setExprTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setExprTick((t) => t + 1), 500);
+    return () => window.clearInterval(id);
+  }, []);
+  void exprTick;
+  const exprRef = getExpressionRef();
+  const exprAgeSec = exprRef.at ? Math.floor((Date.now() - exprRef.at) / 1000) : -1;
   const ecoLevel = useAppStore((s) => s.ecoLevel);
   const [sceneValue, setSceneValue] = useState<SceneId | ''>('');
   const [progressStart, setProgressStart] = useState<string>('');
@@ -86,6 +101,58 @@ export function DebugBar() {
         >
           ✅ 完成配网
         </button>
+      </div>
+
+      <div className="mt-2 flex items-center gap-2">
+        <span className={labelClass}>📷 表情：</span>
+        <span
+          className={`h-6 rounded border border-white/15 px-2 py-[3px] text-[10px] ${
+            cameraUnavailable
+              ? 'border-red-400/40 text-red-300'
+              : exprRef.expr === 'neutral'
+              ? 'text-white/60'
+              : 'border-porthole-glow/60 text-porthole-glow'
+          }`}
+        >
+          {cameraUnavailable
+            ? '📵 unavailable'
+            : `${exprRef.expr} conf=${exprRef.confidence.toFixed(2)} age=${exprAgeSec}s`}
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            void snap();
+          }}
+          className="h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10"
+        >
+          手动 snap
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            try {
+              window.sessionStorage.removeItem('p003_camera_unavailable');
+              useAppStore.getState().setCameraUnavailable(false);
+            } catch {
+              /* ignore */
+            }
+          }}
+          className="h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10"
+          title="清掉 sessionStorage 摄像头不可用标志"
+        >
+          清旗
+        </button>
+      </div>
+
+      {/* D6 P1 debug：内部 flag 实时显示，定位 snap 卡在哪一关 */}
+      <div className="mt-1 ml-12 text-[9px] text-white/50">
+        {(() => {
+          const d = getExpressionDebug();
+          void exprTick;
+          return `bound=${d.bound ? 'Y' : 'N'}  stream=${d.stream ? 'Y' : 'N'}  mdev=${
+            d.mdev ? 'Y' : 'N'
+          }  unavail=${d.unavailable ? 'Y' : 'N'}  last=${d.lastSkip}`;
+        })()}
       </div>
 
       <div className="mt-2 flex items-center gap-2">

@@ -22,6 +22,25 @@ interface ExpressionSnapshotInstance {
   disposeCamera(): void;
 }
 
+// D6 P1 debug：暴露内部状态给 DebugBar 显示
+export interface ExpressionDebugInfo {
+  bound: boolean;
+  stream: boolean;
+  mdev: boolean;
+  unavailable: boolean;
+  lastSkip: string;
+}
+let lastSkipReason = '-';
+export function getExpressionDebug(): ExpressionDebugInfo {
+  return {
+    bound: !!boundVideo,
+    stream: !!cameraStream,
+    mdev: typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia,
+    unavailable: cameraUnavailable,
+    lastSkip: lastSkipReason,
+  };
+}
+
 const CAMERA_UNAVAILABLE_SESSION_KEY = 'p003_camera_unavailable';
 const MAX_BASE64_LENGTH = 50 * 1024;
 export const EXPRESSION_TTL_MS = 3_000;
@@ -132,10 +151,20 @@ async function waitVideoReady(video: HTMLVideoElement): Promise<boolean> {
 }
 
 async function ensureCameraReady(): Promise<boolean> {
-  if (cameraUnavailable) return false;
-  if (!boundVideo) return false;
+  if (cameraUnavailable) {
+    lastSkipReason = 'unavailable_flag';
+    if (import.meta.env.DEV) console.warn('[expr-snap] skip: cameraUnavailable=true');
+    return false;
+  }
+  if (!boundVideo) {
+    lastSkipReason = 'no_bound_video';
+    if (import.meta.env.DEV) console.warn('[expr-snap] skip: boundVideo=null');
+    return false;
+  }
   if (cameraStream) return true;
   if (!navigator.mediaDevices?.getUserMedia) {
+    lastSkipReason = 'mdev_undefined';
+    if (import.meta.env.DEV) console.warn('[expr-snap] fail: navigator.mediaDevices undefined');
     syncCameraUnavailable(true);
     return false;
   }
@@ -151,8 +180,12 @@ async function ensureCameraReady(): Promise<boolean> {
       // Safari 可能仍在自动播放策略里，后续抓拍前再等 readyState
     }
     syncCameraUnavailable(false);
+    lastSkipReason = 'ready';
+    if (import.meta.env.DEV) console.warn('[expr-snap] camera ready ✅');
     return true;
-  } catch {
+  } catch (err) {
+    lastSkipReason = `getUserMedia_${(err as Error)?.name ?? 'err'}`;
+    if (import.meta.env.DEV) console.warn('[expr-snap] getUserMedia rejected:', err);
     syncCameraUnavailable(true);
     return false;
   }
@@ -188,13 +221,17 @@ async function doSnap(): Promise<void> {
 
   const jpegBase64 = await captureJpegBase64();
   if (!jpegBase64) {
+    lastSkipReason = 'capture_fail';
+    if (import.meta.env.DEV) console.warn('[expr-snap] capture failed (video not ready or canvas blob)');
     setNeutralNow();
     return;
   }
+  lastSkipReason = 'posting';
 
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), POST_TIMEOUT_MS);
   try {
+    if (import.meta.env.DEV) console.warn('[expr-snap] POST /api/vision/expression jpegLen=', jpegBase64.length);
     const resp = await fetch('/api/vision/expression', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -202,18 +239,27 @@ async function doSnap(): Promise<void> {
       signal: controller.signal,
     });
     if (!resp.ok) {
+      lastSkipReason = `HTTP_${resp.status}`;
+      if (import.meta.env.DEV) console.warn('[expr-snap] HTTP', resp.status);
       setNeutralNow();
       return;
     }
     const parsed = parseVisionResponse(await resp.json());
     if (!parsed) {
+      lastSkipReason = 'parse_fail';
+      if (import.meta.env.DEV) console.warn('[expr-snap] parse failed');
       setNeutralNow();
       return;
     }
+    if (import.meta.env.DEV) console.warn('[expr-snap] result:', parsed);
     currentRef.confidence = parsed.confidence;
     currentRef.expr = parsed.confidence < 0.8 || parsed.expr === 'no_face' ? 'neutral' : parsed.expr;
+    lastSkipReason = `ok:${parsed.expr}@${parsed.confidence.toFixed(2)}`;
     currentRef.at = Date.now();
-  } catch {
+  } catch (err) {
+    const e = err as { name?: string; message?: string };
+    lastSkipReason = `fetch_${e?.name ?? 'err'}_${(e?.message ?? '').slice(0, 30)}`;
+    if (import.meta.env.DEV) console.warn('[expr-snap] fetch threw:', err);
     setNeutralNow();
   } finally {
     window.clearTimeout(timeoutId);

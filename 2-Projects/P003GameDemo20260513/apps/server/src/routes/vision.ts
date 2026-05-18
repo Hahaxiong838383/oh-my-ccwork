@@ -12,32 +12,38 @@ const MAX_BASE64_LEN = 50000;
 
 visionRoute.post('/expression', async (c) => {
   const startedAt = Date.now();
+  console.log('[vision] POST /expression received');
 
   let rawBody: unknown;
   try {
     rawBody = await c.req.json();
   } catch {
+    console.log('[vision] bad_request: invalid JSON');
     return c.json({ error: 'bad_request' }, 400);
   }
 
   const bodyParsed = BodySchema.safeParse(rawBody);
   if (!bodyParsed.success) {
+    console.log('[vision] bad_request: schema');
     return c.json({ error: 'bad_request' }, 400);
   }
 
   const { jpegBase64 } = bodyParsed.data;
+  console.log(`[vision] jpeg len=${jpegBase64.length}`);
   if (jpegBase64.length > MAX_BASE64_LEN) {
     return c.json({ error: 'image_too_large' }, 413);
   }
 
   try {
     const { label, confidence } = await geminiVisionDetect(jpegBase64);
+    console.log(`[vision] result expr=${label} conf=${confidence.toFixed(2)} ms=${Date.now() - startedAt}`);
     return c.json({
       expr: label,
       confidence,
       latencyMs: Date.now() - startedAt,
     });
-  } catch {
+  } catch (err) {
+    console.log('[vision] gemini error:', (err as Error)?.message);
     return c.json({
       expr: 'no_face',
       confidence: 0,
