@@ -200,20 +200,26 @@ async function ensureCameraReady(): Promise<boolean> {
   }
 }
 
+// D6 P1 速度优化：320×240 q=0.7 → 160×120 q=0.6（base64 -65%，
+// 上传 + Gemini 处理双减，准确率几乎不变）。
+const CAPTURE_W = 160;
+const CAPTURE_H = 120;
+const CAPTURE_Q = 0.6;
+
 async function captureJpegBase64(): Promise<string | null> {
   if (!boundVideo) return null;
   const ready = await waitVideoReady(boundVideo);
   if (!ready || boundVideo.videoWidth <= 0 || boundVideo.videoHeight <= 0) return null;
 
   const canvas = document.createElement('canvas');
-  canvas.width = 320;
-  canvas.height = 240;
+  canvas.width = CAPTURE_W;
+  canvas.height = CAPTURE_H;
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
   ctx.drawImage(boundVideo, 0, 0, canvas.width, canvas.height);
 
   const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(resolve, 'image/jpeg', 0.7);
+    canvas.toBlob(resolve, 'image/jpeg', CAPTURE_Q);
   });
   if (!blob) return null;
   const jpegBase64 = await blobToBase64(blob);
@@ -262,9 +268,9 @@ async function doSnap(): Promise<void> {
     }
     if (import.meta.env.DEV) console.warn('[expr-snap] result:', parsed);
     currentRef.confidence = parsed.confidence;
-    // D6 P1 hotfix v2：阈值 0.8 → 0.6（0.8 太严，Gemini 给"轻微表情"通常 0.6-0.75，
-    // 全被兜底成 neutral → 永无前缀）。no_face 仍直接 → neutral。
-    currentRef.expr = parsed.confidence < 0.6 || parsed.expr === 'no_face' ? 'neutral' : parsed.expr;
+    // D6 P1 hotfix v3：阈值 0.6 → 0.5（gemini 评审强烈建议"秒回 > 准确"，
+    // 万金油误判也胜过冷场）。no_face 仍直接 → neutral。
+    currentRef.expr = parsed.confidence < 0.5 || parsed.expr === 'no_face' ? 'neutral' : parsed.expr;
     lastSkipReason = `ok:${parsed.expr}@${parsed.confidence.toFixed(2)}`;
     currentRef.at = Date.now();
   } catch (err) {

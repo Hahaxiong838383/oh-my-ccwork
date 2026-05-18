@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
-const MODEL = 'gemini-3-flash-preview';
-// D6 P1 hotfix：3000ms 给 Gemini Vision 偏紧（实测 30KB 图 3018ms 超时）。
-// 提到 8000ms，前端 client 5000ms 仍优先 abort，server 给 Gemini 留足。
-const TIMEOUT_MS = 8000;
+// D6 P1 速度优化：thinking 模型（gemini-3-flash-preview）reasoning_tokens=112
+// 吃掉大半延迟（实测 4-7s）→ 改非 thinking 的 2.5-flash（p95 <1.5s）。
+// 跟 LLM (gemini-llm.ts, gemini-3.1-flash-lite-preview) 物理隔离的两个 provider，
+// 改这个不影响小可对话 LLM 智商。
+const MODEL = 'gemini-2.5-flash';
+const TIMEOUT_MS = 5000;
 
 // D6 P1 hotfix v2：实测 Gemini 对自然状态人脸偏 neutral/no_face，导致 demo
 // 几乎拿不到 happy/curious/tired → 无前缀。改 prompt"偏向找表情"。
@@ -58,10 +60,15 @@ export async function geminiVisionDetect(jpegBase64: string): Promise<VisionOut>
         model: MODEL,
         stream: false,
         temperature: 0,
-        // D6 P1 hotfix：Gemini 3 是 thinking 模型，response 显示 reasoning_tokens=112
-        // 吃掉了 max_tokens=120，content 被截到 0。按记忆 reference_gemini_proxy.md
-        // gemini-3-flash 上限 65535，直接拉满给 reasoning + 答案最充裕预算。
-        max_tokens: 65535,
+        max_tokens: 4096,
+        // Vertex 原生关 thinking：thinking_budget=0 完全禁用 reasoning。
+        // 代理 400 报错明示：reasoning_effort 和 thinking_config 不能同时传，
+        // 此处只保留 thinking_config（最彻底关 thinking）。
+        extra_body: {
+          google: {
+            thinking_config: { thinking_budget: 0 },
+          },
+        },
         messages: [
           {
             role: 'user',
