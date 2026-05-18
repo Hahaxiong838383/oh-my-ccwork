@@ -26,6 +26,8 @@ import { bootTransition } from './boot-machine';
 import { focusTransition } from './focus-machine';
 import { rewardTransition } from './reward-machine';
 import { getSharedVoiceClient } from '../services/voice-client';
+import { getExpressionRef, getExpressionSnapshot } from '../services/expression-snapshot';
+import { EXPR_INTRO } from '../config/expression-intros';
 import { pickNextBoxLevel } from '../config/boxes';
 import type { SceneId, Effect, BootEvent, FocusEvent, RewardEvent } from './types';
 
@@ -46,9 +48,11 @@ function getVoiceWsUrlInternal(): string {
 export function ttsSpeak(text: string, onAudioStart?: () => void): void {
   const trimmed = text.trim();
   if (trimmed.length === 0) return;
+  const expr = getExpressionRef().expr;
+  const spokenText = `${EXPR_INTRO[expr]}${trimmed}`;
   const now = Date.now();
-  if (trimmed === lastTtsText && now - lastTtsAt < TTS_DEDUP_MS) return;
-  lastTtsText = trimmed;
+  if (spokenText === lastTtsText && now - lastTtsAt < TTS_DEDUP_MS) return;
+  lastTtsText = spokenText;
   lastTtsAt = now;
   // D5 P20 兜底：若 3s 内 TTS 未到达，仍然显示字幕（防 server 出错字幕永远不显示）
   let fired = false;
@@ -63,7 +67,7 @@ export function ttsSpeak(text: string, onAudioStart?: () => void): void {
     void (async () => {
       try {
         await client.connect(getVoiceWsUrlInternal());
-        client.sayDirect(trimmed, () => {
+        client.sayDirect(spokenText, () => {
           if (fallback) window.clearTimeout(fallback);
           fireOnce();
         });
@@ -131,15 +135,16 @@ export function applyEffects(effects: readonly Effect[], onTimer: (key: string) 
         break;
       case 'setSubtitle': {
         const text = effect.text;
+        const spokenText = text.trim().length > 0 ? `${EXPR_INTRO[getExpressionRef().expr]}${text}` : text;
         if (effect.silent || text.trim().length === 0) {
           // 静默或空文本：立即 set（清字幕场景）
-          store.setSubtitle(text);
+          store.setSubtitle(spokenText);
         } else {
           // D5 P20：字幕等到 TTS 第一段音频到达再显示，修字幕提前 TTS
           // 先清掉旧字幕（避免错位旧文本停留），等 callback 再 set 新字幕
           store.setSubtitle('');
           ttsSpeak(text, () => {
-            useAppStore.getState().setSubtitle(text);
+            useAppStore.getState().setSubtitle(spokenText);
           });
         }
         break;
@@ -290,6 +295,7 @@ export function defaultTimerRouter(key: string): void {
  * clearAllTimers + hydrate 所有相关字段 + 切机器状态
  */
 export function jumpToScene(scene: SceneId): void {
+  void getExpressionSnapshot().snapIfStale();
   // 中断任何在途 ASR/LLM/TTS 会话，避免旧 turn 的回包污染新场景的 subtitle/voiceStatus
   try {
     const client = getSharedVoiceClient();

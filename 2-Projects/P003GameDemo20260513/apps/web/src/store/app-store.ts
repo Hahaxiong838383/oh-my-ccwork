@@ -129,6 +129,8 @@ interface AppState {
   // —— 配网过渡视频请求（DebugBar 触发，SetupGuide 消费）——
   setupVideoRequested: boolean;
   setSetupVideoRequested: (b: boolean) => void;
+  cameraUnavailable: boolean;
+  setCameraUnavailable: (b: boolean) => void;
 
   // —— 设置面板（V0.6 新增，D4 实现 UI）——
   settingsOpen: boolean;
@@ -148,6 +150,7 @@ interface AppState {
 }
 
 const SESSION_KEY_OPENED_BOX_LEVELS = 'p003_opened_box_levels';
+const SESSION_KEY_CAMERA_UNAVAILABLE = 'p003_camera_unavailable';
 
 function loadOpenedBoxLevels(): BoxLevel[] {
   if (typeof window === 'undefined') return [];
@@ -168,6 +171,28 @@ function saveOpenedBoxLevels(levels: BoxLevel[]): void {
   if (typeof window === 'undefined') return;
   try {
     window.sessionStorage.setItem(SESSION_KEY_OPENED_BOX_LEVELS, JSON.stringify(levels));
+  } catch {
+    /* 配额满静默 */
+  }
+}
+
+function loadCameraUnavailable(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.sessionStorage.getItem(SESSION_KEY_CAMERA_UNAVAILABLE) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function saveCameraUnavailable(flag: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (flag) {
+      window.sessionStorage.setItem(SESSION_KEY_CAMERA_UNAVAILABLE, '1');
+    } else {
+      window.sessionStorage.removeItem(SESSION_KEY_CAMERA_UNAVAILABLE);
+    }
   } catch {
     /* 配额满静默 */
   }
@@ -262,6 +287,11 @@ export const useAppStore = create<AppState>((set) => ({
 
   setupVideoRequested: false,
   setSetupVideoRequested: (setupVideoRequested) => set({ setupVideoRequested }),
+  cameraUnavailable: loadCameraUnavailable(),
+  setCameraUnavailable: (cameraUnavailable) => {
+    saveCameraUnavailable(cameraUnavailable);
+    set({ cameraUnavailable });
+  },
 
   settingsOpen: false,
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),

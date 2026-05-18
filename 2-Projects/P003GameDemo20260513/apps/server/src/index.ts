@@ -2,11 +2,13 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { WebSocketServer, type RawData, type WebSocket } from 'ws';
 import { VoicePipeline, type ClientMessage } from './pipeline.js';
+import { visionRoute } from './routes/vision.js';
 
 const app = new Hono();
 const port = Number(process.env.PORT ?? 8787);
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
+app.route('/api/vision', visionRoute);
 
 const server = serve(
   {

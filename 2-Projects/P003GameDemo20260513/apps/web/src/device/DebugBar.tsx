@@ -4,6 +4,7 @@ import { jumpToScene } from '../machines';
 import { useTransitionRunner } from '../hooks/useTransitionRunner';
 import { useAppStore, type SceneId } from '../store/app-store';
 import { getSharedVoiceClient } from '../services/voice-client';
+import { requestCameraPermissionAndSnap } from '../services/expression-snapshot';
 
 function getVoiceWsUrl(): string {
   const envUrl = import.meta.env.VITE_VOICE_WS_URL as string | undefined;
@@ -70,6 +71,7 @@ export function DebugBar() {
             void client.connect(getVoiceWsUrl()).catch((err) => {
               console.warn('[DebugBar] ws pre-connect failed', err);
             });
+            void requestCameraPermissionAndSnap();
             const store = useAppStore.getState();
             if (store.bootState === 'unconfigured') {
               store.setSetupVideoRequested(true);
