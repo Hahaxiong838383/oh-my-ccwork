@@ -1,10 +1,10 @@
 # P003 K1 Game Demo
 
-> 儿童陪伴机器人 K1 web 模拟器 · 800×480 像素锁定 · 5 天交付
+> 儿童陪伴机器人 K1 web 模拟器 · 800×480 像素锁定 · 6 天交付
 
-## 🚀 进展速览（2026-05-17 · D5 V0.9 完工）
+## 🚀 进展速览（2026-05-18 · **D6 V1.0 完工**）
 
-**当前 V0.9** · D1→D5 共 5 天 / 80+ commits / 真机演示节奏校准到位
+**当前 V1.0** · D1→D6 共 6 天 / 96+ commits / 表情感知打通
 
 ```
 ✅ D1 V0.4    框架 + 9 组件 + 凭据探针
@@ -13,7 +13,55 @@
 ✅ D3.5       配网美术化 + 视频过渡 + Welcome 写实图 + TTS sayDirect 通道
 ✅ D4 V0.8    全场景美术化（12 PNG + 4 MP4）+ focus 4 stage 链路
 ✅ D5 V0.9    25 commits · 字幕 TTS 严同步 + 专注流程闭环 + debug 工具集
+✅ D6 V1.0    16 commits · 表情感知 A' 架构 + Gemini Vision + 12 标签 + 1.6s 延迟
 ```
+
+### D6 表情感知打通（按系统分组）
+
+| 系统 | Commit 范围 | 关键改动 |
+|---|---|---|
+| **规划评审** | `ad2a7ecc9` → `a239b335f` | V0.1 规划 + V0.9 回滚 tag + codex/gemini 双评审 NEEDS_FIX/NEEDS_TWEAK 整合 V0.2 |
+| **A' 架构实施** | `ef8460db4` | team 并行 codex A 前端 + codex B 后端 + cc 主线契约 Gate（581 行 / 11 文件）|
+| **真机踩坑链** | `ddfb5f2f0` → `5862d7609` | vite proxy /api / catch lastSkip / timeout 1.5→5s / 离屏 video 1×1→160×120 |
+| **后端踩坑** | `62e6f3aa1` → `b9b405fcb` | facingMode user / prompt 去儿童 / Gemini raw 日志 |
+| **真凶逮捕 #1** | `925ced525` → `d03f0f8bf` | Gemini 3 thinking reasoning_tokens 吃 max_tokens → 4096 → 65535 |
+| **命中率优化** | `1270a07ba` | prompt 偏向找表情 + 阈值 0.6 + jumpToScene force snap |
+| **🔥 速度优化** | `20fe65689` | **vision 6s→1.6-2.1s（-70%）**：换 gemini-2.5-flash + thinking_budget=0 + 图压 160×120 |
+| **人设感** | `69409fd2c` | neutral 加 "嗯，" 前缀（A 方案）|
+| **表情扩谱** | `96eb822aa` | V2 扩到 13 标签（含 sad/excited/focused/thinking 等）|
+| **真凶逮捕 #2** | `14ed2738d` | V3 删 neutral + 修 isExpressionLabel 旧白名单 bug（V2 漏改）|
+
+### D6 三大踩坑（沉淀给后续）
+
+1. **Gemini 3/2.5 thinking 模型 reasoning_tokens 隐式吃 max_tokens** → response.content 字段直接缺失。修：`extra_body.google.thinking_config.thinking_budget: 0` · [feedback](../../../.claude/projects/-Users-rayman-chen-mycc/memory/feedback_gemini_thinking_budget_zero.md)
+2. **多路 codex 后类型守卫 isXxx 函数漏同步**：扩 union 时 `value === 'happy' || ...` 这种硬编码 tsc 抓不到，必须 grep 6 处消费方 · [feedback](../../../.claude/projects/-Users-rayman-chen-mycc/memory/feedback_codex_multi_field_whitelist_sync.md)
+3. **iOS Safari getUserMedia 三件套**：facingMode 默认后置 / 1×1 video 停帧解码 / 手势栈强制 · [feedback](../../../.claude/projects/-Users-rayman-chen-mycc/memory/feedback_ios_safari_getusermedia_traps.md)
+
+### D6 演示流程（V1.0）
+
+```
+手机 https://10.9.1.104:5173/ → 完成配网（触发摄像头授权）
+  ↓ 抓拍 → Gemini Vision (1.6-2.1s) → currentRef.expr 更新
+  ↓ 跳关 1: Welcome（小可："看你这么期待，你好，指挥官！..."）
+  ↓ 跳关 2-11: 全程带 12 种表情前缀（happy/sad/curious/focused/thinking/...）
+debug: DebugBar 表情行 expr+conf+age + 5 flag 诊断 + 手动 snap + 清旗 + 预览开关
+```
+
+### D6 后续 TODO
+
+| P | 项 |
+|---|---|
+| P1 | 真机现场暗光 / 逆光 / 侧光压测（演示场地光线复杂）|
+| P1 | confidence 分布统计（实测 12 标签命中比例）|
+| P2 | 多帧投票（最近 3 帧滑动窗口取 mode）防瞬时误判 |
+| P2 | "看到你啦" 首次抓拍成功 trigger（V0.2 §9.2 没实现）|
+| P3 | 摄像头拒绝场景 0.3 概率说"我看不到你呢"（V0.2 §9.3 没实现）|
+| P3 | DebugBar 5 flag 行清理（demo 上线前隐藏）|
+| P4 商业化 | 端侧 MediaPipe Tasks Vision 替换云端 Gemini（合规 + 零延迟）|
+
+详见 [`docs/D6-log.md`](docs/D6-log.md) 完整复盘（16 commit 时间线 + 真凶诊断 + 经验沉淀）。
+
+---
 
 ### D5 24 轮迭代（按系统分组）
 

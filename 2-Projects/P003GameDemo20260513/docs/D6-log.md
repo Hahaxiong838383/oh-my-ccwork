@@ -1,0 +1,136 @@
+# D6 完整复盘（2026-05-18）
+
+> V0.9 → **V1.0** · 16 commit · 表情感知 A' 架构端到端 · Team 模式 cc/codex/gemini 三引擎协同 · 一天打通
+
+## 目标演化
+
+D6 起手是给小可加"看到表情"的人设感：摄像头抓拍 → Gemini Vision 识别表情 → TTS 前缀拼接（"看你笑得这么开心，..."）。
+
+**最终 V1.0**：
+
+- 12 标签丰富表情谱（含 happy/sad/excited/curious/focused/thinking 等）
+- A' 架构：scene 切换瞬间预抓拍 + 5s 后台兜底，ttsSpeak **零等待**（保 D5 字幕严同步）
+- vision 端到端 **1.6-2.1s**（6s → 改善 70%）
+- 端到端真机演练通过（iOS Safari + iBRO 10.9.1.104）
+
+## 时间线与决策
+
+| Phase | Commit | 核心改动 | 触发 |
+|---|---|---|---|
+| **规划阶段** | | | |
+| P0 | `ad2a7ecc9` | V0.1 规划评审稿 + V0.9 回滚锚点 tag `p003-v0.9-stable` | 川哥要做表情感知 |
+| P0 | `a239b335f` | V0.2 整合稿（codex 工程 NEEDS_FIX + gemini 产品 NEEDS_TWEAK 双评审采纳）| 双引擎并行评审 → 拒绝 codex 的"滞后一拍" A 方案（90% 单句场景失效）→ 落 A' |
+| **实施阶段（team 模式）** | | | |
+| P1 | `ef8460db4` | 团队并行 codex A 前端（4 新 + 4 改）+ codex B 后端（2 新 + 1 改），cc 主线契约 Gate + 双 typecheck | A' 架构落地，581 行 / 11 文件 |
+| **真机踩坑链** | | | |
+| P2 | `ddfb5f2f0` | cc 自测发现 vite proxy 只 ws/voice 不转 /api，加 4 行 proxy | curl 测 5173 时 404 |
+| P3 | `9b6a039c9` | 表情诊断面板（DebugBar 加 5 flag 实时显示 + 手动 snap + 清旗）+ catch 路径补 lastSkip | 川哥真机看到 last=posting 卡死 |
+| P4 | `9c56b5def` | client fetch timeout 1.5s→5s（iOS Safari + WiFi + Gemini 实测 2-3s）| 真凶：1500ms < server 3000ms 兜底，client 先 abort |
+| P5 | `5862d7609` | 离屏 video 1×1→160×120（iOS Safari 1×1 停帧解码）| 摄像头预览出来了但 Gemini 总判 no_face |
+| P6 | `62e6f3aa1` | 强制 `facingMode: 'user'` 前置（iOS Safari 默认后置）| cc 误判 — 川哥反馈"我拍的是前摄画面"|
+| P7 | `b9b405fcb` | prompt 去"儿童"偏置 + server 加 raw 响应 log | 川哥前置正脸清晰但 Gemini 仍判 no_face — 怀疑 prompt 偏向"儿童" |
+| **真凶逮捕** | | | |
+| P8 | `925ced525` | **真凶**：Gemini 3 thinking 模型 `reasoning_tokens=112` 吃掉 `max_tokens=120` → content 截断为 0 → 兜底 no_face。修：max_tokens 120→4096 | server log 显示 `gemini raw content: undefined` + `finish_reason: "length"` |
+| P9 | `d03f0f8bf` | max_tokens 4096→65535 拉满 | 川哥说"都设置为最大" |
+| **命中率优化** | | | |
+| P10 | `1270a07ba` | 三件套：prompt"偏向找表情" + confidence 0.8→0.6 + jumpToScene snap() force（不复用缓存）| Gemini 对自然脸偏 neutral/no_face@1.0 |
+| **速度优化** | | | |
+| P11 | `20fe65689` | **perf**：vision 6s→1.6-2.1s。换模型 + 关 thinking + 图压：① `gemini-3-flash-preview` → `gemini-2.5-flash`；② **`extra_body.google.thinking_config.thinking_budget: 0`**（Vertex 原生关 thinking，代理透传）；③ 图 320×240 q=0.7 → 160×120 q=0.6；④ confidence 阈值 0.6→0.5 | 川哥反馈"识别速度偏慢"。cc + codex + gemini 三路调研后落 |
+| **人设感强化** | | | |
+| P12 | `69409fd2c` | neutral 加 `'嗯，'` 前缀（A 方案）| 川哥实测 67% neutral → V0.2 §9.1 设计 neutral 空前缀 = 永远不触发 |
+| P13 | `96eb822aa` | V2 表情扩到 13 标签（加 sad/surprised/focused/excited/bored/shy/confused/thinking）| 川哥："越丰富越好" |
+| **真凶逮捕 #2** | | | |
+| P14 | `14ed2738d` | **真凶**：`isExpressionLabel` 函数 V2 漏改，只校验旧 5 标签 → 新加 8 标签**全被 parseVisionResponse 拒** → currentRef 永走兜底。修：用 Set + 12 标签 + 删 neutral + 阈值 0 | 川哥"小可 TTS 没基于表情"——server 返了 happy/sad 等，client 默默兜底 |
+
+## 三大踩坑根因（沉淀给后续）
+
+### 坑 1：Gemini 3 thinking 模型 `reasoning_tokens` 隐式吃 max_tokens
+
+**症状**：vision 端口 200 + `expr=no_face conf=0.00`，server log 显示 `gemini raw content: undefined`。
+
+**真凶**：Gemini 3 是 thinking 模型，response 含 `reasoning_tokens: 112`。`max_tokens=120` 被 reasoning 吃光 112，剩 8 给 content，输出 4 token 后 `finish_reason: "length"` 截断 → content 字段直接缺失。
+
+**修复路径**：
+1. 排查时**必须 dump 完整 response**，单看 content 字段会误以为是 Gemini 真返 no_face
+2. `max_tokens` 给 thinking 模型必须留充裕（4096 起步，否则 reasoning 吃光剩多少都不够 JSON 输出）
+3. 想真正关 thinking：`extra_body.google.thinking_config.thinking_budget: 0`（Vertex 原生，OpenAI 兼容代理透传），可以杀掉 reasoning_tokens 这一项
+
+**关键约束**：`reasoning_effort` 和 `thinking_config` **不能同时传**，代理 400 INVALID_ARGUMENT：`Expected one of either reasoning_effort or custom thinking_config; found both.`
+
+### 坑 2：多路 codex 后白名单同步不彻底
+
+**症状**：V2 扩到 13 标签，server 端 zod 校验 + prompt 都改了，但 client 端 `isExpressionLabel` 函数还停留在旧 5 标签 → Gemini 返 `happy/sad/excited` 等被 parseVisionResponse **静默拒掉** → currentRef 永远走兜底 → TTS 没基于表情。
+
+**真凶**：扩 union 类型时，**白名单实现必须同步**（zod / parser / 类型守卫 isXxx 函数）。类型守卫不会被 tsc 编译期捕获（它检查的是 runtime string 字面量）。
+
+**修复路径**：
+- 扩标签 union → grep `isExpressionLabel|LabelSchema|EXPR_INTRO` 全部消费方
+- 用 Set + 类型 union 共享数据源（一处定义，多处用），不要硬编码字符串列表分散
+- 多路 codex 改完后 cc 主线必须做"字段对齐 Gate"——这次 cc 漏检查了 client parser
+
+### 坑 3：iOS Safari + getUserMedia 三个陷阱串联
+
+**症状链**：
+1. **`facingMode` 默认后置摄像头** → 川哥前面看屏幕，但摄像头拍后面 → Gemini 永远 no_face
+2. **1×1 离屏 video 不解码帧** → drawImage 拿到全黑 / 不完整 → Gemini 也 no_face
+3. **getUserMedia 必须用户手势栈** → setInterval 后台调会拒（cameraUnavailable 持久化）
+
+**修复路径**：
+- 强制 `facingMode: { ideal: 'user' }`
+- 离屏 video 改 `top: -9999px + opacity: 0` + **真实尺寸 160×120**（不能 1×1）
+- 授权挂用户手势栈按钮 onClick（DebugBar 完成配网按钮 onClick 内）
+
+## 团队协同模式（D6 最大产出）
+
+D6 16 commit 里只有 1 commit（codex A + B 并行实施）是 codex 真正写代码 / 多次评审用 codex + gemini，其余 cc 主线诊断 + 修复。
+
+**模式**：
+- **规划阶段** → codex（工程评审 NEEDS_FIX）+ gemini（产品 NEEDS_TWEAK）双引擎并行评审 → cc 整合落 V0.2
+- **实施阶段** → codex A（前端）+ codex B（后端）并行写代码 → cc 主线契约 Gate（前后端字段对齐）+ typecheck + commit
+- **真机踩坑** → cc 主线单路调试（不派 agent，因为需要川哥真机交互的快速来回）
+- **速度优化** → 再次双路 codex（工程）+ gemini（产品）评审 + cc 综合
+
+**关键经验**：codex 调研 + 评审强，但 **cc 自己写 prompt 时必须明确"禁推"避免 codex 把所有字段都给改了**（比如 codex A 写 expression-snapshot.ts 时漏校 isExpressionLabel 函数 — 因为 prompt 没指定）。
+
+## 工程范式沉淀
+
+1. **A' 架构 = "事件预抓拍 + 后台兜底"**：不让 fetch 阻塞主流程，用 demo 自身的过场动画时间换异步延迟
+2. **Gemini Vision 接 OpenAI 兼容代理的关 thinking 套路**：`extra_body.google.thinking_config.thinking_budget: 0`
+3. **多路 codex 后契约 Gate 模板**：union / zod / parser / EXPR_INTRO / isXxx 类型守卫 / 文档示例 6 处必须同步 grep 验证
+4. **iOS Safari getUserMedia 三件套**：facingMode user + 160×120 离屏（非 1×1）+ 用户手势栈触发
+
+## 演示流程（V1.0）
+
+```
+手机 https://10.9.1.104:5173/ → 完成配网（DebugBar 按钮，触发摄像头授权）
+  ↓ 抓拍 → Gemini Vision (1.6-2.1s) → currentRef.expr 更新
+  ↓ 跳关 1: Welcome （小可："看你这么期待，你好，指挥官！..."）
+  ↓ 跳关 2: 夜航报告（小可："看你笑得这么开心，夜航报告出炉..."）
+  ↓ ... 11 场景全程小可带表情前缀
+  ↓ DebugBar 第 2 行实时显示 bound/stream/mdev/unavail/last 5 flag
+```
+
+## 后续 TODO
+
+| P | 项 |
+|---|---|
+| P1 | 真机现场暗光 / 逆光 / 侧光压测（演示场地光线复杂） |
+| P1 | confidence 分布统计（实测 happy/sad/curious/no_face 命中比例）|
+| P2 | 多帧投票（最近 3 帧滑动窗口取 mode）防瞬时误判 |
+| P2 | "看到你啦" 首次抓拍成功 trigger（V0.2 §9.2 没实现）|
+| P3 | 摄像头拒绝场景 0.3 概率说"我看不到你呢"（V0.2 §9.3 没实现）|
+| P3 | DebugBar debug 面板清理（demo 上线前隐藏 5 flag 行）|
+| P4 商业化 | 端侧 MediaPipe Tasks Vision 替换云端 Gemini（合规 + 零延迟）|
+
+## 沉淀文档与记忆
+
+- [V0.2 规划稿](./D6-vision-expression-plan.md)（含 codex + gemini 双评审整合）
+- [feedback_gemini_thinking_budget_zero.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — thinking_budget=0 关 thinking + reasoning_effort 互斥
+- [feedback_ios_safari_getusermedia_traps.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — iOS Safari 三件套
+- [feedback_codex_multi_field_whitelist_sync.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — 多路 codex 后白名单 6 处同步
+- [feedback_vite_proxy_api_path.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — vite proxy 默认不转 /api
+- [feedback_long_running_vite_dev.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — vite dev 长跑（22h）僵死
+
+---
+
+**川哥总评**：D6 P1 表情感知功能上线，端到端通畅，小可终于"看得见你"了。从 6s → 1.6-2.1s + 12 标签 + 100% 带前缀，符合"小可能感知用户面部表情状态"的产品目标。
