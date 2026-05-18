@@ -7,27 +7,59 @@ import { z } from 'zod';
 const MODEL = 'gemini-2.5-flash';
 const TIMEOUT_MS = 5000;
 
-// D6 P1 hotfix v2：实测 Gemini 对自然状态人脸偏 neutral/no_face，导致 demo
-// 几乎拿不到 happy/curious/tired → 无前缀。改 prompt"偏向找表情"。
-const VISION_PROMPT = `请观察这张照片中人脸的表情，从以下标签里挑一个**最贴近的**：
+// D6 P1 V2：扩到 13 标签（含中性/认知/正负向情绪全谱），川哥要"越丰富越好"。
+const VISION_PROMPT = `请观察这张照片中人脸的表情，从以下 13 个标签里挑一个**最贴近的**：
 
-- happy   嘴角上扬 / 微笑 / 大笑 / 表情轻松愉快
-- tired   闭眼 / 打哈欠 / 眼袋重 / 表情倦怠 / 揉眼
-- curious 睁大眼睛 / 抬眉 / 嘴微张 / 专注盯着什么 / 惊讶
-- neutral 面部完全放松、眉眼嘴都没动作
-- no_face 画面里完全没有人脸（拍到天花板、桌面、墙壁、衣服等）
+【正向情绪】
+- happy      嘴角上扬 / 微笑 / 轻松愉快
+- excited    瞪眼笑 / 张大嘴 / 表情非常兴奋激动
+
+【负向情绪】
+- sad        皱眉 / 嘴角下垂 / 眼角下垂 / 难过失落
+- tired      闭眼 / 打哈欠 / 眼袋重 / 倦怠 / 揉眼
+- bored      撑头 / 目光涣散 / 表情松散没精神
+- confused   皱眉歪头 / 嘴角紧 / 一脸困惑
+- shy        低头 / 嘴角紧 / 眼神躲闪 / 害羞
+
+【认知 / 中性】
+- curious    睁大眼 / 抬眉 / 嘴微张 / 好奇张望
+- focused    眼神锐利 / 微皱眉 / 凝视专注做事
+- surprised  瞪眼张嘴 / 突然吃惊
+- thinking   看向斜上 / 咬唇 / 抚下巴 / 沉思
+- neutral    面部完全放松、眉眼嘴都没动作
+
+【兜底】
+- no_face    画面里**完全没有人脸**（拍到天花板、桌面、墙壁、衣服等）
 
 **重要规则**：
-1. 只要画面里能看到任何一张人脸（不论年龄、性别、距离、角度），就**优先**在 happy/tired/curious/neutral 4 个里选。
-2. 哪怕表情很轻微（嘴角微翘 / 眼睛微眯 / 略抬眉），也尽量归到 happy/tired/curious 中**最贴近的一个**。
-3. 只有四个表情标签**都明显不符**时才用 neutral。
-4. 只有画面**完全没有人脸**时才用 no_face。
+1. 只要画面里能看到任何一张人脸（不论年龄、性别、距离、角度），就在前 12 个标签里选。
+2. 哪怕表情很轻微，也尽量归到**最贴近的一个**，不要轻易用 neutral。
+3. happy 和 excited 的区别：excited 是更强烈的开心（张大嘴 / 表情夸张）；普通微笑用 happy。
+4. curious / surprised / thinking 的区别：curious 偏好奇张望、surprised 是瞬间吃惊、thinking 是沉思思考。
+5. 只有四个表情标签**全都明显不符**时才用 neutral。
+6. 只有画面**完全没有人脸**时才用 no_face。
 
 返回 JSON：{"label": "<标签>", "confidence": <0.0-1.0>}
 confidence 反映你对标签的把握度。
 只返回 JSON，不要其他内容、解释或代码块标记。`;
 
-const LabelSchema = z.enum(['happy', 'tired', 'curious', 'neutral', 'no_face']);
+// D6 P1 V2：13 标签白名单。跟 apps/web/src/services/expression-snapshot.ts
+// ExpressionLabel union 保持一致；新加标签必须双侧同步。
+const LabelSchema = z.enum([
+  'happy',
+  'excited',
+  'sad',
+  'tired',
+  'bored',
+  'confused',
+  'shy',
+  'curious',
+  'focused',
+  'surprised',
+  'thinking',
+  'neutral',
+  'no_face',
+]);
 const VisionOutSchema = z.object({
   label: LabelSchema,
   confidence: z.number().min(0).max(1),

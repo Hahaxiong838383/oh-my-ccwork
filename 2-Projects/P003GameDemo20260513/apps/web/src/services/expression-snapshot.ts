@@ -1,6 +1,25 @@
 import { useAppStore } from '../store/app-store';
 
-export type ExpressionLabel = 'happy' | 'tired' | 'curious' | 'neutral' | 'no_face';
+// D6 P1 V2：扩到 13 标签（川哥要"越丰富越好"，judge 不稳没关系）。
+// 13 标签分 3 组：
+// - 正向情绪：happy / excited
+// - 负向情绪：sad / tired / bored / confused / shy
+// - 中性 / 认知：curious / focused / surprised / thinking / neutral
+// - 兜底：no_face
+export type ExpressionLabel =
+  | 'happy'
+  | 'excited'
+  | 'sad'
+  | 'tired'
+  | 'bored'
+  | 'confused'
+  | 'shy'
+  | 'curious'
+  | 'focused'
+  | 'surprised'
+  | 'thinking'
+  | 'neutral'
+  | 'no_face';
 
 export interface ExpressionRef {
   expr: ExpressionLabel;
