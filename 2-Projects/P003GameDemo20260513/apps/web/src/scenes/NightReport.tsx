@@ -62,7 +62,7 @@ export function NightReport() {
   const rewardMachine = useAppStore((s) => s.rewardMachine);
   const bonus = DEMO_DATA.nightReportBonus;
   const isActive = bootState === 'nightReport';
-  const { dispatchBoot, dispatchReward } = useTransitionRunner();
+  const { dispatchReward } = useTransitionRunner();
   const [phase, setPhase] = useState<1 | 2 | 3>(1);
   const [renderOverlay, setRenderOverlay] = useState(isActive);
   const [isExiting, setIsExiting] = useState(false);
@@ -113,10 +113,9 @@ export function NightReport() {
   }, [ecoLevel, hasLegendary]);
 
   if (!renderOverlay) return null;
-  // D6 P7：z 层冲突修复 — NightReport(z-layer-modal=80) 会盖住 OpenBox(z-layer-mask=70)，
-  // 川哥点"收取奖励"触发开宝箱但视觉看不到（被信纸盖住）。reward 进 openingBox/
-  // showingReward 时立即让位，让 OpenBox 独占视觉。
-  if (rewardMachine === 'openingBox' || rewardMachine === 'showingReward') return null;
+  // D6 P9：P7 的 return null 改回 — 川哥要"开箱时保持夜航报告界面"。
+  // 改让 OpenBox z 升到跟 NightReport 同级（modal=80），DOM 顺序天然盖在上。
+  void rewardMachine; // 保留 hook 防 unused 警告，留作未来调试
 
   return (
     <div
@@ -174,9 +173,9 @@ export function NightReport() {
                   type="button"
                   onClick={() => {
                     if (isExiting) return;
-                    // D6 P6：触发开宝箱体验 — 从 randomBoxes 抽最高品质，
-                    // dispatchReward 进 openingBox（OpenBox scene 自动覆盖渲染），
-                    // 同步 dispatchBoot 切 askMode，开完箱后自然落在状态询问页。
+                    // D6 P9：点按钮**只** dispatchReward 触发开宝箱，**不** dispatchBoot。
+                    // 川哥要"保持夜航报告界面"，开箱完后 timer router 自动切 askMode。
+                    // 从 randomBoxes 抽最高品质 → OpenBox scene 接管视觉。
                     if (randomBoxes.length > 0) {
                       let best = randomBoxes[0];
                       let bestIdx = ALL_BOX_LEVELS.indexOf(best);
@@ -186,7 +185,6 @@ export function NightReport() {
                       }
                       dispatchReward({ type: 'OPEN_BOX', level: best });
                     }
-                    dispatchBoot({ type: 'NIGHT_REPORT_DONE' });
                   }}
                   className="pointer-events-auto shrink-0 cursor-pointer rounded-full bg-amber-400 font-bold text-amber-900 shadow-[0_0_2.4cqh_rgba(255,180,40,0.6)] ring-2 ring-amber-300/80 transition active:scale-95 hover:brightness-110"
                   style={{

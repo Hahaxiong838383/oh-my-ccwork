@@ -282,7 +282,17 @@ export function defaultTimerRouter(key: string): void {
     case 'rewardShown': {
       // showingReward → ECO_CHECK：legendary 必触发 ecoUnlock，其它级走 askMode
       // （demo 演示节奏可控，避免每次 OPEN_BOX 都进 ecoUnlock 节奏过密）
-      const level = useAppStore.getState().currentBoxLevel;
+      // D6 P9：夜航报告路径（bootState='nightReport'）走完 reward 后直接进 boot askMode
+      // （"今天想出航还是静思呢"），不进 reward 自己的 askMode（"继续/返舱"）。
+      const state = useAppStore.getState();
+      if (state.bootState === 'nightReport') {
+        state.setRewardMachine('idle');
+        state.setCurrentBoxLevel(null);
+        state.setSubtitle('');
+        internalDispatchBoot({ type: 'NIGHT_REPORT_DONE' });
+        break;
+      }
+      const level = state.currentBoxLevel;
       internalDispatchReward({ type: 'ECO_CHECK', hasUnlock: level === 'legendary' });
       break;
     }

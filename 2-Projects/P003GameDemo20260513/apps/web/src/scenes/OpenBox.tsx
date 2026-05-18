@@ -70,7 +70,7 @@ export function OpenBox() {
 
   return (
     <motion.div
-      className="pointer-events-none absolute inset-0 z-layer-mask overflow-hidden text-white"
+      className="pointer-events-none absolute inset-0 z-layer-modal overflow-hidden text-white"
       style={{ containerType: 'size' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
