@@ -18,6 +18,11 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
       },
+      // D6 P1: /api 走后端 server（vision endpoint 等）
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
   },
   plugins: [
