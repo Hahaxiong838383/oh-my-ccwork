@@ -44,10 +44,9 @@ export function getExpressionDebug(): ExpressionDebugInfo {
 const CAMERA_UNAVAILABLE_SESSION_KEY = 'p003_camera_unavailable';
 const MAX_BASE64_LENGTH = 50 * 1024;
 export const EXPRESSION_TTL_MS = 3_000;
-// D6 P1 hotfix：client 端必须 ≥ server 端兜底（3000ms）+ 网络余量，
-// 否则 server 还没兜底返 no_face，client 就先 abort 了。
-// iOS Safari + 自签 HTTPS + WiFi + Gemini 800ms = 实测可能 2-3s。
-export const POST_TIMEOUT_MS = 5_000;
+// D6 P1 hotfix：server 端 Gemini 超时已提到 8s（30KB 图实测 3018ms 超时），
+// client 给 server 留 4s 余量。
+export const POST_TIMEOUT_MS = 12_000;
 
 const currentRef: ExpressionRef = {
   expr: 'neutral',

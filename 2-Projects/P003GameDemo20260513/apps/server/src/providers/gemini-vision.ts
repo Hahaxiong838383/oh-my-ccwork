@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
 const MODEL = 'gemini-3-flash-preview';
-const TIMEOUT_MS = 3000;
+// D6 P1 hotfix：3000ms 给 Gemini Vision 偏紧（实测 30KB 图 3018ms 超时）。
+// 提到 8000ms，前端 client 5000ms 仍优先 abort，server 给 Gemini 留足。
+const TIMEOUT_MS = 8000;
 
 // D6 P1 hotfix：去掉"儿童"限定。Gemini 看到成年人会判"不符合儿童"→ no_face@0。
 // 川哥实测前置摄像头预览清晰、正脸、光线足，但仍返 no_face → 锁定 prompt 偏置。
@@ -51,7 +53,9 @@ export async function geminiVisionDetect(jpegBase64: string): Promise<VisionOut>
         model: MODEL,
         stream: false,
         temperature: 0,
-        max_tokens: 120,
+        // D6 P1 hotfix：Gemini 3 是 thinking 模型，response 显示 reasoning_tokens=112
+        // 吃掉了我们设的 max_tokens=120，content 被截到 0。改 4096 给 reasoning + 答案留足。
+        max_tokens: 4096,
         messages: [
           {
             role: 'user',
@@ -78,6 +82,7 @@ export async function geminiVisionDetect(jpegBase64: string): Promise<VisionOut>
       choices?: Array<{ message?: { content?: unknown } }>;
     };
 
+    console.log('[vision] gemini full response:', JSON.stringify(data).slice(0, 800));
     const rawContent = data.choices?.[0]?.message?.content;
     console.log('[vision] gemini raw content:', JSON.stringify(rawContent)?.slice(0, 300));
     const modelJson = extractModelJson(rawContent);
