@@ -109,7 +109,7 @@ export function DebugBar() {
           className={`h-6 rounded border border-white/15 px-2 py-[3px] text-[10px] ${
             cameraUnavailable
               ? 'border-red-400/40 text-red-300'
-              : exprRef.expr === 'neutral'
+              : exprRef.expr === 'no_face'
               ? 'text-white/60'
               : 'border-porthole-glow/60 text-porthole-glow'
           }`}

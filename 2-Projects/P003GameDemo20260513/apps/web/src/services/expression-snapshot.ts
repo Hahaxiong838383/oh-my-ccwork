@@ -1,11 +1,8 @@
 import { useAppStore } from '../store/app-store';
 
-// D6 P1 V2：扩到 13 标签（川哥要"越丰富越好"，judge 不稳没关系）。
-// 13 标签分 3 组：
-// - 正向情绪：happy / excited
-// - 负向情绪：sad / tired / bored / confused / shy
-// - 中性 / 认知：curious / focused / surprised / thinking / neutral
-// - 兜底：no_face
+// D6 P1 V3：删 neutral（川哥反馈 67% 都是 neutral 让 TTS 没人设感）。
+// 剩 12 标签 = 11 表情 + no_face 兜底。Gemini 看到任何脸必须归类，
+// 看不到脸才 no_face。
 export type ExpressionLabel =
   | 'happy'
   | 'excited'
@@ -18,7 +15,6 @@ export type ExpressionLabel =
   | 'focused'
   | 'surprised'
   | 'thinking'
-  | 'neutral'
   | 'no_face';
 
 export interface ExpressionRef {
@@ -68,7 +64,7 @@ export const EXPRESSION_TTL_MS = 3_000;
 export const POST_TIMEOUT_MS = 12_000;
 
 const currentRef: ExpressionRef = {
-  expr: 'neutral',
+  expr: 'no_face',
   confidence: 0,
   at: 0,
 };
@@ -103,8 +99,9 @@ function syncCameraUnavailable(flag: boolean): void {
   }
 }
 
-function setNeutralNow(): void {
-  currentRef.expr = 'neutral';
+// 失败兜底：用 no_face（EXPR_INTRO 给空前缀，相当于回退 V0.9 原字幕）。
+function setFailureFallback(): void {
+  currentRef.expr = 'no_face';
   currentRef.confidence = 0;
   currentRef.at = Date.now();
 }
@@ -122,14 +119,24 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+// D6 P1 V3：与 ExpressionLabel union 同步的完整白名单（删 neutral）。
+const EXPRESSION_LABEL_SET: ReadonlySet<ExpressionLabel> = new Set<ExpressionLabel>([
+  'happy',
+  'excited',
+  'sad',
+  'tired',
+  'bored',
+  'confused',
+  'shy',
+  'curious',
+  'focused',
+  'surprised',
+  'thinking',
+  'no_face',
+]);
+
 function isExpressionLabel(value: unknown): value is ExpressionLabel {
-  return (
-    value === 'happy' ||
-    value === 'tired' ||
-    value === 'curious' ||
-    value === 'neutral' ||
-    value === 'no_face'
-  );
+  return typeof value === 'string' && EXPRESSION_LABEL_SET.has(value as ExpressionLabel);
 }
 
 function parseVisionResponse(raw: unknown): VisionResponse | null {
@@ -249,7 +256,7 @@ async function captureJpegBase64(): Promise<string | null> {
 async function doSnap(): Promise<void> {
   const ready = await ensureCameraReady();
   if (!ready) {
-    setNeutralNow();
+    setFailureFallback();
     return;
   }
 
@@ -257,7 +264,7 @@ async function doSnap(): Promise<void> {
   if (!jpegBase64) {
     lastSkipReason = 'capture_fail';
     if (import.meta.env.DEV) console.warn('[expr-snap] capture failed (video not ready or canvas blob)');
-    setNeutralNow();
+    setFailureFallback();
     return;
   }
   lastSkipReason = 'posting';
@@ -275,28 +282,28 @@ async function doSnap(): Promise<void> {
     if (!resp.ok) {
       lastSkipReason = `HTTP_${resp.status}`;
       if (import.meta.env.DEV) console.warn('[expr-snap] HTTP', resp.status);
-      setNeutralNow();
+      setFailureFallback();
       return;
     }
     const parsed = parseVisionResponse(await resp.json());
     if (!parsed) {
       lastSkipReason = 'parse_fail';
       if (import.meta.env.DEV) console.warn('[expr-snap] parse failed');
-      setNeutralNow();
+      setFailureFallback();
       return;
     }
     if (import.meta.env.DEV) console.warn('[expr-snap] result:', parsed);
     currentRef.confidence = parsed.confidence;
-    // D6 P1 hotfix v3：阈值 0.6 → 0.5（gemini 评审强烈建议"秒回 > 准确"，
-    // 万金油误判也胜过冷场）。no_face 仍直接 → neutral。
-    currentRef.expr = parsed.confidence < 0.5 || parsed.expr === 'no_face' ? 'neutral' : parsed.expr;
+    // D6 P1 V3：阈值降到 0（不再兜底），Gemini 返什么用什么。
+    // no_face 时 EXPR_INTRO 给空前缀，相当于回退原字幕。
+    currentRef.expr = parsed.expr;
     lastSkipReason = `ok:${parsed.expr}@${parsed.confidence.toFixed(2)}`;
     currentRef.at = Date.now();
   } catch (err) {
     const e = err as { name?: string; message?: string };
     lastSkipReason = `fetch_${e?.name ?? 'err'}_${(e?.message ?? '').slice(0, 30)}`;
     if (import.meta.env.DEV) console.warn('[expr-snap] fetch threw:', err);
-    setNeutralNow();
+    setFailureFallback();
   } finally {
     window.clearTimeout(timeoutId);
   }
@@ -313,7 +320,7 @@ function createExpressionSnapshot(): ExpressionSnapshotInstance {
     },
     snap(): Promise<void> {
       if (cameraUnavailable) {
-        setNeutralNow();
+        setFailureFallback();
         return Promise.resolve();
       }
       if (inFlightPromise) return inFlightPromise;

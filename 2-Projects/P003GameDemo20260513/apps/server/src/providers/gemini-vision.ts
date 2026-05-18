@@ -7,12 +7,13 @@ import { z } from 'zod';
 const MODEL = 'gemini-2.5-flash';
 const TIMEOUT_MS = 5000;
 
-// D6 P1 V2：扩到 13 标签（含中性/认知/正负向情绪全谱），川哥要"越丰富越好"。
-const VISION_PROMPT = `请观察这张照片中人脸的表情，从以下 13 个标签里挑一个**最贴近的**：
+// D6 P1 V3：删 neutral（川哥反馈"大多数 neutral"让 demo 失去人设感）。
+// 12 标签 = 11 表情 + no_face。Gemini 看到任何脸**必须**归到 11 个表情里。
+const VISION_PROMPT = `请观察这张照片中人脸的表情，从以下 12 个标签里挑一个**最贴近的**：
 
 【正向情绪】
 - happy      嘴角上扬 / 微笑 / 轻松愉快
-- excited    瞪眼笑 / 张大嘴 / 表情非常兴奋激动
+- excited    瞪眼笑 / 张大嘴 / 兴奋激动
 
 【负向情绪】
 - sad        皱眉 / 嘴角下垂 / 眼角下垂 / 难过失落
@@ -21,30 +22,27 @@ const VISION_PROMPT = `请观察这张照片中人脸的表情，从以下 13 �
 - confused   皱眉歪头 / 嘴角紧 / 一脸困惑
 - shy        低头 / 嘴角紧 / 眼神躲闪 / 害羞
 
-【认知 / 中性】
+【认知 / 思考】
 - curious    睁大眼 / 抬眉 / 嘴微张 / 好奇张望
 - focused    眼神锐利 / 微皱眉 / 凝视专注做事
 - surprised  瞪眼张嘴 / 突然吃惊
 - thinking   看向斜上 / 咬唇 / 抚下巴 / 沉思
-- neutral    面部完全放松、眉眼嘴都没动作
 
 【兜底】
 - no_face    画面里**完全没有人脸**（拍到天花板、桌面、墙壁、衣服等）
 
-**重要规则**：
-1. 只要画面里能看到任何一张人脸（不论年龄、性别、距离、角度），就在前 12 个标签里选。
-2. 哪怕表情很轻微，也尽量归到**最贴近的一个**，不要轻易用 neutral。
-3. happy 和 excited 的区别：excited 是更强烈的开心（张大嘴 / 表情夸张）；普通微笑用 happy。
-4. curious / surprised / thinking 的区别：curious 偏好奇张望、surprised 是瞬间吃惊、thinking 是沉思思考。
-5. 只有四个表情标签**全都明显不符**时才用 neutral。
-6. 只有画面**完全没有人脸**时才用 no_face。
+**铁律**：
+1. 看到任何人脸（不论年龄/性别/距离/角度），**必须从前 11 个里选**，不能因为表情"不明显"就拒绝归类。
+2. 表情即便很轻微（嘴角微翘 1 度、眼睛眯一点、眉毛动一下），也要归到**最接近的那一个**。
+3. 如果实在拿不准是哪种正面情绪 → 优先 happy；拿不准是哪种思考态 → 优先 curious；拿不准是哪种负面情绪 → 优先 tired。
+4. 只有画面**完全没有人脸**时才用 no_face。
+5. confidence 反映你对标签的把握度：高置信用 0.8-0.95，没把握用 0.3-0.6，但**仍然要给一个表情标签**。
 
 返回 JSON：{"label": "<标签>", "confidence": <0.0-1.0>}
-confidence 反映你对标签的把握度。
 只返回 JSON，不要其他内容、解释或代码块标记。`;
 
-// D6 P1 V2：13 标签白名单。跟 apps/web/src/services/expression-snapshot.ts
-// ExpressionLabel union 保持一致；新加标签必须双侧同步。
+// D6 P1 V3：12 标签白名单（删 neutral）。
+// 跟 apps/web/src/services/expression-snapshot.ts ExpressionLabel union 同步。
 const LabelSchema = z.enum([
   'happy',
   'excited',
@@ -57,7 +55,6 @@ const LabelSchema = z.enum([
   'focused',
   'surprised',
   'thinking',
-  'neutral',
   'no_face',
 ]);
 const VisionOutSchema = z.object({
