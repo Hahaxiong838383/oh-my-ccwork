@@ -138,9 +138,10 @@ export function NightReport() {
           perspective: '1400px',
         }}
       >
-        {/* D6 P4：信纸位置往里收一点（5%→6%），下方留位给"收取奖励"按钮（18→22%）*/}
+        {/* D6 P5：川哥反馈"新解锁文字没显示全"。信纸 bottom 22→6%（吃满弹窗），
+            收取奖励按钮挪到信纸内右上角（与"📜 夜航报告"标题顶对齐）。 */}
         <motion.div
-          className="absolute left-[6%] right-[6%] top-[5%] bottom-[22%] overflow-hidden rounded-[clamp(1.2cqh,2cqw,2.4cqh)] bg-amber-50/95 shadow-2xl ring-1 ring-amber-900/10"
+          className="absolute left-[6%] right-[6%] top-[5%] bottom-[6%] overflow-hidden rounded-[clamp(1.2cqh,2cqw,2.4cqh)] bg-amber-50/95 shadow-2xl ring-1 ring-amber-900/10"
           animate={
             isExiting
               ? { y: '100%', opacity: 0.8, scale: 0.98 }
@@ -224,8 +225,9 @@ export function NightReport() {
 
         {/* D5 P5：川哥要求去掉信封身和封口三角（视觉上像上下箭头），只保留信纸 */}
 
-        {/* D6 P4：信纸下方留 22% 空间，加"收取奖励"按钮触发 NIGHT_REPORT_DONE
-            进入状态询问。phase 3 才显示（避免动画未完用户误点）。 */}
+        {/* D6 P5：收取奖励按钮挪到信纸内右上角，与"📜 夜航报告"标题顶对齐。
+            位置参考信纸 left/right 6% + top 5%；按钮 top ~7%（弹窗）+ right 9%，
+            垂直水平线与 h2 同行。phase 3 才显示。 */}
         {phase >= 3 && !isExiting && (
           <motion.button
             type="button"
@@ -233,18 +235,18 @@ export function NightReport() {
               if (isExiting) return;
               dispatchBoot({ type: 'NIGHT_REPORT_DONE' });
             }}
-            className="pointer-events-auto absolute left-1/2 cursor-pointer rounded-full bg-amber-400 font-semibold text-amber-900 shadow-[0_0_2.4cqh_rgba(255,200,80,0.55)] ring-1 ring-amber-200/70 transition active:scale-95 hover:brightness-110"
+            className="pointer-events-auto absolute cursor-pointer rounded-full bg-amber-400 font-semibold text-amber-900 shadow-[0_0_2cqh_rgba(255,200,80,0.55)] ring-1 ring-amber-200/70 transition active:scale-95 hover:brightness-110"
             style={{
-              bottom: '4%',
-              transform: 'translateX(-50%)',
-              paddingBlock: 'clamp(1.8cqh, 2.8cqw, 3.2cqh)',
-              paddingInline: 'clamp(4cqh, 6cqw, 7cqh)',
-              fontSize: 'clamp(2cqh, 3.4cqw, 4cqh)',
-              letterSpacing: '0.08em',
+              top: 'calc(5% + clamp(2cqh, 3.2cqw, 4cqh))',
+              right: 'calc(6% + clamp(1cqh, 1.6cqw, 2cqh))',
+              paddingBlock: 'clamp(0.9cqh, 1.4cqw, 1.7cqh)',
+              paddingInline: 'clamp(2cqh, 3cqw, 3.6cqh)',
+              fontSize: 'clamp(1.6cqh, 2.6cqw, 3cqh)',
+              letterSpacing: '0.06em',
             }}
-            initial={{ opacity: 0, y: 14, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
           >
             🎁 收取奖励
           </motion.button>
