@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { DEMO_DATA } from '../config/demo-data';
 import { type BoxLevel, useAppStore } from '../store/app-store';
 import { ALL_BOX_LEVELS, BOX_LEVELS } from '../config/boxes';
+import { useTransitionRunner } from '../hooks/useTransitionRunner';
 
 // D5 P7：sayDirect 已收归 applyEffects 默认 TTS，scene 不再重复触发
 
@@ -60,6 +61,7 @@ export function NightReport() {
   const ecoLevel = useAppStore((s) => s.ecoLevel);
   const bonus = DEMO_DATA.nightReportBonus;
   const isActive = bootState === 'nightReport';
+  const { dispatchBoot } = useTransitionRunner();
   const [phase, setPhase] = useState<1 | 2 | 3>(1);
   const [renderOverlay, setRenderOverlay] = useState(isActive);
   const [isExiting, setIsExiting] = useState(false);
@@ -129,14 +131,16 @@ export function NightReport() {
         }}
         className="relative"
         style={{
-          width: 'clamp(60cqw, 70cqw, 75cqw)',
-          // D5 P6：弹窗加高，确保 1-4 个宝箱（PNG 缩略 + 标签）放得下
-          height: 'clamp(58cqh, 60cqw, 72cqh)',
+          // D6 P4：川哥反馈"夜航报告界面过小看不清"，整体放大：
+          // width 70 → 88cqw / height 60 → 80cqw（高度跟随宽度 ratio 提）
+          width: 'clamp(78cqw, 88cqw, 92cqw)',
+          height: 'clamp(72cqh, 80cqw, 88cqh)',
           perspective: '1400px',
         }}
       >
+        {/* D6 P4：信纸位置往里收一点（5%→6%），下方留位给"收取奖励"按钮（18→22%）*/}
         <motion.div
-          className="absolute left-[8%] right-[8%] top-[6%] bottom-[18%] overflow-hidden rounded-[clamp(1.2cqh,2cqw,2.4cqh)] bg-amber-50/95 shadow-2xl ring-1 ring-amber-900/10"
+          className="absolute left-[6%] right-[6%] top-[5%] bottom-[22%] overflow-hidden rounded-[clamp(1.2cqh,2cqw,2.4cqh)] bg-amber-50/95 shadow-2xl ring-1 ring-amber-900/10"
           animate={
             isExiting
               ? { y: '100%', opacity: 0.8, scale: 0.98 }
@@ -151,9 +155,9 @@ export function NightReport() {
             className="flex h-full flex-col"
             style={{
               color: '#5b3b1f',
-              padding: 'clamp(2cqh, 3cqw, 4cqh)',
-              gap: 'clamp(0.6cqh, 1cqw, 1.2cqh)',
-              fontSize: 'clamp(1.4cqh, 2.4cqw, 2.8cqh)',
+              padding: 'clamp(2.6cqh, 4cqw, 5.2cqh)',
+              gap: 'clamp(0.9cqh, 1.4cqw, 1.8cqh)',
+              fontSize: 'clamp(2cqh, 3.4cqw, 4cqh)',
             }}
           >
             <h2 className="font-semibold tracking-[0.04em]">📜 夜航报告</h2>
@@ -179,11 +183,11 @@ export function NightReport() {
                   return (
                     <div
                       key={`${level}-${idx}`}
-                      className="flex flex-col items-center justify-center rounded-[clamp(0.6cqh,1cqw,1.2cqh)] px-[clamp(0.35cqh,0.6cqw,0.8cqh)] py-[clamp(0.5cqh,0.8cqw,1cqh)] text-center ring-1"
+                      className="flex flex-col items-center justify-center rounded-[clamp(0.8cqh,1.4cqw,1.7cqh)] px-[clamp(0.5cqh,0.9cqw,1.2cqh)] py-[clamp(0.7cqh,1.2cqw,1.5cqh)] text-center ring-1"
                       style={{
                         backgroundColor: item.tone,
                         borderColor: 'rgba(110, 74, 36, 0.24)',
-                        fontSize: 'clamp(1cqh,1.6cqw,1.9cqh)',
+                        fontSize: 'clamp(1.5cqh,2.4cqw,2.8cqh)',
                       }}
                     >
                       <img
@@ -191,12 +195,12 @@ export function NightReport() {
                         alt={item.label}
                         draggable={false}
                         style={{
-                          width: 'clamp(3.2cqh, 5cqw, 6cqh)',
-                          height: 'clamp(3.2cqh, 5cqw, 6cqh)',
+                          width: 'clamp(4.5cqh, 7cqw, 8.5cqh)',
+                          height: 'clamp(4.5cqh, 7cqw, 8.5cqh)',
                           objectFit: 'contain',
                         }}
                       />
-                      <span className="mt-[clamp(0.2cqh,0.3cqw,0.4cqh)] font-medium">{item.label}</span>
+                      <span className="mt-[clamp(0.3cqh,0.5cqw,0.7cqh)] font-medium">{item.label}</span>
                     </div>
                   );
                 })}
@@ -219,6 +223,32 @@ export function NightReport() {
         </motion.div>
 
         {/* D5 P5：川哥要求去掉信封身和封口三角（视觉上像上下箭头），只保留信纸 */}
+
+        {/* D6 P4：信纸下方留 22% 空间，加"收取奖励"按钮触发 NIGHT_REPORT_DONE
+            进入状态询问。phase 3 才显示（避免动画未完用户误点）。 */}
+        {phase >= 3 && !isExiting && (
+          <motion.button
+            type="button"
+            onClick={() => {
+              if (isExiting) return;
+              dispatchBoot({ type: 'NIGHT_REPORT_DONE' });
+            }}
+            className="pointer-events-auto absolute left-1/2 cursor-pointer rounded-full bg-amber-400 font-semibold text-amber-900 shadow-[0_0_2.4cqh_rgba(255,200,80,0.55)] ring-1 ring-amber-200/70 transition active:scale-95 hover:brightness-110"
+            style={{
+              bottom: '4%',
+              transform: 'translateX(-50%)',
+              paddingBlock: 'clamp(1.8cqh, 2.8cqw, 3.2cqh)',
+              paddingInline: 'clamp(4cqh, 6cqw, 7cqh)',
+              fontSize: 'clamp(2cqh, 3.4cqw, 4cqh)',
+              letterSpacing: '0.08em',
+            }}
+            initial={{ opacity: 0, y: 14, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+          >
+            🎁 收取奖励
+          </motion.button>
+        )}
       </motion.div>
     </div>
   );

@@ -156,6 +156,19 @@ export interface DeriveSceneInput {
 
 export function deriveCurrentScene(s: DeriveSceneInput): SceneId | null {
   if (s.farewellState === 'waving' || s.farewellState === 'shutdown') return 'farewell';
+  // D6 P4 修复：focus 主流程（running/launching/paused/confirmExit）优先于 reward
+  // 子状态。原 bug：focusRunning 进度满后 rewardMachine='openingBox' 即把 NextStepButton
+  // 当成 boxCommon scene，跳关卡 4→7 而不是 4→5（focusCompanion）。
+  // 修：focus 在 rewarding 状态时才让 reward 接管（说明开宝箱主导节奏）。
+  if (
+    s.focusMachine === 'running' ||
+    s.focusMachine === 'launching' ||
+    s.focusMachine === 'paused' ||
+    s.focusMachine === 'confirmExit'
+  ) {
+    if (s.focusMode === 'explore') return 'focusRunning';
+    if (s.focusMode === 'companion') return 'focusCompanion';
+  }
   if (s.rewardMachine === 'ecoUnlock') return 'ecoUnlock';
   if (
     (s.rewardMachine === 'openingBox' || s.rewardMachine === 'showingReward') &&
@@ -167,6 +180,8 @@ export function deriveCurrentScene(s: DeriveSceneInput): SceneId | null {
   if (s.bootState === 'nightReport') return 'nightReport';
   if (s.bootState === 'askMode') return 'askMode';
   if (s.focusMachine !== 'idle') {
+    // 兜底：focusMachine='rewarding' 且 reward 不在 openingBox/showingReward/ecoUnlock
+    // 的窄边界态，回主流程 focus scene
     if (s.focusMode === 'explore') return 'focusRunning';
     if (s.focusMode === 'companion') return 'focusCompanion';
   }
