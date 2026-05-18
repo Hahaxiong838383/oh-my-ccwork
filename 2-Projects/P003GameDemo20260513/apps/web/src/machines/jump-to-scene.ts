@@ -126,16 +126,16 @@ export const SCENE_LABELS: Record<SceneId, string> = {
   farewell: 'F. 关盖告别',
 };
 
+// D6 P10：川哥反馈"开宝箱不是独立关卡，把 box6/7/8/9 移出主流程避免串扰"。
+// box*（普通/精品/史诗/传说宝箱）仍在 SCENE_LABELS / SCENE_PRESETS / SCENE_KEYBOARD_MAP
+// 中保留（DebugBar 下拉跳关 + 键盘 6-9 直跳测试用），但不在 NextStepButton 顺序里。
+// 主流程：欢迎→夜航→询问→出航→静思→生态缸→告别
 export const SCENE_ORDER: SceneId[] = [
   'welcome',
   'nightReport',
   'askMode',
   'focusRunning',
   'focusCompanion',
-  'boxCommon',
-  'boxRare',
-  'boxEpic',
-  'boxLegendary',
   'ecoUnlock',
   'farewell',
 ];

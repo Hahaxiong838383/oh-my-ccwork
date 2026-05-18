@@ -48,6 +48,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2,mp3,ogg}'],
+        // D6 P10：川哥手机 PWA SW 缓存旧 JS（P7/P8 版本 reward 路径走 ECO_CHECK
+        // 让 legendary 抽中后进生态缸），新 P9 部署后用户感知不到。skipWaiting +
+        // clientsClaim 强制新 SW 立即激活并接管所有客户端，下次访问拿最新。
+        skipWaiting: true,
+        clientsClaim: true,
       },
     }),
   ],
