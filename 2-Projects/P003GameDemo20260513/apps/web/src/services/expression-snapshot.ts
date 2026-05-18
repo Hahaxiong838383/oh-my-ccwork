@@ -172,8 +172,15 @@ async function ensureCameraReady(): Promise<boolean> {
     return false;
   }
   try {
+    // D6 P1 hotfix：iOS Safari 不指定 facingMode 默认拿后置摄像头
+    // → 拍川哥背后的环境而不是他的脸 → Gemini 永远 no_face@0。
+    // 强制前置 user-facing；如果设备没前置（罕见），降级到任意可用。
     cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: 320, height: 240 },
+      video: {
+        width: { ideal: 320 },
+        height: { ideal: 240 },
+        facingMode: { ideal: 'user' },
+      },
       audio: false,
     });
     boundVideo.srcObject = cameraStream;
