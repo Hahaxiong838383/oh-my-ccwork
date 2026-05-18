@@ -61,7 +61,7 @@ export function NightReport() {
   const ecoLevel = useAppStore((s) => s.ecoLevel);
   const bonus = DEMO_DATA.nightReportBonus;
   const isActive = bootState === 'nightReport';
-  const { dispatchBoot } = useTransitionRunner();
+  const { dispatchBoot, dispatchReward } = useTransitionRunner();
   const [phase, setPhase] = useState<1 | 2 | 3>(1);
   const [renderOverlay, setRenderOverlay] = useState(isActive);
   const [isExiting, setIsExiting] = useState(false);
@@ -161,7 +161,43 @@ export function NightReport() {
               fontSize: 'clamp(2cqh, 3.4cqw, 4cqh)',
             }}
           >
-            <h2 className="font-semibold tracking-[0.04em]">📜 夜航报告</h2>
+            {/* D6 P6：h2 + 收取奖励按钮放 flex row，按钮 inline 右对齐避开 h2 文字 */}
+            <div className="flex items-center justify-between gap-[clamp(1cqh,2cqw,2.4cqh)]">
+              <h2 className="font-semibold tracking-[0.04em]">📜 夜航报告</h2>
+              {phase >= 3 && !isExiting && (
+                <motion.button
+                  type="button"
+                  onClick={() => {
+                    if (isExiting) return;
+                    // D6 P6：触发开宝箱体验 — 从 randomBoxes 抽最高品质，
+                    // dispatchReward 进 openingBox（OpenBox scene 自动覆盖渲染），
+                    // 同步 dispatchBoot 切 askMode，开完箱后自然落在状态询问页。
+                    if (randomBoxes.length > 0) {
+                      let best = randomBoxes[0];
+                      let bestIdx = ALL_BOX_LEVELS.indexOf(best);
+                      for (const b of randomBoxes) {
+                        const i = ALL_BOX_LEVELS.indexOf(b);
+                        if (i > bestIdx) { best = b; bestIdx = i; }
+                      }
+                      dispatchReward({ type: 'OPEN_BOX', level: best });
+                    }
+                    dispatchBoot({ type: 'NIGHT_REPORT_DONE' });
+                  }}
+                  className="shrink-0 cursor-pointer rounded-full bg-amber-400 font-bold text-amber-900 shadow-[0_0_2.4cqh_rgba(255,180,40,0.6)] ring-2 ring-amber-300/80 transition active:scale-95 hover:brightness-110"
+                  style={{
+                    paddingBlock: 'clamp(1.6cqh, 2.6cqw, 3.2cqh)',
+                    paddingInline: 'clamp(3.4cqh, 5cqw, 6cqh)',
+                    fontSize: 'clamp(1.9cqh, 3.2cqw, 3.8cqh)',
+                    letterSpacing: '0.06em',
+                  }}
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                >
+                  🎁 收取奖励
+                </motion.button>
+              )}
+            </div>
             <p className="font-medium">
               星尘奖励 +<NumberRoll value={bonus.stardust} durationMs={1300} />
             </p>
@@ -224,33 +260,7 @@ export function NightReport() {
         </motion.div>
 
         {/* D5 P5：川哥要求去掉信封身和封口三角（视觉上像上下箭头），只保留信纸 */}
-
-        {/* D6 P5：收取奖励按钮挪到信纸内右上角，与"📜 夜航报告"标题顶对齐。
-            位置参考信纸 left/right 6% + top 5%；按钮 top ~7%（弹窗）+ right 9%，
-            垂直水平线与 h2 同行。phase 3 才显示。 */}
-        {phase >= 3 && !isExiting && (
-          <motion.button
-            type="button"
-            onClick={() => {
-              if (isExiting) return;
-              dispatchBoot({ type: 'NIGHT_REPORT_DONE' });
-            }}
-            className="pointer-events-auto absolute cursor-pointer rounded-full bg-amber-400 font-semibold text-amber-900 shadow-[0_0_2cqh_rgba(255,200,80,0.55)] ring-1 ring-amber-200/70 transition active:scale-95 hover:brightness-110"
-            style={{
-              top: 'calc(5% + clamp(2cqh, 3.2cqw, 4cqh))',
-              right: 'calc(6% + clamp(1cqh, 1.6cqw, 2cqh))',
-              paddingBlock: 'clamp(0.9cqh, 1.4cqw, 1.7cqh)',
-              paddingInline: 'clamp(2cqh, 3cqw, 3.6cqh)',
-              fontSize: 'clamp(1.6cqh, 2.6cqw, 3cqh)',
-              letterSpacing: '0.06em',
-            }}
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          >
-            🎁 收取奖励
-          </motion.button>
-        )}
+        {/* D6 P6：收取奖励按钮已挪到信纸内 h2 同行右侧（flex row），不再外部 absolute */}
       </motion.div>
     </div>
   );
