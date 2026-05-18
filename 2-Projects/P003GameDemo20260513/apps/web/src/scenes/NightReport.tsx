@@ -188,7 +188,7 @@ export function NightReport() {
                     }
                     dispatchBoot({ type: 'NIGHT_REPORT_DONE' });
                   }}
-                  className="shrink-0 cursor-pointer rounded-full bg-amber-400 font-bold text-amber-900 shadow-[0_0_2.4cqh_rgba(255,180,40,0.6)] ring-2 ring-amber-300/80 transition active:scale-95 hover:brightness-110"
+                  className="pointer-events-auto shrink-0 cursor-pointer rounded-full bg-amber-400 font-bold text-amber-900 shadow-[0_0_2.4cqh_rgba(255,180,40,0.6)] ring-2 ring-amber-300/80 transition active:scale-95 hover:brightness-110"
                   style={{
                     paddingBlock: 'clamp(1.6cqh, 2.6cqw, 3.2cqh)',
                     paddingInline: 'clamp(3.4cqh, 5cqw, 6cqh)',
