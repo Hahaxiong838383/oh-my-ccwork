@@ -142,6 +142,17 @@ export function DebugBar() {
         >
           清旗
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            const s = useAppStore.getState();
+            s.setCameraPreview(!s.cameraPreview);
+          }}
+          className="h-6 rounded border border-white/15 px-2 text-[10px] transition hover:bg-white/10"
+          title="角落显示摄像头预览（160×120）"
+        >
+          预览
+        </button>
       </div>
 
       {/* D6 P1 debug：内部 flag 实时显示，定位 snap 卡在哪一关 */}

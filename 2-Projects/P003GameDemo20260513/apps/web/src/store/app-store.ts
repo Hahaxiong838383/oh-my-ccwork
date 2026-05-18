@@ -131,6 +131,8 @@ interface AppState {
   setSetupVideoRequested: (b: boolean) => void;
   cameraUnavailable: boolean;
   setCameraUnavailable: (b: boolean) => void;
+  cameraPreview: boolean;
+  setCameraPreview: (b: boolean) => void;
 
   // —— 设置面板（V0.6 新增，D4 实现 UI）——
   settingsOpen: boolean;
@@ -292,6 +294,8 @@ export const useAppStore = create<AppState>((set) => ({
     saveCameraUnavailable(cameraUnavailable);
     set({ cameraUnavailable });
   },
+  cameraPreview: false,
+  setCameraPreview: (cameraPreview) => set({ cameraPreview }),
 
   settingsOpen: false,
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
