@@ -3,15 +3,20 @@ import { z } from 'zod';
 const MODEL = 'gemini-3-flash-preview';
 const TIMEOUT_MS = 3000;
 
-const VISION_PROMPT = `你是一个儿童面部表情识别系统。看这张照片中的人脸，从以下标签中选一个最贴近的：
-- happy (开心、微笑、大笑)
-- tired (疲倦、打哈欠、揉眼睛)
-- curious (好奇、惊讶、睁大眼睛)
-- neutral (无明显情绪)
-- no_face (画面里没有人脸)
+// D6 P1 hotfix：去掉"儿童"限定。Gemini 看到成年人会判"不符合儿童"→ no_face@0。
+// 川哥实测前置摄像头预览清晰、正脸、光线足，但仍返 no_face → 锁定 prompt 偏置。
+const VISION_PROMPT = `请分析这张照片中人脸的表情，从以下标签中选一个最贴近的：
+- happy (微笑、大笑、开心)
+- tired (疲倦、打哈欠、揉眼睛、闭眼)
+- curious (好奇、惊讶、睁大眼睛、专注)
+- neutral (无明显情绪、面无表情)
+- no_face (画面里没有任何人脸)
+
+只要画面里能看到一张人脸（不论年龄性别），就从前 4 个里选一个；
+完全看不到人脸时才用 no_face。
 
 返回 JSON：{"label": "<标签>", "confidence": <0.0-1.0>}
-只返回 JSON，不要任何其他内容、解释或代码块标记。`;
+只返回 JSON，不要其他内容、解释或代码块标记。`;
 
 const LabelSchema = z.enum(['happy', 'tired', 'curious', 'neutral', 'no_face']);
 const VisionOutSchema = z.object({
@@ -73,8 +78,14 @@ export async function geminiVisionDetect(jpegBase64: string): Promise<VisionOut>
       choices?: Array<{ message?: { content?: unknown } }>;
     };
 
-    const modelJson = extractModelJson(data.choices?.[0]?.message?.content);
+    const rawContent = data.choices?.[0]?.message?.content;
+    console.log('[vision] gemini raw content:', JSON.stringify(rawContent)?.slice(0, 300));
+    const modelJson = extractModelJson(rawContent);
+    console.log('[vision] gemini parsed JSON:', JSON.stringify(modelJson));
     const parsed = VisionOutSchema.safeParse(modelJson);
+    if (!parsed.success) {
+      console.log('[vision] zod fallback to no_face, reason:', parsed.error.message.slice(0, 200));
+    }
     return parsed.success ? parsed.data : FALLBACK;
   } finally {
     clearTimeout(timer);
