@@ -54,8 +54,9 @@ export async function geminiVisionDetect(jpegBase64: string): Promise<VisionOut>
         stream: false,
         temperature: 0,
         // D6 P1 hotfix：Gemini 3 是 thinking 模型，response 显示 reasoning_tokens=112
-        // 吃掉了我们设的 max_tokens=120，content 被截到 0。改 4096 给 reasoning + 答案留足。
-        max_tokens: 4096,
+        // 吃掉了 max_tokens=120，content 被截到 0。按记忆 reference_gemini_proxy.md
+        // gemini-3-flash 上限 65535，直接拉满给 reasoning + 答案最充裕预算。
+        max_tokens: 65535,
         messages: [
           {
             role: 'user',
