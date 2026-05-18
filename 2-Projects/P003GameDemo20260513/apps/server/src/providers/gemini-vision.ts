@@ -5,19 +5,24 @@ const MODEL = 'gemini-3-flash-preview';
 // 提到 8000ms，前端 client 5000ms 仍优先 abort，server 给 Gemini 留足。
 const TIMEOUT_MS = 8000;
 
-// D6 P1 hotfix：去掉"儿童"限定。Gemini 看到成年人会判"不符合儿童"→ no_face@0。
-// 川哥实测前置摄像头预览清晰、正脸、光线足，但仍返 no_face → 锁定 prompt 偏置。
-const VISION_PROMPT = `请分析这张照片中人脸的表情，从以下标签中选一个最贴近的：
-- happy (微笑、大笑、开心)
-- tired (疲倦、打哈欠、揉眼睛、闭眼)
-- curious (好奇、惊讶、睁大眼睛、专注)
-- neutral (无明显情绪、面无表情)
-- no_face (画面里没有任何人脸)
+// D6 P1 hotfix v2：实测 Gemini 对自然状态人脸偏 neutral/no_face，导致 demo
+// 几乎拿不到 happy/curious/tired → 无前缀。改 prompt"偏向找表情"。
+const VISION_PROMPT = `请观察这张照片中人脸的表情，从以下标签里挑一个**最贴近的**：
 
-只要画面里能看到一张人脸（不论年龄性别），就从前 4 个里选一个；
-完全看不到人脸时才用 no_face。
+- happy   嘴角上扬 / 微笑 / 大笑 / 表情轻松愉快
+- tired   闭眼 / 打哈欠 / 眼袋重 / 表情倦怠 / 揉眼
+- curious 睁大眼睛 / 抬眉 / 嘴微张 / 专注盯着什么 / 惊讶
+- neutral 面部完全放松、眉眼嘴都没动作
+- no_face 画面里完全没有人脸（拍到天花板、桌面、墙壁、衣服等）
+
+**重要规则**：
+1. 只要画面里能看到任何一张人脸（不论年龄、性别、距离、角度），就**优先**在 happy/tired/curious/neutral 4 个里选。
+2. 哪怕表情很轻微（嘴角微翘 / 眼睛微眯 / 略抬眉），也尽量归到 happy/tired/curious 中**最贴近的一个**。
+3. 只有四个表情标签**都明显不符**时才用 neutral。
+4. 只有画面**完全没有人脸**时才用 no_face。
 
 返回 JSON：{"label": "<标签>", "confidence": <0.0-1.0>}
+confidence 反映你对标签的把握度。
 只返回 JSON，不要其他内容、解释或代码块标记。`;
 
 const LabelSchema = z.enum(['happy', 'tired', 'curious', 'neutral', 'no_face']);

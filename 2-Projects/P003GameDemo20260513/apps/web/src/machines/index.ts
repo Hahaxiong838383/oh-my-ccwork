@@ -295,7 +295,9 @@ export function defaultTimerRouter(key: string): void {
  * clearAllTimers + hydrate 所有相关字段 + 切机器状态
  */
 export function jumpToScene(scene: SceneId): void {
-  void getExpressionSnapshot().snapIfStale();
+  // D6 P1 hotfix v2：跳关时强制 snap()（不复用 3s 缓存），保证每场字幕用最新表情。
+  // 牺牲带宽（每跳关一次 Gemini 调用）换实时表情，对 demo 体验更重要。
+  void getExpressionSnapshot().snap();
   // 中断任何在途 ASR/LLM/TTS 会话，避免旧 turn 的回包污染新场景的 subtitle/voiceStatus
   try {
     const client = getSharedVoiceClient();

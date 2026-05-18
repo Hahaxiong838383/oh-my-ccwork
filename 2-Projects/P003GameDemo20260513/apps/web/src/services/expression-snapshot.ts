@@ -262,7 +262,9 @@ async function doSnap(): Promise<void> {
     }
     if (import.meta.env.DEV) console.warn('[expr-snap] result:', parsed);
     currentRef.confidence = parsed.confidence;
-    currentRef.expr = parsed.confidence < 0.8 || parsed.expr === 'no_face' ? 'neutral' : parsed.expr;
+    // D6 P1 hotfix v2：阈值 0.8 → 0.6（0.8 太严，Gemini 给"轻微表情"通常 0.6-0.75，
+    // 全被兜底成 neutral → 永无前缀）。no_face 仍直接 → neutral。
+    currentRef.expr = parsed.confidence < 0.6 || parsed.expr === 'no_face' ? 'neutral' : parsed.expr;
     lastSkipReason = `ok:${parsed.expr}@${parsed.confidence.toFixed(2)}`;
     currentRef.at = Date.now();
   } catch (err) {
