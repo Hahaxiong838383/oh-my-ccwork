@@ -61,7 +61,20 @@
 ✅ D4 V0.8    全场景美术化（12 PNG + 4 MP4）+ focus 4 stage 链路
 ✅ D5 V0.9    25 commits · 字幕 TTS 严同步 + 专注流程闭环 + debug 工具集
 ✅ D6 V1.0    16 commits · 表情感知 A' 架构 + Gemini Vision + 12 标签 + 1.6s 延迟
+✅ D6 P2-P10  11 commits · VPS 部署 + 真机迭代 6 轮抛光（夜航 UX + 主流程顺序 + PWA 强更）
 ```
+
+### D6 P4-P10 一夜抛光（7 commit）
+
+| Phase | 触发 / 真凶 | 修 |
+|---|---|---|
+| P4 `4b403cf9c` | 夜航过小 + 下一步跳错关 | 1.4× 放大 + 加收取按钮 + deriveCurrentScene focus 优先 |
+| P5 `882d038f9` | 底部"新解锁"溢出 | 信纸 bottom 22→6% + 按钮挪右上 |
+| P6 `39769a08a` | 按钮过小 + 没开箱 | 按钮 1.5× + onClick 触发 dispatchReward OPEN_BOX |
+| P7 `7a1dcb6f6` | 开箱没视觉 | NightReport z=80 盖 OpenBox z=70 修（P9 撤回） |
+| P8 `6660a028a` | 按钮没反应 | **真凶**：P6 漏抄 pointer-events-auto，父 pointer-events-none 吞 click |
+| P9 `0070a943c` | 切换太快 | onClick 只 dispatchReward + OpenBox 升 z 平级 + timer router rewardShown 加 bootState 分支 |
+| P10 `13860e6b1` | 川哥手机仍报老 bug | **真凶**：PWA SW 缓存旧 JS。修 workbox skipWaiting+clientsClaim + SCENE_ORDER 删 box*(6789) |
 
 ### D6 表情感知打通（按系统分组）
 

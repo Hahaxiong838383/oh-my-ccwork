@@ -193,3 +193,55 @@ D6 P1 完工当晚川哥同步：部署到阿里云 HK 8.218.26.17，域名 p003
 
 **川哥总评（D6 完整）**：D6 P1 表情感知功能上线 → 一夜 VPS 部署 + 川哥真机迭代两轮节奏抛光。**小可既能"看见"用户表情，也能在公网 demo 现场流畅交互**——demo 第一原则全程守住。
 
+---
+
+## D6 P4-P10：真机迭代第 3-6 轮（7 commit · 一夜抛光夜航报告 + 主流程顺序）
+
+D6 P3 收尾当晚川哥再开 4 项反馈，加上后续连发，到 P10 共 7 commit 完成"夜航报告完整 UX + 主流程顺序修复 + PWA 强制更新"三件大事。
+
+| Phase | Commit | 核心改动 | 触发 / 真凶 |
+|---|---|---|---|
+| **P4** | `4b403cf9c` | 夜航放大 1.4× + 加"🎁 收取奖励"按钮 + NextStepButton 顺序修复 | 川哥真机反馈"夜航过小+下一步跳错关卡"。真凶：`deriveCurrentScene` reward 子状态优先于 focus 主状态 → focusRunning 进度满后 rewardMachine='openingBox' 误推 box scene → NextStepButton 从关卡 4 跳关卡 7 而非 5。修：focus running/launching/paused/confirmExit 优先返 focusRunning/focusCompanion |
+| **P5** | `882d038f9` | 夜航底部"新解锁"文字截断修 + 收取按钮挪信纸内右上角 | 字号 P4 放大后底部内容溢出。修：信纸 bottom 22→6% 吃满弹窗，按钮 absolute top/right + h2 顶对齐 |
+| **P6** | `39769a08a` | 收取按钮放大到 RewardClaimButton 视觉等级 + 触发开箱体验 | 川哥要"按钮再大+点击触发开箱"。改 h2 + 按钮 flex row 内联；onClick `dispatchReward({OPEN_BOX})` 抽 randomBoxes 最高品质 + `dispatchBoot({NIGHT_REPORT_DONE})` 同步切 askMode |
+| **P7** | `7a1dcb6f6` | NightReport z 层冲突修（rewardMachine ∈ {openingBox, showingReward} return null）| 川哥"点击没跳到开宝箱场景"。真凶：NightReport `z-layer-modal=80` > OpenBox `z-layer-mask=70`，OpenBox 渲染但被信纸盖住。P7 改 NightReport 让位（后续 P9 撤回，改 z 升级路径） |
+| **P8** | `6660a028a` | NightReport 按钮加 `pointer-events-auto` | 川哥再报"按钮没反应"。真凶：P6 改 flex row 时漏抄 P5 absolute 版本的 `pointer-events-auto`，外层 NightReport 容器 `pointer-events-none` 会继承到子级，按钮 click 被吞 |
+| **P9** | `0070a943c` | 收取奖励后保持夜航背景 + 开箱完才切 askMode | 川哥"开完直接跳没缓冲"。改 onClick **只** dispatchReward（不 dispatchBoot），等 rewardShown timer 完才切；OpenBox `z-layer-mask` → `z-layer-modal` 平 z + DOM 后渲染天然盖上；machines/index.ts `rewardShown` timer case 加 `bootState='nightReport'` 分支 → 切 askMode（不进 reward askMode "继续/返舱"）|
+| **P10** | `13860e6b1` | PWA SW skipWaiting/clientsClaim 强更 + SCENE_ORDER 移除 box* | 川哥再报"开完进生态缸"。真凶：川哥手机 PWA SW 缓存 P7/P8 旧 JS（onClick 仍同步 dispatchBoot 立即切 boot + legendary 抽中走 ECO_CHECK）。修 1：workbox skipWaiting+clientsClaim 强制新 SW 立即激活。修 2：SCENE_ORDER 删 boxCommon/Rare/Epic/Legendary 让 NextStepButton 按主流程 4→5 而非 4→6 |
+
+## D6 P4-P10 核心踩坑（沉淀）
+
+### 坑 4：PWA SW 客户端缓存隐形老 JS
+川哥 D6 P9 后仍报"老 bug 复现"，真凶不是代码不对——是 SW 在拦截 fetch 用 cached 旧 JS。**vite-plugin-pwa autoUpdate 默认不强制 skipWaiting**，新 SW 装在后台但不接管现有 client。修：workbox `skipWaiting: true` + `clientsClaim: true` 强制激活。
+
+### 坑 5：pointer-events-none 父级继承吞子级 click
+NightReport 容器 `pointer-events-none`（避免遮 demo 背景交互），子按钮要点必须 `pointer-events-auto` 显式覆盖。P6 从 absolute → inline flex 重构时漏抄 P5 的 `pointer-events-auto` → click 被吞，cc 误报"按钮没反应"。
+
+### 坑 6：z 层 + DOM 顺序双因素决定视觉栈
+P7 时 OpenBox z=70 < NightReport z=80，即使 DOM 后渲染也被盖住。两种修：① 升 OpenBox z 到 80 + DOM 后渲染天然在上（采用）② NightReport return null 让位（P7 临时方案，P9 撤回）。**记住数字大优先于 DOM 顺序**。
+
+### 坑 7：deriveCurrentScene 优先级错位（已 P4 永久修）
+原 `deriveCurrentScene` reward 子状态优先于 focus 主状态：focusRunning 进度满 rewardMachine='openingBox' 时 NextStepButton 把当前 scene 误判为 boxCommon → 下一步跳 boxRare 不是 focusCompanion。修：focus 主流程（running/launching/paused/confirmExit）优先；只在 rewarding 状态才让 reward 子状态接管。
+
+## D6 全程 commit 统计（27 commit 总）
+
+| 阶段 | Commit 数 | 时间 |
+|---|---|---|
+| D6 P1 表情感知 V1.0 | 16 | 早 |
+| VPS 部署 | 2 | 下午 |
+| D6 P2 真机反馈第 1 轮 | 1 | 晚 |
+| D6 P3 真机反馈第 2 轮 | 1 | 晚 |
+| **D6 P4-P10 一夜抛光** | **7** | **深夜** |
+| 文档收尾 (P1) + (P10) | 4+ | 早+今 |
+
+## D6 P4-P10 新沉淀 memory（4 条）
+
+- [feedback_pwa_sw_skipwaiting_clientsclaim.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — PWA SW 客户端缓存陷阱 + skipWaiting/clientsClaim 强更
+- [feedback_pointer_events_inheritance_trap.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — pointer-events-none 父级继承吞子级 click
+- [feedback_z_layer_vs_dom_order.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — z 层 + DOM 顺序双因素视觉栈
+- [feedback_timer_router_boot_branch.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — timer router 按 bootState 分支走不同 reward 路径
+
+---
+
+**川哥总评（D6 P4-P10）**：一夜抛光，7 commit 把"夜航报告 → 开宝箱 → 状态询问"流程从能跑迭到丝滑。同时把主流程顺序串扰彻底解决，box scene 6-9 移出主线，DebugBar 下拉 / 键盘 6-9 仍可测试。PWA 强更修了 P9 后川哥手机感知不到代码已修的隐形 bug。**小可在公网 demo 上节奏完全可用**，下一步只剩演示场地暗光压测 + 端侧化 P4 长线路线。
+
