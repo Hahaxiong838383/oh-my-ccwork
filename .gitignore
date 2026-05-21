@@ -197,6 +197,7 @@ package-lock.json
 # ====================================
 # 敏感文件和本地配置（绝对不能提交）
 # ====================================
+.mcp.json
 .gemini/settings.json
 skills/tell-me/config.json
 .claude/skills/evomap-assets/.node_secret
@@ -285,3 +286,14 @@ skills/netease-music-*
 # 热回滚备份（试运行窗口期不进 git；复盘通过后归档到 5-Archive/）
 CLAUDE.md.bak.*
 AGENTS.md.bak.*
+
+# 求职工具链（含个人简历、求职记录等敏感信息）
+*boss*
+*BOSS*
+~/.config/boss-cli/
+~/.boss-agent/
+2-Projects/career-ops/
+2-Projects/job-search-agent/
+
+# head-tracked-3d-demo (独立 GitHub 仓 Hahaxiong838383/head-tracked-3d-demo)
+2-Projects/head-tracked-3d-demo/
