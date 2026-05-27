@@ -52,7 +52,7 @@ if [ ! -f "$SRC_CONFIG" ] || [ ! -f "$SRC_MASTER_KEY" ]; then
 fi
 
 if [ -d "$USER_HOME" ]; then
-  token_count="$(find "$USER_HOME/Library/Application Support/lark-cli" -type f -name '*.enc' 2>/dev/null | grep -v '/appsecret_' | wc -l | tr -d ' ')"
+  token_count="$(find "$USER_HOME/Library/Application Support/lark-cli" -type f -name '*.enc' 2>/dev/null | grep -v '/appsecret_' || true | wc -l | tr -d ' ')"
   if [ "${token_count:-0}" -gt 0 ]; then
     payload="$(jq -n --arg user_id "$USER_ID" --arg home "$USER_HOME" '{ok:true,user_id:$user_id,home:$home,ready_for_oauth:true,already_provisioned:true}')"
     emit_json "$payload"
