@@ -40,7 +40,7 @@
 - `auth login` 支持 `--no-wait/--device-code/--json`：`/tmp/lark_evidence_snapshot.txt:68-85`
 
 ### 下一步建议
-1. 先在 daemon 机器导出 `LARK_BIN=/Users/rayman.chen/local/node/bin/lark-cli` 后执行脚本。
+1. 先在 daemon 机器导出 `LARK_BIN=~/local/node/bin/lark-cli` 后执行脚本。
 2. 扫码完成后观察 `[4/5] auth status` 与 `[5/5] contact +me` 是否都成功。
 
 ---
@@ -78,7 +78,7 @@
 - `--profile` 为全局持久参数：
   - `https://raw.githubusercontent.com/multica-ai/multica/main/server/cmd/multica/main.go`（L1-L2）
 - 你仓内已记录「单次 `multica daemon start` 后 3 runtime online」：
-  - `/Users/rayman.chen/mycc/2-Projects/multica-team-deploy/TODO.md:78-79`
+  - `~/mycc/2-Projects/multica-team-deploy/TODO.md:78-79`
 - 本地/远端直查受限：`/tmp/multica_access_check.txt:1-9`
 
 ### mini 上双进程命令清单（daemon-codex + daemon-claude）

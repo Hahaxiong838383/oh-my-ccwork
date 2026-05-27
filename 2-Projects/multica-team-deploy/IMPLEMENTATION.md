@@ -67,7 +67,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
     ports:
-      - "192.168.61.18:8080:8080"   # 内网监听，公网走 FRP
+      - "<qnap-lan-ip>:8080:8080"   # 内网监听，公网走 FRP
     volumes:
       - ./data/uploads:/app/data/uploads
     environment:
@@ -81,7 +81,7 @@ services:
       ALLOW_SIGNUP: "false"
       ALLOWED_EMAILS: ${ALLOWED_EMAILS}        # 川哥+9 同事邮箱
       APP_ENV: production
-      MULTICA_TRUSTED_PROXIES: "127.0.0.1/32,192.168.61.0/24,10.9.1.0/24"
+      MULTICA_TRUSTED_PROXIES: "127.0.0.1/32,<qnap-lan-cidr>,<mini-lan-cidr>"
       MULTICA_PUBLIC_URL: https://multica.cli4.hahaxiong.cc
     restart: unless-stopped
 
@@ -89,7 +89,7 @@ services:
     image: ghcr.io/multica-ai/multica-web:v0.3.9
     depends_on: [backend]
     ports:
-      - "192.168.61.18:3080:3000"   # ★ 不用 3000 (被占)
+      - "<qnap-lan-ip>:3080:3000"   # ★ 不用 3000 (被占)
     environment:
       HOSTNAME: "0.0.0.0"
     restart: unless-stopped
@@ -100,7 +100,7 @@ services:
 ```bash
 POSTGRES_PASSWORD=$(openssl rand -hex 16)
 JWT_SECRET=$(openssl rand -hex 32)
-ALLOWED_EMAILS=hahaxiong83@gmail.com,colleague1@...,colleague2@...
+ALLOWED_EMAILS=<your-email>,colleague1@...,colleague2@...
 RESEND_API_KEY=re_xxxxx  # 可选，先空跑用 backend log 抓验证码
 ```
 
@@ -116,7 +116,7 @@ ssh prnas 'cd /share/CACHEDEV2_DATA/multica && \
 sleep 30
 
 # 验证
-ssh prnas 'curl -s http://192.168.61.18:8080/healthz'
+ssh prnas 'curl -s http://<qnap-lan-ip>:8080/healthz'
 # 期望：{"status":"ok","checks":{"db":"ok","migrations":"ok"}}
 ```
 
@@ -162,14 +162,14 @@ multica.cli4.hahaxiong.cc {
 [[proxies]]
 name = "multica-api"
 type = "tcp"
-localIP = "192.168.61.18"
+localIP = "<qnap-lan-ip>"
 localPort = 8080
 remotePort = 18080
 
 [[proxies]]
 name = "multica-web"
 type = "tcp"
-localIP = "192.168.61.18"
+localIP = "<qnap-lan-ip>"
 localPort = 3080
 remotePort = 13080
 ```
@@ -191,7 +191,7 @@ curl https://multica.cli4.hahaxiong.cc/healthz
 **daemon 容器 Dockerfile（先用 multica 官方 CLI 镜像，或自己装 Linux 基础镜像 + multica CLI + AI CLI）**：
 
 ```dockerfile
-# /Users/rayman.chen/multica-daemons/Dockerfile.daemon
+# ~/multica-daemons/Dockerfile.daemon
 FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y curl ca-certificates git \
     && curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash \

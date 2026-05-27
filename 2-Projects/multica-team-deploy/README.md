@@ -7,8 +7,8 @@
 **Phase 0：方案落盘 ✅**（2026-05-27）
 
 - ✅ multica 源码分析（架构 + 多用户隔离机制 + Mac 客户端能力）
-- ✅ QNAP TS-X65 (192.168.61.18) SSH 实测：8C N355 / 16GB / 615GB SSD / Container Station 已装
-- ✅ Mini M4 (10.9.1.54) 资源盘点：停 Ollama+mycc 后可腾 7-12GB 跑 daemon
+- ✅ QNAP TS-X65 (<qnap-lan-ip>) SSH 实测：8C N355 / 16GB / 615GB SSD / Container Station 已装
+- ✅ Mini M4 (<mini-lan-ip>) 资源盘点：停 Ollama+mycc 后可腾 7-12GB 跑 daemon
 - ✅ 部署架构定稿：**QNAP server + Mini daemon + cli4 Caddy TLS 反代 + 同事装 Multica.app**
 - ✅ 落盘 4 份文档：本 README / ARCHITECTURE / IMPLEMENTATION / DECISIONS
 
@@ -17,7 +17,7 @@
 ## 项目根本目标
 
 1. **能用**：10 人团队（含 Apple Silicon 同事）能通过 Multica.app 客户端跑 issue 派单 + agent 自动执行
-2. **共享 AI 订阅**：claude/codex/gemini 不让 10 人各自买（沿用现有 VPS 23.226.135.149 网关路径）
+2. **共享 AI 订阅**：claude/codex/gemini 不让 10 人各自买（沿用现有 VPS <vps-ip> 网关路径）
 3. **集成 mycc 记忆**：每个 agent 任务读 mycc brain → 任务输出回写 RECENT_EVENTS / memory_items
 4. **零额外硬件成本**：QNAP + Mini 已有，公网走现成 FRP（cli4.hahaxiong.cc）
 

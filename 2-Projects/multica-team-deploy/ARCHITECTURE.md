@@ -7,7 +7,7 @@ L0 接入层 │ Tailscale VPN (可选) + 同事浏览器/Multica.app
 L1 入口层 │ 阿里云 HK relay (cli4.hahaxiong.cc) Caddy TLS + FRP
 L2 应用层 │ QNAP TS-X65 — multica server + DB + brain（16GB/8C）
 L3 算力层 │ Mac Mini M4 — 3-5 个 daemon 容器（32GB）
-L4 凭据层 │ VPS 23.226.135.149 — Gemini/Codex 网关 + Claude 后定
+L4 凭据层 │ VPS <vps-ip> — Gemini/Codex 网关 + Claude 后定
 L5 上游   │ Anthropic / OpenAI / Google Vertex AI
 ```
 
@@ -25,7 +25,7 @@ flowchart TB
         FR[FRP server<br/>已有 cli4]
     end
 
-    subgraph L2["🟦 QNAP TS-X65 (192.168.61.18)<br/>应用层 — 8C N355 / 16GB"]
+    subgraph L2["🟦 QNAP TS-X65 (<qnap-lan-ip>)<br/>应用层 — 8C N355 / 16GB"]
         WEB[multica frontend :3080]
         BE[multica backend :8080<br/>REST + WebSocket]
         PG[(PostgreSQL 17<br/>+ pgvector)]
@@ -33,14 +33,14 @@ flowchart TB
         BRAIN[mycc brain<br/>MCP + HTTP API]
     end
 
-    subgraph L3["🟧 Mac Mini M4 (10.9.1.54)<br/>算力层 — 32GB"]
+    subgraph L3["🟧 Mac Mini M4 (<mini-lan-ip>)<br/>算力层 — 32GB"]
         FRC[frpc client<br/>已有]
         D1[daemon 容器 1<br/>独立 HOME]
         D2[daemon 容器 2<br/>独立 HOME]
         DN[daemon ... × 3-5]
     end
 
-    subgraph L4["🔌 VPS 23.226.135.149<br/>凭据网关"]
+    subgraph L4["🔌 VPS <vps-ip><br/>凭据网关"]
         GWG[:4000 Gemini Proxy]
         GWC[:4001 Codex Proxy]
         GWA[Claude 方案后定<br/>Team plan 或 自建]

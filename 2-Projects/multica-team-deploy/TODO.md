@@ -73,7 +73,7 @@
 - **P1** QNAP `/share/CACHEDEV2_DATA/multica/` 工作目录 + docker-compose.yml + .env(chmod 600) + 4 镜像（GHCR + docker.1ms.run 国内镜像源）
 - **P2** docker compose up → 4 容器 + 109 migration 全跑 + `/healthz` `db:ok,migrations:ok` + Redis relay 接入成功
 - **P3-1** Mini `~/Library/LaunchAgents/dev.frpc.cc-remote.plist` 加 `multica-web` (3080→18080) + `multica-api` (8080→18443) proxy
-- **P3-2** HK 8.218.26.17 nginx server block + certbot 签 multica.cli4.hahaxiong.cc 证书
+- **P3-2** HK <hk-vps-ip> nginx server block + certbot 签 multica.cli4.hahaxiong.cc 证书
 - **P3-3** 公网 HTTPS HTTP/2 200 + CORS allow_origin 正确 + WSS Upgrade 路径通
 - **P5** Mini 直接装 multica CLI Linux→darwin-arm64 binary（**因为 Mini 没 Docker / 没 brew**），跑 `multica login --token mul_xxx` + `multica daemon start`，3 个 runtime（Claude/Codex/Gemini）online
 - **codex CLI 修复** symlink `~/.nvm/.../node + codex → ~/bin/`，daemon 重启后 3 runtime 全注册
