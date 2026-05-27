@@ -236,10 +236,27 @@ func (s *Server) startHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	deviceCode := stringVal(data, "device_code", "deviceCode")
+
+	// fire-and-forget 后台 polling: oauth-ui 前端只轮询 /status, 不主动调 /complete
+	// 04 脚本完成后会写 mapping + token 落到 user HOME, /status 自然检测到 bound=true
+	if deviceCode != "" {
+		uid := req.MulticaUserID
+		go func() {
+			bgCtx, bgCancel := context.WithTimeout(context.Background(), 200*time.Second)
+			defer bgCancel()
+			if _, err := s.runScriptJSON(bgCtx, "04_user_oauth_complete.sh", uid, deviceCode); err != nil {
+				s.logger.Warn("background oauth polling failed", "user_id", uid, "error", err.Error())
+			} else {
+				s.logger.Info("background oauth polling succeeded", "user_id", uid)
+			}
+		}()
+	}
+
 	writeJSON(w, http.StatusOK, jsonResponse{
 		"ok":               true,
 		"multica_user_id":  req.MulticaUserID,
-		"device_code":      stringVal(data, "device_code", "deviceCode"),
+		"device_code":      deviceCode,
 		"verification_url": stringVal(data, "verification_url", "verificationUrl"),
 		"user_code":        stringVal(data, "user_code", "userCode"),
 		"expires_in":       intVal(data, "expires_in", "expiresIn"),
