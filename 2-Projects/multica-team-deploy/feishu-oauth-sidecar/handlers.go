@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -330,23 +331,42 @@ func (s *Server) statusHandler(w http.ResponseWriter, r *http.Request) {
 
 	entry, ok := findMapping(entries, userID)
 	if !ok {
-		userHome := filepath.Join(s.cfg.UserHomesDir, userID)
+		// self-heal: mapping 缺但 token enc 已落地 (例如 04 polling 成功但脚本最后 exit 失败)
+		// → 查 lark-cli auth status 拿 openId+userName 补写 mapping,避免用户重新扫码
+		userHome := filepath.Join(s.cfg.UserHomesDir, "mc-user-"+userID)
 		if st, err := os.Stat(userHome); err == nil && st.IsDir() {
+			rec, healErr := s.tryHealMapping(ctx, userID, userHome)
+			if healErr != nil {
+				s.logger.Warn("self-heal try failed", "user_id", userID, "error", healErr.Error())
+			}
+			if healErr == nil && rec != nil {
+				entries = append(entries, *rec)
+				if saveErr := saveMappings(s.cfg.MappingFile, entries); saveErr != nil {
+					s.logger.Warn("self-heal save mapping failed", "user_id", userID, "error", saveErr.Error())
+				} else {
+					s.logger.Info("self-heal mapping written", "user_id", userID, "lark_user_open_id", rec.LarkUserOpenID)
+					entry = *rec
+					ok = true
+				}
+			}
+		}
+		if !ok {
+			homeFound := false
+			if st, err := os.Stat(userHome); err == nil && st.IsDir() {
+				homeFound = true
+			}
+			status := "no_token"
+			if homeFound {
+				status = "not_authorized"
+			}
 			writeJSON(w, http.StatusOK, jsonResponse{
 				"ok":              true,
 				"multica_user_id": userID,
 				"bound":           false,
-				"token_status":    "not_authorized",
+				"token_status":    status,
 			})
 			return
 		}
-		writeJSON(w, http.StatusOK, jsonResponse{
-			"ok":              true,
-			"multica_user_id": userID,
-			"bound":           false,
-			"token_status":    "no_token",
-		})
-		return
 	}
 
 	result, err := s.runner.Run(ctx, "05_agent_spawn.sh", userID, "auth", "status")
@@ -459,6 +479,76 @@ func findMapping(items []MappingEntry, userID string) (MappingEntry, bool) {
 	return MappingEntry{}, false
 }
 
+func saveMappings(path string, entries []MappingEntry) error {
+	data, err := json.MarshalIndent(entries, "", "  ")
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(path)
+	if dir != "" && dir != "." {
+		_ = os.MkdirAll(dir, 0o700)
+	}
+	tmp, err := os.CreateTemp(dir, "user_mapping.*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if _, err := tmp.Write(append(data, '\n')); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
+}
+
+// tryHealMapping: token enc 已落地但 mapping 缺时,直接 exec lark-cli auth status (绕过 05_spawn 的 mapping 检查) 补出 MappingEntry
+func (s *Server) tryHealMapping(ctx context.Context, userID, userHome string) (*MappingEntry, error) {
+	larkBin := os.Getenv("LARK_BIN")
+	if larkBin == "" {
+		// fallback to common nvm path; same default as wrapper
+		larkBin = filepath.Join(os.Getenv("HOME"), ".nvm/versions/node/v22.12.0/bin/lark-cli")
+	}
+	cmd := exec.CommandContext(ctx, larkBin, "auth", "status")
+	cmd.Env = append(os.Environ(), "HOME="+userHome)
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	stdout, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("exec lark-cli (bin=%s home=%s): %w stderr=%s", larkBin, userHome, err, strings.TrimSpace(stderr.String()))
+	}
+	obj, err := parseJSONObject(string(stdout))
+	if err != nil {
+		return nil, fmt.Errorf("parse lark-cli stdout (head=%q): %w", truncate(string(stdout), 200), err)
+	}
+	// lark-cli auth status 输出 .identities.user.{openId,userName,tokenStatus}
+	openID := ""
+	userName := ""
+	if ids, ok := obj["identities"].(map[string]any); ok {
+		if u, ok := ids["user"].(map[string]any); ok {
+			openID = stringVal(u, "openId", "open_id")
+			userName = stringVal(u, "userName", "user_name")
+		}
+	}
+	if openID == "" {
+		// fallback: 顶层有 userOpenId
+		openID = stringVal(obj, "userOpenId", "user_open_id")
+		userName = stringVal(obj, "userName", "user_name")
+	}
+	if openID == "" {
+		return nil, errors.New("auth status missing user openId")
+	}
+	return &MappingEntry{
+		MulticaUserID:  userID,
+		LarkUserOpenID: openID,
+		LarkUserName:   userName,
+		Home:           userHome,
+		ProvisionedAt:  time.Now().UTC(),
+	}, nil
+}
+
 func parseTokenStatus(out string) (TokenStatus, error) {
 	obj, err := parseJSONObject(out)
 	if err != nil {
@@ -500,6 +590,13 @@ func stripWarnLines(raw string) string {
 		out = append(out, line)
 	}
 	return strings.Join(out, "\n")
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "...(truncated)"
 }
 
 func stringVal(m map[string]any, keys ...string) string {
