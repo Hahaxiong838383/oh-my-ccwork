@@ -83,7 +83,7 @@ body{display:flex;justify-content:center;align-items:center;padding:24px 16px 40
     <section id="state-input" class="state active">
       <label for="userIdInput" class="field-label">Multica 用户 ID</label>
       <input id="userIdInput" class="id-input" type="text" placeholder="例如: user-123-abc" autocomplete="off" spellcheck="false">
-      <div class="hint">如果你是从系统跳转过来的链接，通常会自动带上用户 ID。</div>
+      <div class="hint">如未自动检测到，请先在另一标签页登录 <a href="https://multica.cli4.hahaxiong.cc" target="_blank" rel="noopener" style="color:#8ab0ff">multica</a> 后刷新本页。或直接在 multica CLI 跑 <code style="background:#1a1a1a;padding:2px 6px;border-radius:4px">multica user profile get</code> 拿 <code style="background:#1a1a1a;padding:2px 6px;border-radius:4px">id</code> 字段。</div>
       <button id="startBtn" class="primary-btn">开始飞书授权</button>
     </section>
 
@@ -326,12 +326,41 @@ body{display:flex;justify-content:center;align-items:center;padding:24px 16px 40
     catch(_){showToast("复制失败，请手动复制");}
   }
 
-  // ====== Query 参数自动发起 ======
-  function initFromQuery(){
+  // ====== Query 参数自动发起 (优先级 1) ======
+  // ====== /api/me 自动检测 multica 当前登录用户 (优先级 2, 同域 cookie 自动带过去) ======
+  async function autoDetectFromMulticaSession(){
+    try{
+      var res=await fetch("/api/me",{method:"GET",credentials:"include",headers:{"Accept":"application/json"}});
+      if(!res.ok)return null;
+      var data=await res.json();
+      var id=sanitizeUserID(data&&data.id);
+      return id||null;
+    }catch(_){return null;}
+  }
+
+  async function initFromQuery(){
     var params=new URLSearchParams(window.location.search);
     var queryID=sanitizeUserID(params.get("multica_user_id"));
     if(queryID){els.userIdInput.value=queryID;beginFlow(queryID);return;}
-    setState("input");els.userIdInput.focus();
+
+    // 自动检测 multica 当前登录用户
+    setState("input");
+    els.userIdInput.value="";
+    els.userIdInput.placeholder="正在自动检测 multica 当前登录用户...";
+    els.userIdInput.disabled=true;
+    els.startBtn.disabled=true;
+    var detectedID=await autoDetectFromMulticaSession();
+    els.userIdInput.disabled=false;
+    els.startBtn.disabled=false;
+    if(detectedID){
+      els.userIdInput.value=detectedID;
+      els.userIdInput.placeholder="例如: user-123-abc";
+      beginFlow(detectedID);
+      return;
+    }
+    // 自动检测失败 → fallback 手动输入
+    els.userIdInput.placeholder="例如: ece30832-3b2c-49b6-985c-c9254cd3f108";
+    els.userIdInput.focus();
   }
 
   // ====== 事件绑定 ======
