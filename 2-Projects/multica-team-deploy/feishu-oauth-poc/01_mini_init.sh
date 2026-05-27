@@ -46,7 +46,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
   exit 1
 fi
 
-APP_ID="$(jq -r '.appId // .app_id // empty' "$CONFIG_FILE")"
+APP_ID="$(jq -r '(.apps[0].appId // .appId // .app_id) // empty' "$CONFIG_FILE")"
 if [ -z "$APP_ID" ]; then
   err "config.json 中未找到 app_id"
   exit 1

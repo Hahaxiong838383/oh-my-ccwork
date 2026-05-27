@@ -70,8 +70,8 @@ scopes_json="$(echo "$poll_json" | jq -c '.scope // .scopes // []')"
 status_raw="$(HOME="$USER_HOME" lark-cli auth status --json 2>/dev/null || HOME="$USER_HOME" lark-cli auth status)"
 
 if echo "$status_raw" | jq -e . >/dev/null 2>&1; then
-  lark_user_open_id="$(echo "$status_raw" | jq -r '.user_open_id // .open_id // .user.open_id // empty')"
-  lark_user_name="$(echo "$status_raw" | jq -r '.lark_user_name // .user_name // .name // .user.name // empty')"
+  lark_user_open_id="$(echo "$status_raw" | jq -r '.userOpenId // .user_open_id // .open_id // .user.open_id // empty')"
+  lark_user_name="$(echo "$status_raw" | jq -r '.userName // .lark_user_name // .user_name // .name // .user.name // empty')"
 else
   lark_user_open_id="$(printf '%s\n' "$status_raw" | sed -n 's/.*open[_ -]*id[[:space:]]*:[[:space:]]*//Ip' | head -n1 | tr -d '\r')"
   lark_user_name="$(printf '%s\n' "$status_raw" | sed -n 's/.*user[_ -]*name[[:space:]]*:[[:space:]]*//Ip' | head -n1 | tr -d '\r')"
