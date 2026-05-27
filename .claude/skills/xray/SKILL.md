@@ -147,3 +147,40 @@ kill $(pgrep -f "/Users/rayman.chen/xray/xray run")
 | `~/xray/xray.log` | 运行日志 |
 | `~/Library/LaunchAgents/com.xray.proxy.plist` | launchd 服务 |
 | `~/.zshrc` | 终端代理环境变量 |
+
+## 多机部署（2026-05-27 加）
+
+**当前 xray 已在两台 Mac 部署**：
+
+| 机器 | binary | config 来源 | 用途 |
+|------|--------|------------|------|
+| Air M5 | v25.10.15 darwin/amd64 (Rosetta) | 主配 (V1.6) | 川哥日常 AI CLI 走代理 |
+| Mini M4 | **v26.3.23 darwin/arm64 (原生)** | rsync from Air | multica daemon + AI CLI runtime 走代理 |
+
+**Mini 部署经验**：
+- 推 config + scripts + geo dat（不推 binary, Mini 原生 arm64 v26.x 更新更原生）
+- 推 3 launchd plist (proxy/manager/rule-updater), 不推 proxy-setup (Mini 无需 macOS 系统代理设置)
+- 路由规则一致: GPT/Claude → 美宅-US-A, Gemini → Gemini 专用-US2-VLESS-Reality-IP
+- Web UI: http://10.9.1.54:8888 (Mini) 同 http://127.0.0.1:8888 (Air)
+
+**多机扩展 rsync 命令模板**:
+```bash
+rsync -avz --delete \
+    --exclude='xray' --exclude='xray-*.bak' \
+    --exclude='*.log*' --exclude='config.json.bak*' \
+    --exclude='backups/' \
+    ~/xray/ TARGET:~/xray/
+
+# scp 3 plists (不含 proxy-setup, 服务器机器无需)
+for p in com.xray.proxy com.xray.manager com.xray.rule-updater; do
+    scp ~/Library/LaunchAgents/$p.plist TARGET:~/Library/LaunchAgents/$p.plist
+done
+
+# 远程 bootstrap
+ssh TARGET 'for p in com.xray.proxy com.xray.manager com.xray.rule-updater; do
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/$p.plist
+done'
+```
+
+**关联**: [project_multica_team_deploy.md](memory/project_multica_team_deploy.md) 14:30-14:40 段落
+
