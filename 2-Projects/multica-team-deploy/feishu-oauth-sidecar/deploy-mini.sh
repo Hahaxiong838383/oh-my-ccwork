@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT_DIR"
 
 BIN_NAME="feishu-oauth-sidecar"
-REMOTE_HOST="mini"
+REMOTE_HOST="${REMOTE_HOST:-mini}"
 REMOTE_DIR="~/feishu-oauth-sidecar"
 REMOTE_PLIST="~/Library/LaunchAgents/com.multica.feishu-oauth.plist"
 
@@ -24,6 +24,6 @@ echo "[3/4] restart launch agent"
 ssh "$REMOTE_HOST" 'launchctl bootout gui/$(id -u)/com.multica.feishu-oauth 2>/dev/null || true; launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.multica.feishu-oauth.plist'
 
 echo "[4/4] health check"
-curl -fsS http://mini.lan:18090/healthz
+curl -fsS "http://${HEALTH_HOST:-mini.lan}:18090/healthz"
 
 echo "deploy done"

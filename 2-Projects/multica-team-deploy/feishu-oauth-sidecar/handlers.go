@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,6 +19,9 @@ import (
 )
 
 var userIDPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+
+//go:embed oauth-ui.html
+var oauthUIFS embed.FS
 
 type Config struct {
 	Port           string
@@ -126,6 +130,7 @@ func (s *Server) Router() http.Handler {
 	r.Use(s.requestLogMiddleware)
 
 	r.Get("/healthz", s.healthzHandler)
+	r.Get("/oauth-ui", s.serveOAuthUI)
 	r.Post("/api/feishu/device/start", s.startHandler)
 	r.Post("/api/feishu/device/complete", s.completeHandler)
 	r.Get("/api/feishu/device/status", s.statusHandler)
@@ -187,6 +192,21 @@ func (s *Server) rateLimitMiddleware(next http.Handler) http.Handler {
 func (s *Server) healthzHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.recoverPanic(w, r)
 	writeJSON(w, http.StatusOK, jsonResponse{"ok": true, "version": s.cfg.Version})
+}
+
+func (s *Server) serveOAuthUI(w http.ResponseWriter, r *http.Request) {
+	defer s.recoverPanic(w, r)
+	body, err := oauthUIFS.ReadFile("oauth-ui.html")
+	if err != nil {
+		s.logger.Error("read oauth-ui failed", "error", err)
+		writeJSON(w, http.StatusInternalServerError, jsonResponse{"ok": false, "error": "oauth ui unavailable"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(body)
 }
 
 func (s *Server) startHandler(w http.ResponseWriter, r *http.Request) {

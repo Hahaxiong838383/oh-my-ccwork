@@ -283,3 +283,24 @@ func TestStatusEndpoint(t *testing.T) {
 		}
 	})
 }
+
+func TestOAuthUIEndpoint(t *testing.T) {
+	r := &mockRunner{resp: map[string]mockResp{}}
+	h := newTestHandler(t, r, "[]", "")
+	req := httptest.NewRequest(http.MethodGet, "/oauth-ui", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("want 200 got %d", rr.Code)
+	}
+	if got := rr.Header().Get("Content-Type"); !strings.Contains(got, "text/html") {
+		t.Fatalf("unexpected content-type: %s", got)
+	}
+	if got := rr.Header().Get("Cache-Control"); !strings.Contains(got, "max-age=300") {
+		t.Fatalf("unexpected cache-control: %s", got)
+	}
+	if !strings.Contains(rr.Body.String(), "飞书扫码授权") {
+		t.Fatalf("unexpected body")
+	}
+}
