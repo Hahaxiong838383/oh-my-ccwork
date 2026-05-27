@@ -44,6 +44,7 @@ body{display:flex;justify-content:center;align-items:center;padding:24px 16px 40
 .qr-wrap{text-align:center}
 .qr-box{width:300px;height:300px;margin:0 auto;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;padding:14px}
 .qr-box canvas,.qr-box img{max-width:100%;max-height:100%}
+.qr-box pre.qr-ascii{margin:0;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:5px;line-height:5px;letter-spacing:0;color:#111;background:#fff;white-space:pre;overflow:hidden;font-weight:700}
 .qr-fallback{display:none;color:#222;font-size:14px;line-height:1.4;text-align:center}
 .qr-fallback.visible{display:block}
 .verify-link{margin:16px 0 0;font-size:14px;color:var(--sub);line-height:1.5}
@@ -134,7 +135,6 @@ body{display:flex;justify-content:center;align-items:center;padding:24px 16px 40
 </div>
 <div id="toast" class="toast" role="status"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
 (function(){
   /*
@@ -231,16 +231,20 @@ body{display:flex;justify-content:center;align-items:center;padding:24px 16px 40
 
   async function getJSON(url){var res=await fetch(url,{method:"GET"});if(!res.ok)throw new Error("请求失败");return res.json();}
 
-  // ====== QR 渲染 ======
-  function renderQRCode(url){
+  // ====== QR 渲染（用 sidecar 返回的 ASCII，零外部 CDN 依赖）======
+  function renderQRCode(qrAsciiBase64){
     els.qrFallback.classList.remove("visible");
     els.qrBox.innerHTML="";
     els.qrBox.appendChild(els.qrFallback);
-    if(!window.QRCode||typeof window.QRCode.toCanvas!=="function"){els.qrFallback.classList.add("visible");return;}
-    var canvas=document.createElement("canvas");els.qrBox.appendChild(canvas);
-    window.QRCode.toCanvas(canvas,url,{width:272,margin:1,color:{dark:"#111",light:"#fff"}},function(err){
-      if(err){if(canvas.parentNode===els.qrBox)els.qrBox.removeChild(canvas);els.qrFallback.classList.add("visible");}
-    });
+    if(!qrAsciiBase64){els.qrFallback.classList.add("visible");return;}
+    try{
+      // sidecar 返回的 qr_ascii 是 base64-encoded UTF-8 (含 ▀▄█ 块字符)
+      var decoded=decodeURIComponent(escape(atob(qrAsciiBase64)));
+      var pre=document.createElement("pre");
+      pre.className="qr-ascii";
+      pre.textContent=decoded;
+      els.qrBox.appendChild(pre);
+    }catch(e){els.qrFallback.classList.add("visible");}
   }
 
   // ====== 授权状态判断 ======
@@ -280,7 +284,7 @@ body{display:flex;justify-content:center;align-items:center;padding:24px 16px 40
     els.verifyLink.textContent=verificationURL||"打开飞书授权页";
     els.userCodeLine.textContent=data.user_code?("用户验证码："+data.user_code):"";
     els.statusTip.textContent="等待你扫码并确认授权，页面会自动刷新状态。";
-    renderQRCode(verificationURL);
+    renderQRCode(data.qr_ascii||"");
   }
 
   // ====== 开始授权流程 ======
