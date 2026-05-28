@@ -1,7 +1,7 @@
 # TODO — multica-team-deploy
 
-> **基线日期**：2026-05-28 14:40 hermes/codex runtime 三连修完成 + gemma-direct adapter 上线
-> **当前状态**：5 runtime 全 online + 6 模型实测通过（claude/codex-5.5/grok-4.20/gemma-4-e4b/gemini）。仍待 P0-A 邮件邀请 + P0-B issue 隔离心智沟通。
+> **基线日期**：2026-05-28 17:11 内测前 P0-A/P0-B 全开 + runtime 三连修完成
+> **当前状态**：5 runtime 全 online + 6 model 实测通过 + 4 邮箱白名单生效(dev mode 验证码 888888)。等 Resend API key 切真邮件。
 > **优先级标记**：🟥 P0 阻塞 / 🟧 P1 重要 / 🟦 P2 扩展 / 🟪 P3 长期 / 🟫 P4 加固
 
 ---
@@ -48,11 +48,11 @@
 > **2026-05-27 晚发现 2 个挂起问题,详见 [ISSUES-TRIAGE-2026-05-27.md](./ISSUES-TRIAGE-2026-05-27.md)**
 
 ### P0-A 邮件邀请收不到（阻塞内测开始）
-- [ ] **P0-A1**: 川哥给内测成员邮箱清单（2-3 人 PoC）
-- [ ] **P0-A2**: cc 改 QNAP `.env` `ALLOWED_EMAILS=...` + docker restart backend（5 min）
-- [ ] **P0-A3**: ONBOARDING.md 加方案 A 说明（验证码 888888，dev mode 临时）
-- [ ] **P0-A4**: 川哥下午注册 Resend 拿 API key
-- [ ] **P0-A5**: cc 切 production mode + 配 RESEND_API_KEY + 实测发邮件（30 min）
+- [x] **P0-A1**: 川哥给内测成员邮箱清单(2026-05-28: xinrun.li / rayman.chen / ping.yang @futurus.co)
+- [x] **P0-A2**: cc 改 QNAP `.env` `ALLOWED_EMAILS=...` + ~~docker restart~~ → `docker compose up -d backend`(restart 不 reload env 踩坑,详见 RETRO 2026-05-28)
+- [x] **P0-A3**: ONBOARDING.md Step 1 列 4 白名单邮箱 + 验证码 888888 提示
+- [ ] **P0-A4**: 川哥注册 Resend 拿 API key
+- [ ] **P0-A5**: cc 切 production mode + 配 RESEND_API_KEY + 实测发邮件(30 min)
 
 ### P0-B issue 隔离心智沟通
 - [ ] **P0-B1**: 明天上午跟内测成员说明"workspace 内 issue 默认互看"心智

@@ -73,9 +73,38 @@ How to fix: set `wire_api = "responses"` in your provider config.
    - `curl -m 30 <endpoint>` 验证公网连通性
    - 修源（plist env / config.toml）→ `bootout`+`bootstrap` 重载 → 派测试 issue 验证
 
+## 修复 3（傍晚追加）：P0-A 邮件白名单 + P0-B issue 隔离心智
+
+### P0-A 邮件白名单 — `docker restart` 不 reload `.env` 陷阱
+
+**第一次操作**:
+- QNAP `.env` `ALLOWED_EMAILS=...,xinrun.li@futurus.co,rayman.chen@futurus.co,ping.yang@futurus.co`
+- `docker restart multica-backend` → 表面 "successfully restarted",`/api` 200,daemon heartbeat 正常
+- **同事用 rayman.chen@futurus.co 注册 → 报 `user registration is disabled on this self-hosted instance`**
+
+**揭穿**:`docker exec multica-backend env | grep ALLOWED_EMAILS` 显示 container 内**仍是旧值**(只有 hahaxiong83@gmail.com)。
+
+**真根因**:`docker restart` 语义是"重启进程",**不重读 `.env` / `env_file`**。container env 在首次创建时已经 bake 进 container 元数据,restart 沿用旧值。
+
+**真修法**:
+```bash
+docker compose up -d backend   # compose 检测 env 变化自动 Recreate container
+# 输出: Container multica-backend  Recreate / Recreated / Started
+```
+container 销毁重建,新 env 灌进去,`docker exec env` 4 邮箱全显示,同事重试成功。
+
+### P0-B issue 隔离心智沟通
+- ONBOARDING.md 加新章「Issue 可见性与隔离」(Step 3 与「安全说明」之间)
+- 明示 multica 当前没 per-issue ACL,workspace 内全员透明 (类似 Linear/Jira 默认)
+- 3 种敏感场景应对路径:`private_to` metadata / HR-private workspace / 不放 multica
+- 区分两套独立机制:**issue 内容公开** vs **agent 调飞书身份严格隔离**
+
+### 经验沉淀
+- **`feedback_docker_restart_no_env_reload.md`** — docker restart 不 reload env,改 .env 必须 `docker compose up -d` 重建 container,`docker exec env` 是 single source of truth(不能只看主机 .env)。复用范围:任何 docker-compose + .env 自托管栈。
+
 ## 关联
 
 - 前置成果：[gemma-direct-adapter](./gemma-direct-adapter/) — opencode runtime hijack 跑 Gemma 4 E4B（11m → 20-32s）
 - 项目主线：[ONBOARDING.md](./ONBOARDING.md) / [ARCHITECTURE.md](./ARCHITECTURE.md)
 - 上次 retro：[RETRO-2026-05-27.md](./RETRO-2026-05-27.md)
-- 阻塞项：[ISSUES-TRIAGE-2026-05-27.md](./ISSUES-TRIAGE-2026-05-27.md)（邮件邀请 P0-A + issue 隔离 P0-B 仍未启动）
+- 原 P0 triage：[ISSUES-TRIAGE-2026-05-27.md](./ISSUES-TRIAGE-2026-05-27.md)

@@ -1,6 +1,10 @@
 # 2026-05-27 晚 · 内测前 2 个挂起问题分析
 
 > 川哥晚饭后提的两个真问题，明天去公司前必须解。完整调研 + 候选方案落盘。
+>
+> **2026-05-28 17:11 更新**:Q1+Q2 已落地,详见 [RETRO-2026-05-28-runtime-fixes.md §修复 3](./RETRO-2026-05-28-runtime-fixes.md)
+> - Q1(issue 隔离): ONBOARDING 加心智沟通章 + skill V3 metadata 检查待做(P1)
+> - Q2(邮件邀请): 4 邮箱白名单 dev mode 跑通(验证码 888888),Resend production 切换等川哥 API key
 
 ---
 
