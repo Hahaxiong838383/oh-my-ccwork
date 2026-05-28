@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """
-gemma-direct.py - multica direct-ollama adapter (v2.3: 加 retry + health check)
+gemma-direct.py - multica direct-ollama adapter (v2.4: 注入 agent instructions)
 模拟 opencode CLI 接口,跳过 agent loop 直调 Ollama,流式收 + batched emit stream-json
 
 multica daemon 调用方式 (实测):
   gemma-direct.py run --format json --dangerously-skip-permissions --dir <workdir> --model <provider/model> <PROMPT>
+
+v2.4 (2026-05-28):
+- 拿 issue.assignee_id → multica agent get → instructions 注入 Ollama system message,
+  让 multica web 改 agent instructions 即时生效
+- 没拿到 agent instructions 时 fallback DEFAULT_GUARDRAIL (基础范式 + refuse 模板)
 
 v2.3 (2026-05-28):
 - Ollama 启动前健康探测 (GET /api/tags, 5s),不可达直接 emit clear 错误 + 0 exit (让 daemon 写 comment)
@@ -43,6 +48,19 @@ OLLAMA_TIMEOUT = 600  # 单次 stream 调用上限 (Gemma 4 E4B prefill 长 prom
 # 可重试的网络/瞬时错误
 RETRYABLE_EXCEPTIONS = (URLError, HTTPError, ConnectionError, TimeoutError, OSError)
 
+# 当 multica agent instructions 拿不到时的兜底 system prompt
+# 保证即使 agent 没配 instructions 也有基本能力边界, 避免 Gemma 硬干超能力任务
+DEFAULT_GUARDRAIL = """你是 multica 部署的本地小模型 worker (Gemma 4 E4B Q4 in Ollama)。
+
+能力上限严格遵守:
+- ✅ 简单中文写作(周报/邮件/通知 <500 字) / 翻译 / 单事实问答 / 短摘要
+- ❌ 多步推理 / 复杂代码 / 长上下文 (>2K) / 工具调用 / 战略决策
+
+任务超出能力 → 直接 refuse:
+> 🤖 任务超出 Gemma 4 E4B 能力(<原因>)。建议改派复杂任务给「爱马仕grok（4.3）」或 cc(Claude)。
+
+输出原则: 中文 / 简洁直接 / 不啰嗦 / 不 hallucinate / 不确定标 [不确定]"""
+
 
 def short_id(prefix):
     return f"{prefix}_{uuid.uuid4().hex[:24]}"
@@ -75,11 +93,19 @@ def probe_ollama_health(timeout=HEALTH_TIMEOUT):
         return False, f"Ollama 健康探测异常 ({type(e).__name__}): {e}"
 
 
-def call_ollama_stream(model, user_prompt, timeout=OLLAMA_TIMEOUT):
-    """流式调 Ollama,yield 文本 chunk。抛 RETRYABLE_EXCEPTIONS 由外层 retry。"""
+def call_ollama_stream(model, user_prompt, system_prompt=None, timeout=OLLAMA_TIMEOUT):
+    """流式调 Ollama,yield 文本 chunk。抛 RETRYABLE_EXCEPTIONS 由外层 retry。
+
+    system_prompt: 可选 — 注入到 messages[0] role=system, 用于灌 agent instructions。
+                   Ollama OpenAI 兼容 chat API 支持 system role (实测 gemma4 会遵循)。
+    """
+    messages = []
+    if system_prompt and system_prompt.strip():
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": user_prompt})
     payload = {
         "model": model,
-        "messages": [{"role": "user", "content": user_prompt}],
+        "messages": messages,
         "stream": True,
     }
     req = urlrequest.Request(
@@ -111,7 +137,7 @@ def call_ollama_stream(model, user_prompt, timeout=OLLAMA_TIMEOUT):
                 yield content
 
 
-def call_ollama_with_retry(model, user_prompt):
+def call_ollama_with_retry(model, user_prompt, system_prompt=None):
     """
     包 call_ollama_stream + retry. 返回 (full_text: str, attempts_used: int, error: str | None).
     - 成功: (text, attempt, None)
@@ -121,7 +147,7 @@ def call_ollama_with_retry(model, user_prompt):
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             full_text = ""
-            for chunk in call_ollama_stream(model, user_prompt):
+            for chunk in call_ollama_stream(model, user_prompt, system_prompt=system_prompt):
                 full_text += chunk
             # 空响应 (Ollama 返回但 0 token) 算失败,触发 retry
             if not full_text.strip():
@@ -156,24 +182,69 @@ def multica_issue_get(issue_id):
         return None
 
 
+def multica_agent_get(agent_id):
+    """拿 agent 详情 (含 instructions). 失败返回 None, 不抛异常."""
+    if not agent_id:
+        return None
+    try:
+        out = subprocess.run(
+            [MULTICA_BIN, "agent", "get", agent_id, "--output", "json"],
+            capture_output=True, text=True, timeout=15, check=True,
+        ).stdout
+        idx = out.find("{")
+        return json.loads(out[idx:]) if idx >= 0 else None
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired,
+            json.JSONDecodeError, FileNotFoundError):
+        return None
+
+
+def resolve_system_prompt(issue):
+    """
+    从 issue.assignee 取 agent instructions 作为 system prompt.
+    - issue.assignee_type == "agent" 时拉 agent instructions
+    - 拿不到或为空 → 返回 DEFAULT_GUARDRAIL (确保最低能力边界)
+    """
+    if not issue:
+        return DEFAULT_GUARDRAIL
+    if issue.get("assignee_type") != "agent":
+        return DEFAULT_GUARDRAIL
+    agent_id = issue.get("assignee_id")
+    agent = multica_agent_get(agent_id)
+    if not agent:
+        return DEFAULT_GUARDRAIL
+    instructions = (agent.get("instructions") or "").strip()
+    return instructions if instructions else DEFAULT_GUARDRAIL
+
+
 def strip_model_prefix(model):
     return model.split("/", 1)[1] if "/" in model else model
 
 
-def build_user_prompt(raw_prompt):
-    """从 raw_prompt 抽 issue UUID + 取 multica issue description, 失败则返回 raw_prompt."""
+def build_user_prompt_and_system(raw_prompt):
+    """
+    从 raw_prompt 抽 issue UUID, 拉 issue + agent, 返回 (user_prompt, system_prompt).
+    抽不到 issue 时回退 raw_prompt + DEFAULT_GUARDRAIL.
+    """
     m = UUID_RE.search(raw_prompt)
     if not m:
-        return raw_prompt
+        return raw_prompt, DEFAULT_GUARDRAIL
     issue = multica_issue_get(m.group(0))
     if issue is None:
-        return raw_prompt
+        return raw_prompt, DEFAULT_GUARDRAIL
     title = issue.get("title", "")
     description = issue.get("description", "")
-    return (
+    user_prompt = (
         "请完成以下任务,直接给出结果,不需要工具调用。\n\n"
         f"标题: {title}\n\n详情:\n{description}"
     )
+    system_prompt = resolve_system_prompt(issue)
+    return user_prompt, system_prompt
+
+
+# 保留旧函数签名供 test_gemma_direct.py 已写的单测用 (向后兼容)
+def build_user_prompt(raw_prompt):
+    user_prompt, _ = build_user_prompt_and_system(raw_prompt)
+    return user_prompt
 
 
 def parse_args_safely(argv):
@@ -236,11 +307,11 @@ def main():
         })
         return
 
-    user_prompt = build_user_prompt(raw_prompt)
+    user_prompt, system_prompt = build_user_prompt_and_system(raw_prompt)
 
     # 内部 stream=true 收 (TTFB 快); 仍单次 emit 避免 v2.0 624KB comment 重蹈.
     # 真 streaming 体感待调研 multica daemon 是否支持 same-part-id delta merge.
-    full_text, attempts_used, error = call_ollama_with_retry(model, user_prompt)
+    full_text, attempts_used, error = call_ollama_with_retry(model, user_prompt, system_prompt=system_prompt)
 
     text_part_id = short_id("prt")
     if error:

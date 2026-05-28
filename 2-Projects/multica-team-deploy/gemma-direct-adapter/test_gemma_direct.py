@@ -115,22 +115,94 @@ class TestRetry(unittest.TestCase):
 
 class TestPromptBuilding(unittest.TestCase):
     def test_no_uuid_returns_raw(self):
+        # 无 issue id 时 user_prompt = raw, system_prompt = DEFAULT_GUARDRAIL
+        user, system = gd.build_user_prompt_and_system("just text")
+        self.assertEqual(user, "just text")
+        self.assertEqual(system, gd.DEFAULT_GUARDRAIL)
+        # 向后兼容: build_user_prompt 仍能跑
         self.assertEqual(gd.build_user_prompt("just text"), "just text")
 
     def test_uuid_but_multica_fails_returns_raw(self):
         with mock.patch.object(gd, "multica_issue_get", return_value=None):
             raw = "do issue 12345678-1234-1234-1234-123456789abc now"
-            self.assertEqual(gd.build_user_prompt(raw), raw)
+            user, system = gd.build_user_prompt_and_system(raw)
+            self.assertEqual(user, raw)
+            self.assertEqual(system, gd.DEFAULT_GUARDRAIL)
 
     def test_uuid_with_issue_substitutes(self):
-        with mock.patch.object(gd, "multica_issue_get", return_value={"title": "周报", "description": "写本周"}):
-            out = gd.build_user_prompt("处理 12345678-1234-1234-1234-123456789abc")
-            self.assertIn("标题: 周报", out)
-            self.assertIn("详情:\n写本周", out)
+        with mock.patch.object(gd, "multica_issue_get", return_value={"title": "周报", "description": "写本周", "assignee_type": "agent", "assignee_id": "agent-1"}), \
+             mock.patch.object(gd, "multica_agent_get", return_value={"instructions": "你是 Gemma worker, 简洁回答"}):
+            user, system = gd.build_user_prompt_and_system("处理 12345678-1234-1234-1234-123456789abc")
+            self.assertIn("标题: 周报", user)
+            self.assertIn("详情:\n写本周", user)
+            self.assertEqual(system, "你是 Gemma worker, 简洁回答")
 
     def test_strip_model_prefix(self):
         self.assertEqual(gd.strip_model_prefix("ollama/gemma4:e4b"), "gemma4:e4b")
         self.assertEqual(gd.strip_model_prefix("gemma4:e4b"), "gemma4:e4b")
+
+
+class TestSystemPromptResolution(unittest.TestCase):
+    def test_no_issue_returns_default(self):
+        self.assertEqual(gd.resolve_system_prompt(None), gd.DEFAULT_GUARDRAIL)
+
+    def test_assignee_type_not_agent_returns_default(self):
+        issue = {"assignee_type": "user", "assignee_id": "u1"}
+        self.assertEqual(gd.resolve_system_prompt(issue), gd.DEFAULT_GUARDRAIL)
+
+    def test_agent_with_empty_instructions_returns_default(self):
+        with mock.patch.object(gd, "multica_agent_get", return_value={"instructions": ""}):
+            issue = {"assignee_type": "agent", "assignee_id": "a1"}
+            self.assertEqual(gd.resolve_system_prompt(issue), gd.DEFAULT_GUARDRAIL)
+
+    def test_agent_with_instructions_returns_them(self):
+        with mock.patch.object(gd, "multica_agent_get", return_value={"instructions": "  custom guard  "}):
+            issue = {"assignee_type": "agent", "assignee_id": "a1"}
+            # 应 strip 前后空格但保留内部
+            self.assertEqual(gd.resolve_system_prompt(issue), "custom guard")
+
+    def test_agent_get_fails_returns_default(self):
+        with mock.patch.object(gd, "multica_agent_get", return_value=None):
+            issue = {"assignee_type": "agent", "assignee_id": "a1"}
+            self.assertEqual(gd.resolve_system_prompt(issue), gd.DEFAULT_GUARDRAIL)
+
+
+class TestSystemPromptInjection(unittest.TestCase):
+    def test_system_message_included_when_provided(self):
+        """call_ollama_stream 应该把 system_prompt 注入 messages[0] role=system."""
+        captured_payload = []
+
+        def fake_urlopen(req, *a, **kw):
+            captured_payload.append(json.loads(req.data.decode("utf-8")))
+            chunks = [make_ollama_chunk("ok"), b"data: [DONE]\n"]
+            return FakeStreamResp(chunks)
+
+        with mock.patch.object(gd.urlrequest, "urlopen", side_effect=fake_urlopen):
+            list(gd.call_ollama_stream("m", "user q", system_prompt="be brief"))
+
+        self.assertEqual(len(captured_payload), 1)
+        msgs = captured_payload[0]["messages"]
+        self.assertEqual(len(msgs), 2)
+        self.assertEqual(msgs[0]["role"], "system")
+        self.assertEqual(msgs[0]["content"], "be brief")
+        self.assertEqual(msgs[1]["role"], "user")
+        self.assertEqual(msgs[1]["content"], "user q")
+
+    def test_no_system_message_when_empty(self):
+        """system_prompt 为空 → 不注入 system message,只有 user."""
+        captured_payload = []
+
+        def fake_urlopen(req, *a, **kw):
+            captured_payload.append(json.loads(req.data.decode("utf-8")))
+            chunks = [make_ollama_chunk("ok"), b"data: [DONE]\n"]
+            return FakeStreamResp(chunks)
+
+        with mock.patch.object(gd.urlrequest, "urlopen", side_effect=fake_urlopen):
+            list(gd.call_ollama_stream("m", "user q"))
+
+        msgs = captured_payload[0]["messages"]
+        self.assertEqual(len(msgs), 1)
+        self.assertEqual(msgs[0]["role"], "user")
 
 
 class TestArgsParsing(unittest.TestCase):
