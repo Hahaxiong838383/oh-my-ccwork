@@ -10,8 +10,13 @@
 > 已经收到川哥邀请邮件的，跳过此步直接 Step 2。
 
 1. 打开 **https://multica.cli4.hahaxiong.cc**
-2. 用收到的邀请邮箱注册 / 登录
-3. 完成 onboarding 问卷（30 秒）
+2. 用以下任一**白名单邮箱**注册 / 登录：
+   - `hahaxiong83@gmail.com`（川哥）
+   - `xinrun.li@futurus.co`
+   - `rayman.chen@futurus.co`
+   - `ping.yang@futurus.co`
+3. **当前 dev 模式不发真邮件**，邮箱验证码统一填 **`888888`**（10 人内测临时方案，下周切真邮件）
+4. 完成 onboarding 问卷（30 秒）
 
 完成标志：能看到 multica 工作台 + 你头像在右上角。
 
@@ -65,6 +70,39 @@ agent 严格按 [飞书代理操作 skill V2](feishu-oauth-integration/skill-fei
 - 先验证你的 token 还 valid（每次操作前都验证）
 - 调用 lark-cli 完成 → 返回真实 message_id / document_id 作为证据
 - token 失效会拒绝执行 + 提示你重走 Step 2
+
+---
+
+## Issue 可见性与隔离 ⚠️ 必读
+
+> 这是 multica 当前架构的**重要心智**，避免误把敏感内容放到公开 issue 里。
+
+### 默认：workspace 内全员透明
+
+multica 当前**没有 per-issue ACL**。同一 workspace 里所有 issue **互相可见**（包括 description / comment / metadata / agent 产出）。这是协作平台 by design（类似 Linear / Jira 默认公开）。
+
+**意味着**：
+- ✅ 业务 issue（写代码 / 调研 / 内部讨论）— 团队互看互学，OK
+- ⚠️ 敏感 issue（HR 简历 / 合同 / 个人隐私 / 第三方机密）— **会被同 workspace 其他成员看到**
+
+### 处理敏感内容的 3 个选择
+
+| 场景 | 建议做法 |
+|------|---------|
+| 偶尔涉及个人隐私（如让 agent 写一封私人邮件） | issue.metadata 加 `private_to=<你的 multica user_id>`，agent skill 会 check 不匹配就拒绝执行（不能防 UI 窥视，但能防 agent 误操作给别人转发） |
+| 持续处理 HR / 合同等敏感流程 | 跟川哥申请单独建 **HR-private workspace**，只拉相关人，物理隔离 |
+| 第三方机密（合作方 NDA 等） | **不要放 multica**，走线下 / 加密渠道 |
+
+### Agent 调你飞书身份的隔离（独立于 issue 可见性）
+
+issue 内容大家能看，但**调飞书 API 用谁的身份**是严格隔离的：
+- agent 用 `issue.metadata.feishu_user_id` 对应那个人的 token，**不是 issue 创建者，也不是 workspace owner**
+- 没注入 `feishu_user_id` → agent 拒绝执行
+- 即使 owner（川哥）也**不能**冒用你的飞书身份发消息（skill 铁律）
+
+### 试用反馈
+
+如果你发现某个场景"必须 issue 级隔离才能用"，跟川哥说，会评估是否 fork multica 加 ACL 字段（当前是接受透明、必要时分 workspace）。
 
 ---
 
