@@ -33,8 +33,29 @@ class FakeStreamResp:
     def read(self, n=-1): return b""
 
 
-def make_ollama_chunk(content):
-    return "data: " + json.dumps({"choices": [{"delta": {"content": content}}]}) + "\n"
+def make_ollama_chunk(content, done=False):
+    """v2.5+: Ollama 原生 /api/chat NDJSON 格式 — 每行一个 JSON, 不再是 SSE data:..."""
+    obj = {
+        "model": "gemma4:e4b-it-q4_K_M",
+        "created_at": "2026-05-28T00:00:00Z",
+        "message": {"role": "assistant", "content": content},
+        "done": done,
+    }
+    return (json.dumps(obj) + "\n").encode()
+
+
+def make_done_chunk():
+    """流末尾的 done=true 标记 (Ollama 原生 API 强制要求才结束)"""
+    obj = {
+        "model": "gemma4:e4b-it-q4_K_M",
+        "created_at": "2026-05-28T00:00:01Z",
+        "message": {"role": "assistant", "content": ""},
+        "done": True,
+        "done_reason": "stop",
+        "eval_count": 10,
+        "total_duration": 1000000000,
+    }
+    return (json.dumps(obj) + "\n").encode()
 
 
 class TestHealthProbe(unittest.TestCase):
@@ -53,7 +74,7 @@ class TestHealthProbe(unittest.TestCase):
 
 class TestRetry(unittest.TestCase):
     def test_succeeds_first_try(self):
-        chunks = [make_ollama_chunk("你好"), make_ollama_chunk("世界"), b"data: [DONE]\n"]
+        chunks = [make_ollama_chunk("你好"), make_ollama_chunk("世界"), make_done_chunk()]
         with mock.patch.object(gd.urlrequest, "urlopen", return_value=FakeStreamResp(chunks)), \
              mock.patch.object(gd.time, "sleep") as sleep_mock:
             text, attempts, err = gd.call_ollama_with_retry("test-model", "prompt")
@@ -63,7 +84,7 @@ class TestRetry(unittest.TestCase):
             sleep_mock.assert_not_called()  # 首次成功不该 sleep
 
     def test_retries_then_succeeds(self):
-        chunks_ok = [make_ollama_chunk("成功了"), b"data: [DONE]\n"]
+        chunks_ok = [make_ollama_chunk("成功了"), make_done_chunk()]
         # 第 1 次 raise URLError,第 2 次成功
         responses = [URLError("net flaky"), FakeStreamResp(chunks_ok)]
         def urlopen_side_effect(*a, **kw):
@@ -89,8 +110,8 @@ class TestRetry(unittest.TestCase):
 
     def test_empty_response_triggers_retry(self):
         """Ollama 返回但 0 token (例: 模型 hang 后 yield 0 content) 应触发 retry."""
-        empty_chunks = [b"data: [DONE]\n"]  # 没有 content delta
-        nonempty = [make_ollama_chunk("ok"), b"data: [DONE]\n"]
+        empty_chunks = [make_done_chunk()]  # 没有 content delta
+        nonempty = [make_ollama_chunk("ok"), make_done_chunk()]
         responses = [FakeStreamResp(empty_chunks), FakeStreamResp(nonempty)]
         def urlopen_side_effect(*a, **kw):
             return responses.pop(0)
@@ -174,7 +195,7 @@ class TestSystemPromptInjection(unittest.TestCase):
 
         def fake_urlopen(req, *a, **kw):
             captured_payload.append(json.loads(req.data.decode("utf-8")))
-            chunks = [make_ollama_chunk("ok"), b"data: [DONE]\n"]
+            chunks = [make_ollama_chunk("ok"), make_done_chunk()]
             return FakeStreamResp(chunks)
 
         with mock.patch.object(gd.urlrequest, "urlopen", side_effect=fake_urlopen):
@@ -194,7 +215,7 @@ class TestSystemPromptInjection(unittest.TestCase):
 
         def fake_urlopen(req, *a, **kw):
             captured_payload.append(json.loads(req.data.decode("utf-8")))
-            chunks = [make_ollama_chunk("ok"), b"data: [DONE]\n"]
+            chunks = [make_ollama_chunk("ok"), make_done_chunk()]
             return FakeStreamResp(chunks)
 
         with mock.patch.object(gd.urlrequest, "urlopen", side_effect=fake_urlopen):
@@ -203,6 +224,47 @@ class TestSystemPromptInjection(unittest.TestCase):
         msgs = captured_payload[0]["messages"]
         self.assertEqual(len(msgs), 1)
         self.assertEqual(msgs[0]["role"], "user")
+
+
+class TestOllamaOptions(unittest.TestCase):
+    """v2.5: 验证 num_ctx / num_predict 通过 options 字段传入 Ollama /api/chat."""
+
+    def _capture_payload(self, content="ok"):
+        captured = []
+
+        def fake_urlopen(req, *a, **kw):
+            captured.append(json.loads(req.data.decode("utf-8")))
+            return FakeStreamResp([make_ollama_chunk(content), make_done_chunk()])
+
+        return captured, fake_urlopen
+
+    def test_default_options_used(self):
+        captured, fake = self._capture_payload()
+        with mock.patch.object(gd.urlrequest, "urlopen", side_effect=fake):
+            list(gd.call_ollama_stream("m", "q"))
+        opts = captured[0].get("options", {})
+        self.assertEqual(opts["num_ctx"], gd.DEFAULT_NUM_CTX)
+        self.assertEqual(opts["num_predict"], gd.DEFAULT_NUM_PREDICT)
+
+    def test_explicit_options_override(self):
+        captured, fake = self._capture_payload()
+        with mock.patch.object(gd.urlrequest, "urlopen", side_effect=fake):
+            list(gd.call_ollama_stream("m", "q", num_ctx=65536, num_predict=2048))
+        opts = captured[0]["options"]
+        self.assertEqual(opts["num_ctx"], 65536)
+        self.assertEqual(opts["num_predict"], 2048)
+
+    def test_uses_native_api_endpoint(self):
+        """v2.5 切到 /api/chat 而不是 /v1/chat/completions"""
+        self.assertTrue(gd.OLLAMA_CHAT_URL.endswith("/api/chat"))
+
+    def test_error_field_raises_for_retry(self):
+        """Ollama 返回 {error:"..."} 应抛 URLError 让外层 retry"""
+        chunks = [(json.dumps({"error": "model not loaded"}) + "\n").encode()]
+        with mock.patch.object(gd.urlrequest, "urlopen", return_value=FakeStreamResp(chunks)):
+            with self.assertRaises(gd.URLError) as cm:
+                list(gd.call_ollama_stream("m", "q"))
+            self.assertIn("model not loaded", str(cm.exception))
 
 
 class TestArgsParsing(unittest.TestCase):

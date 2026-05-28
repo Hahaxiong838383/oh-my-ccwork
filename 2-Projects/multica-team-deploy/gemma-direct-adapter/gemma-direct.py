@@ -6,6 +6,12 @@ gemma-direct.py - multica direct-ollama adapter (v2.4: 注入 agent instructions
 multica daemon 调用方式 (实测):
   gemma-direct.py run --format json --dangerously-skip-permissions --dir <workdir> --model <provider/model> <PROMPT>
 
+v2.5 (2026-05-28):
+- 切到 Ollama 原生 /api/chat 端点(NDJSON 流) 替代 /v1/chat/completions,以便传 options.num_ctx
+- 默认 num_ctx=32768 (32K, Gemma 4 E4B 支持到 128K 但 32K 平衡 VRAM/速度)
+- 修隐藏严重 bug: 之前 Ollama 默认 num_ctx=2048 直接砍长输入到 2K, agent.instructions 也被砍
+- DEFAULT_GUARDRAIL 重写为反映 Gemma 4 真实能力上限 (128K context / 多模态 / 中等推理 OK)
+
 v2.4 (2026-05-28):
 - 拿 issue.assignee_id → multica agent get → instructions 注入 Ollama system message,
   让 multica web 改 agent instructions 即时生效
@@ -36,7 +42,8 @@ from urllib.error import URLError, HTTPError
 UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 MULTICA_BIN = os.path.expanduser("~/bin/multica")
 OLLAMA_BASE = "http://127.0.0.1:11434"
-OLLAMA_CHAT_URL = OLLAMA_BASE + "/v1/chat/completions"
+# v2.5: 切到 Ollama 原生 /api/chat 端点 (NDJSON 流),OpenAI 兼容 /v1/chat/completions 不接 options.num_ctx
+OLLAMA_CHAT_URL = OLLAMA_BASE + "/api/chat"
 OLLAMA_TAGS_URL = OLLAMA_BASE + "/api/tags"
 
 # Retry 策略: 总尝试次数 = MAX_ATTEMPTS, 失败间隔取 RETRY_DELAYS[attempt-1]
@@ -45,21 +52,56 @@ RETRY_DELAYS = [5, 15]  # 第 1 次失败后等 5s,第 2 次后 15s
 HEALTH_TIMEOUT = 5
 OLLAMA_TIMEOUT = 600  # 单次 stream 调用上限 (Gemma 4 E4B prefill 长 prompt 可能需要)
 
+# Gemma 4 E4B 模型本身支持 131072 (128K) context, 但 Ollama 默认 num_ctx=2048 直接砍输入。
+# 32768 (32K) 平衡 VRAM/速度: ~32K input + ~32K output 足够 multica 长任务,VRAM 占用可控。
+# 可被 env GEMMA_NUM_CTX override,极少数 100K+ 长文档场景设 131072。
+DEFAULT_NUM_CTX = int(os.environ.get("GEMMA_NUM_CTX", "32768"))
+DEFAULT_NUM_PREDICT = int(os.environ.get("GEMMA_NUM_PREDICT", "8192"))  # 输出 token 上限
+
 # 可重试的网络/瞬时错误
 RETRYABLE_EXCEPTIONS = (URLError, HTTPError, ConnectionError, TimeoutError, OSError)
 
 # 当 multica agent instructions 拿不到时的兜底 system prompt
-# 保证即使 agent 没配 instructions 也有基本能力边界, 避免 Gemma 硬干超能力任务
-DEFAULT_GUARDRAIL = """你是 multica 部署的本地小模型 worker (Gemma 4 E4B Q4 in Ollama)。
+# 反映 Gemma 4 E4B 真实能力 (基于官方模型卡 + benchmark, 2026-05-28 更新)
+DEFAULT_GUARDRAIL = """你是 multica 部署的 Gemma 4 E4B (本地 Ollama, Studio M2 Max, 47 TPS, 不走云端 API)。
 
-能力上限严格遵守:
-- ✅ 简单中文写作(周报/邮件/通知 <500 字) / 翻译 / 单事实问答 / 短摘要
-- ❌ 多步推理 / 复杂代码 / 长上下文 (>2K) / 工具调用 / 战略决策
+# 真实能力 (基于官方模型卡 + benchmark)
 
-任务超出能力 → 直接 refuse:
-> 🤖 任务超出 Gemma 4 E4B 能力(<原因>)。建议改派复杂任务给「爱马仕grok（4.3）」或 cc(Claude)。
+✅ **强项**:
+- 中文/英文写作: 周报/邮件/技术文档/翻译/摘要 (输入 <32K, 输出 <8K)
+- 中等推理: MMLU Pro 69.4% / GPQA Diamond 58.6% — 多步思考 OK, 但**复杂数学/竞赛级** (AIME 42.5%) 不稳
+- 代码: LiveCodeBench 52% / Codeforces ELO 940 — 小脚本/单文件 bug fix/补全 OK, 50-200 行可控
+- 结构化输出: JSON / Markdown 表格 / 列表 — 原生 system role + function calling
+- 多模态 (官方支持但 multica 当前未传入图像/音频): OCR/图表/PDF/30s 音频/60s 视频
+- 长上下文: 128K 模型上限, 当前配 32K — 可塞整篇长文档
+- 思维模式: 复杂任务可用 <think>...</think> 先内部推理再答 (Gemma 4 IT 原生支持)
 
-输出原则: 中文 / 简洁直接 / 不啰嗦 / 不 hallucinate / 不确定标 [不确定]"""
+⚠️ **限制 (要主动声明而不是装作万能)**:
+- 知识截止 **2026-01**, 之后的事实需要 RAG/搜索, 不知道就说 [不确定]
+- 不是知识库, 法律/政策/价格/产品规格不能裸答
+- 复杂多步 Agent 流程不稳定, 不要裸跑生产
+- 强常识推理/讽刺/隐喻可能漏
+
+❌ **真不能 (硬性 refuse)**:
+- 大型代码工程 (>500 行 / 跨多文件 / 复杂算法竞赛)
+- 高风险决策 (金融交易 / 数据库写入 / 权限变更 / 安全审计)
+- 实时数据 / 精确事实查询 (没接 RAG 时)
+
+# 工作原则
+
+1. **中文回复** (术语保留英文)
+2. **直接给结果** (无 throat clearing / 无"作为 AI 助手..."套话)
+3. **不确定标 [不确定]**, 拿不准的事实标 <请补充具体值>
+4. **复杂任务可用 thinking mode**: 先在 <think>...</think> 内部推理, 再给最终答案
+5. **超能力 refuse 模板**:
+   > 🤖 此任务超出 Gemma 4 E4B 能力 (<具体原因>)。建议改派:
+   > - 复杂决策/战略 → 「爱马仕grok（4.3）」或 cc(Claude)
+   > - 多文件代码工程 → codex
+   > - 实时数据/精确事实 → 接 RAG 或问 gemini
+
+# 角色边界
+- worker, 不是 coordinator: 不派单, 不调度
+- 1 次完整产出, 无 multi-turn"""
 
 
 def short_id(prefix):
@@ -93,20 +135,30 @@ def probe_ollama_health(timeout=HEALTH_TIMEOUT):
         return False, f"Ollama 健康探测异常 ({type(e).__name__}): {e}"
 
 
-def call_ollama_stream(model, user_prompt, system_prompt=None, timeout=OLLAMA_TIMEOUT):
-    """流式调 Ollama,yield 文本 chunk。抛 RETRYABLE_EXCEPTIONS 由外层 retry。
+def call_ollama_stream(model, user_prompt, system_prompt=None, timeout=OLLAMA_TIMEOUT,
+                       num_ctx=None, num_predict=None):
+    """流式调 Ollama 原生 /api/chat (NDJSON), yield 文本 chunk。抛 RETRYABLE_EXCEPTIONS 由外层 retry。
 
-    system_prompt: 可选 — 注入到 messages[0] role=system, 用于灌 agent instructions。
-                   Ollama OpenAI 兼容 chat API 支持 system role (实测 gemma4 会遵循)。
+    切到原生 API (v2.5) 是为了能传 options.num_ctx — OpenAI 兼容 /v1/chat/completions 不接 options,
+    会让 Ollama 用默认 num_ctx=2048 (致命: 把 128K 模型砍成 2K)。
+
+    system_prompt: 注入到 messages[0] role=system, 用于灌 agent instructions。
+    num_ctx: context 窗口 (默认 DEFAULT_NUM_CTX=32K), Gemma 4 E4B 模型支持到 131072。
+    num_predict: 输出 token 上限 (默认 DEFAULT_NUM_PREDICT=8K), -1 = 无限制。
     """
     messages = []
     if system_prompt and system_prompt.strip():
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": user_prompt})
+    options = {
+        "num_ctx": num_ctx if num_ctx is not None else DEFAULT_NUM_CTX,
+        "num_predict": num_predict if num_predict is not None else DEFAULT_NUM_PREDICT,
+    }
     payload = {
         "model": model,
         "messages": messages,
         "stream": True,
+        "options": options,
     }
     req = urlrequest.Request(
         OLLAMA_CHAT_URL,
@@ -114,27 +166,28 @@ def call_ollama_stream(model, user_prompt, system_prompt=None, timeout=OLLAMA_TI
         headers={"Content-Type": "application/json"},
         method="POST",
     )
+    # 原生 /api/chat 流式格式: NDJSON 每行一个 JSON 对象
+    # {"model":"...","created_at":"...","message":{"role":"assistant","content":"..."},"done":false}
+    # 最后一行 done=true 带 metadata (eval_count / total_duration 等)
     with urlrequest.urlopen(req, timeout=timeout) as resp:
         for line in resp:
             line = line.strip()
             if not line:
                 continue
-            if line.startswith(b"data: "):
-                line = line[6:]
-            if line == b"[DONE]":
-                break
             try:
                 chunk = json.loads(line.decode("utf-8"))
             except json.JSONDecodeError:
                 # 单 chunk 解码失败不应 abort 整个 stream
                 continue
-            choices = chunk.get("choices") or []
-            if not choices:
-                continue
-            delta = choices[0].get("delta") or {}
-            content = delta.get("content")
+            # Ollama 错误情况: {"error":"..."} 立即抛
+            if "error" in chunk and chunk["error"]:
+                raise URLError(f"Ollama API error: {chunk['error']}")
+            message = chunk.get("message") or {}
+            content = message.get("content")
             if content:
                 yield content
+            if chunk.get("done"):
+                break
 
 
 def call_ollama_with_retry(model, user_prompt, system_prompt=None):
