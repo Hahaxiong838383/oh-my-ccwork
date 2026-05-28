@@ -1,7 +1,7 @@
 # TODO — multica-team-deploy
 
-> **基线日期**：2026-05-28 17:11 内测前 P0-A/P0-B 全开 + runtime 三连修完成
-> **当前状态**：5 runtime 全 online + 6 model 实测通过 + 4 邮箱白名单生效(dev mode 验证码 888888)。等 Resend API key 切真邮件。
+> **基线日期**：2026-05-28 18:36 Gemma 4 E4B v2.5 真实能力解锁 + 双 grok coordinator 配置 + runtime 三连修 + 内测前 P0-A/P0-B 完成
+> **当前状态**：5 runtime 全 online + 8 active agent 配置就绪 (含 Gemma v2.5 / 爱马仕grok 快速+4.3 / 飞书代理 V3 + HR squad 4 个) + 4 邮箱白名单生效。等 Resend 切真邮件。
 > **优先级标记**：🟥 P0 阻塞 / 🟧 P1 重要 / 🟦 P2 扩展 / 🟪 P3 长期 / 🟫 P4 加固
 
 ---
@@ -40,6 +40,15 @@
 - [x] **hermes runtime 修复** — daemon plist 加 HTTPS_PROXY/HTTP_PROXY/ALL_PROXY/NO_PROXY 走 xray mixed (127.0.0.1:10808)，FUT-34 grok-4.20 26s 完成
 - [x] **codex runtime 修复** — 删 `~/.codex/config.toml` 末尾遗留 `[model_providers.ollama]` wire_api="chat" block，FUT-35 codex-5.5 90s 完成
 - [x] **RETRO-2026-05-28-runtime-fixes.md** 三连修复盘
+
+### Agent 体系完整化 (2026-05-28 下午+傍晚)
+- [x] **archived agent name 释放** SQL 给 4 个 archived agent 加 [archived-<date>] 后缀腾 name slot,避免 23505
+- [x] **爱马仕grok（快速）coordinator** 灌入 v2 instructions (0 号铁律 + 派单流程 + 4.3 agent id 硬编码),FUT-39 端到端验证派子 issue 成功
+- [x] **爱马仕grok（4.3）deep worker** 灌入 RPT 五步范式 instructions
+- [x] **gemma-direct adapter v2.4** 拉 multica agent get → 注入 Ollama system message,multica web 改 instructions 即时生效
+- [x] **gemma-direct adapter v2.5** ★ 修 num_ctx=2048 隐藏 bug (Ollama 默认 2K, Gemma 4 支持 128K) — 切 /api/chat 原生 NDJSON + options.num_ctx=32K
+- [x] **Gemma 4 E4B agent v2 instructions** 基于官方模型卡 + benchmark 重写 (强项/中等限制/真不能三档),thinking mode 引导
+- [x] **5 维度能力实测** FUT-43~47: 中等推理 + 结构化 JSON + 代码 LRU+TTL + 长输入摘要 + 应 refuse 全部 ✅
 
 ---
 
@@ -119,9 +128,13 @@
 - [ ] **secrets rotation** multica PAT / FRP token / LXJ key 定期轮换
 - [ ] **04 polling 进度上报** sidecar log 加 "polling started/token detected/exit gracefully" 让运维看到完整链路
 - [ ] **修个别旧脚本 quoting** 派 codex 时偶尔出现 sed 命令 quoting 错误，文档教训
+- [x] **gemma-direct 失败重试** v2.3 已加 3 次 retry + 5s/15s 退避 + Ollama 健康探测 (FUT-36 验证)
 - [ ] **gemma-direct 真 streaming** 当前 batch 收完再 emit，multica web 看不到逐字流式，需调研 daemon stream-json 协议
-- [ ] **gemma-direct 失败重试** Ollama 一次失败就报错，加 1-2 retry + ollama 健康探测
+- [ ] **gemma 多模态支持** adapter v2.5 已切原生 /api/chat,可加 messages[].images: [base64] 让 Gemma OCR/图表/PDF 能力发挥
+- [ ] **gemma 思考模式 post-process** 当前 `<think>...</think>` 全发给用户,可在 adapter 端切片只发块外答案
+- [ ] **gemma 128K full ctx 测试** 当前 32K, VRAM 占用 ~25GB; Studio 128GB 支持全开 128K (~50GB),需要测速度衰减
 - [ ] **xAI proxy 凭据保护** xray 节点切换/失效后 hermes 直接挂，加 healthz 自检脚本
+- [ ] **multica agent.skills 字段对 hijacked agent 不生效** 在 gemma-direct README 标说明,避免团队误以为配 skill 就生效
 
 ---
 
