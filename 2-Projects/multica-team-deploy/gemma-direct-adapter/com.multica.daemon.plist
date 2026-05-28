@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.multica.daemon</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/rayman.chen/bin/multica</string>
+    <string>daemon</string>
+    <string>start</string>
+    <string>--foreground</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/rayman.chen/.nvm/versions/node/v22.12.0/bin:/Users/rayman.chen/.local/bin:/Users/rayman.chen/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>MULTICA_OPENCODE_PATH</key>
+    <string>/Users/rayman.chen/bin/opencode-gemma-direct</string>
+    <key>HOME</key>
+    <string>/Users/rayman.chen</string>
+  </dict>
+  <key>KeepAlive</key><true/>
+  <key>RunAtLoad</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>StandardOutPath</key><string>/Users/rayman.chen/Library/Logs/multica-daemon.log</string>
+  <key>StandardErrorPath</key><string>/Users/rayman.chen/Library/Logs/multica-daemon.log</string>
+</dict>
+</plist>
