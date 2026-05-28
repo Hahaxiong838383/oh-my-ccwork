@@ -43,7 +43,7 @@ multica daemon
 |------|------------|------|
 | `gemma-direct.py` | `~/bin/gemma-direct.py` | 主 adapter Python 脚本 (172 行) |
 | `opencode-gemma-direct.sh` | `~/bin/opencode-gemma-direct` | shell wrapper，让 multica daemon 调 |
-| `com.multica.daemon.plist` | `~/Library/LaunchAgents/com.multica.daemon.plist` | multica daemon launchd 自启 (含 `MULTICA_OPENCODE_PATH` 环境变量) |
+| `com.multica.daemon.plist` | `~/Library/LaunchAgents/com.multica.daemon.plist` | multica daemon launchd 自启 (含 `MULTICA_OPENCODE_PATH` + 2026-05-28 加的 HTTPS_PROXY/NO_PROXY 走 xray 10808 让 hermes runtime 能调境外 LLM) |
 
 ## 部署
 

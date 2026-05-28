@@ -1,7 +1,7 @@
 # TODO — multica-team-deploy
 
-> **基线日期**：2026-05-27 22:40 完成飞书集成全链路 + ONBOARDING
-> **当前状态**：multica + 飞书 OAuth side-car + oauth-ui + skill ↔ agent ↔ lark-cli 端到端实测通过。明天去公司发邀请给团队。
+> **基线日期**：2026-05-28 14:40 hermes/codex runtime 三连修完成 + gemma-direct adapter 上线
+> **当前状态**：5 runtime 全 online + 6 模型实测通过（claude/codex-5.5/grok-4.20/gemma-4-e4b/gemini）。仍待 P0-A 邮件邀请 + P0-B issue 隔离心智沟通。
 > **优先级标记**：🟥 P0 阻塞 / 🟧 P1 重要 / 🟦 P2 扩展 / 🟪 P3 长期 / 🟫 P4 加固
 
 ---
@@ -33,6 +33,13 @@
 - [x] **P0-1b** ONBOARDING.md 团队 3 步上手文档
 - [x] **飞书文档读写实测** FUT-18 docx (`WkhZdwfLfo4zCexYKetc46ldnMz`)
 - [x] **RETRO-2026-05-27.md** 收工复盘（16 commit / 13 memory / 13 踩坑 / 6 经验范式）
+
+### Runtime 加固（2026-05-28）
+- [x] **Gemma 4 E4B Studio 部署** — Studio Ollama + Mini ↔ Studio Thunderbolt bridge 192.168.100.x 固定 IP + SSH tunnel 11434 launchd
+- [x] **gemma-direct adapter v2.2** — opencode runtime hijack 跑 Gemma 4 E4B，FUT-20 vs FUT-32/33 实测 11m5s → 20-32s（20-33x 提速）
+- [x] **hermes runtime 修复** — daemon plist 加 HTTPS_PROXY/HTTP_PROXY/ALL_PROXY/NO_PROXY 走 xray mixed (127.0.0.1:10808)，FUT-34 grok-4.20 26s 完成
+- [x] **codex runtime 修复** — 删 `~/.codex/config.toml` 末尾遗留 `[model_providers.ollama]` wire_api="chat" block，FUT-35 codex-5.5 90s 完成
+- [x] **RETRO-2026-05-28-runtime-fixes.md** 三连修复盘
 
 ---
 
@@ -112,6 +119,9 @@
 - [ ] **secrets rotation** multica PAT / FRP token / LXJ key 定期轮换
 - [ ] **04 polling 进度上报** sidecar log 加 "polling started/token detected/exit gracefully" 让运维看到完整链路
 - [ ] **修个别旧脚本 quoting** 派 codex 时偶尔出现 sed 命令 quoting 错误，文档教训
+- [ ] **gemma-direct 真 streaming** 当前 batch 收完再 emit，multica web 看不到逐字流式，需调研 daemon stream-json 协议
+- [ ] **gemma-direct 失败重试** Ollama 一次失败就报错，加 1-2 retry + ollama 健康探测
+- [ ] **xAI proxy 凭据保护** xray 节点切换/失效后 hermes 直接挂，加 healthz 自检脚本
 
 ---
 

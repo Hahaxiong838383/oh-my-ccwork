@@ -19,6 +19,17 @@
     <string>/Users/rayman.chen/bin/opencode-gemma-direct</string>
     <key>HOME</key>
     <string>/Users/rayman.chen</string>
+    <!-- 2026-05-28 加 xray mixed proxy (10808 同端口兼 SOCKS5+HTTP CONNECT) -->
+    <!-- 修 hermes runtime: mini→api.x.ai 公网阻塞,daemon spawn 子进程必须从 plist 继承 proxy -->
+    <key>HTTPS_PROXY</key>
+    <string>http://127.0.0.1:10808</string>
+    <key>HTTP_PROXY</key>
+    <string>http://127.0.0.1:10808</string>
+    <key>ALL_PROXY</key>
+    <string>http://127.0.0.1:10808</string>
+    <!-- NO_PROXY 兜住 127.0.0.1 (Ollama tunnel + gemma-direct adapter) + 内网 -->
+    <key>NO_PROXY</key>
+    <string>localhost,127.0.0.1,192.168.0.0/16,10.0.0.0/8</string>
   </dict>
   <key>KeepAlive</key><true/>
   <key>RunAtLoad</key><true/>
