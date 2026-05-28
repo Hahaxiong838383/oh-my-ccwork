@@ -35,8 +35,16 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	// expiry watcher 后台 goroutine: 每 1h 扫一次,token 距 refresh expiry <24h 发飞书提醒,
+	// 24h cooldown 防止重复打扰. ctx 在 main 退出时取消.
+	watcherCtx, watcherCancel := context.WithCancel(context.Background())
+	defer watcherCancel()
+	stateFile := filepath.Join(filepath.Dir(cfg.MappingFile), "notified.json")
+	watcher := NewExpiryWatcher(runner, logger, cfg.MappingFile, stateFile)
+	watcher.Start(watcherCtx)
+
 	go func() {
-		logger.Info("server start", "addr", httpServer.Addr)
+		logger.Info("server start", "addr", httpServer.Addr, "expiry_watcher", "enabled")
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("server failed", "error", err)
 			os.Exit(1)
@@ -46,6 +54,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
+	watcherCancel()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
