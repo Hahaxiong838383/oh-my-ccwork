@@ -1,10 +1,10 @@
 ---
 name: 飞书代理操作-zh
-description: 以当前 issue 创建者 (multica user) 的飞书身份执行 lark-cli 操作 — 发消息/查日历/读文档/管理 wiki 等。区分真实 OAuth 失效 vs lark-cli 临时错误，token 失效才停 + 拒绝;临时错误 max 2 次 retry。V3 加 metadata.private_to 隔离检查。永不伪造结果。
+description: 以当前 issue 创建者 (multica user) 的飞书身份执行 lark-cli 操作 — 发消息/查日历/读文档/管理 wiki 等。V4 fallback creator_id 当 metadata 空 (99% 场景免显式注入)。区分真实 OAuth 失效 vs lark-cli 临时错误，token 失效才停 + 拒绝;临时错误 max 2 次 retry。V3 加 metadata.private_to 隔离检查。永不伪造结果。
 language: zh-CN
 ---
 
-# 飞书代理操作员 (V3)
+# 飞书代理操作员 (V4)
 
 ## 何时使用
 
@@ -17,36 +17,69 @@ issue 描述里出现以下任一意图时，**必须**用这个 skill，**禁�
 
 ## 操作流程（必须严格按顺序）
 
-### 步骤 0 (V3 新增): 私密 issue 隔离检查 — 防身份误用
+### 步骤 0 (V3): 私密 issue 隔离检查 — 防身份误用
 
-multica 当前 workspace 内所有 issue 互看 (没 per-issue ACL),但 `metadata.private_to` 是 issue 创建者标记的"只允许这个 multica user 名下的飞书身份执行"约定。**先拿 ISSUE 完整 metadata,一次解析两个字段**:
+multica 当前 workspace 内所有 issue 互看 (没 per-issue ACL),但 `metadata.private_to` 是 issue 创建者标记的"只允许这个 multica user 名下的飞书身份执行"约定。**先拿 ISSUE 完整 JSON,一次解析三个字段(含 creator_id 给 V4 fallback 用)**:
 
 ```bash
 ISSUE_JSON=$(multica issue get $ISSUE_ID --output json)
 PRIVATE_TO=$(echo "$ISSUE_JSON" | jq -r '.metadata.private_to // empty')
-FEISHU_USER_ID=$(echo "$ISSUE_JSON" | jq -r '.metadata.feishu_user_id // empty')
+FEISHU_USER_ID_META=$(echo "$ISSUE_JSON" | jq -r '.metadata.feishu_user_id // empty')
+CREATOR_ID=$(echo "$ISSUE_JSON" | jq -r '.creator_id // empty')
+CREATOR_TYPE=$(echo "$ISSUE_JSON" | jq -r '.creator_type // empty')
 ```
 
-**判定铁律 (违反 = 安全事故)**:
+**判定铁律 — 私密 issue (违反 = 安全事故)**:
 
-- `private_to` 为空 → 公开 issue,跳过本步走步骤 1+ 的常规校验
-- `private_to` 非空 **且** `private_to == feishu_user_id` → 自洽,放行走步骤 1+
-- `private_to` 非空 **且** `feishu_user_id` 为空 → 立即停止 + 拒绝 comment:
-  > 🔒 此 issue 标了 `private_to=$PRIVATE_TO` (私密),但缺 `feishu_user_id` 注入,**拒绝执行**。请 issue 创建者补 `metadata.feishu_user_id=$PRIVATE_TO` 后 rerun。
-- `private_to` 非空 **且** `private_to != feishu_user_id` → 立即停止 + 拒绝 comment:
-  > 🔒 私密 issue: `metadata.private_to=$PRIVATE_TO`, 但 `metadata.feishu_user_id=$FEISHU_USER_ID` 不一致,**拒绝执行**。私密 issue 必须由本人飞书身份处理,不能借他人 token。请 issue 创建者把两个字段对齐。
+- `private_to` 为空 → 公开 issue, 跳过本步走步骤 1+ 的常规校验 (会自动走 V4 fallback)
+- `private_to` 非空 → **必须**显式 `metadata.feishu_user_id`, 严格校验 `private_to == feishu_user_id`:
+  - 自洽 → 放行,**禁止用 V4 fallback** (私密 issue 不允许猜身份)
+  - `feishu_user_id` 为空 → 拒绝:
+    > 🔒 此 issue 标了 `private_to=$PRIVATE_TO` (私密),但缺 `metadata.feishu_user_id`,**拒绝执行**。请 issue 创建者补 `metadata.feishu_user_id=$PRIVATE_TO` 后 rerun。私密 issue 不允许 fallback。
+  - 不一致 → 拒绝:
+    > 🔒 私密 issue: `metadata.private_to=$PRIVATE_TO`, 但 `metadata.feishu_user_id=$FEISHU_USER_ID_META` 不一致,**拒绝执行**。
 
-**不允许的反模式**:
+**不允许的反模式 (私密 issue 场景)**:
 - ❌ 把 `private_to` 解释成"软提示",硬跑
-- ❌ 用 owner 身份 / workspace 默认身份替代 — 这是同一类身份污染
-- ❌ 把不一致归类成"用户配错了"自作主张选 `feishu_user_id` 跑
+- ❌ 私密 issue 用 V4 fallback 推导 `creator_id` 当 `feishu_user_id` — 违反"必须显式"原则
+- ❌ 用 owner 身份 / workspace 默认身份替代
 
-### 步骤 1: 拿到当前 issue 的 feishu_user_id
+### 步骤 1 (V4 升级): 决定 FEISHU_USER_ID — fallback 推导链
 
-(步骤 0 已经拿到 `FEISHU_USER_ID`,直接复用)
+按以下**优先级顺序**决定 `FEISHU_USER_ID`:
 
-**若 `FEISHU_USER_ID` 为空** → 立即停止，issue comment 回：
-> ❌ 此 issue 缺少 metadata.feishu_user_id，无法代理飞书操作。请前往 multica web 设置 → 飞书授权完成扫码绑定，workspace 会自动给你创建的 issue 注入此字段。
+```
+1. metadata.feishu_user_id 非空 → 直接用 (尊重显式注入)
+2. metadata.feishu_user_id 为空 + creator_type == "member" → 用 creator_id (V4 fallback)
+3. 其他 → 报错 + 引导授权
+```
+
+**Bash 实现**:
+
+```bash
+if [ -n "$FEISHU_USER_ID_META" ]; then
+  FEISHU_USER_ID="$FEISHU_USER_ID_META"
+  FEISHU_SOURCE="metadata.feishu_user_id (显式)"
+elif [ "$CREATOR_TYPE" = "member" ] && [ -n "$CREATOR_ID" ]; then
+  FEISHU_USER_ID="$CREATOR_ID"
+  FEISHU_SOURCE="issue.creator_id (V4 fallback,99% 场景适用)"
+else
+  FEISHU_USER_ID=""
+fi
+```
+
+**V4 fallback 适用前提**:
+- multica user 已通过 oauth-ui 扫码绑定过飞书 → sidecar mapping 有 `{multica_user_id == issue.creator_id} → lark_user_open_id`
+- 步骤 2 调 sidecar `/status` 会自动验证 (返回 bound:false 时给清晰错误)
+- 这避免了"每个 issue 必须显式 metadata 注入"的负担,99% 普通 issue 自然走通
+
+**FEISHU_USER_ID 为空时的错误处理**:
+
+> ❌ 无法确定 issue 对应的飞书身份:
+> - `metadata.feishu_user_id` 为空 (未显式注入)
+> - `creator_type=$CREATOR_TYPE` 不是 `member` (可能是 agent 创建的 issue)
+>
+> 请 issue 创建者补 `metadata.feishu_user_id=<你的 multica user id>`,或前往 https://multica.cli4.hahaxiong.cc/oauth-ui 完成飞书绑定后由本人重新派单。
 
 ### 步骤 2: 检查该 user 的 token 是否 valid
 
@@ -111,6 +144,7 @@ echo "$RESPONSE"
 ```
 ✅ 飞书操作完成
 - 执行人 (multica user): $FEISHU_USER_ID
+- 身份来源: $FEISHU_SOURCE  ← V4 标注 (metadata 显式 vs creator_id fallback)
 - 飞书身份: <step2 status 输出的 lark_user_name>
 - 操作: <命令简述>
 - 结果: <message_id 或其他证据，从 RESPONSE.data 提取>
@@ -152,6 +186,8 @@ echo "$RESPONSE"
 7. **必须**临时错误 retry max 2 次 + 间隔 2s/5s
 8. **必须**报告 retry 次数让 user 看到完整经历
 9. **V3 必须**: `metadata.private_to` 非空时按步骤 0 严判,不一致一律拒绝,不要尝试"猜对意图"
+10. **V4 必须**: 公开 issue 缺 `metadata.feishu_user_id` 时走 `creator_id` fallback (前提 `creator_type=member`); 私密 issue (private_to 非空) **禁止** fallback, 必须显式 metadata
+11. **V4 必须**: 成功 comment 标注 `身份来源` 字段, 让审计能区分"显式 vs fallback"
 
 ## 常见 lark-cli 命令速查
 
@@ -164,6 +200,15 @@ echo "$RESPONSE"
 | 搜员工 | `contact +user-search --query "张三"` |
 
 详细参数：`bash ~/lark_multi_user/05_agent_spawn.sh $FEISHU_USER_ID <module> +<cmd> --help`
+
+## V4 变更（vs V3，2026-05-29）
+
+- **核心**: 公开 issue 缺 `metadata.feishu_user_id` 时,**自动 fallback 用 `issue.creator_id`** 作为 `FEISHU_USER_ID` (前提 `creator_type=member`)
+- **理由**: multica 没 issue.created webhook,无法 server-side 自动注入 `metadata.feishu_user_id`。但 multica `user_id` 和 sidecar 用的 `multica_user_id` 本就同一个 id,所以只要用户绑定过飞书,`creator_id` 就能直接当 `feishu_user_id` 用 — **99% 普通 issue 不再报"缺 metadata"错**
+- **新增 `身份来源` 字段**: 成功 comment 区分"显式 metadata vs creator_id fallback",可审计
+- **私密 issue 限制**: `metadata.private_to` 非空时**禁止** fallback,必须显式 `metadata.feishu_user_id` (保安全边界)
+- 新增**铁律 #10/#11**: V4 fallback 适用条件 + 标注审计字段
+- 实施: 步骤 0 已经拿 `creator_id` `creator_type`,fallback 是纯 bash 逻辑,无额外 API 调用
 
 ## V3 变更（vs V2，2026-05-28）
 

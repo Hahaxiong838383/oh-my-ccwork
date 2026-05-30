@@ -426,6 +426,121 @@ func TestStatusEndpoint(t *testing.T) {
 	})
 }
 
+func TestForceRestartEndpoint(t *testing.T) {
+	t.Run("missing user id", func(t *testing.T) {
+		r := &mockRunner{resp: map[string]mockResp{}}
+		h := newTestHandler(t, r, "[]", "")
+		req := httptest.NewRequest(http.MethodPost, "/api/feishu/device/force-restart", strings.NewReader(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("want 400 got %d", rr.Code)
+		}
+	})
+
+	t.Run("removes mapping entry", func(t *testing.T) {
+		mapping := `[
+			{"multica_user_id":"alice","lark_user_open_id":"ou_a","lark_user_name":"Alice","home":"/h/a","provisioned_at":"2026-05-27T10:46:09Z"},
+			{"multica_user_id":"bob","lark_user_open_id":"ou_b","lark_user_name":"Bob","home":"/h/b","provisioned_at":"2026-05-27T10:46:09Z"}
+		]`
+		r := &mockRunner{resp: map[string]mockResp{}}
+		env := newTestHandlerWithMapping(t, r, mapping, "")
+
+		req := httptest.NewRequest(http.MethodPost, "/api/feishu/device/force-restart", strings.NewReader(`{"multica_user_id":"alice"}`))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+		env.router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("want 200 got %d body=%s", rr.Code, rr.Body.String())
+		}
+		body := parseBody(t, rr)
+		if body["ok"] != true {
+			t.Fatalf("want ok true got %v", body["ok"])
+		}
+		if mr, _ := body["mapping_removed"].(float64); mr != 1 {
+			t.Fatalf("want mapping_removed=1 got %v", body["mapping_removed"])
+		}
+
+		// 验证 alice 已删, bob 还在
+		raw, _ := os.ReadFile(env.mappingFile)
+		var remaining []map[string]any
+		if err := json.Unmarshal(raw, &remaining); err != nil {
+			t.Fatal(err)
+		}
+		if len(remaining) != 1 || remaining[0]["multica_user_id"] != "bob" {
+			t.Fatalf("expect only bob remaining, got: %v", remaining)
+		}
+	})
+
+	t.Run("cleans token files in user home", func(t *testing.T) {
+		r := &mockRunner{resp: map[string]mockResp{}}
+		env := newTestHandlerWithMapping(t, r, "[]", "u_clean")
+
+		// 在 home 下放假 token files
+		homeDir := filepath.Join(env.userHomesDir, "mc-user-u_clean")
+		larkCliDir := filepath.Join(homeDir, ".lark-cli")
+		if err := os.MkdirAll(larkCliDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(larkCliDir, "tokens.json"), []byte(`{"x":1}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		hermesDir := filepath.Join(homeDir, ".hermes")
+		if err := os.MkdirAll(hermesDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(hermesDir, "auth.json"), []byte(`{"y":2}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		// 留一个不该被删的: 用户其他数据
+		userDataDir := filepath.Join(homeDir, "my-notes")
+		if err := os.MkdirAll(userDataDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/api/feishu/device/force-restart", strings.NewReader(`{"multica_user_id":"u_clean"}`))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+		env.router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("want 200 got %d", rr.Code)
+		}
+
+		// 验证 token files 删了, my-notes 还在
+		if _, err := os.Stat(larkCliDir); !os.IsNotExist(err) {
+			t.Fatalf(".lark-cli should be removed")
+		}
+		if _, err := os.Stat(filepath.Join(hermesDir, "auth.json")); !os.IsNotExist(err) {
+			t.Fatalf(".hermes/auth.json should be removed")
+		}
+		if _, err := os.Stat(userDataDir); err != nil {
+			t.Fatalf("my-notes (user data) should NOT be removed, got %v", err)
+		}
+	})
+
+	t.Run("idempotent when no mapping no home", func(t *testing.T) {
+		// 没 mapping 没 home 也应该 200 OK 而不是 500, 让 UI 能重复点
+		r := &mockRunner{resp: map[string]mockResp{}}
+		env := newTestHandlerWithMapping(t, r, "[]", "")
+
+		req := httptest.NewRequest(http.MethodPost, "/api/feishu/device/force-restart", strings.NewReader(`{"multica_user_id":"ghost"}`))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+		env.router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("want 200 got %d", rr.Code)
+		}
+		body := parseBody(t, rr)
+		if mr, _ := body["mapping_removed"].(float64); mr != 0 {
+			t.Fatalf("want mapping_removed=0 got %v", body["mapping_removed"])
+		}
+	})
+}
+
 func TestOAuthUIEndpoint(t *testing.T) {
 	r := &mockRunner{resp: map[string]mockResp{}}
 	h := newTestHandler(t, r, "[]", "")

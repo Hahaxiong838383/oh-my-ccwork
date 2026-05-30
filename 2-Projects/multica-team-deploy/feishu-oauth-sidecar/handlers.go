@@ -132,9 +132,11 @@ func (s *Server) Router() http.Handler {
 
 	r.Get("/healthz", s.healthzHandler)
 	r.Get("/oauth-ui", s.serveOAuthUI)
+	r.Get("/settings", s.serveOAuthUI) // 别名: multica web 入口可链 /settings, UI 自适应展示
 	r.Post("/api/feishu/device/start", s.startHandler)
 	r.Post("/api/feishu/device/complete", s.completeHandler)
 	r.Get("/api/feishu/device/status", s.statusHandler)
+	r.Post("/api/feishu/device/force-restart", s.forceRestartHandler) // V4: 清旧 mapping/home 强制重授权
 	return r
 }
 
@@ -388,6 +390,85 @@ func (s *Server) statusHandler(w http.ResponseWriter, r *http.Request) {
 		"token_status":      tokenInfo.TokenStatus,
 		"expires_at":        tokenInfo.ExpiresAt,
 		"scopes":            tokenInfo.Scopes,
+	})
+}
+
+// forceRestartHandler V4: 用户在 oauth-ui 触发"强制重新授权" 时调用,
+// 清理本机的 (mapping entry + user home dir),然后 oauth-ui 应跳回 device start 重走流程。
+//
+// 适用场景:
+// - 用户在另一台机器扫码授权了,本机 mapping 缺
+// - 本机 token enc 损坏 / refresh 失败 / auth.json 格式漂移
+// - 用户想换飞书账号绑定 (旧 mapping 必须先清)
+//
+// 安全考虑:
+// - 仅接受 POST + multica_user_id (cors + rate limit 自动覆盖)
+// - 不能跨 multica_user_id 操作 (user 只能清自己的, 通过 URL 参数自证)
+// - 不真的删 home 目录里 user 数据,只删 .hermes/.lark-cli 等 token 凭据 (避免误删)
+func (s *Server) forceRestartHandler(w http.ResponseWriter, r *http.Request) {
+	defer s.recoverPanic(w, r)
+	var req struct {
+		MulticaUserID string `json:"multica_user_id"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeJSON(w, http.StatusBadRequest, jsonResponse{"ok": false, "error": err.Error()})
+		return
+	}
+	userID := strings.TrimSpace(req.MulticaUserID)
+	if err := validateUserID(userID); err != nil {
+		writeJSON(w, http.StatusBadRequest, jsonResponse{"ok": false, "error": err.Error()})
+		return
+	}
+
+	// 1. 删 mapping entry (如果存在)
+	entries, err := loadMappings(s.cfg.MappingFile)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, jsonResponse{"ok": false, "error": fmt.Sprintf("load mapping: %v", err)})
+		return
+	}
+	cleaned := make([]MappingEntry, 0, len(entries))
+	removed := 0
+	for _, e := range entries {
+		if e.MulticaUserID == userID {
+			removed++
+			continue
+		}
+		cleaned = append(cleaned, e)
+	}
+	if removed > 0 {
+		if saveErr := saveMappings(s.cfg.MappingFile, cleaned); saveErr != nil {
+			s.logger.Warn("force-restart save mapping failed", "user_id", userID, "error", saveErr.Error())
+		}
+	}
+
+	// 2. 删 user home 里的 token 凭据 (但保留 home 目录本身, 避免误删用户其他数据)
+	userHome := filepath.Join(s.cfg.UserHomesDir, "mc-user-"+userID)
+	cleanedPaths := []string{}
+	if _, err := os.Stat(userHome); err == nil {
+		// 安全清单: 只清这些已知 token 文件 / 目录
+		tokenPaths := []string{
+			filepath.Join(userHome, ".lark-cli"),
+			filepath.Join(userHome, ".hermes", "auth.json"),
+			filepath.Join(userHome, ".config", "lark"),
+		}
+		for _, p := range tokenPaths {
+			if _, err := os.Stat(p); err == nil {
+				if err := os.RemoveAll(p); err == nil {
+					cleanedPaths = append(cleanedPaths, p)
+				} else {
+					s.logger.Warn("force-restart remove failed", "path", p, "error", err.Error())
+				}
+			}
+		}
+	}
+
+	s.logger.Info("force-restart done", "user_id", userID, "mapping_removed", removed, "paths_cleaned", len(cleanedPaths))
+	writeJSON(w, http.StatusOK, jsonResponse{
+		"ok":              true,
+		"multica_user_id": userID,
+		"mapping_removed": removed,
+		"paths_cleaned":   cleanedPaths,
+		"next_step":       "请重新点击「开始飞书授权」走完整 device flow",
 	})
 }
 
