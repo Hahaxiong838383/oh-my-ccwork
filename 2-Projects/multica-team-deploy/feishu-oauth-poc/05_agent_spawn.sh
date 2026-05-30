@@ -49,6 +49,24 @@ if ! jq -e --arg uid "$USER_ID" 'map(select(.multica_user_id == $uid)) | length 
   exit 1
 fi
 
-# 关键改进: 不再做 lark-cli 输出 string match 预检查 (V1 误判源)
+# 关键改进 (V2): 不再做 lark-cli 输出 string match 预检查 (V1 误判源)
 # 直接 exec lark-cli, 让真实 OAuth 错误码透传给上层 skill (V2) 分类
-exec env HOME="$USER_HOME" "$LARK_BIN" "$@"
+#
+# V4 修 (2026-05-30, 完整版): env -i 清空 + 只保留必要 env
+#
+# 根因 (实测追踪): multica hermes runtime spawn 子进程时会自动注入大量 hermes
+# 上下文标识 env (NODE / npm_config_* / HERMES_HOME / OPENCLAW_HOME / LARK_CHANNEL 等),
+# lark-cli detection 任一命中 → 强制走 "bind required" 路径, 报 exit 3
+# "hermes context detected but lark-cli is not bound to it"。
+# 单纯 unset 几个不可靠 (multica daemon 注入清单未文档化, 可能新增),
+# 用 env -i 整体清空 env, 只显式保留 wrapper 真正需要的几个,
+# lark-cli 在干净 env 里走 user-default 路径。
+exec env -i \
+  HOME="$USER_HOME" \
+  PATH="$HOME/.nvm/versions/node/v22.12.0/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  TERM="${TERM:-xterm}" \
+  LANG="${LANG:-en_US.UTF-8}" \
+  LC_ALL="${LC_ALL:-en_US.UTF-8}" \
+  USER="${USER:-rayman.chen}" \
+  LOGNAME="${LOGNAME:-rayman.chen}" \
+  "$LARK_BIN" "$@"
