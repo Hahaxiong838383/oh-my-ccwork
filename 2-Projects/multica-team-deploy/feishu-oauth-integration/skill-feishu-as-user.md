@@ -1,10 +1,10 @@
 ---
 name: 飞书代理操作-zh
-description: 以当前 issue 创建者 (multica user) 的飞书身份执行 lark-cli 操作 — 发消息/查日历/读文档/管理 wiki 等。V4 fallback creator_id 当 metadata 空 (99% 场景免显式注入)。区分真实 OAuth 失效 vs lark-cli 临时错误，token 失效才停 + 拒绝;临时错误 max 2 次 retry。V3 加 metadata.private_to 隔离检查。永不伪造结果。
+description: 以当前 issue 创建者 (multica user) 的飞书身份执行 lark-cli 操作 — 发消息/查日历/读文档/管理 wiki 等。V5 完整 fallback 链:metadata → member creator_id → agent parent.creator → agent.owner_id (覆盖 autopilot 派的 agent issue)。私密 issue 禁 fallback。区分 OAuth 失效 vs 临时错误,错误分类四档 + retry max 2。永不伪造结果。
 language: zh-CN
 ---
 
-# 飞书代理操作员 (V4)
+# 飞书代理操作员 (V5)
 
 ## 何时使用
 
@@ -19,7 +19,7 @@ issue 描述里出现以下任一意图时，**必须**用这个 skill，**禁�
 
 ### 步骤 0 (V3): 私密 issue 隔离检查 — 防身份误用
 
-multica 当前 workspace 内所有 issue 互看 (没 per-issue ACL),但 `metadata.private_to` 是 issue 创建者标记的"只允许这个 multica user 名下的飞书身份执行"约定。**先拿 ISSUE 完整 JSON,一次解析三个字段(含 creator_id 给 V4 fallback 用)**:
+multica 当前 workspace 内所有 issue 互看 (没 per-issue ACL),但 `metadata.private_to` 是 issue 创建者标记的"只允许这个 multica user 名下的飞书身份执行"约定。**先拿 ISSUE 完整 JSON,一次解析全部字段**:
 
 ```bash
 ISSUE_JSON=$(multica issue get $ISSUE_ID --output json)
@@ -27,6 +27,7 @@ PRIVATE_TO=$(echo "$ISSUE_JSON" | jq -r '.metadata.private_to // empty')
 FEISHU_USER_ID_META=$(echo "$ISSUE_JSON" | jq -r '.metadata.feishu_user_id // empty')
 CREATOR_ID=$(echo "$ISSUE_JSON" | jq -r '.creator_id // empty')
 CREATOR_TYPE=$(echo "$ISSUE_JSON" | jq -r '.creator_type // empty')
+PARENT_ISSUE_ID=$(echo "$ISSUE_JSON" | jq -r '.parent_issue_id // empty')
 ```
 
 **判定铁律 — 私密 issue (违反 = 安全事故)**:
@@ -44,42 +45,76 @@ CREATOR_TYPE=$(echo "$ISSUE_JSON" | jq -r '.creator_type // empty')
 - ❌ 私密 issue 用 V4 fallback 推导 `creator_id` 当 `feishu_user_id` — 违反"必须显式"原则
 - ❌ 用 owner 身份 / workspace 默认身份替代
 
-### 步骤 1 (V4 升级): 决定 FEISHU_USER_ID — fallback 推导链
+### 步骤 1 (V5 升级): 决定 FEISHU_USER_ID — 完整 fallback 推导链
 
-按以下**优先级顺序**决定 `FEISHU_USER_ID`:
+按以下**优先级顺序**决定 `FEISHU_USER_ID`,**私密 issue (private_to 非空) 跳过所有 fallback,必须显式 metadata**:
 
 ```
 1. metadata.feishu_user_id 非空 → 直接用 (尊重显式注入)
-2. metadata.feishu_user_id 为空 + creator_type == "member" → 用 creator_id (V4 fallback)
-3. 其他 → 报错 + 引导授权
+2. creator_type=member + creator_id 非空 → 用 creator_id (V4 fallback)
+3. creator_type=agent + parent_issue_id 非空 → 递归看 parent (找 user 起源)
+4. creator_type=agent + 无 parent → 用 agent.owner_id (V5 fallback,覆盖 autopilot 直派 issue)
+5. 都不行 → 错误引导
 ```
 
 **Bash 实现**:
 
 ```bash
+FEISHU_USER_ID=""
+FEISHU_SOURCE=""
+
 if [ -n "$FEISHU_USER_ID_META" ]; then
+  # 1. 显式 metadata
   FEISHU_USER_ID="$FEISHU_USER_ID_META"
   FEISHU_SOURCE="metadata.feishu_user_id (显式)"
 elif [ "$CREATOR_TYPE" = "member" ] && [ -n "$CREATOR_ID" ]; then
+  # 2. V4: member 创建的 issue 用 creator_id
   FEISHU_USER_ID="$CREATOR_ID"
-  FEISHU_SOURCE="issue.creator_id (V4 fallback,99% 场景适用)"
-else
-  FEISHU_USER_ID=""
+  FEISHU_SOURCE="issue.creator_id (V4 fallback, member 创建)"
+elif [ "$CREATOR_TYPE" = "agent" ]; then
+  # 3 + 4: agent 创建的 issue — 先看 parent, 否则取 agent.owner_id
+  if [ -n "$PARENT_ISSUE_ID" ]; then
+    # 递归查 parent (V5a) — 最多向上 5 层避免循环
+    P_JSON=$(multica issue get $PARENT_ISSUE_ID --output json)
+    P_CREATOR_TYPE=$(echo "$P_JSON" | jq -r '.creator_type // empty')
+    P_CREATOR_ID=$(echo "$P_JSON" | jq -r '.creator_id // empty')
+    P_META=$(echo "$P_JSON" | jq -r '.metadata.feishu_user_id // empty')
+    if [ -n "$P_META" ]; then
+      FEISHU_USER_ID="$P_META"
+      FEISHU_SOURCE="parent issue.metadata (V5a)"
+    elif [ "$P_CREATOR_TYPE" = "member" ] && [ -n "$P_CREATOR_ID" ]; then
+      FEISHU_USER_ID="$P_CREATOR_ID"
+      FEISHU_SOURCE="parent issue.creator_id (V5a, member 起源)"
+    fi
+    # 仍空 → 落到 owner_id (V5b)
+  fi
+  if [ -z "$FEISHU_USER_ID" ]; then
+    # V5b: agent 没 parent (或 parent 也是 agent), 取 agent.owner_id
+    AGENT_JSON=$(multica agent get $CREATOR_ID --output json)
+    OWNER_ID=$(echo "$AGENT_JSON" | jq -r '.owner_id // empty')
+    if [ -n "$OWNER_ID" ]; then
+      FEISHU_USER_ID="$OWNER_ID"
+      FEISHU_SOURCE="agent.owner_id (V5b fallback, 适用 autopilot 直派 issue)"
+    fi
+  fi
 fi
 ```
 
-**V4 fallback 适用前提**:
-- multica user 已通过 oauth-ui 扫码绑定过飞书 → sidecar mapping 有 `{multica_user_id == issue.creator_id} → lark_user_open_id`
-- 步骤 2 调 sidecar `/status` 会自动验证 (返回 bound:false 时给清晰错误)
-- 这避免了"每个 issue 必须显式 metadata 注入"的负担,99% 普通 issue 自然走通
+**V4/V5 fallback 适用前提**:
+- 目标 multica user (member 或 agent owner) 已通过 oauth-ui 扫码绑定飞书
+- 步骤 2 调 sidecar `/status` 自动验证, bound:false 时给清晰错误
+- **私密 issue (private_to 非空) 仍强制显式 metadata, 不允许 fallback** (安全边界)
 
 **FEISHU_USER_ID 为空时的错误处理**:
 
 > ❌ 无法确定 issue 对应的飞书身份:
 > - `metadata.feishu_user_id` 为空 (未显式注入)
-> - `creator_type=$CREATOR_TYPE` 不是 `member` (可能是 agent 创建的 issue)
+> - `creator_type=$CREATOR_TYPE` / `creator_id=$CREATOR_ID`
+> - V5 fallback 链全部走完仍未拿到 user id
 >
-> 请 issue 创建者补 `metadata.feishu_user_id=<你的 multica user id>`,或前往 https://multica.cli4.hahaxiong.cc/oauth-ui 完成飞书绑定后由本人重新派单。
+> 请 issue 创建者:
+> 1. 补 `metadata.feishu_user_id=<你的 multica user id>` 后 rerun
+> 2. 或前往 https://multica.cli4.hahaxiong.cc/settings 飞书绑定完成后由本人 (或本人创建的 agent) 重新派单
 
 ### 步骤 2: 检查该 user 的 token 是否 valid
 
@@ -187,7 +222,8 @@ echo "$RESPONSE"
 8. **必须**报告 retry 次数让 user 看到完整经历
 9. **V3 必须**: `metadata.private_to` 非空时按步骤 0 严判,不一致一律拒绝,不要尝试"猜对意图"
 10. **V4 必须**: 公开 issue 缺 `metadata.feishu_user_id` 时走 `creator_id` fallback (前提 `creator_type=member`); 私密 issue (private_to 非空) **禁止** fallback, 必须显式 metadata
-11. **V4 必须**: 成功 comment 标注 `身份来源` 字段, 让审计能区分"显式 vs fallback"
+11. **V4/V5 必须**: 成功 comment 标注 `身份来源` 字段, 让审计能区分"显式 vs fallback 各档"
+12. **V5 必须**: agent 创建的 issue (`creator_type=agent`) 按 parent → owner_id 链回溯找 user; agent 自己**不是** user, 不允许把 agent_id 当 feishu_user_id 用
 
 ## 常见 lark-cli 命令速查
 
@@ -200,6 +236,25 @@ echo "$RESPONSE"
 | 搜员工 | `contact +user-search --query "张三"` |
 
 详细参数：`bash ~/lark_multi_user/05_agent_spawn.sh $FEISHU_USER_ID <module> +<cmd> --help`
+
+## V5 变更（vs V4，2026-05-30）
+
+**根因**: V4 只覆盖 `creator_type=member`,但 autopilot / coordinator agent (如「爱马仕grok 4.3」) 自己派的 issue `creator_type=agent`,V4 fallback 不生效 → 飞书代理操作员仍报"读不到 feishu_user_id"(FUT-54 实战暴露)。
+
+**V5 加强 fallback 链** (公开 issue,私密 issue 仍禁 fallback):
+
+1. metadata.feishu_user_id 非空 → 用
+2. creator_type=member → 用 creator_id (V4)
+3. **V5a**: creator_type=agent + 有 parent_issue_id → 递归查 parent (找 user 起源,最多 5 层)
+4. **V5b**: creator_type=agent + 无 parent → 用 `agent.owner_id` (创建该 agent 的 user, 覆盖 autopilot 直派 issue)
+
+**为什么 agent.owner_id 是合理 fallback**:
+- multica agent 创建时必须指定 owner (一个 multica user)
+- agent 派的 issue 本质是"代表 owner 执行" — owner 是真实负责人
+- autopilot / scheduler 触发的 agent 也都有 owner (谁创建的 agent)
+- 实测:川哥所有 agent 的 owner_id 都是同一个 user (`ece30832-...`),fallback 自洽
+
+**新增铁律 #12**: agent 自己**不是** user,不允许把 agent_id 当 feishu_user_id 用 (会撞 sidecar 404)。
 
 ## V4 变更（vs V3，2026-05-29）
 
