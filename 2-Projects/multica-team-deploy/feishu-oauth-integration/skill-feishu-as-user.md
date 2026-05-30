@@ -1,10 +1,10 @@
 ---
 name: 飞书代理操作-zh
-description: 以当前 issue 创建者 (multica user) 的飞书身份执行 lark-cli 操作 — 发消息/查日历/读文档/管理 wiki 等。V5 完整 fallback 链:metadata → member creator_id → agent parent.creator → agent.owner_id (覆盖 autopilot 派的 agent issue)。私密 issue 禁 fallback。区分 OAuth 失效 vs 临时错误,错误分类四档 + retry max 2。永不伪造结果。
+description: 以当前 issue 创建者 (multica user) 的飞书身份执行 lark-cli 操作 — 发消息/查日历/读文档/管理 wiki 等。V6 反 hallucination:禁手敲 UUID/open_id,只允许 bash 变量引用 + sidecar /status 权威字段。V5 完整 fallback 链:metadata → member creator_id → agent parent.creator → agent.owner_id。私密 issue 禁 fallback。区分 OAuth 失效 vs 临时错误,错误分类四档 + retry max 2。永不伪造结果。
 language: zh-CN
 ---
 
-# 飞书代理操作员 (V5)
+# 飞书代理操作员 (V6)
 
 ## 何时使用
 
@@ -116,25 +116,42 @@ fi
 > 1. 补 `metadata.feishu_user_id=<你的 multica user id>` 后 rerun
 > 2. 或前往 https://multica.cli4.hahaxiong.cc/settings 飞书绑定完成后由本人 (或本人创建的 agent) 重新派单
 
-### 步骤 2: 检查该 user 的 token 是否 valid
+### 步骤 2 (V6 强化): 检查 token + 拿权威 lark_user_open_id
+
+**[V6 关键]** 不要从 issue 描述 / 历史 comment / 训练记忆 / Contact API 自己搜 open_id。**sidecar /status 返回的 `lark_user_open_id` 字段是唯一权威源**,直接 jq 提取使用,**禁止手敲任何 UUID/ou_/oc_ 字符串**。
 
 ```bash
-FEISHU_USER_ID="<step1 输出>"
+FEISHU_USER_ID="<step1 输出>"   # 已经通过 V5 fallback 链推导出的权威值
 STATUS_JSON=$(curl -sS "http://localhost:18090/api/feishu/device/status?multica_user_id=$FEISHU_USER_ID")
 echo "$STATUS_JSON" | jq .
+
+# V6: 直接 jq 提取权威 open_id, 不许手敲
+LARK_OPEN_ID=$(echo "$STATUS_JSON" | jq -r '.lark_user_open_id // empty')
+BOUND=$(echo "$STATUS_JSON" | jq -r '.bound // false')
+TOKEN_STATUS=$(echo "$STATUS_JSON" | jq -r '.token_status // empty')
 ```
 
 **仅当 sidecar 明确返回 `bound:false` 或 `token_status != "valid"`** → 立即停止，issue comment 回：
-> ❌ multica user `$FEISHU_USER_ID` 的飞书授权已过期/未授权 (sidecar 返回 token_status: `<status>`)。请访问 https://multica.cli4.hahaxiong.cc/oauth-ui?multica_user_id=$FEISHU_USER_ID 重新扫码授权。
+> ❌ multica user `$FEISHU_USER_ID` 的飞书授权已过期/未授权 (sidecar 返回 token_status: `<status>`)。请访问 https://multica.cli4.hahaxiong.cc/settings 重新扫码授权。
 
 **注意**：以下情况**不算** token 失效，不要错误归因：
 - sidecar `/status` 返回网络错误（curl timeout）→ 临时问题，retry sidecar 一次
 - lark-cli 后续命令失败（步骤 3）→ 看错误码分类（见下），不要直接判定 token 失效
 
-### 步骤 3: 用 05_agent_spawn.sh 透传 lark-cli 命令（含错误分类与重试）
+**V6 反 hallucination 自检** (步骤 3 前必做):
+- $FEISHU_USER_ID 必须是 step 1 bash 变量传递, **不许在新命令里重新手敲 UUID 字符串**
+- $LARK_OPEN_ID 必须是 step 2 sidecar /status 返回的字段, **不许从 Contact API / 历史 issue / 记忆里搜其他 ou_xxx 替代**
+
+### 步骤 3 (V6 强化): 用 05_agent_spawn.sh 发送, 强制变量引用不许手敲
 
 ```bash
-RESPONSE=$(bash ~/lark_multi_user/05_agent_spawn.sh $FEISHU_USER_ID <lark-cli-args>)
+# ✅ 正确: bash 变量引用, 一字不差传递
+RESPONSE=$(bash ~/lark_multi_user/05_agent_spawn.sh "$FEISHU_USER_ID" im +messages-send --user-id "$LARK_OPEN_ID" --text "$MESSAGE")
+
+# ❌ 严禁: 手敲 UUID/open_id (会出 c→f 一字 hallucination 把消息发到错的人)
+# bash ~/lark_multi_user/05_agent_spawn.sh ece30832-3b2c-49b6-985c-c9254cf3f108 ...
+#                                                                          ↑ 这里一字之差送错人, 飞书 API 不验证存在性
+
 EXIT_CODE=$?
 echo "$RESPONSE"
 ```
@@ -224,6 +241,8 @@ echo "$RESPONSE"
 10. **V4 必须**: 公开 issue 缺 `metadata.feishu_user_id` 时走 `creator_id` fallback (前提 `creator_type=member`); 私密 issue (private_to 非空) **禁止** fallback, 必须显式 metadata
 11. **V4/V5 必须**: 成功 comment 标注 `身份来源` 字段, 让审计能区分"显式 vs fallback 各档"
 12. **V5 必须**: agent 创建的 issue (`creator_type=agent`) 按 parent → owner_id 链回溯找 user; agent 自己**不是** user, 不允许把 agent_id 当 feishu_user_id 用
+13. **V6 必须 (反 hallucination)**: $FEISHU_USER_ID / $LARK_OPEN_ID 只能 bash 变量引用传递, **禁止**在 lark-cli 命令里手敲 UUID 字符串。LLM 复制 UUID 时会出 c→f / 0→o 类一字之差,飞书 API 不验存在性所以**会返回 OK + 错误 message_id**, 但消息送到错的人 = 严重隐私事故 (FUT-61 教训)
+14. **V6 必须**: 只能用 sidecar /status 返回的 `lark_user_open_id` 字段作为 --user-id 参数。**禁止**从 issue 描述 / 历史 comment / 训练记忆 / Contact API 搜来的 ou_xxx 或 oc_xxx 替代 (oc_ 是群 chat_id 不是 user id, 用错会更隐蔽地失败)
 
 ## 常见 lark-cli 命令速查
 
@@ -236,6 +255,24 @@ echo "$RESPONSE"
 | 搜员工 | `contact +user-search --query "张三"` |
 
 详细参数：`bash ~/lark_multi_user/05_agent_spawn.sh $FEISHU_USER_ID <module> +<cmd> --help`
+
+## V6 变更（vs V5，2026-05-30 晚）
+
+**根因 (FUT-61 实战暴露)**: 飞书代理 agent 报告说"已发送 message_id=om_x100b6e9f6c83013cb..."但川哥**没收到**。调查发现:
+- agent 没用步骤 1 拿到的 $FEISHU_USER_ID, 而是**自己在 lark-cli 命令里手敲 UUID**: `ece30832-3b2c-49b6-985c-c9254cf3f108` (注意 `cf` 这字符)
+- 但 sidecar mapping 里川哥真实 user id 是 `ece30832-3b2c-49b6-985c-c9254cd3f108` (`cd` 这字符)
+- 一字之差 (d→f) 让 sidecar 返 not_authorized → agent 编了个"oc_bee60c311... 失效"借口 → 又"通过 Contact API"瞎搜了 `ou_cab36f047c029f5aa2264986538dbc67`
+- 飞书 API 不验证 user 存在性 → 返回 message_id (假成功) → 消息送到错误用户那里 = 隐私事故
+
+**V6 加强**:
+- **铁律 #13/#14** 显式禁止手敲 UUID / 复用历史 ou_xxx 字符串, 只能 bash 变量引用 + sidecar /status 权威字段
+- 步骤 2 加 `LARK_OPEN_ID=$(echo "$STATUS_JSON" | jq -r '.lark_user_open_id')` 明示提取方式
+- 步骤 3 用 `"$FEISHU_USER_ID"` 和 `"$LARK_OPEN_ID"` 强制引用, 注释里给"反面教材"展示一字之差怎么发到错的人
+
+**为什么这是高频陷阱**:
+- LLM 在长 prompt 里复制 UUID 高概率出错 (尤其字符 c/f, 0/o, 1/l)
+- 飞书 API 对 user_id 存在性是 fuzzy 的, 错的 ID 经常返回 200 OK + 假 message_id
+- agent 看到 "ok:true" 会自信 "成功",不知道送错人
 
 ## V5 变更（vs V4，2026-05-30）
 
