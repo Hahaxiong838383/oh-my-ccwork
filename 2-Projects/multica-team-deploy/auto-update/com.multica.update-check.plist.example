@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- multica 上游新版每日检查 + 飞书通知 (通知优先,不自动应用)
+     部署: 把 __USER_HOME__ 换成真实 HOME, MULTICA_NOTIFY_USER_ID 换成真实 multica user id,
+           放到 ~/Library/LaunchAgents/ 后 launchctl bootstrap gui/$(id -u) <plist> -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.multica.update-check</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>__USER_HOME__/bin/multica-update-check.sh</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>HOME</key>
+      <string>__USER_HOME__</string>
+      <key>MULTICA_NOTIFY_USER_ID</key>
+      <string>__MULTICA_USER_ID__</string>
+      <key>HTTPS_PROXY</key>
+      <string>http://127.0.0.1:10808</string>
+      <key>HTTP_PROXY</key>
+      <string>http://127.0.0.1:10808</string>
+      <key>NO_PROXY</key>
+      <string>localhost,127.0.0.1,::1</string>
+    </dict>
+
+    <!-- 每日 10:00 检查 -->
+    <key>StartCalendarInterval</key>
+    <dict>
+      <key>Hour</key><integer>10</integer>
+      <key>Minute</key><integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>__USER_HOME__/Library/Logs/multica-update-check.log</string>
+    <key>StandardErrorPath</key>
+    <string>__USER_HOME__/Library/Logs/multica-update-check.log</string>
+  </dict>
+</plist>
