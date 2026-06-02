@@ -74,3 +74,9 @@ done
 4. **全中文**，5 段式格式
 5. 完成后 issue comment 记录 3 个 message_id + 状态置 in_review
 6. 若某步失败：抓取失败→重试1次带 proxy；飞书 bound:false→报 token 失效让川哥重新授权；不要伪造 message_id
+
+## ★ 收尾铁律（防超时 + 防重复，FUT-83 教训）
+
+7. **每条消息只发一次**：`05_agent_spawn.sh` 返回 `ok:true` + message_id 即成功，**立即发下一条，绝不重发已成功的**。只有返回 ok:false 才重试该条（max 1 次）。
+8. **发完即停**：3 条消息 + 1 条 comment(记 message_id) 完成后，**立即把 issue 置 in_review 并结束任务**。**禁止**任何额外动作：不归档 wiki、不写多维表、不反复读取检查、不再生成内容。任务到此为止。
+9. **效率优先**：分析 8 篇 + 发 3 条应在 10 分钟内完成，不要逐篇反复打磨。
