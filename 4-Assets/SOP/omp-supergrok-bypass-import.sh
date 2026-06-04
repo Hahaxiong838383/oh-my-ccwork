@@ -6,6 +6,8 @@
 #       scope 完全一致（openid profile email offline_access grok-cli:access api:access）
 #       所以 grok 的 refresh_token 在 omp 里可直接换 access_token
 # 沉淀：2026-06-02 cc 首次走通,见 RECENT_EVENTS / project_omp_grok43.md
+#
+# 姐妹脚本: omp-chatgpt-bypass-import.sh 把 codex CLI 的 ChatGPT Pro 订阅旁路导入 omp(原理一样)
 
 set -euo pipefail
 
