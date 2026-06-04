@@ -1,39 +1,198 @@
 # 多智能体协同规则
 
-> 适用：cc (Claude) + grok (xAI) + codex (OpenAI) + gemini (Google)
-> 更新：2026-05-31 — 接入 Grok 第二套写码引擎（双引擎并存 + Team 第 4 lane）
-> 历史：2026-03-11 从理想化四层闭环精简为实用版
+> 适用：cc (Claude) + grok (xAI) + codex (OpenAI) + gemini (Google) + omp 跨家族通道
+> 更新：**2026-06-04 — v3 整合 omp 三家订阅闭环（A 写码档 + B 调研评审档 + 跨家族对抗审查）**
+> 历史：2026-05-31 接入 Grok 第二套写码引擎；2026-06-02 grok-4.3 满血档；2026-03-11 从理想化四层闭环精简为实用版
 
 ---
 
-## 日常模式（默认）
+## 核心结构（v3）
 
-### 路由规则
+**三大 lane × 多档模型**：
+- **A 写码档** — 4 档（grok-build / omp grok-4.3 / omp gpt-5.5 / omp gpt-5.4 review）
+- **B 调研评审档** — 5 档（omp gemini-3-flash / 3.1-pro / VPS proxy 3.5-flash / **omp grok-4.3 推理** / **omp gpt-5.5 严谨评审**）
+- **C/D 编排+异步** — cc 主线 + hermes 长跑
 
-| 任务类型 | 路由 | 示例 |
-|---------|------|------|
-| 代码实现、快速迭代、批量改、子代理并行（默认写码） | → **grok** (`grok-build` 512k) | "实现登录功能"、"批量改这 20 个文件" |
-| 高 stake（认证/支付/数据迁移/生产事故）/ 已验证链路 / 对抗审查 / 疑难根因 | → **codex** | "改支付逻辑"、"codex review 一下" |
-| 超 512k 超长上下文 / 需 reasoning effort 分档 | → **omp 满血 grok-4.3**（1M，xAI 原生 + SuperGrok 订阅 OAuth） | "整仓重构超大依赖树"、"深度推理任务" |
-| 调研、知识库同步、论文抓取、学术评审 | → gemini | "调研 XX 技术"、"同步到 FUTURUS" |
-| 规划、决策、编排、终验、日常问答 | → cc | "设计架构"、"帮我看看" |
+**成本视角**：三家订阅（SuperGrok + ChatGPT Team + Gemini OAuth）= **已付月费 sunk cost，调用边际 ¥0**。**唯一付费按量** = mycc VPS proxy 3.5-flash（仅在"需要 3.5 thinking"启用）。**默认走订阅，付费档按需触发**。
 
-**写码双引擎并存，cc 按任务挑**（川哥钦定 2026-05-31，2026-06-02 接入 grok-4.3 满血档）：默认 grok（`grok-build`，512k），命中「高 stake/对抗审查/已验证链路」走 codex，**超 512k 升级到 omp 的 `xai-oauth/grok-4.3`（1M）**。**高 stake 实现可 grok+codex 双发对比 / grok-build+grok-4.3 同家族不同档对比**（各出一版，cc 跑测试挑优 / 互为对抗审查）。模型 + effort 详表见 [`~/.claude/rules/engine-routing.md`](file:///Users/rayman.chen/.claude/rules/engine-routing.md)。⚠️ grok-build 调用必带 `-m grok-build --no-subagents` + 绝对路径；omp 必带 `--model xai-oauth/grok-4.3` 完整路径（短名 `grok-4.3` 会模糊匹配到 kilo gateway 报 "No API key for kilo"）。
+**路径选择原则**：**omp 路径优先（统一 `omp -p --model X/Y`）+ CLI 直调降级备用**（omp 崩/凭据失效逃生通道）。
 
-### 强制规则（3 条）
+---
 
-1. **大任务（预估 >10 分钟）必须拆分** — 分发给 grok/codex/gemini 并行执行，cc 只编排不硬啃
-2. **cc 不负责批量实现** — cc 做规划和关键决策，写代码交给 grok（默认）或 codex（高 stake）
-3. **写码引擎自报** — 派 grok/codex 前一行自报模型 + effort + 选它的理由（见 engine-routing.md「调用前自报」）
+## A 档：写码 Lane
 
-### 角色定位
+| ID | 路径 | 引擎 | 上下文 | 速度 | 适用 |
+|---|---|---|---|---|---|
+| **A1 默认** | grok-build CLI 直调 | `grok-build` | 512k | ⚡⚡⚡ 最快 | 短任务 / 批量改 / 单文件 / <300 行 |
+| **A2 满血/长ctx** | omp | `xai-oauth/grok-4.3` | 1M | ⚡⚡ + reasoning 分档 | >512k 上下文 / 需 effort 分档 / 同家族对比 |
+| **A3 高stake默认** | **omp** | `openai-codex/gpt-5.5` | 272k | ⚡ 中等稳 | 认证 / 支付 / 数据迁移 / 生产事故 |
+| **A3-fallback** | codex CLI 直调（降级）| `gpt-5.3-codex` / `gpt-5.4` / `gpt-5.5` | 272k-1M | 同上 | A3 omp 不通时逃生 |
+| **A4 对抗审查** | omp | `openai-codex/gpt-5.4` | 400k | ⚡ 中等 | code review 主通道（轻量 review 单发即可）|
+
+### A 档写码触发逻辑
+
+```
+写码任务
+  ├─ <300 行 / 单文件 / 快速迭代 → A1 grok-build (默认)
+  ├─ >512k 上下文 / 需 effort 分档 → A2 omp xai-oauth/grok-4.3
+  ├─ 高 stake (认证/支付/迁移/事故) → A3 omp openai-codex/gpt-5.5
+  └─ 轻量 code review → A4/B5 omp openai-codex/gpt-5.4 (单发)
+```
+
+---
+
+## B 档：调研/研究/评审 Lane（v3 新增 grok / gpt 评审档）
+
+| ID | 路径 | 引擎 | 上下文 | thinking 档 | 成本 | 独特价值 |
+|---|---|---|---|---|---|---|
+| **B1 默认** | omp | `google-gemini-cli/gemini-3-flash-preview` | 1M | minimal-high | ¥0 | Gemini 默认主力,短任务 |
+| **B2 学术深度** | omp | `google-gemini-cli/gemini-3.1-pro-preview` | 1M | low/high | ¥0 | gemini 风格精准,长综合,Google ecosystem |
+| **B3 顶级深度（付费）** | mycc VPS proxy `23.226.135.149:4000` | `gemini-3.5-flash` + max_tokens 65535 | 1M | minimal/medium/high | 💴 按 token | Vertex AI Global,thinking 最强 |
+| **★ B4 grok 推理评审** | omp | `xai-oauth/grok-4.3` | 1M | minimal-**xhigh** | ¥0 | **第一性原理推理 / 反思维定式 / 物理直觉 / 非 Google 视角** |
+| **★ B5 codex 严谨评审** | omp | `openai-codex/gpt-5.5` 或 `gpt-5.4` | 272k-400k | minimal-xhigh | ¥0 | **结构化逻辑链清晰 / 边界用例 / 偏正式格式** |
+| **B-fallback** | gemini CLI 直调 | 同 B1/B2 | 同上 | 同上 | ¥0 | omp 不通时降级 |
+
+### B 档调研/评审触发逻辑（按风格选）
+
+```
+评审/调研任务
+  ├─ 短调研 / 提取 / 分类 → B1 omp gemini-3-flash (默认,最快)
+  ├─ 学术综合 / 长文分析 → B2 omp gemini-3.1-pro
+  ├─ 推理深度 / Why / 第一性原理 → B4 omp grok-4.3 thinking=high
+  ├─ 严谨结构化 / 代码评审风格 → B5 omp gpt-5.5 thinking=high
+  ├─ 顶级深度 / 批判性思考 → B3 VPS proxy 3.5-flash high (付费)
+  └─ 轻量 code review → B5 omp gpt-5.4 high (单发)
+```
+
+---
+
+## ★ 核心新规则：跨 stake 三发对抗触发（川哥钦定 2026-06-04）
+
+| Stake 档 | 写码 lane 模式 | 评审 lane 模式 | 触发判定 |
+|---------|---------------|---------------|---------|
+| **普通**（默认）| 单发（按 A 档路由）| 单发（按 B 档路由）| 默认 |
+| **中等** | 单发 + 关键时双发对比 | 双发（B4 + B2 推理 vs 学术）| cc 判断 |
+| **高 stake / 高难度** ★ | **A 双发**（A1 + A3）+ **B 三发评审**（B4 + B5 + B2）| **B 三发对抗**（B4 + B5 + B2）| 见下方判定 |
+| **顶级** ⚠️ 川哥手动触发 | A 双发 + **B 四发**（B4 + B5 + B2 + B3 加付费档） | B 四发 | 川哥说"大活/高难度/不能错" 或 cc 风险预警 |
+
+### 高 stake / 高难度 判定（自动触发三发）
+
+满足任一立即升级到"高 stake/高难度"：
+
+**高 stake**:
+- 认证 / 支付 / 数据迁移 / 生产事故
+- 安全相关（CVE / 凭据处理 / 加密）
+- 不可回滚（migration / 删数据 / DROP TABLE）
+
+**高难度写码**（v3 新增触发线）:
+- 任务行数 >1000 行
+- 跨子系统 / 跨包 / 跨语言
+- 涉及并发 / 算法核心 / 性能关键路径
+- 大范围重构 / 顶级架构变更
+
+### 顶级 stake（手动触发 + cc 主动预警）
+
+**触发方式**：
+- 川哥明确说"大活 / 高难度 / 不能错 / 全力 / 顶级"
+- cc 检测到下面"风险预警关键词" → **主动问川哥是否升级**：
+
+cc 风险预警清单（看到这些主动问川哥）:
+- 生产关键路径 / 生产环境核心
+- 资金 / 支付链路 / 财务
+- 全量数据操作 / 全表 migration
+- 安全凭据轮换 / 权限提升
+- 不可回滚 + 无 staging 验证
+
+cc 自报格式：
+```
+[风险预警] 检测到「<关键词>」,这看起来是顶级 stake 任务。
+建议升级到 B 四发对抗(grok+gpt+gemini+VPS proxy)+ A 双发实现。
+要不要启动顶级模式? (yes/no)
+```
+
+---
+
+## 通用 lane 调用清单
+
+```bash
+# A1 grok-build (默认写码,最快最便宜)
+~/.grok/bin/grok --prompt-file /tmp/p.md -m grok-build --effort high --no-subagents --cwd /path
+
+# A2 omp xai-oauth/grok-4.3 (满血/长 ctx)
+omp -p --model xai-oauth/grok-4.3 --thinking high --auto-approve "..."
+
+# A3 omp openai-codex/gpt-5.5 (高 stake 写码)
+omp -p --model openai-codex/gpt-5.5 --thinking high --auto-approve "..."
+
+# A3-fallback codex CLI (omp 不通时降级)
+codex exec -C /path --full-auto -c model="gpt-5.5" -c model_reasoning_effort="high" - < /tmp/p.md
+
+# B1 omp gemini-3-flash-preview (默认调研,免费)
+omp -p --model google-gemini-cli/gemini-3-flash-preview --thinking minimal --auto-approve "..."
+
+# B2 omp gemini-3.1-pro-preview (学术深度,免费)
+omp -p --model google-gemini-cli/gemini-3.1-pro-preview --thinking high --auto-approve "..."
+
+# B3 VPS proxy 3.5-flash (顶级深度,付费)
+curl -H "Authorization: Bearer fq8-1NLtsbVsiJhZaISmNeobvqY0bIZMoafPnKfkuz4" \
+  http://23.226.135.149:4000/v1/chat/completions \
+  -d '{"model":"gemini-3.5-flash","messages":[...],"max_tokens":65535,"reasoning_effort":"high"}'
+
+# B4 omp xai-oauth/grok-4.3 (推理深度评审,免费)
+omp -p --model xai-oauth/grok-4.3 --thinking high --auto-approve "..."
+
+# B5 omp openai-codex/gpt-5.4 or 5.5 (严谨结构化评审 + 轻量 code review,免费)
+omp -p --model openai-codex/gpt-5.4 --thinking high --auto-approve "..."
+
+# ─── B 三发对抗(高 stake/高难度评审标准模板) ───
+PROMPT_FILE=/tmp/review.md  # 评审内容 + diff + 评审角度
+
+omp -p --model xai-oauth/grok-4.3 --thinking high --auto-approve "$(cat $PROMPT_FILE)" > /tmp/r-grok.md 2>&1 &
+omp -p --model openai-codex/gpt-5.5 --thinking high --auto-approve "$(cat $PROMPT_FILE)" > /tmp/r-gpt.md 2>&1 &
+omp -p --model google-gemini-cli/gemini-3.1-pro-preview --thinking high --auto-approve "$(cat $PROMPT_FILE)" > /tmp/r-gem.md 2>&1 &
+wait
+# cc 综合三家 finding, 取并集去重, 标各家独有发现, 跑测试验证
+
+# ─── 顶级 B 四发(川哥手动触发 / cc 预警后确认才用) ───
+# 上面三家 + B3 VPS proxy 3.5-flash (付费档,thinking 最强)
+
+# ─── 高 stake 写码 A 双发 + B 三发评审 联动 ───
+# Stage 1: A 双发实现
+~/.grok/bin/grok --prompt-file /tmp/impl.md -m grok-build --effort high --no-subagents --cwd /path > /tmp/a-grok.md 2>&1 &
+omp -p --model openai-codex/gpt-5.5 --thinking high --auto-approve "$(cat /tmp/impl.md)" > /tmp/a-gpt.md 2>&1 &
+wait
+# cc diff 两版 + 挑优 / 合并
+
+# Stage 2: B 三发评审 cc 选定版本
+DIFF=$(cd /path && git diff main..HEAD)
+PROMPT="审查这段 diff: \n\n$DIFF"
+omp -p --model xai-oauth/grok-4.3 --thinking high --auto-approve "$PROMPT" > /tmp/r-grok.md &
+omp -p --model openai-codex/gpt-5.5 --thinking high --auto-approve "$PROMPT" > /tmp/r-gpt.md &
+omp -p --model google-gemini-cli/gemini-3.1-pro-preview --thinking high --auto-approve "$PROMPT" > /tmp/r-gem.md &
+wait
+# cc 综合所有信号(双发实现差异 + 三家评审 finding) 决策
+```
+
+⚠️ **每次调用前自报**（写码/评审都要）：
+```
+[lane] <ID> <provider/model> + --thinking <X> / 任务=<...> / stake=<普通/中等/高/顶级> / 选它的理由=<...>
+```
+
+### 强制规则（v3 整合,4 条）
+
+1. **大任务（预估 >10 分钟）必须拆分** — 分发给 A/B 各 lane,cc 只编排不硬啃
+2. **cc 不负责批量实现 / 主评审** — cc 做规划和关键决策,写代码交 A,评审交 B,综合裁决在 cc
+3. **omp 路径优先** — 默认走 omp(统一 `omp -p --model X/Y`),CLI 直调作降级 fallback,**遇 omp 进程崩/凭据失效一键切 CLI**
+4. **每次调用前自报 lane + provider/model + thinking + stake + 理由**（写码/评审都要）
+
+### 角色定位（v3 重写）
 
 | 角色 | 职责 | 不做什么 |
 |------|------|---------|
-| cc (Claude) | 想清楚、做决策、编排任务、终验、commit/push | 不写大段样板代码 |
-| grok (xAI) | 写码（默认）、快速迭代、批量改、超长上下文实现 | 不做架构决策 |
-| codex (OpenAI) | 写码（高 stake）、改仓库、跑测试、对抗审查 | 不做架构决策 |
-| gemini (Google) | 搜资料、写报告、学术评审、找问题 | 不争主实现 |
+| **cc (Claude)** | 想清楚、做决策、编排任务、终验、commit/push、风险预警询问 | 不写大段样板代码、不主评审 |
+| **A 写码档** | 写码、改文件、跑测试（4 引擎按 stake 升级，omp 路径优先）| 不做架构决策 |
+| **B 调研评审档** | 调研、评审、对抗审查（5 引擎按风格选，三家跨家族对抗能力是 v3 最大新增）| 不写主代码 |
+| **D hermes** | 长时（>30min）、跨平台消息、异步推送 | 不参与同步决策 |
 
 ### 信息黑板（GWT — Global Workspace Theory，2026-03-31 起）
 
@@ -67,23 +226,26 @@
 - ✅ 用户明确说"启动正式项目模式 / Team 模式"
 - ❌ 单文件 <100 行小修（cc 主线直接做更快）
 
-### 四 lane 并行（cc 编排 + grok + codex + gemini）
+### 多 lane 并行（v3：A 写码 + B 调研评审 + cc 编排 + D 异步）
 
 ```
 Layer 1 规格（cc 输出 SPEC.md + AC.md，含数据契约 + 判定矩阵 + "不在范围内"明示）
       ↓
-Layer 2 四 lane 并行产出（各占 blackboard 一行，互不阻塞）：
-        • cc    — 主线编排 / 关键决策 / 写验收脚本
-        • grok  — 写码主力（默认）：快速迭代 / 批量 / 超长上下文实现
-        • codex — 写码（高 stake lane）/ 对照补边界 / 对抗审查
-        • gemini— 学术评审 / 边界用例 / 外部知识（与写码并行，不串行等）
+Layer 2 多 lane 并行产出（各占 blackboard 一行，互不阻塞）：
+        • cc    — 主线编排 / 关键决策 / 写验收脚本 / 风险预警
+        • A 写码 — 按 stake 升级：普通 A1 单发 / 高 stake/高难度 A1+A3 双发
+        • B 评审 — 按 stake 升级：普通 B1 单发 / 高 stake/高难度 B4+B5+B2 三发对抗
+        • D hermes — 长时（>30min）/ 异步推送（如需）
       ↓
 Layer 3 自动化验收（测试 + lint + type check，cc 主 shell 自跑一遍）
       ↓
-Layer 4 裁决（cc 审查 + 合并 + REVIEW.md，commit/push）
+Layer 4 裁决（cc 综合 A 双发实现差异 + B 三发评审 finding + 自验测试 → REVIEW.md，commit/push）
 ```
 
-> **写码 lane 由 cc 按日常路由分派 grok / codex**：默认 grok（`grok-build`）；高 stake 走 codex；高 stake 实现可双发对比（grok + codex 各一版，cc 跑测试挑优 / 互为对抗审查，类似 grok `--best-of-n` 的跨引擎版）。多引擎并行改同仓文件时用 `grok -w`（worktree）或独立 worktree 防冲突。
+> **写码 lane 由 cc 按日常路由分派**：普通走 A1（grok-build 最便宜）；超 512k 升 A2（omp grok-4.3 1M）；高 stake 走 A3（omp gpt-5.5）。**高 stake/高难度任务必须 A 双发对比**（A1 + A3，cc 跑测试挑优 / 互为对抗审查）。
+> **评审 lane**：高 stake/高难度任务必须 **B 三发对抗**（B4 grok 推理 + B5 gpt 严谨 + B2 gemini 学术，三家跨家族独立视角）。
+> **顶级 stake**（川哥手动触发 或 cc 风险预警询问后启动）：A 双发 + **B 四发**（B3 加 VPS proxy 3.5-flash 付费档）。
+> 多引擎并行改同仓文件时用 `grok -w`（worktree）或独立 worktree 防冲突。
 
 ### Team 模式额外规则
 
@@ -104,7 +266,8 @@ git reset --soft HEAD~1
 
 ## 引擎调用方式
 
-> 写码/调研引擎的**唯一调用 = bash CLI 直调**（`grok -p` / `codex exec` / `gemini -p`），禁用 MCP/skill 包装（见全局 `memory/reference_engine_cli_calling.md`）。模型 + effort 选择见 [`~/.claude/rules/engine-routing.md`](file:///Users/rayman.chen/.claude/rules/engine-routing.md)。
+> **v3 路径策略（2026-06-04）**：**omp 路径优先**（统一 `omp -p --model X/Y`，三家订阅同 agent.db 共存 + 跨家族并发 1.3x 加速）+ **CLI 直调作降级 fallback**（omp 进程崩/凭据失效时一键切回）。模型 + effort 选择见 [`~/.claude/rules/engine-routing.md`](file:///Users/rayman.chen/.claude/rules/engine-routing.md)。
+> CLI 直调注意事项见全局 `memory/reference_engine_cli_calling.md`（grok 5 铁律 / codex 调用模板等）。
 
 ```bash
 # Grok（默认写码引擎，xAI）— prompt 从文件读。⚠️ 必 -m grok-build + 绝对路径；判断成功看 exit0+stdout 非空（不看 stderr 的 .mcp.json 噪音）
