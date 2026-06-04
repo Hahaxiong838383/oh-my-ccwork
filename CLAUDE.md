@@ -27,6 +27,7 @@
 | 昵称 | 引擎 |
 |------|------|
 | cc | Claude |
+| grok | xAI Grok |
 | codex | OpenAI Codex |
 | gemini | Google Gemini |
 | hermes | Nous Research Hermes |
@@ -116,7 +117,7 @@ cc 通过三层记忆工作。**每次 Session 必做**：
 | GOAL-CASCADE | 收到新任务（旧名 Goal Cascading） | 对照 `0-System/status.md` 焦点：对齐→直接干 / 偏离合理→干完简短说明 / 明显偏离非紧急→提示老板 | P1/0.75 | 防焦点漂移。优先级：阶段目标 > 今日焦点 > 暂缓项 |
 | FEISHU-CONFIRM | 飞书指令含歧义/冲突/高风险/上下文不足 | **先回复确认，不直接执行** | P1/0.75 | 异步通道无预设上下文 |
 | TRAJECTORY | 普通档+ 任务（>30min 或多步） | 5 步：`trajectory_open` → `trajectory_step`(N) → `trajectory_decision` → `trajectory_friction` → `trajectory_close`。Session 结束自检：有普通档+ 任务但无轨迹→`RECENT_EVENTS` 标 `[轨迹缺失]` | P1/0.75 | 采样积累，auto_draft 默认关 |
-| MULTI-AGENT | >10 分钟任务 / 批量代码实现 / 跨域调研 | 拆给 codex（写码）/ gemini（调研）/ hermes（长时）。cc 只做规划与关键决策。详见 [`docs/rules/MULTI-AGENT.md`](./docs/rules/MULTI-AGENT.md) | P1/0.75 | cc 上下文有限，分工效率 3-5x |
+| MULTI-AGENT | >10 分钟任务 / 批量代码实现 / 跨域调研 | 拆给 grok（默认写码）/ codex（高 stake 写码·对抗审查）/ gemini（调研）/ hermes（长时）。写码双引擎并存 cc 按任务挑。cc 只做规划与关键决策。详见 [`docs/rules/MULTI-AGENT.md`](./docs/rules/MULTI-AGENT.md) | P1/0.75 | cc 上下文有限，分工效率 3-5x |
 
 ---
 
@@ -163,4 +164,5 @@ cc 通过三层记忆工作。**每次 Session 必做**：
 | [`multi-agent/RULES.md`](./multi-agent/RULES.md) | 多智能体协同完整规则 |
 | [`3-Thinking/01-BRO-PDCA方法论.md`](./3-Thinking/01-BRO-PDCA方法论.md) | BRO-PDCA 方法论详细 |
 | [`3-Thinking/06-意识理论与认知架构映射.md`](./3-Thinking/06-意识理论与认知架构映射.md) | 六大意识理论 × mycc 架构（HOT/GWT/IIT/RPT/AST/PP） |
+| [`3-Thinking/07-ISO方法论.md`](./3-Thinking/07-ISO方法论.md) | **ISO 目标导向方案推导与验证框架**（配套 `/iso` skill） |
 | [`.claude/skills/rule-compress/SKILL.md`](./.claude/skills/rule-compress/SKILL.md) | **万能公式 v1 规则压缩 skill**（`/rule-compress`） |
