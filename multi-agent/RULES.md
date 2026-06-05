@@ -125,6 +125,13 @@ omp -p --model xai-oauth/grok-4.3 --thinking high --auto-approve "..."
 omp -p --model openai-codex/gpt-5.5 --thinking high --auto-approve "..."
 
 # A3-fallback codex CLI (omp 不通时降级)
+# ⚠️ team 模式 / 自动化场景必须用 codex_run.sh 包装 -- codex exec 无 stream-idle timeout,
+#    上游静默挂连接时 codex 永久 read 等待(进程不退,grok_run.sh 那种 exit code 检测无效)
+#    实测案例: 2026-06-05 三发评审 codex 卡 12KB / 30min,详见 engine-routing.md "Team 模式加固"节
+bash /Users/rayman.chen/mycc/4-Assets/SOP/codex_run.sh /tmp/p.md /tmp/codex_out.md gpt-5.5 high /path
+# RC=0 成功 / RC=2 hang/失败重试耗尽 → 调用方降级 grok 或 gemini
+#
+# 应急直调(仅手动单次/不进 team 编排):
 codex exec -C /path --full-auto -c model="gpt-5.5" -c model_reasoning_effort="high" - < /tmp/p.md
 
 # B1 omp gemini-3-flash-preview (默认调研,免费)

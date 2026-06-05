@@ -36,7 +36,9 @@ START=$(date +%s)
   > /tmp/a-grok.md 2>/tmp/a-grok.err &
 GROK_PID=$!
 
-# A3 omp openai-codex/gpt-5.5
+# A3 omp openai-codex/gpt-5.5 (Bun 进程,目前未观察到 hang。
+#    若降级到 A3-fallback codex CLI 直调,改用 4-Assets/SOP/codex_run.sh 包装 -- codex exec
+#    无 stream-idle timeout 会永久 hang,见 engine-routing.md "Team 模式加固"节)
 omp -p --model openai-codex/gpt-5.5 --thinking high --auto-approve \
   --no-extensions --no-skills --no-rules \
   --append-system-prompt "$(cat "$PROMPT_FILE")" \
