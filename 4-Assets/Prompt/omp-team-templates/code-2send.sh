@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# A 双发写码实现: A1 grok-build CLI + A3 omp openai-codex/gpt-5.5
+# A 双发写码实现: A1 grok-build CLI + A3 codex(API网关gpt-5.5主路 + omp订阅gpt-5.4降级)
 # 用法: bash code-2send.sh <repo-path> <prompt-file>
 # 输出: /tmp/a-grok.md (A1 实现) + /tmp/a-gpt.md (A3 实现)
 # cc 后续: diff 两版 + 挑优 / 合并 / 跑测试
@@ -19,10 +19,12 @@ if [ ! -d "$REPO_PATH/.git" ]; then
 fi
 
 export PATH="$HOME/.bun/bin:$PATH"
+# codex lane helper: API 网关 gpt-5.5 主路 + omp 订阅 gpt-5.4 降级
+source "$(dirname "${BASH_SOURCE[0]}")/_codex_lane.sh"
 
 echo "===== A 双发写码 ====="
 echo "[A1] grok-build CLI / 仓库=$REPO_PATH"
-echo "[A3] omp openai-codex/gpt-5.5 / thinking=high"
+echo "[A3] codex API 网关 gpt-5.5(主) → omp 订阅 gpt-5.4(降级) / reasoning=high"
 echo "prompt: $PROMPT_FILE ($(wc -l <$PROMPT_FILE) 行)"
 echo ""
 
@@ -36,14 +38,10 @@ START=$(date +%s)
   > /tmp/a-grok.md 2>/tmp/a-grok.err &
 GROK_PID=$!
 
-# A3 omp openai-codex/gpt-5.5 (Bun 进程,目前未观察到 hang。
-#    若降级到 A3-fallback codex CLI 直调,改用 4-Assets/SOP/codex_run.sh 包装 -- codex exec
-#    无 stream-idle timeout 会永久 hang,见 engine-routing.md "Team 模式加固"节)
-omp -p --model openai-codex/gpt-5.5 --thinking high --auto-approve \
-  --no-extensions --no-skills --no-rules \
-  --append-system-prompt "$(cat "$PROMPT_FILE")" \
-  "执行任务" \
-  > /tmp/a-gpt.md 2>/tmp/a-gpt.err &
+# A3 codex: API 网关 gpt-5.5 主路 + omp 订阅 gpt-5.4 降级 (见 _codex_lane.sh)
+#   主路 curl 出「实现方案文本」到 a-gpt.md 供 cc 综合挑优(非 agentic 改 repo,
+#   与 A1 grok --cwd 改 repo 互补且不冲突);API 不可用时自动降级 omp 订阅 gpt-5.4
+run_codex_lane "$(cat "$PROMPT_FILE")" /tmp/a-gpt.md /tmp/a-gpt.err "A3" &
 GPT_PID=$!
 
 echo "两 lane 并发跑中 (PID grok=$GROK_PID, gpt=$GPT_PID)..."
@@ -64,7 +62,7 @@ if [ $GROK_RC -ne 0 ] || [ ! -s /tmp/a-grok.md ]; then
   tail -10 /tmp/a-grok.err
 fi
 if [ $GPT_RC -ne 0 ] || [ ! -s /tmp/a-gpt.md ]; then
-  echo "⚠️ A3 omp gpt-5.5 失败:"
+  echo "⚠️ A3 codex 失败 (API 主路 + omp 降级都没出正文):"
   tail -10 /tmp/a-gpt.err
 fi
 

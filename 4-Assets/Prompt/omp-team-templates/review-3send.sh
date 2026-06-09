@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# B 三发评审对抗: B4 grok-4.3 推理 + B5 gpt-5.5 严谨 + B2 gemini-3.1-pro 学术
+# B 三发评审对抗: B4 grok-4.3 推理 + B5 codex(API网关gpt-5.5主路+omp订阅gpt-5.4降级) 严谨 + B2 gemini-3.1-pro 学术
 # 用法: bash review-3send.sh <review-prompt-file>
 # 输出: /tmp/r-grok.md / /tmp/r-gpt.md / /tmp/r-gem.md (三家独立 finding)
 # cc 后续: 三方综合 / 取并集 / 标各家独有发现 / 跑测试验证
@@ -30,12 +30,14 @@ EXAMPLE
 fi
 
 export PATH="$HOME/.bun/bin:$PATH"
+# codex lane helper: API 网关 gpt-5.5 主路 + omp 订阅 gpt-5.4 降级
+source "$(dirname "${BASH_SOURCE[0]}")/_codex_lane.sh"
 
 PROMPT=$(cat "$PROMPT_FILE")
 SIZE=$(wc -c <"$PROMPT_FILE")
 echo "===== B 三发评审对抗 ====="
 echo "[B4 推理] omp xai-oauth/grok-4.3 / thinking=high"
-echo "[B5 严谨] omp openai-codex/gpt-5.5 / thinking=high"
+echo "[B5 严谨] codex API 网关 gpt-5.5(主) → omp 订阅 gpt-5.4(降级) / reasoning=high"
 echo "[B2 学术] omp google-gemini-cli/gemini-3.1-pro-preview / thinking=high"
 echo "prompt: $PROMPT_FILE ($SIZE 字节)"
 echo ""
@@ -54,11 +56,8 @@ GROK_PID=$!
 
 sleep 0.8
 
-# B5 gpt-5.5 严谨评审 (结构化逻辑链清晰)
-omp -p --model openai-codex/gpt-5.5 --thinking high --auto-approve \
-  --no-extensions --no-skills --no-rules \
-  "$PROMPT" \
-  > /tmp/r-gpt.md 2>/tmp/r-gpt.err &
+# B5 codex 严谨评审: API 网关 gpt-5.5 主路 + omp 订阅 gpt-5.4 降级 (见 _codex_lane.sh)
+run_codex_lane "$PROMPT" /tmp/r-gpt.md /tmp/r-gpt.err "B5" &
 GPT_PID=$!
 
 sleep 0.8
