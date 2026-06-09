@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_DIR="${MULTICA_USER_HOMES_DIR:-$HOME/multica-user-homes}"
-MAPPING_FILE="${MULTICA_USER_MAPPING_FILE:-$HOME/multica-user-homes/user_mapping.json}"
+# 同时接受 sidecar(Go main.go)使用的 MAPPING_FILE / USER_HOMES_DIR 变量名：
+# runner.go 调脚本时不显式设 cmd.Env，脚本继承 sidecar 进程 env；若部署者只为 sidecar
+# 设了自定义路径(MAPPING_FILE/USER_HOMES_DIR)，脚本必须读到同一值，否则会写到默认位置，
+# 而 /status 读的是 sidecar 的 MappingFile → 用户扫码后一直显示未绑定。
+MAPPING_FILE="${MULTICA_USER_MAPPING_FILE:-${MAPPING_FILE:-$HOME/multica-user-homes/user_mapping.json}}"
+BASE_DIR="${MULTICA_USER_HOMES_DIR:-${USER_HOMES_DIR:-$(dirname "$MAPPING_FILE")}}"
 LARK_BIN="${LARK_BIN:-$HOME/.nvm/versions/node/v22.12.0/bin/lark-cli}"
 TIMEOUT_SECONDS=180
 
@@ -36,7 +40,7 @@ tmp_out="$(mktemp)"
 tmp_err="$(mktemp)"
 tmp_map=""
 cleanup() {
-  rm -f "$tmp_out" "$tmp_err" "${tmp_map:-}"
+  rm -f "$tmp_out" "$tmp_err" "${tmp_map:-}" "${ts_ref:-}"
 }
 trap cleanup EXIT
 
@@ -48,6 +52,9 @@ TOKEN_ENC_DIR="$USER_HOME/Library/Application Support/lark-cli"
 # 记录 polling 前的 enc 文件 (排除 appsecret_) — 之后多出的就是 user token
 enc_before="$(find "$TOKEN_ENC_DIR" -type f -name '*.enc' 2>/dev/null | grep -v '/appsecret_' || true)"
 enc_before_count="$(printf '%s\n' "$enc_before" | grep -c . || true)"
+# 时间戳引用：重授权时 lark-cli 可能覆盖同一 .enc（数量不变但 mtime 更新），
+# 用 find -newer "$ts_ref" 检测被刷新的 token，避免只靠文件数量判定（数量永不增 → 误判失败）。
+ts_ref="$(mktemp)"
 
 (
   HOME="$USER_HOME" "$LARK_BIN" auth login --device-code "$DEVICE_CODE" --json >"$tmp_out" 2>"$tmp_err"
@@ -66,7 +73,9 @@ while kill -0 "$pid" 2>/dev/null; do
   fi
   # 每秒检测 token enc 文件 — 落地立即跳出循环 (kill lark-cli 子进程节省时间)
   enc_now_count="$(find "$TOKEN_ENC_DIR" -type f -name '*.enc' 2>/dev/null | grep -v '/appsecret_' | wc -l | tr -d ' ' || echo 0)"
-  if [ "$enc_now_count" -gt "$enc_before_count" ]; then
+  # 重授权场景：lark-cli 覆盖同一 .enc（数量不变），用 mtime 比 ts_ref 新来兜底
+  enc_updated="$(find "$TOKEN_ENC_DIR" -type f -name '*.enc' -newer "$ts_ref" 2>/dev/null | grep -v '/appsecret_' | wc -l | tr -d ' ' || echo 0)"
+  if [ "$enc_now_count" -gt "$enc_before_count" ] || [ "$enc_updated" -gt 0 ]; then
     token_landed=1
     # 优雅 kill: 给 lark-cli 1s flush 时间再 kill
     sleep 1
@@ -80,7 +89,9 @@ done
 # 如果 lark-cli 自然退出且 token 没落地 → 真失败 (用户取消授权 / 网络中断)
 if [ "$token_landed" -ne 1 ]; then
   enc_now_count="$(find "$TOKEN_ENC_DIR" -type f -name '*.enc' 2>/dev/null | grep -v '/appsecret_' | wc -l | tr -d ' ' || echo 0)"
-  if [ "$enc_now_count" -le "$enc_before_count" ]; then
+  enc_updated="$(find "$TOKEN_ENC_DIR" -type f -name '*.enc' -newer "$ts_ref" 2>/dev/null | grep -v '/appsecret_' | wc -l | tr -d ' ' || echo 0)"
+  # 子进程已自然退出：数量没增加且没有 .enc 被覆盖刷新，才算真失败
+  if [ "$enc_now_count" -le "$enc_before_count" ] && [ "$enc_updated" -eq 0 ]; then
     err "lark-cli 退出但 token 未落地 (stderr: $(cat "$tmp_err" | head -c 300))"
     exit 1
   fi
