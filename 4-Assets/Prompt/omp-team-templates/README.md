@@ -51,7 +51,8 @@ bash 4-Assets/Prompt/omp-team-templates/review-3send.sh /tmp/review.md
 
 ## codex lane 路由 (A3/B5,见 `_codex_lane.sh`)
 
-- **主路**: `curl` API 网关 `https://10521052.xyz/v1` (cc-switch 同款) `gpt-5.5` + `reasoning_effort=high`,**直连**(强制 `--noproxy` + unset proxy,网关在国内不走 xray 代理)
+- **主路**: `curl` API 网关 `https://10521052.xyz/v1` (cc-switch 同款) `gpt-5.5` + `reasoning_effort=high` + **`stream:true` 流式**,**直连**(强制 `--noproxy` + unset proxy,网关在国内不走 xray 代理)
+  - ★ **为何流式**:网关在 Cloudflare 后,源站 ~100s 不响应回 **HTTP 524**。非流式重 reasoning 任务憋满 ~125s 必 524 卡死(2026-06-10 实测);流式持续吐 SSE 字节刷新 CF 空闲计时器绕过。`--connect-timeout 15` + `--max-time 300` 硬上限兜底
 - **降级**: API 不可用(非 200/无正文)自动切 `omp -p --model openai-codex/gpt-5.4` (ChatGPT 订阅 OAuth,独立路径;订阅 5.5 常卡死故用 5.4)
 - **key**: 存 `~/.gateway.env` 的 `CODEX_API_GATEWAY_KEY` (chmod 600,home 目录不入 git)
 - **强制降级自测**: `CODEX_FORCE_FALLBACK=1 bash review-3send.sh /tmp/review.md`
