@@ -9,8 +9,8 @@
 
 | 脚本 | 用途 | 触发 |
 |------|------|------|
-| `code-2send.sh` | A 双发写码实现 (A1 grok-build + A3 codex: API 网关 gpt-5.5 主→omp 订阅 gpt-5.4 降级) | 高 stake/高难度 写码 |
-| `review-3send.sh` | B 三发评审对抗 (B4 grok + B5 codex: API 网关 gpt-5.5 主→omp 订阅 gpt-5.4 降级 + B2 gemini-pro) | 高 stake/高难度 评审,顶级评审第一阶段 |
+| `code-2send.sh` | A 双发写码实现 (A1 grok-build + A3 codex: 双网关 gpt-5.5 链→omp 订阅 gpt-5.4 兜底) | 高 stake/高难度 写码 |
+| `review-3send.sh` | B 三发评审对抗 (B4 grok + B5 codex: 双网关 gpt-5.5 链→omp 订阅 gpt-5.4 兜底 + B2 gemini-pro) | 高 stake/高难度 评审,顶级评审第一阶段 |
 | `review-4send.sh` | B 四发评审顶级 (上面三家 + B3 VPS proxy 3.5-flash) | **顶级**评审,川哥手动触发或 cc 预警确认 |
 
 ## 使用流程
@@ -51,11 +51,14 @@ bash 4-Assets/Prompt/omp-team-templates/review-3send.sh /tmp/review.md
 
 ## codex lane 路由 (A3/B5,见 `_codex_lane.sh`)
 
-- **主路**: `curl` API 网关 `https://10521052.xyz/v1` (cc-switch 同款) `gpt-5.5` + `reasoning_effort=high` + **`stream:true` 流式**,**直连**(强制 `--noproxy` + unset proxy,网关在国内不走 xray 代理)
+三级降级链(双网关 2026-06-10 晚):
+
+- **① 网关1 主路**: `curl` `https://10521052.xyz/v1` (cc-switch 同款) `gpt-5.5` + `reasoning_effort=high` + **`stream:true` 流式**,**直连**(强制 `--noproxy` + unset proxy,网关在国内不走 xray 代理)。实测 6 轮综合微胜网关2(轻任务快 21%,吞吐 148 vs 132 字/秒)
   - ★ **为何流式**:网关在 Cloudflare 后,源站 ~100s 不响应回 **HTTP 524**。非流式重 reasoning 任务憋满 ~125s 必 524 卡死(2026-06-10 实测);流式持续吐 SSE 字节刷新 CF 空闲计时器绕过。`--connect-timeout 15` + `--max-time 300` 硬上限兜底
-- **降级**: API 不可用(非 200/无正文)自动切 `omp -p --model openai-codex/gpt-5.4` (ChatGPT 订阅 OAuth,独立路径;订阅 5.5 常卡死故用 5.4)
-- **key**: 存 `~/.gateway.env` 的 `CODEX_API_GATEWAY_KEY` (chmod 600,home 目录不入 git)
-- **强制降级自测**: `CODEX_FORCE_FALLBACK=1 bash review-3send.sh /tmp/review.md`
+- **② 网关2 第一降级**: `curl` `https://cc-sub2.whtaibang.top/v1` `gpt-5.5` 同参数(重任务首字反而更快 5.3s vs 7.2s)。⚠️ 其 WAF 拦 Python-urllib UA(curl/Bun/node/codex UA 放行);`/responses` 不认 `max_output_tokens`
+- **③ 订阅兜底**: API 链全失败自动切 `omp -p --model openai-codex/gpt-5.4` (ChatGPT 订阅 OAuth,独立路径;订阅 5.5 常卡死故用 5.4)
+- **key**: 存 `~/.gateway.env` 的 `CODEX_API_GATEWAY_KEY`(网关1) / `CODEX_API_GATEWAY2_KEY`(网关2) (chmod 600,home 目录不入 git)
+- **自测旋钮**: `CODEX_FORCE_FALLBACK=1`(直达订阅) / `CODEX_SKIP_GW1=1`(验证网关2路)
 - 注: curl 主路是「prompt→文本」对话(非 agentic 改 repo),team 产出本就是文本交 cc 综合,无损
 
 ## 失败模式 + 降级
