@@ -3,6 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 // StatusBar 复用原 demo 字幕系统（读 app-store.subtitle，TTS 严同步逻辑现成）
 import { StatusBar } from '../../components/StatusBar';
 import { CardScene } from './CardScene';
+import { XiaokeAvatar } from '../avatar/XiaokeAvatar';
+import { ExpressionPicker } from '../avatar/ExpressionPicker';
+import { useAvatarStore } from '../avatar/avatar-store';
+import { resolveExpressionName } from '../avatar/expressions';
 import {
   getSharedVoiceClient,
   type VoiceClient,
@@ -40,12 +44,17 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   const setSubtitle = useAppStore((s) => s.setSubtitle);
   const setXiaokeEmotion = useAppStore((s) => s.setXiaokeEmotion);
 
+  const setAvatarExpression = useAvatarStore((s) => s.setExpression);
+  const applyNetState = useAvatarStore((s) => s.applyNetState);
+  const endAvatarTurn = useAvatarStore((s) => s.endTurn);
+
   const clientRef = useRef<VoiceClient | null>(null);
   const [pressed, setPressed] = useState(false);
   const pressedRef = useRef(false);
   const startInFlightRef = useRef(false);
   const needStopRef = useRef(false);
   const llmTextRef = useRef('');
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const [, setConnected] = useState(false);
 
@@ -109,6 +118,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     const onTtsEnd = () => {
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
+      // 一轮真正说完：解除 LLM 表情持有，小可回待机
+      endAvatarTurn();
     };
     const onPromptAssembled = (msg: { systemPrompt: string; userText: string }) => {
       const len = (msg.systemPrompt || '').length;
@@ -122,12 +133,23 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       pushDebug({ kind: 'config', title: `session.config.ack (${msg.chars} 字符)` });
       onConfigAck?.(msg);
     };
+    // LLM 在回复开头选的表情（server 已剥离标记）→ 驱动小可形象 + 调试流留痕
+    const onAvatarExpression = (msg: { name: string }) => {
+      const def = resolveExpressionName(msg.name);
+      if (def) {
+        setAvatarExpression(def.id, 'llm');
+        pushDebug({ kind: 'avatar', title: `🎭 小可选了表情：${def.label}` });
+      } else {
+        pushDebug({ kind: 'avatar', title: `🎭 表情名未识别：「${msg.name}」（菜单外，已忽略）` });
+      }
+    };
     const onError = (msg: { message?: string; code?: string }) => {
       const t = msg.message || msg.code || '语音服务错误';
       onDebug('error', `❌ ${t}`);
       pushDebug({ kind: 'error', title: `❌ ${t}` });
       setVoiceStatus('idle');
       setSubtitle(t);
+      applyNetState('fail');
     };
 
     client.on('asr.partial', onAsrPartial);
@@ -138,6 +160,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     client.on('tts.end', onTtsEnd);
     client.on('debug.prompt_assembled', onPromptAssembled);
     client.on('session.config.ack', handleConfigAck);
+    client.on('avatar.expression', onAvatarExpression);
     client.on('error', onError);
 
     return () => {
@@ -149,9 +172,10 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       client.off('tts.end', onTtsEnd);
       client.off('debug.prompt_assembled', onPromptAssembled);
       client.off('session.config.ack', handleConfigAck);
+      client.off('avatar.expression', onAvatarExpression);
       client.off('error', onError);
     };
-  }, [onDebug, onConfigAck, pushDebug, setSubtitle, setVoiceStatus, setXiaokeEmotion]);
+  }, [onDebug, onConfigAck, pushDebug, setSubtitle, setVoiceStatus, setXiaokeEmotion, setAvatarExpression, applyNetState, endAvatarTurn]);
 
   // 供外部调用的下发 + 开场白
   // 注意：此函数由 Studio 通过 ref / 事件驱动调用（见 StudioPage）
@@ -173,15 +197,18 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       await client.unlockAudio();
     } catch {}
 
-    // 确保连接
+    // 确保连接（小可同步演连网小剧场：敲键盘 → 跳起庆祝 / 哭哭）
     if (!client.isConnected()) {
+      applyNetState('connecting');
       try {
         await client.connect(getVoiceWsUrl());
         setConnected(true);
+        applyNetState('success');
       } catch (e) {
         setPressed(false);
         pressedRef.current = false;
         setSubtitle('语音服务连接失败');
+        applyNetState('fail');
         return;
       }
     }
@@ -256,12 +283,14 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
           data-scope="screen-canvas"
         >
           <CardScene card={card ?? null} />
+          {/* 小可本体：表情库驱动的可互动形象（状态机兜底 + LLM 逐句选表情 + 点击逗它） */}
+          <XiaokeAvatar />
           <StatusBar />
         </div>
       </div>
 
       {/* 控制条 */}
-      <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-neutral-900 px-3 py-2">
+      <div className="relative flex items-center justify-between gap-3 border-b border-white/10 bg-neutral-900 px-3 py-2">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -301,11 +330,26 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
           >
             💬 KidsHub
           </button>
+
+          {/* 表情库：PM 点任意表情直接驱动小可（验美术 / 调表情 prompt 用） */}
+          <button
+            onClick={() => setPickerOpen((v) => !v)}
+            title="小可表情库：点击预览全部表情，标 AI 的是 LLM 回复时可自选的"
+            className={`rounded-full px-4 py-1.5 text-sm transition ${
+              pickerOpen
+                ? 'bg-pink-500/80 text-white'
+                : 'border border-pink-400/40 bg-pink-400/10 text-pink-300 hover:bg-pink-400/20'
+            }`}
+          >
+            🎭 表情库
+          </button>
         </div>
 
         <div className="text-[11px] text-neutral-500">
           {card ? `当前：${card.title}` : '未选卡 · 画布空闲'}
         </div>
+
+        {pickerOpen && <ExpressionPicker onClose={() => setPickerOpen(false)} />}
       </div>
 
       {/* 简要提示 */}

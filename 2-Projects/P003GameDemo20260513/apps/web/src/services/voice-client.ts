@@ -29,6 +29,7 @@ type VoiceEvent =
   | 'tts.sentence_break'
   | 'session.config.ack'
   | 'debug.prompt_assembled'
+  | 'avatar.expression'
   | 'error';
 
 type ServerMessage =
@@ -41,6 +42,7 @@ type ServerMessage =
   | { type: 'tts.end' }
   | { type: 'session.config.ack'; chars: number }
   | { type: 'debug.prompt_assembled'; systemPrompt: string; userText: string }
+  | { type: 'avatar.expression'; name: string }
   | { type: 'error'; code: string; message: string };
 
 class VoiceClientImpl implements VoiceClient {
@@ -187,6 +189,7 @@ class VoiceClientImpl implements VoiceClient {
             break;
           case 'session.config.ack':
           case 'debug.prompt_assembled':
+          case 'avatar.expression':
             this.emit(msg.type, msg);
             break;
           default:

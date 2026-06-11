@@ -10,6 +10,7 @@ const kindColor: Record<DebugEntry['kind'], string> = {
   prompt: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
   config: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
   perf: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+  avatar: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
   error: 'bg-red-500/20 text-red-300 border-red-500/30',
 };
 

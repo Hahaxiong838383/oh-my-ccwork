@@ -229,6 +229,9 @@ export-myaiopc.sh
 video.mp4
 *.png
 !2-Projects/cc-remote/panel/*.png
+# P003 KidsHub 工作台运行必需资产（小可表情库 + 场景卡背景），clone 端缺图则小可没脸
+!2-Projects/P003GameDemo20260513/apps/web/public/kidshub/expressions/*.png
+!2-Projects/P003GameDemo20260513/apps/web/public/kidshub/scenes/*.png
 
 # ====================================
 # cc-remote 运行时

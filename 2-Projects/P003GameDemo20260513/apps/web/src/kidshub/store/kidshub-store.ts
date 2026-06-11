@@ -13,13 +13,15 @@ import type { LoreSection } from '../knowledge/types';
 
 const TOKEN_KEY = 'kidshub.token';
 const DRAFTS_KEY = 'kidshub.scenePromptDrafts';
-const GLOBALS_KEY = 'kidshub.globalTemplate';
+// .v2：表情系统上线后出厂全局人设/附加规则变了，bump key 让旧 localStorage 缓存失效
+// （否则老用户的缓存会盖住新出厂值，永远拿不到表情指令）
+const GLOBALS_KEY = 'kidshub.globalTemplate.v2';
 const VARS_KEY = 'kidshub.variables';
-const ADDENDUM_KEY = 'kidshub.addendum';
+const ADDENDUM_KEY = 'kidshub.addendum.v2';
 
 export interface DebugEntry {
   ts: number;
-  kind: 'action' | 'asr' | 'llm' | 'tts' | 'prompt' | 'config' | 'perf' | 'error';
+  kind: 'action' | 'asr' | 'llm' | 'tts' | 'prompt' | 'config' | 'perf' | 'avatar' | 'error';
   title: string;
   detail?: string;
 }
