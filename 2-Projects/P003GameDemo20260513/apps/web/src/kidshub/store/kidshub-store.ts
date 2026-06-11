@@ -7,6 +7,7 @@ import {
   defaultVariableValues,
   composeSystemPrompt,
 } from '../prompts';
+import { sampleDeviceState } from '../prompts/sample';
 
 const TOKEN_KEY = 'kidshub.token';
 const DRAFTS_KEY = 'kidshub.scenePromptDrafts';
@@ -41,6 +42,15 @@ interface KidsHubState {
 
   // dirty flag for "未下发"
   promptDirty: boolean;
+
+  // 上次用过的 framing 表达角度 id（会话内追踪，避免连续同角度；不持久化）
+  lastFramingAngle: string | null;
+  setLastFramingAngle: (id: string | null) => void;
+
+  // 各描述类字段「最近 N 次」选中的事实（会话内追踪，走遍整池才重复；不持久化）
+  recentFactPicks: Record<string, string[]>;
+  // 采样版组装：device_state 描述类多条字段各选一条「最近没选过」的，返回 prompt + 本次选中项
+  getComposedPromptSampled: () => { prompt: string; picks: Record<string, string> };
 
   // actions
   setToken: (t: string | null) => void;
@@ -131,6 +141,10 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
     addendum: savedAddendum,
     debugLog: [],
     promptDirty: false,
+    lastFramingAngle: null,
+    recentFactPicks: {},
+
+    setLastFramingAngle: (id) => set({ lastFramingAngle: id }),
 
     setToken: (t) => {
       saveToken(t);
@@ -240,6 +254,25 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
         variables: s.variables,
         addendum: s.addendum,
       });
+    },
+
+    getComposedPromptSampled: () => {
+      const s = get();
+      const cardId = s.activeCardId;
+      const scenePrompt = cardId ? (s.scenePromptDrafts[cardId] ?? '') : '';
+      const { snapshot, picks, nextRecent } = sampleDeviceState(
+        s.variables.device_state ?? '',
+        cardId ?? '',
+        s.recentFactPicks,
+      );
+      set({ recentFactPicks: nextRecent });
+      const prompt = composeSystemPrompt({
+        globalTemplate: s.globalTemplate,
+        scenePrompt,
+        variables: { ...s.variables, device_state: snapshot },
+        addendum: s.addendum,
+      });
+      return { prompt, picks };
     },
 
     getCurrentScenePromptDraft: () => {

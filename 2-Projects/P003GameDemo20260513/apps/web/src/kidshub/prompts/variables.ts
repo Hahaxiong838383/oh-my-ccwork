@@ -24,6 +24,10 @@ export const PROMPT_VARIABLES: PromptVariable[] = [
     key: 'device_state',
     label: '设备 / 玩法已锁定状态',
     source: '状态接口，只注入已锁定值',
+    // 护栏（team 边界审查 claude）：
+    // - 数值类（夜航收益的小时/星尘）= 单组，整段对话唯一，绝不进多条池（防数字漂移对不上账）
+    // - 描述类（生态缸变化）= 多条真实已发生变化，让小可每次挑不同的说（解决「每次讲小鱼」）
+    // - 明日预告 = 多条且每条带「已锁定」，card6 关机预告只能从这里挑（预告必兑现红线）
     defaultValue: JSON.stringify(
       {
         灯光: { 开: true, 亮度: '80%' },
@@ -31,8 +35,17 @@ export const PROMPT_VARIABLES: PromptVariable[] = [
         音量: '50%',
         像距: '舒适档',
         夜航收益: { 离线小时: 10, 星尘: 30 },
-        生态缸变化: '小鱼长出了新花纹',
-        明日预告: '小鱼长尾巴（已锁定）',
+        生态缸变化: [
+          '小鱼身上长出了淡紫色的新花纹',
+          '发光水草开了三朵蓝色的小花',
+          '缸底多了一块像红宝石的小矿石',
+          '一只发光的小海螺爬上了珊瑚',
+        ],
+        明日预告: [
+          '明天小鱼会学会吐泡泡圈（已锁定）',
+          '明天生态缸要点亮一座珊瑚灯塔（已锁定）',
+          '明天会孵化出一只会发光的小海马（已锁定）',
+        ],
       },
       null,
       2,
@@ -43,7 +56,11 @@ export const PROMPT_VARIABLES: PromptVariable[] = [
     key: 'confirmed_memories',
     label: '已确认记忆列表',
     source: '记忆库确认态（候选记忆不注入）',
-    defaultValue: '["喜欢恐龙"]',
+    defaultValue: JSON.stringify(
+      ['喜欢恐龙', '上次说想养一只会发光的电子小狗', '说过长大想去火星种土豆'],
+      null,
+      2,
+    ),
     multiline: true,
   },
   {

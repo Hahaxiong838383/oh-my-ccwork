@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useKidsHubStore, getComposedPromptNow } from './store/kidshub-store';
 import { getSceneCard, SPEC_META } from './prompts';
 import { perfStartTurn } from './perf-tracker';
+import { pickFreshAngle } from './prompts/framing';
 import { SceneNav } from './components/SceneNav';
 import { CardDetail } from './components/CardDetail';
 import { SectionReader } from './components/SectionReader';
@@ -49,9 +50,14 @@ export function StudioPage() {
     });
   }, []);
 
+  // 防 React 18 StrictMode（dev）下 useEffect 双触发导致一次进卡重复采样两条事实
+  const processedCardRef = useRef<string | null>(null);
+
   // 核心交互序列：选中卡
   useEffect(() => {
     if (!activeCardId) return;
+    if (processedCardRef.current === activeCardId) return;
+    processedCardRef.current = activeCardId;
 
     const card = getSceneCard(activeCardId);
     if (!card) return;
@@ -68,8 +74,10 @@ export function StudioPage() {
       variables: { ...s.variables, commander_suffix: card.commanderSuffix },
     }));
 
-    // 4. 组装 + 下发 + 开场触发（顺序保证：config 先到 server，trigger 后到）
-    const composed = getComposedPromptNow();
+    // 4. 采样组装 + 下发 + 开场触发（顺序保证：config 先到 server，trigger 后到）
+    // 采样：device_state 描述类多条 → 每次选一条「与上次不同」的（前端控制轮换，
+    // 不靠 LLM 自觉——独立请求 LLM 无跨轮记忆，靠 prompt 规则会锁定同一条事实）
+    const { prompt: composed, picks } = useKidsHubStore.getState().getComposedPromptSampled();
     const client = getSharedVoiceClient();
 
     void (async () => {
@@ -85,13 +93,21 @@ export function StudioPage() {
           kind: 'config',
           title: `下发 session.config（${composed.length} 字符）· ${card.title}`,
         });
+        const factLine = Object.entries(picks)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(' / ');
+        if (factLine) pushDebug({ kind: 'action', title: `本次事实：${factLine}` });
         markPromptDirty(false);
 
-        // 5. 开场触发：LLM 基于场景 prompt 实时生成开场白（参考示例风格，每次不同）
+        // 5. 开场触发：LLM 基于场景 prompt + 本轮 framing 角度实时生成开场白
+        // framing 角度每次换不同的，让同一事实"像这次刚想到它的这一面"（解决录制感根因）
         if (card.triggerInstruction) {
+          const angle = pickFreshAngle(useKidsHubStore.getState().lastFramingAngle);
+          useKidsHubStore.getState().setLastFramingAngle(angle.id);
+          const instr = `${card.triggerInstruction}\n本次表达角度：【${angle.label}】——${angle.hint}。`;
           perfStartTurn('trigger');
-          client.sendChatTrigger(card.triggerInstruction);
-          pushDebug({ kind: 'action', title: `开场触发 → LLM 生成开场白`, detail: card.triggerInstruction });
+          client.sendChatTrigger(instr);
+          pushDebug({ kind: 'action', title: `本次角度：${angle.label} · 开场触发`, detail: instr });
         }
       } catch (e) {
         pushDebug({ kind: 'error', title: 'sendSessionConfig 失败' });
