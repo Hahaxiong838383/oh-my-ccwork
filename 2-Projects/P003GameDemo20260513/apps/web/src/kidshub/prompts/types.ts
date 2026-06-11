@@ -1,5 +1,3 @@
-import type { SceneId } from '../../store/app-store';
-
 /**
  * KidsHub-AI Prompt 工作台 · 数据类型
  *
@@ -41,17 +39,17 @@ export interface SceneCard {
   why: string;
   /** 场景子 Prompt 原文（填入全局模板 {scene_prompt}） */
   scenePrompt: string;
-  /** 进入该卡时画布跳转的场景；null = 保持当前画面 */
-  sceneId: SceneId | null;
   /** 该场景 {commander_suffix} 推荐值（产品定义场景判定） */
   commanderSuffix: 'on' | 'off';
   /**
-   * 进卡开场白模板（小可先说，走 sayDirect，支持 {占位符}）。
-   * null = 该场景由孩子先开口，AI 不先说话。
+   * 进卡开场触发指令（发给 LLM 当 userText，让小可基于场景 prompt 生成开场白——
+   * 每次不同，不是固定台词）。null = 该场景由孩子先开口，AI 不先说话。
    */
-  opening: string | null;
-  /** 开场白性质说明（产品话术 / 演示用占位），UI 展示 */
-  openingNote?: string;
+  triggerInstruction: string | null;
+  /** kidshub 专属场景背景图（/kidshub/scenes/cardN.png），加载失败自动降级占位 */
+  sceneImage: string;
+  /** 占位渲染用 emoji（图缺失时的降级视觉） */
+  emoji: string;
   /** 工作台提示：建议对小可说什么来体验本卡 */
   hint: string;
 }

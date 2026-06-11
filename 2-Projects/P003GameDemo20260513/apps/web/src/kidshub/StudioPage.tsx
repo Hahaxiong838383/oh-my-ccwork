@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useKidsHubStore, getComposedPromptNow } from './store/kidshub-store';
-import { getSceneCard, fillVariables, SPEC_META } from './prompts';
+import { getSceneCard, SPEC_META } from './prompts';
+import { perfStartTurn } from './perf-tracker';
 import { SceneNav } from './components/SceneNav';
 import { CardDetail } from './components/CardDetail';
 import { SectionReader } from './components/SectionReader';
@@ -8,7 +9,6 @@ import { CanvasHost } from './components/CanvasHost';
 import { DebugFlow } from './components/DebugFlow';
 import { PromptPanel } from './components/PromptPanel';
 import { getSharedVoiceClient } from '../services/voice-client';
-import { jumpToScene } from '../machines';
 import { useAppStore } from '../store/app-store';
 
 function getVoiceWsUrl(): string {
@@ -26,7 +26,6 @@ export function StudioPage() {
   const activeSectionId = useKidsHubStore((s) => s.activeSectionId);
   const promptDirty = useKidsHubStore((s) => s.promptDirty);
   const markPromptDirty = useKidsHubStore((s) => s.markPromptDirty);
-  const variables = useKidsHubStore((s) => s.variables);
   const pushDebug = useKidsHubStore((s) => s.pushDebug);
 
   const [showSection, setShowSection] = useState(false); // 控制左栏下半显示阅读还是详情
@@ -59,10 +58,9 @@ export function StudioPage() {
 
     // 1. store 已在 selectCard 里设置，这里只做副作用
 
-    // 2. 画布跳场景（muteAutoTts：preset 老文案不发声，开场白用产品定义话术）
-    if (card.sceneId) {
-      jumpToScene(card.sceneId, { muteAutoTts: true });
-    }
+    // 2. 画布场景由 CardScene 按 activeCardId 渲染（kidshub 专属场景层，无需跳原 demo 状态机）
+    // 清掉上一张卡残留字幕
+    useAppStore.getState().setSubtitle('');
 
     // 3. 强制设置 commander_suffix
     // 注意：setVariable 会把 dirty 设 true，这里我们手动在后面处理
@@ -70,12 +68,14 @@ export function StudioPage() {
       variables: { ...s.variables, commander_suffix: card.commanderSuffix },
     }));
 
-    // 4. 组装 + 下发
+    // 4. 组装 + 下发 + 开场触发（顺序保证：config 先到 server，trigger 后到）
     const composed = getComposedPromptNow();
     const client = getSharedVoiceClient();
 
-    // 确保连上
     void (async () => {
+      try {
+        await client.unlockAudio();
+      } catch {}
       try {
         if (!client.isConnected()) {
           await client.connect(getVoiceWsUrl());
@@ -86,27 +86,17 @@ export function StudioPage() {
           title: `下发 session.config（${composed.length} 字符）· ${card.title}`,
         });
         markPromptDirty(false);
+
+        // 5. 开场触发：LLM 基于场景 prompt 实时生成开场白（参考示例风格，每次不同）
+        if (card.triggerInstruction) {
+          perfStartTurn('trigger');
+          client.sendChatTrigger(card.triggerInstruction);
+          pushDebug({ kind: 'action', title: `开场触发 → LLM 生成开场白`, detail: card.triggerInstruction });
+        }
       } catch (e) {
         pushDebug({ kind: 'error', title: 'sendSessionConfig 失败' });
       }
     })();
-
-    // 5. 开场白（点击手势合法）
-    const opening = card.opening;
-    if (opening) {
-      void (async () => {
-        try {
-          await client.unlockAudio();
-          if (!client.isConnected()) {
-            await client.connect(getVoiceWsUrl());
-          }
-          const spoken = fillVariables(opening, variables);
-          client.sayDirect(spoken);
-          useAppStore.getState().setSubtitle(spoken);
-          pushDebug({ kind: 'action', title: `开场白：${spoken}` });
-        } catch {}
-      })();
-    }
 
     // 6. debug action
     pushDebug({ kind: 'action', title: `进入卡${card.cardNo}·${card.title}` });

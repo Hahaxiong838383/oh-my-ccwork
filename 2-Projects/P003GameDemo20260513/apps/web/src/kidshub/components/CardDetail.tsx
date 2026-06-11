@@ -60,11 +60,11 @@ export function CardDetail({ card }: CardDetailProps) {
         </div>
       </div>
 
-      {card.openingNote && (
-        <div className="text-[10px] text-neutral-500">
-          开场白性质：{card.openingNote}
-        </div>
-      )}
+      <div className="text-[10px] text-neutral-500">
+        {card.triggerInstruction
+          ? '开场白：进卡时由 LLM 基于场景 Prompt 实时生成（参考示例风格，每次不同）'
+          : '开场白：无（本场景孩子先开口）'}
+      </div>
     </div>
   );
 }

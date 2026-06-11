@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   GLOBAL_SYSTEM_PROMPT,
+  DEFAULT_ADDENDUM,
   SCENE_CARDS,
   getSceneCard,
   defaultVariableValues,
@@ -11,10 +12,11 @@ const TOKEN_KEY = 'kidshub.token';
 const DRAFTS_KEY = 'kidshub.scenePromptDrafts';
 const GLOBALS_KEY = 'kidshub.globalTemplate';
 const VARS_KEY = 'kidshub.variables';
+const ADDENDUM_KEY = 'kidshub.addendum';
 
 export interface DebugEntry {
   ts: number;
-  kind: 'action' | 'asr' | 'llm' | 'tts' | 'prompt' | 'config' | 'error';
+  kind: 'action' | 'asr' | 'llm' | 'tts' | 'prompt' | 'config' | 'perf' | 'error';
   title: string;
   detail?: string;
 }
@@ -31,6 +33,8 @@ interface KidsHubState {
   globalTemplate: string;
   scenePromptDrafts: Record<string, string>;
   variables: Record<string, string>;
+  // 工程附加规则（防示例复读 + KidsHub 全局响应），清空 = 关闭
+  addendum: string;
 
   // debug
   debugLog: DebugEntry[];
@@ -44,6 +48,7 @@ interface KidsHubState {
   selectSection: (id: string) => void;
   editGlobal: (text: string) => void;
   editScenePrompt: (cardId: string, text: string) => void;
+  editAddendum: (text: string) => void;
   setVariable: (key: string, value: string) => void;
   resetCard: (cardId: string) => void;
   resetAll: () => void;
@@ -102,6 +107,7 @@ const factoryDefaults = {
   globalTemplate: GLOBAL_SYSTEM_PROMPT,
   scenePromptDrafts: Object.fromEntries(SCENE_CARDS.map((c) => [c.id, c.scenePrompt])),
   variables: defaultVariableValues(),
+  addendum: DEFAULT_ADDENDUM,
 };
 
 export const useKidsHubStore = create<KidsHubState>((set, get) => {
@@ -110,6 +116,7 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
   const savedGlobal = loadFromStorage<string>(GLOBALS_KEY, factoryDefaults.globalTemplate);
   const savedDrafts = loadFromStorage<Record<string, string>>(DRAFTS_KEY, factoryDefaults.scenePromptDrafts);
   const savedVars = loadFromStorage<Record<string, string>>(VARS_KEY, factoryDefaults.variables);
+  const savedAddendum = loadFromStorage<string>(ADDENDUM_KEY, factoryDefaults.addendum);
 
   // ensure all cards have a draft (in case new cards added later)
   const mergedDrafts = { ...factoryDefaults.scenePromptDrafts, ...savedDrafts };
@@ -121,6 +128,7 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
     globalTemplate: savedGlobal,
     scenePromptDrafts: mergedDrafts,
     variables: { ...factoryDefaults.variables, ...savedVars },
+    addendum: savedAddendum,
     debugLog: [],
     promptDirty: false,
 
@@ -155,6 +163,11 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
         saveToStorage(DRAFTS_KEY, next);
         return { scenePromptDrafts: next, promptDirty: true };
       });
+    },
+
+    editAddendum: (text) => {
+      saveToStorage(ADDENDUM_KEY, text);
+      set({ addendum: text, promptDirty: true });
     },
 
     setVariable: (key, value) => {
@@ -192,12 +205,14 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
           window.localStorage.removeItem(GLOBALS_KEY);
           window.localStorage.removeItem(DRAFTS_KEY);
           window.localStorage.removeItem(VARS_KEY);
+          window.localStorage.removeItem(ADDENDUM_KEY);
         } catch {}
       }
       set({
         globalTemplate: factoryDefaults.globalTemplate,
         scenePromptDrafts: { ...factoryDefaults.scenePromptDrafts },
         variables: { ...factoryDefaults.variables },
+        addendum: factoryDefaults.addendum,
         promptDirty: true,
       });
     },
@@ -223,6 +238,7 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
         globalTemplate: s.globalTemplate,
         scenePrompt,
         variables: s.variables,
+        addendum: s.addendum,
       });
     },
 
@@ -244,5 +260,6 @@ export function getComposedPromptNow(): string {
     globalTemplate: s.globalTemplate,
     scenePrompt,
     variables: s.variables,
+    addendum: s.addendum,
   });
 }

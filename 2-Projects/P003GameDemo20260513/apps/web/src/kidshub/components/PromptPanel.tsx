@@ -17,6 +17,8 @@ export function PromptPanel({ onSend, onExport, hasUnsent }: PromptPanelProps) {
   const editScenePrompt = useKidsHubStore((s) => s.editScenePrompt);
   const variables = useKidsHubStore((s) => s.variables);
   const setVariable = useKidsHubStore((s) => s.setVariable);
+  const addendum = useKidsHubStore((s) => s.addendum);
+  const editAddendum = useKidsHubStore((s) => s.editAddendum);
   const resetCard = useKidsHubStore((s) => s.resetCard);
   const resetAll = useKidsHubStore((s) => s.resetAll);
 
@@ -77,6 +79,30 @@ export function PromptPanel({ onSend, onExport, hasUnsent }: PromptPanelProps) {
                   spellCheck={false}
                 />
               )}
+            </div>
+          )}
+        </section>
+
+        {/* 工程附加规则（防示例复读 + KidsHub 全局响应） */}
+        <section>
+          <button
+            onClick={() => toggle('addendum')}
+            className="flex w-full items-center justify-between text-left text-xs font-medium text-neutral-400 hover:text-white"
+          >
+            工程附加规则（非产品定义原文）
+            <span>{collapsed.addendum ? '▶' : '▼'}</span>
+          </button>
+          {!collapsed.addendum && (
+            <div>
+              <textarea
+                value={addendum}
+                onChange={(e) => editAddendum(e.target.value)}
+                className="mt-1 h-28 w-full resize-y rounded-lg border border-amber-400/20 bg-neutral-900 p-2 font-mono text-[11px] text-neutral-100 focus:border-amber-400 focus:outline-none"
+                spellCheck={false}
+              />
+              <div className="mt-1 text-[10px] text-neutral-500">
+                拼接在场景子 Prompt 之后下发。清空 = 关闭。调整验证有效后应回写产品定义文档。
+              </div>
             </div>
           )}
         </section>

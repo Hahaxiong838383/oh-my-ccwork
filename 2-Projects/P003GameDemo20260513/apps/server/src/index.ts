@@ -106,6 +106,11 @@ function decodeClientMessage(data: RawData, isBinary: boolean): ClientMessage | 
       if (!systemPrompt.trim() || systemPrompt.length > 32000) return null;
       return { type: 'session.config', systemPrompt };
     }
+    case 'chat.trigger': {
+      const text = typeof rec.text === 'string' ? rec.text : '';
+      if (!text.trim() || text.length > 2000) return null;
+      return { type: 'chat.trigger', text };
+    }
     default:
       return null;
   }

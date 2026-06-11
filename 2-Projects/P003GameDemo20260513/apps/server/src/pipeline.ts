@@ -9,7 +9,9 @@ export type ClientMessage =
   | { type: 'audio.end' }
   | { type: 'barge.in' }
   | { type: 'tts.say'; text: string }
-  | { type: 'session.config'; systemPrompt: string };
+  | { type: 'session.config'; systemPrompt: string }
+  // 文本直入 LLM 管线（绕过 ASR）：工作台开场触发指令用，走完整 LLM→TTS 流
+  | { type: 'chat.trigger'; text: string };
 
 export type ServerMessage =
   | { type: 'asr.partial'; text: string }
@@ -67,6 +69,10 @@ export class VoicePipeline {
       case 'session.config':
         this.sessionSystemPrompt = msg.systemPrompt;
         this.send({ type: 'session.config.ack', chars: msg.systemPrompt.length });
+        return;
+      case 'chat.trigger':
+        console.log('[pipeline] chat.trigger received:', msg.text.slice(0, 30));
+        this.startLlmAndTts(msg.text);
         return;
       default:
         this.sendError('BAD_MESSAGE', '未知客户端消息');

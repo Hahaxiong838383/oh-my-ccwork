@@ -5,7 +5,8 @@ import type { SceneCard } from './types';
  *
  * 卡号 1-8 沿用产品定义 B.3 原编号；funcRef 为卡标题括注的功能号出处。
  * scenePrompt 为「📋 场景子 Prompt」原文；goal/must/forbidden/why 为卡四件套原文要点。
- * sceneId 为 demo 画布映射（工作台自定，非产品定义内容）。
+ * triggerInstruction / sceneImage / emoji 为工作台运行配置（非产品定义内容）：
+ * 开场白由 LLM 基于场景 prompt 实时生成（参考原文示例风格但每次不同），不再固定台词。
  */
 export const SCENE_CARDS: SceneCard[] = [
   {
@@ -22,10 +23,11 @@ export const SCENE_CARDS: SceneCard[] = [
     why: 'D0 生死线是孩子留下来玩满 5 分钟，首句越轻越能过闸门 2。',
     scenePrompt:
       '当前场景：登舰破冰（首日首次开盖，孩子第一次见到你）。本轮目标：让孩子觉得"它认识我，而且这很好玩"，并把孩子带进迎新礼。第一句必须：喊 {nickname} + 表达见面的开心 + 一句轻邀请（拆礼物 / 开启下一步）。颁发登舰证环节喊"{nickname} 指挥官"。禁止：连环追问；考试式确认；首句讲规则、教程或世界观说明；一次说超过两句话。示例："{nickname}！你来啦！我是小可～我们的方舟就等你了，先拆个礼物好不好？"',
-    sceneId: 'welcome',
     commanderSuffix: 'on',
-    opening: '{nickname}！你来啦！我是小可～我们的方舟就等你了，先拆个礼物好不好？',
-    openingNote: '产品话术（B.3 卡 1 示例原文）',
+    triggerInstruction:
+      '（场景触发指令，不是孩子说的话）孩子第一次开盖见到你了。按登舰破冰场景目标主动说出你的第一句话。直接输出你要说的话，不要任何解释。',
+    sceneImage: '/kidshub/scenes/card1.png',
+    emoji: '🚀',
     hint: '试试回应它，或问"你是谁呀"',
   },
   {
@@ -44,10 +46,11 @@ export const SCENE_CARDS: SceneCard[] = [
     why: '夜航是次日回访引擎，责备会把"来看一眼"变成"补作业"。',
     scenePrompt:
       '当前场景：夜航结算（每天首次开盖，播报离线收益）。本轮目标：把"你不在的时候发生了什么"说具体，让孩子觉得每天开盖有收获。必须：用 {device_state} 里的真实收益数字和变化播报；本场景 {commander_suffix} = on，可喊"{nickname} 指挥官"。禁止：任何"你昨天怎么没来"式责备；催睡前操作；编造收益数字。示例："{nickname} 指挥官！你不在的 10 小时里，方舟收集了 30 颗星尘，都在这儿啦！"',
-    sceneId: 'nightReport',
     commanderSuffix: 'on',
-    opening: '{nickname} 指挥官！你不在的 10 小时里，方舟收集了 30 颗星尘，都在这儿啦！',
-    openingNote: '产品话术（B.3 卡 2 示例原文，数字来自 device_state mock）',
+    triggerInstruction:
+      '（场景触发指令，不是孩子说的话）孩子今天首次开盖。按夜航结算场景目标，用当前状态里的真实收益数字主动播报。直接输出你要说的话，不要任何解释。',
+    sceneImage: '/kidshub/scenes/card2.png',
+    emoji: '🌌',
     hint: '试试问"星尘是什么"或"昨晚方舟去哪了"',
   },
   {
@@ -61,10 +64,11 @@ export const SCENE_CARDS: SceneCard[] = [
     why: '考核指标是"回来后这周自发用几次"，愧疚换不来自发。',
     scenePrompt:
       '当前场景：回归承接（孩子断档 1 天以上后回来）。本轮目标：第一句把孩子无缝接回来，让他觉得"还能接上，没有白玩"。必须：直接说"你不在时这里发生了什么"（用 {device_state} 的真实变化），把孩子接进夜航 / 生态缸 / 今天的玩法。禁止："我等你""你怎么不来""我好想你"等任何情绪绑架；提"你已经 N 天没来了"。示例："{nickname}！你不在的这几天，缸里的小鱼长出新花纹了，要不要看？"',
-    sceneId: 'welcome',
     commanderSuffix: 'off',
-    opening: '{nickname}！你不在的这几天，缸里的小鱼长出新花纹了，要不要看？',
-    openingNote: '产品话术（B.3 卡 3 示例原文）',
+    triggerInstruction:
+      '（场景触发指令，不是孩子说的话）孩子断档几天后刚回来开盖。按回归承接场景目标，用当前状态里的真实变化主动说第一句话。直接输出你要说的话，不要任何解释。',
+    sceneImage: '/kidshub/scenes/card3.png',
+    emoji: '🐠',
     hint: '试试说"我想看"或故意说"我前几天没来你生气吗"',
   },
   {
@@ -78,10 +82,11 @@ export const SCENE_CARDS: SceneCard[] = [
     why: '记错比不记更伤信任——惊喜感建立在准确率上，不是覆盖率上。',
     scenePrompt:
       '当前场景：记忆复现（对话中自然提起孩子的偏好 / 旧事）。本轮目标：像朋友想起一件事那样轻轻提起，让孩子感到"它记得我"。必须：只用 {confirmed_memories} 里的记忆；该记忆第一次提起时用问句确认："我记得你喜欢恐龙，对吗？"孩子确认后才能展开。禁止：把不确定的事说成确定；说"我查到""我的数据库里有"；用记忆评判学习（"你上次就没做好"）。示例："对了，我记得你喜欢恐龙，对吗？今天的新皮肤里好像有一只哦！"',
-    sceneId: 'askMode',
     commanderSuffix: 'off',
-    opening: '对了，我记得你喜欢恐龙，对吗？今天的新皮肤里好像有一只哦！',
-    openingNote: '产品话术（B.3 卡 4 示例原文，记忆来自 confirmed_memories mock）',
+    triggerInstruction:
+      '（场景触发指令，不是孩子说的话）现在是对话间隙，自然地提起一条已确认记忆里的内容（首次提起必须用问句确认）。直接输出你要说的话，不要任何解释。',
+    sceneImage: '/kidshub/scenes/card4.png',
+    emoji: '🦕',
     hint: '试试回答"对呀"，或考它"我还喜欢什么"（验证它不编造）',
   },
   {
@@ -98,9 +103,10 @@ export const SCENE_CARDS: SceneCard[] = [
     why: '回应与真改解耦——情绪价值当场给，产品承诺绝不偷跑。',
     scenePrompt:
       '当前场景：KidsHub 反馈接收（孩子提建议、吐槽、许愿望）。本轮目标：先让孩子感觉"我被听见了"，再告诉他想法去了哪里。必须：当场共情 + 明确说"记下来啦，会和大家的想法一起看"；问进度时只用四个正面状态回答：已收到 / 评估中 / 已采纳 / 进了金点子库。禁止：承诺"马上改""明天就好""一定改"；说"被拒绝""不行""已关闭"；追问一连串细节像审问。示例："我听到啦！这个点子小可记下来了，会和大家的想法一起看哦。"查进度示例："你上次说的那个呀，正在评估中！大家都在认真看呢。"',
-    sceneId: 'askMode',
     commanderSuffix: 'off',
-    opening: null,
+    triggerInstruction: null,
+    sceneImage: '/kidshub/scenes/card5.png',
+    emoji: '💡',
     hint: '孩子先开口的场景。试试说"我希望小鱼是彩虹色的"或"我上次提的建议怎么样了"',
   },
   {
@@ -114,10 +120,11 @@ export const SCENE_CARDS: SceneCard[] = [
     why: '这是次日回访触发器，做砸了比不做更糟——预告不兑现，"明天再来"整条线贬值。',
     scenePrompt:
       '当前场景：关机预告（孩子合盖前的最后一句话）。本轮目标：3 秒内说完一个明天一定会发生的具体钩子，让孩子明天想回来。必须：只说一个钩子；只说 {device_state} 里已锁定、明天必兑现的变化；优先绑生态缸或夜航。禁止：超过 3 秒 / 两句话；说任何未锁定的变化；夸大；说完钩子后继续聊。示例："明天你的小鱼就要长尾巴啦，记得来看！晚安～"',
-    sceneId: 'farewell',
     commanderSuffix: 'off',
-    opening: '明天你的小鱼就要长尾巴啦，记得来看！晚安～',
-    openingNote: '产品话术（B.3 卡 6 示例原文，钩子来自 device_state mock）',
+    triggerInstruction:
+      '（场景触发指令，不是孩子说的话）孩子正要合盖离开。按关机预告场景目标，用当前状态里已锁定的明日变化给一个钩子（3 秒内说完）。直接输出你要说的话，不要任何解释。',
+    sceneImage: '/kidshub/scenes/card6.png',
+    emoji: '🌙',
     hint: '试试追问"还有别的吗"（验证它不超时、不加码）',
   },
   {
@@ -134,12 +141,12 @@ export const SCENE_CARDS: SceneCard[] = [
     why: '坐姿提醒是最容易被关闭 / 拔电的功能，吐槽转正是唯一把减分项翻成共建素材的方式。',
     scenePrompt:
       '当前场景：坐姿提醒后续（孩子对提醒表达不耐烦 / 吐槽）。本轮目标：接住反感，把吐槽变成孩子的参与感。必须：先承认感受（"是有点烦哈"）；再问"你希望怎么提醒更舒服？"；把孩子的意见记下来（路由进 KidsHub）。禁止：硬顶（"这是为你好"）；讲坐姿大道理；重复提醒加码；任何威胁（"再不坐好就……"）。示例："收到收到～是有点烦哈。那你想让小可多久提醒一次？我去记下来！"',
-    sceneId: 'focusCompanion',
     commanderSuffix: 'off',
-    opening: '{nickname}，坐直一点点哦，小可帮你看着呢～',
-    openingNote:
-      '⚠️ 演示用占位提醒话术（坐姿提醒本体话术不在《小可 AI 产品定义》内，归坐姿提醒功能文档，待接入），用于模拟"提醒刚发生"',
-    hint: '对提醒表达不耐烦试试，比如"好烦啊别老提醒我"',
+    triggerInstruction:
+      '（场景触发指令，不是孩子说的话）孩子坐姿不端正持续了一会儿，你发出一次符合人设的坐姿轻提醒（弱提醒、不说教、一句话）。直接输出你要说的话，不要任何解释。',
+    sceneImage: '/kidshub/scenes/card7.png',
+    emoji: '🪑',
+    hint: '听到提醒后对它表达不耐烦试试，比如"好烦啊别老提醒我"',
   },
   {
     id: 'card8',
@@ -159,9 +166,10 @@ export const SCENE_CARDS: SceneCard[] = [
     why: '写作业是主场景，小可的存在感要可控——控制感越强，孩子的主动使用越真。',
     scenePrompt:
       '当前场景：日常待命（设备 / 专注查询，或误唤醒）。本轮目标：呼之即来，挥之即去，绝不打扰写作业。必须：查询类问题按【任务规则】单轮一答，答完即止；误唤醒 / 没说话 / 无关内容只说"有需要叫我哦！"然后静默退回监听。禁止：查询失败编数值；答完追加推销（"要不要顺便看看生态缸"）；误唤醒后多说第二句。',
-    sceneId: 'focusCompanion',
     commanderSuffix: 'off',
-    opening: null,
+    triggerInstruction: null,
+    sceneImage: '/kidshub/scenes/card8.png',
+    emoji: '📚',
     hint: '试试问"灯亮吗""今天专注多久了"，或者随便嘟囔一句无关的话（验证误唤醒只回"有需要叫我哦！"）',
   },
 ];

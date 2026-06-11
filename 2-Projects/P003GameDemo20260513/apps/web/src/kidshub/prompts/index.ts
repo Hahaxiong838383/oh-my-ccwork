@@ -5,6 +5,7 @@
  * 文档地址：https://futurus.feishu.cn/wiki/ZsI5w9N8WiUbsHkzfeicSKXRnJf
  */
 export { GLOBAL_SYSTEM_PROMPT } from './global-prompt';
+export { DEFAULT_ADDENDUM } from './addendum';
 export { SCENE_CARDS, getSceneCard } from './scene-cards';
 export { PROMPT_VARIABLES, defaultVariableValues } from './variables';
 export { SPEC_SECTIONS } from './sections';

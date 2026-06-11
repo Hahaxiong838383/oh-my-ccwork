@@ -1,25 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
-import { Screen } from '../../screen/Screen';
-// 场景组件自管显隐，原 demo 挂在 DeviceFrame 画布容器内（Screen 只管 focus 场景+字幕），
-// 工作台画布必须挂同一套，否则 welcome/nightReport 等场景空白
-import { Welcome } from '../../scenes/Welcome';
-import { NightReport } from '../../scenes/NightReport';
-import { AskMode } from '../../scenes/AskMode';
-import { OpenBox } from '../../scenes/OpenBox';
-import { EcoUnlock } from '../../scenes/EcoUnlock';
-import { Farewell } from '../../scenes/Farewell';
-import { WifiHud } from '../../components/WifiHud';
-import { Tips } from '../../components/Tips';
-import { jumpToScene } from '../../machines';
+// kidshub 专属场景层（CardScene），与原 demo 场景组件完全解耦；
+// StatusBar 复用原 demo 字幕系统（读 app-store.subtitle，TTS 严同步逻辑现成）
+import { StatusBar } from '../../components/StatusBar';
+import { CardScene } from './CardScene';
 import {
   getSharedVoiceClient,
   type VoiceClient,
 } from '../../services/voice-client';
 import { useKidsHubStore } from '../store/kidshub-store';
-import { fillVariables } from '../prompts';
 import { getSceneCard } from '../prompts';
-import type { SceneCard } from '../prompts';
 import { useAppStore } from '../../store/app-store';
+import {
+  perfStartTurn,
+  perfMarkAsrFinal,
+  perfMarkLlmFirst,
+  perfMarkTtsFirstAndReport,
+  perfReset,
+} from '../perf-tracker';
 
 function getVoiceWsUrl(): string {
   const envUrl = (import.meta as any).env?.VITE_VOICE_WS_URL as string | undefined;
@@ -36,7 +33,7 @@ interface CanvasHostProps {
 
 export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   const activeCardId = useKidsHubStore((s) => s.activeCardId);
-  const variables = useKidsHubStore((s) => s.variables);
+  const selectCard = useKidsHubStore((s) => s.selectCard);
   const pushDebug = useKidsHubStore((s) => s.pushDebug);
 
   const setVoiceStatus = useAppStore((s) => s.setVoiceStatus);
@@ -75,6 +72,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       setSubtitle(msg.text);
     };
     const onAsrFinal = (msg: { text: string }) => {
+      perfMarkAsrFinal();
       setSubtitle(`${msg.text}...`);
       llmTextRef.current = '';
       onDebug('asr', `👦 用户：${msg.text}`);
@@ -83,6 +81,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     };
     const onLlmDelta = (msg: { text: string }) => {
       if (!msg.text) return;
+      perfMarkLlmFirst();
       llmTextRef.current += msg.text;
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
@@ -99,6 +98,11 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       llmTextRef.current = '';
     };
     const onTtsAudio = () => {
+      // 首段音频到达 → 产出本轮 perf 汇总（每轮只报一次）
+      const perfLine = perfMarkTtsFirstAndReport();
+      if (perfLine) {
+        pushDebug({ kind: 'perf', title: perfLine });
+      }
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
     };
@@ -221,6 +225,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     }
 
     client.stopRecording();
+    // 松手 = 一轮 voice 计时起点（ASR→LLM TTFT→TTS 首包→端到端）
+    perfStartTurn('voice');
     setVoiceStatus('thinking');
     setXiaokeEmotion('calm');
   };
@@ -229,42 +235,10 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     const client = clientRef.current;
     if (client) {
       client.bargeIn();
+      perfReset();
       setVoiceStatus('idle');
       setSubtitle('');
     }
-  };
-
-  // 暴露给外部的 imperative API（供 Studio 选择卡后调用）
-  // 放在 window 仅为方便，实际 Studio 直接 import 这些函数更好
-  (window as any).__KIDSHUB_CANVAS__ = {
-    jumpAndSay: async (card: SceneCard) => {
-      if (card.sceneId) {
-        jumpToScene(card.sceneId);
-      }
-      // 变量已在 store 侧设置，这里只负责语音
-      const client = clientRef.current;
-      if (!client) return;
-
-      if (card.opening) {
-        try {
-          await client.unlockAudio();
-        } catch {}
-        if (!client.isConnected()) {
-          try {
-            await client.connect(getVoiceWsUrl());
-          } catch {}
-        }
-        const spoken = fillVariables(card.opening, variables);
-        client.sayDirect(spoken);
-      }
-    },
-    sendConfig: (prompt: string) => {
-      const client = clientRef.current;
-      if (client && client.isConnected()) {
-        client.sendSessionConfig(prompt);
-      }
-    },
-    getClient: () => clientRef.current,
   };
 
   const card = activeCardId ? getSceneCard(activeCardId) : null;
@@ -281,15 +255,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
           }}
           data-scope="screen-canvas"
         >
-          <Screen />
-          <WifiHud />
-          <Welcome />
-          <NightReport />
-          <AskMode />
-          <OpenBox />
-          <EcoUnlock />
-          <Farewell />
-          <Tips />
+          <CardScene card={card ?? null} />
+          <StatusBar />
         </div>
       </div>
 
@@ -320,6 +287,19 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
             className="rounded-full border border-white/15 bg-neutral-800 px-4 py-1.5 text-sm text-neutral-300 hover:bg-neutral-700 active:bg-neutral-950"
           >
             打断
+          </button>
+
+          {/* KidsHub 反馈是贯穿小可体验的全局能力（任何场景都可吐槽/提建议），常驻入口 */}
+          <button
+            onClick={() => selectCard('card5')}
+            title="KidsHub 反馈贯穿所有场景：随时切到卡 5 体验完整反馈流（附加规则已让所有场景都能接住建议/吐槽）"
+            className={`rounded-full px-4 py-1.5 text-sm transition ${
+              activeCardId === 'card5'
+                ? 'bg-amber-500/90 text-neutral-950'
+                : 'border border-amber-400/40 bg-amber-400/10 text-amber-300 hover:bg-amber-400/20'
+            }`}
+          >
+            💬 KidsHub
           </button>
         </div>
 

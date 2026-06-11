@@ -11,6 +11,8 @@ export interface VoiceClient {
   sayDirect(text: string, onAudioStart?: () => void): void;
   // KidsHub-AI 工作台：下发组装好的完整 system prompt（server 存到当前连接）
   sendSessionConfig(systemPrompt: string): void;
+  // KidsHub-AI 工作台：文本直入 LLM 管线（开场触发指令，走完整 LLM→TTS）
+  sendChatTrigger(text: string): void;
   unlockAudio(): Promise<void>;
   on(event: VoiceEvent, cb: (data: any) => void): void;
   off(event: VoiceEvent, cb: (data: any) => void): void;
@@ -461,6 +463,15 @@ class VoiceClientImpl implements VoiceClient {
       return;
     }
     this.ws.send(JSON.stringify({ type: 'session.config', systemPrompt }));
+  }
+
+  sendChatTrigger(text: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.warn('[voice-client] sendChatTrigger skipped: websocket not open');
+      return;
+    }
+    // server 端 startLlmAndTts 内部会 bargein，旧轮自动让位
+    this.ws.send(JSON.stringify({ type: 'chat.trigger', text }));
   }
 
   async unlockAudio(): Promise<void> {
