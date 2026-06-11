@@ -17,7 +17,8 @@ export function createSubtitleTypewriter(
   cb: TypewriterCallbacks,
   opts?: { charMs?: number; clearDelayMs?: number; autoAdvanceMs?: number },
 ): SubtitleTypewriter {
-  const charMs = Math.max(1, opts?.charMs ?? 180);
+  // 126ms/字 ≈ 8 字/秒（2026-06-11 川哥手测 180 偏慢，提速 30%）
+  const charMs = Math.max(1, opts?.charMs ?? 126);
   const clearDelayMs = Math.max(0, opts?.clearDelayMs ?? 1200);
   // 自动跨句兜底：当前句打完后这么久没等到外部 advance（TTS 句边界信号与文本切句
   // 数不一致是常态：短句并段/逗号长句拆段），自动推进下一句——对齐降级但绝不卡死
