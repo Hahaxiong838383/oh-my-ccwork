@@ -77,7 +77,8 @@ export function StudioPage() {
     // 4. 采样组装 + 下发 + 开场触发（顺序保证：config 先到 server，trigger 后到）
     // 采样：device_state 描述类多条 → 每次选一条「与上次不同」的（前端控制轮换，
     // 不靠 LLM 自觉——独立请求 LLM 无跨轮记忆，靠 prompt 规则会锁定同一条事实）
-    const { prompt: composed, picks } = useKidsHubStore.getState().getComposedPromptSampled();
+    // 新增：getKnowledge 世界观 lore 注入（L1 + L2 1-2 节），loreSections 供 debug 展示本次注入了哪些
+    const { prompt: composed, picks, loreSections } = useKidsHubStore.getState().getComposedPromptSampled();
     const client = getSharedVoiceClient();
 
     void (async () => {
@@ -97,6 +98,11 @@ export function StudioPage() {
           .map(([k, v]) => `${k}=${v}`)
           .join(' / ');
         if (factLine) pushDebug({ kind: 'action', title: `本次事实：${factLine}` });
+        // 世界观素材注入记录（仅本次 sampled 触发的 loreSections）
+        if (loreSections && loreSections.length > 0) {
+          const titles = loreSections.map((s) => s.title).join('/');
+          pushDebug({ kind: 'action', title: `本次世界观素材：${titles}` });
+        }
         markPromptDirty(false);
 
         // 5. 开场触发：LLM 基于场景 prompt + 本轮 framing 角度实时生成开场白

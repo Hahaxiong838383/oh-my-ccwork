@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useKidsHubStore } from '../store/kidshub-store';
 import { PROMPT_VARIABLES } from '../prompts';
 import { PromptPreviewModal } from './PromptPreviewModal';
+import { WORLD_CORE, CARD_LORE_MAP, getSection } from '../knowledge';
 
 interface PromptPanelProps {
   onSend: () => void; // 下发生效
@@ -26,7 +27,9 @@ export function PromptPanel({ onSend, onExport, hasUnsent }: PromptPanelProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
     global: false,
     scene: false,
+    addendum: false,
     vars: false,
+    lore: false,
   });
 
   const currentDraft = activeCardId ? scenePromptDrafts[activeCardId] ?? '' : '';
@@ -102,6 +105,56 @@ export function PromptPanel({ onSend, onExport, hasUnsent }: PromptPanelProps) {
               />
               <div className="mt-1 text-[10px] text-neutral-500">
                 拼接在场景子 Prompt 之后下发。清空 = 关闭。调整验证有效后应回写产品定义文档。
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* 世界观知识注入（工作台预览区：让 PM 一眼看到小可本轮/常驻带了哪些世界观知识） */}
+        <section>
+          <button
+            onClick={() => toggle('lore')}
+            className="flex w-full items-center justify-between text-left text-xs font-medium text-neutral-400 hover:text-white"
+          >
+            世界观知识注入
+            <span>{collapsed.lore ? '▶' : '▼'}</span>
+          </button>
+          {!collapsed.lore && (
+            <div className="mt-2 space-y-3 text-[11px]">
+              {/* L1 核心常驻 */}
+              <div>
+                <div className="font-medium text-emerald-300">L1 核心常驻（进 system prompt，每轮均带）</div>
+                <div className="mt-0.5 rounded border border-emerald-400/20 bg-neutral-900 p-2 text-neutral-300">
+                  {WORLD_CORE.slice(0, 80)}
+                  {WORLD_CORE.length > 80 ? '…' : ''}
+                  <span className="ml-1 text-emerald-400">（常驻）</span>
+                </div>
+                <div className="mt-0.5 text-[10px] text-neutral-500">来源：KNOWLEDGE_META + boundaryDeclaration（死活分离声明）</div>
+              </div>
+
+              {/* L2 当前卡对应节（标注本场景会注入哪些；实际 1-2 节由 getKnowledge 运行时挑 + 避重） */}
+              <div>
+                <div className="font-medium text-emerald-300">L2 本场景素材（CARD_LORE_MAP 路由，实际注入见 debug「本次世界观素材」）</div>
+                {!activeCardId && <div className="text-neutral-500">未选择场景卡</div>}
+                {activeCardId && (
+                  <div className="mt-1 space-y-0.5 text-neutral-300">
+                    {(CARD_LORE_MAP[activeCardId] ?? []).length === 0 ? (
+                      <div className="text-neutral-500">本卡暂无关联 lore 节</div>
+                    ) : (
+                      (CARD_LORE_MAP[activeCardId] ?? []).map((id) => {
+                        const sec = getSection(id);
+                        return (
+                          <div key={id} className="rounded border border-white/10 bg-neutral-900 px-2 py-0.5">
+                            • {sec?.title ?? id} <span className="text-[10px] text-neutral-500">（候选，本轮可能 1-2 节）</span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="text-[10px] text-neutral-500">
+                说明：L1 常驻；L2 由 store getComposedPromptSampled 调用 getKnowledge(cardId, recentLoreIds) 选 1-2 节（候选≤2 全取；否则避重随机挑），picked 记入 recentLoreIds 保留最近 4-6。
               </div>
             </div>
           )}
