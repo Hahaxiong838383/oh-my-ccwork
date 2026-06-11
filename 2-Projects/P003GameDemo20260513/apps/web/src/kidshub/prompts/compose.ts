@@ -33,7 +33,9 @@ export function composeSystemPrompt(opts: {
     }
     if (sections.length > 0) {
       const loreMat = sections.map((s) => `${s.title}：${s.body}`).join('\n\n');
-      full += `\n\n【世界观·本场景素材】\n${loreMat}`;
+      // 危险素材（具体藏品/光环/生态缸演变）紧贴用户消息、recency 最强，块内必须再贴一道强边界 + 正反例，
+      // 否则 LLM 易把"世界里存在"讲成"孩子此刻拥有"（对抗审查 No.1，最高风险）
+      full += `\n\n【世界观·本场景素材】（以下只是这个世界里"存在"的设定，不代表孩子此刻就拥有——凡涉及"你的/今天/刚刚/现在"的事实，一律以上文 device_state 为准。✅可以说"方舟世界里有机械恐龙这种藏品"；❌不能说"你昨晚的宝箱里有机械恐龙"。）\n${loreMat}`;
     }
   }
 

@@ -51,8 +51,8 @@ interface KidsHubState {
 
   // 各描述类字段「最近 N 次」选中的事实（会话内追踪，走遍整池才重复；不持久化）
   recentFactPicks: Record<string, string[]>;
-  // 世界观 lore 节 id 最近使用记录（跨轮避重用，参考 recentFactPicks 模式；不持久化）
-  recentLoreIds: string[];
+  // 世界观 lore 节最近使用记录，按 cardId 分桶（对抗审查 No.3：避免跨卡借走素材；参考 recentFactPicks）
+  recentLoreByCard: Record<string, string[]>;
   // 采样版组装：device_state 事实采样 + 世界观 lore 注入，返回 prompt + picks + 本次 loreSections（供 debug/UI 展示注入内容）
   getComposedPromptSampled: () => { prompt: string; picks: Record<string, string>; loreSections: LoreSection[] };
 
@@ -147,7 +147,7 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
     promptDirty: false,
     lastFramingAngle: null,
     recentFactPicks: {},
-    recentLoreIds: [],
+    recentLoreByCard: {},
 
     setLastFramingAngle: (id) => set({ lastFramingAngle: id }),
 
@@ -274,12 +274,16 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
       );
       set({ recentFactPicks: nextRecent });
 
-      // 2. 世界观知识注入（新增）：L1 core + 从 CARD_LORE_MAP 按卡选 1-2 节，避开 recentLoreIds
+      // 2. 世界观知识注入：L1 core + 从 CARD_LORE_MAP 按卡选 1-2 节，避开「本卡」最近用过的节
+      //    （对抗审查 No.3：recentLore 按 cardId 分桶，避免夜航卡把 night_voyage 借走导致回归卡注入不到）
+      const cardLoreRecent = cardId ? s.recentLoreByCard[cardId] ?? [] : [];
       const loreBundle = cardId
-        ? getKnowledge(cardId, s.recentLoreIds)
+        ? getKnowledge(cardId, cardLoreRecent)
         : { core: '', sections: [] as LoreSection[], pickedIds: [] as string[] };
-      const nextLoreRecent = [...(s.recentLoreIds ?? []), ...loreBundle.pickedIds].slice(-6); // 保留最近 4-6 个
-      set({ recentLoreIds: nextLoreRecent });
+      if (cardId) {
+        const nextCardRecent = [...cardLoreRecent, ...loreBundle.pickedIds].slice(-6);
+        set({ recentLoreByCard: { ...s.recentLoreByCard, [cardId]: nextCardRecent } });
+      }
 
       // 3. 组装：把 lore {core, sections} 传给 compose（L1 core 常驻；仅 sections 非空时插入本场景素材块）
       const prompt = composeSystemPrompt({

@@ -3,6 +3,13 @@ import { CARD_LORE_MAP, getSection } from './lore-sections';
 import type { KnowledgeBundle, LoreSection } from './types';
 
 /**
+ * 永不注入的 lore 节（伏笔/后续功能硬隔离）。
+ * 即使有人误把 'foreshadow'（光灵/熵兽/版本规划）挂进 CARD_LORE_MAP，也注入不了——
+ * 把"靠人不挂"的约定升级成"代码强制"，防小可把未上线功能讲成现有（对抗审查 No.5）。
+ */
+const BLOCKED_LORE_IDS = new Set(['foreshadow']);
+
+/**
  * 世界观知识注入引擎（L1 常驻 + L2 按卡路由 1-2 节，跨轮避重）。
  *
  * 供 store 的 getComposedPromptSampled 调用。
@@ -12,7 +19,7 @@ import type { KnowledgeBundle, LoreSection } from './types';
  */
 export function getKnowledge(cardId: string, recentLoreIds: string[]): KnowledgeBundle {
   const core = WORLD_CORE;
-  const candidateIds: string[] = CARD_LORE_MAP[cardId] ?? [];
+  const candidateIds: string[] = (CARD_LORE_MAP[cardId] ?? []).filter((id) => !BLOCKED_LORE_IDS.has(id));
 
   let pickedIds: string[];
   if (candidateIds.length <= 2) {
