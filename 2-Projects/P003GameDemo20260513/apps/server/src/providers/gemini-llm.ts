@@ -28,6 +28,19 @@ function getMaxTokensForModel(model: string): number {
   return 8192;
 }
 
+/**
+ * 采样温度（可调旋钮）：默认 1.0 —— 让相同 prompt 每次话术有差异，
+ * 避免"提前录制感"。需要更稳/更发散时改 .env.local 的 LLM_TEMPERATURE 即可，
+ * 不必改代码。非法值回退 1.0。
+ */
+const DEFAULT_TEMPERATURE = 1.0;
+function getTemperature(): number {
+  const raw = process.env.LLM_TEMPERATURE;
+  if (raw === undefined || raw.trim() === '') return DEFAULT_TEMPERATURE;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : DEFAULT_TEMPERATURE;
+}
+
 class GeminiLlmClientImpl implements GeminiLlmClient {
   private activeAbort: AbortController | null = null;
 
@@ -63,7 +76,7 @@ class GeminiLlmClientImpl implements GeminiLlmClient {
         body: JSON.stringify({
           model,
           stream: true,
-          temperature: 0.6,
+          temperature: getTemperature(),
           // 按模型动态取上限：2.5-pro 32768 / 2.5+3.x 系列 65535 / MiniMax 8192
           max_tokens: getMaxTokensForModel(model),
           messages: [
