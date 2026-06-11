@@ -88,7 +88,11 @@ export function StudioPage() {
     void (async () => {
       try {
         await client.unlockAudio();
-      } catch {}
+      } catch (e) {
+        // 不吞错：Brave 等隐私护盾可能让 AudioContext 创建/resume 异常，记到调试流便于定位
+        const msg = e instanceof Error ? e.message : String(e);
+        pushDebug({ kind: 'error', title: `🔇 解锁音频失败（不影响下发）：${msg}` });
+      }
       try {
         if (!client.isConnected()) {
           await client.connect(getVoiceWsUrl());
@@ -120,7 +124,9 @@ export function StudioPage() {
           pushDebug({ kind: 'action', title: `本次角度：${angle.label} · 开场触发`, detail: instr });
         }
       } catch (e) {
-        pushDebug({ kind: 'error', title: 'sendSessionConfig 失败' });
+        // 暴露真实错误（连接超时/握手失败等）——之前只显示"失败"无法定位 Brave 卡点
+        const msg = e instanceof Error ? e.message : String(e);
+        pushDebug({ kind: 'error', title: `❌ 下发/触发失败：${msg}` });
       }
     })();
 

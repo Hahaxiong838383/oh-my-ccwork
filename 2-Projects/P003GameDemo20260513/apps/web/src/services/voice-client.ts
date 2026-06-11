@@ -111,7 +111,23 @@ class VoiceClientImpl implements VoiceClient {
       // 或 resolve 之后 onclose 再次 settle 已结算的 promise
       let settled = false;
 
+      // 握手超时兜底：某些浏览器（Brave Shields 等）可能让 ws 既不 open 也不 error，
+      // connectPromise 永远 pending → 点卡的 await 死锁、一条消息都发不出（server 侧 msgs=0）。
+      // 10s 没 open 就 reject，让上层拿到明确错误而不是静默卡死。
+      const handshakeTimer = window.setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        try {
+          ws.close();
+        } catch {
+          // ignore
+        }
+        clearPendingIfSelf();
+        reject(new Error('WebSocket 握手超时（10s）——可能被浏览器隐私护盾或网络拦截'));
+      }, 10_000);
+
       const clearPendingIfSelf = () => {
+        window.clearTimeout(handshakeTimer);
         if (this.pendingWs === ws) {
           this.pendingWs = null;
           this.connectPromise = null;
@@ -528,32 +544,33 @@ class VoiceClientImpl implements VoiceClient {
   }
 
   sendSessionConfig(systemPrompt: string): void {
+    // 抛错而非静默 return：ws 没 open 时静默吞掉 = 点卡毫无反应且 server msgs=0，
+    // 无法定位（Brave 实战踩坑）。抛出让上层 catch 显示到调试流。
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn('[voice-client] sendSessionConfig skipped: websocket not open');
-      return;
+      throw new Error(`下发失败：WebSocket 未就绪（readyState=${this.ws?.readyState ?? 'null'}）`);
     }
     this.ws.send(JSON.stringify({ type: 'session.config', systemPrompt }));
   }
 
   sendChatTrigger(text: string): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn('[voice-client] sendChatTrigger skipped: websocket not open');
-      return;
+      throw new Error(`触发失败：WebSocket 未就绪（readyState=${this.ws?.readyState ?? 'null'}）`);
     }
     // server 端 startLlmAndTts 内部会 bargein，旧轮自动让位
     this.ws.send(JSON.stringify({ type: 'chat.trigger', text }));
   }
 
   async unlockAudio(): Promise<void> {
-    const ctx = this.ensureAudioContext();
-    if (!ctx) return;
-    if (ctx.state === 'suspended') {
-      try {
+    // ensureAudioContext 可能 throw（Brave fingerprinting 护盾对 Web Audio 异常）——
+    // 整体 try 兜底，让音频解锁失败绝不阻断后续 ws 下发（语音对话链路不依赖播放解锁成功）
+    try {
+      const ctx = this.ensureAudioContext();
+      if (!ctx) return;
+      if (ctx.state === 'suspended') {
         await ctx.resume();
-        console.log('[voice-client] AudioContext resumed via unlockAudio');
-      } catch (err) {
-        console.warn('[voice-client] unlockAudio resume failed', err);
       }
+    } catch (err) {
+      console.warn('[voice-client] unlockAudio failed (non-fatal)', err);
     }
   }
 
