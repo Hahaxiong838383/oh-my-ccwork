@@ -7,6 +7,7 @@ import { SceneNav } from './components/SceneNav';
 import { CardDetail } from './components/CardDetail';
 import { SectionReader } from './components/SectionReader';
 import { CanvasHost } from './components/CanvasHost';
+import { sharedTypewriter } from './subtitle/shared';
 import { DebugFlow } from './components/DebugFlow';
 import { PromptPanel } from './components/PromptPanel';
 import { getSharedVoiceClient } from '../services/voice-client';
@@ -64,8 +65,11 @@ export function StudioPage() {
 
     // 1. store 已在 selectCard 里设置，这里只做副作用
 
-    // 2. 画布场景由 CardScene 按 activeCardId 渲染（kidshub 专属场景层，无需跳原 demo 状态机）
-    // 清掉上一张卡残留字幕
+    // 2. 硬打断旧轮：server 端 trigger 自带 bargein 只停"合成"，已下发到本地的
+    // mp3 chunk 还在播放队列里——不本地 bargeIn 就会把旧场景的话播完才开新场景。
+    // 顺序：先 reset 打字机（bargeIn 同步 emit playback_end，空状态 no-op 防字幕复活）
+    sharedTypewriter().reset();
+    getSharedVoiceClient().bargeIn();
     useAppStore.getState().setSubtitle('');
 
     // 3. 强制设置 commander_suffix

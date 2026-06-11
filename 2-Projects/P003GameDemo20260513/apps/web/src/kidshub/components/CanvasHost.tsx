@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-// kidshub 专属场景层（CardScene），与原 demo 场景组件完全解耦；
-// StatusBar 复用原 demo 字幕系统（读 app-store.subtitle，TTS 严同步逻辑现成）
-import { StatusBar } from '../../components/StatusBar';
+// kidshub 专属场景层（CardScene）+ 专属字幕条（KidsHubSubtitle），与原 demo 组件解耦：
+// 原 StatusBar 的 popLayout 跨句动画与打字机高频更新冲突（exit 节点泄漏出重复字）
+import { KidsHubSubtitle } from './KidsHubSubtitle';
 import { CardScene } from './CardScene';
 import { XiaokeAvatar } from '../avatar/XiaokeAvatar';
 import { ExpressionPicker } from '../avatar/ExpressionPicker';
 import { useAvatarStore } from '../avatar/avatar-store';
 import { resolveExpressionName } from '../avatar/expressions';
+import { sharedTypewriter } from '../subtitle/shared';
 import {
   getSharedVoiceClient,
   type VoiceClient,
@@ -78,11 +79,15 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     const client = clientRef.current;
     if (!client) return;
 
+    const tw = sharedTypewriter();
     const onAsrPartial = (msg: { text: string }) => {
+      // 用户开口 → 小可旧字幕的打字机让位（reset 幂等，连续 partial 无害）
+      tw.reset();
       setSubtitle(msg.text);
     };
     const onAsrFinal = (msg: { text: string }) => {
       perfMarkAsrFinal();
+      tw.reset();
       setSubtitle(`${msg.text}...`);
       llmTextRef.current = '';
       onDebug('asr', `👦 用户：${msg.text}`);
@@ -93,6 +98,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       if (!msg.text) return;
       perfMarkLlmFirst();
       llmTextRef.current += msg.text;
+      // 字幕走打字机：文本只入引擎切句，显示由 tts.segment_start 按句驱动
+      tw.feedText(msg.text);
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
     };
@@ -101,7 +108,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
       if (full) {
-        setSubtitle(full);
+        // 不再整段 setSubtitle（打字机接管）；权威全文喂引擎做流缺字兜底
+        tw.finalizeText(full);
         onDebug('llm', `🤖 小可：${full}`);
         pushDebug({ kind: 'llm', title: `🤖 小可：${full}` });
       }
@@ -121,13 +129,15 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
     };
-    // 句边界段真实开播 → 消费句级表情队列（表情跟着句子走）
+    // 句边界段真实开播 → 表情切下一个 + 字幕开始打这一句（同一时钟源，天然同步）
     const onSegmentStart = () => {
       consumeNextExpression();
+      tw.advanceSentence();
     };
-    // 本轮音频真正播完（含被打断）→ 表情收尾回待机
+    // 本轮音频真正播完（含被打断）→ 表情收尾回待机 + 字幕补完后延迟清空
     const onPlaybackEnd = () => {
       endAvatarTurn();
+      tw.finishPlayback();
     };
     const onPromptAssembled = (msg: { systemPrompt: string; userText: string }) => {
       const len = (msg.systemPrompt || '').length;
@@ -157,6 +167,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       onDebug('error', `❌ ${t}`);
       pushDebug({ kind: 'error', title: `❌ ${t}` });
       setVoiceStatus('idle');
+      tw.reset();
       setSubtitle(t);
       applyNetState('fail');
     };
@@ -274,6 +285,9 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   const doBargeIn = () => {
     const client = clientRef.current;
     if (client) {
+      // 先 reset 打字机再 bargeIn：bargeIn 同步 emit playback_end，
+      // 引擎空状态下 finishPlayback no-op，不会把被打断的句子又补完显示
+      sharedTypewriter().reset();
       client.bargeIn();
       perfReset();
       setVoiceStatus('idle');
@@ -298,7 +312,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
           <CardScene card={card ?? null} />
           {/* 小可本体：表情库驱动的可互动形象（状态机兜底 + LLM 逐句选表情 + 点击逗它） */}
           <XiaokeAvatar />
-          <StatusBar />
+          <KidsHubSubtitle />
         </div>
       </div>
 

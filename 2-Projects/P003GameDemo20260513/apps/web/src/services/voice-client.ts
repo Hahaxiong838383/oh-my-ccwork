@@ -85,6 +85,8 @@ class VoiceClientImpl implements VoiceClient {
   private playbackGeneration = 0;
   // 本轮 server 合成流是否已结束（tts.end 已到）——播完检测的前提条件
   private ttsStreamEnded = false;
+  // 本轮是否已调度过第一个音频段（第 0 句开播信号只发一次；bargeIn 重置）
+  private turnHadSegment = false;
   // 在途 decodeAudioData 计数：decode 期间 buffer 已清、source 未 push，
   // 不挡住的话 tts.end 的立即检查会把"最后一段 decode 中"误判成播完
   private decodingCount = 0;
@@ -429,15 +431,26 @@ class VoiceClientImpl implements VoiceClient {
         if (generation === this.playbackGeneration) this.checkPlaybackEnd();
       };
 
-      // 句边界段在 AudioContext clock 上的真实开播点 → emit segment_start
-      // （表情队列按句消费的对齐点；timer 防抖段是半句续段，不算新句）
-      if (reason === 'boundary') {
+      // 句开播信号 segment_start（表情队列/字幕打字机的逐句对齐点）：
+      //  1) 本轮第一个段（任何 reason）开播 = 第 0 句开播——600ms 防抖 timer 常比
+      //     sentence_break 先偷跑首段，单句轮甚至可能全是 timer 段（一个 boundary 都
+      //     没有），只认 boundary 会让第 0 句信号整轮缺失（实测字幕全程空白的根因）
+      //  2) boundary 段（sentence_break/tts.end flush）= 该句的【尾段】，它"播完"的
+      //     时刻才是下一句开播——在 endAt 对齐 emit。末段会多发一次，下游已自保
+      //     （打字机末句原地不动 / 表情队列空 no-op）
+      const isFirstSegment = !this.turnHadSegment;
+      this.turnHadSegment = true;
+      if (isFirstSegment) {
         const delayMs = Math.max(0, (startAt - now) * 1000);
         window.setTimeout(() => {
-          if (generation === this.playbackGeneration) {
-            this.emit('tts.segment_start', {});
-          }
+          if (generation === this.playbackGeneration) this.emit('tts.segment_start', {});
         }, delayMs);
+      }
+      if (reason === 'boundary') {
+        const endDelayMs = Math.max(0, (startAt + buffer.duration - now) * 1000);
+        window.setTimeout(() => {
+          if (generation === this.playbackGeneration) this.emit('tts.segment_start', {});
+        }, endDelayMs);
       }
 
       // D5 P21：实际 src.start() 已调度——首段播放点真到了，fire pendingOnAudioStart
@@ -486,6 +499,7 @@ class VoiceClientImpl implements VoiceClient {
     this.playbackSources = [];
     this.playbackScheduledAt = 0;
     this.ttsStreamEnded = false;
+    this.turnHadSegment = false;
     // 打断 = 本轮播放强制结束，给 avatar/UI 一个确定的收尾信号
     this.emit('tts.playback_end', {});
   }
