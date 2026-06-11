@@ -14,7 +14,10 @@
 #     非流式重 reasoning 任务憋满 ~125s 无字节必 524 卡死(2026-06-10 实测根因);
 #     流式持续吐 SSE 字节刷新 CF 空闲计时器绕过 524。
 #   直连: 强制 --noproxy + unset proxy(国内网关不走 xray 代理 10808)
-#   --connect-timeout 15 + --max-time 300 硬上限(防中途 stall 无限等)
+#   --connect-timeout 15 + --max-time 900 硬上限(防中途 stall 无限等;可用 CODEX_API_MAX_TIME 覆盖)
+#     ⚠️ 2026-06-11 实证: 旧值 300s 对长文撰写任务(48KB prompt + reasoning high 输出 13K字)是压线值,
+#        再重一点必被 curl 硬掐 → 调 900s;且超时/掐断时走「部分内容抢救」:
+#        raw SSE 里已拼出 ≥2000B 正文则写 out + 尾注 [TRUNCATED-RESCUED] 并算成功,不再整段丢弃降级
 #   ★ 订阅路 watchdog 硬超时(默认 480s): omp/codex 无 stream-idle timeout,
 #     上游流式响应中途阻塞会永久挂(见 memory feedback_codex_exec_hang_no_stream_timeout),
 #     裸 omp 会拖死调用方的 wait。超时递归杀进程树(macOS 无 setsid,pkill -P 递归)后 return 2。
@@ -31,6 +34,8 @@
 #           CODEX_SKIP_GW1=1     跳过网关1(验证网关2降级路)
 #           CODEX_FALLBACK_TIMEOUT=N 订阅 omp 硬超时秒数(默认 480)
 #           CODEX_FALLBACK_CMD='...' 订阅命令测试替身(模拟挂死/失败,不真调 omp)
+#           CODEX_API_MAX_TIME=N  网关 curl 总时长硬上限秒数(默认 900)
+#           CODEX_RESCUE_MIN=N    截断抢救的最小正文字节数(默认 2000,低于此判失败降级)
 
 # macOS 无 setsid,递归 pkill -P 杀进程树(防 bun/tls 子进程残留孤儿)
 _codex_lane_kill_tree () {
@@ -45,40 +50,61 @@ _codex_lane_kill_tree_force () {
 }
 
 # _codex_lane_api_try <base> <key> <gwtag> <prompt> <out> <err> <label>
-# 单网关流式尝试: 成功(http=200 且正文非空)写 out 并 return 0
+# 单网关流式尝试: 完整成功(收到 finish 标志且正文非空) return 0
+#   截断抢救: curl 超时/被掐但 raw 已拼出 ≥CODEX_RESCUE_MIN 字节正文 → 写 out + [TRUNCATED-RESCUED] 尾注, return 0
 _codex_lane_api_try () {
   local base="$1" key="$2" gwtag="$3" prompt="$4" out="$5" err="$6" label="$7"
-  local body http crc raw="$out.sse"
+  local body http crc pyrc raw="$out.sse"
+  local max_time="${CODEX_API_MAX_TIME:-900}" rescue_min="${CODEX_RESCUE_MIN:-2000}"
+  echo "[$label] ▶️ API $gwtag gpt-5.5 起跑 (max-time=${max_time}s)" >&2
   body=$(python3 -c "import json,sys;print(json.dumps({'model':'gpt-5.5','messages':[{'role':'user','content':sys.argv[1]}],'max_tokens':16000,'reasoning_effort':'high','stream':True}))" "$prompt")
   http=$(env -u HTTPS_PROXY -u HTTP_PROXY -u ALL_PROXY -u https_proxy -u http_proxy -u all_proxy \
-    curl -sN --noproxy '*' --connect-timeout 15 --max-time 300 \
+    curl -sN --noproxy '*' --connect-timeout 15 --max-time "$max_time" \
       -H "Authorization: Bearer $key" -H "Content-Type: application/json" \
       -d "$body" "$base/chat/completions" -o "$raw" -w '%{http_code}' 2>>"$err")
   crc=$?
   # 解析 SSE: 拼 delta.content(跳过 reasoning_content),写 out
-  if [ "$http" = 200 ] && python3 -c "
+  # exit 0=完整(见 finish/[DONE] 且正文非空) / 2=截断但正文 ≥rescue_min / 1=不可用
+  python3 -c "
 import json,sys
-buf=[]
-for line in open(sys.argv[1],encoding='utf-8'):
+buf=[];finished=False
+for line in open(sys.argv[1],encoding='utf-8',errors='ignore'):
     line=line.strip()
     if not line.startswith('data:'): continue
     payload=line[5:].strip()
-    if payload=='[DONE]': break
+    if payload=='[DONE]':
+        finished=True; break
     try: d=json.loads(payload)
     except Exception: continue
     ch=d.get('choices') or [{}]
+    if ch and ch[0].get('finish_reason'): finished=True
     delta=ch[0].get('delta',{}) if ch else {}
     c=delta.get('content')
     if c: buf.append(c)
 text=''.join(buf).strip()
-open(sys.argv[2],'w',encoding='utf-8').write(text+'\n')
-sys.exit(0 if text else 1)
-" "$raw" "$out" 2>>"$err"; then
+rescue_min=int(sys.argv[3])
+if not text:
+    sys.exit(1)
+if finished:
+    open(sys.argv[2],'w',encoding='utf-8').write(text+'\n')
+    sys.exit(0)
+if len(text.encode('utf-8'))>=rescue_min:
+    open(sys.argv[2],'w',encoding='utf-8').write(text+'\n\n> ⚠️ [TRUNCATED-RESCUED] 流在此被截断（curl 超时/网络掐断），以上为已接收部分。\n')
+    sys.exit(2)
+sys.exit(1)
+" "$raw" "$out" "$rescue_min" 2>>"$err"
+  pyrc=$?
+  if [ "$http" = 200 ] && [ "$pyrc" = 0 ]; then
     echo "[$label] ✅ API $gwtag gpt-5.5 (流式 reasoning=high)" >&2
     rm -f "$raw"
     return 0
   fi
-  echo "[$label] ⚠️ API $gwtag 失败 (http=$http curl_rc=$crc)" | tee -a "$err" >&2
+  if [ "$pyrc" = 2 ]; then
+    echo "[$label] ⚠️✅ API $gwtag 流被截断,已抢救部分正文 (http=$http curl_rc=$crc, out=$(wc -c < "$out" | tr -d ' ')B 含 TRUNCATED 标注)" | tee -a "$err" >&2
+    rm -f "$raw"
+    return 0
+  fi
+  echo "[$label] ⚠️ API $gwtag 失败 (http=$http curl_rc=$crc pyrc=$pyrc)" | tee -a "$err" >&2
   rm -f "$raw"
   return 1
 }
