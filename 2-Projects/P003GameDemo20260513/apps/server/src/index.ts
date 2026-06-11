@@ -44,10 +44,20 @@ server.on('upgrade', (req, socket, head) => {
   }
 });
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
   const pipeline = new VoicePipeline(ws);
+  // 连接生命周期日志：公网排障用（客户端"没反应"时分辨 ws 是否到达 server、活了多久、传了什么）
+  const clientIp =
+    (req?.headers['x-real-ip'] as string) ||
+    (req?.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+    req?.socket?.remoteAddress ||
+    '?';
+  const openedAt = Date.now();
+  let msgCount = 0;
+  console.log(`[ws] open ip=${clientIp}`);
 
   ws.on('message', (data, isBinary) => {
+    msgCount += 1;
     const msg = decodeClientMessage(data, isBinary);
     if (!msg) {
       sendWsError(ws, 'BAD_MESSAGE', '消息格式错误');
@@ -56,11 +66,13 @@ wss.on('connection', (ws) => {
     pipeline.handleClientMessage(msg);
   });
 
-  ws.on('close', () => {
+  ws.on('close', (code) => {
+    console.log(`[ws] close ip=${clientIp} code=${code} lived=${Math.round((Date.now() - openedAt) / 1000)}s msgs=${msgCount}`);
     pipeline.close();
   });
 
-  ws.on('error', () => {
+  ws.on('error', (err) => {
+    console.log(`[ws] error ip=${clientIp} ${String((err as Error)?.message ?? err)}`);
     pipeline.close();
   });
 });

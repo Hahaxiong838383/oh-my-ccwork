@@ -65,11 +65,20 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     clientRef.current = getSharedVoiceClient();
   }
 
-  // 周期同步连接状态（给顶栏用）
+  // 周期同步连接状态（给顶栏用）+ 断线静默重连（节流 5s）：
+  // 国内→香港 wss 长连接偶发被运营商掐断，掉线后不自愈的话用户侧表现就是"没反应"
+  const lastReconnectAtRef = useRef(0);
   useEffect(() => {
     const id = window.setInterval(() => {
       const c = clientRef.current;
-      setConnected(!!(c && c.isConnected()));
+      const ok = !!(c && c.isConnected());
+      setConnected(ok);
+      if (!ok && c && Date.now() - lastReconnectAtRef.current > 5_000) {
+        lastReconnectAtRef.current = Date.now();
+        c.connect(getVoiceWsUrl()).catch(() => {
+          /* 静默，下个周期再试 */
+        });
+      }
     }, 800);
     return () => window.clearInterval(id);
   }, []);
