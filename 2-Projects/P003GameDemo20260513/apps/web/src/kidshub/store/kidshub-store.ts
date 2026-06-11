@@ -13,11 +13,12 @@ import type { LoreSection } from '../knowledge/types';
 
 const TOKEN_KEY = 'kidshub.token';
 const DRAFTS_KEY = 'kidshub.scenePromptDrafts';
-// .v2：表情系统上线后出厂全局人设/附加规则变了，bump key 让旧 localStorage 缓存失效
-// （否则老用户的缓存会盖住新出厂值，永远拿不到表情指令）
+// 出厂 prompt 变更时 bump key 让旧 localStorage 缓存失效
+// （否则老用户的缓存会盖住新出厂值，永远拿不到新指令）
+// globalTemplate.v2：表情系统人设；addendum.v3：句级表情标记 + 意图映射表
 const GLOBALS_KEY = 'kidshub.globalTemplate.v2';
 const VARS_KEY = 'kidshub.variables';
-const ADDENDUM_KEY = 'kidshub.addendum.v2';
+const ADDENDUM_KEY = 'kidshub.addendum.v3';
 
 export interface DebugEntry {
   ts: number;

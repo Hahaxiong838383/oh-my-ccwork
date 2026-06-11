@@ -2,7 +2,7 @@ import type WebSocket from 'ws';
 import { createGeminiLlmClient, type GeminiLlmClient } from './providers/gemini-llm.js';
 import { createVolcAsrClient, type VolcAsrClient } from './providers/volc-asr.js';
 import { createVolcTtsClient, type VolcTtsClient } from './providers/volc-tts.js';
-import { createExpressionFilter, stripExpressionTag } from './expression-filter.js';
+import { createExpressionFilter, stripExpressionTags } from './expression-filter.js';
 
 export type ClientMessage =
   | { type: 'session.start'; sampleRate: number }
@@ -24,8 +24,8 @@ export type ServerMessage =
   | { type: 'tts.end' }
   | { type: 'session.config.ack'; chars: number }
   | { type: 'debug.prompt_assembled'; systemPrompt: string; userText: string }
-  // LLM 在回复开头用【表情：xxx】选的表情（server 解析剥离后单发，驱动前端小可形象）
-  | { type: 'avatar.expression'; name: string }
+  // LLM 每句开头用【表情：xxx】（多标记句级），server 按出现顺序解析并带 index（turn 内 0 起）
+  | { type: 'avatar.expression'; name: string; index: number }
   | { type: 'error'; code: string; message: string };
 
 const DEFAULT_SYSTEM_PROMPT =
@@ -187,11 +187,12 @@ export class VoicePipeline {
       // 工作台调试流依赖：回发本轮真实使用的 prompt（所见即所发）
       this.send({ type: 'debug.prompt_assembled', systemPrompt, userText: finalText });
 
-      // 回复开头的【表情：xxx】标记：解析→发 avatar.expression，剥离后才喂 TTS/llm.delta
+      // 句级多标记：每 feed/flush 可能返回多个 expressions，按本轮 turn 累加 index 发 avatar.expression
       const exprFilter = createExpressionFilter();
-      const emitFiltered = (piece: { text: string; expression?: string }) => {
-        if (piece.expression) {
-          this.send({ type: 'avatar.expression', name: piece.expression });
+      let exprIndex = 0;
+      const emitFiltered = (piece: { text: string; expressions: string[] }) => {
+        for (const name of piece.expressions) {
+          this.send({ type: 'avatar.expression', name, index: exprIndex++ });
         }
         if (piece.text) {
           this.send({ type: 'llm.delta', text: piece.text });
@@ -210,7 +211,7 @@ export class VoicePipeline {
           if (turn !== this.activeTurn) return;
           // 兜底：整条回复只有标记/标记未闭合时，缓冲区剩余在这里放行
           emitFiltered(exprFilter.flush());
-          this.send({ type: 'llm.done', text: stripExpressionTag(fullText).text });
+          this.send({ type: 'llm.done', text: stripExpressionTags(fullText).text });
           this.tts?.finish();
         },
         onError: (err) => {

@@ -75,11 +75,6 @@ export function resolveExpressionName(name: string): ExpressionDef | undefined {
   );
 }
 
-/** 给 addendum 用的 LLM 表情菜单文本：「名字（语境）、…」 */
-export const LLM_EXPRESSION_MENU = EXPRESSIONS.filter((e) => e.llmPick)
-  .map((e) => `${e.label}（${e.hint}）`)
-  .join('、');
-
 /** 点击互动随机池（摸一摸小可的开心反应） */
 export const POKE_POOL = ['heart', 'peace', 'cheer', 'jump-joy', 'giggle', 'praise', 'surprised'];
 

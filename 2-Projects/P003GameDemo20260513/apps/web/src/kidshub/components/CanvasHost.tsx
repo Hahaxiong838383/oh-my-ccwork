@@ -44,7 +44,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   const setSubtitle = useAppStore((s) => s.setSubtitle);
   const setXiaokeEmotion = useAppStore((s) => s.setXiaokeEmotion);
 
-  const setAvatarExpression = useAvatarStore((s) => s.setExpression);
+  const enqueueLlmExpression = useAvatarStore((s) => s.enqueueLlmExpression);
+  const consumeNextExpression = useAvatarStore((s) => s.consumeNextExpression);
   const applyNetState = useAvatarStore((s) => s.applyNetState);
   const endAvatarTurn = useAvatarStore((s) => s.endTurn);
 
@@ -116,9 +117,16 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       setXiaokeEmotion('happy');
     };
     const onTtsEnd = () => {
+      // tts.end 只是 server 合成完毕，音频可能还在播——avatar 收尾移到 tts.playback_end
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
-      // 一轮真正说完：解除 LLM 表情持有，小可回待机
+    };
+    // 句边界段真实开播 → 消费句级表情队列（表情跟着句子走）
+    const onSegmentStart = () => {
+      consumeNextExpression();
+    };
+    // 本轮音频真正播完（含被打断）→ 表情收尾回待机
+    const onPlaybackEnd = () => {
       endAvatarTurn();
     };
     const onPromptAssembled = (msg: { systemPrompt: string; userText: string }) => {
@@ -133,12 +141,13 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       pushDebug({ kind: 'config', title: `session.config.ack (${msg.chars} 字符)` });
       onConfigAck?.(msg);
     };
-    // LLM 在回复开头选的表情（server 已剥离标记）→ 驱动小可形象 + 调试流留痕
-    const onAvatarExpression = (msg: { name: string }) => {
+    // LLM 句级表情（server 已按出现顺序剥离标记，index 为 turn 内序号）：
+    // index 0 立即上脸（新一轮），后续入队等各自句子开播时切换
+    const onAvatarExpression = (msg: { name: string; index: number }) => {
       const def = resolveExpressionName(msg.name);
       if (def) {
-        setAvatarExpression(def.id, 'llm');
-        pushDebug({ kind: 'avatar', title: `🎭 小可选了表情：${def.label}` });
+        enqueueLlmExpression(def.id, msg.index ?? 0);
+        pushDebug({ kind: 'avatar', title: `🎭 小可选了表情[${msg.index ?? 0}]：${def.label}` });
       } else {
         pushDebug({ kind: 'avatar', title: `🎭 表情名未识别：「${msg.name}」（菜单外，已忽略）` });
       }
@@ -161,6 +170,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     client.on('debug.prompt_assembled', onPromptAssembled);
     client.on('session.config.ack', handleConfigAck);
     client.on('avatar.expression', onAvatarExpression);
+    client.on('tts.segment_start', onSegmentStart);
+    client.on('tts.playback_end', onPlaybackEnd);
     client.on('error', onError);
 
     return () => {
@@ -173,9 +184,11 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       client.off('debug.prompt_assembled', onPromptAssembled);
       client.off('session.config.ack', handleConfigAck);
       client.off('avatar.expression', onAvatarExpression);
+      client.off('tts.segment_start', onSegmentStart);
+      client.off('tts.playback_end', onPlaybackEnd);
       client.off('error', onError);
     };
-  }, [onDebug, onConfigAck, pushDebug, setSubtitle, setVoiceStatus, setXiaokeEmotion, setAvatarExpression, applyNetState, endAvatarTurn]);
+  }, [onDebug, onConfigAck, pushDebug, setSubtitle, setVoiceStatus, setXiaokeEmotion, enqueueLlmExpression, consumeNextExpression, applyNetState, endAvatarTurn]);
 
   // 供外部调用的下发 + 开场白
   // 注意：此函数由 Studio 通过 ref / 事件驱动调用（见 StudioPage）

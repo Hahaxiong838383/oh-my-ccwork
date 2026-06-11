@@ -20,10 +20,20 @@ interface AvatarState {
   source: AvatarSource;
   /** LLM 表情持有中：speaking/idle 状态切换不得覆盖（直到 endTurn / 新一轮） */
   llmHold: boolean;
+  /** 本轮句级表情队列（index>0 的后续表情，按 tts.segment_start 逐句消费） */
+  exprQueue: string[];
+  /** 本轮是否已见过首个句边界段（表情 0 提前上脸，首段开播不消费队列） */
+  firstSegmentSeen: boolean;
+  /** 最近一次表情变化时间戳：待机轮换的静默期判据（对话中不轮换） */
+  lastBumpAt: number;
   setExpression: (id: string, source: AvatarSource) => void;
+  /** LLM 句级表情到达：index===0 清场立即上脸（新一轮），否则入队等句边界 */
+  enqueueLlmExpression: (id: string, index: number) => void;
+  /** 一个句边界段开播（tts.segment_start）：消费队列里下一个表情 */
+  consumeNextExpression: () => void;
   applyVoiceStatus: (status: VoiceStatus) => void;
   applyNetState: (state: 'connecting' | 'success' | 'fail') => void;
-  /** 一轮 TTS 真正结束（tts.end）：解除 LLM 持有，回待机 */
+  /** 一轮音频真正播完（tts.playback_end）：清队列+解除持有，回待机 */
   endTurn: () => void;
 }
 
@@ -42,6 +52,9 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
   bumpKey: 0,
   source: 'state',
   llmHold: false,
+  exprQueue: [],
+  firstSegmentSeen: false,
+  lastBumpAt: 0,
 
   setExpression: (id, source) => {
     if (!getExpression(id)) return;
@@ -49,11 +62,37 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
       expressionId: id,
       fileIndex: pickFileIndex(id),
       bumpKey: s.bumpKey + 1,
+      lastBumpAt: Date.now(),
       source,
-      // LLM 选的表情持有到本轮 tts.end（llm.done 会先把 voiceStatus 拉回 idle，
-      // TTS 其实还在播——没有 hold 的话表情只闪 <1s 就被待机脸覆盖，实测踩过）
+      // LLM 选的表情持有到本轮播放真正结束（tts.playback_end → endTurn）。
+      // llm.done / tts.end 会先把 voiceStatus 拉回 idle 但音频还在播——
+      // 没有 hold 的话表情提前被待机脸覆盖，实测踩过
       llmHold: source === 'llm' ? true : s.llmHold,
     }));
+  },
+
+  enqueueLlmExpression: (id, index) => {
+    const { setExpression } = get();
+    if (index === 0) {
+      // 新一轮第一个表情：清掉上轮残留队列，开口前先上脸（预告感）
+      set({ exprQueue: [], firstSegmentSeen: false });
+      setExpression(id, 'llm');
+      return;
+    }
+    set((s) => ({ exprQueue: [...s.exprQueue, id] }));
+  },
+
+  consumeNextExpression: () => {
+    const { exprQueue, firstSegmentSeen, setExpression } = get();
+    // 第 0 句开播：表情 0 已在 enqueue(index 0) 时提前上脸，跳过防错位 +1
+    if (!firstSegmentSeen) {
+      set({ firstSegmentSeen: true });
+      return;
+    }
+    if (exprQueue.length === 0) return;
+    const [next, ...rest] = exprQueue;
+    set({ exprQueue: rest });
+    setExpression(next, 'llm');
   },
 
   applyVoiceStatus: (status) => {
@@ -91,7 +130,7 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
 
   endTurn: () => {
     const { setExpression, expressionId } = get();
-    set({ llmHold: false });
+    set({ llmHold: false, exprQueue: [], firstSegmentSeen: false });
     // 连网失败脸是异常提示，不被回待机吞掉（下一轮交互自然恢复）
     if (expressionId.startsWith('net-')) return;
     setExpression('head-tilt', 'state');

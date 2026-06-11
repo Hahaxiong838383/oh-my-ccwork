@@ -23,6 +23,7 @@ export function XiaokeAvatar() {
   const fileIndex = useAvatarStore((s) => s.fileIndex);
   const bumpKey = useAvatarStore((s) => s.bumpKey);
   const source = useAvatarStore((s) => s.source);
+  const llmHold = useAvatarStore((s) => s.llmHold);
   const setExpression = useAvatarStore((s) => s.setExpression);
   const applyVoiceStatus = useAvatarStore((s) => s.applyVoiceStatus);
 
@@ -52,14 +53,17 @@ export function XiaokeAvatar() {
     return () => window.clearTimeout(id);
   }, [expressionId, applyVoiceStatus]);
 
-  // 待机轮换：像有自己的小生活（歪头/招手/看书），仅 state 来源 + idle 时生效
+  // 待机轮换：像有自己的小生活（歪头/招手/看书），仅真空闲时生效——
+  // 距上次任何表情变化 >20s 才换（对话进行中表情频繁变化，静默期天然不满足，不会插嘴）
   useEffect(() => {
     if (voiceStatus !== 'idle' || source !== 'state') return;
     const id = window.setInterval(() => {
-      const pool = IDLE_POOL.filter((p) => p !== useAvatarStore.getState().expressionId);
+      const s = useAvatarStore.getState();
+      if (Date.now() - s.lastBumpAt < 20_000) return;
+      const pool = IDLE_POOL.filter((p) => p !== s.expressionId);
       const next = pool[Math.floor(Math.random() * pool.length)];
       if (next) setExpression(next, 'state');
-    }, 14_000);
+    }, 8_000);
     return () => window.clearInterval(id);
   }, [voiceStatus, source, setExpression]);
 
@@ -72,16 +76,18 @@ export function XiaokeAvatar() {
     pushDebug({ kind: 'avatar', title: `🎭 摸了摸小可 → ${label}` });
   };
 
-  // 身体动画按状态分支（点 motion 值数组做循环）
+  // 身体动画按状态分支（点 motion 值数组做循环）。
+  // 说话 bob 用 llmHold 一起判：voiceStatus 在 llm.done/tts.end 就回 idle 了，
+  // 音频还在播——bob 跟着表情持有期走，说完（playback_end → endTurn）才放松
   const bodyAnim = useMemo(() => {
-    if (voiceStatus === 'speaking') {
+    if (voiceStatus === 'speaking' || llmHold) {
       return { y: [0, -5, 0], rotate: 0, transition: { duration: 0.55, repeat: Infinity, ease: 'easeInOut' as const } };
     }
     if (voiceStatus === 'thinking') {
       return { y: [0, -2, 0], rotate: [-1.6, 1.6, -1.6], transition: { duration: 2.2, repeat: Infinity, ease: 'easeInOut' as const } };
     }
     return { y: [0, -3, 0], rotate: 0, transition: { duration: 3.6, repeat: Infinity, ease: 'easeInOut' as const } };
-  }, [voiceStatus]);
+  }, [voiceStatus, llmHold]);
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20">

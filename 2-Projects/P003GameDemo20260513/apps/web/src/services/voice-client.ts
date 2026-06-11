@@ -27,6 +27,11 @@ type VoiceEvent =
   | 'tts.audio'
   | 'tts.end'
   | 'tts.sentence_break'
+  // 客户端合成事件（非 server 下发）：
+  // tts.segment_start = 一个「句边界段」在 AudioContext clock 上真正开播（表情逐句切换的对齐点）
+  // tts.playback_end = 本轮所有音频段播放完毕（≠ tts.end 的"合成完毕"，长句两者差秒级）
+  | 'tts.segment_start'
+  | 'tts.playback_end'
   | 'session.config.ack'
   | 'debug.prompt_assembled'
   | 'avatar.expression'
@@ -42,7 +47,7 @@ type ServerMessage =
   | { type: 'tts.end' }
   | { type: 'session.config.ack'; chars: number }
   | { type: 'debug.prompt_assembled'; systemPrompt: string; userText: string }
-  | { type: 'avatar.expression'; name: string }
+  | { type: 'avatar.expression'; name: string; index: number }
   | { type: 'error'; code: string; message: string };
 
 class VoiceClientImpl implements VoiceClient {
@@ -76,6 +81,13 @@ class VoiceClientImpl implements VoiceClient {
   private mp3FlushTimer: number | null = null;
   private playbackScheduledAt = 0;
   private playbackSources: AudioBufferSourceNode[] = [];
+  // 播放代际：bargeIn / close 时 +1，作废已调度的 segment_start 定时器和 onended 检测
+  private playbackGeneration = 0;
+  // 本轮 server 合成流是否已结束（tts.end 已到）——播完检测的前提条件
+  private ttsStreamEnded = false;
+  // 在途 decodeAudioData 计数：decode 期间 buffer 已清、source 未 push，
+  // 不挡住的话 tts.end 的立即检查会把"最后一段 decode 中"误判成播完
+  private decodingCount = 0;
   // 600ms 绝对延迟（不 reset）兜底：正常流靠 server 端 tts.sentence_break 信号优先 flush
   // （每句话标点触发，段是完整一句话，mp3 priming silence 占比 < 2% 不可感）
   // 600ms 仅在「一句话没标点 / sentence_break 信号缺失」边界场景触发兜底
@@ -163,13 +175,17 @@ class VoiceClientImpl implements VoiceClient {
             // 同时 emit 给外部用于 UI 状态更新（VoiceButton 等）
             // D5 P21：onAudioStart 不在这里 fire（mp3 chunk 到达离实际播放还有 350ms 防抖）
             // 移到 flushMp3Buffer 内 src.start() 之后才 fire
+            this.ttsStreamEnded = false;
             void this.playAudioChunk(msg.mp3Base64);
             this.emit(msg.type, msg);
             break;
           case 'tts.end':
             // 流末立刻 flush 缓冲段，避免末段被 600ms 防抖延迟
+            this.ttsStreamEnded = true;
             this.flushTtsBufferNow();
             this.emit(msg.type, msg);
+            // 空回复/出错路径可能没有任何已调度音频段——此刻直接判播完
+            this.checkPlaybackEnd();
             break;
           case 'tts.sentence_break':
             // 句末信号：立刻 flush 当前段（按句切，每段是完整一句话音频，
@@ -357,22 +373,24 @@ class VoiceClientImpl implements VoiceClient {
 
     this.mp3FlushTimer = window.setTimeout(() => {
       this.mp3FlushTimer = null;
-      void this.flushMp3Buffer();
+      // timer 兜底 flush 的段是句子的"续段"（半句），不算新句开播
+      void this.flushMp3Buffer('timer');
     }, this.mp3FlushDelayMs);
   }
 
   /**
-   * 由 tts.end 事件触发整段立刻播放
+   * 由 tts.sentence_break / tts.end 事件触发整段立刻播放。
+   * 这种"句边界 flush"的段开播 = 新一句开播（表情逐句切换的对齐点）。
    */
   flushTtsBufferNow(): void {
     if (this.mp3FlushTimer !== null) {
       window.clearTimeout(this.mp3FlushTimer);
       this.mp3FlushTimer = null;
     }
-    void this.flushMp3Buffer();
+    void this.flushMp3Buffer('boundary');
   }
 
-  private async flushMp3Buffer(): Promise<void> {
+  private async flushMp3Buffer(reason: 'timer' | 'boundary'): Promise<void> {
     if (this.mp3Buffer.length === 0) return;
     const ctx = this.ensureAudioContext();
     if (!ctx) return;
@@ -386,6 +404,7 @@ class VoiceClientImpl implements VoiceClient {
     }
     this.mp3Buffer = [];
 
+    this.decodingCount += 1;
     try {
       const arrayBuffer = merged.buffer.slice(
         merged.byteOffset,
@@ -402,10 +421,24 @@ class VoiceClientImpl implements VoiceClient {
       src.start(startAt);
       this.playbackScheduledAt = startAt + buffer.duration;
       this.playbackSources.push(src);
+      const generation = this.playbackGeneration;
       src.onended = () => {
         const idx = this.playbackSources.indexOf(src);
         if (idx >= 0) this.playbackSources.splice(idx, 1);
+        // 最后一段播完 + 合成流已结束 → 本轮真正说完（avatar endTurn 等用）
+        if (generation === this.playbackGeneration) this.checkPlaybackEnd();
       };
+
+      // 句边界段在 AudioContext clock 上的真实开播点 → emit segment_start
+      // （表情队列按句消费的对齐点；timer 防抖段是半句续段，不算新句）
+      if (reason === 'boundary') {
+        const delayMs = Math.max(0, (startAt - now) * 1000);
+        window.setTimeout(() => {
+          if (generation === this.playbackGeneration) {
+            this.emit('tts.segment_start', {});
+          }
+        }, delayMs);
+      }
 
       // D5 P21：实际 src.start() 已调度——首段播放点真到了，fire pendingOnAudioStart
       // 用 setTimeout 等到 (startAt - now) * 1000 ms 后才 fire（精确对齐 AudioContext clock）
@@ -423,6 +456,10 @@ class VoiceClientImpl implements VoiceClient {
       }
     } catch {
       // decode 失败：忽略本段
+    } finally {
+      this.decodingCount -= 1;
+      // decode 失败的段若是最后一段，这里补一次播完检查（成功路径 source 在场不会误发）
+      this.checkPlaybackEnd();
     }
   }
 
@@ -436,6 +473,8 @@ class VoiceClientImpl implements VoiceClient {
       this.mp3FlushTimer = null;
     }
     this.mp3Buffer = [];
+    // 代际 +1：作废在途的 segment_start 定时器和旧 source 的 onended 播完检测
+    this.playbackGeneration += 1;
     // 立刻停掉所有已调度的 audio source
     for (const src of this.playbackSources) {
       try {
@@ -446,6 +485,20 @@ class VoiceClientImpl implements VoiceClient {
     }
     this.playbackSources = [];
     this.playbackScheduledAt = 0;
+    this.ttsStreamEnded = false;
+    // 打断 = 本轮播放强制结束，给 avatar/UI 一个确定的收尾信号
+    this.emit('tts.playback_end', {});
+  }
+
+  /**
+   * 本轮所有音频真正播完的判定：合成流已结束（tts.end 已到）+ 播放队列清空 + 无待 flush 缓冲。
+   * 由每个 source 的 onended 和 tts.end 到达时触发检查；命中后消费掉 ttsStreamEnded 保证幂等。
+   */
+  private checkPlaybackEnd(): void {
+    if (!this.ttsStreamEnded) return;
+    if (this.playbackSources.length > 0 || this.mp3Buffer.length > 0 || this.decodingCount > 0) return;
+    this.ttsStreamEnded = false;
+    this.emit('tts.playback_end', {});
   }
 
   sayDirect(text: string, onAudioStart?: () => void): void {
