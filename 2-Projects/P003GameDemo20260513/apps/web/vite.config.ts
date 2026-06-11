@@ -5,29 +5,33 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // HTTPS 必需：手机访问局域网 IP 时，navigator.mediaDevices 仅在
 // secure context（HTTPS 或 localhost）下可用。
+// VITE_NO_HTTPS=1 时退回 HTTP（localhost 调试/自动化验收用，localhost 本身是 secure context）
+const noHttps = process.env.VITE_NO_HTTPS === '1';
+
 export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    https: {},
+    https: noHttps ? undefined : {},
     proxy: {
       // 把 /ws/voice 代理到本地 server 3001（wss → ws 终结），
       // 避免 HTTPS 页面连 ws:// 触发 mixed content 拦截
       '/ws/voice': {
-        target: 'ws://localhost:3001',
+        // 127.0.0.1 钉死 IPv4（server 端 hostname 0.0.0.0 配对，避免 localhost 双栈解析歧义）
+        target: 'ws://127.0.0.1:3001',
         ws: true,
         changeOrigin: true,
       },
       // D6 P1: /api 走后端 server（vision endpoint 等）
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
       },
     },
   },
   plugins: [
     react(),
-    basicSsl(),
+    ...(noHttps ? [] : [basicSsl()]),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],

@@ -2,18 +2,23 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { WebSocketServer, type RawData, type WebSocket } from 'ws';
 import { VoicePipeline, type ClientMessage } from './pipeline.js';
+import { authRoute } from './routes/auth.js';
 import { visionRoute } from './routes/vision.js';
 
 const app = new Hono();
 const port = Number(process.env.PORT ?? 8787);
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
+app.route('/api/auth', authRoute);
 app.route('/api/vision', visionRoute);
 
 const server = serve(
   {
     fetch: app.fetch,
     port,
+    // 显式 IPv4：node22 下默认监听 '::' 在 macOS 上不接受 127.0.0.1，
+    // vite proxy(localhost→IPv4) 会 connection refused
+    hostname: '0.0.0.0',
   },
   (info) => {
     console.log(`[server] listening on http://${info.address}:${info.port}`);
@@ -95,6 +100,11 @@ function decodeClientMessage(data: RawData, isBinary: boolean): ClientMessage | 
       const text = typeof rec.text === 'string' ? rec.text : '';
       if (!text.trim()) return null;
       return { type: 'tts.say', text };
+    }
+    case 'session.config': {
+      const systemPrompt = typeof rec.systemPrompt === 'string' ? rec.systemPrompt : '';
+      if (!systemPrompt.trim() || systemPrompt.length > 32000) return null;
+      return { type: 'session.config', systemPrompt };
     }
     default:
       return null;

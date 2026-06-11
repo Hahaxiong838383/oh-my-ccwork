@@ -9,19 +9,25 @@ export interface VoiceClient {
   // D5 P20：sayDirect 第二参 onAudioStart 在第一段 mp3 到达时 fire
   // 让字幕等 TTS 真发声再显示（修字幕提前 TTS）
   sayDirect(text: string, onAudioStart?: () => void): void;
+  // KidsHub-AI 工作台：下发组装好的完整 system prompt（server 存到当前连接）
+  sendSessionConfig(systemPrompt: string): void;
   unlockAudio(): Promise<void>;
-  on(
-    event: 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'tts.sentence_break' | 'error',
-    cb: (data: any) => void,
-  ): void;
-  off(
-    event: 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'tts.sentence_break' | 'error',
-    cb: (data: any) => void,
-  ): void;
+  on(event: VoiceEvent, cb: (data: any) => void): void;
+  off(event: VoiceEvent, cb: (data: any) => void): void;
   close(): void;
 }
 
-type VoiceEvent = 'asr.partial' | 'asr.final' | 'llm.delta' | 'tts.audio' | 'tts.end' | 'tts.sentence_break' | 'error';
+type VoiceEvent =
+  | 'asr.partial'
+  | 'asr.final'
+  | 'llm.delta'
+  | 'llm.done'
+  | 'tts.audio'
+  | 'tts.end'
+  | 'tts.sentence_break'
+  | 'session.config.ack'
+  | 'debug.prompt_assembled'
+  | 'error';
 
 type ServerMessage =
   | { type: 'asr.partial'; text: string }
@@ -31,6 +37,8 @@ type ServerMessage =
   | { type: 'tts.audio'; mp3Base64: string }
   | { type: 'tts.sentence_break' }
   | { type: 'tts.end' }
+  | { type: 'session.config.ack'; chars: number }
+  | { type: 'debug.prompt_assembled'; systemPrompt: string; userText: string }
   | { type: 'error'; code: string; message: string };
 
 class VoiceClientImpl implements VoiceClient {
@@ -172,6 +180,12 @@ class VoiceClientImpl implements VoiceClient {
           case 'llm.done':
             // llm.done 由按钮层可选监听，这里先复用 llm.delta 累积策略。
             this.emit('llm.delta', { text: '' });
+            // 工作台调试流需要完整回答文本，原样再透传一份
+            this.emit('llm.done', msg);
+            break;
+          case 'session.config.ack':
+          case 'debug.prompt_assembled':
+            this.emit(msg.type, msg);
             break;
           default:
             break;
@@ -439,6 +453,14 @@ class VoiceClientImpl implements VoiceClient {
     // D5 P20：注册"第一段音频到达"回调（覆盖之前 pending，bargeIn 已断旧会话）
     this.pendingOnAudioStart = onAudioStart ?? null;
     this.ws.send(JSON.stringify({ type: 'tts.say', text }));
+  }
+
+  sendSessionConfig(systemPrompt: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.warn('[voice-client] sendSessionConfig skipped: websocket not open');
+      return;
+    }
+    this.ws.send(JSON.stringify({ type: 'session.config', systemPrompt }));
   }
 
   async unlockAudio(): Promise<void> {

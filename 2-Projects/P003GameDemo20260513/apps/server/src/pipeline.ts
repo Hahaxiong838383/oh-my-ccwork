@@ -8,7 +8,8 @@ export type ClientMessage =
   | { type: 'audio.chunk'; pcm16: ArrayBuffer }
   | { type: 'audio.end' }
   | { type: 'barge.in' }
-  | { type: 'tts.say'; text: string };
+  | { type: 'tts.say'; text: string }
+  | { type: 'session.config'; systemPrompt: string };
 
 export type ServerMessage =
   | { type: 'asr.partial'; text: string }
@@ -18,6 +19,8 @@ export type ServerMessage =
   | { type: 'tts.audio'; mp3Base64: string }
   | { type: 'tts.sentence_break' }
   | { type: 'tts.end' }
+  | { type: 'session.config.ack'; chars: number }
+  | { type: 'debug.prompt_assembled'; systemPrompt: string; userText: string }
   | { type: 'error'; code: string; message: string };
 
 const DEFAULT_SYSTEM_PROMPT =
@@ -31,6 +34,8 @@ export class VoicePipeline {
   private tts: VolcTtsClient | null = null;
   private readonly llm: GeminiLlmClient & { abort?: () => void };
   private activeTurn = 0;
+  // KidsHub-AI 工作台下发的完整 system prompt（组装在前端做，server 只存只用）
+  private sessionSystemPrompt: string | null = null;
 
   constructor(ws: WebSocket) {
     this.ws = ws;
@@ -58,6 +63,10 @@ export class VoicePipeline {
       case 'tts.say':
         console.log('[pipeline] tts.say received:', msg.text.slice(0, 30));
         this.speakDirect(msg.text);
+        return;
+      case 'session.config':
+        this.sessionSystemPrompt = msg.systemPrompt;
+        this.send({ type: 'session.config.ack', chars: msg.systemPrompt.length });
         return;
       default:
         this.sendError('BAD_MESSAGE', '未知客户端消息');
@@ -165,8 +174,12 @@ export class VoicePipeline {
         return;
       }
 
+      const systemPrompt = this.sessionSystemPrompt ?? DEFAULT_SYSTEM_PROMPT;
+      // 工作台调试流依赖：回发本轮真实使用的 prompt（所见即所发）
+      this.send({ type: 'debug.prompt_assembled', systemPrompt, userText: finalText });
+
       await this.llm.streamChat({
-        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        systemPrompt,
         userText: finalText,
         onDelta: (delta) => {
           if (turn !== this.activeTurn) return;

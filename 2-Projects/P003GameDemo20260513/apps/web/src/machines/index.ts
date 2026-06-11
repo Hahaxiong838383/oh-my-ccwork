@@ -311,8 +311,11 @@ export function defaultTimerRouter(key: string): void {
 /**
  * jumpToScene —— 跳关原子动作
  * clearAllTimers + hydrate 所有相关字段 + 切机器状态
+ *
+ * opts.muteAutoTts：KidsHub-AI 工作台用——跳场景不播 preset 字幕 TTS、字幕清空，
+ * 由调用方用产品定义话术自行 sayDirect + setSubtitle（避免与卡开场白双发声）。
  */
-export function jumpToScene(scene: SceneId): void {
+export function jumpToScene(scene: SceneId, opts?: { muteAutoTts?: boolean }): void {
   // D6 P1 hotfix v2：跳关时强制 snap()（不复用 3s 缓存），保证每场字幕用最新表情。
   // 牺牲带宽（每跳关一次 Gemini 调用）换实时表情，对 demo 体验更重要。
   void getExpressionSnapshot().snap();
@@ -347,7 +350,7 @@ export function jumpToScene(scene: SceneId): void {
   store.setRewardMachine(isBoxScene ? 'idle' : preset.rewardMachine);
   store.setCurrentBoxLevel(isBoxScene ? null : preset.currentBoxLevel);
   store.setVoiceStatus(preset.voiceStatus);
-  store.setSubtitle(preset.subtitle);
+  store.setSubtitle(opts?.muteAutoTts ? '' : preset.subtitle);
   store.setXiaokeEmotion(preset.xiaokeEmotion);
   store.setSetupComplete(preset.setupComplete);
   store.setFarewellState('hidden');
@@ -377,7 +380,7 @@ export function jumpToScene(scene: SceneId): void {
 
   // D5 P7：跳关字幕也要 TTS（含关盖告别的"指挥官，明天见～"等）
   // 短期去重保护 vs effect 重复触发同一文本
-  if (preset.subtitle && preset.subtitle.trim().length > 0) {
+  if (!opts?.muteAutoTts && preset.subtitle && preset.subtitle.trim().length > 0) {
     ttsSpeak(preset.subtitle);
   }
 
