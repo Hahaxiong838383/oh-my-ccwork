@@ -223,7 +223,7 @@ export function StudioPage() {
             className="rounded border border-white/10 px-2 py-0.5 text-sky-300 hover:bg-white/5 hover:text-sky-200"
             title="数据后台 + KidsHub 运营台（mock 数据 · 产品定义可视化）"
           >
-            📊 数据后台
+            📊 KidsHub 数据管理后台
           </a>
 
           {/* WS 状态 */}
