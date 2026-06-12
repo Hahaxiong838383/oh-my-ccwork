@@ -65,7 +65,10 @@ class DeepseekLlmClientImpl implements DeepseekLlmClient {
           ],
           stream: true,
           temperature: getTemperature(),
-          // DeepSeek 官方默认即为非思考模式（低延迟），不要添加任何 thinking/reasoning 字段
+          // V4 系列默认开 thinking（流先吐 reasoning_content，正文延后 1-2s），
+          // 语音场景必须显式关闭——实测关闭前 TTFT 2.4-2.9s，关闭后见部署验证记录。
+          // 文档：https://api-docs.deepseek.com/guides/thinking_mode
+          thinking: { type: 'disabled' },
           max_tokens: 8192,
         }),
       });

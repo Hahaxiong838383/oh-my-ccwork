@@ -234,12 +234,15 @@ export function StudioPage() {
             {wsConnected ? 'WS 已连' : 'WS 未连'}
           </div>
 
-          <button
-            onClick={handleLogout}
-            className="rounded border border-white/10 px-2 py-0.5 text-neutral-400 hover:bg-white/5 hover:text-white"
-          >
-            退出登录
-          </button>
+          {/* 个人站公开模式无登录态，不渲染登出 */}
+          {import.meta.env.VITE_KIDSHUB_PUBLIC !== '1' && (
+            <button
+              onClick={handleLogout}
+              className="rounded border border-white/10 px-2 py-0.5 text-neutral-400 hover:bg-white/5 hover:text-white"
+            >
+              退出登录
+            </button>
+          )}
         </div>
       </div>
 
