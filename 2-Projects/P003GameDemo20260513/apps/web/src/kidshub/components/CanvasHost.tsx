@@ -8,6 +8,7 @@ import { ExpressionPicker } from '../avatar/ExpressionPicker';
 import { TutorialManager } from '../tutorial/TutorialManager';
 import { TutorialCanvasContent } from '../tutorial/TutorialCanvasContent';
 import { BoardingCanvasContent } from '../tutorial/BoardingCanvasContent';
+import { NightReportCanvasContent } from '../tutorial/NightReportCanvasContent';
 import { useTutorialStore } from '../tutorial/tutorial-store';
 import { getUnitStep } from '../tutorial/tutorial-units';
 import { useAvatarStore } from '../avatar/avatar-store';
@@ -332,6 +333,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
           {tutorialActive ? (
             tutorialUnitId === 'boarding' ? (
               <BoardingCanvasContent />
+            ) : tutorialUnitId === 'night-report' ? (
+              <NightReportCanvasContent />
             ) : (
               <TutorialCanvasContent />
             )

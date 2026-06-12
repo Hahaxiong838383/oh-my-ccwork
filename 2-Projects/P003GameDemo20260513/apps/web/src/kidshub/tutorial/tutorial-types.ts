@@ -16,7 +16,9 @@ export type TutorialTarget =
   | 'light-on'
   | 'close-panel' // 上滑手势区 或 语音"准备好了"
   // —— 单元2 登舰引导 ——
-  | 'boot-button'; // 启动按钮 或 语音"登舰"
+  | 'boot-button' // 启动按钮 或 语音"登舰"
+  // —— 单元3 夜航报告引导 ——
+  | 'wake-word'; // 语音唤醒词"小可小可"（纯语音目标，无点击控件）
 
 export interface TutorialStep {
   /** demo 内部步骤 id（配表 N-1/N-2 的说明+等待两行合并为一步，phase 区分） */
@@ -110,6 +112,8 @@ export function describeTarget(target: TutorialTarget): string {
       return "说'准备好了'或往上滑关闭设置面板";
     case 'boot-button':
       return "按一下屏幕中央的启动按钮，或者对小可说'登舰'";
+    case 'wake-word':
+      return "对着小可喊'小可小可'试试唤醒它";
   }
 }
 

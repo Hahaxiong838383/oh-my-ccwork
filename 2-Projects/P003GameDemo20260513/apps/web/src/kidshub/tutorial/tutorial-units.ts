@@ -5,8 +5,9 @@
 import type { TutorialStep, TutorialUnit } from './tutorial-types';
 import { SETTINGS_UNIT } from './tutorial-settings';
 import { BOARDING_UNIT } from './tutorial-boarding';
+import { NIGHT_REPORT_UNIT } from './tutorial-night-report';
 
-export const TUTORIAL_UNITS: TutorialUnit[] = [BOARDING_UNIT, SETTINGS_UNIT].sort(
+export const TUTORIAL_UNITS: TutorialUnit[] = [BOARDING_UNIT, SETTINGS_UNIT, NIGHT_REPORT_UNIT].sort(
   (a, b) => a.navOrder - b.navOrder,
 );
 

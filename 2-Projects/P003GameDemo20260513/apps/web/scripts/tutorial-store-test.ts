@@ -3,10 +3,11 @@
  * 跑法：apps/web 下 `npm run test:tutorial` 或 `tsx scripts/tutorial-store-test.ts`
  */
 import { useTutorialStore, currentStep } from '../src/kidshub/tutorial/tutorial-store';
-import { getUnit } from '../src/kidshub/tutorial/tutorial-units';
+import { getUnit, TUTORIAL_UNITS } from '../src/kidshub/tutorial/tutorial-units';
 import { matchHints } from '../src/kidshub/tutorial/tutorial-types';
 import { BOARDING_HINTS } from '../src/kidshub/tutorial/tutorial-boarding';
 import { READY_HINTS } from '../src/kidshub/tutorial/tutorial-settings';
+import { WAKE_HINTS } from '../src/kidshub/tutorial/tutorial-night-report';
 
 let pass = 0;
 let fail = 0;
@@ -74,10 +75,49 @@ expect('boarding 的 boot-button 在 settings 不消费', s().advanceOnAction('b
 expect('open-panel 推进+面板打开', s().advanceOnAction('open-panel') === true && s().panelOpen === true);
 s().interrupt();
 
+// ── 夜航报告全流程 ──
+s().start('night-report');
+expect('夜航启动', s().isActive && s().unitId === 'night-report');
+expect('链条顺序：登舰<设置<夜航', (() => {
+  const order = TUTORIAL_UNITS.map((u) => u.id);
+  return order.indexOf('boarding') < order.indexOf('settings') && order.indexOf('settings') < order.indexOf('night-report');
+})());
+expect('设置单元衔接指向夜航', getUnit('settings')?.nextUnitId === 'night-report' && !!getUnit('settings')?.outroCopy);
+s().onSpeechEnd(); // 1→2
+s().onSpeechEnd(); // 2→3
+s().onSpeechEnd(); // 3→4
+expect('step4 无语音纯特效', currentStep(s())?.voiceCopy === null && (currentStep(s())?.durationMs ?? 0) > 0);
+s().onSpeechEnd(); // 4→5
+expect('step5 庆祝文案', currentStep(s())?.expression === 'jump-joy');
+s().onSpeechEnd(); // 5→6
+expect('step6 吃惊彩蛋', currentStep(s())?.expression === 'surprised');
+s().onSpeechEnd(); // 6→7
+expect('step7 等唤醒词', currentStep(s())?.waitFor === 'wake-word');
+s().onSpeechEnd();
+expect('step7 转 waiting', s().phase === 'waiting');
+expect('唤醒词推进到收尾', s().advanceOnAction('wake-word') === true && currentStep(s())?.id === '8');
+expect('收尾步 celebrating', s().phase === 'celebrating' && currentStep(s())?.isUnitEnd === true);
+s().onSpeechEnd();
+expect('夜航完成落盘', !s().isActive && s().completedUnits['night-report'] === true);
+
+// 超时跳步路径：3 次提醒后 forceNext 也应落到收尾步而非卡死
+s().resetForDebug();
+s().start('night-report');
+for (let i = 0; i < 6; i++) s().onSpeechEnd(); // 1→7
+s().onSpeechEnd(); // 7 waiting
+s().onRemindTick(); s().onRemindTick();
+expect('第3次提醒超限', s().onRemindTick().exceeded === true);
+s().forceNext();
+expect('超时跳步落到收尾步', currentStep(s())?.id === '8' && s().phase === 'celebrating');
+s().interrupt();
+
 // ── 关键词匹配 ──
 expect('登舰命中', matchHints('我要登舰！', BOARDING_HINTS));
 expect('同音误字命中', matchHints('登见', BOARDING_HINTS));
 expect('准备好了命中', matchHints('小可我准备好了', READY_HINTS));
+expect('唤醒词命中', matchHints('小可小可！', WAKE_HINTS));
+expect('唤醒词同音命中', matchHints('小科小科', WAKE_HINTS));
+expect('单叠"小可"不命中（防误触吞 LLM）', !matchHints('小可你好呀', WAKE_HINTS));
 expect('无关话不命中', !matchHints('今天天气真好', BOARDING_HINTS));
 
 console.log(`\n=== 结果汇总：PASS=${pass} FAIL=${fail} ===`);

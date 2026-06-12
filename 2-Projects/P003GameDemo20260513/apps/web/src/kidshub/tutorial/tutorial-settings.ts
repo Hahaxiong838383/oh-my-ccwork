@@ -152,6 +152,11 @@ export const SETTINGS_UNIT: TutorialUnit = {
   subtitle: '学会打开设置，调整到舒服状态',
   emoji: '🧭',
   storageKey: 'kidshub.tutorial_settings',
-  navOrder: 90, // 按需独立单元，文档明确移出固定链 → 垫底
+  // demo 体验链（川哥钦定）：登舰 → 设置 → 夜航（文档里设置是按需独立单元，
+  // demo 为消除转场生硬插入固定链第二站）
+  navOrder: 20,
+  outroCopy:
+    '灯光和声音都调到最舒服啦！接下来我带你看看方舟最神奇的夜航功能——点一下「夜航报告引导」吧！',
+  nextUnitId: 'night-report',
   steps: SETTINGS_STEPS,
 };

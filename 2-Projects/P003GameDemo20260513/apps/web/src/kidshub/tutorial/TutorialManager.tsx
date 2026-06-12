@@ -27,6 +27,7 @@ import {
 import { getUnit, getUnitStep } from './tutorial-units';
 import { READY_HINTS } from './tutorial-settings';
 import { BOARDING_HINTS } from './tutorial-boarding';
+import { WAKE_HINTS } from './tutorial-night-report';
 
 function getVoiceWsUrl(): string {
   const envUrl = (import.meta as any).env?.VITE_VOICE_WS_URL as string | undefined;
@@ -39,6 +40,7 @@ function getVoiceWsUrl(): string {
 function hintsForTarget(target: TutorialStep['waitFor']): string[] {
   if (target === 'close-panel') return READY_HINTS;
   if (target === 'boot-button') return BOARDING_HINTS;
+  if (target === 'wake-word') return WAKE_HINTS;
   return [];
 }
 
