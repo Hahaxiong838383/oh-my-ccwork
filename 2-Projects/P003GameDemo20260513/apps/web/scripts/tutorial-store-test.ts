@@ -8,6 +8,7 @@ import { matchHints } from '../src/kidshub/tutorial/tutorial-types';
 import { BOARDING_HINTS } from '../src/kidshub/tutorial/tutorial-boarding';
 import { READY_HINTS } from '../src/kidshub/tutorial/tutorial-settings';
 import { WAKE_HINTS } from '../src/kidshub/tutorial/tutorial-night-report';
+import { CLAIM_HINTS } from '../src/kidshub/tutorial/tutorial-focus';
 
 let pass = 0;
 let fail = 0;
@@ -82,7 +83,7 @@ expect('链条顺序：登舰<设置<夜航', (() => {
   const order = TUTORIAL_UNITS.map((u) => u.id);
   return order.indexOf('boarding') < order.indexOf('settings') && order.indexOf('settings') < order.indexOf('night-report');
 })());
-expect('设置单元衔接指向夜航', getUnit('settings')?.nextUnitId === 'night-report' && !!getUnit('settings')?.outroCopy);
+expect('设置单元衔接指向专注', getUnit('settings')?.nextUnitId === 'focus' && !!getUnit('settings')?.outroCopy);
 s().onSpeechEnd(); // 1→2
 s().onSpeechEnd(); // 2→3
 s().onSpeechEnd(); // 3→4
@@ -111,7 +112,53 @@ s().forceNext();
 expect('超时跳步落到收尾步', currentStep(s())?.id === '8' && s().phase === 'celebrating');
 s().interrupt();
 
+// ── 专注模式全流程 ──
+s().resetForDebug();
+s().start('focus');
+expect('专注启动', s().isActive && s().unitId === 'focus');
+for (let i = 0; i < 4; i++) s().onSpeechEnd(); // 1→5
+expect('step5 无语音计时幕', currentStep(s())?.voiceCopy === null && currentStep(s())?.scene === 'focus-counting');
+s().onSpeechEnd(); // 5→6
+expect('step6 宝箱出现吃惊', currentStep(s())?.expression === 'surprised' && currentStep(s())?.scene === 'chest-ready');
+s().onSpeechEnd(); // 6→7
+expect('step7 等获取奖励', currentStep(s())?.waitFor === 'claim-reward');
+s().onSpeechEnd();
+expect('step7 转 waiting', s().phase === 'waiting');
+expect('点宝箱推进开箱', s().advanceOnAction('claim-reward') === true && currentStep(s())?.scene === 'chest-open');
+s().onSpeechEnd(); // 8→9
+expect('step9 总结收尾', currentStep(s())?.isUnitEnd === true && s().phase === 'celebrating');
+s().onSpeechEnd();
+expect('专注完成落盘', !s().isActive && s().completedUnits['focus'] === true);
+
+// ── 生态缸全流程 ──
+s().start('eco-pond');
+expect('生态缸启动', s().unitId === 'eco-pond');
+s().onSpeechEnd(); // 1→2
+expect('step2 种子升起无语音', currentStep(s())?.voiceCopy === null && currentStep(s())?.scene === 'seed-rise');
+s().onSpeechEnd(); // 2→3
+s().onSpeechEnd(); // 3→4
+expect('step4 收尾步', currentStep(s())?.isUnitEnd === true);
+s().onSpeechEnd();
+expect('生态缸完成（全部引导结束）', !s().isActive && s().completedUnits['eco-pond'] === true);
+
+// ── 五单元链条 ──
+expect('链条顺序 登舰→设置→专注→夜航→生态缸', (() => {
+  const ids = TUTORIAL_UNITS.map((u) => u.id);
+  return JSON.stringify(ids) === JSON.stringify(['boarding', 'settings', 'focus', 'night-report', 'eco-pond']);
+})());
+expect('outro 链 settings→focus→night→eco 闭合', (() => {
+  return (
+    getUnit('boarding')?.nextUnitId === 'settings' &&
+    getUnit('settings')?.nextUnitId === 'focus' &&
+    getUnit('focus')?.nextUnitId === 'night-report' &&
+    getUnit('night-report')?.nextUnitId === 'eco-pond' &&
+    getUnit('eco-pond')?.nextUnitId === undefined
+  );
+})());
+s().resetForDebug();
+
 // ── 关键词匹配 ──
+expect('开箱口令命中', matchHints('打开宝箱！', CLAIM_HINTS));
 expect('登舰命中', matchHints('我要登舰！', BOARDING_HINTS));
 expect('同音误字命中', matchHints('登见', BOARDING_HINTS));
 expect('准备好了命中', matchHints('小可我准备好了', READY_HINTS));

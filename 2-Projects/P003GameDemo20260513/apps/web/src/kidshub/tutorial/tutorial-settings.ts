@@ -152,11 +152,11 @@ export const SETTINGS_UNIT: TutorialUnit = {
   subtitle: '学会打开设置，调整到舒服状态',
   emoji: '🧭',
   storageKey: 'kidshub.tutorial_settings',
-  // demo 体验链（川哥钦定）：登舰 → 设置 → 夜航（文档里设置是按需独立单元，
-  // demo 为消除转场生硬插入固定链第二站）
+  // demo 体验链（川哥钦定）：登舰 → 设置 → 专注 → 夜航 → 生态缸（文档里设置是
+  // 按需独立单元，demo 为消除转场生硬插入固定链第二站）
   navOrder: 20,
   outroCopy:
-    '灯光和声音都调到最舒服啦！接下来我带你看看方舟最神奇的夜航功能——点一下「夜航报告引导」吧！',
-  nextUnitId: 'night-report',
+    '灯光和声音都调到最舒服啦！接下来我教你方舟最重要的本领——点一下「专注模式引导」吧！',
+  nextUnitId: 'focus',
   steps: SETTINGS_STEPS,
 };

@@ -9,6 +9,8 @@ import { TutorialManager } from '../tutorial/TutorialManager';
 import { TutorialCanvasContent } from '../tutorial/TutorialCanvasContent';
 import { BoardingCanvasContent } from '../tutorial/BoardingCanvasContent';
 import { NightReportCanvasContent } from '../tutorial/NightReportCanvasContent';
+import { FocusCanvasContent } from '../tutorial/FocusCanvasContent';
+import { EcoPondCanvasContent } from '../tutorial/EcoPondCanvasContent';
 import { useTutorialStore } from '../tutorial/tutorial-store';
 import { getUnitStep } from '../tutorial/tutorial-units';
 import { useAvatarStore } from '../avatar/avatar-store';
@@ -335,6 +337,10 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
               <BoardingCanvasContent />
             ) : tutorialUnitId === 'night-report' ? (
               <NightReportCanvasContent />
+            ) : tutorialUnitId === 'focus' ? (
+              <FocusCanvasContent />
+            ) : tutorialUnitId === 'eco-pond' ? (
+              <EcoPondCanvasContent />
             ) : (
               <TutorialCanvasContent />
             )

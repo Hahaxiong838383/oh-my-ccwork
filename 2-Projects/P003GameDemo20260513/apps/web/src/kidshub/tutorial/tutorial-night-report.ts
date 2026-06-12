@@ -114,7 +114,7 @@ const NIGHT_REPORT_STEPS: TutorialStep[] = [
     expression: 'cheer',
     target: null,
     voiceCopy:
-      "方舟的新手之旅全部完成啦！{child_nickname}指挥官，以后随时喊'小可小可'，我马上就会出现～",
+      "夜航的秘密你都知道啦！{child_nickname}指挥官，以后随时喊'小可小可'，我马上就会出现～",
     remindCopy: null,
     waitFor: null,
     hideAvatar: false,
@@ -135,6 +135,9 @@ export const NIGHT_REPORT_UNIT: TutorialUnit = {
   subtitle: '理解离线收益机制，领取首日奖励',
   emoji: '🌙',
   storageKey: 'kidshub.tutorial_night_report',
-  navOrder: 30, // demo 链条第三站：登舰 → 设置 → 夜航
+  navOrder: 40, // demo 链第四站：登舰 → 设置 → 专注 → 夜航 → 生态缸
+  outroCopy:
+    '对了，还有一个最特别的地方没带你看——点一下「生态缸引导」，去看看你的专属家园吧！',
+  nextUnitId: 'eco-pond',
   steps: NIGHT_REPORT_STEPS,
 };
