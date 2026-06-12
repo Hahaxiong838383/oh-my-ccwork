@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTutorialStore, currentStep } from './tutorial-store';
 import type { TutorialTarget } from './tutorial-types';
 import { MockSettingsPanel } from './MockSettingsPanel';
@@ -19,6 +20,8 @@ export function TutorialCanvasContent(): JSX.Element {
   const panelOpen = useTutorialStore((s) => s.panelOpen);
   const lightOn = useTutorialStore((s) => s.lightOn);
   const advanceOnAction = useTutorialStore((s) => s.advanceOnAction);
+  // 统一方舟美术底图（与登舰引导同风格舱内图）；缺图降级为原 CSS 舷窗场景
+  const [bgFailed, setBgFailed] = useState(false);
 
   // 本组件只服务单元1（设置引导）；登舰等剧情单元有各自的画布组件
   const step = currentStep({ unitId: 'settings', stepIndex });
@@ -30,8 +33,19 @@ export function TutorialCanvasContent(): JSX.Element {
 
   return (
     <div className="absolute inset-0 overflow-hidden text-white" style={{ fontSize: 'inherit' }}>
-      {/* 背景层：太空舱深蓝渐变 + 舷窗 + 星点 */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0a1929] via-[#11294a] to-[#0d2238]">
+      {/* 背景层：方舟舱内美术图（与登舰引导统一风格）；缺图降级 CSS 舷窗场景 */}
+      {!bgFailed && (
+        <img
+          src="/kidshub/boarding/settings-cabin.png"
+          alt="方舟舱内"
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={() => setBgFailed(true)}
+          draggable={false}
+        />
+      )}
+      <div className={`absolute inset-0 ${bgFailed ? 'bg-gradient-to-b from-[#0a1929] via-[#11294a] to-[#0d2238]' : ''}`}>
+        {bgFailed && (
+          <>
         {/* 大圆角舷窗（模拟观察窗） */}
         <div
           className="absolute left-1/2 top-[13%] -translate-x-1/2 rounded-[17cqw] border-[1.1cqw] border-white/10 bg-[#081628]/55 overflow-hidden"
@@ -67,6 +81,8 @@ export function TutorialCanvasContent(): JSX.Element {
             <div key={i} className="absolute h-[0.55cqw] w-[0.55cqw] rounded-full bg-white/60" style={p} />
           ))}
         </div>
+          </>
+        )}
       </div>
 
       {/* 关灯压暗层（在状态条与面板下方，面板仍可读） */}

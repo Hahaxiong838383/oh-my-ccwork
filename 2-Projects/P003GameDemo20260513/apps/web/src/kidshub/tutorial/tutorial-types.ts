@@ -61,6 +61,13 @@ export interface TutorialUnit {
   storageKey: string;
   /** 左栏入口排序：按产品流程（登舰最先，设置按需垫底） */
   navOrder: number;
+  /**
+   * 收尾衔接语（末步庆祝播完后追加播报，引导孩子进下一个单元；可含 {child_nickname}）。
+   * 播完才真正 complete 退出
+   */
+  outroCopy?: string;
+  /** 衔接指向的下一单元：入口卡在"本单元已完成、下一单元未完成"时显示"下一步"脉冲提示 */
+  nextUnitId?: string;
   steps: TutorialStep[];
 }
 

@@ -36,6 +36,11 @@ export function SceneNav() {
       <div className="p-2 pb-0">
         {TUTORIAL_UNITS.map((unit) => {
           const active = tutorialActive && tutorialUnitId === unit.id;
+          // 上一单元已完成且衔接指向本单元、本单元未完成 → "下一步"脉冲提示（接小可衔接语）
+          const isNextStep =
+            !active &&
+            !completedUnits[unit.id] &&
+            TUTORIAL_UNITS.some((u) => u.nextUnitId === unit.id && completedUnits[u.id]);
           return (
             <button
               key={unit.id}
@@ -43,7 +48,9 @@ export function SceneNav() {
               className={`mb-1 w-full rounded-lg border px-3 py-2 text-left transition ${
                 active
                   ? 'border-yellow-400/60 bg-yellow-500/10 ring-1 ring-yellow-400/30'
-                  : 'border-white/10 bg-neutral-900 hover:bg-neutral-800 active:bg-neutral-950'
+                  : isNextStep
+                    ? 'animate-pulse border-sky-400/60 bg-sky-500/10 ring-1 ring-sky-400/40'
+                    : 'border-white/10 bg-neutral-900 hover:bg-neutral-800 active:bg-neutral-950'
               }`}
             >
               <div className="flex items-center gap-2">
@@ -51,11 +58,15 @@ export function SceneNav() {
                   {unit.emoji}
                 </span>
                 <span className="font-medium">{unit.title}</span>
-                {completedUnits[unit.id] && (
+                {completedUnits[unit.id] ? (
                   <span className="ml-auto rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] text-emerald-300">
                     已完成
                   </span>
-                )}
+                ) : isNextStep ? (
+                  <span className="ml-auto rounded-full bg-sky-500/20 px-1.5 py-0.5 text-[9px] text-sky-300">
+                    👉 下一步
+                  </span>
+                ) : null}
               </div>
               <div className="mt-0.5 pl-7 text-[11px] text-neutral-400 line-clamp-1">
                 {unit.subtitle}

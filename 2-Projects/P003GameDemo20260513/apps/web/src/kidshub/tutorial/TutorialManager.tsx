@@ -24,7 +24,7 @@ import {
   matchHints,
   type TutorialStep,
 } from './tutorial-types';
-import { getUnitStep } from './tutorial-units';
+import { getUnit, getUnitStep } from './tutorial-units';
 import { READY_HINTS } from './tutorial-settings';
 import { BOARDING_HINTS } from './tutorial-boarding';
 
@@ -61,6 +61,8 @@ export function TutorialManager(): null {
 
   // 第 3 次提醒过渡语 / 跳过回应 播完后要做的事（playback_end natural 时执行）
   const afterSpeechRef = useRef<null | (() => void)>(null);
+  // 收尾衔接语只播一次（庆祝播完 → 衔接语 → 才 complete；防循环）
+  const outroSpokenRef = useRef(false);
 
   /** 固定话术发声 + 字幕喂句（统一入口；连接断了自动重连一次） */
   const speakLine = async (text: string): Promise<void> => {
@@ -153,6 +155,14 @@ export function TutorialManager(): null {
       const s = useTutorialStore.getState();
       // waiting 期的 natural end 是提醒语/LLM 兜底回复播完，不推主线
       if (s.phase === 'waiting') return;
+      // 庆祝步播完且单元配了衔接语：先播衔接（引导去下一单元），播完才 complete 退出
+      const unit = getUnit(s.unitId);
+      if (s.phase === 'celebrating' && unit?.outroCopy && !outroSpokenRef.current) {
+        outroSpokenRef.current = true;
+        pushDebug({ kind: 'action', title: `🧭 引导衔接语 → ${unit.nextUnitId ?? '下一单元'}` });
+        void speakLine(applyVars(unit.outroCopy));
+        return;
+      }
       s.onSpeechEnd();
     };
     client.on('tts.playback_end', onPlaybackEnd);
@@ -160,7 +170,13 @@ export function TutorialManager(): null {
       client.off('tts.playback_end', onPlaybackEnd);
       afterSpeechRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive]);
+
+  // 新一轮引导启动时重置衔接语标记
+  useEffect(() => {
+    if (isActive) outroSpokenRef.current = false;
+  }, [isActive, generation]);
 
   // ── 30s 超时提醒（仅 waiting 期；remindCount 变化重新 arm 下一轮） ──
   useEffect(() => {

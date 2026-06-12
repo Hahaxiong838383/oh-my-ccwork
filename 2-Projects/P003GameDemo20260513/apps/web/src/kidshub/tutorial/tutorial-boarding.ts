@@ -110,5 +110,9 @@ export const BOARDING_UNIT: TutorialUnit = {
   emoji: '🚀',
   storageKey: 'kidshub.tutorial_boarding',
   navOrder: 10, // 破冰第一步，产品流程最先 → 入口排首位
+  // demo 衔接：登舰庆祝后口播引导去设置引导（产品链路是→专注引导，demo 未建该单元，
+  // 川哥钦定先衔接设置引导消除转场生硬）
+  outroCopy: '对了{child_nickname}，方舟的灯光和声音还没调呢——点一下左边的「设置引导」，我教你把它们调到最舒服的状态～',
+  nextUnitId: 'settings',
   steps: BOARDING_STEPS,
 };
