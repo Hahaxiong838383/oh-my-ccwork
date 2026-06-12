@@ -315,7 +315,7 @@ P003GameDemo20260513/
 2. **MiniMax 备选凭据**（已有 mmx-cli，确认账号有 STT/TTS 权限）
 3. **本地开发机**：Bun 已装（或 `curl -fsSL https://bun.sh/install | bash`）
 4. **手机和电脑同网段** —— D2 真机调试用
-5. **云端部署目标**：是用川哥 VPS（47.84.204.175 / hahafeiniu2）还是 Vercel/Cloudflare？提前定
+5. **云端部署目标**：是用川哥 VPS（已有 VPS）还是 Vercel/Cloudflare？提前定
 
 **验收路径预定**：
 - D2 晚上：内网 (`pnpm dev --host`) 手机扫码，本地 demo

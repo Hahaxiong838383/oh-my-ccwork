@@ -17,8 +17,8 @@
 
 | # | 决策 | 选择 | 理由 |
 |---|---|---|---|
-| D1 | 静思模式资源 | `/Users/rayman.chen/Documents/P003 Game demo/UI界面/静思模式/` 4 张 PNG | 川哥指定路径 |
-| D2 | 出航模式资源 | `/Users/rayman.chen/Documents/P003 Game demo/UI界面/出航模式/` 8 张 PNG | 同上 |
+| D1 | 静思模式资源 | `本机 Documents/P003 Game demo/UI界面/静思模式/` 4 张 PNG | 川哥指定路径 |
+| D2 | 出航模式资源 | `本机 Documents/P003 Game demo/UI界面/出航模式/` 8 张 PNG | 同上 |
 | D3 | DebugBar 加速度滑块 | 是 | demo 现场调节"几秒走完"，必须 |
 | D4 | DebugBar 加 progress 起点输入框 | 是 | 跳关测试不同阶段 |
 | D5 | 定时器驱动 | 用户打开 web 起算，按秒推进，乘速度滑块 | 不绑设备/真信号，纯 web 时长 |
@@ -139,7 +139,7 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 
 ## 17. P9 生态缸 mp4 动态升级演示
 
-**川哥决策**：源路径 `/Users/rayman.chen/Documents/P003 Game demo/UI界面/生态缸/生态缸动态/` 4 个 mp4 共 6.8MB。
+**川哥决策**：源路径 `本机 Documents/P003 Game demo/UI界面/生态缸/生态缸动态/` 4 个 mp4 共 6.8MB。
 
 **实施**（codex 写 + gemini APPROVE）：
 - `apps/web/public/art/eco/1.mp4 ~ 4.mp4`（数字命名延续川哥风格）
@@ -156,7 +156,7 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 
 ## 16. P8 宝箱视觉从 emoji 升级到 PNG（川哥指定新素材）
 
-**川哥决策**：源路径 `/Users/rayman.chen/Documents/P003 Game demo/UI界面/宝箱/` 共 4 张宝箱 PNG。
+**川哥决策**：源路径 `本机 Documents/P003 Game demo/UI界面/宝箱/` 共 4 张宝箱 PNG。
 
 **关键发现**：原先 OpenBox.tsx 用 emoji `📦` + 彩色光环渲染宝箱，川哥这次给的不是替换 PNG（之前没有），而是**首次加入 PNG 美术**。
 
@@ -174,7 +174,7 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 
 ## 15. P7 出航图替换（川哥指定 7 张新素材）
 
-**川哥决策**：源路径 `/Users/rayman.chen/Documents/P003 Game demo/UI界面/出航模式/` 共 7 张新图。
+**川哥决策**：源路径 `本机 Documents/P003 Game demo/UI界面/出航模式/` 共 7 张新图。
 
 **映射策略**：**按视觉用途**（不是文件名数字 1-7 严格对应），保证代码 launching/transition/locked/active/active-rotating/openable/full 各 stage 视觉链路正确。
 
@@ -196,7 +196,7 @@ focusMode: 'explore' | 'companion'  // 已存在，复用
 
 ## 14. P6 静思图重制（川哥指定新素材）
 
-**川哥决策**：源路径 `/Users/rayman.chen/Documents/P003 Game demo/UI界面/静思模式/` 下的 4 张已重制，要求按文件名顺序替换。
+**川哥决策**：源路径 `本机 Documents/P003 Game demo/UI界面/静思模式/` 下的 4 张已重制，要求按文件名顺序替换。
 
 **新 4 张映射**：
 | stage | 文件名 | 视觉 |

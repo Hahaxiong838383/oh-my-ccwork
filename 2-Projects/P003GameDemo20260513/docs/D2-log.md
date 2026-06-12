@@ -1,7 +1,7 @@
 # D2 进度日志 · 2026-05-14（约 6 小时 V0.4 → V0.6 全闭环）
 
 > D1 晚上完成 V0.4 框架（2h），D2 全天直接打通 AI 语音三段端到端 + 修 8 个真机 bug，**目标提前 1.5 天达成**。
-> 川哥手机扫码 https://10.9.1.104:5173/ 真机验证：
+> 川哥手机扫码 https://<内网IP>:5173/ 真机验证：
 > ✅ ASR "小可你好" 识别 → LLM 流式 → TTS 甜美小源音色，端到端 ~2.4s 丝滑无卡顿无重复音。
 
 ---
@@ -31,7 +31,7 @@
 ## 端到端验收（cc 用 playwright + 真实 WAV 注入麦克风）
 
 ```
-T0: GET https://10.9.1.104:5173/ → Pixel 5 viewport
+T0: GET https://<内网IP>:5173/ → Pixel 5 viewport
 T1: 跳关到 focusRunning
 T2: 注入 /tmp/test-xiaoke-hello.wav (1.16s "小可你好" 火山 TTS 自己生成的)
 T3: 按住🎤 录 2s → 松开
@@ -127,7 +127,7 @@ WS 流量（实际 cc 抓出来）:
 **复盘**：所有交互的"无效输入"路径都必须给前端反馈，让状态机能回到 idle。
 
 ### 6. HTTP 局域网 IP 是非安全上下文，navigator.mediaDevices 不存在
-**根因**：手机访问 http://10.9.1.104:5173/ 不是 localhost 也不是 HTTPS，浏览器视为非安全上下文，**navigator.mediaDevices 完全不存在**（playwright Pixel 5 mode 复现：`isSecureContext=false / hasMediaDevices=false`）。getUserMedia 报 `Cannot read properties of undefined`。
+**根因**：手机访问 http://<内网IP>:5173/ 不是 localhost 也不是 HTTPS，浏览器视为非安全上下文，**navigator.mediaDevices 完全不存在**（playwright Pixel 5 mode 复现：`isSecureContext=false / hasMediaDevices=false`）。getUserMedia 报 `Cannot read properties of undefined`。
 **复盘**：dev server 默认必须开 HTTPS（@vitejs/plugin-basic-ssl）+ WS 用 vite proxy 同 origin wss → 避免 mixed content。
 
 ### 7. Xray 全局代理拦截 server 调火山 WSS
@@ -168,7 +168,7 @@ WS 流量（实际 cc 抓出来）:
 - [ ] Farewell 关盖告别
 
 ### D4 上午（部署）
-- [ ] 部署到阿里云 VPS（47.84.204.175）
+- [ ] 部署到阿里云 VPS（<阿里云VPS>）
 - [ ] HTTPS + 域名/IP + Nginx 反代 WSS
 - [ ] iOS Safari 真机测试（音频策略 + 后台节流 + 麦克风权限二次拒绝引导）
 - [ ] 音频 buffer 释放（防 10-15 轮内存泄漏）
@@ -190,9 +190,9 @@ WS 流量（实际 cc 抓出来）:
 
 ## 关键交付物
 
-- **GitHub**: `Hahaxiong838383/mycc` · `2-Projects/P003GameDemo20260513/`
+- **GitHub**: `私有主仓` · `2-Projects/P003GameDemo20260513/`
 - **D2 最新 commit**: `e3380df4`
-- **手机访问**: `https://10.9.1.104:5173/`（同 iBRO WiFi）
+- **手机访问**: `https://<内网IP>:5173/`（同 iBRO WiFi）
 - **本地服务**:
   - 后端: `cd apps/server && npm start`（自动禁代理 + .env.local）
   - 前端: `cd apps/web && npx vite`（自动 HTTPS + WS proxy）

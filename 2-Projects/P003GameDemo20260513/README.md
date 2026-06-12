@@ -8,12 +8,12 @@
 
 **🎯 是什么**：FUTURUS 自研儿童陪伴机器人 **K1** 的 web demo 模拟器。设备形态是飞船舷窗造型 + 一只拟人化星灵小可。Demo 目标是给投资人 / 合作方 / 现场演示用，让他们 **5 分钟体验完 K1 主要能力**：开机欢迎 → 夜航报告 → 选模式（出航/静思）→ 4 阶段专注 → 开宝箱 → 选择继续/返舱 → 关盖告别。
 
-**🌐 现状（V1.0）**：[https://p003.hahaxiong.cc/](https://p003.hahaxiong.cc/)（公网 HTTPS，HK 阿里云 8.218.26.17 部署），打开手机扫即可演示。
+**🌐 现状（V1.0）**：[https://<demo域名>/](https://<demo域名>/)（公网 HTTPS，HK 阿里云 <HK-VPS> 部署），打开手机扫即可演示。
 
 **🏗 技术栈**：
 - 前端 React 18 + Vite 5 + TypeScript strict + Tailwind + Zustand + framer-motion + CSS container queries (cqw/cqh)
 - 后端 Hono + Node `ws` + tsx + ESM（端口 :3001）
-- 三段语音链路：ASR 火山 SAUC v3 + LLM Gemini via 川哥代理 4000（`gemini-3.1-flash-lite-preview`）+ TTS Doubao 2.0 双向流
+- 三段语音链路：ASR 火山 SAUC v3 + LLM Gemini via 内部代理网关（`gemini-3.1-flash-lite-preview`）+ TTS Doubao 2.0 双向流
 - **D6 新增**表情感知：Gemini Vision (`gemini-2.5-flash` + `thinking_budget=0`) + A' 架构（scene 切换瞬间预抓拍 + 5s 后台兜底）
 - 部署：阿里云 HK + nginx + systemd + Let's Encrypt
 
@@ -25,7 +25,7 @@
 
 **💎 设计原则**：
 - 演示节奏 > 工程完美：宁可写死 timer 别引入状态机层级
-- 字幕 / TTS / 视觉**严同步**：见 [feedback_subtitle_tts_strict_sync_pattern](../../.claude/projects/-Users-rayman-chen-mycc/memory/)
+- 字幕 / TTS / 视觉**严同步**：见 `feedback_subtitle_tts_strict_sync_pattern`
 - 摄像头隐私：server 即用即抛不存图（demo 可云，商业化必转端侧）
 - 真机驱动迭代：川哥手机反馈 → cc 主线快速修 → rsync VPS → 公网验证
 
@@ -93,14 +93,14 @@
 
 ### D6 三大踩坑（沉淀给后续）
 
-1. **Gemini 3/2.5 thinking 模型 reasoning_tokens 隐式吃 max_tokens** → response.content 字段直接缺失。修：`extra_body.google.thinking_config.thinking_budget: 0` · [feedback](../../../.claude/projects/-Users-rayman-chen-mycc/memory/feedback_gemini_thinking_budget_zero.md)
-2. **多路 codex 后类型守卫 isXxx 函数漏同步**：扩 union 时 `value === 'happy' || ...` 这种硬编码 tsc 抓不到，必须 grep 6 处消费方 · [feedback](../../../.claude/projects/-Users-rayman-chen-mycc/memory/feedback_codex_multi_field_whitelist_sync.md)
-3. **iOS Safari getUserMedia 三件套**：facingMode 默认后置 / 1×1 video 停帧解码 / 手势栈强制 · [feedback](../../../.claude/projects/-Users-rayman-chen-mycc/memory/feedback_ios_safari_getusermedia_traps.md)
+1. **Gemini 3/2.5 thinking 模型 reasoning_tokens 隐式吃 max_tokens** → response.content 字段直接缺失。修：`extra_body.google.thinking_config.thinking_budget: 0` · `feedback`
+2. **多路 codex 后类型守卫 isXxx 函数漏同步**：扩 union 时 `value === 'happy' || ...` 这种硬编码 tsc 抓不到，必须 grep 6 处消费方 · `feedback`
+3. **iOS Safari getUserMedia 三件套**：facingMode 默认后置 / 1×1 video 停帧解码 / 手势栈强制 · `feedback`
 
 ### D6 演示流程（V1.0）
 
 ```
-手机 https://10.9.1.104:5173/ → 完成配网（触发摄像头授权）
+手机 https://<内网IP>:5173/ → 完成配网（触发摄像头授权）
   ↓ 抓拍 → Gemini Vision (1.6-2.1s) → currentRef.expr 更新
   ↓ 跳关 1: Welcome（小可："看你这么期待，你好，指挥官！..."）
   ↓ 跳关 2-11: 全程带 12 种表情前缀（happy/sad/curious/focused/thinking/...）
@@ -137,14 +137,14 @@ debug: DebugBar 表情行 expr+conf+age + 5 flag 诊断 + 手动 snap + 清旗 +
 | **宝箱手动触发** | **P24** | 进度满后透明覆盖按钮叠在美术"收获奖励" 用户点击触发 |
 
 ### 沉淀的 3 大工程范式
-1. **字幕 + TTS 严同步**：出现等 `src.start()` AudioContext clock / 推进用打字机字速 / 消失公式匹配字速 + buffer · [feedback_subtitle_tts_strict_sync_pattern.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/)
-2. **useEffect cleanup race**：deps 含自 set state → cleanup 取消 raf → setOpacity 永远卡 0 · [feedback_useeffect_cleanup_cancels_raf_timer.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/)
-3. **cq 单位 fallback 陷阱**：加 containerType 会全局缩 cqh 元素 · [feedback_cq_unit_fallback_pitfall.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/)
+1. **字幕 + TTS 严同步**：出现等 `src.start()` AudioContext clock / 推进用打字机字速 / 消失公式匹配字速 + buffer · `feedback_subtitle_tts_strict_sync_pattern.md`
+2. **useEffect cleanup race**：deps 含自 set state → cleanup 取消 raf → setOpacity 永远卡 0 · `feedback_useeffect_cleanup_cancels_raf_timer.md`
+3. **cq 单位 fallback 陷阱**：加 containerType 会全局缩 cqh 元素 · `feedback_cq_unit_fallback_pitfall.md`
 
 ### 真机演示流程（V0.9）
 
 ```
-手机 https://192.168.1.193:5173/ → 完成配网
+手机 https://<内网IP>:5173/ → 完成配网
   ↓ 跳关 1: 开机欢迎 (字幕+TTS 同步)
   ↓ 跳关 2: 夜航报告 (1-4 随机宝箱 PNG)
   ↓ 跳关 3: 状态询问 → 选出航/静思
@@ -177,8 +177,8 @@ debug: 左下紫色徽章实时显示场景编号 + focus state
 - **前端**：React 18 + Vite 5 + TypeScript strict + Tailwind + Zustand + framer-motion + CSS container query units (cqw/cqh)
 - **后端**：Hono + Node `ws` + tsx + ESM
 - **三段语音链路**：
-  - **ASR**：火山大模型 sauc v3（`wss://openspeech.bytedance.com/api/v3/sauc/bigmodel`）
-  - **LLM**：gemini-3.1-flash-lite-preview via 川哥代理 `http://23.226.135.149:4000/v1`（TTFT 0.80s，max_tokens 65535）
+  - **ASR**：火山大模型 sauc v3（官方 v3 双向流端点）
+  - **LLM**：gemini-3.1-flash-lite-preview via 内部代理网关（TTFT 0.80s，max_tokens 65535）
   - **TTS**：Doubao-TTS 2.0 双向流（音色 `zh_female_tianmeixiaoyuan_moon_bigtts` 甜美小源）
 - **新增 TTS sayDirect 通道**：绕过 ASR+LLM 直接 `{ type:'tts.say', text }`，用于开机欢迎语等无 ASR 触发场景
 

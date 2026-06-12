@@ -51,7 +51,7 @@
 | 宝箱 PNG | `public/art/box/` | 4 PNG | `1-common ~ 4-legendary` |
 | 生态缸视频 | `public/art/eco/` | 4 MP4 | `1.mp4 ~ 4.mp4` |
 
-**规范**：数字前缀（顺序）+ 英文等级语义（无 URL encoding 风险）+ 川哥源文件保留原名在 `/Users/rayman.chen/Documents/`，cc cp 时统一改名。
+**规范**：数字前缀（顺序）+ 英文等级语义（无 URL encoding 风险）+ 川哥源文件保留原名在 `本机 Documents/`，cc cp 时统一改名。
 
 ### 3. 跨场景共享 UI
 
@@ -76,7 +76,7 @@ StatusBar 从 MainScreen 提升到 Screen.tsx 层级，所有 scene（FocusRunni
 
 ### B. 子目录 codex 跑时不能依赖父仓 docs/rules
 
-D4 全程 codex prompt 显式标注"项目是 mycc 仓子目录，git 根 /Users/rayman.chen/mycc，不要访问父仓 docs/rules，本项目自带 docs/"。这一条避免了 codex 跑歪。
+D4 全程 codex prompt 显式标注"项目是 mycc 仓子目录，git 根 主仓根，不要访问父仓 docs/rules，本项目自带 docs/"。这一条避免了 codex 跑歪。
 
 ### C. 路由分流后子组件丢失
 

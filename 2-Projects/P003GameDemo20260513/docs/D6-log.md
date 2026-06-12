@@ -11,7 +11,7 @@ D6 起手是给小可加"看到表情"的人设感：摄像头抓拍 → Gemini 
 - 12 标签丰富表情谱（含 happy/sad/excited/curious/focused/thinking 等）
 - A' 架构：scene 切换瞬间预抓拍 + 5s 后台兜底，ttsSpeak **零等待**（保 D5 字幕严同步）
 - vision 端到端 **1.6-2.1s**（6s → 改善 70%）
-- 端到端真机演练通过（iOS Safari + iBRO 10.9.1.104）
+- 端到端真机演练通过（iOS Safari + iBRO <内网IP>）
 
 ## 时间线与决策
 
@@ -102,7 +102,7 @@ D6 16 commit 里只有 1 commit（codex A + B 并行实施）是 codex 真正写
 ## 演示流程（V1.0）
 
 ```
-手机 https://10.9.1.104:5173/ → 完成配网（DebugBar 按钮，触发摄像头授权）
+手机 https://<内网IP>:5173/ → 完成配网（DebugBar 按钮，触发摄像头授权）
   ↓ 抓拍 → Gemini Vision (1.6-2.1s) → currentRef.expr 更新
   ↓ 跳关 1: Welcome （小可："看你这么期待，你好，指挥官！..."）
   ↓ 跳关 2: 夜航报告（小可："看你笑得这么开心，夜航报告出炉..."）
@@ -125,27 +125,27 @@ D6 16 commit 里只有 1 commit（codex A + B 并行实施）是 codex 真正写
 ## 沉淀文档与记忆
 
 - [V0.2 规划稿](./D6-vision-expression-plan.md)（含 codex + gemini 双评审整合）
-- [feedback_gemini_thinking_budget_zero.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — thinking_budget=0 关 thinking + reasoning_effort 互斥
-- [feedback_ios_safari_getusermedia_traps.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — iOS Safari 三件套
-- [feedback_codex_multi_field_whitelist_sync.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — 多路 codex 后白名单 6 处同步
-- [feedback_vite_proxy_api_path.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — vite proxy 默认不转 /api
-- [feedback_long_running_vite_dev.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — vite dev 长跑（22h）僵死
+- `feedback_gemini_thinking_budget_zero.md` — thinking_budget=0 关 thinking + reasoning_effort 互斥
+- `feedback_ios_safari_getusermedia_traps.md` — iOS Safari 三件套
+- `feedback_codex_multi_field_whitelist_sync.md` — 多路 codex 后白名单 6 处同步
+- `feedback_vite_proxy_api_path.md` — vite proxy 默认不转 /api
+- `feedback_long_running_vite_dev.md` — vite dev 长跑（22h）僵死
 
 ---
 
 ## D6 P2：VPS 公网部署（8 commit）
 
-D6 P1 完工当晚川哥同步：部署到阿里云 HK 8.218.26.17，域名 p003.hahaxiong.cc。
+D6 P1 完工当晚川哥同步：部署到阿里云 HK <HK-VPS>，域名 <demo域名>。
 
 | Phase | Commit | 改动 | 真凶 / 踩坑 |
 |---|---|---|---|
-| **现状探查** | — | SSH 8.218.26.17 看：1.6Gi 内存 / cc-remote V4 frps + nginx 80/443 已占 / 无 node/npm | 资源紧但 1.1Gi 可用够，避开 7000/19080/19443/22022/29443 端口选 :3001 |
+| **现状探查** | — | SSH <HK-VPS> 看：1.6Gi 内存 / cc-remote V4 frps + nginx 80/443 已占 / 无 node/npm | 资源紧但 1.1Gi 可用够，避开 7000/19080/19443/22022/29443 端口选 :3001 |
 | **基础设施** | — | nodesource setup_22.x → Node v22.22 + 装 + 建 /opt/p003/{server,web/dist} | rsync + certbot 系统已装 |
 | **代码上传** | — | rsync web/dist + apps/server → VPS（含 24 PNG+MP4 美术资产）| 17M / 24 asset 全到位 |
 | **systemd unit 起步崩 #1** | — | exit 127 = command not found | `--omit=dev` 跳过 tsx（tsx 是 devDep），改 npm install 完整装 |
 | **真凶逮捕 #3** | `a72f47284` | server/package.json **漏 zod dependency** → ERR_MODULE_NOT_FOUND | codex B 写 vision.ts 用 zod 但忘加 dep；本地 monorepo root 共享 zod 掩盖了，独立部署 VPS 才暴露 |
 | **nginx 语法陷阱** | — | reload 失败 `unknown directive "http2"` | nginx 1.24 不支持 `http2 on;` (nginx 1.25+ 语法)；改老语法 `listen 443 ssl http2;` |
-| **certbot 装证书失败** | — | "Could not automatically find a matching server block for p003.hahaxiong.cc" | vhost 只有 listen 80 没 listen 443，certbot --nginx 找不到。手写完整 80+443 vhost 后重 reload，证书自然挂上 |
+| **certbot 装证书失败** | — | "Could not automatically find a matching server block for <demo域名>" | vhost 只有 listen 80 没 listen 443，certbot --nginx 找不到。手写完整 80+443 vhost 后重 reload，证书自然挂上 |
 | **SSL 不匹配假象** | — | Mac 端 curl 首次报 SSL 不匹配，VPS 端 5/5 都 200 | Mac 端 SSL session resumption 缓存旧 TLS ticket；重试或 keep-alive 自然恢复 |
 
 **端到端时延实测**：
@@ -153,7 +153,7 @@ D6 P1 完工当晚川哥同步：部署到阿里云 HK 8.218.26.17，域名 p003
 - POST /api/vision/expression: 公网 1.1s（含 Gemini 0.85s）
 - 静态 PNG: HTTP/2 200，nginx 30d expires 缓存
 - 80→443 redirect: 301 OK
-- 证书: Let's Encrypt CN=p003.hahaxiong.cc, 2026-08-16 到期
+- 证书: Let's Encrypt CN=<demo域名>, 2026-08-16 到期
 
 ## D6 P2 + P3：川哥真机迭代两轮（4+4 反馈）
 
@@ -177,17 +177,17 @@ D6 P1 完工当晚川哥同步：部署到阿里云 HK 8.218.26.17，域名 p003
 | 阶段 | Commit 数 | 关键产出 |
 |---|---|---|
 | P1 表情感知（含规划）| 16 | A' 架构 + 12 标签 + 1.6s 延迟 + 7 commits 真凶链 |
-| VPS 部署 | 2 | p003.hahaxiong.cc HTTPS 上线 + zod fix |
+| VPS 部署 | 2 | <demo域名> HTTPS 上线 + zod fix |
 | P2 真机反馈第 1 轮 | 1 | reward 缓冲 + 变黄即点 + 生态缸常驻 |
 | P3 真机反馈第 2 轮 | 1 | reward 再加长 + 按钮 + UI 放大 + 去 debug |
 | 文档收尾 | 4 | D6-log + README + RECENT_EVENTS + memory |
 
 ## 关键新沉淀 memory（D6 P2/P3 + VPS）
 
-- [feedback_monorepo_deps_vs_standalone_deploy.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — monorepo root node_modules 共享掩盖 sub-package.json 漏 dep，VPS 独立部署才暴露
-- [feedback_nginx_1_24_vs_1_25_http2_syntax.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — nginx 1.24 `listen 443 ssl http2;` 老语法 vs 1.25+ `http2 on;` 新语法
-- [feedback_certbot_nginx_needs_443_block.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — certbot --nginx 自动装证书前必须先有 listen 443 ssl server block
-- [feedback_pwa_sw_deploy_verify.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — PWA SW 新版上线靠 JS hash 对比验证（curl `/` grep index-XXX.js）
+- `feedback_monorepo_deps_vs_standalone_deploy.md` — monorepo root node_modules 共享掩盖 sub-package.json 漏 dep，VPS 独立部署才暴露
+- `feedback_nginx_1_24_vs_1_25_http2_syntax.md` — nginx 1.24 `listen 443 ssl http2;` 老语法 vs 1.25+ `http2 on;` 新语法
+- `feedback_certbot_nginx_needs_443_block.md` — certbot --nginx 自动装证书前必须先有 listen 443 ssl server block
+- `feedback_pwa_sw_deploy_verify.md` — PWA SW 新版上线靠 JS hash 对比验证（curl `/` grep index-XXX.js）
 
 ---
 
@@ -236,10 +236,10 @@ P7 时 OpenBox z=70 < NightReport z=80，即使 DOM 后渲染也被盖住。两�
 
 ## D6 P4-P10 新沉淀 memory（4 条）
 
-- [feedback_pwa_sw_skipwaiting_clientsclaim.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — PWA SW 客户端缓存陷阱 + skipWaiting/clientsClaim 强更
-- [feedback_pointer_events_inheritance_trap.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — pointer-events-none 父级继承吞子级 click
-- [feedback_z_layer_vs_dom_order.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — z 层 + DOM 顺序双因素视觉栈
-- [feedback_timer_router_boot_branch.md](../../../.claude/projects/-Users-rayman-chen-mycc/memory/) — timer router 按 bootState 分支走不同 reward 路径
+- `feedback_pwa_sw_skipwaiting_clientsclaim.md` — PWA SW 客户端缓存陷阱 + skipWaiting/clientsClaim 强更
+- `feedback_pointer_events_inheritance_trap.md` — pointer-events-none 父级继承吞子级 click
+- `feedback_z_layer_vs_dom_order.md` — z 层 + DOM 顺序双因素视觉栈
+- `feedback_timer_router_boot_branch.md` — timer router 按 bootState 分支走不同 reward 路径
 
 ---
 

@@ -29,5 +29,5 @@
 
 ## 踩坑记录
 
-- **Node `--env-file` 的 `#` 行内注释**：`STUDIO_PASS=Futu#2026` 被截断成 `Futu`，登录 401。修复：值加双引号。env 值含 `#` 必须加引号。
+- **Node `--env-file` 的 `#` 行内注释**：`STUDIO_PASS` 的值含 `#` 被截断成前半段，登录 401。修复：值加双引号。env 值含 `#` 必须加引号。
 - corepack 损坏（Cannot find module './lib/corepack.cjs'）：pnpm 不可用，用仓库根 `node_modules/.bin/{tsc,vite}` 直跑。

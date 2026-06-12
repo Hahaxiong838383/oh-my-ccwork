@@ -114,17 +114,17 @@
 
 ## 经验教训（已沉淀到 memory）
 
-1. [feedback_demo_scope_anchor_doc.md](~/.claude/projects/-Users-rayman-chen-mycc/memory/feedback_demo_scope_anchor_doc.md) — 短工期 demo 必写 DEMO-PRINCIPLES 锚定
-2. [feedback_credential_test_script_rule.md](~/.claude/projects/-Users-rayman-chen-mycc/memory/feedback_credential_test_script_rule.md) — 凭据测试脚本铁律
-3. [feedback_provider_probe_check_memory_first.md](~/.claude/projects/-Users-rayman-chen-mycc/memory/feedback_provider_probe_check_memory_first.md) — 测 API 前先 grep memory
-4. [feedback_codex_team_with_contract.md](~/.claude/projects/-Users-rayman-chen-mycc/memory/feedback_codex_team_with_contract.md) — codex prompt 含接口契约
-5. [reference_p003_ai_voice_providers.md](~/.claude/projects/-Users-rayman-chen-mycc/memory/reference_p003_ai_voice_providers.md) — 4 家 API 实测对比
+1. `feedback_demo_scope_anchor_doc.md` — 短工期 demo 必写 DEMO-PRINCIPLES 锚定
+2. `feedback_credential_test_script_rule.md` — 凭据测试脚本铁律
+3. `feedback_provider_probe_check_memory_first.md` — 测 API 前先 grep memory
+4. `feedback_codex_team_with_contract.md` — codex prompt 含接口契约
+5. `reference_p003_ai_voice_providers.md` — 4 家 API 实测对比
 
 ---
 
 ## 关键交付物
 
-- **GitHub**: `Hahaxiong838383/mycc` · `2-Projects/P003GameDemo20260513/`
+- **GitHub**: `私有主仓` · `2-Projects/P003GameDemo20260513/`
 - **当前 commit**: `c3f55ff4`
 - **本地访问**: `http://localhost:5173/`（dev server 已关，下次 `cd apps/web && npx vite --host`）
-- **手机扫码**: 同 WiFi (iBRO) 访问 `http://192.168.1.193:5173/`
+- **手机扫码**: 同 WiFi (iBRO) 访问 `http://<内网IP>:5173/`
