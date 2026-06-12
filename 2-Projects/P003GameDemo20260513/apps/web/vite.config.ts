@@ -52,6 +52,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2,mp3,ogg}'],
+        // /admin 后台原型子站与主应用 SW 完全隔离：不预缓存其资产（vendor 共
+        // ~3MB 且独立迭代），导航也不走 SPA fallback——否则原型更新后用户会被
+        // SW 钉在旧版（D6 P10 同款坑），离线时 /admin 还会被劫持成 React 页。
+        globIgnores: ['admin/**'],
+        navigateFallbackDenylist: [/^\/admin/],
         // D6 P10：川哥手机 PWA SW 缓存旧 JS（P7/P8 版本 reward 路径走 ECO_CHECK
         // 让 legendary 抽中后进生态缸），新 P9 部署后用户感知不到。skipWaiting +
         // clientsClaim 强制新 SW 立即激活并接管所有客户端，下次访问拿最新。

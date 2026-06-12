@@ -215,6 +215,17 @@ export function StudioPage() {
         </div>
 
         <div className="flex items-center gap-4 text-xs">
+          {/* 数据后台原型子站（静态托管于 /admin/，与工作台同一套登录凭据） */}
+          <a
+            href="/admin/"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded border border-white/10 px-2 py-0.5 text-sky-300 hover:bg-white/5 hover:text-sky-200"
+            title="数据后台 + KidsHub 运营台（mock 数据 · 产品定义可视化）"
+          >
+            📊 数据后台
+          </a>
+
           {/* WS 状态 */}
           <div className="flex items-center gap-1.5 text-neutral-400">
             <span className={`inline-block h-1.5 w-1.5 rounded-full ${wsConnected ? 'bg-emerald-400' : 'bg-neutral-600'}`} />
