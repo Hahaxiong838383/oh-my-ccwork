@@ -8,7 +8,8 @@
  *
  * 触发（产品）：专注引导完成后 + tutorial_night_report=false；首日满12h发放+额外宝箱。
  * 目标：理解离线收益机制，领取首日奖励。
- * demo 链条（川哥钦定）：登舰 → 设置 → 夜航（产品链是 专注→夜航，专注单元未建）。
+ * 链条（2026-06-12 配表定稿）：固定链 登舰 → 专注 → 夜航；本单元是固定链终点。
+ * demo 衔接：outro 轻提示去生态缸引导（生态缸产品上是首次进入升级时独立触发）。
  */
 import type { TutorialStep, TutorialUnit } from './tutorial-types';
 
@@ -33,7 +34,7 @@ const NIGHT_REPORT_STEPS: TutorialStep[] = [
     expression: 'head-tilt',
     target: null,
     voiceCopy:
-      '在你离开的时候，方舟会为你自动收集星光。离开得越久，收集得越多——不过最多攒12个小时，满了就不会再涨了。所以记得每天都要来领哦，这样才不会亏！',
+      '在你离开的时候，方舟会为你自动收集星尘。离开得越久，收集得越多——不过最多攒12个小时，满了就不会再涨了。所以记得每天都要来领哦，这样才不会亏！',
     remindCopy: null,
     waitFor: null,
     hideAvatar: false,
@@ -45,7 +46,7 @@ const NIGHT_REPORT_STEPS: TutorialStep[] = [
     specStep: '3',
     expression: 'head-tilt',
     target: null,
-    voiceCopy: '让我们来看看你来之前方舟收集了多少星光吧！',
+    voiceCopy: '让我们来看看你来之前方舟收集了多少星尘吧！',
     remindCopy: null,
     waitFor: null,
     hideAvatar: false,
@@ -135,7 +136,7 @@ export const NIGHT_REPORT_UNIT: TutorialUnit = {
   subtitle: '理解离线收益机制，领取首日奖励',
   emoji: '🌙',
   storageKey: 'kidshub.tutorial_night_report',
-  navOrder: 40, // demo 链第四站：登舰 → 设置 → 专注 → 夜航 → 生态缸
+  navOrder: 30, // 固定链终点站（2026-06-12 配表定稿：登舰 → 专注 → 夜航）
   outroCopy:
     '对了，还有一个最特别的地方没带你看——点一下「生态缸引导」，去看看你的专属家园吧！',
   nextUnitId: 'eco-pond',

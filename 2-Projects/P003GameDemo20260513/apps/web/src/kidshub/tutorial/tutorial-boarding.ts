@@ -8,7 +8,7 @@
  *
  * 触发（产品）：首次开盖 tutorial_boarding=false。demo：左栏入口（排首位，破冰第一步）。
  * 目标：完成世界观导入和身份认证，获得新手光环。
- * 结束链（产品）：→ 专注模式引导 + 开启 OTA 检测（demo 未建单元3，完成即回工作台）。
+ * 结束链（产品，2026-06-12 配表定稿）：→ 专注模式引导（首日默认陪伴，跳过状态询问）+ 开启 OTA 检测。
  */
 import type { TutorialStep, TutorialUnit } from './tutorial-types';
 
@@ -110,9 +110,9 @@ export const BOARDING_UNIT: TutorialUnit = {
   emoji: '🚀',
   storageKey: 'kidshub.tutorial_boarding',
   navOrder: 10, // 破冰第一步，产品流程最先 → 入口排首位
-  // demo 衔接：登舰庆祝后口播引导去设置引导（产品链路是→专注引导，demo 未建该单元，
-  // 川哥钦定先衔接设置引导消除转场生硬）
-  outroCopy: '对了{child_nickname}，方舟的灯光和声音还没调呢——点一下左边的「设置引导」，我教你把它们调到最舒服的状态～',
-  nextUnitId: 'settings',
+  // demo 衔接（按 2026-06-12 配表固定链 登舰→专注）：庆祝后口播引导去专注模式引导
+  outroCopy:
+    '{child_nickname}指挥官，方舟启动成功啦！接下来我教你方舟最重要的本领——点一下左边的「专注模式引导」吧！',
+  nextUnitId: 'focus',
   steps: BOARDING_STEPS,
 };

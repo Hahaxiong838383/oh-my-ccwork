@@ -123,7 +123,7 @@ const FOCUS_STEPS: TutorialStep[] = [
     expression: 'jump-joy',
     target: null,
     voiceCopy:
-      '太厉害了！坐得越久，宝箱越丰富——下次坚持更久，宝箱品质会更好哦！坚持每天方舟航行，你的家园会越来越漂亮的！',
+      '太厉害了！坐得越久，宝箱越丰富——下次坚持更久，宝箱品质会更好哦！坚持每天给方舟充能，你的家园会越来越漂亮的！',
     remindCopy: null,
     waitFor: null,
     hideAvatar: false,
@@ -141,7 +141,7 @@ export const FOCUS_UNIT: TutorialUnit = {
   subtitle: '理解专注→攒宝箱→开箱循环，体验开箱爽感',
   emoji: '📦',
   storageKey: 'kidshub.tutorial_focus',
-  navOrder: 30, // demo 链第三站：登舰 → 设置 → 专注 → 夜航 → 生态缸
+  navOrder: 20, // 固定链第二站（2026-06-12 配表定稿：登舰 → 专注 → 夜航）
   outroCopy:
     '专注的秘密你已经掌握啦！接下来我给你看看方舟夜里偷偷干了什么——点一下「夜航报告引导」吧！',
   nextUnitId: 'night-report',

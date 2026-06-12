@@ -79,11 +79,12 @@ s().interrupt();
 // ── 夜航报告全流程 ──
 s().start('night-report');
 expect('夜航启动', s().isActive && s().unitId === 'night-report');
-expect('链条顺序：登舰<设置<夜航', (() => {
+expect('固定链顺序：登舰<专注<夜航', (() => {
   const order = TUTORIAL_UNITS.map((u) => u.id);
-  return order.indexOf('boarding') < order.indexOf('settings') && order.indexOf('settings') < order.indexOf('night-report');
+  return order.indexOf('boarding') < order.indexOf('focus') && order.indexOf('focus') < order.indexOf('night-report');
 })());
-expect('设置单元衔接指向专注', getUnit('settings')?.nextUnitId === 'focus' && !!getUnit('settings')?.outroCopy);
+expect('设置为独立单元（无 outro 衔接）', getUnit('settings')?.nextUnitId === undefined && getUnit('settings')?.outroCopy === undefined);
+expect('登舰衔接指向专注', getUnit('boarding')?.nextUnitId === 'focus' && !!getUnit('boarding')?.outroCopy);
 s().onSpeechEnd(); // 1→2
 s().onSpeechEnd(); // 2→3
 s().onSpeechEnd(); // 3→4
@@ -141,18 +142,18 @@ expect('step4 收尾步', currentStep(s())?.isUnitEnd === true);
 s().onSpeechEnd();
 expect('生态缸完成（全部引导结束）', !s().isActive && s().completedUnits['eco-pond'] === true);
 
-// ── 五单元链条 ──
-expect('链条顺序 登舰→设置→专注→夜航→生态缸', (() => {
+// ── 五单元排序（固定链 + 独立单元）──
+expect('入口排序 登舰→专注→夜航→生态缸→设置', (() => {
   const ids = TUTORIAL_UNITS.map((u) => u.id);
-  return JSON.stringify(ids) === JSON.stringify(['boarding', 'settings', 'focus', 'night-report', 'eco-pond']);
+  return JSON.stringify(ids) === JSON.stringify(['boarding', 'focus', 'night-report', 'eco-pond', 'settings']);
 })());
-expect('outro 链 settings→focus→night→eco 闭合', (() => {
+expect('outro 链 boarding→focus→night→eco 闭合，settings 独立', (() => {
   return (
-    getUnit('boarding')?.nextUnitId === 'settings' &&
-    getUnit('settings')?.nextUnitId === 'focus' &&
+    getUnit('boarding')?.nextUnitId === 'focus' &&
     getUnit('focus')?.nextUnitId === 'night-report' &&
     getUnit('night-report')?.nextUnitId === 'eco-pond' &&
-    getUnit('eco-pond')?.nextUnitId === undefined
+    getUnit('eco-pond')?.nextUnitId === undefined &&
+    getUnit('settings')?.nextUnitId === undefined
   );
 })());
 s().resetForDebug();

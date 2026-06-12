@@ -152,11 +152,8 @@ export const SETTINGS_UNIT: TutorialUnit = {
   subtitle: '学会打开设置，调整到舒服状态',
   emoji: '🧭',
   storageKey: 'kidshub.tutorial_settings',
-  // demo 体验链（川哥钦定）：登舰 → 设置 → 专注 → 夜航 → 生态缸（文档里设置是
-  // 按需独立单元，demo 为消除转场生硬插入固定链第二站）
-  navOrder: 20,
-  outroCopy:
-    '灯光和声音都调到最舒服啦！接下来我教你方舟最重要的本领——点一下「专注模式引导」吧！',
-  nextUnitId: 'focus',
+  // 2026-06-12 配表定稿：设置为按需独立单元（首次进入调光/亮度/像距/音量时触发），
+  // 不在固定链中、不做保底；单元结束返回设置前场景，不接其他单元 → 无 outro
+  navOrder: 50,
   steps: SETTINGS_STEPS,
 };
