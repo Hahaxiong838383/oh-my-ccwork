@@ -1,5 +1,5 @@
 import { useTutorialStore, currentStep } from './tutorial-store';
-import type { TutorialTarget } from './tutorial-settings';
+import type { TutorialTarget } from './tutorial-types';
 import { MockSettingsPanel } from './MockSettingsPanel';
 import { TutorialOverlay } from './TutorialOverlay';
 
@@ -20,7 +20,8 @@ export function TutorialCanvasContent(): JSX.Element {
   const lightOn = useTutorialStore((s) => s.lightOn);
   const advanceOnAction = useTutorialStore((s) => s.advanceOnAction);
 
-  const step = currentStep({ stepIndex });
+  // 本组件只服务单元1（设置引导）；登舰等剧情单元有各自的画布组件
+  const step = currentStep({ unitId: 'settings', stepIndex });
   const activeTarget = (step?.target ?? null) as TutorialTarget | null;
   const isStep4 = step?.id === '4' || step?.specStep?.startsWith('4');
 

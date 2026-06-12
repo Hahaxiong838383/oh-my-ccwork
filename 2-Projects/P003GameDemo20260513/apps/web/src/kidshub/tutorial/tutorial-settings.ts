@@ -3,41 +3,11 @@
  *
  * 事实源：《A03 · 新手引导系统》（飞书 GxZ3wUt1YiqubNkLC2Fcdw4xnBh，2026-06 配表）。
  * voiceCopy 逐字搬运配表 voice_copy，不得在代码里改写产品话术；改动走产品文档再同步。
- * remindCopy / voiceHints / 跳过关键词为 demo 补全（gemini 按 A03 儿童文案原则产出）。
+ * remindCopy / voiceHints 为 demo 补全（gemini 按 A03 儿童文案原则产出）。
  *
- * 结构设计为 unit 无关：后续登舰/夜航/专注/生态缸单元复用同一引擎，只加数据。
+ * 类型与通用规则在 tutorial-types.ts；单元注册表在 tutorial-units.ts。
  */
-
-/** 引导内可交互的目标控件（MockSettingsPanel / SwipeZone 用同一套 key） */
-export type TutorialTarget =
-  | 'open-panel' // step2：下滑手势区 或 右上设置按钮
-  | 'brightness'
-  | 'volume'
-  | 'color-temp'
-  | 'light-off'
-  | 'light-on'
-  | 'close-panel'; // step5：上滑手势区 或 语音"准备好了"
-
-export interface TutorialStep {
-  /** demo 内部步骤 id（配表 3-x-1/3-x-2 的说明+等待两行合并为一步，phase 区分） */
-  id: string;
-  /** 配表原始 step 编号（调试流展示对账用） */
-  specStep: string;
-  /** 小可表情（现有注册表 id；配表 anim_type → 表情映射见下） */
-  expression: string;
-  /** 蒙版高亮 + 小手指向的目标控件；null = 无蒙版（小可正常出镜说话） */
-  target: TutorialTarget | null;
-  /** 语音文案 —— 配表 voice_copy 逐字，禁改 */
-  voiceCopy: string;
-  /** 30s 超时提醒文案（仅等待步有；第 3 次提醒追加 REMIND_FINAL_SUFFIX 后跳步） */
-  remindCopy: string | null;
-  /** 等待的用户操作；null = 纯播报步，说完自动进下一步 */
-  waitFor: TutorialTarget | null;
-  /** 3-x 步小可隐藏（配表"小可隐藏，显示小手指+蒙版"） */
-  hideAvatar: boolean;
-  /** 配表 is_unit_end=1：完成本步 = 单元完成 */
-  isUnitEnd: boolean;
-}
+import type { TutorialStep, TutorialUnit } from './tutorial-types';
 
 /** 配表 anim_type → 表情注册表 id（[09 打招呼大笑] / [16 微笑歪头] / [06 开心跳起]） */
 export const ANIM_TO_EXPRESSION: Record<string, string> = {
@@ -46,7 +16,7 @@ export const ANIM_TO_EXPRESSION: Record<string, string> = {
   '06': 'jump-joy',
 };
 
-export const SETTINGS_TUTORIAL_STEPS: TutorialStep[] = [
+const SETTINGS_STEPS: TutorialStep[] = [
   {
     id: '1',
     specStep: '1',
@@ -160,14 +130,7 @@ export const SETTINGS_TUTORIAL_STEPS: TutorialStep[] = [
   },
 ];
 
-/** 第 3 次超时提醒后的过渡话术（播完自动跳下一步，配表"提醒3次无反应进入下一步"） */
-export const REMIND_FINAL_SUFFIX = '没关系，这个操作指挥官肯定已经记在脑子里啦，我们先看下一个～';
-
-/** 超时提醒间隔（配表：30 秒未操作重复提醒）与最大次数 */
-export const REMIND_INTERVAL_MS = 30_000;
-export const REMIND_MAX = 3;
-
-/** step5 推进关键词（ASR final 包含匹配；ASR 同音误字多，禁精确匹配） */
+/** step5 推进关键词（ASR final 包含匹配） */
 export const READY_HINTS = [
   '准备好了',
   '准备好啦',
@@ -183,56 +146,12 @@ export const READY_HINTS = [
   'OK',
 ];
 
-/** 全程跳过关键词（任意步说出 = 想跳过引导） */
-export const SKIP_HINTS = ['我会了', '不用教了', '跳过', '别教了', '关掉引导', '不想学了', '我已经懂了'];
-
-/** 跳过时小可的回应（播完直接走完成流程） */
-export const SKIP_RESPONSE = '原来指挥官已经是操作专家啦！那小可就不啰嗦了，我们直接开启冒险吧！';
-
-/** 本地完成标记 key（文档：无法联网仅判断本地） */
-export const TUTORIAL_SETTINGS_STORAGE_KEY = 'kidshub.tutorial_settings';
-
-/**
- * 引导模式 LLM 兜底系统指令（ASR 不命中关键词时孩子的话会走正常 LLM 链路；
- * 进引导 / 换步时下发，让 LLM 简短回答后拉回当前步骤动作）
- */
-export function buildTutorialSystemPrompt(step: TutorialStep): string {
-  const goal = step.waitFor ? `教孩子${describeTarget(step.waitFor)}` : '给孩子讲解设置面板';
-  const action = step.waitFor ? describeTarget(step.waitFor) : '听小可继续讲';
-  return [
-    '你现在是AI伙伴小可，正带"指挥官"（6~13岁孩子）进行读写台的设置引导。',
-    `当前目标：${goal}；等待孩子的动作：${action}。`,
-    '若孩子说无关话题，先用1-2句童趣、正向的话简短回答，然后必须立即用鼓励语气引导孩子完成上面的动作。',
-    '严禁长篇大论，严禁脱离引导流程，每句不超过40字。',
-  ].join('\n');
-}
-
-function describeTarget(target: TutorialTarget): string {
-  switch (target) {
-    case 'open-panel':
-      return '下滑屏幕或点右上角设置按钮打开设置面板';
-    case 'brightness':
-      return '点击亮度条调整灯光亮度';
-    case 'volume':
-      return '按住拖动音量条调整声音大小';
-    case 'color-temp':
-      return '点击常规模式调节灯光颜色';
-    case 'light-off':
-      return '点击灯泡按钮关灯';
-    case 'light-on':
-      return '再点一次灯泡按钮开灯';
-    case 'close-panel':
-      return "说'准备好了'或往上滑关闭设置面板";
-  }
-}
-
-export function getStepByIndex(index: number): TutorialStep | null {
-  return SETTINGS_TUTORIAL_STEPS[index] ?? null;
-}
-
-/** ASR 文本是否命中关键词表（去空白 + 大小写不敏感的包含匹配） */
-export function matchHints(text: string, hints: string[]): boolean {
-  const normalized = text.replace(/\s+/g, '').toLowerCase();
-  if (!normalized) return false;
-  return hints.some((h) => normalized.includes(h.toLowerCase()));
-}
+export const SETTINGS_UNIT: TutorialUnit = {
+  id: 'settings',
+  title: '设置引导（单元1 · 按需独立）',
+  subtitle: '学会打开设置，调整到舒服状态',
+  emoji: '🧭',
+  storageKey: 'kidshub.tutorial_settings',
+  navOrder: 90, // 按需独立单元，文档明确移出固定链 → 垫底
+  steps: SETTINGS_STEPS,
+};

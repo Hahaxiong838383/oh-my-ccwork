@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useTutorialStore } from './tutorial-store';
-import type { TutorialTarget } from './tutorial-settings';
+import type { TutorialTarget } from './tutorial-types';
 import { FingerPointer } from './FingerPointer';
 
 /**

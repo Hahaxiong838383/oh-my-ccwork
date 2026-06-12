@@ -1,5 +1,5 @@
 import { useTutorialStore, currentStep } from './tutorial-store';
-import type { TutorialTarget } from './tutorial-settings';
+import type { TutorialTarget } from './tutorial-types';
 import { FingerPointer } from './FingerPointer';
 
 /**
@@ -15,7 +15,8 @@ export function TutorialOverlay(): JSX.Element {
   const panelOpen = useTutorialStore((s) => s.panelOpen);
   const advanceOnAction = useTutorialStore((s) => s.advanceOnAction);
 
-  const step = currentStep({ stepIndex });
+  // 蒙版/小手只用于单元1 面板教学
+  const step = currentStep({ unitId: 'settings', stepIndex });
   const activeTarget = (step?.target ?? null) as TutorialTarget | null;
 
   const showMask = !!activeTarget;

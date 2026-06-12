@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useKidsHubStore } from '../store/kidshub-store';
 import type { DebugEntry } from '../store/kidshub-store';
 import { useTutorialStore } from '../tutorial/tutorial-store';
-import { getStepByIndex } from '../tutorial/tutorial-settings';
+import { getUnitStep, getUnit } from '../tutorial/tutorial-units';
 import { getSharedVoiceClient } from '../../services/voice-client';
 import { sharedTypewriter } from '../subtitle/shared';
 import { useAppStore } from '../../store/app-store';
@@ -31,10 +31,12 @@ export function DebugFlow() {
   const debugLog = useKidsHubStore((s) => s.debugLog);
   const clearDebug = useKidsHubStore((s) => s.clearDebug);
   const tutorialActive = useTutorialStore((s) => s.isActive);
+  const tutorialUnitId = useTutorialStore((s) => s.unitId);
   const tutorialStepIndex = useTutorialStore((s) => s.stepIndex);
   const tutorialPhase = useTutorialStore((s) => s.phase);
   const tutorialRemind = useTutorialStore((s) => s.remindCount);
-  const tutorialCompleted = useTutorialStore((s) => s.completed);
+  const completedUnits = useTutorialStore((s) => s.completedUnits);
+  const anyCompleted = Object.values(completedUnits).some(Boolean);
 
   // 重置引导：清本地完成标记 + 停掉在途语音/字幕（PM 反复体验入口）
   const resetTutorial = () => {
@@ -66,7 +68,8 @@ export function DebugFlow() {
           <div className="font-medium text-neutral-400">调试流 · 时间线</div>
           {tutorialActive && (
             <span className="rounded-full border border-yellow-500/30 bg-yellow-500/15 px-2 py-0.5 text-[10px] text-yellow-300">
-              🧭 Step {getStepByIndex(tutorialStepIndex)?.specStep ?? '?'} · {tutorialPhase}
+              {getUnit(tutorialUnitId)?.emoji ?? '🧭'} Step{' '}
+              {getUnitStep(tutorialUnitId, tutorialStepIndex)?.specStep ?? '?'} · {tutorialPhase}
               {tutorialRemind > 0 ? ` · 已提醒${tutorialRemind}次` : ''}
             </span>
           )}
@@ -76,7 +79,7 @@ export function DebugFlow() {
             onClick={resetTutorial}
             title="清除 tutorial_settings 本地完成标记并停止当前引导，可重新体验"
             className={`rounded border px-2 py-0.5 text-[10px] hover:bg-white/5 ${
-              tutorialCompleted || tutorialActive
+              anyCompleted || tutorialActive
                 ? 'border-yellow-500/30 text-yellow-300'
                 : 'border-white/10 text-neutral-500'
             }`}

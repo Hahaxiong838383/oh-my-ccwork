@@ -7,8 +7,9 @@ import { XiaokeAvatar } from '../avatar/XiaokeAvatar';
 import { ExpressionPicker } from '../avatar/ExpressionPicker';
 import { TutorialManager } from '../tutorial/TutorialManager';
 import { TutorialCanvasContent } from '../tutorial/TutorialCanvasContent';
+import { BoardingCanvasContent } from '../tutorial/BoardingCanvasContent';
 import { useTutorialStore } from '../tutorial/tutorial-store';
-import { getStepByIndex } from '../tutorial/tutorial-settings';
+import { getUnitStep } from '../tutorial/tutorial-units';
 import { useAvatarStore } from '../avatar/avatar-store';
 import { resolveExpressionName } from '../avatar/expressions';
 import { sharedTypewriter } from '../subtitle/shared';
@@ -45,6 +46,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   const selectCard = useKidsHubStore((s) => s.selectCard);
   const pushDebug = useKidsHubStore((s) => s.pushDebug);
   const tutorialActive = useTutorialStore((s) => s.isActive);
+  const tutorialUnitId = useTutorialStore((s) => s.unitId);
   const tutorialStepIndex = useTutorialStore((s) => s.stepIndex);
 
   const setVoiceStatus = useAppStore((s) => s.setVoiceStatus);
@@ -311,7 +313,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   };
 
   const card = activeCardId ? getSceneCard(activeCardId) : null;
-  const tutorialStep = tutorialActive ? getStepByIndex(tutorialStepIndex) : null;
+  const tutorialStep = tutorialActive ? getUnitStep(tutorialUnitId, tutorialStepIndex) : null;
 
   return (
     <div className="flex h-full flex-col bg-neutral-950">
@@ -327,7 +329,15 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
           }}
           data-scope="screen-canvas"
         >
-          {tutorialActive ? <TutorialCanvasContent /> : <CardScene card={card ?? null} />}
+          {tutorialActive ? (
+            tutorialUnitId === 'boarding' ? (
+              <BoardingCanvasContent />
+            ) : (
+              <TutorialCanvasContent />
+            )
+          ) : (
+            <CardScene card={card ?? null} />
+          )}
           {/* 小可本体：表情库驱动的可互动形象（状态机兜底 + LLM 逐句选表情 + 点击逗它）。
               引导 3-x 步配表要求"小可隐藏，只留小手指+蒙版" */}
           {!tutorialStep?.hideAvatar && <XiaokeAvatar />}
