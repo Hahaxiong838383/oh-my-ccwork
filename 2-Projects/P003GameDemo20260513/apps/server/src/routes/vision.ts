@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { geminiVisionDetect } from '../providers/gemini-vision.js';
+import { checkAndCount, getClientIp } from '../guard.js';
 
 const visionRoute = new Hono();
 
@@ -32,6 +33,14 @@ visionRoute.post('/expression', async (c) => {
   console.log(`[vision] jpeg len=${jpegBase64.length}`);
   if (jpegBase64.length > MAX_BASE64_LEN) {
     return c.json({ error: 'image_too_large' }, 413);
+  }
+
+  // vision 限额检查（使用共享 getClientIp，支持 Hono c）
+  const clientIp = getClientIp(c);
+  const visionCheck = checkAndCount('vision', clientIp);
+  if (!visionCheck.ok) {
+    console.log(`[vision] rate_limited ip=${clientIp}`);
+    return c.json({ error: 'rate_limited' }, 429);
   }
 
   try {

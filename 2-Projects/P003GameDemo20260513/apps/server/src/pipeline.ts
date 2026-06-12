@@ -1,5 +1,6 @@
 import type WebSocket from 'ws';
 import { createGeminiLlmClient, type GeminiLlmClient } from './providers/gemini-llm.js';
+import { createDeepseekLlmClient } from './providers/deepseek-llm.js';
 import { createVolcAsrClient, type VolcAsrClient } from './providers/volc-asr.js';
 import { createVolcTtsClient, type VolcTtsClient } from './providers/volc-tts.js';
 import { createExpressionFilter, stripExpressionTags } from './expression-filter.js';
@@ -44,7 +45,10 @@ export class VoicePipeline {
 
   constructor(ws: WebSocket) {
     this.ws = ws;
-    this.llm = createGeminiLlmClient() as GeminiLlmClient & { abort?: () => void };
+    // 按 LLM_PROVIDER 工厂切换：'deepseek' 走 DeepSeek 官方（个人站部署），默认 gemini（公司侧零影响）
+    const provider = (process.env.LLM_PROVIDER || '').toLowerCase();
+    const rawClient = provider === 'deepseek' ? createDeepseekLlmClient() : createGeminiLlmClient();
+    this.llm = rawClient as GeminiLlmClient & { abort?: () => void };
   }
 
   handleClientMessage(msg: ClientMessage): void {

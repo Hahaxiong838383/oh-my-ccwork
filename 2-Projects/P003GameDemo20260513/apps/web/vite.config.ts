@@ -8,7 +8,15 @@ import { VitePWA } from 'vite-plugin-pwa';
 // VITE_NO_HTTPS=1 时退回 HTTP（localhost 调试/自动化验收用，localhost 本身是 secure context）
 const noHttps = process.env.VITE_NO_HTTPS === '1';
 
+// 个人站部署目标（my.chenchuan.cc/kidshub-ai/）：
+// - VITE_PUBLIC_BASE 指定子路径 base（默认 '/' = 公司侧独立域名部署，行为不变）
+// - VITE_DISABLE_PWA=1 关掉 SW——挂在别人家域名路径下时 PWA SW 会与宿主站
+//   （Next.js 个人站）抢缓存/钉旧版，且 demo 不需要离线能力
+const publicBase = process.env.VITE_PUBLIC_BASE ?? '/';
+const disablePwa = process.env.VITE_DISABLE_PWA === '1';
+
 export default defineConfig({
+  base: publicBase,
   server: {
     host: '0.0.0.0',
     port: 5173,
@@ -32,7 +40,7 @@ export default defineConfig({
   plugins: [
     react(),
     ...(noHttps ? [] : [basicSsl()]),
-    VitePWA({
+    ...(disablePwa ? [] : [VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
@@ -63,7 +71,7 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
       },
-    }),
+    })]),
   ],
   build: {
     target: 'es2020',

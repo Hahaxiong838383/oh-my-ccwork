@@ -4,6 +4,7 @@ import { WebSocketServer, type RawData, type WebSocket } from 'ws';
 import { VoicePipeline, type ClientMessage } from './pipeline.js';
 import { authRoute } from './routes/auth.js';
 import { visionRoute } from './routes/vision.js';
+import { checkAndCount, getClientIp } from './guard.js';
 
 const app = new Hono();
 const port = Number(process.env.PORT ?? 8787);
@@ -45,13 +46,17 @@ server.on('upgrade', (req, socket, head) => {
 });
 
 wss.on('connection', (ws, req) => {
+  // 连接时立即做 ws_session 限额检查（使用共享 getClientIp）
+  const clientIp = getClientIp(req);
+  const sessCheck = checkAndCount('ws_session', clientIp);
+  if (!sessCheck.ok) {
+    sendWsError(ws, 'RATE_LIMITED', '今日体验次数已达上限，明天再来玩吧');
+    ws.close();
+    return;
+  }
+
   const pipeline = new VoicePipeline(ws);
   // 连接生命周期日志：公网排障用（客户端"没反应"时分辨 ws 是否到达 server、活了多久、传了什么）
-  const clientIp =
-    (req?.headers['x-real-ip'] as string) ||
-    (req?.headers['x-forwarded-for'] as string)?.split(',')[0] ||
-    req?.socket?.remoteAddress ||
-    '?';
   const openedAt = Date.now();
   let msgCount = 0;
   console.log(`[ws] open ip=${clientIp}`);
@@ -63,6 +68,17 @@ wss.on('connection', (ws, req) => {
       sendWsError(ws, 'BAD_MESSAGE', '消息格式错误');
       return;
     }
+
+    // chat_round 限额：仅对会触发 LLM 的消息类型检查（chat.trigger / audio.end）
+    // 超限仅发错误码不断开连接
+    if (msg.type === 'chat.trigger' || msg.type === 'audio.end') {
+      const roundCheck = checkAndCount('chat_round', clientIp);
+      if (!roundCheck.ok) {
+        sendWsError(ws, 'RATE_LIMITED', '今日体验次数已达上限，明天再来玩吧');
+        return;
+      }
+    }
+
     pipeline.handleClientMessage(msg);
   });
 
@@ -147,9 +163,18 @@ function logProviderStatus(): void {
       process.env.VOLC_ASR_WS_URL,
   );
 
-  const llmOk = Boolean(
-    process.env.GEMINI_PROXY_URL && process.env.GEMINI_API_KEY && process.env.GEMINI_DEFAULT_MODEL,
-  );
+  // LLM ready 判断按 provider 分支：
+  // deepseek 只检查 DEEPSEEK_API_KEY（BASE_URL/MODEL 有默认值）
+  // gemini 维持原有三个必填判断（公司侧部署零影响）
+  const provider = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
+  let llmOk = false;
+  if (provider === 'deepseek') {
+    llmOk = Boolean(process.env.DEEPSEEK_API_KEY);
+  } else {
+    llmOk = Boolean(
+      process.env.GEMINI_PROXY_URL && process.env.GEMINI_API_KEY && process.env.GEMINI_DEFAULT_MODEL,
+    );
+  }
 
   const ttsOk = Boolean(
     process.env.VOLC_API_KEY &&
@@ -158,6 +183,7 @@ function logProviderStatus(): void {
       process.env.VOLC_TTS_WS_URL,
   );
 
+  console.log(`[server] LLM provider: ${provider}`);
   console.log(`[server] ASR: ${asrOk ? 'ready' : 'missing-env'}`);
   console.log(`[server] LLM: ${llmOk ? 'ready' : 'missing-env'}`);
   console.log(`[server] TTS: ${ttsOk ? 'ready' : 'missing-env'}`);

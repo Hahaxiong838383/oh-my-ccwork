@@ -215,9 +215,11 @@ export function StudioPage() {
         </div>
 
         <div className="flex items-center gap-4 text-xs">
-          {/* 数据后台原型子站（静态托管于 /admin/，与工作台同一套登录凭据） */}
+          {/* 数据后台原型子站（静态托管于 base 下 admin/，与工作台同一套登录凭据）。
+              BASE_URL 跟随构建 base：公司侧 '/' → /admin/；个人站
+              '/kidshub-ai/' → /kidshub-ai/admin/，避免撞宿主站自己的 /admin */}
           <a
-            href="/admin/"
+            href={`${import.meta.env.BASE_URL}admin/`}
             target="_blank"
             rel="noreferrer"
             className="rounded border border-white/10 px-2 py-0.5 text-sky-300 hover:bg-white/5 hover:text-sky-200"
