@@ -5,6 +5,10 @@ import { KidsHubSubtitle } from './KidsHubSubtitle';
 import { CardScene } from './CardScene';
 import { XiaokeAvatar } from '../avatar/XiaokeAvatar';
 import { ExpressionPicker } from '../avatar/ExpressionPicker';
+import { TutorialManager } from '../tutorial/TutorialManager';
+import { TutorialCanvasContent } from '../tutorial/TutorialCanvasContent';
+import { useTutorialStore } from '../tutorial/tutorial-store';
+import { getStepByIndex } from '../tutorial/tutorial-settings';
 import { useAvatarStore } from '../avatar/avatar-store';
 import { resolveExpressionName } from '../avatar/expressions';
 import { sharedTypewriter } from '../subtitle/shared';
@@ -40,6 +44,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   const activeCardId = useKidsHubStore((s) => s.activeCardId);
   const selectCard = useKidsHubStore((s) => s.selectCard);
   const pushDebug = useKidsHubStore((s) => s.pushDebug);
+  const tutorialActive = useTutorialStore((s) => s.isActive);
+  const tutorialStepIndex = useTutorialStore((s) => s.stepIndex);
 
   const setVoiceStatus = useAppStore((s) => s.setVoiceStatus);
   const setSubtitle = useAppStore((s) => s.setSubtitle);
@@ -305,9 +311,12 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   };
 
   const card = activeCardId ? getSceneCard(activeCardId) : null;
+  const tutorialStep = tutorialActive ? getStepByIndex(tutorialStepIndex) : null;
 
   return (
     <div className="flex h-full flex-col bg-neutral-950">
+      {/* 引导协调器（无渲染）：状态机 ↔ 语音/字幕/表情副作用 */}
+      <TutorialManager />
       {/* 画布容器：严格 800x480 等比 + container queries 支持 */}
       <div className="flex items-center justify-center border-b border-white/10 bg-black/60 p-3">
         <div
@@ -318,9 +327,10 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
           }}
           data-scope="screen-canvas"
         >
-          <CardScene card={card ?? null} />
-          {/* 小可本体：表情库驱动的可互动形象（状态机兜底 + LLM 逐句选表情 + 点击逗它） */}
-          <XiaokeAvatar />
+          {tutorialActive ? <TutorialCanvasContent /> : <CardScene card={card ?? null} />}
+          {/* 小可本体：表情库驱动的可互动形象（状态机兜底 + LLM 逐句选表情 + 点击逗它）。
+              引导 3-x 步配表要求"小可隐藏，只留小手指+蒙版" */}
+          {!tutorialStep?.hideAvatar && <XiaokeAvatar />}
           <KidsHubSubtitle />
         </div>
       </div>
@@ -382,7 +392,11 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
         </div>
 
         <div className="text-[11px] text-neutral-500">
-          {card ? `当前：${card.title}` : '未选卡 · 画布空闲'}
+          {tutorialActive
+            ? `🧭 设置引导中 · Step ${tutorialStep?.specStep ?? '?'}`
+            : card
+              ? `当前：${card.title}`
+              : '未选卡 · 画布空闲'}
         </div>
 
         {pickerOpen && <ExpressionPicker onClose={() => setPickerOpen(false)} />}

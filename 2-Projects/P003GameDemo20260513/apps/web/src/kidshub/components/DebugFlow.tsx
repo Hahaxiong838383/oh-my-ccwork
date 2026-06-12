@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useKidsHubStore } from '../store/kidshub-store';
 import type { DebugEntry } from '../store/kidshub-store';
+import { useTutorialStore } from '../tutorial/tutorial-store';
+import { getStepByIndex } from '../tutorial/tutorial-settings';
+import { getSharedVoiceClient } from '../../services/voice-client';
+import { sharedTypewriter } from '../subtitle/shared';
+import { useAppStore } from '../../store/app-store';
 
 const kindColor: Record<DebugEntry['kind'], string> = {
   action: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
@@ -25,6 +30,19 @@ function formatTime(ts: number): string {
 export function DebugFlow() {
   const debugLog = useKidsHubStore((s) => s.debugLog);
   const clearDebug = useKidsHubStore((s) => s.clearDebug);
+  const tutorialActive = useTutorialStore((s) => s.isActive);
+  const tutorialStepIndex = useTutorialStore((s) => s.stepIndex);
+  const tutorialPhase = useTutorialStore((s) => s.phase);
+  const tutorialRemind = useTutorialStore((s) => s.remindCount);
+  const tutorialCompleted = useTutorialStore((s) => s.completed);
+
+  // 重置引导：清本地完成标记 + 停掉在途语音/字幕（PM 反复体验入口）
+  const resetTutorial = () => {
+    sharedTypewriter().reset();
+    getSharedVoiceClient().bargeIn();
+    useAppStore.getState().setSubtitle('');
+    useTutorialStore.getState().resetForDebug();
+  };
 
   const listRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
@@ -44,13 +62,34 @@ export function DebugFlow() {
   return (
     <div className="flex h-full flex-col bg-neutral-950 text-xs text-neutral-300">
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-1.5">
-        <div className="font-medium text-neutral-400">调试流 · 时间线</div>
-        <button
-          onClick={clearDebug}
-          className="rounded border border-white/10 px-2 py-0.5 text-[10px] text-neutral-400 hover:bg-white/5"
-        >
-          清空
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="font-medium text-neutral-400">调试流 · 时间线</div>
+          {tutorialActive && (
+            <span className="rounded-full border border-yellow-500/30 bg-yellow-500/15 px-2 py-0.5 text-[10px] text-yellow-300">
+              🧭 Step {getStepByIndex(tutorialStepIndex)?.specStep ?? '?'} · {tutorialPhase}
+              {tutorialRemind > 0 ? ` · 已提醒${tutorialRemind}次` : ''}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={resetTutorial}
+            title="清除 tutorial_settings 本地完成标记并停止当前引导，可重新体验"
+            className={`rounded border px-2 py-0.5 text-[10px] hover:bg-white/5 ${
+              tutorialCompleted || tutorialActive
+                ? 'border-yellow-500/30 text-yellow-300'
+                : 'border-white/10 text-neutral-500'
+            }`}
+          >
+            重置引导
+          </button>
+          <button
+            onClick={clearDebug}
+            className="rounded border border-white/10 px-2 py-0.5 text-[10px] text-neutral-400 hover:bg-white/5"
+          >
+            清空
+          </button>
+        </div>
       </div>
 
       <div ref={listRef} className="flex-1 overflow-auto p-2 font-mono text-[11px]">

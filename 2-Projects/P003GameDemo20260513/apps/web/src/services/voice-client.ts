@@ -516,8 +516,9 @@ class VoiceClientImpl implements VoiceClient {
     this.playbackScheduledAt = 0;
     this.ttsStreamEnded = false;
     this.turnHadSegment = false;
-    // 打断 = 本轮播放强制结束，给 avatar/UI 一个确定的收尾信号
-    this.emit('tts.playback_end', {});
+    // 打断 = 本轮播放强制结束，给 avatar/UI 一个确定的收尾信号；
+    // reason 让消费方（如 tutorial 状态机）区分"被掐断"和"自然播完"
+    this.emit('tts.playback_end', { reason: 'barge' });
   }
 
   /**
@@ -528,7 +529,7 @@ class VoiceClientImpl implements VoiceClient {
     if (!this.ttsStreamEnded) return;
     if (this.playbackSources.length > 0 || this.mp3Buffer.length > 0 || this.decodingCount > 0) return;
     this.ttsStreamEnded = false;
-    this.emit('tts.playback_end', {});
+    this.emit('tts.playback_end', { reason: 'natural' });
   }
 
   sayDirect(text: string, onAudioStart?: () => void): void {

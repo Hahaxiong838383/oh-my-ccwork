@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { VoiceStatus } from '../../store/app-store';
 import { getExpression } from './expressions';
 
-export type AvatarSource = 'state' | 'llm' | 'click';
+export type AvatarSource = 'state' | 'llm' | 'click' | 'tutorial';
 
 /**
  * 小可形象状态 · 三层驱动的仲裁规则：
@@ -10,6 +10,8 @@ export type AvatarSource = 'state' | 'llm' | 'click';
  *    speaking 仅在 LLM 没选表情时给默认；idle 总是回待机（说完一句自然放松）
  *  - llm（每句话的表情标记）：speaking 期间持有，不被 state 默认覆盖
  *  - click（摸一摸互动 / 表情库面板）：idle 期间生效，下一轮语音状态变化时让位
+ *  - tutorial（新手引导锁）：引导期表情由配表 anim_type 指定，压过以上所有层；
+ *    仅 net-* 异常脸可穿透（连接问题必须可见）。退出引导时解锁
  */
 interface AvatarState {
   expressionId: string;
@@ -26,6 +28,9 @@ interface AvatarState {
   firstSegmentSeen: boolean;
   /** 最近一次表情变化时间戳：待机轮换的静默期判据（对话中不轮换） */
   lastBumpAt: number;
+  /** 引导锁：true 期间非 tutorial 来源的表情变更一律忽略（net-* 除外） */
+  tutorialLock: boolean;
+  setTutorialLock: (on: boolean) => void;
   setExpression: (id: string, source: AvatarSource) => void;
   /** LLM 句级表情到达：index===0 清场立即上脸（新一轮），否则入队等句边界 */
   enqueueLlmExpression: (id: string, index: number) => void;
@@ -55,9 +60,15 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
   exprQueue: [],
   firstSegmentSeen: false,
   lastBumpAt: 0,
+  tutorialLock: false,
+
+  setTutorialLock: (on) => set({ tutorialLock: on }),
 
   setExpression: (id, source) => {
     if (!getExpression(id)) return;
+    // 引导锁：固定配表表情不被语音状态机 / LLM 句级表情 / 点击覆盖；
+    // net-* 异常脸放行（连接断了孩子必须能看见）
+    if (get().tutorialLock && source !== 'tutorial' && !id.startsWith('net-')) return;
     set((s) => ({
       expressionId: id,
       fileIndex: pickFileIndex(id),

@@ -12,6 +12,7 @@ import { DebugFlow } from './components/DebugFlow';
 import { PromptPanel } from './components/PromptPanel';
 import { getSharedVoiceClient } from '../services/voice-client';
 import { useAppStore } from '../store/app-store';
+import { useTutorialStore } from './tutorial/tutorial-store';
 
 function getVoiceWsUrl(): string {
   const envUrl = (import.meta as any).env?.VITE_VOICE_WS_URL as string | undefined;
@@ -33,6 +34,7 @@ export function StudioPage() {
   const [showSection, setShowSection] = useState(false); // 控制左栏下半显示阅读还是详情
   const [toast, setToast] = useState<string | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
+  const tutorialActive = useTutorialStore((s) => s.isActive);
 
   // 周期刷新 ws 状态（顶栏）
   useEffect(() => {
@@ -68,6 +70,9 @@ export function StudioPage() {
     // 2. 硬打断旧轮：server 端 trigger 自带 bargein 只停"合成"，已下发到本地的
     // mp3 chunk 还在播放队列里——不本地 bargeIn 就会把旧场景的话播完才开新场景。
     // 顺序：先 reset 打字机（bargeIn 同步 emit playback_end，空状态 no-op 防字幕复活）
+    // 引导中点场景卡 = 打断引导（A03 §2.4：不标记完成，下次从 Step 1 重来）
+    const tutorial = useTutorialStore.getState();
+    if (tutorial.isActive) tutorial.interrupt();
     sharedTypewriter().reset();
     getSharedVoiceClient().bargeIn();
     useAppStore.getState().setSubtitle('');
@@ -251,7 +256,8 @@ export function StudioPage() {
         {/* 中栏：画布 + 调试流 */}
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex-1 overflow-hidden">
-            {activeCardId ? (
+            {activeCardId || tutorialActive ? (
+              // 引导可在未选卡时启动：CanvasHost 同时承载 TutorialManager，必须挂载
               <CanvasHost onDebug={handleCanvasDebug} onConfigAck={handleConfigAck} />
             ) : (
               <div className="flex h-full items-center justify-center bg-neutral-950 text-center text-neutral-400">
