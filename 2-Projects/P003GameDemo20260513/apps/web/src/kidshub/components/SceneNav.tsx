@@ -138,16 +138,18 @@ export function SceneNav() {
         </div>
       </div>
 
-      {/* 出处徽标 */}
-      <a
-        href={SPEC_META.docUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="m-2 block rounded-lg border border-white/10 bg-neutral-900 px-3 py-1.5 text-[10px] text-neutral-400 hover:border-sky-500/40 hover:text-sky-300"
-      >
-        {SPEC_META.docName} · {SPEC_META.docVersion}
-        <span className="ml-1 text-[9px] text-neutral-500">↗</span>
-      </a>
+      {/* 出处徽标（产品定义文档链接仅公司内部模式展示，个人站公开版不暴露） */}
+      {import.meta.env.VITE_KIDSHUB_PUBLIC !== '1' && (
+        <a
+          href={SPEC_META.docUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="m-2 block rounded-lg border border-white/10 bg-neutral-900 px-3 py-1.5 text-[10px] text-neutral-400 hover:border-sky-500/40 hover:text-sky-300"
+        >
+          {SPEC_META.docName} · {SPEC_META.docVersion}
+          <span className="ml-1 text-[9px] text-neutral-500">↗</span>
+        </a>
+      )}
     </div>
   );
 }

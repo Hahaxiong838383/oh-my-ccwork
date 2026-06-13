@@ -203,15 +203,18 @@ export function StudioPage() {
       <div className="flex items-center justify-between border-b border-white/10 bg-neutral-900 px-4 py-2 text-sm">
         <div className="flex items-center gap-3">
           <span className="font-semibold tracking-tight text-white">KidsHub-AI · 小可 Prompt 体验工作台</span>
-          <a
-            href={SPEC_META.docUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-full border border-white/10 bg-neutral-800 px-2.5 py-0.5 text-[10px] text-emerald-300 hover:border-emerald-400/60"
-            title="打开产品定义文档"
-          >
-            {SPEC_META.docName} {SPEC_META.docVersion}
-          </a>
+          {/* 产品定义文档链接仅公司内部模式展示（个人站公开版不暴露内部文档入口） */}
+          {import.meta.env.VITE_KIDSHUB_PUBLIC !== '1' && (
+            <a
+              href={SPEC_META.docUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-white/10 bg-neutral-800 px-2.5 py-0.5 text-[10px] text-emerald-300 hover:border-emerald-400/60"
+              title="打开产品定义文档"
+            >
+              {SPEC_META.docName} {SPEC_META.docVersion}
+            </a>
+          )}
         </div>
 
         <div className="flex items-center gap-4 text-xs">
