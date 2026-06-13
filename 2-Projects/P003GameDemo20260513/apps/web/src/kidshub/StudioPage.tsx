@@ -13,6 +13,8 @@ import { PromptPanel } from './components/PromptPanel';
 import { getSharedVoiceClient } from '../services/voice-client';
 import { useAppStore } from '../store/app-store';
 import { useTutorialStore } from './tutorial/tutorial-store';
+import { ExperienceHintBar, ExperienceLeadModal } from './components/ExperienceFunnel';
+import { useExperienceStore, EXPERIENCE_QUOTA_ENABLED } from './store/experience-store';
 
 function getVoiceWsUrl(): string {
   const envUrl = (import.meta as any).env?.VITE_VOICE_WS_URL as string | undefined;
@@ -91,6 +93,17 @@ export function StudioPage() {
     const client = getSharedVoiceClient();
 
     void (async () => {
+      // 公开模式体验限额：场景卡浏览额度（自动开场白消耗一次额度）。
+      // 超限 → 仍切画面看美术（activeCardId 已变），但不下发、不发开场白、首次弹窗引导加微信。
+      if (EXPERIENCE_QUOTA_ENABLED) {
+        const exp = useExperienceStore.getState();
+        if (!exp.canScene()) {
+          if (!exp.modalShownOnce) exp.openModal();
+          pushDebug({ kind: 'action', title: '🔒 体验次数已达上限——仅切换画面，加微信继续深聊' });
+          return;
+        }
+        exp.recordSceneClick();
+      }
       try {
         await client.unlockAudio();
       } catch (e) {
@@ -252,6 +265,9 @@ export function StudioPage() {
         </div>
       </div>
 
+      {/* 体验限额峰值轻提示（公开模式，到爽点时出现，非阻断） */}
+      {EXPERIENCE_QUOTA_ENABLED && <ExperienceHintBar />}
+
       {/* 三栏主体 */}
       <div className="flex flex-1 overflow-hidden">
         {/* 左栏（窄屏收窄，留高度宽度给画布区） */}
@@ -314,6 +330,9 @@ export function StudioPage() {
         </div>
       )}
       </div>
+
+      {/* 体验上限弹窗（公开模式，超限引导加微信） */}
+      {EXPERIENCE_QUOTA_ENABLED && <ExperienceLeadModal />}
     </div>
   );
 }

@@ -21,6 +21,7 @@ import {
   type VoiceClient,
 } from '../../services/voice-client';
 import { useKidsHubStore } from '../store/kidshub-store';
+import { useExperienceStore, EXPERIENCE_QUOTA_ENABLED } from '../store/experience-store';
 import { getSceneCard } from '../prompts';
 import { useAppStore } from '../../store/app-store';
 import {
@@ -230,6 +231,12 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   const onPointerDown = async () => {
     if (startInFlightRef.current || pressedRef.current) return;
 
+    // 公开模式语音对话限额：超限直接弹窗引导加微信，不录音（语音是真消耗，硬拦截点）
+    if (EXPERIENCE_QUOTA_ENABLED && !useExperienceStore.getState().canVoice()) {
+      useExperienceStore.getState().openModal();
+      return;
+    }
+
     pressedRef.current = true;
     needStopRef.current = false;
     setPressed(true);
@@ -284,6 +291,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
 
   const onPointerUp = () => {
     if (!pressedRef.current) return;
+    // 完成一次按住说话 = 消耗一轮语音对话额度（onPointerDown 已 gate 过未超限才到这）
+    if (EXPERIENCE_QUOTA_ENABLED) useExperienceStore.getState().recordVoiceRound();
     pressedRef.current = false;
     setPressed(false);
 
