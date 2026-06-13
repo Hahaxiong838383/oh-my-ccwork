@@ -4,7 +4,7 @@ import type { SceneCard } from '../prompts';
 /**
  * CardScene —— kidshub 专属场景层（与原 demo 场景组件完全解耦）
  *
- * 每张卡一张 800×480 背景图（/kidshub/scenes/cardN.png）：
+ * 每张卡一张 800×480 背景图（/kidshub/scenes/cardN.v2.png）：
  * card1/7/8 复制自原 demo 美术；card2-6 为 AI 生图占位，川哥后续替换美术资源
  * （直接覆盖同名文件即可，零代码改动）。图加载失败自动降级为星空渐变占位。
  */
