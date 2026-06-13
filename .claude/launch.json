@@ -1,0 +1,32 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "p003web",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/apps/web && VITE_NO_HTTPS=1 ../../node_modules/.bin/vite"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "p003web-verify",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/apps/web && VITE_NO_HTTPS=1 ../../node_modules/.bin/vite --port 5174 --strictPort"
+      ],
+      "port": 5174
+    },
+    {
+      "name": "kidshub-personal-preview",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/apps/web && VITE_NO_HTTPS=1 VITE_PUBLIC_BASE=/kidshub-ai/ VITE_DISABLE_PWA=1 VITE_KIDSHUB_PUBLIC=1 ../../node_modules/.bin/vite preview --outDir dist-personal --port 4173 --strictPort"
+      ],
+      "port": 4173
+    }
+  ]
+}

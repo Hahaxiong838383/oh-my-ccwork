@@ -318,15 +318,40 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   const card = activeCardId ? getSceneCard(activeCardId) : null;
   const tutorialStep = tutorialActive ? getUnitStep(tutorialUnitId, tutorialStepIndex) : null;
 
+  // 画布尺寸双约束自适应：之前只按宽度定高（max-w-800 + 5:3），矮视口（1366×768 /
+  // 笔记本 100% 缩放）下画布把控制条顶出可视区。改为测量可用盒宽高，
+  // 取 min(800, 可用宽, 可用高×5/3)，严格保 5:3——内部 cq 单位/百分比布局不受影响。
+  const stageBoxRef = useRef<HTMLDivElement | null>(null);
+  const [stageWidth, setStageWidth] = useState(800);
+  useEffect(() => {
+    const el = stageBoxRef.current;
+    if (!el) return;
+    const PAD = 24; // p-3 两侧
+    const compute = () => {
+      const availW = el.clientWidth - PAD;
+      const availH = el.clientHeight - PAD;
+      if (availW <= 0 || availH <= 0) return;
+      setStageWidth(Math.max(280, Math.min(800, availW, (availH * 5) / 3)));
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
-    <div className="flex h-full flex-col bg-neutral-950">
+    <div className="flex h-full min-h-0 flex-col bg-neutral-950">
       {/* 引导协调器（无渲染）：状态机 ↔ 语音/字幕/表情副作用 */}
       <TutorialManager />
-      {/* 画布容器：严格 800x480 等比 + container queries 支持 */}
-      <div className="flex items-center justify-center border-b border-white/10 bg-black/60 p-3">
+      {/* 画布容器：占据剩余高度（min-h-0 允许收缩），控制条/提示永远保底可见 */}
+      <div
+        ref={stageBoxRef}
+        className="flex min-h-0 flex-1 items-center justify-center border-b border-white/10 bg-black/60 p-3"
+      >
         <div
-          className="relative w-full max-w-[800px] overflow-hidden rounded-xl bg-[#0a1929] ring-1 ring-white/10"
+          className="relative overflow-hidden rounded-xl bg-[#0a1929] ring-1 ring-white/10"
           style={{
+            width: stageWidth,
             aspectRatio: '5 / 3',
             containerType: 'size',
           }}
@@ -354,8 +379,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
         </div>
       </div>
 
-      {/* 控制条 */}
-      <div className="relative flex items-center justify-between gap-3 border-b border-white/10 bg-neutral-900 px-3 py-2">
+      {/* 控制条（flex-shrink-0：任何视口高度下都不被画布挤出） */}
+      <div className="relative flex flex-shrink-0 flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-neutral-900 px-3 py-2">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -422,7 +447,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       </div>
 
       {/* 简要提示 */}
-      <div className="px-3 py-2 text-[11px] text-neutral-500">
+      <div className="flex-shrink-0 px-3 py-2 text-[11px] text-neutral-500">
         按住说话后说一句话，松手 → 小可回复。打断可立即停止 TTS/ASR。
       </div>
     </div>

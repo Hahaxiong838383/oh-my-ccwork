@@ -248,8 +248,8 @@ export function StudioPage() {
 
       {/* 三栏主体 */}
       <div className="flex flex-1 overflow-hidden">
-        {/* 左栏 */}
-        <div className="flex w-80 flex-shrink-0 flex-col border-r border-white/10">
+        {/* 左栏（窄屏收窄，留高度宽度给画布区） */}
+        <div className="flex w-72 flex-shrink-0 flex-col border-r border-white/10 xl:w-80">
           <SceneNav />
 
           {/* 卡详情 或 版块阅读（互斥） */}
@@ -271,7 +271,7 @@ export function StudioPage() {
 
         {/* 中栏：画布 + 调试流 */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex-1 overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-hidden">
             {activeCardId || tutorialActive ? (
               // 引导可在未选卡时启动：CanvasHost 同时承载 TutorialManager，必须挂载
               <CanvasHost onDebug={handleCanvasDebug} onConfigAck={handleConfigAck} />
@@ -285,14 +285,14 @@ export function StudioPage() {
             )}
           </div>
 
-          {/* 调试流固定在画布下方 */}
-          <div className="h-56 border-t border-white/10">
+          {/* 调试流固定在画布下方：高度随视口 clamp（矮屏让位给画布+控制条，高屏维持 224px） */}
+          <div className="h-[clamp(120px,22vh,224px)] flex-shrink-0 border-t border-white/10">
             <DebugFlow />
           </div>
         </div>
 
-        {/* 右栏 */}
-        <div className="flex w-96 flex-shrink-0 flex-col border-l border-white/10">
+        {/* 右栏（窄屏收窄） */}
+        <div className="flex w-80 flex-shrink-0 flex-col border-l border-white/10 xl:w-96">
           <PromptPanel
             onSend={handleSend}
             onExport={handleExport}
