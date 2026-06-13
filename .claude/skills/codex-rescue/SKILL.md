@@ -35,9 +35,9 @@ description: 将调查、修复或后续任务委派给 Codex 执行。当用户
 
 ## 难度自动路由（默认开启）
 
-**完整路由表（5 档：极简/普通/复杂/困难/极难，含模型 + effort + 降级链）已沉淀为全局规则**：[`~/.claude/rules/engine-routing.md`](../../../../../.claude/rules/engine-routing.md) 的「Codex 模型选择」节。
+**完整路由表（5 档：极简/普通/复杂/困难/极难，含模型 + effort + 降级链）见全局参考**：[`~/.claude/docs/engine-ops.md`](../../../../../.claude/docs/engine-ops.md) 的「Codex 模型选择」节。
 
-该全局规则会被所有 cc session 自动加载（不限于 mycc 项目）。本 skill 只负责「执行入口」语义，不重复维护表格。
+该参考文档按需读取（2026-06-13 起 engine-routing 已迁出常驻层为 docs/engine-ops.md，派 codex 前先读它取正确 model ID + effort）。本 skill 只负责「执行入口」语义，不重复维护表格。
 
 **速查（精简版，详细见全局规则）**：
 

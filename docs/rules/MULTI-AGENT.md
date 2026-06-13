@@ -46,7 +46,7 @@
 | **cc (Claude)** | 想清楚 / 决策 / 编排 / 终验 / commit/push / 风险预警询问 | — |
 | **hermes (Nous)** | 长时（>30min）/ 跨平台消息 / 异步推送 | `mcp__hermes__messages_send(...)` |
 
-> 模型 + thinking 档详表见全局规则 [`~/.claude/rules/engine-routing.md`](file:///Users/rayman.chen/.claude/rules/engine-routing.md)。
+> 模型 + thinking 档详表见全局参考 [`~/.claude/docs/engine-ops.md`](file:///Users/rayman.chen/.claude/docs/engine-ops.md)（按需读取）。
 
 ## 路由策略（v3）
 

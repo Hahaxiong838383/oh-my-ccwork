@@ -71,4 +71,4 @@ bash 4-Assets/Prompt/omp-team-templates/review-3send.sh /tmp/review.md
 
 - v3 路由全文: `multi-agent/RULES.md`
 - omp 接入手册: `~/.claude/projects/.../memory/project_omp_grok43.md`
-- 引擎对照表: `~/.claude/rules/engine-routing.md`
+- 引擎对照表: `~/.claude/docs/engine-ops.md`

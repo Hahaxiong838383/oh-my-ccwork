@@ -110,4 +110,4 @@ ISO 不是万能。开场先判断当前问题适不适用——**不适用就�
 
 ## team 协作（高 stake 时）
 
-重大方案（不可逆/大额/对外）可调 team 互评：grok 证伪（攻循环论证/伪最优/边界）、gpt 查结构（三门 MECE/回炉）、gemini 对标（独特性/跨域）。详见 engine-routing 规则。
+重大方案（不可逆/大额/对外）可调 team 互评：grok 证伪（攻循环论证/伪最优/边界）、gpt 查结构（三门 MECE/回炉）、gemini 对标（独特性/跨域）。详见 ~/.claude/docs/engine-ops.md。
