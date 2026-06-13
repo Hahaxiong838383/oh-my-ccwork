@@ -32,7 +32,7 @@ const FOCUS_STEPS: TutorialStep[] = [
     expression: 'head-tilt',
     target: null,
     voiceCopy:
-      '作为方舟的领导者，你要坐得稳稳的哦！背挺直、眼睛离屏幕一个小拳头那么远——这样方舟跑得更快，你的眼睛也更舒服啦！',
+      '作为方舟的领导者，你要坐得稳稳的哦！背挺直、眼睛离读写台玻璃一个小拳头那么远——这样方舟跑得更快，你的眼睛也更舒服啦！',
     remindCopy: null,
     waitFor: null,
     hideAvatar: false,
