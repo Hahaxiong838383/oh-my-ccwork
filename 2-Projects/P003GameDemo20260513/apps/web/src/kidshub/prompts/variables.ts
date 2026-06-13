@@ -15,6 +15,12 @@ export const PROMPT_VARIABLES: PromptVariable[] = [
     defaultValue: '朵朵',
   },
   {
+    key: 'gender',
+    label: '孩子性别',
+    source: '登录页家长/孩子选择（男 / 女）',
+    defaultValue: '男',
+  },
+  {
     key: 'commander_suffix',
     label: '指挥官后缀开关',
     source: '场景判定：登舰 / 授勋 / 回归高光 / 夜航结算 = on',

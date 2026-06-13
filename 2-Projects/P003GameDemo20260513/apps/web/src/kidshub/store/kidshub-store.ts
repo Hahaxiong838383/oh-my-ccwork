@@ -15,9 +15,10 @@ const TOKEN_KEY = 'kidshub.token';
 const DRAFTS_KEY = 'kidshub.scenePromptDrafts';
 // 出厂 prompt 变更时 bump key 让旧 localStorage 缓存失效
 // （否则老用户的缓存会盖住新出厂值，永远拿不到新指令）
+// globalTemplate.v4：【称呼】注入 {gender}（登录页收集孩子性别，让小可知道但不贴性别标签）
 // globalTemplate.v3：世界观+读写台玻璃光学原理（画面在 3 米外，护眼根本逻辑）
 // addendum.v5：规则 8 收紧——参照物只许"读写台玻璃"，去掉"书本"（川哥钦定 2026-06-13）
-const GLOBALS_KEY = 'kidshub.globalTemplate.v3';
+const GLOBALS_KEY = 'kidshub.globalTemplate.v4';
 const VARS_KEY = 'kidshub.variables';
 const ADDENDUM_KEY = 'kidshub.addendum.v5';
 
