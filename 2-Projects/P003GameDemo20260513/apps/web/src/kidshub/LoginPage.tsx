@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useKidsHubStore } from './store/kidshub-store';
+import { getSharedVoiceClient } from '../services/voice-client';
 
 export function LoginPage() {
   const setToken = useKidsHubStore((s) => s.setToken);
@@ -21,6 +22,9 @@ export function LoginPage() {
       setError('请填写孩子的昵称');
       return;
     }
+    // 需求4：登录是用户手势——同步解锁 AudioContext（iOS Safari 要求 resume 在手势栈内），
+    // 让登录后自动触发的引导语音能正常播放。不 await（await 会脱离手势栈）。
+    void getSharedVoiceClient().unlockAudio();
     setLoading(true);
     setError(null);
     try {

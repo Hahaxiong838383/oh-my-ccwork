@@ -6,7 +6,8 @@
  *
  * 触发（产品）：tutorial_eco_pond=false，首次进入生态缸升级环节（本次替换原升级流程）。
  * 目标：介绍生态缸是方舟家园，建立情感连接和长期期待。
- * 文档：本单元结束 = 全部引导单元结束（无 outro 衔接）。
+ * 体验链（川哥 2026-06-13 调整）：夜航 → 生态缸 → KidsHub。KidsHub 移到末站，
+ * 本单元 outro 衔接到 KidsHub 引导（原为全链终点，现非）。
  */
 import type { TutorialStep, TutorialUnit } from './tutorial-types';
 
@@ -72,6 +73,9 @@ export const ECO_POND_UNIT: TutorialUnit = {
   subtitle: '介绍生态缸是方舟家园，建立情感连接和长期期待',
   emoji: '🪴',
   storageKey: 'kidshub.tutorial_eco_pond',
-  navOrder: 50, // 体验链终点站；本单元结束 = 全部引导结束
+  navOrder: 50, // 体验链第五站（川哥 2026-06-13：…夜航 → 生态缸 → KidsHub）
+  outroCopy:
+    '生态缸就是你专属的家园呀～最后还有件事我特别想听：你对方舟有什么想说的吗？点「继续下一步」告诉我，或者「再来一次」再逛逛！',
+  nextUnitId: 'kidshub',
   steps: ECO_POND_STEPS,
 };

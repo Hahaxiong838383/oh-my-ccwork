@@ -12,7 +12,8 @@ import { TUTORIAL_UNITS, getUnit, getUnitStep } from './tutorial-units';
 export type TutorialPhase =
   | 'speaking' // 当前步语音/演出进行中
   | 'waiting' // 播完，等用户操作（仅 waitFor 步）
-  | 'celebrating'; // 末步播放中（播完 = complete）
+  | 'celebrating' // 末步播放中（播完 → 衔接确认）
+  | 'handoff'; // 末步+衔接语播完，显示「继续下一步/再来一次」，等用户按键（需求4）
 
 interface TutorialState {
   isActive: boolean;
@@ -45,6 +46,12 @@ interface TutorialState {
   interrupt: () => void;
   /** 一键跳过全部新手引导（需求4）：标记所有单元已完成 + 退出，不再触发 */
   skipAll: () => void;
+  /** 末步庆祝+衔接语播完 → 进衔接确认态：标记单元完成 + phase='handoff'（isActive 保持，等按键） */
+  enterHandoff: () => void;
+  /** 衔接确认「继续下一步」：有 nextUnitId → start 下一单元；末站 → complete 结束全部引导 */
+  proceedNext: () => void;
+  /** 衔接确认「再来一次」：从 step 0 重播当前单元 */
+  replayUnit: () => void;
   /** 调试：清全部单元完成标记 + 重置 */
   resetForDebug: () => void;
 }
@@ -118,7 +125,9 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
     const step = currentStep(s);
     if (!step) return;
     if (s.phase === 'celebrating' || step.isUnitEnd) {
-      get().complete();
+      // 末步播完 → 进衔接确认态（需求4），而非直接结束。正常路径走 TutorialManager
+      // onPlaybackEnd 的 celebrating 分支；这里是语音降级兜底路径，确保按钮照样出。
+      get().enterHandoff();
       return;
     }
     if (step.waitFor) {
@@ -171,6 +180,34 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
       completedUnits: Object.fromEntries(TUTORIAL_UNITS.map((u) => [u.id, true])),
       generation: s.generation + 1,
     }));
+  },
+
+  enterHandoff: () => {
+    const s = get();
+    if (!s.isActive) return;
+    // 标记本单元完成（写 storage，刷新不丢）。关键：不 +generation——否则会触发 TutorialManager
+    // 步进副作用 useEffect([…,generation]) 重跑、重播末步庆祝语。只切 phase，停在末步等按键。
+    writeCompleted(s.unitId, true);
+    set((prev) => ({
+      phase: 'handoff',
+      completedUnits: { ...prev.completedUnits, [s.unitId]: true },
+    }));
+  },
+
+  proceedNext: () => {
+    const s = get();
+    if (!s.isActive) return;
+    const unit = getUnit(s.unitId);
+    const nextId = unit?.nextUnitId;
+    if (nextId && getUnit(nextId)) {
+      get().start(nextId); // start 自带 generation+1 + 重置到 step0
+    } else {
+      get().complete(); // 末站（无 nextUnitId）：真正结束全部引导
+    }
+  },
+
+  replayUnit: () => {
+    get().start(get().unitId); // 从 step0 重播当前单元
   },
 
   resetForDebug: () => {

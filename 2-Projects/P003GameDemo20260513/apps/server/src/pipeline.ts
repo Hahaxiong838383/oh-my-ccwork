@@ -45,6 +45,15 @@ const DEFAULT_SYSTEM_PROMPT =
   '你是儿童陪伴机器人小可（K1）。用户是 5-12 岁孩子，叫他"指挥官"。语气温暖、活泼、有耐心。' +
   '日常聊天保持简短自然（30-50 字）；如果指挥官请你讲故事、科普知识、详细解释，可以讲完整（200-500 字，分段叙述）。' +
   '不要刻意凑字数，自然就好。';
+
+// 需求1（川哥 2026-06-13）：吐槽模式人格后缀。captureMode='feedback' 时追加在场景 prompt 后，
+// 让小可对孩子的吐槽/建议共情+感谢+不过度承诺（对齐 card5「KidsHub 情绪回应」四正面态口径）。
+const FEEDBACK_PERSONA_SUFFIX =
+  '【KidsHub 吐槽模式】指挥官刚刚分享了一个吐槽 / 建议 / 想法，你现在要以"认真倾听并回应孩子心声"的小可身份回应：' +
+  '先真诚感谢、用夸奖或共情肯定他愿意说出来，让他感到被重视；再明确告诉他——这个点子已经被收进 KidsHub，' +
+  '我们都会认真看、会想办法去改进或实现。严禁过度承诺：绝不能说"马上改""一定改""明天就做出来"这类无法兑现的话，' +
+  '只说"我们会认真看 + 努力想办法"。反馈口径仅限四个正面态：已收到 / 评估中 / 已采纳 / 进金点子库。' +
+  '语气温暖童趣、口语化，每次回复 30-50 字。可顺势鼓励"还有别的想法也继续告诉我哦"。';
 const FEEDBACK_IP_SALT = process.env.FEEDBACK_IP_SALT?.trim() || randomBytes(16).toString('hex');
 
 export class VoicePipeline {
@@ -58,6 +67,10 @@ export class VoicePipeline {
   // KidsHub-AI 工作台下发的完整 system prompt（组装在前端做，server 只存只用）
   private sessionSystemPrompt: string | null = null;
   private sessionMeta: SessionMeta | null = null;
+  // 需求1 修复（grok CRITICAL）：audio.end 时快照本轮 meta，防 ASR 异步 final 期间
+  // sessionMeta 被新 sendSessionMeta 覆盖（吐槽漏落库 / 人格用错）。onFinal 落库+人格都用此快照。
+  // sessionMeta 整体替换不 mutate，引用快照即冻结本轮值。
+  private capturedTurnMeta: SessionMeta | null = null;
 
   constructor(ws: WebSocket, clientIp: string) {
     this.ws = ws;
@@ -81,6 +94,8 @@ export class VoicePipeline {
         this.asr.feed(Buffer.from(msg.pcm16));
         return;
       case 'audio.end':
+        // 快照本轮 meta（冻结此刻 captureMode/sessionId/nickname/sceneId），ASR final 异步到达时用它
+        this.capturedTurnMeta = this.sessionMeta;
         this.asr?.finishAudio();
         return;
       case 'barge.in':
@@ -99,7 +114,8 @@ export class VoicePipeline {
         return;
       case 'chat.trigger':
         console.log('[pipeline] chat.trigger received:', msg.text.slice(0, 30));
-        this.startLlmAndTts(msg.text);
+        // 开场白/触发指令恒用普通人格（card 切换 captureMode 永远 off，不该吐槽人格）
+        this.startLlmAndTts(msg.text, false);
         return;
       default:
         this.sendError('BAD_MESSAGE', '未知客户端消息');
@@ -138,7 +154,9 @@ export class VoicePipeline {
           this.send({ type: 'asr.final', text });
           this.maybeCaptureUserInput(text);
           if (text.trim()) {
-            this.startLlmAndTts(text);
+            // ASR 路径吐槽人格用本轮快照判定（与落库一致），不读可能已被覆盖的 sessionMeta
+            const isFeedback = (this.capturedTurnMeta ?? this.sessionMeta)?.captureMode === 'feedback';
+            this.startLlmAndTts(text, isFeedback);
           } else {
             // 用户没说话 → 立刻发 tts.end，让 client 重置 voiceStatus 到 idle
             this.send({ type: 'tts.end' });
@@ -157,31 +175,33 @@ export class VoicePipeline {
     const finalText = text.trim();
     if (!finalText) return;
 
-    if (this.sessionMeta?.captureMode !== 'feedback') {
-      console.log('[feedback] capture_skip', { captureMode: this.sessionMeta?.captureMode ?? 'off' });
+    // 用本轮快照（audio.end 冻结），不受 ASR 异步 final 期间 sessionMeta 被覆盖影响
+    const meta = this.capturedTurnMeta ?? this.sessionMeta;
+    if (meta?.captureMode !== 'feedback') {
+      console.log('[feedback] capture_skip', { captureMode: meta?.captureMode ?? 'off' });
       return;
     }
 
     try {
       const item = feedbackStore.add({
-        session_id: this.sessionMeta.sessionId,
+        session_id: meta.sessionId,
         turn_id: ++this.feedbackTurnId,
-        source: this.sessionMeta.source,
-        nickname: this.sessionMeta.nickname,
-        scene_id: this.sessionMeta.sceneId,
+        source: meta.source,
+        nickname: meta.nickname,
+        scene_id: meta.sceneId,
         text: finalText,
         ip_hash: this.ipHash,
       });
       console.log('[feedback] capture_ok', { sceneId: item.scene_id, len: item.text.length });
     } catch (err) {
       console.error('[feedback] capture_fail', {
-        sessionId: this.sessionMeta.sessionId,
+        sessionId: meta.sessionId,
         message: toError(err).message,
       });
     }
   }
 
-  private async startLlmAndTts(userText: string): Promise<void> {
+  private async startLlmAndTts(userText: string, feedbackMode: boolean): Promise<void> {
     const finalText = userText.trim();
     if (!finalText) return;
 
@@ -236,7 +256,12 @@ export class VoicePipeline {
         return;
       }
 
-      const systemPrompt = this.sessionSystemPrompt ?? DEFAULT_SYSTEM_PROMPT;
+      // 需求1：吐槽模式 → 追加吐槽回应人格（共情+感谢+不过度承诺）。feedbackMode 由调用方传入：
+      // ASR 路径用本轮快照(capturedTurnMeta)判定，chat.trigger 开场白恒 false。普通对话维持原 prompt。
+      const baseSystemPrompt = this.sessionSystemPrompt ?? DEFAULT_SYSTEM_PROMPT;
+      const systemPrompt = feedbackMode
+        ? `${baseSystemPrompt}\n\n${FEEDBACK_PERSONA_SUFFIX}`
+        : baseSystemPrompt;
       // 工作台调试流依赖：回发本轮真实使用的 prompt（所见即所发）
       this.send({ type: 'debug.prompt_assembled', systemPrompt, userText: finalText });
 

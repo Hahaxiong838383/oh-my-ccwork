@@ -34,7 +34,7 @@ expect('未知 unit 启动被拒', (s().start('nonexistent'), !s().isActive));
 // ── boarding 全流程 ──
 s().start('boarding');
 expect('boarding 启动', s().isActive && s().unitId === 'boarding' && s().stepIndex === 0);
-expect('step1 无语音有时长', currentStep(s())?.voiceCopy === null && (currentStep(s())?.durationMs ?? 0) === 5000);
+expect('step1 无语音有时长(感叹号1秒)', currentStep(s())?.voiceCopy === null && (currentStep(s())?.durationMs ?? 0) === 1000);
 expect('step1 scene=alert + alarm', currentStep(s())?.scene === 'alert' && currentStep(s())?.sound === 'alarm');
 
 s().onSpeechEnd(); // 1→2（定时到等价）
@@ -55,9 +55,13 @@ expect('错误目标不推进', s().advanceOnAction('brightness') === false && c
 // 正确操作推进到末步
 expect('boot-button 推进', s().advanceOnAction('boot-button') === true);
 expect('末步 celebrating', s().phase === 'celebrating' && currentStep(s())?.isUnitEnd === true);
-s().onSpeechEnd(); // 庆祝播完 → complete
-expect('boarding 完成退出', !s().isActive && s().completedUnits['boarding'] === true);
+s().onSpeechEnd(); // 庆祝播完 → 进衔接确认态 handoff（需求4，不再直接退出）
+expect('boarding 末步进 handoff 且落盘', s().phase === 'handoff' && s().isActive && s().completedUnits['boarding'] === true);
 expect('settings 未被波及', s().completedUnits['settings'] !== true);
+// 衔接「继续下一步」→ start 下一单元 settings（proceedNext）
+s().proceedNext();
+expect('handoff 继续 → 进下一单元 settings', s().isActive && s().unitId === 'settings' && s().stepIndex === 0);
+s().interrupt();
 
 // ── 打断不标记完成 ──
 s().resetForDebug();
@@ -104,7 +108,7 @@ expect('step7 转 waiting', s().phase === 'waiting');
 expect('唤醒词推进到收尾', s().advanceOnAction('wake-word') === true && currentStep(s())?.id === '8');
 expect('收尾步 celebrating', s().phase === 'celebrating' && currentStep(s())?.isUnitEnd === true);
 s().onSpeechEnd();
-expect('夜航完成落盘', !s().isActive && s().completedUnits['night-report'] === true);
+expect('夜航末步进 handoff 且落盘', s().phase === 'handoff' && s().completedUnits['night-report'] === true);
 
 // 超时跳步路径：3 次提醒后 forceNext 也应落到收尾步而非卡死
 s().resetForDebug();
@@ -133,7 +137,7 @@ expect('点宝箱推进开箱', s().advanceOnAction('claim-reward') === true && 
 s().onSpeechEnd(); // 8→9
 expect('step9 总结收尾', currentStep(s())?.isUnitEnd === true && s().phase === 'celebrating');
 s().onSpeechEnd();
-expect('专注完成落盘', !s().isActive && s().completedUnits['focus'] === true);
+expect('专注末步进 handoff 且落盘', s().phase === 'handoff' && s().completedUnits['focus'] === true);
 
 // ── 生态缸全流程 ──
 s().start('eco-pond');
@@ -144,20 +148,38 @@ s().onSpeechEnd(); // 2→3
 s().onSpeechEnd(); // 3→4
 expect('step4 收尾步', currentStep(s())?.isUnitEnd === true);
 s().onSpeechEnd();
-expect('生态缸完成（全部引导结束）', !s().isActive && s().completedUnits['eco-pond'] === true);
+expect('生态缸末步进 handoff 且落盘', s().phase === 'handoff' && s().completedUnits['eco-pond'] === true);
+// 生态缸现在衔接到 KidsHub（非终点）：继续 → 进 kidshub 末站
+s().proceedNext();
+expect('生态缸继续 → 进 KidsHub', s().isActive && s().unitId === 'kidshub' && s().stepIndex === 0);
+s().onSpeechEnd(); // kidshub id1→id2
+s().onSpeechEnd(); // id2→id3（末步 celebrating）
+expect('KidsHub 末步 celebrating', currentStep(s())?.isUnitEnd === true && s().phase === 'celebrating');
+s().onSpeechEnd(); // celebrating → handoff
+expect('KidsHub 末步进 handoff 且落盘', s().phase === 'handoff' && s().completedUnits['kidshub'] === true);
+// 末站无 nextUnitId：继续 → complete 真正结束全部引导
+s().proceedNext();
+expect('末站继续 → 全部引导结束退出', !s().isActive && s().completedUnits['kidshub'] === true);
+// replayUnit：再玩一遍当前单元，重启到 step0
+s().start('boarding');
+s().onSpeechEnd();
+s().replayUnit();
+expect('replayUnit 重启当前单元到 step0', s().isActive && s().unitId === 'boarding' && s().stepIndex === 0);
+s().interrupt();
 
-// ── 五单元体验链（川哥 2026-06-13 钦定）──
-expect('入口排序 登舰→设置→专注→夜航→生态缸', (() => {
+// ── 六单元体验链（川哥 2026-06-13 调整：…生态缸 → KidsHub 末站）──
+expect('入口排序 登舰→设置→专注→夜航→生态缸→KidsHub', (() => {
   const ids = TUTORIAL_UNITS.map((u) => u.id);
-  return JSON.stringify(ids) === JSON.stringify(['boarding', 'settings', 'focus', 'night-report', 'eco-pond']);
+  return JSON.stringify(ids) === JSON.stringify(['boarding', 'settings', 'focus', 'night-report', 'eco-pond', 'kidshub']);
 })());
-expect('outro 链 boarding→settings→focus→night→eco 全链闭合', (() => {
+expect('outro 链 全链闭合 + KidsHub 末站(无 next)', (() => {
   return (
     getUnit('boarding')?.nextUnitId === 'settings' &&
     getUnit('settings')?.nextUnitId === 'focus' &&
     getUnit('focus')?.nextUnitId === 'night-report' &&
     getUnit('night-report')?.nextUnitId === 'eco-pond' &&
-    getUnit('eco-pond')?.nextUnitId === undefined
+    getUnit('eco-pond')?.nextUnitId === 'kidshub' &&
+    getUnit('kidshub')?.nextUnitId === undefined
   );
 })());
 s().resetForDebug();

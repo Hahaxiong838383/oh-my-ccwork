@@ -169,12 +169,15 @@ export function TutorialManager(): null {
       const s = useTutorialStore.getState();
       // waiting 期的 natural end 是提醒语/LLM 兜底回复播完，不推主线
       if (s.phase === 'waiting') return;
-      // 庆祝步播完且单元配了衔接语：先播衔接（引导去下一单元），播完才 complete 退出
+      // handoff 期（衔接确认语播完）：停住等用户按「继续下一步/再来一次」，不自动推进
+      if (s.phase === 'handoff') return;
+      // 庆祝步播完 → 进衔接确认态（需求4）：切 phase 显示按钮 + 标记完成，再播小可问询语
       const unit = getUnit(s.unitId);
-      if (s.phase === 'celebrating' && unit?.outroCopy && !outroSpokenRef.current) {
+      if (s.phase === 'celebrating' && !outroSpokenRef.current) {
         outroSpokenRef.current = true;
-        pushDebug({ kind: 'action', title: `🧭 引导衔接语 → ${unit.nextUnitId ?? '下一单元'}` });
-        void speakLine(applyVars(unit.outroCopy));
+        useTutorialStore.getState().enterHandoff();
+        pushDebug({ kind: 'action', title: `🧭 衔接确认 → ${unit?.nextUnitId ?? '末站·完成体验'}` });
+        if (unit?.outroCopy) void speakLine(applyVars(unit.outroCopy));
         return;
       }
       s.onSpeechEnd();
@@ -222,6 +225,16 @@ export function TutorialManager(): null {
       const s = useTutorialStore.getState();
       if (!s.isActive) return;
       const text = msg?.text ?? '';
+
+      // 衔接确认态（需求4）：
+      //  - KidsHub 末站（需求1 修复，grok HIGH）：handoff 期允许孩子继续吐槽 → 放行 server LLM
+      //    走吐槽人格回应。captureMode 仍 feedback（CanvasHost wantFeedback 含 kidshub 引导分支，
+      //    进 handoff 前最后一次步进也设了），server audio.end 快照 → 落库 + 吐槽人格。
+      //  - 其它单元：等用户按键，孩子此刻说话不走 LLM（掐掉 server 即将生成的回复）。
+      if (s.phase === 'handoff') {
+        if (s.unitId !== 'kidshub') client.bargeIn();
+        return;
+      }
 
       if (matchHints(text, SKIP_HINTS)) {
         pushDebug({ kind: 'action', title: `🧭 引导跳过指令：「${text}」` });

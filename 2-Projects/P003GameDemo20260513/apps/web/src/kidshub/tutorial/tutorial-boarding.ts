@@ -20,7 +20,8 @@ const BOARDING_STEPS: TutorialStep[] = [
     expression: 'net-fail',
     target: null,
     voiceCopy: null,
-    durationMs: 5_000,
+    // 川哥 2026-06-13：登舰第一幕感叹号警报时间太长 → 1 秒（原 5 秒）
+    durationMs: 1_000,
     remindCopy: null,
     waitFor: null,
     hideAvatar: true,
@@ -112,7 +113,7 @@ export const BOARDING_UNIT: TutorialUnit = {
   navOrder: 10, // 破冰第一步，产品流程最先 → 入口排首位
   // demo 体验链（川哥 2026-06-13 钦定五站全链）：登舰 → 设置 → 专注 → 夜航 → 生态缸
   outroCopy:
-    '对了{child_nickname}，方舟的灯光和声音还没调呢——点一下左边的「设置引导」，我教你把它们调到最舒服的状态～',
+    '{child_nickname}，登舰成功！下一站，我教你把方舟的灯光和声音调到最舒服～想继续就点「继续下一步」，再玩一遍点「再来一次」哦！',
   nextUnitId: 'settings',
   steps: BOARDING_STEPS,
 };

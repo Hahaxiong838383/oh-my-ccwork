@@ -13,6 +13,7 @@ import { PromptPanel } from './components/PromptPanel';
 import { getSharedVoiceClient, getKidsHubSessionId } from '../services/voice-client';
 import { useAppStore } from '../store/app-store';
 import { useTutorialStore } from './tutorial/tutorial-store';
+import { TUTORIAL_UNITS } from './tutorial/tutorial-units';
 import { ExperienceHintBar, ExperienceLeadModal } from './components/ExperienceFunnel';
 import { useExperienceStore, EXPERIENCE_QUOTA_ENABLED } from './store/experience-store';
 
@@ -53,6 +54,24 @@ export function StudioPage() {
     client.connect(getVoiceWsUrl()).catch(() => {
       /* 静默，后面再说 */
     });
+  }, []);
+
+  // 需求4：登录后自动触发引导链——进入工作台时若引导未全部完成，自动从第一个未完成单元开始，
+  // 不用手动点左栏入口。已全完成/已在引导中则不触发。想摆脱自动引导可点控制条「跳过引导」。
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    const ts = useTutorialStore.getState();
+    if (ts.isActive) return;
+    const firstIncomplete = TUTORIAL_UNITS.find((u) => !ts.completedUnits[u.id]);
+    if (!firstIncomplete) return; // 全部完成，不打扰
+    const client = getSharedVoiceClient();
+    void client.unlockAudio().catch(() => {});
+    sharedTypewriter().reset();
+    client.bargeIn();
+    useAppStore.getState().setSubtitle('');
+    ts.start(firstIncomplete.id);
   }, []);
 
   // 防 React 18 StrictMode（dev）下 useEffect 双触发导致一次进卡重复采样两条事实
@@ -117,12 +136,14 @@ export function StudioPage() {
           await client.connect(getVoiceWsUrl());
         }
         client.sendSessionConfig(composed);
-        // 需求2：发会话元数据（与 prompt 解耦）。card5=反馈场景 → captureMode=feedback，孩子语音落库供后台
+        // 需求1/2：发会话元数据（与 prompt 解耦）。场景卡切换统一 captureMode='off'——
+        // 吐槽改由「按住吐槽」按钮 / KidsHub 引导触发（CanvasHost 录音前会重发 meta 切 feedback），
+        // 不再因停留 card5 就自动捕获（也避免 card 开场白被当吐槽、误用吐槽人格）。
         client.sendSessionMeta({
           sessionId: getKidsHubSessionId(),
           sceneId: activeCardId,
           nickname: useKidsHubStore.getState().variables.nickname || '',
-          captureMode: activeCardId === 'card5' ? 'feedback' : 'off',
+          captureMode: 'off',
           source: 'card',
         });
         pushDebug({

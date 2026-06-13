@@ -143,7 +143,7 @@ export const FOCUS_UNIT: TutorialUnit = {
   storageKey: 'kidshub.tutorial_focus',
   navOrder: 30, // 体验链第三站（川哥 2026-06-13 钦定：登舰 → 设置 → 专注 → 夜航 → 生态缸）
   outroCopy:
-    '专注的秘密你已经掌握啦！接下来我给你看看方舟夜里偷偷干了什么——点一下「夜航报告引导」吧！',
+    '专注的秘密你掌握啦！接下来看看方舟夜里偷偷干了啥——点「继续下一步」继续探险，想重温就点「再来一次」！',
   nextUnitId: 'night-report',
   steps: FOCUS_STEPS,
 };

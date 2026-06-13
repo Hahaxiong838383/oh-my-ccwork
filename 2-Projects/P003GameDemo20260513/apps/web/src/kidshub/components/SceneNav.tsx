@@ -30,7 +30,7 @@ export function SceneNav() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-neutral-950 text-sm text-neutral-200">
-      {/* 新手引导入口（A03 五单元，按产品流程排序：登舰最先，设置按需垫底） */}
+      {/* 新手引导入口（A03 六单元：登舰→设置→专注→夜航→生态缸→KidsHub，登录后自动从首个未完成单元触发） */}
       <div className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-[1px] text-neutral-400">
         新手引导 · A03
       </div>

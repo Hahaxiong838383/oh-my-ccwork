@@ -294,8 +294,13 @@ class VoiceClientImpl implements VoiceClient {
     this.micStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
-        echoCancellation: true,
-        noiseSuppression: true,
+        // 音量修复（川哥 2026-06-13）：关闭 AEC/降噪/AGC。「按住说话」是 PTT——孩子说话时
+        // 小可不出声，无回声风险；但 echoCancellation 会让浏览器申请进系统「通信模式」，对
+        // 扬声器输出做 ducking（把小可 TTS 当回声压低）→ 录一次音后小可回复音量骤降。关掉三
+        // 件套即阻止进入通信模式，绕过系统级音量压制（gemini 根因分析：桌面 85%/移动 95%）。
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
       },
     });
 

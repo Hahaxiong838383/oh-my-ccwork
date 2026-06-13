@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>P003 Web 后台（整合版）· 数据看板 + KidsHub 运营台 + 运营操作台</title>
+  <!-- 2026-05 KidsHub Issue 看板(board) 联动真实反馈：board 唯一真实数据源(复用 /api/feedback + PATCH + reBucket)；移除 mock khIssueCols + feedback nav 项 + 冗余 mock 逻辑/抽屉；进入 board 自动 loadRealFeedback；tutorial 灰标；详情抽屉支持状态四态+note保存；不破其它 tab -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus@2.9.1/dist/index.css" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -441,7 +442,7 @@
         </el-form>
         <div class="role-hint">
           账号密码与 KidsHub 工作台一致<br/>
-          （demo 统一管理员视图 · 数据为模拟）
+          （管理员视图 · 用户反馈看板为真实数据，其余看板为演示）
         </div>
       </div>
     </div>
@@ -506,7 +507,7 @@
             </el-breadcrumb>
           </div>
           <div class="right">
-            <el-tag type="warning" size="small">模拟数据 · 产品定义可视化</el-tag>
+            <el-tag type="warning" size="small">用户反馈真实数据 · 其余看板演示</el-tag>
             <el-tag :type="isAdmin ? 'danger' : 'info'" size="small">{{ isAdmin ? '管理员' : 'B端用户' }}</el-tag>
             <el-dropdown @command="handleDropdown">
               <span style="cursor:pointer;display:flex;align-items:center;gap:6px">
@@ -1190,29 +1191,38 @@
                 <button class="kh-back" @click="handleMenuSelect('dashboard')">⇠ 数据看板</button>
               </div>
               <div class="kh-main" style="display:flex;gap:0;padding:0">
-                <!-- Issue 看板 -->
+                <!-- Issue 看板（真实数据驱动，唯一看板，复用 realFeedback + realCols + PATCH 逻辑） -->
                 <template v-if="khNav==='board'">
                   <div style="flex:1;min-width:0;padding:20px">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                      <div><div class="kh-h1">KidsHub 后台 · Issue 看板</div>
-                      <div class="kh-sub">拖动卡片推进状态 · 全正面态 · 终态变更需二次确认</div></div>
-                      <el-button type="primary" size="small" style="background:#3B7A99;border-color:#3B7A99">+ 版本决策</el-button>
+                      <div>
+                        <div class="kh-h1">KidsHub 后台 · Issue 看板</div>
+                        <div class="kh-sub">真实内测反馈（/api/feedback）· 点击卡片改状态/备注 · 来源 tutorial 标灰「引导测试」 · 401 自动清 token</div>
+                      </div>
+                      <div>
+                        <el-button size="small" :loading="realFeedback.loading" @click="loadRealFeedback">刷新</el-button>
+                        <el-button size="small" @click="exportRealCSV">导出 CSV</el-button>
+                      </div>
                     </div>
                     <div class="kh-board">
-                      <div v-for="col in khIssueCols" :key="col.key">
+                      <div v-for="col in realCols" :key="col.key">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                           <span class="kh-chip" :class="col.key"><i></i>{{ khStatusLabel(col.key) }}</span>
                           <span style="font-size:12px;color:#6B7785;font-weight:700">{{ col.items.length }}</span>
                         </div>
                         <div style="display:flex;flex-direction:column;gap:10px">
-                          <div class="kh-issue" v-for="it in col.items" :key="it.id" @click="openKhIssue(it, col.key)">
-                            <div style="display:flex;justify-content:space-between;align-items:center">
-                              <span class="iid">{{ it.id }}</span>
-                              <span class="src" :style="{background: it.src==='孩子' ? '#E0913A' : '#5B8C7B'}">{{ it.src }}</span>
+                          <div class="kh-issue" v-for="it in col.items" :key="it.id" @click="openRealIssue(it)">
+                            <div class="iid">{{ it.id }} · {{ it.nickname || '匿名' }}</div>
+                            <p style="margin:6px 0 8px;font-size:13px;line-height:1.4">{{ it.text }}</p>
+                            <div class="meta">
+                              <span>{{ getSceneLabel(it.sceneId) }}</span>
+                              <span v-if="it.source === 'tutorial'" style="background:#f3f3f3;color:#888">引导测试</span>
+                              <span v-else>{{ it.source || 'card' }}</span>
+                              <span class="ct">{{ fmtTs(it.ts) }}</span>
                             </div>
-                            <p>{{ it.text }}</p>
-                            <div class="meta"><span>😶 {{ it.mood }}</span><span>#{{ it.theme }}</span><span class="ct">+{{ it.c }}</span></div>
+                            <div v-if="it.note" style="margin-top:4px;font-size:11px;color:#666">备注：{{ it.note }}</div>
                           </div>
+                          <div v-if="!col.items.length" style="font-size:12px;color:#909399;padding:8px 0">暂无</div>
                         </div>
                       </div>
                     </div>
@@ -1386,72 +1396,11 @@
                   <div class="kh-sub" style="margin-top:12px">兜底链：推送 7 天未打开 → 周报二次提醒 + 消息中心常驻红点；亲子纽带联动仅触发条件，孩子端展示归功能 15。</div>
                 </div>
 
-                <!-- 用户反馈 · 真实数据（与 Issue 看板 mock 完全分区，醒目标签 + 独立刷新/导出） -->
-                <div v-if="khNav==='feedback'" style="flex:1;min-width:0;padding:20px">
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                    <div style="display:flex;align-items:center;gap:8px">
-                      <el-tag type="success" size="small">真实内测数据</el-tag>
-                      <div class="kh-h1" style="margin:0;font-size:17px">用户反馈 · 看板</div>
-                    </div>
-                    <div>
-                      <el-button size="small" :loading="realFeedback.loading" @click="loadRealFeedback">刷新</el-button>
-                      <el-button size="small" @click="exportRealCSV">导出 CSV</el-button>
-                    </div>
-                  </div>
-                  <div class="kh-sub" style="margin-bottom:12px">来自内测用户真实吐槽（GET /api/feedback）· 按状态四列流转 · 来源 tutorial 标灰「引导测试」· 金点子库可返工 · 401 自动清 token</div>
-                  <div class="kh-board">
-                    <div v-for="col in realCols" :key="col.key">
-                      <div style="margin-bottom:8px">
-                        <span class="kh-chip" :class="col.key"><i></i>{{ khStatusLabel(col.key) }}</span>
-                        <span style="margin-left:6px;font-size:12px;color:#6B7785">{{ col.items.length }}</span>
-                      </div>
-                      <div class="kh-issue" v-for="it in col.items" :key="it.id" @click="openRealIssue(it)">
-                        <div class="iid">{{ it.id }} · {{ it.nickname || '匿名' }}</div>
-                        <p style="margin:6px 0 8px;font-size:13px;line-height:1.4">{{ it.text }}</p>
-                        <div class="meta">
-                          <span>{{ getSceneLabel(it.sceneId) }}</span>
-                          <span v-if="it.source === 'tutorial'" style="background:#f3f3f3;color:#888">引导测试</span>
-                          <span v-else>{{ it.source || 'card' }}</span>
-                          <span class="ct">{{ fmtTs(it.ts) }}</span>
-                        </div>
-                        <div v-if="it.note" style="margin-top:4px;font-size:11px;color:#666">备注：{{ it.note }}</div>
-                      </div>
-                      <div v-if="!col.items.length" style="font-size:12px;color:#909399;padding:8px 0">暂无</div>
-                    </div>
-                  </div>
-                </div>
-
               </div>
             </div>
 
-            <!-- 工单详情抽屉（状态机操作） -->
-            <el-drawer v-model="khDrawerOpen" :title="khDrawer ? khDrawer.id : ''" size="400px">
-              <div v-if="khDrawer" style="padding:0 4px">
-                <div style="font-size:16px;font-weight:700;margin-bottom:12px">{{ khDrawer.text }}</div>
-                <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
-                  <el-tag size="small" type="info">来源：{{ khDrawer.src }}</el-tag>
-                  <el-tag size="small" type="info">情绪：{{ khDrawer.mood }}</el-tag>
-                  <el-tag size="small" type="info">#{{ khDrawer.theme }}</el-tag>
-                </div>
-                <div style="font-size:13px;font-weight:800;color:#6B7785;margin-bottom:10px">状态推进（全正面 · 终态需二次确认）</div>
-                <div v-for="s in ['received','reviewing','adopted']" :key="s" @click="khSetStatus(s)"
-                  :style="{border: khDrawer.status===s ? '2px solid #3B7A99' : '1px solid #E4E9EF', background: khDrawer.status===s ? '#F6F8FA' : '#fff'}"
-                  style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;margin-bottom:8px;cursor:pointer">
-                  <span class="kh-chip" :class="s"><i></i>{{ khStatusLabel(s) }}</span>
-                  <span v-if="khDrawer.status===s" style="font-size:12px;color:#3B7A99;font-weight:700">当前</span>
-                </div>
-                <div @click="khSetStatus('vault')"
-                  :style="{border: khDrawer.status==='vault' ? '2px solid #9B7BF0' : '1px dashed #E4E9EF', background: khDrawer.status==='vault' ? '#EEE8FD' : '#fff'}"
-                  style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;cursor:pointer">
-                  <span class="kh-chip vault"><i></i>金点子库</span><span style="font-size:12px;color:#6B7785">暂不采纳 → 珍藏</span>
-                </div>
-                <div style="font-size:13px;font-weight:800;color:#6B7785;margin:18px 0 8px">回告路由</div>
-                <div style="font-size:13px;color:#6B7785;line-height:1.6">采纳后 → 孩子端 KidsHub 署名致谢 + 家长端消息中心定向回告。</div>
-              </div>
-            </el-drawer>
-
-            <!-- 真实反馈详情抽屉（支持 PATCH status / note，乐观更新 + 回滚 + 二次确认） -->
-            <el-drawer v-model="realDrawerOpen" :title="realDrawer ? (realDrawer.id + ' · 真实反馈') : ''" size="420px">
+            <!-- 真实反馈详情抽屉（board 唯一真实 Issue 看板使用；支持 PATCH status/note，乐观更新+回滚+二次确认；来源 tutorial 已在卡片灰标） -->
+            <el-drawer v-model="realDrawerOpen" :title="realDrawer ? (realDrawer.id + ' · Issue 详情') : ''" size="420px">
               <div v-if="realDrawer" style="padding:0 8px 20px">
                 <div style="margin-bottom:8px">
                   <el-tag size="small" type="success">真实内测</el-tag>
@@ -1651,6 +1600,7 @@
           currentUser.role = '';
           if (realFeedback && realFeedback.items) realFeedback.items = [];
           if (realCols) realCols.forEach(function (c) { c.items = []; });
+          realDrawer.value = null; realDrawerOpen.value = false;
           ElementPlus.ElMessage.error('登录已失效，请重新登录');
         }
 
@@ -1702,6 +1652,7 @@
             loginForm.password = '';
             if (realFeedback && realFeedback.items) realFeedback.items = [];
             if (realCols) realCols.forEach(function (c) { c.items = []; });
+            realDrawer.value = null; realDrawerOpen.value = false;
           }
         }
 
@@ -1713,6 +1664,15 @@
           if (index !== 'dashboard') {
             mapView.selectedProvince = '';
             mapView.provChartIdx = 0;
+          }
+          if (index === 'kidshub') {
+            nextTick(function () {
+              if (khNav.value === 'board' && (!realFeedback.items || realFeedback.items.length === 0)) {
+                loadRealFeedback();
+              } else if (khNav.value === 'metrics') {
+                nextTick(initKhRetention);
+              }
+            });
           }
         }
 
@@ -2226,24 +2186,10 @@
         // ====== 整合版新增：KidsHub 运营台 + 运营操作台 ======
         var khNav = ref('board');
         var khNavs = [
-          { k: 'board', l: 'Issue 看板' }, { k: 'feedback', l: '用户反馈' }, { k: 'ledger', l: '贡献账本' }, { k: 'vault', l: '金点子库' },
+          { k: 'board', l: 'Issue 看板' }, { k: 'ledger', l: '贡献账本' }, { k: 'vault', l: '金点子库' },
           { k: 'version', l: '版本决策' }, { k: 'revisit', l: '复访触发' }, { k: 'intercept', l: '流失拦截' },
           { k: 'metrics', l: '度量看板' }, { k: 'notify', l: '回告路由' }
         ];
-        var khDrawer = ref(null);
-        var khDrawerOpen = ref(false);
-        var khIssueCols = reactive([
-          { key: 'received', items: [
-            { id: 'KH-241', text: '专注按钮太小，孩子够不着', src: '孩子', mood: '吐槽', theme: '专注·交互', c: 5, status: 'received' },
-            { id: 'KH-240', text: '周报里护眼数据看不太懂', src: '家长', mood: '困惑', theme: '周报·可读性', c: 2, status: 'received' } ] },
-          { key: 'reviewing', items: [
-            { id: 'KH-235', text: '夜航故事太短，想听更长', src: '孩子', mood: '期待', theme: '夜航·内容', c: 12, status: 'reviewing' } ] },
-          { key: 'adopted', items: [
-            { id: 'KH-198', text: '开机问候叫孩子名字', src: '孩子', mood: '建议', theme: '破冰·个性化', c: 8, status: 'adopted' } ] },
-          { key: 'vault', items: [
-            { id: 'KH-176', text: '想要会发光的恐龙皮肤', src: '孩子', mood: '愿望', theme: '皮肤·养成', c: 1, status: 'vault' },
-            { id: 'KH-152', text: '能不能和同学比贡献值', src: '孩子', mood: '愿望', theme: '社交·PK', c: 1, status: 'vault' } ] }
-        ]);
         var khThemes = [
           { name: '夜航·内容', n: 12, mood: '期待' }, { name: '专注·交互', n: 9, mood: '吐槽' },
           { name: '皮肤·养成', n: 7, mood: '愿望' }, { name: '周报·可读性', n: 4, mood: '困惑' }
@@ -2316,33 +2262,10 @@
         function khStatusLabel(s) {
           return { received: '已收到', reviewing: '评估中', adopted: '已采纳', vault: '金点子库' }[s] || s;
         }
-        function openKhIssue(it, colKey) {
-          it.status = it.status || colKey;
-          khDrawer.value = it;
-          khDrawerOpen.value = true;
-        }
-        function khSetStatus(s) {
-          if (!khDrawer.value) return;
-          var it = khDrawer.value;
-          // 从旧列移除
-          for (var i = 0; i < khIssueCols.length; i++) {
-            var col = khIssueCols[i];
-            var idx = col.items.findIndex(function (x) { return x.id === it.id; });
-            if (idx >= 0) {
-              col.items.splice(idx, 1);
-              break;
-            }
-          }
-          // 设新状态并移入新列（本地模拟，立即生效）
-          it.status = s;
-          var newCol = khIssueCols.find(function (c) { return c.key === s; });
-          if (newCol) newCol.items.push(it);
-          ElementPlus.ElMessage.success('状态已变更（模拟数据）');
-        }
         function khSelectNav(k) {
           khNav.value = k;
           if (k === 'metrics') nextTick(initKhRetention);
-          if (k === 'feedback') {
+          if (k === 'board') {
             nextTick(function () {
               if (!realFeedback.items || realFeedback.items.length === 0) loadRealFeedback();
             });
@@ -2369,7 +2292,7 @@
           });
         }
 
-        // ====== 真实反馈数据（新增，与 mock khIssueCols 明确分区） ======
+        // ====== 真实反馈数据（board 唯一真实 Issue 看板驱动源；支持 snake/camel 字段归一） ======
         var realFeedback = reactive({ items: [], loading: false });
         var realCols = reactive([
           { key: 'received', items: [] },
@@ -2379,6 +2302,26 @@
         ]);
         var realDrawer = ref(null);
         var realDrawerOpen = ref(false);
+
+        function normalizeFeedbackItem(raw) {
+          if (!raw) return raw;
+          return {
+            id: raw.id,
+            session_id: raw.session_id || raw.sessionId || '',
+            turn_id: raw.turn_id || raw.turnId || '',
+            source: raw.source || 'card',
+            nickname: raw.nickname || '',
+            sceneId: raw.sceneId || raw.scene_id || raw.sceneID || '',
+            text: raw.text || '',
+            status: raw.status || '已收到',
+            note: raw.note || '',
+            created_at: raw.created_at || raw.createdAt || raw.ts || '',
+            updated_at: raw.updated_at || raw.updatedAt || '',
+            updated_by: raw.updated_by || raw.updatedBy || '',
+            // 兼容旧字段
+            ts: raw.ts || raw.created_at || raw.createdAt || ''
+          };
+        }
 
         function getSceneLabel(sid) {
           if (!sid) return '—';
@@ -2412,7 +2355,7 @@
             })
             .then(function (data) {
               if (data && data.ok) {
-                realFeedback.items = data.items || [];
+                realFeedback.items = (data.items || []).map(normalizeFeedbackItem);
                 reBucketReal();
                 ElementPlus.ElMessage.success('已刷新 · ' + realFeedback.items.length + ' 条真实反馈');
               } else {
@@ -2451,7 +2394,7 @@
             .then(function (d) {
               if (d && d.ok && d.item) {
                 var idx = realFeedback.items.findIndex(function (x) { return x.id === it.id; });
-                if (idx >= 0) realFeedback.items[idx] = d.item;
+                if (idx >= 0) realFeedback.items[idx] = normalizeFeedbackItem(d.item);
                 reBucketReal();
                 ElementPlus.ElMessage.success('状态已更新');
               } else {
@@ -2479,7 +2422,7 @@
             .then(function (d) {
               if (d && d.ok && d.item) {
                 var idx = realFeedback.items.findIndex(function (x) { return x.id === it.id; });
-                if (idx >= 0) realFeedback.items[idx] = d.item;
+                if (idx >= 0) realFeedback.items[idx] = normalizeFeedbackItem(d.item);
                 reBucketReal();
                 ElementPlus.ElMessage.success('备注已保存');
               } else {
@@ -2560,18 +2503,17 @@
           dateRangeQuery: dateRangeQuery,
           queryDateRange: queryDateRange,
           resetDateQuery: resetDateQuery,
-          khNav: khNav, khNavs: khNavs, khDrawer: khDrawer, khDrawerOpen: khDrawerOpen,
-          khIssueCols: khIssueCols, khThemes: khThemes, khLedger: khLedger, khIdeas: khIdeas,
+          khNav: khNav, khNavs: khNavs, khThemes: khThemes, khLedger: khLedger, khIdeas: khIdeas,
           khAdopted: khAdopted, khRevisitRules: khRevisitRules, khRevisitRecs: khRevisitRecs,
           khInterceptFlows: khInterceptFlows, khInterceptRecs: khInterceptRecs,
           khFunnel: khFunnel, khParentCards: khParentCards, khNotifyRows: khNotifyRows,
           snRows: snRows, csRows: csRows,
-          khStatusLabel: khStatusLabel, openKhIssue: openKhIssue, khSetStatus: khSetStatus, khSelectNav: khSelectNav,
-          // 真实反馈暴露
+          khStatusLabel: khStatusLabel, khSelectNav: khSelectNav,
+          // 真实反馈（board 唯一 Issue 看板）
           realFeedback: realFeedback, realCols: realCols, realDrawer: realDrawer, realDrawerOpen: realDrawerOpen,
           loadRealFeedback: loadRealFeedback, openRealIssue: openRealIssue, setRealStatus: setRealStatus,
           saveRealNote: saveRealNote, exportRealCSV: exportRealCSV,
-          getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey
+          getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey, normalizeFeedbackItem: normalizeFeedbackItem
         };
       }
     });

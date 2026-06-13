@@ -6,6 +6,7 @@ import { CardScene } from './CardScene';
 import { XiaokeAvatar } from '../avatar/XiaokeAvatar';
 import { ExpressionPicker } from '../avatar/ExpressionPicker';
 import { TutorialManager } from '../tutorial/TutorialManager';
+import { TutorialHandoffPrompt } from '../tutorial/TutorialHandoffPrompt';
 import { TutorialCanvasContent } from '../tutorial/TutorialCanvasContent';
 import { BoardingCanvasContent } from '../tutorial/BoardingCanvasContent';
 import { NightReportCanvasContent } from '../tutorial/NightReportCanvasContent';
@@ -18,6 +19,7 @@ import { resolveExpressionName } from '../avatar/expressions';
 import { sharedTypewriter } from '../subtitle/shared';
 import {
   getSharedVoiceClient,
+  getKidsHubSessionId,
   type VoiceClient,
 } from '../../services/voice-client';
 import { useKidsHubStore } from '../store/kidshub-store';
@@ -47,7 +49,6 @@ interface CanvasHostProps {
 
 export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   const activeCardId = useKidsHubStore((s) => s.activeCardId);
-  const selectCard = useKidsHubStore((s) => s.selectCard);
   const pushDebug = useKidsHubStore((s) => s.pushDebug);
   const voiceSpeed = useKidsHubStore((s) => s.voiceSpeed);
   const setVoiceSpeed = useKidsHubStore((s) => s.setVoiceSpeed);
@@ -67,6 +68,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
 
   const clientRef = useRef<VoiceClient | null>(null);
   const [pressed, setPressed] = useState(false);
+  // 需求1：区分当前按住的是「普通说话」还是「吐槽」按钮，用于两个按钮各自的高亮态
+  const [activeRecordMode, setActiveRecordMode] = useState<'normal' | 'feedback' | null>(null);
   const pressedRef = useRef(false);
   const startInFlightRef = useRef(false);
   const needStopRef = useRef(false);
@@ -236,7 +239,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   // 真实下发逻辑集中在 StudioPage 里统一做。
 
   // 按住说话逻辑（精简自 VoiceButton）
-  const onPointerDown = async () => {
+  const onPointerDown = async (feedbackMode = false) => {
     if (startInFlightRef.current || pressedRef.current) return;
 
     // 公开模式语音对话限额：超限直接弹窗引导加微信，不录音（语音是真消耗，硬拦截点）
@@ -248,6 +251,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     pressedRef.current = true;
     needStopRef.current = false;
     setPressed(true);
+    setActiveRecordMode(feedbackMode ? 'feedback' : 'normal');
 
     const client = clientRef.current;
     if (!client) return;
@@ -265,6 +269,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
         applyNetState('success');
       } catch (e) {
         setPressed(false);
+        setActiveRecordMode(null);
         pressedRef.current = false;
         setSubtitle('语音服务连接失败');
         applyNetState('fail');
@@ -273,6 +278,22 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     }
 
     client.bargeIn();
+    // 需求1：录音前下发会话元数据，决定本轮是否吐槽捕获。
+    // 显式吐槽按钮 OR 当前在 KidsHub 引导单元 → captureMode='feedback'（落库 + 小可吐槽人格回复）；
+    // 普通「按住说话」→ 'off'（不进 KidsHub 后台）。best-effort，失败不挡录音主链路。
+    const wantFeedback = feedbackMode || (tutorialActive && tutorialUnitId === 'kidshub');
+    try {
+      client.sendSessionMeta({
+        sessionId: getKidsHubSessionId(),
+        sceneId: activeCardId,
+        nickname: useKidsHubStore.getState().variables.nickname || '',
+        tutorialUnitId: tutorialActive ? tutorialUnitId : undefined,
+        captureMode: wantFeedback ? 'feedback' : 'off',
+        source: tutorialActive ? 'tutorial' : 'card',
+      });
+    } catch {
+      /* meta best-effort：发送失败不影响录音 */
+    }
     startInFlightRef.current = true;
     try {
       await client.startRecording();
@@ -290,6 +311,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       pressedRef.current = false;
       needStopRef.current = false;
       setPressed(false);
+      setActiveRecordMode(null);
       setVoiceStatus('idle');
       setSubtitle(err instanceof Error ? err.message : '麦克风启动失败');
     } finally {
@@ -303,6 +325,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     if (EXPERIENCE_QUOTA_ENABLED) useExperienceStore.getState().recordVoiceRound();
     pressedRef.current = false;
     setPressed(false);
+    setActiveRecordMode(null);
 
     const client = clientRef.current;
     if (!client) return;
@@ -396,6 +419,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
               引导 3-x 步配表要求"小可隐藏，只留小手指+蒙版" */}
           {!tutorialStep?.hideAvatar && <XiaokeAvatar />}
           <KidsHubSubtitle />
+          {/* 需求4：单元间衔接确认浮层（phase==='handoff' 显示「继续下一步 / 再来一次」按键） */}
+          <TutorialHandoffPrompt />
         </div>
       </div>
 
@@ -407,18 +432,18 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
             aria-label="按住说话"
             onPointerDown={(e) => {
               e.preventDefault();
-              void onPointerDown();
+              void onPointerDown(false);
             }}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
             onPointerLeave={onPointerUp}
             className={`select-none rounded-full px-5 py-1.5 text-sm tracking-widest transition-all active:scale-[0.985] ${
-              pressed
+              pressed && activeRecordMode === 'normal'
                 ? 'bg-red-500/90 text-white shadow-[0_0_12px_rgba(239,68,68,0.5)]'
                 : 'bg-neutral-800 text-white/80 ring-1 ring-white/10 hover:bg-neutral-700'
             }`}
           >
-            {pressed ? '松手结束' : '按住说话'}
+            {pressed && activeRecordMode === 'normal' ? '松手结束' : '按住说话'}
           </button>
 
           <button
@@ -428,24 +453,26 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
             打断
           </button>
 
-          {/* KidsHub 反馈是贯穿小可体验的全局能力（任何场景都可吐槽/提建议），常驻入口 */}
+          {/* 需求1：KidsHub 吐槽 = 按住直接录音，松手进 KidsHub 后台，小可用吐槽人格回应；
+              普通「按住说话」不进后台。引导 KidsHub 单元的录音也自动走吐槽逻辑。 */}
           <button
-            onClick={() => {
-              // card5 也是一次场景卡切换，公开模式超限同样拦截弹窗
-              if (EXPERIENCE_QUOTA_ENABLED && !useExperienceStore.getState().canScene()) {
-                useExperienceStore.getState().openModal();
-                return;
-              }
-              selectCard('card5');
+            type="button"
+            aria-label="按住吐槽"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              void onPointerDown(true);
             }}
-            title="KidsHub 反馈贯穿所有场景：随时切到卡 5 体验完整反馈流（附加规则已让所有场景都能接住建议/吐槽）"
-            className={`rounded-full px-4 py-1.5 text-sm transition ${
-              activeCardId === 'card5'
-                ? 'bg-amber-500/90 text-neutral-950'
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            onPointerLeave={onPointerUp}
+            title="按住对小可说出你的吐槽 / 建议 / 想法——松手后收进 KidsHub 后台，小可会认真回应你"
+            className={`select-none rounded-full px-4 py-1.5 text-sm transition-all active:scale-[0.985] ${
+              pressed && activeRecordMode === 'feedback'
+                ? 'bg-red-500/90 text-white shadow-[0_0_12px_rgba(239,68,68,0.5)]'
                 : 'border border-amber-400/40 bg-amber-400/10 text-amber-300 hover:bg-amber-400/20'
             }`}
           >
-            💬 KidsHub
+            {pressed && activeRecordMode === 'feedback' ? '松手提交吐槽' : '💬 按住吐槽'}
           </button>
 
           {/* 表情库：PM 点任意表情直接驱动小可（验美术 / 调表情 prompt 用） */}

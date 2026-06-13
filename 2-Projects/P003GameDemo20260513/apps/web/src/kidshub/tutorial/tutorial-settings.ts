@@ -156,7 +156,7 @@ export const SETTINGS_UNIT: TutorialUnit = {
   // 注：A03 文档 2.3 节写的是"按需独立单元、不在固定链"——demo 演示顺序以川哥拍板为准
   navOrder: 20,
   outroCopy:
-    '灯光和声音都调到最舒服啦！接下来我教你方舟最重要的本领——点一下「专注模式引导」吧！',
+    '灯光声音都调好啦！下一站，我教你方舟最重要的本领——专注模式～想继续就点「继续下一步」，再玩一遍点「再来一次」哦！',
   nextUnitId: 'focus',
   steps: SETTINGS_STEPS,
 };
