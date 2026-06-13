@@ -15,10 +15,11 @@ const TOKEN_KEY = 'kidshub.token';
 const DRAFTS_KEY = 'kidshub.scenePromptDrafts';
 // 出厂 prompt 变更时 bump key 让旧 localStorage 缓存失效
 // （否则老用户的缓存会盖住新出厂值，永远拿不到新指令）
-// globalTemplate.v2：表情系统人设；addendum.v3：句级表情标记 + 意图映射表
+// globalTemplate.v2：表情系统人设；addendum.v4：+第 8 条护眼参照系红线
+// （v3 时代加规则 8 时忘 bump，老访客旧缓存遮蔽红线 → 小可仍说"离屏幕"，2026-06-13 修）
 const GLOBALS_KEY = 'kidshub.globalTemplate.v2';
 const VARS_KEY = 'kidshub.variables';
-const ADDENDUM_KEY = 'kidshub.addendum.v3';
+const ADDENDUM_KEY = 'kidshub.addendum.v4';
 
 export interface DebugEntry {
   ts: number;
