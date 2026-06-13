@@ -172,7 +172,8 @@ export function NightReportCanvasContent(): JSX.Element {
         {/* 1. pond-intro：轻柔氛围 + 缓慢微光粒子 */}
         {displayScene === 'pond-intro' && (
           <>
-            <div className="pointer-events-none absolute -top-[16%] left-1/2 h-[42%] w-[66%] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,#fde047_0%,#f59e0b_28%,transparent_70%)] opacity-28" />
+            {/* opacity-28 非 Tailwind 预设值（会被忽略致全不透明刺眼），用 arbitrary 值修正为真正的淡暖光 */}
+            <div className="pointer-events-none absolute -top-[16%] left-1/2 h-[42%] w-[66%] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,#fde047_0%,#f59e0b_28%,transparent_70%)] opacity-[0.28]" />
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="absolute h-[0.55cqw] w-[0.55cqw] rounded-full bg-[#fde047]/65" style={{ left: `${10 + i * 13.5}%`, top: `${25 + (i % 2) * 13}%`, animation: `dustDrift ${2350 + i * 280}ms infinite ease-in-out ${i * 160}ms` }} />
             ))}

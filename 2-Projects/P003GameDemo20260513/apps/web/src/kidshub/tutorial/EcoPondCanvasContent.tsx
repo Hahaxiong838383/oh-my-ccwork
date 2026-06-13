@@ -128,11 +128,9 @@ export function EcoPondCanvasContent(): JSX.Element {
           }
         />
 
-        {/* 1. pond-view：全景 + 缸区轻微聚光 + 几条小鱼缓慢左右游动 */}
+        {/* 1. pond-view：全景 + 几条小鱼缓慢左右游动 */}
         {displayScene === 'pond-view' && (
           <>
-            {/* 径向聚光（缸体区域） */}
-            <div className="pointer-events-none absolute left-1/2 top-[33%] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,#fde047_0%,#14b8a6_38%,transparent_72%)] opacity-26" style={{ width: '46cqw', height: '34cqh' }} />
             {/* 缓慢游动小鱼（translateX 往返） */}
             {[
               { ch: '🐠', l: '19%', t: '41%', d: '0ms', dur: 2850 },
