@@ -110,9 +110,9 @@ export const BOARDING_UNIT: TutorialUnit = {
   emoji: '🚀',
   storageKey: 'kidshub.tutorial_boarding',
   navOrder: 10, // 破冰第一步，产品流程最先 → 入口排首位
-  // demo 衔接（按 2026-06-12 配表固定链 登舰→专注）：庆祝后口播引导去专注模式引导
+  // demo 体验链（川哥 2026-06-13 钦定五站全链）：登舰 → 设置 → 专注 → 夜航 → 生态缸
   outroCopy:
-    '{child_nickname}指挥官，方舟启动成功啦！接下来我教你方舟最重要的本领——点一下左边的「专注模式引导」吧！',
-  nextUnitId: 'focus',
+    '对了{child_nickname}，方舟的灯光和声音还没调呢——点一下左边的「设置引导」，我教你把它们调到最舒服的状态～',
+  nextUnitId: 'settings',
   steps: BOARDING_STEPS,
 };

@@ -72,6 +72,6 @@ export const ECO_POND_UNIT: TutorialUnit = {
   subtitle: '介绍生态缸是方舟家园，建立情感连接和长期期待',
   emoji: '🪴',
   storageKey: 'kidshub.tutorial_eco_pond',
-  navOrder: 40, // 独立触发单元（首次进入生态缸升级时）；本单元结束 = 全部引导结束
+  navOrder: 50, // 体验链终点站；本单元结束 = 全部引导结束
   steps: ECO_POND_STEPS,
 };

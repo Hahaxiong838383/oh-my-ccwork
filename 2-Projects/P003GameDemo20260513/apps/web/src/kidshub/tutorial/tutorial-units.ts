@@ -9,14 +9,16 @@ import { NIGHT_REPORT_UNIT } from './tutorial-night-report';
 import { FOCUS_UNIT } from './tutorial-focus';
 import { ECO_POND_UNIT } from './tutorial-eco-pond';
 
-/** 2026-06-12 配表定稿：固定链 登舰(10) → 专注(20) → 夜航(30)；
- *  生态缸(40) 首次进入升级时独立触发；设置(50) 按需独立单元、不在固定链。 */
+/** demo 体验链（川哥 2026-06-13 钦定五站全链）：
+ *  登舰(10) → 设置(20) → 专注(30) → 夜航(40) → 生态缸(50)。
+ *  注：A03 文档 2.3 节的产品触发逻辑（设置/生态缸为独立触发）≠ demo 演示顺序——
+ *  顺序改动以川哥拍板为准，勿因文档对账擅自重排。 */
 export const TUTORIAL_UNITS: TutorialUnit[] = [
   BOARDING_UNIT,
+  SETTINGS_UNIT,
   FOCUS_UNIT,
   NIGHT_REPORT_UNIT,
   ECO_POND_UNIT,
-  SETTINGS_UNIT,
 ].sort((a, b) => a.navOrder - b.navOrder);
 
 export function getUnit(unitId: string): TutorialUnit | null {
