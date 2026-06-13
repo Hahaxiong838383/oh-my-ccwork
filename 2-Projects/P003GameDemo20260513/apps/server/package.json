@@ -4,8 +4,8 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "start": "NO_PROXY=* HTTPS_PROXY= HTTP_PROXY= ALL_PROXY= tsx --env-file=.env.local src/index.ts",
-    "start:debug": "DEBUG_ASR=1 NO_PROXY=* HTTPS_PROXY= HTTP_PROXY= ALL_PROXY= tsx --env-file=.env.local src/index.ts",
+    "start": "NODE_OPTIONS=--experimental-sqlite NO_PROXY=* HTTPS_PROXY= HTTP_PROXY= ALL_PROXY= tsx --env-file=.env.local src/index.ts",
+    "start:debug": "DEBUG_ASR=1 NODE_OPTIONS=--experimental-sqlite NO_PROXY=* HTTPS_PROXY= HTTP_PROXY= ALL_PROXY= tsx --env-file=.env.local src/index.ts",
     "probe:xfyun": "node --env-file=.env.local scripts/xfyun-tts-probe.mjs",
     "probe:gemini": "NO_PROXY=* HTTPS_PROXY= HTTP_PROXY= node --env-file=.env.local scripts/gemini-probe.mjs",
     "probe:volc-asr": "NO_PROXY=* HTTPS_PROXY= HTTP_PROXY= node --env-file=.env.local scripts/volc-asr-probe.mjs",

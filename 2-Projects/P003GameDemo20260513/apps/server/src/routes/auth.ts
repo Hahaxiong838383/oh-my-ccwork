@@ -8,6 +8,7 @@ import { Hono } from 'hono';
  * token 存内存（重启失效），极简失败限流防爆破。
  */
 const validTokens = new Set<string>();
+const tokenUsers = new Map<string, string>();
 
 let failCount = 0;
 let lockedUntil = 0;
@@ -15,6 +16,14 @@ const FAIL_LIMIT = 10;
 const LOCK_MS = 60_000;
 
 export const authRoute = new Hono();
+
+export function isValidToken(token: string): boolean {
+  return validTokens.has(token);
+}
+
+export function getTokenUser(token: string): string | undefined {
+  return tokenUsers.get(token);
+}
 
 authRoute.post('/login', async (c) => {
   const expectedUser = process.env.STUDIO_USER;
@@ -50,12 +59,13 @@ authRoute.post('/login', async (c) => {
   failCount = 0;
   const token = randomBytes(24).toString('hex');
   validTokens.add(token);
+  tokenUsers.set(token, username);
   return c.json({ ok: true, token });
 });
 
 authRoute.get('/check', (c) => {
   const token = c.req.query('token') ?? '';
-  if (token && validTokens.has(token)) {
+  if (token && isValidToken(token)) {
     return c.json({ ok: true });
   }
   return c.json({ ok: false }, 401);

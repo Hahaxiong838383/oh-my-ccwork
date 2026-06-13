@@ -10,7 +10,7 @@ import { CanvasHost } from './components/CanvasHost';
 import { sharedTypewriter } from './subtitle/shared';
 import { DebugFlow } from './components/DebugFlow';
 import { PromptPanel } from './components/PromptPanel';
-import { getSharedVoiceClient } from '../services/voice-client';
+import { getSharedVoiceClient, getKidsHubSessionId } from '../services/voice-client';
 import { useAppStore } from '../store/app-store';
 import { useTutorialStore } from './tutorial/tutorial-store';
 import { ExperienceHintBar, ExperienceLeadModal } from './components/ExperienceFunnel';
@@ -117,6 +117,14 @@ export function StudioPage() {
           await client.connect(getVoiceWsUrl());
         }
         client.sendSessionConfig(composed);
+        // 需求2：发会话元数据（与 prompt 解耦）。card5=反馈场景 → captureMode=feedback，孩子语音落库供后台
+        client.sendSessionMeta({
+          sessionId: getKidsHubSessionId(),
+          sceneId: activeCardId,
+          nickname: useKidsHubStore.getState().variables.nickname || '',
+          captureMode: activeCardId === 'card5' ? 'feedback' : 'off',
+          source: 'card',
+        });
         pushDebug({
           kind: 'config',
           title: `下发 session.config（${composed.length} 字符）· ${card.title}`,

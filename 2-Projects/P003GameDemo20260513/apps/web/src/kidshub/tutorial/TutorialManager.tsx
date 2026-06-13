@@ -10,7 +10,7 @@
  *  - 退出（完成/打断/跳过）：解表情锁 + 恢复待机
  */
 import { useEffect, useRef } from 'react';
-import { getSharedVoiceClient } from '../../services/voice-client';
+import { getSharedVoiceClient, getKidsHubSessionId } from '../../services/voice-client';
 import { sharedTypewriter } from '../subtitle/shared';
 import { useAvatarStore } from '../avatar/avatar-store';
 import { useKidsHubStore } from '../store/kidshub-store';
@@ -123,6 +123,16 @@ export function TutorialManager(): null {
     const client = getSharedVoiceClient();
     try {
       client.sendSessionConfig(buildTutorialSystemPrompt(step));
+      // 需求2：引导期会话元数据。kidshub 单元 = 反馈窗口 → captureMode=feedback（source=tutorial，
+      // 孩子"试一句"会被捕获落库，后台可一键过滤引导来源）；其余单元 off。
+      client.sendSessionMeta({
+        sessionId: getKidsHubSessionId(),
+        sceneId: null,
+        nickname: useKidsHubStore.getState().variables.nickname || '',
+        tutorialUnitId: unitId,
+        captureMode: unitId === 'kidshub' ? 'feedback' : 'off',
+        source: 'tutorial',
+      });
     } catch {
       // 未连接时跳过：speakLine 里会重连，config 缺失只影响兜底插话质量，不影响主线
     }

@@ -1,9 +1,20 @@
+import { createHash, randomBytes } from 'node:crypto';
 import type WebSocket from 'ws';
+import { feedbackStore } from './feedback-store.js';
 import { createGeminiLlmClient, type GeminiLlmClient } from './providers/gemini-llm.js';
 import { createDeepseekLlmClient } from './providers/deepseek-llm.js';
 import { createVolcAsrClient, type VolcAsrClient } from './providers/volc-asr.js';
 import { createVolcTtsClient, type VolcTtsClient } from './providers/volc-tts.js';
 import { createExpressionFilter, stripExpressionTags } from './expression-filter.js';
+
+export type SessionMeta = {
+  sessionId: string;
+  sceneId: string | null;
+  nickname: string;
+  tutorialUnitId?: string;
+  captureMode: 'feedback' | 'off';
+  source: 'card' | 'tutorial';
+};
 
 export type ClientMessage =
   | { type: 'session.start'; sampleRate: number }
@@ -12,6 +23,7 @@ export type ClientMessage =
   | { type: 'barge.in' }
   | { type: 'tts.say'; text: string }
   | { type: 'session.config'; systemPrompt: string }
+  | { type: 'session.meta'; meta: SessionMeta }
   // 文本直入 LLM 管线（绕过 ASR）：工作台开场触发指令用，走完整 LLM→TTS 流
   | { type: 'chat.trigger'; text: string };
 
@@ -33,18 +45,23 @@ const DEFAULT_SYSTEM_PROMPT =
   '你是儿童陪伴机器人小可（K1）。用户是 5-12 岁孩子，叫他"指挥官"。语气温暖、活泼、有耐心。' +
   '日常聊天保持简短自然（30-50 字）；如果指挥官请你讲故事、科普知识、详细解释，可以讲完整（200-500 字，分段叙述）。' +
   '不要刻意凑字数，自然就好。';
+const FEEDBACK_IP_SALT = process.env.FEEDBACK_IP_SALT?.trim() || randomBytes(16).toString('hex');
 
 export class VoicePipeline {
   private readonly ws: WebSocket;
+  private readonly ipHash: string;
   private asr: VolcAsrClient | null = null;
   private tts: VolcTtsClient | null = null;
   private readonly llm: GeminiLlmClient & { abort?: () => void };
   private activeTurn = 0;
+  private feedbackTurnId = 0;
   // KidsHub-AI 工作台下发的完整 system prompt（组装在前端做，server 只存只用）
   private sessionSystemPrompt: string | null = null;
+  private sessionMeta: SessionMeta | null = null;
 
-  constructor(ws: WebSocket) {
+  constructor(ws: WebSocket, clientIp: string) {
     this.ws = ws;
+    this.ipHash = hashIp(clientIp);
     // 按 LLM_PROVIDER 工厂切换：'deepseek' 走 DeepSeek 官方（个人站部署），默认 gemini（公司侧零影响）
     const provider = (process.env.LLM_PROVIDER || '').toLowerCase();
     const rawClient = provider === 'deepseek' ? createDeepseekLlmClient() : createGeminiLlmClient();
@@ -76,6 +93,9 @@ export class VoicePipeline {
       case 'session.config':
         this.sessionSystemPrompt = msg.systemPrompt;
         this.send({ type: 'session.config.ack', chars: msg.systemPrompt.length });
+        return;
+      case 'session.meta':
+        this.sessionMeta = msg.meta;
         return;
       case 'chat.trigger':
         console.log('[pipeline] chat.trigger received:', msg.text.slice(0, 30));
@@ -116,6 +136,7 @@ export class VoicePipeline {
         },
         onFinal: (text) => {
           this.send({ type: 'asr.final', text });
+          this.maybeCaptureUserInput(text);
           if (text.trim()) {
             this.startLlmAndTts(text);
           } else {
@@ -129,6 +150,34 @@ export class VoicePipeline {
       });
     } catch (err) {
       this.sendError('ASR_START_FAILED', toError(err).message);
+    }
+  }
+
+  private maybeCaptureUserInput(text: string): void {
+    const finalText = text.trim();
+    if (!finalText) return;
+
+    if (this.sessionMeta?.captureMode !== 'feedback') {
+      console.log('[feedback] capture_skip', { captureMode: this.sessionMeta?.captureMode ?? 'off' });
+      return;
+    }
+
+    try {
+      const item = feedbackStore.add({
+        session_id: this.sessionMeta.sessionId,
+        turn_id: ++this.feedbackTurnId,
+        source: this.sessionMeta.source,
+        nickname: this.sessionMeta.nickname,
+        scene_id: this.sessionMeta.sceneId,
+        text: finalText,
+        ip_hash: this.ipHash,
+      });
+      console.log('[feedback] capture_ok', { sceneId: item.scene_id, len: item.text.length });
+    } catch (err) {
+      console.error('[feedback] capture_fail', {
+        sessionId: this.sessionMeta.sessionId,
+        message: toError(err).message,
+      });
     }
   }
 
@@ -308,4 +357,10 @@ export class VoicePipeline {
 function toError(err: unknown): Error {
   if (err instanceof Error) return err;
   return new Error(String(err));
+}
+
+function hashIp(ip: string): string {
+  return createHash('sha256')
+    .update(`${FEEDBACK_IP_SALT}${ip}`)
+    .digest('hex');
 }

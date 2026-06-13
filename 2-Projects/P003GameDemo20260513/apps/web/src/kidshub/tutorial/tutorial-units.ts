@@ -7,10 +7,12 @@ import { SETTINGS_UNIT } from './tutorial-settings';
 import { BOARDING_UNIT } from './tutorial-boarding';
 import { NIGHT_REPORT_UNIT } from './tutorial-night-report';
 import { FOCUS_UNIT } from './tutorial-focus';
+import { KIDSHUB_UNIT } from './tutorial-kidshub';
 import { ECO_POND_UNIT } from './tutorial-eco-pond';
 
-/** demo 体验链（川哥 2026-06-13 钦定五站全链）：
- *  登舰(10) → 设置(20) → 专注(30) → 夜航(40) → 生态缸(50)。
+/** demo 体验链（川哥 2026-06-13 钦定六站全链）：
+ *  登舰(10) → 设置(20) → 专注(30) → 夜航(40) → KidsHub(45) → 生态缸(50)。
+ *  KidsHub 引导（需求新增）插夜航后：复盘高点引入"你有什么想说的"（team 2:1 钦定此位）。
  *  注：A03 文档 2.3 节的产品触发逻辑（设置/生态缸为独立触发）≠ demo 演示顺序——
  *  顺序改动以川哥拍板为准，勿因文档对账擅自重排。 */
 export const TUTORIAL_UNITS: TutorialUnit[] = [
@@ -18,6 +20,7 @@ export const TUTORIAL_UNITS: TutorialUnit[] = [
   SETTINGS_UNIT,
   FOCUS_UNIT,
   NIGHT_REPORT_UNIT,
+  KIDSHUB_UNIT,
   ECO_POND_UNIT,
 ].sort((a, b) => a.navOrder - b.navOrder);
 

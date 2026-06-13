@@ -49,9 +49,12 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   const activeCardId = useKidsHubStore((s) => s.activeCardId);
   const selectCard = useKidsHubStore((s) => s.selectCard);
   const pushDebug = useKidsHubStore((s) => s.pushDebug);
+  const voiceSpeed = useKidsHubStore((s) => s.voiceSpeed);
+  const setVoiceSpeed = useKidsHubStore((s) => s.setVoiceSpeed);
   const tutorialActive = useTutorialStore((s) => s.isActive);
   const tutorialUnitId = useTutorialStore((s) => s.unitId);
   const tutorialStepIndex = useTutorialStore((s) => s.stepIndex);
+  const skipAllTutorials = useTutorialStore((s) => s.skipAll);
 
   const setVoiceStatus = useAppStore((s) => s.setVoiceStatus);
   const setSubtitle = useAppStore((s) => s.setSubtitle);
@@ -76,6 +79,11 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   if (!clientRef.current) {
     clientRef.current = getSharedVoiceClient();
   }
+
+  // 需求3：语速变化（含初次挂载）即时应用到语音客户端，下一段 TTS 生效
+  useEffect(() => {
+    clientRef.current?.setPlaybackRate(voiceSpeed);
+  }, [voiceSpeed]);
 
   // 周期同步连接状态（给顶栏用）+ 断线静默重连（节流 5s）：
   // 国内→香港 wss 长连接偶发被运营商掐断，掉线后不自愈的话用户侧表现就是"没反应"
@@ -375,6 +383,9 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
               <FocusCanvasContent />
             ) : tutorialUnitId === 'eco-pond' ? (
               <EcoPondCanvasContent />
+            ) : tutorialUnitId === 'kidshub' ? (
+              // 需求1：KidsHub 引导用 card5「情绪回应/点子墙」场景做背景，主题契合
+              <CardScene card={getSceneCard('card5') ?? null} />
             ) : (
               <TutorialCanvasContent />
             )
@@ -449,6 +460,34 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
           >
             🎭 表情库
           </button>
+
+          {/* 需求3：小可语速 1× / 1.5× / 2× */}
+          <div className="flex items-center gap-1 rounded-full border border-white/10 bg-neutral-800 px-1.5 py-0.5">
+            <span className="px-1 text-[11px] text-neutral-500">语速</span>
+            {[1, 1.5, 2].map((sp) => (
+              <button
+                key={sp}
+                onClick={() => setVoiceSpeed(sp)}
+                title={`小可语速 ${sp}×`}
+                className={`rounded-full px-2 py-0.5 text-xs transition ${
+                  voiceSpeed === sp ? 'bg-sky-500 text-white' : 'text-neutral-400 hover:bg-neutral-700'
+                }`}
+              >
+                {sp}×
+              </button>
+            ))}
+          </div>
+
+          {/* 需求4：一键跳过新手引导（仅引导进行中显示） */}
+          {tutorialActive && (
+            <button
+              onClick={skipAllTutorials}
+              title="跳过全部新手引导，直接开始体验"
+              className="rounded-full border border-amber-400/30 bg-amber-400/10 px-4 py-1.5 text-sm text-amber-200/90 transition hover:bg-amber-400/20 active:bg-amber-400/5"
+            >
+              ⏭ 跳过引导
+            </button>
+          )}
         </div>
 
         <div className="text-[11px] text-neutral-500">

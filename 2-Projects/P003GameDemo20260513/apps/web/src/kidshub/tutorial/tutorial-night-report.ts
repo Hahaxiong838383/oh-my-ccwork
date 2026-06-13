@@ -136,9 +136,9 @@ export const NIGHT_REPORT_UNIT: TutorialUnit = {
   subtitle: '理解离线收益机制，领取首日奖励',
   emoji: '🌙',
   storageKey: 'kidshub.tutorial_night_report',
-  navOrder: 40, // 体验链第四站（川哥 2026-06-13 钦定：登舰 → 设置 → 专注 → 夜航 → 生态缸）
+  navOrder: 40, // 体验链第四站（登舰 → 设置 → 专注 → 夜航 → KidsHub → 生态缸）
   outroCopy:
-    '对了，还有一个最特别的地方没带你看——点一下「生态缸引导」，去看看你的专属家园吧！',
-  nextUnitId: 'eco-pond',
+    '夜航的秘密你都懂啦！对了，我还想偷偷问你一件事——点一下「KidsHub 引导」，让我听听你的想法好不好？',
+  nextUnitId: 'kidshub',
   steps: NIGHT_REPORT_STEPS,
 };

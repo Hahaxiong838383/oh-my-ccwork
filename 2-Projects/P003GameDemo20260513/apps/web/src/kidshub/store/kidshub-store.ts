@@ -21,6 +21,8 @@ const DRAFTS_KEY = 'kidshub.scenePromptDrafts';
 const GLOBALS_KEY = 'kidshub.globalTemplate.v4';
 const VARS_KEY = 'kidshub.variables';
 const ADDENDUM_KEY = 'kidshub.addendum.v5';
+// 需求3：小可语速（1 / 1.5 / 2），持久化
+const VOICE_SPEED_KEY = 'kidshub.voiceSpeed';
 
 export interface DebugEntry {
   ts: number;
@@ -43,6 +45,10 @@ interface KidsHubState {
   variables: Record<string, string>;
   // 工程附加规则（防示例复读 + KidsHub 全局响应），清空 = 关闭
   addendum: string;
+
+  // 需求3：小可语速（TTS 播放速率）1 / 1.5 / 2
+  voiceSpeed: number;
+  setVoiceSpeed: (n: number) => void;
 
   // debug
   debugLog: DebugEntry[];
@@ -148,6 +154,7 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
     scenePromptDrafts: mergedDrafts,
     variables: { ...factoryDefaults.variables, ...savedVars },
     addendum: savedAddendum,
+    voiceSpeed: loadFromStorage<number>(VOICE_SPEED_KEY, 1),
     debugLog: [],
     promptDirty: false,
     lastFramingAngle: null,
@@ -159,6 +166,11 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
     setToken: (t) => {
       saveToken(t);
       set({ token: t });
+    },
+
+    setVoiceSpeed: (n) => {
+      saveToStorage(VOICE_SPEED_KEY, n);
+      set({ voiceSpeed: n });
     },
 
     selectCard: (id) => {

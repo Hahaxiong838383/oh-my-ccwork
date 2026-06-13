@@ -43,6 +43,8 @@ interface TutorialState {
   complete: () => void;
   /** 打断退出（点其他场景卡等）：不标记完成（A03 §2.4） */
   interrupt: () => void;
+  /** 一键跳过全部新手引导（需求4）：标记所有单元已完成 + 退出，不再触发 */
+  skipAll: () => void;
   /** 调试：清全部单元完成标记 + 重置 */
   resetForDebug: () => void;
 }
@@ -157,6 +159,16 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
     set((s) => ({
       isActive: false,
       panelOpen: false,
+      generation: s.generation + 1,
+    }));
+  },
+
+  skipAll: () => {
+    for (const unit of TUTORIAL_UNITS) writeCompleted(unit.id, true);
+    set((s) => ({
+      isActive: false,
+      panelOpen: false,
+      completedUnits: Object.fromEntries(TUTORIAL_UNITS.map((u) => [u.id, true])),
       generation: s.generation + 1,
     }));
   },

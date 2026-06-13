@@ -1,8 +1,9 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { WebSocketServer, type RawData, type WebSocket } from 'ws';
-import { VoicePipeline, type ClientMessage } from './pipeline.js';
+import { VoicePipeline, type ClientMessage, type SessionMeta } from './pipeline.js';
 import { authRoute } from './routes/auth.js';
+import { feedbackRoute } from './routes/feedback.js';
 import { visionRoute } from './routes/vision.js';
 import { checkAndCount, getClientIp } from './guard.js';
 
@@ -11,6 +12,7 @@ const port = Number(process.env.PORT ?? 8787);
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
 app.route('/api/auth', authRoute);
+app.route('/api/feedback', feedbackRoute);
 app.route('/api/vision', visionRoute);
 
 const server = serve(
@@ -55,7 +57,7 @@ wss.on('connection', (ws, req) => {
     return;
   }
 
-  const pipeline = new VoicePipeline(ws);
+  const pipeline = new VoicePipeline(ws, clientIp);
   // 连接生命周期日志：公网排障用（客户端"没反应"时分辨 ws 是否到达 server、活了多久、传了什么）
   const openedAt = Date.now();
   let msgCount = 0;
@@ -134,6 +136,10 @@ function decodeClientMessage(data: RawData, isBinary: boolean): ClientMessage | 
       if (!systemPrompt.trim() || systemPrompt.length > 32000) return null;
       return { type: 'session.config', systemPrompt };
     }
+    case 'session.meta': {
+      const meta = parseSessionMeta(rec);
+      return meta ? { type: 'session.meta', meta } : null;
+    }
     case 'chat.trigger': {
       const text = typeof rec.text === 'string' ? rec.text : '';
       if (!text.trim() || text.length > 2000) return null;
@@ -142,6 +148,31 @@ function decodeClientMessage(data: RawData, isBinary: boolean): ClientMessage | 
     default:
       return null;
   }
+}
+
+function parseSessionMeta(rec: Record<string, unknown>): SessionMeta | null {
+  const sessionId = typeof rec.sessionId === 'string' ? rec.sessionId.trim() : '';
+  if (!sessionId) return null;
+
+  const sceneIdValue = rec.sceneId;
+  if (sceneIdValue !== null && typeof sceneIdValue !== 'string') return null;
+  const sceneId = typeof sceneIdValue === 'string' && sceneIdValue.trim() ? sceneIdValue.trim() : null;
+
+  const nickname = typeof rec.nickname === 'string' ? rec.nickname : '';
+  const tutorialUnitId =
+    typeof rec.tutorialUnitId === 'string' && rec.tutorialUnitId.trim() ? rec.tutorialUnitId.trim() : undefined;
+  const source = rec.source === 'card' || rec.source === 'tutorial' ? rec.source : null;
+  if (!source) return null;
+
+  const captureMode = rec.captureMode === 'feedback' || rec.captureMode === 'off' ? rec.captureMode : 'off';
+  return {
+    sessionId,
+    sceneId,
+    nickname,
+    tutorialUnitId,
+    captureMode,
+    source,
+  };
 }
 
 function toBuffer(data: RawData): Buffer {

@@ -1,3 +1,16 @@
+/**
+ * 会话元数据（需求2）：与 prompt 解耦的"当前会话是谁、在哪个场景、要不要捕获反馈"。
+ * server 按 captureMode 决定是否把孩子 ASR 转写落进反馈库。sceneId=card5 或引导 kidshub 单元 → 'feedback'。
+ */
+export interface SessionMeta {
+  sessionId: string;
+  sceneId: string | null;
+  nickname: string;
+  tutorialUnitId?: string;
+  captureMode: 'feedback' | 'off';
+  source: 'card' | 'tutorial';
+}
+
 export interface VoiceClient {
   connect(url: string): Promise<void>;
   isConnected(): boolean;
@@ -11,8 +24,12 @@ export interface VoiceClient {
   sayDirect(text: string, onAudioStart?: () => void): void;
   // KidsHub-AI 工作台：下发组装好的完整 system prompt（server 存到当前连接）
   sendSessionConfig(systemPrompt: string): void;
+  // 需求2：下发会话元数据（sceneId/nickname/captureMode），与 config 解耦
+  sendSessionMeta(meta: SessionMeta): void;
   // KidsHub-AI 工作台：文本直入 LLM 管线（开场触发指令，走完整 LLM→TTS）
   sendChatTrigger(text: string): void;
+  // 需求3：小可语速（TTS 播放速率）1 / 1.5 / 2；立即对后续音频段生效
+  setPlaybackRate(rate: number): void;
   unlockAudio(): Promise<void>;
   on(event: VoiceEvent, cb: (data: any) => void): void;
   off(event: VoiceEvent, cb: (data: any) => void): void;
@@ -94,6 +111,10 @@ class VoiceClientImpl implements VoiceClient {
   // （每句话标点触发，段是完整一句话，mp3 priming silence 占比 < 2% 不可感）
   // 600ms 仅在「一句话没标点 / sentence_break 信号缺失」边界场景触发兜底
   private readonly mp3FlushDelayMs = 600;
+
+  // 需求3：小可语速（TTS 播放速率）。1=正常，1.5/2=加速。注意 Web Audio playbackRate 会同时升调，
+  // 加速时音色偏尖（无音高保持，时间拉伸需第三方库，demo 接受此权衡）。
+  private playbackRate = 1;
 
   isConnected(): boolean {
     return !!(this.ws && this.ws.readyState === WebSocket.OPEN);
@@ -432,12 +453,15 @@ class VoiceClientImpl implements VoiceClient {
 
       const src = ctx.createBufferSource();
       src.buffer = buffer;
+      // 需求3：应用语速（同时升调，demo 接受）。effDur = 真实播放时长 = buffer.duration / rate
+      src.playbackRate.value = this.playbackRate;
       src.connect(ctx.destination);
 
       const now = ctx.currentTime;
       const startAt = Math.max(now, this.playbackScheduledAt);
       src.start(startAt);
-      this.playbackScheduledAt = startAt + buffer.duration;
+      const effDur = buffer.duration / this.playbackRate;
+      this.playbackScheduledAt = startAt + effDur;
       this.playbackSources.push(src);
       const generation = this.playbackGeneration;
       src.onended = () => {
@@ -463,7 +487,7 @@ class VoiceClientImpl implements VoiceClient {
         }, delayMs);
       }
       if (reason === 'boundary') {
-        const endDelayMs = Math.max(0, (startAt + buffer.duration - now) * 1000);
+        const endDelayMs = Math.max(0, (startAt + effDur - now) * 1000);
         window.setTimeout(() => {
           if (generation === this.playbackGeneration) this.emit('tts.segment_start', {});
         }, endDelayMs);
@@ -553,12 +577,24 @@ class VoiceClientImpl implements VoiceClient {
     this.ws.send(JSON.stringify({ type: 'session.config', systemPrompt }));
   }
 
+  sendSessionMeta(meta: SessionMeta): void {
+    // best-effort：meta 是辅助上下文，ws 没就绪时静默跳过（不像 config 抛错），
+    // 下次切卡/切步会重发。绝不因 meta 发送失败影响语音主链路。
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ type: 'session.meta', ...meta }));
+  }
+
   sendChatTrigger(text: string): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       throw new Error(`触发失败：WebSocket 未就绪（readyState=${this.ws?.readyState ?? 'null'}）`);
     }
     // server 端 startLlmAndTts 内部会 bargein，旧轮自动让位
     this.ws.send(JSON.stringify({ type: 'chat.trigger', text }));
+  }
+
+  setPlaybackRate(rate: number): void {
+    // 容错：只接受正常范围，非法值兜回 1
+    this.playbackRate = rate > 0 && rate <= 4 ? rate : 1;
   }
 
   async unlockAudio(): Promise<void> {
@@ -730,6 +766,20 @@ let sharedInstance: VoiceClient | null = null;
 export function getSharedVoiceClient(): VoiceClient {
   if (!sharedInstance) sharedInstance = createVoiceClient();
   return sharedInstance;
+}
+
+// 需求2：本次页面会话 id（同一访问内稳定），StudioPage / TutorialManager 发 meta 共用，
+// 便于后端按 session 去重 + 关联同一孩子的多条吐槽。
+let kidsHubSessionId: string | null = null;
+export function getKidsHubSessionId(): string {
+  if (!kidsHubSessionId) {
+    try {
+      kidsHubSessionId = crypto.randomUUID();
+    } catch {
+      kidsHubSessionId = `sess-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    }
+  }
+  return kidsHubSessionId;
 }
 
 /** 仅测试用：清掉单例（让 unit test 之间互不污染） */
