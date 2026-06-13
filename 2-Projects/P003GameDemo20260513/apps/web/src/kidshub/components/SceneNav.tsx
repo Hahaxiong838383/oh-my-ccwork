@@ -5,6 +5,7 @@ import { TUTORIAL_UNITS } from '../tutorial/tutorial-units';
 import { getSharedVoiceClient } from '../../services/voice-client';
 import { sharedTypewriter } from '../subtitle/shared';
 import { useAppStore } from '../../store/app-store';
+import { useExperienceStore, EXPERIENCE_QUOTA_ENABLED } from '../store/experience-store';
 
 export function SceneNav() {
   const activeCardId = useKidsHubStore((s) => s.activeCardId);
@@ -88,6 +89,12 @@ export function SceneNav() {
             <button
               key={card.id}
               onClick={() => {
+                // 公开模式场景卡额度用尽：直接弹窗引导加微信，不切画面、不再放行
+                // （每次点都弹，关掉弹窗后继续点仍弹——堵住"关弹窗后无限白嫖"）
+                if (EXPERIENCE_QUOTA_ENABLED && !useExperienceStore.getState().canScene()) {
+                  useExperienceStore.getState().openModal();
+                  return;
+                }
                 // 引导中点卡 = 打断（同卡 id 不会触发 StudioPage 的换卡 effect，这里兜住）
                 const t = useTutorialStore.getState();
                 if (t.isActive) {

@@ -419,7 +419,14 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
 
           {/* KidsHub 反馈是贯穿小可体验的全局能力（任何场景都可吐槽/提建议），常驻入口 */}
           <button
-            onClick={() => selectCard('card5')}
+            onClick={() => {
+              // card5 也是一次场景卡切换，公开模式超限同样拦截弹窗
+              if (EXPERIENCE_QUOTA_ENABLED && !useExperienceStore.getState().canScene()) {
+                useExperienceStore.getState().openModal();
+                return;
+              }
+              selectCard('card5');
+            }}
             title="KidsHub 反馈贯穿所有场景：随时切到卡 5 体验完整反馈流（附加规则已让所有场景都能接住建议/吐槽）"
             className={`rounded-full px-4 py-1.5 text-sm transition ${
               activeCardId === 'card5'

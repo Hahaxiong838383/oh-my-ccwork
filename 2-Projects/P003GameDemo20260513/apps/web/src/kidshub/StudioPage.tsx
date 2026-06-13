@@ -98,8 +98,9 @@ export function StudioPage() {
       if (EXPERIENCE_QUOTA_ENABLED) {
         const exp = useExperienceStore.getState();
         if (!exp.canScene()) {
-          if (!exp.modalShownOnce) exp.openModal();
-          pushDebug({ kind: 'action', title: '🔒 体验次数已达上限——仅切换画面，加微信继续深聊' });
+          // 兜底（正常已被 SceneNav/card5 入口拦截不会进卡）：超限每次都弹窗，不下发对话
+          exp.openModal();
+          pushDebug({ kind: 'action', title: '🔒 体验次数已达上限——加微信继续深聊' });
           return;
         }
         exp.recordSceneClick();

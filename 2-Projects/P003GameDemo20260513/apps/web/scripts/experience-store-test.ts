@@ -25,7 +25,7 @@ const s = () => useExperienceStore.getState();
 s().reset();
 assert(s().canScene() && s().canVoice(), '初始：canScene && canVoice');
 assert(!s().shouldShowHint(), '初始：无轻提示');
-assert(!s().modalOpen && !s().modalShownOnce, '初始：弹窗关闭');
+assert(!s().modalOpen, '初始：弹窗关闭');
 
 // 2. 场景卡计数到上限
 s().reset();
@@ -63,17 +63,19 @@ s().reset();
 for (let i = 0; i < MAX_SCENE_CLICKS; i++) s().recordSceneClick();
 assert(!s().shouldShowHint(), '场景卡超限后：轻提示消失（让位弹窗）');
 
-// 7. 弹窗状态机：openModal 置 shownOnce，closeModal 只关 open 不清 shownOnce
+// 7. 弹窗：可反复 open（超限后每次交互都弹，不静默放行）
 s().reset();
 s().openModal();
-assert(s().modalOpen && s().modalShownOnce, 'openModal：open + shownOnce 都置位');
+assert(s().modalOpen, 'openModal：modalOpen 置位');
 s().closeModal();
-assert(!s().modalOpen && s().modalShownOnce, 'closeModal：关 open 但保留 shownOnce（软退路不重复自动弹）');
+assert(!s().modalOpen, 'closeModal：关闭弹窗');
+s().openModal();
+assert(s().modalOpen, '关闭后可再次 openModal（堵住关弹窗后无限白嫖）');
 
 // 8. reset 清空一切
 s().reset();
 assert(
-  s().sceneClicks === 0 && s().voiceRounds === 0 && !s().modalShownOnce && !s().modalOpen,
+  s().sceneClicks === 0 && s().voiceRounds === 0 && !s().modalOpen && !s().hintDismissed,
   'reset 清空全部计数与状态',
 );
 

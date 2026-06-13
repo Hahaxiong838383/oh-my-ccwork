@@ -10,8 +10,9 @@ import { create } from 'zustand';
  *  - sceneClicks（场景卡点击 = 浏览，上限 6）：点卡触发的自动开场白不算进对话额度
  *  - voiceRounds（按住说话 = 深度语音对话，上限 5）
  *
- * 软退路：场景卡超限后首次弹窗，之后只切画面看美术（不再发对话、不再弹）；
- * 语音超限后按住说话即弹窗引导（语音是真消耗，不放行但不锁死整个界面）。
+ * 超限后：由入口（SceneNav 卡片 / CanvasHost card5 与按住说话）拦截，每次点击都弹窗，
+ * 不静默放行——堵住"关掉弹窗后继续无限点"。弹窗本身可关闭（不死锁界面），但任何
+ * 主交互都会再次弹窗。
  */
 
 // 仅个人站公开部署启用限额漏斗；公司侧（VITE_KIDSHUB_PUBLIC 未设）完全不拦
@@ -29,11 +30,10 @@ const STORAGE_KEY = 'kidshub.experience.quota.v1';
 interface PersistShape {
   sceneClicks: number;
   voiceRounds: number;
-  modalShownOnce: boolean;
 }
 
 function loadPersisted(): PersistShape {
-  const fallback: PersistShape = { sceneClicks: 0, voiceRounds: 0, modalShownOnce: false };
+  const fallback: PersistShape = { sceneClicks: 0, voiceRounds: 0 };
   try {
     if (typeof localStorage === 'undefined') return fallback;
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -42,7 +42,6 @@ function loadPersisted(): PersistShape {
     return {
       sceneClicks: Number(parsed.sceneClicks) || 0,
       voiceRounds: Number(parsed.voiceRounds) || 0,
-      modalShownOnce: Boolean(parsed.modalShownOnce),
     };
   } catch {
     return fallback;
@@ -61,7 +60,6 @@ function persist(shape: PersistShape): void {
 interface ExperienceState {
   sceneClicks: number;
   voiceRounds: number;
-  modalShownOnce: boolean;
   modalOpen: boolean;
   hintDismissed: boolean; // session 级，不持久化
 
@@ -89,7 +87,6 @@ export const useExperienceStore = create<ExperienceState>((set, get) => {
   return {
     sceneClicks: init.sceneClicks,
     voiceRounds: init.voiceRounds,
-    modalShownOnce: init.modalShownOnce,
     modalOpen: false,
     hintDismissed: false,
 
@@ -99,14 +96,14 @@ export const useExperienceStore = create<ExperienceState>((set, get) => {
     recordSceneClick: () =>
       set((s) => {
         const sceneClicks = s.sceneClicks + 1;
-        persist({ sceneClicks, voiceRounds: s.voiceRounds, modalShownOnce: s.modalShownOnce });
+        persist({ sceneClicks, voiceRounds: s.voiceRounds });
         return { sceneClicks };
       }),
 
     recordVoiceRound: () =>
       set((s) => {
         const voiceRounds = s.voiceRounds + 1;
-        persist({ sceneClicks: s.sceneClicks, voiceRounds, modalShownOnce: s.modalShownOnce });
+        persist({ sceneClicks: s.sceneClicks, voiceRounds });
         return { voiceRounds };
       }),
 
@@ -119,18 +116,12 @@ export const useExperienceStore = create<ExperienceState>((set, get) => {
     },
     dismissHint: () => set({ hintDismissed: true }),
 
-    openModal: () =>
-      set((s) => {
-        if (!s.modalShownOnce) {
-          persist({ sceneClicks: s.sceneClicks, voiceRounds: s.voiceRounds, modalShownOnce: true });
-        }
-        return { modalOpen: true, modalShownOnce: true };
-      }),
+    openModal: () => set({ modalOpen: true }),
     closeModal: () => set({ modalOpen: false }),
 
     reset: () => {
-      persist({ sceneClicks: 0, voiceRounds: 0, modalShownOnce: false });
-      set({ sceneClicks: 0, voiceRounds: 0, modalShownOnce: false, modalOpen: false, hintDismissed: false });
+      persist({ sceneClicks: 0, voiceRounds: 0 });
+      set({ sceneClicks: 0, voiceRounds: 0, modalOpen: false, hintDismissed: false });
     },
   };
 });
