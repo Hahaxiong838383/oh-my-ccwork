@@ -198,7 +198,10 @@ export function StudioPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-neutral-950 text-neutral-200">
+    // 外层滚动兜底：视口小于最小可用布局（960×480）时出滚动条而不是 overflow 裁切——
+    // 任意浏览器/窗口尺寸下控制条按钮永远可达；正常视口下无滚动条，行为不变
+    <div className="h-screen overflow-auto bg-neutral-950 text-neutral-200">
+      <div className="flex h-full min-h-[480px] min-w-[960px] flex-col">
       {/* 顶栏 */}
       <div className="flex items-center justify-between border-b border-white/10 bg-neutral-900 px-4 py-2 text-sm">
         <div className="flex items-center gap-3">
@@ -310,6 +313,7 @@ export function StudioPage() {
           {toast}
         </div>
       )}
+      </div>
     </div>
   );
 }

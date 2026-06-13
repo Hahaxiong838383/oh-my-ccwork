@@ -27,6 +27,15 @@
         "cd /Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/apps/web && VITE_NO_HTTPS=1 VITE_PUBLIC_BASE=/kidshub-ai/ VITE_DISABLE_PWA=1 VITE_KIDSHUB_PUBLIC=1 ../../node_modules/.bin/vite preview --outDir dist-personal --port 4173 --strictPort"
       ],
       "port": 4173
+    },
+    {
+      "name": "kidshub-public-dev",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/apps/web && VITE_NO_HTTPS=1 VITE_KIDSHUB_PUBLIC=1 ../../node_modules/.bin/vite --port 5175 --strictPort"
+      ],
+      "port": 5175
     }
   ]
 }
