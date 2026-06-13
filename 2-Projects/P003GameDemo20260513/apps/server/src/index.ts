@@ -159,6 +159,8 @@ function parseSessionMeta(rec: Record<string, unknown>): SessionMeta | null {
   const sceneId = typeof sceneIdValue === 'string' && sceneIdValue.trim() ? sceneIdValue.trim() : null;
 
   const nickname = typeof rec.nickname === 'string' ? rec.nickname : '';
+  const gender = typeof rec.gender === 'string' ? rec.gender : '';
+  const age = typeof rec.age === 'string' ? rec.age : '';
   const tutorialUnitId =
     typeof rec.tutorialUnitId === 'string' && rec.tutorialUnitId.trim() ? rec.tutorialUnitId.trim() : undefined;
   const source = rec.source === 'card' || rec.source === 'tutorial' ? rec.source : null;
@@ -169,6 +171,8 @@ function parseSessionMeta(rec: Record<string, unknown>): SessionMeta | null {
     sessionId,
     sceneId,
     nickname,
+    gender,
+    age,
     tutorialUnitId,
     captureMode,
     source,

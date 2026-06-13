@@ -11,6 +11,8 @@ export type SessionMeta = {
   sessionId: string;
   sceneId: string | null;
   nickname: string;
+  gender: string;
+  age: string;
   tutorialUnitId?: string;
   captureMode: 'feedback' | 'off';
   source: 'card' | 'tutorial';
@@ -188,6 +190,8 @@ export class VoicePipeline {
         turn_id: ++this.feedbackTurnId,
         source: meta.source,
         nickname: meta.nickname,
+        gender: meta.gender,
+        age: meta.age,
         scene_id: meta.sceneId,
         text: finalText,
         ip_hash: this.ipHash,

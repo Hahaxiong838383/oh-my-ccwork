@@ -10,6 +10,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [nickname, setNickname] = useState('');
   const [gender, setGender] = useState<'男' | '女'>('男');
+  const [age, setAge] = useState('8');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,9 +36,10 @@ export function LoginPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.ok && data?.token) {
-        // 孩子昵称 + 性别作为设备信息带入：注入 prompt 变量（{nickname}/{gender}）供小可交互
+        // 孩子昵称 + 性别 + 年龄作为设备信息带入：注入 prompt 变量（{nickname}/{gender}/{age}）供小可交互
         setVariable('nickname', nickname.trim());
         setVariable('gender', gender);
+        setVariable('age', age);
         setToken(data.token as string);
       } else if (res.status === 429) {
         setError('请求太频繁，请稍后再试');
@@ -122,6 +124,21 @@ export function LoginPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-neutral-400">年龄</label>
+            <select
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
+            >
+              {Array.from({ length: 18 }, (_, i) => String(i + 3)).map((a) => (
+                <option key={a} value={a}>
+                  {a} 岁
+                </option>
+              ))}
+            </select>
           </div>
 
           {error && (

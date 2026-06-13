@@ -143,6 +143,8 @@ export function StudioPage() {
           sessionId: getKidsHubSessionId(),
           sceneId: activeCardId,
           nickname: useKidsHubStore.getState().variables.nickname || '',
+          gender: useKidsHubStore.getState().variables.gender || '',
+          age: useKidsHubStore.getState().variables.age || '',
           captureMode: 'off',
           source: 'card',
         });

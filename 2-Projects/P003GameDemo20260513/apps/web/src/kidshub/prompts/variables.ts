@@ -21,6 +21,12 @@ export const PROMPT_VARIABLES: PromptVariable[] = [
     defaultValue: '男',
   },
   {
+    key: 'age',
+    label: '孩子年龄',
+    source: '登录页家长/孩子填写（岁）',
+    defaultValue: '8',
+  },
+  {
     key: 'commander_suffix',
     label: '指挥官后缀开关',
     source: '场景判定：登舰 / 授勋 / 回归高光 / 夜航结算 = on',

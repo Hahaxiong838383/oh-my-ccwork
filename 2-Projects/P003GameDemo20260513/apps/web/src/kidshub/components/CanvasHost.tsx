@@ -287,6 +287,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
         sessionId: getKidsHubSessionId(),
         sceneId: activeCardId,
         nickname: useKidsHubStore.getState().variables.nickname || '',
+        gender: useKidsHubStore.getState().variables.gender || '',
+        age: useKidsHubStore.getState().variables.age || '',
         tutorialUnitId: tutorialActive ? tutorialUnitId : undefined,
         captureMode: wantFeedback ? 'feedback' : 'off',
         source: tutorialActive ? 'tutorial' : 'card',

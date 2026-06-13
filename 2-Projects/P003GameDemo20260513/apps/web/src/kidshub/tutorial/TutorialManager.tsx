@@ -129,6 +129,8 @@ export function TutorialManager(): null {
         sessionId: getKidsHubSessionId(),
         sceneId: null,
         nickname: useKidsHubStore.getState().variables.nickname || '',
+        gender: useKidsHubStore.getState().variables.gender || '',
+        age: useKidsHubStore.getState().variables.age || '',
         tutorialUnitId: unitId,
         captureMode: unitId === 'kidshub' ? 'feedback' : 'off',
         source: 'tutorial',

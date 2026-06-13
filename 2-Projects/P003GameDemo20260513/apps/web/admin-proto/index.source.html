@@ -1212,7 +1212,7 @@
                         </div>
                         <div style="display:flex;flex-direction:column;gap:10px">
                           <div class="kh-issue" v-for="it in col.items" :key="it.id" @click="openRealIssue(it)">
-                            <div class="iid">{{ it.id }} · {{ it.nickname || '匿名' }}</div>
+                            <div class="iid">{{ it.id }} · {{ it.nickname || '匿名' }}<span v-if="it.gender || it.age" style="color:#909399"> · {{ it.gender }}{{ it.age ? it.age + '岁' : '' }}</span></div>
                             <p style="margin:6px 0 8px;font-size:13px;line-height:1.4">{{ it.text }}</p>
                             <div class="meta">
                               <span>{{ getSceneLabel(it.sceneId) }}</span>
@@ -1409,6 +1409,8 @@
                 <div style="font-size:15px;font-weight:700;margin-bottom:10px;line-height:1.35">{{ realDrawer.text }}</div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
                   <span style="font-size:12px;background:#f6f8fa;padding:2px 8px;border-radius:4px">昵称：{{ realDrawer.nickname || '—' }}</span>
+                  <span style="font-size:12px;background:#f6f8fa;padding:2px 8px;border-radius:4px">性别：{{ realDrawer.gender || '—' }}</span>
+                  <span style="font-size:12px;background:#f6f8fa;padding:2px 8px;border-radius:4px">年龄：{{ realDrawer.age ? realDrawer.age + ' 岁' : '—' }}</span>
                   <span style="font-size:12px;background:#f6f8fa;padding:2px 8px;border-radius:4px">场景：{{ getSceneLabel(realDrawer.sceneId) }}</span>
                   <span style="font-size:12px;background:#f6f8fa;padding:2px 8px;border-radius:4px">来源：{{ realDrawer.source || '—' }}{{ realDrawer.source==='tutorial' ? '（引导测试）' : '' }}</span>
                   <span style="font-size:12px;background:#f6f8fa;padding:2px 8px;border-radius:4px">时间：{{ fmtTs(realDrawer.ts) }}</span>
@@ -2311,6 +2313,8 @@
             turn_id: raw.turn_id || raw.turnId || '',
             source: raw.source || 'card',
             nickname: raw.nickname || '',
+            gender: raw.gender || '',
+            age: raw.age || '',
             sceneId: raw.sceneId || raw.scene_id || raw.sceneID || '',
             text: raw.text || '',
             status: raw.status || '已收到',

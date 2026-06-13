@@ -14,6 +14,9 @@ export type FeedbackItem = {
   source: string;
   ts: number;
   nickname: string;
+  // 设备信息（登录页收集，随 session.meta 落库）：性别 / 年龄，后台按孩子画像分析反馈用
+  gender: string;
+  age: string;
   scene_id: string | null;
   text: string;
   status: FeedbackStatus;
@@ -28,6 +31,8 @@ export type FeedbackAddInput = {
   turn_id: number;
   source: string;
   nickname: string;
+  gender: string;
+  age: string;
   scene_id: string | null;
   text: string;
   ip_hash: string;
@@ -40,6 +45,8 @@ type FeedbackRow = {
   source: string;
   ts: number;
   nickname: string;
+  gender: string;
+  age: string;
   scene_id: string | null;
   text: string;
   status: string;
@@ -58,6 +65,27 @@ type FeedbackUpdateInput = {
 const DEFAULT_DB_PATH = './data/feedback.db';
 const DEDUPE_WINDOW_MS = 30_000;
 
+// 列清单单一真相：建表 / SELECT / INSERT 共用，加字段只改这里（防多处 SQL 漏列）
+const FEEDBACK_COLUMNS = [
+  'id',
+  'session_id',
+  'turn_id',
+  'source',
+  'ts',
+  'nickname',
+  'gender',
+  'age',
+  'scene_id',
+  'text',
+  'status',
+  'note',
+  'updated_at',
+  'updated_by',
+  'ip_hash',
+] as const;
+
+const SELECT_COLS = FEEDBACK_COLUMNS.join(', ');
+
 function resolveDbPath(): string {
   const rawPath = process.env.FEEDBACK_DB_PATH?.trim() || DEFAULT_DB_PATH;
   return resolve(process.cwd(), rawPath);
@@ -73,6 +101,8 @@ function toFeedbackItem(row: FeedbackRow | null | undefined): FeedbackItem | nul
     source: row.source,
     ts: row.ts,
     nickname: row.nickname,
+    gender: row.gender,
+    age: row.age,
     scene_id: row.scene_id,
     text: row.text,
     status: row.status,
@@ -103,6 +133,8 @@ class FeedbackStore {
         source TEXT NOT NULL,
         ts INTEGER NOT NULL,
         nickname TEXT NOT NULL,
+        gender TEXT NOT NULL DEFAULT '',
+        age TEXT NOT NULL DEFAULT '',
         scene_id TEXT,
         text TEXT NOT NULL,
         status TEXT NOT NULL,
@@ -116,6 +148,17 @@ class FeedbackStore {
       CREATE INDEX IF NOT EXISTS idx_feedback_items_session_text_ts
       ON feedback_items (session_id, text, ts DESC);
     `);
+    // 生产已有 feedback_items 表（建于无 gender/age 的版本）→ 补列保留旧数据
+    // （CREATE TABLE IF NOT EXISTS 不会改已存在表，必须显式 ALTER）
+    this.migrateAddColumn('gender', "TEXT NOT NULL DEFAULT ''");
+    this.migrateAddColumn('age', "TEXT NOT NULL DEFAULT ''");
+  }
+
+  /** 幂等加列：列已存在则跳过，否则 ALTER TABLE ADD COLUMN（旧行用 DEFAULT 填充） */
+  private migrateAddColumn(col: string, def: string): void {
+    const cols = this.db.prepare('PRAGMA table_info(feedback_items)').all() as { name: string }[];
+    if (cols.some((c) => c.name === col)) return;
+    this.db.exec(`ALTER TABLE feedback_items ADD COLUMN ${col} ${def}`);
   }
 
   add(input: FeedbackAddInput): FeedbackItem {
@@ -123,6 +166,8 @@ class FeedbackStore {
     const text = input.text.trim();
     const source = input.source.trim();
     const nickname = input.nickname.trim();
+    const gender = input.gender.trim();
+    const age = input.age.trim();
     const sceneId = typeof input.scene_id === 'string' && input.scene_id.trim() ? input.scene_id.trim() : null;
     const ipHash = input.ip_hash.trim();
     const now = Date.now();
@@ -139,6 +184,8 @@ class FeedbackStore {
       source,
       ts: now,
       nickname,
+      gender,
+      age,
       scene_id: sceneId,
       text,
       status: '已收到',
@@ -151,9 +198,9 @@ class FeedbackStore {
     this.db
       .prepare(`
         INSERT INTO feedback_items (
-          id, session_id, turn_id, source, ts, nickname, scene_id,
+          id, session_id, turn_id, source, ts, nickname, gender, age, scene_id,
           text, status, note, updated_at, updated_by, ip_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .run(
         item.id,
@@ -162,6 +209,8 @@ class FeedbackStore {
         item.source,
         item.ts,
         item.nickname,
+        item.gender,
+        item.age,
         item.scene_id,
         item.text,
         item.status,
@@ -176,13 +225,7 @@ class FeedbackStore {
 
   list(): FeedbackItem[] {
     const rows = this.db
-      .prepare(`
-        SELECT
-          id, session_id, turn_id, source, ts, nickname, scene_id,
-          text, status, note, updated_at, updated_by, ip_hash
-        FROM feedback_items
-        ORDER BY ts DESC
-      `)
+      .prepare(`SELECT ${SELECT_COLS} FROM feedback_items ORDER BY ts DESC`)
       .all() as FeedbackRow[];
 
     return rows
@@ -212,13 +255,7 @@ class FeedbackStore {
 
   private getById(id: string): FeedbackItem | null {
     const row = this.db
-      .prepare(`
-        SELECT
-          id, session_id, turn_id, source, ts, nickname, scene_id,
-          text, status, note, updated_at, updated_by, ip_hash
-        FROM feedback_items
-        WHERE id = ?
-      `)
+      .prepare(`SELECT ${SELECT_COLS} FROM feedback_items WHERE id = ?`)
       .get(id) as FeedbackRow | undefined;
 
     return toFeedbackItem(row);
@@ -227,9 +264,7 @@ class FeedbackStore {
   private findDuplicate(sessionId: string, text: string, minTs: number): FeedbackItem | null {
     const row = this.db
       .prepare(`
-        SELECT
-          id, session_id, turn_id, source, ts, nickname, scene_id,
-          text, status, note, updated_at, updated_by, ip_hash
+        SELECT ${SELECT_COLS}
         FROM feedback_items
         WHERE session_id = ? AND text = ? AND ts >= ?
         ORDER BY ts DESC

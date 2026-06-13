@@ -6,6 +6,8 @@ export interface SessionMeta {
   sessionId: string;
   sceneId: string | null;
   nickname: string;
+  gender: string;
+  age: string;
   tutorialUnitId?: string;
   captureMode: 'feedback' | 'off';
   source: 'card' | 'tutorial';
