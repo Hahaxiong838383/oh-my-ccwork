@@ -12,7 +12,7 @@
 
 V0.1 规则核心写在两处，必须先读：
 - `~/.claude/docs/no-guessing-full.md` § 实体锚定（完整版含违规案例；常驻核心已于 2026-06-13 抽到 rules/behavior.md）
-- `~/.claude/skills/verification-before-completion/SKILL.md` § Entity & Event Anchor Check（按需 skill 版本）
+- `~/.claude/rules/behavior.md` § 证据标签 / 元认知（常驻核心；2026-06-13 起 BFO 检查并入此处，原 verification-before-completion skill 未建）
 
 V0.1 设计起源 + 试跑结果记录：
 - `~/.claude/projects/-Users-rayman-chen-mycc/memory/project_bfo_anchoring.md`
@@ -37,7 +37,7 @@ V0.1 设计起源 + 试跑结果记录：
    git log --since="2026-04-28" -p -- 0-System/task-log.md .claude/projects/-Users-rayman-chen-mycc/memory/
    ```
    看具体改动。
-5. **`~/.claude/skills/verification-before-completion/SKILL.md`** — 看是否有 V0.2 级修改的痕迹（如老板在中途手动改过）。
+5. **`~/.claude/rules/behavior.md`** — 看证据标签/元认知段是否有 V0.2 级修改痕迹（BFO 检查现并入常驻规则）。
 
 ## 校准 4 维度
 
@@ -131,7 +131,7 @@ git push origin main
 
 ## 约束（重要，不可违反）
 
-- **不得修改 `~/.claude/docs/no-guessing-full.md` 或 `~/.claude/skills/verification-before-completion/SKILL.md`**——校准只输出建议到 memory + 飞书。任何阈值修改必须等老板下次手动批准
+- **不得修改 `~/.claude/docs/no-guessing-full.md` 或 `~/.claude/rules/behavior.md`**——校准只输出建议到 memory + 飞书。任何阈值修改必须等老板下次手动批准
 - 任何"具体阈值改成 X"的建议必须附数据依据（grep 命中数 / git diff 行数 / memory 摘录），禁止凭直觉
 - 飞书推送如遇限速 429，按 `feedback_lark_cli_keychain_ssh` 走 open-feishu-mcp `send_message` 备用通道
 - **自检字段必带（按 V0.1 规则演练）**：在向飞书推送 / 写 memory / push 仓 三个对外操作前各跑一次 `[自检]` 自报，作为 V0.1 dogfood 数据——这次校准本身也是 V0.1 的真实使用样本
