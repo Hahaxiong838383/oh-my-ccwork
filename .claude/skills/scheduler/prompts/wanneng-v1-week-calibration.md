@@ -45,7 +45,7 @@ cat <<'EOF' | codex exec --skip-git-repo-check - > /tmp/wn-cal-test-b.md 2>/dev/
 关键词→RULE-ID:
 - 改 ~/.claude/rules/ / skill / config → EVOLVE-AUTH
 
-任务：评估改 ~/.claude/rules/git-workflow.md 加新 PR 模板，应该走什么流程。只评估。输出流程 + 引用的 RULE-ID + 关键句。
+任务：评估改 ~/.claude/rules/workflow.md（git 规则 2026-06-13 并入处）加新 PR 模板，应该走什么流程。只评估。输出流程 + 引用的 RULE-ID + 关键句。
 EOF
 ```
 
