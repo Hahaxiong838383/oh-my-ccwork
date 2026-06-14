@@ -15,25 +15,32 @@
  */
 import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
-import { readFileSync, existsSync, statSync } from "fs";
+import { readFileSync, existsSync, statSync, readdirSync } from "fs";
 import * as path from "path";
+import { parseMemoryItemLine } from "./memory-item-parser.js";
+const A_MEMORY_DIR = path.join(process.env.HOME || "", ".claude/projects/-Users-rayman-chen-mycc/memory");
+const A_MEMORY_EXCLUDED = new Set(["MEMORY.md", "INDEX-full.md"]);
 // ============================================================
 // Schema
 // ============================================================
 const SCHEMA_SQL = `
 -- 1. 原子记忆条目（派生自 memory-items.md）
 CREATE TABLE IF NOT EXISTS items (
-  id          TEXT PRIMARY KEY,
-  category    TEXT NOT NULL,
-  scope       TEXT NOT NULL DEFAULT 'project',  -- user/project/agent/session
-  content     TEXT NOT NULL,
-  stars       INTEGER DEFAULT 0,
-  write_date  TEXT,
-  event_date  TEXT,
-  chain_type  TEXT,
-  chain_ref   TEXT,
-  created_at  TEXT DEFAULT (datetime('now')),
-  updated_at  TEXT DEFAULT (datetime('now'))
+  id            TEXT PRIMARY KEY,
+  category      TEXT NOT NULL,
+  scope         TEXT NOT NULL DEFAULT 'project',  -- user/project/agent/session
+  content       TEXT NOT NULL,
+  stars         INTEGER DEFAULT 0,
+  source        TEXT NOT NULL DEFAULT 'B',
+  write_date    TEXT,
+  event_date    TEXT,
+  chain_type    TEXT,
+  chain_ref     TEXT,
+  quality_score REAL DEFAULT 0.5,     -- EDM: 记忆质量分 (0-1)
+  last_accessed TEXT,                  -- FadeMem: 最近被检索注入的时间
+  access_count  INTEGER DEFAULT 0,    -- FadeMem: 被检索注入的累计次数
+  created_at    TEXT DEFAULT (datetime('now')),
+  updated_at    TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_items_category ON items(category);
 CREATE INDEX IF NOT EXISTS idx_items_scope ON items(scope);
@@ -91,6 +98,7 @@ CREATE TABLE IF NOT EXISTS traces (
   pipeline   TEXT,
   rrf        TEXT,
   injected   TEXT,
+  predicted  TEXT,
   budget_used INTEGER,
   budget_limit INTEGER,
   created_at TEXT DEFAULT (datetime('now'))
@@ -158,6 +166,32 @@ export function getDB(cwd) {
         // 创建 schema
         db.exec(SCHEMA_SQL);
         db.exec(VEC_TABLE_SQL);
+        // Migration: traces 表增加 predicted 列（兼容旧库）
+        try {
+            const cols = db.prepare("PRAGMA table_info(traces)").all();
+            if (!cols.some(c => c.name === "predicted")) {
+                db.exec("ALTER TABLE traces ADD COLUMN predicted TEXT");
+            }
+        }
+        catch { /* 静默 */ }
+        // Migration: items 表增加 EDM + FadeMem 列（兼容旧库）
+        try {
+            const itemCols = db.prepare("PRAGMA table_info(items)").all();
+            const colNames = new Set(itemCols.map(c => c.name));
+            if (!colNames.has("quality_score")) {
+                db.exec("ALTER TABLE items ADD COLUMN quality_score REAL DEFAULT 0.5");
+            }
+            if (!colNames.has("last_accessed")) {
+                db.exec("ALTER TABLE items ADD COLUMN last_accessed TEXT");
+            }
+            if (!colNames.has("access_count")) {
+                db.exec("ALTER TABLE items ADD COLUMN access_count INTEGER DEFAULT 0");
+            }
+            if (!colNames.has("source")) {
+                db.exec("ALTER TABLE items ADD COLUMN source TEXT DEFAULT 'B'");
+            }
+        }
+        catch { /* 静默 */ }
         _db = db;
         _dbPath = dbPath;
         console.log("[MemoryDB] SQLite 连接就绪:", dbPath);
@@ -183,56 +217,159 @@ export function closeDB() {
 // md → SQLite 同步（items + vectors）
 // ============================================================
 /** 从 item 行解析元数据 */
-function parseItemLine(line, category, idx) {
-    // 星级
-    const starCount = (line.match(/★/g) || []).length;
-    // 写入日期 [YYYY-MM-DD]（排除 event: 前缀）
-    const writeDateMatch = line.match(/(?<!\bevent:)\[(\d{4}-\d{2}-\d{2})\]/);
-    const writeDate = writeDateMatch ? writeDateMatch[1] : null;
-    // 事件日期 [event:YYYY-MM-DD]
-    const eventDateMatch = line.match(/\[event:(\d{4}-\d{2}-\d{2})\]/);
-    const eventDate = eventDateMatch ? eventDateMatch[1] : null;
-    // 残差版本链
-    let chainType = null;
-    let chainRef = null;
-    if (line.includes("#base")) {
-        chainType = "base";
-    }
-    else if (line.includes("→Δ:")) {
-        chainType = "delta";
-        const m = line.match(/→Δ:(.+?)(?:\s*\[|\s*#|\s*$)/);
-        chainRef = m ? m[1].trim() : null;
-    }
-    else if (line.includes("→supersedes:")) {
-        chainType = "supersedes";
-        const m = line.match(/→supersedes:(.+?)(?:\s*\[|\s*#|\s*$)/);
-        chainRef = m ? m[1].trim() : null;
-    }
-    else if (line.includes("→updates:")) {
-        chainType = "supersedes"; // 向后兼容
-        const m = line.match(/→updates:(.+?)(?:\s*\[|\s*#|\s*$)/);
-        chainRef = m ? m[1].trim() : null;
-    }
-    // scope：从 category 前缀提取（user/偏好 → "user"）
-    const scope = category.split("/")[0] || "project";
-    // ID：category + index（稳定 ID，重建时不变）
-    const id = `${category}:${idx}`;
+function parseItemLine(line, category) {
+    const parsed = parseMemoryItemLine(line, category);
+    if (!parsed)
+        return null;
     return {
-        id,
-        category,
-        scope,
-        content: line.replace(/^-\s*/, "").trim(),
-        stars: starCount,
-        write_date: writeDate,
-        event_date: eventDate,
-        chain_type: chainType,
-        chain_ref: chainRef,
+        id: parsed.id,
+        category: parsed.category,
+        scope: parsed.scope,
+        content: parsed.content,
+        stars: parsed.stars,
+        source: "B",
+        write_date: parsed.write_date,
+        event_date: parsed.event_date,
+        chain_type: parsed.chain_type,
+        chain_ref: parsed.chain_ref,
     };
+}
+function cleanFrontmatterValue(value) {
+    const trimmed = value.trim();
+    if (trimmed.length >= 2) {
+        const first = trimmed[0];
+        const last = trimmed[trimmed.length - 1];
+        if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+            return trimmed.slice(1, -1).trim();
+        }
+    }
+    return trimmed;
+}
+function parseAFrontmatter(content) {
+    if (!content.startsWith("---"))
+        return null;
+    const end = content.indexOf("\n---", 3);
+    if (end === -1)
+        return null;
+    let description = "";
+    let type = "";
+    let inMetadata = false;
+    for (const rawLine of content.slice(3, end).split(/\r?\n/)) {
+        const line = rawLine.trimEnd();
+        if (!line.trim() || line.trimStart().startsWith("#"))
+            continue;
+        const topMatch = line.match(/^([A-Za-z_][\w-]*):\s*(.*)$/);
+        if (topMatch) {
+            const key = topMatch[1];
+            inMetadata = key === "metadata";
+            if (key === "description") {
+                description = cleanFrontmatterValue(topMatch[2]);
+            }
+            else if (key === "type") {
+                type = cleanFrontmatterValue(topMatch[2]);
+            }
+            continue;
+        }
+        if (inMetadata) {
+            const metaMatch = line.match(/^\s+([A-Za-z_][\w-]*):\s*(.*)$/);
+            if (metaMatch?.[1] === "type") {
+                type = cleanFrontmatterValue(metaMatch[2]);
+            }
+        }
+    }
+    return { description, type };
+}
+function listAMemoryCardFiles(memoryDir = A_MEMORY_DIR) {
+    if (!memoryDir || !existsSync(memoryDir))
+        return [];
+    return readdirSync(memoryDir, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && !A_MEMORY_EXCLUDED.has(entry.name))
+        .map((entry) => entry.name)
+        .sort();
+}
+function getAMemoryFingerprint(memoryDir = A_MEMORY_DIR) {
+    const fileNames = listAMemoryCardFiles(memoryDir);
+    let latestMtime = 0;
+    for (const fileName of fileNames) {
+        const { mtimeMs } = statSync(path.join(memoryDir, fileName));
+        if (mtimeMs > latestMtime)
+            latestMtime = mtimeMs;
+    }
+    return `${fileNames.length}:${latestMtime}`;
+}
+function parseClaudeMemoryCards(memoryDir = A_MEMORY_DIR) {
+    const items = [];
+    for (const fileName of listAMemoryCardFiles(memoryDir)) {
+        const cardPath = path.join(memoryDir, fileName);
+        const frontmatter = parseAFrontmatter(readFileSync(cardPath, "utf-8"));
+        if (!frontmatter)
+            continue;
+        const content = frontmatter.description.trim();
+        const category = frontmatter.type.trim();
+        if (content.length < 5 || !category)
+            continue;
+        // A 套 ID 必须使用文件名 stem；frontmatter name 已实测不可靠。
+        const id = path.basename(fileName, ".md");
+        items.push({
+            id,
+            category,
+            scope: "project",
+            content,
+            stars: 0,
+            source: "A",
+            write_date: null,
+            event_date: null,
+            chain_type: null,
+            chain_ref: null,
+        });
+    }
+    return items;
 }
 /**
  * 从 memory-items.md 同步到 SQLite items 表。
  * 检测 mtime 变更，仅在文件被编辑后重建。
  */
+// ============================================================
+// EDM 记忆质量评分（Eval-Driven Memory）
+// ============================================================
+/**
+ * 计算单条 item 的质量分（0-1）。
+ *
+ * 评分维度：
+ * - 具体性：包含路径、端口、版本号、URL 等具体值 → 高质量
+ * - 信息量：内容长度适中（15-200 字符最佳）
+ * - 星级：★ 标记反映人类评价
+ * - 结构化：有因果链/版本链标记 → 说明经过整理
+ */
+function computeQualityScore(item) {
+    let score = 0.5; // 基线
+    // 具体性检测（有具体值加分）
+    const hasPath = /\/[a-zA-Z][\w/.-]+/.test(item.content);
+    const hasPort = /:\d{4,5}\b/.test(item.content);
+    const hasVersion = /v?\d+\.\d+/.test(item.content);
+    const hasUrl = /https?:\/\//.test(item.content);
+    const specificityBonus = (hasPath ? 0.05 : 0) + (hasPort ? 0.05 : 0) + (hasVersion ? 0.05 : 0) + (hasUrl ? 0.05 : 0);
+    score += Math.min(specificityBonus, 0.15);
+    // 信息量（去掉标记后的纯文本长度）
+    const cleanContent = item.content.replace(/[★#→←\[\]]/g, "").trim();
+    if (cleanContent.length < 10)
+        score -= 0.2; // 太短，信息不足
+    else if (cleanContent.length < 20)
+        score -= 0.1; // 偏短
+    else if (cleanContent.length > 200)
+        score -= 0.05; // 偏长（不够原子化）
+    // 星级加成
+    if (item.stars >= 3)
+        score += 0.15;
+    else if (item.stars >= 2)
+        score += 0.1;
+    else if (item.stars >= 1)
+        score += 0.05;
+    // 结构化标记（有因果链/版本链 → 经过整理的高质量记忆）
+    if (item.chain_type)
+        score += 0.05;
+    return Math.max(0, Math.min(1, score));
+}
 export function syncItemsFromMd(cwd) {
     const db = getDB(cwd);
     if (!db)
@@ -240,13 +377,15 @@ export function syncItemsFromMd(cwd) {
     const mdPath = path.join(cwd, "0-System/memory-items.md");
     if (!existsSync(mdPath))
         return false;
-    // 检查 mtime
+    // 检查 B 套 mtime + A 套廉价指纹（卡数 + 最新 mtime），A 未变时不全读卡片。
     const currentMtime = statSync(mdPath).mtimeMs.toString();
+    const currentAFingerprint = getAMemoryFingerprint();
     const savedMtime = db.prepare("SELECT value FROM meta WHERE key = 'items_md_mtime'").get();
-    if (savedMtime && savedMtime.value === currentMtime) {
+    const savedAFingerprint = db.prepare("SELECT value FROM meta WHERE key = 'a_memory_fingerprint'").get();
+    if (savedMtime?.value === currentMtime && savedAFingerprint?.value === currentAFingerprint) {
         return true; // 无变更，跳过
     }
-    console.log("[MemoryDB] memory-items.md 变更，重建 items 表...");
+    console.log("[MemoryDB] 记忆源变更，重建 items 表...");
     const content = readFileSync(mdPath, "utf-8");
     const sections = content.split(/^## /m).filter(Boolean);
     const items = [];
@@ -256,22 +395,37 @@ export function syncItemsFromMd(cwd) {
             continue;
         const category = headerMatch[1];
         const lines = section.split("\n").filter((l) => l.startsWith("- "));
-        lines.forEach((line, idx) => {
-            items.push(parseItemLine(line, category, idx));
-        });
+        for (const line of lines) {
+            const item = parseItemLine(line, category);
+            if (item)
+                items.push(item);
+        }
     }
+    items.push(...parseClaudeMemoryCards());
+    // 保留旧的访问数据（FadeMem：sync 不应清除访问统计）
+    const oldAccess = new Map();
+    try {
+        const rows = db.prepare("SELECT id, last_accessed, access_count FROM items WHERE last_accessed IS NOT NULL").all();
+        for (const row of rows) {
+            oldAccess.set(row.id, { last_accessed: row.last_accessed, access_count: row.access_count });
+        }
+    }
+    catch { /* 首次运行无数据 */ }
     // 事务内全量重建
     const rebuild = db.transaction(() => {
         db.exec("DELETE FROM items");
         db.exec("DELETE FROM items_fts");
-        const insertItem = db.prepare("INSERT INTO items (id, category, scope, content, stars, write_date, event_date, chain_type, chain_ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        const insertItem = db.prepare("INSERT INTO items (id, category, scope, content, stars, source, write_date, event_date, chain_type, chain_ref, quality_score, last_accessed, access_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         const insertFts = db.prepare("INSERT INTO items_fts (id, content, category) VALUES (?, ?, ?)");
         for (const item of items) {
-            insertItem.run(item.id, item.category, item.scope, item.content, item.stars, item.write_date, item.event_date, item.chain_type, item.chain_ref);
+            const qScore = computeQualityScore(item);
+            const old = oldAccess.get(item.id);
+            insertItem.run(item.id, item.category, item.scope, item.content, item.stars, item.source, item.write_date, item.event_date, item.chain_type, item.chain_ref, qScore, old?.last_accessed ?? null, old?.access_count ?? 0);
             insertFts.run(item.id, item.content, item.category);
         }
-        // 更新 mtime
+        // 更新变更检测元数据
         db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('items_md_mtime', ?)").run(currentMtime);
+        db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('a_memory_fingerprint', ?)").run(currentAFingerprint);
     });
     rebuild();
     console.log(`[MemoryDB] items 表重建完成：${items.length} 条，${new Set(items.map((i) => i.category)).size} 个类别`);
@@ -560,9 +714,9 @@ export function saveTrace(cwd, trace) {
         return;
     try {
         db.prepare(`
-      INSERT INTO traces (timestamp, query, pipeline, rrf, injected, budget_used, budget_limit)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(trace.timestamp, trace.query, JSON.stringify(trace.pipeline), JSON.stringify(trace.rrf), JSON.stringify(trace.injected), trace.budget_used, trace.budget_limit);
+      INSERT INTO traces (timestamp, query, pipeline, rrf, injected, predicted, budget_used, budget_limit)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(trace.timestamp, trace.query, JSON.stringify(trace.pipeline), JSON.stringify(trace.rrf), JSON.stringify(trace.injected), trace.predicted ? JSON.stringify(trace.predicted) : null, trace.budget_used, trace.budget_limit);
         // FTS5 索引
         const lastId = db.prepare("SELECT last_insert_rowid() as id").get();
         db.prepare("INSERT INTO traces_fts (rowid, query) VALUES (?, ?)").run(lastId.id, trace.query);
@@ -571,6 +725,123 @@ export function saveTrace(cwd, trace) {
     }
     catch {
         // 静默失败
+    }
+}
+export function verifyPredictions(cwd, days = 7) {
+    const empty = {
+        totalWithPredictions: 0, precision: 0, recall: 0,
+        overPredicted: [], underPredicted: [],
+    };
+    const db = getDB(cwd);
+    if (!db)
+        return empty;
+    try {
+        const rows = db.prepare(`SELECT predicted, injected FROM traces
+       WHERE predicted IS NOT NULL AND created_at >= datetime('now', '-${days} days')`).all();
+        if (rows.length === 0)
+            return empty;
+        let totalHits = 0;
+        let totalPredicted = 0;
+        let totalInjected = 0;
+        let totalRecallHits = 0;
+        const overCounts = new Map();
+        const underCounts = new Map();
+        for (const row of rows) {
+            const predicted = JSON.parse(row.predicted || "[]");
+            const injectedRaw = JSON.parse(row.injected || "[]");
+            const injectedSet = new Set(injectedRaw.map(i => i.category));
+            totalPredicted += predicted.length;
+            totalInjected += injectedSet.size;
+            for (const p of predicted) {
+                if (injectedSet.has(p)) {
+                    totalHits++;
+                }
+                else {
+                    overCounts.set(p, (overCounts.get(p) || 0) + 1);
+                }
+            }
+            for (const cat of injectedSet) {
+                if (predicted.includes(cat)) {
+                    totalRecallHits++;
+                }
+                else {
+                    underCounts.set(cat, (underCounts.get(cat) || 0) + 1);
+                }
+            }
+        }
+        const overPredicted = [...overCounts.entries()]
+            .map(([category, count]) => ({ category, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+        const underPredicted = [...underCounts.entries()]
+            .map(([category, count]) => ({ category, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+        return {
+            totalWithPredictions: rows.length,
+            precision: totalPredicted > 0 ? totalHits / totalPredicted : 0,
+            recall: totalInjected > 0 ? totalRecallHits / totalInjected : 0,
+            overPredicted,
+            underPredicted,
+        };
+    }
+    catch {
+        return empty;
+    }
+}
+/**
+ * v6 AST: 聚合最近 N 天的检索轨迹，生成类别命中率统计。
+ *
+ * 用于 ASAC 反馈闭环：历史高命中类别在下次检索中获得 boost。
+ * 冷启动安全：无数据时返回空统计，调用方可安全忽略。
+ */
+export function aggregateTraces(cwd, days = 7) {
+    const empty = { categoryHitRate: [], missedCategories: [], avgBudgetUsage: 0, totalTraces: 0 };
+    const db = getDB(cwd);
+    if (!db)
+        return empty;
+    try {
+        // 拉取最近 N 天的轨迹
+        const rows = db.prepare(`SELECT rrf, injected, budget_used, budget_limit FROM traces WHERE created_at >= datetime('now', '-${days} days')`).all();
+        if (rows.length === 0)
+            return empty;
+        const rrfCounts = new Map();
+        const injectCounts = new Map();
+        let totalBudgetRatio = 0;
+        for (const row of rows) {
+            // RRF 类别统计
+            const rrfList = JSON.parse(row.rrf || "[]");
+            for (const item of rrfList) {
+                rrfCounts.set(item.category, (rrfCounts.get(item.category) || 0) + 1);
+            }
+            // 注入类别统计
+            const injectedList = JSON.parse(row.injected || "[]");
+            for (const item of injectedList) {
+                injectCounts.set(item.category, (injectCounts.get(item.category) || 0) + 1);
+            }
+            // 预算使用率
+            if (row.budget_limit > 0) {
+                totalBudgetRatio += row.budget_used / row.budget_limit;
+            }
+        }
+        // 类别命中率（注入次数 / 总轨迹数）
+        const categoryHitRate = Array.from(injectCounts.entries())
+            .map(([category, count]) => ({ category, count, rate: count / rows.length }))
+            .sort((a, b) => b.count - a.count);
+        // 检索盲区：被 RRF 排到过但从未注入的类别
+        const missedCategories = Array.from(rrfCounts.entries())
+            .filter(([cat]) => !injectCounts.has(cat))
+            .map(([category, rrfCount]) => ({ category, rrfCount, injectCount: 0 }))
+            .sort((a, b) => b.rrfCount - a.rrfCount);
+        return {
+            categoryHitRate,
+            missedCategories,
+            avgBudgetUsage: totalBudgetRatio / rows.length,
+            totalTraces: rows.length,
+        };
+    }
+    catch {
+        return empty;
     }
 }
 // ============================================================
@@ -615,5 +886,169 @@ export function syncEventsFromMd(cwd) {
     });
     rebuild();
     return true;
+}
+// ============================================================
+// FadeMem 访问频率追踪 + 指数衰减
+// ============================================================
+/** FadeMem 衰减参数：λ=0.05 对应半衰期 ≈ 14 天 */
+const FADE_LAMBDA = 0.05;
+/**
+ * 记录一批 item 被检索注入（更新 last_accessed + access_count）。
+ * 在 context-loader 的 extractCategories 完成后调用。
+ */
+export function recordItemAccess(cwd, categories) {
+    const db = getDB(cwd);
+    if (!db || categories.length === 0)
+        return;
+    try {
+        const now = new Date().toISOString();
+        const stmt = db.prepare("UPDATE items SET last_accessed = ?, access_count = access_count + 1 WHERE category = ?");
+        const batch = db.transaction(() => {
+            for (const cat of categories) {
+                stmt.run(now, cat);
+            }
+        });
+        batch();
+    }
+    catch {
+        // 静默
+    }
+}
+/**
+ * 获取指定类别下所有 item 的质量分 + 访问衰减系数。
+ *
+ * 返回 Map<itemId, { quality, decayFactor }>
+ * - quality: 0-1 EDM 质量分
+ * - decayFactor: 0-1 FadeMem 衰减系数（1=刚访问，→0=长期未访问）
+ *
+ * decayFactor = e^(-λ * daysSinceLastAccess)
+ * 从未被访问的 item: daysSinceLastAccess = daysSinceCreation，给予基线衰减
+ */
+export function getQualityAndDecayScores(cwd, categories) {
+    const result = new Map();
+    const db = getDB(cwd);
+    if (!db || categories.length === 0)
+        return result;
+    try {
+        const placeholders = categories.map(() => "?").join(",");
+        const rows = db.prepare(`SELECT id, quality_score, last_accessed, access_count, created_at FROM items WHERE category IN (${placeholders})`).all(...categories);
+        const now = Date.now();
+        for (const row of rows) {
+            const quality = row.quality_score ?? 0.5;
+            // 计算距上次访问的天数
+            let daysSince;
+            if (row.last_accessed) {
+                daysSince = Math.max(0, (now - new Date(row.last_accessed).getTime()) / (1000 * 60 * 60 * 24));
+            }
+            else {
+                // 从未被访问：用创建时间，但给更宽容的衰减（λ 减半）
+                daysSince = Math.max(0, (now - new Date(row.created_at).getTime()) / (1000 * 60 * 60 * 24));
+            }
+            // FadeMem 指数衰减：e^(-λ * days)
+            // 从未被访问的 item 用 λ/2（更宽容），避免新 item 被过度惩罚
+            const lambda = row.last_accessed ? FADE_LAMBDA : FADE_LAMBDA / 2;
+            const decayFactor = Math.exp(-lambda * daysSince);
+            result.set(row.id, { quality, decayFactor });
+        }
+    }
+    catch {
+        // 静默
+    }
+    return result;
+}
+/**
+ * 从 task-log.md 解析行为指标，用于检测 cc 的行为漂移。
+ *
+ * 数据源：`0-System/task-log.md`
+ * 格式：| 时间 | 任务类型 | 摘要 | 执行引擎 | 状态 | friction_skill |
+ *
+ * @param cwd 项目根目录
+ * @param days 回看天数（默认 14）
+ */
+export function computeBehaviorDrift(cwd, days = 14) {
+    const empty = {
+        totalTasks: 0,
+        engineDistribution: [],
+        frictionDensity: 0,
+        frictionHotspots: [],
+        taskTypeDistribution: [],
+        dailyTaskCounts: [],
+        windowDays: days,
+    };
+    const logPath = path.join(cwd, "0-System/task-log.md");
+    if (!existsSync(logPath))
+        return empty;
+    try {
+        const content = readFileSync(logPath, "utf-8");
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        const engineCounts = new Map();
+        const typeCounts = new Map();
+        const frictionCounts = new Map();
+        const dailyCounts = new Map();
+        let totalTasks = 0;
+        let frictionTasks = 0;
+        for (const line of content.split("\n")) {
+            const cells = line.split("|").map(c => c.trim()).filter(Boolean);
+            if (cells.length < 5)
+                continue;
+            // 解析时间列（格式：2026-03-31 14:00 或 2026-03-31）
+            const timeStr = cells[0];
+            const dateMatch = timeStr.match(/^(\d{4}-\d{2}-\d{2})/);
+            if (!dateMatch)
+                continue;
+            const date = dateMatch[1];
+            const taskDate = new Date(date);
+            if (taskDate < cutoff)
+                continue;
+            totalTasks++;
+            // 任务类型
+            const taskType = cells[1];
+            typeCounts.set(taskType, (typeCounts.get(taskType) ?? 0) + 1);
+            // 引擎
+            const engineRaw = cells[3].toLowerCase();
+            let engine = "unknown";
+            if (engineRaw.includes("codex"))
+                engine = "codex";
+            else if (engineRaw.includes("gemini"))
+                engine = "gemini";
+            else if (engineRaw.includes("cc") || engineRaw.includes("claude"))
+                engine = "cc";
+            engineCounts.set(engine, (engineCounts.get(engine) ?? 0) + 1);
+            // friction
+            const frictionCol = cells.length >= 6 ? cells[5] : "";
+            if (frictionCol && frictionCol !== "—" && frictionCol !== "-") {
+                frictionTasks++;
+                frictionCounts.set(frictionCol, (frictionCounts.get(frictionCol) ?? 0) + 1);
+            }
+            // 每日计数
+            dailyCounts.set(date, (dailyCounts.get(date) ?? 0) + 1);
+        }
+        if (totalTasks === 0)
+            return empty;
+        const toDistribution = (map, nameKey) => [...map.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => ({
+            [nameKey]: name,
+            count,
+            ratio: Math.round((count / totalTasks) * 100) / 100,
+        }));
+        return {
+            totalTasks,
+            engineDistribution: toDistribution(engineCounts, "engine"),
+            frictionDensity: Math.round((frictionTasks / totalTasks) * 100) / 100,
+            frictionHotspots: [...frictionCounts.entries()]
+                .sort((a, b) => b[1] - a[1])
+                .map(([skill, count]) => ({ skill, count })),
+            taskTypeDistribution: toDistribution(typeCounts, "type"),
+            dailyTaskCounts: [...dailyCounts.entries()]
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .map(([date, count]) => ({ date, count })),
+            windowDays: days,
+        };
+    }
+    catch {
+        return empty;
+    }
 }
 //# sourceMappingURL=memory-db.js.map

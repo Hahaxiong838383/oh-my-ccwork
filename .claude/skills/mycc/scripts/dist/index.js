@@ -19,6 +19,7 @@ import qrcode from "qrcode-terminal";
 import chalk from "chalk";
 import { HttpServer } from "./http-server.js";
 import { startScheduler, stopScheduler } from "./scheduler.js";
+import { runDream } from "./services/dream-consolidation.js";
 import { adapter, officialAdapter } from "./adapters/index.js";
 import { runCliEngine } from "./adapters/cli-engine.js";
 import { HealthMonitor } from "./health-monitor.js";
@@ -134,6 +135,7 @@ async function startServer(args) {
     // 检测公网模式（读取 .env 中的 PUBLIC_URL）
     const publicUrl = loadPublicUrl(process.cwd(), scriptsDir);
     const isPublicMode = !!publicUrl;
+    let cloudflaredAvailable = true; // 公网/Relay 模式不需要 cloudflared
     if (isPublicMode) {
         console.log(chalk.cyan(`\n公网模式: ${publicUrl}`));
         console.log(chalk.gray("  跳过 cloudflared（不需要内网穿透）\n"));
@@ -146,13 +148,14 @@ async function startServer(args) {
     else {
         // 只有 Cloudflare 模式才需要 cloudflared
         console.log("检查 cloudflared...");
-        const cloudflaredAvailable = await checkCloudflared();
+        cloudflaredAvailable = await checkCloudflared();
         if (!cloudflaredAvailable) {
-            console.error(chalk.red("错误: cloudflared 未安装"));
-            console.error(getCloudflaredInstallHint());
-            process.exit(1);
+            console.warn(chalk.yellow("⚠️ cloudflared 未安装，tunnel 不可用（scheduler 和本地 API 正常运行）"));
+            console.warn(chalk.gray(getCloudflaredInstallHint()));
         }
-        console.log(chalk.green("✓ cloudflared 可用\n"));
+        else {
+            console.log(chalk.green("✓ cloudflared 可用\n"));
+        }
     }
     // 解析工作目录
     const cwdIndex = args.indexOf("--cwd");
@@ -309,6 +312,27 @@ async function startServer(args) {
     };
     // 启动定时任务调度器
     const executeTask = async (task, taskCwd) => {
+        // Dream 记忆巩固：直接调用内部函数，不走 Claude/Codex
+        if (task.skill === "dream") {
+            console.log(chalk.cyan(`[Scheduler] Dream 记忆巩固启动`));
+            recordHistory(taskCwd, task.name, "执行中...");
+            try {
+                const result = await runDream(taskCwd);
+                if (result.success) {
+                    recordHistory(taskCwd, task.name, `✅ 成功 (${result.duration}ms, ${result.steps.length} steps)`);
+                    addStatusEvent(`记忆巩固完成 (${result.steps.filter(s => s.ok).length}/${result.steps.length} steps)`);
+                    refreshStatus(taskCwd);
+                }
+                else {
+                    recordHistory(taskCwd, task.name, `⚠️ 部分失败: ${result.error ?? "unknown"}`);
+                }
+            }
+            catch (err) {
+                console.error(chalk.red(`[Scheduler] Dream 失败:`), err);
+                recordHistory(taskCwd, task.name, "❌ 失败");
+            }
+            return;
+        }
         // 获取当前时间戳
         const now = new Date();
         const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -455,72 +479,84 @@ ${skillLine}
                 }
             });
         }
-        else {
+        else if (cloudflaredAvailable) {
             // Quick Tunnel: 随机 URL，适合无自定义域名场景
             tunnelProvider = new CloudflareProvider(120000);
             if (tunnelToken && !dnsConfig) {
                 console.warn(chalk.yellow("⚠️  已设置 CF_TUNNEL_TOKEN 但缺少 CF_DOMAIN/CF_ZONE_ID，降级为 Quick Tunnel"));
             }
         }
-        tunnelManager = new TunnelManager({
-            localPort: actualPort,
-            onRestartSuccess: async (newUrl) => {
-                console.log(chalk.cyan(`[TunnelManager] 更新 tunnelUrl: ${newUrl}`));
-                tunnelUrl = newUrl;
-                if (isRelayMode) {
-                    // Relay 模式：URL 固定，重连后只需更新连接信息
-                    console.log(chalk.green("✓ Relay 重连成功"));
-                    saveConnectionInfo();
-                }
-                else {
-                    // Quick Tunnel: URL 每次重启都变，需要更新 DNS
-                    // Named Tunnel: CNAME 指向固定的 cfargotunnel.com，无需更新
-                    if (!isNamedTunnel && dnsConfig) {
-                        updateDnsRecord(newUrl, dnsConfig).catch(() => { });
-                    }
-                    console.log(chalk.gray("重新注册到中转服务器..."));
-                    const newRegisterResult = await registerToWorker(newUrl, pairCode, deviceId);
-                    if (newRegisterResult?.token) {
-                        console.log(chalk.green("✓ 重新注册成功"));
+        else {
+            // cloudflared 不可用，跳过 tunnel（scheduler 和本地 API 仍正常工作）
+            console.warn(chalk.yellow("⚠️ 跳过 tunnel 启动（cloudflared 不可用）"));
+            tunnelProvider = null;
+        }
+        if (!tunnelProvider) {
+            // 无 tunnel provider，仅本地运行（scheduler + 本地 API）
+            tunnelUrl = `http://localhost:${actualPort}`;
+            console.log(chalk.yellow(`⚠️ 仅本地模式: ${tunnelUrl}（tunnel 不可用）\n`));
+        }
+        else {
+            tunnelManager = new TunnelManager({
+                localPort: actualPort,
+                onRestartSuccess: async (newUrl) => {
+                    console.log(chalk.cyan(`[TunnelManager] 更新 tunnelUrl: ${newUrl}`));
+                    tunnelUrl = newUrl;
+                    if (isRelayMode) {
+                        // Relay 模式：URL 固定，重连后只需更新连接信息
+                        console.log(chalk.green("✓ Relay 重连成功"));
                         saveConnectionInfo();
                     }
                     else {
-                        console.warn(chalk.yellow("⚠️ 重新注册失败，小程序可能无法访问"));
+                        // Quick Tunnel: URL 每次重启都变，需要更新 DNS
+                        // Named Tunnel: CNAME 指向固定的 cfargotunnel.com，无需更新
+                        if (!isNamedTunnel && dnsConfig) {
+                            updateDnsRecord(newUrl, dnsConfig).catch(() => { });
+                        }
+                        console.log(chalk.gray("重新注册到中转服务器..."));
+                        const newRegisterResult = await registerToWorker(newUrl, pairCode, deviceId);
+                        if (newRegisterResult?.token) {
+                            console.log(chalk.green("✓ 重新注册成功"));
+                            saveConnectionInfo();
+                        }
+                        else {
+                            console.warn(chalk.yellow("⚠️ 重新注册失败，小程序可能无法访问"));
+                        }
                     }
+                },
+                onGiveUp: () => {
+                    console.error(chalk.red("╔════════════════════════════════════════╗"));
+                    console.error(chalk.red("║  Tunnel 重连失败次数过多，已放弃       ║"));
+                    console.error(chalk.red("║  请手动重启: /mycc                     ║"));
+                    console.error(chalk.red("╚════════════════════════════════════════╝"));
+                },
+            });
+            try {
+                tunnelUrl = await tunnelManager.start(tunnelProvider);
+                console.log(chalk.green(`✓ Tunnel 已启动: ${tunnelUrl}`));
+                const modeLabel = isRelayMode ? 'WS Relay（自建中继）' : isNamedTunnel ? 'Named Tunnel（固定域名）' : 'Quick Tunnel（随机 URL）';
+                console.log(chalk.gray(`  模式: ${modeLabel}`));
+                console.log(chalk.gray(`  保活监控已开启（心跳间隔 60s，失败阈值 3 次）\n`));
+                // Quick Tunnel + DNS 配置：更新 CNAME（注意：这会触发 Error 1014！）
+                if (!isRelayMode && !isNamedTunnel && dnsConfig) {
+                    console.warn(chalk.yellow("⚠️  Quick Tunnel + CNAME 可能触发 Cloudflare Error 1014"));
+                    console.warn(chalk.yellow("   建议：设置 CF_TUNNEL_TOKEN 使用 Named Tunnel"));
+                    updateDnsRecord(tunnelUrl, dnsConfig).then((ok) => {
+                        if (ok) {
+                            const domain = dnsConfig.subdomain ? `${dnsConfig.subdomain}.${dnsConfig.domain}` : dnsConfig.domain;
+                            console.log(chalk.green(`✓ DNS 已更新: ${domain} → tunnel`));
+                        }
+                    });
                 }
-            },
-            onGiveUp: () => {
-                console.error(chalk.red("╔════════════════════════════════════════╗"));
-                console.error(chalk.red("║  Tunnel 重连失败次数过多，已放弃       ║"));
-                console.error(chalk.red("║  请手动重启: /mycc                     ║"));
-                console.error(chalk.red("╚════════════════════════════════════════╝"));
-            },
-        });
-        try {
-            tunnelUrl = await tunnelManager.start(tunnelProvider);
-            console.log(chalk.green(`✓ Tunnel 已启动: ${tunnelUrl}`));
-            const modeLabel = isRelayMode ? 'WS Relay（自建中继）' : isNamedTunnel ? 'Named Tunnel（固定域名）' : 'Quick Tunnel（随机 URL）';
-            console.log(chalk.gray(`  模式: ${modeLabel}`));
-            console.log(chalk.gray(`  保活监控已开启（心跳间隔 60s，失败阈值 3 次）\n`));
-            // Quick Tunnel + DNS 配置：更新 CNAME（注意：这会触发 Error 1014！）
-            if (!isRelayMode && !isNamedTunnel && dnsConfig) {
-                console.warn(chalk.yellow("⚠️  Quick Tunnel + CNAME 可能触发 Cloudflare Error 1014"));
-                console.warn(chalk.yellow("   建议：设置 CF_TUNNEL_TOKEN 使用 Named Tunnel"));
-                updateDnsRecord(tunnelUrl, dnsConfig).then((ok) => {
-                    if (ok) {
-                        const domain = dnsConfig.subdomain ? `${dnsConfig.subdomain}.${dnsConfig.domain}` : dnsConfig.domain;
-                        console.log(chalk.green(`✓ DNS 已更新: ${domain} → tunnel`));
-                    }
-                });
             }
-        }
-        catch (error) {
-            console.error(chalk.red("警告: 无法启动 tunnel"), error);
-            console.warn(chalk.yellow("  Web 通道将不可用，但飞书通道仍可正常工作\n"));
-            // 使用占位 URL，避免后续代码崩溃
-            tunnelUrl = "http://localhost disabled";
-            tunnelManager = null; // 标记 tunnel 不可用
-        }
+            catch (error) {
+                console.error(chalk.red("警告: 无法启动 tunnel"), error);
+                console.warn(chalk.yellow("  Web 通道将不可用，但飞书通道仍可正常工作\n"));
+                // 使用占位 URL，避免后续代码崩溃
+                tunnelUrl = "http://localhost disabled";
+                tunnelManager = null; // 标记 tunnel 不可用
+            }
+        } // end if (tunnelProvider)
     }
     // 向 Worker 注册，获取 token（带 deviceId）
     let token = null;

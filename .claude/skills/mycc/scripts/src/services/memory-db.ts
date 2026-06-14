@@ -18,6 +18,7 @@ import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { readFileSync, existsSync, statSync, readdirSync } from "fs";
 import * as path from "path";
+import { parseMemoryItemLine } from "./memory-item-parser.js";
 
 const A_MEMORY_DIR = path.join(process.env.HOME || "", ".claude/projects/-Users-rayman-chen-mycc/memory");
 const A_MEMORY_EXCLUDED = new Set(["MEMORY.md", "INDEX-full.md"]);
@@ -271,54 +272,21 @@ export function closeDB(): void {
 // ============================================================
 
 /** 从 item 行解析元数据 */
-function parseItemLine(line: string, category: string, idx: number): ItemRow {
-  // 星级
-  const starCount = (line.match(/★/g) || []).length;
-
-  // 写入日期 [YYYY-MM-DD]（排除 event: 前缀）
-  const writeDateMatch = line.match(/(?<!\bevent:)\[(\d{4}-\d{2}-\d{2})\]/);
-  const writeDate = writeDateMatch ? writeDateMatch[1] : null;
-
-  // 事件日期 [event:YYYY-MM-DD]
-  const eventDateMatch = line.match(/\[event:(\d{4}-\d{2}-\d{2})\]/);
-  const eventDate = eventDateMatch ? eventDateMatch[1] : null;
-
-  // 残差版本链
-  let chainType: string | null = null;
-  let chainRef: string | null = null;
-  if (line.includes("#base")) {
-    chainType = "base";
-  } else if (line.includes("→Δ:")) {
-    chainType = "delta";
-    const m = line.match(/→Δ:(.+?)(?:\s*\[|\s*#|\s*$)/);
-    chainRef = m ? m[1].trim() : null;
-  } else if (line.includes("→supersedes:")) {
-    chainType = "supersedes";
-    const m = line.match(/→supersedes:(.+?)(?:\s*\[|\s*#|\s*$)/);
-    chainRef = m ? m[1].trim() : null;
-  } else if (line.includes("→updates:")) {
-    chainType = "supersedes"; // 向后兼容
-    const m = line.match(/→updates:(.+?)(?:\s*\[|\s*#|\s*$)/);
-    chainRef = m ? m[1].trim() : null;
-  }
-
-  // scope：从 category 前缀提取（user/偏好 → "user"）
-  const scope = category.split("/")[0] || "project";
-
-  // ID：category + index（稳定 ID，重建时不变）
-  const id = `${category}:${idx}`;
+function parseItemLine(line: string, category: string): ItemRow | null {
+  const parsed = parseMemoryItemLine(line, category);
+  if (!parsed) return null;
 
   return {
-    id,
-    category,
-    scope,
-    content: line.replace(/^-\s*/, "").trim(),
-    stars: starCount,
+    id: parsed.id,
+    category: parsed.category,
+    scope: parsed.scope,
+    content: parsed.content,
+    stars: parsed.stars,
     source: "B",
-    write_date: writeDate,
-    event_date: eventDate,
-    chain_type: chainType,
-    chain_ref: chainRef,
+    write_date: parsed.write_date,
+    event_date: parsed.event_date,
+    chain_type: parsed.chain_type,
+    chain_ref: parsed.chain_ref,
   };
 }
 
@@ -497,9 +465,10 @@ export function syncItemsFromMd(cwd: string): boolean {
     const category = headerMatch[1];
 
     const lines = section.split("\n").filter((l) => l.startsWith("- "));
-    lines.forEach((line, idx) => {
-      items.push(parseItemLine(line, category, idx));
-    });
+    for (const line of lines) {
+      const item = parseItemLine(line, category);
+      if (item) items.push(item);
+    }
   }
   items.push(...parseClaudeMemoryCards());
 

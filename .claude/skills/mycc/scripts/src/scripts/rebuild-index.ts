@@ -21,6 +21,7 @@ import {
   type VectorItem,
   type VectorIndex,
 } from "../services/embedding.js";
+import { parseMemoryItemLine } from "../services/memory-item-parser.js";
 
 // ============================================================
 // memory-items.md 解析
@@ -75,27 +76,16 @@ function parseMemoryItems(filePath: string): ParsedItem[] {
     const lines = section.split("\n").filter((l) => l.startsWith("- "));
 
     for (const line of lines) {
-      // 提取纯文本（去掉标记符号）
-      const text = line
-        .replace(/^-\s*/, "")
-        .replace(/★+\s*/g, "")
-        .replace(/\[\d{4}-\d{2}-\d{2}\]/g, "")
-        .replace(/\[event:\d{4}-\d{2}-\d{2}\]/g, "")
-        .replace(/→(Δ|updates|supersedes|extends):[^\s]*/g, "")
-        .replace(/#\w+/g, "")
-        .replace(/#base/g, "")
-        .replace(/\[已废弃\]/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
+      const parsed = parseMemoryItemLine(line, category);
+      if (!parsed) continue;
 
-      if (text.length < 5) continue;
-
-      const starCount = (line.match(/★/g) || []).length;
-
-      // B 套继续用内容哈希作为 ID，保持既有向量兼容。
-      const id = simpleHash(`${category}:${text}`);
-
-      items.push({ category, text, stars: starCount, id, source: "B" });
+      items.push({
+        category: parsed.category,
+        text: parsed.text,
+        stars: parsed.stars,
+        id: parsed.id,
+        source: "B",
+      });
     }
   }
 
@@ -178,14 +168,6 @@ function parseClaudeMemoryCards(memoryDir: string = A_MEMORY_DIR): ParsedItem[] 
   return items;
 }
 
-/** 简单字符串哈希（djb2） */
-function simpleHash(str: string): string {
-  let hash = 5381;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0x7fffffff;
-  }
-  return hash.toString(36);
-}
 
 // ============================================================
 // 主流程

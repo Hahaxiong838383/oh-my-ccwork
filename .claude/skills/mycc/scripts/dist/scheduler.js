@@ -503,8 +503,73 @@ export class TaskLock {
 // 调度器
 // ============================================
 const CHECK_INTERVAL = 60 * 1000; // 1 分钟
+const CATCHUP_DELAY_MS = 10 * 1000; // 启动后等 10s 再补执行，避免和正常轮询撞车
 let intervalId = null;
 let taskLock = null;
+/**
+ * 检查今天已错过的 daily/weekly 任务并补执行
+ * 只补当天的，不补昨天及更早的（避免重启后雪崩式补跑）
+ */
+function catchUpMissedTasks(tasksPath, cwd, lock, executeTask) {
+    if (!fs.existsSync(tasksPath))
+        return;
+    let content;
+    try {
+        content = fs.readFileSync(tasksPath, "utf-8");
+    }
+    catch {
+        return;
+    }
+    const tasks = parseTasks(content);
+    const now = new Date();
+    const nowTotalMinutes = now.getHours() * 60 + now.getMinutes();
+    let catchUpCount = 0;
+    for (const task of tasks) {
+        // 只补 daily 和 weekly 任务，interval/once/ndays/conditional 不补
+        if (task.type !== "daily" && task.type !== "weekly")
+            continue;
+        // weekly：先检查今天是否匹配星期
+        if (task.type === "weekly") {
+            const weekMatch = task.time.match(/^周([一二三四五六日])/);
+            if (!weekMatch)
+                continue;
+            const dayMap = { 日: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6 };
+            if (dayMap[weekMatch[1]] !== now.getDay())
+                continue;
+        }
+        // 解析任务时间
+        const timeMatch = task.time.match(/(\d{1,2}):(\d{2})/);
+        if (!timeMatch)
+            continue;
+        const taskTotalMinutes = parseInt(timeMatch[1], 10) * 60 + parseInt(timeMatch[2], 10);
+        // 只补已经过去的任务（当前时间 > 任务时间 + 容差）
+        if (nowTotalMinutes <= taskTotalMinutes + TOLERANCE_MINUTES)
+            continue;
+        // 检查活跃时段
+        if (task.activeHours && !isInActiveHours(now, task.activeHours))
+            continue;
+        // 尝试获取锁（如果今天已执行过则跳过）
+        // 用任务原定时间构造 Date 对象，使 lock key 与正常执行一致
+        const fakeNow = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(timeMatch[1], 10), parseInt(timeMatch[2], 10));
+        if (!lock.tryAcquire(task.name, task.time, fakeNow))
+            continue;
+        // 补执行
+        catchUpCount++;
+        console.log(`[Scheduler] 补执行错过的任务: ${task.name} (原定 ${task.time})`);
+        try {
+            executeTask(task, cwd);
+        }
+        catch (error) {
+            console.error(`[Scheduler] 补执行失败: ${task.name}`, error);
+        }
+    }
+    if (catchUpCount > 0) {
+        console.log(`[Scheduler] 补执行完成，共 ${catchUpCount} 个任务`);
+    }
+    else {
+        console.log("[Scheduler] 无错过的任务需要补执行");
+    }
+}
 /**
  * 启动定时任务调度器
  *
@@ -521,6 +586,11 @@ export function startScheduler(cwd, executeTask) {
     taskLock.loadFromFile();
     const tasksPath = path.join(cwd, ".claude/skills/scheduler/tasks.md");
     console.log("[Scheduler] 定时任务模块已启动");
+    // 启动后延迟补执行错过的任务（唤醒/重启场景）
+    setTimeout(() => {
+        console.log("[Scheduler] 检查是否有错过的任务需要补执行...");
+        catchUpMissedTasks(tasksPath, cwd, taskLock, executeTask);
+    }, CATCHUP_DELAY_MS);
     intervalId = setInterval(() => {
         checkAndExecuteTasks(tasksPath, cwd, executeTask);
     }, CHECK_INTERVAL);

@@ -30,6 +30,9 @@ export declare class HttpServer {
     /** 获取当前 authToken */
     getAuthToken(): string | null;
     private handleRequest;
+    private handleMemoryRollback;
+    private handleMemoryExtract;
+    private handleMemoryDream;
     private handleHealth;
     private handlePair;
     private handleChat;

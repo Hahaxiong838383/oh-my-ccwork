@@ -14,15 +14,29 @@
 export type MessageType = "chat" | "task";
 export type AutoRouteEngine = "cc" | "codex" | "gemini" | "pipeline";
 /**
- * 半自动任务路由：根据消息内容推荐最合适的引擎。
+ * 路由结果（AST — 社会注意力推断）
+ *
+ * 不仅返回目标引擎，还返回路由原因和上下文提示，
+ * 让系统「知道为什么分配给这个引擎」。
+ */
+export interface RouteResult {
+    engine: AutoRouteEngine;
+    /** 路由原因（用于 blackboard 记录 + 日志） */
+    reason: string;
+    /** 传递给目标引擎的上下文提示（如已知的工具偏好、历史表现） */
+    contextHints: string[];
+}
+/**
+ * 半自动任务路由（AST 社会注意力版）：
+ * 根据消息内容推荐最合适的引擎，并说明路由原因和上下文提示。
  *
  * 路由优先级：
  * 1. pipeline（分析+写入组合）→ Gemini 分析 → Codex 写入飞书
- * 2. codex（纯代码任务）
+ * 2. codex（纯代码任务 / 论文调研）
  * 3. gemini（纯调研/采集）
  * 4. cc（默认 / 纯写入操作）
  */
-export declare function autoRouteEngine(message: string): AutoRouteEngine;
+export declare function autoRouteEngine(message: string, cwd?: string): RouteResult;
 /**
  * 判断消息类型。
  * 启发式规则，不追求完美，误判代价低（无非同步变同步）。

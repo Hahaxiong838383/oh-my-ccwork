@@ -12,6 +12,8 @@
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
+import { readAttentionState, updateAttentionLoad } from "./blackboard.js";
+import { taskQueueManager } from "../task-queue.js";
 const UPDATE_INTERVAL = 30 * 60 * 1000; // 30 分钟
 let intervalId = null;
 /** 今日完成的重要事件（由外部追加） */
@@ -73,6 +75,64 @@ function loadTodayEvents(cwd) {
     }
 }
 /**
+ * 计算注意力负载（Phase 5 认知镜子）
+ *
+ * 基于活跃任务数 + 队列深度自动估算 1-5 级负载，
+ * 并同步写回 blackboard.md。
+ */
+function computeAndSyncAttentionLoad(cwd) {
+    try {
+        const state = readAttentionState(cwd);
+        // 统计所有通道的活跃任务和队列
+        let totalRunning = 0;
+        let totalPending = 0;
+        const suppressedTasks = [];
+        // 遍历已知通道（cc、codex、gemini 三通道）
+        for (const channelId of ["cc", "codex", "gemini"]) {
+            const info = taskQueueManager.getQueueInfo(channelId);
+            if (info.running)
+                totalRunning++;
+            totalPending += info.pending;
+            // 队列中排队的任务视为被抑制
+            if (info.currentTask && info.pending > 0) {
+                suppressedTasks.push(`${channelId} 队列中 ${info.pending} 个待处理`);
+            }
+        }
+        // 负载公式：base(1) + running引擎数 + pending/2，cap at 5
+        const computedLoad = Math.min(5, 1 + totalRunning + Math.floor(totalPending / 2));
+        // 只在负载变化时写入（减少磁盘 I/O）
+        if (computedLoad !== state.load || suppressedTasks.length !== state.suppressed.length) {
+            updateAttentionLoad(cwd, {
+                ...state,
+                load: computedLoad,
+                suppressed: suppressedTasks.length > 0 ? suppressedTasks : state.suppressed,
+            });
+        }
+    }
+    catch {
+        // 静默失败，不影响 status 刷新主流程
+    }
+}
+/**
+ * 加载注意力图式（AST — Attention Schema Theory）
+ *
+ * 从 blackboard.ts 结构化读取当前焦点和注意力负载，
+ * 使 cc 能「知道自己在关注什么以及为什么」。
+ *
+ * Phase 5 升级：自动计算负载 + 知识边界感知。
+ */
+function loadAttentionSchema(cwd) {
+    // 先自动计算并同步负载到 blackboard
+    computeAndSyncAttentionLoad(cwd);
+    // 然后从 blackboard 结构化读取
+    const state = readAttentionState(cwd);
+    const table = `| 聚焦 | 负载 | 选择原因 |\n|------|------|----------|\n| ${state.focus} | ${state.load}/5 | ${state.reason} |`;
+    const suppressed = state.suppressed.length > 0
+        ? `**被抑制的任务**：${state.suppressed.join("、")}`
+        : "**被抑制的任务**：无";
+    return `${table}\n\n${suppressed}`;
+}
+/**
  * 检测系统运行状态
  */
 function getSystemStatus() {
@@ -117,6 +177,8 @@ function generateStatus(cwd) {
         : "- 暂无记录";
     // 定时任务
     const tasksOverview = loadTasksOverview(cwd);
+    // 注意力图式（AST — Attention Schema Theory）
+    const attentionSchema = loadAttentionSchema(cwd);
     return `# Status（短期记忆）
 
 > 自动注入给 cc。由 mycc 后端每 30 分钟自动刷新。
@@ -132,6 +194,10 @@ ${eventsBlock}
 
 ---
 
+## 注意力图式
+
+${attentionSchema}
+
 ## 系统状态
 
 | 系统 | 状态 | 说明 |
@@ -141,6 +207,10 @@ ${sysTable}
 ## 定时任务
 
 ${tasksOverview}
+
+## 多引擎黑板
+
+> 三引擎共享状态，详见 \`0-System/blackboard.md\`
 
 ---
 

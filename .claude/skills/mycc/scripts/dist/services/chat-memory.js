@@ -205,6 +205,17 @@ export function onSessionEnd(chatId, cwd) {
     const leafCount = dag.nodes.filter((n) => n.level === 0).length;
     const depth = dag.nodes.reduce((max, n) => Math.max(max, n.level), 0);
     console.log(`[ChatMemory] session 结束，DAG 生成完毕 (chatId=${chatId.substring(0, 12)}, 叶子=${leafCount}, 深度=${depth})`);
+    // Phase 2: Session 结束自动提取记忆（fire-and-forget）
+    const totalTokens = dag.nodes.reduce((sum, n) => sum + n.tokenCount, 0);
+    import("./session-memory.js").then(({ extractFromSession }) => {
+        extractFromSession(cwd, totalTokens).then((result) => {
+            if (result.extracted > 0) {
+                console.log(`[ChatMemory] session 记忆提取: ${result.detail}`);
+            }
+        }).catch((err) => {
+            console.warn("[ChatMemory] session 记忆提取失败:", err);
+        });
+    }).catch(() => { });
 }
 /** 摘要持久化目录 */
 function getSummaryDir(cwd) {

@@ -19,6 +19,7 @@ import { getAdaptiveTimeout, recordExecution } from "./adaptive-timeout.js";
 import { loadConfig } from "./config.js";
 import { SessionOwnership } from "./session-ownership.js";
 import { classifyMessage, taskQueueManager, autoRouteEngine } from "./task-queue.js";
+import { updateBlackboard } from "./services/blackboard.js";
 import { triggerAutoCapture } from "./services/auto-capture.js";
 import { saveChatAndExtractMemory } from "./services/chat-history.js";
 import { loadSharedContext, loadSharedContextLight } from "./services/context-loader.js";
@@ -26,6 +27,10 @@ import { buildCrossSessionContext, recordConversationTurn, onSessionEnd, extract
 import { preprocessMultimodal } from "./services/multimodal-preprocessor.js";
 import { fetchUrlContent } from "./services/url-content-fetcher.js";
 import { getPortsSnapshot } from "./services/port-manager.js";
+import { listSnapshots, rollbackToSnapshot } from "./services/memory-rollback.js";
+import { extractFromRecentEvents } from "./services/session-memory.js";
+import { runDream } from "./services/dream-consolidation.js";
+import { loadAgentMemory, recordAgentExperience } from "./services/agent-memory.js";
 const PORT = process.env.PORT || 18080;
 // 配对速率限制：每 IP 5 次失败后锁定 5 分钟
 const PAIR_MAX_ATTEMPTS = 5;
@@ -222,6 +227,20 @@ export class HttpServer {
                 res.writeHead(200, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({ ports: snapshot, total: snapshot.length }));
             }
+            else if (url.pathname === "/memory/snapshots" && req.method === "GET") {
+                const snapshots = listSnapshots(this.cwd);
+                res.writeHead(200, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ snapshots, total: snapshots.length }));
+            }
+            else if (url.pathname === "/memory/rollback" && req.method === "POST") {
+                await this.handleMemoryRollback(req, res);
+            }
+            else if (url.pathname === "/memory/extract-session" && req.method === "POST") {
+                await this.handleMemoryExtract(res);
+            }
+            else if (url.pathname === "/memory/dream" && req.method === "POST") {
+                await this.handleMemoryDream(res);
+            }
             else {
                 res.writeHead(404, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({ error: "Not Found" }));
@@ -231,6 +250,47 @@ export class HttpServer {
             console.error("[HTTP] Error:", error);
             res.writeHead(500, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: "Internal Server Error" }));
+        }
+    }
+    // ── Memory API handlers ──────────────────────────────────────
+    async handleMemoryRollback(req, res) {
+        try {
+            const body = await this.readBody(req);
+            const { snapshot } = JSON.parse(body);
+            if (!snapshot) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: "missing snapshot path" }));
+                return;
+            }
+            const ok = rollbackToSnapshot(this.cwd, snapshot);
+            res.writeHead(ok ? 200 : 404, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ success: ok }));
+        }
+        catch (err) {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: String(err) }));
+        }
+    }
+    async handleMemoryExtract(res) {
+        try {
+            const result = await extractFromRecentEvents(this.cwd);
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(JSON.stringify(result));
+        }
+        catch (err) {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: String(err) }));
+        }
+    }
+    async handleMemoryDream(res) {
+        try {
+            const result = await runDream(this.cwd);
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(JSON.stringify(result));
+        }
+        catch (err) {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: String(err) }));
         }
     }
     handleHealth(res) {
@@ -448,17 +508,33 @@ export class HttpServer {
             return;
         }
         // 双主分离：任务型消息异步入队，立即 ack，不阻塞对话通道
+        // v7 AST: chat 消息如果路由到非 cc 引擎，升级为 task（路由比分类更精准）
         if (!ctx.engine) {
-            const msgType = classifyMessage(trimmedMessage);
+            let msgType = classifyMessage(trimmedMessage);
+            if (msgType === "chat") {
+                const probeRoute = autoRouteEngine(trimmedMessage, this.cwd);
+                if (probeRoute.engine !== "cc") {
+                    msgType = "task";
+                    console.log(`[CC][${ctx.channelId}] chat→task 升级: 路由到 ${probeRoute.engine} | ${probeRoute.reason}`);
+                }
+            }
             if (msgType === "task") {
                 const queueInfo = taskQueueManager.getQueueInfo(ctx.channelId);
                 const pending = queueInfo.pending;
-                // 半自动路由：根据任务内容自动选择最合适的引擎
-                const routedEngine = autoRouteEngine(trimmedMessage);
+                // 半自动路由（AST 社会注意力）：根据任务内容自动选择最合适的引擎
+                const routeResult = autoRouteEngine(trimmedMessage, this.cwd);
+                const routedEngine = routeResult.engine;
                 const engineTip = routedEngine !== "cc" ? `（→ ${routedEngine}）` : "";
                 if (routedEngine !== "cc") {
-                    console.log(`[CC][${ctx.channelId}] 半自动路由: "${trimmedMessage.substring(0, 40)}..." → ${routedEngine}`);
+                    console.log(`[CC][${ctx.channelId}] 半自动路由: "${trimmedMessage.substring(0, 40)}..." → ${routedEngine} | 原因: ${routeResult.reason}`);
                 }
+                // 更新 blackboard 引擎状态（AST — 社会注意力记录）
+                updateBlackboard(this.cwd, {
+                    engine: routedEngine,
+                    task: trimmedMessage.substring(0, 50),
+                    reason: routeResult.reason,
+                    contextHints: routeResult.contextHints,
+                });
                 // 构建队列状态提示（包含正在执行的任务信息，避免用户困惑）
                 let queueTip = "";
                 if (queueInfo.running && queueInfo.currentTask) {
@@ -1038,7 +1114,12 @@ export class HttpServer {
                     console.log(`[CC][${ctx.channelId}] 合并 URL PDF: 总共 ${mediaBuffers.length} 个媒体文件`);
                 }
             }
-            const result = await runCliEngine(engine, finalPrompt, this.cwd, {
+            // P1-4: Agent Memory 注入 — 引擎调用前 prepend 对应引擎的经验记忆
+            const agentMem = loadAgentMemory(this.cwd, engine);
+            const promptWithAgentMemory = agentMem
+                ? `[Agent Memory for ${engine}]\n${agentMem}\n\n${finalPrompt}`
+                : finalPrompt;
+            const result = await runCliEngine(engine, promptWithAgentMemory, this.cwd, {
                 timeout: adaptiveTimeout,
                 signal: channelAbort.signal,
                 mediaBuffers,
@@ -1047,6 +1128,17 @@ export class HttpServer {
             const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
             // 记录执行结果，供自适应超时学习
             recordExecution(matchedSopKey, engine, Date.now() - startTime, !!result.timedOut);
+            // P1-5: Agent Memory 实时采集 — 任务完成后记录经验信号
+            try {
+                const isTimeout = !!result.timedOut;
+                const isError = !!result.error && !result.output;
+                const signalType = isTimeout || isError ? "friction" : "success";
+                const summary = isError
+                    ? `${matchedSopKey || "task"} — ${result.error?.substring(0, 80) ?? "unknown error"}`
+                    : `${matchedSopKey || "task"} — ${elapsed}s`;
+                recordAgentExperience(this.cwd, engine, { type: signalType, content: summary });
+            }
+            catch { /* agent memory 采集不应阻塞主流程 */ }
             // 用户中止
             if (result.error === "USER_ABORTED") {
                 engineState.status = "error";

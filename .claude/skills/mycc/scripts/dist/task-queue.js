@@ -33,6 +33,66 @@ const CHAT_KEYWORDS = [
     "好的", "明白", "谢谢", "知道了", "可以", "不用了",
     "进展", "状态", "怎么样", "如何", "情况",
 ];
+import { readFileSync, existsSync } from "fs";
+import * as path from "path";
+// ---- 引擎信任度统计（AST — 基于历史完成率） ----
+/** 引擎信任度缓存（10 分钟 TTL，避免频繁读文件） */
+let _trustCache = null;
+const TRUST_CACHE_TTL = 10 * 60 * 1000;
+/**
+ * 从 task-log.md 统计各引擎完成率。
+ * 解析格式: | 时间 | 任务类型 | 摘要 | 执行引擎 | 状态 | friction_skill |
+ */
+function computeEngineTrust(cwd) {
+    const now = Date.now();
+    if (_trustCache && now - _trustCache.timestamp < TRUST_CACHE_TTL) {
+        return _trustCache.data;
+    }
+    const trustMap = new Map();
+    const logPath = path.join(cwd, "0-System/task-log.md");
+    if (!existsSync(logPath)) {
+        _trustCache = { data: trustMap, timestamp: now };
+        return trustMap;
+    }
+    try {
+        const content = readFileSync(logPath, "utf-8");
+        const counts = new Map();
+        for (const line of content.split("\n")) {
+            // 匹配表格行: | 时间 | 类型 | 摘要 | 引擎 | 状态 | ...
+            const cells = line.split("|").map(c => c.trim()).filter(Boolean);
+            if (cells.length < 5)
+                continue;
+            const engineRaw = cells[3].toLowerCase();
+            const status = cells[4];
+            // 提取引擎名（可能带括号注释如 "cc (opus)"）
+            let engine = null;
+            if (engineRaw.includes("codex"))
+                engine = "codex";
+            else if (engineRaw.includes("gemini"))
+                engine = "gemini";
+            else if (engineRaw.includes("cc") || engineRaw.includes("claude"))
+                engine = "cc";
+            if (!engine)
+                continue;
+            const entry = counts.get(engine) || { total: 0, success: 0 };
+            entry.total++;
+            if (status.includes("✅") || status.includes("完成")) {
+                entry.success++;
+            }
+            counts.set(engine, entry);
+        }
+        // 计算信任度 = 成功率（最低 0.5 保底，避免冷启动引擎被完全排除）
+        for (const [engine, { total, success }] of counts) {
+            const rate = total > 0 ? success / total : 0.5;
+            trustMap.set(engine, Math.max(rate, 0.5));
+        }
+    }
+    catch {
+        // 静默失败
+    }
+    _trustCache = { data: trustMap, timestamp: now };
+    return trustMap;
+}
 /** 适合 codex 的任务：代码编写/调试/重构 + 论文调研归档 */
 const CODEX_ROUTE_KEYWORDS = [
     "写代码", "写个", "写一个", "帮我写", "编程", "写程序",
@@ -71,47 +131,91 @@ const GEMINI_ROUTE_KEYWORDS = [
     "总结全文", "全文分析", "深度分析全文",
 ];
 /**
- * 半自动任务路由：根据消息内容推荐最合适的引擎。
+ * 半自动任务路由（AST 社会注意力版）：
+ * 根据消息内容推荐最合适的引擎，并说明路由原因和上下文提示。
  *
  * 路由优先级：
  * 1. pipeline（分析+写入组合）→ Gemini 分析 → Codex 写入飞书
- * 2. codex（纯代码任务）
+ * 2. codex（纯代码任务 / 论文调研）
  * 3. gemini（纯调研/采集）
  * 4. cc（默认 / 纯写入操作）
  */
-export function autoRouteEngine(message) {
+export function autoRouteEngine(message, cwd) {
     const text = message.trim().toLowerCase();
+    // v7 AST: 加载历史信任度（有 cwd 时生效）
+    const trust = cwd ? computeEngineTrust(cwd) : new Map();
+    const getTrust = (engine) => trust.get(engine) ?? 0.5;
+    const trustSuffix = (engine) => {
+        const t = getTrust(engine);
+        return trust.size > 0 ? ` [信任度: ${(t * 100).toFixed(0)}%]` : "";
+    };
     const hasWrite = WRITE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
     const hasAnalysis = ANALYSIS_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
     const hasGemini = GEMINI_ROUTE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
     const hasUrl = /https?:\/\/\S+/i.test(text);
     const hasCodex = CODEX_ROUTE_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
+    const hasGitHub = /github\.com/i.test(text);
+    const hasArxiv = /arxiv\.org/i.test(text);
     // 最高优先级：分析+写入组合 → pipeline（Gemini 分析 → Codex 写入）
     if (hasWrite && (hasAnalysis || hasGemini)) {
-        return "pipeline";
+        return {
+            engine: "pipeline",
+            reason: `分析+写入组合任务，Gemini 负责分析，Codex 负责写入飞书${trustSuffix("pipeline")}`,
+            contextHints: ["gemini 做前置分析", "codex 做飞书写入", "需要 lark-cli MCP"],
+        };
     }
     // 纯写入操作 → codex（有飞书 MCP 能力，分摊 cc 负担）
     if (hasWrite) {
-        return "codex";
+        return {
+            engine: "codex",
+            reason: `飞书写入操作，codex 有 lark-cli MCP 能力${trustSuffix("codex")}`,
+            contextHints: ["需要 lark-cli MCP", "写入后验证结果"],
+        };
     }
     // GitHub URL → cc（分析项目对 mycc 的迭代价值，需要 cc 的完整上下文）
-    const hasGitHub = /github\.com/i.test(text);
     if (hasGitHub) {
-        return "cc";
+        return {
+            engine: "cc",
+            reason: `GitHub 项目分析需要 cc 的完整项目上下文${trustSuffix("cc")}`,
+            contextHints: ["评估对 mycc 的迭代价值", "需要 gh CLI"],
+        };
     }
     // arxiv URL / 论文关键词 → codex（论文调研归档）
-    const hasArxiv = /arxiv\.org/i.test(text);
+    // v7 AST: 如果 codex 信任度明显低于 gemini，降级到 gemini
     if (hasArxiv || hasCodex) {
-        return "codex";
+        const preferredEngine = (getTrust("codex") < 0.6 && getTrust("gemini") > getTrust("codex") + 0.1)
+            ? "gemini"
+            : "codex";
+        return {
+            engine: preferredEngine,
+            reason: hasArxiv
+                ? `arxiv 论文调研归档${trustSuffix(preferredEngine)}`
+                : `代码/调研任务${trustSuffix(preferredEngine)}`,
+            contextHints: hasArxiv
+                ? ["论文调研模式", "输出归档到 1-Inbox/"]
+                : ["代码任务", "可直接修改仓库"],
+        };
     }
     // 非 GitHub/arxiv 的 URL + 分析关键词 → gemini（通用调研类）
     if (hasUrl && hasAnalysis) {
-        return "gemini";
+        return {
+            engine: "gemini",
+            reason: `URL + 分析关键词，gemini 擅长通用调研${trustSuffix("gemini")}`,
+            contextHints: ["通用 URL 分析", "输出纯文本结果"],
+        };
     }
     if (hasGemini) {
-        return "gemini";
+        return {
+            engine: "gemini",
+            reason: `采集/新闻/知识库查询任务${trustSuffix("gemini")}`,
+            contextHints: ["采集模式", "可能需要 enableTools"],
+        };
     }
-    return "cc";
+    return {
+        engine: "cc",
+        reason: `默认路由到 cc（对话/通用任务）${trustSuffix("cc")}`,
+        contextHints: [],
+    };
 }
 /**
  * 判断消息类型。

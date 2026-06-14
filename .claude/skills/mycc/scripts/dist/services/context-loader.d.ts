@@ -55,4 +55,9 @@ export declare function loadSharedContextLight(prompt: string, cwd: string): Pro
  * @returns 格式化的 context 前缀（可能为空）
  */
 export declare function loadSharedContext(prompt: string, cwd: string): Promise<string>;
+/**
+ * PP 自动验证闭环：获取预测准确率统计。
+ * 由 attention-audit skill 定期调用，偏差大时输出策略调整建议。
+ */
+export declare function getVerificationReport(cwd: string, days?: number): string;
 //# sourceMappingURL=context-loader.d.ts.map

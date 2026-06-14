@@ -38,7 +38,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import * as path from "path";
 import { embed, loadVectorIndex, vectorSearch, } from "./embedding.js";
-import { getDB, syncAll as syncDB, getItemsByCategory, getCategorySummary, saveTrace as saveTraceDB, } from "./memory-db.js";
+import { getDB, syncAll as syncDB, getItemsByCategory, getCategorySummary, saveTrace as saveTraceDB, verifyPredictions as verifyPredictionsDB, recordItemAccess as recordItemAccessDB, } from "./memory-db.js";
 // ============================================================
 // 时间衰减 v3（双时间戳 + 事件感知，借鉴 Supermemory temporal grounding）
 // ============================================================
@@ -153,6 +153,57 @@ function resolveRelations(items) {
         }
         return item;
     });
+}
+// ============================================================
+// 因果关联链 v6（IIT 启发 — 信息因果整合）
+// ============================================================
+/**
+ * v6: 解析因果关联标记，扩展检索召回。
+ *
+ * 标记语法：
+ * - →caused:关键词   — 本条导致了某条的产生
+ * - ←caused-by:关键词 — 本条由某条触发
+ * - →evolved:关键词   — 本条演化为某条
+ *
+ * 当一个 item 被检索命中时，沿因果链扩展召回关联 items，
+ * 关联 items 获得原始分数的 0.5 倍加成（不超过原始排名）。
+ */
+function resolveCausalChains(items) {
+    // 收集所有因果标记
+    const causalLinks = [];
+    for (let i = 0; i < items.length; i++) {
+        const line = items[i].line;
+        const causedMatch = line.match(/→caused:(.+?)(?:\s*\[|\s*#|\s*→|←|\s*$)/);
+        if (causedMatch) {
+            causalLinks.push({ sourceIdx: i, targetKeyword: causedMatch[1].trim().toLowerCase(), direction: "forward" });
+        }
+        const causedByMatch = line.match(/←caused-by:(.+?)(?:\s*\[|\s*#|\s*→|←|\s*$)/);
+        if (causedByMatch) {
+            causalLinks.push({ sourceIdx: i, targetKeyword: causedByMatch[1].trim().toLowerCase(), direction: "backward" });
+        }
+        const evolvedMatch = line.match(/→evolved:(.+?)(?:\s*\[|\s*#|\s*→|←|\s*$)/);
+        if (evolvedMatch) {
+            causalLinks.push({ sourceIdx: i, targetKeyword: evolvedMatch[1].trim().toLowerCase(), direction: "evolved" });
+        }
+    }
+    if (causalLinks.length === 0)
+        return items.map(i => ({ ...i }));
+    // 对于有分数的 items，沿因果链给关联 items 加分
+    const boosted = items.map(i => ({ ...i }));
+    for (const link of causalLinks) {
+        const sourceScore = boosted[link.sourceIdx].score;
+        if (sourceScore <= 0)
+            continue; // 源 item 没被命中，不扩展
+        const boostAmount = sourceScore * 0.5;
+        for (let j = 0; j < boosted.length; j++) {
+            if (j === link.sourceIdx)
+                continue;
+            if (boosted[j].line.toLowerCase().includes(link.targetKeyword)) {
+                boosted[j] = { ...boosted[j], score: boosted[j].score + boostAmount };
+            }
+        }
+    }
+    return boosted;
 }
 // ============================================================
 // TF-IDF cosine 相似度（v3: 从 Jaccard 升级，借鉴 Supermemory hybrid search）
@@ -508,6 +559,57 @@ function rrfFuse(rankedLists) {
         .sort((a, b) => b.score - a.score);
 }
 // ============================================================
+// 历史轨迹加权 v6 AST（ASAC 反馈闭环）
+// ============================================================
+/** 缓存历史命中率（每 10 分钟刷新，避免频繁 SQLite 查询） */
+let _hitRateCache = null;
+const HIT_RATE_CACHE_TTL = 10 * 60 * 1000; // 10 分钟
+const HISTORY_BOOST_WEIGHT = 0.2; // 历史 boost 权重（相对于 RRF 原始分数）
+/**
+ * v6 AST: 将历史命中率叠加到 RRF 融合结果上。
+ *
+ * 高频被注入的类别获得 boost，让检索策略从经验中学习。
+ * 冷启动安全：无历史数据时直接返回原始结果。
+ */
+function applyHistoricalBoost(fused, cwd) {
+    // 缓存检查
+    const now = Date.now();
+    if (!_hitRateCache || now - _hitRateCache.timestamp > HIT_RATE_CACHE_TTL) {
+        try {
+            const { aggregateTraces } = require("./memory-db");
+            const stats = aggregateTraces(cwd, 7);
+            if (stats.totalTraces > 0) {
+                const rateMap = new Map();
+                for (const item of stats.categoryHitRate) {
+                    rateMap.set(item.category, item.rate);
+                }
+                _hitRateCache = { data: rateMap, timestamp: now };
+            }
+            else {
+                _hitRateCache = { data: new Map(), timestamp: now };
+            }
+        }
+        catch {
+            _hitRateCache = { data: new Map(), timestamp: now };
+        }
+    }
+    // 无历史数据 → 直接返回
+    if (_hitRateCache.data.size === 0) {
+        return fused.map(item => ({ ...item }));
+    }
+    // 叠加历史 boost
+    const boosted = fused.map(item => {
+        const histRate = _hitRateCache.data.get(item.category) || 0;
+        return {
+            category: item.category,
+            score: item.score + HISTORY_BOOST_WEIGHT * histRate,
+        };
+    });
+    // 重新排序
+    boosted.sort((a, b) => b.score - a.score);
+    return boosted;
+}
+// ============================================================
 // LLM 重排 v5.5（借鉴 QMD reranker pipeline）
 // ============================================================
 const RERANKER_MODEL = "qwen3-reranker:0.6b";
@@ -706,6 +808,16 @@ async function expandQuery(query) {
         return [];
     }
 }
+/**
+ * PP 协议：从 prompt 中解析注意力预测声明。
+ * 格式: [注意力预测] 本任务预计需要关注：类别1, 类别2, 类别3
+ */
+function parsePredictedCategories(prompt) {
+    const match = prompt.match(/\[注意力预测\]\s*(?:本任务预计需要关注：?\s*)?(.+)/);
+    if (!match)
+        return undefined;
+    return match[1].split(/[,，、\s]+/).map(s => s.trim()).filter(Boolean);
+}
 /** 将检索轨迹写入 JSONL（fire-and-forget） */
 function writeTrace(trace, cwd) {
     try {
@@ -831,9 +943,12 @@ async function hybridMatchCategories(prompt, memContent, cwd) {
         return { categories: [], trace };
     }
     const fused = rrfFuse(rankedLists);
-    trace.rrf = fused.slice(0, 10);
+    // v6 AST: 历史轨迹加权 — ASAC 反馈闭环
+    // 高频被注入的类别获得 boost，让检索策略从经验中学习
+    const boosted = applyHistoricalBoost(fused, cwd);
+    trace.rrf = boosted.slice(0, 10);
     // 取 RRF 最高的类别（上限 8 个，避免过度注入）
-    const categories = fused.slice(0, 8).map((r) => r.category);
+    const categories = boosted.slice(0, 8).map((r) => r.category);
     return { categories, trace };
 }
 /**
@@ -885,6 +1000,14 @@ export async function loadSharedContextLight(prompt, cwd) {
                 parts.push(userBlock);
             if (projectBlock)
                 parts.push(projectBlock);
+            // v8 FadeMem: 记录被注入的类别的访问（Light 版也追踪）
+            const injectedCatsLight = [...ALWAYS_INJECT_CATEGORIES, ...allProjectCats];
+            recordItemAccessDB(cwd, injectedCatsLight);
+            // v7 PP: 从 prompt 中解析注意力预测声明（Light 版也支持）
+            const predicted = parsePredictedCategories(prompt);
+            if (predicted) {
+                trace.predicted = predicted;
+            }
             // v5.5: 写检索轨迹到 SQLite（降级到 JSONL）
             trace.budget.used = parts.join("\n\n").length;
             trace.budget.limit = 2000;
@@ -894,6 +1017,7 @@ export async function loadSharedContextLight(prompt, cwd) {
                 pipeline: trace.pipeline,
                 rrf: trace.rrf,
                 injected: trace.injected,
+                predicted: trace.predicted,
                 budget_used: trace.budget.used,
                 budget_limit: trace.budget.limit,
             });
@@ -952,6 +1076,14 @@ export async function loadSharedContext(prompt, cwd) {
                 parts.push(userBlock);
             if (projectBlock)
                 parts.push(projectBlock);
+            // v8 FadeMem: 记录被注入的类别的访问（更新 last_accessed + access_count）
+            const injectedCats = [...ALWAYS_INJECT_CATEGORIES, ...allProjectCats];
+            recordItemAccessDB(cwd, injectedCats);
+            // v7 PP: 从 prompt 中解析注意力预测声明
+            const predicted = parsePredictedCategories(prompt);
+            if (predicted) {
+                trace.predicted = predicted;
+            }
             // v5.5: 检索轨迹双写（SQLite + JSONL 过渡期）
             trace.budget.used = parts.join("\n\n").length;
             trace.budget.limit = 3000;
@@ -961,6 +1093,7 @@ export async function loadSharedContext(prompt, cwd) {
                 pipeline: trace.pipeline,
                 rrf: trace.rrf,
                 injected: trace.injected,
+                predicted: trace.predicted,
                 budget_used: trace.budget.used,
                 budget_limit: trace.budget.limit,
             });
@@ -978,5 +1111,34 @@ export async function loadSharedContext(prompt, cwd) {
         result = result.substring(0, 3000) + "\n...(记忆截断)";
     }
     return `[共享记忆 — 以下是跨会话记忆，帮助你理解上下文]\n\n${result}\n\n[共享记忆结束]\n\n`;
+}
+/**
+ * PP 自动验证闭环：获取预测准确率统计。
+ * 由 attention-audit skill 定期调用，偏差大时输出策略调整建议。
+ */
+export function getVerificationReport(cwd, days = 7) {
+    const v = verifyPredictionsDB(cwd, days);
+    if (v.totalWithPredictions === 0) {
+        return "PP 验证：暂无含预测的轨迹数据（预测声明尚未积累）";
+    }
+    const lines = [
+        `PP 预测验证报告（最近 ${days} 天，${v.totalWithPredictions} 条含预测轨迹）`,
+        `  精确率: ${(v.precision * 100).toFixed(1)}%（预测类别被实际注入的比率）`,
+        `  召回率: ${(v.recall * 100).toFixed(1)}%（实际注入类别被预测覆盖的比率）`,
+    ];
+    if (v.overPredicted.length > 0) {
+        lines.push(`  幻觉类别（经常预测但未注入）: ${v.overPredicted.map(o => `${o.category}(${o.count}次)`).join(", ")}`);
+    }
+    if (v.underPredicted.length > 0) {
+        lines.push(`  盲区类别（经常注入但未预测）: ${v.underPredicted.map(u => `${u.category}(${u.count}次)`).join(", ")}`);
+    }
+    // 策略调整建议
+    if (v.precision < 0.5 && v.totalWithPredictions >= 5) {
+        lines.push("  ⚠️ 精确率过低，建议收紧预测范围：只预测高置信度的类别");
+    }
+    if (v.recall < 0.3 && v.totalWithPredictions >= 5) {
+        lines.push("  ⚠️ 召回率过低，建议扩大预测范围：关注盲区类别");
+    }
+    return lines.join("\n");
 }
 //# sourceMappingURL=context-loader.js.map
