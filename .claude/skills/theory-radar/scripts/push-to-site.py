@@ -13,9 +13,11 @@ from datetime import datetime, timezone, timedelta
 
 WEBHOOK_URL = os.environ.get("RADAR_WEBHOOK_URL", "https://my.chenchuan.cc/api/radar-webhook")
 TOKEN = os.environ.get("RADAR_WEBHOOK_TOKEN", "")
-GEMINI_URL = os.environ.get("GEMINI_PROXY_URL", "http://23.226.135.149:4000/v1/chat/completions")
-GEMINI_KEY = os.environ.get("GEMINI_PROXY_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
+# codex API 网关（gpt-5.5）。必须 stream:true：网关在 CF 后源站 ~100s 超时回 524，流式持续吐字节绕过。
+CODEX_BASE = os.environ.get("CODEX_API_GATEWAY_BASE_URL", "https://10521052.xyz/v1").rstrip("/")
+CODEX_URL = CODEX_BASE + "/chat/completions"
+CODEX_KEY = os.environ.get("CODEX_API_GATEWAY_KEY", "")
+CODEX_MODEL = os.environ.get("CODEX_MODEL", "gpt-5.5")
 DATA = os.environ.get("THEORY_RADAR_DATA", "/tmp/theory-radar-data.json")
 BJ = timezone(timedelta(hours=8))
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
@@ -53,7 +55,7 @@ def score(p):
     return sum(1 for k in PRI if k in t)
 
 
-def call_gemini(sel):
+def call_codex(sel):
     blocks = []
     for i, p in enumerate(sel):
         aid = p["arxiv_id"].split("v")[0]
@@ -74,24 +76,42 @@ def call_gemini(sel):
     )
     body = json.dumps(
         {
-            "model": GEMINI_MODEL,
+            "model": CODEX_MODEL,
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 65535,
+            "max_tokens": 20000,
             "reasoning_effort": "high",
+            "stream": True,
         }
     ).encode()
     req = urllib.request.Request(
-        GEMINI_URL,
+        CODEX_URL,
         data=body,
         headers={
-            "Authorization": f"Bearer {GEMINI_KEY}",
+            "Authorization": f"Bearer {CODEX_KEY}",
             "Content-Type": "application/json",
             "User-Agent": UA,
+            "Accept": "text/event-stream",
         },
+        method="POST",
     )
-    with urllib.request.urlopen(req, timeout=200) as r:
-        resp = json.load(r)
-    return resp["choices"][0]["message"]["content"]
+    # 直连绕 xray（网关在 CF 后，与 _codex_lane.sh 的 curl --noproxy 同款）
+    content = ""
+    with NOPROXY_OPENER.open(req, timeout=240) as resp:
+        for raw in resp:
+            line = raw.decode("utf-8", "ignore").strip()
+            if not line.startswith("data:"):
+                continue
+            payload = line[5:].strip()
+            if payload == "[DONE]":
+                break
+            try:
+                chunk = json.loads(payload)
+                delta = chunk["choices"][0].get("delta", {}).get("content", "")
+                if delta:
+                    content += delta
+            except Exception:
+                continue
+    return content
 
 
 def parse_json(content):
@@ -107,8 +127,8 @@ def parse_json(content):
 def main():
     if not TOKEN:
         log("缺 RADAR_WEBHOOK_TOKEN"); sys.exit(1)
-    if not GEMINI_KEY:
-        log("缺 GEMINI_PROXY_KEY"); sys.exit(1)
+    if not CODEX_KEY:
+        log("缺 CODEX_API_GATEWAY_KEY"); sys.exit(1)
 
     papers = load_papers()
     log(f"加载 {len(papers)} 篇去重论文")
@@ -118,7 +138,7 @@ def main():
     log(f"选出 {len(sel)} 篇")
     meta = {p["arxiv_id"].split("v")[0]: p for p in sel}
 
-    content = call_gemini(sel)
+    content = call_codex(sel)
     data = parse_json(content)
     analyses = data.get("papers", [])
 

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>cc.theory-radar-push</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/rayman.chen/theory-radar/daily-radar-push.sh</string>
+  </array>
+  <!-- 每 3 天跑一次（3*86400=259200 秒）。从 load 起算，重启后重新计时（3天一次漂移可接受）。 -->
+  <key>StartInterval</key>
+  <integer>259200</integer>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/tmp/radar-push-launchd.out</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/radar-push-launchd.err</string>
+</dict>
+</plist>
