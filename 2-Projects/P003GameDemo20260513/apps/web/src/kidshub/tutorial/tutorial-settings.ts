@@ -72,28 +72,8 @@ const SETTINGS_STEPS: TutorialStep[] = [
     hideAvatar: true,
     isUnitEnd: false,
   },
-  {
-    id: '3-4',
-    specStep: '3-4-1 / 3-4-2',
-    expression: 'praise',
-    target: 'light-off',
-    voiceCopy: '太厉害了，点击这里可以开关灯光哦',
-    remindCopy: '指挥官，试试点击这个小灯泡按钮，灯光就会休息一会儿哦！',
-    waitFor: 'light-off',
-    hideAvatar: true,
-    isUnitEnd: false,
-  },
-  {
-    id: '3-5',
-    specStep: '3-5-1 / 3-5-2',
-    expression: 'cheer',
-    target: 'light-on',
-    voiceCopy: '真棒，我们再试一下打开灯吧',
-    remindCopy: '快把灯光唤醒吧！再点一次那个按钮，让方舟亮起来！',
-    waitFor: 'light-on',
-    hideAvatar: true,
-    isUnitEnd: false,
-  },
+  // 川哥 2026-06-14 一比一还原设计图：设计图无开关灯控件 → 删原 step3-4(关灯)/3-5(开灯)，
+  // 设置面板只 4 控件(亮度/音量/光谱/像距)，引导教 亮度→音量→色温→高度→准备好。
   {
     id: '4',
     specStep: '4',
