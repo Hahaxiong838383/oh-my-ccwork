@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useKidsHubStore } from './store/kidshub-store';
 import { LoginPage } from './LoginPage';
 import { StudioPage } from './StudioPage';
+import { getSharedVoiceClient } from '../services/voice-client';
 
 /**
  * KidsHub-AI · 小可 Prompt 体验工作台 入口
@@ -17,6 +18,7 @@ export function KidsHubApp() {
   const token = useKidsHubStore((s) => s.token);
   const setToken = useKidsHubStore((s) => s.setToken);
   const [checking, setChecking] = useState(true);
+  const [publicStarted, setPublicStarted] = useState(!isPublicMode);
 
   // 启动时校验已有 token（公开模式跳过）
   useEffect(() => {
@@ -65,5 +67,31 @@ export function KidsHubApp() {
     return <LoginPage />;
   }
 
-  return <StudioPage />;
+  const handlePublicStart = () => {
+    // 公开版没有登录按钮，必须在这个真实点击栈里同步解锁 AudioContext。不 await。
+    void getSharedVoiceClient().unlockAudio();
+    setPublicStarted(true);
+  };
+
+  return (
+    <div className="relative min-h-screen">
+      <StudioPage autoStartTutorial={publicStarted} />
+      {isPublicMode && !publicStarted ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/90 px-6 backdrop-blur-sm">
+          <div className="max-w-sm text-center">
+            <div className="text-sm font-medium tracking-[0.2em] text-sky-200/80">KIDSHUB-AI</div>
+            <h1 className="mt-4 text-2xl font-semibold text-white">和小可开始对话</h1>
+            <button
+              type="button"
+              onClick={handlePublicStart}
+              className="mt-7 inline-flex items-center gap-3 rounded-full bg-sky-400 px-6 py-3 text-base font-semibold text-neutral-950 shadow-lg shadow-sky-500/20 transition hover:bg-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200 focus:ring-offset-2 focus:ring-offset-neutral-950"
+            >
+              <span aria-hidden="true">▶</span>
+              <span>开始和小可对话</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }

@@ -25,7 +25,11 @@ function getVoiceWsUrl(): string {
   return `${protocol}://${window.location.host}/ws/voice`;
 }
 
-export function StudioPage() {
+type StudioPageProps = {
+  autoStartTutorial?: boolean;
+};
+
+export function StudioPage({ autoStartTutorial = true }: StudioPageProps) {
   const setToken = useKidsHubStore((s) => s.setToken);
 
   const activeCardId = useKidsHubStore((s) => s.activeCardId);
@@ -60,6 +64,7 @@ export function StudioPage() {
   // 不用手动点左栏入口。已全完成/已在引导中则不触发。想摆脱自动引导可点控制条「跳过引导」。
   const autoStartedRef = useRef(false);
   useEffect(() => {
+    if (!autoStartTutorial) return;
     if (autoStartedRef.current) return;
     autoStartedRef.current = true;
     const ts = useTutorialStore.getState();
@@ -72,7 +77,7 @@ export function StudioPage() {
     client.bargeIn();
     useAppStore.getState().setSubtitle('');
     ts.start(firstIncomplete.id);
-  }, []);
+  }, [autoStartTutorial]);
 
   // 防 React 18 StrictMode（dev）下 useEffect 双触发导致一次进卡重复采样两条事实
   const processedCardRef = useRef<string | null>(null);
