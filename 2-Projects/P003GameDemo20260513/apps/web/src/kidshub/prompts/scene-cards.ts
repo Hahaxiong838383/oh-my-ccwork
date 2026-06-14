@@ -49,7 +49,7 @@ export const SCENE_CARDS: SceneCard[] = [
     commanderSuffix: 'on',
     triggerInstruction:
       '（场景触发指令，不是孩子说的话）孩子今天首次开盖。按夜航结算场景目标主动播报夜航收益——无论用什么表达角度，都必须说出星尘的具体数字（这是夜航的核心获得感）。直接输出你要说的话，不要任何解释。',
-    sceneImage: '/kidshub/boarding/ecopond.png',
+    sceneImage: '/kidshub/scenes/card2.eco.png',
     emoji: '🌌',
     hint: '试试问"星尘是什么"或"昨晚方舟去哪了"',
   },
@@ -67,7 +67,7 @@ export const SCENE_CARDS: SceneCard[] = [
     commanderSuffix: 'off',
     triggerInstruction:
       '（场景触发指令，不是孩子说的话）孩子断档几天后刚回来开盖。按回归承接场景目标，用当前状态里的真实变化主动说第一句话。直接输出你要说的话，不要任何解释。',
-    sceneImage: '/kidshub/boarding/ecopond.png',
+    sceneImage: '/kidshub/scenes/card3.eco.png',
     emoji: '🐠',
     hint: '试试说"我想看"或故意说"我前几天没来你生气吗"',
   },
