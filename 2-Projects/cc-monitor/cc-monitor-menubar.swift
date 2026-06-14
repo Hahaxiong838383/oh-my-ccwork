@@ -220,46 +220,42 @@ struct ContentView: View {
     }
 
     // ── 架构 tab：每层 = 一张卡，列出真实子目录路径 + 作用，点路径在 Finder 打开 ──
+    // ── 架构 tab：左偏轴管道流转图(地铁线主干贯穿 + 右侧挂枝) ──
     var archView: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            legend
-            layerCard("① 常驻核心", badge: "rules \(s.rulesKB)K·MEM \(s.memKB)K",
-                      ok: s.rulesKB <= s.rulesTrip && s.memKB <= s.memTrip) {
-                pathRow(.green, "~/.claude/rules/", "5 文件·身份/行为/流程/工具/路由·每次注入")
-                pathRow(.green, "~/.claude/projects/-Users-rayman-chen-mycc/memory/MEMORY.md", "热索引 46★·每次注入")
-                pathRow(.green, "~/mycc/CLAUDE.md", "项目入口·cwd=mycc 时常驻")
-            }
-            arrow("↓ 按需 pull · ripgrep / read")
-            layerCard("② 按需召回", badge: "\(s.cards) 记忆卡", ok: true) {
-                pathRow(.blue, "~/.claude/docs/", "engine-ops·no-guessing·patterns…")
-                pathRow(.blue, "~/.claude/projects/-Users-rayman-chen-mycc/memory/", "\(s.cards) 卡·INDEX-full·ripgrep 召回")
-                pathRow(.blue, "~/.claude/skills/", "全局 skill 17")
-                pathRow(.blue, "~/mycc/.claude/skills/", "项目 skill 80")
-            }
-            arrow("↓ cc 编排")
-            layerCard("③ 项目 ~/mycc", badge: "PARA·MCP \(s.mcp)", ok: true) {
-                pathRow(.gray, "~/mycc/0-System/", "status·RECENT_EVENTS·task-log")
-                pathRow(.gray, "~/mycc/{1-Inbox…5-Archive}/", "PARA 五区·分类归档", open: "~/mycc")
-                pathRow(.gray, "~/mycc/.mcp.json", "项目 MCP \(s.mcp) 个·飞书/wiki/gateway")
-                pathRow(.gray, "~/mycc/docs/rules/ · multi-agent/", "P2/P3 规则·多智能体协同", open: "~/mycc/docs/rules")
-            }
-            arrow("↓ routing-kernel 路由")
-            engineCard
-            arrow("⊘ 隔离 · 不外派 / 不 memory / 不 git")
-            layerCard("⑤ work-private", badge: "隐私 vault", ok: true, muted: true) {
-                pathRow(.gray, "~/work-private/", "人事/面试/客户·三不墙(独立·非 git)")
-            }
-            Divider().padding(.vertical, 1)
-            govCard
+        VStack(alignment: .leading, spacing: 0) {
+            legend.padding(.leading, 26).padding(.bottom, 8)
+            pipeLayer("①", "常驻核心", "rules \(s.rulesKB)K·MEM \(s.memKB)K",
+                      ok: s.rulesKB <= s.rulesTrip && s.memKB <= s.memTrip,
+                      nodes: [("rules/", "~/.claude/rules/", false),
+                              ("CLAUDE.md", "~/mycc/CLAUDE.md", false),
+                              ("memory/MEMORY.md", "~/.claude/projects/-Users-rayman-chen-mycc/memory/MEMORY.md", true)])
+            relationRow("↓ 按需 pull · ripgrep")
+            pipeLayer("②", "按需召回", "\(s.cards) 卡", ok: true,
+                      nodes: [("docs/", "~/.claude/docs/", false),
+                              ("\(s.cards) 记忆卡", "~/.claude/projects/-Users-rayman-chen-mycc/memory/", false),
+                              ("skills/", "~/.claude/skills/", false),
+                              (".claude/skills/", "~/mycc/.claude/skills/", false)])
+            relationRow("↓ cc 编排")
+            pipeLayer("③", "项目 ~/mycc", "MCP \(s.mcp)", ok: true,
+                      nodes: [("0-System/", "~/mycc/0-System/", false),
+                              ("PARA 五区", "~/mycc", false),
+                              (".mcp.json", "~/mycc/.mcp.json", false)])
+            relationRow("↓ routing-kernel 路由")
+            engineLayer
+            relationRow("⊘ 隔离 · 不外派 / 不 memory / 不 git")
+            pipeLayer("⑤", "work-private", "隐私 vault", ok: true, muted: true,
+                      nodes: [("人事/面试/客户 vault", "~/work-private", true)], isLast: true)
+            govRow
         }
+        .padding(.vertical, 4)
     }
 
     var legend: some View {
         HStack(spacing: 12) {
-            legendDot(.green, "常驻 每次注入")
-            legendDot(.blue, "按需 召回")
-            legendDot(.gray, "运行时")
-        }.padding(.bottom, 1)
+            legendDot(.green, "健康")
+            legendDot(.orange, "超预算/告警")
+            legendDot(Color.gray.opacity(0.55), "隔离/中性")
+        }
     }
     func legendDot(_ c: Color, _ t: String) -> some View {
         HStack(spacing: 3) {
@@ -268,84 +264,123 @@ struct ContentView: View {
         }
     }
 
-    // ④ 引擎团队：状态点 + 各 CLI 配置根路径
-    var engineCard: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                Circle().fill(!s.engines.isEmpty && s.engines.allSatisfy { $0.1 } ? Color.green : Color.orange)
-                    .frame(width: 7, height: 7)
-                Text("④ 引擎团队").font(.system(size: 11.5, weight: .semibold))
-                Spacer()
-                HStack(spacing: 6) {
-                    ForEach(s.engines, id: \.0) { e in
-                        HStack(spacing: 2) {
-                            Circle().fill(e.1 ? Color.green : Color.red).frame(width: 5, height: 5)
-                            Text(e.0).font(.system(size: 8))
-                        }
-                    }
-                }
+    // 左主干背景:顶部圆点(健康色) + 向下贯穿竖线(画在 .background,自然填满本块高度,不撑爆 VStack)
+    func spineBg(dot: Color, tail: Bool) -> some View {
+        ZStack(alignment: .top) {
+            if tail {
+                Rectangle().fill(Color.gray.opacity(0.3)).frame(width: 2)
+                    .frame(maxHeight: .infinity).padding(.top, 5)
             }
-            pathRow(.gray, "~/.omp/", "omp 多 provider 编排·agent.db")
-            pathRow(.gray, "~/.grok/ · ~/.codex/ · ~/.gemini/", "各引擎 CLI 配置根", open: "~/.codex")
-            pathRow(.gray, "~/.gateway.env", "codex 网关 key·chmod 600")
+            Circle().fill(dot).frame(width: 11, height: 11)
+                .overlay(Circle().stroke(Color(nsColor: .windowBackgroundColor), lineWidth: 2))
         }
-        .padding(8).frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 7).fill(Color.gray.opacity(0.07)))
+        .frame(width: 11).padding(.leading, 3)
     }
 
-    // 治理闸：hooks
-    var govCard: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                Circle().fill(s.secretHook ? Color.green : Color.orange).frame(width: 7, height: 7)
-                Text("治理闸").font(.system(size: 11.5, weight: .semibold))
-                Spacer()
-                Text(s.secretHook ? "secret 闸 active ✅" : "闸 off ⚠️")
-                    .font(.system(size: 8.5)).foregroundColor(.secondary)
-            }
-            pathRow(.gray, "~/.claude/hooks/", "secret-scan·budget-check·cc-status·pre-commit")
-        }
-        .padding(8).frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 7).fill(Color.gray.opacity(0.07)))
-    }
-
-    func layerCard<C: View>(_ title: String, badge: String, ok: Bool, muted: Bool = false,
-                            @ViewBuilder _ rows: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                Circle().fill(muted ? Color.gray.opacity(0.5) : (ok ? Color.green : Color.orange))
-                    .frame(width: 7, height: 7)
-                Text(title).font(.system(size: 11.5, weight: .semibold))
-                Spacer()
+    // 一个架构层:右侧标题 + 叶节点网格,左侧主干画在 background
+    func pipeLayer(_ idx: String, _ title: String, _ badge: String, ok: Bool, muted: Bool = false,
+                   nodes: [(String, String, Bool)], isLast: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Text(idx).font(.system(size: 12, weight: .bold)).foregroundColor(.secondary)
+                Text(title).font(.system(size: 12, weight: .semibold))
+                Spacer(minLength: 4)
                 Text(badge).font(.system(size: 8.5)).foregroundColor(.secondary)
             }
-            rows()
+            nodeGrid(nodes)
         }
-        .padding(8).frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 7).fill(Color.gray.opacity(0.07)))
+        .padding(.leading, 26).padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topLeading) {
+            spineBg(dot: muted ? Color.gray.opacity(0.55) : (ok ? .green : .orange), tail: !isLast)
+        }
     }
 
-    func pathRow(_ dot: Color, _ path: String, _ role: String, open: String? = nil) -> some View {
-        Button(action: { reveal(open ?? path) }) {
-            HStack(alignment: .top, spacing: 6) {
-                Circle().fill(dot).frame(width: 5, height: 5).padding(.top, 4)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(path).font(.system(size: 9.5, design: .monospaced))
-                        .foregroundColor(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .multilineTextAlignment(.leading)
-                    Text(role).font(.system(size: 8.5)).foregroundColor(.secondary)
-                }
+    // 叶节点 2 列网格(长 label wide=true 占满整行)
+    func nodeGrid(_ nodes: [(String, String, Bool)]) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)],
+                  alignment: .leading, spacing: 6) {
+            ForEach(nodes.indices, id: \.self) { i in
+                nodeChip(nodes[i].0, open: nodes[i].1).gridCellColumns(nodes[i].2 ? 2 : 1)
+            }
+        }
+    }
+
+    // 叶节点 chip:点击在 Finder 打开
+    func nodeChip(_ label: String, open: String) -> some View {
+        Button(action: { reveal(open) }) {
+            Text(label).font(.system(size: 10, design: .monospaced))
+                .lineLimit(1).truncationMode(.middle)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 7).padding(.vertical, 5)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.09)))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.16), lineWidth: 0.5))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // 层间关系标签:主干竖线段(对齐圆点 x≈8.5) + 右侧胶囊文字
+    func relationRow(_ text: String) -> some View {
+        HStack(spacing: 0) {
+            Rectangle().fill(Color.gray.opacity(0.3)).frame(width: 2, height: 22).padding(.leading, 7.5)
+            Text(text).font(.system(size: 9)).foregroundColor(.secondary)
+                .padding(.horizontal, 8).padding(.vertical, 2)
+                .background(Capsule().fill(Color.gray.opacity(0.10)))
+                .padding(.leading, 9)
+            Spacer(minLength: 0)
+        }
+    }
+
+    // ④ 引擎团队:5 引擎各带在线点,点击开各自配置根
+    var engineLayer: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Text("④").font(.system(size: 12, weight: .bold)).foregroundColor(.secondary)
+                Text("引擎团队").font(.system(size: 12, weight: .semibold))
+                Spacer()
+            }
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)],
+                      alignment: .leading, spacing: 6) {
+                ForEach(s.engines, id: \.0) { e in engineChip(e.0, e.1) }
+            }
+        }
+        .padding(.leading, 26).padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topLeading) {
+            spineBg(dot: !s.engines.isEmpty && s.engines.allSatisfy { $0.1 } ? .green : .orange, tail: true)
+        }
+    }
+    func engineChip(_ name: String, _ online: Bool) -> some View {
+        let path = ["omp": "~/.omp", "grok": "~/.grok", "codex": "~/.codex",
+                    "gemini": "~/.gemini", "gateway": "~/.gateway.env"][name] ?? "~"
+        return Button(action: { reveal(path) }) {
+            HStack(spacing: 5) {
+                Circle().fill(online ? Color.green : Color.red).frame(width: 6, height: 6)
+                Text(name).font(.system(size: 10, design: .monospaced))
                 Spacer(minLength: 0)
             }
+            .padding(.horizontal, 7).padding(.vertical, 5)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.09)))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
-    func arrow(_ t: String) -> some View {
-        Text(t).font(.system(size: 8)).foregroundColor(.secondary)
-            .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 1)
+    // 治理闸:管道末端旁挂(无 tail)
+    var govRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Text("治理闸").font(.system(size: 12, weight: .semibold))
+                Spacer()
+                Text(s.secretHook ? "secret 闸 ✅" : "闸 off ⚠️")
+                    .font(.system(size: 8.5)).foregroundColor(.secondary)
+            }
+            nodeChip("hooks/", open: "~/.claude/hooks/")
+        }
+        .padding(.leading, 26)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topLeading) { spineBg(dot: s.secretHook ? .green : .orange, tail: false) }
     }
 
     // 点路径：目录→Finder 打开；文件→Finder 选中（便于右键编辑）
