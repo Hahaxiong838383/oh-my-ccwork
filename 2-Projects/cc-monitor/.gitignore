@@ -11,3 +11,6 @@ xcode/cc-monitor/build/
 xcode/**/xcuserdata/
 xcode/**/*.xcuserstate
 **/DerivedData/
+
+# ── AppIcon 资源 PNG 必须入库(覆盖 mycc 根 .gitignore 的 *.png,否则克隆后图标丢失) ──
+!xcode/cc-monitor/cc-monitor/Assets.xcassets/AppIcon.appiconset/*.png
