@@ -40,7 +40,9 @@ export function TutorialCanvasContent(): JSX.Element {
   const canvasFilter = `brightness(${(lightB * nightDim).toFixed(2)}) ${modeTint}`.trim();
 
   return (
-    <div className="absolute inset-0 overflow-hidden text-white" style={{ fontSize: 'inherit', filter: canvasFilter, transition: 'filter 200ms ease-out' }}>
+    <div className="absolute inset-0 z-[30] overflow-hidden text-white" style={{ fontSize: 'inherit', filter: canvasFilter, transition: 'filter 200ms ease-out' }}>
+      {/* z-[30]：整个设置引导画布(filter 在此创建 stacking context)抬到小可(z-20)之上，
+          面板(内部 z-65)随之盖过小可；filter 仍作用整画布(背景+面板一起明暗)保留调灯光所见即所得 */}
       {/* 背景层：方舟舱内美术图（与登舰引导统一风格）；缺图降级 CSS 舷窗场景 */}
       {!bgFailed && (
         <img
@@ -140,7 +142,7 @@ export function TutorialCanvasContent(): JSX.Element {
         </div>
       )}
 
-      {/* 设置面板（从顶部滑入） */}
+      {/* 设置面板（从顶部滑入；整画布 z-30 已抬到小可之上，面板 z-65 不被遮挡 + 随 filter 明暗） */}
       {panelOpen && <MockSettingsPanel activeTarget={activeTarget} />}
 
       {/* 蒙版 + 画布级小手 + 手势热区 */}
