@@ -4,37 +4,48 @@ import type { TutorialTarget } from './tutorial-types';
 import { GuidePointer, GuideRing } from './GuidePointer';
 
 /**
- * MockSettingsPanel — 读写台设备设置面板（川哥 2026-06-14 一比一还原设计图 设置界面.png）
+ * MockSettingsPanel — 读写台设备设置面板（川哥 2026-06-14 二次还原：image2 3D 素材 + 玻璃质感）
  *
- * 4 控件（与设计图严格对齐，无开关灯）：
- *  - 亮度/音量：竖向滑块（细灰轨道+填充+大白圆滑块头+图标+拖动浮百分比气泡）
- *  - 光谱模式：彩虹圆盘（环+暗心，无中心图标）+ 4段选择器，默认「暖光」高亮
- *  - 像距：侧视示意图（侧脸+虚线+蓝屏幕随拖动前后移）+ 横滑块 2.5~10 米
- *  - 重置：顶栏「恢复初始」；护耳：音量 >85% 变红
- *  - 指引：真 PNG 小手/箭头/光圈
- * 交互契约：data-tutorial-target + advanceOnAction(target)。开关灯已从引导移除（设计图无）。
- * 注：VSlider 提到模块级（不在 render 内联定义），避免父 setState 时 remount 中断拖拽。
+ * 设计图 设置面板UI方案v1.png 一比一还原要点：
+ *  - 背景：image2 生成的深色科幻 HUD 面板底图（settings-ui/panel-bg.png），替换原纯色渐变
+ *  - 卡片：深蓝玻璃 + 青色发光边框（非灰色实心矩形）
+ *  - 图标：emoji 套 3D 玻璃圆底座（非裸 emoji）
+ *  - 像距：image2 生成的 3D 儿童侧脸（settings-ui/child-profile.png，深蓝底 + radial-mask 羽化），
+ *         替换原 SVG「一坨椭圆」；蓝屏幕随滑块前后移（保留 SVG 以便交互联动）
+ *  - 顶栏：补绿色齿轮设置按钮（设计图右上）
+ * 交互契约不变：data-tutorial-target + advanceOnAction(target)。VSlider 保持模块级避免 remount。
  */
-
-interface LightMode {
-  name: string;
-  icon: string;
-  ring: string;
-}
-const LIGHT_MODES: LightMode[] = [
-  { name: '常规', icon: '☀️', ring: 'conic-gradient(from 210deg,#22d3ee,#3b82f6,#a855f7,#22d3ee)' },
-  { name: '暖光', icon: '🛋️', ring: 'conic-gradient(from 200deg,#f59e0b,#fbbf24,#fb923c,#f59e0b)' },
-  { name: '绘画', icon: '🎨', ring: 'conic-gradient(from 200deg,#38bdf8,#3b82f6,#818cf8,#38bdf8)' },
-  { name: '夜读', icon: '🌙', ring: 'conic-gradient(from 210deg,#fb923c,#f59e0b,#fdba74,#fb923c)' },
-];
 
 const DEFAULTS = { bright: 64, vol: 78, mode: 1, dist: 5.5 };
 const DIST_MIN = 2.5;
 const DIST_MAX = 10;
 const VOL_SAFE = 85;
 
-function aring(on: boolean): string {
-  return on ? 'ring-2 ring-amber-400/90 ring-offset-1 ring-offset-[#15171c]' : 'ring-1 ring-white/10';
+const LIGHT_MODES = [
+  { name: '常规', icon: '☀️' },
+  { name: '暖光', icon: '🛋️' },
+  { name: '绘画', icon: '🎨' },
+  { name: '夜读', icon: '🌙' },
+];
+
+/** 控件卡片外壳：深蓝玻璃 + 青色发光边框（设计图的独立发光玻璃块感）；active 时琥珀高亮 */
+function cardClass(active: boolean): string {
+  return [
+    'relative flex flex-col items-center rounded-[1.8cqw] border-[0.18cqw] backdrop-blur-md transition',
+    'bg-gradient-to-b from-[#0e2342]/55 to-[#081124]/65',
+    active
+      ? 'border-amber-300/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_0_24px_rgba(245,158,11,0.5)]'
+      : 'border-cyan-300/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_0_22px_rgba(56,189,248,0.08),0_4px_16px_rgba(0,0,0,0.5),0_0_16px_rgba(56,189,248,0.18)]',
+  ].join(' ');
+}
+
+/** emoji 3D 玻璃圆底座 */
+function IconBadge({ icon }: { icon: string }) {
+  return (
+    <div className="flex h-[4.4cqw] w-[4.4cqw] items-center justify-center rounded-full bg-white/8 text-[2.4cqw] shadow-[inset_0_1px_2px_rgba(255,255,255,0.18),0_2px_6px_rgba(0,0,0,0.3)] ring-1 ring-white/12">
+      {icon}
+    </div>
+  );
 }
 
 /** 竖向滑块（亮度/音量共用，模块级组件，避免 remount） */
@@ -44,6 +55,7 @@ function VSlider({
   setValue,
   icon,
   fill,
+  glow,
   label,
   red,
   activeTarget,
@@ -55,6 +67,7 @@ function VSlider({
   setValue: (n: number) => void;
   icon: string;
   fill: string;
+  glow: string;
   label: string;
   red?: boolean;
   activeTarget: TutorialTarget | null;
@@ -68,8 +81,10 @@ function VSlider({
   };
   const headBorder = red ? 'border-red-400' : target === 'brightness' ? 'border-amber-300' : 'border-sky-300';
   return (
-    <div className={`flex flex-[1] flex-col items-center rounded-[1.6cqw] bg-[#26252b]/80 px-[1cqw] py-[1.4cqh] ${aring(activeTarget === target)}`}>
-      <div className="mb-[1cqh] text-[2.2cqw]">{icon}</div>
+    <div className={`flex-[1] px-[1cqw] py-[1.5cqh] ${cardClass(activeTarget === target)}`}>
+      <div className="mb-[1cqh]">
+        <IconBadge icon={icon} />
+      </div>
       <div
         data-tutorial-target={target}
         className="relative flex-1 cursor-pointer touch-none"
@@ -88,14 +103,23 @@ function VSlider({
           if (dragRef.current === target) dragRef.current = null;
         }}
       >
-        <div className="absolute left-1/2 top-0 h-full w-[1.7cqw] -translate-x-1/2 overflow-hidden rounded-full bg-white/12">
-          <div className="absolute inset-x-0 bottom-0 rounded-full" style={{ height: `${value}%`, background: fill }} />
+        {/* 轨道 */}
+        <div className="absolute left-1/2 top-0 h-full w-[2.4cqw] -translate-x-1/2 overflow-hidden rounded-full bg-black/35 shadow-[inset_0_0_4px_rgba(0,0,0,0.6)]">
+          <div
+            className="absolute inset-x-0 bottom-0 rounded-full"
+            style={{ height: `${value}%`, background: fill, boxShadow: `0 0 12px ${glow}` }}
+          />
         </div>
+        {/* 滑块头 */}
         <div
-          className={`absolute left-1/2 h-[3.6cqw] w-[3.6cqw] -translate-x-1/2 translate-y-1/2 rounded-full border-[0.4cqw] bg-white shadow-[0_1px_6px_rgba(0,0,0,0.45)] ${headBorder}`}
-          style={{ bottom: `calc(${value}% - 1.8cqw)` }}
+          className={`absolute left-1/2 h-[4cqw] w-[4cqw] -translate-x-1/2 translate-y-1/2 rounded-full border-[0.45cqw] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.5)] ${headBorder}`}
+          style={{ bottom: `calc(${value}% - 2cqw)`, boxShadow: `0 0 10px ${glow}, 0 2px 8px rgba(0,0,0,0.5)` }}
         />
-        <div className="absolute left-[4cqw] -translate-y-1/2 rounded-md bg-black/60 px-[0.9cqw] py-[0.2cqh] text-[1.35cqw] font-medium text-white" style={{ bottom: `calc(${value}% - 0.9cqw)` }}>
+        {/* 百分比气泡 */}
+        <div
+          className="absolute left-[4.4cqw] -translate-y-1/2 rounded-md bg-black/70 px-[0.9cqw] py-[0.2cqh] text-[1.4cqw] font-semibold text-white shadow-sm"
+          style={{ bottom: `calc(${value}% - 0.9cqw)` }}
+        >
           {value}%
         </div>
         {activeTarget === target && <GuideRing />}
@@ -105,7 +129,7 @@ function VSlider({
           </div>
         )}
       </div>
-      <div className="mt-[1cqh] text-[1.5cqw] text-white/85">
+      <div className="mt-[1cqh] text-[1.6cqw] font-medium text-white/90">
         {label}
         {red && <span className="ml-[0.4cqw] text-[1.1cqw] text-red-400">护耳</span>}
       </div>
@@ -164,41 +188,54 @@ export function MockSettingsPanel({ activeTarget }: { activeTarget: TutorialTarg
 
   return (
     <div
-      className={`absolute top-0 left-0 right-0 z-[65] overflow-hidden rounded-b-3xl border-b border-white/10 backdrop-blur-xl transition-transform duration-300 ease-out ${entered ? 'translate-y-0' : '-translate-y-[82%]'}`}
-      style={{
-        height: '100cqh',
-        background: 'radial-gradient(120% 85% at 50% 6%, rgba(38,40,54,0.94), rgba(26,28,40,0.96) 55%, rgba(16,17,26,0.98))',
-      }}
+      className={`absolute top-0 left-0 right-0 z-[65] overflow-hidden rounded-b-3xl border-b border-cyan-300/20 transition-transform duration-300 ease-out ${entered ? 'translate-y-0' : '-translate-y-[82%]'}`}
+      style={{ height: '100cqh' }}
       onPointerDown={onPanelDown}
       onPointerMove={onPanelMove}
       onPointerUp={onPanelUp}
       onPointerCancel={onPanelUp}
     >
+      {/* 背景：image2 科幻 HUD 面板底图 + 兜底深蓝 */}
+      <div className="absolute inset-0 -z-10 bg-[#081427]" />
+      <img
+        src="/kidshub/settings-ui/panel-bg.png"
+        alt=""
+        draggable={false}
+        className="pointer-events-none absolute inset-0 -z-10 h-full w-full select-none object-cover"
+      />
+
       {/* 顶栏 */}
-      <div className="absolute left-[2.6cqw] top-[2.8cqh] select-none rounded-full border border-white/15 bg-white/5 px-[1.7cqw] py-[0.5cqh] text-[1.4cqw] tracking-wide text-emerald-300/80">
+      <div className="absolute left-[2.6cqw] top-[2.8cqh] z-10 select-none rounded-full border border-emerald-300/40 bg-emerald-400/10 px-[1.7cqw] py-[0.5cqh] text-[1.4cqw] tracking-wide text-emerald-300/90">
         ⟳ 检测更新
       </div>
-      <div className="absolute right-[2.6cqw] top-[3cqh] flex items-center gap-[1.3cqw]">
+      <div className="absolute right-[2.6cqw] top-[2.8cqh] z-10 flex items-center gap-[1.3cqw]">
         <svg viewBox="0 0 24 18" className="h-[1.9cqh]" fill="none">
           <path d="M2 6.5C8 1.5 16 1.5 22 6.5M5 10C9 6.5 15 6.5 19 10M8 13.5c2.4-2 5.6-2 8 0" stroke="white" strokeOpacity="0.75" strokeWidth="1.8" strokeLinecap="round" />
           <circle cx="12" cy="16" r="1.3" fill="white" fillOpacity="0.85" />
         </svg>
-        <button type="button" onClick={reset} className="flex items-center gap-[0.4cqw] rounded-full border border-white/15 bg-white/5 px-[1.4cqw] py-[0.45cqh] text-[1.3cqw] text-white/65 transition active:scale-95 hover:bg-white/10">
+        {/* 绿色齿轮设置按钮（设计图右上） */}
+        <div className="flex h-[3.4cqh] w-[3.4cqh] items-center justify-center rounded-full bg-emerald-400/15 text-[1.8cqh] text-emerald-300 ring-1 ring-emerald-300/40 shadow-[0_0_10px_rgba(16,185,129,0.35)]">
+          ⚙️
+        </div>
+        <button type="button" onClick={reset} className="flex items-center gap-[0.4cqw] rounded-full border border-white/15 bg-white/5 px-[1.4cqw] py-[0.45cqh] text-[1.3cqw] text-white/70 transition active:scale-95 hover:bg-white/10">
           ↺ 恢复初始
         </button>
       </div>
 
       {/* 控件区 */}
-      <div className="absolute inset-x-0 top-[13cqh] bottom-[9cqh] flex items-stretch gap-[1.6cqw] px-[2.6cqw]">
-        <VSlider target="brightness" value={bright} setValue={setBright} icon="☀️" fill="linear-gradient(to top,#f59e0b,#fcd34d)" label="亮度" activeTarget={activeTarget} dragRef={dragRef} fire={fire} />
-        <VSlider target="volume" value={vol} setValue={setVol} icon={vol < 6 ? '🔇' : '🔊'} fill={volRed ? 'linear-gradient(to top,#dc2626,#f87171)' : 'linear-gradient(to top,#0ea5e9,#7dd3fc)'} label="音量" red={volRed} activeTarget={activeTarget} dragRef={dragRef} fire={fire} />
+      <div className="absolute inset-x-0 top-[13cqh] bottom-[9cqh] z-[1] flex items-stretch gap-[1.6cqw] px-[2.6cqw]">
+        <VSlider target="brightness" value={bright} setValue={setBright} icon="☀️" fill="linear-gradient(to top,#f59e0b,#fcd34d)" glow="rgba(245,158,11,0.55)" label="亮度" activeTarget={activeTarget} dragRef={dragRef} fire={fire} />
+        <VSlider target="volume" value={vol} setValue={setVol} icon={vol < 6 ? '🔇' : '🔊'} fill={volRed ? 'linear-gradient(to top,#dc2626,#f87171)' : 'linear-gradient(to top,#0ea5e9,#7dd3fc)'} glow={volRed ? 'rgba(220,38,38,0.55)' : 'rgba(14,165,233,0.55)'} label="音量" red={volRed} activeTarget={activeTarget} dragRef={dragRef} fire={fire} />
 
         {/* 光谱模式 */}
-        <div data-tutorial-target="color-temp" className={`relative flex flex-[1.7] flex-col items-center rounded-[1.6cqw] bg-[#26252b]/80 p-[1cqw] ${aring(activeTarget === 'color-temp')}`}>
-          <div className="relative mt-[0.6cqh] h-[8.5cqh] w-[8.5cqh] shrink-0 rounded-full" style={{ background: 'conic-gradient(from 90deg,#ef4444,#f97316,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)' }}>
-            <div className="absolute inset-[0.55cqh] rounded-full bg-[#15171c] shadow-[inset_0_0_8px_rgba(0,0,0,0.7)]" />
+        <div data-tutorial-target="color-temp" className={`flex-[2.15] px-[1.4cqw] py-[2cqh] ${cardClass(activeTarget === 'color-temp')}`}>
+          <div
+            className="relative h-[11cqh] w-[11cqh] shrink-0 rounded-full shadow-[0_0_26px_rgba(168,85,247,0.5)]"
+            style={{ background: 'conic-gradient(from 90deg,#ef4444,#f97316,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)' }}
+          >
+            <div className="absolute inset-[0.6cqh] rounded-full bg-[#0b1a30] shadow-[inset_0_0_10px_rgba(0,0,0,0.8)]" />
           </div>
-          <div className="mt-[1.1cqh] grid w-full grid-cols-2 gap-[0.7cqw]">
+          <div className="my-[1.4cqh] grid w-full flex-1 grid-cols-2 grid-rows-2 gap-[1cqw]">
             {LIGHT_MODES.map((m, i) => (
               <button
                 key={m.name}
@@ -207,16 +244,18 @@ export function MockSettingsPanel({ activeTarget }: { activeTarget: TutorialTarg
                   setModeIdx(i);
                   fire('color-temp');
                 }}
-                className={`flex items-center justify-center gap-[0.4cqw] rounded-[0.9cqw] py-[0.9cqh] text-[1.4cqw] transition active:scale-95 ${
-                  i === modeIdx ? 'bg-amber-400/90 font-medium text-neutral-900 shadow-[0_2px_8px_rgba(245,158,11,0.4)]' : 'bg-white/8 text-white/70 hover:bg-white/14'
+                className={`flex h-full items-center justify-center gap-[0.6cqw] rounded-[1.1cqw] text-[1.8cqw] transition active:scale-95 ${
+                  i === modeIdx
+                    ? 'bg-amber-400/90 font-semibold text-neutral-900 shadow-[0_2px_10px_rgba(245,158,11,0.5)]'
+                    : 'bg-white/8 text-white/75 ring-1 ring-white/10 hover:bg-white/14'
                 }`}
               >
-                <span>{m.icon}</span>
+                <span className="text-[2.2cqw]">{m.icon}</span>
                 {m.name}
               </button>
             ))}
           </div>
-          <div className="mt-[0.9cqh] text-[1.5cqw] text-white/85">光谱模式</div>
+          <div className="shrink-0 text-[1.6cqw] font-medium text-white/90">光谱模式</div>
           {activeTarget === 'color-temp' && (
             <div className="absolute bottom-[1cqh] right-[1cqw]">
               <GuidePointer variant="tap" />
@@ -225,23 +264,31 @@ export function MockSettingsPanel({ activeTarget }: { activeTarget: TutorialTarg
         </div>
 
         {/* 像距 */}
-        <div className="flex flex-[1.5] flex-col items-center justify-center rounded-[1.6cqw] bg-[#26252b]/80 p-[1.2cqw]">
-          <div className="relative mb-[0.5cqh] h-[8cqh] w-full">
-            <svg viewBox="0 0 34 38" className="absolute left-[4%] top-1/2 h-[6.5cqh] -translate-y-1/2" fill="none">
-              <path d="M22 3c5 0 8 5 8 12 0 4-1 7-3 9l1 5c0 3-3 6-8 6-7 0-13-6-13-15S13 3 22 3Z" fill="#f1c9a5" stroke="#d9a878" strokeWidth="1" />
-              <circle cx="24" cy="15" r="1.6" fill="#3a2c22" />
-              <path d="M30 17c2 1 3 2 2 3l-2 1" stroke="#d9a878" strokeWidth="1.2" strokeLinecap="round" />
-            </svg>
-            <div className="absolute left-[26%] right-[8%] top-1/2 h-px -translate-y-1/2 border-t border-dashed border-white/30" />
-            <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-[left] duration-100" style={{ left: `${26 + distRatio * 60}%` }}>
-              <svg viewBox="0 0 22 32" className="h-[6cqh]" fill="none">
-                <rect x="3" y="2" width="16" height="28" rx="2.5" fill="#38bdf8" fillOpacity="0.2" stroke="#7dd3fc" strokeWidth="1.6" />
-                <rect x="6" y="6" width="10" height="16" rx="1" fill="#7dd3fc" fillOpacity="0.4" />
+        <div className={`flex-[2.15] justify-center p-[1.2cqw] ${cardClass(false)}`}>
+          <div className="relative mb-[0.5cqh] h-[8.5cqh] w-full">
+            {/* 3D 儿童侧脸（image2 素材，深蓝底 + radial-mask 羽化融入卡片） */}
+            <img
+              src="/kidshub/settings-ui/child-profile.png"
+              alt=""
+              draggable={false}
+              className="pointer-events-none absolute left-[5%] top-[40%] h-[26cqh] w-[13cqw] -translate-y-1/2 select-none object-cover"
+              style={{
+                maskImage: 'radial-gradient(ellipse 64% 72% at 50% 40%, #000 60%, transparent 84%)',
+                WebkitMaskImage: 'radial-gradient(ellipse 64% 72% at 50% 40%, #000 60%, transparent 84%)',
+              }}
+            />
+            {/* 虚线 */}
+            <div className="absolute left-[30%] right-[8%] top-1/2 h-px -translate-y-1/2 border-t border-dashed border-cyan-200/40" />
+            {/* 蓝色发光屏幕（随滑块前后移） */}
+            <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-[left] duration-100" style={{ left: `${30 + distRatio * 56}%` }}>
+              <svg viewBox="0 0 22 32" className="h-[6.2cqh] drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]" fill="none">
+                <rect x="3" y="2" width="16" height="28" rx="2.5" fill="#38bdf8" fillOpacity="0.25" stroke="#7dd3fc" strokeWidth="1.6" />
+                <rect x="6" y="6" width="10" height="16" rx="1" fill="#7dd3fc" fillOpacity="0.5" />
               </svg>
             </div>
           </div>
-          <div className="text-[3cqw] font-semibold text-amber-400">
-            {dist.toFixed(1)} <span className="text-[1.5cqw] text-white/70">米</span>
+          <div className="text-[3.2cqw] font-bold text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.35)]">
+            {dist.toFixed(1)} <span className="text-[1.5cqw] font-medium text-white/70">米</span>
           </div>
           <div
             className="relative mt-[0.6cqh] h-[3.4cqh] w-[88%] cursor-pointer touch-none"
@@ -258,16 +305,16 @@ export function MockSettingsPanel({ activeTarget }: { activeTarget: TutorialTarg
               if (dragRef.current === 'dist') dragRef.current = null;
             }}
           >
-            <div className="absolute left-0 right-0 top-1/2 h-[1cqh] -translate-y-1/2 overflow-hidden rounded-full bg-white/12">
+            <div className="absolute left-0 right-0 top-1/2 h-[1.1cqh] -translate-y-1/2 overflow-hidden rounded-full bg-black/35 shadow-[inset_0_0_4px_rgba(0,0,0,0.6)]">
               <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-teal-400 to-amber-400" style={{ width: `${distRatio * 100}%` }} />
             </div>
-            <div className="absolute top-1/2 h-[3.2cqw] w-[3.2cqw] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.35cqw] border-white bg-sky-400 shadow-[0_1px_4px_rgba(0,0,0,0.4)]" style={{ left: `${distRatio * 100}%` }} />
+            <div className="absolute top-1/2 h-[3.4cqw] w-[3.4cqw] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.4cqw] border-white bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.6),0_1px_4px_rgba(0,0,0,0.4)]" style={{ left: `${distRatio * 100}%` }} />
           </div>
-          <div className="mt-[0.3cqh] flex w-[88%] justify-between text-[1.1cqw] text-white/40">
+          <div className="mt-[0.3cqh] flex w-[88%] justify-between text-[1.1cqw] text-white/45">
             <span>2.5米 近</span>
             <span>远 10米</span>
           </div>
-          <div className="mt-[0.5cqh] text-[1.5cqw] text-white/85">像距</div>
+          <div className="mt-[0.5cqh] text-[1.6cqw] font-medium text-white/90">像距</div>
         </div>
       </div>
 
@@ -280,7 +327,7 @@ export function MockSettingsPanel({ activeTarget }: { activeTarget: TutorialTarg
       )}
 
       {/* home indicator */}
-      <div className="absolute bottom-[2.4cqh] left-1/2 h-[0.5cqh] w-[16cqw] -translate-x-1/2 rounded-full bg-white/70" />
+      <div className="absolute bottom-[2.4cqh] left-1/2 z-10 h-[0.5cqh] w-[16cqw] -translate-x-1/2 rounded-full bg-white/70" />
     </div>
   );
 }
