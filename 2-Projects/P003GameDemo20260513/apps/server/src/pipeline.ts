@@ -34,9 +34,11 @@ export type ServerMessage =
   | { type: 'asr.final'; text: string }
   | { type: 'llm.delta'; text: string }
   | { type: 'llm.done'; text: string }
-  | { type: 'tts.audio'; mp3Base64: string }
-  | { type: 'tts.sentence_break' }
-  | { type: 'tts.end' }
+  | { type: 'tts.turn_start'; turn: number }
+  | { type: 'tts.turn_discard'; upTo: number }
+  | { type: 'tts.audio'; mp3Base64: string; turn: number }
+  | { type: 'tts.sentence_break'; turn: number }
+  | { type: 'tts.end'; turn?: number }
   | { type: 'session.config.ack'; chars: number }
   | { type: 'debug.prompt_assembled'; systemPrompt: string; userText: string }
   // LLM 每句开头用【表情：xxx】（多标记句级），server 按出现顺序解析并带 index（turn 内 0 起）
@@ -102,6 +104,7 @@ export class VoicePipeline {
         return;
       case 'barge.in':
         this.bargein();
+        this.send({ type: 'tts.turn_discard', upTo: this.activeTurn - 1 });
         return;
       case 'tts.say':
         console.log('[pipeline] tts.say received:', msg.text.slice(0, 30));
@@ -212,12 +215,13 @@ export class VoicePipeline {
     this.bargein();
     const turn = this.activeTurn;
     let endSent = false;
+    this.send({ type: 'tts.turn_start', turn });
 
     // 整个流程任何环节失败都必须发 tts.end，前端不能卡 thinking
     const ensureEnd = () => {
       if (endSent || turn !== this.activeTurn) return;
       endSent = true;
-      this.send({ type: 'tts.end' });
+      this.send({ type: 'tts.end', turn });
     };
 
     try {
@@ -234,18 +238,18 @@ export class VoicePipeline {
         await this.tts.start({
           onAudio: (chunk) => {
             if (turn !== this.activeTurn || endSent) return;
-            this.send({ type: 'tts.audio', mp3Base64: chunk.toString('base64') });
+            this.send({ type: 'tts.audio', mp3Base64: chunk.toString('base64'), turn });
           },
           onSentenceBreak: () => {
             // 句末标点信号 → 让客户端 flush 当前段播放，实现字幕与 TTS 同步
             if (turn !== this.activeTurn || endSent) return;
-            this.send({ type: 'tts.sentence_break' });
+            this.send({ type: 'tts.sentence_break', turn });
           },
           onSentenceEnd: () => {
             if (turn !== this.activeTurn) return;
             if (endSent) return;
             endSent = true;
-            this.send({ type: 'tts.end' });
+            this.send({ type: 'tts.end', turn });
           },
           onError: (err) => {
             this.sendError('TTS_ERROR', err.message);
@@ -324,11 +328,12 @@ export class VoicePipeline {
     this.bargein();
     const turn = this.activeTurn;
     let endSent = false;
+    this.send({ type: 'tts.turn_start', turn });
 
     const ensureEnd = () => {
       if (endSent || turn !== this.activeTurn) return;
       endSent = true;
-      this.send({ type: 'tts.end' });
+      this.send({ type: 'tts.end', turn });
     };
 
     const closeTtsAfterError = () => {
@@ -345,16 +350,16 @@ export class VoicePipeline {
       await this.tts.start({
         onAudio: (chunk) => {
           if (turn !== this.activeTurn || endSent) return;
-          this.send({ type: 'tts.audio', mp3Base64: chunk.toString('base64') });
+          this.send({ type: 'tts.audio', mp3Base64: chunk.toString('base64'), turn });
         },
         onSentenceBreak: () => {
           if (turn !== this.activeTurn || endSent) return;
-          this.send({ type: 'tts.sentence_break' });
+          this.send({ type: 'tts.sentence_break', turn });
         },
         onSentenceEnd: () => {
           if (turn !== this.activeTurn || endSent) return;
           endSent = true;
-          this.send({ type: 'tts.end' });
+          this.send({ type: 'tts.end', turn });
         },
         onError: (err) => {
           this.sendError('TTS_ERROR', err.message);

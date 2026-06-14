@@ -61,9 +61,11 @@ type ServerMessage =
   | { type: 'asr.final'; text: string }
   | { type: 'llm.delta'; text: string }
   | { type: 'llm.done'; text: string }
-  | { type: 'tts.audio'; mp3Base64: string }
-  | { type: 'tts.sentence_break' }
-  | { type: 'tts.end' }
+  | { type: 'tts.turn_start'; turn: number }
+  | { type: 'tts.turn_discard'; upTo: number }
+  | { type: 'tts.audio'; mp3Base64: string; turn: number }
+  | { type: 'tts.sentence_break'; turn: number }
+  | { type: 'tts.end'; turn?: number }
   | { type: 'session.config.ack'; chars: number }
   | { type: 'debug.prompt_assembled'; systemPrompt: string; userText: string }
   | { type: 'avatar.expression'; name: string; index: number }
@@ -102,6 +104,9 @@ class VoiceClientImpl implements VoiceClient {
   private playbackSources: AudioBufferSourceNode[] = [];
   // 播放代际：bargeIn / close 时 +1，作废已调度的 segment_start 定时器和 onended 检测
   private playbackGeneration = 0;
+  // server 轮次：bargeIn 后丢弃当前及更旧 turn 的在途 tts.audio，避免旧场景续播。
+  private currentTurn = 0;
+  private discardTurnAtOrBelow = -1;
   // 本轮 server 合成流是否已结束（tts.end 已到）——播完检测的前提条件
   private ttsStreamEnded = false;
   // 本轮是否已调度过第一个音频段（第 0 句开播信号只发一次；bargeIn 重置）
@@ -211,7 +216,14 @@ class VoiceClientImpl implements VoiceClient {
           case 'llm.delta':
             this.emit(msg.type, msg);
             break;
+          case 'tts.turn_start':
+            this.observeTurn(msg.turn);
+            break;
+          case 'tts.turn_discard':
+            this.discardTurnAtOrBelow = Math.max(this.discardTurnAtOrBelow, msg.upTo);
+            break;
           case 'tts.audio':
+            if (this.shouldDiscardTtsTurn(msg.turn)) return;
             // voice-client 内部统一播放（任意触发路径：按住说话 / sayDirect / 未来其它）
             // 同时 emit 给外部用于 UI 状态更新（VoiceButton 等）
             // D5 P21：onAudioStart 不在这里 fire（mp3 chunk 到达离实际播放还有 350ms 防抖）
@@ -221,6 +233,7 @@ class VoiceClientImpl implements VoiceClient {
             this.emit(msg.type, msg);
             break;
           case 'tts.end':
+            if (this.shouldDiscardTtsTurn(msg.turn)) return;
             // 流末立刻 flush 缓冲段，避免末段被 600ms 防抖延迟
             this.ttsStreamEnded = true;
             this.flushTtsBufferNow();
@@ -229,6 +242,7 @@ class VoiceClientImpl implements VoiceClient {
             this.checkPlaybackEnd();
             break;
           case 'tts.sentence_break':
+            if (this.shouldDiscardTtsTurn(msg.turn)) return;
             // 句末信号：立刻 flush 当前段（按句切，每段是完整一句话音频，
             // chunk 边界 priming silence 占比小不可感，比 250ms 时间切更稳）
             this.flushTtsBufferNow();
@@ -440,6 +454,7 @@ class VoiceClientImpl implements VoiceClient {
     if (this.mp3Buffer.length === 0) return;
     const ctx = this.ensureAudioContext();
     if (!ctx) return;
+    const generation = this.playbackGeneration;
 
     const totalLen = this.mp3Buffer.reduce((s, b) => s + b.byteLength, 0);
     const merged = new Uint8Array(totalLen);
@@ -457,6 +472,7 @@ class VoiceClientImpl implements VoiceClient {
         merged.byteOffset + merged.byteLength,
       ) as ArrayBuffer;
       const buffer = await ctx.decodeAudioData(arrayBuffer);
+      if (generation !== this.playbackGeneration) return;
 
       const src = ctx.createBufferSource();
       src.buffer = buffer;
@@ -470,7 +486,6 @@ class VoiceClientImpl implements VoiceClient {
       const effDur = buffer.duration / this.playbackRate;
       this.playbackScheduledAt = startAt + effDur;
       this.playbackSources.push(src);
-      const generation = this.playbackGeneration;
       src.onended = () => {
         const idx = this.playbackSources.indexOf(src);
         if (idx >= 0) this.playbackSources.splice(idx, 1);
@@ -524,6 +539,7 @@ class VoiceClientImpl implements VoiceClient {
   }
 
   bargeIn(): void {
+    this.discardTurnAtOrBelow = Math.max(this.discardTurnAtOrBelow, this.currentTurn);
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type: 'barge.in' }));
     }
@@ -550,6 +566,18 @@ class VoiceClientImpl implements VoiceClient {
     // 打断 = 本轮播放强制结束，给 avatar/UI 一个确定的收尾信号；
     // reason 让消费方（如 tutorial 状态机）区分"被掐断"和"自然播完"
     this.emit('tts.playback_end', { reason: 'barge' });
+  }
+
+  private observeTurn(turn: number): boolean {
+    if (!Number.isFinite(turn)) return false;
+    this.currentTurn = Math.max(this.currentTurn, turn);
+    return true;
+  }
+
+  private shouldDiscardTtsTurn(turn: number | undefined): boolean {
+    if (turn === undefined) return false;
+    if (!this.observeTurn(turn)) return true;
+    return turn <= this.discardTurnAtOrBelow;
   }
 
   /**
