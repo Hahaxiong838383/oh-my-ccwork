@@ -109,7 +109,7 @@ export function EcoPondCanvasContent(): JSX.Element {
         @keyframes cardPop{0%{transform:scale(.58) translateY(1.4cqh);opacity:0}52%{transform:scale(1.04) translateY(-0.6cqh);opacity:1}100%{transform:scale(1) translateY(0);opacity:1}}
         @keyframes cardFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-0.7cqh)}}
         @keyframes ripple{0%{transform:scale(.4);opacity:.75}70%{transform:scale(1.65);opacity:.08}100%{transform:scale(2.1);opacity:0}}
-        @keyframes fishSwim{0%,100%{transform:translateX(-7.5cqw)}50%{transform:translateX(8.2cqw)}}
+        @keyframes fishSwim{0%,100%{transform:translateX(-2.2cqw)}50%{transform:translateX(2.4cqw)}}
         @keyframes pondBloom{0%{opacity:.0}100%{opacity:.42}}
         @keyframes goldUp{0%{transform:translateY(0) scale(.78);opacity:.92}100%{transform:translateY(-21cqh) scale(.18);opacity:0}}
         @keyframes trail{0%{transform:translateY(0) scale(1);opacity:.85}100%{transform:translateY(-11cqh) scale(.3);opacity:0}}
@@ -131,14 +131,14 @@ export function EcoPondCanvasContent(): JSX.Element {
         {/* 1. pond-view：全景 + 几条小鱼缓慢左右游动 */}
         {displayScene === 'pond-view' && (
           <>
-            {/* 缓慢游动小鱼（translateX 往返） */}
+            {/* 缓慢游动小鱼（限定在左侧生态缸区域内 left 5%-28% / top 30%-54%，translateX 小幅往返不出缸） */}
             {[
-              { ch: '🐠', l: '19%', t: '41%', d: '0ms', dur: 2850 },
-              { ch: '🐟', l: '32%', t: '52%', d: '420ms', dur: 3120 },
-              { ch: '🐠', l: '61%', t: '38%', d: '190ms', dur: 2680 },
-              { ch: '🐟', l: '73%', t: '49%', d: '610ms', dur: 3290 },
+              { ch: '🐠', l: '8%', t: '34%', d: '0ms', dur: 2850 },
+              { ch: '🐟', l: '19%', t: '47%', d: '420ms', dur: 3120 },
+              { ch: '🐠', l: '13%', t: '52%', d: '190ms', dur: 2680 },
+              { ch: '🐟', l: '24%', t: '39%', d: '610ms', dur: 3290 },
             ].map((f, i) => (
-              <div key={i} className="absolute text-[2.15cqw] select-none pointer-events-none" style={{ left: f.l, top: f.t, animation: `fishSwim ${f.dur}ms ease-in-out ${f.d} infinite` }}>{f.ch}</div>
+              <div key={i} className="absolute text-[1.7cqw] select-none pointer-events-none" style={{ left: f.l, top: f.t, animation: `fishSwim ${f.dur}ms ease-in-out ${f.d} infinite` }}>{f.ch}</div>
             ))}
             {/* 少量微光粒子 */}
             {Array.from({ length: 4 }).map((_, i) => (

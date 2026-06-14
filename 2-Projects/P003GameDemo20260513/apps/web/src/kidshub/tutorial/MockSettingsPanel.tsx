@@ -139,6 +139,7 @@ function VSlider({
 
 export function MockSettingsPanel({ activeTarget }: { activeTarget: TutorialTarget | null }) {
   const advanceOnAction = useTutorialStore((s) => s.advanceOnAction);
+  const setPanelLight = useTutorialStore((s) => s.setPanelLight);
   const fire = (t: TutorialTarget) => advanceOnAction(t);
 
   const [entered, setEntered] = useState(false);
@@ -152,6 +153,11 @@ export function MockSettingsPanel({ activeTarget }: { activeTarget: TutorialTarg
   const [modeIdx, setModeIdx] = useState(DEFAULTS.mode);
   const [dist, setDist] = useState(DEFAULTS.dist);
   const dragRef = useRef<string | null>(null);
+
+  // 亮度/光谱变化实时同步到 store，驱动设置引导画布明暗/色温联动（调灯光真实反馈）
+  React.useEffect(() => {
+    setPanelLight(bright, modeIdx);
+  }, [bright, modeIdx, setPanelLight]);
 
   const reset = () => {
     setBright(DEFAULTS.bright);

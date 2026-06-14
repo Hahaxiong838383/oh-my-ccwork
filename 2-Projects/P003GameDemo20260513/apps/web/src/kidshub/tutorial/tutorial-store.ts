@@ -26,6 +26,9 @@ interface TutorialState {
   /** 模拟设备视觉状态（单元1 演出层；其他单元不用） */
   panelOpen: boolean;
   lightOn: boolean;
+  /** 设置面板灯光（驱动设置引导画布明暗/色温联动）：亮度 0-100 / 光谱模式 0-3 */
+  panelBright: number;
+  panelMode: number;
   /** 各单元本地完成标记（localStorage 镜像，key = unit.storageKey） */
   completedUnits: Record<string, boolean>;
   /** store 内部代际：异步回调（playback_end/timer）凭代际作废，防旧轮信号串台 */
@@ -52,6 +55,8 @@ interface TutorialState {
   proceedNext: () => void;
   /** 衔接确认「再来一次」：从 step 0 重播当前单元 */
   replayUnit: () => void;
+  /** 设置面板调灯光：同步亮度/光谱到 store 供设置引导画布明暗联动 */
+  setPanelLight: (bright: number, mode: number) => void;
   /** 调试：清全部单元完成标记 + 重置 */
   resetForDebug: () => void;
 }
@@ -91,6 +96,8 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
   remindCount: 0,
   panelOpen: false,
   lightOn: true,
+  panelBright: 64,
+  panelMode: 1,
   completedUnits: readCompletedUnits(),
   generation: 0,
 
@@ -104,6 +111,8 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
       remindCount: 0,
       panelOpen: false,
       lightOn: true,
+      panelBright: 64,
+      panelMode: 1,
       generation: s.generation + 1,
     }));
   },
@@ -118,6 +127,8 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
     advanceToNext(set, get, visualFor(target));
     return true;
   },
+
+  setPanelLight: (bright, mode) => set({ panelBright: bright, panelMode: mode }),
 
   onSpeechEnd: () => {
     const s = get();

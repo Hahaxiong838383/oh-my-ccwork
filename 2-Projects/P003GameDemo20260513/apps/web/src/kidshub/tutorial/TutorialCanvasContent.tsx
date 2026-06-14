@@ -19,6 +19,8 @@ export function TutorialCanvasContent(): JSX.Element {
   const stepIndex = useTutorialStore((s) => s.stepIndex);
   const panelOpen = useTutorialStore((s) => s.panelOpen);
   const lightOn = useTutorialStore((s) => s.lightOn);
+  const panelBright = useTutorialStore((s) => s.panelBright);
+  const panelMode = useTutorialStore((s) => s.panelMode);
   const advanceOnAction = useTutorialStore((s) => s.advanceOnAction);
   // 统一方舟美术底图（与登舰引导同风格舱内图）；缺图降级为原 CSS 舷窗场景
   const [bgFailed, setBgFailed] = useState(false);
@@ -31,12 +33,18 @@ export function TutorialCanvasContent(): JSX.Element {
   // 右上六边形设置按钮高亮（仅 open-panel 且未开面板时）
   const hexActive = activeTarget === 'open-panel' && !panelOpen;
 
+  // 设置面板亮度/光谱 → 整个画布明暗 + 色温（模拟真实调灯光的所见即所得）
+  const lightB = 0.45 + (panelBright / 100) * 0.85;
+  const modeTint = ['', 'sepia(0.18) saturate(1.12)', 'saturate(1.28) contrast(1.04)', 'sepia(0.4) hue-rotate(-10deg)'][panelMode] || '';
+  const nightDim = panelMode === 3 ? 0.82 : 1;
+  const canvasFilter = `brightness(${(lightB * nightDim).toFixed(2)}) ${modeTint}`.trim();
+
   return (
-    <div className="absolute inset-0 overflow-hidden text-white" style={{ fontSize: 'inherit' }}>
+    <div className="absolute inset-0 overflow-hidden text-white" style={{ fontSize: 'inherit', filter: canvasFilter, transition: 'filter 200ms ease-out' }}>
       {/* 背景层：方舟舱内美术图（与登舰引导统一风格）；缺图降级 CSS 舷窗场景 */}
       {!bgFailed && (
         <img
-          src="/kidshub/boarding/settings-cabin.png"
+          src="/kidshub/boarding/settings.eco.png"
           alt="方舟舱内"
           className="absolute inset-0 h-full w-full object-cover"
           onError={() => setBgFailed(true)}
