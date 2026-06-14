@@ -13,7 +13,7 @@ struct CCStatus {
     var rulesTrip = 12, memTrip = 12, eventsTrip = 60
     var cards = 0, mcp = 0, sessions = 0, gitDirty = 0
     var gitTag = "—", gitLast = "—"
-    var engines: [(String, Bool)] = []
+    var engines: [(name: String, model: String, ready: Bool)] = []   // (引擎名, 配置态模型, 凭据/配置就绪)
     var secretHook = false
     // skills 自进化(诚实命名:evoActive=活跃未毕业改进项/进化债; frictionTop=周边热度近似非精确计数)
     var skillTotal = 0, evoTotal = 0, evoActive = 0, evoStaleDays = 0
@@ -116,7 +116,10 @@ final class StatusStore: ObservableObject {
             }
         }
         if let e = o["engines"] as? [String: Any] {
-            st.engines = ["omp","grok","codex","gemini","gateway"].map { ($0, e[$0] as? Bool ?? false) }
+            st.engines = ["omp","grok","codex","gemini","gateway"].map { k -> (name: String, model: String, ready: Bool) in
+                let info = e[k] as? [String: Any]
+                return (k, info?["model"] as? String ?? "", info?["on"] as? Bool ?? false)
+            }
         }
         if let sk = o["skills"] as? [String: Any] {
             st.skillTotal = sk["total"] as? Int ?? 0
@@ -184,7 +187,7 @@ final class StatusStore: ObservableObject {
 
     var healthy: Bool {
         s.rulesKB <= s.rulesTrip && s.memKB <= s.memTrip && s.eventsKB <= s.eventsTrip
-        && s.secretHook && (s.engines.isEmpty || s.engines.allSatisfy { $0.1 })
+        && s.secretHook && (s.engines.isEmpty || s.engines.allSatisfy { $0.ready })
     }
 }
 
@@ -294,13 +297,9 @@ struct ContentView: View {
             }
             Divider()
             Text("引擎团队").font(.system(size: 11, weight: .medium)).foregroundColor(.secondary)
-            HStack(spacing: 11) {
-                ForEach(s.engines, id: \.0) { item in
-                    HStack(spacing: 3) {
-                        Circle().fill(item.1 ? Color.green : Color.red).frame(width: 7, height: 7)
-                        Text(item.0).font(.system(size: 10))
-                    }
-                }
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)],
+                      alignment: .leading, spacing: 6) {
+                ForEach(s.engines, id: \.name) { e in engineChip(e) }
             }
         }
     }
@@ -621,22 +620,27 @@ struct ContentView: View {
             }
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)],
                       alignment: .leading, spacing: 6) {
-                ForEach(s.engines, id: \.0) { e in engineChip(e.0, e.1) }
+                ForEach(s.engines, id: \.name) { e in engineChip(e) }
             }
         }
         .padding(.leading, 26).padding(.bottom, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(alignment: .topLeading) {
-            spineBg(dot: !s.engines.isEmpty && s.engines.allSatisfy { $0.1 } ? .green : .orange, tail: true)
+            spineBg(dot: !s.engines.isEmpty && s.engines.allSatisfy { $0.ready } ? .green : .orange, tail: true)
         }
     }
-    func engineChip(_ name: String, _ online: Bool) -> some View {
+    // 引擎 chip:左灯(配置态就绪) + 名(上)/配置模型(下小字),点击开各自配置根
+    func engineChip(_ e: (name: String, model: String, ready: Bool)) -> some View {
         let path = ["omp": "~/.omp", "grok": "~/.grok", "codex": "~/.codex",
-                    "gemini": "~/.gemini", "gateway": "~/.gateway.env"][name] ?? "~"
+                    "gemini": "~/.gemini", "gateway": "~/.gateway.env"][e.name] ?? "~"
         return Button(action: { reveal(path) }) {
             HStack(spacing: 5) {
-                Circle().fill(online ? Color.green : Color.red).frame(width: 6, height: 6)
-                Text(name).font(.system(size: 10, design: .monospaced))
+                Circle().fill(e.ready ? Color.green : Color.red).frame(width: 6, height: 6)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(e.name).font(.system(size: 10, weight: .medium, design: .monospaced))
+                    Text(e.model).font(.system(size: 8)).foregroundColor(.secondary)
+                        .lineLimit(1).truncationMode(.middle)
+                }
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 7).padding(.vertical, 5)
