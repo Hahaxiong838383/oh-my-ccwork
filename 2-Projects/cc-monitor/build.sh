@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 APP="cc-monitor.app"
 
 echo "→ 编译"
-swiftc -swift-version 5 cc-monitor.swift -o cc-monitor
+swiftc -swift-version 5 -parse-as-library cc-monitor.swift -o cc-monitor
 
 echo "→ 组装 .app bundle"
 rm -rf "$APP"

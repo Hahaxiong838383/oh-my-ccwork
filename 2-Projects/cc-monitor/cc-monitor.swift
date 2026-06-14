@@ -1,9 +1,10 @@
-// cc-monitor — 菜单栏 + 桌面悬浮窗，实时显示 cc 系统运行状态 + 架构
+// cc-monitor — 菜单栏图标(MenuBarExtra) + 点击弹出状态/架构面板
 // 数据源：~/.claude/hooks/cc-status.sh --json（每 30s 轮询）
 // 编译：swiftc -swift-version 5 cc-monitor.swift -o cc-monitor
-import AppKit
+// 用 SwiftUI 原生 MenuBarExtra（系统管菜单栏渲染，比手搓 NSStatusItem 可靠）
 import SwiftUI
 import Foundation
+import AppKit
 
 struct CCStatus {
     var ts = "—"
@@ -18,6 +19,12 @@ struct CCStatus {
 final class StatusStore: ObservableObject {
     @Published var s = CCStatus()
     let scriptPath = ("~/.claude/hooks/cc-status.sh" as NSString).expandingTildeInPath
+    private var timer: Timer?
+
+    init() {
+        refresh()
+        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.refresh() }
+    }
 
     func refresh() {
         DispatchQueue.global().async {
@@ -114,9 +121,9 @@ struct ContentView: View {
         }
         .padding(14)
         .frame(width: 340)
+        .onAppear { store.refresh() }
     }
 
-    // ── 状态 tab ──
     var statusView: some View {
         VStack(alignment: .leading, spacing: 9) {
             Text("常驻预算 (KB)").font(.system(size: 11, weight: .medium)).foregroundColor(.secondary)
@@ -148,7 +155,6 @@ struct ContentView: View {
         }
     }
 
-    // ── 架构 tab：分层 + 调用流 + live 状态 ──
     var archView: some View {
         VStack(alignment: .leading, spacing: 3) {
             archLayer("① 常驻核心", "rules \(s.rulesKB)K · MEMORY \(s.memKB)K · 每次注入",
@@ -201,69 +207,15 @@ struct ContentView: View {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    var statusItem: NSStatusItem!
-    var panel: NSPanel!
-    let store = StatusStore()
-    var timer: Timer?
-
-    func applicationDidFinishLaunching(_ n: Notification) {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.isVisible = true
-        if let btn = statusItem.button {
-            btn.image = NSImage(systemSymbolName: "gauge.medium", accessibilityDescription: "cc")
-            btn.image?.isTemplate = true
-            btn.imagePosition = .imageLeading
-            btn.title = "cc"
-            btn.toolTip = "cc 监视器"
-            btn.target = self
-            btn.action = #selector(togglePanel)
+@main
+struct CCMonitorApp: App {
+    @StateObject private var store = StatusStore()
+    var body: some Scene {
+        MenuBarExtra {
+            ContentView(store: store)
+        } label: {
+            Image(systemName: store.healthy ? "gauge.medium" : "exclamationmark.triangle.fill")
         }
-
-        let hosting = NSHostingView(rootView: ContentView(store: store))
-        panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 340, height: 420),
-                        styleMask: [.titled, .closable, .nonactivatingPanel, .utilityWindow],
-                        backing: .buffered, defer: false)
-        panel.title = "cc 监视器"
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
-        panel.contentView = hosting
-
-        store.refresh()
-        updateIcon()
-        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            self?.store.refresh()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self?.updateIcon() }
-        }
-        // 悬浮面板启动即显示在屏幕右上角,常驻桌面(菜单栏图标作辅助入口)
-        if let scr = NSScreen.main {
-            panel.setFrameTopLeftPoint(NSPoint(x: scr.visibleFrame.maxX - 360, y: scr.visibleFrame.maxY - 8))
-        }
-        panel.orderFrontRegardless()
-    }
-
-    func updateIcon() {
-        statusItem.button?.contentTintColor = store.healthy ? .systemGreen : .systemOrange
-    }
-
-    @objc func togglePanel() {
-        if panel.isVisible {
-            panel.orderOut(nil)
-        } else {
-            if let b = statusItem.button, let w = b.window {
-                let r = w.convertToScreen(b.frame)
-                panel.setFrameTopLeftPoint(NSPoint(x: r.minX - 160, y: r.minY - 6))
-            }
-            store.refresh()
-            panel.orderFrontRegardless()
-        }
+        .menuBarExtraStyle(.window)
     }
 }
-
-let app = NSApplication.shared
-let delegate = AppDelegate()
-app.delegate = delegate
-app.setActivationPolicy(.accessory)
-app.run()
