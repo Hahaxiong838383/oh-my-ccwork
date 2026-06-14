@@ -7,10 +7,10 @@ import { GuidePointer, GuideRing } from './GuidePointer';
  * MockSettingsPanel — 读写台设备设置面板（川哥 2026-06-14 二次还原：image2 3D 素材 + 玻璃质感）
  *
  * 设计图 设置面板UI方案v1.png 一比一还原要点：
- *  - 背景：image2 生成的深色科幻 HUD 面板底图（settings-ui/panel-bg.png），替换原纯色渐变
+ *  - 背景：image2 生成的深色科幻 HUD 面板底图（settings-ui/panel-bg.webp），替换原纯色渐变
  *  - 卡片：深蓝玻璃 + 青色发光边框（非灰色实心矩形）
  *  - 图标：emoji 套 3D 玻璃圆底座（非裸 emoji）
- *  - 像距：image2 生成的 3D 儿童侧脸（settings-ui/child-profile.png，深蓝底 + radial-mask 羽化），
+ *  - 像距：image2 生成的 3D 儿童侧脸（settings-ui/child-profile.webp，深蓝底 + radial-mask 羽化），
  *         替换原 SVG「一坨椭圆」；蓝屏幕随滑块前后移（保留 SVG 以便交互联动）
  *  - 顶栏：补绿色齿轮设置按钮（设计图右上）
  * 交互契约不变：data-tutorial-target + advanceOnAction(target)。VSlider 保持模块级避免 remount。
@@ -204,7 +204,7 @@ export function MockSettingsPanel({ activeTarget }: { activeTarget: TutorialTarg
       {/* 背景：image2 科幻 HUD 面板底图 + 兜底深蓝 */}
       <div className="absolute inset-0 -z-10 bg-[#081427]" />
       <img
-        src="/kidshub/settings-ui/panel-bg.png"
+        src="/kidshub/settings-ui/panel-bg.webp"
         alt=""
         draggable={false}
         className="pointer-events-none absolute inset-0 -z-10 h-full w-full select-none object-cover"
@@ -274,7 +274,7 @@ export function MockSettingsPanel({ activeTarget }: { activeTarget: TutorialTarg
           <div className="relative mb-[0.5cqh] h-[8.5cqh] w-full">
             {/* 3D 儿童侧脸（image2 素材，深蓝底 + radial-mask 羽化融入卡片） */}
             <img
-              src="/kidshub/settings-ui/child-profile.png"
+              src="/kidshub/settings-ui/child-profile.webp"
               alt=""
               draggable={false}
               className="pointer-events-none absolute left-[5%] top-[40%] h-[26cqh] w-[13cqw] -translate-y-1/2 select-none object-cover"

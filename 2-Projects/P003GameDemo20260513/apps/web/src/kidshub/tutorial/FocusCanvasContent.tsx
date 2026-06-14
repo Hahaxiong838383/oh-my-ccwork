@@ -107,7 +107,7 @@ export function FocusCanvasContent(): JSX.Element {
       `}</style>
 
       <div className="absolute inset-0 transition-opacity duration-[300ms] ease-out" style={{ opacity: sceneOpacity }}>
-        <SceneImg src="/kidshub/boarding/ecopond.png" alt="生态缸" fallback={<div className="absolute inset-0 bg-gradient-to-br from-[#0d2238] via-[#0f4a4a] to-[#3d6b2f]"><div className="absolute left-1/2 top-[29%] -translate-x-1/2 rounded-[3.8cqw] bg-[#14b8a6] shadow-[0_0_46px_#14b8a6,0_0_86px_#0f766e] opacity-80" style={{ width: '48cqw', height: '37cqh' }} /></div>} />
+        <SceneImg src="/kidshub/boarding/ecopond.webp" alt="生态缸" fallback={<div className="absolute inset-0 bg-gradient-to-br from-[#0d2238] via-[#0f4a4a] to-[#3d6b2f]"><div className="absolute left-1/2 top-[29%] -translate-x-1/2 rounded-[3.8cqw] bg-[#14b8a6] shadow-[0_0_46px_#14b8a6,0_0_86px_#0f766e] opacity-80" style={{ width: '48cqw', height: '37cqh' }} /></div>} />
 
         {displayScene === 'focus-intro' && (
           <>

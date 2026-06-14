@@ -46,7 +46,7 @@ export function TutorialCanvasContent(): JSX.Element {
       {/* 背景层：方舟舱内美术图（与登舰引导统一风格）；缺图降级 CSS 舷窗场景 */}
       {!bgFailed && (
         <img
-          src="/kidshub/boarding/settings.eco.png"
+          src="/kidshub/boarding/settings.eco.webp"
           alt="方舟舱内"
           className="absolute inset-0 h-full w-full object-cover"
           onError={() => setBgFailed(true)}

@@ -99,7 +99,7 @@ export function BoardingCanvasContent(): JSX.Element {
 
         {displayScene === 'storm' && (
           <div className="absolute inset-0 bg-[#0d2238]">
-            <SceneImg src="/kidshub/boarding/storm.png" alt="风暴" fallback={<div className="absolute inset-0 bg-gradient-to-br from-[#1a0b33] via-[#3b1466] to-[#0d2238]">{[{l:'8%',t:'12%',w:'72%',r:-27,d:'0ms'},{l:'22%',t:'-6%',w:'58%',r:-31,d:'260ms'},{l:'-4%',t:'34%',w:'81%',r:-25,d:'520ms'}].map((s,i)=>(<div key={i} className="absolute h-[0.9cqh] bg-white/35" style={{left:s.l,top:s.t,width:s.w,transform:`rotate(${s.r}deg)`,animation:`streakSweep 1450ms linear ${s.d} infinite`}}/>))}</div>} />
+            <SceneImg src="/kidshub/boarding/storm.webp" alt="风暴" fallback={<div className="absolute inset-0 bg-gradient-to-br from-[#1a0b33] via-[#3b1466] to-[#0d2238]">{[{l:'8%',t:'12%',w:'72%',r:-27,d:'0ms'},{l:'22%',t:'-6%',w:'58%',r:-31,d:'260ms'},{l:'-4%',t:'34%',w:'81%',r:-25,d:'520ms'}].map((s,i)=>(<div key={i} className="absolute h-[0.9cqh] bg-white/35" style={{left:s.l,top:s.t,width:s.w,transform:`rotate(${s.r}deg)`,animation:`streakSweep 1450ms linear ${s.d} infinite`}}/>))}</div>} />
             <div className="absolute text-[5.8cqw] drop-shadow-[0_0_8px_rgba(255,255,255,.6)] select-none" style={{ animation: 'shipFly 4800ms linear infinite' }}>🚀</div>
             {[0,1,2].map(k=>(<div key={k} className="absolute h-[0.9cqw] w-[0.9cqw] rounded-full bg-white/70" style={{animation:`shipFly 4800ms linear ${-280-k*210}ms infinite`,opacity:.35-k*.08}}/>))}
           </div>
@@ -107,22 +107,22 @@ export function BoardingCanvasContent(): JSX.Element {
 
         {displayScene === 'crash' && (
           <div className="absolute inset-0 bg-[#0d2238]">
-            <SceneImg src="/kidshub/boarding/storm.png" alt="坠落" fallback={<div className="absolute inset-0 bg-gradient-to-br from-[#140a28] via-[#2a0f4a] to-[#091a2a]" />} />
+            <SceneImg src="/kidshub/boarding/storm.webp" alt="坠落" fallback={<div className="absolute inset-0 bg-gradient-to-br from-[#140a28] via-[#2a0f4a] to-[#091a2a]" />} />
             <div className="absolute inset-0 bg-black/35" />
-            <img src="/kidshub/expressions/net-sad.png" alt="伤心" className="absolute select-none" style={{ width: '31cqw', animation: 'sadSlide 1850ms ease-out forwards, sadBreathe 1350ms 1950ms infinite ease-in-out' }} draggable={false} />
+            <img src="/kidshub/expressions/net-sad.webp" alt="伤心" className="absolute select-none" style={{ width: '31cqw', animation: 'sadSlide 1850ms ease-out forwards, sadBreathe 1350ms 1950ms infinite ease-in-out' }} draggable={false} />
           </div>
         )}
 
         {displayScene === 'rescue' && (
           <div className="absolute inset-0 bg-[#0a1628]">
-            <SceneImg src="/kidshub/boarding/damaged.png" alt="受损舱" fallback={<div className="absolute inset-0 bg-gradient-to-b from-[#0a1628] via-[#132a42] to-[#0d2238]"><div className="absolute inset-y-0 left-0 w-[38%] bg-[radial-gradient(circle_at_12%_50%,rgba(220,40,40,.55)_0%,transparent_72%)]" style={{animation:'redSidePulse 1250ms infinite ease-in-out'}}/><div className="absolute inset-y-0 right-0 w-[38%] bg-[radial-gradient(circle_at_88%_50%,rgba(220,40,40,.55)_0%,transparent_72%)]" style={{animation:'redSidePulse 1250ms infinite ease-in-out 380ms'}}/></div>} />
+            <SceneImg src="/kidshub/boarding/damaged.webp" alt="受损舱" fallback={<div className="absolute inset-0 bg-gradient-to-b from-[#0a1628] via-[#132a42] to-[#0d2238]"><div className="absolute inset-y-0 left-0 w-[38%] bg-[radial-gradient(circle_at_12%_50%,rgba(220,40,40,.55)_0%,transparent_72%)]" style={{animation:'redSidePulse 1250ms infinite ease-in-out'}}/><div className="absolute inset-y-0 right-0 w-[38%] bg-[radial-gradient(circle_at_88%_50%,rgba(220,40,40,.55)_0%,transparent_72%)]" style={{animation:'redSidePulse 1250ms infinite ease-in-out 380ms'}}/></div>} />
             {[{l:'17%',t:'22%'},{l:'31%',t:'61%'},{l:'58%',t:'19%'},{l:'74%',t:'47%'},{l:'42%',t:'73%'},{l:'23%',t:'44%'},{l:'81%',t:'29%'}].map((p,i)=>(<div key={i} className="absolute h-[0.55cqw] w-[0.55cqw] rounded-full bg-white/55" style={{...p,animation:`dustDrift ${2100+(i%3)*420}ms infinite ease-in-out ${i*170}ms`}}/>))}
           </div>
         )}
 
         {displayScene === 'celebrate' && (
           <div className="absolute inset-0 bg-black" style={{ animation: 'bgBrighten 2100ms ease-out forwards' }}>
-            <SceneImg src="/kidshub/boarding/ecopond.png" alt="生态" fallback={<div className="absolute inset-0 bg-gradient-to-br from-[#0d2238] via-[#0f4a4a] to-[#3d6b2f]"><div className="absolute left-1/2 top-[29%] -translate-x-1/2 rounded-[3.8cqw] bg-[#14b8a6] shadow-[0_0_46px_#14b8a6,0_0_86px_#0f766e] opacity-80" style={{width:'48cqw',height:'37cqh'}}/></div>} />
+            <SceneImg src="/kidshub/boarding/ecopond.webp" alt="生态" fallback={<div className="absolute inset-0 bg-gradient-to-br from-[#0d2238] via-[#0f4a4a] to-[#3d6b2f]"><div className="absolute left-1/2 top-[29%] -translate-x-1/2 rounded-[3.8cqw] bg-[#14b8a6] shadow-[0_0_46px_#14b8a6,0_0_86px_#0f766e] opacity-80" style={{width:'48cqw',height:'37cqh'}}/></div>} />
             <div className="pointer-events-none absolute -top-[18%] left-1/2 h-[46%] w-[68%] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,#fde047_0%,#f59e0b_32%,transparent_72%)] opacity-35" />
             {Array.from({length:16}).map((_,i)=>(<div key={i} className="absolute h-[0.7cqw] w-[0.7cqw] rounded-full bg-[#fde047]" style={{left:`${8+((i*4.7)%81)}%`,bottom:`${-1+(i%5)*1.6}%`,opacity:.75+(i%3)*.07,animation:`goldFloat ${1850+(i%5)*180}ms infinite ease-in ${((i*97)%1350)}ms`,boxShadow:i%4===0?'0 0 6px #facc15':undefined}}/>))}
           </div>

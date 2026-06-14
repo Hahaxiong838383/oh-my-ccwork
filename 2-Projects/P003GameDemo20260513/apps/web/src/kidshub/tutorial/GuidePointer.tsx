@@ -15,7 +15,7 @@ export function GuidePointer({ variant }: { variant: 'tap' | 'swipe-down' | 'swi
     return (
       <>
         <img
-          src={`${BASE}/hand.png`}
+          src={`${BASE}/hand.webp`}
           alt=""
           draggable={false}
           className="pointer-events-none select-none drop-shadow-[0_3px_6px_rgba(0,0,0,0.35)]"
@@ -29,7 +29,7 @@ export function GuidePointer({ variant }: { variant: 'tap' | 'swipe-down' | 'swi
   return (
     <>
       <img
-        src={`${BASE}/arrow.png`}
+        src={`${BASE}/arrow.webp`}
         alt=""
         draggable={false}
         className="pointer-events-none select-none opacity-85 drop-shadow-[0_2px_5px_rgba(0,0,0,0.3)]"
@@ -52,7 +52,7 @@ export function GuideRing(): JSX.Element {
   return (
     <>
       <img
-        src={`${BASE}/ring.png`}
+        src={`${BASE}/ring.webp`}
         alt=""
         draggable={false}
         className="pointer-events-none absolute left-1/2 top-1/2 z-[5] -translate-x-1/2 -translate-y-1/2 select-none mix-blend-screen"

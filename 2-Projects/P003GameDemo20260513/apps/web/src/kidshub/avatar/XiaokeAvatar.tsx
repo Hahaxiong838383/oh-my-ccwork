@@ -28,7 +28,7 @@ export function XiaokeAvatar() {
   const applyVoiceStatus = useAvatarStore((s) => s.applyVoiceStatus);
 
   const def = getExpression(expressionId);
-  const file = def?.files[Math.min(fileIndex, (def?.files.length ?? 1) - 1)] ?? 'head-tilt.png';
+  const file = def?.files[Math.min(fileIndex, (def?.files.length ?? 1) - 1)] ?? 'head-tilt.webp';
 
   // 全量预加载：换表情不闪白（25 张约 4.6MB，本地工作台一次热完）
   useEffect(() => {

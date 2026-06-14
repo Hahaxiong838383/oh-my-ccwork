@@ -160,7 +160,7 @@ export function NightReportCanvasContent(): JSX.Element {
       <div className="absolute inset-0 transition-opacity duration-[300ms] ease-out" style={{ opacity: sceneOpacity }}>
         {/* 统一生态缸背景（复用登舰 ecopond，温暖金光自然衔接） */}
         <SceneImg
-          src="/kidshub/boarding/ecopond.png"
+          src="/kidshub/boarding/ecopond.webp"
           alt="生态缸"
           fallback={
             <div className="absolute inset-0 bg-gradient-to-br from-[#0d2238] via-[#0f4a4a] to-[#3d6b2f]">
