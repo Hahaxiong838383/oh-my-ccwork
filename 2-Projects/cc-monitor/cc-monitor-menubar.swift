@@ -446,39 +446,81 @@ struct ContentView: View {
                 Text("\(s.cards) 卡").font(.system(size: 8.5)).foregroundColor(.secondary)
             }
             foldRow(key: "docs", label: "docs/", desc: "按需文档", tildeDir: "~/.claude/docs")
+            // A 套:cc 主力 canonical(平时 ripgrep 召回的真记忆,无向量)
+            groupLabel("A", "主力记忆 · cc canonical · ripgrep 召回")
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)],
                       alignment: .leading, spacing: 5) {
+                nodeChip("记忆卡 \(s.cards) →MEMORY", open: "~/.claude/projects/-Users-rayman-chen-mycc/memory")
                 nodeChip("skills·全局 \(dirCount("~/.claude/skills"))", open: "~/.claude/skills")
                 nodeChip("skills·mycc \(dirCount("~/mycc/.claude/skills"))", open: "~/mycc/.claude/skills")
-                nodeChip("记忆卡 \(s.cards) →MEMORY", open: "~/.claude/projects/-Users-rayman-chen-mycc/memory")
             }.padding(.leading, 14)
-            vectorHealthRow
+            // B 套:memory.db 向量检索管道(≠A 套;源→embed→向量→db→检索关系链)
+            groupLabel("B", "向量检索库 · memory.db(另一套源)")
+            memVectorChain
         }
         .padding(.leading, 26).padding(.bottom, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(alignment: .topLeading) { spineBg(dot: vecWarn ? .orange : .green, tail: true) }
     }
 
-    // 记忆向量健康(根治 76 天静默死亡的可见性):覆盖率+鲜活度,Ollama挂/低覆盖/陈旧→橙红,点开 vector-health.json
     var vecWarn: Bool { !s.vecReady || s.vecCoverage < 80 || s.vecDays > 30 }
-    var vectorHealthRow: some View {
-        let healthy = s.vecReady && s.vecCoverage >= 95 && s.vecDays <= 7
-        let col: Color = vecWarn ? .red : (healthy ? .green : .orange)
-        return Button(action: { reveal("~/mycc/0-System/vector-health.json") }) {
+
+    // 分组小标(A/B 徽 + 标题),区分两套记忆源
+    func groupLabel(_ tag: String, _ title: String) -> some View {
+        HStack(spacing: 4) {
+            Text(tag).font(.system(size: 8, weight: .bold))
+                .padding(.horizontal, 4).padding(.vertical, 1)
+                .background(Capsule().fill(Color.gray.opacity(0.18)))
+            Text(title).font(.system(size: 9, weight: .medium)).foregroundColor(.secondary)
+            Spacer(minLength: 0)
+        }.padding(.leading, 14).padding(.top, 2)
+    }
+
+    // B 套向量关系链:源 →embed→ 向量 →入库→ db(检索),健康灯在 db 终态节点(原向量健康并入此处)
+    var memVectorChain: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            chainNode(icon: "doc.text", title: "memory-items.md", badge: "源·人可编辑",
+                      open: "~/mycc/0-System/memory-items.md", dot: nil)
+            chainArrow("embed · Ollama qwen3 · 512维")
+            chainNode(icon: "circle.grid.2x2", title: "memory-vectors.json", badge: "\(s.vecTotal) 向量",
+                      open: "~/mycc/0-System/memory-vectors.json", dot: nil)
+            chainArrow("入库")
+            chainNode(icon: "cylinder.split.1x2", title: "memory.db", badge: "FTS5 + 向量 KNN",
+                      open: "~/mycc/0-System/memory.db", dot: vecWarn ? .orange : .green)
+            Text("\(s.vecVectored)/\(s.vecTotal) 已向量 · \(s.vecCoverage)% · " + (s.vecReady ? "\(s.vecDays)天前" : "⚠️Ollama挂"))
+                .font(.system(size: 8.5)).foregroundColor(vecWarn ? .orange : .secondary)
+                .padding(.leading, 28).padding(.top, 1)
+            chainArrow("检索 → 向量+FTS+关键词 ⇒ RRF 融合+重排")
+        }.padding(.leading, 14)
+    }
+
+    // 链节点:左小图标/健康点 + 名(mono) + 右 badge,点击 Finder 打开
+    func chainNode(icon: String, title: String, badge: String, open: String, dot: Color?) -> some View {
+        Button(action: { reveal(open) }) {
             HStack(spacing: 5) {
-                Circle().fill(col).frame(width: 6, height: 6)
-                Text("向量 \(s.vecVectored)/\(s.vecTotal)").font(.system(size: 10, design: .monospaced))
-                Text("\(s.vecCoverage)%").font(.system(size: 9)).foregroundColor(.secondary)
+                if let d = dot { Circle().fill(d).frame(width: 6, height: 6) }
+                else { Image(systemName: icon).font(.system(size: 9)).foregroundColor(.secondary).frame(width: 11) }
+                Text(title).font(.system(size: 10, design: .monospaced)).lineLimit(1).truncationMode(.middle)
                 Spacer(minLength: 4)
-                Text(s.vecReady ? "\(s.vecDays)天前更新" : "⚠️Ollama挂").font(.system(size: 9))
-                    .foregroundColor(vecWarn ? .red : .secondary)
+                Text(badge).font(.system(size: 8)).foregroundColor(.secondary)
             }
-            .padding(.horizontal, 7).padding(.vertical, 4)
-            .background(RoundedRectangle(cornerRadius: 6).fill(col.opacity(0.10)))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(col.opacity(0.25), lineWidth: 0.5))
+            .padding(.horizontal, 7).padding(.vertical, 5)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.09)))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.16), lineWidth: 0.5))
             .contentShape(Rectangle())
-            .padding(.leading, 14)
         }.buttonStyle(.plain)
+    }
+
+    // 链内流转标:短竖线 + ▼ + 灰字(比 relationRow 紧凑,嵌分组内)
+    func chainArrow(_ text: String) -> some View {
+        HStack(spacing: 6) {
+            VStack(spacing: 0) {
+                Rectangle().fill(Color.gray.opacity(0.3)).frame(width: 1.5, height: 7)
+                Image(systemName: "arrowtriangle.down.fill").font(.system(size: 5)).foregroundColor(Color.gray.opacity(0.4))
+            }.frame(width: 11)
+            Text(text).font(.system(size: 8.5)).foregroundColor(.secondary).lineLimit(1).truncationMode(.tail)
+            Spacer(minLength: 0)
+        }.padding(.vertical, 1)
     }
 
     // 通用可折叠资源行:区头(chevron+名+计数+desc) + 展开 entries 网格(目录在前/文件带字节);①rules ②docs 共用
