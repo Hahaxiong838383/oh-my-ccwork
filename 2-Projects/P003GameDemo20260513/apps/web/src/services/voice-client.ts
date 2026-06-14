@@ -175,6 +175,8 @@ class VoiceClientImpl implements VoiceClient {
         }
         settled = true;
         this.ws = ws;
+        this.currentTurn = 0;
+        this.discardTurnAtOrBelow = -1;
         clearPendingIfSelf();
         resolve();
       };
