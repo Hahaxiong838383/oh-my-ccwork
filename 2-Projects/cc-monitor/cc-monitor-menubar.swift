@@ -19,6 +19,8 @@ struct CCStatus {
     var skillTotal = 0, evoTotal = 0, evoActive = 0, evoStaleDays = 0
     var evoId = "—", evoColor = "", evoProblem = ""
     var frictionTop: [(String, Int)] = []
+    var gitFiles: [(String, String)] = []                  // (状态码, 路径) 未提交文件
+    var evoItems: [(String, String, String, String)] = []  // (id, 颜色, 问题, 状态)
 }
 
 final class StatusStore: ObservableObject {
@@ -90,6 +92,12 @@ final class StatusStore: ObservableObject {
             st.gitDirty = g["dirty"] as? Int ?? 0
             st.gitTag = g["tag"] as? String ?? "—"
             st.gitLast = g["last"] as? String ?? "—"
+            if let gf = g["files"] as? [[String: Any]] {
+                st.gitFiles = gf.compactMap {
+                    guard let stt = $0["st"] as? String, let p = $0["path"] as? String else { return nil }
+                    return (stt, p)
+                }
+            }
         }
         if let e = o["engines"] as? [String: Any] {
             st.engines = ["omp","grok","codex","gemini","gateway"].map { ($0, e[$0] as? Bool ?? false) }
@@ -108,6 +116,12 @@ final class StatusStore: ObservableObject {
                 st.frictionTop = ft.compactMap {
                     guard let n = $0["name"] as? String, let c = $0["count"] as? Int else { return nil }
                     return (n, c)
+                }
+            }
+            if let ei = sk["evo_items"] as? [[String: Any]] {
+                st.evoItems = ei.compactMap {
+                    guard let id = $0["id"] as? String else { return nil }
+                    return (id, $0["color"] as? String ?? "", $0["problem"] as? String ?? "", $0["status"] as? String ?? "")
                 }
             }
         }
@@ -177,6 +191,8 @@ struct BudgetBar: View {
 struct ContentView: View {
     @ObservedObject var store: StatusStore
     @State private var tab = 0
+    @State private var gitExpanded = false
+    @State private var evoExpanded = false
     var s: CCStatus { store.s }
 
     var body: some View {
@@ -224,12 +240,36 @@ struct ContentView: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text(s.gitDirty == 0 ? "git 干净 ✅" : "git \(s.gitDirty) 未提交 ⚠️").font(.system(size: 11))
-                        .onTapGesture { reveal("~/.claude") }
-                        .help(s.gitDirty == 0 ? "~/.claude 工作区干净" : "~/.claude 有 \(s.gitDirty) 个文件未提交 · 点击在 Finder 打开去手动提交(监视器只读不替你提交)")
+                    Button(action: { if s.gitDirty > 0 { withAnimation(.snappy) { gitExpanded.toggle() } } }) {
+                        Text(s.gitDirty == 0 ? "git 干净 ✅" : "git \(s.gitDirty) 未提交 ⚠️ \(gitExpanded ? "▾" : "▸")")
+                            .font(.system(size: 11)).foregroundColor(.primary)
+                    }.buttonStyle(.plain)
                     Text("tag \(s.gitTag) · 闸 \(s.secretHook ? "✅" : "⚠️")").font(.system(size: 11))
-                        .help("tag = git 版本锚点(架构迁移完成的标记,可一键回退到稳定点) · 闸 = secret-scan pre-commit hook(提交 ~/.claude 时自动扫硬编码密钥,防泄露)")
                 }
+            }
+            // tag/闸 常驻人话说明(可见,不用 hover)
+            Text("tag=版本锚点(可回退) · 闸=提交前 secret 扫描")
+                .font(.system(size: 8)).foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            // git 展开:未提交文件列表(只读;提交仍去 Finder/终端人工控制)
+            if gitExpanded && !s.gitFiles.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(s.gitFiles.indices, id: \.self) { i in
+                        HStack(spacing: 5) {
+                            Text(s.gitFiles[i].0).font(.system(size: 8, weight: .bold))
+                                .foregroundColor(s.gitFiles[i].0 == "??" ? .orange : .blue)
+                                .frame(width: 20, alignment: .leading)
+                            Text(s.gitFiles[i].1).font(.system(size: 9, design: .monospaced))
+                                .lineLimit(1).truncationMode(.middle)
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    Button(action: { reveal("~/.claude") }) {
+                        Text("在 Finder 打开 ~/.claude 去提交 ›").font(.system(size: 8)).foregroundColor(.secondary)
+                    }.buttonStyle(.plain)
+                }
+                .padding(7).frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.08)))
             }
             Divider()
             Text("引擎团队").font(.system(size: 11, weight: .medium)).foregroundColor(.secondary)
@@ -427,6 +467,28 @@ struct ContentView: View {
                     statChip("停滞", "\(s.evoStaleDays)天", alert: s.evoStaleDays > 14)
                     statChip("进化项", "\(s.evoTotal)")
                     Spacer()
+                    Button(action: { withAnimation(.snappy) { evoExpanded.toggle() } }) {
+                        Text(evoExpanded ? "收起 ▾" : "展开全部 ▸").font(.system(size: 9)).foregroundColor(.secondary)
+                    }.buttonStyle(.plain)
+                }
+                // 展开:全部活跃进化项(只读;点单项在 Finder 打开进化日志看全文)
+                if evoExpanded {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Divider()
+                        ForEach(s.evoItems.indices, id: \.self) { i in
+                            Button(action: { reveal("~/mycc/0-System/evolution-log.md") }) {
+                                HStack(alignment: .top, spacing: 5) {
+                                    Text(s.evoItems[i].1.isEmpty ? "⚪" : s.evoItems[i].1).font(.system(size: 9))
+                                    Text(s.evoItems[i].0).font(.system(size: 9, weight: .semibold)).frame(width: 26, alignment: .leading)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(s.evoItems[i].2).font(.system(size: 9)).lineLimit(1).truncationMode(.tail)
+                                        Text(s.evoItems[i].3).font(.system(size: 8)).foregroundColor(.secondary).lineLimit(1)
+                                    }
+                                    Spacer(minLength: 0)
+                                }.contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                        }
+                    }
                 }
             }
             .padding(10).frame(maxWidth: .infinity, alignment: .leading)
