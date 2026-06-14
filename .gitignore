@@ -302,3 +302,6 @@ AGENTS.md.bak.*
 
 # head-tracked-3d-demo (独立 GitHub 仓 Hahaxiong838383/head-tracked-3d-demo)
 2-Projects/head-tracked-3d-demo/
+
+# 记忆向量索引(派生数据,从 memory-items.md 随时重建;2.2MB 不入 git 防 auto-push 每日膨胀)
+0-System/memory-vectors.json
