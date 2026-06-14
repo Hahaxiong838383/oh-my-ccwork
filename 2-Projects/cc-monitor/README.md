@@ -48,6 +48,7 @@ macOS **不允许** app 用代码把图标钉到指定位置。按住 **Cmd 拖�
 2. **App Sandbox**：Xcode 26 新建 macOS app 默认 `ENABLE_APP_SANDBOX=YES`，沙盒挡死 `Process` 跑 `cc-status.sh` + 读 `~/.claude` + 把 `/tmp` 写重定向进容器（症状：数据全 0 + 调试日志凭空消失）→ pbxproj 已设 `ENABLE_APP_SANDBOX=NO`。
 3. **Debug dylib**：Xcode 26 Debug 把代码塞进 `cc-monitor.debug.dylib`（路径绑定，ditto 到别处即废）→ 必须 `-configuration Release`（自包含）。
 4. 附：SwiftUI `MenuBarExtra` 不渲染 → 改用 AppKit `NSStatusItem`；`gauge.medium` 等 SF Symbol 可能 nil → 加纯文字 fallback。
+5. **重 build 旧进程**：运行中的进程内存里是旧二进制，重 build 覆盖磁盘**不会**被已跑进程加载——`open` 只激活旧进程＝看到旧版（踩过：①②层下钻 build 后还看到旧 ①②，根因是旧进程没退）。`build-menubar.sh` 已自动 `pkill` 旧进程；手动构建记得先退。
 
 ## 技术
 

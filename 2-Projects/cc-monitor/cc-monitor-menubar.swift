@@ -213,6 +213,7 @@ struct ContentView: View {
     @State private var gitExpanded = false
     @State private var evoExpanded = false
     @State private var expandedFriction: String? = nil
+    @State private var expandedDirs: Set<String> = ["2-Projects"]   // ③ 目录区展开态;默认摊开 2-Projects(最常看)
     var s: CCStatus { store.s }
 
     var body: some View {
@@ -309,22 +310,11 @@ struct ContentView: View {
     var archView: some View {
         VStack(alignment: .leading, spacing: 0) {
             legend.padding(.leading, 26).padding(.bottom, 8)
-            pipeLayer("①", "常驻核心", "rules \(s.rulesKB)K·MEM \(s.memKB)K",
-                      ok: s.rulesKB <= s.rulesTrip && s.memKB <= s.memTrip,
-                      nodes: [("rules/", "~/.claude/rules/", false),
-                              ("CLAUDE.md", "~/mycc/CLAUDE.md", false),
-                              ("memory/MEMORY.md", "~/.claude/projects/-Users-rayman-chen-mycc/memory/MEMORY.md", true)])
+            coreLayer
             relationRow("↓ 按需 pull · ripgrep")
-            pipeLayer("②", "按需召回", "\(s.cards) 卡", ok: true,
-                      nodes: [("docs/", "~/.claude/docs/", false),
-                              ("\(s.cards) 记忆卡", "~/.claude/projects/-Users-rayman-chen-mycc/memory/", false),
-                              ("skills/", "~/.claude/skills/", false),
-                              (".claude/skills/", "~/mycc/.claude/skills/", false)])
+            recallLayer
             relationRow("↓ cc 编排")
-            pipeLayer("③", "项目 ~/mycc", "MCP \(s.mcp)", ok: true,
-                      nodes: [("0-System/", "~/mycc/0-System/", false),
-                              ("PARA 五区", "~/mycc", false),
-                              (".mcp.json", "~/mycc/.mcp.json", false)])
+            myccZonePipe
             relationRow("↓ routing-kernel 路由")
             engineLayer
             relationRow("⊘ 隔离 · 不外派 / 不 memory / 不 git")
@@ -333,6 +323,210 @@ struct ContentView: View {
             govRow
         }
         .padding(.vertical, 4)
+    }
+
+    // ── ③ mycc 目录全景:PARA 骨架 9 区,点区下钻子目录(FileManager 实时扫描,默认折叠) ──
+    // hardcode 的只是「区→作用」语义(文件系统读不出),子目录列表实时扫,保留地铁线主干第③站不变。
+    var myccZones: [(name: String, rel: String, desc: String)] {
+        [("0-System/",   "0-System",   "状态·记忆·事件"),
+         ("1-Inbox/",    "1-Inbox",    "创意暂存"),
+         ("2-Projects/", "2-Projects", "在推项目"),
+         ("3-Thinking/", "3-Thinking", "认知方法论"),
+         ("4-Assets/",   "4-Assets",   "可复用资产"),
+         ("5-Archive/",  "5-Archive",  "历史归档"),
+         ("tasks/",      "tasks",      "跨会话任务"),
+         ("docs/",       "docs",       "扩展文档"),
+         (".claude/",    ".claude",    "skills·hooks·rules")]
+    }
+
+    // 实时扫某区下的一级子目录(排隐藏),排序返回
+    func subdirs(_ rel: String) -> [String] {
+        let base = ("~/mycc/\(rel)" as NSString).expandingTildeInPath
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: base) else { return [] }
+        return items.filter { n in
+            if n.hasPrefix(".") { return false }
+            var d: ObjCBool = false
+            FileManager.default.fileExists(atPath: "\(base)/\(n)", isDirectory: &d)
+            return d.boolValue
+        }.sorted()
+    }
+
+    // ③ 层:保留主干第③站 + 头部,body 换成 9 区可折叠目录树
+    var myccZonePipe: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Text("③").font(.system(size: 12, weight: .bold)).foregroundColor(.secondary)
+                Text("项目 ~/mycc").font(.system(size: 12, weight: .semibold))
+                Spacer(minLength: 4)
+                Text("MCP \(s.mcp) · 点区展开").font(.system(size: 8.5)).foregroundColor(.secondary)
+            }
+            ForEach(myccZones, id: \.rel) { z in zoneRow(z) }
+        }
+        .padding(.leading, 26).padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topLeading) { spineBg(dot: .green, tail: true) }
+    }
+
+    // 单个区:折叠头(chevron+名+计数+作用) + 展开后子目录 2 列网格(点 chip 在 Finder 打开)
+    @ViewBuilder
+    func zoneRow(_ z: (name: String, rel: String, desc: String)) -> some View {
+        let subs = subdirs(z.rel)
+        let isOpen = expandedDirs.contains(z.rel)
+        VStack(alignment: .leading, spacing: 4) {
+            Button(action: {
+                if isOpen { expandedDirs.remove(z.rel) } else { expandedDirs.insert(z.rel) }
+            }) {
+                HStack(spacing: 5) {
+                    Image(systemName: isOpen ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 8, weight: .bold)).foregroundColor(.secondary).frame(width: 9)
+                    Text(z.name).font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                    Text("(\(subs.count))").font(.system(size: 9)).foregroundColor(.secondary)
+                    Spacer(minLength: 4)
+                    Text(z.desc).font(.system(size: 9)).foregroundColor(.secondary)
+                }
+                .contentShape(Rectangle())
+            }.buttonStyle(.plain)
+            if isOpen {
+                if subs.isEmpty {
+                    Button(action: { reveal("~/mycc/\(z.rel)") }) {
+                        Text("📂 无子文件夹 · Finder 打开本区")
+                            .font(.system(size: 9)).foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }.buttonStyle(.plain).padding(.leading, 14)
+                } else {
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)],
+                              alignment: .leading, spacing: 5) {
+                        ForEach(subs, id: \.self) { sub in
+                            nodeChip(sub, open: "~/mycc/\(z.rel)/\(sub)")
+                        }
+                    }.padding(.leading, 14).padding(.top, 1)
+                }
+            }
+        }
+    }
+
+    // ── ① 常驻核心:rules/ 可下钻看 5 个规则文件+字节(=常驻预算构成);CLAUDE.md/MEMORY.md 单文件点开 ──
+    var coreLayer: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Text("①").font(.system(size: 12, weight: .bold)).foregroundColor(.secondary)
+                Text("常驻核心").font(.system(size: 12, weight: .semibold))
+                Spacer(minLength: 4)
+                Text("rules \(s.rulesKB)K·MEM \(s.memKB)K").font(.system(size: 8.5)).foregroundColor(.secondary)
+            }
+            foldRow(key: "rules", label: "rules/", desc: "常驻规则(=预算构成)", tildeDir: "~/.claude/rules")
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)],
+                      alignment: .leading, spacing: 5) {
+                nodeChip("CLAUDE.md", open: "~/mycc/CLAUDE.md")
+                nodeChip("MEMORY.md", open: "~/.claude/projects/-Users-rayman-chen-mycc/memory/MEMORY.md")
+            }.padding(.leading, 14)
+        }
+        .padding(.leading, 26).padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topLeading) {
+            spineBg(dot: (s.rulesKB <= s.rulesTrip && s.memKB <= s.memTrip) ? .green : .orange, tail: true)
+        }
+    }
+
+    // ── ② 按需召回:docs/ 可下钻列文档;skills(两套)/记忆卡只显计数+点开根(各有专门入口,不内联爆炸) ──
+    var recallLayer: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Text("②").font(.system(size: 12, weight: .bold)).foregroundColor(.secondary)
+                Text("按需召回").font(.system(size: 12, weight: .semibold))
+                Spacer(minLength: 4)
+                Text("\(s.cards) 卡").font(.system(size: 8.5)).foregroundColor(.secondary)
+            }
+            foldRow(key: "docs", label: "docs/", desc: "按需文档", tildeDir: "~/.claude/docs")
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)],
+                      alignment: .leading, spacing: 5) {
+                nodeChip("skills·全局 \(dirCount("~/.claude/skills"))", open: "~/.claude/skills")
+                nodeChip("skills·mycc \(dirCount("~/mycc/.claude/skills"))", open: "~/mycc/.claude/skills")
+                nodeChip("记忆卡 \(s.cards) →MEMORY", open: "~/.claude/projects/-Users-rayman-chen-mycc/memory")
+            }.padding(.leading, 14)
+        }
+        .padding(.leading, 26).padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topLeading) { spineBg(dot: .green, tail: true) }
+    }
+
+    // 通用可折叠资源行:区头(chevron+名+计数+desc) + 展开 entries 网格(目录在前/文件带字节);①rules ②docs 共用
+    @ViewBuilder
+    func foldRow(key: String, label: String, desc: String, tildeDir: String) -> some View {
+        let entries = entriesAt(tildeDir)
+        let isOpen = expandedDirs.contains(key)
+        VStack(alignment: .leading, spacing: 4) {
+            Button(action: {
+                if isOpen { expandedDirs.remove(key) } else { expandedDirs.insert(key) }
+            }) {
+                HStack(spacing: 5) {
+                    Image(systemName: isOpen ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 8, weight: .bold)).foregroundColor(.secondary).frame(width: 9)
+                    Text(label).font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                    Text("(\(entries.count))").font(.system(size: 9)).foregroundColor(.secondary)
+                    Spacer(minLength: 4)
+                    Text(desc).font(.system(size: 9)).foregroundColor(.secondary)
+                }
+                .contentShape(Rectangle())
+            }.buttonStyle(.plain)
+            if isOpen {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)],
+                          alignment: .leading, spacing: 5) {
+                    ForEach(entries.indices, id: \.self) { i in
+                        fileChip(entries[i].label, sub: entries[i].sub, open: entries[i].path)
+                    }
+                }.padding(.leading, 14).padding(.top, 1)
+            }
+        }
+    }
+
+    // 文件/目录叶子 chip:右侧附字节数(目录无),点击在 Finder 打开
+    func fileChip(_ label: String, sub: String, open: String) -> some View {
+        Button(action: { reveal(open) }) {
+            HStack(spacing: 4) {
+                Text(label).font(.system(size: 10, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+                Spacer(minLength: 2)
+                if !sub.isEmpty { Text(sub).font(.system(size: 8)).foregroundColor(.secondary) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 7).padding(.vertical, 5)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.09)))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.16), lineWidth: 0.5))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // 扫 ~ 目录下非隐藏项:目录在前(带/后缀,无字节)、文件在后(带字节);给 ①rules ②docs 下钻用
+    func entriesAt(_ tildeDir: String) -> [(label: String, sub: String, path: String)] {
+        let base = (tildeDir as NSString).expandingTildeInPath
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: base) else { return [] }
+        var dirs: [(label: String, sub: String, path: String)] = []
+        var files: [(label: String, sub: String, path: String)] = []
+        for n in items.sorted() where !n.hasPrefix(".") {
+            let full = "\(base)/\(n)"
+            var d: ObjCBool = false
+            FileManager.default.fileExists(atPath: full, isDirectory: &d)
+            if d.boolValue {
+                dirs.append((label: n + "/", sub: "", path: "\(tildeDir)/\(n)"))
+            } else {
+                let sz = ((try? FileManager.default.attributesOfItem(atPath: full))?[.size] as? Int) ?? 0
+                files.append((label: n, sub: sz >= 1024 ? "\(sz/1024)K" : "\(sz)B", path: "\(tildeDir)/\(n)"))
+            }
+        }
+        return dirs + files
+    }
+
+    // 只数某 ~ 目录下子目录数(skills 两套计数用,不列内容)
+    func dirCount(_ tildeDir: String) -> Int {
+        let base = (tildeDir as NSString).expandingTildeInPath
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: base) else { return 0 }
+        return items.filter { n in
+            if n.hasPrefix(".") { return false }
+            var d: ObjCBool = false
+            FileManager.default.fileExists(atPath: "\(base)/\(n)", isDirectory: &d)
+            return d.boolValue
+        }.count
     }
 
     var legend: some View {

@@ -34,6 +34,9 @@ echo "→ 安装到项目根 + 注册 LaunchServices"
 rm -rf "$DST_APP"; ditto "$A" "$DST_APP"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$DST_APP"
 
+echo "→ 退出旧进程(运行中进程内存=旧二进制,不会自动加载新文件;不退则 open 只激活旧进程=看到旧版)"
+pkill -f 'cc-monitor\.app/Contents/MacOS/cc-monitor' 2>/dev/null && echo "   已 kill 旧进程,open 即加载最新" || echo "   无旧进程在跑"
+
 echo ""
 echo "✅ 完成: $DST_APP"
 echo "   ⚠️ 启动必须【你自己】跑(不能让 cc/自动化代跑,否则进不可见会话看不到图标):"

@@ -15,6 +15,15 @@ struct CCStatus {
     var gitTag = "—", gitLast = "—"
     var engines: [(String, Bool)] = []
     var secretHook = false
+    // skills 自进化(诚实命名:evoActive=活跃未毕业改进项/进化债; frictionTop=周边热度近似非精确计数)
+    var skillTotal = 0, evoTotal = 0, evoActive = 0, evoStaleDays = 0
+    var evoId = "—", evoColor = "", evoProblem = ""
+    var frictionTop: [(String, Int)] = []
+    var gitFiles: [(String, String)] = []                  // (状态码, 路径) 未提交文件
+    var evoItems: [(String, String, String, String)] = []  // (id, 颜色, 问题, 状态)
+    var frictionDetail: [String: [String]] = [:]           // skill → 具体摩擦记录
+    var ackedEvo: Set<String> = []                         // 已标「已处理」的进化项 id
+    var ackedFriction: Set<String> = []                    // 已标「已知」的 friction skill
 }
 
 final class StatusStore: ObservableObject {
@@ -67,6 +76,19 @@ final class StatusStore: ObservableObject {
         }
     }
 
+    // 🟡 可逆确认:写独立 ack 文件(不碰原始 evolution-log/task-log,删文件即重置;绝对可逆)
+    func toggleAck(_ kind: String, _ id: String) {
+        let p = ("~/.claude/.skills-monitor-acks.json" as NSString).expandingTildeInPath
+        var d: [String: [String]] = [:]
+        if let data = FileManager.default.contents(atPath: p),
+           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: [String]] { d = obj }
+        var arr = Set(d[kind] ?? [])
+        if arr.contains(id) { arr.remove(id) } else { arr.insert(id) }
+        d[kind] = Array(arr)
+        if let out = try? JSONSerialization.data(withJSONObject: d) { try? out.write(to: URL(fileURLWithPath: p)) }
+        refresh()
+    }
+
     static func parse(_ o: [String: Any]) -> CCStatus {
         var st = CCStatus()
         st.ts = o["ts"] as? String ?? "—"
@@ -86,9 +108,41 @@ final class StatusStore: ObservableObject {
             st.gitDirty = g["dirty"] as? Int ?? 0
             st.gitTag = g["tag"] as? String ?? "—"
             st.gitLast = g["last"] as? String ?? "—"
+            if let gf = g["files"] as? [[String: Any]] {
+                st.gitFiles = gf.compactMap {
+                    guard let stt = $0["st"] as? String, let p = $0["path"] as? String else { return nil }
+                    return (stt, p)
+                }
+            }
         }
         if let e = o["engines"] as? [String: Any] {
             st.engines = ["omp","grok","codex","gemini","gateway"].map { ($0, e[$0] as? Bool ?? false) }
+        }
+        if let sk = o["skills"] as? [String: Any] {
+            st.skillTotal = sk["total"] as? Int ?? 0
+            st.evoTotal = sk["evo_total"] as? Int ?? 0
+            st.evoActive = sk["evo_pending"] as? Int ?? 0
+            st.evoStaleDays = sk["evo_stale_days"] as? Int ?? 0
+            if let el = sk["evo_latest"] as? [String: Any] {
+                st.evoId = el["id"] as? String ?? "—"
+                st.evoColor = el["color"] as? String ?? ""
+                st.evoProblem = el["problem"] as? String ?? ""
+            }
+            if let ft = sk["friction_top"] as? [[String: Any]] {
+                st.frictionTop = ft.compactMap {
+                    guard let n = $0["name"] as? String, let c = $0["count"] as? Int else { return nil }
+                    return (n, c)
+                }
+            }
+            if let ei = sk["evo_items"] as? [[String: Any]] {
+                st.evoItems = ei.compactMap {
+                    guard let id = $0["id"] as? String else { return nil }
+                    return (id, $0["color"] as? String ?? "", $0["problem"] as? String ?? "", $0["status"] as? String ?? "")
+                }
+            }
+            if let fd = sk["friction_detail"] as? [String: [String]] { st.frictionDetail = fd }
+            st.ackedEvo = Set((sk["acked_evo"] as? [String]) ?? [])
+            st.ackedFriction = Set((sk["acked_friction"] as? [String]) ?? [])
         }
         return st
     }
@@ -156,6 +210,10 @@ struct BudgetBar: View {
 struct ContentView: View {
     @ObservedObject var store: StatusStore
     @State private var tab = 0
+    @State private var gitExpanded = false
+    @State private var evoExpanded = false
+    @State private var expandedFriction: String? = nil
+    @State private var expandedDirs: Set<String> = ["2-Projects"]   // ③ 目录区展开态;默认摊开 2-Projects(最常看)
     var s: CCStatus { store.s }
 
     var body: some View {
@@ -163,14 +221,14 @@ struct ContentView: View {
             HStack {
                 Text("🧠 cc").font(.system(size: 13, weight: .semibold))
                 Picker("", selection: $tab) {
-                    Text("状态").tag(0); Text("架构").tag(1)
-                }.pickerStyle(.segmented).labelsHidden().frame(width: 130)
+                    Text("状态").tag(0); Text("架构").tag(1); Text("skills").tag(2)
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 178)
                 Spacer()
                 Text(s.ts).font(.system(size: 9)).foregroundColor(.secondary)
             }
             Divider()
             ScrollView {
-                if tab == 0 { statusView } else { archView }
+                if tab == 0 { statusView } else if tab == 1 { archView } else { skillsView }
             }
             .frame(maxHeight: 520)
             Divider()
@@ -178,6 +236,7 @@ struct ContentView: View {
                 Button("刷新") { store.refresh() }.font(.system(size: 11))
                 Spacer()
                 if tab == 1 { Text("点路径→Finder 打开").font(.system(size: 9)).foregroundColor(.secondary) }
+                if tab == 2 { Text("friction=周边热度近似").font(.system(size: 9)).foregroundColor(.secondary) }
                 Spacer()
                 Button("退出") { NSApp.terminate(nil) }.font(.system(size: 11))
             }
@@ -202,9 +261,36 @@ struct ContentView: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text(s.gitDirty == 0 ? "git 干净 ✅" : "git \(s.gitDirty) 未提交 ⚠️").font(.system(size: 11))
+                    Button(action: { if s.gitDirty > 0 { withAnimation(.snappy) { gitExpanded.toggle() } } }) {
+                        Text(s.gitDirty == 0 ? "git 干净 ✅" : "git \(s.gitDirty) 未提交 ⚠️ \(gitExpanded ? "▾" : "▸")")
+                            .font(.system(size: 11)).foregroundColor(.primary)
+                    }.buttonStyle(.plain)
                     Text("tag \(s.gitTag) · 闸 \(s.secretHook ? "✅" : "⚠️")").font(.system(size: 11))
                 }
+            }
+            // tag/闸 常驻人话说明(可见,不用 hover)
+            Text("tag=版本锚点(可回退) · 闸=提交前 secret 扫描")
+                .font(.system(size: 8)).foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            // git 展开:未提交文件列表(只读;提交仍去 Finder/终端人工控制)
+            if gitExpanded && !s.gitFiles.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(s.gitFiles.indices, id: \.self) { i in
+                        HStack(spacing: 5) {
+                            Text(s.gitFiles[i].0).font(.system(size: 8, weight: .bold))
+                                .foregroundColor(s.gitFiles[i].0 == "??" ? .orange : .blue)
+                                .frame(width: 20, alignment: .leading)
+                            Text(s.gitFiles[i].1).font(.system(size: 9, design: .monospaced))
+                                .lineLimit(1).truncationMode(.middle)
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    Button(action: { reveal("~/.claude") }) {
+                        Text("在 Finder 打开 ~/.claude 去提交 ›").font(.system(size: 8)).foregroundColor(.secondary)
+                    }.buttonStyle(.plain)
+                }
+                .padding(7).frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.08)))
             }
             Divider()
             Text("引擎团队").font(.system(size: 11, weight: .medium)).foregroundColor(.secondary)
@@ -220,46 +306,235 @@ struct ContentView: View {
     }
 
     // ── 架构 tab：每层 = 一张卡，列出真实子目录路径 + 作用，点路径在 Finder 打开 ──
+    // ── 架构 tab：左偏轴管道流转图(地铁线主干贯穿 + 右侧挂枝) ──
     var archView: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            legend
-            layerCard("① 常驻核心", badge: "rules \(s.rulesKB)K·MEM \(s.memKB)K",
-                      ok: s.rulesKB <= s.rulesTrip && s.memKB <= s.memTrip) {
-                pathRow(.green, "~/.claude/rules/", "5 文件·身份/行为/流程/工具/路由·每次注入")
-                pathRow(.green, "~/.claude/projects/-Users-rayman-chen-mycc/memory/MEMORY.md", "热索引 46★·每次注入")
-                pathRow(.green, "~/mycc/CLAUDE.md", "项目入口·cwd=mycc 时常驻")
-            }
-            arrow("↓ 按需 pull · ripgrep / read")
-            layerCard("② 按需召回", badge: "\(s.cards) 记忆卡", ok: true) {
-                pathRow(.blue, "~/.claude/docs/", "engine-ops·no-guessing·patterns…")
-                pathRow(.blue, "~/.claude/projects/-Users-rayman-chen-mycc/memory/", "\(s.cards) 卡·INDEX-full·ripgrep 召回")
-                pathRow(.blue, "~/.claude/skills/", "全局 skill 17")
-                pathRow(.blue, "~/mycc/.claude/skills/", "项目 skill 80")
-            }
-            arrow("↓ cc 编排")
-            layerCard("③ 项目 ~/mycc", badge: "PARA·MCP \(s.mcp)", ok: true) {
-                pathRow(.gray, "~/mycc/0-System/", "status·RECENT_EVENTS·task-log")
-                pathRow(.gray, "~/mycc/{1-Inbox…5-Archive}/", "PARA 五区·分类归档", open: "~/mycc")
-                pathRow(.gray, "~/mycc/.mcp.json", "项目 MCP \(s.mcp) 个·飞书/wiki/gateway")
-                pathRow(.gray, "~/mycc/docs/rules/ · multi-agent/", "P2/P3 规则·多智能体协同", open: "~/mycc/docs/rules")
-            }
-            arrow("↓ routing-kernel 路由")
-            engineCard
-            arrow("⊘ 隔离 · 不外派 / 不 memory / 不 git")
-            layerCard("⑤ work-private", badge: "隐私 vault", ok: true, muted: true) {
-                pathRow(.gray, "~/work-private/", "人事/面试/客户·三不墙(独立·非 git)")
-            }
-            Divider().padding(.vertical, 1)
-            govCard
+        VStack(alignment: .leading, spacing: 0) {
+            legend.padding(.leading, 26).padding(.bottom, 8)
+            coreLayer
+            relationRow("↓ 按需 pull · ripgrep")
+            recallLayer
+            relationRow("↓ cc 编排")
+            myccZonePipe
+            relationRow("↓ routing-kernel 路由")
+            engineLayer
+            relationRow("⊘ 隔离 · 不外派 / 不 memory / 不 git")
+            pipeLayer("⑤", "work-private", "隐私 vault", ok: true, muted: true,
+                      nodes: [("人事/面试/客户 vault", "~/work-private", true)], isLast: true)
+            govRow
         }
+        .padding(.vertical, 4)
+    }
+
+    // ── ③ mycc 目录全景:PARA 骨架 9 区,点区下钻子目录(FileManager 实时扫描,默认折叠) ──
+    // hardcode 的只是「区→作用」语义(文件系统读不出),子目录列表实时扫,保留地铁线主干第③站不变。
+    var myccZones: [(name: String, rel: String, desc: String)] {
+        [("0-System/",   "0-System",   "状态·记忆·事件"),
+         ("1-Inbox/",    "1-Inbox",    "创意暂存"),
+         ("2-Projects/", "2-Projects", "在推项目"),
+         ("3-Thinking/", "3-Thinking", "认知方法论"),
+         ("4-Assets/",   "4-Assets",   "可复用资产"),
+         ("5-Archive/",  "5-Archive",  "历史归档"),
+         ("tasks/",      "tasks",      "跨会话任务"),
+         ("docs/",       "docs",       "扩展文档"),
+         (".claude/",    ".claude",    "skills·hooks·rules")]
+    }
+
+    // 实时扫某区下的一级子目录(排隐藏),排序返回
+    func subdirs(_ rel: String) -> [String] {
+        let base = ("~/mycc/\(rel)" as NSString).expandingTildeInPath
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: base) else { return [] }
+        return items.filter { n in
+            if n.hasPrefix(".") { return false }
+            var d: ObjCBool = false
+            FileManager.default.fileExists(atPath: "\(base)/\(n)", isDirectory: &d)
+            return d.boolValue
+        }.sorted()
+    }
+
+    // ③ 层:保留主干第③站 + 头部,body 换成 9 区可折叠目录树
+    var myccZonePipe: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Text("③").font(.system(size: 12, weight: .bold)).foregroundColor(.secondary)
+                Text("项目 ~/mycc").font(.system(size: 12, weight: .semibold))
+                Spacer(minLength: 4)
+                Text("MCP \(s.mcp) · 点区展开").font(.system(size: 8.5)).foregroundColor(.secondary)
+            }
+            ForEach(myccZones, id: \.rel) { z in zoneRow(z) }
+        }
+        .padding(.leading, 26).padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topLeading) { spineBg(dot: .green, tail: true) }
+    }
+
+    // 单个区:折叠头(chevron+名+计数+作用) + 展开后子目录 2 列网格(点 chip 在 Finder 打开)
+    @ViewBuilder
+    func zoneRow(_ z: (name: String, rel: String, desc: String)) -> some View {
+        let subs = subdirs(z.rel)
+        let isOpen = expandedDirs.contains(z.rel)
+        VStack(alignment: .leading, spacing: 4) {
+            Button(action: {
+                if isOpen { expandedDirs.remove(z.rel) } else { expandedDirs.insert(z.rel) }
+            }) {
+                HStack(spacing: 5) {
+                    Image(systemName: isOpen ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 8, weight: .bold)).foregroundColor(.secondary).frame(width: 9)
+                    Text(z.name).font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                    Text("(\(subs.count))").font(.system(size: 9)).foregroundColor(.secondary)
+                    Spacer(minLength: 4)
+                    Text(z.desc).font(.system(size: 9)).foregroundColor(.secondary)
+                }
+                .contentShape(Rectangle())
+            }.buttonStyle(.plain)
+            if isOpen {
+                if subs.isEmpty {
+                    Button(action: { reveal("~/mycc/\(z.rel)") }) {
+                        Text("📂 无子文件夹 · Finder 打开本区")
+                            .font(.system(size: 9)).foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }.buttonStyle(.plain).padding(.leading, 14)
+                } else {
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)],
+                              alignment: .leading, spacing: 5) {
+                        ForEach(subs, id: \.self) { sub in
+                            nodeChip(sub, open: "~/mycc/\(z.rel)/\(sub)")
+                        }
+                    }.padding(.leading, 14).padding(.top, 1)
+                }
+            }
+        }
+    }
+
+    // ── ① 常驻核心:rules/ 可下钻看 5 个规则文件+字节(=常驻预算构成);CLAUDE.md/MEMORY.md 单文件点开 ──
+    var coreLayer: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Text("①").font(.system(size: 12, weight: .bold)).foregroundColor(.secondary)
+                Text("常驻核心").font(.system(size: 12, weight: .semibold))
+                Spacer(minLength: 4)
+                Text("rules \(s.rulesKB)K·MEM \(s.memKB)K").font(.system(size: 8.5)).foregroundColor(.secondary)
+            }
+            foldRow(key: "rules", label: "rules/", desc: "常驻规则(=预算构成)", tildeDir: "~/.claude/rules")
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)],
+                      alignment: .leading, spacing: 5) {
+                nodeChip("CLAUDE.md", open: "~/mycc/CLAUDE.md")
+                nodeChip("MEMORY.md", open: "~/.claude/projects/-Users-rayman-chen-mycc/memory/MEMORY.md")
+            }.padding(.leading, 14)
+        }
+        .padding(.leading, 26).padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topLeading) {
+            spineBg(dot: (s.rulesKB <= s.rulesTrip && s.memKB <= s.memTrip) ? .green : .orange, tail: true)
+        }
+    }
+
+    // ── ② 按需召回:docs/ 可下钻列文档;skills(两套)/记忆卡只显计数+点开根(各有专门入口,不内联爆炸) ──
+    var recallLayer: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Text("②").font(.system(size: 12, weight: .bold)).foregroundColor(.secondary)
+                Text("按需召回").font(.system(size: 12, weight: .semibold))
+                Spacer(minLength: 4)
+                Text("\(s.cards) 卡").font(.system(size: 8.5)).foregroundColor(.secondary)
+            }
+            foldRow(key: "docs", label: "docs/", desc: "按需文档", tildeDir: "~/.claude/docs")
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)],
+                      alignment: .leading, spacing: 5) {
+                nodeChip("skills·全局 \(dirCount("~/.claude/skills"))", open: "~/.claude/skills")
+                nodeChip("skills·mycc \(dirCount("~/mycc/.claude/skills"))", open: "~/mycc/.claude/skills")
+                nodeChip("记忆卡 \(s.cards) →MEMORY", open: "~/.claude/projects/-Users-rayman-chen-mycc/memory")
+            }.padding(.leading, 14)
+        }
+        .padding(.leading, 26).padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topLeading) { spineBg(dot: .green, tail: true) }
+    }
+
+    // 通用可折叠资源行:区头(chevron+名+计数+desc) + 展开 entries 网格(目录在前/文件带字节);①rules ②docs 共用
+    @ViewBuilder
+    func foldRow(key: String, label: String, desc: String, tildeDir: String) -> some View {
+        let entries = entriesAt(tildeDir)
+        let isOpen = expandedDirs.contains(key)
+        VStack(alignment: .leading, spacing: 4) {
+            Button(action: {
+                if isOpen { expandedDirs.remove(key) } else { expandedDirs.insert(key) }
+            }) {
+                HStack(spacing: 5) {
+                    Image(systemName: isOpen ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 8, weight: .bold)).foregroundColor(.secondary).frame(width: 9)
+                    Text(label).font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                    Text("(\(entries.count))").font(.system(size: 9)).foregroundColor(.secondary)
+                    Spacer(minLength: 4)
+                    Text(desc).font(.system(size: 9)).foregroundColor(.secondary)
+                }
+                .contentShape(Rectangle())
+            }.buttonStyle(.plain)
+            if isOpen {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)],
+                          alignment: .leading, spacing: 5) {
+                    ForEach(entries.indices, id: \.self) { i in
+                        fileChip(entries[i].label, sub: entries[i].sub, open: entries[i].path)
+                    }
+                }.padding(.leading, 14).padding(.top, 1)
+            }
+        }
+    }
+
+    // 文件/目录叶子 chip:右侧附字节数(目录无),点击在 Finder 打开
+    func fileChip(_ label: String, sub: String, open: String) -> some View {
+        Button(action: { reveal(open) }) {
+            HStack(spacing: 4) {
+                Text(label).font(.system(size: 10, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+                Spacer(minLength: 2)
+                if !sub.isEmpty { Text(sub).font(.system(size: 8)).foregroundColor(.secondary) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 7).padding(.vertical, 5)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.09)))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.16), lineWidth: 0.5))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // 扫 ~ 目录下非隐藏项:目录在前(带/后缀,无字节)、文件在后(带字节);给 ①rules ②docs 下钻用
+    func entriesAt(_ tildeDir: String) -> [(label: String, sub: String, path: String)] {
+        let base = (tildeDir as NSString).expandingTildeInPath
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: base) else { return [] }
+        var dirs: [(label: String, sub: String, path: String)] = []
+        var files: [(label: String, sub: String, path: String)] = []
+        for n in items.sorted() where !n.hasPrefix(".") {
+            let full = "\(base)/\(n)"
+            var d: ObjCBool = false
+            FileManager.default.fileExists(atPath: full, isDirectory: &d)
+            if d.boolValue {
+                dirs.append((label: n + "/", sub: "", path: "\(tildeDir)/\(n)"))
+            } else {
+                let sz = ((try? FileManager.default.attributesOfItem(atPath: full))?[.size] as? Int) ?? 0
+                files.append((label: n, sub: sz >= 1024 ? "\(sz/1024)K" : "\(sz)B", path: "\(tildeDir)/\(n)"))
+            }
+        }
+        return dirs + files
+    }
+
+    // 只数某 ~ 目录下子目录数(skills 两套计数用,不列内容)
+    func dirCount(_ tildeDir: String) -> Int {
+        let base = (tildeDir as NSString).expandingTildeInPath
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: base) else { return 0 }
+        return items.filter { n in
+            if n.hasPrefix(".") { return false }
+            var d: ObjCBool = false
+            FileManager.default.fileExists(atPath: "\(base)/\(n)", isDirectory: &d)
+            return d.boolValue
+        }.count
     }
 
     var legend: some View {
         HStack(spacing: 12) {
-            legendDot(.green, "常驻 每次注入")
-            legendDot(.blue, "按需 召回")
-            legendDot(.gray, "运行时")
-        }.padding(.bottom, 1)
+            legendDot(.green, "健康")
+            legendDot(.orange, "超预算/告警")
+            legendDot(Color.gray.opacity(0.55), "隔离/中性")
+        }
     }
     func legendDot(_ c: Color, _ t: String) -> some View {
         HStack(spacing: 3) {
@@ -268,84 +543,241 @@ struct ContentView: View {
         }
     }
 
-    // ④ 引擎团队：状态点 + 各 CLI 配置根路径
-    var engineCard: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                Circle().fill(!s.engines.isEmpty && s.engines.allSatisfy { $0.1 } ? Color.green : Color.orange)
-                    .frame(width: 7, height: 7)
-                Text("④ 引擎团队").font(.system(size: 11.5, weight: .semibold))
-                Spacer()
-                HStack(spacing: 6) {
-                    ForEach(s.engines, id: \.0) { e in
-                        HStack(spacing: 2) {
-                            Circle().fill(e.1 ? Color.green : Color.red).frame(width: 5, height: 5)
-                            Text(e.0).font(.system(size: 8))
-                        }
-                    }
-                }
+    // 左主干背景:顶部圆点(健康色) + 向下贯穿竖线(画在 .background,自然填满本块高度,不撑爆 VStack)
+    func spineBg(dot: Color, tail: Bool) -> some View {
+        ZStack(alignment: .top) {
+            if tail {
+                Rectangle().fill(Color.gray.opacity(0.3)).frame(width: 2)
+                    .frame(maxHeight: .infinity).padding(.top, 5)
             }
-            pathRow(.gray, "~/.omp/", "omp 多 provider 编排·agent.db")
-            pathRow(.gray, "~/.grok/ · ~/.codex/ · ~/.gemini/", "各引擎 CLI 配置根", open: "~/.codex")
-            pathRow(.gray, "~/.gateway.env", "codex 网关 key·chmod 600")
+            Circle().fill(dot).frame(width: 11, height: 11)
+                .overlay(Circle().stroke(Color(nsColor: .windowBackgroundColor), lineWidth: 2))
         }
-        .padding(8).frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 7).fill(Color.gray.opacity(0.07)))
+        .frame(width: 11).padding(.leading, 3)
     }
 
-    // 治理闸：hooks
-    var govCard: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                Circle().fill(s.secretHook ? Color.green : Color.orange).frame(width: 7, height: 7)
-                Text("治理闸").font(.system(size: 11.5, weight: .semibold))
-                Spacer()
-                Text(s.secretHook ? "secret 闸 active ✅" : "闸 off ⚠️")
-                    .font(.system(size: 8.5)).foregroundColor(.secondary)
-            }
-            pathRow(.gray, "~/.claude/hooks/", "secret-scan·budget-check·cc-status·pre-commit")
-        }
-        .padding(8).frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 7).fill(Color.gray.opacity(0.07)))
-    }
-
-    func layerCard<C: View>(_ title: String, badge: String, ok: Bool, muted: Bool = false,
-                            @ViewBuilder _ rows: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                Circle().fill(muted ? Color.gray.opacity(0.5) : (ok ? Color.green : Color.orange))
-                    .frame(width: 7, height: 7)
-                Text(title).font(.system(size: 11.5, weight: .semibold))
-                Spacer()
+    // 一个架构层:右侧标题 + 叶节点网格,左侧主干画在 background
+    func pipeLayer(_ idx: String, _ title: String, _ badge: String, ok: Bool, muted: Bool = false,
+                   nodes: [(String, String, Bool)], isLast: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Text(idx).font(.system(size: 12, weight: .bold)).foregroundColor(.secondary)
+                Text(title).font(.system(size: 12, weight: .semibold))
+                Spacer(minLength: 4)
                 Text(badge).font(.system(size: 8.5)).foregroundColor(.secondary)
             }
-            rows()
+            nodeGrid(nodes)
         }
-        .padding(8).frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 7).fill(Color.gray.opacity(0.07)))
+        .padding(.leading, 26).padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topLeading) {
+            spineBg(dot: muted ? Color.gray.opacity(0.55) : (ok ? .green : .orange), tail: !isLast)
+        }
     }
 
-    func pathRow(_ dot: Color, _ path: String, _ role: String, open: String? = nil) -> some View {
-        Button(action: { reveal(open ?? path) }) {
-            HStack(alignment: .top, spacing: 6) {
-                Circle().fill(dot).frame(width: 5, height: 5).padding(.top, 4)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(path).font(.system(size: 9.5, design: .monospaced))
-                        .foregroundColor(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .multilineTextAlignment(.leading)
-                    Text(role).font(.system(size: 8.5)).foregroundColor(.secondary)
-                }
+    // 叶节点 2 列网格(长 label wide=true 占满整行)
+    func nodeGrid(_ nodes: [(String, String, Bool)]) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)],
+                  alignment: .leading, spacing: 6) {
+            ForEach(nodes.indices, id: \.self) { i in
+                nodeChip(nodes[i].0, open: nodes[i].1).gridCellColumns(nodes[i].2 ? 2 : 1)
+            }
+        }
+    }
+
+    // 叶节点 chip:点击在 Finder 打开
+    func nodeChip(_ label: String, open: String) -> some View {
+        Button(action: { reveal(open) }) {
+            Text(label).font(.system(size: 10, design: .monospaced))
+                .lineLimit(1).truncationMode(.middle)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 7).padding(.vertical, 5)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.09)))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.16), lineWidth: 0.5))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // 层间关系标签:主干竖线段(对齐圆点 x≈8.5) + 右侧胶囊文字
+    func relationRow(_ text: String) -> some View {
+        HStack(spacing: 0) {
+            Rectangle().fill(Color.gray.opacity(0.3)).frame(width: 2, height: 22).padding(.leading, 7.5)
+            Text(text).font(.system(size: 9)).foregroundColor(.secondary)
+                .padding(.horizontal, 8).padding(.vertical, 2)
+                .background(Capsule().fill(Color.gray.opacity(0.10)))
+                .padding(.leading, 9)
+            Spacer(minLength: 0)
+        }
+    }
+
+    // ④ 引擎团队:5 引擎各带在线点,点击开各自配置根
+    var engineLayer: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Text("④").font(.system(size: 12, weight: .bold)).foregroundColor(.secondary)
+                Text("引擎团队").font(.system(size: 12, weight: .semibold))
+                Spacer()
+            }
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)],
+                      alignment: .leading, spacing: 6) {
+                ForEach(s.engines, id: \.0) { e in engineChip(e.0, e.1) }
+            }
+        }
+        .padding(.leading, 26).padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topLeading) {
+            spineBg(dot: !s.engines.isEmpty && s.engines.allSatisfy { $0.1 } ? .green : .orange, tail: true)
+        }
+    }
+    func engineChip(_ name: String, _ online: Bool) -> some View {
+        let path = ["omp": "~/.omp", "grok": "~/.grok", "codex": "~/.codex",
+                    "gemini": "~/.gemini", "gateway": "~/.gateway.env"][name] ?? "~"
+        return Button(action: { reveal(path) }) {
+            HStack(spacing: 5) {
+                Circle().fill(online ? Color.green : Color.red).frame(width: 6, height: 6)
+                Text(name).font(.system(size: 10, design: .monospaced))
                 Spacer(minLength: 0)
             }
+            .padding(.horizontal, 7).padding(.vertical, 5)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.09)))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
-    func arrow(_ t: String) -> some View {
-        Text(t).font(.system(size: 8)).foregroundColor(.secondary)
-            .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 1)
+    // 治理闸:管道末端旁挂(无 tail)
+    var govRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Text("治理闸").font(.system(size: 12, weight: .semibold))
+                Spacer()
+                Text(s.secretHook ? "secret 闸 ✅" : "闸 off ⚠️")
+                    .font(.system(size: 8.5)).foregroundColor(.secondary)
+            }
+            nodeChip("hooks/", open: "~/.claude/hooks/")
+        }
+        .padding(.leading, 26)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topLeading) { spineBg(dot: s.secretHook ? .green : .orange, tail: false) }
+    }
+
+    // ── skills tab：自进化状态(Latest Insight + 进化债/停滞 + friction 周边热度) ──
+    var skillsView: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // 卡片1：最新进化项(Latest Insight) + 进化债/停滞/进化项
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top, spacing: 6) {
+                    Text(s.evoColor.isEmpty ? "⚪" : s.evoColor).font(.system(size: 12))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(s.evoId) 最新进化").font(.system(size: 11, weight: .semibold))
+                        Text(s.evoProblem).font(.system(size: 9)).foregroundColor(.secondary)
+                            .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                HStack(spacing: 18) {
+                    statChip("进化债", "\(s.evoActive)", alert: s.evoActive > 5)
+                    statChip("停滞", "\(s.evoStaleDays)天", alert: s.evoStaleDays > 14)
+                    statChip("进化项", "\(s.evoTotal)")
+                    Spacer()
+                    Button(action: { withAnimation(.snappy) { evoExpanded.toggle() } }) {
+                        Text(evoExpanded ? "收起 ▾" : "展开全部 ▸").font(.system(size: 9)).foregroundColor(.secondary)
+                    }.buttonStyle(.plain)
+                }
+                // 展开:全部活跃进化项(只读;点单项在 Finder 打开进化日志看全文)
+                if evoExpanded {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Divider()
+                        ForEach(s.evoItems.indices, id: \.self) { i in
+                            let eid = s.evoItems[i].0
+                            let acked = s.ackedEvo.contains(eid)
+                            HStack(alignment: .top, spacing: 5) {
+                                Text(s.evoItems[i].1.isEmpty ? "⚪" : s.evoItems[i].1).font(.system(size: 9))
+                                Text(eid).font(.system(size: 9, weight: .semibold)).frame(width: 26, alignment: .leading)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(s.evoItems[i].2).font(.system(size: 9)).lineLimit(1).truncationMode(.tail)
+                                        .foregroundColor(acked ? .secondary : .primary).strikethrough(acked)
+                                    Text(s.evoItems[i].3).font(.system(size: 8)).foregroundColor(.secondary).lineLimit(1)
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture { reveal("~/mycc/0-System/evolution-log.md") }
+                                Spacer(minLength: 0)
+                                Button(action: { store.toggleAck("evo", eid) }) {
+                                    Text(acked ? "✓已处理" : "标记").font(.system(size: 8))
+                                        .foregroundColor(acked ? .green : .blue)
+                                        .padding(.horizontal, 4).padding(.vertical, 1)
+                                        .background(RoundedRectangle(cornerRadius: 3).fill((acked ? Color.green : Color.blue).opacity(0.13)))
+                                }.buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.08)))
+
+            // 卡片2：friction 周边热度 TOP3(Capsule 条形,人对条形敏感>数字)
+            VStack(alignment: .leading, spacing: 7) {
+                Text("⚠️ 摩擦周边热度 TOP3").font(.system(size: 11, weight: .semibold))
+                if s.frictionTop.isEmpty {
+                    Text("近期无摩擦记录 ✅").font(.system(size: 9)).foregroundColor(.secondary)
+                } else {
+                    ForEach(s.frictionTop, id: \.0) { f in
+                        let acked = s.ackedFriction.contains(f.0)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Button(action: { withAnimation(.snappy) { expandedFriction = (expandedFriction == f.0 ? nil : f.0) } }) {
+                                HStack(spacing: 6) {
+                                    Text(f.0).font(.system(size: 10, design: .monospaced))
+                                        .frame(width: 78, alignment: .leading).lineLimit(1).truncationMode(.middle)
+                                        .foregroundColor(acked ? .secondary : .primary)
+                                    GeometryReader { geo in
+                                        Capsule().fill((acked ? Color.gray : Color.orange).opacity(0.7))
+                                            .frame(width: max(CGFloat(f.1) / CGFloat(frictionMax) * geo.size.width, 3))
+                                    }.frame(height: 9)
+                                    Text("\(f.1)").font(.system(size: 10)).foregroundColor(.secondary).frame(width: 18, alignment: .trailing)
+                                    Text(expandedFriction == f.0 ? "▾" : "▸").font(.system(size: 8)).foregroundColor(.secondary)
+                                }.contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                            if expandedFriction == f.0 {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    ForEach(s.frictionDetail[f.0] ?? [], id: \.self) { rec in
+                                        Text("· \(rec)").font(.system(size: 8)).foregroundColor(.secondary)
+                                            .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                                    }
+                                    Button(action: { store.toggleAck("friction", f.0) }) {
+                                        Text(acked ? "✓已知 · 点击取消" : "标记「已知」").font(.system(size: 8))
+                                            .foregroundColor(acked ? .green : .blue)
+                                            .padding(.horizontal, 4).padding(.vertical, 1)
+                                            .background(RoundedRectangle(cornerRadius: 3).fill((acked ? Color.green : Color.blue).opacity(0.13)))
+                                    }.buttonStyle(.plain)
+                                }.padding(.leading, 6).padding(.top, 1)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.08)))
+
+            // 底部：skill 库存(小字,非主 KPI) + 点开进化日志
+            Button(action: { reveal("~/mycc/0-System/evolution-log.md") }) {
+                HStack(spacing: 4) {
+                    Text("\(s.skillTotal) skills").font(.system(size: 9, weight: .medium)).foregroundColor(.primary)
+                    Text("· 读 evolution-log + task-log · 点开进化日志 ›")
+                        .font(.system(size: 8)).foregroundColor(.secondary)
+                    Spacer()
+                }.contentShape(Rectangle())
+            }.buttonStyle(.plain)
+        }
+        .padding(.top, 2)
+    }
+    var frictionMax: Int { max(s.frictionTop.map { $0.1 }.max() ?? 1, 1) }
+    func statChip(_ label: String, _ value: String, alert: Bool = false) -> some View {
+        VStack(spacing: 1) {
+            Text(value).font(.system(size: 13, weight: .bold)).foregroundColor(alert ? .orange : .primary)
+            Text(label).font(.system(size: 8)).foregroundColor(.secondary)
+        }
     }
 
     // 点路径：目录→Finder 打开；文件→Finder 选中（便于右键编辑）
