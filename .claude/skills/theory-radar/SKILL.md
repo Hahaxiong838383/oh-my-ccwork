@@ -263,3 +263,26 @@ codex 的输入来自 `/tmp/theory-radar-data.json`（Step 1 输出），30 分�
 - arXiv 限速：查询间隔 ≥ 3 秒，每次最多查 10 条
 - 论文数量视当日不同，通常 8-15 篇；若不足 8 篇，降低过滤门槛（扩大到 7 天）
 - 内容为学术参考，不代表任何观点
+
+## 个人站推送支线（前沿资讯雷达，2026-06-14 新增，独立于飞书流）
+
+把 theory-radar 的论文拆解推到陈川个人站 https://my.chenchuan.cc/radar 的「深度拆解」区，
+**与上面的飞书流完全解耦**（互不影响、零风险）。部署在 mini，由 launchd 每 3 天触发。
+
+| 文件（`scripts/`，已部署到 mini `~/theory-radar/`） | 作用 |
+|------|------|
+| `push-to-site.py` | 读 `/tmp/theory-radar-data.json` → 选 8 篇 → LLM 做中文 5 段式 → 组装 TheoryReport JSON → POST 站点 webhook |
+| `daily-radar-push.sh` | wrapper：设 proxy → 跑 arXiv 抓取 → 跑 push-to-site.py |
+| `cc.theory-radar-push.plist` | launchd（部署到 mini `~/Library/LaunchAgents/`），`StartInterval=259200`（每 3 天） |
+
+**分析引擎降级链**：codex `gpt-5.5`（网关 `10521052.xyz/v1`，**`stream:true` 防 CF 524**，直连绕 xray）→ 失败/结果<4篇 → 降级 **gemini `gemini-3.1-flash-lite-preview`**（proxy `23.226.135.149:4000`）。
+
+**站点契约**：`POST https://my.chenchuan.cc/api/radar-webhook`，`Authorization: Bearer <token>`，body=TheoryReport（date/summary/papers[{arxivId,published,score,finding,llmLink,insight}]）。站点 webhook 端有 token 鉴权 + url 白名单 + 消毒 + revalidatePath。
+
+**踩坑**：webhook/网关 POST 必须**直连（绕 xray）+ 浏览器 UA**，否则 nginx/CF 把 Python-urllib 境外请求当可疑 → 403。
+
+**secret（铁律：只存指针）**：全在 mini `~/.theory-radar-push.env`（chmod 600，不入 git）——
+`RADAR_WEBHOOK_TOKEN` / `CODEX_API_GATEWAY_KEY` / `CODEX_API_GATEWAY_BASE_URL` / `GEMINI_PROXY_KEY`。
+脚本仅引用 env 变量，零明文。站点侧 token 在 VPS `/var/www/chenchuan-site/.env.local`。
+
+**手动触发 / 排障**：`ssh mini-pub 'bash ~/theory-radar/daily-radar-push.sh'`，日志 `/tmp/radar-push-*.log`。
