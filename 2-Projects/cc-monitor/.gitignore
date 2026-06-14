@@ -1,2 +1,13 @@
-cc-monitor
-cc-monitor.app/
+# ── 编译产物(根目录的裸二进制 + app bundle,不入库) ──
+/cc-monitor
+/cc-monitor-dock
+/cc-monitor-menubar
+/cc-monitor.app/
+/cc-monitor-dock.app/
+*.dSYM/
+
+# ── Xcode 构建产物 / 用户态(保留 .xcodeproj 工程本体,可复现) ──
+xcode/cc-monitor/build/
+xcode/**/xcuserdata/
+xcode/**/*.xcuserstate
+**/DerivedData/
