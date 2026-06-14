@@ -18,6 +18,10 @@ CODEX_BASE = os.environ.get("CODEX_API_GATEWAY_BASE_URL", "https://10521052.xyz/
 CODEX_URL = CODEX_BASE + "/chat/completions"
 CODEX_KEY = os.environ.get("CODEX_API_GATEWAY_KEY", "")
 CODEX_MODEL = os.environ.get("CODEX_MODEL", "gpt-5.5")
+# 降级模型：codex 失败时用 gemini 3.1 flash（走 proxy；实测 proxy 真实 model id = gemini-3.1-flash-lite-preview）
+GEMINI_URL = os.environ.get("GEMINI_PROXY_URL", "http://23.226.135.149:4000/v1/chat/completions")
+GEMINI_KEY = os.environ.get("GEMINI_PROXY_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
 DATA = os.environ.get("THEORY_RADAR_DATA", "/tmp/theory-radar-data.json")
 BJ = timezone(timedelta(hours=8))
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
@@ -55,7 +59,7 @@ def score(p):
     return sum(1 for k in PRI if k in t)
 
 
-def call_codex(sel):
+def build_prompt(sel):
     blocks = []
     for i, p in enumerate(sel):
         aid = p["arxiv_id"].split("v")[0]
@@ -64,7 +68,7 @@ def call_codex(sel):
             f"[{i+1}] arxivId={aid} | {cats}\n标题: {p['title']}\n摘要: {p['abstract'][:500]}"
         )
     papers_block = "\n\n".join(blocks)
-    prompt = (
+    return (
         "你是「AI 前沿资讯雷达」的理论分析师。下面是今天 arXiv 抓到的 "
         f"{len(sel)} 篇论文（脑科学×LLM / 认知科学×AI / LLM 机制 / Agent 治理 方向）。\n"
         "对每篇做中文「5 段式」深度拆解，**只依据给定摘要，严禁编造数据或结论**。\n"
@@ -74,6 +78,10 @@ def call_codex(sel):
         '"llmLink":"与LLM机制/AI设计的连接1-2句","insight":"研究启示1-2句"}]}\n'
         f"papers 必须恰好 {len(sel)} 条，arxivId 严格原样回填。\n\n论文：\n" + papers_block
     )
+
+
+def call_codex(sel):
+    prompt = build_prompt(sel)
     body = json.dumps(
         {
             "model": CODEX_MODEL,
@@ -114,6 +122,30 @@ def call_codex(sel):
     return content
 
 
+def call_gemini(sel):
+    """降级：codex 失败时用 gemini 3.1 flash（非流式，走 proxy/xray，与早期实现一致）。"""
+    prompt = build_prompt(sel)
+    body = json.dumps(
+        {
+            "model": GEMINI_MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 16384,
+        }
+    ).encode()
+    req = urllib.request.Request(
+        GEMINI_URL,
+        data=body,
+        headers={
+            "Authorization": f"Bearer {GEMINI_KEY}",
+            "Content-Type": "application/json",
+            "User-Agent": UA,
+        },
+    )
+    with urllib.request.urlopen(req, timeout=120) as r:
+        resp = json.load(r)
+    return resp["choices"][0]["message"]["content"]
+
+
 def parse_json(content):
     s = content.strip()
     s = re.sub(r"^```(json)?", "", s).strip()
@@ -122,6 +154,23 @@ def parse_json(content):
     if a >= 0 and b > a:
         s = s[a : b + 1]
     return json.loads(s)
+
+
+def get_analysis(sel):
+    """主用 codex gpt-5.5；失败或结果不足 4 篇则降级 gemini 3.1 flash。返回 (data, engine)。"""
+    try:
+        data = parse_json(call_codex(sel))
+        if len(data.get("papers", [])) >= 4:
+            log(f"codex({CODEX_MODEL}) 分析成功")
+            return data, f"codex/{CODEX_MODEL}"
+        log(f"codex 结果不足 4 篇({len(data.get('papers', []))})，降级 gemini")
+    except Exception as e:
+        log(f"codex 失败({type(e).__name__}: {str(e)[:100]})，降级 gemini")
+    if not GEMINI_KEY:
+        raise RuntimeError("codex 失败且未配 GEMINI_PROXY_KEY，无降级路径")
+    data = parse_json(call_gemini(sel))
+    log(f"gemini({GEMINI_MODEL}) 降级分析成功")
+    return data, f"gemini/{GEMINI_MODEL}"
 
 
 def main():
@@ -138,8 +187,7 @@ def main():
     log(f"选出 {len(sel)} 篇")
     meta = {p["arxiv_id"].split("v")[0]: p for p in sel}
 
-    content = call_codex(sel)
-    data = parse_json(content)
+    data, engine = get_analysis(sel)
     analyses = data.get("papers", [])
 
     out = []
@@ -187,7 +235,7 @@ def main():
     # 直连（绕 xray），国内站走国内出口，避免被上游当可疑请求 403
     with NOPROXY_OPENER.open(req, timeout=60) as r:
         log("webhook 响应: " + r.read().decode())
-    log(f"推送成功 {len(out)} 篇，date={report['date']}")
+    log(f"推送成功 {len(out)} 篇，date={report['date']}，engine={engine}")
 
 
 if __name__ == "__main__":
