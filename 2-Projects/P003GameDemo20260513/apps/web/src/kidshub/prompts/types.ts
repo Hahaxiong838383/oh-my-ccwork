@@ -46,7 +46,7 @@ export interface SceneCard {
    * 每次不同，不是固定台词）。null = 该场景由孩子先开口，AI 不先说话。
    */
   triggerInstruction: string | null;
-  /** kidshub 专属场景背景图（/kidshub/scenes/cardN.v2.png），加载失败自动降级占位 */
+  /** kidshub 场景背景图（同一艘方舟：ecopond / cardN.eco.png），加载失败自动降级占位 */
   sceneImage: string;
   /** 占位渲染用 emoji（图缺失时的降级视觉） */
   emoji: string;
