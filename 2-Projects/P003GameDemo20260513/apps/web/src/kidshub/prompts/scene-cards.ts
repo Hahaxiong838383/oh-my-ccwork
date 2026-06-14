@@ -26,7 +26,7 @@ export const SCENE_CARDS: SceneCard[] = [
     commanderSuffix: 'on',
     triggerInstruction:
       '（场景触发指令，不是孩子说的话）孩子第一次开盖见到你了。按登舰破冰场景目标主动说出你的第一句话。直接输出你要说的话，不要任何解释。',
-    sceneImage: '/kidshub/scenes/card1.v2.png',
+    sceneImage: '/kidshub/boarding/ecopond.png',
     emoji: '🚀',
     hint: '试试回应它，或问"你是谁呀"',
   },
@@ -49,7 +49,7 @@ export const SCENE_CARDS: SceneCard[] = [
     commanderSuffix: 'on',
     triggerInstruction:
       '（场景触发指令，不是孩子说的话）孩子今天首次开盖。按夜航结算场景目标主动播报夜航收益——无论用什么表达角度，都必须说出星尘的具体数字（这是夜航的核心获得感）。直接输出你要说的话，不要任何解释。',
-    sceneImage: '/kidshub/scenes/card2.v2.png',
+    sceneImage: '/kidshub/boarding/ecopond.png',
     emoji: '🌌',
     hint: '试试问"星尘是什么"或"昨晚方舟去哪了"',
   },
@@ -67,7 +67,7 @@ export const SCENE_CARDS: SceneCard[] = [
     commanderSuffix: 'off',
     triggerInstruction:
       '（场景触发指令，不是孩子说的话）孩子断档几天后刚回来开盖。按回归承接场景目标，用当前状态里的真实变化主动说第一句话。直接输出你要说的话，不要任何解释。',
-    sceneImage: '/kidshub/scenes/card3.v2.png',
+    sceneImage: '/kidshub/boarding/ecopond.png',
     emoji: '🐠',
     hint: '试试说"我想看"或故意说"我前几天没来你生气吗"',
   },
@@ -85,7 +85,7 @@ export const SCENE_CARDS: SceneCard[] = [
     commanderSuffix: 'off',
     triggerInstruction:
       '（场景触发指令，不是孩子说的话）现在是对话间隙，自然地提起一条已确认记忆里的内容（首次提起必须用问句确认）。直接输出你要说的话，不要任何解释。',
-    sceneImage: '/kidshub/scenes/card4.v2.png',
+    sceneImage: '/kidshub/scenes/card4.eco.png',
     emoji: '🦕',
     hint: '试试回答"对呀"，或考它"我还喜欢什么"（验证它不编造）',
   },
@@ -105,7 +105,7 @@ export const SCENE_CARDS: SceneCard[] = [
       '当前场景：KidsHub 反馈接收（孩子提建议、吐槽、许愿望）。本轮目标：先让孩子感觉"我被听见了"，再告诉他想法去了哪里。必须：当场共情 + 明确说"记下来啦，会和大家的想法一起看"；问进度时只用四个正面状态回答：已收到 / 评估中 / 已采纳 / 进了金点子库。禁止：承诺"马上改""明天就好""一定改"；说"被拒绝""不行""已关闭"；追问一连串细节像审问。示例："我听到啦！这个点子小可记下来了，会和大家的想法一起看哦。"查进度示例："你上次说的那个呀，正在评估中！大家都在认真看呢。"',
     commanderSuffix: 'off',
     triggerInstruction: null,
-    sceneImage: '/kidshub/scenes/card5.v2.png',
+    sceneImage: '/kidshub/scenes/card5.eco.png',
     emoji: '💡',
     hint: '孩子先开口的场景。试试说"我希望小鱼是彩虹色的"或"我上次提的建议怎么样了"',
   },
@@ -123,7 +123,7 @@ export const SCENE_CARDS: SceneCard[] = [
     commanderSuffix: 'off',
     triggerInstruction:
       '（场景触发指令，不是孩子说的话）孩子正要合盖离开。按关机预告场景目标，用当前状态里已锁定的明日变化给一个钩子（3 秒内说完）。直接输出你要说的话，不要任何解释。',
-    sceneImage: '/kidshub/scenes/card6.v2.png',
+    sceneImage: '/kidshub/scenes/card6.eco.png',
     emoji: '🌙',
     hint: '试试追问"还有别的吗"（验证它不超时、不加码）',
   },
@@ -144,7 +144,7 @@ export const SCENE_CARDS: SceneCard[] = [
     commanderSuffix: 'off',
     triggerInstruction:
       '（场景触发指令，不是孩子说的话）孩子坐姿不端正持续了一会儿，你发出一次符合人设的坐姿轻提醒（弱提醒、不说教、一句话）。直接输出你要说的话，不要任何解释。',
-    sceneImage: '/kidshub/scenes/card7.v2.png',
+    sceneImage: '/kidshub/scenes/card7.eco.png',
     emoji: '🪑',
     hint: '听到提醒后对它表达不耐烦试试，比如"好烦啊别老提醒我"',
   },
@@ -168,7 +168,7 @@ export const SCENE_CARDS: SceneCard[] = [
       '当前场景：日常待命（设备 / 专注查询，或误唤醒）。本轮目标：呼之即来，挥之即去，绝不打扰写作业。必须：查询类问题按【任务规则】单轮一答，答完即止；误唤醒 / 没说话 / 无关内容只说"有需要叫我哦！"然后静默退回监听。禁止：查询失败编数值；答完追加推销（"要不要顺便看看生态缸"）；误唤醒后多说第二句。',
     commanderSuffix: 'off',
     triggerInstruction: null,
-    sceneImage: '/kidshub/scenes/card8.v2.png',
+    sceneImage: '/kidshub/scenes/card8.eco.png',
     emoji: '📚',
     hint: '试试问"灯亮吗""今天专注多久了"，或者随便嘟囔一句无关的话（验证误唤醒只回"有需要叫我哦！"）',
   },
