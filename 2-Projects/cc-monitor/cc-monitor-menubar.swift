@@ -15,6 +15,10 @@ struct CCStatus {
     var gitTag = "—", gitLast = "—"
     var engines: [(String, Bool)] = []
     var secretHook = false
+    // skills 自进化(诚实命名:evoActive=活跃未毕业改进项/进化债; frictionTop=周边热度近似非精确计数)
+    var skillTotal = 0, evoTotal = 0, evoActive = 0, evoStaleDays = 0
+    var evoId = "—", evoColor = "", evoProblem = ""
+    var frictionTop: [(String, Int)] = []
 }
 
 final class StatusStore: ObservableObject {
@@ -90,6 +94,23 @@ final class StatusStore: ObservableObject {
         if let e = o["engines"] as? [String: Any] {
             st.engines = ["omp","grok","codex","gemini","gateway"].map { ($0, e[$0] as? Bool ?? false) }
         }
+        if let sk = o["skills"] as? [String: Any] {
+            st.skillTotal = sk["total"] as? Int ?? 0
+            st.evoTotal = sk["evo_total"] as? Int ?? 0
+            st.evoActive = sk["evo_pending"] as? Int ?? 0
+            st.evoStaleDays = sk["evo_stale_days"] as? Int ?? 0
+            if let el = sk["evo_latest"] as? [String: Any] {
+                st.evoId = el["id"] as? String ?? "—"
+                st.evoColor = el["color"] as? String ?? ""
+                st.evoProblem = el["problem"] as? String ?? ""
+            }
+            if let ft = sk["friction_top"] as? [[String: Any]] {
+                st.frictionTop = ft.compactMap {
+                    guard let n = $0["name"] as? String, let c = $0["count"] as? Int else { return nil }
+                    return (n, c)
+                }
+            }
+        }
         return st
     }
 
@@ -163,14 +184,14 @@ struct ContentView: View {
             HStack {
                 Text("🧠 cc").font(.system(size: 13, weight: .semibold))
                 Picker("", selection: $tab) {
-                    Text("状态").tag(0); Text("架构").tag(1)
-                }.pickerStyle(.segmented).labelsHidden().frame(width: 130)
+                    Text("状态").tag(0); Text("架构").tag(1); Text("skills").tag(2)
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 178)
                 Spacer()
                 Text(s.ts).font(.system(size: 9)).foregroundColor(.secondary)
             }
             Divider()
             ScrollView {
-                if tab == 0 { statusView } else { archView }
+                if tab == 0 { statusView } else if tab == 1 { archView } else { skillsView }
             }
             .frame(maxHeight: 520)
             Divider()
@@ -178,6 +199,7 @@ struct ContentView: View {
                 Button("刷新") { store.refresh() }.font(.system(size: 11))
                 Spacer()
                 if tab == 1 { Text("点路径→Finder 打开").font(.system(size: 9)).foregroundColor(.secondary) }
+                if tab == 2 { Text("friction=周边热度近似").font(.system(size: 9)).foregroundColor(.secondary) }
                 Spacer()
                 Button("退出") { NSApp.terminate(nil) }.font(.system(size: 11))
             }
@@ -203,7 +225,10 @@ struct ContentView: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(s.gitDirty == 0 ? "git 干净 ✅" : "git \(s.gitDirty) 未提交 ⚠️").font(.system(size: 11))
+                        .onTapGesture { reveal("~/.claude") }
+                        .help(s.gitDirty == 0 ? "~/.claude 工作区干净" : "~/.claude 有 \(s.gitDirty) 个文件未提交 · 点击在 Finder 打开去手动提交(监视器只读不替你提交)")
                     Text("tag \(s.gitTag) · 闸 \(s.secretHook ? "✅" : "⚠️")").font(.system(size: 11))
+                        .help("tag = git 版本锚点(架构迁移完成的标记,可一键回退到稳定点) · 闸 = secret-scan pre-commit hook(提交 ~/.claude 时自动扫硬编码密钥,防泄露)")
                 }
             }
             Divider()
@@ -381,6 +406,73 @@ struct ContentView: View {
         .padding(.leading, 26)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(alignment: .topLeading) { spineBg(dot: s.secretHook ? .green : .orange, tail: false) }
+    }
+
+    // ── skills tab：自进化状态(Latest Insight + 进化债/停滞 + friction 周边热度) ──
+    var skillsView: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // 卡片1：最新进化项(Latest Insight) + 进化债/停滞/进化项
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top, spacing: 6) {
+                    Text(s.evoColor.isEmpty ? "⚪" : s.evoColor).font(.system(size: 12))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(s.evoId) 最新进化").font(.system(size: 11, weight: .semibold))
+                        Text(s.evoProblem).font(.system(size: 9)).foregroundColor(.secondary)
+                            .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                HStack(spacing: 18) {
+                    statChip("进化债", "\(s.evoActive)", alert: s.evoActive > 5)
+                    statChip("停滞", "\(s.evoStaleDays)天", alert: s.evoStaleDays > 14)
+                    statChip("进化项", "\(s.evoTotal)")
+                    Spacer()
+                }
+            }
+            .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.08)))
+
+            // 卡片2：friction 周边热度 TOP3(Capsule 条形,人对条形敏感>数字)
+            VStack(alignment: .leading, spacing: 7) {
+                Text("⚠️ 摩擦周边热度 TOP3").font(.system(size: 11, weight: .semibold))
+                if s.frictionTop.isEmpty {
+                    Text("近期无摩擦记录 ✅").font(.system(size: 9)).foregroundColor(.secondary)
+                } else {
+                    ForEach(s.frictionTop, id: \.0) { f in
+                        HStack(spacing: 6) {
+                            Text(f.0).font(.system(size: 10, design: .monospaced))
+                                .frame(width: 84, alignment: .leading).lineLimit(1).truncationMode(.middle)
+                            GeometryReader { geo in
+                                Capsule().fill(Color.orange.opacity(0.7))
+                                    .frame(width: max(CGFloat(f.1) / CGFloat(frictionMax) * geo.size.width, 3))
+                            }.frame(height: 9)
+                            Text("\(f.1)").font(.system(size: 10)).foregroundColor(.secondary)
+                                .frame(width: 20, alignment: .trailing)
+                        }
+                    }
+                }
+            }
+            .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.08)))
+
+            // 底部：skill 库存(小字,非主 KPI) + 点开进化日志
+            Button(action: { reveal("~/mycc/0-System/evolution-log.md") }) {
+                HStack(spacing: 4) {
+                    Text("\(s.skillTotal) skills").font(.system(size: 9, weight: .medium)).foregroundColor(.primary)
+                    Text("· 读 evolution-log + task-log · 点开进化日志 ›")
+                        .font(.system(size: 8)).foregroundColor(.secondary)
+                    Spacer()
+                }.contentShape(Rectangle())
+            }.buttonStyle(.plain)
+        }
+        .padding(.top, 2)
+    }
+    var frictionMax: Int { max(s.frictionTop.map { $0.1 }.max() ?? 1, 1) }
+    func statChip(_ label: String, _ value: String, alert: Bool = false) -> some View {
+        VStack(spacing: 1) {
+            Text(value).font(.system(size: 13, weight: .bold)).foregroundColor(alert ? .orange : .primary)
+            Text(label).font(.system(size: 8)).foregroundColor(.secondary)
+        }
     }
 
     // 点路径：目录→Finder 打开；文件→Finder 选中（便于右键编辑）
