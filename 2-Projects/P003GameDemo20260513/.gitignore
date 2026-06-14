@@ -39,3 +39,7 @@ apps/web/dev-dist
 apps/web/public/sw.js
 apps/web/public/workbox-*.js
 apps/web/dist-personal/
+
+# 运行时 / 出图临时产物（cc 2026-06-14）
+apps/server/data/
+apps/web/garden-gpt-image-2/
