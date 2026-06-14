@@ -7,6 +7,8 @@ import Foundation
 import Combine        // ObservableObject/@Published(Xcode 26 MemberImportVisibility 要求显式导入)
 import CoreServices   // FSEvents 文件监听
 
+let APP_VERSION = "1.0.0"   // cc-monitor 版本号
+
 struct CCStatus {
     var ts = "—"
     var rulesKB = 0, memKB = 0, eventsKB = 0
@@ -232,6 +234,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("🧠 cc").font(.system(size: 13, weight: .semibold))
+                Text("v\(APP_VERSION)").font(.system(size: 8)).foregroundColor(.secondary)
                 Picker("", selection: $tab) {
                     Text("状态").tag(0); Text("架构").tag(1); Text("skills").tag(2)
                 }.pickerStyle(.segmented).labelsHidden().frame(width: 178)
@@ -447,7 +450,7 @@ struct ContentView: View {
             }
             foldRow(key: "docs", label: "docs/", desc: "按需文档", tildeDir: "~/.claude/docs")
             // A 套:cc 主力 canonical(平时 ripgrep 召回的真记忆,无向量)
-            groupLabel("A", "主力记忆 · cc canonical · ripgrep 召回")
+            groupLabel("A", "主力记忆 · cc canonical · ✓已接入向量")
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)],
                       alignment: .leading, spacing: 5) {
                 nodeChip("记忆卡 \(s.cards) →MEMORY", open: "~/.claude/projects/-Users-rayman-chen-mycc/memory")
@@ -455,7 +458,7 @@ struct ContentView: View {
                 nodeChip("skills·mycc \(dirCount("~/mycc/.claude/skills"))", open: "~/mycc/.claude/skills")
             }.padding(.leading, 14)
             // B 套:memory.db 向量检索管道(≠A 套;源→embed→向量→db→检索关系链)
-            groupLabel("B", "向量检索库 · memory.db(另一套源)")
+            groupLabel("B", "向量检索库 · memory.db · A+B 双源统一")
             memVectorChain
         }
         .padding(.leading, 26).padding(.bottom, 10)
@@ -479,9 +482,11 @@ struct ContentView: View {
     // B 套向量关系链:源 →embed→ 向量 →入库→ db(检索),健康灯在 db 终态节点(原向量健康并入此处)
     var memVectorChain: some View {
         VStack(alignment: .leading, spacing: 0) {
-            chainNode(icon: "doc.text", title: "memory-items.md", badge: "源·人可编辑",
+            chainNode(icon: "folder", title: "A·主力卡 .claude/memory", badge: "\(s.cards) 卡",
+                      open: "~/.claude/projects/-Users-rayman-chen-mycc/memory", dot: nil)
+            chainNode(icon: "doc.text", title: "B·memory-items.md", badge: "源",
                       open: "~/mycc/0-System/memory-items.md", dot: nil)
-            chainArrow("embed · Ollama qwen3 · 512维")
+            chainArrow("A+B 统一 embed · Ollama qwen3 · 512维")
             chainNode(icon: "circle.grid.2x2", title: "memory-vectors.json", badge: "\(s.vecTotal) 向量",
                       open: "~/mycc/0-System/memory-vectors.json", dot: nil)
             chainArrow("入库")
