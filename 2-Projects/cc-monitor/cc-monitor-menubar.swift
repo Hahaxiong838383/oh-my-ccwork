@@ -21,6 +21,9 @@ struct CCStatus {
     var frictionTop: [(String, Int)] = []
     var gitFiles: [(String, String)] = []                  // (状态码, 路径) 未提交文件
     var evoItems: [(String, String, String, String)] = []  // (id, 颜色, 问题, 状态)
+    var frictionDetail: [String: [String]] = [:]           // skill → 具体摩擦记录
+    var ackedEvo: Set<String> = []                         // 已标「已处理」的进化项 id
+    var ackedFriction: Set<String> = []                    // 已标「已知」的 friction skill
 }
 
 final class StatusStore: ObservableObject {
@@ -71,6 +74,19 @@ final class StatusStore: ObservableObject {
                 DispatchQueue.main.async { self.s = parsed }
             } catch { }
         }
+    }
+
+    // 🟡 可逆确认:写独立 ack 文件(不碰原始 evolution-log/task-log,删文件即重置;绝对可逆)
+    func toggleAck(_ kind: String, _ id: String) {
+        let p = ("~/.claude/.skills-monitor-acks.json" as NSString).expandingTildeInPath
+        var d: [String: [String]] = [:]
+        if let data = FileManager.default.contents(atPath: p),
+           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: [String]] { d = obj }
+        var arr = Set(d[kind] ?? [])
+        if arr.contains(id) { arr.remove(id) } else { arr.insert(id) }
+        d[kind] = Array(arr)
+        if let out = try? JSONSerialization.data(withJSONObject: d) { try? out.write(to: URL(fileURLWithPath: p)) }
+        refresh()
     }
 
     static func parse(_ o: [String: Any]) -> CCStatus {
@@ -124,6 +140,9 @@ final class StatusStore: ObservableObject {
                     return (id, $0["color"] as? String ?? "", $0["problem"] as? String ?? "", $0["status"] as? String ?? "")
                 }
             }
+            if let fd = sk["friction_detail"] as? [String: [String]] { st.frictionDetail = fd }
+            st.ackedEvo = Set((sk["acked_evo"] as? [String]) ?? [])
+            st.ackedFriction = Set((sk["acked_friction"] as? [String]) ?? [])
         }
         return st
     }
@@ -193,6 +212,7 @@ struct ContentView: View {
     @State private var tab = 0
     @State private var gitExpanded = false
     @State private var evoExpanded = false
+    @State private var expandedFriction: String? = nil
     var s: CCStatus { store.s }
 
     var body: some View {
@@ -476,17 +496,26 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Divider()
                         ForEach(s.evoItems.indices, id: \.self) { i in
-                            Button(action: { reveal("~/mycc/0-System/evolution-log.md") }) {
-                                HStack(alignment: .top, spacing: 5) {
-                                    Text(s.evoItems[i].1.isEmpty ? "⚪" : s.evoItems[i].1).font(.system(size: 9))
-                                    Text(s.evoItems[i].0).font(.system(size: 9, weight: .semibold)).frame(width: 26, alignment: .leading)
-                                    VStack(alignment: .leading, spacing: 1) {
-                                        Text(s.evoItems[i].2).font(.system(size: 9)).lineLimit(1).truncationMode(.tail)
-                                        Text(s.evoItems[i].3).font(.system(size: 8)).foregroundColor(.secondary).lineLimit(1)
-                                    }
-                                    Spacer(minLength: 0)
-                                }.contentShape(Rectangle())
-                            }.buttonStyle(.plain)
+                            let eid = s.evoItems[i].0
+                            let acked = s.ackedEvo.contains(eid)
+                            HStack(alignment: .top, spacing: 5) {
+                                Text(s.evoItems[i].1.isEmpty ? "⚪" : s.evoItems[i].1).font(.system(size: 9))
+                                Text(eid).font(.system(size: 9, weight: .semibold)).frame(width: 26, alignment: .leading)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(s.evoItems[i].2).font(.system(size: 9)).lineLimit(1).truncationMode(.tail)
+                                        .foregroundColor(acked ? .secondary : .primary).strikethrough(acked)
+                                    Text(s.evoItems[i].3).font(.system(size: 8)).foregroundColor(.secondary).lineLimit(1)
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture { reveal("~/mycc/0-System/evolution-log.md") }
+                                Spacer(minLength: 0)
+                                Button(action: { store.toggleAck("evo", eid) }) {
+                                    Text(acked ? "✓已处理" : "标记").font(.system(size: 8))
+                                        .foregroundColor(acked ? .green : .blue)
+                                        .padding(.horizontal, 4).padding(.vertical, 1)
+                                        .background(RoundedRectangle(cornerRadius: 3).fill((acked ? Color.green : Color.blue).opacity(0.13)))
+                                }.buttonStyle(.plain)
+                            }
                         }
                     }
                 }
@@ -501,15 +530,35 @@ struct ContentView: View {
                     Text("近期无摩擦记录 ✅").font(.system(size: 9)).foregroundColor(.secondary)
                 } else {
                     ForEach(s.frictionTop, id: \.0) { f in
-                        HStack(spacing: 6) {
-                            Text(f.0).font(.system(size: 10, design: .monospaced))
-                                .frame(width: 84, alignment: .leading).lineLimit(1).truncationMode(.middle)
-                            GeometryReader { geo in
-                                Capsule().fill(Color.orange.opacity(0.7))
-                                    .frame(width: max(CGFloat(f.1) / CGFloat(frictionMax) * geo.size.width, 3))
-                            }.frame(height: 9)
-                            Text("\(f.1)").font(.system(size: 10)).foregroundColor(.secondary)
-                                .frame(width: 20, alignment: .trailing)
+                        let acked = s.ackedFriction.contains(f.0)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Button(action: { withAnimation(.snappy) { expandedFriction = (expandedFriction == f.0 ? nil : f.0) } }) {
+                                HStack(spacing: 6) {
+                                    Text(f.0).font(.system(size: 10, design: .monospaced))
+                                        .frame(width: 78, alignment: .leading).lineLimit(1).truncationMode(.middle)
+                                        .foregroundColor(acked ? .secondary : .primary)
+                                    GeometryReader { geo in
+                                        Capsule().fill((acked ? Color.gray : Color.orange).opacity(0.7))
+                                            .frame(width: max(CGFloat(f.1) / CGFloat(frictionMax) * geo.size.width, 3))
+                                    }.frame(height: 9)
+                                    Text("\(f.1)").font(.system(size: 10)).foregroundColor(.secondary).frame(width: 18, alignment: .trailing)
+                                    Text(expandedFriction == f.0 ? "▾" : "▸").font(.system(size: 8)).foregroundColor(.secondary)
+                                }.contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                            if expandedFriction == f.0 {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    ForEach(s.frictionDetail[f.0] ?? [], id: \.self) { rec in
+                                        Text("· \(rec)").font(.system(size: 8)).foregroundColor(.secondary)
+                                            .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                                    }
+                                    Button(action: { store.toggleAck("friction", f.0) }) {
+                                        Text(acked ? "✓已知 · 点击取消" : "标记「已知」").font(.system(size: 8))
+                                            .foregroundColor(acked ? .green : .blue)
+                                            .padding(.horizontal, 4).padding(.vertical, 1)
+                                            .background(RoundedRectangle(cornerRadius: 3).fill((acked ? Color.green : Color.blue).opacity(0.13)))
+                                    }.buttonStyle(.plain)
+                                }.padding(.leading, 6).padding(.top, 1)
+                            }
                         }
                     }
                 }
