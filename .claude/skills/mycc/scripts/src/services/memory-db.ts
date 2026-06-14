@@ -16,8 +16,11 @@
 
 import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
-import { readFileSync, existsSync, statSync } from "fs";
+import { readFileSync, existsSync, statSync, readdirSync } from "fs";
 import * as path from "path";
+
+const A_MEMORY_DIR = path.join(process.env.HOME || "", ".claude/projects/-Users-rayman-chen-mycc/memory");
+const A_MEMORY_EXCLUDED = new Set(["MEMORY.md", "INDEX-full.md"]);
 
 // ============================================================
 // 类型定义
@@ -29,6 +32,7 @@ export interface ItemRow {
   scope: string;        // user/project/agent/session
   content: string;
   stars: number;
+  source: string;
   write_date: string | null;
   event_date: string | null;
   chain_type: string | null;
@@ -70,6 +74,7 @@ CREATE TABLE IF NOT EXISTS items (
   scope         TEXT NOT NULL DEFAULT 'project',  -- user/project/agent/session
   content       TEXT NOT NULL,
   stars         INTEGER DEFAULT 0,
+  source        TEXT NOT NULL DEFAULT 'B',
   write_date    TEXT,
   event_date    TEXT,
   chain_type    TEXT,
@@ -234,6 +239,9 @@ export function getDB(cwd: string): Database.Database | null {
       if (!colNames.has("access_count")) {
         db.exec("ALTER TABLE items ADD COLUMN access_count INTEGER DEFAULT 0");
       }
+      if (!colNames.has("source")) {
+        db.exec("ALTER TABLE items ADD COLUMN source TEXT DEFAULT 'B'");
+      }
     } catch { /* 静默 */ }
 
     _db = db;
@@ -306,11 +314,113 @@ function parseItemLine(line: string, category: string, idx: number): ItemRow {
     scope,
     content: line.replace(/^-\s*/, "").trim(),
     stars: starCount,
+    source: "B",
     write_date: writeDate,
     event_date: eventDate,
     chain_type: chainType,
     chain_ref: chainRef,
   };
+}
+
+function cleanFrontmatterValue(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length >= 2) {
+    const first = trimmed[0];
+    const last = trimmed[trimmed.length - 1];
+    if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+      return trimmed.slice(1, -1).trim();
+    }
+  }
+  return trimmed;
+}
+
+function parseAFrontmatter(content: string): { description: string; type: string } | null {
+  if (!content.startsWith("---")) return null;
+
+  const end = content.indexOf("\n---", 3);
+  if (end === -1) return null;
+
+  let description = "";
+  let type = "";
+  let inMetadata = false;
+
+  for (const rawLine of content.slice(3, end).split(/\r?\n/)) {
+    const line = rawLine.trimEnd();
+    if (!line.trim() || line.trimStart().startsWith("#")) continue;
+
+    const topMatch = line.match(/^([A-Za-z_][\w-]*):\s*(.*)$/);
+    if (topMatch) {
+      const key = topMatch[1];
+      inMetadata = key === "metadata";
+      if (key === "description") {
+        description = cleanFrontmatterValue(topMatch[2]);
+      } else if (key === "type") {
+        type = cleanFrontmatterValue(topMatch[2]);
+      }
+      continue;
+    }
+
+    if (inMetadata) {
+      const metaMatch = line.match(/^\s+([A-Za-z_][\w-]*):\s*(.*)$/);
+      if (metaMatch?.[1] === "type") {
+        type = cleanFrontmatterValue(metaMatch[2]);
+      }
+    }
+  }
+
+  return { description, type };
+}
+
+function listAMemoryCardFiles(memoryDir: string = A_MEMORY_DIR): string[] {
+  if (!memoryDir || !existsSync(memoryDir)) return [];
+
+  return readdirSync(memoryDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && !A_MEMORY_EXCLUDED.has(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+}
+
+function getAMemoryFingerprint(memoryDir: string = A_MEMORY_DIR): string {
+  const fileNames = listAMemoryCardFiles(memoryDir);
+  let latestMtime = 0;
+
+  for (const fileName of fileNames) {
+    const { mtimeMs } = statSync(path.join(memoryDir, fileName));
+    if (mtimeMs > latestMtime) latestMtime = mtimeMs;
+  }
+
+  return `${fileNames.length}:${latestMtime}`;
+}
+
+function parseClaudeMemoryCards(memoryDir: string = A_MEMORY_DIR): ItemRow[] {
+  const items: ItemRow[] = [];
+
+  for (const fileName of listAMemoryCardFiles(memoryDir)) {
+    const cardPath = path.join(memoryDir, fileName);
+    const frontmatter = parseAFrontmatter(readFileSync(cardPath, "utf-8"));
+    if (!frontmatter) continue;
+
+    const content = frontmatter.description.trim();
+    const category = frontmatter.type.trim();
+    if (content.length < 5 || !category) continue;
+
+    // A 套 ID 必须使用文件名 stem；frontmatter name 已实测不可靠。
+    const id = path.basename(fileName, ".md");
+    items.push({
+      id,
+      category,
+      scope: "project",
+      content,
+      stars: 0,
+      source: "A",
+      write_date: null,
+      event_date: null,
+      chain_type: null,
+      chain_ref: null,
+    });
+  }
+
+  return items;
 }
 
 /**
@@ -365,15 +475,17 @@ export function syncItemsFromMd(cwd: string): boolean {
   const mdPath = path.join(cwd, "0-System/memory-items.md");
   if (!existsSync(mdPath)) return false;
 
-  // 检查 mtime
+  // 检查 B 套 mtime + A 套廉价指纹（卡数 + 最新 mtime），A 未变时不全读卡片。
   const currentMtime = statSync(mdPath).mtimeMs.toString();
+  const currentAFingerprint = getAMemoryFingerprint();
   const savedMtime = db.prepare("SELECT value FROM meta WHERE key = 'items_md_mtime'").get() as { value: string } | undefined;
+  const savedAFingerprint = db.prepare("SELECT value FROM meta WHERE key = 'a_memory_fingerprint'").get() as { value: string } | undefined;
 
-  if (savedMtime && savedMtime.value === currentMtime) {
+  if (savedMtime?.value === currentMtime && savedAFingerprint?.value === currentAFingerprint) {
     return true; // 无变更，跳过
   }
 
-  console.log("[MemoryDB] memory-items.md 变更，重建 items 表...");
+  console.log("[MemoryDB] 记忆源变更，重建 items 表...");
 
   const content = readFileSync(mdPath, "utf-8");
   const sections = content.split(/^## /m).filter(Boolean);
@@ -389,6 +501,7 @@ export function syncItemsFromMd(cwd: string): boolean {
       items.push(parseItemLine(line, category, idx));
     });
   }
+  items.push(...parseClaudeMemoryCards());
 
   // 保留旧的访问数据（FadeMem：sync 不应清除访问统计）
   const oldAccess = new Map<string, { last_accessed: string | null; access_count: number }>();
@@ -405,7 +518,7 @@ export function syncItemsFromMd(cwd: string): boolean {
     db.exec("DELETE FROM items_fts");
 
     const insertItem = db.prepare(
-      "INSERT INTO items (id, category, scope, content, stars, write_date, event_date, chain_type, chain_ref, quality_score, last_accessed, access_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO items (id, category, scope, content, stars, source, write_date, event_date, chain_type, chain_ref, quality_score, last_accessed, access_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     const insertFts = db.prepare(
       "INSERT INTO items_fts (id, content, category) VALUES (?, ?, ?)"
@@ -415,15 +528,16 @@ export function syncItemsFromMd(cwd: string): boolean {
       const qScore = computeQualityScore(item);
       const old = oldAccess.get(item.id);
       insertItem.run(
-        item.id, item.category, item.scope, item.content, item.stars,
+        item.id, item.category, item.scope, item.content, item.stars, item.source,
         item.write_date, item.event_date, item.chain_type, item.chain_ref,
         qScore, old?.last_accessed ?? null, old?.access_count ?? 0,
       );
       insertFts.run(item.id, item.content, item.category);
     }
 
-    // 更新 mtime
+    // 更新变更检测元数据
     db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('items_md_mtime', ?)").run(currentMtime);
+    db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('a_memory_fingerprint', ?)").run(currentAFingerprint);
   });
 
   rebuild();

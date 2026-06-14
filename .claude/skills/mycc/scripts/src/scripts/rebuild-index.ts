@@ -11,7 +11,7 @@
  *   2. 模型已拉取：ollama pull qwen3-embedding:0.6b
  */
 
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "fs";
+import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from "fs";
 import * as path from "path";
 import {
   embed,
@@ -31,12 +31,14 @@ interface ParsedItem {
   text: string;
   stars: number;
   id: string;
+  source: string;
 }
 
 interface CliOptions {
   cwd: string;
   force: boolean;
   strict: boolean;
+  dryRunA: boolean;
 }
 
 interface RebuildStats {
@@ -50,7 +52,10 @@ interface RebuildStats {
 const MODEL = "qwen3-embedding:0.6b";
 const DIMENSIONS = 512;
 
-/** 从 memory-items.md 解析所有 item */
+
+const A_MEMORY_DIR = path.join(process.env.HOME || "", ".claude/projects/-Users-rayman-chen-mycc/memory");
+const A_MEMORY_EXCLUDED = new Set(["MEMORY.md", "INDEX-full.md"]);
+/** 从 memory-items.md 解析 B 套 item */
 function parseMemoryItems(filePath: string): ParsedItem[] {
   if (!existsSync(filePath)) {
     console.error(`文件不存在：${filePath}`);
@@ -87,11 +92,87 @@ function parseMemoryItems(filePath: string): ParsedItem[] {
 
       const starCount = (line.match(/★/g) || []).length;
 
-      // 用内容哈希作为 ID（简单稳定）
+      // B 套继续用内容哈希作为 ID，保持既有向量兼容。
       const id = simpleHash(`${category}:${text}`);
 
-      items.push({ category, text, stars: starCount, id });
+      items.push({ category, text, stars: starCount, id, source: "B" });
     }
+  }
+
+  return items;
+}
+
+function cleanFrontmatterValue(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length >= 2) {
+    const first = trimmed[0];
+    const last = trimmed[trimmed.length - 1];
+    if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+      return trimmed.slice(1, -1).trim();
+    }
+  }
+  return trimmed;
+}
+
+function parseAFrontmatter(content: string): { description: string; type: string } | null {
+  if (!content.startsWith("---")) return null;
+
+  const end = content.indexOf("\n---", 3);
+  if (end === -1) return null;
+
+  let description = "";
+  let type = "";
+  let inMetadata = false;
+
+  for (const rawLine of content.slice(3, end).split(/\r?\n/)) {
+    const line = rawLine.trimEnd();
+    if (!line.trim() || line.trimStart().startsWith("#")) continue;
+
+    const topMatch = line.match(/^([A-Za-z_][\w-]*):\s*(.*)$/);
+    if (topMatch) {
+      const key = topMatch[1];
+      inMetadata = key === "metadata";
+      if (key === "description") {
+        description = cleanFrontmatterValue(topMatch[2]);
+      } else if (key === "type") {
+        type = cleanFrontmatterValue(topMatch[2]);
+      }
+      continue;
+    }
+
+    if (inMetadata) {
+      const metaMatch = line.match(/^\s+([A-Za-z_][\w-]*):\s*(.*)$/);
+      if (metaMatch?.[1] === "type") {
+        type = cleanFrontmatterValue(metaMatch[2]);
+      }
+    }
+  }
+
+  return { description, type };
+}
+
+/** 从 CC 原生 A 套 memory 卡读取 description，不读取/嵌入正文。 */
+function parseClaudeMemoryCards(memoryDir: string = A_MEMORY_DIR): ParsedItem[] {
+  if (!memoryDir || !existsSync(memoryDir)) return [];
+
+  const items: ParsedItem[] = [];
+  const fileNames = readdirSync(memoryDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && !A_MEMORY_EXCLUDED.has(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+
+  for (const fileName of fileNames) {
+    const cardPath = path.join(memoryDir, fileName);
+    const frontmatter = parseAFrontmatter(readFileSync(cardPath, "utf-8"));
+    if (!frontmatter) continue;
+
+    const text = frontmatter.description.trim();
+    const category = frontmatter.type.trim();
+    if (text.length < 5 || !category) continue;
+
+    // A 套 ID 必须使用文件名 stem；frontmatter name 已实测不可靠。
+    const id = path.basename(fileName, ".md");
+    items.push({ id, category, text, stars: 0, source: "A" });
   }
 
   return items;
@@ -118,18 +199,21 @@ function parseArgs(argv: string[]): CliOptions {
   let cwd = defaultCwd();
   let force = false;
   let strict = false;
+  let dryRunA = false;
 
   for (const arg of argv) {
     if (arg === "--force") {
       force = true;
     } else if (arg === "--strict") {
       strict = true;
+    } else if (arg === "--dry-run-a") {
+      dryRunA = true;
     } else {
       cwd = arg;
     }
   }
 
-  return { cwd, force, strict };
+  return { cwd, force, strict, dryRunA };
 }
 
 function appendVectorAlert(cwd: string, reason: string, now: string): void {
@@ -173,6 +257,15 @@ async function main(): Promise<void> {
   const cwd = options.cwd;
   const memPath = path.join(cwd, "0-System/memory-items.md");
 
+  if (options.dryRunA) {
+    const aItems = parseClaudeMemoryCards();
+    console.log(`A 套解析：${aItems.length} 张卡`);
+    for (const item of aItems.slice(0, 3)) {
+      console.log(`- id=${item.id} category=${item.category} description=${item.text}`);
+    }
+    return;
+  }
+
   console.log("🔍 检查 Ollama 状态...");
   const ready = await isOllamaReady();
   if (!ready) {
@@ -183,9 +276,16 @@ async function main(): Promise<void> {
     console.log("✅ Ollama 就绪");
   }
 
-  console.log(`📖 解析 ${memPath}...`);
-  const parsed = parseMemoryItems(memPath);
-  console.log(`   找到 ${parsed.length} 条 item`);
+  console.log(`📖 解析 B 套 ${memPath}...`);
+  const bItems = parseMemoryItems(memPath);
+  console.log(`   B 套找到 ${bItems.length} 条 item`);
+
+  console.log(`📖 解析 A 套 ${A_MEMORY_DIR}...`);
+  const aItems = parseClaudeMemoryCards();
+  console.log(`   A 套找到 ${aItems.length} 张卡`);
+
+  const parsed = [...bItems, ...aItems];
+  console.log(`   合并后 ${parsed.length} 条 item`);
 
   const oldIndex = loadVectorIndex(cwd);
   const oldItems = new Map(oldIndex.items.map((item) => [item.id, item]));
@@ -214,6 +314,7 @@ async function main(): Promise<void> {
         category: item.category,
         text: item.text,
         stars: item.stars,
+        source: item.source,
         vector: oldItem.vector,
       });
       stats.reused++;
@@ -226,6 +327,7 @@ async function main(): Promise<void> {
           category: item.category,
           text: item.text,
           stars: item.stars,
+          source: item.source,
           vector: vec,
         });
         stats.embedded++;
@@ -236,6 +338,7 @@ async function main(): Promise<void> {
           category: item.category,
           text: item.text,
           stars: item.stars,
+          source: item.source,
           vector: oldItem.vector,
         });
         stats.failedKept++;

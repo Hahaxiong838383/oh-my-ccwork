@@ -27,6 +27,7 @@ export interface VectorItem {
   category: string;
   text: string;
   stars: number;
+  source: string;
   vector: number[];
 }
 
