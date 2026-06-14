@@ -11,12 +11,13 @@
  *   2. 模型已拉取：ollama pull qwen3-embedding:0.6b
  */
 
-import { readFileSync, existsSync } from "fs";
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import {
   embed,
-  saveVectorIndex,
   isOllamaReady,
+  loadVectorIndex,
+  saveVectorIndex,
   type VectorItem,
   type VectorIndex,
 } from "../services/embedding.js";
@@ -31,6 +32,23 @@ interface ParsedItem {
   stars: number;
   id: string;
 }
+
+interface CliOptions {
+  cwd: string;
+  force: boolean;
+  strict: boolean;
+}
+
+interface RebuildStats {
+  total: number;
+  reused: number;
+  embedded: number;
+  failedKept: number;
+  missing: number;
+}
+
+const MODEL = "qwen3-embedding:0.6b";
+const DIMENSIONS = 512;
 
 /** 从 memory-items.md 解析所有 item */
 function parseMemoryItems(filePath: string): ParsedItem[] {
@@ -92,8 +110,67 @@ function simpleHash(str: string): string {
 // 主流程
 // ============================================================
 
+function defaultCwd(): string {
+  return path.resolve(import.meta.dirname || new URL(".", import.meta.url).pathname, "../../../../..");
+}
+
+function parseArgs(argv: string[]): CliOptions {
+  let cwd = defaultCwd();
+  let force = false;
+  let strict = false;
+
+  for (const arg of argv) {
+    if (arg === "--force") {
+      force = true;
+    } else if (arg === "--strict") {
+      strict = true;
+    } else {
+      cwd = arg;
+    }
+  }
+
+  return { cwd, force, strict };
+}
+
+function appendVectorAlert(cwd: string, reason: string, now: string): void {
+  const recentEventsPath = path.join(cwd, "0-System/RECENT_EVENTS.md");
+  appendFileSync(
+    recentEventsPath,
+    `\n- ⚠️ [向量系统告警 ${now}] memory 向量重建:${reason},语义召回降级,请修复`,
+    "utf-8",
+  );
+}
+
+function writeVectorHealth(
+  cwd: string,
+  now: string,
+  stats: RebuildStats,
+  ollamaReady: boolean,
+): void {
+  const vectored = stats.total - stats.missing;
+  const coverage = stats.total === 0 ? 1 : vectored / stats.total;
+  const health = {
+    last_run: now,
+    last_success: ollamaReady && stats.missing === 0,
+    total: stats.total,
+    vectored,
+    coverage,
+    missing: stats.missing,
+    ollama_ready: ollamaReady,
+    model: MODEL,
+    dimensions: DIMENSIONS,
+  };
+
+  writeFileSync(
+    path.join(cwd, "0-System/vector-health.json"),
+    `${JSON.stringify(health, null, 2)}\n`,
+    "utf-8",
+  );
+}
+
 async function main(): Promise<void> {
-  const cwd = process.argv[2] || path.resolve(import.meta.dirname || new URL(".", import.meta.url).pathname, "../../../../..");
+  const options = parseArgs(process.argv.slice(2));
+  const cwd = options.cwd;
   const memPath = path.join(cwd, "0-System/memory-items.md");
 
   console.log("🔍 检查 Ollama 状态...");
@@ -102,37 +179,69 @@ async function main(): Promise<void> {
     console.error("❌ Ollama 未就绪。请确保：");
     console.error("   1. ollama serve 已启动");
     console.error("   2. ollama pull qwen3-embedding:0.6b 已完成");
-    process.exit(1);
+  } else {
+    console.log("✅ Ollama 就绪");
   }
-  console.log("✅ Ollama 就绪");
 
   console.log(`📖 解析 ${memPath}...`);
   const parsed = parseMemoryItems(memPath);
   console.log(`   找到 ${parsed.length} 条 item`);
 
-  if (parsed.length === 0) {
-    console.log("⚠️ 无 item 可索引，退出");
-    return;
-  }
-
-  console.log("🧠 开始生成 embedding...");
+  const oldIndex = loadVectorIndex(cwd);
+  const oldItems = new Map(oldIndex.items.map((item) => [item.id, item]));
   const vectorItems: VectorItem[] = [];
-  let failed = 0;
+  const stats: RebuildStats = {
+    total: parsed.length,
+    reused: 0,
+    embedded: 0,
+    failedKept: 0,
+    missing: 0,
+  };
+
+  if (parsed.length === 0) {
+    console.log("⚠️ 无 item 可索引");
+  } else {
+    console.log(options.force ? "🧠 开始强制生成 embedding..." : "🧠 开始增量生成 embedding...");
+  }
 
   for (let i = 0; i < parsed.length; i++) {
     const item = parsed[i];
-    const vec = await embed(item.text);
+    const oldItem = oldItems.get(item.id);
 
-    if (vec) {
+    if (!options.force && oldItem && oldItem.text === item.text) {
       vectorItems.push({
         id: item.id,
         category: item.category,
         text: item.text,
         stars: item.stars,
-        vector: vec,
+        vector: oldItem.vector,
       });
+      stats.reused++;
     } else {
-      failed++;
+      const vec = ready ? await embed(item.text) : null;
+
+      if (vec) {
+        vectorItems.push({
+          id: item.id,
+          category: item.category,
+          text: item.text,
+          stars: item.stars,
+          vector: vec,
+        });
+        stats.embedded++;
+      } else if (oldItem) {
+        // 数据安全红线：当前条目 embed 失败时，绝不丢弃已有向量。
+        vectorItems.push({
+          id: item.id,
+          category: item.category,
+          text: item.text,
+          stars: item.stars,
+          vector: oldItem.vector,
+        });
+        stats.failedKept++;
+      } else {
+        stats.missing++;
+      }
     }
 
     // 进度显示（每 10 条或最后一条）
@@ -142,27 +251,41 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(""); // 换行
-
-  if (failed > 0) {
-    console.log(`⚠️ ${failed} 条 embed 失败`);
+  if (parsed.length > 0) {
+    console.log(""); // 换行
   }
 
+  const now = new Date().toISOString();
   const index: VectorIndex = {
-    model: "qwen3-embedding:0.6b",
-    dimensions: 512,
-    updated_at: new Date().toISOString(),
+    model: MODEL,
+    dimensions: DIMENSIONS,
+    updated_at: now,
     items: vectorItems,
   };
 
   console.log(`💾 写入索引（${vectorItems.length} 条）...`);
   saveVectorIndex(cwd, index);
+  writeVectorHealth(cwd, now, stats, ready);
+
+  if (!ready) {
+    appendVectorAlert(cwd, "Ollama不可用", now);
+  } else if (stats.missing > 0) {
+    appendVectorAlert(cwd, `${stats.missing}条新记忆embed失败`, now);
+  }
 
   const indexPath = path.join(cwd, "0-System/memory-vectors.json");
-  const stats = readFileSync(indexPath);
-  const sizeKB = Math.round(stats.length / 1024);
+  const statsFile = readFileSync(indexPath);
+  const sizeKB = Math.round(statsFile.length / 1024);
+  const coverage = stats.total === 0 ? 1 : vectorItems.length / stats.total;
   console.log(`✅ 完成！索引大小：${sizeKB} KB`);
   console.log(`   路径：${indexPath}`);
+  console.log(
+    `   total=${stats.total} reused=${stats.reused} embedded=${stats.embedded} failedKept=${stats.failedKept} missing=${stats.missing} coverage=${coverage.toFixed(4)}`,
+  );
+
+  if (options.strict && (!ready || stats.missing > 0)) {
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {

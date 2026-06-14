@@ -12,6 +12,8 @@ struct CCStatus {
     var rulesKB = 0, memKB = 0, eventsKB = 0
     var rulesTrip = 12, memTrip = 12, eventsTrip = 60
     var cards = 0, mcp = 0, sessions = 0, gitDirty = 0
+    var vecCoverage = 100, vecVectored = 0, vecTotal = 0, vecDays = 0   // 记忆向量健康(vector-health.json)
+    var vecReady = true
     var gitTag = "—", gitLast = "—"
     var engines: [(name: String, model: String, ready: Bool)] = []   // (引擎名, 配置态模型, 凭据/配置就绪)
     var secretHook = false
@@ -101,6 +103,13 @@ final class StatusStore: ObservableObject {
             st.eventsTrip = b["events_trip"] as? Int ?? 60
         }
         st.cards = o["memory_cards"] as? Int ?? 0
+        if let vh = o["vector_health"] as? [String: Any] {
+            st.vecCoverage = vh["coverage"] as? Int ?? -1
+            st.vecVectored = vh["vectored"] as? Int ?? 0
+            st.vecTotal = vh["total"] as? Int ?? 0
+            st.vecReady = vh["ollama_ready"] as? Bool ?? true
+            st.vecDays = vh["days"] as? Int ?? -1
+        }
         st.mcp = o["mcp"] as? Int ?? 0
         st.sessions = o["sessions"] as? Int ?? 0
         st.secretHook = o["secret_hook"] as? Bool ?? false
@@ -443,10 +452,33 @@ struct ContentView: View {
                 nodeChip("skills·mycc \(dirCount("~/mycc/.claude/skills"))", open: "~/mycc/.claude/skills")
                 nodeChip("记忆卡 \(s.cards) →MEMORY", open: "~/.claude/projects/-Users-rayman-chen-mycc/memory")
             }.padding(.leading, 14)
+            vectorHealthRow
         }
         .padding(.leading, 26).padding(.bottom, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(alignment: .topLeading) { spineBg(dot: .green, tail: true) }
+        .background(alignment: .topLeading) { spineBg(dot: vecWarn ? .orange : .green, tail: true) }
+    }
+
+    // 记忆向量健康(根治 76 天静默死亡的可见性):覆盖率+鲜活度,Ollama挂/低覆盖/陈旧→橙红,点开 vector-health.json
+    var vecWarn: Bool { !s.vecReady || s.vecCoverage < 80 || s.vecDays > 30 }
+    var vectorHealthRow: some View {
+        let healthy = s.vecReady && s.vecCoverage >= 95 && s.vecDays <= 7
+        let col: Color = vecWarn ? .red : (healthy ? .green : .orange)
+        return Button(action: { reveal("~/mycc/0-System/vector-health.json") }) {
+            HStack(spacing: 5) {
+                Circle().fill(col).frame(width: 6, height: 6)
+                Text("向量 \(s.vecVectored)/\(s.vecTotal)").font(.system(size: 10, design: .monospaced))
+                Text("\(s.vecCoverage)%").font(.system(size: 9)).foregroundColor(.secondary)
+                Spacer(minLength: 4)
+                Text(s.vecReady ? "\(s.vecDays)天前更新" : "⚠️Ollama挂").font(.system(size: 9))
+                    .foregroundColor(vecWarn ? .red : .secondary)
+            }
+            .padding(.horizontal, 7).padding(.vertical, 4)
+            .background(RoundedRectangle(cornerRadius: 6).fill(col.opacity(0.10)))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(col.opacity(0.25), lineWidth: 0.5))
+            .contentShape(Rectangle())
+            .padding(.leading, 14)
+        }.buttonStyle(.plain)
     }
 
     // 通用可折叠资源行:区头(chevron+名+计数+desc) + 展开 entries 网格(目录在前/文件带字节);①rules ②docs 共用

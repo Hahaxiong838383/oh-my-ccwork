@@ -18,6 +18,11 @@ fi
 
 echo "发现 $CHANGES 个改动文件" >> "$LOG_FILE"
 
+# 记忆向量增量重建（根治向量静默死亡：每日同步前让向量跟上记忆，更新的 vectors.json/health 随本次一起提交）
+# 增量模式秒级（仅 embed 新增/变更条目）；失败不阻断 git 同步，告警已由脚本写入 RECENT_EVENTS
+echo "触发记忆向量增量重建..." >> "$LOG_FILE"
+( cd "$LOCAL_MYCC/.claude/skills/mycc/scripts" && npx tsx src/scripts/rebuild-index.ts "$LOCAL_MYCC" >> "$LOG_FILE" 2>&1 ) || echo "向量重建失败（不阻断同步）" >> "$LOG_FILE"
+
 # 添加所有改动（尊重 .gitignore）
 git add -A >> "$LOG_FILE" 2>&1
 
