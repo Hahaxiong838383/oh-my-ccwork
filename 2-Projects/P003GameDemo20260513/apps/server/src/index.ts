@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { WebSocketServer, type RawData, type WebSocket } from 'ws';
 import { VoicePipeline, type ClientMessage, type SessionMeta } from './pipeline.js';
 import { authRoute } from './routes/auth.js';
+import { inviteAuthRoute } from './routes/invite-auth.js';
 import { feedbackRoute } from './routes/feedback.js';
 import { visionRoute } from './routes/vision.js';
 import { checkAndCount, getClientIp } from './guard.js';
@@ -12,6 +13,7 @@ const port = Number(process.env.PORT ?? 8787);
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
 app.route('/api/auth', authRoute);
+app.route('/api/auth', inviteAuthRoute);
 app.route('/api/feedback', feedbackRoute);
 app.route('/api/vision', visionRoute);
 
