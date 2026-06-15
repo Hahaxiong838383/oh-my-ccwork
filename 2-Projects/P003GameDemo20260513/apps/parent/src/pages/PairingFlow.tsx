@@ -2,10 +2,11 @@
 // 还原原型设计稿《小程序配网&设备绑定》：添加设备 → 搜索 → 连接设备 → 选 Wi-Fi → 连接网络 → 成功
 // loading 态自动流转（setTimeout），交互态手动推进。纯前端 mock，无真实蓝牙/网络。
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FlowNav } from '../components/chrome';
 import { pairingDevice } from '../mock/data';
-import ProfileSheet from './ProfileSheet';
+import ProfileSheet, { type ProfileData } from './ProfileSheet';
+import { bindDevice, saveProfile } from '../api';
 
 type Step =
   | 'entry'
@@ -74,7 +75,28 @@ export default function PairingFlow({ onExit }: { onExit: () => void }) {
     }
   }, [step, sheetClosed, onExit]);
 
-  const finishProfile = () => setSheetClosed(true);
+  // 配网成功即把设备绑定到当前账号（一次）——打通配网链路
+  const deviceBoundRef = useRef(false);
+  useEffect(() => {
+    if (step === 'netDone' && !deviceBoundRef.current) {
+      deviceBoundRef.current = true;
+      void bindDevice({ model: pairingDevice.model, name: pairingDevice.name }).catch((e) =>
+        console.error('bindDevice failed', e),
+      );
+    }
+  }, [step]);
+
+  // 建档：保存→写孩子档案；跳过→用兜底昵称建档（都不阻断配网，失败仅记日志）
+  const handleSave = (data: ProfileData) => {
+    void saveProfile(data).catch((e) => console.error('saveProfile failed', e));
+    setSheetClosed(true);
+  };
+  const handleSkip = (fallbackName: string) => {
+    void saveProfile({ nickname: fallbackName, birthday: '', gender: '' }).catch((e) =>
+      console.error('saveProfile(skip) failed', e),
+    );
+    setSheetClosed(true);
+  };
 
   function back() {
     const target = backMap[step];
@@ -110,7 +132,7 @@ export default function PairingFlow({ onExit }: { onExit: () => void }) {
       </div>
       {/* 异步建档浮层：连接中弹出，连接成功后切成功态。填完/跳过都不打断配网 */}
       {(step === 'netConnecting' || step === 'netDone') && !sheetClosed && (
-        <ProfileSheet success={step === 'netDone'} onSave={finishProfile} onSkip={finishProfile} />
+        <ProfileSheet success={step === 'netDone'} onSave={handleSave} onSkip={handleSkip} />
       )}
     </div>
   );
