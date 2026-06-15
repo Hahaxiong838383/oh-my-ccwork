@@ -11,7 +11,7 @@ export type ProfileData = { nickname: string; birthday: string; gender: string }
 const FALLBACK_NAMES = ['小航海家', '小探险家', '小发现家', '小观察员', '小船长'];
 
 // 由出生年月（"2018-08"）算当前周岁，按实时日期
-function calcAge(ym: string): number {
+export function calcAge(ym: string): number {
   const [by, bm] = ym.split('-').map(Number);
   const now = new Date();
   let age = now.getFullYear() - by;

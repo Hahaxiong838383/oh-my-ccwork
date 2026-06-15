@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type WebSocket from 'ws';
 import { feedbackStore } from './feedback-store.js';
+import { conversationStore } from './conversation-store.js';
 import type { AuthContext } from './auth-jwt.js';
 import { createGeminiLlmClient, type GeminiLlmClient } from './providers/gemini-llm.js';
 import { createDeepseekLlmClient } from './providers/deepseek-llm.js';
@@ -124,7 +125,7 @@ export class VoicePipeline {
       case 'chat.trigger':
         console.log('[pipeline] chat.trigger received:', msg.text.slice(0, 30));
         // 开场白/触发指令恒用普通人格（card 切换 captureMode 永远 off，不该吐槽人格）
-        this.startLlmAndTts(msg.text, false);
+        this.startLlmAndTts(msg.text, false, this.sessionMeta);
         return;
       default:
         this.sendError('BAD_MESSAGE', '未知客户端消息');
@@ -161,11 +162,13 @@ export class VoicePipeline {
         },
         onFinal: (text) => {
           this.send({ type: 'asr.final', text });
+          this.captureConversation('user', text, this.capturedTurnMeta ?? this.sessionMeta);
           this.maybeCaptureUserInput(text);
           if (text.trim()) {
             // ASR 路径吐槽人格用本轮快照判定（与落库一致），不读可能已被覆盖的 sessionMeta
-            const isFeedback = (this.capturedTurnMeta ?? this.sessionMeta)?.captureMode === 'feedback';
-            this.startLlmAndTts(text, isFeedback);
+            const turnMeta = this.capturedTurnMeta ?? this.sessionMeta;
+            const isFeedback = turnMeta?.captureMode === 'feedback';
+            this.startLlmAndTts(text, isFeedback, turnMeta);
           } else {
             // 用户没说话 → 立刻发 tts.end，让 client 重置 voiceStatus 到 idle
             this.send({ type: 'tts.end' });
@@ -213,7 +216,27 @@ export class VoicePipeline {
     }
   }
 
-  private async startLlmAndTts(userText: string, feedbackMode: boolean): Promise<void> {
+  private captureConversation(role: 'user' | 'assistant', text: string, meta: SessionMeta | null): void {
+    const finalText = text.trim();
+    if (!finalText || !meta) return;
+
+    try {
+      conversationStore.add({
+        account_id: this.authContext?.accountId ?? null,
+        session_id: meta.sessionId,
+        role,
+        text: finalText,
+      });
+    } catch (err) {
+      console.error('[conversation] capture_fail', {
+        sessionId: meta.sessionId,
+        role,
+        message: toError(err).message,
+      });
+    }
+  }
+
+  private async startLlmAndTts(userText: string, feedbackMode: boolean, turnMeta: SessionMeta | null): Promise<void> {
     const finalText = userText.trim();
     if (!finalText) return;
 
@@ -302,7 +325,9 @@ export class VoicePipeline {
           if (turn !== this.activeTurn) return;
           // 兜底：整条回复只有标记/标记未闭合时，缓冲区剩余在这里放行
           emitFiltered(exprFilter.flush());
-          this.send({ type: 'llm.done', text: stripExpressionTags(fullText).text });
+          const assistantText = stripExpressionTags(fullText).text;
+          this.captureConversation('assistant', assistantText, turnMeta);
+          this.send({ type: 'llm.done', text: assistantText });
           this.tts?.finish();
         },
         onError: (err) => {

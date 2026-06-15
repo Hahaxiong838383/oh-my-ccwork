@@ -1,8 +1,11 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { childProfile, homeStats, kidsHub, menuItems, weeklyReport, type SuggestionStatus } from './mock/data';
 import { StatusBar } from './components/chrome';
 import PairingFlow from './pages/PairingFlow';
 import ProfileSetupFlow from './pages/ProfileSetupFlow';
+import InviteLoginPage from './pages/InviteLoginPage';
+import { calcAge } from './pages/ProfileSheet';
+import { getDevice, getProfile, type DeviceInfo, type Profile } from './api';
 
 type TabKey = 'home' | 'report' | 'kidshub' | 'mine';
 type FlowKey = 'pairing' | 'profile';
@@ -66,18 +69,24 @@ function TabBar({ activeTab, onChange }: { activeTab: TabKey; onChange: (tab: Ta
   );
 }
 
-function ChildBadge() {
+function ChildBadge({ profile }: { profile: Profile | null }) {
+  const name = profile?.nickname || '未建档';
+  const age = profile?.birthday ? `${calcAge(profile.birthday)} 周岁` : '待完善';
   return (
     <div className="flex items-center gap-3">
       <div className="grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-orange-200 to-brand-orange text-xl font-bold text-white">
-        {childProfile.avatar}
+        {name.slice(0, 1)}
       </div>
       <div>
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-bold text-text-main">{childProfile.name}</h2>
-          <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-brand-orange">{childProfile.status}</span>
+          <h2 className="text-lg font-bold text-text-main">{name}</h2>
+          <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-brand-orange">
+            {profile?.gender || age}
+          </span>
         </div>
-        <p className="mt-1 text-sm text-text-muted">今天状态稳定，适合轻松陪伴</p>
+        <p className="mt-1 text-sm text-text-muted">
+          {profile ? `${profile.gender} · ${age}` : '完善信息后，小可更懂 TA'}
+        </p>
       </div>
     </div>
   );
@@ -85,40 +94,57 @@ function ChildBadge() {
 
 function HomePage({ onStartFlow }: { onStartFlow: (flow: FlowKey) => void }) {
   const maxBar = Math.max(...homeStats.weeklyBars);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [device, setDevice] = useState<DeviceInfo | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    getProfile()
+      .then((r) => setProfile(r.profile))
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+    getDevice()
+      .then((r) => setDevice(r.device))
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-4">
-      {/* 完善孩子信息引导（首次进入） */}
-      <button
-        className="flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-brand-orange to-orange-400 p-3 text-left shadow-card"
-        onClick={() => onStartFlow('profile')}
-        type="button"
-      >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/25 text-lg">👧</span>
-        <span className="flex-1 text-sm font-semibold leading-5 text-white">补全孩子信息，让小可叫出 TA 的名字</span>
-        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-brand-orange">去补全</span>
-      </button>
+      {/* 未建档才显「补全孩子信息」提示条 */}
+      {loaded && !profile && (
+        <button
+          className="flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-brand-orange to-orange-400 p-3 text-left shadow-card"
+          onClick={() => onStartFlow('profile')}
+          type="button"
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/25 text-lg">👧</span>
+          <span className="flex-1 text-sm font-semibold leading-5 text-white">补全孩子信息，让小可叫出 TA 的名字</span>
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-brand-orange">去补全</span>
+        </button>
+      )}
 
-      {/* 设备配网引导 */}
-      <button
-        className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-card"
-        onClick={() => onStartFlow('pairing')}
-        type="button"
-      >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-orange-50 text-lg text-brand-orange">＋</span>
-        <span className="flex-1 text-sm font-semibold text-text-main">配网添加你的读写台设备</span>
-        <span className="text-text-muted">›</span>
-      </button>
+      {/* 未绑定设备才显配网引导 */}
+      {loaded && !device && (
+        <button
+          className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-card"
+          onClick={() => onStartFlow('pairing')}
+          type="button"
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-orange-50 text-lg text-brand-orange">＋</span>
+          <span className="flex-1 text-sm font-semibold text-text-main">配网添加你的读写台设备</span>
+          <span className="text-text-muted">›</span>
+        </button>
+      )}
 
       <Card>
-        <ChildBadge />
+        <ChildBadge profile={profile} />
       </Card>
 
       <Card>
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-bold text-text-main">读写台状态</h3>
-            <p className="text-sm text-text-muted">环境参数正常</p>
+            <p className="text-sm text-text-muted">{device ? `${device.name} · 在线` : '未绑定设备'}</p>
           </div>
           <div className="grid h-20 w-24 place-items-center rounded-2xl bg-gradient-to-br from-orange-100 via-white to-slate-100 text-3xl">📚</div>
         </div>
@@ -333,6 +359,7 @@ function MinePage({ onStartFlow }: { onStartFlow: (flow: FlowKey) => void }) {
 }
 
 export default function App() {
+  const [loggedIn, setLoggedIn] = useState(() => Boolean(sessionStorage.getItem('parent.token')));
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [flow, setFlow] = useState<FlowKey | null>(null);
   const activeTitle = useMemo(() => tabs.find((tab) => tab.key === activeTab)?.title ?? '家长端', [activeTab]);
@@ -340,7 +367,9 @@ export default function App() {
   return (
     <div className="flex min-h-screen items-center justify-center px-3 py-6">
       <div className="relative h-[844px] w-[390px] overflow-hidden rounded-[42px] border-[10px] border-slate-950 bg-page-bg shadow-phone">
-        {flow === 'pairing' ? (
+        {!loggedIn ? (
+          <InviteLoginPage onLogin={() => setLoggedIn(true)} />
+        ) : flow === 'pairing' ? (
           <PairingFlow onExit={() => setFlow(null)} />
         ) : flow === 'profile' ? (
           <ProfileSetupFlow onExit={() => setFlow(null)} />

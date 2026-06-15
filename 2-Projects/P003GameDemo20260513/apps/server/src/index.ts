@@ -5,6 +5,7 @@ import { VoicePipeline, type ClientMessage, type SessionMeta } from './pipeline.
 import { authRoute } from './routes/auth.js';
 import { inviteAuthRoute } from './routes/invite-auth.js';
 import { feedbackRoute } from './routes/feedback.js';
+import { conversationRoute } from './routes/conversation.js';
 import { visionRoute } from './routes/vision.js';
 import { profileRoute } from './routes/profile.js';
 import { checkAndCount, getClientIp } from './guard.js';
@@ -17,6 +18,7 @@ app.get('/health', (c) => c.json({ status: 'ok' }));
 app.route('/api/auth', authRoute);
 app.route('/api/auth', inviteAuthRoute);
 app.route('/api/feedback', feedbackRoute);
+app.route('/api/conversation', conversationRoute);
 app.route('/api/vision', visionRoute);
 app.route('/api/profile', profileRoute);
 
