@@ -7,6 +7,7 @@ import { inviteAuthRoute } from './routes/invite-auth.js';
 import { feedbackRoute } from './routes/feedback.js';
 import { visionRoute } from './routes/vision.js';
 import { checkAndCount, getClientIp } from './guard.js';
+import { verifyAuthToken, type AuthContext } from './auth-jwt.js';
 
 const app = new Hono();
 const port = Number(process.env.PORT ?? 8787);
@@ -33,20 +34,29 @@ const server = serve(
 
 const wss = new WebSocketServer({ noServer: true });
 
-server.on('upgrade', (req, socket, head) => {
-  try {
-    const reqUrl = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
-    if (reqUrl.pathname !== '/ws/voice') {
-      socket.destroy();
-      return;
-    }
+// Step 4：WS 握手鉴权产物（accountId）按连接关联，不改 emit/on 签名（向后兼容）
+const wsAuth = new WeakMap<WebSocket, AuthContext>();
 
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      wss.emit('connection', ws, req);
-    });
-  } catch {
-    socket.destroy();
-  }
+server.on('upgrade', (req, socket, head) => {
+  void (async () => {
+    try {
+      const reqUrl = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+      if (reqUrl.pathname !== '/ws/voice') {
+        socket.destroy();
+        return;
+      }
+
+      // 可选 wsToken：有 token 解析身份，无 token / 无效 → 退回现有匿名行为（向后兼容）
+      const auth = await verifyAuthToken(reqUrl.searchParams.get('token'));
+
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        if (auth) wsAuth.set(ws, auth);
+        wss.emit('connection', ws, req);
+      });
+    } catch {
+      socket.destroy();
+    }
+  })();
 });
 
 wss.on('connection', (ws, req) => {
@@ -59,7 +69,8 @@ wss.on('connection', (ws, req) => {
     return;
   }
 
-  const pipeline = new VoicePipeline(ws, clientIp);
+  const auth = wsAuth.get(ws) ?? null;
+  const pipeline = new VoicePipeline(ws, clientIp, auth);
   // 连接生命周期日志：公网排障用（客户端"没反应"时分辨 ws 是否到达 server、活了多久、传了什么）
   const openedAt = Date.now();
   let msgCount = 0;

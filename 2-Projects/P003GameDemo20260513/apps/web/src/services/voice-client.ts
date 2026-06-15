@@ -131,8 +131,22 @@ class VoiceClientImpl implements VoiceClient {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
     if (this.connectPromise) return this.connectPromise;
 
+    // Step 4：已登录则把 token 带进 WS（浏览器原生 WS 不能加 Authorization header → 走 query）；
+    // 未登录 / 无 token → finalUrl=url 不变，退回现有匿名连接（向后兼容）。
+    let finalUrl = url;
+    try {
+      const token = window.sessionStorage.getItem('kidshub.token');
+      if (token) {
+        const u = new URL(url, window.location.origin);
+        u.searchParams.set('token', token);
+        finalUrl = u.toString();
+      }
+    } catch {
+      // sessionStorage / URL 解析异常 → 退回原 url（不阻断连接）
+    }
+
     this.connectPromise = new Promise<void>((resolve, reject) => {
-      const ws = new WebSocket(url);
+      const ws = new WebSocket(finalUrl);
       ws.binaryType = 'arraybuffer';
       this.pendingWs = ws;
       // closure 内局部变量：防止 onerror→onclose 双触发重复 reject，

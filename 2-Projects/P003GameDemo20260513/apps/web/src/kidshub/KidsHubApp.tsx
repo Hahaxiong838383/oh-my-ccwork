@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useKidsHubStore } from './store/kidshub-store';
 import { LoginPage } from './LoginPage';
+import { InviteLoginPage } from './InviteLoginPage';
 import { StudioPage } from './StudioPage';
 import { getSharedVoiceClient } from '../services/voice-client';
 
@@ -13,6 +14,7 @@ import { getSharedVoiceClient } from '../services/voice-client';
 // 个人站公开部署（VITE_KIDSHUB_PUBLIC=1）：作品展示模式，无登录门，
 // 滥用防护在 server 侧 per-IP 日限额兜底（guard.ts）
 const isPublicMode = import.meta.env.VITE_KIDSHUB_PUBLIC === '1';
+const INVITE_LOGIN = import.meta.env.VITE_ENABLE_INVITE_LOGIN === '1';
 
 export function KidsHubApp() {
   const token = useKidsHubStore((s) => s.token);
@@ -64,7 +66,8 @@ export function KidsHubApp() {
   }
 
   if (!isPublicMode && !token) {
-    return <LoginPage />;
+    const LoginComponent = INVITE_LOGIN ? InviteLoginPage : LoginPage;
+    return <LoginComponent />;
   }
 
   const handlePublicStart = () => {

@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type WebSocket from 'ws';
 import { feedbackStore } from './feedback-store.js';
+import type { AuthContext } from './auth-jwt.js';
 import { createGeminiLlmClient, type GeminiLlmClient } from './providers/gemini-llm.js';
 import { createDeepseekLlmClient } from './providers/deepseek-llm.js';
 import { createVolcAsrClient, type VolcAsrClient } from './providers/volc-asr.js';
@@ -75,10 +76,13 @@ export class VoicePipeline {
   // sessionMeta 被新 sendSessionMeta 覆盖（吐槽漏落库 / 人格用错）。onFinal 落库+人格都用此快照。
   // sessionMeta 整体替换不 mutate，引用快照即冻结本轮值。
   private capturedTurnMeta: SessionMeta | null = null;
+  // Step 4：WS 握手鉴权后的身份（邀请码登录用户）。匿名连接为 null，feedback 落库带 account_id 用。
+  private readonly authContext: AuthContext | null;
 
-  constructor(ws: WebSocket, clientIp: string) {
+  constructor(ws: WebSocket, clientIp: string, authContext: AuthContext | null = null) {
     this.ws = ws;
     this.ipHash = hashIp(clientIp);
+    this.authContext = authContext;
     // 按 LLM_PROVIDER 工厂切换：'deepseek' 走 DeepSeek 官方（个人站部署），默认 gemini（公司侧零影响）
     const provider = (process.env.LLM_PROVIDER || '').toLowerCase();
     const rawClient = provider === 'deepseek' ? createDeepseekLlmClient() : createGeminiLlmClient();
@@ -198,6 +202,7 @@ export class VoicePipeline {
         scene_id: meta.sceneId,
         text: finalText,
         ip_hash: this.ipHash,
+        account_id: this.authContext?.accountId ?? null,
       });
       console.log('[feedback] capture_ok', { sceneId: item.scene_id, len: item.text.length });
     } catch (err) {

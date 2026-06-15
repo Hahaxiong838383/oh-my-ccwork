@@ -24,6 +24,8 @@ export type FeedbackItem = {
   updated_at: number;
   updated_by: string;
   ip_hash: string;
+  // Step 3：归属账号（邀请码登录后写入；匿名/旧数据为 null）。用于 parent 视角按账号隔离查询。
+  account_id: string | null;
 };
 
 export type FeedbackAddInput = {
@@ -36,6 +38,8 @@ export type FeedbackAddInput = {
   scene_id: string | null;
   text: string;
   ip_hash: string;
+  // Step 3：可选。鉴权后的 WS 会带；现有匿名调用不传 → 落 null（向后兼容）。
+  account_id?: string | null;
 };
 
 type FeedbackRow = {
@@ -54,6 +58,7 @@ type FeedbackRow = {
   updated_at: number;
   updated_by: string;
   ip_hash: string;
+  account_id: string | null;
 };
 
 type FeedbackUpdateInput = {
@@ -82,6 +87,7 @@ const FEEDBACK_COLUMNS = [
   'updated_at',
   'updated_by',
   'ip_hash',
+  'account_id',
 ] as const;
 
 const SELECT_COLS = FEEDBACK_COLUMNS.join(', ');
@@ -110,6 +116,7 @@ function toFeedbackItem(row: FeedbackRow | null | undefined): FeedbackItem | nul
     updated_at: row.updated_at,
     updated_by: row.updated_by,
     ip_hash: row.ip_hash,
+    account_id: row.account_id ?? null,
   };
 }
 
@@ -141,17 +148,22 @@ class FeedbackStore {
         note TEXT NOT NULL,
         updated_at INTEGER NOT NULL,
         updated_by TEXT NOT NULL,
-        ip_hash TEXT NOT NULL
+        ip_hash TEXT NOT NULL,
+        account_id TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_feedback_items_ts
       ON feedback_items (ts DESC);
       CREATE INDEX IF NOT EXISTS idx_feedback_items_session_text_ts
       ON feedback_items (session_id, text, ts DESC);
     `);
-    // 生产已有 feedback_items 表（建于无 gender/age 的版本）→ 补列保留旧数据
+    // 生产已有 feedback_items 表（建于无 gender/age/account_id 的版本）→ 补列保留旧数据
     // （CREATE TABLE IF NOT EXISTS 不会改已存在表，必须显式 ALTER）
     this.migrateAddColumn('gender', "TEXT NOT NULL DEFAULT ''");
     this.migrateAddColumn('age', "TEXT NOT NULL DEFAULT ''");
+    // Step 3：account_id 可空，旧行/匿名为 NULL（不破坏现有数据，向后兼容）
+    this.migrateAddColumn('account_id', 'TEXT');
+    // 账号维度查询索引（parent 视角隔离用）；列存在才建
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_feedback_items_account ON feedback_items (account_id, ts DESC);');
   }
 
   /** 幂等加列：列已存在则跳过，否则 ALTER TABLE ADD COLUMN（旧行用 DEFAULT 填充） */
@@ -170,6 +182,8 @@ class FeedbackStore {
     const age = input.age.trim();
     const sceneId = typeof input.scene_id === 'string' && input.scene_id.trim() ? input.scene_id.trim() : null;
     const ipHash = input.ip_hash.trim();
+    const accountId =
+      typeof input.account_id === 'string' && input.account_id.trim() ? input.account_id.trim() : null;
     const now = Date.now();
 
     const existing = this.findDuplicate(sessionId, text, now - DEDUPE_WINDOW_MS);
@@ -193,14 +207,15 @@ class FeedbackStore {
       updated_at: now,
       updated_by: 'system',
       ip_hash: ipHash,
+      account_id: accountId,
     };
 
     this.db
       .prepare(`
         INSERT INTO feedback_items (
           id, session_id, turn_id, source, ts, nickname, gender, age, scene_id,
-          text, status, note, updated_at, updated_by, ip_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          text, status, note, updated_at, updated_by, ip_hash, account_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .run(
         item.id,
@@ -218,15 +233,24 @@ class FeedbackStore {
         item.updated_at,
         item.updated_by,
         item.ip_hash,
+        item.account_id,
       );
 
     return item;
   }
 
-  list(): FeedbackItem[] {
-    const rows = this.db
-      .prepare(`SELECT ${SELECT_COLS} FROM feedback_items ORDER BY ts DESC`)
-      .all() as FeedbackRow[];
+  /**
+   * 列出反馈。
+   * - 不传 accountId（现有 admin 调用）→ 全量（向后兼容，行为不变）。
+   * - 传 accountId（Step 3 parent 视角）→ 仅该账号的反馈。
+   */
+  list(accountId?: string | null): FeedbackItem[] {
+    const base = `SELECT ${SELECT_COLS} FROM feedback_items`;
+    const rows = (
+      accountId
+        ? this.db.prepare(`${base} WHERE account_id = ? ORDER BY ts DESC`).all(accountId)
+        : this.db.prepare(`${base} ORDER BY ts DESC`).all()
+    ) as FeedbackRow[];
 
     return rows
       .map((row) => toFeedbackItem(row))
