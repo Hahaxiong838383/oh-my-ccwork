@@ -510,17 +510,10 @@ async function extractCategories(
     const scored = scoreSectionItems(section);
     if (scored.length === 0) continue;
 
-    let selected: Array<{ line: string; score: number }>;
-
-    if (query && scored.length > 10) {
-      // v5.5: MMR 先选 Top 20 → LLM rerank → 取 Top 10
-      const mmrCandidates = mmrSelect(scored, 20) as Array<{ line: string; score: number; tokens: string[] }>;
-      const reranked = await llmRerank(query, mmrCandidates);
-      selected = reranked.slice(0, 10);
-    } else {
-      // 候选不多或无 query → 直接 MMR Top 10
-      selected = mmrSelect(scored, 10);
-    }
+    // reranker 已移除（2026-06-15）：qwen3-reranker 不支持 Ollama generate 接口，原 llmRerank 一直静默降级。
+    // 检索现只靠 embedding 向量召回 + MMR 多样性选择；query 参数保留供后续记忆系统重构引入正确 rerank。
+    void query;
+    const selected = mmrSelect(scored, 10);
 
     blocks.push(`## [${cat}]\n${selected.map((s) => s.line).join("\n")}`);
   }
@@ -687,134 +680,7 @@ function applyHistoricalBoost(
   return boosted;
 }
 
-// ============================================================
-// LLM 重排 v5.5（借鉴 QMD reranker pipeline）
-// ============================================================
-
-const RERANKER_MODEL = "qwen3-reranker:0.6b";
-const RERANKER_TIMEOUT_MS = 15_000;
-
-/** 缓存 reranker 可用性（避免每次请求都检查） */
-let _rerankerAvailable: boolean | null = null;
-let _rerankerCheckTime = 0;
-const RERANKER_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 分钟重新检查
-
-/** 检查 reranker 模型是否可用 */
-async function isRerankerReady(): Promise<boolean> {
-  const now = Date.now();
-  if (_rerankerAvailable !== null && now - _rerankerCheckTime < RERANKER_CHECK_INTERVAL_MS) {
-    return _rerankerAvailable;
-  }
-
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3_000);
-    const res = await fetch(`${OLLAMA_BASE}/api/tags`, { signal: controller.signal });
-    clearTimeout(timer);
-
-    if (!res.ok) {
-      _rerankerAvailable = false;
-      _rerankerCheckTime = now;
-      return false;
-    }
-
-    const data = (await res.json()) as { models?: Array<{ name: string }> };
-    _rerankerAvailable = (data.models || []).some((m) => m.name.includes("qwen3-reranker"));
-    _rerankerCheckTime = now;
-    return _rerankerAvailable;
-  } catch {
-    _rerankerAvailable = false;
-    _rerankerCheckTime = now;
-    return false;
-  }
-}
-
-/**
- * v5.5: 用 Qwen3-Reranker 对候选 items 二次打分。
- *
- * 输入 query + items，输出 rerankScore 0~1。
- * 最终分数 = 0.6 * rerankScore + 0.4 * originalScore（归一化后）。
- *
- * 降级：模型不可用 → 直接返回原列表，不阻塞。
- */
-async function llmRerank(
-  query: string,
-  items: Array<{ line: string; score: number; tokens: string[] }>,
-): Promise<Array<{ line: string; score: number; tokens: string[] }>> {
-  if (items.length === 0) return items;
-
-  const ready = await isRerankerReady();
-  if (!ready) return items;
-
-  try {
-    // 构建 reranker 输入：逐条评估相关性
-    const documents = items.map((item) => item.line.substring(0, 200));
-    const prompt = `Query: ${query.substring(0, 100)}\n\nRate each document's relevance (0.0-1.0):\n${documents.map((d, i) => `[${i}] ${d}`).join("\n")}\n\nOutput JSON array of scores:`;
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), RERANKER_TIMEOUT_MS);
-
-    const res = await fetch(`${OLLAMA_BASE}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: RERANKER_MODEL,
-        prompt,
-        stream: false,
-        options: { temperature: 0, num_predict: 200 },
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timer);
-
-    if (!res.ok) return items;
-
-    const data = (await res.json()) as { response?: string };
-    const responseText = data.response || "";
-
-    // 解析分数：尝试提取 JSON 数组 或 逐行浮点数
-    const scores = parseRerankScores(responseText, items.length);
-    if (!scores) return items;
-
-    // 归一化原始分数到 0~1
-    const maxOriginal = Math.max(...items.map((i) => i.score), 0.001);
-    const RERANK_WEIGHT = 0.6;
-    const ORIGINAL_WEIGHT = 0.4;
-
-    const reranked = items.map((item, idx) => ({
-      ...item,
-      score: RERANK_WEIGHT * scores[idx] + ORIGINAL_WEIGHT * (item.score / maxOriginal),
-    }));
-
-    reranked.sort((a, b) => b.score - a.score);
-    return reranked;
-  } catch {
-    return items; // 降级：静默回退
-  }
-}
-
-/** 从 reranker 输出解析分数数组 */
-function parseRerankScores(text: string, expectedLength: number): number[] | null {
-  // 尝试 1：JSON 数组
-  const jsonMatch = text.match(/\[[\d.,\s]+\]/);
-  if (jsonMatch) {
-    try {
-      const arr = JSON.parse(jsonMatch[0]) as number[];
-      if (arr.length === expectedLength && arr.every((n) => typeof n === "number")) {
-        return arr.map((n) => Math.max(0, Math.min(1, n)));
-      }
-    } catch { /* fallthrough */ }
-  }
-
-  // 尝试 2：逐行浮点数
-  const floats = text.match(/\d+\.\d+/g);
-  if (floats && floats.length >= expectedLength) {
-    return floats.slice(0, expectedLength).map((f) => Math.max(0, Math.min(1, parseFloat(f))));
-  }
-
-  return null;
-}
+// reranker（llmRerank v5.5）已移除（2026-06-15）：qwen3-reranker 不支持 Ollama generate，一直静默降级。待记忆系统重构再引入正确 rerank。
 
 // ============================================================
 // Ollama 配置（与 embedding.ts 共享端点）
@@ -830,13 +696,14 @@ const EXPANSION_MODEL = "qwen2.5:3b";
 const EXPANSION_TIMEOUT_MS = 8_000;
 
 /** 缓存扩展模型可用性 */
+const EXPANSION_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 分钟重新检查
 let _expansionAvailable: boolean | null = null;
 let _expansionCheckTime = 0;
 
 /** 检查扩展模型是否可用 */
 async function isExpansionReady(): Promise<boolean> {
   const now = Date.now();
-  if (_expansionAvailable !== null && now - _expansionCheckTime < RERANKER_CHECK_INTERVAL_MS) {
+  if (_expansionAvailable !== null && now - _expansionCheckTime < EXPANSION_CHECK_INTERVAL_MS) {
     return _expansionAvailable;
   }
 
@@ -1146,7 +1013,7 @@ export async function loadSharedContextLight(prompt: string, cwd: string): Promi
       // v4.5: 混合类别匹配（RRF 融合 + 检索轨迹）
       const { categories: allProjectCats, trace } = await hybridMatchCategories(prompt, memContent, cwd);
 
-      // v5.5: project 类别注入时启用 LLM rerank
+      // project 类别注入（reranker 已移除，靠 embedding 向量召回 + MMR）
       const projectBlock = allProjectCats.length > 0
         ? await extractCategories(memContent, allProjectCats, prompt)
         : "";
@@ -1232,7 +1099,7 @@ export async function loadSharedContext(prompt: string, cwd: string): Promise<st
       // v4.5: 混合类别匹配（RRF 融合 + 检索轨迹）
       const { categories: allProjectCats, trace } = await hybridMatchCategories(prompt, memContent, cwd);
 
-      // v5.5: project 类别注入时启用 LLM rerank
+      // project 类别注入（reranker 已移除，靠 embedding 向量召回 + MMR）
       const projectBlock = allProjectCats.length > 0
         ? await extractCategories(memContent, allProjectCats, prompt)
         : "";
