@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -27,6 +28,36 @@ export type AccountSeed = {
 };
 
 const DEFAULT_DB_PATH = './data/accounts.db';
+const INVITE_LIMIT = 15;
+const INVITE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+function generateInviteCode(): string {
+  let suffix = '';
+  for (let i = 0; i < 4; i += 1) {
+    suffix += INVITE_CHARS[randomInt(INVITE_CHARS.length)];
+  }
+  return `KH-${suffix}`;
+}
+
+function nextAccountNumber(accounts: Account[]): number {
+  let max = 0;
+  for (const account of accounts) {
+    const matched = /^acct-(\d+)$/.exec(account.id);
+    if (!matched) continue;
+    const n = Number.parseInt(matched[1], 10);
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  return max + 1;
+}
+
+function formatAccountId(n: number): string {
+  return `acct-${String(n).padStart(2, '0')}`;
+}
+
+function normalizeNickname(input: string | undefined, accountNo: number): string {
+  const trimmed = input?.trim();
+  return trimmed || `测试家长${String(accountNo).padStart(2, '0')}`;
+}
 
 function resolveDbPath(): string {
   const raw = process.env.ACCOUNTS_DB_PATH?.trim() || DEFAULT_DB_PATH;
@@ -93,6 +124,63 @@ class AccountStore {
     return this.db
       .prepare(`SELECT id, nickname, role, created_at FROM account ORDER BY id`)
       .all() as Account[];
+  }
+
+  countCodes(): number {
+    const row = this.db.prepare(`SELECT COUNT(*) AS count FROM invite_code`).get() as { count: number } | undefined;
+    return row?.count ?? 0;
+  }
+
+  createInvite(nickname?: string): { code: string; account_id: string; nickname: string } {
+    if (this.countCodes() >= INVITE_LIMIT) throw new Error('invite_limit');
+
+    let code = '';
+    for (let i = 0; i < 20; i += 1) {
+      const candidate = generateInviteCode();
+      if (!this.findByCode(candidate)) {
+        code = candidate;
+        break;
+      }
+    }
+    if (!code) throw new Error('invite_code_collision');
+
+    const accountNo = nextAccountNumber(this.listAccounts());
+    const accountId = formatAccountId(accountNo);
+    const accountNickname = normalizeNickname(nickname, accountNo);
+    const now = Date.now();
+
+    try {
+      this.db.exec('BEGIN');
+      this.db
+        .prepare(`INSERT INTO account (id, nickname, role, created_at) VALUES (?, ?, 'parent', ?)`)
+        .run(accountId, accountNickname, now);
+      this.db
+        .prepare(`INSERT INTO invite_code (code, account_id, used_at, created_at) VALUES (?, ?, NULL, ?)`)
+        .run(code, accountId, now);
+      this.db.exec('COMMIT');
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
+
+    return { code, account_id: accountId, nickname: accountNickname };
+  }
+
+  deleteInvite(code: string): boolean {
+    const invite = this.findByCode(code);
+    if (!invite) return false;
+
+    try {
+      this.db.exec('BEGIN');
+      this.db.prepare(`DELETE FROM invite_code WHERE code = ?`).run(invite.code);
+      this.db.prepare(`DELETE FROM account WHERE id = ?`).run(invite.account_id);
+      this.db.exec('COMMIT');
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
+
+    return true;
   }
 
   listCodes(): InviteCode[] {

@@ -1140,13 +1140,13 @@
             </div>
             <div style="background:#fff;border-radius:12px;padding:8px 20px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.04)">
               <el-table :data="snRows" style="width:100%">
-                <el-table-column prop="sn" label="设备 SN" width="170" />
-                <el-table-column prop="order" label="绑定订单" width="130" />
-                <el-table-column prop="date" label="出库日期" width="130" />
+                <el-table-column prop="sn" label="设备 SN" width="170"></el-table-column>
+                <el-table-column prop="order" label="绑定订单" width="130"></el-table-column>
+                <el-table-column prop="date" label="出库日期" width="130"></el-table-column>
                 <el-table-column label="激活状态" width="130">
                   <template #default="{row}"><el-tag :type="row.tagType" size="small">{{ row.status }}</el-tag></template>
                 </el-table-column>
-                <el-table-column prop="calc" label="分母处理" width="200" />
+                <el-table-column prop="calc" label="分母处理" width="200"></el-table-column>
                 <el-table-column label="操作">
                   <template #default="{row}"><el-button type="primary" link size="small">{{ row.op }}</el-button></template>
                 </el-table-column>
@@ -1164,10 +1164,10 @@
             </div>
             <div style="background:#fff;border-radius:12px;padding:8px 20px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.04)">
               <el-table :data="csRows" style="width:100%">
-                <el-table-column prop="sn" label="设备 SN" width="160" />
-                <el-table-column prop="phone" label="家长联系方式" width="140" />
-                <el-table-column prop="t" label="T+天数" width="90" />
-                <el-table-column prop="log" label="蓝牙错误日志摘要（外呼前必看）" min-width="280" />
+                <el-table-column prop="sn" label="设备 SN" width="160"></el-table-column>
+                <el-table-column prop="phone" label="家长联系方式" width="140"></el-table-column>
+                <el-table-column prop="t" label="T+天数" width="90"></el-table-column>
+                <el-table-column prop="log" label="蓝牙错误日志摘要（外呼前必看）" min-width="280"></el-table-column>
                 <el-table-column label="状态" width="110">
                   <template #default="{row}"><el-tag :type="row.tagType" size="small">{{ row.status }}</el-tag></template>
                 </el-table-column>
@@ -1290,6 +1290,50 @@
                       </el-table-column>
                       <el-table-column label="建档时间" width="170">
                         <template #default="{row}">{{ fmtTs(row.created_at) }}</template>
+                      </el-table-column>
+                    </el-table>
+                  </div>
+                </div>
+
+                <!-- 邀请码管理 -->
+                <div v-if="khNav==='invites'" style="flex:1;padding:20px;min-width:0">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
+                    <div>
+                      <div class="kh-h1">邀请码管理</div>
+                      <div class="kh-sub">三端共享身份锚点（家长端/体验台/admin 同一码）· 上限 15 个 · 删除会清空该账号孩子档案与设备</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+                      <span style="font-size:13px;color:#6B7785;font-weight:700">{{ inviteList.count }}/15</span>
+                      <el-button size="small" type="primary" :loading="inviteList.loading" :disabled="inviteList.count >= 15" @click="genInvite">生成邀请码</el-button>
+                      <el-button size="small" :loading="inviteList.loading" @click="loadInvites">刷新</el-button>
+                    </div>
+                  </div>
+                  <div class="kh-card" style="overflow:hidden">
+                    <el-table :data="inviteList.items" style="width:100%" :empty-text="inviteList.loading ? '加载中...' : '暂无邀请码'">
+                      <el-table-column label="邀请码" width="130">
+                        <template #default="{row}"><span style="font-family:monospace;font-weight:700">{{ row.code }}</span></template>
+                      </el-table-column>
+                      <el-table-column label="家长账号" width="130">
+                        <template #default="{row}">{{ row.account_id }}</template>
+                      </el-table-column>
+                      <el-table-column label="家长昵称" width="130">
+                        <template #default="{row}">{{ row.account_nickname }}</template>
+                      </el-table-column>
+                      <el-table-column label="孩子昵称" width="130">
+                        <template #default="{row}">{{ row.child_nickname || '未建档' }}</template>
+                      </el-table-column>
+                      <el-table-column label="状态" width="90">
+                        <template #default="{row}"><span :style="{color: row.used_at ? '#3B7A99' : '#E8833A', fontWeight:600}">{{ row.used_at ? '已登录' : '未使用' }}</span></template>
+                      </el-table-column>
+                      <el-table-column label="创建时间" width="170">
+                        <template #default="{row}">{{ fmtTs(row.created_at) }}</template>
+                      </el-table-column>
+                      <el-table-column label="操作" width="90">
+                        <template #default="{row}">
+                          <el-popconfirm title="删除后该邀请码失效，并清空对应账号的孩子档案/设备，确认？" @confirm="delInvite(row.code)">
+                            <template #reference><el-button type="danger" link>删除</el-button></template>
+                          </el-popconfirm>
+                        </template>
                       </el-table-column>
                     </el-table>
                   </div>
@@ -1732,6 +1776,8 @@
                 loadConversationHistory();
               } else if (khNav.value === 'profiles' && (!childProfiles.profiles || childProfiles.profiles.length === 0)) {
                 loadChildProfiles();
+              } else if (khNav.value === 'invites' && (!inviteList.items || inviteList.items.length === 0)) {
+                loadInvites();
               }
             });
           }
@@ -2248,7 +2294,7 @@
         var khNav = ref('board');
         var khNavs = [
           { k: 'board', l: 'Issue 看板' }, { k: 'conversations', l: '对话历史' }, { k: 'profiles', l: '孩子档案' },
-          { k: 'ledger', l: '贡献账本' }, { k: 'vault', l: '金点子库' }, { k: 'version', l: '版本决策' },
+          { k: 'invites', l: '邀请码管理' }, { k: 'ledger', l: '贡献账本' }, { k: 'vault', l: '金点子库' }, { k: 'version', l: '版本决策' },
           { k: 'revisit', l: '复访触发' }, { k: 'intercept', l: '流失拦截' }, { k: 'metrics', l: '度量看板' }, { k: 'notify', l: '回告路由' }
         ];
         var khThemes = [
@@ -2323,6 +2369,7 @@
         var conversationQuery = reactive({ accountId: '', limit: 200 });
         var conversationHistory = reactive({ items: [], loading: false });
         var childProfiles = reactive({ profiles: [], loading: false });
+        var inviteList = reactive({ items: [], count: 0, loading: false });
 
         function shortSessionId(sessionId) {
           if (!sessionId) return '—';
@@ -2383,6 +2430,75 @@
             })
             .finally(function () { childProfiles.loading = false; });
         }
+        function loadInvites() {
+          var token = getToken();
+          if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
+          inviteList.loading = true;
+          fetch('/api/admin/invites', { method: 'GET', headers: { 'Authorization': 'Bearer ' + token } })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json().catch(function () { return { ok: false, error: '服务响应异常' }; });
+            })
+            .then(function (data) {
+              if (data && data.ok) {
+                inviteList.items = data.invites || [];
+                inviteList.count = data.count || 0;
+                ElementPlus.ElMessage.success('已刷新 · ' + inviteList.count + ' 个邀请码');
+              } else {
+                ElementPlus.ElMessage.error((data && data.error) || '拉取邀请码失败');
+              }
+            })
+            .catch(function (e) {
+              if (e.message !== '401') ElementPlus.ElMessage.error('无法连接邀请码服务，请稍后重试');
+            })
+            .finally(function () { inviteList.loading = false; });
+        }
+        function genInvite() {
+          var token = getToken();
+          if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
+          inviteList.loading = true;
+          fetch('/api/admin/invites', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: '{}' })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json().catch(function () { return { ok: false, error: '服务响应异常' }; });
+            })
+            .then(function (data) {
+              if (data && data.ok && data.invite) {
+                ElementPlus.ElMessage.success('已生成邀请码 ' + data.invite.code);
+                loadInvites();
+              } else if (data && data.error) {
+                ElementPlus.ElMessage.warning(data.error);
+              } else {
+                ElementPlus.ElMessage.error('生成邀请码失败');
+              }
+            })
+            .catch(function (e) {
+              if (e.message !== '401') ElementPlus.ElMessage.error('无法连接邀请码服务，请稍后重试');
+            })
+            .finally(function () { inviteList.loading = false; });
+        }
+        function delInvite(code) {
+          var token = getToken();
+          if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
+          inviteList.loading = true;
+          fetch('/api/admin/invites/' + encodeURIComponent(code), { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json().catch(function () { return { ok: false, error: '服务响应异常' }; });
+            })
+            .then(function (data) {
+              if (data && data.ok) {
+                ElementPlus.ElMessage.success('已删除');
+                loadInvites();
+              } else {
+                ElementPlus.ElMessage.error((data && data.error) || '删除邀请码失败');
+              }
+            })
+            .catch(function (e) {
+              if (e.message !== '401') ElementPlus.ElMessage.error('无法连接邀请码服务，请稍后重试');
+            })
+            .finally(function () { inviteList.loading = false; });
+        }
         function khStatusLabel(s) {
           return { received: '已收到', reviewing: '评估中', adopted: '已采纳', vault: '金点子库' }[s] || s;
         }
@@ -2402,6 +2518,11 @@
           if (k === 'profiles') {
             nextTick(function () {
               if (!childProfiles.profiles || childProfiles.profiles.length === 0) loadChildProfiles();
+            });
+          }
+          if (k === 'invites') {
+            nextTick(function () {
+              if (!inviteList.items || inviteList.items.length === 0) loadInvites();
             });
           }
         }
@@ -2650,7 +2771,9 @@
           loadRealFeedback: loadRealFeedback, openRealIssue: openRealIssue, setRealStatus: setRealStatus,
           saveRealNote: saveRealNote, exportRealCSV: exportRealCSV,
           conversationQuery: conversationQuery, conversationHistory: conversationHistory, childProfiles: childProfiles,
+          inviteList: inviteList,
           loadConversationHistory: loadConversationHistory, loadChildProfiles: loadChildProfiles,
+          loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite,
           shortSessionId: shortSessionId, roleLabel: roleLabel, roleTagType: roleTagType,
           getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey, normalizeFeedbackItem: normalizeFeedbackItem
         };

@@ -141,6 +141,18 @@ class ProfileStore {
     return row ?? null;
   }
 
+  deleteByAccountId(accountId: string): void {
+    try {
+      this.db.exec('BEGIN');
+      this.db.prepare(`DELETE FROM family_member WHERE account_id = ?`).run(accountId);
+      this.db.prepare(`DELETE FROM device WHERE account_id = ?`).run(accountId);
+      this.db.exec('COMMIT');
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
+  }
+
   /** hub 看板：列所有孩子档案（admin 视角，按建档时间倒序）。 */
   listAllProfiles(): FamilyMember[] {
     return this.db
