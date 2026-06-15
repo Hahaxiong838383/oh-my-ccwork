@@ -65,3 +65,9 @@ export const menuItems = [
   { label: '设置', badge: false },
   { label: '使用帮助', badge: false },
 ];
+
+// 配网流程 mock：搜索到的读写台设备
+export const pairingDevice = {
+  name: '空间光学读写台',
+  model: 'EyesCare Pro-0261',
+};

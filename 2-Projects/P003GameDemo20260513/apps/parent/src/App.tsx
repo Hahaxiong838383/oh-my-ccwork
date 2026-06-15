@@ -1,7 +1,11 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { childProfile, homeStats, kidsHub, menuItems, weeklyReport, type SuggestionStatus } from './mock/data';
+import { StatusBar } from './components/chrome';
+import PairingFlow from './pages/PairingFlow';
+import ProfileSetupFlow from './pages/ProfileSetupFlow';
 
 type TabKey = 'home' | 'report' | 'kidshub' | 'mine';
+type FlowKey = 'pairing' | 'profile';
 
 type CardProps = {
   children: ReactNode;
@@ -24,27 +28,6 @@ const statusStyles: Record<SuggestionStatus, string> = {
 
 function Card({ children, className = '' }: CardProps) {
   return <section className={`rounded-2xl bg-white p-4 shadow-card ${className}`}>{children}</section>;
-}
-
-function StatusBar() {
-  return (
-    <div className="flex h-9 items-center justify-between px-7 text-xs font-semibold text-text-main">
-      <span>9:41</span>
-      <div className="flex items-center gap-1.5">
-        <span className="flex items-end gap-0.5">
-          <i className="h-1.5 w-1 rounded-sm bg-text-main" />
-          <i className="h-2 w-1 rounded-sm bg-text-main" />
-          <i className="h-2.5 w-1 rounded-sm bg-text-main" />
-          <i className="h-3 w-1 rounded-sm bg-text-main" />
-        </span>
-        <span className="text-[11px]">⌁</span>
-        <span className="relative h-3 w-6 rounded-[4px] border border-text-main">
-          <i className="absolute -right-1 top-1 h-1.5 w-0.5 rounded-r bg-text-main" />
-          <i className="absolute left-0.5 top-0.5 h-2 w-4 rounded-sm bg-text-main" />
-        </span>
-      </div>
-    </div>
-  );
 }
 
 function MiniProgramNav({ title }: { title: string }) {
@@ -100,11 +83,33 @@ function ChildBadge() {
   );
 }
 
-function HomePage() {
+function HomePage({ onStartFlow }: { onStartFlow: (flow: FlowKey) => void }) {
   const maxBar = Math.max(...homeStats.weeklyBars);
 
   return (
     <div className="space-y-4">
+      {/* 完善孩子信息引导（首次进入） */}
+      <button
+        className="flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-brand-orange to-orange-400 p-3 text-left shadow-card"
+        onClick={() => onStartFlow('profile')}
+        type="button"
+      >
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/25 text-lg">👧</span>
+        <span className="flex-1 text-sm font-semibold leading-5 text-white">补全孩子信息，让小可叫出 TA 的名字</span>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-brand-orange">去补全</span>
+      </button>
+
+      {/* 设备配网引导 */}
+      <button
+        className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-card"
+        onClick={() => onStartFlow('pairing')}
+        type="button"
+      >
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-orange-50 text-lg text-brand-orange">＋</span>
+        <span className="flex-1 text-sm font-semibold text-text-main">配网添加你的读写台设备</span>
+        <span className="text-text-muted">›</span>
+      </button>
+
       <Card>
         <ChildBadge />
       </Card>
@@ -281,34 +286,7 @@ function KidsHubPage() {
   );
 }
 
-function MinePage() {
-  const [editingChild, setEditingChild] = useState(false);
-  const [selectedGender, setSelectedGender] = useState(childProfile.gender);
-  const [needsEyeCare, setNeedsEyeCare] = useState('否');
-
-  if (editingChild) {
-    return (
-      <div className="space-y-4">
-        <button className="text-sm font-semibold text-brand-orange" onClick={() => setEditingChild(false)} type="button">‹ 返回我的</button>
-        <Card>
-          <h2 className="text-xl font-black text-text-main">孩子档案</h2>
-          <div className="mt-5 space-y-4">
-            <ProfileRow label="头像"><div className="grid h-12 w-12 place-items-center rounded-full bg-brand-orange font-bold text-white">{childProfile.avatar}</div></ProfileRow>
-            <ProfileRow label="昵称"><span className="font-semibold text-text-main">{childProfile.name}</span></ProfileRow>
-            <ProfileRow label="性别">
-              <Segmented options={['男', '女']} value={selectedGender} onChange={setSelectedGender} />
-            </ProfileRow>
-            <ProfileRow label="出生年月"><span className="font-semibold text-text-main">{childProfile.birthday}</span></ProfileRow>
-            <ProfileRow label="用眼健康关注">
-              <Segmented options={['否', '是']} value={needsEyeCare} onChange={setNeedsEyeCare} />
-            </ProfileRow>
-          </div>
-        </Card>
-        <button className="h-12 w-full rounded-2xl bg-brand-orange font-bold text-white shadow-card" type="button">保存档案</button>
-      </div>
-    );
-  }
-
+function MinePage({ onStartFlow }: { onStartFlow: (flow: FlowKey) => void }) {
   return (
     <div className="space-y-4">
       <Card>
@@ -322,11 +300,22 @@ function MinePage() {
       </Card>
 
       <Card className="p-0">
+        <button
+          className="flex h-14 w-full items-center justify-between px-4 text-left"
+          onClick={() => onStartFlow('pairing')}
+          type="button"
+        >
+          <span className="font-semibold text-text-main">设备配网 / 添加读写台</span>
+          <span className="text-text-muted">›</span>
+        </button>
+      </Card>
+
+      <Card className="p-0">
         {menuItems.map((item, index) => (
           <button
             key={item.label}
             className={`flex h-14 w-full items-center justify-between px-4 text-left ${index === 0 ? '' : 'border-t border-black/5'}`}
-            onClick={() => item.label === '孩子管理' && setEditingChild(true)}
+            onClick={() => item.label === '孩子管理' && onStartFlow('profile')}
             type="button"
           >
             <span className="flex items-center gap-2 font-semibold text-text-main">
@@ -343,47 +332,30 @@ function MinePage() {
   );
 }
 
-function ProfileRow({ label, children }: CardProps & { label: string }) {
-  return (
-    <div className="flex min-h-12 items-center justify-between gap-4 rounded-2xl bg-page-bg px-3 py-2">
-      <span className="text-sm text-text-muted">{label}</span>
-      <div className="flex items-center gap-2">{children}</div>
-    </div>
-  );
-}
-
-function Segmented({ options, value, onChange }: { options: string[]; value: string; onChange: (value: string) => void }) {
-  return (
-    <div className="flex rounded-full bg-white p-1">
-      {options.map((option) => (
-        <button
-          key={option}
-          className={`h-8 rounded-full px-4 text-sm font-bold transition ${value === option ? 'bg-brand-orange text-white' : 'text-text-muted'}`}
-          onClick={() => onChange(option)}
-          type="button"
-        >
-          {option}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
+  const [flow, setFlow] = useState<FlowKey | null>(null);
   const activeTitle = useMemo(() => tabs.find((tab) => tab.key === activeTab)?.title ?? '家长端', [activeTab]);
 
   return (
     <div className="flex min-h-screen items-center justify-center px-3 py-6">
       <div className="relative h-[844px] w-[390px] overflow-hidden rounded-[42px] border-[10px] border-slate-950 bg-page-bg shadow-phone">
-        <MiniProgramNav title={activeTitle} />
-        <main className="no-scrollbar h-[calc(100%-129px)] overflow-y-auto px-4 pb-6 pt-2">
-          {activeTab === 'home' && <HomePage />}
-          {activeTab === 'report' && <ReportPage />}
-          {activeTab === 'kidshub' && <KidsHubPage />}
-          {activeTab === 'mine' && <MinePage />}
-        </main>
-        <TabBar activeTab={activeTab} onChange={setActiveTab} />
+        {flow === 'pairing' ? (
+          <PairingFlow onExit={() => setFlow(null)} />
+        ) : flow === 'profile' ? (
+          <ProfileSetupFlow onExit={() => setFlow(null)} />
+        ) : (
+          <>
+            <MiniProgramNav title={activeTitle} />
+            <main className="no-scrollbar h-[calc(100%-129px)] overflow-y-auto px-4 pb-6 pt-2">
+              {activeTab === 'home' && <HomePage onStartFlow={setFlow} />}
+              {activeTab === 'report' && <ReportPage />}
+              {activeTab === 'kidshub' && <KidsHubPage />}
+              {activeTab === 'mine' && <MinePage onStartFlow={setFlow} />}
+            </main>
+            <TabBar activeTab={activeTab} onChange={setActiveTab} />
+          </>
+        )}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ export default {
     extend: {
       colors: {
         'page-bg': '#F5F5F7',
-        'brand-orange': '#FF7A33',
+        'brand-orange': '#FF7A45',
         'text-main': '#1A1A1A',
         'text-muted': '#8A8A8A',
       },
