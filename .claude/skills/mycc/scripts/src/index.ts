@@ -33,7 +33,7 @@ import { runDream } from "./services/dream-consolidation.js";
 import { adapter, officialAdapter } from "./adapters/index.js";
 import { runCliEngine, type EngineType } from "./adapters/cli-engine.js";
 import { HealthMonitor } from "./health-monitor.js";
-import { CloudflareProvider, NamedCloudflareProvider, WsRelayProvider } from "./tunnel-provider.js";
+import { CloudflareProvider, NamedCloudflareProvider, WsRelayProvider, type TunnelProvider } from "./tunnel-provider.js";
 import { TunnelManager } from "./tunnel-manager.js";
 import { loadPublicUrl, loadEnvFile } from "./env-loader.js";
 import { agentIntrospection } from "./introspection.js";
