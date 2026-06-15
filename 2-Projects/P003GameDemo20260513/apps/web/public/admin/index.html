@@ -1239,6 +1239,61 @@
                   </div>
                 </template>
 
+                <!-- 对话历史 -->
+                <div v-if="khNav==='conversations'" style="flex:1;padding:20px;min-width:0">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+                    <div>
+                      <div class="kh-h1">对话历史</div>
+                      <div class="kh-sub">三端共享真实会话记录（/api/conversation）· 账号为空时查看全部 · 401 自动清 token</div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                      <el-input v-model="conversationQuery.accountId" size="small" placeholder="accountId，空=全部" clearable style="width:240px" @keyup.enter="loadConversationHistory" />
+                      <el-button size="small" type="primary" :loading="conversationHistory.loading" @click="loadConversationHistory">查询</el-button>
+                    </div>
+                  </div>
+                  <div class="kh-card" style="overflow:hidden">
+                    <el-table :data="conversationHistory.items" style="width:100%" :empty-text="conversationHistory.loading ? '加载中...' : '暂无对话'">
+                      <el-table-column label="时间" width="170">
+                        <template #default="{row}">{{ fmtTs(row.ts) }}</template>
+                      </el-table-column>
+                      <el-table-column label="账号" width="170">
+                        <template #default="{row}">{{ row.account_id || '匿名' }}</template>
+                      </el-table-column>
+                      <el-table-column label="会话" width="170">
+                        <template #default="{row}">{{ shortSessionId(row.session_id) }}</template>
+                      </el-table-column>
+                      <el-table-column label="角色" width="90">
+                        <template #default="{row}"><span :style="{color: row.role==='user' ? '#3B7A99' : '#E8833A', fontWeight:600}">{{ roleLabel(row.role) }}</span></template>
+                      </el-table-column>
+                      <el-table-column label="内容" min-width="360" show-overflow-tooltip><template #default="{row}">{{ row.text }}</template></el-table-column>
+                    </el-table>
+                  </div>
+                </div>
+
+                <!-- 孩子档案 -->
+                <div v-if="khNav==='profiles'" style="flex:1;padding:20px;min-width:0">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+                    <div>
+                      <div class="kh-h1">孩子档案</div>
+                      <div class="kh-sub">三端共享真实孩子档案（/api/admin/profiles）· 设备绑定状态来自真实数据 · 401 自动清 token</div>
+                    </div>
+                    <el-button size="small" :loading="childProfiles.loading" @click="loadChildProfiles">刷新</el-button>
+                  </div>
+                  <div class="kh-card" style="overflow:hidden">
+                    <el-table :data="childProfiles.profiles" style="width:100%" :empty-text="childProfiles.loading ? '加载中...' : '暂无档案'">
+                      <el-table-column label="账号" width="170"><template #default="{row}">{{ row.account_id }}</template></el-table-column>
+                      <el-table-column label="昵称" width="140"><template #default="{row}">{{ row.nickname }}</template></el-table-column>
+                      <el-table-column label="性别" width="90"><template #default="{row}">{{ row.gender }}</template></el-table-column>
+                      <el-table-column label="出生年月" width="130"><template #default="{row}">{{ row.birthday }}</template></el-table-column>
+                      <el-table-column label="绑定设备" min-width="180">
+                        <template #default="{row}">{{ row.device && row.device.name ? row.device.name : '未绑定' }}</template>
+                      </el-table-column>
+                      <el-table-column label="建档时间" width="170">
+                        <template #default="{row}">{{ fmtTs(row.created_at) }}</template>
+                      </el-table-column>
+                    </el-table>
+                  </div>
+                </div>
                 <!-- 贡献账本 -->
                 <div v-if="khNav==='ledger'" style="flex:1;padding:20px">
                   <div class="kh-h1">贡献账本</div>
@@ -1673,6 +1728,10 @@
                 loadRealFeedback();
               } else if (khNav.value === 'metrics') {
                 nextTick(initKhRetention);
+              } else if (khNav.value === 'conversations' && (!conversationHistory.items || conversationHistory.items.length === 0)) {
+                loadConversationHistory();
+              } else if (khNav.value === 'profiles' && (!childProfiles.profiles || childProfiles.profiles.length === 0)) {
+                loadChildProfiles();
               }
             });
           }
@@ -2188,9 +2247,9 @@
         // ====== 整合版新增：KidsHub 运营台 + 运营操作台 ======
         var khNav = ref('board');
         var khNavs = [
-          { k: 'board', l: 'Issue 看板' }, { k: 'ledger', l: '贡献账本' }, { k: 'vault', l: '金点子库' },
-          { k: 'version', l: '版本决策' }, { k: 'revisit', l: '复访触发' }, { k: 'intercept', l: '流失拦截' },
-          { k: 'metrics', l: '度量看板' }, { k: 'notify', l: '回告路由' }
+          { k: 'board', l: 'Issue 看板' }, { k: 'conversations', l: '对话历史' }, { k: 'profiles', l: '孩子档案' },
+          { k: 'ledger', l: '贡献账本' }, { k: 'vault', l: '金点子库' }, { k: 'version', l: '版本决策' },
+          { k: 'revisit', l: '复访触发' }, { k: 'intercept', l: '流失拦截' }, { k: 'metrics', l: '度量看板' }, { k: 'notify', l: '回告路由' }
         ];
         var khThemes = [
           { name: '夜航·内容', n: 12, mood: '期待' }, { name: '专注·交互', n: 9, mood: '吐槽' },
@@ -2261,6 +2320,69 @@
           { sn: 'SN-2402-0205', phone: '135****5523', t: 'T+9', log: '蓝牙日志：闸门2未过 · 开盖无交互', status: '跟进中', tagType: 'primary' },
           { sn: 'SN-2401-0420', phone: '150****7741', t: 'T+12', log: '未取得联系（2 次）', status: '二次跟进', tagType: 'danger' }
         ];
+        var conversationQuery = reactive({ accountId: '', limit: 200 });
+        var conversationHistory = reactive({ items: [], loading: false });
+        var childProfiles = reactive({ profiles: [], loading: false });
+
+        function shortSessionId(sessionId) {
+          if (!sessionId) return '—';
+          var s = String(sessionId);
+          return s.length > 18 ? s.slice(0, 8) + '…' + s.slice(-6) : s;
+        }
+        function roleLabel(role) {
+          return role === 'user' ? '孩子' : (role === 'assistant' ? '小可' : (role || '—'));
+        }
+        function roleTagType(role) {
+          return role === 'user' ? 'success' : (role === 'assistant' ? 'primary' : 'info');
+        }
+        function loadConversationHistory() {
+          var token = getToken();
+          if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
+          var params = new URLSearchParams();
+          params.set('accountId', (conversationQuery.accountId || '').trim());
+          params.set('sessionId', '');
+          params.set('limit', String(conversationQuery.limit || 200));
+          conversationHistory.loading = true;
+          fetch('/api/conversation?' + params.toString(), { method: 'GET', headers: { 'Authorization': 'Bearer ' + token } })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json().catch(function () { return { ok: false, error: '服务响应异常' }; });
+            })
+            .then(function (data) {
+              if (data && data.ok) {
+                conversationHistory.items = data.items || [];
+                ElementPlus.ElMessage.success('已刷新 · ' + conversationHistory.items.length + ' 条对话');
+              } else {
+                ElementPlus.ElMessage.error((data && data.error) || '拉取对话历史失败');
+              }
+            })
+            .catch(function (e) {
+              if (e.message !== '401') ElementPlus.ElMessage.error('无法连接对话服务，请稍后重试');
+            })
+            .finally(function () { conversationHistory.loading = false; });
+        }
+        function loadChildProfiles() {
+          var token = getToken();
+          if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
+          childProfiles.loading = true;
+          fetch('/api/admin/profiles', { method: 'GET', headers: { 'Authorization': 'Bearer ' + token } })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json().catch(function () { return { ok: false, error: '服务响应异常' }; });
+            })
+            .then(function (data) {
+              if (data && data.ok) {
+                childProfiles.profiles = data.profiles || [];
+                ElementPlus.ElMessage.success('已刷新 · ' + childProfiles.profiles.length + ' 个孩子档案');
+              } else {
+                ElementPlus.ElMessage.error((data && data.error) || '拉取孩子档案失败');
+              }
+            })
+            .catch(function (e) {
+              if (e.message !== '401') ElementPlus.ElMessage.error('无法连接档案服务，请稍后重试');
+            })
+            .finally(function () { childProfiles.loading = false; });
+        }
         function khStatusLabel(s) {
           return { received: '已收到', reviewing: '评估中', adopted: '已采纳', vault: '金点子库' }[s] || s;
         }
@@ -2270,6 +2392,16 @@
           if (k === 'board') {
             nextTick(function () {
               if (!realFeedback.items || realFeedback.items.length === 0) loadRealFeedback();
+            });
+          }
+          if (k === 'conversations') {
+            nextTick(function () {
+              if (!conversationHistory.items || conversationHistory.items.length === 0) loadConversationHistory();
+            });
+          }
+          if (k === 'profiles') {
+            nextTick(function () {
+              if (!childProfiles.profiles || childProfiles.profiles.length === 0) loadChildProfiles();
             });
           }
         }
@@ -2517,6 +2649,9 @@
           realFeedback: realFeedback, realCols: realCols, realDrawer: realDrawer, realDrawerOpen: realDrawerOpen,
           loadRealFeedback: loadRealFeedback, openRealIssue: openRealIssue, setRealStatus: setRealStatus,
           saveRealNote: saveRealNote, exportRealCSV: exportRealCSV,
+          conversationQuery: conversationQuery, conversationHistory: conversationHistory, childProfiles: childProfiles,
+          loadConversationHistory: loadConversationHistory, loadChildProfiles: loadChildProfiles,
+          shortSessionId: shortSessionId, roleLabel: roleLabel, roleTagType: roleTagType,
           getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey, normalizeFeedbackItem: normalizeFeedbackItem
         };
       }

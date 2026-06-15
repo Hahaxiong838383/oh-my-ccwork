@@ -8,6 +8,7 @@ import { feedbackRoute } from './routes/feedback.js';
 import { conversationRoute } from './routes/conversation.js';
 import { visionRoute } from './routes/vision.js';
 import { profileRoute } from './routes/profile.js';
+import { adminDataRoute } from './routes/admin-data.js';
 import { checkAndCount, getClientIp } from './guard.js';
 import { verifyAuthToken, type AuthContext } from './auth-jwt.js';
 
@@ -21,6 +22,7 @@ app.route('/api/feedback', feedbackRoute);
 app.route('/api/conversation', conversationRoute);
 app.route('/api/vision', visionRoute);
 app.route('/api/profile', profileRoute);
+app.route('/api/admin', adminDataRoute);
 
 const server = serve(
   {

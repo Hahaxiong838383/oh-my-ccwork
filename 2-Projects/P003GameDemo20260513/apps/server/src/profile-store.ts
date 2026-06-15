@@ -140,6 +140,20 @@ class ProfileStore {
       .get(accountId) as Device | undefined;
     return row ?? null;
   }
+
+  /** hub 看板：列所有孩子档案（admin 视角，按建档时间倒序）。 */
+  listAllProfiles(): FamilyMember[] {
+    return this.db
+      .prepare(`SELECT id, account_id, nickname, birthday, gender, created_at, updated_at FROM family_member ORDER BY created_at DESC`)
+      .all() as FamilyMember[];
+  }
+
+  /** hub 看板：列所有已绑定设备（admin 视角）。 */
+  listAllDevices(): Device[] {
+    return this.db
+      .prepare(`SELECT id, account_id, model, name, bound_at FROM device ORDER BY bound_at DESC`)
+      .all() as Device[];
+  }
 }
 
 export const profileStore = new ProfileStore();
