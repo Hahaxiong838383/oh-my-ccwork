@@ -75,4 +75,22 @@ adminDataRoute.delete('/invites/:code', (c) => {
   }
 });
 
+adminDataRoute.patch('/invites/:code', async (c) => {
+  try {
+    const code = c.req.param('code').trim();
+    if (!code) return c.json({ ok: false, error: '邀请码不能为空' }, 400);
+    const body = (await c.req.json().catch(() => ({}))) as { nickname?: unknown };
+    const nickname = typeof body.nickname === 'string' ? body.nickname.trim() : '';
+    if (!nickname) return c.json({ ok: false, error: '昵称不能为空' }, 400);
+
+    const invite = accountStore.findByCode(code);
+    if (!invite) return c.json({ ok: false, error: '邀请码不存在' }, 404);
+
+    accountStore.updateNickname(invite.account_id, nickname);
+    return c.json({ ok: true });
+  } catch (error) {
+    return c.json({ ok: false, error: '更新昵称失败，请稍后重试' }, 500);
+  }
+});
+
 export { adminDataRoute };

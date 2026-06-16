@@ -183,6 +183,12 @@ class AccountStore {
     return true;
   }
 
+  /** 更新家长昵称（admin 用来备注邀请码发给谁）。 */
+  updateNickname(accountId: string, nickname: string): boolean {
+    const r = this.db.prepare(`UPDATE account SET nickname = ? WHERE id = ?`).run(nickname, accountId);
+    return Number(r.changes) > 0;
+  }
+
   listCodes(): InviteCode[] {
     return this.db
       .prepare(`SELECT code, account_id, used_at, created_at FROM invite_code ORDER BY code`)

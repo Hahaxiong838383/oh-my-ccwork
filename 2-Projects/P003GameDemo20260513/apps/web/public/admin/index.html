@@ -1316,8 +1316,8 @@
                       <el-table-column label="家长账号" width="130">
                         <template #default="{row}">{{ row.account_id }}</template>
                       </el-table-column>
-                      <el-table-column label="家长昵称" width="130">
-                        <template #default="{row}">{{ row.account_nickname }}</template>
+                      <el-table-column label="家长昵称（备注发给谁）" min-width="160">
+                        <template #default="{row}"><el-input v-model="row.account_nickname" size="small" placeholder="点此备注，如：邻居王姐" @change="saveNickname(row)"></el-input></template>
                       </el-table-column>
                       <el-table-column label="孩子昵称" width="130">
                         <template #default="{row}">{{ row.child_nickname || '未建档' }}</template>
@@ -2499,6 +2499,28 @@
             })
             .finally(function () { inviteList.loading = false; });
         }
+        function saveNickname(row) {
+          var token = getToken();
+          if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
+          var nickname = (row.account_nickname || '').trim();
+          if (!nickname) { ElementPlus.ElMessage.warning('昵称不能为空'); loadInvites(); return; }
+          fetch('/api/admin/invites/' + encodeURIComponent(row.code), {
+            method: 'PATCH',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nickname: nickname })
+          })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json().catch(function () { return { ok: false, error: '服务响应异常' }; });
+            })
+            .then(function (data) {
+              if (data && data.ok) ElementPlus.ElMessage.success('已保存「' + nickname + '」');
+              else ElementPlus.ElMessage.error((data && data.error) || '保存失败');
+            })
+            .catch(function (e) {
+              if (e.message !== '401') ElementPlus.ElMessage.error('保存失败，请稍后重试');
+            });
+        }
         function khStatusLabel(s) {
           return { received: '已收到', reviewing: '评估中', adopted: '已采纳', vault: '金点子库' }[s] || s;
         }
@@ -2773,7 +2795,7 @@
           conversationQuery: conversationQuery, conversationHistory: conversationHistory, childProfiles: childProfiles,
           inviteList: inviteList,
           loadConversationHistory: loadConversationHistory, loadChildProfiles: loadChildProfiles,
-          loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite,
+          loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname,
           shortSessionId: shortSessionId, roleLabel: roleLabel, roleTagType: roleTagType,
           getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey, normalizeFeedbackItem: normalizeFeedbackItem
         };
