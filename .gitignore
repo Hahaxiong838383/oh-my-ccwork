@@ -305,3 +305,12 @@ AGENTS.md.bak.*
 
 # 记忆向量索引(派生数据,从 memory-items.md 随时重建;2.2MB 不入 git 防 auto-push 每日膨胀)
 0-System/memory-vectors.json
+
+# 阶段0 记忆召回日志(本地敏感,含query可能涉secret/客户名,绝不进git)
+0-System/recall-log.jsonl
+0-System/recall-logger.err
+
+# 运行态产物（锁/备份/临时），不入 git
+.claude/skills/scheduler/.tasks.lock.json
+*.json.bak
+.codex/tmp/
