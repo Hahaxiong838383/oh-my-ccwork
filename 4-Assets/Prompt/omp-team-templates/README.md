@@ -51,14 +51,15 @@ bash 4-Assets/Prompt/omp-team-templates/review-3send.sh /tmp/review.md
 
 ## codex lane 路由 (A3/B5,见 `_codex_lane.sh`)
 
-三级降级链(双网关 2026-06-10 晚):
+四级降级链(三网关,2026-06-16 主次重排——网关1 长期 403 降垫底):
 
-- **① 网关1 主路**: `curl` `https://10521052.xyz/v1` (cc-switch 同款) `gpt-5.5` + `reasoning_effort=high` + **`stream:true` 流式**,**直连**(强制 `--noproxy` + unset proxy,网关在国内不走 xray 代理)。实测 6 轮综合微胜网关2(轻任务快 21%,吞吐 148 vs 132 字/秒)
-  - ★ **为何流式**:网关在 Cloudflare 后,源站 ~100s 不响应回 **HTTP 524**。非流式重 reasoning 任务憋满 ~125s 必 524 卡死(2026-06-10 实测);流式持续吐 SSE 字节刷新 CF 空闲计时器绕过。`--connect-timeout 15` + `--max-time 300` 硬上限兜底
-- **② 网关2 第一降级**: `curl` `https://cc-sub2.whtaibang.top/v1` `gpt-5.5` 同参数(重任务首字反而更快 5.3s vs 7.2s)。⚠️ 其 WAF 拦 Python-urllib UA(curl/Bun/node/codex UA 放行);`/responses` 不认 `max_output_tokens`
-- **③ 订阅兜底**: API 链全失败自动切 `omp -p --model openai-codex/gpt-5.4` (ChatGPT 订阅 OAuth,独立路径;订阅 5.5 常卡死故用 5.4)
-- **key**: 存 `~/.gateway.env` 的 `CODEX_API_GATEWAY_KEY`(网关1) / `CODEX_API_GATEWAY2_KEY`(网关2) (chmod 600,home 目录不入 git)
-- **自测旋钮**: `CODEX_FORCE_FALLBACK=1`(直达订阅) / `CODEX_SKIP_GW1=1`(验证网关2路)
+- **① 网关2 主路**: `curl` `https://cc-sub2.whtaibang.top/v1` (黎夏) `gpt-5.5` + `reasoning_effort=high` + **`stream:true` 流式**,**直连**(强制 `--noproxy` + unset proxy)。⚠️ 其 WAF 拦 Python-urllib UA(curl/Bun/node/codex UA 放行);`/responses` 不认 `max_output_tokens`
+  - ★ **为何流式**:网关在 Cloudflare 后,源站 ~100s 不响应回 **HTTP 524**。非流式重 reasoning 任务憋满 ~125s 必 524 卡死;流式持续吐 SSE 字节刷新 CF 空闲计时器绕过。`--connect-timeout 15` + `--max-time 900` 硬上限 + 截断抢救兜底
+- **② 网关3 第一降级**: `curl` `https://api-direct.hahaxiong.top/v1` (川哥日本自建 CLIProxyAPI,聚合 team+gemini+grok) `gpt-5.5`。2026-06-16 实测最快最稳(轻请求 1.75s),自建可控
+- **③ 网关1 垫底**: `curl` `https://10521052.xyz/v1` (cc-switch 同款) `gpt-5.5`。⚠️ **2026-06-16 实测长期 403「无权访问 20X专用通道分组」**(账号被移出分组,非限流);403 修好后自动复用。曾是主路(6 轮综合微胜)
+- **④ 订阅兜底**: API 链全失败自动切 `omp -p --model openai-codex/gpt-5.4` (ChatGPT 订阅 OAuth,独立路径;订阅 5.5 常卡死故用 5.4)
+- **key**: 存 `~/.gateway.env` 的 `CODEX_API_GATEWAY_KEY`(网关1) / `CODEX_API_GATEWAY2_KEY`(网关2) / `CODEX_API_GATEWAY3_KEY`(网关3) (chmod 600,home 目录不入 git)
+- **自测旋钮**: `CODEX_FORCE_FALLBACK=1`(直达订阅) / `CODEX_SKIP_GW1=1`(跳过垫底网关1,省一次 403 往返)
 - 注: curl 主路是「prompt→文本」对话(非 agentic 改 repo),team 产出本就是文本交 cc 综合,无损
 
 ## 失败模式 + 降级

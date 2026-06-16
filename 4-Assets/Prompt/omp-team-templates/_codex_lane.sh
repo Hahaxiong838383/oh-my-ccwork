@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # 被 code-2send.sh / review-3send.sh source。提供 run_codex_lane()。
 #
-# team codex lane = 「双 API 网关流式主路 + 订阅 OAuth 兜底」三级降级链
-#   (川哥钦定 2026-06-09,流式加固 2026-06-10,双网关 2026-06-10 晚):
-#   ① 网关1: curl https://10521052.xyz/v1 (cc-switch 同款) gpt-5.5 + reasoning_effort=high
-#      实测 6 轮综合微胜网关2(轻任务快 21% / 吞吐 148 vs 132 字/秒) → 主路
-#   ② 网关2: curl https://cc-sub2.whtaibang.top/v1 gpt-5.5 (2026-06-10 川哥提供)
-#      重任务首字反而更快(5.3s vs 7.2s),作第一降级
+# team codex lane = 「三 API 网关流式主路 + 订阅 OAuth 兜底」四级降级链
+#   (川哥钦定 2026-06-09,流式加固 06-10,三网关 06-15,主次重排 06-16):
+#   ① 网关2: curl https://cc-sub2.whtaibang.top/v1 gpt-5.5 (黎夏,川哥 06-10 提供) → 主路
 #      ⚠️ 其 WAF 拦 Python-urllib UA(curl/Bun/node/codex UA 均放行);/responses 不认 max_output_tokens
-#   ③ 订阅: omp -p --model openai-codex/gpt-5.4 (ChatGPT OAuth,独立路径;订阅 5.5 常卡死故用 5.4)
+#   ② 网关3: curl https://api-direct.hahaxiong.top/v1 gpt-5.5 (川哥日本自建 CLIProxyAPI,聚合 team+gemini+grok)
+#      实测最快最稳(轻请求 1.75s),自建可控,见 memory reference_japan_codex_relay
+#   ③ 网关1: curl https://10521052.xyz/v1 (cc-switch 同款) gpt-5.5 → 垫底
+#      ⚠️ 2026-06-16 实测长期 403「无权访问 20X专用通道 分组」(账号被移出分组,非限流),
+#         降垫底;403 修好(套餐/分组恢复)后自动复用。CODEX_SKIP_GW1=1 可整个跳过它
+#   ④ 订阅: omp -p --model openai-codex/gpt-5.4 (ChatGPT OAuth,独立路径;订阅 5.5 常卡死故用 5.4)
 #
 #   ★ stream:true 流式 —— 两网关都在 Cloudflare 后,源站 ~100s 不响应即回 HTTP 524。
 #     非流式重 reasoning 任务憋满 ~125s 无字节必 524 卡死(2026-06-10 实测根因);
@@ -24,14 +26,14 @@
 #     注: omp -p 正文常在结束时一次性落盘,不能照搬 codex_run.sh 的「字节停滞」判 hang。
 #
 # key 来源: ~/.gateway.env (chmod 600,home 目录不入 git)
-#   网关1 = CODEX_API_GATEWAY_KEY / _BASE_URL;网关2 = CODEX_API_GATEWAY2_KEY / _BASE_URL
+#   网关1=CODEX_API_GATEWAY_KEY / 网关2=CODEX_API_GATEWAY2_KEY / 网关3=CODEX_API_GATEWAY3_KEY (各带 _BASE_URL)
 #   只 grep 提取 CODEX_*,不 source 整个文件 —— 避免图像网关的 OPENAI_BASE_URL 污染 omp
 #
 # 注: curl 主路是「prompt→文本」对话(非 agentic 改文件),team 双发/三发产出本就是文本
 #     交 cc 综合挑优,故无损;且 A3 不再 agentic 改 repo,反而消除与 A1 grok(--cwd) 写冲突。
 #
 # 调试旋钮: CODEX_FORCE_FALLBACK=1 跳过全部 API 网关直接走订阅(验证兜底路)
-#           CODEX_SKIP_GW1=1     跳过网关1(验证网关2降级路)
+#           CODEX_SKIP_GW1=1     跳过垫底网关1(它长期 403,默认仍尝试;设1可省一次往返)
 #           CODEX_FALLBACK_TIMEOUT=N 订阅 omp 硬超时秒数(默认 480)
 #           CODEX_FALLBACK_CMD='...' 订阅命令测试替身(模拟挂死/失败,不真调 omp)
 #           CODEX_API_MAX_TIME=N  网关 curl 总时长硬上限秒数(默认 900)
@@ -117,23 +119,30 @@ run_codex_lane () {
   # 只取 CODEX_* 凭据(不 source,防 OPENAI_BASE_URL 污染 omp 降级)
   local key1="" base1="https://10521052.xyz/v1"
   local key2="" base2="https://cc-sub2.whtaibang.top/v1"
+  local key3="" base3="https://api-direct.hahaxiong.top/v1"
   if [ -f "$HOME/.gateway.env" ]; then
     key1=$(grep -E '^CODEX_API_GATEWAY_KEY=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
     key2=$(grep -E '^CODEX_API_GATEWAY2_KEY=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
+    key3=$(grep -E '^CODEX_API_GATEWAY3_KEY=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
     local b
     b=$(grep -E '^CODEX_API_GATEWAY_BASE_URL=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
     [ -n "$b" ] && base1="$b"
     b=$(grep -E '^CODEX_API_GATEWAY2_BASE_URL=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
     [ -n "$b" ] && base2="$b"
+    b=$(grep -E '^CODEX_API_GATEWAY3_BASE_URL=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
+    [ -n "$b" ] && base3="$b"
   fi
 
-  # ── ①② API 网关链: 网关1 主路 → 网关2 第一降级 ──
+  # ── API 网关链 (2026-06-16 主次重排,网关1 长期 403 降垫底): 网关2 主 → 网关3 → 网关1(垫底) ──
   if [ "${CODEX_FORCE_FALLBACK:-0}" != 1 ]; then
-    if [ -n "$key1" ] && [ "${CODEX_SKIP_GW1:-0}" != 1 ]; then
-      _codex_lane_api_try "$base1" "$key1" "网关1(10521052)" "$prompt" "$out" "$err" "$label" && return 0
-    fi
     if [ -n "$key2" ]; then
       _codex_lane_api_try "$base2" "$key2" "网关2(cc-sub2)" "$prompt" "$out" "$err" "$label" && return 0
+    fi
+    if [ -n "$key3" ]; then
+      _codex_lane_api_try "$base3" "$key3" "网关3(日本cpa)" "$prompt" "$out" "$err" "$label" && return 0
+    fi
+    if [ -n "$key1" ] && [ "${CODEX_SKIP_GW1:-0}" != 1 ]; then
+      _codex_lane_api_try "$base1" "$key1" "网关1(10521052,垫底403)" "$prompt" "$out" "$err" "$label" && return 0
     fi
     echo "[$label] ⚠️ API 网关链全失败 → 兜底 omp 订阅 gpt-5.4" | tee -a "$err" >&2
   else
