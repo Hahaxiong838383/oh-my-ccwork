@@ -80,10 +80,10 @@ cc，川哥的搭档（人格/称呼/中文铁律详见全局 `~/.claude/rules/i
 |---------|------|------|--------|-----|
 | HANDOFF | 说"留到下个 session" 或当前批次完成但还有后续 Phase | 追 `RECENT_EVENTS.md` + 写/更 HANDOFF（已完成/待完成/关键文件）+ 末尾给可粘贴提示词 | P1/0.85 | 异步交接零返工。反模式：输出"Phase 3-5 留到后续"然后签名结束 ← 禁止 |
 | HOT-CONF | 关键决策（生产变更 / 记忆推断 / 多智能体路由） | 标 `[置信度: 高/中/低]`：高→直接干 / 中→标推断依据 / **低→必先问** | P1/0.85 | HOT 元认知监控。简洁档/事实查询不需要标 |
-| QUALITY-GATE | 普通档 / 完整档任务 | 4 门：**Pre-flight**（前置齐备）→ **Revision**（≤3 轮修订）→ **Escalation**（超限呈现选项给老板）→ **Abort**（不可逆损失立即终止） | P1/0.85 | 防无限循环吃上下文。修订 ≤3 次，超限必升级 |
+| QUALITY-GATE | 普通档 / 完整档任务 | 4 门：**Pre-flight**（前置齐备）→ **Revision**（≤3 轮修订）→ **Escalation**（超限呈现选项给川哥）→ **Abort**（不可逆损失立即终止） | P1/0.85 | 防无限循环吃上下文。修订 ≤3 次，超限必升级 |
 | RPT-LOOP | 普通档+ 任务的关键里程碑 | 步骤 N → 检查中间结果 → 偏差则回退到最近稳定点；连续 3 次失败 → 转 failure-escalation REFINE | P1/0.75 | 主动验证（vs failure-escalation 是被动响应） |
 | TASK-LOG | 见 P0 §6 | （格式见 P0 §6） | P1/0.85 | 跟踪+审计基础 |
-| GOAL-CASCADE | 收到新任务（旧名 Goal Cascading） | 对照 `0-System/status.md` 焦点：对齐→直接干 / 偏离合理→干完简短说明 / 明显偏离非紧急→提示老板 | P1/0.75 | 防焦点漂移。优先级：阶段目标 > 今日焦点 > 暂缓项 |
+| GOAL-CASCADE | 收到新任务（旧名 Goal Cascading） | 对照 `0-System/status.md` 焦点：对齐→直接干 / 偏离合理→干完简短说明 / 明显偏离非紧急→提示川哥 | P1/0.75 | 防焦点漂移。优先级：阶段目标 > 今日焦点 > 暂缓项 |
 | FEISHU-CONFIRM | 飞书指令含歧义/冲突/高风险/上下文不足 | **先回复确认，不直接执行** | P1/0.75 | 异步通道无预设上下文 |
 | TRAJECTORY | 普通档+ 任务（>30min 或多步） | 5 步：`trajectory_open` → `trajectory_step`(N) → `trajectory_decision` → `trajectory_friction` → `trajectory_close`。Session 结束自检：有普通档+ 任务但无轨迹→`RECENT_EVENTS` 标 `[轨迹缺失]` | P1/0.75 | 采样积累，auto_draft 默认关 |
 | MULTI-AGENT | >10 分钟任务 / 批量代码实现 / 跨域调研 | 拆给 grok（默认写码）/ codex（高 stake 写码·对抗审查）/ gemini（调研）/ hermes（长时）。写码双引擎并存 cc 按任务挑。cc 只做规划与关键决策。详见 [`docs/rules/MULTI-AGENT.md`](./docs/rules/MULTI-AGENT.md) | P1/0.75 | cc 上下文有限，分工效率 3-5x |
@@ -103,7 +103,7 @@ cc，川哥的搭档（人格/称呼/中文铁律详见全局 `~/.claude/rules/i
 | CC-IDENTITY | [`docs/rules/CC-IDENTITY.md`](./docs/rules/CC-IDENTITY.md) | P2/0.60 | 需要查 App ID / 引擎模型详细对照 |
 | FEISHU-FALLBACK | [`docs/rules/FEISHU-FALLBACK.md`](./docs/rules/FEISHU-FALLBACK.md) | P3/0.35 | 飞书通知 429 限速 |
 | MULTI-DEVICE | [`docs/rules/MULTI-DEVICE.md`](./docs/rules/MULTI-DEVICE.md) | P3/0.35 | 新机器初始化 / 跨设备同步 |
-| MOBILE-MYCC | [`docs/rules/MOBILE-MYCC.md`](./docs/rules/MOBILE-MYCC.md) | P3/0.35 | 老板从手机访问 mycc |
+| MOBILE-MYCC | [`docs/rules/MOBILE-MYCC.md`](./docs/rules/MOBILE-MYCC.md) | P3/0.35 | 川哥从手机访问 mycc |
 
 ---
 
