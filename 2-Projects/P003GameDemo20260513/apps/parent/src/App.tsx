@@ -368,7 +368,7 @@ export default function App() {
     <div className="flex min-h-[100dvh] justify-center bg-slate-100 md:items-center md:px-3 md:py-6">
       <div className="relative h-[100dvh] w-full max-w-[440px] overflow-hidden bg-page-bg md:h-[844px] md:w-[390px] md:max-w-none md:rounded-[42px] md:border-[10px] md:border-slate-950 md:shadow-phone">
         {!loggedIn ? (
-          <InviteLoginPage onLogin={() => setLoggedIn(true)} />
+          <InviteLoginPage onLogin={() => { setLoggedIn(true); setFlow('pairing'); }} />
         ) : flow === 'pairing' ? (
           <PairingFlow onExit={() => setFlow(null)} />
         ) : flow === 'profile' ? (

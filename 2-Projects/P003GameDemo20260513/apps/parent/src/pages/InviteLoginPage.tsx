@@ -5,10 +5,11 @@ import { useState } from 'react';
 import { StatusBar } from '../components/chrome';
 
 const TOKEN_KEY = 'parent.token';
+const CODE_KEY = 'parent.invite_code'; // 记住上次邀请码(localStorage),内测免反复输
 
 export default function InviteLoginPage({ onLogin }: { onLogin: () => void }) {
   const [step, setStep] = useState<'code' | 'authorize'>('code');
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(() => localStorage.getItem(CODE_KEY) ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +41,7 @@ export default function InviteLoginPage({ onLogin }: { onLogin: () => void }) {
       const data = (await res.json().catch(() => ({}))) as { token?: string };
       if (res.ok && data.token) {
         sessionStorage.setItem(TOKEN_KEY, data.token);
+        localStorage.setItem(CODE_KEY, trimmed); // 记住邀请码,下次自动填充
         onLogin();
       } else {
         setError('邀请码无效');
