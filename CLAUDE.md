@@ -88,6 +88,7 @@ cc，川哥的搭档（人格/称呼/中文铁律详见全局 `~/.claude/rules/i
 | TRAJECTORY | 普通档+ 任务（>30min 或多步） | 5 步：`trajectory_open` → `trajectory_step`(N) → `trajectory_decision` → `trajectory_friction` → `trajectory_close`。Session 结束自检：有普通档+ 任务但无轨迹→`RECENT_EVENTS` 标 `[轨迹缺失]` | P1/0.75 | 采样积累，auto_draft 默认关 |
 | MULTI-AGENT | >10 分钟任务 / 批量代码实现 / 跨域调研 | 拆给 grok（默认写码）/ codex（高 stake 写码·对抗审查）/ gemini（调研）/ hermes（长时）。写码双引擎并存 cc 按任务挑。cc 只做规划与关键决策。详见 [`docs/rules/MULTI-AGENT.md`](./docs/rules/MULTI-AGENT.md) | P1/0.75 | cc 上下文有限，分工效率 3-5x |
 
+| WORKTREE-FLOW | 在 mycc 下新建/使用 git worktree 开展工作时 | 1. **隔离**：一任务一 worktree；2. **不污染全局**：worktree 内绝不修改 0-System 等全局状态文件（全局状态由主 session 维护）；3. **阅后即焚**：任务完成/合并后及时清理（`git worktree remove`）。 | P1/0.85 | 防止并行 session/任务发生状态竞态与冲突。 |
 ---
 
 # P2 / P3 · 索引（按需 grep）
@@ -135,3 +136,13 @@ cc，川哥的搭档（人格/称呼/中文铁律详见全局 `~/.claude/rules/i
 | [`3-Thinking/06-意识理论与认知架构映射.md`](./3-Thinking/06-意识理论与认知架构映射.md) | 六大意识理论 × mycc 架构（HOT/GWT/IIT/RPT/AST/PP） |
 | [`3-Thinking/07-ISO方法论.md`](./3-Thinking/07-ISO方法论.md) | **ISO 目标导向方案推导与验证框架**（配套 `/iso` skill） |
 | [`.claude/skills/rule-compress/SKILL.md`](./.claude/skills/rule-compress/SKILL.md) | **万能公式 v1 规则压缩 skill**（`/rule-compress`） |
+
+<!-- MYCC_WORKTREE_RULES_BEGIN -->
+## Worktree 工作流规则(原生隔离)
+
+- 一任务一 worktree,不在主 checkout 混不相关工作;并行 session 各进各的 worktree。
+- worktree **不改全局状态**:`0-System` 是指向 `~/.mycc-global/0-System` 的 tracked symlink(共享外置状态),不要替换成实目录,不要在 worktree 里对 `0-System/**` 跑 `sed -i`/格式化/递归清理。
+- 不改 `CLAUDE.md`/`rules/`/`.claude/skills/`,除非走专门 governance 任务并提回 main。
+- 完事 `git worktree remove` + `prune` 清理,别让 worktree 积成第二工作区。
+- **绝不碰 `~/.claude`**:记忆 canonical 由 Claude 原生管。
+<!-- MYCC_WORKTREE_RULES_END -->
