@@ -8,7 +8,7 @@
 #   ② 网关3: curl https://api-direct.hahaxiong.top/v1 gpt-5.5 (川哥日本自建 CLIProxyAPI,聚合 team+gemini+grok)
 #      实测最快最稳(轻请求 1.75s),自建可控,见 memory reference_japan_codex_relay
 #   ③ 网关1: curl https://10521052.xyz/v1 (cc-switch 同款) gpt-5.5 → 垫底
-#      ⚠️ 2026-06-16 实测长期 403「无权访问 20X专用通道 分组」(账号被移出分组,非限流),
+#      ⚠️ 2026-06-16 曾突发 403「无权访问 20X专用通道 分组」(账号被移出分组,非限流),同日已修复恢复 200,
 #         降垫底;403 修好(套餐/分组恢复)后自动复用。CODEX_SKIP_GW1=1 可整个跳过它
 #   ④ 订阅: omp -p --model openai-codex/gpt-5.4 (ChatGPT OAuth,独立路径;订阅 5.5 常卡死故用 5.4)
 #
@@ -33,7 +33,7 @@
 #     交 cc 综合挑优,故无损;且 A3 不再 agentic 改 repo,反而消除与 A1 grok(--cwd) 写冲突。
 #
 # 调试旋钮: CODEX_FORCE_FALLBACK=1 跳过全部 API 网关直接走订阅(验证兜底路)
-#           CODEX_SKIP_GW1=1     跳过垫底网关1(它长期 403,默认仍尝试;设1可省一次往返)
+#           CODEX_SKIP_GW1=1     跳过垫底网关1(默认仍尝试;设1可省一次往返)
 #           CODEX_FALLBACK_TIMEOUT=N 订阅 omp 硬超时秒数(默认 480)
 #           CODEX_FALLBACK_CMD='...' 订阅命令测试替身(模拟挂死/失败,不真调 omp)
 #           CODEX_API_MAX_TIME=N  网关 curl 总时长硬上限秒数(默认 900)
@@ -133,7 +133,7 @@ run_codex_lane () {
     [ -n "$b" ] && base3="$b"
   fi
 
-  # ── API 网关链 (2026-06-16 主次重排,网关1 长期 403 降垫底): 网关2 主 → 网关3 → 网关1(垫底) ──
+  # ── API 网关链 (2026-06-16 主次重排,网关1 曾403已修复降垫底): 网关2 主 → 网关3 → 网关1(垫底) ──
   if [ "${CODEX_FORCE_FALLBACK:-0}" != 1 ]; then
     if [ -n "$key2" ]; then
       _codex_lane_api_try "$base2" "$key2" "网关2(cc-sub2)" "$prompt" "$out" "$err" "$label" && return 0
@@ -142,7 +142,7 @@ run_codex_lane () {
       _codex_lane_api_try "$base3" "$key3" "网关3(日本cpa)" "$prompt" "$out" "$err" "$label" && return 0
     fi
     if [ -n "$key1" ] && [ "${CODEX_SKIP_GW1:-0}" != 1 ]; then
-      _codex_lane_api_try "$base1" "$key1" "网关1(10521052,垫底403)" "$prompt" "$out" "$err" "$label" && return 0
+      _codex_lane_api_try "$base1" "$key1" "网关1(10521052,垫底)" "$prompt" "$out" "$err" "$label" && return 0
     fi
     echo "[$label] ⚠️ API 网关链全失败 → 兜底 omp 订阅 gpt-5.4" | tee -a "$err" >&2
   else
