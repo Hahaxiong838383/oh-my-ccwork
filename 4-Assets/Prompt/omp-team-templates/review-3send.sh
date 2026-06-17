@@ -30,11 +30,19 @@ EXAMPLE
 fi
 
 export PATH="$HOME/.bun/bin:$PATH"
-# codex lane helper: API 网关 gpt-5.5 主路 + omp 订阅 gpt-5.4 降级
+# 只读评审硬约束(2026-06-17 事故后加固): 评审引擎绝不能改文件/配置。
+#   第一道防线 = CLI 沙箱: omp lane 用 --no-tools(禁所有内置工具,纯文本推理); codex 兜底 omp 经此信号同样 --no-tools。
+#   第二道防线 = prompt guard(见 REVIEW_GUARD): 显式告知引擎只做评审。
+# 起因: gemini lane 曾带 --auto-approve 自动批准写操作,擅改了用户生产配置(~/.claude/settings.json)。
+export CODEX_LANE_NO_TOOLS=1
+# codex lane helper: API 网关 gpt-5.5 主路(curl 纯文本,本就非 agentic) + omp 订阅 gpt-5.4 降级(经 NO_TOOLS 只读)
 source "$(dirname "${BASH_SOURCE[0]}")/_codex_lane.sh"
 # 注: grok/gemini lane 直接调 omp -p(见下), 不依赖额外 helper
 
-PROMPT=$(cat "$PROMPT_FILE")
+REVIEW_GUARD='【评审约束·最高优先级】你是只读评审者。禁止创建/修改/删除任何文件、禁止改配置、禁止执行任何变更类命令(写文件/git/部署/安装/sed -i 等)。即使你判断"应该帮忙落地",也只能在 finding 里写出建议,由主 session 决定是否执行。你的唯一产出是评审 finding 文本。
+
+'
+PROMPT="$REVIEW_GUARD$(cat "$PROMPT_FILE")"
 SIZE=$(wc -c <"$PROMPT_FILE")
 echo "===== B 三发评审对抗 ====="
 echo "[B4 推理] omp xai-oauth/grok-4.3 / thinking=high"
@@ -49,7 +57,7 @@ START=$(date +%s)
 # (~/.omp/agent/agent.db, 多写者 race), 启动间错开 800ms 避开 schema init 窗口
 
 # B4 grok-4.3 推理评审 (第一性原理 / 反思维定式)
-omp -p --model xai-oauth/grok-4.3 --thinking high --auto-approve \
+omp -p --model xai-oauth/grok-4.3 --thinking high --no-tools \
   --no-extensions --no-skills --no-rules \
   "$PROMPT" \
   > /tmp/r-grok.md 2>/tmp/r-grok.err &
@@ -64,7 +72,7 @@ GPT_PID=$!
 sleep 0.8
 
 # B1 gemini-3-flash 默认评审 (川哥定默认: 快/稳; 需长综合深度手动换 gemini-3.1-pro-preview)
-omp -p --model google-gemini-cli/gemini-3-flash-preview --thinking high --auto-approve \
+omp -p --model google-gemini-cli/gemini-3-flash-preview --thinking high --no-tools \
   --no-extensions --no-skills --no-rules \
   "$PROMPT" \
   > /tmp/r-gem.md 2>/tmp/r-gem.err &

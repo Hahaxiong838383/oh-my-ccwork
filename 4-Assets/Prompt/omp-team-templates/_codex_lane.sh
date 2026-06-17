@@ -158,7 +158,11 @@ run_codex_lane () {
   if [ -n "${CODEX_FALLBACK_CMD:-}" ]; then
     bash -c "$CODEX_FALLBACK_CMD" > "$out" 2>>"$err" &
   else
-    omp -p --model openai-codex/gpt-5.4 --thinking high --auto-approve \
+    # 评审上下文(调用方 export CODEX_LANE_NO_TOOLS=1)走只读 --no-tools(禁所有工具,纯文本);
+    #   写码上下文(code-2send 不设此变量)保留 --auto-approve。codex 主路 curl 本就非 agentic,此处加固兜底 omp。
+    local codex_tool_flag="--auto-approve"
+    [ "${CODEX_LANE_NO_TOOLS:-0}" = 1 ] && codex_tool_flag="--no-tools"
+    omp -p --model openai-codex/gpt-5.4 --thinking high "$codex_tool_flag" \
       --no-extensions --no-skills --no-rules \
       "$prompt" > "$out" 2>>"$err" &
   fi
