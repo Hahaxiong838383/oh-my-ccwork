@@ -1,3 +1,5 @@
+> 归档自 tasks/，日期 2026-06-17（不再活跃）
+
 # cc-remote：基于 ttyd 的多 CLI 远程终端平台
 
 > 在公网通过 Web 页面远程操作 macmini/macbook/Windows 上的 Claude Code、Codex、Gemini CLI

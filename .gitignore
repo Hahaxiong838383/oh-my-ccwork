@@ -314,3 +314,6 @@ AGENTS.md.bak.*
 .claude/skills/scheduler/.tasks.lock.json
 *.json.bak
 .codex/tmp/
+
+# 11G 评测项目，不纳入 mycc 仓
+2-Projects/kidsbench-eval/

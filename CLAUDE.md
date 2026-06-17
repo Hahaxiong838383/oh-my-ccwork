@@ -35,13 +35,21 @@ cc，川哥的搭档（人格/称呼/中文铁律详见全局 `~/.claude/rules/i
 
 输出检查结果后，再提出修复方案。**禁止跳过检查直接猜测根因。**
 
-## 4. 记忆系统（单一 canonical + 备份副本）
+## 4. 记忆系统（三位置 + 身份所有权）
 
-> 详见 [`docs/memory-system.md`](./docs/memory-system.md)
+> B 系统（EvoMap）的分层/检索/遗忘细节详见 [`docs/memory-system.md`](./docs/memory-system.md)
 
-- **canonical 单源** = `~/.claude/projects/-Users-rayman-chen-mycc/memory/`（cc 读写唯一处）。常驻只有 `MEMORY.md` 热索引(46 条 ★)，全量见 `INDEX-full.md`，任何主题 `rg <kw>` 召回。mycc 镜像 = 写后单向 cp 的只读备份副本（供 git push 备份/多设备），**非第二真相源，不双写**。
+**三个位置，用途不同，不是同一份的镜像：**
+
+| 代号 | 路径 | 是什么 | 读写 |
+|------|------|--------|------|
+| **A canonical** | `~/.claude/projects/-Users-rayman-chen-mycc/memory/` | cc 跨项目长期经验库（`feedback_*.md` + `MEMORY.md` 热索引 + `INDEX-full.md`） | cc 直接读写，唯一处 |
+| **MIRROR** | `~/mycc/.claude/.../memory/` | A 的只读 git 备份 | `~/.claude/scripts/mycc-memory-sync.sh` 从 A 单向 rsync，**不手改** |
+| **B EvoMap** | `~/.mycc-global/0-System/`（=`0-System` symlink） | mycc 运行态：`memory-items.md`/`memory.db`/向量/`RECENT_EVENTS`/`status`/`about-me` | mycc 后端 + hooks + 三引擎共享读写 |
+
+- **身份所有权（防漂移铁律）**：用户身份/称呼归各引擎私有入口——cc→`~/.claude/rules/identity.md`、codex→`AGENTS.md`、gemini→`GEMINI.md`；**禁止写入 B 的 `memory-items.md`**（`mycc-lint-structure.sh` 守护）。A 与 B 唯一同名文件 `MEMORY.md` **互不同步**，各是各系统的索引。
 - **secret 绝不入记忆**（只存指针，写前自查；2026-06-13 已清 1 处 evodesk token）。
-- **每次 Session 必做**：开始读 `0-System/RECENT_EVENTS.md`（近 7 天热窗，全量在 `events/`）；结束追加事件 + 提取原子 Item 到 `memory-items.md`。
+- **每次 Session 必做**：开始读 `0-System/RECENT_EVENTS.md`（近 7 天热窗，全量在 `events/`）；结束追加事件 + 提取原子 Item 到 `memory-items.md`（身份类除外）。
 
 ## 5. 文件归档铁律
 
