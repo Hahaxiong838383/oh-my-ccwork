@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# B 三发评审对抗: B4 grok-4.3 推理 + B5 codex(API网关gpt-5.5主路+omp订阅gpt-5.4降级) 严谨 + B2 gemini-3.1-pro 学术
+# B 三发评审对抗: B4 grok-4.3 推理 + B5 codex(API网关gpt-5.5主路+omp订阅gpt-5.4降级) 严谨 + B1 gemini-3-flash 默认(川哥定: gemini 默认先 flash, 需长综合深度手动换 B2 gemini-3.1-pro-preview)
 # 用法: bash review-3send.sh <review-prompt-file>
 # 输出: /tmp/r-grok.md / /tmp/r-gpt.md / /tmp/r-gem.md (三家独立 finding)
 # cc 后续: 三方综合 / 取并集 / 标各家独有发现 / 跑测试验证
@@ -32,13 +32,14 @@ fi
 export PATH="$HOME/.bun/bin:$PATH"
 # codex lane helper: API 网关 gpt-5.5 主路 + omp 订阅 gpt-5.4 降级
 source "$(dirname "${BASH_SOURCE[0]}")/_codex_lane.sh"
+# 注: grok/gemini lane 直接调 omp -p(见下), 不依赖额外 helper
 
 PROMPT=$(cat "$PROMPT_FILE")
 SIZE=$(wc -c <"$PROMPT_FILE")
 echo "===== B 三发评审对抗 ====="
 echo "[B4 推理] omp xai-oauth/grok-4.3 / thinking=high"
 echo "[B5 严谨] codex API 网关 gpt-5.5(主) → omp 订阅 gpt-5.4(降级) / reasoning=high"
-echo "[B2 学术] omp google-gemini-cli/gemini-3.1-pro-preview / thinking=high"
+echo "[B1 默认] omp google-gemini-cli/gemini-3-flash-preview / thinking=high"
 echo "prompt: $PROMPT_FILE ($SIZE 字节)"
 echo ""
 
@@ -62,8 +63,8 @@ GPT_PID=$!
 
 sleep 0.8
 
-# B2 gemini-3.1-pro 学术评审 (长综合 / Google 偏精准)
-omp -p --model google-gemini-cli/gemini-3.1-pro-preview --thinking high --auto-approve \
+# B1 gemini-3-flash 默认评审 (川哥定默认: 快/稳; 需长综合深度手动换 gemini-3.1-pro-preview)
+omp -p --model google-gemini-cli/gemini-3-flash-preview --thinking high --auto-approve \
   --no-extensions --no-skills --no-rules \
   "$PROMPT" \
   > /tmp/r-gem.md 2>/tmp/r-gem.err &
@@ -79,7 +80,7 @@ echo ""
 echo "===== 结果汇总 ====="
 echo "B4 grok-4.3 推理: RC=$GROK_RC, 输出 $(wc -l </tmp/r-grok.md 2>/dev/null || echo 0) 行"
 echo "B5 gpt-5.5 严谨: RC=$GPT_RC, 输出 $(wc -l </tmp/r-gpt.md 2>/dev/null || echo 0) 行"
-echo "B2 gemini-pro 学术: RC=$GEM_RC, 输出 $(wc -l </tmp/r-gem.md 2>/dev/null || echo 0) 行"
+echo "B1 gemini-3-flash 默认: RC=$GEM_RC, 输出 $(wc -l </tmp/r-gem.md 2>/dev/null || echo 0) 行"
 echo "总耗时 = $((END-START))s (vs 串行省时 ≈1.7x)"
 echo ""
 
@@ -101,5 +102,5 @@ echo "  2. 两家共识 finding → 中置信度,核验后修"
 echo "  3. 一家独有 finding → 低置信度,标'待验证',跑测试或人工 review 验证"
 echo "  4. 写 REVIEW.md 综合各家观点 + cc 自验补充"
 echo ""
-echo "若需升级到顶级评审 (+ B3 VPS proxy 3.5-flash 付费档):"
+echo "若需升级到顶级四发评审 (+ B3 antigravity gemini-3.5-flash 免费深度档):"
 echo "  bash review-4send.sh $PROMPT_FILE"

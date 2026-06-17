@@ -3,15 +3,15 @@
 > 用途：mycc team 模式 v3 的标准调用脚本,封装"A 双发实现"和"B 三发评审"两个核心动作
 > 入参：cc 写好 `/tmp/p.md` (任务/AC) 和（可选）`/tmp/review.md` (评审内容),然后跑对应脚本
 > 适用：自动触发条件 = 高 stake (认证/支付/迁移/事故/安全/不可回滚) 或 高难度 (>1000 行/跨子系统/并发/算法核心)
-> 顶级触发：川哥手动说"大活/不能错" 或 cc 风险预警确认后 → 跑 `review-4send.sh` 加 B3 付费档
+> 顶级触发：川哥手动说"大活/不能错" 或 cc 风险预警确认后 → 跑 `review-4send.sh`（真四发 B4+B5+B1+B3；B3 = 免费 antigravity gemini-3.5-flash，2026-06-17 复活）
 
 ## 三个标准动作
 
 | 脚本 | 用途 | 触发 |
 |------|------|------|
 | `code-2send.sh` | A 双发写码实现 (A1 grok-build + A3 codex: 双网关 gpt-5.5 链→omp 订阅 gpt-5.4 兜底) | 高 stake/高难度 写码 |
-| `review-3send.sh` | B 三发评审对抗 (B4 grok + B5 codex: 双网关 gpt-5.5 链→omp 订阅 gpt-5.4 兜底 + B2 gemini-pro) | 高 stake/高难度 评审,顶级评审第一阶段 |
-| `review-4send.sh` | B 四发评审顶级 (上面三家 + B3 VPS proxy 3.5-flash) | **顶级**评审,川哥手动触发或 cc 预警确认 |
+| `review-3send.sh` | B 三发评审对抗 (B4 grok + B5 codex: 双网关 gpt-5.5 链→omp 订阅 gpt-5.4 兜底 + B1 gemini-3-flash) | 高 stake/高难度 评审,顶级评审第一阶段 |
+| `review-4send.sh` | B 四发评审 (B4 grok + B5 codex + B1 gemini-flash + **B3 antigravity gemini-3.5-flash 免费深度档**) | **顶级**评审,川哥手动触发或 cc 预警确认 |
 
 ## 使用流程
 
@@ -66,7 +66,8 @@ bash 4-Assets/Prompt/omp-team-templates/review-3send.sh /tmp/review.md
 
 - omp 进程崩 → 切对应 CLI 直调 (grok / codex / gemini)
 - 凭据 refresh 失败 → 重跑对应 `4-Assets/SOP/omp-*-bypass-import.sh`
-- B3 VPS proxy 不可达 → 降级到 B2 gemini-3.1-pro (omp 路径)
+- B3 antigravity (`google-antigravity/gemini-3.5-flash`) 失败 → ① 确认 xray 在跑 (`pgrep -fl 'xray run'`) ② `grep cloudcode ~/xray/access.log | tail` 确认走 `Gemini专用-US2` 节点(非美宅,否则 Google 判 400) ③ 缺 B3 不阻塞,按三发综合。详见 memory `project_antigravity_team_b3`
+- 旧 B3 VPS proxy 付费档(Vertex AI `23.226.135.149:4000`)保留作备用,已被免费 antigravity 取代
 
 ## 关联
 
