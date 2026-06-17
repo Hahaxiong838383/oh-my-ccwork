@@ -19,6 +19,9 @@ if [ ! -d "$REPO_PATH/.git" ]; then
 fi
 
 export PATH="$HOME/.bun/bin:$PATH"
+# 写码上下文显式声明保留写权限(2026-06-17 加固): 无视任何 review 脚本残留的 CODEX_LANE_NO_TOOLS=1
+#   (子进程本就隔离,正常用法安全; 此行防 source/手动 export 残留误把 codex 兜底锁成只读)。
+export CODEX_LANE_NO_TOOLS=0
 # codex lane helper: API 网关 gpt-5.5 主路 + omp 订阅 gpt-5.4 降级
 source "$(dirname "${BASH_SOURCE[0]}")/_codex_lane.sh"
 
