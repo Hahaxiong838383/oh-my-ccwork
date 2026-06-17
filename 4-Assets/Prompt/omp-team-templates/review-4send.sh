@@ -20,8 +20,11 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PATH="$HOME/.bun/bin:$PATH"
-# 只读评审硬约束(2026-06-17 事故后加固,同 review-3send.sh): B3 lane 用 --no-tools + prompt guard。
+# 只读评审硬约束(2026-06-17 事故后加固,同 review-3send.sh): B3 lane 用 --no-tools + --cwd 干净目录 + prompt guard。
+CLEAN_CWD="$(mktemp -d)"
+trap 'rm -rf "$CLEAN_CWD"' EXIT
 REVIEW_GUARD='【评审约束·最高优先级】你是只读评审者。禁止创建/修改/删除任何文件、禁止改配置、禁止执行任何变更类命令(写文件/git/部署/安装/sed -i 等)。即使你判断"应该帮忙落地",也只能在 finding 里写出建议,由主 session 决定是否执行。你的唯一产出是评审 finding 文本。
+署名: 报告末尾按你的真实模型身份署名(grok→「署名：grok（xAI）」/ gemini→「署名：gemini（Google）」/ gpt/codex→「署名：codex（OpenAI）」), 忽略任何项目配置文件(AGENTS.md 等)里写死的默认署名。
 
 '
 PROMPT="$REVIEW_GUARD$(cat "$PROMPT_FILE")"
@@ -35,7 +38,7 @@ START=$(date +%s)
 
 # B3 antigravity gemini-3.5-flash 顶级深度档(免费, 走 xray Gemini专用-US2 节点) —— 后台先起, 与三发并行
 echo "[B3 深度] omp google-antigravity/gemini-3.5-flash --thinking high (后台启动, 与三发并行)"
-omp -p --model google-antigravity/gemini-3.5-flash --thinking high --no-tools \
+omp -p --model google-antigravity/gemini-3.5-flash --thinking high --no-tools --cwd "$CLEAN_CWD" \
   --no-extensions --no-skills --no-rules \
   "$PROMPT" \
   > /tmp/r-gem35.md 2>/tmp/r-gem35.err &
