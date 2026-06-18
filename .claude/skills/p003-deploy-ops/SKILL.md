@@ -43,6 +43,13 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **家长昵称可编辑**=备注邀请码发给谁(admin el-input @change → PATCH → updateNickname)。
 - 10 个 seed 码:`scripts/seed-accounts.ts`(KH-9K2M/4R7T/8W3X/2P6L/5N1V/7B9D/3H4F/6Q8S/1Z5C/0J7G)。
 
+## 限额运营（公网防刷兜底）
+
+`guard.ts` per-IP 日限额(内存 Map,UTC+8 自然日重置,**进程重启即清**):`ws_session 连接 / chat_round 对话轮 / vision`,默认 `60/120/200`,env `GUARD_WS_SESSIONS_PER_DAY`/`GUARD_CHAT_ROUNDS_PER_DAY`/`GUARD_VISION_PER_DAY` 覆盖(0=不限)。`getClientIp` 优先 `x-real-ip`(nginx `/ws/voice` 必设 `X-Real-IP $remote_addr`)。
+- **误伤排查**:报"今日体验次数已达上限"先看日志 `[ws] open ip=` 是否真实客户端 IP(非 127.0.0.1 共享限额)→排除 IP 取错→再判真超限。同文案两处:ws_session(连不上进不去)/chat_round(进去后语音报错),据此定位。
+- **内测调大**:`.env.local` `GUARD_*=1000/2000` + `pm2 restart`;**正式开放前必改回 60/120/200**(公网无密码裸放被刷量/刷费)。
+- **admin 自助重置**:邀请码页顶部「重置今日限额」按钮(`POST /api/admin/reset-quota` → `guard.resetAllQuotas()` 清 Map),内测自助免 ssh,不重启服务/不断连接。
+
 ## 坑清单（都踩过,改前必看）
 
 1. **admin DOM 内 Vue 自闭合**:`<el-table-column .../>`/`<el-input .../>` 自闭合→浏览器解析成嵌套**吞掉后续列**布局错乱,**必须成对** `<el-table-column ...></el-table-column>`。`el-tag` 在该 admin CSS 环境**不可见**→用 `<span :style="{color:...}">` inline color。
