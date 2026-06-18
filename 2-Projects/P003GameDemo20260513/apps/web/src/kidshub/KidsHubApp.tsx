@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useKidsHubStore } from './store/kidshub-store';
-import { InviteLoginPage } from './InviteLoginPage';
+import { InviteLoginPage, applyProfileToVariables, normalizeProfile } from './InviteLoginPage';
 import { StudioPage } from './StudioPage';
 import { getSharedVoiceClient } from '../services/voice-client';
 
@@ -18,6 +18,7 @@ const isPublicMode = import.meta.env.VITE_KIDSHUB_PUBLIC === '1';
 export function KidsHubApp() {
   const token = useKidsHubStore((s) => s.token);
   const setToken = useKidsHubStore((s) => s.setToken);
+  const setVariable = useKidsHubStore((s) => s.setVariable);
   const [checking, setChecking] = useState(true);
   const [publicStarted, setPublicStarted] = useState(!isPublicMode);
 
@@ -39,9 +40,16 @@ export function KidsHubApp() {
         const res = await fetch('/api/profile', {
           headers: { Authorization: `Bearer ${t}` },
         });
-        if (!cancelled && !res.ok) {
-          // JWT 失效
-          setToken(null);
+        if (!cancelled) {
+          if (!res.ok) {
+            setToken(null); // JWT 失效
+          } else {
+            // P1.4 每次进体验台回源 profile，刷新 variables（覆盖 localStorage 旧值）——
+            // 语音改名/家长改档后，重开体验台界面就用最新名字（profile 是唯一真相源）。
+            const data = await res.json().catch(() => ({}));
+            const profile = normalizeProfile(data?.profile);
+            if (profile) applyProfileToVariables(profile, setVariable);
+          }
         }
       } catch {
         // 网络问题时保守保留（下次操作会再失败）
@@ -53,7 +61,7 @@ export function KidsHubApp() {
     return () => {
       cancelled = true;
     };
-  }, [token, setToken]);
+  }, [token, setToken, setVariable]);
 
   if (checking) {
     return (

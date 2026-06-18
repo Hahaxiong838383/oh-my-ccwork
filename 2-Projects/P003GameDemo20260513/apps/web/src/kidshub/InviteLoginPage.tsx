@@ -32,13 +32,14 @@ function toProfileGender(gender: VariableGender): ProfileGender {
   return gender === '女' ? '女孩' : '男孩';
 }
 
-function applyProfileToVariables(profile: ChildProfile, setVariable: (key: string, value: string) => void) {
+// P1.4：导出供 KidsHubApp 启动时回源 profile 刷新 variables（覆盖 localStorage 旧值）。
+export function applyProfileToVariables(profile: ChildProfile, setVariable: (key: string, value: string) => void) {
   setVariable('nickname', profile.nickname);
   setVariable('gender', toVariableGender(profile.gender));
   setVariable('age', String(calcAge(profile.birthday)));
 }
 
-function normalizeProfile(value: unknown): ChildProfile | null {
+export function normalizeProfile(value: unknown): ChildProfile | null {
   if (!value || typeof value !== 'object') return null;
   const profile = value as Partial<ChildProfile>;
   if (typeof profile.nickname !== 'string' || typeof profile.birthday !== 'string') return null;
