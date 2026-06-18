@@ -8,6 +8,7 @@ import { createDeepseekLlmClient } from './providers/deepseek-llm.js';
 import { createVolcAsrClient, type VolcAsrClient } from './providers/volc-asr.js';
 import { createVolcTtsClient, type VolcTtsClient } from './providers/volc-tts.js';
 import { createExpressionFilter, stripExpressionTags } from './expression-filter.js';
+import { assembleSystemPrompt } from './prompt-orchestrator.js';
 
 export type SessionMeta = {
   sessionId: string;
@@ -303,9 +304,12 @@ export class VoicePipeline {
       // 需求1：吐槽模式 → 追加吐槽回应人格（共情+感谢+不过度承诺）。feedbackMode 由调用方传入：
       // ASR 路径用本轮快照(capturedTurnMeta)判定，chat.trigger 开场白恒 false。普通对话维持原 prompt。
       const baseSystemPrompt = this.sessionSystemPrompt ?? DEFAULT_SYSTEM_PROMPT;
-      const systemPrompt = feedbackMode
+      const withFeedback = feedbackMode
         ? `${baseSystemPrompt}\n\n${FEEDBACK_PERSONA_SUFFIX}`
         : baseSystemPrompt;
+      // P0.2 后端 Prompt Orchestrator：追加「关于这个孩子」user_memory 区块（登录用 profile-store
+      // 权威，匿名用本轮 meta）。下方 debug.prompt_assembled 会回发含此块的完整 prompt（所见即所发）。
+      const systemPrompt = assembleSystemPrompt(withFeedback, turnMeta, this.authContext);
       // 工作台调试流依赖：回发本轮真实使用的 prompt（所见即所发）
       this.send({ type: 'debug.prompt_assembled', systemPrompt, userText: finalText });
 
