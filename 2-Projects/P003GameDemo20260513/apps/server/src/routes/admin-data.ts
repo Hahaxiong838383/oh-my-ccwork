@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { accountStore } from '../account-store.js';
+import { conversationStore } from '../conversation-store.js';
 import { profileStore } from '../profile-store.js';
 import { isValidToken } from './auth.js';
 import { resetAllQuotas } from '../guard.js';
@@ -28,15 +29,19 @@ adminDataRoute.get('/profiles', (c) => {
 
 adminDataRoute.get('/invites', (c) => {
   try {
+    const stats = conversationStore.statsByAccount();
     const invites = accountStore.listCodes().map((invite) => {
       const account = accountStore.findAccount(invite.account_id);
       const profile = profileStore.getProfile(invite.account_id);
+      const stat = stats[invite.account_id];
       return {
         code: invite.code,
         account_id: invite.account_id,
         account_nickname: account?.nickname ?? '',
         child_nickname: profile?.nickname ?? '',
         used_at: invite.used_at,
+        conv_count: stat?.count ?? 0,
+        token_sum: stat?.tokens ?? 0,
         created_at: invite.created_at,
       };
     });

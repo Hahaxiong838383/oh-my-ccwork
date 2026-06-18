@@ -166,6 +166,10 @@ class AccountStore {
     return { code, account_id: accountId, nickname: accountNickname };
   }
 
+  markUsed(code: string): void {
+    this.db.prepare(`UPDATE invite_code SET used_at = ? WHERE code = ? AND used_at IS NULL`).run(Date.now(), code.trim());
+  }
+
   deleteInvite(code: string): boolean {
     const invite = this.findByCode(code);
     if (!invite) return false;

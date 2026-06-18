@@ -12,6 +12,7 @@ export type ConversationItem = {
   role: ConversationRole;
   text: string;
   ts: number;
+  tokens: number;
 };
 
 export type ConversationAddInput = {
@@ -19,6 +20,7 @@ export type ConversationAddInput = {
   session_id: string;
   role: ConversationRole;
   text: string;
+  tokens?: number;
 };
 
 export type ConversationListOptions = {
@@ -34,10 +36,11 @@ type ConversationRow = {
   role: string;
   text: string;
   ts: number;
+  tokens: number;
 };
 
 const DEFAULT_DB_PATH = './data/conversation.db';
-const CONVERSATION_COLUMNS = ['id', 'account_id', 'session_id', 'role', 'text', 'ts'] as const;
+const CONVERSATION_COLUMNS = ['id', 'account_id', 'session_id', 'role', 'text', 'ts', 'tokens'] as const;
 const SELECT_COLS = CONVERSATION_COLUMNS.join(', ');
 const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 1_000;
@@ -57,6 +60,7 @@ function toConversationItem(row: ConversationRow | null | undefined): Conversati
     role: row.role,
     text: row.text,
     ts: row.ts,
+    tokens: Number(row.tokens) || 0,
   };
 }
 
@@ -80,13 +84,18 @@ class ConversationStore {
         session_id TEXT NOT NULL,
         role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
         text TEXT NOT NULL,
-        ts INTEGER NOT NULL
+        ts INTEGER NOT NULL,
+        tokens INTEGER NOT NULL DEFAULT 0
       );
       CREATE INDEX IF NOT EXISTS idx_conversation_account_ts
       ON conversation (account_id, ts DESC);
       CREATE INDEX IF NOT EXISTS idx_conversation_session_ts
       ON conversation (session_id, ts);
     `);
+    const cols = this.db.prepare('PRAGMA table_info(conversation)').all() as Array<{ name: string }>;
+    if (!cols.some((col) => col.name === 'tokens')) {
+      this.db.exec('ALTER TABLE conversation ADD COLUMN tokens INTEGER NOT NULL DEFAULT 0');
+    }
   }
 
   add(input: ConversationAddInput): ConversationItem {
@@ -100,11 +109,12 @@ class ConversationStore {
       role: input.role,
       text,
       ts: Date.now(),
+      tokens: input.tokens ?? 0,
     };
 
     this.db
-      .prepare(`INSERT INTO conversation (${SELECT_COLS}) VALUES (?, ?, ?, ?, ?, ?) `)
-      .run(item.id, item.account_id, item.session_id, item.role, item.text, item.ts);
+      .prepare(`INSERT INTO conversation (${SELECT_COLS}) VALUES (?, ?, ?, ?, ?, ?, ?) `)
+      .run(item.id, item.account_id, item.session_id, item.role, item.text, item.ts, item.tokens);
 
     return item;
   }
@@ -133,6 +143,17 @@ class ConversationStore {
     return rows
       .map((row) => toConversationItem(row))
       .filter((item): item is ConversationItem => item !== null);
+  }
+
+  statsByAccount(): Record<string, { count: number; tokens: number }> {
+    const rows = this.db
+      .prepare(
+        `SELECT account_id, COUNT(*) AS count, COALESCE(SUM(tokens), 0) AS tokens FROM conversation WHERE account_id IS NOT NULL GROUP BY account_id`,
+      )
+      .all() as Array<{ account_id: string; count: number; tokens: number }>;
+    const out: Record<string, { count: number; tokens: number }> = {};
+    for (const r of rows) out[r.account_id] = { count: Number(r.count), tokens: Number(r.tokens) };
+    return out;
   }
 }
 

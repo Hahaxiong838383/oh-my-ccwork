@@ -1328,6 +1328,12 @@
                       <el-table-column label="状态" width="90">
                         <template #default="{row}"><span :style="{color: row.used_at ? '#3B7A99' : '#E8833A', fontWeight:600}">{{ row.used_at ? '已登录' : '未使用' }}</span></template>
                       </el-table-column>
+                      <el-table-column label="对话次数" width="90">
+                        <template #default="{row}">{{ row.conv_count || 0 }}</template>
+                      </el-table-column>
+                      <el-table-column label="Token" width="100">
+                        <template #default="{row}">{{ (row.token_sum || 0).toLocaleString() }}</template>
+                      </el-table-column>
                       <el-table-column label="创建时间" width="170">
                         <template #default="{row}">{{ fmtTs(row.created_at) }}</template>
                       </el-table-column>

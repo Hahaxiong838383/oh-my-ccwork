@@ -1,9 +1,11 @@
+type GeminiUsage = { totalTokens: number; promptTokens: number; completionTokens: number };
+
 export interface GeminiLlmClient {
   streamChat(opts: {
     systemPrompt: string;
     userText: string;
     onDelta: (delta: string) => void;
-    onDone: (fullText: string) => void;
+    onDone: (fullText: string, usage?: GeminiUsage) => void;
     onError: (err: Error) => void;
   }): Promise<void>;
 }
@@ -48,7 +50,7 @@ class GeminiLlmClientImpl implements GeminiLlmClient {
     systemPrompt: string;
     userText: string;
     onDelta: (delta: string) => void;
-    onDone: (fullText: string) => void;
+    onDone: (fullText: string, usage?: GeminiUsage) => void;
     onError: (err: Error) => void;
   }): Promise<void> {
     const proxyUrl = process.env.GEMINI_PROXY_URL;
@@ -76,6 +78,7 @@ class GeminiLlmClientImpl implements GeminiLlmClient {
         body: JSON.stringify({
           model,
           stream: true,
+          stream_options: { include_usage: true },
           temperature: getTemperature(),
           // 按模型动态取上限：2.5-pro 32768 / 2.5+3.x 系列 65535 / MiniMax 8192
           max_tokens: getMaxTokensForModel(model),
@@ -99,6 +102,7 @@ class GeminiLlmClientImpl implements GeminiLlmClient {
       const decoder = new TextDecoder();
       let buffer = '';
       let fullText = '';
+      let lastUsage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -118,7 +122,9 @@ class GeminiLlmClientImpl implements GeminiLlmClient {
           try {
             const evt = JSON.parse(chunk) as {
               choices?: Array<{ delta?: { content?: string } }>;
+              usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
             };
+            if (evt.usage) lastUsage = evt.usage;
             const delta = evt.choices?.[0]?.delta?.content;
             if (!delta) continue;
             fullText += delta;
@@ -129,7 +135,16 @@ class GeminiLlmClientImpl implements GeminiLlmClient {
         }
       }
 
-      opts.onDone(fullText.trim());
+      opts.onDone(
+        fullText.trim(),
+        lastUsage
+          ? {
+              totalTokens: lastUsage.total_tokens ?? 0,
+              promptTokens: lastUsage.prompt_tokens ?? 0,
+              completionTokens: lastUsage.completion_tokens ?? 0,
+            }
+          : undefined,
+      );
     } catch (err) {
       if (controller.signal.aborted) return;
       opts.onError(toError(err));

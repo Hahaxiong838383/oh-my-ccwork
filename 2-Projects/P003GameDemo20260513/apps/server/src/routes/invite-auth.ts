@@ -31,6 +31,13 @@ inviteAuthRoute.post('/invite', async (c) => {
     return c.json({ error: 'invalid_code' }, 401);
   }
 
+  try {
+    accountStore.markUsed(code);
+  } catch (error) {
+    console.error('[invite-auth] mark_used_failed', error);
+  }
+
+
   const rawSecret = process.env.AUTH_JWT_SECRET || DEFAULT_AUTH_SECRET;
   if (rawSecret === DEFAULT_AUTH_SECRET && !warnedDefaultSecret) {
     warnedDefaultSecret = true;

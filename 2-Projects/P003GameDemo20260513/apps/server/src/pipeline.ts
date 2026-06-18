@@ -216,7 +216,7 @@ export class VoicePipeline {
     }
   }
 
-  private captureConversation(role: 'user' | 'assistant', text: string, meta: SessionMeta | null): void {
+  private captureConversation(role: 'user' | 'assistant', text: string, meta: SessionMeta | null, tokens = 0): void {
     const finalText = text.trim();
     if (!finalText || !meta) return;
 
@@ -226,6 +226,7 @@ export class VoicePipeline {
         session_id: meta.sessionId,
         role,
         text: finalText,
+        tokens,
       });
     } catch (err) {
       console.error('[conversation] capture_fail', {
@@ -321,12 +322,12 @@ export class VoicePipeline {
           if (turn !== this.activeTurn) return;
           emitFiltered(exprFilter.feed(delta));
         },
-        onDone: (fullText) => {
+        onDone: (fullText, usage) => {
           if (turn !== this.activeTurn) return;
           // 兜底：整条回复只有标记/标记未闭合时，缓冲区剩余在这里放行
           emitFiltered(exprFilter.flush());
           const assistantText = stripExpressionTags(fullText).text;
-          this.captureConversation('assistant', assistantText, turnMeta);
+          this.captureConversation('assistant', assistantText, turnMeta, usage?.totalTokens ?? 0);
           this.send({ type: 'llm.done', text: assistantText });
           this.tts?.finish();
         },
