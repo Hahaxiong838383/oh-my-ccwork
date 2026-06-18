@@ -31,6 +31,10 @@ function buildChildMemoryBlock(meta: ChildMeta | null, auth: AuthContext | null)
   let nickname = sanitizeField(meta?.nickname);
   let gender = sanitizeField(meta?.gender);
   let age = sanitizeField(meta?.age);
+  // P1.3 画像增强字段（仅登录用户从 profile 拿，匿名 meta 没有这些）。
+  let interests: string[] = [];
+  let preferredAddress = '';
+  let recentEmotion = '';
 
   // 登录用户：profile-store 是后端权威源，全字段覆盖前端 meta（家长在档案里改了以它为准）。
   if (auth?.accountId) {
@@ -42,18 +46,25 @@ function buildChildMemoryBlock(meta: ChildMeta | null, auth: AuthContext | null)
       // 无生日才保留前端 meta.age。
       const profileAge = ageFromBirthday(p.birthday);
       if (profileAge) age = profileAge;
+      // P1.3 语音抽取沉淀的画像（兴趣/称呼偏好/近期情绪）也注入，让小可真正「懂这个孩子」。
+      interests = p.interests.map((i) => sanitizeField(i.value)).filter(Boolean).slice(0, 5);
+      preferredAddress = sanitizeField(p.preferred_address);
+      recentEmotion = sanitizeField(p.recent_emotion);
     }
   }
 
   const parts: string[] = [];
   if (nickname) parts.push(`昵称：${nickname}`);
+  if (preferredAddress) parts.push(`喜欢被叫：${preferredAddress}`);
   if (age) parts.push(`年龄：${age}`);
   if (gender) parts.push(`性别：${gender}`);
+  if (interests.length) parts.push(`兴趣：${interests.join('、')}`);
+  if (recentEmotion) parts.push(`近期：${recentEmotion}`);
   if (parts.length === 0) return null;
 
   return (
     `【关于这个孩子（长期记忆）】\n${parts.join('，')}。\n` +
-    '你认识 ta，请自然体现——用昵称称呼、按年龄调整用词与内容深度，但不要生硬罗列上述信息。' +
+    '你认识 ta，请自然体现——用昵称称呼、按年龄调整用词、结合 ta 的兴趣，但不要生硬罗列上述信息。' +
     '实时状态 / 当下场景仍以本轮对话为准。'
   );
 }

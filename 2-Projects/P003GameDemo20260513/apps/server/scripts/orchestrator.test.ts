@@ -62,4 +62,21 @@ const BASE = '你是儿童陪伴机器人小可。';
   console.log('✅ case6 字段清洗：换行转空格 + 超长截断 20');
 }
 
-console.log('\n🎉 P0.2 orchestrator 全部通过');
+// case7: P1.3 注入扩展——登录用户的兴趣/称呼偏好/近期情绪也注入
+{
+  profileStore.upsertProfile('test-p13', { nickname: '乐乐', birthday: '2017-05', gender: '女孩' });
+  profileStore.updateMemoryFields('test-p13', {
+    interests: [{ value: '画画', confidence: 0.8, last_updated: 1, source: 'voice' }],
+    preferred_address: '小公主',
+    recent_emotion: '今天很开心',
+  });
+  const r = assembleSystemPrompt(BASE, null, { accountId: 'test-p13', role: 'parent' });
+  assert.ok(r.includes('乐乐'), '昵称');
+  assert.ok(r.includes('小公主'), '喜欢被叫（preferred_address）');
+  assert.ok(r.includes('画画'), '兴趣');
+  assert.ok(r.includes('今天很开心'), '近期情绪');
+  profileStore.deleteByAccountId('test-p13');
+  console.log('✅ case7 P1.3 注入扩展：兴趣/称呼偏好/近期情绪都注入');
+}
+
+console.log('\n🎉 orchestrator(P0.2+P1.3) 全部通过');
