@@ -17,22 +17,31 @@ export function assembleSystemPrompt(
   meta: ChildMeta | null,
   auth: AuthContext | null,
 ): string {
-  const block = buildChildMemoryBlock(meta, auth);
-  return block ? `${basePrompt}\n\n${block}` : basePrompt;
+  // 记忆注入是「增益」而非「必需」：profile-store 读取 / 解析任何异常都降级回 basePrompt，
+  // 绝不阻断实时语音主链路（team 致命 #2）。
+  try {
+    const block = buildChildMemoryBlock(meta, auth);
+    return block ? `${basePrompt}\n\n${block}` : basePrompt;
+  } catch {
+    return basePrompt;
+  }
 }
 
 function buildChildMemoryBlock(meta: ChildMeta | null, auth: AuthContext | null): string | null {
-  let nickname = (meta?.nickname ?? '').trim();
-  let gender = (meta?.gender ?? '').trim();
-  let age = (meta?.age ?? '').trim();
+  let nickname = sanitizeField(meta?.nickname);
+  let gender = sanitizeField(meta?.gender);
+  let age = sanitizeField(meta?.age);
 
-  // 登录用户：profile-store 是后端权威源，覆盖前端 meta（家长在档案里改了名字以它为准）。
+  // 登录用户：profile-store 是后端权威源，全字段覆盖前端 meta（家长在档案里改了以它为准）。
   if (auth?.accountId) {
     const p = profileStore.getProfile(auth.accountId);
     if (p) {
-      if (p.nickname) nickname = p.nickname;
-      if (p.gender) gender = p.gender;
-      if (!age) age = ageFromBirthday(p.birthday);
+      if (p.nickname) nickname = sanitizeField(p.nickname);
+      if (p.gender) gender = sanitizeField(p.gender);
+      // 年龄同样 profile 权威（team #6）：有生日就用生日算的年龄覆盖前端 meta（防前端传过时年龄），
+      // 无生日才保留前端 meta.age。
+      const profileAge = ageFromBirthday(p.birthday);
+      if (profileAge) age = profileAge;
     }
   }
 
@@ -59,4 +68,26 @@ function ageFromBirthday(birthday: string): string {
   let age = now.getFullYear() - birthYear;
   if (now.getMonth() + 1 < birthMonth) age -= 1;
   return age > 0 && age < 18 ? `${age}岁` : '';
+}
+
+/**
+ * 字段清洗（team #8）：换行/制表转空格 + 删其余控制字符 + 截断 20 字。
+ * nickname/gender/age 会直接拼进 system prompt，家长输入或前端 meta 若含换行 + "忽略以上指令"
+ * 这类内容会成为高优先级 system 指令（prompt injection），且超长字段会膨胀 prompt 拖 TTFT。
+ * 用 charCodeAt 数值判断而非控制字符正则（避免源码内嵌不可见字节）。
+ */
+function sanitizeField(raw?: string): string {
+  if (!raw) return '';
+  let out = '';
+  for (const ch of raw) {
+    const code = ch.charCodeAt(0);
+    if (code === 0x09 || code === 0x0a || code === 0x0d) {
+      out += ' '; // 制表/换行 → 空格，保留词间隔
+    } else if (code < 0x20 || code === 0x7f) {
+      continue; // 其余控制字符（含 DEL）丢弃
+    } else {
+      out += ch;
+    }
+  }
+  return out.trim().slice(0, 20);
 }

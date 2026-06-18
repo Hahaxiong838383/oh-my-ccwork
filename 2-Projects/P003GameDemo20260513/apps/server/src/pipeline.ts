@@ -67,6 +67,9 @@ const FEEDBACK_IP_SALT = process.env.FEEDBACK_IP_SALT?.trim() || randomBytes(16)
 // 仅会话级（VoicePipeline 实例成员），连接断开即丢、不跨会话（这是 L0 Working Memory；
 // 跨会话画像是 L1，走 profile-store 注入，见 docs/18 P0.2）。
 const MAX_HISTORY_TURNS = 8;
+// P0.1 字符预算（team #5）：长回复（讲故事 200-500 字）累积会拖 TTFT / 触发网关上下文超限。
+// 轮数之外再设总字符上限，超限按轮（user+assistant）丢最旧。儿童对话短，3000 字符约覆盖近几轮。
+const MAX_HISTORY_CHARS = 3000;
 
 export class VoicePipeline {
   private readonly ws: WebSocket;
@@ -345,8 +348,15 @@ export class VoicePipeline {
           // TODO(P1)：chat.trigger 开场白/feedback 吐槽轮的 userText 非孩子真实语音，是否计入待优化。
           this.history.push({ role: 'user', content: finalText });
           this.history.push({ role: 'assistant', content: assistantText });
+          // 轮数裁剪
           if (this.history.length > MAX_HISTORY_TURNS * 2) {
             this.history = this.history.slice(-MAX_HISTORY_TURNS * 2);
+          }
+          // 字符预算裁剪（team #5）：超总字符上限则按轮丢最旧，防长回复累积拖 TTFT / 网关超限。
+          let histChars = this.history.reduce((n, t) => n + t.content.length, 0);
+          while (this.history.length > 2 && histChars > MAX_HISTORY_CHARS) {
+            const dropped = this.history.splice(0, 2);
+            histChars -= dropped.reduce((n, t) => n + t.content.length, 0);
           }
           this.send({ type: 'llm.done', text: assistantText });
           this.tts?.finish();
