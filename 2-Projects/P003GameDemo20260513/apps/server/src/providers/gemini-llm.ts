@@ -1,9 +1,14 @@
 type GeminiUsage = { totalTokens: number; promptTokens: number; completionTokens: number };
 
+// P0.1 会话内多轮上下文：之前轮的 user/assistant（不含本轮 userText、不含 system）。
+export type ChatHistoryTurn = { role: 'user' | 'assistant'; content: string };
+
 export interface GeminiLlmClient {
   streamChat(opts: {
     systemPrompt: string;
     userText: string;
+    // 缺省 = 单轮（向后兼容，不破坏现有调用）。
+    history?: ChatHistoryTurn[];
     onDelta: (delta: string) => void;
     onDone: (fullText: string, usage?: GeminiUsage) => void;
     onError: (err: Error) => void;
@@ -49,6 +54,7 @@ class GeminiLlmClientImpl implements GeminiLlmClient {
   async streamChat(opts: {
     systemPrompt: string;
     userText: string;
+    history?: ChatHistoryTurn[];
     onDelta: (delta: string) => void;
     onDone: (fullText: string, usage?: GeminiUsage) => void;
     onError: (err: Error) => void;
@@ -84,6 +90,7 @@ class GeminiLlmClientImpl implements GeminiLlmClient {
           max_tokens: getMaxTokensForModel(model),
           messages: [
             { role: 'system', content: systemPrompt },
+            ...(opts.history ?? []),
             { role: 'user', content: opts.userText },
           ],
         }),
