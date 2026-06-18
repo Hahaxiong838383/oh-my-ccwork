@@ -9,6 +9,8 @@ import { createVolcAsrClient, type VolcAsrClient } from './providers/volc-asr.js
 import { createVolcTtsClient, type VolcTtsClient } from './providers/volc-tts.js';
 import { createExpressionFilter, stripExpressionTags } from './expression-filter.js';
 import { assembleSystemPrompt } from './prompt-orchestrator.js';
+import { profileStore } from './profile-store.js';
+import { extractMemoryUpdate } from './memory-extractor.js';
 
 export type SessionMeta = {
   sessionId: string;
@@ -70,6 +72,8 @@ const MAX_HISTORY_TURNS = 8;
 // P0.1 字符预算（team #5）：长回复（讲故事 200-500 字）累积会拖 TTFT / 触发网关上下文超限。
 // 轮数之外再设总字符上限，超限按轮（user+assistant）丢最旧。儿童对话短，3000 字符约覆盖近几轮。
 const MAX_HISTORY_CHARS = 3000;
+// P1.2 每累积 N 轮对话，异步抽取一次画像更新写 profile-store（出主链路，仅登录用户）。
+const EXTRACT_EVERY_TURNS = 3;
 
 export class VoicePipeline {
   private readonly ws: WebSocket;
@@ -81,6 +85,8 @@ export class VoicePipeline {
   private feedbackTurnId = 0;
   // P0.1 L0 会话记忆：本连接多轮对话滑动窗口（最近 MAX_HISTORY_TURNS 轮 user+assistant）。
   private history: ChatHistoryTurn[] = [];
+  // P1.2 距上次画像抽取的轮数计数（每 EXTRACT_EVERY_TURNS 轮触发一次异步抽取）。
+  private turnsSinceExtract = 0;
   // KidsHub-AI 工作台下发的完整 system prompt（组装在前端做，server 只存只用）
   private sessionSystemPrompt: string | null = null;
   private sessionMeta: SessionMeta | null = null;
@@ -357,6 +363,27 @@ export class VoicePipeline {
           while (this.history.length > 2 && histChars > MAX_HISTORY_CHARS) {
             const dropped = this.history.splice(0, 2);
             histChars -= dropped.reduce((n, t) => n + t.content.length, 0);
+          }
+          // P1.2 每 N 轮异步抽取画像写 profile-store（出主链路 fire-and-forget，失败不影响语音）。
+          // 仅登录用户（有持久档案）；改名/兴趣等更新落真相源 → admin/体验台多端打通。
+          this.turnsSinceExtract += 1;
+          const acctId = this.authContext?.accountId;
+          if (acctId && this.turnsSinceExtract >= EXTRACT_EVERY_TURNS) {
+            this.turnsSinceExtract = 0;
+            const snapshot = this.history.slice(-EXTRACT_EVERY_TURNS * 2);
+            void (async () => {
+              try {
+                const current = profileStore.getProfile(acctId);
+                if (!current) return; // 没建档不抽（建档是家长端的事）
+                const patch = await extractMemoryUpdate(snapshot, current);
+                if (patch) {
+                  profileStore.updateMemoryFields(acctId, patch);
+                  console.log(`[memory] account=${acctId} 画像更新: ${Object.keys(patch).join(',')}`);
+                }
+              } catch (err) {
+                console.log('[memory] 抽取失败(不影响语音):', String((err as Error)?.message ?? err));
+              }
+            })();
           }
           this.send({ type: 'llm.done', text: assistantText });
           this.tts?.finish();
