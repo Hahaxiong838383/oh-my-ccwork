@@ -1,7 +1,11 @@
+import type { ChatHistoryTurn } from './gemini-llm.js';
+
 export interface DeepseekLlmClient {
   streamChat(opts: {
     systemPrompt: string;
     userText: string;
+    // P0.1 会话内多轮上下文（缺省 = 单轮，向后兼容）。
+    history?: ChatHistoryTurn[];
     onDelta: (delta: string) => void;
     onDone: (fullText: string) => void;
     onError: (err: Error) => void;
@@ -31,6 +35,7 @@ class DeepseekLlmClientImpl implements DeepseekLlmClient {
   async streamChat(opts: {
     systemPrompt: string;
     userText: string;
+    history?: ChatHistoryTurn[];
     onDelta: (delta: string) => void;
     onDone: (fullText: string) => void;
     onError: (err: Error) => void;
@@ -61,6 +66,7 @@ class DeepseekLlmClientImpl implements DeepseekLlmClient {
           model,
           messages: [
             { role: 'system', content: systemPrompt },
+            ...(opts.history ?? []),
             { role: 'user', content: opts.userText },
           ],
           stream: true,

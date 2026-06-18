@@ -3,11 +3,12 @@ import type WebSocket from 'ws';
 import { feedbackStore } from './feedback-store.js';
 import { conversationStore } from './conversation-store.js';
 import type { AuthContext } from './auth-jwt.js';
-import { createGeminiLlmClient, type GeminiLlmClient } from './providers/gemini-llm.js';
+import { createGeminiLlmClient, type GeminiLlmClient, type ChatHistoryTurn } from './providers/gemini-llm.js';
 import { createDeepseekLlmClient } from './providers/deepseek-llm.js';
 import { createVolcAsrClient, type VolcAsrClient } from './providers/volc-asr.js';
 import { createVolcTtsClient, type VolcTtsClient } from './providers/volc-tts.js';
 import { createExpressionFilter, stripExpressionTags } from './expression-filter.js';
+import { assembleSystemPrompt } from './prompt-orchestrator.js';
 
 export type SessionMeta = {
   sessionId: string;
@@ -62,6 +63,14 @@ const FEEDBACK_PERSONA_SUFFIX =
   '语气温暖童趣、口语化，每次回复 30-50 字。可顺势鼓励"还有别的想法也继续告诉我哦"。';
 const FEEDBACK_IP_SALT = process.env.FEEDBACK_IP_SALT?.trim() || randomBytes(16).toString('hex');
 
+// P0.1 L0 会话记忆：保留最近 N 轮（user+assistant）滑动窗口，防 prompt 膨胀拖 TTFT。
+// 仅会话级（VoicePipeline 实例成员），连接断开即丢、不跨会话（这是 L0 Working Memory；
+// 跨会话画像是 L1，走 profile-store 注入，见 docs/18 P0.2）。
+const MAX_HISTORY_TURNS = 8;
+// P0.1 字符预算（team #5）：长回复（讲故事 200-500 字）累积会拖 TTFT / 触发网关上下文超限。
+// 轮数之外再设总字符上限，超限按轮（user+assistant）丢最旧。儿童对话短，3000 字符约覆盖近几轮。
+const MAX_HISTORY_CHARS = 3000;
+
 export class VoicePipeline {
   private readonly ws: WebSocket;
   private readonly ipHash: string;
@@ -70,6 +79,8 @@ export class VoicePipeline {
   private readonly llm: GeminiLlmClient & { abort?: () => void };
   private activeTurn = 0;
   private feedbackTurnId = 0;
+  // P0.1 L0 会话记忆：本连接多轮对话滑动窗口（最近 MAX_HISTORY_TURNS 轮 user+assistant）。
+  private history: ChatHistoryTurn[] = [];
   // KidsHub-AI 工作台下发的完整 system prompt（组装在前端做，server 只存只用）
   private sessionSystemPrompt: string | null = null;
   private sessionMeta: SessionMeta | null = null;
@@ -296,9 +307,12 @@ export class VoicePipeline {
       // 需求1：吐槽模式 → 追加吐槽回应人格（共情+感谢+不过度承诺）。feedbackMode 由调用方传入：
       // ASR 路径用本轮快照(capturedTurnMeta)判定，chat.trigger 开场白恒 false。普通对话维持原 prompt。
       const baseSystemPrompt = this.sessionSystemPrompt ?? DEFAULT_SYSTEM_PROMPT;
-      const systemPrompt = feedbackMode
+      const withFeedback = feedbackMode
         ? `${baseSystemPrompt}\n\n${FEEDBACK_PERSONA_SUFFIX}`
         : baseSystemPrompt;
+      // P0.2 后端 Prompt Orchestrator：追加「关于这个孩子」user_memory 区块（登录用 profile-store
+      // 权威，匿名用本轮 meta）。下方 debug.prompt_assembled 会回发含此块的完整 prompt（所见即所发）。
+      const systemPrompt = assembleSystemPrompt(withFeedback, turnMeta, this.authContext);
       // 工作台调试流依赖：回发本轮真实使用的 prompt（所见即所发）
       this.send({ type: 'debug.prompt_assembled', systemPrompt, userText: finalText });
 
@@ -318,6 +332,7 @@ export class VoicePipeline {
       await this.llm.streamChat({
         systemPrompt,
         userText: finalText,
+        history: this.history,
         onDelta: (delta) => {
           if (turn !== this.activeTurn) return;
           emitFiltered(exprFilter.feed(delta));
@@ -328,6 +343,21 @@ export class VoicePipeline {
           emitFiltered(exprFilter.flush());
           const assistantText = stripExpressionTags(fullText).text;
           this.captureConversation('assistant', assistantText, turnMeta, usage?.totalTokens ?? 0);
+          // P0.1 本轮入会话历史（user + assistant），滑动窗口裁最近 MAX_HISTORY_TURNS 轮。
+          // 用 strip 后的干净文本；只在本轮有效（turn===activeTurn，被打断的轮不入队）。
+          // TODO(P1)：chat.trigger 开场白/feedback 吐槽轮的 userText 非孩子真实语音，是否计入待优化。
+          this.history.push({ role: 'user', content: finalText });
+          this.history.push({ role: 'assistant', content: assistantText });
+          // 轮数裁剪
+          if (this.history.length > MAX_HISTORY_TURNS * 2) {
+            this.history = this.history.slice(-MAX_HISTORY_TURNS * 2);
+          }
+          // 字符预算裁剪（team #5）：超总字符上限则按轮丢最旧，防长回复累积拖 TTFT / 网关超限。
+          let histChars = this.history.reduce((n, t) => n + t.content.length, 0);
+          while (this.history.length > 2 && histChars > MAX_HISTORY_CHARS) {
+            const dropped = this.history.splice(0, 2);
+            histChars -= dropped.reduce((n, t) => n + t.content.length, 0);
+          }
           this.send({ type: 'llm.done', text: assistantText });
           this.tts?.finish();
         },
