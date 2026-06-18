@@ -118,6 +118,13 @@ export function checkAndCount(kind: QuotaKind, ip: string): CheckResult {
   return { ok: true, remaining };
 }
 
+// admin 手动重置今日限额（内测自助：清空所有 IP 当日计数，等价 pm2 restart 的清限额效果但不重启服务/不断开连接）。
+export function resetAllQuotas(): number {
+  const n = ipQuotas.size;
+  ipQuotas.clear();
+  return n;
+}
+
 // 仅用于临时测试脚本的辅助（生产代码绝不调用）
 // 允许强制跨天重置验证 + 清理状态
 export function __resetForTest(): void {

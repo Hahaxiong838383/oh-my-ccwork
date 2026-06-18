@@ -1306,6 +1306,9 @@
                       <span style="font-size:13px;color:#6B7785;font-weight:700">{{ inviteList.count }}/15</span>
                       <el-button size="small" type="primary" :loading="inviteList.loading" :disabled="inviteList.count >= 15" @click="genInvite">生成邀请码</el-button>
                       <el-button size="small" :loading="inviteList.loading" @click="loadInvites">刷新</el-button>
+                      <el-popconfirm title="清空所有 IP 的今日体验次数计数，语音/连接限额立即恢复，确认？" confirm-button-text="重置" cancel-button-text="取消" @confirm="resetQuota">
+                        <template #reference><el-button size="small" type="warning" plain>重置今日限额</el-button></template>
+                      </el-popconfirm>
                     </div>
                   </div>
                   <div class="kh-card" style="overflow:hidden">
@@ -2521,6 +2524,22 @@
               if (e.message !== '401') ElementPlus.ElMessage.error('保存失败，请稍后重试');
             });
         }
+        function resetQuota() {
+          var token = getToken();
+          if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
+          fetch('/api/admin/reset-quota', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json().catch(function () { return { ok: false, error: '服务响应异常' }; });
+            })
+            .then(function (data) {
+              if (data && data.ok) ElementPlus.ElMessage.success('已重置今日体验限额（清空 ' + (data.cleared || 0) + ' 个 IP 计数）');
+              else ElementPlus.ElMessage.error((data && data.error) || '重置失败');
+            })
+            .catch(function (e) {
+              if (e.message !== '401') ElementPlus.ElMessage.error('重置失败，请稍后重试');
+            });
+        }
         function khStatusLabel(s) {
           return { received: '已收到', reviewing: '评估中', adopted: '已采纳', vault: '金点子库' }[s] || s;
         }
@@ -2795,7 +2814,7 @@
           conversationQuery: conversationQuery, conversationHistory: conversationHistory, childProfiles: childProfiles,
           inviteList: inviteList,
           loadConversationHistory: loadConversationHistory, loadChildProfiles: loadChildProfiles,
-          loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname,
+          loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
           shortSessionId: shortSessionId, roleLabel: roleLabel, roleTagType: roleTagType,
           getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey, normalizeFeedbackItem: normalizeFeedbackItem
         };

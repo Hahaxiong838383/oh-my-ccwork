@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { accountStore } from '../account-store.js';
 import { profileStore } from '../profile-store.js';
 import { isValidToken } from './auth.js';
+import { resetAllQuotas } from '../guard.js';
 
 // hub 看板数据端点：admin 看所有账号的孩子档案 + 设备（admin token 鉴权，区别于 parent 自己的 /api/profile 邀请码 JWT）。
 const adminDataRoute = new Hono();
@@ -90,6 +91,16 @@ adminDataRoute.patch('/invites/:code', async (c) => {
     return c.json({ ok: true });
   } catch (error) {
     return c.json({ ok: false, error: '更新昵称失败，请稍后重试' }, 500);
+  }
+});
+
+// admin 手动重置今日体验限额（内测自助，清空所有 IP 计数；鉴权走上面 use('*') 中间件）
+adminDataRoute.post('/reset-quota', (c) => {
+  try {
+    const cleared = resetAllQuotas();
+    return c.json({ ok: true, cleared });
+  } catch (error) {
+    return c.json({ ok: false, error: '重置限额失败，请稍后重试' }, 500);
   }
 });
 
