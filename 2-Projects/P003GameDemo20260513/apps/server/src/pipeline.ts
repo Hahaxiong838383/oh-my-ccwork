@@ -368,7 +368,9 @@ export class VoicePipeline {
           // 仅登录用户（有持久档案）；改名/兴趣等更新落真相源 → admin/体验台多端打通。
           this.turnsSinceExtract += 1;
           const acctId = this.authContext?.accountId;
-          if (acctId && this.turnsSinceExtract >= EXTRACT_EVERY_TURNS) {
+          // 隐私/应急开关（team）：MEMORY_EXTRACT_ENABLED=0 可关抽取（正式版合规未就位时兜底）。默认开。
+          const extractOn = process.env.MEMORY_EXTRACT_ENABLED !== '0';
+          if (acctId && extractOn && this.turnsSinceExtract >= EXTRACT_EVERY_TURNS) {
             this.turnsSinceExtract = 0;
             const snapshot = this.history.slice(-EXTRACT_EVERY_TURNS * 2);
             void (async () => {

@@ -104,24 +104,34 @@ class ProfileStore {
     this.migrate();
   }
 
-  /** P1 老库迁移：幂等补画像列（已有 family_member 库不含新列时 ALTER）。 */
+  /** P1 老库迁移：幂等补画像列（已有 family_member 库不含新列时 ALTER）。失败不阻断启动（team#5）。 */
   private migrate(): void {
-    const cols = this.db.prepare('PRAGMA table_info(family_member)').all() as { name: string }[];
-    const has = (n: string) => cols.some((c) => c.name === n);
-    const add = (col: string, def: string) => {
-      if (!has(col)) this.db.exec(`ALTER TABLE family_member ADD COLUMN ${col} TEXT NOT NULL DEFAULT '${def}'`);
-    };
-    add('interests', '[]');
-    add('preferred_address', '');
-    add('personality_notes', '');
-    add('recent_emotion', '');
+    try {
+      const cols = this.db.prepare('PRAGMA table_info(family_member)').all() as { name: string }[];
+      const has = (n: string) => cols.some((c) => c.name === n);
+      const add = (col: string, def: string) => {
+        if (!has(col)) this.db.exec(`ALTER TABLE family_member ADD COLUMN ${col} TEXT NOT NULL DEFAULT '${def}'`);
+      };
+      add('interests', '[]');
+      add('preferred_address', '');
+      add('personality_notes', '');
+      add('recent_emotion', '');
+    } catch (err) {
+      // CREATE TABLE 已含新列（新库无碍）；老库迁移失败记日志、不阻断启动，后续人工处理。
+      console.error('[profile-store] migrate 失败(不阻断启动):', String((err as Error)?.message ?? err));
+    }
   }
 
+  // 解析 interests JSON，并校验元素结构（损坏/异常对象不进入 prompt 注入路径 — team#7）。
   private rowToMember(row: FamilyRow): FamilyMember {
     let interests: InterestItem[] = [];
     try {
       const parsed = JSON.parse(row.interests || '[]');
-      if (Array.isArray(parsed)) interests = parsed;
+      if (Array.isArray(parsed)) {
+        interests = parsed.filter(
+          (i): i is InterestItem => Boolean(i) && typeof i.value === 'string' && typeof i.confidence === 'number',
+        );
+      }
     } catch {
       // 损坏的 JSON 容错为空数组，不阻断
     }
@@ -173,7 +183,9 @@ class ProfileStore {
       preferred_address: patch.preferred_address ?? existing.preferred_address,
       personality_notes: patch.personality_notes ?? existing.personality_notes,
       recent_emotion: patch.recent_emotion ?? existing.recent_emotion,
-      interests: patch.interests ?? existing.interests,
+      // team#1: patch.interests 是「新增项」，基于此刻最新 existing 合并（本方法 getProfile→UPDATE 间
+      // 无 await=同步原子执行），杜绝基于抽取时旧快照覆盖导致的并发 lost update。
+      interests: patch.interests ? appendInterests(existing.interests, patch.interests) : existing.interests,
       updated_at: Date.now(),
     };
     this.db
@@ -257,6 +269,19 @@ class ProfileStore {
       .prepare(`SELECT id, account_id, model, name, bound_at FROM device ORDER BY bound_at DESC`)
       .all() as Device[];
   }
+}
+
+// team#1: 兴趣合并去重（基于最新 existing append 新增项，写时执行保证原子）。
+function appendInterests(existing: InterestItem[], added: InterestItem[]): InterestItem[] {
+  const seen = new Set(existing.map((i) => i.value));
+  const merged = [...existing];
+  for (const item of added) {
+    if (item && typeof item.value === 'string' && !seen.has(item.value)) {
+      seen.add(item.value);
+      merged.push(item);
+    }
+  }
+  return merged;
 }
 
 export const profileStore = new ProfileStore();
