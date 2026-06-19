@@ -8,7 +8,7 @@ export interface TypewriterCallbacks {
 export interface SubtitleTypewriter {
   feedText(delta: string): void;
   finalizeText(full: string): void;
-  advanceSentence(): void;
+  advanceSentence(durationMs?: number): void;
   finishPlayback(): void;
   reset(): void;
 }
@@ -17,8 +17,19 @@ export function createSubtitleTypewriter(
   cb: TypewriterCallbacks,
   opts?: { charMs?: number; clearDelayMs?: number; autoAdvanceMs?: number },
 ): SubtitleTypewriter {
-  // 126ms/字 ≈ 8 字/秒（2026-06-11 川哥手测 180 偏慢，提速 30%）
-  const charMs = Math.max(1, opts?.charMs ?? 126);
+  // 基准每字时长（首句无音频时长可参考时的兜底）。后续句用真实 TTS 段时长动态校准（见 advanceSentence）。
+  const baseCharMs = Math.max(1, opts?.charMs ?? 180);
+  // 动态校准（修「字幕固定 126ms/字 快于 TTS 真实语速 → 字幕超前傻等、且不跟小可语速」根因）：
+  // 累积「真实音频段时长 / 字数」自适应 TTS 真实语速。effDur 已 / playbackRate，故同时自动跟
+  // 「小可语速 1/1.5/2×」，无需单独缩放。
+  const MIN_CHAR_MS = 40;
+  const MAX_CHAR_MS = 400;
+  let accAudioMs = 0;
+  let accChars = 0;
+  function dynamicCharMs(): number {
+    if (accChars <= 0) return baseCharMs;
+    return Math.min(MAX_CHAR_MS, Math.max(MIN_CHAR_MS, accAudioMs / accChars));
+  }
   const clearDelayMs = Math.max(0, opts?.clearDelayMs ?? 1200);
   // 自动跨句兜底：当前句打完后这么久没等到外部 advance（TTS 句边界信号与文本切句
   // 数不一致是常态：短句并段/逗号长句拆段），自动推进下一句——对齐降级但绝不卡死
@@ -121,13 +132,13 @@ export function createSubtitleTypewriter(
       if (currentTypedLen < txt.length) {
         currentTypedLen++;
         cb.onText(txt.slice(0, currentTypedLen));
-        typingTimer = setTimeout(doTick, charMs) as any;
+        typingTimer = setTimeout(doTick, dynamicCharMs()) as any;
       } else {
         typingTimer = null;
         maybeScheduleAutoAdvance();
       }
     };
-    typingTimer = setTimeout(doTick, charMs) as any;
+    typingTimer = setTimeout(doTick, dynamicCharMs()) as any;
   }
 
   function reconcileAfterTextUpdate(): void {
@@ -167,7 +178,7 @@ export function createSubtitleTypewriter(
     reconcileAfterTextUpdate();
   }
 
-  function advanceSentence(): void {
+  function advanceSentence(durationMs?: number): void {
     // 外部句边界信号优先：取消在途的自动兜底，避免双推进跳句
     stopAutoAdvanceTimer();
     if (activeSentenceIdx >= 0) {
@@ -175,6 +186,12 @@ export function createSubtitleTypewriter(
       if (currentTypedLen < currTxt.length) {
         currentTypedLen = currTxt.length;
         cb.onText(currTxt);
+      }
+      // 动态校准：segment_start[N] = 句 N 开播 = 刚播完句 N-1，durationMs 是刚播完这句
+      // (activeSentenceIdx) 的真实音频段时长，累积进每字均速供后续句用（字数与时长精确对应）。
+      if (durationMs && durationMs > 0 && currTxt.length > 0) {
+        accAudioMs += durationMs;
+        accChars += currTxt.length;
       }
     }
     // 已在最后一句（外部信号比文本切句多：长句被 TTS 按逗号拆段）→ 原地不动，
@@ -237,6 +254,8 @@ export function createSubtitleTypewriter(
     partial = '';
     activeSentenceIdx = -1;
     currentTypedLen = 0;
+    accAudioMs = 0;
+    accChars = 0;
     // do NOT call onClear (caller decides subtitle clear to avoid double-clear races)
   }
 

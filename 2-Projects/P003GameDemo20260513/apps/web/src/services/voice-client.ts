@@ -521,13 +521,13 @@ class VoiceClientImpl implements VoiceClient {
       if (isFirstSegment) {
         const delayMs = Math.max(0, (startAt - now) * 1000);
         window.setTimeout(() => {
-          if (generation === this.playbackGeneration) this.emit('tts.segment_start', {});
+          if (generation === this.playbackGeneration) this.emit('tts.segment_start', { durationMs: Math.round(effDur * 1000) });
         }, delayMs);
       }
       if (reason === 'boundary') {
         const endDelayMs = Math.max(0, (startAt + effDur - now) * 1000);
         window.setTimeout(() => {
-          if (generation === this.playbackGeneration) this.emit('tts.segment_start', {});
+          if (generation === this.playbackGeneration) this.emit('tts.segment_start', { durationMs: Math.round(effDur * 1000) });
         }, endDelayMs);
       }
 

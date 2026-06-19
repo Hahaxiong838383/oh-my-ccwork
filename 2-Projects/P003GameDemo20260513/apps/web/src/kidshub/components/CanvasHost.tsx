@@ -162,9 +162,10 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       setXiaokeEmotion('happy');
     };
     // 句边界段真实开播 → 表情切下一个 + 字幕开始打这一句（同一时钟源，天然同步）
-    const onSegmentStart = () => {
+    const onSegmentStart = (msg?: { durationMs?: number }) => {
       consumeNextExpression();
-      tw.advanceSentence();
+      // 字幕节奏修复：用真实音频段时长动态校准打字速度（见 typewriter.dynamicCharMs）。
+      tw.advanceSentence(msg?.durationMs);
     };
     // 本轮音频真正播完（含被打断）→ 表情收尾回待机 + 字幕补完后延迟清空
     const onPlaybackEnd = () => {
