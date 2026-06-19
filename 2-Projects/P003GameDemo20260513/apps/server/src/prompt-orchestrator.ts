@@ -16,12 +16,17 @@ export function assembleSystemPrompt(
   basePrompt: string,
   meta: ChildMeta | null,
   auth: AuthContext | null,
+  curriculumGuardrail?: string | null,
 ): string {
   // 记忆注入是「增益」而非「必需」：profile-store 读取 / 解析任何异常都降级回 basePrompt，
   // 绝不阻断实时语音主链路（team 致命 #2）。
   try {
     const block = buildChildMemoryBlock(meta, auth);
-    return block ? `${basePrompt}\n\n${block}` : basePrompt;
+    let prompt = block ? `${basePrompt}\n\n${block}` : basePrompt;
+    // L_curriculum 护栏（docs/20）：命中 KG 概念时追加先修护栏，引导小可不越级 / 不乱讲教学顺序。
+    // 同样降级安全：guardrail 为 null（未命中 / 加载失败）则不追加，不影响主链路。
+    if (curriculumGuardrail) prompt += `\n\n${curriculumGuardrail}`;
+    return prompt;
   } catch {
     return basePrompt;
   }

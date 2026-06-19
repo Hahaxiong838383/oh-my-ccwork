@@ -11,6 +11,7 @@ import { createExpressionFilter, stripExpressionTags } from './expression-filter
 import { assembleSystemPrompt } from './prompt-orchestrator.js';
 import { profileStore } from './profile-store.js';
 import { extractMemoryUpdate } from './memory-extractor.js';
+import { curriculumKG } from './curriculum-kg.js';
 
 export type SessionMeta = {
   sessionId: string;
@@ -105,6 +106,8 @@ export class VoicePipeline {
     const provider = (process.env.LLM_PROVIDER || '').toLowerCase();
     const rawClient = provider === 'deepseek' ? createDeepseekLlmClient() : createGeminiLlmClient();
     this.llm = rawClient as GeminiLlmClient & { abort?: () => void };
+    // L_curriculum：连接时预热 KG（幂等，读 ~4MB JSON）。避免首个 ASR final 时才同步加载拖 TTFT。
+    curriculumKG.load();
   }
 
   handleClientMessage(msg: ClientMessage): void {
@@ -318,7 +321,9 @@ export class VoicePipeline {
         : baseSystemPrompt;
       // P0.2 后端 Prompt Orchestrator：追加「关于这个孩子」user_memory 区块（登录用 profile-store
       // 权威，匿名用本轮 meta）。下方 debug.prompt_assembled 会回发含此块的完整 prompt（所见即所发）。
-      const systemPrompt = assembleSystemPrompt(withFeedback, turnMeta, this.authContext);
+      // L_curriculum（docs/20）：内存匹配孩子话里的课程概念（<10ms，不拖 TTFT），命中则注入先修护栏。
+      const curriculumGuardrail = curriculumKG.buildGuardrail(finalText);
+      const systemPrompt = assembleSystemPrompt(withFeedback, turnMeta, this.authContext, curriculumGuardrail);
       // 工作台调试流依赖：回发本轮真实使用的 prompt（所见即所发）
       this.send({ type: 'debug.prompt_assembled', systemPrompt, userText: finalText });
 
