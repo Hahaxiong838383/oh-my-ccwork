@@ -40,7 +40,10 @@ export function createSubtitleTypewriter(
 
   function parseSentences(text: string): { closed: string[]; partial: string } {
     if (!text) return { closed: [], partial: '' };
-    const enders = new Set(Array.from('。！？!?…'));
+    // A(2026-06-19)：切句粒度对齐 server——Doubao-TTS 每个逗号/句号都发 sentence_break(→segment_start)，
+    // 故逗号/顿号/分号也切「分句」。否则长句(一个句号含多逗号)只切 1 句，第 2 个 segment_start
+    // (音频才播到句中)就触发 advanceSentence 快进补完整句 → 字幕超前 + 单行塞不下被省略。
+    const enders = new Set(Array.from('。！？!?…，、；,;'));
     const closed: string[] = [];
     let start = 0;
     let i = 0;

@@ -66,9 +66,14 @@ export function KidsHubSubtitle() {
             letterSpacing: '0.06em',
             color: '#fff',
             fontWeight: 300,
-            whiteSpace: 'nowrap',
+            // B(配合 A 切句对齐)：允许换行。分句短多数单行；极端长分句(无逗号)换行最多 2 行，
+            // 不再单行 nowrap 省略致显示不全。
+            whiteSpace: 'normal',
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            wordBreak: 'break-word',
           }}
         >
           {subtitle}

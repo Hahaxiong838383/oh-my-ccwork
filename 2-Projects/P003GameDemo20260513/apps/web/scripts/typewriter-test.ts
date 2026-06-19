@@ -84,9 +84,10 @@ async function run() {
     tw.feedText('，世界。'); // 追加使闭合
     await sleep(25); // 继续打 "，世界。"
 
-    const hasFull = onTextCalls.includes('你好，世界。');
+    // A(逗号切句)：'你好，世界。' 切成 '你好，'+'世界。' 两分句，验证分句1闭合续打(逐分句对齐)。
+    const hasFull = onTextCalls.includes('你好，');
     const ok = atEnd && hasFull;
-    record('进行中句delta多次+追尾续打', ok, `atEnd=${atEnd} hasFull=${hasFull} last=${onTextCalls[onTextCalls.length - 1]}`);
+    record('进行中句delta多次+追尾续打(逗号分句)', ok, `atEnd=${atEnd} hasFull=${hasFull} last=${onTextCalls[onTextCalls.length - 1]}`);
   }
 
   // ===== Case 3: advance时上句未打完 → 立即收到上句完整，再开始下句 =====
@@ -214,10 +215,11 @@ async function run() {
     tw.advanceSentence();
     await sleep(25);
 
-    const hasFull1 = onTextCalls.includes('你好，世界！');
+    // A(逗号切句)：'你好，世界！再见。' 切成 '你好，'/'世界！'/'再见。' 三分句，逐分句推进显示。
+    const hasFull1 = onTextCalls.includes('世界！');
     const hasFull2 = onTextCalls.includes('再见。');
     const ok = hasFull1 && hasFull2;
-    record('finalize全文覆盖后推进', ok, `has1=${hasFull1} has2=${hasFull2} totalCalls=${onTextCalls.length}`);
+    record('finalize全文覆盖后推进(逗号分句)', ok, `has1=${hasFull1} has2=${hasFull2} totalCalls=${onTextCalls.length}`);
   }
 
   // ===== Case 8: 空状态 finish 无副作用 + 基本 reset 防护（多轮） =====
