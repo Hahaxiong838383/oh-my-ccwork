@@ -99,6 +99,22 @@ strings ~/xray/xray.log | tail -30
 | 大陆域名 | direct | 直连 |
 | 其他 | 默认 | HK-HKT-A |
 
+### Google Cloud Code Assist 路由（antigravity / gemini-cli，2026-06-19 实测加固）
+
+team 的 gemini lane（omp `google-antigravity/*`）和 antigravity 调用走 **`cloudcode-pa.googleapis.com`** 系列（不是 `generativelanguage`）。这条通道对出口 IP 风控极严：
+
+- **症状**：`Cloud Code Assist API error (400): User location is not supported`。普通美宅/机房节点会被判 400（≠ 限流，≠ token 问题）。
+- **根因坑**：`domain:googleapis.com` 这类**宽匹配规则会先截走**所有 `*.googleapis.com` 子域，把 cloudcode-pa 导到通用美宅节点 → 400。
+- **修复**：在 `~/xray/config.json` 的 `routing.rules` **最前面**（抢在 `domain:googleapis.com` 之前）加精确规则，3 个域名 → `Gemini专用-US2-VLESS-Reality-IP`：
+  ```
+  domain:cloudcode-pa.googleapis.com
+  domain:daily-cloudcode-pa.googleapis.com
+  domain:daily-cloudcode-pa.sandbox.googleapis.com
+  ```
+- **改后**：`~/xray/xray run -test -c config.json` 验 `Configuration OK` → `launchctl kickstart -k gui/$(id -u)/com.xray.proxy`（原子重启）。
+- **验证走对节点**：`grep cloudcode ~/xray/access.log | tail` 看 `[socks -> Gemini专用-US2-...]`（不是美宅）。
+- 详见 memory `project_antigravity_team_b3`。
+
 ## mihomo (Clash Meta) 管理
 
 **配置文件**：`/opt/homebrew/etc/mihomo/config.yaml`
