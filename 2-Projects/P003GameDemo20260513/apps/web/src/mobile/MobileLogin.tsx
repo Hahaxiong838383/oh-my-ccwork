@@ -112,7 +112,7 @@ export function MobileLogin() {
 
   return (
     <div
-      className="flex min-h-[100dvh] flex-col justify-center px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]"
+      className="fixed inset-0 flex flex-col justify-center overflow-y-auto px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]"
       style={{ background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 45%, #eff6ff 100%)' }}
     >
       <div className="mx-auto w-full max-w-[380px]">

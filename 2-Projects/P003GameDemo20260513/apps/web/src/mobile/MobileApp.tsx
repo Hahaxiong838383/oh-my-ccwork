@@ -50,7 +50,7 @@ export function MobileApp() {
   if (checking) {
     return (
       <div
-        className="flex min-h-[100dvh] items-center justify-center text-[15px] tracking-tight text-slate-400"
+        className="fixed inset-0 flex items-center justify-center text-[15px] tracking-tight text-slate-400"
         style={{ background: 'linear-gradient(180deg, #f8fafc 0%, #eff6ff 100%)' }}
       >
         正在唤醒小可…

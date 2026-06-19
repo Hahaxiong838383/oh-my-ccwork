@@ -107,7 +107,7 @@ export function MobileMain() {
 
   return (
     <div
-      className="relative flex min-h-[100dvh] flex-col overflow-hidden"
+      className="fixed inset-0 flex flex-col overflow-hidden"
       style={{ background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 40%, #eff6ff 100%)' }}
     >
       {/* 顶栏：毛玻璃 pill（liquid glass：内高光边 + 模糊） */}

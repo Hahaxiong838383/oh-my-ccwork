@@ -108,7 +108,7 @@ export function MobileAvatar() {
         type="button"
         aria-label={`小可（${def?.label ?? '待机'}）· 点一点逗逗它`}
         onClick={handlePoke}
-        className="relative flex select-none flex-col items-center bg-transparent pb-[3vh] outline-none"
+        className="relative flex select-none flex-col items-center bg-transparent pb-5 outline-none"
         whileTap={{ scale: 0.95 }}
       >
         <motion.div animate={bodyAnim} style={{ willChange: 'transform' }}>
@@ -117,7 +117,7 @@ export function MobileAvatar() {
             src={expressionUrl(file)}
             alt={def?.label ?? '小可'}
             draggable={false}
-            className="h-[min(46vh,400px)] w-auto"
+            className="h-[340px] w-auto"
             style={{ filter: 'drop-shadow(0 14px 22px rgba(51,65,85,0.22))' }}
             initial={{ scale: 0.84, y: 10, opacity: 0.4 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
@@ -125,7 +125,7 @@ export function MobileAvatar() {
           />
         </motion.div>
         {/* 地面投影（浅背景适配：冷灰、柔和扩散） */}
-        <div className="-mt-[1vh] h-[2.2vh] w-[34vw] max-w-[180px] rounded-[50%] bg-slate-400/30 blur-[10px]" />
+        <div className="-mt-2 h-4 w-40 max-w-[180px] rounded-[50%] bg-slate-400/30 blur-[10px]" />
       </motion.button>
     </div>
   );
