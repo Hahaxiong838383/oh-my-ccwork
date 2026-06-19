@@ -8,8 +8,6 @@ import { create } from 'zustand';
  */
 
 export type VoiceStatus = 'idle' | 'listening' | 'thinking' | 'speaking';
-/** 字幕富文本：committed=本轮已说完分句累积(置灰)，active=当前分句已显示部分(高亮)。null=无富文本字幕 */
-export type SubtitleRich = { committed: string; active: string } | null;
 export type XiaokeEmotion = 'happy' | 'curious' | 'warm' | 'calm' | 'excited';
 export type FarewellState = 'hidden' | 'waving' | 'shutdown';
 
@@ -75,14 +73,9 @@ interface AppState {
   // —— 语音对话 ——
   voiceStatus: VoiceStatus;
   subtitle: string;
-  // 字幕富文本（打字机专用）：committed=本轮已说完的分句累积（置灰），active=当前正在说的分句已显示部分（高亮）。
-  // 治"逐分句整句替换"的视觉跳动——已说内容保留累积，当前句逐字接续，而非整行瞬替。
-  // 与 subtitle 字符串互斥：走字符串路径(ASR/错误/状态机)时清 rich，走打字机时清 subtitle 字符串。
-  subtitleRich: SubtitleRich;
   xiaokeEmotion: XiaokeEmotion;
   setVoiceStatus: (s: VoiceStatus) => void;
   setSubtitle: (s: string) => void;
-  setSubtitleRich: (r: SubtitleRich) => void;
   setXiaokeEmotion: (e: XiaokeEmotion) => void;
 
   // —— 三机器状态（V0.6）——
@@ -227,14 +220,9 @@ export const useAppStore = create<AppState>((set) => ({
 
   voiceStatus: 'idle',
   subtitle: '',
-  subtitleRich: null,
   xiaokeEmotion: 'happy',
   setVoiceStatus: (voiceStatus) => set({ voiceStatus }),
-  // 字符串路径(ASR/错误/状态机)覆盖：清掉打字机富文本，避免两条字幕并存
-  setSubtitle: (subtitle) => set({ subtitle, subtitleRich: null }),
-  // 打字机路径：激活富文本时清掉字符串字幕（如 ASR 的 "xxx..."），渲染层优先富文本；
-  // 传 null(打字机 onClear)时一并清空，字幕彻底消失
-  setSubtitleRich: (subtitleRich) => set({ subtitleRich, subtitle: '' }),
+  setSubtitle: (subtitle) => set({ subtitle }),
   setXiaokeEmotion: (xiaokeEmotion) => set({ xiaokeEmotion }),
 
   bootState: 'unconfigured',

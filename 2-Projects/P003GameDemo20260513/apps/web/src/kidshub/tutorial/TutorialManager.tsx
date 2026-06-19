@@ -11,7 +11,6 @@
  */
 import { useEffect, useRef } from 'react';
 import { getSharedVoiceClient, getKidsHubSessionId } from '../../services/voice-client';
-import { sharedTypewriter } from '../subtitle/shared';
 import { useAppStore } from '../../store/app-store';
 import { useAvatarStore } from '../avatar/avatar-store';
 import { useKidsHubStore } from '../store/kidshub-store';
@@ -72,8 +71,6 @@ export function TutorialManager(): null {
   /** 固定话术发声 + 字幕喂句（统一入口；连接断了自动重连一次） */
   const speakLine = async (text: string): Promise<void> => {
     const client = getSharedVoiceClient();
-    // 清残留打字机状态（C2 后字幕走 setSubtitle/cue，富文本不再渲染）
-    sharedTypewriter().reset();
     try {
       if (!client.isConnected()) {
         await client.connect(getVoiceWsUrl());

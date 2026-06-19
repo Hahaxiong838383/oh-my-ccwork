@@ -3,7 +3,6 @@ import { useKidsHubStore } from '../store/kidshub-store';
 import { useTutorialStore } from '../tutorial/tutorial-store';
 import { TUTORIAL_UNITS } from '../tutorial/tutorial-units';
 import { getSharedVoiceClient } from '../../services/voice-client';
-import { sharedTypewriter } from '../subtitle/shared';
 import { useAppStore } from '../../store/app-store';
 import { useExperienceStore, EXPERIENCE_QUOTA_ENABLED } from '../store/experience-store';
 
@@ -22,7 +21,6 @@ export function SceneNav() {
     void client.unlockAudio().catch(() => {
       /* 解锁失败不拦启动，Manager 调试流里能看到后续语音错误 */
     });
-    sharedTypewriter().reset();
     client.bargeIn();
     useAppStore.getState().setSubtitle('');
     useTutorialStore.getState().start(unitId);
@@ -99,8 +97,7 @@ export function SceneNav() {
                 const t = useTutorialStore.getState();
                 if (t.isActive) {
                   t.interrupt();
-                  sharedTypewriter().reset();
-                  getSharedVoiceClient().bargeIn();
+                                getSharedVoiceClient().bargeIn();
                   useAppStore.getState().setSubtitle('');
                 }
                 selectCard(card.id);

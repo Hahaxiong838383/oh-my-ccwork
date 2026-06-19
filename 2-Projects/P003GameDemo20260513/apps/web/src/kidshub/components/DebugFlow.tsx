@@ -4,7 +4,6 @@ import type { DebugEntry } from '../store/kidshub-store';
 import { useTutorialStore } from '../tutorial/tutorial-store';
 import { getUnitStep, getUnit } from '../tutorial/tutorial-units';
 import { getSharedVoiceClient } from '../../services/voice-client';
-import { sharedTypewriter } from '../subtitle/shared';
 import { useAppStore } from '../../store/app-store';
 
 const kindColor: Record<DebugEntry['kind'], string> = {
@@ -40,7 +39,6 @@ export function DebugFlow() {
 
   // 重置引导：清本地完成标记 + 停掉在途语音/字幕（PM 反复体验入口）
   const resetTutorial = () => {
-    sharedTypewriter().reset();
     getSharedVoiceClient().bargeIn();
     useAppStore.getState().setSubtitle('');
     useTutorialStore.getState().resetForDebug();

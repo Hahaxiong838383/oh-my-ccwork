@@ -7,7 +7,6 @@ import { SceneNav } from './components/SceneNav';
 import { CardDetail } from './components/CardDetail';
 import { SectionReader } from './components/SectionReader';
 import { CanvasHost } from './components/CanvasHost';
-import { sharedTypewriter } from './subtitle/shared';
 import { DebugFlow } from './components/DebugFlow';
 import { PromptPanel } from './components/PromptPanel';
 import { getSharedVoiceClient, getKidsHubSessionId } from '../services/voice-client';
@@ -73,7 +72,6 @@ export function StudioPage({ autoStartTutorial = true }: StudioPageProps) {
     if (!firstIncomplete) return; // 全部完成，不打扰
     const client = getSharedVoiceClient();
     void client.unlockAudio().catch(() => {});
-    sharedTypewriter().reset();
     client.bargeIn();
     useAppStore.getState().setSubtitle('');
     ts.start(firstIncomplete.id);
@@ -99,7 +97,6 @@ export function StudioPage({ autoStartTutorial = true }: StudioPageProps) {
     // 引导中点场景卡 = 打断引导（A03 §2.4：不标记完成，下次从 Step 1 重来）
     const tutorial = useTutorialStore.getState();
     if (tutorial.isActive) tutorial.interrupt();
-    sharedTypewriter().reset();
     getSharedVoiceClient().bargeIn();
     useAppStore.getState().setSubtitle('');
 
