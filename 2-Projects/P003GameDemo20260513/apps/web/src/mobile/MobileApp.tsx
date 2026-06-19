@@ -16,6 +16,22 @@ export function MobileApp() {
   const setVariable = useKidsHubStore((s) => s.setVariable);
   const [checking, setChecking] = useState(true);
 
+  // 自适应不同手机分辨率：该 Android WebView 里 vh/dvh/% 视口单位会算成 0，
+  // 用 JS 实测的 innerHeight 注入 --app-vh（纯 px），下游元素用 calc(var(--app-vh)*N) 按屏高缩放，
+  // 绕过失效的视口单位，旋转/分屏时也实时跟随。
+  useEffect(() => {
+    const setAppVh = () => {
+      document.documentElement.style.setProperty('--app-vh', `${window.innerHeight}px`);
+    };
+    setAppVh();
+    window.addEventListener('resize', setAppVh);
+    window.addEventListener('orientationchange', setAppVh);
+    return () => {
+      window.removeEventListener('resize', setAppVh);
+      window.removeEventListener('orientationchange', setAppVh);
+    };
+  }, []);
+
   useEffect(() => {
     if (!token) {
       setChecking(false);

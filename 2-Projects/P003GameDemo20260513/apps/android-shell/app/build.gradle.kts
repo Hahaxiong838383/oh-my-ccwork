@@ -19,10 +19,11 @@ android {
         // "https://192.168.1.100:5173/m"   // 用于 Vite dev server 本地联调
         buildConfigField("String", "WEBVIEW_URL", "\"https://kidshub-ai.hahaxiong.cc/m\"")
 
-        // Porcupine AccessKey（占位）
-        // TODO: 去 https://console.picovoice.ai/ 注册获取 AccessKey，填入下方
-        // 注意：国内访问 Picovoice Console 可能需要科学上网，首次初始化需要联网校验
-        buildConfigField("String", "PORCUPINE_ACCESS_KEY", "\"\"")
+        // sherpa-onnx 端侧唤醒词：纯离线、无账号、无激活，模型在 assets/kws-model/。
+        // 只打包 arm64-v8a（覆盖现代手机；onnxruntime.so 单 ABI ~26M，全 ABI 会翻几倍）。
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
     }
 
     buildTypes {
@@ -77,9 +78,10 @@ dependencies {
     // WebView（标准 WebView + 必要配置）
     // androidx.webkit 可选，这里直接用 android.webkit.WebView 即可
 
-    // Picovoice Porcupine Android SDK（前台唤醒词）
-    // 版本按官方 3.x 系列
-    implementation("ai.picovoice:porcupine-android:3.+")
+    // 唤醒词引擎 = sherpa-onnx（源码集成，非 maven）：
+    //   - Kotlin API 在 java/com/k2fsa/sherpa/onnx/（v1.13.3，22 个 .kt）
+    //   - 预编译 native .so 在 jniLibs/arm64-v8a/（libsherpa-onnx-jni + libonnxruntime + c-api）
+    //   - AGP 默认自动打包 src/main/jniLibs，无需额外依赖声明
 
     // Debug 工具
     debugImplementation("androidx.compose.ui:ui-tooling:1.5.4")

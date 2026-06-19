@@ -117,8 +117,11 @@ export function MobileAvatar() {
             src={expressionUrl(file)}
             alt={def?.label ?? '小可'}
             draggable={false}
-            className="h-[340px] w-auto"
-            style={{ filter: 'drop-shadow(0 14px 22px rgba(51,65,85,0.22))' }}
+            className="w-auto"
+            style={{
+              height: 'clamp(220px, calc(var(--app-vh, 100vh) * 0.42), 380px)',
+              filter: 'drop-shadow(0 14px 22px rgba(51,65,85,0.22))',
+            }}
             initial={{ scale: 0.84, y: 10, opacity: 0.4 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 360, damping: 22 }}
