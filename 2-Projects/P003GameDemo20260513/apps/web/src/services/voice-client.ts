@@ -123,6 +123,12 @@ class VoiceClientImpl implements VoiceClient {
   // 加速时音色偏尖（无音高保持，时间拉伸需第三方库，demo 接受此权衡）。
   private playbackRate = 1;
 
+  // 修复(team 2026-06-19)：decode 串行链——保证音频段严格按 flush 顺序 decode+schedule，
+  // 杜绝并发 decodeAudioData 完成乱序抢占 playbackScheduledAt（段重叠/错位 → "同段音量忽大忽小"根因）。
+  private decodeChain: Promise<void> = Promise.resolve();
+  // 固定 TTS 增益总线：source → ttsGain → destination，统一音量 + 防多段瞬时叠加削波。
+  private ttsGain: GainNode | null = null;
+
   isConnected(): boolean {
     return !!(this.ws && this.ws.readyState === WebSocket.OPEN);
   }
@@ -308,6 +314,9 @@ class VoiceClientImpl implements VoiceClient {
       this.workletLoaded = true;
     }
 
+    // PTT 互斥(team 修复 2026-06-19)：录音前停掉所有 TTS 播放——录音与播放不同时存在，
+    // 避免 getUserMedia 激活系统音频会话 ducking 时压低正在播的小可声音(三件套已关但系统层仍可能 duck)。
+    this.stopAllPlayback();
     // 清资源但不发 audio.end（避免 session.start 之前的错误信号）
     this.cleanupRecordingResources();
 
@@ -466,12 +475,9 @@ class VoiceClientImpl implements VoiceClient {
     void this.flushMp3Buffer('boundary');
   }
 
-  private async flushMp3Buffer(reason: 'timer' | 'boundary'): Promise<void> {
+  private flushMp3Buffer(reason: 'timer' | 'boundary'): void {
     if (this.mp3Buffer.length === 0) return;
-    const ctx = this.ensureAudioContext();
-    if (!ctx) return;
-    const generation = this.playbackGeneration;
-
+    // 同步拼接 + 清 buffer：保证「入队顺序 = flush 顺序」，后续串行 decode 严格按此序推进。
     const totalLen = this.mp3Buffer.reduce((s, b) => s + b.byteLength, 0);
     const merged = new Uint8Array(totalLen);
     let cursor = 0;
@@ -480,78 +486,106 @@ class VoiceClientImpl implements VoiceClient {
       cursor += b.byteLength;
     }
     this.mp3Buffer = [];
-
+    const generation = this.playbackGeneration;
+    const isFirstSegment = !this.turnHadSegment;
+    this.turnHadSegment = true;
     this.decodingCount += 1;
-    try {
-      const arrayBuffer = merged.buffer.slice(
-        merged.byteOffset,
-        merged.byteOffset + merged.byteLength,
-      ) as ArrayBuffer;
-      const buffer = await ctx.decodeAudioData(arrayBuffer);
-      if (generation !== this.playbackGeneration) return;
+    // 串行链：上一段 decode+schedule 完才轮到本段，playbackScheduledAt 按序推进，
+    // 消除并发 decodeAudioData 乱序完成抢占排队时间轴（段重叠/错位）。
+    this.decodeChain = this.decodeChain
+      .then(() => this.decodeAndSchedule(merged, reason, generation, isFirstSegment))
+      .catch(() => {
+        /* 单段 decode 失败不断链，后续段照常播 */
+      })
+      .finally(() => {
+        this.decodingCount -= 1;
+        this.checkPlaybackEnd();
+      });
+  }
 
-      const src = ctx.createBufferSource();
-      src.buffer = buffer;
-      // 需求3：应用语速（同时升调，demo 接受）。effDur = 真实播放时长 = buffer.duration / rate
-      src.playbackRate.value = this.playbackRate;
-      src.connect(ctx.destination);
+  private async decodeAndSchedule(
+    merged: Uint8Array,
+    reason: 'timer' | 'boundary',
+    generation: number,
+    isFirstSegment: boolean,
+  ): Promise<void> {
+    if (generation !== this.playbackGeneration) return;
+    const ctx = this.ensureAudioContext();
+    if (!ctx) return;
+    const arrayBuffer = merged.buffer.slice(
+      merged.byteOffset,
+      merged.byteOffset + merged.byteLength,
+    ) as ArrayBuffer;
+    const buffer = await ctx.decodeAudioData(arrayBuffer);
+    if (generation !== this.playbackGeneration) return;
 
-      const now = ctx.currentTime;
-      const startAt = Math.max(now, this.playbackScheduledAt);
-      src.start(startAt);
-      const effDur = buffer.duration / this.playbackRate;
-      this.playbackScheduledAt = startAt + effDur;
-      this.playbackSources.push(src);
-      src.onended = () => {
-        const idx = this.playbackSources.indexOf(src);
-        if (idx >= 0) this.playbackSources.splice(idx, 1);
-        // 最后一段播完 + 合成流已结束 → 本轮真正说完（avatar endTurn 等用）
-        if (generation === this.playbackGeneration) this.checkPlaybackEnd();
-      };
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    // 需求3：应用语速（同时升调，demo 接受）。effDur = 真实播放时长 = buffer.duration / rate
+    src.playbackRate.value = this.playbackRate;
+    // 接固定 ttsGain 总线（非直连 destination）：统一音量 + 防多段叠加削波。
+    src.connect(this.ensureTtsGain(ctx));
 
-      // 句开播信号 segment_start（表情队列/字幕打字机的逐句对齐点）：
-      //  1) 本轮第一个段（任何 reason）开播 = 第 0 句开播——600ms 防抖 timer 常比
-      //     sentence_break 先偷跑首段，单句轮甚至可能全是 timer 段（一个 boundary 都
-      //     没有），只认 boundary 会让第 0 句信号整轮缺失（实测字幕全程空白的根因）
-      //  2) boundary 段（sentence_break/tts.end flush）= 该句的【尾段】，它"播完"的
-      //     时刻才是下一句开播——在 endAt 对齐 emit。末段会多发一次，下游已自保
-      //     （打字机末句原地不动 / 表情队列空 no-op）
-      const isFirstSegment = !this.turnHadSegment;
-      this.turnHadSegment = true;
-      if (isFirstSegment) {
-        const delayMs = Math.max(0, (startAt - now) * 1000);
+    const now = ctx.currentTime;
+    const startAt = Math.max(now, this.playbackScheduledAt);
+    src.start(startAt);
+    const effDur = buffer.duration / this.playbackRate;
+    this.playbackScheduledAt = startAt + effDur;
+    this.playbackSources.push(src);
+    src.onended = () => {
+      const idx = this.playbackSources.indexOf(src);
+      if (idx >= 0) this.playbackSources.splice(idx, 1);
+      // 最后一段播完 + 合成流已结束 → 本轮真正说完（avatar endTurn 等用）
+      if (generation === this.playbackGeneration) this.checkPlaybackEnd();
+    };
+
+    // 句开播信号 segment_start（表情队列/字幕逐句对齐点）。保留现状 durationMs；
+    // 修复1（字幕 rAF 进度驱动）会改成带 startAt/endAt 段时间轴。
+    if (isFirstSegment) {
+      const delayMs = Math.max(0, (startAt - now) * 1000);
+      window.setTimeout(() => {
+        if (generation === this.playbackGeneration)
+          this.emit('tts.segment_start', { durationMs: Math.round(effDur * 1000) });
+      }, delayMs);
+    }
+    if (reason === 'boundary') {
+      const endDelayMs = Math.max(0, (startAt + effDur - now) * 1000);
+      window.setTimeout(() => {
+        if (generation === this.playbackGeneration)
+          this.emit('tts.segment_start', { durationMs: Math.round(effDur * 1000) });
+      }, endDelayMs);
+    }
+
+    // D5 P21：src.start() 已调度——首段播放点真到了，fire pendingOnAudioStart（对齐 AudioContext clock）
+    if (this.pendingOnAudioStart) {
+      const cb = this.pendingOnAudioStart;
+      this.pendingOnAudioStart = null;
+      const delayMs = Math.max(0, (startAt - now) * 1000);
+      if (delayMs > 0) {
         window.setTimeout(() => {
-          if (generation === this.playbackGeneration) this.emit('tts.segment_start', { durationMs: Math.round(effDur * 1000) });
+          try {
+            cb();
+          } catch (err) {
+            console.warn('[voice-client] onAudioStart cb failed', err);
+          }
         }, delayMs);
-      }
-      if (reason === 'boundary') {
-        const endDelayMs = Math.max(0, (startAt + effDur - now) * 1000);
-        window.setTimeout(() => {
-          if (generation === this.playbackGeneration) this.emit('tts.segment_start', { durationMs: Math.round(effDur * 1000) });
-        }, endDelayMs);
-      }
-
-      // D5 P21：实际 src.start() 已调度——首段播放点真到了，fire pendingOnAudioStart
-      // 用 setTimeout 等到 (startAt - now) * 1000 ms 后才 fire（精确对齐 AudioContext clock）
-      if (this.pendingOnAudioStart) {
-        const cb = this.pendingOnAudioStart;
-        this.pendingOnAudioStart = null;
-        const delayMs = Math.max(0, (startAt - now) * 1000);
-        if (delayMs > 0) {
-          window.setTimeout(() => {
-            try { cb(); } catch (err) { console.warn('[voice-client] onAudioStart cb failed', err); }
-          }, delayMs);
-        } else {
-          try { cb(); } catch (err) { console.warn('[voice-client] onAudioStart cb failed', err); }
+      } else {
+        try {
+          cb();
+        } catch (err) {
+          console.warn('[voice-client] onAudioStart cb failed', err);
         }
       }
-    } catch {
-      // decode 失败：忽略本段
-    } finally {
-      this.decodingCount -= 1;
-      // decode 失败的段若是最后一段，这里补一次播完检查（成功路径 source 在场不会误发）
-      this.checkPlaybackEnd();
     }
+  }
+
+  private ensureTtsGain(ctx: AudioContext): GainNode {
+    if (this.ttsGain) return this.ttsGain;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.9; // 略降防多段瞬时叠加削波（clip）
+    gain.connect(ctx.destination);
+    this.ttsGain = gain;
+    return gain;
   }
 
   bargeIn(): void {
@@ -565,9 +599,19 @@ class VoiceClientImpl implements VoiceClient {
       this.mp3FlushTimer = null;
     }
     this.mp3Buffer = [];
-    // 代际 +1：作废在途的 segment_start 定时器和旧 source 的 onended 播完检测
+    this.stopAllPlayback();
+    // 打断 = 本轮播放强制结束，给 avatar/UI 一个确定的收尾信号；
+    // reason 让消费方（如 tutorial 状态机）区分"被掐断"和"自然播完"
+    this.emit('tts.playback_end', { reason: 'barge' });
+  }
+
+  /**
+   * 停掉所有在播 / 在调度的 TTS 音频（不发 server barge.in）。
+   * bargeIn 与 startRecording(PTT 互斥) 复用：代际 +1 作废在途 segment_start 定时器、
+   * 旧 source onended、decode 串行链上的旧段。
+   */
+  private stopAllPlayback(): void {
     this.playbackGeneration += 1;
-    // 立刻停掉所有已调度的 audio source
     for (const src of this.playbackSources) {
       try {
         src.stop();
@@ -577,11 +621,9 @@ class VoiceClientImpl implements VoiceClient {
     }
     this.playbackSources = [];
     this.playbackScheduledAt = 0;
+    this.decodeChain = Promise.resolve();
     this.ttsStreamEnded = false;
     this.turnHadSegment = false;
-    // 打断 = 本轮播放强制结束，给 avatar/UI 一个确定的收尾信号；
-    // reason 让消费方（如 tutorial 状态机）区分"被掐断"和"自然播完"
-    this.emit('tts.playback_end', { reason: 'barge' });
   }
 
   private observeTurn(turn: number): boolean {
