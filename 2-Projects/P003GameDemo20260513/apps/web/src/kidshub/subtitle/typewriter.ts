@@ -133,7 +133,9 @@ export function createSubtitleTypewriter(
         maybeScheduleAutoAdvance();
       }
     };
-    typingTimer = setTimeout(doTick, charMs) as any;
+    // 修(team 2026-06-19)：立即打第一个字,不等 charMs——A 改逐分句后每个分句开头都要等 charMs(150ms)
+    // 才出首字 → 字幕明显滞后于语音(净滞后 ~70-120ms)。doTick() 同步出首字,后续字符才 setTimeout(charMs)。
+    doTick();
   }
 
   function reconcileAfterTextUpdate(): void {
