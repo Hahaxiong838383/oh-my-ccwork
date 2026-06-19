@@ -45,10 +45,11 @@ for (const t of ['我今天很开心', '我喜欢恐龙', '讲个故事吧', '�
 // 7. 闲聊 / 空输入返 null（降级不注入）
 ok('闲聊返null', buildAiLiteracyGuide('我今天很开心') === null);
 ok('空输入返null', buildAiLiteracyGuide('') === null);
-// 8. 安全红线常驻段内容（禁后台词 + 不是真人 + 珍惜身边人）
+// 8. 安全红线常驻段内容（禁后台词 + 闲聊不主动提身份防 AI 感 + 被问才回应 + 珍惜身边人）
 ok('常驻段禁"程序"', AI_SAFETY_BASELINE.includes('程序'));
 ok('常驻段禁"Gemini"', AI_SAFETY_BASELINE.includes('Gemini'));
-ok('常驻段说不是真人', AI_SAFETY_BASELINE.includes('不是真人'));
+ok('常驻段闲聊不主动提身份(防AI感)', AI_SAFETY_BASELINE.includes('平时') && AI_SAFETY_BASELINE.includes('绝不主动'));
+ok('常驻段被问到才回应身份', AI_SAFETY_BASELINE.includes('只有当孩子主动问到'));
 ok('常驻段含珍惜身边人', AI_SAFETY_BASELINE.includes('珍惜身边'));
 
 console.log(`\n${fail === 0 ? '🎉' : '❌'} ai-literacy 单测 pass=${pass} fail=${fail}`);
