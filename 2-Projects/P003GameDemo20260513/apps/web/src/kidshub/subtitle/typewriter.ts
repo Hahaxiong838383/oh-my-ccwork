@@ -8,7 +8,7 @@ export interface TypewriterCallbacks {
 export interface SubtitleTypewriter {
   feedText(delta: string): void;
   finalizeText(full: string): void;
-  advanceSentence(durationMs?: number): void;
+  advanceSentence(): void;
   finishPlayback(): void;
   reset(): void;
 }
@@ -170,7 +170,7 @@ export function createSubtitleTypewriter(
     reconcileAfterTextUpdate();
   }
 
-  function advanceSentence(durationMs?: number): void {
+  function advanceSentence(): void {
     // 外部句边界信号优先：取消在途的自动兜底，避免双推进跳句
     stopAutoAdvanceTimer();
     if (activeSentenceIdx >= 0) {
