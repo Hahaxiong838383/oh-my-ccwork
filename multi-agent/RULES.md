@@ -45,22 +45,22 @@
 
 | ID | 路径 | 引擎 | 上下文 | thinking 档 | 成本 | 独特价值 |
 |---|---|---|---|---|---|---|
-| **B1 默认** | omp | `google-gemini-cli/gemini-3-flash-preview` | 1M | minimal-high | ¥0 | Gemini 默认主力,短任务 |
-| **B2 学术深度** | omp | `google-gemini-cli/gemini-3.1-pro-preview` | 1M | low/high | ¥0 | gemini 风格精准,长综合,Google ecosystem |
-| **B3 顶级深度（付费）** | mycc VPS proxy `23.226.135.149:4000` | `gemini-3.5-flash` + max_tokens 65535 | 1M | minimal/medium/high | 💴 按 token | Vertex AI Global,thinking 最强 |
+| **B1 默认** | omp | `google-antigravity/gemini-3-flash` | 1M | minimal-high | ¥0 | Gemini 默认主力,短任务（⚠️ 2026-06-19 gemini-cli 被 Google 停用→切 antigravity） |
+| **B2 学术深度** | omp | `google-antigravity/gemini-3.5-flash` + thinking high | 1M | low/high | ¥0 | gemini 长综合深度（原 gemini-cli pro 停用→antigravity 3.5） |
+| **B3 顶级深度（免费）** | omp | `google-antigravity/gemini-3.5-flash` + thinking high | 1M | low/high | ¥0 | 独立 Google 深度声音（2026-06-17 antigravity 免费复活，原付费 VPS proxy 已弃用） |
 | **★ B4 grok 推理评审** | omp | `xai-oauth/grok-4.3` | 1M | minimal-**xhigh** | ¥0 | **第一性原理推理 / 反思维定式 / 物理直觉 / 非 Google 视角** |
 | **★ B5 codex 严谨评审** | omp | `openai-codex/gpt-5.5` 或 `gpt-5.4` | 272k-400k | minimal-xhigh | ¥0 | **结构化逻辑链清晰 / 边界用例 / 偏正式格式** |
-| **B-fallback** | gemini CLI 直调 | 同 B1/B2 | 同上 | 同上 | ¥0 | omp 不通时降级 |
+| ~~B-fallback~~ | ❌ gemini CLI 直调已停用 | — | — | — | — | 2026-06-19 Google 停 Code Assist 个人版；gemini 全走 antigravity，无 CLI fallback |
 
 ### B 档调研/评审触发逻辑（按风格选）
 
 ```
 评审/调研任务
   ├─ 短调研 / 提取 / 分类 → B1 omp gemini-3-flash (默认,最快)
-  ├─ 学术综合 / 长文分析 → B2 omp gemini-3.1-pro
+  ├─ 学术综合 / 长文分析 → B2 omp antigravity gemini-3.5-flash high
   ├─ 推理深度 / Why / 第一性原理 → B4 omp grok-4.3 thinking=high
   ├─ 严谨结构化 / 代码评审风格 → B5 omp gpt-5.5 thinking=high
-  ├─ 顶级深度 / 批判性思考 → B3 VPS proxy 3.5-flash high (付费)
+  ├─ 顶级深度 / 批判性思考 → B3 omp antigravity gemini-3.5-flash high (免费；原付费 VPS proxy 已弃用)
   └─ 轻量 code review → B5 omp gpt-5.4 high (单发)
 ```
 
@@ -71,9 +71,9 @@
 | Stake 档 | 写码 lane 模式 | 评审 lane 模式 | 触发判定 |
 |---------|---------------|---------------|---------|
 | **普通**（默认）| 单发（按 A 档路由）| 单发（按 B 档路由）| 默认 |
-| **中等** | 单发 + 关键时双发对比 | 双发（B4 + B2 推理 vs 学术）| cc 判断 |
-| **高 stake / 高难度** ★ | **A 双发**（A1 + A3）+ **B 三发评审**（B4 + B5 + B2）| **B 三发对抗**（B4 + B5 + B2）| 见下方判定 |
-| **顶级** ⚠️ 川哥手动触发 | A 双发 + **B 四发**（B4 + B5 + B2 + B3 加付费档） | B 四发 | 川哥说"大活/高难度/不能错" 或 cc 风险预警 |
+| **中等** | 单发 + 关键时双发对比 | 双发（B4 + B1 快速 vs 推理）| cc 判断 |
+| **高 stake / 高难度** ★ | **A 双发**（A1 + A3）+ **B 三发评审**（B4 + B5 + B1）| **B 三发对抗**（B4 + B5 + B1）| 见下方判定 |
+| **顶级** ⚠️ 川哥手动触发 | A 双发 + **B 三发兼容入口**（`review-4send.sh` 当前退化三发；B3 下线） | B 三发 + 手动升档 | 川哥说"大活/高难度/不能错" 或 cc 风险预警；恢复 B3 前必须显式确认付费 |
 
 ### 高 stake / 高难度 判定（自动触发三发）
 
@@ -134,16 +134,14 @@ bash /Users/rayman.chen/mycc/4-Assets/SOP/codex_run.sh /tmp/p.md /tmp/codex_out.
 # 应急直调(仅手动单次/不进 team 编排):
 codex exec -C /path --full-auto -c model="gpt-5.5" -c model_reasoning_effort="high" - < /tmp/p.md
 
-# B1 omp gemini-3-flash-preview (默认调研,免费)
-omp -p --model google-gemini-cli/gemini-3-flash-preview --thinking minimal --auto-approve "..."
+# B1 omp antigravity gemini-3-flash (默认调研,免费; ⚠️ gemini-cli 2026-06-19 被 Google 停用)
+omp -p --model google-antigravity/gemini-3-flash --thinking minimal --auto-approve "..."
 
-# B2 omp gemini-3.1-pro-preview (学术深度,免费)
-omp -p --model google-gemini-cli/gemini-3.1-pro-preview --thinking high --auto-approve "..."
+# B2 omp antigravity gemini-3.5-flash (学术深度,免费)
+omp -p --model google-antigravity/gemini-3.5-flash --thinking high --auto-approve "..."
 
-# B3 VPS proxy 3.5-flash (顶级深度,付费)
-curl -H "Authorization: Bearer fq8-1NLtsbVsiJhZaISmNeobvqY0bIZMoafPnKfkuz4" \
-  http://23.226.135.149:4000/v1/chat/completions \
-  -d '{"model":"gemini-3.5-flash","messages":[...],"max_tokens":65535,"reasoning_effort":"high"}'
+# B3 omp antigravity gemini-3.5-flash (顶级深度,免费; 原付费 VPS proxy 已弃用)
+omp -p --model google-antigravity/gemini-3.5-flash --thinking high --auto-approve "..."
 
 # B4 omp xai-oauth/grok-4.3 (推理深度评审,免费)
 omp -p --model xai-oauth/grok-4.3 --thinking high --auto-approve "..."
@@ -154,14 +152,15 @@ omp -p --model openai-codex/gpt-5.4 --thinking high --auto-approve "..."
 # ─── B 三发对抗(高 stake/高难度评审标准模板) ───
 PROMPT_FILE=/tmp/review.md  # 评审内容 + diff + 评审角度
 
-omp -p --model xai-oauth/grok-4.3 --thinking high --auto-approve "$(cat $PROMPT_FILE)" > /tmp/r-grok.md 2>&1 &
-omp -p --model openai-codex/gpt-5.5 --thinking high --auto-approve "$(cat $PROMPT_FILE)" > /tmp/r-gpt.md 2>&1 &
-omp -p --model google-gemini-cli/gemini-3.1-pro-preview --thinking high --auto-approve "$(cat $PROMPT_FILE)" > /tmp/r-gem.md 2>&1 &
+# ⚠️ 实际请用 review-3send.sh(已加固 --no-tools 只读 + --cwd 干净目录, 防评审引擎改文件); 下方仅示意
+omp -p --model xai-oauth/grok-4.3 --thinking high --no-tools "$(cat $PROMPT_FILE)" > /tmp/r-grok.md 2>&1 &
+omp -p --model openai-codex/gpt-5.5 --thinking high --no-tools "$(cat $PROMPT_FILE)" > /tmp/r-gpt.md 2>&1 &
+omp -p --model google-antigravity/gemini-3-flash --thinking high --no-tools "$(cat $PROMPT_FILE)" > /tmp/r-gem.md 2>&1 &
 wait
 # cc 综合三家 finding, 取并集去重, 标各家独有发现, 跑测试验证
 
-# ─── 顶级 B 四发(川哥手动触发 / cc 预警后确认才用) ───
-# 上面三家 + B3 VPS proxy 3.5-flash (付费档,thinking 最强)
+# ─── 顶级四发入口(川哥手动触发 / cc 预警后确认才用) ───
+# review-4send.sh 真四发(B4 grok + B5 codex + B1 antigravity gemini-3-flash + B3 antigravity gemini-3.5-flash); B3 已用免费 antigravity 复活,无需付费确认
 
 # ─── 高 stake 写码 A 双发 + B 三发评审 联动 ───
 # Stage 1: A 双发实现
@@ -173,9 +172,9 @@ wait
 # Stage 2: B 三发评审 cc 选定版本
 DIFF=$(cd /path && git diff main..HEAD)
 PROMPT="审查这段 diff: \n\n$DIFF"
-omp -p --model xai-oauth/grok-4.3 --thinking high --auto-approve "$PROMPT" > /tmp/r-grok.md &
-omp -p --model openai-codex/gpt-5.5 --thinking high --auto-approve "$PROMPT" > /tmp/r-gpt.md &
-omp -p --model google-gemini-cli/gemini-3.1-pro-preview --thinking high --auto-approve "$PROMPT" > /tmp/r-gem.md &
+omp -p --model xai-oauth/grok-4.3 --thinking high --no-tools "$PROMPT" > /tmp/r-grok.md &
+omp -p --model openai-codex/gpt-5.5 --thinking high --no-tools "$PROMPT" > /tmp/r-gpt.md &
+omp -p --model google-antigravity/gemini-3-flash --thinking high --no-tools "$PROMPT" > /tmp/r-gem.md &
 wait
 # cc 综合所有信号(双发实现差异 + 三家评审 finding) 决策
 ```
@@ -241,7 +240,7 @@ Layer 1 规格（cc 输出 SPEC.md + AC.md，含数据契约 + 判定矩阵 + "�
 Layer 2 多 lane 并行产出（各占 blackboard 一行，互不阻塞）：
         • cc    — 主线编排 / 关键决策 / 写验收脚本 / 风险预警
         • A 写码 — 按 stake 升级：普通 A1 单发 / 高 stake/高难度 A1+A3 双发
-        • B 评审 — 按 stake 升级：普通 B1 单发 / 高 stake/高难度 B4+B5+B2 三发对抗
+        • B 评审 — 按 stake 升级：普通 B1 单发 / 高 stake/高难度 B4+B5+B1 三发对抗
         • D hermes — 长时（>30min）/ 异步推送（如需）
       ↓
 Layer 3 自动化验收（测试 + lint + type check，cc 主 shell 自跑一遍）
@@ -250,8 +249,8 @@ Layer 4 裁决（cc 综合 A 双发实现差异 + B 三发评审 finding + 自�
 ```
 
 > **写码 lane 由 cc 按日常路由分派**：普通走 A1（grok-build 最便宜）；超 512k 升 A2（omp grok-4.3 1M）；高 stake 走 A3（omp gpt-5.5）。**高 stake/高难度任务必须 A 双发对比**（A1 + A3，cc 跑测试挑优 / 互为对抗审查）。
-> **评审 lane**：高 stake/高难度任务必须 **B 三发对抗**（B4 grok 推理 + B5 gpt 严谨 + B2 gemini 学术，三家跨家族独立视角）。
-> **顶级 stake**（川哥手动触发 或 cc 风险预警询问后启动）：A 双发 + **B 四发**（B3 加 VPS proxy 3.5-flash 付费档）。
+> **评审 lane**：高 stake/高难度任务必须 **B 三发对抗**（B4 grok 推理 + B5 gpt 严谨 + B1 gemini 默认，三家跨家族独立视角）。
+> **顶级 stake**（川哥手动触发 或 cc 风险预警询问后启动）：先走 `review-4send.sh` 兼容入口（当前等同三发）；确需 B3 付费档时先显式确认并从 Keychain 取 token。
 > 多引擎并行改同仓文件时用 `grok -w`（worktree）或独立 worktree 防冲突。
 
 ### Team 模式额外规则
@@ -306,7 +305,8 @@ codex exec -C /Users/rayman.chen/mycc --full-auto \
   - < /tmp/codex_prompt.md > /tmp/codex_log.md 2>&1 &
 
 # Gemini（调研 / 评审，Google）— prompt 内嵌全文
-gemini -m gemini-3-flash-preview -p "$(cat /tmp/gemini_prompt.md)"
+# ⚠️ 2026-06-19: gemini CLI 直调已停用(Google 停 Code Assist 个人版)，改走 omp antigravity 通道
+omp -p --model google-antigravity/gemini-3-flash --thinking high "$(cat /tmp/gemini_prompt.md)"
 ```
 
 > cc 用 Monitor 等引擎退出（不轮询），完成后**主 shell 自跑测试验收**，再由 cc 主线 commit/push（grok/codex sandbox 不让写 .git）。

@@ -32,12 +32,12 @@
 
 | ID | 引擎 | 上下文 | 独特价值 | 调用入口 |
 |---|---|---|---|---|
-| **B1 默认** | omp gemini-3-flash-preview | 1M | Gemini 默认主力,短任务 | `omp -p --model google-gemini-cli/gemini-3-flash-preview` |
-| **B2 学术深度** | omp gemini-3.1-pro-preview | 1M | gemini 风格精准,长综合 | `omp -p --model google-gemini-cli/gemini-3.1-pro-preview --thinking high` |
-| **B3 顶级深度（付费）** | mycc VPS proxy gemini-3.5-flash | 1M | Vertex AI,thinking 最强 | `curl 23.226.135.149:4000` + reasoning_effort + max_tokens 65535 |
+| **B1 默认** | omp antigravity gemini-3-flash | 1M | Gemini 默认主力,短任务（⚠️ gemini-cli 2026-06-19 被 Google 停用） | `omp -p --model google-antigravity/gemini-3-flash` |
+| **B2 学术深度** | omp antigravity gemini-3.5-flash | 1M | gemini 长综合深度 | `omp -p --model google-antigravity/gemini-3.5-flash --thinking high` |
+| **B3 顶级深度（免费）** | omp antigravity gemini-3.5-flash | 1M | 独立 Google 深度声音（原付费 VPS proxy 已弃用） | `omp -p --model google-antigravity/gemini-3.5-flash --thinking high` |
 | **★ B4 grok 推理评审** | omp xai-oauth/grok-4.3 | 1M | **第一性原理推理 / 反思维定式 / 非 Google 视角** | `omp -p --model xai-oauth/grok-4.3 --thinking high` |
 | **★ B5 codex 严谨评审** | omp openai-codex/gpt-5.5 或 5.4 | 272k-400k | **结构化逻辑链清晰 / 边界用例** | `omp -p --model openai-codex/gpt-5.5 --thinking high` |
-| **B-fallback** | gemini CLI 直调 | 同上 | omp 不通时降级 | `gemini -m gemini-3-flash-preview -p ...` |
+| ~~B-fallback~~ | ❌ gemini CLI 直调已停用 | — | 2026-06-19 Google 停 Code Assist 个人版,gemini 全走 antigravity | — |
 
 ### C/D 档
 
@@ -68,8 +68,8 @@
   ├─ 学术综合 / 长文分析 → B2 omp gemini-3.1-pro
   ├─ 推理深度 / Why / 第一性原理 → B4 omp grok-4.3 thinking=high
   ├─ 严谨结构化 / code review → B5 omp gpt-5.5 thinking=high (单发即可)
-  ├─ 顶级深度 / 批判性思考 → B3 VPS proxy 3.5-flash (付费)
-  └─ 高 stake / 高难度评审 → B 三发对抗(B4+B5+B2)
+  ├─ 顶级深度 / 批判性思考 → B3 VPS proxy 3.5-flash (付费；当前已从 team 自动脚本下线)
+  └─ 高 stake / 高难度评审 → B 三发对抗(B4+B5+B1)
 ```
 
 ### 三发/四发对抗触发线（川哥钦定 2026-06-04）
@@ -77,9 +77,9 @@
 | Stake 档 | 写码模式 | 评审模式 | 触发判定 |
 |---------|---------|---------|---------|
 | **普通** | 单发 | 单发 | 默认 |
-| **中等** | 单发 + 关键时双发 | 双发（B4+B2）| cc 判断 |
-| **高 stake / 高难度** ★ | **A 双发**（A1+A3）+ **B 三发评审**（B4+B5+B2）| **B 三发对抗**（B4+B5+B2）| 见下方判定 |
-| **顶级** ⚠️ 手动触发 | A 双发 + **B 四发**（+ B3 付费档）| B 四发 | 川哥说"大活/高难度/不能错" 或 cc 风险预警询问 |
+| **中等** | 单发 + 关键时双发 | 双发（B4+B1）| cc 判断 |
+| **高 stake / 高难度** ★ | **A 双发**（A1+A3）+ **B 三发评审**（B4+B5+B1）| **B 三发对抗**（B4+B5+B1）| 见下方判定 |
+| **顶级** ⚠️ 手动触发 | A 双发 + `review-4send.sh` 兼容入口（当前退化三发；B3 下线）| B 三发 + 手动升档 | 川哥说"大活/高难度/不能错" 或 cc 风险预警询问；恢复 B3 前必须显式确认付费 |
 
 **高 stake 判定**（自动触发三发）：认证 / 支付 / 数据迁移 / 生产事故 / 安全凭据 / 不可回滚
 
