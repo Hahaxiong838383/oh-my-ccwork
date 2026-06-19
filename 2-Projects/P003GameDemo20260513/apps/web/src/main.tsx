@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App } from './app/App';
 import { KidsHubApp } from './kidshub/KidsHubApp';
+import { MobileApp } from './mobile/MobileApp';
 import './styles.css';
 
 // 工作台分流：/kidshub-ai 路径，或 kidshub* 专属域名根路径直接进工作台
@@ -13,6 +14,11 @@ const isKidsHub =
   window.location.pathname.startsWith('/kidshub-ai') ||
   window.location.hostname.startsWith('kidshub');
 
+// 移动端 App（原生壳 WebView / 手机浏览器）：/m 路径优先分流，复用工作台同一份 dist
+const isMobileApp = window.location.pathname.startsWith('/m');
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>{isKidsHub ? <KidsHubApp /> : <App />}</React.StrictMode>,
+  <React.StrictMode>
+    {isMobileApp ? <MobileApp /> : isKidsHub ? <KidsHubApp /> : <App />}
+  </React.StrictMode>,
 );

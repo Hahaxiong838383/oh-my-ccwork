@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 全屏沉浸式主题，无 ActionBar -->
+    <style name="Theme.KidshubShell" parent="android:Theme.Material.Light.NoDisplay">
+        <!-- 实际在代码中使用 WindowCompat + WindowInsetsController 控制沉浸 -->
+    </style>
+</resources>
