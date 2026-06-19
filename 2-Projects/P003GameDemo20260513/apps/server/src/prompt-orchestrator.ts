@@ -17,6 +17,7 @@ export function assembleSystemPrompt(
   meta: ChildMeta | null,
   auth: AuthContext | null,
   curriculumGuardrail?: string | null,
+  aiLiteracyGuide?: string | null,
 ): string {
   // 记忆注入是「增益」而非「必需」：profile-store 读取 / 解析任何异常都降级回 basePrompt，
   // 绝不阻断实时语音主链路（team 致命 #2）。
@@ -25,7 +26,10 @@ export function assembleSystemPrompt(
     let prompt = block ? `${basePrompt}\n\n${block}` : basePrompt;
     // L_curriculum 护栏（docs/20）：命中 KG 概念时追加先修护栏，引导小可不越级 / 不乱讲教学顺序。
     // 同样降级安全：guardrail 为 null（未命中 / 加载失败）则不追加，不影响主链路。
+    // AI 启蒙门控（docs/22 §9 双层「门控层」）：双命中让位——学科护栏优先(求解正确性)，AI 启蒙引导仅在
+    // 无学科护栏时注入(避免双段 >1600 字稀释人格 / 拖 TTFT)；AI 安全红线已由 basePrompt 的 AI_SAFETY_BASELINE 常驻兜底，双命中不裸奔。
     if (curriculumGuardrail) prompt += `\n\n${curriculumGuardrail}`;
+    else if (aiLiteracyGuide) prompt += `\n\n${aiLiteracyGuide}`;
     return prompt;
   } catch {
     return basePrompt;

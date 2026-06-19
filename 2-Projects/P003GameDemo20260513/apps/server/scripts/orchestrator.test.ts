@@ -79,4 +79,29 @@ const BASE = '你是儿童陪伴机器人小可。';
   console.log('✅ case7 P1.3 注入扩展：兴趣/称呼偏好/近期情绪都注入');
 }
 
-console.log('\n🎉 orchestrator(P0.2+P1.3) 全部通过');
+// case8: AI 启蒙门控注入（docs/22 §9）—— 无学科护栏时 aiLiteracyGuide 命中则追加
+{
+  const r = assembleSystemPrompt(BASE, null, null, null, 'AI启蒙引导XYZ');
+  assert.ok(r.startsWith(BASE), 'base 前缀保留');
+  assert.ok(r.includes('AI启蒙引导XYZ'), 'aiLiteracyGuide 注入');
+  console.log('✅ case8 AI 启蒙门控：无学科护栏时注入 aiLiteracyGuide');
+}
+
+// case9: 双命中让位（docs/22 §9）—— 学科 + AI 都命中时学科优先、AI 启蒙让位不注入
+{
+  const r = assembleSystemPrompt(BASE, null, null, '课程护栏ABC', 'AI启蒙引导XYZ');
+  assert.ok(r.includes('课程护栏ABC'), '学科护栏注入');
+  assert.ok(!r.includes('AI启蒙引导XYZ'), 'AI 启蒙让位(双命中不注入,避免双段稀释人格/拖TTFT)');
+  console.log('✅ case9 双命中让位：学科优先,AI 启蒙不注入');
+}
+
+// case10: 门控 baseline 不回归 —— 双门控 null 时与改前(4 参数签名)结果完全一致
+{
+  const r5 = assembleSystemPrompt(BASE, { nickname: '点点' }, null, null, null);
+  const r4 = assembleSystemPrompt(BASE, { nickname: '点点' }, null);
+  assert.equal(r5, r4, '双门控 null = 改前 4 参数调用,baseline 不回归');
+  assert.ok(!r5.includes('===='), '无任何门控护栏段(无 ==== 标记)');
+  console.log('✅ case10 门控 baseline：双门控 null 时 = 改前,零门控注入');
+}
+
+console.log('\n🎉 orchestrator(P0.2+P1.3+§9 AI启蒙门控) 全部通过');

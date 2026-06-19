@@ -12,6 +12,7 @@ import { assembleSystemPrompt } from './prompt-orchestrator.js';
 import { profileStore } from './profile-store.js';
 import { extractMemoryUpdate } from './memory-extractor.js';
 import { curriculumKG } from './curriculum-kg.js';
+import { buildAiLiteracyGuide, AI_SAFETY_BASELINE } from './ai-literacy.js';
 
 export type SessionMeta = {
   sessionId: string;
@@ -328,7 +329,9 @@ export class VoicePipeline {
 
       // 需求1：吐槽模式 → 追加吐槽回应人格（共情+感谢+不过度承诺）。feedbackMode 由调用方传入：
       // ASR 路径用本轮快照(capturedTurnMeta)判定，chat.trigger 开场白恒 false。普通对话维持原 prompt。
-      const baseSystemPrompt = this.sessionSystemPrompt ?? DEFAULT_SYSTEM_PROMPT;
+      // AI 启蒙双层「常驻层」(docs/22 §9)：身份安全红线拼在 base(session/default 人格都带)，
+      // 兜底门控漏判 / 多轮闪烁 / KV-cache(team 四发共识)；静态文本不破坏 assembleSystemPrompt 的门控 baseline。
+      const baseSystemPrompt = `${this.sessionSystemPrompt ?? DEFAULT_SYSTEM_PROMPT}\n\n${AI_SAFETY_BASELINE}`;
       const withFeedback = feedbackMode
         ? `${baseSystemPrompt}\n\n${FEEDBACK_PERSONA_SUFFIX}`
         : baseSystemPrompt;
@@ -336,7 +339,9 @@ export class VoicePipeline {
       // 权威，匿名用本轮 meta）。下方 debug.prompt_assembled 会回发含此块的完整 prompt（所见即所发）。
       // L_curriculum（docs/20）：内存匹配孩子话里的课程概念（<10ms，不拖 TTFT），命中则注入先修护栏。
       const curriculumGuardrail = curriculumKG.buildGuardrail(finalText);
-      const systemPrompt = assembleSystemPrompt(withFeedback, turnMeta, this.authContext, curriculumGuardrail);
+      // AI 启蒙双层「门控层」(docs/22 §9)：命中 AI 话题才注入生动启蒙引导；闲聊返 null 不注入、不稀释人格。
+      const aiLiteracyGuide = buildAiLiteracyGuide(finalText);
+      const systemPrompt = assembleSystemPrompt(withFeedback, turnMeta, this.authContext, curriculumGuardrail, aiLiteracyGuide);
       // 工作台调试流依赖：回发本轮真实使用的 prompt（所见即所发）
       this.send({ type: 'debug.prompt_assembled', systemPrompt, userText: finalText });
 
