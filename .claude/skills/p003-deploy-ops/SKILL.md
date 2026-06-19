@@ -1,6 +1,6 @@
 ---
 name: p003-deploy-ops
-description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台 / 后端 server)部署 + 邀请码运营管理 SOP（含血泪坑清单）。触发词："/p003-deploy"、"P003 部署"、"部署家长端/体验台/admin"、"P003 邀请码管理"、"加 P003 后台功能"、"P003 上线/发版"。涵盖:按改了哪端的部署步骤(server rsync+pm2 / admin scp from git / parent build base / web full build)、邀请码 CRUD/上限/昵称备注、admin DOM 内 Vue 坑、并行 session 防污染、生产 E2E 铁律。
+description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台 / 后端 server)部署 + 邀请码运营管理 SOP（含血泪坑清单）。触发词："/p003-deploy"、"P003 部署"、"部署家长端/体验台/admin"、"P003 邀请码管理"、"加 P003 后台功能"、"P003 上线/发版"。涵盖:按改了哪端的部署步骤(server rsync+pm2 / admin scp from git / parent build base / web full build)、**两端 server 部署(公司侧 p003-voice·gemini 全量版 + 个人站 kidshub-voice·DeepSeek 精简版,不同源·同步要适配)**、邀请码 CRUD/上限/昵称备注、admin DOM 内 Vue 坑、并行 session 防污染、生产 E2E 铁律。
 ---
 
 # P003 三端部署 + 邀请码运营 SOP · V1
@@ -17,9 +17,10 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 | 家长端 parent | `p003.hahaxiong.cc/parent/` | `/opt/p003/parent/dist`(nginx alias) | 独立 vite,**base=/parent/** |
 | 体验台 web | `kidshub-ai.hahaxiong.cc/`(+CF `kidshub.chenchuan.cc`) | `/opt/p003/web/dist` | vite SPA,main.tsx 按 hostname `kidshub*`/path `/kidshub-ai` 分流 |
 | admin 后台 | `kidshub-ai.hahaxiong.cc/admin/` | `/opt/p003/web/dist/admin/index.html` | **单 HTML + DOM 内 Vue3 CDN + ElementPlus**,静态子站 |
-| 后端 server | (内网 3001) | `/opt/p003/server` | pm2 `p003-voice`,tsx 直跑 src,`NODE_OPTIONS=--experimental-sqlite`,node:sqlite |
+| 后端 server(公司侧) | (内网 3001) | `/opt/p003/server` | pm2 `p003-voice`,tsx 直跑 src,`NODE_OPTIONS=--experimental-sqlite`,node:sqlite,**gemini**,全量 13 文件 |
+| **个人站 server** | `my.chenchuan.cc/kidshub-ai`(WS `/ws/voice`→3002) | `/opt/kidshub-personal/server` | pm2 `kidshub-voice`,**DeepSeek**,**2026-06-13 迁移的早期精简版 5 文件(无 orchestrator/curriculum/account)** |
 
-- 部署机 **aliyun-hk(8.218.26.17)**,同机还有 `chenchuan-site`/`kidshub-voice`,**别动**。
+- 部署机 **aliyun-hk(8.218.26.17)**,同机还有 `chenchuan-site`(别动);**`kidshub-voice`=个人站 server(见上表,独立部署目标,与公司侧不同源,功能同步要适配见 Step 1b)**。
 - server `.env.local`:`PORT=3001` / `STUDIO_USER` / `STUDIO_PASS`(admin 登录) / `AUTH_JWT_SECRET`(邀请码 JWT,生产 openssl 生成不外露) / `GEMINI_API_KEY`。
 - 三独立 SQLite:`data/accounts.db`(账号+邀请码) / `profile.db`(family_member+device) / `conversation.db` / `feedback.db`。`data/` 被 gitignore,生产单独 seed。
 - dev 端口差异:**parent vite proxy `/api`→8787**,**web vite proxy `/api`→3001**(本地验证起 server 要对应端口)。
@@ -28,7 +29,8 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 
 **Step 0 备份(必做,high blast)**:`ssh aliyun-hk 'ts=$(date +%Y%m%d-%H%M%S); bk=/opt/p003/_backup/$ts; mkdir -p $bk; cp -r 生产相关目录 $bk/'`
 
-1. **server 改**(src/*.ts):`rsync -az apps/server/src/ aliyun-hk:/opt/p003/server/src/`(增量,不 --delete)→ `ssh aliyun-hk 'pm2 restart p003-voice'`(tsx 直跑,重启即加载新代码)。新增依赖先 `ssh ... 'cd /opt/p003/server && npm i <pkg>'`。新增 scripts/ 要一起 rsync(seed 脚本在 scripts 非 src)。
+1. **server 改**(src/*.ts):`rsync -az apps/server/src/ aliyun-hk:/opt/p003/server/src/`(增量,不 --delete)→ `ssh aliyun-hk 'pm2 restart p003-voice'`(tsx 直跑,重启即加载新代码)。新增依赖先 `ssh ... 'cd /opt/p003/server && npm i <pkg>'`。新增 scripts/ 要一起 rsync(seed 脚本在 scripts 非 src)。验证 LLM ready 看 `pm2 logs p003-voice | grep LLM:`。
+1b. **个人站 server 同步**(功能要两端时,如 AI 启蒙):个人站 `/opt/kidshub-personal` 是早期精简版(5 文件 / DeepSeek / 无 orchestrator·curriculum·account)→**不同源,绝不能盲 rsync 公司侧 13 文件**(会塞它没有的依赖崩)。做法:① `ssh aliyun-hk` diff 比对 src 同源程度(`grep -c` 关键标志) ② 新文件(纯函数无依赖)直接 `scp` ③ 改 pipeline 等共享文件**手动适配个人站简化版**(`scp` 下来本地 Edit 改回,绕生产直改)+ `_backup/` 备份 ④ `pm2 restart kidshub-voice` + 公网 E2E(`wss://my.chenchuan.cc/ws/voice`)。
 2. **admin 改**(public/admin/index.html):**`git show HEAD:<path>/admin/index.html > /tmp/admin.html` 导出正确版 → `scp /tmp/admin.html aliyun-hk:/opt/p003/web/dist/admin/index.html`**。绕工作区污染(见坑#4),不用 full build(admin 是静态 HTML)。
 3. **parent 改**:`cd apps/parent && npm run build`(base=/parent/ 已固化进 vite.config)→ `rsync -az --delete dist/ aliyun-hk:/opt/p003/parent/dist/`(--delete 清旧 hash chunk)。
 4. **web 改**(体验台/分流/admin 随 build):`cd apps/web && npm run build` → `rsync -az --delete dist/ aliyun-hk:/opt/p003/web/dist/`(--delete 清旧 chunk+SW;含 admin/,**注意会覆盖 admin/index.html=用工作区版本**,若工作区被污染先恢复)。
@@ -59,6 +61,8 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 5. **nginx `$uri` 转义**:python 三引号写 nginx 配置时 `"""\$uri"""` SyntaxWarning 保留字面 `\$uri`→try_files 全 fallback(JS 请求返 HTML)→`.replace("\\$uri","$uri")` 修。
 6. **preview 后台节流**:走长 UI 流程的 `preview_eval` 累加超 30s 反复超时→关键验证改 `curl` 直查后端 + 页面上下文 `fetch` 直走 proxy。preview_click 对 React/Vue onClick 不可靠→用 `eval` 找元素 `.click()`。preview viewport 默认可能 1px→显式 resize width/height。
 7. **生产 server 可能落后**:部署前确认生产 routes/依赖齐(jose 等缺则 `npm i`)+ scripts/(seed 脚本)+ `.env`(AUTH_JWT_SECRET 生产 `openssl rand -hex 32` 生成不外露)。
+8. **个人站 vs 公司侧不同源**(2026-06-19 AI 启蒙踩):个人站 `/opt/kidshub-personal`(kidshub-voice:3002,DeepSeek,精简 5 文件) ≠ 公司侧 `/opt/p003`(p003-voice:3001,gemini,13 文件)。两端功能同步**先 ssh diff 判同源再动**(新文件 scp / 共享文件手动适配),盲 rsync 必崩。
+9. **本地起 server 验证踩坑**(2026-06-19):① `.env.local` 的 `GEMINI_API_KEY` 可能空(本地不调 gemini,生产走 Keychain gemini-proxy-token)→起 server 前 `export GEMINI_API_KEY=$(security find-generic-password -s gemini-proxy-token -a gemini-proxy -w)` 覆盖,否则启动日志 `LLM: missing-env` ② WS 路径必须 `/ws/voice`(index.ts upgrade pathname 校验,否则 socket hang up) ③ 不走语音的文字对话 E2E 入口=`chat.trigger`(type+text),收 `debug.prompt_assembled` 验 prompt 真注入。
 
 ## 验证铁律（cc 自己验,绝不甩给川哥）
 
