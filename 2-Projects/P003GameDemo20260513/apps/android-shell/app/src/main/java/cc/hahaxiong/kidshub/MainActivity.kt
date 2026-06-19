@@ -53,15 +53,13 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (!isGranted) {
-            // 拒绝后仍继续加载 Web，Web 端有自己的 PTT 兜底
+            // 拒绝不影响 WebView 显示（已在 onCreate 加载）；Web 端 PTT 兜底，可后续系统设置开麦克风
             Toast.makeText(
                 this,
-                "麦克风权限被拒绝，语音唤醒与录音功能将受限。请在系统设置中开启。",
+                "麦克风权限被拒绝，语音对话受限。可在系统设置里给本应用开麦克风。",
                 Toast.LENGTH_LONG
             ).show()
         }
-        // 无论是否授权都继续初始化 WebView（Web 有兜底）
-        setupWebView()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,12 +76,15 @@ class MainActivity : ComponentActivity() {
         // ========== 2. 初始化 Porcupine Bridge（最先做，优雅降级） ==========
         wakeWordBridge = WakeWordBridge(this)
 
-        // ========== 3. 申请麦克风权限 ==========
+        // ========== 3. 立即加载 WebView（防黑屏）==========
+        // 关键修复：不把 setContent 卡在权限回调后——否则权限对话框期间 Activity 无内容＝黑屏，
+        // 某些 ROM 权限流程异常时会一直黑。WebView 登录/主界面本身不需麦克风，先显示。
+        setupWebView()
+
+        // ========== 4. 并行申请麦克风权限（不阻塞 UI；授权后 PTT/getUserMedia 才可用）==========
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-            == PackageManager.PERMISSION_GRANTED
+            != PackageManager.PERMISSION_GRANTED
         ) {
-            setupWebView()
-        } else {
             requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
@@ -99,6 +100,10 @@ class MainActivity : ComponentActivity() {
                 factory = { ctx ->
                     WebView(ctx).apply {
                         webView = this
+
+                        // 防黑屏：背景设白（加载前/中不黑）+ 开远程调试（电脑 chrome://inspect 可看 JS 错误）
+                        setBackgroundColor(android.graphics.Color.WHITE)
+                        WebView.setWebContentsDebuggingEnabled(true)
 
                         // ========== WebView 核心配置 ==========
                         settings.apply {
@@ -129,10 +134,24 @@ class MainActivity : ComponentActivity() {
 
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 super.onPageFinished(view, url)
-
-                                // 页面加载完后通知 Web 原生就绪状态（包含 wakeWordAvailable）
-                                // Web 侧可用此信息决定是否显示「唤醒词可用」或只用 PTT
                                 wakeWordBridge.notifyNativeReady()
+                            }
+
+                            // 主框架加载失败时显示错误页（不黑屏，便于定位是网络/URL 问题）
+                            override fun onReceivedError(
+                                view: WebView?,
+                                request: android.webkit.WebResourceRequest?,
+                                error: android.webkit.WebResourceError?
+                            ) {
+                                super.onReceivedError(view, request, error)
+                                if (request?.isForMainFrame == true) {
+                                    view?.loadData(
+                                        "<html><body style='font-family:sans-serif;padding:24px;color:#334155'>" +
+                                            "<h3>小可加载失败</h3><p>${error?.description} (${request.url})</p>" +
+                                            "<p>检查手机网络后重开 App</p></body></html>",
+                                        "text/html; charset=utf-8", "utf-8"
+                                    )
+                                }
                             }
 
                             // ========== 自签证书放行（仅 debug，用于局域网 dev） ==========
