@@ -93,7 +93,7 @@ team 一致警告「后台/锁屏常开唤醒在国内安卓 = 系统工程灾�
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | P0-P2 | Web `/m` 全链路（taste UI + 复用语音/字幕/状态/小可 + PTT）+ 原生壳代码 | ✅ 本轮完成 |
-| P3 | 原生编译出 APK + Porcupine「小可小可」key/模型 + 真机麦克风/唤醒/童声调优 | ⏳ 待川哥配环境 |
+| P3 | Android 工具链 + 编译出 app-debug.apk 9.2M(揪修 grok 2 配置bug) + /m 部署生产 | ✅ 本轮完成（剩唤醒词 key）|
 | P4 | 真机功耗/弱网/权限兜底 + 发布 | ⏳ |
 
 ## 风险与待验证
@@ -105,8 +105,8 @@ team 一致警告「后台/锁屏常开唤醒在国内安卓 = 系统工程灾�
 | 国产 ROM 后台强杀 | 中 | 前台唤醒规避（不做 Foreground Service） |
 
 ## 接手指南
-1. **Web 本地 dev**：`cd apps/web && npm run dev`，访问 `https://localhost:5173/m`（VITE_KIDSHUB_PUBLIC=1 跳登录直达主界面）
-2. **Android 编译**：`cd apps/android-shell && ./gradlew assembleDebug`（需 JDK 17 + Android SDK）
+1. **Web 本地 dev**：`cd apps/web && npm run dev`，访问 `https://localhost:5173/m`（/m 始终邀请码登录门，已解耦 VITE_KIDSHUB_PUBLIC；用 seed 码 KH-2P6L 等登录）
+2. **Android 编译**（cc 已跑通）：`brew install openjdk@17 android-commandlinetools gradle` → `sdkmanager` 装 platform-34/build-tools-34/platform-tools → `gradle wrapper --gradle-version 8.7`（grok 缺 wrapper + brew gradle 9.6 太新不兼容 AGP 8.3.2，必锁 8.7）→ `JAVA_HOME=$(brew --prefix openjdk@17) ./gradlew assembleDebug`。产物 `app-debug.apk` 9.2M
 3. **Porcupine 配置**：Picovoice Console 注册拿 AccessKey（填 `BuildConfig.PORCUPINE_ACCESS_KEY`）+ 训练「小可小可」中文 `.ppn` + 下载 `porcupine_params_zh.pv`，放 `app/src/main/assets/`
 4. **dev 联调**：改 `BuildConfig.WEBVIEW_URL` 指向局域网 `https://192.168.x.x:5173/m`（DEBUG build 自动放行自签证书）
 5. **复用关系**：Web 核心 100% 复用现有 `voice-client.ts` / 表情库 / 登录 API，后端零改动；改动只在 `apps/web/src/mobile/`（新增）+ `main.tsx`（加路由）+ `apps/android-shell/`（新增）
