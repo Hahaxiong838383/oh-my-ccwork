@@ -33,6 +33,8 @@ export interface VoiceClient {
   // 需求3：小可语速（TTS 播放速率）1 / 1.5 / 2；立即对后续音频段生效
   setPlaybackRate(rate: number): void;
   unlockAudio(): Promise<void>;
+  /** 电影字幕：当前音频播放时刻对应的整句文本（rAF 每帧取，无则 null） */
+  getCurrentSubtitleCue(): string | null;
   on(event: VoiceEvent, cb: (data: any) => void): void;
   off(event: VoiceEvent, cb: (data: any) => void): void;
   close(): void;
@@ -46,6 +48,8 @@ type VoiceEvent =
   | 'tts.audio'
   | 'tts.end'
   | 'tts.sentence_break'
+  // 句级 cue（电影字幕）：server 据 Doubao 350 下发，带该句权威文本 + index
+  | 'tts.cue'
   // 客户端合成事件（非 server 下发）：
   // tts.segment_start = 一个「句边界段」在 AudioContext clock 上真正开播（表情逐句切换的对齐点）
   // tts.playback_end = 本轮所有音频段播放完毕（≠ tts.end 的"合成完毕"，长句两者差秒级）
@@ -63,7 +67,8 @@ type ServerMessage =
   | { type: 'llm.done'; text: string }
   | { type: 'tts.turn_start'; turn: number }
   | { type: 'tts.turn_discard'; upTo: number }
-  | { type: 'tts.audio'; mp3Base64: string; turn: number }
+  | { type: 'tts.audio'; mp3Base64: string; turn: number; sentenceIndex?: number }
+  | { type: 'tts.cue'; turn: number; index: number; text: string }
   | { type: 'tts.sentence_break'; turn: number }
   | { type: 'tts.end'; turn?: number }
   | { type: 'session.config.ack'; chars: number }
@@ -128,6 +133,18 @@ class VoiceClientImpl implements VoiceClient {
   private decodeChain: Promise<void> = Promise.resolve();
   // 固定 TTS 增益总线：source → ttsGain → destination，统一音量 + 防多段瞬时叠加削波。
   private ttsGain: GainNode | null = null;
+
+  // —— 电影字幕式句级 cue（C2 2026-06-19）——
+  // cueText: 句 index → 该句权威文本（来自 server tts.cue / Doubao 350）。
+  // cueWindow: 句 index → 该句在 AudioContext 时钟上的真实播放窗 {startAt,endAt}（音频段排播时绑定）。
+  // 字幕层用 rAF 读 ctx.currentTime 查当前落在哪句 → 整句显示，无打字机/无逐字（真同步）。
+  private cueText = new Map<number, string>();
+  private cueWindow = new Map<number, { startAt: number; endAt: number }>();
+  // 当前正在缓冲的音频 chunk 所属句 index（tts.audio.sentenceIndex）。flush 成段时绑定到该句的时间窗。
+  private bufferingSentenceIndex = 0;
+  // 行级单调钳制：同一 cue 内分行只前进不回退（cue 早期 endAt 还在扩展会让比例分行抖动→回退）。
+  private lastCueIdx = -1;
+  private lastLineIdx = -1;
 
   isConnected(): boolean {
     return !!(this.ws && this.ws.readyState === WebSocket.OPEN);
@@ -244,12 +261,20 @@ class VoiceClientImpl implements VoiceClient {
           case 'tts.turn_discard':
             this.discardTurnAtOrBelow = Math.max(this.discardTurnAtOrBelow, msg.upTo);
             break;
+          case 'tts.cue':
+            if (this.shouldDiscardTtsTurn(msg.turn)) return;
+            // 句开始（Doubao 350）：记录该句权威文本，等其音频段排播时绑定时间窗
+            this.cueText.set(msg.index, msg.text);
+            this.emit('tts.cue', msg);
+            break;
           case 'tts.audio':
             if (this.shouldDiscardTtsTurn(msg.turn)) return;
             // voice-client 内部统一播放（任意触发路径：按住说话 / sayDirect / 未来其它）
             // 同时 emit 给外部用于 UI 状态更新（VoiceButton 等）
             // D5 P21：onAudioStart 不在这里 fire（mp3 chunk 到达离实际播放还有 350ms 防抖）
             // 移到 flushMp3Buffer 内 src.start() 之后才 fire
+            // 记录本 chunk 所属句：flush 成段时绑定到该句 cue 时间窗
+            if (typeof msg.sentenceIndex === 'number') this.bufferingSentenceIndex = msg.sentenceIndex;
             this.ttsStreamEnded = false;
             void this.playAudioChunk(msg.mp3Base64);
             this.emit(msg.type, msg);
@@ -489,11 +514,13 @@ class VoiceClientImpl implements VoiceClient {
     const generation = this.playbackGeneration;
     const isFirstSegment = !this.turnHadSegment;
     this.turnHadSegment = true;
+    // 本段所属句 index（buffer 内 chunk 共享同一句——flush 在 Doubao 句边界触发，不混句）
+    const segmentSentenceIndex = this.bufferingSentenceIndex;
     this.decodingCount += 1;
     // 串行链：上一段 decode+schedule 完才轮到本段，playbackScheduledAt 按序推进，
     // 消除并发 decodeAudioData 乱序完成抢占排队时间轴（段重叠/错位）。
     this.decodeChain = this.decodeChain
-      .then(() => this.decodeAndSchedule(merged, reason, generation, isFirstSegment))
+      .then(() => this.decodeAndSchedule(merged, reason, generation, isFirstSegment, segmentSentenceIndex))
       .catch(() => {
         /* 单段 decode 失败不断链，后续段照常播 */
       })
@@ -508,6 +535,7 @@ class VoiceClientImpl implements VoiceClient {
     reason: 'timer' | 'boundary',
     generation: number,
     isFirstSegment: boolean,
+    sentenceIndex: number,
   ): Promise<void> {
     if (generation !== this.playbackGeneration) return;
     const ctx = this.ensureAudioContext();
@@ -532,6 +560,16 @@ class VoiceClientImpl implements VoiceClient {
     const effDur = buffer.duration / this.playbackRate;
     this.playbackScheduledAt = startAt + effDur;
     this.playbackSources.push(src);
+
+    // 电影字幕 cue 绑定：把本句在 AudioContext 时钟上的真实播放窗记到 cueWindow。
+    // 一句可能由多段（boundary + 600ms timer 续段）组成 → startAt 取最早、endAt 取最晚（扩展）。
+    {
+      const prev = this.cueWindow.get(sentenceIndex);
+      this.cueWindow.set(sentenceIndex, {
+        startAt: prev ? Math.min(prev.startAt, startAt) : startAt,
+        endAt: prev ? Math.max(prev.endAt, startAt + effDur) : startAt + effDur,
+      });
+    }
     src.onended = () => {
       const idx = this.playbackSources.indexOf(src);
       if (idx >= 0) this.playbackSources.splice(idx, 1);
@@ -624,6 +662,74 @@ class VoiceClientImpl implements VoiceClient {
     this.decodeChain = Promise.resolve();
     this.ttsStreamEnded = false;
     this.turnHadSegment = false;
+    // 清电影字幕 cue：新一轮重建（bargeIn/PTT 互斥都经此）
+    this.cueText.clear();
+    this.cueWindow.clear();
+    this.bufferingSentenceIndex = 0;
+    this.lastCueIdx = -1;
+    this.lastLineIdx = -1;
+  }
+
+  /**
+   * 电影字幕：返回「当前 AudioContext 播放时刻」该显示的字幕行，无则 null。
+   * 1) 取 startAt<=now 中 startAt 最大的句（=最近开播的句，gap 不闪）；
+   * 2) Doubao 偶把多句合一个 cue（整段）→ 把该 cue 文本按句标点切「行」，在 cue 的真实音频窗
+   *    [startAt,endAt] 内按字数比例分配子窗，返回 now 落在的那一行 → 长 cue 也一行行显示而非整段静止；
+   * 3) endAt grace：超末窗 + 2s 仍没收尾信号 → 返 null 兜底（防最后一行无限残留）。
+   */
+  getCurrentSubtitleCue(): string | null {
+    const ctx = this.audioCtx;
+    if (!ctx) return null;
+    const now = ctx.currentTime;
+    let bestIdx = -1;
+    let bestStart = -Infinity;
+    let maxEnd = -Infinity;
+    for (const [idx, win] of this.cueWindow) {
+      if (win.endAt > maxEnd) maxEnd = win.endAt;
+      // 跳过空文本句（350 无 text 的兜底句仍推进 index，但不显示，保持上一非空行）
+      const t = this.cueText.get(idx);
+      if (!t) continue;
+      if (win.startAt <= now + 0.001 && win.startAt > bestStart) {
+        bestStart = win.startAt;
+        bestIdx = idx;
+      }
+    }
+    if (bestIdx < 0) return null;
+    // 末窗 grace 兜底：远超最后音频窗仍在查 → 不再钉住（收尾交给 playback_end 清空）
+    if (now > maxEnd + 2) return null;
+
+    const win = this.cueWindow.get(bestIdx)!;
+    const text = this.cueText.get(bestIdx)!;
+    const lines = splitCueLines(text);
+    if (lines.length <= 1) {
+      this.lastCueIdx = bestIdx;
+      this.lastLineIdx = 0;
+      return text;
+    }
+
+    // 在该 cue 的真实音频窗内按字数比例分行；返回 now 落在的行（超末行则保持末行）
+    const span = Math.max(0.001, win.endAt - win.startAt);
+    const totalChars = lines.reduce((n, l) => n + l.length, 0) || 1;
+    let acc = 0;
+    let lineIdx = lines.length - 1;
+    for (let k = 0; k < lines.length; k++) {
+      acc += lines[k].length;
+      const lineEnd = win.startAt + (acc / totalChars) * span;
+      if (now < lineEnd) {
+        lineIdx = k;
+        break;
+      }
+    }
+    // 单调钳制：同 cue 内行号只进不退（早期 endAt 扩展致比例抖动时不回跳上一行）
+    if (bestIdx !== this.lastCueIdx) {
+      this.lastCueIdx = bestIdx;
+      this.lastLineIdx = lineIdx;
+    } else if (lineIdx < this.lastLineIdx) {
+      lineIdx = this.lastLineIdx;
+    } else {
+      this.lastLineIdx = lineIdx;
+    }
+    return lines[lineIdx];
   }
 
   private observeTurn(turn: number): boolean {
@@ -646,7 +752,14 @@ class VoiceClientImpl implements VoiceClient {
     if (!this.ttsStreamEnded) return;
     if (this.playbackSources.length > 0 || this.mp3Buffer.length > 0 || this.decodingCount > 0) return;
     this.ttsStreamEnded = false;
+    // 本轮播完即发收尾（CanvasHost 据此停 cue 驱动 + 延迟清字幕，最后一行已 setSubtitle 停住）；
+    // 同步清本轮 cue map，防下一轮 index 从 0 起撞旧窗导致跨轮串字幕（codex P1）。
     this.emit('tts.playback_end', { reason: 'natural' });
+    this.cueText.clear();
+    this.cueWindow.clear();
+    this.bufferingSentenceIndex = 0;
+    this.lastCueIdx = -1;
+    this.lastLineIdx = -1;
   }
 
   sayDirect(text: string, onAudioStart?: () => void): void {
@@ -797,6 +910,55 @@ class VoiceClientImpl implements VoiceClient {
     const pcm16 = floatToPcm16(resampled);
     this.ws.send(pcm16.buffer);
   }
+}
+
+/**
+ * 把一个 cue 文本切成「字幕行」：先按句末标点(。！？!?…)+换行切句；
+ * 若单句仍很长(>22字，如一句含多逗号)再按逗号/顿号/分号切，使每行适合单屏显示。
+ * 切行只为「长 cue 分行显示」，时间由调用方按字数比例分配到真实音频窗（不靠猜速度）。
+ */
+function splitCueLines(text: string): string[] {
+  const clean = text.replace(/\n+/g, '\n').trim();
+  if (!clean) return [];
+  const enders = new Set(Array.from('。！？!?…\n'));
+  const sub = new Set(Array.from('，、；,;'));
+  const sentences: string[] = [];
+  let start = 0;
+  for (let i = 0; i < clean.length; i++) {
+    if (enders.has(clean[i])) {
+      let j = i + 1;
+      while (j < clean.length && enders.has(clean[j])) j++;
+      const s = clean.slice(start, j).replace(/\n/g, '').trim();
+      if (s) sentences.push(s);
+      start = j;
+      i = j - 1;
+    }
+  }
+  const tail = clean.slice(start).replace(/\n/g, '').trim();
+  if (tail) sentences.push(tail);
+
+  const LONG = 22;
+  const lines: string[] = [];
+  for (const s of sentences) {
+    if (s.length <= LONG) {
+      lines.push(s);
+      continue;
+    }
+    // 长句再按逗号切，但把过短碎片并回上一行，避免一行只有两三个字
+    let seg = '';
+    for (let i = 0; i < s.length; i++) {
+      seg += s[i];
+      if (sub.has(s[i]) && seg.length >= 8) {
+        lines.push(seg);
+        seg = '';
+      }
+    }
+    if (seg) {
+      if (seg.length < 6 && lines.length > 0) lines[lines.length - 1] += seg;
+      else lines.push(seg);
+    }
+  }
+  return lines.length ? lines : [clean];
 }
 
 function base64ToUint8Array(b64: string): Uint8Array {

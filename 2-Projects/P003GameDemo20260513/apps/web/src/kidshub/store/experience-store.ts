@@ -15,9 +15,12 @@ import { create } from 'zustand';
  * 主交互都会再次弹窗。
  */
 
-// 仅个人站公开部署启用限额漏斗；公司侧（VITE_KIDSHUB_PUBLIC 未设）完全不拦
+// 仅个人站公开部署启用限额漏斗；公司侧（VITE_KIDSHUB_PUBLIC 未设）完全不拦。
+// VITE_DISABLE_QUOTA=1 显式关闭漏斗（本地验证用：public 模式根路径进工作台，但不弹"加微信"漏斗）。
+// 生产个人站不设此变量，行为不变。
 export const EXPERIENCE_QUOTA_ENABLED =
-  (import.meta as { env?: Record<string, string> }).env?.VITE_KIDSHUB_PUBLIC === '1';
+  (import.meta as { env?: Record<string, string> }).env?.VITE_KIDSHUB_PUBLIC === '1' &&
+  (import.meta as { env?: Record<string, string> }).env?.VITE_DISABLE_QUOTA !== '1';
 
 export const MAX_SCENE_CLICKS = 6;
 export const MAX_VOICE_ROUNDS = 5;

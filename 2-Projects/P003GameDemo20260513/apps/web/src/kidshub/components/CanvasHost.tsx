@@ -16,7 +16,6 @@ import { useTutorialStore } from '../tutorial/tutorial-store';
 import { getUnitStep } from '../tutorial/tutorial-units';
 import { useAvatarStore } from '../avatar/avatar-store';
 import { resolveExpressionName } from '../avatar/expressions';
-import { sharedTypewriter } from '../subtitle/shared';
 import {
   getSharedVoiceClient,
   getKidsHubSessionId,
@@ -111,15 +110,43 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     const client = clientRef.current;
     if (!client) return;
 
-    const tw = sharedTypewriter();
+    // —— 电影字幕式 cue 驱动（C2 2026-06-19）——
+    // 废弃打字机/逐字/渐隐/高亮：字幕 = server tts.cue 给的整句文本，rAF 读 AudioContext
+    // 实际播放时刻查当前落在哪句 → setSubtitle(整句)，与音频严格同步。
+    let speaking = false; // 小可发声中（cue 驱动字幕）；listening/idle 时为 false，不抢 ASR/错误字幕
+    let lastShownCue = '';
+    let clearTimer: number | null = null;
+    let rafId: number | null = null;
+    const cancelClear = () => {
+      if (clearTimer !== null) {
+        window.clearTimeout(clearTimer);
+        clearTimer = null;
+      }
+    };
+    const tick = () => {
+      if (speaking) {
+        const cue = client.getCurrentSubtitleCue();
+        if (cue !== null && cue !== lastShownCue) {
+          lastShownCue = cue;
+          setSubtitle(cue);
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+
     const onAsrPartial = (msg: { text: string }) => {
-      // 用户开口 → 小可旧字幕的打字机让位（reset 幂等，连续 partial 无害）
-      tw.reset();
+      // 用户开口 → 停 cue 驱动，显示 ASR 字幕（bargeIn 已清 cueMap）
+      speaking = false;
+      cancelClear();
+      lastShownCue = '';
       setSubtitle(msg.text);
     };
     const onAsrFinal = (msg: { text: string }) => {
       perfMarkAsrFinal();
-      tw.reset();
+      speaking = false;
+      cancelClear();
+      lastShownCue = '';
       setSubtitle(`${msg.text}...`);
       llmTextRef.current = '';
       onDebug('asr', `👦 用户：${msg.text}`);
@@ -130,8 +157,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       if (!msg.text) return;
       perfMarkLlmFirst();
       llmTextRef.current += msg.text;
-      // 字幕走打字机：文本只入引擎切句，显示由 tts.segment_start 按句驱动
-      tw.feedText(msg.text);
+      // 字幕不再由 LLM 文本驱动（改 server cue + 音频时刻）；这里只累积全文供调试
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
     };
@@ -140,8 +166,6 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
       if (full) {
-        // 不再整段 setSubtitle（打字机接管）；权威全文喂引擎做流缺字兜底
-        tw.finalizeText(full);
         onDebug('llm', `🤖 小可：${full}`);
         pushDebug({ kind: 'llm', title: `🤖 小可：${full}` });
       }
@@ -153,6 +177,9 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       if (perfLine) {
         pushDebug({ kind: 'perf', title: perfLine });
       }
+      // 小可开始发声 → 开启 cue 驱动字幕
+      speaking = true;
+      cancelClear();
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
     };
@@ -161,16 +188,24 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       setVoiceStatus('idle');
       setXiaokeEmotion('happy');
     };
-    // 句边界段真实开播 → 表情切下一个 + 字幕开始打这一句（同一时钟源，天然同步）
+    // 句边界段真实开播 → 表情切下一个（字幕已改 cue+rAF 驱动，不再在此切句）
     const onSegmentStart = () => {
       consumeNextExpression();
-      // 句边界段开播 → 字幕切到这一句（固定速度打字，见 typewriter；durationMs 链路已回退）。
-      tw.advanceSentence();
     };
-    // 本轮音频真正播完（含被打断）→ 表情收尾回待机 + 字幕补完后延迟清空
+    // 本轮音频真正播完（含被打断）→ 表情收尾 + 停 cue 驱动 + 延迟清空字幕（停在最后一句）
     const onPlaybackEnd = () => {
       endAvatarTurn();
-      tw.finishPlayback();
+      speaking = false;
+      cancelClear();
+      // 快照守卫：若 1.2s 内字幕被新内容替换（如 tutorial 下一句旁白快速接上），不清——
+      // 防"前一句 playback_end 的清空定时器把后一句字幕清掉"的竞态。
+      const snapshot = useAppStore.getState().subtitle;
+      clearTimer = window.setTimeout(() => {
+        clearTimer = null;
+        if (useAppStore.getState().subtitle !== snapshot) return;
+        lastShownCue = '';
+        setSubtitle('');
+      }, 1200);
     };
     const onPromptAssembled = (msg: { systemPrompt: string; userText: string }) => {
       const len = (msg.systemPrompt || '').length;
@@ -200,7 +235,9 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       onDebug('error', `❌ ${t}`);
       pushDebug({ kind: 'error', title: `❌ ${t}` });
       setVoiceStatus('idle');
-      tw.reset();
+      speaking = false;
+      cancelClear();
+      lastShownCue = '';
       setSubtitle(t);
       applyNetState('fail');
     };
@@ -219,6 +256,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     client.on('error', onError);
 
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      cancelClear();
       client.off('asr.partial', onAsrPartial);
       client.off('asr.final', onAsrFinal);
       client.off('llm.delta', onLlmDelta);
@@ -348,9 +387,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   const doBargeIn = () => {
     const client = clientRef.current;
     if (client) {
-      // 先 reset 打字机再 bargeIn：bargeIn 同步 emit playback_end，
-      // 引擎空状态下 finishPlayback no-op，不会把被打断的句子又补完显示
-      sharedTypewriter().reset();
+      // bargeIn 清 cueMap（stopAllPlayback 内）→ rAF getCurrentSubtitleCue 返回 null 不再覆盖
       client.bargeIn();
       perfReset();
       setVoiceStatus('idle');

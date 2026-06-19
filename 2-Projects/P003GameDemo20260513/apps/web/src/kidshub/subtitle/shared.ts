@@ -9,7 +9,8 @@ import { getSharedTypewriter, type SubtitleTypewriter } from './typewriter';
  */
 export function sharedTypewriter(): SubtitleTypewriter {
   return getSharedTypewriter({
-    onText: (t) => useAppStore.getState().setSubtitle(t),
-    onClear: () => useAppStore.getState().setSubtitle(''),
+    // 累积语义：committed(已说·灰) + active(当前句·亮) → 富文本字幕，治逐分句整句替换的视觉跳动
+    onText: (committed, active) => useAppStore.getState().setSubtitleRich({ committed, active }),
+    onClear: () => useAppStore.getState().setSubtitleRich(null),
   });
 }

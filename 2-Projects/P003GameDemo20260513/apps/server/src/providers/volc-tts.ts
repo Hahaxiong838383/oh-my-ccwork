@@ -4,6 +4,11 @@ import WebSocket from 'ws';
 export interface VolcTtsClient {
   start(opts: {
     onAudio: (chunk: Buffer) => void;
+    /**
+     * 句开始信号（event 350 TTSSentenceStart），payload 带**该句文本**。
+     * 电影字幕式句级 cue 的权威来源：350 在该句音频之前到达，后续 audio 归属此句。
+     */
+    onSentenceStart?: (text: string) => void;
     /** 句末标点信号（中段，event 351），客户端用来 flush 当前段播放，与字幕同步 */
     onSentenceBreak?: () => void;
     /** 整流真正结束（event 152 SessionFinished 或 ws.close） */
@@ -17,6 +22,7 @@ export interface VolcTtsClient {
 
 interface TtsStartOptions {
   onAudio: (chunk: Buffer) => void;
+  onSentenceStart?: (text: string) => void;
   onSentenceBreak?: () => void;
   onSentenceEnd: () => void;
   onError: (err: Error) => void;
@@ -33,6 +39,7 @@ const EVENT_TASK_REQUEST = 200;
 // 注：Doubao-TTS 2.0 event 351 是「句末标点中段」（每个逗号/句号都会发），
 // 不是流结束。真正的流结束是 event 152 (SessionFinished) 或 ws.close。
 // 之前误把 351 当 stream end → 第一个标点就锁死后续 audio chunk = 老板"只播指挥官"bug。
+const EVENT_TTS_SENTENCE_START = 350;
 const EVENT_TTS_SENTENCE_END_MID = 351;
 const EVENT_SESSION_FINISHED = 152;
 
@@ -106,6 +113,17 @@ class VolcTtsClientImpl implements VolcTtsClient {
           // 真正的整流结束：event 152 SessionFinished
           if (parsed.event === EVENT_SESSION_FINISHED) {
             this.emitSentenceEndOnce();
+            return;
+          }
+
+          // event 350 是「句开始」（TTSSentenceStart），payload JSON 带该句 text。
+          // 在该句音频之前到达 → 电影字幕式句级 cue 的权威文本来源。
+          // 总是回调（即使 text 解析为空）：让 pipeline 推进 sentenceIndex，
+          // 防 350 schema 变化/解析失败时后续 audio 错绑到上一句（codex P1）。
+          if (parsed.event === EVENT_TTS_SENTENCE_START) {
+            const json = tryParseJson(parsed.payload) as { text?: string } | null;
+            const text = typeof json?.text === 'string' ? json.text : '';
+            opts.onSentenceStart?.(text);
             return;
           }
 

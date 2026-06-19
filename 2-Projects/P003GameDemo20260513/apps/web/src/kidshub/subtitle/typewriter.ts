@@ -1,6 +1,11 @@
 export interface TypewriterCallbacks {
-  /** 每次打字推进时回调当前句的"已显示部分"（整句替换语义，调用方 setSubtitle 用） */
-  onText(text: string): void;
+  /**
+   * 每次打字推进时回调（累积语义，治视觉跳动）：
+   * - committed = 本轮已说完的分句拼接（当前句之前的所有分句），调用方置灰
+   * - active = 当前正在说的分句的已显示部分，调用方高亮
+   * 调用方拼成「已说(灰)+当前(亮)」连续字幕，而非整行替换。
+   */
+  onText(committed: string, active: string): void;
   /** 收尾清空字幕 */
   onClear(): void;
 }
@@ -8,7 +13,8 @@ export interface TypewriterCallbacks {
 export interface SubtitleTypewriter {
   feedText(delta: string): void;
   finalizeText(full: string): void;
-  advanceSentence(): void;
+  /** 切到下一句；传 durationMs(来自 tts.segment_start)则句内 rAF 铺满真实音频时长，否则固定 charMs */
+  advanceSentence(durationMs?: number): void;
   finishPlayback(): void;
   reset(): void;
 }
@@ -35,8 +41,13 @@ export function createSubtitleTypewriter(
 
   let generation = 0;
   let typingTimer: number | null = null;
+  let rafId: number | null = null;
   let clearTimer: number | null = null;
   let autoAdvanceTimer: number | null = null;
+  // 当前句应铺满的真实音频时长(ms)，来自 tts.segment_start 的 durationMs。
+  // 有值 → 句内用 rAF 按 elapsed/dur 平滑显现(锁真实语速，治"charMs 打完早→干等→猛跳")；
+  // null(如开场白/无段时长) → 回退固定 charMs。
+  let currentSentenceDurationMs: number | null = null;
 
   function parseSentences(text: string): { closed: string[]; partial: string } {
     if (!text) return { closed: [], partial: '' };
@@ -82,10 +93,26 @@ export function createSubtitleTypewriter(
     return '';
   }
 
+  /** 当前句之前的所有分句拼接（已说完的累积，渲染层置灰）。activeSentenceIdx 之前必为 closed 分句。 */
+  function committedText(): string {
+    if (activeSentenceIdx <= 0) return '';
+    const upto = Math.min(activeSentenceIdx, closed.length);
+    return closed.slice(0, upto).join('');
+  }
+
+  /** 累积语义回调：committed=已说完(灰) + active=当前句已显示部分(亮) */
+  function emitText(active: string): void {
+    cb.onText(committedText(), active);
+  }
+
   function stopTypingTimer(): void {
     if (typingTimer !== null) {
       clearTimeout(typingTimer as any);
       typingTimer = null;
+    }
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
     }
   }
 
@@ -114,6 +141,49 @@ export function createSubtitleTypewriter(
   function startTyping(): void {
     stopTypingTimer();
     const scheduledGen = generation;
+    // 立即出首字(team 2026-06-19)：逐分句后每句开头等 charMs/帧会净滞后，先同步出第 1 字。
+    {
+      const txt0 = getSentenceText(activeSentenceIdx);
+      if (txt0 && activeSentenceIdx >= 0 && currentTypedLen < 1) {
+        currentTypedLen = 1;
+        emitText(txt0.slice(0, 1));
+        if (txt0.length <= 1) {
+          maybeScheduleAutoAdvance();
+          return;
+        }
+      }
+    }
+
+    // 模式 A — rAF 锁真实音频时长(2026-06-19)：句内按 elapsed/durationMs 平滑显现到这句字数，
+    // 最后一字正好在本段音频播完(≈下一句 segment_start)时打完。治"固定 charMs 打完早→干等→猛跳"。
+    if (currentSentenceDurationMs !== null && currentSentenceDurationMs > 0) {
+      const dur = currentSentenceDurationMs;
+      const startPerf = performance.now();
+      const tick = () => {
+        rafId = null;
+        if (generation !== scheduledGen) return;
+        const txt = getSentenceText(activeSentenceIdx);
+        if (!txt || activeSentenceIdx < 0) return;
+        const len = txt.length;
+        const elapsed = performance.now() - startPerf;
+        // 目标字数 = 这句字数 × 已播比例；单调不回退(只增)
+        let target = Math.floor((elapsed / dur) * len);
+        if (target > len) target = len;
+        if (target > currentTypedLen) {
+          currentTypedLen = target;
+          emitText(txt.slice(0, currentTypedLen));
+        }
+        if (currentTypedLen < len) {
+          rafId = requestAnimationFrame(tick);
+        } else {
+          maybeScheduleAutoAdvance();
+        }
+      };
+      rafId = requestAnimationFrame(tick);
+      return;
+    }
+
+    // 模式 B — 固定 charMs 回退(无段时长：开场白/sayDirect 等)
     const doTick = () => {
       if (generation !== scheduledGen) {
         typingTimer = null;
@@ -126,15 +196,13 @@ export function createSubtitleTypewriter(
       }
       if (currentTypedLen < txt.length) {
         currentTypedLen++;
-        cb.onText(txt.slice(0, currentTypedLen));
+        emitText(txt.slice(0, currentTypedLen));
         typingTimer = setTimeout(doTick, charMs) as any;
       } else {
         typingTimer = null;
         maybeScheduleAutoAdvance();
       }
     };
-    // 修(team 2026-06-19)：立即打第一个字,不等 charMs——A 改逐分句后每个分句开头都要等 charMs(150ms)
-    // 才出首字 → 字幕明显滞后于语音(净滞后 ~70-120ms)。doTick() 同步出首字,后续字符才 setTimeout(charMs)。
     doTick();
   }
 
@@ -150,10 +218,11 @@ export function createSubtitleTypewriter(
     const showLen = Math.min(currentTypedLen, targetLen);
     currentTypedLen = showLen;
     if (showLen > 0) {
-      cb.onText(txt.slice(0, showLen));
+      emitText(txt.slice(0, showLen));
     }
     if (currentTypedLen < targetLen) {
-      if (!typingTimer) {
+      // rAF 模式下 tick 每帧动态读最新句文本，会自动吃进流式新增字；只有完全没在打时才重启
+      if (typingTimer === null && rafId === null) {
         startTyping();
       }
     } else {
@@ -175,14 +244,14 @@ export function createSubtitleTypewriter(
     reconcileAfterTextUpdate();
   }
 
-  function advanceSentence(): void {
+  function advanceSentence(durationMs?: number): void {
     // 外部句边界信号优先：取消在途的自动兜底，避免双推进跳句
     stopAutoAdvanceTimer();
     if (activeSentenceIdx >= 0) {
       const currTxt = getSentenceText(activeSentenceIdx);
       if (currentTypedLen < currTxt.length) {
         currentTypedLen = currTxt.length;
-        cb.onText(currTxt);
+        emitText(currTxt);
       }
     }
     // 已在最后一句（外部信号比文本切句多：长句被 TTS 按逗号拆段）→ 原地不动，
@@ -193,6 +262,8 @@ export function createSubtitleTypewriter(
     activeSentenceIdx = activeSentenceIdx + 1;
     if (activeSentenceIdx < 0) activeSentenceIdx = 0; // safety, though starts -1 +1 =0
     currentTypedLen = 0;
+    // 本句铺满的真实音频时长(tts.segment_start.durationMs)；无则回退固定 charMs
+    currentSentenceDurationMs = durationMs !== undefined && durationMs > 0 ? durationMs : null;
     stopTypingTimer();
     const newTxt = getSentenceText(activeSentenceIdx);
     if (newTxt.length > 0) {
@@ -215,7 +286,7 @@ export function createSubtitleTypewriter(
     const currTxt = getSentenceText(activeSentenceIdx);
     if (currentTypedLen !== currTxt.length) {
       currentTypedLen = currTxt.length;
-      cb.onText(currTxt);
+      emitText(currTxt);
     }
     // schedule clear after delay (caller may have reset before this arrives in interrupt)
     if (clearTimer !== null) {
@@ -245,6 +316,7 @@ export function createSubtitleTypewriter(
     partial = '';
     activeSentenceIdx = -1;
     currentTypedLen = 0;
+    currentSentenceDurationMs = null;
     // do NOT call onClear (caller decides subtitle clear to avoid double-clear races)
   }
 

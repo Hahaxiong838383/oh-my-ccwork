@@ -42,7 +42,10 @@ export type ServerMessage =
   | { type: 'llm.done'; text: string }
   | { type: 'tts.turn_start'; turn: number }
   | { type: 'tts.turn_discard'; upTo: number }
-  | { type: 'tts.audio'; mp3Base64: string; turn: number }
+  // sentenceIndex：本 chunk 所属句（来自 Doubao 350/351 句边界，turn 内 0 起）。前端据此把音频段绑定到 cue 时间窗。
+  | { type: 'tts.audio'; mp3Base64: string; turn: number; sentenceIndex: number }
+  // 句级 cue（电影字幕）：Doubao event 350 在该句音频前到达，带该句权威文本。前端按 index 建 cueMap。
+  | { type: 'tts.cue'; turn: number; index: number; text: string }
   | { type: 'tts.sentence_break'; turn: number }
   | { type: 'tts.end'; turn?: number }
   | { type: 'session.config.ack'; chars: number }
@@ -282,12 +285,22 @@ export class VoicePipeline {
         }
       };
 
+      // 句级 cue（电影字幕）：Doubao 350 句开始信号带文本，在该句音频前到达。
+      // currentSentenceIndex 标记后续 audio 归属哪句；前端据此把段绑定到 cue 时间窗。
+      let currentSentenceIndex = -1;
       try {
         this.tts = createVolcTtsClient();
         await this.tts.start({
+          onSentenceStart: (text) => {
+            if (turn !== this.activeTurn || endSent) return;
+            currentSentenceIndex += 1;
+            this.send({ type: 'tts.cue', turn, index: currentSentenceIndex, text });
+          },
           onAudio: (chunk) => {
             if (turn !== this.activeTurn || endSent) return;
-            this.send({ type: 'tts.audio', mp3Base64: chunk.toString('base64'), turn });
+            // sentenceIndex<0 兜底成 0：极少数 audio 早于首个 350 到达时归第 0 句
+            const sentenceIndex = currentSentenceIndex < 0 ? 0 : currentSentenceIndex;
+            this.send({ type: 'tts.audio', mp3Base64: chunk.toString('base64'), turn, sentenceIndex });
           },
           onSentenceBreak: () => {
             // 句末标点信号 → 让客户端 flush 当前段播放，实现字幕与 TTS 同步
@@ -438,14 +451,21 @@ export class VoicePipeline {
       }
     };
 
+    let currentSentenceIndex = -1;
     try {
       if (!this.tts) {
         this.tts = createVolcTtsClient();
       }
       await this.tts.start({
+        onSentenceStart: (text) => {
+          if (turn !== this.activeTurn || endSent) return;
+          currentSentenceIndex += 1;
+          this.send({ type: 'tts.cue', turn, index: currentSentenceIndex, text });
+        },
         onAudio: (chunk) => {
           if (turn !== this.activeTurn || endSent) return;
-          this.send({ type: 'tts.audio', mp3Base64: chunk.toString('base64'), turn });
+          const sentenceIndex = currentSentenceIndex < 0 ? 0 : currentSentenceIndex;
+          this.send({ type: 'tts.audio', mp3Base64: chunk.toString('base64'), turn, sentenceIndex });
         },
         onSentenceBreak: () => {
           if (turn !== this.activeTurn || endSent) return;

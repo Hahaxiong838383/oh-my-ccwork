@@ -12,6 +12,7 @@
 import { useEffect, useRef } from 'react';
 import { getSharedVoiceClient, getKidsHubSessionId } from '../../services/voice-client';
 import { sharedTypewriter } from '../subtitle/shared';
+import { useAppStore } from '../../store/app-store';
 import { useAvatarStore } from '../avatar/avatar-store';
 import { useKidsHubStore } from '../store/kidshub-store';
 import { useTutorialStore } from './tutorial-store';
@@ -71,15 +72,15 @@ export function TutorialManager(): null {
   /** 固定话术发声 + 字幕喂句（统一入口；连接断了自动重连一次） */
   const speakLine = async (text: string): Promise<void> => {
     const client = getSharedVoiceClient();
-    const tw = sharedTypewriter();
-    tw.reset();
+    // 清残留打字机状态（C2 后字幕走 setSubtitle/cue，富文本不再渲染）
+    sharedTypewriter().reset();
     try {
       if (!client.isConnected()) {
         await client.connect(getVoiceWsUrl());
       }
-      // 先喂文本再发声：segment_start 到达时第 0 句才开打（同一时钟源）
-      tw.feedText(text);
-      tw.finalizeText(text);
+      // 旁白是固定脚本文本（tts.say 无 llm.delta/cue 对 sayDirect 不稳）→ 整句直接显示，立即可见。
+      // 之后 sayDirect 的音频若产出 cue，CanvasHost 的 rAF 会用同文本 cue 精修；产不出也不影响这句已显示。
+      useAppStore.getState().setSubtitle(text);
       client.sayDirect(text);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
