@@ -5,12 +5,11 @@ import { MobileLogin } from './MobileLogin';
 import { MobileMain } from './MobileMain';
 
 /**
- * 移动端 App 入口（/m 路由）—— 复刻 KidsHubApp 的登录门控：
+ * 移动端 App 入口（/m 路由）—— 始终走邀请码登录门（需求3）：
  * 无 token → 邀请码登录；有 token → 校验 + 回源 profile → 主界面。
- * 公开模式（VITE_KIDSHUB_PUBLIC=1）跳过登录门（与体验台一致）。
+ * 注意：/m 不跟体验台的 VITE_KIDSHUB_PUBLIC 公开模式——孩子端 App 始终要登录，
+ * 解耦后体验台公开与否都不影响 /m 的登录门。
  */
-const isPublicMode = import.meta.env.VITE_KIDSHUB_PUBLIC === '1';
-
 export function MobileApp() {
   const token = useKidsHubStore((s) => s.token);
   const setToken = useKidsHubStore((s) => s.setToken);
@@ -18,7 +17,7 @@ export function MobileApp() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (isPublicMode || !token) {
+    if (!token) {
       setChecking(false);
       return;
     }
@@ -59,6 +58,6 @@ export function MobileApp() {
     );
   }
 
-  if (!isPublicMode && !token) return <MobileLogin />;
+  if (!token) return <MobileLogin />;
   return <MobileMain />;
 }
