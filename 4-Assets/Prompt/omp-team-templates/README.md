@@ -11,7 +11,7 @@
 |------|------|------|
 | `code-2send.sh` | A 双发写码实现 (A1 grok-build + A3 codex: 双网关 gpt-5.5 链→omp 订阅 gpt-5.4 兜底) | 高 stake/高难度 写码,要两个方案对比挑优 |
 | `code-patch.sh` | **路 C 高质量写码** (codex 出 Search/Replace 块 → `apply-blocks.py` 确定性落盘 → cc 测试判官) | 已知目标、要高质量落地的高风险/跨≥3文件/核心路径写码 |
-| `review-3send.sh` | B 三发评审对抗 (B4 grok + B5 codex: 双网关 gpt-5.5 链→omp 订阅 gpt-5.4 兜底 + B1 gemini-3-flash) | 高 stake/高难度 评审,顶级评审第一阶段 |
+| `review-3send.sh` | B 三发评审对抗 (B4 grok + B5 codex: 双网关 gpt-5.5 链→omp 订阅 gpt-5.4 兜底 + B1 **antigravity** gemini-3-flash) | 高 stake/高难度 评审,顶级评审第一阶段 |
 | `review-4send.sh` | B 四发评审 (B4 grok + B5 codex + B1 gemini-flash + **B3 antigravity gemini-3.5-flash 免费深度档**) | **顶级**评审,川哥手动触发或 cc 预警确认 |
 
 > ⚠️ **评审脚本(review-3/4send)只读硬约束**(2026-06-17 事故后): 所有引擎 lane 跑 `--no-tools`(禁所有内置工具,纯文本评审) + `--cwd` 干净临时目录(避免加载 mycc/AGENTS.md 误把 grok/gemini 署名成 codex)。起因: 一次评审中 gemini lane 带 `--auto-approve` 擅改了用户生产配置。写码脚本(code-2send/code-patch)保留写权限。

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# B 三发评审对抗: B4 grok-4.3 推理 + B5 codex(API网关gpt-5.5主路+omp订阅gpt-5.4降级) 严谨 + B1 gemini-3-flash 默认(川哥定: gemini 默认先 flash, 需长综合深度手动换 B2 gemini-3.1-pro-preview)
+# B 三发评审对抗: B4 grok-4.3 推理 + B5 codex(API网关gpt-5.5主路+omp订阅gpt-5.4降级) 严谨 + B1 gemini 默认
+# ⚠️ 2026-06-19: google-gemini-cli(Gemini Code Assist for individuals) 被 Google 停用("no longer supported, migrate to Antigravity")
+#   → B1 gemini lane 全切 google-antigravity 通道。默认 antigravity/gemini-3-flash(快); 需深度手动换 gemini-3.5-flash。详见 memory project_antigravity_team_b3
 # 用法: bash review-3send.sh <review-prompt-file>
 # 输出: /tmp/r-grok.md / /tmp/r-gpt.md / /tmp/r-gem.md (三家独立 finding)
 # cc 后续: 三方综合 / 取并集 / 标各家独有发现 / 跑测试验证
@@ -53,7 +55,7 @@ SIZE=$(wc -c <"$PROMPT_FILE")
 echo "===== B 三发评审对抗 ====="
 echo "[B4 推理] omp xai-oauth/grok-4.3 / thinking=high"
 echo "[B5 严谨] codex API 网关 gpt-5.5(主) → omp 订阅 gpt-5.4(降级) / reasoning=high"
-echo "[B1 默认] omp google-gemini-cli/gemini-3-flash-preview / thinking=high"
+echo "[B1 默认] omp google-antigravity/gemini-3-flash / thinking=high (gemini-cli 已停用,切 antigravity)"
 echo "prompt: $PROMPT_FILE ($SIZE 字节)"
 echo ""
 
@@ -77,8 +79,8 @@ GPT_PID=$!
 
 sleep 0.8
 
-# B1 gemini-3-flash 默认评审 (川哥定默认: 快/稳; 需长综合深度手动换 gemini-3.1-pro-preview)
-omp -p --model google-gemini-cli/gemini-3-flash-preview --thinking high --no-tools --cwd "$CLEAN_CWD" \
+# B1 gemini-3-flash 默认评审 (2026-06-19 gemini-cli 被 Google 停用→切 antigravity; 快/稳; 深度手动换 gemini-3.5-flash)
+omp -p --model google-antigravity/gemini-3-flash --thinking high --no-tools --cwd "$CLEAN_CWD" \
   --no-extensions --no-skills --no-rules \
   "$PROMPT" \
   > /tmp/r-gem.md 2>/tmp/r-gem.err &
