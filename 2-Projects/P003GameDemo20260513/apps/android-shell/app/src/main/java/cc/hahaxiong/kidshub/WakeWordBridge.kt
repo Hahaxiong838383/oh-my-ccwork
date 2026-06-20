@@ -4,6 +4,8 @@ import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.audiofx.AcousticEchoCanceler
+import android.media.audiofx.NoiseSuppressor
 import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -49,6 +51,8 @@ class WakeWordBridge(private val context: Context) {
 
     private var keywordSpotter: KeywordSpotter? = null
     private var audioRecord: AudioRecord? = null
+    private var echoCanceler: AcousticEchoCanceler? = null
+    private var noiseSuppressor: NoiseSuppressor? = null
     private var recordThread: Thread? = null
     private var webView: WebView? = null
 
@@ -123,7 +127,9 @@ class WakeWordBridge(private val context: Context) {
         val record: AudioRecord
         try {
             record = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
+                // VOICE_RECOGNITION：平台对识别优化（降噪友好）、不进 VoIP 模式（不破坏 Web TTS 播放音色/路由）。
+                // 弃用 VOICE_COMMUNICATION：它进通话模式把媒体路由到听筒+限 16kHz（team gemini 指出会毁 TTS 音色）。
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
                 SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
@@ -132,6 +138,23 @@ class WakeWordBridge(private val context: Context) {
         } catch (e: Throwable) {
             Log.e(TAG, "创建 AudioRecord 失败", e)
             return
+        }
+        // 需求2：小可说话时也开 KWS 让「小可小可」能打断 → 麦会录到 TTS 自声 → 自触发/回声。
+        // 显式绑定平台回声消除 + 降噪到本录音 session 抑制自声，best-effort（不可用机型静默跳过，靠真机降级兜底）。
+        val sessionId = record.audioSessionId
+        if (AcousticEchoCanceler.isAvailable()) {
+            try {
+                echoCanceler = AcousticEchoCanceler.create(sessionId)?.also { it.enabled = true }
+            } catch (e: Throwable) {
+                Log.w(TAG, "AcousticEchoCanceler 绑定失败（忽略）", e)
+            }
+        }
+        if (NoiseSuppressor.isAvailable()) {
+            try {
+                noiseSuppressor = NoiseSuppressor.create(sessionId)?.also { it.enabled = true }
+            } catch (e: Throwable) {
+                Log.w(TAG, "NoiseSuppressor 绑定失败（忽略）", e)
+            }
         }
 
         val stream: OnlineStream = spotter.createStream()
@@ -174,10 +197,14 @@ class WakeWordBridge(private val context: Context) {
                     }
                 }
             }
-            // 先彻底释放麦克风，再通知 Web（契约：通知前麦克风必须已释放）
+            // 先彻底释放麦克风 + 音效，再通知 Web（契约：通知前麦克风必须已释放）
             stream.release()
             try { record.stop() } catch (_: Throwable) {}
             try { record.release() } catch (_: Throwable) {}
+            try { echoCanceler?.release() } catch (_: Throwable) {}
+            try { noiseSuppressor?.release() } catch (_: Throwable) {}
+            echoCanceler = null
+            noiseSuppressor = null
             if (audioRecord === record) audioRecord = null
             if (hit) notifyWakeWordDetected()
         }

@@ -33,6 +33,8 @@ export interface VoiceClient {
   // 需求3：小可语速（TTS 播放速率）1 / 1.5 / 2；立即对后续音频段生效
   setPlaybackRate(rate: number): void;
   unlockAudio(): Promise<void>;
+  /** 唤醒即时确认音（本地 AudioContext 合成柔和双音，<50ms，掩盖云端 LLM+TTS 延迟）。复用已解锁的 ctx，未解锁则静默 */
+  playCue(): void;
   /** 电影字幕：当前音频播放时刻对应的整句文本（rAF 每帧取，无则 null） */
   getCurrentSubtitleCue(): string | null;
   on(event: VoiceEvent, cb: (data: any) => void): void;
@@ -87,6 +89,12 @@ class VoiceClientImpl implements VoiceClient {
   private pendingOnAudioStart: (() => void) | null = null;
 
   private readonly listeners = new Map<VoiceEvent, Set<(data: any) => void>>();
+
+  // 问题2（docs/24）：唤醒确认音 —— 预存小可音色短语（public/cue/cue-1..N.mp3），随机播不连续重复。
+  // null=未懒加载；[]=加载过但无文件（此时 playCue 降级回本地合成音）。
+  private cueAudioBuffers: AudioBuffer[] = [];
+  private cueLoadStarted = false;
+  private lastCueAudioIdx = -1;
 
   private audioCtx: AudioContext | null = null;
   private micStream: MediaStream | null = null;
@@ -814,6 +822,80 @@ class VoiceClientImpl implements VoiceClient {
       }
     } catch (err) {
       console.warn('[voice-client] unlockAudio failed (non-fatal)', err);
+    }
+  }
+
+  /**
+   * 唤醒即时确认音：本地 AudioContext 合成柔和上扬双音（叮-咚 E5→A5），<50ms 延迟。
+   * 唤醒命中后立即播放，衔接云端 connect+录音+LLM+TTS 的延时空窗（需求1）。
+   * 复用已解锁的 ctx；ctx 未 running（无用户手势解锁）→ 静默不播，绝不抛错阻断主流程。
+   */
+  playCue(): void {
+    try {
+      const ctx = this.ensureAudioContext();
+      if (!ctx || ctx.state !== 'running') return;
+
+      // 问题2：懒加载预存小可音色短语（public/cue/cue-1..N.mp3），首次触发一次（cueLoadStarted 去重并发，team grok/gpt）。
+      if (!this.cueLoadStarted) {
+        this.cueLoadStarted = true;
+        const names = ['cue-1', 'cue-2', 'cue-3', 'cue-4', 'cue-5'];
+        void Promise.allSettled(
+          names.map((n) =>
+            fetch(`/cue/${n}.mp3`)
+              .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('404'))))
+              .then((b) => ctx.decodeAudioData(b))
+              .then((buf) => {
+                this.cueAudioBuffers.push(buf);
+              }),
+          ),
+        ).then(() => {
+          // 全失败（离线/文件缺）→ 复位允许下次唤醒重试，防永久降级合成音（team gemini #6）
+          if (this.cueAudioBuffers.length === 0) this.cueLoadStarted = false;
+        });
+      }
+
+      // 有预存人声 → 随机播 1 条（不连续重复上一条，降低重复感，需求2）
+      if (this.cueAudioBuffers.length > 0) {
+        let idx = Math.floor(Math.random() * this.cueAudioBuffers.length);
+        if (this.cueAudioBuffers.length > 1 && idx === this.lastCueAudioIdx) {
+          idx = (idx + 1) % this.cueAudioBuffers.length;
+        }
+        this.lastCueAudioIdx = idx;
+        const src = ctx.createBufferSource();
+        src.buffer = this.cueAudioBuffers[idx];
+        const g = ctx.createGain();
+        g.gain.value = 1;
+        g.connect(ctx.destination);
+        src.connect(g);
+        src.start();
+        return;
+      }
+
+      // 降级：预存人声未就绪 / 全缺 → 本地合成柔和上扬双音（叮-咚 E5→A5）
+      const now = ctx.currentTime;
+      const bus = ctx.createGain();
+      bus.gain.value = 1;
+      bus.connect(ctx.destination);
+      const notes = [
+        { f: 660, t: 0, d: 0.12 },
+        { f: 880, t: 0.1, d: 0.18 },
+      ];
+      for (const n of notes) {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = n.f;
+        osc.connect(g);
+        g.connect(bus);
+        const start = now + n.t;
+        g.gain.setValueAtTime(0.0001, start);
+        g.gain.linearRampToValueAtTime(0.16, start + 0.02); // 柔起
+        g.gain.exponentialRampToValueAtTime(0.0008, start + n.d); // 柔落
+        osc.start(start);
+        osc.stop(start + n.d + 0.03);
+      }
+    } catch {
+      /* 即时音失败不影响主流程 */
     }
   }
 

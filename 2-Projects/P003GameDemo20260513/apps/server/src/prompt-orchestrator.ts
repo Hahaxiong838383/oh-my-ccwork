@@ -30,6 +30,15 @@ export function assembleSystemPrompt(
     // 无学科护栏时注入(避免双段 >1600 字稀释人格 / 拖 TTFT)；AI 安全红线已由 basePrompt 的 AI_SAFETY_BASELINE 常驻兜底，双命中不裸奔。
     if (curriculumGuardrail) prompt += `\n\n${curriculumGuardrail}`;
     else if (aiLiteracyGuide) prompt += `\n\n${aiLiteracyGuide}`;
+    // 尾部人设锚点（docs/24，team 三发共识破 recency bias）：课程/启蒙护栏追加在末尾时，
+    // 长上下文 LLM 的近因效应会让护栏(末尾)盖过世界观(开头)，孩子人设被「老师化」。
+    // 末尾再钉一句高张力人设复述(~80字)夺回 recency，比重复整段世界观省 token。
+    // 仅在确有护栏注入时加(无护栏不稀释)，且 basePrompt 已含世界观时才有意义。
+    if (curriculumGuardrail || aiLiteracyGuide) {
+      prompt +=
+        '\n\n【牢记】无论上面有什么学习/知识引导，你始终是方舟上的小可——童话陪伴的口吻、温暖好奇的伙伴，' +
+        '绝不变成讲课说教的老师。知识只在自然陪伴里轻轻带一句，不考试、不长篇大论、不端着教。';
+    }
     return prompt;
   } catch {
     return basePrompt;

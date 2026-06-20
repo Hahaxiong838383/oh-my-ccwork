@@ -7,7 +7,7 @@ import {
 import { useAppStore } from '../store/app-store';
 import { useAvatarStore } from '../kidshub/avatar/avatar-store';
 import { resolveExpressionName } from '../kidshub/avatar/expressions';
-import { useKidsHubStore } from '../kidshub/store/kidshub-store';
+import { useKidsHubStore, getComposedPromptNow } from '../kidshub/store/kidshub-store';
 import {
   isWakeWordAvailable,
   pauseWakeListening,
@@ -51,8 +51,11 @@ export interface MobileVoiceController {
   connected: boolean;
   wakeAvailable: boolean;
   listeningByWake: boolean;
+  feedbackPressed: boolean;
   onPttDown: () => void;
   onPttUp: () => void;
+  onFeedbackDown: () => void;
+  onFeedbackUp: () => void;
   bargeIn: () => void;
 }
 
@@ -72,6 +75,7 @@ export function useMobileVoice(): MobileVoiceController {
   const [connected, setConnected] = useState(false);
   const [wakeAvailable, setWakeAvailable] = useState(false);
   const [listeningByWake, setListeningByWake] = useState(false);
+  const [feedbackPressed, setFeedbackPressed] = useState(false);
 
   const pressedRef = useRef(false);
   // 覆盖「连接+录音」整个异步启动生命周期：防极短按松手后录音才启动、防并发 beginTurn
@@ -110,6 +114,7 @@ export function useMobileVoice(): MobileVoiceController {
     pressedRef.current = false;
     setPressed(false);
     setListeningByWake(false);
+    setFeedbackPressed(false);
 
     const client = clientRef.current;
     if (!client) return;
@@ -138,14 +143,17 @@ export function useMobileVoice(): MobileVoiceController {
 
   // 启动一轮录音（PTT 与唤醒共用）
   const beginTurn = useCallback(
-    async (byWake: boolean) => {
+    async (byWake: boolean, feedbackMode = false) => {
       // 唤醒触发的 6s 录音期间用户按住 PTT → 转为「按住模式」（清 6s 限制，按住一直说）
-      if (pressedRef.current && listeningByWakeRef.current && !byWake) {
+      // team 审查（gpt/gemini）：吐槽入口不走「唤醒转 PTT」分支（否则唤醒录音被误切成 feedback captureMode）。
+      if (pressedRef.current && listeningByWakeRef.current && !byWake && !feedbackMode) {
         clearWakeStopTimer();
         setListeningByWake(false);
         setPressed(true);
         return;
       }
+      // team 审查（gpt/gemini/grok）：已在录音/启动中时，吐槽入口直接早退，不抢占 PTT/唤醒录音、不混 captureMode。
+      if (feedbackMode && (pressedRef.current || actionInFlightRef.current)) return;
       if (actionInFlightRef.current || pressedRef.current) return;
       const client = clientRef.current;
       if (!client) return;
@@ -153,8 +161,9 @@ export function useMobileVoice(): MobileVoiceController {
       actionInFlightRef.current = true; // 首行置位：覆盖整个异步启动
       pressedRef.current = true;
       needStopRef.current = false;
-      setPressed(!byWake);
+      setPressed(!byWake && !feedbackMode);
       setListeningByWake(byWake);
+      setFeedbackPressed(feedbackMode);
       pauseWakeListening();
       clearThinkingTimeout();
 
@@ -172,6 +181,13 @@ export function useMobileVoice(): MobileVoiceController {
           if (!mountedRef.current || needStopRef.current) throw new Error('__aborted__');
           setConnected(true);
           applyNetState('success');
+          // 问题1 修复（docs/24）：移动端补发完整世界观 prompt（复用前端组装，含世界观 L1+L2+人设）。
+          // 否则 server 回退极简 DEFAULT_SYSTEM_PROMPT，孩子听不到方舟世界观。新连接发一次即可（server 存住）。
+          try {
+            client.sendSessionConfig(getComposedPromptNow());
+          } catch {
+            /* best-effort：失败不阻断；server 端已有内置世界观基座兜底 */
+          }
         }
 
         try {
@@ -187,7 +203,7 @@ export function useMobileVoice(): MobileVoiceController {
             nickname: vars.nickname || '',
             gender: vars.gender || '',
             age: vars.age || '',
-            captureMode: 'off',
+            captureMode: feedbackMode ? 'feedback' : 'off',
             source: 'card',
           });
         } catch {
@@ -246,6 +262,16 @@ export function useMobileVoice(): MobileVoiceController {
     finishTurn();
   }, [finishTurn]);
 
+  // 问题4（docs/24）：按住吐槽 = captureMode:'feedback' 录音（复用 kidshub 吐槽链路：
+  // server 落反馈库 + 吐槽人格回应）。按住录、松手提交，与 PTT 同收尾。
+  const onFeedbackDown = useCallback(() => {
+    void beginTurn(false, true);
+  }, [beginTurn]);
+
+  const onFeedbackUp = useCallback(() => {
+    finishTurn();
+  }, [finishTurn]);
+
   const bargeIn = useCallback(() => {
     const client = clientRef.current;
     if (!client) return;
@@ -256,6 +282,7 @@ export function useMobileVoice(): MobileVoiceController {
       pressedRef.current = false;
       setPressed(false);
       setListeningByWake(false);
+      setFeedbackPressed(false);
       try {
         client.stopRecording();
       } catch {
@@ -362,6 +389,9 @@ export function useMobileVoice(): MobileVoiceController {
       cancelClear();
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
+      // 需求2：小可说话时开唤醒监听（此刻 Web 不录音、麦空闲），让「小可小可」能打断。
+      // 原生 KWS 用 VOICE_RECOGNITION+AcousticEchoCanceler 抑制 TTS 自声回声（见 WakeWordBridge.kt）。
+      if (wakeAvailableRef.current) startWakeListening();
     };
     const onTtsEnd = () => {
       setVoiceStatus('idle');
@@ -381,9 +411,12 @@ export function useMobileVoice(): MobileVoiceController {
         lastShownCueRef.current = '';
         setSubtitle('');
       }, 1200);
-      setVoiceStatus('idle');
-      // 一轮对话彻底结束 → 恢复原生唤醒监听（前台 idle）
-      if (wakeAvailableRef.current) startWakeListening();
+      // team 审查（gemini/gpt 高风险）：唤醒打断时 onWakeWord 会同步 bargeIn→本回调，紧接着设 listening+beginTurn。
+      // 若此刻已在录音/启动中，绝不能重置 idle / 恢复 KWS（会覆盖 listening 态 + 抢麦）。仅真正空闲收尾才走。
+      if (!pressedRef.current && !actionInFlightRef.current) {
+        setVoiceStatus('idle');
+        if (wakeAvailableRef.current) startWakeListening();
+      }
     };
     const onAvatarExpression = (msg: { name: string; index: number }) => {
       const def = resolveExpressionName(msg.name);
@@ -396,6 +429,7 @@ export function useMobileVoice(): MobileVoiceController {
       pressedRef.current = false;
       setPressed(false);
       setListeningByWake(false);
+      setFeedbackPressed(false);
       speakingRef.current = false;
       cancelClear();
       lastShownCueRef.current = '';
@@ -446,6 +480,28 @@ export function useMobileVoice(): MobileVoiceController {
     setWakeAvailable(avail);
     const unregister = registerWebBridge({
       onWakeWord: () => {
+        // 重入早退：已在录音/启动中则忽略重复唤醒（beginTurn 内亦有防护，这里早退避免多余 bargeIn/playCue）
+        if (pressedRef.current || actionInFlightRef.current) return;
+        const client = clientRef.current;
+        // 需求2：小可说话中被唤醒 → 先打断 TTS。bargeIn 同步 emit tts.playback_end（→onPlaybackEnd 置 idle），
+        // 紧接着下面同步覆盖为 listening（React 批处理同一执行栈，不闪 idle）。
+        if (speakingRef.current && client) {
+          try {
+            client.bargeIn();
+          } catch {
+            /* 容错 */
+          }
+        }
+        // 需求1：立即切聆听态 + 本地即时确认音（先于 connect/录音，衔接云端 LLM+TTS 延时空窗）
+        setVoiceStatus('listening');
+        setXiaokeEmotion('curious');
+        if (client) {
+          try {
+            client.playCue();
+          } catch {
+            /* 容错 */
+          }
+        }
         void beginTurnRef.current(true);
       },
       onNativeReady: (info) => {
@@ -462,5 +518,16 @@ export function useMobileVoice(): MobileVoiceController {
     };
   }, []);
 
-  return { pressed, connected, wakeAvailable, listeningByWake, onPttDown, onPttUp, bargeIn };
+  return {
+    pressed,
+    connected,
+    wakeAvailable,
+    listeningByWake,
+    feedbackPressed,
+    onPttDown,
+    onPttUp,
+    onFeedbackDown,
+    onFeedbackUp,
+    bargeIn,
+  };
 }

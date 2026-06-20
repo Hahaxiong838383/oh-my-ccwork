@@ -100,8 +100,18 @@ function PttButton({ recording, status, onDown, onUp, onBarge }: PttButtonProps)
  * 唤醒词「小可小可」由原生壳提供（无壳自动隐藏唤醒提示，PTT 兜底）。
  */
 export function MobileMain() {
-  const { pressed, connected, wakeAvailable, listeningByWake, onPttDown, onPttUp, bargeIn } =
-    useMobileVoice();
+  const {
+    pressed,
+    connected,
+    wakeAvailable,
+    listeningByWake,
+    feedbackPressed,
+    onPttDown,
+    onPttUp,
+    onFeedbackDown,
+    onFeedbackUp,
+    bargeIn,
+  } = useMobileVoice();
   const voiceStatus = useAppStore((s) => s.voiceStatus);
   const recording = pressed || listeningByWake;
 
@@ -149,6 +159,28 @@ export function MobileMain() {
           onBarge={bargeIn}
         />
       </footer>
+
+      {/* 右下角「按住吐槽」入口（问题4 docs/24，对标 kidshub：captureMode=feedback → server 落反馈库 + 吐槽人格回应） */}
+      <button
+        type="button"
+        aria-label="按住吐槽"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          onFeedbackDown();
+        }}
+        onPointerUp={onFeedbackUp}
+        onPointerCancel={onFeedbackUp}
+        onPointerLeave={onFeedbackUp}
+        title="按住对小可说出你的吐槽 / 建议 / 想法"
+        className={`absolute bottom-[max(1.75rem,env(safe-area-inset-bottom))] right-5 z-20 select-none rounded-full px-3.5 py-2 text-xs font-medium tracking-tight transition-all active:scale-[0.94] ${
+          feedbackPressed
+            ? 'bg-rose-500 text-white shadow-[0_8px_20px_-6px_rgba(244,63,94,0.6)]'
+            : 'border border-amber-300/60 bg-amber-50/85 text-amber-600 shadow-sm backdrop-blur'
+        }`}
+        style={{ touchAction: 'none', WebkitUserSelect: 'none' }}
+      >
+        {feedbackPressed ? '松手提交' : '按住吐槽'}
+      </button>
     </div>
   );
 }
