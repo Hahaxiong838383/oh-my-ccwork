@@ -119,3 +119,20 @@
 - 儿童 5-10 岁;demo 阶段不管隐私。
 - 个人站 server 冻结(只改公司侧 server + 前端 Web + Android 壳)。
 - 麦克风互斥铁律。
+
+---
+
+## 实施进度（2026-06-20）
+
+### ✅ 批1 已实施 + 部署（commit + 验证全过）
+- **块1 记忆静态注入**：新增 `getVoiceDefaultKnowledge()`（get-knowledge.ts）+ `getMobileVoicePromptNow()`（kidshub-store.ts），移动端语音常驻注入 WORLD_CORE + 4 节方舟精选 L2（夜航/藏品/生态缸/小可生活）；orchestrator 尾部锚点加钉方舟词。
+- **块2 game_progress 事件记忆**：profile-store 加 game_progress 列（JSON/幂等 migrate/去重留最近5/防并发）+ memory-extractor 抽取 + orchestrator 注入最近3条。**生产 profile.db 已迁移（game_progress 列确认存在）**。
+- **块4 填充音语境化**：voice-client 按最近 ASR 文本分 3 桶（知识/难题/中性）选贴合 think，从严分类错配兜底中性；预加载改 name→buffer Map。
+- **验证**：前端 tsc 零错误 + server 单测全过（orchestrator/memory-extractor 13/profile-store）。
+- **部署**：server rsync + pm2 restart（p003-voice online，migrate 成功）；前端 build `index-Cf0Nmldj.js` + rsync dist（公网 HTTP 200）。
+- **缓存**：CDP 清手机 PWA service worker（sw_unreg=1）+ caches，川哥杀 App 重开走 etag 协商拿新 bundle。
+
+### ⏳ 批2 待实施（需真机实测迭代）
+- **块3 退出意图**：L1 端侧告别词白名单（排除"不要/不"）+ L2 主 LLM 输出 intent 字段（0 额外往返）+ L3 idle 8-10s 升级式兜底 + 优雅告别 + 退出链=唤醒链反向走。
+- **块5 VAD 火山语义判停**（最高 ROI，需真机）：先 `DEBUG_ASR=1` E2E 实测火山 `sauc/bigmodel` 有没有主动吐 `definite` 句尾事件 + 延迟（现状 asr.final 由前端 VAD 判停驱动，火山 server VAD 没开；volc-asr.ts:268 `isFinalPayload` 已能接 definite，只差 start payload 加 `vad_segment_duration`/`end_window_size`）→ 开火山 server VAD 当主判停，前端能量 VAD 降兜底（1800→800-1000ms），童声阈值 ~1000-1200ms。
+- **缓存长期根治**：vite PWA SW 配置（registerType autoUpdate + skipWaiting/NetworkFirst）或 nginx index.html no-cache + assets 长缓存，避免 SW 再 precache 旧版。
