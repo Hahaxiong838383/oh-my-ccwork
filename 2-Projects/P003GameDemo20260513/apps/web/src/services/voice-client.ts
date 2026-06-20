@@ -122,6 +122,18 @@ class VoiceClientImpl implements VoiceClient {
   private sourceNode: MediaStreamAudioSourceNode | null = null;
   // 问题1：前端能量 VAD（流式判停替 6s 窗）的清理函数
   private vadStopFn: (() => void) | null = null;
+  // docs/25 块5：前端能量 VAD 从「唯一判停」降为「抢跑兜底」——火山 server VAD 语义判停为主。
+  // 收到 server asr.final（火山主动吐 definite → server onFinal，或 audio.end EOF 后火山 final）即置位，
+  // 让本轮在途 VAD 立刻让位 + 不再 emit speech_end（防能量 VAD 与火山语义判停两路竞态）。每轮录音起重置。
+  private asrFinalReceived = false;
+  // 童声基础静音阈值（ms，可 env/配置覆盖）：孩子吐字慢、句间停顿长，比成人 600-800ms 长。
+  // 1800→1100：当「最快可能说完」抢跑提示，最终判停以火山 definite 为准（asrFinalReceived 优先）。
+  private readonly vadSilenceMs = clampInt(
+    (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_VAD_SILENCE_MS,
+    1100,
+    400,
+    4000,
+  );
   private workletNode: AudioWorkletNode | null = null;
   private sinkGain: GainNode | null = null;
 
@@ -285,6 +297,12 @@ class VoiceClientImpl implements VoiceClient {
           case 'asr.final':
             // docs/25 问题1：记录最近用户文本，供填充音语境分类
             this.lastUserAsrText = (msg as { text?: string }).text || this.lastUserAsrText;
+            // docs/25 块5：server asr.final = 火山语义判停（definite）或 EOF 后 final 已到。
+            // 语义信号优先：立刻停掉本轮在途能量 VAD，让它让位、不再 emit speech_end（防两路竞态重复判停）。
+            if (msg.type === 'asr.final') {
+              this.asrFinalReceived = true;
+              this.vadStopFn?.();
+            }
             this.emit(msg.type, msg);
             break;
           case 'llm.delta':
@@ -428,6 +446,8 @@ class VoiceClientImpl implements VoiceClient {
     );
 
     this.isRecording = true;
+    // docs/25 块5：每轮录音起重置「火山已判停」标志，让本轮能量 VAD 抢跑兜底重新就绪。
+    this.asrFinalReceived = false;
     this.frameTimer = window.setInterval(() => {
       this.flushOneFrame();
     }, 100);
@@ -435,9 +455,16 @@ class VoiceClientImpl implements VoiceClient {
   }
 
   /**
-   * 问题1（team 共识）：前端能量 VAD（AnalyserNode RMS）流式判停，替固定 6s 窗。
-   * 接 sourceNode 并行挂 AnalyserNode（不影响 workletNode 上行）；说话起始后连续 1800ms 静音 → emit vad.speech_end。
-   * 童声适配：动态噪声底 + 静音 1800ms（孩子吐字慢、句间停顿长，避免误截断）。
+   * 前端能量 VAD（AnalyserNode RMS）—— docs/25 块5 后**降级为「抢跑兜底」**，火山 server VAD 语义判停为主。
+   * 接 sourceNode 并行挂 AnalyserNode（不影响 workletNode 上行）。判停优先级：
+   *   1) server asr.final（火山 definite 语义判停）→ asrFinalReceived 置位 → 本轮 VAD 直接让位（onmessage 已 stop）；
+   *   2) 能量 VAD「抢跑」：说完后静音超阈值时 emit speech_end（hands-free 流据此发 audio.end，让火山尽快出 final）。
+   * 不稳定根因修复（cc 已验证）：
+   *   - noiseFloor 说话期也慢更新（仅在非语音帧，半衰更慢），不再说话期冻结 → 背景噪变化能跟上。
+   *   - 首 ~300ms 收敛期不判停（noiseFloor 还没收敛，避免首帧噪声误判）。
+   *   - 双置信超时：有 ASR 文本（高置信，确实说了话）→ 基础静音阈；无文本（低置信，可能纯噪声/没说话）→ 阈值×1.6 更耐心。
+   *   - 6s 硬上限兜底（万一火山没判停 + 能量阈值也没触发，强制收尾防永久 listening）。
+   * 童声适配：基础静音阈 vadSilenceMs（默认 1100ms，可 VITE_VAD_SILENCE_MS 覆盖），minSpeak 150ms。
    */
   private setupVad(): void {
     const ctx = this.audioCtx;
@@ -456,17 +483,52 @@ class VoiceClientImpl implements VoiceClient {
     let silenceStart = 0;
     let speakStart = 0;
     let noiseFloor = 0.005;
-    const SILENCE_MS = 1800;
+    const SILENCE_MS = this.vadSilenceMs;
     const MIN_SPEAK_MS = 150;
+    // 首 ~300ms 收敛期：noiseFloor 还在向真实背景噪收敛，期间不判停（避免首帧未收敛误判，cc 已验证根因之一）。
+    const startedAt = Date.now();
+    const WARMUP_MS = 300;
+    // 6s 硬上限兜底：火山没判停 + 能量阈值也没触发时强制收尾，防永久 listening（保留原 6s 兜底语义）。
+    const HARD_CEILING_MS = 6000;
+    const debugVad =
+      (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_VAD_DEBUG === '1';
+    const finish = (reason: 'asr_definite' | 'local_silence' | 'timeout'): void => {
+      if (debugVad) {
+        // eslint-disable-next-line no-console
+        console.log(
+          `[vad] finish reason=${reason} rms~ noiseFloor=${noiseFloor.toFixed(4)} ` +
+            `silenceMs=${SILENCE_MS} asrText="${(this.lastUserAsrText || '').slice(0, 20)}"`,
+        );
+      }
+      this.vadStopFn?.(); // 先停 VAD 防重复 emit
+      this.emit('vad.speech_end', { reason });
+    };
     const id = window.setInterval(() => {
+      // 火山语义判停已到 → 本轮让位（onmessage 已调用 vadStopFn，这里是防御性二次保险）。
+      if (this.asrFinalReceived) {
+        this.vadStopFn?.();
+        return;
+      }
       analyser.getFloatTimeDomainData(buf);
       let sum = 0;
       for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
       const rms = Math.sqrt(sum / buf.length);
-      if (!isSpeaking) noiseFloor = noiseFloor * 0.98 + rms * 0.02;
+      const now = Date.now();
+      const elapsed = now - startedAt;
+
       const speakTh = Math.max(noiseFloor * 3.5, 0.015);
       const silenceTh = Math.max(noiseFloor * 1.5, 0.008);
-      const now = Date.now();
+
+      // noiseFloor 更新：非语音帧才更新（rms 低于 speakTh），不再「只在 !isSpeaking 时更新」导致说话期冻结。
+      // 半衰更慢（0.99/0.01）避免把句间短停顿的尾音拉高底噪；语音帧（rms>=speakTh）完全不更新。
+      if (rms < speakTh) {
+        noiseFloor = noiseFloor * 0.99 + rms * 0.01;
+      }
+
+      // 双置信静音阈：说了话（有 ASR 文本）= 高置信，用基础阈；没文本 = 低置信，更耐心（×1.6）防把没说话/纯噪声误当「说完」。
+      const hasAsrText = (this.lastUserAsrText || '').trim().length > 0;
+      const effSilenceMs = hasAsrText ? SILENCE_MS : Math.round(SILENCE_MS * 1.6);
+
       if (rms > speakTh) {
         if (!isSpeaking) {
           if (speakStart === 0) speakStart = now;
@@ -478,13 +540,19 @@ class VoiceClientImpl implements VoiceClient {
         silenceStart = 0;
       } else if (rms < silenceTh) {
         speakStart = 0;
-        if (isSpeaking) {
+        // 收敛期内不判停（noiseFloor 未稳）。
+        if (isSpeaking && elapsed >= WARMUP_MS) {
           if (silenceStart === 0) silenceStart = now;
-          if (now - silenceStart >= SILENCE_MS) {
-            this.vadStopFn?.(); // 先停 VAD 防重复 emit
-            this.emit('vad.speech_end', {});
+          if (now - silenceStart >= effSilenceMs) {
+            finish('local_silence');
+            return;
           }
         }
+      }
+
+      // 6s 硬上限：无论是否检测到说话，超时强制收尾（防火山没判停 + 能量阈值卡住时永久 listening）。
+      if (elapsed >= HARD_CEILING_MS) {
+        finish('timeout');
       }
     }, 20);
     this.vadStopFn = () => {
@@ -1265,6 +1333,13 @@ function splitCueLines(text: string): string[] {
     }
   }
   return lines.length ? lines : [clean];
+}
+
+/** docs/25 块5：解析 VITE 注入的 VAD 阈值 env（字符串），非法/缺失回退 fallback，并钳到 [min,max]。 */
+function clampInt(raw: string | undefined, fallback: number, min: number, max: number): number {
+  const n = raw !== undefined && raw.trim() !== '' ? Number(raw) : NaN;
+  const v = Number.isFinite(n) ? Math.trunc(n) : fallback;
+  return Math.max(min, Math.min(max, v));
 }
 
 function base64ToUint8Array(b64: string): Uint8Array {

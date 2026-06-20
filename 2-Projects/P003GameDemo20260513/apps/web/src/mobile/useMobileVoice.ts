@@ -14,6 +14,7 @@ import {
   registerWebBridge,
   startWakeListening,
 } from './bridge';
+import { detectExitIntent } from './exit-intent';
 
 /**
  * 移动端语音控制 hook —— 复刻 CanvasHost 的 voice-client 接线（连接/重连 + 字幕 rAF +
@@ -49,6 +50,14 @@ const THINKING_TIMEOUT_MS = 12000;
 const MAX_FOLLOWUP_TURNS = 4;
 // 问题2 填充音（docs/24，team gemini）：thinking 后延迟播，快返回(<300ms)则取消避免一闪，>300ms 拉起。
 const THINKING_CUE_DELAY_MS = 300;
+// 问题3 退出意图（docs/25）：多轮等接话时静默超时分级——先温柔提醒，再自动告别退出。孩子一开口重置。
+const IDLE_NUDGE_MS = 9000; // 等接话静默到此 → 温柔提醒一次（"还在吗～"）
+const IDLE_EXIT_MS = 9000; // 提醒后再静默到此 → 自动告别退出
+// 退出/提醒话术（儿童产品：温暖不生硬）
+const EXIT_FAREWELL_TEXT = "小可先去休息啦～想我了就喊'小可小可'，我马上回来！";
+const IDLE_NUDGE_TEXT = '还在吗？想休息的话跟我说一声，小可随时都在哦～';
+// 退出兜底：sayDirect 告别若迟迟无 tts.playback_end（WS 异常等）→ 强制收尾回唤醒态，防卡死。
+const EXIT_FALLBACK_MS = 8000;
 
 export interface MobileVoiceController {
   pressed: boolean;
@@ -91,6 +100,18 @@ export function useMobileVoice(): MobileVoiceController {
   // 问题1：连续多轮计数（onWakeWord/PTT 主动发起时清零；超 MAX 或无接话退 idle 清零）
   const turnCountRef = useRef(0);
   const mountedRef = useRef(true);
+  // 问题3 退出意图（docs/25）：
+  // exitingRef —— 退出流程进行中（幂等门：L1 白名单/L2 [EXIT]/L3 idle 多路径触发只退一次）。
+  // exitPendingRef —— L2 标记：本轮 llm.done 带 exit=true，等 tts.playback_end 播完告别后再退。
+  // idleNudgeTimerRef / idleExitTimerRef —— L3 等接话静默分级定时器。
+  // idleNudgedRef —— 本轮 idle 是否已提醒过一次（防重复提醒）。
+  // exitFallbackTimerRef —— 退出告别无 playback_end 的兜底强制收尾。
+  const exitingRef = useRef(false);
+  const exitPendingRef = useRef(false);
+  const idleNudgeTimerRef = useRef<number | null>(null);
+  const idleExitTimerRef = useRef<number | null>(null);
+  const idleNudgedRef = useRef(false);
+  const exitFallbackTimerRef = useRef<number | null>(null);
   // 供事件回调/timer 读最新值（避免闭包旧值）
   const wakeAvailableRef = useRef(false);
   wakeAvailableRef.current = wakeAvailable;
@@ -113,6 +134,171 @@ export function useMobileVoice(): MobileVoiceController {
   const resumeWakeIfIdle = useCallback(() => {
     if (wakeAvailableRef.current) startWakeListening();
   }, []);
+
+  // 问题3：清 L3 等接话静默定时器（进入新录音 / 退出 / 出错时调）
+  const clearIdleTimers = useCallback(() => {
+    if (idleNudgeTimerRef.current !== null) {
+      window.clearTimeout(idleNudgeTimerRef.current);
+      idleNudgeTimerRef.current = null;
+    }
+    if (idleExitTimerRef.current !== null) {
+      window.clearTimeout(idleExitTimerRef.current);
+      idleExitTimerRef.current = null;
+    }
+  }, []);
+
+  const clearExitFallback = useCallback(() => {
+    if (exitFallbackTimerRef.current !== null) {
+      window.clearTimeout(exitFallbackTimerRef.current);
+      exitFallbackTimerRef.current = null;
+    }
+  }, []);
+
+  // 问题3 退出流程收尾（= 唤醒进对话链反向走的最后一步）：
+  // 停录音 + 释放麦（pauseWake）+ 回 idle + 重启唤醒监听回到待唤醒态。幂等。
+  // 由「告别 TTS 播完(onPlaybackEnd)」或「兜底超时」调用。
+  const finalizeExit = useCallback(() => {
+    clearExitFallback();
+    if (!exitingRef.current) return; // 已收尾过，幂等
+    exitingRef.current = false;
+    exitPendingRef.current = false;
+    const client = clientRef.current;
+    // 防御性停录音（退出流程理论上不在录音，但多路径触发兜底，避免麦泄漏）
+    if (client) {
+      try {
+        client.stopRecording();
+      } catch {
+        /* 容错 */
+      }
+      try {
+        client.restoreTts();
+      } catch {
+        /* 容错 */
+      }
+    }
+    setListeningByWake(false);
+    setFeedbackPressed(false);
+    setVoiceStatus('idle');
+    // 回到待唤醒 idle 态：原生重新独占麦跑 Porcupine（pauseWake 在 startExit 时已调，这里恢复监听）
+    if (wakeAvailableRef.current) startWakeListening();
+  }, [clearExitFallback, setFeedbackPressed, setListeningByWake, setVoiceStatus]);
+
+  const finalizeExitRef = useRef(finalizeExit);
+  finalizeExitRef.current = finalizeExit;
+
+  // 问题3 触发退出：取消进行中 LLM/TTS（sayDirect 内部 bargeIn）→ 播暖告别 → 播完 finalizeExit。
+  // 幂等（exitingRef 门）。reason 仅用于日志/调试。pressedRef 状态同步清掉防卡。
+  const startExit = useCallback(
+    (reason: 'l1_word' | 'l2_marker' | 'l3_idle') => {
+      if (exitingRef.current) return; // 已在退出，多路径只退一次
+      exitingRef.current = true;
+      exitPendingRef.current = false;
+      // 清一切等待/接话/思考定时器，停多轮
+      clearWakeStopTimer();
+      clearThinkingTimeout();
+      clearIdleTimers();
+      turnCountRef.current = 0;
+      idleNudgedRef.current = false;
+      // 同步清录音/按住态（退出可能从 thinking / followup 等待中触发）
+      pressedRef.current = false;
+      setPressed(false);
+      setListeningByWake(false);
+      setFeedbackPressed(false);
+      // 退出期间不让原生唤醒抢麦（告别 TTS 要发声；finalizeExit 再恢复监听）
+      pauseWakeListening();
+
+      const client = clientRef.current;
+      // 停填充音（避免和告别叠播）
+      try {
+        client?.stopThinkingCue();
+      } catch {
+        /* 容错 */
+      }
+      setVoiceStatus('speaking');
+      setXiaokeEmotion('calm');
+
+      if (!client) {
+        // 没有 client（异常）→ 直接收尾
+        finalizeExitRef.current();
+        return;
+      }
+      // sayDirect 内部先 bargeIn（取消在途 LLM/TTS，复用退出链），再播告别。
+      // 播完会走 tts.playback_end → onPlaybackEnd（exitingRef 命中 → finalizeExit）。
+      try {
+        client.sayDirect(EXIT_FAREWELL_TEXT);
+      } catch {
+        // sayDirect 抛错（WS 未就绪等）→ 不卡死，直接收尾回唤醒态
+        finalizeExitRef.current();
+        return;
+      }
+      // 兜底：告别 TTS 若无 playback_end（WS 异常/无音频）→ 强制收尾
+      clearExitFallback();
+      exitFallbackTimerRef.current = window.setTimeout(() => {
+        exitFallbackTimerRef.current = null;
+        if (mountedRef.current && exitingRef.current) finalizeExitRef.current();
+      }, EXIT_FALLBACK_MS);
+      console.log('[mobile-voice] exit triggered:', reason);
+    },
+    [
+      clearExitFallback,
+      clearIdleTimers,
+      setFeedbackPressed,
+      setListeningByWake,
+      setPressed,
+      setVoiceStatus,
+      setXiaokeEmotion,
+    ],
+  );
+
+  const startExitRef = useRef(startExit);
+  startExitRef.current = startExit;
+
+  // 问题3 L3：等接话静默分级——arm 一次 nudge 计时；触发则温柔提醒一次再 arm 退出计时。
+  // 跨多个 6s followup 录音存活（追踪整体静默，不随单轮 recording 边界重置）；孩子真开口（asr partial/final 非空）清零。
+  const armIdleTimers = useCallback(() => {
+    if (exitingRef.current) return;
+    // 已有静默周期在跑（nudge 待触发 或 已提醒+退出计时中）→ 不重置，让它继续倒数。
+    // 防 nudge 播完后 followup 重新 arm 把退出计时清掉导致永不退出。
+    if (idleNudgeTimerRef.current !== null || idleExitTimerRef.current !== null || idleNudgedRef.current) {
+      return;
+    }
+    idleNudgeTimerRef.current = window.setTimeout(() => {
+      idleNudgeTimerRef.current = null;
+      if (!mountedRef.current || exitingRef.current) return;
+      // 录音/启动中（孩子可能正在说）不打断，顺延一个周期再判
+      if (pressedRef.current || actionInFlightRef.current) {
+        armIdleTimersRef.current();
+        return;
+      }
+      idleNudgedRef.current = true;
+      const client = clientRef.current;
+      try {
+        client?.sayDirect(IDLE_NUDGE_TEXT);
+      } catch {
+        /* 容错：提醒失败不影响后续退出计时 */
+      }
+      // 提醒后再静默 → 自动告别退出
+      idleExitTimerRef.current = window.setTimeout(() => {
+        idleExitTimerRef.current = null;
+        if (!mountedRef.current || exitingRef.current) return;
+        if (pressedRef.current || actionInFlightRef.current) {
+          // 仍在录音（孩子在说）→ 不退，重新 arm 一轮
+          idleNudgedRef.current = false;
+          armIdleTimersRef.current();
+          return;
+        }
+        startExitRef.current('l3_idle');
+      }, IDLE_EXIT_MS);
+    }, IDLE_NUDGE_MS);
+  }, [clearIdleTimers]);
+
+  const armIdleTimersRef = useRef(armIdleTimers);
+  armIdleTimersRef.current = armIdleTimers;
+  // 供 [] 依赖的 bridge effect（onWakeWord）读最新清理函数，避免把这些 useCallback 塞进 effect 依赖触发重注册
+  const clearIdleTimersRef = useRef(clearIdleTimers);
+  clearIdleTimersRef.current = clearIdleTimers;
+  const clearExitFallbackRef = useRef(clearExitFallback);
+  clearExitFallbackRef.current = clearExitFallback;
 
   // 结束本轮录音（PTT 松手 / 唤醒窗口到期）
   const finishTurn = useCallback(() => {
@@ -270,8 +456,11 @@ export function useMobileVoice(): MobileVoiceController {
   beginTurnRef.current = beginTurn;
 
   const onPttDown = useCallback(() => {
+    // 问题3：用户按住说话 = 主动互动 → 取消 idle 分级，重置提醒态（退出态若在播告别由 bargeIn 链处理）
+    clearIdleTimers();
+    idleNudgedRef.current = false;
     void beginTurn(false);
-  }, [beginTurn]);
+  }, [beginTurn, clearIdleTimers]);
 
   const onPttUp = useCallback(() => {
     finishTurn();
@@ -280,8 +469,10 @@ export function useMobileVoice(): MobileVoiceController {
   // 问题4（docs/24）：按住吐槽 = captureMode:'feedback' 录音（复用 kidshub 吐槽链路：
   // server 落反馈库 + 吐槽人格回应）。按住录、松手提交，与 PTT 同收尾。
   const onFeedbackDown = useCallback(() => {
+    clearIdleTimers();
+    idleNudgedRef.current = false;
     void beginTurn(false, true);
-  }, [beginTurn]);
+  }, [beginTurn, clearIdleTimers]);
 
   const onFeedbackUp = useCallback(() => {
     finishTurn();
@@ -292,6 +483,12 @@ export function useMobileVoice(): MobileVoiceController {
     if (!client) return;
     clearWakeStopTimer();
     clearThinkingTimeout();
+    // 问题3：用户主动打断 = 继续互动 → 取消退出/idle 分级，重置态
+    clearIdleTimers();
+    clearExitFallback();
+    exitingRef.current = false;
+    exitPendingRef.current = false;
+    idleNudgedRef.current = false;
     // 录音中打断 → 先收尾录音状态，避免 pressedRef 残留锁死 + 双重占麦
     if (pressedRef.current) {
       pressedRef.current = false;
@@ -312,7 +509,7 @@ export function useMobileVoice(): MobileVoiceController {
     setVoiceStatus('idle');
     setSubtitle('');
     resumeWakeIfIdle();
-  }, [resumeWakeIfIdle, setSubtitle, setVoiceStatus]);
+  }, [clearExitFallback, clearIdleTimers, resumeWakeIfIdle, setSubtitle, setVoiceStatus]);
 
   // 挂载/卸载守卫：卸载时兜底停录音，防麦克风后台泄漏
   useEffect(() => {
@@ -321,6 +518,8 @@ export function useMobileVoice(): MobileVoiceController {
       mountedRef.current = false;
       clearWakeStopTimer();
       clearThinkingTimeout();
+      clearIdleTimers(); // 问题3：卸载清 idle 分级计时
+      clearExitFallback(); // 问题3：卸载清退出兜底计时
       const client = clientRef.current;
       if (client) {
         try {
@@ -385,12 +584,27 @@ export function useMobileVoice(): MobileVoiceController {
       cancelClear();
       lastShownCueRef.current = '';
       setSubtitle(msg.text);
+      // 问题3 L3：孩子真开口（partial 有字）→ 清静默分级计时并复位提醒态（不退出）。
+      if (msg.text && msg.text.trim()) {
+        clearIdleTimers();
+        idleNudgedRef.current = false;
+      }
     };
     const onAsrFinal = (msg: { text: string }) => {
       speakingRef.current = false;
       cancelClear();
       lastShownCueRef.current = '';
       setSubtitle(`${msg.text}...`);
+      // 问题3 L1 + L3：仅当 asr.final 真有内容（孩子开口）才处理。
+      // 空 final（followup 录音无人说话）不清 L3 计时，让静默跨多轮累积到提醒/退出。
+      if (!msg.text || !msg.text.trim()) return;
+      // L3：孩子开口 → 取消静默分级计时并复位提醒态
+      clearIdleTimers();
+      idleNudgedRef.current = false;
+      // L1：告别词白名单命中 → 退出流程（sayDirect 内部 bargeIn 取消 server 即将启动的这轮 LLM/TTS）
+      if (!exitingRef.current && detectExitIntent(msg.text)) {
+        startExitRef.current('l1_word');
+      }
     };
     const cancelThinkingCue = () => {
       if (thinkingCueTimerRef.current !== null) {
@@ -405,6 +619,17 @@ export function useMobileVoice(): MobileVoiceController {
       cancelThinkingCue(); // 问题2：真回复来了，停填充音
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
+    };
+    // 问题3 L2：server 检测 LLM 回复开头 [EXIT]（已剥离）→ llm.done 带 exit=true。
+    // 此刻 LLM 自己的告别正在 TTS 播；标记本轮待退，等告别 playback_end 后在 onPlaybackEnd 收尾
+    //（不立即 sayDirect，避免双重告别；让 LLM 那句温暖告别自然播完）。
+    const onLlmDone = (msg: { text?: string; exit?: boolean }) => {
+      if (msg?.exit && !exitingRef.current) {
+        exitPendingRef.current = true;
+        clearIdleTimers();
+        clearWakeStopTimer();
+        turnCountRef.current = 0; // 退出轮不再进多轮接话
+      }
     };
     const onTtsAudio = () => {
       clearThinkingTimeout();
@@ -438,6 +663,15 @@ export function useMobileVoice(): MobileVoiceController {
         setSubtitle('');
       }, 1200);
       client.restoreTts(); // 问题3：恢复 TTS 音量
+      // 问题3 退出收尾（两条退出路径都在「告别 TTS 播完」这一刻统一收尾到唤醒 idle 态）：
+      // (a) exitingRef —— L1/L3：startExit 已 sayDirect 自家告别，播完即 finalizeExit。
+      // (b) exitPendingRef —— L2：LLM 回复开头带 [EXIT]，它自己那句告别刚播完，这里直接收尾，
+      //     不再 sayDirect（避免双重告别）。置 exitingRef 命中 finalizeExit 的幂等门后收尾。
+      if (exitingRef.current || exitPendingRef.current) {
+        exitingRef.current = true;
+        finalizeExitRef.current();
+        return;
+      }
       // team 审查（gemini/gpt 高风险）：唤醒打断时 onWakeWord 会同步 bargeIn→本回调，紧接着设 listening+beginTurn。
       // 若此刻已在录音/启动中，绝不能 idle / 进 followup（会覆盖 listening 态 + 抢麦）。仅真正空闲收尾才走。
       if (!pressedRef.current && !actionInFlightRef.current) {
@@ -445,6 +679,8 @@ export function useMobileVoice(): MobileVoiceController {
         // 超限 / 原生唤醒不可用 → 退 idle 恢复 KWS。无接话时 followup 录音 6s 空 → thinking 兜底超时退（turnCount 下次唤醒清零）。
         if (wakeAvailableRef.current && turnCountRef.current < MAX_FOLLOWUP_TURNS) {
           turnCountRef.current += 1;
+          // 问题3 L3：followup 等接话 → arm 静默分级计时（幂等：已在倒数则不重置）。孩子开口清零。
+          armIdleTimersRef.current();
           void beginTurnRef.current(true);
         } else {
           turnCountRef.current = 0;
@@ -464,6 +700,12 @@ export function useMobileVoice(): MobileVoiceController {
       cancelThinkingCue(); // 问题2：出错停填充音
       client.restoreTts(); // 问题3：出错恢复音量
       turnCountRef.current = 0; // 问题1：出错结束多轮
+      // 问题3：出错时清退出/idle 态，绝不让退出流程卡死状态机
+      clearIdleTimers();
+      clearExitFallback();
+      exitingRef.current = false;
+      exitPendingRef.current = false;
+      idleNudgedRef.current = false;
       pressedRef.current = false;
       setPressed(false);
       setListeningByWake(false);
@@ -486,6 +728,7 @@ export function useMobileVoice(): MobileVoiceController {
     client.on('asr.partial', onAsrPartial);
     client.on('asr.final', onAsrFinal);
     client.on('llm.delta', onLlmDelta);
+    client.on('llm.done', onLlmDone);
     client.on('tts.audio', onTtsAudio);
     client.on('tts.end', onTtsEnd);
     client.on('tts.segment_start', onSegmentStart);
@@ -500,6 +743,7 @@ export function useMobileVoice(): MobileVoiceController {
       client.off('asr.partial', onAsrPartial);
       client.off('asr.final', onAsrFinal);
       client.off('llm.delta', onLlmDelta);
+      client.off('llm.done', onLlmDone);
       client.off('tts.audio', onTtsAudio);
       client.off('tts.end', onTtsEnd);
       client.off('tts.segment_start', onSegmentStart);
@@ -528,6 +772,13 @@ export function useMobileVoice(): MobileVoiceController {
         // 重入早退：已在录音/启动中则忽略重复唤醒（beginTurn 内亦有防护，这里早退避免多余 bargeIn/playCue）
         if (pressedRef.current || actionInFlightRef.current) return;
         turnCountRef.current = 0; // 问题1：用户主动喊唤醒词 = 新会话，多轮计数清零
+        // 问题3：喊唤醒词 = 主动回来 → 取消退出/idle 分级（即便正在播告别也救回），重置态。
+        // 先于下面 bargeIn（bargeIn 会 emit tts.playback_end→onPlaybackEnd，需此处已清 exitingRef 防误收尾）。
+        clearIdleTimersRef.current();
+        clearExitFallbackRef.current();
+        exitingRef.current = false;
+        exitPendingRef.current = false;
+        idleNudgedRef.current = false;
         const client = clientRef.current;
         // 需求2：小可说话中被唤醒 → 先打断 TTS。bargeIn 同步 emit tts.playback_end（→onPlaybackEnd 置 idle），
         // 紧接着下面同步覆盖为 listening（React 批处理同一执行栈，不闪 idle）。

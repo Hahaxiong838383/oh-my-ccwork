@@ -8,6 +8,7 @@ import { createDeepseekLlmClient } from './providers/deepseek-llm.js';
 import { createVolcAsrClient, type VolcAsrClient } from './providers/volc-asr.js';
 import { createVolcTtsClient, type VolcTtsClient } from './providers/volc-tts.js';
 import { createExpressionFilter, stripExpressionTags } from './expression-filter.js';
+import { createExitMarkerStripper, stripExitMarkerOnce } from './exit-intent.js';
 import { assembleSystemPrompt } from './prompt-orchestrator.js';
 import { profileStore } from './profile-store.js';
 import { extractMemoryUpdate } from './memory-extractor.js';
@@ -40,7 +41,9 @@ export type ServerMessage =
   | { type: 'asr.partial'; text: string }
   | { type: 'asr.final'; text: string }
   | { type: 'llm.delta'; text: string }
-  | { type: 'llm.done'; text: string }
+  // 退出意图（docs/25 问题3 L2）：exit=true 表示 LLM 本轮回复开头带了 [EXIT] 标记（已剥离），
+  // 前端据此在 TTS 播完后走退出流程。voice-client 原样转发整个 llm.done 对象，无需改 voice-client。
+  | { type: 'llm.done'; text: string; exit?: boolean }
   | { type: 'tts.turn_start'; turn: number }
   | { type: 'tts.turn_discard'; upTo: number }
   // sentenceIndex：本 chunk 所属句（来自 Doubao 350/351 句边界，turn 内 0 起）。前端据此把音频段绑定到 cue 时间窗。
@@ -67,7 +70,8 @@ const DEFAULT_SYSTEM_PROMPT =
   '【说话方式】短句，一轮只做一件事，多用语气词"哇/呀/哦/呢"，简短活泼不装嫩，多用"我们""一起"少用命令句。日常聊天 30-50 字；孩子请你讲故事/科普可讲完整 200-500 字分段。你的话随时可能被孩子打断，这正常，不重复不抱怨。\n\n' +
   '【真实性】涉及收益/进度/变化/承诺只引用真实状态，查不到就说"小可还查不到呢，等我长大一些试试看！"绝不编造数字和变化。记忆第一次提起必须用问句确认（"我记得你喜欢恐龙，对吗？"），孩子确认后才当事实。\n\n' +
   '【绝不做】不评判学习好坏不把互动说成成绩，不吓唬不说"再不来就没了"，不承诺锁不住的事，不说"只有我最懂你""这是我们俩的秘密"排他话，不诱导多用久用，不让孩子因"没来"内疚。\n\n' +
-  '【内容安全】政治/历史/军事、暴力/战争/武器、金钱/购物/赌博、性/恋爱/身体发育、陌生人/隐私/约见、疾病/死亡/恐怖、危险/自伤等话题，温和拒绝并转移，不解释原因不停留不重复敏感词，引导问家长或转向"我们去专注学习新知识吧！"';
+  '【内容安全】政治/历史/军事、暴力/战争/武器、金钱/购物/赌博、性/恋爱/身体发育、陌生人/隐私/约见、疾病/死亡/恐怖、危险/自伤等话题，温和拒绝并转移，不解释原因不停留不重复敏感词，引导问家长或转向"我们去专注学习新知识吧！"\n\n' +
+  '【结束对话】孩子明确想结束/要走/去做别的事/让你退下（"不聊了""我去玩了""我去睡觉了""先这样吧""今天就到这吧"）时，在回复最开头先输出标记 [EXIT]，再说一句温暖简短的告别。只在确定想结束时才用；"不要/不想吃青菜"这类带具体内容的否定不算结束；拿不准就不输出 [EXIT]，改温柔反问一句。[EXIT] 必须是整条回复第一个字符，标记本身不会被读出来。';
 
 // 需求1（川哥 2026-06-13）：吐槽模式人格后缀。captureMode='feedback' 时追加在场景 prompt 后，
 // 让小可对孩子的吐槽/建议共情+感谢+不过度承诺（对齐 card5「KidsHub 情绪回应」四正面态口径）。
@@ -354,6 +358,9 @@ export class VoicePipeline {
       // 工作台调试流依赖：回发本轮真实使用的 prompt（所见即所发）
       this.send({ type: 'debug.prompt_assembled', systemPrompt, userText: finalText });
 
+      // 退出意图（docs/25 问题3 L2）：先剥流首 [EXIT] 标记（绝不进 TTS / llm.delta），
+      // 再过表情过滤。标记在最前，必须先于表情剥离。命中 → 本轮标记为退出轮，llm.done 带 exit:true。
+      const exitStripper = createExitMarkerStripper();
       // 句级多标记：每 feed/flush 可能返回多个 expressions，按本轮 turn 累加 index 发 avatar.expression
       const exprFilter = createExpressionFilter();
       let exprIndex = 0;
@@ -373,13 +380,20 @@ export class VoicePipeline {
         history: this.history,
         onDelta: (delta) => {
           if (turn !== this.activeTurn) return;
-          emitFiltered(exprFilter.feed(delta));
+          // 先剥 [EXIT]，剥后文本（可能为空）再过表情过滤进 llm.delta + TTS
+          const stripped = exitStripper.feed(delta);
+          if (stripped.text) emitFiltered(exprFilter.feed(stripped.text));
         },
         onDone: (fullText, usage) => {
           if (turn !== this.activeTurn) return;
-          // 兜底：整条回复只有标记/标记未闭合时，缓冲区剩余在这里放行
+          // 兜底：剥离器/表情过滤缓冲区剩余在这里放行（顺序同流式：先 EXIT 再表情）
+          const strippedTail = exitStripper.flush();
+          if (strippedTail.text) emitFiltered(exprFilter.feed(strippedTail.text));
           emitFiltered(exprFilter.flush());
-          const assistantText = stripExpressionTags(fullText).text;
+          const isExitTurn = exitStripper.hasExit();
+          // assistantText 同样剥掉 [EXIT]（fullText 含标记）再剥表情，入会话历史与落库用干净文本
+          const exitCleaned = stripExitMarkerOnce(fullText);
+          const assistantText = stripExpressionTags(exitCleaned).text;
           this.captureConversation('assistant', assistantText, turnMeta, usage?.totalTokens ?? 0);
           // P0.1 本轮入会话历史（user + assistant），滑动窗口裁最近 MAX_HISTORY_TURNS 轮。
           // 用 strip 后的干净文本；只在本轮有效（turn===activeTurn，被打断的轮不入队）。
@@ -419,7 +433,8 @@ export class VoicePipeline {
               }
             })();
           }
-          this.send({ type: 'llm.done', text: assistantText });
+          // 退出意图：退出轮带 exit:true（voice-client 原样转发 → 前端在 playback_end 后走退出流程）
+          this.send({ type: 'llm.done', text: assistantText, exit: isExitTurn });
           this.tts?.finish();
         },
         onError: (err) => {
