@@ -440,7 +440,8 @@ export function useMobileVoice(): MobileVoiceController {
         if (mountedRef.current) {
           setVoiceStatus('idle');
           if (!aborted) {
-            setSubtitle(err instanceof Error ? err.message : '网络好像不太好，待会再试试～');
+            // 问题2：不把 WS/技术错误原文（"WebSocket was closed..."）暴露给孩子，统一友好提示
+            setSubtitle('网络好像不太好，待会再试试～');
             applyNetState('fail');
           }
         }
