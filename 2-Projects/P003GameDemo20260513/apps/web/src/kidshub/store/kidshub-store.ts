@@ -8,7 +8,7 @@ import {
   composeSystemPrompt,
 } from '../prompts';
 import { sampleDeviceState } from '../prompts/sample';
-import { getKnowledge } from '../knowledge/get-knowledge';
+import { getKnowledge, getVoiceDefaultKnowledge } from '../knowledge/get-knowledge';
 import type { LoreSection } from '../knowledge/types';
 
 const TOKEN_KEY = 'kidshub.token';
@@ -333,5 +333,21 @@ export function getComposedPromptNow(): string {
     scenePrompt,
     variables: s.variables,
     addendum: s.addendum,
+  });
+}
+
+// 移动端语音专用组装（docs/25 问题4 记忆修复）：在 getComposedPromptNow 基础上带上方舟世界观 lore
+// （L1 WORLD_CORE 常驻 + 语音默认精选 L2），修复移动端语音「方舟游戏世界记忆缺失」根因。
+// 不复用 getComposedPromptNow（体验台 StudioPage 预览/复制也用它，保持其行为不变）。
+export function getMobileVoicePromptNow(): string {
+  const s = useKidsHubStore.getState();
+  const cardId = s.activeCardId;
+  const scenePrompt = cardId ? (s.scenePromptDrafts[cardId] ?? '') : '';
+  return composeSystemPrompt({
+    globalTemplate: s.globalTemplate,
+    scenePrompt,
+    variables: s.variables,
+    addendum: s.addendum,
+    lore: getVoiceDefaultKnowledge(),
   });
 }

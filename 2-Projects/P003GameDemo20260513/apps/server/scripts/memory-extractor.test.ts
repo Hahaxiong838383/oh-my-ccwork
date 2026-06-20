@@ -7,7 +7,9 @@ import type { FamilyMember } from '../src/profile-store.js';
 const cur: FamilyMember = {
   id: 'x', account_id: 'a', nickname: '小明', birthday: '2018-08', gender: '男孩',
   interests: [{ value: '恐龙', confidence: 0.9, last_updated: 1, source: 'voice' }],
-  preferred_address: '', personality_notes: '', recent_emotion: '', created_at: 0, updated_at: 0,
+  preferred_address: '', personality_notes: '', recent_emotion: '',
+  game_progress: [{ value: '通关恐龙星域', last_updated: 1, source: 'voice' }],
+  created_at: 0, updated_at: 0,
 };
 
 // 1. 改名：新名 ≠ 旧名 → patch.nickname（语音改名核心）
@@ -71,4 +73,34 @@ const cur: FamilyMember = {
   console.log('✅ 9 改名校验：拒注入词/清XSS/截超长/正常通过');
 }
 
-console.log('\n🎉 P1.2(+team修复) memory-extractor.parsePatch 全过');
+// 10. 方舟冒险事件：抽出孩子明确表达的新进展（只返回新增项，去重 + clip ≤40）
+{
+  const p = parsePatch('{"game_progress":["打捞到机械恐龙宝箱"]}', cur);
+  assert.ok(p && p.game_progress && p.game_progress.length === 1, '抽出 1 条新方舟进展');
+  assert.equal(p.game_progress[0].value, '打捞到机械恐龙宝箱', '进展 value');
+  assert.equal(p.game_progress[0].source, 'voice', '带 source');
+  assert.equal(typeof p.game_progress[0].last_updated, 'number', '带 last_updated');
+  console.log('✅ 10 方舟进展：抽出孩子明确表达的新进展(只返回新增项)');
+}
+// 11. 不臆测：普通闲聊不含游戏进展 → 不抽 game_progress（LLM 已省略，parse 不无中生有）
+{
+  const p = parsePatch('{"recent_emotion":"今天好开心"}', cur);
+  assert.ok(!p || !p.game_progress, '普通闲聊不抽 game_progress');
+  console.log('✅ 11 不臆测：普通闲聊不抽方舟进展');
+}
+// 12. 已有进展不重复 → 不返回（current 已含「通关恐龙星域」）
+{
+  const p = parsePatch('{"game_progress":["通关恐龙星域"]}', cur);
+  assert.equal(p, null, '已有进展不重复 → null');
+  console.log('✅ 12 已有方舟进展不重复');
+}
+// 13. 方舟进展 clip：超长截断 ≤40 + 清 <>（防注入/存储型 XSS）
+{
+  const longEv = '一二三四五六七八九十一二三四五六七八九十一二三四五六七八九十一二三四五六七八九十X';
+  const p = parsePatch(`{"game_progress":["${longEv}<script>"]}`, cur);
+  assert.ok(p && p.game_progress && [...p.game_progress[0].value].length <= 40, '超长截断 ≤40');
+  assert.ok(p && p.game_progress && !p.game_progress[0].value.includes('<'), 'XSS <> 被清洗');
+  console.log('✅ 13 方舟进展 clip：截超长 ≤40 + 清 XSS');
+}
+
+console.log('\n🎉 P1.2(+team修复+方舟game_progress) memory-extractor.parsePatch 全过');

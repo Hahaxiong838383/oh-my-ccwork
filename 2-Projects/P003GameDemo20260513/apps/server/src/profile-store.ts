@@ -13,6 +13,12 @@ import { DatabaseSync } from 'node:sqlite';
 
 export type InterestItem = { value: string; confidence: number; last_updated: number; source: string };
 
+// 方舟冒险事件记忆（game_progress）：孩子明确表达的方舟游戏进展/冒险经历（"通关了恐龙星域"…）。
+// 轻量扩展，持久化同 interests（family_member.game_progress JSON TEXT 列），写时只留最近 5 条。
+export type GameEvent = { value: string; last_updated: number; source: string };
+
+const GAME_PROGRESS_MAX = 5; // 只留最近 5 条方舟冒险事件（按 last_updated）。
+
 export type FamilyMember = {
   id: string;
   account_id: string;
@@ -24,6 +30,7 @@ export type FamilyMember = {
   preferred_address: string; // 喜欢被叫什么（昵称偏好）
   personality_notes: string; // 性格观察
   recent_emotion: string; // 近期情绪锚点（JSON {emotion,topic,ts} 或文本）
+  game_progress: GameEvent[]; // 方舟冒险事件记忆（最近 5 条，语音抽取写入）
   created_at: number;
   updated_at: number;
 };
@@ -54,10 +61,14 @@ export type MemoryPatch = Partial<{
   personality_notes: string;
   recent_emotion: string;
   interests: InterestItem[];
+  game_progress: GameEvent[]; // 只新增项（合并下沉到 updateMemoryFields 写时，防并发 lost update）
 }>;
 
-// DB 原始行（interests 是 TEXT，读出后 parse 成数组）。
-type FamilyRow = Omit<FamilyMember, 'interests'> & { interests: string };
+// DB 原始行（interests / game_progress 是 TEXT，读出后 parse 成数组）。
+type FamilyRow = Omit<FamilyMember, 'interests' | 'game_progress'> & {
+  interests: string;
+  game_progress: string;
+};
 
 const DEFAULT_DB_PATH = './data/profile.db';
 
@@ -67,7 +78,7 @@ function resolveDbPath(): string {
 }
 
 const FAMILY_COLUMNS =
-  'id, account_id, nickname, birthday, gender, interests, preferred_address, personality_notes, recent_emotion, created_at, updated_at';
+  'id, account_id, nickname, birthday, gender, interests, preferred_address, personality_notes, recent_emotion, game_progress, created_at, updated_at';
 
 class ProfileStore {
   private readonly db: DatabaseSync;
@@ -88,6 +99,7 @@ class ProfileStore {
         preferred_address TEXT NOT NULL DEFAULT '',
         personality_notes TEXT NOT NULL DEFAULT '',
         recent_emotion TEXT NOT NULL DEFAULT '',
+        game_progress TEXT NOT NULL DEFAULT '[]',
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL
       );
@@ -116,26 +128,25 @@ class ProfileStore {
       add('preferred_address', '');
       add('personality_notes', '');
       add('recent_emotion', '');
+      add('game_progress', '[]');
     } catch (err) {
       // CREATE TABLE 已含新列（新库无碍）；老库迁移失败记日志、不阻断启动，后续人工处理。
       console.error('[profile-store] migrate 失败(不阻断启动):', String((err as Error)?.message ?? err));
     }
   }
 
-  // 解析 interests JSON，并校验元素结构（损坏/异常对象不进入 prompt 注入路径 — team#7）。
+  // 解析 interests / game_progress JSON，并校验元素结构（损坏/异常对象不进入 prompt 注入路径 — team#7）。
+  // 旧库（无 game_progress 列时 row.game_progress 为 undefined）默认 []，向后兼容。
   private rowToMember(row: FamilyRow): FamilyMember {
-    let interests: InterestItem[] = [];
-    try {
-      const parsed = JSON.parse(row.interests || '[]');
-      if (Array.isArray(parsed)) {
-        interests = parsed.filter(
-          (i): i is InterestItem => Boolean(i) && typeof i.value === 'string' && typeof i.confidence === 'number',
-        );
-      }
-    } catch {
-      // 损坏的 JSON 容错为空数组，不阻断
-    }
-    return { ...row, interests };
+    const interests = parseJsonArray(
+      row.interests,
+      (i): i is InterestItem => Boolean(i) && typeof i.value === 'string' && typeof i.confidence === 'number',
+    );
+    const game_progress = parseJsonArray(
+      row.game_progress,
+      (g): g is GameEvent => Boolean(g) && typeof g.value === 'string' && typeof g.last_updated === 'number',
+    );
+    return { ...row, interests, game_progress };
   }
 
   /** 原型：一个账号一个孩子档案。已存在则更新基础信息，不存在则插入。 */
@@ -152,7 +163,7 @@ class ProfileStore {
     this.db
       .prepare(`
         INSERT INTO family_member (${FAMILY_COLUMNS})
-        VALUES (?, ?, ?, ?, ?, '[]', '', '', '', ?, ?)
+        VALUES (?, ?, ?, ?, ?, '[]', '', '', '', '[]', ?, ?)
       `)
       .run(id, accountId, input.nickname, input.birthday, input.gender, now, now);
     return {
@@ -165,6 +176,7 @@ class ProfileStore {
       preferred_address: '',
       personality_notes: '',
       recent_emotion: '',
+      game_progress: [],
       created_at: now,
       updated_at: now,
     };
@@ -186,12 +198,16 @@ class ProfileStore {
       // team#1: patch.interests 是「新增项」，基于此刻最新 existing 合并（本方法 getProfile→UPDATE 间
       // 无 await=同步原子执行），杜绝基于抽取时旧快照覆盖导致的并发 lost update。
       interests: patch.interests ? appendInterests(existing.interests, patch.interests) : existing.interests,
+      // game_progress 同 interests 防并发：基于最新 existing 追加新增 + 去重 + 只留最近 5 条。
+      game_progress: patch.game_progress
+        ? appendGameEvents(existing.game_progress, patch.game_progress)
+        : existing.game_progress,
       updated_at: Date.now(),
     };
     this.db
       .prepare(`
         UPDATE family_member
-        SET nickname = ?, preferred_address = ?, personality_notes = ?, recent_emotion = ?, interests = ?, updated_at = ?
+        SET nickname = ?, preferred_address = ?, personality_notes = ?, recent_emotion = ?, interests = ?, game_progress = ?, updated_at = ?
         WHERE id = ?
       `)
       .run(
@@ -200,6 +216,7 @@ class ProfileStore {
         merged.personality_notes,
         merged.recent_emotion,
         JSON.stringify(merged.interests),
+        JSON.stringify(merged.game_progress),
         merged.updated_at,
         existing.id,
       );
@@ -282,6 +299,35 @@ function appendInterests(existing: InterestItem[], added: InterestItem[]): Inter
     }
   }
   return merged;
+}
+
+// 方舟冒险事件合并：基于最新 existing 追加新增项（按 value 去重），按 last_updated 只留最近 GAME_PROGRESS_MAX 条。
+// 不可变：返回新数组，不原地改入参。
+function appendGameEvents(existing: GameEvent[], added: GameEvent[]): GameEvent[] {
+  const seen = new Set(existing.map((g) => g.value));
+  const merged = [...existing];
+  for (const ev of added) {
+    if (ev && typeof ev.value === 'string' && !seen.has(ev.value)) {
+      seen.add(ev.value);
+      merged.push(ev);
+    }
+  }
+  // 只留最近 N 条：按 last_updated 降序取前 N，再按时间升序还原存储顺序（旧→新，稳定可读）。
+  if (merged.length <= GAME_PROGRESS_MAX) return merged;
+  return [...merged]
+    .sort((a, b) => b.last_updated - a.last_updated)
+    .slice(0, GAME_PROGRESS_MAX)
+    .sort((a, b) => a.last_updated - b.last_updated);
+}
+
+// 解析 JSON 数组列（损坏容错为 []；旧库列 undefined 也容错），按 guard 过滤异常元素。
+function parseJsonArray<T>(raw: string | undefined, guard: (v: any) => v is T): T[] {
+  try {
+    const parsed = JSON.parse(raw || '[]');
+    return Array.isArray(parsed) ? parsed.filter(guard) : [];
+  } catch {
+    return [];
+  }
 }
 
 export const profileStore = new ProfileStore();

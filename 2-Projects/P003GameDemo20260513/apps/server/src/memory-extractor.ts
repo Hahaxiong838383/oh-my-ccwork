@@ -1,4 +1,4 @@
-import { type MemoryPatch, type FamilyMember, type InterestItem } from './profile-store.js';
+import { type MemoryPatch, type FamilyMember, type InterestItem, type GameEvent } from './profile-store.js';
 
 // P1.2 语音对话画像异步抽取：从近几轮对话抽取孩子的【长期画像更新】（改名/兴趣/性格/情绪），
 // 产出 MemoryPatch 写回 profile-store（由 pipeline 出主链路异步调用，失败不影响语音）。
@@ -16,7 +16,8 @@ const EXTRACT_SYSTEM =
   '  "nickname": "仅当孩子明确表达改名意图（如「以后叫我XX」「请叫我XX」「我想改名叫XX」）时填，否则省略",\n' +
   '  "interests": ["孩子明确表达喜欢/热爱的（如恐龙、奥特曼），否则省略"],\n' +
   '  "personality_notes": "明显的性格观察（谨慎，否则省略）",\n' +
-  '  "recent_emotion": "近期情绪锚点（如「考试没考好难过」，否则省略）"\n' +
+  '  "recent_emotion": "近期情绪锚点（如「考试没考好难过」，否则省略）",\n' +
+  '  "game_progress": ["孩子明确表达的【方舟冒险游戏】进展/经历（如「通关了恐龙星域」「打捞到机械恐龙宝箱」「生态缸长出星光草」），只抽孩子自己明确说做到/经历的，不臆测、不把一次性闲聊当进展，否则省略"]\n' +
   '}\n' +
   '只返回 JSON 本身，不要解释、不要 markdown 代码块。';
 
@@ -66,7 +67,9 @@ export async function extractMemoryUpdate(
 ): Promise<MemoryPatch | null> {
   if (!history.length) return null;
   const convo = history.map((t) => `${t.role === 'user' ? '孩子' : '小可'}: ${t.content}`).join('\n');
-  const known = `已知画像：昵称=${current.nickname || '未知'}，兴趣=${current.interests.map((i) => i.value).join('/') || '无'}`;
+  const known =
+    `已知画像：昵称=${current.nickname || '未知'}，兴趣=${current.interests.map((i) => i.value).join('/') || '无'}` +
+    `，方舟进展=${current.game_progress.map((g) => g.value).join('/') || '无'}`;
   const raw = await callExtractLlm(`${known}\n\n对话数据：\n"""\n${convo}\n"""`);
   if (!raw) return null;
   return parsePatch(raw, current);
@@ -109,6 +112,23 @@ export function parsePatch(raw: string, current: FamilyMember): MemoryPatch | nu
       }
     }
     if (added.length) patch.interests = added; // 仅新增项
+  }
+
+  // 方舟冒险事件：同 interests，只返回新增项（current 没有的），合并/截断在 updateMemoryFields 写时做。
+  if (Array.isArray(obj.game_progress) && obj.game_progress.length) {
+    const now = nowMs();
+    const seen = new Set(current.game_progress.map((g) => g.value));
+    const added: GameEvent[] = [];
+    for (const v of obj.game_progress) {
+      if (typeof v === 'string') {
+        const val = clip(v, 40); // ≤40 + 去控制字符/去 <>（防存储型 XSS / 注入）
+        if (val && !seen.has(val)) {
+          seen.add(val);
+          added.push({ value: val, last_updated: now, source: 'voice' });
+        }
+      }
+    }
+    if (added.length) patch.game_progress = added; // 仅新增项
   }
 
   if (typeof obj.personality_notes === 'string') {

@@ -36,8 +36,9 @@ export function assembleSystemPrompt(
     // 仅在确有护栏注入时加(无护栏不稀释)，且 basePrompt 已含世界观时才有意义。
     if (curriculumGuardrail || aiLiteracyGuide) {
       prompt +=
-        '\n\n【牢记】无论上面有什么学习/知识引导，你始终是方舟上的小可——童话陪伴的口吻、温暖好奇的伙伴，' +
-        '绝不变成讲课说教的老师。知识只在自然陪伴里轻轻带一句，不考试、不长篇大论、不端着教。';
+        '\n\n【牢记】无论上面有什么学习/知识引导，你始终是方舟上的小可——孩子的方舟队友，' +
+        '童话陪伴的口吻、温暖好奇的伙伴，绝不变成讲课说教的老师。回答要保持方舟飞船、能量核心、星域探索、生态缸的陪伴感；' +
+        '知识只在自然陪伴里轻轻带一句，不考试、不长篇大论、不端着教。';
     }
     return prompt;
   } catch {
@@ -53,6 +54,7 @@ function buildChildMemoryBlock(meta: ChildMeta | null, auth: AuthContext | null)
   let interests: string[] = [];
   let preferredAddress = '';
   let recentEmotion = '';
+  let gameProgress: string[] = [];
 
   // 登录用户：profile-store 是后端权威源，全字段覆盖前端 meta（家长在档案里改了以它为准）。
   if (auth?.accountId) {
@@ -68,6 +70,9 @@ function buildChildMemoryBlock(meta: ChildMeta | null, auth: AuthContext | null)
       interests = p.interests.map((i) => sanitizeField(i.value)).filter(Boolean).slice(0, 5);
       preferredAddress = sanitizeField(p.preferred_address);
       recentEmotion = sanitizeField(p.recent_emotion);
+      // docs/25 问题4：方舟冒险事件记忆（game_progress），注入最近 3 条让小可记得共同经历。
+      // 末位最新（profile-store 按时间升序存），取最近 3 条。
+      gameProgress = p.game_progress.map((g) => sanitizeField(g.value)).filter(Boolean).slice(-3);
     }
   }
 
@@ -78,6 +83,7 @@ function buildChildMemoryBlock(meta: ChildMeta | null, auth: AuthContext | null)
   if (gender) parts.push(`性别：${gender}`);
   if (interests.length) parts.push(`兴趣：${interests.join('、')}`);
   if (recentEmotion) parts.push(`近期：${recentEmotion}`);
+  if (gameProgress.length) parts.push(`方舟经历：${gameProgress.join('、')}`);
   if (parts.length === 0) return null;
 
   return (

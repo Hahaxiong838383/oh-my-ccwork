@@ -34,9 +34,42 @@ assert.equal(got.interests[0].value, '恐龙', 'interests JSON 解析回数组')
 assert.equal(got.interests[0].source, 'voice', 'interests 字段完整');
 console.log('✅ 3 getProfile：改名持久 + interests JSON 解析');
 
-// 4. 无档案 updateMemoryFields 返回 null（不凭空建档）
+// 4. 向后兼容：旧档案（从未写过 game_progress）读出为 []（migrate 补列默认 '[]'，不崩）
+const compat = profileStore.getProfile(ACCT);
+assert.ok(compat, '档案存在');
+assert.deepEqual(compat.game_progress, [], '旧档案 game_progress 读出为空数组（向后兼容）');
+console.log('✅ 4 向后兼容：旧档案 game_progress 读出为 []');
+
+// 5. game_progress 写入 + 去重 + 只留最近 5 条（按 last_updated）
+// 先写 4 条，再写 3 条（含 1 条重复），共 6 条唯一 → 截断到最近 5 条。
+const GACCT = 'test-p1-game-acct';
+profileStore.deleteByAccountId(GACCT);
+profileStore.upsertProfile(GACCT, { nickname: '小可玩家', birthday: '2018-08', gender: '男孩' });
+const ev = (value: string, ts: number) => ({ value, last_updated: ts, source: 'voice' });
+profileStore.updateMemoryFields(GACCT, {
+  game_progress: [ev('事件1', 1000), ev('事件2', 2000), ev('事件3', 3000), ev('事件4', 4000)],
+});
+const after2 = profileStore.updateMemoryFields(GACCT, {
+  game_progress: [ev('事件2', 9999), ev('事件5', 5000), ev('事件6', 6000)], // 事件2 重复（按 value 去重）
+});
+assert.ok(after2, '有档案返回非 null');
+assert.equal(after2.game_progress.length, 5, '6 条唯一 → 只留最近 5 条');
+const vals = after2.game_progress.map((g) => g.value);
+assert.ok(!vals.includes('事件1'), '最旧的事件1 被挤出（保留最近 5）');
+assert.ok(vals.includes('事件6') && vals.includes('事件5'), '最新的事件5/事件6 保留');
+assert.equal(after2.game_progress.filter((g) => g.value === '事件2').length, 1, '事件2 按 value 去重不重复');
+console.log('✅ 5 game_progress：去重 + 只留最近 5 条');
+
+// 6. game_progress 持久化：getProfile 重新读 JSON 解析回数组
+const gotGame = profileStore.getProfile(GACCT);
+assert.ok(gotGame && gotGame.game_progress.length === 5, 'game_progress JSON 持久化 + 解析回数组');
+assert.equal(gotGame.game_progress[0].source, 'voice', 'game_progress 字段完整');
+profileStore.deleteByAccountId(GACCT);
+console.log('✅ 6 game_progress 持久化：JSON 解析回数组');
+
+// 7. 无档案 updateMemoryFields 返回 null（不凭空建档）
 profileStore.deleteByAccountId(ACCT);
 assert.equal(profileStore.updateMemoryFields(ACCT, { nickname: 'x' }), null, '无档案返回 null');
-console.log('✅ 4 无档案：updateMemoryFields 返回 null（不凭空建档）');
+console.log('✅ 7 无档案：updateMemoryFields 返回 null（不凭空建档）');
 
-console.log('\n🎉 P1.1 profile-store 画像 schema + updateMemoryFields 全过');
+console.log('\n🎉 P1.1(+方舟game_progress) profile-store 画像 schema + updateMemoryFields 全过');

@@ -35,6 +35,14 @@ export interface VoiceClient {
   unlockAudio(): Promise<void>;
   /** 唤醒即时确认音（本地 AudioContext 合成柔和双音，<50ms，掩盖云端 LLM+TTS 延迟）。复用已解锁的 ctx，未解锁则静默 */
   playCue(): void;
+  /** 应答延时填充音（问题2）：thinking 期随机播一条 think-*.mp3（"我想想哦"），独立 handle 可随时停 */
+  playThinkingCue(): void;
+  /** 停止填充音（收到真 TTS / 打断时）。50ms 淡出防爆音 */
+  stopThinkingCue(): void;
+  /** TTS 播放音量压低（问题3：speaking 时减自声掩盖、改善打断 SNR） */
+  duckTts(): void;
+  /** TTS 播放音量恢复 */
+  restoreTts(): void;
   /** 电影字幕：当前音频播放时刻对应的整句文本（rAF 每帧取，无则 null） */
   getCurrentSubtitleCue(): string | null;
   on(event: VoiceEvent, cb: (data: any) => void): void;
@@ -60,6 +68,8 @@ type VoiceEvent =
   | 'session.config.ack'
   | 'debug.prompt_assembled'
   | 'avatar.expression'
+  // 问题1：前端 VAD 判定用户一句话说完（流式判停，替固定 6s 窗）
+  | 'vad.speech_end'
   | 'error';
 
 type ServerMessage =
@@ -95,10 +105,23 @@ class VoiceClientImpl implements VoiceClient {
   private cueAudioBuffers: AudioBuffer[] = [];
   private cueLoadStarted = false;
   private lastCueAudioIdx = -1;
+  // 问题2 应答延时填充音（think-*.mp3，独立 handle 可停）。
+  // docs/25 问题1：按语境分桶（name→buffer，顺序无关），thinking 时按最近 ASR 文本选贴合的一条。
+  private thinkingCueByName = new Map<string, AudioBuffer>();
+  private thinkingCueLoadStarted = false;
+  private lastThinkingName = '';
+  private thinkingSource: AudioBufferSourceNode | null = null;
+  private thinkingGain: GainNode | null = null;
+  // docs/25 问题1：最近一句用户 ASR 文本（partial/final 更新），用于填充音语境分类
+  private lastUserAsrText = '';
+  // 问题3 TTS ducking：speaking 时压低音量减自声，便于唤醒打断
+  private ttsDucked = false;
 
   private audioCtx: AudioContext | null = null;
   private micStream: MediaStream | null = null;
   private sourceNode: MediaStreamAudioSourceNode | null = null;
+  // 问题1：前端能量 VAD（流式判停替 6s 窗）的清理函数
+  private vadStopFn: (() => void) | null = null;
   private workletNode: AudioWorkletNode | null = null;
   private sinkGain: GainNode | null = null;
 
@@ -260,6 +283,10 @@ class VoiceClientImpl implements VoiceClient {
         switch (msg.type) {
           case 'asr.partial':
           case 'asr.final':
+            // docs/25 问题1：记录最近用户文本，供填充音语境分类
+            this.lastUserAsrText = (msg as { text?: string }).text || this.lastUserAsrText;
+            this.emit(msg.type, msg);
+            break;
           case 'llm.delta':
             this.emit(msg.type, msg);
             break;
@@ -404,9 +431,75 @@ class VoiceClientImpl implements VoiceClient {
     this.frameTimer = window.setInterval(() => {
       this.flushOneFrame();
     }, 100);
+    this.setupVad();
+  }
+
+  /**
+   * 问题1（team 共识）：前端能量 VAD（AnalyserNode RMS）流式判停，替固定 6s 窗。
+   * 接 sourceNode 并行挂 AnalyserNode（不影响 workletNode 上行）；说话起始后连续 1800ms 静音 → emit vad.speech_end。
+   * 童声适配：动态噪声底 + 静音 1800ms（孩子吐字慢、句间停顿长，避免误截断）。
+   */
+  private setupVad(): void {
+    const ctx = this.audioCtx;
+    const source = this.sourceNode;
+    if (!ctx || !source) return;
+    let analyser: AnalyserNode;
+    try {
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+    } catch {
+      return;
+    }
+    const buf = new Float32Array(analyser.fftSize);
+    let isSpeaking = false;
+    let silenceStart = 0;
+    let speakStart = 0;
+    let noiseFloor = 0.005;
+    const SILENCE_MS = 1800;
+    const MIN_SPEAK_MS = 150;
+    const id = window.setInterval(() => {
+      analyser.getFloatTimeDomainData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+      const rms = Math.sqrt(sum / buf.length);
+      if (!isSpeaking) noiseFloor = noiseFloor * 0.98 + rms * 0.02;
+      const speakTh = Math.max(noiseFloor * 3.5, 0.015);
+      const silenceTh = Math.max(noiseFloor * 1.5, 0.008);
+      const now = Date.now();
+      if (rms > speakTh) {
+        if (!isSpeaking) {
+          if (speakStart === 0) speakStart = now;
+          if (now - speakStart >= MIN_SPEAK_MS) {
+            isSpeaking = true;
+            speakStart = 0;
+          }
+        }
+        silenceStart = 0;
+      } else if (rms < silenceTh) {
+        speakStart = 0;
+        if (isSpeaking) {
+          if (silenceStart === 0) silenceStart = now;
+          if (now - silenceStart >= SILENCE_MS) {
+            this.vadStopFn?.(); // 先停 VAD 防重复 emit
+            this.emit('vad.speech_end', {});
+          }
+        }
+      }
+    }, 20);
+    this.vadStopFn = () => {
+      window.clearInterval(id);
+      try {
+        analyser.disconnect();
+      } catch {
+        /* ignore */
+      }
+      this.vadStopFn = null;
+    };
   }
 
   private cleanupRecordingResources(): void {
+    this.vadStopFn?.(); // 问题1：停 VAD
     if (this.frameTimer !== null) {
       window.clearInterval(this.frameTimer);
       this.frameTimer = null;
@@ -820,6 +913,9 @@ class VoiceClientImpl implements VoiceClient {
       if (ctx.state === 'suspended') {
         await ctx.resume();
       }
+      // 问题2（team gemini）：用户首次手势解锁后立即预加载 thinking 填充音到内存，
+      // 避免 thinking 时才 fetch+decode（200-800ms）被 LLM 首包掐死 / 首次 buffer 空不播。
+      this.preloadThinkingCues(ctx);
     } catch (err) {
       console.warn('[voice-client] unlockAudio failed (non-fatal)', err);
     }
@@ -896,6 +992,134 @@ class VoiceClientImpl implements VoiceClient {
       }
     } catch {
       /* 即时音失败不影响主流程 */
+    }
+  }
+
+  /**
+   * 应答延时填充音（问题2 docs/24）：thinking 期随机播一条 think-*.mp3 掩盖 ASR→LLM→TTS 冷场。
+   * 独立 audio handle（不走 ttsGain、不触发 speakingRef），收到真 TTS / 打断时 stopThinkingCue。
+   * 懒加载去重；没加载好就不播（thinking 短，下次有）。
+   */
+  playThinkingCue(): void {
+    try {
+      const ctx = this.ensureAudioContext();
+      if (!ctx || ctx.state !== 'running') return;
+      this.preloadThinkingCues(ctx);
+      if (this.thinkingCueByName.size === 0) return;
+      // docs/25 问题1：语境分类选桶（从严：命中知识/难题才用对应桶，否则中性；桶空降级中性再降级全部）
+      const wantNames = this.thinkingCueNamesFor(this.lastUserAsrText);
+      let pool = wantNames.filter((n) => this.thinkingCueByName.has(n));
+      if (pool.length === 0) pool = [...this.thinkingCueByName.keys()];
+      if (pool.length === 0) return;
+      // 类内随机，不连续重复上一条
+      let name = pool[Math.floor(Math.random() * pool.length)];
+      if (pool.length > 1 && name === this.lastThinkingName) {
+        name = pool[(pool.indexOf(name) + 1) % pool.length];
+      }
+      this.lastThinkingName = name;
+      const buf = this.thinkingCueByName.get(name);
+      if (!buf) return;
+      this.stopThinkingCue();
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const g = ctx.createGain();
+      g.gain.value = 1;
+      g.connect(ctx.destination);
+      src.connect(g);
+      src.start();
+      this.thinkingSource = src;
+      this.thinkingGain = g;
+      src.onended = () => {
+        if (this.thinkingSource === src) {
+          this.thinkingSource = null;
+          this.thinkingGain = null;
+        }
+      };
+    } catch {
+      /* 填充音失败不影响主流程 */
+    }
+  }
+
+  /** 预加载全部 think-*.mp3 到内存（name→buffer，顺序无关）；去重并发，全失败则复位允许重试。 */
+  private preloadThinkingCues(ctx: AudioContext): void {
+    if (this.thinkingCueLoadStarted) return;
+    this.thinkingCueLoadStarted = true;
+    const names = ['think-1', 'think-2', 'think-3', 'think-4', 'think-5', 'think-6', 'think-7', 'think-8'];
+    void Promise.allSettled(
+      names.map((n) =>
+        fetch(`/cue/${n}.mp3`)
+          .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('404'))))
+          .then((b) => ctx.decodeAudioData(b))
+          .then((buf) => {
+            this.thinkingCueByName.set(n, buf);
+          }),
+      ),
+    ).then(() => {
+      if (this.thinkingCueByName.size === 0) this.thinkingCueLoadStarted = false;
+    });
+  }
+
+  /**
+   * 填充音语境分桶（docs/25 问题1）：按最近用户文本返回该语境的 think 名单（现有 8 条按语义打标签）。
+   * 从严分类——只有明确命中知识/难题才用对应桶，否则中性兜底（错配比随机更尬，CUI'25 实证）。
+   * knowledge: 我得查一查/找找看/查一下（think-3/4/7）；hard: 好问题让我想想/好好想想（think-6/8）；
+   * neutral: 嗯我想想哦/让我想一想呀/等我想想喔（think-1/2/5）。
+   */
+  private thinkingCueNamesFor(text: string): string[] {
+    const t = (text || '').trim();
+    if (!t) return ['think-1', 'think-2', 'think-5'];
+    if (/为什么|为啥|为何|是什么|什么是|怎么|咋|哪里|哪儿|是谁|多少|原理|原因/.test(t)) {
+      return ['think-3', 'think-4', 'think-7']; // 知识/查询
+    }
+    if (/难|不会|帮我想|能不能|可不可以|如果|要是|比较|哪个好|怎么办/.test(t) || t.length > 15) {
+      return ['think-6', 'think-8']; // 难题/思考
+    }
+    return ['think-1', 'think-2', 'think-5']; // 中性兜底
+  }
+
+  stopThinkingCue(): void {
+    const ctx = this.audioCtx;
+    const src = this.thinkingSource;
+    const g = this.thinkingGain;
+    this.thinkingSource = null;
+    this.thinkingGain = null;
+    if (!src) return;
+    try {
+      if (ctx && g) {
+        const now = ctx.currentTime;
+        g.gain.cancelScheduledValues(now);
+        g.gain.setValueAtTime(g.gain.value, now);
+        g.gain.linearRampToValueAtTime(0.0001, now + 0.05); // 50ms 淡出防爆音
+        src.stop(now + 0.06);
+      } else {
+        src.stop();
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  duckTts(): void {
+    if (this.ttsDucked) return;
+    this.ttsDucked = true;
+    const ctx = this.audioCtx;
+    if (ctx && this.ttsGain) {
+      const now = ctx.currentTime;
+      this.ttsGain.gain.cancelScheduledValues(now);
+      this.ttsGain.gain.setValueAtTime(this.ttsGain.gain.value, now);
+      this.ttsGain.gain.linearRampToValueAtTime(0.7, now + 0.08);
+    }
+  }
+
+  restoreTts(): void {
+    if (!this.ttsDucked) return;
+    this.ttsDucked = false;
+    const ctx = this.audioCtx;
+    if (ctx && this.ttsGain) {
+      const now = ctx.currentTime;
+      this.ttsGain.gain.cancelScheduledValues(now);
+      this.ttsGain.gain.setValueAtTime(this.ttsGain.gain.value, now);
+      this.ttsGain.gain.linearRampToValueAtTime(0.9, now + 0.08);
     }
   }
 

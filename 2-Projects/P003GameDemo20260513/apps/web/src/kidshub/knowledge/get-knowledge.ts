@@ -41,3 +41,20 @@ export function getKnowledge(cardId: string, recentLoreIds: string[]): Knowledge
 
   return { core, sections, pickedIds };
 }
+
+/**
+ * 移动端语音默认 lore pack（docs/25 问题4 修复）。
+ * 移动端语音无 cardId → 走不到 CARD_LORE_MAP 按卡路由，方舟世界观 L2 血肉长期缺失
+ * （川哥反馈「方舟游戏世界记忆没了」根因）。给语音场景固定精选集：
+ * L1 WORLD_CORE 常驻 + 4 节方舟核心素材（夜航/藏品/生态缸/小可生活），覆盖「方舟游戏世界」主干。
+ * 不含 foreshadow（BLOCKED 硬隔离），不做按卡/性别细分（语音通用）。
+ */
+const VOICE_DEFAULT_LORE_IDS = ['night_voyage', 'collectibles', 'ecosystem', 'xiaoke_life'];
+
+export function getVoiceDefaultKnowledge(): { core: string; sections: LoreSection[] } {
+  const sections: LoreSection[] = VOICE_DEFAULT_LORE_IDS
+    .filter((id) => !BLOCKED_LORE_IDS.has(id))
+    .map((id) => getSection(id))
+    .filter((s): s is LoreSection => s != null);
+  return { core: WORLD_CORE, sections };
+}

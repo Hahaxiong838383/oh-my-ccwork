@@ -7,7 +7,7 @@ import {
 import { useAppStore } from '../store/app-store';
 import { useAvatarStore } from '../kidshub/avatar/avatar-store';
 import { resolveExpressionName } from '../kidshub/avatar/expressions';
-import { useKidsHubStore, getComposedPromptNow } from '../kidshub/store/kidshub-store';
+import { useKidsHubStore, getMobileVoicePromptNow } from '../kidshub/store/kidshub-store';
 import {
   isWakeWordAvailable,
   pauseWakeListening,
@@ -45,6 +45,10 @@ function getVoiceWsUrl(): string {
 const WAKE_RECORD_MS = 6000;
 // 录音后进入 thinking 但迟迟无任何回复（无 tts.audio）的兜底：回 idle + 恢复唤醒，防卡死
 const THINKING_TIMEOUT_MS = 12000;
+// 问题1 多轮（docs/24）：小可说完不立即 idle，自动开录音等接话，连续最多 N 轮（防无限空转）；超限/无接话退 idle。
+const MAX_FOLLOWUP_TURNS = 4;
+// 问题2 填充音（docs/24，team gemini）：thinking 后延迟播，快返回(<300ms)则取消避免一闪，>300ms 拉起。
+const THINKING_CUE_DELAY_MS = 300;
 
 export interface MobileVoiceController {
   pressed: boolean;
@@ -83,6 +87,9 @@ export function useMobileVoice(): MobileVoiceController {
   const needStopRef = useRef(false);
   const wakeStopTimerRef = useRef<number | null>(null);
   const thinkingTimeoutRef = useRef<number | null>(null);
+  const thinkingCueTimerRef = useRef<number | null>(null);
+  // 问题1：连续多轮计数（onWakeWord/PTT 主动发起时清零；超 MAX 或无接话退 idle 清零）
+  const turnCountRef = useRef(0);
   const mountedRef = useRef(true);
   // 供事件回调/timer 读最新值（避免闭包旧值）
   const wakeAvailableRef = useRef(false);
@@ -127,6 +134,14 @@ export function useMobileVoice(): MobileVoiceController {
     client.stopRecording();
     setVoiceStatus('thinking');
     setXiaokeEmotion('calm');
+    // 问题2：进 thinking 后延迟播填充音（"我想想哦"）掩盖 ASR→LLM→TTS 冷场；快返回(llm.delta/tts.audio)会取消/停。
+    if (thinkingCueTimerRef.current !== null) window.clearTimeout(thinkingCueTimerRef.current);
+    thinkingCueTimerRef.current = window.setTimeout(() => {
+      thinkingCueTimerRef.current = null;
+      if (mountedRef.current && useAppStore.getState().voiceStatus === 'thinking') {
+        clientRef.current?.playThinkingCue();
+      }
+    }, THINKING_CUE_DELAY_MS);
     // 兜底：thinking 后迟迟无回复（无 tts.audio 清掉本 timer）→ 回 idle + 恢复唤醒
     clearThinkingTimeout();
     thinkingTimeoutRef.current = window.setTimeout(() => {
@@ -184,7 +199,7 @@ export function useMobileVoice(): MobileVoiceController {
           // 问题1 修复（docs/24）：移动端补发完整世界观 prompt（复用前端组装，含世界观 L1+L2+人设）。
           // 否则 server 回退极简 DEFAULT_SYSTEM_PROMPT，孩子听不到方舟世界观。新连接发一次即可（server 存住）。
           try {
-            client.sendSessionConfig(getComposedPromptNow());
+            client.sendSessionConfig(getMobileVoicePromptNow());
           } catch {
             /* best-effort：失败不阻断；server 端已有内置世界观基座兜底 */
           }
@@ -377,18 +392,29 @@ export function useMobileVoice(): MobileVoiceController {
       lastShownCueRef.current = '';
       setSubtitle(`${msg.text}...`);
     };
+    const cancelThinkingCue = () => {
+      if (thinkingCueTimerRef.current !== null) {
+        window.clearTimeout(thinkingCueTimerRef.current);
+        thinkingCueTimerRef.current = null;
+      }
+      client.stopThinkingCue();
+    };
     const onLlmDelta = (msg: { text: string }) => {
       if (!msg.text) return;
       clearThinkingTimeout(); // 有回复了，撤销无回复兜底
+      cancelThinkingCue(); // 问题2：真回复来了，停填充音
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
     };
     const onTtsAudio = () => {
       clearThinkingTimeout();
+      cancelThinkingCue(); // 问题2：真 TTS 发声，停填充音（淡出，避免叠播）
       speakingRef.current = true;
       cancelClear();
       setVoiceStatus('speaking');
       setXiaokeEmotion('happy');
+      // 问题3：小可说话时压低 TTS 音量减自声掩盖，改善唤醒打断 SNR。
+      client.duckTts();
       // 需求2：小可说话时开唤醒监听（此刻 Web 不录音、麦空闲），让「小可小可」能打断。
       // 原生 KWS 用 VOICE_RECOGNITION+AcousticEchoCanceler 抑制 TTS 自声回声（见 WakeWordBridge.kt）。
       if (wakeAvailableRef.current) startWakeListening();
@@ -411,11 +437,20 @@ export function useMobileVoice(): MobileVoiceController {
         lastShownCueRef.current = '';
         setSubtitle('');
       }, 1200);
+      client.restoreTts(); // 问题3：恢复 TTS 音量
       // team 审查（gemini/gpt 高风险）：唤醒打断时 onWakeWord 会同步 bargeIn→本回调，紧接着设 listening+beginTurn。
-      // 若此刻已在录音/启动中，绝不能重置 idle / 恢复 KWS（会覆盖 listening 态 + 抢麦）。仅真正空闲收尾才走。
+      // 若此刻已在录音/启动中，绝不能 idle / 进 followup（会覆盖 listening 态 + 抢麦）。仅真正空闲收尾才走。
       if (!pressedRef.current && !actionInFlightRef.current) {
-        setVoiceStatus('idle');
-        if (wakeAvailableRef.current) startWakeListening();
+        // 问题1 多轮（docs/24）：小可说完不立即 idle，自动开录音等接话（复用 wake 录音链路、视觉"在听"、不播唤醒音），最多 MAX 轮。
+        // 超限 / 原生唤醒不可用 → 退 idle 恢复 KWS。无接话时 followup 录音 6s 空 → thinking 兜底超时退（turnCount 下次唤醒清零）。
+        if (wakeAvailableRef.current && turnCountRef.current < MAX_FOLLOWUP_TURNS) {
+          turnCountRef.current += 1;
+          void beginTurnRef.current(true);
+        } else {
+          turnCountRef.current = 0;
+          setVoiceStatus('idle');
+          if (wakeAvailableRef.current) startWakeListening();
+        }
       }
     };
     const onAvatarExpression = (msg: { name: string; index: number }) => {
@@ -426,6 +461,9 @@ export function useMobileVoice(): MobileVoiceController {
       // 统一收尾：清 timer + 重置录音 ref + 回 idle + 恢复唤醒
       clearWakeStopTimer();
       clearThinkingTimeout();
+      cancelThinkingCue(); // 问题2：出错停填充音
+      client.restoreTts(); // 问题3：出错恢复音量
+      turnCountRef.current = 0; // 问题1：出错结束多轮
       pressedRef.current = false;
       setPressed(false);
       setListeningByWake(false);
@@ -439,6 +477,11 @@ export function useMobileVoice(): MobileVoiceController {
       applyNetState('fail');
       resumeWakeIfIdle();
     };
+    const onVadSpeechEnd = () => {
+      // 问题1（team 共识）：前端 VAD 判定用户一句话说完 → 立即 finishTurn（替固定 6s 窗，对话流畅）。
+      // 仅唤醒/followup 录音(listeningByWake)；PTT 靠松手不受 VAD 影响；finishTurn 内 pressedRef 守卫防与 6s 兜底重复。
+      if (listeningByWakeRef.current) finishTurnRef.current();
+    };
 
     client.on('asr.partial', onAsrPartial);
     client.on('asr.final', onAsrFinal);
@@ -449,6 +492,7 @@ export function useMobileVoice(): MobileVoiceController {
     client.on('tts.playback_end', onPlaybackEnd);
     client.on('avatar.expression', onAvatarExpression);
     client.on('error', onError);
+    client.on('vad.speech_end', onVadSpeechEnd);
 
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId);
@@ -462,6 +506,7 @@ export function useMobileVoice(): MobileVoiceController {
       client.off('tts.playback_end', onPlaybackEnd);
       client.off('avatar.expression', onAvatarExpression);
       client.off('error', onError);
+      client.off('vad.speech_end', onVadSpeechEnd);
     };
   }, [
     applyNetState,
@@ -482,6 +527,7 @@ export function useMobileVoice(): MobileVoiceController {
       onWakeWord: () => {
         // 重入早退：已在录音/启动中则忽略重复唤醒（beginTurn 内亦有防护，这里早退避免多余 bargeIn/playCue）
         if (pressedRef.current || actionInFlightRef.current) return;
+        turnCountRef.current = 0; // 问题1：用户主动喊唤醒词 = 新会话，多轮计数清零
         const client = clientRef.current;
         // 需求2：小可说话中被唤醒 → 先打断 TTS。bargeIn 同步 emit tts.playback_end（→onPlaybackEnd 置 idle），
         // 紧接着下面同步覆盖为 listening（React 批处理同一执行栈，不闪 idle）。
