@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
+import { verifyAuthToken } from '../auth-jwt.js';
+import { profileStore, needsOnboarding } from '../profile-store.js';
 
 /**
  * 火山 RTC 实时对话接入（docs/35 Block A）。
@@ -37,16 +39,20 @@ const RTC_VERSION = '2024-12-01';
 const CUSTOM_LLM_URL =
   process.env.CUSTOM_LLM_URL || 'https://kidshub-ai.hahaxiong.cc/v1/chat/completions';
 const WELCOME = process.env.RTC_WELCOME_MESSAGE || '指挥官，你回来啦！方舟一直在等你，我们继续探险吧！';
+// onboarding 开场白（docs/36）：第一次见面、还没认全孩子时用——先自我介绍 + 问名字。
+const ONBOARDING_WELCOME =
+  process.env.RTC_ONBOARDING_WELCOME ||
+  '你好呀！我是方舟上的小可～我们好像是第一次见面吧？我还不知道该怎么称呼你呢，可以告诉我你叫什么名字吗？';
 
 /** server 端组装 StartVoiceChat 的 VoiceChat 配置（凭证从 env，不下发前端）。 */
-function buildVoiceChatConfig(roomId: string, userId: string, llmToken?: string): Record<string, unknown> {
+function buildVoiceChatConfig(roomId: string, userId: string, llmToken?: string, welcomeMessage?: string): Record<string, unknown> {
   return {
     AppId: process.env.VOLC_RTC_APP_ID,
     RoomId: roomId,
     TaskId: roomId, // 一房一任务（火山要求 TaskId 非空）
     AgentConfig: {
       TargetUserId: [userId],
-      WelcomeMessage: WELCOME,
+      WelcomeMessage: welcomeMessage || WELCOME,
       UserId: 'xiaoke_bot', // ★ 必须 ASCII，中文报 invalid UserID
       EnableConversationStateCallback: true,
     },
@@ -140,8 +146,14 @@ rtcRoute.post('/start', async (c) => {
   // 登录 token（前端 Authorization）→ 透传给 CustomLLM 端点，让小可记得这个孩子
   const authHeader = c.req.header('authorization') || '';
   const llmToken = /^Bearer\s+(.+)$/i.exec(authHeader.trim())?.[1]?.trim();
+  // docs/36 onboarding：还没认全孩子时，火山进房即主动问名字。
+  let welcomeMessage: string | undefined;
+  if (llmToken) {
+    const auth = await verifyAuthToken(llmToken);
+    if (auth && needsOnboarding(profileStore.getProfile(auth.accountId))) welcomeMessage = ONBOARDING_WELCOME;
+  }
   // 起 AI agent（火山起 task，AI 回调我们 /v1 小可大脑）
-  const result = await callRtcOpenAPI('StartVoiceChat', buildVoiceChatConfig(roomId, userId, llmToken));
+  const result = await callRtcOpenAPI('StartVoiceChat', buildVoiceChatConfig(roomId, userId, llmToken, welcomeMessage));
   const err = result?.ResponseMetadata?.Error;
   if (err) {
     console.log(`[rtc] StartVoiceChat failed: ${err.Code} ${err.Message}`);

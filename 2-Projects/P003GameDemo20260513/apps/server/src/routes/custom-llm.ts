@@ -2,11 +2,13 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { ARK_WORLDVIEW_BASE } from '../prompts.js';
 import { AI_SAFETY_BASELINE, buildAiLiteracyGuide } from '../ai-literacy.js';
-import { assembleSystemPrompt } from '../prompt-orchestrator.js';
+import { assembleSystemPrompt, buildOnboardingGuide } from '../prompt-orchestrator.js';
 import { curriculumKG } from '../curriculum-kg.js';
 import { createGeminiLlmClient, type ChatHistoryTurn } from '../providers/gemini-llm.js';
 import { createDeepseekLlmClient } from '../providers/deepseek-llm.js';
 import { verifyAuthToken } from '../auth-jwt.js';
+import { profileStore, needsOnboarding } from '../profile-store.js';
+import { extractOnboarding } from '../onboarding-extractor.js';
 
 /**
  * 火山 RTC 实时对话「CustomLLM」回调端点（docs/34 D 方案）。
@@ -74,8 +76,22 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // 从回调 Url 的 ?token= 拿登录态 → accountId → 注入这个孩子的 profile 记忆（昵称/年龄/兴趣/近况/方舟经历）。
   // 无 token / 无效 token → authContext=null → 降级匿名（仅世界观，无个性化记忆）。
   const authContext = await verifyAuthToken(c.req.query('token'));
-  console.log(`[custom-llm] ${authContext ? '记忆注入 account=' + authContext.accountId : '匿名（无 token）'}`);
-  const systemPrompt = assembleSystemPrompt(base, null, authContext, curriculumGuardrail, aiLiteracyGuide);
+  const profile = authContext ? profileStore.getProfile(authContext.accountId) : null;
+  const inOnboarding = Boolean(authContext) && needsOnboarding(profile);
+  const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
+  console.log(`[custom-llm] ${authContext ? '记忆注入 account=' + authContext.accountId : '匿名（无 token）'}${inOnboarding ? ' [onboarding]' : ''}`);
+  const systemPrompt = assembleSystemPrompt(base, null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide);
+  if (inOnboarding && authContext) {
+    const convo = [...history, { role: 'user' as const, content: userText }];
+    void extractOnboarding(convo, profile)
+      .then((patch) => {
+        if (patch) {
+          console.log(`[custom-llm][onboarding] account=${authContext.accountId} patch=${JSON.stringify(patch)}`);
+          profileStore.upsertBasics(authContext.accountId, patch);
+        }
+      })
+      .catch(() => {});
+  }
 
   const provider = (process.env.LLM_PROVIDER || '').toLowerCase();
   const llm = provider === 'deepseek' ? createDeepseekLlmClient() : createGeminiLlmClient();

@@ -183,6 +183,22 @@ class ProfileStore {
   }
 
   /**
+   * onboarding 增量建档：逐字段补齐基础档案（只覆盖 patch 里提供的，其余保持）。
+   * 无档案时创建基础档案，画像列使用默认值（upsertProfile 只写 nickname/birthday/gender，不动画像字段）。
+   * 并发安全：getProfile→upsertProfile 全程同步（DatabaseSync 无 await），且抽取写回回调在事件循环里
+   * 串行执行、每次读最新 existing 合并 → 不会 lost update（对齐 updateMemoryFields 的同步原子策略）。
+   */
+  upsertBasics(accountId: string, patch: Partial<ProfileInput>): FamilyMember {
+    const existing = this.getProfile(accountId);
+    const input: ProfileInput = {
+      nickname: patch.nickname !== undefined ? patch.nickname : existing?.nickname ?? '',
+      birthday: patch.birthday !== undefined ? patch.birthday : existing?.birthday ?? '',
+      gender: patch.gender !== undefined ? patch.gender : existing?.gender ?? '',
+    };
+    return this.upsertProfile(accountId, input);
+  }
+
+  /**
    * P1 语音抽取写入：部分更新画像字段（只覆盖 patch 里提供的，其余保持）。
    * 无档案时返回 null（不凭空建档——建档是家长端的事，抽取只在已有档案上补画像）。
    */
@@ -331,3 +347,9 @@ function parseJsonArray<T>(raw: string | undefined, guard: (v: any) => v is T): 
 }
 
 export const profileStore = new ProfileStore();
+
+// 无档案/缺昵称/缺性别 → 需 onboarding；生日不计入退出判定，走家长兜底。
+// 字段防御：历史/异常数据可能非字符串，用 ?? '' 兜底避免 .trim() 抛错阻断主链路（failsafe）。
+export function needsOnboarding(p: FamilyMember | null): boolean {
+  return !p || !(p.nickname ?? '').trim() || !(p.gender ?? '').trim();
+}
