@@ -14,6 +14,7 @@ import { profileStore } from './profile-store.js';
 import { extractMemoryUpdate } from './memory-extractor.js';
 import { curriculumKG } from './curriculum-kg.js';
 import { buildAiLiteracyGuide, AI_SAFETY_BASELINE } from './ai-literacy.js';
+import { buildKnowledgeRecall } from './xiaoke-kb.js';
 
 export type SessionMeta = {
   sessionId: string;
@@ -354,7 +355,9 @@ export class VoicePipeline {
       const curriculumGuardrail = curriculumKG.buildGuardrail(finalText);
       // AI 启蒙双层「门控层」(docs/22 §9)：命中 AI 话题才注入生动启蒙引导；闲聊返 null 不注入、不稀释人格。
       const aiLiteracyGuide = buildAiLiteracyGuide(finalText);
-      const systemPrompt = assembleSystemPrompt(withFeedback, turnMeta, this.authContext, curriculumGuardrail, aiLiteracyGuide);
+      // 世界观知识按需召回（xiaoke-kb，仿 curriculum-kg）：孩子聊到经济/身世/藏品/生态缸/夜航/设置等才召回对应条目。
+      const knowledgeRecall = buildKnowledgeRecall(finalText);
+      const systemPrompt = assembleSystemPrompt(withFeedback, turnMeta, this.authContext, curriculumGuardrail, aiLiteracyGuide, knowledgeRecall);
       // 工作台调试流依赖：回发本轮真实使用的 prompt（所见即所发）
       this.send({ type: 'debug.prompt_assembled', systemPrompt, userText: finalText });
 

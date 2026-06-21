@@ -8,9 +8,9 @@ import type { AuthContext } from './auth-jwt.js';
 type ChildMeta = { nickname?: string; gender?: string; age?: string };
 
 /**
- * 组装最终 systemPrompt = 基础 prompt（人格+lore，已含吐槽后缀）+「关于这个孩子」区块。
+ * 组装最终 systemPrompt = 基础 prompt（人格+前端世界观，已含吐槽后缀）+「关于这个孩子」区块 + 各按需召回片段。
  * 数据源：登录用户优先 profile-store（后端权威），匿名退回前端下发的本轮 meta。
- * 无任何孩子信息时原样返回 basePrompt（不破坏现有行为）。
+ * 世界观知识【不常驻】：经济/身世/藏品等由 knowledgeRecall 按需召回注入（xiaoke-kb，命中才给）；无任何注入时原样返回 basePrompt。
  */
 export function assembleSystemPrompt(
   basePrompt: string,
@@ -18,12 +18,16 @@ export function assembleSystemPrompt(
   auth: AuthContext | null,
   curriculumGuardrail?: string | null,
   aiLiteracyGuide?: string | null,
+  knowledgeRecall?: string | null,
 ): string {
   // 记忆注入是「增益」而非「必需」：profile-store 读取 / 解析任何异常都降级回 basePrompt，
   // 绝不阻断实时语音主链路（team 致命 #2）。
   try {
     const block = buildChildMemoryBlock(meta, auth);
     let prompt = block ? `${basePrompt}\n\n${block}` : basePrompt;
+    // 世界观知识【按需召回】注入（xiaoke-kb，仿 K12 curriculum-kg）：孩子聊到经济/身世/藏品/生态缸等才注入对应条目，
+    // 闲聊/学习零注入（不常驻、不稀释人格、不拖 TTFT）。召回计算在 pipeline（需孩子本轮文本），这里只负责拼装。
+    if (knowledgeRecall) prompt += `\n\n${knowledgeRecall}`;
     // L_curriculum 护栏（docs/20）：命中 KG 概念时追加先修护栏，引导小可不越级 / 不乱讲教学顺序。
     // 同样降级安全：guardrail 为 null（未命中 / 加载失败）则不追加，不影响主链路。
     // AI 启蒙门控（docs/22 §9 双层「门控层」）：双命中让位——学科护栏优先(求解正确性)，AI 启蒙引导仅在
