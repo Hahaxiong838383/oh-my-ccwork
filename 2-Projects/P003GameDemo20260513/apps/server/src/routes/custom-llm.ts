@@ -9,6 +9,7 @@ import { createDeepseekLlmClient } from '../providers/deepseek-llm.js';
 import { verifyAuthToken } from '../auth-jwt.js';
 import { profileStore, needsOnboarding } from '../profile-store.js';
 import { extractOnboarding } from '../onboarding-extractor.js';
+import { buildKnowledgeRecall } from '../xiaoke-kb.js';
 
 /**
  * 火山 RTC 实时对话「CustomLLM」回调端点（docs/34 D 方案）。
@@ -79,8 +80,10 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const profile = authContext ? profileStore.getProfile(authContext.accountId) : null;
   const inOnboarding = Boolean(authContext) && needsOnboarding(profile);
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
-  console.log(`[custom-llm] ${authContext ? '记忆注入 account=' + authContext.accountId : '匿名（无 token）'}${inOnboarding ? ' [onboarding]' : ''}`);
-  const systemPrompt = assembleSystemPrompt(base, null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide);
+  // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回，命中才注入；闲聊零注入不稀释人格。
+  const knowledgeRecall = buildKnowledgeRecall(userText);
+  console.log(`[custom-llm] ${authContext ? '记忆注入 account=' + authContext.accountId : '匿名（无 token）'}${inOnboarding ? ' [onboarding]' : ''}${knowledgeRecall ? ' [kb]' : ''}`);
+  const systemPrompt = assembleSystemPrompt(base, null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide, knowledgeRecall);
   if (inOnboarding && authContext) {
     const convo = [...history, { role: 'user' as const, content: userText }];
     void extractOnboarding(convo, profile)
