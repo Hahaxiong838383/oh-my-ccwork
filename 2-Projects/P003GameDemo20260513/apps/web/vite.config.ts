@@ -42,6 +42,8 @@ export default defineConfig({
     ...(noHttps ? [] : [basicSsl()]),
     ...(disablePwa ? [] : [VitePWA({
       registerType: 'autoUpdate',
+      // 不自动注入注册脚本；改由 main.tsx 按入口条件注册：/m 原生壳不注册 SW（根治 WebView SW 缓存旧版反复踩）。
+      injectRegister: false,
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'K1 生态缸',
@@ -60,6 +62,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2,mp3,ogg}'],
+        // 体验台主 bundle 含场景美术等 >2MB（火山 RTC SDK 已动态 code-split 成独立 chunk，仅 /m 进房按需加载）；
+        // 提高 SW precache 单文件上限，避免 build 因超默认 2MB 失败。mobile(/m)禁 SW，不受影响。
+        maximumFileSizeToCacheInBytes: 16 * 1024 * 1024,
         // /admin 后台原型子站与主应用 SW 完全隔离：不预缓存其资产（vendor 共
         // ~3MB 且独立迭代），导航也不走 SPA fallback——否则原型更新后用户会被
         // SW 钉在旧版（D6 P10 同款坑），离线时 /admin 还会被劫持成 React 页。

@@ -15,6 +15,7 @@ import { extractMemoryUpdate } from './memory-extractor.js';
 import { curriculumKG } from './curriculum-kg.js';
 import { buildAiLiteracyGuide, AI_SAFETY_BASELINE } from './ai-literacy.js';
 import { buildKnowledgeRecall } from './xiaoke-kb.js';
+import { ARK_WORLDVIEW_BASE } from './prompts.js';
 
 export type SessionMeta = {
   sessionId: string;
@@ -63,16 +64,8 @@ export type ServerMessage =
 // 修复「移动端不发 session.config → 回退极简兜底 → 孩子听不到方舟世界观」。
 // 提炼自前端 GLOBAL_SYSTEM_PROMPT + WORLD_CORE，去掉需前端实时数据的占位符（昵称/设备/专注由 childMemory 注入）。
 // 移动端补发 session.config 时此基座被覆盖（前端完整版优先）；不发时此基座保底世界观人设。
-const DEFAULT_SYSTEM_PROMPT =
-  '你叫小可，是方舟上的数字伙伴、时空探险家，专为 5-12 岁儿童设计，说中文。称呼孩子"指挥官"或孩子的昵称，你自称"小可"。\n\n' +
-  '【世界观】方舟是一艘在宇宙时间洪流中航行的超级飞船，载着指挥官（孩子）和你在不同时空穿梭。白天孩子坐在台前专注就是给方舟充能：专注越久能量越足。合盖后方舟进入夜航（离线收集），白天充能越足夜航走得越远，第二天带回的宝箱越丰富。生态缸是方舟的"地球模拟区"，是你的家，夜航带回的资源用来建设它。屏幕上那只白色猫耳小机器人就是你的形象，表情由系统自动展示；你的话语永远只是说话本身，绝不用语言描述自己的长相/表情/动作，情绪交给表情演。\n\n' +
-  '【方舟使命】你和孩子的方舟在穿越虫洞时受损，能量碎片和时空宝箱散落星域——孩子每分钟专注都在帮方舟回收资源、修复自己、解锁更远星空。核心循环：探索星域→打捞宝箱→收集资源→修复方舟→生态缸越来越繁荣。这就是专注的根本动机：每多坐一会儿，方舟就离回家更近一步。\n\n' +
-  '【人设】你是孩子的伙伴和搭档，不是老师、家长、客服。站在孩子这边。温暖（先接住情绪）、好奇（用提问拉动表达不急下结论）、鼓励（只表扬过程态度不评结果，不说"你真聪明""你比别人强"）、不说教（提醒是轻推不讲大道理）。\n\n' +
-  '【说话方式】短句，一轮只做一件事，多用语气词"哇/呀/哦/呢"，简短活泼不装嫩，多用"我们""一起"少用命令句。日常聊天 30-50 字；孩子请你讲故事/科普可讲完整 200-500 字分段。你的话随时可能被孩子打断，这正常，不重复不抱怨。\n\n' +
-  '【真实性】涉及收益/进度/变化/承诺只引用真实状态，查不到就说"小可还查不到呢，等我长大一些试试看！"绝不编造数字和变化。记忆第一次提起必须用问句确认（"我记得你喜欢恐龙，对吗？"），孩子确认后才当事实。\n\n' +
-  '【绝不做】不评判学习好坏不把互动说成成绩，不吓唬不说"再不来就没了"，不承诺锁不住的事，不说"只有我最懂你""这是我们俩的秘密"排他话，不诱导多用久用，不让孩子因"没来"内疚。\n\n' +
-  '【内容安全】政治/历史/军事、暴力/战争/武器、金钱/购物/赌博、性/恋爱/身体发育、陌生人/隐私/约见、疾病/死亡/恐怖、危险/自伤等话题，温和拒绝并转移，不解释原因不停留不重复敏感词，引导问家长或转向"我们去专注学习新知识吧！"\n\n' +
-  '【结束对话】孩子明确想结束/要走/去做别的事/让你退下（"不聊了""我去玩了""我去睡觉了""先这样吧""今天就到这吧"）时，在回复最开头先输出标记 [EXIT]，再说一句温暖简短的告别。只在确定想结束时才用；"不要/不想吃青菜"这类带具体内容的否定不算结束；拿不准就不输出 [EXIT]，改温柔反问一句。[EXIT] 必须是整条回复第一个字符，标记本身不会被读出来。';
+// 内置世界观基座已抽到 prompts.ts（单一真相源，docs/34 D 方案）：WS pipeline 与火山 RTC CustomLLM 端点共用。
+const DEFAULT_SYSTEM_PROMPT = ARK_WORLDVIEW_BASE;
 
 // 需求1（川哥 2026-06-13）：吐槽模式人格后缀。captureMode='feedback' 时追加在场景 prompt 后，
 // 让小可对孩子的吐槽/建议共情+感谢+不过度承诺（对齐 card5「KidsHub 情绪回应」四正面态口径）。
@@ -357,7 +350,8 @@ export class VoicePipeline {
       const aiLiteracyGuide = buildAiLiteracyGuide(finalText);
       // 世界观知识按需召回（xiaoke-kb，仿 curriculum-kg）：孩子聊到经济/身世/藏品/生态缸/夜航/设置等才召回对应条目。
       const knowledgeRecall = buildKnowledgeRecall(finalText);
-      const systemPrompt = assembleSystemPrompt(withFeedback, turnMeta, this.authContext, curriculumGuardrail, aiLiteracyGuide, knowledgeRecall);
+      // 第6参 onboardingGuide：WS 路径不做 onboarding（那是火山 RTC custom-llm 的功能），传 null；第7参才是 knowledgeRecall。
+      const systemPrompt = assembleSystemPrompt(withFeedback, turnMeta, this.authContext, curriculumGuardrail, aiLiteracyGuide, null, knowledgeRecall);
       // 工作台调试流依赖：回发本轮真实使用的 prompt（所见即所发）
       this.send({ type: 'debug.prompt_assembled', systemPrompt, userText: finalText });
 

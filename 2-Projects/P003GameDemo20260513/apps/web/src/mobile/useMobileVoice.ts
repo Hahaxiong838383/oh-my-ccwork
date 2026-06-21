@@ -9,10 +9,14 @@ import { useAvatarStore } from '../kidshub/avatar/avatar-store';
 import { resolveExpressionName } from '../kidshub/avatar/expressions';
 import { useKidsHubStore, getMobileVoicePromptNow } from '../kidshub/store/kidshub-store';
 import {
+  isOnDeviceAsrAvailable,
   isWakeWordAvailable,
+  notifyTtsState,
   pauseWakeListening,
   registerWebBridge,
+  startAsr,
   startWakeListening,
+  stopAsr,
 } from './bridge';
 import { detectExitIntent } from './exit-intent';
 
@@ -117,6 +121,12 @@ export function useMobileVoice(): MobileVoiceController {
   wakeAvailableRef.current = wakeAvailable;
   const listeningByWakeRef = useRef(false);
   listeningByWakeRef.current = listeningByWake;
+  // P2 端侧 ASR：是否走原生 AudioEngine ASR（onNativeReady 探测 onDeviceAsrAvailable；
+  // false = 纯浏览器/原生 ASR 不可用 → 回退云火山，现状链路不变）。
+  const useDeviceAsrRef = useRef(false);
+  // P2 方向X：端侧一轮只接受一个 final 的哨兵（beginTurn 置 true，首个 onAsrFinal 收下即置 false，
+  // 拒绝同轮后续 final）。防 native 切句/竞态多发 final → 多 chat.trigger → 双声音叠。
+  const turnActiveRef = useRef(false);
 
   const clearWakeStopTimer = () => {
     if (wakeStopTimerRef.current !== null) {
@@ -166,7 +176,9 @@ export function useMobileVoice(): MobileVoiceController {
     // 防御性停录音（退出流程理论上不在录音，但多路径触发兜底，避免麦泄漏）
     if (client) {
       try {
-        client.stopRecording();
+        // 退出：端侧停原生 ASR（auto 连续监听必须停，否则退出后还在听）/ 云停录音。
+        if (useDeviceAsrRef.current) stopAsr();
+        else client.stopRecording();
       } catch {
         /* 容错 */
       }
@@ -317,14 +329,17 @@ export function useMobileVoice(): MobileVoiceController {
       needStopRef.current = true;
       return;
     }
-    client.stopRecording();
+    // 端侧 ASR：stopAsr（PTT 松手收尾，原生 flush 出 final）；云火山：stopRecording。
+    if (useDeviceAsrRef.current) stopAsr();
+    else client.stopRecording();
     setVoiceStatus('thinking');
     setXiaokeEmotion('calm');
     // 问题2：进 thinking 后延迟播填充音（"我想想哦"）掩盖 ASR→LLM→TTS 冷场；快返回(llm.delta/tts.audio)会取消/停。
     if (thinkingCueTimerRef.current !== null) window.clearTimeout(thinkingCueTimerRef.current);
     thinkingCueTimerRef.current = window.setTimeout(() => {
       thinkingCueTimerRef.current = null;
-      if (mountedRef.current && useAppStore.getState().voiceStatus === 'thinking') {
+      // 端侧 ASR：不播 thinkingCue 填充音（小可音色，会被端侧 KWS/ASR 录到自激）；云火山保留。
+      if (mountedRef.current && useAppStore.getState().voiceStatus === 'thinking' && !useDeviceAsrRef.current) {
         clientRef.current?.playThinkingCue();
       }
     }, THINKING_CUE_DELAY_MS);
@@ -365,7 +380,9 @@ export function useMobileVoice(): MobileVoiceController {
       setPressed(!byWake && !feedbackMode);
       setListeningByWake(byWake);
       setFeedbackPressed(feedbackMode);
-      pauseWakeListening();
+      // 端侧 ASR：麦由原生 AudioEngine 持有，startAsr 内部切 KWS→ASR，不 pauseWakeListening（那会停录音线程）；
+      // 云火山：释放 KWS 麦给 Web getUserMedia。
+      if (!useDeviceAsrRef.current) pauseWakeListening();
       clearThinkingTimeout();
 
       try {
@@ -411,10 +428,17 @@ export function useMobileVoice(): MobileVoiceController {
           /* meta best-effort */
         }
 
-        await client.startRecording();
+        if (useDeviceAsrRef.current) {
+          // 端侧：原生 ASR（auto = 唤醒/followup 用 endpoint 判停；ptt = 按住说话松手停）。不 getUserMedia、不上传 PCM。
+          startAsr(byWake ? 'auto' : 'ptt');
+          turnActiveRef.current = true; // 方向X：本轮开始，接受一个 final
+        } else {
+          await client.startRecording();
+        }
         // 录音就绪前已松手/卸载 → 立即停，不留泄漏
         if (!mountedRef.current || needStopRef.current) {
-          client.stopRecording();
+          if (useDeviceAsrRef.current) stopAsr();
+          else client.stopRecording();
           needStopRef.current = false;
           if (mountedRef.current) {
             setVoiceStatus('thinking');
@@ -424,7 +448,8 @@ export function useMobileVoice(): MobileVoiceController {
         }
         setVoiceStatus('listening');
         setXiaokeEmotion('curious');
-        if (byWake) {
+        // 云火山唤醒录音用固定 6s 窗兜底；端侧 ASR 用原生 endpoint 自动判停（onAsrEndpoint）+ 连续多轮，不需固定窗。
+        if (byWake && !useDeviceAsrRef.current) {
           clearWakeStopTimer();
           wakeStopTimerRef.current = window.setTimeout(() => {
             wakeStopTimerRef.current = null;
@@ -482,6 +507,7 @@ export function useMobileVoice(): MobileVoiceController {
   const bargeIn = useCallback(() => {
     const client = clientRef.current;
     if (!client) return;
+    turnActiveRef.current = false; // 方向X：用户打断作废本轮，防原生在途 final 晚到误触发 chat
     clearWakeStopTimer();
     clearThinkingTimeout();
     // 问题3：用户主动打断 = 继续互动 → 取消退出/idle 分级，重置态
@@ -496,11 +522,13 @@ export function useMobileVoice(): MobileVoiceController {
       setPressed(false);
       setListeningByWake(false);
       setFeedbackPressed(false);
-      try {
-        client.stopRecording();
-      } catch {
-        /* 容错 */
-      }
+    }
+    // 停 ASR：端侧 stopAsr（auto 连续监听也要停）/ 云 stopRecording。再 bargeIn 停在途 TTS。
+    try {
+      if (useDeviceAsrRef.current) stopAsr();
+      else client.stopRecording();
+    } catch {
+      /* 容错 */
     }
     try {
       client.bargeIn();
@@ -641,8 +669,9 @@ export function useMobileVoice(): MobileVoiceController {
       setXiaokeEmotion('happy');
       // 问题3：小可说话时压低 TTS 音量减自声掩盖，改善唤醒打断 SNR。
       client.duckTts();
-      // 需求2：小可说话时开唤醒监听（此刻 Web 不录音、麦空闲），让「小可小可」能打断。
-      // 原生 KWS 用 VOICE_RECOGNITION+AcousticEchoCanceler 抑制 TTS 自声回声（见 WakeWordBridge.kt）。
+      // AEC（端侧 ASR）：TTS 开始播 → 通知原生（原生据此 gate ASR/KWS 防录到小可自声→自唤醒；纯浏览器 no-op）。
+      // 注：硬件 AcousticEchoCanceler 对 WebView 的 STREAM_MUSIC 输出不生效，自声抑制靠原生 notifyTtsState gating。
+      notifyTtsState(true);
       if (wakeAvailableRef.current) startWakeListening();
     };
     const onTtsEnd = () => {
@@ -652,7 +681,7 @@ export function useMobileVoice(): MobileVoiceController {
     const onSegmentStart = () => {
       consumeNextExpression();
     };
-    const onPlaybackEnd = () => {
+    const onPlaybackEnd = (data?: { reason?: string }) => {
       endAvatarTurn();
       speakingRef.current = false;
       cancelClear();
@@ -664,6 +693,8 @@ export function useMobileVoice(): MobileVoiceController {
         setSubtitle('');
       }, 1200);
       client.restoreTts(); // 问题3：恢复 TTS 音量
+      // AEC（端侧 ASR）：TTS 播完 → 通知原生恢复 ASR（原生内部延迟 ~250ms 防扬声器尾音余振；纯浏览器 no-op）。
+      notifyTtsState(false);
       // 问题3 退出收尾（两条退出路径都在「告别 TTS 播完」这一刻统一收尾到唤醒 idle 态）：
       // (a) exitingRef —— L1/L3：startExit 已 sayDirect 自家告别，播完即 finalizeExit。
       // (b) exitPendingRef —— L2：LLM 回复开头带 [EXIT]，它自己那句告别刚播完，这里直接收尾，
@@ -671,6 +702,14 @@ export function useMobileVoice(): MobileVoiceController {
       if (exitingRef.current || exitPendingRef.current) {
         exitingRef.current = true;
         finalizeExitRef.current();
+        return;
+      }
+      // 用户主动打断（bargeIn emit reason='barge'）→ 收尾 idle，绝不进 followup。
+      // 否则点按钮打断后 followup 又自动开一轮 startAsr → 连续 startAsr 自激、停不下来（真机实测 bug3/4）。
+      if (data?.reason === 'barge') {
+        turnCountRef.current = 0;
+        setVoiceStatus('idle');
+        if (wakeAvailableRef.current) startWakeListening();
         return;
       }
       // team 审查（gemini/gpt 高风险）：唤醒打断时 onWakeWord 会同步 bargeIn→本回调，紧接着设 listening+beginTurn。
@@ -681,6 +720,7 @@ export function useMobileVoice(): MobileVoiceController {
         if (wakeAvailableRef.current && turnCountRef.current < MAX_FOLLOWUP_TURNS) {
           turnCountRef.current += 1;
           // 问题3 L3：followup 等接话 → arm 静默分级计时（幂等：已在倒数则不重置）。孩子开口清零。
+          // 方向X：端侧也走 followup beginTurn（内部 startAsr('auto') 重启下一轮 + 置 turnActive），与云火山统一态机。
           armIdleTimersRef.current();
           void beginTurnRef.current(true);
         } else {
@@ -768,6 +808,7 @@ export function useMobileVoice(): MobileVoiceController {
   useEffect(() => {
     const avail = isWakeWordAvailable();
     setWakeAvailable(avail);
+    useDeviceAsrRef.current = isOnDeviceAsrAvailable();
     const unregister = registerWebBridge({
       onWakeWord: () => {
         // 重入早退：已在录音/启动中则忽略重复唤醒（beginTurn 内亦有防护，这里早退避免多余 bargeIn/playCue）
@@ -793,7 +834,9 @@ export function useMobileVoice(): MobileVoiceController {
         // 需求1：立即切聆听态 + 本地即时确认音（先于 connect/录音，衔接云端 LLM+TTS 延时空窗）
         setVoiceStatus('listening');
         setXiaokeEmotion('curious');
-        if (client) {
+        // 端侧 ASR：不播 playCue 唤醒确认音——小可音色会被原生 ASR 录到→识别→自答（真机实测 bug1）。
+        // 端侧识别延迟低无需 cue 掩盖；云火山模式保留。
+        if (client && !useDeviceAsrRef.current) {
           try {
             client.playCue();
           } catch {
@@ -804,8 +847,49 @@ export function useMobileVoice(): MobileVoiceController {
       },
       onNativeReady: (info) => {
         setWakeAvailable(!!info.wakeWordAvailable);
+        useDeviceAsrRef.current = !!info.onDeviceAsrAvailable;
         // 原生 ready 时若正在录音 → 不抢麦，等本轮结束 playback_end 再恢复
         if (info.wakeWordAvailable && !pressedRef.current) startWakeListening();
+      },
+      // ===== P2 端侧 ASR 回调（原生 AudioEngine 流式结果，仅端侧模式触发）=====
+      onAsrPartial: (text: string) => {
+        // 用户说话字幕（原生侧已节流 ≥120ms）。孩子开口 → 清退出静默分级计时。
+        setSubtitle(text);
+        if (text && text.trim()) {
+          clearIdleTimersRef.current();
+          idleNudgedRef.current = false;
+        }
+      },
+      onAsrEndpoint: () => {
+        // auto 模式端侧判停（一句说完）→ 进 thinking 等小可回答。
+        // 原生自身 reset stream 继续监听多轮，Web 不停 ASR（与云火山的 finishTurn 语义不同）。
+        if (useAppStore.getState().voiceStatus === 'listening') {
+          setVoiceStatus('thinking');
+          setXiaokeEmotion('calm');
+        }
+      },
+      onAsrFinal: (text: string) => {
+        if (!text || !text.trim()) return;
+        // 方向X：一轮只接受一个 final（哨兵去重，防 native 切句/竞态多发 → 多 chat.trigger → 双声音叠）。
+        if (!turnActiveRef.current) return;
+        turnActiveRef.current = false;
+        clearIdleTimersRef.current();
+        idleNudgedRef.current = false;
+        // 收尾本轮录音态：清 listeningByWake/pressed（修按钮常红）+ stopAsr 释放本轮 + 进 thinking。
+        finishTurnRef.current();
+        // L1 退出词白名单 → 退出流程（不入 LLM）。
+        if (!exitingRef.current && detectExitIntent(text)) {
+          startExitRef.current('l1_word');
+          return;
+        }
+        // 端侧 final → chat.trigger 入 LLM→TTS（server 内部 bargein 旧轮）。
+        // 不在此客户端 bargeIn：方向X 一轮一 final + followup 在 playback_end 之后，无在途 TTS 可叠；
+        // 且 client.bargeIn() 会 emit tts.playback_end 误触发 followup beginTurn。
+        try {
+          clientRef.current?.sendChatTrigger(text);
+        } catch {
+          /* WS 未就绪：忽略，下次重连后可用 */
+        }
       },
     });
     if (avail) startWakeListening();

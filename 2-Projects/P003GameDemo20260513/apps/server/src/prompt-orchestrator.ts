@@ -1,4 +1,4 @@
-import { profileStore } from './profile-store.js';
+import { profileStore, type FamilyMember } from './profile-store.js';
 import type { AuthContext } from './auth-jwt.js';
 
 // P0.2 后端 Prompt Orchestrator：记忆只在后端汇入 systemPrompt（端无关、可即时剔除）。
@@ -18,6 +18,7 @@ export function assembleSystemPrompt(
   auth: AuthContext | null,
   curriculumGuardrail?: string | null,
   aiLiteracyGuide?: string | null,
+  onboardingGuide?: string | null,
   knowledgeRecall?: string | null,
 ): string {
   // 记忆注入是「增益」而非「必需」：profile-store 读取 / 解析任何异常都降级回 basePrompt，
@@ -44,10 +45,30 @@ export function assembleSystemPrompt(
         '童话陪伴的口吻、温暖好奇的伙伴，绝不变成讲课说教的老师。回答要保持方舟飞船、能量核心、星域探索、生态缸的陪伴感；' +
         '知识只在自然陪伴里轻轻带一句，不考试、不长篇大论、不端着教。';
     }
+    // docs/36 onboarding 引导放在【最末尾】——onboarding 期要盖过世界观开头的「欢迎指挥官探险」默认开场，
+    // 靠近因效应（docs/24）让 LLM 优先执行「先认识孩子」这一当前任务。
+    if (onboardingGuide) prompt += `\n\n${onboardingGuide}`;
     return prompt;
   } catch {
     return basePrompt;
   }
+}
+
+export function buildOnboardingGuide(p: FamilyMember | null): string | null {
+  // 字段防御：?? '' 兜底非字符串历史/异常数据，避免 .trim() 抛错阻断主链路（failsafe）。
+  const missingNickname = !p || !(p.nickname ?? '').trim();
+  const missingGender = !p || !(p.gender ?? '').trim();
+  const missingBirthday = !p || !(p.birthday ?? '').trim();
+  if (!missingNickname && !missingGender && !missingBirthday) return null;
+
+  const lines = [
+    '【本轮最高优先·先认识孩子】你和这个孩子还不熟。这一轮回复最重要的事【不是】喊「指挥官」、也【不是】急着邀请去星域探险，而是先温柔地认识 ta。请在这次回复里就自然地引导孩子告诉你下面还缺的信息——一次只问一样，孩子答了就开心地接住、夸一夸 ta，问到了就记住、别再重复问，绝不要像查户口/填表一样连珠炮发问：',
+  ];
+  if (missingNickname) lines.push('· 你还不知道孩子叫什么——温柔地问 ta 的名字，或者喜欢你怎么称呼 ta。');
+  if (missingGender) lines.push('· 你还不知道孩子是男孩还是女孩——找个自然的机会轻轻问一句（比如「你是小哥哥还是小妹妹呀」）。');
+  if (missingBirthday) lines.push('· 你还不知道孩子的出生年月——可以问问 ta 的生日是什么时候、是哪一年生的；如果孩子说不清楚，就温柔地说「没关系呀，让爸爸妈妈在小可的 App 里悄悄告诉我就好啦」，不要追问、不要为难 ta。');
+  lines.push('这些信息你都会记住。等认识齐了，再像方舟队友一样陪 ta 探险玩耍；在认识齐之前，每轮回复都要把「问下一个还缺的信息」放进去，别光顾着聊探险忘了认识 ta。');
+  return lines.join('\n');
 }
 
 function buildChildMemoryBlock(meta: ChildMeta | null, auth: AuthContext | null): string | null {

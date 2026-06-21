@@ -109,5 +109,15 @@ const localized = localizeHtml(html);
 // 后续原型若新增 unpkg/字体/图片外链会在这里被拦下而不是静默上线
 const leftover = localized.match(/(https?:)?\/\/[a-z0-9][a-z0-9.-]+\.[a-z]{2,}[^\s"'<>)]*/gi);
 if (leftover) throw new Error(`仍有外部依赖残留（${leftover.length} 处）：\n${[...new Set(leftover)].join('\n')}`);
+// 防自闭合吞列（2026-06-21 事故根因）：Vue 组件若被编辑器 HTML formatter 改成自闭合 `<x/>`，
+// 浏览器会把后续兄弟节点解析进它内部 → 吞掉后续列（邀请码管理整片消失）。在产出前拦下。
+const selfClosed = localized.match(/<(el-table-column|el-form-item|el-table|el-descriptions-item|el-tab-pane)\b[^>]*\/>/g);
+if (selfClosed) {
+  throw new Error(
+    `❌ 产物含 ${selfClosed.length} 个自闭合 Vue 组件（会吞掉后续兄弟节点/表格列）：\n` +
+      `${[...new Set(selfClosed)].slice(0, 3).join('\n')}\n` +
+      `→ admin-proto/index.source.html 被自动格式化改坏了。改 source 时务必禁用编辑器的 HTML 自闭合/格式化（Vue 组件必须成对 <x></x>）。`,
+  );
+}
 writeFileSync(join(OUT_DIR, 'index.html'), localized);
 console.log(`✅ 产出 public/admin/index.html（${(localized.length / 1024).toFixed(0)} KB，零外网依赖）`);

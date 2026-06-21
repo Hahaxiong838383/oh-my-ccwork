@@ -107,11 +107,11 @@ const BASE = '你是儿童陪伴机器人小可。';
 // case11: knowledgeRecall 按需召回参数 —— 命中时注入（画像之后），与画像共存；为 null 时不注入（不常驻）
 {
   const recall = '==== 小可世界观素材 ====\n【经济】家族币是硬通货。';
-  const r = assembleSystemPrompt(BASE, { nickname: '航航' }, null, null, null, recall);
+  const r = assembleSystemPrompt(BASE, { nickname: '航航' }, null, null, null, null, recall); // 第6 onboarding=null, 第7 knowledgeRecall
   assert.ok(r.includes(recall), '召回片段注入');
   assert.ok(r.includes('航航'), '与孩子画像共存');
   assert.ok(r.indexOf('航航') < r.indexOf('小可世界观素材'), '顺序：画像在前、召回在后');
-  const r2 = assembleSystemPrompt(BASE, { nickname: '航航' }, null, null, null, null);
+  const r2 = assembleSystemPrompt(BASE, { nickname: '航航' }, null, null, null, null, null);
   assert.ok(!r2.includes('小可世界观素材'), 'knowledgeRecall 为 null 时不注入(知识不常驻)');
   console.log('✅ case11 知识按需召回：命中注入(画像后)/null 不注入/与画像共存');
 }
