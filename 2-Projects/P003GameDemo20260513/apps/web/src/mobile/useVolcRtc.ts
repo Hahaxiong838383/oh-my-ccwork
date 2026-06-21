@@ -22,14 +22,19 @@ function tlv2String(tlvBuffer: ArrayBufferLike): { type: string; value: string }
   return { type, value };
 }
 
+export type ConnectPhase = 'idle' | 'starting' | 'loading' | 'joining';
+
 export interface UseVolcRtc {
   connected: boolean;
   connecting: boolean;
+  connectPhase: ConnectPhase;
+  feedbackArmed: boolean;
   error: string | null;
   needTapToPlay: boolean;
   start: () => Promise<void>;
   stop: () => Promise<void>;
   resumePlay: () => void;
+  armFeedback: () => Promise<void>;
 }
 
 export function useVolcRtc(): UseVolcRtc {
@@ -48,6 +53,9 @@ export function useVolcRtc(): UseVolcRtc {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needTapToPlay, setNeedTapToPlay] = useState(false);
+  const [connectPhase, setConnectPhase] = useState<ConnectPhase>('idle'); // 首次连接进度阶段（SDK 12MB 加载慢）
+  const [feedbackArmed, setFeedbackArmed] = useState(false); // 「我要吐槽」已预置（UI 提示小可在听吐槽）
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** 解析火山二进制消息（状态 + 字幕）→ 更新 store。 */
   const handleBinary = useCallback(
@@ -78,6 +86,7 @@ export function useVolcRtc(): UseVolcRtc {
   const start = useCallback(async () => {
     if (engineRef.current || connecting) return;
     setConnecting(true);
+    setConnectPhase('starting');
     setError(null);
     setNeedTapToPlay(false);
     try {
@@ -95,6 +104,7 @@ export function useVolcRtc(): UseVolcRtc {
       sessionRef.current = { roomId: data.roomId, taskId: data.taskId, userId: data.userId };
 
       console.log('[volc] load SDK + createEngine');
+      setConnectPhase('loading'); // 动态 import 12MB SDK，首次最慢的一步
       const rtcMod: any = await import('@volcengine/rtc'); // eslint-disable-line @typescript-eslint/no-explicit-any
       const VERTC = rtcMod.default;
       const { MediaType, RoomProfileType } = rtcMod;
@@ -112,6 +122,7 @@ export function useVolcRtc(): UseVolcRtc {
       }) as never);
 
       console.log('[volc] joinRoom...');
+      setConnectPhase('joining');
       await engine.joinRoom(
         data.token,
         data.roomId,
@@ -128,6 +139,7 @@ export function useVolcRtc(): UseVolcRtc {
       }
       setConnected(true);
       setConnecting(false);
+      setConnectPhase('idle');
       setVoiceStatus('listening');
 
       // 采麦 + 发布（异步，权限慢/失败不阻塞连接与小可开口）
@@ -157,6 +169,7 @@ export function useVolcRtc(): UseVolcRtc {
       setConnected(false);
       setVoiceStatus('idle');
       setConnecting(false);
+      setConnectPhase('idle');
     }
   }, [connecting, handleBinary, setVoiceStatus, authToken]);
 
@@ -175,6 +188,28 @@ export function useVolcRtc(): UseVolcRtc {
     }
     setNeedTapToPlay(false);
   }, []);
+
+  /** 点「我要吐槽」→ 预置 server 端吐槽模式（custom-llm 下一轮落反馈库 + 吐槽人格回应）。需登录。 */
+  const armFeedback = useCallback(async () => {
+    if (!authToken) {
+      setError('吐槽要登录后才能用哦');
+      return;
+    }
+    try {
+      const res = await fetch('/api/rtc/feedback-arm', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (!res.ok) throw new Error('arm failed');
+      setFeedbackArmed(true);
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+      // UI 提示 15s 自动撤（孩子说完吐槽、小可回应即可；提示只是引导，不与 server arm TTL 严格对齐）
+      feedbackTimerRef.current = setTimeout(() => setFeedbackArmed(false), 15000);
+      console.log('[volc] feedback armed');
+    } catch {
+      setError('吐槽没说出去，再点一下试试');
+    }
+  }, [authToken]);
 
   const stop = useCallback(async () => {
     const engine = engineRef.current;
@@ -202,13 +237,16 @@ export function useVolcRtc(): UseVolcRtc {
       sessionRef.current = null;
     }
     failedUsersRef.current.clear();
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
     setConnected(false);
     setConnecting(false);
+    setConnectPhase('idle');
+    setFeedbackArmed(false);
     setNeedTapToPlay(false);
     setVoiceStatus('idle');
     setSubtitle('');
     setUserSubtitle('');
   }, [setVoiceStatus, setSubtitle, setUserSubtitle]);
 
-  return { connected, connecting, error, needTapToPlay, start, stop, resumePlay };
+  return { connected, connecting, connectPhase, feedbackArmed, error, needTapToPlay, start, stop, resumePlay, armFeedback };
 }

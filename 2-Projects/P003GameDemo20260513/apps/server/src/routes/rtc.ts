@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { verifyAuthToken } from '../auth-jwt.js';
 import { profileStore, needsOnboarding } from '../profile-store.js';
+import { armFeedback } from '../feedback-arm.js';
 
 /**
  * 火山 RTC 实时对话接入（docs/35 Block A）。
@@ -176,6 +177,21 @@ rtcRoute.post('/stop', async (c) => {
     TaskId: taskId,
   });
   return c.json({ ok: true, result });
+});
+
+/**
+ * 吐槽预置（docs/37）：前端点「我要吐槽」→ 标记该登录孩子下一轮走吐槽（custom-llm 回调时落反馈库 + 吐槽人格回应）。
+ * RTC 全双工无端侧 captureMode 下发通道，改用 arm（feedback-arm 内存 Map + TTL），custom-llm 一次性消费。
+ * 必须登录（token→accountId）；匿名不支持吐槽（落库要 accountId 归属）。
+ */
+rtcRoute.post('/feedback-arm', async (c) => {
+  const authHeader = c.req.header('authorization') || '';
+  const llmToken = /^Bearer\s+(.+)$/i.exec(authHeader.trim())?.[1]?.trim();
+  const auth = llmToken ? await verifyAuthToken(llmToken) : null;
+  if (!auth) return c.json({ ok: false, error: '未登录，吐槽需要登录身份' }, 401);
+  armFeedback(auth.accountId);
+  console.log(`[rtc] feedback armed account=${auth.accountId}`);
+  return c.json({ ok: true });
 });
 
 export { rtcRoute };

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
-import { ARK_WORLDVIEW_BASE } from '../prompts.js';
+import { ARK_WORLDVIEW_BASE, FEEDBACK_PERSONA_SUFFIX } from '../prompts.js';
 import { AI_SAFETY_BASELINE, buildAiLiteracyGuide } from '../ai-literacy.js';
 import { assembleSystemPrompt, buildOnboardingGuide } from '../prompt-orchestrator.js';
 import { curriculumKG } from '../curriculum-kg.js';
@@ -10,6 +10,8 @@ import { verifyAuthToken } from '../auth-jwt.js';
 import { profileStore, needsOnboarding } from '../profile-store.js';
 import { extractOnboarding } from '../onboarding-extractor.js';
 import { buildKnowledgeRecall } from '../xiaoke-kb.js';
+import { feedbackStore } from '../feedback-store.js';
+import { consumeFeedbackArmed } from '../feedback-arm.js';
 
 /**
  * 火山 RTC 实时对话「CustomLLM」回调端点（docs/34 D 方案）。
@@ -78,12 +80,37 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // 无 token / 无效 token → authContext=null → 降级匿名（仅世界观，无个性化记忆）。
   const authContext = await verifyAuthToken(c.req.query('token'));
   const profile = authContext ? profileStore.getProfile(authContext.accountId) : null;
-  const inOnboarding = Boolean(authContext) && needsOnboarding(profile);
+  // 吐槽模式（docs/37）：前端点「我要吐槽」arm 过 → 本轮一次性消费走吐槽（落反馈库 + 吐槽人格回应）。
+  // 吐槽优先：不走 onboarding 引导、不召回世界观，专注接住孩子的吐槽。
+  const isFeedback = authContext ? consumeFeedbackArmed(authContext.accountId) : false;
+  const inOnboarding = !isFeedback && Boolean(authContext) && needsOnboarding(profile);
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
-  // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回，命中才注入；闲聊零注入不稀释人格。
-  const knowledgeRecall = buildKnowledgeRecall(userText);
-  console.log(`[custom-llm] ${authContext ? '记忆注入 account=' + authContext.accountId : '匿名（无 token）'}${inOnboarding ? ' [onboarding]' : ''}${knowledgeRecall ? ' [kb]' : ''}`);
-  const systemPrompt = assembleSystemPrompt(base, null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide, knowledgeRecall);
+  // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回；吐槽时不召回。
+  const knowledgeRecall = isFeedback ? null : buildKnowledgeRecall(userText);
+  console.log(`[custom-llm] ${authContext ? '记忆注入 account=' + authContext.accountId : '匿名（无 token）'}${isFeedback ? ' [feedback]' : ''}${inOnboarding ? ' [onboarding]' : ''}${knowledgeRecall ? ' [kb]' : ''}`);
+  let systemPrompt = assembleSystemPrompt(base, null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide, knowledgeRecall);
+  // 吐槽人格放 systemPrompt 最末尾（近因效应，docs/36 同源）：否则被世界观 + 用户字面意图(如"想听故事")盖过，LLM 会去满足请求而非收集吐槽。
+  if (isFeedback) systemPrompt += `\n\n${FEEDBACK_PERSONA_SUFFIX}`;
+  // 吐槽落库（复用 feedbackStore，进 admin/家长端同一反馈看板；try-catch 不阻断回应）。
+  if (isFeedback && authContext && userText.trim()) {
+    try {
+      feedbackStore.add({
+        session_id: authContext.accountId, // RTC 无 WS sessionId，用 accountId（30s 内同 account+text 去重）
+        turn_id: Math.floor(Date.now() / 1000), // RTC 无轮次，用秒级时间戳
+        source: 'rtc',
+        nickname: profile?.nickname ?? '',
+        gender: profile?.gender ?? '',
+        age: '',
+        scene_id: null,
+        text: userText,
+        ip_hash: '',
+        account_id: authContext.accountId,
+      });
+      console.log(`[custom-llm][feedback] 落库 account=${authContext.accountId} text=${userText.slice(0, 30)}`);
+    } catch (e) {
+      console.log(`[custom-llm][feedback] 落库失败(不阻断): ${(e as Error)?.message ?? e}`);
+    }
+  }
   if (inOnboarding && authContext) {
     const convo = [...history, { role: 'user' as const, content: userText }];
     void extractOnboarding(convo, profile)

@@ -15,7 +15,7 @@ import { extractMemoryUpdate } from './memory-extractor.js';
 import { curriculumKG } from './curriculum-kg.js';
 import { buildAiLiteracyGuide, AI_SAFETY_BASELINE } from './ai-literacy.js';
 import { buildKnowledgeRecall } from './xiaoke-kb.js';
-import { ARK_WORLDVIEW_BASE } from './prompts.js';
+import { ARK_WORLDVIEW_BASE, FEEDBACK_PERSONA_SUFFIX } from './prompts.js';
 
 export type SessionMeta = {
   sessionId: string;
@@ -67,14 +67,7 @@ export type ServerMessage =
 // 内置世界观基座已抽到 prompts.ts（单一真相源，docs/34 D 方案）：WS pipeline 与火山 RTC CustomLLM 端点共用。
 const DEFAULT_SYSTEM_PROMPT = ARK_WORLDVIEW_BASE;
 
-// 需求1（川哥 2026-06-13）：吐槽模式人格后缀。captureMode='feedback' 时追加在场景 prompt 后，
-// 让小可对孩子的吐槽/建议共情+感谢+不过度承诺（对齐 card5「KidsHub 情绪回应」四正面态口径）。
-const FEEDBACK_PERSONA_SUFFIX =
-  '【KidsHub 吐槽模式】指挥官刚刚分享了一个吐槽 / 建议 / 想法，你现在要以"认真倾听并回应孩子心声"的小可身份回应：' +
-  '先真诚感谢、用夸奖或共情肯定他愿意说出来，让他感到被重视；再明确告诉他——这个点子已经被收进 KidsHub，' +
-  '我们都会认真看、会想办法去改进或实现。严禁过度承诺：绝不能说"马上改""一定改""明天就做出来"这类无法兑现的话，' +
-  '只说"我们会认真看 + 努力想办法"。反馈口径仅限四个正面态：已收到 / 评估中 / 已采纳 / 进金点子库。' +
-  '语气温暖童趣、口语化，每次回复 30-50 字。可顺势鼓励"还有别的想法也继续告诉我哦"。';
+// 需求1（川哥 2026-06-13）：吐槽模式人格后缀已抽到 prompts.ts（FEEDBACK_PERSONA_SUFFIX）供 WS pipeline + 火山 RTC custom-llm 共用。
 const FEEDBACK_IP_SALT = process.env.FEEDBACK_IP_SALT?.trim() || randomBytes(16).toString('hex');
 
 // P0.1 L0 会话记忆：保留最近 N 轮（user+assistant）滑动窗口，防 prompt 膨胀拖 TTFT。
@@ -339,9 +332,6 @@ export class VoicePipeline {
       // AI 启蒙双层「常驻层」(docs/22 §9)：身份安全红线拼在 base(session/default 人格都带)，
       // 兜底门控漏判 / 多轮闪烁 / KV-cache(team 四发共识)；静态文本不破坏 assembleSystemPrompt 的门控 baseline。
       const baseSystemPrompt = `${this.sessionSystemPrompt ?? DEFAULT_SYSTEM_PROMPT}\n\n${AI_SAFETY_BASELINE}`;
-      const withFeedback = feedbackMode
-        ? `${baseSystemPrompt}\n\n${FEEDBACK_PERSONA_SUFFIX}`
-        : baseSystemPrompt;
       // P0.2 后端 Prompt Orchestrator：追加「关于这个孩子」user_memory 区块（登录用 profile-store
       // 权威，匿名用本轮 meta）。下方 debug.prompt_assembled 会回发含此块的完整 prompt（所见即所发）。
       // L_curriculum（docs/20）：内存匹配孩子话里的课程概念（<10ms，不拖 TTFT），命中则注入先修护栏。
@@ -351,7 +341,9 @@ export class VoicePipeline {
       // 世界观知识按需召回（xiaoke-kb，仿 curriculum-kg）：孩子聊到经济/身世/藏品/生态缸/夜航/设置等才召回对应条目。
       const knowledgeRecall = buildKnowledgeRecall(finalText);
       // 第6参 onboardingGuide：WS 路径不做 onboarding（那是火山 RTC custom-llm 的功能），传 null；第7参才是 knowledgeRecall。
-      const systemPrompt = assembleSystemPrompt(withFeedback, turnMeta, this.authContext, curriculumGuardrail, aiLiteracyGuide, null, knowledgeRecall);
+      // 吐槽人格放最末尾（近因效应 docs/36 同源）：否则被世界观 + 用户字面意图盖过，LLM 会去满足请求而非收集吐槽。
+      let systemPrompt = assembleSystemPrompt(baseSystemPrompt, turnMeta, this.authContext, curriculumGuardrail, aiLiteracyGuide, null, knowledgeRecall);
+      if (feedbackMode) systemPrompt += `\n\n${FEEDBACK_PERSONA_SUFFIX}`;
       // 工作台调试流依赖：回发本轮真实使用的 prompt（所见即所发）
       this.send({ type: 'debug.prompt_assembled', systemPrompt, userText: finalText });
 
