@@ -17,6 +17,25 @@ const isKidsHub =
 // 移动端 App（原生壳 WebView / 手机浏览器）：/m 路径优先分流，复用工作台同一份 dist
 const isMobileApp = window.location.pathname.startsWith('/m');
 
+// PWA Service Worker 注册策略（根治 WebView SW 缓存旧版 —— D6P10 + P2 反复踩的"老样子"）：
+// - /m（原生壳 / 移动在线）：不注册 SW + 注销历史 SW + 清 caches，确保每次加载拿最新（壳是单一在线目标，无需离线缓存）。
+// - 其余（工作台 / demo 浏览器）：注册 SW 保留 PWA（autoUpdate + skipWaiting 处理浏览器更新）。
+if (isMobileApp) {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((rs) => rs.forEach((r) => r.unregister()))
+      .catch(() => {});
+  }
+  if (typeof caches !== 'undefined') {
+    caches.keys().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
+  }
+} else {
+  import('virtual:pwa-register')
+    .then(({ registerSW }) => registerSW({ immediate: true }))
+    .catch(() => {});
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     {isMobileApp ? <MobileApp /> : isKidsHub ? <KidsHubApp /> : <App />}

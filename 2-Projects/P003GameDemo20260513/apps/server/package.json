@@ -10,10 +10,12 @@
     "probe:gemini": "NO_PROXY=* HTTPS_PROXY= HTTP_PROXY= node --env-file=.env.local scripts/gemini-probe.mjs",
     "probe:volc-asr": "NO_PROXY=* HTTPS_PROXY= HTTP_PROXY= node --env-file=.env.local scripts/volc-asr-probe.mjs",
     "probe:volc-tts": "NO_PROXY=* HTTPS_PROXY= HTTP_PROXY= node --env-file=.env.local scripts/volc-tts-probe.mjs",
-    "test:expr": "tsx scripts/expression-filter.test.ts"
+    "test:expr": "tsx scripts/expression-filter.test.ts",
+    "test:exit": "tsx scripts/exit-intent.test.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.0.0",
+    "@volcengine/openapi": "^1.36.2",
     "hono": "^4.12.18",
     "jose": "^6.2.3",
     "ws": "^8.18.0",

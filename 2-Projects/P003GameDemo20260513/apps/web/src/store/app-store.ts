@@ -73,9 +73,11 @@ interface AppState {
   // —— 语音对话 ——
   voiceStatus: VoiceStatus;
   subtitle: string;
+  userSubtitle: string;
   xiaokeEmotion: XiaokeEmotion;
   setVoiceStatus: (s: VoiceStatus) => void;
   setSubtitle: (s: string) => void;
+  setUserSubtitle: (s: string) => void;
   setXiaokeEmotion: (e: XiaokeEmotion) => void;
 
   // —— 三机器状态（V0.6）——
@@ -220,9 +222,11 @@ export const useAppStore = create<AppState>((set) => ({
 
   voiceStatus: 'idle',
   subtitle: '',
+  userSubtitle: '',
   xiaokeEmotion: 'happy',
   setVoiceStatus: (voiceStatus) => set({ voiceStatus }),
   setSubtitle: (subtitle) => set({ subtitle }),
+  setUserSubtitle: (userSubtitle) => set({ userSubtitle }),
   setXiaokeEmotion: (xiaokeEmotion) => set({ xiaokeEmotion }),
 
   bootState: 'unconfigured',

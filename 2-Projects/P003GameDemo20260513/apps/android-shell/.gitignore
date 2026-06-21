@@ -11,3 +11,9 @@ captures/
 *.aab
 *.keystore
 !debug.keystore
+
+# 端侧 ASR 候选模型（大文件 ~55MB；用 scripts/download-asr-models.sh 下载挑入 assets，不进 git）
+# P0 验证选定 type9/type15 后生产只留一个。kws-model（唤醒词 12MB）为历史先例已在 git。
+app/src/main/assets/asr-model-v9/
+app/src/main/assets/asr-model-v15/
+app/src/main/assets/asr-test.wav

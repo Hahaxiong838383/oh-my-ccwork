@@ -46,7 +46,9 @@ import androidx.core.view.WindowInsetsControllerCompat
 class MainActivity : ComponentActivity() {
 
     private lateinit var webView: WebView
+    private lateinit var audioEngine: AudioEngine
     private lateinit var wakeWordBridge: WakeWordBridge
+    private lateinit var asrBridge: AsrBridge
 
     // 麦克风权限请求
     private val requestPermissionLauncher = registerForActivityResult(
@@ -73,8 +75,10 @@ class MainActivity : ComponentActivity() {
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
-        // ========== 2. 初始化 Porcupine Bridge（最先做，优雅降级） ==========
-        wakeWordBridge = WakeWordBridge(this)
+        // ========== 2. 初始化 AudioEngine + Bridge（P1：单一 AudioRecord + on-device ASR） ==========
+        audioEngine = AudioEngine(this)
+        wakeWordBridge = WakeWordBridge(audioEngine)   // 委托模式（保留兼容）
+        asrBridge = AsrBridge(audioEngine)
 
         // ========== 3. 立即加载 WebView（防黑屏）==========
         // 关键修复：不把 setContent 卡在权限回调后——否则权限对话框期间 Activity 无内容＝黑屏，
@@ -86,6 +90,13 @@ class MainActivity : ComponentActivity() {
             != PackageManager.PERMISSION_GRANTED
         ) {
             requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+
+        // ========== 5. P0 ASR smoke 验证（仅 debug，docs/32 §11.F）==========
+        // 验单 .so 跑 OnlineRecognizer + KWS/ASR 同进程共存 + type9/type15 对 test wav 的识别/RTF/内存。
+        // 真机看结果：adb logcat -s AsrSmoke:*。release 包不含（BuildConfig.DEBUG gate）。
+        if (BuildConfig.DEBUG) {
+            AsrSmokeTest.run(this)
         }
     }
 
@@ -134,7 +145,8 @@ class MainActivity : ComponentActivity() {
 
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 super.onPageFinished(view, url)
-                                wakeWordBridge.notifyNativeReady()
+                                // 统一走 asrBridge（其内部委托 AudioEngine）
+                                asrBridge.notifyNativeReady()
                             }
 
                             // 主框架加载失败时显示错误页（不黑屏，便于定位是网络/URL 问题）
@@ -173,12 +185,13 @@ class MainActivity : ComponentActivity() {
                             // override fun shouldInterceptRequest(...) ...
                         }
 
-                        // ========== 注入 Native Bridge ==========
-                        // Web 通过 window.KidshubNative.xxx() 调用
-                        addJavascriptInterface(wakeWordBridge, "KidshubNative")
+                        // ========== 注入 Native Bridge（P1：AsrBridge 作完整门面，保留 KidshubNative 名称） ==========
+                        // 包含：isWakeWordAvailable / startWakeListening / pauseWakeListening
+                        //      + isOnDeviceAsrAvailable / startAsr(mode) / stopAsr / notifyTtsState
+                        addJavascriptInterface(asrBridge, "KidshubNative")
 
-                        // 绑定给 Bridge（用于 evaluateJavascript 回调）
-                        wakeWordBridge.attachWebView(this)
+                        // 绑定给 Bridge（evaluateJavascript 回调）
+                        asrBridge.attachWebView(this)
 
                         // ========== 加载目标页面 ==========
                         // 可在 BuildConfig 里修改
@@ -189,26 +202,31 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ========== 生命周期：管理 Porcupine 监听 ==========
+    // ========== 生命周期：管理 AudioEngine（单一 AudioRecord） ==========
 
     override fun onResume() {
         super.onResume()
-        // 如果 Web 之前请求过监听，且当前可用，则恢复
-        if (::wakeWordBridge.isInitialized) {
+        if (::asrBridge.isInitialized) {
+            asrBridge.onResume()
+        } else if (::wakeWordBridge.isInitialized) {
             wakeWordBridge.onResume()
         }
     }
 
     override fun onPause() {
         super.onPause()
-        if (::wakeWordBridge.isInitialized) {
+        if (::asrBridge.isInitialized) {
+            asrBridge.onPause()
+        } else if (::wakeWordBridge.isInitialized) {
             wakeWordBridge.onPause()
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (::wakeWordBridge.isInitialized) {
+        if (::asrBridge.isInitialized) {
+            asrBridge.cleanup()
+        } else if (::wakeWordBridge.isInitialized) {
             wakeWordBridge.cleanup()
         }
     }

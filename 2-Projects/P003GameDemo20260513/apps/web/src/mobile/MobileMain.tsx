@@ -1,13 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useMobileVoice } from './useMobileVoice';
+import { useVolcRtc } from './useVolcRtc';
 import { MobileAvatar } from './MobileAvatar';
 import { MobileSubtitle } from './MobileSubtitle';
 import { useAppStore } from '../store/app-store';
 import type { VoiceStatus } from '../store/app-store';
 
 const STATUS_TEXT: Record<VoiceStatus, string> = {
-  idle: '按住下面的圆圈，和小可说说话',
+  idle: '点中间的圆圈，开始和小可聊天',
   listening: '小可在认真听你说…',
   thinking: '小可正在想…',
   speaking: '小可正在说…',
@@ -18,29 +18,32 @@ function MicIcon() {
   return (
     <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden>
       <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" />
-      <path
-        d="M5 11a7 7 0 0 0 14 0"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        fill="none"
-      />
+      <path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" fill="none" />
       <path d="M12 18v3M9 21h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
 
+/** 挂断图标 */
+function StopIcon() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" />
+    </svg>
+  );
+}
+
 /** 录音脉冲环 —— perpetual 动画，memo + 隔离，仅 transform/opacity（硬件加速） */
-const PulseRings = React.memo(function PulseRings() {
+const PulseRings = React.memo(function PulseRings({ color }: { color: string }) {
   return (
     <>
       {[0, 0.55].map((delay, i) => (
         <motion.span
           key={i}
           aria-hidden
-          className="absolute h-[88px] w-[88px] rounded-full bg-rose-400/25"
-          style={{ willChange: 'transform, opacity' }}
-          initial={{ scale: 1, opacity: 0.5 }}
+          className="absolute h-[88px] w-[88px] rounded-full"
+          style={{ background: color, willChange: 'transform, opacity' }}
+          initial={{ scale: 1, opacity: 0.45 }}
           animate={{ scale: 1.75, opacity: 0 }}
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut', delay }}
         />
@@ -49,86 +52,43 @@ const PulseRings = React.memo(function PulseRings() {
   );
 });
 
-interface PttButtonProps {
-  recording: boolean;
-  status: VoiceStatus;
-  onDown: () => void;
-  onUp: () => void;
-  onBarge: () => void;
-}
-
-function PttButton({ recording, status, onDown, onUp, onBarge }: PttButtonProps) {
-  return (
-    <div className="relative flex h-[124px] w-[124px] items-center justify-center">
-      {recording && <PulseRings />}
-      <motion.button
-        type="button"
-        aria-label={status === 'speaking' ? '点一下打断小可' : '按住和小可说话'}
-        onPointerDown={(e) => {
-          e.preventDefault();
-          // 小可正在说时，点一下 = 打断（孩子想插话）；否则按住录音
-          if (status === 'speaking') {
-            onBarge();
-            return;
-          }
-          onDown();
-        }}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
-        onPointerLeave={onUp}
-        whileTap={{ scale: 0.94 }}
-        className="relative flex h-[88px] w-[88px] items-center justify-center rounded-full text-white outline-none"
-        style={{
-          touchAction: 'none',
-          WebkitUserSelect: 'none',
-          background: recording ? '#f43f5e' : '#0ea5e9',
-          // tinted diffusion shadow（taste：禁 neon glow，用染色扩散阴影）
-          boxShadow: recording
-            ? '0 12px 32px -8px rgba(244,63,94,0.55)'
-            : '0 12px 32px -8px rgba(14,165,233,0.5)',
-        }}
-      >
-        <MicIcon />
-      </motion.button>
-    </div>
-  );
+/** 圆钮按状态取色（未连=蓝 / 听=绿 / 想说=蓝） */
+function circleColor(connected: boolean, status: VoiceStatus): string {
+  if (!connected) return '#0ea5e9';
+  if (status === 'listening') return '#10b981';
+  return '#0ea5e9';
 }
 
 /**
- * 移动端主界面 —— 苹果简洁科技清新风（taste baseline 调向 airy/低密度）：
- * 顶栏毛玻璃 pill + 小可站立舞台 + 字幕 + 底部拇指区 PTT 大圆。
- * 唤醒词「小可小可」由原生壳提供（无壳自动隐藏唤醒提示，PTT 兜底）。
+ * 移动端主界面 —— 火山 RTC 全双工实时对话（docs/35）。
+ * 进房后常开麦：孩子直接说话，火山云负责 ASR + 小可大脑(/v1) + TTS + 3A + 语义判停 + barge-in。
+ * 圆钮：未连=「开始对话」，已连=状态指示 + 点击挂断。复用 MobileAvatar / MobileSubtitle。
  */
 export function MobileMain() {
-  const {
-    pressed,
-    connected,
-    wakeAvailable,
-    listeningByWake,
-    feedbackPressed,
-    onPttDown,
-    onPttUp,
-    onFeedbackDown,
-    onFeedbackUp,
-    bargeIn,
-  } = useMobileVoice();
+  const { connected, connecting, error, needTapToPlay, start, stop, resumePlay } = useVolcRtc();
   const voiceStatus = useAppStore((s) => s.voiceStatus);
-  const recording = pressed || listeningByWake;
+  const color = circleColor(connected, voiceStatus);
+
+  const onCircleClick = (): void => {
+    if (connecting) return;
+    if (connected) void stop();
+    else void start();
+  };
+
+  const statusText = connecting ? '正在叫醒小可…' : connected ? STATUS_TEXT[voiceStatus] : STATUS_TEXT.idle;
 
   return (
     <div
       className="fixed inset-0 flex flex-col overflow-hidden"
       style={{ background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 40%, #eff6ff 100%)' }}
     >
-      {/* 顶栏：毛玻璃 pill（liquid glass：内高光边 + 模糊） */}
+      {/* 顶栏：毛玻璃 pill */}
       <header className="z-10 flex items-center justify-between px-5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
         <div className="flex items-center gap-2 rounded-full border border-white/50 bg-white/55 px-3.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] backdrop-blur-md">
           <span className="text-[15px] font-semibold tracking-tight text-slate-800">小可</span>
           <span
-            className={`h-1.5 w-1.5 rounded-full transition-colors ${
-              connected ? 'bg-emerald-500' : 'bg-slate-300'
-            }`}
-            title={connected ? '已连接' : '连接中…'}
+            className={`h-1.5 w-1.5 rounded-full transition-colors ${connected ? 'bg-emerald-500' : 'bg-slate-300'}`}
+            title={connected ? '对话中' : '未连接'}
           />
         </div>
       </header>
@@ -141,46 +101,46 @@ export function MobileMain() {
         <MobileSubtitle />
       </main>
 
-      {/* 底部控制区（拇指区，安全区内边距） */}
+      {/* 底部控制区 */}
       <footer className="z-10 flex flex-col items-center gap-3 px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2">
-        {wakeAvailable && voiceStatus === 'idle' && !recording && (
-          <div className="rounded-full border border-sky-100 bg-sky-50/70 px-3 py-1 text-[12px] tracking-tight text-sky-600 backdrop-blur">
-            试试喊「小可小可」叫醒我
-          </div>
+        <p className="text-[13px] font-medium tracking-tight text-slate-400">{statusText}</p>
+        {error && (
+          <p className="rounded-full bg-rose-50 px-3 py-1 text-[12px] text-rose-500">{error}</p>
         )}
-        <p className="text-[13px] font-medium tracking-tight text-slate-400">
-          {STATUS_TEXT[voiceStatus] ?? STATUS_TEXT.idle}
-        </p>
-        <PttButton
-          recording={recording}
-          status={voiceStatus}
-          onDown={onPttDown}
-          onUp={onPttUp}
-          onBarge={bargeIn}
-        />
+        <div className="relative flex h-[124px] w-[124px] items-center justify-center">
+          {connected && <PulseRings color={`${color}40`} />}
+          <motion.button
+            type="button"
+            aria-label={connected ? '点一下结束对话' : '点一下开始和小可对话'}
+            onClick={onCircleClick}
+            whileTap={{ scale: 0.94 }}
+            disabled={connecting}
+            className="relative flex h-[88px] w-[88px] items-center justify-center rounded-full text-white outline-none disabled:opacity-70"
+            style={{
+              touchAction: 'manipulation',
+              WebkitUserSelect: 'none',
+              background: connecting ? '#94a3b8' : color,
+              boxShadow: `0 12px 32px -8px ${color}88`,
+            }}
+          >
+            {connected ? <StopIcon /> : <MicIcon />}
+          </motion.button>
+        </div>
+        {connected && (
+          <p className="text-[12px] tracking-tight text-slate-400">点圆圈结束对话</p>
+        )}
       </footer>
 
-      {/* 右下角「按住吐槽」入口（问题4 docs/24，对标 kidshub：captureMode=feedback → server 落反馈库 + 吐槽人格回应） */}
-      <button
-        type="button"
-        aria-label="按住吐槽"
-        onPointerDown={(e) => {
-          e.preventDefault();
-          onFeedbackDown();
-        }}
-        onPointerUp={onFeedbackUp}
-        onPointerCancel={onFeedbackUp}
-        onPointerLeave={onFeedbackUp}
-        title="按住对小可说出你的吐槽 / 建议 / 想法"
-        className={`absolute bottom-[max(1.75rem,env(safe-area-inset-bottom))] right-5 z-20 select-none rounded-full px-3.5 py-2 text-xs font-medium tracking-tight transition-all active:scale-[0.94] ${
-          feedbackPressed
-            ? 'bg-rose-500 text-white shadow-[0_8px_20px_-6px_rgba(244,63,94,0.6)]'
-            : 'border border-amber-300/60 bg-amber-50/85 text-amber-600 shadow-sm backdrop-blur'
-        }`}
-        style={{ touchAction: 'none', WebkitUserSelect: 'none' }}
-      >
-        {feedbackPressed ? '松手提交' : '按住吐槽'}
-      </button>
+      {/* autoplay 被浏览器拦时的兜底：点一下屏幕（手势）恢复 AI 音频播放 */}
+      {needTapToPlay && (
+        <button
+          type="button"
+          onClick={resumePlay}
+          className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-2 bg-slate-900/55 text-white backdrop-blur-sm"
+        >
+          <span className="text-base font-medium tracking-tight">点一下屏幕，让小可出声</span>
+        </button>
+      )}
     </div>
   );
 }
