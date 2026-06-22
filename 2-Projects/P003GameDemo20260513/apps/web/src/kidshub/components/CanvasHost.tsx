@@ -21,7 +21,8 @@ import {
   getKidsHubSessionId,
   type VoiceClient,
 } from '../../services/voice-client';
-import { useKidsHubStore } from '../store/kidshub-store';
+import { useVolcRtc } from '../../mobile/useVolcRtc';
+import { useKidsHubStore, getComposedPromptNow } from '../store/kidshub-store';
 import { useExperienceStore, EXPERIENCE_QUOTA_ENABLED } from '../store/experience-store';
 import { getSceneCard } from '../prompts';
 import { useAppStore } from '../../store/app-store';
@@ -74,6 +75,9 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   const needStopRef = useRef(false);
   const llmTextRef = useRef('');
   const [pickerOpen, setPickerOpen] = useState(false);
+  // —— 工作台「实时对话」双模式：RTC 全双工，用右栏当前 composed prompt 起火山（server prompt override）——
+  const rtc = useVolcRtc();
+  const [rtcMode, setRtcMode] = useState(false);
 
   const [, setConnected] = useState(false);
 
@@ -395,6 +399,32 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     }
   };
 
+  // 进入「实时对话」：停 WS（打断 + 停录音释放麦），用右栏当前 composed prompt 起火山 RTC 全双工。
+  // 麦克风互斥：rtcMode 下禁用 WS「按住说话/吐槽」，火山独占麦；退出时 rtc.stop() leaveRoom 释放。
+  const enterRtc = async () => {
+    const client = clientRef.current;
+    client?.bargeIn();
+    if (pressedRef.current) {
+      pressedRef.current = false;
+      setPressed(false);
+      setActiveRecordMode(null);
+      client?.stopRecording();
+    }
+    setSubtitle('');
+    setRtcMode(true);
+    await rtc.start(getComposedPromptNow()); // 工作台当前调好的 prompt → server override，RTC 大脑用它
+  };
+  // 退出「实时对话」：火山离房释放麦，回到 WS「按住说话」调试模式。
+  const exitRtc = async () => {
+    await rtc.stop();
+    setRtcMode(false);
+    setSubtitle('');
+  };
+  // rtcMode 下改了 Prompt → 一键热更（不重连，下一轮即用新 prompt）。
+  const applyRtcPrompt = () => {
+    void rtc.updatePrompt(getComposedPromptNow());
+  };
+
   const card = activeCardId ? getSceneCard(activeCardId) : null;
   const tutorialStep = tutorialActive ? getUnitStep(tutorialUnitId, tutorialStepIndex) : null;
 
@@ -467,9 +497,35 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
       {/* 控制条（flex-shrink-0：任何视口高度下都不被画布挤出） */}
       <div className="relative flex flex-shrink-0 flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-neutral-900 px-3 py-2">
         <div className="flex items-center gap-2">
+          {/* 工作台「实时对话」双模式：火山 RTC 全双工，用右栏当前 Prompt（override）。放「按住说话」左边。 */}
+          <button
+            type="button"
+            onClick={() => void (rtcMode ? exitRtc() : enterRtc())}
+            disabled={rtcMode && rtc.connecting}
+            title="用右栏当前调好的 Prompt 起火山实时全双工对话（点击说话、可打断），看真实 RTC 效果"
+            className={`select-none rounded-full px-5 py-1.5 text-sm tracking-wide transition-all active:scale-[0.985] disabled:opacity-60 ${
+              rtcMode
+                ? 'bg-emerald-500/90 text-white shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                : 'border border-emerald-400/40 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20'
+            }`}
+          >
+            {rtcMode ? (rtc.connecting ? '连接中…' : '⏹ 退出实时对话') : '🎙 实时对话'}
+          </button>
+          {/* rtcMode 下改了 Prompt → 一键热更（下一句即生效，不重连） */}
+          {rtcMode && rtc.connected && (
+            <button
+              type="button"
+              onClick={applyRtcPrompt}
+              title="把右栏当前 Prompt 应用到正在进行的实时对话（下一句即生效）"
+              className="rounded-full border border-sky-400/40 bg-sky-400/10 px-4 py-1.5 text-sm text-sky-300 transition hover:bg-sky-400/20"
+            >
+              ⟳ 应用新 Prompt
+            </button>
+          )}
           <button
             type="button"
             aria-label="按住说话"
+            disabled={rtcMode}
             onPointerDown={(e) => {
               e.preventDefault();
               void onPointerDown(false);
@@ -477,7 +533,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
             onPointerLeave={onPointerUp}
-            className={`select-none rounded-full px-5 py-1.5 text-sm tracking-widest transition-all active:scale-[0.985] ${
+            className={`select-none rounded-full px-5 py-1.5 text-sm tracking-widest transition-all active:scale-[0.985] disabled:opacity-40 ${
               pressed && activeRecordMode === 'normal'
                 ? 'bg-red-500/90 text-white shadow-[0_0_12px_rgba(239,68,68,0.5)]'
                 : 'bg-neutral-800 text-white/80 ring-1 ring-white/10 hover:bg-neutral-700'
@@ -498,6 +554,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
           <button
             type="button"
             aria-label="按住吐槽"
+            disabled={rtcMode}
             onPointerDown={(e) => {
               e.preventDefault();
               void onPointerDown(true);

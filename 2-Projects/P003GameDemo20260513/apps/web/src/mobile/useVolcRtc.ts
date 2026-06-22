@@ -31,10 +31,12 @@ export interface UseVolcRtc {
   feedbackArmed: boolean;
   error: string | null;
   needTapToPlay: boolean;
-  start: () => Promise<void>;
+  start: (systemPrompt?: string) => Promise<void>;
   stop: () => Promise<void>;
   resumePlay: () => void;
   armFeedback: () => Promise<void>;
+  /** 工作台「实时对话」改 prompt 热更新（不重连，下一轮即用新 prompt）。 */
+  updatePrompt: (systemPrompt: string) => Promise<void>;
 }
 
 export function useVolcRtc(): UseVolcRtc {
@@ -83,7 +85,7 @@ export function useVolcRtc(): UseVolcRtc {
     [setVoiceStatus, setSubtitle, setUserSubtitle],
   );
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (systemPrompt?: string) => {
     if (engineRef.current || connecting) return;
     setConnecting(true);
     setConnectPhase('starting');
@@ -97,7 +99,8 @@ export function useVolcRtc(): UseVolcRtc {
           'Content-Type': 'application/json',
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
-        body: '{}',
+        // 工作台「实时对话」双模式：带 systemPrompt → server 存 prompt override（custom-llm 用工作台调的 prompt）。
+        body: JSON.stringify(systemPrompt ? { systemPrompt } : {}),
       });
       const data = (await res.json()) as { ok: boolean; error?: string; appId: string; roomId: string; userId: string; token: string; taskId: string };
       if (!data.ok) throw new Error(data.error || '起 AI 失败');
@@ -211,6 +214,22 @@ export function useVolcRtc(): UseVolcRtc {
     }
   }, [authToken]);
 
+  /** 工作台「实时对话」改 prompt 热更新：POST /update-prompt 更新本房间 override，下一轮即用新 prompt（不重连）。 */
+  const updatePrompt = useCallback(async (systemPrompt: string) => {
+    const sess = sessionRef.current;
+    if (!sess || !systemPrompt.trim()) return;
+    try {
+      await fetch('/api/rtc/update-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId: sess.roomId, systemPrompt }),
+      });
+      console.log('[volc] prompt updated');
+    } catch {
+      /* 热更失败不阻断对话；下次重连用新 prompt */
+    }
+  }, []);
+
   const stop = useCallback(async () => {
     const engine = engineRef.current;
     if (engine) {
@@ -248,5 +267,5 @@ export function useVolcRtc(): UseVolcRtc {
     setUserSubtitle('');
   }, [setVoiceStatus, setSubtitle, setUserSubtitle]);
 
-  return { connected, connecting, connectPhase, feedbackArmed, error, needTapToPlay, start, stop, resumePlay, armFeedback };
+  return { connected, connecting, connectPhase, feedbackArmed, error, needTapToPlay, start, stop, resumePlay, armFeedback, updatePrompt };
 }

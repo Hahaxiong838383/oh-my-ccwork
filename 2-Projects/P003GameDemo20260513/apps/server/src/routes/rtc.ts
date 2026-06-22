@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { verifyAuthToken } from '../auth-jwt.js';
 import { profileStore, needsOnboarding } from '../profile-store.js';
 import { armFeedback } from '../feedback-arm.js';
+import { setPromptOverride, clearPromptOverride } from '../rtc-prompt-override.js';
 
 /**
  * 火山 RTC 实时对话接入（docs/35 Block A）。
@@ -44,6 +45,14 @@ const WELCOME = process.env.RTC_WELCOME_MESSAGE || '指挥官，你回来啦！�
 const ONBOARDING_WELCOME =
   process.env.RTC_ONBOARDING_WELCOME ||
   '你好呀！我是方舟上的小可～我们好像是第一次见面吧？我还不知道该怎么称呼你呢，可以告诉我你叫什么名字吗？';
+
+/** 拼 custom-llm 回调 URL：?session=roomId（工作台 prompt override 取用键）+ 可选 ?token=（记忆注入）。两者可并存。 */
+function buildCustomLlmUrl(roomId: string, llmToken?: string): string {
+  const params = new URLSearchParams();
+  params.set('session', roomId);
+  if (llmToken) params.set('token', llmToken);
+  return `${CUSTOM_LLM_URL}?${params.toString()}`;
+}
 
 /** server 端组装 StartVoiceChat 的 VoiceChat 配置（凭证从 env，不下发前端）。 */
 function buildVoiceChatConfig(roomId: string, userId: string, llmToken?: string, welcomeMessage?: string): Record<string, unknown> {
@@ -87,8 +96,8 @@ function buildVoiceChatConfig(roomId: string, userId: string, llmToken?: string,
       },
       LLMConfig: {
         Mode: 'CustomLLM',
-        // 带登录 token → CustomLLM 端点验签拿 accountId → 注入该孩子记忆（无 token 则匿名）
-        Url: llmToken ? `${CUSTOM_LLM_URL}?token=${encodeURIComponent(llmToken)}` : CUSTOM_LLM_URL,
+        // session=roomId → custom-llm 取工作台 prompt override（双模式）；token → 注入记忆。两者可并存。
+        Url: buildCustomLlmUrl(roomId, llmToken),
         ModelName: 'xiaoke',
         APIKey: process.env.CUSTOM_LLM_API_KEY || 'none',
         SystemMessages: [],
@@ -137,6 +146,13 @@ rtcRoute.post('/start', async (c) => {
   const roomId = `xiaoke-${randomUUID()}`;
   const userId = `user-${randomUUID().slice(0, 8)}`;
 
+  // 工作台「实时对话」双模式：body 带 systemPrompt → 存 prompt override（custom-llm 按 roomId 取用，绕开火山中途换 prompt）。
+  const startBody = (await c.req.json().catch(() => ({}))) as { systemPrompt?: string };
+  if (startBody.systemPrompt?.trim()) {
+    setPromptOverride(roomId, startBody.systemPrompt);
+    console.log(`[rtc] prompt override set room=${roomId} (${startBody.systemPrompt.length} 字符)`);
+  }
+
   // RTC token（订阅 + 发布权限，24h 过期）
   const key = new AccessToken(appId, appKey, roomId, userId);
   key.addPrivilege(privileges.PrivSubscribeStream, 0);
@@ -171,6 +187,7 @@ rtcRoute.post('/stop', async (c) => {
   const roomId = body.roomId;
   const taskId = body.taskId || roomId;
   if (!roomId) return c.json({ ok: false, error: 'roomId 必填' }, 400);
+  clearPromptOverride(roomId); // 释放工作台 prompt override（双模式）
   const result = await callRtcOpenAPI('StopVoiceChat', {
     AppId: process.env.VOLC_RTC_APP_ID,
     RoomId: roomId,
@@ -191,6 +208,19 @@ rtcRoute.post('/feedback-arm', async (c) => {
   if (!auth) return c.json({ ok: false, error: '未登录，吐槽需要登录身份' }, 401);
   armFeedback(auth.accountId);
   console.log(`[rtc] feedback armed account=${auth.accountId}`);
+  return c.json({ ok: true });
+});
+
+/**
+ * 工作台「实时对话」改 prompt 热更新：不重连，更新该房间 override，下一轮 custom-llm 回调即用新 prompt。
+ */
+rtcRoute.post('/update-prompt', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { roomId?: string; systemPrompt?: string };
+  if (!body.roomId || !body.systemPrompt?.trim()) {
+    return c.json({ ok: false, error: 'roomId + systemPrompt 必填' }, 400);
+  }
+  setPromptOverride(body.roomId, body.systemPrompt);
+  console.log(`[rtc] prompt override updated room=${body.roomId} (${body.systemPrompt.length} 字符)`);
   return c.json({ ok: true });
 });
 
