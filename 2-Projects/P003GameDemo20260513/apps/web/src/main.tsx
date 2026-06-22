@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App } from './app/App';
 import { KidsHubApp } from './kidshub/KidsHubApp';
+import { KidsHubLivePage } from './kidshub/live/KidsHubLivePage';
 import { MobileApp } from './mobile/MobileApp';
 import './styles.css';
 
@@ -17,10 +18,17 @@ const isKidsHub =
 // 移动端 App（原生壳 WebView / 手机浏览器）：/m 路径优先分流，复用工作台同一份 dist
 const isMobileApp = window.location.pathname.startsWith('/m');
 
+// 体验台火山 RTC 全双工页（/kidshub-ai/live，或 kidshub* 域名下 /live）：独立路由，
+// 与现有工作台（StudioPage）并存、零影响。注意 /kidshub-ai/live 也 startsWith /kidshub-ai，
+// 故渲染时必须先判 isKidsHubLive 再判 isKidsHub。
+const isKidsHubLive =
+  window.location.pathname.startsWith('/kidshub-ai/live') ||
+  (window.location.hostname.startsWith('kidshub') && window.location.pathname.startsWith('/live'));
+
 // PWA Service Worker 注册策略（根治 WebView SW 缓存旧版 —— D6P10 + P2 反复踩的"老样子"）：
-// - /m（原生壳 / 移动在线）：不注册 SW + 注销历史 SW + 清 caches，确保每次加载拿最新（壳是单一在线目标，无需离线缓存）。
+// - /m（原生壳 / 移动在线）+ 体验台 /live（火山 RTC 页）：不注册 SW + 注销历史 SW + 清 caches，确保每次加载拿最新。
 // - 其余（工作台 / demo 浏览器）：注册 SW 保留 PWA（autoUpdate + skipWaiting 处理浏览器更新）。
-if (isMobileApp) {
+if (isMobileApp || isKidsHubLive) {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .getRegistrations()
@@ -38,6 +46,6 @@ if (isMobileApp) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {isMobileApp ? <MobileApp /> : isKidsHub ? <KidsHubApp /> : <App />}
+    {isMobileApp ? <MobileApp /> : isKidsHubLive ? <KidsHubLivePage /> : isKidsHub ? <KidsHubApp /> : <App />}
   </React.StrictMode>,
 );
