@@ -23,6 +23,7 @@ import {
 } from '../../services/voice-client';
 import { useVolcRtc } from '../../mobile/useVolcRtc';
 import { useKidsHubStore, getComposedPromptNow } from '../store/kidshub-store';
+import { sanitizeForVolcRtc } from '../prompts/compose';
 import { useExperienceStore, EXPERIENCE_QUOTA_ENABLED } from '../store/experience-store';
 import { getSceneCard } from '../prompts';
 import { useAppStore } from '../../store/app-store';
@@ -412,7 +413,8 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     }
     setSubtitle('');
     setRtcMode(true);
-    await rtc.start(getComposedPromptNow()); // 工作台当前调好的 prompt → server override，RTC 大脑用它
+    // 净化（剔句级表情标记等火山无效内容）后 → server override，RTC 大脑用它
+    await rtc.start(sanitizeForVolcRtc(getComposedPromptNow()));
   };
   // 退出「实时对话」：火山离房释放麦，回到 WS「按住说话」调试模式。
   const exitRtc = async () => {
@@ -422,7 +424,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
   };
   // rtcMode 下改了 Prompt → 一键热更（不重连，下一轮即用新 prompt）。
   const applyRtcPrompt = () => {
-    void rtc.updatePrompt(getComposedPromptNow());
+    void rtc.updatePrompt(sanitizeForVolcRtc(getComposedPromptNow()));
   };
 
   const card = activeCardId ? getSceneCard(activeCardId) : null;

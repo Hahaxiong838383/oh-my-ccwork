@@ -55,3 +55,26 @@ export function findUnfilledPlaceholders(text: string): string[] {
   const matches = text.match(/\{[a-z_]+\}/g);
   return matches ? [...new Set(matches)] : [];
 }
+
+/**
+ * 火山 RTC「实时对话」净化：剔除对火山不生效且有害的内容（句级表情标记指令）。
+ * WS pipeline 靠 server 剥离 LLM 输出的【表情：xxx】驱动 avatar；但 custom-llm 不剥离，
+ * 火山直接 TTS 会把「表情：吃惊」念出来污染语音。仅工作台「实时对话」触发时用，
+ * 其他场景（WS pipeline / 手机端 / live 固定大脑）prompt 一律不变。
+ * 策略：行级删表情标记规则（addendum 第5条 + 正/反例）+ 末尾追加强禁令兜底
+ *      （近因效应，即使没删净也不输出标记）。第6条「不描述外观」对 RTC 仍有效，保留。
+ */
+export function sanitizeForVolcRtc(prompt: string): string {
+  const kept = prompt.split('\n').filter((line) => {
+    const t = line.trim();
+    if (/句级表情标记/.test(t)) return false; // addendum 第5条主体
+    if (/^正例[：:]/.test(t) && t.includes('【')) return false; // 表情正例
+    if (/^反例[：:]/.test(t) && t.includes('【')) return false; // 表情反例
+    return true;
+  });
+  return (
+    kept.join('\n') +
+    '\n\n【实时语音模式·最高优先】你现在是实时语音对话，说的每个字都会被直接读给孩子听。' +
+    '绝对不要输出【表情：xxx】、任何方括号【】标记或舞台提示，只说要对孩子讲的话本身，不带任何标记符号。'
+  );
+}
