@@ -23,6 +23,20 @@ export const LORE_ENTITIES: LoreEntity[] = [
   { id: 'collectible', name: '藏品', aliases: ['探险家宝库', '星梦奇境'], type: 'collectible' },
   { id: 'growth_guide', name: '新手引导', aliases: ['人生第一次', '成长线'], type: 'lore' },
   { id: 'device', name: '读写台硬件', aliases: ['台灯', '设备', '桌子'], type: 'item' },
+  // —— v1.0 创世故事实体（叙事层；可聊正文归 server xiaoke-kb 按需召回，此处仅 canonical 对齐 + 为 KG 铺路）——
+  { id: 'micro_light', name: '微光', aliases: ['认真生活之光', '认真的光', '心里的光'], type: 'lore' },
+  { id: 'lampkeeper', name: '守灯人', aliases: [], type: 'role' },
+  { id: 'old_engineer', name: '守灯工程师', aliases: ['老爷爷', '博士'], type: 'role' },
+  { id: 'snore_king', name: '打呼噜大王', aliases: ['呼噜大王'], type: 'role' },
+  { id: 'sleepy_bug', name: '瞌睡虫', aliases: ['瞌睡虫们'], type: 'role' },
+  { id: 'abyss', name: '长眠之渊', aliases: [], type: 'place' },
+  { id: 'cradle_zone', name: '摇篮星域', aliases: ['家门口'], type: 'place' },
+  { id: 'starsea', name: '星海', aliases: ['睡雾', '迷雾'], type: 'place' },
+  { id: 'life_seed', name: '生命之种', aliases: ['种子', '蛋'], type: 'item' },
+  { id: 'light_core', name: '光核', aliases: ['方舟的心脏', '头顶的灯'], type: 'building' },
+  { id: 'cockpit', name: '驾驶舱', aliases: ['书桌', '小书桌'], type: 'place' },
+  { id: 'porthole', name: '舷窗', aliases: ['读写台玻璃'], type: 'item' },
+  { id: 'glass_tank', name: '玻璃缸', aliases: ['最早的缸', '生命起点'], type: 'item' },
 ];
 
 export function getEntity(id: string): LoreEntity | undefined {

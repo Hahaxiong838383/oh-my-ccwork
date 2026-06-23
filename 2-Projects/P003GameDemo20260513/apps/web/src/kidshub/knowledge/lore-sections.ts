@@ -6,6 +6,9 @@ import type { LoreSection } from './types';
  * 精炼自《小可世界观知识手册 v0.3》。每节 body 是小可视角的可聊素材，已剔工程细节。
  * sceneTags/entities 是为将来 KG/检索铺路的 front-matter（team 评审建议①）。
  * 守真实性边界：foreshadow 节是 D30+/后续伏笔，默认不注入（CARD_LORE_MAP 不挂任何卡）。
+ * 叙事层（身世/微光/打呼噜大王/生命之种/方舟星海，《小可宇宙世界背景描述 v1.0》）的可聊正文归
+ * server xiaoke-kb.ts 按需召回（孩子真实端=手机/live/语音的单一真相源）；本前端库专注工作台游戏机制场景素材，
+ * 不重复维护叙事正文，仅在 lore-entities.ts 补齐叙事实体做 canonical 对齐。
  */
 export const LORE_SECTIONS: LoreSection[] = [
   {
