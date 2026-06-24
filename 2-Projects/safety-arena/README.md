@@ -36,7 +36,7 @@
 ## 状态
 
 - [x] M0 核心引擎:数据模型 / capture / replay / 3 策略 / metrics + 确定性 mock + 单测(纯逻辑,不碰真实 LLM)
-- [ ] M1 服务层:FastAPI + SSE 流式 + SQLite trace 落库
+- [x] M1 服务层:FastAPI + SSE 流式 timeline + SQLite trace 落库 + /docs 交互(REST: capture/traces/replay/scan;SSE: replay/stream)
 - [ ] M2 最简 Web:输入 / 数据集上传 / 对比视图(timeline + diff + decision overlay)
 - [ ] M3 接真实 SUT(可插拔 provider;若用于语音/小可,接其生产 classifier + LLM)
 - [ ] M4 安全 judge(可插拔 + 校准)算 unsafe-output-rate
@@ -58,5 +58,15 @@ tests/               # 确定性 fixtures + 单测
 
 ```bash
 uv sync
-uv run pytest -q
+uv run pytest -q                      # 15 个测试(引擎 + 服务)
+uv run python -m safety_arena.demo    # 离线对比(不起服务,直接看对比表 + 两条权衡曲线)
+
+uv run python -m safety_arena.server  # 起服务(默认 127.0.0.1:8800,PORT 可改)
+# 浏览器开 http://127.0.0.1:8800/docs 交互点测全部端点
+```
+
+SSE timeline 示例(token 逐帧 emit + 仲裁决策按 t_ms 流式):
+
+```bash
+curl -N "http://127.0.0.1:8800/api/replay/stream?trace_id=harm-early::mock&strategy=parallel-buffer:0&speed=20"
 ```

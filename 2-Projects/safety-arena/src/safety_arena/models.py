@@ -147,6 +147,16 @@ class Decision:
 
 
 @dataclass
+class Emit:
+    """一次"放给用户"的动作。original 区分 SUT 原始 token 与注入的安全兜底。"""
+
+    t_ms: float
+    text: str
+    original: bool
+    token_index: int | None = None
+
+
+@dataclass
 class ReplayResult:
     """一个策略在一条 Trace 上重放的结果。指标全部从这里聚合。"""
 
@@ -167,4 +177,5 @@ class ReplayResult:
     leaked_tokens: int = 0                      # 拦截前已暴露给用户的 unsafe token 数
     leaked_text: str = ""                       # 泄漏的具体内容(白盒可审计)
 
+    emits: list[Emit] = field(default_factory=list)  # 时间轴原料(SSE timeline 用)
     notes: dict = field(default_factory=dict)

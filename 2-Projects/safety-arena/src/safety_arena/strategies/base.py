@@ -7,12 +7,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 from ..models import (
     ActionKind,
     Decision,
+    Emit,
     Event,
     EventKind,
     ReplayResult,
@@ -32,16 +33,6 @@ class Knobs:
     high_threshold: RiskLabel = RiskLabel.HIGH
     medium_threshold: RiskLabel = RiskLabel.MEDIUM
     fallback_text: str = DEFAULT_FALLBACK
-
-
-@dataclass
-class Emit:
-    """一次"放给用户"的动作。original 区分 SUT 原始 token 与注入的安全兜底。"""
-
-    t_ms: float
-    text: str
-    original: bool
-    token_index: int | None = None
 
 
 @runtime_checkable
@@ -153,4 +144,5 @@ def finalize(
         intervention_ms=intervention_ms,
         leaked_tokens=leaked_tokens,
         leaked_text=leaked_text,
+        emits=list(emits),
     )
