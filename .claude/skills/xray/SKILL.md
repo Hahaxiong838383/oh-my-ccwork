@@ -1,6 +1,6 @@
 # xray - Xray 代理管理
 
-> 管理 Xray+mihomo 双代理引擎：启动/停止/切换/状态检查/分流测试。触发词："/xray"、"代理状态"、"网络不通"、"mihomo"、"clash"
+> 管理 Xray 代理引擎：启动/停止/切换/状态检查/分流测试。触发词："/xray"、"代理状态"、"网络不通"
 
 ## 触发条件
 
@@ -94,7 +94,7 @@ strings ~/xray/xray.log | tail -30
 | 分组 | 策略 | 节点池 |
 |------|------|--------|
 | Claude/GPT | 固定 | 美宅专用 US (VLESS+Reality) |
-| **Gemini/AI Studio** | **Xray→mihomo 链式转发** | mihomo GoogleAI 组 (US-GIA-D/B/C + US-V1/R1/R2, round-robin) |
+| **Gemini/AI Studio** | 固定 | Gemini专用-US2 (VLESS+Reality) |
 | YouTube/视频娱乐 | leastPing | HK×5, TW×2, SG×2, JP×5 |
 | 大陆域名 | direct | 直连 |
 | 其他 | 默认 | HK-HKT-A |
@@ -115,25 +115,19 @@ team 的 gemini lane（omp `google-antigravity/*`）和 antigravity 调用走 **
 - **验证走对节点**：`grep cloudcode ~/xray/access.log | tail` 看 `[socks -> Gemini专用-US2-...]`（不是美宅）。
 - 详见 memory `project_antigravity_team_b3`。
 
-## mihomo (Clash Meta) 管理
+### GitHub / HuggingFace / 包管理器下载节点优化（2026-06-24）
 
-**配置文件**：`/opt/homebrew/etc/mihomo/config.yaml`
-**服务管理**：`brew services start/stop/restart mihomo`
-**Web UI**：http://127.0.0.1:9090/ui
+rule[5] 是「开发者下载」大组（github + githubusercontent + codeload + PyPI + crates + conda + **huggingface.co + cdn-lfs**）。原走 `美宅-Claud-GPT专用US` 单住宅节点 → **git clone/push、HF 大文件下载反复 `SSL_ERROR_SYSCALL` / curl `exit 35` / `000`**（住宅节点带宽小 + 无冗余，还挤占 Claude 命脉节点）。
 
-### mihomo 状态检查
-```bash
-brew services list | grep mihomo
-curl -s http://127.0.0.1:9090/proxies | python3 -m json.tool | head -30
-```
+**连锁病根（最关键）**：observatory + burstObservatory 探测 URL 是 `google.com/generate_204`（**被墙**）→ 所有节点探测超时被判 dead → **所有 leastPing/leastLoad balancer 失效、全 fallback 美宅**。balancer 形同虚设（这也是 media/asia-fast balancer 一直只走美宅的原因）。
 
-### Xray→mihomo 链式转发回滚
-```bash
-# 改回 Xray 自己的 GoogleAI-US balancer
-# config.json 中 "outboundTag": "mihomo-proxy" → "balancerTag": "GoogleAI-US"
-# 然后重启 xray
-kill $(pgrep -f "/Users/rayman.chen/xray/xray run")
-```
+**修复**：
+1. 探测 URL `google.com` → `http://cp.cloudflare.com/generate_204`（节点真能到，恢复活性判断）。改 `observatory.probeURL` + `burstObservatory.pingConfig.destination`。
+2. rule[5] outboundTag 美宅 → **JP-Linode-V1**（rule[17] 默认出站 = 日常验证可用机房；**不赌脆弱的 balancer 探测，直接钉死可用节点**）。
+3. `~/xray/xray run -test -c config.json` → `launchctl kickstart -k gui/$(id -u)/com.xray.proxy`。
+4. 验证三件套：`git ls-remote https://github.com/<x> HEAD`（之前 SSL EOF→现返回 hash）+ `grep github ~/xray/access.log`（→ JP-Linode-V1）+ HF resolve `307→200`。
+
+**坑**：① balancer 探测 URL 必须选节点真能到的（cloudflare 非 google），否则全 fallback。② **节点别假设可用**：US-V1 实测死（cloudflare 探测也超时），用默认节点最稳。③ 单次 curl `exit 35` 可能瞬时抖动，多测几次。④ 改 config 先 `cp` 备份（本次 `config.json.bak-github-opt-20260624`），`xray -test` 过了再 kickstart；排查完 loglevel 记得改回 `warning`。
 
 ## 排查清单
 
