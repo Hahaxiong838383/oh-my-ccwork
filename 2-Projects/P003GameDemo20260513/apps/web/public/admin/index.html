@@ -441,8 +441,9 @@
           </el-form-item>
         </el-form>
         <div class="role-hint">
-          账号密码与 KidsHub 工作台一致<br/>
-          （管理员视图 · 用户反馈看板为真实数据，其余看板为演示）
+          管理员：账号密码与 KidsHub 工作台一致<br/>
+          游客：用 guest 账号登录，只读查看全部内容、无编辑权<br/>
+          （用户反馈看板为真实数据，其余看板为演示）
         </div>
       </div>
     </div>
@@ -471,29 +472,29 @@
             <span class="menu-icon">🔍</span>
             <span>单用户查询</span>
           </el-menu-item>
-          <el-menu-item v-if="isAdmin" index="user-list">
+          <el-menu-item index="user-list">
             <span class="menu-icon">👥</span>
             <span>全部用户列表</span>
           </el-menu-item>
-          <el-menu-item v-if="isAdmin" index="user-stats">
+          <el-menu-item index="user-stats">
             <span class="menu-icon">📈</span>
             <span>统计页面</span>
           </el-menu-item>
-          <el-menu-item v-if="isAdmin" index="date-query">
+          <el-menu-item index="date-query">
             <span class="menu-icon">📅</span>
             <span>日期范围查询</span>
           </el-menu-item>
-          <div class="menu-group-title" v-if="!asideCollapsed && isAdmin">运营操作台</div>
-          <el-menu-item v-if="isAdmin" index="sn-manage">
+          <div class="menu-group-title" v-if="!asideCollapsed">运营操作台</div>
+          <el-menu-item index="sn-manage">
             <span class="menu-icon">🏷️</span>
             <span>SN 与订单管理</span>
           </el-menu-item>
-          <el-menu-item v-if="isAdmin" index="cs-tickets">
+          <el-menu-item index="cs-tickets">
             <span class="menu-icon">📞</span>
             <span>客服挽回工单池</span>
           </el-menu-item>
         </el-menu>
-        <div class="kidshub-entry" v-if="isAdmin && !asideCollapsed" :class="{active: currentPage==='kidshub'}" @click="handleMenuSelect('kidshub')">KidsHub 运营台 ↗</div>
+        <div class="kidshub-entry" v-if="!asideCollapsed" :class="{active: currentPage==='kidshub'}" @click="handleMenuSelect('kidshub')">KidsHub 运营台 ↗</div>
       </div>
 
       <!-- Main Content -->
@@ -508,7 +509,7 @@
           </div>
           <div class="right">
             <el-tag type="warning" size="small">用户反馈真实数据 · 其余看板演示</el-tag>
-            <el-tag :type="isAdmin ? 'danger' : 'info'" size="small">{{ isAdmin ? '管理员' : 'B端用户' }}</el-tag>
+            <el-tag :type="isAdmin ? 'danger' : 'info'" size="small">{{ isAdmin ? '管理员' : '游客 · 只读' }}</el-tag>
             <el-dropdown @command="handleDropdown">
               <span style="cursor:pointer;display:flex;align-items:center;gap:6px">
                 <el-avatar :size="32">{{ currentUser.username.charAt(0).toUpperCase() }}</el-avatar>
@@ -1304,9 +1305,9 @@
                     </div>
                     <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
                       <span style="font-size:13px;color:#6B7785;font-weight:700">{{ inviteList.count }}/15</span>
-                      <el-button size="small" type="primary" :loading="inviteList.loading" :disabled="inviteList.count >= 15" @click="genInvite">生成邀请码</el-button>
+                      <el-button v-if="isAdmin" size="small" type="primary" :loading="inviteList.loading" :disabled="inviteList.count >= 15" @click="genInvite">生成邀请码</el-button>
                       <el-button size="small" :loading="inviteList.loading" @click="loadInvites">刷新</el-button>
-                      <el-popconfirm title="清空所有 IP 的今日体验次数计数，语音/连接限额立即恢复，确认？" confirm-button-text="重置" cancel-button-text="取消" @confirm="resetQuota">
+                      <el-popconfirm v-if="isAdmin" title="清空所有 IP 的今日体验次数计数，语音/连接限额立即恢复，确认？" confirm-button-text="重置" cancel-button-text="取消" @confirm="resetQuota">
                         <template #reference><el-button size="small" type="warning" plain>重置今日限额</el-button></template>
                       </el-popconfirm>
                     </div>
@@ -1320,7 +1321,7 @@
                         <template #default="{row}">{{ row.account_id }}</template>
                       </el-table-column>
                       <el-table-column label="家长昵称（备注发给谁）" min-width="160">
-                        <template #default="{row}"><el-input v-model="row.account_nickname" size="small" placeholder="点此备注，如：邻居王姐" @change="saveNickname(row)"></el-input></template>
+                        <template #default="{row}"><el-input v-model="row.account_nickname" size="small" :disabled="!isAdmin" :placeholder="isAdmin ? '点此备注，如：邻居王姐' : '—'" @change="saveNickname(row)"></el-input></template>
                       </el-table-column>
                       <el-table-column label="孩子昵称" width="130">
                         <template #default="{row}">{{ row.child_nickname || '未建档' }}</template>
@@ -1339,9 +1340,10 @@
                       </el-table-column>
                       <el-table-column label="操作" width="90">
                         <template #default="{row}">
-                          <el-popconfirm title="删除后该邀请码失效，并清空对应账号的孩子档案/设备，确认？" @confirm="delInvite(row.code)">
+                          <el-popconfirm v-if="isAdmin" title="删除后该邀请码失效，并清空对应账号的孩子档案/设备，确认？" @confirm="delInvite(row.code)">
                             <template #reference><el-button type="danger" link>删除</el-button></template>
                           </el-popconfirm>
+                          <span v-else style="color:#C0C4CC">—</span>
                         </template>
                       </el-table-column>
                     </el-table>
@@ -1524,6 +1526,8 @@
                   <span style="font-size:12px;background:#f6f8fa;padding:2px 8px;border-radius:4px">时间：{{ fmtTs(realDrawer.ts) }}</span>
                 </div>
                 <div v-if="realDrawer.note" style="font-size:12px;color:#666;margin-bottom:8px">当前备注：{{ realDrawer.note }}</div>
+                <div v-if="!isAdmin" style="margin-top:10px;font-size:12px;color:#909399">游客只读视图 · 可查看反馈详情，无法变更状态或备注。</div>
+                <template v-if="isAdmin">
                 <div style="font-size:13px;font-weight:700;color:#6B7785;margin:10px 0 6px">变更状态（PATCH 后实时 re-bucket）</div>
                 <div v-for="s in ['已收到','评估中','已采纳']" :key="s" @click="setRealStatus(s)"
                   :style="{border: realDrawer.status===s ? '2px solid #3B7A99' : '1px solid #E4E9EF', background: realDrawer.status===s ? '#F6F8FA' : '#fff'}"
@@ -1542,6 +1546,7 @@
                   <el-button size="small" type="primary" @click="saveRealNote">保存备注</el-button>
                 </div>
                 <div style="margin-top:16px;font-size:11px;color:#909399;line-height:1.5">所有变更走真实后端 · 失败自动回滚本地看板</div>
+                </template>
               </div>
             </el-drawer>
           </div>
@@ -1657,13 +1662,15 @@
     function getToken() {
       return localStorage.getItem('kidshub_admin_token') || '';
     }
-    function saveAuth(token, username) {
+    function saveAuth(token, username, role) {
       if (token) localStorage.setItem('kidshub_admin_token', token);
       if (username) localStorage.setItem('kidshub_admin_username', username);
+      if (role) localStorage.setItem('kidshub_admin_role', role);
     }
     function clearAuth() {
       localStorage.removeItem('kidshub_admin_token');
       localStorage.removeItem('kidshub_admin_username');
+      localStorage.removeItem('kidshub_admin_role');
     }
 
     var allMockUsers = generateMockUsers(86);
@@ -1693,14 +1700,29 @@
           return map[currentPage.value] || '';
         });
 
-        // 持久登录：token 存在则恢复（不存明文密码）
+        // 持久登录：token 存在则恢复（不存明文密码）。
+        // role 必须以服务端为准——本地乐观恢复后立刻 /check 校正，防止 guest 篡改
+        // localStorage 提权（即便 UI 被骗，写操作的真防线仍是后端 403）。
         onMounted(function () {
           var tok = getToken();
-          if (tok) {
-            isLoggedIn.value = true;
-            currentUser.username = localStorage.getItem('kidshub_admin_username') || '管理员';
-            currentUser.role = 'admin';
-          }
+          if (!tok) return;
+          // 乐观恢复（避免闪烁）：role 默认按最小权限 guest，待服务端校正
+          isLoggedIn.value = true;
+          currentUser.username = localStorage.getItem('kidshub_admin_username') || '';
+          currentUser.role = localStorage.getItem('kidshub_admin_role') || 'guest';
+          fetch('/api/auth/check?token=' + encodeURIComponent(tok))
+            .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+            .then(function (data) {
+              if (data && data.ok) {
+                currentUser.role = data.role || currentUser.role;
+                if (data.username) currentUser.username = data.username;
+                saveAuth(tok, currentUser.username, currentUser.role);
+                nextTick(function () { initCharts(); });
+              } else {
+                handleAuthError();
+              }
+            })
+            .catch(function () { /* 网络问题保守保留，下次操作再失败 */ });
         });
 
         function handleAuthError() {
@@ -1735,11 +1757,12 @@
               // ok + token 双校验：token 是鉴权成功的契约字段（与 KidsHub 工作台一致），
               // 防后端契约漂移成 {ok:true} 无 token 时误放行
               if (data && data.ok && data.token) {
-                currentUser.username = loginForm.username;
-                currentUser.role = 'admin';
+                var role = data.role || 'guest';
+                currentUser.username = data.username || loginForm.username;
+                currentUser.role = role;
                 isLoggedIn.value = true;
-                saveAuth(data.token, loginForm.username);
-                ElementPlus.ElMessage.success('登录成功');
+                saveAuth(data.token, currentUser.username, role);
+                ElementPlus.ElMessage.success(role === 'admin' ? '登录成功' : '登录成功 · 游客只读视图');
                 nextTick(function() { initCharts(); });
               } else {
                 ElementPlus.ElMessage.error((data && data.error) || '账号或密码错误');
@@ -2463,6 +2486,7 @@
             .finally(function () { inviteList.loading = false; });
         }
         function genInvite() {
+          if (!isAdmin.value) return; // 纵深防御：guest 只读，写入口前端已隐藏，后端 403 兜底
           var token = getToken();
           if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
           inviteList.loading = true;
@@ -2487,6 +2511,7 @@
             .finally(function () { inviteList.loading = false; });
         }
         function delInvite(code) {
+          if (!isAdmin.value) return; // 纵深防御：guest 只读，写入口前端已隐藏，后端 403 兜底
           var token = getToken();
           if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
           inviteList.loading = true;
@@ -2509,6 +2534,7 @@
             .finally(function () { inviteList.loading = false; });
         }
         function saveNickname(row) {
+          if (!isAdmin.value) return; // 纵深防御：guest 只读，写入口前端已隐藏，后端 403 兜底
           var token = getToken();
           if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
           var nickname = (row.account_nickname || '').trim();
@@ -2531,6 +2557,7 @@
             });
         }
         function resetQuota() {
+          if (!isAdmin.value) return; // 纵深防御：guest 只读，写入口前端已隐藏，后端 403 兜底
           var token = getToken();
           if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
           fetch('/api/admin/reset-quota', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } })
@@ -2673,6 +2700,7 @@
         }
         function openRealIssue(it) { realDrawer.value = it; realDrawerOpen.value = true; }
         function setRealStatus(newStatus) {
+          if (!isAdmin.value) return; // 纵深防御：guest 只读，写入口前端已隐藏，后端 403 兜底
           var it = realDrawer.value; if (!it) return;
           if (newStatus === '金点子库' && it.status !== '金点子库') {
             ElementPlus.ElMessageBox.confirm('确认移入「金点子库」？（非终态，可返工）', '二次确认', { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' })
@@ -2711,6 +2739,7 @@
             });
         }
         function saveRealNote() {
+          if (!isAdmin.value) return; // 纵深防御：guest 只读，写入口前端已隐藏，后端 403 兜底
           var it = realDrawer.value; if (!it) return;
           var oldNote = it.note || '';
           var token = getToken();

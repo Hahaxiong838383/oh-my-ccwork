@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { accountStore } from '../account-store.js';
 import { conversationStore } from '../conversation-store.js';
 import { profileStore } from '../profile-store.js';
-import { isValidToken } from './auth.js';
+import { getTokenRole, isValidToken } from './auth.js';
 import { resetAllQuotas } from '../guard.js';
 
 // hub 看板数据端点：admin 看所有账号的孩子档案 + 设备（admin token 鉴权，区别于 parent 自己的 /api/profile 邀请码 JWT）。
@@ -13,6 +13,11 @@ adminDataRoute.use('*', async (c, next) => {
   const token = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
   if (!token || !isValidToken(token)) {
     return c.json({ ok: false, error: 'unauthorized' }, 401);
+  }
+  // 只读门控（真防线）：guest 仅可 GET（查看）；任何写操作（POST/DELETE/PATCH）一律 403。
+  // 前端隐藏编辑按钮只是 UX，这里才是 guest 改不了数据的保证。
+  if (c.req.method !== 'GET' && getTokenRole(token) !== 'admin') {
+    return c.json({ ok: false, error: 'forbidden_readonly', message: '游客账号只读，无编辑权限' }, 403);
   }
   await next();
 });

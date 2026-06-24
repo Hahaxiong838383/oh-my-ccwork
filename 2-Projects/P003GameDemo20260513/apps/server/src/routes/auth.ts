@@ -2,13 +2,22 @@ import { randomBytes } from 'node:crypto';
 import { Hono } from 'hono';
 
 /**
- * KidsHub-AI 工作台登录（demo 级）
+ * KidsHub-AI 工作台 / 运营台登录（demo 级）
  *
- * 凭据走 env（STUDIO_USER / STUDIO_PASS，放 .env.local 不入 git）。
- * token 存内存（重启失效），极简失败限流防爆破。
+ * 两类账号：
+ *  - admin：凭据走 env（STUDIO_USER / STUDIO_PASS，放 .env.local 不入 git）。全权限（读 + 写）。
+ *  - guest：只读游客（查看所有内容，无任何编辑权）。凭据走 env 带默认值
+ *    （STUDIO_GUEST_USER / STUDIO_GUEST_PASS，默认 guest / 123456 —— 公开只读门票，
+ *    零配置即生效；想改或关闭就配 env，STUDIO_GUEST_USER='' 可禁用 guest）。
+ *
+ * token 存内存（重启失效），按 token 关联 role；写操作的真防线在各路由中间件
+ * （admin-data / feedback 对 guest 的非 GET 请求一律 403），前端隐藏按钮只是 UX。
  */
 const validTokens = new Set<string>();
 const tokenUsers = new Map<string, string>();
+const tokenRoles = new Map<string, Role>();
+
+export type Role = 'admin' | 'guest';
 
 let failCount = 0;
 let lockedUntil = 0;
@@ -25,10 +34,20 @@ export function getTokenUser(token: string): string | undefined {
   return tokenUsers.get(token);
 }
 
+export function getTokenRole(token: string): Role | undefined {
+  return tokenRoles.get(token);
+}
+
 authRoute.post('/login', async (c) => {
-  const expectedUser = process.env.STUDIO_USER;
-  const expectedPass = process.env.STUDIO_PASS;
-  if (!expectedUser || !expectedPass) {
+  const adminUser = process.env.STUDIO_USER;
+  const adminPass = process.env.STUDIO_PASS;
+  // guest 默认 guest/123456（公开只读门票）；env 可覆盖，置空字符串可禁用。
+  const guestUser = process.env.STUDIO_GUEST_USER ?? 'guest';
+  const guestPass = process.env.STUDIO_GUEST_PASS ?? '123456';
+
+  const adminConfigured = Boolean(adminUser && adminPass);
+  const guestConfigured = Boolean(guestUser && guestPass);
+  if (!adminConfigured && !guestConfigured) {
     return c.json({ ok: false, error: 'auth 未配置' }, 503);
   }
 
@@ -47,7 +66,14 @@ authRoute.post('/login', async (c) => {
   const username = typeof rec.username === 'string' ? rec.username : '';
   const password = typeof rec.password === 'string' ? rec.password : '';
 
-  if (username !== expectedUser || password !== expectedPass) {
+  let role: Role | null = null;
+  if (adminConfigured && username === adminUser && password === adminPass) {
+    role = 'admin';
+  } else if (guestConfigured && username === guestUser && password === guestPass) {
+    role = 'guest';
+  }
+
+  if (!role) {
     failCount += 1;
     if (failCount >= FAIL_LIMIT) {
       lockedUntil = Date.now() + LOCK_MS;
@@ -60,13 +86,18 @@ authRoute.post('/login', async (c) => {
   const token = randomBytes(24).toString('hex');
   validTokens.add(token);
   tokenUsers.set(token, username);
-  return c.json({ ok: true, token });
+  tokenRoles.set(token, role);
+  return c.json({ ok: true, token, role, username });
 });
 
 authRoute.get('/check', (c) => {
   const token = c.req.query('token') ?? '';
   if (token && isValidToken(token)) {
-    return c.json({ ok: true });
+    return c.json({
+      ok: true,
+      role: getTokenRole(token) ?? 'guest',
+      username: getTokenUser(token) ?? '',
+    });
   }
   return c.json({ ok: false }, 401);
 });
