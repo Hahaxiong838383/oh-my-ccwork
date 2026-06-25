@@ -53,6 +53,7 @@ def shifted_signals(trace: Trace, knobs: Knobs) -> list[Event]:
             risk=s.risk,
             risk_label=s.risk_label,
             signal_source=s.signal_source,
+            signal_reason=s.signal_reason,
         )
         for s in trace.signals()
     ]

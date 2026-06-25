@@ -53,6 +53,7 @@ class MockSut:
                 risk=risk,
                 risk_label=RiskLabel.from_risk(risk),
                 signal_source="mock-classifier",
+                signal_reason="内置场景预设值(非真实判断)",
             )
 
         yield Event(last_token_t, EventKind.GEN_END)

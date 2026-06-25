@@ -48,12 +48,14 @@ class KeywordRiskSut:
 
         # 找最早出现的危险词,取其结束字符位置作为 classifier "看出危险"的时刻
         hit_end: int | None = None
+        hit_word: str | None = None
         for w in self.danger_words:
             idx = text.find(w)
             if idx >= 0:
                 end = idx + len(w) - 1
                 if hit_end is None or end < hit_end:
                     hit_end = end
+                    hit_word = w
 
         if hit_end is not None and hit_end in char_t:
             yield Event(
@@ -62,6 +64,7 @@ class KeywordRiskSut:
                 risk=0.9,
                 risk_label=RiskLabel.HIGH,
                 signal_source="keyword-mock",
+                signal_reason=f"命中危险词「{hit_word}」(规则子串匹配)",
             )
         else:
             yield Event(
@@ -70,6 +73,7 @@ class KeywordRiskSut:
                 risk=0.05,
                 risk_label=RiskLabel.NONE,
                 signal_source="keyword-mock",
+                signal_reason="未命中任何危险词(规则)",
             )
 
         yield Event(last_token_t, EventKind.GEN_END)

@@ -217,7 +217,7 @@ function playOne(s){
   es.addEventListener('meta', e => {
     const d = JSON.parse(e.data);
     box.querySelector('.meta').innerHTML = d.harmful ? '<span style="color:var(--red)">危险样本</span>' : '<span style="color:var(--teal)">安全样本</span>';
-    (d.signals || []).forEach(sg => logLine('sig', `${Math.round(sg.t_ms)}ms  检测信号 → ${sg.label}${sg.risk != null ? ' (risk ' + sg.risk + ')' : ''}`));
+    (d.signals || []).forEach(sg => logLine('sig', `${Math.round(sg.t_ms)}ms  ${sg.source || '检测器'} → ${sg.label}${sg.risk != null ? ' risk ' + sg.risk : ''}　← ${sg.reason || '(无理由)'}`));
     if(s.key === 'serial-block') $('#tl-input').innerHTML = `输入:<b>${esc(d.input)}</b>`;
   });
   es.addEventListener('emit', e => {

@@ -26,6 +26,7 @@ def event_to_dict(e: Event) -> dict:
         "risk": e.risk,
         "risk_label": e.risk_label.value if e.risk_label else None,
         "signal_source": e.signal_source,
+        "signal_reason": e.signal_reason,
     }
 
 
@@ -38,6 +39,7 @@ def event_from_dict(d: dict) -> Event:
         risk=d.get("risk"),
         risk_label=RiskLabel(d["risk_label"]) if d.get("risk_label") else None,
         signal_source=d.get("signal_source"),
+        signal_reason=d.get("signal_reason"),
     )
 
 

@@ -245,7 +245,10 @@ async def replay_stream(
             "trace_id": trace_id, "strategy": result.strategy_name,
             "input": tr.input.text, "harmful": tr.is_harmful(),
             "signals": [
-                {"t_ms": round(s.t_ms, 1), "risk": s.risk, "label": s.effective_label().value}
+                {
+                    "t_ms": round(s.t_ms, 1), "risk": s.risk, "label": s.effective_label().value,
+                    "reason": s.signal_reason, "source": s.signal_source,
+                }
                 for s in sigs
             ],
         })
