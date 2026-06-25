@@ -35,7 +35,7 @@ from .scenarios import CASES, sut as scenario_sut
 from .serde import decision_to_dict, emit_to_dict, result_to_dict, trace_to_dict
 from .store import TraceStore
 from .strategies import Arbiter, Knobs, ParallelBuffer, SerialBlock
-from .strategies.base import shifted_signals
+from .strategies.base import shifted_signals, trace_is_harmful
 
 DB_PATH = os.environ.get("SAFETY_ARENA_DB", "data/traces.db")
 store = TraceStore(DB_PATH)
@@ -76,6 +76,9 @@ def build_knobs(d: dict | None) -> Knobs:
     return Knobs(
         classifier_latency_ms=float(d.get("classifier_latency_ms", 0)),
         buffer_depth_tokens=int(d.get("buffer_depth_tokens", 0)),
+        high_at=float(d.get("high_at", 0.75)),
+        medium_at=float(d.get("medium_at", 0.45)),
+        low_at=float(d.get("low_at", 0.20)),
     )
 
 
@@ -227,12 +230,18 @@ async def replay_stream(
     strategy: str = "parallel-buffer:0",
     classifier_latency_ms: float = 0.0,
     buffer_depth_tokens: int = 0,
+    high_at: float = 0.75,
+    medium_at: float = 0.45,
+    low_at: float = 0.20,
     speed: float = 8.0,
 ):
     tr = store.get(trace_id)
     if not tr:
         raise HTTPException(404, "trace 不存在")
-    knobs = Knobs(classifier_latency_ms=classifier_latency_ms, buffer_depth_tokens=buffer_depth_tokens)
+    knobs = Knobs(
+        classifier_latency_ms=classifier_latency_ms, buffer_depth_tokens=buffer_depth_tokens,
+        high_at=high_at, medium_at=medium_at, low_at=low_at,
+    )
     result = build_strategy(strategy).replay(tr, knobs)
 
     timeline = [(e.t_ms, "emit", emit_to_dict(e)) for e in result.emits]
@@ -243,7 +252,8 @@ async def replay_stream(
         sigs = shifted_signals(tr, knobs)  # 含 classifier 延迟注入后的信号时刻
         yield sse("meta", {
             "trace_id": trace_id, "strategy": result.strategy_name,
-            "input": tr.input.text, "harmful": tr.is_harmful(),
+            "input": tr.input.text, "harmful": trace_is_harmful(tr, knobs),
+            "thresholds": {"high_at": knobs.high_at, "medium_at": knobs.medium_at, "low_at": knobs.low_at},
             "signals": [
                 {
                     "t_ms": round(s.t_ms, 1), "risk": s.risk, "label": s.effective_label().value,

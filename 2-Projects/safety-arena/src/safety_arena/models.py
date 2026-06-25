@@ -29,13 +29,25 @@ class RiskLabel(str, Enum):
     @classmethod
     def from_risk(cls, risk: float) -> "RiskLabel":
         """把 0..1 的连续 risk 分数映射到等级(默认阈值,可被分类器自带 label 覆盖)。"""
-        if risk >= 0.75:
-            return cls.HIGH
-        if risk >= 0.45:
-            return cls.MEDIUM
-        if risk >= 0.20:
-            return cls.LOW
-        return cls.NONE
+        return label_at(risk)
+
+
+def label_at(
+    risk: float | None,
+    high_at: float = 0.75,
+    medium_at: float = 0.45,
+    low_at: float = 0.20,
+) -> RiskLabel:
+    """用**可编辑阈值**把 risk 数值映射到等级 —— risk 定义逻辑的单一真相源,前端调阈值即改这里的边界。"""
+    if risk is None:
+        return RiskLabel.NONE
+    if risk >= high_at:
+        return RiskLabel.HIGH
+    if risk >= medium_at:
+        return RiskLabel.MEDIUM
+    if risk >= low_at:
+        return RiskLabel.LOW
+    return RiskLabel.NONE
 
 
 class EventKind(str, Enum):

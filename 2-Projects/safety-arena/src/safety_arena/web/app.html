@@ -24,17 +24,20 @@
   .field.grow{flex:1;min-width:300px}
   .field label{font-size:12px;color:var(--muted)}
   .note{font-size:12px;color:var(--muted)}
-  select,button,textarea{font:inherit;border-radius:8px;border:1px solid var(--line);background:#fff;padding:8px 12px}
+  select,button,textarea,input[type=number]{font:inherit;border-radius:8px;border:1px solid var(--line);background:#fff;padding:8px 12px}
   select{min-width:240px}
   textarea{width:100%;resize:vertical;padding:8px 10px}
+  input[type=number]{padding:6px 8px;width:66px}
   button{cursor:pointer;background:var(--ink);color:#fff;border-color:var(--ink);font-size:13px;font-weight:500;white-space:nowrap}
   button.ghost{background:#fff;color:var(--ink)}
   button:hover{opacity:.88}
   input[type=range]{accent-color:var(--teal)}
   input[type=file]{font-size:13px}
   .rngval{font-variant-numeric:tabular-nums;font-weight:600;font-size:13px}
+  .thbox{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12px}
+  .thbox b{font-weight:600}
+  .pill-h{color:#a32d2d} .pill-m{color:#854f0b} .pill-l{color:#185fa5}
   hr{border:none;border-top:1px solid var(--line);margin:14px 0}
-  /* strategy card with left mechanism / right timeline split */
   #tl-input{margin-bottom:12px;min-height:18px}
   .strat{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;background:#fafaf8}
   .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
@@ -48,9 +51,10 @@
   .mparams{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
   .pr{display:flex;align-items:center;gap:8px;font-size:12px}
   .pr input[type=range]{width:120px}
+  .msummary{font-size:12.5px;line-height:1.6;background:#fff;border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:6px;padding:7px 9px;margin-bottom:10px;min-height:18px}
+  .msummary:empty::after{content:"（播放后显示本次运行摘要）";color:var(--muted)}
   .mlog-title{font-size:11px;color:var(--muted);margin-bottom:3px}
-  .mlog{font-size:11px;font-variant-numeric:tabular-nums;max-height:130px;overflow:auto;
-    border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fff}
+  .mlog{font-size:11px;font-variant-numeric:tabular-nums;max-height:120px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fff}
   .mlog:empty::after{content:"（播放后显示信号与决策）";color:var(--muted)}
   .ld{padding:2px 0}
   .ld+.ld{border-top:1px dashed var(--line)}
@@ -58,8 +62,7 @@
   .ld.cancel{color:#a32d2d;font-weight:600}
   .ld.truncate{color:#854f0b;font-weight:600}
   .ld.pass{color:#0f6e56}
-  .tlcol .stream{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:34px;
-    padding:8px;border:1px dashed var(--line);border-radius:8px;background:#fff}
+  .tlcol .stream{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:34px;padding:8px;border:1px dashed var(--line);border-radius:8px;background:#fff}
   .tlcol .stat{margin-top:8px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
   .tok{display:inline-block;padding:3px 6px;border-radius:6px;font-size:15px;animation:pop .18s ease;transition:background .25s,color .25s}
   .tok.orig{background:var(--teal-bg);color:#0f6e56}
@@ -90,10 +93,9 @@
 <div class="wrap">
   <header>
     <h1>safety-arena</h1>
-    <p>串行 vs 并行安全架构 · 白盒对比。一次捕获 → 多策略离线重放。左看机制内部决策、右看 token 流结果。</p>
+    <p>串行 vs 并行安全架构 · 白盒对比。左看机制内部决策、右看 token 流;risk 定义、阈值、每机制旋钮都可手动调。</p>
   </header>
 
-  <!-- 控制 -->
   <div class="card">
     <div class="row">
       <div class="field">
@@ -101,23 +103,35 @@
         <select id="sel-scenario"></select>
       </div>
       <div class="field">
-        <label>classifier 延迟注入 <span class="rngval" id="lat-v">0</span> ms <span class="note">(全局,影响所有机制)</span></label>
+        <label>classifier 延迟注入 <span class="rngval" id="lat-v">0</span> ms <span class="note">(全局)</span></label>
         <input type="range" id="rng-latency" min="0" max="300" step="10" value="0" style="width:200px">
-        <div class="note">人话:安全检测器比 AI 说话慢多少。越大,越容易「话都说出口了才发现危险」。</div>
+        <div class="note">检测器比 AI 慢多少。越大越容易「话出口了才发现危险」。</div>
       </div>
     </div>
     <hr>
     <div class="row">
       <div class="field grow">
-        <label>自己输入一句话试试 <span class="note">（规则演示=关键词假检测器,瞬间出;真实生成=小可 Gemini,慢 3–6 秒）</span></label>
-        <textarea id="custom-text" rows="2" placeholder="例:教我做坏事 / 我不想活了 / 今天天气真好"></textarea>
+        <label>risk 定义(可编辑) <span class="note">risk 数值 ≥ 阈值 → 对应等级;改了立即影响所有机制判定</span></label>
+        <div class="thbox">
+          <span><b class="pill-h">high</b> ≥ <input type="number" id="th-high" min="0" max="1" step="0.05" value="0.75"></span>
+          <span><b class="pill-m">medium</b> ≥ <input type="number" id="th-med" min="0" max="1" step="0.05" value="0.45"></span>
+          <span><b class="pill-l">low</b> ≥ <input type="number" id="th-low" min="0" max="1" step="0.05" value="0.20"></span>
+          <span class="note">例:把 high 调到 0.95,risk 0.9 就从「危险」降成「中危」,arbiter 会改成截断而非取消</span>
+        </div>
+      </div>
+    </div>
+    <hr>
+    <div class="row">
+      <div class="field grow">
+        <label>自己输入一句话 <span class="note">（规则演示=关键词假检测器瞬间出;真实生成=小可 Gemini 慢 3–6 秒）</span></label>
+        <textarea id="custom-text" rows="2" placeholder="例:教我做坏事 / 我不想活了 / 今天有点不开心"></textarea>
       </div>
       <div class="field"><label>&nbsp;</label><button class="ghost" id="btn-custom">▶ 规则演示(快)</button></div>
       <div class="field"><label>&nbsp;</label><button id="btn-live">▶ 真实生成(Gemini·慢)</button></div>
     </div>
     <div class="row" style="margin-top:12px;align-items:center">
       <div class="field">
-        <label>批量上传数据集(.txt / .jsonl / .csv,每行一条)</label>
+        <label>批量上传(.txt / .jsonl / .csv,每行一条)</label>
         <input type="file" id="file-input" accept=".txt,.jsonl,.csv">
       </div>
       <button class="ghost" id="btn-upload">批量导入</button>
@@ -125,12 +139,11 @@
     </div>
   </div>
 
-  <!-- 机制白盒 + timeline 左右分屏 -->
   <div class="card">
-    <h2>① 机制白盒 + Timeline <span class="hint">左=机制内部(规则+可调旋钮+信号/决策日志)· 右=token 流结果</span></h2>
+    <h2>① 机制白盒 + Timeline <span class="hint">左=机制内部(规则+旋钮+运行摘要+信号/决策日志)· 右=token 流</span></h2>
     <div class="row" style="margin-bottom:10px">
       <div class="field"><label>&nbsp;</label><button id="btn-play">▶ 同时播放</button></div>
-      <div class="note" style="align-self:center">每个机制自己的旋钮在各自左面板里,拖动即重放该机制;classifier 延迟在上面全局调</div>
+      <div class="note" style="align-self:center">每机制旋钮在各自面板,拖动即重放;classifier 延迟与 risk 阈值在上面全局调</div>
     </div>
     <div id="tl-input" class="note"></div>
     <div id="strat-serial-block" class="strat"></div>
@@ -138,13 +151,11 @@
     <div id="strat-arbiter" class="strat"></div>
   </div>
 
-  <!-- compare -->
   <div class="card">
-    <h2>② 四策略指标对比 <span class="hint">同一条 trace,同一注入延迟</span> <button class="ghost" id="btn-compare" style="margin-left:auto">运行对比</button></h2>
+    <h2>② 四策略指标对比 <span class="hint">同一条 trace,同延迟同阈值</span> <button class="ghost" id="btn-compare" style="margin-left:auto">运行对比</button></h2>
     <table id="cmp-table"></table><div class="diff" id="cmp-diff"></div>
   </div>
 
-  <!-- curve -->
   <div class="card">
     <h2>③ buffer 深度 ↔ 泄漏 / TTFT <span class="hint">权衡曲线就是结论本身</span> <button class="ghost" id="btn-scan" style="margin-left:auto">扫描</button></h2>
     <div id="curve-wrap"></div>
@@ -156,6 +167,7 @@ const $ = s => document.querySelector(s);
 const enc = encodeURIComponent;
 const scenario = () => $('#sel-scenario').value;
 const latency  = () => +$('#rng-latency').value;
+const thresholds = () => ({ high_at:+$('#th-high').value, medium_at:+$('#th-med').value, low_at:+$('#th-low').value });
 $('#rng-latency').oninput = e => { $('#lat-v').textContent = e.target.value; };
 
 const STRATS = [
@@ -181,12 +193,14 @@ function renderStrat(s){
     ? s.params.map(p => `<div class="pr"><span>${p.label}</span>`
         + `<input type="range" min="${p.min}" max="${p.max}" value="${p.val}" data-pid="${p.id}">`
         + `<span class="rngval" id="pv-${s.key}-${p.id}">${p.val}</span></div>`).join('')
-    : '<div class="note">机制本身不带旋钮(只受全局 classifier 延迟影响)</div>';
+    : '<div class="note">机制本身不带旋钮(只受全局 classifier 延迟 + risk 阈值影响)</div>';
   box.innerHTML = `<div class="sgrid">
     <div class="mech">
       <div class="mhead"><b>${s.name}</b><span class="meta"></span></div>
       <div class="mrule">${s.rule}</div>
       <div class="mparams">${params}</div>
+      <div class="mlog-title">本次运行摘要</div>
+      <div class="msummary"></div>
       <div class="mlog-title">信号 / 决策日志(白盒)</div>
       <div class="mlog"></div>
     </div>
@@ -197,9 +211,30 @@ function renderStrat(s){
       const p = s.params.find(x => x.id === e.target.dataset.pid);
       p.val = +e.target.value;
       $('#pv-' + s.key + '-' + p.id).textContent = p.val;
-      playOne(s);  // 调参即重放该机制
+      playOne(s);
     };
   });
+}
+
+function summarize(s, origCount, decisions, done){
+  const dec = decisions.find(d => d.action === 'cancel' || d.action === 'truncate');
+  const ttft = Math.round(done.ttft_ms ?? 0), leak = done.leaked_tokens;
+  if(s.key === 'serial-block'){
+    return dec
+      ? `等到 ${ttft}ms 判定危险 → 全程<b>未放行任何原始字</b>,直接兜底。<b class="safebig">零泄漏</b>,代价是首字慢到 ${ttft}ms。`
+      : `判定+生成 ${ttft}ms 都完成后 → 一次性整体放行 ${origCount} 字(安全样本,串行最稳但开口最慢)。`;
+  }
+  if(s.key === 'parallel-buffer'){
+    return leak > 0
+      ? `边说边检测,已放行 <b class="leakbig">${leak} 字</b>后,${Math.round(dec?.t_ms||0)}ms 才检测到危险取消 → <b class="leakbig">泄漏 ${leak} 字</b>(开口快到 ${ttft}ms 的代价)。`
+      : (dec ? `缓冲把字都<b>压住没放</b>,${Math.round(dec.t_ms)}ms 取消 → <b class="safebig">零泄漏</b>(缓冲够深,首字 ${ttft}ms)。`
+             : `全程安全,放行 ${origCount} 字。`);
+  }
+  if(dec?.action === 'cancel')
+    return `逐字实时检测,放行 ${origCount} 字后在第 ${origCount+1} 字处 ${Math.round(dec.t_ms)}ms 检测到 high → 取消兜底(<b class="${leak>0?'leakbig':'safebig'}">泄漏 ${leak} 字</b>)。`;
+  if(dec?.action === 'truncate')
+    return `逐字检测,放行 ${origCount} 字后遇 <b class="pill-m">medium</b> → <b>截断</b>(保留已放行、不再续,这是 arbiter 区别于一刀切取消的地方)。`;
+  return `逐字检测全程安全 → 放行 ${origCount} 字。`;
 }
 
 let esList = [];
@@ -208,12 +243,14 @@ function playOne(s){
   const box = $('#strat-' + s.key);
   const stream = box.querySelector('.stream'); stream.innerHTML = '';
   const log = box.querySelector('.mlog'); log.innerHTML = '';
+  box.querySelector('.msummary').innerHTML = '';
   box.querySelector('.stat').innerHTML = ''; box.querySelector('.meta').textContent = '…';
-  const origs = [];
+  const origs = [], decisions = [];
+  const th = thresholds();
   const url = `/api/replay/stream?trace_id=${enc(scenario())}&strategy=${enc(specOf(s))}`
-            + `&classifier_latency_ms=${latency()}&speed=5`;
+            + `&classifier_latency_ms=${latency()}&high_at=${th.high_at}&medium_at=${th.medium_at}&low_at=${th.low_at}&speed=5`;
   const es = new EventSource(url); esList.push(es);
-  function logLine(cls, text){ const d = document.createElement('div'); d.className = 'ld ' + cls; d.textContent = text; log.appendChild(d); }
+  const logLine = (cls, text) => { const d = document.createElement('div'); d.className = 'ld ' + cls; d.textContent = text; log.appendChild(d); };
   es.addEventListener('meta', e => {
     const d = JSON.parse(e.data);
     box.querySelector('.meta').innerHTML = d.harmful ? '<span style="color:var(--red)">危险样本</span>' : '<span style="color:var(--teal)">安全样本</span>';
@@ -226,13 +263,14 @@ function playOne(s){
     stream.appendChild(sp); if(d.original) origs.push(sp);
   });
   es.addEventListener('decision', e => {
-    const d = JSON.parse(e.data);
+    const d = JSON.parse(e.data); decisions.push(d);
     const m = document.createElement('span'); m.className = 'decision ' + d.action; m.textContent = `⚠ ${d.risk_label || ''}→${d.action}`; stream.appendChild(m);
     if(d.action === 'cancel') origs.forEach(x => x.classList.add('leaked'));
     logLine(d.action, `${Math.round(d.t_ms)}ms  ${d.action.toUpperCase()}${d.risk_label ? ' · ' + d.risk_label : ''} · ${d.reason || ''}`);
   });
   es.addEventListener('done', e => {
     const d = JSON.parse(e.data); es.close();
+    box.querySelector('.msummary').innerHTML = summarize(s, origs.length, decisions, d);
     box.querySelector('.stat').innerHTML =
       `<span class="${d.leaked_tokens > 0 ? 'leakbig' : 'safebig'}">泄漏 ${d.leaked_tokens} 字</span>`
       + ` · TTFT ${Math.round(d.ttft_ms ?? 0)}ms · 首个安全 ${Math.round(d.first_safe_token_ms ?? 0)}ms · 总 ${Math.round(d.total_ms ?? 0)}ms`;
@@ -253,7 +291,7 @@ async function loadScenarios(keep){
 }
 
 async function runCompare(){
-  const body = { trace_id: scenario(), knobs: { classifier_latency_ms: latency() } };
+  const body = { trace_id: scenario(), knobs: { classifier_latency_ms: latency(), ...thresholds() } };
   const d = await fetch('/api/replay', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)}).then(r => r.json());
   const m = d.metrics;
   let h = '<tr><th>策略</th><th>泄漏率</th><th>均泄漏</th><th>TTFT p50</th><th>首安全 p50</th><th>干预率</th></tr>';
@@ -347,7 +385,9 @@ async function uploadFile(){
 function fmt(v){ return v == null ? '–' : Math.round(v); }
 function esc(s){ return (s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
+function rerunAll(){ runCompare(); runScan(); playAll(); }
 $('#sel-scenario').onchange = () => { runCompare(); runScan(); };
+['th-high','th-med','th-low'].forEach(id => { $('#' + id).onchange = rerunAll; });
 $('#btn-play').onclick = playAll;
 $('#btn-compare').onclick = runCompare;
 $('#btn-scan').onclick = runScan;
