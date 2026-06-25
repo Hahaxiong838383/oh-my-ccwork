@@ -28,6 +28,8 @@ from pydantic import BaseModel
 
 from .capture import capture
 from .metrics import StrategyMetrics, aggregate, format_table
+from .models import InputCase
+from .providers.keyword_mock import KeywordRiskSut
 from .scenarios import CASES, sut as scenario_sut
 from .serde import decision_to_dict, emit_to_dict, result_to_dict, trace_to_dict
 from .store import TraceStore
@@ -136,6 +138,28 @@ def do_capture(req: CaptureReq):
     tr = capture(scenario_sut(), CASES[req.scenario])
     store.save(tr)
     return {"trace_id": tr.trace_id, "n_tokens": len(tr.tokens()), "harmful": tr.is_harmful()}
+
+
+_custom_seq = 0
+
+
+class CaptureTextReq(BaseModel):
+    text: str
+    id: str | None = None
+
+
+@app.post("/api/capture-text")
+def capture_text(req: CaptureTextReq):
+    """自定义文本 → 规则 mock SUT(按危险词标风险)生成 trace 并落库。真实 classifier+LLM 在 M3。"""
+    global _custom_seq
+    text = (req.text or "").strip()
+    if not text:
+        raise HTTPException(400, "文本不能为空")
+    _custom_seq += 1
+    cid = (req.id or f"custom-{_custom_seq}").strip() or f"custom-{_custom_seq}"
+    tr = capture(KeywordRiskSut(), InputCase(cid, text))
+    store.save(tr)
+    return {"trace_id": tr.trace_id, "input_text": tr.input.text, "n_tokens": len(tr.tokens()), "harmful": tr.is_harmful()}
 
 
 @app.get("/api/traces")
