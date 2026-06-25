@@ -35,6 +35,7 @@ from .scenarios import CASES, sut as scenario_sut
 from .serde import decision_to_dict, emit_to_dict, result_to_dict, trace_to_dict
 from .store import TraceStore
 from .strategies import Arbiter, Knobs, ParallelBuffer, SerialBlock
+from .strategies.base import shifted_signals
 
 DB_PATH = os.environ.get("SAFETY_ARENA_DB", "data/traces.db")
 store = TraceStore(DB_PATH)
@@ -239,8 +240,15 @@ async def replay_stream(
     timeline.sort(key=lambda x: x[0])
 
     async def gen():
-        yield sse("meta", {"trace_id": trace_id, "strategy": result.strategy_name,
-                           "input": tr.input.text, "harmful": tr.is_harmful()})
+        sigs = shifted_signals(tr, knobs)  # 含 classifier 延迟注入后的信号时刻
+        yield sse("meta", {
+            "trace_id": trace_id, "strategy": result.strategy_name,
+            "input": tr.input.text, "harmful": tr.is_harmful(),
+            "signals": [
+                {"t_ms": round(s.t_ms, 1), "risk": s.risk, "label": s.effective_label().value}
+                for s in sigs
+            ],
+        })
         prev = 0.0
         for t_ms, kind, payload in timeline:
             dt = (t_ms - prev) / max(speed, 0.01) / 1000.0

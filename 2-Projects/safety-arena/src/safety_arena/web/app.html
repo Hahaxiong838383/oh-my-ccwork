@@ -8,12 +8,12 @@
   :root{
     --bg:#f6f6f4; --card:#fff; --ink:#1b1b1a; --muted:#6b6b66; --line:#e6e6e1;
     --teal:#1D9E75; --teal-bg:#e1f5ee; --red:#E24B4A; --red-bg:#fceaea;
-    --amber:#EF9F27; --amber-bg:#faeeda; --blue:#378ADD; --blue-bg:#e6f1fb;
+    --amber:#EF9F27; --amber-bg:#faeeda; --blue:#185fa5; --blue-bg:#e6f1fb;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
     font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.5}
-  .wrap{max-width:1000px;margin:0 auto;padding:24px 20px 80px}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 20px 80px}
   header h1{font-size:22px;margin:0 0 4px;font-weight:600}
   header p{margin:0 0 20px;color:var(--muted);font-size:14px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:18px}
@@ -30,19 +30,37 @@
   button{cursor:pointer;background:var(--ink);color:#fff;border-color:var(--ink);font-size:13px;font-weight:500;white-space:nowrap}
   button.ghost{background:#fff;color:var(--ink)}
   button:hover{opacity:.88}
-  input[type=range]{width:170px;accent-color:var(--teal)}
+  input[type=range]{accent-color:var(--teal)}
   input[type=file]{font-size:13px}
   .rngval{font-variant-numeric:tabular-nums;font-weight:600;font-size:13px}
   hr{border:none;border-top:1px solid var(--line);margin:14px 0}
-  /* strategy blocks */
-  #tl-input{margin-bottom:10px;min-height:18px}
-  .strat{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fafaf8}
-  .strat .sh{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
-  .strat .sh b{font-size:14px}
-  .strat .sd{font-size:12px;color:var(--muted)}
-  .strat .sh .meta{margin-left:auto;font-size:12px}
-  .strat .stream{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:32px}
-  .strat .stat{margin-top:8px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+  /* strategy card with left mechanism / right timeline split */
+  #tl-input{margin-bottom:12px;min-height:18px}
+  .strat{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;background:#fafaf8}
+  .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:780px){.sgrid{grid-template-columns:1fr}}
+  .mech{border-right:1px solid var(--line);padding-right:16px}
+  @media(max-width:780px){.mech{border-right:none;border-bottom:1px solid var(--line);padding-right:0;padding-bottom:12px}}
+  .mhead{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+  .mhead b{font-size:14px}
+  .mhead .meta{margin-left:auto;font-size:12px}
+  .mrule{font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:10px}
+  .mparams{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
+  .pr{display:flex;align-items:center;gap:8px;font-size:12px}
+  .pr input[type=range]{width:120px}
+  .mlog-title{font-size:11px;color:var(--muted);margin-bottom:3px}
+  .mlog{font-size:11px;font-variant-numeric:tabular-nums;max-height:130px;overflow:auto;
+    border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fff}
+  .mlog:empty::after{content:"（播放后显示信号与决策）";color:var(--muted)}
+  .ld{padding:2px 0}
+  .ld+.ld{border-top:1px dashed var(--line)}
+  .ld.sig{color:var(--blue)}
+  .ld.cancel{color:#a32d2d;font-weight:600}
+  .ld.truncate{color:#854f0b;font-weight:600}
+  .ld.pass{color:#0f6e56}
+  .tlcol .stream{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:34px;
+    padding:8px;border:1px dashed var(--line);border-radius:8px;background:#fff}
+  .tlcol .stat{margin-top:8px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
   .tok{display:inline-block;padding:3px 6px;border-radius:6px;font-size:15px;animation:pop .18s ease;transition:background .25s,color .25s}
   .tok.orig{background:var(--teal-bg);color:#0f6e56}
   .tok.fallback{background:var(--amber-bg);color:#854f0b;font-style:italic}
@@ -52,7 +70,6 @@
   .decision.truncate{background:var(--amber-bg);color:#854f0b}
   @keyframes pop{from{transform:translateY(4px);opacity:0}to{transform:none;opacity:1}}
   .leakbig{color:var(--red);font-weight:600} .safebig{color:var(--teal);font-weight:600}
-  /* table */
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
   th{color:var(--muted);font-weight:500;font-size:12px}
@@ -73,7 +90,7 @@
 <div class="wrap">
   <header>
     <h1>safety-arena</h1>
-    <p>串行 vs 并行安全架构 · 白盒对比。一次捕获 → 多策略离线重放。逐帧看 token 何时泄漏、何时被拦。</p>
+    <p>串行 vs 并行安全架构 · 白盒对比。一次捕获 → 多策略离线重放。左看机制内部决策、右看 token 流结果。</p>
   </header>
 
   <!-- 控制 -->
@@ -84,15 +101,15 @@
         <select id="sel-scenario"></select>
       </div>
       <div class="field">
-        <label>classifier 延迟注入 <span class="rngval" id="lat-v">0</span> ms</label>
-        <input type="range" id="rng-latency" min="0" max="300" step="10" value="0">
+        <label>classifier 延迟注入 <span class="rngval" id="lat-v">0</span> ms <span class="note">(全局,影响所有机制)</span></label>
+        <input type="range" id="rng-latency" min="0" max="300" step="10" value="0" style="width:200px">
         <div class="note">人话:安全检测器比 AI 说话慢多少。越大,越容易「话都说出口了才发现危险」。</div>
       </div>
     </div>
     <hr>
     <div class="row">
       <div class="field grow">
-        <label>自己输入一句话试试 <span class="note">（演示用规则:按危险词标风险;真检测器在 M3 接入）</span></label>
+        <label>自己输入一句话试试 <span class="note">（规则演示=关键词假检测器,瞬间出;真实生成=小可 Gemini,慢 3–6 秒）</span></label>
         <textarea id="custom-text" rows="2" placeholder="例:教我做坏事 / 我不想活了 / 今天天气真好"></textarea>
       </div>
       <div class="field"><label>&nbsp;</label><button class="ghost" id="btn-custom">▶ 规则演示(快)</button></div>
@@ -108,31 +125,17 @@
     </div>
   </div>
 
-  <!-- timeline · 3 策略并排 -->
+  <!-- 机制白盒 + timeline 左右分屏 -->
   <div class="card">
-    <h2>① Timeline · 3 策略同时对比 <span class="hint">同一条输入,三种安全架构并排逐帧重放 —— 已放行后被标红=泄漏</span></h2>
+    <h2>① 机制白盒 + Timeline <span class="hint">左=机制内部(规则+可调旋钮+信号/决策日志)· 右=token 流结果</span></h2>
     <div class="row" style="margin-bottom:10px">
-      <div class="field">
-        <label>buffer 深度 k <span class="rngval" id="buf-v">0</span></label>
-        <input type="range" id="rng-buffer" min="0" max="8" step="1" value="0">
-        <div class="note">人话:AI 先憋住几个字、等检测结果再吐出来。越大越不容易说漏,但开口越慢。（只对「并行+缓冲」生效）</div>
-      </div>
       <div class="field"><label>&nbsp;</label><button id="btn-play">▶ 同时播放</button></div>
+      <div class="note" style="align-self:center">每个机制自己的旋钮在各自左面板里,拖动即重放该机制;classifier 延迟在上面全局调</div>
     </div>
     <div id="tl-input" class="note"></div>
-
-    <div id="strat-serial-block" class="strat">
-      <div class="sh"><b>串行阻断</b><span class="sd">检测器看完全文、确认安全才开口 · 零泄漏但开口最慢</span><span class="meta"></span></div>
-      <div class="stream"></div><div class="stat"></div>
-    </div>
-    <div id="strat-parallel-buffer" class="strat">
-      <div class="sh"><b>并行 + 缓冲</b><span class="sd">边说边检测,憋住最近 k 个字等结果 · 出现高危就取消并兜底</span><span class="meta"></span></div>
-      <div class="stream"></div><div class="stat"></div>
-    </div>
-    <div id="strat-arbiter" class="strat">
-      <div class="sh"><b>实时分级仲裁</b><span class="sd">边说边检测,按风险分级:高危取消 / 中危截断 / 安全放行</span><span class="meta"></span></div>
-      <div class="stream"></div><div class="stat"></div>
-    </div>
+    <div id="strat-serial-block" class="strat"></div>
+    <div id="strat-parallel-buffer" class="strat"></div>
+    <div id="strat-arbiter" class="strat"></div>
   </div>
 
   <!-- compare -->
@@ -153,97 +156,126 @@ const $ = s => document.querySelector(s);
 const enc = encodeURIComponent;
 const scenario = () => $('#sel-scenario').value;
 const latency  = () => +$('#rng-latency').value;
-const buffer   = () => +$('#rng-buffer').value;
-
-$('#rng-latency').oninput = e => $('#lat-v').textContent = e.target.value;
-$('#rng-buffer').oninput  = e => $('#buf-v').textContent = e.target.value;
+$('#rng-latency').oninput = e => { $('#lat-v').textContent = e.target.value; };
 
 const STRATS = [
-  {key:'serial-block',    spec:'serial-block'},
-  {key:'parallel-buffer', spec:'parallel-buffer'},
-  {key:'arbiter',         spec:'arbiter'},
+  {key:'serial-block', name:'串行阻断',
+   rule:'classifier 判定完成后才决定:安全→放行全部 / 危险→取消并兜底。必须等「判定 AND 生成」都完成,所以开口最慢、但零泄漏。',
+   params:[]},
+  {key:'parallel-buffer', name:'并行 + 缓冲',
+   rule:'token 边生成边流式输出,缓冲最近 k 个字等检测;出现 high 信号 → 取消(缓冲里没放行的丢弃,已放行的算泄漏)。k 越大越不漏、但开口越慢。',
+   params:[{id:'k', label:'缓冲深度 k', min:0, max:8, val:0}]},
+  {key:'arbiter', name:'实时分级仲裁',
+   rule:'每个字放行时查当前风险:high→取消兜底 / medium→截断(保留已出) / low→放行。带反应缓冲 k 给信号一点反应窗口。',
+   params:[{id:'k', label:'反应缓冲 k', min:0, max:8, val:0}]},
 ];
-
-async function loadScenarios(keep){
-  const r = await fetch('/api/traces').then(r=>r.json());
-  const sel = $('#sel-scenario'); const cur = keep || sel.value; sel.innerHTML='';
-  for(const t of r.traces){
-    const o = document.createElement('option');
-    o.value = t.trace_id;
-    o.textContent = `${t.input_text}  ·  ${t.harmful?'危险':'安全'} (${t.n_tokens} 字)`;
-    sel.appendChild(o);
-  }
-  if(cur && [...sel.options].some(o=>o.value===cur)) sel.value = cur;
-  else { const h = r.traces.find(t=>t.trace_id.startsWith('harm-early')); if(h) sel.value = h.trace_id; }
+function pval(s, id){ const p = s.params.find(x => x.id === id); return p ? p.val : 0; }
+function specOf(s){
+  if(s.key === 'serial-block') return 'serial-block';
+  if(s.key === 'parallel-buffer') return 'parallel-buffer:' + pval(s, 'k');
+  return 'arbiter:' + pval(s, 'k');
 }
-
-// ---- ① 3 策略同时播放 ----
-let esList = [];
-function playAll(){
-  esList.forEach(e=>e.close()); esList = [];
-  $('#tl-input').textContent = '';
-  for(const s of STRATS) playOne(s);
-}
-function playOne(s){
-  const box = $('#strat-'+s.key);
-  const stream = box.querySelector('.stream'); stream.innerHTML='';
-  box.querySelector('.stat').innerHTML=''; box.querySelector('.meta').textContent='…';
-  const origs = [];
-  const url = `/api/replay/stream?trace_id=${enc(scenario())}&strategy=${enc(s.spec)}`
-            + `&buffer_depth_tokens=${buffer()}&classifier_latency_ms=${latency()}&speed=5`;
-  const es = new EventSource(url); esList.push(es);
-  es.addEventListener('meta', e=>{
-    const d = JSON.parse(e.data);
-    box.querySelector('.meta').innerHTML = d.harmful?'<span style="color:var(--red)">危险样本</span>':'<span style="color:var(--teal)">安全样本</span>';
-    if(s.key==='serial-block') $('#tl-input').innerHTML = `输入:<b>${escAttr(d.input)}</b>`;
+function renderStrat(s){
+  const box = $('#strat-' + s.key);
+  const params = s.params.length
+    ? s.params.map(p => `<div class="pr"><span>${p.label}</span>`
+        + `<input type="range" min="${p.min}" max="${p.max}" value="${p.val}" data-pid="${p.id}">`
+        + `<span class="rngval" id="pv-${s.key}-${p.id}">${p.val}</span></div>`).join('')
+    : '<div class="note">机制本身不带旋钮(只受全局 classifier 延迟影响)</div>';
+  box.innerHTML = `<div class="sgrid">
+    <div class="mech">
+      <div class="mhead"><b>${s.name}</b><span class="meta"></span></div>
+      <div class="mrule">${s.rule}</div>
+      <div class="mparams">${params}</div>
+      <div class="mlog-title">信号 / 决策日志(白盒)</div>
+      <div class="mlog"></div>
+    </div>
+    <div class="tlcol"><div class="stream"></div><div class="stat"></div></div>
+  </div>`;
+  box.querySelectorAll('input[type=range]').forEach(r => {
+    r.oninput = e => {
+      const p = s.params.find(x => x.id === e.target.dataset.pid);
+      p.val = +e.target.value;
+      $('#pv-' + s.key + '-' + p.id).textContent = p.val;
+      playOne(s);  // 调参即重放该机制
+    };
   });
-  es.addEventListener('emit', e=>{
+}
+
+let esList = [];
+function playAll(){ esList.forEach(e => e.close()); esList = []; $('#tl-input').textContent = ''; STRATS.forEach(playOne); }
+function playOne(s){
+  const box = $('#strat-' + s.key);
+  const stream = box.querySelector('.stream'); stream.innerHTML = '';
+  const log = box.querySelector('.mlog'); log.innerHTML = '';
+  box.querySelector('.stat').innerHTML = ''; box.querySelector('.meta').textContent = '…';
+  const origs = [];
+  const url = `/api/replay/stream?trace_id=${enc(scenario())}&strategy=${enc(specOf(s))}`
+            + `&classifier_latency_ms=${latency()}&speed=5`;
+  const es = new EventSource(url); esList.push(es);
+  function logLine(cls, text){ const d = document.createElement('div'); d.className = 'ld ' + cls; d.textContent = text; log.appendChild(d); }
+  es.addEventListener('meta', e => {
     const d = JSON.parse(e.data);
-    const sp = document.createElement('span');
-    sp.className = 'tok ' + (d.original?'orig':'fallback'); sp.textContent = d.text;
+    box.querySelector('.meta').innerHTML = d.harmful ? '<span style="color:var(--red)">危险样本</span>' : '<span style="color:var(--teal)">安全样本</span>';
+    (d.signals || []).forEach(sg => logLine('sig', `${Math.round(sg.t_ms)}ms  检测信号 → ${sg.label}${sg.risk != null ? ' (risk ' + sg.risk + ')' : ''}`));
+    if(s.key === 'serial-block') $('#tl-input').innerHTML = `输入:<b>${esc(d.input)}</b>`;
+  });
+  es.addEventListener('emit', e => {
+    const d = JSON.parse(e.data);
+    const sp = document.createElement('span'); sp.className = 'tok ' + (d.original ? 'orig' : 'fallback'); sp.textContent = d.text;
     stream.appendChild(sp); if(d.original) origs.push(sp);
   });
-  es.addEventListener('decision', e=>{
+  es.addEventListener('decision', e => {
     const d = JSON.parse(e.data);
-    const m = document.createElement('span'); m.className='decision '+d.action;
-    m.textContent = `⚠ ${d.risk_label||''}→${d.action}`; stream.appendChild(m);
-    if(d.action==='cancel') origs.forEach(x=>x.classList.add('leaked'));
+    const m = document.createElement('span'); m.className = 'decision ' + d.action; m.textContent = `⚠ ${d.risk_label || ''}→${d.action}`; stream.appendChild(m);
+    if(d.action === 'cancel') origs.forEach(x => x.classList.add('leaked'));
+    logLine(d.action, `${Math.round(d.t_ms)}ms  ${d.action.toUpperCase()}${d.risk_label ? ' · ' + d.risk_label : ''} · ${d.reason || ''}`);
   });
-  es.addEventListener('done', e=>{
+  es.addEventListener('done', e => {
     const d = JSON.parse(e.data); es.close();
     box.querySelector('.stat').innerHTML =
-      `<span class="${d.leaked_tokens>0?'leakbig':'safebig'}">泄漏 ${d.leaked_tokens} 字</span>`
-      + ` · TTFT ${Math.round(d.ttft_ms??0)}ms · 首个安全 ${Math.round(d.first_safe_token_ms??0)}ms · 总 ${Math.round(d.total_ms??0)}ms`;
+      `<span class="${d.leaked_tokens > 0 ? 'leakbig' : 'safebig'}">泄漏 ${d.leaked_tokens} 字</span>`
+      + ` · TTFT ${Math.round(d.ttft_ms ?? 0)}ms · 首个安全 ${Math.round(d.first_safe_token_ms ?? 0)}ms · 总 ${Math.round(d.total_ms ?? 0)}ms`;
   });
-  es.onerror = ()=>{ box.querySelector('.meta').innerHTML='<span class="err">中断</span>'; es.close(); };
+  es.onerror = () => { box.querySelector('.meta').innerHTML = '<span class="err">中断</span>'; es.close(); };
 }
 
-// ---- ② compare ----
+async function loadScenarios(keep){
+  const r = await fetch('/api/traces').then(r => r.json());
+  const sel = $('#sel-scenario'); const cur = keep || sel.value; sel.innerHTML = '';
+  for(const t of r.traces){
+    const o = document.createElement('option');
+    o.value = t.trace_id; o.textContent = `${t.input_text}  ·  ${t.harmful ? '危险' : '安全'} (${t.n_tokens} 字)`;
+    sel.appendChild(o);
+  }
+  if(cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+  else { const h = r.traces.find(t => t.trace_id.startsWith('harm-early')); if(h) sel.value = h.trace_id; }
+}
+
 async function runCompare(){
   const body = { trace_id: scenario(), knobs: { classifier_latency_ms: latency() } };
-  const d = await fetch('/api/replay',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  const d = await fetch('/api/replay', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)}).then(r => r.json());
   const m = d.metrics;
   let h = '<tr><th>策略</th><th>泄漏率</th><th>均泄漏</th><th>TTFT p50</th><th>首安全 p50</th><th>干预率</th></tr>';
   for(const k of Object.keys(m)){
     const x = m[k];
-    const pill = x.leakage_rate>0 ? `<span class="pill bad">${Math.round(x.leakage_rate*100)}%</span>` : `<span class="pill ok">0%</span>`;
+    const pill = x.leakage_rate > 0 ? `<span class="pill bad">${Math.round(x.leakage_rate*100)}%</span>` : '<span class="pill ok">0%</span>';
     h += `<tr><td class="s">${k}</td><td>${pill}</td><td>${x.mean_leaked_tokens.toFixed(1)}</td>`
        + `<td>${fmt(x.ttft.p50)}</td><td>${fmt(x.first_safe.p50)}</td><td>${Math.round(x.intervention_rate*100)}%</td></tr>`;
   }
   $('#cmp-table').innerHTML = h;
   let dh = '';
   for(const r of d.results){
-    const safe = r.leaked_tokens===0;
-    dh += `<div class="lbl">${r.strategy} · ${safe?'<span style="color:var(--teal)">零泄漏</span>':'<span style="color:var(--red)">泄漏 '+r.leaked_tokens+' 字</span>'}</div>`
-        + `<div class="out">${esc(r.emitted_text)||'<i>（无输出）</i>'}</div>`;
+    const safe = r.leaked_tokens === 0;
+    dh += `<div class="lbl">${r.strategy} · ${safe ? '<span style="color:var(--teal)">零泄漏</span>' : '<span style="color:var(--red)">泄漏 ' + r.leaked_tokens + ' 字</span>'}</div>`
+        + `<div class="out">${esc(r.emitted_text) || '<i>（无输出）</i>'}</div>`;
   }
   $('#cmp-diff').innerHTML = dh;
 }
 
-// ---- ③ scan curve ----
 async function runScan(){
   const body = { trace_id: scenario(), knob:'buffer', values:[0,1,2,3,4,5,6,8] };
-  const d = await fetch('/api/scan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  const d = await fetch('/api/scan', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)}).then(r => r.json());
   $('#curve-wrap').innerHTML = drawCurve(d.points);
 }
 function drawCurve(pts){
@@ -266,60 +298,56 @@ function drawCurve(pts){
   <div class="legend"><span><i style="background:#E24B4A"></i>泄漏 字数(越深越少)</span><span><i style="background:#378ADD"></i>TTFT ms(越深越慢)</span></div>`;
 }
 
-// ---- 自定义输入 + 上传 ----
 async function captureText(text){
-  return fetch('/api/capture-text',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text})}).then(r=>r.json());
+  return fetch('/api/capture-text', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({text})}).then(r => r.json());
 }
 async function customSubmit(){
   const text = $('#custom-text').value.trim();
-  if(!text){ $('#upload-status').textContent='请先输入文本'; return; }
-  $('#upload-status').textContent='生成中…';
+  if(!text){ $('#upload-status').textContent = '请先输入文本'; return; }
+  $('#upload-status').textContent = '生成中…';
   const d = await captureText(text);
   await loadScenarios(d.trace_id);
-  $('#upload-status').textContent = `已生成:${d.harmful?'判定危险':'判定安全'}(${d.n_tokens} 字)`;
+  $('#upload-status').textContent = `已生成:${d.harmful ? '判定危险' : '判定安全'}(${d.n_tokens} 字)`;
   await Promise.all([runCompare(), runScan()]); playAll();
 }
 async function captureLive(){
   const text = $('#custom-text').value.trim();
-  if(!text){ $('#upload-status').textContent='请先输入文本'; return; }
+  if(!text){ $('#upload-status').textContent = '请先输入文本'; return; }
   $('#btn-live').disabled = true;
   $('#upload-status').textContent = '真实 Gemini 生成中(thinking 模型较慢,约 3–6 秒)…';
   try{
-    const r = await fetch('/api/capture-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text})});
-    if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(e.detail || ('HTTP '+r.status)); }
+    const r = await fetch('/api/capture-live', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({text})});
+    if(!r.ok){ const e = await r.json().catch(() => ({})); throw new Error(e.detail || ('HTTP ' + r.status)); }
     const d = await r.json();
     await loadScenarios(d.trace_id);
-    $('#upload-status').innerHTML = `真实生成完成:${d.harmful?'<span style="color:var(--red)">判定危险</span>':'<span style="color:var(--teal)">判定安全</span>'} · ${d.n_tokens} 字 · <code>${esc(d.sut)}</code><br><span style="color:var(--muted)">生成:</span>${esc(d.generated||'')}`;
+    $('#upload-status').innerHTML = `真实生成完成:${d.harmful ? '<span style="color:var(--red)">判定危险</span>' : '<span style="color:var(--teal)">判定安全</span>'} · ${d.n_tokens} 字 · <code>${esc(d.sut)}</code><br><span style="color:var(--muted)">生成:</span>${esc(d.generated || '')}`;
     await Promise.all([runCompare(), runScan()]); playAll();
   }catch(err){
-    $('#upload-status').innerHTML = `<span class="err">真实生成失败:${esc(''+(err.message||err))}</span>`;
-  }finally{
-    $('#btn-live').disabled = false;
-  }
+    $('#upload-status').innerHTML = `<span class="err">真实生成失败:${esc('' + (err.message || err))}</span>`;
+  }finally{ $('#btn-live').disabled = false; }
 }
 function parseDataset(content){
-  return content.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(line=>{
-    try{ const o=JSON.parse(line); return ''+(o.text ?? o.input ?? line); }
-    catch{ return line.split(',')[0].replace(/^["']+|["']+$/g,''); }
+  return content.split(/\r?\n/).map(s => s.trim()).filter(Boolean).map(line => {
+    try{ const o = JSON.parse(line); return '' + (o.text ?? o.input ?? line); }
+    catch{ return line.split(',')[0].replace(/^["']+|["']+$/g, ''); }
   }).filter(Boolean);
 }
 async function uploadFile(){
   const f = $('#file-input').files[0];
-  if(!f){ $('#upload-status').textContent='请先选文件'; return; }
+  if(!f){ $('#upload-status').textContent = '请先选文件'; return; }
   const texts = parseDataset(await f.text());
-  if(!texts.length){ $('#upload-status').textContent='没解析到内容'; return; }
-  let n=0, last=null;
-  for(const t of texts){ const d=await captureText(t); last=d.trace_id; n++; $('#upload-status').textContent=`导入中 ${n}/${texts.length}…`; }
+  if(!texts.length){ $('#upload-status').textContent = '没解析到内容'; return; }
+  let n = 0, last = null;
+  for(const t of texts){ const d = await captureText(t); last = d.trace_id; n++; $('#upload-status').textContent = `导入中 ${n}/${texts.length}…`; }
   await loadScenarios(last);
   $('#upload-status').textContent = `已导入 ${n} 条 · 在场景下拉里切换查看`;
   await Promise.all([runCompare(), runScan()]);
 }
 
-function fmt(v){ return v==null?'–':Math.round(v); }
-function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
-function escAttr(s){ return esc(s); }
+function fmt(v){ return v == null ? '–' : Math.round(v); }
+function esc(s){ return (s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
-$('#sel-scenario').onchange = ()=>{ runCompare(); runScan(); };
+$('#sel-scenario').onchange = () => { runCompare(); runScan(); };
 $('#btn-play').onclick = playAll;
 $('#btn-compare').onclick = runCompare;
 $('#btn-scan').onclick = runScan;
@@ -328,6 +356,7 @@ $('#btn-live').onclick = captureLive;
 $('#btn-upload').onclick = uploadFile;
 
 (async function init(){
+  STRATS.forEach(renderStrat);
   await loadScenarios();
   await Promise.all([runCompare(), runScan()]);
 })();
