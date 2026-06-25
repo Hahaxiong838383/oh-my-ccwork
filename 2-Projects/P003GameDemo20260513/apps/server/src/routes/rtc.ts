@@ -79,17 +79,17 @@ function buildVoiceChatConfig(roomId: string, userId: string, llmToken?: string,
       TTSConfig: {
         Provider: 'volcano_bidirection',
         ProviderParams: {
+          // ⚠️ 2026-06-25：火山收紧 volcano_bidirection schema，cluster / loudness_ratio 已成非法字段
+          //    （preParamCheck unknown fields → 拒整个 TTSConfig → 回退试用资源撞 quota 45000292 → 小可静音）。
+          //    必须只留 appid+token。音量改由客户端 setPlaybackVolume(50) 控制（useVolcRtc）。
           app: {
             appid: process.env.VOLC_TTS_APP_ID,
             token: process.env.VOLC_TTS_ACCESS_TOKEN,
-            cluster: process.env.VOLC_TTS_CLUSTER || 'volcano_tts',
           },
           audio: {
             voice_type: process.env.VOLC_TTS_VOICE_TYPE,
             speech_rate: 0,
             pitch_rate: 0,
-            // 音量（loudness_ratio 0.5-2.0，默认 1.0）——川哥反馈过响，降到 0.6（叠加客户端 setPlaybackVolume 再降）
-            loudness_ratio: Number(process.env.VOLC_TTS_LOUDNESS || '0.6'),
           },
           ResourceId: process.env.VOLC_TTS_RESOURCE_ID || 'volc.service_type.10029',
         },
