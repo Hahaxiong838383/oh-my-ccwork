@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>safety-arena · 安全架构白盒对比</title>
+<style>
+  :root{
+    --bg:#f6f6f4; --card:#fff; --ink:#1b1b1a; --muted:#6b6b66; --line:#e6e6e1;
+    --teal:#1D9E75; --teal-bg:#e1f5ee; --red:#E24B4A; --red-bg:#fceaea;
+    --amber:#EF9F27; --amber-bg:#faeeda; --blue:#378ADD; --blue-bg:#e6f1fb; --purple:#7F77DD;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.5}
+  .wrap{max-width:1000px;margin:0 auto;padding:24px 20px 80px}
+  header h1{font-size:22px;margin:0 0 4px;font-weight:600}
+  header p{margin:0 0 20px;color:var(--muted);font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:18px}
+  .card h2{font-size:15px;margin:0 0 14px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .card h2 .hint{font-weight:400;color:var(--muted);font-size:12px}
+  .row{display:flex;flex-wrap:wrap;gap:16px 22px;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:12px;color:var(--muted)}
+  select,button{font:inherit;border-radius:8px;border:1px solid var(--line);background:#fff;padding:8px 12px}
+  select{min-width:150px}
+  button{cursor:pointer;background:var(--ink);color:#fff;border-color:var(--ink);font-size:13px;font-weight:500}
+  button.ghost{background:#fff;color:var(--ink)}
+  button:hover{opacity:.88}
+  input[type=range]{width:150px;accent-color:var(--teal)}
+  .rngval{font-variant-numeric:tabular-nums;font-weight:600;font-size:13px}
+  /* timeline */
+  #tl-meta{font-size:13px;color:var(--muted);margin-bottom:10px;min-height:18px}
+  #tl-stream{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:46px;
+    padding:12px;border:1px dashed var(--line);border-radius:10px;background:#fafaf8}
+  .tok{display:inline-block;padding:4px 7px;border-radius:6px;font-size:15px;
+    animation:pop .18s ease;transition:background .25s,color .25s}
+  .tok.orig{background:var(--teal-bg);color:#0f6e56}
+  .tok.fallback{background:var(--amber-bg);color:#854f0b;font-style:italic}
+  .tok.leaked{background:var(--red-bg);color:#a32d2d;text-decoration:line-through}
+  .decision{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:6px;
+    font-size:12px;font-weight:600;margin:0 2px;animation:pop .18s ease}
+  .decision.cancel{background:var(--red-bg);color:#a32d2d}
+  .decision.truncate{background:var(--amber-bg);color:#854f0b}
+  @keyframes pop{from{transform:translateY(4px);opacity:0}to{transform:none;opacity:1}}
+  #tl-done{margin-top:12px;font-size:13px;display:none;gap:18px;flex-wrap:wrap}
+  #tl-done .stat{display:flex;flex-direction:column}
+  #tl-done .stat b{font-size:18px;font-variant-numeric:tabular-nums}
+  #tl-done .stat span{font-size:11px;color:var(--muted)}
+  .leakbig{color:var(--red)} .safebig{color:var(--teal)}
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);
+    font-variant-numeric:tabular-nums}
+  th{color:var(--muted);font-weight:500;font-size:12px}
+  td.s{font-weight:600}
+  .pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600}
+  .pill.bad{background:var(--red-bg);color:#a32d2d}
+  .pill.ok{background:var(--teal-bg);color:#0f6e56}
+  .diff{margin-top:12px;font-size:13px}
+  .diff .lbl{color:var(--muted);font-size:12px;margin-bottom:3px}
+  .diff .out{padding:8px 10px;border-radius:8px;background:#fafaf8;border:1px solid var(--line);margin-bottom:8px}
+  /* svg curve */
+  svg{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:18px;font-size:12px;color:var(--muted);margin-top:6px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .err{color:var(--red);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>safety-arena</h1>
+    <p>串行 vs 并行安全架构 · 白盒对比。一次捕获 → 多策略离线重放。逐帧看 token 何时泄漏、何时被拦。</p>
+  </header>
+
+  <!-- 控制 -->
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <label>场景(trace)</label>
+        <select id="sel-scenario"></select>
+      </div>
+      <div class="field">
+        <label>classifier 延迟注入 <span class="rngval" id="lat-v">0</span> ms</label>
+        <input type="range" id="rng-latency" min="0" max="300" step="10" value="0">
+      </div>
+    </div>
+  </div>
+
+  <!-- timeline -->
+  <div class="card">
+    <h2>① Timeline <span class="hint">token 逐帧 emit,出现 high 信号那一刻 arbiter 拦截 —— 已放行的标红=泄漏</span></h2>
+    <div class="row" style="margin-bottom:14px">
+      <div class="field">
+        <label>策略</label>
+        <select id="sel-strategy">
+          <option value="parallel-buffer">parallel-buffer(并行+缓冲)</option>
+          <option value="arbiter">arbiter(实时分级)</option>
+          <option value="serial-block">serial-block(串行阻断)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>buffer 深度 k <span class="rngval" id="buf-v">0</span></label>
+        <input type="range" id="rng-buffer" min="0" max="8" step="1" value="0">
+      </div>
+      <div class="field"><label>&nbsp;</label><button id="btn-play">▶ 播放</button></div>
+    </div>
+    <div id="tl-meta"></div>
+    <div id="tl-stream"></div>
+    <div id="tl-done">
+      <div class="stat"><b id="d-leak">–</b><span>泄漏 token</span></div>
+      <div class="stat"><b id="d-ttft">–</b><span>TTFT (ms)</span></div>
+      <div class="stat"><b id="d-safe">–</b><span>首个安全 (ms)</span></div>
+      <div class="stat"><b id="d-total">–</b><span>总完成 (ms)</span></div>
+    </div>
+  </div>
+
+  <!-- compare -->
+  <div class="card">
+    <h2>② 四策略对比 <span class="hint">同一条 trace,同一注入延迟</span> <button class="ghost" id="btn-compare" style="margin-left:auto">运行对比</button></h2>
+    <div id="cmp-wrap"><table id="cmp-table"></table><div class="diff" id="cmp-diff"></div></div>
+  </div>
+
+  <!-- curve -->
+  <div class="card">
+    <h2>③ buffer 深度 ↔ 泄漏 / TTFT <span class="hint">权衡曲线就是结论本身</span> <button class="ghost" id="btn-scan" style="margin-left:auto">扫描</button></h2>
+    <div id="curve-wrap"></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const enc = encodeURIComponent;
+function scenario(){ return $('#sel-scenario').value; }
+function latency(){ return +$('#rng-latency').value; }
+function buffer(){ return +$('#rng-buffer').value; }
+
+$('#rng-latency').oninput = e => $('#lat-v').textContent = e.target.value;
+$('#rng-buffer').oninput  = e => $('#buf-v').textContent = e.target.value;
+
+async function loadScenarios(){
+  const r = await fetch('/api/traces').then(r=>r.json());
+  const sel = $('#sel-scenario'); sel.innerHTML='';
+  for(const t of r.traces){
+    const o = document.createElement('option');
+    o.value = t.trace_id;
+    o.textContent = `${t.input_text}  ·  ${t.harmful?'危险':'安全'} (${t.n_tokens} tok)`;
+    sel.appendChild(o);
+  }
+  // 默认选一个危险场景
+  const harm = r.traces.find(t=>t.trace_id.startsWith('harm-early'));
+  if(harm) sel.value = harm.trace_id;
+}
+
+// ---- ① timeline (SSE) ----
+let es = null;
+function playTimeline(){
+  if(es) es.close();
+  const tl = $('#tl-stream'); tl.innerHTML=''; $('#tl-done').style.display='none';
+  $('#tl-meta').textContent = '连接中…';
+  const origs = [];
+  const url = `/api/replay/stream?trace_id=${enc(scenario())}&strategy=${enc($('#sel-strategy').value)}`
+            + `&buffer_depth_tokens=${buffer()}&classifier_latency_ms=${latency()}&speed=5`;
+  es = new EventSource(url);
+  es.addEventListener('meta', e=>{
+    const d = JSON.parse(e.data);
+    $('#tl-meta').innerHTML = `输入:<b>${d.input}</b> · 策略 <code>${d.strategy}</code> · ${d.harmful?'<span style="color:var(--red)">危险样本</span>':'<span style="color:var(--teal)">安全样本</span>'}`;
+  });
+  es.addEventListener('emit', e=>{
+    const d = JSON.parse(e.data);
+    const s = document.createElement('span');
+    s.className = 'tok ' + (d.original?'orig':'fallback');
+    s.textContent = d.text;
+    tl.appendChild(s);
+    if(d.original) origs.push(s);
+  });
+  es.addEventListener('decision', e=>{
+    const d = JSON.parse(e.data);
+    const m = document.createElement('span');
+    m.className = 'decision ' + d.action;
+    m.textContent = `⚠ ${d.risk_label||''} → ${d.action}`;
+    tl.appendChild(m);
+    if(d.action==='cancel') origs.forEach(s=>s.classList.add('leaked'));
+  });
+  es.addEventListener('done', e=>{
+    const d = JSON.parse(e.data); es.close();
+    $('#d-leak').textContent = d.leaked_tokens;
+    $('#d-leak').className = d.leaked_tokens>0?'leakbig':'safebig';
+    $('#d-ttft').textContent = Math.round(d.ttft_ms ?? 0);
+    $('#d-safe').textContent = Math.round(d.first_safe_token_ms ?? 0);
+    $('#d-total').textContent = Math.round(d.total_ms ?? 0);
+    $('#tl-done').style.display='flex';
+  });
+  es.onerror = ()=>{ $('#tl-meta').innerHTML='<span class="err">连接中断</span>'; es.close(); };
+}
+
+// ---- ② compare ----
+async function runCompare(){
+  const body = { trace_id: scenario(), knobs: { classifier_latency_ms: latency() } };
+  const d = await fetch('/api/replay',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  const m = d.metrics;
+  let h = '<tr><th>策略</th><th>泄漏率</th><th>均泄漏</th><th>TTFT p50</th><th>首安全 p50</th><th>干预率</th></tr>';
+  for(const k of Object.keys(m)){
+    const x = m[k];
+    const leakPill = x.leakage_rate>0 ? `<span class="pill bad">${Math.round(x.leakage_rate*100)}%</span>` : `<span class="pill ok">0%</span>`;
+    h += `<tr><td class="s">${k}</td><td>${leakPill}</td><td>${x.mean_leaked_tokens.toFixed(1)}</td>`
+       + `<td>${fmt(x.ttft.p50)}</td><td>${fmt(x.first_safe.p50)}</td><td>${Math.round(x.intervention_rate*100)}%</td></tr>`;
+  }
+  $('#cmp-table').innerHTML = h;
+  // diff: 并排最终输出
+  let dh = '';
+  for(const r of d.results){
+    const safe = r.leaked_tokens===0;
+    dh += `<div class="lbl">${r.strategy} · ${safe?'<span style="color:var(--teal)">零泄漏</span>':'<span style="color:var(--red)">泄漏 '+r.leaked_tokens+' tok</span>'}</div>`
+        + `<div class="out">${esc(r.emitted_text)||'<i>（无输出）</i>'}</div>`;
+  }
+  $('#cmp-diff').innerHTML = dh;
+}
+
+// ---- ③ scan curve (SVG) ----
+async function runScan(){
+  const body = { trace_id: scenario(), knob:'buffer', values:[0,1,2,3,4,5,6,8] };
+  const d = await fetch('/api/scan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  $('#curve-wrap').innerHTML = drawCurve(d.points);
+}
+function drawCurve(pts){
+  const W=680,H=240,P=42;
+  const xs = pts.map(p=>p.x), leak = pts.map(p=>p.leaked_tokens), ttft = pts.map(p=>p.ttft_ms);
+  const xmax=Math.max(...xs), lmax=Math.max(1,...leak), tmax=Math.max(1,...ttft);
+  const X = v => P + v/xmax*(W-2*P);
+  const YL = v => H-P - v/lmax*(H-2*P);
+  const YT = v => H-P - v/tmax*(H-2*P);
+  const path = (ys,Y)=>pts.map((p,i)=>(i?'L':'M')+X(xs[i])+' '+Y(ys[i])).join(' ');
+  const dots = (ys,Y,c)=>pts.map((p,i)=>`<circle cx="${X(xs[i])}" cy="${Y(ys[i])}" r="3.5" fill="${c}"/>`).join('');
+  const xlab = xs.map(v=>`<text x="${X(v)}" y="${H-P+18}" font-size="11" fill="#6b6b66" text-anchor="middle">${v}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img">
+    <line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="#e6e6e1"/>
+    <line x1="${P}" y1="${P}" x2="${P}" y2="${H-P}" stroke="#e6e6e1"/>
+    <text x="${P}" y="${P-12}" font-size="11" fill="#6b6b66">泄漏/延迟</text>
+    <text x="${W/2}" y="${H-8}" font-size="11" fill="#6b6b66" text-anchor="middle">buffer 深度 k</text>
+    <path d="${path(ttft,YT)}" fill="none" stroke="#378ADD" stroke-width="2"/>
+    <path d="${path(leak,YL)}" fill="none" stroke="#E24B4A" stroke-width="2"/>
+    ${dots(ttft,YT,'#378ADD')}${dots(leak,YL,'#E24B4A')}${xlab}
+  </svg>
+  <div class="legend"><span><i style="background:#E24B4A"></i>泄漏 token(越深越少)</span><span><i style="background:#378ADD"></i>TTFT ms(越深越慢)</span></div>`;
+}
+
+// utils
+function fmt(v){ return v==null?'–':Math.round(v); }
+function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+$('#btn-play').onclick = playTimeline;
+$('#btn-compare').onclick = runCompare;
+$('#btn-scan').onclick = runScan;
+
+(async function init(){
+  await loadScenarios();
+  runCompare();
+  runScan();
+})();
+</script>
+</body>
+</html>

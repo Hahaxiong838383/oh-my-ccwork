@@ -20,6 +20,7 @@ import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -34,6 +35,7 @@ from .strategies import Arbiter, Knobs, ParallelBuffer, SerialBlock
 
 DB_PATH = os.environ.get("SAFETY_ARENA_DB", "data/traces.db")
 store = TraceStore(DB_PATH)
+WEB_DIR = Path(__file__).parent / "web"
 
 
 def seed_scenarios() -> None:
@@ -59,7 +61,7 @@ def build_strategy(spec: str):
     if name == "serial-block":
         return SerialBlock()
     if name == "parallel-buffer":
-        return ParallelBuffer(int(arg) if arg else 0)
+        return ParallelBuffer(int(arg) if arg else None)  # 无 arg → 用 knobs.buffer_depth_tokens(给滑块)
     if name == "arbiter":
         return Arbiter(int(arg) if arg else None)
     raise HTTPException(400, f"未知策略: {spec}")
@@ -112,11 +114,7 @@ class ScanReq(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 def root():
-    return (
-        "<h2>safety-arena</h2><p>串行 vs 并行安全架构白盒对比平台。</p>"
-        "<p>交互测试 → <a href='/docs'>/docs</a>(Swagger UI)。"
-        "前端可视化在 M2。</p>"
-    )
+    return (WEB_DIR / "app.html").read_text(encoding="utf-8")
 
 
 @app.get("/api/health")
