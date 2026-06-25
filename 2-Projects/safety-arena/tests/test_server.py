@@ -42,3 +42,11 @@ def test_scan_buffer_monotonic():
 def test_capture_unknown_scenario_404():
     with TestClient(app) as c:
         assert c.post("/api/capture", json={"scenario": "nope"}).status_code == 404
+
+
+def test_capture_live_without_env_returns_503(monkeypatch):
+    # 未配 GEMINI 凭证时,真实 SUT 端点应给可读 503,而不是 500
+    monkeypatch.delenv("GEMINI_PROXY_URL", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    with TestClient(app) as c:
+        assert c.post("/api/capture-live", json={"text": "hi"}).status_code == 503

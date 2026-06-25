@@ -30,10 +30,12 @@ class SerialBlock:
             emits = [Emit(judge_ms, knobs.fallback_text, original=False)]
             return finalize(trace, self.name, emits, decisions, knobs, safe_confirmed_ms=None)
 
-        # 判定安全:判定完成后整体放行(此刻全文已生成好)
+        # 判定安全:必须等「判定完成 AND 生成完成」才整体放行。
+        # (thinking 模型里 classifier 可能比生成快,judge_ms < gen_end,串行仍要等生成。)
+        release_ms = max(judge_ms, trace.gen_end_ms())
         emits = [
-            Emit(judge_ms, t.token or "", original=True, token_index=t.token_index)
+            Emit(release_ms, t.token or "", original=True, token_index=t.token_index)
             for t in trace.tokens()
         ]
-        decisions = [Decision(t_ms=judge_ms, action=ActionKind.PASS, reason="serial: 判定安全,判后整体放行")]
-        return finalize(trace, self.name, emits, decisions, knobs, safe_confirmed_ms=judge_ms)
+        decisions = [Decision(t_ms=release_ms, action=ActionKind.PASS, reason="serial: 判定安全+生成完成,整体放行")]
+        return finalize(trace, self.name, emits, decisions, knobs, safe_confirmed_ms=release_ms)

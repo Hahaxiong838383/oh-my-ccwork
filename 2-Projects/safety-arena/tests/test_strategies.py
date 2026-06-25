@@ -62,3 +62,9 @@ def test_decisions_are_observable():
     assert len(cancels) == 1
     assert cancels[0].t_ms == 220
     assert cancels[0].risk_label == RiskLabel.HIGH
+
+
+def test_serial_waits_for_generation_when_classifier_fast():
+    # med-1: classifier 信号 @120 早于生成完成 @300;串行 safe 必须等生成完成才放行(不是判定时刻)
+    serial = res(SerialBlock(), "med-1")
+    assert serial.ttft_ms == 300  # = gen_end,不是 judge(120)

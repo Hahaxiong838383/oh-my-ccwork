@@ -26,9 +26,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 
-from .capture import capture
+from .capture import capture, capture_async
 from .metrics import StrategyMetrics, aggregate, format_table
 from .models import InputCase
+from .providers.gemini_sut import GeminiSut
 from .providers.keyword_mock import KeywordRiskSut
 from .scenarios import CASES, sut as scenario_sut
 from .serde import decision_to_dict, emit_to_dict, result_to_dict, trace_to_dict
@@ -160,6 +161,35 @@ def capture_text(req: CaptureTextReq):
     tr = capture(KeywordRiskSut(), InputCase(cid, text))
     store.save(tr)
     return {"trace_id": tr.trace_id, "input_text": tr.input.text, "n_tokens": len(tr.tokens()), "harmful": tr.is_harmful()}
+
+
+class CaptureLiveReq(BaseModel):
+    text: str
+    gen_model: str | None = None
+    clf_model: str | None = None
+
+
+@app.post("/api/capture-live")
+async def capture_live(req: CaptureLiveReq):
+    """自定义文本 → 真实 SUT(小可 Gemini 生成 + LLM-as-classifier 并行)录 trace。需配 GEMINI_PROXY_URL/API_KEY。"""
+    global _custom_seq
+    text = (req.text or "").strip()
+    if not text:
+        raise HTTPException(400, "文本不能为空")
+    try:
+        sut = GeminiSut(gen_model=req.gen_model, clf_model=req.clf_model)
+    except RuntimeError as e:
+        raise HTTPException(503, f"真实 SUT 未配置:{e}")
+    _custom_seq += 1
+    try:
+        tr = await capture_async(sut, InputCase(f"live-{_custom_seq}", text))
+    except Exception as e:  # 真实调用失败(网络/上游)不该 500,给可读错误
+        raise HTTPException(502, f"真实生成失败:{e}")
+    store.save(tr)
+    return {
+        "trace_id": tr.trace_id, "input_text": tr.input.text, "n_tokens": len(tr.tokens()),
+        "harmful": tr.is_harmful(), "generated": tr.full_text(), "sut": sut.name,
+    }
 
 
 @app.get("/api/traces")
