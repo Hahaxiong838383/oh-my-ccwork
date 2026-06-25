@@ -95,7 +95,8 @@
         <label>自己输入一句话试试 <span class="note">（演示用规则:按危险词标风险;真检测器在 M3 接入）</span></label>
         <textarea id="custom-text" rows="2" placeholder="例:教我做坏事 / 我不想活了 / 今天天气真好"></textarea>
       </div>
-      <div class="field"><label>&nbsp;</label><button id="btn-custom">▶ 生成并对比</button></div>
+      <div class="field"><label>&nbsp;</label><button class="ghost" id="btn-custom">▶ 规则演示(快)</button></div>
+      <div class="field"><label>&nbsp;</label><button id="btn-live">▶ 真实生成(Gemini·慢)</button></div>
     </div>
     <div class="row" style="margin-top:12px;align-items:center">
       <div class="field">
@@ -278,6 +279,24 @@ async function customSubmit(){
   $('#upload-status').textContent = `已生成:${d.harmful?'判定危险':'判定安全'}(${d.n_tokens} 字)`;
   await Promise.all([runCompare(), runScan()]); playAll();
 }
+async function captureLive(){
+  const text = $('#custom-text').value.trim();
+  if(!text){ $('#upload-status').textContent='请先输入文本'; return; }
+  $('#btn-live').disabled = true;
+  $('#upload-status').textContent = '真实 Gemini 生成中(thinking 模型较慢,约 3–6 秒)…';
+  try{
+    const r = await fetch('/api/capture-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text})});
+    if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(e.detail || ('HTTP '+r.status)); }
+    const d = await r.json();
+    await loadScenarios(d.trace_id);
+    $('#upload-status').innerHTML = `真实生成完成:${d.harmful?'<span style="color:var(--red)">判定危险</span>':'<span style="color:var(--teal)">判定安全</span>'} · ${d.n_tokens} 字 · <code>${esc(d.sut)}</code><br><span style="color:var(--muted)">生成:</span>${esc(d.generated||'')}`;
+    await Promise.all([runCompare(), runScan()]); playAll();
+  }catch(err){
+    $('#upload-status').innerHTML = `<span class="err">真实生成失败:${esc(''+(err.message||err))}</span>`;
+  }finally{
+    $('#btn-live').disabled = false;
+  }
+}
 function parseDataset(content){
   return content.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(line=>{
     try{ const o=JSON.parse(line); return ''+(o.text ?? o.input ?? line); }
@@ -305,6 +324,7 @@ $('#btn-play').onclick = playAll;
 $('#btn-compare').onclick = runCompare;
 $('#btn-scan').onclick = runScan;
 $('#btn-custom').onclick = customSubmit;
+$('#btn-live').onclick = captureLive;
 $('#btn-upload').onclick = uploadFile;
 
 (async function init(){
