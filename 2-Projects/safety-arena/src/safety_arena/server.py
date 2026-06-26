@@ -261,10 +261,19 @@ async def replay_stream(
 
     async def gen():
         sigs = shifted_signals(tr, knobs)  # 含 classifier 延迟注入后的信号时刻
+        toks = tr.tokens()
+        gen_first = round(toks[0].t_ms, 1) if toks else 0.0
+        gen_last = round(toks[-1].t_ms, 1) if toks else 0.0
+        clf_ms = round(sigs[0].t_ms, 1) if sigs else None
+        # 瓶颈:classifier 判定晚于生成完成 → classifier 是延迟瓶颈(三机制差异大);否则生成是瓶颈(差异≈生成跨度)
+        bottleneck = "classifier" if (clf_ms is not None and clf_ms > gen_last) else "生成"
         yield sse("meta", {
             "trace_id": trace_id, "strategy": result.strategy_name,
             "input": tr.input.text, "harmful": trace_is_harmful(tr, knobs),
             "thresholds": {"high_at": knobs.high_at, "medium_at": knobs.medium_at, "low_at": knobs.low_at},
+            "gen": {"first_ms": gen_first, "last_ms": gen_last, "span_ms": round(gen_last - gen_first, 1), "n_tokens": len(toks)},
+            "classifier_ms": clf_ms,
+            "bottleneck": bottleneck,
             "signals": [
                 {
                     "t_ms": round(s.t_ms, 1), "risk": s.risk, "label": s.effective_label().value,

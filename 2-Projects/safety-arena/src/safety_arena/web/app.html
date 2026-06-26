@@ -132,7 +132,13 @@
         <textarea id="custom-text" rows="2" placeholder="例:教我做坏事 / 我不想活了 / 今天有点不开心"></textarea>
       </div>
       <div class="field"><label>&nbsp;</label><button class="ghost" id="btn-custom">▶ 规则演示(快)</button></div>
-      <div class="field"><label>&nbsp;</label><button id="btn-live">▶ 真实生成(Gemini·慢)</button></div>
+      <div class="field"><label>真实生成模型</label>
+        <select id="sel-gen-model" style="min-width:210px">
+          <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite(无 thinking·快)</option>
+          <option value="gemini-2.5-flash">gemini-2.5-flash(thinking·慢)</option>
+        </select>
+      </div>
+      <div class="field"><label>&nbsp;</label><button id="btn-live">▶ 真实生成</button></div>
     </div>
     <div class="row" style="margin-top:12px;align-items:center">
       <div class="field">
@@ -266,7 +272,10 @@ function playOne(s){
     const d = JSON.parse(e.data);
     box.querySelector('.meta').innerHTML = d.harmful ? '<span style="color:var(--red)">危险样本</span>' : '<span style="color:var(--teal)">安全样本</span>';
     (d.signals || []).forEach(sg => logLine('sig', `${Math.round(sg.t_ms)}ms  ${sg.source || '检测器'} → ${sg.label}${sg.risk != null ? ' risk ' + sg.risk : ''}　← ${sg.reason || '(无理由)'}`));
-    if(s.key === 'serial-block') $('#tl-input').innerHTML = `输入:<b>${esc(d.input)}</b>`;
+    if(s.key === 'serial-block'){
+      const g = d.gen || {}, clf = d.classifier_ms, bn = d.bottleneck || '?';
+      $('#tl-input').innerHTML = `输入:<b>${esc(d.input)}</b>　｜　生成 ${g.n_tokens||0} 字 @${Math.round(g.first_ms||0)}–${Math.round(g.last_ms||0)}ms(跨度 <b>${Math.round(g.span_ms||0)}ms</b>) · classifier@${clf!=null?Math.round(clf):'?'}ms · 瓶颈=<b style="color:${bn==='classifier'?'var(--red)':'var(--teal)'}">${bn}</b> <span class="note">三机制 TTFT 差异≈生成跨度;classifier 是瓶颈时才大幅拉开</span>`;
+    }
   });
   es.addEventListener('emit', e => {
     const d = JSON.parse(e.data);
@@ -382,7 +391,7 @@ async function captureLive(){
   $('#btn-live').disabled = true;
   $('#upload-status').textContent = '真实 Gemini 生成中(thinking 模型较慢,约 3–6 秒)…';
   try{
-    const r = await fetch('/api/capture-live', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({text})});
+    const r = await fetch('/api/capture-live', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({text, gen_model: $('#sel-gen-model').value})});
     if(!r.ok){ const e = await r.json().catch(() => ({})); throw new Error(e.detail || ('HTTP ' + r.status)); }
     const d = await r.json();
     await loadScenarios(d.trace_id);
