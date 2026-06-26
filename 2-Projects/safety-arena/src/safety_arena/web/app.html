@@ -92,6 +92,19 @@
   .rule-row input.r-w{width:54px;padding:4px 6px}
   .rule-row button{padding:2px 7px;font-size:12px}
   .err{color:var(--red);font-size:13px}
+  .r-cat{font-size:10px;color:var(--muted);background:#efefe9;border-radius:4px;padding:1px 5px;white-space:nowrap}
+  .rule-row.regex{background:#eef4fb;border-color:#cfe0f2}
+  .r-intent{font-size:12px;color:var(--blue);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bench-big{font-size:22px;font-weight:700}
+  #bench-result table{margin-top:10px}
+  .strat-edit{border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:8px;background:#fafaf8}
+  .strat-edit .sh{display:flex;align-items:baseline;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+  .strat-edit .sh b{font-size:13px}
+  .strat-edit .cats{font-size:11px;color:var(--muted)}
+  .strat-edit textarea{width:100%;font-size:12px;line-height:1.6}
+  #clf-prompt{width:100%;font-size:12px;font-family:ui-monospace,SFMono-Regular,monospace;line-height:1.6}
+  .sr-verdict{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin-bottom:8px}
+  .sr-reply{background:var(--teal-bg);border:1px solid var(--teal);border-radius:8px;padding:11px 13px;font-size:14px;line-height:1.7;color:#0f5c45}
 </style>
 </head>
 <body>
@@ -157,10 +170,51 @@
   </div>
 
   <div class="card">
+    <h2>规则评测 · 在真实 K12 标注集上召回多少 <span class="hint">用当前词库+阈值评;改完重评看召回变化。两份数据全是有害样本 → 只测召回(recall),测不了误判(precision,需安全对照组)</span></h2>
+    <div class="row" style="margin-bottom:6px">
+      <button class="ghost" id="btn-bench-testset">▶ 评 testset(23 条 · 带类别标注)</button>
+      <button class="ghost" id="btn-bench-safechild">▶ 评 Safe-Child(100 条英文有害)</button>
+      <span class="note" id="bench-status"></span>
+    </div>
+    <div id="bench-result"><div class="note">点上面按钮:对真实标注集逐条评分,出召回 + 按类别 + 漏判清单(规则零命中=结构性盲区,LLM-classifier 的价值区)</div></div>
+  </div>
+
+  <div class="card">
+    <h2>分级安全回复 · high 时按风险类型分流 <span class="hint">真实 classifier 判 risk + 类型 → high 时按「可编辑策略」生成安全回复 —— 这是「导」不只是「拦」。classifier 模型:<b id="clf-model-label">…</b></span></h2>
+    <div class="field grow" style="margin-bottom:14px">
+      <label>① classifier 判定 prompt(可编辑 · 白盒)<span class="note">改这里 = 改 LLM 怎么判 risk / 等级 / 类型</span></label>
+      <textarea id="clf-prompt" rows="4"></textarea>
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="note" style="margin-bottom:6px">② 回复策略表(可编辑 · 每类一段话术指引,改 guide 即改小可的回应方式;预留给你研究 K12 心理学后迭代)</div>
+      <div id="strategies-grid"></div>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <div class="field grow"><label>③ 输入孩子说的话</label><textarea id="sr-text" rows="2" placeholder="例:我不想活了 / 教我做炸弹 / 怎么报复同学"></textarea></div>
+      <div class="field"><label>生成模型</label>
+        <select id="sr-model" style="min-width:200px">
+          <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite(快)</option>
+          <option value="gemini-2.5-flash">gemini-2.5-flash(thinking)</option>
+        </select>
+      </div>
+      <div class="field"><label>&nbsp;</label><button id="btn-safe-reply">▶ 测分级回复</button></div>
+    </div>
+    <div id="sr-result"><div class="note">输入一句危险的话 → 看 classifier 判出风险类型 → high 时按对应策略生成安全回复(非 high 不触发)。classifier prompt 和策略 guide 都可现场改了再测。</div></div>
+  </div>
+
+  <div class="card">
     <h2>① 机制白盒 + Timeline <span class="hint">左=机制内部(规则+旋钮+运行摘要+信号/决策日志)· 右=token 流</span></h2>
     <div class="row" style="margin-bottom:10px">
       <div class="field"><label>&nbsp;</label><button id="btn-play">▶ 同时播放</button></div>
       <div class="note" style="align-self:center">每机制旋钮在各自面板,拖动即重放;classifier 延迟与 risk 阈值在上面全局调</div>
+    </div>
+    <div class="note" style="margin-bottom:10px;line-height:1.8;background:#fafaf8;border:1px solid var(--line);border-radius:8px;padding:8px 11px">
+      <b>右边输出</b> = 这个机制最终放给孩子看到的字 ——
+      <span style="background:var(--teal-bg);color:#0f6e56;padding:1px 6px;border-radius:4px">正常放行</span>
+      <span style="background:var(--amber-bg);color:#854f0b;padding:1px 6px;border-radius:4px;font-style:italic">安全兜底替换</span>
+      <span style="background:var(--red-bg);color:#a32d2d;padding:1px 6px;border-radius:4px;text-decoration:line-through">没拦住·已被孩子看到</span>(泄漏)。
+      <b>左边</b> = 它凭什么这么放:检测信号(classifier 何时判出多少 risk)+ 逐步决策(放行/截断/取消)。
+      <b>同一句话喂给三个机制,看它们各自怎么处理</b>——这就是横向对比。
     </div>
     <div id="tl-input" class="note"></div>
     <div id="strat-serial-block" class="strat"></div>
@@ -171,6 +225,14 @@
   <div class="card">
     <h2>② 四策略指标对比 <span class="hint">同一条 trace,同延迟同阈值</span> <button class="ghost" id="btn-compare" style="margin-left:auto">运行对比</button></h2>
     <table id="cmp-table"></table><div class="diff" id="cmp-diff"></div>
+    <div class="note" style="margin-top:12px;line-height:1.9;background:#fafaf8;border:1px solid var(--line);border-radius:8px;padding:9px 12px">
+      <b>泄漏率</b> = 多少比例的话「危险内容在拦住前已经被孩子看到了」——<b style="color:var(--teal)">0% 最好</b>,这是并行架构的真实代价侧 ·
+      <b>均泄漏</b> = 平均每条漏给孩子几个危险字 ·
+      <b>TTFT p50</b> = 孩子等多久看到<b>第一个字</b>(中位数,越小越快;并行赢在这) ·
+      <b>首安全 p50</b> = 等多久看到第一个「确认安全后」放出的字(<b>串行阻断要等判定完才开口,所以这项最慢</b>) ·
+      <b>干预率</b> = 多少比例的话触发了拦截/截断/取消。
+      <span class="note">（单条 trace 时,「率」就是这一条的 0%/100%;批量评测才有真正的百分比分布）</span>
+    </div>
   </div>
 
   <div class="card">
@@ -361,18 +423,98 @@ async function loadRules(){
   try{ RULES = (await fetch('/api/rules').then(r => r.json())).rules; }catch{ RULES = []; }
   renderRules();
 }
+function ruleChip(r, i){
+  const cat = r.category ? `<span class="r-cat" title="${esc(r.category)}">${esc(r.category)}</span>` : '';
+  const w = `<input class="r-w" type="number" min="0" max="1" step="0.05" data-i="${i}" value="${r.weight}">`
+          + `<button class="ghost r-del" data-i="${i}">×</button>`;
+  if(r.is_regex)  // 意图模式:裸正则不可读,显示人话 note + ⚡,只调权重(title 给完整正则)
+    return `<span class="rule-row regex" title="${esc(r.pattern)}">${cat}<span class="r-intent">⚡${esc(r.note || r.pattern)}</span>${w}</span>`;
+  return `<span class="rule-row">${cat}<input class="r-pat" data-i="${i}" value="${esc(r.pattern)}" title="${esc(r.note||'')}">${w}</span>`;
+}
 function renderRules(){
   const g = $('#rules-grid');
-  g.innerHTML = RULES.map((r,i) =>
-    `<span class="rule-row"><input class="r-pat" data-i="${i}" value="${esc(r.pattern)}" title="${esc(r.note||'')}">`
-    + `<input class="r-w" type="number" min="0" max="1" step="0.05" data-i="${i}" value="${r.weight}">`
-    + `<button class="ghost r-del" data-i="${i}">×</button></span>`).join('');
+  g.innerHTML = RULES.map((r,i) => ruleChip(r,i)).join('');
   g.querySelectorAll('.r-pat').forEach(el => el.onchange = e => RULES[+e.target.dataset.i].pattern = e.target.value);
   g.querySelectorAll('.r-w').forEach(el => el.onchange = e => RULES[+e.target.dataset.i].weight = +e.target.value);
   g.querySelectorAll('.r-del').forEach(el => el.onclick = e => { RULES.splice(+e.target.dataset.i, 1); renderRules(); });
 }
-const currentRules = () => RULES.map(r => ({pattern:r.pattern, weight:r.weight, note:r.note || ''}));
+const currentRules = () => RULES.map(r => ({pattern:r.pattern, weight:r.weight, category:r.category || '', note:r.note || '', is_regex:!!r.is_regex}));
 
+let STRATEGIES = [], FALLBACK = null;
+async function loadClassifierConfig(){
+  try{ const d = await fetch('/api/classifier-config').then(r=>r.json()); $('#clf-prompt').value = d.prompt; $('#clf-model-label').textContent = d.model; }catch{}
+}
+async function loadStrategies(){
+  try{ const d = await fetch('/api/reply-strategies').then(r=>r.json()); STRATEGIES = d.strategies; FALLBACK = d.fallback; renderStrategies(); }catch{}
+}
+function renderStrategies(){
+  const g = $('#strategies-grid');
+  g.innerHTML = STRATEGIES.map((s,i) =>
+    `<div class="strat-edit"><div class="sh"><b>${esc(s.name)}</b><span class="cats">匹配类型: ${esc(s.categories.join(', '))}</span></div>`
+    + `<textarea data-i="${i}" rows="3">${esc(s.guide)}</textarea></div>`).join('');
+  g.querySelectorAll('textarea').forEach(el => el.onchange = e => STRATEGIES[+e.target.dataset.i].guide = e.target.value);
+}
+const currentStrategies = () => STRATEGIES.map(s => ({key:s.key, name:s.name, categories:s.categories, guide:s.guide}));
+async function runSafeReply(){
+  const text = $('#sr-text').value.trim();
+  if(!text){ $('#sr-result').innerHTML = '<span class="err">请先输入一句话</span>'; return; }
+  $('#btn-safe-reply').disabled = true;
+  $('#sr-result').innerHTML = '<span class="note">真实判定 + 生成中(thinking 模型约 3–8 秒)…</span>';
+  try{
+    const r = await fetch('/api/safe-reply', {method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify({text, clf_prompt:$('#clf-prompt').value, gen_model:$('#sr-model').value, strategies:currentStrategies()})});
+    if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(e.detail || ('HTTP '+r.status)); }
+    renderSafeReply(await r.json());
+  }catch(err){ $('#sr-result').innerHTML = `<span class="err">失败:${esc(''+(err.message||err))}</span>`; }
+  finally{ $('#btn-safe-reply').disabled = false; }
+}
+function renderSafeReply(d){
+  const c = d.label==='high'?'var(--red)':d.label==='medium'?'var(--amber)':d.label==='low'?'var(--blue)':'var(--teal)';
+  let h = `<div class="sr-verdict">`
+    + `<span>判定: <b style="color:${c}">${esc(d.label)}</b>(risk ${d.risk})</span>`
+    + `<span>风险类型: <b>${esc(d.category)}</b></span>`
+    + `<span>选中策略: <b>${esc(d.strategy.name)}</b></span></div>`
+    + `<div class="note" style="margin-bottom:8px">classifier 理由: ${esc(d.reason||'—')}</div>`;
+  if(d.triggered) h += `<div class="note" style="margin-bottom:4px">小可的分级安全回复(按上面选中策略生成):</div><div class="sr-reply">${esc(d.safe_reply)}</div>`;
+  else h += `<div class="note">label 非 high → 不触发分级回复(正常对话走原流程)。改 classifier prompt 或换更危险的输入再试。</div>`;
+  $('#sr-result').innerHTML = h;
+}
+
+async function runBenchmark(dataset){
+  $('#bench-status').textContent = '评测中…';
+  try{
+    const d = await fetch('/api/benchmark', {method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify({dataset, rules: currentRules(), ...thresholds()})}).then(r => r.json());
+    $('#bench-status').textContent = '';
+    renderBenchmark(d);
+  }catch(err){ $('#bench-status').innerHTML = `<span class="err">评测失败:${esc(''+(err.message||err))}</span>`; }
+}
+function renderBenchmark(d){
+  const rm = Math.round(d.recall_medium*100);
+  let h = `<div>数据集 <b>${esc(d.dataset)}</b> · ${d.n} 条 · 召回(medium+ 视为拦截)`
+    + `<span class="bench-big ${rm>=80?'safebig':rm>=50?'':'leakbig'}"> ${rm}%</span> `
+    + `<span class="note">(${d.hit_medium}/${d.n} 命中,${d.miss} 漏判;阈值 high≥${d.thresholds.high_at} / med≥${d.thresholds.medium_at})</span></div>`;
+  const cats = Object.keys(d.by_category || {});
+  if(cats.length){
+    h += '<table><tr><th>风险类别</th><th>命中/总</th><th>漏判 id</th></tr>';
+    for(const c of cats.sort()){
+      const v = d.by_category[c], full = v.hit_medium === v.n;
+      h += `<tr><td class="s">${esc(c)}</td><td><span class="pill ${full?'ok':'bad'}">${v.hit_medium}/${v.n}</span></td>`
+         + `<td class="note">${(v.miss_ids||[]).join(', ') || '—'}</td></tr>`;
+    }
+    h += '</table>';
+  }
+  const miss = d.items.filter(x => x.miss);
+  if(miss.length){
+    h += `<div class="diff"><div class="lbl">漏判清单(规则零命中 = 结构性盲区,LLM-classifier 的价值区)</div>`;
+    for(const x of miss.slice(0,12)) h += `<div class="out">${x.category ? '<b>['+esc(x.category)+']</b> ' : ''}${esc(x.prompt)}</div>`;
+    if(miss.length > 12) h += `<div class="note">…还有 ${miss.length-12} 条漏判</div>`;
+    h += '</div>';
+  }else{
+    h += '<div class="note" style="margin-top:8px;color:var(--teal)">本数据集全部命中 ✓</div>';
+  }
+  $('#bench-result').innerHTML = h;
+}
 async function captureText(text){
   return fetch('/api/capture-text', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({text, rules: currentRules()})}).then(r => r.json());
 }
@@ -430,12 +572,15 @@ $('#btn-compare').onclick = runCompare;
 $('#btn-scan').onclick = runScan;
 $('#btn-custom').onclick = customSubmit;
 $('#btn-live').onclick = captureLive;
-$('#btn-add-rule').onclick = () => { RULES.push({pattern:'新词', weight:0.5, note:''}); renderRules(); };
+$('#btn-add-rule').onclick = () => { RULES.push({pattern:'新词', weight:0.5, category:'custom', note:'', is_regex:false}); renderRules(); };
 $('#btn-upload').onclick = uploadFile;
+$('#btn-bench-testset').onclick = () => runBenchmark('k12_testset');
+$('#btn-bench-safechild').onclick = () => runBenchmark('safe_child');
+$('#btn-safe-reply').onclick = runSafeReply;
 
 (async function init(){
   STRATS.forEach(renderStrat);
-  await Promise.all([loadScenarios(), loadRules()]);
+  await Promise.all([loadScenarios(), loadRules(), loadClassifierConfig(), loadStrategies()]);
   await Promise.all([runCompare(), runScan()]);
 })();
 </script>

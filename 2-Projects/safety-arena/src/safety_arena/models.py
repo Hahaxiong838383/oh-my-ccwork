@@ -71,6 +71,7 @@ class Event:
     risk_label: RiskLabel | None = None  # 不给则由 risk 推
     signal_source: str | None = None     # 分类器名,可观测用
     signal_reason: str | None = None     # 判断依据(白盒:为什么是这个 risk/label)
+    signal_category: str | None = None   # 风险类型(KORA 类),分级安全回复按它分流
 
     def effective_label(self) -> RiskLabel:
         if self.risk_label is not None:

@@ -12,6 +12,7 @@
   POST /api/replay                 多策略重放 → 结果 + 指标表(同步)
   GET  /api/replay/stream          单策略 SSE timeline(token emit / 仲裁决策按 t_ms 流式)
   POST /api/scan                   旋钮扫描(buffer / latency)→ 权衡曲线点
+  POST /api/benchmark              对内置真实标注集跑规则评分器 → recall + 漏判(评测 oracle)
 """
 
 from __future__ import annotations
@@ -26,11 +27,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 
+from .benchmark import DATASETS, evaluate
 from .capture import capture, capture_async
 from .metrics import StrategyMetrics, aggregate, format_table
 from .models import InputCase
-from .providers.gemini_sut import GeminiSut
+from .providers.gemini_sut import CLASSIFIER_PROMPT, GeminiSut
 from .providers.keyword_mock import DEFAULT_RULES, KeywordRiskSut, Rule
+from .reply_strategy import DEFAULT_FALLBACK, DEFAULT_STRATEGIES, ReplyStrategy, pick_strategy
 from .scenarios import CASES, sut as scenario_sut
 from .serde import decision_to_dict, emit_to_dict, result_to_dict, trace_to_dict
 from .store import TraceStore
@@ -80,6 +83,34 @@ def build_knobs(d: dict | None) -> Knobs:
         medium_at=float(d.get("medium_at", 0.45)),
         low_at=float(d.get("low_at", 0.20)),
     )
+
+
+def build_rules(raw: list[dict] | None) -> list[Rule] | None:
+    """前端词库 [{pattern,weight,category,note,is_regex}] → list[Rule];空/None → None(用默认)。"""
+    if not raw:
+        return None
+    return [
+        Rule(
+            pattern=str(r["pattern"]), weight=float(r["weight"]),
+            category=str(r.get("category", "")), note=str(r.get("note", "")),
+            is_regex=bool(r.get("is_regex", False)),
+        )
+        for r in raw if r.get("pattern")
+    ]
+
+
+def build_strategies(raw: list[dict] | None) -> list[ReplyStrategy] | None:
+    """前端策略表 [{key,name,categories,guide}] → list[ReplyStrategy];空/None → None(用默认)。"""
+    if not raw:
+        return None
+    return [
+        ReplyStrategy(
+            key=str(s.get("key", "")), name=str(s.get("name", "")),
+            categories=[str(c) for c in (s.get("categories") or [])],
+            guide=str(s.get("guide", "")),
+        )
+        for s in raw if s.get("guide")
+    ]
 
 
 def metrics_to_dict(m: StrategyMetrics) -> dict:
@@ -137,7 +168,10 @@ def scenarios():
 @app.get("/api/rules")
 def get_rules():
     """白盒规则评分器的默认词库(pattern + weight),前端加载后可编辑,再随 capture-text 传回。"""
-    return {"rules": [{"pattern": r.pattern, "weight": r.weight, "note": r.note} for r in DEFAULT_RULES]}
+    return {"rules": [
+        {"pattern": r.pattern, "weight": r.weight, "category": r.category, "note": r.note, "is_regex": r.is_regex}
+        for r in DEFAULT_RULES
+    ]}
 
 
 @app.post("/api/capture")
@@ -169,11 +203,7 @@ def capture_text(req: CaptureTextReq):
         raise HTTPException(400, "文本不能为空")
     _custom_seq += 1
     cid = (req.id or f"custom-{_custom_seq}").strip() or f"custom-{_custom_seq}"
-    rules = None
-    if req.rules:
-        rules = [Rule(str(r["pattern"]), float(r["weight"]), str(r.get("note", "")))
-                 for r in req.rules if r.get("pattern")]
-    tr = capture(KeywordRiskSut(rules=rules), InputCase(cid, text))
+    tr = capture(KeywordRiskSut(rules=build_rules(req.rules)), InputCase(cid, text))
     store.save(tr)
     return {"trace_id": tr.trace_id, "input_text": tr.input.text, "n_tokens": len(tr.tokens()), "harmful": tr.is_harmful()}
 
@@ -182,6 +212,7 @@ class CaptureLiveReq(BaseModel):
     text: str
     gen_model: str | None = None
     clf_model: str | None = None
+    clf_prompt: str | None = None  # 前端可编辑的 classifier 判定 prompt(白盒)
 
 
 @app.post("/api/capture-live")
@@ -192,7 +223,7 @@ async def capture_live(req: CaptureLiveReq):
     if not text:
         raise HTTPException(400, "文本不能为空")
     try:
-        sut = GeminiSut(gen_model=req.gen_model, clf_model=req.clf_model)
+        sut = GeminiSut(gen_model=req.gen_model, clf_model=req.clf_model, clf_prompt=req.clf_prompt or None)
     except RuntimeError as e:
         raise HTTPException(503, f"真实 SUT 未配置:{e}")
     _custom_seq += 1
@@ -201,9 +232,13 @@ async def capture_live(req: CaptureLiveReq):
     except Exception as e:  # 真实调用失败(网络/上游)不该 500,给可读错误
         raise HTTPException(502, f"真实生成失败:{e}")
     store.save(tr)
+    sig = tr.signals()
     return {
         "trace_id": tr.trace_id, "input_text": tr.input.text, "n_tokens": len(tr.tokens()),
         "harmful": tr.is_harmful(), "generated": tr.full_text(), "sut": sut.name,
+        "category": sig[0].signal_category if sig else None,
+        "risk_label": sig[0].effective_label().value if sig else None,
+        "risk": sig[0].risk if sig else None,
     }
 
 
@@ -317,6 +352,87 @@ def do_scan(req: ScanReq):
             raise HTTPException(400, "knob 只支持 buffer | latency")
         points.append({"x": v, "leaked_tokens": r.leaked_tokens, "ttft_ms": r.ttft_ms, "total_ms": r.total_ms})
     return {"knob": req.knob, "buffer_depth": req.buffer_depth, "points": points}
+
+
+class BenchmarkReq(BaseModel):
+    dataset: str = "k12_testset"
+    rules: list[dict] | None = None
+    high_at: float = 0.75
+    medium_at: float = 0.45
+    low_at: float = 0.20
+
+
+@app.post("/api/benchmark")
+def do_benchmark(req: BenchmarkReq):
+    """对内置真实标注集跑规则评分器 → recall + 按类别 + 漏判清单(评测 oracle)。
+
+    带 rules/thresholds 即用当前编辑的词库+阈值评,形成"改词库→看召回变化"的白盒闭环。
+    """
+    if req.dataset not in DATASETS:
+        raise HTTPException(404, f"未知数据集: {req.dataset}(可选 {list(DATASETS)})")
+    try:
+        return evaluate(
+            req.dataset, rules=build_rules(req.rules),
+            high_at=req.high_at, medium_at=req.medium_at, low_at=req.low_at,
+        )
+    except FileNotFoundError:
+        raise HTTPException(500, "评测数据文件缺失")
+
+
+@app.get("/api/reply-strategies")
+def get_reply_strategies():
+    """分级安全回复策略表(可编辑):high 时按 category 选哪段话术指引生成安全回复。"""
+    def to_d(s: ReplyStrategy) -> dict:
+        return {"key": s.key, "name": s.name, "categories": s.categories, "guide": s.guide}
+    return {"strategies": [to_d(s) for s in DEFAULT_STRATEGIES], "fallback": to_d(DEFAULT_FALLBACK)}
+
+
+@app.get("/api/classifier-config")
+def get_classifier_config():
+    """LLM classifier 的判定 prompt + 模型(前端可编辑 prompt → 随 safe-reply/capture-live 传回)。"""
+    return {
+        "prompt": CLASSIFIER_PROMPT,
+        "model": os.environ.get("SAFETY_ARENA_CLF_MODEL", "gemini-2.5-flash-lite"),
+    }
+
+
+class SafeReplyReq(BaseModel):
+    text: str
+    clf_prompt: str | None = None
+    gen_model: str | None = None
+    strategies: list[dict] | None = None
+
+
+@app.post("/api/safe-reply")
+async def safe_reply(req: SafeReplyReq):
+    """分级安全回复:真实 classifier 判 risk+category → high 时按策略表生成安全回复。
+
+    全链路白盒:classifier prompt 与策略表都可由前端传入覆盖。非 high 不触发生成(只回判定)。
+    """
+    text = (req.text or "").strip()
+    if not text:
+        raise HTTPException(400, "文本不能为空")
+    try:
+        sut = GeminiSut(gen_model=req.gen_model, clf_prompt=req.clf_prompt or None)
+    except RuntimeError as e:
+        raise HTTPException(503, f"真实 SUT 未配置:{e}")
+    try:
+        verdict = await sut.classify_once(text)
+    except Exception as e:
+        raise HTTPException(502, f"分类失败:{e}")
+    strat = pick_strategy(verdict["category"], build_strategies(req.strategies))
+    triggered = verdict["label"] == "high"
+    safe = None
+    if triggered:
+        try:
+            safe = await sut.generate_safe_reply(text, strat.guide)
+        except Exception as e:
+            raise HTTPException(502, f"安全回复生成失败:{e}")
+    return {
+        **verdict,
+        "strategy": {"key": strat.key, "name": strat.name, "guide": strat.guide},
+        "triggered": triggered, "safe_reply": safe,
+    }
 
 
 def run() -> None:
