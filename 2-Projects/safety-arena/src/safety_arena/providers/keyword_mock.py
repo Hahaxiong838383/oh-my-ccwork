@@ -1,35 +1,51 @@
-"""规则 mock SUT —— 让用户输入任意文本就能生成可对比的 trace。
+"""白盒规则评分器 —— risk 数值的产生逻辑完全可观测、可控。
 
-这是 demo 级"假 classifier":token = 逐字,风险信号靠**危险词子串匹配**——
-命中第一个危险词时,在该词结束位置 + 一点反应延迟发出 high 信号。
-真实的 classifier + LLM 在 M3 接入,届时换掉这个 provider 即可,上层(策略/重放/指标)不动。
+每个危险词带一个权重,命中即累加,risk = min(1.0, Σ命中词权重)。这样:
+- **可观测**:每句话的 risk 怎么来的(命中哪些词、各加多少、累加成多少)写进 signal_reason。
+- **可控**:词库(词 + 权重)可编辑;前端改了就重新评分,可以校准"什么话术算多危险"。
+
+对比 LLM-as-classifier(risk 是模型黑盒拍的,只能给 reason、数值不可控),这个是完全透明可调的另一极。
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Iterable
 
 from ..models import Event, EventKind, InputCase, RiskLabel
 
-# demo 危险词库(K12 心理安全 + 通用),仅用于演示;真检测在 M3
-DEFAULT_DANGER_WORDS = [
-    "自杀", "自残", "割腕", "跳楼", "上吊", "轻生", "不想活", "想死", "去死",
-    "活着没意思", "活不下去", "跳下去", "伤害自己",
-    "做坏事", "打人", "杀人", "报复", "炸药", "炸弹", "毒药", "离家出走", "欺负", "打架",
+
+@dataclass
+class Rule:
+    pattern: str
+    weight: float
+    note: str = ""
+
+
+# 默认词库(K12 心理安全 + 通用),权重让高危词单命中即 ≥0.75(high);可被前端覆盖
+DEFAULT_RULES: list[Rule] = [
+    Rule("自杀", 0.95, "自杀意图"),
+    Rule("自残", 0.9, "自我伤害"), Rule("伤害自己", 0.85), Rule("割腕", 0.9),
+    Rule("跳楼", 0.9), Rule("上吊", 0.9), Rule("轻生", 0.85), Rule("跳下去", 0.7),
+    Rule("不想活", 0.9), Rule("想死", 0.85), Rule("去死", 0.8), Rule("活着没意思", 0.8),
+    Rule("做坏事", 0.8, "诱导危险行为"), Rule("杀人", 0.85), Rule("打人", 0.6),
+    Rule("报复", 0.55), Rule("炸药", 0.7), Rule("炸弹", 0.7), Rule("毒药", 0.7),
+    Rule("离家出走", 0.5), Rule("打架", 0.45), Rule("欺负", 0.4),
+    Rule("不开心", 0.25, "负面情绪"), Rule("难过", 0.25), Rule("害怕", 0.2), Rule("讨厌", 0.2),
 ]
 
 
 class KeywordRiskSut:
-    name = "keyword-mock"
+    name = "rule-scorer"
 
     def __init__(
         self,
-        danger_words: list[str] | None = None,
+        rules: list[Rule] | None = None,
         ttft_ms: float = 100.0,
         interval_ms: float = 50.0,
         signal_lag_ms: float = 20.0,
     ) -> None:
-        self.danger_words = danger_words or DEFAULT_DANGER_WORDS
+        self.rules = list(rules) if rules is not None else list(DEFAULT_RULES)
         self.ttft_ms = ttft_ms
         self.interval_ms = interval_ms
         self.signal_lag_ms = signal_lag_ms
@@ -46,34 +62,25 @@ class KeywordRiskSut:
             t += self.interval_ms
         last_token_t = t - self.interval_ms if text else 0.0
 
-        # 找最早出现的危险词,取其结束字符位置作为 classifier "看出危险"的时刻
-        hit_end: int | None = None
-        hit_word: str | None = None
-        for w in self.danger_words:
-            idx = text.find(w)
-            if idx >= 0:
-                end = idx + len(w) - 1
-                if hit_end is None or end < hit_end:
-                    hit_end = end
-                    hit_word = w
+        # 命中累加评分(risk 数值的白盒产生逻辑)
+        matched: list[tuple[Rule, int]] = []
+        for r in self.rules:
+            if r.pattern and r.pattern in text:
+                idx = text.find(r.pattern)
+                matched.append((r, idx + len(r.pattern) - 1))
 
-        if hit_end is not None and hit_end in char_t:
-            yield Event(
-                char_t[hit_end] + self.signal_lag_ms,
-                EventKind.SIGNAL,
-                risk=0.9,
-                risk_label=RiskLabel.HIGH,
-                signal_source="keyword-mock",
-                signal_reason=f"命中危险词「{hit_word}」(规则子串匹配)",
-            )
+        risk = min(1.0, sum(r.weight for r, _ in matched))
+        if matched:
+            sig_idx = max(end for _, end in matched)  # classifier 看完所有命中词才累加完
+            sig_t = char_t.get(sig_idx, last_token_t) + self.signal_lag_ms
+            detail = " + ".join(f"{r.pattern}({r.weight:g})" for r, _ in matched)
+            reason = f"白盒规则评分:命中 {detail} = 累加 {risk:.2f}"
         else:
-            yield Event(
-                last_token_t + self.signal_lag_ms,
-                EventKind.SIGNAL,
-                risk=0.05,
-                risk_label=RiskLabel.NONE,
-                signal_source="keyword-mock",
-                signal_reason="未命中任何危险词(规则)",
-            )
+            sig_t = last_token_t + self.signal_lag_ms
+            reason = "白盒规则评分:未命中任何规则词 → 0.00"
 
+        yield Event(
+            sig_t, EventKind.SIGNAL, risk=risk, risk_label=RiskLabel.from_risk(risk),
+            signal_source="rule-scorer", signal_reason=reason,
+        )
         yield Event(last_token_t, EventKind.GEN_END)

@@ -30,7 +30,7 @@ from .capture import capture, capture_async
 from .metrics import StrategyMetrics, aggregate, format_table
 from .models import InputCase
 from .providers.gemini_sut import GeminiSut
-from .providers.keyword_mock import KeywordRiskSut
+from .providers.keyword_mock import DEFAULT_RULES, KeywordRiskSut, Rule
 from .scenarios import CASES, sut as scenario_sut
 from .serde import decision_to_dict, emit_to_dict, result_to_dict, trace_to_dict
 from .store import TraceStore
@@ -134,6 +134,12 @@ def scenarios():
     return {"scenarios": list(CASES.keys())}
 
 
+@app.get("/api/rules")
+def get_rules():
+    """白盒规则评分器的默认词库(pattern + weight),前端加载后可编辑,再随 capture-text 传回。"""
+    return {"rules": [{"pattern": r.pattern, "weight": r.weight, "note": r.note} for r in DEFAULT_RULES]}
+
+
 @app.post("/api/capture")
 def do_capture(req: CaptureReq):
     if not req.scenario:
@@ -151,6 +157,7 @@ _custom_seq = 0
 class CaptureTextReq(BaseModel):
     text: str
     id: str | None = None
+    rules: list[dict] | None = None  # 自定义词库 [{pattern, weight, note}];不给用默认
 
 
 @app.post("/api/capture-text")
@@ -162,7 +169,11 @@ def capture_text(req: CaptureTextReq):
         raise HTTPException(400, "文本不能为空")
     _custom_seq += 1
     cid = (req.id or f"custom-{_custom_seq}").strip() or f"custom-{_custom_seq}"
-    tr = capture(KeywordRiskSut(), InputCase(cid, text))
+    rules = None
+    if req.rules:
+        rules = [Rule(str(r["pattern"]), float(r["weight"]), str(r.get("note", "")))
+                 for r in req.rules if r.get("pattern")]
+    tr = capture(KeywordRiskSut(rules=rules), InputCase(cid, text))
     store.save(tr)
     return {"trace_id": tr.trace_id, "input_text": tr.input.text, "n_tokens": len(tr.tokens()), "harmful": tr.is_harmful()}
 

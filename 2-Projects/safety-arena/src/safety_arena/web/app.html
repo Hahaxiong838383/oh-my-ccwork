@@ -86,6 +86,11 @@
   svg{width:100%;height:auto;display:block}
   .legend{display:flex;gap:18px;font-size:12px;color:var(--muted);margin-top:6px}
   .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  #rules-grid{display:flex;flex-wrap:wrap;gap:8px}
+  .rule-row{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:5px 7px;background:#fafaf8;font-size:13px}
+  .rule-row input.r-pat{width:88px;padding:4px 6px}
+  .rule-row input.r-w{width:54px;padding:4px 6px}
+  .rule-row button{padding:2px 7px;font-size:12px}
   .err{color:var(--red);font-size:13px}
 </style>
 </head>
@@ -137,6 +142,12 @@
       <button class="ghost" id="btn-upload">批量导入</button>
       <span class="note" id="upload-status"></span>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>规则评分器 · risk 怎么算的(白盒可编辑) <span class="hint">「规则演示」用这个词库:risk = 命中词权重累加(封顶 1.0);改权重/加词即校准"什么话术算多危险",信号日志会显示命中明细</span></h2>
+    <div id="rules-grid"></div>
+    <div style="margin-top:10px"><button class="ghost" id="btn-add-rule">+ 加一条规则</button></div>
   </div>
 
   <div class="card">
@@ -336,8 +347,25 @@ function drawCurve(pts){
   <div class="legend"><span><i style="background:#E24B4A"></i>泄漏 字数(越深越少)</span><span><i style="background:#378ADD"></i>TTFT ms(越深越慢)</span></div>`;
 }
 
+let RULES = [];
+async function loadRules(){
+  try{ RULES = (await fetch('/api/rules').then(r => r.json())).rules; }catch{ RULES = []; }
+  renderRules();
+}
+function renderRules(){
+  const g = $('#rules-grid');
+  g.innerHTML = RULES.map((r,i) =>
+    `<span class="rule-row"><input class="r-pat" data-i="${i}" value="${esc(r.pattern)}" title="${esc(r.note||'')}">`
+    + `<input class="r-w" type="number" min="0" max="1" step="0.05" data-i="${i}" value="${r.weight}">`
+    + `<button class="ghost r-del" data-i="${i}">×</button></span>`).join('');
+  g.querySelectorAll('.r-pat').forEach(el => el.onchange = e => RULES[+e.target.dataset.i].pattern = e.target.value);
+  g.querySelectorAll('.r-w').forEach(el => el.onchange = e => RULES[+e.target.dataset.i].weight = +e.target.value);
+  g.querySelectorAll('.r-del').forEach(el => el.onclick = e => { RULES.splice(+e.target.dataset.i, 1); renderRules(); });
+}
+const currentRules = () => RULES.map(r => ({pattern:r.pattern, weight:r.weight, note:r.note || ''}));
+
 async function captureText(text){
-  return fetch('/api/capture-text', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({text})}).then(r => r.json());
+  return fetch('/api/capture-text', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({text, rules: currentRules()})}).then(r => r.json());
 }
 async function customSubmit(){
   const text = $('#custom-text').value.trim();
@@ -393,11 +421,12 @@ $('#btn-compare').onclick = runCompare;
 $('#btn-scan').onclick = runScan;
 $('#btn-custom').onclick = customSubmit;
 $('#btn-live').onclick = captureLive;
+$('#btn-add-rule').onclick = () => { RULES.push({pattern:'新词', weight:0.5, note:''}); renderRules(); };
 $('#btn-upload').onclick = uploadFile;
 
 (async function init(){
   STRATS.forEach(renderStrat);
-  await loadScenarios();
+  await Promise.all([loadScenarios(), loadRules()]);
   await Promise.all([runCompare(), runScan()]);
 })();
 </script>
