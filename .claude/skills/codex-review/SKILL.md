@@ -45,14 +45,14 @@ CODEX_PLUGIN_ROOT="$(ls -d ~/.claude/plugins/cache/openai-codex/codex/* 2>/dev/n
 3. **前台执行**：
 
 ```bash
-node "$CODEX_PLUGIN_ROOT/scripts/codex-companion.mjs" review "$ARGUMENTS"
+node "$CODEX_PLUGIN_ROOT/scripts/codex-companion.mjs" review --model gpt-5.5 "$ARGUMENTS"
 ```
 
 4. **后台执行**：
 
 ```bash
 # 使用 run_in_background: true
-node "$CODEX_PLUGIN_ROOT/scripts/codex-companion.mjs" review "$ARGUMENTS"
+node "$CODEX_PLUGIN_ROOT/scripts/codex-companion.mjs" review --model gpt-5.5 "$ARGUMENTS"
 ```
 后台启动后告知用户：「Codex 审查已在后台启动，用 `/codex-status` 查看进度。」
 
@@ -60,6 +60,7 @@ node "$CODEX_PLUGIN_ROOT/scripts/codex-companion.mjs" review "$ARGUMENTS"
 
 ## 铁律
 
+- **必须带 `--model gpt-5.5`**：codex companion 走 ChatGPT 订阅账号，不支持默认的 `gpt-5.3-codex`（报 400 `The 'gpt-5.3-codex' model is not supported when using Codex with a ChatGPT account`）。上面命令已固定 `--model gpt-5.5`（账号支持的无 `-codex` 后缀模型），**切勿删除**。如需换模型，只能用 `gpt-5.4`/`gpt-5.5` 等无 `-codex` 后缀的。
 - **仅审查，不修复**。不要根据审查结果自动修改代码。
 - **原样输出**。不要改写、总结或添加评论。
 - 如果用户需要自定义审查指令或更激进的审查，引导使用 `/codex-adversarial-review`。
