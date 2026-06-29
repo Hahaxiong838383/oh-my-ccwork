@@ -52,6 +52,7 @@ output_levels: L2（分析过程 + 结论）
    | 依赖问题 | 外部服务/库的行为变化 |
    | 配置问题 | 环境变量、配置项缺失或错误 |
    | 状态问题 | 全局状态/缓存/session 异常 |
+   | 静默成功 | "没反应"且无报错 → 请求其实 200 成功，但返回了被前端忽略的状态字段（`deduplicated`/`skipped`/`already_exists`/`noop`），或成功路径压根没给用户反馈。**"没反应"≠ 失败，优先怀疑"静默成功"**：先看 Network 真实响应体，再看前端是否消费了所有有意义的字段 |
 
 ### Phase 3：假设验证
 
@@ -96,6 +97,26 @@ output_levels: L2（分析过程 + 结论）
 
 ---
 
+## 实战技巧：前端「没反应」类 bug 的浏览器内端到端验证
+
+验证前端修复（尤其文件上传、表单提交这类"靠交互触发"的路径）时，preview/自动化工具通常**没法直接传本机文件**。可在页面上下文里造真实交互：
+
+```js
+// preview_eval 里执行：从后端已有数据 download 端点取内容 → 造 File → 塞进隐藏 input → 派发 change
+const blob = await (await fetch(`/api/banks/${ver}/download/source`)).blob();
+const file = new File([blob], 'x.csv', { type: 'text/csv' });
+const input = document.querySelector('input[type=file]');
+const dt = new DataTransfer(); dt.items.add(file);
+input.files = dt.files;
+input.dispatchEvent(new Event('change', { bubbles: true }));  // 触发真实 React onChange → 真实上传
+```
+
+- 改一个字节（如末尾加 `\n`）即可让内容 hash 变化，验证"新建成功"分支；原样重传验证"去重/重复"分支——一份数据测两条路径。
+- **Claude_Preview MCP 在 monorepo 里会跑自己的 `/tmp/narrative_preview` 静态服务、无视 `launch.json`**：绕过法 = 自己 `npm run dev` 起 vite，再用 `preview_eval` 把 `window.location` 跨源导航到本机 vite 端口，后续 eval/snapshot 都在真页面里跑。
+- 验证后查 `preview_console_logs(level=error)` 确认零报错，再看 DOM 文本（比截图更权威，截图视口可能异常窄）。
+
+---
+
 ## 反模式（禁止）
 
 - 看到错误信息直接改代码，没有找到根因
@@ -116,3 +137,4 @@ output_levels: L2（分析过程 + 结论）
 ---
 
 *v1.0 — 改编自 gstack-investigate，2026-03-21*
+*v1.1 — 增补「静默成功」根因类型 + 前端浏览器内端到端验证技巧（kidsbench 题库上传「没反应」实战），2026-06-29*
