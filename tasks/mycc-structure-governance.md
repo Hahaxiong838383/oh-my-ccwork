@@ -96,19 +96,18 @@ ln -sfn ../.mycc-global/0-System 0-System
 
 注意：
 
-- 不删除 `0-System.old`
 - 不用 `0-System.old` 覆盖当前 `0-System`
 - 不改 canonical 记忆源 `~/.claude/projects/-Users-rayman-chen-mycc/memory/`
 
-## `0-System.old` 迁移注意事项
+## `0-System.old` 迁移注意事项（已完结，2026-06-30 删除）
 
-`0-System.old` 只作为旧数据来源：
+`0-System.old` 是 symlink 化（6-16）之前的旧实目录备份。2026-06-30 经老板确认删除，删前已验证现行 `~/.mycc-global/0-System`（symlink 真身）是其**严格超集**：
 
-1. 先列文件清单和用途。
-2. 对比当前 `0-System` 是否已有同名/同类内容。
-3. 只提取缺失事实或历史材料。
-4. 涉及记忆内容时，先给差异清单，等老板确认。
-5. 不做目录级覆盖。
+- `memory-items.md` 6-25 > old 6-13；`RECENT_EVENTS.md` 6-29 > old 6-15；`task-log.md` 6-30 > old 6-16；`status.md` 6-30 > old 6-16
+- `memory.db` 两侧完全一致（同大小同时间）
+- 无任何脚本/配置引用 `0-System.old`，且它从未被 git 跟踪
+
+结论：旧备份无 live 缺失的事实，迁移保险条件满足，已 `rm -rf`。
 
 ## 分阶段 todo
 
