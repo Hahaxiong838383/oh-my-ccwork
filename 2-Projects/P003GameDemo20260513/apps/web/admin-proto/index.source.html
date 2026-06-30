@@ -1376,19 +1376,21 @@
                       </el-table-column>
                       <el-table-column label="名称（可改名 → 联动 UPDATE feedback）" min-width="220">
                         <template #default="{row}">
-                          <el-input v-if="isAdmin && row.system===0" :model-value="row.display_name" size="small" @change="(v) => renameTheme(row, v)"></el-input>
+                          <!-- v-model 绑 row.display_name 本地草稿（row 是 reactive 副本，敲字立即可见）；
+                               @change 失焦/回车提交 PATCH。修：原 :model-value 单向绑定，输入被立即覆盖敲不进去 -->
+                          <el-input v-if="isAdmin && row.system===0" v-model="row.display_name" size="small" @change="(v) => renameTheme(row, v)"></el-input>
                           <span v-else>{{ row.display_name }}<span v-if="row.system===1" style="color:#9B7BF0;margin-left:6px;font-size:11px">🔒 系统</span></span>
                         </template>
                       </el-table-column>
                       <el-table-column label="颜色" width="160">
                         <template #default="{row}">
-                          <el-input v-if="isAdmin" :model-value="row.color" size="small" placeholder="#0EA5C0" @change="(v) => setThemeColor(row, v)"></el-input>
+                          <el-input v-if="isAdmin" v-model="row.color" size="small" placeholder="#0EA5C0" @change="(v) => setThemeColor(row, v)"></el-input>
                           <span v-else>{{ row.color }}</span>
                         </template>
                       </el-table-column>
                       <el-table-column label="排序" width="110">
                         <template #default="{row}">
-                          <el-input-number v-if="isAdmin" :model-value="row.sort_order" size="small" :min="0" :max="9999" :controls="false" style="width:80px" @change="(v) => setThemeSort(row, v)"></el-input-number>
+                          <el-input-number v-if="isAdmin" v-model="row.sort_order" size="small" :min="0" :max="9999" :controls="false" style="width:80px" @change="(v) => setThemeSort(row, v)"></el-input-number>
                           <span v-else>{{ row.sort_order }}</span>
                         </template>
                       </el-table-column>
@@ -3076,21 +3078,30 @@
                 // 改名 / 启停影响 chip 显示，重拉一次 feedback 让卡片/聚合都跟着变
                 if (patch.new_id || patch.active != null) loadRealFeedback();
               } else {
+                // 失败：v-model 已乐观改了 row 字段，重拉还原成 server 真值
                 ElementPlus.ElMessage.error('操作失败：' + (d && d.error || '未知'));
+                loadThemes();
               }
             })
-            .catch(function (e) { if (e.message !== '401') ElementPlus.ElMessage.error('操作失败'); });
+            .catch(function (e) {
+              if (e.message !== '401') { ElementPlus.ElMessage.error('操作失败'); loadThemes(); }
+            });
         }
+        // 注：列用 v-model 双绑 row 字段（敲字立即可见），所以这里不能拿 row.xxx 比旧值
+        // （v-model 已把 row.xxx 改成新值，比较恒等 true 会永远 return 不提交）。
+        // el-input @change 仅在值真正变化 + 失焦/回车时触发，传入的就是新值，直接提交。
         function renameTheme(row, newId) {
-          if (!newId || newId === row.id) return;
+          newId = (newId || '').trim();
+          if (!newId) { loadThemes(); return; } // 清空非法 → 重拉还原
           patchTheme(row.id, { new_id: newId }, '已改名（并联动 feedback）');
         }
         function setThemeColor(row, color) {
-          if (!color || color === row.color) return;
+          color = (color || '').trim();
+          if (!color) { loadThemes(); return; }
           patchTheme(row.id, { color: color }, '颜色已更新');
         }
         function setThemeSort(row, sort) {
-          if (sort == null || sort === row.sort_order) return;
+          if (sort == null) { loadThemes(); return; }
           patchTheme(row.id, { sort_order: sort }, '排序已更新');
         }
         function toggleThemeActive(row, isActive) {

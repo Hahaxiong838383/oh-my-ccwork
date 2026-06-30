@@ -4,7 +4,6 @@ import {
   FEEDBACK_ADOPTION_KINDS,
   FEEDBACK_EMOTIONS,
   FEEDBACK_STATUSES,
-  FEEDBACK_THEMES,
   feedbackStore,
   type FeedbackItem,
 } from '../feedback-store.js';
@@ -13,11 +12,15 @@ import { getTokenRole, getTokenUser, isValidToken } from './auth.js';
 const feedbackRoute = new Hono();
 
 // PATCH body：所有字段 optional；adoptionKind 三态（缺/null/枚举值），用 nullable.optional 表达
+// 2026-06-30 修：theme 由硬编码 z.enum(FEEDBACK_THEMES) 改 z.string()——主题词表已动态化（ADR-06，
+// feedback_themes 表 admin 可增删改名），enum 会拒 admin 新增的主题（如「方法」），导致 Issue 看板
+// 把卡片改成新主题时 400 bad_request。store 层 normalizeTheme 已兜底（trim + 空兜「未分类」）。
+// emotion 词表仍硬编码（无管理页），保留 z.enum 严格校验。
 const PatchBodySchema = z
   .object({
     status: z.enum(FEEDBACK_STATUSES).optional(),
     note: z.string().optional(),
-    theme: z.enum(FEEDBACK_THEMES).optional(),
+    theme: z.string().min(1).max(40).optional(),
     emotion: z.enum(FEEDBACK_EMOTIONS).optional(),
     adoptionKind: z.enum(FEEDBACK_ADOPTION_KINDS).nullable().optional(),
   })
