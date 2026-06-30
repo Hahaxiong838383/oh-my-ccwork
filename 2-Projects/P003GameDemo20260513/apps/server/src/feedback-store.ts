@@ -197,10 +197,16 @@ function isFeedbackStatus(value: string): value is FeedbackStatus {
   return FEEDBACK_STATUSES.includes(value as FeedbackStatus);
 }
 
-/** 主题归一：未知 / 空 → 「未分类」（向后兼容旧数据 + 容错） */
+/**
+ * 主题归一：trim + 空兜底「未分类」。
+ * ADR-06 后 themes 词表由 feedback_themes 表动态管理（admin 可加 / 改名 / 软删），
+ * 不再用硬编码 FEEDBACK_THEMES 校验白名单——否则改过名的值会被误归「未分类」。
+ * 前端用 themesMap 兜底显示，未知值原样保留 chip。
+ * FEEDBACK_THEMES 常量仅作初始 seed 数据用。
+ */
 function normalizeTheme(value: string | null | undefined): FeedbackTheme {
   const v = (value ?? '').trim();
-  return (FEEDBACK_THEMES as readonly string[]).includes(v) ? (v as FeedbackTheme) : '未分类';
+  return (v || '未分类') as FeedbackTheme;
 }
 
 /** 情绪归一：未知 / 空 → 「中性」 */

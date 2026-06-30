@@ -12,6 +12,7 @@ import { adminDataRoute } from './routes/admin-data.js';
 import { customLlmRoute } from './routes/custom-llm.js';
 import { rtcRoute } from './routes/rtc.js';
 import { devItemsRoute } from './routes/dev-items.js';
+import { themesRoute } from './routes/themes.js';
 import { checkAndCount, getClientIp } from './guard.js';
 import { verifyAuthToken, type AuthContext } from './auth-jwt.js';
 
@@ -28,6 +29,7 @@ app.route('/api/profile', profileRoute);
 app.route('/api/admin', adminDataRoute);
 app.route('/api/rtc', rtcRoute);
 app.route('/api/dev-items', devItemsRoute);
+app.route('/api/feedback-themes', themesRoute);
 // 火山 RTC 实时对话 CustomLLM 回调端点（docs/34 D 方案）：OpenAI 兼容 /v1/chat/completions（SSE）。
 app.route('/v1', customLlmRoute);
 
