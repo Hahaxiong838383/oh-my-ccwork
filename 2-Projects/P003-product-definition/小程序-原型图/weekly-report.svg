@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+  <!-- 背景 -->
+  <rect width="390" height="844" fill="#F7F8FA"/>
+  
+  <!-- 状态栏 -->
+  <text x="32" y="30" font-family="PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#1F2933">9:41</text>
+  <rect x="330" y="20" width="22" height="10" rx="2" stroke="#1F2933" stroke-width="1" fill="none"/>
+  <rect x="332" y="22" width="14" height="6" fill="#1F2933"/>
+  <path d="M310 30 L310 20 M315 30 L315 17 M320 30 L320 14" stroke="#1F2933" stroke-width="1.5"/>
+  
+  <!-- 导航栏 -->
+  <text x="195" y="70" font-family="PingFang SC, sans-serif" font-size="17" font-weight="600" fill="#1F2933" text-anchor="middle">本周报告 · 6.2-6.8</text>
+  
+  <!-- 内容区 -->
+  <!-- 1. 高光卡 -->
+  <rect x="16" y="96" width="358" height="90" rx="16" fill="#FFF3EC"/>
+  <text x="32" y="125" font-family="PingFang SC, sans-serif" font-size="16" font-weight="600" fill="#FF7A45">🌟 本周高光</text>
+  <text x="32" y="152" font-family="PingFang SC, sans-serif" font-size="14" fill="#1F2933">连续 5 天主动打开读写台</text>
+  <text x="32" y="172" font-family="PingFang SC, sans-serif" font-size="14" fill="#1F2933">KidsHub 建议被采纳 1 条</text>
+  
+  <!-- 2. 护眼硬数字卡 -->
+  <rect x="16" y="198" width="358" height="110" rx="16" fill="#FFFFFF"/>
+  <text x="32" y="225" font-family="PingFang SC, sans-serif" font-size="14" font-weight="600" fill="#1F2933">护眼守护</text>
+  <!-- 三列 -->
+  <text x="75" y="260" font-family="PingFang SC, sans-serif" font-size="26" font-weight="700" fill="#FF7A45" text-anchor="middle">23</text>
+  <text x="75" y="282" font-family="PingFang SC, sans-serif" font-size="12" fill="#8C94A3" text-anchor="middle">坐姿守护次</text>
+  
+  <text x="195" y="260" font-family="PingFang SC, sans-serif" font-size="26" font-weight="700" fill="#1F2933" text-anchor="middle">1.8</text>
+  <text x="195" y="282" font-family="PingFang SC, sans-serif" font-size="12" fill="#8C94A3" text-anchor="middle">日均用眼h</text>
+  
+  <text x="315" y="260" font-family="PingFang SC, sans-serif" font-size="20" font-weight="700" fill="#52C41A" text-anchor="middle">平稳</text>
+  <text x="315" y="282" font-family="PingFang SC, sans-serif" font-size="12" fill="#8C94A3" text-anchor="middle">视力趋势</text>
+
+  <!-- 3. 问题与解法卡 -->
+  <rect x="16" y="320" width="358" height="96" rx="16" fill="#FFFFFF"/>
+  <text x="32" y="345" font-family="PingFang SC, sans-serif" font-size="14" font-weight="600" fill="#FF4D4F">⚠ 一个小建议</text>
+  <text x="32" y="372" font-family="PingFang SC, sans-serif" font-size="14" fill="#1F2933">孩子晚上 9 点后使用偏多</text>
+  <text x="32" y="394" font-family="PingFang SC, sans-serif" font-size="14" fill="#4A9DF0">→ 把提醒间隔调到 30 分钟</text>
+
+  <!-- 4. 亲子小目标卡 -->
+  <rect x="16" y="428" width="358" height="64" rx="16" fill="#FFFFFF"/>
+  <text x="32" y="465" font-family="PingFang SC, sans-serif" font-size="14" fill="#1F2933">🎯 下周小目标：连续 4 天 21:00 收工</text>
+  <rect x="290" y="444" width="68" height="32" rx="16" fill="#FF7A45"/>
+  <text x="324" y="465" font-family="PingFang SC, sans-serif" font-size="12" font-weight="600" fill="#FFFFFF" text-anchor="middle">转为约定</text>
+
+  <!-- 5. 底部按钮 -->
+  <rect x="16" y="700" width="173" height="44" rx="22" stroke="#FF7A45" stroke-width="1.5" fill="#FFFFFF"/>
+  <text x="102" y="727" font-family="PingFang SC, sans-serif" font-size="14" font-weight="600" fill="#FF7A45" text-anchor="middle">查看历史报告</text>
+  
+  <rect x="201" y="700" width="173" height="44" rx="22" fill="#FF7A45"/>
+  <text x="287" y="727" font-family="PingFang SC, sans-serif" font-size="14" font-weight="600" fill="#FFFFFF" text-anchor="middle">生成分享卡</text>
+
+  <!-- 底部 TabBar -->
+  <rect y="761" width="390" height="83" fill="#FFFFFF"/>
+  <line x1="0" y1="761" x2="390" y2="761" stroke="#EEEEEE" stroke-width="1"/>
+  <!-- Tab 1: 首页 -->
+  <rect x="29" y="775" width="20" height="20" rx="4" fill="#8C94A3"/>
+  <text x="39" y="810" font-family="PingFang SC, sans-serif" font-size="11" fill="#8C94A3" text-anchor="middle">首页</text>
+  <!-- Tab 2: 周报 (Active) -->
+  <rect x="107" y="775" width="20" height="20" rx="4" fill="#FF7A45"/>
+  <text x="117" y="810" font-family="PingFang SC, sans-serif" font-size="11" fill="#FF7A45" text-anchor="middle">周报</text>
+  <!-- Tab 3: 兑换 -->
+  <rect x="185" y="775" width="20" height="20" rx="4" fill="#8C94A3"/>
+  <text x="195" y="810" font-family="PingFang SC, sans-serif" font-size="11" fill="#8C94A3" text-anchor="middle">兑换</text>
+  <!-- Tab 4: KidsHub -->
+  <rect x="263" y="775" width="20" height="20" rx="4" fill="#8C94A3"/>
+  <text x="273" y="810" font-family="PingFang SC, sans-serif" font-size="11" fill="#8C94A3" text-anchor="middle">KidsHub</text>
+  <!-- Tab 5: 我的 -->
+  <rect x="341" y="775" width="20" height="20" rx="4" fill="#8C94A3"/>
+  <text x="351" y="810" font-family="PingFang SC, sans-serif" font-size="11" fill="#8C94A3" text-anchor="middle">我的</text>
+</svg>

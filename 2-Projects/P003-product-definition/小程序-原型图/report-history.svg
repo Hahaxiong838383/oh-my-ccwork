@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+  <rect width="390" height="844" fill="#F7F8FA"/>
+  
+  <!-- 状态栏 -->
+  <text x="32" y="30" font-family="PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#1F2933">9:41</text>
+  
+  <!-- 导航栏 -->
+  <path d="M20 70 L30 60 M20 70 L30 80" stroke="#1F2933" stroke-width="2" fill="none"/>
+  <text x="195" y="75" font-family="PingFang SC, sans-serif" font-size="17" font-weight="600" fill="#1F2933" text-anchor="middle">历史报告</text>
+
+  <!-- 内容区 -->
+  <!-- 切换开关 -->
+  <rect x="145" y="100" width="100" height="32" rx="16" fill="#EEEEEE"/>
+  <rect x="147" y="102" width="48" height="28" rx="14" fill="#FF7A45"/>
+  <text x="171" y="121" font-family="PingFang SC, sans-serif" font-size="12" fill="#FFFFFF" text-anchor="middle">周</text>
+  <text x="221" y="121" font-family="PingFang SC, sans-serif" font-size="12" fill="#8C94A3" text-anchor="middle">月</text>
+
+  <!-- 1. 今日分时卡 -->
+  <rect x="16" y="148" width="358" height="160" rx="16" fill="#FFFFFF"/>
+  <text x="32" y="175" font-family="PingFang SC, sans-serif" font-size="14" font-weight="600" fill="#1F2933">今日使用分布</text>
+  <!-- 柱状图示意 -->
+  <rect x="50" y="250" width="10" height="20" fill="#FF7A45" rx="2"/>
+  <rect x="70" y="240" width="10" height="30" fill="#FF7A45" rx="2"/>
+  <rect x="90" y="220" width="10" height="50" fill="#FF7A45" rx="2"/>
+  <rect x="110" y="210" width="10" height="60" fill="#FF7A45" rx="2"/>
+  <rect x="130" y="230" width="10" height="40" fill="#FF7A45" rx="2"/>
+  <rect x="150" y="260" width="10" height="10" fill="#EEEEEE" rx="2"/>
+  <rect x="170" y="200" width="10" height="70" fill="#FF7A45" rx="2"/>
+  <rect x="190" y="190" width="10" height="80" fill="#FF7A45" rx="2"/>
+  <rect x="210" y="220" width="10" height="50" fill="#FF7A45" rx="2"/>
+  <rect x="230" y="240" width="10" height="30" fill="#FF7A45" rx="2"/>
+  <rect x="250" y="250" width="10" height="20" fill="#FF7A45" rx="2"/>
+  <rect x="270" y="265" width="10" height="5" fill="#EEEEEE" rx="2"/>
+  <text x="55" y="285" font-family="PingFang SC" font-size="10" fill="#8C94A3" text-anchor="middle">8点</text>
+  <text x="275" y="285" font-family="PingFang SC" font-size="10" fill="#8C94A3" text-anchor="middle">20点</text>
+
+  <!-- 2. 使用日历卡 -->
+  <rect x="16" y="320" width="358" height="200" rx="16" fill="#FFFFFF"/>
+  <text x="32" y="345" font-family="PingFang SC, sans-serif" font-size="14" font-weight="600" fill="#1F2933">6 月使用日历</text>
+  <!-- 7x5 网格示意 -->
+  <g transform="translate(45, 365)">
+    <rect x="0" y="0" width="36" height="24" rx="4" fill="#FF7A45"/>
+    <rect x="42" y="0" width="36" height="24" rx="4" fill="#FF7A45"/>
+    <rect x="84" y="0" width="36" height="24" rx="4" fill="#EEEEEE"/>
+    <rect x="126" y="0" width="36" height="24" rx="4" fill="#FF7A45"/>
+    <rect x="168" y="0" width="36" height="24" rx="4" fill="#EEEEEE"/>
+    <rect x="210" y="0" width="36" height="24" rx="4" fill="#FF7A45"/>
+    <rect x="252" y="0" width="36" height="24" rx="4" fill="#FF7A45"/>
+    
+    <rect x="0" y="30" width="36" height="24" rx="4" fill="#FF7A45"/>
+    <rect x="42" y="30" width="36" height="24" rx="4" fill="#FF7A45"/>
+    <rect x="84" y="30" width="36" height="24" rx="4" fill="#FF7A45"/>
+    <rect x="126" y="30" width="36" height="24" rx="4" fill="#EEEEEE"/>
+    <rect x="168" y="30" width="36" height="24" rx="4" fill="#FF7A45"/>
+    <rect x="210" y="30" width="36" height="24" rx="4" fill="#FF7A45"/>
+    <rect x="252" y="30" width="36" height="24" rx="4" fill="#FF7A45"/>
+  </g>
+
+  <!-- 3. 视力趋势卡 -->
+  <rect x="16" y="532" width="358" height="200" rx="16" fill="#FFFFFF"/>
+  <text x="32" y="557" font-family="PingFang SC, sans-serif" font-size="14" font-weight="600" fill="#1F2933">视力档案趋势</text>
+  <!-- 折线图示意 -->
+  <polyline points="60,670 110,660 160,665 210,650 260,640 310,635" fill="none" stroke="#FF7A45" stroke-width="2"/>
+  <polyline points="60,680 110,675 160,685 210,670 260,665 310,660" fill="none" stroke="#4A9DF0" stroke-width="2"/>
+  <text x="60" y="705" font-family="PingFang SC" font-size="10" fill="#8C94A3" text-anchor="middle">1月</text>
+  <text x="310" y="705" font-family="PingFang SC" font-size="10" fill="#8C94A3" text-anchor="middle">6月</text>
+  <!-- 图例 -->
+  <circle cx="280" cy="554" r="3" fill="#FF7A45"/>
+  <text x="286" y="558" font-family="PingFang SC" font-size="10" fill="#8C94A3">左眼</text>
+  <circle cx="320" cy="554" r="3" fill="#4A9DF0"/>
+  <text x="326" y="558" font-family="PingFang SC" font-size="10" fill="#8C94A3">右眼</text>
+</svg>

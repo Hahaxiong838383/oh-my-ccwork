@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+  <rect width="390" height="844" fill="#F7F8FA"/>
+  
+  <!-- 状态栏 -->
+  <text x="32" y="30" font-family="PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#1F2933">9:41</text>
+  
+  <!-- 导航栏 -->
+  <path d="M20 70 L30 60 M20 70 L30 80" stroke="#1F2933" stroke-width="2" fill="none"/>
+  <text x="195" y="75" font-family="PingFang SC, sans-serif" font-size="17" font-weight="600" fill="#1F2933" text-anchor="middle">消息中心</text>
+
+  <!-- 列表区 -->
+  <!-- 1. 消息 -->
+  <rect x="16" y="100" width="358" height="88" rx="16" fill="#FFFFFF"/>
+  <circle cx="48" cy="144" r="20" fill="#FF7A45" opacity="0.2"/>
+  <rect x="42" y="138" width="12" height="12" rx="2" fill="#FF7A45"/>
+  <text x="80" y="132" font-family="PingFang SC, sans-serif" font-size="14" font-weight="600" fill="#1F2933">夜航助攻</text>
+  <text x="80" y="156" font-family="PingFang SC, sans-serif" font-size="12" fill="#8C94A3">昨晚小明的方舟带回 32 家族币</text>
+  <text x="358" y="132" font-family="PingFang SC, sans-serif" font-size="12" fill="#8C94A3" text-anchor="end">今天 8:00</text>
+  <circle cx="25" cy="108" r="4" fill="#FF4D4F"/> <!-- 红点 -->
+
+  <!-- 2. 消息 -->
+  <rect x="16" y="200" width="358" height="88" rx="16" fill="#FFFFFF"/>
+  <circle cx="48" cy="244" r="20" fill="#52C41A" opacity="0.2"/>
+  <rect x="42" y="238" width="12" height="12" rx="2" fill="#52C41A"/>
+  <text x="80" y="232" font-family="PingFang SC, sans-serif" font-size="14" font-weight="600" fill="#1F2933">待兑现提醒</text>
+  <text x="80" y="256" font-family="PingFang SC, sans-serif" font-size="12" fill="#8C94A3">小明达成了约定『踢足球 50 分钟』</text>
+  <text x="358" y="232" font-family="PingFang SC, sans-serif" font-size="12" fill="#8C94A3" text-anchor="end">昨天 19:32</text>
+  <circle cx="25" cy="208" r="4" fill="#FF4D4F"/> <!-- 红点 -->
+
+  <!-- 3. 消息 -->
+  <rect x="16" y="300" width="358" height="88" rx="16" fill="#FFFFFF"/>
+  <circle cx="48" cy="344" r="20" fill="#4A9DF0" opacity="0.2"/>
+  <rect x="42" y="338" width="12" height="12" rx="2" fill="#4A9DF0"/>
+  <text x="80" y="332" font-family="PingFang SC, sans-serif" font-size="14" font-weight="600" fill="#1F2933">因为你的建议，小可又进化了</text>
+  <text x="80" y="356" font-family="PingFang SC, sans-serif" font-size="12" fill="#8C94A3">你提的『周报看不懂』已优化上线</text>
+  <text x="358" y="332" font-family="PingFang SC, sans-serif" font-size="12" fill="#8C94A3" text-anchor="end">6.8</text>
+
+  <!-- 4. 消息 -->
+  <rect x="16" y="400" width="358" height="88" rx="16" fill="#FFFFFF"/>
+  <circle cx="48" cy="444" r="20" fill="#9B7BF0" opacity="0.2"/>
+  <rect x="42" y="438" width="12" height="12" rx="2" fill="#9B7BF0"/>
+  <text x="80" y="432" font-family="PingFang SC, sans-serif" font-size="14" font-weight="600" fill="#1F2933">本周报告已生成</text>
+  <text x="80" y="456" font-family="PingFang SC, sans-serif" font-size="12" fill="#8C94A3">点击查看小明的一周表现</text>
+  <text x="358" y="432" font-family="PingFang SC, sans-serif" font-size="12" fill="#8C94A3" text-anchor="end">6.8</text>
+</svg>
