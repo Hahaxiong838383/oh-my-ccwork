@@ -15,6 +15,8 @@ export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
  */
 export const FEEDBACK_THEMES = [
   '未分类',
+  '功能类',
+  '体验类',
   '夜航·内容',
   '专注·交互',
   '皮肤·养成',
