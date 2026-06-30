@@ -156,6 +156,48 @@ class DevItemStore {
     this.db.exec(`ALTER TABLE dev_items ADD COLUMN ${col} ${def}`);
   }
 
+  /**
+   * 父子展开：对传入的 feedback_ids，若其中任何一个是「父项」（有子），
+   * 把其所有子项 id 也一并加入待关联列表（去重 + 保序）。
+   *
+   * 避循环依赖：直接 SQL 查 feedback_items（同库），不 import feedbackStore。
+   * 容错：feedback_items 表不存在（极少见）→ 直接返回原列表，不抛错。
+   */
+  private expandWithChildren(feedbackIds: string[]): string[] {
+    const cleaned = feedbackIds
+      .filter((x): x is string => typeof x === 'string')
+      .map((x) => x.trim())
+      .filter((x) => x.length > 0);
+    if (cleaned.length === 0) return [];
+
+    const result: string[] = [];
+    const seen = new Set<string>();
+    for (const id of cleaned) {
+      if (!seen.has(id)) {
+        seen.add(id);
+        result.push(id);
+      }
+    }
+
+    try {
+      const placeholders = cleaned.map(() => '?').join(', ');
+      const rows = this.db
+        .prepare(
+          `SELECT id FROM feedback_items WHERE parent_feedback_id IN (${placeholders})`,
+        )
+        .all(...cleaned) as { id: string }[];
+      for (const r of rows) {
+        if (!seen.has(r.id)) {
+          seen.add(r.id);
+          result.push(r.id);
+        }
+      }
+    } catch {
+      // feedback_items 表不存在 / parent_feedback_id 列不存在 → 不展开，返原列表
+    }
+    return result;
+  }
+
   /** 读关联的 feedback_id 列表 */
   private getFeedbackIds(devItemId: string): string[] {
     const rows = this.db
@@ -237,14 +279,14 @@ class DevItemStore {
       );
 
     // 初始关联 feedback（如果有）→ 自动聚合 quote + themes
+    // 父子展开：父项被 promote 时其子项一并入库（admin 单击父 → 所有合并的孩子都看到 dev chip）
     if (input.feedback_ids && input.feedback_ids.length > 0) {
+      const expanded = this.expandWithChildren(input.feedback_ids);
       const stmt = this.db.prepare(
         'INSERT OR IGNORE INTO dev_item_feedbacks (dev_item_id, feedback_id) VALUES (?, ?)',
       );
-      for (const fid of input.feedback_ids) {
-        if (typeof fid === 'string' && fid.trim()) {
-          stmt.run(id, fid.trim());
-        }
+      for (const fid of expanded) {
+        stmt.run(id, fid);
       }
       this.updateAggregation(id);
     }
@@ -349,13 +391,13 @@ class DevItemStore {
   attachFeedbacks(id: string, feedbackIds: string[]): DevItem | null {
     const current = this.getById(id);
     if (!current) return null;
+    // 父子展开：传入父项 → 一并附加其子项
+    const expanded = this.expandWithChildren(feedbackIds);
     const stmt = this.db.prepare(
       'INSERT OR IGNORE INTO dev_item_feedbacks (dev_item_id, feedback_id) VALUES (?, ?)',
     );
-    for (const fid of feedbackIds) {
-      if (typeof fid === 'string' && fid.trim()) {
-        stmt.run(id, fid.trim());
-      }
+    for (const fid of expanded) {
+      stmt.run(id, fid);
     }
     this.updateAggregation(id);
     return this.getById(id);

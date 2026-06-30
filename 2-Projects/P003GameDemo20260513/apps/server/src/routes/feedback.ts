@@ -31,6 +31,11 @@ const PatchBodySchema = z
     { message: 'status / note / theme / emotion / adoptionKind 至少提供一个' },
   );
 
+// PATCH /:id/parent body：parent_id 必填（string|null）。string=合并到该父；null=解除合并。
+const PatchParentBodySchema = z.object({
+  parent_id: z.string().min(1).nullable(),
+});
+
 type FeedbackPublicItem = Omit<FeedbackItem, 'ip_hash'>;
 
 feedbackRoute.use('*', async (c, next) => {
@@ -81,6 +86,60 @@ feedbackRoute.patch('/:id', async (c) => {
   }
 
   return c.json({ ok: true, item: toPublicItem(item) });
+});
+
+/**
+ * PATCH /:id/parent  body { parent_id: string | null }
+ * - admin only（中间件已校验）
+ * - 改 childId 的 parent_feedback_id
+ * - 失败场景（拒嵌套）→ 400 + 具体 error code
+ */
+feedbackRoute.patch('/:id/parent', async (c) => {
+  let rawBody: unknown;
+  try {
+    rawBody = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'bad_request' }, 400);
+  }
+
+  const parsed = PatchParentBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return c.json({ ok: false, error: 'bad_request', message: 'parent_id 必填（string|null）' }, 400);
+  }
+
+  const token = getAuthorizedToken(c.req.header('authorization'));
+  const updatedBy = token ? getTokenUser(token) ?? 'admin' : 'admin';
+  const childId = c.req.param('id');
+
+  try {
+    const item = feedbackStore.setParent(childId, parsed.data.parent_id, updatedBy);
+    if (!item) {
+      return c.json({ ok: false, error: 'not_found' }, 404);
+    }
+    console.log(`[feedback] parent updated child=${childId} parent=${parsed.data.parent_id ?? 'null'} by=${updatedBy}`);
+    return c.json({ ok: true, item: toPublicItem(item) });
+  } catch (err) {
+    const code = err instanceof Error ? err.message : 'merge_failed';
+    return c.json({ ok: false, error: code }, 400);
+  }
+});
+
+/**
+ * GET /:id/children
+ * 列出某父项的所有子项。guest 可读。不存在 → 200 + 空数组。
+ */
+feedbackRoute.get('/:id/children', (c) => {
+  const items = feedbackStore.findChildren(c.req.param('id')).map(toPublicItem);
+  return c.json({ ok: true, items });
+});
+
+/**
+ * GET /:id/merge-candidates
+ * 同主题 + 同情绪的顶层反馈候选（最多 50）。guest 可读。
+ */
+feedbackRoute.get('/:id/merge-candidates', (c) => {
+  const items = feedbackStore.findMergeCandidates(c.req.param('id')).map(toPublicItem);
+  return c.json({ ok: true, items });
 });
 
 function readBearerToken(headerValue: string | undefined): string | null {
