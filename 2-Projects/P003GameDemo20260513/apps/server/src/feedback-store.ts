@@ -119,9 +119,12 @@ type FeedbackUpdateInput = {
   status?: FeedbackStatus;
   note?: string;
   updatedBy?: string;
-  /** 主题改写（admin 手动归类）。传入字符串非枚举值 → 兜底「其他」。 */
-  theme?: FeedbackTheme;
-  /** 情绪改写（admin 手动）。非枚举 → 兜底「中性」。 */
+  /**
+   * 主题改写（admin 手动归类）。ADR-06 后词表动态化，admin 可新增任意主题（如「方法」），
+   * 故收 string 而非枚举；normalizeTheme 只做 trim + 空兜「未分类」，不再白名单校验。
+   */
+  theme?: string;
+  /** 情绪改写（admin 手动）。词表仍硬编码，非枚举值 normalizeEmotion 兜底「中性」。 */
   emotion?: FeedbackEmotion;
   /**
    * 采纳子类。规则：
