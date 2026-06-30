@@ -1214,10 +1214,34 @@
                           <div class="kh-issue" v-for="it in col.items" :key="it.id" @click="openRealIssue(it)">
                             <div class="iid">{{ it.id }} · {{ it.nickname || '匿名' }}<span v-if="it.gender || it.age" style="color:#909399"> · {{ it.gender }}{{ it.age ? it.age + '岁' : '' }}</span><span v-if="it.adoptionKind==='重点'" title="重点采纳" style="margin-left:6px;color:#E8833A">⭐</span></div>
                             <p style="margin:6px 0 8px;font-size:13px;line-height:1.4">{{ it.text }}</p>
-                            <!-- 双标签 chip：主题 + 情绪（点开抽屉可改） -->
-                            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
-                              <span :style="{background: themeChipColor(it.theme), color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px'}">{{ it.theme || '未分类' }}</span>
-                              <span :style="{background:'transparent', color: emotionChipColor(it.emotion), border:'1px solid '+emotionChipColor(it.emotion), fontSize:'11px', padding:'1px 8px', borderRadius:'10px'}">{{ it.emotion || '中性' }}</span>
+                            <!-- 双标签 chip：主题 + 情绪（admin 点 chip 直接 popover 改；否则只读） -->
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px" @click.stop>
+                              <el-popover v-if="isAdmin" trigger="click" :width="280" placement="top">
+                                <template #reference>
+                                  <span :style="themeChipStyle(it.theme)" @click.stop>{{ themeDisplayName(it.theme) }}<span v-if="isThemeInactive(it.theme)"> (已禁用)</span> ▾</span>
+                                </template>
+                                <div>
+                                  <div style="font-size:11px;color:#6B7785;margin-bottom:6px">改主题（即时生效）</div>
+                                  <el-select :model-value="it.theme" size="small" filterable style="width:100%" @update:model-value="(v) => setRealTheme(it, v)">
+                                    <el-option v-for="t in activeThemes" :key="t.id" :label="t.display_name" :value="t.id"></el-option>
+                                  </el-select>
+                                </div>
+                              </el-popover>
+                              <span v-else :style="themeChipStyle(it.theme)">{{ themeDisplayName(it.theme) }}<span v-if="isThemeInactive(it.theme)"> (已禁用)</span></span>
+
+                              <el-popover v-if="isAdmin" trigger="click" :width="240" placement="top">
+                                <template #reference>
+                                  <span :style="{background:'transparent', color: emotionChipColor(it.emotion), border:'1px solid '+emotionChipColor(it.emotion), fontSize:'11px', padding:'1px 8px', borderRadius:'10px', cursor:'pointer'}" @click.stop>{{ it.emotion || '中性' }} ▾</span>
+                                </template>
+                                <div>
+                                  <div style="font-size:11px;color:#6B7785;margin-bottom:6px">改情绪（即时生效）</div>
+                                  <el-select :model-value="it.emotion" size="small" style="width:100%" @update:model-value="(v) => setRealEmotion(it, v)">
+                                    <el-option v-for="e in FEEDBACK_EMOTION_OPTIONS" :key="e" :label="e" :value="e"></el-option>
+                                  </el-select>
+                                </div>
+                              </el-popover>
+                              <span v-else :style="{background:'transparent', color: emotionChipColor(it.emotion), border:'1px solid '+emotionChipColor(it.emotion), fontSize:'11px', padding:'1px 8px', borderRadius:'10px'}">{{ it.emotion || '中性' }}</span>
+
                               <span v-if="it.status==='已采纳' && it.adoptionKind" :style="{background: it.adoptionKind==='重点' ? '#E8833A' : '#3DBE78', color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px'}">{{ it.adoptionKind }}采纳</span>
                             </div>
                             <div class="meta">
@@ -1266,7 +1290,7 @@
                       <div class="pt" @click="toggleThemePool(t.theme)" style="cursor:pointer">
                         <div>
                           <div style="display:flex;align-items:center;gap:6px">
-                            <span :style="{background: themeChipColor(t.theme), color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px'}">{{ t.theme }}</span>
+                            <span :style="themeChipStyle(t.theme)">{{ themeDisplayName(t.theme) }}<span v-if="isThemeInactive(t.theme)"> (已禁用)</span></span>
                             <span style="font-size:11px;color:#909399">{{ themePoolExpanded[t.theme] ? '▾' : '▸' }}</span>
                           </div>
                           <div style="font-size:11px;color:#6B7785;margin-top:4px">主导情绪：{{ t.topEmotion }}</div>
@@ -1328,6 +1352,86 @@
                       </div>
                     </div>
                   </div>
+                </template>
+
+                <!-- 主题词表管理（theme-table；表格 CRUD + 改名联动 + 软删灰显） -->
+                <template v-if="khNav==='theme-table'">
+                  <div style="flex:1;min-width:0;padding:20px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                      <div>
+                        <div class="kh-h1">KidsHub 后台 · 主题词表管理</div>
+                        <div class="kh-sub">改 display_name 会事务联动 UPDATE 所有 feedback.theme · 「未分类」「其他」系统级锁定 · 软删后 chip 灰显</div>
+                      </div>
+                      <div style="display:flex;gap:8px">
+                        <el-button size="small" :loading="themesLoading" @click="loadThemes">刷新</el-button>
+                        <el-button v-if="isAdmin" size="small" type="primary" @click="newThemeDialogOpen = true">+ 新增主题</el-button>
+                      </div>
+                    </div>
+
+                    <el-table :data="themesList" style="width:100%" :empty-text="themesLoading ? '加载中...' : '暂无主题'">
+                      <el-table-column label="预览" width="120">
+                        <template #default="{row}">
+                          <span :style="{background: row.color, color:'#fff', fontSize:'11px', padding:'2px 10px', borderRadius:'10px', opacity: row.active===0 ? 0.6 : 1}">{{ row.display_name }}<span v-if="row.active===0"> (已禁用)</span></span>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="名称（可改名 → 联动 UPDATE feedback）" min-width="220">
+                        <template #default="{row}">
+                          <el-input v-if="isAdmin && row.system===0" :model-value="row.display_name" size="small" @change="(v) => renameTheme(row, v)"></el-input>
+                          <span v-else>{{ row.display_name }}<span v-if="row.system===1" style="color:#9B7BF0;margin-left:6px;font-size:11px">🔒 系统</span></span>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="颜色" width="160">
+                        <template #default="{row}">
+                          <el-input v-if="isAdmin" :model-value="row.color" size="small" placeholder="#0EA5C0" @change="(v) => setThemeColor(row, v)"></el-input>
+                          <span v-else>{{ row.color }}</span>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="排序" width="110">
+                        <template #default="{row}">
+                          <el-input-number v-if="isAdmin" :model-value="row.sort_order" size="small" :min="0" :max="9999" :controls="false" style="width:80px" @change="(v) => setThemeSort(row, v)"></el-input-number>
+                          <span v-else>{{ row.sort_order }}</span>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="状态" width="130">
+                        <template #default="{row}">
+                          <el-switch v-if="isAdmin" :model-value="row.active === 1" :disabled="row.system===1" :active-text="row.active===1?'启用':'已禁用'" @change="(v) => toggleThemeActive(row, v)"></el-switch>
+                          <span v-else>{{ row.active===1 ? '启用' : '已禁用' }}</span>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="系统级" width="90">
+                        <template #default="{row}"><span v-if="row.system===1" style="color:#9B7BF0;font-size:11px">🔒 系统</span></template>
+                      </el-table-column>
+                      <el-table-column label="操作" width="80">
+                        <template #default="{row}">
+                          <el-popconfirm v-if="isAdmin && row.system===0" title="确定删除？引用此主题的 feedback chip 会显示「(已禁用)」直到 admin 改归类。" @confirm="deleteTheme(row)">
+                            <template #reference><el-button size="small" type="danger" text>删除</el-button></template>
+                          </el-popconfirm>
+                        </template>
+                      </el-table-column>
+                    </el-table>
+                  </div>
+
+                  <!-- 新增主题对话框 -->
+                  <el-dialog v-model="newThemeDialogOpen" title="新增主题" width="420px">
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                      <div>
+                        <div style="font-size:11px;color:#6B7785;margin-bottom:3px">主题名（即 id）</div>
+                        <el-input v-model="newThemeForm.id" size="small" placeholder="例：教育·内容"></el-input>
+                      </div>
+                      <div>
+                        <div style="font-size:11px;color:#6B7785;margin-bottom:3px">颜色 hex</div>
+                        <el-input v-model="newThemeForm.color" size="small" placeholder="#0EA5C0"></el-input>
+                      </div>
+                      <div>
+                        <div style="font-size:11px;color:#6B7785;margin-bottom:3px">排序号</div>
+                        <el-input-number v-model="newThemeForm.sort_order" size="small" :min="0" :max="9999" :controls="false"></el-input-number>
+                      </div>
+                    </div>
+                    <template #footer>
+                      <el-button @click="newThemeDialogOpen = false">取消</el-button>
+                      <el-button type="primary" @click="createTheme">新增</el-button>
+                    </template>
+                  </el-dialog>
                 </template>
 
                 <!-- 对话历史 -->
@@ -1604,7 +1708,7 @@
                 <div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
                   <el-tag size="small" type="success">真实内测</el-tag>
                   <el-tag size="small">{{ realDrawer.status }}</el-tag>
-                  <span :style="{background: themeChipColor(realDrawer.theme), color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px'}">{{ realDrawer.theme || '未分类' }}</span>
+                  <span :style="themeChipStyle(realDrawer.theme)">{{ themeDisplayName(realDrawer.theme) }}<span v-if="isThemeInactive(realDrawer.theme)"> (已禁用)</span></span>
                   <span :style="{background:'transparent', color: emotionChipColor(realDrawer.emotion), border:'1px solid '+emotionChipColor(realDrawer.emotion), fontSize:'11px', padding:'1px 8px', borderRadius:'10px'}">{{ realDrawer.emotion || '中性' }}</span>
                   <span v-if="realDrawer.status==='已采纳' && realDrawer.adoptionKind" :style="{background: realDrawer.adoptionKind==='重点' ? '#E8833A' : '#3DBE78', color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px'}">{{ realDrawer.adoptionKind }}采纳</span>
                 </div>
@@ -1625,14 +1729,14 @@
                 <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
                   <div style="flex:1;min-width:140px">
                     <div style="font-size:11px;color:#6B7785;margin-bottom:3px">主题（双标签 · 可编辑）</div>
-                    <el-select size="small" :model-value="realDrawer.theme" :disabled="!isAdmin" @update:model-value="(v)=>setRealTheme(realDrawer, v)" style="width:100%">
-                      <el-option v-for="t in FEEDBACK_THEME_OPTIONS" :key="t" :label="t" :value="t" />
+                    <el-select size="small" :model-value="realDrawer.theme" :disabled="!isAdmin" filterable @update:model-value="(v)=>setRealTheme(realDrawer, v)" style="width:100%">
+                      <el-option v-for="t in activeThemes" :key="t.id" :label="t.display_name" :value="t.id"></el-option>
                     </el-select>
                   </div>
                   <div style="flex:1;min-width:120px">
                     <div style="font-size:11px;color:#6B7785;margin-bottom:3px">情绪极性</div>
                     <el-select size="small" :model-value="realDrawer.emotion" :disabled="!isAdmin" @update:model-value="(v)=>setRealEmotion(realDrawer, v)" style="width:100%">
-                      <el-option v-for="e in FEEDBACK_EMOTION_OPTIONS" :key="e" :label="e" :value="e" />
+                      <el-option v-for="e in FEEDBACK_EMOTION_OPTIONS" :key="e" :label="e" :value="e"></el-option>
                     </el-select>
                   </div>
                 </div>
@@ -1730,13 +1834,13 @@
                 <div style="font-size:11px;color:#6B7785;margin:14px 0 6px">来源反馈聚合（chips · admin 可手动改 → 触发锁定）</div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
                   <span v-for="(th, idx) in (devDrawer.source_themes || [])" :key="th + '_' + idx"
-                    :style="{background: themeChipColor(th), color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px', display:'inline-flex', alignItems:'center', gap:'4px'}">
-                    {{ th }}
+                    :style="{background: themeChipColor(th), color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px', display:'inline-flex', alignItems:'center', gap:'4px', opacity: isThemeInactive(th) ? 0.6 : 1}">
+                    {{ themeDisplayName(th) }}<span v-if="isThemeInactive(th)"> (已禁用)</span>
                     <span v-if="isAdmin" @click="removeDevTheme(idx)" style="cursor:pointer;opacity:0.85">×</span>
                   </span>
                   <span v-if="isAdmin">
-                    <el-select size="small" :model-value="''" placeholder="+ 添加主题" style="width:140px" @update:model-value="addDevTheme">
-                      <el-option v-for="t in FEEDBACK_THEME_OPTIONS" :key="t" :label="t" :value="t" />
+                    <el-select size="small" :model-value="''" placeholder="+ 添加主题" filterable style="width:140px" @update:model-value="addDevTheme">
+                      <el-option v-for="t in activeThemes" :key="t.id" :label="t.display_name" :value="t.id"></el-option>
                     </el-select>
                   </span>
                 </div>
@@ -1989,6 +2093,7 @@
                 isLoggedIn.value = true;
                 saveAuth(data.token, loginForm.username);
                 ElementPlus.ElMessage.success('登录成功');
+                loadThemes();  // 启动加载主题词表（驱动所有 chip 渲染）
                 nextTick(function() { initCharts(); });
               } else {
                 ElementPlus.ElMessage.error((data && data.error) || '账号或密码错误');
@@ -2025,6 +2130,8 @@
             mapView.provChartIdx = 0;
           }
           if (index === 'kidshub') {
+            // 进 KidsHub 时兜底加载主题词表（保证 chip 颜色/名称即时可用）
+            if (!themesList.value || themesList.value.length === 0) loadThemes();
             nextTick(function () {
               if (khNav.value === 'board' && (!realFeedback.items || realFeedback.items.length === 0)) {
                 loadRealFeedback();
@@ -2036,6 +2143,8 @@
                 loadChildProfiles();
               } else if (khNav.value === 'invites' && (!inviteList.items || inviteList.items.length === 0)) {
                 loadInvites();
+              } else if (khNav.value === 'theme-table') {
+                loadThemes();
               }
             });
           }
@@ -2551,7 +2660,8 @@
         // ====== 整合版新增：KidsHub 运营台 + 运营操作台 ======
         var khNav = ref('board');
         var khNavs = [
-          { k: 'board', l: 'Issue 看板' }, { k: 'dev-board', l: '产品开发看板' }, { k: 'conversations', l: '对话历史' }, { k: 'profiles', l: '孩子档案' },
+          { k: 'board', l: 'Issue 看板' }, { k: 'dev-board', l: '产品开发看板' }, { k: 'theme-table', l: '主题词表管理' },
+          { k: 'conversations', l: '对话历史' }, { k: 'profiles', l: '孩子档案' },
           { k: 'invites', l: '邀请码管理' }, { k: 'ledger', l: '贡献账本' }, { k: 'vault', l: '金点子库' }, { k: 'version', l: '版本决策' },
           { k: 'revisit', l: '复访触发' }, { k: 'intercept', l: '流失拦截' }, { k: 'metrics', l: '度量看板' }, { k: 'notify', l: '回告路由' }
         ];
@@ -2821,6 +2931,9 @@
               if (!inviteList.items || inviteList.items.length === 0) loadInvites();
             });
           }
+          if (k === 'theme-table') {
+            loadThemes();
+          }
         }
         var khRetentionChart = null;
         function initKhRetention() {
@@ -2891,27 +3004,130 @@
           };
         }
 
-        // 主题 / 情绪 / 采纳子类 枚举（与 server feedback-store.ts FEEDBACK_THEMES/EMOTIONS/ADOPTION_KINDS 对齐）
-        var FEEDBACK_THEME_OPTIONS = [
-          '未分类', '功能类', '体验类',
-          '夜航·内容', '专注·交互', '皮肤·养成', '周报·可读性',
-          '登舰·体验', '生态·养成', '记忆·联动', 'KidsHub·建议', '设备·设置', '其他'
-        ];
+        // 情绪 / 采纳子类 枚举（与 server feedback-store.ts EMOTIONS/ADOPTION_KINDS 对齐）
+        // 主题已迁到后台 themesList（/api/feedback-themes），FEEDBACK_THEME_OPTIONS 硬编码已删除
         var FEEDBACK_EMOTION_OPTIONS = ['中性', '期待', '吐槽', '愿望', '困惑'];
         var FEEDBACK_ADOPTION_KIND_OPTIONS = ['普通', '重点'];
 
-        // 主题颜色映射（卡片小 chip 用）
+        // ====== 主题词表（reactive 缓存，由 /api/feedback-themes 驱动） ======
+        var themesList = ref([]);  // 全部 themes（含 inactive，按 sort_order）
+        var themesLoading = ref(false);
+        // themesMap 派生：id → theme 元数据（O(1) 查 color/display_name/active/system）
+        var themesMap = computed(function () {
+          var m = {};
+          (themesList.value || []).forEach(function (t) { m[t.id] = t; });
+          return m;
+        });
+        var activeThemes = computed(function () {
+          return (themesList.value || []).filter(function (t) { return t.active === 1; });
+        });
+        function loadThemes() {
+          themesLoading.value = true;
+          var token = getToken();
+          return fetch('/api/feedback-themes', { headers: token ? { 'Authorization': 'Bearer ' + token } : {} })
+            .then(function (r) { if (r.status === 401) { handleAuthError(); throw new Error('401'); } return r.json(); })
+            .then(function (d) { if (d && d.ok) themesList.value = d.items || []; })
+            .catch(function (e) { if (e.message !== '401') { /* guest GET 200，理论上不会到这里 */ } })
+            .finally(function () { themesLoading.value = false; });
+        }
+
+        // chip 渲染助手（替代直接 themeChipColor 调用）
         function themeChipColor(theme) {
-          var map = {
-            '未分类': '#9aa4ae',
-            '功能类': '#0EA5C0', // 青——粗类，与具体功能小类区分（5B7CCC/3B7A99 偏蓝绿用了）
-            '体验类': '#E91E72', // 粉——粗类，与橙系(E8833A)/紫系(7E4FBF/9B7BF0)区分
-            '夜航·内容': '#5B7CCC', '专注·交互': '#3B7A99',
-            '皮肤·养成': '#E8833A', '周报·可读性': '#7E4FBF', '登舰·体验': '#4A9DF0',
-            '生态·养成': '#3DBE78', '记忆·联动': '#9B7BF0', 'KidsHub·建议': '#F6A724',
-            '设备·设置': '#6B7785', '其他': '#909399'
+          var t = themesMap.value[theme];
+          return t ? t.color : '#909399';
+        }
+        function themeDisplayName(theme) {
+          var t = themesMap.value[theme];
+          return t ? t.display_name : (theme || '未分类');
+        }
+        function isThemeInactive(theme) {
+          var t = themesMap.value[theme];
+          return !!(t && t.active === 0);
+        }
+        function themeChipStyle(theme) {
+          var color = themeChipColor(theme);
+          var inactive = isThemeInactive(theme);
+          return {
+            background: inactive ? '#9aa4ae' : color,
+            color: '#fff',
+            fontSize: '11px',
+            padding: '2px 8px',
+            borderRadius: '10px',
+            opacity: inactive ? 0.6 : 1
           };
-          return map[theme] || '#909399';
+        }
+
+        // ====== 主题词表 CRUD（管理页用） ======
+        var newThemeDialogOpen = ref(false);
+        var newThemeForm = reactive({ id: '', color: '#0EA5C0', sort_order: 500 });
+
+        function patchTheme(id, patch, successMsg) {
+          var token = getToken();
+          return fetch('/api/feedback-themes/' + encodeURIComponent(id), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify(patch)
+          })
+            .then(function (r) { if (r.status === 401) { handleAuthError(); throw new Error('401'); } return r.json(); })
+            .then(function (d) {
+              if (d && d.ok) {
+                ElementPlus.ElMessage.success(successMsg);
+                loadThemes();
+                // 改名 / 启停影响 chip 显示，重拉一次 feedback 让卡片/聚合都跟着变
+                if (patch.new_id || patch.active != null) loadRealFeedback();
+              } else {
+                ElementPlus.ElMessage.error('操作失败：' + (d && d.error || '未知'));
+              }
+            })
+            .catch(function (e) { if (e.message !== '401') ElementPlus.ElMessage.error('操作失败'); });
+        }
+        function renameTheme(row, newId) {
+          if (!newId || newId === row.id) return;
+          patchTheme(row.id, { new_id: newId }, '已改名（并联动 feedback）');
+        }
+        function setThemeColor(row, color) {
+          if (!color || color === row.color) return;
+          patchTheme(row.id, { color: color }, '颜色已更新');
+        }
+        function setThemeSort(row, sort) {
+          if (sort == null || sort === row.sort_order) return;
+          patchTheme(row.id, { sort_order: sort }, '排序已更新');
+        }
+        function toggleThemeActive(row, isActive) {
+          patchTheme(row.id, { active: isActive ? 1 : 0 }, isActive ? '已启用' : '已禁用');
+        }
+        function deleteTheme(row) {
+          var token = getToken();
+          fetch('/api/feedback-themes/' + encodeURIComponent(row.id), {
+            method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token }
+          })
+            .then(function (r) { if (r.status === 401) { handleAuthError(); throw new Error('401'); } return r.json(); })
+            .then(function (d) {
+              if (d && d.ok) { ElementPlus.ElMessage.success('已删除'); loadThemes(); loadRealFeedback(); }
+              else ElementPlus.ElMessage.error((d && d.error) || '删除失败');
+            })
+            .catch(function (e) { if (e.message !== '401') ElementPlus.ElMessage.error('删除失败'); });
+        }
+        function createTheme() {
+          if (!newThemeForm.id || !newThemeForm.color) { ElementPlus.ElMessage.warning('请填主题名和颜色'); return; }
+          var token = getToken();
+          fetch('/api/feedback-themes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ id: newThemeForm.id, color: newThemeForm.color, sort_order: newThemeForm.sort_order })
+          })
+            .then(function (r) { if (r.status === 401) { handleAuthError(); throw new Error('401'); } return r.json(); })
+            .then(function (d) {
+              if (d && d.ok) {
+                ElementPlus.ElMessage.success('新增成功');
+                newThemeDialogOpen.value = false;
+                newThemeForm.id = ''; newThemeForm.color = '#0EA5C0'; newThemeForm.sort_order = 500;
+                loadThemes();
+              } else {
+                ElementPlus.ElMessage.error('新增失败：' + (d && d.error || ''));
+              }
+            })
+            .catch(function (e) { if (e.message !== '401') ElementPlus.ElMessage.error('新增失败'); });
         }
         function emotionChipColor(emotion) {
           var map = {
@@ -3802,12 +4018,18 @@
           getChildCount: getChildCount, toggleAggregate: toggleAggregate, openChildFeedback: openChildFeedback,
           loadChildren: loadChildren, loadMergeCandidates: loadMergeCandidates,
           mergeAsChild: mergeAsChild, unmergeChild: unmergeChild, jumpToParent: jumpToParent,
-          // 双标签 + 采纳子类
-          FEEDBACK_THEME_OPTIONS: FEEDBACK_THEME_OPTIONS,
+          // 情绪 + 采纳子类（主题已迁到后台 themesList）
           FEEDBACK_EMOTION_OPTIONS: FEEDBACK_EMOTION_OPTIONS,
           FEEDBACK_ADOPTION_KIND_OPTIONS: FEEDBACK_ADOPTION_KIND_OPTIONS,
           themeChipColor: themeChipColor, emotionChipColor: emotionChipColor,
           setRealTheme: setRealTheme, setRealEmotion: setRealEmotion, setRealAdoptionKind: setRealAdoptionKind,
+          // 主题词表（reactive 缓存 + chip helpers + CRUD）
+          themesList: themesList, themesMap: themesMap, themesLoading: themesLoading, activeThemes: activeThemes,
+          themeDisplayName: themeDisplayName, isThemeInactive: isThemeInactive, themeChipStyle: themeChipStyle,
+          loadThemes: loadThemes, renameTheme: renameTheme, setThemeColor: setThemeColor,
+          setThemeSort: setThemeSort, toggleThemeActive: toggleThemeActive, deleteTheme: deleteTheme,
+          patchTheme: patchTheme, createTheme: createTheme,
+          newThemeDialogOpen: newThemeDialogOpen, newThemeForm: newThemeForm,
           // 主题池真聚合
           realThemes: realThemes, themePoolExpanded: themePoolExpanded,
           toggleThemePool: toggleThemePool, feedbackByTheme: feedbackByTheme,
