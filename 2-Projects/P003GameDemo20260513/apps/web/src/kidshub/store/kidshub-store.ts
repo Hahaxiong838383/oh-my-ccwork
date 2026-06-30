@@ -61,6 +61,47 @@ export interface VariableSubstitution {
   sampledThisTurn: boolean;
 }
 
+/** 引导可视化：单步快照（与场景卡 LastAssembly 并存，两者互斥/共存皆可） */
+export interface TutorialStepAssembly {
+  unitId: string;
+  unitTitle: string;
+  unitEmoji: string;
+  stepIndex: number;
+  /** 该单元总步数 */
+  stepTotal: number;
+  /** 当前步骤详情 */
+  step: {
+    id: string;
+    specStep: string;
+    expression: string;
+    target: string | null;
+    targetDescription: string | null;
+    /** 注入 {child_nickname} 后的旁白（实际播放文本） */
+    voiceCopy: string | null;
+    /** 旁白原文（未注入），方便看占位符位置 */
+    voiceCopyRaw: string | null;
+    durationMs: number | null;
+    remindCopy: string | null;
+    waitFor: string | null;
+    hideAvatar: boolean;
+    scene: string | null;
+    sound: string | null;
+    isUnitEnd: boolean;
+    /** ASR 推进关键词（hintsForTarget(waitFor)） */
+    advanceHints: string[];
+    /** LLM 兜底 system prompt（buildTutorialSystemPrompt(step) 全文） */
+    systemPrompt: string;
+  };
+  /** 当前阶段：speaking / waiting / celebrating / handoff */
+  phase: 'speaking' | 'waiting' | 'celebrating' | 'handoff';
+  remindCount: number;
+  /** 引导期会话元数据：kidshub 单元=feedback，其他=off */
+  captureMode: 'off' | 'feedback';
+  /** 注入用的孩子昵称（与场景卡同 store.variables.nickname；默认"指挥官"） */
+  nickname: string;
+  timestamp: number;
+}
+
 /** 拼接可视化：选卡触发后整条流水线的完整快照 */
 export interface LastAssembly {
   cardId: string;
@@ -123,6 +164,12 @@ interface KidsHubState {
   // 拼接可视化：选卡瞬间的完整流水线快照（getComposedPromptSampled 内部写入；StudioPage 选卡副作用补 angle）
   lastAssembly: LastAssembly | null;
   setLastAssemblyAngle: (angle: { id: string; label: string; hint: string }) => void;
+
+  // 引导可视化：当前步骤快照（TutorialManager 副作用写入；引导退出 → null）
+  lastTutorialStep: TutorialStepAssembly | null;
+  setLastTutorialStep: (snapshot: TutorialStepAssembly) => void;
+  updateTutorialPhase: (phase: TutorialStepAssembly['phase'], remindCount: number) => void;
+  clearLastTutorialStep: () => void;
 
   // actions
   setToken: (t: string | null) => void;
@@ -218,6 +265,7 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
     recentFactPicks: {},
     recentLoreByCard: {},
     lastAssembly: null,
+    lastTutorialStep: null,
 
     setLastAssemblyAngle: (angle) => {
       set((s) => {
@@ -225,6 +273,25 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
         return { lastAssembly: { ...s.lastAssembly, angle } };
       });
     },
+
+    setLastTutorialStep: (snapshot) => set({ lastTutorialStep: snapshot }),
+
+    updateTutorialPhase: (phase, remindCount) => {
+      set((s) => {
+        if (!s.lastTutorialStep) return s;
+        // 只 phase / remindCount 变化时打个新 timestamp，保留 step 主体
+        return {
+          lastTutorialStep: {
+            ...s.lastTutorialStep,
+            phase,
+            remindCount,
+            timestamp: Date.now(),
+          },
+        };
+      });
+    },
+
+    clearLastTutorialStep: () => set({ lastTutorialStep: null }),
 
     setLastFramingAngle: (id) => set({ lastFramingAngle: id }),
 
