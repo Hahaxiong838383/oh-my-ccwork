@@ -37,6 +37,11 @@ export PATH="$HOME/.bun/bin:$PATH"
 #   第二道防线 = prompt guard(见 REVIEW_GUARD): 显式告知引擎只做评审。
 # 起因: gemini lane 曾带 --auto-approve 自动批准写操作,擅改了用户生产配置(~/.claude/settings.json)。
 export CODEX_LANE_NO_TOOLS=1
+# ⛔ 2026-06-29: antigravity Google 账户(hahaxiong83@gmail.com)的 Cloud Code Assist 被 Google 判 TOS_VIOLATION 封禁
+#   (403 PERMISSION_DENIED "service disabled in this account for violation of Terms of Service")→ B1 gemini lane(走 antigravity)全挂。
+#   暂时下线 gemini lane, team 用 grok+codex 两发顶。恢复: 账户申诉成功 / 换干净 Google 号后, `export GEMINI_LANE_ENABLED=1` 即复活。
+#   详见 memory project_antigravity_team_b3 + feedback_antigravity_tos_ban_team_gemini_down。
+GEMINI_LANE_ENABLED="${GEMINI_LANE_ENABLED:-0}"
 # codex lane helper: API 网关 gpt-5.5 主路(curl 纯文本,本就非 agentic) + omp 订阅 gpt-5.4 降级(经 NO_TOOLS 只读)
 source "$(dirname "${BASH_SOURCE[0]}")/_codex_lane.sh"
 # 注: grok/gemini lane 直接调 omp -p(见下), 不依赖额外 helper
@@ -55,9 +60,22 @@ SIZE=$(wc -c <"$PROMPT_FILE")
 echo "===== B 三发评审对抗 ====="
 echo "[B4 推理] omp xai-oauth/grok-4.3 / thinking=high"
 echo "[B5 严谨] codex API 网关 gpt-5.5(主) → omp 订阅 gpt-5.4(降级) / reasoning=high"
-echo "[B1 默认] omp google-antigravity/gemini-3-flash / thinking=high (gemini-cli 已停用,切 antigravity)"
+if [ "$GEMINI_LANE_ENABLED" = "1" ]; then
+  echo "[B1 默认] omp google-antigravity/gemini-3-flash / thinking=high (gemini-cli 已停用,切 antigravity)"
+else
+  echo "[B1 默认] ⛔ 已下线 (antigravity 账户 2026-06-29 被 Google TOS 封禁; export GEMINI_LANE_ENABLED=1 恢复)"
+fi
 echo "prompt: $PROMPT_FILE ($SIZE 字节)"
 echo ""
+
+# B4 grok token 预检自愈(2026-06-25): xai-oauth refresh token 轮换冲突会致 B4 lane 挂(invalid_grant)。
+# 平时由 launchd com.omp.xai-token-refresh 每 2h 保鲜;此处兜底:access token <10min 过期则刷一次。
+# token 已吊销则告警但不阻断(B5/B1 照跑) → 提示真终端跑 omp-xai-relogin.sh 重登。
+XAI_REFRESH="$HOME/mycc/4-Assets/SOP/omp-xai-token-refresh.py"
+if [ -f "$XAI_REFRESH" ]; then
+  python3 "$XAI_REFRESH" --if-expiring 600 --quiet 2>/dev/null \
+    || echo "⚠️ [B4 grok] xai-oauth token 刷新失败(refresh token 可能被吊销) → 真终端跑 bash ~/mycc/4-Assets/SOP/omp-xai-relogin.sh 重登;本轮 B4 或无正文"
+fi
 
 START=$(date +%s)
 
@@ -79,24 +97,34 @@ GPT_PID=$!
 
 sleep 0.8
 
-# B1 gemini-3-flash 默认评审 (2026-06-19 gemini-cli 被 Google 停用→切 antigravity; 快/稳; 深度手动换 gemini-3.5-flash)
-omp -p --model google-antigravity/gemini-3-flash --thinking high --no-tools --cwd "$CLEAN_CWD" \
-  --no-extensions --no-skills --no-rules \
-  "$PROMPT" \
-  > /tmp/r-gem.md 2>/tmp/r-gem.err &
-GEM_PID=$!
+# B1 gemini-3-flash 默认评审 (2026-06-19 切 antigravity; 2026-06-29 antigravity 账户被 Google TOS 封禁→默认下线)
+GEM_RC=0
+if [ "$GEMINI_LANE_ENABLED" = "1" ]; then
+  omp -p --model google-antigravity/gemini-3-flash --thinking high --no-tools --cwd "$CLEAN_CWD" \
+    --no-extensions --no-skills --no-rules \
+    "$PROMPT" \
+    > /tmp/r-gem.md 2>/tmp/r-gem.err &
+  GEM_PID=$!
+else
+  GEM_PID=""
+  echo "⛔ B1 gemini lane 已下线(antigravity 账户 TOS 封禁 2026-06-29) — 本轮按 grok+codex 两发综合。" > /tmp/r-gem.md
+fi
 
-echo "三 lane 错开启动跑中 (PID grok=$GROK_PID gpt=$GPT_PID gem=$GEM_PID, 间隔 800ms)..."
+echo "lane 错开启动跑中 (PID grok=$GROK_PID gpt=$GPT_PID gem=${GEM_PID:-下线}, 间隔 800ms)..."
 wait $GROK_PID; GROK_RC=$?
 wait $GPT_PID; GPT_RC=$?
-wait $GEM_PID; GEM_RC=$?
+[ -n "$GEM_PID" ] && { wait $GEM_PID; GEM_RC=$?; }
 
 END=$(date +%s)
 echo ""
 echo "===== 结果汇总 ====="
 echo "B4 grok-4.3 推理: RC=$GROK_RC, 输出 $(wc -l </tmp/r-grok.md 2>/dev/null || echo 0) 行"
 echo "B5 gpt-5.5 严谨: RC=$GPT_RC, 输出 $(wc -l </tmp/r-gpt.md 2>/dev/null || echo 0) 行"
-echo "B1 gemini-3-flash 默认: RC=$GEM_RC, 输出 $(wc -l </tmp/r-gem.md 2>/dev/null || echo 0) 行"
+if [ -n "$GEM_PID" ]; then
+  echo "B1 gemini-3-flash 默认: RC=$GEM_RC, 输出 $(wc -l </tmp/r-gem.md 2>/dev/null || echo 0) 行"
+else
+  echo "B1 gemini-3-flash 默认: ⛔ 已下线(antigravity TOS 封禁) — 本轮 grok+codex 两发"
+fi
 echo "总耗时 = $((END-START))s (vs 串行省时 ≈1.7x)"
 echo ""
 

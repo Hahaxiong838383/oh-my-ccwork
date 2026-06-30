@@ -20,6 +20,9 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PATH="$HOME/.bun/bin:$PATH"
+# ⛔ 2026-06-29: antigravity 账户被 Google 判 TOS_VIOLATION 封禁(详见 review-3send.sh 同款说明)→ B3 深度 gemini lane 下线。
+#   恢复: 账户申诉成功/换号后 `export GEMINI_LANE_ENABLED=1`(会一并传给子脚本 review-3send.sh 复活 B1)。
+GEMINI_LANE_ENABLED="${GEMINI_LANE_ENABLED:-0}"; export GEMINI_LANE_ENABLED
 # 只读评审硬约束(2026-06-17 事故后加固,同 review-3send.sh): B3 lane 用 --no-tools + --cwd 干净目录 + prompt guard。
 CLEAN_CWD="$(mktemp -d)"
 trap 'rm -rf "$CLEAN_CWD"' EXIT
@@ -31,38 +34,52 @@ PROMPT="$REVIEW_GUARD$(cat "$PROMPT_FILE")"
 SIZE=$(wc -c <"$PROMPT_FILE")
 
 echo "===== B 四发评审顶级对抗 ====="
-echo "[B4 推理] grok-4.3 / [B5 严谨] codex gpt-5.5 / [B1 默认] gemini-3-flash / [B3 深度] antigravity gemini-3.5-flash(免费)"
+if [ "$GEMINI_LANE_ENABLED" = "1" ]; then
+  echo "[B4 推理] grok-4.3 / [B5 严谨] codex gpt-5.5 / [B1 默认] gemini-3-flash / [B3 深度] antigravity gemini-3.5-flash(免费)"
+else
+  echo "[B4 推理] grok-4.3 / [B5 严谨] codex gpt-5.5 / [B1+B3 gemini] ⛔ 已下线(antigravity TOS 封禁 2026-06-29) → 实际 grok+codex 两发"
+fi
 echo "prompt: $PROMPT_FILE ($SIZE 字节)"
 echo ""
 START=$(date +%s)
 
-# B3 antigravity gemini-3.5-flash 顶级深度档(免费, 走 xray Gemini专用-US2 节点) —— 后台先起, 与三发并行
-echo "[B3 深度] omp google-antigravity/gemini-3.5-flash --thinking high (后台启动, 与三发并行)"
-omp -p --model google-antigravity/gemini-3.5-flash --thinking high --no-tools --cwd "$CLEAN_CWD" \
-  --no-extensions --no-skills --no-rules \
-  "$PROMPT" \
-  > /tmp/r-gem35.md 2>/tmp/r-gem35.err &
-B3_PID=$!
-
-# 错开 omp SQLite schema-init race 窗口(三发内部还会再各自错开 800ms)
-sleep 1
+# B3 antigravity gemini-3.5-flash 顶级深度档 (2026-06-29 antigravity 账户被 Google TOS 封禁→默认下线)
+B3_RC=0
+if [ "$GEMINI_LANE_ENABLED" = "1" ]; then
+  echo "[B3 深度] omp google-antigravity/gemini-3.5-flash --thinking high (后台启动, 与三发并行)"
+  omp -p --model google-antigravity/gemini-3.5-flash --thinking high --no-tools --cwd "$CLEAN_CWD" \
+    --no-extensions --no-skills --no-rules \
+    "$PROMPT" \
+    > /tmp/r-gem35.md 2>/tmp/r-gem35.err &
+  B3_PID=$!
+  # 错开 omp SQLite schema-init race 窗口(三发内部还会再各自错开 800ms)
+  sleep 1
+else
+  B3_PID=""
+  echo "⛔ B3 gemini 深度 lane 已下线(antigravity 账户 TOS 封禁 2026-06-29)。" > /tmp/r-gem35.md
+fi
 
 # B4 + B5 + B1 三发(review-3send.sh 内部并行 + 800ms 错开)
 bash "$SCRIPT_DIR/review-3send.sh" "$PROMPT_FILE"
 
-# 等 B3 完成
-wait "$B3_PID"; B3_RC=$?
+# 等 B3 完成(下线时跳过)
+[ -n "$B3_PID" ] && { wait "$B3_PID"; B3_RC=$?; }
 END=$(date +%s)
 
 echo ""
 echo "===== B3 深度档结果 ====="
-echo "B3 gemini-3.5-flash 深度: RC=$B3_RC, 输出 $(wc -l </tmp/r-gem35.md 2>/dev/null || echo 0) 行 | 四发总耗时 ≈ $((END-START))s"
-if [ "$B3_RC" -ne 0 ] || [ ! -s /tmp/r-gem35.md ]; then
-  echo "⚠️ B3 失败/无正文:"
-  tail -5 /tmp/r-gem35.err 2>/dev/null
-  echo "   排障: ① pgrep -fl 'xray run' 确认代理在跑 ② grep cloudcode ~/xray/access.log | tail 确认走 Gemini专用-US2"
-  echo "        ③ omp models | grep -A2 google-antigravity 确认通道 ④ 详见 memory project_antigravity_team_b3"
-  echo "   降级: 四发缺 B3 时按三发(B4+B5+B1)综合, 不阻塞顶级评审"
+if [ -z "$B3_PID" ]; then
+  echo "B3 gemini-3.5-flash 深度: ⛔ 已下线(antigravity 账户 TOS 封禁 2026-06-29) — 四发实际降级为 grok+codex 两发(B1 同步下线)"
+  echo "   恢复: 账户申诉成功/换干净 Google 号后 export GEMINI_LANE_ENABLED=1; 详见 memory project_antigravity_team_b3"
+else
+  echo "B3 gemini-3.5-flash 深度: RC=$B3_RC, 输出 $(wc -l </tmp/r-gem35.md 2>/dev/null || echo 0) 行 | 四发总耗时 ≈ $((END-START))s"
+  if [ "$B3_RC" -ne 0 ] || [ ! -s /tmp/r-gem35.md ]; then
+    echo "⚠️ B3 失败/无正文:"
+    tail -5 /tmp/r-gem35.err 2>/dev/null
+    echo "   排障: ① pgrep -fl 'xray run' 确认代理在跑 ② grep cloudcode ~/xray/access.log | tail 确认走 Gemini专用-US2"
+    echo "        ③ omp models | grep -A2 google-antigravity 确认通道 ④ 详见 memory project_antigravity_team_b3"
+    echo "   降级: 四发缺 B3 时按三发(B4+B5+B1)综合, 不阻塞顶级评审"
+  fi
 fi
 
 echo ""
