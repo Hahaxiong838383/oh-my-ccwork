@@ -1265,6 +1265,46 @@
                   </div>
                 </template>
 
+                <!-- 产品开发看板（dev-board，三栏 Kanban：规划中/开发中/已上线；卡片→devDrawer） -->
+                <template v-if="khNav==='dev-board'">
+                  <div style="flex:1;min-width:0;padding:20px">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                      <div>
+                        <div class="kh-h1">KidsHub 后台 · 产品开发看板</div>
+                        <div class="kh-sub">从 Issue 看板「已采纳」升级而来 · 跟踪规划/开发/上线状态 · 上线时可一键标致谢名单</div>
+                      </div>
+                      <div>
+                        <el-button size="small" type="primary" :disabled="!isAdmin" @click="openDevItem(null)">+ 新建条目</el-button>
+                        <el-button size="small" :loading="devItems.loading" @click="loadDevItems">刷新</el-button>
+                      </div>
+                    </div>
+                    <div class="kh-board" style="grid-template-columns:repeat(3, 1fr);margin-top:14px">
+                      <div v-for="col in devCols" :key="col.key">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                          <span :style="devColChipStyle(col.key)">● {{ col.key }}</span>
+                          <span style="font-size:12px;color:#6B7785;font-weight:700">{{ col.items.length }}</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:10px">
+                          <div class="kh-issue" v-for="it in col.items" :key="it.id" @click="openDevItem(it)">
+                            <div class="iid">{{ it.title }}<span style="float:right;color:#3B7A99;font-size:11px">编辑 ›</span></div>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+                              <span :style="levelChipStyle(it.level)">{{ it.level }}</span>
+                              <span v-if="it.thanks_sent_at" style="background:#3DBE78;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px">已下发致谢名单</span>
+                            </div>
+                            <p v-if="it.representative_quote" style="margin:8px 0 6px;font-size:12.5px;line-height:1.4;color:#1F2933;font-style:italic">「{{ it.representative_quote }}」</p>
+                            <div class="meta" style="margin-top:6px">
+                              <span>{{ it.feedback_count > 0 ? '源自 ' + it.feedback_count + ' 条工单' : '未关联反馈' }}</span>
+                              <span class="ct" v-if="it.launched_at">上线 {{ fmtTs(it.launched_at) }}</span>
+                              <span class="ct" v-else>{{ fmtTs(it.updated_at || it.created_at) }}</span>
+                            </div>
+                          </div>
+                          <div v-if="!col.items.length" style="font-size:12px;color:#909399;padding:8px 0">暂无</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+
                 <!-- 对话历史 -->
                 <div v-if="khNav==='conversations'" style="flex:1;padding:20px;min-width:0">
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
@@ -1543,6 +1583,17 @@
                   <span :style="{background:'transparent', color: emotionChipColor(realDrawer.emotion), border:'1px solid '+emotionChipColor(realDrawer.emotion), fontSize:'11px', padding:'1px 8px', borderRadius:'10px'}">{{ realDrawer.emotion || '中性' }}</span>
                   <span v-if="realDrawer.status==='已采纳' && realDrawer.adoptionKind" :style="{background: realDrawer.adoptionKind==='重点' ? '#E8833A' : '#3DBE78', color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px'}">{{ realDrawer.adoptionKind }}采纳</span>
                 </div>
+                <!-- promote 入口（已关联→显示 chip 可跳转 / 已采纳未关联→显示升级按钮） -->
+                <div v-if="realDrawerLinks.length > 0" style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:6px">
+                  <span v-for="lk in realDrawerLinks" :key="lk.dev_item_id"
+                    @click="openDevItemById(lk.dev_item_id)"
+                    style="cursor:pointer;background:#E0E7FF;color:#4F46E5;font-size:11px;padding:4px 10px;border-radius:10px;font-weight:600">
+                    ✓ 已进入开发看板：{{ lk.dev_item_title }}（{{ lk.dev_item_status }}）→
+                  </span>
+                </div>
+                <div v-else-if="realDrawer.status==='已采纳' && isAdmin" style="margin-bottom:10px">
+                  <el-button size="small" type="primary" plain @click="promoteFeedbackToDevItem(realDrawer)">升级为开发条目 +</el-button>
+                </div>
                 <div style="font-size:15px;font-weight:700;margin-bottom:10px;line-height:1.35">{{ realDrawer.text }}</div>
 
                 <!-- 主题 / 情绪 编辑：admin 手工归类（guest 只读自动 403） -->
@@ -1596,6 +1647,96 @@
                   <el-button size="small" type="primary" @click="saveRealNote">保存备注</el-button>
                 </div>
                 <div style="margin-top:16px;font-size:11px;color:#909399;line-height:1.5">所有变更走真实后端 · 失败自动回滚本地看板</div>
+              </div>
+            </el-drawer>
+
+            <!-- 产品开发看板 · 条目抽屉（新建/编辑通用；状态切换即调 PATCH；上线时弹致谢二次确认） -->
+            <el-drawer v-model="devDrawerOpen" :title="devDrawer && devDrawer.id ? '编辑开发条目' : '新建开发条目'" size="480px" @closed="onDevDrawerClosed">
+              <div v-if="devDrawer" style="padding:0 8px 20px">
+                <div style="font-size:11px;color:#6B7785;margin-bottom:3px">标题</div>
+                <el-input v-model="devDrawer.title" size="default" placeholder="例：夜航能不能去太空" :disabled="!isAdmin" autofocus></el-input>
+
+                <div style="font-size:11px;color:#6B7785;margin:14px 0 6px">改动分级</div>
+                <el-radio-group v-model="devDrawer.level" :disabled="!isAdmin" @change="onDevLevelChange">
+                  <el-radio label="大功能">大功能（跨场景/新模块/UX 重构）</el-radio>
+                  <el-radio label="小改">小改（文案/数值/微交互）</el-radio>
+                </el-radio-group>
+
+                <div style="font-size:11px;color:#6B7785;margin:14px 0 6px">开发状态（点击直接切换 · 「已上线」会询问是否同时下发致谢）</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <span v-for="s in DEV_STATUS_OPTIONS" :key="s"
+                    @click="isAdmin && devDrawer.id && setDevStatus(devDrawer, s)"
+                    :style="[devStatusChipStyle(s), { opacity: devDrawer.status===s ? 1 : 0.55, cursor: (isAdmin && devDrawer.id) ? 'pointer' : 'default', border: devDrawer.status===s ? '2px solid #1F2933' : '2px solid transparent', padding: '4px 12px', fontSize:'12px', borderRadius:'12px', fontWeight: 700 }]">
+                    ● {{ s }}{{ devDrawer.status===s ? '（当前）' : '' }}
+                  </span>
+                </div>
+                <div v-if="!devDrawer.id" style="font-size:11px;color:#909399;margin-top:6px">（新建保存后才能切状态）</div>
+                <div v-if="devDrawer.thanks_sent_at" style="margin-top:6px;font-size:11px;color:#3DBE78">已下发致谢名单 · {{ fmtTs(devDrawer.thanks_sent_at) }}</div>
+
+                <div style="font-size:11px;color:#6B7785;margin:14px 0 6px">来源反馈聚合（chips · admin 可手动改 → 触发锁定）</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+                  <span v-for="(th, idx) in (devDrawer.source_themes || [])" :key="th + '_' + idx"
+                    :style="{background: themeChipColor(th), color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px', display:'inline-flex', alignItems:'center', gap:'4px'}">
+                    {{ th }}
+                    <span v-if="isAdmin" @click="removeDevTheme(idx)" style="cursor:pointer;opacity:0.85">×</span>
+                  </span>
+                  <span v-if="isAdmin">
+                    <el-select size="small" :model-value="''" placeholder="+ 添加主题" style="width:140px" @update:model-value="addDevTheme">
+                      <el-option v-for="t in FEEDBACK_THEME_OPTIONS" :key="t" :label="t" :value="t" />
+                    </el-select>
+                  </span>
+                </div>
+                <div v-if="devDrawer.themes_locked" style="font-size:10px;color:#9B7BF0;margin-bottom:8px">🔒 主题已锁（admin 手改后不再被自动聚合覆盖）</div>
+
+                <div style="font-size:11px;color:#6B7785;margin:10px 0 4px">代表声音 / 引用</div>
+                <el-input v-model="devDrawer.representative_quote" type="textarea" :rows="2"
+                  placeholder="例：「我希望小可能记得我上次说的话」" :disabled="!isAdmin"
+                  @change="onQuoteChange"></el-input>
+                <div v-if="devDrawer.quote_locked" style="font-size:10px;color:#9B7BF0;margin-top:3px">🔒 引用已锁（admin 手改后不再被自动覆盖）</div>
+
+                <div style="margin:14px 0 6px;display:flex;justify-content:space-between;align-items:center">
+                  <div style="font-size:12px;color:#1F2933;font-weight:600">{{ (devDrawer.feedback_ids || []).length }} 个孩子提过同一问题</div>
+                  <span style="font-size:11px;color:#3B7A99;cursor:pointer" @click="devLinkedExpanded = !devLinkedExpanded">{{ devLinkedExpanded ? '收起 ▴' : '展开看完整列表 ▾' }}</span>
+                </div>
+                <div v-if="devLinkedExpanded" style="background:#fafbfc;border:1px solid #eef0f3;border-radius:6px;padding:8px;max-height:240px;overflow-y:auto">
+                  <div v-if="!(devDrawer.feedback_ids || []).length" style="font-size:11px;color:#909399">暂无关联反馈</div>
+                  <div v-for="fid in (devDrawer.feedback_ids || [])" :key="fid"
+                    style="padding:6px;border-bottom:1px solid #eef0f3;font-size:11.5px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+                    <div style="flex:1;min-width:0">
+                      <div style="color:#3B7A99;font-weight:600">{{ findFeedback(fid).nickname || '匿名' }} · {{ getSceneLabel(findFeedback(fid).sceneId) }} · {{ findFeedback(fid).status || '—' }}</div>
+                      <div style="color:#333;margin-top:2px;white-space:normal;line-height:1.4">{{ findFeedback(fid).text || ('（feedback ' + fid + ' 未在当前列表）') }}</div>
+                    </div>
+                    <span v-if="isAdmin && devDrawer.id" @click="detachFeedback(devDrawer, fid)" style="cursor:pointer;color:#E8833A;font-size:13px">×</span>
+                  </div>
+                </div>
+
+                <div v-if="devDrawer.id" style="margin:14px 0 6px;font-size:11px;color:#6B7785">+ 关联反馈（搜索 Issue 看板内的真实反馈）</div>
+                <el-select v-if="devDrawer.id"
+                  :model-value="''"
+                  filterable
+                  remote
+                  reserve-keyword
+                  placeholder="输入关键字搜索 issue 文本/昵称..."
+                  :remote-method="searchFeedbackForAttach"
+                  :loading="devAttachSearchLoading"
+                  :disabled="!isAdmin"
+                  style="width:100%"
+                  @update:model-value="(v)=>v && attachFeedback(devDrawer, v)">
+                  <el-option v-for="opt in devAttachSearchResults" :key="opt.id" :label="opt.label" :value="opt.id" />
+                </el-select>
+
+                <div style="margin-top:18px;display:flex;justify-content:space-between;align-items:center">
+                  <el-popconfirm v-if="devDrawer.id && isAdmin" title="确定删除该开发条目？关联会一并解除（不影响 Issue）。" confirm-button-text="删除" cancel-button-text="取消" @confirm="deleteDevItem(devDrawer)">
+                    <template #reference><el-button size="small" type="danger" plain>删除</el-button></template>
+                  </el-popconfirm>
+                  <span v-else></span>
+                  <div style="display:flex;gap:8px">
+                    <el-button size="small" v-if="!devDrawer.id && isAdmin" type="primary" @click="saveNewDevItem">保存新建</el-button>
+                    <el-button size="small" v-if="devDrawer.id && isAdmin" type="primary" @click="saveDevItemEdits">保存修改</el-button>
+                    <el-button size="small" @click="devDrawerOpen = false">关闭</el-button>
+                  </div>
+                </div>
+                <div style="margin-top:14px;font-size:11px;color:#909399;line-height:1.5">所有变更走真实后端 · 失败弹错并保留本地编辑</div>
               </div>
             </el-drawer>
           </div>
@@ -2356,7 +2497,7 @@
         // ====== 整合版新增：KidsHub 运营台 + 运营操作台 ======
         var khNav = ref('board');
         var khNavs = [
-          { k: 'board', l: 'Issue 看板' }, { k: 'conversations', l: '对话历史' }, { k: 'profiles', l: '孩子档案' },
+          { k: 'board', l: 'Issue 看板' }, { k: 'dev-board', l: '产品开发看板' }, { k: 'conversations', l: '对话历史' }, { k: 'profiles', l: '孩子档案' },
           { k: 'invites', l: '邀请码管理' }, { k: 'ledger', l: '贡献账本' }, { k: 'vault', l: '金点子库' }, { k: 'version', l: '版本决策' },
           { k: 'revisit', l: '复访触发' }, { k: 'intercept', l: '流失拦截' }, { k: 'metrics', l: '度量看板' }, { k: 'notify', l: '回告路由' }
         ];
@@ -2940,6 +3081,463 @@
               if (e.message !== '401') { it.note = oldNote; ElementPlus.ElMessage.error('备注保存失败'); }
             });
         }
+        // ====== 产品开发看板（dev-board） ======
+        var DEV_STATUS_OPTIONS = ['规划中', '开发中', '已上线'];
+        var DEV_LEVEL_OPTIONS = ['大功能', '小改'];
+        var devItems = reactive({ items: [], loading: false });
+        var devDrawer = ref(null);                 // 当前编辑的 item（new 时是空模板对象）
+        var devDrawerOpen = ref(false);
+        var devLinkedExpanded = ref(false);
+        var devAttachSearchResults = ref([]);
+        var devAttachSearchLoading = ref(false);
+        var realDrawerLinks = ref([]);             // Issue 抽屉的反查关联（FeedbackDevItemLink[]）
+
+        var devCols = computed(function () {
+          var bucket = { '规划中': [], '开发中': [], '已上线': [] };
+          (devItems.items || []).forEach(function (it) {
+            if (bucket[it.status]) bucket[it.status].push(it);
+          });
+          return DEV_STATUS_OPTIONS.map(function (k) { return { key: k, items: bucket[k] }; });
+        });
+
+        function normalizeDevItem(raw) {
+          if (!raw) return raw;
+          var fids = raw.feedback_ids || raw.feedbackIds || [];
+          if (!Array.isArray(fids)) fids = [];
+          var themes = raw.source_themes || raw.sourceThemes || [];
+          if (!Array.isArray(themes)) themes = [];
+          return {
+            id: raw.id || '',
+            title: raw.title || '',
+            description: raw.description || '',
+            level: raw.level || '大功能',
+            status: raw.status || '规划中',
+            representative_quote: raw.representative_quote || raw.representativeQuote || '',
+            quote_locked: (raw.quote_locked || raw.quoteLocked) ? 1 : 0,
+            source_themes: themes,
+            themes_locked: (raw.themes_locked || raw.themesLocked) ? 1 : 0,
+            created_at: raw.created_at || raw.createdAt || '',
+            updated_at: raw.updated_at || raw.updatedAt || '',
+            launched_at: raw.launched_at || raw.launchedAt || null,
+            thanks_sent_at: raw.thanks_sent_at || raw.thanksSentAt || null,
+            updated_by: raw.updated_by || raw.updatedBy || '',
+            feedback_ids: fids,
+            feedback_count: raw.feedback_count != null ? raw.feedback_count : (raw.feedbackCount != null ? raw.feedbackCount : fids.length)
+          };
+        }
+
+        function levelChipStyle(level) {
+          return level === '大功能'
+            ? { background: '#E0E7FF', color: '#4F46E5', fontSize: '11px', padding: '2px 8px', borderRadius: '10px' }
+            : { background: '#DCFCE7', color: '#16A34A', fontSize: '11px', padding: '2px 8px', borderRadius: '10px' };
+        }
+        function devStatusChipStyle(status) {
+          var map = {
+            '规划中': { background: '#E3F0FD', color: '#5B7CCC' },
+            '开发中': { background: '#FEF3DC', color: '#F6A724' },
+            '已上线': { background: '#DEF5E9', color: '#3DBE78' }
+          };
+          return map[status] || { background: '#F6F8FA', color: '#6B7785' };
+        }
+        function devColChipStyle(status) {
+          var base = devStatusChipStyle(status);
+          return Object.assign({}, base, { fontSize: '12px', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, display: 'inline-block' });
+        }
+
+        function loadDevItems() {
+          var token = getToken();
+          devItems.loading = true;
+          var headers = { 'Content-Type': 'application/json' };
+          if (token) headers.Authorization = 'Bearer ' + token;
+          fetch('/api/dev-items', { method: 'GET', headers: headers })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json().catch(function () { return { ok: false, error: '服务响应异常' }; });
+            })
+            .then(function (data) {
+              if (data && data.ok) {
+                devItems.items = (data.items || []).map(normalizeDevItem);
+                ElementPlus.ElMessage.success('已刷新 · ' + devItems.items.length + ' 条开发条目');
+              } else {
+                ElementPlus.ElMessage.error((data && data.error) || '拉取开发看板失败');
+              }
+            })
+            .catch(function (e) { if (e.message !== '401') ElementPlus.ElMessage.error('无法连接开发看板服务'); })
+            .finally(function () { devItems.loading = false; });
+        }
+
+        function makeEmptyDevItem() {
+          return { id: '', title: '', description: '', level: '大功能', status: '规划中', representative_quote: '', quote_locked: 0, source_themes: [], themes_locked: 0, created_at: '', updated_at: '', launched_at: null, thanks_sent_at: null, updated_by: '', feedback_ids: [], feedback_count: 0 };
+        }
+
+        function openDevItem(it) {
+          devLinkedExpanded.value = false;
+          devAttachSearchResults.value = [];
+          if (!it) {
+            devDrawer.value = makeEmptyDevItem();
+          } else {
+            // 用一份本地副本编辑，避免 source_themes/feedback_ids 直接被覆写时丢列表项引用
+            devDrawer.value = normalizeDevItem(JSON.parse(JSON.stringify(it)));
+          }
+          devDrawerOpen.value = true;
+        }
+        function onDevDrawerClosed() {
+          devDrawer.value = null;
+          devLinkedExpanded.value = false;
+          devAttachSearchResults.value = [];
+        }
+
+        function openDevItemById(id) {
+          if (!id) return;
+          khNav.value = 'dev-board';
+          var token = getToken();
+          var headers = {};
+          if (token) headers.Authorization = 'Bearer ' + token;
+          fetch('/api/dev-items/' + encodeURIComponent(id), { method: 'GET', headers: headers })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json();
+            })
+            .then(function (data) {
+              if (data && data.ok && data.item) {
+                var norm = normalizeDevItem(data.item);
+                // 同步进 list（如果还没拉过 / 不存在）
+                var idx = (devItems.items || []).findIndex(function (x) { return x.id === norm.id; });
+                if (idx >= 0) devItems.items[idx] = norm; else devItems.items.push(norm);
+                openDevItem(norm);
+              } else {
+                ElementPlus.ElMessage.error((data && data.error) || '未找到开发条目');
+              }
+            })
+            .catch(function (e) { if (e.message !== '401') ElementPlus.ElMessage.error('打开开发条目失败'); });
+        }
+
+        function saveNewDevItem() {
+          var d = devDrawer.value; if (!d) return;
+          if (!d.title || !d.title.trim()) { ElementPlus.ElMessage.warning('请填写标题'); return; }
+          var token = getToken();
+          if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
+          var payload = { title: d.title.trim(), description: d.description || '', level: d.level || '大功能', feedback_ids: d.feedback_ids || [] };
+          fetch('/api/dev-items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify(payload)
+          })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              if (res.status === 403) { ElementPlus.ElMessage.error('无权限'); throw new Error('403'); }
+              return res.json();
+            })
+            .then(function (data) {
+              if (data && data.ok && data.item) {
+                var norm = normalizeDevItem(data.item);
+                devItems.items.push(norm);
+                devDrawer.value = norm;
+                ElementPlus.ElMessage.success('已新建开发条目');
+              } else {
+                ElementPlus.ElMessage.error((data && data.error) || '新建失败');
+              }
+            })
+            .catch(function (e) { if (e.message !== '401' && e.message !== '403') ElementPlus.ElMessage.error('新建失败'); });
+        }
+
+        function patchDevItem(id, patch, opts) {
+          opts = opts || {};
+          var token = getToken();
+          if (!token) { ElementPlus.ElMessage.warning('请先登录'); return Promise.resolve(); }
+          return fetch('/api/dev-items/' + encodeURIComponent(id), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify(patch)
+          })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              if (res.status === 403) { ElementPlus.ElMessage.error('无权限'); throw new Error('403'); }
+              return res.json();
+            })
+            .then(function (data) {
+              if (data && data.ok && data.item) {
+                var norm = normalizeDevItem(data.item);
+                var idx = devItems.items.findIndex(function (x) { return x.id === id; });
+                if (idx >= 0) devItems.items[idx] = norm; else devItems.items.push(norm);
+                if (devDrawer.value && devDrawer.value.id === id) {
+                  // 合并：保留尚未保存的本地编辑字段是危险的，这里直接覆盖为 server 真相
+                  devDrawer.value = norm;
+                }
+                if (opts.successMsg !== false) ElementPlus.ElMessage.success(opts.successMsg || '已更新');
+                return norm;
+              } else {
+                ElementPlus.ElMessage.error((data && data.error) || '更新失败');
+              }
+            })
+            .catch(function (e) { if (e.message !== '401' && e.message !== '403') ElementPlus.ElMessage.error('更新失败'); });
+        }
+
+        function saveDevItemEdits() {
+          var d = devDrawer.value; if (!d || !d.id) return;
+          if (!d.title || !d.title.trim()) { ElementPlus.ElMessage.warning('请填写标题'); return; }
+          var payload = {
+            title: d.title.trim(),
+            description: d.description || '',
+            level: d.level,
+            representative_quote: d.representative_quote || null,
+            source_themes: d.source_themes || null
+          };
+          patchDevItem(d.id, payload, { successMsg: '已保存修改' });
+        }
+
+        function setDevStatus(it, newStatus) {
+          if (!it || !it.id) return;
+          if (newStatus === it.status) return;
+          if (newStatus === '已上线' && it.status !== '已上线') {
+            ElementPlus.ElMessageBox.confirm('流转到「已上线」。是否同时下发致谢名单？（仅打标，不会真发短信/通知）', '上线确认', {
+              confirmButtonText: '上线 + 致谢',
+              cancelButtonText: '仅上线',
+              distinguishCancelAndClose: true,
+              type: 'success'
+            })
+              .then(function () {
+                patchDevItem(it.id, { status: newStatus }, { successMsg: '已切换为「已上线」' })
+                  .then(function (norm) { if (norm) sendThanks(norm); });
+              })
+              .catch(function (action) {
+                if (action === 'cancel') patchDevItem(it.id, { status: newStatus }, { successMsg: '已切换为「已上线」（未发致谢）' });
+                // 关闭 / 按 ESC 视为取消整次切换
+              });
+          } else {
+            patchDevItem(it.id, { status: newStatus }, { successMsg: '已切换为「' + newStatus + '」' });
+          }
+        }
+
+        function sendThanks(it) {
+          if (!it || !it.id) return;
+          var token = getToken();
+          if (!token) return;
+          fetch('/api/dev-items/' + encodeURIComponent(it.id) + '/send-thanks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+          })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json();
+            })
+            .then(function (data) {
+              if (data && data.ok && data.item) {
+                var norm = normalizeDevItem(data.item);
+                var idx = devItems.items.findIndex(function (x) { return x.id === it.id; });
+                if (idx >= 0) devItems.items[idx] = norm;
+                if (devDrawer.value && devDrawer.value.id === it.id) devDrawer.value = norm;
+                ElementPlus.ElMessage.success('已打致谢标 · ' + (norm.feedback_count || 0) + ' 个孩子');
+              } else {
+                ElementPlus.ElMessage.warning((data && data.error) || '致谢标记失败（已上线状态保留）');
+              }
+            })
+            .catch(function (e) { if (e.message !== '401') ElementPlus.ElMessage.warning('致谢标记失败'); });
+        }
+
+        function deleteDevItem(it) {
+          if (!it || !it.id) return;
+          var token = getToken();
+          if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
+          fetch('/api/dev-items/' + encodeURIComponent(it.id), {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token }
+          })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              if (res.status === 403) { ElementPlus.ElMessage.error('无权限'); throw new Error('403'); }
+              return res.json();
+            })
+            .then(function (data) {
+              if (data && data.ok) {
+                devItems.items = devItems.items.filter(function (x) { return x.id !== it.id; });
+                devDrawerOpen.value = false;
+                ElementPlus.ElMessage.success('已删除');
+              } else {
+                ElementPlus.ElMessage.error((data && data.error) || '删除失败');
+              }
+            })
+            .catch(function (e) { if (e.message !== '401' && e.message !== '403') ElementPlus.ElMessage.error('删除失败'); });
+        }
+
+        function attachFeedback(it, feedbackId) {
+          if (!it || !it.id || !feedbackId) return;
+          var token = getToken();
+          if (!token) return;
+          fetch('/api/dev-items/' + encodeURIComponent(it.id) + '/feedbacks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ feedback_ids: [feedbackId] })
+          })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json();
+            })
+            .then(function (data) {
+              if (data && data.ok && data.item) {
+                var norm = normalizeDevItem(data.item);
+                var idx = devItems.items.findIndex(function (x) { return x.id === it.id; });
+                if (idx >= 0) devItems.items[idx] = norm;
+                if (devDrawer.value && devDrawer.value.id === it.id) devDrawer.value = norm;
+                ElementPlus.ElMessage.success('已关联反馈');
+                devAttachSearchResults.value = [];
+              } else {
+                ElementPlus.ElMessage.error((data && data.error) || '关联失败');
+              }
+            })
+            .catch(function (e) { if (e.message !== '401') ElementPlus.ElMessage.error('关联失败'); });
+        }
+
+        function detachFeedback(it, feedbackId) {
+          if (!it || !it.id || !feedbackId) return;
+          var token = getToken();
+          if (!token) return;
+          fetch('/api/dev-items/' + encodeURIComponent(it.id) + '/feedbacks/' + encodeURIComponent(feedbackId), {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token }
+          })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json();
+            })
+            .then(function (data) {
+              if (data && data.ok && data.item) {
+                var norm = normalizeDevItem(data.item);
+                var idx = devItems.items.findIndex(function (x) { return x.id === it.id; });
+                if (idx >= 0) devItems.items[idx] = norm;
+                if (devDrawer.value && devDrawer.value.id === it.id) devDrawer.value = norm;
+                ElementPlus.ElMessage.success('已解除关联');
+              } else {
+                ElementPlus.ElMessage.error((data && data.error) || '解除关联失败');
+              }
+            })
+            .catch(function (e) { if (e.message !== '401') ElementPlus.ElMessage.error('解除关联失败'); });
+        }
+
+        function addDevTheme(theme) {
+          if (!devDrawer.value || !theme) return;
+          var list = devDrawer.value.source_themes || [];
+          if (list.indexOf(theme) >= 0) { ElementPlus.ElMessage.info('已存在'); return; }
+          devDrawer.value.source_themes = list.concat([theme]);
+          devDrawer.value.themes_locked = 1;
+        }
+        function removeDevTheme(idx) {
+          if (!devDrawer.value) return;
+          var list = (devDrawer.value.source_themes || []).slice();
+          list.splice(idx, 1);
+          devDrawer.value.source_themes = list;
+          devDrawer.value.themes_locked = 1;
+        }
+        function onQuoteChange() {
+          if (devDrawer.value) devDrawer.value.quote_locked = 1;
+        }
+        function onDevLevelChange() {
+          // 仅本地变更；保存时一并 PATCH
+        }
+
+        function searchFeedbackForAttach(query) {
+          if (!query || !query.trim()) { devAttachSearchResults.value = []; return; }
+          devAttachSearchLoading.value = true;
+          var q = query.trim().toLowerCase();
+          var src = (realFeedback.items || []);
+          // 优先内存搜：text / nickname / id 匹配
+          var hits = src.filter(function (it) {
+            var hay = ((it.text || '') + ' ' + (it.nickname || '') + ' ' + (it.id || '')).toLowerCase();
+            return hay.indexOf(q) >= 0;
+          }).slice(0, 20).map(function (it) {
+            return {
+              id: it.id,
+              label: '[' + (it.status || '—') + '] ' + (it.nickname || '匿名') + ' · ' + (it.text || '').slice(0, 30)
+            };
+          });
+          devAttachSearchResults.value = hits;
+          devAttachSearchLoading.value = false;
+          // 兜底：本地无 issue 时提示
+          if (!src.length) {
+            ElementPlus.ElMessage.info('Issue 看板尚未加载，请先去 Issue 看板「刷新」一次');
+          }
+        }
+
+        function findFeedback(fid) {
+          if (!fid) return {};
+          var hit = (realFeedback.items || []).find(function (x) { return x.id === fid; });
+          return hit || { id: fid, text: '', nickname: '', sceneId: '', status: '' };
+        }
+
+        function promoteFeedbackToDevItem(feedback) {
+          if (!feedback || !feedback.id) return;
+          var snippet = (feedback.text || '').trim().slice(0, 20);
+          ElementPlus.ElMessageBox.confirm('将该 issue 升级为「开发条目」并关联？默认按「大功能」创建，可进抽屉后修改。', '升级为开发条目', {
+            confirmButtonText: '创建并打开',
+            cancelButtonText: '取消',
+            type: 'info'
+          })
+            .then(function () {
+              var token = getToken();
+              if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
+              var payload = {
+                title: '采纳：' + (snippet || feedback.id),
+                level: '大功能',
+                feedback_ids: [feedback.id]
+              };
+              fetch('/api/dev-items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(payload)
+              })
+                .then(function (res) {
+                  if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+                  if (res.status === 403) { ElementPlus.ElMessage.error('无权限'); throw new Error('403'); }
+                  return res.json();
+                })
+                .then(function (data) {
+                  if (data && data.ok && data.item) {
+                    var norm = normalizeDevItem(data.item);
+                    devItems.items.push(norm);
+                    // 反查 link 刷新一下（让 realDrawer 立刻显示已关联 chip）
+                    loadRealDrawerLinks(feedback.id);
+                    openDevItem(norm);
+                    ElementPlus.ElMessage.success('已升级为开发条目');
+                  } else {
+                    ElementPlus.ElMessage.error((data && data.error) || '升级失败');
+                  }
+                })
+                .catch(function (e) { if (e.message !== '401' && e.message !== '403') ElementPlus.ElMessage.error('升级失败'); });
+            })
+            .catch(function () {});
+        }
+
+        function loadRealDrawerLinks(feedbackId) {
+          if (!feedbackId) { realDrawerLinks.value = []; return; }
+          var token = getToken();
+          var headers = {};
+          if (token) headers.Authorization = 'Bearer ' + token;
+          fetch('/api/dev-items/links?feedbackIds=' + encodeURIComponent(feedbackId), { method: 'GET', headers: headers })
+            .then(function (res) {
+              if (res.status === 401) { realDrawerLinks.value = []; return null; }
+              return res.json().catch(function () { return null; });
+            })
+            .then(function (data) {
+              if (data && data.ok && Array.isArray(data.links)) {
+                realDrawerLinks.value = data.links.filter(function (lk) { return lk.feedback_id === feedbackId; });
+              } else {
+                realDrawerLinks.value = [];
+              }
+            })
+            .catch(function () { realDrawerLinks.value = []; });
+        }
+
+        // 进入 dev-board nav 自动加载；realDrawer 打开自动拉关联
+        watch(khNav, function (nv) {
+          if (nv === 'dev-board') {
+            if (!devItems.items || !devItems.items.length) loadDevItems();
+          }
+        });
+        watch(realDrawer, function (nv) {
+          if (nv && nv.id) loadRealDrawerLinks(nv.id);
+          else realDrawerLinks.value = [];
+        });
+
         function exportRealCSV() {
           var items = realFeedback.items || [];
           if (!items.length) { ElementPlus.ElMessage.warning('暂无真实反馈可导出'); return; }
@@ -3037,7 +3635,20 @@
           loadConversationHistory: loadConversationHistory, loadChildProfiles: loadChildProfiles,
           loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
           shortSessionId: shortSessionId, roleLabel: roleLabel, roleTagType: roleTagType,
-          getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey, normalizeFeedbackItem: normalizeFeedbackItem
+          getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey, normalizeFeedbackItem: normalizeFeedbackItem,
+          // 产品开发看板
+          DEV_STATUS_OPTIONS: DEV_STATUS_OPTIONS, DEV_LEVEL_OPTIONS: DEV_LEVEL_OPTIONS,
+          devItems: devItems, devCols: devCols, devDrawer: devDrawer, devDrawerOpen: devDrawerOpen,
+          devLinkedExpanded: devLinkedExpanded, devAttachSearchResults: devAttachSearchResults, devAttachSearchLoading: devAttachSearchLoading,
+          realDrawerLinks: realDrawerLinks,
+          normalizeDevItem: normalizeDevItem, levelChipStyle: levelChipStyle, devStatusChipStyle: devStatusChipStyle, devColChipStyle: devColChipStyle,
+          loadDevItems: loadDevItems, openDevItem: openDevItem, openDevItemById: openDevItemById, onDevDrawerClosed: onDevDrawerClosed,
+          saveNewDevItem: saveNewDevItem, saveDevItemEdits: saveDevItemEdits,
+          patchDevItem: patchDevItem, setDevStatus: setDevStatus, sendThanks: sendThanks, deleteDevItem: deleteDevItem,
+          attachFeedback: attachFeedback, detachFeedback: detachFeedback,
+          addDevTheme: addDevTheme, removeDevTheme: removeDevTheme, onQuoteChange: onQuoteChange, onDevLevelChange: onDevLevelChange,
+          searchFeedbackForAttach: searchFeedbackForAttach, findFeedback: findFeedback,
+          promoteFeedbackToDevItem: promoteFeedbackToDevItem, loadRealDrawerLinks: loadRealDrawerLinks
         };
       }
     });
