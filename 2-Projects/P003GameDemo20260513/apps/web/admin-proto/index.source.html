@@ -1227,6 +1227,31 @@
                               <span class="ct">{{ fmtTs(it.ts) }}</span>
                             </div>
                             <div v-if="it.note" style="margin-top:4px;font-size:11px;color:#666">备注：{{ it.note }}</div>
+                            <!-- 多人聚合（≥2 子项才显示） -->
+                            <div v-if="getChildCount(it.id) >= 2"
+                                 style="margin-top:10px;padding:8px;border:1.5px dashed #F6A724;border-radius:6px;background:#FFF8E8"
+                                 @click.stop>
+                              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                                <span style="background:#F6A724;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">① 多人聚合</span>
+                              </div>
+                              <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer"
+                                   @click.stop="toggleAggregate(it.id)">
+                                <span style="font-size:12px;color:#E8833A;font-weight:600">{{ getChildCount(it.id) }} 个孩子提过同一问题</span>
+                                <span style="font-size:11px;color:#E8833A">{{ expandedParents[it.id] ? '收起 ▴' : '展开 ▾' }}</span>
+                              </div>
+                              <div v-if="expandedParents[it.id]" style="margin-top:8px">
+                                <div v-for="child in (childrenCache[it.id] || []).slice(0, 3)" :key="child.id"
+                                     @click.stop="openChildFeedback(child)"
+                                     style="padding:4px 6px;font-size:11.5px;cursor:pointer;line-height:1.5">
+                                  <span style="color:#3B7A99;font-weight:600">{{ child.nickname || '匿名' }}：</span>
+                                  <span style="color:#333">{{ child.text }}</span>
+                                </div>
+                                <div v-if="(childrenCache[it.id] || []).length > 3"
+                                     style="padding:4px 6px;font-size:11px;color:#909399">
+                                  ...另有 {{ (childrenCache[it.id] || []).length - 3 }} 条，点击工单可溯源
+                                </div>
+                              </div>
+                            </div>
                           </div>
                           <div v-if="!col.items.length" style="font-size:12px;color:#909399;padding:8px 0">暂无</div>
                         </div>
@@ -1640,6 +1665,35 @@
                   :style="{border: realDrawer.status==='金点子库' ? '2px solid #9B7BF0' : '1px dashed #E4E9EF', background: realDrawer.status==='金点子库' ? '#EEE8FD' : '#fff'}"
                   style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;margin-bottom:12px">
                   <span class="kh-chip vault"><i></i>金点子库</span><span style="font-size:11px;color:#6B7785">暂不采纳 → 珍藏（可返工）</span>
+                </div>
+                <!-- 多人聚合操作区（admin 手工合并；子项视图差异） -->
+                <div v-if="realDrawer.parent_feedback_id" style="margin:14px 0 8px;padding:8px;background:#FFF8E8;border:1px solid #F6A724;border-radius:6px">
+                  <div style="font-size:11px;color:#E8833A;font-weight:600;margin-bottom:4px">⚙ 已合并到父反馈</div>
+                  <div style="font-size:11.5px;color:#3B7A99;cursor:pointer" @click="jumpToParent(realDrawer.parent_feedback_id)">点击查看父项 ↑</div>
+                  <el-button v-if="isAdmin" size="small" type="warning" plain style="margin-top:8px" @click="unmergeChild(realDrawer)">解除合并（变独立）</el-button>
+                </div>
+                <div v-else style="margin:14px 0 8px">
+                  <div style="font-size:11px;color:#6B7785;margin-bottom:4px">多人聚合（合并相似反馈到此条）</div>
+                  <div v-if="(childrenCache[realDrawer.id] || []).length">
+                    <div style="font-size:11.5px;font-weight:600;color:#E8833A">本反馈是父项 · 已合并 {{ (childrenCache[realDrawer.id] || []).length }} 个子项</div>
+                    <div v-for="c in childrenCache[realDrawer.id]" :key="c.id"
+                         style="margin-top:5px;padding:5px 6px;background:#fafbfc;border:1px solid #eef0f3;border-radius:4px;font-size:11.5px;display:flex;justify-content:space-between;gap:8px">
+                      <div style="flex:1;min-width:0">
+                        <span style="color:#3B7A99;font-weight:600">{{ c.nickname || '匿名' }}</span>
+                        <span style="color:#333;margin-left:6px">{{ c.text }}</span>
+                      </div>
+                      <span v-if="isAdmin" @click="unmergeChild(c)" style="cursor:pointer;color:#E8833A">×</span>
+                    </div>
+                  </div>
+                  <el-select v-if="isAdmin" :model-value="''" filterable
+                             placeholder="+ 合并子项（默认列出推荐：同主题+同情绪）"
+                             :loading="mergeCandidatesLoading"
+                             style="width:100%;margin-top:6px"
+                             @update:model-value="(v)=>v && mergeAsChild(realDrawer, v)">
+                    <el-option v-for="opt in mergeCandidates" :key="opt.id"
+                               :label="(opt.nickname || '匿名') + '：' + opt.text.slice(0, 30) + (opt.text.length>30?'...':'')"
+                               :value="opt.id"></el-option>
+                  </el-select>
                 </div>
                 <div style="font-size:13px;font-weight:700;color:#6B7785;margin:8px 0 4px">备注（可选，PATCH {note}）</div>
                 <el-input v-model="realDrawer.note" type="textarea" :rows="2" placeholder="记录跟进/决策依据..." />
@@ -2800,6 +2854,12 @@
         var realDrawer = ref(null);
         var realDrawerOpen = ref(false);
 
+        // 多人聚合：父项 id → 子项数组 / 展开状态 / 合并候选
+        var childrenCache = reactive({});
+        var expandedParents = reactive({});
+        var mergeCandidates = ref([]);
+        var mergeCandidatesLoading = ref(false);
+
         function normalizeFeedbackItem(raw) {
           if (!raw) return raw;
           var theme = raw.theme || raw.Theme || '未分类';
@@ -2825,6 +2885,7 @@
             created_at: raw.created_at || raw.createdAt || raw.ts || '',
             updated_at: raw.updated_at || raw.updatedAt || '',
             updated_by: raw.updated_by || raw.updatedBy || '',
+            parent_feedback_id: raw.parent_feedback_id || raw.parentFeedbackId || null,
             // 兼容旧字段
             ts: raw.ts || raw.created_at || raw.createdAt || ''
           };
@@ -2894,7 +2955,18 @@
               if (data && data.ok) {
                 realFeedback.items = (data.items || []).map(normalizeFeedbackItem);
                 reBucketReal();
-                ElementPlus.ElMessage.success('已刷新 · ' + realFeedback.items.length + ' 条真实反馈');
+                ElementPlus.ElMessage.success('已刷新 · 父项 ' + realFeedback.items.length + ' 条');
+                // 多人聚合：并发预拉所有父项的 children 填 childrenCache（卡片首屏就有子项 count）
+                Promise.all(realFeedback.items.map(function (it) {
+                  return fetch('/api/feedback/' + encodeURIComponent(it.id) + '/children', {
+                    headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                  })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) {
+                      if (d && d.ok) childrenCache[it.id] = (d.items || []).map(normalizeFeedbackItem);
+                    })
+                    .catch(function () { /* 单条失败不影响别的 */ });
+                }));
               } else {
                 ElementPlus.ElMessage.error((data && data.error) || '拉取真实反馈失败');
               }
@@ -2904,7 +2976,110 @@
             })
             .finally(function () { realFeedback.loading = false; });
         }
-        function openRealIssue(it) { realDrawer.value = it; realDrawerOpen.value = true; }
+        function openRealIssue(it) {
+          realDrawer.value = it;
+          realDrawerOpen.value = true;
+          if (it && !it.parent_feedback_id) {
+            loadMergeCandidates(it.id);
+            // 父项视图：确保 children 已加载（卡片预拉一般已 cache，二次兜底）
+            if (!childrenCache[it.id]) loadChildren(it.id);
+          } else {
+            mergeCandidates.value = [];
+          }
+        }
+
+        // ====== 多人聚合：子项 / 合并候选 / 合并 / 解除合并 / 跳父 ======
+        function getChildCount(parentId) {
+          return (childrenCache[parentId] || []).length;
+        }
+        function toggleAggregate(parentId) {
+          if (expandedParents[parentId]) {
+            expandedParents[parentId] = false;
+            return;
+          }
+          expandedParents[parentId] = true;
+          if (!childrenCache[parentId]) loadChildren(parentId);
+        }
+        function loadChildren(parentId) {
+          var token = getToken();
+          fetch('/api/feedback/' + encodeURIComponent(parentId) + '/children', {
+            headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+          })
+            .then(function (r) { if (r.status === 401) { handleAuthError(); throw new Error('401'); } return r.json(); })
+            .then(function (d) {
+              if (d && d.ok) childrenCache[parentId] = (d.items || []).map(normalizeFeedbackItem);
+            })
+            .catch(function (e) { if (e.message !== '401') ElementPlus.ElMessage.error('加载子项失败'); });
+        }
+        function openChildFeedback(child) {
+          openRealIssue(child);
+        }
+        function loadMergeCandidates(feedbackId) {
+          if (!feedbackId) { mergeCandidates.value = []; return; }
+          mergeCandidatesLoading.value = true;
+          var token = getToken();
+          fetch('/api/feedback/' + encodeURIComponent(feedbackId) + '/merge-candidates', {
+            headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+          })
+            .then(function (r) { if (r.status === 401) { handleAuthError(); throw new Error('401'); } return r.json(); })
+            .then(function (d) { if (d && d.ok) mergeCandidates.value = (d.items || []).map(normalizeFeedbackItem); })
+            .catch(function () { mergeCandidates.value = []; })
+            .finally(function () { mergeCandidatesLoading.value = false; });
+        }
+        function mergeAsChild(parent, candidateId) {
+          if (!parent || !candidateId) return;
+          var token = getToken();
+          fetch('/api/feedback/' + encodeURIComponent(candidateId) + '/parent', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ parent_id: parent.id })
+          })
+            .then(function (r) { if (r.status === 401) { handleAuthError(); throw new Error('401'); } return r.json(); })
+            .then(function (d) {
+              if (d && d.ok) {
+                ElementPlus.ElMessage.success('已合并');
+                loadRealFeedback();
+                loadChildren(parent.id);
+                loadMergeCandidates(parent.id);
+              } else {
+                ElementPlus.ElMessage.error((d && d.error) || '合并失败');
+              }
+            })
+            .catch(function (e) { if (e.message !== '401') ElementPlus.ElMessage.error('合并失败'); });
+        }
+        function unmergeChild(child) {
+          if (!child) return;
+          var token = getToken();
+          var parentId = child.parent_feedback_id;
+          fetch('/api/feedback/' + encodeURIComponent(child.id) + '/parent', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ parent_id: null })
+          })
+            .then(function (r) { if (r.status === 401) { handleAuthError(); throw new Error('401'); } return r.json(); })
+            .then(function (d) {
+              if (d && d.ok) {
+                ElementPlus.ElMessage.success('已解除合并');
+                loadRealFeedback();
+                if (parentId) {
+                  loadChildren(parentId);
+                  loadMergeCandidates(parentId);
+                }
+                if (realDrawer.value && realDrawer.value.id === child.id && d.item) {
+                  realDrawer.value = normalizeFeedbackItem(d.item);
+                }
+              } else {
+                ElementPlus.ElMessage.error((d && d.error) || '解除失败');
+              }
+            })
+            .catch(function (e) { if (e.message !== '401') ElementPlus.ElMessage.error('解除失败'); });
+        }
+        function jumpToParent(parentId) {
+          if (!parentId) return;
+          var found = (realFeedback.items || []).find(function (x) { return x.id === parentId; });
+          if (found) { openRealIssue(found); return; }
+          loadRealFeedback();
+        }
         function setRealStatus(newStatus) {
           var it = realDrawer.value; if (!it) return;
           if (newStatus === '金点子库' && it.status !== '金点子库') {
@@ -3621,6 +3796,12 @@
           realFeedback: realFeedback, realCols: realCols, realDrawer: realDrawer, realDrawerOpen: realDrawerOpen,
           loadRealFeedback: loadRealFeedback, openRealIssue: openRealIssue, setRealStatus: setRealStatus,
           saveRealNote: saveRealNote, exportRealCSV: exportRealCSV,
+          // 多人聚合
+          childrenCache: childrenCache, expandedParents: expandedParents,
+          mergeCandidates: mergeCandidates, mergeCandidatesLoading: mergeCandidatesLoading,
+          getChildCount: getChildCount, toggleAggregate: toggleAggregate, openChildFeedback: openChildFeedback,
+          loadChildren: loadChildren, loadMergeCandidates: loadMergeCandidates,
+          mergeAsChild: mergeAsChild, unmergeChild: unmergeChild, jumpToParent: jumpToParent,
           // 双标签 + 采纳子类
           FEEDBACK_THEME_OPTIONS: FEEDBACK_THEME_OPTIONS,
           FEEDBACK_EMOTION_OPTIONS: FEEDBACK_EMOTION_OPTIONS,
