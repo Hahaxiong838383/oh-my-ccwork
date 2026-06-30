@@ -93,7 +93,7 @@ strings ~/xray/xray.log | tail -30
 
 | 分组 | 策略 | 节点池 |
 |------|------|--------|
-| Claude/GPT | 固定 | 美宅专用 US (VLESS+Reality) |
+| Claude/GPT | 固定 | **美宅-Claude-GPT_mychenchuan** (VLESS+Reality, 直连 154.44.3.170:8444) |
 | **Gemini/AI Studio** | 固定 | Gemini专用-US2 (VLESS+Reality) |
 | YouTube/视频娱乐 | leastPing | HK×5, TW×2, SG×2, JP×5 |
 | 大陆域名 | direct | 直连 |
@@ -140,6 +140,14 @@ rule[5] 是「开发者下载」大组（github + githubusercontent + codeload +
 5. **v2rayN 残留进程？** → 多个 xray 抢端口会异常
 6. **终端环境变量？** → `echo $ALL_PROXY` 应为 `socks5://127.0.0.1:10808`
 
+### 节点连得上但目标站 403/连不上 → 查出口IP信誉（非配置问题）
+
+现象：某节点能连（reality 握手成功），但 ChatGPT/Claude 等站 **403 或 000**，google 却 200。
+- **403 ≠ 000**：reality 握手成功时目标站返 403（流量出去被目标拦）；握手失败才 000/exit35。有 403 说明节点本身通，问题在**出口IP信誉**。
+- **查真实出口IP**：`curl -x http://127.0.0.1:10808 https://ifconfig.me` → 再 `curl https://ipinfo.io/<IP>/json` 看归属。**ColoCrossing 等机房IP 会被 OpenAI/Cloudflare 403**（google 不严所以 200）。
+- **同一中转入口不同端口落到不同出口机**：住宅IP中转常在一个入口IP开多端口，每端口NAT到不同落地。「v2rayN 正常、xray 不通」且其他参数全同时，**重点核对端口**。让用户导出 v2rayN 的 `vless://` 链接逐字段比对，差异常藏在端口。改 reality 节点要**按分享链接完整重建 outbound**，别在旧配置改单字段（残留临时字段会干扰）。
+- 详见 memory `feedback_xray_port_routes_different_landing`。
+
 ## 重要注意事项
 
 - **Claude 必须走美宅节点**，不要尝试其他节点
@@ -170,7 +178,7 @@ rule[5] 是「开发者下载」大组（github + githubusercontent + codeload +
 **Mini 部署经验**：
 - 推 config + scripts + geo dat（不推 binary, Mini 原生 arm64 v26.x 更新更原生）
 - 推 3 launchd plist (proxy/manager/rule-updater), 不推 proxy-setup (Mini 无需 macOS 系统代理设置)
-- 路由规则一致: GPT/Claude → 美宅-US-A, Gemini → Gemini 专用-US2-VLESS-Reality-IP
+- 路由规则一致: GPT/Claude → **美宅-Claude-GPT_mychenchuan** (154.44.3.170:8444 直连, 2026-06-25 从旧节点 美宅-Claud-GPT专用US 迁移), Gemini → Gemini 专用-US2-VLESS-Reality-IP
 - Web UI: http://10.9.1.54:8888 (Mini) 同 http://127.0.0.1:8888 (Air)
 
 **多机扩展 rsync 命令模板**:
@@ -193,4 +201,97 @@ done'
 ```
 
 **关联**: [project_multica_team_deploy.md](memory/project_multica_team_deploy.md) 14:30-14:40 段落
+
+---
+
+## REALITY 服务端运维（换伪装域名 / 加节点）—— VPS 侧，2026-06-25
+
+> ⚠️ 上面全是**客户端**（本机走代理）。这一节是**服务端**：在 VPS 上管 Xray REALITY inbound。配置通常 `/usr/local/etc/xray/config.json`，systemd 服务 `xray.service`（**服务端用 `systemctl restart xray`，不是 launchd**）。
+
+### 换伪装域名（dest / serverNames）零风险 SOP
+
+REALITY 的 `serverNames`/`dest` **不是「随便填的伪装名」**：它去「借」一个真实站的 TLS 握手，非法探测来访时把流量回落转发到 `dest`。填错=代理握手失败用不了；**绝不直接改生产口断现网**。
+
+**① dest 选站三硬条件**（填前 openssl 实测，别猜）：
+```bash
+D=<候选域名>
+echo | openssl s_client -connect $D:443 -servername $D -tls1_3 2>/dev/null | grep "Verify return code"  # 要 0 (ok)
+echo | openssl s_client -connect $D:443 -servername $D -alpn h2  2>/dev/null | grep -i ALPN              # 要 h2
+# 且 dest 不能解析到 VPS 自己（防回环）。自己的 CF 后端站默认达标（CF 给 TLS1.3+H2+X25519）。
+```
+
+**② 加测试端口验证（不碰生产口）**：
+```bash
+CFG=/usr/local/etc/xray/config.json
+cp "$CFG" "$CFG.bak.$(date +%s)"
+# python3 deepcopy 生产 inbound → 只改 port + realitySettings.dest + serverNames，复用同 keypair/UUID/shortId
+xray -test -config "$CFG" | grep "Configuration OK" && systemctl restart xray
+ss -tlnp | grep -E ":<生产口>|:<测试口>"   # 新老端口都要在听
+```
+
+**③ 伪装层验证**（合法探测会回落到 dest）：
+```bash
+echo | openssl s_client -connect 127.0.0.1:<测试口> -servername <新域名> 2>/dev/null | openssl x509 -noout -subject
+# subject == <新域名> 的证书 = 伪装生效；对比老口 -servername <老域名> 看老证书
+```
+
+**④ 出网闭环（终极）**：VPS 本地起临时客户端（socks → REALITY 测试口，SNI=新域名）：
+```bash
+# 推 publicKey： xray x25519 -i <privateKey>   ← 26.x 输出里标 "Password:" 那行就是 publicKey！
+# /tmp/xc.json: socks inbound(10808) + vless outbound(127.0.0.1:<测试口>, reality serverName=<新域名>, 复用 UUID/pbk/sid/flow)
+nohup xray run -c /tmp/xc.json >/tmp/xc.log 2>&1 & CPID=$!; sleep 3
+curl -s --max-time 15 --socks5-hostname 127.0.0.1:10808 https://ifconfig.me; echo " exit=$?"
+grep tunneling /tmp/xc.log     # exit 0 + 日志 "tunneling request ... via 127.0.0.1:<测试口>" = 全链路通
+kill $CPID; rm -f /tmp/xc.json /tmp/xc.log
+```
+
+### 坑（实测）
+- **`xray x25519 -i <priv>` 在 26.x 把 publicKey 标成 `Password:`**（不是 `Public key`），另有 `Hash32`（客户端不用）。别认错字段。
+- **keypair 与 dest/serverName 正交**：换伪装域名**不用换密钥**，客户端只改 SNI(serverName)，publicKey/UUID/shortId/端口都不变。
+- **同机客户端+服务端测试，socks 出口 IP == 直连 IP**（都是 VPS 自己）→ 判断走没走代理靠 `socks exit 0 + 客户端日志 tunneling`，不靠 IP。
+- **测试口公网可达性看云安全组**（机器内 `ufw`/`iptables` 看不到云控制台规则）；本地闭环不受影响、最可靠。便宜 VPS 常默认全放行。
+- **凭证（IP/UUID/pbk/sid/privateKey/密码）是 secret**，只对话交付，**绝不写进本 skill / 记忆 / git**。
+- 详见 memory `feedback_xray_reality_serverName_swap`。
+
+### 变体 A：x-ui / 3x-ui 面板管理的节点（2026-06-25 实战）
+
+识别：xray 进程 args 是相对路径 `bin/xray-linux-amd64 -c bin/config.json`、cwd `/usr/local/x-ui`、systemd unit 叫 **`x-ui`**（非 `xray`）。
+
+- **真源是 `/etc/x-ui/x-ui.db`（SQLite），不是 `bin/config.json`**（后者面板按 db 生成，直接改会被 `x-ui restart` 覆盖）。
+- 换域名：备份 db → sqlite3 改 `inbounds.stream_settings` 的 `realitySettings.dest`+`serverNames` → **`x-ui restart`**（重启面板+重生成 config+拉起 xray；别用 `systemctl restart xray`）。
+
+```bash
+DB=/etc/x-ui/x-ui.db; cp "$DB" "$DB.bak.$(date +%s)"
+python3 - <<'PY'
+import sqlite3,json
+con=sqlite3.connect("/etc/x-ui/x-ui.db")
+ss=json.loads(con.execute("SELECT stream_settings FROM inbounds WHERE id=<N>").fetchone()[0])
+rs=ss["realitySettings"]; rs["dest"]="<新域名>:443"; rs["serverNames"]=["<新域名>"]
+con.execute("UPDATE inbounds SET stream_settings=? WHERE id=<N>",(json.dumps(ss),)); con.commit()
+PY
+x-ui restart
+echo | openssl s_client -connect 127.0.0.1:443 -servername <新域名> 2>/dev/null | openssl x509 -noout -subject  # 验回落证书
+```
+
+### 变体 B：服务端节点是 cc 工作出口（如 Gemini 专用）→ 双侧多机联动
+
+换了**服务端**伪装域名，**所有客户端**对应 outbound 的 `serverName` 必须同步改，否则该引擎链路立断（客户端 SNI ∉ 服务端 serverNames → 握手失败）。本案要改 **Air + Mini 两台** `~/xray/config.json` 的 `Gemini专用-US2-VLESS-Reality-IP`：
+
+```bash
+# 每台客户端（ssh mini 远程同样）：python3 匹配 address+reality 改 serverName（不靠 tag 名）→ 原子重启 → E2E
+~/xray/xray -test -config ~/xray/config.json                     # Configuration OK（WS/VMess deprecated 警告无关）
+launchctl kickstart -k gui/$(id -u)/com.xray.proxy
+curl -s -o /dev/null -w "%{http_code}" --socks5-hostname 127.0.0.1:10808 https://generativelanguage.googleapis.com/v1beta/models  # 非000(403正常)=通
+grep generativelanguage ~/xray/access.log | tail -1             # 见 [socks -> 节点tag] = 走对节点
+```
+客户端 serverName 必须 ∈ 服务端 serverNames 且与 dest 证书域名一致 → 同口换 serverNames 时 dest 单一=证书单一，**无法零中断**，切换有几秒窗口（cc 自用节点可接受）。
+
+### 切换策略（决定客户端链接命运）
+
+换域名后客户端分享链接**只改 `sni` 一个字段**（UUID/pbk/sid/端口/flow 全不变，因 keypair 与 serverName 正交）。两种切法对旧链接影响完全不同：
+
+- **单口直切**（改原端口 serverNames 只留新域名，如 x-ui 改 db）→ **旧 SNI 链接立即失效**，所有客户端必须同步更新 sni，否则握手失败。适合 cc 自用节点（Air/Mini 能一起改）。
+- **双口并存**（旧端口不动 + 新域名挂新端口）→ 旧链接照用、新链接是增量，**平滑迁移零中断**。这才是零中断的正解（≠ 同口多挂 serverNames，那个 dest/证书单一做不到）。适合客户端分散 / 不能同时改 / 要过渡期。
+
+详见 memory `feedback_xray_reality_serverName_swap`。
 

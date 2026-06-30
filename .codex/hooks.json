@@ -1,0 +1,34 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/Users/rayman.chen/mycc/.codex/hooks/test-after-edit.sh'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/Users/rayman.chen/mycc/.codex/hooks/stop-landing-reminder.sh'"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sf http://localhost:18080/memory/extract-session || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -45,6 +45,16 @@
         "cd /Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/apps/parent && ../../node_modules/.bin/vite --port 5176 --strictPort"
       ],
       "port": 5176
+    },
+    {
+      "name": "safety-arena",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/rayman.chen/mycc/2-Projects/safety-arena && export GEMINI_PROXY_URL=http://23.226.135.149:4000/v1 GEMINI_DEFAULT_MODEL=gemini-2.5-flash no_proxy='*' NO_PROXY='*' && export GEMINI_API_KEY=$(security find-generic-password -s gemini-proxy-token -a gemini-proxy -w) && SAFETY_ARENA_DB=/tmp/sa-m3.db uv run python -m safety_arena.server"
+      ],
+      "port": 8803,
+      "autoPort": true
     }
   ]
 }
