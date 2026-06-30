@@ -7,6 +7,40 @@ export const FEEDBACK_STATUSES = ['已收到', '评估中', '已采纳', '金点
 
 export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
 
+/**
+ * 主题词表（预设 + 「其他」兜底）。
+ * 来源：mock khThemes 4 项 + 业务高频补 6 项，覆盖 8 张场景卡 + KidsHub 反馈典型分类。
+ * 「未分类」是出厂默认（旧数据 + 新 add 都进它，等人工归类，前端不让选）。
+ * 「其他」是预设外兜底（admin 选了它就放弃归类，下个版本看要不要扩词表）。
+ */
+export const FEEDBACK_THEMES = [
+  '未分类',
+  '功能类',
+  '体验类',
+  '夜航·内容',
+  '专注·交互',
+  '皮肤·养成',
+  '周报·可读性',
+  '登舰·体验',
+  '生态·养成',
+  '记忆·联动',
+  'KidsHub·建议',
+  '设备·设置',
+  '其他',
+] as const;
+
+export type FeedbackTheme = (typeof FEEDBACK_THEMES)[number];
+
+/** 情绪极性枚举（mock 4 项 + 中性默认） */
+export const FEEDBACK_EMOTIONS = ['中性', '期待', '吐槽', '愿望', '困惑'] as const;
+
+export type FeedbackEmotion = (typeof FEEDBACK_EMOTIONS)[number];
+
+/** 采纳子状态：status='已采纳' 时生效；其他 status 下为 null。 */
+export const FEEDBACK_ADOPTION_KINDS = ['普通', '重点'] as const;
+
+export type FeedbackAdoptionKind = (typeof FEEDBACK_ADOPTION_KINDS)[number];
+
 export type FeedbackItem = {
   id: string;
   session_id: string;
@@ -26,6 +60,13 @@ export type FeedbackItem = {
   ip_hash: string;
   // Step 3：归属账号（邀请码登录后写入；匿名/旧数据为 null）。用于 parent 视角按账号隔离查询。
   account_id: string | null;
+  // 2026-06-30 双标签 + 采纳子状态（admin 手工标，无 LLM）
+  /** 主题 chip（预设枚举，新行/旧行默认「未分类」） */
+  theme: FeedbackTheme;
+  /** 情绪极性 chip（默认「中性」） */
+  emotion: FeedbackEmotion;
+  /** 采纳子类（仅 status='已采纳' 时生效；其他 status 为 null；前端用下拉） */
+  adoption_kind: FeedbackAdoptionKind | null;
 };
 
 export type FeedbackAddInput = {
@@ -59,12 +100,26 @@ type FeedbackRow = {
   updated_by: string;
   ip_hash: string;
   account_id: string | null;
+  theme: string;
+  emotion: string;
+  adoption_kind: string | null;
 };
 
 type FeedbackUpdateInput = {
   status?: FeedbackStatus;
   note?: string;
   updatedBy?: string;
+  /** 主题改写（admin 手动归类）。传入字符串非枚举值 → 兜底「其他」。 */
+  theme?: FeedbackTheme;
+  /** 情绪改写（admin 手动）。非枚举 → 兜底「中性」。 */
+  emotion?: FeedbackEmotion;
+  /**
+   * 采纳子类。规则：
+   * - 传 '普通' / '重点' → 写入（无论当前 status；UI 应在 status='已采纳' 时才暴露下拉）
+   * - 传 null → 显式清空（admin 切回非采纳时 UI 清掉）
+   * - 不传（undefined）→ 保持原值
+   */
+  adoptionKind?: FeedbackAdoptionKind | null;
 };
 
 const DEFAULT_DB_PATH = './data/feedback.db';
@@ -88,6 +143,9 @@ const FEEDBACK_COLUMNS = [
   'updated_by',
   'ip_hash',
   'account_id',
+  'theme',
+  'emotion',
+  'adoption_kind',
 ] as const;
 
 const SELECT_COLS = FEEDBACK_COLUMNS.join(', ');
@@ -117,11 +175,33 @@ function toFeedbackItem(row: FeedbackRow | null | undefined): FeedbackItem | nul
     updated_by: row.updated_by,
     ip_hash: row.ip_hash,
     account_id: row.account_id ?? null,
+    theme: normalizeTheme(row.theme),
+    emotion: normalizeEmotion(row.emotion),
+    adoption_kind: normalizeAdoptionKind(row.adoption_kind),
   };
 }
 
 function isFeedbackStatus(value: string): value is FeedbackStatus {
   return FEEDBACK_STATUSES.includes(value as FeedbackStatus);
+}
+
+/** 主题归一：未知 / 空 → 「未分类」（向后兼容旧数据 + 容错） */
+function normalizeTheme(value: string | null | undefined): FeedbackTheme {
+  const v = (value ?? '').trim();
+  return (FEEDBACK_THEMES as readonly string[]).includes(v) ? (v as FeedbackTheme) : '未分类';
+}
+
+/** 情绪归一：未知 / 空 → 「中性」 */
+function normalizeEmotion(value: string | null | undefined): FeedbackEmotion {
+  const v = (value ?? '').trim();
+  return (FEEDBACK_EMOTIONS as readonly string[]).includes(v) ? (v as FeedbackEmotion) : '中性';
+}
+
+/** 采纳子类归一：未知 / 空 → null（status≠已采纳 时本就该 null） */
+function normalizeAdoptionKind(value: string | null | undefined): FeedbackAdoptionKind | null {
+  const v = (value ?? '').trim();
+  if (!v) return null;
+  return (FEEDBACK_ADOPTION_KINDS as readonly string[]).includes(v) ? (v as FeedbackAdoptionKind) : null;
 }
 
 class FeedbackStore {
@@ -149,7 +229,10 @@ class FeedbackStore {
         updated_at INTEGER NOT NULL,
         updated_by TEXT NOT NULL,
         ip_hash TEXT NOT NULL,
-        account_id TEXT
+        account_id TEXT,
+        theme TEXT NOT NULL DEFAULT '未分类',
+        emotion TEXT NOT NULL DEFAULT '中性',
+        adoption_kind TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_feedback_items_ts
       ON feedback_items (ts DESC);
@@ -162,8 +245,14 @@ class FeedbackStore {
     this.migrateAddColumn('age', "TEXT NOT NULL DEFAULT ''");
     // Step 3：account_id 可空，旧行/匿名为 NULL（不破坏现有数据，向后兼容）
     this.migrateAddColumn('account_id', 'TEXT');
+    // 2026-06-30：双标签 + 采纳子状态。旧行 theme/emotion 走 DEFAULT，adoption_kind 为 NULL
+    this.migrateAddColumn('theme', "TEXT NOT NULL DEFAULT '未分类'");
+    this.migrateAddColumn('emotion', "TEXT NOT NULL DEFAULT '中性'");
+    this.migrateAddColumn('adoption_kind', 'TEXT');
     // 账号维度查询索引（parent 视角隔离用）；列存在才建
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_feedback_items_account ON feedback_items (account_id, ts DESC);');
+    // 主题维度聚合用索引（按 theme 分组 count，主题池实时统计）
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_feedback_items_theme ON feedback_items (theme);');
   }
 
   /** 幂等加列：列已存在则跳过，否则 ALTER TABLE ADD COLUMN（旧行用 DEFAULT 填充） */
@@ -208,14 +297,18 @@ class FeedbackStore {
       updated_by: 'system',
       ip_hash: ipHash,
       account_id: accountId,
+      theme: '未分类',
+      emotion: '中性',
+      adoption_kind: null,
     };
 
     this.db
       .prepare(`
         INSERT INTO feedback_items (
           id, session_id, turn_id, source, ts, nickname, gender, age, scene_id,
-          text, status, note, updated_at, updated_by, ip_hash, account_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          text, status, note, updated_at, updated_by, ip_hash, account_id,
+          theme, emotion, adoption_kind
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .run(
         item.id,
@@ -234,6 +327,9 @@ class FeedbackStore {
         item.updated_by,
         item.ip_hash,
         item.account_id,
+        item.theme,
+        item.emotion,
+        item.adoption_kind,
       );
 
     return item;
@@ -264,15 +360,41 @@ class FeedbackStore {
     const nextStatus = input.status ?? current.status;
     const nextNote = typeof input.note === 'string' ? input.note : current.note;
     const nextUpdatedBy = input.updatedBy?.trim() || current.updated_by;
+    const nextTheme: FeedbackTheme = input.theme !== undefined ? normalizeTheme(input.theme) : current.theme;
+    const nextEmotion: FeedbackEmotion =
+      input.emotion !== undefined ? normalizeEmotion(input.emotion) : current.emotion;
+    // adoption_kind 三态：undefined=保持原值；null=显式清空；'普通'/'重点'=写入
+    let nextAdoptionKind: FeedbackAdoptionKind | null;
+    if (input.adoptionKind === undefined) {
+      nextAdoptionKind = current.adoption_kind;
+    } else if (input.adoptionKind === null) {
+      nextAdoptionKind = null;
+    } else {
+      nextAdoptionKind = normalizeAdoptionKind(input.adoptionKind);
+    }
+    // 一致性兜底：status≠已采纳 时强制清空 adoption_kind（防止前端漏清）
+    if (nextStatus !== '已采纳') {
+      nextAdoptionKind = null;
+    }
     const nextUpdatedAt = Date.now();
 
     this.db
       .prepare(`
         UPDATE feedback_items
-        SET status = ?, note = ?, updated_at = ?, updated_by = ?
+        SET status = ?, note = ?, theme = ?, emotion = ?, adoption_kind = ?,
+            updated_at = ?, updated_by = ?
         WHERE id = ?
       `)
-      .run(nextStatus, nextNote, nextUpdatedAt, nextUpdatedBy, id);
+      .run(
+        nextStatus,
+        nextNote,
+        nextTheme,
+        nextEmotion,
+        nextAdoptionKind,
+        nextUpdatedAt,
+        nextUpdatedBy,
+        id,
+      );
 
     return this.getById(id);
   }

@@ -1,18 +1,35 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { FEEDBACK_STATUSES, feedbackStore, type FeedbackItem } from '../feedback-store.js';
+import {
+  FEEDBACK_ADOPTION_KINDS,
+  FEEDBACK_EMOTIONS,
+  FEEDBACK_STATUSES,
+  FEEDBACK_THEMES,
+  feedbackStore,
+  type FeedbackItem,
+} from '../feedback-store.js';
 import { getTokenRole, getTokenUser, isValidToken } from './auth.js';
 
 const feedbackRoute = new Hono();
 
+// PATCH body：所有字段 optional；adoptionKind 三态（缺/null/枚举值），用 nullable.optional 表达
 const PatchBodySchema = z
   .object({
     status: z.enum(FEEDBACK_STATUSES).optional(),
     note: z.string().optional(),
+    theme: z.enum(FEEDBACK_THEMES).optional(),
+    emotion: z.enum(FEEDBACK_EMOTIONS).optional(),
+    adoptionKind: z.enum(FEEDBACK_ADOPTION_KINDS).nullable().optional(),
   })
-  .refine((value) => value.status !== undefined || value.note !== undefined, {
-    message: 'status 或 note 至少提供一个',
-  });
+  .refine(
+    (value) =>
+      value.status !== undefined ||
+      value.note !== undefined ||
+      value.theme !== undefined ||
+      value.emotion !== undefined ||
+      value.adoptionKind !== undefined,
+    { message: 'status / note / theme / emotion / adoptionKind 至少提供一个' },
+  );
 
 type FeedbackPublicItem = Omit<FeedbackItem, 'ip_hash'>;
 
@@ -53,6 +70,9 @@ feedbackRoute.patch('/:id', async (c) => {
   const item = feedbackStore.updateStatus(c.req.param('id'), {
     status: parsed.data.status,
     note: parsed.data.note,
+    theme: parsed.data.theme,
+    emotion: parsed.data.emotion,
+    adoptionKind: parsed.data.adoptionKind,
     updatedBy,
   });
 
