@@ -1212,8 +1212,14 @@
                         </div>
                         <div style="display:flex;flex-direction:column;gap:10px">
                           <div class="kh-issue" v-for="it in col.items" :key="it.id" @click="openRealIssue(it)">
-                            <div class="iid">{{ it.id }} · {{ it.nickname || '匿名' }}<span v-if="it.gender || it.age" style="color:#909399"> · {{ it.gender }}{{ it.age ? it.age + '岁' : '' }}</span></div>
+                            <div class="iid">{{ it.id }} · {{ it.nickname || '匿名' }}<span v-if="it.gender || it.age" style="color:#909399"> · {{ it.gender }}{{ it.age ? it.age + '岁' : '' }}</span><span v-if="it.adoptionKind==='重点'" title="重点采纳" style="margin-left:6px;color:#E8833A">⭐</span></div>
                             <p style="margin:6px 0 8px;font-size:13px;line-height:1.4">{{ it.text }}</p>
+                            <!-- 双标签 chip：主题 + 情绪（点开抽屉可改） -->
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+                              <span :style="{background: themeChipColor(it.theme), color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px'}">{{ it.theme || '未分类' }}</span>
+                              <span :style="{background:'transparent', color: emotionChipColor(it.emotion), border:'1px solid '+emotionChipColor(it.emotion), fontSize:'11px', padding:'1px 8px', borderRadius:'10px'}">{{ it.emotion || '中性' }}</span>
+                              <span v-if="it.status==='已采纳' && it.adoptionKind" :style="{background: it.adoptionKind==='重点' ? '#E8833A' : '#3DBE78', color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px'}">{{ it.adoptionKind }}采纳</span>
+                            </div>
                             <div class="meta">
                               <span>{{ getSceneLabel(it.sceneId) }}</span>
                               <span v-if="it.source === 'tutorial'" style="background:#f3f3f3;color:#888">引导测试</span>
@@ -1228,14 +1234,34 @@
                     </div>
                   </div>
                   <div class="kh-pool">
-                    <div style="font-size:14px;font-weight:700">主题池</div>
-                    <div style="font-size:12px;color:#6B7785;margin:4px 0 14px">情绪极性 + 主题 双标签聚合 · 攒够阈值进版本决策</div>
-                    <div class="pt" v-for="t in khThemes" :key="t.name">
-                      <div><div style="font-size:13px;font-weight:700">{{ t.name }}</div>
-                      <div style="font-size:11px;color:#6B7785;margin-top:2px">情绪：{{ t.mood }}</div></div>
-                      <div style="font-size:18px;font-weight:800" :style="{color: t.n>=10 ? '#3B7A99' : '#6B7785'}">{{ t.n }}</div>
-                    </div>
-                    <div class="kh-hint">“夜航·内容” 已达 12 条 ≥ 阈值，建议进入版本决策。</div>
+                    <div style="font-size:14px;font-weight:700">主题池（真聚合）</div>
+                    <div style="font-size:12px;color:#6B7785;margin:4px 0 14px">情绪极性 + 主题 双标签聚合 · 点条目展开看明细 · 攒够阈值进版本决策</div>
+                    <div v-if="!realThemes.length" style="font-size:12px;color:#909399">暂无数据（点击右上「刷新」加载真实反馈）</div>
+                    <template v-for="t in realThemes" :key="t.theme">
+                      <div class="pt" @click="toggleThemePool(t.theme)" style="cursor:pointer">
+                        <div>
+                          <div style="display:flex;align-items:center;gap:6px">
+                            <span :style="{background: themeChipColor(t.theme), color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px'}">{{ t.theme }}</span>
+                            <span style="font-size:11px;color:#909399">{{ themePoolExpanded[t.theme] ? '▾' : '▸' }}</span>
+                          </div>
+                          <div style="font-size:11px;color:#6B7785;margin-top:4px">主导情绪：{{ t.topEmotion }}</div>
+                        </div>
+                        <div style="font-size:18px;font-weight:800" :style="{color: t.count>=10 ? '#3B7A99' : '#6B7785'}">{{ t.count }}</div>
+                      </div>
+                      <div v-if="themePoolExpanded[t.theme]" style="margin:-6px 0 10px 8px;padding:8px;background:#fafbfc;border-left:2px solid #E4E9EF;border-radius:0 4px 4px 0">
+                        <div v-for="ft in feedbackByTheme(t.theme)" :key="ft.id"
+                          @click.stop="openRealIssue(ft)"
+                          style="font-size:11px;line-height:1.45;padding:5px 6px;margin-bottom:3px;background:#fff;border:1px solid #eef0f3;border-radius:4px;cursor:pointer">
+                          <div style="display:flex;justify-content:space-between;gap:6px">
+                            <span style="color:#3B7A99;font-weight:600">{{ ft.nickname || '匿名' }}</span>
+                            <span :style="{color: emotionChipColor(ft.emotion)}">{{ ft.emotion }}</span>
+                          </div>
+                          <div style="color:#333;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ft.text }}</div>
+                          <div style="color:#909399;font-size:10px;margin-top:1px">{{ ft.status }}{{ ft.adoptionKind ? '·'+ft.adoptionKind : '' }} · {{ fmtTs(ft.ts) }}</div>
+                        </div>
+                      </div>
+                    </template>
+                    <div class="kh-hint" v-if="realThemes.find(function(t){return t.count>=10})">某主题已达 ≥10 条阈值，建议进入版本决策。</div>
                   </div>
                 </template>
 
@@ -1510,11 +1536,30 @@
             <!-- 真实反馈详情抽屉（board 唯一真实 Issue 看板使用；支持 PATCH status/note，乐观更新+回滚+二次确认；来源 tutorial 已在卡片灰标） -->
             <el-drawer v-model="realDrawerOpen" :title="realDrawer ? (realDrawer.id + ' · Issue 详情') : ''" size="420px">
               <div v-if="realDrawer" style="padding:0 8px 20px">
-                <div style="margin-bottom:8px">
+                <div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
                   <el-tag size="small" type="success">真实内测</el-tag>
-                  <el-tag size="small" style="margin-left:6px">{{ realDrawer.status }}</el-tag>
+                  <el-tag size="small">{{ realDrawer.status }}</el-tag>
+                  <span :style="{background: themeChipColor(realDrawer.theme), color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px'}">{{ realDrawer.theme || '未分类' }}</span>
+                  <span :style="{background:'transparent', color: emotionChipColor(realDrawer.emotion), border:'1px solid '+emotionChipColor(realDrawer.emotion), fontSize:'11px', padding:'1px 8px', borderRadius:'10px'}">{{ realDrawer.emotion || '中性' }}</span>
+                  <span v-if="realDrawer.status==='已采纳' && realDrawer.adoptionKind" :style="{background: realDrawer.adoptionKind==='重点' ? '#E8833A' : '#3DBE78', color:'#fff', fontSize:'11px', padding:'2px 8px', borderRadius:'10px'}">{{ realDrawer.adoptionKind }}采纳</span>
                 </div>
                 <div style="font-size:15px;font-weight:700;margin-bottom:10px;line-height:1.35">{{ realDrawer.text }}</div>
+
+                <!-- 主题 / 情绪 编辑：admin 手工归类（guest 只读自动 403） -->
+                <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+                  <div style="flex:1;min-width:140px">
+                    <div style="font-size:11px;color:#6B7785;margin-bottom:3px">主题（双标签 · 可编辑）</div>
+                    <el-select size="small" :model-value="realDrawer.theme" :disabled="!isAdmin" @update:model-value="(v)=>setRealTheme(realDrawer, v)" style="width:100%">
+                      <el-option v-for="t in FEEDBACK_THEME_OPTIONS" :key="t" :label="t" :value="t" />
+                    </el-select>
+                  </div>
+                  <div style="flex:1;min-width:120px">
+                    <div style="font-size:11px;color:#6B7785;margin-bottom:3px">情绪极性</div>
+                    <el-select size="small" :model-value="realDrawer.emotion" :disabled="!isAdmin" @update:model-value="(v)=>setRealEmotion(realDrawer, v)" style="width:100%">
+                      <el-option v-for="e in FEEDBACK_EMOTION_OPTIONS" :key="e" :label="e" :value="e" />
+                    </el-select>
+                  </div>
+                </div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
                   <span style="font-size:12px;background:#f6f8fa;padding:2px 8px;border-radius:4px">昵称：{{ realDrawer.nickname || '—' }}</span>
                   <span style="font-size:12px;background:#f6f8fa;padding:2px 8px;border-radius:4px">性别：{{ realDrawer.gender || '—' }}</span>
@@ -1525,12 +1570,21 @@
                 </div>
                 <div v-if="realDrawer.note" style="font-size:12px;color:#666;margin-bottom:8px">当前备注：{{ realDrawer.note }}</div>
                 <div style="font-size:13px;font-weight:700;color:#6B7785;margin:10px 0 6px">变更状态（PATCH 后实时 re-bucket）</div>
-                <div v-for="s in ['已收到','评估中','已采纳']" :key="s" @click="setRealStatus(s)"
-                  :style="{border: realDrawer.status===s ? '2px solid #3B7A99' : '1px solid #E4E9EF', background: realDrawer.status===s ? '#F6F8FA' : '#fff'}"
-                  style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:13px">
-                  <span class="kh-chip" :class="getColKey(s)"><i></i>{{ s }}</span>
-                  <span v-if="realDrawer.status===s" style="font-size:11px;color:#3B7A99">当前</span>
-                </div>
+                <template v-for="s in ['已收到','评估中','已采纳']" :key="s">
+                  <div @click="setRealStatus(s)"
+                    :style="{border: realDrawer.status===s ? '2px solid #3B7A99' : '1px solid #E4E9EF', background: realDrawer.status===s ? '#F6F8FA' : '#fff'}"
+                    style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:13px">
+                    <span class="kh-chip" :class="getColKey(s)"><i></i>{{ s }}</span>
+                    <span v-if="realDrawer.status===s" style="font-size:11px;color:#3B7A99">当前</span>
+                  </div>
+                  <!-- 已采纳子状态下拉：当前状态正好是「已采纳」时出现 -->
+                  <div v-if="s==='已采纳' && realDrawer.status==='已采纳'" style="margin:-3px 0 10px 14px;padding:6px 10px;background:#F6F8FA;border-left:2px solid #3B7A99;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:8px">
+                    <span style="font-size:11px;color:#6B7785;flex-shrink:0">采纳类型</span>
+                    <el-select size="small" :model-value="realDrawer.adoptionKind || ''" :disabled="!isAdmin" placeholder="（未指定）" clearable @clear="setRealAdoptionKind(realDrawer, null)" @update:model-value="(v)=>setRealAdoptionKind(realDrawer, v || null)" style="flex:1">
+                      <el-option v-for="k in FEEDBACK_ADOPTION_KIND_OPTIONS" :key="k" :label="k+'采纳' + (k==='重点' ? ' ⭐' : '')" :value="k" />
+                    </el-select>
+                  </div>
+                </template>
                 <div @click="setRealStatus('金点子库')"
                   :style="{border: realDrawer.status==='金点子库' ? '2px solid #9B7BF0' : '1px dashed #E4E9EF', background: realDrawer.status==='金点子库' ? '#EEE8FD' : '#fff'}"
                   style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;margin-bottom:12px">
@@ -2607,6 +2661,11 @@
 
         function normalizeFeedbackItem(raw) {
           if (!raw) return raw;
+          var theme = raw.theme || raw.Theme || '未分类';
+          var emotion = raw.emotion || raw.Emotion || '中性';
+          // adoption_kind 可能是 null（status≠已采纳）或 '普通'/'重点'
+          var rawKind = raw.adoption_kind !== undefined ? raw.adoption_kind : raw.adoptionKind;
+          var adoptionKind = rawKind === '普通' || rawKind === '重点' ? rawKind : null;
           return {
             id: raw.id,
             session_id: raw.session_id || raw.sessionId || '',
@@ -2619,12 +2678,41 @@
             text: raw.text || '',
             status: raw.status || '已收到',
             note: raw.note || '',
+            theme: theme,
+            emotion: emotion,
+            adoptionKind: adoptionKind,
             created_at: raw.created_at || raw.createdAt || raw.ts || '',
             updated_at: raw.updated_at || raw.updatedAt || '',
             updated_by: raw.updated_by || raw.updatedBy || '',
             // 兼容旧字段
             ts: raw.ts || raw.created_at || raw.createdAt || ''
           };
+        }
+
+        // 主题 / 情绪 / 采纳子类 枚举（与 server feedback-store.ts FEEDBACK_THEMES/EMOTIONS/ADOPTION_KINDS 对齐）
+        var FEEDBACK_THEME_OPTIONS = [
+          '未分类', '夜航·内容', '专注·交互', '皮肤·养成', '周报·可读性',
+          '登舰·体验', '生态·养成', '记忆·联动', 'KidsHub·建议', '设备·设置', '其他'
+        ];
+        var FEEDBACK_EMOTION_OPTIONS = ['中性', '期待', '吐槽', '愿望', '困惑'];
+        var FEEDBACK_ADOPTION_KIND_OPTIONS = ['普通', '重点'];
+
+        // 主题颜色映射（卡片小 chip 用）
+        function themeChipColor(theme) {
+          var map = {
+            '未分类': '#9aa4ae', '夜航·内容': '#5B7CCC', '专注·交互': '#3B7A99',
+            '皮肤·养成': '#E8833A', '周报·可读性': '#7E4FBF', '登舰·体验': '#4A9DF0',
+            '生态·养成': '#3DBE78', '记忆·联动': '#9B7BF0', 'KidsHub·建议': '#F6A724',
+            '设备·设置': '#6B7785', '其他': '#909399'
+          };
+          return map[theme] || '#909399';
+        }
+        function emotionChipColor(emotion) {
+          var map = {
+            '中性': '#909399', '期待': '#3DBE78', '吐槽': '#E8833A',
+            '愿望': '#9B7BF0', '困惑': '#F6A724'
+          };
+          return map[emotion] || '#909399';
         }
 
         function getSceneLabel(sid) {
@@ -2683,13 +2771,18 @@
         }
         function doPatchReal(it, newStatus) {
           var oldStatus = it.status;
+          var oldKind = it.adoptionKind;
           it.status = newStatus;
+          // status 离开「已采纳」时本地立即清子状态（server 同侧兜底）
+          if (newStatus !== '已采纳') it.adoptionKind = null;
           reBucketReal();
           var token = getToken();
+          var body = { status: newStatus };
+          if (newStatus !== '已采纳' && oldKind) body.adoptionKind = null;
           fetch('/api/feedback/' + it.id, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ status: newStatus })
+            body: JSON.stringify(body)
           })
             .then(function (res) {
               if (res.status === 401) { handleAuthError(); throw new Error('401'); }
@@ -2699,17 +2792,123 @@
               if (d && d.ok && d.item) {
                 var idx = realFeedback.items.findIndex(function (x) { return x.id === it.id; });
                 if (idx >= 0) realFeedback.items[idx] = normalizeFeedbackItem(d.item);
+                if (realDrawer.value && realDrawer.value.id === it.id && idx >= 0) {
+                  realDrawer.value = realFeedback.items[idx];
+                }
                 reBucketReal();
                 ElementPlus.ElMessage.success('状态已更新');
               } else {
-                it.status = oldStatus; reBucketReal();
+                it.status = oldStatus; it.adoptionKind = oldKind; reBucketReal();
                 ElementPlus.ElMessage.error((d && d.error) || '更新失败');
               }
             })
             .catch(function (e) {
-              if (e.message !== '401') { it.status = oldStatus; reBucketReal(); ElementPlus.ElMessage.error('更新失败，已回滚'); }
+              if (e.message !== '401') { it.status = oldStatus; it.adoptionKind = oldKind; reBucketReal(); ElementPlus.ElMessage.error('更新失败，已回滚'); }
             });
         }
+        /**
+         * 通用字段 PATCH：传 patch 对象（status/note/theme/emotion/adoptionKind 任意子集），
+         * 乐观更新 → 走 /api/feedback/:id → 失败回滚 + toast；成功后 normalize 替换 + reBucket（联动主题池）。
+         * 不替代 setRealStatus 的特殊化逻辑（金点子库二次确认 / status 切换时 adoption_kind 清空兜底）。
+         */
+        function patchRealFeedback(it, patch, successMsg) {
+          if (!it || !patch) return Promise.resolve();
+          var token = getToken();
+          if (!token) { ElementPlus.ElMessage.warning('请先登录'); return Promise.resolve(); }
+          // 备份待回滚字段
+          var rollback = {};
+          Object.keys(patch).forEach(function (k) {
+            if (k === 'adoptionKind') rollback.adoptionKind = it.adoptionKind;
+            else rollback[k] = it[k];
+          });
+          // 乐观更新本地视图
+          Object.keys(patch).forEach(function (k) {
+            if (k === 'adoptionKind') it.adoptionKind = patch[k];
+            else it[k] = patch[k];
+          });
+          reBucketReal();
+          return fetch('/api/feedback/' + it.id, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify(patch)
+          })
+            .then(function (res) {
+              if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+              return res.json().catch(function () { return { ok: false }; });
+            })
+            .then(function (d) {
+              if (d && d.ok && d.item) {
+                var idx = realFeedback.items.findIndex(function (x) { return x.id === it.id; });
+                if (idx >= 0) realFeedback.items[idx] = normalizeFeedbackItem(d.item);
+                // 抽屉同步：让右侧 realDrawer 也指向最新对象（保持 reactive 触发）
+                if (realDrawer.value && realDrawer.value.id === it.id && idx >= 0) {
+                  realDrawer.value = realFeedback.items[idx];
+                }
+                reBucketReal();
+                if (successMsg) ElementPlus.ElMessage.success(successMsg);
+              } else {
+                // 回滚
+                Object.keys(rollback).forEach(function (k) { it[k] = rollback[k]; });
+                reBucketReal();
+                ElementPlus.ElMessage.error((d && d.error) || '更新失败');
+              }
+            })
+            .catch(function (e) {
+              if (e.message !== '401') {
+                Object.keys(rollback).forEach(function (k) { it[k] = rollback[k]; });
+                reBucketReal();
+                ElementPlus.ElMessage.error('更新失败，已回滚');
+              }
+            });
+        }
+        function setRealTheme(it, newTheme) {
+          if (!it || !newTheme || it.theme === newTheme) return;
+          patchRealFeedback(it, { theme: newTheme }, '主题已更新');
+        }
+        function setRealEmotion(it, newEmotion) {
+          if (!it || !newEmotion || it.emotion === newEmotion) return;
+          patchRealFeedback(it, { emotion: newEmotion }, '情绪已更新');
+        }
+        function setRealAdoptionKind(it, newKind) {
+          if (!it) return;
+          var next = newKind || null;
+          if (it.adoptionKind === next) return;
+          patchRealFeedback(it, { adoptionKind: next }, '采纳子状态已更新');
+        }
+
+        // 主题池真聚合：按 realFeedback.items 的 theme 字段 group by count（含「未分类」）。
+        // 用 computed 让 reactive 改 theme 后自动联动 —— 需求 c「改后实时回写联动后续聚合归并」。
+        var realThemes = computed(function () {
+          var counts = {};
+          (realFeedback.items || []).forEach(function (it) {
+            var t = it.theme || '未分类';
+            counts[t] = (counts[t] || 0) + 1;
+          });
+          // 主导情绪：每主题下出现最多的 emotion
+          var emotionAgg = {};
+          (realFeedback.items || []).forEach(function (it) {
+            var t = it.theme || '未分类';
+            var e = it.emotion || '中性';
+            if (!emotionAgg[t]) emotionAgg[t] = {};
+            emotionAgg[t][e] = (emotionAgg[t][e] || 0) + 1;
+          });
+          return Object.keys(counts).map(function (theme) {
+            var emos = emotionAgg[theme] || {};
+            var top = Object.keys(emos).reduce(function (a, b) {
+              return (emos[a] || 0) >= (emos[b] || 0) ? a : b;
+            }, '中性');
+            return { theme: theme, count: counts[theme], topEmotion: top };
+          }).sort(function (a, b) { return b.count - a.count; });
+        });
+        // 主题池展开态：theme → bool。点条目切换；展开后列出该 theme 下所有 feedback，点条目进抽屉编辑
+        var themePoolExpanded = reactive({});
+        function toggleThemePool(theme) {
+          themePoolExpanded[theme] = !themePoolExpanded[theme];
+        }
+        function feedbackByTheme(theme) {
+          return (realFeedback.items || []).filter(function (it) { return (it.theme || '未分类') === theme; });
+        }
+
         function saveRealNote() {
           var it = realDrawer.value; if (!it) return;
           var oldNote = it.note || '';
@@ -2740,7 +2939,7 @@
         function exportRealCSV() {
           var items = realFeedback.items || [];
           if (!items.length) { ElementPlus.ElMessage.warning('暂无真实反馈可导出'); return; }
-          var headers = ['时间', '昵称', '场景', '来源', '状态', '内容', '备注'];
+          var headers = ['时间', '昵称', '场景', '来源', '状态', '采纳子类', '主题', '情绪', '内容', '备注'];
           var lines = [headers.join(',')];
           items.forEach(function (it) {
             var row = [
@@ -2749,6 +2948,9 @@
               getSceneLabel(it.sceneId).replace(/"/g, '""'),
               (it.source || '').replace(/"/g, '""'),
               (it.status || '').replace(/"/g, '""'),
+              (it.adoptionKind || '').replace(/"/g, '""'),
+              (it.theme || '未分类').replace(/"/g, '""'),
+              (it.emotion || '中性').replace(/"/g, '""'),
               (it.text || '').replace(/"/g, '""'),
               (it.note || '').replace(/"/g, '""')
             ].map(function (v) { return '"' + v + '"'; });
@@ -2817,6 +3019,15 @@
           realFeedback: realFeedback, realCols: realCols, realDrawer: realDrawer, realDrawerOpen: realDrawerOpen,
           loadRealFeedback: loadRealFeedback, openRealIssue: openRealIssue, setRealStatus: setRealStatus,
           saveRealNote: saveRealNote, exportRealCSV: exportRealCSV,
+          // 双标签 + 采纳子类
+          FEEDBACK_THEME_OPTIONS: FEEDBACK_THEME_OPTIONS,
+          FEEDBACK_EMOTION_OPTIONS: FEEDBACK_EMOTION_OPTIONS,
+          FEEDBACK_ADOPTION_KIND_OPTIONS: FEEDBACK_ADOPTION_KIND_OPTIONS,
+          themeChipColor: themeChipColor, emotionChipColor: emotionChipColor,
+          setRealTheme: setRealTheme, setRealEmotion: setRealEmotion, setRealAdoptionKind: setRealAdoptionKind,
+          // 主题池真聚合
+          realThemes: realThemes, themePoolExpanded: themePoolExpanded,
+          toggleThemePool: toggleThemePool, feedbackByTheme: feedbackByTheme,
           conversationQuery: conversationQuery, conversationHistory: conversationHistory, childProfiles: childProfiles,
           inviteList: inviteList,
           loadConversationHistory: loadConversationHistory, loadChildProfiles: loadChildProfiles,
