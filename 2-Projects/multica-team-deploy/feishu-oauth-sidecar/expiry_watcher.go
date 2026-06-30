@@ -13,7 +13,8 @@ import (
 	"time"
 )
 
-// ExpiryWatcher 周期扫所有 mapping,token 距 refresh expiry < threshold 时发飞书通知.
+// ExpiryWatcher 周期扫所有 mapping,token 异常或距 refresh expiry < threshold 时先静默刷新.
+// 只有刷新后仍接近过期时才发飞书通知.
 //
 // 防止重复打扰: notify 状态文件 notified.json 记录每个 user 最近通知时间,
 // 同一 user 24h 内不重复发通知.
@@ -21,17 +22,18 @@ import (
 // 复用 05_agent_spawn.sh 作为 lark-cli wrapper (HOME 隔离已在 wrapper 内做了),
 // 不直接 exec lark-cli,避免重复实现 HOME 切换/proxy 注入逻辑.
 type ExpiryWatcher struct {
-	runner          ScriptRunner
-	logger          *slog.Logger
-	mappingFile     string
-	stateFile       string
-	scanInterval    time.Duration // 多久跑一次 scan, 默认 1h
-	warnThreshold   time.Duration // token 距 expiry 多少时间触发通知, 默认 24h
-	notifyCooldown  time.Duration // 同 user 多久内不重复通知, 默认 24h
-	scriptTimeout   time.Duration // 单次 lark-cli 调用超时, 默认 30s
-	notifyTextTpl   string        // 通知文案模板, %s = 剩余时间
-	now             func() time.Time
-	mu              sync.Mutex // 守护 notify 状态文件
+	runner         ScriptRunner
+	logger         *slog.Logger
+	mappingFile    string
+	stateFile      string
+	scanInterval   time.Duration // 多久跑一次 scan, 默认 1h
+	warnThreshold  time.Duration // token 距 expiry 多少时间触发通知, 默认 24h
+	notifyCooldown time.Duration // 同 user 多久内不重复通知, 默认 24h
+	scriptTimeout  time.Duration // 单次 lark-cli 调用超时, 默认 30s
+	refreshScope   string        // 静默刷新使用的最小 scope, 默认 im:message
+	notifyTextTpl  string        // 通知文案模板, %s = 剩余时间
+	now            func() time.Time
+	mu             sync.Mutex // 守护 notify 状态文件
 }
 
 // notifyState 是 stateFile 序列化结构.
@@ -65,6 +67,7 @@ func NewExpiryWatcher(runner ScriptRunner, logger *slog.Logger, mappingFile, sta
 		warnThreshold:  24 * time.Hour,
 		notifyCooldown: 24 * time.Hour,
 		scriptTimeout:  30 * time.Second,
+		refreshScope:   "im:message",
 		notifyTextTpl:  "⚠️ 飞书授权将在约 %s 后过期,请打开 https://multica.cli4.hahaxiong.cc/oauth-ui 重新扫码授权,以免 multica 任务被中断。",
 		now:            time.Now,
 	}
@@ -108,6 +111,10 @@ func (w *ExpiryWatcher) RunOnce(ctx context.Context) (scanned, notified, errs in
 	}
 
 	for _, entry := range entries {
+		if skipExpiryWatcherEntry(entry) {
+			w.logger.Debug("expiry-watcher: skip synthetic/test mapping", "user_id", entry.MulticaUserID)
+			continue
+		}
 		scanned++
 		if entry.MulticaUserID == "" || entry.LarkUserOpenID == "" {
 			continue
@@ -124,6 +131,26 @@ func (w *ExpiryWatcher) RunOnce(ctx context.Context) (scanned, notified, errs in
 			continue
 		}
 		remaining := expireAt.Sub(w.now())
+		if shouldAttemptSilentRefresh(status, remaining, w.warnThreshold) {
+			if err := w.refreshAuth(ctx, entry.MulticaUserID); err != nil {
+				errs++
+				w.logger.Warn("expiry-watcher: silent refresh failed", "user_id", entry.MulticaUserID, "token_status", status, "remaining", remaining.String(), "error", err.Error())
+				continue
+			}
+			w.logger.Info("expiry-watcher: silent refresh succeeded", "user_id", entry.MulticaUserID, "previous_token_status", status, "previous_remaining", remaining.String())
+
+			expireAt, status, err = w.fetchExpiry(ctx, entry.MulticaUserID)
+			if err != nil {
+				errs++
+				w.logger.Warn("expiry-watcher: fetch expiry after refresh failed", "user_id", entry.MulticaUserID, "error", err.Error())
+				continue
+			}
+			if expireAt.IsZero() {
+				w.logger.Debug("expiry-watcher: no expiry field after refresh", "user_id", entry.MulticaUserID, "token_status", status)
+				continue
+			}
+			remaining = expireAt.Sub(w.now())
+		}
 		if remaining > w.warnThreshold {
 			continue
 		}
@@ -197,6 +224,28 @@ func (w *ExpiryWatcher) fetchExpiry(ctx context.Context, userID string) (time.Ti
 		return time.Time{}, status, fmt.Errorf("parse expiry %q: %w", expStr, err)
 	}
 	return t, status, nil
+}
+
+// refreshAuth 通过一个无副作用的 scope check 触发 lark-cli 自动 refresh.
+// auth status/auth status --verify 在 lark-cli 1.0.41 不会滚动 needs_refresh token,
+// 但 auth check 会走真实 token 获取链路,成功后本地 token 变回 valid.
+func (w *ExpiryWatcher) refreshAuth(ctx context.Context, userID string) error {
+	ctx2, cancel := context.WithTimeout(ctx, w.scriptTimeout)
+	defer cancel()
+	_, err := w.runner.Run(ctx2, "05_agent_spawn.sh", userID, "auth", "check", "--scope", w.refreshScope)
+	return err
+}
+
+func shouldAttemptSilentRefresh(status string, remaining, threshold time.Duration) bool {
+	normalized := strings.ToLower(strings.TrimSpace(status))
+	if normalized != "" && normalized != "valid" {
+		return true
+	}
+	return remaining <= threshold
+}
+
+func skipExpiryWatcherEntry(entry MappingEntry) bool {
+	return strings.HasPrefix(strings.TrimSpace(entry.MulticaUserID), "test-user-")
 }
 
 // parseFlexibleTime 接受 RFC3339 / RFC3339 含偏移 / 秒级 unix 数字字符串.

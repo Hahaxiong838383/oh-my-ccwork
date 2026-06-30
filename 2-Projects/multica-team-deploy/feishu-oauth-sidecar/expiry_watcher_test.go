@@ -15,9 +15,10 @@ import (
 
 // frozenRunner: 按 callKey 派发 stdout/err,记录所有调用方便断言.
 type frozenRunner struct {
-	mu    sync.Mutex
-	resp  map[string]mockResp
-	calls []string
+	mu      sync.Mutex
+	resp    map[string]mockResp
+	respSeq map[string][]mockResp
+	calls   []string
 }
 
 func (r *frozenRunner) Run(ctx context.Context, script string, args ...string) (RunResult, error) {
@@ -25,6 +26,11 @@ func (r *frozenRunner) Run(ctx context.Context, script string, args ...string) (
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.calls = append(r.calls, key)
+	if len(r.respSeq[key]) > 0 {
+		got := r.respSeq[key][0]
+		r.respSeq[key] = r.respSeq[key][1:]
+		return RunResult{Stdout: got.stdout, Stderr: got.stderr}, got.err
+	}
 	if got, ok := r.resp[key]; ok {
 		return RunResult{Stdout: got.stdout, Stderr: got.stderr}, got.err
 	}
@@ -61,6 +67,9 @@ func TestExpiryWatcher_NotifyAboutToExpire(t *testing.T) {
 	runner := &frozenRunner{resp: map[string]mockResp{
 		callKey("05_agent_spawn.sh", "u1", "auth", "status"): {
 			stdout: `{"tokenStatus":"valid","refreshExpiresAt":"` + expireIn10h + `","expiresAt":"` + expireIn10h + `"}`,
+		},
+		callKey("05_agent_spawn.sh", "u1", "auth", "check", "--scope", "im:message"): {
+			stdout: `{"ok":true}`,
 		},
 		callKey("05_agent_spawn.sh", "u1", "im", "+messages-send",
 			"--user-id", "ou_1", "--text",
@@ -123,6 +132,9 @@ func TestExpiryWatcher_CooldownPreventsDoubleNotify(t *testing.T) {
 		callKey("05_agent_spawn.sh", "u1", "auth", "status"): {
 			stdout: `{"tokenStatus":"valid","refreshExpiresAt":"` + expireIn10h + `"}`,
 		},
+		callKey("05_agent_spawn.sh", "u1", "auth", "check", "--scope", "im:message"): {
+			stdout: `{"ok":true}`,
+		},
 		// 任意 messages-send 调用 — 这里 stdout 写空给默认 success
 	}}
 	w, stateFile := newTestWatcher(t, runner, mapping, now)
@@ -179,6 +191,9 @@ func TestExpiryWatcher_FetchExpiryParsesNestedIdentities(t *testing.T) {
 	nestedJSON := `{"identities":{"user":{"tokenStatus":"valid","refreshExpiresAt":"` + expireIn8h + `"}}}`
 	runner := &frozenRunner{resp: map[string]mockResp{
 		callKey("05_agent_spawn.sh", "u1", "auth", "status"): {stdout: nestedJSON},
+		callKey("05_agent_spawn.sh", "u1", "auth", "check", "--scope", "im:message"): {
+			stdout: `{"ok":true}`,
+		},
 	}}
 	w, _ := newTestWatcher(t, runner, mapping, now)
 	_, notified, errs := w.RunOnce(context.Background())
@@ -195,11 +210,92 @@ func TestExpiryWatcher_StripsWarnLinesFromAuthOutput(t *testing.T) {
 	mapping := `[{"multica_user_id":"u1","lark_user_open_id":"ou_1","home":"/h/u1"}]`
 	runner := &frozenRunner{resp: map[string]mockResp{
 		callKey("05_agent_spawn.sh", "u1", "auth", "status"): {stdout: noisyOut},
+		callKey("05_agent_spawn.sh", "u1", "auth", "check", "--scope", "im:message"): {
+			stdout: `{"ok":true}`,
+		},
 	}}
 	w, _ := newTestWatcher(t, runner, mapping, now)
 	_, notified, errs := w.RunOnce(context.Background())
 	if notified != 1 || errs != 0 {
 		t.Fatalf("want notified=1 errs=0 got %d/%d", notified, errs)
+	}
+}
+
+func TestExpiryWatcher_SilentRefreshSuppressesNotify(t *testing.T) {
+	now := time.Date(2026, 5, 28, 12, 0, 0, 0, time.UTC)
+	expireIn10h := now.Add(10 * time.Hour).Format(time.RFC3339)
+	expireIn7d := now.Add(7 * 24 * time.Hour).Format(time.RFC3339)
+	mapping := `[{"multica_user_id":"u1","lark_user_open_id":"ou_1","home":"/h/u1"}]`
+	statusKey := callKey("05_agent_spawn.sh", "u1", "auth", "status")
+	runner := &frozenRunner{
+		respSeq: map[string][]mockResp{
+			statusKey: {
+				{stdout: `{"tokenStatus":"valid","refreshExpiresAt":"` + expireIn10h + `"}`},
+				{stdout: `{"tokenStatus":"valid","refreshExpiresAt":"` + expireIn7d + `"}`},
+			},
+		},
+		resp: map[string]mockResp{
+			callKey("05_agent_spawn.sh", "u1", "auth", "check", "--scope", "im:message"): {stdout: `{"ok":true}`},
+		},
+	}
+	w, _ := newTestWatcher(t, runner, mapping, now)
+
+	scanned, notified, errs := w.RunOnce(context.Background())
+	if scanned != 1 || notified != 0 || errs != 0 {
+		t.Fatalf("want 1/0/0 got %d/%d/%d, calls=%v", scanned, notified, errs, runner.callsCopy())
+	}
+	calls := strings.Join(runner.callsCopy(), "\n")
+	if !strings.Contains(calls, "auth") || !strings.Contains(calls, "check") || !strings.Contains(calls, "--scope") || !strings.Contains(calls, "im:message") {
+		t.Fatalf("expected silent refresh call, got %v", runner.callsCopy())
+	}
+	if strings.Contains(calls, "messages-send") {
+		t.Fatalf("unexpected notify after refresh: %v", runner.callsCopy())
+	}
+}
+
+func TestExpiryWatcher_NeedsRefreshTriggersSilentRefresh(t *testing.T) {
+	now := time.Date(2026, 5, 28, 12, 0, 0, 0, time.UTC)
+	expireIn5d := now.Add(5 * 24 * time.Hour).Format(time.RFC3339)
+	mapping := `[{"multica_user_id":"u1","lark_user_open_id":"ou_1","home":"/h/u1"}]`
+	statusKey := callKey("05_agent_spawn.sh", "u1", "auth", "status")
+	runner := &frozenRunner{
+		respSeq: map[string][]mockResp{
+			statusKey: {
+				{stdout: `{"tokenStatus":"needs_refresh","refreshExpiresAt":"` + expireIn5d + `"}`},
+				{stdout: `{"tokenStatus":"valid","refreshExpiresAt":"` + expireIn5d + `"}`},
+			},
+		},
+		resp: map[string]mockResp{
+			callKey("05_agent_spawn.sh", "u1", "auth", "check", "--scope", "im:message"): {stdout: `{"ok":true}`},
+		},
+	}
+	w, _ := newTestWatcher(t, runner, mapping, now)
+
+	_, notified, errs := w.RunOnce(context.Background())
+	if notified != 0 || errs != 0 {
+		t.Fatalf("want notified=0 errs=0 got %d/%d, calls=%v", notified, errs, runner.callsCopy())
+	}
+	calls := strings.Join(runner.callsCopy(), "\n")
+	if !strings.Contains(calls, "auth") || !strings.Contains(calls, "check") || !strings.Contains(calls, "--scope") || !strings.Contains(calls, "im:message") {
+		t.Fatalf("expected silent refresh call, got %v", runner.callsCopy())
+	}
+}
+
+func TestExpiryWatcher_SkipsSyntheticTestUsers(t *testing.T) {
+	now := time.Date(2026, 5, 28, 12, 0, 0, 0, time.UTC)
+	mapping := `[
+		{"multica_user_id":"test-user-001","lark_user_open_id":"ou_test","home":"/h/test"},
+		{"multica_user_id":"u1","lark_user_open_id":"","home":"/h/u1"}
+	]`
+	runner := &frozenRunner{resp: map[string]mockResp{}}
+	w, _ := newTestWatcher(t, runner, mapping, now)
+
+	scanned, notified, errs := w.RunOnce(context.Background())
+	if scanned != 1 || notified != 0 || errs != 0 {
+		t.Fatalf("want only real user scanned 1/0/0 got %d/%d/%d", scanned, notified, errs)
+	}
+	if len(runner.callsCopy()) != 0 {
+		t.Fatalf("test user should not call lark-cli, got %v", runner.callsCopy())
 	}
 }
 

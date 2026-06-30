@@ -81,9 +81,10 @@
   - self-heal 加入后旧 test `no_mapping_but_home_exists` fail
   - 加 self-heal happy path 测试
   - go test 必须 100% green
-- [ ] **token 过期主动通知**（半天）
-  - sidecar 加 cron 每天扫所有 mapping
-  - 距 `refreshExpiresAt < 24h` 用 lark-cli 给本人发飞书消息 "请重新扫码授权"
+- [x] **token 自动刷新 + 过期兜底通知**（已完成 2026-06-14）
+  - sidecar watcher 每小时扫真实 mapping，跳过 `test-user-*`
+  - `tokenStatus != valid` 或距 `refreshExpiresAt < 24h` 时先用 `lark-cli auth check --scope im:message` 静默刷新
+  - 刷新后仍临期才发飞书消息 "请重新扫码授权"
 - [ ] **sidecar metrics endpoint** `/metrics`（2 hour）
   - prometheus format: 成功授权数 / 失败数 / token 过期数 / per-user 请求数
 - [ ] **oauth-ui 完成态 polish**（1 hour）

@@ -1,0 +1,891 @@
+diff --git a/docs/skill-evolution.md b/docs/skill-evolution.md
+new file mode 100644
+index 0000000..ac10e9b
+--- /dev/null
++++ b/docs/skill-evolution.md
+@@ -0,0 +1,93 @@
++# Skill Evolution Proposals
++
++Multica skills should evolve through proposals before they are activated on
++agents. A proposal is a workspace-scoped draft that can be produced by a human
++or an automation, validated, then published into the workspace skill library.
++
++## Flow
++
++```text
++task experience
++  -> skill proposal
++  -> lint / secret scan / eval metadata
++  -> publish
++  -> optional agent binding
++```
++
++Publishing a proposal creates or updates a workspace skill. It does not bind the
++skill to any agent. Agent activation remains a separate explicit step through
++the existing agent-skill APIs.
++
++## API
++
++Create a proposal:
++
++```http
++POST /api/skills/proposals
++```
++
++Required fields:
++
++- `name`
++
++Optional fields:
++
++- `target_skill_id`: existing skill to update when published. Omit to create a
++  new skill.
++- `description`
++- `content`: proposed `SKILL.md` body.
++- `config`: skill config JSON.
++- `files`: supporting files as `[{ "path": "...", "content": "..." }]`.
++- `source`: provenance metadata, such as originating task IDs.
++- `validation`: validation metadata, such as lint/eval/secret-scan results.
++- `status`: `draft`, `validated`, or `rejected`. Defaults to `draft`.
++
++List proposals:
++
++```http
++GET /api/skills/proposals?status=draft
++```
++
++Publish a proposal:
++
++```http
++POST /api/skills/proposals/{proposalId}/publish
++```
++
++Rejected and already-published proposals cannot be published.
++
++## CLI
++
++Create a draft proposal:
++
++```bash
++multica skill proposals create \
++  --name "release-checklist" \
++  --description "Use when preparing a release checklist" \
++  --content-file ./SKILL.md \
++  --source '{"kind":"autopilot","task_ids":["..."]}' \
++  --validation '{"lint":"ok","secret_scan":"ok"}' \
++  --status validated
++```
++
++Publish it into the workspace skill library:
++
++```bash
++multica skill proposals publish <proposal-id>
++```
++
++Bind the published skill to an agent only after review/canary:
++
++```bash
++multica agent skills add <agent-id> --skill-ids <skill-id>
++```
++
++## Automation Guardrails
++
++- Automation may create proposals freely.
++- Automation may publish new low-risk skills after validation.
++- Updates to existing skills should require stronger validation because they can
++  affect already-bound agents.
++- Publishing must never auto-bind a skill to an agent.
++- Store task IDs, validation output, and reviewer context in `source` and
++  `validation`; do not store secrets.
+diff --git a/server/cmd/multica/cmd_skill.go b/server/cmd/multica/cmd_skill.go
+index 23da0a0..c37a31c 100644
+--- a/server/cmd/multica/cmd_skill.go
++++ b/server/cmd/multica/cmd_skill.go
+@@ -69,6 +69,31 @@ var skillSearchCmd = &cobra.Command{
+ 	RunE:  runSkillSearch,
+ }
+ 
++var skillProposalsCmd = &cobra.Command{
++	Use:     "proposals",
++	Aliases: []string{"proposal"},
++	Short:   "Work with draft skill proposals",
++}
++
++var skillProposalsListCmd = &cobra.Command{
++	Use:   "list",
++	Short: "List skill proposals in the workspace",
++	RunE:  runSkillProposalsList,
++}
++
++var skillProposalsCreateCmd = &cobra.Command{
++	Use:   "create",
++	Short: "Create a draft skill proposal",
++	RunE:  runSkillProposalsCreate,
++}
++
++var skillProposalsPublishCmd = &cobra.Command{
++	Use:   "publish <proposal-id>",
++	Short: "Publish a skill proposal into the workspace skill library",
++	Args:  exactArgs(1),
++	RunE:  runSkillProposalsPublish,
++}
++
+ // Skill file subcommands.
+ 
+ var skillFilesCmd = &cobra.Command{
+@@ -105,8 +130,12 @@ func init() {
+ 	skillCmd.AddCommand(skillDeleteCmd)
+ 	skillCmd.AddCommand(skillImportCmd)
+ 	skillCmd.AddCommand(skillSearchCmd)
++	skillCmd.AddCommand(skillProposalsCmd)
+ 	skillCmd.AddCommand(skillFilesCmd)
+ 
++	skillProposalsCmd.AddCommand(skillProposalsListCmd)
++	skillProposalsCmd.AddCommand(skillProposalsCreateCmd)
++	skillProposalsCmd.AddCommand(skillProposalsPublishCmd)
+ 	skillFilesCmd.AddCommand(skillFilesListCmd)
+ 	skillFilesCmd.AddCommand(skillFilesUpsertCmd)
+ 	skillFilesCmd.AddCommand(skillFilesDeleteCmd)
+@@ -146,6 +175,23 @@ func init() {
+ 	// skill search
+ 	skillSearchCmd.Flags().String("output", "json", "Output format: table or json")
+ 
++	// skill proposals
++	skillProposalsListCmd.Flags().String("status", "", "Filter by status: draft, validated, rejected, or published")
++	skillProposalsListCmd.Flags().String("output", "json", "Output format: table or json")
++	skillProposalsCreateCmd.Flags().String("name", "", "Proposed skill name (required)")
++	skillProposalsCreateCmd.Flags().String("target-skill-id", "", "Existing skill ID to update; omit to create a new skill when published")
++	skillProposalsCreateCmd.Flags().String("description", "", "Proposed skill description")
++	skillProposalsCreateCmd.Flags().String("content", "", "Proposed SKILL.md body")
++	skillProposalsCreateCmd.Flags().Bool("content-stdin", false, "Read proposed skill content from stdin. Mutually exclusive with --content and --content-file.")
++	skillProposalsCreateCmd.Flags().String("content-file", "", "Read proposed skill content from a UTF-8 file. Mutually exclusive with --content and --content-stdin.")
++	skillProposalsCreateCmd.Flags().String("config", "", "Proposed skill config as JSON string")
++	skillProposalsCreateCmd.Flags().String("files-json", "", "Supporting files as JSON array: [{\"path\":\"references/x.md\",\"content\":\"...\"}]")
++	skillProposalsCreateCmd.Flags().String("source", "", "Proposal source metadata as JSON string")
++	skillProposalsCreateCmd.Flags().String("validation", "", "Proposal validation metadata as JSON string")
++	skillProposalsCreateCmd.Flags().String("status", "draft", "Initial proposal status: draft, validated, or rejected")
++	skillProposalsCreateCmd.Flags().String("output", "json", "Output format: table or json")
++	skillProposalsPublishCmd.Flags().String("output", "json", "Output format: table or json")
++
+ 	// skill files list
+ 	skillFilesListCmd.Flags().String("output", "table", "Output format: table or json")
+ 
+@@ -537,6 +583,155 @@ func nestedMap(m map[string]any, key string) map[string]any {
+ 	return nested
+ }
+ 
++func runSkillProposalsList(cmd *cobra.Command, _ []string) error {
++	client, err := newAPIClient(cmd)
++	if err != nil {
++		return err
++	}
++
++	status, _ := cmd.Flags().GetString("status")
++	path := "/api/skills/proposals"
++	if status != "" {
++		q := url.Values{}
++		q.Set("status", status)
++		path += "?" + q.Encode()
++	}
++
++	ctx, cancel := cli.APIContext(context.Background())
++	defer cancel()
++
++	var proposals []map[string]any
++	if err := client.GetJSON(ctx, path, &proposals); err != nil {
++		return fmt.Errorf("list skill proposals: %w", err)
++	}
++
++	output, _ := cmd.Flags().GetString("output")
++	if output == "json" {
++		return cli.PrintJSON(os.Stdout, proposals)
++	}
++
++	headers := []string{"ID", "STATUS", "NAME", "TARGET_SKILL_ID", "UPDATED_AT"}
++	rows := make([][]string, 0, len(proposals))
++	for _, p := range proposals {
++		rows = append(rows, []string{
++			strVal(p, "id"),
++			strVal(p, "status"),
++			strVal(p, "name"),
++			strVal(p, "target_skill_id"),
++			strVal(p, "updated_at"),
++		})
++	}
++	cli.PrintTable(os.Stdout, headers, rows)
++	return nil
++}
++
++func runSkillProposalsCreate(cmd *cobra.Command, _ []string) error {
++	client, err := newAPIClient(cmd)
++	if err != nil {
++		return err
++	}
++
++	name, _ := cmd.Flags().GetString("name")
++	if name == "" {
++		return fmt.Errorf("--name is required")
++	}
++
++	body := map[string]any{"name": name}
++	if v, _ := cmd.Flags().GetString("target-skill-id"); v != "" {
++		body["target_skill_id"] = v
++	}
++	if v, _ := cmd.Flags().GetString("description"); v != "" {
++		body["description"] = v
++	}
++	content, hasContent, err := resolveSkillContentFlag(cmd)
++	if err != nil {
++		return err
++	}
++	if hasContent {
++		body["content"] = content
++	}
++	if cmd.Flags().Changed("config") {
++		config, err := parseJSONFlag(cmd, "config")
++		if err != nil {
++			return err
++		}
++		body["config"] = config
++	}
++	if cmd.Flags().Changed("files-json") {
++		files, err := parseJSONFlag(cmd, "files-json")
++		if err != nil {
++			return err
++		}
++		body["files"] = files
++	}
++	if cmd.Flags().Changed("source") {
++		source, err := parseJSONFlag(cmd, "source")
++		if err != nil {
++			return err
++		}
++		body["source"] = source
++	}
++	if cmd.Flags().Changed("validation") {
++		validation, err := parseJSONFlag(cmd, "validation")
++		if err != nil {
++			return err
++		}
++		body["validation"] = validation
++	}
++	if v, _ := cmd.Flags().GetString("status"); v != "" {
++		body["status"] = v
++	}
++
++	ctx, cancel := cli.APIContext(context.Background())
++	defer cancel()
++
++	var result map[string]any
++	if err := client.PostJSON(ctx, "/api/skills/proposals", body, &result); err != nil {
++		return fmt.Errorf("create skill proposal: %w", err)
++	}
++
++	output, _ := cmd.Flags().GetString("output")
++	if output == "json" {
++		return cli.PrintJSON(os.Stdout, result)
++	}
++
++	fmt.Printf("Skill proposal created: %s (%s)\n", strVal(result, "name"), strVal(result, "id"))
++	return nil
++}
++
++func runSkillProposalsPublish(cmd *cobra.Command, args []string) error {
++	client, err := newAPIClient(cmd)
++	if err != nil {
++		return err
++	}
++
++	ctx, cancel := cli.APIContext(context.Background())
++	defer cancel()
++
++	var result map[string]any
++	if err := client.PostJSON(ctx, "/api/skills/proposals/"+args[0]+"/publish", map[string]any{}, &result); err != nil {
++		return fmt.Errorf("publish skill proposal: %w", err)
++	}
++
++	output, _ := cmd.Flags().GetString("output")
++	if output == "json" {
++		return cli.PrintJSON(os.Stdout, result)
++	}
++
++	skill := nestedMap(result, "skill")
++	fmt.Printf("Skill proposal published: %s (%s)\n", strVal(skill, "name"), strVal(skill, "id"))
++	return nil
++}
++
++func parseJSONFlag(cmd *cobra.Command, name string) (any, error) {
++	raw, _ := cmd.Flags().GetString(name)
++	var value any
++	if err := json.Unmarshal([]byte(raw), &value); err != nil {
++		return nil, fmt.Errorf("--%s must be valid JSON: %w", name, err)
++	}
++	return value, nil
++}
++
+ func runSkillSearch(cmd *cobra.Command, args []string) error {
+ 	client, err := newAPIClient(cmd)
+ 	if err != nil {
+diff --git a/server/cmd/server/router.go b/server/cmd/server/router.go
+index 3033ad0..7865646 100644
+--- a/server/cmd/server/router.go
++++ b/server/cmd/server/router.go
+@@ -873,6 +873,9 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
+ 				r.Post("/", h.CreateSkill)
+ 				r.Get("/search", h.SearchSkills)
+ 				r.Post("/import", h.ImportSkill)
++				r.Get("/proposals", h.ListSkillProposals)
++				r.Post("/proposals", h.CreateSkillProposal)
++				r.Post("/proposals/{proposalId}/publish", h.PublishSkillProposal)
+ 				r.Route("/{id}", func(r chi.Router) {
+ 					r.Get("/", h.GetSkill)
+ 					r.Put("/", h.UpdateSkill)
+diff --git a/server/internal/handler/skill_proposal.go b/server/internal/handler/skill_proposal.go
+new file mode 100644
+index 0000000..b234964
+--- /dev/null
++++ b/server/internal/handler/skill_proposal.go
+@@ -0,0 +1,415 @@
++package handler
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"net/http"
++
++	"github.com/go-chi/chi/v5"
++	"github.com/jackc/pgx/v5"
++	"github.com/jackc/pgx/v5/pgtype"
++	skillpkg "github.com/multica-ai/multica/server/internal/skill"
++	db "github.com/multica-ai/multica/server/pkg/db/generated"
++	"github.com/multica-ai/multica/server/pkg/protocol"
++)
++
++const (
++	skillProposalDraft     = "draft"
++	skillProposalValidated = "validated"
++	skillProposalRejected  = "rejected"
++	skillProposalPublished = "published"
++)
++
++type SkillProposalResponse struct {
++	ID               string                   `json:"id"`
++	WorkspaceID      string                   `json:"workspace_id"`
++	TargetSkillID    *string                  `json:"target_skill_id,omitempty"`
++	Name             string                   `json:"name"`
++	Description      string                   `json:"description"`
++	Content          string                   `json:"content"`
++	Config           any                      `json:"config"`
++	Files            []CreateSkillFileRequest `json:"files,omitempty"`
++	Source           any                      `json:"source"`
++	Validation       any                      `json:"validation"`
++	Status           string                   `json:"status"`
++	CreatedBy        *string                  `json:"created_by"`
++	CreatedAt        string                   `json:"created_at"`
++	UpdatedAt        string                   `json:"updated_at"`
++	PublishedAt      *string                  `json:"published_at,omitempty"`
++	PublishedSkillID *string                  `json:"published_skill_id,omitempty"`
++}
++
++type CreateSkillProposalRequest struct {
++	TargetSkillID *string                  `json:"target_skill_id,omitempty"`
++	Name          string                   `json:"name"`
++	Description   string                   `json:"description"`
++	Content       string                   `json:"content"`
++	Config        any                      `json:"config"`
++	Files         []CreateSkillFileRequest `json:"files,omitempty"`
++	Source        any                      `json:"source"`
++	Validation    any                      `json:"validation"`
++	Status        string                   `json:"status,omitempty"`
++}
++
++type skillProposalRow struct {
++	ID               pgtype.UUID
++	WorkspaceID      pgtype.UUID
++	TargetSkillID    pgtype.UUID
++	Name             string
++	Description      string
++	Content          string
++	Config           []byte
++	Files            []byte
++	Source           []byte
++	Validation       []byte
++	Status           string
++	CreatedBy        pgtype.UUID
++	CreatedAt        pgtype.Timestamptz
++	UpdatedAt        pgtype.Timestamptz
++	PublishedAt      pgtype.Timestamptz
++	PublishedSkillID pgtype.UUID
++}
++
++func scanSkillProposal(row pgx.Row) (skillProposalRow, error) {
++	var p skillProposalRow
++	err := row.Scan(
++		&p.ID,
++		&p.WorkspaceID,
++		&p.TargetSkillID,
++		&p.Name,
++		&p.Description,
++		&p.Content,
++		&p.Config,
++		&p.Files,
++		&p.Source,
++		&p.Validation,
++		&p.Status,
++		&p.CreatedBy,
++		&p.CreatedAt,
++		&p.UpdatedAt,
++		&p.PublishedAt,
++		&p.PublishedSkillID,
++	)
++	return p, err
++}
++
++func skillProposalToResponse(p skillProposalRow) SkillProposalResponse {
++	return SkillProposalResponse{
++		ID:               uuidToString(p.ID),
++		WorkspaceID:      uuidToString(p.WorkspaceID),
++		TargetSkillID:    uuidToPtr(p.TargetSkillID),
++		Name:             p.Name,
++		Description:      p.Description,
++		Content:          p.Content,
++		Config:           decodeSkillConfig(p.Config),
++		Files:            decodeSkillProposalFiles(p.Files),
++		Source:           decodeSkillConfig(p.Source),
++		Validation:       decodeSkillConfig(p.Validation),
++		Status:           p.Status,
++		CreatedBy:        uuidToPtr(p.CreatedBy),
++		CreatedAt:        timestampToString(p.CreatedAt),
++		UpdatedAt:        timestampToString(p.UpdatedAt),
++		PublishedAt:      timestampToPtr(p.PublishedAt),
++		PublishedSkillID: uuidToPtr(p.PublishedSkillID),
++	}
++}
++
++func decodeSkillProposalFiles(raw []byte) []CreateSkillFileRequest {
++	var files []CreateSkillFileRequest
++	if len(raw) == 0 {
++		return nil
++	}
++	if err := json.Unmarshal(raw, &files); err != nil {
++		return nil
++	}
++	return files
++}
++
++func encodeSkillProposalJSON(v any, fallback string) ([]byte, error) {
++	if v == nil {
++		return []byte(fallback), nil
++	}
++	return json.Marshal(v)
++}
++
++func normalizeSkillProposalStatus(status string) (string, bool) {
++	switch status {
++	case "":
++		return skillProposalDraft, true
++	case skillProposalDraft, skillProposalValidated, skillProposalRejected:
++		return status, true
++	default:
++		return "", false
++	}
++}
++
++func (h *Handler) loadSkillProposalForUser(w http.ResponseWriter, r *http.Request, id string) (skillProposalRow, bool) {
++	workspaceID := h.resolveWorkspaceID(r)
++	workspaceUUID, ok := parseUUIDOrBadRequest(w, workspaceID, "workspace_id")
++	if !ok {
++		return skillProposalRow{}, false
++	}
++	proposalUUID, ok := parseUUIDOrBadRequest(w, id, "id")
++	if !ok {
++		return skillProposalRow{}, false
++	}
++
++	p, err := scanSkillProposal(h.DB.QueryRow(r.Context(), `
++SELECT id, workspace_id, target_skill_id, name, description, content, config, files, source, validation, status, created_by, created_at, updated_at, published_at, published_skill_id
++FROM skill_proposal
++WHERE id = $1 AND workspace_id = $2
++`, proposalUUID, workspaceUUID))
++	if err != nil {
++		if errors.Is(err, pgx.ErrNoRows) {
++			writeError(w, http.StatusNotFound, "skill proposal not found")
++			return skillProposalRow{}, false
++		}
++		writeError(w, http.StatusInternalServerError, "failed to load skill proposal")
++		return skillProposalRow{}, false
++	}
++	return p, true
++}
++
++func (h *Handler) ListSkillProposals(w http.ResponseWriter, r *http.Request) {
++	workspaceID := h.resolveWorkspaceID(r)
++	workspaceUUID, ok := parseUUIDOrBadRequest(w, workspaceID, "workspace_id")
++	if !ok {
++		return
++	}
++
++	status := r.URL.Query().Get("status")
++	rows, err := h.DB.Query(r.Context(), `
++SELECT id, workspace_id, target_skill_id, name, description, content, config, files, source, validation, status, created_by, created_at, updated_at, published_at, published_skill_id
++FROM skill_proposal
++WHERE workspace_id = $1 AND ($2 = '' OR status = $2)
++ORDER BY updated_at DESC
++`, workspaceUUID, status)
++	if err != nil {
++		writeError(w, http.StatusInternalServerError, "failed to list skill proposals")
++		return
++	}
++	defer rows.Close()
++
++	resp := []SkillProposalResponse{}
++	for rows.Next() {
++		p, err := scanSkillProposal(rows)
++		if err != nil {
++			writeError(w, http.StatusInternalServerError, "failed to scan skill proposal")
++			return
++		}
++		resp = append(resp, skillProposalToResponse(p))
++	}
++	if err := rows.Err(); err != nil {
++		writeError(w, http.StatusInternalServerError, "failed to list skill proposals")
++		return
++	}
++	writeJSON(w, http.StatusOK, resp)
++}
++
++func (h *Handler) CreateSkillProposal(w http.ResponseWriter, r *http.Request) {
++	workspaceID := h.resolveWorkspaceID(r)
++	creatorID, ok := requireUserID(w, r)
++	if !ok {
++		return
++	}
++	workspaceUUID, ok := parseUUIDOrBadRequest(w, workspaceID, "workspace_id")
++	if !ok {
++		return
++	}
++	creatorUUID := parseUUID(creatorID)
++
++	var req CreateSkillProposalRequest
++	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
++		writeError(w, http.StatusBadRequest, "invalid request body")
++		return
++	}
++	if req.Name == "" {
++		writeError(w, http.StatusBadRequest, "name is required")
++		return
++	}
++	for _, f := range req.Files {
++		if !validateFilePath(f.Path) || skillpkg.IsReservedContentPath(f.Path) {
++			writeError(w, http.StatusBadRequest, "invalid file path: "+f.Path)
++			return
++		}
++	}
++	status, ok := normalizeSkillProposalStatus(req.Status)
++	if !ok {
++		writeError(w, http.StatusBadRequest, "status must be draft, validated, or rejected")
++		return
++	}
++
++	var targetSkillID pgtype.UUID
++	if req.TargetSkillID != nil && *req.TargetSkillID != "" {
++		targetSkillID, ok = parseUUIDOrBadRequest(w, *req.TargetSkillID, "target_skill_id")
++		if !ok {
++			return
++		}
++		if _, err := h.Queries.GetSkillInWorkspace(r.Context(), db.GetSkillInWorkspaceParams{
++			ID:          targetSkillID,
++			WorkspaceID: workspaceUUID,
++		}); err != nil {
++			writeError(w, http.StatusNotFound, "target skill not found")
++			return
++		}
++	}
++
++	config, err := encodeSkillProposalJSON(req.Config, "{}")
++	if err != nil {
++		writeError(w, http.StatusBadRequest, "config must be valid JSON")
++		return
++	}
++	files, err := encodeSkillProposalJSON(req.Files, "[]")
++	if err != nil {
++		writeError(w, http.StatusBadRequest, "files must be valid JSON")
++		return
++	}
++	source, err := encodeSkillProposalJSON(req.Source, "{}")
++	if err != nil {
++		writeError(w, http.StatusBadRequest, "source must be valid JSON")
++		return
++	}
++	validation, err := encodeSkillProposalJSON(req.Validation, "{}")
++	if err != nil {
++		writeError(w, http.StatusBadRequest, "validation must be valid JSON")
++		return
++	}
++
++	p, err := scanSkillProposal(h.DB.QueryRow(r.Context(), `
++INSERT INTO skill_proposal (workspace_id, target_skill_id, name, description, content, config, files, source, validation, status, created_by)
++VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
++RETURNING id, workspace_id, target_skill_id, name, description, content, config, files, source, validation, status, created_by, created_at, updated_at, published_at, published_skill_id
++`, workspaceUUID, targetSkillID, sanitizeNullBytes(req.Name), sanitizeNullBytes(req.Description), sanitizeNullBytes(req.Content), config, files, source, validation, status, creatorUUID))
++	if err != nil {
++		writeError(w, http.StatusInternalServerError, "failed to create skill proposal: "+err.Error())
++		return
++	}
++	writeJSON(w, http.StatusCreated, skillProposalToResponse(p))
++}
++
++func (h *Handler) PublishSkillProposal(w http.ResponseWriter, r *http.Request) {
++	p, ok := h.loadSkillProposalForUser(w, r, chi.URLParam(r, "proposalId"))
++	if !ok {
++		return
++	}
++	if p.Status == skillProposalPublished {
++		writeError(w, http.StatusConflict, "skill proposal is already published")
++		return
++	}
++	if p.Status == skillProposalRejected {
++		writeError(w, http.StatusConflict, "rejected skill proposal cannot be published")
++		return
++	}
++
++	userID, ok := requireUserID(w, r)
++	if !ok {
++		return
++	}
++	userUUID := parseUUID(userID)
++	files := decodeSkillProposalFiles(p.Files)
++
++	var eventType string
++	if p.TargetSkillID.Valid {
++		target, found := h.loadSkillForUser(w, r, uuidToString(p.TargetSkillID))
++		if !found {
++			return
++		}
++		if !h.canManageSkill(w, r, target) {
++			return
++		}
++		eventType = protocol.EventSkillUpdated
++	} else {
++		eventType = protocol.EventSkillCreated
++	}
++
++	published, err := h.publishSkillProposalInTx(r.Context(), p, userUUID, files)
++	if err != nil {
++		if isUniqueViolation(err) {
++			writeError(w, http.StatusConflict, "a skill with this name already exists")
++			return
++		}
++		writeError(w, http.StatusInternalServerError, "failed to publish skill proposal: "+err.Error())
++		return
++	}
++
++	workspaceID := uuidToString(p.WorkspaceID)
++	actorType, actorID := h.resolveActor(r, userID, workspaceID)
++	h.publish(eventType, workspaceID, actorType, actorID, map[string]any{"skill": published})
++	writeJSON(w, http.StatusOK, map[string]any{
++		"status":   skillProposalPublished,
++		"proposal": map[string]any{"id": uuidToString(p.ID)},
++		"skill":    published,
++	})
++}
++
++func (h *Handler) publishSkillProposalInTx(ctx context.Context, p skillProposalRow, creatorID pgtype.UUID, files []CreateSkillFileRequest) (SkillWithFilesResponse, error) {
++	tx, err := h.TxStarter.Begin(ctx)
++	if err != nil {
++		return SkillWithFilesResponse{}, err
++	}
++	defer tx.Rollback(ctx)
++
++	qtx := h.Queries.WithTx(tx)
++
++	var resp SkillWithFilesResponse
++	if p.TargetSkillID.Valid {
++		skill, err := qtx.UpdateSkill(ctx, db.UpdateSkillParams{
++			ID:          p.TargetSkillID,
++			Description: pgtype.Text{String: sanitizeNullBytes(p.Description), Valid: true},
++			Content:     pgtype.Text{String: sanitizeNullBytes(p.Content), Valid: true},
++			Config:      p.Config,
++		})
++		if err != nil {
++			return SkillWithFilesResponse{}, err
++		}
++		if err := qtx.DeleteSkillFilesBySkill(ctx, skill.ID); err != nil {
++			return SkillWithFilesResponse{}, err
++		}
++		fileResps := make([]SkillFileResponse, 0, len(files))
++		for _, f := range files {
++			if skillpkg.IsReservedContentPath(f.Path) {
++				continue
++			}
++			sf, err := qtx.UpsertSkillFile(ctx, db.UpsertSkillFileParams{
++				SkillID: skill.ID,
++				Path:    sanitizeNullBytes(f.Path),
++				Content: sanitizeNullBytes(f.Content),
++			})
++			if err != nil {
++				return SkillWithFilesResponse{}, err
++			}
++			fileResps = append(fileResps, skillFileToResponse(sf))
++		}
++		resp = SkillWithFilesResponse{
++			SkillResponse: skillToResponse(skill),
++			Files:         fileResps,
++		}
++	} else {
++		resp, err = createSkillWithFilesInTx(ctx, qtx, skillCreateInput{
++			WorkspaceID: p.WorkspaceID,
++			CreatorID:   creatorID,
++			Name:        p.Name,
++			Description: p.Description,
++			Content:     p.Content,
++			Config:      decodeSkillConfig(p.Config),
++			Files:       files,
++		})
++		if err != nil {
++			return SkillWithFilesResponse{}, err
++		}
++	}
++
++	if _, err := tx.Exec(ctx, `
++UPDATE skill_proposal
++SET status = $2, published_at = now(), published_skill_id = $3, updated_at = now()
++WHERE id = $1
++`, p.ID, skillProposalPublished, parseUUID(resp.ID)); err != nil {
++		return SkillWithFilesResponse{}, err
++	}
++
++	if err := tx.Commit(ctx); err != nil {
++		return SkillWithFilesResponse{}, err
++	}
++	return resp, nil
++}
+diff --git a/server/internal/handler/skill_proposal_test.go b/server/internal/handler/skill_proposal_test.go
+new file mode 100644
+index 0000000..b641653
+--- /dev/null
++++ b/server/internal/handler/skill_proposal_test.go
+@@ -0,0 +1,84 @@
++package handler
++
++import (
++	"context"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++)
++
++func TestSkillProposalPublishCreatesSkill(t *testing.T) {
++	body := map[string]any{
++		"name":        "proposal-create-" + t.Name(),
++		"description": "created from a proposal",
++		"content":     "---\nname: proposal-create\n---\nUse this for proposal publishing tests.",
++		"files": []map[string]any{
++			{"path": "references/eval.md", "content": "checked"},
++		},
++		"source": map[string]any{"kind": "test"},
++		"validation": map[string]any{
++			"lint": "ok",
++		},
++		"status": "validated",
++	}
++
++	createW := httptest.NewRecorder()
++	createReq := newRequest(http.MethodPost, "/api/skills/proposals?workspace_id="+testWorkspaceID, body)
++	testHandler.CreateSkillProposal(createW, createReq)
++	if createW.Code != http.StatusCreated {
++		t.Fatalf("CreateSkillProposal: expected 201, got %d: %s", createW.Code, createW.Body.String())
++	}
++
++	var proposal map[string]any
++	if err := json.Unmarshal(createW.Body.Bytes(), &proposal); err != nil {
++		t.Fatalf("decode proposal: %v", err)
++	}
++	proposalID, _ := proposal["id"].(string)
++	if proposalID == "" {
++		t.Fatalf("CreateSkillProposal response missing id: %v", proposal)
++	}
++	t.Cleanup(func() {
++		testPool.Exec(context.Background(), `DELETE FROM skill_proposal WHERE id = $1`, proposalID)
++	})
++
++	publishW := httptest.NewRecorder()
++	publishReq := newRequest(http.MethodPost, "/api/skills/proposals/"+proposalID+"/publish?workspace_id="+testWorkspaceID, nil)
++	publishReq = withURLParam(publishReq, "proposalId", proposalID)
++	testHandler.PublishSkillProposal(publishW, publishReq)
++	if publishW.Code != http.StatusOK {
++		t.Fatalf("PublishSkillProposal: expected 200, got %d: %s", publishW.Code, publishW.Body.String())
++	}
++
++	var published map[string]any
++	if err := json.Unmarshal(publishW.Body.Bytes(), &published); err != nil {
++		t.Fatalf("decode publish response: %v", err)
++	}
++	skill, _ := published["skill"].(map[string]any)
++	skillID, _ := skill["id"].(string)
++	if skillID == "" {
++		t.Fatalf("PublishSkillProposal response missing skill id: %v", published)
++	}
++	t.Cleanup(func() {
++		testPool.Exec(context.Background(), `DELETE FROM skill WHERE id = $1`, skillID)
++	})
++
++	getW := httptest.NewRecorder()
++	getReq := newRequest(http.MethodGet, "/api/skills/"+skillID+"?workspace_id="+testWorkspaceID, nil)
++	getReq = withURLParam(getReq, "id", skillID)
++	testHandler.GetSkill(getW, getReq)
++	if getW.Code != http.StatusOK {
++		t.Fatalf("GetSkill: expected 200, got %d: %s", getW.Code, getW.Body.String())
++	}
++
++	var got map[string]any
++	if err := json.Unmarshal(getW.Body.Bytes(), &got); err != nil {
++		t.Fatalf("decode get response: %v", err)
++	}
++	if got["description"] != "created from a proposal" {
++		t.Fatalf("published skill description mismatch: %v", got["description"])
++	}
++	if files, _ := got["files"].([]any); len(files) != 1 {
++		t.Fatalf("published skill files count = %d, want 1: %v", len(files), got["files"])
++	}
++}
+diff --git a/server/migrations/119_skill_proposals.down.sql b/server/migrations/119_skill_proposals.down.sql
+new file mode 100644
+index 0000000..2eab25a
+--- /dev/null
++++ b/server/migrations/119_skill_proposals.down.sql
+@@ -0,0 +1 @@
++DROP TABLE IF EXISTS skill_proposal;
+diff --git a/server/migrations/119_skill_proposals.up.sql b/server/migrations/119_skill_proposals.up.sql
+new file mode 100644
+index 0000000..1616cb0
+--- /dev/null
++++ b/server/migrations/119_skill_proposals.up.sql
+@@ -0,0 +1,25 @@
++-- Skill proposals are draft/evaluation records produced by humans or
++-- automation before a workspace skill is created or updated.
++
++CREATE TABLE skill_proposal (
++    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
++    workspace_id UUID NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
++    target_skill_id UUID REFERENCES skill(id) ON DELETE SET NULL,
++    name TEXT NOT NULL,
++    description TEXT NOT NULL DEFAULT '',
++    content TEXT NOT NULL DEFAULT '',
++    config JSONB NOT NULL DEFAULT '{}',
++    files JSONB NOT NULL DEFAULT '[]',
++    source JSONB NOT NULL DEFAULT '{}',
++    validation JSONB NOT NULL DEFAULT '{}',
++    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'validated', 'rejected', 'published')),
++    created_by UUID REFERENCES "user"(id),
++    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
++    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
++    published_at TIMESTAMPTZ,
++    published_skill_id UUID REFERENCES skill(id) ON DELETE SET NULL
++);
++
++CREATE INDEX idx_skill_proposal_workspace ON skill_proposal(workspace_id, updated_at DESC);
++CREATE INDEX idx_skill_proposal_target ON skill_proposal(target_skill_id);
++CREATE INDEX idx_skill_proposal_status ON skill_proposal(workspace_id, status);

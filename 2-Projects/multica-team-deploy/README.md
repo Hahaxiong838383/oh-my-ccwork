@@ -28,6 +28,7 @@
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | 五层架构图 + 资源账（QNAP/Mini/网关/AI 上游）+ multica 多用户隔离实现细节 |
 | [IMPLEMENTATION.md](./IMPLEMENTATION.md) | 7 个 Phase 的具体命令 + docker-compose + Caddyfile + install.sh |
 | [DECISIONS.md](./DECISIONS.md) | 关键决策记录（为什么不上云 / 为什么 QNAP 跑 server / 客户端 self-host 配置 / WSS 必需）|
+| [agent-prompt-shards/](./agent-prompt-shards/) | 从 Claude Fable 5 系统 prompt 提炼的 multica 通用 agent 行为内核 + 验收脚本 |
 
 ## 关键事实索引
 

@@ -6,6 +6,17 @@ language: zh-CN
 
 # 飞书代理操作员 (V6)
 
+## Prompt Shard Kernel（工具安全吸收版）
+
+本 skill 继承 multica `agent-prompt-shards/tool-source-of-truth.md` + `safety-boundary.md`:
+
+- **sidecar /status 是身份权威源**: 飞书 open_id、token 状态、绑定用户以 `/status` 当前返回为准。
+- **issue JSON 是任务权威源**: `metadata`、`creator_type`、`creator_id`、`parent_issue_id` 只从当前 issue/parent/agent JSON 解析。
+- **变量传递不手敲**: UUID/open_id/chat_id/token 一律从 jq/bash 变量传递,禁止复制长 ID 到命令里。
+- **成功必须有证据**: 只有真实 `ok:true` + `message_id` / `document_id` / API 返回才算成功。
+- **失败必须分类**: OAuth 失效、临时网络/限流、参数错误、权限不足、业务失败分开处理。
+- **隐私优先**: 私密 issue、HR、合同、个人隐私场景不走身份 fallback,不扩大传播。
+
 ## 何时使用
 
 issue 描述里出现以下任一意图时，**必须**用这个 skill，**禁止**自己造 lark-cli 命令：
