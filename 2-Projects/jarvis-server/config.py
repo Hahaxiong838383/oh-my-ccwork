@@ -6,7 +6,8 @@ MINIMAX_BASE_URL = "https://api.minimax.chat/v1/text/chatcompletion_v2"
 MINIMAX_MODEL = "MiniMax-M2.7-highspeed"
 
 # Gemini API（备用）
-GEMINI_API_KEY = "fq8-1NLtsbVsiJhZaISmNeobvqY0bIZMoafPnKfkuz4"
+import os as _os
+GEMINI_API_KEY = _os.environ.get("GEMINI_PROXY_KEY", "")  # 轮换 20260615:读环境变量,不硬编码
 GEMINI_BASE_URL = "http://23.226.135.149:4000/v1"
 GEMINI_MODEL = "gemini-2.5-flash"
 

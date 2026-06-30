@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FUTURUS · 车载 AR×AI 商业模式叙事</title>
+<style>
+  :root{
+    --bg:#070a12;
+    --bg2:#0a1020;
+    --ink:#edf4ff;
+    --text:#dce7f7;
+    --soft:#aebbd0;
+    --muted:#78869d;
+    --faint:#526075;
+    --panel:#0d1424;
+    --panel2:#111a2d;
+    --panel3:#151f34;
+    --line:rgba(168,188,220,.16);
+    --line2:rgba(168,188,220,.08);
+    --cyan:#39d3ff;
+    --violet:#7d8cff;
+    --gold:#ffcf6b;
+    --red:#ff5d72;
+    --maxw:1120px;
+    --narrow:820px;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --radius:24px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;background:var(--bg)}
+  body{
+    min-width:320px;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
+    color:var(--text);
+    line-height:1.78;
+    letter-spacing:0;
+    background:
+      radial-gradient(circle at 12% 5%,rgba(57,211,255,.15),transparent 34rem),
+      radial-gradient(circle at 82% 10%,rgba(125,140,255,.12),transparent 32rem),
+      linear-gradient(180deg,#070a12 0%,#0b1020 36%,#070a12 100%);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:1;
+    opacity:.035;
+    background-image:
+      linear-gradient(rgba(255,255,255,.85) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.85) 1px,transparent 1px);
+    background-size:42px 42px;
+    mask-image:linear-gradient(180deg,black,transparent 78%);
+  }
+  a{color:inherit}
+  img,svg{max-width:100%}
+  .wrap{width:min(var(--maxw),calc(100% - 48px));margin:0 auto;position:relative;z-index:2}
+  .narrow{max-width:var(--narrow)}
+  section{
+    position:relative;
+    padding:112px 0;
+    border-top:1px solid var(--line2);
+  }
+  section:first-of-type{border-top:0}
+  section::before{
+    content:"";
+    position:absolute;
+    inset:0 auto auto 50%;
+    width:min(960px,92vw);
+    height:1px;
+    transform:translateX(-50%);
+    background:linear-gradient(90deg,transparent,rgba(57,211,255,.32),transparent);
+    opacity:.42;
+  }
+  p{max-width:72ch;text-wrap:pretty}
+  .eyebrow,.chap-no,.kicker{
+    display:inline-flex;
+    align-items:center;
+    gap:12px;
+    width:max-content;
+    max-width:100%;
+    margin-bottom:18px;
+    padding:7px 12px;
+    border:1px solid rgba(168,188,220,.16);
+    border-radius:999px;
+    color:var(--soft);
+    background:rgba(255,255,255,.035);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.22em;
+  }
+  .eyebrow::before,.chap-no::before,.kicker::before{
+    content:"";
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:var(--cyan);
+    box-shadow:0 0 18px rgba(57,211,255,.55);
+  }
+  h1,h2,h3,h4,h5{font-weight:760;color:var(--ink);letter-spacing:-.02em;text-wrap:balance}
+  h1{
+    max-width:980px;
+    font-size:clamp(42px,7.1vw,88px);
+    line-height:.98;
+  }
+  h2{
+    max-width:860px;
+    margin:0 0 18px;
+    font-size:clamp(30px,4.4vw,56px);
+    line-height:1.08;
+  }
+  h3{font-size:clamp(22px,2.4vw,30px);line-height:1.2}
+  .hl{color:var(--cyan)}
+  .hl2{color:var(--gold)}
+  .hlr{color:var(--red)}
+  .em{color:var(--ink);font-weight:760}
+  .accent{color:var(--cyan);font-weight:760}
+  .gold{color:var(--gold);font-weight:760}
+  .lede{
+    margin:18px 0 36px;
+    max-width:830px;
+    color:var(--soft);
+    font-size:clamp(18px,2vw,22px);
+    line-height:1.72;
+  }
+  p.body{
+    margin:18px 0;
+    color:var(--soft);
+    font-size:16.5px;
+  }
+  .hero{
+    position:relative;
+    min-height:100dvh;
+    display:grid;
+    align-items:end;
+    overflow:hidden;
+    padding:0;
+    border-top:0;
+  }
+  .hero::before{display:none}
+  .hero-bg{
+    position:absolute;
+    inset:0;
+    background:url('assets/shots/10_hero_wide.jpg') center/cover no-repeat;
+    filter:saturate(1.06) contrast(1.03);
+    transform:scale(1.02);
+  }
+  .hero-bg::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      linear-gradient(90deg,rgba(7,10,18,.94) 0%,rgba(7,10,18,.72) 44%,rgba(7,10,18,.18) 100%),
+      linear-gradient(180deg,rgba(7,10,18,.25) 0%,rgba(7,10,18,.62) 58%,#070a12 100%);
+  }
+  .hero-inner{
+    position:relative;
+    z-index:2;
+    width:100%;
+    padding:124px 0 74px;
+  }
+  .hero .sub{
+    margin-top:26px;
+    max-width:720px;
+    color:#c6d3e6;
+    font-size:clamp(17px,2.1vw,23px);
+    line-height:1.68;
+  }
+  .hero-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-top:34px;
+  }
+  .meta-pill{
+    padding:9px 13px;
+    border:1px solid rgba(168,188,220,.18);
+    border-radius:999px;
+    background:rgba(8,12,22,.52);
+    color:var(--soft);
+    font-size:13px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .slogan{
+    margin-top:58px;
+    color:var(--muted);
+    font-size:12px;
+    letter-spacing:.28em;
+  }
+  .scrollcue{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-top:28px;
+    color:var(--faint);
+    font-size:13px;
+  }
+  .scrollcue::before{
+    content:"";
+    width:46px;
+    height:1px;
+    background:linear-gradient(90deg,var(--cyan),transparent);
+  }
+  .grid-3,.cards,.wins,.moats{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:18px;
+  }
+  .tldr{margin-top:20px}
+  .shell{
+    border:1px solid rgba(168,188,220,.16);
+    border-radius:calc(var(--radius) + 8px);
+    padding:6px;
+    background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.018));
+    box-shadow:0 28px 90px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .card,.t,.win,.moat,.state,.maprow,.jbar,.quote{
+    position:relative;
+    overflow:hidden;
+    border:1px solid rgba(168,188,220,.13);
+    border-radius:var(--radius);
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018)),
+      linear-gradient(135deg,rgba(57,211,255,.035),rgba(125,140,255,.025));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .card::after,.t::after,.win::after,.moat::after,.state::after,.maprow::after,.jbar::after,.quote::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    border-radius:inherit;
+    background:radial-gradient(circle at 18% 0%,rgba(255,255,255,.10),transparent 32%);
+    opacity:.7;
+  }
+  .t{min-height:224px;padding:28px}
+  .t .n,.moat .k,.maprow .pt{
+    color:var(--cyan);
+    font-size:11px;
+    font-weight:780;
+    letter-spacing:.18em;
+  }
+  .t .h{
+    margin:16px 0 10px;
+    color:var(--ink);
+    font-size:22px;
+    font-weight:780;
+    line-height:1.28;
+    letter-spacing:-.01em;
+  }
+  .t .d,.card p,.win p,.moat p,.state p,.maprow .frame{
+    color:var(--muted);
+    font-size:14.5px;
+    line-height:1.75;
+  }
+  figure{margin:34px 0}
+  figure img{
+    width:100%;
+    display:block;
+    border:1px solid rgba(168,188,220,.16);
+    border-radius:22px;
+    background:#0a1020;
+    box-shadow:0 34px 90px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  figcaption{
+    max-width:68ch;
+    margin:13px auto 0;
+    color:var(--muted);
+    text-align:center;
+    font-size:13px;
+    line-height:1.65;
+  }
+  .imgrow,.imgrid2{
+    display:grid;
+    grid-template-columns:1.28fr .92fr;
+    align-items:start;
+    gap:18px;
+    margin:34px 0;
+  }
+  .imgrid2 figure,.imgrow figure{margin:0}
+  .cards{margin-top:28px}
+  .card{padding:26px}
+  .glyph{
+    display:grid;
+    place-items:center;
+    width:38px;
+    height:38px;
+    margin-bottom:18px;
+    border:1px solid rgba(57,211,255,.26);
+    border-radius:13px;
+    color:var(--cyan);
+    background:rgba(57,211,255,.08);
+  }
+  .glyph svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .card h4,.win h4,.moat h5{
+    margin-bottom:8px;
+    color:var(--ink);
+    font-size:17px;
+    line-height:1.3;
+  }
+  blockquote,.quote{
+    margin:34px 0;
+    padding:30px 32px;
+    color:var(--text);
+    font-size:17px;
+    border-left:1px solid rgba(57,211,255,.38);
+  }
+  blockquote .tag,.quote .tag{
+    display:block;
+    margin-bottom:14px;
+    color:var(--cyan);
+    font-size:11px;
+    font-weight:780;
+    letter-spacing:.22em;
+  }
+  blockquote .big,.quote .big{
+    color:var(--ink);
+    font-size:19px;
+    font-weight:760;
+    line-height:1.75;
+  }
+  .svg-panel{
+    margin:34px 0;
+    padding:22px;
+    border:1px solid rgba(168,188,220,.14);
+    border-radius:30px;
+    background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+    box-shadow:0 30px 90px rgba(0,0,0,.23),inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .svg-panel svg{
+    display:block;
+    width:100%;
+    height:auto;
+  }
+  .center-note{
+    max-width:700px;
+    margin:0 auto;
+    color:var(--soft);
+    text-align:center;
+    font-size:15px;
+  }
+  .states{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;
+    margin:28px 0 34px;
+  }
+  .state{
+    display:flex;
+    gap:16px;
+    padding:22px;
+  }
+  .num{
+    flex:0 0 auto;
+    display:grid;
+    place-items:center;
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    color:var(--cyan);
+    border:1px solid rgba(57,211,255,.35);
+    background:rgba(57,211,255,.09);
+    font-weight:800;
+    font-size:14px;
+  }
+  .state h5{margin-bottom:4px;font-size:16px}
+  .state .say{
+    margin-bottom:5px;
+    color:var(--cyan);
+    font-size:13px;
+    font-weight:760;
+  }
+  .section-subhead{
+    margin:54px 0 18px;
+    font-size:24px;
+  }
+  .jbar{
+    margin:30px 0;
+    padding:26px 28px;
+  }
+  .jbar p{margin:0}
+  .spectrum-copy{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:0;
+    margin-top:18px;
+    border:1px solid rgba(168,188,220,.14);
+    border-radius:24px;
+    overflow:hidden;
+  }
+  .spectrum-copy .head{
+    padding:16px 18px;
+    color:var(--ink);
+    font-weight:780;
+    font-size:15px;
+    background:rgba(255,255,255,.04);
+  }
+  .spectrum-copy .head:first-child{color:var(--red);border-right:1px solid rgba(168,188,220,.14)}
+  .spectrum-copy .head:nth-child(2){color:var(--cyan)}
+  .spectrum-copy .cell{
+    padding:16px 18px;
+    border-top:1px solid rgba(168,188,220,.14);
+    color:var(--soft);
+    font-size:14.5px;
+    line-height:1.65;
+  }
+  .spectrum-copy .c-l{
+    border-right:1px solid rgba(168,188,220,.14);
+    color:var(--muted);
+  }
+  .spectrum-copy s{color:#687489;text-decoration-color:rgba(255,93,114,.48)}
+  .wins{margin-top:28px}
+  .win{padding:28px;text-align:left}
+  .win .glyph{margin-bottom:18px}
+  .moats{margin-top:24px}
+  .moat{min-height:178px;padding:24px}
+  .maprow{
+    display:grid;
+    grid-template-columns:.95fr 1.05fr;
+    gap:24px;
+    align-items:center;
+    margin:18px 0;
+    padding:18px;
+  }
+  .maprow img{
+    width:100%;
+    display:block;
+    border:1px solid rgba(168,188,220,.13);
+    border-radius:18px;
+  }
+  .maprow .txt{position:relative;z-index:2;padding:8px 8px 8px 4px}
+  .maprow h4{margin:8px 0 10px;font-size:21px}
+  .maprow p{
+    margin:7px 0;
+    color:var(--soft);
+    font-size:14.5px;
+  }
+  .maprow.rev .txt{order:-1;padding:8px 4px 8px 8px}
+  .closing{
+    min-height:58dvh;
+    display:grid;
+    align-items:center;
+    text-align:center;
+    padding:124px 0 96px;
+    background:
+      radial-gradient(circle at 50% 0%,rgba(57,211,255,.12),transparent 38rem),
+      linear-gradient(180deg,transparent,rgba(57,211,255,.035));
+  }
+  .closing .big{
+    max-width:900px;
+    margin:0 auto;
+    color:var(--ink);
+    font-size:clamp(32px,5.5vw,68px);
+    font-weight:760;
+    line-height:1.08;
+  }
+  .closing .sl{
+    margin:30px auto 0;
+    color:var(--muted);
+    font-size:12px;
+    letter-spacing:.28em;
+  }
+  .foot{
+    position:relative;
+    z-index:2;
+    padding:34px 0 56px;
+    color:#5e6b80;
+    text-align:center;
+    font-size:12px;
+  }
+  .reveal{
+    opacity:0;
+    transform:translateY(26px);
+    transition:opacity .8s var(--ease),transform .8s var(--ease);
+  }
+  .reveal.is-visible{
+    opacity:1;
+    transform:translateY(0);
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .reveal{opacity:1;transform:none;transition:none}
+  }
+  @media(max-width:900px){
+    section{padding:88px 0}
+    .grid-3,.cards,.wins,.moats{grid-template-columns:1fr}
+    .t{min-height:auto}
+    .maprow,.maprow.rev{grid-template-columns:1fr}
+    .maprow.rev .txt{order:0;padding:4px}
+  }
+  @media(max-width:720px){
+    .wrap{width:min(100% - 32px,var(--maxw))}
+    .hero{min-height:92dvh}
+    .hero-inner{padding:108px 0 54px}
+    h1{font-size:clamp(38px,13vw,58px)}
+    h2{font-size:clamp(28px,9vw,42px)}
+    .hero-meta{gap:9px}
+    .meta-pill{font-size:12px}
+    .imgrow,.imgrid2,.states,.spectrum-copy{grid-template-columns:1fr}
+    .spectrum-copy .head:first-child,.spectrum-copy .c-l{border-right:0}
+    blockquote,.quote,.jbar{padding:24px 22px}
+    .svg-panel{padding:12px;border-radius:24px}
+    .svg-panel svg{min-width:0;width:100%}
+    .closing{min-height:auto}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-inner">
+    <div class="wrap">
+      <span class="eyebrow">FUTURUS · 车载 AR × AI</span>
+      <h1>把挡风玻璃，变成一块<br><span class="hl">不打扰、还能赚钱</span>的广告<br>和一个<span class="hl2">越来越懂你</span>的 AI</h1>
+      <p class="sub">这份说明用一条连续叙事讲清楚：那支视频里的炫酷 AR，背后到底是一门什么样的生意，以及为什么它会从广告，进化成车里最懂人的服务入口。</p>
+      <div class="hero-meta">
+        <span class="meta-pill">第一拍：余光区广告，本身能赚钱</span>
+        <span class="meta-pill">第二拍：意图 AI，把广告变服务</span>
+        <span class="meta-pill">终局：数据飞轮，形成护城河</span>
+      </div>
+      <p class="slogan">FUTURUS — THE INTELLIGENCE BEHIND THE DISPLAY</p>
+      <p class="scrollcue">向下阅读完整投资人叙事</p>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <span class="kicker">一句话看懂</span>
+    <h2>三句话，讲清这门生意</h2>
+    <div class="grid-3 tldr">
+      <div class="t reveal">
+        <div class="n">01 / 地基</div>
+        <div class="h">一种不让人烦、还能赚钱的广告</div>
+        <div class="d">广告放进驾驶余光区，不挡视线、不打断，用户不抵触，品牌才愿意买单。</div>
+      </div>
+      <div class="t reveal">
+        <div class="n">02 / 引擎</div>
+        <div class="h">背后是越来越懂你的 AI</div>
+        <div class="d">它在余光里轻轻试探，用你的每一次反应自我学习，越用越懂你这个人。</div>
+      </div>
+      <div class="t reveal">
+        <div class="n">03 / 终局</div>
+        <div class="h">懂到最后，广告就成了服务</div>
+        <div class="d">精准到推给你的，正是你此刻需要的。广告变服务，服务变习惯。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap narrow">
+    <span class="chap-no">第 0 章 · 痛点</span>
+    <h2>今天的广告，为什么<span class="hlr">招人烦</span></h2>
+    <p class="lede">弹窗、糊脸的大牌、跳不过的贴片，传统广告的本质是<span class="em">打断</span>。它抢你的注意力，越多越烦。这也是广告生意的天花板：用户讨厌它。</p>
+    <figure class="reveal">
+      <img src="assets/gen/01_ad_fatigue.png" alt="被传统广告轰炸的驾驶者">
+      <figcaption>传统广告 = 侵入式的打断。用户被包围、被打扰，本能地想躲开。</figcaption>
+    </figure>
+    <p class="body">所以问题不是“怎么投更多广告”，而是先换一个问题：<span class="accent">能不能有一种广告，用户不但不烦，甚至还欢迎它？</span> 这个答案要从车里被释放出来的注意力开始。</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="chap-no">第 1 章 · 地基（第一拍）</span>
+    <h2>一种<span class="hl">不打扰</span>的全新广告形式</h2>
+    <p class="lede">在高阶辅助驾驶 / 自动驾驶里，双手和一部分注意力被释放出来。FUTURUS 把广告搬到<span class="em">驾驶余光区</span>：道路两侧、城市天际线、建筑立面，像光影艺术一样自然浮现。</p>
+    <div class="imgrid2 reveal">
+      <figure>
+        <img src="assets/shots/02_ar_vortex_wide.jpg" alt="余光区 AR 全景">
+        <figcaption>AR 内容在道路两侧的余光区，不占用中央视野。</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/shots/03_iphone_closeup.jpg" alt="楼体 AR 产品揭示特写">
+        <figcaption>像光影艺术融进真实建筑，而不是糊你一脸。</figcaption>
+      </figure>
+    </div>
+    <div class="cards">
+      <div class="card reveal">
+        <div class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.5 12s3.6-6 9.5-6 9.5 6 9.5 6-3.6 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <h4>不挡视线</h4>
+        <p>只在余光区、道路两侧呈现，中央视野始终留给路面。</p>
+      </div>
+      <div class="card reveal">
+        <div class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 16c4-8 12-8 16 0"/><path d="M7 16c2-4 8-4 10 0"/><path d="M12 5v14"/></svg></div>
+        <h4>像艺术，不像广告</h4>
+        <p>融入城市天际线的全息光影，是享受而不是打扰。</p>
+      </div>
+      <div class="card reveal">
+        <div class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M17 7.5c0-1.9-2.3-3-5-3s-5 1.1-5 3 2.3 3 5 3 5 1.1 5 3-2.3 3-5 3-5-1.1-5-3"/></svg></div>
+        <h4>用户不抵触 → 能赚钱</h4>
+        <p>不被反感的广告，品牌才愿意买单。这本身就是收入。</p>
+      </div>
+    </div>
+    <blockquote class="reveal">
+      <span class="tag">视频旁白 · 第一拍</span>
+      过去的广告是打断、是打扰，没人喜欢。而当你的注意力被自动驾驶释放，FUTURUS 把广告放进你的驾驶余光区，像光影艺术一样自然浮现，不挡视线、不打断你。<span class="big">仅凭这一点，我们就创造了一种全新的媒介：用户不抵触、品牌愿买单，它本身就能带来收益。</span>
+    </blockquote>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="chap-no">第 2 章 · 引擎</span>
+    <h2>余光区里，藏着一个在<span class="hl">读懂你</span>的 AI</h2>
+    <p class="lede">第一拍解决“广告如何不烦”，但这只是入口。余光区真正值钱的地方，是它可以成为 AI 的<span class="em">试探场</span>：看你的目光停在哪、掠过哪，再叠加实时状态，用每一次反应让模型更懂你。</p>
+    <div class="imgrid2 reveal">
+      <figure>
+        <img src="assets/gen/02_ai_understands.png" alt="AI 在余光区温柔地理解你">
+        <figcaption>一个不打扰的 AI，在余光里温柔地感知、理解你。</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/shots/04_vitals.jpg" alt="生命体征 HUD">
+        <figcaption>心率、状态……这些不是装饰，是 AI 读懂你此刻的输入。</figcaption>
+      </figure>
+    </div>
+    <div class="svg-panel reveal">
+      <svg viewBox="0 0 920 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="意图学习飞轮：余光试探、用户反应、强化学习、更懂你">
+        <defs>
+          <marker id="intentArrow" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto">
+            <path d="M0 0 7 3.5 0 7Z" fill="#39d3ff"/>
+          </marker>
+          <radialGradient id="intentCore" cx="50%" cy="48%" r="58%">
+            <stop offset="0%" stop-color="#1b3d64"/>
+            <stop offset="100%" stop-color="#0d1424"/>
+          </radialGradient>
+          <filter id="softCyan" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <rect x="1" y="1" width="918" height="418" rx="28" fill="#0a1020" stroke="rgba(168,188,220,.14)"/>
+        <circle cx="460" cy="210" r="130" fill="none" stroke="#39d3ff" stroke-opacity=".20" stroke-width="2" stroke-dasharray="7 9"/>
+        <path d="M460 72 A138 138 0 0 1 598 210" fill="none" stroke="#39d3ff" stroke-width="3" marker-end="url(#intentArrow)"/>
+        <path d="M598 210 A138 138 0 0 1 460 348" fill="none" stroke="#7d8cff" stroke-width="3" marker-end="url(#intentArrow)"/>
+        <path d="M460 348 A138 138 0 0 1 322 210" fill="none" stroke="#ffcf6b" stroke-width="3" marker-end="url(#intentArrow)"/>
+        <path d="M322 210 A138 138 0 0 1 460 72" fill="none" stroke="#39d3ff" stroke-width="3" marker-end="url(#intentArrow)"/>
+        <circle cx="460" cy="210" r="72" fill="url(#intentCore)" stroke="#39d3ff" stroke-opacity=".48"/>
+        <text x="460" y="202" text-anchor="middle" fill="#edf4ff" font-size="22" font-weight="760">意图模型</text>
+        <text x="460" y="235" text-anchor="middle" fill="#39d3ff" font-size="34" font-weight="800" filter="url(#softCyan)">∞</text>
+        <g fill="#edf4ff" font-size="18" font-weight="760" text-anchor="middle">
+          <text x="460" y="48">余光试探</text>
+          <text x="700" y="216">你的反应</text>
+          <text x="460" y="384">强化学习</text>
+          <text x="220" y="216">更懂你</text>
+        </g>
+        <g fill="#78869d" font-size="13" text-anchor="middle">
+          <text x="460" y="70">轻轻抛出一个内容</text>
+          <text x="700" y="238">停留、忽略、追问</text>
+          <text x="460" y="366">把反馈写回权重</text>
+          <text x="220" y="238">下一次更接近需求</text>
+        </g>
+      </svg>
+    </div>
+    <p class="center-note"><span class="accent">试探 → 看你的反应 → 学习 → 更懂你</span>，循环往复。第一拍的“广告位”，在第二拍里变成了训练意图 AI 的入口。</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="chap-no">主角 · 贾维斯 JARVIS</span>
+    <h2>认识<span class="hl">贾维斯</span>，藏在画面背后的那个 AI</h2>
+    <p class="lede">就像钢铁侠的贾维斯，你看不见它的脸，但它无处不在。在 FUTURUS 里，贾维斯是<span class="em">底部 HUD 中控里的语音助手</span>：一颗声纹光球，像车里的 Siri 一样待命、听你说、为你做。<span class="accent">原片右下角那个麦克风 + 声纹波形，就是它现成的“家”</span>。</p>
+    <div class="imgrid2 reveal">
+      <figure><img src="assets/gen/jarvis_voice.png" alt="贾维斯语音助手形态"><figcaption>贾维斯的样子：底部中控的声纹光球语音助手，不拟人，像车载 Siri。</figcaption></figure>
+      <figure><img src="assets/shots/05_nav_charging.jpg" alt="原片底部语音助手雏形"><figcaption>原片证据：底部 HUD 右下角已有麦克风 + 声纹波形，贾维斯的位置早埋好了。</figcaption></figure>
+    </div>
+    <h3 class="section-subhead">它怎么在画面里“显形”？四个状态</h3>
+    <div class="states">
+      <div class="state reveal"><div class="num">1</div><div><h5>在场</h5><div class="say">“我一直在”</div><p>底部 HUD 中控的语音助手声纹光球，低调待命。</p></div></div>
+      <div class="state reveal"><div class="num">2</div><div><h5>感知你</h5><div class="say">“我在读你”</div><p>光丝从你的目光、心率流向核心。</p></div></div>
+      <div class="state reveal"><div class="num">3</div><div><h5>为你呈现</h5><div class="say">“我懂你要什么”</div><p>核心向余光区射出光流，AR 内容浮现。</p></div></div>
+      <div class="state reveal"><div class="num">4</div><div><h5>学习</h5><div class="say">“我越来越懂你”</div><p>你反应后光流回到核心，∞ 网络变亮。</p></div></div>
+    </div>
+    <div class="svg-panel reveal">
+      <svg viewBox="0 0 980 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="贾维斯四状态状态机：在场、感知、呈现、学习">
+        <defs>
+          <marker id="stateArrow" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto">
+            <path d="M0 0 7 3.5 0 7Z" fill="#7d8cff"/>
+          </marker>
+          <linearGradient id="stateLine" x1="0" x2="1">
+            <stop offset="0%" stop-color="#39d3ff"/><stop offset="100%" stop-color="#7d8cff"/>
+          </linearGradient>
+        </defs>
+        <rect x="1" y="1" width="978" height="358" rx="28" fill="#0a1020" stroke="rgba(168,188,220,.14)"/>
+        <path d="M185 178H357" stroke="url(#stateLine)" stroke-width="3" marker-end="url(#stateArrow)"/>
+        <path d="M425 178H597" stroke="url(#stateLine)" stroke-width="3" marker-end="url(#stateArrow)"/>
+        <path d="M665 178H837" stroke="url(#stateLine)" stroke-width="3" marker-end="url(#stateArrow)"/>
+        <path d="M860 224C735 318 260 318 140 224" fill="none" stroke="#39d3ff" stroke-opacity=".48" stroke-width="2" stroke-dasharray="6 8" marker-end="url(#stateArrow)"/>
+        <g font-family="inherit" text-anchor="middle">
+          <g transform="translate(120 178)">
+            <circle r="58" fill="rgba(57,211,255,.08)" stroke="#39d3ff" stroke-opacity=".46"/>
+            <circle r="20" fill="none" stroke="#39d3ff" stroke-width="3"/><path d="M-30 0h14M16 0h14" stroke="#39d3ff" stroke-width="3"/>
+            <text y="88" fill="#edf4ff" font-size="18" font-weight="760">在场</text>
+            <text y="112" fill="#78869d" font-size="13">声纹光球待命</text>
+          </g>
+          <g transform="translate(380 178)">
+            <circle r="58" fill="rgba(125,140,255,.08)" stroke="#7d8cff" stroke-opacity=".48"/>
+            <path d="M-26 18C-8-18 8-18 26 18" fill="none" stroke="#7d8cff" stroke-width="3"/>
+            <path d="M0-30V28" stroke="#7d8cff" stroke-width="3"/>
+            <text y="88" fill="#edf4ff" font-size="18" font-weight="760">感知</text>
+            <text y="112" fill="#78869d" font-size="13">读取状态与目光</text>
+          </g>
+          <g transform="translate(640 178)">
+            <circle r="58" fill="rgba(255,207,107,.08)" stroke="#ffcf6b" stroke-opacity=".50"/>
+            <path d="M-30 18 0-24 30 18Z" fill="none" stroke="#ffcf6b" stroke-width="3"/><path d="M-10 18 0 2l10 16" stroke="#ffcf6b" stroke-width="3" fill="none"/>
+            <text y="88" fill="#edf4ff" font-size="18" font-weight="760">呈现</text>
+            <text y="112" fill="#78869d" font-size="13">内容进入余光区</text>
+          </g>
+          <g transform="translate(900 178)">
+            <circle r="58" fill="rgba(57,211,255,.08)" stroke="#39d3ff" stroke-opacity=".46"/>
+            <path d="M-30 0C-15-28 15 28 30 0C15-28-15 28-30 0Z" fill="none" stroke="#39d3ff" stroke-width="3"/>
+            <text y="88" fill="#edf4ff" font-size="18" font-weight="760">学习</text>
+            <text y="112" fill="#78869d" font-size="13">反馈写回模型</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <div class="imgrid2 reveal">
+      <figure><img src="assets/gen/jarvis_sense.png" alt="贾维斯感知你"><figcaption>感知：光丝从仪表与你身上汇聚向核心，它在读你。</figcaption></figure>
+      <figure><img src="assets/gen/jarvis_present.png" alt="贾维斯余光区呈现"><figcaption>呈现：核心向道路两侧射光，AR 内容在余光区浮现。</figcaption></figure>
+    </div>
+    <div class="jbar reveal">
+      <p class="body"><span class="accent">为什么用“光”而不是一张脸？</span> 不拟人，就不违和、不抢戏，像光影融入城市；只在余光区，就不干扰驾驶；而它的“显形”，让投资人一眼看到：这背后是一个 AI，不是普通广告屏。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="chap-no">第 3 章 · 终局（第二拍）</span>
+    <h2>当 AI 懂你，广告就变成了<span class="hl2">服务</span></h2>
+    <p class="lede">从这里开始，商业模式完成第二次跃迁：广告不再只是“被看见”，而是被 AI 判断为“此刻可能有用”。它推给你的，是你正缺的那次充电、你一直想去的那家店、你此刻刚好想要的东西。<span class="em">广告，变成了服务。</span></p>
+    <div class="imgrid2 reveal">
+      <figure>
+        <img src="assets/shots/07_sneaker.jpg" alt="精准推荐：运动鞋">
+        <figcaption>推运动鞋，因为它已经知道你爱跑步。</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/shots/05_nav_charging.jpg" alt="精准服务：充电站">
+        <figcaption>提前帮你想到充电，这是服务，不是广告。</figcaption>
+      </figure>
+    </div>
+    <div class="svg-panel reveal">
+      <svg viewBox="0 0 980 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="广告到服务的光谱：AI 精准度越高，越从打断式广告移动到刚好需要的服务">
+        <defs>
+          <linearGradient id="adServiceGradient" x1="0" x2="1">
+            <stop offset="0%" stop-color="#ff5d72"/>
+            <stop offset="45%" stop-color="#7d8cff"/>
+            <stop offset="100%" stop-color="#39d3ff"/>
+          </linearGradient>
+          <marker id="spectrumArrow" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto">
+            <path d="M0 0 7 3.5 0 7Z" fill="#39d3ff"/>
+          </marker>
+        </defs>
+        <rect x="1" y="1" width="978" height="338" rx="28" fill="#0a1020" stroke="rgba(168,188,220,.14)"/>
+        <text x="78" y="72" fill="#ff5d72" font-size="20" font-weight="760">广告腔</text>
+        <text x="78" y="101" fill="#78869d" font-size="14">打断 · 招人烦 · 红</text>
+        <text x="902" y="72" fill="#39d3ff" font-size="20" font-weight="760" text-anchor="end">服务腔</text>
+        <text x="902" y="101" fill="#78869d" font-size="14" text-anchor="end">懂你 · 刚好需要 · 青</text>
+        <rect x="92" y="152" width="796" height="54" rx="27" fill="url(#adServiceGradient)" opacity=".9"/>
+        <rect x="102" y="162" width="776" height="34" rx="17" fill="rgba(7,10,18,.20)"/>
+        <path d="M330 118H650" stroke="#39d3ff" stroke-width="2.5" marker-end="url(#spectrumArrow)"/>
+        <text x="490" y="103" fill="#edf4ff" font-size="18" font-weight="760" text-anchor="middle">AI 精准度越高，越右移</text>
+        <g fill="#edf4ff" font-size="15" font-weight="760" text-anchor="middle">
+          <text x="150" y="244">强行推送</text>
+          <text x="356" y="244">相关但生硬</text>
+          <text x="604" y="244">理解场景</text>
+          <text x="830" y="244">刚好需要</text>
+        </g>
+        <g fill="#78869d" font-size="12" text-anchor="middle">
+          <text x="150" y="267">用户想躲开</text>
+          <text x="356" y="267">偶尔有用</text>
+          <text x="604" y="267">像建议</text>
+          <text x="830" y="267">像服务</text>
+        </g>
+      </svg>
+    </div>
+    <div class="spectrum-copy reveal">
+      <div class="head">广告腔（招人烦）</div>
+      <div class="head">服务腔（懂你 · 帮你）</div>
+      <div class="cell c-l"><s>立即购买这双鞋！</s></div>
+      <div class="cell">今天天气适合跑步，你常去的那家店就在 2km 外</div>
+      <div class="cell c-l"><s>XX 充电站广告</s></div>
+      <div class="cell">前方就是你习惯的那一站，要导航吗？</div>
+      <div class="cell c-l"><s>故宫文创促销弹窗</s></div>
+      <div class="cell">正路过故宫，要不要听听它的故事？</div>
+    </div>
+    <blockquote class="reveal">
+      <span class="tag">视频旁白 · 第二拍</span>
+      我们真正的核心，是一套读懂人类意图的 AI。它在你的余光里轻轻试探，用你的每一次反应，让自己越来越懂你。于是广告越来越精准，精准到它推给你的已经不像广告，是你刚好需要的东西。<span class="big">广告，变成了服务；推送，变成了“刚好你需要”。你越用，它越懂你；它越懂你，你越离不开它。</span>
+    </blockquote>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="chap-no">第 4 章 · 护城河</span>
+    <h2>越用越懂你，越懂<span class="hl">越离不开</span></h2>
+    <p class="lede">当“服务”开始被反复使用，飞轮就真正转起来：用得越多 → 数据越多 → AI 越懂你 → 服务越精准 → 你越离不开 → 用得更多。<span class="em">别人没有你的数据，也炼不出你的模型。</span></p>
+    <div class="imgrid2 reveal">
+      <figure>
+        <img src="assets/shots/06_infinity.jpg" alt="无限符号：永不停的学习">
+        <figcaption>∞ — 越用越懂，永不停转的意图飞轮。</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/shots/09_whale.jpg" alt="懂你的不只是钱包">
+        <figcaption>它懂的不只是你想买什么，还有你想看什么、需要被治愈的时刻。</figcaption>
+      </figure>
+    </div>
+    <div class="svg-panel reveal">
+      <svg viewBox="0 0 980 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="数据护城河飞轮：用得越多、数据越多、AI 越懂你、服务越精准、越离不开、用得更多">
+        <defs>
+          <marker id="moatArrow" markerWidth="11" markerHeight="11" refX="8" refY="4" orient="auto">
+            <path d="M0 0 8 4 0 8Z" fill="#39d3ff"/>
+          </marker>
+          <radialGradient id="flyCore" cx="50%" cy="46%" r="58%">
+            <stop offset="0%" stop-color="#19395a"/>
+            <stop offset="100%" stop-color="#0d1424"/>
+          </radialGradient>
+        </defs>
+        <rect x="1" y="1" width="978" height="558" rx="28" fill="#0a1020" stroke="rgba(168,188,220,.14)"/>
+        <circle cx="490" cy="282" r="190" fill="none" stroke="#39d3ff" stroke-opacity=".18" stroke-width="28"/>
+        <circle cx="490" cy="282" r="184" fill="none" stroke="#7d8cff" stroke-opacity=".16" stroke-width="2" stroke-dasharray="10 12"/>
+        <path d="M490 92A190 190 0 0 1 655 187" fill="none" stroke="#39d3ff" stroke-width="5" marker-end="url(#moatArrow)"/>
+        <path d="M655 187A190 190 0 0 1 655 377" fill="none" stroke="#39d3ff" stroke-width="5" marker-end="url(#moatArrow)"/>
+        <path d="M655 377A190 190 0 0 1 490 472" fill="none" stroke="#39d3ff" stroke-width="5" marker-end="url(#moatArrow)"/>
+        <path d="M490 472A190 190 0 0 1 325 377" fill="none" stroke="#39d3ff" stroke-width="5" marker-end="url(#moatArrow)"/>
+        <path d="M325 377A190 190 0 0 1 325 187" fill="none" stroke="#39d3ff" stroke-width="5" marker-end="url(#moatArrow)"/>
+        <path d="M325 187A190 190 0 0 1 490 92" fill="none" stroke="#39d3ff" stroke-width="5" marker-end="url(#moatArrow)"/>
+        <circle cx="490" cy="282" r="86" fill="url(#flyCore)" stroke="#39d3ff" stroke-opacity=".52"/>
+        <text x="490" y="270" text-anchor="middle" fill="#edf4ff" font-size="26" font-weight="800">飞轮</text>
+        <text x="490" y="304" text-anchor="middle" fill="#39d3ff" font-size="18" font-weight="760">护城河</text>
+        <g font-size="17" font-weight="760" fill="#edf4ff" text-anchor="middle">
+          <text x="490" y="67">用得越多</text>
+          <text x="736" y="184">数据越多</text>
+          <text x="736" y="395">AI 越懂你</text>
+          <text x="490" y="514">服务越精准</text>
+          <text x="244" y="395">越离不开</text>
+          <text x="244" y="184">用得更多</text>
+        </g>
+        <g font-size="12" fill="#78869d" text-anchor="middle">
+          <text x="490" y="88">真实使用场景变多</text>
+          <text x="736" y="205">反馈更密、更细</text>
+          <text x="736" y="416">模型权重继续领先</text>
+          <text x="490" y="535">推送越来越像服务</text>
+          <text x="244" y="416">习惯与信任沉淀</text>
+          <text x="244" y="205">复利重新注入飞轮</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="chap-no">第 5 章 · 为什么是我们</span>
+    <h2>一块挡风玻璃，<span class="hl">三方都赢</span></h2>
+    <p class="lede">飞轮要成立，不能只让平台获益。FUTURUS 的位置是“挡风玻璃 AR×AI”这层中立智能界面：用户得到不打扰的服务，品牌获得精准触达，车企拿到差异化体验与数据共享。</p>
+    <div class="svg-panel reveal">
+      <svg viewBox="0 0 980 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="三赢三角：用户、品牌、车企围绕挡风玻璃 AR×AI 形成三赢">
+        <defs>
+          <marker id="triArrow" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto">
+            <path d="M0 0 7 3.5 0 7Z" fill="#7d8cff"/>
+          </marker>
+          <radialGradient id="triCenter" cx="50%" cy="50%" r="60%">
+            <stop offset="0%" stop-color="#17385c"/>
+            <stop offset="100%" stop-color="#0d1424"/>
+          </radialGradient>
+        </defs>
+        <rect x="1" y="1" width="978" height="538" rx="28" fill="#0a1020" stroke="rgba(168,188,220,.14)"/>
+        <path d="M490 80 180 425H800Z" fill="rgba(57,211,255,.025)" stroke="rgba(168,188,220,.22)" stroke-width="2"/>
+        <path d="M490 150 278 386" stroke="#39d3ff" stroke-opacity=".52" stroke-width="2.5" marker-end="url(#triArrow)"/>
+        <path d="M490 150 702 386" stroke="#ffcf6b" stroke-opacity=".58" stroke-width="2.5" marker-end="url(#triArrow)"/>
+        <path d="M318 425H662" stroke="#7d8cff" stroke-opacity=".58" stroke-width="2.5" marker-end="url(#triArrow)"/>
+        <circle cx="490" cy="272" r="86" fill="url(#triCenter)" stroke="#39d3ff" stroke-opacity=".52"/>
+        <text x="490" y="258" fill="#edf4ff" font-size="22" font-weight="800" text-anchor="middle">挡风玻璃</text>
+        <text x="490" y="291" fill="#39d3ff" font-size="22" font-weight="800" text-anchor="middle">AR × AI</text>
+        <g>
+          <rect x="365" y="40" width="250" height="86" rx="20" fill="rgba(57,211,255,.08)" stroke="rgba(57,211,255,.38)"/>
+          <text x="490" y="75" fill="#edf4ff" font-size="22" font-weight="800" text-anchor="middle">用户</text>
+          <text x="490" y="102" fill="#aebbd0" font-size="14" text-anchor="middle">不打扰，还得到刚好需要的服务</text>
+        </g>
+        <g>
+          <rect x="58" y="394" width="270" height="94" rx="20" fill="rgba(125,140,255,.08)" stroke="rgba(125,140,255,.38)"/>
+          <text x="193" y="431" fill="#edf4ff" font-size="22" font-weight="800" text-anchor="middle">品牌</text>
+          <text x="193" y="458" fill="#aebbd0" font-size="14" text-anchor="middle">精准触达即转化</text>
+        </g>
+        <g>
+          <rect x="652" y="394" width="270" height="94" rx="20" fill="rgba(255,207,107,.08)" stroke="rgba(255,207,107,.38)"/>
+          <text x="787" y="431" fill="#edf4ff" font-size="22" font-weight="800" text-anchor="middle">车企</text>
+          <text x="787" y="458" fill="#aebbd0" font-size="14" text-anchor="middle">数据共享 + 差异化体验</text>
+        </g>
+      </svg>
+    </div>
+    <div class="wins">
+      <div class="win reveal">
+        <div class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21c1.3-4 4-6 7.5-6s6.2 2 7.5 6"/></svg></div>
+        <h4>用户</h4>
+        <p>不被打扰，还得到刚好需要的服务。</p>
+      </div>
+      <div class="win reveal">
+        <div class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 13V8l12-4v14L4 13Z"/><path d="M4 13l2 7h4l-2.2-6"/></svg></div>
+        <h4>品牌</h4>
+        <p>前所未有的精准触达，广告即转化。</p>
+      </div>
+      <div class="win reveal">
+        <div class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 16l1.5-5.5A3 3 0 0 1 9.4 8h5.2a3 3 0 0 1 2.9 2.5L19 16"/><path d="M4 16h16v4H4z"/><circle cx="8" cy="20" r="1.5"/><circle cx="16" cy="20" r="1.5"/></svg></div>
+        <h4>车企</h4>
+        <p>数据共享、差异化体验、互惠共赢。</p>
+      </div>
+    </div>
+    <h3 class="section-subhead">而这三件事，别人短期抄不了</h3>
+    <div class="svg-panel reveal">
+      <svg viewBox="0 0 980 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="护城河三层墙：AR 光学专利墙、意图模型权重领先、跨 OEM 中立，短期抄不了">
+        <defs>
+          <linearGradient id="wallGrad" x1="0" x2="1">
+            <stop offset="0%" stop-color="#39d3ff" stop-opacity=".25"/>
+            <stop offset="48%" stop-color="#7d8cff" stop-opacity=".22"/>
+            <stop offset="100%" stop-color="#ffcf6b" stop-opacity=".24"/>
+          </linearGradient>
+        </defs>
+        <rect x="1" y="1" width="978" height="428" rx="28" fill="#0a1020" stroke="rgba(168,188,220,.14)"/>
+        <rect x="104" y="262" width="772" height="54" rx="10" fill="url(#wallGrad)" stroke="rgba(168,188,220,.18)"/>
+        <rect x="144" y="208" width="692" height="54" rx="10" fill="url(#wallGrad)" stroke="rgba(168,188,220,.18)"/>
+        <rect x="184" y="154" width="612" height="54" rx="10" fill="url(#wallGrad)" stroke="rgba(168,188,220,.18)"/>
+        <g stroke="rgba(168,188,220,.18)">
+          <path d="M232 154v54M348 154v54M464 154v54M580 154v54M696 154v54"/>
+          <path d="M218 208v54M358 208v54M498 208v54M638 208v54M778 208v54"/>
+          <path d="M188 262v54M342 262v54M496 262v54M650 262v54M804 262v54"/>
+        </g>
+        <path d="M490 80 556 114v70c0 70-34 112-66 130-32-18-66-60-66-130v-70Z" fill="rgba(57,211,255,.08)" stroke="#39d3ff" stroke-opacity=".5"/>
+        <text x="490" y="153" fill="#edf4ff" font-size="23" font-weight="800" text-anchor="middle">短期抄不了</text>
+        <text x="490" y="182" fill="#39d3ff" font-size="14" font-weight="760" text-anchor="middle">技术 · 模型 · 位置</text>
+        <g fill="#edf4ff" font-size="17" font-weight="760" text-anchor="middle">
+          <text x="214" y="365">AR 光学专利墙</text>
+          <text x="490" y="365">意图模型权重领先</text>
+          <text x="766" y="365">跨 OEM 中立</text>
+        </g>
+        <g fill="#78869d" font-size="13" text-anchor="middle">
+          <text x="214" y="390">余光区全息显示的硬技术壁垒</text>
+          <text x="490" y="390">飞轮越转越聪明，自研不划算</text>
+          <text x="766" y="390">不绑死任何品牌，任何车可接入</text>
+        </g>
+      </svg>
+    </div>
+    <div class="moats">
+      <div class="moat reveal"><div class="k">护城河 01</div><h5>AR 光学专利墙</h5><p>这么细腻的余光区全息显示，是硬技术壁垒。</p></div>
+      <div class="moat reveal"><div class="k">护城河 02</div><h5>意图模型权重领先</h5><p>飞轮越转越聪明，领先到车企自研都不划算。</p></div>
+      <div class="moat reveal"><div class="k">护城河 03</div><h5>跨 OEM 中立</h5><p>不绑死任何品牌，任何车都能装上这个懂你的 AI。</p></div>
+    </div>
+    <figure class="reveal" style="margin-top:42px">
+      <img src="assets/shots/08_palace_slogan.jpg" alt="FUTURUS The Intelligence Behind the Display">
+      <figcaption>FUTURUS — The Intelligence Behind the Display</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="chap-no">落地支撑 · 逐帧对照</span>
+    <h2>这套叙事，怎么<span class="hl">长在这支视频里</span></h2>
+    <p class="lede">原片的每一帧，其实都在讲这门生意，只是贾维斯还没“显形”。下面用原片截图逐条对照：每个叙事点对应哪一帧、怎么让贾维斯把它演出来。</p>
+
+    <div class="maprow reveal">
+      <img src="assets/shots/02_ar_vortex_wide.jpg" alt="余光区 AR">
+      <div class="txt"><div class="pt">叙事点 01 · 不打扰</div><h4>余光区的新广告</h4>
+        <p class="frame">原片：AR 内容在道路两侧楼体浮现，中央视野留给路面。</p>
+        <p>让贾维斯的光流从核心射向两侧建筑，把“不挡视线”演明白。</p></div>
+    </div>
+
+    <div class="maprow rev reveal">
+      <div class="txt"><div class="pt">叙事点 02 · 感知</div><h4>它在读此刻的你</h4>
+        <p class="frame">原片：底部生命体征 HUD（心率 / 血氧 / 体温）。</p>
+        <p>这些不是装饰，是贾维斯的输入；加一道光丝从生命体征流向核心。</p></div>
+      <img src="assets/shots/04_vitals.jpg" alt="生命体征">
+    </div>
+
+    <div class="maprow reveal">
+      <img src="assets/shots/03_iphone_closeup.jpg" alt="涡旋揭示 iPhone">
+      <div class="txt"><div class="pt">叙事点 03 · 试探</div><h4>抛一个内容，看你反应</h4>
+        <p class="frame">原片：涡旋“抛出”一台 iPhone 的动作。</p>
+        <p>这正是贾维斯的“试探”；加注视捕捉光效 + 学习光流回到核心。</p></div>
+    </div>
+
+    <div class="maprow rev reveal">
+      <div class="txt"><div class="pt">叙事点 04 · 广告即服务</div><h4>推的都是你正需要的</h4>
+        <p class="frame">原片：运动鞋（懂你爱跑）、最近充电站（任务服务）。</p>
+        <p>内容越来越精准，“广告”过渡成“刚好你需要的服务”。</p></div>
+      <img src="assets/shots/07_sneaker.jpg" alt="精准推荐运动鞋">
+    </div>
+
+    <div class="maprow reveal">
+      <img src="assets/shots/06_infinity.jpg" alt="无限符号">
+      <div class="txt"><div class="pt">叙事点 05 · 飞轮</div><h4>越用越懂，永不停</h4>
+        <p class="frame">原片：中国尊上的无限符号 ∞。</p>
+        <p>正好做贾维斯“持续学习”的母题：每转一圈，它更懂你一点。</p></div>
+    </div>
+
+    <div class="jbar reveal">
+      <p class="body"><span class="gold">一句话：</span>原片现在让贾维斯“隐身”，观众只看到炫酷 AR；<span class="em">改造 = 让贾维斯的光核、光丝、光流显形</span>，把“背后有个越来越懂你的 AI”亲眼演给投资人看。</p>
+    </div>
+  </div>
+</section>
+
+<section class="closing">
+  <div class="wrap">
+    <p class="big">不是卖一块更炫的玻璃，<br>是做<span class="hl">车里那个最懂你的 AI</span>。</p>
+    <p class="sl">FUTURUS · THE INTELLIGENCE BEHIND THE DISPLAY</p>
+  </div>
+</section>
+
+<div class="foot">叙事说明 v2 · 配合“国贸”AR-HUD 概念片 · 供内部确认</div>
+
+<script>
+  (function(){
+    var items = document.querySelectorAll('.reveal');
+    if(!('IntersectionObserver' in window)){
+      items.forEach(function(el){ el.classList.add('is-visible'); });
+      return;
+    }
+    var observer = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    },{threshold:0.12,rootMargin:'0px 0px -8% 0px'});
+    items.forEach(function(el,i){
+      el.style.transitionDelay = Math.min(i % 3, 2) * 70 + 'ms';
+      observer.observe(el);
+    });
+  })();
+</script>
+</body>
+</html>

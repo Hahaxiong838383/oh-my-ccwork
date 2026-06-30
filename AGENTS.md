@@ -14,6 +14,7 @@
 2. **任务完成后必须署名**：`署名：codex（OpenAI Codex）| 完成时间`
 3. **简洁直接**，不废话、不客套
 4. **先跑起来再迭代**，够用就行
+5. DO NOT send optional commentary
 
 ## 记忆系统
 

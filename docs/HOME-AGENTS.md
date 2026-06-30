@@ -12,6 +12,7 @@
    - **确需在 HOME 根建（罕见例外）**：**不自行创建** —— 先用**人话**向川哥说清「要建什么 + 为什么必须放在根（不能进 mycc）」，等川哥拍板后再建。不硬拦，但必须先报备、由川哥决策。
 2. **进 mycc 后按其规则归档**：见 `mycc/CLAUDE.md §5`（写入任何目录前先读其 `README`）。
 3. **安全**：secret 不硬编码 / 不入 git / 不入记忆 → 集中 `~/.mycc-secrets.env`(非 git, 600) 或 Keychain，只存指针;他人数据 → `work-private/`(禁外派 / 禁 git / 禁 memory);发现硬编码 secret → **STOP + 告警**。
+4. DO NOT send optional commentary
 
 ---
 

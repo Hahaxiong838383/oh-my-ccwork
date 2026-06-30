@@ -1,0 +1,20 @@
+{
+  "ok": false,
+  "identity": "user",
+  "error": {
+    "type": "api_error",
+    "code": 1770002,
+    "message": "API error: [1770002] not found",
+    "detail": {
+      "log_id": "20260616131533B0AD6EFA2CD5DCA65A37",
+      "troubleshooter": "排查建议查看(Troubleshooting suggestions): https://open.feishu.cn/search?from=openapi&log_id=20260616131533B0AD6EFA2CD5DCA65A37&code=1770002&method_id=7075613434532462593"
+    }
+  },
+  "_notice": {
+    "update": {
+      "current": "1.0.22",
+      "latest": "1.0.53",
+      "message": "lark-cli 1.0.53 available, current 1.0.22"
+    }
+  }
+}
