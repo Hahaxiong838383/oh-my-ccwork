@@ -170,6 +170,8 @@ export function StudioPage({ autoStartTutorial = true }: StudioPageProps) {
         if (card.triggerInstruction) {
           const angle = pickFreshAngle(useKidsHubStore.getState().lastFramingAngle);
           useKidsHubStore.getState().setLastFramingAngle(angle.id);
+          // 拼接可视化：把本轮 framing 角度同步到 lastAssembly（getComposedPromptSampled 写入时还没选角度）
+          useKidsHubStore.getState().setLastAssemblyAngle({ id: angle.id, label: angle.label, hint: angle.hint });
           const instr = `${card.triggerInstruction}\n本次表达角度：【${angle.label}】——${angle.hint}。`;
           perfStartTurn('trigger');
           client.sendChatTrigger(instr);

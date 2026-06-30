@@ -6,10 +6,12 @@ import {
   getSceneCard,
   defaultVariableValues,
   composeSystemPrompt,
+  PROMPT_VARIABLES,
 } from '../prompts';
 import { sampleDeviceState } from '../prompts/sample';
 import { getKnowledge, getVoiceDefaultKnowledge } from '../knowledge/get-knowledge';
 import type { LoreSection } from '../knowledge/types';
+import { KNOWLEDGE_META, WORLD_CORE } from '../knowledge';
 
 const TOKEN_KEY = 'kidshub.token';
 const DRAFTS_KEY = 'kidshub.scenePromptDrafts';
@@ -30,6 +32,97 @@ export interface DebugEntry {
   kind: 'action' | 'asr' | 'llm' | 'tts' | 'prompt' | 'config' | 'perf' | 'avatar' | 'error';
   title: string;
   detail?: string;
+}
+
+/** 拼接可视化：单层数据（含原文 + 来源说明 + 字符数） */
+export interface AssemblyLayer {
+  /** 稳定 key，用于 UI 颜色映射 */
+  key: 'global' | 'scene' | 'addendum' | 'loreCore' | 'loreSections' | 'variables';
+  /** 中文展示标签 */
+  label: string;
+  /** 来源说明（文件路径 / 数据源） */
+  source: string;
+  /** 原文（未变量替换；variables 层为表格序列化） */
+  rawText: string;
+  /** 字符数（rawText.length） */
+  charCount: number;
+  /** UI 高亮色（tailwind class 直接用） */
+  accentClass: string;
+  /** 一句话给新同事的说明 */
+  hint: string;
+}
+
+/** 变量替换记录：本轮哪些变量被注入了什么值 + 是否本轮采样改写过 */
+export interface VariableSubstitution {
+  key: string;
+  label: string;
+  value: string;
+  /** 本轮事实采样改写了它（device_state 等） */
+  sampledThisTurn: boolean;
+}
+
+/** 引导可视化：单步快照（与场景卡 LastAssembly 并存，两者互斥/共存皆可） */
+export interface TutorialStepAssembly {
+  unitId: string;
+  unitTitle: string;
+  unitEmoji: string;
+  stepIndex: number;
+  /** 该单元总步数 */
+  stepTotal: number;
+  /** 当前步骤详情 */
+  step: {
+    id: string;
+    specStep: string;
+    expression: string;
+    target: string | null;
+    targetDescription: string | null;
+    /** 注入 {child_nickname} 后的旁白（实际播放文本） */
+    voiceCopy: string | null;
+    /** 旁白原文（未注入），方便看占位符位置 */
+    voiceCopyRaw: string | null;
+    durationMs: number | null;
+    remindCopy: string | null;
+    waitFor: string | null;
+    hideAvatar: boolean;
+    scene: string | null;
+    sound: string | null;
+    isUnitEnd: boolean;
+    /** ASR 推进关键词（hintsForTarget(waitFor)） */
+    advanceHints: string[];
+    /** LLM 兜底 system prompt（buildTutorialSystemPrompt(step) 全文） */
+    systemPrompt: string;
+  };
+  /** 当前阶段：speaking / waiting / celebrating / handoff */
+  phase: 'speaking' | 'waiting' | 'celebrating' | 'handoff';
+  remindCount: number;
+  /** 引导期会话元数据：kidshub 单元=feedback，其他=off */
+  captureMode: 'off' | 'feedback';
+  /** 注入用的孩子昵称（与场景卡同 store.variables.nickname；默认"指挥官"） */
+  nickname: string;
+  timestamp: number;
+}
+
+/** 拼接可视化：选卡触发后整条流水线的完整快照 */
+export interface LastAssembly {
+  cardId: string;
+  cardNo: number;
+  cardTitle: string;
+  /** device_state 等本轮采样选中的事实（按字段名 → 选中文本） */
+  picks: Record<string, string>;
+  /** L2 lore 本轮选中的节 */
+  loreSections: LoreSection[];
+  /** 本卡最近用过的 lore id（避重展示用） */
+  loreRecentReuse: string[];
+  /** 本轮 framing 角度 */
+  angle: { id: string; label: string; hint: string } | null;
+  /** 6 层有序快照（按组装顺序） */
+  layers: AssemblyLayer[];
+  /** 变量替换表（本轮注入） */
+  variableSubstitutions: VariableSubstitution[];
+  /** 最终下发给 server 的完整 system prompt（变量已替换） */
+  finalPrompt: string;
+  /** 触发时间戳（用于 UI 检测新触发触发瀑布流动画） */
+  timestamp: number;
 }
 
 interface KidsHubState {
@@ -67,6 +160,16 @@ interface KidsHubState {
   recentLoreByCard: Record<string, string[]>;
   // 采样版组装：device_state 事实采样 + 世界观 lore 注入，返回 prompt + picks + 本次 loreSections（供 debug/UI 展示注入内容）
   getComposedPromptSampled: () => { prompt: string; picks: Record<string, string>; loreSections: LoreSection[] };
+
+  // 拼接可视化：选卡瞬间的完整流水线快照（getComposedPromptSampled 内部写入；StudioPage 选卡副作用补 angle）
+  lastAssembly: LastAssembly | null;
+  setLastAssemblyAngle: (angle: { id: string; label: string; hint: string }) => void;
+
+  // 引导可视化：当前步骤快照（TutorialManager 副作用写入；引导退出 → null）
+  lastTutorialStep: TutorialStepAssembly | null;
+  setLastTutorialStep: (snapshot: TutorialStepAssembly) => void;
+  updateTutorialPhase: (phase: TutorialStepAssembly['phase'], remindCount: number) => void;
+  clearLastTutorialStep: () => void;
 
   // actions
   setToken: (t: string | null) => void;
@@ -161,6 +264,34 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
     lastFramingAngle: null,
     recentFactPicks: {},
     recentLoreByCard: {},
+    lastAssembly: null,
+    lastTutorialStep: null,
+
+    setLastAssemblyAngle: (angle) => {
+      set((s) => {
+        if (!s.lastAssembly) return s;
+        return { lastAssembly: { ...s.lastAssembly, angle } };
+      });
+    },
+
+    setLastTutorialStep: (snapshot) => set({ lastTutorialStep: snapshot }),
+
+    updateTutorialPhase: (phase, remindCount) => {
+      set((s) => {
+        if (!s.lastTutorialStep) return s;
+        // 只 phase / remindCount 变化时打个新 timestamp，保留 step 主体
+        return {
+          lastTutorialStep: {
+            ...s.lastTutorialStep,
+            phase,
+            remindCount,
+            timestamp: Date.now(),
+          },
+        };
+      });
+    },
+
+    clearLastTutorialStep: () => set({ lastTutorialStep: null }),
 
     setLastFramingAngle: (id) => set({ lastFramingAngle: id }),
 
@@ -304,13 +435,103 @@ export const useKidsHubStore = create<KidsHubState>((set, get) => {
       }
 
       // 3. 组装：把 lore {core, sections} 传给 compose（L1 core 常驻；仅 sections 非空时插入本场景素材块）
+      const mergedVars: Record<string, string> = { ...s.variables, device_state: snapshot };
       const prompt = composeSystemPrompt({
         globalTemplate: s.globalTemplate,
         scenePrompt,
-        variables: { ...s.variables, device_state: snapshot },
+        variables: mergedVars,
         addendum: s.addendum,
         lore: cardId ? { core: loreBundle.core, sections: loreBundle.sections } : undefined,
       });
+
+      // 4. 拼接可视化快照（angle 由 StudioPage 在选完角度后通过 setLastAssemblyAngle 补上）
+      if (cardId) {
+        const card = getSceneCard(cardId);
+        const layers: AssemblyLayer[] = [
+          {
+            key: 'global',
+            label: '① 全局 System Prompt',
+            source: 'prompts/global-prompt.ts · GLOBAL_SYSTEM_PROMPT',
+            rawText: s.globalTemplate,
+            charCount: s.globalTemplate.length,
+            accentClass: 'border-sky-400/50 bg-sky-500/10 text-sky-100',
+            hint: '小可的世界观底座（含 {scene_prompt} 占位 + 称呼/角色/红线）。每张卡都用同一份。',
+          },
+          {
+            key: 'scene',
+            label: `② 场景子 Prompt · ${card?.title ?? cardId}`,
+            source: `prompts/scene-cards.ts · card${card?.cardNo ?? '?'}`,
+            rawText: scenePrompt,
+            charCount: scenePrompt.length,
+            accentClass: 'border-emerald-400/50 bg-emerald-500/10 text-emerald-100',
+            hint: '替换全局模板里的 {scene_prompt} 占位。八张卡各自不同——核心是当前这张。',
+          },
+          {
+            key: 'addendum',
+            label: '③ 工程附加规则（addendum）',
+            source: 'prompts/addendum.ts · DEFAULT_ADDENDUM',
+            rawText: s.addendum,
+            charCount: s.addendum.length,
+            accentClass: 'border-amber-400/50 bg-amber-500/10 text-amber-100',
+            hint: '非产品定义原文：句级表情标记、防示例复读、KidsHub 全局响应。空 = 关闭。',
+          },
+          {
+            key: 'loreCore',
+            label: '④ 世界观 L1 核心（常驻）',
+            source: 'knowledge/world-core.ts · WORLD_CORE',
+            rawText: `${KNOWLEDGE_META.boundaryDeclaration}\n\n${WORLD_CORE}`,
+            charCount: WORLD_CORE.length + KNOWLEDGE_META.boundaryDeclaration.length + 2,
+            accentClass: 'border-violet-400/50 bg-violet-500/10 text-violet-100',
+            hint: '每张卡都注入，让小可"天生就懂"方舟世界。开头一行死活分离声明防 LLM 把"存在"讲成"拥有"。',
+          },
+          {
+            key: 'loreSections',
+            label: `⑤ 世界观 L2 本场景素材（本轮 ${loreBundle.sections.length} 节）`,
+            source: `knowledge/lore-sections.ts · CARD_LORE_MAP[${cardId}] → ${loreBundle.sections.map((x) => x.id).join(',') || '∅'}`,
+            rawText: loreBundle.sections.length === 0
+              ? '（本卡未路由任何 L2 素材）'
+              : loreBundle.sections.map((sec) => `【${sec.title}】(${sec.id})\n${sec.body}`).join('\n\n'),
+            charCount: loreBundle.sections.reduce((n, sec) => n + sec.body.length + sec.title.length, 0),
+            accentClass: 'border-fuchsia-400/50 bg-fuchsia-500/10 text-fuchsia-100',
+            hint: '按卡路由 1-2 节素材（CARD_LORE_MAP 候选 → 避重随机挑）。本卡最近用过的节这轮回避。',
+          },
+          {
+            key: 'variables',
+            label: '⑥ 变量替换（{key} → 值）',
+            source: 'prompts/variables.ts · PROMPT_VARIABLES',
+            rawText: Object.entries(mergedVars)
+              .map(([k, v]) => `{${k}} → ${v || '(空)'}`)
+              .join('\n'),
+            charCount: Object.entries(mergedVars).reduce((n, [k, v]) => n + k.length + (v?.length ?? 0), 0),
+            accentClass: 'border-orange-400/50 bg-orange-500/10 text-orange-100',
+            hint: '把上面 5 层里的 {nickname} {age} {device_state} 等占位换成真值。device_state 等多条事实采样轮换防重复。',
+          },
+        ];
+
+        const variableSubstitutions: VariableSubstitution[] = PROMPT_VARIABLES.map((v) => ({
+          key: v.key,
+          label: v.label,
+          value: mergedVars[v.key] ?? '',
+          sampledThisTurn: Object.prototype.hasOwnProperty.call(picks, v.key),
+        }));
+
+        set({
+          lastAssembly: {
+            cardId,
+            cardNo: card?.cardNo ?? 0,
+            cardTitle: card?.title ?? cardId,
+            picks,
+            loreSections: loreBundle.sections,
+            loreRecentReuse: cardLoreRecent,
+            angle: null,
+            layers,
+            variableSubstitutions,
+            finalPrompt: prompt,
+            timestamp: Date.now(),
+          },
+        });
+      }
+
       return { prompt, picks, loreSections: loreBundle.sections };
     },
 

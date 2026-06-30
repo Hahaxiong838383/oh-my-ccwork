@@ -21,6 +21,7 @@ import {
   SKIP_HINTS,
   SKIP_RESPONSE,
   buildTutorialSystemPrompt,
+  describeTarget,
   matchHints,
   type TutorialStep,
 } from './tutorial-types';
@@ -62,6 +63,10 @@ export function TutorialManager(): null {
   const generation = useTutorialStore((s) => s.generation);
 
   const pushDebug = useKidsHubStore((s) => s.pushDebug);
+  // 引导可视化：把当前步骤快照同步到 store，供 PromptVisualizer 引导视图渲染
+  const setLastTutorialStep = useKidsHubStore((s) => s.setLastTutorialStep);
+  const updateTutorialPhase = useKidsHubStore((s) => s.updateTutorialPhase);
+  const clearLastTutorialStep = useKidsHubStore((s) => s.clearLastTutorialStep);
 
   // 第 3 次提醒过渡语 / 跳过回应 播完后要做的事（playback_end natural 时执行）
   const afterSpeechRef = useRef<null | (() => void)>(null);
@@ -103,9 +108,12 @@ export function TutorialManager(): null {
         const a = useAvatarStore.getState();
         a.setTutorialLock(false);
         a.endTurn();
+        // 引导可视化快照清空（退出引导）
+        clearLastTutorialStep();
       };
     }
     return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive]);
 
   // ── 步进副作用：表情 + 话术/定时演出 + tutorial 系统指令 ──
@@ -138,6 +146,40 @@ export function TutorialManager(): null {
     }
 
     pushDebug({ kind: 'action', title: `🧭 引导[${unitId}] Step ${step.specStep}（${step.id}）` });
+
+    // 引导可视化：写入步骤快照（5 件事白盒：旁白 / 等待目标 / LLM 兜底 / 提醒话术 / 元信息）
+    const unit = getUnit(unitId);
+    const nicknameVal = useKidsHubStore.getState().variables.nickname || '指挥官';
+    setLastTutorialStep({
+      unitId,
+      unitTitle: unit?.title ?? unitId,
+      unitEmoji: unit?.emoji ?? '🧭',
+      stepIndex,
+      stepTotal: unit?.steps.length ?? 0,
+      step: {
+        id: step.id,
+        specStep: step.specStep,
+        expression: step.expression,
+        target: step.target,
+        targetDescription: step.target ? describeTarget(step.target) : null,
+        voiceCopy: step.voiceCopy ? applyVars(step.voiceCopy) : null,
+        voiceCopyRaw: step.voiceCopy,
+        durationMs: step.durationMs ?? null,
+        remindCopy: step.remindCopy,
+        waitFor: step.waitFor,
+        hideAvatar: step.hideAvatar,
+        scene: step.scene ?? null,
+        sound: step.sound ?? null,
+        isUnitEnd: step.isUnitEnd,
+        advanceHints: step.waitFor ? hintsForTarget(step.waitFor) : [],
+        systemPrompt: buildTutorialSystemPrompt(step),
+      },
+      phase: useTutorialStore.getState().phase,
+      remindCount: useTutorialStore.getState().remindCount,
+      captureMode: unitId === 'kidshub' ? 'feedback' : 'off',
+      nickname: nicknameVal,
+      timestamp: Date.now(),
+    });
 
     if (step.voiceCopy) {
       void speakLine(applyVars(step.voiceCopy));
@@ -194,6 +236,14 @@ export function TutorialManager(): null {
   useEffect(() => {
     if (isActive) outroSpokenRef.current = false;
   }, [isActive, generation]);
+
+  // 引导可视化：phase / remindCount 变化时同步到 lastTutorialStep
+  // （step 副作用已写主体快照，这里只更新两个会随时间变化的字段，避免重建整个 snapshot）
+  useEffect(() => {
+    if (!isActive) return;
+    updateTutorialPhase(phase, remindCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, phase, remindCount]);
 
   // ── 30s 超时提醒（仅 waiting 期；remindCount 变化重新 arm 下一轮） ──
   useEffect(() => {
