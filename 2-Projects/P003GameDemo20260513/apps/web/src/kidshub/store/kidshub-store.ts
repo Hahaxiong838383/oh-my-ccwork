@@ -20,10 +20,11 @@ const DRAFTS_KEY = 'kidshub.scenePromptDrafts';
 // globalTemplate.v5：【称呼】再注入 {age}（登录页收集孩子年龄，让小可按年龄把握用词深浅，不拿年龄施压）
 // globalTemplate.v4：【称呼】注入 {gender}（登录页收集孩子性别，让小可知道但不贴性别标签）
 // globalTemplate.v3：世界观+读写台玻璃光学原理（画面在 3 米外，护眼根本逻辑）
-// addendum.v5：规则 8 收紧——参照物只许"读写台玻璃"，去掉"书本"（川哥钦定 2026-06-13）
+// addendum.v6：规则 5 表情映射表去动作化——表情名改纯情绪词（挠头→疑惑、比心→喜爱、跳起→开心），
+//   DeepSeek 不再把动作词当台词念出来（川哥 2026-07-01）；规则 8 参照物仍只许"读写台玻璃"。
 const GLOBALS_KEY = 'kidshub.globalTemplate.v5';
 const VARS_KEY = 'kidshub.variables';
-const ADDENDUM_KEY = 'kidshub.addendum.v5';
+const ADDENDUM_KEY = 'kidshub.addendum.v6';
 // 需求3：小可语速（1 / 1.5 / 2），持久化
 const VOICE_SPEED_KEY = 'kidshub.voiceSpeed';
 
