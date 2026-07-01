@@ -508,7 +508,7 @@
           </div>
           <div class="right">
             <el-tag type="warning" size="small">用户反馈真实数据 · 其余看板演示</el-tag>
-            <el-tag :type="isAdmin ? 'danger' : 'info'" size="small">{{ isAdmin ? '管理员' : 'B端用户' }}</el-tag>
+            <el-tag :type="currentUser.role === 'admin' ? 'danger' : (currentUser.role === 'editor' ? 'warning' : 'info')" size="small">{{ currentUser.role === 'admin' ? '管理员' : (currentUser.role === 'editor' ? '编辑员' : '游客 · 只读') }}</el-tag>
             <el-dropdown @command="handleDropdown">
               <span style="cursor:pointer;display:flex;align-items:center;gap:6px">
                 <el-avatar :size="32">{{ currentUser.username.charAt(0).toUpperCase() }}</el-avatar>
@@ -1187,7 +1187,7 @@
             <div class="kh-wrap">
               <div class="kh-nav">
                 <div class="kh-logo">KidsHub 后台</div>
-                <button v-for="n in khNavs" :key="n.k" :class="{on: khNav===n.k}" @click="khSelectNav(n.k)">{{ n.l }}</button>
+                <button v-for="n in visibleKhNavs" :key="n.k" :class="{on: khNav===n.k}" @click="khSelectNav(n.k)">{{ n.l }}</button>
                 <button class="kh-back" @click="handleMenuSelect('dashboard')">⇠ 数据看板</button>
               </div>
               <div class="kh-main" style="display:flex;gap:0;padding:0">
@@ -1493,7 +1493,7 @@
                 </div>
 
                 <!-- 邀请码管理 -->
-                <div v-if="khNav==='invites'" style="flex:1;padding:20px;min-width:0">
+                <div v-if="khNav==='invites' && canManageInvites" style="flex:1;padding:20px;min-width:0">
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
                     <div>
                       <div class="kh-h1">邀请码管理</div>
@@ -2012,13 +2012,15 @@
     function getToken() {
       return localStorage.getItem('kidshub_admin_token') || '';
     }
-    function saveAuth(token, username) {
+    function saveAuth(token, username, role) {
       if (token) localStorage.setItem('kidshub_admin_token', token);
       if (username) localStorage.setItem('kidshub_admin_username', username);
+      if (role) localStorage.setItem('kidshub_admin_role', role);
     }
     function clearAuth() {
       localStorage.removeItem('kidshub_admin_token');
       localStorage.removeItem('kidshub_admin_username');
+      localStorage.removeItem('kidshub_admin_role');
     }
 
     var allMockUsers = generateMockUsers(86);
@@ -2039,7 +2041,11 @@
         var loginLoading = ref(false);
         var loginForm = reactive({ username: '', password: '' });
         var currentUser = reactive({ username: '', role: '' });
-        var isAdmin = computed(function() { return currentUser.role === 'admin'; });
+        // isAdmin 语义 = 「可编辑/特权视图」（admin 或 editor），与只读 guest 相对。
+        // editor（clw1-5）除邀请码管理外与 admin 同权，故绝大多数菜单/编辑入口沿用 isAdmin 门控。
+        var isAdmin = computed(function() { return currentUser.role === 'admin' || currentUser.role === 'editor'; });
+        // canManageInvites = 邀请码管理专属，仅 admin。editor 看不到该 tab、也进不去（后端 403 兜底）。
+        var canManageInvites = computed(function() { return currentUser.role === 'admin'; });
         var currentPage = ref('dashboard');
         var asideCollapsed = ref(false);
 
@@ -2054,7 +2060,20 @@
           if (tok) {
             isLoggedIn.value = true;
             currentUser.username = localStorage.getItem('kidshub_admin_username') || '管理员';
-            currentUser.role = 'admin';
+            // 乐观恢复 role（仅 UX，默认最小权限 guest）；随即打 /api/auth/check 用服务端真实 role 覆盖，
+            // 防 localStorage 被篡改提权（前端 role 仅 UX，后端 403 才是真防线）。
+            currentUser.role = localStorage.getItem('kidshub_admin_role') || 'guest';
+            fetch('/api/auth/check?token=' + encodeURIComponent(tok))
+              .then(function (r) { return r.json(); })
+              .then(function (d) {
+                if (d && d.ok && d.role) {
+                  currentUser.role = d.role;
+                  localStorage.setItem('kidshub_admin_role', d.role);
+                } else {
+                  handleAuthError();
+                }
+              })
+              .catch(function () { /* 网络抖动不强制登出，保留乐观恢复 */ });
           }
         });
 
@@ -2091,9 +2110,10 @@
               // 防后端契约漂移成 {ok:true} 无 token 时误放行
               if (data && data.ok && data.token) {
                 currentUser.username = loginForm.username;
-                currentUser.role = 'admin';
+                // 用后端返回的真实 role（admin / editor / guest），不再写死 admin。
+                currentUser.role = data.role || 'guest';
                 isLoggedIn.value = true;
-                saveAuth(data.token, loginForm.username);
+                saveAuth(data.token, loginForm.username, currentUser.role);
                 ElementPlus.ElMessage.success('登录成功');
                 loadThemes();  // 启动加载主题词表（驱动所有 chip 渲染）
                 nextTick(function() { initCharts(); });
@@ -2667,6 +2687,10 @@
           { k: 'invites', l: '邀请码管理' }, { k: 'ledger', l: '贡献账本' }, { k: 'vault', l: '金点子库' }, { k: 'version', l: '版本决策' },
           { k: 'revisit', l: '复访触发' }, { k: 'intercept', l: '流失拦截' }, { k: 'metrics', l: '度量看板' }, { k: 'notify', l: '回告路由' }
         ];
+        // 邀请码管理 tab 仅 admin 可见；editor/guest 过滤掉（后端 403 兜底，前端隐藏只是 UX）。
+        var visibleKhNavs = computed(function () {
+          return canManageInvites.value ? khNavs : khNavs.filter(function (n) { return n.k !== 'invites'; });
+        });
         var khThemes = [
           { name: '夜航·内容', n: 12, mood: '期待' }, { name: '专注·交互', n: 9, mood: '吐槽' },
           { name: '皮肤·养成', n: 7, mood: '愿望' }, { name: '周报·可读性', n: 4, mood: '困惑' }
@@ -2801,6 +2825,7 @@
             .finally(function () { childProfiles.loading = false; });
         }
         function loadInvites() {
+          if (!canManageInvites.value) return; // 邀请码管理仅 admin；editor/guest 直接跳过（后端 403 兜底）
           var token = getToken();
           if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
           inviteList.loading = true;
@@ -3978,6 +4003,8 @@
           loginForm: loginForm,
           currentUser: currentUser,
           isAdmin: isAdmin,
+          canManageInvites: canManageInvites,
+          visibleKhNavs: visibleKhNavs,
           currentPage: currentPage,
           currentPageTitle: currentPageTitle,
           asideCollapsed: asideCollapsed,

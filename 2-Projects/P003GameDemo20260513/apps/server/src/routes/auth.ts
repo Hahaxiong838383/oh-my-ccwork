@@ -4,20 +4,24 @@ import { Hono } from 'hono';
 /**
  * KidsHub-AI 工作台 / 运营台登录（demo 级）
  *
- * 两类账号：
+ * 三类账号：
  *  - admin：凭据走 env（STUDIO_USER / STUDIO_PASS，放 .env.local 不入 git）。全权限（读 + 写）。
+ *  - editor：可编辑账号（clw1-5 等）。除「邀请码管理」外与 admin 同权（可读可写）。凭据走 env
+ *    （STUDIO_EDITOR_USERS = 逗号分隔用户名 + STUDIO_EDITOR_PASS = 统一口令，放 .env.local 不入 git；
+ *    未配置则不存在此类账号）。邀请码管理（/api/admin/invites）对 editor 一律 403，见 admin-data.ts。
  *  - guest：只读游客（查看所有内容，无任何编辑权）。凭据走 env 带默认值
  *    （STUDIO_GUEST_USER / STUDIO_GUEST_PASS，默认 guest / 123456 —— 公开只读门票，
  *    零配置即生效；想改或关闭就配 env，STUDIO_GUEST_USER='' 可禁用 guest）。
  *
  * token 存内存（重启失效），按 token 关联 role；写操作的真防线在各路由中间件
- * （admin-data / feedback 对 guest 的非 GET 请求一律 403），前端隐藏按钮只是 UX。
+ * （admin-data / feedback / dev-items / themes 用 canWrite 门控，非 GET 且非 admin/editor 一律 403；
+ * 邀请码端点额外用 isAdminRole 门控，editor/guest 连 GET 都 403），前端隐藏按钮只是 UX。
  */
 const validTokens = new Set<string>();
 const tokenUsers = new Map<string, string>();
 const tokenRoles = new Map<string, Role>();
 
-export type Role = 'admin' | 'guest';
+export type Role = 'admin' | 'editor' | 'guest';
 
 let failCount = 0;
 let lockedUntil = 0;
@@ -38,16 +42,35 @@ export function getTokenRole(token: string): Role | undefined {
   return tokenRoles.get(token);
 }
 
+/** 可写角色门控（真防线）：admin 或 editor 可写；guest 只读。各路由非 GET 请求用它判断。 */
+export function canWrite(token: string): boolean {
+  const role = tokenRoles.get(token);
+  return role === 'admin' || role === 'editor';
+}
+
+/** admin 专属能力门控（真防线）：仅 admin。用于邀请码管理等 editor 也不可触达的端点。 */
+export function isAdminRole(token: string): boolean {
+  return tokenRoles.get(token) === 'admin';
+}
+
 authRoute.post('/login', async (c) => {
   const adminUser = process.env.STUDIO_USER;
   const adminPass = process.env.STUDIO_PASS;
+  // editor：可编辑账号（clw1-5 等），除邀请码管理外与 admin 同权。凭据走 env，未配置则不存在此类账号。
+  // STUDIO_EDITOR_USERS = 逗号分隔用户名；STUDIO_EDITOR_PASS = 统一口令。
+  const editorUsers = (process.env.STUDIO_EDITOR_USERS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const editorPass = process.env.STUDIO_EDITOR_PASS ?? '';
   // guest 默认 guest/123456（公开只读门票）；env 可覆盖，置空字符串可禁用。
   const guestUser = process.env.STUDIO_GUEST_USER ?? 'guest';
   const guestPass = process.env.STUDIO_GUEST_PASS ?? '123456';
 
   const adminConfigured = Boolean(adminUser && adminPass);
+  const editorConfigured = editorUsers.length > 0 && Boolean(editorPass);
   const guestConfigured = Boolean(guestUser && guestPass);
-  if (!adminConfigured && !guestConfigured) {
+  if (!adminConfigured && !editorConfigured && !guestConfigured) {
     return c.json({ ok: false, error: 'auth 未配置' }, 503);
   }
 
@@ -69,6 +92,8 @@ authRoute.post('/login', async (c) => {
   let role: Role | null = null;
   if (adminConfigured && username === adminUser && password === adminPass) {
     role = 'admin';
+  } else if (editorConfigured && editorUsers.includes(username) && password === editorPass) {
+    role = 'editor';
   } else if (guestConfigured && username === guestUser && password === guestPass) {
     role = 'guest';
   }

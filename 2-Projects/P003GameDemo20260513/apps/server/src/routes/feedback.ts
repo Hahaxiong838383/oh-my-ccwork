@@ -7,7 +7,7 @@ import {
   feedbackStore,
   type FeedbackItem,
 } from '../feedback-store.js';
-import { getTokenRole, getTokenUser, isValidToken } from './auth.js';
+import { canWrite, getTokenUser, isValidToken } from './auth.js';
 
 const feedbackRoute = new Hono();
 
@@ -46,8 +46,8 @@ feedbackRoute.use('*', async (c, next) => {
   if (!token || !isValidToken(token)) {
     return c.json({ ok: false, error: 'unauthorized' }, 401);
   }
-  // 只读门控（真防线）：guest 仅可 GET（看反馈）；改状态/备注（PATCH）一律 403。
-  if (c.req.method !== 'GET' && getTokenRole(token) !== 'admin') {
+  // 只读门控（真防线）：guest 仅可 GET（看反馈）；改状态/备注（PATCH）需 admin/editor，否则 403。
+  if (c.req.method !== 'GET' && !canWrite(token)) {
     return c.json({ ok: false, error: 'forbidden_readonly', message: '游客账号只读，无编辑权限' }, 403);
   }
   await next();

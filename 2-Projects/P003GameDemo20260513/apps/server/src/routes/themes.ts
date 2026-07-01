@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { themeStore } from '../themes-store.js';
-import { getTokenRole, getTokenUser, isValidToken } from './auth.js';
+import { canWrite, getTokenUser, isValidToken } from './auth.js';
 
 /**
  * /api/feedback-themes
@@ -37,7 +37,7 @@ themesRoute.use('*', async (c, next) => {
   if (!token || !isValidToken(token)) {
     return c.json({ ok: false, error: 'unauthorized' }, 401);
   }
-  if (c.req.method !== 'GET' && getTokenRole(token) !== 'admin') {
+  if (c.req.method !== 'GET' && !canWrite(token)) {
     return c.json({ ok: false, error: 'forbidden_readonly', message: '游客账号只读，无编辑权限' }, 403);
   }
   await next();

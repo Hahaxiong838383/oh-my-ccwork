@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { accountStore } from '../account-store.js';
 import { conversationStore } from '../conversation-store.js';
 import { profileStore } from '../profile-store.js';
-import { getTokenRole, isValidToken } from './auth.js';
+import { canWrite, isAdminRole, isValidToken } from './auth.js';
 import { resetAllQuotas } from '../guard.js';
 
 // hub 看板数据端点：admin 看所有账号的孩子档案 + 设备（admin token 鉴权，区别于 parent 自己的 /api/profile 邀请码 JWT）。
@@ -14,9 +14,14 @@ adminDataRoute.use('*', async (c, next) => {
   if (!token || !isValidToken(token)) {
     return c.json({ ok: false, error: 'unauthorized' }, 401);
   }
-  // 只读门控（真防线）：guest 仅可 GET（查看）；任何写操作（POST/DELETE/PATCH）一律 403。
+  // 邀请码管理（/api/admin/invites 及 /invites/:code）= admin 专属：editor / guest 连查看（GET）都 403。
+  // editor「除邀请码管理外与 admin 同权」的边界就落在这里（真防线；前端隐藏邀请码 tab 只是 UX）。
+  if (/\/invites(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+    return c.json({ ok: false, error: 'forbidden_invites', message: '无邀请码管理权限' }, 403);
+  }
+  // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
   // 前端隐藏编辑按钮只是 UX，这里才是 guest 改不了数据的保证。
-  if (c.req.method !== 'GET' && getTokenRole(token) !== 'admin') {
+  if (c.req.method !== 'GET' && !canWrite(token)) {
     return c.json({ ok: false, error: 'forbidden_readonly', message: '游客账号只读，无编辑权限' }, 403);
   }
   await next();
