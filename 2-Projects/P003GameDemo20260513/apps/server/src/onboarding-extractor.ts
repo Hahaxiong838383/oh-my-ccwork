@@ -1,4 +1,5 @@
 import type { FamilyMember } from './profile-store.js';
+import { callExtractionLlm } from './llm-extract.js';
 
 // 小可 onboarding 建档信息抽取：从对话抽取孩子【首次自报】的 昵称/性别/出生年月，
 // 产出 OnboardingPatch 写回 profile-store（custom-llm / pipeline onboarding 期每轮异步调用，失败不阻断语音）。
@@ -24,38 +25,9 @@ const EXTRACT_SYSTEM =
 
 const EXTRACT_TIMEOUT_MS = 8000;
 
-// 非流式调 gemini 网关抽取（与对话同网关/key）。带超时；任何失败返回 null（不阻断、不更新）。
+// 非流式抽取，按 LLM_PROVIDER 走对话同源模型（minimax/deepseek/gemini）。失败返回 null（不阻断、不更新）。
 async function callExtractLlm(prompt: string): Promise<string | null> {
-  const proxyUrl = process.env.GEMINI_PROXY_URL;
-  const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_DEFAULT_MODEL ?? 'gemini-2.5-flash-lite';
-  if (!proxyUrl || !apiKey) return null;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), EXTRACT_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${proxyUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      signal: ctrl.signal,
-      body: JSON.stringify({
-        model,
-        stream: false,
-        temperature: 0,
-        max_tokens: 256,
-        messages: [
-          { role: 'system', content: EXTRACT_SYSTEM },
-          { role: 'user', content: prompt },
-        ],
-      }),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    return data.choices?.[0]?.message?.content ?? null;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
+  return callExtractionLlm(EXTRACT_SYSTEM, prompt, { maxTokens: 256, timeoutMs: EXTRACT_TIMEOUT_MS });
 }
 
 /**

@@ -5,6 +5,7 @@ import { conversationStore } from './conversation-store.js';
 import type { AuthContext } from './auth-jwt.js';
 import { createGeminiLlmClient, type GeminiLlmClient, type ChatHistoryTurn } from './providers/gemini-llm.js';
 import { createDeepseekLlmClient } from './providers/deepseek-llm.js';
+import { createMinimaxLlmClient } from './providers/minimax-llm.js';
 import { createVolcAsrClient, type VolcAsrClient } from './providers/volc-asr.js';
 import { createVolcTtsClient, type VolcTtsClient } from './providers/volc-tts.js';
 import { createExpressionFilter, stripExpressionTags } from './expression-filter.js';
@@ -106,9 +107,14 @@ export class VoicePipeline {
     this.ws = ws;
     this.ipHash = hashIp(clientIp);
     this.authContext = authContext;
-    // 按 LLM_PROVIDER 工厂切换：'deepseek' 走 DeepSeek 官方（个人站部署），默认 gemini（公司侧零影响）
+    // 按 LLM_PROVIDER 工厂切换：'minimax' 走 MiniMax（reasoning 剥离 think），'deepseek' 走 DeepSeek 官方，默认 gemini。
     const provider = (process.env.LLM_PROVIDER || '').toLowerCase();
-    const rawClient = provider === 'deepseek' ? createDeepseekLlmClient() : createGeminiLlmClient();
+    const rawClient =
+      provider === 'minimax'
+        ? createMinimaxLlmClient()
+        : provider === 'deepseek'
+          ? createDeepseekLlmClient()
+          : createGeminiLlmClient();
     this.llm = rawClient as GeminiLlmClient & { abort?: () => void };
     // L_curriculum：连接时预热 KG（幂等，读 ~4MB JSON）。避免首个 ASR final 时才同步加载拖 TTFT。
     curriculumKG.load();

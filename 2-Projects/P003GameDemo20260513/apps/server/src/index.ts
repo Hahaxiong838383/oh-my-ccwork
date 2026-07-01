@@ -233,6 +233,8 @@ function logProviderStatus(): void {
   let llmOk = false;
   if (provider === 'deepseek') {
     llmOk = Boolean(process.env.DEEPSEEK_API_KEY);
+  } else if (provider === 'minimax') {
+    llmOk = Boolean(process.env.MINIMAX_API_KEY);
   } else {
     llmOk = Boolean(
       process.env.GEMINI_PROXY_URL && process.env.GEMINI_API_KEY && process.env.GEMINI_DEFAULT_MODEL,
