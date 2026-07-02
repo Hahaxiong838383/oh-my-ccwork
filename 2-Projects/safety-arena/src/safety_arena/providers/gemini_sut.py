@@ -5,8 +5,7 @@
 - classifier:用一个快模型并行判**输入**风险 —— 这正是平台要验证"该不该给小可加"的那个独立检测器。
 - 两条流用 asyncio 并发跑,谁先到谁的事件 t_ms 就更小,归并成 Trace。
 
-凭据全部从 env 读,绝不硬编码。本地 GEMINI_API_KEY 在 Keychain:
-  export GEMINI_API_KEY=$(security find-generic-password -s gemini-proxy-token -a gemini-proxy -w)
+凭据全部从 env 读,绝不硬编码:GEMINI_PROXY_URL(OpenAI 兼容网关 /v1)+ GEMINI_API_KEY。
 
 ⚠️ gemini-2.5-flash 是 thinking 模型,reasoning 会吃 max_tokens 且 thinking 阶段无 content 输出
 (表现为 TTFT 偏高、然后内容集中吐出)——这是真实特性,平台如实呈现,不人为抹平。
@@ -66,7 +65,7 @@ class GeminiSut:
         self.name = self.gen_model
         if not self.base_url or not self.api_key:
             raise RuntimeError(
-                "GEMINI_PROXY_URL / GEMINI_API_KEY 未配置(本地 key 在 Keychain gemini-proxy-token)"
+                "GEMINI_PROXY_URL / GEMINI_API_KEY 未配置(走环境变量传入)"
             )
 
     def _headers(self) -> dict:

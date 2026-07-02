@@ -4,10 +4,10 @@
 
 | 文件 | 条数 | 来源 | 用途 |
 |------|------|------|------|
-| `k12_testset_v1.jsonl` | 23 | 川哥整理(合成,带 `risk_category`/`intent`/`age_group` 标注) | 按类别混淆 + 漏判定位 |
+| `k12_testset_v1.jsonl` | 23 | 内部整理(合成,带 `risk_category`/`intent`/`age_group` 标注) | 按类别混淆 + 漏判定位 |
 | `safe_child_llm_prompts.json` | 100 | Safe-Child-LLM(arXiv:2506.13510,公开数据集) | 总召回 |
 
-> 原始素材在川哥本地 `~/Documents/P003 文件/.../AI 安全红线/`;此处为评测固化副本。
+> 此处为评测固化副本(原始素材内部留存)。
 > 另有 KORA 风险分类法(8 大类 25 风险)用于规则的 `category` 归类对齐,见 korabench.ai。
 
 ## 重要边界

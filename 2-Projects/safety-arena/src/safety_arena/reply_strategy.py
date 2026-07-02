@@ -21,7 +21,7 @@ class ReplyStrategy:
 
 
 # 默认策略表:按 high 风险的"该怎么回"分流。categories 对齐 classifier / 规则词库的 KORA 类。
-# guide 是初版话术(占位,等川哥按心理学论文迭代),刻意写成"指引"而非固定句子。
+# guide 是初版话术(占位,待按 K12 心理学研究迭代),刻意写成"指引"而非固定句子。
 DEFAULT_STRATEGIES: list[ReplyStrategy] = [
     ReplyStrategy(
         "psych_crisis", "心理危机", ["self_harm", "mental_health", "emotional"],
