@@ -6,13 +6,18 @@ AI 前沿理论雷达 - 每日 08:00 执行
 输出: /tmp/theory-radar-data.json
 """
 import json
+import os
+import random
+import socket
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Optional
 
 # 加载 graph_builder（与本脚本同目录）
 sys.path.insert(0, str(Path(__file__).parent))
@@ -25,8 +30,26 @@ except ImportError:
 
 BJ_TZ = timezone(timedelta(hours=8))
 OUTPUT_FILE = "/tmp/theory-radar-data.json"
-ARXIV_API = "http://export.arxiv.org/api/query"
+ARXIV_API_ENDPOINTS = [
+    endpoint.strip().rstrip("/")
+    for endpoint in os.getenv(
+        "THEORY_RADAR_ARXIV_ENDPOINTS",
+        "https://export.arxiv.org/api/query,http://export.arxiv.org/api/query",
+    ).split(",")
+    if endpoint.strip()
+]
+ARXIV_USER_AGENT = os.getenv(
+    "THEORY_RADAR_USER_AGENT",
+    "cc-theory-radar/1.1 (+https://multica.cli4.hahaxiong.cc/settings)",
+)
+ARXIV_TIMEOUT = float(os.getenv("THEORY_RADAR_ARXIV_TIMEOUT", "25"))
+ARXIV_MAX_ATTEMPTS = int(os.getenv("THEORY_RADAR_ARXIV_MAX_ATTEMPTS", "3"))
+ARXIV_REQUEST_INTERVAL = float(os.getenv("THEORY_RADAR_ARXIV_INTERVAL", "5"))
+ARXIV_RETRY_BASE_DELAY = float(os.getenv("THEORY_RADAR_ARXIV_RETRY_BASE_DELAY", "8"))
+RECENT_DAYS = int(os.getenv("THEORY_RADAR_DAYS", "3"))
+FALLBACK_DAYS = int(os.getenv("THEORY_RADAR_FALLBACK_DAYS", "7"))
 GRAPH_PATH = Path(__file__).parent.parent.parent.parent.parent / "tasks" / "theory-radar" / "graph.json"
+FETCH_ERRORS = []
 
 # arXiv XML 命名空间
 NS = {
@@ -106,7 +129,58 @@ RELEVANCE_KEYWORDS = [
 ]
 
 
-def fetch_arxiv(query: str, max_results: int = 5) -> list:
+def _retry_delay(exc, attempt: int) -> float:
+    retry_after = None
+    if isinstance(exc, urllib.error.HTTPError):
+        retry_after = exc.headers.get("Retry-After")
+    if retry_after:
+        try:
+            return min(float(retry_after), 90.0)
+        except ValueError:
+            pass
+    return min(ARXIV_RETRY_BASE_DELAY * (2 ** (attempt - 1)), 60.0) + random.uniform(0.5, 2.5)
+
+
+def _is_retryable(exc) -> bool:
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code in {429, 500, 502, 503, 504}
+    return isinstance(exc, (urllib.error.URLError, TimeoutError, socket.timeout))
+
+
+def fetch_arxiv_xml(params: dict, label: str) -> Optional[str]:
+    """Fetch arXiv Atom XML with HTTPS-first endpoint fallback and bounded backoff."""
+    query = urllib.parse.urlencode(params)
+    last_error = None
+    for endpoint in ARXIV_API_ENDPOINTS:
+        url = f"{endpoint}?{query}"
+        for attempt in range(1, max(1, ARXIV_MAX_ATTEMPTS) + 1):
+            req = urllib.request.Request(url, headers={"User-Agent": ARXIV_USER_AGENT})
+            try:
+                with urllib.request.urlopen(req, timeout=ARXIV_TIMEOUT) as resp:
+                    return resp.read().decode("utf-8")
+            except Exception as exc:
+                last_error = exc
+                err_text = f"{type(exc).__name__}: {exc}"
+                if isinstance(exc, urllib.error.HTTPError):
+                    err_text = f"HTTP {exc.code}: {exc.reason}"
+                print(
+                    f"[WARN] arXiv fetch failed ({label}, endpoint={endpoint}, attempt={attempt}/{ARXIV_MAX_ATTEMPTS}): {err_text}",
+                    file=sys.stderr,
+                )
+                if attempt < ARXIV_MAX_ATTEMPTS and _is_retryable(exc):
+                    time.sleep(_retry_delay(exc, attempt))
+                    continue
+                break
+
+    FETCH_ERRORS.append({
+        "label": label,
+        "params": params,
+        "error": str(last_error) if last_error else "unknown",
+    })
+    return None
+
+
+def fetch_arxiv(query: str, max_results: int = 5, days: int = RECENT_DAYS) -> list:
     """查询 arXiv API，返回最近 3 天内的论文列表"""
     params = {
         "search_query": query,
@@ -114,18 +188,18 @@ def fetch_arxiv(query: str, max_results: int = 5) -> list:
         "sortOrder": "descending",
         "max_results": max_results * 2,  # 多取一些，过滤后选最优
     }
-    url = f"{ARXIV_API}?{urllib.parse.urlencode(params)}"
-    req = urllib.request.Request(url, headers={"User-Agent": "cc-theory-radar/1.0"})
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            xml_text = resp.read().decode("utf-8")
-    except Exception as e:
-        print(f"[WARN] arXiv fetch failed ({query[:40]}): {e}", file=sys.stderr)
+    xml_text = fetch_arxiv_xml(params, query[:80])
+    if not xml_text:
         return []
 
-    root = ET.fromstring(xml_text)
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError as e:
+        FETCH_ERRORS.append({"label": query[:80], "params": params, "error": f"XML parse: {e}"})
+        print(f"[WARN] arXiv XML parse failed ({query[:40]}): {e}", file=sys.stderr)
+        return []
     papers = []
-    cutoff = datetime.now(timezone.utc) - timedelta(days=3)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
     for entry in root.findall("atom:entry", NS):
         title_el = entry.find("atom:title", NS)
@@ -193,16 +267,16 @@ def fetch_arxiv_by_author(author_en: str, author_cn: str, max_results: int = 5, 
         "sortOrder": "descending",
         "max_results": max_results * 3,
     }
-    url = f"{ARXIV_API}?{urllib.parse.urlencode(params)}"
-    req = urllib.request.Request(url, headers={"User-Agent": "cc-theory-radar/1.0"})
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            xml_text = resp.read().decode("utf-8")
-    except Exception as e:
-        print(f"[WARN] arXiv author fetch failed ({author_en}): {e}", file=sys.stderr)
+    xml_text = fetch_arxiv_xml(params, f"author:{author_en}")
+    if not xml_text:
         return []
 
-    root = ET.fromstring(xml_text)
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError as e:
+        FETCH_ERRORS.append({"label": f"author:{author_en}", "params": params, "error": f"XML parse: {e}"})
+        print(f"[WARN] arXiv author XML parse failed ({author_en}): {e}", file=sys.stderr)
+        return []
     papers = []
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
@@ -267,22 +341,15 @@ def deduplicate(all_papers: list) -> list:
     return result
 
 
-def main():
-    now = datetime.now(BJ_TZ)
-    result = {
-        "date": now.strftime("%Y-%m-%d"),
-        "generated_at": now.isoformat(),
-        "total": 0,
-        "sections": [],
-    }
-
+def collect_papers(days: int) -> tuple[list, list]:
+    sections = []
     all_papers_flat = []
 
     for section in QUERIES:
         print(f"[INFO] 搜索: {section['label']}", file=sys.stderr)
-        papers = fetch_arxiv(section["query"], section["max"])
-        time.sleep(3)  # arXiv 限速：建议 3s 间隔
-        result["sections"].append({
+        papers = fetch_arxiv(section["query"], section["max"], days=days)
+        time.sleep(ARXIV_REQUEST_INTERVAL)  # arXiv 限速：官方建议至少 3s 间隔
+        sections.append({
             "label": section["label"],
             "papers": papers,
         })
@@ -298,9 +365,9 @@ def main():
                 max_results=expert_section["max_per_author"],
                 days=expert_section["days"],
             )
-            time.sleep(3)
+            time.sleep(ARXIV_REQUEST_INTERVAL)
             if papers:
-                result["sections"].append({
+                sections.append({
                     "label": f"👤 {author_cn}",
                     "papers": papers,
                 })
@@ -309,10 +376,39 @@ def main():
             else:
                 print(f"[INFO]   无近期论文", file=sys.stderr)
 
+    return sections, all_papers_flat
+
+
+def main():
+    now = datetime.now(BJ_TZ)
+    result = {
+        "date": now.strftime("%Y-%m-%d"),
+        "generated_at": now.isoformat(),
+        "total": 0,
+        "sections": [],
+        "arxiv": {
+            "endpoints": ARXIV_API_ENDPOINTS,
+            "days": RECENT_DAYS,
+            "request_interval_seconds": ARXIV_REQUEST_INTERVAL,
+            "max_attempts": ARXIV_MAX_ATTEMPTS,
+            "fetch_errors": [],
+        },
+    }
+
+    sections, all_papers_flat = collect_papers(RECENT_DAYS)
+
     # 去重后计算总数
     unique_papers = deduplicate(all_papers_flat)
+    if not unique_papers and FALLBACK_DAYS > RECENT_DAYS:
+        print(f"[WARN] 近 {RECENT_DAYS} 天抓取为 0，扩大到 {FALLBACK_DAYS} 天重试", file=sys.stderr)
+        sections, all_papers_flat = collect_papers(FALLBACK_DAYS)
+        unique_papers = deduplicate(all_papers_flat)
+        result["arxiv"]["days"] = FALLBACK_DAYS
+
     unique_count = len(unique_papers)
     result["total"] = unique_count
+    result["sections"] = sections
+    result["arxiv"]["fetch_errors"] = FETCH_ERRORS
 
     # ── 知识图谱构建（增量） ───────────────────────────────────────────────────
     graph_data = {"enabled": False, "hot_clusters": [], "key_authors": [], "total_nodes": 0, "total_edges": 0}

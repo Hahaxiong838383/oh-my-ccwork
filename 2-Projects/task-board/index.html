@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>任务看板</title>
+  <style>
+    :root {
+      --bg: #fbfbfa;
+      --surface: #ffffff;
+      --border: #ececec;
+      --border-strong: #e0e0e0;
+      --text: #1a1a1a;
+      --text-2: #6b6b6b;
+      --text-3: #9b9b9b;
+      --accent: #6366f1;
+      --accent-soft: #eef2ff;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.04);
+      --shadow-hover: 0 2px 6px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.08);
+      --radius: 12px;
+    }
+    html[data-theme="dark"] {
+      --bg: #16161a;
+      --surface: #1e1e23;
+      --border: #2c2c33;
+      --border-strong: #3a3a42;
+      --text: #ededed;
+      --text-2: #a3a3ad;
+      --text-3: #7a7a84;
+      --accent: #818cf8;
+      --accent-soft: #2a2a45;
+      --shadow: 0 1px 2px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.3);
+      --shadow-hover: 0 2px 6px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.4);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      transition: background .2s, color .2s;
+    }
+
+    /* ====== 顶栏 ====== */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .left { display: flex; align-items: center; gap: 14px; }
+    .logo { font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
+    .logo-dot { color: var(--accent); }
+
+    /* 项目下拉 */
+    .proj-select {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 12px; border-radius: 8px;
+      border: 1px solid var(--border-strong); background: var(--surface);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background .12s;
+    }
+    .proj-select:hover { background: #f5f5f5; }
+    html[data-theme="dark"] .proj-select:hover { background: #2a2a30; }
+    .proj-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .proj-caret { color: var(--text-3); font-size: 10px; }
+
+    .proj-menu {
+      position: absolute; top: 52px; left: 28px;
+      background: var(--surface); border: 1px solid var(--border-strong);
+      border-radius: var(--radius); box-shadow: var(--shadow-hover);
+      min-width: 220px; padding: 6px; z-index: 30; display: none;
+    }
+    .proj-menu.show { display: block; }
+    .proj-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 13px;
+    }
+    .proj-item:hover { background: var(--accent-soft); }
+    .proj-item.cur { font-weight: 600; }
+    .proj-item .check { margin-left: auto; color: var(--accent); }
+    .proj-divider { height: 1px; background: var(--border); margin: 4px 0; }
+    .proj-item.new { color: var(--accent); font-weight: 600; }
+
+    .right { display: flex; align-items: center; gap: 8px; }
+    .search {
+      padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border-strong);
+      font-size: 13px; width: 180px; background: var(--surface); font-family: inherit;
+    }
+    .search:focus { outline: none; border-color: var(--accent); }
+
+    .btn {
+      border: 1px solid var(--border-strong); background: var(--surface);
+      color: var(--text); padding: 7px 12px; border-radius: 8px;
+      font-size: 13px; cursor: pointer; font-weight: 500; font-family: inherit;
+      transition: all .12s;
+    }
+    .btn:hover { background: #f5f5f5; }
+    html[data-theme="dark"] .btn:hover { background: #2a2a30; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.primary:hover { background: #4f46e5; }
+    .btn.danger { color: #b91c1c; }
+    .btn.danger:hover { background: #fef2f2; }
+    .btn.sm { padding: 3px 8px; font-size: 12px; border-radius: 6px; }
+
+    /* ====== 看板 ====== */
+    .board {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 14px; padding: 20px 28px 40px;
+    }
+    .col {
+      background: transparent;
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .col-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 4px 12px;
+    }
+    .col-title { font-size: 12px; font-weight: 600; color: var(--text-2);
+      text-transform: uppercase; letter-spacing: .04em; display: flex; align-items: center; gap: 8px; }
+    .col-title .col-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .col-count { font-size: 12px; color: var(--text-3); }
+    .col-body {
+      background: rgba(0,0,0,.015); border-radius: var(--radius);
+      padding: 8px; flex: 1; min-height: 60vh; transition: background .12s;
+    }
+    html[data-theme="dark"] .col-body { background: rgba(255,255,255,.03); }
+    .col-body.drag-over { background: var(--accent-soft); }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 11px 12px 11px 14px;
+      margin-bottom: 8px; cursor: grab; position: relative;
+      transition: box-shadow .12s, border-color .12s, opacity .12s;
+    }
+    .card::before {
+      content: ""; position: absolute; left: 0; top: 8px; bottom: 8px;
+      width: 3px; border-radius: 0 2px 2px 0; background: var(--card-color, var(--accent));
+    }
+    .card:hover { box-shadow: var(--shadow-hover); border-color: var(--border-strong); }
+    .card.dragging { opacity: .35; }
+    .card-row { display: flex; align-items: flex-start; gap: 8px; }
+    .card-id { color: var(--text-3); font-size: 11px; font-family: ui-monospace, monospace;
+      margin-bottom: 3px; }
+    .card-title { font-size: 13px; font-weight: 600; line-height: 1.4; color: var(--text); }
+    .card-meta { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    .prio { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-2); }
+    .prio-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .prio.p1 .prio-dot { background: #ef4444; }
+    .prio.p2 .prio-dot { background: #f59e0b; }
+    .prio.p3 .prio-dot { background: #6366f1; }
+    .files { font-size: 11px; color: var(--text-3); font-family: ui-monospace, monospace;
+      margin-top: 5px; word-break: break-all; }
+    .notes { font-size: 12px; color: var(--text-2); margin-top: 6px; line-height: 1.45; }
+    .card-actions {
+      display: flex; gap: 4px; margin-top: 8px;
+      opacity: 0; transition: opacity .12s;
+    }
+    .card:hover .card-actions { opacity: 1; }
+    .empty { color: var(--text-3); font-size: 12px; padding: 14px 8px; text-align: center; }
+
+    /* ====== Modal ====== */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.25);
+      display: none; align-items: center; justify-content: center; z-index: 100;
+    }
+    .overlay.show { display: flex; }
+    .modal {
+      background: var(--surface); border-radius: 16px; padding: 22px;
+      width: 460px; max-width: 92vw; box-shadow: var(--shadow-hover);
+    }
+    .modal h3 { margin: 0 0 16px; font-size: 16px; font-weight: 700; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 11px; color: var(--text-2);
+      margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+    .field input, .field select, .field textarea {
+      width: 100%; padding: 8px 11px; font-size: 13px;
+      border: 1px solid var(--border-strong); border-radius: 8px; font-family: inherit; background: var(--surface);
+    }
+    .field textarea { resize: vertical; min-height: 56px; }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+    }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+    /* 复制跟进弹窗专用 */
+    .follow-list { max-height: 280px; overflow-y: auto; margin: 8px 0 14px; }
+    .follow-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px;
+      cursor: pointer; transition: background .12s;
+    }
+    .follow-item:hover { background: #f9f9f9; }
+    html[data-theme="dark"] .follow-item:hover { background: #2a2a30; }
+    .follow-item input { accent-color: var(--accent); }
+    .follow-item .fi-id { font-family: ui-monospace, monospace; font-size: 11px; color: var(--text-3); }
+    .follow-item .fi-title { font-size: 13px; font-weight: 500; flex: 1; }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #1a1a1a; color: #fff; padding: 9px 16px; border-radius: 8px;
+      font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 200;
+    }
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 960px) {
+      .board { grid-template-columns: 1fr; }
+      .card-actions { opacity: 1; }
+      .search { display: none; }
+    }
+
+    /* 统计栏 */
+    .stats {
+      display: flex; gap: 8px; padding: 14px 28px 0; flex-wrap: wrap;
+    }
+    .stat {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; font-size: 13px; min-width: 92px;
+    }
+    .stat .s-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .stat .s-label { color: var(--text-2); }
+    .stat .s-num { font-weight: 700; margin-left: auto; color: var(--text); }
+    .stat.total { background: var(--accent-soft); border-color: transparent; }
+    .stat.total .s-num { color: var(--accent); }
+    .progress-wrap {
+      flex: 1; min-width: 180px; display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px;
+    }
+    .progress-bar {
+      flex: 1; height: 8px; background: #eee; border-radius: 999px; overflow: hidden;
+    }
+    html[data-theme="dark"] .progress-bar { background: #2c2c33; }
+    .progress-fill {
+      height: 100%; background: linear-gradient(90deg, var(--accent), #10b981);
+      border-radius: 999px; transition: width .3s;
+    }
+    .progress-pct { font-size: 12px; font-weight: 600; color: var(--text-2); min-width: 38px; text-align: right; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="left">
+      <div class="logo"><span class="logo-dot">●</span> 任务看板</div>
+      <div class="proj-select" id="projSelect">
+        <span class="proj-dot" id="curDot"></span>
+        <span id="curName">加载中</span>
+        <span class="proj-caret">▼</span>
+      </div>
+      <div class="proj-menu" id="projMenu"></div>
+    </div>
+    <div class="right">
+      <input class="search" id="search" placeholder="搜索任务…" />
+      <button class="btn" id="themeBtn" title="切换深色/浅色模式">🌙</button>
+      <button class="btn" id="refreshBtn" title="刷新">↻</button>
+      <button class="btn primary" id="addBtn">+ 新增任务</button>
+    </div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <main class="board" id="board"></main>
+
+  <!-- 任务编辑/新增 modal -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h3 id="modalTitle">新增任务</h3>
+      <input type="hidden" id="f_id" />
+      <div class="field">
+        <label>标题</label>
+        <input type="text" id="f_title" placeholder="一句话描述" />
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>状态</label>
+          <select id="f_status">
+            <option value="backlog">backlog</option>
+            <option value="todo">todo</option>
+            <option value="doing" selected>doing</option>
+            <option value="done">done</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>优先级</label>
+          <select id="f_priority">
+            <option value="P1">P1 高</option>
+            <option value="P2" selected>P2 中</option>
+            <option value="P3">P3 低</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>备注</label>
+        <textarea id="f_notes" placeholder="背景 / 阻塞 / 完成说明"></textarea>
+      </div>
+      <div class="field">
+        <label>关联文件（逗号分隔）</label>
+        <input type="text" id="f_files" placeholder="a.js, b.html" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="cancelBtn">取消</button>
+        <button class="btn primary" id="saveBtn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 复制跟进 modal -->
+  <div class="overlay" id="followOverlay">
+    <div class="modal">
+      <h3 id="followTitle">切换项目</h3>
+      <div style="font-size:13px;color:var(--text-2);">要把以下进行中的任务复制到新项目跟进吗？（原任务会保留）</div>
+      <div class="follow-list" id="followList"></div>
+      <div class="modal-actions">
+        <button class="btn" id="followCancel">取消切换</button>
+        <button class="btn" id="followSkip">不复制</button>
+        <button class="btn primary" id="followCopy">复制选中</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新建项目 modal -->
+  <div class="overlay" id="newProjOverlay">
+    <div class="modal" style="width:360px;">
+      <h3>新建项目</h3>
+      <div class="field">
+        <label>项目标识（英文，用于 id）</label>
+        <input type="text" id="np_id" placeholder="例如 my-app" />
+      </div>
+      <div class="field">
+        <label>显示名</label>
+        <input type="text" id="np_name" placeholder="例如 我的应用" />
+      </div>
+      <div class="field">
+        <label>颜色</label>
+        <input type="color" id="np_color" value="#6366f1" style="height:36px;" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="npCancel">取消</button>
+        <button class="btn primary" id="npSave">创建</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const COLUMNS = [
+      ["backlog", "Backlog", "#9b9b9b"],
+      ["todo", "Todo", "#6b7280"],
+      ["doing", "Doing", "#f59e0b"],
+      ["done", "Done", "#10b981"],
+    ];
+    const STATUS_ORDER = ["backlog", "todo", "doing", "done"];
+    const COL_DOT = { backlog:"#9b9b9b", todo:"#6b7280", doing:"#f59e0b", done:"#10b981" };
+
+    let board = { tasks: [], currentProject: "", projects: {} };
+    let projects = [];
+    let editingId = null;
+    let interactUntil = 0;
+    let draggingId = null;
+    let pendingSwitch = null;  // { targetId, followUps:[] }
+
+    // ---------- 主题 ----------
+    function applyTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      $("themeBtn").textContent = theme === "dark" ? "☀️" : "🌙";
+      localStorage.setItem("theme", theme);
+    }
+    function initTheme() {
+      const saved = localStorage.getItem("theme");
+      const theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      applyTheme(theme);
+    }
+    function toggleTheme() {
+      const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      applyTheme(next);
+    }
+
+    const $ = (id) => document.getElementById(id);
+    const esc = (s = "") => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    function toast(msg) {
+      const t = $("toast"); t.textContent = msg; t.classList.add("show");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1600);
+    }
+    function pausePoll(ms = 4000) { interactUntil = Date.now() + ms; }
+
+    async function api(method, path, body) {
+      const opt = { method, headers: { "cache-control": "no-store" } };
+      if (body !== undefined) {
+        opt.headers["content-type"] = "application/json";
+        opt.body = JSON.stringify(body);
+      }
+      const res = await fetch(path, opt);
+      if (res.status === 204) return null;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    }
+
+    // ---------- 渲染 ----------
+    function renderProjectSelect() {
+      const cur = projects.find((p) => p.id === board.currentProject) || projects[0];
+      if (cur) {
+        $("curDot").style.background = cur.color;
+        $("curName").textContent = cur.name;
+      }
+      const menu = $("projMenu");
+      menu.innerHTML = projects.map((p) => `
+        <div class="proj-item ${p.id === board.currentProject ? "cur" : ""}" data-pid="${esc(p.id)}">
+          <span class="proj-dot" style="background:${esc(p.color)}"></span>
+          <span>${esc(p.name)}</span>
+          <span style="color:var(--text-3);font-size:11px;">${p.count}</span>
+          ${p.id === board.currentProject ? '<span class="check">✓</span>' : ""}
+        </div>`).join("") + `
+        <div class="proj-divider"></div>
+        <div class="proj-item new" id="newProjBtn">+ 新建项目</div>`;
+      menu.querySelectorAll(".proj-item[data-pid]").forEach((el) => {
+        el.addEventListener("click", () => switchProject(el.dataset.pid));
+      });
+      $("newProjBtn").addEventListener("click", () => {
+        $("projMenu").classList.remove("show");
+        openNewProjectModal();
+      });
+    }
+
+    function renderCard(task, projectColor) {
+      const idx = STATUS_ORDER.indexOf(task.status);
+      const left = idx > 0 ? `<button class="btn sm" data-move="-1" title="左移">←</button>` : "";
+      const right = idx < 3 ? `<button class="btn sm" data-move="1" title="右移">→</button>` : "";
+      const prio = task.priority || "P2";
+      const prioCls = "p" + prio.slice(1);
+      return `
+        <article class="card" draggable="true" data-id="${esc(task.id)}" style="--card-color:${esc(projectColor)}">
+          <div class="card-id">${esc(task.id)}</div>
+          <div class="card-title">${esc(task.title)}</div>
+          <div class="card-meta">
+            <span class="prio ${prioCls}"><span class="prio-dot"></span>${esc(prio)}</span>
+          </div>
+          ${task.notes ? `<div class="notes">${esc(task.notes)}</div>` : ""}
+          ${task.files?.length ? `<div class="files">${esc(task.files.join(", "))}</div>` : ""}
+          <div class="card-actions">
+            ${left}${right}
+            <button class="btn sm" data-edit>编辑</button>
+            <button class="btn sm danger" data-del>删除</button>
+          </div>
+        </article>`;
+    }
+
+    function renderBoard() {
+      const cur = projects.find((p) => p.id === board.currentProject) || projects[0];
+      const color = cur ? cur.color : "#6366f1";
+      const q = $("search").value.trim().toLowerCase();
+      const all = board.tasks || [];
+      const tasks = q
+        ? all.filter((t) =>
+            (t.title || "").toLowerCase().includes(q) ||
+            (t.notes || "").toLowerCase().includes(q) ||
+            (t.id || "").toLowerCase().includes(q))
+        : all;
+
+      // 统计栏：各状态数量 + 总数 + 完成进度条
+      const cnt = { backlog: 0, todo: 0, doing: 0, done: 0 };
+      for (const t of all) cnt[t.status] = (cnt[t.status] || 0) + 1;
+      const total = all.length;
+      const pct = total > 0 ? Math.round((cnt.done / total) * 100) : 0;
+      $("stats").innerHTML = `
+        <div class="stat"><span class="s-dot" style="background:#9b9b9b"></span><span class="s-label">Backlog</span><span class="s-num">${cnt.backlog}</span></div>
+        <div class="stat"><span class="s-dot" style="background:#6b7280"></span><span class="s-label">Todo</span><span class="s-num">${cnt.todo}</span></div>
+        <div class="stat"><span class="s-dot" style="background:#f59e0b"></span><span class="s-label">Doing</span><span class="s-num">${cnt.doing}</span></div>
+        <div class="stat"><span class="s-dot" style="background:#10b981"></span><span class="s-label">Done</span><span class="s-num">${cnt.done}</span></div>
+        <div class="stat total"><span class="s-label">总计</span><span class="s-num">${total}</span></div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div class="progress-pct">${pct}%</div>
+        </div>`;
+
+      const boardEl = $("board");
+      boardEl.innerHTML = "";
+      for (const [status, label] of COLUMNS) {
+        const list = tasks.filter((t) => t.status === status);
+        const col = document.createElement("section");
+        col.className = "col";
+        col.innerHTML = `
+          <div class="col-head">
+            <div class="col-title"><span class="col-dot" style="background:${COL_DOT[status]}"></span>${label}</div>
+            <div class="col-count">${list.length}</div>
+          </div>
+          <div class="col-body" data-status="${status}">
+            ${list.length === 0 ? `<div class="empty">—</div>` : list.map((t) => renderCard(t, color)).join("")}
+          </div>`;
+        boardEl.appendChild(col);
+      }
+      wireCardEvents();
+      wireColumnDrop();
+    }
+
+    async function loadTasks() {
+      if (Date.now() < interactUntil) return;
+      if ($("overlay").classList.contains("show") ||
+          $("followOverlay").classList.contains("show") ||
+          $("newProjOverlay").classList.contains("show")) return;
+      try {
+        const [tData, pData] = await Promise.all([api("GET", "/api/tasks"), api("GET", "/api/projects")]);
+        board = tData;
+        projects = pData.projects;
+        renderProjectSelect();
+        renderBoard();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // ---------- 卡片事件 ----------
+    function wireCardEvents() {
+      document.querySelectorAll(".card").forEach((card) => {
+        const id = card.dataset.id;
+        const task = board.tasks.find((t) => t.id === id);
+        if (!task) return;
+        card.querySelector("[data-edit]")?.addEventListener("click", () => openTaskModal(task));
+        card.querySelector("[data-del]")?.addEventListener("click", async () => {
+          if (!confirm(`删除 ${task.id}：${task.title}？`)) return;
+          pausePoll();
+          try { await api("DELETE", `/api/tasks/${encodeURIComponent(id)}`); toast("已删除"); await refresh(); }
+          catch (e) { toast("删除失败：" + e.message); }
+        });
+        card.querySelectorAll("[data-move]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const dir = Number(btn.dataset.move);
+            const next = STATUS_ORDER[STATUS_ORDER.indexOf(task.status) + dir];
+            if (!next) return;
+            pausePoll();
+            try { await api("PATCH", `/api/tasks/${encodeURIComponent(id)}`, { status: next }); await refresh(); }
+            catch (e) { toast("移动失败：" + e.message); }
+          });
+        });
+        card.addEventListener("dragstart", (e) => {
+          draggingId = id; card.classList.add("dragging");
+          e.dataTransfer.effectAllowed = "move"; pausePoll();
+        });
+        card.addEventListener("dragend", () => {
+          card.classList.remove("dragging"); draggingId = null;
+        });
+      });
+    }
+
+    function wireColumnDrop() {
+      document.querySelectorAll(".col-body").forEach((body) => {
+        body.addEventListener("dragover", (e) => {
+          e.preventDefault(); e.dataTransfer.dropEffect = "move";
+          body.classList.add("drag-over");
+        });
+        body.addEventListener("dragleave", () => body.classList.remove("drag-over"));
+        body.addEventListener("drop", async (e) => {
+          e.preventDefault(); body.classList.remove("drag-over");
+          const id = draggingId; if (!id) return;
+          const newStatus = body.dataset.status;
+          const task = board.tasks.find((t) => t.id === id);
+          if (!task || task.status === newStatus) return;
+          pausePoll();
+          try { await api("PATCH", `/api/tasks/${encodeURIComponent(id)}`, { status: newStatus }); await refresh(); }
+          catch (err) { toast("移动失败：" + err.message); }
+        });
+      });
+    }
+
+    async function refresh() { interactUntil = 0; await loadTasks(); }
+
+    // ---------- 项目切换 + 复制跟进 ----------
+    async function switchProject(targetId) {
+      $("projMenu").classList.remove("show");
+      if (targetId === board.currentProject) return;
+      pausePoll();
+      try {
+        const r = await api("POST", `/api/projects/${encodeURIComponent(targetId)}/activate`);
+        if (r.followUps && r.followUps.length > 0) {
+          pendingSwitch = { targetId, followUps: r.followUps };
+          showFollowModal(r.followUps, targetId);
+        } else {
+          await refresh(); toast("已切换项目");
+        }
+      } catch (e) { toast("切换失败：" + e.message); }
+    }
+
+    function showFollowModal(followUps, targetId) {
+      const target = projects.find((p) => p.id === targetId);
+      $("followTitle").textContent = `切换到「${target ? target.name : targetId}」`;
+      $("followList").innerHTML = followUps.map((t) => `
+        <label class="follow-item">
+          <input type="checkbox" value="${esc(t.id)}" checked />
+          <span class="fi-id">${esc(t.id)}</span>
+          <span class="fi-title">${esc(t.title)}</span>
+        </label>`).join("");
+      $("followOverlay").classList.add("show");
+      pausePoll(60000);
+    }
+
+    async function doFollowCopy() {
+      const checked = [...document.querySelectorAll("#followList input:checked")].map((i) => i.value);
+      const targetId = pendingSwitch.targetId;
+      try {
+        for (const id of checked) {
+          await api("POST", `/api/tasks/${encodeURIComponent(id)}/copy-to/${encodeURIComponent(targetId)}`);
+        }
+        toast(checked.length ? `已复制 ${checked.length} 条到新项目` : "已切换");
+      } catch (e) { toast("复制失败：" + e.message); }
+      closeFollow(); await refresh();
+    }
+    function closeFollow() {
+      $("followOverlay").classList.remove("show");
+      pendingSwitch = null; interactUntil = 0;
+    }
+
+    // ---------- 任务 modal ----------
+    function openTaskModal(task) {
+      editingId = task ? task.id : null;
+      $("modalTitle").textContent = task ? `编辑 ${task.id}` : "新增任务";
+      $("f_id").value = task ? task.id : "";
+      $("f_title").value = task ? task.title : "";
+      $("f_status").value = task ? task.status : "todo";
+      $("f_priority").value = task ? (task.priority || "P2") : "P2";
+      $("f_notes").value = task ? (task.notes || "") : "";
+      $("f_files").value = task && task.files?.length ? task.files.join(", ") : "";
+      $("overlay").classList.add("show");
+      pausePoll(60000); $("f_title").focus();
+    }
+    async function saveTaskModal() {
+      const title = $("f_title").value.trim();
+      if (!title) { toast("标题不能为空"); $("f_title").focus(); return; }
+      const payload = {
+        title,
+        status: $("f_status").value,
+        priority: $("f_priority").value,
+        notes: $("f_notes").value.trim(),
+        files: $("f_files").value.split(",").map((s) => s.trim()).filter(Boolean),
+      };
+      try {
+        if (editingId) {
+          await api("PATCH", `/api/tasks/${encodeURIComponent(editingId)}`, payload);
+          toast("已保存");
+        } else {
+          await api("POST", "/api/tasks", payload); toast("已新增");
+        }
+        closeTaskModal(); await refresh();
+      } catch (e) { toast("保存失败：" + e.message); }
+    }
+    function closeTaskModal() {
+      $("overlay").classList.remove("show"); editingId = null; interactUntil = 0;
+    }
+
+    // ---------- 新建项目 ----------
+    function openNewProjectModal() {
+      $("np_id").value = ""; $("np_name").value = ""; $("np_color").value = "#6366f1";
+      $("newProjOverlay").classList.add("show"); pausePoll(60000);
+    }
+    async function saveNewProject() {
+      const id = $("np_id").value.trim();
+      const name = $("np_name").value.trim() || id;
+      if (!id) { toast("请填项目标识"); return; }
+      try {
+        await api("POST", "/api/projects", { id, name, color: $("np_color").value });
+        $("newProjOverlay").classList.remove("show"); interactUntil = 0;
+        toast("已创建并切换"); await refresh();
+      } catch (e) { toast("创建失败：" + e.message); }
+    }
+
+    // ---------- 绑定 ----------
+    $("themeBtn").addEventListener("click", toggleTheme);
+    $("addBtn").addEventListener("click", () => openTaskModal(null));
+    $("cancelBtn").addEventListener("click", closeTaskModal);
+    $("saveBtn").addEventListener("click", saveTaskModal);
+    $("refreshBtn").addEventListener("click", refresh);
+    $("search").addEventListener("input", () => renderBoard());
+    $("projSelect").addEventListener("click", (e) => {
+      e.stopPropagation();
+      $("projMenu").classList.toggle("show");
+    });
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".proj-select") && !e.target.closest(".proj-menu")) {
+        $("projMenu").classList.remove("show");
+      }
+    });
+    $("followCopy").addEventListener("click", doFollowCopy);
+    $("followSkip").addEventListener("click", async () => { closeFollow(); toast("已切换"); await refresh(); });
+    $("followCancel").addEventListener("click", closeFollow);
+    $("npCancel").addEventListener("click", () => { $("newProjOverlay").classList.remove("show"); interactUntil = 0; });
+    $("npSave").addEventListener("click", saveNewProject);
+    ["overlay", "followOverlay", "newProjOverlay"].forEach((id) => {
+      $(id).addEventListener("click", (e) => { if (e.target === $(id)) {
+        if (id === "overlay") closeTaskModal();
+        else if (id === "followOverlay") closeFollow();
+        else { $(id).classList.remove("show"); interactUntil = 0; }
+      }});
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        if ($("overlay").classList.contains("show")) closeTaskModal();
+        if ($("followOverlay").classList.contains("show")) closeFollow();
+        if ($("newProjOverlay").classList.contains("show")) { $("newProjOverlay").classList.remove("show"); interactUntil = 0; }
+        $("projMenu").classList.remove("show");
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        if ($("overlay").classList.contains("show")) saveTaskModal();
+      }
+    });
+
+    // 启动
+    initTheme();
+    refresh();
+    setInterval(loadTasks, 3000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+{
+  "version": 2,
+  "updatedAt": "2026-06-22T04:39:03.192Z",
+  "currentProject": "local-board",
+  "projects": {
+    "local-board": {
+      "name": "local-board",
+      "color": "#6366f1",
+      "tasks": [
+        {
+          "id": "T-001",
+          "title": "初始化本地任务看板",
+          "status": "doing",
+          "priority": "P1",
+          "project": "local-board",
+          "files": [
+            "index.html",
+            "tasks.json",
+            "tasks.md"
+          ],
+          "notes": "创建本地看板页面和任务数据结构"
+        },
+        {
+          "id": "T-002",
+          "title": "接入 Claude Code Skill 自动维护任务",
+          "status": "backlog",
+          "priority": "P1",
+          "project": "local-board",
+          "files": [
+            ".claude/skills/task-board/SKILL.md"
+          ],
+          "notes": "SKILL.md 已创建并以 curl 调 API 为主，含项目维度说明；本次会话已按 Skill 规则验证可用"
+        },
+        {
+          "id": "T-003",
+          "title": "配置 Stop Hook 自动同步 tasks.md",
+          "status": "done",
+          "priority": "P1",
+          "project": "local-board",
+          "files": [
+            ".claude/settings.json",
+            "scripts/sync-taskboard.mjs"
+          ],
+          "notes": "每轮结束时自动校验 tasks.json 并生成 tasks.md"
+        },
+        {
+          "id": "T-004",
+          "title": "增加项目维度过滤与文件关联",
+          "status": "doing",
+          "priority": "P2",
+          "project": "local-board",
+          "files": [
+            "index.html",
+            "server.mjs",
+            "scripts/lib.mjs"
+          ],
+          "notes": "v3 已实现：多项目结构 + 项目下拉切换 + 复制跟进弹窗，单文件 tasks.json 含 projects"
+        },
+        {
+          "id": "T-005",
+          "title": "任务卡片显示关联文件与最近改动摘要",
+          "status": "todo",
+          "priority": "P3",
+          "project": "local-board",
+          "files": [
+            "index.html"
+          ],
+          "notes": "第三版：显示最近一次改动摘要、是否已 commit、是否有 diff"
+        },
+        {
+          "id": "T-006",
+          "title": "看板顶部加统计数据栏",
+          "status": "done",
+          "priority": "P2",
+          "project": "local-board",
+          "files": [
+            "index.html"
+          ],
+          "notes": "已实现：顶部统计栏显示 Backlog/Todo/Doing/Done 各状态数量、总计、完成百分比进度条。renderBoard 内实时刷新"
+        },
+        {
+          "id": "T-007",
+          "title": "看板页面新增深色模式切换按钮",
+          "status": "done",
+          "priority": "P2",
+          "project": "local-board",
+          "files": [
+            "index.html"
+          ],
+          "notes": "新增 themeBtn 深色模式切换按钮，新增 [data-theme=dark] CSS 变量覆盖，localStorage 持久化主题，浏览器验证浅/深色切换与刷新保留均正常"
+        }
+      ]
+    }
+  }
+}

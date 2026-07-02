@@ -1,0 +1,15 @@
+{
+  "name": "task-board",
+  "version": "3.0.0",
+  "description": "本地多项目任务看板：人在页面上能直接增删改拖拽，Claude Code/Codex 通过 API 或文件共同维护 tasks.json",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "node --watch server.mjs",
+    "start": "node server.mjs",
+    "sync": "node scripts/sync-taskboard.mjs"
+  }
+}
