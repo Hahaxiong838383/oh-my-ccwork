@@ -47,6 +47,15 @@
       "port": 5176
     },
     {
+      "name": "myjavis-web",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/rayman.chen/mycc/2-Projects/MyJavis/apps/web && VITE_NO_HTTPS=1 ./node_modules/.bin/vite --port 5177 --strictPort"
+      ],
+      "port": 5177
+    },
+    {
       "name": "safety-arena",
       "runtimeExecutable": "/bin/sh",
       "runtimeArgs": [
