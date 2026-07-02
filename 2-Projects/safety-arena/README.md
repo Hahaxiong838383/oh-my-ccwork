@@ -71,3 +71,26 @@ SSE timeline 示例(token 逐帧 emit + 仲裁决策按 t_ms 流式):
 ```bash
 curl -N "http://127.0.0.1:8800/api/replay/stream?trace_id=harm-early::mock&strategy=parallel-buffer:0&speed=20"
 ```
+
+## 真实生成(可选,接 LLM SUT)
+
+mock 重放 / 规则评分 / Web 可视化**不需要任何 key**。只有用真实 LLM 生成 + LLM-as-classifier(Web 里点「▶ 真实生成」)时,才需配一个 OpenAI 兼容网关:
+
+```bash
+cp .env.example .env                       # .env 已 gitignore,填入你自己的网关地址与 key
+set -a; . ./.env; set +a                   # 载入环境变量
+bash scripts/serve-live.sh                 # 起服务(缺 key 时真实生成返回 503,其余功能照常)
+```
+
+凭据**只走环境变量,绝不提交到仓库**(`.env` / `.gateway.env` 已在 `.gitignore`)。变量清单见 [`.env.example`](.env.example)。
+
+## 团队协作 / 贡献
+
+- **分支 + PR**:从 `main` 切 feature 分支开发,PR 合并;`main` 保持随时可跑。
+- **改动前后跑测试**:`uv run pytest -q`(引擎纯逻辑 + 服务层);新增能力配套加测试。
+- **数据集纪律**:`src/safety_arena/data/benchmarks/` 均为公开/合成红队 prompt,**不含真人隐私**——新增数据请保持同标准,勿放真实用户对话。
+- **不提交 secret**:网关地址 / key / 内部部署信息只走本地 `.env`,永不进 git。
+- **待办(欢迎接手)**:
+  - **P3 · precision 对照组**:补「安全儿童正常对话」样本测误判率。现两 benchmark 全是有害样本 → 只测得 recall;堆正则能刷高召回,但会误伤正常对话(儿童产品体验灾难),必须有对照组把关。
+  - **规则评分器 vs LLM-classifier 并排评测**:量化两者在「无脏词迂回意图」case 上的差距(当前 recall:规则 testset 96% / safe_child 60%,漏的多是迂回意图 = LLM-classifier 价值区)。
+  - **M4 · 安全 judge**:可插拔 + 校准,算 unsafe-output-rate。
