@@ -32,8 +32,9 @@ description: 多重意见圆桌讨论——同时把代码/方案/问题/文档�
 
 - grok：`omp xai-oauth/grok-4.3`(本机OAuth) → CPA中转(日本自建，独立网络路径) → `grok-build` CLI(最终兜底)
 - codex：网关2→网关3→网关1(各带重试，流式) → `omp openai-codex/gpt-5.4`订阅(最终兜底)
+- ✅ 全部 7 级（grok 3 + codex 4）已于 2026-07-02 逐一实测通过，日常只会命中 grok①+codex网关2 这两条最快路径
 - 若某条 OAuth 兜底报 401：先查 `omp auth-broker list` 有没有 `<provider>-device` 的 headless 变体，device flow 能在非交互 Bash 里安全后台跑（不会像交互式浏览器回调那样崩），验证码/URL 转给用户在浏览器完成即可
-- 两条链完整细节 + 设计决策见 memory `project_team_skill_multi_opinion`(改降级链前必读)
+- 两条链完整细节 + 验证表 + 设计决策见 memory `project_team_skill_multi_opinion`(改降级链前必读)
 
 ## 示例
 
