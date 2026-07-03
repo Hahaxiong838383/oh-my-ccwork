@@ -121,8 +121,20 @@ prompt 层已禁(config.py instructions)+ TTS 入口 `strip_stage_directions` �
   卡死系统对优雅重启无响应,Stopping 会挂几分钟等强杀。
 - 服务自启已 enable(livekit-server/voice-worker,2026-07-03 补——之前从未重启过没暴露)。
 - 🔴 预防:**HK 上禁止连发 probe(≥30s 间隔,或 probe 客户端挪本机跑)**。
-- 遗留(已立案):job 分配瞬间补位进程 bootstrap 与 FFI 握手抢核,~25% 首连失败(对照
-  实验证明与声纹无关的存量;nice 降级钩子已部署缓解),用户侧=偶发无响应重试即好。
+
+### 症状:点开始对话"通话中"但无声(FFI panic 首连失败)——已根治(2026-07-04)
+真根因(py-spy 栈实锤,**不是**补位进程抢核——那是同秒出现的旁观者,initialize 仅 84ms):
+job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰性 import(pydantic
+建模 1s+ 持 GIL)**,恰落在 ctx.connect 的 FFI ReadyForRoomEventRequest 1s deadline
+(rust 写死)窗内 → event loop 饿死 → panic 秒崩 → 房里没 agent。空闲机器也 ~25% 中招。
+- 终解三件套:`_openai_preload` 模块注册为 Plugin(forkserver preload 一次付清,子进程
+  COW 继承)+ setup_process 兜底 import(macOS/spawn 开发环境)+ LLM/TTS prewarm 全部
+  挪到 `start_livekit_job` **之后**(纵深防御:任何持 GIL 的活不落 deadline 窗)。
+- 验收:10 轮 20s 间隔 0 panic(基线 25%)。复发排查:①journal 有无
+  `preloading plugins ... _openai_preload`(forkserver 生效)②新增的 create_task 是否
+  又放回了 connect 之前 ③py-spy dump job 进程看谁持 GIL。
+- 配套:WORKER_RESPAWN_NICE(10,兜底)/WORKER_INIT_TIMEOUT(30s,防 nice 拖过默认
+  10s 被杀进 spawn 循环)。
 
 ### 症状:响应变慢
 拉 worker 日志四锚点分解(**别信单一 metric,probe 端到端数字含 ~1s 伪影**):
