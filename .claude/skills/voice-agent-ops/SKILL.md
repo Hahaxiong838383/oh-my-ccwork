@@ -84,6 +84,20 @@ prompt 层已禁(config.py instructions)+ TTS 入口 `strip_stage_directions` �
 ### 症状:worker restart 后第一个连接必失败(FFI panic)
 = 2 核机 job 进程内 onnx 冷加载阻塞 event loop。已修(`AgentServer(setup_fnc=...)` 预载 silero 存 proc.userdata);复发查 setup_fnc 是否还在。
 
+### 症状:LLM 慢/晚高峰抖(赛马组件,2026-07-03 上线)
+双路赛马:DeepSeek 主 + MiniMax-M2.7-highspeed 兜底(`LLM_FALLBACK_*` 三 env)。
+- 看胜负:`journalctl -u voice-worker | grep "race won by"`——健康时 main ~600-660ms;
+  **fallback 频繁胜 = DeepSeek 在抖**(兜底可开口 ~2.1s,正常现象非故障)。
+- 兜底回复念出思考过程 → ThinkStripper 回归,查 `LLM_FALLBACK_STRIP_THINK`(默认 1)。
+- 关赛马回单路:删 .env 三行 LLM_FALLBACK_* 重启。
+
+### 症状:TTS 回复段变慢/句间卡(连接池组件,2026-07-03 上线)
+连接池复用(`_volc_tts_pool`):回复段 ttfb 基线 ~470-520(池前 694-820)。
+- `grep "tts pool"` 日志:`prewarmed`/`connection ready` 正常;`tts pool 路径失败`
+  频繁 = 池降级中(每句多付建连税但可用),查火山侧/网络。
+- 复用铁律:session 必须收到 SessionFinished 才回池;barge-in 取消的连接直接丢弃。
+- 一键关:`TTS_POOL_ENABLED=0` 重启(回一次性连接,慢但稳)。
+
 ### 症状:响应变慢
 拉 worker 日志四锚点分解(**别信单一 metric,probe 端到端数字含 ~1s 伪影**):
 `S1v3 preflight emitted`(silence=X 反推停说时刻)→ `UserTurnCommitted` → `tts: connecting`(首句 flush 完成)→ `AgentSpeechStarted`。
