@@ -239,6 +239,21 @@ class ProfileStore {
     return merged;
   }
 
+  /**
+   * Phase 1(docs/43):孩子明确说"不喜欢X了" → 从 interests 删除该项(dislike 联动撤销)。
+   * 同 updateMemoryFields 的同步原子策略:读最新→过滤→写回,无 await 间隙,防并发 lost update。
+   */
+  removeInterest(accountId: string, value: string): boolean {
+    const existing = this.getProfile(accountId);
+    if (!existing) return false;
+    const next = existing.interests.filter((i) => i.value !== value);
+    if (next.length === existing.interests.length) return false;
+    this.db
+      .prepare('UPDATE family_member SET interests = ?, updated_at = ? WHERE id = ?')
+      .run(JSON.stringify(next), Date.now(), existing.id);
+    return true;
+  }
+
   getProfile(accountId: string): FamilyMember | null {
     const row = this.db
       .prepare(`SELECT ${FAMILY_COLUMNS} FROM family_member WHERE account_id = ? ORDER BY created_at LIMIT 1`)

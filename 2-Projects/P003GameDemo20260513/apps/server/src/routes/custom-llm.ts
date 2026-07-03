@@ -10,6 +10,8 @@ import { createMinimaxLlmClient } from '../providers/minimax-llm.js';
 import { verifyAuthToken } from '../auth-jwt.js';
 import { profileStore, needsOnboarding } from '../profile-store.js';
 import { extractOnboarding } from '../onboarding-extractor.js';
+import { extractAndPersist } from '../memory-extractor.js';
+import { conversationStore } from '../conversation-store.js';
 import { buildKnowledgeRecall } from '../xiaoke-kb.js';
 import { feedbackStore } from '../feedback-store.js';
 import { consumeFeedbackArmed } from '../feedback-arm.js';
@@ -159,6 +161,27 @@ customLlmRoute.post('/chat/completions', async (c) => {
       chain = chain.then(() => stream.writeSSE({ data }));
     };
 
+    // Phase 1(docs/43 §8 F1):RTC 链路补齐对话落库 + 画像/情景记忆抽取——此前只有 WS 链路有,
+    // 手机端 /m 的对话既无审计历史也无记忆抽取。累积 assistant 全文,onDone 后 fire-and-forget。
+    let assistantText = '';
+    const persistTurn = (): void => {
+      if (!authContext || overridePrompt || isFeedback) return; // override/吐槽不落库不抽取(不污染真实 profile)
+      const finalAssistant = assistantText.trim();
+      try {
+        conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'user', text: userText });
+        if (finalAssistant) {
+          conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'assistant', text: finalAssistant });
+        }
+      } catch { /* 审计落库失败不阻断 */ }
+      if (!finalAssistant || process.env.MEMORY_EXTRACT_ENABLED === '0') return;
+      // 节流:每 3 个 user 轮抽一次(无状态端点按消息数取模;末尾 ≤2 轮漏抽窗口是已知局限,docs/43 §8 G2)。
+      const full = [...history, { role: 'user' as const, content: userText }, { role: 'assistant' as const, content: finalAssistant }];
+      const userTurns = full.filter((t) => t.role === 'user').length;
+      if (userTurns % 3 === 0) {
+        void extractAndPersist(authContext.accountId, full.slice(-6), 'rtc');
+      }
+    };
+
     // OpenAI 规范：首 chunk 带 delta.role=assistant。
     enqueue(chunk({ role: 'assistant', content: '' }, null));
     try {
@@ -166,8 +189,14 @@ customLlmRoute.post('/chat/completions', async (c) => {
         systemPrompt,
         userText,
         history,
-        onDelta: (delta) => enqueue(chunk({ content: delta }, null)),
-        onDone: () => enqueue(chunk({}, 'stop')),
+        onDelta: (delta) => {
+          assistantText += delta;
+          enqueue(chunk({ content: delta }, null));
+        },
+        onDone: () => {
+          enqueue(chunk({}, 'stop'));
+          persistTurn();
+        },
         onError: (err) => enqueue(chunk({ content: `（小可有点累了：${err.message}）` }, 'stop')),
       });
     } catch (err) {

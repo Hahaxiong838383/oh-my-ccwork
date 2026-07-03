@@ -12,7 +12,7 @@ import { createExpressionFilter, stripExpressionTags } from './expression-filter
 import { createExitMarkerStripper, stripExitMarkerOnce } from './exit-intent.js';
 import { assembleSystemPrompt } from './prompt-orchestrator.js';
 import { profileStore } from './profile-store.js';
-import { extractMemoryUpdate } from './memory-extractor.js';
+import { extractAndPersist } from './memory-extractor.js';
 import { curriculumKG } from './curriculum-kg.js';
 import { buildAiLiteracyGuide, AI_SAFETY_BASELINE } from './ai-literacy.js';
 import { buildKnowledgeRecall } from './xiaoke-kb.js';
@@ -176,9 +176,25 @@ export class VoicePipeline {
   }
 
   close(): void {
+    // Phase 1 会话结束补抽(docs/43 §8 G2):约定常出现在告别前的最后 1-2 轮,
+    // 不补抽会永远漏(下次连接 history 全新)。fire-and-forget,pm2 常驻进程能跑完。
+    const acctId = this.authContext?.accountId;
+    if (acctId && process.env.MEMORY_EXTRACT_ENABLED !== '0' && this.turnsSinceExtract > 0 && this.history.length) {
+      const tail = this.history.slice(-this.turnsSinceExtract * 2);
+      this.turnsSinceExtract = 0;
+      this.fireExtract(acctId, tail);
+    }
     this.bargein();
     this.asr?.close();
     this.asr = null;
+  }
+
+  /**
+   * Phase 1 统一抽取入口(轮触发 + close 补抽共用):一次 LLM call 抽画像 patch + 情景记忆。
+   * 出主链路 fire-and-forget,失败只 log 不影响语音(现有纪律不变);持久化逻辑与 RTC 链路共用。
+   */
+  private fireExtract(acctId: string, snapshot: ChatHistoryTurn[]): void {
+    void extractAndPersist(acctId, snapshot, this.sessionMeta?.sessionId ?? '');
   }
 
   private async startAsr(sampleRate: number): Promise<void> {
@@ -413,20 +429,7 @@ export class VoicePipeline {
           const extractOn = process.env.MEMORY_EXTRACT_ENABLED !== '0';
           if (acctId && extractOn && this.turnsSinceExtract >= EXTRACT_EVERY_TURNS) {
             this.turnsSinceExtract = 0;
-            const snapshot = this.history.slice(-EXTRACT_EVERY_TURNS * 2);
-            void (async () => {
-              try {
-                const current = profileStore.getProfile(acctId);
-                if (!current) return; // 没建档不抽（建档是家长端的事）
-                const patch = await extractMemoryUpdate(snapshot, current);
-                if (patch) {
-                  profileStore.updateMemoryFields(acctId, patch);
-                  console.log(`[memory] account=${acctId} 画像更新: ${Object.keys(patch).join(',')}`);
-                }
-              } catch (err) {
-                console.log('[memory] 抽取失败(不影响语音):', String((err as Error)?.message ?? err));
-              }
-            })();
+            this.fireExtract(acctId, this.history.slice(-EXTRACT_EVERY_TURNS * 2));
           }
           // 退出意图：退出轮带 exit:true（voice-client 原样转发 → 前端在 playback_end 后走退出流程）
           this.send({ type: 'llm.done', text: assistantText, exit: isExitTurn });

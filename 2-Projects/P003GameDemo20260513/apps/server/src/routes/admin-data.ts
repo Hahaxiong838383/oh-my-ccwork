@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { accountStore } from '../account-store.js';
 import { conversationStore } from '../conversation-store.js';
 import { profileStore } from '../profile-store.js';
+import { memoryItemStore } from '../memory-item-store.js';
 import { canWrite, isAdminRole, isValidToken } from './auth.js';
 import { resetAllQuotas } from '../guard.js';
 
@@ -106,6 +107,31 @@ adminDataRoute.patch('/invites/:code', async (c) => {
     return c.json({ ok: true });
   } catch (error) {
     return c.json({ ok: false, error: '更新昵称失败，请稍后重试' }, 500);
+  }
+});
+
+// Phase 1 情景记忆治理(docs/43 §4/§8 C4):家长/运营查看孩子的 typed 记忆 + 删除权。
+// GET 不返回已归档情绪原文(只给条数);DELETE = 物理删除(儿童数据删除权,区别于 LLM retract 软删)。
+adminDataRoute.get('/memory/:accountId', (c) => {
+  try {
+    const accountId = c.req.param('accountId').trim();
+    if (!accountId) return c.json({ ok: false, error: 'accountId 不能为空' }, 400);
+    const { items, archived_emotion_count } = memoryItemStore.listByAccount(accountId);
+    return c.json({ ok: true, items, archived_emotion_count });
+  } catch (error) {
+    return c.json({ ok: false, error: '拉取记忆失败，请稍后重试' }, 500);
+  }
+});
+
+adminDataRoute.delete('/memory/:id', (c) => {
+  try {
+    const id = c.req.param('id').trim();
+    if (!id) return c.json({ ok: false, error: 'id 不能为空' }, 400);
+    const deleted = memoryItemStore.hardDelete(id);
+    if (!deleted) return c.json({ ok: false, error: '记忆不存在' }, 404);
+    return c.json({ ok: true });
+  } catch (error) {
+    return c.json({ ok: false, error: '删除记忆失败，请稍后重试' }, 500);
   }
 });
 
