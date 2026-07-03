@@ -13,6 +13,7 @@ import { extractOnboarding } from '../onboarding-extractor.js';
 import { extractAndPersist } from '../memory-extractor.js';
 import { conversationStore } from '../conversation-store.js';
 import { createParenFilter } from '../paren-filter.js';
+import { createExitMarkerStripper } from '../exit-intent.js';
 import { buildKnowledgeRecall } from '../xiaoke-kb.js';
 import { feedbackStore } from '../feedback-store.js';
 import { consumeFeedbackArmed } from '../feedback-arm.js';
@@ -186,6 +187,9 @@ customLlmRoute.post('/chat/completions', async (c) => {
     // 括号旁白硬防线(paren-filter,2026-07-03):LLM 输出"（挠了挠头）"类状态机旁白会被火山
     // TTS 原样念出——prompt 禁令压不死,这里在流上剥净(字幕/TTS/记忆抽取都吃干净文本)。
     const parenFilter = createParenFilter();
+    // [EXIT] 标记剥离(2026-07-03 生产 E2E 抓到):RTC 链路此前没接(只 WS 有),LLM 输出
+    // "[EXIT]再见"会被火山 TTS 念出"EXIT"。RTC 退出走火山自己的挂断,标记剥掉即可。
+    const exitStripper = createExitMarkerStripper();
 
     // OpenAI 规范：首 chunk 带 delta.role=assistant。
     enqueue(chunk({ role: 'assistant', content: '' }, null));
@@ -195,13 +199,14 @@ customLlmRoute.post('/chat/completions', async (c) => {
         userText,
         history,
         onDelta: (delta) => {
-          const clean = parenFilter.feed(delta);
-          if (!clean) return; // 整个 delta 都在括号扣留中
+          const clean = parenFilter.feed(exitStripper.feed(delta).text); // EXIT → 括号 两级串联
+          if (!clean) return; // 整个 delta 都在过滤器扣留中
           assistantText += clean;
           enqueue(chunk({ content: clean }, null));
         },
         onDone: () => {
-          const tail = parenFilter.flush(); // 未闭合括号残余原样放行(绝不吞正文)
+          // 两级过滤器收尾:EXIT 残余 → 括号 feed,再括号 flush(未闭合原样放行,绝不吞正文)
+          const tail = parenFilter.feed(exitStripper.flush().text) + parenFilter.flush();
           if (tail) {
             assistantText += tail;
             enqueue(chunk({ content: tail }, null));
