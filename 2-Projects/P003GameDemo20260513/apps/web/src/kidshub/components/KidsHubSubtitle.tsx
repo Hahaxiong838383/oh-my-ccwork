@@ -13,8 +13,10 @@ import { useAppStore } from '../../store/app-store';
  */
 export function KidsHubSubtitle() {
   const subtitle = useAppStore((s) => s.subtitle);
+  const userSubtitle = useAppStore((s) => s.userSubtitle);
   const voiceStatus = useAppStore((s) => s.voiceStatus);
   const setSubtitle = useAppStore((s) => s.setSubtitle);
+  const setUserSubtitle = useAppStore((s) => s.setUserSubtitle);
 
   // 静默兜底：同一条字幕 15s 没变化（信号缺失没被清/换）自动清
   useEffect(() => {
@@ -23,19 +25,46 @@ export function KidsHubSubtitle() {
     return () => window.clearTimeout(id);
   }, [subtitle, setSubtitle]);
 
+  // 用户字幕(实时对话 RTC 模式,useVolcRtc 写入的火山 ASR 转写)同样 15s 静默兜底清
+  useEffect(() => {
+    if (!userSubtitle.trim()) return;
+    const id = window.setTimeout(() => setUserSubtitle(''), 15_000);
+    return () => window.clearTimeout(id);
+  }, [userSubtitle, setUserSubtitle]);
+
   const [statusVisible, setStatusVisible] = useState(false);
   useEffect(() => {
     setStatusVisible(voiceStatus !== 'idle');
   }, [voiceStatus]);
 
   const hasText = subtitle.trim().length > 0;
-  if (!hasText && !statusVisible) return null;
+  const hasUserText = userSubtitle.trim().length > 0;
+  if (!hasText && !hasUserText && !statusVisible) return null;
 
   return (
     <div
       className="pointer-events-none absolute left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-[0.6cqh]"
       style={{ bottom: '1cqh', width: '98cqw', maxWidth: '98cqw' }}
     >
+      {/* 用户说话字幕（实时对话 RTC：火山 ASR 转写。小灰条在小可字幕上方，样式对齐 /live 页） */}
+      {hasUserText && (
+        <div
+          className="rounded-[3px] bg-black/30 px-[3cqw] py-[0.3cqh] text-center backdrop-blur-md"
+          style={{
+            maxWidth: '92%',
+            fontSize: 'clamp(9px, 2.2cqw, 12px)',
+            lineHeight: 1.4,
+            letterSpacing: '0.05em',
+            fontWeight: 300,
+            color: 'rgba(226,232,240,0.92)',
+            maxHeight: '2.8em',
+            overflow: 'hidden',
+          }}
+        >
+          你：{userSubtitle}
+        </div>
+      )}
+
       {/* voiceStatus 指示器（聆听/思考/说话） */}
       {voiceStatus !== 'idle' && (
         <div className="rounded-[3px] bg-black/25 px-[2cqw] py-[0.3cqh] backdrop-blur-md">

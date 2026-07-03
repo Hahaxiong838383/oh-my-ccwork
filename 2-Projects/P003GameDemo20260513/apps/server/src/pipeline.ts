@@ -9,6 +9,7 @@ import { createMinimaxLlmClient } from './providers/minimax-llm.js';
 import { createVolcAsrClient, type VolcAsrClient } from './providers/volc-asr.js';
 import { createVolcTtsClient, type VolcTtsClient } from './providers/volc-tts.js';
 import { createExpressionFilter, stripExpressionTags } from './expression-filter.js';
+import { createParenFilter, stripParenAsides } from './paren-filter.js';
 import { createExitMarkerStripper, stripExitMarkerOnce } from './exit-intent.js';
 import { assembleSystemPrompt } from './prompt-orchestrator.js';
 import { profileStore } from './profile-store.js';
@@ -374,14 +375,19 @@ export class VoicePipeline {
       const exitStripper = createExitMarkerStripper();
       // 句级多标记：每 feed/flush 可能返回多个 expressions，按本轮 turn 累加 index 发 avatar.expression
       const exprFilter = createExpressionFilter();
+      // 括号旁白硬防线(paren-filter,2026-07-03):剥"（挠了挠头）"类状态机旁白,防 TTS 念出。
+      // 串接顺序:EXIT → 表情标记 → 括号旁白 → llm.delta/TTS。
+      const parenFilter = createParenFilter();
       let exprIndex = 0;
-      const emitFiltered = (piece: { text: string; expressions: string[] }) => {
+      const emitFiltered = (piece: { text: string; expressions: string[] }, parenFlush = false) => {
         for (const name of piece.expressions) {
           this.send({ type: 'avatar.expression', name, index: exprIndex++ });
         }
-        if (piece.text) {
-          this.send({ type: 'llm.delta', text: piece.text });
-          this.tts?.feed(piece.text);
+        let text = piece.text ? parenFilter.feed(piece.text) : '';
+        if (parenFlush) text += parenFilter.flush(); // 流尾:未闭合括号残余放行(绝不吞正文)
+        if (text) {
+          this.send({ type: 'llm.delta', text });
+          this.tts?.feed(text);
         }
       };
 
@@ -400,11 +406,11 @@ export class VoicePipeline {
           // 兜底：剥离器/表情过滤缓冲区剩余在这里放行（顺序同流式：先 EXIT 再表情）
           const strippedTail = exitStripper.flush();
           if (strippedTail.text) emitFiltered(exprFilter.feed(strippedTail.text));
-          emitFiltered(exprFilter.flush());
+          emitFiltered(exprFilter.flush(), true); // parenFlush=true:三级过滤器全部收尾
           const isExitTurn = exitStripper.hasExit();
           // assistantText 同样剥掉 [EXIT]（fullText 含标记）再剥表情，入会话历史与落库用干净文本
           const exitCleaned = stripExitMarkerOnce(fullText);
-          const assistantText = stripExpressionTags(exitCleaned).text;
+          const assistantText = stripParenAsides(stripExpressionTags(exitCleaned).text);
           this.captureConversation('assistant', assistantText, turnMeta, usage?.totalTokens ?? 0);
           // P0.1 本轮入会话历史（user + assistant），滑动窗口裁最近 MAX_HISTORY_TURNS 轮。
           // 用 strip 后的干净文本；只在本轮有效（turn===activeTurn，被打断的轮不入队）。

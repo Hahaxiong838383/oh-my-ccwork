@@ -22,9 +22,11 @@ const DRAFTS_KEY = 'kidshub.scenePromptDrafts';
 // globalTemplate.v3：世界观+读写台玻璃光学原理（画面在 3 米外，护眼根本逻辑）
 // addendum.v6：规则 5 表情映射表去动作化——表情名改纯情绪词（挠头→疑惑、比心→喜爱、跳起→开心），
 //   DeepSeek 不再把动作词当台词念出来（川哥 2026-07-01）；规则 8 参照物仍只许"读写台玻璃"。
+// addendum.v7：规则 6 补禁括号旁白——"（开心地）""(挥挥手)"类舞台提示一并禁（川哥 2026-07-03）；
+//   server 侧另有 paren-filter 流式硬防线兜底（prompt 是第一防线，压不死时过滤器剥）。
 const GLOBALS_KEY = 'kidshub.globalTemplate.v5';
 const VARS_KEY = 'kidshub.variables';
-const ADDENDUM_KEY = 'kidshub.addendum.v6';
+const ADDENDUM_KEY = 'kidshub.addendum.v7';
 // 需求3：小可语速（1 / 1.5 / 2），持久化
 const VOICE_SPEED_KEY = 'kidshub.voiceSpeed';
 

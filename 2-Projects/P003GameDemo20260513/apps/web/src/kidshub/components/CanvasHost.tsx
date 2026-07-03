@@ -60,6 +60,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
 
   const setVoiceStatus = useAppStore((s) => s.setVoiceStatus);
   const setSubtitle = useAppStore((s) => s.setSubtitle);
+  const setUserSubtitle = useAppStore((s) => s.setUserSubtitle);
   const setXiaokeEmotion = useAppStore((s) => s.setXiaokeEmotion);
 
   const enqueueLlmExpression = useAvatarStore((s) => s.enqueueLlmExpression);
@@ -421,6 +422,7 @@ export function CanvasHost({ onDebug, onConfigAck }: CanvasHostProps) {
     await rtc.stop();
     setRtcMode(false);
     setSubtitle('');
+    setUserSubtitle(''); // 用户 ASR 字幕一并清（防退出后残留小灰条）
   };
   // rtcMode 下改了 Prompt → 一键热更（不重连，下一轮即用新 prompt）。
   const applyRtcPrompt = () => {
