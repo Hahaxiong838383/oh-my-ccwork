@@ -191,3 +191,26 @@ CREATE INDEX IF NOT EXISTS idx_memory_item_sel ON memory_item (account_id, type,
 生命周期修订:promise **存储永不淘汰**(X2),注入≤3 按 due 优先;event 上限 30/emotion 60/relation 8/preference 10 照旧(非 promise 类可淘汰);emotion 30 天 archived(C4)。
 
 署名:cc(Claude)| 2026-07-03
+
+---
+
+## §9 · 实施与部署验收(2026-07-03)
+
+**实施** commit `77401862b`(11 文件 +1206 行):memory-item-store(新)/ memory-extractor(扩抽 6 类 + extractAndPersist 共用)/ prompt-orchestrator(data/policy 分离注入)/ pipeline(close 补抽)/ custom-llm(RTC 落库+抽取,F1)/ admin-data(memory GET/DELETE)。
+
+**实施中修的两个真 bug**:① 渲染用 sanitizeField 硬截 20 字腰斩记忆内容(单测抓获)→ maxLen 参数化,情景 content 60;② 抽取扩到 12 类字段后 8s/512tok 超时撞线(生产探针 8005ms 实测)→ 20s/1024tok(异步路径零 TTFT 代价)。
+
+**验证**:tsc 0 err;14 测试文件全过(新增 3 文件 19 case,零回归);本地 E2E 6/6;**生产 E2E 全绿**(公网 kidshub-ai.hahaxiong.cc):
+- 3 轮真实对话(测试账号)→ 抽出 emotion/event/relation 3 条 + **预置 promise 被精确 resolve**(小可轮2说"今天要给你讲白鲸的故事"→判定兑现消账);
+- RTC 对话落 conversation-store 6 条(此前手机端零审计);
+- 公网 admin API:GET 200(4 items)/ DELETE 200(物理删);
+- 测试数据清理零残留,p003-voice online,体验台/手机端 200。
+- 本地 E2E 曾实锤 promise 注入话术:"哇!指挥官记性真好呢~今天小可要兑现约定,给你讲白鲸的故事哦!"(生产轮1未主动提=LLM 自由发挥,注入是软引导非硬规则,符合 policy 设计)。
+
+**部署**:回滚点 `/opt/p003/_backup/20260703-171215-episodic-memory`;rsync src + pm2 restart;4 关键文件 shasum 本地==生产。个人站 kidshub-voice 冻结不动(不同源,惯例)。
+
+**已知观察**:轮 3 的新约定"明天讲给朵朵听"生产未抽出(本地抽出)——promise evidence 硬校验偏严 + LLM 抽取随机性,宁漏勿错是设计取向;召回率待 Phase 2 KidsBench 量化。
+
+**一键回滚**:`ssh aliyun-hk 'BK=/opt/p003/_backup/20260703-171215-episodic-memory; cp $BK/src/*.ts /opt/p003/server/src/; cp $BK/src/routes/*.ts /opt/p003/server/src/routes/; rm /opt/p003/server/src/memory-item-store.ts; pm2 restart p003-voice'`(或不删新文件仅设 `MEMORY_EPISODIC_INJECT=0` + `MEMORY_EXTRACT_ENABLED=0` 软回退)。
+
+署名:cc(Claude)| 2026-07-03

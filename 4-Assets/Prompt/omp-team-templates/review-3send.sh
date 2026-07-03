@@ -57,6 +57,9 @@ REVIEW_GUARD='【评审约束·最高优先级】你是只读评审者。禁止�
 '
 PROMPT="$REVIEW_GUARD$(cat "$PROMPT_FILE")"
 SIZE=$(wc -c <"$PROMPT_FILE")
+# 清旧产物(2026-07-03 实踩):固定输出路径 /tmp/r-*.md 若留有上一轮评审残留,调用方
+# "文件非空即完成"的等待哨兵会拿旧报告当本轮结果(假阳性,曾拿 LnMem 评审当 P003 评审读)。
+rm -f /tmp/r-grok.md /tmp/r-gpt.md /tmp/r-gem.md /tmp/r-grok.err /tmp/r-gpt.err /tmp/r-gem.err
 echo "===== B 三发评审对抗 ====="
 echo "[B4 推理] omp xai-oauth/grok-4.3 / thinking=high"
 echo "[B5 严谨] codex API 网关 gpt-5.5(主) → omp 订阅 gpt-5.4(降级) / reasoning=high"
