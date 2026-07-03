@@ -31,6 +31,8 @@ livekit-server ◄─localhost─► voice-worker(systemd,/root/voice-venv)
 worker 内:silero VAD(setup_fnc 预载)+ v1-mini 判停 + 火山 seedasr2.0 STT
          + DeepSeek v4-flash(FastLLM 关思考+预热)+ 火山 TTS(emo_v2)
          + S1v3 静音投机 + 语义承接音 + StreamAdapter min_sentence_len=6
+         + 声纹旁路(CAM++ 26MB,setup 后台线程延迟4s预载;turn 后异步比对
+           → 粘滞身份注入 LLM 近因位;assets/speakers/registry.json 每 job 加载)
 ```
 
 ## 部署 SOP(HK)
@@ -98,11 +100,35 @@ prompt 层已禁(config.py instructions)+ TTS 入口 `strip_stage_directions` �
 - 复用铁律:session 必须收到 SessionFinished 才回池;barge-in 取消的连接直接丢弃。
 - 一键关:`TTS_POOL_ENABLED=0` 重启(回一次性连接,慢但稳)。
 
+### 症状:声纹不识别 / AI 不认人(声纹组件,2026-07-03 上线)
+分层切:`journalctl -u voice-worker | grep "speaker id"`。
+1. 无"旁路启用"日志 → env `SPEAKER_ID_ENABLED=1`?模型/注册库文件在?setup 阶段
+   stderr 有无 `[speaker_id] setup: extractor 后台预载完成`(延迟 4s 错峰;job 撞上
+   未就绪窗=该 job 旁路禁用下个恢复,正常)。
+2. 有识别但 UNKNOWN、score 低(<0.4):**九成是注册信道不一致**——注册必须用
+   **通话信道内音频**(浏览器 NS/AGC+opus+RTC 频谱改动大;录音 app 注册实测只有 0.07)。
+   重注册:.env 开 `SPEAKER_ID_DUMP_DIR=/root/voiceprint-calib` → 真机说 4-6 句(长句为主)
+   → `enroll_speaker.py --name 川哥 /root/voiceprint-calib/turn-*.wav`(同名 upsert 换纹)
+   → **无需 restart**(registry 每 job 加载)。基线:同人 0.54-0.68 / 非同人 <0.28 / 阈值 0.50。
+3. 声纹命中但 AI 说不认识 → grep `llm ctx note 注入`(P2 粘滞身份注入 FastLLM 近因位;
+   **首句建立身份第二句生效**,首句问"我是谁"答不知道是设计内)。
+4. 🔴 铁律:job 内绝不同步加载 onnx(阻塞 event loop→FFI panic);<1s 短句 skip 是设计内;
+   声纹 Score=概率非强认证,绝不当记忆主键(记忆 voice_mem_traps 六陷阱)。
+
+### 症状:整机卡死(ping 通 / ssh 死 / nginx 无响应)
+= 2核小机被连发压测打进 job 残骸雪球(inference 排队 40s+ → thrash),2026-07-03 实锤。
+- 修复:阿里云控制台**强制停止**再启动(实例 i-j6cbb5uj10lp67k1xak0,hk-personal 账号);
+  卡死系统对优雅重启无响应,Stopping 会挂几分钟等强杀。
+- 服务自启已 enable(livekit-server/voice-worker,2026-07-03 补——之前从未重启过没暴露)。
+- 🔴 预防:**HK 上禁止连发 probe(≥30s 间隔,或 probe 客户端挪本机跑)**。
+- 遗留(已立案):job 分配瞬间补位进程 bootstrap 与 FFI 握手抢核,~25% 首连失败(对照
+  实验证明与声纹无关的存量;nice 降级钩子已部署缓解),用户侧=偶发无响应重试即好。
+
 ### 症状:响应变慢
 拉 worker 日志四锚点分解(**别信单一 metric,probe 端到端数字含 ~1s 伪影**):
 `S1v3 preflight emitted`(silence=X 反推停说时刻)→ `UserTurnCommitted` → `tts: connecting`(首句 flush 完成)→ `AgentSpeechStarted`。
 基线(2026-07-02):判停 550-700 / commit→tts connect ~950(ttft 750 投机抵 150-270 + 首句 flush ~200)/ TTS 694-820 / 真实端到端 ~2.5s,开承接音感知 <1s。
-- 判停恶化 → VOLC_ASR_END_WINDOW_MS(200)/MIN_ENDPOINTING_DELAY(0.55,**不可 <0.55**,否则火山 FINAL 迟到丢尾字)。
+- 判停恶化 → VOLC_ASR_END_WINDOW_MS(200)/MIN_ENDPOINTING_DELAY(0.65,**不可 <0.55** 否则火山 FINAL 迟到丢尾字);MAX(0.90)−MIN=v1-mini 语义决策窗 250ms(判"没说完"多扛/误判慢最坏 +250ms;2026-07-03 川哥"长句被打断"定稿,13.6s 长句实测完整)。
 - LLM 段恶化 → `scripts/llm_ttft_bench.py --only deepseek`(测"首个非空 content"+tps,首字节空 role chunk 会骗人)。
 - 首句 flush 恶化 → TTS_MIN_SENTENCE_LEN(6;调大攒字变慢,过小句间断音:首段播放时长须 > 下段 TTS 建连 ~700ms)。
 
@@ -111,7 +137,8 @@ prompt 层已禁(config.py instructions)+ TTS 入口 `strip_stage_directions` �
 | 组 | 变量(默认) | 说明 |
 |---|---|---|
 | 投机 | VOLC_PREFLIGHT_ENABLED(1)/ _SILENCE_MS(180)/ _TEXT_QUIET_MS(150)/ _SILENCE_AMP(250) | S1v3 静音触发 |
-| 判停 | VOLC_ASR_END_WINDOW_MS(200)、MIN/MAX_ENDPOINTING_DELAY(0.55/0.6) | min≥0.55 防丢尾字 |
+| 判停 | VOLC_ASR_END_WINDOW_MS(200)、MIN/MAX_ENDPOINTING_DELAY(0.65/0.90) | min≥0.55 防丢尾字;max−min=语义决策窗 |
+| 声纹 | SPEAKER_ID_ENABLED(1)/ _THRESHOLD(0.50)/ _MODEL/_REGISTRY(默认 assets 下)/ _DUMP_DIR(标定期开) | 注册必须信道内音频 |
 | 承接音 | FILLER_ENABLED(1)/ FILLER_PROBABILITY(0.9)/ FILLER_DIR、IDLE 无 | 资产 assets/fillers+manifest |
 | TTS | VOLC_TTS_SPEAKER/RESOURCE_ID/SPEED、TTS_MIN_SENTENCE_LEN(6) | 换音色重跑 gen_fillers |
 | worker | WORKER_LOAD_THRESHOLD(0.95) | 2 核机默认 0.7 会拒接 |
