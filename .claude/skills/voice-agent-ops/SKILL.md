@@ -11,6 +11,16 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 深层原理与血泪坑 → 记忆 `rg <关键词> ~/.claude/projects/-Users-rayman-chen-mycc/memory/`:
 `livekit_agent_rejoin_dead_room_5g`(重连/5G/生命周期)、`livekit_cascade_first_audio_latency_traps`(开口延迟四坑)、`voice_filler_semantic_bucket_pattern`(承接句范式)、`project_realtime_voice_agent`(全史)。
 
+**查文档 vs 读源码(分工纪律)**:
+- "API 怎么用/有什么配置/怎么迁移/新能力(电话/视觉/RAG)" → 官方文档,入口
+  `https://docs.livekit.io/llms.txt`(AI 友好全索引,WebFetch 定位子页再细读)。
+  ⚠️ v2.0 迁移预警:`preemptive_generation/min_endpointing_delay/turn_detection` 等
+  AgentSession 参数将改 `turn_handling=TurnHandlingOptions(...)`,升级前必查文档。
+- "实际行为为什么这样/默认值是什么/坑在哪" → **读本地 venv 源码**
+  (`.venv/lib/python3.12/site-packages/livekit/agents/`)——文档不写
+  min_sentence_len=20 攒字、load_threshold 0.7、dispatch 只在房间创建时这类坑,
+  本项目的关键修复全部源自源码级确认,别只信文档。
+
 ## 架构一图流
 
 ```
