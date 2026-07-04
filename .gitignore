@@ -338,3 +338,6 @@ AGENTS.md.bak.*
 /.codex/sessions/
 /.claude/projects/
 /.claude/skills/cc-lite/
+
+# codex worktree 陈旧工作存档(本地冷藏,不进仓)
+5-Archive/codex-worktree-stale-20260704/
