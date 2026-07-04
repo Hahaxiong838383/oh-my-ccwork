@@ -39,6 +39,7 @@ class PlayRequest(BaseModel):
     query: str
     mode: str = "track"  # 目前仅支持 track
     session_id: str
+    exclude_ids: Optional[List[str]] = None  # "换一首"：跳过已放过的曲目 id
 
 
 class ControlRequest(BaseModel):
@@ -92,6 +93,13 @@ async def music_play(req: PlayRequest, _: str = Depends(require_music_key)):
     sources = get_enabled_sources()
     results = await search_all(req.query, 8, sources)
 
+    # "换一首"：过滤掉已放过的曲目；全放过则清空重来（循环）
+    if req.exclude_ids:
+        excluded = set(req.exclude_ids)
+        filtered = [r for r in results if r.id not in excluded]
+        if filtered:
+            results = filtered
+
     if not results:
         return {"status": "not_found"}
 
@@ -109,7 +117,11 @@ async def music_play(req: PlayRequest, _: str = Depends(require_music_key)):
         "duration_sec": top.duration_sec,
     }
 
-    if score > 0.75:
+    # "换一首"（带 exclude_ids）语义是"随便给我下一首"，用户已认定这个查询，
+    # 不该再走 ambiguous 让用户二次选——直接播下一首（哪怕相关度分低）。
+    force_play = bool(req.exclude_ids)
+
+    if score > 0.75 or force_play:
         sess["current_track"] = {**track_dict, "stream_url": stream_url}
         sess["playing"] = True
         sess["position_sec"] = 0.0

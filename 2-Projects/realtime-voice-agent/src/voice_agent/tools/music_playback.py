@@ -35,6 +35,16 @@ def stop_music_playback(session_id: str) -> None:
         task.cancel()
 
 
+def stop_all_playback() -> None:
+    """取消所有在跑的音乐播放任务。会话关闭（用户断开）时必须调，否则播放任务（流一首
+    4 分钟的歌）不退出 → LiveKit "entrypoint did not exit in time" → 房间删不干净 →
+    用户第二次连接进不去（2026-07-04 川哥实测复发根因）。"""
+    for sid in list(_playback_tasks.keys()):
+        task = _playback_tasks.pop(sid, None)
+        if task and not task.done():
+            task.cancel()
+
+
 async def start_music_playback(
     room: Any,
     stream_url: str,

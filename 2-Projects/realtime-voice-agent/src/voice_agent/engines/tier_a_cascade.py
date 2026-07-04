@@ -47,7 +47,14 @@ class TierACascadeEngine(ExperienceEngine):
         return None
 
     async def aclose(self) -> None:
-        # 先放哨兵解开 VoiceSession.run() 的事件循环,再关 AgentSession——反过来的话
+        # 先取消音乐播放任务——否则播放任务(流一首 4 分钟的歌)不退出,同样导致
+        # "entrypoint did not exit in time" → 房间删不干净 → 用户第二次进不去
+        # (2026-07-04 川哥实测:播放音乐后断开,第二次连不上)。
+        with suppress(Exception):
+            from ..tools.music_playback import stop_all_playback
+
+            stop_all_playback()
+        # 再放哨兵解开 VoiceSession.run() 的事件循环,再关 AgentSession——反过来的话
         # AgentSession 在异常态(如 TTS 流水线崩溃后)aclose 可能卡死,shutdown 回调
         # 超时 → "entrypoint did not exit in time" 强杀(2026-07-02 川哥实测复发根因)。
         await self._queue.put(None)
