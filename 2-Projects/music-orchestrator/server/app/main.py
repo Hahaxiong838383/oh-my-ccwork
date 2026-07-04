@@ -43,3 +43,14 @@ app.include_router(admin.router)
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/")
+async def root():
+    """纯 API 服务，没有网页首页——浏览器直接访问时给个友好提示而非裸 404。"""
+    return {
+        "service": "music-orchestrator",
+        "status": "ok",
+        "note": "这是后端 API 服务，没有可浏览的网页；通过 MyJavis/voice-agent 语音点歌来使用。",
+        "endpoints": ["/health", "/tools/*", "/stream/*"],
+    }
