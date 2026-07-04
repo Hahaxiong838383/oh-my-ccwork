@@ -103,7 +103,7 @@ def create_music_tools(client: MusicClient) -> list[Any]:
         return _safe_json(res)
 
     @function_tool
-    async def music_control(ctx: RunContext[Any], action: str, value: Any | None = None) -> str:
+    async def music_control(ctx: RunContext[Any], action: str, value: float | None = None) -> str:
         """控制当前播放（暂停/继续/停止/调音量/切歌等）。
 
         用户说“暂停音乐”、“继续放”、“停止”、“下一首”、“调大点声音”、“静音”时调用。
@@ -122,7 +122,7 @@ def create_music_tools(client: MusicClient) -> list[Any]:
         return f"控制结果：{st}"
 
     @function_tool
-    async def music_queue(ctx: RunContext[Any], action: str, item: Any | None = None) -> str:
+    async def music_queue(ctx: RunContext[Any], action: str, item: str | None = None) -> str:
         """队列操作：add / remove / list / clear。
 
         用户说“把这首歌加到队列”、“清空播放列表”、“队列里有什么”时调用。
