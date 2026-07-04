@@ -1,0 +1,158 @@
+{
+  "greet_01.wav": {
+    "bucket": "greet",
+    "text": "哎，你好呀。"
+  },
+  "greet_02.wav": {
+    "bucket": "greet",
+    "text": "嗯呐，我在呢。"
+  },
+  "greet_03.wav": {
+    "bucket": "greet",
+    "text": "来啦，想聊点啥？"
+  },
+  "greet_04.wav": {
+    "bucket": "greet",
+    "text": "来啦。"
+  },
+  "thanks_01.wav": {
+    "bucket": "thanks",
+    "text": "嗐，客气啥呀。"
+  },
+  "thanks_02.wav": {
+    "bucket": "thanks",
+    "text": "小事儿一桩。"
+  },
+  "thanks_03.wav": {
+    "bucket": "thanks",
+    "text": "哎，应该的。"
+  },
+  "thanks_04.wav": {
+    "bucket": "thanks",
+    "text": "客气了。"
+  },
+  "emo_neg_01.wav": {
+    "bucket": "emo_neg",
+    "text": "哎呀，怎么啦？"
+  },
+  "emo_neg_02.wav": {
+    "bucket": "emo_neg",
+    "text": "嗯，我听着呢，你说。"
+  },
+  "emo_neg_03.wav": {
+    "bucket": "emo_neg",
+    "text": "哎，别急哈，慢慢说。"
+  },
+  "emo_neg_04.wav": {
+    "bucket": "emo_neg",
+    "text": "哎哟，咋回事儿呀？"
+  },
+  "emo_neg_05.wav": {
+    "bucket": "emo_neg",
+    "text": "咋啦？"
+  },
+  "emo_pos_01.wav": {
+    "bucket": "emo_pos",
+    "text": "哟，啥好事儿呀？"
+  },
+  "emo_pos_02.wav": {
+    "bucket": "emo_pos",
+    "text": "哈，听着就开心。"
+  },
+  "emo_pos_03.wav": {
+    "bucket": "emo_pos",
+    "text": "哟嚯，可以呀。"
+  },
+  "emo_pos_04.wav": {
+    "bucket": "emo_pos",
+    "text": "哟？"
+  },
+  "task_01.wav": {
+    "bucket": "task",
+    "text": "没问题，包在我身上。"
+  },
+  "task_02.wav": {
+    "bucket": "task",
+    "text": "行啊，这就来。"
+  },
+  "task_03.wav": {
+    "bucket": "task",
+    "text": "来，听好了哈。"
+  },
+  "task_04.wav": {
+    "bucket": "task",
+    "text": "嗯，我组织下哈。"
+  },
+  "task_05.wav": {
+    "bucket": "task",
+    "text": "没问题。"
+  },
+  "story_01.wav": {
+    "bucket": "story",
+    "text": "哦？是嘛。"
+  },
+  "story_02.wav": {
+    "bucket": "story",
+    "text": "哎哟，真的假的？"
+  },
+  "story_03.wav": {
+    "bucket": "story",
+    "text": "哇塞，还有这事儿？"
+  },
+  "story_04.wav": {
+    "bucket": "story",
+    "text": "嗯嗯。"
+  },
+  "story_05.wav": {
+    "bucket": "story",
+    "text": "哦？"
+  },
+  "ask_01.wav": {
+    "bucket": "ask",
+    "text": "嗯，好问题。"
+  },
+  "ask_02.wav": {
+    "bucket": "ask",
+    "text": "这个嘛，我想想。"
+  },
+  "ask_03.wav": {
+    "bucket": "ask",
+    "text": "嗯，怎么说呢。"
+  },
+  "ask_04.wav": {
+    "bucket": "ask",
+    "text": "哈，你还真问着了。"
+  },
+  "ask_05.wav": {
+    "bucket": "ask",
+    "text": "嗯……"
+  },
+  "opinion_01.wav": {
+    "bucket": "opinion",
+    "text": "哈，有点意思。"
+  },
+  "opinion_02.wav": {
+    "bucket": "opinion",
+    "text": "哦？怎么讲？"
+  },
+  "opinion_03.wav": {
+    "bucket": "opinion",
+    "text": "哦？"
+  },
+  "gen_01.wav": {
+    "bucket": "gen",
+    "text": "嗯呐，我想想。"
+  },
+  "gen_02.wav": {
+    "bucket": "gen",
+    "text": "哦，这样啊。"
+  },
+  "gen_03.wav": {
+    "bucket": "gen",
+    "text": "那个，让我捋捋。"
+  },
+  "gen_04.wav": {
+    "bucket": "gen",
+    "text": "嗯。"
+  }
+}

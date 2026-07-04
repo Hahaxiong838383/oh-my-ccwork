@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "realtime-voice-agent"
+version = "0.0.1"
+description = "通用型实时语音 Agent — 可插拔体验引擎 + 恒定 CQRS 记忆内核"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "川哥" }]
+keywords = ["voice-agent", "realtime", "livekit", "cqrs", "event-sourcing", "memory"]
+
+# 骨架核心零运行时依赖(契约/内核仅用标准库 dataclass)——
+# 真实引擎依赖按 Tier 放到 optional-dependencies,M0 接线时再装。
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+# Tier A(★MVP):LiveKit cascade + 本地 STT(sherpa)/TTS(VoxCPM)/LLM(OpenAI 兼容) + VAD
+# mlx-audio 仅 Apple Silicon(M0 worker 跑在 Studio macOS);其余跨平台。
+tier-a = [
+  "livekit-agents==1.6.3",
+  "livekit-plugins-silero",
+  "livekit-plugins-openai",
+  "livekit-plugins-turn-detector",
+  "sherpa-onnx==1.13.3",
+  "numpy",
+  "mlx-audio; sys_platform == 'darwin'",
+]
+# Tier B:托管 Realtime(豆包 Seeduplex / OpenAI Realtime)旁挂 STT
+tier-b = [
+  "livekit-agents>=0.11",
+]
+# 向量投影(语义召回)——可换实现,默认本地 sqlite-vec
+vector = [
+  "sqlite-vec>=0.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+voice_agent = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["src"]
+addopts = "-ra -q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.mypy]
+# 实际运行环境(Air .venv / Studio venv 均 3.12);numpy 新版 stub 用 3.12 `type` 语句,
+# 按 3.11 解析会报 syntax error。代码语法兼容仍由 ruff target-version=py311 守。
+python_version = "3.12"
+mypy_path = "src"
+packages = ["voice_agent"]
+strict = true
+# 骨架阶段未接引擎,允许 stub 留 TODO
+warn_unused_ignores = false
+
+# Tier A 真实引擎库无类型 stub(dev 环境未必装 [tier-a]);忽略缺失 import。
+[[tool.mypy.overrides]]
+module = ["livekit.*", "sherpa_onnx.*", "mlx_audio.*"]
+ignore_missing_imports = true

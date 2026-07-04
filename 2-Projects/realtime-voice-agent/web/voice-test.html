@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>实时语音测试 · realtime-voice-agent</title>
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, system-ui, "PingFang SC", sans-serif;
+    background: #0d1117; color: #e6edf3; height: 100dvh;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  header { padding: 16px; text-align: center; }
+  header h1 { font-size: 17px; margin: 0 0 4px; font-weight: 600; }
+  header .sub { font-size: 12px; color: #7d8590; }
+  #status {
+    font-size: 13px; padding: 4px 12px; border-radius: 12px;
+    background: #21262d; color: #7d8590; margin-top: 6px; display: inline-block;
+  }
+  #status.live { background: #0f5132; color: #3fb950; }
+  #status.err  { background: #5c1a1a; color: #ff7b72; }
+  #subs {
+    flex: 1; width: 100%; max-width: 640px; overflow-y: auto;
+    padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .bubble {
+    max-width: 80%; padding: 9px 13px; border-radius: 14px;
+    font-size: 15px; line-height: 1.45; word-break: break-word; white-space: pre-wrap;
+  }
+  .user  { align-self: flex-end; background: #1f6feb; color: #fff; border-bottom-right-radius: 4px; }
+  .agent { align-self: flex-start; background: #21262d; border-bottom-left-radius: 4px; }
+  .bubble.interim { opacity: 0.55; font-style: italic; }
+  footer { padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); width: 100%; max-width: 640px; }
+  #btn {
+    width: 100%; padding: 16px; border: none; border-radius: 14px;
+    font-size: 17px; font-weight: 600; cursor: pointer;
+    background: #238636; color: #fff; transition: background .15s;
+  }
+  #btn:active { background: #2ea043; }
+  #btn.stop { background: #da3633; }
+  #btn:disabled { background: #30363d; color: #7d8590; }
+  .hint { text-align: center; font-size: 12px; color: #7d8590; margin-top: 10px; }
+  #metrics { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+  #metrics .m { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 4px 9px; font-size: 11px; color: #7d8590; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 46px; }
+  #metrics .mv { font-size: 14px; color: #e6edf3; font-variant-numeric: tabular-nums; }
+  #metrics .tot .mv { color: #3fb950; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🎙️ 小可 · 实时语音测试</h1>
+    <div class="sub">sherpa STT · v1-mini 判停 · DeepSeek · VoxCPM TTS</div>
+    <div id="status">未连接</div>
+    <div id="metrics">
+      <div class="m"><span class="ml">判停</span><b class="mv" data-k="eou">–</b></div>
+      <div class="m"><span class="ml">STT</span><b class="mv" data-k="stt">–</b></div>
+      <div class="m"><span class="ml">LLM</span><b class="mv" data-k="llm">–</b></div>
+      <div class="m"><span class="ml">TTS</span><b class="mv" data-k="tts">–</b></div>
+      <div class="m tot"><span class="ml">合计</span><b class="mv" data-k="total">–</b></div>
+    </div>
+  </header>
+  <div id="subs"></div>
+  <footer>
+    <button id="btn">开始对话</button>
+    <div class="hint">点按钮授权麦克风后即可直接说话，可随时打断对方</div>
+  </footer>
+
+<script>
+const LIVEKIT_URL = "wss://voice.hahaxiong.top";
+const TOKEN = "__LIVEKIT_TOKEN__"; // 部署时由脚本注入(24h TTL)
+
+const { Room, RoomEvent, Track } = LivekitClient;
+const statusEl = document.getElementById("status");
+const subsEl = document.getElementById("subs");
+const btn = document.getElementById("btn");
+let room = null;
+let connected = false;
+const bubbles = {}; // segmentId -> element
+
+function setStatus(text, cls) {
+  statusEl.textContent = text;
+  statusEl.className = cls || "";
+}
+
+function upsertBubble(id, text, who, final) {
+  let el = bubbles[id];
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "bubble " + who;
+    subsEl.appendChild(el);
+    bubbles[id] = el;
+  }
+  el.textContent = text;
+  el.classList.toggle("interim", !final);
+  subsEl.scrollTop = subsEl.scrollHeight;
+}
+
+// 跨境网络兜底(2026-07-02):大陆直连境外的 WebRTC UDP 媒体常被运营商 QoS 掐断
+// (症状:代理可通、直连"通话中"但无声无指标)。走 TURN/TLS 中继(server 已配)解决。
+// ?relay=1 强制中转 / ?relay=0 清除记忆恢复直连;直连失败或掉线自动切中转并记住。
+const _relayQ = new URLSearchParams(location.search).get("relay");
+if (_relayQ === "0") localStorage.removeItem("vk_relay");
+function wantRelay() { return _relayQ === "1" || localStorage.getItem("vk_relay") === "1"; }
+function rememberRelay() { localStorage.setItem("vk_relay", "1"); }
+
+async function connect() {
+  const relay = wantRelay();
+  setStatus(relay ? "连接中…(中转模式)" : "连接中…");
+  btn.disabled = true;
+  try {
+    room = new Room({ adaptiveStream: true, dynacast: true });
+
+    // 直连媒体中途被掐(建立后十几秒断,跨境 UDP QoS 典型)→ 记住走中转,立即重连
+    room.on(RoomEvent.Reconnecting, () => {
+      if (!relay) {
+        rememberRelay();
+        setStatus("网络中断,切中转模式重连…");
+        room.disconnect().then(() => connect());
+      } else {
+        setStatus("重连中…(中转模式)");
+      }
+    });
+
+    room.on(RoomEvent.TrackSubscribed, (track) => {
+      if (track.kind === Track.Kind.Audio) {
+        const el = track.attach();
+        el.autoplay = true;
+        document.body.appendChild(el);
+      }
+    });
+
+    // 字幕:user + agent 转写(livekit transcription)
+    room.on(RoomEvent.TranscriptionReceived, (segments, participant) => {
+      const isAgent = participant && participant.isAgent;
+      const who = isAgent ? "agent" : "user";
+      for (const s of segments) upsertBubble(s.id, s.text, who, s.final);
+    });
+
+    // 链路延迟面板:worker 经 publish_data 发来各段耗时(payload JSON 有 k 字段)
+    const lastM = {};
+    room.on(RoomEvent.DataReceived, (payload) => {
+      try {
+        const m = JSON.parse(new TextDecoder().decode(payload));
+        if (!m.k) return;
+        if (m.k === "eou") { lastM.eou = m.eou_ms; lastM.stt = m.stt_ms; }
+        else if (m.k === "llm") lastM.llm = m.ttft_ms;
+        else if (m.k === "tts") lastM.tts = m.ttfb_ms;
+        const set = (k, v) => {
+          const e = document.querySelector(`[data-k="${k}"]`);
+          if (e) e.textContent = v == null ? "–" : v + "ms";
+        };
+        set("eou", lastM.eou); set("stt", lastM.stt);
+        set("llm", lastM.llm); set("tts", lastM.tts);
+        const total = (lastM.eou || 0) + (lastM.llm || 0) + (lastM.tts || 0);
+        set("total", total || null);
+      } catch (e) { /* ignore non-metrics data */ }
+    });
+
+    room.on(RoomEvent.Disconnected, () => {
+      connected = false;
+      setStatus("已断开", "err");
+      btn.textContent = "重新连接"; btn.classList.remove("stop"); btn.disabled = false;
+    });
+
+    await room.connect(
+      LIVEKIT_URL,
+      TOKEN,
+      relay ? { rtcConfig: { iceTransportPolicy: "relay" } } : undefined
+    );
+    await room.localParticipant.setMicrophoneEnabled(true); // 用户手势栈内,麦克风+AudioContext 解锁
+    connected = true;
+    setStatus(relay ? "● 通话中(中转模式)" : "● 通话中", "live");
+    btn.textContent = "结束对话"; btn.classList.add("stop"); btn.disabled = false;
+  } catch (e) {
+    if (!relay) {
+      // 直连建立失败 → 自动切 TURN 中转重试一次(并记住,下次直接中转)
+      rememberRelay();
+      setStatus("直连失败,切中转模式重试…");
+      try { if (room) await room.disconnect(); } catch (_) { /* ignore */ }
+      return connect();
+    }
+    setStatus("连接失败: " + (e.message || e), "err");
+    btn.textContent = "重试"; btn.disabled = false;
+  }
+}
+
+async function disconnect() {
+  if (room) await room.disconnect();
+  connected = false;
+}
+
+btn.addEventListener("click", () => { connected ? disconnect() : connect(); });
+</script>
+</body>
+</html>

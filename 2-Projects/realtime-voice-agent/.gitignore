@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# 测试 / 类型 / lint 缓存
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# 配置 / 密钥(只提交 .env.example,真值绝不入库)
+.env
+*.local
+
+# 记忆内核运行态(Event Log / 投影 / 向量库 — 可从 Event Log replay 重建)
+data/
+*.db
+*.sqlite
+*.sqlite3
+events/*.jsonl
+
+# Voice-Eval 录音 / 回放产物
+eval/recordings/
+eval/runs/
+
+# 声纹(Phase 1):模型二进制 + 注册库/注册音频(生物特征,绝不入库)
+assets/models/
+assets/speakers/
+
+# OS
+.DS_Store
