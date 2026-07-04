@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  部署到 Mini: ~/Library/LaunchAgents/com.multica.music-maintenance.plist
+  加载: launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.multica.music-maintenance.plist
+  仿照 multica-team-deploy 项目已有的 frpc/daemon launchd 先例写法。
+  部署前把下面 __FILL_IN__ 换成真实值（workspace id 从 multica web 或
+  `multica workspace list` 查；agent name 需先在该 workspace 建好并绑定 music-ops-skill.md）。
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.multica.music-maintenance</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/rayman.chen/mycc/2-Projects/music-orchestrator/deploy/multica/daily-issue-trigger.sh</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>MUSIC_MULTICA_WORKSPACE_ID</key>
+        <string>__FILL_IN__</string>
+        <key>MUSIC_MULTICA_AGENT_NAME</key>
+        <string>MusicOpsBot</string>
+        <key>MUSIC_ORCHESTRATOR_BASE_URL</key>
+        <string>https://music.chenchuan.cc</string>
+    </dict>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/Users/rayman.chen/Library/Logs/music-maintenance-trigger.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/rayman.chen/Library/Logs/music-maintenance-trigger.log</string>
+</dict>
+</plist>
