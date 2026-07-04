@@ -331,7 +331,6 @@ AGENTS.md.bak.*
 .DS_Store
 
 # ===== 2026-07-04 剥离清单(项目与个人数据不再入 mycc 仓,本地文件保留) =====
-/2-Projects/chenchuan-site/
 /2-Projects/MyJavis/
 /2-Projects/evo-desktop-ai/
 /2-Projects/cc-AirPlayer/

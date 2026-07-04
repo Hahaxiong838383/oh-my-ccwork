@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>方案 C · Cinematic Hold — Hero Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Newsreader:ital,wght@0,200..600;1,200..600&family=Geist+Mono:wght@300..500&family=Geist:wght@300..700&display=swap" rel="stylesheet" />
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:#03060b;color:#ffffff;font-family:'Geist',sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"ss01"}
+  body{min-height:100vh;position:relative;overflow-x:hidden}
+
+  /* 视频背景（用现网 poster 模拟，部署后会换真视频） */
+  .bg-video{position:fixed;inset:0;background:url('/media/hero/hero-poster.jpg') center center / cover no-repeat;z-index:0;filter:saturate(1.1) contrast(1.05)}
+  .bg-video::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(3,6,11,0.6) 0%,rgba(3,6,11,0.3) 35%,rgba(3,6,11,0.55) 65%,rgba(3,6,11,0.92) 100%)}
+
+  /* Dynamic vignette — 四角自然暗，中心透出 */
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 80% 60% at 50% 50%, transparent 0%, rgba(3,6,11,0.5) 100%)}
+
+  /* 顶部 status bar */
+  .top-bar{position:fixed;top:32px;left:48px;right:48px;display:flex;justify-content:space-between;align-items:center;z-index:10;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(255,255,255,0.45)}
+  .top-bar .live{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,0.7)}
+  .live-dot{width:5px;height:5px;background:#fff;border-radius:50%;animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:0.5}50%{opacity:1}}
+
+  .back{position:fixed;top:24px;left:24px;z-index:20;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.5);text-decoration:none;border:1px solid rgba(255,255,255,0.15);padding:6px 12px;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px)}
+  .back:hover{color:#fff;border-color:#fff}
+
+  .hero{position:relative;z-index:5;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:48px 80px;max-width:1280px;margin:0 auto}
+  @media (max-width:768px){.hero{padding:48px 32px}}
+
+  .meta-top{font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:0.34em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:48px}
+
+  .name{font-family:'Instrument Serif',serif;font-size:clamp(96px,16vw,220px);font-weight:400;letter-spacing:-0.025em;line-height:0.88;color:#ffffff;text-shadow:0 2px 80px rgba(0,0,0,0.4)}
+  .name-gap{display:inline-block;width:0.3em}
+
+  .meta-row{display:flex;gap:64px;flex-wrap:wrap;margin-top:48px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.65)}
+  .meta-row strong{color:#fff;font-weight:500;margin-right:10px}
+
+  .quote{font-family:'Newsreader',serif;font-style:italic;font-size:clamp(20px,2vw,24px);line-height:1.5;color:rgba(255,255,255,0.85);margin-top:48px;font-weight:300;max-width:680px;position:relative;padding-left:32px}
+  .quote::before{content:'';position:absolute;left:0;top:14px;width:18px;height:1px;background:rgba(255,255,255,0.5)}
+
+  .actions{display:flex;gap:32px;margin-top:64px;align-items:center;flex-wrap:wrap}
+  .cta-primary{font-family:'Geist',sans-serif;font-size:14px;font-weight:500;background:#ffffff;color:#03060b;text-decoration:none;padding:14px 28px;display:inline-flex;align-items:center;gap:10px;border-radius:2px;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);position:relative;overflow:hidden}
+  .cta-primary:hover{background:#fafafa;transform:translateY(-1px);box-shadow:0 8px 32px rgba(255,255,255,0.12)}
+  .cta-primary .arr{font-family:'Geist Mono',monospace;font-size:13px;transition:transform 0.3s}
+  .cta-primary:hover .arr{transform:translateX(3px)}
+
+  .cta-ghost{font-family:'Geist',sans-serif;font-size:14px;color:rgba(255,255,255,0.85);text-decoration:none;display:inline-flex;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.2);transition:all 0.3s ease}
+  .cta-ghost:hover{color:#fff;border-bottom-color:#fff}
+  .cta-ghost .arr{font-family:'Geist Mono',monospace;font-size:13px;color:rgba(255,255,255,0.5);transition:all 0.3s}
+  .cta-ghost:hover .arr{color:#fff;transform:translateX(3px)}
+
+  /* Executive Presets — ★ gemini 钦定 */
+  .presets-section{margin-top:96px;border-top:1px solid rgba(255,255,255,0.1);padding-top:32px;max-width:920px}
+  .presets-label{font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(255,255,255,0.45);display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .presets-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.08);margin-left:8px}
+  .presets-label .live-dot{background:#9DECF9;animation:pulse 2.4s ease-in-out infinite}
+
+  .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media (max-width:768px){.presets{grid-template-columns:1fr}}
+  .preset{display:flex;flex-direction:column;gap:6px;padding:18px 20px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.02);text-decoration:none;color:inherit;transition:all 0.35s cubic-bezier(0.16,1,0.3,1);position:relative}
+  .preset:hover{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.3);transform:translateY(-2px)}
+  .preset .tag{font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.5)}
+  .preset .text{font-family:'Geist',sans-serif;font-size:13.5px;line-height:1.45;color:rgba(255,255,255,0.9);font-weight:400}
+  .preset .arr{position:absolute;top:18px;right:20px;font-family:'Geist Mono',monospace;font-size:11px;color:rgba(255,255,255,0.4);transition:all 0.3s}
+  .preset:hover .arr{color:#fff;transform:translateX(3px)}
+
+  .scroll-hint{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);z-index:10;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(255,255,255,0.4);display:flex;flex-direction:column;align-items:center;gap:12px}
+  .scroll-line{width:1px;height:24px;background:linear-gradient(180deg,transparent,rgba(255,255,255,0.6))}
+</style>
+</head>
+<body>
+<a class="back" href="./index.html">← 返回对比</a>
+
+<div class="bg-video"></div>
+<div class="vignette"></div>
+
+<div class="top-bar">
+  <span>方案 C · Cinematic Hold</span>
+  <span class="live"><span class="live-dot"></span>Live · Product Director · FUTURUS</span>
+</div>
+
+<div class="hero">
+  <div class="meta-top">Product · AI · Hard Tech / 2007 → 2026</div>
+
+  <h1 class="name">陈<span class="name-gap"></span>川</h1>
+
+  <div class="meta-row">
+    <span><strong>19</strong>年硬科技</span>
+    <span><strong>46</strong>项专利</span>
+    <span><strong>9</strong>款量产产品</span>
+  </div>
+
+  <p class="quote">把智能转化为产品力 — 从车规级 AR HUD 到独立 AI 工作底座，再到下一代健康教育硬件。</p>
+
+  <div class="actions">
+    <a class="cta-primary" href="#">
+      查看作品
+      <span class="arr">→</span>
+    </a>
+    <a class="cta-ghost" href="#">
+      和我的 AI 聊聊
+      <span class="arr">→</span>
+    </a>
+  </div>
+
+  <div class="presets-section">
+    <div class="presets-label">
+      <span class="live-dot"></span>
+      战略镜像 · 已上线 · 一键提问
+    </div>
+    <div class="presets">
+      <a class="preset" href="#">
+        <span class="tag">HR</span>
+        <span class="text">1 分钟生成川哥的背景简报</span>
+        <span class="arr">→</span>
+      </a>
+      <a class="preset" href="#">
+        <span class="tag">投资人</span>
+        <span class="text">川哥怎么看 AR HUD 赛道的未来</span>
+        <span class="arr">→</span>
+      </a>
+      <a class="preset" href="#">
+        <span class="tag">合作者</span>
+        <span class="text">川哥对独立 AI 项目的合作态度</span>
+        <span class="arr">→</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="scroll-hint">
+  <span>滑下探索</span>
+  <span class="scroll-line"></span>
+</div>
+</body>
+</html>

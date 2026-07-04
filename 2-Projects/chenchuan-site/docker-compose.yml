@@ -1,0 +1,75 @@
+services:
+  site:
+    build: .
+    container_name: chenchuan-site
+    restart: unless-stopped
+    ports:
+      - "${SITE_PORT:-3100}:3000"
+    volumes:
+      - ./media:/app/public/media
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - DIRECTUS_URL=http://directus:8055
+    depends_on:
+      directus:
+        condition: service_healthy
+
+  directus:
+    image: directus/directus:11
+    container_name: chenchuan-cms
+    restart: unless-stopped
+    ports:
+      - "${CMS_PORT:-8055}:8055"
+    volumes:
+      - ./directus/uploads:/directus/uploads
+      - ./directus/extensions:/directus/extensions
+      # NAS 共享文件夹挂载（只读），用于导入素材
+      - /vol1/1000/文件临时缓存:/directus/nas-import:ro
+    environment:
+      SECRET: "${DIRECTUS_SECRET:-change-me-to-a-random-string}"
+      DB_CLIENT: pg
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: "${DB_DATABASE:-directus}"
+      DB_USER: "${DB_USER:-directus}"
+      DB_PASSWORD: "${DB_PASSWORD:-directus}"
+
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@example.com}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-admin123}"
+
+      PUBLIC_URL: "${CMS_PUBLIC_URL:-http://localhost:8055}"
+      CORS_ENABLED: "true"
+      CORS_ORIGIN: "*"
+
+      CACHE_ENABLED: "true"
+      CACHE_AUTO_PURGE: "true"
+      CACHE_TTL: "5m"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8055/server/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: chenchuan-db
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: "${DB_DATABASE:-directus}"
+      POSTGRES_USER: "${DB_USER:-directus}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-directus}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-directus}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:

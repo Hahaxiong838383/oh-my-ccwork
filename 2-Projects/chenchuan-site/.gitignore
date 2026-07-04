@@ -1,0 +1,22 @@
+node_modules/
+.next/
+out/
+.env
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+# analytics SQLite 数据库（运行时生成，不入 git）
+data/*.db
+data/*.db-*
+
+# MediaPipe wasm + model 大文件（~44MB），不入 git 避免仓库膨胀
+# wasm 从 node_modules/@mediapipe/tasks-vision/wasm/ 拷贝
+# model .task 从 storage.googleapis.com/mediapipe-models/ 下载
+# rsync 部署时正常同步（rsync 不读 .gitignore）
+public/mediapipe/
+
+# 大视频（>GitHub 100MB 单文件上限），不入 git；rsync 部署正常同步到 VPS
+# 源文件在 ~/Documents/陈川个人站/，需要时从那里重新部署
+public/media/futurus-hud/full-window-hud-live.mp4
+public/media/futurus-hud/mass-production-hud.mp4
+public/media/auto-show/beijing-auto-show-2024.mp4
