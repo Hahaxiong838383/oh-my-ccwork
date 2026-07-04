@@ -33,6 +33,7 @@
   .user  { align-self: flex-end; background: #1f6feb; color: #fff; border-bottom-right-radius: 4px; }
   .agent { align-self: flex-start; background: #21262d; border-bottom-left-radius: 4px; }
   .bubble.interim { opacity: 0.55; font-style: italic; }
+  .bubble.interrupted::after { content: " ⋯"; opacity: 0.5; }
   footer { padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); width: 100%; max-width: 640px; }
   #btn {
     width: 100%; padding: 16px; border: none; border-radius: 14px;
@@ -78,23 +79,58 @@ const subsEl = document.getElementById("subs");
 const btn = document.getElementById("btn");
 let room = null;
 let connected = false;
-const bubbles = {}; // segmentId -> element
+
+// 气泡合并(2026-07-04,team 圆桌 grok+codex 共识定案):LiveKit 把火山每个 definite
+// 分句(句中自然停顿会被切成多句)当成独立 segment id,按 id 建气泡会把一句话说话中的
+// 停顿渲染成两个气泡,用户观感是"被截断了"(实际 ASR/判停均正常,纯显示层问题;agent
+// 侧同理,StreamAdapter 逐句合成也会产生多个 segment id)。改用"说话方"分界,不再用
+// segment id 做气泡 key。
+const active = { user: null, agent: null }; // { el, committed, lastUpdateAt }
+let lastSpeaker = null;
+// 同一说话方超时未更新 → 视为新一轮(兜底:agent 全链路静默失败时,不会把用户下一轮
+// 错误并入上一轮气泡;数值远大于正常轮内分句间隔,不会误拆真实的同一句话)。
+const MERGE_GAP_MS = { user: 2500, agent: 6000 };
 
 function setStatus(text, cls) {
   statusEl.textContent = text;
   statusEl.className = cls || "";
 }
 
-function upsertBubble(id, text, who, final) {
-  let el = bubbles[id];
-  if (!el) {
-    el = document.createElement("div");
-    el.className = "bubble " + who;
-    subsEl.appendChild(el);
-    bubbles[id] = el;
+function startBubble(who) {
+  const el = document.createElement("div");
+  el.className = "bubble " + who;
+  subsEl.appendChild(el);
+  return { el, committed: "", lastUpdateAt: Date.now() };
+}
+
+function upsertBubble(text, who, final) {
+  const now = Date.now();
+
+  // barge-in 视觉标记(仅样式,不改变气泡边界逻辑):用户开口时如果 agent 气泡仍"新鲜"
+  // (未超时),大概率是打断了 agent 未说完的回复——标记但不强制关闭该气泡,如果 agent
+  // 实际仍在继续同一句回复(理论上的误判),后续分句仍能正常追加进这个气泡。
+  if (who === "user" && active.agent && now - active.agent.lastUpdateAt < MERGE_GAP_MS.agent) {
+    active.agent.el.classList.add("interrupted");
   }
-  el.textContent = text;
-  el.classList.toggle("interim", !final);
+
+  const msg = active[who];
+  const speakerChanged = who !== lastSpeaker;
+  const timedOut = !!msg && now - msg.lastUpdateAt > MERGE_GAP_MS[who];
+  if (!msg || speakerChanged || timedOut) {
+    active[who] = startBubble(who);
+  }
+  lastSpeaker = who;
+
+  const s = active[who];
+  s.lastUpdateAt = now;
+  if (final) {
+    s.committed += text;       // definite 分句 → 累加进已提交文本(同轮多句合并的关键)
+    s.el.textContent = s.committed;
+    s.el.classList.remove("interim");
+  } else {
+    s.el.textContent = s.committed + text;  // 进行中分句 → 已提交 + 当前 interim,不落 committed
+    s.el.classList.add("interim");
+  }
   subsEl.scrollTop = subsEl.scrollHeight;
 }
 
@@ -136,7 +172,7 @@ async function connect() {
     room.on(RoomEvent.TranscriptionReceived, (segments, participant) => {
       const isAgent = participant && participant.isAgent;
       const who = isAgent ? "agent" : "user";
-      for (const s of segments) upsertBubble(s.id, s.text, who, s.final);
+      for (const s of segments) upsertBubble(s.text, who, s.final);
     });
 
     // 链路延迟面板:worker 经 publish_data 发来各段耗时(payload JSON 有 k 字段)

@@ -135,6 +135,7 @@ class VolcSTT(STT[Never]):
         preflight_text_quiet_ms: float = 150.0,
         preflight_silence_amp: float = 250.0,
         speaker_ring: object | None = None,
+        enable_ddc: bool = True,
     ) -> None:
         super().__init__(capabilities=STTCapabilities(streaming=True, interim_results=True))
         self._app_id = app_id
@@ -155,6 +156,11 @@ class VolcSTT(STT[Never]):
         # 声纹旁路 ring buffer(speaker_id.AudioRingBuffer;None=关):pump 侧顺手留存
         # 本轮用户音频,turn 提交后旁路比对。带幅度过滤,静音帧不占容量。
         self._speaker_ring = speaker_ring
+        # 语义顺滑(2026-07-04 team 圆桌 grok+codex 共识定案):火山服务端删语气词/停顿词/
+        # 重复词提升可读性,服务端默认 False,我们显式开(陪伴场景字幕干净+不回应咳嗽)。
+        # 风险:纯语气词整轮(如单字"嗯")理论上可能被顺滑清空成空文本——_run() 里有对应
+        # 告警日志兜底观测,VOLC_ASR_ENABLE_DDC=0 可临时关闭验证是否命中。
+        self._enable_ddc = enable_ddc
 
     async def _recognize_impl(
         self,
@@ -284,6 +290,7 @@ class VolcRecognizeStream(RecognizeStream):
             api_key=self._volc._api_key,
             resource_id=self._volc._resource_id,
             end_window_size=self._volc._end_window_size,
+            enable_ddc=self._volc._enable_ddc,
         )
         final_n = 0  # 已 emit FINAL 的 definite 句数(utterances 累积前缀)
         try:
@@ -294,7 +301,20 @@ class VolcRecognizeStream(RecognizeStream):
                 # canonical:FINAL 也去标点,与 PREFLIGHT 全等(否则 final 补标点→miss)。
                 for i in range(final_n, len(utts)):
                     if utts[i].get("definite"):
-                        self._emit(self._canon(str(utts[i].get("text") or "")), final=True)
+                        canon_text = self._canon(str(utts[i].get("text") or ""))
+                        if not canon_text.strip():
+                            # 顺滑风险观测(2026-07-04 team 圆桌 grok+codex 共识):definite
+                            # 句段文本为空——可能是纯语气词/停顿词被 enable_ddc 整段清空
+                            # (用户说了话但这轮无声无息消失,_emit 会静默丢弃不留痕迹)。
+                            # 此行是唯一证据:排查"AI 没反应"时先查这条,pre_interim_tail
+                            # 非空则实锤是顺滑清空(说明用户确实说过、interim 曾捕捉到)。
+                            logger.warning(
+                                "stt: definite 句段顺滑后为空(疑似 enable_ddc 清空纯语气词),"
+                                "raw_utterance=%r pre_interim_tail=%r",
+                                utts[i],
+                                self._pf_last_text,
+                            )
+                        self._emit(canon_text, final=True)
                         final_n = i + 1
                         self._reset_pf()  # definite 提交后,下个句段重新允许投机
                     else:
