@@ -2,15 +2,19 @@
 
 GET /stream/{source}/{track_id}
 
-边下边流：上游字节经 ffmpeg 剥离视频轨、只保留音频（fragmented mp4/m4a 容器，
-不重新编码，`-c:a copy` 直接透传原始音频数据），一边产出给客户端一边写入缓存文件；
-下载完成后原子 rename 成正式缓存，下次同一首歌直接命中缓存（Range 请求原生支持）。
+边下边流：上游字节经 ffmpeg 剥离视频轨 + **统一重编码成 MP3**，一边产出给客户端
+一边写入缓存文件；下载完成后原子 rename 成正式缓存，下次命中缓存直接 FileResponse（Range 原生支持）。
 
-已知简化（有意为之，不算 bug）：
-- 首次流式请求不支持 Range（用户点播不会去 seek 一首还没下完的新歌，这个场景优先级低）；
-  缓存命中后走 FileResponse，Range 原生支持。
-- 两个并发请求同一首「从未缓存过」的歌时会各自触发一次下载（无 leader/follower 去重），
-  对个人自用场景概率极低，不为此增加协调复杂度。
+为什么重编码成 MP3 而不是 `-c:a copy` 透传（2026-07-04 真机踩坑后改）：
+- B 站不同视频音轨编码不一（普通 aac / Dolby `_da2` / 其它），`-c:a copy` 进 fragmented mp4
+  muxer 对某些编码会**卡死不产出分片**（实测 BV1d4411N7zD 首字节后 25s 零输出）。重编码成 MP3
+  无视源编码、输出永远一致。
+- MP3 渐进流是所有浏览器 `<audio>`（含 WKWebView）原生支持的最稳格式，不需要 Range/moov，
+  直接边收边播。代价=音频重编码 CPU（很轻）+ 可忽略的音质损失（192k）。
+
+已知简化（有意为之）：
+- 首次流式请求不支持 Range（点播不会 seek 一首还没下完的新歌）；缓存命中后 FileResponse 支持 Range。
+- 两个并发请求同一首未缓存的歌各自触发一次下载（无去重），个人自用概率极低，不为此加协调复杂度。
 """
 
 import asyncio
@@ -19,11 +23,12 @@ import logging
 from typing import AsyncIterator, Optional
 
 import httpx
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 
 from app.cache import LRUFileCache
 from app.config import config
+from app.signing import verify_stream
 from app.sources import get_source_by_name
 
 logger = logging.getLogger(__name__)
@@ -32,13 +37,18 @@ router = APIRouter(prefix="/stream", tags=["stream"])
 
 _cache = LRUFileCache(config.cache_dir, config.cache_max_mb)
 
-AUDIO_MEDIA_TYPE = "audio/mp4"  # 音频轨道装在 fragmented mp4(m4a) 容器里
+AUDIO_MEDIA_TYPE = "audio/mpeg"  # 统一重编码成 MP3（渐进流，<audio> 全兼容）
 
 
-def require_music_key(x_music_key: Optional[str] = Header(None)):
-    if not config.music_key or x_music_key != config.music_key:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Music-Key")
-    return x_music_key
+def _authed(source: str, track_id: str, token: Optional[str], exp: Optional[int], x_music_key: Optional[str]) -> bool:
+    """双路鉴权：header（服务端 httpx 客户端，如 voice-agent）或签名 token（浏览器 `<audio>`）。"""
+    # header 路：voice-agent 服务端拉流带 X-Music-Key
+    if config.music_key and x_music_key == config.music_key:
+        return True
+    # token 路：music_play 签发的短时 token，绑定本 source/track_id（浏览器 <audio> 用）
+    if token and exp is not None:
+        return verify_stream(source, track_id, exp, token)
+    return False
 
 
 async def _fetch_transcode_and_cache(
@@ -61,11 +71,11 @@ async def _fetch_transcode_and_cache(
         "pipe:0",
         "-vn",  # 丢弃视频轨
         "-c:a",
-        "copy",  # 音频不重新编码，直接透传（快、零质量损失）
+        "libmp3lame",  # 统一重编码成 MP3（无视源编码，输出永远一致、可渐进流）
+        "-b:a",
+        "192k",
         "-f",
-        "mp4",
-        "-movflags",
-        "frag_keyframe+empty_moov+default_base_moof",  # 分片 mp4，支持边写边读不需回写 moov
+        "mp3",
         "pipe:1",
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
@@ -128,8 +138,13 @@ async def _fetch_transcode_and_cache(
 async def stream_audio(
     source: str,
     track_id: str,
-    _: str = Depends(require_music_key),
+    token: Optional[str] = Query(None),
+    exp: Optional[int] = Query(None),
+    x_music_key: Optional[str] = Header(None),
 ):
+    if not _authed(source, track_id, token, exp, x_music_key):
+        raise HTTPException(status_code=401, detail="unauthorized")
+
     key = f"{source}:{track_id}"
 
     if _cache.has(key):

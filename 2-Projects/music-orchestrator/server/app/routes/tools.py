@@ -9,7 +9,14 @@ from pydantic import BaseModel
 from app.config import config
 from app.ranking import search_all
 from app.session_state import get_session
+from app.signing import sign_stream
 from app.sources.base import SearchResult
+
+
+def _signed_stream_url(source: str, track_id: str) -> str:
+    """拼带签名 token 的相对 stream 地址（供浏览器 `<audio>` 无 header 取流）。"""
+    token, exp = sign_stream(source, track_id)
+    return f"/stream/{source}/{track_id}?token={token}&exp={exp}"
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +98,7 @@ async def music_play(req: PlayRequest, _: str = Depends(require_music_key)):
     top = results[0]
     score = top.stream_hint.get("score", 0.0) if isinstance(top.stream_hint, dict) else 0.0
 
-    stream_url = f"/stream/{top.source}/{top.id}"
+    stream_url = _signed_stream_url(top.source, top.id)
 
     sess = get_session(req.session_id)
     track_dict = {
