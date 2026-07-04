@@ -197,6 +197,12 @@ class MemoryItemStore {
     return Number(r.changes) > 0;
   }
 
+  /** 面板用户删除:归属校验版物理删(儿童数据删除权;admin 的 hardDelete 保持原样)。 */
+  hardDeleteOwned(accountId: string, id: string): boolean {
+    const r = this.db.prepare('DELETE FROM memory_item WHERE id = ? AND account_id = ?').run(id, accountId);
+    return r.changes > 0;
+  }
+
   /** 按"不喜欢了"的内容撤销 preference/event 同名项(抽取器 dislike 联动用,精确 content 匹配)。 */
   retractByContent(accountId: string, type: MemoryType, content: string): boolean {
     const r = this.db.prepare(`

@@ -16,6 +16,7 @@ const kindColor: Record<DebugEntry['kind'], string> = {
   perf: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
   avatar: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
   error: 'bg-red-500/20 text-red-300 border-red-500/30',
+  memory: 'bg-lime-500/20 text-lime-300 border-lime-500/30',
 };
 
 function formatTime(ts: number): string {

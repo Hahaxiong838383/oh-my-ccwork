@@ -32,7 +32,7 @@ const VOICE_SPEED_KEY = 'kidshub.voiceSpeed';
 
 export interface DebugEntry {
   ts: number;
-  kind: 'action' | 'asr' | 'llm' | 'tts' | 'prompt' | 'config' | 'perf' | 'avatar' | 'error';
+  kind: 'action' | 'asr' | 'llm' | 'tts' | 'prompt' | 'config' | 'perf' | 'avatar' | 'error' | 'memory';
   title: string;
   detail?: string;
 }
