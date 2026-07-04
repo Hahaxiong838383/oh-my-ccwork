@@ -1,6 +1,6 @@
 #!/bin/bash
 # 每日 00:00 推送本地 main 到 origin
-# origin = https://github.com/Hahaxiong838383/mycc
+# origin = https://github.com/Hahaxiong838383/oh-my-ccwork（2026-07-04 迁移，旧 mycc 仓已废弃禁推）
 
 set -e
 cd /Users/rayman.chen/mycc

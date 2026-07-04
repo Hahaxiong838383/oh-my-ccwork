@@ -329,3 +329,14 @@ AGENTS.md.bak.*
 2-Projects/multica-team-deploy/upgrade-v0.3.21/multica-v0.3.21/
 # 系统垃圾
 .DS_Store
+
+# ===== 2026-07-04 剥离清单(项目与个人数据不再入 mycc 仓,本地文件保留) =====
+/2-Projects/chenchuan-site/
+/2-Projects/MyJavis/
+/2-Projects/realtime-voice-agent/
+/2-Projects/evo-desktop-ai/
+/2-Projects/cc-AirPlayer/
+/.codex/auth.json
+/.codex/sessions/
+/.claude/projects/
+/.claude/skills/cc-lite/
