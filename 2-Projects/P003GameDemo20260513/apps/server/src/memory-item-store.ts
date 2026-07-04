@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { isCrisisContent } from './memory-safety-filter.js';
 
 // Phase 1 typed 情景记忆(docs/43 §8 定稿):promise/event/emotion/relation/preference。
 // 与 family_member 同库(profile.db)不同表——profile.db 仍是孩子记忆的唯一物理真相源;
@@ -131,7 +132,10 @@ class MemoryItemStore {
    * 批量写入(抽取器产出)。同步原子;UNIQUE(account,type,content) ON CONFLICT IGNORE 防双链路重复写。
    * 非 promise 类写后淘汰超限最旧;promise 永不淘汰(评审 X2),active 超 8 条仅 log 警告。
    */
-  addItems(accountId: string, items: NewMemoryItem[]): number {
+  addItems(accountId: string, rawItems: NewMemoryItem[]): number {
+    // 安全兜底：危机内容(自伤/自杀/极端家庭压力)绝不进记忆系统——临时关键词规则，
+    // 科学的儿童安全防护(实时识别+分级干预)待产品设计后叠加(见 memory-safety-filter.ts)。
+    const items = rawItems.filter((it) => !isCrisisContent(it.content));
     if (!items.length) return 0;
     const now = Date.now();
     const ins = this.db.prepare(`
