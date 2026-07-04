@@ -140,9 +140,37 @@ class TierACascadeEngine(ExperienceEngine):
         self._livekit_started = True
         bridge = LiveKitEventBridge(emit=self._queue.put_nowait)
         _register_livekit_handlers(session, bridge)
+
+        # 音乐工具（可选）：仅当配置了 MUSIC_ORCHESTRATOR_URL 才注册
+        extra_tools: list[Any] = []
+        if self._settings.music_orchestrator_url:
+            try:
+                import logging as _log
+
+                from ..tools.music_client import MusicClient
+                from ..tools.music_tools import create_music_tools
+
+                mclient = MusicClient(
+                    self._settings.music_orchestrator_url,
+                    self._settings.music_orchestrator_key or "",
+                )
+                extra_tools = create_music_tools(mclient)
+                _log.getLogger("voice_agent.music").info(
+                    "music tools 已注册 (orchestrator=%s)", self._settings.music_orchestrator_url
+                )
+            except Exception:
+                import logging as _logging
+
+                _logging.getLogger("voice_agent.music").exception(
+                    "music tools 注册失败，音乐能力关闭"
+                )
+
         await session.start(
             agent=_make_agent(
-                Agent, self._settings.agent_instructions, speaker_sidecar=speaker_sidecar
+                Agent,
+                self._settings.agent_instructions,
+                speaker_sidecar=speaker_sidecar,
+                tools=extra_tools,
             ),
             room=ctx.room,
             # 统一输入采样率 16k:让 VAD 与 STT 收同采样率音频
@@ -472,7 +500,13 @@ def _load_filler_bank() -> Any:
     return FillerBank.load(filler_dir, probability)
 
 
-def _make_agent(agent_cls: Any, instructions: str, *, speaker_sidecar: Any | None = None) -> Any:
+def _make_agent(
+    agent_cls: Any,
+    instructions: str,
+    *,
+    speaker_sidecar: Any | None = None,
+    tools: list[Any] | None = None,
+) -> Any:
     """构造带承接音的 Agent 子类实例(C1 v2,2026-07-02 川哥反馈迭代)。
 
     ``on_user_turn_completed`` 是唯一同时满足两条件的钩子:①拿到用户 turn 完整文本
@@ -505,7 +539,7 @@ def _make_agent(agent_cls: Any, instructions: str, *, speaker_sidecar: Any | Non
 
                 logging.getLogger("voice_agent.fillers").exception("filler say 失败(忽略)")
 
-    return _FillerAgent(instructions=instructions)
+    return _FillerAgent(instructions=instructions, tools=tools or None)
 
 
 def _register_livekit_handlers(session: Any, bridge: LiveKitEventBridge) -> None:

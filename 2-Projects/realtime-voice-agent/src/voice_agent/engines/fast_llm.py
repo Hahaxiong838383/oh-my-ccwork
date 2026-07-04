@@ -28,7 +28,14 @@ from typing import Any, Never
 import httpx
 import openai
 from livekit.agents import APIConnectionError, APIConnectOptions, APIStatusError, llm
-from livekit.agents.llm import ChatChunk, ChatContext, ChoiceDelta, Tool, ToolChoice
+from livekit.agents.llm import (
+    ChatChunk,
+    ChatContext,
+    ChoiceDelta,
+    FunctionToolCall,
+    Tool,
+    ToolChoice,
+)
 from livekit.agents.types import DEFAULT_API_CONNECT_OPTIONS, NOT_GIVEN, NotGivenOr
 from openai import AsyncOpenAI
 
@@ -286,6 +293,37 @@ class FastLLMStream(llm.LLMStream):
             ChatChunk(id=cid, delta=ChoiceDelta(role="assistant", content=content))
         )
 
+    def _emit_tool_calls(self, raw_tcs: list[Any]) -> None:
+        """把 openai delta.tool_calls 片段合并后 emit FunctionToolCall 列表。"""
+        from collections import defaultdict
+
+        default = {"id": "", "name": "", "arguments": ""}
+        by_idx: dict[int, dict[str, str]] = defaultdict(lambda: dict(default))
+        for tc in raw_tcs:
+            idx = getattr(tc, "index", 0) or 0
+            if getattr(tc, "id", None):
+                by_idx[idx]["id"] = tc.id
+            fn = getattr(tc, "function", None)
+            if fn:
+                if getattr(fn, "name", None):
+                    by_idx[idx]["name"] = fn.name
+                if getattr(fn, "arguments", None):
+                    by_idx[idx]["arguments"] += fn.arguments or ""
+        livekit_tcs: list[FunctionToolCall] = []
+        for info in by_idx.values():
+            if info["name"]:
+                livekit_tcs.append(
+                    FunctionToolCall(
+                        name=info["name"],
+                        arguments=info["arguments"],
+                        call_id=info["id"] or f"call_{len(livekit_tcs)}",
+                    )
+                )
+        if livekit_tcs:
+            self._event_ch.send_nowait(
+                ChatChunk(id="tool", delta=ChoiceDelta(role="assistant", tool_calls=livekit_tcs))
+            )
+
     async def _run(self) -> None:
         # 复用 livekit 消息转换(含 system/历史/dummy user 注入,避免空 user 报错)
         messages, _ = self._chat_ctx.to_provider_format("openai")
@@ -301,7 +339,8 @@ class FastLLMStream(llm.LLMStream):
                 logger.info("llm ctx note 注入: %s…", note[:24])
         if self._fast._api_style == "ollama":
             await self._run_ollama(messages)
-        elif self._fast._ep_fallback is not None:
+        elif self._fast._ep_fallback is not None and not self.tools:
+            # 有 tools 时跳过 race（tool call 非 TTFT 敏感路径，简化实现）
             await self._run_race(messages)
         else:
             await self._run_openai(messages)
@@ -335,8 +374,23 @@ class FastLLMStream(llm.LLMStream):
                 else {}
             )
             stripper = ThinkStripper() if ep.strip_think else None
+            # race 路径也尽量透传 tools（但外层在有 tools 时已优选单路）
+            req_tools = None
+            if self.tools:
+                try:
+                    from livekit.agents.llm import ToolContext
+                    from livekit.agents.llm._provider_format import openai as ofmt
+
+                    tc = ToolContext(self.tools)
+                    req_tools = ofmt.to_fnc_ctx(tc)
+                except Exception:
+                    req_tools = None
             stream = await client.chat.completions.create(
-                model=ep.model, messages=messages, stream=True, extra_body=extra_body
+                model=ep.model,
+                messages=messages,
+                stream=True,
+                extra_body=extra_body,
+                tools=req_tools,
             )
             try:
                 async for chunk in stream:
@@ -394,19 +448,39 @@ class FastLLMStream(llm.LLMStream):
             if self._fast._thinking in ("disabled", "enabled", "adaptive")
             else {}
         )
+        # function calling 支持：把 LiveKit Tool 转成 openai 格式透传
+        request_tools = None
+        if self.tools:
+            try:
+                from livekit.agents.llm import ToolContext
+                from livekit.agents.llm._provider_format import openai as ofmt
+
+                tc = ToolContext(self.tools)
+                request_tools = ofmt.to_fnc_ctx(tc)
+            except Exception:
+                request_tools = None
         try:
             stream = await self._fast._client.chat.completions.create(
                 model=self._fast._model,
                 messages=messages,
                 stream=True,
                 extra_body=extra_body,
+                tools=request_tools,
             )
+            # 收集 tool_calls（openai 流式分片到达，arguments 要拼接）
+            collected_tcs: list[Any] = []
             async for chunk in stream:
                 if not chunk.choices:
                     continue
                 delta = chunk.choices[0].delta
+                if delta and getattr(delta, "tool_calls", None):
+                    collected_tcs.extend(delta.tool_calls or [])
+                    continue
                 if delta and delta.content:
                     self._emit_content(chunk.id, delta.content)
+            # 流结束后若有 tool_calls，合并后 emit 给 LiveKit 收集器
+            if collected_tcs:
+                self._emit_tool_calls(collected_tcs)
         except openai.APIStatusError as e:
             raise APIStatusError(
                 str(e), status_code=e.status_code, request_id=e.request_id, body=e.body

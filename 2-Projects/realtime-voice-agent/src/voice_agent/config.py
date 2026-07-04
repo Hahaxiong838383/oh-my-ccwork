@@ -60,6 +60,9 @@ class Settings:
     vector_index_path: str = "./data/vector.db"
     # 冷路径抽取置信度门
     extraction_confidence_floor: float = DEFAULT_CONFIDENCE_FLOOR
+    # 音乐能力（可选）：未配置时不注册工具
+    music_orchestrator_url: str = ""
+    music_orchestrator_key: str = ""
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> Settings:
@@ -98,6 +101,8 @@ class Settings:
             event_log_path=get("EVENT_LOG_PATH", "./data/events"),
             vector_index_path=get("VECTOR_INDEX_PATH", "./data/vector.db"),
             extraction_confidence_floor=floor,
+            music_orchestrator_url=get("MUSIC_ORCHESTRATOR_URL"),
+            music_orchestrator_key=get("MUSIC_ORCHESTRATOR_KEY"),
         )
 
 
