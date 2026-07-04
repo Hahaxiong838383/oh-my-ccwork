@@ -19,7 +19,7 @@ def load_config() -> Config:
     music_key = os.getenv("MUSIC_KEY", "")
     music_admin_key = os.getenv("MUSIC_ADMIN_KEY", "")
     cache_dir = os.getenv("CACHE_DIR", "./cache")
-    cache_max_mb = int(os.getenv("CACHE_MAX_MB", "5000"))
+    cache_max_mb = int(os.getenv("CACHE_MAX_MB", "3000"))
     enabled_sources_str = os.getenv("ENABLED_SOURCES", "bilibili")
     enabled_sources = [s.strip() for s in enabled_sources_str.split(",") if s.strip()]
     bilibili_sessdata = os.getenv("BILIBILI_SESSDATA", "")

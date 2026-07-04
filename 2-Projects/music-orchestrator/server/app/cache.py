@@ -103,3 +103,25 @@ class LRUFileCache:
         # 写入后检查是否需要 prune
         self.prune()
         return p
+
+    def tmp_path_for(self, key: str) -> Path:
+        """边下边流场景：调用方增量写入这个临时文件，完成后调 finalize()。"""
+        p = self.path_for(key)
+        return p.with_suffix(p.suffix + ".tmp")
+
+    def finalize(self, key: str, tmp_path: Path) -> Path:
+        """流式下载完成：原子 rename 临时文件为正式缓存 + 写入后 prune。"""
+        p = self.path_for(key)
+        with self._lock:
+            tmp_path.replace(p)
+            os.utime(p, None)
+        self.prune()
+        return p
+
+    def discard_tmp(self, tmp_path: Path) -> None:
+        """流式下载中途失败/客户端断开：清理残留临时文件，不留半成品。"""
+        try:
+            if tmp_path.exists():
+                tmp_path.unlink()
+        except Exception as e:
+            logger.warning(f"discard tmp failed for {tmp_path}: {e}")
