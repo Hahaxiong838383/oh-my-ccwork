@@ -122,6 +122,23 @@ prompt 层已禁(config.py instructions)+ TTS 入口 `strip_stage_directions` �
 - 服务自启已 enable(livekit-server/voice-worker,2026-07-03 补——之前从未重启过没暴露)。
 - 🔴 预防:**HK 上禁止连发 probe(≥30s 间隔,或 probe 客户端挪本机跑)**。
 
+### 症状:通话中偶发卡顿(非无声,能对话但一顿一顿)——内存 thrash(2026-07-04 根治)
+真根因=**内存不足磁盘 thrash,不是 CPU**(易误判!先猜 CPU 被 vmstat 打脸)。诊断铁律=
+`vmstat 2` 看**三维**:CPU `id`(通话时若 87-96% 空闲=算力没问题)/ 内存 `cache`(被挤爆
+从 285→109MB=内存压力)/ IO `wa`+`bi`(wa 飙 91%、bi 暴增 16万块/s=正在 thrash)。
+- 元凶:LiveKit prod 默认 `num_idle_processes=min(⌈CPU核数⌉,4)`=2,加活跃通话=3-4 个
+  forkserver 子进程各 350-440MB(silero VAD+声纹+av+v1-mini+openai 预载),打爆 2G;无 swap
+  → page cache 回收 → 进程页/模型 mmap 从磁盘疯狂重读 → 整机 IO 卡死几秒。
+- 修:①`WORKER_NUM_IDLE=1`(app.py num_idle_processes,单用户专机够用,省 ~400MB)②2G swap
+  兜底(`fallocate -l 2G /swapfile`+chmod 600+mkswap+swapon+写 fstab 持久化)。
+- 验证:活跃通话 `free -m` available 稳 400MB+/`vmstat` wa 0-1%/swap 未动用。`ps -eo rss,args|
+  grep "forkserver import main"` 看大进程数(空闲应 ≤2,活跃 ≤3)。
+
+### 症状:改了前端(voice-test.html)手机不生效
+= 手机 Chrome 缓存旧版 HTML(nginx `location=/voice-test.html` 若无 cache 头→启发式缓存)。
+已根治:nginx 加 `add_header Cache-Control "no-cache, must-revalidate"`(改前端立即生效+304 省流量),
+公网 `curl -sI` 应见该头。临时验证可让川哥飞行模式重连(强制重新拉取)。
+
 ### 症状:点开始对话"通话中"但无声(FFI panic 首连失败)——已根治(2026-07-04)
 真根因(py-spy 栈实锤,**不是**补位进程抢核——那是同秒出现的旁观者,initialize 仅 84ms):
 job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰性 import(pydantic
@@ -160,7 +177,8 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 | 声纹 | SPEAKER_ID_ENABLED(1)/ _THRESHOLD(0.50)/ _MODEL/_REGISTRY(默认 assets 下)/ _DUMP_DIR(标定期开) | 注册必须信道内音频 |
 | 承接音 | FILLER_ENABLED(1)/ FILLER_PROBABILITY(0.9)/ FILLER_DIR、IDLE 无 | 资产 assets/fillers+manifest |
 | TTS | VOLC_TTS_SPEAKER/RESOURCE_ID/SPEED、TTS_MIN_SENTENCE_LEN(6) | 换音色重跑 gen_fillers |
-| worker | WORKER_LOAD_THRESHOLD(0.95) | 2 核机默认 0.7 会拒接 |
+| worker | WORKER_LOAD_THRESHOLD(0.95)、WORKER_NUM_IDLE(1) | 2 核机默认 0.7 拒接;idle 默认 2 撑爆 2G→thrash,单用户压 1 |
+| 内存 | HK 已配 2G swap(fstab 持久化) | 兜底瞬时尖峰,正常不动用 |
 
 ## 铁律与边界
 
