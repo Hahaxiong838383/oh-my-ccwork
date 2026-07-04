@@ -136,11 +136,17 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 - 配套:WORKER_RESPAWN_NICE(10,兜底)/WORKER_INIT_TIMEOUT(30s,防 nice 拖过默认
   10s 被杀进 spawn 循环)。
 
+### 症状:吃首字——用户字幕缺第一个字 / AI 第一个字没念(2026-07-04 双根因修复)
+证据先行(两条 INFO 日志已常驻,直接对照,不用猜层位):
+`journalctl -u voice-worker | grep -E "stt final|tts synth"`
+- **用户侧(ASR)**:`stt final` 完整而字幕缺 → 前端/转发问题;`stt final` 就缺 → 上行音频或火山识别。已修根因=**LiveKit AEC warmup**(agent_activity.push_audio 源码实证):首次 agent 说话起 one-shot 3s 内,agent 说话期间喂 STT 的用户音频被替换成**纯静音**(VAD 收真帧所以能打断,但说的字 ASR 收不到)——greeting 没播完就抢话必中招,抢话点越早丢得越多。修=AEC_WARMUP_DURATION 3.0→0.5(浏览器 AEC 收敛 <300ms,0.5 够保护回声误识别)。若复发:重开 SPEAKER_ID_DUMP_DIR 听 pump 侧音频分层(有声无字=火山层;无声=上行/浏览器 NS/AGC 层)。
+- **AI 侧(TTS)**:`tts synth` 与字幕对照——synth 里没那个字=上游剥除(by design),有=合成/播放层。已修根因=旧 R2 在 volc_tts **句级**剥句首承接词("嗯,/好的,"),只改音频不改字幕,字幕比音频多字,川哥对照字幕以为 TTS 丢字。修=剥除挪到 fast_llm.LeadingFillerStripper(LLM 输出流,只剥回复最开头,首字快筛零延迟),TTS/字幕/对话历史三者一致;volc_tts 不再句级剥。开关 LLM_STRIP_LEADING_FILLER 跟随 FILLER_ENABLED(承接音关则正文语气词保留)。
+
 ### 症状:响应变慢
 拉 worker 日志四锚点分解(**别信单一 metric,probe 端到端数字含 ~1s 伪影**):
 `S1v3 preflight emitted`(silence=X 反推停说时刻)→ `UserTurnCommitted` → `tts: connecting`(首句 flush 完成)→ `AgentSpeechStarted`。
 基线(2026-07-02):判停 550-700 / commit→tts connect ~950(ttft 750 投机抵 150-270 + 首句 flush ~200)/ TTS 694-820 / 真实端到端 ~2.5s,开承接音感知 <1s。
-- 判停恶化 → VOLC_ASR_END_WINDOW_MS(200)/MIN_ENDPOINTING_DELAY(0.65,**不可 <0.55** 否则火山 FINAL 迟到丢尾字);MAX(0.90)−MIN=v1-mini 语义决策窗 250ms(判"没说完"多扛/误判慢最坏 +250ms;2026-07-03 川哥"长句被打断"定稿,13.6s 长句实测完整)。
+- 判停恶化 → VOLC_ASR_END_WINDOW_MS(200)/MIN_ENDPOINTING_DELAY(0.65,**不可 <0.55** 否则火山 FINAL 迟到丢尾字);MAX(1.30)−MIN=v1-mini 语义决策窗 650ms(判"没说完"多扛/误判慢最坏 +650ms;0.90 时川哥两报"长句被打断",2026-07-04 加到 1.30——只影响判"没说完"的等待,判"说完"仍走 MIN 快路)。
 - LLM 段恶化 → `scripts/llm_ttft_bench.py --only deepseek`(测"首个非空 content"+tps,首字节空 role chunk 会骗人)。
 - 首句 flush 恶化 → TTS_MIN_SENTENCE_LEN(6;调大攒字变慢,过小句间断音:首段播放时长须 > 下段 TTS 建连 ~700ms)。
 
@@ -149,7 +155,8 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 | 组 | 变量(默认) | 说明 |
 |---|---|---|
 | 投机 | VOLC_PREFLIGHT_ENABLED(1)/ _SILENCE_MS(180)/ _TEXT_QUIET_MS(150)/ _SILENCE_AMP(250) | S1v3 静音触发 |
-| 判停 | VOLC_ASR_END_WINDOW_MS(200)、MIN/MAX_ENDPOINTING_DELAY(0.65/0.90) | min≥0.55 防丢尾字;max−min=语义决策窗 |
+| 判停 | VOLC_ASR_END_WINDOW_MS(200)、MIN/MAX_ENDPOINTING_DELAY(0.65/1.30) | min≥0.55 防丢尾字;max−min=语义决策窗 |
+| 吃字防护 | AEC_WARMUP_DURATION(0.5)、LLM_STRIP_LEADING_FILLER(跟随 FILLER_ENABLED) | 见"吃首字"排障段 |
 | 声纹 | SPEAKER_ID_ENABLED(1)/ _THRESHOLD(0.50)/ _MODEL/_REGISTRY(默认 assets 下)/ _DUMP_DIR(标定期开) | 注册必须信道内音频 |
 | 承接音 | FILLER_ENABLED(1)/ FILLER_PROBABILITY(0.9)/ FILLER_DIR、IDLE 无 | 资产 assets/fillers+manifest |
 | TTS | VOLC_TTS_SPEAKER/RESOURCE_ID/SPEED、TTS_MIN_SENTENCE_LEN(6) | 换音色重跑 gen_fillers |
@@ -161,3 +168,4 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 - agent 生命周期**宁可简单重建,不要状态复用**(close_on_disconnect 留守方案已被实战推翻)。
 - cc 改安全组/开公网端口会被 harness 拦 → 给现成命令川哥自己跑。
 - 部署自验必须 rtc_probe 真跑(editable 装才 rsync 即生效;曾栽过 site-packages 旧副本)。
+- **git 归属(2026-07-04 变更)**:本项目已随 mycc 仓隐私剥离**出 mycc 仓**(gitignore + filter-repo 洗净历史),现为项目目录内**独立本地仓**(`git -C ~/mycc/2-Projects/realtime-voice-agent log`);远程仓去向待川哥拍板,在此之前"部署过的代码立即 commit"落这个本地仓。
