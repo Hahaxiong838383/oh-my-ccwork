@@ -11,3 +11,6 @@ class NeteaseSource:
 
     async def resolve(self, track_id: str) -> str:
         raise NotImplementedError("Phase 3 — 未接入")
+
+    def download_headers(self) -> dict[str, str]:
+        return {}

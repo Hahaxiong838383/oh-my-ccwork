@@ -56,10 +56,11 @@ async def stream_audio(
         logger.warning(f"resolve failed: source={source} id={track_id} err={e}")
         raise HTTPException(status_code=502, detail="Failed to resolve stream url")
 
-    # 下载到缓存
+    # 下载到缓存（部分源的直链是签名 CDN URL，需要特定请求头如 Referer 才能通过校验）
     try:
+        headers = src.download_headers()
         async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
-            resp = await client.get(direct_url)
+            resp = await client.get(direct_url, headers=headers)
             if resp.status_code >= 400:
                 raise HTTPException(status_code=502, detail=f"Upstream returned {resp.status_code}")
             content = resp.content

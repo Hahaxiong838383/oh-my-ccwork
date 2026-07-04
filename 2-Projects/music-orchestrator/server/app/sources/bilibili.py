@@ -1,7 +1,15 @@
 """Bilibili 源实现（Day-1 唯一真实可用源）
 
 搜索：使用 bilibili-api-python (import bilibili_api) 的视频搜索接口，免登录。
-解析：使用 yt-dlp 对 https://www.bilibili.com/video/{bvid} 提取 bestaudio 直链。
+解析：同样用 bilibili-api 的 Video.get_download_url(html5=True)（移动端 HTML5 播放流，
+库文档原话"此时获得的媒体流访问无需鉴权"），不用 yt-dlp。
+
+2026-07-04 生产 IP 真机验证记录：yt-dlp 对 bilibili 单视频网页解析（webpage scraping）
+会被现时的 B 站反爬拒绝（HTTP 412，yt-dlp 官方 issue #16962/#16565/#16584 证实是普遍现象，
+不是本项目特有问题）。但 bilibili-api 走的是官方 API 签名机制（WBI 签名，与搜索用的是
+同一套，已验证长期稳定可用），`get_download_url(html5=True)` 这条"移动端免鉴权流"路径
+完全不触发该拦截，生产 HK IP 首次请求即成功拿到直链。这是根治而非缓解——两条路径命中
+的是 B 站不同的检测逻辑，网页抓取被限，官方签名 API 没事。
 """
 
 import asyncio
@@ -94,78 +102,51 @@ class BilibiliSource:
         return 0.0
 
     async def resolve(self, track_id: str) -> str:
-        """使用 yt-dlp 提取 bilibili 音频直链。
+        """用 bilibili-api 的 html5=True 免鉴权流拿直链（2026-07-04 生产验证，见类 docstring）。
 
-        ⚠️ 已知风险（2026-07-04 真机验证发现，非本地代码 bug）：B 站近期收紧反爬，
-        yt-dlp 对 bilibili 单视频解析会随机遇到 HTTP 412（"Request is blocked by
-        server"），yt-dlp 官方 issue #16962/#16565/#16584（近1-2月新开）证实这是
-        当前 B 站侧的普遍限制，非本项目特有问题；官方错误信息本身建议"加 cookies、
-        等一下再试"。这里做两件事缓解（不能保证根治）：
-        1. 配置 BILIBILI_SESSDATA 时带上 cookie（降低触发概率，非 100% 免疫）；
-        2. 显式请求头 + 411/412 命中时短退避重试 2 次（该错误具有间歇性，issue
-           原文描述"被封通常几分钟到几小时后自行恢复"）。
-        重试耗尽仍失败会向上抛异常，交给 ranking 层的多源降级处理（这也是"三源
-        分层不押注单源"这个架构决策在本次真机验证中被进一步印证的地方）。
+        流程：先 get_info() 拿 cid（分 P 标识，单 P 视频用第一个即可），
+        再 get_download_url(cid=cid, html5=True) 拿 durl（mp4 muxed 直链，
+        音频由下游 ffmpeg 解码时自然提取，浏览器 <audio> 也能直接播放视频容器的音轨）。
+        保留短重试应对普通网络抖动（非 412 专用，那个问题已经不存在于这条路径）。
         """
         bvid = track_id
-        url = f"https://www.bilibili.com/video/{bvid}"
 
-        def _extract() -> str:
-            import yt_dlp  # type: ignore
+        async def _extract() -> str:
+            from bilibili_api import video  # type: ignore
 
-            from app.config import config
-
-            http_headers = {
-                "Referer": "https://www.bilibili.com/",
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-                ),
-            }
-            ydl_opts: dict = {
-                "format": "bestaudio/best",
-                "quiet": True,
-                "no_warnings": True,
-                "noplaylist": True,
-                "http_headers": http_headers,
-            }
-            if config.bilibili_sessdata:
-                ydl_opts["http_headers"]["Cookie"] = f"SESSDATA={config.bilibili_sessdata}"
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                # 取最佳音频格式的 url
-                if "url" in info:
-                    return info["url"]
-                formats = info.get("formats", [])
-                # 优先选有 audio 且没有 video 的
-                audio_formats = [
-                    f for f in formats
-                    if f.get("acodec") != "none" and (f.get("vcodec") in (None, "none") or f.get("vcodec") == "none")
-                ]
-                if not audio_formats:
-                    # 退化到 bestaudio
-                    audio_formats = [f for f in formats if f.get("acodec") != "none"]
-                if not audio_formats:
-                    # 最后退化
-                    audio_formats = formats
-                best = max(audio_formats, key=lambda f: f.get("abr") or f.get("tbr") or 0)
-                return best["url"]
+            v = video.Video(bvid=bvid)
+            info = await v.get_info()
+            cid = info["cid"]
+            result = await v.get_download_url(cid=cid, html5=True)
+            durl = result.get("durl")
+            if not durl:
+                raise RuntimeError(f"bilibili-api 未返回 durl（响应字段: {list(result.keys())}）")
+            return durl[0]["url"]
 
         last_err: Exception | None = None
-        for attempt in range(3):
+        for attempt in range(2):
             try:
-                direct_url = await asyncio.to_thread(_extract)
+                direct_url = await _extract()
                 if not direct_url:
-                    raise RuntimeError("yt-dlp 未返回可用的音频直链")
+                    raise RuntimeError("bilibili-api 未返回可用的音频直链")
                 return direct_url
             except Exception as e:
                 last_err = e
-                is_blocked = "412" in str(e) or "blocked" in str(e).lower()
-                if is_blocked and attempt < 2:
-                    wait_sec = 2 * (attempt + 1)
-                    logger.warning(f"bilibili resolve 412/blocked for {bvid}, retry in {wait_sec}s (attempt {attempt + 1}/3)")
-                    await asyncio.sleep(wait_sec)
+                if attempt == 0:
+                    logger.warning(f"bilibili resolve 第一次失败，重试一次 for {bvid}: {e}")
+                    await asyncio.sleep(1)
                     continue
                 break
         logger.warning(f"bilibili resolve failed for {bvid}: {last_err}")
         raise last_err  # type: ignore[misc]
+
+    def download_headers(self) -> dict[str, str]:
+        """B 站 CDN 签名直链校验 Referer（2026-07-04 生产验证：resolve 成功但下载
+        403，加上这个头后通过）。"""
+        return {
+            "Referer": "https://www.bilibili.com/",
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            ),
+        }

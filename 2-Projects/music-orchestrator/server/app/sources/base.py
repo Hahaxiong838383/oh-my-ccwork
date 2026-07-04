@@ -22,5 +22,10 @@ class Source(Protocol):
         ...
 
     async def resolve(self, track_id: str) -> str:
-        """返回可直接被 yt-dlp/httpx 消费的直链，或抛出异常。"""
+        """返回可直接被 httpx 消费的直链，或抛出异常。"""
+        ...
+
+    def download_headers(self) -> dict[str, str]:
+        """resolve() 返回的直链可能是签名 CDN URL，需要特定请求头（如 Referer）才能
+        真正下载字节——不同源要求不同，默认空字典（无特殊要求）。"""
         ...
