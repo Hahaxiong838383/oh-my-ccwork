@@ -178,6 +178,14 @@ def run_livekit_worker() -> None:
         # CPU 持续繁忙时 initialize 可能拖长;超时会杀进程重 spawn,循环本身烧 CPU
         # 反而拖垮 job 派发(2026-07-03 验收实测)。宁慢勿杀。
         initialize_process_timeout=float(os.environ.get("WORKER_INIT_TIMEOUT", "30")),
+        # 🔴 内存 thrash 根治(2026-07-04 vmstat 实证:通话时 wa=91%/bi=16万块/id=0,
+        # CPU 反而空闲 87-96%——瓶颈是内存不是算力)。LiveKit prod 默认 idle 进程数=
+        # min(⌈CPU核数⌉,4)=2,加活跃通话进程=3 个子进程各 350-440MB 合计 1.2GB,把 2G
+        # 机器打到临界;无 swap → 内核回收 page cache(285→109MB)→ 进程页/模型 mmap
+        # 被丢弃 → 用时从磁盘疯狂重读 → 整机 IO 卡死几秒。单用户专机 1 个 idle 足够
+        # (挂断重连时它接管 + 同时 spawn 新 idle),内存降到 ~2 进程 800MB;配 2G swap
+        # 兜底新 job spawn/声纹加载的瞬时尖峰。WORKER_NUM_IDLE=0 更省但首连要现 spawn。
+        num_idle_processes=int(os.environ.get("WORKER_NUM_IDLE", "1")),
     )
     server.rtc_session(_livekit_entrypoint, agent_name="realtime-voice-agent")
     _deprioritize_respawn_procs(server)
