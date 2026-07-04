@@ -168,4 +168,4 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 - agent 生命周期**宁可简单重建,不要状态复用**(close_on_disconnect 留守方案已被实战推翻)。
 - cc 改安全组/开公网端口会被 harness 拦 → 给现成命令川哥自己跑。
 - 部署自验必须 rtc_probe 真跑(editable 装才 rsync 即生效;曾栽过 site-packages 旧副本)。
-- **git 归属(2026-07-04 变更)**:本项目已随 mycc 仓隐私剥离**出 mycc 仓**(gitignore + filter-repo 洗净历史),现为项目目录内**独立本地仓**(`git -C ~/mycc/2-Projects/realtime-voice-agent log`);远程仓去向待川哥拍板,在此之前"部署过的代码立即 commit"落这个本地仓。
+- **git 归属(2026-07-04 川哥拍板定稿)**:随 mycc 仓隐私剥离曾短暂出仓,当日川哥拍板**回归 oh-my-ccwork 仓 `2-Projects/` 正常管理**(1c2c14462 快照入仓;旧历史已被 filter-repo 洗净,从快照重新开始)。"部署过的代码立即 commit"落 mycc 仓即可;`.gitignore`/`.git/info/exclude` 的剥离清单里**不再有本项目**(其余 4 个剥离项目不受影响)。
