@@ -4,12 +4,14 @@
 
 ## P0 — 核心地基（决定"是不是智能音箱级体验"）
 
-- [ ] **共存阶段 1：唤醒词门控 + ducking**（`DESIGN-coexistence.md` v2 的落地）。当前最大瓶颈：音乐大声放着时，助手被音乐盖住听不清指令（barge-in）。真机日志实锤：MyJavis 转录出"包含拟真暴力"乱码（音乐漏进麦克风）、voice-agent 播放后 17s 零 STT。
-  - MyJavis：客户端 KWS（sherpa-onnx WASM 或 Tauri 原生）+ 播放中 mute 火山上行，喊「hi 贾维斯/你好 贾维斯/贾维斯 贾维斯」才唤醒。
-  - voice-agent：服务端 agent 侧 KWS（已有 mic 流 + sherpa Python）+ STT fanout 门控。
-  - 唤醒后 duck 音乐到 15-25% 让助手听清，对话完恢复。
-  - ⚠️ 唤醒词音素拆分对着官方模型 tokens.txt 现验，不手搓。
-- [ ] **服务端唤醒词门控（更轻的 MVP 前置）**：不做端侧 KWS，先在大脑侧——播放中转录文本不含唤醒词就不响应。几乎纯服务端，先止住"歌词乱触发"。
+> ⚠️ 2026-07-05 复审后，P0 执行以 **`DESIGN-coexistence.md` §8**（v3 复审章节）为准：含 2 个路线修正（voice-agent 先做 AEC 实测可能免 KWS / MyJavis KWS 走 Tauri Rust 原生优先）+ 修正后 5 步执行序 + 待拍板决策 D1(火山计费模式)/D2(中间态先上)。
+
+- [ ] **步1 AEC 实测**（10 分钟，需川哥配合）→ voice-agent 三分支定案（免 KWS / talk-over ducking / 服务端惰性 KWS）
+- [ ] **步2 MyJavis mute+duck 闭环**（不含 KWS，临时点屏幕唤醒）→ 放歌零误触发零打断
+- [ ] **步3 MyJavis 接 KWS**（Rust 原生优先）：喊「hi(嗨) 贾维斯/你好 贾维斯/贾维斯 贾维斯」替代点屏幕。⚠️ 音素拆分对官方 tokens.txt 现验不手搓；TTS 期间暂停 KWS 防自触发
+- [ ] **步4 voice-agent 按步1结果落地**；若上 KWS 必须惰性加载（2G 内存机防 thrash 复发）
+- [ ] **步5 状态机收敛**（§4 接口抽象，共享规则测试用例）
+- ~~[ ] 服务端唤醒词门控（更轻的 MVP 前置）~~ **已否决**（§8.1 问题3：文本门控挡不住信令层 VAD/打断被音乐搅乱，且 mute 后无存在意义——假台阶）
 
 ## P1 — 播放体验 / 命令完整度
 
