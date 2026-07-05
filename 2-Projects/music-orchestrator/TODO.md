@@ -1,17 +1,22 @@
 # music-orchestrator 后续优化 TODO
 
-> 2026-07-04。当前状态：MyJavis + realtime-voice-agent 都能播放 + 换歌（止血修复已上线）。以下按优先级排。
+> 2026-07-05 更新。当前状态：**共存 P0 步 2 已上线并生产验证**（MyJavis v0.6.1）——放歌进守护态零误触发、点球 PTT 唤醒、duck、追问窗口、双计费模式（默认省钱）全闭环。以下按优先级排。
 
 ## P0 — 核心地基（决定"是不是智能音箱级体验"）
 
-> ⚠️ 2026-07-05 复审后，P0 执行以 **`DESIGN-coexistence.md` §8**（v3 复审章节）为准：含 2 个路线修正（voice-agent 先做 AEC 实测可能免 KWS / MyJavis KWS 走 Tauri Rust 原生优先）+ 修正后 5 步执行序 + 待拍板决策 D1(火山计费模式)/D2(中间态先上)。
+> ⚠️ 2026-07-05 复审后，P0 执行以 **`DESIGN-coexistence.md` §8**（v3 复审章节）为准：含 2 个路线修正（voice-agent 先做 AEC 实测可能免 KWS / MyJavis KWS 走 Tauri Rust 原生优先）+ 修正后 5 步执行序。D1 拍板=C（计费开关默认省钱）、D2 拍板=是（中间态先上）。
 
-- [ ] **步1 AEC 实测**（10 分钟，需川哥配合）→ voice-agent 三分支定案（免 KWS / talk-over ducking / 服务端惰性 KWS）
-- [ ] **步2 MyJavis mute+duck 闭环**（不含 KWS，临时点屏幕唤醒）→ 放歌零误触发零打断
-- [ ] **步3 MyJavis 接 KWS**（Rust 原生优先）：喊「hi(嗨) 贾维斯/你好 贾维斯/贾维斯 贾维斯」替代点屏幕。⚠️ 音素拆分对官方 tokens.txt 现验不手搓；TTS 期间暂停 KWS 防自触发
+- [ ] **步1 AEC 实测**（10 分钟，需川哥配合一次：voice-agent 网页端外放音乐中说三句话，cc 看服务端日志三观测点）→ voice-agent 三分支定案（免 KWS / talk-over ducking / 服务端惰性 KWS）
+- [x] **步2 MyJavis mute+duck 闭环** ✅ 2026-07-05 完成（MyJavis v0.6.0 `2c58d68` 实现 + v0.6.1 `2489c3d` 修致命回归后 preview 连生产全链路验证：播放 166s 不断/守护停任务/点球唤醒同房重启 voiceprints=2/8s 追问窗口自动回守护）。**遗留验证点：川哥真机最终体感**（cc 无法模拟真实麦克风+扬声器环境）
+- [ ] **步3 MyJavis 接 KWS**（Rust 原生优先，WASM 备选）：喊「hi(嗨) 贾维斯/你好 贾维斯/贾维斯 贾维斯」替代点屏幕。⚠️ 音素拆分对官方 tokens.txt 现验不手搓；TTS 期间暂停 KWS 防自触发；唤醒事件走 useMusicGuard.wake() 同一入口（PTT 已立好接口）
 - [ ] **步4 voice-agent 按步1结果落地**；若上 KWS 必须惰性加载（2G 内存机防 thrash 复发）
 - [ ] **步5 状态机收敛**（§4 接口抽象，共享规则测试用例）
 - ~~[ ] 服务端唤醒词门控（更轻的 MVP 前置）~~ **已否决**（§8.1 问题3：文本门控挡不住信令层 VAD/打断被音乐搅乱，且 mute 后无存在意义——假台阶）
+
+### 步2 上线后观察项（真机使用中留意，出现即修）
+- [ ] 省钱模式重启任务后对话 history 丢失的体感（固有代价，若不可接受 → `.env` 改 `MUSIC_GUARD_MODE=respond` 重启 server 即切响应模式）
+- [ ] 追问窗口 8s（`FOLLOWUP_WINDOW_MS`）长短体感；唤醒后 ~2s 才能说话（save 模式）是否可接受
+- [ ] 点球唤醒后若 resume-agent 失败的重试体验（现=回守护态可重点）
 
 ## P1 — 播放体验 / 命令完整度
 
