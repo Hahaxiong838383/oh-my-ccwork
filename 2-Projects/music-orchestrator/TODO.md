@@ -8,7 +8,7 @@
 
 - [x] **步1 AEC 实测** ✅ 2026-07-06 真机完成，**判定=免 KWS**（54s 纯音乐外放灌麦零误触发/混合段转写逐字正确/音乐中"停止播放"识别执行全通）——浏览器 WebRTC AEC 覆盖 LiveKit 音乐 track 的架构红利实锤，voice-agent 天然全双工
 - [x] **步2 MyJavis mute+duck 闭环** ✅ 2026-07-05 完成（MyJavis v0.6.0 `2c58d68` 实现 + v0.6.1 `2489c3d` 修致命回归后 preview 连生产全链路验证：播放 166s 不断/守护停任务/点球唤醒同房重启 voiceprints=2/8s 追问窗口自动回守护）。**遗留验证点：川哥真机最终体感**（cc 无法模拟真实麦克风+扬声器环境）
-- [ ] **步3 MyJavis 接 KWS**（Rust 原生优先，WASM 备选）：喊「hi(嗨) 贾维斯/你好 贾维斯/贾维斯 贾维斯」替代点屏幕。⚠️ 音素拆分对官方 tokens.txt 现验不手搓；TTS 期间暂停 KWS 防自触发；唤醒事件走 useMusicGuard.wake() 同一入口（PTT 已立好接口）
+- [x] **步3 MyJavis 接 KWS** ✅ 2026-07-06 上线(v0.9.0 `3767d8b` release-app.sh 发版):sherpa-onnx 官方 Rust crate(社区 sherpa-rs 已弃用)+cpal;三唤醒词音素逐 token 对 tokens.txt 验证;仅 guarded 态惰性运行(免 TTS 自触发);wav 直喂 5/5 PASS+mic 冒烟+clippy 零告警;回滚 tag rollback-pre-kws。**遗留验证点:川哥真机声学链路**(双进程采麦/外放中喊唤醒词命中率)
 - [x] ~~**步4 voice-agent KWS/门控**~~ ✅ 免做（步1判定 AEC 干净，voice-agent 无需唤醒词/守护态；"bot 说话时 duck 音乐 track"降级为 P1 可选优化）
 - [ ] **步5 状态机收敛**（§4 接口抽象，共享规则测试用例）——voice-agent 侧已大幅简化，仅 MyJavis 需完整三态
 - ~~[ ] 服务端唤醒词门控（更轻的 MVP 前置）~~ **已否决**（§8.1 问题3：文本门控挡不住信令层 VAD/打断被音乐搅乱，且 mute 后无存在意义——假台阶）
