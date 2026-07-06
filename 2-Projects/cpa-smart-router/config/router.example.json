@@ -1,0 +1,42 @@
+{
+  "listen": ":8327",
+  "client_api_key_env": "CPA_SMART_ROUTER_KEY",
+  "body_limit_bytes": 33554432,
+  "max_retries": 1,
+  "metrics_path": "router-metrics.jsonl",
+  "default_backend": {
+    "id": "cpa-mixed",
+    "base_url": "http://127.0.0.1:8317/v1",
+    "api_key_env": "CPA_API_KEY",
+    "model": ""
+  },
+  "routes": {
+    "gpt-5.5": {
+      "sticky": true,
+      "candidates": [
+        {"id": "ccsub2-gpt55", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "ccsub2/gpt-5.5", "priority": 90, "daily_token_limit": 1000000},
+        {"id": "gw1052-gpt55", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "gw1052/gpt-5.5", "priority": 80, "daily_token_limit": 1000000},
+        {"id": "cpa-mixed-gpt55", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "gpt-5.5", "priority": 70, "daily_token_limit": 2000000}
+      ]
+    },
+    "gpt-5.4-mini": {
+      "sticky": true,
+      "candidates": [
+        {"id": "gw1052-gpt54-mini", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "gw1052/gpt-5.4-mini", "priority": 90, "daily_token_limit": 1000000},
+        {"id": "cpa-mixed-gpt54-mini", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "gpt-5.4-mini", "priority": 70, "daily_token_limit": 2000000}
+      ]
+    },
+    "fable-5": {
+      "sticky": false,
+      "candidates": [
+        {"id": "gw1052-fable5", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "gw1052/fable-5", "priority": 100, "daily_token_limit": 1000000}
+      ]
+    },
+    "grok-3-mini-fast": {
+      "sticky": true,
+      "candidates": [
+        {"id": "cpa-grok-fast", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "grok-3-mini-fast", "priority": 100, "daily_token_limit": 1000000}
+      ]
+    }
+  }
+}
