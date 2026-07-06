@@ -51,6 +51,6 @@ ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
 ## Dashboard
 
 - `/dashboard`：简易 HTML 聚合页，支持 `Authorization: Bearer <key>`；浏览器可用 Basic Auth，密码填同一个 key。
-- `/debug/summary?hours=24`：JSON 聚合，字段包含总量、按 provider、按 model、最近错误。
+- `/debug/summary?hours=24`：JSON 聚合，字段包含总量、调度解释、按 provider、按 model、最近错误。
 - `sqlite_path` 为空时禁用 SQLite 聚合；生产建议写到 `/opt/cpa-smart-router/router.sqlite`。
 - JSONL 指标仍保留，SQLite 写入走后台 channel，不阻塞流式转发路径。

@@ -938,9 +938,28 @@ type Summary struct {
 	Since        string          `json:"since"`
 	Hours        int             `json:"hours"`
 	Total        SummaryBucket   `json:"total"`
+	Providers    []ProviderDebug `json:"providers"`
 	ByProvider   []SummaryBucket `json:"by_provider"`
 	ByModel      []SummaryBucket `json:"by_model"`
 	RecentErrors []RecentError   `json:"recent_errors"`
+}
+
+type ProviderDebug struct {
+	ID              string  `json:"id"`
+	RouteModel      string  `json:"route_model"`
+	UpstreamModel   string  `json:"upstream_model"`
+	Priority        int     `json:"priority"`
+	DailyTokenLimit int64   `json:"daily_token_limit"`
+	Successes       int64   `json:"successes"`
+	Failures        int64   `json:"failures"`
+	Health          float64 `json:"health"`
+	LatencyEWMA     float64 `json:"latency_ewma_ms"`
+	LatencyScore    float64 `json:"latency_score"`
+	TokensToday     int64   `json:"tokens_today"`
+	QuotaScore      float64 `json:"quota_score"`
+	Score           float64 `json:"score"`
+	CooldownUntil   string  `json:"cooldown_until,omitempty"`
+	Reason          string  `json:"reason"`
 }
 
 type SummaryBucket struct {
@@ -989,6 +1008,7 @@ func (s *Server) summary(r *http.Request) (Summary, error) {
 	if err != nil {
 		return Summary{}, err
 	}
+	providers := s.providerDebug()
 	recentErrors, err := queryRecentErrors(s.db, since)
 	if err != nil {
 		return Summary{}, err
@@ -998,10 +1018,81 @@ func (s *Server) summary(r *http.Request) (Summary, error) {
 		Since:        since,
 		Hours:        hours,
 		Total:        total,
+		Providers:    providers,
 		ByProvider:   byProvider,
 		ByModel:      byModel,
 		RecentErrors: recentErrors,
 	}, nil
+}
+
+func (s *Server) providerDebug() []ProviderDebug {
+	now := time.Now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	items := []ProviderDebug{}
+	for routeModel, route := range s.cfg.Routes {
+		for _, candidate := range route.Candidates {
+			s.ensureDayLocked(candidate.ID, now)
+			state := s.states[candidate.ID]
+			item := ProviderDebug{
+				ID:              candidate.ID,
+				RouteModel:      routeModel,
+				UpstreamModel:   candidate.Model,
+				Priority:        candidate.Priority,
+				DailyTokenLimit: candidate.DailyTokenLimit,
+				Score:           s.scoreLocked(candidate, now),
+			}
+			item.Health = 1
+			item.LatencyScore = 1
+			item.QuotaScore = 1
+			if state != nil {
+				item.Successes = state.Successes
+				item.Failures = state.Failures
+				item.LatencyEWMA = state.LatencyEWMA
+				item.TokensToday = state.TokensToday
+				total := state.Successes + state.Failures
+				if total > 0 {
+					item.Health = float64(state.Successes) / float64(total)
+				}
+				if state.LatencyEWMA > 0 {
+					item.LatencyScore = math.Max(0, 1-math.Min(state.LatencyEWMA/10000.0, 1))
+				}
+				if candidate.DailyTokenLimit > 0 {
+					item.QuotaScore = math.Max(0, 1-math.Min(float64(state.TokensToday)/float64(candidate.DailyTokenLimit), 1))
+				}
+				if state.CooldownUntil.After(now) {
+					item.CooldownUntil = state.CooldownUntil.Format(time.RFC3339)
+				}
+			}
+			item.Reason = providerReason(item)
+			items = append(items, item)
+		}
+	}
+	sort.SliceStable(items, func(i, j int) bool { return items[i].Score > items[j].Score })
+	return items
+}
+
+func providerReason(item ProviderDebug) string {
+	if item.CooldownUntil != "" {
+		return "cooldown"
+	}
+	parts := []string{}
+	if item.Health >= 0.98 {
+		parts = append(parts, "health ok")
+	} else {
+		parts = append(parts, "health low")
+	}
+	if item.LatencyScore >= 0.7 {
+		parts = append(parts, "latency ok")
+	} else {
+		parts = append(parts, "latency high")
+	}
+	if item.QuotaScore >= 0.8 {
+		parts = append(parts, "quota ok")
+	} else {
+		parts = append(parts, "quota tight")
+	}
+	return strings.Join(parts, " / ")
 }
 
 func querySummaryBucket(db *sql.DB, since, name, where string, args ...any) (SummaryBucket, error) {
@@ -1084,6 +1175,7 @@ func successRate(successes, requests int64) float64 {
 var dashboardTemplate = template.Must(template.New("dashboard").Funcs(template.FuncMap{
 	"pct": func(value float64) string { return strconv.FormatFloat(value*100, 'f', 1, 64) + "%" },
 	"ms":  func(value float64) string { return strconv.FormatFloat(value, 'f', 0, 64) },
+	"num": func(value float64) string { return strconv.FormatFloat(value, 'f', 1, 64) },
 }).Parse(`<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -1103,7 +1195,8 @@ body{margin:0;background:#0f172a;color:#e2e8f0;font:14px/1.5 -apple-system,Blink
 <div class="card"><div class="muted">平均延迟</div><div class="metric">{{ms .Total.AvgLatencyMS}}ms</div></div>
 <div class="card"><div class="muted">总 Token</div><div class="metric">{{.Total.TotalTokens}}</div></div>
 </div>
-<section><h2>Provider</h2><table><thead><tr><th>provider</th><th>requests</th><th>success</th><th>errors</th><th>avg latency</th><th>tokens</th><th>last</th></tr></thead><tbody>{{range .ByProvider}}<tr><td>{{.Name}}</td><td>{{.Requests}}</td><td>{{pct .SuccessRate}}</td><td>{{.Errors}}</td><td>{{ms .AvgLatencyMS}}ms</td><td>{{.TotalTokens}}</td><td>{{.LastRequestAt}}</td></tr>{{else}}<tr><td colspan="7" class="muted">暂无数据</td></tr>{{end}}</tbody></table></section>
+<section><h2>调度解释</h2><table><thead><tr><th>provider</th><th>route</th><th>score</th><th>health</th><th>latency ewma</th><th>quota</th><th>tokens today</th><th>reason</th></tr></thead><tbody>{{range .Providers}}<tr><td>{{.ID}}</td><td>{{.RouteModel}} → {{.UpstreamModel}}</td><td>{{num .Score}}</td><td>{{pct .Health}}</td><td>{{ms .LatencyEWMA}}ms</td><td>{{pct .QuotaScore}}</td><td>{{.TokensToday}} / {{.DailyTokenLimit}}</td><td>{{.Reason}}{{if .CooldownUntil}} until {{.CooldownUntil}}{{end}}</td></tr>{{else}}<tr><td colspan="8" class="muted">暂无 provider 配置</td></tr>{{end}}</tbody></table><div class="muted">score = 35% health + 25% latency + 20% quota + 20% priority；cooldown 时 score 极低。</div></section>
+<section><h2>Provider 统计</h2><table><thead><tr><th>provider</th><th>requests</th><th>success</th><th>errors</th><th>avg latency</th><th>tokens</th><th>last</th></tr></thead><tbody>{{range .ByProvider}}<tr><td>{{.Name}}</td><td>{{.Requests}}</td><td>{{pct .SuccessRate}}</td><td>{{.Errors}}</td><td>{{ms .AvgLatencyMS}}ms</td><td>{{.TotalTokens}}</td><td>{{.LastRequestAt}}</td></tr>{{else}}<tr><td colspan="7" class="muted">暂无数据</td></tr>{{end}}</tbody></table></section>
 <section><h2>Model</h2><table><thead><tr><th>model</th><th>requests</th><th>success</th><th>errors</th><th>avg latency</th><th>tokens</th><th>last</th></tr></thead><tbody>{{range .ByModel}}<tr><td>{{.Name}}</td><td>{{.Requests}}</td><td>{{pct .SuccessRate}}</td><td>{{.Errors}}</td><td>{{ms .AvgLatencyMS}}ms</td><td>{{.TotalTokens}}</td><td>{{.LastRequestAt}}</td></tr>{{else}}<tr><td colspan="7" class="muted">暂无数据</td></tr>{{end}}</tbody></table></section>
 <section><h2>最近错误</h2><table><thead><tr><th>time</th><th>provider</th><th>model</th><th>status</th><th>error</th></tr></thead><tbody>{{range .RecentErrors}}<tr><td>{{.TS}}</td><td>{{.ProviderID}}</td><td>{{.RouteModel}}</td><td>{{.Status}}</td><td>{{.Error}}</td></tr>{{else}}<tr><td colspan="5" class="muted">暂无错误</td></tr>{{end}}</tbody></table></section>
 </main></body></html>`))
