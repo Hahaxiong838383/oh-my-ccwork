@@ -64,6 +64,7 @@ ssh aliyun-jp 'install -m 755 /tmp/cpa-smart-router /opt/cpa-smart-router/cpa-sm
 - 已支持 `/v1/chat/completions`、`/v1/responses`、`/v1/models`。
 - 已支持鉴权、请求体上限、sticky、最多 2 次重试、被动 EWMA、熔断 cooldown。
 - 已支持 JSONL 指标、SQLite 持久聚合、`/debug/summary` 和 `/dashboard`。
+- 正式使用默认优先走 `gpt-5.5`；`fable-5` 只是测试玩具模型，生产配置应放入 `blocked_models`，不要调用。
 - 流式响应目前不解析 usage；流式 token 统计可能为 0，后续可加 SSE usage 解析。
 
 ## 提交前检查
@@ -74,4 +75,3 @@ git status --short
 rg -n 'sk-[A-Za-z0-9_-]{12,}|CPA_SMART_ROUTER_KEY=.*[A-Za-z0-9_-]{12,}|CPA_API_KEY=.*[A-Za-z0-9_-]{12,}|Bearer [A-Za-z0-9._-]{12,}' \
   2-Projects/cpa-smart-router 4-Assets/Prompt/omp-team-templates/_codex_lane.sh .claude/skills/cpa-smart-router || true
 ```
-

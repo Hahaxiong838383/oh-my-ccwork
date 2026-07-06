@@ -16,29 +16,68 @@
     "gpt-5.5": {
       "sticky": true,
       "candidates": [
-        {"id": "ccsub2-gpt55", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "ccsub2/gpt-5.5", "priority": 90, "daily_token_limit": 1000000},
-        {"id": "gw1052-gpt55", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "gw1052/gpt-5.5", "priority": 80, "daily_token_limit": 1000000},
-        {"id": "cpa-mixed-gpt55", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "gpt-5.5", "priority": 70, "daily_token_limit": 2000000}
+        {
+          "id": "ccsub2-gpt55",
+          "base_url": "http://127.0.0.1:8317/v1",
+          "api_key_env": "CPA_API_KEY",
+          "model": "ccsub2/gpt-5.5",
+          "priority": 90,
+          "daily_token_limit": 1000000
+        },
+        {
+          "id": "gw1052-gpt55",
+          "base_url": "http://127.0.0.1:8317/v1",
+          "api_key_env": "CPA_API_KEY",
+          "model": "gw1052/gpt-5.5",
+          "priority": 80,
+          "daily_token_limit": 1000000
+        },
+        {
+          "id": "cpa-mixed-gpt55",
+          "base_url": "http://127.0.0.1:8317/v1",
+          "api_key_env": "CPA_API_KEY",
+          "model": "gpt-5.5",
+          "priority": 70,
+          "daily_token_limit": 2000000
+        }
       ]
     },
     "gpt-5.4-mini": {
       "sticky": true,
       "candidates": [
-        {"id": "gw1052-gpt54-mini", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "gw1052/gpt-5.4-mini", "priority": 90, "daily_token_limit": 1000000},
-        {"id": "cpa-mixed-gpt54-mini", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "gpt-5.4-mini", "priority": 70, "daily_token_limit": 2000000}
-      ]
-    },
-    "fable-5": {
-      "sticky": false,
-      "candidates": [
-        {"id": "gw1052-fable5", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "gw1052/fable-5", "priority": 100, "daily_token_limit": 1000000}
+        {
+          "id": "gw1052-gpt54-mini",
+          "base_url": "http://127.0.0.1:8317/v1",
+          "api_key_env": "CPA_API_KEY",
+          "model": "gw1052/gpt-5.4-mini",
+          "priority": 90,
+          "daily_token_limit": 1000000
+        },
+        {
+          "id": "cpa-mixed-gpt54-mini",
+          "base_url": "http://127.0.0.1:8317/v1",
+          "api_key_env": "CPA_API_KEY",
+          "model": "gpt-5.4-mini",
+          "priority": 70,
+          "daily_token_limit": 2000000
+        }
       ]
     },
     "grok-3-mini-fast": {
       "sticky": true,
       "candidates": [
-        {"id": "cpa-grok-fast", "base_url": "http://127.0.0.1:8317/v1", "api_key_env": "CPA_API_KEY", "model": "grok-3-mini-fast", "priority": 100, "daily_token_limit": 1000000}
+        {
+          "id": "cpa-grok-fast",
+          "base_url": "http://127.0.0.1:8317/v1",
+          "api_key_env": "CPA_API_KEY",
+          "model": "grok-3-mini-fast",
+          "priority": 100,
+          "daily_token_limit": 1000000
+        }
       ]
     }
-  }
+  },
+  "blocked_models": [
+    "fable-5"
+  ]
 }

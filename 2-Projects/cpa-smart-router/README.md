@@ -24,6 +24,7 @@ go run ./cmd/router -config config/router.example.json
 
 - 公网入口必须校验 `Authorization: Bearer <CPA_SMART_ROUTER_KEY>`。
 - 后端 CPA key 只在服务端注入，不透传客户端 key。
+- `blocked_models` 用于拦截测试/玩具模型；正式流量不要调用 `fable-5`。
 - 流式响应开始输出后不做 failover。
 - `/v1/responses` 强制 sticky，避免 `previous_response_id` 断链。
 

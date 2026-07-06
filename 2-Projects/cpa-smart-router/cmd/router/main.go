@@ -34,6 +34,7 @@ type Config struct {
 	MetricsPath      string           `json:"metrics_path"`
 	SQLitePath       string           `json:"sqlite_path"`
 	DashboardEnabled bool             `json:"dashboard_enabled"`
+	BlockedModels    []string         `json:"blocked_models"`
 	DefaultBackend   Candidate        `json:"default_backend"`
 	Routes           map[string]Route `json:"routes"`
 }
@@ -370,6 +371,10 @@ func (s *Server) handleLLM(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing model", http.StatusBadRequest)
 		return
 	}
+	if s.modelBlocked(model) {
+		http.Error(w, "model blocked by smart-router policy", http.StatusForbidden)
+		return
+	}
 	stream, _ := payload["stream"].(bool)
 
 	route, ok := s.cfg.Routes[model]
@@ -440,6 +445,15 @@ func readLimited(reader io.Reader, limit int64) ([]byte, error) {
 		return nil, errors.New("too large")
 	}
 	return data, nil
+}
+
+func (s *Server) modelBlocked(model string) bool {
+	for _, blocked := range s.cfg.BlockedModels {
+		if model == blocked {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) tryCandidate(w http.ResponseWriter, r *http.Request, body []byte, payload map[string]any, routeModel string, candidate Candidate, stream bool) (int, bool, MetricEvent) {
