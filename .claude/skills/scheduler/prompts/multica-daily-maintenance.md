@@ -11,6 +11,13 @@
 - HK relay：`ssh aliyun-hk`
 - 上游仓库：`https://github.com/multica-ai/multica`
 
+## 当前部署基线（2026-07-06 实测，重要）
+
+- **backend = 自编译 fork** `local/multica-backend:v0.3.21-skill-evolution.1`（commit be00801，**非官方 tag**；源码在 QNAP `/share/CACHEDEV2_DATA/multica-build/`）。改了 skill 系统，官方 `ghcr.io/multica-ai/multica-backend` image **不兼容**——严禁用官方 image 替换 backend，会丢 skill-evolution 定制。
+- frontend = 官方 `ghcr.io/multica-ai/multica-web:v0.3.21`（这个可以按官方 tag 更新）。
+- 登录 cookie 有效期已加固为 1 年（compose backend `AUTH_TOKEN_TTL: ${AUTH_TOKEN_TTL:-8760h}`）。备份/对比 compose 时保留这行。
+- 内测用户报 web 端 `missing authorization` = **登录 cookie 过期**（默认 30 天，已延长 1 年），让其重登即可（dev code `888888`），**非部署故障**，别去动 backend。详见 memory `feedback_multica_cookie_expiry_missing_auth`。
+
 ## QNAP 连接方式
 
 在 mini 上已配置 `~/.ssh/config` 的 `prnas` alias，以及本地密码助手 `~/bin/prnas-askpass`。维护任务需要从 mini 访问 QNAP 时，使用以下形式，不要输出密码、不要读取或打印 `~/.secrets/prnas_sshpass`：
@@ -99,6 +106,7 @@ QNAP docker binary 可能不在 PATH，优先使用 `/share/CACHEDEV1_DATA/.qpkg
 - QNAP 或 mini 当前不健康。
 - SSH 到关键主机失败。
 - release notes 信息不足，无法判断影响。
+- **backend 是 skill-evolution fork：禁止用官方 `multica-backend` image 替换（会丢定制），backend 只能用自编译 fork image 更新。** frontend 官方 web image 不受此限。
 
 ## 收尾要求
 
