@@ -9,6 +9,7 @@
 - [x] **步1 AEC 实测** ✅ 2026-07-06 真机完成，**判定=免 KWS**（54s 纯音乐外放灌麦零误触发/混合段转写逐字正确/音乐中"停止播放"识别执行全通）——浏览器 WebRTC AEC 覆盖 LiveKit 音乐 track 的架构红利实锤，voice-agent 天然全双工
 - [x] **步2 MyJavis mute+duck 闭环** ✅ 2026-07-05 完成（MyJavis v0.6.0 `2c58d68` 实现 + v0.6.1 `2489c3d` 修致命回归后 preview 连生产全链路验证：播放 166s 不断/守护停任务/点球唤醒同房重启 voiceprints=2/8s 追问窗口自动回守护）。**遗留验证点：川哥真机最终体感**（cc 无法模拟真实麦克风+扬声器环境）
 - [x] **步3 MyJavis 接 KWS** ✅ 2026-07-06 上线(v0.9.0 `3767d8b` release-app.sh 发版):sherpa-onnx 官方 Rust crate(社区 sherpa-rs 已弃用)+cpal;三唤醒词音素逐 token 对 tokens.txt 验证;仅 guarded 态惰性运行(免 TTS 自触发);wav 直喂 5/5 PASS+mic 冒烟+clippy 零告警;回滚 tag rollback-pre-kws。**遗留验证点:川哥真机声学链路**(双进程采麦/外放中喊唤醒词命中率)
+- [x] **步3.5 KWS 采音重构 = WebView AEC 喂样本（fed 模式）** ✅ 2026-07-06 v0.10.0：真机"音乐外放喊不醒"复盘 → 数字混合实验实锤 **cpal 直采无 AEC 是死路**（真实歌曲叠加超过人声 ~0.2x 全灭，threshold 0.04 都救不回，纯调参自我安慰）→ 重构为 getUserMedia({echoCancellation:true}) WebView 采麦 + AudioWorklet 攒包 + kws_feed IPC 喂 Rust 引擎（AEC 消掉 App 自播音乐，同 voice-agent 免 KWS 的架构红利），cpal 降级兜底；同时 keywords 加"贾维斯"短词（首个贾维斯即醒）+ 5 个免唤醒控制词（下一首/上一首/换一首/暂停播放/停止播放→本地直控播放器，不唤醒不打断）+ 灵敏度 score2.0/th0.15。fed 分包链路 3/3 PASS。**遗留验证点：川哥真机音乐中喊"贾维斯"**（AEC 正例需空气人声，自动化只能测负例）
 - [x] ~~**步4 voice-agent KWS/门控**~~ ✅ 免做（步1判定 AEC 干净，voice-agent 无需唤醒词/守护态；"bot 说话时 duck 音乐 track"降级为 P1 可选优化）
 - [ ] **步5 状态机收敛**（§4 接口抽象，共享规则测试用例）——voice-agent 侧已大幅简化，仅 MyJavis 需完整三态
 - ~~[ ] 服务端唤醒词门控（更轻的 MVP 前置）~~ **已否决**（§8.1 问题3：文本门控挡不住信令层 VAD/打断被音乐搅乱，且 mute 后无存在意义——假台阶）
@@ -21,7 +22,7 @@
 ## P1 — 播放体验 / 命令完整度
 
 - [ ] **搜索结果质量**：现在搜"周杰伦"top 结果常是 4K MV/游戏视频（如"原神一条龙"），不是干净音源。ranking 加"音乐向"信号（时长带、UP 主类型、"纯音乐/无损"关键词加权、排除游戏/影视区）。
-- [ ] **上一首（prev）真实现**：现在是 stub（只暂停）。需 music-session 存播放历史栈，prev 回上一首。
+- [x] **上一首（prev）真实现** ✅ 2026-07-06 server 0.9.0：music-session 播放历史栈（栈顶=当前曲，20 上限）+ takePrevTrack 连弹两个；语音"上一首"/REST /api/music/prev/⏮ 按钮/KWS"上一首"四入口共用；E2E 晴天→夜曲→上一首回晴天+边界"这就是第一首"验证通过。
 - [ ] **queue / 播放列表**：music_queue 现是内存 stub。做真队列（加歌/清空/查看/连播）。
 - [ ] **单曲循环 / 随机播放 / 播完自动下一首**：音箱标配。播完自动 next 需前端 `<audio>` 的 ended 事件 → 触发 next。
 - [ ] **音量绝对值设置**："音量调到 50%""音量最大"（现在只有相对 大声点/小声点）。
