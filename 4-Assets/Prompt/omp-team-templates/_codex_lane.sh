@@ -27,6 +27,7 @@
 #
 # key 来源: ~/.gateway.env (chmod 600,home 目录不入 git)
 #   网关1=CODEX_API_GATEWAY_KEY / 网关2=CODEX_API_GATEWAY2_KEY / 网关3=CODEX_API_GATEWAY3_KEY (各带 _BASE_URL)
+#   Smart 灰度=CODEX_API_SMART_KEY / CODEX_API_SMART_BASE_URL / CODEX_SMART_CANARY_PERCENT
 #   只 grep 提取 CODEX_*,不 source 整个文件 —— 避免图像网关的 OPENAI_BASE_URL 污染 omp
 #
 # 注: curl 主路是「prompt→文本」对话(非 agentic 改文件),team 双发/三发产出本就是文本
@@ -37,6 +38,7 @@
 #           CODEX_FALLBACK_TIMEOUT=N 订阅 omp 硬超时秒数(默认 480)
 #           CODEX_FALLBACK_CMD='...' 订阅命令测试替身(模拟挂死/失败,不真调 omp)
 #           CODEX_API_MAX_TIME=N  网关 curl 总时长硬上限秒数(默认 900)
+#           CODEX_SMART_CANARY_PERCENT=N  0-100,命中时先试 smart-router,失败自动回原链路
 #           CODEX_RESCUE_MIN=N    截断抢救的最小正文字节数(默认 2000,低于此判失败降级)
 
 # macOS 无 setsid,递归 pkill -P 杀进程树(防 bun/tls 子进程残留孤儿)
@@ -117,14 +119,22 @@ run_codex_lane () {
   : > "$err"
 
   # 只取 CODEX_* 凭据(不 source,防 OPENAI_BASE_URL 污染 omp 降级)
+  local smart_key="" smart_base="https://smart-api.hahaxiong.top/v1" smart_pct="${CODEX_SMART_CANARY_PERCENT:-0}"
   local key1="" base1="https://10521052.xyz/v1"
   local key2="" base2="https://cc-sub2.whtaibang.top/v1"
   local key3="" base3="https://api-direct.hahaxiong.top/v1"
   if [ -f "$HOME/.gateway.env" ]; then
+    smart_key=$(grep -E '^CODEX_API_SMART_KEY=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
     key1=$(grep -E '^CODEX_API_GATEWAY_KEY=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
     key2=$(grep -E '^CODEX_API_GATEWAY2_KEY=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
     key3=$(grep -E '^CODEX_API_GATEWAY3_KEY=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
     local b
+    b=$(grep -E '^CODEX_API_SMART_BASE_URL=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
+    [ -n "$b" ] && smart_base="$b"
+    if [ -z "${CODEX_SMART_CANARY_PERCENT+x}" ]; then
+      b=$(grep -E '^CODEX_SMART_CANARY_PERCENT=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
+      [ -n "$b" ] && smart_pct="$b"
+    fi
     b=$(grep -E '^CODEX_API_GATEWAY_BASE_URL=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
     [ -n "$b" ] && base1="$b"
     b=$(grep -E '^CODEX_API_GATEWAY2_BASE_URL=' "$HOME/.gateway.env" | head -1 | cut -d= -f2-)
@@ -133,8 +143,17 @@ run_codex_lane () {
     [ -n "$b" ] && base3="$b"
   fi
 
-  # ── API 网关链 (2026-06-16 主次重排,网关1 曾403已修复降垫底): 网关2 主 → 网关3 → 网关1(垫底) ──
+  # ── API 网关链 (2026-07-06 smart-router 灰度): Smart(按百分比) → 网关2 主 → 网关3 → 网关1(垫底) ──
   if [ "${CODEX_FORCE_FALLBACK:-0}" != 1 ]; then
+    local smart_roll=100
+    if [ -n "$smart_key" ] && [ "$smart_pct" -gt 0 ] 2>/dev/null; then
+      [ "$smart_pct" -gt 100 ] && smart_pct=100
+      smart_roll=$(( RANDOM % 100 ))
+      if [ "$smart_roll" -lt "$smart_pct" ]; then
+        _codex_lane_api_try "$smart_base" "$smart_key" "SmartRouter(${smart_pct}% canary)" "$prompt" "$out" "$err" "$label" && return 0
+        echo "[$label] ⚠️ SmartRouter 灰度失败 → 回落原 API 网关链" | tee -a "$err" >&2
+      fi
+    fi
     if [ -n "$key2" ]; then
       _codex_lane_api_try "$base2" "$key2" "网关2(cc-sub2)" "$prompt" "$out" "$err" "$label" && return 0
     fi

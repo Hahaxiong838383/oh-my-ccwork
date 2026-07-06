@@ -52,6 +52,7 @@ type ProviderState struct {
 	Consecutive   int
 	LatencyEWMA   float64
 	TokensToday   int64
+	TokenDay      string
 	CooldownUntil time.Time
 }
 
@@ -99,6 +100,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", server.handleHealthz)
+	mux.HandleFunc("/debug/state", server.handleDebugState)
 	mux.HandleFunc("/v1/models", server.handleModels)
 	mux.HandleFunc("/v1/chat/completions", server.handleLLM)
 	mux.HandleFunc("/v1/responses", server.handleLLM)
@@ -206,6 +208,48 @@ func (s *Server) metricWriter(path string) {
 func (s *Server) handleHealthz(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	io.WriteString(w, `{"ok":true}`)
+}
+
+func (s *Server) handleDebugState(w http.ResponseWriter, r *http.Request) {
+	if !s.authorized(r) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	now := time.Now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	type debugState struct {
+		Successes     int64   `json:"successes"`
+		Failures      int64   `json:"failures"`
+		Consecutive   int     `json:"consecutive_failures"`
+		LatencyEWMA   float64 `json:"latency_ewma_ms"`
+		TokensToday   int64   `json:"tokens_today"`
+		TokenDay      string  `json:"token_day"`
+		CooldownUntil string  `json:"cooldown_until,omitempty"`
+		Score         float64 `json:"score"`
+	}
+	result := map[string]debugState{}
+	for _, route := range s.cfg.Routes {
+		for _, candidate := range route.Candidates {
+			s.ensureDayLocked(candidate.ID, now)
+			state := s.states[candidate.ID]
+			item := debugState{Score: s.scoreLocked(candidate, now)}
+			if state != nil {
+				item.Successes = state.Successes
+				item.Failures = state.Failures
+				item.Consecutive = state.Consecutive
+				item.LatencyEWMA = state.LatencyEWMA
+				item.TokensToday = state.TokensToday
+				item.TokenDay = state.TokenDay
+				if state.CooldownUntil.After(now) {
+					item.CooldownUntil = state.CooldownUntil.Format(time.RFC3339)
+				}
+			}
+			result[candidate.ID] = item
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
@@ -435,6 +479,7 @@ func (s *Server) rankCandidates(candidates []Candidate) []Candidate {
 }
 
 func (s *Server) scoreLocked(c Candidate, now time.Time) float64 {
+	s.ensureDayLocked(c.ID, now)
 	st := s.states[c.ID]
 	if st == nil {
 		return float64(c.Priority)
@@ -469,6 +514,7 @@ func (s *Server) isCooling(providerID string) bool {
 func (s *Server) updateState(providerID string, status int, latency time.Duration, tokens int64, errMsg string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.ensureDayLocked(providerID, time.Now())
 	st := s.states[providerID]
 	if st == nil {
 		st = &ProviderState{}
@@ -493,6 +539,28 @@ func (s *Server) updateState(providerID string, status int, latency time.Duratio
 	} else if st.Consecutive >= 3 {
 		st.CooldownUntil = time.Now().Add(2 * time.Minute)
 	}
+}
+
+func (s *Server) ensureDayLocked(providerID string, now time.Time) {
+	st := s.states[providerID]
+	if st == nil {
+		st = &ProviderState{}
+		s.states[providerID] = st
+	}
+	day := cstDay(now)
+	if st.TokenDay == "" {
+		st.TokenDay = day
+		return
+	}
+	if st.TokenDay != day {
+		st.TokenDay = day
+		st.TokensToday = 0
+	}
+}
+
+func cstDay(now time.Time) string {
+	loc := time.FixedZone("CST", 8*60*60)
+	return now.In(loc).Format("2006-01-02")
 }
 
 func (s *Server) sessionKey(r *http.Request, payload map[string]any, body []byte) string {

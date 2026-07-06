@@ -6,6 +6,7 @@ CPA Smart Router 是部署在 `aliyun-jp` 的 CLIProxyAPI 旁路调度层：客�
 
 - M-1：已验证 CPA `openai-compatibility.prefix` 可固定命中候选上游。
 - M0/M1：Go 单二进制 MVP，支持 `/v1/chat/completions`、`/v1/responses`、`/v1/models` 转发、鉴权、sticky、熔断、异步 JSONL 指标。
+- M2：支持 CST 日用量重置与鉴权状态查看 `/debug/state`。
 - SQLite 与 dashboard 放到 M3/M4。
 
 ## 运行
@@ -25,3 +26,19 @@ go run ./cmd/router -config config/router.example.json
 - 后端 CPA key 只在服务端注入，不透传客户端 key。
 - 流式响应开始输出后不做 failover。
 - `/v1/responses` 强制 sticky，避免 `previous_response_id` 断链。
+
+## 灰度接入
+
+`4-Assets/Prompt/omp-team-templates/_codex_lane.sh` 支持以下开关：
+
+- `CODEX_API_SMART_BASE_URL`：smart-router base URL。
+- `CODEX_API_SMART_KEY`：smart-router 客户端 key。
+- `CODEX_SMART_CANARY_PERCENT`：0-100，命中时先试 smart-router，失败自动回原网关链。
+
+## 观察
+
+```bash
+curl https://smart-api.hahaxiong.top/debug/state \
+  -H "Authorization: Bearer $CPA_SMART_ROUTER_KEY"
+ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
+```
