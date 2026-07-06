@@ -120,11 +120,11 @@ sherpa-onnx keywords.txt 用**声韵母带声调**格式（参照 P003 `feedback
 
 | 步 | 做什么 | 交付判定 | 状态 |
 |---|---|---|---|
-| 1 | **AEC 实测**（10 分钟，需川哥配合一次） | voice-agent 三分支定案 | ⏳待排期 |
+| 1 | **AEC 实测**（10 分钟，需川哥配合一次） | voice-agent 三分支定案 | ✅ 2026-07-06 真机实测，**判定=分支 A（免 KWS）**：外放音乐 54s 纯音乐灌麦零 VAD 触发零转写（歌词完全被浏览器 WebRTC AEC 消除）；混合段"今天天气怎么样"逐字正确；音乐中"停止播放"识别+执行全通。边界：Mac 浏览器+中等偏大外放（=川哥真实使用条件）实测成立 |
 | 2 | **MyJavis mute + duck 闭环**（不含 KWS）：播放开始→停火山采集/静音上行；前端 duck 雏形（bot 说话时 0.3）扩展成状态机；临时 PTT（点屏幕）兜底唤醒 | 放歌零误触发零打断（真机），代价=播放中点屏幕才能唤醒 | ✅ 2026-07-05 上线（v0.6.0 `2c58d68` + v0.6.1 `2489c3d` 修轮询拆建回归；preview 连生产全链路验证：守护停任务/点球同房重启任务成功/追问窗口闭环） |
-| 3 | **MyJavis 接 KWS**（Rust 原生优先，WASM 备选）：喊"贾维斯"替代点屏幕；计费模式按 D1 拍板结果 | 真机喊三条唤醒词命中 + TTS 期间不自触发 | ⏳下一步 |
-| 4 | **voice-agent 按步 1 结果**三选一落地 | 真机放歌中说"停止"生效 | ⏳依赖步1 |
-| 5 | 状态机按 §4 接口抽象各自实现收敛 | 状态机规则测试（共享用例） | ⏳ |
+| 3 | **MyJavis 接 KWS**（Rust 原生优先，WASM 备选）：喊"贾维斯"替代点屏幕；计费模式按 D1 拍板结果 | 真机喊三条唤醒词命中 + TTS 期间不自触发 | ⏳**P0 唯一剩余项** |
+| 4 | ~~voice-agent 服务端 KWS + fanout 门控 + 惰性加载~~ **步 1 判定后取消**：AEC 干净=voice-agent 天然全双工（音乐走 LiveKit 房间 track 被客户端 AEC 覆盖的架构红利），放歌中直接说话即可，无需唤醒词无需守护态。降级为 P1 可选体验优化（bot 说话时 duck 音乐 track） | — | ✅ 免做（2026-07-06） |
+| 5 | 状态机按 §4 接口抽象各自实现收敛 | 状态机规则测试（共享用例） | ⏳（voice-agent 侧因免 KWS 大幅简化，仅 MyJavis 需要完整三态） |
 
 > 步 2 实现要点（追溯用）：`useMusicGuard.ts`（三态 coordinator：idle/guarded/active，进守护等 bot 说完报幕防掐 TTS）+ `useVoiceRtc.setMicMuted`（setCaptureVolume(0)=发静音帧，任务挂着轨道保留）+ server `pause-agent`/`resume-agent`（save 模式停/同房重启任务，welcome 空串火山接受✅，声纹 registry 现拉）+ `guard-config` 下发计费模式 + MusicPlayer 控制条（歌名/暂停/换一首/停止，`/api/music/next` 同步换歌）。v0.6.0 踩坑：轮询 effect 依赖含 voiceStatus 间接依赖 → bot 状态每变一次轮询拆建一次 → cleanup 掐音乐（见 [[feedback_react_effect_dep_churn_kills_loop]]）。
 
