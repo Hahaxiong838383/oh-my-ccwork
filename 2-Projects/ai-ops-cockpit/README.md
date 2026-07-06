@@ -151,3 +151,49 @@ flowchart TD
 - `ops.hahaxiong.top` 尚未配置 DNS，当前先用 `http://23.226.135.149/` 验收。
 - Uptime Kuma 和 Dockge 还需要首次 Web 初始化账号。
 - oh-my-pi、omp-deck、n8n、飞书通知属于后续 Phase。
+
+### 2026-07-07 域名与基础监控闭环
+
+川哥已在 Cloudflare 配置 `ops.hahaxiong.top` 橙云代理；源站已完成域名入口适配。
+
+域名入口：
+
+- 正式入口：`https://ops.hahaxiong.top/`
+- Cloudflare 橙云：已生效，DNS 返回 Cloudflare A/AAAA
+- 源站 HTTPS：Caddy 已自动签发 `ops.hahaxiong.top` Let’s Encrypt 证书
+- 访问保护：未登录访问 `https://ops.hahaxiong.top/` 返回 `401`
+- 登录后页面验收：`/`、`/kuma/`、`/dashboard`、`/netdata/`、`/dockge/` 均返回 `200`
+
+管理账号：
+
+| 服务 | 用户 | 密码位置 |
+|---|---|---|
+| 外层 Basic Auth | `chuan` | `/root/ai-ops-cockpit-secrets.txt` 的 `ops` |
+| Uptime Kuma | `chuan` | `/root/ai-ops-cockpit-secrets.txt` 的 `uptime_kuma_setup_password` |
+| Dockge | `chuan` | `/root/ai-ops-cockpit-secrets.txt` 的 `dockge_setup_password` |
+
+Uptime Kuma 已配置 3 个基础监控项：
+
+| 监控项 | 类型 | 当前状态 |
+|---|---|---|
+| AI 运维驾驶舱 HTTPS | HTTP `https://ops.hahaxiong.top/`，接受 `401` | UP |
+| 陈川个人站 HTTPS | HTTP `https://my.chenchuan.cc/` | UP |
+| RackNerd SSH 22 | TCP `23.226.135.149:22` | UP |
+
+最新验收：
+
+| 检查 | 结果 |
+|---|---|
+| `https://ops.hahaxiong.top/` 未登录 | `401` |
+| `https://ops.hahaxiong.top/` 登录后 | `200 text/html` |
+| `/kuma/` | `200 text/html` |
+| `/dashboard` | `200 text/html` |
+| `/netdata/` | `200 text/html` |
+| `/dockge/` | `200 text/html` |
+| Kuma 监控 3 项 | 全部 `UP` |
+
+下一步：
+
+- 接入飞书通知。
+- 部署 oh-my-pi / omp-deck，形成 AI 运维助手入口。
+- 接入 n8n，做每日巡检日报和手动巡检按钮。
