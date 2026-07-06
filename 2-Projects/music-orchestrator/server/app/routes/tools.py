@@ -40,6 +40,10 @@ class PlayRequest(BaseModel):
     mode: str = "track"  # 目前仅支持 track
     session_id: str
     exclude_ids: Optional[List[str]] = None  # "换一首"：跳过已放过的曲目 id
+    # 直接指定曲目（ambiguous 反问后用户选了某个候选）：跳过搜索，直接以该曲构造播放响应
+    track_id: Optional[str] = None
+    track_source: Optional[str] = None
+    track_title: Optional[str] = None  # 仅回显用，可空
 
 
 class ControlRequest(BaseModel):
@@ -89,6 +93,22 @@ async def music_search(req: SearchRequest, _: str = Depends(require_music_key)):
 @router.post("/music_play")
 async def music_play(req: PlayRequest, _: str = Depends(require_music_key)):
     from app.sources import get_enabled_sources
+
+    # 直接按曲目 id 播（候选选择路径）：不重搜，直接签名+更新会话
+    if req.track_id and req.track_source:
+        stream_url = _signed_stream_url(req.track_source, req.track_id)
+        track_dict = {
+            "id": req.track_id,
+            "source": req.track_source,
+            "title": req.track_title or req.track_id,
+            "artist": "",
+            "duration_sec": 0.0,
+        }
+        sess = get_session(req.session_id)
+        sess["current_track"] = {**track_dict, "stream_url": stream_url}
+        sess["playing"] = True
+        sess["position_sec"] = 0.0
+        return {"status": "playing", "track": track_dict, "stream_url": stream_url}
 
     sources = get_enabled_sources()
     results = await search_all(req.query, 8, sources)

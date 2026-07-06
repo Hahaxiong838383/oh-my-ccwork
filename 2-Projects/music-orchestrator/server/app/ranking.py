@@ -18,18 +18,39 @@ class Source(Protocol):
 
 
 def _title_artist_score(query: str, title: str, artist: str) -> float:
-    """标题+歌手模糊匹配分数 (0~1)，权重 0.5"""
+    """标题+歌手匹配分数 (0~1)，权重 0.5。
+
+    精确子串信号优先（2026-07-06 真机踩坑修复）：搜"夜曲"时 B 站自然排序不稳定，
+    《蛋仔派对：把惊魂夜唱成一首歌》这类游戏视频曾冲到 top（标题不含连续"夜曲"，
+    但 SequenceMatcher 对短 query 的区分度差 + 热度分把它顶上去）。标题/歌手包含
+    完整 query 子串 → 强信号直接高分；query 含多词（如"夜曲 周杰伦"）时按词逐个
+    检查子串命中率。模糊相似度只做兜底。
+    """
     q = (query or "").lower().strip()
     t = (title or "").lower().strip()
     a = (artist or "").lower().strip()
     if not q:
         return 0.0
-    # 用 SequenceMatcher 计算相似度
+
+    # 精确子串：query 整体或全部分词都出现在 标题+歌手 里 → 0.9+；部分命中按比例
+    haystack = f"{t} {a}"
+    words = [w for w in q.split() if w]
+    if words:
+        hit = sum(1 for w in words if w in haystack)
+        if hit == len(words):
+            return 1.0 if q in haystack or len(words) > 1 else 0.95
+        if hit > 0:
+            exact_partial = 0.5 + 0.3 * (hit / len(words))
+        else:
+            exact_partial = 0.0
+    else:
+        exact_partial = 0.0
+
+    # 模糊相似度兜底（长错拼/近似写法）
     title_sim = difflib.SequenceMatcher(None, q, t).ratio()
     artist_sim = difflib.SequenceMatcher(None, q, a).ratio()
-    # 取更高者或加权
-    combined = max(title_sim, artist_sim * 0.8 + title_sim * 0.2)
-    return combined
+    fuzzy = max(title_sim, artist_sim * 0.8 + title_sim * 0.2)
+    return max(exact_partial, fuzzy)
 
 
 def _duration_score(duration_sec: float) -> float:
