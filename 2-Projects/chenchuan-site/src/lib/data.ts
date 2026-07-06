@@ -254,6 +254,18 @@ export async function getArticleBySlug(slug: string) {
 // ── Videos ──
 // 视频库真相源 = admin 管理的 SQLite（managed_videos，published=1）。
 // 表为空/读取异常 → 回退本地静态 videos.ts（页面永不空）。Directus 已弃用，不再读。
+function getOptimizedVideoUrl(url: string): string {
+  if (!url.startsWith('/media/') || !url.endsWith('.mp4')) return url
+  return url.replace('/media/', '/media-optimized/')
+}
+
+function getOptimizedVideoPoster(url: string, thumbnail: string): string {
+  if (thumbnail) return thumbnail
+  const optimizedUrl = getOptimizedVideoUrl(url)
+  if (!optimizedUrl.startsWith('/media-optimized/') || !optimizedUrl.endsWith('.mp4')) return ''
+  return optimizedUrl.replace('/media-optimized/', '/media-posters/').replace(/\.mp4$/, '.jpg')
+}
+
 export async function getVideos() {
   try {
     const { listPublishedVideos, countManagedVideos } = await import('@/lib/videos/store')
@@ -263,8 +275,8 @@ export async function getVideos() {
         return {
           title: v.title,
           description: v.description,
-          url: v.url,
-          thumbnail: v.thumbnail,
+          url: getOptimizedVideoUrl(v.url),
+          thumbnail: getOptimizedVideoPoster(v.url, v.thumbnail),
           duration: v.duration,
           tags: v.tags,
           projectSlug: v.projectSlug ?? undefined,

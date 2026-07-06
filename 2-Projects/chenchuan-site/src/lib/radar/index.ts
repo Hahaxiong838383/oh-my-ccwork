@@ -180,8 +180,40 @@ export async function getRadarFeed(): Promise<RadarFeed> {
 }
 
 // 首页 Hero 滚动条用：最新混合资讯（去重）
+function getTheoryTickerFallback(take: number): RadarItem[] {
+  const reports = sortReportsDesc([RADAR_SEED, ...RADAR_ARCHIVE])
+  const items = reports.flatMap((report) =>
+    report.papers.map((paper) => ({
+      id: `theory:${report.date}:${paper.arxivId || paper.index}:${paper.url}`,
+      title: paper.title,
+      url: paper.url,
+      source: paper.arxivId ? `arXiv ${paper.arxivId}` : 'theory-radar',
+      publishedAt: paper.published
+        ? `${paper.published}T00:00:00Z`
+        : `${report.date}T00:00:00+08:00`,
+      summary: paper.finding ?? report.summary ?? null,
+      category: 'paper' as const,
+    })),
+  )
+  return sortByTimeDesc(dedupe(items)).slice(0, take)
+}
+
 export async function getRadarTicker(take = 14): Promise<RadarItem[]> {
-  return dedupe(await fetchAihotLatest(take))
+  const latest = dedupe(await fetchAihotLatest(take))
+  if (latest.length > 0) return latest
+
+  const cachedFeed = globalRadarFeed.__radarFeedCache?.feed
+  if (cachedFeed?.items.length) {
+    return sortByTimeDesc(cachedFeed.items).slice(0, take)
+  }
+
+  const disk = await loadDiskCache()
+  if (disk?.feed.items.length) {
+    globalRadarFeed.__radarFeedCache = disk
+    return sortByTimeDesc(disk.feed.items).slice(0, take)
+  }
+
+  return getTheoryTickerFallback(take)
 }
 
 // theory-radar agent 推送的深度报告落盘目录

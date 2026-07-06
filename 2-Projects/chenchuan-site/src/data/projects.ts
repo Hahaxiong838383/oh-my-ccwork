@@ -2,6 +2,7 @@ export interface ProjectVideo {
   title: string
   url: string
   duration: string
+  poster?: string
 }
 
 export interface ProjectBrief {
@@ -149,13 +150,13 @@ export const projects: Project[] = [
     },
     relatedSlugs: ['eye-gesture-multimodal', 'ar-hud-smart-cockpit'],
     videos: [
-      { title: '全车窗 HUD 概念车实拍', url: '/media/futurus-hud/full-window-hud-live.mp4', duration: '1:09' },
-      { title: '眼动+手势交互演示', url: '/media/eye-gesture-interaction/20260319-090647.mp4', duration: '0:27' },
-      { title: '注视预选与捏住抓取', url: '/media/eye-gesture-interaction/20260319-090658.mp4', duration: '0:33' },
-      { title: '气泡锁定视觉增强', url: '/media/eye-gesture-interaction/20260319-090714.mp4', duration: '0:29' },
-      { title: '多模态交互完整流程', url: '/media/eye-gesture-interaction/20260319-090720.mp4', duration: '1:13' },
-      { title: '单摄像头手势远程控制原型 · 演示 1', url: '/media/multimodal-interaction/clip-01.mp4', duration: '0:23' },
-      { title: '单摄像头手势远程控制原型 · 演示 2', url: '/media/multimodal-interaction/clip-02.mp4', duration: '0:10' },
+      { title: '全车窗 HUD 概念车实拍', url: '/media-optimized/futurus-hud/full-window-hud-live.mp4', duration: '1:09' },
+      { title: '眼动+手势交互演示', url: '/media-optimized/eye-gesture-interaction/20260319-090647.mp4', duration: '0:27' },
+      { title: '注视预选与捏住抓取', url: '/media-optimized/eye-gesture-interaction/20260319-090658.mp4', duration: '0:33' },
+      { title: '气泡锁定视觉增强', url: '/media-optimized/eye-gesture-interaction/20260319-090714.mp4', duration: '0:29' },
+      { title: '多模态交互完整流程', url: '/media-optimized/eye-gesture-interaction/20260319-090720.mp4', duration: '1:13' },
+      { title: '单摄像头手势远程控制原型 · 演示 1', url: '/media-optimized/multimodal-interaction/clip-01.mp4', duration: '0:23' },
+      { title: '单摄像头手势远程控制原型 · 演示 2', url: '/media-optimized/multimodal-interaction/clip-02.mp4', duration: '0:10' },
     ],
   },
   {
@@ -187,10 +188,10 @@ export const projects: Project[] = [
     },
     relatedSlugs: ['full-window-ar-hud-ai-cockpit', 'ar-hud-smart-cockpit'],
     videos: [
-      { title: '眼动+手势交互演示 1', url: '/media/eye-gesture-interaction/20260319-090647.mp4', duration: '0:27' },
-      { title: '注视高亮与捏住抓取', url: '/media/eye-gesture-interaction/20260319-090658.mp4', duration: '0:33' },
-      { title: '气泡锁定与视觉增强', url: '/media/eye-gesture-interaction/20260319-090714.mp4', duration: '0:29' },
-      { title: '完整交互流程演示', url: '/media/eye-gesture-interaction/20260319-090720.mp4', duration: '1:13' },
+      { title: '眼动+手势交互演示 1', url: '/media-optimized/eye-gesture-interaction/20260319-090647.mp4', duration: '0:27' },
+      { title: '注视高亮与捏住抓取', url: '/media-optimized/eye-gesture-interaction/20260319-090658.mp4', duration: '0:33' },
+      { title: '气泡锁定与视觉增强', url: '/media-optimized/eye-gesture-interaction/20260319-090714.mp4', duration: '0:29' },
+      { title: '完整交互流程演示', url: '/media-optimized/eye-gesture-interaction/20260319-090720.mp4', duration: '1:13' },
     ],
   },
   {
@@ -224,11 +225,11 @@ export const projects: Project[] = [
     },
     relatedSlugs: ['full-window-ar-hud-ai-cockpit', 'eye-gesture-multimodal', 'ai-hardware-voice-prototype'],
     videos: [
-      { title: '量产 AR HUD 及全车窗显示产品全景', url: '/media/futurus-hud/mass-production-hud.mp4', duration: '3:26' },
-      { title: '眼动+手势交互演示', url: '/media/eye-gesture-interaction/20260319-090647.mp4', duration: '0:27' },
-      { title: '注视预选与捏住抓取', url: '/media/eye-gesture-interaction/20260319-090658.mp4', duration: '0:33' },
-      { title: '气泡锁定视觉增强', url: '/media/eye-gesture-interaction/20260319-090714.mp4', duration: '0:29' },
-      { title: '多模态交互完整流程', url: '/media/eye-gesture-interaction/20260319-090720.mp4', duration: '1:13' },
+      { title: '量产 AR HUD 及全车窗显示产品全景', url: '/media-optimized/futurus-hud/mass-production-hud.mp4', duration: '3:26' },
+      { title: '眼动+手势交互演示', url: '/media-optimized/eye-gesture-interaction/20260319-090647.mp4', duration: '0:27' },
+      { title: '注视预选与捏住抓取', url: '/media-optimized/eye-gesture-interaction/20260319-090658.mp4', duration: '0:33' },
+      { title: '气泡锁定视觉增强', url: '/media-optimized/eye-gesture-interaction/20260319-090714.mp4', duration: '0:29' },
+      { title: '多模态交互完整流程', url: '/media-optimized/eye-gesture-interaction/20260319-090720.mp4', duration: '1:13' },
     ],
   },
   {
@@ -277,10 +278,10 @@ export const projects: Project[] = [
     color: '#8B5CF6',
     featured: true,
     videos: [
-      { title: '多模态互动机器人 · 现场记录 1', url: '/media/multimodal-robot/clip-01.mp4', duration: '0:07' },
-      { title: '多模态互动机器人 · 现场记录 2', url: '/media/multimodal-robot/clip-02.mp4', duration: '0:13' },
-      { title: '多模态互动机器人 · 现场记录 3', url: '/media/multimodal-robot/clip-03.mp4', duration: '0:19' },
-      { title: '多模态互动机器人 · 现场记录 4', url: '/media/multimodal-robot/clip-04.mp4', duration: '0:28' },
+      { title: '多模态互动机器人 · 现场记录 1', url: '/media-optimized/multimodal-robot/clip-01.mp4', duration: '0:07' },
+      { title: '多模态互动机器人 · 现场记录 2', url: '/media-optimized/multimodal-robot/clip-02.mp4', duration: '0:13' },
+      { title: '多模态互动机器人 · 现场记录 3', url: '/media-optimized/multimodal-robot/clip-03.mp4', duration: '0:19' },
+      { title: '多模态互动机器人 · 现场记录 4', url: '/media-optimized/multimodal-robot/clip-04.mp4', duration: '0:28' },
     ],
   },
   {
@@ -304,12 +305,12 @@ export const projects: Project[] = [
     color: '#F59E0B',
     featured: true,
     videos: [
-      { title: 'Mimic 机械臂镜像交互 1', url: '/media/mimic-robot/VID_20180514_213207.mp4', duration: '0:24' },
-      { title: 'Mimic 机械臂追踪响应', url: '/media/mimic-robot/VID_20180514_214137.mp4', duration: '0:07' },
-      { title: 'Mimic 机械臂交互全流程', url: '/media/mimic-robot/VID_20180514_215121.mp4', duration: '0:19' },
-      { title: '机械臂运动控制测试', url: '/media/mimic-robot/VID_20180515_102033.mp4', duration: '0:12' },
-      { title: '机械臂协作演示', url: '/media/mimic-robot/VID_20180518_165951.mp4', duration: '0:19' },
-      { title: '机械臂交互原型 A', url: '/media/mimic-robot/1527325414605.mp4', duration: '0:27' },
+      { title: 'Mimic 机械臂镜像交互 1', url: '/media-optimized/mimic-robot/VID_20180514_213207.mp4', duration: '0:24' },
+      { title: 'Mimic 机械臂追踪响应', url: '/media-optimized/mimic-robot/VID_20180514_214137.mp4', duration: '0:07' },
+      { title: 'Mimic 机械臂交互全流程', url: '/media-optimized/mimic-robot/VID_20180514_215121.mp4', duration: '0:19' },
+      { title: '机械臂运动控制测试', url: '/media-optimized/mimic-robot/VID_20180515_102033.mp4', duration: '0:12' },
+      { title: '机械臂协作演示', url: '/media-optimized/mimic-robot/VID_20180518_165951.mp4', duration: '0:19' },
+      { title: '机械臂交互原型 A', url: '/media-optimized/mimic-robot/1527325414605.mp4', duration: '0:27' },
     ],
     images: [
       '/media/mimic-robot/IMG_20180515_171717.jpg',

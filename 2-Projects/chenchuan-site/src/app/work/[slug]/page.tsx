@@ -29,6 +29,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: project?.title ?? '项目详情' }
 }
 
+function getVideoPoster(url: string, poster?: string): string | undefined {
+  if (poster) return poster
+  if (!url.startsWith('/media-optimized/') || !url.endsWith('.mp4')) return undefined
+  return url.replace('/media-optimized/', '/media-posters/').replace(/\.mp4$/, '.jpg')
+}
+
 function getRelatedProjects(slugs: string[]) {
   return slugs
     .map((s) => localProjects.find((p) => p.slug === s))
@@ -148,8 +154,9 @@ export default async function ProjectDetailPage({ params }: Props) {
                       src={v.url}
                       controls
                       preload="metadata"
+                      poster={getVideoPoster(v.url, 'poster' in v ? v.poster : undefined)}
                       playsInline
-                      className="aspect-video w-full object-cover"
+                      className="block h-auto max-h-[72vh] w-full bg-black object-contain"
                     />
                     <div className="flex items-center justify-between px-4 py-3">
                       <span className="text-sm text-text-primary">{v.title}</span>
