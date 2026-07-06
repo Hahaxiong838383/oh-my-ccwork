@@ -64,6 +64,15 @@
       ],
       "port": 8803,
       "autoPort": true
+    },
+    {
+      "name": "kidsbench-web-frontend",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/rayman.chen/mycc/2-Projects/kidsbench-eval/web/frontend && ./node_modules/.bin/vite --port 5178 --strictPort"
+      ],
+      "port": 5178
     }
   ]
 }
