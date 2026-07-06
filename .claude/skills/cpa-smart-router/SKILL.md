@@ -31,6 +31,7 @@ description: CPA Smart Router 运维与迭代指南。用于检查、部署、�
 - 不提交 `~/.gateway.env`、`/etc/cpa-smart-router.env` 或任何 secret。
 - 提交前避开无关运行态文件，例如 `.claude/skills/mycc/current.json`。
 - 公网接口必须带鉴权；dashboard 支持 Bearer，也支持 Basic Auth，密码填同一个 key。
+- 正式客户端可继续使用个人 `CPA_API_KEY`；smart-router 通过 `client_api_key_envs` 兼容该 key，同时可保留 `CPA_SMART_ROUTER_KEY` 作为管理备用 key。
 
 ## 常用验证
 
@@ -65,7 +66,7 @@ ssh aliyun-jp 'install -m 755 /tmp/cpa-smart-router /opt/cpa-smart-router/cpa-sm
 - 已支持鉴权、请求体上限、sticky、最多 2 次重试、被动 EWMA、熔断 cooldown。
 - 已支持 JSONL 指标、SQLite 持久聚合、`/debug/summary` 和 `/dashboard`。
 - 正式使用默认优先走 `gpt-5.5`；`fable-5` 只是测试玩具模型，生产配置应放入 `blocked_models`，不要调用。
-- 流式响应目前不解析 usage；流式 token 统计可能为 0，后续可加 SSE usage 解析。
+- `/v1/chat/completions` 流式响应会注入 `stream_options.include_usage=true` 并解析 SSE usage；若上游不返回 usage，token 仍会是 0。
 
 ## 提交前检查
 

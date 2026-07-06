@@ -1,6 +1,9 @@
 {
   "listen": ":8327",
   "client_api_key_env": "CPA_SMART_ROUTER_KEY",
+  "client_api_key_envs": [
+    "CPA_API_KEY"
+  ],
   "body_limit_bytes": 33554432,
   "max_retries": 1,
   "metrics_path": "router-metrics.jsonl",

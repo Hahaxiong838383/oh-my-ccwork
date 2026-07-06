@@ -28,6 +28,7 @@ import (
 type Config struct {
 	Listen           string           `json:"listen"`
 	ClientAPIKeyEnv  string           `json:"client_api_key_env"`
+	ClientAPIKeyEnvs []string         `json:"client_api_key_envs"`
 	ClientAPIKeys    []string         `json:"client_api_keys"`
 	BodyLimitBytes   int64            `json:"body_limit_bytes"`
 	MaxRetries       int              `json:"max_retries"`
@@ -158,6 +159,11 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 	if cfg.ClientAPIKeyEnv != "" {
 		if key := os.Getenv(cfg.ClientAPIKeyEnv); key != "" {
+			keys[key] = struct{}{}
+		}
+	}
+	for _, env := range cfg.ClientAPIKeyEnvs {
+		if key := os.Getenv(env); key != "" {
 			keys[key] = struct{}{}
 		}
 	}
@@ -458,7 +464,7 @@ func (s *Server) modelBlocked(model string) bool {
 
 func (s *Server) tryCandidate(w http.ResponseWriter, r *http.Request, body []byte, payload map[string]any, routeModel string, candidate Candidate, stream bool) (int, bool, MetricEvent) {
 	start := time.Now()
-	upstreamBody, err := rewriteModel(body, payload, candidate.Model)
+	upstreamBody, err := rewriteModel(body, payload, candidate.Model, stream && r.URL.Path == "/v1/chat/completions")
 	if err != nil {
 		return 0, false, s.metric(routeModel, candidate.ID, 0, start, "rewrite model: "+err.Error(), nil)
 	}
@@ -493,12 +499,14 @@ func (s *Server) tryCandidate(w http.ResponseWriter, r *http.Request, body []byt
 	w.WriteHeader(resp.StatusCode)
 	var responseBody []byte
 	var usage usageInfo
+	var upstreamModel string
 	if stream {
-		_, err = io.Copy(w, resp.Body)
+		usage, upstreamModel, err = streamAndExtractUsage(w, resp.Body)
 	} else {
 		responseBody, err = io.ReadAll(resp.Body)
 		if err == nil {
 			usage = extractUsage(responseBody)
+			upstreamModel = extractModel(responseBody)
 			_, err = w.Write(responseBody)
 		}
 	}
@@ -511,7 +519,7 @@ func (s *Server) tryCandidate(w http.ResponseWriter, r *http.Request, body []byt
 	}
 	s.updateState(candidate.ID, resp.StatusCode, time.Since(start), usage.Total, errMsg)
 	metric := s.metric(routeModel, candidate.ID, resp.StatusCode, start, errMsg, &usage)
-	metric.UpstreamModel = extractModel(responseBody)
+	metric.UpstreamModel = upstreamModel
 	return resp.StatusCode, false, metric
 }
 
@@ -521,15 +529,27 @@ func (s *Server) forwardWithCandidate(w http.ResponseWriter, r *http.Request, bo
 	s.record(metric)
 }
 
-func rewriteModel(body []byte, payload map[string]any, model string) ([]byte, error) {
-	if model == "" {
+func rewriteModel(body []byte, payload map[string]any, model string, includeStreamUsage bool) ([]byte, error) {
+	if model == "" && !includeStreamUsage {
 		return body, nil
 	}
 	clone := make(map[string]any, len(payload))
 	for k, v := range payload {
 		clone[k] = v
 	}
-	clone["model"] = model
+	if model != "" {
+		clone["model"] = model
+	}
+	if includeStreamUsage {
+		options := map[string]any{}
+		if existing, ok := clone["stream_options"].(map[string]any); ok {
+			for k, v := range existing {
+				options[k] = v
+			}
+		}
+		options["include_usage"] = true
+		clone["stream_options"] = options
+	}
 	return json.Marshal(clone)
 }
 
@@ -747,16 +767,67 @@ func removeCandidate(candidates []Candidate, id string) []Candidate {
 
 type usageInfo struct{ Prompt, Completion, Total int64 }
 
+func streamAndExtractUsage(w http.ResponseWriter, reader io.Reader) (usageInfo, string, error) {
+	buffered := bufio.NewReader(reader)
+	var usage usageInfo
+	var upstreamModel string
+	for {
+		line, readErr := buffered.ReadBytes('\n')
+		if len(line) > 0 {
+			if _, writeErr := w.Write(line); writeErr != nil {
+				return usage, upstreamModel, writeErr
+			}
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
+			if chunkUsage, model, ok := extractSSEUsage(line); ok {
+				usage = chunkUsage
+				if model != "" {
+					upstreamModel = model
+				}
+			} else if model != "" {
+				upstreamModel = model
+			}
+		}
+		if readErr != nil {
+			if errors.Is(readErr, io.EOF) {
+				return usage, upstreamModel, nil
+			}
+			return usage, upstreamModel, readErr
+		}
+	}
+}
+
+func extractSSEUsage(line []byte) (usageInfo, string, bool) {
+	text := strings.TrimSpace(string(line))
+	if !strings.HasPrefix(text, "data:") {
+		return usageInfo{}, "", false
+	}
+	data := strings.TrimSpace(strings.TrimPrefix(text, "data:"))
+	if data == "" || data == "[DONE]" {
+		return usageInfo{}, "", false
+	}
+	usage, hasUsage := extractUsageFromJSON([]byte(data))
+	return usage, extractModel([]byte(data)), hasUsage
+}
+
 func extractUsage(body []byte) usageInfo {
+	usage, _ := extractUsageFromJSON(body)
+	return usage
+}
+
+func extractUsageFromJSON(body []byte) (usageInfo, bool) {
 	var payload struct {
-		Usage struct {
+		Usage *struct {
 			PromptTokens     int64 `json:"prompt_tokens"`
 			CompletionTokens int64 `json:"completion_tokens"`
 			TotalTokens      int64 `json:"total_tokens"`
 		} `json:"usage"`
 	}
-	json.Unmarshal(body, &payload)
-	return usageInfo{Prompt: payload.Usage.PromptTokens, Completion: payload.Usage.CompletionTokens, Total: payload.Usage.TotalTokens}
+	if err := json.Unmarshal(body, &payload); err != nil || payload.Usage == nil {
+		return usageInfo{}, false
+	}
+	return usageInfo{Prompt: payload.Usage.PromptTokens, Completion: payload.Usage.CompletionTokens, Total: payload.Usage.TotalTokens}, true
 }
 
 func extractModel(body []byte) string {

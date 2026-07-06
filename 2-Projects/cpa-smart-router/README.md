@@ -19,6 +19,7 @@ go run ./cmd/router -config config/router.example.json
 
 - `CPA_SMART_ROUTER_KEY`：客户端访问 smart-router 的 key
 - `CPA_API_KEY`：smart-router 访问本机 CPA 的 key
+- `client_api_key_envs` 可加入 `CPA_API_KEY`，让客户端继续用个人 CPA key 访问 smart-router。
 
 ## 安全规则
 
@@ -26,6 +27,7 @@ go run ./cmd/router -config config/router.example.json
 - 后端 CPA key 只在服务端注入，不透传客户端 key。
 - `blocked_models` 用于拦截测试/玩具模型；正式流量不要调用 `fable-5`。
 - 流式响应开始输出后不做 failover。
+- `/v1/chat/completions` 流式请求会自动注入 `stream_options.include_usage=true` 并解析 SSE usage，用于 dashboard 和调度用量统计。
 - `/v1/responses` 强制 sticky，避免 `previous_response_id` 断链。
 
 ## 灰度接入
