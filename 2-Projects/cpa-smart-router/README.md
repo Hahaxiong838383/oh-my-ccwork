@@ -7,7 +7,7 @@ CPA Smart Router 是部署在 `aliyun-jp` 的 CLIProxyAPI 旁路调度层：客�
 - M-1：已验证 CPA `openai-compatibility.prefix` 可固定命中候选上游。
 - M0/M1：Go 单二进制 MVP，支持 `/v1/chat/completions`、`/v1/responses`、`/v1/models` 转发、鉴权、sticky、熔断、异步 JSONL 指标。
 - M2：支持 CST 日用量重置与鉴权状态查看 `/debug/state`。
-- SQLite 与 dashboard 放到 M3/M4。
+- M3：支持 SQLite 持久聚合、`/debug/summary` 与简易 `/dashboard`。
 
 ## 运行
 
@@ -40,5 +40,14 @@ go run ./cmd/router -config config/router.example.json
 ```bash
 curl https://smart-api.hahaxiong.top/debug/state \
   -H "Authorization: Bearer $CPA_SMART_ROUTER_KEY"
+curl https://smart-api.hahaxiong.top/debug/summary \
+  -H "Authorization: Bearer $CPA_SMART_ROUTER_KEY"
 ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
 ```
+
+## Dashboard
+
+- `/dashboard`：简易 HTML 聚合页，支持 `Authorization: Bearer <key>`；浏览器可用 Basic Auth，密码填同一个 key。
+- `/debug/summary?hours=24`：JSON 聚合，字段包含总量、按 provider、按 model、最近错误。
+- `sqlite_path` 为空时禁用 SQLite 聚合；生产建议写到 `/opt/cpa-smart-router/router.sqlite`。
+- JSONL 指标仍保留，SQLite 写入走后台 channel，不阻塞流式转发路径。

@@ -5,30 +5,37 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
+	"html/template"
 	"io"
 	"log"
 	"math"
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	_ "modernc.org/sqlite"
 )
 
 type Config struct {
-	Listen          string           `json:"listen"`
-	ClientAPIKeyEnv string           `json:"client_api_key_env"`
-	ClientAPIKeys   []string         `json:"client_api_keys"`
-	BodyLimitBytes  int64            `json:"body_limit_bytes"`
-	MaxRetries      int              `json:"max_retries"`
-	MetricsPath     string           `json:"metrics_path"`
-	DefaultBackend  Candidate        `json:"default_backend"`
-	Routes          map[string]Route `json:"routes"`
+	Listen           string           `json:"listen"`
+	ClientAPIKeyEnv  string           `json:"client_api_key_env"`
+	ClientAPIKeys    []string         `json:"client_api_keys"`
+	BodyLimitBytes   int64            `json:"body_limit_bytes"`
+	MaxRetries       int              `json:"max_retries"`
+	MetricsPath      string           `json:"metrics_path"`
+	SQLitePath       string           `json:"sqlite_path"`
+	DashboardEnabled bool             `json:"dashboard_enabled"`
+	DefaultBackend   Candidate        `json:"default_backend"`
+	Routes           map[string]Route `json:"routes"`
 }
 
 type Route struct {
@@ -83,6 +90,8 @@ type Server struct {
 	mu         sync.Mutex
 	httpClient *http.Client
 	metricCh   chan MetricEvent
+	db         *sql.DB
+	wg         sync.WaitGroup
 }
 
 func main() {
@@ -101,6 +110,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", server.handleHealthz)
 	mux.HandleFunc("/debug/state", server.handleDebugState)
+	mux.HandleFunc("/debug/summary", server.handleDebugSummary)
+	mux.HandleFunc("/dashboard", server.handleDashboard)
 	mux.HandleFunc("/v1/models", server.handleModels)
 	mux.HandleFunc("/v1/chat/completions", server.handleLLM)
 	mux.HandleFunc("/v1/responses", server.handleLLM)
@@ -163,6 +174,15 @@ func NewServer(cfg Config) (*Server, error) {
 		states[cfg.DefaultBackend.ID] = &ProviderState{}
 	}
 
+	var db *sql.DB
+	if cfg.SQLitePath != "" {
+		var err error
+		db, err = openMetricsDB(cfg.SQLitePath)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	s := &Server{
 		cfg:        cfg,
 		clientKeys: keys,
@@ -170,24 +190,36 @@ func NewServer(cfg Config) (*Server, error) {
 		bindings:   map[string]SessionBinding{},
 		httpClient: &http.Client{Timeout: 10 * time.Minute},
 		metricCh:   make(chan MetricEvent, 1024),
+		db:         db,
 	}
+	s.wg.Add(1)
 	go s.metricWriter(cfg.MetricsPath)
 	return s, nil
 }
 
-func (s *Server) Close() { close(s.metricCh) }
+func (s *Server) Close() {
+	close(s.metricCh)
+	s.wg.Wait()
+	if s.db != nil {
+		s.db.Close()
+	}
+}
 
 func (s *Server) metricWriter(path string) {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		log.Printf("metrics disabled: %v", err)
-		for range s.metricCh {
+	defer s.wg.Done()
+	var file *os.File
+	var writer *bufio.Writer
+	if path != "" {
+		var err error
+		file, err = os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			log.Printf("jsonl metrics disabled: %v", err)
+		} else {
+			defer file.Close()
+			writer = bufio.NewWriterSize(file, 64*1024)
+			defer writer.Flush()
 		}
-		return
 	}
-	defer file.Close()
-	writer := bufio.NewWriterSize(file, 64*1024)
-	defer writer.Flush()
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -196,11 +228,20 @@ func (s *Server) metricWriter(path string) {
 			if !ok {
 				return
 			}
-			line, _ := json.Marshal(event)
-			writer.Write(line)
-			writer.WriteByte('\n')
+			if writer != nil {
+				line, _ := json.Marshal(event)
+				writer.Write(line)
+				writer.WriteByte('\n')
+			}
+			if s.db != nil {
+				if err := insertMetric(s.db, event); err != nil {
+					log.Printf("sqlite metric write failed: %v", err)
+				}
+			}
 		case <-ticker.C:
-			writer.Flush()
+			if writer != nil {
+				writer.Flush()
+			}
 		}
 	}
 }
@@ -250,6 +291,51 @@ func (s *Server) handleDebugState(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
+}
+
+func (s *Server) handleDebugSummary(w http.ResponseWriter, r *http.Request) {
+	if !s.authorized(r) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if s.db == nil {
+		http.Error(w, "sqlite disabled", http.StatusServiceUnavailable)
+		return
+	}
+	summary, err := s.summary(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(summary)
+}
+
+func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
+	if !s.cfg.DashboardEnabled {
+		http.NotFound(w, r)
+		return
+	}
+	if !s.authorized(r) {
+		w.Header().Set("WWW-Authenticate", `Basic realm="cpa-smart-router"`)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if s.db == nil {
+		http.Error(w, "sqlite disabled", http.StatusServiceUnavailable)
+		return
+	}
+	summary, err := s.summary(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	if err := dashboardTemplate.Execute(w, summary); err != nil {
+		log.Printf("dashboard render failed: %v", err)
+	}
 }
 
 func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
@@ -331,6 +417,10 @@ func (s *Server) handleLLM(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) authorized(r *http.Request) bool {
+	if _, password, ok := r.BasicAuth(); ok {
+		_, ok := s.clientKeys[password]
+		return ok
+	}
 	auth := r.Header.Get("Authorization")
 	if !strings.HasPrefix(auth, "Bearer ") {
 		return false
@@ -707,3 +797,228 @@ func (s *Server) proxyRaw(w http.ResponseWriter, r *http.Request, candidate Cand
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
 }
+
+func openMetricsDB(path string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(1)
+	if _, err := db.Exec(`
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+CREATE TABLE IF NOT EXISTS request_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts TEXT NOT NULL,
+  day TEXT NOT NULL,
+  path TEXT NOT NULL,
+  route_model TEXT NOT NULL,
+  provider_id TEXT NOT NULL,
+  upstream_model TEXT,
+  status INTEGER NOT NULL,
+  latency_ms INTEGER NOT NULL,
+  input_tokens INTEGER DEFAULT 0,
+  output_tokens INTEGER DEFAULT 0,
+  total_tokens INTEGER DEFAULT 0,
+  error TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_request_log_day_provider ON request_log(day, provider_id);
+CREATE INDEX IF NOT EXISTS idx_request_log_ts ON request_log(ts);
+CREATE INDEX IF NOT EXISTS idx_request_log_route_model ON request_log(route_model);
+`); err != nil {
+		db.Close()
+		return nil, err
+	}
+	return db, nil
+}
+
+func insertMetric(db *sql.DB, event MetricEvent) error {
+	ts := event.TS
+	parsed, err := time.Parse(time.RFC3339, ts)
+	if err != nil {
+		parsed = time.Now()
+		ts = parsed.Format(time.RFC3339)
+	}
+	_, err = db.Exec(`INSERT INTO request_log (
+ts, day, path, route_model, provider_id, upstream_model, status, latency_ms,
+input_tokens, output_tokens, total_tokens, error
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		ts, cstDay(parsed), event.Path, event.RouteModel, event.ProviderID, event.UpstreamModel,
+		event.Status, event.LatencyMS, event.InputTokens, event.OutputTokens, event.TotalTokens, event.Error)
+	return err
+}
+
+type Summary struct {
+	GeneratedAt  string          `json:"generated_at"`
+	Since        string          `json:"since"`
+	Hours        int             `json:"hours"`
+	Total        SummaryBucket   `json:"total"`
+	ByProvider   []SummaryBucket `json:"by_provider"`
+	ByModel      []SummaryBucket `json:"by_model"`
+	RecentErrors []RecentError   `json:"recent_errors"`
+}
+
+type SummaryBucket struct {
+	Name          string  `json:"name"`
+	Requests      int64   `json:"requests"`
+	Successes     int64   `json:"successes"`
+	Errors        int64   `json:"errors"`
+	SuccessRate   float64 `json:"success_rate"`
+	AvgLatencyMS  float64 `json:"avg_latency_ms"`
+	InputTokens   int64   `json:"input_tokens"`
+	OutputTokens  int64   `json:"output_tokens"`
+	TotalTokens   int64   `json:"total_tokens"`
+	LastRequestAt string  `json:"last_request_at,omitempty"`
+}
+
+type RecentError struct {
+	TS         string `json:"ts"`
+	ProviderID string `json:"provider_id"`
+	RouteModel string `json:"route_model"`
+	Status     int    `json:"status"`
+	Error      string `json:"error"`
+}
+
+func (s *Server) summary(r *http.Request) (Summary, error) {
+	hours := 24
+	if raw := r.URL.Query().Get("hours"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed <= 0 {
+			return Summary{}, errors.New("invalid hours")
+		}
+		if parsed > 24*31 {
+			parsed = 24 * 31
+		}
+		hours = parsed
+	}
+	since := time.Now().Add(-time.Duration(hours) * time.Hour).Format(time.RFC3339)
+	total, err := querySummaryBucket(s.db, since, "total", "")
+	if err != nil {
+		return Summary{}, err
+	}
+	byProvider, err := queryGroupedSummary(s.db, since, "provider_id")
+	if err != nil {
+		return Summary{}, err
+	}
+	byModel, err := queryGroupedSummary(s.db, since, "route_model")
+	if err != nil {
+		return Summary{}, err
+	}
+	recentErrors, err := queryRecentErrors(s.db, since)
+	if err != nil {
+		return Summary{}, err
+	}
+	return Summary{
+		GeneratedAt:  time.Now().Format(time.RFC3339),
+		Since:        since,
+		Hours:        hours,
+		Total:        total,
+		ByProvider:   byProvider,
+		ByModel:      byModel,
+		RecentErrors: recentErrors,
+	}, nil
+}
+
+func querySummaryBucket(db *sql.DB, since, name, where string, args ...any) (SummaryBucket, error) {
+	query := `SELECT COUNT(*),
+COALESCE(SUM(CASE WHEN status >= 200 AND status < 500 AND COALESCE(error, '') = '' THEN 1 ELSE 0 END), 0),
+COALESCE(SUM(CASE WHEN status = 0 OR status >= 500 OR COALESCE(error, '') != '' THEN 1 ELSE 0 END), 0),
+COALESCE(AVG(latency_ms), 0), COALESCE(SUM(input_tokens), 0), COALESCE(SUM(output_tokens), 0),
+COALESCE(SUM(total_tokens), 0), COALESCE(MAX(ts), '') FROM request_log WHERE ts >= ?`
+	queryArgs := append([]any{since}, args...)
+	if where != "" {
+		query += " AND " + where
+	}
+	var bucket SummaryBucket
+	bucket.Name = name
+	if err := db.QueryRow(query, queryArgs...).Scan(&bucket.Requests, &bucket.Successes, &bucket.Errors, &bucket.AvgLatencyMS, &bucket.InputTokens, &bucket.OutputTokens, &bucket.TotalTokens, &bucket.LastRequestAt); err != nil {
+		return SummaryBucket{}, err
+	}
+	bucket.SuccessRate = successRate(bucket.Successes, bucket.Requests)
+	return bucket, nil
+}
+
+func queryGroupedSummary(db *sql.DB, since, column string) ([]SummaryBucket, error) {
+	if column != "provider_id" && column != "route_model" {
+		return nil, errors.New("invalid summary column")
+	}
+	rows, err := db.Query(`SELECT `+column+`, COUNT(*),
+COALESCE(SUM(CASE WHEN status >= 200 AND status < 500 AND COALESCE(error, '') = '' THEN 1 ELSE 0 END), 0),
+COALESCE(SUM(CASE WHEN status = 0 OR status >= 500 OR COALESCE(error, '') != '' THEN 1 ELSE 0 END), 0),
+COALESCE(AVG(latency_ms), 0), COALESCE(SUM(input_tokens), 0), COALESCE(SUM(output_tokens), 0),
+COALESCE(SUM(total_tokens), 0), COALESCE(MAX(ts), '')
+FROM request_log WHERE ts >= ? GROUP BY `+column+` ORDER BY COUNT(*) DESC, `+column, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var buckets []SummaryBucket
+	for rows.Next() {
+		var bucket SummaryBucket
+		if err := rows.Scan(&bucket.Name, &bucket.Requests, &bucket.Successes, &bucket.Errors, &bucket.AvgLatencyMS, &bucket.InputTokens, &bucket.OutputTokens, &bucket.TotalTokens, &bucket.LastRequestAt); err != nil {
+			return nil, err
+		}
+		bucket.SuccessRate = successRate(bucket.Successes, bucket.Requests)
+		buckets = append(buckets, bucket)
+	}
+	if buckets == nil {
+		buckets = []SummaryBucket{}
+	}
+	return buckets, rows.Err()
+}
+
+func queryRecentErrors(db *sql.DB, since string) ([]RecentError, error) {
+	rows, err := db.Query(`SELECT ts, provider_id, route_model, status, COALESCE(error, '')
+FROM request_log WHERE ts >= ? AND (status = 0 OR status >= 500 OR COALESCE(error, '') != '')
+ORDER BY ts DESC LIMIT 20`, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var errorsList []RecentError
+	for rows.Next() {
+		var item RecentError
+		if err := rows.Scan(&item.TS, &item.ProviderID, &item.RouteModel, &item.Status, &item.Error); err != nil {
+			return nil, err
+		}
+		errorsList = append(errorsList, item)
+	}
+	if errorsList == nil {
+		errorsList = []RecentError{}
+	}
+	return errorsList, rows.Err()
+}
+
+func successRate(successes, requests int64) float64 {
+	if requests == 0 {
+		return 0
+	}
+	return float64(successes) / float64(requests)
+}
+
+var dashboardTemplate = template.Must(template.New("dashboard").Funcs(template.FuncMap{
+	"pct": func(value float64) string { return strconv.FormatFloat(value*100, 'f', 1, 64) + "%" },
+	"ms":  func(value float64) string { return strconv.FormatFloat(value, 'f', 0, 64) },
+}).Parse(`<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CPA Smart Router Dashboard</title>
+<style>
+body{margin:0;background:#0f172a;color:#e2e8f0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1120px;margin:0 auto;padding:28px}h1{font-size:24px;margin:0 0 4px}.muted{color:#94a3b8}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0}.card,section{background:#111c33;border:1px solid #23314f;border-radius:14px;padding:16px}.metric{font-size:28px;font-weight:700}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid #23314f}th{color:#93c5fd;font-weight:600}section{margin-top:16px}.ok{color:#86efac}.bad{color:#fca5a5}@media(max-width:760px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:18px}table{font-size:12px}}
+</style>
+</head>
+<body><main>
+<h1>CPA Smart Router</h1>
+<div class="muted">最近 {{.Hours}} 小时 · 生成于 {{.GeneratedAt}} · since {{.Since}}</div>
+<div class="cards">
+<div class="card"><div class="muted">请求数</div><div class="metric">{{.Total.Requests}}</div></div>
+<div class="card"><div class="muted">成功率</div><div class="metric {{if lt .Total.SuccessRate 0.95}}bad{{else}}ok{{end}}">{{pct .Total.SuccessRate}}</div></div>
+<div class="card"><div class="muted">平均延迟</div><div class="metric">{{ms .Total.AvgLatencyMS}}ms</div></div>
+<div class="card"><div class="muted">总 Token</div><div class="metric">{{.Total.TotalTokens}}</div></div>
+</div>
+<section><h2>Provider</h2><table><thead><tr><th>provider</th><th>requests</th><th>success</th><th>errors</th><th>avg latency</th><th>tokens</th><th>last</th></tr></thead><tbody>{{range .ByProvider}}<tr><td>{{.Name}}</td><td>{{.Requests}}</td><td>{{pct .SuccessRate}}</td><td>{{.Errors}}</td><td>{{ms .AvgLatencyMS}}ms</td><td>{{.TotalTokens}}</td><td>{{.LastRequestAt}}</td></tr>{{else}}<tr><td colspan="7" class="muted">暂无数据</td></tr>{{end}}</tbody></table></section>
+<section><h2>Model</h2><table><thead><tr><th>model</th><th>requests</th><th>success</th><th>errors</th><th>avg latency</th><th>tokens</th><th>last</th></tr></thead><tbody>{{range .ByModel}}<tr><td>{{.Name}}</td><td>{{.Requests}}</td><td>{{pct .SuccessRate}}</td><td>{{.Errors}}</td><td>{{ms .AvgLatencyMS}}ms</td><td>{{.TotalTokens}}</td><td>{{.LastRequestAt}}</td></tr>{{else}}<tr><td colspan="7" class="muted">暂无数据</td></tr>{{end}}</tbody></table></section>
+<section><h2>最近错误</h2><table><thead><tr><th>time</th><th>provider</th><th>model</th><th>status</th><th>error</th></tr></thead><tbody>{{range .RecentErrors}}<tr><td>{{.TS}}</td><td>{{.ProviderID}}</td><td>{{.RouteModel}}</td><td>{{.Status}}</td><td>{{.Error}}</td></tr>{{else}}<tr><td colspan="5" class="muted">暂无错误</td></tr>{{end}}</tbody></table></section>
+</main></body></html>`))
