@@ -107,3 +107,47 @@ flowchart TD
 - 系统：Ubuntu 24.04
 - 登录方式：本机 `~/.ssh/id_ed25519` 公钥免密
 - 密码策略：密码不入文档、不入记忆
+
+## 实施记录
+
+### 2026-07-07 Phase 1 基础驾驶舱
+
+已在 RackNerd VPS 完成基础栈部署：
+
+- Docker Engine：`29.6.1`
+- Docker Compose：`v5.3.0`
+- 部署目录：`/opt/ai-ops-cockpit`
+- Compose 文件：`/opt/ai-ops-cockpit/compose.yaml`
+- 入口：`http://23.226.135.149/`
+- Basic Auth 用户：`chuan`
+- Basic Auth 密码：仅保存在远端 `/root/ai-ops-cockpit-secrets.txt`，不入文档、不入记忆
+- 防火墙：UFW 已启用，仅放行 `22/tcp`、`80/tcp`、`443/tcp`
+
+已启动容器：
+
+| 容器 | 作用 | 路径 |
+|---|---|---|
+| `ops-caddy` | 统一入口与 Basic Auth | `/` |
+| `ops-homepage` | 运维总入口 | `/` |
+| `ops-uptime-kuma` | 在线监控 | `/kuma/` |
+| `ops-netdata` | 资源图表 | `/netdata/` |
+| `ops-dockge` | Docker 服务管理 | `/dockge/` |
+
+公网验收结果：
+
+| 验收项 | 结果 |
+|---|---|
+| 未登录访问 `/` | `401`，Basic Auth 生效 |
+| 登录访问 `/` | `200 text/html` |
+| 登录访问 `/kuma/` | `302`，进入 Uptime Kuma 初始化流程 |
+| 登录访问 `/netdata/` | `200 text/html` |
+| 登录访问 `/dockge/` | `200 text/html` |
+| Netdata 容器健康 | `healthy` |
+| 磁盘余量 | `/` 约 `25G` 可用 |
+| 运行内存 | 5 个容器合计约 `770MiB` |
+
+当前限制：
+
+- `ops.hahaxiong.top` 尚未配置 DNS，当前先用 `http://23.226.135.149/` 验收。
+- Uptime Kuma 和 Dockge 还需要首次 Web 初始化账号。
+- oh-my-pi、omp-deck、n8n、飞书通知属于后续 Phase。
