@@ -71,17 +71,38 @@ type SessionBinding struct {
 }
 
 type MetricEvent struct {
-	TS            string `json:"ts"`
-	Path          string `json:"path"`
-	RouteModel    string `json:"route_model"`
-	ProviderID    string `json:"provider_id"`
-	UpstreamModel string `json:"upstream_model,omitempty"`
-	Status        int    `json:"status"`
-	LatencyMS     int64  `json:"latency_ms"`
-	InputTokens   int64  `json:"input_tokens,omitempty"`
-	OutputTokens  int64  `json:"output_tokens,omitempty"`
-	TotalTokens   int64  `json:"total_tokens,omitempty"`
-	Error         string `json:"error,omitempty"`
+	TS            string              `json:"ts"`
+	Path          string              `json:"path"`
+	RouteModel    string              `json:"route_model"`
+	ProviderID    string              `json:"provider_id"`
+	UpstreamModel string              `json:"upstream_model,omitempty"`
+	Status        int                 `json:"status"`
+	LatencyMS     int64               `json:"latency_ms"`
+	InputTokens   int64               `json:"input_tokens,omitempty"`
+	OutputTokens  int64               `json:"output_tokens,omitempty"`
+	TotalTokens   int64               `json:"total_tokens,omitempty"`
+	Error         string              `json:"error,omitempty"`
+	ResponseProbe *ResponseProbeEvent `json:"response_probe,omitempty"`
+}
+
+type ResponseProbeEvent struct {
+	Stream                bool   `json:"stream"`
+	StoreValue            string `json:"store_value"`
+	ResponseID            string `json:"response_id,omitempty"`
+	ParentResponseID      string `json:"parent_response_id,omitempty"`
+	ParentSeen            bool   `json:"parent_seen"`
+	ParentProviderID      string `json:"parent_provider_id,omitempty"`
+	ParentAgeMS           int64  `json:"parent_age_ms,omitempty"`
+	ProviderMatchesParent *bool  `json:"provider_matches_parent,omitempty"`
+	CaptureStatus         string `json:"capture_status"`
+	CaptureEvent          string `json:"capture_event,omitempty"`
+	UpstreamErrorSample   string `json:"upstream_error_sample,omitempty"`
+}
+
+type responseCapture struct {
+	ID     string
+	Status string
+	Event  string
 }
 
 type Server struct {
@@ -462,16 +483,105 @@ func (s *Server) modelBlocked(model string) bool {
 	return false
 }
 
+func (s *Server) newResponseProbe(r *http.Request, payload map[string]any, providerID string, stream bool) *ResponseProbeEvent {
+	if r.URL.Path != "/v1/responses" {
+		return nil
+	}
+	probe := &ResponseProbeEvent{
+		Stream:        stream,
+		StoreValue:    storeValue(payload),
+		CaptureStatus: "missing",
+	}
+	if parent, ok := payload["previous_response_id"].(string); ok && parent != "" {
+		probe.ParentResponseID = parent
+		if s.db != nil {
+			parentProvider, parentTS, found := lookupObservedResponse(s.db, parent)
+			if found {
+				probe.ParentSeen = true
+				probe.ParentProviderID = parentProvider
+				if parsed, err := time.Parse(time.RFC3339, parentTS); err == nil {
+					probe.ParentAgeMS = time.Since(parsed).Milliseconds()
+				}
+				matches := providerID == parentProvider
+				probe.ProviderMatchesParent = &matches
+			}
+		}
+	}
+	return probe
+}
+
+func storeValue(payload map[string]any) string {
+	value, ok := payload["store"]
+	if !ok {
+		return "missing"
+	}
+	switch v := value.(type) {
+	case bool:
+		if v {
+			return "true"
+		}
+		return "false"
+	case nil:
+		return "null"
+	default:
+		return "other"
+	}
+}
+
+func lookupObservedResponse(db *sql.DB, responseID string) (string, string, bool) {
+	var providerID, ts string
+	err := db.QueryRow(`SELECT provider_id, ts FROM responses_observe WHERE response_id = ? ORDER BY ts DESC LIMIT 1`, responseID).Scan(&providerID, &ts)
+	if err != nil {
+		return "", "", false
+	}
+	return providerID, ts, true
+}
+
+func attachResponseCaptureProbe(probe *ResponseProbeEvent, capture responseCapture) {
+	if probe == nil {
+		return
+	}
+	if capture.Status != "" {
+		probe.CaptureStatus = capture.Status
+	}
+	probe.ResponseID = capture.ID
+	probe.CaptureEvent = capture.Event
+}
+
+func attachResponseErrorProbe(probe *ResponseProbeEvent, body []byte) {
+	if probe == nil || len(body) == 0 {
+		return
+	}
+	probe.UpstreamErrorSample = errorSample(body, 512)
+}
+
+func errorSample(body []byte, limit int) string {
+	var payload struct {
+		Error any `json:"error"`
+	}
+	if err := json.Unmarshal(body, &payload); err == nil && payload.Error != nil {
+		if data, err := json.Marshal(payload.Error); err == nil {
+			body = data
+		}
+	}
+	text := strings.TrimSpace(string(body))
+	if len(text) > limit {
+		text = text[:limit]
+	}
+	return text
+}
+
 func (s *Server) tryCandidate(w http.ResponseWriter, r *http.Request, body []byte, payload map[string]any, routeModel string, candidate Candidate, stream bool) (int, bool, MetricEvent) {
 	start := time.Now()
+	probe := s.newResponseProbe(r, payload, candidate.ID, stream)
 	upstreamBody, err := rewriteModel(body, payload, candidate.Model, stream && r.URL.Path == "/v1/chat/completions")
 	if err != nil {
-		return 0, false, s.metric(routeModel, candidate.ID, 0, start, "rewrite model: "+err.Error(), nil)
+		return 0, false, s.metric(routeModel, candidate.ID, 0, start, "rewrite model: "+err.Error(), nil, probe)
 	}
 	url := upstreamURL(candidate.BaseURL, r.URL.Path)
 	req, err := http.NewRequestWithContext(context.Background(), r.Method, url, bytes.NewReader(upstreamBody))
 	if err != nil {
-		return 0, false, s.metric(routeModel, candidate.ID, 0, start, err.Error(), nil)
+		return 0, false, s.metric(routeModel, candidate.ID, 0, start, err.Error(), nil, probe)
 	}
 	copyHeaders(req.Header, r.Header)
 	key := candidate.APIKey
@@ -484,15 +594,16 @@ func (s *Server) tryCandidate(w http.ResponseWriter, r *http.Request, body []byt
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		s.updateState(candidate.ID, 0, time.Since(start), 0, err.Error())
-		return 0, true, s.metric(routeModel, candidate.ID, 0, start, err.Error(), nil)
+		return 0, true, s.metric(routeModel, candidate.ID, 0, start, err.Error(), nil, probe)
 	}
 	defer resp.Body.Close()
 
 	if isRetryableStatus(resp.StatusCode) {
 		data, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		errMsg := strings.TrimSpace(string(data))
+		attachResponseErrorProbe(probe, data)
 		s.updateState(candidate.ID, resp.StatusCode, time.Since(start), 0, errMsg)
-		return resp.StatusCode, true, s.metric(routeModel, candidate.ID, resp.StatusCode, start, errMsg, nil)
+		return resp.StatusCode, true, s.metric(routeModel, candidate.ID, resp.StatusCode, start, errMsg, nil, probe)
 	}
 
 	copyResponseHeaders(w.Header(), resp.Header)
@@ -500,15 +611,21 @@ func (s *Server) tryCandidate(w http.ResponseWriter, r *http.Request, body []byt
 	var responseBody []byte
 	var usage usageInfo
 	var upstreamModel string
+	capture := responseCapture{Status: "not_applicable"}
 	if stream {
-		usage, upstreamModel, err = streamAndExtractUsage(w, resp.Body)
+		usage, upstreamModel, capture, err = streamAndExtractUsage(w, resp.Body, r.URL.Path == "/v1/responses")
 	} else {
 		responseBody, err = io.ReadAll(resp.Body)
 		if err == nil {
 			usage = extractUsage(responseBody)
 			upstreamModel = extractModel(responseBody)
+			capture = captureResponseIDFromBody(responseBody, r.URL.Path == "/v1/responses")
 			_, err = w.Write(responseBody)
 		}
+	}
+	attachResponseCaptureProbe(probe, capture)
+	if resp.StatusCode >= 400 {
+		attachResponseErrorProbe(probe, responseBody)
 	}
 	if flusher, ok := w.(http.Flusher); ok {
 		flusher.Flush()
@@ -518,7 +635,7 @@ func (s *Server) tryCandidate(w http.ResponseWriter, r *http.Request, body []byt
 		errMsg = err.Error()
 	}
 	s.updateState(candidate.ID, resp.StatusCode, time.Since(start), usage.Total, errMsg)
-	metric := s.metric(routeModel, candidate.ID, resp.StatusCode, start, errMsg, &usage)
+	metric := s.metric(routeModel, candidate.ID, resp.StatusCode, start, errMsg, &usage, probe)
 	metric.UpstreamModel = upstreamModel
 	return resp.StatusCode, false, metric
 }
@@ -767,15 +884,19 @@ func removeCandidate(candidates []Candidate, id string) []Candidate {
 
 type usageInfo struct{ Prompt, Completion, Total int64 }
 
-func streamAndExtractUsage(w http.ResponseWriter, reader io.Reader) (usageInfo, string, error) {
+func streamAndExtractUsage(w http.ResponseWriter, reader io.Reader, captureResponse bool) (usageInfo, string, responseCapture, error) {
 	buffered := bufio.NewReader(reader)
 	var usage usageInfo
 	var upstreamModel string
+	capture := responseCapture{Status: "not_applicable"}
+	if captureResponse {
+		capture.Status = "missing"
+	}
 	for {
 		line, readErr := buffered.ReadBytes('\n')
 		if len(line) > 0 {
 			if _, writeErr := w.Write(line); writeErr != nil {
-				return usage, upstreamModel, writeErr
+				return usage, upstreamModel, capture, writeErr
 			}
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
@@ -788,12 +909,17 @@ func streamAndExtractUsage(w http.ResponseWriter, reader io.Reader) (usageInfo, 
 			} else if model != "" {
 				upstreamModel = model
 			}
+			if captureResponse && capture.ID == "" {
+				if next := extractSSEResponseID(line); next.ID != "" || next.Status == "parse_error" {
+					capture = next
+				}
+			}
 		}
 		if readErr != nil {
 			if errors.Is(readErr, io.EOF) {
-				return usage, upstreamModel, nil
+				return usage, upstreamModel, capture, nil
 			}
-			return usage, upstreamModel, readErr
+			return usage, upstreamModel, capture, readErr
 		}
 	}
 }
@@ -809,6 +935,60 @@ func extractSSEUsage(line []byte) (usageInfo, string, bool) {
 	}
 	usage, hasUsage := extractUsageFromJSON([]byte(data))
 	return usage, extractModel([]byte(data)), hasUsage
+}
+
+func extractSSEResponseID(line []byte) responseCapture {
+	text := strings.TrimSpace(string(line))
+	if !strings.HasPrefix(text, "data:") {
+		return responseCapture{Status: "missing"}
+	}
+	data := strings.TrimSpace(strings.TrimPrefix(text, "data:"))
+	if data == "" || data == "[DONE]" {
+		return responseCapture{Status: "missing"}
+	}
+	capture := captureResponseIDFromBody([]byte(data), true)
+	if capture.ID != "" {
+		if event := extractSSEEventName([]byte(text)); event != "" {
+			capture.Event = event
+		}
+		if capture.Event == "" {
+			capture.Event = "sse_data"
+		}
+	}
+	return capture
+}
+
+func extractSSEEventName(line []byte) string {
+	text := strings.TrimSpace(string(line))
+	if !strings.HasPrefix(text, "event:") {
+		return ""
+	}
+	return strings.TrimSpace(strings.TrimPrefix(text, "event:"))
+}
+
+func captureResponseIDFromBody(body []byte, captureResponse bool) responseCapture {
+	if !captureResponse {
+		return responseCapture{Status: "not_applicable"}
+	}
+	if len(body) == 0 {
+		return responseCapture{Status: "missing"}
+	}
+	var payload struct {
+		ID       string `json:"id"`
+		Response *struct {
+			ID string `json:"id"`
+		} `json:"response"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return responseCapture{Status: "parse_error"}
+	}
+	if payload.ID != "" {
+		return responseCapture{ID: payload.ID, Status: "captured", Event: "json_body"}
+	}
+	if payload.Response != nil && payload.Response.ID != "" {
+		return responseCapture{ID: payload.Response.ID, Status: "captured", Event: "response.created"}
+	}
+	return responseCapture{Status: "missing"}
 }
 
 func extractUsage(body []byte) usageInfo {
@@ -841,8 +1021,8 @@ func extractModel(body []byte) string {
 	return payload.Model
 }
 
-func (s *Server) metric(routeModel, providerID string, status int, start time.Time, errMsg string, usage *usageInfo) MetricEvent {
-	event := MetricEvent{TS: time.Now().Format(time.RFC3339), RouteModel: routeModel, ProviderID: providerID, Status: status, LatencyMS: time.Since(start).Milliseconds(), Error: errMsg}
+func (s *Server) metric(routeModel, providerID string, status int, start time.Time, errMsg string, usage *usageInfo, probe *ResponseProbeEvent) MetricEvent {
+	event := MetricEvent{TS: time.Now().Format(time.RFC3339), RouteModel: routeModel, ProviderID: providerID, Status: status, LatencyMS: time.Since(start).Milliseconds(), Error: errMsg, ResponseProbe: probe}
 	if usage != nil {
 		event.InputTokens = usage.Prompt
 		event.OutputTokens = usage.Completion
@@ -910,6 +1090,30 @@ CREATE TABLE IF NOT EXISTS request_log (
 CREATE INDEX IF NOT EXISTS idx_request_log_day_provider ON request_log(day, provider_id);
 CREATE INDEX IF NOT EXISTS idx_request_log_ts ON request_log(ts);
 CREATE INDEX IF NOT EXISTS idx_request_log_route_model ON request_log(route_model);
+CREATE TABLE IF NOT EXISTS responses_observe (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts TEXT NOT NULL,
+  route_model TEXT NOT NULL,
+  provider_id TEXT NOT NULL,
+  upstream_model TEXT,
+  status INTEGER NOT NULL,
+  latency_ms INTEGER NOT NULL,
+  stream BOOLEAN NOT NULL,
+  store_value TEXT NOT NULL,
+  response_id TEXT,
+  parent_response_id TEXT,
+  parent_seen BOOLEAN NOT NULL DEFAULT 0,
+  parent_provider_id TEXT,
+  parent_age_ms INTEGER,
+  provider_matches_parent BOOLEAN,
+  capture_status TEXT NOT NULL,
+  capture_event TEXT,
+  upstream_error_sample TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_responses_observe_response_id ON responses_observe(response_id);
+CREATE INDEX IF NOT EXISTS idx_responses_observe_parent ON responses_observe(parent_response_id);
+CREATE INDEX IF NOT EXISTS idx_responses_observe_ts ON responses_observe(ts);
+CREATE INDEX IF NOT EXISTS idx_responses_observe_provider ON responses_observe(provider_id);
 `); err != nil {
 		db.Close()
 		return nil, err
@@ -930,18 +1134,77 @@ input_tokens, output_tokens, total_tokens, error
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		ts, cstDay(parsed), event.Path, event.RouteModel, event.ProviderID, event.UpstreamModel,
 		event.Status, event.LatencyMS, event.InputTokens, event.OutputTokens, event.TotalTokens, event.Error)
+	if err != nil {
+		return err
+	}
+	if event.ResponseProbe != nil {
+		return insertResponseProbe(db, ts, event)
+	}
+	return nil
+}
+
+func insertResponseProbe(db *sql.DB, ts string, event MetricEvent) error {
+	probe := event.ResponseProbe
+	var providerMatches any
+	if probe.ProviderMatchesParent != nil {
+		providerMatches = *probe.ProviderMatchesParent
+	}
+	_, err := db.Exec(`INSERT INTO responses_observe (
+ts, route_model, provider_id, upstream_model, status, latency_ms, stream, store_value,
+response_id, parent_response_id, parent_seen, parent_provider_id, parent_age_ms,
+provider_matches_parent, capture_status, capture_event, upstream_error_sample
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		ts, event.RouteModel, event.ProviderID, event.UpstreamModel, event.Status, event.LatencyMS,
+		probe.Stream, probe.StoreValue, probe.ResponseID, probe.ParentResponseID, probe.ParentSeen,
+		probe.ParentProviderID, probe.ParentAgeMS, providerMatches, probe.CaptureStatus,
+		probe.CaptureEvent, probe.UpstreamErrorSample)
 	return err
 }
 
 type Summary struct {
-	GeneratedAt  string          `json:"generated_at"`
-	Since        string          `json:"since"`
-	Hours        int             `json:"hours"`
-	Total        SummaryBucket   `json:"total"`
-	Providers    []ProviderDebug `json:"providers"`
-	ByProvider   []SummaryBucket `json:"by_provider"`
-	ByModel      []SummaryBucket `json:"by_model"`
-	RecentErrors []RecentError   `json:"recent_errors"`
+	GeneratedAt   string               `json:"generated_at"`
+	Since         string               `json:"since"`
+	Hours         int                  `json:"hours"`
+	Total         SummaryBucket        `json:"total"`
+	Providers     []ProviderDebug      `json:"providers"`
+	ResponseProbe ResponseProbeSummary `json:"response_probe"`
+	ByProvider    []SummaryBucket      `json:"by_provider"`
+	ByModel       []SummaryBucket      `json:"by_model"`
+	RecentErrors  []RecentError        `json:"recent_errors"`
+}
+
+type ResponseProbeSummary struct {
+	Requests              int64                 `json:"requests"`
+	WithPrevious          int64                 `json:"with_previous_response_id"`
+	PreviousRate          float64               `json:"previous_response_id_rate"`
+	StreamRequests        int64                 `json:"stream_requests"`
+	StreamRate            float64               `json:"stream_rate"`
+	Captured              int64                 `json:"captured"`
+	CaptureRate           float64               `json:"capture_rate"`
+	ParentSeen            int64                 `json:"parent_seen"`
+	ParentSeenRate        float64               `json:"parent_seen_rate"`
+	ProviderMismatches    int64                 `json:"provider_mismatches"`
+	MismatchErrors        int64                 `json:"mismatch_errors"`
+	StoreDistribution     []DistributionBucket  `json:"store_distribution"`
+	CaptureDistribution   []DistributionBucket  `json:"capture_distribution"`
+	ProviderBindingCounts []DistributionBucket  `json:"provider_binding_counts"`
+	RecentResponseErrors  []ResponseErrorSample `json:"recent_response_errors"`
+}
+
+type DistributionBucket struct {
+	Name  string `json:"name"`
+	Count int64  `json:"count"`
+}
+
+type ResponseErrorSample struct {
+	TS                    string `json:"ts"`
+	ProviderID            string `json:"provider_id"`
+	RouteModel            string `json:"route_model"`
+	Status                int    `json:"status"`
+	ParentResponseID      string `json:"parent_response_id,omitempty"`
+	ParentSeen            bool   `json:"parent_seen"`
+	ProviderMatchesParent *bool  `json:"provider_matches_parent,omitempty"`
+	ErrorSample           string `json:"error_sample"`
 }
 
 type ProviderDebug struct {
@@ -1009,19 +1272,24 @@ func (s *Server) summary(r *http.Request) (Summary, error) {
 		return Summary{}, err
 	}
 	providers := s.providerDebug()
+	responseProbe, err := queryResponseProbeSummary(s.db, since)
+	if err != nil {
+		return Summary{}, err
+	}
 	recentErrors, err := queryRecentErrors(s.db, since)
 	if err != nil {
 		return Summary{}, err
 	}
 	return Summary{
-		GeneratedAt:  time.Now().Format(time.RFC3339),
-		Since:        since,
-		Hours:        hours,
-		Total:        total,
-		Providers:    providers,
-		ByProvider:   byProvider,
-		ByModel:      byModel,
-		RecentErrors: recentErrors,
+		GeneratedAt:   time.Now().Format(time.RFC3339),
+		Since:         since,
+		Hours:         hours,
+		Total:         total,
+		Providers:     providers,
+		ResponseProbe: responseProbe,
+		ByProvider:    byProvider,
+		ByModel:       byModel,
+		RecentErrors:  recentErrors,
 	}, nil
 }
 
@@ -1165,6 +1433,98 @@ ORDER BY ts DESC LIMIT 20`, since)
 	return errorsList, rows.Err()
 }
 
+func queryResponseProbeSummary(db *sql.DB, since string) (ResponseProbeSummary, error) {
+	var summary ResponseProbeSummary
+	if err := db.QueryRow(`SELECT COUNT(*),
+COALESCE(SUM(CASE WHEN parent_response_id IS NOT NULL AND parent_response_id != '' THEN 1 ELSE 0 END), 0),
+COALESCE(SUM(CASE WHEN stream THEN 1 ELSE 0 END), 0),
+COALESCE(SUM(CASE WHEN response_id IS NOT NULL AND response_id != '' THEN 1 ELSE 0 END), 0),
+COALESCE(SUM(CASE WHEN parent_seen THEN 1 ELSE 0 END), 0),
+COALESCE(SUM(CASE WHEN provider_matches_parent = 0 THEN 1 ELSE 0 END), 0),
+COALESCE(SUM(CASE WHEN provider_matches_parent = 0 AND status >= 400 THEN 1 ELSE 0 END), 0)
+FROM responses_observe WHERE ts >= ?`, since).Scan(&summary.Requests, &summary.WithPrevious, &summary.StreamRequests, &summary.Captured, &summary.ParentSeen, &summary.ProviderMismatches, &summary.MismatchErrors); err != nil {
+		return ResponseProbeSummary{}, err
+	}
+	summary.PreviousRate = successRate(summary.WithPrevious, summary.Requests)
+	summary.StreamRate = successRate(summary.StreamRequests, summary.Requests)
+	summary.CaptureRate = successRate(summary.Captured, summary.Requests)
+	summary.ParentSeenRate = successRate(summary.ParentSeen, summary.WithPrevious)
+	var err error
+	summary.StoreDistribution, err = queryDistribution(db, since, "store_value")
+	if err != nil {
+		return ResponseProbeSummary{}, err
+	}
+	summary.CaptureDistribution, err = queryDistribution(db, since, "capture_status")
+	if err != nil {
+		return ResponseProbeSummary{}, err
+	}
+	summary.ProviderBindingCounts, err = queryProviderBindingCounts(db, since)
+	if err != nil {
+		return ResponseProbeSummary{}, err
+	}
+	summary.RecentResponseErrors, err = queryResponseErrorSamples(db, since)
+	if err != nil {
+		return ResponseProbeSummary{}, err
+	}
+	return summary, nil
+}
+
+func queryDistribution(db *sql.DB, since, column string) ([]DistributionBucket, error) {
+	if column != "store_value" && column != "capture_status" {
+		return nil, errors.New("invalid distribution column")
+	}
+	rows, err := db.Query(`SELECT `+column+`, COUNT(*) FROM responses_observe WHERE ts >= ? GROUP BY `+column+` ORDER BY COUNT(*) DESC, `+column, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanDistribution(rows)
+}
+
+func queryProviderBindingCounts(db *sql.DB, since string) ([]DistributionBucket, error) {
+	rows, err := db.Query(`SELECT provider_id, COUNT(*) FROM responses_observe WHERE ts >= ? AND response_id IS NOT NULL AND response_id != '' GROUP BY provider_id ORDER BY COUNT(*) DESC, provider_id`, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanDistribution(rows)
+}
+
+func scanDistribution(rows *sql.Rows) ([]DistributionBucket, error) {
+	items := []DistributionBucket{}
+	for rows.Next() {
+		var item DistributionBucket
+		if err := rows.Scan(&item.Name, &item.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func queryResponseErrorSamples(db *sql.DB, since string) ([]ResponseErrorSample, error) {
+	rows, err := db.Query(`SELECT ts, provider_id, route_model, status, COALESCE(parent_response_id, ''), parent_seen, provider_matches_parent, COALESCE(upstream_error_sample, '')
+FROM responses_observe WHERE ts >= ? AND status >= 400 ORDER BY ts DESC LIMIT 20`, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ResponseErrorSample{}
+	for rows.Next() {
+		var item ResponseErrorSample
+		var providerMatches sql.NullBool
+		if err := rows.Scan(&item.TS, &item.ProviderID, &item.RouteModel, &item.Status, &item.ParentResponseID, &item.ParentSeen, &providerMatches, &item.ErrorSample); err != nil {
+			return nil, err
+		}
+		if providerMatches.Valid {
+			value := providerMatches.Bool
+			item.ProviderMatchesParent = &value
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
 func successRate(successes, requests int64) float64 {
 	if requests == 0 {
 		return 0
@@ -1195,6 +1555,8 @@ body{margin:0;background:#0f172a;color:#e2e8f0;font:14px/1.5 -apple-system,Blink
 <div class="card"><div class="muted">平均延迟</div><div class="metric">{{ms .Total.AvgLatencyMS}}ms</div></div>
 <div class="card"><div class="muted">总 Token</div><div class="metric">{{.Total.TotalTokens}}</div></div>
 </div>
+<section><h2>Responses State Probe</h2><div class="cards"><div class="card"><div class="muted">responses</div><div class="metric">{{.ResponseProbe.Requests}}</div></div><div class="card"><div class="muted">previous_response_id</div><div class="metric">{{pct .ResponseProbe.PreviousRate}}</div></div><div class="card"><div class="muted">stream</div><div class="metric">{{pct .ResponseProbe.StreamRate}}</div></div><div class="card"><div class="muted">id capture</div><div class="metric">{{pct .ResponseProbe.CaptureRate}}</div></div></div><table><thead><tr><th>metric</th><th>value</th></tr></thead><tbody><tr><td>with previous_response_id</td><td>{{.ResponseProbe.WithPrevious}}</td></tr><tr><td>parent seen</td><td>{{.ResponseProbe.ParentSeen}} ({{pct .ResponseProbe.ParentSeenRate}})</td></tr><tr><td>provider mismatches</td><td>{{.ResponseProbe.ProviderMismatches}}</td></tr><tr><td>mismatch errors</td><td>{{.ResponseProbe.MismatchErrors}}</td></tr></tbody></table><div class="muted">M1 gate: previous_response_id &gt; 1% or >=20, and response id capture >=95%; otherwise keep observe only.</div></section>
+<section><h2>Responses 分布</h2><table><thead><tr><th>store</th><th>count</th></tr></thead><tbody>{{range .ResponseProbe.StoreDistribution}}<tr><td>{{.Name}}</td><td>{{.Count}}</td></tr>{{else}}<tr><td colspan="2" class="muted">暂无 store 数据</td></tr>{{end}}</tbody></table><table><thead><tr><th>capture</th><th>count</th></tr></thead><tbody>{{range .ResponseProbe.CaptureDistribution}}<tr><td>{{.Name}}</td><td>{{.Count}}</td></tr>{{else}}<tr><td colspan="2" class="muted">暂无 capture 数据</td></tr>{{end}}</tbody></table><table><thead><tr><th>provider captured bindings</th><th>count</th></tr></thead><tbody>{{range .ResponseProbe.ProviderBindingCounts}}<tr><td>{{.Name}}</td><td>{{.Count}}</td></tr>{{else}}<tr><td colspan="2" class="muted">暂无 binding 数据</td></tr>{{end}}</tbody></table></section>
 <section><h2>调度解释</h2><table><thead><tr><th>provider</th><th>route</th><th>score</th><th>health</th><th>latency ewma</th><th>quota</th><th>tokens today</th><th>reason</th></tr></thead><tbody>{{range .Providers}}<tr><td>{{.ID}}</td><td>{{.RouteModel}} → {{.UpstreamModel}}</td><td>{{num .Score}}</td><td>{{pct .Health}}</td><td>{{ms .LatencyEWMA}}ms</td><td>{{pct .QuotaScore}}</td><td>{{.TokensToday}} / {{.DailyTokenLimit}}</td><td>{{.Reason}}{{if .CooldownUntil}} until {{.CooldownUntil}}{{end}}</td></tr>{{else}}<tr><td colspan="8" class="muted">暂无 provider 配置</td></tr>{{end}}</tbody></table><div class="muted">score = 35% health + 25% latency + 20% quota + 20% priority；cooldown 时 score 极低。</div></section>
 <section><h2>Provider 统计</h2><table><thead><tr><th>provider</th><th>requests</th><th>success</th><th>errors</th><th>avg latency</th><th>tokens</th><th>last</th></tr></thead><tbody>{{range .ByProvider}}<tr><td>{{.Name}}</td><td>{{.Requests}}</td><td>{{pct .SuccessRate}}</td><td>{{.Errors}}</td><td>{{ms .AvgLatencyMS}}ms</td><td>{{.TotalTokens}}</td><td>{{.LastRequestAt}}</td></tr>{{else}}<tr><td colspan="7" class="muted">暂无数据</td></tr>{{end}}</tbody></table></section>
 <section><h2>Model</h2><table><thead><tr><th>model</th><th>requests</th><th>success</th><th>errors</th><th>avg latency</th><th>tokens</th><th>last</th></tr></thead><tbody>{{range .ByModel}}<tr><td>{{.Name}}</td><td>{{.Requests}}</td><td>{{pct .SuccessRate}}</td><td>{{.Errors}}</td><td>{{ms .AvgLatencyMS}}ms</td><td>{{.TotalTokens}}</td><td>{{.LastRequestAt}}</td></tr>{{else}}<tr><td colspan="7" class="muted">暂无数据</td></tr>{{end}}</tbody></table></section>

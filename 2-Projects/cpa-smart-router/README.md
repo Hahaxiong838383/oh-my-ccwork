@@ -29,6 +29,7 @@ go run ./cmd/router -config config/router.example.json
 - 流式响应开始输出后不做 failover。
 - `/v1/chat/completions` 流式请求会自动注入 `stream_options.include_usage=true` 并解析 SSE usage，用于 dashboard 和调度用量统计。
 - `/v1/responses` 强制 sticky，避免 `previous_response_id` 断链。
+- `/v1/responses` 当前先启用 state probe 观测，不改变路由；M1 门控看 `previous_response_id` 占比和 response id 捕获率。
 
 ## 灰度接入
 
@@ -52,5 +53,6 @@ ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
 
 - `/dashboard`：简易 HTML 聚合页，支持 `Authorization: Bearer <key>`；浏览器可用 Basic Auth，密码填同一个 key。
 - `/debug/summary?hours=24`：JSON 聚合，字段包含总量、调度解释、按 provider、按 model、最近错误。
+- `Responses State Probe`：观测 `previous_response_id`、`store`、`stream`、response id 捕获率、provider mismatch 和错误样本；只观测不强制 sticky。
 - `sqlite_path` 为空时禁用 SQLite 聚合；生产建议写到 `/opt/cpa-smart-router/router.sqlite`。
 - JSONL 指标仍保留，SQLite 写入走后台 channel，不阻塞流式转发路径。
