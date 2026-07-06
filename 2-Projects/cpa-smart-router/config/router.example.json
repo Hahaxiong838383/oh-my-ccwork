@@ -78,6 +78,35 @@
           "daily_token_limit": 1000000
         }
       ]
+    },
+    "gpt-5.3-codex": {
+      "sticky": true,
+      "candidates": [
+        {
+          "id": "ccsub2-gpt53-codex",
+          "base_url": "http://127.0.0.1:8317/v1",
+          "api_key_env": "CPA_API_KEY",
+          "model": "ccsub2/gpt-5.5",
+          "priority": 90,
+          "daily_token_limit": 1000000
+        },
+        {
+          "id": "gw1052-gpt53-codex",
+          "base_url": "http://127.0.0.1:8317/v1",
+          "api_key_env": "CPA_API_KEY",
+          "model": "gw1052/gpt-5.5",
+          "priority": 80,
+          "daily_token_limit": 1000000
+        },
+        {
+          "id": "cpa-mixed-gpt53-codex",
+          "base_url": "http://127.0.0.1:8317/v1",
+          "api_key_env": "CPA_API_KEY",
+          "model": "gpt-5.5",
+          "priority": 70,
+          "daily_token_limit": 2000000
+        }
+      ]
     }
   },
   "blocked_models": [
