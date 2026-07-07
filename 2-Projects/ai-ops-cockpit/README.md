@@ -302,3 +302,52 @@ BRO-PDCA 验收证据：
 - 接入 n8n，做“手动巡检按钮”和每日巡检日报。
 - 接入 oh-my-pi / omp-deck / Grok，形成 AI 运维助手入口。
 - 扩展监控目标：本机关键项目、NAS、Mini、Studio、更多个人站服务。
+
+### 2026-07-07 n8n 接入、Dockge 白屏修复、Netdata 真实性核验
+
+本轮按川哥要求并行处理 3 件事：接入 n8n、修复 Dockge 白屏、确认 Netdata 数据是否为当前真实数据。
+
+n8n 接入：
+
+- 已新增容器 `ops-n8n`，入口：`https://ops.hahaxiong.top/n8n/`。
+- 已在 Homepage 增加 `n8n 自动化巡检` 卡片。
+- 已完成 n8n owner 初始化，当前页面进入登录态；账号信息不入文档、不入 git、不入记忆，密码仍只在远端 `/root/ai-ops-cockpit-secrets.txt`。
+- 已在 Uptime Kuma 增加监控 `n8n 自动化巡检 HTTPS`，并绑定 `飞书运维告警`。
+
+Dockge 白屏根因与修复：
+
+- 根因 1：Dockge 和 Uptime Kuma 都是根路径 SPA，Dockge `/dockge/` 页面会默认加载根路径 `/assets/*`，被 Caddy 转给 Kuma，导致 JS MIME 错误和白屏。
+- 根因 2：修复资源后，Dockge Socket.IO 仍默认连根路径 `/socket.io/`，继续和 Kuma 冲突。
+- 根因 3：Socket 修好后，Dockge Vue Router 仍按 `/` 作为前端 base，访问 `/dockge/` 无匹配路由，页面仍空。
+- 修复：Dockge 前端资源继续由 `/dockge/` 入口访问；Socket.IO 改为 `/dockge/socket.io`，Caddy 对该路径 strip `/dockge` 后转发给 Dockge；Dockge 前端 Router base 改为 `/dockge/`。
+
+Netdata 真实性结论：
+
+- `https://ops.hahaxiong.top/netdata/` 显示的是 RackNerd 当前真实宿主机数据，不是静态样例数据。
+- 证据：Netdata 页面显示 Ubuntu、Kernel `6.8.0-134-generic`、1 核、约 `1.92 GB` RAM、约 `40 GB` Disk、KVM；与宿主 `hostname`、`uname -r`、`free -m`、`df -h /` 匹配。
+- Netdata 容器通过 host `/proc`、`/sys`、`/` 只读挂载采集宿主数据；浏览器和 Netdata API 均有实时数值变化。
+
+BRO-PDCA 验收证据：
+
+| 检查 | 结果 |
+|---|---|
+| 远端容器 | `ops-caddy`、`ops-homepage`、`ops-uptime-kuma`、`ops-netdata`、`ops-dockge`、`ops-n8n` 全部运行 |
+| Homepage | `200`，可见 `n8n 自动化巡检`，无 `API Error` |
+| Dockge | `200`，页面非空，显示 `Dockge / Username / Password / Login`，控制台错误 0，失败请求 0 |
+| Netdata | `200`，页面非空，显示 RackNerd 当前系统信息，控制台错误 0，失败请求 0 |
+| n8n | `200`，owner 已初始化，显示 `Sign in / Email / Password` |
+| Uptime Kuma | 4 个监控：AI 运维驾驶舱、个人站、RackNerd SSH、n8n；均绑定飞书告警 |
+| 最新心跳 | 4 个监控均为 `UP`，n8n 返回 `401 - Unauthorized` 并按预期计为 UP |
+
+本地验收文件：
+
+- `/Users/rayman.chen/mycc/output/playwright/ai-ops-final-phase2.json`
+- `/Users/rayman.chen/mycc/output/playwright/final--.png`
+- `/Users/rayman.chen/mycc/output/playwright/final--dockge-.png`
+- `/Users/rayman.chen/mycc/output/playwright/final--netdata-.png`
+- `/Users/rayman.chen/mycc/output/playwright/final--n8n-.png`
+
+下一步：
+
+- 在 n8n 内做第一个“手动巡检按钮”：读取 Kuma 状态、Netdata 摘要、Docker 容器状态，并发飞书摘要。
+- 再做每日定时巡检日报。
