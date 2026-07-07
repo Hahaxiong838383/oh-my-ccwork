@@ -9,6 +9,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { fetchAihotAll, fetchAihotLatest } from './aihot'
+import { fetchYuweiwanLatest } from './yuweiwan'
 import {
   dedupe,
   isDegraded,
@@ -86,36 +87,57 @@ async function saveDiskCache(cache: RadarFeedCache): Promise<void> {
   }
 }
 
+// 双上游并行（2026-07-07 起）：aihot（主，泛 AI 资讯 ~1900 条）+ yuweiwan（副，92 源中文聚合 ~770 条）。
+// allSettled 隔离故障——任一源挂只少一路数据，绝不拖垮另一路；归档合并天然按 url 去重叠。
 async function refreshRadarFeed(prev: RadarFeedCache | undefined): Promise<RadarFeed> {
-  const raw = await fetchAihotAll(1000, 'no-store')
-  const freshItems = sortByTimeDesc(dedupe(raw))
+  const [aihotSettled, ywSettled] = await Promise.allSettled([
+    fetchAihotAll(1000, 'no-store'),
+    fetchYuweiwanLatest(),
+  ])
+  const aihotItems = aihotSettled.status === 'fulfilled' ? aihotSettled.value : []
+  const ywItems = ywSettled.status === 'fulfilled' ? ywSettled.value : []
+  const freshItems = sortByTimeDesc(dedupe([...aihotItems, ...ywItems]))
   const prevItems = prev?.feed.items ?? []
   const now = Date.now()
 
   const failed = freshItems.length === 0
   const degraded = isDegraded(freshItems.length, prevItems.length)
 
-  if (failed || degraded) {
-    globalRadarFeed.__radarFeedNegativeUntil = now + NEGATIVE_CACHE_MS
+  const maybeAlert = (title: string, summary: string) => {
     const lastSent = globalRadarFeed.__radarAlertLastSent ?? 0
-    if (now - lastSent > ALERT_COOLDOWN_MS) {
-      globalRadarFeed.__radarAlertLastSent = now
-      void sendChatAlert({
-        type: 'radar_degraded',
-        title: failed ? '📡 雷达资讯流：上游拉取失败' : '📡 雷达资讯流：拉取降级',
-        summary: failed
-          ? '上游 aihot 本轮全量拉取 0 条，已自动回退服务器本地归档，**页面用户无感，无需操作**。若持续告警：检查 aihot 上游或韩国机 hosts 钉的节点是否失效。'
-          : `上游本轮拉取条数暴跌（归档 ${prevItems.length} → 本轮 ${freshItems.length}），疑似部分分类失败，已保留旧归档不覆盖，**页面用户无感**。持续出现再排查。`,
-        fields: {
-          本轮拉取: `${freshItems.length} 条`,
-          本地归档: `${prevItems.length} 条`,
-          服务器: 'aliyun-kr（韩国）',
-          冷却: '同类告警 30 分钟内不重复',
-        },
-      })
-    }
+    if (now - lastSent <= ALERT_COOLDOWN_MS) return
+    globalRadarFeed.__radarAlertLastSent = now
+    void sendChatAlert({
+      type: 'radar_degraded',
+      title,
+      summary,
+      fields: {
+        'aihot(主源)': `${aihotItems.length} 条`,
+        'yuweiwan(副源)': `${ywItems.length} 条`,
+        本地归档: `${prevItems.length} 条`,
+        服务器: 'aliyun-kr（韩国）',
+        冷却: '同类告警 30 分钟内不重复',
+      },
+    })
+  }
+
+  if (failed) {
+    globalRadarFeed.__radarFeedNegativeUntil = now + NEGATIVE_CACHE_MS
+    maybeAlert(
+      '📡 雷达资讯流：双上游全部拉取失败',
+      '本轮 aihot 与 yuweiwan 均 0 条，已自动回退服务器本地归档，**页面用户无感，无需操作**。若持续告警：检查网络出口 / hosts 钉的节点 / GitHub raw 可达性。',
+    )
     if (prev) return prev.feed
     return { items: [], fetchedAt: new Date().toISOString(), ok: false, sourceCount: 0 }
+  }
+
+  // 部分成功（条数暴跌）：与全失败不同——新内容仍要吸收进归档（并集不缩水），
+  // 但发告警提示某路源可能出问题（分源计数直接可见是哪路）。
+  if (degraded) {
+    maybeAlert(
+      '📡 雷达资讯流：拉取降级（部分源疑似失败）',
+      `本轮合计 ${freshItems.length} 条，较归档 ${prevItems.length} 条暴跌。新内容已照常并入归档（并集不缩水），**页面用户无感**。持续出现再按分源计数排查。`,
+    )
   }
 
   const merged = mergeArchive(freshItems, prevItems)
