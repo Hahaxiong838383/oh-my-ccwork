@@ -574,6 +574,42 @@ cd /tmp && omp --model xai-oauth/grok-4.3 -p "$(cat /tmp/ai-ops-prompt.txt)"
 
 注意：不要使用模糊模型名 `--model grok-4.3`，它可能落到 `xai` provider 并提示缺 API key；应使用完整模型名 `xai-oauth/grok-4.3`。
 
+### 2026-07-07 P0 稳定性补齐
+
+本轮目标：先把“看得见、测得准、每天能主动报”的 P0 闭环补齐，再继续做更复杂的 AI 运维能力。
+
+完成项：
+
+- 健康端点：新增 `https://ops.hahaxiong.top/ops-health/ai` 与 `https://ops.hahaxiong.top/ops-health/n8n`，两者免登录返回 `200` JSON。
+- Kuma 优化：`AI 运维驾驶舱 HTTPS` 和 `n8n 自动化巡检 HTTPS` 已从认证页监控切到 `/ops-health/*`，状态码规则恢复为 `200-299`，不再依赖 `401` 判活。
+- Bridge 自检：`/ai/` 页面新增“本机 OMP Bridge 自检”卡片，自动请求 `http://127.0.0.1:18777/health`，在线时显示模型 `xai-oauth/grok-4.3`。
+- 飞书日报：n8n 新增并激活 `AI Ops 每日巡检日报到飞书`，每天 `08:30 Asia/Shanghai` 调用 `ops-inspector:/send-daily-feishu`。
+
+文件快照：
+
+- Caddy 快照：`2-Projects/ai-ops-cockpit/caddy/Caddyfile`
+- n8n 日报工作流：`2-Projects/ai-ops-cockpit/n8n/workflows/aiops-daily-feishu-0830.json`
+- 远端服务源码：`2-Projects/ai-ops-cockpit/ops-inspector/server.py`
+
+BRO-PDCA 验收：
+
+| 检查 | 结果 |
+|---|---|
+| `/ops-health/ai` | 公网免登录 `200`，返回 `ok=true`、`downCount=0`、`unhealthyCount=0` |
+| `/ops-health/n8n` | 公网免登录 `200`，内部探测 n8n `/healthz` 返回 `status=ok` |
+| Kuma 监控目标 | `AI 运维驾驶舱 HTTPS` -> `/ops-health/ai`，`n8n 自动化巡检 HTTPS` -> `/ops-health/n8n` |
+| Bridge 自检页面 | Playwright 可见 `Bridge 在线，可一键问 OMP/Grok`，请求 `127.0.0.1:18777/health => 200` |
+| 浏览器控制台 | `/ai/` 页面最终验收 `Errors: 0, Warnings: 0` |
+| 飞书日报发送 | 手动触发 `/send-daily-feishu` 返回飞书 `StatusCode:0` / `msg:success` |
+| n8n 激活 | 日报工作流 `active=1` 且 n8n 日志显示 `Activated workflow "AI Ops 每日巡检日报到飞书"` |
+
+踩坑记录：
+
+- Caddy 的外层授权白名单要同时排除 `@needsAuth` 和 `@setAuthCookie`，否则 `/ops-health/*` 仍会返回 `401`，Kuma 无法用纯 `200-299` 判活。
+- 直接改 Kuma SQLite 前必须先备份；本次备份在远端 `/opt/ai-ops-cockpit/backups/kuma-before-health-py-20260707082645.db`。
+- n8n 单机模式下 `import:workflow --activeState=fromJson` 不可用；需要先导入，再发布 `publish:workflow`，并重启 n8n 才会加载定时触发器。
+- Python f-string 内输出 JS 字符串时仍需注意 `\\n`，否则浏览器会报 `Invalid or unexpected token`。
+
 #### 站内一键问 OMP / Grok
 
 目标：川哥在 `https://ops.hahaxiong.top/ai/` 页面点击按钮，就能把当前页面里的只读运维 Prompt 发给本机 OMP/Grok，不再手工复制命令。

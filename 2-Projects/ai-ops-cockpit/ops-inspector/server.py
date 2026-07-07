@@ -189,6 +189,49 @@ def send_feishu(report):
     return {"status": response.status, "body": body}
 
 
+def probe_url(url):
+    started = time.time()
+    with urllib.request.urlopen(url, timeout=10) as response:
+        body = response.read(200).decode("utf-8", "replace")
+    return {
+        "ok": 200 <= response.status < 300,
+        "status": response.status,
+        "latencyMs": round((time.time() - started) * 1000),
+        "bodyPreview": body,
+    }
+
+
+def health_payload(component):
+    if component == "ai":
+        report = build_report()
+        return {
+            "ok": report["ok"],
+            "component": "ai-ops-cockpit",
+            "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+            "monitorCount": len([item for item in report["monitors"] if item["active"]]),
+            "containerCount": len(report["containers"]),
+            "downCount": len([item for item in report["monitors"] if item["active"] and item["status"] != 1]),
+            "unhealthyCount": len([item for item in report["containers"] if "Up" not in item["status"]]),
+        }
+    if component == "n8n":
+        probe = probe_url("http://n8n:5678/healthz")
+        return {
+            "ok": probe["ok"] and "ok" in probe["bodyPreview"],
+            "component": "n8n",
+            "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+            "probe": probe,
+        }
+    return {"ok": False, "component": component, "error": "unknown component"}
+
+
+def send_daily_feishu():
+    report = build_report()
+    report = dict(report)
+    report["text"] = "AI 运维驾驶舱每日巡检日报\n" + report["text"]
+    result = send_feishu(report)
+    return {"ok": True, "feishu": result, "report": report}
+
+
 def answer_question(question):
     question = (question or "").strip()
     context = ai_context()
@@ -253,7 +296,8 @@ def render_ai_page():
 body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1100px;margin:0 auto;padding:32px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:22px;margin:18px 0;box-shadow:0 20px 60px #0005}}h1{{font-size:34px;margin:0 0 8px}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left}}textarea{{width:100%;min-height:360px;background:#020617;color:#d1d5db;border:1px solid #334155;border-radius:12px;padding:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin-right:8px}}code{{background:#020617;padding:2px 6px;border-radius:6px}}</style></head><body><main>
 <h1>AI 运维助手 v0</h1><p class="muted">只读上下文 + Grok/OMP 提示词入口。当前不执行任何运维动作。</p>
 <section class="card grid"><div><div class="muted">总状态</div><h2 class="{status_class}">{status}</h2></div><div><div class="muted">主机</div><h2>{html.escape(context['summary']['host']['hostname'])}</h2></div><div><div class="muted">Load</div><h2>{context['summary']['host']['load1']} / {context['summary']['host']['load5']} / {context['summary']['host']['load15']}</h2></div><div><div class="muted">监控数</div><h2>{context['summary']['monitorCount']}</h2></div></section>
-<section class="card"><h2>怎么用</h2><p>复制下方提示词，粘到本机 <code>Grok</code> 或 <code>OMP</code> 对话里，即可让 AI 基于当前真实状态做只读分析。</p><button onclick="navigator.clipboard.writeText(document.querySelector('textarea').value)">复制提示词</button><a class="btn" href="/ai/context" target="_blank">查看 JSON</a><a class="btn" href="/ai/prompt" target="_blank">纯文本 Prompt</a></section>
+<section class="card"><h2>怎么用</h2><p>复制下方提示词，粘到本机 <code>Grok</code> 或 <code>OMP</code> 对话里，即可让 AI 基于当前真实状态做只读分析。</p><button onclick="navigator.clipboard.writeText(document.querySelector('textarea').value)">复制提示词</button><a class="btn" href="/ai/context" target="_blank">查看 JSON</a><a class="btn" href="/ai/prompt" target="_blank">纯文本 Prompt</a><a class="btn" href="/ops-health/ai" target="_blank">健康端点</a></section>
+<section class="card"><h2>本机 OMP Bridge 自检</h2><p class="muted">用于确认本机一键问 Grok 的桥接服务是否在线。只访问本机 <code>127.0.0.1:18777</code>，不会把凭据发到服务器。</p><button id="checkBridgeBtn">检测 Bridge</button><span id="bridgeStatus" class="muted">尚未检测</span><pre id="bridgeDetail" style="white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:14px"></pre></section>
 <section class="card"><h2>站内只读问答 v0</h2><p class="muted">规则化问答，不调用模型、不执行命令。可问：当前有哪些异常？备份正常吗？磁盘空间怎么样？</p><input id="q" style="width:70%;padding:10px;border-radius:10px;border:1px solid #334155;background:#020617;color:#e5e7eb" value="当前有哪些异常？"><button onclick="fetch('/ai/ask?q='+encodeURIComponent(document.getElementById('q').value)).then(r=>r.text()).then(t=>document.getElementById('answer').textContent=t)">规则问答</button><pre id="answer" style="white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:14px"></pre></section>
 <section class="card"><h2>一键问 OMP / Grok</h2><p class="muted">需要本机先启动 OMP Bridge：<code>python3 /Users/rayman.chen/mycc/2-Projects/ai-ops-cockpit/local-omp-bridge/server.py</code>。Bridge 只监听 127.0.0.1，不把 OMP/Grok 凭据放到服务器。</p><input id="grokq" style="width:70%;padding:10px;border-radius:10px;border:1px solid #334155;background:#020617;color:#e5e7eb" value="请分析当前运维状态，并告诉我最应该关注哪三项。"><button id="askGrokBtn">问 OMP/Grok</button><pre id="grokAnswer" style="white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:14px"></pre></section>
 <section class="card"><h2>推荐本机命令</h2><p class="muted">为减少 Grok 扫描 mycc 大仓库和 MCP 配置噪音，建议先保存 Prompt 到 /tmp，再从 /tmp 运行。</p><pre style="white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:14px">curl -u chuan:你的外层密码 https://ops.hahaxiong.top/ai/prompt -o /tmp/ai-ops-prompt.txt
@@ -263,6 +307,26 @@ cd /tmp && omp --model xai-oauth/grok-4.3 -p "$(cat /tmp/ai-ops-prompt.txt)"</pr
 <section class="card"><h2>Kuma 监控</h2><table><thead><tr><th>名称</th><th>状态</th><th>消息</th><th>时间</th></tr></thead><tbody>{''.join(monitor_rows)}</tbody></table></section>
 <section class="card"><h2>容器</h2><table><thead><tr><th>名称</th><th>状态</th></tr></thead><tbody>{''.join(container_rows)}</tbody></table></section>
 <script>
+async function checkBridge() {{
+  const status = document.getElementById('bridgeStatus');
+  const detail = document.getElementById('bridgeDetail');
+  status.textContent = '检测中...';
+  status.className = 'muted';
+  try {{
+    const response = await fetch('http://127.0.0.1:18777/health');
+    const data = await response.json();
+    status.textContent = data.ok ? 'Bridge 在线，可一键问 OMP/Grok' : 'Bridge 返回异常';
+    status.className = data.ok ? 'ok' : 'warn';
+    detail.textContent = JSON.stringify(data, null, 2);
+  }} catch (error) {{
+    status.textContent = 'Bridge 不在线';
+    status.className = 'warn';
+    detail.textContent = '请确认本机 LaunchAgent com.ai-ops.omp-bridge 已启动。\\n' + error;
+  }}
+}}
+document.getElementById('checkBridgeBtn').addEventListener('click', checkBridge);
+checkBridge();
+
 document.getElementById('askGrokBtn').addEventListener('click', async () => {{
   const answer = document.getElementById('grokAnswer');
   answer.textContent = '正在调用本机 OMP/Grok...';
@@ -308,6 +372,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, {"ok": True})
             elif path == "/summary":
                 self._send_json(200, build_report())
+            elif path == "/ops-health/ai":
+                self._send_json(200, health_payload("ai"))
+            elif path == "/ops-health/n8n":
+                self._send_json(200, health_payload("n8n"))
             elif path == "/ai/context":
                 self._send_json(200, ai_context())
             elif path == "/ai/prompt":
@@ -322,6 +390,8 @@ class Handler(BaseHTTPRequestHandler):
                 report = build_report()
                 result = send_feishu(report)
                 self._send_json(200, {"ok": True, "feishu": result, "report": report})
+            elif path == "/send-daily-feishu":
+                self._send_json(200, send_daily_feishu())
             else:
                 self._send_json(404, {"ok": False, "error": "not found"})
         except Exception as exc:
