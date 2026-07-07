@@ -48,6 +48,15 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
   -H "Authorization: Bearer $CPA_SMART_ROUTER_KEY"
 ```
 
+## Codex App 图片输入排障
+
+如果 Codex app 使用 smart-router 的 `gpt-5.5` 时提示“不支持图片输入”，优先检查本地模型 catalog，而不是先怀疑 smart-router：
+
+- Codex app 读取 `~/.codex/cc-switch-model-catalog.json` 判断模型输入模态。
+- `gpt-5.5` 必须包含 `input_modalities: ["text", "image"]`。
+- `~/.codex/refresh-cc-switch-model-catalog.mjs` 会通过 LaunchAgent 每小时刷新 catalog；持久修复要改刷新脚本，不能只手改 JSON。
+- API 层验证可直接向 `https://smart-api.hahaxiong.top/v1/responses` 发送带 `input_image` 的 `gpt-5.5` 请求；若返回 200，说明 CPA/smart-router 实际支持图片，问题在 Codex app catalog。
+
 ## 构建部署
 
 ```bash
