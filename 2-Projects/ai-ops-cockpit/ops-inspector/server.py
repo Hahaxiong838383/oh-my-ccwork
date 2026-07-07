@@ -17,6 +17,9 @@ DISPLAY_HOSTNAME = os.environ.get("DISPLAY_HOSTNAME", "racknerd-54aa08d")
 STATE_DIR = os.environ.get("STATE_DIR", "/tmp/ai-ops-state")
 ALERT_STATE_FILE = os.path.join(STATE_DIR, "alert-state.json")
 DAILY_STATE_FILE = os.path.join(STATE_DIR, "daily-state.json")
+SNAPSHOT_FILE = os.path.join(STATE_DIR, "last-report.json")
+CACHE_TTL_SECONDS = int(os.environ.get("CACHE_TTL_SECONDS", "15"))
+REPORT_CACHE = {"ts": 0, "data": None}
 
 
 def run(cmd):
@@ -199,6 +202,7 @@ def dashboard_payload():
             "load1": host.get("load1"),
             "freeRamMB": host.get("ramMB", {}).get("free"),
         },
+        "cache": context.get("cache"),
     }
 
 
@@ -217,7 +221,7 @@ def host_summary():
     }
 
 
-def build_report():
+def collect_report():
     containers = docker_ps()
     monitors = kuma_status()
     host = host_summary()
@@ -242,6 +246,28 @@ def build_report():
     for container in containers:
         lines.append(f"- {container['name']}：{container['status']}")
     return {"ok": ok, "host": host, "monitors": monitors, "containers": containers, "text": "\n".join(lines)}
+
+
+def build_report(force=False):
+    now = time.time()
+    if not force and REPORT_CACHE["data"] is not None and now - REPORT_CACHE["ts"] < CACHE_TTL_SECONDS:
+        cached = dict(REPORT_CACHE["data"])
+        cached["cache"] = {"hit": True, "source": "memory", "ageSeconds": round(now - REPORT_CACHE["ts"], 2), "ttlSeconds": CACHE_TTL_SECONDS}
+        return cached
+    if not force and REPORT_CACHE["data"] is None:
+        snapshot = load_json_file(SNAPSHOT_FILE, None)
+        if snapshot:
+            REPORT_CACHE["ts"] = now
+            REPORT_CACHE["data"] = snapshot
+            cached = dict(snapshot)
+            cached["cache"] = {"hit": True, "source": "snapshot", "ageSeconds": 0, "ttlSeconds": CACHE_TTL_SECONDS}
+            return cached
+    report = collect_report()
+    report["cache"] = {"hit": False, "source": "live", "ageSeconds": 0, "ttlSeconds": CACHE_TTL_SECONDS}
+    REPORT_CACHE["ts"] = now
+    REPORT_CACHE["data"] = report
+    save_json_file(SNAPSHOT_FILE, report)
+    return dict(report)
 
 
 def ai_context():
@@ -273,6 +299,7 @@ def ai_context():
         "kumaMonitors": report["monitors"],
         "containers": report["containers"],
         "reportText": report["text"],
+        "cache": report.get("cache"),
     }
 
 
@@ -341,7 +368,7 @@ def health_payload(component):
 
 
 def send_daily_feishu():
-    report = build_report()
+    report = build_report(force=True)
     report = dict(report)
     report["text"] = "AI 运维驾驶舱每日巡检日报\n" + report["text"]
     result = send_feishu(report, force=True)
@@ -473,7 +500,7 @@ checkBridge();
 
 document.getElementById('askGrokBtn').addEventListener('click', async () => {{
   const answer = document.getElementById('grokAnswer');
-  answer.textContent = '正在调用本机 OMP/Grok...';
+  answer.textContent = '已收到问题，正在调用本机 OMP/Grok...\\n通常需要 30-90 秒，请稍等。';
   try {{
     const response = await fetch('http://127.0.0.1:18777/ask', {{
       method: 'POST',
@@ -496,11 +523,13 @@ def render_home_page():
     backup = data.get("backup") or {}
     metrics = data.get("metrics") or {}
     daily = data.get("lastDaily") or {}
+    cache = data.get("cache") or {}
+    cache_text = f"缓存：{cache.get('source', 'unknown')} / {cache.get('ageSeconds', 0)}s"
     status_class = "ok" if data.get("ok") else "warn"
     default_question = "现在有什么需要我关注？"
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI 运维驾驶舱</title><style>
 body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:32px}}.hero{{background:linear-gradient(135deg,#111827,#172554);border:1px solid #334155;border-radius:24px;padding:28px;margin-bottom:18px;box-shadow:0 24px 80px #0006}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin-right:8px}}input,textarea{{width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid #334155;background:#020617;color:#e5e7eb}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:14px}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}
-</style></head><body><main>{nav_html("home")}<section class="hero"><h1>AI 运维驾驶舱</h1><p class="muted">一屏看状态，直接问 AI。当前 AI 只读分析，不会执行重启、删除、升级或改配置。</p><div class="grid"><div><div class="muted">总状态</div><h2 class="{status_class}">{html.escape(data['statusText'])}</h2></div><div><div class="muted">备份</div><h2>{html.escape(str(backup.get('message') or '未知'))}</h2></div><div><div class="muted">磁盘</div><h2>{metrics.get('maxDiskUsedPercent')}%</h2></div><div><div class="muted">容器/Kuma</div><h2>异常 {metrics.get('unhealthyCount')} / DOWN {metrics.get('downCount')}</h2></div></div></section><section class="card"><h2>问 AI 运维助手</h2><p class="muted">直接问当前风险、备份、磁盘、容器。调用本机 OMP/Grok Bridge。</p><input id="homeQuestion" value="{html.escape(default_question)}"><p><button id="homeAskBtn">问 AI</button><button id="homeCheckBridgeBtn">检测 Bridge</button><span id="homeBridgeStatus" class="muted">尚未检测</span></p><pre id="homeAnswer">等待提问...</pre></section><section class="grid"><a class="card" href="/ops-dashboard/"><h2>AI Ops 总览</h2><p class="muted">更完整状态卡和 JSON</p></a><a class="card" href="/ops-app/kuma"><h2>Uptime Kuma</h2><p class="muted">监控红绿灯</p></a><a class="card" href="/ops-app/n8n"><h2>n8n 自动化</h2><p class="muted">日报与工作流</p></a><a class="card" href="/ops-app/netdata"><h2>Netdata</h2><p class="muted">资源趋势</p></a><a class="card" href="/ops-app/dockge"><h2>Dockge</h2><p class="muted">服务管理</p></a></section><section class="card"><h2>最后日报</h2><p>{html.escape(str(daily.get('sentAt') or '尚未发送'))}</p></section><textarea id="homePrompt" style="display:none">{html.escape(ai_prompt())}</textarea><script>
+</style></head><body><main>{nav_html("home")}<section class="hero"><h1>AI 运维驾驶舱</h1><p class="muted">一屏看状态，直接问 AI。当前 AI 只读分析，不会执行重启、删除、升级或改配置。</p><div class="grid"><div><div class="muted">总状态</div><h2 class="{status_class}">{html.escape(data['statusText'])}</h2></div><div><div class="muted">备份</div><h2>{html.escape(str(backup.get('message') or '未知'))}</h2></div><div><div class="muted">磁盘</div><h2>{metrics.get('maxDiskUsedPercent')}%</h2></div><div><div class="muted">容器/Kuma</div><h2>异常 {metrics.get('unhealthyCount')} / DOWN {metrics.get('downCount')}</h2></div></div></section><section class="card"><h2>问 AI 运维助手</h2><p class="muted">直接问当前风险、备份、磁盘、容器。调用本机 OMP/Grok Bridge。</p><input id="homeQuestion" value="{html.escape(default_question)}"><p><button id="homeAskBtn">问 AI</button><button id="homeCheckBridgeBtn">检测 Bridge</button><span id="homeBridgeStatus" class="muted">尚未检测</span></p><pre id="homeAnswer">等待提问。提示：页面状态卡会快速显示；AI 回答需要调用 Grok，通常 30-90 秒。</pre></section><section class="grid"><a class="card" href="/ops-dashboard/"><h2>AI Ops 总览</h2><p class="muted">更完整状态卡和 JSON</p></a><a class="card" href="/ops-app/kuma"><h2>Uptime Kuma</h2><p class="muted">监控红绿灯</p></a><a class="card" href="/ops-app/n8n"><h2>n8n 自动化</h2><p class="muted">日报与工作流</p></a><a class="card" href="/ops-app/netdata"><h2>Netdata</h2><p class="muted">资源趋势</p></a><a class="card" href="/ops-app/dockge"><h2>Dockge</h2><p class="muted">服务管理</p></a></section><section class="card"><h2>最后日报</h2><p>{html.escape(str(daily.get('sentAt') or '尚未发送'))}</p><p class="muted">{html.escape(cache_text)}</p></section><textarea id="homePrompt" style="display:none">{html.escape(ai_prompt())}</textarea><script>
 async function checkHomeBridge() {{
   const status = document.getElementById('homeBridgeStatus');
   try {{
@@ -519,7 +548,7 @@ document.getElementById('homeCheckBridgeBtn').addEventListener('click', checkHom
 checkHomeBridge();
 document.getElementById('homeAskBtn').addEventListener('click', async () => {{
   const answer = document.getElementById('homeAnswer');
-  answer.textContent = '正在调用本机 OMP/Grok...';
+  answer.textContent = '已收到问题，正在调用本机 OMP/Grok...\\n通常需要 30-90 秒，请稍等。';
   try {{
     const response = await fetch('http://127.0.0.1:18777/ask', {{
       method: 'POST',
@@ -541,8 +570,10 @@ def render_dashboard_page():
     backup = data.get("backup") or {}
     metrics = data.get("metrics") or {}
     daily = data.get("lastDaily") or {}
+    cache = data.get("cache") or {}
+    cache_text = f"缓存：{cache.get('source', 'unknown')} / {cache.get('ageSeconds', 0)}s"
     status_class = "ok" if data.get("ok") else "warn"
-    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Ops 总览</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1100px;margin:0 auto;padding:32px}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:22px;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html("dashboard")}<h1>AI Ops 总览</h1><p class="muted">低代码总览页：正常/异常、备份、磁盘、容器、日报。</p><section class="grid"><div class="card"><div class="muted">总状态</div><h2 class="{status_class}">{html.escape(data['statusText'])}</h2></div><div class="card"><div class="muted">备份状态</div><h2>{html.escape(str(backup.get('message') or '未知'))}</h2></div><div class="card"><div class="muted">磁盘最高使用率</div><h2>{metrics.get('maxDiskUsedPercent')}%</h2></div><div class="card"><div class="muted">容器</div><h2>{metrics.get('containerCount')} 个 / 异常 {metrics.get('unhealthyCount')}</h2></div><div class="card"><div class="muted">Kuma</div><h2>{metrics.get('monitorCount')} 个 / DOWN {metrics.get('downCount')}</h2></div><div class="card"><div class="muted">最后日报</div><h2>{html.escape(str(daily.get('sentAt') or '尚未发送'))}</h2></div></section><p><a href="/ai/">进入 AI 运维助手</a> · <a href="/ops-dashboard.json">查看 JSON</a></p></main></body></html>"""
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Ops 总览</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1100px;margin:0 auto;padding:32px}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:22px;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html("dashboard")}<h1>AI Ops 总览</h1><p class="muted">低代码总览页：正常/异常、备份、磁盘、容器、日报。</p><section class="grid"><div class="card"><div class="muted">总状态</div><h2 class="{status_class}">{html.escape(data['statusText'])}</h2></div><div class="card"><div class="muted">备份状态</div><h2>{html.escape(str(backup.get('message') or '未知'))}</h2></div><div class="card"><div class="muted">磁盘最高使用率</div><h2>{metrics.get('maxDiskUsedPercent')}%</h2></div><div class="card"><div class="muted">容器</div><h2>{metrics.get('containerCount')} 个 / 异常 {metrics.get('unhealthyCount')}</h2></div><div class="card"><div class="muted">Kuma</div><h2>{metrics.get('monitorCount')} 个 / DOWN {metrics.get('downCount')}</h2></div><div class="card"><div class="muted">最后日报</div><h2>{html.escape(str(daily.get('sentAt') or '尚未发送'))}</h2></div></section><p class="muted">{html.escape(cache_text)}</p><p><a href="/ai/">进入 AI 运维助手</a> · <a href="/ops-dashboard.json">查看 JSON</a></p></main></body></html>"""
 
 def render_app_frame(app):
     apps = {
