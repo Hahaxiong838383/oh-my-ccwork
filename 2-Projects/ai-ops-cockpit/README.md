@@ -496,3 +496,120 @@ BRO-PDCA 验收结果：
 - `ops_auth` 是外层会话 cookie；对应 secret 在远端 `.env`，不写 git。
 - n8n 登录密码只在远端 secret/.env 中，`ops-auth` 动态换取每个浏览器自己的 `n8n-auth`。
 - n8n 的 `n8n-auth` 默认约 7 天有效；如果之后 n8n 改登录 API 或 cookie 机制，优先检查 `/n8n/rest/login`、`browser-id`、`auth.service.js` 的 browserId 校验逻辑。
+
+### 2026-07-07 只读 AI 运维助手 v0
+
+基于“AI 能力提前，但执行闭环后置”的原则，已先完成只读 AI 运维助手 v0：把真实运维状态结构化给 Grok / OMP 分析，但不让 AI 执行任何重启、删除、升级、改配置动作。
+
+入口：
+
+- 可视化页：`https://ops.hahaxiong.top/ai/`
+- JSON 上下文：`https://ops.hahaxiong.top/ai/context`
+- 可复制 Prompt：`https://ops.hahaxiong.top/ai/prompt`
+
+实现：
+
+- 复用 `ops-inspector`，新增 `/ai/`、`/ai/context`、`/ai/prompt`。
+- `/ai/context` 聚合 Kuma 监控、Docker 容器、Netdata 主机摘要。
+- `/ai/prompt` 把上下文包装成“只读 AI 运维助手”提示词，可复制给 Grok / OMP。
+- Caddy 新增 `/ai*` 路由到 `ops-inspector`。
+- Homepage 把原 `AI 操作台` 卡片升级为 `AI 运维助手 v0`。
+
+安全边界：
+
+- v0 只读，不执行命令。
+- Prompt 内显式要求：不重启、不删除、不升级、不改配置。
+- 高危动作只能输出建议和风险说明，必须等待川哥确认。
+- 远端未接入模型 API key，不在服务器上保存 Grok / OMP 凭据。
+
+BRO-PDCA 验收：
+
+| 检查 | 结果 |
+|---|---|
+| `/ai/` | `200 text/html`，可见 `AI 运维助手 v0`、`总状态`、`复制提示词` |
+| `/ai/context` | `200 application/json`，包含 `read_only_ai_ops_assistant_v0`、Kuma、容器、主机摘要 |
+| `/ai/prompt` | `200 text/plain`，可复制给 Grok / OMP |
+| Homepage | 可见 `AI 运维助手 v0` 卡片 |
+| 浏览器验收 | `/ai/` 页面非空，可见 `正常`、`racknerd-54aa08d`、`Grok`、`OMP`、`Kuma 监控`、`容器` |
+| Grok 验收 | 本机 Grok 使用 `/ai/prompt` 成功输出只读运维分析，指出当前正常、需关注重启稳定性、内存、磁盘数据缺失等 |
+
+限制补齐：
+
+- 已补磁盘采集：`/ai/context` 的 `diskGB` 包含 `/`、`/app`、`/kuma` 使用率，以及 Docker image 占用摘要。
+- 已补站内只读问答：`/ai/ask?q=...` 支持异常、备份、磁盘、内存、容器等规则化问答；页面提供“站内只读问答 v0”。
+- 已补 Grok/OMP 使用入口：页面提供推荐命令，建议把 Prompt 保存到 `/tmp` 后从 `/tmp` 运行，减少 Grok 扫描 `mycc` 大仓和 MCP 配置噪音。
+- 已修 favicon 404：Caddy 对 `/favicon.ico` 返回 `204`，减少浏览器控制台噪音。
+
+后续 TODO：
+
+| 优先级 | 事项 | 说明 |
+|---|---|---|
+| P0 | 观察只读助手稳定性 | 确认 `ops-inspector` 重建后 24h 内不异常重启 |
+| P1 | 接 OMP/Grok 站内聊天 | 已完成：页面内“一键问 OMP/Grok”经本机 Bridge 调 OMP，只读返回分析 |
+| P1 | 优化健康检查 | 把驾驶舱/n8n 监控从 `401` 视为 UP 改成明确健康端点 |
+| P2 | AI 总览卡片 | 首页直接显示“正常/异常、备份、磁盘、容器”的摘要 |
+| P2 | 清理 Grok MCP 噪音 | 修复本机 Grok 无 transport 的 MCP 配置，减少 CLI 启动警告 |
+| P3 | 人工审批执行 | 只在稳定后考虑“建议 → 确认 → 执行 → 验收”的半自动运维 |
+
+#### OMP / Grok 登录态验证
+
+结论：OMP 调用 Grok 不需要额外手动登录；本机已有 `xai-oauth` 登录态，并由 `com.omp.xai-token-refresh` 定时刷新同步 OMP 与 Grok token。
+
+验证结果：
+
+| 检查 | 结果 |
+|---|---|
+| `omp models` | 可见 `xai-oauth` provider，包含 `grok-4.3`、`grok-build` 等模型 |
+| `grok models` | 显示已登录 `grok.com`，可用 `grok-composer-2.5-fast`、`grok-build` |
+| token 保鲜 | `com.omp.xai-token-refresh` last exit code `0`，日志显示刷新成功 |
+| OMP 烟测 | `omp --model xai-oauth/grok-4.3 -p ...` 成功返回中文回答 |
+| 运维 Prompt | OMP + `xai-oauth/grok-4.3` 成功分析 `/ai/prompt`，判断当前正常并指出内存、个人站延迟、MyJavis 备份心跳为观察项 |
+
+推荐命令：
+
+```bash
+curl -u chuan:你的外层密码 https://ops.hahaxiong.top/ai/prompt -o /tmp/ai-ops-prompt.txt
+cd /tmp && omp --model xai-oauth/grok-4.3 -p "$(cat /tmp/ai-ops-prompt.txt)"
+```
+
+注意：不要使用模糊模型名 `--model grok-4.3`，它可能落到 `xai` provider 并提示缺 API key；应使用完整模型名 `xai-oauth/grok-4.3`。
+
+#### 站内一键问 OMP / Grok
+
+目标：川哥在 `https://ops.hahaxiong.top/ai/` 页面点击按钮，就能把当前页面里的只读运维 Prompt 发给本机 OMP/Grok，不再手工复制命令。
+
+实现边界：
+
+- 远端 `ops-inspector` 只负责渲染页面和真实只读上下文，不保存 Grok / OMP 凭据。
+- 本机 Bridge：`/Users/rayman.chen/mycc/2-Projects/ai-ops-cockpit/local-omp-bridge/server.py`。
+- 本机 LaunchAgent：`/Users/rayman.chen/Library/LaunchAgents/com.ai-ops.omp-bridge.plist`。
+- 健康检查：`http://127.0.0.1:18777/health`，期望返回 `mode=prompt-from-page`、`model=xai-oauth/grok-4.3`。
+- 页面按钮 POST 到 `http://127.0.0.1:18777/ask`，请求体由页面携带当前 `prompt` 和 `question`。
+
+BRO-PDCA 验收：
+
+| 检查 | 结果 |
+|---|---|
+| Bridge health | `200 {"ok": true, "model": "xai-oauth/grok-4.3", "mode": "prompt-from-page"}` |
+| 远端容器 | `ops-inspector` 重建后运行，`/ai/` 不再 500 |
+| 浏览器页面 | Playwright 打开 `/ai/`，可见 `正常`、`一键问 OMP / Grok`、`问 OMP/Grok` |
+| 控制台 | 最终验收 console `Errors: 0, Warnings: 0` |
+| 网络请求 | 点击按钮后 `POST http://127.0.0.1:18777/ask => 200 OK` |
+| 模型输出 | 页面内出现 Grok 分析：总判断正常，关注内存 free RAM、MyJavis 备份时效、401 认证响应是否预期 |
+
+踩坑记录：
+
+- `ops-inspector` 是 build 镜像服务，改 `/opt/ai-ops-cockpit/ops-inspector/server.py` 后必须 `docker compose up -d --build ops-inspector`，只 `restart` 不会带入新代码。
+- Python f-string 里内嵌 JS 对象字面量时，`{method:'POST'}` 会被当成 Python 表达式，导致 `/ai/` 500：`NameError: name 'method' is not defined`；JS 代码中的花括号必须双写或放到更安全的脚本块里。
+- Python f-string 里写 JS 字符串换行时，`\n` 会在最终 HTML 里变成真实换行，触发浏览器 `Invalid or unexpected token`；需要输出字面量 `\\n`。
+- 本机 LaunchAgent 调 OMP/Grok 必须带代理环境变量；否则 CLI 在 LaunchAgent 环境里可能超时。已在 plist 写入 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 及小写版本。
+- 真实验收不能只看 HTTP `200`；这次用 Playwright 验证了页面文本、控制台、网络请求和按钮返回内容。
+
+维护命令：
+
+```bash
+curl -sS http://127.0.0.1:18777/health
+launchctl kickstart -k gui/$(id -u)/com.ai-ops.omp-bridge
+tail -120 /tmp/ai-ops-omp-bridge.log
+ssh racknerd 'cd /opt/ai-ops-cockpit && docker compose up -d --build ops-inspector'
+```
