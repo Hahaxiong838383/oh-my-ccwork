@@ -635,9 +635,10 @@ BRO-PDCA 验收：
 | n8n 页面 | Playwright 可见 `AI Ops 每日巡检日报到飞书`，控制台 `Errors: 0` |
 | Homepage API | `/api/services` 返回 `AI Ops 总览` -> `/ops-dashboard/` |
 
-已知残留：
+收尾修复：
 
-- Homepage `/api/services` 已返回 `AI Ops 总览`，但当前前端首页 SSR/缓存仍显示旧 `AI 运维助手 v0` 卡片；不影响 `/ops-dashboard/` 直接访问。后续优先处理 Homepage 前端缓存/版本渲染问题，或改为 widget/API 方式展示总览。
+- Homepage `/api/services` 已返回 `AI Ops 总览` 但首页仍显示旧卡片，根因是 Homepage 容器内 `.next/server/pages/en.html` 静态 SSR 缓存未刷新。
+- 已清理容器内旧静态 HTML 并重启 Homepage；Playwright 复验首页可见 `AI Ops 总览`，点击后进入 `/ops-dashboard/`。
 
 文件快照：
 
