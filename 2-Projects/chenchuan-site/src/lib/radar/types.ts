@@ -24,6 +24,28 @@ export interface RadarFeed {
   sourceCount: number // 去重后涉及的信源数
 }
 
+// ── GitHub 风向标（github-radar agent 推送，2026-07-07 上站） ──
+export interface GithubRepoItem {
+  name: string // owner/repo
+  url: string
+  stars: number
+  description?: string
+  language?: string
+  updated?: string // YYYY-MM-DD（最近 push）
+}
+
+export interface GithubRadarCategory {
+  label: string // 如「🤖 AI Agent」
+  repos: GithubRepoItem[]
+}
+
+export interface GithubRadarReport {
+  date: string // YYYY-MM-DD
+  generatedAt: string
+  categories: GithubRadarCategory[]
+  judgments?: Array<{ repo: string; reason: string }> // cc 自进化判断（可选）
+}
+
 // ── 深度论文流（theory-radar agent 推送） ──
 export interface TheoryPaper {
   index: number

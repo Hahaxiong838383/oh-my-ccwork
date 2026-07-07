@@ -4,10 +4,11 @@ import { headers } from 'next/headers'
 import { RadarPipeline } from '@/components/radar/RadarPipeline'
 import { RadarFeed } from '@/components/radar/RadarFeed'
 import { TheoryReportSection } from '@/components/radar/TheoryReportSection'
+import { GithubRadarSection } from '@/components/radar/GithubRadarSection'
 import { SectionWrapper } from '@/components/layout/SectionWrapper'
 import { SectionTitle } from '@/components/shared/SectionTitle'
 import { BlurFade } from '@/components/ui/BlurFade'
-import { getRadarFeed, getTheoryReports } from '@/lib/radar'
+import { getLatestGithubRadar, getRadarFeed, getTheoryReports } from '@/lib/radar'
 
 export const metadata: Metadata = {
   title: 'AI 前沿资讯雷达',
@@ -20,7 +21,11 @@ export default async function RadarPage() {
   // Upstream aihot fetches still use their own 15min Data Cache in src/lib/radar/aihot.ts.
   await headers()
 
-  const [feed, reports] = await Promise.all([getRadarFeed(), getTheoryReports()])
+  const [feed, reports, githubReport] = await Promise.all([
+    getRadarFeed(),
+    getTheoryReports(),
+    getLatestGithubRadar(),
+  ])
 
   return (
     <>
@@ -39,6 +44,12 @@ export default async function RadarPage() {
       <SectionWrapper id="deep-dive" className="scroll-mt-24 pt-0">
         <TheoryReportSection reports={reports} />
       </SectionWrapper>
+
+      {githubReport ? (
+        <SectionWrapper id="github-radar" className="scroll-mt-24 pt-0">
+          <GithubRadarSection report={githubReport} />
+        </SectionWrapper>
+      ) : null}
 
       <RadarCTA />
     </>

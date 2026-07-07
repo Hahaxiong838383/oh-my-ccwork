@@ -20,7 +20,7 @@ import {
 import { sendChatAlert } from '@/lib/chat/feishu-alert'
 import { RADAR_SEED } from '@/data/radar-seed'
 import { RADAR_ARCHIVE } from '@/data/radar-archive'
-import type { RadarFeed, RadarItem, TheoryReport } from './types'
+import type { GithubRadarReport, RadarFeed, RadarItem, TheoryReport } from './types'
 
 export * from './types'
 
@@ -307,4 +307,34 @@ export async function getTheoryReports(): Promise<TheoryReport[]> {
 export async function getLatestTheoryReport(): Promise<TheoryReport | null> {
   const reports = await getRuntimeTheoryReports()
   return reports[0] ?? RADAR_SEED
+}
+
+// ── GitHub 风向标（github-radar agent 推送，data/radar-github/report-*.json） ──
+const GITHUB_RADAR_DIR =
+  process.env.RADAR_GITHUB_DATA_DIR || path.join(process.cwd(), 'data', 'radar-github')
+
+function isValidGithubReport(r: unknown): r is GithubRadarReport {
+  if (!r || typeof r !== 'object') return false
+  const g = r as Partial<GithubRadarReport>
+  return (
+    typeof g.date === 'string' &&
+    Array.isArray(g.categories) &&
+    g.categories.some((c) => c && Array.isArray(c.repos) && c.repos.length > 0)
+  )
+}
+
+// 读最新一期 GitHub 风向标；无数据/脏数据返回 null（页面隐藏板块，优雅缺省）
+export async function getLatestGithubRadar(): Promise<GithubRadarReport | null> {
+  try {
+    const files = (await fs.readdir(GITHUB_RADAR_DIR))
+      .filter((f) => /^report-\d{4}-\d{2}-\d{2}\.json$/.test(f))
+      .sort()
+    const latest = files[files.length - 1]
+    if (!latest) return null
+    const raw = await fs.readFile(path.join(GITHUB_RADAR_DIR, latest), 'utf-8')
+    const parsed = JSON.parse(raw) as unknown
+    return isValidGithubReport(parsed) ? parsed : null
+  } catch {
+    return null
+  }
 }
