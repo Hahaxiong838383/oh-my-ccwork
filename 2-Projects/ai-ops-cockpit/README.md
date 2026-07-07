@@ -257,3 +257,48 @@ Playwright 输出摘要：`bodyLength=377`，可见 `AI 运维驾驶舱 HTTPS`�
 - 前端页面验收不能只看 HTTP 状态码，必须至少做一次真实浏览器加载验证。
 - SPA 子路径/反代改动必须检查 HTML 引用的 JS/CSS/API/WebSocket 资源是否全部命中正确后端。
 - 涉及用户可见页面时，验收证据需包含页面文本、截图或 Playwright snapshot。
+
+### 2026-07-07 飞书告警通道与最终验收
+
+川哥提供飞书机器人 Webhook 后，已在 Uptime Kuma 中接入“飞书运维告警”，并绑定到 3 个生产监控项。
+
+当前生产监控：
+
+| 监控项 | 告警通道 | 当前状态 |
+|---|---|---|
+| AI 运维驾驶舱 HTTPS | 飞书运维告警 | UP |
+| 陈川个人站 HTTPS | 飞书运维告警 | UP |
+| RackNerd SSH 22 | 飞书运维告警 | UP |
+
+本次处理：
+
+- Uptime Kuma 已创建飞书通知配置 `飞书运维告警`，Webhook 不入文档、不入 git、不入记忆。
+- 已发送飞书通道测试消息，Uptime Kuma provider 返回 `Sent Successfully.`。
+- 已用临时容器 `ops-alert-test` 做 Down/Up 闭环测试，Kuma 记录到 `Up → Down → Up` 心跳变化。
+- 测试监控与临时容器已清理，最终页面只保留 3 个生产监控项。
+- Homepage `RackNerd VPS` 卡片移除了外链 `ubuntu.png` 图标，避免浏览器出现非核心第三方图标失败请求。
+
+BRO-PDCA 验收证据：
+
+| 检查 | 结果 |
+|---|---|
+| 远端容器 | `ops-caddy`、`ops-homepage`、`ops-uptime-kuma`、`ops-netdata`、`ops-dockge` 全部运行 |
+| 生产监控数量 | 3 个，均绑定 `飞书运维告警` |
+| 最近心跳 | 3 个生产监控均为 `UP` |
+| 临时测试项 | `飞书告警闭环测试` 已删除 |
+| Playwright 首页验收 | 首页 `200`，可见 Uptime Kuma / Netdata / Dockge / RackNerd VPS，无 `API Error` |
+| Playwright Kuma 验收 | `/dashboard` `200`，标题 `Uptime Kuma`，可见 3 个生产监控，Quick Stats `Up 3 / Down 0` |
+| 浏览器控制台 | 无错误 |
+| 应用失败请求 | 无失败请求 |
+
+本地验收截图：
+
+- `/Users/rayman.chen/mycc/output/playwright/ai-ops-homepage-final.png`
+- `/Users/rayman.chen/mycc/output/playwright/kuma-dashboard-final.png`
+- `/Users/rayman.chen/mycc/output/playwright/ai-ops-final-verify.json`
+
+下一步：
+
+- 接入 n8n，做“手动巡检按钮”和每日巡检日报。
+- 接入 oh-my-pi / omp-deck / Grok，形成 AI 运维助手入口。
+- 扩展监控目标：本机关键项目、NAS、Mini、Studio、更多个人站服务。
