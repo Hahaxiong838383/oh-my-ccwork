@@ -82,6 +82,15 @@
         "cd /Users/rayman.chen/mycc/2-Projects/chenchuan-site && npm run dev -- --port 3100"
       ],
       "port": 3100
+    },
+    {
+      "name": "myjavis-web-localapi",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/rayman.chen/mycc/2-Projects/MyJavis/apps/web && VITE_API_BASE= VITE_NO_HTTPS=1 pnpm dev --port 5177 --strictPort"
+      ],
+      "port": 5177
     }
   ]
 }
