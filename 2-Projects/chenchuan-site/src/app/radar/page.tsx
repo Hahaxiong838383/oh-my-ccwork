@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { RadarPipeline } from '@/components/radar/RadarPipeline'
+import { RadarSectionNav } from '@/components/radar/RadarSectionNav'
 import { RadarFeed } from '@/components/radar/RadarFeed'
 import { TheoryReportSection } from '@/components/radar/TheoryReportSection'
 import { GithubRadarSection } from '@/components/radar/GithubRadarSection'
@@ -36,17 +37,25 @@ export default async function RadarPage() {
         fetchedAt={feed.fetchedAt}
       />
 
-      <SectionWrapper>
+      <RadarSectionNav
+        sections={[
+          { id: 'feed', label: '实时资讯', color: '#0071E3' },
+          { id: 'deep-dive', label: '深度拆解', color: '#16A34A' },
+          ...(githubReport ? [{ id: 'github-radar', label: '开源风向标', color: '#6D5BD0' }] : []),
+        ]}
+      />
+
+      <SectionWrapper id="feed" className="scroll-mt-28">
         <SectionTitle label="Live Feed / 实时资讯" title="AI 全域热点" />
         <RadarFeed items={feed.items} />
       </SectionWrapper>
 
-      <SectionWrapper id="deep-dive" className="scroll-mt-24 pt-0">
+      <SectionWrapper id="deep-dive" className="scroll-mt-28 pt-0">
         <TheoryReportSection reports={reports} />
       </SectionWrapper>
 
       {githubReport ? (
-        <SectionWrapper id="github-radar" className="scroll-mt-24 pt-0">
+        <SectionWrapper id="github-radar" className="scroll-mt-28 pt-0">
           <GithubRadarSection report={githubReport} />
         </SectionWrapper>
       ) : null}
