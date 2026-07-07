@@ -10,13 +10,6 @@ ops.hahaxiong.top, :80 {
     not path /api/push/*
     not path /ops-health/*
     not header Cookie *ops_auth=REDACTED_OPS_AUTH_COOKIE_VALUE*
-  }
-  basic_auth @needsAuth {
-    chuan REDACTED_BCRYPT_HASH
-  }
-
-  @setAuthCookie {
-    not path /api/push/*
     not path /ops-health/*
     header Authorization *
   }
@@ -28,6 +21,10 @@ ops.hahaxiong.top, :80 {
   }
 
   handle /ops-health/* {
+    reverse_proxy ops-inspector:8080
+  }
+
+  handle /ops-dashboard* {
     reverse_proxy ops-inspector:8080
   }
 

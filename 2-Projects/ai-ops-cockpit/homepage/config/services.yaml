@@ -1,0 +1,34 @@
+---
+- 运维入口:
+    - Uptime Kuma 在线监控:
+        href: /kuma/
+        description: 网站、端口、证书红绿灯
+        icon: uptime-kuma.png
+    - Netdata 资源图表:
+        href: /netdata/
+        description: CPU、内存、磁盘、网络实时图表
+        icon: netdata.png
+    - Dockge 服务管理:
+        href: /dockge/
+        description: Docker Compose 服务启停和日志
+        icon: docker.png
+    - AI Ops 总览:
+        href: /ops-dashboard/
+        description: 正常/异常、备份、磁盘、容器、日报一屏看完
+        icon: openai.png
+    - n8n 自动化巡检:
+        href: /n8n/
+        description: 手动巡检按钮、每日巡检日报
+        icon: n8n.png
+- 主机状态:
+    - RackNerd VPS:
+        href: http://23.226.135.149/
+        description: racknerd-54aa08d / Ubuntu 24.04 / root 免密 SSH
+    - 个人站:
+        href: https://my.chenchuan.cc/
+        description: 已加入 Uptime Kuma 监控
+        icon: cloudflare.png
+    - mycc 本机:
+        href: "#"
+        description: Phase 5 接入本机项目状态
+        icon: apple.png

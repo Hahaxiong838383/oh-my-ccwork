@@ -7,12 +7,16 @@ import subprocess
 import time
 import traceback
 import urllib.request
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 KUMA_DB = os.environ.get("KUMA_DB", "/kuma/kuma.db")
 NETDATA = os.environ.get("NETDATA_URL", "http://netdata:19999")
 DISPLAY_HOSTNAME = os.environ.get("DISPLAY_HOSTNAME", "racknerd-54aa08d")
+STATE_DIR = os.environ.get("STATE_DIR", "/tmp/ai-ops-state")
+ALERT_STATE_FILE = os.path.join(STATE_DIR, "alert-state.json")
+DAILY_STATE_FILE = os.path.join(STATE_DIR, "daily-state.json")
 
 
 def run(cmd):
@@ -91,6 +95,113 @@ def disk_summary():
     return {"mounts": disks, "docker": docker_df}
 
 
+def ensure_state_dir():
+    os.makedirs(STATE_DIR, exist_ok=True)
+
+
+def load_json_file(path, default):
+    try:
+        with open(path, encoding="utf-8") as file:
+            return json.load(file)
+    except Exception:
+        return default
+
+
+def save_json_file(path, payload):
+    ensure_state_dir()
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as file:
+        json.dump(payload, file, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, path)
+
+
+def parse_kuma_time(value):
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(value, fmt).timestamp()
+        except ValueError:
+            pass
+    return None
+
+
+def backup_summary(monitors):
+    backups = [item for item in monitors if "备份" in item["name"] or "MyJavis" in item["name"]]
+    if not backups:
+        return {"ok": None, "message": "未找到备份监控", "items": []}
+    items = []
+    now = time.time()
+    for item in backups:
+        last_ts = parse_kuma_time(item.get("time"))
+        age_hours = round((now - last_ts) / 3600, 1) if last_ts else None
+        window_hours = 36 if item.get("type") == "push" else None
+        remaining_hours = round(window_hours - age_hours, 1) if age_hours is not None and window_hours else None
+        items.append({
+            "name": item["name"],
+            "statusText": item["statusText"],
+            "msg": item.get("msg"),
+            "time": item.get("time"),
+            "ageHours": age_hours,
+            "windowHours": window_hours,
+            "remainingHours": remaining_hours,
+            "ok": item["statusText"] == "UP" and (remaining_hours is None or remaining_hours > 0),
+        })
+    ok = all(item["ok"] for item in items)
+    first = items[0]
+    if first.get("remainingHours") is not None:
+        message = f"{first['statusText']}，最近心跳 {first.get('time') or '未知'}，约剩 {first['remainingHours']} 小时进入告警窗口"
+    else:
+        message = f"{first['statusText']}，最近心跳 {first.get('time') or '未知'}"
+    return {"ok": ok, "message": message, "items": items}
+
+
+def latest_daily_state():
+    return load_json_file(DAILY_STATE_FILE, {})
+
+
+def issue_signature(report):
+    down = sorted(item["name"] for item in report["monitors"] if item["active"] and item["status"] != 1)
+    unhealthy = sorted(item["name"] for item in report["containers"] if "Up" not in item["status"])
+    return json.dumps({"down": down, "unhealthy": unhealthy}, ensure_ascii=False, sort_keys=True)
+
+
+def should_send_alert(report, force=False):
+    signature = issue_signature(report)
+    state = load_json_file(ALERT_STATE_FILE, {})
+    now = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+    previous = state.get("signature")
+    previous_ok = state.get("ok", True)
+    current_ok = report["ok"]
+    send = force or signature != previous or (previous_ok is False and current_ok is True)
+    state.update({"signature": signature, "ok": current_ok, "updatedAt": now})
+    save_json_file(ALERT_STATE_FILE, state)
+    return send, {"previousSignature": previous, "signature": signature, "deduped": not send}
+
+
+def dashboard_payload():
+    context = ai_context()
+    host = context["summary"]["host"]
+    mounts = host.get("diskGB", {}).get("mounts", [])
+    max_disk = max([item.get("usedPercent") or 0 for item in mounts] or [0])
+    return {
+        "ok": context["summary"]["ok"],
+        "generatedAt": context["generatedAt"],
+        "statusText": "正常" if context["summary"]["ok"] else "需要关注",
+        "backup": context.get("backup"),
+        "lastDaily": latest_daily_state(),
+        "metrics": {
+            "monitorCount": context["summary"]["monitorCount"],
+            "downCount": len(context["summary"]["downMonitors"]),
+            "unhealthyCount": len(context["summary"]["unhealthyContainers"]),
+            "maxDiskUsedPercent": max_disk,
+            "containerCount": len(context["containers"]),
+            "load1": host.get("load1"),
+            "freeRamMB": host.get("ramMB", {}).get("free"),
+        },
+    }
+
+
 def host_summary():
     load = os.getloadavg()
     ram = netdata_chart("system.ram")
@@ -157,6 +268,8 @@ def ai_context():
             "downMonitors": [monitor for monitor in active_monitors if monitor["status"] != 1],
             "unhealthyContainers": [container for container in report["containers"] if "Up" not in container["status"]],
         },
+        "backup": backup_summary(report["monitors"]),
+        "lastDaily": latest_daily_state(),
         "kumaMonitors": report["monitors"],
         "containers": report["containers"],
         "reportText": report["text"],
@@ -178,7 +291,10 @@ def ai_prompt():
 """ + context + "\n```\n"
 
 
-def send_feishu(report):
+def send_feishu(report, force=False):
+    send, dedupe = should_send_alert(report, force=force)
+    if not send:
+        return {"status": "deduped", "body": "same issue signature", "dedupe": dedupe}
     webhook = os.environ.get("FEISHU_WEBHOOK_URL")
     if not webhook:
         raise RuntimeError("FEISHU_WEBHOOK_URL is not configured")
@@ -186,7 +302,7 @@ def send_feishu(report):
     request = urllib.request.Request(webhook, data=payload, headers={"content-type": "application/json"}, method="POST")
     with urllib.request.urlopen(request, timeout=15) as response:
         body = response.read().decode("utf-8", "replace")
-    return {"status": response.status, "body": body}
+    return {"status": response.status, "body": body, "dedupe": dedupe}
 
 
 def probe_url(url):
@@ -228,7 +344,12 @@ def send_daily_feishu():
     report = build_report()
     report = dict(report)
     report["text"] = "AI 运维驾驶舱每日巡检日报\n" + report["text"]
-    result = send_feishu(report)
+    result = send_feishu(report, force=True)
+    save_json_file(DAILY_STATE_FILE, {
+        "sentAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "ok": report["ok"],
+        "feishuStatus": result.get("status"),
+    })
     return {"ok": True, "feishu": result, "report": report}
 
 
@@ -283,6 +404,11 @@ def render_ai_page():
     status = "正常" if context["summary"]["ok"] else "需要关注"
     status_class = "ok" if context["summary"]["ok"] else "warn"
     prompt = ai_prompt()
+    backup = context.get("backup") or {}
+    daily = context.get("lastDaily") or {}
+    backup_class = "ok" if backup.get("ok") else "warn"
+    backup_message = html.escape(str(backup.get("message") or "暂无备份数据"))
+    daily_text = html.escape(str(daily.get("sentAt") or "尚未发送日报"))
     monitor_rows = []
     for monitor in context["kumaMonitors"]:
         row_class = "ok" if monitor["statusText"] == "UP" else "warn"
@@ -295,7 +421,7 @@ def render_ai_page():
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI 运维助手 v0</title><style>
 body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1100px;margin:0 auto;padding:32px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:22px;margin:18px 0;box-shadow:0 20px 60px #0005}}h1{{font-size:34px;margin:0 0 8px}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left}}textarea{{width:100%;min-height:360px;background:#020617;color:#d1d5db;border:1px solid #334155;border-radius:12px;padding:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin-right:8px}}code{{background:#020617;padding:2px 6px;border-radius:6px}}</style></head><body><main>
 <h1>AI 运维助手 v0</h1><p class="muted">只读上下文 + Grok/OMP 提示词入口。当前不执行任何运维动作。</p>
-<section class="card grid"><div><div class="muted">总状态</div><h2 class="{status_class}">{status}</h2></div><div><div class="muted">主机</div><h2>{html.escape(context['summary']['host']['hostname'])}</h2></div><div><div class="muted">Load</div><h2>{context['summary']['host']['load1']} / {context['summary']['host']['load5']} / {context['summary']['host']['load15']}</h2></div><div><div class="muted">监控数</div><h2>{context['summary']['monitorCount']}</h2></div></section>
+<section class="card grid"><div><div class="muted">总状态</div><h2 class="{status_class}">{status}</h2></div><div><div class="muted">备份</div><h2 class="{backup_class}">{html.escape(str((backup.get('items') or [{'statusText':'未知'}])[0].get('statusText')))}</h2><p class="muted">{backup_message}</p></div><div><div class="muted">主机</div><h2>{html.escape(context['summary']['host']['hostname'])}</h2></div><div><div class="muted">Load</div><h2>{context['summary']['host']['load1']} / {context['summary']['host']['load5']} / {context['summary']['host']['load15']}</h2></div><div><div class="muted">监控数</div><h2>{context['summary']['monitorCount']}</h2></div><div><div class="muted">最后日报</div><h2>{daily_text}</h2></div></section>
 <section class="card"><h2>怎么用</h2><p>复制下方提示词，粘到本机 <code>Grok</code> 或 <code>OMP</code> 对话里，即可让 AI 基于当前真实状态做只读分析。</p><button onclick="navigator.clipboard.writeText(document.querySelector('textarea').value)">复制提示词</button><a class="btn" href="/ai/context" target="_blank">查看 JSON</a><a class="btn" href="/ai/prompt" target="_blank">纯文本 Prompt</a><a class="btn" href="/ops-health/ai" target="_blank">健康端点</a></section>
 <section class="card"><h2>本机 OMP Bridge 自检</h2><p class="muted">用于确认本机一键问 Grok 的桥接服务是否在线。只访问本机 <code>127.0.0.1:18777</code>，不会把凭据发到服务器。</p><button id="checkBridgeBtn">检测 Bridge</button><span id="bridgeStatus" class="muted">尚未检测</span><pre id="bridgeDetail" style="white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:14px"></pre></section>
 <section class="card"><h2>站内只读问答 v0</h2><p class="muted">规则化问答，不调用模型、不执行命令。可问：当前有哪些异常？备份正常吗？磁盘空间怎么样？</p><input id="q" style="width:70%;padding:10px;border-radius:10px;border:1px solid #334155;background:#020617;color:#e5e7eb" value="当前有哪些异常？"><button onclick="fetch('/ai/ask?q='+encodeURIComponent(document.getElementById('q').value)).then(r=>r.text()).then(t=>document.getElementById('answer').textContent=t)">规则问答</button><pre id="answer" style="white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:14px"></pre></section>
@@ -348,6 +474,15 @@ document.getElementById('askGrokBtn').addEventListener('click', async () => {{
 </script></main></body></html>""".encode()
 
 
+def render_dashboard_page():
+    data = dashboard_payload()
+    backup = data.get("backup") or {}
+    metrics = data.get("metrics") or {}
+    daily = data.get("lastDaily") or {}
+    status_class = "ok" if data.get("ok") else "warn"
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Ops 总览</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1100px;margin:0 auto;padding:32px}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:22px;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}</style></head><body><main><h1>AI Ops 总览</h1><p class="muted">低代码总览页：正常/异常、备份、磁盘、容器、日报。</p><section class="grid"><div class="card"><div class="muted">总状态</div><h2 class="{status_class}">{html.escape(data['statusText'])}</h2></div><div class="card"><div class="muted">备份状态</div><h2>{html.escape(str(backup.get('message') or '未知'))}</h2></div><div class="card"><div class="muted">磁盘最高使用率</div><h2>{metrics.get('maxDiskUsedPercent')}%</h2></div><div class="card"><div class="muted">容器</div><h2>{metrics.get('containerCount')} 个 / 异常 {metrics.get('unhealthyCount')}</h2></div><div class="card"><div class="muted">Kuma</div><h2>{metrics.get('monitorCount')} 个 / DOWN {metrics.get('downCount')}</h2></div><div class="card"><div class="muted">最后日报</div><h2>{html.escape(str(daily.get('sentAt') or '尚未发送'))}</h2></div></section><p><a href="/ai/">进入 AI 运维助手</a> · <a href="/ops-dashboard.json">查看 JSON</a></p></main></body></html>"""
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send_json(self, code, payload):
         body = json.dumps(payload, ensure_ascii=False).encode()
@@ -376,6 +511,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, health_payload("ai"))
             elif path == "/ops-health/n8n":
                 self._send_json(200, health_payload("n8n"))
+            elif path == "/ops-dashboard.json":
+                self._send_json(200, dashboard_payload())
+            elif path in ("/ops-dashboard", "/ops-dashboard/"):
+                self._send_text(200, render_dashboard_page(), "text/html; charset=utf-8")
             elif path == "/ai/context":
                 self._send_json(200, ai_context())
             elif path == "/ai/prompt":

@@ -610,6 +610,41 @@ BRO-PDCA 验收：
 - n8n 单机模式下 `import:workflow --activeState=fromJson` 不可用；需要先导入，再发布 `publish:workflow`，并重启 n8n 才会加载定时触发器。
 - Python f-string 内输出 JS 字符串时仍需注意 `\\n`，否则浏览器会报 `Invalid or unexpected token`。
 
+### 2026-07-07 P1 可视化与告警体验
+
+本轮目标：把 P1 的“首页总览、n8n 可视化验收、告警降噪、备份状态卡”并行补齐，让日常运维尽量少进命令行。
+
+完成项：
+
+- AI Ops 总览页：新增 `https://ops.hahaxiong.top/ops-dashboard/`，展示总状态、备份状态、磁盘最高使用率、容器异常数、Kuma DOWN 数、最后日报时间。
+- 总览 JSON：新增 `https://ops.hahaxiong.top/ops-dashboard.json`，供后续 Homepage widget 或其他 agent 读取。
+- 备份状态卡：`/ai/` 与 `/ops-dashboard/` 都展示 `MyJavis 备份异地拉取` 最近心跳、36h 窗口和剩余告警时间。
+- 告警降噪：`/send-feishu` 增加 issue signature 去重；相同 DOWN/异常容器组合只发一次，重复触发返回 `status=deduped`；日报 `/send-daily-feishu` 保持强制发送。
+- n8n 可视化验收：n8n 页面可见 `AI Ops 每日巡检日报到飞书` 工作流，并可从 `Executions` 查看执行记录入口。
+- Homepage 配置：`homepage/config/services.yaml` 已加入 `AI Ops 总览` 卡片配置；远端 API `/api/services` 已返回该卡片。
+
+BRO-PDCA 验收：
+
+| 检查 | 结果 |
+|---|---|
+| `/ops-dashboard/` | Playwright 可见 `AI Ops 总览`、`正常`、`备份状态`、`磁盘最高使用率`、`最后日报` |
+| `/ops-dashboard.json` | 返回 `ok=true`、`backup.remainingHours`、`lastDaily.sentAt`、`metrics` |
+| 备份卡 | 显示 `UP，最近心跳 2026-07-07 04:37:06.365，约剩 23.7 小时进入告警窗口` |
+| 告警降噪 | 连续调用 `/send-feishu` 第一次发飞书成功，第二次返回 `status=deduped` |
+| 日报状态 | 调用 `/send-daily-feishu` 后 `lastDaily.sentAt=2026-07-07 16:52:50 CST` |
+| n8n 页面 | Playwright 可见 `AI Ops 每日巡检日报到飞书`，控制台 `Errors: 0` |
+| Homepage API | `/api/services` 返回 `AI Ops 总览` -> `/ops-dashboard/` |
+
+已知残留：
+
+- Homepage `/api/services` 已返回 `AI Ops 总览`，但当前前端首页 SSR/缓存仍显示旧 `AI 运维助手 v0` 卡片；不影响 `/ops-dashboard/` 直接访问。后续优先处理 Homepage 前端缓存/版本渲染问题，或改为 widget/API 方式展示总览。
+
+文件快照：
+
+- 远端服务源码：`2-Projects/ai-ops-cockpit/ops-inspector/server.py`
+- Homepage 配置：`2-Projects/ai-ops-cockpit/homepage/config/services.yaml`
+- Homepage 注入脚本尝试：`2-Projects/ai-ops-cockpit/homepage/config/custom.js`
+
 #### 站内一键问 OMP / Grok
 
 目标：川哥在 `https://ops.hahaxiong.top/ai/` 页面点击按钮，就能把当前页面里的只读运维 Prompt 发给本机 OMP/Grok，不再手工复制命令。
