@@ -392,3 +392,66 @@ BRO-PDCA 验收证据：
 
 - `ops-inspector` 当前 hostname 显示容器 ID，但 Kernel、内存、Kuma、Docker 状态均来自宿主/生产服务；后续可把显示名固定为 `racknerd-54aa08d`。
 - 当前是手动按钮，下一步再加 n8n 定时节点做每日巡检日报。
+
+### 2026-07-07 统一登录与 MyJavis 备份监控
+
+已完成两项运维体验改造：
+
+1. Uptime Kuma 新增 Push 类型监控 `MyJavis 备份异地拉取`。
+2. `ops.hahaxiong.top` 改为外层 Caddy Basic Auth 统一登录，核心子页面不再二次弹登录。
+
+MyJavis 备份监控：
+
+| 项 | 配置 |
+|---|---|
+| 类型 | Push |
+| 名称 | `MyJavis 备份异地拉取` |
+| Heartbeat Interval | `129600` 秒 |
+| Retries | `0` |
+| 通知 | `飞书运维告警` |
+| Push URL | 不写入 git / 文档 / 首页，只在对话中交付 |
+
+验收结果：
+
+| 步骤 | 结果 |
+|---|---|
+| 手动 push | Kuma 返回 `{"ok":true}`，监控变 `UP` |
+| 临时改 `60s` 等待超时 | 监控变 `DOWN`，飞书收到故障告警 |
+| 恢复 `129600s` 再 push | 监控恢复 `UP`，飞书收到恢复通知 |
+
+统一登录改造：
+
+| 页面 | 结果 |
+|---|---|
+| `/` | 外层未登录 `401`，登录后显示 AI 运维驾驶舱 |
+| `/dashboard` | 登录外层后直接进入 Uptime Kuma Dashboard |
+| `/dockge/` | 登录外层后直接进入 Dockge |
+| `/n8n/` | 登录外层后直接进入 n8n |
+| `/netdata/` | 登录外层后直接进入 Netdata |
+| `/api/push/*` | 为 Kuma Push 心跳单独放行，不要求外层 Basic Auth |
+
+实现说明：
+
+- Caddy 继续作为统一入口，外层 Basic Auth 保护除 `/api/push/*` 之外的页面。
+- Uptime Kuma 设置 `disableAuth=true`，依赖外层 Caddy 鉴权。
+- Dockge 设置 `disableAuth=true`，依赖外层 Caddy 鉴权。
+- n8n 关闭内层 Basic Auth，保留 `N8N_USER_MANAGEMENT_DISABLED=true`，依赖外层 Caddy 鉴权。
+- Netdata 原本无内层登录，继续依赖外层 Caddy 鉴权。
+
+BRO-PDCA 验收证据：
+
+| 检查 | 结果 |
+|---|---|
+| 容器状态 | `ops-caddy`、`ops-homepage`、`ops-uptime-kuma`、`ops-netdata`、`ops-dockge`、`ops-n8n`、`ops-inspector` 均运行 |
+| 外层保护 | 未登录访问首页返回 `401` |
+| Push 放行 | 假 token 返回 `404`，说明请求已到 Kuma，而不是被 Basic Auth 拦截 |
+| 浏览器验收 | Homepage、Kuma、Dockge、n8n、Netdata 均可打开 |
+| 登录体验 | Kuma/Dockge/n8n 页面不再出现二次登录页 |
+
+本地验收文件：
+
+- `/Users/rayman.chen/mycc/output/playwright/auth-unify-home.png`
+- `/Users/rayman.chen/mycc/output/playwright/auth-unify-kuma.png`
+- `/Users/rayman.chen/mycc/output/playwright/auth-unify-dockge.png`
+- `/Users/rayman.chen/mycc/output/playwright/auth-unify-n8n.png`
+- `/Users/rayman.chen/mycc/output/playwright/auth-unify-netdata.png`
