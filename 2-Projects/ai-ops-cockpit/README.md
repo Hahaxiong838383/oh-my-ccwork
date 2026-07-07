@@ -455,3 +455,44 @@ BRO-PDCA 验收证据：
 - `/Users/rayman.chen/mycc/output/playwright/auth-unify-dockge.png`
 - `/Users/rayman.chen/mycc/output/playwright/auth-unify-n8n.png`
 - `/Users/rayman.chen/mycc/output/playwright/auth-unify-netdata.png`
+
+### 2026-07-07 统一登录二次优化：消除子页反复授权
+
+现象：从 Homepage 进入 n8n 时，浏览器会反复出现外层授权/登录相关提示；Kuma、Dockge、Netdata 也需要确认是否受同类问题影响。
+
+根因拆分：
+
+1. 只用 Caddy `basic_auth` 时，浏览器会对不同子资源/API 请求反复处理 Basic Auth challenge，体验上像“子页面不断弹授权”。
+2. n8n 最新镜像中 `N8N_USER_MANAGEMENT_DISABLED=true` 不能绕过已经初始化 owner 的产品内登录；`/n8n/rest/login` 返回 `401` 是 n8n 自身登录状态，不是 Caddy 外层挑战。
+3. n8n 的 `n8n-auth` cookie 会绑定每个浏览器的 `browser-id`，静态复用一个 cookie 会被 n8n 拒绝，仍回到 Sign in。
+
+修复方式：
+
+- 新增内部服务 `ops-auth`：首次通过外层 Basic Auth 后下发 `ops_auth` 会话 cookie，后续页面/API 请求凭 cookie 放行，不再重复弹 Basic Auth。
+- Caddy 继续保护除 `/api/push/*` 之外的全部页面；`/api/push/*` 仍保持 Kuma Push 心跳免登录。
+- 对 `/n8n/rest/login` 单独反代到 `ops-auth`，由 `ops-auth` 使用当前浏览器的 `browser-id` 动态向 n8n 登录，再把 n8n 返回的 `n8n-auth` cookie 透传给浏览器。
+- Kuma、Dockge 继续使用 `disableAuth=true`，依赖外层 Caddy/`ops_auth` 统一会话。
+
+BRO-PDCA 验收结果：
+
+| 页面 | 验收结果 |
+|---|---|
+| Homepage | 首次授权后进入驾驶舱 |
+| n8n | 直接进入 `/n8n/home/workflows`，页面标题 `Workflows - n8n`，可见 `Overview`、`Workflows`、`Credentials`、`Executions` |
+| Uptime Kuma | 直接进入 Dashboard，无外层 401 请求 |
+| Dockge | 直接进入 Dockge，无外层 401 请求 |
+| Netdata | 直接进入 Netdata，无外层 401 请求 |
+| Push 心跳 | `/api/push/not-real-token` 仍返回 `404`，说明仍到达 Kuma 且未被授权层拦截 |
+
+本地验收文件：
+
+- `/Users/rayman.chen/mycc/output/playwright/sso-final-n8n.png`
+- `/Users/rayman.chen/mycc/output/playwright/sso-final-kuma-snapshot.txt`
+- `/Users/rayman.chen/mycc/output/playwright/sso-final-dockge-snapshot.txt`
+- `/Users/rayman.chen/mycc/output/playwright/sso-final-netdata-snapshot.txt`
+
+维护注意：
+
+- `ops_auth` 是外层会话 cookie；对应 secret 在远端 `.env`，不写 git。
+- n8n 登录密码只在远端 secret/.env 中，`ops-auth` 动态换取每个浏览器自己的 `n8n-auth`。
+- n8n 的 `n8n-auth` 默认约 7 天有效；如果之后 n8n 改登录 API 或 cookie 机制，优先检查 `/n8n/rest/login`、`browser-id`、`auth.service.js` 的 browserId 校验逻辑。
