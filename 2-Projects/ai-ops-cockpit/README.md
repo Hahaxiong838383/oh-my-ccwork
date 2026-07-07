@@ -197,3 +197,24 @@ Uptime Kuma 已配置 3 个基础监控项：
 - 接入飞书通知。
 - 部署 oh-my-pi / omp-deck，形成 AI 运维助手入口。
 - 接入 n8n，做每日巡检日报和手动巡检按钮。
+
+### 2026-07-07 Homepage 默认模板修复
+
+川哥截图显示首页仍是 Homepage 默认模板，并且顶部出现多个 `API Error`。根因是 Caddy 为兼容 Uptime Kuma，把 `/api/*` 和 `/assets/*` 也转发给了 Uptime Kuma，导致 Homepage 自己的 `/api/services`、`/api/bookmarks` 等接口被抢路由，前端无法读取自定义配置。
+
+修复：
+
+- 移除 Kuma 对全局 `/api/*`、`/assets/*`、`/socket.io/*` 的匹配。
+- Kuma 仅保留 `/kuma*`、`/dashboard*`、`/setup*`、`/status*`、`/manage-status-page*`、`/maintenance*` 等必要页面路由。
+- Homepage 的 `/api/services`、`/api/bookmarks` 恢复由 Homepage 容器处理。
+- 个人站卡片从错误的 `https://chenchuan.site/` 改为 `https://my.chenchuan.cc/`。
+
+验收：
+
+| 检查 | 结果 |
+|---|---|
+| `https://ops.hahaxiong.top/api/services` | `200 application/json` |
+| `https://ops.hahaxiong.top/api/bookmarks` | `200 application/json` |
+| 服务组 | `运维入口`、`主机状态` |
+| 服务卡片 | `Uptime Kuma 在线监控`、`Netdata 资源图表`、`Dockge 服务管理`、`AI 操作台`、`RackNerd VPS`、`个人站`、`mycc 本机` |
+| 默认模板字符串 | API 中已不存在 `My First Group` / `API Error` |
