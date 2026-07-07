@@ -351,3 +351,44 @@ BRO-PDCA 验收证据：
 
 - 在 n8n 内做第一个“手动巡检按钮”：读取 Kuma 状态、Netdata 摘要、Docker 容器状态，并发飞书摘要。
 - 再做每日定时巡检日报。
+
+### 2026-07-07 n8n 手动巡检按钮闭环
+
+已完成第一版“手动巡检按钮”：通过 n8n Webhook 触发只读巡检，汇总 Kuma、Netdata、Docker 容器状态，并发送飞书摘要。
+
+入口：
+
+- 手动触发：`https://ops.hahaxiong.top/n8n/webhook/ai-ops-inspect`
+- 访问保护：仍在外层 Caddy Basic Auth 后面。
+- n8n 工作流：`AI Ops 手动巡检到飞书`
+- 内部只读采集服务：`ops-inspector`
+
+实现结构：
+
+- `ops-inspector` 只读读取：Docker socket、Uptime Kuma SQLite、Netdata API。
+- n8n Webhook 调用 `http://ops-inspector:8080/send-feishu`。
+- 飞书 Webhook 只保存在远端 `.env`，不写入文档、不写入 git、不写入长期记忆。
+- n8n 不直接持有飞书 Webhook，避免表达式读取 env 被禁和 secret 扩散。
+
+BRO-PDCA 验收证据：
+
+| 检查 | 结果 |
+|---|---|
+| `ops-inspector /health` | `200 {"ok": true}` |
+| `ops-inspector /summary` | 返回 Kuma、容器、Netdata 摘要 |
+| `ops-inspector /send-feishu` | 飞书返回 `StatusCode: 0` / `msg: success` |
+| n8n Webhook | `GET /n8n/webhook/ai-ops-inspect` 返回 `200` |
+| n8n 执行记录 | execution `2`，workflow `AI Ops 手动巡检到飞书`，状态 `success` |
+| 飞书结果 | 已发送“AI 运维驾驶舱手动巡检”摘要 |
+
+当前巡检摘要包含：
+
+- 总结论：正常 / 需要关注。
+- 主机：Kernel、Load、内存概况。
+- Kuma：4 个监控项状态。
+- Docker：`ops-*` 容器运行状态。
+
+已知限制：
+
+- `ops-inspector` 当前 hostname 显示容器 ID，但 Kernel、内存、Kuma、Docker 状态均来自宿主/生产服务；后续可把显示名固定为 `racknerd-54aa08d`。
+- 当前是手动按钮，下一步再加 n8n 定时节点做每日巡检日报。
