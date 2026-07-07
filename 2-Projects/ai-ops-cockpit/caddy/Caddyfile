@@ -28,6 +28,15 @@ ops.hahaxiong.top, :80 {
     reverse_proxy ops-inspector:8080
   }
 
+  handle /ops-home* {
+    reverse_proxy ops-inspector:8080
+  }
+
+  handle /homepage* {
+    uri strip_prefix /homepage
+    reverse_proxy homepage:3000
+  }
+
   # Dockge is also a root-mounted SPA. When the browser is on /dockge/,
   # its root assets/socket endpoints must be routed to Dockge, not Kuma.
   @dockgeAssets {
@@ -111,6 +120,6 @@ ops.hahaxiong.top, :80 {
   }
 
   handle {
-    reverse_proxy homepage:3000
+    reverse_proxy ops-inspector:8080
   }
 }

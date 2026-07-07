@@ -640,6 +640,31 @@ BRO-PDCA 验收：
 - Homepage `/api/services` 已返回 `AI Ops 总览` 但首页仍显示旧卡片，根因是 Homepage 容器内 `.next/server/pages/en.html` 静态 SSR 缓存未刷新。
 - 已清理容器内旧静态 HTML 并重启 Homepage；Playwright 复验首页可见 `AI Ops 总览`，点击后进入 `/ops-dashboard/`。
 
+### 2026-07-07 P1 导航与首页 AI 问答收尾
+
+目标：解决“进子页面回不去主页”和“AI 问答藏太深”的体验断点。
+
+完成项：
+
+- 根路径 `/` 已切换为自有 `AI 运维驾驶舱` 操作台，不再直接使用 Homepage SSR 首页。
+- 首页首屏显示总状态、备份、磁盘、容器/Kuma，并直接提供“问 AI 运维助手”输入框。
+- 首页 AI 问答直接调用本机 OMP Bridge：`http://127.0.0.1:18777/ask`，仍保持只读分析。
+- `/ops-dashboard/` 与 `/ai/` 顶部新增统一导航：`首页 / 总览 / AI 详情 / Kuma / n8n / Netdata / Dockge`。
+- 第三方子页新增包装入口：`/ops-app/kuma`、`/ops-app/n8n`、`/ops-app/netdata`、`/ops-app/dockge`，顶部固定返回导航，下方 iframe 承载原子应用。
+- 旧 Homepage 备用入口保留在 `/homepage/`，便于需要时回看原始卡片页。
+
+BRO-PDCA 验收：
+
+| 检查 | 结果 |
+|---|---|
+| 首页 | Playwright 打开 `/`，可见 `AI 运维驾驶舱`、`问 AI 运维助手`、`Bridge 在线` |
+| 首页 AI 问答 | 点击 `问 AI` 后 `POST 127.0.0.1:18777/ask => 200 OK`，页面返回 Grok 中文分析 |
+| 总览返回 | `/ops-dashboard/` 顶部可见 `首页 / 总览 / AI 详情 ...` 导航 |
+| AI 详情返回 | `/ai/` 顶部可见统一导航和 `本机 OMP Bridge 自检` |
+| Kuma 包装页 | `/ops-app/kuma` 可见顶部导航和 iframe 内 `Uptime Kuma` |
+| n8n 包装页 | `/ops-app/n8n` 可见顶部导航和 iframe 内 n8n 工作流页面 |
+| 控制台 | 最终浏览器验收 `Errors: 0, Warnings: 0` |
+
 文件快照：
 
 - 远端服务源码：`2-Projects/ai-ops-cockpit/ops-inspector/server.py`

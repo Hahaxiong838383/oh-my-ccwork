@@ -398,6 +398,23 @@ def answer_question(question):
     lines.append("安全边界：我没有执行任何命令，也不会自动重启、删除、升级或改配置。")
     return "\n".join(lines)
 
+def nav_html(active="home"):
+    links = [
+        ("首页", "/", "home"),
+        ("总览", "/ops-dashboard/", "dashboard"),
+        ("AI 详情", "/ai/", "ai"),
+        ("Kuma", "/ops-app/kuma", "kuma"),
+        ("n8n", "/ops-app/n8n", "n8n"),
+        ("Netdata", "/ops-app/netdata", "netdata"),
+        ("Dockge", "/ops-app/dockge", "dockge"),
+    ]
+    items = []
+    for label, href, key in links:
+        class_name = "active" if key == active else ""
+        items.append(f'<a class="{class_name}" href="{href}">{html.escape(label)}</a>')
+    return '<nav class="topnav">' + ''.join(items) + '</nav>'
+
+
 
 def render_ai_page():
     context = ai_context()
@@ -419,7 +436,8 @@ def render_ai_page():
     for container in context["containers"]:
         container_rows.append(f"<tr><td>{html.escape(container['name'])}</td><td>{html.escape(container['status'])}</td></tr>")
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI 运维助手 v0</title><style>
-body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1100px;margin:0 auto;padding:32px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:22px;margin:18px 0;box-shadow:0 20px 60px #0005}}h1{{font-size:34px;margin:0 0 8px}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left}}textarea{{width:100%;min-height:360px;background:#020617;color:#d1d5db;border:1px solid #334155;border-radius:12px;padding:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin-right:8px}}code{{background:#020617;padding:2px 6px;border-radius:6px}}</style></head><body><main>
+body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1100px;margin:0 auto;padding:32px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:22px;margin:18px 0;box-shadow:0 20px 60px #0005}}h1{{font-size:34px;margin:0 0 8px}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left}}textarea{{width:100%;min-height:360px;background:#020617;color:#d1d5db;border:1px solid #334155;border-radius:12px;padding:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin-right:8px}}code{{background:#020617;padding:2px 6px;border-radius:6px}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>
+{nav_html("ai")}
 <h1>AI 运维助手 v0</h1><p class="muted">只读上下文 + Grok/OMP 提示词入口。当前不执行任何运维动作。</p>
 <section class="card grid"><div><div class="muted">总状态</div><h2 class="{status_class}">{status}</h2></div><div><div class="muted">备份</div><h2 class="{backup_class}">{html.escape(str((backup.get('items') or [{'statusText':'未知'}])[0].get('statusText')))}</h2><p class="muted">{backup_message}</p></div><div><div class="muted">主机</div><h2>{html.escape(context['summary']['host']['hostname'])}</h2></div><div><div class="muted">Load</div><h2>{context['summary']['host']['load1']} / {context['summary']['host']['load5']} / {context['summary']['host']['load15']}</h2></div><div><div class="muted">监控数</div><h2>{context['summary']['monitorCount']}</h2></div><div><div class="muted">最后日报</div><h2>{daily_text}</h2></div></section>
 <section class="card"><h2>怎么用</h2><p>复制下方提示词，粘到本机 <code>Grok</code> 或 <code>OMP</code> 对话里，即可让 AI 基于当前真实状态做只读分析。</p><button onclick="navigator.clipboard.writeText(document.querySelector('textarea').value)">复制提示词</button><a class="btn" href="/ai/context" target="_blank">查看 JSON</a><a class="btn" href="/ai/prompt" target="_blank">纯文本 Prompt</a><a class="btn" href="/ops-health/ai" target="_blank">健康端点</a></section>
@@ -473,6 +491,50 @@ document.getElementById('askGrokBtn').addEventListener('click', async () => {{
 }});
 </script></main></body></html>""".encode()
 
+def render_home_page():
+    data = dashboard_payload()
+    backup = data.get("backup") or {}
+    metrics = data.get("metrics") or {}
+    daily = data.get("lastDaily") or {}
+    status_class = "ok" if data.get("ok") else "warn"
+    default_question = "现在有什么需要我关注？"
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI 运维驾驶舱</title><style>
+body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:32px}}.hero{{background:linear-gradient(135deg,#111827,#172554);border:1px solid #334155;border-radius:24px;padding:28px;margin-bottom:18px;box-shadow:0 24px 80px #0006}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin-right:8px}}input,textarea{{width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid #334155;background:#020617;color:#e5e7eb}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:14px}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}
+</style></head><body><main>{nav_html("home")}<section class="hero"><h1>AI 运维驾驶舱</h1><p class="muted">一屏看状态，直接问 AI。当前 AI 只读分析，不会执行重启、删除、升级或改配置。</p><div class="grid"><div><div class="muted">总状态</div><h2 class="{status_class}">{html.escape(data['statusText'])}</h2></div><div><div class="muted">备份</div><h2>{html.escape(str(backup.get('message') or '未知'))}</h2></div><div><div class="muted">磁盘</div><h2>{metrics.get('maxDiskUsedPercent')}%</h2></div><div><div class="muted">容器/Kuma</div><h2>异常 {metrics.get('unhealthyCount')} / DOWN {metrics.get('downCount')}</h2></div></div></section><section class="card"><h2>问 AI 运维助手</h2><p class="muted">直接问当前风险、备份、磁盘、容器。调用本机 OMP/Grok Bridge。</p><input id="homeQuestion" value="{html.escape(default_question)}"><p><button id="homeAskBtn">问 AI</button><button id="homeCheckBridgeBtn">检测 Bridge</button><span id="homeBridgeStatus" class="muted">尚未检测</span></p><pre id="homeAnswer">等待提问...</pre></section><section class="grid"><a class="card" href="/ops-dashboard/"><h2>AI Ops 总览</h2><p class="muted">更完整状态卡和 JSON</p></a><a class="card" href="/ops-app/kuma"><h2>Uptime Kuma</h2><p class="muted">监控红绿灯</p></a><a class="card" href="/ops-app/n8n"><h2>n8n 自动化</h2><p class="muted">日报与工作流</p></a><a class="card" href="/ops-app/netdata"><h2>Netdata</h2><p class="muted">资源趋势</p></a><a class="card" href="/ops-app/dockge"><h2>Dockge</h2><p class="muted">服务管理</p></a></section><section class="card"><h2>最后日报</h2><p>{html.escape(str(daily.get('sentAt') or '尚未发送'))}</p></section><textarea id="homePrompt" style="display:none">{html.escape(ai_prompt())}</textarea><script>
+async function checkHomeBridge() {{
+  const status = document.getElementById('homeBridgeStatus');
+  try {{
+    const response = await fetch('http://127.0.0.1:18777/health');
+    const data = await response.json();
+    status.textContent = data.ok ? 'Bridge 在线' : 'Bridge 异常';
+    status.className = data.ok ? 'ok' : 'warn';
+    return data.ok;
+  }} catch (error) {{
+    status.textContent = 'Bridge 不在线';
+    status.className = 'warn';
+    return false;
+  }}
+}}
+document.getElementById('homeCheckBridgeBtn').addEventListener('click', checkHomeBridge);
+checkHomeBridge();
+document.getElementById('homeAskBtn').addEventListener('click', async () => {{
+  const answer = document.getElementById('homeAnswer');
+  answer.textContent = '正在调用本机 OMP/Grok...';
+  try {{
+    const response = await fetch('http://127.0.0.1:18777/ask', {{
+      method: 'POST',
+      headers: {{'content-type':'application/json'}},
+      body: JSON.stringify({{question: document.getElementById('homeQuestion').value, prompt: document.getElementById('homePrompt').value}})
+    }});
+    const data = await response.json();
+    answer.textContent = data.stdout || data.error || data.stderr || JSON.stringify(data, null, 2);
+  }} catch (error) {{
+    answer.textContent = '调用失败：请确认本机 OMP Bridge 已启动。\\n' + error;
+  }}
+}});
+</script></main></body></html>"""
+
+
 
 def render_dashboard_page():
     data = dashboard_payload()
@@ -480,7 +542,22 @@ def render_dashboard_page():
     metrics = data.get("metrics") or {}
     daily = data.get("lastDaily") or {}
     status_class = "ok" if data.get("ok") else "warn"
-    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Ops 总览</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1100px;margin:0 auto;padding:32px}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:22px;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}</style></head><body><main><h1>AI Ops 总览</h1><p class="muted">低代码总览页：正常/异常、备份、磁盘、容器、日报。</p><section class="grid"><div class="card"><div class="muted">总状态</div><h2 class="{status_class}">{html.escape(data['statusText'])}</h2></div><div class="card"><div class="muted">备份状态</div><h2>{html.escape(str(backup.get('message') or '未知'))}</h2></div><div class="card"><div class="muted">磁盘最高使用率</div><h2>{metrics.get('maxDiskUsedPercent')}%</h2></div><div class="card"><div class="muted">容器</div><h2>{metrics.get('containerCount')} 个 / 异常 {metrics.get('unhealthyCount')}</h2></div><div class="card"><div class="muted">Kuma</div><h2>{metrics.get('monitorCount')} 个 / DOWN {metrics.get('downCount')}</h2></div><div class="card"><div class="muted">最后日报</div><h2>{html.escape(str(daily.get('sentAt') or '尚未发送'))}</h2></div></section><p><a href="/ai/">进入 AI 运维助手</a> · <a href="/ops-dashboard.json">查看 JSON</a></p></main></body></html>"""
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Ops 总览</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1100px;margin:0 auto;padding:32px}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:22px;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html("dashboard")}<h1>AI Ops 总览</h1><p class="muted">低代码总览页：正常/异常、备份、磁盘、容器、日报。</p><section class="grid"><div class="card"><div class="muted">总状态</div><h2 class="{status_class}">{html.escape(data['statusText'])}</h2></div><div class="card"><div class="muted">备份状态</div><h2>{html.escape(str(backup.get('message') or '未知'))}</h2></div><div class="card"><div class="muted">磁盘最高使用率</div><h2>{metrics.get('maxDiskUsedPercent')}%</h2></div><div class="card"><div class="muted">容器</div><h2>{metrics.get('containerCount')} 个 / 异常 {metrics.get('unhealthyCount')}</h2></div><div class="card"><div class="muted">Kuma</div><h2>{metrics.get('monitorCount')} 个 / DOWN {metrics.get('downCount')}</h2></div><div class="card"><div class="muted">最后日报</div><h2>{html.escape(str(daily.get('sentAt') or '尚未发送'))}</h2></div></section><p><a href="/ai/">进入 AI 运维助手</a> · <a href="/ops-dashboard.json">查看 JSON</a></p></main></body></html>"""
+
+def render_app_frame(app):
+    apps = {
+        "kuma": {"title": "Uptime Kuma", "src": "/kuma/", "active": "kuma"},
+        "n8n": {"title": "n8n 自动化", "src": "/n8n/", "active": "n8n"},
+        "netdata": {"title": "Netdata", "src": "/netdata/", "active": "netdata"},
+        "dockge": {"title": "Dockge", "src": "/dockge/", "active": "dockge"},
+    }
+    config = apps.get(app)
+    if not config:
+        return None
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(config['title'])} - AI Ops</title><style>
+html,body{{margin:0;height:100%;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}body{{display:flex;flex-direction:column}}.topbar{{padding:12px 16px;background:#111827;border-bottom:1px solid #334155;z-index:10}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;align-items:center}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}iframe{{border:0;flex:1;width:100%;min-height:0}}.hint{{color:#94a3b8;margin-left:auto}}
+</style></head><body><div class="topbar">{nav_html(config['active'])}<span class="hint">如果子应用显示异常，可用浏览器返回或从导航重新进入。</span></div><iframe src="{html.escape(config['src'])}" title="{html.escape(config['title'])}"></iframe></body></html>"""
+
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -503,10 +580,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = urlparse(self.path).path
         try:
-            if path == "/health":
+            if path in ("/", ""):
+                self._send_text(200, render_home_page(), "text/html; charset=utf-8")
+            elif path == "/health":
                 self._send_json(200, {"ok": True})
             elif path == "/summary":
                 self._send_json(200, build_report())
+            elif path in ("/ops-home", "/ops-home/"):
+                self._send_text(200, render_home_page(), "text/html; charset=utf-8")
             elif path == "/ops-health/ai":
                 self._send_json(200, health_payload("ai"))
             elif path == "/ops-health/n8n":
@@ -515,6 +596,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, dashboard_payload())
             elif path in ("/ops-dashboard", "/ops-dashboard/"):
                 self._send_text(200, render_dashboard_page(), "text/html; charset=utf-8")
+            elif path.startswith("/ops-app/"):
+                app_page = render_app_frame(path.rsplit("/", 1)[-1])
+                if app_page is None:
+                    self._send_json(404, {"ok": False, "error": "unknown app"})
+                else:
+                    self._send_text(200, app_page, "text/html; charset=utf-8")
             elif path == "/ai/context":
                 self._send_json(200, ai_context())
             elif path == "/ai/prompt":
