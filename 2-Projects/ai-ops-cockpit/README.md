@@ -218,3 +218,42 @@ Uptime Kuma 已配置 3 个基础监控项：
 | 服务组 | `运维入口`、`主机状态` |
 | 服务卡片 | `Uptime Kuma 在线监控`、`Netdata 资源图表`、`Dockge 服务管理`、`AI 操作台`、`RackNerd VPS`、`个人站`、`mycc 本机` |
 | 默认模板字符串 | API 中已不存在 `My First Group` / `API Error` |
+
+### 2026-07-07 Uptime Kuma 空白页修复与 BRO-PDCA 补验
+
+川哥截图反馈 `/dashboard` 打开后一片空白。前一次验收只验证了 HTTP `200`，没有做真实浏览器加载验证，违反 BRO-PDCA 中“自己先验收、证据闭环”的要求。
+
+根因：
+
+- Uptime Kuma 是根路径 SPA，`/dashboard` 页面引用根路径资源：`/assets/*.js`、`/assets/*.css`、`/manifest.json`、`/icon.svg`、`/socket.io/*`、`/api/entry-page`。
+- 为修复 Homepage 默认模板时，我把 `/api/*`、`/assets/*` 从 Kuma 路由移除，导致 Kuma 的 JS/CSS 资源被 Homepage 接管并返回 `404 text/html`。
+- 浏览器看到 HTML 主页面 `200`，但 JS/CSS 加载失败，所以页面空白。
+
+修复：
+
+- 保持 Homepage 的 `/api/services`、`/api/bookmarks` 由 Homepage 处理。
+- 将 Kuma 必需资源显式路由给 `ops-uptime-kuma`：`/assets/*`、`/socket.io/*`、`/upload/*`、`/manifest.json`、`/icon.svg`、`/api/entry-page*`、`/api/status-page/*`。
+- 保留 Kuma 页面路由：`/kuma*`、`/dashboard*`、`/setup*`、`/status*`、`/manage-status-page*`、`/maintenance*`。
+
+验收证据：
+
+| 检查 | 结果 |
+|---|---|
+| Homepage `/api/services` | `200 application/json` |
+| Homepage `/api/bookmarks` | `200 application/json` |
+| Kuma `/dashboard` | `200 text/html` |
+| Kuma `/assets/index-*.js` | `200 application/javascript` |
+| Kuma `/assets/index-*.css` | `200 text/css` |
+| Kuma `/manifest.json` | `200 application/json` |
+| Kuma `/icon.svg` | `200 image/svg+xml` |
+| Playwright 真浏览器登录 `/dashboard` | 页面非空，标题 `Uptime Kuma`，三项监控可见 |
+| Playwright 控制台错误 | 无 |
+| Playwright 失败请求 | 无 |
+
+Playwright 输出摘要：`bodyLength=377`，可见 `AI 运维驾驶舱 HTTPS`、`RackNerd SSH 22`、`陈川个人站 HTTPS`，Quick Stats 显示 `Up 3 / Down 0`。
+
+后续规则：
+
+- 前端页面验收不能只看 HTTP 状态码，必须至少做一次真实浏览器加载验证。
+- SPA 子路径/反代改动必须检查 HTML 引用的 JS/CSS/API/WebSocket 资源是否全部命中正确后端。
+- 涉及用户可见页面时，验收证据需包含页面文本、截图或 Playwright snapshot。
