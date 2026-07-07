@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd /workspace/projects/ai-ops-cockpit
+cat <<'BANNER'
+╭────────────────────────────────────────────╮
+│ AI Ops Grok OMP Terminal                   │
+│ 自动启动: omp --model xai-oauth/grok-4.3   │
+│ 工作区: /workspace/projects/ai-ops-cockpit │
+│ 退出 OMP 后会回到普通 bash                 │
+╰────────────────────────────────────────────╯
+
+BANNER
+if ! command -v omp >/dev/null 2>&1; then
+  echo "未找到 omp，回落到 bash。"
+  exec /bin/bash
+fi
+omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit || true
+echo
+echo "OMP 已退出，已回到普通 bash。重新启动可运行："
+echo "  omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit"
+exec /bin/bash

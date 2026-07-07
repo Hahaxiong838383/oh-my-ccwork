@@ -738,3 +738,41 @@ launchctl kickstart -k gui/$(id -u)/com.ai-ops.omp-bridge
 tail -120 /tmp/ai-ops-omp-bridge.log
 ssh racknerd 'cd /opt/ai-ops-cockpit && docker compose up -d --build ops-inspector'
 ```
+
+## 2026-07-07 晚上 · P0/P1 Vibe Coding 网页终端上线
+
+目标：川哥在 `https://ops.hahaxiong.top/` 里直接进入一个类似 OMP 终端的网页界面，用于远程 vibe coding、查看项目工作区、执行高权限但非 root 的运维/开发操作。
+
+### 已上线
+
+- 首页入口：`https://ops.hahaxiong.top/` 新增 `Vibe Coding 终端` 卡片。
+- 工作台：`https://ops.hahaxiong.top/vibe/`，包含内嵌终端、项目入口、常用命令、护栏说明。
+- 终端：`https://ops.hahaxiong.top/terminal/`，基于 `ttyd`，外层继续走统一登录授权。
+- 工作区 JSON：`https://ops.hahaxiong.top/vibe/workspaces.json`，供后续 AI/前端读取项目入口。
+
+### 权限模型
+
+- 容器：`ops-terminal`。
+- 用户：`ops`，不是 root。
+- 权限：加入 `sudo`、宿主 Docker socket 对应组 `hostdocker`，可免密 `sudo`，可执行 `docker` / `docker compose`。
+- 挂载：`/opt/ai-ops-cockpit` → `/workspace/projects/ai-ops-cockpit`，`/opt/stacks` → `/workspace/stacks`，终端日志 → `/var/log/ops-terminal`。
+- 日志：`vibe-shell` 使用 `script` 记录交互会话到 `terminal/logs/session-*.log`；手工探针已验证日志目录可写。
+
+### 验收结果
+
+| 项 | 结果 |
+|---|---|
+| 未登录访问 `/terminal/` | 401，仍受统一登录保护 |
+| 登录访问 `/terminal/` | 200，返回 `ttyd - Terminal` 页面 |
+| 登录访问 `/vibe/` | 200，可见 `Vibe Coding 工作台`、`内嵌终端`、`项目入口` |
+| 首页入口 | `/` 可见 `Vibe Coding 终端` 卡片 |
+| 终端权限 | `ops` 用户、非 root、`sudo -n true` 成功、`docker ps` 可访问宿主 Docker |
+| 容器状态 | `ops-caddy`、`ops-terminal`、`ops-inspector`、`ops-homepage` 等均 running |
+| Caddy | 已恢复为 `forward_auth` 统一授权方案，避免本地脱敏快照覆盖远端真实 cookie/hash |
+
+### 踩坑
+
+- 本地 `caddy/Caddyfile` 是脱敏快照，不能直接覆盖远端真实 Caddyfile；否则会丢失 `basic_auth`/cookie matcher 或 `forward_auth` 结构，导致 Caddy 起不来或登录异常。
+- Caddy 多路径 `handle /terminal /terminal/*` 语法不兼容；最终使用 `@terminal { path /terminal* }` + `handle @terminal`，保留 `/terminal/` 原路径给 ttyd。
+- `handle_path /terminal*` 会剥掉 `/terminal` 前缀，ttyd 以 `--base-path /terminal` 启动时会返回 404；不能用 `handle_path`。
+- Docker socket 组权限要匹配宿主 `/var/run/docker.sock` 的 GID；容器里新增 `hostdocker` 组后，`ops` 才能访问 Docker API。

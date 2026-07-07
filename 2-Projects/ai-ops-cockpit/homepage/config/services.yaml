@@ -16,6 +16,10 @@
         href: /ops-dashboard/
         description: 正常/异常、备份、磁盘、容器、日报一屏看完
         icon: openai.png
+    - Vibe Coding 终端:
+        href: /vibe/
+        description: 网页终端、项目工作区、远程开发入口
+        icon: terminal.png
     - n8n 自动化巡检:
         href: /n8n/
         description: 手动巡检按钮、每日巡检日报

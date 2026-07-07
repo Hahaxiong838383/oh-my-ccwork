@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p /var/log/ops-terminal /workspace/projects
+log_file="/var/log/ops-terminal/session-$(date +%Y%m%d-%H%M%S)-$$.log"
+cat <<'BANNER'
+正在启动 AI Ops Grok OMP Terminal...
+BANNER
+cd /workspace
+exec /usr/bin/script -q -f -a "$log_file" -c /usr/local/bin/vibe-omp

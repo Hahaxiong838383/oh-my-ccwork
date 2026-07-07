@@ -6,15 +6,14 @@
 ops.hahaxiong.top, :80 {
   encode gzip
 
-  @needsAuth {
+  @protected {
     not path /api/push/*
     not path /ops-health/*
-    not header Cookie *ops_auth=REDACTED_OPS_AUTH_COOKIE_VALUE*
-    not path /ops-health/*
-    header Authorization *
   }
-  header @setAuthCookie Set-Cookie "ops_auth=REDACTED_OPS_AUTH_COOKIE_VALUE; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax"
-
+  forward_auth @protected ops-auth:8080 {
+    uri /auth
+    copy_headers Set-Cookie
+  }
 
   handle /favicon.ico {
     respond 204
@@ -32,13 +31,22 @@ ops.hahaxiong.top, :80 {
     reverse_proxy ops-inspector:8080
   }
 
+  handle /vibe* {
+    reverse_proxy ops-inspector:8080
+  }
+
+  @terminal {
+    path /terminal*
+  }
+  handle @terminal {
+    reverse_proxy ops-terminal:7681
+  }
+
   handle /homepage* {
     uri strip_prefix /homepage
     reverse_proxy homepage:3000
   }
 
-  # Dockge is also a root-mounted SPA. When the browser is on /dockge/,
-  # its root assets/socket endpoints must be routed to Dockge, not Kuma.
   @dockgeAssets {
     path /assets/* /socket.io/* /manifest.json /icon.svg /apple-touch-icon.png
     header Referer *://ops.hahaxiong.top/dockge/*
@@ -47,8 +55,6 @@ ops.hahaxiong.top, :80 {
     reverse_proxy dockge:5001
   }
 
-  # Uptime Kuma is a root-mounted SPA. Keep Homepage /api/* intact,
-  # but send Kuma pages/assets/socket endpoints to Kuma.
   handle_path /kuma* {
     reverse_proxy uptime-kuma:3001
   }

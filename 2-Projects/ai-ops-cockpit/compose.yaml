@@ -1,0 +1,145 @@
+services:
+  ops-auth:
+    build: ./auth-gateway
+    container_name: ops-auth
+    restart: unless-stopped
+    environment:
+      OPS_AUTH_USER: chuan
+      OPS_AUTH_PASSWORD: ${OPS_AUTH_PASSWORD}
+      OPS_AUTH_SECRET: ${OPS_AUTH_SECRET}
+      OPS_AUTH_COOKIE: ${OPS_AUTH_COOKIE}
+      OPS_AUTH_MAX_AGE: 2592000
+      N8N_URL: http://n8n:5678
+      N8N_EMAIL: ${N8N_EMAIL}
+      N8N_PASSWORD: ${N8N_PASSWORD}
+
+  caddy:
+    image: caddy:2
+    container_name: ops-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - homepage
+      - uptime-kuma
+      - dockge
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: ops-homepage
+    restart: unless-stopped
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: "23.226.135.149,localhost,127.0.0.1,ops.hahaxiong.top"
+    volumes:
+      - ./homepage/config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: ops-uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - ./kuma/data:/app/data
+
+  netdata:
+    image: netdata/netdata:stable
+    container_name: ops-netdata
+    restart: unless-stopped
+    environment:
+      NETDATA_HOSTNAME: racknerd-54aa08d
+    pid: host
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - ./netdata/config:/etc/netdata
+      - netdata_lib:/var/lib/netdata
+      - netdata_cache:/var/cache/netdata
+      - /:/host/root:ro,rslave
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+
+  ops-inspector:
+    build: ./ops-inspector
+    container_name: ops-inspector
+    restart: unless-stopped
+    environment:
+      KUMA_DB: /kuma/kuma.db
+      NETDATA_URL: http://netdata:19999
+      DISPLAY_HOSTNAME: racknerd-54aa08d
+      TZ: Asia/Shanghai
+      FEISHU_WEBHOOK_URL: ${FEISHU_WEBHOOK_URL}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./kuma/data/kuma.db:/kuma/kuma.db:ro
+    depends_on:
+      - uptime-kuma
+      - netdata
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: ops-n8n
+    restart: unless-stopped
+    environment:
+      N8N_HOST: ops.hahaxiong.top
+      N8N_PORT: 5678
+      N8N_PROTOCOL: https
+      N8N_PATH: /n8n/
+      WEBHOOK_URL: https://ops.hahaxiong.top/n8n/
+      N8N_EDITOR_BASE_URL: https://ops.hahaxiong.top/n8n/
+      N8N_SECURE_COOKIE: "true"
+      N8N_PROXY_HOPS: 1
+      N8N_USER_MANAGEMENT_DISABLED: "true"
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: chuan
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
+      GENERIC_TIMEZONE: Asia/Shanghai
+      TZ: Asia/Shanghai
+    volumes:
+      - ./n8n/data:/home/node/.n8n
+
+  ops-terminal:
+    build:
+      context: ./terminal
+      args:
+        DOCKER_GID: 988
+    container_name: ops-terminal
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/ai-ops-cockpit:/workspace/projects/ai-ops-cockpit
+      - /opt/stacks:/workspace/stacks
+      - ./terminal/logs:/var/log/ops-terminal
+      - ./terminal/omp:/home/ops/.omp
+    depends_on:
+      - caddy
+
+  dockge:
+    image: louislam/dockge:1
+    container_name: ops-dockge
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./dockge/data:/app/data
+      - /opt/stacks:/opt/stacks
+    environment:
+      DOCKGE_STACKS_DIR: /opt/stacks
+
+volumes:
+  caddy_data:
+  caddy_config:
+  netdata_lib:
+  netdata_cache:

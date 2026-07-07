@@ -430,6 +430,8 @@ def nav_html(active="home"):
         ("首页", "/", "home"),
         ("总览", "/ops-dashboard/", "dashboard"),
         ("AI 详情", "/ai/", "ai"),
+        ("Vibe Coding", "/vibe/", "vibe"),
+        ("终端", "/terminal/", "terminal"),
         ("Kuma", "/ops-app/kuma", "kuma"),
         ("n8n", "/ops-app/n8n", "n8n"),
         ("Netdata", "/ops-app/netdata", "netdata"),
@@ -529,7 +531,7 @@ def render_home_page():
     default_question = "现在有什么需要我关注？"
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI 运维驾驶舱</title><style>
 body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:32px}}.hero{{background:linear-gradient(135deg,#111827,#172554);border:1px solid #334155;border-radius:24px;padding:28px;margin-bottom:18px;box-shadow:0 24px 80px #0006}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin-right:8px}}input,textarea{{width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid #334155;background:#020617;color:#e5e7eb}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:14px}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}
-</style></head><body><main>{nav_html("home")}<section class="hero"><h1>AI 运维驾驶舱</h1><p class="muted">一屏看状态，直接问 AI。当前 AI 只读分析，不会执行重启、删除、升级或改配置。</p><div class="grid"><div><div class="muted">总状态</div><h2 class="{status_class}">{html.escape(data['statusText'])}</h2></div><div><div class="muted">备份</div><h2>{html.escape(str(backup.get('message') or '未知'))}</h2></div><div><div class="muted">磁盘</div><h2>{metrics.get('maxDiskUsedPercent')}%</h2></div><div><div class="muted">容器/Kuma</div><h2>异常 {metrics.get('unhealthyCount')} / DOWN {metrics.get('downCount')}</h2></div></div></section><section class="card"><h2>问 AI 运维助手</h2><p class="muted">直接问当前风险、备份、磁盘、容器。调用本机 OMP/Grok Bridge。</p><input id="homeQuestion" value="{html.escape(default_question)}"><p><button id="homeAskBtn">问 AI</button><button id="homeCheckBridgeBtn">检测 Bridge</button><span id="homeBridgeStatus" class="muted">尚未检测</span></p><pre id="homeAnswer">等待提问。提示：页面状态卡会快速显示；AI 回答需要调用 Grok，通常 30-90 秒。</pre></section><section class="grid"><a class="card" href="/ops-dashboard/"><h2>AI Ops 总览</h2><p class="muted">更完整状态卡和 JSON</p></a><a class="card" href="/ops-app/kuma"><h2>Uptime Kuma</h2><p class="muted">监控红绿灯</p></a><a class="card" href="/ops-app/n8n"><h2>n8n 自动化</h2><p class="muted">日报与工作流</p></a><a class="card" href="/ops-app/netdata"><h2>Netdata</h2><p class="muted">资源趋势</p></a><a class="card" href="/ops-app/dockge"><h2>Dockge</h2><p class="muted">服务管理</p></a></section><section class="card"><h2>最后日报</h2><p>{html.escape(str(daily.get('sentAt') or '尚未发送'))}</p><p class="muted">{html.escape(cache_text)}</p></section><textarea id="homePrompt" style="display:none">{html.escape(ai_prompt())}</textarea><script>
+</style></head><body><main>{nav_html("home")}<section class="hero"><h1>AI 运维驾驶舱</h1><p class="muted">一屏看状态，直接问 AI。当前 AI 只读分析，不会执行重启、删除、升级或改配置。</p><div class="grid"><div><div class="muted">总状态</div><h2 class="{status_class}">{html.escape(data['statusText'])}</h2></div><div><div class="muted">备份</div><h2>{html.escape(str(backup.get('message') or '未知'))}</h2></div><div><div class="muted">磁盘</div><h2>{metrics.get('maxDiskUsedPercent')}%</h2></div><div><div class="muted">容器/Kuma</div><h2>异常 {metrics.get('unhealthyCount')} / DOWN {metrics.get('downCount')}</h2></div></div></section><section class="card"><h2>问 AI 运维助手</h2><p class="muted">直接问当前风险、备份、磁盘、容器。调用本机 OMP/Grok Bridge。</p><input id="homeQuestion" value="{html.escape(default_question)}"><p><button id="homeAskBtn">问 AI</button><button id="homeCheckBridgeBtn">检测 Bridge</button><span id="homeBridgeStatus" class="muted">尚未检测</span></p><pre id="homeAnswer">等待提问。提示：页面状态卡会快速显示；AI 回答需要调用 Grok，通常 30-90 秒。</pre></section><section class="grid"><a class="card" href="/ops-dashboard/"><h2>AI Ops 总览</h2><p class="muted">更完整状态卡和 JSON</p></a><a class="card" href="/vibe/"><h2>Vibe Coding 终端</h2><p class="muted">网页终端、项目工作区、远程开发</p></a><a class="card" href="/ops-app/kuma"><h2>Uptime Kuma</h2><p class="muted">监控红绿灯</p></a><a class="card" href="/ops-app/n8n"><h2>n8n 自动化</h2><p class="muted">日报与工作流</p></a><a class="card" href="/ops-app/netdata"><h2>Netdata</h2><p class="muted">资源趋势</p></a><a class="card" href="/ops-app/dockge"><h2>Dockge</h2><p class="muted">服务管理</p></a></section><section class="card"><h2>最后日报</h2><p>{html.escape(str(daily.get('sentAt') or '尚未发送'))}</p><p class="muted">{html.escape(cache_text)}</p></section><textarea id="homePrompt" style="display:none">{html.escape(ai_prompt())}</textarea><script>
 async function checkHomeBridge() {{
   const status = document.getElementById('homeBridgeStatus');
   try {{
@@ -574,6 +576,72 @@ def render_dashboard_page():
     cache_text = f"缓存：{cache.get('source', 'unknown')} / {cache.get('ageSeconds', 0)}s"
     status_class = "ok" if data.get("ok") else "warn"
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Ops 总览</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1100px;margin:0 auto;padding:32px}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:22px;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html("dashboard")}<h1>AI Ops 总览</h1><p class="muted">低代码总览页：正常/异常、备份、磁盘、容器、日报。</p><section class="grid"><div class="card"><div class="muted">总状态</div><h2 class="{status_class}">{html.escape(data['statusText'])}</h2></div><div class="card"><div class="muted">备份状态</div><h2>{html.escape(str(backup.get('message') or '未知'))}</h2></div><div class="card"><div class="muted">磁盘最高使用率</div><h2>{metrics.get('maxDiskUsedPercent')}%</h2></div><div class="card"><div class="muted">容器</div><h2>{metrics.get('containerCount')} 个 / 异常 {metrics.get('unhealthyCount')}</h2></div><div class="card"><div class="muted">Kuma</div><h2>{metrics.get('monitorCount')} 个 / DOWN {metrics.get('downCount')}</h2></div><div class="card"><div class="muted">最后日报</div><h2>{html.escape(str(daily.get('sentAt') or '尚未发送'))}</h2></div></section><p class="muted">{html.escape(cache_text)}</p><p><a href="/ai/">进入 AI 运维助手</a> · <a href="/ops-dashboard.json">查看 JSON</a></p></main></body></html>"""
+
+def workspace_payload():
+    projects = [
+        {
+            "name": "AI Ops Cockpit",
+            "path": "/workspace/projects/ai-ops-cockpit",
+            "purpose": "运维驾驶舱配置、页面、终端容器",
+            "start": "cd /workspace/projects/ai-ops-cockpit && git status --short",
+        },
+        {
+            "name": "Remote Stacks",
+            "path": "/workspace/stacks",
+            "purpose": "远端 Docker Compose stacks（只放允许管理的 stack）",
+            "start": "cd /workspace/stacks && find . -maxdepth 2 -name 'compose*.yml' -o -name 'docker-compose*.yml'",
+        },
+        {
+            "name": "Ops Scratchpad",
+            "path": "/workspace/scratch",
+            "purpose": "临时排障记录和命令输出，不放 secret",
+            "start": "mkdir -p /workspace/scratch && cd /workspace/scratch",
+        },
+    ]
+    commands = [
+        {"label": "查看容器", "command": "docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Image}}'"},
+        {"label": "查看 Compose", "command": "docker compose ls"},
+        {"label": "查看终端日志", "command": "ls -lt /var/log/ops-terminal | head"},
+        {"label": "进入工作区", "command": "cd /workspace/projects"},
+        {"label": "检查权限", "command": "id && sudo -l"},
+        {"label": "重启 OMP", "command": "omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit"},
+        {"label": "首次登录 Grok", "command": "omp auth-broker login xai-oauth"},
+    ]
+    guardrails = [
+        "默认用户 ops：高权限非 root，sudo 免密；需要 root 能力时显式 sudo。",
+        "终端会话记录在 /var/log/ops-terminal/session-*.log，用于复盘。",
+        "OMP 已安装；Grok OAuth 登录态持久化在 /home/ops/.omp，重建容器不会丢。",
+        "不要在终端里粘贴或保存密码、Webhook、Push URL token、API key。",
+        "改生产服务前先说明目标、备份点、回滚方式、验收命令。",
+        "建议先在工作区 git status，再改文件、测试、记录证据。",
+    ]
+    return {"projects": projects, "commands": commands, "guardrails": guardrails}
+
+
+def render_vibe_page():
+    payload = workspace_payload()
+    project_cards = "".join(
+        f"""<div class=\"card\"><h2>{html.escape(item['name'])}</h2><p class=\"muted\">{html.escape(item['purpose'])}</p><p><code>{html.escape(item['path'])}</code></p><button data-copy=\"{html.escape(item['start'])}\">复制启动命令</button></div>"""
+        for item in payload["projects"]
+    )
+    command_rows = "".join(
+        f"""<tr><td>{html.escape(item['label'])}</td><td><code>{html.escape(item['command'])}</code></td><td><button data-copy=\"{html.escape(item['command'])}\">复制</button></td></tr>"""
+        for item in payload["commands"]
+    )
+    guardrail_items = "".join(f"<li>{html.escape(item)}</li>" for item in payload["guardrails"])
+    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Vibe Coding - AI Ops</title><style>
+body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:32px}}.hero{{background:linear-gradient(135deg,#111827,#1e3a8a);border:1px solid #334155;border-radius:24px;padding:28px;margin-bottom:18px;box-shadow:0 24px 80px #0006}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin-right:8px}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}.terminal{{height:62vh;border:1px solid #334155;border-radius:18px;overflow:hidden;background:#020617}}iframe{{border:0;width:100%;height:100%}}
+</style></head><body><main>{nav_html('vibe')}<section class=\"hero\"><h1>Vibe Coding 工作台</h1><p class=\"muted\">网页端终端 + 项目工作区 + 远程开发入口。打开终端会自动进入 Grok 版 OMP；终端用户是高权限非 root 的 <code>ops</code>，必要时可 <code>sudo</code>。</p><p><a class=\"btn\" href=\"/terminal/\" target=\"_blank\">新窗口打开终端</a><a class=\"btn\" href=\"/vibe/workspaces.json\">查看 JSON</a></p></section><section class=\"card\"><h2>内嵌终端</h2><p class=\"muted\">如果内嵌区域未加载，点“新窗口打开终端”。打开后会自动启动 <code>omp --model xai-oauth/grok-4.3</code>。</p><div class=\"terminal\"><iframe src=\"/terminal/\" title=\"Vibe Terminal\"></iframe></div></section><section><h2>项目入口</h2><div class=\"grid\">{project_cards}</div></section><section class=\"card\"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section class=\"card\"><h2>护栏</h2><ul>{guardrail_items}</ul></section></main><script>
+document.querySelectorAll('[data-copy]').forEach((button) => {{
+  button.addEventListener('click', async () => {{
+    await navigator.clipboard.writeText(button.dataset.copy);
+    const oldText = button.textContent;
+    button.textContent = '已复制';
+    setTimeout(() => button.textContent = oldText, 1200);
+  }});
+}});
+</script></body></html>"""
+
 
 def render_app_frame(app):
     apps = {
@@ -627,6 +695,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, dashboard_payload())
             elif path in ("/ops-dashboard", "/ops-dashboard/"):
                 self._send_text(200, render_dashboard_page(), "text/html; charset=utf-8")
+            elif path == "/vibe/workspaces.json":
+                self._send_json(200, workspace_payload())
+            elif path in ("/vibe", "/vibe/"):
+                self._send_text(200, render_vibe_page(), "text/html; charset=utf-8")
             elif path.startswith("/ops-app/"):
                 app_page = render_app_frame(path.rsplit("/", 1)[-1])
                 if app_page is None:
