@@ -30,19 +30,22 @@ interface AihotPage {
 
 type AihotCacheMode = 'next-revalidate' | 'no-store'
 
-// 拉单页（take 硬上限 100；cursor 为空=第一页）。返回 items + 分页信息。
+const PAGE_TIMEOUT_MS = 6000 // 健康节点 0.2-0.9s；6s 给火山CN节点偶发抖动(2-4s)留余量，避免误丢页(2026-07-08 从 4s 放宽)
+const PAGE_RETRY = 1 // 单页失败(含超时)重试次数——瞬时抖动一次机会，治 aihot 412 类暴跌
+
+// 拉单页（take 硬上限 100；cursor 为空=第一页）。返回 items + 分页信息。失败重试 PAGE_RETRY 次。
 async function fetchPage(
   category: RadarCategory,
   cursor: string | null,
   cacheMode: AihotCacheMode = 'next-revalidate',
+  attempt = 0,
 ): Promise<AihotPage> {
   const params = new URLSearchParams({ mode: 'all', category, take: '100' })
   if (cursor) params.set('cursor', cursor)
   const url = `${AIHOT_BASE}/api/public/items?${params.toString()}`
   // Node fetch 无默认超时；源站挂起会拖死 ISR 再生/构建，用 AbortController 兜底
-  // 健康节点实测 0.2-0.8s，4s 足够宽；坏节点(字节US↔阿里KR黑洞)快速失败少拖首访
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 4000)
+  const timer = setTimeout(() => controller.abort(), PAGE_TIMEOUT_MS)
   try {
     const res = await fetch(url, {
       headers: {
@@ -58,7 +61,7 @@ async function fetchPage(
             next: { revalidate: 900 },
           }),
     })
-    if (!res.ok) return { items: [], hasNext: false, nextCursor: null }
+    if (!res.ok) throw new Error(`http_${res.status}`)
     const data = (await res.json()) as {
       items?: AihotRaw[]
       hasNext?: boolean
@@ -81,7 +84,8 @@ async function fetchPage(
       }))
     return { items, hasNext: Boolean(data.hasNext), nextCursor: data.nextCursor ?? null }
   } catch {
-    // 单页失败（含超时 abort）不影响其余（fail-soft）
+    // 单页失败（含超时 abort / !ok）：重试一次给瞬时抖动机会，仍失败则 fail-soft 返回空（不影响其余页）
+    if (attempt < PAGE_RETRY) return fetchPage(category, cursor, cacheMode, attempt + 1)
     return { items: [], hasNext: false, nextCursor: null }
   } finally {
     clearTimeout(timer)

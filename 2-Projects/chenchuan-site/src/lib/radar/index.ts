@@ -4,7 +4,8 @@
 // - stale-while-revalidate：有缓存（内存或盘）永远立即返回，过期只触发后台刷新，
 //   请求路径不再阻塞等上游 —— 消灭「首访卡 40s」。
 // - 磁盘持久化 data/radar-feed-cache.json：pm2 重启 / 部署后仍有数据（rsync 排除 /data 不会覆盖）。
-// - 归档累积：每轮成功拉取与本地旧库合并去重（cap 3000），上游滚动淘汰的资讯服务器留存。
+// - 热冷分层（2026-07-08）：前 HOT_CAP(5000) 进热层（页面展示，radar-feed-cache.json），
+//   被 cap 挤出的旧记录 append 冷层 data/radar-archive-cold/YYYY-MM.jsonl（只增不删=数据主权，每日异地备份香港）。
 // - 失败负缓存 + 条数暴跌保护：上游抖动（字节US节点↔阿里KR路由黑洞）时不清空、不覆盖、发飞书告警。
 import { promises as fs } from 'fs'
 import path from 'path'
@@ -12,10 +13,12 @@ import { fetchAihotAll, fetchAihotLatest } from './aihot'
 import { fetchYuweiwanLatest } from './yuweiwan'
 import {
   dedupe,
+  groupByMonth,
+  HOT_CAP,
   isDegraded,
-  mergeArchive,
   parseDiskCacheRaw,
   sortByTimeDesc,
+  splitHotCold,
 } from './feed-cache'
 import { sendChatAlert } from '@/lib/chat/feishu-alert'
 import { RADAR_SEED } from '@/data/radar-seed'
@@ -31,6 +34,26 @@ const NEGATIVE_CACHE_MS = 90 * 1000 // 刷新失败后的静默窗：期间不�
 
 // 注意：放 data/ 根，不能进 data/radar/（那里是 theory 报告目录，readdir 按 *.json 全扫）
 const FEED_CACHE_FILE = path.join(process.cwd(), 'data', 'radar-feed-cache.json')
+
+// 冷层：被热层 cap 挤出的旧记录归档目录（按月 JSONL，只增不删 = 真正的「数据主权」）。
+// rsync 部署排除 /data，运行时写入不被覆盖；每日 cron 异地备份到香港机。
+const COLD_ARCHIVE_DIR =
+  process.env.RADAR_COLD_DIR || path.join(process.cwd(), 'data', 'radar-archive-cold')
+
+// 把被挤出热层的记录按月 append 到冷层 JSONL。fail-soft：冷层写失败绝不影响主链路/页面。
+async function appendColdArchive(items: RadarItem[]): Promise<void> {
+  if (items.length === 0) return
+  try {
+    await fs.mkdir(COLD_ARCHIVE_DIR, { recursive: true })
+    const byMonth = groupByMonth(items)
+    for (const [month, list] of Object.entries(byMonth)) {
+      const lines = list.map((it) => JSON.stringify(it)).join('\n') + '\n'
+      await fs.appendFile(path.join(COLD_ARCHIVE_DIR, `${month}.jsonl`), lines, 'utf-8')
+    }
+  } catch {
+    // 存档失败不阻断（下轮被挤出的记录会再次尝试；冷层是备份非关键路径）
+  }
+}
 
 type RadarFeedCache = {
   feed: RadarFeed
@@ -140,12 +163,16 @@ async function refreshRadarFeed(prev: RadarFeedCache | undefined): Promise<Radar
     )
   }
 
-  const merged = mergeArchive(freshItems, prevItems)
+  // 热冷分层：前 hotCap 进热层（页面展示），被挤出的旧记录归档到冷层 JSONL（不再永久丢弃）。
+  // hotCap 支持 env 覆盖（RADAR_HOT_CAP），便于运维调整展示容量而不改代码。
+  const hotCap = Number(process.env.RADAR_HOT_CAP) || HOT_CAP
+  const { hot, evicted } = splitHotCold(freshItems, prevItems, hotCap)
+  void appendColdArchive(evicted)
   const feed: RadarFeed = {
-    items: merged,
+    items: hot,
     fetchedAt: new Date().toISOString(),
     ok: true,
-    sourceCount: new Set(merged.map((i) => i.source)).size,
+    sourceCount: new Set(hot.map((i) => i.source)).size,
   }
   const cache: RadarFeedCache = { feed, cachedAt: now }
   globalRadarFeed.__radarFeedCache = cache

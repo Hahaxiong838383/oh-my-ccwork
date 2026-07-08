@@ -2,7 +2,8 @@
 // index.ts 负责 IO（读写盘 / 内存缓存 / 告警），本文件只做数据变换与判定。
 import type { RadarItem } from './types'
 
-export const ARCHIVE_CAP = 3000
+export const ARCHIVE_CAP = 3000 // 兼容保留（mergeArchive 默认值）
+export const HOT_CAP = 5000 // 热层：进页面展示的最新 N 条（2026-07-08 分层改造）
 export const DEGRADE_RATIO = 0.5
 export const DEGRADE_MIN_BASE = 200
 
@@ -37,6 +38,35 @@ export function mergeArchive(
   cap = ARCHIVE_CAP,
 ): RadarItem[] {
   return sortByTimeDesc(dedupe([...fresh, ...prev])).slice(0, cap)
+}
+
+// 热冷分层（2026-07-08）：合并去重排序后，前 hotCap 进热层（展示），其余是被挤出的冷层增量。
+// evicted 天然低重复——一条一旦被挤出热层，下轮 prev/fresh 都不再含它（除非上游重推），只会 append 一次。
+export function splitHotCold(
+  fresh: RadarItem[],
+  prev: RadarItem[],
+  hotCap = HOT_CAP,
+): { hot: RadarItem[]; evicted: RadarItem[] } {
+  const all = sortByTimeDesc(dedupe([...fresh, ...prev]))
+  return { hot: all.slice(0, hotCap), evicted: all.slice(hotCap) }
+}
+
+// 冷层按 publishedAt 月份分文件（YYYY-MM.jsonl）；无有效日期归 'unknown'，不丢
+export function monthKey(publishedAt: string | null): string {
+  if (publishedAt) {
+    const t = Date.parse(publishedAt)
+    if (!Number.isNaN(t)) return new Date(t).toISOString().slice(0, 7)
+  }
+  return 'unknown'
+}
+
+export function groupByMonth(items: RadarItem[]): Record<string, RadarItem[]> {
+  const out: Record<string, RadarItem[]> = {}
+  for (const it of items) {
+    const m = monthKey(it.publishedAt)
+    ;(out[m] ||= []).push(it)
+  }
+  return out
 }
 
 // 条数暴跌判定：旧归档已成规模（≥ minBase）而新拉结果不足其一半 → 视为上游部分失败，
