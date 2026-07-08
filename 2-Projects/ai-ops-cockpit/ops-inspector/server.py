@@ -425,13 +425,34 @@ def terminal_status():
 def omp_status(sessions=None):
     sessions = sessions if sessions is not None else terminal_sessions(5)
     try:
-        probe = run(["docker", "exec", "ops-terminal", "sh", "-lc", "test -s ~/.omp/agent/agent.db && grep -q 'setupWizard: false' ~/.omp/agent/config.yml"])
-        db_exists = True
-        setup_disabled = True
-        error = None
+        raw = run(["docker", "exec", "ops-terminal", "python3", "-c", """
+import json, sqlite3
+db='/home/ops/.omp/agent/agent.db'
+cfg='/home/ops/.omp/agent/config.yml'
+result={'dbExists': False, 'setupWizardDisabled': False, 'credentialReady': False, 'disabledCause': None}
+try:
+    open(db, 'rb').close(); result['dbExists'] = True
+    result['setupWizardDisabled'] = 'setupWizard: false' in open(cfg, encoding='utf-8').read()
+    conn = sqlite3.connect(db)
+    row = conn.execute(\"select disabled_cause from auth_credentials where provider='xai-oauth' order by updated_at desc limit 1\").fetchone()
+    if row:
+        result['disabledCause'] = row[0]
+        result['credentialReady'] = row[0] in (None, '')
+except Exception as exc:
+    result['error'] = str(exc)
+print(json.dumps(result, ensure_ascii=False))
+"""])
+        credential = json.loads(raw)
+        db_exists = credential.get("dbExists", False)
+        setup_disabled = credential.get("setupWizardDisabled", False)
+        credential_ready = credential.get("credentialReady", False)
+        disabled_cause = credential.get("disabledCause")
+        error = credential.get("error")
     except Exception as exc:
         db_exists = False
         setup_disabled = False
+        credential_ready = False
+        disabled_cause = None
         error = str(exc)
     recent = ""
     for item in sessions[:5]:
@@ -439,9 +460,11 @@ def omp_status(sessions=None):
             recent = item["preview"]
             break
     payload = {
-        "ok": db_exists and setup_disabled,
+        "ok": db_exists and setup_disabled and credential_ready,
         "dbExists": db_exists,
         "setupWizardDisabled": setup_disabled,
+        "credentialReady": credential_ready,
+        "disabledCause": redact_sensitive_text(disabled_cause or "") or None,
         "autoModel": "xai-oauth/grok-4.3",
         "recentSessionHasProviderSetup": "Set up your providers" in recent or "Select provider to login" in recent,
         "recentSessionHasReconnectSignal": "process exited with code 1" in recent,
@@ -493,6 +516,93 @@ def command_templates():
         {"label": "回滚方案", "prompt": "请基于当前项目给出可执行回滚方案，包含备份、回滚命令、验证标准。"},
         {"label": "写复盘", "prompt": "请根据终端日志和当前 diff 总结本轮改动、踩坑、验收证据和后续 TODO。"},
     ]
+
+
+def harness_payload():
+    workflows = [
+        {
+            "id": "readonly_inspect",
+            "name": "只读巡检",
+            "permission": "read_only",
+            "allowed": ["读取状态", "查看日志", "列风险", "给验收命令"],
+            "blocked": ["写文件", "重启服务", "删除数据", "提交推送"],
+            "prompt": "按 BRO-PDCA 只读巡检当前项目和 AI Ops 状态：先写 O1/O2，再列观察、风险、下一步和验收命令；不要执行写入或重启。",
+        },
+        {
+            "id": "plan_design",
+            "name": "方案设计",
+            "permission": "no_write",
+            "allowed": ["读文档", "读代码", "提出方案", "列验收标准"],
+            "blocked": ["直接改代码", "直接部署", "改 secrets"],
+            "prompt": "先读上下文，再按 BRO-PDCA 输出方案：背景、风险、分阶段计划、验收标准、回滚点；不改文件。",
+        },
+        {
+            "id": "patch_draft",
+            "name": "补丁草案",
+            "permission": "draft_only",
+            "allowed": ["定位文件", "生成 diff 草案", "列测试命令"],
+            "blocked": ["自动 commit", "自动 push", "写入 secret", "未验收即部署"],
+            "prompt": "如需改动，先给最小 diff 草案和风险说明，等待川哥或 Codex/cc 确认后再执行；禁止自行 commit/push。",
+        },
+        {
+            "id": "deploy_verify",
+            "name": "部署验收",
+            "permission": "confirm_first",
+            "allowed": ["列部署命令", "列回滚命令", "执行已确认验收"],
+            "blocked": ["未确认的生产变更", "破坏性 Docker/DB 操作"],
+            "prompt": "部署前必须列变更、备份/回滚点、验收命令和失败处理；高危操作等待明确确认。",
+        },
+    ]
+    projects = workspace_payload()["projects"]
+    return {
+        "name": "AI Ops Harness v1",
+        "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "purpose": "让 OMP/Grok 在真实项目接入前先具备规则、记忆、方法论、工作流和权限边界。",
+        "identity": {"user": "川哥", "assistant": "grok（xAI via OMP）", "language": "中文"},
+        "ruleSources": [
+            {"name": "HOME AGENTS", "path": "~/AGENTS.md", "scope": "HOME 白名单、secret、并发、git 权限"},
+            {"name": "mycc CLAUDE", "path": "~/mycc/CLAUDE.md", "scope": "BRO-PDCA、记忆系统、归档、验收"},
+            {"name": "project AGENTS", "path": "~/mycc/AGENTS.md", "scope": "Codex/mycc 项目规则"},
+            {"name": "AI Ops README", "path": "/workspace/projects/ai-ops-cockpit/README.md", "scope": "本项目部署、踩坑、验收记录"},
+        ],
+        "memorySources": [
+            {"name": "recent_events", "path": "0-System/RECENT_EVENTS.md", "mode": "read_before_work", "secretPolicy": "no_secret"},
+            {"name": "memory_items", "path": "0-System/memory-items.md", "mode": "query_relevant_only", "secretPolicy": "no_secret"},
+            {"name": "status", "path": "0-System/status.md", "mode": "current_snapshot", "secretPolicy": "no_secret"},
+        ],
+        "methodology": {
+            "name": "BRO-PDCA",
+            "minimum": ["O1 目标", "O2 约束", "Plan 步骤", "Do 执行", "Check 验收", "Action 复盘/沉淀"],
+            "stopRules": ["缺关键约束先问", "发现 secret 立即停止", "发现并发冲突立即停止", "真实项目写入前先给计划和验收标准"],
+        },
+        "permissions": {
+            "defaultMode": "read_only",
+            "writeRequires": "川哥明确授权 + 计划 + diff 范围 + 验收命令",
+            "commitPushOwner": "Codex/cc 收口，OMP/Grok 默认不直接 commit/push",
+            "dangerousActions": DANGEROUS_PATTERNS,
+        },
+        "workflows": workflows,
+        "projects": projects,
+        "promptEndpoint": "/vibe/harness-prompt",
+        "jsonEndpoint": "/vibe/harness.json",
+    }
+
+
+def harness_prompt():
+    payload = harness_payload()
+    return """你正在 ops.hahaxiong.top 的 AI Ops Vibe Coding 终端中工作。请先遵守以下 Harness，不要绕过。
+
+核心要求：
+1. 全程中文，称呼用户为川哥。
+2. 默认只读；任何写文件、重启、部署、删除、commit、push 前，必须先说明 O1/O2、风险、计划、回滚点和验收命令，等待明确确认。
+3. 真实项目接入前，不能凭空假设路径、密钥、部署方式；先读项目规则和 README。
+4. secret、Webhook、Kuma Push URL、OAuth code/token、密码、cookie、API key 不得输出到文档、git、记忆或日志摘要。
+5. 遇到 UI 白屏/接口异常/服务不响应，必须先做根因检查和真实页面验收，不能只看 HTTP 200。
+6. 输出按 BRO-PDCA：O1/O2 → Plan → Do/建议 → Check 验收 → Action 沉淀。
+
+Harness JSON：
+```json
+""" + json.dumps(payload, ensure_ascii=False, indent=2) + "\n```\n"
 
 def health_payload(component):
     if component == "ai":
@@ -768,20 +878,30 @@ def workspace_payload():
 def render_vibe_page():
     payload = workspace_payload()
     status = vibe_status_payload()
+    harness = harness_payload()
     project_cards = "".join(
-        f"""<div class=\"card\"><h2>{html.escape(item['name'])}</h2><p class=\"muted\">{html.escape(item['purpose'])}</p><p><code>{html.escape(item['path'])}</code></p><button data-copy=\"{html.escape(item['start'])}\">复制启动命令</button></div>"""
+        f"""<div class="card"><h2>{html.escape(item['name'])}</h2><p class="muted">{html.escape(item['purpose'])}</p><p><code>{html.escape(item['path'])}</code></p><button data-copy="{html.escape(item['start'])}">复制启动命令</button></div>"""
         for item in payload["projects"]
     )
+    workflow_parts = []
+    base_harness_prompt = harness_prompt()
+    for item in harness["workflows"]:
+        prompt_text = base_harness_prompt + "\n\n当前工作模式：" + item["prompt"]
+        omp_command = "omp --model xai-oauth/grok-4.3 -p " + json.dumps(prompt_text, ensure_ascii=False)
+        workflow_parts.append(
+            f"""<div class="card"><h2>{html.escape(item['name'])}</h2><p class="muted">权限：{html.escape(item['permission'])}</p><p>{html.escape(item['prompt'])}</p><button data-copy="{html.escape(omp_command)}">复制 Harness OMP 命令</button></div>"""
+        )
+    workflow_cards = "".join(workflow_parts)
     command_rows = "".join(
-        f"""<tr><td>{html.escape(item['label'])}</td><td><code>{html.escape(item['command'])}</code></td><td><button data-copy=\"{html.escape(item['command'])}\">复制</button></td></tr>"""
+        f"""<tr><td>{html.escape(item['label'])}</td><td><code>{html.escape(item['command'])}</code></td><td><button data-copy="{html.escape(item['command'])}">复制</button></td></tr>"""
         for item in payload["commands"]
     )
     server_rows = "".join(
-        f"""<tr><td>{html.escape(item['name'])}</td><td>{html.escape(item['target'])}</td><td><code>{html.escape(item['command'])}</code></td><td><button data-copy=\"{html.escape(item['command'])}\">复制</button></td></tr>"""
+        f"""<tr><td>{html.escape(item['name'])}</td><td>{html.escape(item['target'])}</td><td><code>{html.escape(item['command'])}</code></td><td><button data-copy="{html.escape(item['command'])}">复制</button></td></tr>"""
         for item in payload["servers"]
     )
     template_cards = "".join(
-        f"""<div class=\"card\"><h2>{html.escape(item['label'])}</h2><p class=\"muted\">{html.escape(item['prompt'])}</p><button data-copy=\"{html.escape('omp --model xai-oauth/grok-4.3 -p ' + json.dumps(item['prompt'], ensure_ascii=False))}\">复制 OMP 命令</button></div>"""
+        f"""<div class="card"><h2>{html.escape(item['label'])}</h2><p class="muted">{html.escape(item['prompt'])}</p><button data-copy="{html.escape('omp --model xai-oauth/grok-4.3 -p ' + json.dumps(item['prompt'], ensure_ascii=False))}">复制 OMP 命令</button></div>"""
         for item in payload["templates"]
     )
     session_rows = "".join(
@@ -791,9 +911,9 @@ def render_vibe_page():
     guardrail_items = "".join(f"<li>{html.escape(item)}</li>" for item in payload["guardrails"])
     dangerous = "、".join(DANGEROUS_PATTERNS)
     status_class = "ok" if status["ok"] else "warn"
-    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Vibe Coding - AI Ops</title><style>
-body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1280px;margin:0 auto;padding:32px}}.hero{{background:linear-gradient(135deg,#111827,#1e3a8a);border:1px solid #334155;border-radius:24px;padding:28px;margin-bottom:18px;box-shadow:0 24px 80px #0006}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin:4px 8px 4px 0}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:280px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}.terminal{{height:58vh;border:1px solid #334155;border-radius:18px;overflow:hidden;background:#020617}}iframe{{border:0;width:100%;height:100%}}.pill{{display:inline-block;border:1px solid #334155;border-radius:999px;padding:6px 10px;margin:4px;background:#0b1220}}
-</style></head><body><main>{nav_html('vibe')}<section class=\"hero\"><h1>Vibe Coding 工作台</h1><p class=\"muted\">打开终端会自动进入 Grok 版 OMP；这里集中项目入口、服务器入口、审计日志、健康检查和操作护栏。</p><p><span class=\"pill {status_class}\">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class=\"pill\">自动模型：xai-oauth/grok-4.3</span><span class=\"pill\">日志 {len(status['sessions'])} 条</span></p><p><a class=\"btn\" href=\"/terminal/\" target=\"_blank\">新窗口打开终端</a><button id=\"restartTerminalBtn\">重启终端容器</button><a class=\"btn\" href=\"/vibe/status.json\">状态 JSON</a></p><pre id=\"actionResult\">等待操作。</pre></section><section class=\"card\"><h2>内嵌终端</h2><p class=\"muted\">打开后会自动启动 <code>omp --model xai-oauth/grok-4.3</code>。如卡住，先点“重启终端容器”。</p><div class=\"terminal\"><iframe src=\"/terminal/\" title=\"Vibe Terminal\"></iframe></div></section><section><h2>项目入口</h2><div class=\"grid\">{project_cards}</div></section><section class=\"card\"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class=\"card\"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class=\"grid\">{template_cards}</div></section><section class=\"card\"><h2>审计日志</h2><p class=\"muted\">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class=\"card\"><h2>护栏</h2><p class=\"muted\">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vibe Coding - AI Ops</title><style>
+body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1240px;margin:0 auto;padding:28px}}.hero{{background:linear-gradient(135deg,#111827,#172554);border:1px solid #334155;border-radius:24px;padding:28px;margin-bottom:18px;box-shadow:0 24px 80px #0006}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin:4px 8px 4px 0}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:280px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}.terminal{{height:58vh;border:1px solid #334155;border-radius:18px;overflow:hidden;background:#020617}}iframe{{border:0;width:100%;height:100%}}.pill{{display:inline-block;border:1px solid #334155;border-radius:999px;padding:6px 10px;margin:4px;background:#0b1220}}
+</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 Grok 版 OMP；真实项目接入前先固定规则、记忆、BRO-PDCA、工作流和权限边界。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">默认只读</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a></p><pre id="actionResult">等待操作。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness prompt 并启动 <code>omp --model xai-oauth/grok-4.3</code>。默认只读；写入/部署必须先确认。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
 document.querySelectorAll('[data-copy]').forEach((button) => {{
   button.addEventListener('click', async () => {{
     await navigator.clipboard.writeText(button.dataset.copy);
@@ -877,6 +997,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_text(200, render_dashboard_page(), "text/html; charset=utf-8")
             elif path == "/vibe/workspaces.json":
                 self._send_json(200, workspace_payload())
+            elif path == "/vibe/harness.json":
+                self._send_json(200, harness_payload())
+            elif path == "/vibe/harness-prompt":
+                self._send_text(200, harness_prompt())
             elif path == "/vibe/status.json":
                 self._send_json(200, vibe_status_payload())
             elif path in ("/vibe", "/vibe/"):

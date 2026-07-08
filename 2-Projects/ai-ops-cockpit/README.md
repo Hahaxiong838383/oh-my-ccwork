@@ -799,3 +799,48 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && docker compose up -d --build ops-inspect
 | `/vibe/action/restart-terminal` | 返回 JSON，`ok=true`，且 `ops-terminal` 仍 running |
 | 终端 | 打开后自动进 Grok OMP，退出后回 bash |
 | 护栏 | 普通 bash 中高危命令会要求 `YES` 确认 |
+
+
+## 2026-07-08 · AI Ops Harness v1 前置层
+
+目标：真实项目工作区接入前，先给 OMP/Grok 固定规则、记忆、BRO-PDCA、工作流和权限边界，避免 AI 直接改真实项目。
+
+### 本轮新增
+
+- `/vibe/harness.json`：统一输出规则来源、记忆来源、BRO-PDCA 方法论、权限边界、工作模式和项目清单。
+- `/vibe/harness-prompt`：面向 OMP/Grok 的启动提示词，要求中文、默认只读、写入/部署前先给 O1/O2、计划、风险、回滚和验收命令。
+- `/vibe/`：新增“工作模式”卡片：只读巡检、方案设计、补丁草案、部署验收；每张卡可复制带 Harness 的 OMP 命令。
+- `terminal/vibe-omp`：启动时从 `ops-inspector` 拉取 Harness prompt，并用 `omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit -p` 注入。
+
+### 验收标准
+
+| 项 | 标准 |
+|---|---|
+| `/vibe/harness.json` | 返回 `name=AI Ops Harness v1`，含 `workflows`、`permissions`、`memorySources` |
+| `/vibe/harness-prompt` | 含 `BRO-PDCA`、`默认只读`、`secret` 禁令 |
+| `/vibe/` | 可见 `工作模式`、`Harness：AI Ops Harness v1`、`复制 Harness OMP 命令` |
+| 终端 | `vibe-omp` 能拉取 harness prompt；失败时回落普通 OMP |
+
+
+## 2026-07-08 · xAI/Grok 重登与保活
+
+目标：恢复 RackNerd `ops-terminal` 内 `omp --model xai-oauth/grok-4.3`，并避免本机与远端 refresh token 轮换互相踢掉。
+
+### 本轮结论
+
+- 远端 `xai-oauth` 失效根因：`agent.db` 中 `disabled_cause` 为 `invalid_grant / Refresh token has been revoked`，不是 Harness 代码问题。
+- 浏览器回调授权在 SSH 隧道模式下不稳定，改用“本机统一刷新 + 脱敏同步远端”的保活策略。
+- 本机 `~/.grok/auth.json` 和 OMP 凭据作为统一真源，由既有 `omp-xai-token-refresh.py` 先刷新，再同步到 RackNerd。
+- `4-Assets/SOP/aiops-xai-sync-to-racknerd.sh` 每次只生成临时导入文件，scp 到远端后导入 `ops-terminal`，随后清理临时文件；日志不打印 access token、refresh token、授权码。
+- 本机 LaunchAgent `com.aiops.xai-sync` 每 2 小时运行一次同步脚本，日志在 `~/Library/Logs/aiops-xai-sync.log` / `.err`。
+
+### 验收结果
+
+| 项 | 结果 |
+|---|---|
+| 本机刷新 | `omp-xai-token-refresh.py --if-expiring 14400` 成功 |
+| 远端导入 | `remote_import_done_without_printing_tokens` |
+| Grok 调用 | `GROK_KEEPALIVE_OK` |
+| Vibe 状态 | `/vibe/status.json` 返回 `ok=true`、`omp=true`、`credentialReady=true`、`disabledCause=null` |
+| 通讯测试 | 注入 Harness 后向远端 Grok 发任务，返回 `GROK_OPS_COMM_OK` |
+| 脱敏 | 日志仅含状态与剩余时间，不含 token/授权码；远端临时导入文件已清理 |

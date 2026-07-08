@@ -4,7 +4,7 @@ cd /workspace/projects/ai-ops-cockpit
 cat <<'BANNER'
 ╭────────────────────────────────────────────╮
 │ AI Ops Grok OMP Terminal                   │
-│ 自动启动: omp --model xai-oauth/grok-4.3   │
+│ 自动启动: Harness + Grok OMP               │
 │ 工作区: /workspace/projects/ai-ops-cockpit │
 │ 退出 OMP 后会回到普通 bash                 │
 ╰────────────────────────────────────────────╯
@@ -14,8 +14,32 @@ if ! command -v omp >/dev/null 2>&1; then
   echo "未找到 omp，回落到 bash。"
   exec /bin/bash
 fi
-omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit || true
+if ! python3 - <<'PY'
+import sqlite3, sys
+try:
+    conn = sqlite3.connect('/home/ops/.omp/agent/agent.db')
+    row = conn.execute("select disabled_cause from auth_credentials where provider='xai-oauth' order by updated_at desc limit 1").fetchone()
+    sys.exit(0 if row and row[0] in (None, '') else 1)
+except Exception:
+    sys.exit(1)
+PY
+then
+  echo "⚠️  OMP xAI/Grok 登录态不可用，已进入普通 bash。"
+  echo "请先在终端完成 xAI OAuth 重登，再重新打开 /terminal/。"
+  echo "Harness prompt 可查看：curl -fsS http://ops-inspector:8080/vibe/harness-prompt"
+  exec /bin/bash
+fi
+if command -v curl >/dev/null 2>&1; then
+  harness_prompt="$(curl -fsS --max-time 5 http://ops-inspector:8080/vibe/harness-prompt || true)"
+fi
+if [ -n "${harness_prompt:-}" ]; then
+  omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit -p "$harness_prompt" || true
+else
+  echo "未能读取 Harness prompt，使用普通 OMP 启动。"
+  omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit || true
+fi
 echo
 echo "OMP 已退出，已回到普通 bash。重新启动可运行："
-echo "  omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit"
+echo "  harness_prompt=\$(curl -fsS http://ops-inspector:8080/vibe/harness-prompt)"
+echo "  omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit -p \"\$harness_prompt\""
 exec /bin/bash
