@@ -943,3 +943,11 @@ scripts/validate-vibe-regression.sh
 ```
 
 验收通过标记：`OK vibe regression`。
+
+## 2026-07-08 · P0/P1 二期：待办、Allowlist、联动入口
+
+- `/vibe/tasks`：任务审计支持“一键转待办”，生成脱敏待办摘要，不把 Grok 完整输出外发。
+- `/vibe/todos` / `/vibe/todos.json`：新增 AI Ops 待办列表，用于后续接工单/周报。
+- `/vibe/assets` / `/vibe/allowlist.json`：展示项目文件级 allowlist；真实项目仍为 `placeholder_only`，禁止目录级同步整仓。
+- `/vibe/`：新增“AI 待办”入口和“触发手动巡检”按钮；内部调用 `ops-inspector` 生成飞书巡检摘要。
+- 回归脚本扩展覆盖：任务审计、待办创建、资产 allowlist、只读挂载、发送给 Grok 主按钮。

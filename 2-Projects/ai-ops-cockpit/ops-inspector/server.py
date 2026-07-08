@@ -36,6 +36,7 @@ READ_TOKEN = os.environ.get("OPS_READ_TOKEN") or ACTION_TOKEN
 ACTION_HEADER = "x-aiops-action-token"
 READ_HEADER = "x-aiops-read-token"
 TASKS_DIR = os.path.join(STATE_DIR, "vibe-tasks")
+TODOS_DIR = os.path.join(STATE_DIR, "vibe-todos")
 CONVERSATIONS_DIR = os.path.join(STATE_DIR, "vibe-conversations")
 READONLY_STATE_FILE = os.path.join(STATE_DIR, "readonly-refresh.json")
 WORKSPACE_ROOT = os.environ.get("WORKSPACE_ROOT", "/workspace/projects")
@@ -45,6 +46,31 @@ TASK_STATE = {"last_run": 0}
 TASK_COOLDOWN_SECONDS = int(os.environ.get("TASK_COOLDOWN_SECONDS", "20"))
 ASSETS_CACHE_TTL_SECONDS = int(os.environ.get("ASSETS_CACHE_TTL_SECONDS", "20"))
 READONLY_REFRESH_LOCK = threading.Lock()
+PROJECT_ALLOWLIST = {
+    "mycc": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "docs/rules/SCHEMA.md",
+        "docs/rules/CONTEXT-BUDGET.md",
+        "docs/rules/FEISHU-FALLBACK.md",
+        "2-Projects/ai-ops-cockpit/README.md",
+        "2-Projects/ai-ops-cockpit/compose.yaml",
+        "2-Projects/ai-ops-cockpit/caddy/Caddyfile",
+        "2-Projects/ai-ops-cockpit/ops-inspector/server.py",
+        "2-Projects/ai-ops-cockpit/scripts/validate-vibe-regression.sh",
+        "2-Projects/ai-ops-cockpit/scripts/sync-readonly-workspaces.sh",
+        "2-Projects/ai-ops-cockpit/scripts/install-readonly-refresh-cron.sh",
+        "2-Projects/ai-ops-cockpit/terminal/Dockerfile",
+        "2-Projects/ai-ops-cockpit/terminal/vibe-bashrc",
+        "2-Projects/ai-ops-cockpit/terminal/vibe-omp",
+        "2-Projects/ai-ops-cockpit/terminal/vibe-shell",
+    ],
+    "chenchuan-site": [],
+    "MyJavis": [],
+    "realtime-voice-agent": [],
+    "P003GameDemo20260513": [],
+}
 
 
 
@@ -662,6 +688,64 @@ def refresh_readonly_payload():
         READONLY_REFRESH_LOCK.release()
 
 
+def allowlist_payload():
+    return {
+        "policy": "真实项目默认占位；接入前必须文件级 allowlist，禁止目录级同步整仓。",
+        "projects": [
+            {"name": name, "fileCount": len(files), "status": "enabled" if files else "placeholder_only", "files": files}
+            for name, files in PROJECT_ALLOWLIST.items()
+        ],
+        "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+    }
+
+
+def n8n_manual_inspect_payload():
+    try:
+        report = build_report()
+        feishu = send_feishu(report, force=True)
+        return {"ok": True, "mode": "internal_inspect", "feishu": feishu, "summary": report.get("summary"), "generatedAt": report.get("generatedAt")}
+    except Exception as exc:
+        return {"ok": False, "error": sanitize_terminal_text(str(exc)), "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")}
+
+
+def todo_history(limit=50):
+    ensure_state_dir()
+    ensure_private_dir(TODOS_DIR)
+    items = []
+    for name in os.listdir(TODOS_DIR):
+        if not name.endswith(".json"):
+            continue
+        item = load_json_file(os.path.join(TODOS_DIR, name), None)
+        if item:
+            items.append(item)
+    return sorted(items, key=lambda item: item.get("createdAt", ""), reverse=True)[:limit]
+
+
+def create_todo_from_task(task_id):
+    task_id = (task_id or "").strip()
+    if not re.match(r"^[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$", task_id):
+        return {"ok": False, "error": "invalid task id"}
+    task = load_json_file(os.path.join(TASKS_DIR, task_id + ".json"), None)
+    if not task:
+        return {"ok": False, "error": "task not found"}
+    ensure_private_dir(TODOS_DIR)
+    todo_id = "todo-" + task_id
+    answer = task.get("answer") or ""
+    summary = " ".join(answer.strip().split())[:240] or "查看任务审计输出"
+    todo = {
+        "id": todo_id,
+        "taskId": task_id,
+        "status": "open",
+        "title": (task.get("question") or "Grok 任务待办")[:120],
+        "summary": summary,
+        "modeName": task.get("modeName"),
+        "createdAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "source": "/vibe/tasks",
+    }
+    save_json_file(os.path.join(TODOS_DIR, todo_id + ".json"), todo)
+    return {"ok": True, "todo": todo}
+
+
 def task_history(limit=20):
     ensure_state_dir()
     ensure_private_dir(TASKS_DIR)
@@ -736,7 +820,7 @@ def run_vibe_task(mode, question, conversation=None, notify=False):
 
 
 def render_vibe_tasks_page():
-    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Grok 任务审计 - AI Ops</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}button,select{{background:#2563eb;color:white;border:0;border-radius:10px;padding:8px 12px;margin:4px;cursor:pointer}}select{{background:#1f2937;border:1px solid #334155}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}tr.fail{{background:#3b1118}}tr.ok{{background:#0b1f16}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:360px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}.toolbar{{display:flex;gap:8px;align-items:center;flex-wrap:wrap}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>Grok 任务审计</h1><p class=\"muted\">只展示脱敏后的最近任务输入与输出；支持筛选、复制结果、失败高亮。</p><div class=\"toolbar\"><label>状态 <select id=\"statusFilter\"><option value=\"all\">全部</option><option value=\"ok\">成功</option><option value=\"fail\">失败</option></select></label><button id=\"reloadTasks\">刷新</button><span id=\"taskSummary\" class=\"muted\"></span></div><table><thead><tr><th>时间</th><th>模式</th><th>任务</th><th>状态</th><th>输出</th></tr></thead><tbody id=\"taskRows\"><tr><td colspan=5>加载中...</td></tr></tbody></table></section></main><script>
+    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Grok 任务审计 - AI Ops</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}button,select{{background:#2563eb;color:white;border:0;border-radius:10px;padding:8px 12px;margin:4px;cursor:pointer}}select{{background:#1f2937;border:1px solid #334155}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}tr.fail{{background:#3b1118}}tr.ok{{background:#0b1f16}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:360px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}.toolbar{{display:flex;gap:8px;align-items:center;flex-wrap:wrap}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>Grok 任务审计</h1><p class=\"muted\">只展示脱敏后的最近任务输入与输出；支持筛选、复制结果、失败高亮，可一键沉淀为待办。</p><div class=\"toolbar\"><label>状态 <select id=\"statusFilter\"><option value=\"all\">全部</option><option value=\"ok\">成功</option><option value=\"fail\">失败</option></select></label><button id=\"reloadTasks\">刷新</button><a href=\"/vibe/todos\">查看待办</a><span id=\"taskSummary\" class=\"muted\"></span></div><table><thead><tr><th>时间</th><th>模式</th><th>任务</th><th>状态</th><th>输出</th></tr></thead><tbody id=\"taskRows\"><tr><td colspan=5>加载中...</td></tr></tbody></table></section></main><script>
 const token = sessionStorage.getItem('aiopsReadToken') || '';
 let allTasks = [];
 function escapeHtml(value) {{ return String(value || '').replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
@@ -745,12 +829,17 @@ function renderTasks() {{
   const filter = document.getElementById('statusFilter').value;
   const tasks = allTasks.filter(item => filter === 'all' || (filter === 'ok' ? item.ok : !item.ok));
   document.getElementById('taskSummary').textContent = `共 ${{allTasks.length}} 条，当前显示 ${{tasks.length}} 条`;
-  body.innerHTML = tasks.map((item, index) => `<tr class="${{item.ok ? 'ok' : 'fail'}}"><td>${{escapeHtml(item.createdAt)}}</td><td>${{escapeHtml(item.modeName)}}</td><td>${{escapeHtml(item.question)}}</td><td>${{item.ok ? '✅ 成功' : '⚠️ 失败'}}</td><td><button data-copy-index="${{index}}">复制结果</button><details><summary>查看</summary><pre>${{escapeHtml(item.answer)}}</pre></details></td></tr>`).join('') || '<tr><td colspan=5>暂无任务</td></tr>';
+  body.innerHTML = tasks.map((item, index) => `<tr class="${{item.ok ? 'ok' : 'fail'}}"><td>${{escapeHtml(item.createdAt)}}</td><td>${{escapeHtml(item.modeName)}}</td><td>${{escapeHtml(item.question)}}</td><td>${{item.ok ? '✅ 成功' : '⚠️ 失败'}}</td><td><button data-copy-index="${{index}}">复制结果</button><button data-todo-id="${{escapeHtml(item.id)}}">转待办</button><details><summary>查看</summary><pre>${{escapeHtml(item.answer)}}</pre></details></td></tr>`).join('') || '<tr><td colspan=5>暂无任务</td></tr>';
   document.querySelectorAll('[data-copy-index]').forEach(button => button.addEventListener('click', async () => {{
     const item = tasks[Number(button.dataset.copyIndex)];
     await navigator.clipboard.writeText(item.answer || '');
     button.textContent = '已复制';
     setTimeout(() => button.textContent = '复制结果', 1200);
+  }}));
+  document.querySelectorAll('[data-todo-id]').forEach(button => button.addEventListener('click', async () => {{
+    const response = await fetch('/vibe/todos/create', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Read-Token': token }}, body: JSON.stringify({{ taskId: button.dataset.todoId }}) }});
+    const data = await response.json();
+    button.textContent = data.ok ? '已转待办' : '转待办失败';
   }}));
 }}
 async function loadTasks() {{
@@ -768,9 +857,29 @@ loadTasks();
 </script></body></html>"""
 
 
+def render_vibe_todos_page():
+    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>AI Ops 待办 - Vibe</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}button{{background:#2563eb;color:white;border:0;border-radius:10px;padding:8px 12px;margin:4px;cursor:pointer}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>AI Ops 待办</h1><p class=\"muted\">由 Grok 任务审计一键沉淀，默认只保存脱敏摘要和任务 ID；用于后续转工单/周报。</p><button id=\"reloadTodos\">刷新</button><span id=\"todoSummary\" class=\"muted\"></span><table><thead><tr><th>时间</th><th>状态</th><th>标题</th><th>摘要</th><th>来源</th></tr></thead><tbody id=\"todoRows\"><tr><td colspan=5>加载中...</td></tr></tbody></table></section></main><script>
+const token = sessionStorage.getItem('aiopsReadToken') || '';
+function escapeHtml(value) {{ return String(value || '').replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
+async function loadTodos() {{
+  const body = document.getElementById('todoRows');
+  if (!token) {{ body.innerHTML = '<tr><td colspan=5>请从 Vibe 工作台进入待办。</td></tr>'; return; }}
+  const response = await fetch('/vibe/todos.json', {{ credentials: 'same-origin', headers: {{ 'X-AIOps-Read-Token': token }} }});
+  if (!response.ok) {{ body.innerHTML = '<tr><td colspan=5>无权读取待办。</td></tr>'; return; }}
+  const data = await response.json();
+  const todos = data.todos || [];
+  document.getElementById('todoSummary').textContent = `共 ${{todos.length}} 条`;
+  body.innerHTML = todos.map(item => `<tr><td>${{escapeHtml(item.createdAt)}}</td><td>${{escapeHtml(item.status)}}</td><td>${{escapeHtml(item.title)}}</td><td>${{escapeHtml(item.summary)}}</td><td><code>${{escapeHtml(item.taskId)}}</code></td></tr>`).join('') || '<tr><td colspan=5>暂无待办</td></tr>';
+}}
+document.getElementById('reloadTodos').addEventListener('click', loadTodos);
+loadTodos();
+</script></body></html>"""
+
+
 def render_assets_page():
     matrix = assets_payload()
     workspaces = matrix
+    allowlist = allowlist_payload()
     server_rows = "".join(
         f"""<tr><td>{html.escape(item['name'])}</td><td>{html.escape(item['role'])}</td><td>{html.escape(str(item['status']))}</td><td>{html.escape(display_value(item.get('readinessScore')))}</td><td>{html.escape(str(item.get('risk')))}</td><td>{html.escape(display_value(item['containers']))}</td><td>{html.escape(display_value(item['maxDiskUsedPercent']))}</td><td>{html.escape(display_value(item['monitorsDown']))}</td></tr>"""
         for item in matrix["servers"]
@@ -779,12 +888,19 @@ def render_assets_page():
         f"""<tr><td>{html.escape(item['name'])}</td><td><code>{html.escape(item['path'])}</code></td><td>{html.escape(item['status'])}</td><td>{html.escape(display_value(item.get('readinessScore')))}</td><td>{html.escape(str(item.get('risk')))}</td><td><pre>{html.escape(item.get('details') or '')}</pre></td></tr>"""
         for item in workspaces["workspaces"]
     )
-    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>资产矩阵 - AI Ops</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}code{{background:#020617;padding:2px 6px;border-radius:6px}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:10px;max-height:160px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>服务器资产矩阵</h1><p class=\"muted\">就绪度为启发式运维信号，不代表项目业务质量；异常以 Kuma/日志/审计为准。</p><table><thead><tr><th>资产</th><th>角色</th><th>状态</th><th>就绪度</th><th>风险</th><th>容器</th><th>磁盘%</th><th>Down</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class=\"card\"><h1>项目工作区</h1><p class=\"muted\">当前只允许只读探测；未挂载项目保持待接入，避免 Grok 乱改真实项目。就绪度仅表示挂载/只读/git 状态。</p><table><thead><tr><th>项目</th><th>路径</th><th>状态</th><th>就绪度</th><th>风险</th><th>详情</th></tr></thead><tbody>{workspace_rows}</tbody></table></section></main></body></html>"""
+    allowlist_rows = "".join(
+        f"""<tr><td>{html.escape(item['name'])}</td><td>{html.escape(item['status'])}</td><td>{item['fileCount']}</td><td><pre>{html.escape(chr(10).join(item['files']) or '占位，未接入真实文件')}</pre></td></tr>"""
+        for item in allowlist["projects"]
+    )
+    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>资产矩阵 - AI Ops</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}code{{background:#020617;padding:2px 6px;border-radius:6px}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:10px;max-height:160px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>服务器资产矩阵</h1><p class=\"muted\">就绪度为启发式运维信号，不代表项目业务质量；异常以 Kuma/日志/审计为准。</p><table><thead><tr><th>资产</th><th>角色</th><th>状态</th><th>就绪度</th><th>风险</th><th>容器</th><th>磁盘%</th><th>Down</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class=\"card\"><h1>项目工作区</h1><p class=\"muted\">当前只允许只读探测；未挂载项目保持待接入，避免 Grok 乱改真实项目。就绪度仅表示挂载/只读/git 状态。</p><table><thead><tr><th>项目</th><th>路径</th><th>状态</th><th>就绪度</th><th>风险</th><th>详情</th></tr></thead><tbody>{workspace_rows}</tbody></table></section><section class="card"><h1>项目文件级 Allowlist</h1><p class="muted">真实项目默认只占位；接入前必须明确文件级 allowlist，禁止目录级同步整仓。</p><table><thead><tr><th>项目</th><th>状态</th><th>文件数</th><th>允许文件</th></tr></thead><tbody>{allowlist_rows}</tbody></table></section></main></body></html>"""
 
 
 def command_templates():
     return [
         {"label": "全局只读巡检", "prompt": "请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。"},
+        {"label": "Kuma 告警复盘", "prompt": "请只读分析 Uptime Kuma 当前 DOWN/UNKNOWN 监控，按影响、可能原因、下一步检查、是否需要飞书升级输出。"},
+        {"label": "n8n 巡检联动", "prompt": "请检查 n8n 手动巡检链路是否可用：只读查看 ops-inspector、Kuma、Netdata、飞书发送链路，并给出验收命令。"},
+        {"label": "项目接入评估", "prompt": "请针对一个待接入项目，先列文件级 allowlist 建议、secret 风险、只读验收命令；不要同步整仓。"},
         {"label": "查 Docker 问题", "prompt": "请检查 Docker 容器状态、最近异常日志，并给出不执行变更的排查计划。"},
         {"label": "部署前检查", "prompt": "请先检查 git diff、compose 配置、Caddy 路由和回滚点，确认是否可以部署。"},
         {"label": "回滚方案", "prompt": "请基于当前项目给出可执行回滚方案，包含备份、回滚命令、验证标准。"},
@@ -1187,7 +1303,7 @@ def render_vibe_page():
     status_class = "ok" if status["ok"] else "warn"
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vibe Coding - AI Ops</title><style>
 body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1240px;margin:0 auto;padding:28px}}.hero{{background:linear-gradient(135deg,#111827,#172554);border:1px solid #334155;border-radius:24px;padding:28px;margin-bottom:18px;box-shadow:0 24px 80px #0006}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin:4px 8px 4px 0}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:280px;overflow:auto}}.chat div{{border:1px solid #334155;border-radius:14px;padding:12px;margin:10px 0}}.chat .user{{background:#172554}}.chat .assistant{{background:#111827}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}.terminal{{height:58vh;border:1px solid #334155;border-radius:18px;overflow:hidden;background:#020617}}iframe{{border:0;width:100%;height:100%}}.pill{{display:inline-block;border:1px solid #334155;border-radius:999px;padding:6px 10px;margin:4px;background:#0b1220}}
-</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 Grok 版 OMP；真实项目接入前先固定规则、记忆、BRO-PDCA、工作流和权限边界。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">默认只读</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/assets">资产矩阵</a><button id="refreshReadonlyBtn">刷新只读快照</button></p><pre id="actionResult">等待操作。</pre><p class="muted" id="readonlyStatus">只读快照：检查中...</p></section><section class="card"><h2>连续对话</h2><p class="muted">保留本页上下文继续问 Grok；刷新页面会清空上下文。</p><div id="chatHistory" class="chat"><p class="muted">暂无对话。</p></div></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送只读任务。默认禁用工具调用；留空会自动执行默认只读巡检。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><label><input id="notifyFeishu" type="checkbox"> 完成后飞书通知</label></p><p><button id="sendTaskBtn">发送给 Grok</button><button id="clearTaskBtn" type="button">清空重写</button><button id="clearChatBtn" type="button">清空对话</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><p class="muted" id="taskStatus">状态：待发送</p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness prompt 并启动 <code>omp --model xai-oauth/grok-4.3</code>。默认只读；写入/部署必须先确认。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
+</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 Grok 版 OMP；真实项目接入前先固定规则、记忆、BRO-PDCA、工作流和权限边界。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">默认只读</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/todos" data-token-link="true">AI 待办</a><a class="btn" href="/vibe/assets">资产矩阵</a><button id="refreshReadonlyBtn">刷新只读快照</button><button id="runN8nInspectBtn">触发手动巡检</button></p><pre id="actionResult">等待操作。</pre><p class="muted" id="readonlyStatus">只读快照：检查中...</p></section><section class="card"><h2>连续对话</h2><p class="muted">保留本页上下文继续问 Grok；刷新页面会清空上下文。</p><div id="chatHistory" class="chat"><p class="muted">暂无对话。</p></div></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送只读任务。默认禁用工具调用；留空会自动执行默认只读巡检。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><label><input id="notifyFeishu" type="checkbox"> 完成后飞书通知</label></p><p><button id="sendTaskBtn">发送给 Grok</button><button id="clearTaskBtn" type="button">清空重写</button><button id="clearChatBtn" type="button">清空对话</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><p class="muted" id="taskStatus">状态：待发送</p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness prompt 并启动 <code>omp --model xai-oauth/grok-4.3</code>。默认只读；写入/部署必须先确认。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
 document.querySelectorAll('[data-copy]').forEach((button) => {{
   button.addEventListener('click', async () => {{
     await navigator.clipboard.writeText(button.dataset.copy);
@@ -1255,6 +1371,13 @@ async function loadReadonlyStatus() {{
   const data = await response.json();
   document.getElementById('readonlyStatus').textContent = `只读快照：${{data.mounted ? '已挂载' : '未就绪'}}，最后刷新：${{data.refreshedAt || data.mountedAt || '未知'}}`;
 }}
+document.getElementById('runN8nInspectBtn').addEventListener('click', async () => {{
+  const result = document.getElementById('actionResult');
+  result.textContent = '正在触发内部手动巡检...';
+  const response = await fetch('/vibe/action/n8n-inspect', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'X-AIOps-Read-Token': '{READ_TOKEN}' }} }});
+  const data = await response.json();
+  result.textContent = JSON.stringify(data, null, 2);
+}});
 document.getElementById('refreshReadonlyBtn').addEventListener('click', async () => {{
   const result = document.getElementById('actionResult');
   result.textContent = '正在刷新只读快照...';
@@ -1356,6 +1479,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, assets_payload())
             elif path == "/vibe/readonly-refresh.json":
                 self._send_json(200, readonly_refresh_status())
+            elif path == "/vibe/allowlist.json":
+                self._send_json(200, allowlist_payload())
             elif path in ("/vibe/assets", "/vibe/assets/"):
                 self._send_text(200, render_assets_page(), "text/html; charset=utf-8")
             elif path == "/vibe/tasks.json":
@@ -1365,6 +1490,13 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, {"tasks": task_history(50)})
             elif path in ("/vibe/tasks", "/vibe/tasks/"):
                 self._send_text(200, render_vibe_tasks_page(), "text/html; charset=utf-8")
+            elif path == "/vibe/todos.json":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                self._send_json(200, {"todos": todo_history(100)})
+            elif path in ("/vibe/todos", "/vibe/todos/"):
+                self._send_text(200, render_vibe_todos_page(), "text/html; charset=utf-8")
             elif path in ("/vibe", "/vibe/"):
                 self._send_text(200, render_vibe_page(), "text/html; charset=utf-8")
             elif path.startswith("/ops-app/"):
@@ -1416,6 +1548,17 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json(403, {"ok": False, "error": "read token required"})
                     return
                 self._send_json(200, refresh_readonly_payload())
+            elif path == "/vibe/action/n8n-inspect":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                self._send_json(200, n8n_manual_inspect_payload())
+            elif path == "/vibe/todos/create":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                payload = self._read_json_body()
+                self._send_json(200, create_todo_from_task(payload.get("taskId")))
             else:
                 self._send_json(404, {"ok": False, "error": "not found"})
         except Exception as exc:
