@@ -100,6 +100,15 @@
         "cd /Users/rayman.chen/mycc/2-Projects/MyJavis/apps/web && VITE_API_BASE=http://127.0.0.1:3002 VITE_JAVIS_API_KEY=preview-admin VITE_NO_HTTPS=1 pnpm dev --port 5179 --strictPort"
       ],
       "port": 5179
+    },
+    {
+      "name": "myjavis-web-r35",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/rayman.chen/mycc/2-Projects/MyJavis-r35/apps/web && VITE_API_BASE=http://127.0.0.1:3290 VITE_JAVIS_API_KEY=preview-admin VITE_NO_HTTPS=1 pnpm dev --port 5180 --strictPort"
+      ],
+      "port": 5180
     }
   ]
 }
