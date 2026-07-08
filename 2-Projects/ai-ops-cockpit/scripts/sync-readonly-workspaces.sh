@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="${AI_OPS_ROOT:-/opt/ai-ops-cockpit}"
-SRC_ROOT="${AI_OPS_READONLY_SRC:-/opt/ai-ops-readonly-src}"
+SRC_ROOT="${AI_OPS_READONLY_SRC:-/opt/ai-ops-workspaces}"
 DEST_ROOT="$ROOT/readonly"
 mkdir -p "$SRC_ROOT" "$DEST_ROOT"
 
@@ -91,6 +91,28 @@ copy_mycc_minimal() {
   make_readonly "$dest"
 }
 
+copy_allowlist_snapshot() {
+  local name="$1"
+  local source="$2"
+  shift 2
+  local dest="$DEST_ROOT/$name"
+  if [ ! -d "$source" ]; then
+    create_project_placeholder "$name"
+    return
+  fi
+  mkdir -p "$dest"
+  chmod -R u+w "$dest" 2>/dev/null || true
+  rm -rf "$dest"/*
+  for path in "$@"; do
+    if [ -f "$source/$path" ]; then
+      mkdir -p "$dest/$(dirname -- "$path")"
+      cp "$source/$path" "$dest/$path"
+    fi
+  done
+  purge_sensitive_paths "$dest"
+  make_readonly "$dest"
+}
+
 if [ -d "$ROOT/2-Projects/ai-ops-cockpit" ]; then
   copy_mycc_minimal
 elif [ -f "$DEST_ROOT/mycc/AGENTS.md" ]; then
@@ -106,7 +128,17 @@ EOF
 fi
 
 create_project_placeholder chenchuan-site
-create_project_placeholder MyJavis
+copy_allowlist_snapshot MyJavis "$SRC_ROOT/MyJavis" \
+  README.md \
+  HANDOFF.md \
+  package.json \
+  pnpm-workspace.yaml \
+  apps/server/package.json \
+  apps/server/tsconfig.json \
+  apps/web/package.json \
+  apps/web/tsconfig.json \
+  apps/web/vite.config.ts \
+  apps/web/index.html
 create_project_placeholder realtime-voice-agent
 create_project_placeholder P003GameDemo20260513
 

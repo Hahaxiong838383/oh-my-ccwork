@@ -951,3 +951,10 @@ scripts/validate-vibe-regression.sh
 - `/vibe/assets` / `/vibe/allowlist.json`：展示项目文件级 allowlist；真实项目仍为 `placeholder_only`，禁止目录级同步整仓。
 - `/vibe/`：新增“AI 待办”入口和“触发手动巡检”按钮；内部调用 `ops-inspector` 生成飞书巡检摘要。
 - 回归脚本扩展覆盖：任务审计、待办创建、资产 allowlist、只读挂载、发送给 Grok 主按钮。
+
+## 2026-07-08 · P0 三件套：MyJavis 接入、待办流转、待办联动
+
+- `MyJavis` 只读快照首批接入文件级 allowlist，仅同步 README、HANDOFF、package/tsconfig/vite/index 等安全文件；`.env`、`.env.local`、数据库、密钥和整仓内容仍禁止暴露。
+- `/vibe/todos` 待办支持 `open → doing → done` 状态流转，并支持单条待办“发飞书”和“巡检”。
+- 待办飞书只发送待办 ID、状态、模式和入口，不外发标题、摘要、Grok 输出或用户问题；待办巡检只触发内部巡检摘要。
+- 回归脚本扩展覆盖：MyJavis allowlist 已启用、待办状态更新、待办巡检、Grok 主按钮不回归。

@@ -67,7 +67,18 @@ PROJECT_ALLOWLIST = {
         "2-Projects/ai-ops-cockpit/terminal/vibe-shell",
     ],
     "chenchuan-site": [],
-    "MyJavis": [],
+    "MyJavis": [
+        "README.md",
+        "HANDOFF.md",
+        "package.json",
+        "pnpm-workspace.yaml",
+        "apps/server/package.json",
+        "apps/server/tsconfig.json",
+        "apps/web/package.json",
+        "apps/web/tsconfig.json",
+        "apps/web/vite.config.ts",
+        "apps/web/index.html",
+    ],
     "realtime-voice-agent": [],
     "P003GameDemo20260513": [],
 }
@@ -746,6 +757,52 @@ def create_todo_from_task(task_id):
     return {"ok": True, "todo": todo}
 
 
+def update_todo_status(todo_id, status):
+    todo_id = (todo_id or "").strip()
+    status = (status or "").strip()
+    if status not in {"open", "doing", "done"}:
+        return {"ok": False, "error": "invalid status"}
+    if not re.match(r"^todo-[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$", todo_id):
+        return {"ok": False, "error": "invalid todo id"}
+    path = os.path.join(TODOS_DIR, todo_id + ".json")
+    todo = load_json_file(path, None)
+    if not todo:
+        return {"ok": False, "error": "todo not found"}
+    todo["status"] = status
+    todo["updatedAt"] = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+    save_json_file(path, todo)
+    return {"ok": True, "todo": todo}
+
+
+def notify_todo(todo_id):
+    todo_id = (todo_id or "").strip()
+    if not re.match(r"^todo-[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$", todo_id):
+        return {"ok": False, "error": "invalid todo id"}
+    todo = load_json_file(os.path.join(TODOS_DIR, todo_id + ".json"), None)
+    if not todo:
+        return {"ok": False, "error": "todo not found"}
+    text = "AI Ops 待办提醒\n" + f"待办ID：{todo['id']}\n状态：{todo.get('status')}\n模式：{todo.get('modeName') or '-'}\n入口：请在 /vibe/todos 查看脱敏详情。"
+    try:
+        result = send_feishu_text(text)
+        todo["lastNotifiedAt"] = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+        save_json_file(os.path.join(TODOS_DIR, todo_id + ".json"), todo)
+        return {"ok": True, "feishu": result, "todoId": todo_id}
+    except Exception as exc:
+        return {"ok": False, "error": sanitize_terminal_text(str(exc))}
+
+
+def inspect_for_todo(todo_id):
+    todo_id = (todo_id or "").strip()
+    if not re.match(r"^todo-[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$", todo_id):
+        return {"ok": False, "error": "invalid todo id"}
+    if not load_json_file(os.path.join(TODOS_DIR, todo_id + ".json"), None):
+        return {"ok": False, "error": "todo not found"}
+    result = n8n_manual_inspect_payload()
+    result["todoId"] = todo_id
+    result["note"] = "已基于待办触发内部巡检；未外发待办标题、摘要或 Grok 输出。"
+    return result
+
+
 def task_history(limit=20):
     ensure_state_dir()
     ensure_private_dir(TASKS_DIR)
@@ -869,7 +926,21 @@ async function loadTodos() {{
   const data = await response.json();
   const todos = data.todos || [];
   document.getElementById('todoSummary').textContent = `共 ${{todos.length}} 条`;
-  body.innerHTML = todos.map(item => `<tr><td>${{escapeHtml(item.createdAt)}}</td><td>${{escapeHtml(item.status)}}</td><td>${{escapeHtml(item.title)}}</td><td>${{escapeHtml(item.summary)}}</td><td><code>${{escapeHtml(item.taskId)}}</code></td></tr>`).join('') || '<tr><td colspan=5>暂无待办</td></tr>';
+  body.innerHTML = todos.map(item => `<tr><td>${{escapeHtml(item.createdAt)}}</td><td><select data-status-id="${{escapeHtml(item.id)}}"><option value="open" ${{item.status === 'open' ? 'selected' : ''}}>open</option><option value="doing" ${{item.status === 'doing' ? 'selected' : ''}}>doing</option><option value="done" ${{item.status === 'done' ? 'selected' : ''}}>done</option></select></td><td>${{escapeHtml(item.title)}}</td><td>${{escapeHtml(item.summary)}}</td><td><code>${{escapeHtml(item.taskId)}}</code><br><button data-notify-id="${{escapeHtml(item.id)}}">发飞书</button><button data-inspect-id="${{escapeHtml(item.id)}}">巡检</button></td></tr>`).join('') || '<tr><td colspan=5>暂无待办</td></tr>';
+  document.querySelectorAll('[data-status-id]').forEach(select => select.addEventListener('change', async () => {{
+    const response = await fetch('/vibe/todos/update', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Read-Token': token }}, body: JSON.stringify({{ todoId: select.dataset.statusId, status: select.value }}) }});
+    if (!response.ok) select.value = 'open';
+  }}));
+  document.querySelectorAll('[data-notify-id]').forEach(button => button.addEventListener('click', async () => {{
+    const response = await fetch('/vibe/todos/notify', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Read-Token': token }}, body: JSON.stringify({{ todoId: button.dataset.notifyId }}) }});
+    const data = await response.json();
+    button.textContent = data.ok ? '已发飞书' : '发送失败';
+  }}));
+  document.querySelectorAll('[data-inspect-id]').forEach(button => button.addEventListener('click', async () => {{
+    const response = await fetch('/vibe/todos/inspect', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Read-Token': token }}, body: JSON.stringify({{ todoId: button.dataset.inspectId }}) }});
+    const data = await response.json();
+    button.textContent = data.ok ? '已巡检' : '巡检失败';
+  }}));
 }}
 document.getElementById('reloadTodos').addEventListener('click', loadTodos);
 loadTodos();
@@ -1559,6 +1630,24 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 payload = self._read_json_body()
                 self._send_json(200, create_todo_from_task(payload.get("taskId")))
+            elif path == "/vibe/todos/update":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                payload = self._read_json_body()
+                self._send_json(200, update_todo_status(payload.get("todoId"), payload.get("status")))
+            elif path == "/vibe/todos/notify":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                payload = self._read_json_body()
+                self._send_json(200, notify_todo(payload.get("todoId")))
+            elif path == "/vibe/todos/inspect":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                payload = self._read_json_body()
+                self._send_json(200, inspect_for_todo(payload.get("todoId")))
             else:
                 self._send_json(404, {"ok": False, "error": "not found"})
         except Exception as exc:
