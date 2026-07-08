@@ -35,7 +35,6 @@ ACTION_TOKEN = os.environ.get("OPS_ACTION_TOKEN") or secrets.token_urlsafe(24)
 READ_TOKEN = os.environ.get("OPS_READ_TOKEN") or ACTION_TOKEN
 ACTION_HEADER = "x-aiops-action-token"
 READ_HEADER = "x-aiops-read-token"
-READ_HEADER = "x-aiops-read-token"
 TASKS_DIR = os.path.join(STATE_DIR, "vibe-tasks")
 WORKSPACE_ROOT = os.environ.get("WORKSPACE_ROOT", "/workspace/projects")
 READONLY_ROOT = os.environ.get("READONLY_ROOT", "/workspace/readonly")

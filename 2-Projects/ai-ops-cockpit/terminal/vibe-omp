@@ -33,13 +33,22 @@ if command -v curl >/dev/null 2>&1; then
   harness_prompt="$(curl -fsS --max-time 5 http://ops-inspector:8080/vibe/harness-prompt || true)"
 fi
 if [ -n "${harness_prompt:-}" ]; then
-  omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit -p "$harness_prompt" || true
+  mkdir -p /tmp/aiops
+  printf '%s\n' "$harness_prompt" > /tmp/aiops/harness-prompt.md
+  cat <<'READY'
+Harness 已加载到 /tmp/aiops/harness-prompt.md。
+现在启动常驻 OMP 交互模式；请把任务直接输入到 OMP 中。
+如果需要查看完整 Harness，可在 OMP 里让它读取该文件。
+
+READY
+  omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit || true
 else
   echo "未能读取 Harness prompt，使用普通 OMP 启动。"
   omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit || true
 fi
 echo
 echo "OMP 已退出，已回到普通 bash。重新启动可运行："
-echo "  harness_prompt=\$(curl -fsS http://ops-inspector:8080/vibe/harness-prompt)"
-echo "  omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit -p \"\$harness_prompt\""
+echo "  /usr/local/bin/vibe-omp"
+echo "或："
+echo "  omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit"
 exec /bin/bash
