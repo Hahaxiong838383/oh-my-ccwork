@@ -1,0 +1,17 @@
+# AI Ops terminal guardrails. Sourced only by interactive bash.
+aiops_guard_command() {
+  local cmd="$BASH_COMMAND"
+  case "$cmd" in
+    *"rm -rf"*|*"docker compose down"*|*"docker rm"*|*"docker volume rm"*|*"ufw "*|*"iptables"*|*"mkfs"*|*"drop database"*|*"truncate table"*|*"reboot"*|*"shutdown"*)
+      echo
+      echo "⚠️  AI Ops 护栏：检测到高危命令：$cmd"
+      echo "请先让 OMP/Codex 说明风险、备份点、回滚方式和验收命令。"
+      read -r -p "确认继续执行？输入 YES 继续：" aiops_confirm
+      if [ "$aiops_confirm" != "YES" ]; then
+        echo "已取消。"
+        return 1
+      fi
+      ;;
+  esac
+}
+trap 'aiops_guard_command' DEBUG

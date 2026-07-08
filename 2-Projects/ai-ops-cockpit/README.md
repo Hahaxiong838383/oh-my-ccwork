@@ -776,3 +776,26 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && docker compose up -d --build ops-inspect
 - Caddy 多路径 `handle /terminal /terminal/*` 语法不兼容；最终使用 `@terminal { path /terminal* }` + `handle @terminal`，保留 `/terminal/` 原路径给 ttyd。
 - `handle_path /terminal*` 会剥掉 `/terminal` 前缀，ttyd 以 `--base-path /terminal` 启动时会返回 404；不能用 `handle_path`。
 - Docker socket 组权限要匹配宿主 `/var/run/docker.sock` 的 GID；容器里新增 `hostdocker` 组后，`ops` 才能访问 Docker API。
+
+
+## 2026-07-08 · P0/P1 Vibe Coding 收尾增强
+
+目标：在现有 `/vibe/` 和 `/terminal/` 基础上，补齐终端会话管理、审计看板、OMP 健康检查、项目/服务器入口、任务模板与高危命令软护栏。
+
+### 本轮新增
+
+- `/vibe/status.json`：输出 `ops-terminal`、OMP 登录/设置状态、最近终端 session 日志和护栏关键词。
+- `/vibe/action/restart-terminal`：从网页触发 `docker restart ops-terminal`，用于终端卡住时自助恢复。
+- `/vibe/`：新增服务器入口、AI 任务模板、审计日志预览、终端/OMP 健康状态、重启终端按钮。
+- 项目入口扩展：AI Ops、mycc、个人站、MyJavis、Voice Agent、P003、Remote Stacks、Scratchpad。
+- 终端软护栏：交互式 bash 命中 `rm -rf`、`docker compose down`、`docker rm`、`docker volume rm`、`ufw`、`iptables`、`mkfs`、删库、重启/关机等关键词时要求输入 `YES` 才继续。
+
+### 验收标准
+
+| 项 | 标准 |
+|---|---|
+| `/vibe/` | 可见 `服务器入口`、`AI 任务模板`、`审计日志`、`重启终端容器` |
+| `/vibe/status.json` | 返回 `ok=true`，含 `terminal`、`omp`、`sessions` |
+| `/vibe/action/restart-terminal` | 返回 JSON，`ok=true`，且 `ops-terminal` 仍 running |
+| 终端 | 打开后自动进 Grok OMP，退出后回 bash |
+| 护栏 | 普通 bash 中高危命令会要求 `YES` 确认 |

@@ -83,6 +83,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./kuma/data/kuma.db:/kuma/kuma.db:ro
+      - ./terminal/logs:/terminal-logs:ro
     depends_on:
       - uptime-kuma
       - netdata

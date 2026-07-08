@@ -40,7 +40,10 @@ RUN curl -fsSL https://bun.sh/install | bash \
 
 COPY vibe-shell /usr/local/bin/vibe-shell
 COPY vibe-omp /usr/local/bin/vibe-omp
-RUN chmod +x /usr/local/bin/vibe-shell /usr/local/bin/vibe-omp
+COPY vibe-bashrc /etc/aiops-vibe-bashrc
+RUN chmod +x /usr/local/bin/vibe-shell /usr/local/bin/vibe-omp \
+    && echo 'if [ -f /etc/aiops-vibe-bashrc ]; then . /etc/aiops-vibe-bashrc; fi' >> /home/ops/.bashrc \
+    && chown ops:ops /home/ops/.bashrc
 
 USER ops
 WORKDIR /workspace
