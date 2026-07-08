@@ -3,16 +3,18 @@ import json
 import os
 import re
 import secrets
+import shlex
 import shutil
 import sqlite3
 import subprocess
 import threading
 import time
+import copy
 import traceback
 import urllib.request
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 KUMA_DB = os.environ.get("KUMA_DB", "/kuma/kuma.db")
 NETDATA = os.environ.get("NETDATA_URL", "http://netdata:19999")
@@ -23,17 +25,28 @@ DAILY_STATE_FILE = os.path.join(STATE_DIR, "daily-state.json")
 SNAPSHOT_FILE = os.path.join(STATE_DIR, "last-report.json")
 CACHE_TTL_SECONDS = int(os.environ.get("CACHE_TTL_SECONDS", "15"))
 REPORT_CACHE = {"ts": 0, "data": None}
+ASSETS_CACHE = {"ts": 0, "data": None}
 TERMINAL_LOG_DIR = os.environ.get("TERMINAL_LOG_DIR", "/terminal-logs")
 DANGEROUS_PATTERNS = ["rm -rf", "docker compose down", "docker rm", "docker volume rm", "ufw ", "iptables", "mkfs", "drop database", "truncate table", ":(){", "reboot", "shutdown"]
 TERMINAL_ACTION_LOCK = threading.Lock()
 TERMINAL_ACTION_STATE = {"last_restart": 0}
 TERMINAL_RESTART_COOLDOWN_SECONDS = int(os.environ.get("TERMINAL_RESTART_COOLDOWN_SECONDS", "30"))
 ACTION_TOKEN = os.environ.get("OPS_ACTION_TOKEN") or secrets.token_urlsafe(24)
+TASKS_DIR = os.path.join(STATE_DIR, "vibe-tasks")
+WORKSPACE_ROOT = os.environ.get("WORKSPACE_ROOT", "/workspace/projects")
+TASK_LOCK = threading.Lock()
+TASK_STATE = {"last_run": 0}
+TASK_COOLDOWN_SECONDS = int(os.environ.get("TASK_COOLDOWN_SECONDS", "20"))
+ASSETS_CACHE_TTL_SECONDS = int(os.environ.get("ASSETS_CACHE_TTL_SECONDS", "20"))
 
 
 
 def run(cmd):
     return subprocess.check_output(cmd, text=True, timeout=10).strip()
+
+
+def run_quiet(cmd, timeout=10):
+    return subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT, timeout=timeout).strip()
 
 
 def docker_ps():
@@ -110,6 +123,14 @@ def disk_summary():
 
 def ensure_state_dir():
     os.makedirs(STATE_DIR, exist_ok=True)
+
+
+def ensure_private_dir(path):
+    os.makedirs(path, mode=0o700, exist_ok=True)
+    try:
+        os.chmod(path, 0o700)
+    except OSError:
+        pass
 
 
 def load_json_file(path, default):
@@ -508,6 +529,161 @@ def terminal_action_payload(action):
         return {"ok": False, "action": action, "error": str(exc)}
 
 
+def workspace_status_payload():
+    items = []
+    for project in workspace_payload()["projects"]:
+        path = project["path"]
+        exists = False
+        git = False
+        status = "not_mounted"
+        details = ""
+        if path.startswith(WORKSPACE_ROOT):
+            try:
+                quoted_path = shlex.quote(path)
+                output = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", f"test -d {quoted_path} && echo exists || true; test -d {quoted_path}/.git && echo git || true"], timeout=6)
+                exists = "exists" in output.splitlines()
+                git = "git" in output.splitlines()
+                if exists and git:
+                    status = "ready_readonly"
+                    details = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", f"cd {quoted_path} && git status --short --branch | head -n 12"], timeout=8)
+                elif exists:
+                    status = "mounted_no_git"
+                details = sanitize_terminal_text(details)
+            except Exception as exc:
+                status = "error"
+                details = str(exc)
+        items.append({**project, "exists": exists, "git": git, "status": status, "details": details})
+    return {"workspaces": items, "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")}
+
+
+def servers_matrix_payload():
+    report = build_report()
+    docker = report.get("containers", [])
+    disks = report.get("disk", {}).get("mounts", [])
+    monitors = [item for item in report.get("monitors", []) if item.get("active")]
+    racknerd = {
+        "name": "RackNerd",
+        "role": "AI Ops 当前宿主",
+        "status": "UP" if report.get("ok") else "WARN",
+        "containers": len(docker),
+        "unhealthy": len([item for item in docker if "Up" not in item.get("status", "")]),
+        "maxDiskUsedPercent": max([item.get("usedPercent") or 0 for item in disks] or [None]),
+        "monitorsDown": len([item for item in monitors if item.get("status") != 1]),
+        "lastChecked": report.get("generatedAt"),
+    }
+    planned = [
+        {"name": "阿里云", "role": "待接 SSH 只读巡检", "status": "待接入", "containers": None, "unhealthy": None, "maxDiskUsedPercent": None, "monitorsDown": None, "lastChecked": None},
+        {"name": "Mini", "role": "家庭编排中枢，待接入", "status": "待接入", "containers": None, "unhealthy": None, "maxDiskUsedPercent": None, "monitorsDown": None, "lastChecked": None},
+        {"name": "NAS", "role": "fnOS/NAS，待接入", "status": "待接入", "containers": None, "unhealthy": None, "maxDiskUsedPercent": None, "monitorsDown": None, "lastChecked": None},
+    ]
+    return {"servers": [racknerd] + planned, "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")}
+
+
+def assets_payload(force=False):
+    now = time.time()
+    if not force and ASSETS_CACHE["data"] is not None and now - ASSETS_CACHE["ts"] < ASSETS_CACHE_TTL_SECONDS:
+        cached = copy.deepcopy(ASSETS_CACHE["data"])
+        cached["cache"] = {"hit": True, "source": "memory", "ageSeconds": round(now - ASSETS_CACHE["ts"], 2), "ttlSeconds": ASSETS_CACHE_TTL_SECONDS}
+        return cached
+    data = {**servers_matrix_payload(), **workspace_status_payload()}
+    data["cache"] = {"hit": False, "source": "live", "ageSeconds": 0, "ttlSeconds": ASSETS_CACHE_TTL_SECONDS}
+    ASSETS_CACHE["ts"] = now
+    ASSETS_CACHE["data"] = copy.deepcopy(data)
+    return copy.deepcopy(data)
+
+
+def task_history(limit=20):
+    ensure_state_dir()
+    ensure_private_dir(TASKS_DIR)
+    items = []
+    for name in os.listdir(TASKS_DIR):
+        if not name.endswith(".json"):
+            continue
+        path = os.path.join(TASKS_DIR, name)
+        item = load_json_file(path, None)
+        if item:
+            items.append(item)
+    return sorted(items, key=lambda item: item.get("createdAt", ""), reverse=True)[:limit]
+
+
+def run_vibe_task(mode, question):
+    mode = (mode or "readonly_inspect").strip()
+    question = (question or "").strip()
+    workflows = {item["id"]: item for item in harness_payload()["workflows"]}
+    workflow = workflows.get(mode) or workflows["readonly_inspect"]
+    if not question:
+        return {"ok": False, "error": "empty question"}
+    if len(question) > 1600:
+        return {"ok": False, "error": "question too long"}
+    if not TASK_LOCK.acquire(blocking=False):
+        return {"ok": False, "error": "task already running"}
+    created = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+    task_id = time.strftime("%Y%m%d-%H%M%S") + "-" + secrets.token_hex(3)
+    started = time.time()
+    try:
+        now = time.time()
+        elapsed = now - TASK_STATE["last_run"]
+        if elapsed < TASK_COOLDOWN_SECONDS:
+            return {"ok": False, "error": "cooldown", "retryAfterSeconds": round(TASK_COOLDOWN_SECONDS - elapsed)}
+        prompt = harness_prompt() + "\n\n当前工作模式：" + workflow["prompt"] + "\n\n川哥发来的任务：" + question
+        shell = 'cat > /tmp/aiops-task-prompt.txt && timeout 120 omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit --no-tools -p "$(cat /tmp/aiops-task-prompt.txt)"'
+        try:
+            output = subprocess.check_output(["docker", "exec", "-i", "ops-terminal", "bash", "-lc", shell], input=prompt, text=True, stderr=subprocess.STDOUT, timeout=150)
+            ok = True
+        except subprocess.CalledProcessError as exc:
+            output = exc.output
+            ok = False
+        except Exception as exc:
+            output = str(exc)
+            ok = False
+        item = {
+            "id": task_id,
+            "ok": ok,
+            "mode": workflow["id"],
+            "modeName": workflow["name"],
+            "question": redact_sensitive_text(question),
+            "answer": redact_sensitive_text(sanitize_terminal_text(output))[-6000:],
+            "createdAt": created,
+            "durationMs": round((time.time() - started) * 1000),
+        }
+        ensure_private_dir(TASKS_DIR)
+        save_json_file(os.path.join(TASKS_DIR, task_id + ".json"), item)
+        TASK_STATE["last_run"] = time.time()
+        return item
+    finally:
+        TASK_LOCK.release()
+
+
+def render_vibe_tasks_page():
+    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Grok 任务审计 - AI Ops</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:360px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>Grok 任务审计</h1><p class=\"muted\">只展示脱敏后的最近任务输入与输出；数据通过同源 header 鉴权加载，不把 action token 放进 URL。</p><table><thead><tr><th>时间</th><th>模式</th><th>任务</th><th>状态</th><th>输出</th></tr></thead><tbody id=\"taskRows\"><tr><td colspan=5>加载中...</td></tr></tbody></table></section></main><script>
+const token = sessionStorage.getItem('aiopsActionToken') || '';
+function escapeHtml(value) {{ return String(value || '').replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
+async function loadTasks() {{
+  const body = document.getElementById('taskRows');
+  if (!token) {{ body.innerHTML = '<tr><td colspan=5>请从 Vibe 工作台入口进入任务审计。</td></tr>'; return; }}
+  const response = await fetch('/vibe/tasks.json', {{ credentials: 'same-origin', headers: {{ 'X-AIOps-Action-Token': token }} }});
+  if (!response.ok) {{ body.innerHTML = '<tr><td colspan=5>无权读取任务审计。</td></tr>'; return; }}
+  const data = await response.json();
+  body.innerHTML = (data.tasks || []).map(item => `<tr><td>${{escapeHtml(item.createdAt)}}</td><td>${{escapeHtml(item.modeName)}}</td><td>${{escapeHtml(item.question)}}</td><td>${{item.ok ? '✅' : '⚠️'}}</td><td><details><summary>查看</summary><pre>${{escapeHtml(item.answer)}}</pre></details></td></tr>`).join('') || '<tr><td colspan=5>暂无任务</td></tr>';
+}}
+loadTasks();
+</script></body></html>"""
+
+
+def render_assets_page():
+    matrix = assets_payload()
+    workspaces = matrix
+    server_rows = "".join(
+        f"""<tr><td>{html.escape(item['name'])}</td><td>{html.escape(item['role'])}</td><td>{html.escape(str(item['status']))}</td><td>{html.escape(str(item['containers']))}</td><td>{html.escape(str(item['maxDiskUsedPercent']))}</td><td>{html.escape(str(item['monitorsDown']))}</td></tr>"""
+        for item in matrix["servers"]
+    )
+    workspace_rows = "".join(
+        f"""<tr><td>{html.escape(item['name'])}</td><td><code>{html.escape(item['path'])}</code></td><td>{html.escape(item['status'])}</td><td><pre>{html.escape(item.get('details') or '')}</pre></td></tr>"""
+        for item in workspaces["workspaces"]
+    )
+    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>资产矩阵 - AI Ops</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}code{{background:#020617;padding:2px 6px;border-radius:6px}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:10px;max-height:160px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>服务器资产矩阵</h1><table><thead><tr><th>资产</th><th>角色</th><th>状态</th><th>容器</th><th>磁盘%</th><th>Down</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class=\"card\"><h1>项目工作区</h1><p class=\"muted\">当前只允许只读探测；未挂载项目保持待接入，避免 Grok 乱改真实项目。</p><table><thead><tr><th>项目</th><th>路径</th><th>状态</th><th>详情</th></tr></thead><tbody>{workspace_rows}</tbody></table></section></main></body></html>"""
+
+
 def command_templates():
     return [
         {"label": "全局只读巡检", "prompt": "请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。"},
@@ -840,9 +1016,9 @@ def render_dashboard_page():
 def workspace_payload():
     projects = [
         {"name": "AI Ops Cockpit", "path": "/workspace/projects/ai-ops-cockpit", "purpose": "运维驾驶舱配置、页面、终端容器", "start": "cd /workspace/projects/ai-ops-cockpit && git status --short"},
-        {"name": "mycc", "path": "/workspace/projects/mycc", "purpose": "本机 AI 协作中枢（待接入远程工作副本）", "start": "echo 'mycc 尚未挂载到 ops-terminal；下一步接入 git clone/sshfs 后启用。'"},
+        {"name": "mycc", "path": "/workspace/projects/mycc", "purpose": "本机 AI 协作中枢（先登记，待轻量只读快照/clone）", "start": "echo 'mycc 尚未挂载到 ops-terminal；先用 Harness 只读计划，待快照完成后启用。'"},
         {"name": "个人站", "path": "/workspace/projects/chenchuan-site", "purpose": "个人站开发、构建、部署检查（待挂载）", "start": "echo '个人站尚未挂载到 ops-terminal；下一步接入 git clone/sshfs 后启用。'"},
-        {"name": "MyJavis", "path": "/workspace/projects/myjavis", "purpose": "MyJavis 服务、备份、发布相关检查（待挂载）", "start": "echo 'MyJavis 尚未挂载到 ops-terminal；下一步接入 git clone/sshfs 后启用。'"},
+        {"name": "MyJavis", "path": "/workspace/projects/MyJavis", "purpose": "MyJavis 服务、备份、发布相关检查（待挂载）", "start": "echo 'MyJavis 尚未挂载到 ops-terminal；下一步接入轻量只读快照后启用。'"},
         {"name": "Voice Agent", "path": "/workspace/projects/realtime-voice-agent", "purpose": "实时语音 Agent 与声纹链路（待挂载）", "start": "echo 'Voice Agent 尚未挂载到 ops-terminal；下一步接入 git clone/sshfs 后启用。'"},
         {"name": "P003", "path": "/workspace/projects/P003GameDemo20260513", "purpose": "P003 游戏 demo / 实验项目（待挂载）", "start": "echo 'P003 尚未挂载到 ops-terminal；下一步接入 git clone/sshfs 后启用。'"},
         {"name": "Remote Stacks", "path": "/workspace/stacks", "purpose": "远端 Docker Compose stacks", "start": "cd /workspace/stacks && find . -maxdepth 2 -name 'compose*.yml' -o -name 'docker-compose*.yml'"},
@@ -913,7 +1089,7 @@ def render_vibe_page():
     status_class = "ok" if status["ok"] else "warn"
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vibe Coding - AI Ops</title><style>
 body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1240px;margin:0 auto;padding:28px}}.hero{{background:linear-gradient(135deg,#111827,#172554);border:1px solid #334155;border-radius:24px;padding:28px;margin-bottom:18px;box-shadow:0 24px 80px #0006}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin:4px 8px 4px 0}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:280px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}.terminal{{height:58vh;border:1px solid #334155;border-radius:18px;overflow:hidden;background:#020617}}iframe{{border:0;width:100%;height:100%}}.pill{{display:inline-block;border:1px solid #334155;border-radius:999px;padding:6px 10px;margin:4px;background:#0b1220}}
-</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 Grok 版 OMP；真实项目接入前先固定规则、记忆、BRO-PDCA、工作流和权限边界。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">默认只读</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a></p><pre id="actionResult">等待操作。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness prompt 并启动 <code>omp --model xai-oauth/grok-4.3</code>。默认只读；写入/部署必须先确认。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
+</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 Grok 版 OMP；真实项目接入前先固定规则、记忆、BRO-PDCA、工作流和权限边界。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">默认只读</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/assets">资产矩阵</a></p><pre id="actionResult">等待操作。</pre></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送只读任务。默认禁用工具调用；留空会自动执行默认只读巡检。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><button id="sendTaskBtn">发送给 Grok</button><button id="clearTaskBtn" type="button">清空重写</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness prompt 并启动 <code>omp --model xai-oauth/grok-4.3</code>。默认只读；写入/部署必须先确认。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
 document.querySelectorAll('[data-copy]').forEach((button) => {{
   button.addEventListener('click', async () => {{
     await navigator.clipboard.writeText(button.dataset.copy);
@@ -921,6 +1097,25 @@ document.querySelectorAll('[data-copy]').forEach((button) => {{
     button.textContent = '已复制';
     setTimeout(() => button.textContent = oldText, 1200);
   }});
+}});
+sessionStorage.setItem('aiopsActionToken', '{ACTION_TOKEN}');
+document.querySelectorAll('[data-token-link="true"]').forEach((link) => {{
+  link.addEventListener('click', () => sessionStorage.setItem('aiopsActionToken', '{ACTION_TOKEN}'));
+}});
+document.getElementById('clearTaskBtn').addEventListener('click', () => {{
+  const input = document.getElementById('taskQuestion');
+  input.value = '';
+  input.focus();
+}});
+document.getElementById('sendTaskBtn').addEventListener('click', async () => {{
+  const result = document.getElementById('taskResult');
+  const input = document.getElementById('taskQuestion');
+  const question = input.value.trim() || '请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。';
+  input.value = question;
+  result.textContent = '正在发送给 Grok，通常需要 30-120 秒...';
+  const response = await fetch('/vibe/task/run', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Action-Token': '{ACTION_TOKEN}' }}, body: JSON.stringify({{ mode: document.getElementById('taskMode').value, question }}) }});
+  const data = await response.json();
+  result.textContent = JSON.stringify(data, null, 2);
 }});
 document.getElementById('restartTerminalBtn').addEventListener('click', async () => {{
   const result = document.getElementById('actionResult');
@@ -964,6 +1159,14 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _read_json_body(self, limit=10000):
+        length = int(self.headers.get("content-length") or 0)
+        if length <= 0:
+            return {}
+        if length > limit:
+            raise ValueError("request body too large")
+        return json.loads(self.rfile.read(length).decode("utf-8"))
+
     def _is_same_origin_post(self):
         host = self.headers.get("host", "")
         if self.headers.get("x-aiops-action-token") != ACTION_TOKEN:
@@ -1003,6 +1206,19 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_text(200, harness_prompt())
             elif path == "/vibe/status.json":
                 self._send_json(200, vibe_status_payload())
+            elif path == "/vibe/workspaces-status.json":
+                self._send_json(200, workspace_status_payload())
+            elif path == "/vibe/assets.json":
+                self._send_json(200, assets_payload())
+            elif path in ("/vibe/assets", "/vibe/assets/"):
+                self._send_text(200, render_assets_page(), "text/html; charset=utf-8")
+            elif path == "/vibe/tasks.json":
+                if self.headers.get("x-aiops-action-token") != ACTION_TOKEN:
+                    self._send_json(403, {"ok": False, "error": "action token required"})
+                    return
+                self._send_json(200, {"tasks": task_history(50)})
+            elif path in ("/vibe/tasks", "/vibe/tasks/"):
+                self._send_text(200, render_vibe_tasks_page(), "text/html; charset=utf-8")
             elif path in ("/vibe", "/vibe/"):
                 self._send_text(200, render_vibe_page(), "text/html; charset=utf-8")
             elif path.startswith("/ops-app/"):
@@ -1016,7 +1232,6 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/ai/prompt":
                 self._send_text(200, ai_prompt())
             elif path == "/ai/ask":
-                from urllib.parse import parse_qs
                 question = parse_qs(urlparse(self.path).query).get("q", [""])[0]
                 self._send_text(200, answer_question(question))
             elif path in ("/ai", "/ai/"):
@@ -1041,6 +1256,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if path == "/vibe/action/restart-terminal":
                 self._send_json(200, terminal_action_payload("restart"))
+            elif path == "/vibe/task/run":
+                payload = self._read_json_body()
+                self._send_json(200, run_vibe_task(payload.get("mode"), payload.get("question")))
             else:
                 self._send_json(404, {"ok": False, "error": "not found"})
         except Exception as exc:

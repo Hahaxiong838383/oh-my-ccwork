@@ -844,3 +844,34 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && docker compose up -d --build ops-inspect
 | Vibe 状态 | `/vibe/status.json` 返回 `ok=true`、`omp=true`、`credentialReady=true`、`disabledCause=null` |
 | 通讯测试 | 注入 Harness 后向远端 Grok 发任务，返回 `GROK_OPS_COMM_OK` |
 | 脱敏 | 日志仅含状态与剩余时间，不含 token/授权码；远端临时导入文件已清理 |
+
+
+## 2026-07-08 · P0/P1 任务发送、审计、资产矩阵
+
+目标：在真实项目写入能力开放前，先让网页端能安全地“发任务给 Grok”、记录审计、查看资产矩阵，并保持项目工作区默认只读/待接入。
+
+### 本轮新增
+
+- `/vibe/task/run`：网页端 POST 任务给远端 `ops-terminal` 内的 `omp --model xai-oauth/grok-4.3`，自动注入 Harness prompt，默认 `--no-tools`。
+- `/vibe/tasks` / `/vibe/tasks.json`：展示最近 Grok 任务的脱敏输入、输出、耗时和状态；JSON 通过同源 header 鉴权，不把 action token 放进 URL。
+- `/vibe/assets` / `/vibe/assets.json`：展示服务器资产矩阵与项目工作区状态。
+- `/vibe/workspaces-status.json`：只读探测项目路径是否存在、是否 git 工作区、`git status --short --branch` 摘要。
+- `/vibe/`：新增“发任务给 Grok”表单，以及“任务审计”“资产矩阵”入口。
+
+### 安全边界
+
+- 任务发送接口和任务审计 JSON 均复用页面 action token + header 鉴权；缺 token 返回 `403`，token 不写入 URL。
+- Grok 任务默认 `--no-tools`，只允许文本分析；写文件、部署、重启仍必须走 Harness 的确认流程。
+- 任务历史写入 `/tmp/ai-ops-state/vibe-tasks`，输入输出经过脱敏；不记录 access token、refresh token、Webhook、Kuma Push URL、授权码。
+- 真实项目工作区先登记，不直接挂本机目录；未挂载项目显示 `not_mounted`，防止 Grok 误以为可以直接改真实项目。
+
+### 验收结果
+
+| 项 | 结果 |
+|---|---|
+| `/vibe/` 页面 | 可见 `发任务给 Grok`、`任务审计`、`资产矩阵` |
+| `/vibe/assets.json` | 返回 4 个服务器资产、8 个工作区条目，RackNerd `UP` |
+| `/vibe/task/run` | 返回 `ok=true`，Grok 输出 `AI_OPS_TASK_OK` 和 `read_only` 默认权限 |
+| `/vibe/tasks` | 页面不暴露 URL token；`/vibe/tasks.json` 缺 header token 返回 `403`；从 `/vibe/` 入口进入可见 `Grok 任务审计` 与最新任务输出 |
+| CSRF | 缺 action token 的 POST 返回 `403` |
+| 回归 | `/vibe/status.json ok=true`，`/ops-health/ai ok=true` |
