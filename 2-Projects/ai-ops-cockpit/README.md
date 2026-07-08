@@ -921,3 +921,25 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && docker compose up -d --build ops-inspect
 | `/vibe/tasks` | 审计列表可加载，筛选/复制不报错 |
 | `/vibe/assets` | 资产矩阵可加载，`mycc` 只读快照状态可见 |
 | `/terminal/` | OMP 进入常驻交互，不因一次性 prompt 自动退出 |
+
+## 2026-07-08 · P0/P1 可视化、回归、自动刷新
+
+本轮目标：在不破坏既有主流程的前提下，补齐 P0/P1：任务执行状态可视化、连续对话体验、自动回归脚本、只读快照定时刷新、多项目快照占位、资产就绪度标记、飞书任务通知。
+
+### 本轮新增
+
+- `/vibe/`：发送任务时显示运行中计时、完成/失败状态、耗时和错误原因；连续对话改为消息气泡，并支持清空对话。
+- `/vibe/`：新增“完成后飞书通知”复选框；勾选后任务完成/失败会推送飞书摘要。
+- `/vibe/assets` / `/vibe/assets.json`：服务器与工作区增加`readinessScore` 和 `risk` 字段；页面显示为“就绪度”，只代表运维探测信号，不输出业务健康结论。
+- `scripts/validate-vibe-regression.sh`：自动回归 `/vibe/` JS 语法、发送给 Grok、审计页、资产页、只读挂载。
+- `scripts/install-readonly-refresh-cron.sh`：安装每 30 分钟刷新只读快照的 cron。
+- `scripts/sync-readonly-workspaces.sh`：仅为 `chenchuan-site`、`MyJavis`、`realtime-voice-agent`、`P003GameDemo20260513` 创建只读占位；真实项目必须先补文件级 allowlist。
+
+### 必跑回归
+
+```bash
+cd /opt/ai-ops-cockpit
+scripts/validate-vibe-regression.sh
+```
+
+验收通过标记：`OK vibe regression`。
