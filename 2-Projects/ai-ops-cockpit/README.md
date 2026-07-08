@@ -894,3 +894,30 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && docker compose up -d --build ops-inspect
 - `/workspace/readonly` 在 Docker Compose 中以 `:ro` 挂载，脚本同步后文件权限设为目录 `0555`、文件 `0444`。
 - 同步脚本默认只接 `mycc` 公开仓库；其他私有项目先保留占位，后续通过只读 deploy key 或脱敏快照逐个接入。
 - 同步排除 `.env*`、私钥、node_modules、venv、构建产物等，不把 secret 放入只读区。
+
+## 2026-07-08 · 前端回归教训：内联 JS 必验主流程
+
+事故：新增 `/vibe/` 连续对话后，“发送给 Grok”按钮点击无反应。
+
+根因：`ops-inspector/server.py` 用 Python f-string 生成内联 HTML/JS，JS 里的 `join('\n')` 在最终 HTML 中变成真实换行，导致浏览器 JS 语法错误，按钮事件监听未注册。
+
+修复：输出字面量 `\\n`，并重建 `ops-inspector`。
+
+### 新执行规范
+
+凡修改 `/vibe/`、`/vibe/tasks` 或任何 Python 生成的内联 HTML/JS，必须执行：
+
+1. 本地语法：`python3 -m py_compile ops-inspector/server.py`。
+2. 生成后 JS 语法：渲染页面，抽取 `<script>`，执行 `node --check`。
+3. 主流程回归：至少验证“发送给 Grok”能返回预期标记，例如 `AI_OPS_SEND_OK`。
+4. 新功能验收：只在主流程通过后，再验连续对话、审计筛选、快照刷新等新增能力。
+5. 安全扫描：确认 token、Webhook、OAuth、Push URL、密码未写入 git/文档/记忆。
+
+### 当前关键回归清单
+
+| 页面 | 必测主流程 |
+|---|---|
+| `/vibe/` | “发送给 Grok”按钮可触发任务并写入审计 |
+| `/vibe/tasks` | 审计列表可加载，筛选/复制不报错 |
+| `/vibe/assets` | 资产矩阵可加载，`mycc` 只读快照状态可见 |
+| `/terminal/` | OMP 进入常驻交互，不因一次性 prompt 自动退出 |

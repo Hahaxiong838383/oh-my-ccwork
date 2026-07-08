@@ -49,14 +49,19 @@ if [ -d "$ROOT/.git" ]; then
   find "$DEST_ROOT/mycc" -type f -exec chmod 0444 {} +
 else
   if ! sync_repo mycc "https://github.com/Hahaxiong838383/oh-my-ccwork.git" main; then
-    mkdir -p "$DEST_ROOT/mycc"
-    cat > "$DEST_ROOT/mycc/README.md" <<'EOF'
+    if [ -f "$DEST_ROOT/mycc/AGENTS.md" ]; then
+      find "$DEST_ROOT/mycc" -type d -exec chmod 0555 {} +
+      find "$DEST_ROOT/mycc" -type f -exec chmod 0444 {} +
+    else
+      mkdir -p "$DEST_ROOT/mycc"
+      cat > "$DEST_ROOT/mycc/README.md" <<'EOF'
 # mycc readonly snapshot pending
 
 This host cannot clone the repository without credentials. Push a sanitized snapshot from the trusted local machine with rsync.
 EOF
-    chmod 0555 "$DEST_ROOT/mycc"
-    chmod 0444 "$DEST_ROOT/mycc/README.md"
+      chmod 0555 "$DEST_ROOT/mycc"
+      chmod 0444 "$DEST_ROOT/mycc/README.md"
+    fi
   fi
 fi
 

@@ -36,12 +36,15 @@ READ_TOKEN = os.environ.get("OPS_READ_TOKEN") or ACTION_TOKEN
 ACTION_HEADER = "x-aiops-action-token"
 READ_HEADER = "x-aiops-read-token"
 TASKS_DIR = os.path.join(STATE_DIR, "vibe-tasks")
+CONVERSATIONS_DIR = os.path.join(STATE_DIR, "vibe-conversations")
+READONLY_STATE_FILE = os.path.join(STATE_DIR, "readonly-refresh.json")
 WORKSPACE_ROOT = os.environ.get("WORKSPACE_ROOT", "/workspace/projects")
 READONLY_ROOT = os.environ.get("READONLY_ROOT", "/workspace/readonly")
 TASK_LOCK = threading.Lock()
 TASK_STATE = {"last_run": 0}
 TASK_COOLDOWN_SECONDS = int(os.environ.get("TASK_COOLDOWN_SECONDS", "20"))
 ASSETS_CACHE_TTL_SECONDS = int(os.environ.get("ASSETS_CACHE_TTL_SECONDS", "20"))
+READONLY_REFRESH_LOCK = threading.Lock()
 
 
 
@@ -597,6 +600,37 @@ def assets_payload(force=False):
     return copy.deepcopy(data)
 
 
+def readonly_refresh_status():
+    state = load_json_file(READONLY_STATE_FILE, {}) or {}
+    try:
+        raw = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", "test -d /workspace/readonly/mycc && stat -c '%y' /workspace/readonly/mycc 2>/dev/null | cut -d. -f1 || true"], timeout=6)
+        if raw:
+            state["mountedAt"] = raw.strip()
+        state["mounted"] = bool(raw)
+    except Exception as exc:
+        state["mounted"] = False
+        state["error"] = str(exc)
+    return state
+
+
+def refresh_readonly_payload():
+    if not READONLY_REFRESH_LOCK.acquire(blocking=False):
+        return {"ok": False, "error": "refresh already running"}
+    started = time.time()
+    try:
+        try:
+            output = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", "cd /workspace/projects/ai-ops-cockpit && if [ -x scripts/sync-readonly-workspaces.sh ]; then AI_OPS_ROOT=/workspace/projects/ai-ops-cockpit scripts/sync-readonly-workspaces.sh; else echo 'sync script missing'; exit 1; fi"], timeout=120)
+            payload = {"ok": True, "refreshedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"), "durationMs": round((time.time() - started) * 1000), "output": sanitize_terminal_text(output)[-2000:]}
+        except Exception as exc:
+            payload = {"ok": False, "refreshedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"), "durationMs": round((time.time() - started) * 1000), "error": sanitize_terminal_text(str(exc))}
+        save_json_file(READONLY_STATE_FILE, payload)
+        global ASSETS_CACHE
+        ASSETS_CACHE = {"ts": 0, "data": None}
+        return payload
+    finally:
+        READONLY_REFRESH_LOCK.release()
+
+
 def task_history(limit=20):
     ensure_state_dir()
     ensure_private_dir(TASKS_DIR)
@@ -611,9 +645,10 @@ def task_history(limit=20):
     return sorted(items, key=lambda item: item.get("createdAt", ""), reverse=True)[:limit]
 
 
-def run_vibe_task(mode, question):
+def run_vibe_task(mode, question, conversation=None):
     mode = (mode or "readonly_inspect").strip()
     question = (question or "").strip()
+    conversation = (conversation or "").strip()[-4000:]
     workflows = {item["id"]: item for item in harness_payload()["workflows"]}
     workflow = workflows.get(mode) or workflows["readonly_inspect"]
     if not question:
@@ -630,7 +665,10 @@ def run_vibe_task(mode, question):
         elapsed = now - TASK_STATE["last_run"]
         if elapsed < TASK_COOLDOWN_SECONDS:
             return {"ok": False, "error": "cooldown", "retryAfterSeconds": round(TASK_COOLDOWN_SECONDS - elapsed)}
-        prompt = harness_prompt() + "\n\n当前工作模式：" + workflow["prompt"] + "\n\n川哥发来的任务：" + question
+        prompt = harness_prompt() + "\n\n当前工作模式：" + workflow["prompt"]
+        if conversation:
+            prompt += "\n\n网页端连续对话上下文（已脱敏，仅供理解当前轮）：\n" + conversation
+        prompt += "\n\n川哥发来的任务：" + question
         shell = 'cat > /tmp/aiops-task-prompt.txt && timeout 120 omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit --no-tools -p "$(cat /tmp/aiops-task-prompt.txt)"'
         try:
             output = subprocess.check_output(["docker", "exec", "-i", "ops-terminal", "bash", "-lc", shell], input=prompt, text=True, stderr=subprocess.STDOUT, timeout=150)
@@ -647,6 +685,7 @@ def run_vibe_task(mode, question):
             "mode": workflow["id"],
             "modeName": workflow["name"],
             "question": redact_sensitive_text(question),
+            "conversationPreview": redact_sensitive_text(conversation)[-1000:],
             "answer": redact_sensitive_text(sanitize_terminal_text(output))[-6000:],
             "createdAt": created,
             "durationMs": round((time.time() - started) * 1000),
@@ -660,17 +699,34 @@ def run_vibe_task(mode, question):
 
 
 def render_vibe_tasks_page():
-    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Grok 任务审计 - AI Ops</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:360px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>Grok 任务审计</h1><p class=\"muted\">只展示脱敏后的最近任务输入与输出；数据通过同源 header 鉴权加载，不把 action token 放进 URL。</p><table><thead><tr><th>时间</th><th>模式</th><th>任务</th><th>状态</th><th>输出</th></tr></thead><tbody id=\"taskRows\"><tr><td colspan=5>加载中...</td></tr></tbody></table></section></main><script>
+    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Grok 任务审计 - AI Ops</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}button,select{{background:#2563eb;color:white;border:0;border-radius:10px;padding:8px 12px;margin:4px;cursor:pointer}}select{{background:#1f2937;border:1px solid #334155}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}tr.fail{{background:#3b1118}}tr.ok{{background:#0b1f16}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:360px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}.toolbar{{display:flex;gap:8px;align-items:center;flex-wrap:wrap}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>Grok 任务审计</h1><p class=\"muted\">只展示脱敏后的最近任务输入与输出；支持筛选、复制结果、失败高亮。</p><div class=\"toolbar\"><label>状态 <select id=\"statusFilter\"><option value=\"all\">全部</option><option value=\"ok\">成功</option><option value=\"fail\">失败</option></select></label><button id=\"reloadTasks\">刷新</button><span id=\"taskSummary\" class=\"muted\"></span></div><table><thead><tr><th>时间</th><th>模式</th><th>任务</th><th>状态</th><th>输出</th></tr></thead><tbody id=\"taskRows\"><tr><td colspan=5>加载中...</td></tr></tbody></table></section></main><script>
 const token = sessionStorage.getItem('aiopsReadToken') || '';
+let allTasks = [];
 function escapeHtml(value) {{ return String(value || '').replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
+function renderTasks() {{
+  const body = document.getElementById('taskRows');
+  const filter = document.getElementById('statusFilter').value;
+  const tasks = allTasks.filter(item => filter === 'all' || (filter === 'ok' ? item.ok : !item.ok));
+  document.getElementById('taskSummary').textContent = `共 ${{allTasks.length}} 条，当前显示 ${{tasks.length}} 条`;
+  body.innerHTML = tasks.map((item, index) => `<tr class="${{item.ok ? 'ok' : 'fail'}}"><td>${{escapeHtml(item.createdAt)}}</td><td>${{escapeHtml(item.modeName)}}</td><td>${{escapeHtml(item.question)}}</td><td>${{item.ok ? '✅ 成功' : '⚠️ 失败'}}</td><td><button data-copy-index="${{index}}">复制结果</button><details><summary>查看</summary><pre>${{escapeHtml(item.answer)}}</pre></details></td></tr>`).join('') || '<tr><td colspan=5>暂无任务</td></tr>';
+  document.querySelectorAll('[data-copy-index]').forEach(button => button.addEventListener('click', async () => {{
+    const item = tasks[Number(button.dataset.copyIndex)];
+    await navigator.clipboard.writeText(item.answer || '');
+    button.textContent = '已复制';
+    setTimeout(() => button.textContent = '复制结果', 1200);
+  }}));
+}}
 async function loadTasks() {{
   const body = document.getElementById('taskRows');
   if (!token) {{ body.innerHTML = '<tr><td colspan=5>请从 Vibe 工作台入口进入任务审计。</td></tr>'; return; }}
   const response = await fetch('/vibe/tasks.json', {{ credentials: 'same-origin', headers: {{ 'X-AIOps-Read-Token': token }} }});
   if (!response.ok) {{ body.innerHTML = '<tr><td colspan=5>无权读取任务审计。</td></tr>'; return; }}
   const data = await response.json();
-  body.innerHTML = (data.tasks || []).map(item => `<tr><td>${{escapeHtml(item.createdAt)}}</td><td>${{escapeHtml(item.modeName)}}</td><td>${{escapeHtml(item.question)}}</td><td>${{item.ok ? '✅' : '⚠️'}}</td><td><details><summary>查看</summary><pre>${{escapeHtml(item.answer)}}</pre></details></td></tr>`).join('') || '<tr><td colspan=5>暂无任务</td></tr>';
+  allTasks = data.tasks || [];
+  renderTasks();
 }}
+document.getElementById('statusFilter').addEventListener('change', renderTasks);
+document.getElementById('reloadTasks').addEventListener('click', loadTasks);
 loadTasks();
 </script></body></html>"""
 
@@ -1094,7 +1150,7 @@ def render_vibe_page():
     status_class = "ok" if status["ok"] else "warn"
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vibe Coding - AI Ops</title><style>
 body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1240px;margin:0 auto;padding:28px}}.hero{{background:linear-gradient(135deg,#111827,#172554);border:1px solid #334155;border-radius:24px;padding:28px;margin-bottom:18px;box-shadow:0 24px 80px #0006}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin:4px 8px 4px 0}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:280px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}.terminal{{height:58vh;border:1px solid #334155;border-radius:18px;overflow:hidden;background:#020617}}iframe{{border:0;width:100%;height:100%}}.pill{{display:inline-block;border:1px solid #334155;border-radius:999px;padding:6px 10px;margin:4px;background:#0b1220}}
-</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 Grok 版 OMP；真实项目接入前先固定规则、记忆、BRO-PDCA、工作流和权限边界。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">默认只读</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/assets">资产矩阵</a></p><pre id="actionResult">等待操作。</pre></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送只读任务。默认禁用工具调用；留空会自动执行默认只读巡检。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><button id="sendTaskBtn">发送给 Grok</button><button id="clearTaskBtn" type="button">清空重写</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness prompt 并启动 <code>omp --model xai-oauth/grok-4.3</code>。默认只读；写入/部署必须先确认。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
+</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 Grok 版 OMP；真实项目接入前先固定规则、记忆、BRO-PDCA、工作流和权限边界。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">默认只读</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/assets">资产矩阵</a><button id="refreshReadonlyBtn">刷新只读快照</button></p><pre id="actionResult">等待操作。</pre><p class="muted" id="readonlyStatus">只读快照：检查中...</p></section><section class="card"><h2>连续对话</h2><p class="muted">保留本页上下文继续问 Grok；刷新页面会清空上下文。</p><div id="chatHistory"><p class="muted">暂无对话。</p></div></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送只读任务。默认禁用工具调用；留空会自动执行默认只读巡检。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><button id="sendTaskBtn">发送给 Grok</button><button id="clearTaskBtn" type="button">清空重写</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness prompt 并启动 <code>omp --model xai-oauth/grok-4.3</code>。默认只读；写入/部署必须先确认。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
 document.querySelectorAll('[data-copy]').forEach((button) => {{
   button.addEventListener('click', async () => {{
     await navigator.clipboard.writeText(button.dataset.copy);
@@ -1118,10 +1174,21 @@ document.getElementById('sendTaskBtn').addEventListener('click', async () => {{
   const question = input.value.trim() || '请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。';
   input.value = question;
   result.textContent = '正在发送给 Grok，通常需要 30-120 秒...';
-  const response = await fetch('/vibe/task/run', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Read-Token': '{READ_TOKEN}' }}, body: JSON.stringify({{ mode: document.getElementById('taskMode').value, question }}) }});
+  const conversation = Array.from(document.querySelectorAll('[data-chat-line]')).map(node => node.textContent).join('\\n');
+  const response = await fetch('/vibe/task/run', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Read-Token': '{READ_TOKEN}' }}, body: JSON.stringify({{ mode: document.getElementById('taskMode').value, question, conversation }}) }});
   const data = await response.json();
   result.textContent = JSON.stringify(data, null, 2);
+  appendChat('川哥', question);
+  appendChat('Grok', data.answer || data.error || JSON.stringify(data));
 }});
+function appendChat(role, text) {{
+  const history = document.getElementById('chatHistory');
+  if (history.querySelector('.muted')) history.innerHTML = '';
+  const item = document.createElement('div');
+  item.setAttribute('data-chat-line', 'true');
+  item.innerHTML = `<p><strong>${{role}}</strong></p><pre>${{String(text || '').replace(/[&<>]/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;'}}[ch]))}}</pre>`;
+  history.appendChild(item);
+}}
 document.getElementById('restartTerminalBtn').addEventListener('click', async () => {{
   const result = document.getElementById('actionResult');
   result.textContent = '正在重启 ops-terminal...';
@@ -1129,6 +1196,20 @@ document.getElementById('restartTerminalBtn').addEventListener('click', async ()
   const data = await response.json();
   result.textContent = JSON.stringify(data, null, 2);
 }});
+async function loadReadonlyStatus() {{
+  const response = await fetch('/vibe/readonly-refresh.json', {{ credentials: 'same-origin' }});
+  const data = await response.json();
+  document.getElementById('readonlyStatus').textContent = `只读快照：${{data.mounted ? '已挂载' : '未就绪'}}，最后刷新：${{data.refreshedAt || data.mountedAt || '未知'}}`;
+}}
+document.getElementById('refreshReadonlyBtn').addEventListener('click', async () => {{
+  const result = document.getElementById('actionResult');
+  result.textContent = '正在刷新只读快照...';
+  const response = await fetch('/vibe/action/refresh-readonly', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'X-AIOps-Read-Token': '{READ_TOKEN}' }} }});
+  const data = await response.json();
+  result.textContent = JSON.stringify(data, null, 2);
+  loadReadonlyStatus();
+}});
+loadReadonlyStatus();
 </script></body></html>"""
 
 def render_app_frame(app):
@@ -1219,6 +1300,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, workspace_status_payload())
             elif path == "/vibe/assets.json":
                 self._send_json(200, assets_payload())
+            elif path == "/vibe/readonly-refresh.json":
+                self._send_json(200, readonly_refresh_status())
             elif path in ("/vibe/assets", "/vibe/assets/"):
                 self._send_text(200, render_assets_page(), "text/html; charset=utf-8")
             elif path == "/vibe/tasks.json":
@@ -1273,7 +1356,12 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json(403, {"ok": False, "error": "read token required"})
                     return
                 payload = self._read_json_body()
-                self._send_json(200, run_vibe_task(payload.get("mode"), payload.get("question")))
+                self._send_json(200, run_vibe_task(payload.get("mode"), payload.get("question"), payload.get("conversation")))
+            elif path == "/vibe/action/refresh-readonly":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                self._send_json(200, refresh_readonly_payload())
             else:
                 self._send_json(404, {"ok": False, "error": "not found"})
         except Exception as exc:
