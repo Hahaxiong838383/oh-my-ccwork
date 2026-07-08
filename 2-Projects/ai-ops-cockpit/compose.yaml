@@ -80,6 +80,8 @@ services:
       DISPLAY_HOSTNAME: racknerd-54aa08d
       TZ: Asia/Shanghai
       FEISHU_WEBHOOK_URL: ${FEISHU_WEBHOOK_URL}
+      OPS_READ_TOKEN: ${OPS_READ_TOKEN}
+      OPS_ACTION_TOKEN: ${OPS_ACTION_TOKEN}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./kuma/data/kuma.db:/kuma/kuma.db:ro
@@ -122,6 +124,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /opt/ai-ops-cockpit:/workspace/projects/ai-ops-cockpit
+      - ./readonly:/workspace/readonly:ro
       - /opt/stacks:/workspace/stacks
       - ./terminal/logs:/var/log/ops-terminal
       - ./terminal/omp:/home/ops/.omp

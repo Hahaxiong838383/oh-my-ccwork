@@ -875,3 +875,22 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && docker compose up -d --build ops-inspect
 | `/vibe/tasks` | 页面不暴露 URL token；`/vibe/tasks.json` 缺 header token 返回 `403`；从 `/vibe/` 入口进入可见 `Grok 任务审计` 与最新任务输出 |
 | CSRF | 缺 action token 的 POST 返回 `403` |
 | 回归 | `/vibe/status.json ok=true`，`/ops-health/ai ok=true` |
+
+
+## 2026-07-08 · P0 权限分层与只读项目接入
+
+目标：真实项目给 Grok 看之前，先把“只读任务能力”和“高危动作能力”拆开，并通过只读快照目录接入项目，避免 Grok 误改真实工作区。
+
+### 本轮新增
+
+- `OPS_READ_TOKEN`：用于 `/vibe/task/run` 和 `/vibe/tasks.json`，只覆盖发只读任务与读取任务审计。
+- `OPS_ACTION_TOKEN`：继续只用于 `/vibe/action/restart-terminal` 等动作接口。
+- `scripts/sync-readonly-workspaces.sh`：在远端生成 `/opt/ai-ops-cockpit/readonly`，并挂载到 `ops-terminal:/workspace/readonly:ro`。
+- `workspace_payload()`：`mycc` 等真实项目入口改指向 `/workspace/readonly/*`，状态页显示只读快照是否可用。
+
+### 安全边界
+
+- 不再用高权限 action token 读取任务审计或发送只读任务。
+- `/workspace/readonly` 在 Docker Compose 中以 `:ro` 挂载，脚本同步后文件权限设为目录 `0555`、文件 `0444`。
+- 同步脚本默认只接 `mycc` 公开仓库；其他私有项目先保留占位，后续通过只读 deploy key 或脱敏快照逐个接入。
+- 同步排除 `.env*`、私钥、node_modules、venv、构建产物等，不把 secret 放入只读区。

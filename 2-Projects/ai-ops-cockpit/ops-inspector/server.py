@@ -32,8 +32,13 @@ TERMINAL_ACTION_LOCK = threading.Lock()
 TERMINAL_ACTION_STATE = {"last_restart": 0}
 TERMINAL_RESTART_COOLDOWN_SECONDS = int(os.environ.get("TERMINAL_RESTART_COOLDOWN_SECONDS", "30"))
 ACTION_TOKEN = os.environ.get("OPS_ACTION_TOKEN") or secrets.token_urlsafe(24)
+READ_TOKEN = os.environ.get("OPS_READ_TOKEN") or ACTION_TOKEN
+ACTION_HEADER = "x-aiops-action-token"
+READ_HEADER = "x-aiops-read-token"
+READ_HEADER = "x-aiops-read-token"
 TASKS_DIR = os.path.join(STATE_DIR, "vibe-tasks")
 WORKSPACE_ROOT = os.environ.get("WORKSPACE_ROOT", "/workspace/projects")
+READONLY_ROOT = os.environ.get("READONLY_ROOT", "/workspace/readonly")
 TASK_LOCK = threading.Lock()
 TASK_STATE = {"last_run": 0}
 TASK_COOLDOWN_SECONDS = int(os.environ.get("TASK_COOLDOWN_SECONDS", "20"))
@@ -537,17 +542,18 @@ def workspace_status_payload():
         git = False
         status = "not_mounted"
         details = ""
-        if path.startswith(WORKSPACE_ROOT):
+        if path.startswith(WORKSPACE_ROOT) or path.startswith(READONLY_ROOT):
             try:
                 quoted_path = shlex.quote(path)
-                output = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", f"test -d {quoted_path} && echo exists || true; test -d {quoted_path}/.git && echo git || true"], timeout=6)
+                output = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", f"test -d {quoted_path} && echo exists || true; test -d {quoted_path}/.git && echo git || true; test -w {quoted_path} || echo readonly"], timeout=6)
                 exists = "exists" in output.splitlines()
                 git = "git" in output.splitlines()
+                readonly = "readonly" in output.splitlines()
                 if exists and git:
-                    status = "ready_readonly"
+                    status = "ready_readonly" if readonly else "ready_writable"
                     details = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", f"cd {quoted_path} && git status --short --branch | head -n 12"], timeout=8)
                 elif exists:
-                    status = "mounted_no_git"
+                    status = "mounted_readonly_no_git" if readonly else "mounted_no_git"
                 details = sanitize_terminal_text(details)
             except Exception as exc:
                 status = "error"
@@ -656,12 +662,12 @@ def run_vibe_task(mode, question):
 
 def render_vibe_tasks_page():
     return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Grok 任务审计 - AI Ops</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:360px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>Grok 任务审计</h1><p class=\"muted\">只展示脱敏后的最近任务输入与输出；数据通过同源 header 鉴权加载，不把 action token 放进 URL。</p><table><thead><tr><th>时间</th><th>模式</th><th>任务</th><th>状态</th><th>输出</th></tr></thead><tbody id=\"taskRows\"><tr><td colspan=5>加载中...</td></tr></tbody></table></section></main><script>
-const token = sessionStorage.getItem('aiopsActionToken') || '';
+const token = sessionStorage.getItem('aiopsReadToken') || '';
 function escapeHtml(value) {{ return String(value || '').replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
 async function loadTasks() {{
   const body = document.getElementById('taskRows');
   if (!token) {{ body.innerHTML = '<tr><td colspan=5>请从 Vibe 工作台入口进入任务审计。</td></tr>'; return; }}
-  const response = await fetch('/vibe/tasks.json', {{ credentials: 'same-origin', headers: {{ 'X-AIOps-Action-Token': token }} }});
+  const response = await fetch('/vibe/tasks.json', {{ credentials: 'same-origin', headers: {{ 'X-AIOps-Read-Token': token }} }});
   if (!response.ok) {{ body.innerHTML = '<tr><td colspan=5>无权读取任务审计。</td></tr>'; return; }}
   const data = await response.json();
   body.innerHTML = (data.tasks || []).map(item => `<tr><td>${{escapeHtml(item.createdAt)}}</td><td>${{escapeHtml(item.modeName)}}</td><td>${{escapeHtml(item.question)}}</td><td>${{item.ok ? '✅' : '⚠️'}}</td><td><details><summary>查看</summary><pre>${{escapeHtml(item.answer)}}</pre></details></td></tr>`).join('') || '<tr><td colspan=5>暂无任务</td></tr>';
@@ -753,7 +759,7 @@ def harness_payload():
         },
         "permissions": {
             "defaultMode": "read_only",
-            "writeRequires": "川哥明确授权 + 计划 + diff 范围 + 验收命令",
+            "writeRequires": "川哥明确授权 + 计划 + diff 范围 + 验收命令；/workspace/readonly 始终只读",
             "commitPushOwner": "Codex/cc 收口，OMP/Grok 默认不直接 commit/push",
             "dangerousActions": DANGEROUS_PATTERNS,
         },
@@ -1016,11 +1022,11 @@ def render_dashboard_page():
 def workspace_payload():
     projects = [
         {"name": "AI Ops Cockpit", "path": "/workspace/projects/ai-ops-cockpit", "purpose": "运维驾驶舱配置、页面、终端容器", "start": "cd /workspace/projects/ai-ops-cockpit && git status --short"},
-        {"name": "mycc", "path": "/workspace/projects/mycc", "purpose": "本机 AI 协作中枢（先登记，待轻量只读快照/clone）", "start": "echo 'mycc 尚未挂载到 ops-terminal；先用 Harness 只读计划，待快照完成后启用。'"},
-        {"name": "个人站", "path": "/workspace/projects/chenchuan-site", "purpose": "个人站开发、构建、部署检查（待挂载）", "start": "echo '个人站尚未挂载到 ops-terminal；下一步接入 git clone/sshfs 后启用。'"},
-        {"name": "MyJavis", "path": "/workspace/projects/MyJavis", "purpose": "MyJavis 服务、备份、发布相关检查（待挂载）", "start": "echo 'MyJavis 尚未挂载到 ops-terminal；下一步接入轻量只读快照后启用。'"},
-        {"name": "Voice Agent", "path": "/workspace/projects/realtime-voice-agent", "purpose": "实时语音 Agent 与声纹链路（待挂载）", "start": "echo 'Voice Agent 尚未挂载到 ops-terminal；下一步接入 git clone/sshfs 后启用。'"},
-        {"name": "P003", "path": "/workspace/projects/P003GameDemo20260513", "purpose": "P003 游戏 demo / 实验项目（待挂载）", "start": "echo 'P003 尚未挂载到 ops-terminal；下一步接入 git clone/sshfs 后启用。'"},
+        {"name": "mycc", "path": "/workspace/readonly/mycc", "purpose": "本机 AI 协作中枢只读快照", "start": "cd /workspace/readonly/mycc && git status --short --branch"},
+        {"name": "个人站", "path": "/workspace/readonly/chenchuan-site", "purpose": "个人站开发、构建、部署检查只读快照", "start": "cd /workspace/readonly/chenchuan-site && git status --short --branch"},
+        {"name": "MyJavis", "path": "/workspace/readonly/MyJavis", "purpose": "MyJavis 服务、备份、发布相关检查只读快照", "start": "cd /workspace/readonly/MyJavis && git status --short --branch"},
+        {"name": "Voice Agent", "path": "/workspace/readonly/realtime-voice-agent", "purpose": "实时语音 Agent 与声纹链路只读快照", "start": "cd /workspace/readonly/realtime-voice-agent && git status --short --branch"},
+        {"name": "P003", "path": "/workspace/readonly/P003GameDemo20260513", "purpose": "P003 游戏 demo / 实验项目只读快照", "start": "cd /workspace/readonly/P003GameDemo20260513 && git status --short --branch"},
         {"name": "Remote Stacks", "path": "/workspace/stacks", "purpose": "远端 Docker Compose stacks", "start": "cd /workspace/stacks && find . -maxdepth 2 -name 'compose*.yml' -o -name 'docker-compose*.yml'"},
         {"name": "Ops Scratchpad", "path": "/workspace/scratch", "purpose": "临时排障记录和命令输出，不放 secret", "start": "mkdir -p /workspace/scratch && cd /workspace/scratch"},
     ]
@@ -1098,9 +1104,9 @@ document.querySelectorAll('[data-copy]').forEach((button) => {{
     setTimeout(() => button.textContent = oldText, 1200);
   }});
 }});
-sessionStorage.setItem('aiopsActionToken', '{ACTION_TOKEN}');
+sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}');
 document.querySelectorAll('[data-token-link="true"]').forEach((link) => {{
-  link.addEventListener('click', () => sessionStorage.setItem('aiopsActionToken', '{ACTION_TOKEN}'));
+  link.addEventListener('click', () => sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}'));
 }});
 document.getElementById('clearTaskBtn').addEventListener('click', () => {{
   const input = document.getElementById('taskQuestion');
@@ -1113,7 +1119,7 @@ document.getElementById('sendTaskBtn').addEventListener('click', async () => {{
   const question = input.value.trim() || '请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。';
   input.value = question;
   result.textContent = '正在发送给 Grok，通常需要 30-120 秒...';
-  const response = await fetch('/vibe/task/run', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Action-Token': '{ACTION_TOKEN}' }}, body: JSON.stringify({{ mode: document.getElementById('taskMode').value, question }}) }});
+  const response = await fetch('/vibe/task/run', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Read-Token': '{READ_TOKEN}' }}, body: JSON.stringify({{ mode: document.getElementById('taskMode').value, question }}) }});
   const data = await response.json();
   result.textContent = JSON.stringify(data, null, 2);
 }});
@@ -1169,8 +1175,6 @@ class Handler(BaseHTTPRequestHandler):
 
     def _is_same_origin_post(self):
         host = self.headers.get("host", "")
-        if self.headers.get("x-aiops-action-token") != ACTION_TOKEN:
-            return False
         seen_origin_header = False
         for header in ("origin", "referer"):
             value = self.headers.get(header)
@@ -1178,6 +1182,12 @@ class Handler(BaseHTTPRequestHandler):
             if value and urlparse(value).netloc != host:
                 return False
         return seen_origin_header
+
+    def _has_read_token(self):
+        return self.headers.get(READ_HEADER) == READ_TOKEN
+
+    def _has_action_token(self):
+        return self.headers.get(ACTION_HEADER) == ACTION_TOKEN
 
     def do_GET(self):
         path = urlparse(self.path).path
@@ -1213,8 +1223,8 @@ class Handler(BaseHTTPRequestHandler):
             elif path in ("/vibe/assets", "/vibe/assets/"):
                 self._send_text(200, render_assets_page(), "text/html; charset=utf-8")
             elif path == "/vibe/tasks.json":
-                if self.headers.get("x-aiops-action-token") != ACTION_TOKEN:
-                    self._send_json(403, {"ok": False, "error": "action token required"})
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
                     return
                 self._send_json(200, {"tasks": task_history(50)})
             elif path in ("/vibe/tasks", "/vibe/tasks/"):
@@ -1255,8 +1265,14 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(403, {"ok": False, "error": "cross-origin post rejected"})
                 return
             if path == "/vibe/action/restart-terminal":
+                if not self._has_action_token():
+                    self._send_json(403, {"ok": False, "error": "action token required"})
+                    return
                 self._send_json(200, terminal_action_payload("restart"))
             elif path == "/vibe/task/run":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
                 payload = self._read_json_body()
                 self._send_json(200, run_vibe_task(payload.get("mode"), payload.get("question")))
             else:
