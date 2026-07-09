@@ -41,14 +41,14 @@ Harness 已加载到 /tmp/aiops/harness-prompt.md。
 如果需要查看完整 Harness，可在 OMP 里让它读取该文件。
 
 READY
-  omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit || true
+  omp --model xai-oauth/grok-4.5 --cwd /workspace/projects/ai-ops-cockpit || true
 else
   echo "未能读取 Harness prompt，使用普通 OMP 启动。"
-  omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit || true
+  omp --model xai-oauth/grok-4.5 --cwd /workspace/projects/ai-ops-cockpit || true
 fi
 echo
 echo "OMP 已退出，已回到普通 bash。重新启动可运行："
 echo "  /usr/local/bin/vibe-omp"
 echo "或："
-echo "  omp --model xai-oauth/grok-4.3 --cwd /workspace/projects/ai-ops-cockpit"
+echo "  omp --model xai-oauth/grok-4.5 --cwd /workspace/projects/ai-ops-cockpit"
 exec /bin/bash

@@ -974,3 +974,11 @@ scripts/validate-vibe-regression.sh
 - `/vibe/pilot/run`：只开放 `readonly_inspect` 与 `plan_design` 两类安全试点；`patch_draft`、`deploy_verify` 只展示权限矩阵，未授权前不允许一键执行。
 - 首批试点项目：`chenchuan-site` 与 `MyJavis`，均只读取 `/workspace/readonly/*` 中的文件级 allowlist；禁止整仓同步、数据库、`.env`、`.env.local`、token/Webhook/Kuma Push URL。
 - 实战验收：Grok 输出必须包含 O1/O2、Plan、Check、Action；结果进入 `/vibe/tasks`，需要沉淀时再转 `/vibe/todos`。
+
+## 2026-07-09 · 实战化 P0/P1：巡检闭环与项目工作区
+
+- P0 闭环：任务转待办时新增结构化摘要字段，保留 O1/O2、Plan、Check、Action 等脱敏片段，便于判断是否具备验收条件。
+- P0 待办动作：`/vibe/todos` 增加“继续追问”“生成方案”按钮，后端通过 `/vibe/todos/action` 异步创建后续 Grok 任务；“巡检”动作仍只触发内部巡检摘要。
+- P1 项目工作区：新增 `/vibe/project?id=chenchuan-site` 与 `/vibe/project?id=MyJavis`，展示项目 allowlist、最近任务、未完成待办和 workflow 权限矩阵。
+- P1 报告扩展：`/vibe/report.json?kind=daily|weekly` 增加 `pilotProjects`，把实战试点项目状态带入日报/周报上下文。
+- 安全边界不变：真实项目仍只读 allowlist；后续补丁草案/部署验收必须明确授权，不在一键试点中开放。
