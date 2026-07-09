@@ -38,12 +38,14 @@ READ_HEADER = "x-aiops-read-token"
 TASKS_DIR = os.path.join(STATE_DIR, "vibe-tasks")
 TODOS_DIR = os.path.join(STATE_DIR, "vibe-todos")
 CONVERSATIONS_DIR = os.path.join(STATE_DIR, "vibe-conversations")
+PILOT_JOBS_DIR = os.path.join(STATE_DIR, "vibe-pilot-jobs")
 READONLY_STATE_FILE = os.path.join(STATE_DIR, "readonly-refresh.json")
 WORKSPACE_ROOT = os.environ.get("WORKSPACE_ROOT", "/workspace/projects")
 READONLY_ROOT = os.environ.get("READONLY_ROOT", "/workspace/readonly")
 TASK_LOCK = threading.Lock()
 TASK_STATE = {"last_run": 0}
 TASK_COOLDOWN_SECONDS = int(os.environ.get("TASK_COOLDOWN_SECONDS", "20"))
+PILOT_JOB_LOCK = threading.Lock()
 ASSETS_CACHE_TTL_SECONDS = int(os.environ.get("ASSETS_CACHE_TTL_SECONDS", "20"))
 READONLY_REFRESH_LOCK = threading.Lock()
 PROJECT_ALLOWLIST = {
@@ -87,6 +89,50 @@ PROJECT_ALLOWLIST = {
     ],
     "realtime-voice-agent": [],
     "P003GameDemo20260513": [],
+}
+
+PILOT_WORKFLOW_MATRIX = {
+    "readonly_inspect": {
+        "name": "只读巡检",
+        "permission": "read_only",
+        "allowed": ["读取 allowlist 文件", "查看只读快照", "列风险", "给验收命令"],
+        "blocked": ["写文件", "重启服务", "改配置", "commit/push"],
+    },
+    "plan_design": {
+        "name": "方案设计",
+        "permission": "no_write",
+        "allowed": ["读上下文", "提出方案", "拆待办", "列回滚点"],
+        "blocked": ["直接改代码", "直接部署", "改 secrets"],
+    },
+    "patch_draft": {
+        "name": "补丁草案",
+        "permission": "draft_only",
+        "allowed": ["生成 diff 草案", "列测试命令", "说明风险"],
+        "blocked": ["自动写入真实项目", "自动 commit/push", "自动部署"],
+    },
+    "deploy_verify": {
+        "name": "部署验收",
+        "permission": "confirm_first",
+        "allowed": ["列部署步骤", "列回滚命令", "执行已授权验收"],
+        "blocked": ["未确认的生产变更", "破坏性 Docker/DB 操作"],
+    },
+}
+
+PILOT_PROJECTS = {
+    "chenchuan-site": {
+        "name": "chenchuan-site",
+        "path": "/workspace/readonly/chenchuan-site",
+        "risk": "低风险：只读巡检文档、构建配置和 Dockerfile，不触碰生产环境。",
+        "goal": "确认个人站项目上下文、部署线索、潜在风险和下一步低风险优化。",
+        "firstWorkflow": "readonly_inspect",
+    },
+    "MyJavis": {
+        "name": "MyJavis",
+        "path": "/workspace/readonly/MyJavis",
+        "risk": "中风险：仅允许读 README/HANDOFF/package/tsconfig/vite/index，禁止数据库和 secrets。",
+        "goal": "确认 MyJavis 当前结构、备份关联点、可观测性缺口和下一步方案。",
+        "firstWorkflow": "readonly_inspect",
+    },
 }
 
 
@@ -734,6 +780,110 @@ def allowlist_payload():
     }
 
 
+def pilot_payload():
+    return {
+        "policy": "实战试点默认只读；先跑低风险项目巡检，再由 Codex/cc 收口执行任何写入。",
+        "acceptance": [
+            "Grok 输出必须包含 O1/O2、Plan、Check、Action。",
+            "只能引用 allowlist 文件和只读快照路径。",
+            "任何写入、部署、commit、push 都必须先生成计划、风险、回滚点和验收命令。",
+            "任务结果进入 /vibe/tasks，可再转入 /vibe/todos。",
+        ],
+        "projects": [dict(item, allowlist=PROJECT_ALLOWLIST.get(key, [])) for key, item in PILOT_PROJECTS.items()],
+        "workflowMatrix": [dict({"id": key}, **value) for key, value in PILOT_WORKFLOW_MATRIX.items()],
+        "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+    }
+
+
+def build_pilot_question(project_id, workflow_id):
+    project = PILOT_PROJECTS.get(project_id)
+    workflow = PILOT_WORKFLOW_MATRIX.get(workflow_id)
+    if not project or not workflow:
+        return None
+    allowlist = PROJECT_ALLOWLIST.get(project_id, [])
+    return "\n".join([
+        f"请按实战试点流程处理项目：{project['name']}。",
+        f"工作流：{workflow['name']}，权限：{workflow['permission']}。",
+        f"目标：{project['goal']}",
+        f"只读路径：{project['path']}",
+        "允许读取的文件 allowlist：" + "、".join(allowlist),
+        "必须按 BRO-PDCA 输出：O1/O2 → Plan → Do/观察 → Check 验收 → Action 沉淀。",
+        "禁止写文件、改配置、重启、部署、commit、push；如认为需要写操作，只能给方案、diff 草案、风险、回滚点和验收命令，等待川哥确认。",
+        "禁止输出或索要 secret、Webhook、Kuma Push URL、OAuth code/token、密码、cookie、API key。",
+    ])
+
+
+def load_pilot_job(job_id):
+    job_id = (job_id or "").strip()
+    if not re.match(r"^pilot-[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$", job_id):
+        return None
+    return load_json_file(os.path.join(PILOT_JOBS_DIR, job_id + ".json"), None)
+
+
+def save_pilot_job(job):
+    ensure_private_dir(PILOT_JOBS_DIR)
+    save_json_file(os.path.join(PILOT_JOBS_DIR, job["id"] + ".json"), job)
+
+
+def run_pilot_task(payload):
+    project_id = (payload.get("project") or "chenchuan-site").strip()
+    workflow_id = (payload.get("workflow") or "readonly_inspect").strip()
+    if workflow_id not in ("readonly_inspect", "plan_design"):
+        return {"ok": False, "error": "pilot workflow must be readonly_inspect or plan_design before write access is approved"}
+    question = build_pilot_question(project_id, workflow_id)
+    if not question:
+        return {"ok": False, "error": "unknown pilot project or workflow"}
+    return run_vibe_task(workflow_id, question, "", bool(payload.get("notify")))
+
+
+def start_pilot_job(payload):
+    project_id = (payload.get("project") or "chenchuan-site").strip()
+    workflow_id = (payload.get("workflow") or "readonly_inspect").strip()
+    if workflow_id not in ("readonly_inspect", "plan_design"):
+        return {"ok": False, "error": "pilot workflow must be readonly_inspect or plan_design before write access is approved"}
+    question = build_pilot_question(project_id, workflow_id)
+    if not question:
+        return {"ok": False, "error": "unknown pilot project or workflow"}
+    if not PILOT_JOB_LOCK.acquire(blocking=False):
+        return {"ok": False, "error": "pilot job already starting"}
+    try:
+        job_id = "pilot-" + time.strftime("%Y%m%d-%H%M%S") + "-" + secrets.token_hex(3)
+        job = {
+            "id": job_id,
+            "ok": None,
+            "status": "queued",
+            "project": project_id,
+            "workflow": workflow_id,
+            "createdAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+            "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        }
+        save_pilot_job(job)
+        thread = threading.Thread(target=run_pilot_job_worker, args=(job_id, workflow_id, question, bool(payload.get("notify"))), daemon=True)
+        thread.start()
+        return {"ok": True, "status": "queued", "jobId": job_id, "pollUrl": f"/vibe/pilot/job?id={job_id}"}
+    finally:
+        PILOT_JOB_LOCK.release()
+
+
+def run_pilot_job_worker(job_id, workflow_id, question, notify):
+    job = load_pilot_job(job_id) or {"id": job_id}
+    job.update({"status": "running", "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")})
+    save_pilot_job(job)
+    try:
+        result = run_vibe_task(workflow_id, question, "", notify)
+        job.update({
+            "ok": bool(result.get("ok")),
+            "status": "done" if result.get("ok") else "failed",
+            "taskId": result.get("id"),
+            "error": result.get("error"),
+            "durationMs": result.get("durationMs"),
+            "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        })
+    except Exception as exc:
+        job.update({"ok": False, "status": "failed", "error": sanitize_terminal_text(str(exc)), "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")})
+    save_pilot_job(job)
+
+
 def n8n_manual_inspect_payload():
     try:
         report = build_report()
@@ -1248,6 +1398,7 @@ def nav_html(active="home"):
         ("总览", "/ops-dashboard/", "dashboard"),
         ("AI 详情", "/ai/", "ai"),
         ("Vibe Coding", "/vibe/", "vibe"),
+        ("实战试点", "/vibe/pilot", "pilot"),
         ("终端", "/terminal/", "terminal"),
         ("Kuma", "/ops-app/kuma", "kuma"),
         ("n8n", "/ops-app/n8n", "n8n"),
@@ -1259,6 +1410,65 @@ def nav_html(active="home"):
         class_name = "active" if key == active else ""
         items.append(f'<a class="{class_name}" href="{href}">{html.escape(label)}</a>')
     return '<nav class="topnav">' + ''.join(items) + '</nav>'
+
+
+def render_vibe_pilot_page():
+    payload = pilot_payload()
+    project_options = "".join(
+        f"<option value='{html.escape(item['name'])}'>{html.escape(item['name'])}</option>"
+        for item in payload["projects"]
+    )
+    workflow_options = "".join(
+        f"<option value='{html.escape(item['id'])}'>{html.escape(item['name'])} / {html.escape(item['permission'])}</option>"
+        for item in payload["workflowMatrix"]
+        if item["id"] in ("readonly_inspect", "plan_design")
+    )
+    project_rows = "".join(
+        f"<tr><td>{html.escape(item['name'])}</td><td><code>{html.escape(item['path'])}</code></td><td>{html.escape(item['risk'])}</td><td>{len(item['allowlist'])}</td></tr>"
+        for item in payload["projects"]
+    )
+    workflow_rows = "".join(
+        f"<tr><td>{html.escape(item['name'])}</td><td>{html.escape(item['permission'])}</td><td>{html.escape('、'.join(item['allowed']))}</td><td>{html.escape('、'.join(item['blocked']))}</td></tr>"
+        for item in payload["workflowMatrix"]
+    )
+    acceptance_items = "".join(f"<li>{html.escape(item)}</li>" for item in payload["acceptance"])
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>实战试点 - AI Ops</title><style>
+body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.hero,.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:22px;margin:16px 0;box-shadow:0 20px 60px #0005}}.hero{{background:linear-gradient(135deg,#111827,#172554)}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin:4px 8px 4px 0}}select{{background:#020617;color:#e5e7eb;border:1px solid #334155;border-radius:10px;padding:10px;margin:4px 8px 4px 0}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:360px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}.warn{{color:#f59e0b}}
+</style></head><body><main>{nav_html('pilot')}<section class="hero"><h1>真实项目实战试点</h1><p class="muted">先跑低风险只读/方案任务，验证 Harness、记忆、BRO-PDCA、工作流和权限矩阵，再逐步开放更高权限。</p><p><a class="btn" href="/vibe/">返回 Vibe</a><a class="btn" href="/vibe/pilot.json">查看 JSON</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/todos" data-token-link="true">AI 待办</a></p></section><section class="card"><h2>一键试点</h2><p class="muted">当前只允许“只读巡检”和“方案设计”；补丁草案/部署验收仅展示权限矩阵，不开放一键执行。</p><select id="pilotProject">{project_options}</select><select id="pilotWorkflow">{workflow_options}</select><label><input id="pilotNotify" type="checkbox"> 完成后飞书通知</label><p><button id="runPilotBtn">发送试点任务给 Grok</button></p><pre id="pilotResult">等待试点任务。</pre></section><section class="card"><h2>项目级 Allowlist</h2><table><thead><tr><th>项目</th><th>只读路径</th><th>风险说明</th><th>文件数</th></tr></thead><tbody>{project_rows}</tbody></table></section><section class="card"><h2>Workflow 权限矩阵</h2><table><thead><tr><th>Workflow</th><th>权限</th><th>允许</th><th>禁止</th></tr></thead><tbody>{workflow_rows}</tbody></table></section><section class="card"><h2>验收标准</h2><ul>{acceptance_items}</ul></section></main><script>
+sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}');
+document.querySelectorAll('[data-token-link="true"]').forEach((link) => {{
+  link.addEventListener('click', () => sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}'));
+}});
+document.getElementById('runPilotBtn').addEventListener('click', async () => {{
+  const result = document.getElementById('pilotResult');
+  const button = document.getElementById('runPilotBtn');
+  button.disabled = true;
+  result.textContent = '正在提交试点任务...';
+  try {{
+    const response = await fetch('/vibe/pilot/run', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Read-Token': '{READ_TOKEN}' }}, body: JSON.stringify({{ project: document.getElementById('pilotProject').value, workflow: document.getElementById('pilotWorkflow').value, notify: document.getElementById('pilotNotify').checked }}) }});
+    const data = await response.json();
+    result.textContent = JSON.stringify(data, null, 2);
+    if (data.ok && data.jobId) {{
+      await pollPilotJob(data.jobId, result);
+    }}
+  }} catch (error) {{
+    result.textContent = String(error);
+  }} finally {{
+    button.disabled = false;
+  }}
+}});
+async function pollPilotJob(jobId, result) {{
+  const startedAt = Date.now();
+  for (let attempt = 0; attempt < 90; attempt += 1) {{
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const response = await fetch(`/vibe/pilot/job?id=${{encodeURIComponent(jobId)}}`, {{ credentials: 'same-origin' }});
+    const data = await response.json();
+    result.textContent = JSON.stringify(data, null, 2) + `\\n\\n运行中 ${{Math.round((Date.now() - startedAt) / 1000)}}s；完成后去 /vibe/tasks 查看完整审计。`;
+    if (data.status === 'done' || data.status === 'failed') return;
+  }}
+  result.textContent += '\\n\\n任务仍在后台运行，请稍后到 /vibe/tasks 查看。';
+}}
+</script></body></html>"""
 
 
 
@@ -1470,7 +1680,7 @@ def render_vibe_page():
     status_class = "ok" if status["ok"] else "warn"
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vibe Coding - AI Ops</title><style>
 body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1240px;margin:0 auto;padding:28px}}.hero{{background:linear-gradient(135deg,#111827,#172554);border:1px solid #334155;border-radius:24px;padding:28px;margin-bottom:18px;box-shadow:0 24px 80px #0006}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 20px 60px #0005}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin:4px 8px 4px 0}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:280px;overflow:auto}}.chat div{{border:1px solid #334155;border-radius:14px;padding:12px;margin:10px 0}}.chat .user{{background:#172554}}.chat .assistant{{background:#111827}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}.terminal{{height:58vh;border:1px solid #334155;border-radius:18px;overflow:hidden;background:#020617}}iframe{{border:0;width:100%;height:100%}}.pill{{display:inline-block;border:1px solid #334155;border-radius:999px;padding:6px 10px;margin:4px;background:#0b1220}}
-</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 Grok 版 OMP；真实项目接入前先固定规则、记忆、BRO-PDCA、工作流和权限边界。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">默认只读</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/todos" data-token-link="true">AI 待办</a><a class="btn" href="/vibe/assets">资产矩阵</a><button id="refreshReadonlyBtn">刷新只读快照</button><button id="runN8nInspectBtn">触发手动巡检</button></p><pre id="actionResult">等待操作。</pre><p class="muted" id="readonlyStatus">只读快照：检查中...</p></section><section class="card"><h2>连续对话</h2><p class="muted">保留本页上下文继续问 Grok；刷新页面会清空上下文。</p><div id="chatHistory" class="chat"><p class="muted">暂无对话。</p></div></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送只读任务。默认禁用工具调用；留空会自动执行默认只读巡检。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><label><input id="notifyFeishu" type="checkbox"> 完成后飞书通知</label></p><p><button id="sendTaskBtn">发送给 Grok</button><button id="clearTaskBtn" type="button">清空重写</button><button id="clearChatBtn" type="button">清空对话</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><p class="muted" id="taskStatus">状态：待发送</p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness prompt 并启动 <code>omp --model xai-oauth/grok-4.3</code>。默认只读；写入/部署必须先确认。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
+</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 Grok 版 OMP；真实项目接入前先固定规则、记忆、BRO-PDCA、工作流和权限边界。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">默认只读</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/pilot">实战试点</a><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/todos" data-token-link="true">AI 待办</a><a class="btn" href="/vibe/assets">资产矩阵</a><button id="refreshReadonlyBtn">刷新只读快照</button><button id="runN8nInspectBtn">触发手动巡检</button></p><pre id="actionResult">等待操作。</pre><p class="muted" id="readonlyStatus">只读快照：检查中...</p></section><section class="card"><h2>实战前护栏</h2><p class="muted">先从低风险项目开始：选择项目、选择只读/方案 workflow、发送给 Grok，结果进入任务审计并可转待办。</p><p><a class="btn" href="/vibe/pilot">进入真实项目实战试点</a></p></section><section class="card"><h2>连续对话</h2><p class="muted">保留本页上下文继续问 Grok；刷新页面会清空上下文。</p><div id="chatHistory" class="chat"><p class="muted">暂无对话。</p></div></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送只读任务。默认禁用工具调用；留空会自动执行默认只读巡检。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><label><input id="notifyFeishu" type="checkbox"> 完成后飞书通知</label></p><p><button id="sendTaskBtn">发送给 Grok</button><button id="clearTaskBtn" type="button">清空重写</button><button id="clearChatBtn" type="button">清空对话</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><p class="muted" id="taskStatus">状态：待发送</p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness prompt 并启动 <code>omp --model xai-oauth/grok-4.3</code>。默认只读；写入/部署必须先确认。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
 document.querySelectorAll('[data-copy]').forEach((button) => {{
   button.addEventListener('click', async () => {{
     await navigator.clipboard.writeText(button.dataset.copy);
@@ -1648,6 +1858,14 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, readonly_refresh_status())
             elif path == "/vibe/allowlist.json":
                 self._send_json(200, allowlist_payload())
+            elif path == "/vibe/pilot.json":
+                self._send_json(200, pilot_payload())
+            elif path == "/vibe/pilot/job":
+                job_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
+                job = load_pilot_job(job_id)
+                self._send_json(200 if job else 404, job or {"ok": False, "error": "pilot job not found"})
+            elif path in ("/vibe/pilot", "/vibe/pilot/"):
+                self._send_text(200, render_vibe_pilot_page(), "text/html; charset=utf-8")
             elif path == "/vibe/kuma-context.json":
                 self._send_json(200, kuma_context_payload())
             elif path == "/vibe/report.json":
@@ -1752,6 +1970,12 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 payload = self._read_json_body()
                 self._send_json(200, inspect_for_todo(payload.get("todoId")))
+            elif path == "/vibe/pilot/run":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                payload = self._read_json_body()
+                self._send_json(200, start_pilot_job(payload))
             else:
                 self._send_json(404, {"ok": False, "error": "not found"})
         except Exception as exc:

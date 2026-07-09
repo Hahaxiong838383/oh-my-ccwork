@@ -12,6 +12,7 @@ PAGE=/tmp/aiops-vibe-regression.html
 TASKS=/tmp/aiops-vibe-tasks.html
 ASSETS=/tmp/aiops-vibe-assets.html
 TODOS=/tmp/aiops-vibe-todos.html
+PILOT=/tmp/aiops-vibe-pilot.html
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/" -o "$PAGE"
 python3 - "$PAGE" > /tmp/aiops-vibe-script.js <<'PY'
 import sys
@@ -37,15 +38,28 @@ grep -q 'AI Ops 待办' "$TODOS"
 grep -q '发飞书' "$TODOS"
 grep -q '巡检' "$TODOS"
 grep -q 'todoSearch' "$TODOS"
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/pilot" -o "$PILOT"
+grep -q '真实项目实战试点' "$PILOT"
+grep -q 'Workflow 权限矩阵' "$PILOT"
+python3 - "$PILOT" > /tmp/aiops-vibe-pilot-script.js <<'PY'
+import sys
+html=open(sys.argv[1]).read()
+script=html.split('<script>',1)[1].split('</script>',1)[0]
+assert 'runPilotBtn' in script
+print(script)
+PY
+node --check /tmp/aiops-vibe-pilot-script.js >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/assets" -o "$ASSETS"
 grep -q '服务器资产矩阵' "$ASSETS"
 grep -q '项目文件级 Allowlist' "$ASSETS"
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/assets.json" | jq -e '(.servers|length)>=4 and (.workspaces|length)>=1' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="MyJavis" and .status=="enabled" and .fileCount>=8)' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="chenchuan-site" and .status=="enabled" and .fileCount>=4)' >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/pilot.json" | jq -e '(.projects|length)>=2 and (.workflowMatrix[] | select(.id=="patch_draft" and .permission=="draft_only"))' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/kuma-context.json" | jq -e 'has("downMonitors") and has("backup")' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/report.json?kind=daily" | jq -e '.summary | has("openTodos") and has("backupOk")' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/readonly-refresh.json" | jq -e 'has("mounted")' >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"project":"chenchuan-site","workflow":"patch_draft"}' "$BASE/vibe/pilot/run" | jq -e '.ok==false and (.error|contains("pilot workflow"))' >/dev/null
 sleep "${AI_OPS_REGRESSION_SLEEP:-22}"
 RESP=$(curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"mode":"readonly_inspect","question":"回归验收：请只返回 AI_OPS_REGRESSION_OK。","conversation":"川哥: 回归测试发送主按钮。"}' "$BASE/vibe/task/run")
 printf "%s" "$RESP" | jq -e '.ok==true and (.answer|contains("AI_OPS_REGRESSION_OK"))' >/dev/null

@@ -966,3 +966,11 @@ scripts/validate-vibe-regression.sh
 - `/vibe/kuma-context.json` 提供 Kuma 告警上下文、备份状态、主机和容器摘要，供告警后自动拉上下文。
 - `/vibe/report.json?kind=daily|weekly` 提供 AI Ops 日报/周报 JSON：监控、容器、备份、待办摘要。
 - 远端服务器矩阵会尝试通过 `ops-terminal` 内 SSH alias 做短超时只读探测；不可达时仍显示待接入，不阻塞页面。
+
+## 2026-07-09 · 实战前护栏与首个真实项目试点
+
+- `/vibe/pilot`：新增“真实项目实战试点”入口，用于从看板阶段进入实战阶段；先选项目、选 workflow，再发送给 Grok。
+- `/vibe/pilot.json`：输出项目级 allowlist、workflow 权限矩阵和验收标准，供页面和外部检查使用。
+- `/vibe/pilot/run`：只开放 `readonly_inspect` 与 `plan_design` 两类安全试点；`patch_draft`、`deploy_verify` 只展示权限矩阵，未授权前不允许一键执行。
+- 首批试点项目：`chenchuan-site` 与 `MyJavis`，均只读取 `/workspace/readonly/*` 中的文件级 allowlist；禁止整仓同步、数据库、`.env`、`.env.local`、token/Webhook/Kuma Push URL。
+- 实战验收：Grok 输出必须包含 O1/O2、Plan、Check、Action；结果进入 `/vibe/tasks`，需要沉淀时再转 `/vibe/todos`。
