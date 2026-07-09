@@ -958,3 +958,11 @@ scripts/validate-vibe-regression.sh
 - `/vibe/todos` 待办支持 `open → doing → done` 状态流转，并支持单条待办“发飞书”和“巡检”。
 - 待办飞书只发送待办 ID、状态、模式和入口，不外发标题、摘要、Grok 输出或用户问题；待办巡检只触发内部巡检摘要。
 - 回归脚本扩展覆盖：MyJavis allowlist 已启用、待办状态更新、待办巡检、Grok 主按钮不回归。
+
+## 2026-07-08 · P1/P2 补齐：详情、搜索、报告、告警上下文
+
+- `/vibe/todos` 增加状态筛选和关键字搜索；每条待办可进入 `/vibe/todos/detail?id=...` 查看脱敏详情与来源任务元信息。
+- `chenchuan-site` 首批接入文件级 allowlist，仅同步 README、package、tsconfig、next config、Dockerfile；远端源未就绪时保持占位，不整仓同步。
+- `/vibe/kuma-context.json` 提供 Kuma 告警上下文、备份状态、主机和容器摘要，供告警后自动拉上下文。
+- `/vibe/report.json?kind=daily|weekly` 提供 AI Ops 日报/周报 JSON：监控、容器、备份、待办摘要。
+- 远端服务器矩阵会尝试通过 `ops-terminal` 内 SSH alias 做短超时只读探测；不可达时仍显示待接入，不阻塞页面。

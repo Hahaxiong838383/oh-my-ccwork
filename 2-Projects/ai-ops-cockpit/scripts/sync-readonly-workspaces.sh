@@ -127,7 +127,12 @@ EOF
   make_readonly "$DEST_ROOT/mycc"
 fi
 
-create_project_placeholder chenchuan-site
+copy_allowlist_snapshot chenchuan-site "$SRC_ROOT/chenchuan-site" \
+  README.md \
+  package.json \
+  tsconfig.json \
+  next.config.ts \
+  Dockerfile
 copy_allowlist_snapshot MyJavis "$SRC_ROOT/MyJavis" \
   README.md \
   HANDOFF.md \

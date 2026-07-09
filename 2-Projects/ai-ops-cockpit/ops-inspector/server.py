@@ -66,7 +66,13 @@ PROJECT_ALLOWLIST = {
         "2-Projects/ai-ops-cockpit/terminal/vibe-omp",
         "2-Projects/ai-ops-cockpit/terminal/vibe-shell",
     ],
-    "chenchuan-site": [],
+    "chenchuan-site": [
+        "README.md",
+        "package.json",
+        "tsconfig.json",
+        "next.config.ts",
+        "Dockerfile",
+    ],
     "MyJavis": [
         "README.md",
         "HANDOFF.md",
@@ -187,7 +193,7 @@ def load_json_file(path, default):
 
 def save_json_file(path, payload):
     ensure_state_dir()
-    tmp_path = path + ".tmp"
+    tmp_path = f"{path}.{os.getpid()}.{threading.get_ident()}.tmp"
     with open(tmp_path, "w", encoding="utf-8") as file:
         json.dump(payload, file, ensure_ascii=False, indent=2)
     os.replace(tmp_path, path)
@@ -647,12 +653,30 @@ def servers_matrix_payload():
     disk_used = racknerd["maxDiskUsedPercent"] or 0
     racknerd["readinessScore"] = max(0, 100 - racknerd["unhealthy"] * 20 - racknerd["monitorsDown"] * 20 - max(0, disk_used - 70))
     racknerd["risk"] = "探测项未见异常（非业务健康结论）" if racknerd["readinessScore"] >= 90 else "需关注：容器/监控/磁盘存在扣分项"
-    planned = [
-        {"name": "阿里云", "role": "待接 SSH 只读巡检", "status": "待接入", "containers": None, "unhealthy": None, "maxDiskUsedPercent": None, "monitorsDown": None, "lastChecked": None, "readinessScore": None, "risk": "待接入"},
-        {"name": "Mini", "role": "家庭编排中枢，待接入", "status": "待接入", "containers": None, "unhealthy": None, "maxDiskUsedPercent": None, "monitorsDown": None, "lastChecked": None, "readinessScore": None, "risk": "待接入"},
-        {"name": "NAS", "role": "fnOS/NAS，待接入", "status": "待接入", "containers": None, "unhealthy": None, "maxDiskUsedPercent": None, "monitorsDown": None, "lastChecked": None, "readinessScore": None, "risk": "待接入"},
-    ]
+    planned = remote_server_matrix()
     return {"servers": [racknerd] + planned, "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")}
+
+
+def remote_server_matrix():
+    items = []
+    for name, alias, role in [
+        ("阿里云", "aliyun", "待接 SSH 只读巡检"),
+        ("Mini", "mini", "家庭编排中枢"),
+        ("NAS", "nas", "fnOS/NAS"),
+    ]:
+        status = "待接入"
+        risk = "SSH 只读探测未配置或不可达"
+        readiness = None
+        try:
+            output = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", f"timeout 6 ssh -o BatchMode=yes -o ConnectTimeout=3 {shlex.quote(alias)} 'hostname && uptime'"], timeout=8)
+            if output:
+                status = "UP"
+                risk = "SSH 只读探测可用"
+                readiness = 80
+        except Exception:
+            pass
+        items.append({"name": name, "role": role, "status": status, "containers": None, "unhealthy": None, "maxDiskUsedPercent": None, "monitorsDown": None, "lastChecked": time.strftime("%Y-%m-%d %H:%M:%S %Z"), "readinessScore": readiness, "risk": risk})
+    return items
 
 
 def assets_payload(force=False):
@@ -730,6 +754,56 @@ def todo_history(limit=50):
         if item:
             items.append(item)
     return sorted(items, key=lambda item: item.get("createdAt", ""), reverse=True)[:limit]
+
+
+def todo_detail(todo_id):
+    todo_id = (todo_id or "").strip()
+    if not re.match(r"^todo-[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$", todo_id):
+        return None
+    todo = load_json_file(os.path.join(TODOS_DIR, todo_id + ".json"), None)
+    if not todo:
+        return None
+    task = load_json_file(os.path.join(TASKS_DIR, todo.get("taskId", "") + ".json"), {}) or {}
+    return {"todo": todo, "task": {"id": task.get("id"), "ok": task.get("ok"), "modeName": task.get("modeName"), "createdAt": task.get("createdAt"), "durationMs": task.get("durationMs")}}
+
+
+def ops_report_payload(kind="daily"):
+    report = build_report()
+    todos = todo_history(200)
+    open_todos = [item for item in todos if item.get("status") != "done"]
+    done_todos = [item for item in todos if item.get("status") == "done"]
+    backup = backup_summary(report.get("monitors", []))
+    payload = {
+        "ok": report.get("ok") and not open_todos,
+        "kind": kind if kind in ("daily", "weekly") else "daily",
+        "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "summary": {
+            "monitorsDown": len([item for item in report.get("monitors", []) if item.get("active") and item.get("status") != 1]),
+            "unhealthyContainers": len([item for item in report.get("containers", []) if "Up" not in item.get("status", "")]),
+            "openTodos": len(open_todos),
+            "doneTodos": len(done_todos),
+            "backupOk": backup.get("ok"),
+        },
+        "backup": backup,
+        "openTodos": [{"id": item.get("id"), "status": item.get("status"), "modeName": item.get("modeName"), "createdAt": item.get("createdAt")} for item in open_todos[:20]],
+        "reportText": report.get("text"),
+    }
+    return payload
+
+
+def kuma_context_payload():
+    report = build_report()
+    monitors = [item for item in report.get("monitors", []) if item.get("active")]
+    down = [item for item in monitors if item.get("status") != 1]
+    return {
+        "ok": not down,
+        "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "downMonitors": down,
+        "backup": backup_summary(monitors),
+        "host": report.get("host"),
+        "containers": report.get("containers", []),
+        "nextSteps": ["查看 /vibe/tasks 最近巡检", "查看 /vibe/assets 就绪度", "必要时触发 /vibe/action/n8n-inspect"],
+    }
 
 
 def create_todo_from_task(task_id):
@@ -915,18 +989,20 @@ loadTasks();
 
 
 def render_vibe_todos_page():
-    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>AI Ops 待办 - Vibe</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}button{{background:#2563eb;color:white;border:0;border-radius:10px;padding:8px 12px;margin:4px;cursor:pointer}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>AI Ops 待办</h1><p class=\"muted\">由 Grok 任务审计一键沉淀，默认只保存脱敏摘要和任务 ID；用于后续转工单/周报。</p><button id=\"reloadTodos\">刷新</button><span id=\"todoSummary\" class=\"muted\"></span><table><thead><tr><th>时间</th><th>状态</th><th>标题</th><th>摘要</th><th>来源</th></tr></thead><tbody id=\"todoRows\"><tr><td colspan=5>加载中...</td></tr></tbody></table></section></main><script>
+    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>AI Ops 待办 - Vibe</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}button,select,input{{background:#1f2937;color:white;border:1px solid #334155;border-radius:10px;padding:8px 12px;margin:4px}}button{{background:#2563eb;border:0;cursor:pointer}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>AI Ops 待办</h1><p class=\"muted\">由 Grok 任务审计一键沉淀，默认只保存脱敏摘要和任务 ID；用于后续转工单/周报。</p><input id=\"todoSearch\" placeholder=\"搜索标题/摘要/ID\"><select id=\"todoStatusFilter\"><option value=\"all\">全部</option><option value=\"open\">open</option><option value=\"doing\">doing</option><option value=\"done\">done</option></select><button id=\"reloadTodos\">刷新</button><span id=\"todoSummary\" class=\"muted\"></span><table><thead><tr><th>时间</th><th>状态</th><th>标题</th><th>摘要</th><th>来源</th></tr></thead><tbody id=\"todoRows\"><tr><td colspan=5>加载中...</td></tr></tbody></table></section></main><script>
 const token = sessionStorage.getItem('aiopsReadToken') || '';
+let allTodos = [];
 function escapeHtml(value) {{ return String(value || '').replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
-async function loadTodos() {{
+function renderTodos() {{
   const body = document.getElementById('todoRows');
-  if (!token) {{ body.innerHTML = '<tr><td colspan=5>请从 Vibe 工作台进入待办。</td></tr>'; return; }}
-  const response = await fetch('/vibe/todos.json', {{ credentials: 'same-origin', headers: {{ 'X-AIOps-Read-Token': token }} }});
-  if (!response.ok) {{ body.innerHTML = '<tr><td colspan=5>无权读取待办。</td></tr>'; return; }}
-  const data = await response.json();
-  const todos = data.todos || [];
-  document.getElementById('todoSummary').textContent = `共 ${{todos.length}} 条`;
-  body.innerHTML = todos.map(item => `<tr><td>${{escapeHtml(item.createdAt)}}</td><td><select data-status-id="${{escapeHtml(item.id)}}"><option value="open" ${{item.status === 'open' ? 'selected' : ''}}>open</option><option value="doing" ${{item.status === 'doing' ? 'selected' : ''}}>doing</option><option value="done" ${{item.status === 'done' ? 'selected' : ''}}>done</option></select></td><td>${{escapeHtml(item.title)}}</td><td>${{escapeHtml(item.summary)}}</td><td><code>${{escapeHtml(item.taskId)}}</code><br><button data-notify-id="${{escapeHtml(item.id)}}">发飞书</button><button data-inspect-id="${{escapeHtml(item.id)}}">巡检</button></td></tr>`).join('') || '<tr><td colspan=5>暂无待办</td></tr>';
+  const statusFilter = document.getElementById('todoStatusFilter').value;
+  const query = document.getElementById('todoSearch').value.trim().toLowerCase();
+  const todos = allTodos.filter(item => (statusFilter === 'all' || item.status === statusFilter) && (!query || JSON.stringify(item).toLowerCase().includes(query)));
+  document.getElementById('todoSummary').textContent = `共 ${{allTodos.length}} 条，当前显示 ${{todos.length}} 条`;
+  body.innerHTML = todos.map(item => `<tr><td>${{escapeHtml(item.createdAt)}}</td><td><select data-status-id="${{escapeHtml(item.id)}}"><option value="open" ${{item.status === 'open' ? 'selected' : ''}}>open</option><option value="doing" ${{item.status === 'doing' ? 'selected' : ''}}>doing</option><option value="done" ${{item.status === 'done' ? 'selected' : ''}}>done</option></select></td><td><a href="/vibe/todos/detail?id=${{encodeURIComponent(item.id)}}">${{escapeHtml(item.title)}}</a></td><td>${{escapeHtml(item.summary)}}</td><td><code>${{escapeHtml(item.taskId)}}</code><br><button data-notify-id="${{escapeHtml(item.id)}}">发飞书</button><button data-inspect-id="${{escapeHtml(item.id)}}">巡检</button></td></tr>`).join('') || '<tr><td colspan=5>暂无待办</td></tr>';
+  bindTodoActions();
+}}
+function bindTodoActions() {{
   document.querySelectorAll('[data-status-id]').forEach(select => select.addEventListener('change', async () => {{
     const response = await fetch('/vibe/todos/update', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Read-Token': token }}, body: JSON.stringify({{ todoId: select.dataset.statusId, status: select.value }}) }});
     if (!response.ok) select.value = 'open';
@@ -942,9 +1018,29 @@ async function loadTodos() {{
     button.textContent = data.ok ? '已巡检' : '巡检失败';
   }}));
 }}
+async function loadTodos() {{
+  const body = document.getElementById('todoRows');
+  if (!token) {{ body.innerHTML = '<tr><td colspan=5>请从 Vibe 工作台进入待办。</td></tr>'; return; }}
+  const response = await fetch('/vibe/todos.json', {{ credentials: 'same-origin', headers: {{ 'X-AIOps-Read-Token': token }} }});
+  if (!response.ok) {{ body.innerHTML = '<tr><td colspan=5>无权读取待办。</td></tr>'; return; }}
+  const data = await response.json();
+  allTodos = data.todos || [];
+  renderTodos();
+}}
 document.getElementById('reloadTodos').addEventListener('click', loadTodos);
+document.getElementById('todoSearch').addEventListener('input', renderTodos);
+document.getElementById('todoStatusFilter').addEventListener('change', renderTodos);
 loadTodos();
 </script></body></html>"""
+
+
+def render_vibe_todo_detail_page(todo_id):
+    detail = todo_detail(todo_id)
+    if not detail:
+        return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><title>待办不存在</title></head><body><main>{nav_html('vibe')}<h1>待办不存在</h1><p><a href=\"/vibe/todos\">返回待办</a></p></main></body></html>"""
+    todo = detail["todo"]
+    task = detail["task"]
+    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>待办详情 - AI Ops</title><style>body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:900px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}code{{background:#020617;padding:2px 6px;border-radius:6px}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}</style></head><body><main>{nav_html('vibe')}<section class=\"card\"><h1>{html.escape(todo.get('title') or 'AI Ops 待办')}</h1><p class=\"muted\">ID：<code>{html.escape(todo.get('id'))}</code> · 状态：{html.escape(todo.get('status'))} · 来源任务：<code>{html.escape(todo.get('taskId'))}</code></p><h2>脱敏摘要</h2><pre>{html.escape(todo.get('summary') or '')}</pre><h2>处理记录</h2><ul><li>创建：{html.escape(todo.get('createdAt') or '-')}</li><li>更新：{html.escape(todo.get('updatedAt') or '-')}</li><li>最后通知：{html.escape(todo.get('lastNotifiedAt') or '-')}</li></ul><h2>来源任务元信息</h2><pre>{html.escape(json.dumps(task, ensure_ascii=False, indent=2))}</pre><p><a href=\"/vibe/todos\">返回待办列表</a></p></section></main></body></html>"""
 
 
 def render_assets_page():
@@ -1552,6 +1648,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, readonly_refresh_status())
             elif path == "/vibe/allowlist.json":
                 self._send_json(200, allowlist_payload())
+            elif path == "/vibe/kuma-context.json":
+                self._send_json(200, kuma_context_payload())
+            elif path == "/vibe/report.json":
+                kind = parse_qs(urlparse(self.path).query).get("kind", ["daily"])[0]
+                self._send_json(200, ops_report_payload(kind))
             elif path in ("/vibe/assets", "/vibe/assets/"):
                 self._send_text(200, render_assets_page(), "text/html; charset=utf-8")
             elif path == "/vibe/tasks.json":
@@ -1568,6 +1669,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, {"todos": todo_history(100)})
             elif path in ("/vibe/todos", "/vibe/todos/"):
                 self._send_text(200, render_vibe_todos_page(), "text/html; charset=utf-8")
+            elif path in ("/vibe/todos/detail", "/vibe/todos/detail/"):
+                todo_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
+                self._send_text(200, render_vibe_todo_detail_page(todo_id), "text/html; charset=utf-8")
             elif path in ("/vibe", "/vibe/"):
                 self._send_text(200, render_vibe_page(), "text/html; charset=utf-8")
             elif path.startswith("/ops-app/"):

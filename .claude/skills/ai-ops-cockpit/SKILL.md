@@ -58,6 +58,8 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && AI_OPS_REGRESSION_SLEEP=22 scripts/valid
 - 状态流转：确认 `/vibe/todos/update` 只允许 `open/doing/done`，且不写入 Grok 原文。
 - 待办通知：确认 `/vibe/todos/notify` 只发待办 ID、状态、模式和入口，不发标题/摘要/question/answer。
 - 巡检联动：确认 `/vibe/action/n8n-inspect` 不接收用户正文，不外发 question/answer，只触发内部巡检摘要。
+- 详情/搜索：确认 `/vibe/todos` 搜索和状态筛选可用，`/vibe/todos/detail?id=...` 只展示脱敏摘要与任务元信息。
+- 告警上下文：确认 `/vibe/kuma-context.json` 和 `/vibe/report.json` 可返回 JSON，且不包含 secret/token。
 - cron：确认包含 `flock -n /tmp/aiops-readonly-refresh.lock`，避免重叠刷新。
 - Git：只 stage AI Ops 相关文件；不要吞 `.claude/skills/evomap-assets/*.json`、`.claude/skills/scheduler/history.md` 等无关脏改。
 
