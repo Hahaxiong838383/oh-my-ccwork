@@ -43,6 +43,9 @@ TODO_JOBS_DIR = os.path.join(STATE_DIR, "vibe-todo-jobs")
 READONLY_STATE_FILE = os.path.join(STATE_DIR, "readonly-refresh.json")
 WORKSPACE_ROOT = os.environ.get("WORKSPACE_ROOT", "/workspace/projects")
 READONLY_ROOT = os.environ.get("READONLY_ROOT", "/workspace/readonly")
+ALLOWLIST_DIR = os.environ.get("ALLOWLIST_DIR", "/config")
+PROJECT_CONTEXT_MAX_CHARS = int(os.environ.get("PROJECT_CONTEXT_MAX_CHARS", "280000"))
+PROJECT_CONTEXT_FILE_MAX_CHARS = int(os.environ.get("PROJECT_CONTEXT_FILE_MAX_CHARS", "22000"))
 TASK_LOCK = threading.Lock()
 TASK_STATE = {"last_run": 0}
 TASK_COOLDOWN_SECONDS = int(os.environ.get("TASK_COOLDOWN_SECONDS", "20"))
@@ -50,6 +53,35 @@ PILOT_JOB_LOCK = threading.Lock()
 TODO_JOB_LOCK = threading.Lock()
 ASSETS_CACHE_TTL_SECONDS = int(os.environ.get("ASSETS_CACHE_TTL_SECONDS", "20"))
 READONLY_REFRESH_LOCK = threading.Lock()
+
+
+def load_allowlist_file(name, fallback):
+    path = os.path.join(ALLOWLIST_DIR, name + "-allowlist.txt")
+    try:
+        items = []
+        with open(path, encoding="utf-8") as file:
+            for raw_line in file:
+                line = raw_line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                normalized = os.path.normpath(line).replace("\\", "/")
+                if normalized.startswith("../") or normalized.startswith("/") or normalized == "..":
+                    continue
+                items.append(normalized)
+        return items or list(fallback)
+    except OSError:
+        return list(fallback)
+
+
+CHENCHUAN_SITE_FALLBACK_ALLOWLIST = [
+    "README.md",
+    "package.json",
+    "tsconfig.json",
+    "next.config.ts",
+    "Dockerfile",
+]
+
+
 PROJECT_ALLOWLIST = {
     "mycc": [
         "AGENTS.md",
@@ -70,13 +102,7 @@ PROJECT_ALLOWLIST = {
         "2-Projects/ai-ops-cockpit/terminal/vibe-omp",
         "2-Projects/ai-ops-cockpit/terminal/vibe-shell",
     ],
-    "chenchuan-site": [
-        "README.md",
-        "package.json",
-        "tsconfig.json",
-        "next.config.ts",
-        "Dockerfile",
-    ],
+    "chenchuan-site": load_allowlist_file("chenchuan-site", CHENCHUAN_SITE_FALLBACK_ALLOWLIST),
     "MyJavis": [
         "README.md",
         "HANDOFF.md",
@@ -124,9 +150,18 @@ PILOT_PROJECTS = {
     "chenchuan-site": {
         "name": "chenchuan-site",
         "path": "/workspace/readonly/chenchuan-site",
-        "risk": "低风险：只读巡检文档、构建配置和 Dockerfile，不触碰生产环境。",
-        "goal": "确认个人站项目上下文、部署线索、潜在风险和下一步低风险优化。",
+        "risk": "低风险：只读巡检公开页面、组件和安全业务逻辑；后台、API 鉴权、数据库、环境变量与媒体原文件保持隔离。",
+        "goal": "基于真实只读源码确认个人站结构、部署线索、潜在风险和下一步低风险优化。",
         "firstWorkflow": "readonly_inspect",
+        "production": {
+            "domain": "https://my.chenchuan.cc",
+            "sshAlias": "aliyun-kr",
+            "address": "8.213.134.133",
+            "path": "/var/www/chenchuan-site",
+            "processManager": "PM2",
+            "process": "chenchuan-site",
+            "verifiedAt": "2026-07-10",
+        },
     },
     "MyJavis": {
         "name": "MyJavis",
@@ -512,6 +547,15 @@ def redact_sensitive_text(text):
     return text
 
 
+def compact_task_answer(value, limit=18000):
+    text = sanitize_terminal_text(value or "")
+    if len(text) <= limit:
+        return text
+    head_chars = limit // 3
+    tail_chars = limit - head_chars
+    return text[:head_chars] + "\n[OUTPUT_TRUNCATED_MIDDLE]\n" + text[-tail_chars:]
+
+
 def terminal_sessions(limit=12):
     items = []
     if not os.path.isdir(TERMINAL_LOG_DIR):
@@ -783,6 +827,14 @@ def allowlist_payload():
 
 
 def pilot_payload():
+    projects = []
+    for key, item in PILOT_PROJECTS.items():
+        context = build_project_context(key)
+        projects.append(dict(
+            item,
+            allowlist=PROJECT_ALLOWLIST.get(key, []),
+            context={name: value for name, value in context.items() if name != "prompt"},
+        ))
     return {
         "policy": "实战试点默认只读；先跑低风险项目巡检，再由 Codex/cc 收口执行任何写入。",
         "acceptance": [
@@ -791,7 +843,7 @@ def pilot_payload():
             "任何写入、部署、commit、push 都必须先生成计划、风险、回滚点和验收命令。",
             "任务结果进入 /vibe/tasks，可再转入 /vibe/todos。",
         ],
-        "projects": [dict(item, allowlist=PROJECT_ALLOWLIST.get(key, [])) for key, item in PILOT_PROJECTS.items()],
+        "projects": projects,
         "workflowMatrix": [dict({"id": key}, **value) for key, value in PILOT_WORKFLOW_MATRIX.items()],
         "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
     }
@@ -842,15 +894,69 @@ def project_workspace_panel(project_id):
     if not project:
         return None
     allowlist = PROJECT_ALLOWLIST.get(project_id, [])
-    todos = [item for item in todo_history(100) if project_id in json.dumps(item, ensure_ascii=False)]
-    tasks = [item for item in task_history(100) if project_id in json.dumps(item, ensure_ascii=False)]
+    todos = [item for item in todo_history(100) if item.get("project") == project_id or project_id in json.dumps(item, ensure_ascii=False)]
+    tasks = [item for item in task_history(100) if item.get("project") == project_id or project_id in json.dumps(item, ensure_ascii=False)]
+    context = build_project_context(project_id)
     return {
         "ok": True,
         "project": dict(project, allowlist=allowlist, allowlistCount=len(allowlist)),
+        "context": {key: value for key, value in context.items() if key != "prompt"},
         "recentTasks": [{"id": item.get("id"), "ok": item.get("ok"), "modeName": item.get("modeName"), "createdAt": item.get("createdAt")} for item in tasks[:10]],
         "openTodos": [{"id": item.get("id"), "status": item.get("status"), "title": item.get("title"), "createdAt": item.get("createdAt")} for item in todos if item.get("status") != "done"],
         "workflowMatrix": [dict({"id": key}, **value) for key, value in PILOT_WORKFLOW_MATRIX.items()],
         "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+    }
+
+
+def build_project_context(project_id):
+    project_id = (project_id or "").strip()
+    allowlist = PROJECT_ALLOWLIST.get(project_id)
+    if allowlist is None:
+        return {"ok": False, "error": "unknown project", "files": [], "missing": [], "chars": 0, "truncated": False, "prompt": ""}
+    readonly_base = os.path.realpath(READONLY_ROOT)
+    project_root = os.path.realpath(os.path.join(readonly_base, project_id))
+    if project_root != readonly_base and not project_root.startswith(readonly_base + os.sep):
+        return {"ok": False, "error": "invalid project path", "files": [], "missing": [], "chars": 0, "truncated": False, "prompt": ""}
+    blocks = []
+    files = []
+    missing = []
+    total_chars = 0
+    truncated = False
+    for relative_path in allowlist:
+        file_path = os.path.realpath(os.path.join(project_root, relative_path))
+        if not file_path.startswith(project_root + os.sep) or not os.path.isfile(file_path):
+            missing.append(relative_path)
+            continue
+        try:
+            with open(file_path, encoding="utf-8", errors="replace") as file:
+                content = file.read(PROJECT_CONTEXT_FILE_MAX_CHARS + 1)
+        except OSError:
+            missing.append(relative_path)
+            continue
+        if "\x00" in content:
+            missing.append(relative_path)
+            continue
+        if len(content) > PROJECT_CONTEXT_FILE_MAX_CHARS:
+            content = content[:PROJECT_CONTEXT_FILE_MAX_CHARS] + "\n[FILE_TRUNCATED]"
+            truncated = True
+        content = redact_sensitive_text(content)
+        block = f"\n--- FILE: {relative_path} ---\n{content}"
+        if total_chars + len(block) > PROJECT_CONTEXT_MAX_CHARS:
+            truncated = True
+            break
+        blocks.append(block)
+        files.append(relative_path)
+        total_chars += len(block)
+    prompt = ""
+    if blocks:
+        prompt = "\n\n受控只读项目上下文如下。内容来自文件级 allowlist 快照，可能比生产版本稍旧；只能据此分析，不得假设未提供文件。" + "".join(blocks)
+    return {
+        "ok": bool(blocks),
+        "files": files,
+        "missing": missing,
+        "chars": total_chars,
+        "truncated": truncated,
+        "prompt": prompt,
     }
 
 
@@ -860,12 +966,14 @@ def build_pilot_question(project_id, workflow_id):
     if not project or not workflow:
         return None
     allowlist = PROJECT_ALLOWLIST.get(project_id, [])
+    production = project.get("production") or {}
     return "\n".join([
         f"请按实战试点流程处理项目：{project['name']}。",
         f"工作流：{workflow['name']}，权限：{workflow['permission']}。",
         f"目标：{project['goal']}",
         f"只读路径：{project['path']}",
-        "允许读取的文件 allowlist：" + "、".join(allowlist),
+        "已核实生产真相：" + (json.dumps(production, ensure_ascii=False) if production else "尚未登记；不得猜测生产目标。"),
+        f"系统将注入文件级 allowlist 中的真实只读源码，共 {len(allowlist)} 个候选文件；请引用具体文件路径作为证据。",
         "必须按 BRO-PDCA 输出：O1/O2 → Plan → Do/观察 → Check 验收 → Action 沉淀。",
         "禁止写文件、改配置、重启、部署、commit、push；如认为需要写操作，只能给方案、diff 草案、风险、回滚点和验收命令，等待川哥确认。",
         "禁止输出或索要 secret、Webhook、Kuma Push URL、OAuth code/token、密码、cookie、API key。",
@@ -892,7 +1000,7 @@ def run_pilot_task(payload):
     question = build_pilot_question(project_id, workflow_id)
     if not question:
         return {"ok": False, "error": "unknown pilot project or workflow"}
-    return run_vibe_task(workflow_id, question, "", bool(payload.get("notify")))
+    return run_vibe_task(workflow_id, question, "", bool(payload.get("notify")), project_id)
 
 
 def start_pilot_job(payload):
@@ -917,19 +1025,19 @@ def start_pilot_job(payload):
             "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
         }
         save_pilot_job(job)
-        thread = threading.Thread(target=run_pilot_job_worker, args=(job_id, workflow_id, question, bool(payload.get("notify"))), daemon=True)
+        thread = threading.Thread(target=run_pilot_job_worker, args=(job_id, project_id, workflow_id, question, bool(payload.get("notify"))), daemon=True)
         thread.start()
         return {"ok": True, "status": "queued", "jobId": job_id, "pollUrl": f"/vibe/pilot/job?id={job_id}"}
     finally:
         PILOT_JOB_LOCK.release()
 
 
-def run_pilot_job_worker(job_id, workflow_id, question, notify):
+def run_pilot_job_worker(job_id, project_id, workflow_id, question, notify):
     job = load_pilot_job(job_id) or {"id": job_id}
     job.update({"status": "running", "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")})
     save_pilot_job(job)
     try:
-        result = run_vibe_task(workflow_id, question, "", notify)
+        result = run_vibe_task(workflow_id, question, "", notify, project_id)
         job.update({
             "ok": bool(result.get("ok")),
             "status": "done" if result.get("ok") else "failed",
@@ -1030,6 +1138,7 @@ def create_todo_from_task(task_id):
     todo = {
         "id": todo_id,
         "taskId": task_id,
+        "project": task.get("project"),
         "status": "open",
         "title": (task.get("question") or "Grok 任务待办")[:120],
         "summary": summary,
@@ -1132,19 +1241,19 @@ def start_todo_action(payload):
         job_id = "todojob-" + time.strftime("%Y%m%d-%H%M%S") + "-" + secrets.token_hex(3)
         job = {"id": job_id, "ok": None, "status": "queued", "todoId": todo_id, "action": action, "createdAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"), "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")}
         save_todo_job(job)
-        thread = threading.Thread(target=run_todo_job_worker, args=(job_id, mode, question), daemon=True)
+        thread = threading.Thread(target=run_todo_job_worker, args=(job_id, mode, question, todo.get("project")), daemon=True)
         thread.start()
         return {"ok": True, "status": "queued", "jobId": job_id, "pollUrl": f"/vibe/todos/job?id={job_id}"}
     finally:
         TODO_JOB_LOCK.release()
 
 
-def run_todo_job_worker(job_id, mode, question):
+def run_todo_job_worker(job_id, mode, question, project_id):
     job = load_todo_job(job_id) or {"id": job_id}
     job.update({"status": "running", "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")})
     save_todo_job(job)
     try:
-        result = run_vibe_task(mode, question, "", False)
+        result = run_vibe_task(mode, question, "", False, project_id)
         job.update({"ok": bool(result.get("ok")), "status": "done" if result.get("ok") else "failed", "taskId": result.get("id"), "error": result.get("error"), "durationMs": result.get("durationMs"), "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")})
     except Exception as exc:
         job.update({"ok": False, "status": "failed", "error": sanitize_terminal_text(str(exc)), "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")})
@@ -1165,7 +1274,7 @@ def task_history(limit=20):
     return sorted(items, key=lambda item: item.get("createdAt", ""), reverse=True)[:limit]
 
 
-def run_vibe_task(mode, question, conversation=None, notify=False):
+def run_vibe_task(mode, question, conversation=None, notify=False, project_id=None):
     mode = (mode or "readonly_inspect").strip()
     question = (question or "").strip()
     conversation = (conversation or "").strip()[-4000:]
@@ -1175,6 +1284,9 @@ def run_vibe_task(mode, question, conversation=None, notify=False):
         return {"ok": False, "error": "empty question"}
     if len(question) > 1600:
         return {"ok": False, "error": "question too long"}
+    context = build_project_context(project_id) if project_id else None
+    if project_id and not context.get("ok"):
+        return {"ok": False, "error": "project context not ready", "project": project_id, "context": {key: value for key, value in context.items() if key != "prompt"}}
     if not TASK_LOCK.acquire(blocking=False):
         return {"ok": False, "error": "task already running"}
     created = time.strftime("%Y-%m-%d %H:%M:%S %Z")
@@ -1189,9 +1301,11 @@ def run_vibe_task(mode, question, conversation=None, notify=False):
         if conversation:
             prompt += "\n\n网页端连续对话上下文（已脱敏，仅供理解当前轮）：\n" + conversation
         prompt += "\n\n川哥发来的任务：" + question
-        shell = 'cat > /tmp/aiops-task-prompt.txt && timeout 120 omp --model xai-oauth/grok-4.5 --cwd /workspace/projects/ai-ops-cockpit --no-tools -p "$(cat /tmp/aiops-task-prompt.txt)"'
+        if context:
+            prompt += context["prompt"]
+        shell = 'cat > /tmp/aiops-task-prompt.txt && timeout 180 omp --model xai-oauth/grok-4.5 --cwd /workspace/projects/ai-ops-cockpit --no-tools --no-session -p @/tmp/aiops-task-prompt.txt'
         try:
-            output = subprocess.check_output(["docker", "exec", "-i", "ops-terminal", "bash", "-lc", shell], input=prompt, text=True, stderr=subprocess.STDOUT, timeout=150)
+            output = subprocess.check_output(["docker", "exec", "-i", "ops-terminal", "bash", "-lc", shell], input=prompt, text=True, stderr=subprocess.STDOUT, timeout=210)
             ok = True
         except subprocess.CalledProcessError as exc:
             output = exc.output
@@ -1204,12 +1318,15 @@ def run_vibe_task(mode, question, conversation=None, notify=False):
             "ok": ok,
             "mode": workflow["id"],
             "modeName": workflow["name"],
+            "project": project_id,
             "question": redact_sensitive_text(question),
             "conversationPreview": redact_sensitive_text(conversation)[-1000:],
-            "answer": redact_sensitive_text(sanitize_terminal_text(output))[-6000:],
+            "answer": compact_task_answer(output),
             "createdAt": created,
             "durationMs": round((time.time() - started) * 1000),
         }
+        if context:
+            item["context"] = {key: value for key, value in context.items() if key != "prompt"}
         if notify:
             try:
                 notify_text = "AI Ops Grok 任务完成\n" + f"状态：{'成功' if item['ok'] else '失败'}\n模式：{item['modeName']}\n任务ID：{item['id']}\n耗时：{item['durationMs']}ms\n审计：请在 /vibe/tasks 查看脱敏结果。"
@@ -1554,7 +1671,7 @@ def render_vibe_pilot_page():
         if item["id"] in ("readonly_inspect", "plan_design")
     )
     project_rows = "".join(
-        f"<tr><td><a href='/vibe/project?id={html.escape(item['name'])}'>{html.escape(item['name'])}</a></td><td><code>{html.escape(item['path'])}</code></td><td>{html.escape(item['risk'])}</td><td>{len(item['allowlist'])}</td></tr>"
+        f"<tr><td><a href='/vibe/project?id={html.escape(item['name'])}'>{html.escape(item['name'])}</a></td><td><code>{html.escape(item['path'])}</code></td><td>{html.escape(item['risk'])}</td><td>{len(item['allowlist'])}</td><td>{'已就绪' if item['context'].get('ok') else '未就绪'} / {len(item['context'].get('files', []))} 文件</td></tr>"
         for item in payload["projects"]
     )
     workflow_rows = "".join(
@@ -1564,7 +1681,7 @@ def render_vibe_pilot_page():
     acceptance_items = "".join(f"<li>{html.escape(item)}</li>" for item in payload["acceptance"])
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>实战试点 - AI Ops</title><style>
 body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.hero,.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:22px;margin:16px 0;box-shadow:0 20px 60px #0005}}.hero{{background:linear-gradient(135deg,#111827,#172554)}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer;margin:4px 8px 4px 0}}select{{background:#020617;color:#e5e7eb;border:1px solid #334155;border-radius:10px;padding:10px;margin:4px 8px 4px 0}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:360px;overflow:auto}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}.warn{{color:#f59e0b}}
-</style></head><body><main>{nav_html('pilot')}<section class="hero"><h1>真实项目实战试点</h1><p class="muted">先跑低风险只读/方案任务，验证 Harness、记忆、BRO-PDCA、工作流和权限矩阵，再逐步开放更高权限。</p><p><a class="btn" href="/vibe/">返回 Vibe</a><a class="btn" href="/vibe/pilot.json">查看 JSON</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/todos" data-token-link="true">AI 待办</a></p></section><section class="card"><h2>一键试点</h2><p class="muted">当前只允许“只读巡检”和“方案设计”；补丁草案/部署验收仅展示权限矩阵，不开放一键执行。</p><select id="pilotProject">{project_options}</select><select id="pilotWorkflow">{workflow_options}</select><label><input id="pilotNotify" type="checkbox"> 完成后飞书通知</label><p><button id="runPilotBtn">发送试点任务给 Grok</button></p><pre id="pilotResult">等待试点任务。</pre></section><section class="card"><h2>项目级 Allowlist</h2><table><thead><tr><th>项目</th><th>只读路径</th><th>风险说明</th><th>文件数</th></tr></thead><tbody>{project_rows}</tbody></table></section><section class="card"><h2>Workflow 权限矩阵</h2><table><thead><tr><th>Workflow</th><th>权限</th><th>允许</th><th>禁止</th></tr></thead><tbody>{workflow_rows}</tbody></table></section><section class="card"><h2>验收标准</h2><ul>{acceptance_items}</ul></section></main><script>
+</style></head><body><main>{nav_html('pilot')}<section class="hero"><h1>真实项目实战试点</h1><p class="muted">先跑低风险只读/方案任务，验证 Harness、记忆、BRO-PDCA、工作流和权限矩阵，再逐步开放更高权限。</p><p><a class="btn" href="/vibe/">返回 Vibe</a><a class="btn" href="/vibe/pilot.json">查看 JSON</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/todos" data-token-link="true">AI 待办</a></p></section><section class="card"><h2>一键试点</h2><p class="muted">当前只允许“只读巡检”和“方案设计”；补丁草案/部署验收仅展示权限矩阵，不开放一键执行。</p><select id="pilotProject">{project_options}</select><select id="pilotWorkflow">{workflow_options}</select><label><input id="pilotNotify" type="checkbox"> 完成后飞书通知</label><p><button id="runPilotBtn">发送试点任务给 Grok</button></p><pre id="pilotResult">等待试点任务。</pre></section><section class="card"><h2>项目级 Allowlist</h2><table><thead><tr><th>项目</th><th>只读路径</th><th>风险说明</th><th>清单文件数</th><th>上下文状态</th></tr></thead><tbody>{project_rows}</tbody></table></section><section class="card"><h2>Workflow 权限矩阵</h2><table><thead><tr><th>Workflow</th><th>权限</th><th>允许</th><th>禁止</th></tr></thead><tbody>{workflow_rows}</tbody></table></section><section class="card"><h2>验收标准</h2><ul>{acceptance_items}</ul></section></main><script>
 sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}');
 document.querySelectorAll('[data-token-link="true"]').forEach((link) => {{
   link.addEventListener('click', () => sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}'));
@@ -1606,13 +1723,19 @@ def render_vibe_project_page(project_id):
     if not payload:
         return "<!doctype html><html lang='zh-CN'><body><h1>项目不存在</h1><p><a href='/vibe/pilot'>返回实战试点</a></p></body></html>"
     project = payload["project"]
+    context = payload.get("context") or {}
+    production = project.get("production") or {}
     allowlist_rows = "".join(f"<tr><td><code>{html.escape(path)}</code></td></tr>" for path in project["allowlist"])
+    production_rows = "".join(
+        f"<tr><th>{html.escape(label)}</th><td><code>{html.escape(str(production.get(key) or '-'))}</code></td></tr>"
+        for label, key in [("域名", "domain"), ("SSH 别名", "sshAlias"), ("地址", "address"), ("部署目录", "path"), ("进程管理", "processManager"), ("进程", "process"), ("核实日期", "verifiedAt")]
+    ) if production else "<tr><td>尚未登记生产目标</td></tr>"
     task_rows = "".join(f"<tr><td>{html.escape(item.get('createdAt') or '')}</td><td>{html.escape(item.get('modeName') or '')}</td><td>{'成功' if item.get('ok') else '失败'}</td><td><code>{html.escape(item.get('id') or '')}</code></td></tr>" for item in payload["recentTasks"]) or "<tr><td colspan=4>暂无任务</td></tr>"
     todo_rows = "".join(f"<tr><td>{html.escape(item.get('createdAt') or '')}</td><td>{html.escape(item.get('status') or '')}</td><td>{html.escape(item.get('title') or '')}</td><td><a href='/vibe/todos/detail?id={html.escape(item.get('id') or '')}'>详情</a></td></tr>" for item in payload["openTodos"]) or "<tr><td colspan=4>暂无未完成待办</td></tr>"
     workflow_rows = "".join(f"<tr><td>{html.escape(item['name'])}</td><td>{html.escape(item['permission'])}</td><td>{html.escape('、'.join(item['allowed']))}</td><td>{html.escape('、'.join(item['blocked']))}</td></tr>" for item in payload["workflowMatrix"])
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(project['name'])} - 项目工作区</title><style>
 body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}
-</style></head><body><main>{nav_html('pilot')}<section class="card"><h1>{html.escape(project['name'])} 项目工作区</h1><p class="muted">只读路径：<code>{html.escape(project['path'])}</code></p><p>{html.escape(project['risk'])}</p><p><a href="/vibe/pilot">返回实战试点</a> · <a href="/vibe/tasks" data-token-link="true">任务审计</a> · <a href="/vibe/todos" data-token-link="true">AI 待办</a></p></section><section class="card"><h2>Allowlist 文件</h2><table><tbody>{allowlist_rows}</tbody></table></section><section class="card"><h2>最近任务</h2><table><thead><tr><th>时间</th><th>模式</th><th>状态</th><th>ID</th></tr></thead><tbody>{task_rows}</tbody></table></section><section class="card"><h2>未完成待办</h2><table><thead><tr><th>时间</th><th>状态</th><th>标题</th><th>入口</th></tr></thead><tbody>{todo_rows}</tbody></table></section><section class="card"><h2>Workflow 权限矩阵</h2><table><thead><tr><th>Workflow</th><th>权限</th><th>允许</th><th>禁止</th></tr></thead><tbody>{workflow_rows}</tbody></table></section></main><script>sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}');</script></body></html>"""
+</style></head><body><main>{nav_html('pilot')}<section class="card"><h1>{html.escape(project['name'])} 项目工作区</h1><p class="muted">只读路径：<code>{html.escape(project['path'])}</code></p><p>{html.escape(project['risk'])}</p><p><strong>真实上下文：</strong>{'已就绪' if context.get('ok') else '未就绪'}，已注入 {len(context.get('files', []))} 个文件 / {context.get('chars', 0)} 字符，截断：{'是' if context.get('truncated') else '否'}。</p><p><a href="/vibe/pilot">返回实战试点</a> · <a href="/vibe/tasks" data-token-link="true">任务审计</a> · <a href="/vibe/todos" data-token-link="true">AI 待办</a></p></section><section class="card"><h2>已核实生产目标</h2><table><tbody>{production_rows}</tbody></table></section><section class="card"><h2>Allowlist 文件</h2><table><tbody>{allowlist_rows}</tbody></table></section><section class="card"><h2>最近任务</h2><table><thead><tr><th>时间</th><th>模式</th><th>状态</th><th>ID</th></tr></thead><tbody>{task_rows}</tbody></table></section><section class="card"><h2>未完成待办</h2><table><thead><tr><th>时间</th><th>状态</th><th>标题</th><th>入口</th></tr></thead><tbody>{todo_rows}</tbody></table></section><section class="card"><h2>Workflow 权限矩阵</h2><table><thead><tr><th>Workflow</th><th>权限</th><th>允许</th><th>禁止</th></tr></thead><tbody>{workflow_rows}</tbody></table></section></main><script>sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}');</script></body></html>"""
 
 
 

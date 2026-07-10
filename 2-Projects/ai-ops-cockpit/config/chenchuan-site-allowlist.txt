@@ -1,0 +1,77 @@
+# Project rules and build metadata
+COLLAB-RULES.md
+Dockerfile
+README.md
+SYNC-LOG.md
+next.config.ts
+package.json
+tsconfig.json
+
+# Maintainer-facing documentation
+docs/AR-HUD-DEMO-STATUS.md
+docs/VIDEO-OPTIMIZATION.md
+docs/radar-iteration-roadmap.md
+
+# Public application routes
+src/app/about/page.tsx
+src/app/ai-os/chat/page.tsx
+src/app/contact/page.tsx
+src/app/layout.tsx
+src/app/page.tsx
+src/app/patents/page.tsx
+src/app/radar/loading.tsx
+src/app/radar/page.tsx
+src/app/videos/page.tsx
+src/app/work/[slug]/page.tsx
+src/app/work/page.tsx
+src/app/writing/[slug]/page.tsx
+src/app/writing/page.tsx
+
+# Public layout and homepage components
+src/components/layout/Footer.tsx
+src/components/layout/Header.tsx
+src/components/layout/SectionWrapper.tsx
+src/components/layout/SiteMotion.tsx
+src/components/home/AINativeDay.tsx
+src/components/home/AIWorkflow.tsx
+src/components/home/ContactCTA.tsx
+src/components/home/Hero.tsx
+src/components/home/KeyWins.tsx
+src/components/home/PatentPreview.tsx
+src/components/home/ProjectGrid.tsx
+src/components/home/Stats.tsx
+src/components/home/Timeline.tsx
+src/components/home/VideoSection.tsx
+
+# AI OS presentation components; provider and secret handling stay excluded
+src/components/ai-os/ChatWorkspace.tsx
+src/components/ai-os/EngineBadge.tsx
+src/components/ai-os/FreeAskPanel.tsx
+src/components/ai-os/ReplayTimeline.tsx
+src/components/ai-os/TypewriterText.tsx
+
+# Radar presentation and safe upstream/fallback logic
+src/components/radar/GithubRadarSection.tsx
+src/components/radar/RadarFeed.tsx
+src/components/radar/RadarPipeline.tsx
+src/components/radar/RadarSectionNav.tsx
+src/components/radar/TheoryReportSection.tsx
+src/lib/radar/aihot.ts
+src/lib/radar/feed-cache.ts
+src/lib/radar/index.ts
+src/lib/radar/types.ts
+src/lib/radar/yuweiwan.ts
+
+# Shared public UI and safe data helpers
+src/components/shared/SectionTitle.tsx
+src/components/shared/Tag.tsx
+src/components/ui/BlurFade.tsx
+src/components/ui/Glow.tsx
+src/components/ui/GridPattern.tsx
+src/components/ui/MagicCard.tsx
+src/components/ui/NumberTicker.tsx
+src/lib/cn.ts
+src/lib/data.ts
+src/lib/fonts.ts
+src/lib/motion.ts
+src/lib/videos/store.ts

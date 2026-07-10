@@ -19,7 +19,7 @@ secret_scan_dir() {
   local pattern
   pattern="(sk-[A-Za-z0-9_-]{20,}|github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|BEGIN [A-Z ]*PRIVATE KEY|refresh[_-]?token[\"' :=]{1,8}[A-Za-z0-9._-]{20,}|access[_-]?token[\"' :=]{1,8}[A-Za-z0-9._-]{20,}|api[_-]?key[\"' :=]{1,8}[A-Za-z0-9._-]{20,}|password[\"' :=]{1,8}[^[:space:]]{10,}|https://open.feishu.cn/open-apis/bot/v2/hook/[A-Za-z0-9-]{20,})"
   if command -v rg >/dev/null 2>&1; then
-    if rg -n -i "$pattern" "$target" >/tmp/aiops-readonly-secret-scan.txt 2>/dev/null; then
+    if rg -l -i "$pattern" "$target" >/tmp/aiops-readonly-secret-scan.txt 2>/dev/null; then
       echo "secret-like content detected in readonly snapshot: $target" >&2
       cat /tmp/aiops-readonly-secret-scan.txt >&2
       return 1
@@ -113,6 +113,25 @@ copy_allowlist_snapshot() {
   make_readonly "$dest"
 }
 
+copy_manifest_snapshot() {
+  local name="$1"
+  local source="$2"
+  local manifest="$3"
+  local paths=()
+  local line
+  if [ ! -f "$manifest" ]; then
+    create_project_placeholder "$name"
+    return
+  fi
+  while IFS= read -r line; do
+    if [ -z "$line" ] || [[ "$line" == \#* ]]; then
+      continue
+    fi
+    paths+=("$line")
+  done < "$manifest"
+  copy_allowlist_snapshot "$name" "$source" "${paths[@]}"
+}
+
 if [ -d "$ROOT/2-Projects/ai-ops-cockpit" ]; then
   copy_mycc_minimal
 elif [ -f "$DEST_ROOT/mycc/AGENTS.md" ]; then
@@ -127,12 +146,7 @@ EOF
   make_readonly "$DEST_ROOT/mycc"
 fi
 
-copy_allowlist_snapshot chenchuan-site "$SRC_ROOT/chenchuan-site" \
-  README.md \
-  package.json \
-  tsconfig.json \
-  next.config.ts \
-  Dockerfile
+copy_manifest_snapshot chenchuan-site "$SRC_ROOT/chenchuan-site" "$ROOT/config/chenchuan-site-allowlist.txt"
 copy_allowlist_snapshot MyJavis "$SRC_ROOT/MyJavis" \
   README.md \
   HANDOFF.md \

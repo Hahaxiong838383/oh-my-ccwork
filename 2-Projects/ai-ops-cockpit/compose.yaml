@@ -82,10 +82,14 @@ services:
       FEISHU_WEBHOOK_URL: ${FEISHU_WEBHOOK_URL}
       OPS_READ_TOKEN: ${OPS_READ_TOKEN}
       OPS_ACTION_TOKEN: ${OPS_ACTION_TOKEN}
+      READONLY_ROOT: /workspace/readonly
+      ALLOWLIST_DIR: /config
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./kuma/data/kuma.db:/kuma/kuma.db:ro
       - ./terminal/logs:/terminal-logs:ro
+      - ./readonly:/workspace/readonly:ro
+      - ./config:/config:ro
     depends_on:
       - uptime-kuma
       - netdata

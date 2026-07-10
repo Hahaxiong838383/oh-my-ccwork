@@ -982,3 +982,14 @@ scripts/validate-vibe-regression.sh
 - P1 项目工作区：新增 `/vibe/project?id=chenchuan-site` 与 `/vibe/project?id=MyJavis`，展示项目 allowlist、最近任务、未完成待办和 workflow 权限矩阵。
 - P1 报告扩展：`/vibe/report.json?kind=daily|weekly` 增加 `pilotProjects`，把实战试点项目状态带入日报/周报上下文。
 - 安全边界不变：真实项目仍只读 allowlist；后续补丁草案/部署验收必须明确授权，不在一键试点中开放。
+
+## 2026-07-10 · chenchuan-site 真实只读接入 v1
+
+- 新增 `config/chenchuan-site-allowlist.txt`，显式列出 64 个安全文件：项目规则、构建配置、公开页面、公开组件、Radar 降级逻辑和安全数据辅助层。
+- 明确排除 `.env*`、SQLite、`data/`、媒体原文件、后台页面、API 鉴权、统计数据库和 LLM provider/secrets 处理代码。
+- `ops-inspector` 新增 `/workspace/readonly:ro` 与 `/config:ro` 挂载；项目任务保持 `--no-tools`，由服务端读取 allowlist 快照并把脱敏源码上下文注入 Grok，不开放任意 shell 或文件写入能力。
+- 大上下文通过 OMP 原生 `@/tmp/aiops-task-prompt.txt` 文件消息传入，避免 `$(cat ...)` 展开为单个 argv 后触发 `Argument list too long`；网页任务使用 `--no-session`，审计仍由 AI Ops 自己保存。
+- 任务审计只保存项目 ID、实际注入文件名、字符数、缺失/截断状态，不保存完整源码上下文。
+- Grok 输出审计采用“保留开头 + 保留结尾”的 18K 字符压缩，避免长报告只留尾部而丢失 O1/O2 或 Action；中段截断会显示 `OUTPUT_TRUNCATED_MIDDLE`。
+- 已核实个人站生产目标：`https://my.chenchuan.cc` → `aliyun-kr`（`8.213.134.133`），目录 `/var/www/chenchuan-site`，PM2 进程 `chenchuan-site`；核实日期 2026-07-10。
+- `/vibe/project?id=chenchuan-site` 展示真实上下文就绪度、生产目标、allowlist、最近任务、待办和 workflow 权限矩阵。
