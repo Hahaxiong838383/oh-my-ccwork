@@ -47,3 +47,4 @@
 - 2026-06-17：基于本地内容生成项目状态卡（cc）。
 - 2026-07-10：补齐内层 README v3.0 文档；PyInstaller 打包 macOS App（`gesture_drag_demo/dist/GestureDemo.app`，564MB，构建配置 `GestureDemo.spec`，摄像头授权 + 实机启动已验通）（cc）。
 - 2026-07-10：App 部署 `/Applications/GestureDemo.app`，川哥真机测试 v3.0 全链路（9 点校准 + 注视预选 + 手势拖拽 + 面部特征）通过，项目状态 paused → active（cc）。
+- 2026-07-10：应用图标上线（GPT Image 2 生成金瞳之眼+捏卡片主题，假透明修复 + icns 转换，源图与 icns 在 `gesture_drag_demo/assets/`），重打包部署验证通过（cc）。
