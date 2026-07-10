@@ -12,9 +12,10 @@ import time
 import copy
 import traceback
 import urllib.request
+import urllib.error
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 KUMA_DB = os.environ.get("KUMA_DB", "/kuma/kuma.db")
 NETDATA = os.environ.get("NETDATA_URL", "http://netdata:19999")
@@ -40,6 +41,7 @@ TODOS_DIR = os.path.join(STATE_DIR, "vibe-todos")
 CONVERSATIONS_DIR = os.path.join(STATE_DIR, "vibe-conversations")
 PILOT_JOBS_DIR = os.path.join(STATE_DIR, "vibe-pilot-jobs")
 TODO_JOBS_DIR = os.path.join(STATE_DIR, "vibe-todo-jobs")
+PROJECT_DAILY_DIR = os.path.join(STATE_DIR, "project-daily")
 READONLY_STATE_FILE = os.path.join(STATE_DIR, "readonly-refresh.json")
 WORKSPACE_ROOT = os.environ.get("WORKSPACE_ROOT", "/workspace/projects")
 READONLY_ROOT = os.environ.get("READONLY_ROOT", "/workspace/readonly")
@@ -51,8 +53,25 @@ TASK_STATE = {"last_run": 0}
 TASK_COOLDOWN_SECONDS = int(os.environ.get("TASK_COOLDOWN_SECONDS", "20"))
 PILOT_JOB_LOCK = threading.Lock()
 TODO_JOB_LOCK = threading.Lock()
+PROJECT_DAILY_LOCK = threading.Lock()
+PROJECT_DAILY_ACTIVE = set()
 ASSETS_CACHE_TTL_SECONDS = int(os.environ.get("ASSETS_CACHE_TTL_SECONDS", "20"))
 READONLY_REFRESH_LOCK = threading.Lock()
+
+PROJECT_LIVE_PROBES = {
+    "chenchuan-site": [
+        {"id": "home", "name": "首页", "path": "/", "marker": "<title>陈川 · AI 原生产品负责人", "kind": "html"},
+        {"id": "radar", "name": "AI 前沿资讯雷达", "path": "/radar", "marker": "<title>AI 前沿资讯雷达 · 陈川", "kind": "html"},
+        {"id": "videos", "name": "视频库", "path": "/videos", "marker": "<title>视频 · 陈川", "kind": "html"},
+        {"id": "ai-chat", "name": "Talk With My AI", "path": "/ai-os/chat", "marker": "<title>Talk With My AI · 陈川的战略镜像 · 陈川", "kind": "html"},
+        {"id": "ar-hud", "name": "AR HUD Demo", "path": "/lab/ar-hud-demo", "marker": "<title>AR HUD Demo · 多模态交互沙盒 · 陈川", "kind": "html"},
+        {"id": "video-sample", "name": "视频样本资源", "path": "/media-optimized/eye-gesture-interaction/20260319-090647.mp4", "kind": "binary", "contentTypePrefix": "video/"},
+    ],
+}
+
+PROJECT_DAILY_PUSH_URLS = {
+    "chenchuan-site": os.environ.get("CHENCHUAN_DAILY_PUSH_URL", ""),
+}
 
 
 def load_allowlist_file(name, fallback):
@@ -901,6 +920,7 @@ def project_workspace_panel(project_id):
         "ok": True,
         "project": dict(project, allowlist=allowlist, allowlistCount=len(allowlist)),
         "context": {key: value for key, value in context.items() if key != "prompt"},
+        "dailyInspection": project_daily_status_payload(project_id),
         "recentTasks": [{"id": item.get("id"), "ok": item.get("ok"), "modeName": item.get("modeName"), "createdAt": item.get("createdAt")} for item in tasks[:10]],
         "openTodos": [{"id": item.get("id"), "status": item.get("status"), "title": item.get("title"), "createdAt": item.get("createdAt")} for item in todos if item.get("status") != "done"],
         "workflowMatrix": [dict({"id": key}, **value) for key, value in PILOT_WORKFLOW_MATRIX.items()],
@@ -958,6 +978,353 @@ def build_project_context(project_id):
         "truncated": truncated,
         "prompt": prompt,
     }
+
+
+def project_snapshot_status(project_id):
+    allowlist = PROJECT_ALLOWLIST.get(project_id)
+    if allowlist is None:
+        return {"ok": False, "error": "unknown project", "expectedFiles": 0, "actualFiles": 0}
+    readonly_base = os.path.realpath(READONLY_ROOT)
+    project_root = os.path.realpath(os.path.join(readonly_base, project_id))
+    if project_root != readonly_base and not project_root.startswith(readonly_base + os.sep):
+        return {"ok": False, "error": "invalid project path", "expectedFiles": len(allowlist), "actualFiles": 0}
+    mtimes = []
+    actual_files = 0
+    for relative_path in allowlist:
+        file_path = os.path.realpath(os.path.join(project_root, relative_path))
+        if file_path.startswith(project_root + os.sep) and os.path.isfile(file_path):
+            actual_files += 1
+            try:
+                mtimes.append(os.path.getmtime(file_path))
+            except OSError:
+                pass
+    refresh_marker = os.path.join(readonly_base, ".last-sync")
+    try:
+        refreshed_ts = os.path.getmtime(refresh_marker)
+    except OSError:
+        refreshed_ts = max(mtimes) if mtimes else None
+    age_hours = round((time.time() - refreshed_ts) / 3600, 2) if refreshed_ts else None
+    complete = bool(allowlist) and actual_files == len(allowlist)
+    fresh = age_hours is not None and age_hours <= 36
+    return {
+        "ok": complete and fresh,
+        "expectedFiles": len(allowlist),
+        "actualFiles": actual_files,
+        "complete": complete,
+        "fresh": fresh,
+        "ageHours": age_hours,
+        "refreshedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime(refreshed_ts)) if refreshed_ts else None,
+    }
+
+
+def probe_project_endpoint(base_url, spec):
+    started = time.time()
+    headers = {"User-Agent": "AI-Ops-Cockpit/1.0"}
+    if spec.get("kind") == "binary":
+        headers["Range"] = "bytes=0-4095"
+    request = urllib.request.Request(base_url.rstrip("/") + spec["path"], headers=headers)
+    result = {
+        "id": spec["id"],
+        "name": spec["name"],
+        "path": spec["path"],
+        "ok": False,
+        "status": None,
+        "latencyMs": None,
+        "contentType": None,
+    }
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            body = response.read(131072 if spec.get("kind") == "html" else 4096)
+            result["status"] = response.status
+            result["contentType"] = (response.headers.get("content-type") or "").split(";", 1)[0]
+        result["bytes"] = len(body)
+        status_ok = 200 <= result["status"] < 300
+        if spec.get("kind") == "binary":
+            result["ok"] = status_ok and result["contentType"].startswith(spec.get("contentTypePrefix", ""))
+        else:
+            marker_ok = spec.get("marker", "").encode("utf-8") in body
+            result["markerOk"] = marker_ok
+            result["ok"] = status_ok and marker_ok
+    except urllib.error.HTTPError as exc:
+        result["status"] = exc.code
+        result["error"] = "HTTPError"
+    except Exception as exc:
+        result["error"] = type(exc).__name__
+    result["latencyMs"] = round((time.time() - started) * 1000)
+    return result
+
+
+def project_live_check(project_id, simulate_failure=False):
+    project = PILOT_PROJECTS.get(project_id)
+    probes = PROJECT_LIVE_PROBES.get(project_id)
+    if not project or not probes or not (project.get("production") or {}).get("domain"):
+        return {"ok": False, "error": "project live probes not configured", "checks": [], "total": 0, "passed": 0}
+    checks = [probe_project_endpoint(project["production"]["domain"], spec) for spec in probes]
+    if simulate_failure and checks:
+        checks[0] = dict(checks[0], ok=False, status=599, error="SimulatedFailure")
+    failed_ids = [item["id"] for item in checks if not item.get("ok")]
+    return {
+        "ok": not failed_ids,
+        "project": project_id,
+        "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "simulated": bool(simulate_failure),
+        "passed": len(checks) - len(failed_ids),
+        "total": len(checks),
+        "failedIds": failed_ids,
+        "checks": checks,
+    }
+
+
+def project_daily_root(project_id):
+    return os.path.join(PROJECT_DAILY_DIR, project_id)
+
+
+def load_project_daily_job(job_id):
+    job_id = (job_id or "").strip()
+    if not re.match(r"^daily-[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$", job_id):
+        return None
+    for project_id in PROJECT_LIVE_PROBES:
+        path = os.path.join(project_daily_root(project_id), "jobs", job_id + ".json")
+        job = load_json_file(path, None)
+        if job:
+            return job
+    return None
+
+
+def save_project_daily_job(job):
+    jobs_dir = os.path.join(project_daily_root(job["project"]), "jobs")
+    ensure_private_dir(jobs_dir)
+    save_json_file(os.path.join(jobs_dir, job["id"] + ".json"), job)
+
+
+def project_daily_status_payload(project_id):
+    if project_id not in PROJECT_LIVE_PROBES:
+        return None
+    latest = load_json_file(os.path.join(project_daily_root(project_id), "latest.json"), None)
+    with PROJECT_DAILY_LOCK:
+        active = project_id in PROJECT_DAILY_ACTIVE
+    return {
+        "ok": True,
+        "project": project_id,
+        "active": active,
+        "latest": latest,
+        "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+    }
+
+
+def send_project_daily_heartbeat(project_id, ok, message, ping):
+    push_url = PROJECT_DAILY_PUSH_URLS.get(project_id) or ""
+    if not push_url:
+        return {"status": "skipped", "configured": False}
+    separator = "&" if "?" in push_url else "?"
+    query = urlencode({"status": "up" if ok else "down", "msg": str(message)[:160], "ping": max(0, int(ping or 0))})
+    try:
+        request = urllib.request.Request(push_url + separator + query, headers={"User-Agent": "AI-Ops-Cockpit/1.0"})
+        with urllib.request.urlopen(request, timeout=15) as response:
+            response.read(512)
+        return {"status": response.status, "configured": True, "ok": 200 <= response.status < 300}
+    except Exception as exc:
+        return {"status": "error", "configured": True, "ok": False, "error": type(exc).__name__}
+
+
+def run_vibe_task_with_retry(mode, question, project_id, runtime_context, attempts=5):
+    result = None
+    for attempt in range(attempts):
+        result = run_vibe_task(mode, question, "", False, project_id, runtime_context)
+        if result.get("error") not in {"cooldown", "task already running"}:
+            return result
+        if attempt + 1 < attempts:
+            delay = min(30, max(5, int(result.get("retryAfterSeconds") or 20) + 1))
+            time.sleep(delay)
+    return result or {"ok": False, "error": "task unavailable"}
+
+
+def project_daily_question(project_id):
+    project = PILOT_PROJECTS[project_id]
+    return "\n".join([
+        f"请执行 {project['name']} 每日只读 AI 巡检。",
+        "请同时使用系统注入的文件级 allowlist 源码快照与本轮实时探测 JSON。",
+        "输出必须按 BRO-PDCA：O1/O2、Plan、Do/观察、Check、Action。",
+        "重点判断：关键页面与视频资源是否可访问、源码快照是否完整且新鲜、是否出现需要人工处理的异常或风险。",
+        "只能分析和给建议；不得执行写文件、重启、部署、commit、push，也不得输出或索要任何 secret。",
+    ])
+
+
+def project_daily_signature(live, snapshot, task):
+    payload = {
+        "failedIds": sorted(live.get("failedIds") or []),
+        "snapshot": None if snapshot.get("ok") else "stale_or_incomplete",
+        "task": None if task.get("ok") else "grok_failed",
+    }
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+
+def create_project_daily_todo(project_id, task, job_id):
+    if not task.get("id"):
+        task_id = time.strftime("%Y%m%d-%H%M%S") + "-" + secrets.token_hex(3)
+        task = {
+            "id": task_id,
+            "ok": False,
+            "mode": "readonly_inspect",
+            "modeName": "只读巡检",
+            "project": project_id,
+            "question": f"{project_id} 每日 AI 巡检",
+            "answer": "每日巡检链路未能完成 Grok 分析，请查看实时探测与任务审计。",
+            "createdAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+            "durationMs": 0,
+        }
+        ensure_private_dir(TASKS_DIR)
+        save_json_file(os.path.join(TASKS_DIR, task_id + ".json"), task)
+    result = create_todo_from_task(task["id"])
+    if not result.get("ok"):
+        return None
+    todo = result["todo"]
+    todo.update({
+        "title": f"{project_id} 每日巡检异常",
+        "summary": "每日只读巡检发现异常；请查看任务审计、实时探测与项目巡检状态。",
+        "source": "/vibe/project/daily",
+        "dailyJobId": job_id,
+        "autoCreated": True,
+    })
+    save_json_file(os.path.join(TODOS_DIR, todo["id"] + ".json"), todo)
+    return todo
+
+
+def close_project_daily_todo(todo_id):
+    if not todo_id:
+        return False
+    path = os.path.join(TODOS_DIR, todo_id + ".json")
+    todo = load_json_file(path, None)
+    if not todo or todo.get("status") == "done":
+        return False
+    todo.update({
+        "status": "done",
+        "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "autoRecovered": True,
+    })
+    save_json_file(path, todo)
+    return True
+
+
+def project_daily_notification_text(project_id, job, event):
+    live = job.get("live") or {}
+    snapshot = job.get("snapshot") or {}
+    labels = {"normal": "每日简报", "alert": "异常告警", "recovery": "恢复通知"}
+    return "\n".join([
+        f"AI Ops {project_id} {labels.get(event, event)}",
+        f"状态：{'通过' if job.get('ok') else '需要关注'}",
+        f"实时探测：{live.get('passed', 0)}/{live.get('total', 0)}",
+        f"失败项：{','.join(live.get('failedIds') or []) or '-'}",
+        f"源码快照：{'可用' if snapshot.get('ok') else '过期或不完整'} / {snapshot.get('ageHours')} 小时",
+        f"任务ID：{job.get('taskId') or '-'}",
+        f"待办ID：{job.get('todoId') or '-'}",
+        f"审计：https://ops.hahaxiong.top/vibe/project?id={project_id}",
+    ])
+
+
+def run_project_daily_worker(job_id, project_id, simulate_failure, force_notify):
+    job = load_project_daily_job(job_id) or {"id": job_id, "project": project_id}
+    job.update({"status": "running", "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")})
+    save_project_daily_job(job)
+    latest_path = os.path.join(project_daily_root(project_id), "latest.json")
+    previous = load_json_file(latest_path, {}) or {}
+    started = time.time()
+    try:
+        live = project_live_check(project_id, simulate_failure)
+        snapshot = project_snapshot_status(project_id)
+        runtime_context = {"live": live, "snapshot": snapshot}
+        task = run_vibe_task_with_retry("readonly_inspect", project_daily_question(project_id), project_id, runtime_context)
+        core_ok = bool(live.get("ok") and snapshot.get("ok") and task.get("ok"))
+        signature = project_daily_signature(live, snapshot, task)
+        previous_abnormal = previous.get("ok") is False
+        same_issue_today = previous_abnormal and previous.get("signature") == signature and previous.get("day") == time.strftime("%Y-%m-%d")
+        event = "normal"
+        todo = None
+        if not core_ok:
+            event = "alert"
+            if not same_issue_today:
+                todo = create_project_daily_todo(project_id, task, job_id)
+        elif previous_abnormal:
+            event = "recovery"
+            close_project_daily_todo(previous.get("todoId"))
+        job.update({
+            "ok": core_ok,
+            "status": "done" if core_ok else "attention",
+            "day": time.strftime("%Y-%m-%d"),
+            "event": event,
+            "signature": signature,
+            "live": live,
+            "snapshot": snapshot,
+            "taskId": task.get("id"),
+            "todoId": (todo or {}).get("id") or (previous.get("todoId") if same_issue_today else None),
+            "durationMs": round((time.time() - started) * 1000),
+            "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        })
+        should_notify = force_notify or event in {"alert", "recovery"} or previous.get("day") != job["day"]
+        if should_notify:
+            try:
+                notification = send_feishu_text(project_daily_notification_text(project_id, job, event))
+                job["notification"] = {"status": notification.get("status"), "sent": True}
+            except Exception as exc:
+                job["notification"] = {"status": "error", "sent": False, "error": type(exc).__name__}
+        else:
+            job["notification"] = {"status": "deduped", "sent": False}
+        job["heartbeat"] = send_project_daily_heartbeat(project_id, core_ok, f"{event}:{live.get('passed', 0)}/{live.get('total', 0)}", round(job["durationMs"] / 1000))
+        ensure_private_dir(project_daily_root(project_id))
+        save_json_file(latest_path, job)
+    except Exception as exc:
+        job.update({
+            "ok": False,
+            "status": "failed",
+            "event": "alert",
+            "error": type(exc).__name__,
+            "durationMs": round((time.time() - started) * 1000),
+            "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        })
+        try:
+            send_feishu_text(f"AI Ops {project_id} 每日巡检异常\n状态：巡检链路失败\n任务ID：-\n审计：https://ops.hahaxiong.top/vibe/project?id={project_id}")
+        except Exception:
+            pass
+        job["heartbeat"] = send_project_daily_heartbeat(project_id, False, "pipeline_failed", round(job["durationMs"] / 1000))
+        ensure_private_dir(project_daily_root(project_id))
+        save_json_file(latest_path, job)
+    finally:
+        save_project_daily_job(job)
+        with PROJECT_DAILY_LOCK:
+            PROJECT_DAILY_ACTIVE.discard(project_id)
+
+
+def start_project_daily_job(payload):
+    project_id = (payload.get("project") or "chenchuan-site").strip()
+    if project_id not in PROJECT_LIVE_PROBES:
+        return {"ok": False, "error": "project daily inspection not configured"}
+    with PROJECT_DAILY_LOCK:
+        if project_id in PROJECT_DAILY_ACTIVE:
+            return {"ok": False, "error": "project daily inspection already running"}
+        PROJECT_DAILY_ACTIVE.add(project_id)
+    job_id = "daily-" + time.strftime("%Y%m%d-%H%M%S") + "-" + secrets.token_hex(3)
+    job = {
+        "id": job_id,
+        "ok": None,
+        "status": "queued",
+        "project": project_id,
+        "simulated": bool(payload.get("simulateFailure")),
+        "createdAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+    }
+    try:
+        save_project_daily_job(job)
+        thread = threading.Thread(
+            target=run_project_daily_worker,
+            args=(job_id, project_id, bool(payload.get("simulateFailure")), bool(payload.get("forceNotify"))),
+            daemon=True,
+        )
+        thread.start()
+    except Exception:
+        with PROJECT_DAILY_LOCK:
+            PROJECT_DAILY_ACTIVE.discard(project_id)
+        raise
+    return {"ok": True, "status": "queued", "jobId": job_id, "pollUrl": f"/vibe/project/daily/job?id={job_id}"}
 
 
 def build_pilot_question(project_id, workflow_id):
@@ -1274,7 +1641,7 @@ def task_history(limit=20):
     return sorted(items, key=lambda item: item.get("createdAt", ""), reverse=True)[:limit]
 
 
-def run_vibe_task(mode, question, conversation=None, notify=False, project_id=None):
+def run_vibe_task(mode, question, conversation=None, notify=False, project_id=None, runtime_context=None):
     mode = (mode or "readonly_inspect").strip()
     question = (question or "").strip()
     conversation = (conversation or "").strip()[-4000:]
@@ -1303,6 +1670,9 @@ def run_vibe_task(mode, question, conversation=None, notify=False, project_id=No
         prompt += "\n\n川哥发来的任务：" + question
         if context:
             prompt += context["prompt"]
+        if runtime_context:
+            runtime_text = redact_sensitive_text(json.dumps(runtime_context, ensure_ascii=False, indent=2))[:12000]
+            prompt += "\n\n本轮实时运行上下文如下；它比源码快照更新，应优先用于判断当前状态：\n```json\n" + runtime_text + "\n```"
         shell = 'cat > /tmp/aiops-task-prompt.txt && timeout 180 omp --model xai-oauth/grok-4.5 --cwd /workspace/projects/ai-ops-cockpit --no-tools --no-session -p @/tmp/aiops-task-prompt.txt'
         try:
             output = subprocess.check_output(["docker", "exec", "-i", "ops-terminal", "bash", "-lc", shell], input=prompt, text=True, stderr=subprocess.STDOUT, timeout=210)
@@ -1327,6 +1697,8 @@ def run_vibe_task(mode, question, conversation=None, notify=False, project_id=No
         }
         if context:
             item["context"] = {key: value for key, value in context.items() if key != "prompt"}
+        if runtime_context:
+            item["runtimeContext"] = runtime_context
         if notify:
             try:
                 notify_text = "AI Ops Grok 任务完成\n" + f"状态：{'成功' if item['ok'] else '失败'}\n模式：{item['modeName']}\n任务ID：{item['id']}\n耗时：{item['durationMs']}ms\n审计：请在 /vibe/tasks 查看脱敏结果。"
@@ -1733,9 +2105,37 @@ def render_vibe_project_page(project_id):
     task_rows = "".join(f"<tr><td>{html.escape(item.get('createdAt') or '')}</td><td>{html.escape(item.get('modeName') or '')}</td><td>{'成功' if item.get('ok') else '失败'}</td><td><code>{html.escape(item.get('id') or '')}</code></td></tr>" for item in payload["recentTasks"]) or "<tr><td colspan=4>暂无任务</td></tr>"
     todo_rows = "".join(f"<tr><td>{html.escape(item.get('createdAt') or '')}</td><td>{html.escape(item.get('status') or '')}</td><td>{html.escape(item.get('title') or '')}</td><td><a href='/vibe/todos/detail?id={html.escape(item.get('id') or '')}'>详情</a></td></tr>" for item in payload["openTodos"]) or "<tr><td colspan=4>暂无未完成待办</td></tr>"
     workflow_rows = "".join(f"<tr><td>{html.escape(item['name'])}</td><td>{html.escape(item['permission'])}</td><td>{html.escape('、'.join(item['allowed']))}</td><td>{html.escape('、'.join(item['blocked']))}</td></tr>" for item in payload["workflowMatrix"])
+    daily = (payload.get("dailyInspection") or {}).get("latest") or {}
+    daily_status = "尚未执行" if not daily else ("通过" if daily.get("ok") else "需要关注")
+    daily_live = daily.get("live") or {}
+    daily_snapshot = daily.get("snapshot") or {}
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(project['name'])} - 项目工作区</title><style>
-body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}a{{color:#93c5fd}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}
-</style></head><body><main>{nav_html('pilot')}<section class="card"><h1>{html.escape(project['name'])} 项目工作区</h1><p class="muted">只读路径：<code>{html.escape(project['path'])}</code></p><p>{html.escape(project['risk'])}</p><p><strong>真实上下文：</strong>{'已就绪' if context.get('ok') else '未就绪'}，已注入 {len(context.get('files', []))} 个文件 / {context.get('chars', 0)} 字符，截断：{'是' if context.get('truncated') else '否'}。</p><p><a href="/vibe/pilot">返回实战试点</a> · <a href="/vibe/tasks" data-token-link="true">任务审计</a> · <a href="/vibe/todos" data-token-link="true">AI 待办</a></p></section><section class="card"><h2>已核实生产目标</h2><table><tbody>{production_rows}</tbody></table></section><section class="card"><h2>Allowlist 文件</h2><table><tbody>{allowlist_rows}</tbody></table></section><section class="card"><h2>最近任务</h2><table><thead><tr><th>时间</th><th>模式</th><th>状态</th><th>ID</th></tr></thead><tbody>{task_rows}</tbody></table></section><section class="card"><h2>未完成待办</h2><table><thead><tr><th>时间</th><th>状态</th><th>标题</th><th>入口</th></tr></thead><tbody>{todo_rows}</tbody></table></section><section class="card"><h2>Workflow 权限矩阵</h2><table><thead><tr><th>Workflow</th><th>权限</th><th>允许</th><th>禁止</th></tr></thead><tbody>{workflow_rows}</tbody></table></section></main><script>sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}');</script></body></html>"""
+body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}button{{background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;cursor:pointer}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}
+</style></head><body><main>{nav_html('pilot')}<section class="card"><h1>{html.escape(project['name'])} 项目工作区</h1><p class="muted">只读路径：<code>{html.escape(project['path'])}</code></p><p>{html.escape(project['risk'])}</p><p><strong>真实上下文：</strong>{'已就绪' if context.get('ok') else '未就绪'}，已注入 {len(context.get('files', []))} 个文件 / {context.get('chars', 0)} 字符，截断：{'是' if context.get('truncated') else '否'}。</p><p><a href="/vibe/pilot">返回实战试点</a> · <a href="/vibe/tasks" data-token-link="true">任务审计</a> · <a href="/vibe/todos" data-token-link="true">AI 待办</a></p></section><section class="card"><h2>每日 AI 巡检</h2><p>最近状态：<strong class="{'ok' if daily.get('ok') else 'warn'}">{html.escape(daily_status)}</strong> · 实时探测 {daily_live.get('passed', 0)}/{daily_live.get('total', 0)} · 快照 {daily_snapshot.get('ageHours', '-')} 小时</p><p class="muted">每日由 n8n 自动触发；包含关键页面/资源探测、Grok 4.5 源码分析、异常待办、飞书通知和 Kuma 心跳。</p><button id="runDailyBtn">立即执行一次只读巡检</button><pre id="dailyResult">{html.escape(json.dumps(daily, ensure_ascii=False, indent=2) if daily else '等待首次执行。')}</pre></section><section class="card"><h2>已核实生产目标</h2><table><tbody>{production_rows}</tbody></table></section><section class="card"><h2>Allowlist 文件</h2><table><tbody>{allowlist_rows}</tbody></table></section><section class="card"><h2>最近任务</h2><table><thead><tr><th>时间</th><th>模式</th><th>状态</th><th>ID</th></tr></thead><tbody>{task_rows}</tbody></table></section><section class="card"><h2>未完成待办</h2><table><thead><tr><th>时间</th><th>状态</th><th>标题</th><th>入口</th></tr></thead><tbody>{todo_rows}</tbody></table></section><section class="card"><h2>Workflow 权限矩阵</h2><table><thead><tr><th>Workflow</th><th>权限</th><th>允许</th><th>禁止</th></tr></thead><tbody>{workflow_rows}</tbody></table></section></main><script>
+sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}');
+document.getElementById('runDailyBtn').addEventListener('click', async () => {{
+  const button = document.getElementById('runDailyBtn');
+  const result = document.getElementById('dailyResult');
+  button.disabled = true;
+  result.textContent = '已提交，正在执行实时探测与 Grok 4.5 分析，通常需要 1-4 分钟...';
+  try {{
+    const response = await fetch('/vibe/project/daily/run', {{method:'POST',credentials:'same-origin',headers:{{'content-type':'application/json','X-AIOps-Read-Token':'{READ_TOKEN}'}},body:JSON.stringify({{project:'{html.escape(project_id)}',forceNotify:true}})}});
+    const queued = await response.json();
+    if (!queued.ok) throw new Error(queued.error || '提交失败');
+    for (let attempt = 0; attempt < 60; attempt += 1) {{
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      const poll = await fetch(queued.pollUrl, {{credentials:'same-origin'}});
+      const job = await poll.json();
+      result.textContent = JSON.stringify(job, null, 2);
+      if (!['queued','running'].includes(job.status)) break;
+    }}
+  }} catch (error) {{
+    result.textContent = '执行失败：' + error;
+  }} finally {{
+    button.disabled = false;
+  }}
+}});
+</script></body></html>"""
 
 
 
@@ -2135,6 +2535,18 @@ class Handler(BaseHTTPRequestHandler):
                 project_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
                 payload = project_workspace_panel(project_id)
                 self._send_json(200 if payload else 404, payload or {"ok": False, "error": "project not found"})
+            elif path == "/vibe/project/live.json":
+                project_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
+                payload = project_live_check(project_id)
+                self._send_json(200 if payload.get("total") else 404, payload)
+            elif path == "/vibe/project/daily.json":
+                project_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
+                payload = project_daily_status_payload(project_id)
+                self._send_json(200 if payload else 404, payload or {"ok": False, "error": "project daily inspection not configured"})
+            elif path == "/vibe/project/daily/job":
+                job_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
+                job = load_project_daily_job(job_id)
+                self._send_json(200 if job else 404, job or {"ok": False, "error": "daily job not found"})
             elif path == "/vibe/todos/job":
                 job_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
                 job = load_todo_job(job_id)
@@ -2260,6 +2672,19 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 payload = self._read_json_body()
                 self._send_json(200, start_pilot_job(payload))
+            elif path == "/vibe/project/daily/run":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                payload = self._read_json_body()
+                payload.pop("simulateFailure", None)
+                self._send_json(200, start_project_daily_job(payload))
+            elif path == "/vibe/project/daily/test":
+                if not self._has_action_token():
+                    self._send_json(403, {"ok": False, "error": "action token required"})
+                    return
+                payload = self._read_json_body()
+                self._send_json(200, start_project_daily_job(payload))
             else:
                 self._send_json(404, {"ok": False, "error": "not found"})
         except Exception as exc:

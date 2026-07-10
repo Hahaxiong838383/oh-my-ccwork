@@ -1,0 +1,6 @@
+.env
+ops-inspector/state/
+n8n/data/
+terminal/logs/
+terminal/omp/
+readonly/

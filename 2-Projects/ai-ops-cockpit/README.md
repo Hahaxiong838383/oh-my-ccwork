@@ -993,3 +993,13 @@ scripts/validate-vibe-regression.sh
 - Grok 输出审计采用“保留开头 + 保留结尾”的 18K 字符压缩，避免长报告只留尾部而丢失 O1/O2 或 Action；中段截断会显示 `OUTPUT_TRUNCATED_MIDDLE`。
 - 已核实个人站生产目标：`https://my.chenchuan.cc` → `aliyun-kr`（`8.213.134.133`），目录 `/var/www/chenchuan-site`，PM2 进程 `chenchuan-site`；核实日期 2026-07-10。
 - `/vibe/project?id=chenchuan-site` 展示真实上下文就绪度、生产目标、allowlist、最近任务、待办和 workflow 权限矩阵。
+
+## 2026-07-10 · 个人站每日 AI 巡检 P0
+
+- n8n 新增 `个人站每日 AI 巡检`，每天 `09:00 Asia/Shanghai` 调用 AI Ops 内部只读任务接口；授权值保存在 n8n 私密变量中，不写入 workflow JSON、git 或文档。
+- 每轮检查个人站首页、Radar、视频库、AI 对话页、AR HUD Demo 和视频样本资源，共 6 个公开探测项；HTML 同时校验标题标记，视频资源校验 `video/*` 与 Range 响应。
+- 每轮向 Grok 4.5 注入实时探测和 64 个文件的 allowlist 源码快照，输出进入 `/vibe/tasks`；不开放工具调用，不执行写入、重启、部署、commit 或 push。
+- 异常时自动创建脱敏待办并发飞书；同日相同异常去重；恢复后自动关闭对应待办并发恢复通知。
+- Uptime Kuma 新增 Push 监控 `个人站每日 AI 巡检`，心跳窗口 36 小时、重试 0，绑定 `飞书运维告警`；Push URL 只保存在远端 `.env`。
+- `/vibe/project?id=chenchuan-site` 新增每日巡检卡片和手动只读巡检按钮；状态落在持久卷 `ops-inspector/state/`，容器重建或重启不会丢失。
+- 验收已完成：真实探测 `6/6`、n8n CLI 执行成功、模拟故障 `Down` 与自动待办、恢复 `Up` 与待办自动关闭、全量回归 `OK vibe regression`、真实浏览器四页控制台错误 `0`。

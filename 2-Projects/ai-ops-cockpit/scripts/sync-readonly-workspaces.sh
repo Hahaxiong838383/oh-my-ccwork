@@ -168,4 +168,7 @@ This directory is mounted into ops-terminal as /workspace/readonly:ro.
 It is for Grok/OMP inspection only. Do not put secrets here.
 EOF
 chmod 0444 "$DEST_ROOT/README.md"
+rm -f "$DEST_ROOT/.last-sync"
+date -u +%Y-%m-%dT%H:%M:%SZ > "$DEST_ROOT/.last-sync"
+chmod 0444 "$DEST_ROOT/.last-sync"
 printf 'readonly sync complete: %s\n' "$DEST_ROOT"

@@ -84,12 +84,15 @@ services:
       OPS_ACTION_TOKEN: ${OPS_ACTION_TOKEN}
       READONLY_ROOT: /workspace/readonly
       ALLOWLIST_DIR: /config
+      STATE_DIR: /var/lib/ai-ops-state
+      CHENCHUAN_DAILY_PUSH_URL: ${CHENCHUAN_DAILY_PUSH_URL:-}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./kuma/data/kuma.db:/kuma/kuma.db:ro
       - ./terminal/logs:/terminal-logs:ro
       - ./readonly:/workspace/readonly:ro
       - ./config:/config:ro
+      - ./ops-inspector/state:/var/lib/ai-ops-state
     depends_on:
       - uptime-kuma
       - netdata
