@@ -1,8 +1,18 @@
-# Gesture Drag Demo v2.0
+# Gesture Drag Demo v3.0
 
 基于 OpenCV + MediaPipe 的手势拖拽交互 Demo。使用普通 USB 摄像头，通过 **注视预选 + 捏住拖拽** 实现自然的卡片交互。
 
-## v2.0 新特性：注视预选（Gaze-Attention Pre-selection）
+## v3.0 新特性：面部特征 + 眼动校准
+
+- **2D 注视估计**：注视方向从水平单轴扩展到水平 + 垂直双轴（`gaze_x` / `gaze_y`）
+- **9 点眼动校准**：启动时引导注视 3×3 网格校准点，最小二乘回归仿射参数（`calibrated = a × raw + b`，x/y 独立），提升注视精度；按 C 可随时重新校准
+- **面部特征追踪**（`face_tracker.py`，复用 FaceMesh 结果零额外推理）：
+  - 眼部：EAR（眼睛纵横比）、眨眼检测（帧确认 + 不应期）、眼睛开合度
+  - 头部朝向：yaw / pitch / roll
+  - 表情线索：MAR（嘴巴开合比）、眉毛高度
+- **面部特征可视化**：按 F 切换面部特征调试图层
+
+## v2.0 特性：注视预选（Gaze-Attention Pre-selection）
 
 - **粗粒度注视方向估计**：MediaPipe FaceMesh + 虹膜关键点，实时判断用户注视方向
 - **候选卡片高亮**：看向某个区域 → 对应卡片淡金色提示 → 持续注视 → 金色脉冲锁定
@@ -42,6 +52,8 @@ python app.py
 | 按 ESC | 退出程序 |
 | 按 R | 重置卡片到初始位置 |
 | 按 G | 切换注视调试可视化 |
+| 按 F | 切换面部特征可视化 |
+| 按 C | 重新运行眼动校准 |
 
 ## 画面信息说明
 
@@ -107,8 +119,10 @@ gesture_drag_demo/
   config.py             # 集中参数配置
   hand_tracker.py       # 摄像头与手部关键点检测
   gesture_state.py      # Pinch/Release 状态机
-  gaze_estimator.py     # 粗粒度注视方向估计（FaceMesh + Iris）
+  gaze_estimator.py     # 粗粒度注视方向估计（FaceMesh + Iris，2D）
   attention_selector.py # 注视候选卡片选择器（评分 + 锁定）
+  face_tracker.py       # 面部特征：EAR/眨眼/头部朝向/表情线索
+  calibration.py        # 9 点眼动校准（3×3 网格，仿射回归）
   ui.py                 # 桌面/卡片绘制、拖拽、调试可视化
   requirements.txt      # Python 依赖
   README.md             # 本文件
@@ -134,6 +148,7 @@ gesture_drag_demo/
 
 ## 版本历史
 
+- **v3.0**：面部特征追踪（EAR/眨眼/头部朝向/表情线索）+ 9 点眼动校准 + 2D 注视估计
 - **v2.0**：注视预选（FaceMesh + Iris → 候选锁定 → 融合抓取）
 - **v1.2**：气泡系统 + 捏住动效 + 拖拽立体感
 - **v1.0**：基础手势拖拽（MediaPipe Hands + Pinch 状态机）
