@@ -42,7 +42,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name="GestureDemo.app",
-    icon=None,
+    icon="assets/icon.icns",
     bundle_identifier="cc.chenchuan.gesturedemo",
     info_plist={
         "NSCameraUsageDescription": "手势拖拽 Demo 需要摄像头进行手部与注视追踪",
