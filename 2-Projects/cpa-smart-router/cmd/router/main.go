@@ -641,9 +641,20 @@ func (s *Server) tryCandidate(w http.ResponseWriter, r *http.Request, body []byt
 }
 
 func (s *Server) forwardWithCandidate(w http.ResponseWriter, r *http.Request, body []byte, payload map[string]any, routeModel string, candidate Candidate, stream bool) {
-	_, _, metric := s.tryCandidate(w, r, body, payload, routeModel, candidate, stream)
+	status, retryable, metric := s.tryCandidate(w, r, body, payload, routeModel, candidate, stream)
 	metric.Path = r.URL.Path
 	s.record(metric)
+	if !retryable {
+		return
+	}
+	if status == 0 {
+		status = http.StatusBadGateway
+	}
+	message := strings.TrimSpace(metric.Error)
+	if message == "" {
+		message = http.StatusText(status)
+	}
+	http.Error(w, message, status)
 }
 
 func rewriteModel(body []byte, payload map[string]any, model string, includeStreamUsage bool) ([]byte, error) {
