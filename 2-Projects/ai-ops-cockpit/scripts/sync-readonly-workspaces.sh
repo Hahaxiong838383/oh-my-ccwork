@@ -147,6 +147,7 @@ EOF
 fi
 
 copy_manifest_snapshot chenchuan-site "$SRC_ROOT/chenchuan-site" "$ROOT/config/chenchuan-site-allowlist.txt"
+copy_manifest_snapshot cpa-smart-router "$SRC_ROOT/cpa-smart-router" "$ROOT/config/cpa-smart-router-allowlist.txt"
 copy_allowlist_snapshot MyJavis "$SRC_ROOT/MyJavis" \
   README.md \
   HANDOFF.md \

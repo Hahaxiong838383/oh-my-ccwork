@@ -49,7 +49,7 @@ READONLY_ROOT = os.environ.get("READONLY_ROOT", "/workspace/readonly")
 ALLOWLIST_DIR = os.environ.get("ALLOWLIST_DIR", "/config")
 PRODUCTION_SSH_DIR = os.environ.get("PRODUCTION_SSH_DIR", "/run/secrets/chenchuan-maintenance")
 PROJECT_CONTEXT_MAX_CHARS = int(os.environ.get("PROJECT_CONTEXT_MAX_CHARS", "280000"))
-PROJECT_CONTEXT_FILE_MAX_CHARS = int(os.environ.get("PROJECT_CONTEXT_FILE_MAX_CHARS", "22000"))
+PROJECT_CONTEXT_FILE_MAX_CHARS = int(os.environ.get("PROJECT_CONTEXT_FILE_MAX_CHARS", "90000"))
 TASK_LOCK = threading.Lock()
 TASK_STATE = {"last_run": 0}
 TASK_COOLDOWN_SECONDS = int(os.environ.get("TASK_COOLDOWN_SECONDS", "20"))
@@ -72,10 +72,15 @@ PROJECT_LIVE_PROBES = {
         {"id": "ar-hud", "name": "AR HUD Demo", "path": "/lab/ar-hud-demo", "marker": "<title>AR HUD Demo · 多模态交互沙盒 · 陈川", "kind": "html"},
         {"id": "video-sample", "name": "视频样本资源", "path": "/media-optimized/eye-gesture-interaction/20260319-090647.mp4", "kind": "binary", "contentTypePrefix": "video/"},
     ],
+    "cpa-smart-router": [
+        {"id": "direct-models", "name": "CPA Direct 鉴权边界", "url": "https://api-direct.hahaxiong.top/v1/models", "path": "/v1/models", "kind": "http", "expectedStatuses": [401]},
+        {"id": "smart-models", "name": "CPA Smart Router 鉴权边界", "url": "https://smart-api.hahaxiong.top/v1/models", "path": "/v1/models", "kind": "http", "expectedStatuses": [401]},
+    ],
 }
 
 PROJECT_DAILY_PUSH_URLS = {
     "chenchuan-site": os.environ.get("CHENCHUAN_DAILY_PUSH_URL", ""),
+    "cpa-smart-router": os.environ.get("CPA_DAILY_PUSH_URL", ""),
 }
 
 
@@ -105,6 +110,14 @@ CHENCHUAN_SITE_FALLBACK_ALLOWLIST = [
     "Dockerfile",
 ]
 
+CPA_SMART_ROUTER_FALLBACK_ALLOWLIST = [
+    "README.md",
+    "go.mod",
+    "config/router.example.json",
+    "cmd/router/main.go",
+    "cmd/router/main_test.go",
+]
+
 
 PROJECT_ALLOWLIST = {
     "mycc": [
@@ -127,6 +140,7 @@ PROJECT_ALLOWLIST = {
         "2-Projects/ai-ops-cockpit/terminal/vibe-shell",
     ],
     "chenchuan-site": load_allowlist_file("chenchuan-site", CHENCHUAN_SITE_FALLBACK_ALLOWLIST),
+    "cpa-smart-router": load_allowlist_file("cpa-smart-router", CPA_SMART_ROUTER_FALLBACK_ALLOWLIST),
     "MyJavis": [
         "README.md",
         "HANDOFF.md",
@@ -186,7 +200,41 @@ PILOT_PROJECTS = {
             "path": "/var/www/chenchuan-site",
             "processManager": "PM2",
             "process": "chenchuan-site",
+            "maintenanceSecretDir": PRODUCTION_SSH_DIR,
+            "maintenanceActions": ["inspect", "restart"],
+            "maintenanceConfirmations": {"restart": "RESTART_CHENCHUAN_SITE"},
+            "maintenanceLabels": {"inspect": "巡检生产状态", "restart": "确认后重启个人站"},
             "verifiedAt": "2026-07-10",
+        },
+    },
+    "cpa-smart-router": {
+        "name": "个人 CPA / Smart Router",
+        "path": "/workspace/readonly/cpa-smart-router",
+        "risk": "中风险：仅允许读取路由器核心实现、测试和脱敏示例配置；生产密钥、OAuth 凭据、数据库和真实配置保持隔离。",
+        "goal": "持续验证 CPA Direct 与 Smart Router 的公网鉴权边界、核心服务状态、模型列表可用性和低成本真实请求链路。",
+        "firstWorkflow": "readonly_inspect",
+        "production": {
+            "domain": "https://smart-api.hahaxiong.top",
+            "directDomain": "https://api-direct.hahaxiong.top",
+            "sshAlias": "aliyun-jp",
+            "address": "47.74.43.55",
+            "maintenanceUser": "aiops",
+            "maintenancePort": 52022,
+            "path": "/opt/cliproxy",
+            "processManager": "systemd",
+            "services": ["cliproxy", "cpa-smart-router"],
+            "maintenanceSecretDir": "/run/secrets/cpa-jp-maintenance",
+            "maintenanceActions": ["inspect", "restart-cliproxy", "restart-router"],
+            "maintenanceConfirmations": {
+                "restart-cliproxy": "RESTART_CPA_CORE",
+                "restart-router": "RESTART_CPA_ROUTER",
+            },
+            "maintenanceLabels": {
+                "inspect": "巡检生产状态",
+                "restart-cliproxy": "确认后重启 CPA 核心",
+                "restart-router": "确认后重启 Smart Router",
+            },
+            "verifiedAt": "2026-07-11",
         },
     },
     "MyJavis": {
@@ -772,7 +820,22 @@ def servers_matrix_payload():
     racknerd["readinessScore"] = max(0, 100 - racknerd["unhealthy"] * 20 - racknerd["monitorsDown"] * 20 - max(0, disk_used - 70))
     racknerd["risk"] = "探测项未见异常（非业务健康结论）" if racknerd["readinessScore"] >= 90 else "需关注：容器/监控/磁盘存在扣分项"
     planned = remote_server_matrix()
-    return {"servers": [racknerd] + planned, "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")}
+    cpa_status = project_production_status_payload("cpa-smart-router") or {}
+    cpa_latest = cpa_status.get("latest") or {}
+    cpa_ready = bool(cpa_status.get("configured") and cpa_latest.get("ok"))
+    cpa_server = {
+        "name": "阿里云日本 CPA",
+        "role": "个人 CPA / Smart Router 生产节点",
+        "status": "已巡检" if cpa_ready else ("待巡检" if cpa_status.get("configured") else "待接入"),
+        "containers": None,
+        "unhealthy": None,
+        "maxDiskUsedPercent": ((cpa_latest.get("result") or {}).get("host") or {}).get("diskUsedPercent"),
+        "monitorsDown": None,
+        "lastChecked": cpa_latest.get("updatedAt"),
+        "readinessScore": 90 if cpa_ready else (60 if cpa_status.get("configured") else None),
+        "risk": "最近限权巡检通过（非业务健康结论）" if cpa_ready else "维护通道已配置，等待巡检证据" if cpa_status.get("configured") else "限权维护通道未配置",
+    }
+    return {"servers": [racknerd, cpa_server] + planned, "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")}
 
 
 def remote_server_matrix():
@@ -858,6 +921,7 @@ def pilot_payload():
         context = build_project_context(key)
         projects.append(dict(
             item,
+            id=key,
             allowlist=PROJECT_ALLOWLIST.get(key, []),
             context={name: value for name, value in context.items() if name != "prompt"},
         ))
@@ -1030,7 +1094,8 @@ def probe_project_endpoint(base_url, spec):
     headers = {"User-Agent": "AI-Ops-Cockpit/1.0"}
     if spec.get("kind") == "binary":
         headers["Range"] = "bytes=0-4095"
-    request = urllib.request.Request(base_url.rstrip("/") + spec["path"], headers=headers)
+    target_url = spec.get("url") or (base_url.rstrip("/") + spec["path"])
+    request = urllib.request.Request(target_url, headers=headers)
     result = {
         "id": spec["id"],
         "name": spec["name"],
@@ -1046,16 +1111,24 @@ def probe_project_endpoint(base_url, spec):
             result["status"] = response.status
             result["contentType"] = (response.headers.get("content-type") or "").split(";", 1)[0]
         result["bytes"] = len(body)
-        status_ok = 200 <= result["status"] < 300
+        expected_statuses = spec.get("expectedStatuses") or list(range(200, 300))
+        status_ok = result["status"] in expected_statuses
         if spec.get("kind") == "binary":
             result["ok"] = status_ok and result["contentType"].startswith(spec.get("contentTypePrefix", ""))
-        else:
+        elif spec.get("marker"):
             marker_ok = spec.get("marker", "").encode("utf-8") in body
             result["markerOk"] = marker_ok
             result["ok"] = status_ok and marker_ok
+        else:
+            result["ok"] = status_ok
     except urllib.error.HTTPError as exc:
         result["status"] = exc.code
-        result["error"] = "HTTPError"
+        result["contentType"] = (exc.headers.get("content-type") or "").split(";", 1)[0]
+        result["bytes"] = len(exc.read(4096))
+        expected_statuses = spec.get("expectedStatuses") or []
+        result["ok"] = exc.code in expected_statuses
+        if not result["ok"]:
+            result["error"] = "HTTPError"
     except Exception as exc:
         result["error"] = type(exc).__name__
     result["latencyMs"] = round((time.time() - started) * 1000)
@@ -1083,17 +1156,20 @@ def project_live_check(project_id, simulate_failure=False):
     }
 
 
-def production_channel_files():
+def production_channel_files(project_id):
+    project = PILOT_PROJECTS.get(project_id) or {}
+    production = project.get("production") or {}
+    secret_dir = production.get("maintenanceSecretDir") or PRODUCTION_SSH_DIR
     return {
-        "identity": os.path.join(PRODUCTION_SSH_DIR, "id_ed25519"),
-        "knownHosts": os.path.join(PRODUCTION_SSH_DIR, "known_hosts"),
+        "identity": os.path.join(secret_dir, "id_ed25519"),
+        "knownHosts": os.path.join(secret_dir, "known_hosts"),
     }
 
 
 def production_channel_configured(project_id):
     project = PILOT_PROJECTS.get(project_id) or {}
     production = project.get("production") or {}
-    files = production_channel_files()
+    files = production_channel_files(project_id)
     return bool(
         production.get("address")
         and production.get("maintenanceUser")
@@ -1107,11 +1183,19 @@ def sanitize_production_inspection(payload):
     process = payload.get("process") or {}
     deployment = payload.get("deployment") or {}
     host = payload.get("host") or {}
-    return {
+    sanitized = {
         "ok": bool(payload.get("ok")),
         "generatedAt": payload.get("generatedAt"),
         "hostname": str(payload.get("hostname") or "")[:120],
-        "process": {
+        "host": {
+            "load1": host.get("load1"),
+            "diskUsedPercent": host.get("diskUsedPercent"),
+            "diskFreeGB": host.get("diskFreeGB"),
+            "memoryAvailableMB": host.get("memoryAvailableMB"),
+        },
+    }
+    if process:
+        sanitized["process"] = {
             "name": str(process.get("name") or "")[:120],
             "status": str(process.get("status") or "")[:40],
             "pid": process.get("pid"),
@@ -1119,28 +1203,81 @@ def sanitize_production_inspection(payload):
             "uptimeSeconds": process.get("uptimeSeconds"),
             "cpuPercent": process.get("cpuPercent"),
             "memoryMB": process.get("memoryMB"),
-        },
-        "deployment": {
+        }
+    if deployment:
+        sanitized["deployment"] = {
             "path": str(deployment.get("path") or "")[:240],
             "buildId": str(deployment.get("buildId") or "")[:100] or None,
             "deployedAt": deployment.get("deployedAt"),
-        },
-        "host": {
-            "load1": host.get("load1"),
-            "diskUsedPercent": host.get("diskUsedPercent"),
-            "diskFreeGB": host.get("diskFreeGB"),
-        },
-    }
+        }
+    services = payload.get("services") or {}
+    if isinstance(services, dict) and services:
+        sanitized["services"] = {}
+        for name in ("cliproxy", "cpa-smart-router"):
+            service = services.get(name) or {}
+            sanitized["services"][name] = {
+                "active": str(service.get("active") or "")[:40],
+                "subState": str(service.get("subState") or "")[:40],
+                "pid": service.get("pid"),
+                "restartCount": service.get("restartCount"),
+                "activeSince": str(service.get("activeSince") or "")[:120] or None,
+            }
+    ports = payload.get("ports") or {}
+    if isinstance(ports, dict) and ports:
+        sanitized["ports"] = {str(port): bool(ports.get(str(port))) for port in (8317, 8327)}
+    probes = payload.get("probes") or {}
+    if isinstance(probes, dict) and probes:
+        sanitized["probes"] = {}
+        for name in ("directModels", "smartModels", "directChat", "smartChat"):
+            probe = probes.get(name) or {}
+            sanitized["probes"][name] = {
+                "ok": bool(probe.get("ok")),
+                "status": probe.get("status"),
+                "modelCount": probe.get("modelCount"),
+                "latencyMs": probe.get("latencyMs"),
+            }
+    versions = payload.get("versions") or {}
+    if isinstance(versions, dict) and versions:
+        sanitized["versions"] = {
+            "cliproxy": str(versions.get("cliproxy") or "")[:120] or None,
+            "smartRouter": str(versions.get("smartRouter") or "")[:120] or None,
+        }
+    return sanitized
+
+
+def production_allowed_actions(project_id):
+    production = (PILOT_PROJECTS.get(project_id) or {}).get("production") or {}
+    return list(production.get("maintenanceActions") or ["inspect", "restart"])
+
+
+def production_action_confirmation(project_id, action):
+    production = (PILOT_PROJECTS.get(project_id) or {}).get("production") or {}
+    return (production.get("maintenanceConfirmations") or {}).get(action)
+
+
+def production_action_label(project_id, action):
+    production = (PILOT_PROJECTS.get(project_id) or {}).get("production") or {}
+    return (production.get("maintenanceLabels") or {}).get(action) or action
+
+
+def production_service_summary(result):
+    process = result.get("process") or {}
+    if process:
+        return f"{process.get('name') or 'process'}={process.get('status') or '-'}"
+    services = result.get("services") or {}
+    if services:
+        return ", ".join(f"{name}={item.get('active') or '-'}" for name, item in services.items())
+    return "待巡检"
 
 
 def run_production_command(project_id, action):
-    if action not in {"inspect", "restart"}:
+    if action not in production_allowed_actions(project_id):
         return {"ok": False, "error": "production action not allowed"}
     project = PILOT_PROJECTS.get(project_id) or {}
     production = project.get("production") or {}
     if not production_channel_configured(project_id):
         return {"ok": False, "error": "maintenance channel not configured"}
-    files = production_channel_files()
+    files = production_channel_files(project_id)
     command = [
         "ssh",
         "-F", "/dev/null",
@@ -1156,7 +1293,7 @@ def run_production_command(project_id, action):
     ]
     started = time.time()
     try:
-        result = subprocess.run(command, text=True, capture_output=True, timeout=30, check=False)
+        result = subprocess.run(command, text=True, capture_output=True, timeout=60, check=False)
     except Exception as exc:
         return {"ok": False, "error": type(exc).__name__, "durationMs": round((time.time() - started) * 1000)}
     if result.returncode != 0:
@@ -1205,8 +1342,9 @@ def project_production_status_payload(project_id):
         "configured": production_channel_configured(project_id),
         "active": active,
         "latest": latest,
-        "allowedActions": ["inspect", "restart"],
-        "policy": "inspect is read-only; restart requires action token and exact confirmation; deploy and shell are not allowed",
+        "allowedActions": production_allowed_actions(project_id),
+        "actionLabels": {action: production_action_label(project_id, action) for action in production_allowed_actions(project_id)},
+        "policy": "inspect is read-only; state-changing actions require action token and exact confirmation; deploy and shell are not allowed",
         "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
     }
 
@@ -1218,7 +1356,7 @@ def production_action_notification_text(project_id, job):
         f"AI Ops {project_id} 生产维护动作",
         f"动作：{job.get('action')}",
         f"状态：{'成功' if job.get('ok') else '失败'}",
-        f"PM2：{(result.get('process') or {}).get('status') or '-'}",
+        f"服务：{production_service_summary(result)}",
         f"公网探测：{live.get('passed', 0)}/{live.get('total', 0)}",
         f"动作ID：{job.get('id')}",
         f"审计：https://ops.hahaxiong.top/vibe/project?id={project_id}",
@@ -1233,19 +1371,19 @@ def run_project_production_worker(job_id, project_id, action):
     latest_path = os.path.join(project_production_root(project_id), "latest.json")
     try:
         before = run_production_command(project_id, "inspect")
-        result = before if action == "inspect" else run_production_command(project_id, "restart")
+        result = before if action == "inspect" else run_production_command(project_id, action)
         live = project_live_check(project_id)
         ok = bool(result.get("ok") and live.get("ok"))
         job.update({
             "ok": ok,
             "status": "done" if ok else "failed",
-            "before": before if action == "restart" else None,
+            "before": before if action != "inspect" else None,
             "result": result,
             "live": live,
             "durationMs": round((time.time() - started) * 1000),
             "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
         })
-        if action == "restart":
+        if action != "inspect":
             try:
                 notification = send_feishu_text(production_action_notification_text(project_id, job))
                 job["notification"] = {"sent": True, "status": notification.get("status")}
@@ -1272,14 +1410,15 @@ def start_project_production_job(payload):
     action = (payload.get("action") or "inspect").strip()
     if project_id not in PROJECT_LIVE_PROBES:
         return {"ok": False, "error": "project production maintenance not configured"}
-    if action not in {"inspect", "restart"}:
+    if action not in production_allowed_actions(project_id):
         return {"ok": False, "error": "production action not allowed"}
-    if action == "restart" and payload.get("confirmation") != "RESTART_CHENCHUAN_SITE":
-        return {"ok": False, "error": "restart confirmation required"}
+    required_confirmation = production_action_confirmation(project_id, action)
+    if action != "inspect" and (not required_confirmation or payload.get("confirmation") != required_confirmation):
+        return {"ok": False, "error": "action confirmation required"}
     if not production_channel_configured(project_id):
         return {"ok": False, "error": "maintenance channel not configured"}
-    if action == "restart":
-        restart_state_path = os.path.join(project_production_root(project_id), "last-restart.json")
+    if action != "inspect":
+        restart_state_path = os.path.join(project_production_root(project_id), "last-" + re.sub(r"[^a-z0-9-]", "-", action.lower()) + ".json")
         restart_state = load_json_file(restart_state_path, {}) or {}
         elapsed = time.time() - float(restart_state.get("requestedTs") or 0)
         if elapsed < PROJECT_RESTART_COOLDOWN_SECONDS:
@@ -1300,8 +1439,8 @@ def start_project_production_job(payload):
     }
     try:
         save_project_production_job(job)
-        if action == "restart":
-            restart_state_path = os.path.join(project_production_root(project_id), "last-restart.json")
+        if action != "inspect":
+            restart_state_path = os.path.join(project_production_root(project_id), "last-" + re.sub(r"[^a-z0-9-]", "-", action.lower()) + ".json")
             ensure_private_dir(project_production_root(project_id))
             save_json_file(restart_state_path, {"jobId": job_id, "requestedTs": time.time(), "requestedAt": job["createdAt"]})
         thread = threading.Thread(target=run_project_production_worker, args=(job_id, project_id, action), daemon=True)
@@ -1381,9 +1520,9 @@ def project_daily_question(project_id):
     project = PILOT_PROJECTS[project_id]
     return "\n".join([
         f"请执行 {project['name']} 每日只读 AI 巡检。",
-        "请同时使用系统注入的文件级 allowlist 源码快照、本轮公网实时探测和生产 PM2 限权巡检 JSON。",
+        "请同时使用系统注入的文件级 allowlist 源码快照、本轮公网实时探测和生产限权巡检 JSON。",
         "输出必须按 BRO-PDCA：O1/O2、Plan、Do/观察、Check、Action。",
-        "重点判断：关键页面与视频资源是否可访问、源码快照是否完整且新鲜、PM2/磁盘/部署状态是否需要人工处理。",
+        "重点判断：公网入口与鉴权边界是否符合预期、源码快照是否完整且新鲜、生产服务/资源/真实低成本探测是否需要人工处理。",
         "只能分析和给建议；不得执行写文件、重启、部署、commit、push，也不得输出或索要任何 secret。",
     ])
 
@@ -1456,7 +1595,7 @@ def project_daily_notification_text(project_id, job, event):
         f"实时探测：{live.get('passed', 0)}/{live.get('total', 0)}",
         f"失败项：{','.join(live.get('failedIds') or []) or '-'}",
         f"源码快照：{'可用' if snapshot.get('ok') else '过期或不完整'} / {snapshot.get('ageHours')} 小时",
-        f"生产维护通道：{'可用' if production.get('ok') else '不可用'} / PM2 {(production.get('process') or {}).get('status') or '-'}",
+        f"生产维护通道：{'可用' if production.get('ok') else '不可用'} / {production_service_summary(production)}",
         f"任务ID：{job.get('taskId') or '-'}",
         f"待办ID：{job.get('todoId') or '-'}",
         f"审计：https://ops.hahaxiong.top/vibe/project?id={project_id}",
@@ -2277,7 +2416,7 @@ def nav_html(active="home"):
 def render_vibe_pilot_page():
     payload = pilot_payload()
     project_options = "".join(
-        f"<option value='{html.escape(item['name'])}'>{html.escape(item['name'])}</option>"
+        f"<option value='{html.escape(item['id'])}'>{html.escape(item['name'])}</option>"
         for item in payload["projects"]
     )
     workflow_options = "".join(
@@ -2286,7 +2425,7 @@ def render_vibe_pilot_page():
         if item["id"] in ("readonly_inspect", "plan_design")
     )
     project_rows = "".join(
-        f"<tr><td><a href='/vibe/project?id={html.escape(item['name'])}'>{html.escape(item['name'])}</a></td><td><code>{html.escape(item['path'])}</code></td><td>{html.escape(item['risk'])}</td><td>{len(item['allowlist'])}</td><td>{'已就绪' if item['context'].get('ok') else '未就绪'} / {len(item['context'].get('files', []))} 文件</td></tr>"
+        f"<tr><td><a href='/vibe/project?id={html.escape(item['id'])}'>{html.escape(item['name'])}</a></td><td><code>{html.escape(item['path'])}</code></td><td>{html.escape(item['risk'])}</td><td>{len(item['allowlist'])}</td><td>{'已就绪' if item['context'].get('ok') else '未就绪'} / {len(item['context'].get('files', []))} 文件</td></tr>"
         for item in payload["projects"]
     )
     workflow_rows = "".join(
@@ -2343,7 +2482,7 @@ def render_vibe_project_page(project_id):
     allowlist_rows = "".join(f"<tr><td><code>{html.escape(path)}</code></td></tr>" for path in project["allowlist"])
     production_rows = "".join(
         f"<tr><th>{html.escape(label)}</th><td><code>{html.escape(str(production.get(key) or '-'))}</code></td></tr>"
-        for label, key in [("域名", "domain"), ("SSH 别名", "sshAlias"), ("地址", "address"), ("部署目录", "path"), ("进程管理", "processManager"), ("进程", "process"), ("核实日期", "verifiedAt")]
+        for label, key in [("主域名", "domain"), ("直连域名", "directDomain"), ("SSH 别名", "sshAlias"), ("地址", "address"), ("部署目录", "path"), ("进程管理", "processManager"), ("进程", "process"), ("服务", "services"), ("核实日期", "verifiedAt")]
     ) if production else "<tr><td>尚未登记生产目标</td></tr>"
     task_rows = "".join(f"<tr><td>{html.escape(item.get('createdAt') or '')}</td><td>{html.escape(item.get('modeName') or '')}</td><td>{'成功' if item.get('ok') else '失败'}</td><td><code>{html.escape(item.get('id') or '')}</code></td></tr>" for item in payload["recentTasks"]) or "<tr><td colspan=4>暂无任务</td></tr>"
     todo_rows = "".join(f"<tr><td>{html.escape(item.get('createdAt') or '')}</td><td>{html.escape(item.get('status') or '')}</td><td>{html.escape(item.get('title') or '')}</td><td><a href='/vibe/todos/detail?id={html.escape(item.get('id') or '')}'>详情</a></td></tr>" for item in payload["openTodos"]) or "<tr><td colspan=4>暂无未完成待办</td></tr>"
@@ -2355,11 +2494,26 @@ def render_vibe_project_page(project_id):
     maintenance = payload.get("productionMaintenance") or {}
     maintenance_latest = maintenance.get("latest") or {}
     maintenance_result = maintenance_latest.get("result") or {}
-    maintenance_process = maintenance_result.get("process") or {}
+    allowed_actions = maintenance.get("allowedActions") or production_allowed_actions(project_id)
+    action_labels = maintenance.get("actionLabels") or {action: production_action_label(project_id, action) for action in allowed_actions}
+    action_config = {
+        action: {
+            "label": action_labels.get(action) or action,
+            "confirmation": production_action_confirmation(project_id, action),
+        }
+        for action in allowed_actions
+    }
+    action_buttons = []
+    for action in allowed_actions:
+        button_id = "inspectProductionBtn" if action == "inspect" else ("restartProductionBtn" if action == "restart" else "productionAction-" + action)
+        action_buttons.append(f'<button id="{html.escape(button_id)}" data-production-action="{html.escape(action)}">{html.escape(action_labels.get(action) or action)}</button>')
+    maintenance_summary = production_service_summary(maintenance_result)
+    public_probe_count = len(PROJECT_LIVE_PROBES.get(project_id) or [])
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(project['name'])} - 项目工作区</title><style>
 body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}button{{background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;cursor:pointer}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}
-</style></head><body><main>{nav_html('pilot')}<section class="card"><h1>{html.escape(project['name'])} 项目工作区</h1><p class="muted">只读路径：<code>{html.escape(project['path'])}</code></p><p>{html.escape(project['risk'])}</p><p><strong>真实上下文：</strong>{'已就绪' if context.get('ok') else '未就绪'}，已注入 {len(context.get('files', []))} 个文件 / {context.get('chars', 0)} 字符，截断：{'是' if context.get('truncated') else '否'}。</p><p><a href="/vibe/pilot">返回实战试点</a> · <a href="/vibe/tasks" data-token-link="true">任务审计</a> · <a href="/vibe/todos" data-token-link="true">AI 待办</a></p></section><section class="card"><h2>每日 AI 巡检</h2><p>最近状态：<strong class="{'ok' if daily.get('ok') else 'warn'}">{html.escape(daily_status)}</strong> · 实时探测 {daily_live.get('passed', 0)}/{daily_live.get('total', 0)} · 快照 {daily_snapshot.get('ageHours', '-')} 小时</p><p class="muted">每日由 n8n 自动触发；包含关键页面/资源探测、生产 PM2 限权巡检、Grok 4.5 源码分析、异常待办、飞书通知和 Kuma 心跳。</p><button id="runDailyBtn">立即执行一次只读巡检</button><pre id="dailyResult">{html.escape(json.dumps(daily, ensure_ascii=False, indent=2) if daily else '等待首次执行。')}</pre></section><section class="card"><h2>生产维护通道</h2><p>通道：<strong class="{'ok' if maintenance.get('configured') else 'warn'}">{'已限权接入' if maintenance.get('configured') else '未接入'}</strong> · PM2：{html.escape(str(maintenance_process.get('status') or '待巡检'))}</p><p class="muted">专用 SSH key 只能执行 <code>inspect</code> 和 <code>restart</code>；禁止任意 shell、部署、文件写入。重启需要动作权限、明确确认、10 分钟冷却，并在完成后自动跑 6 项公网验收。</p><button id="inspectProductionBtn">巡检生产状态</button><button id="restartProductionBtn">确认后重启个人站</button><pre id="productionResult">{html.escape(json.dumps(maintenance_latest, ensure_ascii=False, indent=2) if maintenance_latest else '等待首次生产巡检。')}</pre></section><section class="card"><h2>已核实生产目标</h2><table><tbody>{production_rows}</tbody></table></section><section class="card"><h2>Allowlist 文件</h2><table><tbody>{allowlist_rows}</tbody></table></section><section class="card"><h2>最近任务</h2><table><thead><tr><th>时间</th><th>模式</th><th>状态</th><th>ID</th></tr></thead><tbody>{task_rows}</tbody></table></section><section class="card"><h2>未完成待办</h2><table><thead><tr><th>时间</th><th>状态</th><th>标题</th><th>入口</th></tr></thead><tbody>{todo_rows}</tbody></table></section><section class="card"><h2>Workflow 权限矩阵</h2><table><thead><tr><th>Workflow</th><th>权限</th><th>允许</th><th>禁止</th></tr></thead><tbody>{workflow_rows}</tbody></table></section></main><script>
+</style></head><body><main>{nav_html('pilot')}<section class="card"><h1>{html.escape(project['name'])} 项目工作区</h1><p class="muted">只读路径：<code>{html.escape(project['path'])}</code></p><p>{html.escape(project['risk'])}</p><p><strong>真实上下文：</strong>{'已就绪' if context.get('ok') else '未就绪'}，已注入 {len(context.get('files', []))} 个文件 / {context.get('chars', 0)} 字符，截断：{'是' if context.get('truncated') else '否'}。</p><p><a href="/vibe/pilot">返回实战试点</a> · <a href="/vibe/tasks" data-token-link="true">任务审计</a> · <a href="/vibe/todos" data-token-link="true">AI 待办</a></p></section><section class="card"><h2>每日 AI 巡检</h2><p>最近状态：<strong class="{'ok' if daily.get('ok') else 'warn'}">{html.escape(daily_status)}</strong> · 实时探测 {daily_live.get('passed', 0)}/{daily_live.get('total', 0)} · 快照 {daily_snapshot.get('ageHours', '-')} 小时</p><p class="muted">每日由 n8n 自动触发；包含公网入口探测、生产服务限权巡检、Grok 4.5 源码分析、异常待办、飞书通知和 Kuma 心跳。</p><button id="runDailyBtn">立即执行一次只读巡检</button><pre id="dailyResult">{html.escape(json.dumps(daily, ensure_ascii=False, indent=2) if daily else '等待首次执行。')}</pre></section><section class="card"><h2>生产维护通道</h2><p>通道：<strong class="{'ok' if maintenance.get('configured') else 'warn'}">{'已限权接入' if maintenance.get('configured') else '未接入'}</strong> · 服务：{html.escape(maintenance_summary)}</p><p class="muted">专用 SSH key 只能执行页面列出的固定动作；禁止任意 shell、部署、文件写入。状态变更需要动作权限、明确确认、10 分钟冷却，并在完成后自动跑 {public_probe_count} 项公网验收。</p>{''.join(action_buttons)}<pre id="productionResult">{html.escape(json.dumps(maintenance_latest, ensure_ascii=False, indent=2) if maintenance_latest else '等待首次生产巡检。')}</pre></section><section class="card"><h2>已核实生产目标</h2><table><tbody>{production_rows}</tbody></table></section><section class="card"><h2>Allowlist 文件</h2><table><tbody>{allowlist_rows}</tbody></table></section><section class="card"><h2>最近任务</h2><table><thead><tr><th>时间</th><th>模式</th><th>状态</th><th>ID</th></tr></thead><tbody>{task_rows}</tbody></table></section><section class="card"><h2>未完成待办</h2><table><thead><tr><th>时间</th><th>状态</th><th>标题</th><th>入口</th></tr></thead><tbody>{todo_rows}</tbody></table></section><section class="card"><h2>Workflow 权限矩阵</h2><table><thead><tr><th>Workflow</th><th>权限</th><th>允许</th><th>禁止</th></tr></thead><tbody>{workflow_rows}</tbody></table></section></main><script>
 sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}');
+const productionActions = {json.dumps(action_config, ensure_ascii=False)};
 document.getElementById('runDailyBtn').addEventListener('click', async () => {{
   const button = document.getElementById('runDailyBtn');
   const result = document.getElementById('dailyResult');
@@ -2384,14 +2538,15 @@ document.getElementById('runDailyBtn').addEventListener('click', async () => {{
 }});
 async function runProductionAction(action) {{
   const result = document.getElementById('productionResult');
-  const isRestart = action === 'restart';
+  const isMutation = action !== 'inspect';
+  const config = productionActions[action] || {{label: action, confirmation: null}};
   let confirmation = '';
-  if (isRestart) {{
-    confirmation = window.prompt('这是生产重启。请输入 RESTART_CHENCHUAN_SITE 确认；系统不会部署或修改文件。') || '';
-    if (confirmation !== 'RESTART_CHENCHUAN_SITE') {{ result.textContent = '已取消：确认文字不匹配。'; return; }}
+  if (isMutation) {{
+    confirmation = window.prompt('这是生产状态变更。请输入 ' + config.confirmation + ' 确认；系统不会部署或修改文件。') || '';
+    if (confirmation !== config.confirmation) {{ result.textContent = '已取消：确认文字不匹配。'; return; }}
   }}
-  result.textContent = isRestart ? '已提交生产重启，完成后会自动验收公网 6 项...' : '正在读取生产 PM2、部署与磁盘状态...';
-  const tokenHeader = isRestart ? {{'X-AIOps-Action-Token':'{ACTION_TOKEN}'}} : {{'X-AIOps-Read-Token':'{READ_TOKEN}'}};
+  result.textContent = isMutation ? '已提交“' + config.label + '”，完成后会自动验收公网 {public_probe_count} 项...' : '正在读取生产服务、探测与主机资源状态...';
+  const tokenHeader = isMutation ? {{'X-AIOps-Action-Token':'{ACTION_TOKEN}'}} : {{'X-AIOps-Read-Token':'{READ_TOKEN}'}};
   try {{
     const response = await fetch('/vibe/project/production/action', {{method:'POST',credentials:'same-origin',headers:{{'content-type':'application/json',...tokenHeader}},body:JSON.stringify({{project:'{html.escape(project_id)}',action,confirmation}})}});
     const queued = await response.json();
@@ -2407,8 +2562,9 @@ async function runProductionAction(action) {{
     result.textContent = '执行失败：' + error;
   }}
 }}
-document.getElementById('inspectProductionBtn').addEventListener('click', () => runProductionAction('inspect'));
-document.getElementById('restartProductionBtn').addEventListener('click', () => runProductionAction('restart'));
+document.querySelectorAll('[data-production-action]').forEach((button) => {{
+  button.addEventListener('click', () => runProductionAction(button.dataset.productionAction));
+}});
 </script></body></html>"""
 
 
@@ -2974,7 +3130,7 @@ class Handler(BaseHTTPRequestHandler):
                     if not self._has_read_token():
                         self._send_json(403, {"ok": False, "error": "read token required"})
                         return
-                elif action == "restart":
+                elif action in production_allowed_actions((payload.get("project") or "").strip()):
                     if not self._has_action_token():
                         self._send_json(403, {"ok": False, "error": "action token required"})
                         return

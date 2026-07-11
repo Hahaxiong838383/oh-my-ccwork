@@ -1013,3 +1013,14 @@ scripts/validate-vibe-regression.sh
 - 每日 Grok 4.5 巡检上下文新增真实生产状态；维护通道不可用、PM2 非 online 或公网探测失败都会进入异常签名、待办和 Kuma/飞书闭环。
 - 当前允许的是“巡检 + 受控重启 + 自动验收”，不允许从网页任意 shell、改文件或部署；代码修复仍由 Codex/cc 在本地仓完成并经川哥确认后部署。
 - 验收：限权 key 的 `inspect` 成功，任意 `id` 命令被拒绝；网页接口巡检成功；受控重启 PID 发生变化、重启计数 `20→21`、PM2 online、公网 `6/6`、飞书发送成功；错误确认和冷却重复重启均被拒绝。
+
+## 2026-07-11 · 阿里云日本个人 CPA 接入
+
+- 新增 `cpa-smart-router` 文件级 allowlist，只同步 README、Go 模块、脱敏示例配置、核心实现和测试共 5 个文件；真实配置、OAuth 凭据、API key、SQLite 和整仓内容不进入只读快照。
+- 登记真实生产目标：阿里云日本 `aliyun-jp`，CPA Direct 由 `cliproxy.service` 提供，Smart Router 由 `cpa-smart-router.service` 提供；页面入口为 `/vibe/project?id=cpa-smart-router`。
+- `/vibe/assets` 增加 `阿里云日本 CPA` 资产卡，基于最近一次限权巡检显示就绪度、磁盘使用率和证据时间，不把有限探测包装成业务健康结论。
+- RackNerd 到日本节点新增独立限权 SSH 通道，固定允许 `inspect`、`restart-cliproxy`、`restart-router`；任意 shell、部署、文件写入均拒绝，两个重启动作分别使用精确确认词和独立 10 分钟冷却。
+- 公网探测验证 Direct 与 Smart Router 的 `/v1/models` 未授权请求稳定返回预期 `401`；限权内网巡检使用生产机本地凭据验证两个模型列表和两个低成本真实对话请求，只返回状态、耗时和模型数量，不回传响应正文或凭据。
+- Uptime Kuma 新增 `个人 CPA Direct HTTPS`、`个人 CPA Smart Router HTTPS` 和 `个人 CPA 每日 AI 巡检`，均绑定飞书；Push URL 只保存在远端 `.env`，不写入 git、文档或页面。
+- n8n 新增 `个人 CPA 每日 AI 巡检`，每天 `09:20 Asia/Shanghai` 触发：公网探测、只读源码、生产限权巡检、Grok 4.5 分析、异常待办、飞书通知和 Kuma 心跳形成闭环。
+- 验收：两个 systemd 服务受控重启后均恢复 `active`；认证模型列表和真实对话均 `200`；公网鉴权探测 `2/2`；每日巡检 `ok=true`、快照 `5/5`、飞书和 Push 心跳成功；全量回归 `OK vibe regression`；真实浏览器页面 `200`、控制台错误 `0`、失败请求 `0`。
