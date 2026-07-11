@@ -42,10 +42,12 @@ CONVERSATIONS_DIR = os.path.join(STATE_DIR, "vibe-conversations")
 PILOT_JOBS_DIR = os.path.join(STATE_DIR, "vibe-pilot-jobs")
 TODO_JOBS_DIR = os.path.join(STATE_DIR, "vibe-todo-jobs")
 PROJECT_DAILY_DIR = os.path.join(STATE_DIR, "project-daily")
+PROJECT_PRODUCTION_DIR = os.path.join(STATE_DIR, "project-production")
 READONLY_STATE_FILE = os.path.join(STATE_DIR, "readonly-refresh.json")
 WORKSPACE_ROOT = os.environ.get("WORKSPACE_ROOT", "/workspace/projects")
 READONLY_ROOT = os.environ.get("READONLY_ROOT", "/workspace/readonly")
 ALLOWLIST_DIR = os.environ.get("ALLOWLIST_DIR", "/config")
+PRODUCTION_SSH_DIR = os.environ.get("PRODUCTION_SSH_DIR", "/run/secrets/chenchuan-maintenance")
 PROJECT_CONTEXT_MAX_CHARS = int(os.environ.get("PROJECT_CONTEXT_MAX_CHARS", "280000"))
 PROJECT_CONTEXT_FILE_MAX_CHARS = int(os.environ.get("PROJECT_CONTEXT_FILE_MAX_CHARS", "22000"))
 TASK_LOCK = threading.Lock()
@@ -55,6 +57,9 @@ PILOT_JOB_LOCK = threading.Lock()
 TODO_JOB_LOCK = threading.Lock()
 PROJECT_DAILY_LOCK = threading.Lock()
 PROJECT_DAILY_ACTIVE = set()
+PROJECT_PRODUCTION_LOCK = threading.Lock()
+PROJECT_PRODUCTION_ACTIVE = set()
+PROJECT_RESTART_COOLDOWN_SECONDS = int(os.environ.get("PROJECT_RESTART_COOLDOWN_SECONDS", "600"))
 ASSETS_CACHE_TTL_SECONDS = int(os.environ.get("ASSETS_CACHE_TTL_SECONDS", "20"))
 READONLY_REFRESH_LOCK = threading.Lock()
 
@@ -176,6 +181,8 @@ PILOT_PROJECTS = {
             "domain": "https://my.chenchuan.cc",
             "sshAlias": "aliyun-kr",
             "address": "8.213.134.133",
+            "maintenanceUser": "aiops",
+            "maintenancePort": 52022,
             "path": "/var/www/chenchuan-site",
             "processManager": "PM2",
             "process": "chenchuan-site",
@@ -921,6 +928,7 @@ def project_workspace_panel(project_id):
         "project": dict(project, allowlist=allowlist, allowlistCount=len(allowlist)),
         "context": {key: value for key, value in context.items() if key != "prompt"},
         "dailyInspection": project_daily_status_payload(project_id),
+        "productionMaintenance": project_production_status_payload(project_id),
         "recentTasks": [{"id": item.get("id"), "ok": item.get("ok"), "modeName": item.get("modeName"), "createdAt": item.get("createdAt")} for item in tasks[:10]],
         "openTodos": [{"id": item.get("id"), "status": item.get("status"), "title": item.get("title"), "createdAt": item.get("createdAt")} for item in todos if item.get("status") != "done"],
         "workflowMatrix": [dict({"id": key}, **value) for key, value in PILOT_WORKFLOW_MATRIX.items()],
@@ -1075,6 +1083,236 @@ def project_live_check(project_id, simulate_failure=False):
     }
 
 
+def production_channel_files():
+    return {
+        "identity": os.path.join(PRODUCTION_SSH_DIR, "id_ed25519"),
+        "knownHosts": os.path.join(PRODUCTION_SSH_DIR, "known_hosts"),
+    }
+
+
+def production_channel_configured(project_id):
+    project = PILOT_PROJECTS.get(project_id) or {}
+    production = project.get("production") or {}
+    files = production_channel_files()
+    return bool(
+        production.get("address")
+        and production.get("maintenanceUser")
+        and production.get("maintenancePort")
+        and os.path.isfile(files["identity"])
+        and os.path.isfile(files["knownHosts"])
+    )
+
+
+def sanitize_production_inspection(payload):
+    process = payload.get("process") or {}
+    deployment = payload.get("deployment") or {}
+    host = payload.get("host") or {}
+    return {
+        "ok": bool(payload.get("ok")),
+        "generatedAt": payload.get("generatedAt"),
+        "hostname": str(payload.get("hostname") or "")[:120],
+        "process": {
+            "name": str(process.get("name") or "")[:120],
+            "status": str(process.get("status") or "")[:40],
+            "pid": process.get("pid"),
+            "restartCount": process.get("restartCount"),
+            "uptimeSeconds": process.get("uptimeSeconds"),
+            "cpuPercent": process.get("cpuPercent"),
+            "memoryMB": process.get("memoryMB"),
+        },
+        "deployment": {
+            "path": str(deployment.get("path") or "")[:240],
+            "buildId": str(deployment.get("buildId") or "")[:100] or None,
+            "deployedAt": deployment.get("deployedAt"),
+        },
+        "host": {
+            "load1": host.get("load1"),
+            "diskUsedPercent": host.get("diskUsedPercent"),
+            "diskFreeGB": host.get("diskFreeGB"),
+        },
+    }
+
+
+def run_production_command(project_id, action):
+    if action not in {"inspect", "restart"}:
+        return {"ok": False, "error": "production action not allowed"}
+    project = PILOT_PROJECTS.get(project_id) or {}
+    production = project.get("production") or {}
+    if not production_channel_configured(project_id):
+        return {"ok": False, "error": "maintenance channel not configured"}
+    files = production_channel_files()
+    command = [
+        "ssh",
+        "-F", "/dev/null",
+        "-i", files["identity"],
+        "-o", "BatchMode=yes",
+        "-o", "IdentitiesOnly=yes",
+        "-o", "StrictHostKeyChecking=yes",
+        "-o", "LogLevel=ERROR",
+        "-o", f"UserKnownHostsFile={files['knownHosts']}",
+        "-p", str(production["maintenancePort"]),
+        f"{production['maintenanceUser']}@{production['address']}",
+        action,
+    ]
+    started = time.time()
+    try:
+        result = subprocess.run(command, text=True, capture_output=True, timeout=30, check=False)
+    except Exception as exc:
+        return {"ok": False, "error": type(exc).__name__, "durationMs": round((time.time() - started) * 1000)}
+    if result.returncode != 0:
+        return {"ok": False, "error": "maintenance command failed", "returnCode": result.returncode, "durationMs": round((time.time() - started) * 1000)}
+    try:
+        raw_payload = json.loads(result.stdout.strip().splitlines()[-1])
+    except Exception:
+        return {"ok": False, "error": "invalid maintenance response", "durationMs": round((time.time() - started) * 1000)}
+    payload = sanitize_production_inspection(raw_payload)
+    payload["durationMs"] = round((time.time() - started) * 1000)
+    payload["channel"] = "restricted_ssh"
+    return payload
+
+
+def project_production_root(project_id):
+    return os.path.join(PROJECT_PRODUCTION_DIR, project_id)
+
+
+def load_project_production_job(job_id):
+    job_id = (job_id or "").strip()
+    if not re.match(r"^prod-[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$", job_id):
+        return None
+    for project_id in PROJECT_LIVE_PROBES:
+        path = os.path.join(project_production_root(project_id), "jobs", job_id + ".json")
+        job = load_json_file(path, None)
+        if job:
+            return job
+    return None
+
+
+def save_project_production_job(job):
+    jobs_dir = os.path.join(project_production_root(job["project"]), "jobs")
+    ensure_private_dir(jobs_dir)
+    save_json_file(os.path.join(jobs_dir, job["id"] + ".json"), job)
+
+
+def project_production_status_payload(project_id):
+    if project_id not in PROJECT_LIVE_PROBES:
+        return None
+    latest = load_json_file(os.path.join(project_production_root(project_id), "latest.json"), None)
+    with PROJECT_PRODUCTION_LOCK:
+        active = project_id in PROJECT_PRODUCTION_ACTIVE
+    return {
+        "ok": True,
+        "project": project_id,
+        "configured": production_channel_configured(project_id),
+        "active": active,
+        "latest": latest,
+        "allowedActions": ["inspect", "restart"],
+        "policy": "inspect is read-only; restart requires action token and exact confirmation; deploy and shell are not allowed",
+        "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+    }
+
+
+def production_action_notification_text(project_id, job):
+    result = job.get("result") or {}
+    live = job.get("live") or {}
+    return "\n".join([
+        f"AI Ops {project_id} 生产维护动作",
+        f"动作：{job.get('action')}",
+        f"状态：{'成功' if job.get('ok') else '失败'}",
+        f"PM2：{(result.get('process') or {}).get('status') or '-'}",
+        f"公网探测：{live.get('passed', 0)}/{live.get('total', 0)}",
+        f"动作ID：{job.get('id')}",
+        f"审计：https://ops.hahaxiong.top/vibe/project?id={project_id}",
+    ])
+
+
+def run_project_production_worker(job_id, project_id, action):
+    job = load_project_production_job(job_id) or {"id": job_id, "project": project_id, "action": action}
+    job.update({"status": "running", "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")})
+    save_project_production_job(job)
+    started = time.time()
+    latest_path = os.path.join(project_production_root(project_id), "latest.json")
+    try:
+        before = run_production_command(project_id, "inspect")
+        result = before if action == "inspect" else run_production_command(project_id, "restart")
+        live = project_live_check(project_id)
+        ok = bool(result.get("ok") and live.get("ok"))
+        job.update({
+            "ok": ok,
+            "status": "done" if ok else "failed",
+            "before": before if action == "restart" else None,
+            "result": result,
+            "live": live,
+            "durationMs": round((time.time() - started) * 1000),
+            "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        })
+        if action == "restart":
+            try:
+                notification = send_feishu_text(production_action_notification_text(project_id, job))
+                job["notification"] = {"sent": True, "status": notification.get("status")}
+            except Exception as exc:
+                job["notification"] = {"sent": False, "status": "error", "error": type(exc).__name__}
+    except Exception as exc:
+        job.update({
+            "ok": False,
+            "status": "failed",
+            "error": type(exc).__name__,
+            "durationMs": round((time.time() - started) * 1000),
+            "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        })
+    finally:
+        ensure_private_dir(project_production_root(project_id))
+        save_json_file(latest_path, job)
+        save_project_production_job(job)
+        with PROJECT_PRODUCTION_LOCK:
+            PROJECT_PRODUCTION_ACTIVE.discard(project_id)
+
+
+def start_project_production_job(payload):
+    project_id = (payload.get("project") or "chenchuan-site").strip()
+    action = (payload.get("action") or "inspect").strip()
+    if project_id not in PROJECT_LIVE_PROBES:
+        return {"ok": False, "error": "project production maintenance not configured"}
+    if action not in {"inspect", "restart"}:
+        return {"ok": False, "error": "production action not allowed"}
+    if action == "restart" and payload.get("confirmation") != "RESTART_CHENCHUAN_SITE":
+        return {"ok": False, "error": "restart confirmation required"}
+    if not production_channel_configured(project_id):
+        return {"ok": False, "error": "maintenance channel not configured"}
+    if action == "restart":
+        restart_state_path = os.path.join(project_production_root(project_id), "last-restart.json")
+        restart_state = load_json_file(restart_state_path, {}) or {}
+        elapsed = time.time() - float(restart_state.get("requestedTs") or 0)
+        if elapsed < PROJECT_RESTART_COOLDOWN_SECONDS:
+            return {"ok": False, "error": "restart cooldown", "retryAfterSeconds": round(PROJECT_RESTART_COOLDOWN_SECONDS - elapsed)}
+    with PROJECT_PRODUCTION_LOCK:
+        if project_id in PROJECT_PRODUCTION_ACTIVE:
+            return {"ok": False, "error": "project production action already running"}
+        PROJECT_PRODUCTION_ACTIVE.add(project_id)
+    job_id = "prod-" + time.strftime("%Y%m%d-%H%M%S") + "-" + secrets.token_hex(3)
+    job = {
+        "id": job_id,
+        "ok": None,
+        "status": "queued",
+        "project": project_id,
+        "action": action,
+        "createdAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+    }
+    try:
+        save_project_production_job(job)
+        if action == "restart":
+            restart_state_path = os.path.join(project_production_root(project_id), "last-restart.json")
+            ensure_private_dir(project_production_root(project_id))
+            save_json_file(restart_state_path, {"jobId": job_id, "requestedTs": time.time(), "requestedAt": job["createdAt"]})
+        thread = threading.Thread(target=run_project_production_worker, args=(job_id, project_id, action), daemon=True)
+        thread.start()
+    except Exception:
+        with PROJECT_PRODUCTION_LOCK:
+            PROJECT_PRODUCTION_ACTIVE.discard(project_id)
+        raise
+    return {"ok": True, "status": "queued", "jobId": job_id, "pollUrl": f"/vibe/project/production/job?id={job_id}"}
+
+
 def project_daily_root(project_id):
     return os.path.join(PROJECT_DAILY_DIR, project_id)
 
@@ -1143,17 +1381,18 @@ def project_daily_question(project_id):
     project = PILOT_PROJECTS[project_id]
     return "\n".join([
         f"请执行 {project['name']} 每日只读 AI 巡检。",
-        "请同时使用系统注入的文件级 allowlist 源码快照与本轮实时探测 JSON。",
+        "请同时使用系统注入的文件级 allowlist 源码快照、本轮公网实时探测和生产 PM2 限权巡检 JSON。",
         "输出必须按 BRO-PDCA：O1/O2、Plan、Do/观察、Check、Action。",
-        "重点判断：关键页面与视频资源是否可访问、源码快照是否完整且新鲜、是否出现需要人工处理的异常或风险。",
+        "重点判断：关键页面与视频资源是否可访问、源码快照是否完整且新鲜、PM2/磁盘/部署状态是否需要人工处理。",
         "只能分析和给建议；不得执行写文件、重启、部署、commit、push，也不得输出或索要任何 secret。",
     ])
 
 
-def project_daily_signature(live, snapshot, task):
+def project_daily_signature(live, snapshot, production, task):
     payload = {
         "failedIds": sorted(live.get("failedIds") or []),
         "snapshot": None if snapshot.get("ok") else "stale_or_incomplete",
+        "production": None if production.get("ok") else "maintenance_unavailable",
         "task": None if task.get("ok") else "grok_failed",
     }
     return json.dumps(payload, ensure_ascii=False, sort_keys=True)
@@ -1209,6 +1448,7 @@ def close_project_daily_todo(todo_id):
 def project_daily_notification_text(project_id, job, event):
     live = job.get("live") or {}
     snapshot = job.get("snapshot") or {}
+    production = job.get("production") or {}
     labels = {"normal": "每日简报", "alert": "异常告警", "recovery": "恢复通知"}
     return "\n".join([
         f"AI Ops {project_id} {labels.get(event, event)}",
@@ -1216,6 +1456,7 @@ def project_daily_notification_text(project_id, job, event):
         f"实时探测：{live.get('passed', 0)}/{live.get('total', 0)}",
         f"失败项：{','.join(live.get('failedIds') or []) or '-'}",
         f"源码快照：{'可用' if snapshot.get('ok') else '过期或不完整'} / {snapshot.get('ageHours')} 小时",
+        f"生产维护通道：{'可用' if production.get('ok') else '不可用'} / PM2 {(production.get('process') or {}).get('status') or '-'}",
         f"任务ID：{job.get('taskId') or '-'}",
         f"待办ID：{job.get('todoId') or '-'}",
         f"审计：https://ops.hahaxiong.top/vibe/project?id={project_id}",
@@ -1232,10 +1473,11 @@ def run_project_daily_worker(job_id, project_id, simulate_failure, force_notify)
     try:
         live = project_live_check(project_id, simulate_failure)
         snapshot = project_snapshot_status(project_id)
-        runtime_context = {"live": live, "snapshot": snapshot}
+        production = run_production_command(project_id, "inspect")
+        runtime_context = {"live": live, "snapshot": snapshot, "production": production}
         task = run_vibe_task_with_retry("readonly_inspect", project_daily_question(project_id), project_id, runtime_context)
-        core_ok = bool(live.get("ok") and snapshot.get("ok") and task.get("ok"))
-        signature = project_daily_signature(live, snapshot, task)
+        core_ok = bool(live.get("ok") and snapshot.get("ok") and production.get("ok") and task.get("ok"))
+        signature = project_daily_signature(live, snapshot, production, task)
         previous_abnormal = previous.get("ok") is False
         same_issue_today = previous_abnormal and previous.get("signature") == signature and previous.get("day") == time.strftime("%Y-%m-%d")
         event = "normal"
@@ -1255,6 +1497,7 @@ def run_project_daily_worker(job_id, project_id, simulate_failure, force_notify)
             "signature": signature,
             "live": live,
             "snapshot": snapshot,
+            "production": production,
             "taskId": task.get("id"),
             "todoId": (todo or {}).get("id") or (previous.get("todoId") if same_issue_today else None),
             "durationMs": round((time.time() - started) * 1000),
@@ -2109,9 +2352,13 @@ def render_vibe_project_page(project_id):
     daily_status = "尚未执行" if not daily else ("通过" if daily.get("ok") else "需要关注")
     daily_live = daily.get("live") or {}
     daily_snapshot = daily.get("snapshot") or {}
+    maintenance = payload.get("productionMaintenance") or {}
+    maintenance_latest = maintenance.get("latest") or {}
+    maintenance_result = maintenance_latest.get("result") or {}
+    maintenance_process = maintenance_result.get("process") or {}
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(project['name'])} - 项目工作区</title><style>
 body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1180px;margin:0 auto;padding:28px}}.card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;margin:16px 0}}.muted{{color:#94a3b8}}.ok{{color:#22c55e}}.warn{{color:#f59e0b}}a{{color:#93c5fd}}button{{background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;cursor:pointer}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}code{{background:#020617;padding:2px 6px;border-radius:6px;word-break:break-all}}pre{{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}
-</style></head><body><main>{nav_html('pilot')}<section class="card"><h1>{html.escape(project['name'])} 项目工作区</h1><p class="muted">只读路径：<code>{html.escape(project['path'])}</code></p><p>{html.escape(project['risk'])}</p><p><strong>真实上下文：</strong>{'已就绪' if context.get('ok') else '未就绪'}，已注入 {len(context.get('files', []))} 个文件 / {context.get('chars', 0)} 字符，截断：{'是' if context.get('truncated') else '否'}。</p><p><a href="/vibe/pilot">返回实战试点</a> · <a href="/vibe/tasks" data-token-link="true">任务审计</a> · <a href="/vibe/todos" data-token-link="true">AI 待办</a></p></section><section class="card"><h2>每日 AI 巡检</h2><p>最近状态：<strong class="{'ok' if daily.get('ok') else 'warn'}">{html.escape(daily_status)}</strong> · 实时探测 {daily_live.get('passed', 0)}/{daily_live.get('total', 0)} · 快照 {daily_snapshot.get('ageHours', '-')} 小时</p><p class="muted">每日由 n8n 自动触发；包含关键页面/资源探测、Grok 4.5 源码分析、异常待办、飞书通知和 Kuma 心跳。</p><button id="runDailyBtn">立即执行一次只读巡检</button><pre id="dailyResult">{html.escape(json.dumps(daily, ensure_ascii=False, indent=2) if daily else '等待首次执行。')}</pre></section><section class="card"><h2>已核实生产目标</h2><table><tbody>{production_rows}</tbody></table></section><section class="card"><h2>Allowlist 文件</h2><table><tbody>{allowlist_rows}</tbody></table></section><section class="card"><h2>最近任务</h2><table><thead><tr><th>时间</th><th>模式</th><th>状态</th><th>ID</th></tr></thead><tbody>{task_rows}</tbody></table></section><section class="card"><h2>未完成待办</h2><table><thead><tr><th>时间</th><th>状态</th><th>标题</th><th>入口</th></tr></thead><tbody>{todo_rows}</tbody></table></section><section class="card"><h2>Workflow 权限矩阵</h2><table><thead><tr><th>Workflow</th><th>权限</th><th>允许</th><th>禁止</th></tr></thead><tbody>{workflow_rows}</tbody></table></section></main><script>
+</style></head><body><main>{nav_html('pilot')}<section class="card"><h1>{html.escape(project['name'])} 项目工作区</h1><p class="muted">只读路径：<code>{html.escape(project['path'])}</code></p><p>{html.escape(project['risk'])}</p><p><strong>真实上下文：</strong>{'已就绪' if context.get('ok') else '未就绪'}，已注入 {len(context.get('files', []))} 个文件 / {context.get('chars', 0)} 字符，截断：{'是' if context.get('truncated') else '否'}。</p><p><a href="/vibe/pilot">返回实战试点</a> · <a href="/vibe/tasks" data-token-link="true">任务审计</a> · <a href="/vibe/todos" data-token-link="true">AI 待办</a></p></section><section class="card"><h2>每日 AI 巡检</h2><p>最近状态：<strong class="{'ok' if daily.get('ok') else 'warn'}">{html.escape(daily_status)}</strong> · 实时探测 {daily_live.get('passed', 0)}/{daily_live.get('total', 0)} · 快照 {daily_snapshot.get('ageHours', '-')} 小时</p><p class="muted">每日由 n8n 自动触发；包含关键页面/资源探测、生产 PM2 限权巡检、Grok 4.5 源码分析、异常待办、飞书通知和 Kuma 心跳。</p><button id="runDailyBtn">立即执行一次只读巡检</button><pre id="dailyResult">{html.escape(json.dumps(daily, ensure_ascii=False, indent=2) if daily else '等待首次执行。')}</pre></section><section class="card"><h2>生产维护通道</h2><p>通道：<strong class="{'ok' if maintenance.get('configured') else 'warn'}">{'已限权接入' if maintenance.get('configured') else '未接入'}</strong> · PM2：{html.escape(str(maintenance_process.get('status') or '待巡检'))}</p><p class="muted">专用 SSH key 只能执行 <code>inspect</code> 和 <code>restart</code>；禁止任意 shell、部署、文件写入。重启需要动作权限、明确确认、10 分钟冷却，并在完成后自动跑 6 项公网验收。</p><button id="inspectProductionBtn">巡检生产状态</button><button id="restartProductionBtn">确认后重启个人站</button><pre id="productionResult">{html.escape(json.dumps(maintenance_latest, ensure_ascii=False, indent=2) if maintenance_latest else '等待首次生产巡检。')}</pre></section><section class="card"><h2>已核实生产目标</h2><table><tbody>{production_rows}</tbody></table></section><section class="card"><h2>Allowlist 文件</h2><table><tbody>{allowlist_rows}</tbody></table></section><section class="card"><h2>最近任务</h2><table><thead><tr><th>时间</th><th>模式</th><th>状态</th><th>ID</th></tr></thead><tbody>{task_rows}</tbody></table></section><section class="card"><h2>未完成待办</h2><table><thead><tr><th>时间</th><th>状态</th><th>标题</th><th>入口</th></tr></thead><tbody>{todo_rows}</tbody></table></section><section class="card"><h2>Workflow 权限矩阵</h2><table><thead><tr><th>Workflow</th><th>权限</th><th>允许</th><th>禁止</th></tr></thead><tbody>{workflow_rows}</tbody></table></section></main><script>
 sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}');
 document.getElementById('runDailyBtn').addEventListener('click', async () => {{
   const button = document.getElementById('runDailyBtn');
@@ -2135,6 +2382,33 @@ document.getElementById('runDailyBtn').addEventListener('click', async () => {{
     button.disabled = false;
   }}
 }});
+async function runProductionAction(action) {{
+  const result = document.getElementById('productionResult');
+  const isRestart = action === 'restart';
+  let confirmation = '';
+  if (isRestart) {{
+    confirmation = window.prompt('这是生产重启。请输入 RESTART_CHENCHUAN_SITE 确认；系统不会部署或修改文件。') || '';
+    if (confirmation !== 'RESTART_CHENCHUAN_SITE') {{ result.textContent = '已取消：确认文字不匹配。'; return; }}
+  }}
+  result.textContent = isRestart ? '已提交生产重启，完成后会自动验收公网 6 项...' : '正在读取生产 PM2、部署与磁盘状态...';
+  const tokenHeader = isRestart ? {{'X-AIOps-Action-Token':'{ACTION_TOKEN}'}} : {{'X-AIOps-Read-Token':'{READ_TOKEN}'}};
+  try {{
+    const response = await fetch('/vibe/project/production/action', {{method:'POST',credentials:'same-origin',headers:{{'content-type':'application/json',...tokenHeader}},body:JSON.stringify({{project:'{html.escape(project_id)}',action,confirmation}})}});
+    const queued = await response.json();
+    if (!queued.ok) throw new Error(queued.error || '提交失败');
+    for (let attempt = 0; attempt < 36; attempt += 1) {{
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      const poll = await fetch(queued.pollUrl, {{credentials:'same-origin'}});
+      const job = await poll.json();
+      result.textContent = JSON.stringify(job, null, 2);
+      if (!['queued','running'].includes(job.status)) break;
+    }}
+  }} catch (error) {{
+    result.textContent = '执行失败：' + error;
+  }}
+}}
+document.getElementById('inspectProductionBtn').addEventListener('click', () => runProductionAction('inspect'));
+document.getElementById('restartProductionBtn').addEventListener('click', () => runProductionAction('restart'));
 </script></body></html>"""
 
 
@@ -2547,6 +2821,14 @@ class Handler(BaseHTTPRequestHandler):
                 job_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
                 job = load_project_daily_job(job_id)
                 self._send_json(200 if job else 404, job or {"ok": False, "error": "daily job not found"})
+            elif path == "/vibe/project/production.json":
+                project_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
+                payload = project_production_status_payload(project_id)
+                self._send_json(200 if payload else 404, payload or {"ok": False, "error": "project production maintenance not configured"})
+            elif path == "/vibe/project/production/job":
+                job_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
+                job = load_project_production_job(job_id)
+                self._send_json(200 if job else 404, job or {"ok": False, "error": "production job not found"})
             elif path == "/vibe/todos/job":
                 job_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
                 job = load_todo_job(job_id)
@@ -2685,6 +2967,21 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 payload = self._read_json_body()
                 self._send_json(200, start_project_daily_job(payload))
+            elif path == "/vibe/project/production/action":
+                payload = self._read_json_body()
+                action = (payload.get("action") or "inspect").strip()
+                if action == "inspect":
+                    if not self._has_read_token():
+                        self._send_json(403, {"ok": False, "error": "read token required"})
+                        return
+                elif action == "restart":
+                    if not self._has_action_token():
+                        self._send_json(403, {"ok": False, "error": "action token required"})
+                        return
+                else:
+                    self._send_json(400, {"ok": False, "error": "production action not allowed"})
+                    return
+                self._send_json(200, start_project_production_job(payload))
             else:
                 self._send_json(404, {"ok": False, "error": "not found"})
         except Exception as exc:

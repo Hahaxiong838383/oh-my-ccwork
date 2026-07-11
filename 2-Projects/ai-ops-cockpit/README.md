@@ -1003,3 +1003,13 @@ scripts/validate-vibe-regression.sh
 - Uptime Kuma 新增 Push 监控 `个人站每日 AI 巡检`，心跳窗口 36 小时、重试 0，绑定 `飞书运维告警`；Push URL 只保存在远端 `.env`。
 - `/vibe/project?id=chenchuan-site` 新增每日巡检卡片和手动只读巡检按钮；状态落在持久卷 `ops-inspector/state/`，容器重建或重启不会丢失。
 - 验收已完成：真实探测 `6/6`、n8n CLI 执行成功、模拟故障 `Down` 与自动待办、恢复 `Up` 与待办自动关闭、全量回归 `OK vibe regression`、真实浏览器四页控制台错误 `0`。
+
+## 2026-07-10 · 个人站生产维护 P1
+
+- RackNerd 到 `aliyun-kr` 新增个人站专用限权 SSH 通道：独立 `aiops` 用户、独立 key、固定命令 dispatcher、精确 sudoers；key 只能执行 `inspect` 或 `restart`，任意 shell/命令均拒绝。
+- 私钥和可信 host key 只保存在 RackNerd `/opt/ai-ops-cockpit/secrets/chenchuan-maintenance/`，以只读 secret mount 提供给 `ops-inspector`；`secrets/` 已加入 `.gitignore`。
+- `/vibe/project?id=chenchuan-site` 新增“生产维护通道”卡片：可读取 PM2 状态、PID、重启次数、资源、部署 Build ID、磁盘和公网 6 项探测。
+- 生产重启走异步动作审计：必须使用 action token、输入精确确认词、受 10 分钟冷却保护；执行后自动检查 PM2 online、公网页面/资源 `6/6`，并发送不含正文和 secret 的飞书结果。
+- 每日 Grok 4.5 巡检上下文新增真实生产状态；维护通道不可用、PM2 非 online 或公网探测失败都会进入异常签名、待办和 Kuma/飞书闭环。
+- 当前允许的是“巡检 + 受控重启 + 自动验收”，不允许从网页任意 shell、改文件或部署；代码修复仍由 Codex/cc 在本地仓完成并经川哥确认后部署。
+- 验收：限权 key 的 `inspect` 成功，任意 `id` 命令被拒绝；网页接口巡检成功；受控重启 PID 发生变化、重启计数 `20→21`、PM2 online、公网 `6/6`、飞书发送成功；错误确认和冷却重复重启均被拒绝。

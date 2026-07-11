@@ -86,6 +86,7 @@ services:
       ALLOWLIST_DIR: /config
       STATE_DIR: /var/lib/ai-ops-state
       CHENCHUAN_DAILY_PUSH_URL: ${CHENCHUAN_DAILY_PUSH_URL:-}
+      PRODUCTION_SSH_DIR: /run/secrets/chenchuan-maintenance
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./kuma/data/kuma.db:/kuma/kuma.db:ro
@@ -93,6 +94,7 @@ services:
       - ./readonly:/workspace/readonly:ro
       - ./config:/config:ro
       - ./ops-inspector/state:/var/lib/ai-ops-state
+      - ./secrets/chenchuan-maintenance:/run/secrets/chenchuan-maintenance:ro
     depends_on:
       - uptime-kuma
       - netdata

@@ -62,20 +62,27 @@ curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/kuma-context.jso
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project?id=chenchuan-site" -o "$PROJECT"
 grep -q 'chenchuan-site 项目工作区' "$PROJECT"
 grep -q '每日 AI 巡检' "$PROJECT"
+grep -q '生产维护通道' "$PROJECT"
 python3 - "$PROJECT" > /tmp/aiops-vibe-project-script.js <<'PY'
 import sys
 html=open(sys.argv[1]).read()
 script=html.split('<script>',1)[1].split('</script>',1)[0]
 assert 'runDailyBtn' in script
+assert 'inspectProductionBtn' in script
+assert 'restartProductionBtn' in script
 print(script)
 PY
 node --check /tmp/aiops-vibe-project-script.js >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project.json?id=chenchuan-site" | jq -e '.project.allowlistCount>=60 and .context.ok==true and (.context.files|length)>=60 and .context.truncated==false and .project.production.process=="chenchuan-site" and (.workflowMatrix|length)>=4' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/live.json?id=chenchuan-site" | jq -e '.ok==true and .passed==6 and .total==6 and (.checks|length)==6' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/daily.json?id=chenchuan-site" | jq -e '.ok==true and .project=="chenchuan-site" and has("active") and has("latest")' >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production.json?id=chenchuan-site" | jq -e '.ok==true and .project=="chenchuan-site" and .configured==true and (.allowedActions|index("restart"))!=null' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/report.json?kind=daily" | jq -e '(.summary | has("openTodos") and has("backupOk")) and (.pilotProjects|length)>=2' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/readonly-refresh.json" | jq -e 'has("mounted")' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"project":"chenchuan-site","workflow":"patch_draft"}' "$BASE/vibe/pilot/run" | jq -e '.ok==false and (.error|contains("pilot workflow"))' >/dev/null
+restart_code=$(curl --http1.1 -sS -o /tmp/aiops-restart-denied.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"project":"chenchuan-site","action":"restart","confirmation":"RESTART_CHENCHUAN_SITE"}' "$BASE/vibe/project/production/action")
+test "$restart_code" = "403"
+jq -e '.error=="action token required"' /tmp/aiops-restart-denied.json >/dev/null
 sleep "${AI_OPS_REGRESSION_SLEEP:-22}"
 RESP=$(curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"mode":"readonly_inspect","question":"回归验收：请只返回 AI_OPS_REGRESSION_OK。","conversation":"川哥: 回归测试发送主按钮。"}' "$BASE/vibe/task/run")
 printf "%s" "$RESP" | jq -e '.ok==true and (.answer|contains("AI_OPS_REGRESSION_OK"))' >/dev/null
@@ -91,5 +98,6 @@ curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.haha
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/todos/detail?id=$TODO_ID" | grep -q '待办详情'
 docker exec ops-terminal bash -lc 'test -f /workspace/readonly/mycc/AGENTS.md && mount | grep -q /workspace/readonly'
 docker exec ops-inspector sh -lc 'test -d /var/lib/ai-ops-state && mount | grep -q /var/lib/ai-ops-state'
+docker exec ops-inspector sh -lc 'test -r /run/secrets/chenchuan-maintenance/id_ed25519 && test -r /run/secrets/chenchuan-maintenance/known_hosts && mount | grep -q /run/secrets/chenchuan-maintenance'
 docker exec ops-terminal bash -lc 'test -f /workspace/readonly/MyJavis/README.md && test -f /workspace/readonly/chenchuan-site/README.md && test -f /workspace/readonly/chenchuan-site/src/app/page.tsx && test -f /workspace/readonly/chenchuan-site/src/lib/radar/index.ts && ! test -e /workspace/readonly/MyJavis/.env && ! test -e /workspace/readonly/chenchuan-site/.env.local && ! test -e /workspace/readonly/chenchuan-site/src/app/api && ! test -e /workspace/readonly/chenchuan-site/src/lib/analytics && ! test -e /workspace/readonly/chenchuan-site/src/lib/chat && ! test -e /workspace/readonly/chenchuan-site/data'
 printf 'OK vibe regression\n'
