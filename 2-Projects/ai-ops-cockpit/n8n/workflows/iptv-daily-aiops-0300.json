@@ -1,0 +1,57 @@
+[
+  {
+    "id": "iptv-daily-aiops-0300",
+    "name": "私人 IPTV 每日 AI 巡检",
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {"rule":{"interval":[{"field":"cronExpression","expression":"0 3 * * *"}]}},
+        "id": "schedule-iptv-daily",
+        "name": "每日 03:00 触发",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [0, 0]
+      },
+      {
+        "parameters": {},
+        "id": "execute-iptv-daily",
+        "name": "验收触发",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [0, 180]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://ops-inspector:8080/vibe/project/daily/run",
+          "sendHeaders": true,
+          "headerParameters": {"parameters":[
+            {"name":"Origin","value":"https://ops.hahaxiong.top"},
+            {"name":"Host","value":"ops.hahaxiong.top"},
+            {"name":"X-AIOps-Read-Token","value":"={{ $vars.AIOPS_READ_TOKEN }}"}
+          ]},
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/json",
+          "body": "{\"project\":\"iptv-api\",\"forceNotify\":false}",
+          "options": {"timeout":30000}
+        },
+        "id": "start-iptv-daily",
+        "name": "启动 IPTV AI 巡检",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [300, 0]
+      }
+    ],
+    "connections": {
+      "每日 03:00 触发": {"main":[[{"node":"启动 IPTV AI 巡检","type":"main","index":0}]]},
+      "验收触发": {"main":[[{"node":"启动 IPTV AI 巡检","type":"main","index":0}]]}
+    },
+    "settings": {"executionOrder":"v1","timezone":"Asia/Shanghai"},
+    "staticData": null,
+    "meta": {"templateCredsSetupCompleted":true},
+    "pinData": {},
+    "tags": []
+  }
+]

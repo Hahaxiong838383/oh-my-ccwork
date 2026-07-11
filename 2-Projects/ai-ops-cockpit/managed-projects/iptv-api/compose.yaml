@@ -1,0 +1,19 @@
+services:
+  iptv-api:
+    image: guovern/iptv-api@sha256:6cebd138cff636777762afd2681568b7e8564382fc9934a9e24d00cdbea450a3
+    container_name: iptv-api
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+    ports:
+      - "127.0.0.1:15180:8080"
+    volumes:
+      - ./config:/iptv-api/config
+      - ./output:/iptv-api/output
+    environment:
+      TZ: Asia/Shanghai
+      PUBLIC_SCHEME: https
+      PUBLIC_DOMAIN: my.chenchuan.cc
+      PUBLIC_PORT: "443"
+      NGINX_HTTP_PORT: "8080"
+      OPEN_RTMP: "False"

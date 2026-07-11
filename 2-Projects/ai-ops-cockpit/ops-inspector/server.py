@@ -76,11 +76,15 @@ PROJECT_LIVE_PROBES = {
         {"id": "direct-models", "name": "CPA Direct 鉴权边界", "url": "https://api-direct.hahaxiong.top/v1/models", "path": "/v1/models", "kind": "http", "expectedStatuses": [401]},
         {"id": "smart-models", "name": "CPA Smart Router 鉴权边界", "url": "https://smart-api.hahaxiong.top/v1/models", "path": "/v1/models", "kind": "http", "expectedStatuses": [401]},
     ],
+    "iptv-api": [
+        {"id": "iptv-health", "name": "IPTV 私人 M3U 就绪度", "url": "https://my.chenchuan.cc/ops-health/iptv", "path": "/ops-health/iptv", "kind": "html", "marker": '"ok":true'},
+    ],
 }
 
 PROJECT_DAILY_PUSH_URLS = {
     "chenchuan-site": os.environ.get("CHENCHUAN_DAILY_PUSH_URL", ""),
     "cpa-smart-router": os.environ.get("CPA_DAILY_PUSH_URL", ""),
+    "iptv-api": os.environ.get("IPTV_DAILY_PUSH_URL", ""),
 }
 
 
@@ -118,6 +122,15 @@ CPA_SMART_ROUTER_FALLBACK_ALLOWLIST = [
     "cmd/router/main_test.go",
 ]
 
+IPTV_API_FALLBACK_ALLOWLIST = [
+    "compose.yaml",
+    "config/config.ini",
+    "config/subscribe.txt",
+    "config/demo.txt",
+    "scripts/validate-and-publish.sh",
+    "scripts/rollback-last-good.sh",
+]
+
 
 PROJECT_ALLOWLIST = {
     "mycc": [
@@ -141,6 +154,7 @@ PROJECT_ALLOWLIST = {
     ],
     "chenchuan-site": load_allowlist_file("chenchuan-site", CHENCHUAN_SITE_FALLBACK_ALLOWLIST),
     "cpa-smart-router": load_allowlist_file("cpa-smart-router", CPA_SMART_ROUTER_FALLBACK_ALLOWLIST),
+    "iptv-api": load_allowlist_file("iptv-api", IPTV_API_FALLBACK_ALLOWLIST),
     "MyJavis": [
         "README.md",
         "HANDOFF.md",
@@ -234,6 +248,38 @@ PILOT_PROJECTS = {
                 "restart-cliproxy": "确认后重启 CPA 核心",
                 "restart-router": "确认后重启 Smart Router",
             },
+            "verifiedAt": "2026-07-11",
+        },
+    },
+    "iptv-api": {
+        "name": "私人 IPTV M3U",
+        "path": "/workspace/readonly/iptv-api",
+        "risk": "中风险：仅允许读取脱敏 Compose、公开源清单、频道模板与验收脚本；私人 M3U 路径、完整结果、日志、Push URL 和 secrets 保持隔离。",
+        "goal": "持续验证 IPTV 聚合任务、私人 M3U 就绪度、频道数量、抽样播放和 last-good 回滚能力。",
+        "firstWorkflow": "readonly_inspect",
+        "production": {
+            "domain": "https://my.chenchuan.cc",
+            "sshAlias": "aliyun-kr",
+            "address": "8.213.134.133",
+            "maintenanceUser": "aiops",
+            "maintenancePort": 52022,
+            "path": "/opt/stacks/iptv-api",
+            "processManager": "Docker Compose",
+            "services": ["iptv-api"],
+            "maintenanceSecretDir": "/run/secrets/iptv-maintenance",
+            "maintenanceActions": ["inspect", "refresh", "restart-iptv", "rollback-last-good"],
+            "maintenanceConfirmations": {
+                "refresh": "REFRESH_IPTV",
+                "restart-iptv": "RESTART_IPTV",
+                "rollback-last-good": "ROLLBACK_IPTV",
+            },
+            "maintenanceLabels": {
+                "inspect": "巡检 IPTV 状态",
+                "refresh": "确认后立即更新 M3U",
+                "restart-iptv": "确认后重启 IPTV",
+                "rollback-last-good": "确认后回滚上个合格 M3U",
+            },
+            "maintenanceTimeoutSeconds": 720,
             "verifiedAt": "2026-07-11",
         },
     },
@@ -1213,7 +1259,9 @@ def sanitize_production_inspection(payload):
     services = payload.get("services") or {}
     if isinstance(services, dict) and services:
         sanitized["services"] = {}
-        for name in ("cliproxy", "cpa-smart-router"):
+        for name in ("cliproxy", "cpa-smart-router", "iptv-api"):
+            if name not in services:
+                continue
             service = services.get(name) or {}
             sanitized["services"][name] = {
                 "active": str(service.get("active") or "")[:40],
@@ -1228,13 +1276,19 @@ def sanitize_production_inspection(payload):
     probes = payload.get("probes") or {}
     if isinstance(probes, dict) and probes:
         sanitized["probes"] = {}
-        for name in ("directModels", "smartModels", "directChat", "smartChat"):
+        for name in ("directModels", "smartModels", "directChat", "smartChat", "playlist"):
+            if name not in probes:
+                continue
             probe = probes.get(name) or {}
             sanitized["probes"][name] = {
                 "ok": bool(probe.get("ok")),
                 "status": probe.get("status"),
                 "modelCount": probe.get("modelCount"),
+                "channelCount": probe.get("channelCount"),
+                "samplePassed": probe.get("samplePassed"),
+                "sampleTotal": probe.get("sampleTotal"),
                 "latencyMs": probe.get("latencyMs"),
+                "updatedAt": str(probe.get("updatedAt") or "")[:120] or None,
             }
     versions = payload.get("versions") or {}
     if isinstance(versions, dict) and versions:
@@ -1293,7 +1347,7 @@ def run_production_command(project_id, action):
     ]
     started = time.time()
     try:
-        result = subprocess.run(command, text=True, capture_output=True, timeout=60, check=False)
+        result = subprocess.run(command, text=True, capture_output=True, timeout=int(production.get("maintenanceTimeoutSeconds") or 60), check=False)
     except Exception as exc:
         return {"ok": False, "error": type(exc).__name__, "durationMs": round((time.time() - started) * 1000)}
     if result.returncode != 0:

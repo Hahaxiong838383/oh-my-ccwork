@@ -87,6 +87,7 @@ services:
       STATE_DIR: /var/lib/ai-ops-state
       CHENCHUAN_DAILY_PUSH_URL: ${CHENCHUAN_DAILY_PUSH_URL:-}
       CPA_DAILY_PUSH_URL: ${CPA_DAILY_PUSH_URL:-}
+      IPTV_DAILY_PUSH_URL: ${IPTV_DAILY_PUSH_URL:-}
       PRODUCTION_SSH_DIR: /run/secrets/chenchuan-maintenance
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -97,6 +98,7 @@ services:
       - ./ops-inspector/state:/var/lib/ai-ops-state
       - ./secrets/chenchuan-maintenance:/run/secrets/chenchuan-maintenance:ro
       - ./secrets/cpa-jp-maintenance:/run/secrets/cpa-jp-maintenance:ro
+      - ./secrets/iptv-maintenance:/run/secrets/iptv-maintenance:ro
     depends_on:
       - uptime-kuma
       - netdata

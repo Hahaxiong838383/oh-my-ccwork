@@ -1,0 +1,6 @@
+compose.yaml
+config/config.ini
+config/subscribe.txt
+config/demo.txt
+scripts/validate-and-publish.sh
+scripts/rollback-last-good.sh

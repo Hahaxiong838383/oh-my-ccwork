@@ -933,7 +933,7 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && docker compose up -d --build ops-inspect
 - `/vibe/assets` / `/vibe/assets.json`：服务器与工作区增加`readinessScore` 和 `risk` 字段；页面显示为“就绪度”，只代表运维探测信号，不输出业务健康结论。
 - `scripts/validate-vibe-regression.sh`：自动回归 `/vibe/` JS 语法、发送给 Grok、审计页、资产页、只读挂载。
 - `scripts/install-readonly-refresh-cron.sh`：安装每 30 分钟刷新只读快照的 cron。
-- `scripts/sync-readonly-workspaces.sh`：仅为 `chenchuan-site`、`MyJavis`、`realtime-voice-agent`、`P003GameDemo20260513` 创建只读占位；真实项目必须先补文件级 allowlist。
+- `scripts/sync-readonly-workspaces.sh`：按文件级 allowlist 同步已接入项目；其他真实项目只创建占位，禁止目录级整仓暴露。
 
 ### 必跑回归
 
@@ -1031,3 +1031,12 @@ scripts/validate-vibe-regression.sh
 - 关闭 RTMP/HLS 推流和视频代理，个人站服务器只提供 M3U、EPG 与脱敏状态，避免承担频道视频流量。
 - AI Ops 负责每日更新后验收、Kuma/飞书/待办故障恢复闭环；生产维护使用 IPTV 独立限权动作，不扩大个人站现有 `inspect/restart` 通道。
 - 完整方案与验收边界见 `docs/iptv-aiops-deployment-plan.md`。
+
+## 2026-07-11 · 私人 IPTV 上线与 AI Ops 闭环
+
+- `aliyun-kr` 的 `/opt/stacks/iptv-api` 已部署固定镜像摘要的 `Guovin/iptv-api`，仅监听 `127.0.0.1:15180`；每日 `02:10` 聚合，`02:25` 验证并原子发布。
+- 公网只暴露高熵私人 M3U 路径和脱敏就绪度端点；私人路径 token 不进入 git、文档、记忆、Grok、飞书或主页卡片。
+- 发布门要求至少 20 个频道、关键频道存在、标准名称无重复，并用 `ffprobe` 抽样 7 个频道至少通过 5 个；失败候选写独立失败状态且不覆盖已发布 `last-good`。
+- 新增 `iptv-api` 六文件只读 allowlist、项目工作区和独立限权 SSH 通道；只允许 `inspect`、`refresh`、`restart-iptv`、`rollback-last-good`，任意 shell 被拒绝。
+- n8n 每日 `03:00` 执行公网就绪度、只读快照、生产巡检、Grok 4.5、飞书和 Kuma Push 闭环；Uptime Kuma 同时监控公开就绪度端点和 36 小时每日心跳。
+- 验收：初次聚合 31 个频道、服务端抽样 `7/7`；本机真实订阅解析 31 个频道、重复 0、关键频道 `5/5`、播放抽样 `4/5`；错误私人路径 `404`；故障候选隔离与 `last-good` 回滚成功；全站回归 `OK vibe regression`。

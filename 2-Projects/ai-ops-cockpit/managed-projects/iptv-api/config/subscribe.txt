@@ -1,0 +1,3 @@
+# Public source allowlist verified from aliyun-kr on 2026-07-11.
+https://iptv-org.github.io/iptv/countries/cn.m3u
+https://raw.githubusercontent.com/Guovin/iptv-api/gd/output/ipv4/result.m3u
