@@ -1024,3 +1024,10 @@ scripts/validate-vibe-regression.sh
 - Uptime Kuma 新增 `个人 CPA Direct HTTPS`、`个人 CPA Smart Router HTTPS` 和 `个人 CPA 每日 AI 巡检`，均绑定飞书；Push URL 只保存在远端 `.env`，不写入 git、文档或页面。
 - n8n 新增 `个人 CPA 每日 AI 巡检`，每天 `09:20 Asia/Shanghai` 触发：公网探测、只读源码、生产限权巡检、Grok 4.5 分析、异常待办、飞书通知和 Kuma 心跳形成闭环。
 - 验收：两个 systemd 服务受控重启后均恢复 `active`；认证模型列表和真实对话均 `200`；公网鉴权探测 `2/2`；每日巡检 `ok=true`、快照 `5/5`、飞书和 Push 心跳成功；全量回归 `OK vibe regression`；真实浏览器页面 `200`、控制台错误 `0`、失败请求 `0`。
+
+## 2026-07-11 · IPTV AI Ops 部署决策
+
+- 采用 `Guovin/iptv-api` 单核心 P0，先实现合法来源聚合、频道别名、测速过滤、私人 M3U、原子发布和 `last-good` 回滚；不在第一版堆叠多个管理器。
+- 关闭 RTMP/HLS 推流和视频代理，个人站服务器只提供 M3U、EPG 与脱敏状态，避免承担频道视频流量。
+- AI Ops 负责每日更新后验收、Kuma/飞书/待办故障恢复闭环；生产维护使用 IPTV 独立限权动作，不扩大个人站现有 `inspect/restart` 通道。
+- 完整方案与验收边界见 `docs/iptv-aiops-deployment-plan.md`。
