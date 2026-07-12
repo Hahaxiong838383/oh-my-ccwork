@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Rewrite selected group stream URLs in a published m3u to HK HLS proxy URLs.
+"""Optionally rewrite selected group stream URLs to HK HLS proxy URLs.
 
-Default: only 海外新闻 / 海外纪录 go through HK jump.
-港澳台 keeps direct origin URLs (mainland often plays smoother without extra hop).
+Default proxy_groups is empty: all channels stay on origin direct URLs.
+(Televizo 实测经港跳转反而卡顿；直连更顺时不要强行 proxy。)
 """
 
 from __future__ import annotations
@@ -49,9 +49,9 @@ def main() -> int:
     cfg = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
     token = cfg["token"]
     public_base = cfg["public_base"].rstrip("/")
-    # 港澳台默认直连：国内到 txiptv 等源往往比「国内→港→源」更顺
-    groups = set(cfg.get("proxy_groups") or ["海外新闻", "海外纪录"])
-    groups.discard("")  # safety
+    # 默认全部直连；仅当 config 显式配置 proxy_groups 时才改写
+    groups = set(cfg.get("proxy_groups") or [])
+    groups.discard("")
 
     lines = src.read_text(encoding="utf-8", errors="replace").splitlines()
     out = []
