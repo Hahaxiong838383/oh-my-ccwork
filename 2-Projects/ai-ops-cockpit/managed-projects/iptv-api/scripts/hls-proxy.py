@@ -161,6 +161,34 @@ def prefetch_urls(urls: list[str]) -> None:
         threading.Thread(target=_one, args=(u,), daemon=True).start()
 
 
+
+def short_seg_id(url: str) -> str:
+    import hashlib
+    return hashlib.md5(url.encode("utf-8")).hexdigest()[:20]
+
+
+_SID_MAP: dict[str, str] = {}
+_SID_LOCK = threading.Lock()
+
+
+def sid_put(url: str) -> str:
+    sid = short_seg_id(url)
+    with _SID_LOCK:
+        _SID_MAP[sid] = url
+        # bound map size
+        if len(_SID_MAP) > 20000:
+            # drop arbitrary half
+            for i, k in enumerate(list(_SID_MAP.keys())):
+                if i % 2 == 0:
+                    _SID_MAP.pop(k, None)
+    return sid
+
+
+def sid_get(sid: str) -> str | None:
+    with _SID_LOCK:
+        return _SID_MAP.get(sid)
+
+
 def origin_media_urls_from_playlist(origin: str, body: bytes) -> list[str]:
     text = body.decode("utf-8", errors="replace")
     base = origin.rsplit("/", 1)[0] + "/"
@@ -475,26 +503,40 @@ def fetch_usable_origin(origins: list[str], channel_id: str | None = None):
 
 def rewrite_playlist(body: bytes, channel_id: str, token: str, public_base: str, base_url: str) -> bytes:
     text = body.decode("utf-8", errors="replace")
+    # fix invalid double-hash tags from some origins (breaks Televizo etc.)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = re.sub(r"^##+(EXT)", r"#\1", text, flags=re.M)
     lines = text.splitlines()
     out = []
     base = base_url.rsplit("/", 1)[0] + "/"
+    pb = public_base.rstrip("/")
     for line in lines:
         raw = line.strip()
-        if not raw or raw.startswith("#"):
+        if not raw:
+            continue
+        if raw.startswith("#"):
             if 'URI="' in line:
-
                 def repl(match: re.Match) -> str:
                     uri = match.group(1)
                     abs_url = urllib.parse.urljoin(base, uri)
-                    proxied = f"{public_base.rstrip('/')}/{token}/{channel_id}/u/{b64url_encode(abs_url)}"
-                    return f'URI="{proxied}"'
-
+                    # nested playlist keeps .m3u8 suffix; media uses .ts
+                    if abs_url.split("?", 1)[0].endswith((".m3u8", ".m3u")):
+                        sid = sid_put(abs_url)
+                        return f'URI="{pb}/{token}/{channel_id}/p/{sid}.m3u8"'
+                    sid = sid_put(abs_url)
+                    return f'URI="{pb}/{token}/{channel_id}/s/{sid}.ts"'
                 line = re.sub(r'URI="([^"]+)"', repl, line)
+                line = re.sub(r"^##+(EXT)", r"#\1", line)
+            else:
+                line = re.sub(r"^##+(EXT)", r"#\1", raw)
             out.append(line)
             continue
         abs_url = urllib.parse.urljoin(base, raw)
-        proxied = f"{public_base.rstrip('/')}/{token}/{channel_id}/u/{b64url_encode(abs_url)}"
-        out.append(proxied)
+        sid = sid_put(abs_url)
+        if abs_url.split("?", 1)[0].endswith((".m3u8", ".m3u")):
+            out.append(f"{pb}/{token}/{channel_id}/p/{sid}.m3u8")
+        else:
+            out.append(f"{pb}/{token}/{channel_id}/s/{sid}.ts")
     return ("\n".join(out) + "\n").encode("utf-8")
 
 
@@ -586,7 +628,52 @@ class Handler(BaseHTTPRequestHandler):
             self._send_bytes(404, {"Content-Type": "text/plain"}, b"unknown channel\n")
             return
 
-        # media segment path: stream without full buffer
+
+        # short media: /{token}/{channel}/s/{sid}.ts
+        if rest0 == "s" and len(parts) >= 4:
+            sid = parts[3]
+            if sid.endswith(".ts"):
+                sid = sid[:-3]
+            origin = sid_get(sid)
+            if not origin:
+                self._send_bytes(404, {"Content-Type": "text/plain"}, b"unknown segment\n")
+                return
+            cached_body = seg_get(origin)
+            if cached_body is not None:
+                self._send_bytes(200, {"Content-Type": "video/mp2t", "Cache-Control": "private, max-age=5", "X-IPTV-Proxy": "media-cache"}, cached_body if not head_only else b"")
+                return
+            status, headers, body = fetch_url(origin)
+            if status != 200 or not body:
+                self._send_bytes(status if status >= 400 else 502, {"Content-Type": "text/plain"}, b"upstream error\n")
+                return
+            seg_put(origin, body)
+            ctype = headers.get("Content-Type") or headers.get("content-type") or "video/mp2t"
+            self._send_bytes(200, {"Content-Type": "video/mp2t", "Cache-Control": "private, max-age=5", "X-IPTV-Proxy": "media-buffered"}, body if not head_only else b"")
+            return
+
+        # short nested playlist: /{token}/{channel}/p/{sid}.m3u8
+        if rest0 == "p" and len(parts) >= 4:
+            sid = parts[3]
+            if sid.endswith(".m3u8"):
+                sid = sid[:-5]
+            origin = sid_get(sid)
+            if not origin:
+                self._send_bytes(404, {"Content-Type": "text/plain"}, b"unknown playlist\n")
+                return
+            status, headers, body = fetch_url(origin)
+            if status != 200 or not body:
+                self._send_bytes(status if status >= 400 else 502, {"Content-Type": "text/plain"}, b"upstream error\n")
+                return
+            try:
+                prefetch_urls(origin_media_urls_from_playlist(origin, body))
+            except Exception:
+                pass
+            body = rewrite_playlist(body, channel_id, token, public_base, origin)
+            self._send_bytes(200, {"Content-Type": "application/vnd.apple.mpegurl", "Cache-Control": "private, max-age=2", "X-IPTV-Proxy": "playlist"}, body if not head_only else b"")
+            return
+
+
+        # legacy base64 media path
         if rest0 == "u" and len(parts) >= 4:
             try:
                 origin = b64url_decode(parts[3])
