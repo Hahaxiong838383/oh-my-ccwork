@@ -87,3 +87,45 @@ Reuters (1080p)
 CGTN Documentary (1080p)
 Bloomberg Originals (1080p)
 CNA Originals (1080p)
+
+全球新闻·英语,#genre#
+Al Jazeera English
+France 24 English
+DW English
+NHK World-Japan
+TRT World
+CNA
+NBC News NOW
+CBS News 24/7
+ABC News
+Bloomberg TV
+Fox News Channel
+WION
+Euronews English HD
+Sky News
+Arirang TV
+Telesur English
+
+全球新闻·中文,#genre#
+CGTN
+CGTN Documentary
+
+全球新闻·阿语,#genre#
+Al Jazeera Arabic
+Al Arabiya
+Sky News Arabia
+
+全球新闻·法语,#genre#
+TV5Monde Info
+
+全球新闻·德语,#genre#
+DW Deutsch
+
+全球新闻·西语,#genre#
+Telesur
+
+全球新闻·韩语,#genre#
+Arirang Korea
+
+全球新闻·俄语,#genre#
+Euronews Russian
