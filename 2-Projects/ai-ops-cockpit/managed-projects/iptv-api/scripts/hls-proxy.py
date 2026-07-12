@@ -550,19 +550,72 @@ class Handler(BaseHTTPRequestHandler):
         msg = re.sub(r"/u/[A-Za-z0-9_\-=]+", "/u/<id>", msg)
         print(f"[hls-proxy] {msg}")
 
-    def _send_bytes(self, status: int, headers: dict, body: bytes) -> None:
+    def _send_bytes(self, status: int, headers: dict, body: bytes, content_length: int | None = None) -> None:
+        """Send response. HEAD keeps correct Content-Length but empty body."""
         self.send_response(status)
         for key, value in headers.items():
             if key.lower() in {"transfer-encoding", "connection", "content-length", "content-encoding"}:
                 continue
             self.send_header(key, value)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Cache-Control", headers.get("Cache-Control", "private, max-age=2"))
+        if content_length is None:
+            content_length = len(body)
+        self.send_header("Content-Length", str(content_length))
+        if "Access-Control-Allow-Origin" not in {k.title() for k in headers}:
+            self.send_header("Access-Control-Allow-Origin", "*")
+        if "Cache-Control" not in headers and "cache-control" not in {k.lower() for k in headers}:
+            self.send_header("Cache-Control", "private, max-age=2")
+        self.send_header("Accept-Ranges", "bytes")
         self.send_header("Connection", "keep-alive")
         self.end_headers()
         if self.command != "HEAD" and body:
             self.wfile.write(body)
+
+    def _send_media_bytes(self, body: bytes, content_type: str = "video/mp2t", cache: str = "private, max-age=5", x_proxy: str = "media") -> None:
+        """Serve media with correct HEAD and HTTP Range support (Televizo/ExoPlayer)."""
+        total = len(body)
+        rng = self.headers.get("Range") or self.headers.get("range")
+        if rng and rng.startswith("bytes=") and total > 0:
+            # bytes=start-end
+            try:
+                spec = rng.split("=", 1)[1].strip()
+                start_s, _, end_s = spec.partition("-")
+                start = int(start_s) if start_s else 0
+                end = int(end_s) if end_s else total - 1
+                if end >= total:
+                    end = total - 1
+                if start < 0 or start > end or start >= total:
+                    self.send_response(416)
+                    self.send_header("Content-Range", f"bytes */{total}")
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
+                chunk = body[start : end + 1]
+                self.send_response(206)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Accept-Ranges", "bytes")
+                self.send_header("Content-Range", f"bytes {start}-{end}/{total}")
+                self.send_header("Content-Length", str(len(chunk)))
+                self.send_header("Cache-Control", cache)
+                self.send_header("X-IPTV-Proxy", x_proxy + "-range")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Connection", "keep-alive")
+                self.end_headers()
+                if self.command != "HEAD":
+                    self.wfile.write(chunk)
+                return
+            except Exception:
+                pass
+        self._send_bytes(
+            200,
+            {
+                "Content-Type": content_type,
+                "Cache-Control": cache,
+                "X-IPTV-Proxy": x_proxy,
+                "Access-Control-Allow-Origin": "*",
+            },
+            b"" if self.command == "HEAD" else body,
+            content_length=total,
+        )
 
     def _stream_upstream(self, status: int, headers: dict, body_file, closer) -> None:
         self.send_response(status if 100 <= status < 600 else 502)
@@ -640,15 +693,14 @@ class Handler(BaseHTTPRequestHandler):
                 return
             cached_body = seg_get(origin)
             if cached_body is not None:
-                self._send_bytes(200, {"Content-Type": "video/mp2t", "Cache-Control": "private, max-age=5", "X-IPTV-Proxy": "media-cache"}, cached_body if not head_only else b"")
+                self._send_media_bytes(cached_body, x_proxy="media-cache")
                 return
             status, headers, body = fetch_url(origin)
             if status != 200 or not body:
                 self._send_bytes(status if status >= 400 else 502, {"Content-Type": "text/plain"}, b"upstream error\n")
                 return
             seg_put(origin, body)
-            ctype = headers.get("Content-Type") or headers.get("content-type") or "video/mp2t"
-            self._send_bytes(200, {"Content-Type": "video/mp2t", "Cache-Control": "private, max-age=5", "X-IPTV-Proxy": "media-buffered"}, body if not head_only else b"")
+            self._send_media_bytes(body, x_proxy="media-buffered")
             return
 
         # short nested playlist: /{token}/{channel}/p/{sid}.m3u8
@@ -669,7 +721,12 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
             body = rewrite_playlist(body, channel_id, token, public_base, origin)
-            self._send_bytes(200, {"Content-Type": "application/vnd.apple.mpegurl", "Cache-Control": "private, max-age=2", "X-IPTV-Proxy": "playlist"}, body if not head_only else b"")
+            self._send_bytes(
+                200,
+                {"Content-Type": "application/vnd.apple.mpegurl", "Cache-Control": "private, max-age=2", "X-IPTV-Proxy": "playlist"},
+                b"" if self.command == "HEAD" else body,
+                content_length=len(body),
+            )
             return
 
 
@@ -688,30 +745,12 @@ class Handler(BaseHTTPRequestHandler):
             if looks_like_media_url(origin) or origin.endswith(".ts") or "live_" in origin:
                 cached_body = seg_get(origin)
                 if cached_body is not None:
-                    self._send_bytes(
-                        200,
-                        {
-                            "Content-Type": "video/mp2t",
-                            "Cache-Control": "private, max-age=5",
-                            "X-IPTV-Proxy": "media-cache",
-                        },
-                        cached_body if not head_only else b"",
-                    )
+                    self._send_media_bytes(cached_body, x_proxy="media-cache")
                     return
-                # fetch full segment (typical 5s TS is small), cache, then send
                 status, headers, body = fetch_url(origin)
                 if status == 200 and body:
                     seg_put(origin, body)
-                    ctype = headers.get("Content-Type") or headers.get("content-type") or "video/mp2t"
-                    self._send_bytes(
-                        200,
-                        {
-                            "Content-Type": ctype,
-                            "Cache-Control": "private, max-age=5",
-                            "X-IPTV-Proxy": "media-buffered",
-                        },
-                        body if not head_only else b"",
-                    )
+                    self._send_media_bytes(body, x_proxy="media-buffered")
                     return
 
             # playlists under /u/ still small — buffer+rewrite; media stream
@@ -809,14 +848,11 @@ class Handler(BaseHTTPRequestHandler):
                     "X-IPTV-Proxy": "playlist",
                     "X-IPTV-Origin-Host": urllib.parse.urlparse(origin).netloc,
                 },
-                body if not head_only else b"",
+                b"" if self.command == "HEAD" else body,
+                content_length=len(body),
             )
             return
-        self._send_bytes(
-            200,
-            {"Content-Type": content_type, "X-IPTV-Proxy": "media"},
-            body if not head_only else b"",
-        )
+        self._send_media_bytes(body, content_type=content_type or "video/mp2t", x_proxy="media")
 
 
 def main() -> None:
