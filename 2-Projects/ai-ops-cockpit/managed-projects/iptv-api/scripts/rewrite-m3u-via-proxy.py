@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Rewrite overseas/港澳台 stream URLs in a published m3u to HK HLS proxy URLs."""
+"""Rewrite selected group stream URLs in a published m3u to HK HLS proxy URLs.
+
+Default: only 海外新闻 / 海外纪录 go through HK jump.
+港澳台 keeps direct origin URLs (mainland often plays smoother without extra hop).
+"""
 
 from __future__ import annotations
 
@@ -45,7 +49,9 @@ def main() -> int:
     cfg = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
     token = cfg["token"]
     public_base = cfg["public_base"].rstrip("/")
-    groups = set(cfg.get("proxy_groups") or ["港澳台", "海外新闻", "海外纪录"])
+    # 港澳台默认直连：国内到 txiptv 等源往往比「国内→港→源」更顺
+    groups = set(cfg.get("proxy_groups") or ["海外新闻", "海外纪录"])
+    groups.discard("")  # safety
 
     lines = src.read_text(encoding="utf-8", errors="replace").splitlines()
     out = []
@@ -53,6 +59,7 @@ def main() -> int:
     current_name = ""
     current_group = ""
     changed = 0
+    direct_kept = 0
 
     for line in lines:
         if line.startswith("#EXTINF"):
@@ -61,22 +68,42 @@ def main() -> int:
             current_group = match.group(1) if match else ""
             out.append(line)
             continue
-        if line.startswith(("http://", "https://")) and current_group in groups and current_name:
-            channel_id = slugify(current_name)
-            # keep stable mapping
-            channels[channel_id] = line.strip()
-            proxied = f"{public_base}/{token}/{channel_id}/master.m3u8"
-            out.append(proxied)
-            changed += 1
+        if line.startswith(("http://", "https://")) and current_name:
+            if current_group in groups:
+                channel_id = slugify(current_name)
+                # keep stable mapping; preserve multi-origin list if already set
+                existing = channels.get(channel_id)
+                if not isinstance(existing, (list, dict)):
+                    channels[channel_id] = line.strip()
+                proxied = f"{public_base}/{token}/{channel_id}/master.m3u8"
+                out.append(proxied)
+                changed += 1
+            else:
+                # strip accidental old proxy URLs back to origin when input already proxied
+                out.append(line.strip())
+                if "iptv-proxy" not in line:
+                    direct_kept += 1
             current_name = ""
             current_group = ""
             continue
         out.append(line)
 
+    cfg["proxy_groups"] = sorted(groups)
     cfg["channels"] = channels
     Path(sys.argv[3]).write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     dst.write_text("\n".join(out) + "\n", encoding="utf-8")
-    print(json.dumps({"rewritten": changed, "channels": len(channels), "output": str(dst)}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "rewritten": changed,
+                "directKept": direct_kept,
+                "proxyGroups": sorted(groups),
+                "channels": len(channels),
+                "output": str(dst),
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 
