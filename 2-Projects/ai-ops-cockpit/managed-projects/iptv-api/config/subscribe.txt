@@ -1,3 +1,12 @@
 # Public source allowlist verified from aliyun-kr on 2026-07-11.
 https://iptv-org.github.io/iptv/countries/cn.m3u
 https://raw.githubusercontent.com/Guovin/iptv-api/gd/output/ipv4/result.m3u
+
+# --- overseas batch1 (public FTA / iptv-org) ---
+https://iptv-org.github.io/iptv/categories/news.m3u
+https://iptv-org.github.io/iptv/categories/documentary.m3u
+https://iptv-org.github.io/iptv/countries/kr.m3u
+https://iptv-org.github.io/iptv/countries/jp.m3u
+
+# --- hk phoenix batch ---
+https://iptv-org.github.io/iptv/countries/hk.m3u

@@ -55,3 +55,35 @@ CETV-1
 新疆卫视
 西藏卫视
 三沙卫视
+
+港澳台,#genre#
+凤凰卫视
+凤凰资讯
+凤凰中文
+RTHK TV 31
+RTHK TV 32
+RTHK TV 33
+RTHK TV 34
+RTHK TV 35
+HOY TV
+HOY Infotainment
+TVBS Asia
+NTD TV Asia-Pacific
+
+海外新闻,#genre#
+Al Jazeera English (1080p)
+DW English (1080p)
+France 24 English (1080p)
+NHK World-Japan (1080p)
+CGTN (1080p)
+Arirang TV (1080p)
+Bloomberg TV (1080p)
+Bloomberg TV Asia (720p)
+NBC News NOW (1080p)
+TRT World (1080p) [Not 24/7]
+Reuters (1080p)
+
+海外纪录,#genre#
+CGTN Documentary (1080p)
+Bloomberg Originals (1080p)
+CNA Originals (1080p)

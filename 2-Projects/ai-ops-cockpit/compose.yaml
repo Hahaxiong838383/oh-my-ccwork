@@ -91,7 +91,8 @@ services:
       PRODUCTION_SSH_DIR: /run/secrets/chenchuan-maintenance
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./kuma/data/kuma.db:/kuma/kuma.db:ro
+      # 挂整个 data 目录，确保能读到 SQLite WAL/SHM；只挂 kuma.db 会读到过期心跳
+      - ./kuma/data:/kuma:ro
       - ./terminal/logs:/terminal-logs:ro
       - ./readonly:/workspace/readonly:ro
       - ./config:/config:ro

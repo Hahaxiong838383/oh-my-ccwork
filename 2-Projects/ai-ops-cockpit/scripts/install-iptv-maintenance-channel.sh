@@ -2,9 +2,9 @@
 set -euo pipefail
 
 RACKNERD_ALIAS="${RACKNERD_ALIAS:-racknerd}"
-PRODUCTION_ALIAS="${PRODUCTION_ALIAS:-aliyun-kr}"
-PRODUCTION_HOST="${PRODUCTION_HOST:-8.213.134.133}"
-PRODUCTION_PORT="${PRODUCTION_PORT:-52022}"
+PRODUCTION_ALIAS="${PRODUCTION_ALIAS:-chenchuan-site}"
+PRODUCTION_HOST="${PRODUCTION_HOST:-8.218.26.17}"
+PRODUCTION_PORT="${PRODUCTION_PORT:-22}"
 REMOTE_ROOT="${AI_OPS_ROOT:-/opt/ai-ops-cockpit}"
 SECRET_DIR="$REMOTE_ROOT/secrets/iptv-maintenance"
 KEY_PATH="$SECRET_DIR/id_ed25519"
@@ -18,7 +18,11 @@ PUBLIC_KEY_B64="$(printf '%s' "$PUBLIC_KEY" | base64 | tr -d '\n')"
 
 HOST_KEY="$(ssh "$PRODUCTION_ALIAS" "cat /etc/ssh/ssh_host_ed25519_key.pub")"
 read -r HOST_KEY_TYPE HOST_KEY_BODY _ <<<"$HOST_KEY"
-printf '[%s]:%s %s %s\n' "$PRODUCTION_HOST" "$PRODUCTION_PORT" "$HOST_KEY_TYPE" "$HOST_KEY_BODY" > "$TEMP_DIR/known_hosts"
+if [ "$PRODUCTION_PORT" = "22" ]; then
+  printf '%s %s %s\n' "$PRODUCTION_HOST" "$HOST_KEY_TYPE" "$HOST_KEY_BODY" > "$TEMP_DIR/known_hosts"
+else
+  printf '[%s]:%s %s %s\n' "$PRODUCTION_HOST" "$PRODUCTION_PORT" "$HOST_KEY_TYPE" "$HOST_KEY_BODY" > "$TEMP_DIR/known_hosts"
+fi
 scp -q "$TEMP_DIR/known_hosts" "$RACKNERD_ALIAS:$KNOWN_HOSTS_PATH"
 ssh "$RACKNERD_ALIAS" "chmod 600 '$KNOWN_HOSTS_PATH'"
 
@@ -38,6 +42,14 @@ set -euo pipefail
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ROOT=/opt/stacks/iptv-api
 ACTION="${1:-}"
+
+compose() {
+  if docker compose version >/dev/null 2>&1; then
+    docker compose "$@"
+    return
+  fi
+  docker-compose "$@"
+}
 
 inspect() {
   python3 - <<'PY'
@@ -114,7 +126,7 @@ case "$ACTION" in
   refresh)
     before="$(stat -c %Y "$ROOT/output/ipv4/result.m3u" 2>/dev/null || echo 0)"
     cd "$ROOT"
-    docker compose restart iptv-api >/dev/null
+    compose restart iptv-api >/dev/null
     deadline=$((SECONDS + 660))
     while [ "$SECONDS" -lt "$deadline" ]; do
       after="$(stat -c %Y "$ROOT/output/ipv4/result.m3u" 2>/dev/null || echo 0)"
@@ -133,7 +145,7 @@ case "$ACTION" in
     ;;
   restart-iptv)
     cd "$ROOT"
-    docker compose restart iptv-api >/dev/null
+    compose restart iptv-api >/dev/null
     sleep 5
     inspect
     ;;

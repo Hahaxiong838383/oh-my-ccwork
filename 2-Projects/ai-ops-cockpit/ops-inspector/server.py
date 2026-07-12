@@ -77,7 +77,7 @@ PROJECT_LIVE_PROBES = {
         {"id": "smart-models", "name": "CPA Smart Router 鉴权边界", "url": "https://smart-api.hahaxiong.top/v1/models", "path": "/v1/models", "kind": "http", "expectedStatuses": [401]},
     ],
     "iptv-api": [
-        {"id": "iptv-health", "name": "IPTV 私人 M3U 就绪度", "url": "https://my.chenchuan.cc/ops-health/iptv", "path": "/ops-health/iptv", "kind": "html", "marker": '"ok":true'},
+        {"id": "iptv-health", "name": "IPTV 私人 M3U 就绪度", "url": "https://kidshub-ai.hahaxiong.cc/ops-health/iptv", "path": "/ops-health/iptv", "kind": "html", "marker": '"ok":true'},
     ],
 }
 
@@ -255,14 +255,14 @@ PILOT_PROJECTS = {
         "name": "私人 IPTV M3U",
         "path": "/workspace/readonly/iptv-api",
         "risk": "中风险：仅允许读取脱敏 Compose、公开源清单、频道模板与验收脚本；私人 M3U 路径、完整结果、日志、Push URL 和 secrets 保持隔离。",
-        "goal": "持续验证 IPTV 聚合任务、私人 M3U 就绪度、频道数量、抽样播放和 last-good 回滚能力。",
+        "goal": "持续验证香港 IPTV 聚合任务、私人 M3U 就绪度、频道数量、抽样播放和 last-good 回滚能力。",
         "firstWorkflow": "readonly_inspect",
         "production": {
-            "domain": "https://my.chenchuan.cc",
-            "sshAlias": "aliyun-kr",
-            "address": "8.213.134.133",
+            "domain": "https://kidshub-ai.hahaxiong.cc",
+            "sshAlias": "chenchuan-site",
+            "address": "8.218.26.17",
             "maintenanceUser": "aiops",
-            "maintenancePort": 52022,
+            "maintenancePort": 22,
             "path": "/opt/stacks/iptv-api",
             "processManager": "Docker Compose",
             "services": ["iptv-api"],

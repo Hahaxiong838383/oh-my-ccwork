@@ -1040,3 +1040,10 @@ scripts/validate-vibe-regression.sh
 - 新增 `iptv-api` 六文件只读 allowlist、项目工作区和独立限权 SSH 通道；只允许 `inspect`、`refresh`、`restart-iptv`、`rollback-last-good`，任意 shell 被拒绝。
 - n8n 每日 `03:00` 执行公网就绪度、只读快照、生产巡检、Grok 4.5、飞书和 Kuma Push 闭环；Uptime Kuma 同时监控公开就绪度端点和 36 小时每日心跳。
 - 验收：初次聚合 31 个频道、服务端抽样 `7/7`；本机真实订阅解析 31 个频道、重复 0、关键频道 `5/5`、播放抽样 `4/5`；错误私人路径 `404`；故障候选隔离与 `last-good` 回滚成功；全站回归 `OK vibe regression`。
+
+## 2026-07-11 · 私人 IPTV 迁移到香港 VPS
+
+- IPTV 运行目录已迁移到香港 VPS `chenchuan-site:/opt/stacks/iptv-api`，容器仍仅监听 `127.0.0.1:15180`，发布文件、快照和 `last-good` 一并迁移。
+- 香港 `kidshub-ai.hahaxiong.cc` 提供私人 M3U 与脱敏健康端点；韩国 `my.chenchuan.cc` 的原 IPTV 路径仅反代到香港，韩国本地 `iptv-api` 容器已停止并关闭自动重启。
+- AI Ops 的 `iptv-api` 生产维护目标改为香港 VPS；韩国目录保留为短期回滚备份，不再承载 IPTV 服务。
+- 扩海外源不能直接在生产 Guovin 全量拉取；必须先低负载影子验证、限并发、确认主机可达性不受影响，再进入发布门。
