@@ -22,6 +22,9 @@ def slugify(name: str) -> str:
         "凤凰中文": "phoenix-zhongwen",
         "凤凰资讯(备用)": "phoenix-zixun-alt",
         "凤凰资讯-ifeng": "phoenix-zixun-alt",
+        "凤凰中文-备用1": "phoenix-zhongwen-b1",
+        "凤凰中文-备用2": "phoenix-zhongwen-b2",
+        "凤凰香港": "phoenix-hk",
     }
     if name.strip() in aliases:
         return aliases[name.strip()]

@@ -111,6 +111,59 @@ def is_playlist(url: str, content_type: str, body: bytes) -> bool:
     return head.startswith(b"#EXTM3U")
 
 
+def channel_origins(entry) -> list[str]:
+    """Support string origin or multi-origin list / {origins:[...]}."""
+    if isinstance(entry, list):
+        return [str(x) for x in entry if str(x).startswith(("http://", "https://"))]
+    if isinstance(entry, dict):
+        vals = entry.get("origins") or entry.get("urls") or []
+        if entry.get("url"):
+            vals = [entry["url"]] + list(vals)
+        return [str(x) for x in vals if str(x).startswith(("http://", "https://"))]
+    if isinstance(entry, str) and entry.startswith(("http://", "https://")):
+        return [entry]
+    return []
+
+
+def master_variants_ok(origin: str, body: bytes) -> bool:
+    """Reject masters whose nested variant playlists all 404 (ifeng broken pattern)."""
+    text = body.decode("utf-8", errors="replace")
+    if "#EXT-X-STREAM-INF" not in text:
+        # media playlist: require at least one segment-like line
+        for line in text.splitlines():
+            s = line.strip()
+            if s and not s.startswith("#"):
+                return True
+        return False
+    for line in text.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        nested = urllib.parse.urljoin(origin, s)
+        status, _, nested_body = fetch_url(nested)
+        if status == 200 and len(nested_body) > 20:
+            return True
+    return False
+
+
+def fetch_usable_origin(origins: list[str]):
+    last = (502, {}, b"upstream error\n")
+    for origin in origins:
+        status, headers, body = fetch_url(origin)
+        last = (status, headers, body)
+        if status != 200 or not body:
+            continue
+        ctype = headers.get("Content-Type") or headers.get("content-type") or ""
+        if is_playlist(origin, ctype, body):
+            if master_variants_ok(origin, body):
+                return origin, status, headers, body
+            continue
+        # non-playlist media (e.g. flv/ts): accept
+        if len(body) > 20:
+            return origin, status, headers, body
+    return None, last[0], last[1], last[2]
+
+
 def rewrite_playlist(body: bytes, channel_id: str, token: str, public_base: str, base_url: str) -> bytes:
     text = body.decode("utf-8", errors="replace")
     lines = text.splitlines()
@@ -194,24 +247,47 @@ class Handler(BaseHTTPRequestHandler):
             if not origin.startswith(("http://", "https://")):
                 self._send(400, {"Content-Type": "text/plain"}, b"bad scheme\n")
                 return
+            cache_key = origin
+            cached = cache_get(cache_key)
+            if cached:
+                status, headers, body = cached["status"], cached["headers"], cached["body"]
+            else:
+                status, headers, body = fetch_url(origin)
+                if status == 200 and len(body) < 2_000_000:
+                    cache_set(cache_key, {"status": status, "headers": headers, "body": body})
         elif rest0 in {"master.m3u8", "index.m3u8", "playlist.m3u8"}:
-            origin = channels[channel_id]
+            origins = channel_origins(channels[channel_id])
+            if not origins:
+                self._send(404, {"Content-Type": "text/plain"}, b"no origin\n")
+                return
+            cache_key = "master:" + channel_id + "|" + "|".join(origins)
+            cached = cache_get(cache_key)
+            if cached:
+                origin, status, headers, body = (
+                    cached["origin"],
+                    cached["status"],
+                    cached["headers"],
+                    cached["body"],
+                )
+            else:
+                origin, status, headers, body = fetch_usable_origin(origins)
+                if origin and status == 200 and len(body) < 2_000_000:
+                    cache_set(
+                        cache_key,
+                        {
+                            "origin": origin,
+                            "status": status,
+                            "headers": headers,
+                            "body": body,
+                        },
+                        ttl=max(2.0, CACHE_TTL),
+                    )
         else:
             self._send(404, {"Content-Type": "text/plain"}, b"not found\n")
             return
 
-        cache_key = origin
-        cached = cache_get(cache_key)
-        if cached:
-            status, headers, body = cached["status"], cached["headers"], cached["body"]
-        else:
-            status, headers, body = fetch_url(origin)
-            # only cache successful small playlist-ish responses briefly
-            if status == 200 and len(body) < 2_000_000:
-                cache_set(cache_key, {"status": status, "headers": headers, "body": body})
-
-        if status >= 400:
-            self._send(status, {"Content-Type": "text/plain"}, b"upstream error\n")
+        if status >= 400 or not body:
+            self._send(status if status >= 400 else 502, {"Content-Type": "text/plain"}, b"upstream error\n")
             return
 
         content_type = headers.get("Content-Type") or headers.get("content-type") or "application/octet-stream"
@@ -221,6 +297,7 @@ class Handler(BaseHTTPRequestHandler):
             out_headers = {
                 "Content-Type": content_type,
                 "X-IPTV-Proxy": "playlist",
+                "X-IPTV-Origin-Host": urllib.parse.urlparse(origin).netloc,
             }
         else:
             out_headers = {
