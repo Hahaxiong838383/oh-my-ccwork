@@ -38,6 +38,9 @@ CACHE_TTL = float(os.environ.get("IPTV_PROXY_CACHE_TTL", "4"))
 ORIGIN_TTL = float(os.environ.get("IPTV_PROXY_ORIGIN_TTL", "300"))
 CHUNK = int(os.environ.get("IPTV_PROXY_CHUNK", "65536"))
 PREFER_LOW = os.environ.get("IPTV_PROXY_PREFER_LOW", "1") not in {"0", "false", "False"}
+SEG_CACHE_MB = int(os.environ.get("IPTV_PROXY_SEG_CACHE_MB", "96"))
+SEG_TTL = float(os.environ.get("IPTV_PROXY_SEG_TTL", "20"))
+PREFETCH = os.environ.get("IPTV_PROXY_PREFETCH", "1") not in {"0", "false", "False"}
 
 _CONFIG_LOCK = threading.Lock()
 _CONFIG = {"token": "", "public_base": "", "channels": {}}
@@ -48,6 +51,10 @@ _ORIGIN_PICK: dict[str, tuple[float, str]] = {}
 _ORIGIN_LOCK = threading.Lock()
 _POOL_LOCK = threading.Lock()
 _POOL: dict[tuple, list] = {}  # (scheme, host, port) -> [conn]
+_SEG_CACHE: dict = {}  # url -> {expires, body}
+_SEG_ORDER: list = []
+_SEG_BYTES = 0
+_SEG_LOCK = threading.Lock()
 
 
 def b64url_encode(value: str) -> str:
@@ -91,6 +98,79 @@ def cache_set(key: str, payload: dict, ttl: float = CACHE_TTL) -> None:
         if len(_CACHE) > 2000:
             _CACHE.clear()
         _CACHE[key] = {"expires": time.time() + ttl, "payload": payload}
+
+
+
+def seg_get(url: str):
+    now = time.time()
+    with _SEG_LOCK:
+        item = _SEG_CACHE.get(url)
+        if not item:
+            return None
+        if item["expires"] < now:
+            body = item.get("body") or b""
+            global _SEG_BYTES
+            _SEG_BYTES = max(0, _SEG_BYTES - len(body))
+            _SEG_CACHE.pop(url, None)
+            if url in _SEG_ORDER:
+                _SEG_ORDER.remove(url)
+            return None
+        # LRU touch
+        if url in _SEG_ORDER:
+            _SEG_ORDER.remove(url)
+        _SEG_ORDER.append(url)
+        return item["body"]
+
+
+def seg_put(url: str, body: bytes, ttl: float = SEG_TTL) -> None:
+    if not body or len(body) > 8 * 1024 * 1024:
+        return
+    global _SEG_BYTES
+    max_bytes = SEG_CACHE_MB * 1024 * 1024
+    with _SEG_LOCK:
+        old = _SEG_CACHE.get(url)
+        if old:
+            _SEG_BYTES = max(0, _SEG_BYTES - len(old.get("body") or b""))
+        while _SEG_BYTES + len(body) > max_bytes and _SEG_ORDER:
+            victim = _SEG_ORDER.pop(0)
+            v = _SEG_CACHE.pop(victim, None)
+            if v:
+                _SEG_BYTES = max(0, _SEG_BYTES - len(v.get("body") or b""))
+        _SEG_CACHE[url] = {"expires": time.time() + ttl, "body": body}
+        if url in _SEG_ORDER:
+            _SEG_ORDER.remove(url)
+        _SEG_ORDER.append(url)
+        _SEG_BYTES += len(body)
+
+
+def prefetch_urls(urls: list[str]) -> None:
+    if not PREFETCH:
+        return
+
+    def _one(u: str) -> None:
+        try:
+            if seg_get(u) is not None:
+                return
+            status, _, body = fetch_url(u)
+            if status == 200 and body:
+                seg_put(u, body)
+        except Exception:
+            pass
+
+    for u in urls[:4]:
+        threading.Thread(target=_one, args=(u,), daemon=True).start()
+
+
+def origin_media_urls_from_playlist(origin: str, body: bytes) -> list[str]:
+    text = body.decode("utf-8", errors="replace")
+    base = origin.rsplit("/", 1)[0] + "/"
+    out = []
+    for line in text.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        out.append(urllib.parse.urljoin(base, s))
+    return out
 
 
 def picked_origin_get(channel_id: str) -> str | None:
@@ -517,6 +597,36 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_bytes(400, {"Content-Type": "text/plain"}, b"bad scheme\n")
                 return
 
+            # hot segment cache (reduces CN rebuffer stalls)
+            if looks_like_media_url(origin) or origin.endswith(".ts") or "live_" in origin:
+                cached_body = seg_get(origin)
+                if cached_body is not None:
+                    self._send_bytes(
+                        200,
+                        {
+                            "Content-Type": "video/mp2t",
+                            "Cache-Control": "private, max-age=5",
+                            "X-IPTV-Proxy": "media-cache",
+                        },
+                        cached_body if not head_only else b"",
+                    )
+                    return
+                # fetch full segment (typical 5s TS is small), cache, then send
+                status, headers, body = fetch_url(origin)
+                if status == 200 and body:
+                    seg_put(origin, body)
+                    ctype = headers.get("Content-Type") or headers.get("content-type") or "video/mp2t"
+                    self._send_bytes(
+                        200,
+                        {
+                            "Content-Type": ctype,
+                            "Cache-Control": "private, max-age=5",
+                            "X-IPTV-Proxy": "media-buffered",
+                        },
+                        body if not head_only else b"",
+                    )
+                    return
+
             # playlists under /u/ still small — buffer+rewrite; media stream
             if not looks_like_media_url(origin) and (
                 origin.endswith(".m3u8") or origin.endswith(".m3u") or "m3u8" in origin
@@ -598,6 +708,11 @@ class Handler(BaseHTTPRequestHandler):
 
         content_type = headers.get("Content-Type") or headers.get("content-type") or "application/octet-stream"
         if is_playlist(origin, content_type, body):
+            # prefetch upcoming segments into HK memory before player asks
+            try:
+                prefetch_urls(origin_media_urls_from_playlist(origin, body))
+            except Exception:
+                pass
             body = rewrite_playlist(body, channel_id, token, public_base, origin)
             self._send_bytes(
                 200,
