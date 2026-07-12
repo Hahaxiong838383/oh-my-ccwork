@@ -1,17 +1,31 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { SectionWrapper } from '@/components/layout/SectionWrapper'
 import { BlurFade } from '@/components/ui/BlurFade'
 import { NumberTicker } from '@/components/ui/NumberTicker'
-
-const stats = [
-  { value: 19, suffix: '年10个月', label: '产品经验' },
-  { value: 46, suffix: '', label: '项专利成果' },
-  { value: 9, suffix: '', label: '款量产/运营产品' },
-  { value: 10, suffix: '+', label: '人产品市场团队' },
-]
+import { getCareerExperience } from '@/lib/experience'
 
 export function Stats() {
+  const [careerExperience, setCareerExperience] = useState(() => getCareerExperience())
+  const stats = [
+    {
+      value: careerExperience.years,
+      suffix: `年${careerExperience.months}个月${careerExperience.days}天`,
+      label: '产品经验',
+    },
+    { value: 46, suffix: '', label: '项专利成果' },
+    { value: 9, suffix: '', label: '款量产/运营产品' },
+    { value: 10, suffix: '+', label: '人产品市场团队' },
+  ]
+
+  useEffect(() => {
+    const update = () => setCareerExperience(getCareerExperience())
+    update()
+    const timer = window.setInterval(update, 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
+
   return (
     <SectionWrapper id="stats" className="border-y border-border">
       <div className="grid grid-cols-2 gap-8 md:grid-cols-4">

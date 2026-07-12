@@ -16,6 +16,10 @@
  * 自动化原型构建 / 战略整合 + 验收），不是技术细节。
  */
 
+import { formatCareerExperience } from '@/lib/experience'
+
+const careerExperience = formatCareerExperience(undefined, { spaced: true, includeDays: true })
+
 export type DemoCategory = 'arch' | 'speed' | 'cognition' | 'failure' | 'crossover'
 
 export interface DemoRoutingStep {
@@ -117,7 +121,7 @@ export const CLASSIC_DEMOS: ClassicDemo[] = [
   {
     id: 'cog-01',
     category: 'cognition',
-    question: '19 年硬科技产品（46 项专利、9 款量产产品）经验里，最关键的教训是什么？',
+    question: `${careerExperience}硬科技产品（46 项专利、9 款量产产品）经验里，最关键的教训是什么？`,
     routing: [
       {
         engine: 'cc',
@@ -138,7 +142,7 @@ export const CLASSIC_DEMOS: ClassicDemo[] = [
         stage: '战略整合 + 验收',
         duration_ms: 600_000,
         output_md:
-          '**一句话沉淀**：硬科技产品经理的核心是**穿越产品三角**——不是更懂技术，是同时看见技术 / 场景 / 商业三个维度，找出三者交点。\n\n**今天怎么用**：做 EvoDesk / LnMem 时不停问"这是工程师 cool 还是用户 work / 谁付钱 / 怎么续费"。\n\n下一站：AI 产品 leader 不是更会调 prompt，是把 19 年硬科技产品三角能力迁移到 AI 原生产品。',
+          `**一句话沉淀**：硬科技产品经理的核心是**穿越产品三角**——不是更懂技术，是同时看见技术 / 场景 / 商业三个维度，找出三者交点。\n\n**今天怎么用**：做 EvoDesk / LnMem 时不停问"这是工程师 cool 还是用户 work / 谁付钱 / 怎么续费"。\n\n下一站：AI 产品 leader 不是更会调 prompt，是把 ${careerExperience}硬科技产品三角能力迁移到 AI 原生产品。`,
       },
     ],
     total_duration_ms: 2_107_000,
@@ -241,7 +245,7 @@ export function getFeaturedDemos(limit = 6): ClassicDemo[] {
 export const CATEGORY_LABELS: Record<DemoCategory, string> = {
   arch: '关键决策怎么拍板',
   speed: '高压下怎么稳准狠',
-  cognition: '19 年踩过的大坑',
+  cognition: `${careerExperience}踩过的大坑`,
   failure: '立项前怎么避雷',
   crossover: '跨行业经验复用',
 }

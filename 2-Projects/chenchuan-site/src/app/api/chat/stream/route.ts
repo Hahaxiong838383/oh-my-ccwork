@@ -23,7 +23,7 @@ import {
   type ChatMessage,
 } from '@/lib/chat/gemini-proxy'
 import { consumeQuota, getQuotaStatus, hashIp, resolveClientIp } from '@/lib/chat/quota'
-import { ROLE_HANDOFF_SUFFIX, STRATEGIC_MIRROR_PROMPT } from '@/lib/chat/system-prompt'
+import { getStrategicMirrorPrompt, ROLE_HANDOFF_SUFFIX } from '@/lib/chat/system-prompt'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -114,7 +114,7 @@ export async function POST(req: Request): Promise<Response> {
   // 不能直接传 user messages 给 Gemini，否则它会以 "AI 助手"姿态回答技术琐事，
   // 方案 B 的"产品 leader 战略镜像"定位崩塌。
   const messagesWithSystem: ChatMessage[] = [
-    { role: 'system', content: STRATEGIC_MIRROR_PROMPT },
+    { role: 'system', content: getStrategicMirrorPrompt() },
     ...messages,
   ]
   if (willExceedBudget(currentBudget, estimatedCost)) {

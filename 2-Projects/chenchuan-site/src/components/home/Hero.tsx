@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Hand, MessageSquare, Mic } from 'lucide-react'
 import { BlurFade } from '@/components/ui/BlurFade'
 import { profile } from '@/data/profile'
+import { formatCareerExperience } from '@/lib/experience'
 
 const PROMPTS = [
   '我们公司想做 AI 应用，怎么判断有没有市场？',
@@ -13,11 +14,24 @@ const PROMPTS = [
   '想从产品经理转型 AI，第一步是什么？',
 ]
 
-const STATS: Array<[string, string]> = [
-  ['19年10个月', '硬科技产品经验'],
+const getStats = (experience: string): Array<[string, string]> => [
+  [experience, '硬科技产品经验'],
   ['46', '项专利成果'],
   ['>9款', '0-1 量产及运营经验'],
 ]
+
+function useCareerExperienceLabel(): string {
+  const [experience, setExperience] = useState(() => formatCareerExperience(new Date(), { includeDays: true }))
+
+  useEffect(() => {
+    const update = () => setExperience(formatCareerExperience(new Date(), { includeDays: true }))
+    update()
+    const timer = window.setInterval(update, 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  return experience
+}
 
 // 实时时钟（毫秒跳动，HUD 精密感）
 function useClock(): string {
@@ -89,6 +103,8 @@ interface TickerItem {
 export function Hero({ tickerItems = [] }: { tickerItems?: TickerItem[] }) {
   const clock = useClock()
   const typed = useTypewriter(PROMPTS)
+  const experienceLabel = useCareerExperienceLabel()
+  const stats = getStats(experienceLabel)
 
   return (
     <section className="relative isolate min-h-[100svh] overflow-hidden bg-bg-primary">
@@ -136,7 +152,7 @@ export function Hero({ tickerItems = [] }: { tickerItems?: TickerItem[] }) {
             </BlurFade>
             <BlurFade delay={0.7}>
               <div className="mt-10 flex max-w-xl flex-wrap gap-x-12 gap-y-6 border-t border-border pt-7">
-                {STATS.map(([value, label]) => (
+                {stats.map(([value, label]) => (
                   <div key={label}>
                     <div className="text-[clamp(26px,3vw,38px)] font-medium leading-none tracking-[-0.02em] text-text-primary [font-variant-numeric:tabular-nums]">
                       {value}

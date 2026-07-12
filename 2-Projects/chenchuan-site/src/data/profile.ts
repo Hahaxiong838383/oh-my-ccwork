@@ -1,9 +1,14 @@
+import { formatCareerExperience, getCareerExperience } from '@/lib/experience'
+
+const careerExperience = getCareerExperience()
+const careerExperienceLabel = formatCareerExperience(undefined, { spaced: true, includeDays: true })
+
 export const profile = {
   name: '陈川',
   nameEn: 'Chen Chuan',
   title: 'AI-Native Product Leader',
   tagline: 'AR HUD · Embodied Intelligence · Vibe Coder',
-  bio: '19.5 年智能硬件与 AI 产品经验。从 SLAM 机器人到协作机械臂，从多模态 AI 系统到 AR HUD 智能座舱，跨越具身智能完整技术栈。以 Claude Code 为主力构建 AI-Native 工作流，擅长复杂硬科技产品定义、交互体验设计与商业闭环构建。',
+  bio: `${careerExperienceLabel}智能硬件与 AI 产品经验。从 SLAM 机器人到协作机械臂，从多模态 AI 系统到 AR HUD 智能座舱，跨越具身智能完整技术栈。以 Claude Code 为主力构建 AI-Native 工作流，擅长复杂硬科技产品定义、交互体验设计与商业闭环构建。`,
   bioExtended: '我相信好的产品不是技术的堆砌，而是对人类需求的深刻理解与技术可能性的精准匹配。拥有从第一性原理解构需求、到供应链量产、再到 GTM 的全链路操盘经验，多次实现跨界技术降维打击，定义具备极高壁垒的"新物种"品类。',
   profileCards: [
     {
@@ -28,7 +33,7 @@ export const profile = {
     },
   ],
   stats: {
-    yearsExperience: 19,
+    yearsExperience: careerExperience.years,
     patents: 14,
     shippedProducts: 8,
     keyWins: 7,
