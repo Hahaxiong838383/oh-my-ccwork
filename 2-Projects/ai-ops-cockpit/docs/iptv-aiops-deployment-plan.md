@@ -66,3 +66,26 @@
 - 候选失败不会改写已发布健康状态；失败详情单独保存，下一次合格发布后自动清除。
 - 私人 M3U 完整地址仅在受信对话中交付，不记录在本方案。
 - 韩国 `my.chenchuan.cc` 的原 IPTV 路径仅反代香港；韩国本地 IPTV 容器已停止，目录保留为短期回滚备份。
+
+## 2026-07-12 · 国内可播：香港 HLS 跳转反代
+
+仅把私人 M3U 放在香港不够：播放器仍直连源站，国内会慢/超时。
+
+当前架构：
+
+```text
+国内播放器
+  -> kidshub-ai.hahaxiong.cc 私人 M3U（列表）
+  -> 港澳台/海外条目 URL 指向 /iptv-proxy/<token>/<channel>/master.m3u8
+  -> 香港 iptv-hls-proxy 拉源站并重写分片 URL
+  -> 媒体分片同样经香港返回国内
+```
+
+组件：
+- systemd：`iptv-hls-proxy.service`
+- 脚本：`managed-projects/iptv-api/scripts/hls-proxy.py`、`rewrite-m3u-via-proxy.py`
+- 文件：`published/result.origin.m3u`（源）/ `published/result.m3u`（播放器）
+- 变更日志：香港 `/opt/stacks/iptv-api/logs/CHANGELOG-2026-07-12-hls-proxy.md`
+
+注意：带宽会走香港机；只对海外/港澳台分组走 proxy，央视/卫视仍直连。
+
