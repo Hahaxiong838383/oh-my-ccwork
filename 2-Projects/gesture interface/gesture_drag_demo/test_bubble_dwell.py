@@ -72,6 +72,56 @@ def test_long_absence_releases():
     assert sel._bubble_candidate is None
 
 
+def test_app_frame_order_locks():
+    """v3.4.1 回归：完整还原 app.py 每帧序列（set_dragging→update→
+    update_bubbles）——历史 bug 是 set_dragging(False) 每帧清空锁定计数。"""
+    from dataclasses import dataclass as _dc
+
+    @_dc
+    class FakeCard:
+        x: int
+        y: int = 500
+        w: int = 85
+        h: int = 60
+        label: str = "c"
+
+    sel = AttentionSelector(W)
+    cards = [FakeCard(x=100), FakeCard(x=600), FakeCard(x=1100)]
+    b = _bubble_at_gaze(0.3)
+    for _ in range(BUBBLE_LOCK_FRAMES + 2):
+        sel.set_dragging(False)   # app.py 每帧都调（非拖拽=False）
+        sel.update(gaze_x=0.3, confidence=0.9, cards=cards,
+                   direction_label="CENTER-R")
+        sel.update_bubbles(gaze_x=0.3, confidence=0.9, bubbles=[b])
+    assert sel._bubble_locked, "set_dragging 每帧调用不得阻断锁定"
+    assert sel.bubble_lock_progress == 1.0
+
+
+def test_card_lock_survives_frame_order():
+    """v3.4.1 回归：卡片 8 帧锁定在真实帧序下也能达成（同一历史 bug）。"""
+    from dataclasses import dataclass as _dc
+    from config import CANDIDATE_LOCK_FRAMES
+
+    @_dc
+    class FakeCard:
+        x: int
+        y: int = 500
+        w: int = 85
+        h: int = 60
+        label: str = "c"
+
+    sel = AttentionSelector(W)
+    # 卡片中心恰好在 gaze_x=0.3
+    cx_px = (0.3 + 1.0) / 2.0 * W
+    cards = [FakeCard(x=int(cx_px - 42))]
+    st = None
+    for _ in range(CANDIDATE_LOCK_FRAMES + 2):
+        sel.set_dragging(False)
+        st = sel.update(gaze_x=0.3, confidence=0.9, cards=cards,
+                        direction_label="CENTER-R")
+    assert st.candidate_locked, "卡片锁定应在真实帧序下达成"
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):

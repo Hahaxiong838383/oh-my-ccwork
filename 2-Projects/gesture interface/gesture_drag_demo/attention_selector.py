@@ -58,7 +58,15 @@ class AttentionSelector:
         self._bubble_release_count: int = 0
 
     def set_dragging(self, dragging: bool):
-        """进入/退出拖拽状态"""
+        """进入/退出拖拽状态（仅在状态转换沿动作）。
+
+        v3.4.1 历史 bug 修复：app.py 每帧都调本方法，旧实现无条件走
+        else 分支清空锁定状态 → 卡片 8 帧锁定 / 气泡锁定的计数每帧被
+        打回零，「锁定」从未真正达成（候选高亮每帧重算所以看不出来）。
+        改为只在拖拽状态转换沿清一次。
+        """
+        if dragging == self._dragging:
+            return  # 状态未变：每帧调用不得清进度
         self._dragging = dragging
         if dragging:
             # 拖拽开始：冻结候选状态
