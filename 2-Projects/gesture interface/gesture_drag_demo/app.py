@@ -1,5 +1,5 @@
 """
-app.py - 手势拖拽 Demo 主循环 (v3.1)
+app.py - 手势拖拽 Demo 主循环 (v3.2)
 
 使用 OpenCV 窗口 + MediaPipe Hands + FaceMesh 实现：
 - 摄像头实时画面
@@ -32,8 +32,9 @@ from config import (
     CAMERA_INDEX, CAMERA_WIDTH, CAMERA_HEIGHT,
     MAX_NUM_HANDS, PINCH_ON_THRESHOLD, PINCH_OFF_THRESHOLD,
     CONFIRM_FRAMES, LOST_FRAMES_RELEASE, SMOOTHING_ALPHA,
-    WINDOW_NAME, VERSION,
+    WINDOW_NAME, VERSION, IMPLICIT_CALIB_ENABLED,
 )
+from implicit_calib import ImplicitCalibrator, card_expected_gaze
 
 
 def main():
@@ -93,7 +94,17 @@ def main():
     cv2.resizeWindow(WINDOW_NAME, tracker.frame_w, tracker.frame_h)
 
     # 启动校准（可按 ESC/S 跳过）
-    run_calibration(tracker, gaze_est, WINDOW_NAME)
+    # 路线C：显式校准的 9 点作为隐式校准的锚点样本
+    def _build_implicit(anchors):
+        if not (IMPLICIT_CALIB_ENABLED and anchors):
+            return None
+        cal = ImplicitCalibrator(anchors["measured"], anchors["expected"])
+        cal.set_current_coefs(anchors["coef_x"], anchors["coef_y"])
+        print(f"[implicit_calib] 已启用（锚点 {len(anchors['measured'])} 点）")
+        return cal
+
+    implicit_cal = _build_implicit(
+        run_calibration(tracker, gaze_est, WINDOW_NAME))
 
     try:
         while True:
@@ -183,6 +194,21 @@ def main():
                     # 优先级 4：位置命中卡片
                     if not grabbed:
                         drag_mgr.try_grab(cards, px, py)
+
+                    # 路线C 捏取即校准：本帧新抓到卡片 = 一个注视弱标签
+                    # （抓取瞬间视线必在目标卡片上；离群样本由校准器内部拒绝）
+                    _g_card = drag_mgr.dragging_card
+                    if (implicit_cal is not None and _g_card is not None
+                            and gaze_result.face_detected):
+                        _exp = card_expected_gaze(
+                            _g_card.x + _g_card.w / 2.0,
+                            _g_card.y + _g_card.h / 2.0,
+                            tracker.frame_w, tracker.frame_h)
+                        _new = implicit_cal.add_sample(
+                            (gaze_result.uncal_gaze_x, gaze_result.uncal_gaze_y),
+                            _exp)
+                        if _new is not None:
+                            gaze_est.set_calibration(*_new)
                 else:
                     # 更新拖拽位置
                     drag_mgr.update_drag(px, py)
@@ -302,8 +328,9 @@ def main():
                 show_face_debug = not show_face_debug
                 print(f"面部特征: {'ON' if show_face_debug else 'OFF'}")
             elif key == ord('c') or key == ord('C'):
-                # 重新校准
-                run_calibration(tracker, gaze_est, WINDOW_NAME)
+                # 重新校准（隐式校准器随新锚点重建）
+                implicit_cal = _build_implicit(
+                    run_calibration(tracker, gaze_est, WINDOW_NAME))
 
     finally:
         tracker.release()

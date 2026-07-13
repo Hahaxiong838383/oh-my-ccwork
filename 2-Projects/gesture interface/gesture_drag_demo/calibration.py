@@ -16,6 +16,8 @@ import math
 import numpy as np
 from typing import List, Tuple, Optional
 
+from implicit_calib import fit_poly_with_affine_fallback
+
 # ── 校准配置 ──────────────────────────────────────────────
 # 9 个校准点：(screen_x_ratio, screen_y_ratio, expected_gaze_x, expected_gaze_y)
 CALIB_POINTS_2D: List[Tuple[float, float, float, float]] = [
@@ -98,7 +100,8 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
         window_name : OpenCV 窗口名
 
     返回：
-        True = 校准完成, False = 用户跳过
+        校准完成 → anchors dict（measured/expected/coef_x/coef_y，
+        供路线C 隐式校准器做锚点）；跳过或失败 → None
     """
     print("\n[Calibration] 进入 9 点 2D 校准模式...")
 
@@ -107,7 +110,7 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
     while True:
         frame = tracker.read_frame()
         if frame is None:
-            return False
+            return None
 
         h, w = frame.shape[:2]
 
@@ -141,7 +144,7 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
 
         if key == 27 or key == ord('s') or key == ord('S'):
             print("[Calibration] 用户跳过校准")
-            return False
+            return None
         if key == 32 and face_ok:  # SPACE
             break
 
@@ -180,7 +183,7 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
 
             frame = tracker.read_frame()
             if frame is None:
-                return False
+                return None
 
             gaze_result = gaze_est.update(frame)
 
@@ -228,13 +231,13 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
             key = cv2.waitKey(1) & 0xFF
             if key == 27:  # ESC 中途退出
                 print("[Calibration] 用户中途取消")
-                return False
+                return None
 
         # 计算本点中位数
         if len(samples_x) < CALIB_MIN_SAMPLES:
             print(f"[Calibration] 点 {pt_idx + 1} 样本不足 "
                   f"({len(samples_x)})，跳过校准")
-            return False
+            return None
 
         median_x = float(np.median(samples_x))
         median_y = float(np.median(samples_y))
@@ -244,62 +247,19 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
               f"(samples={len(samples_x)})")
 
     # ── Phase 2: 最小二乘回归计算校准参数 ─────────────────
-    # 2026-07 路线A：首选含 xy 交叉项的二阶多项式（联合输入，
-    # 拟合边缘/垂直非线性与轴间耦合——学界实证眼动非线性集中在
-    # 屏幕顶部行与左右边缘）；拟合退化时自动回退仿射。
+    # 2026-07 路线A：含 xy 交叉项的二阶多项式 + 仿射兜底择优
+    # （拟合器与路线C 隐式校准共用，见 implicit_calib.py）
     expected_x = np.array([pt[2] for pt in CALIB_POINTS_2D])  # [-0.5, 0, 0.5, ...]
     expected_y = np.array([pt[3] for pt in CALIB_POINTS_2D])  # [-0.5, ..., 0.5]
-    measured_x = np.array(medians_x)
-    measured_y = np.array(medians_y)
-
-    def _affine_as_poly():
-        """仿射兜底：拟合 per-axis y=ax+b，嵌进 6 维多项式系数格式。"""
-        a_x, b_x = np.polyfit(measured_x, expected_x, 1)
-        a_y, b_y = np.polyfit(measured_y, expected_y, 1)
-        a_x = float(max(CALIB_SCALE_CLAMP[0], min(CALIB_SCALE_CLAMP[1], a_x)))
-        a_y = float(max(CALIB_SCALE_CLAMP[0], min(CALIB_SCALE_CLAMP[1], a_y)))
-        # coef 序：[1, x, y, x², xy, y²]
-        cx = np.array([b_x, a_x, 0.0, 0.0, 0.0, 0.0])
-        cy = np.array([b_y, 0.0, a_y, 0.0, 0.0, 0.0])
-        return cx, cy
-
-    def _mae(coef_x, coef_y):
-        feats = np.stack([
-            gaze_est.poly_features(mx, my)
-            for mx, my in zip(measured_x, measured_y)
-        ])
-        ex = float(np.mean(np.abs(feats @ coef_x - expected_x)))
-        ey = float(np.mean(np.abs(feats @ coef_y - expected_y)))
-        return ex, ey
+    measured = list(zip(medians_x, medians_y))
 
     try:
-        affine_cx, affine_cy = _affine_as_poly()
+        coef_x, coef_y, model, (mae_x, mae_y) = fit_poly_with_affine_fallback(
+            measured, expected_x, expected_y)
     except (np.linalg.LinAlgError, ValueError):
-        print("[Calibration] 仿射回归失败")
-        return False
+        print("[Calibration] 回归失败")
+        return None
 
-    model = "affine"
-    coef_x, coef_y = affine_cx, affine_cy
-    try:
-        # 二阶多项式：9 个方程拟 6 系数，轻微 ridge 防病态
-        feats = np.stack([
-            gaze_est.poly_features(mx, my)
-            for mx, my in zip(measured_x, measured_y)
-        ])
-        ridge = 1e-4 * np.eye(feats.shape[1])
-        gram = feats.T @ feats + ridge
-        poly_cx = np.linalg.solve(gram, feats.T @ expected_x)
-        poly_cy = np.linalg.solve(gram, feats.T @ expected_y)
-        # 择优：多项式拟合残差需真正优于仿射才启用（防过拟合退化）
-        pmx, pmy = _mae(poly_cx, poly_cy)
-        amx, amy = _mae(affine_cx, affine_cy)
-        if pmx + pmy < amx + amy:
-            model = "poly2"
-            coef_x, coef_y = poly_cx, poly_cy
-    except np.linalg.LinAlgError:
-        pass  # 多项式病态 → 保持仿射兜底
-
-    mae_x, mae_y = _mae(coef_x, coef_y)
     print(f"[Calibration] 2D 回归结果 (model={model}):")
     print(f"  MAE: X={mae_x:.3f}, Y={mae_y:.3f}")
 
@@ -374,4 +334,9 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
             break
 
     print("[Calibration] 9 点校准完成，进入主界面\n")
-    return True
+    return {
+        "measured": measured,
+        "expected": [(pt[2], pt[3]) for pt in CALIB_POINTS_2D],
+        "coef_x": coef_x,
+        "coef_y": coef_y,
+    }

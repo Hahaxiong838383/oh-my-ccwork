@@ -51,7 +51,9 @@ class GazeResult:
     """单帧注视估计结果"""
     face_detected: bool = False
     gaze_x: float = 0.0          # 平滑后的水平注视方向 [-1, 1]
-    raw_gaze_x: float = 0.0      # 未平滑的原始值
+    raw_gaze_x: float = 0.0      # 未平滑的原始值（校准后）
+    uncal_gaze_x: float = 0.0    # 未校准原始值（隐式校准采样用，勿混用）
+    uncal_gaze_y: float = 0.0    # 未校准垂直原始值
     head_direction: float = 0.0   # 头部朝向分量
     iris_direction: float = 0.0   # 虹膜朝向分量
     gaze_y: float = 0.0          # 平滑后的垂直注视方向 [-1, 1]（-1=上, +1=下）
@@ -288,6 +290,9 @@ class GazeEstimator:
         # 二阶多项式联合映射：cal = coef · [1, x, y, x², xy, y²]
         # （x/y 联合输入 → 能拟合"看角落时两轴耦合"的非线性）
         # ============================================================
+        # 保留未校准原始值（隐式校准采样必须用它——校准后的值喂回
+        # 拟合器会形成"校准套校准"复合漂移）
+        uncal_gaze_x, uncal_gaze_y = raw_gaze_x, raw_gaze_y
         if self._calibrated:
             feats = self.poly_features(raw_gaze_x, raw_gaze_y)
             raw_gaze_x = max(-1.0, min(1.0, float(self._calib_coef_x @ feats)))
@@ -307,6 +312,8 @@ class GazeEstimator:
             face_detected=True,
             gaze_x=self._smooth_gaze_x,
             raw_gaze_x=raw_gaze_x,
+            uncal_gaze_x=uncal_gaze_x,
+            uncal_gaze_y=uncal_gaze_y,
             head_direction=head_dir,
             iris_direction=iris_dir,
             gaze_y=self._smooth_gaze_y,
