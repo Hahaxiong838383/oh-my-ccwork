@@ -34,11 +34,108 @@ CALIB_POINTS_2D: List[Tuple[float, float, float, float]] = [
     (0.50, 0.75,  0.00,  0.50),  # 中下
     (0.80, 0.75,  0.50,  0.50),  # 右下
 ]
-CALIB_DURATION = 2.0       # 每个点采集秒数（9 点，缩短每点时长）
-CALIB_WARMUP = 0.4         # 预热丢弃秒数
 CALIB_DOT_RADIUS = 18      # 校准圆点半径
 CALIB_SCALE_CLAMP = (0.3, 5.0)  # scale 钳位范围
-CALIB_MIN_SAMPLES = 3      # 每个点最少有效样本数
+CALIB_MIN_SAMPLES = 5      # 降级通过时每个点最少合格样本数
+
+# ── 质量门控（2026-07 v3.3：时间驱动 → 质量驱动闭环）──
+# 只有"盯稳了"的帧才计入合格样本：滑窗 std 低于阈值 = 真实注视
+# （扫视/走神/眨眼时 std 天然飙高，物理上装不出来）
+CALIB_STABILITY_WINDOW = 15   # 稳定性判定滑窗（帧）
+CALIB_STD_THRESHOLD = 0.05    # 滑窗 std 阈值（raw gaze 单位，per-axis）
+CALIB_TARGET_SAMPLES = 30     # 每点合格样本目标（转满一圈）
+CALIB_STAGE_TIMEOUT = 6.0     # 单阶段超时（秒）→ 放宽阈值重试
+CALIB_RELAX_FACTOR = 1.25     # 每次超时放宽阈值的倍数
+CALIB_MAX_RELAX = 2           # 最多放宽次数；之后降级通过（防转圈卡死）
+
+
+class FixationGate:
+    """单点注视质量门控状态机（纯逻辑，无 UI/摄像头依赖，可单测）。
+
+    feed() 每帧喂 raw gaze，内部维护：
+    - 稳定性滑窗：最近 N 帧 std 低于阈值才算"盯稳"
+    - 合格样本池：仅稳定帧计入，攒满 target → complete
+    - 超时降级：每 CALIB_STAGE_TIMEOUT 秒没攒满 → 放宽阈值重试，
+      放宽 CALIB_MAX_RELAX 次后 exhausted=True（调用方降级通过）
+    """
+
+    def __init__(self,
+                 window: int = CALIB_STABILITY_WINDOW,
+                 std_threshold: float = CALIB_STD_THRESHOLD,
+                 target: int = CALIB_TARGET_SAMPLES,
+                 stage_timeout: float = CALIB_STAGE_TIMEOUT,
+                 relax_factor: float = CALIB_RELAX_FACTOR,
+                 max_relax: int = CALIB_MAX_RELAX):
+        from collections import deque
+        self._recent = deque(maxlen=window)
+        self._window = window
+        self.std_threshold = std_threshold
+        self._target = target
+        self._stage_timeout = stage_timeout
+        self._relax_factor = relax_factor
+        self._max_relax = max_relax
+        self.qualified: List[Tuple[float, float]] = []
+        self.all_samples: List[Tuple[float, float]] = []
+        self.relax_count = 0
+        self.is_stable = False
+        self._stage_start: Optional[float] = None
+
+    @property
+    def progress(self) -> float:
+        return min(1.0, len(self.qualified) / self._target)
+
+    @property
+    def complete(self) -> bool:
+        return len(self.qualified) >= self._target
+
+    @property
+    def exhausted(self) -> bool:
+        """放宽次数用尽且仍未攒满 → 调用方应降级通过"""
+        return (self.relax_count >= self._max_relax
+                and self._stage_start is not None
+                and not self.complete)
+
+    def interrupt(self):
+        """人脸丢失等中断：清稳定性滑窗（合格样本保留）"""
+        self._recent.clear()
+        self.is_stable = False
+
+    def feed(self, x: float, y: float, now_s: float):
+        """喂一帧 raw gaze。返回当前是否稳定。"""
+        if self._stage_start is None:
+            self._stage_start = now_s
+        self._recent.append((x, y))
+        self.all_samples.append((x, y))
+
+        self.is_stable = False
+        if len(self._recent) == self._window:
+            xs = np.array([p[0] for p in self._recent])
+            ys = np.array([p[1] for p in self._recent])
+            if (float(np.std(xs)) < self.std_threshold
+                    and float(np.std(ys)) < self.std_threshold):
+                self.is_stable = True
+                self.qualified.append((x, y))
+
+        # 阶段超时 → 放宽阈值（防"永远转不满"）
+        if (not self.complete
+                and self.relax_count < self._max_relax
+                and now_s - self._stage_start > self._stage_timeout):
+            self.relax_count += 1
+            self.std_threshold *= self._relax_factor
+            self._stage_start = now_s
+            print(f"[Calibration] 阶段超时，放宽稳定阈值至 "
+                  f"{self.std_threshold:.3f}（第 {self.relax_count} 次）")
+        return self.is_stable
+
+    def result(self) -> Optional[Tuple[float, float]]:
+        """最终点位值：合格样本中位数；降级时用全量样本中位数兜底。"""
+        pool = self.qualified if len(self.qualified) >= CALIB_MIN_SAMPLES \
+            else self.all_samples
+        if len(pool) < CALIB_MIN_SAMPLES:
+            return None
+        xs = [p[0] for p in pool]
+        ys = [p[1] for p in pool]
+        return float(np.median(xs)), float(np.median(ys))
 
 
 # ── 辅助绘制 ──────────────────────────────────────────────
@@ -165,9 +262,10 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
     ]
 
     for pt_idx, (screen_rx, screen_ry, exp_gx, exp_gy) in enumerate(CALIB_POINTS_2D):
-        samples_x: List[float] = []
-        samples_y: List[float] = []
+        gate = FixationGate()
         start_time = time.time()
+        done_flash_until = None   # 完成后绿圈定格时刻
+        degraded = False
         dot_x = int(w * screen_rx)
         dot_y = int(h * screen_ry)
 
@@ -177,54 +275,84 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
               f"expect=({exp_gx:+.2f},{exp_gy:+.2f}))")
 
         while True:
-            elapsed = time.time() - start_time
-            if elapsed >= CALIB_DURATION:
-                break
-
+            now = time.time()
             frame = tracker.read_frame()
             if frame is None:
                 return None
 
             gaze_result = gaze_est.update(frame)
 
-            # 预热结束后开始采集
-            if elapsed >= CALIB_WARMUP and gaze_result.face_detected:
-                samples_x.append(gaze_result.raw_gaze_x)
-                samples_y.append(gaze_result.raw_gaze_y)
+            # ── 质量门控：只有盯稳的帧才算数 ──
+            if done_flash_until is None:
+                if gaze_result.face_detected:
+                    gate.feed(gaze_result.raw_gaze_x,
+                              gaze_result.raw_gaze_y, now)
+                else:
+                    gate.interrupt()
+
+                if gate.complete:
+                    done_flash_until = now + 0.45
+                    print(f"  → 合格样本 {len(gate.qualified)}，"
+                          f"用时 {now - start_time:.1f}s"
+                          + (f"（放宽 {gate.relax_count} 次）"
+                             if gate.relax_count else ""))
+                elif gate.exhausted:
+                    degraded = True
+                    done_flash_until = now + 0.45
+                    print(f"  ⚠️ 降级通过：合格 {len(gate.qualified)}/"
+                          f"{CALIB_TARGET_SAMPLES}，用全量样本兜底")
+
+            if done_flash_until is not None and now >= done_flash_until:
+                break
 
             # ── 绘制校准 UI ──
-            # 半透明遮罩
             overlay = frame.copy()
             cv2.rectangle(overlay, (0, 0), (w, h), (30, 30, 30), -1)
             cv2.addWeighted(overlay, 0.65, frame, 0.35, 0, frame)
 
-            # 标题
             _draw_text_centered(frame,
                                 f"Look at the dot ({pt_idx + 1}/{total_points})",
                                 40, scale=0.7, color=(200, 200, 200))
-
-            # 绘制所有点的淡影
             _draw_dot_grid(frame, pt_idx, w, h)
 
             # 脉动校准圆点
             pulse = 0.5 + 0.5 * math.sin(time.time() * 4.0)
             dot_r = CALIB_DOT_RADIUS + int(pulse * 6)
-            # 外圈光晕
-            cv2.circle(frame, (dot_x, dot_y), dot_r + 8,
-                       (0, 100, 200), -1)
+            cv2.circle(frame, (dot_x, dot_y), dot_r + 8, (0, 100, 200), -1)
             cv2.addWeighted(frame, 0.85, frame, 0.15, 0, frame)
-            # 实心圆点
-            cv2.circle(frame, (dot_x, dot_y), dot_r, (0, 200, 255), -1)
-            # 中心白点
+            done = done_flash_until is not None
+            dot_color = (80, 220, 80) if done else (0, 200, 255)
+            cv2.circle(frame, (dot_x, dot_y), dot_r, dot_color, -1)
             cv2.circle(frame, (dot_x, dot_y), 4, (255, 255, 255), -1)
 
-            # 进度条
-            progress = elapsed / CALIB_DURATION
-            _draw_progress_bar(frame, progress, h - 60)
+            # ── 质量进度环（v3.3 核心闭环反馈）──
+            ring_r = CALIB_DOT_RADIUS + 20
+            # 底环（暗灰）
+            cv2.circle(frame, (dot_x, dot_y), ring_r, (70, 70, 70), 3)
+            # 进度弧：完成=绿 / 盯稳采集中=亮青 / 未稳=灰
+            if done:
+                arc_color = (80, 220, 80)
+            elif gate.is_stable:
+                arc_color = (0, 220, 255)
+            else:
+                arc_color = (120, 120, 120)
+            arc_end = int(360 * (1.0 if done else gate.progress))
+            if arc_end > 0:
+                cv2.ellipse(frame, (dot_x, dot_y), (ring_r, ring_r),
+                            -90, 0, arc_end, arc_color, 4)
 
-            # 样本数
+            # 状态提示
+            if done:
+                status, s_color = ("DEGRADED - moving on" if degraded
+                                   else "OK!"), (80, 220, 80)
+            elif gate.is_stable:
+                status, s_color = "Collecting... hold your gaze", (0, 220, 255)
+            else:
+                status, s_color = "Fixate on the dot & hold still", (170, 170, 170)
+            _draw_text_centered(frame, status, h - 60, scale=0.55, color=s_color)
             _draw_text_centered(frame,
-                                f"Samples: {len(samples_x)}",
+                                f"Quality samples: {len(gate.qualified)}"
+                                f"/{CALIB_TARGET_SAMPLES}",
                                 h - 30, scale=0.4, color=(150, 150, 150))
 
             cv2.imshow(window_name, frame)
@@ -233,18 +361,14 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
                 print("[Calibration] 用户中途取消")
                 return None
 
-        # 计算本点中位数
-        if len(samples_x) < CALIB_MIN_SAMPLES:
-            print(f"[Calibration] 点 {pt_idx + 1} 样本不足 "
-                  f"({len(samples_x)})，跳过校准")
+        # 计算本点值（合格样本中位数；降级时全量兜底）
+        med = gate.result()
+        if med is None:
+            print(f"[Calibration] 点 {pt_idx + 1} 样本不足，校准失败")
             return None
-
-        median_x = float(np.median(samples_x))
-        median_y = float(np.median(samples_y))
-        medians_x.append(median_x)
-        medians_y.append(median_y)
-        print(f"  → median=({median_x:.3f}, {median_y:.3f}) "
-              f"(samples={len(samples_x)})")
+        medians_x.append(med[0])
+        medians_y.append(med[1])
+        print(f"  → median=({med[0]:.3f}, {med[1]:.3f})")
 
     # ── Phase 2: 最小二乘回归计算校准参数 ─────────────────
     # 2026-07 路线A：含 xy 交叉项的二阶多项式 + 仿射兜底择优

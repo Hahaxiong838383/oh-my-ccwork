@@ -1,5 +1,5 @@
 """
-app.py - 手势拖拽 Demo 主循环 (v3.2)
+app.py - 手势拖拽 Demo 主循环 (v3.3)
 
 使用 OpenCV 窗口 + MediaPipe Hands + FaceMesh 实现：
 - 摄像头实时画面
