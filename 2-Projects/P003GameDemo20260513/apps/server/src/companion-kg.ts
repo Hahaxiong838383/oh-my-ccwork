@@ -145,9 +145,13 @@ class CompanionKG {
     this.load();
     if (!this.ok || !finalText.trim()) return null;
     const qv = await this.queryVector(finalText, allowSync);
-    if (!qv) return null;
+    // skip 日志区分两种失败模式（真机验收诊断用）：no-vector=interim 没预热上 / low-score=检索到但低于阈值
+    if (!qv) { console.log('[companion-kg] skip(no-vector)'); return null; }
     let cands = this.topK(qv);
-    if (!cands.length || cands[0].score < SIM_THRESHOLD) return null;
+    if (!cands.length || cands[0].score < SIM_THRESHOLD) {
+      console.log(`[companion-kg] skip(low-score ${cands[0]?.score.toFixed(3) ?? 'n/a'})`);
+      return null;
+    }
     // 触发词重排：候选内命中触发词/主题名的 +0.05（P1 实测：作为重排信号优于先手抢答）
     cands = cands
       .map((c) => {
@@ -158,6 +162,8 @@ class CompanionKG {
       .sort((a, b) => b.score - a.score);
     const top = this.topics.get(cands[0].id)!;
     const alts = cands.slice(1).map((c) => this.topics.get(c.id)!.name);
+    // 命中日志只打主题名+分数，不落孩子原话（隐私零残留）
+    console.log(`[companion-kg] hit【${top.name}】${cands[0].score.toFixed(3)} 候选+${alts.length}`);
     const prereqNames = (this.prereqIn.get(top.id) ?? [])
       .map((id) => this.topics.get(id)?.name)
       .filter((n): n is string => !!n)
