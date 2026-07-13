@@ -32,6 +32,29 @@ type AihotCacheMode = 'next-revalidate' | 'no-store'
 
 const PAGE_TIMEOUT_MS = 6000 // 健康节点 0.2-0.9s；6s 给火山CN节点偶发抖动(2-4s)留余量，避免误丢页(2026-07-08 从 4s 放宽)
 const PAGE_RETRY = 1 // 单页失败(含超时)重试次数——瞬时抖动一次机会，治 aihot 412 类暴跌
+const FAILURE_LOG_COOLDOWN_MS = 5 * 60 * 1000
+
+const globalAihot = globalThis as typeof globalThis & {
+  __aihotFailureLogAt?: Record<string, number>
+}
+
+function describeError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error)
+  const cause = error.cause as { code?: string; message?: string } | undefined
+  return [error.name, error.message, cause?.code, cause?.message].filter(Boolean).join(': ')
+}
+
+function logFinalFailure(key: string, context: Record<string, unknown>, error: unknown): void {
+  const now = Date.now()
+  const loggedAt = globalAihot.__aihotFailureLogAt ?? {}
+  if (now - (loggedAt[key] ?? 0) < FAILURE_LOG_COOLDOWN_MS) return
+  loggedAt[key] = now
+  globalAihot.__aihotFailureLogAt = loggedAt
+  console.warn('[radar:aihot] fetch failed after retry', {
+    ...context,
+    error: describeError(error),
+  })
+}
 
 // 拉单页（take 硬上限 100；cursor 为空=第一页）。返回 items + 分页信息。失败重试 PAGE_RETRY 次。
 async function fetchPage(
@@ -83,9 +106,14 @@ async function fetchPage(
         category: (isCategory(it.category) ? it.category : category) as RadarCategory,
       }))
     return { items, hasNext: Boolean(data.hasNext), nextCursor: data.nextCursor ?? null }
-  } catch {
+  } catch (error) {
     // 单页失败（含超时 abort / !ok）：重试一次给瞬时抖动机会，仍失败则 fail-soft 返回空（不影响其余页）
     if (attempt < PAGE_RETRY) return fetchPage(category, cursor, cacheMode, attempt + 1)
+    logFinalFailure(
+      `page:${category}:${cursor ? 'cursor' : 'first'}`,
+      { category, page: cursor ? 'cursor' : 'first', attempts: attempt + 1 },
+      error,
+    )
     return { items: [], hasNext: false, nextCursor: null }
   } finally {
     clearTimeout(timer)
@@ -159,7 +187,8 @@ export async function fetchAihotLatest(take = 14): Promise<RadarItem[]> {
         summary: it.summary ?? null,
         category: (isCategory(it.category) ? it.category : null) as RadarCategory | null,
       }))
-  } catch {
+  } catch (error) {
+    logFinalFailure('latest', { endpoint: 'latest', attempts: 1 }, error)
     return []
   } finally {
     clearTimeout(timer)

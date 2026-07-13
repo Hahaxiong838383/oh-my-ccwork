@@ -34,6 +34,7 @@ const NEGATIVE_CACHE_MS = 90 * 1000 // 刷新失败后的静默窗：期间不�
 
 // 注意：放 data/ 根，不能进 data/radar/（那里是 theory 报告目录，readdir 按 *.json 全扫）
 const FEED_CACHE_FILE = path.join(process.cwd(), 'data', 'radar-feed-cache.json')
+const SOURCE_HEALTH_FILE = path.join(process.cwd(), 'data', 'radar-source-health.json')
 
 // 冷层：被热层 cap 挤出的旧记录归档目录（按月 JSONL，只增不删 = 真正的「数据主权」）。
 // rsync 部署排除 /data，运行时写入不被覆盖；每日 cron 异地备份到香港机。
@@ -110,6 +111,59 @@ async function saveDiskCache(cache: RadarFeedCache): Promise<void> {
   }
 }
 
+type SourceHealthEntry = {
+  ok: boolean
+  count: number
+  lastSuccessAt: string | null
+  error: string | null
+}
+
+type SourceHealth = {
+  checkedAt: string
+  aihot: SourceHealthEntry
+  yuweiwan: SourceHealthEntry
+}
+
+async function saveSourceHealth(
+  checkedAt: string,
+  aihotItems: RadarItem[],
+  ywItems: RadarItem[],
+  aihotRejected: boolean,
+  ywRejected: boolean,
+): Promise<void> {
+  let previous: Partial<SourceHealth> = {}
+  try {
+    previous = JSON.parse(await fs.readFile(SOURCE_HEALTH_FILE, 'utf-8')) as SourceHealth
+  } catch {
+    // 首次运行没有历史状态。
+  }
+
+  const entry = (
+    items: RadarItem[],
+    rejected: boolean,
+    prev: SourceHealthEntry | undefined,
+  ): SourceHealthEntry => ({
+    ok: items.length > 0 && !rejected,
+    count: items.length,
+    lastSuccessAt: items.length > 0 && !rejected ? checkedAt : prev?.lastSuccessAt ?? null,
+    error: rejected ? 'request_rejected' : items.length === 0 ? 'zero_items' : null,
+  })
+
+  const health: SourceHealth = {
+    checkedAt,
+    aihot: entry(aihotItems, aihotRejected, previous.aihot),
+    yuweiwan: entry(ywItems, ywRejected, previous.yuweiwan),
+  }
+
+  try {
+    const tmp = `${SOURCE_HEALTH_FILE}.tmp`
+    await fs.writeFile(tmp, JSON.stringify(health, null, 2), 'utf-8')
+    await fs.rename(tmp, SOURCE_HEALTH_FILE)
+  } catch {
+    // 可观测文件写入失败不阻断资讯主链路。
+  }
+}
+
 // 双上游并行（2026-07-07 起）：aihot（主，泛 AI 资讯 ~1900 条）+ yuweiwan（副，92 源中文聚合 ~770 条）。
 // allSettled 隔离故障——任一源挂只少一路数据，绝不拖垮另一路；归档合并天然按 url 去重叠。
 async function refreshRadarFeed(prev: RadarFeedCache | undefined): Promise<RadarFeed> {
@@ -122,6 +176,15 @@ async function refreshRadarFeed(prev: RadarFeedCache | undefined): Promise<Radar
   const freshItems = sortByTimeDesc(dedupe([...aihotItems, ...ywItems]))
   const prevItems = prev?.feed.items ?? []
   const now = Date.now()
+  const checkedAt = new Date(now).toISOString()
+
+  void saveSourceHealth(
+    checkedAt,
+    aihotItems,
+    ywItems,
+    aihotSettled.status === 'rejected',
+    ywSettled.status === 'rejected',
+  )
 
   const failed = freshItems.length === 0
   const degraded = isDegraded(freshItems.length, prevItems.length)
