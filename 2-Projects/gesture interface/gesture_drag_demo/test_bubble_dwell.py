@@ -122,6 +122,52 @@ def test_card_lock_survives_frame_order():
     assert st.candidate_locked, "卡片锁定应在真实帧序下达成"
 
 
+def test_gaze_y_gates_cards():
+    """v3.5：视线在上方（看气泡）时，同列底部卡片不得成为候选。"""
+    from dataclasses import dataclass as _dc
+    from config import CARD_GAZE_Y_MIN, CANDIDATE_LOCK_FRAMES
+
+    @_dc
+    class FakeCard:
+        x: int
+        y: int = 500
+        w: int = 85
+        h: int = 60
+        label: str = "c"
+
+    sel = AttentionSelector(W)
+    cx_px = (0.3 + 1.0) / 2.0 * W
+    cards = [FakeCard(x=int(cx_px - 42))]
+    st = None
+    # 视线水平对准该卡片所在列、但垂直在上方
+    for _ in range(CANDIDATE_LOCK_FRAMES + 5):
+        sel.set_dragging(False)
+        st = sel.update(gaze_x=0.3, confidence=0.9, cards=cards,
+                        direction_label="CENTER-R", gaze_y=-0.5)
+    assert st.candidate_card is None, "视线在上方时卡片不应躺枪"
+    # 视线落到下方 → 正常锁定
+    for _ in range(CANDIDATE_LOCK_FRAMES + 2):
+        st = sel.update(gaze_x=0.3, confidence=0.9, cards=cards,
+                        direction_label="CENTER-R", gaze_y=0.5)
+    assert st.candidate_card is not None and st.candidate_locked
+
+
+def test_gaze_y_gates_bubbles():
+    """v3.5：视线在下方（看卡片区）时气泡进度衰减、不会锁定。"""
+    sel = AttentionSelector(W)
+    b = _bubble_at_gaze(0.3)
+    for _ in range(BUBBLE_LOCK_FRAMES + 10):
+        sel.update_bubbles(gaze_x=0.3, confidence=0.9, bubbles=[b],
+                           gaze_y=0.6)
+    assert not sel._bubble_locked
+    assert sel.bubble_lock_progress == 0.0
+    # 视线回到上方 → 正常累积锁定
+    for _ in range(BUBBLE_LOCK_FRAMES + 10):
+        sel.update_bubbles(gaze_x=0.3, confidence=0.9, bubbles=[b],
+                           gaze_y=-0.2)
+    assert sel._bubble_locked
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):

@@ -17,6 +17,7 @@ from typing import Optional, Any
 
 from config import (
     CANDIDATE_LOCK_FRAMES, CANDIDATE_RELEASE_FRAMES,
+    CARD_GAZE_Y_MIN, BUBBLE_GAZE_Y_MAX,
     CANDIDATE_MIN_CONFIDENCE, ATTENTION_SWITCH_MARGIN,
     ATTENTION_SCORE_SIGMA,
     BUBBLE_LOCK_FRAMES, BUBBLE_RELEASE_FRAMES, BUBBLE_PROGRESS_DECAY,
@@ -83,7 +84,8 @@ class AttentionSelector:
             self._bubble_release_count = 0
 
     def update(self, gaze_x: float, confidence: float,
-               cards: list, direction_label: str = "N/A") -> AttentionState:
+               cards: list, direction_label: str = "N/A",
+               gaze_y: float = None) -> AttentionState:
         """
         每帧调用，根据 gaze_x 更新候选卡片。
 
@@ -146,6 +148,12 @@ class AttentionSelector:
             if score > best_score:
                 best_score = score
                 best_card = card
+
+        # v3.5 垂直门控：视线在上方（如看气泡）时，底部卡片不得成为
+        # 候选——修"盯气泡时底部卡片躺枪跳选中"（评分是 1D 水平的历史设计）
+        if gaze_y is not None and gaze_y < CARD_GAZE_Y_MIN:
+            best_card = None
+            best_score = -1.0
 
         # ============================================================
         # 2. 候选跟踪与锁定
@@ -221,7 +229,7 @@ class AttentionSelector:
         return min(1.0, self._bubble_lock_count / max(1, BUBBLE_LOCK_FRAMES))
 
     def update_bubbles(self, gaze_x: float, confidence: float,
-                       bubbles: list) -> None:
+                       bubbles: list, gaze_y: float = None) -> None:
         """
         每帧调用（在 update() 之后），根据 gaze_x 更新候选气泡。
 
@@ -237,8 +245,11 @@ class AttentionSelector:
         if self._dragging:
             return
 
+        # v3.5 垂直门控：视线在下方（如看卡片区）时气泡进度衰减
+        _y_gated = gaze_y is not None and gaze_y > BUBBLE_GAZE_Y_MAX
+
         # 没有气泡 → 清除候选
-        if not bubbles or confidence < 0.15:
+        if not bubbles or confidence < 0.15 or _y_gated:
             self._bubble_release_count += 1
             # v3.4：进度衰减而非清零（短暂低置信不打回原点）
             self._bubble_lock_count = max(

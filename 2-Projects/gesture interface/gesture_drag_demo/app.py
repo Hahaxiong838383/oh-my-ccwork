@@ -144,6 +144,7 @@ def main():
                 confidence=gaze_result.confidence,
                 cards=cards,
                 direction_label=gaze_result.direction_label,
+                gaze_y=gaze_result.gaze_y,
             )
 
             # --- 气泡更新 ---
@@ -154,6 +155,7 @@ def main():
                 gaze_x=gaze_result.gaze_x,
                 confidence=gaze_result.confidence,
                 bubbles=bubble_mgr.bubbles,
+                gaze_y=gaze_result.gaze_y,
             )
             # 同步气泡候选到 attn_state（update_bubbles 直接修改内部状态，
             # 但 attn_state 快照在 update() 时已生成，需要补刷）
