@@ -32,13 +32,13 @@ from config import (
     CAMERA_INDEX, CAMERA_WIDTH, CAMERA_HEIGHT,
     MAX_NUM_HANDS, PINCH_ON_THRESHOLD, PINCH_OFF_THRESHOLD,
     CONFIRM_FRAMES, LOST_FRAMES_RELEASE, SMOOTHING_ALPHA,
-    WINDOW_NAME,
+    WINDOW_NAME, VERSION,
 )
 
 
 def main():
     print("=" * 50)
-    print("  Gesture Drag Demo v3.1")
+    print(f"  Gesture Drag Demo {VERSION}")
     print("  4 Desktops x 3 Cards = 12 Cards")
     print("  ESC: 退出 | R: 重置 | G: 注视调试")
     print("  F: 面部特征 | C: 重新校准")
@@ -270,6 +270,11 @@ def main():
                 show_gaze=show_gaze_debug,
                 face_features=face_features if show_face_debug else None,
             )
+
+            # 版本水印（右下角；.app 里终端横幅不可见，UI 是唯一出口）
+            cv2.putText(frame, VERSION,
+                        (frame.shape[1] - 58, frame.shape[0] - 15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (130, 130, 130), 1)
 
             # 显示画面
             cv2.imshow(WINDOW_NAME, frame)
