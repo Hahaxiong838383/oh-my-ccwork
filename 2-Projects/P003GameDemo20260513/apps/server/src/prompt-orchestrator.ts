@@ -21,6 +21,7 @@ export function assembleSystemPrompt(
   aiLiteracyGuide?: string | null,
   onboardingGuide?: string | null,
   knowledgeRecall?: string | null,
+  companionGuardrail?: string | null,
 ): string {
   // 记忆注入是「增益」而非「必需」：profile-store 读取 / 解析任何异常都降级回 basePrompt，
   // 绝不阻断实时语音主链路（team 致命 #2）。
@@ -43,13 +44,17 @@ export function assembleSystemPrompt(
     // 同样降级安全：guardrail 为 null（未命中 / 加载失败）则不追加，不影响主链路。
     // AI 启蒙门控（docs/22 §9 双层「门控层」）：双命中让位——学科护栏优先(求解正确性)，AI 启蒙引导仅在
     // 无学科护栏时注入(避免双段 >1600 字稀释人格 / 拖 TTFT)；AI 安全红线已由 basePrompt 的 AI_SAFETY_BASELINE 常驻兜底，双命中不裸奔。
+    // L_companion（陪伴域，os-taxonomy 切片）排最末位：K12 学科护栏最优先（求解正确性），
+    // AI 启蒙次之（产品定制的生动引导，Computing 话题让位给它），companion 只接"非学科非 AI"的
+    // 陪伴场景（科学常识 / 生活技能 / 社交情感 / 学习方法）——三者互斥单注入，防多段护栏稀释人格。
     if (curriculumGuardrail) prompt += `\n\n${curriculumGuardrail}`;
     else if (aiLiteracyGuide) prompt += `\n\n${aiLiteracyGuide}`;
+    else if (companionGuardrail) prompt += `\n\n${companionGuardrail}`;
     // 尾部人设锚点（docs/24，team 三发共识破 recency bias）：课程/启蒙护栏追加在末尾时，
     // 长上下文 LLM 的近因效应会让护栏(末尾)盖过世界观(开头)，孩子人设被「老师化」。
     // 末尾再钉一句高张力人设复述(~80字)夺回 recency，比重复整段世界观省 token。
     // 仅在确有护栏注入时加(无护栏不稀释)，且 basePrompt 已含世界观时才有意义。
-    if (curriculumGuardrail || aiLiteracyGuide) {
+    if (curriculumGuardrail || aiLiteracyGuide || companionGuardrail) {
       prompt +=
         '\n\n【牢记】无论上面有什么学习/知识引导，你始终是方舟上的小可——孩子的方舟队友，' +
         '童话陪伴的口吻、温暖好奇的伙伴，绝不变成讲课说教的老师。回答要保持方舟飞船、能量核心、星域探索、生态缸的陪伴感；' +

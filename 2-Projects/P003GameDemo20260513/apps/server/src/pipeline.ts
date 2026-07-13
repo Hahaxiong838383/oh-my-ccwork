@@ -15,6 +15,7 @@ import { assembleSystemPrompt } from './prompt-orchestrator.js';
 import { profileStore } from './profile-store.js';
 import { extractAndPersist } from './memory-extractor.js';
 import { curriculumKG } from './curriculum-kg.js';
+import { companionKG } from './companion-kg.js';
 import { buildAiLiteracyGuide, AI_SAFETY_BASELINE } from './ai-literacy.js';
 import { buildKnowledgeRecall } from './xiaoke-kb.js';
 import { ARK_WORLDVIEW_BASE, FEEDBACK_PERSONA_SUFFIX } from './prompts.js';
@@ -156,7 +157,7 @@ export class VoicePipeline {
       case 'chat.trigger':
         console.log('[pipeline] chat.trigger received:', msg.text.slice(0, 30));
         // 开场白/触发指令恒用普通人格（card 切换 captureMode 永远 off，不该吐槽人格）
-        this.startLlmAndTts(msg.text, false, this.sessionMeta);
+        this.startLlmAndTts(msg.text, false, this.sessionMeta, true);
         return;
       default:
         this.sendError('BAD_MESSAGE', '未知客户端消息');
@@ -206,6 +207,9 @@ export class VoicePipeline {
         sampleRate,
         onPartial: (text) => {
           this.send({ type: 'asr.partial', text });
+          // L_companion 预热：interim 阶段先算 query 向量（藏进说话窗口），final 零同步等待。
+          // fire-and-forget + 内部静默降级，绝不影响 ASR 流。开关关时为 no-op。
+          companionKG.prewarm(text);
         },
         onFinal: (text) => {
           this.send({ type: 'asr.final', text });
@@ -284,7 +288,9 @@ export class VoicePipeline {
     }
   }
 
-  private async startLlmAndTts(userText: string, feedbackMode: boolean, turnMeta: SessionMeta | null): Promise<void> {
+  // companionSync：chat.trigger 文字通道无 ASR interim 预热且无 TTFT 铁律压力，允许同步算 query 向量；
+  // 语音路径恒 false（只吃 interim 预热 + ≤80ms 兜底，见 companion-kg.ts 延迟铁律注释）。
+  private async startLlmAndTts(userText: string, feedbackMode: boolean, turnMeta: SessionMeta | null, companionSync = false): Promise<void> {
     const finalText = userText.trim();
     if (!finalText) return;
 
@@ -361,11 +367,14 @@ export class VoicePipeline {
       const curriculumGuardrail = curriculumKG.buildGuardrail(finalText);
       // AI 启蒙双层「门控层」(docs/22 §9)：命中 AI 话题才注入生动启蒙引导；闲聊返 null 不注入、不稀释人格。
       const aiLiteracyGuide = buildAiLiteracyGuide(finalText);
+      // L_companion（陪伴域，os-taxonomy 切片）：语义 top3 + 触发词重排。向量已在 interim 预热，
+      // 此处最多等 80ms 兜底；开关关 / 未预热 / 低于阈值 → null 不注入。仅在 K12 与 AI 启蒙都未命中时才会被拼装（见 orchestrator）。
+      const companionGuardrail = curriculumGuardrail || aiLiteracyGuide ? null : await companionKG.buildGuardrail(finalText, companionSync);
       // 世界观知识按需召回（xiaoke-kb，仿 curriculum-kg）：孩子聊到经济/身世/藏品/生态缸/夜航/设置等才召回对应条目。
       const knowledgeRecall = buildKnowledgeRecall(finalText);
       // 第6参 onboardingGuide：WS 路径不做 onboarding（那是火山 RTC custom-llm 的功能），传 null；第7参才是 knowledgeRecall。
       // 吐槽人格放最末尾（近因效应 docs/36 同源）：否则被世界观 + 用户字面意图盖过，LLM 会去满足请求而非收集吐槽。
-      let systemPrompt = assembleSystemPrompt(baseSystemPrompt, turnMeta, this.authContext, curriculumGuardrail, aiLiteracyGuide, null, knowledgeRecall);
+      let systemPrompt = assembleSystemPrompt(baseSystemPrompt, turnMeta, this.authContext, curriculumGuardrail, aiLiteracyGuide, null, knowledgeRecall, companionGuardrail);
       if (feedbackMode) systemPrompt += `\n\n${FEEDBACK_PERSONA_SUFFIX}`;
       // 工作台调试流依赖：回发本轮真实使用的 prompt（所见即所发）
       this.send({ type: 'debug.prompt_assembled', systemPrompt, userText: finalText });
