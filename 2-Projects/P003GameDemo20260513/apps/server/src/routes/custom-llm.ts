@@ -4,6 +4,7 @@ import { ARK_WORLDVIEW_BASE, FEEDBACK_PERSONA_SUFFIX } from '../prompts.js';
 import { AI_SAFETY_BASELINE, buildAiLiteracyGuide } from '../ai-literacy.js';
 import { assembleSystemPrompt, buildOnboardingGuide } from '../prompt-orchestrator.js';
 import { curriculumKG } from '../curriculum-kg.js';
+import { companionKG } from '../companion-kg.js';
 import { createGeminiLlmClient, type ChatHistoryTurn } from '../providers/gemini-llm.js';
 import { createDeepseekLlmClient } from '../providers/deepseek-llm.js';
 import { createMinimaxLlmClient } from '../providers/minimax-llm.js';
@@ -96,11 +97,16 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
   // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回；吐槽/override 时不召回。
   const knowledgeRecall = (overridePrompt || isFeedback) ? null : buildKnowledgeRecall(userText);
+  // L_companion（对齐 pipeline 的互斥链 K12>AI 启蒙>companion）：RTC 回调无 interim 预热条件 → allowSync
+  // 同步算 query 向量（超时上限 400ms，超时/失败降级不注入）。override/吐槽轮不注入。真机验收 2026-07-13 补挂。
+  const companionGuardrail = (overridePrompt || isFeedback || curriculumGuardrail || aiLiteracyGuide)
+    ? null
+    : await companionKG.buildGuardrail(userText, true);
   console.log(`[custom-llm] ${authContext ? '记忆注入 account=' + authContext.accountId : '匿名（无 token）'}${overridePrompt ? ' [override]' : ''}${isFeedback ? ' [feedback]' : ''}${inOnboarding ? ' [onboarding]' : ''}${knowledgeRecall ? ' [kb]' : ''}`);
   // override（工作台调的 prompt）优先：直接用它（自带完整内容）；否则走固定大脑组装。
   let systemPrompt = overridePrompt
     ? overridePrompt
-    : assembleSystemPrompt(base, null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide, knowledgeRecall);
+    : assembleSystemPrompt(base, null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide, knowledgeRecall, companionGuardrail);
   // 吐槽人格放 systemPrompt 最末尾（近因效应，docs/36 同源）：否则被世界观 + 用户字面意图(如"想听故事")盖过，LLM 会去满足请求而非收集吐槽。
   if (isFeedback) systemPrompt += `\n\n${FEEDBACK_PERSONA_SUFFIX}`;
   // 吐槽落库（复用 feedbackStore，进 admin/家长端同一反馈看板；try-catch 不阻断回应）。

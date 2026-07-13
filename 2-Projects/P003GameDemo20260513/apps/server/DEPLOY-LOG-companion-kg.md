@@ -56,6 +56,12 @@ ssh aliyun-hk 'cp -r /opt/p003/_backup/<TS>/server-src/* /opt/p003/server/src/ &
 - [x] 内存：companion 加载后 p003-voice 66MB（部署前基线 65.8MB，无可感知增量）；机器 available 522Mi
 - [ ] 真实语音链路（interim 预热路径）：chat.trigger 验证走 allowSync 分支（与语音路径共享 embed/检索/组装，仅等待策略不同）；真机麦克风验收待川哥日常使用观察或后续真机专测
 
+### 真机验收第一轮对账（2026-07-13 20:40-21:00）+ RTC 补挂
+
+- **对账结论：该时段真机走火山 RTC CustomLLM 链路，companion 当时只挂 WS pipeline → 全程零调用（日志零 hit/skip），白测**。教训：**多入口系统的验收指南必须先确认被测端走哪条链路**（真机 App=RTC，体验台 WS 模式=pipeline）。
+- **补挂（21:1x）**：custom-llm.ts 挂 companionGuardrail（互斥链对齐 pipeline；override/吐槽轮不注入）。RTC 无 interim → allowSync 同步 embed，**超时上限收紧 400ms**（典型 +250ms TTFT，超时降级不注入）。E2E 实锤：`hit【潮汐波浪和洋流】0.496` + SSE 流正常。火山 Prefill 真藏延迟方案记二期。
+- 待川哥真机重测（同一批话语），关注：命中体感 + TTFT 是否可感知变慢（不满意关 `COMPANION_KG` 秒回滚）。
+
 ### 验证中发现的既有问题（非本次引入，不擅动，记录为后续建议）
 
 1. **现网 curriculum-kg 子串误报会抢占 companion**："小狗小猫**小时候**好小"被 K12 数学概念「小时」子串命中（"小时候"⊃"小时"），注入了不相关的时间单位护栏，并按互斥链挡掉了 companion 本可正确命中的【动物的成长阶段】。建议后续：K12 概念名单加超短词（小时/分/秒/角/力）长度或词边界门槛，或 K12 也升级语义层。

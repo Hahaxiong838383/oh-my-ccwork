@@ -74,11 +74,11 @@ class CompanionKG {
     }
   }
 
-  private async embed(text: string, signal: AbortSignal): Promise<Float32Array | null> {
+  private async embed(text: string, signal: AbortSignal, timeoutMs = EMBED_TIMEOUT_MS): Promise<Float32Array | null> {
     const key = process.env.SILICONFLOW_API_KEY;
     if (!key) return null;
     try {
-      const timeout = AbortSignal.timeout(EMBED_TIMEOUT_MS);
+      const timeout = AbortSignal.timeout(timeoutMs);
       const res = await fetch(EMBED_URL, {
         method: 'POST',
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -121,7 +121,8 @@ class CompanionKG {
       const winner = await Promise.race([w!.promise, new Promise<null>((r) => setTimeout(() => r(null), FINAL_WAIT_MS))]);
       if (winner) return winner;
     }
-    if (allowSync) return this.embed(t, new AbortController().signal);
+    // 同步场景（chat.trigger / RTC custom-llm 无 interim）：超时收紧到 400ms 上限，最坏加 400ms TTFT，超时降级不注入
+    if (allowSync) return this.embed(t, new AbortController().signal, 400);
     return null;
   }
 
