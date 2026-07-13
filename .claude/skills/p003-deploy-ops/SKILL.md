@@ -25,6 +25,8 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - 三独立 SQLite:`data/accounts.db`(账号+邀请码) / `profile.db`(family_member+device) / `conversation.db` / `feedback.db`。`data/` 被 gitignore,生产单独 seed。
 - dev 端口差异:**parent vite proxy `/api`→8787**,**web vite proxy `/api`→3001**(本地验证起 server 要对应端口)。
 
+- **L_companion 陪伴域知识层（2026-07-13 上线）**：`src/companion-kg.ts` + `assets/companion-kg/`（os-taxonomy 中文切片 376 主题 + bge 向量表 3.5M，许可署名见其 SOURCE.md）。env 依赖：`COMPANION_KG=1`（灰度开关，默认关=零行为）+ `SILICONFLOW_API_KEY`（query 向量，bge-large-zh-v1.5）+ `COMPANION_SIM_THRESHOLD`（默认 0.47）。互斥链 K12>AI 启蒙>companion。**改 embedding 模型必须重算向量表**（query/passage 同模型铁律）。观测日志 `[companion-kg] hit【主题】分数 / skip(no-vector|low-score)`（不落孩子原话）。回滚三级见 `apps/server/DEPLOY-LOG-companion-kg.md`。
+
 ## 部署 SOP（按改了哪端,只动相关的）
 
 **Step 0 备份(必做,high blast)**:`ssh aliyun-hk 'ts=$(date +%Y%m%d-%H%M%S); bk=/opt/p003/_backup/$ts; mkdir -p $bk; cp -r 生产相关目录 $bk/'`
@@ -64,6 +66,8 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 8. **个人站 vs 公司侧不同源**(2026-06-19 AI 启蒙踩):个人站 `/opt/kidshub-personal`(kidshub-voice:3002,DeepSeek,精简 5 文件) ≠ 公司侧 `/opt/p003`(p003-voice:3001,gemini,13 文件)。两端功能同步**先 ssh diff 判同源再动**(新文件 scp / 共享文件手动适配),盲 rsync 必崩。
 9. **本地起 server 验证踩坑**(2026-06-19):① `.env.local` 的 `GEMINI_API_KEY` 可能空(本地不调 gemini,生产走 Keychain gemini-proxy-token)→起 server 前 `export GEMINI_API_KEY=$(security find-generic-password -s gemini-proxy-token -a gemini-proxy -w)` 覆盖,否则启动日志 `LLM: missing-env` ② WS 路径必须 `/ws/voice`(index.ts upgrade pathname 校验,否则 socket hang up) ③ 不走语音的文字对话 E2E 入口=`chat.trigger`(type+text),收 `debug.prompt_assembled` 验 prompt 真注入。
 10. **kidshub-ai vhost 里的 `/myjavis/` location 是 MyJavis 项目的火山回调中转**(2026-07-02 加,非 P003 业务):反代 → `javis.chenchuan.cc`(47.239.204.68 手机号账号 HK ECS)。存在原因=字节机房出境仅本机(8.218 国际站段)可达,MyJavis 自己的 47.239(中国站段)火山直连零到达。**改 kidshub-ai vhost 时别删它**;它只承载火山→MyJavis 的回调流量,与 P003 的 `/v1/` 互不影响。详见 memory `feedback_volc_customllm_callback_geo_constraint`。
+
+11. **pm2 重启存活是部署验收项非可选**(2026-07-13 实锤):服务器 07-12 重启后 pm2 三服务全灭一天多(无 startup),chenchuan-site/p003-voice/kidshub-voice 全下线无告警。已配 `pm2 startup systemd + pm2 save`(systemctl is-enabled pm2-root=enabled)。**新增/删除 pm2 进程后必须重跑 `pm2 save`**,否则下次重启回到旧 dump。机器内存仅 1.6G/无 swap——上新功能先 `free -h` 侦察,进程内大模型必死,重资产走离线预计算(见 memory low-ram-vps-ai-offline-precompute)。
 
 ## 验证铁律（cc 自己验,绝不甩给川哥）
 
