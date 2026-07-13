@@ -26,14 +26,20 @@ SMOOTHING_ALPHA = 0.6        # EMA 平滑系数（越大越跟手，越小越平
 # ============================================================
 FACE_CONF_THRESHOLD = 0.5    # FaceMesh 检测置信度
 FACE_TRACK_THRESHOLD = 0.5   # FaceMesh 追踪置信度
-GAZE_SMOOTHING_ALPHA = 0.35  # 注视方向 EMA 平滑（越小越稳）
 HEAD_WEIGHT = 0.35            # 头部朝向权重（0~1，剩余给虹膜）
 HEAD_SCALE = 2.5              # 头部偏移放大系数
 IRIS_SCALE = 1.8              # 虹膜偏移放大系数
 MIN_FACE_WIDTH = 30           # 最小有效面部宽度（像素）
 
+# ── 注视 OneEuro 平滑（2026-07 路线A：替代固定 EMA）──
+# min_cutoff 越小静视越稳；beta 越大扫视响应越快
+GAZE_MIN_CUTOFF = 0.8         # 水平静视平滑强度
+GAZE_BETA = 0.6               # 水平速度自适应敏感度
+GAZE_MIN_CUTOFF_Y = 0.6       # 垂直更稳（信号噪声更大）
+GAZE_BETA_Y = 0.5             # 垂直速度自适应敏感度
+GAZE_D_CUTOFF = 1.0           # 速度估计 cutoff（默认）
+
 # ── 垂直注视 ──
-GAZE_SMOOTHING_ALPHA_Y = 0.30  # 垂直 EMA 平滑（比水平稍稳）
 HEAD_WEIGHT_Y = 0.30            # 垂直头部权重（上下摆幅小，权重低于水平）
 HEAD_SCALE_Y = 3.0              # 垂直头部偏移放大（上下摆幅小，需要更大放大）
 IRIS_SCALE_Y = 2.0              # 垂直虹膜偏移放大

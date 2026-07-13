@@ -10,6 +10,8 @@ gaze_estimator.py - 粗粒度注视方向估计
 不做精确注视点映射，只做方向级别的估计。
 """
 
+import time
+
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -18,11 +20,14 @@ from typing import Optional
 
 from config import (
     FACE_CONF_THRESHOLD, FACE_TRACK_THRESHOLD,
-    GAZE_SMOOTHING_ALPHA, HEAD_WEIGHT,
+    HEAD_WEIGHT,
     HEAD_SCALE, IRIS_SCALE, MIN_FACE_WIDTH,
-    GAZE_SMOOTHING_ALPHA_Y, HEAD_WEIGHT_Y,
+    HEAD_WEIGHT_Y,
     HEAD_SCALE_Y, IRIS_SCALE_Y,
+    GAZE_MIN_CUTOFF, GAZE_BETA, GAZE_MIN_CUTOFF_Y, GAZE_BETA_Y,
+    GAZE_D_CUTOFF,
 )
+from one_euro import OneEuroFilter
 
 
 # MediaPipe FaceMesh 关键点索引
@@ -103,15 +108,19 @@ class GazeEstimator:
             min_detection_confidence=FACE_CONF_THRESHOLD,
             min_tracking_confidence=FACE_TRACK_THRESHOLD,
         )
-        self._smooth_gaze_x: Optional[float] = None
-        self._smooth_gaze_y: Optional[float] = None
+        # OneEuro 平滑（2026-07 路线A：替代固定 EMA——慢速强平滑抗抖、
+        # 快速低滞后跟手；调研依据 UnitEye MuC'24 三滤波实测对比）
+        self._filter_x = OneEuroFilter(
+            min_cutoff=GAZE_MIN_CUTOFF, beta=GAZE_BETA, d_cutoff=GAZE_D_CUTOFF)
+        self._filter_y = OneEuroFilter(
+            min_cutoff=GAZE_MIN_CUTOFF_Y, beta=GAZE_BETA_Y, d_cutoff=GAZE_D_CUTOFF)
         self._lost_count = 0
 
-        # 2D 校准参数（仿射：calibrated = a * raw + b）
-        self._calib_a_x: float = 1.0
-        self._calib_b_x: float = 0.0
-        self._calib_a_y: float = 1.0
-        self._calib_b_y: float = 0.0
+        # 2D 校准参数（2026-07 路线A：per-axis 仿射 → 含 xy 交叉项的
+        # 二阶多项式，联合输入 (x,y) 修正边缘/垂直非线性与轴间耦合；
+        # coef 为 6 维：[1, x, y, x², xy, y²] 的系数）
+        self._calib_coef_x: Optional[np.ndarray] = None
+        self._calib_coef_y: Optional[np.ndarray] = None
         self._calibrated: bool = False
 
     # ---------- 校准接口 ----------
@@ -119,29 +128,29 @@ class GazeEstimator:
     def is_calibrated(self) -> bool:
         return self._calibrated
 
-    def set_calibration(self, a_x: float, b_x: float,
-                        a_y: float, b_y: float):
-        """设置 2D 仿射校准参数（calibrated = a * raw + b）"""
-        self._calib_a_x = a_x
-        self._calib_b_x = b_x
-        self._calib_a_y = a_y
-        self._calib_b_y = b_y
+    @staticmethod
+    def poly_features(x: float, y: float) -> np.ndarray:
+        """二阶多项式特征向量 [1, x, y, x², xy, y²]（校准拟合与应用共用）"""
+        return np.array([1.0, x, y, x * x, x * y, y * y])
+
+    def set_calibration(self, coef_x: np.ndarray, coef_y: np.ndarray):
+        """设置 2D 多项式校准系数（各 6 维，对应 [1,x,y,x²,xy,y²]）"""
+        self._calib_coef_x = np.asarray(coef_x, dtype=float)
+        self._calib_coef_y = np.asarray(coef_y, dtype=float)
         self._calibrated = True
-        self._smooth_gaze_x = None  # 重置平滑，避免旧值残留
-        self._smooth_gaze_y = None
-        print(f"[Gaze] 2D 校准已应用: "
-              f"X: a={a_x:.3f} b={b_x:.3f}, "
-              f"Y: a={a_y:.3f} b={b_y:.3f}")
+        self._filter_x.reset()  # 重置平滑，避免旧值残留
+        self._filter_y.reset()
+        print(f"[Gaze] 2D 多项式校准已应用: "
+              f"coef_x={np.round(self._calib_coef_x, 3).tolist()}, "
+              f"coef_y={np.round(self._calib_coef_y, 3).tolist()}")
 
     def clear_calibration(self):
         """清除校准参数，回到未校准状态（重新校准前必须调用）"""
-        self._calib_a_x = 1.0
-        self._calib_b_x = 0.0
-        self._calib_a_y = 1.0
-        self._calib_b_y = 0.0
+        self._calib_coef_x = None
+        self._calib_coef_y = None
         self._calibrated = False
-        self._smooth_gaze_x = None
-        self._smooth_gaze_y = None
+        self._filter_x.reset()
+        self._filter_y.reset()
         self._lost_count = 0
         print("[Gaze] 校准已清除，回到原始状态")
 
@@ -157,8 +166,8 @@ class GazeEstimator:
         if not results.multi_face_landmarks:
             self._lost_count += 1
             if self._lost_count > 10:
-                self._smooth_gaze_x = None
-                self._smooth_gaze_y = None
+                self._filter_x.reset()
+                self._filter_y.reset()
             return GazeResult(face_detected=False)
 
         self._lost_count = 0
@@ -276,29 +285,20 @@ class GazeEstimator:
 
         # ============================================================
         # 5. 应用 2D 校准（在平滑之前）
+        # 二阶多项式联合映射：cal = coef · [1, x, y, x², xy, y²]
+        # （x/y 联合输入 → 能拟合"看角落时两轴耦合"的非线性）
         # ============================================================
         if self._calibrated:
-            raw_gaze_x = self._calib_a_x * raw_gaze_x + self._calib_b_x
-            raw_gaze_x = max(-1.0, min(1.0, raw_gaze_x))
-            raw_gaze_y = self._calib_a_y * raw_gaze_y + self._calib_b_y
-            raw_gaze_y = max(-1.0, min(1.0, raw_gaze_y))
+            feats = self.poly_features(raw_gaze_x, raw_gaze_y)
+            raw_gaze_x = max(-1.0, min(1.0, float(self._calib_coef_x @ feats)))
+            raw_gaze_y = max(-1.0, min(1.0, float(self._calib_coef_y @ feats)))
 
         # ============================================================
-        # 6. EMA 平滑
+        # 6. OneEuro 平滑（速度自适应：静视强平滑、扫视低滞后）
         # ============================================================
-        # 水平
-        if self._smooth_gaze_x is None:
-            self._smooth_gaze_x = raw_gaze_x
-        else:
-            self._smooth_gaze_x = (GAZE_SMOOTHING_ALPHA * raw_gaze_x
-                                   + (1 - GAZE_SMOOTHING_ALPHA) * self._smooth_gaze_x)
-
-        # 垂直
-        if self._smooth_gaze_y is None:
-            self._smooth_gaze_y = raw_gaze_y
-        else:
-            self._smooth_gaze_y = (GAZE_SMOOTHING_ALPHA_Y * raw_gaze_y
-                                   + (1 - GAZE_SMOOTHING_ALPHA_Y) * self._smooth_gaze_y)
+        now = time.monotonic()
+        self._smooth_gaze_x = self._filter_x.filter(raw_gaze_x, now)
+        self._smooth_gaze_y = self._filter_y.filter(raw_gaze_y, now)
 
         # 可信度：基于面部宽度（太小 → 太远 → 不可靠）
         confidence = min(1.0, face_width / 150.0)
@@ -323,8 +323,8 @@ class GazeEstimator:
 
     def reset(self):
         """重置平滑状态"""
-        self._smooth_gaze_x = None
-        self._smooth_gaze_y = None
+        self._filter_x.reset()
+        self._filter_y.reset()
         self._lost_count = 0
 
     def close(self):

@@ -1,4 +1,11 @@
-# Gesture Drag Demo v3.0
+# Gesture Drag Demo v3.1
+
+## v3.1 新特性：注视精度升级（调研驱动·路线A）
+
+- **二阶多项式校准**（含 xy 交叉项，联合输入）替代 per-axis 仿射：直接拟合"边缘压缩 + 垂直增益不足 + 看角落两轴耦合"的非线性（学界实证眼动非线性集中在屏幕顶部行与左右边缘）；拟合退化时自动回退仿射，MAE 择优
+- **OneEuro 平滑**替代固定 EMA：静视强平滑抗抖、扫视低滞后跟手（复用 cc-AirPlayer 生产验证实现，参数在 `config.py` GAZE_MIN_CUTOFF/BETA）
+- 新增 `test_gaze_upgrade.py`（4 测：非线性场景多项式增益 ~33% / 线性场景不退化 / OneEuro 降噪+阶跃响应 / 校准 API）
+- 调研报告见 [`../research-gaze-accuracy-2026-07.md`](../research-gaze-accuracy-2026-07.md)（路线 B=外观法模型、C=捏取即校准 待启）
 
 基于 OpenCV + MediaPipe 的手势拖拽交互 Demo。使用普通 USB 摄像头，通过 **注视预选 + 捏住拖拽** 实现自然的卡片交互。
 
@@ -148,6 +155,7 @@ gesture_drag_demo/
 
 ## 版本历史
 
+- **v3.1**：注视精度升级路线A——二阶多项式校准（xy 交叉项+仿射兜底择优）+ OneEuro 平滑替代 EMA + 4 项单测
 - **v3.0**：面部特征追踪（EAR/眨眼/头部朝向/表情线索）+ 9 点眼动校准 + 2D 注视估计
 - **v2.0**：注视预选（FaceMesh + Iris → 候选锁定 → 融合抓取）
 - **v1.2**：气泡系统 + 捏住动效 + 拖拽立体感

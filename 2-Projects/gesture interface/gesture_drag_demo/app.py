@@ -1,5 +1,5 @@
 """
-app.py - 手势拖拽 Demo 主循环 (v3.0)
+app.py - 手势拖拽 Demo 主循环 (v3.1)
 
 使用 OpenCV 窗口 + MediaPipe Hands + FaceMesh 实现：
 - 摄像头实时画面
@@ -38,7 +38,7 @@ from config import (
 
 def main():
     print("=" * 50)
-    print("  Gesture Drag Demo v3.0")
+    print("  Gesture Drag Demo v3.1")
     print("  4 Desktops x 3 Cards = 12 Cards")
     print("  ESC: 退出 | R: 重置 | G: 注视调试")
     print("  F: 面部特征 | C: 重新校准")

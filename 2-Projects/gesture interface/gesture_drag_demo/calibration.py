@@ -243,45 +243,68 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
         print(f"  → median=({median_x:.3f}, {median_y:.3f}) "
               f"(samples={len(samples_x)})")
 
-    # ── Phase 2: 最小二乘回归计算仿射校准参数 ─────────────
-    # 每个校准点的期望值
+    # ── Phase 2: 最小二乘回归计算校准参数 ─────────────────
+    # 2026-07 路线A：首选含 xy 交叉项的二阶多项式（联合输入，
+    # 拟合边缘/垂直非线性与轴间耦合——学界实证眼动非线性集中在
+    # 屏幕顶部行与左右边缘）；拟合退化时自动回退仿射。
     expected_x = np.array([pt[2] for pt in CALIB_POINTS_2D])  # [-0.5, 0, 0.5, ...]
     expected_y = np.array([pt[3] for pt in CALIB_POINTS_2D])  # [-0.5, ..., 0.5]
     measured_x = np.array(medians_x)
     measured_y = np.array(medians_y)
 
-    # X 回归：expected_x = a_x * measured_x + b_x
-    try:
+    def _affine_as_poly():
+        """仿射兜底：拟合 per-axis y=ax+b，嵌进 6 维多项式系数格式。"""
         a_x, b_x = np.polyfit(measured_x, expected_x, 1)
-    except (np.linalg.LinAlgError, ValueError):
-        print("[Calibration] X 回归失败")
-        return False
-
-    # Y 回归：expected_y = a_y * measured_y + b_y
-    try:
         a_y, b_y = np.polyfit(measured_y, expected_y, 1)
+        a_x = float(max(CALIB_SCALE_CLAMP[0], min(CALIB_SCALE_CLAMP[1], a_x)))
+        a_y = float(max(CALIB_SCALE_CLAMP[0], min(CALIB_SCALE_CLAMP[1], a_y)))
+        # coef 序：[1, x, y, x², xy, y²]
+        cx = np.array([b_x, a_x, 0.0, 0.0, 0.0, 0.0])
+        cy = np.array([b_y, 0.0, a_y, 0.0, 0.0, 0.0])
+        return cx, cy
+
+    def _mae(coef_x, coef_y):
+        feats = np.stack([
+            gaze_est.poly_features(mx, my)
+            for mx, my in zip(measured_x, measured_y)
+        ])
+        ex = float(np.mean(np.abs(feats @ coef_x - expected_x)))
+        ey = float(np.mean(np.abs(feats @ coef_y - expected_y)))
+        return ex, ey
+
+    try:
+        affine_cx, affine_cy = _affine_as_poly()
     except (np.linalg.LinAlgError, ValueError):
-        print("[Calibration] Y 回归失败")
+        print("[Calibration] 仿射回归失败")
         return False
 
-    # 钳位 a 的范围（防极端值）
-    a_x = float(max(CALIB_SCALE_CLAMP[0], min(CALIB_SCALE_CLAMP[1], a_x)))
-    b_x = float(b_x)
-    a_y = float(max(CALIB_SCALE_CLAMP[0], min(CALIB_SCALE_CLAMP[1], a_y)))
-    b_y = float(b_y)
+    model = "affine"
+    coef_x, coef_y = affine_cx, affine_cy
+    try:
+        # 二阶多项式：9 个方程拟 6 系数，轻微 ridge 防病态
+        feats = np.stack([
+            gaze_est.poly_features(mx, my)
+            for mx, my in zip(measured_x, measured_y)
+        ])
+        ridge = 1e-4 * np.eye(feats.shape[1])
+        gram = feats.T @ feats + ridge
+        poly_cx = np.linalg.solve(gram, feats.T @ expected_x)
+        poly_cy = np.linalg.solve(gram, feats.T @ expected_y)
+        # 择优：多项式拟合残差需真正优于仿射才启用（防过拟合退化）
+        pmx, pmy = _mae(poly_cx, poly_cy)
+        amx, amy = _mae(affine_cx, affine_cy)
+        if pmx + pmy < amx + amy:
+            model = "poly2"
+            coef_x, coef_y = poly_cx, poly_cy
+    except np.linalg.LinAlgError:
+        pass  # 多项式病态 → 保持仿射兜底
 
-    # 计算拟合误差（MAE）
-    pred_x = a_x * measured_x + b_x
-    pred_y = a_y * measured_y + b_y
-    mae_x = float(np.mean(np.abs(pred_x - expected_x)))
-    mae_y = float(np.mean(np.abs(pred_y - expected_y)))
-
-    print(f"[Calibration] 2D 回归结果:")
-    print(f"  X: a={a_x:.3f}, b={b_x:.3f} (MAE={mae_x:.3f})")
-    print(f"  Y: a={a_y:.3f}, b={b_y:.3f} (MAE={mae_y:.3f})")
+    mae_x, mae_y = _mae(coef_x, coef_y)
+    print(f"[Calibration] 2D 回归结果 (model={model}):")
+    print(f"  MAE: X={mae_x:.3f}, Y={mae_y:.3f}")
 
     # 应用校准
-    gaze_est.set_calibration(a_x, b_x, a_y, b_y)
+    gaze_est.set_calibration(coef_x, coef_y)
 
     # ── Phase 3: 验证阶段（实时注视光标，5 秒） ─────────────
     VERIFY_DURATION = 5.0
@@ -311,9 +334,7 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
         _draw_text_centered(frame, "Verify - look around!",
                             35, scale=0.7, color=(100, 255, 100))
         _draw_text_centered(frame,
-                            f"X: a={a_x:.2f} b={b_x:.2f}  "
-                            f"Y: a={a_y:.2f} b={b_y:.2f}  "
-                            f"MAE: {mae_x:.2f}/{mae_y:.2f}",
+                            f"model={model}  MAE: {mae_x:.2f}/{mae_y:.2f}",
                             65, scale=0.4, color=(160, 160, 160))
         _draw_text_centered(frame, f"{remaining:.1f}s",
                             h - 25, scale=0.5, color=(150, 150, 150))

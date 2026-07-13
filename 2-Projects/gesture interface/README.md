@@ -5,7 +5,8 @@
 > 一句话目标：用普通 USB 摄像头，通过「注视预选 + 捏住拖拽」实现自然的手势交互 Demo。
 
 ## 下一步
-- [ ] 川哥定后续迭代方向（体验反馈驱动调参 config.py / 新功能）
+- [ ] 川哥真机验收 v3.1 注视精度（重点：边缘卡片与垂直方向的选中稳定性；对照调研报告预期）
+- [ ] 若 v3.1 不够 → 路线 B（PureGaze/ETH-XGaze 外观法模型）+ 路线 C（捏取即校准），见 `research-gaze-accuracy-2026-07.md`
 - [x] 实机跑通验证 v3.0 注视 + 面部特征 + 校准链路：已打包 `/Applications/GestureDemo.app`，川哥真机测试通过（2026-07-10）
 - [x] 整理版本号不一致：内层 README 已补 v3.0 条目（面部特征 + 9 点校准 + 2D 注视），标题/结构/快捷键同步更新（2026-07-10）
 
@@ -47,4 +48,5 @@
 - 2026-06-17：基于本地内容生成项目状态卡（cc）。
 - 2026-07-10：补齐内层 README v3.0 文档；PyInstaller 打包 macOS App（`gesture_drag_demo/dist/GestureDemo.app`，564MB，构建配置 `GestureDemo.spec`，摄像头授权 + 实机启动已验通）（cc）。
 - 2026-07-10：App 部署 `/Applications/GestureDemo.app`，川哥真机测试 v3.0 全链路（9 点校准 + 注视预选 + 手势拖拽 + 面部特征）通过，项目状态 paused → active（cc）。
+- 2026-07-10：注视精度深度调研（deep-research 多源+对抗验证，报告 `research-gaze-accuracy-2026-07.md`）+ v3.1 路线A 落地：二阶多项式校准（xy 交叉项+仿射兜底）+ OneEuro 平滑，4 测全过，App 已重打包部署（cc）。
 - 2026-07-10：应用图标上线（GPT Image 2 生成金瞳之眼+捏卡片主题，假透明修复 + icns 转换，源图与 icns 在 `gesture_drag_demo/assets/`），重打包部署验证通过（cc）。
