@@ -1,0 +1,502 @@
+[
+  {
+    "id": "mt_7VrR1GzhrN",
+    "style": "direct",
+    "utterance": "小可 我看蚂蚁搬饼干 它们绕开水坑 是不是根据证据下结论呀"
+  },
+  {
+    "id": "mt_7nduoLvoB1",
+    "style": "indirect",
+    "utterance": "南极那么冷 企鹅吃啥呀 大鲸鱼又吃谁 谁在最底下呀"
+  },
+  {
+    "id": "mt_LRzjbo1Fn6",
+    "style": "direct",
+    "utterance": "小可 北极熊白白的厚厚的 这是动物适应环境吗"
+  },
+  {
+    "id": "mt_m6UaSmrQVG",
+    "style": "indirect",
+    "utterance": "雨后花坛土被冲跑了 老师让我们想办法把土留住"
+  },
+  {
+    "id": "mt_22XbXTRq50",
+    "style": "direct",
+    "utterance": "小可 勇敢的极地探险家 船被冰夹碎了还能全员回家吗"
+  },
+  {
+    "id": "mt_k7GOtslF-x",
+    "style": "indirect",
+    "utterance": "推箱子时 这边箭头长那边短 是不是就会动起来呀"
+  },
+  {
+    "id": "mt_akBotspaf2",
+    "style": "direct",
+    "utterance": "小可 跑步是动能 电池是化学能 这些能量类型我能说吗"
+  },
+  {
+    "id": "mt_EygMHKs8Ed",
+    "style": "indirect",
+    "utterance": "草被兔子吃 兔子又被狐狸吃 它们是不是一串串连着的"
+  },
+  {
+    "id": "mt_3v0VNkwquK",
+    "style": "direct",
+    "utterance": "小可 植物生长需要啥 水光和合适温度对不对"
+  },
+  {
+    "id": "mt_lutxvMlkwS",
+    "style": "indirect",
+    "utterance": "阳台上小苗挤在一起 叶子黄了 是不是太挤土不够好"
+  },
+  {
+    "id": "mt_ZL9qVVnpwN",
+    "style": "direct",
+    "utterance": "小可 用光和声音远距离通信 我拿手电筒对你眨眼行吗"
+  },
+  {
+    "id": "mt_p6frRFuxS6",
+    "style": "indirect",
+    "utterance": "窗帘拉开亮堂堂 捂上就黑了 玻璃和木头为啥不一样"
+  },
+  {
+    "id": "mt_BI6oGIO-xM",
+    "style": "direct",
+    "utterance": "小可 什么是小昆虫小爬虫呀 花园石头下能找到吗"
+  },
+  {
+    "id": "mt_BLQ2_OXPod",
+    "style": "indirect",
+    "utterance": "山上冒红红的火 石头流下来 地都变样了好吓人"
+  },
+  {
+    "id": "mt_R7LEuZjTmx",
+    "style": "direct",
+    "utterance": "小可 小虫子世界里 蜜蜂传粉 蚯蚓翻土 甲虫种类最多吗"
+  },
+  {
+    "id": "mt_Qkewo5M3_c",
+    "style": "indirect",
+    "utterance": "晒完衣服干了 窗上又有小水珠 水是不是飞上天又回来了"
+  },
+  {
+    "id": "mt_ZAJvTcroFO",
+    "style": "direct",
+    "utterance": "小可 木头塑料玻璃金属 日常材料名字我能认吗"
+  },
+  {
+    "id": "mt_w2xiMNkyyX",
+    "style": "indirect",
+    "utterance": "天黑天亮转一圈 过一年又是生日 地球是不是在转还在跑"
+  },
+  {
+    "id": "mt_OMmiuv9ZLH",
+    "style": "direct",
+    "utterance": "小可 头骨脊柱肋骨大腿骨 大骨头名字你会不会"
+  },
+  {
+    "id": "mt_3WMADSy0mA",
+    "style": "indirect",
+    "utterance": "两边一起推小车不动 一边使劲它就跑 这是为啥呀"
+  },
+  {
+    "id": "mt_KsKLVW_ssY",
+    "style": "direct",
+    "utterance": "小可 我们去爬山了 山上有山谷 下面还有大河和湖"
+  },
+  {
+    "id": "mt_sQpIV0-qY7",
+    "style": "indirect",
+    "utterance": "小可 海下面是不是越往下越黑呀 鱼还能看见吗"
+  },
+  {
+    "id": "mt_W8Eq3CqWJf",
+    "style": "direct",
+    "utterance": "小可 土星有光环 木星最大还有大红斑 火星是红的对不对"
+  },
+  {
+    "id": "mt_NYsz6QgaaE",
+    "style": "indirect",
+    "utterance": "小可 我把每天冷不冷下雨没写在本子上了 夏天和冬天差好多"
+  },
+  {
+    "id": "mt_1dXhJp6qLJ",
+    "style": "direct",
+    "utterance": "小可 化石恐龙粪便是啥呀 科学家真的看这个知道恐龙吃啥"
+  },
+  {
+    "id": "mt_HveO1bOXpJ",
+    "style": "indirect",
+    "utterance": "小可 我搭积木桥老塌 我想了好几种办法 你帮我看看哪个好"
+  },
+  {
+    "id": "mt_jc9k_HJQGd",
+    "style": "direct",
+    "utterance": "小可 今天外面是阴天还是有风呀 会不会下雨"
+  },
+  {
+    "id": "mt_3duNkf6Qmr",
+    "style": "indirect",
+    "utterance": "小可 有的地方晚上太阳还不落 有的地方好几个月都黑黑的诶"
+  },
+  {
+    "id": "mt_ZFwPZaDJ0_",
+    "style": "direct",
+    "utterance": "小可 老师让我们做记录表 我画了好多正字和格子"
+  },
+  {
+    "id": "mt_7OJjLOl0fz",
+    "style": "indirect",
+    "utterance": "小可 冰上还有长牙的大胖动物 还有冬天变白的狐狸好厉害"
+  },
+  {
+    "id": "mt_7EqhgErJyU",
+    "style": "direct",
+    "utterance": "小可 我画了蝴蝶生命周期图 还有花怎么开花结果"
+  },
+  {
+    "id": "mt_XG4RqUIXm8",
+    "style": "indirect",
+    "utterance": "小可 有座古城被火山灰埋住了 人还保持原来的样子好吓人"
+  },
+  {
+    "id": "mt_GF6L7J4MNN",
+    "style": "direct",
+    "utterance": "小可 我把花插进红水里 茎里面怎么变红了 是水往上走吗"
+  },
+  {
+    "id": "mt_NVr4AhsvIq",
+    "style": "indirect",
+    "utterance": "小可 为什么地会突然抖起来呀 是下面的石头动了吗"
+  },
+  {
+    "id": "mt_-gkJdxJUQT",
+    "style": "direct",
+    "utterance": "小可 眼睛是怎么看见东西的 光从瞳孔进去再传到大脑吗"
+  },
+  {
+    "id": "mt_fKwgN61ttR",
+    "style": "indirect",
+    "utterance": "小可 山上怎么挖出贝壳化石呀 那里以前是不是大海"
+  },
+  {
+    "id": "mt_w2u9bXP9n7",
+    "style": "direct",
+    "utterance": "小可 海边的岩石水坑里有螃蟹海星 那是潮池栖息地吧"
+  },
+  {
+    "id": "mt__pMF-Xb0TE",
+    "style": "indirect",
+    "utterance": "小可 地一晃我该怎么办 是不是要蹲下躲桌子底下"
+  },
+  {
+    "id": "mt_LQt4vnKeB4",
+    "style": "direct",
+    "utterance": "小可 地球自转公转还有地轴倾斜 这些词我有点搞不清"
+  },
+  {
+    "id": "mt_YQkUdIHO8L",
+    "style": "indirect",
+    "utterance": "小可 冰块硬硬的 水会流 空气看不见 它们怎么不一样呀"
+  },
+  {
+    "id": "mt_oNWXXAn3cn",
+    "style": "direct",
+    "utterance": "小可你看这只瓢虫 昆虫是不是都有头胸腹还有六条腿呀"
+  },
+  {
+    "id": "mt__00ZSLnB7p",
+    "style": "indirect",
+    "utterance": "我把鼓敲重一点就特别响 轻轻敲就小声 它里面是不是在抖呀"
+  },
+  {
+    "id": "mt_SdIWVjzopp",
+    "style": "direct",
+    "utterance": "小可我胳膊里是不是有骨头和肌肉 所以我才能弯胳膊呀"
+  },
+  {
+    "id": "mt_-0cjwyYhce",
+    "style": "indirect",
+    "utterance": "热带大树好高呀 底下好黑上面才有光 动物是不是都住在中间那一层"
+  },
+  {
+    "id": "mt_auVZZEuXjs",
+    "style": "direct",
+    "utterance": "小可这个积木好硬好光滑 那个海绵软软的还能吸水呢"
+  },
+  {
+    "id": "mt_xT6jPzyj92",
+    "style": "indirect",
+    "utterance": "我给花浇水的时候 下面埋土里的会不会先喝水 上面绿绿的才会站直呀"
+  },
+  {
+    "id": "mt_DJh2JPwTf6",
+    "style": "direct",
+    "utterance": "小可恐龙有的吃草有的吃肉 看牙齿扁不扁就能分出来吧"
+  },
+  {
+    "id": "mt_DbXWivdJFB",
+    "style": "indirect",
+    "utterance": "我前面的牙切苹果 后面的牙才嚼得动 尖尖的那几颗是干啥的呀"
+  },
+  {
+    "id": "mt_GQpqoR5YOc",
+    "style": "direct",
+    "utterance": "小可我把乐高拆开又能拼成火箭 零件还在对不对"
+  },
+  {
+    "id": "mt_6Z42wJaKYG",
+    "style": "indirect",
+    "utterance": "博物馆石头里有个小虫印子 那是不是很久很久以前真的住过呀"
+  },
+  {
+    "id": "mt_fDoE-pL6Jv",
+    "style": "direct",
+    "utterance": "小可鱼有鳞鸟有羽毛 哺乳动物是不是身上都长毛呀"
+  },
+  {
+    "id": "mt_1JFUNQDwAJ",
+    "style": "indirect",
+    "utterance": "冰块硬邦邦放桌上不动 化了就会流 烧开了又飘到空气里去了"
+  },
+  {
+    "id": "mt_BVpB5wyijZ",
+    "style": "direct",
+    "utterance": "小可天上那七颗星像勺子 北斗七星能找到北极星对吧"
+  },
+  {
+    "id": "mt_4pLvMN8uzL",
+    "style": "indirect",
+    "utterance": "打雷了妈妈说别站树下也别玩水 我们赶快进屋好不好"
+  },
+  {
+    "id": "mt_v6CBCMuvz1",
+    "style": "direct",
+    "utterance": "小可热带雨林是不是又热又老下雨 所以树长得特别快呀"
+  },
+  {
+    "id": "mt_rTn43s8RNX",
+    "style": "indirect",
+    "utterance": "雨伞要用布包胶的 要是用纸做一沾水就破了 对吧小可"
+  },
+  {
+    "id": "mt_XirhnAB6Ye",
+    "style": "direct",
+    "utterance": "小可科学问题可以怎么回答呀 是不是可以自己看一看试一试"
+  },
+  {
+    "id": "mt_L1469gt34A",
+    "style": "indirect",
+    "utterance": "我三天没给绿萝浇水它蔫了 小狗也要喝水吃饭才能活对不对"
+  },
+  {
+    "id": "mt_-SZU6cVB_-",
+    "style": "direct",
+    "utterance": "小可望远镜是不是能看很远的星星 哈勃望远镜还飞在天上呢"
+  },
+  {
+    "id": "mt_NYA50DFcOO",
+    "style": "indirect",
+    "utterance": "河边那一层一层的石头里有贝壳印 火山流出来的凉了会变成另一种吧"
+  },
+  {
+    "id": "mt_FwI7q7DSIx",
+    "style": "direct",
+    "utterance": "小可我们玩积木要轮流搭 还要一起分享呀"
+  },
+  {
+    "id": "mt_rkrG2w7WXI",
+    "style": "indirect",
+    "utterance": "滑滑梯上老师说不能推人 不然会摔跤的"
+  },
+  {
+    "id": "mt_X7Tu94-a2m",
+    "style": "direct",
+    "utterance": "以前跟我玩的小朋友现在不找我了 友谊会变吗"
+  },
+  {
+    "id": "mt_aS-Gdh-MHx",
+    "style": "indirect",
+    "utterance": "搬家了新房间好陌生 晚上我想妈妈"
+  },
+  {
+    "id": "mt_SeNxOZTHCN",
+    "style": "direct",
+    "utterance": "我好烦躁 要冷静下来深呼吸才行"
+  },
+  {
+    "id": "mt_MOY_2Cqalz",
+    "style": "indirect",
+    "utterance": "同桌考第一我心里酸酸的 又有点怕自己不行"
+  },
+  {
+    "id": "mt_PdYlsA33jB",
+    "style": "direct",
+    "utterance": "这道题我不会 可以找老师帮忙吗"
+  },
+  {
+    "id": "mt_Ytd8XC3eQr",
+    "style": "indirect",
+    "utterance": "上台前肚子里像有蝴蝶飞 心跳得好快"
+  },
+  {
+    "id": "mt_lAvS72LOUO",
+    "style": "direct",
+    "utterance": "小可我今天帮哭了的小朋友擦眼泪了"
+  },
+  {
+    "id": "mt_Ag9NSWJu-X",
+    "style": "indirect",
+    "utterance": "他俩抢玩具都在吼 我想让他们各让一步"
+  },
+  {
+    "id": "mt_S7UTAhptLi",
+    "style": "direct",
+    "utterance": "有的小朋友腿不方便 他们的生活跟我们不一样"
+  },
+  {
+    "id": "mt_H8dEMH_wik",
+    "style": "indirect",
+    "utterance": "一困我就爱发脾气 没人理我也会嘟嘴"
+  },
+  {
+    "id": "mt_miGrca8zaS",
+    "style": "direct",
+    "utterance": "作业好多 我把它拆成一小步一小步做"
+  },
+  {
+    "id": "mt_h-z88yf9Pn",
+    "style": "indirect",
+    "utterance": "有人在群里笑话同学 我要不要站出来说别这样"
+  },
+  {
+    "id": "mt_9NQEiYLQA3",
+    "style": "direct",
+    "utterance": "要是我被抢走玩具 我会难过 站在别人角度看"
+  },
+  {
+    "id": "mt_K8_RYIvrTV",
+    "style": "indirect",
+    "utterance": "妈妈买菜手机一贴就付钱了 钱去哪了呀"
+  },
+  {
+    "id": "mt_9gpUHWVKMR",
+    "style": "direct",
+    "utterance": "做柠檬水花钱买柠檬 卖出去赚的比花的多就是赚了"
+  },
+  {
+    "id": "mt_asRwlPZXC3",
+    "style": "indirect",
+    "utterance": "叔叔开大卡车送菜 阿姨在医院给病人打针"
+  },
+  {
+    "id": "mt_pOstrrS763",
+    "style": "direct",
+    "utterance": "开店也要团队合作 大家各干擅长的事"
+  },
+  {
+    "id": "mt_CrGnpVjnk8",
+    "style": "indirect",
+    "utterance": "我折了好多星星 想拿到门口让小朋友买"
+  },
+  {
+    "id": "mt_FIkqA0qhnj",
+    "style": "direct",
+    "utterance": "小可 我把一块钱硬币和一张一块钱纸币放一起 它们是不是一样多呀"
+  },
+  {
+    "id": "mt_M2Gou3O6qT",
+    "style": "indirect",
+    "utterance": "我在小区门口贴了画画义卖的小纸条 好多叔叔阿姨都来问我了"
+  },
+  {
+    "id": "mt_uP9faJlnRq",
+    "style": "direct",
+    "utterance": "小可 我帮妈妈洗碗能赚钱吗 大人上班是不是就是这样挣钱的"
+  },
+  {
+    "id": "mt_FNSeo9_T2Z",
+    "style": "indirect",
+    "utterance": "我把压岁钱塞进小猪存钱罐里锁好 再也不乱扔在书包里了"
+  },
+  {
+    "id": "mt_dknMcCqvoY",
+    "style": "direct",
+    "utterance": "小可 我上次摆摊没人买 是不是失败了也能学到东西呀"
+  },
+  {
+    "id": "mt_95zxYqpP7m",
+    "style": "indirect",
+    "utterance": "积木老是倒 换个底座搭 诶 这次居然稳稳站住了"
+  },
+  {
+    "id": "mt_8dstvf-KKb",
+    "style": "direct",
+    "utterance": "小可 我做完算术题会再看一遍 怕哪里写错了"
+  },
+  {
+    "id": "mt_klyw-tdlhP",
+    "style": "indirect",
+    "utterance": "老师讲的那句话我脑子里一团浆糊 我是不是该停下来问问呀"
+  },
+  {
+    "id": "mt_LE7nFEwS12",
+    "style": "direct",
+    "utterance": "小可 动手拼新玩具前 我先想想我以前玩过什么像它的"
+  },
+  {
+    "id": "mt_99G6Msdzw-",
+    "style": "indirect",
+    "utterance": "跳绳教我的节奏 我居然用在弹钢琴的手指上了 好好玩"
+  },
+  {
+    "id": "mt_wvcFlwOrDl",
+    "style": "direct",
+    "utterance": "小可 我发现地砖是一深一浅的 数数也有规律对不对"
+  },
+  {
+    "id": "mt_Y6P9y1Rz-u",
+    "style": "indirect",
+    "utterance": "冰为什么会化成水呀 我只知道会化 但不知道咋回事"
+  },
+  {
+    "id": "mt_TDUpy57QVM",
+    "style": "direct",
+    "utterance": "小可 我这次听写错了 我想弄清楚到底哪里记混了"
+  },
+  {
+    "id": "mt_jvJ35MmCvK",
+    "style": "indirect",
+    "utterance": "家里那个圆圆的会自己扫地 它是不是听人的话在干活呀"
+  },
+  {
+    "id": "mt_kH1DzOPsXG",
+    "style": "direct",
+    "utterance": "小可 电脑里的数字和照片声音 是不是都叫数据呀"
+  },
+  {
+    "id": "mt_AzTrT5ySCx",
+    "style": "indirect",
+    "utterance": "手机一看我的脸就开了 推荐的视频也老是我想看的 好奇怪"
+  },
+  {
+    "id": "mt_bPFToj0OhZ",
+    "style": "direct",
+    "utterance": "小可 人工智能也会认错字对吧 它不是什么都会的"
+  },
+  {
+    "id": "mt_K6qtan847r",
+    "style": "indirect",
+    "utterance": "我给平板看好多猫和狗的照片 它后来自己会猜这是猫还是狗"
+  },
+  {
+    "id": "mt_u6SYiVx7FX",
+    "style": "direct",
+    "utterance": "小可 语音助手是听我说然后找答案的吧 它又不是真人"
+  },
+  {
+    "id": "mt_EedcpioR0v",
+    "style": "indirect",
+    "utterance": "我点了几次恐龙视频 后面全是恐龙 怎么啥别的都没有了"
+  }
+]

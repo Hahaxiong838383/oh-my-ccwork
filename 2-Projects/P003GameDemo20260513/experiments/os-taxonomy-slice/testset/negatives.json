@@ -1,0 +1,247 @@
+[
+  {
+    "cat": "音乐故事请求",
+    "utterance": "小可小可 给我放一首孤勇者",
+    "grade": "hard"
+  },
+  {
+    "cat": "音乐故事请求",
+    "utterance": "我想听奥特曼的故事 讲一个长一点的",
+    "grade": "hard"
+  },
+  {
+    "cat": "音乐故事请求",
+    "utterance": "再讲一遍昨天那个恐龙的故事嘛",
+    "grade": "gray"
+  },
+  {
+    "cat": "音乐故事请求",
+    "utterance": "换一首歌 这首不好听",
+    "grade": "hard"
+  },
+  {
+    "cat": "音乐故事请求",
+    "utterance": "小可你会唱两只老虎吗",
+    "grade": "hard"
+  },
+  {
+    "cat": "音乐故事请求",
+    "utterance": "声音太小了 大一点",
+    "grade": "hard"
+  },
+  {
+    "cat": "音乐故事请求",
+    "utterance": "别放了别放了 我要睡觉了",
+    "grade": "hard"
+  },
+  {
+    "cat": "音乐故事请求",
+    "utterance": "给我讲个笑话呗",
+    "grade": "hard"
+  },
+  {
+    "cat": "打招呼情绪",
+    "utterance": "小可早上好呀 你昨天睡得好吗",
+    "grade": "hard"
+  },
+  {
+    "cat": "打招呼情绪",
+    "utterance": "我今天好开心 爸爸给我买了新玩具",
+    "grade": "hard"
+  },
+  {
+    "cat": "打招呼情绪",
+    "utterance": "我不想去幼儿园 呜呜",
+    "grade": "hard"
+  },
+  {
+    "cat": "打招呼情绪",
+    "utterance": "哼 我生气了 不理你了",
+    "grade": "gray"
+  },
+  {
+    "cat": "打招呼情绪",
+    "utterance": "小可你是我最好的朋友",
+    "grade": "gray"
+  },
+  {
+    "cat": "打招呼情绪",
+    "utterance": "我好想奶奶 她什么时候来呀",
+    "grade": "hard"
+  },
+  {
+    "cat": "打招呼情绪",
+    "utterance": "今天老师表扬我了 嘿嘿",
+    "grade": "hard"
+  },
+  {
+    "cat": "打招呼情绪",
+    "utterance": "你猜我今天在幼儿园干了什么",
+    "grade": "hard"
+  },
+  {
+    "cat": "游戏世界观",
+    "utterance": "小可 方舟今天有什么新任务呀",
+    "grade": "hard"
+  },
+  {
+    "cat": "游戏世界观",
+    "utterance": "我的能量石可以升级了吗",
+    "grade": "hard"
+  },
+  {
+    "cat": "游戏世界观",
+    "utterance": "我们什么时候再去探险呀",
+    "grade": "hard"
+  },
+  {
+    "cat": "游戏世界观",
+    "utterance": "我想给我的小屋换个颜色",
+    "grade": "hard"
+  },
+  {
+    "cat": "游戏世界观",
+    "utterance": "上次那个宝箱还没开呢",
+    "grade": "hard"
+  },
+  {
+    "cat": "游戏世界观",
+    "utterance": "今天的签到奖励是什么",
+    "grade": "hard"
+  },
+  {
+    "cat": "K12数学切片外",
+    "utterance": "三十五加二十七等于多少呀",
+    "grade": "hard"
+  },
+  {
+    "cat": "K12数学切片外",
+    "utterance": "老师留的口算题我不会做 九九八十一后面是什么",
+    "grade": "hard"
+  },
+  {
+    "cat": "K12数学切片外",
+    "utterance": "两位数乘法怎么算 妈妈教的我没听懂",
+    "grade": "hard"
+  },
+  {
+    "cat": "K12数学切片外",
+    "utterance": "什么是余数呀 除不尽的那个",
+    "grade": "hard"
+  },
+  {
+    "cat": "K12数学切片外",
+    "utterance": "钟表上分针走一圈是多久",
+    "grade": "hard"
+  },
+  {
+    "cat": "K12数学切片外",
+    "utterance": "我会背乘法口诀了 你要听吗",
+    "grade": "hard"
+  },
+  {
+    "cat": "K12数学切片外",
+    "utterance": "作业里让画钝角 钝角长什么样",
+    "grade": "hard"
+  },
+  {
+    "cat": "语文英语学习",
+    "utterance": "静夜思怎么背来着 床前明月光后面是什么",
+    "grade": "hard"
+  },
+  {
+    "cat": "语文英语学习",
+    "utterance": "苹果的英语怎么说呀",
+    "grade": "hard"
+  },
+  {
+    "cat": "语文英语学习",
+    "utterance": "这个字念什么 三个水的那个",
+    "grade": "hard"
+  },
+  {
+    "cat": "语文英语学习",
+    "utterance": "老师让我们用高兴造句 你帮我想一个",
+    "grade": "hard"
+  },
+  {
+    "cat": "语文英语学习",
+    "utterance": "拼音的声调老搞错 第二声怎么读",
+    "grade": "hard"
+  },
+  {
+    "cat": "日常闲聊",
+    "utterance": "今天晚饭吃饺子 我最爱韭菜馅的",
+    "grade": "hard"
+  },
+  {
+    "cat": "日常闲聊",
+    "utterance": "妈妈说周末带我去动物园玩",
+    "grade": "hard"
+  },
+  {
+    "cat": "日常闲聊",
+    "utterance": "我的新鞋子是红色的 可好看了",
+    "grade": "hard"
+  },
+  {
+    "cat": "日常闲聊",
+    "utterance": "弟弟又抢我的积木 讨厌死了",
+    "grade": "hard"
+  },
+  {
+    "cat": "日常闲聊",
+    "utterance": "我今天在幼儿园睡午觉睡着了",
+    "grade": "hard"
+  },
+  {
+    "cat": "日常闲聊",
+    "utterance": "爸爸打呼噜好大声 像打雷一样",
+    "grade": "gray"
+  },
+  {
+    "cat": "日常闲聊",
+    "utterance": "我明天生日 会有蛋糕吃",
+    "grade": "hard"
+  },
+  {
+    "cat": "日常闲聊",
+    "utterance": "楼下小狗今天冲我摇尾巴了",
+    "grade": "gray"
+  },
+  {
+    "cat": "日常闲聊",
+    "utterance": "幼儿园新来了一个小朋友 坐我旁边",
+    "grade": "gray"
+  },
+  {
+    "cat": "日常闲聊",
+    "utterance": "我不爱吃胡萝卜 但是妈妈非让吃",
+    "grade": "hard"
+  },
+  {
+    "cat": "天马行空",
+    "utterance": "奥特曼和孙悟空打架谁赢",
+    "grade": "hard"
+  },
+  {
+    "cat": "天马行空",
+    "utterance": "我长大了要当宇航员 开飞船",
+    "grade": "gray"
+  },
+  {
+    "cat": "天马行空",
+    "utterance": "如果我有魔法 我要把作业都变没",
+    "grade": "hard"
+  },
+  {
+    "cat": "天马行空",
+    "utterance": "汪汪队里面我最喜欢毛毛",
+    "grade": "hard"
+  },
+  {
+    "cat": "天马行空",
+    "utterance": "小可你说圣诞老人是真的吗",
+    "grade": "hard"
+  }
+]

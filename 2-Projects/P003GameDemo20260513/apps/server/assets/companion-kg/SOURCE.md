@@ -5,7 +5,7 @@
 - **上游数据集**：Marble Skill Taxonomy (os-taxonomy) v1，2026-07-08 发布
   https://github.com/withmarbleapp/os-taxonomy
 - **切片规则**：`ageRangeStart <= 8` 且 subject ∈ {Science, Personal & Social Development, Life Skills, Learning to Learn, Computing} → **376 微主题 + 594 条内部先修边**（上游 1590 主题 / 3221 边）
-- **中文化管线**（2026-07-13，工具链在 mycc scratchpad os-slice/，管线脚本随本目录归档意义不大，方法论见 P003 docs）：
+- **中文化管线**（2026-07-13，完整脚本+测试集已归档 [`experiments/os-taxonomy-slice/`](../../../experiments/os-taxonomy-slice/README.md)，扩切片/换模型/回归照它跑）：
   grok-4.5 主翻（5 字段 + 口语触发词生成）→ codex gpt-5.5 全量对抗质检（97 处修复，含 25 处知识性错误）→
   规则校验（单字/过泛触发词黑名单清洗）→ 30 条人工抽检（川哥终审通过）
 - **上游脏数据修复**：11 个主题（Learning to Learn / 元认知类）的 evidence 上游放的是文献引用而非可观察行为，

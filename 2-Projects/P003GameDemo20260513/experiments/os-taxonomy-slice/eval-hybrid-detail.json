@@ -1,0 +1,1046 @@
+{
+  "posEval": [
+    {
+      "id": "mt_j8Pv3s7TZR",
+      "style": "direct",
+      "utterance": "小可我生气了想砸东西 难过的时候又不一样 该怎么应对呀",
+      "l1Hit": "mt_SeNxOZTHCN",
+      "l2Hit": {
+        "id": "mt_TU3BcLOgiV",
+        "name": "心情和做法是两回事",
+        "score": 0.595
+      }
+    },
+    {
+      "id": "mt_zVLOm6U7bh",
+      "style": "indirect",
+      "utterance": "小可动物园里那个会游的滑溜溜 还有跳来跳去的和飞的 都叫啥呀",
+      "l1Hit": null,
+      "l2Hit": {
+        "id": "mt__7hXSTbu9s",
+        "name": "小虫子怎么动",
+        "score": 0.435
+      }
+    },
+    {
+      "id": "mt_0u3QNroZ34",
+      "style": "direct",
+      "utterance": "小可热带雨林是不是在地球中间那一圈 亚马逊刚果那边",
+      "l1Hit": "mt_0u3QNroZ34",
+      "l2Hit": {
+        "id": "mt_0u3QNroZ34",
+        "name": "雨林在哪里",
+        "score": 0.609
+      }
+    },
+    {
+      "id": "mt_Wu-ftkzoiE",
+      "style": "indirect",
+      "utterance": "小可电视上那海水突然好高好快冲过来 房子都冲垮了 好吓人",
+      "l1Hit": "mt_m6UaSmrQVG",
+      "l2Hit": {
+        "id": "mt_Wu-ftkzoiE",
+        "name": "海啸",
+        "score": 0.449
+      }
+    },
+    {
+      "id": "mt_oR6dwRj2Ll",
+      "style": "direct",
+      "utterance": "小可小狗小猫小时候好小 长大就变成大人了 这叫生命阶段吧",
+      "l1Hit": "mt_oR6dwRj2Ll",
+      "l2Hit": {
+        "id": "mt_oR6dwRj2Ll",
+        "name": "动物的成长阶段",
+        "score": 0.686
+      }
+    },
+    {
+      "id": "mt_QtIAWOcoQT",
+      "style": "indirect",
+      "utterance": "小可山上那个洞里红红的石头是不是烧化了 冒出来烫烫的",
+      "l1Hit": "mt_brgde1Vx0P",
+      "l2Hit": {
+        "id": "mt_S9SKah-yi_",
+        "name": "什么是火山",
+        "score": 0.485
+      }
+    },
+    {
+      "id": "mt_q3vRl4dddK",
+      "style": "direct",
+      "utterance": "小可过马路要看灯 不跟陌生人走 网上也不能乱点 对不对",
+      "l1Hit": "mt_q3vRl4dddK",
+      "l2Hit": {
+        "id": "mt_q3vRl4dddK",
+        "name": "日常安全意识",
+        "score": 0.514
+      }
+    },
+    {
+      "id": "mt_e29VrLfmYt",
+      "style": "indirect",
+      "utterance": "小可有一次地板突然抖起来 杯子都晃了 妈妈说是地在动",
+      "l1Hit": "mt_e29VrLfmYt",
+      "l2Hit": {
+        "id": "mt__pMF-Xb0TE",
+        "name": "地震安全",
+        "score": 0.478
+      }
+    },
+    {
+      "id": "mt_PiWZA8Z0ZJ",
+      "style": "direct",
+      "utterance": "小可太阳白天好亮好热 晚上有星星 月亮有时候白天也能看见",
+      "l1Hit": "mt_kCSy3Lsgme",
+      "l2Hit": {
+        "id": "mt_PiWZA8Z0ZJ",
+        "name": "太阳月亮和星星",
+        "score": 0.609
+      }
+    },
+    {
+      "id": "mt_kCSy3Lsgme",
+      "style": "indirect",
+      "utterance": "小可海边水一会儿高一会儿低 还有浪浪打过来 好像有条河在海里流",
+      "l1Hit": "mt_4bJiGiMPmy",
+      "l2Hit": {
+        "id": "mt_kCSy3Lsgme",
+        "name": "潮汐波浪和洋流",
+        "score": 0.51
+      }
+    },
+    {
+      "id": "mt_M7XhBBzYof",
+      "style": "direct",
+      "utterance": "小可生产者消费者捕食者和猎物 还有食物链食物网 你能给我讲讲吗",
+      "l1Hit": "mt_EygMHKs8Ed",
+      "l2Hit": {
+        "id": "mt_1LFVPjdGg-",
+        "name": "雨林食物网",
+        "score": 0.624
+      }
+    },
+    {
+      "id": "mt_Dj2xr8CoI0",
+      "style": "indirect",
+      "utterance": "小可今天下雨妈妈让我拿伞 大太阳又要戴帽子 冷了还得加衣服",
+      "l1Hit": "mt_3yuqKww2tU",
+      "l2Hit": {
+        "id": "mt_Dj2xr8CoI0",
+        "name": "看天气穿衣服",
+        "score": 0.545
+      }
+    },
+    {
+      "id": "mt_5r47Pvstyn",
+      "style": "direct",
+      "utterance": "小可这个杯子是物体 它是用塑料做的 木头也能做杯子对吧",
+      "l1Hit": "mt_ZAJvTcroFO",
+      "l2Hit": {
+        "id": "mt_5r47Pvstyn",
+        "name": "物品和材料",
+        "score": 0.595
+      }
+    },
+    {
+      "id": "mt_4IVWRAZoNC",
+      "style": "indirect",
+      "utterance": "小可毛毛虫变成蝴蝶 小鸡从蛋里出来长大 最后也会老掉 是不是都这样",
+      "l1Hit": "mt_oR6dwRj2Ll",
+      "l2Hit": {
+        "id": "mt_Wr6DDgr_kH",
+        "name": "毛毛虫变蝴蝶",
+        "score": 0.634
+      }
+    },
+    {
+      "id": "mt_jgNB2752b9",
+      "style": "direct",
+      "utterance": "小可磁铁有南北极 同极会推开 异极会吸住 对不对呀",
+      "l1Hit": "mt_Wc6cOTQ1bA",
+      "l2Hit": {
+        "id": "mt_jgNB2752b9",
+        "name": "磁铁的两极",
+        "score": 0.641
+      }
+    },
+    {
+      "id": "mt_l6OpmOKMuT",
+      "style": "indirect",
+      "utterance": "小可海里小小的绿绿的被小鱼吃 大鱼又吃小鱼 大鲨鱼吃大鱼",
+      "l1Hit": "mt_l6OpmOKMuT",
+      "l2Hit": {
+        "id": "mt_l6OpmOKMuT",
+        "name": "海洋食物链",
+        "score": 0.562
+      }
+    },
+    {
+      "id": "mt_H4YZ1rSKP3",
+      "style": "direct",
+      "utterance": "小可自我觉察 反思 触发点这些词 是说我心里怎么想的吗",
+      "l1Hit": "mt_H4YZ1rSKP3",
+      "l2Hit": {
+        "id": "mt_H4YZ1rSKP3",
+        "name": "认识自己的词",
+        "score": 0.56
+      }
+    },
+    {
+      "id": "mt_ytUG3yjCYt",
+      "style": "indirect",
+      "utterance": "小可海里有小小的马儿样的 还有花花的小丑鱼 还有好大好大的鲸鱼诶",
+      "l1Hit": "mt_ytUG3yjCYt",
+      "l2Hit": {
+        "id": "mt_ytUG3yjCYt",
+        "name": "海洋动物真多",
+        "score": 0.614
+      }
+    },
+    {
+      "id": "mt_SrmHaJXKrX",
+      "style": "direct",
+      "utterance": "小可冰和雪是水冻住的 冰山大部分在水下面 冰还会浮起来对吧",
+      "l1Hit": "mt_nRF_VRntrW",
+      "l2Hit": {
+        "id": "mt_SrmHaJXKrX",
+        "name": "冰和雪",
+        "score": 0.696
+      }
+    },
+    {
+      "id": "mt_i4bDqjyglj",
+      "style": "indirect",
+      "utterance": "小可羊好多只挤一起 狼也成群跑 这样是不是不容易被吃掉呀",
+      "l1Hit": "mt_brgde1Vx0P",
+      "l2Hit": {
+        "id": "mt_i4bDqjyglj",
+        "name": "动物抱团求生",
+        "score": 0.459
+      }
+    },
+    {
+      "id": "mt_lcf8lx-LkZ",
+      "style": "direct",
+      "utterance": "小可推东西要碰到才行 可磁铁隔着空气也能吸 这是非接触力吗",
+      "l1Hit": "mt_lcf8lx-LkZ",
+      "l2Hit": {
+        "id": "mt_lcf8lx-LkZ",
+        "name": "接触力与非接触力",
+        "score": 0.722
+      }
+    },
+    {
+      "id": "mt_Wc6cOTQ1bA",
+      "style": "indirect",
+      "utterance": "小可同桌的橡皮我想拿 可是没问他 后来还是还回去了 这样对吗",
+      "l1Hit": null,
+      "l2Hit": {
+        "id": "mt_mvXufozy2s",
+        "name": "会请求帮助",
+        "score": 0.395
+      }
+    },
+    {
+      "id": "mt_E1wR8IfCV6",
+      "style": "direct",
+      "utterance": "小可小动物和人一样要吃对的东西 它们自己做不了食物对吧",
+      "l1Hit": null,
+      "l2Hit": {
+        "id": "mt_E1wR8IfCV6",
+        "name": "动物需要营养",
+        "score": 0.6
+      }
+    },
+    {
+      "id": "mt_e6PP4ip39V",
+      "style": "indirect",
+      "utterance": "小可骆驼住沙漠 鱼要住水里 青蛙喜欢潮湿的地方 对不对",
+      "l1Hit": "mt_Wc6cOTQ1bA",
+      "l2Hit": {
+        "id": "mt_XxgU_91AXg",
+        "name": "动物的生存妙招",
+        "score": 0.505
+      }
+    },
+    {
+      "id": "mt_15FduGRf5c",
+      "style": "direct",
+      "utterance": "小可月亮围着地球转大概一个月一圈 它自己不发光 是反光对吧",
+      "l1Hit": "mt_w2xiMNkyyX",
+      "l2Hit": {
+        "id": "mt_15FduGRf5c",
+        "name": "月亮绕地球转",
+        "score": 0.649
+      }
+    },
+    {
+      "id": "mt_j7cj9eWN7w",
+      "style": "indirect",
+      "utterance": "小可你看树叶子呼呼地跑 我的风筝也飞得好高呀",
+      "l1Hit": "mt_j7cer_Nmor",
+      "l2Hit": {
+        "id": "mt_j7cj9eWN7w",
+        "name": "什么是风",
+        "score": 0.401
+      }
+    },
+    {
+      "id": "mt_uUa6cgv8zV",
+      "style": "direct",
+      "utterance": "小可 地球是不是都是石头做的呀 外面摸起来好硬",
+      "l1Hit": "mt_brgde1Vx0P",
+      "l2Hit": {
+        "id": "mt_uUa6cgv8zV",
+        "name": "地球是石头做的",
+        "score": 0.67
+      }
+    },
+    {
+      "id": "mt_d-EKO-pKkP",
+      "style": "indirect",
+      "utterance": "小可为什么铁勺子一碰插头就危险 塑料勺子没事呀",
+      "l1Hit": "mt_q3vRl4dddK",
+      "l2Hit": {
+        "id": "mt_5r47Pvstyn",
+        "name": "物品和材料",
+        "score": 0.418
+      }
+    },
+    {
+      "id": "mt_SZJ1mN7Vfk",
+      "style": "direct",
+      "utterance": "小可蜜蜂采花蜜的时候会不会帮花传粉呀",
+      "l1Hit": "mt_R7LEuZjTmx",
+      "l2Hit": {
+        "id": "mt_SZJ1mN7Vfk",
+        "name": "蜜蜂和传粉",
+        "score": 0.619
+      }
+    },
+    {
+      "id": "mt_WNBHZ1d94L",
+      "style": "indirect",
+      "utterance": "小可花谢了怎么长出小果子 还有毛毛球跟着风跑",
+      "l1Hit": null,
+      "l2Hit": {
+        "id": "mt_WNBHZ1d94L",
+        "name": "传粉和种子传播",
+        "score": 0.476
+      }
+    },
+    {
+      "id": "mt_S4G6GLKr1-",
+      "style": "direct",
+      "utterance": "小可拼图好难 可是我还想再试一次",
+      "l1Hit": "mt_S4G6GLKr1-",
+      "l2Hit": {
+        "id": "mt_S4G6GLKr1-",
+        "name": "难了还坚持",
+        "score": 0.475
+      }
+    },
+    {
+      "id": "mt_UGf6jICEhs",
+      "style": "indirect",
+      "utterance": "小可我画画画歪了 妈妈说她小时候也画错过呢",
+      "l1Hit": "mt_oR6dwRj2Ll",
+      "l2Hit": {
+        "id": "mt_95zxYqpP7m",
+        "name": "换个办法试试",
+        "score": 0.384
+      }
+    },
+    {
+      "id": "mt_lp1eTsQen7",
+      "style": "direct",
+      "utterance": "小可我把手放胸口 心脏在咚咚跳 是在泵血吗",
+      "l1Hit": "mt_lp1eTsQen7",
+      "l2Hit": {
+        "id": "mt_lp1eTsQen7",
+        "name": "心脏和血液",
+        "score": 0.543
+      }
+    },
+    {
+      "id": "mt_Hah24nbToi",
+      "style": "indirect",
+      "utterance": "小可我一按墙上那个键 灯就亮 再按一下又灭了",
+      "l1Hit": null,
+      "l2Hit": {
+        "id": "mt_Hah24nbToi",
+        "name": "开关怎么工作",
+        "score": 0.526
+      }
+    },
+    {
+      "id": "mt_07Geg7LITa",
+      "style": "direct",
+      "utterance": "小可竹节虫是不是在伪装 还有黄黑条纹是警戒色吗",
+      "l1Hit": "mt_07Geg7LITa",
+      "l2Hit": {
+        "id": "mt_07Geg7LITa",
+        "name": "伪装、警戒色和拟态",
+        "score": 0.626
+      }
+    },
+    {
+      "id": "mt_ggcamLzXAy",
+      "style": "indirect",
+      "utterance": "小可早上我开心得跳 下午妹妹抢玩具我就不开心了",
+      "l1Hit": "mt_kvrvpQris4",
+      "l2Hit": {
+        "id": "mt_ggcamLzXAy",
+        "name": "情绪会变也会不同",
+        "score": 0.456
+      }
+    },
+    {
+      "id": "mt_rqalOvjkj3",
+      "style": "direct",
+      "utterance": "小可因纽特人和萨米人住在很冷的地方吗",
+      "l1Hit": "mt_rqalOvjkj3",
+      "l2Hit": {
+        "id": "mt_rqalOvjkj3",
+        "name": "因纽特人和萨米人",
+        "score": 0.635
+      }
+    },
+    {
+      "id": "mt_uSUqTjOl8m",
+      "style": "indirect",
+      "utterance": "小可我压岁钱妈妈帮我放好 说以后会多一点点诶",
+      "l1Hit": "mt_rymBfJmvFl",
+      "l2Hit": {
+        "id": "mt_FNSeo9_T2Z",
+        "name": "保管好钱",
+        "score": 0.517
+      }
+    },
+    {
+      "id": "mt_AylKwhbDWM",
+      "style": "direct",
+      "utterance": "小可我们能不能把活的东西按样子分成好几组呀",
+      "l1Hit": "mt_Sa48W7KXB5",
+      "l2Hit": {
+        "id": "mt_SwaNNdm_Ks",
+        "name": "给材料分组",
+        "score": 0.565
+      }
+    },
+    {
+      "id": "mt_Fw0bbM1e_g",
+      "style": "indirect",
+      "utterance": "小可鱼住在水里 小鸟要窝 沙漠里的动物怎么活呀",
+      "l1Hit": "mt_0zqOTjjW2k",
+      "l2Hit": {
+        "id": "mt_e6PP4ip39V",
+        "name": "动植物的家",
+        "score": 0.568
+      }
+    },
+    {
+      "id": "mt_brgde1Vx0P",
+      "style": "direct",
+      "utterance": "小可分类钥匙是不是一步一步问问题就能认出小虫子",
+      "l1Hit": "mt__p5n8z5soJ",
+      "l2Hit": {
+        "id": "mt__bhJX2SuFJ",
+        "name": "给小虫子分类识别",
+        "score": 0.606
+      }
+    },
+    {
+      "id": "mt_oH1XC8aQYn",
+      "style": "indirect",
+      "utterance": "小可中国挖出的大骨头和美国的好像不一样诶",
+      "l1Hit": "mt_ggcamLzXAy",
+      "l2Hit": {
+        "id": "mt_mwirOvigWD",
+        "name": "化石怎么形成",
+        "score": 0.407
+      }
+    },
+    {
+      "id": "mt_BO_AHGLCk0",
+      "style": "direct",
+      "utterance": "小可为什么先看见闪电 过一会儿才听见打雷呀",
+      "l1Hit": "mt_BO_AHGLCk0",
+      "l2Hit": {
+        "id": "mt_BO_AHGLCk0",
+        "name": "雷和闪电",
+        "score": 0.621
+      }
+    },
+    {
+      "id": "mt__ab4knIaSL",
+      "style": "indirect",
+      "utterance": "小可我想买玩具 妈妈说要先买米和衣服 钱不够了",
+      "l1Hit": "mt_My0OL6fhGL",
+      "l2Hit": {
+        "id": "mt__ab4knIaSL",
+        "name": "需要和想要",
+        "score": 0.567
+      }
+    },
+    {
+      "id": "mt_YPSx5pbpVl",
+      "style": "direct",
+      "utterance": "小可玻璃是透明的吗 还有声音是振动 音量可以变大吗",
+      "l1Hit": "mt_auVZZEuXjs",
+      "l2Hit": {
+        "id": "mt_p6frRFuxS6",
+        "name": "透明、半透明和不透明",
+        "score": 0.497
+      }
+    },
+    {
+      "id": "mt_8QOeG3CuKc",
+      "style": "indirect",
+      "utterance": "小可地球仪上蓝蓝的好大一片 好像都连在一起呀",
+      "l1Hit": "mt_OnV_DTp5i8",
+      "l2Hit": {
+        "id": "mt_KsKLVW_ssY",
+        "name": "陆地和水体的样子",
+        "score": 0.447
+      }
+    },
+    {
+      "id": "mt_DA7-JYRvtP",
+      "style": "direct",
+      "utterance": "小可我想用电池电线和灯泡搭一个简单电路",
+      "l1Hit": "mt_DA7-JYRvtP",
+      "l2Hit": {
+        "id": "mt_DA7-JYRvtP",
+        "name": "搭简单电路",
+        "score": 0.627
+      }
+    },
+    {
+      "id": "mt_C7FNeIDGc6",
+      "style": "indirect",
+      "utterance": "小可我身体是不是好多小小块拼起来的 心和肚子一起干活",
+      "l1Hit": "mt_guaaD6Dn2M",
+      "l2Hit": {
+        "id": "mt_C7FNeIDGc6",
+        "name": "细胞组织和器官",
+        "score": 0.488
+      }
+    },
+    {
+      "id": "mt_1wxwg782yX",
+      "style": "direct",
+      "utterance": "小可我眼睛像妈妈 头发像爸爸 这是遗传特征吗",
+      "l1Hit": "mt_cEzX5r7kp0",
+      "l2Hit": {
+        "id": "mt_cEzX5r7kp0",
+        "name": "孩子像爸妈",
+        "score": 0.607
+      }
+    },
+    {
+      "id": "mt_fk33IEGP-T",
+      "style": "indirect",
+      "utterance": "小可白天亮亮的会下山 晚上那圆圆的还会变胖变瘦",
+      "l1Hit": "mt_PiWZA8Z0ZJ",
+      "l2Hit": {
+        "id": "mt_V_wIdRZLsG",
+        "name": "夜间活动的动物",
+        "score": 0.375
+      }
+    }
+  ],
+  "negEval": [
+    {
+      "cat": "音乐故事请求",
+      "grade": "hard",
+      "utterance": "小可小可 给我放一首孤勇者",
+      "l1Hit": null,
+      "l2": {
+        "name": "勇敢的极地探险家",
+        "score": 0.335
+      }
+    },
+    {
+      "cat": "音乐故事请求",
+      "grade": "hard",
+      "utterance": "我想听奥特曼的故事 讲一个长一点的",
+      "l1Hit": null,
+      "l2": {
+        "name": "讲给别人听",
+        "score": 0.347
+      }
+    },
+    {
+      "cat": "音乐故事请求",
+      "grade": "gray",
+      "utterance": "再讲一遍昨天那个恐龙的故事嘛",
+      "l1Hit": "mt_u0TeRwRII_",
+      "l2": {
+        "name": "恐龙是真的",
+        "score": 0.492
+      }
+    },
+    {
+      "cat": "音乐故事请求",
+      "grade": "hard",
+      "utterance": "换一首歌 这首不好听",
+      "l1Hit": null,
+      "l2": {
+        "name": "换个办法试试",
+        "score": 0.385
+      }
+    },
+    {
+      "cat": "音乐故事请求",
+      "grade": "hard",
+      "utterance": "小可你会唱两只老虎吗",
+      "l1Hit": null,
+      "l2": {
+        "name": "动物的生存妙招",
+        "score": 0.268
+      }
+    },
+    {
+      "cat": "音乐故事请求",
+      "grade": "hard",
+      "utterance": "声音太小了 大一点",
+      "l1Hit": null,
+      "l2": {
+        "name": "声音越远越小",
+        "score": 0.514
+      }
+    },
+    {
+      "cat": "音乐故事请求",
+      "grade": "hard",
+      "utterance": "别放了别放了 我要睡觉了",
+      "l1Hit": null,
+      "l2": {
+        "name": "简单的冷静办法",
+        "score": 0.324
+      }
+    },
+    {
+      "cat": "音乐故事请求",
+      "grade": "hard",
+      "utterance": "给我讲个笑话呗",
+      "l1Hit": null,
+      "l2": {
+        "name": "讲给别人听",
+        "score": 0.366
+      }
+    },
+    {
+      "cat": "打招呼情绪",
+      "grade": "hard",
+      "utterance": "小可早上好呀 你昨天睡得好吗",
+      "l1Hit": null,
+      "l2": {
+        "name": "情绪会变也会不同",
+        "score": 0.333
+      }
+    },
+    {
+      "cat": "打招呼情绪",
+      "grade": "hard",
+      "utterance": "我今天好开心 爸爸给我买了新玩具",
+      "l1Hit": "mt_LhkP_KKIRS",
+      "l2": {
+        "name": "需要和想要",
+        "score": 0.313
+      }
+    },
+    {
+      "cat": "打招呼情绪",
+      "grade": "hard",
+      "utterance": "我不想去幼儿园 呜呜",
+      "l1Hit": null,
+      "l2": {
+        "name": "选择合适的应对办法",
+        "score": 0.357
+      }
+    },
+    {
+      "cat": "打招呼情绪",
+      "grade": "gray",
+      "utterance": "哼 我生气了 不理你了",
+      "l1Hit": "mt_SeNxOZTHCN",
+      "l2": {
+        "name": "心情和做法是两回事",
+        "score": 0.457
+      }
+    },
+    {
+      "cat": "打招呼情绪",
+      "grade": "gray",
+      "utterance": "小可你是我最好的朋友",
+      "l1Hit": "mt_X7Tu94-a2m",
+      "l2": {
+        "name": "好朋友是什么样",
+        "score": 0.404
+      }
+    },
+    {
+      "cat": "打招呼情绪",
+      "grade": "hard",
+      "utterance": "我好想奶奶 她什么时候来呀",
+      "l1Hit": null,
+      "l2": {
+        "name": "耐心和等待",
+        "score": 0.328
+      }
+    },
+    {
+      "cat": "打招呼情绪",
+      "grade": "hard",
+      "utterance": "今天老师表扬我了 嘿嘿",
+      "l1Hit": null,
+      "l2": {
+        "name": "讲给别人听",
+        "score": 0.389
+      }
+    },
+    {
+      "cat": "打招呼情绪",
+      "grade": "hard",
+      "utterance": "你猜我今天在幼儿园干了什么",
+      "l1Hit": null,
+      "l2": {
+        "name": "讲给别人听",
+        "score": 0.365
+      }
+    },
+    {
+      "cat": "游戏世界观",
+      "grade": "hard",
+      "utterance": "小可 方舟今天有什么新任务呀",
+      "l1Hit": null,
+      "l2": {
+        "name": "把任务拆成小步",
+        "score": 0.333
+      }
+    },
+    {
+      "cat": "游戏世界观",
+      "grade": "hard",
+      "utterance": "我的能量石可以升级了吗",
+      "l1Hit": null,
+      "l2": {
+        "name": "能量有哪些种",
+        "score": 0.312
+      }
+    },
+    {
+      "cat": "游戏世界观",
+      "grade": "hard",
+      "utterance": "我们什么时候再去探险呀",
+      "l1Hit": null,
+      "l2": {
+        "name": "太空机器人和火星车",
+        "score": 0.43
+      }
+    },
+    {
+      "cat": "游戏世界观",
+      "grade": "hard",
+      "utterance": "我想给我的小屋换个颜色",
+      "l1Hit": null,
+      "l2": {
+        "name": "动物的伪装",
+        "score": 0.351
+      }
+    },
+    {
+      "cat": "游戏世界观",
+      "grade": "hard",
+      "utterance": "上次那个宝箱还没开呢",
+      "l1Hit": null,
+      "l2": {
+        "name": "会请求帮助",
+        "score": 0.348
+      }
+    },
+    {
+      "cat": "游戏世界观",
+      "grade": "hard",
+      "utterance": "今天的签到奖励是什么",
+      "l1Hit": null,
+      "l2": {
+        "name": "轮流和分享",
+        "score": 0.28
+      }
+    },
+    {
+      "cat": "K12数学切片外",
+      "grade": "hard",
+      "utterance": "三十五加二十七等于多少呀",
+      "l1Hit": null,
+      "l2": {
+        "name": "成本和赚的钱",
+        "score": 0.326
+      }
+    },
+    {
+      "cat": "K12数学切片外",
+      "grade": "hard",
+      "utterance": "老师留的口算题我不会做 九九八十一后面是什么",
+      "l1Hit": "mt_PdYlsA33jB",
+      "l2": {
+        "name": "会请求帮助",
+        "score": 0.426
+      }
+    },
+    {
+      "cat": "K12数学切片外",
+      "grade": "hard",
+      "utterance": "两位数乘法怎么算 妈妈教的我没听懂",
+      "l1Hit": null,
+      "l2": {
+        "name": "讲给别人听",
+        "score": 0.447
+      }
+    },
+    {
+      "cat": "K12数学切片外",
+      "grade": "hard",
+      "utterance": "什么是余数呀 除不尽的那个",
+      "l1Hit": null,
+      "l2": {
+        "name": "记录数据",
+        "score": 0.425
+      }
+    },
+    {
+      "cat": "K12数学切片外",
+      "grade": "hard",
+      "utterance": "钟表上分针走一圈是多久",
+      "l1Hit": null,
+      "l2": {
+        "name": "地球自转和公转",
+        "score": 0.377
+      }
+    },
+    {
+      "cat": "K12数学切片外",
+      "grade": "hard",
+      "utterance": "我会背乘法口诀了 你要听吗",
+      "l1Hit": null,
+      "l2": {
+        "name": "讲给别人听",
+        "score": 0.463
+      }
+    },
+    {
+      "cat": "K12数学切片外",
+      "grade": "hard",
+      "utterance": "作业里让画钝角 钝角长什么样",
+      "l1Hit": null,
+      "l2": {
+        "name": "画力的图",
+        "score": 0.397
+      }
+    },
+    {
+      "cat": "语文英语学习",
+      "grade": "hard",
+      "utterance": "静夜思怎么背来着 床前明月光后面是什么",
+      "l1Hit": null,
+      "l2": {
+        "name": "影子是怎么来的",
+        "score": 0.413
+      }
+    },
+    {
+      "cat": "语文英语学习",
+      "grade": "hard",
+      "utterance": "苹果的英语怎么说呀",
+      "l1Hit": null,
+      "l2": {
+        "name": "讲给别人听",
+        "score": 0.43
+      }
+    },
+    {
+      "cat": "语文英语学习",
+      "grade": "hard",
+      "utterance": "这个字念什么 三个水的那个",
+      "l1Hit": null,
+      "l2": {
+        "name": "水循环",
+        "score": 0.398
+      }
+    },
+    {
+      "cat": "语文英语学习",
+      "grade": "hard",
+      "utterance": "老师让我们用高兴造句 你帮我想一个",
+      "l1Hit": null,
+      "l2": {
+        "name": "更丰富的情绪词",
+        "score": 0.441
+      }
+    },
+    {
+      "cat": "语文英语学习",
+      "grade": "hard",
+      "utterance": "拼音的声调老搞错 第二声怎么读",
+      "l1Hit": null,
+      "l2": {
+        "name": "声音的高低",
+        "score": 0.473
+      }
+    },
+    {
+      "cat": "日常闲聊",
+      "grade": "hard",
+      "utterance": "今天晚饭吃饺子 我最爱韭菜馅的",
+      "l1Hit": null,
+      "l2": {
+        "name": "动物的伪装",
+        "score": 0.294
+      }
+    },
+    {
+      "cat": "日常闲聊",
+      "grade": "hard",
+      "utterance": "妈妈说周末带我去动物园玩",
+      "l1Hit": null,
+      "l2": {
+        "name": "野生、农场和宠物",
+        "score": 0.366
+      }
+    },
+    {
+      "cat": "日常闲聊",
+      "grade": "hard",
+      "utterance": "我的新鞋子是红色的 可好看了",
+      "l1Hit": null,
+      "l2": {
+        "name": "选对材料",
+        "score": 0.326
+      }
+    },
+    {
+      "cat": "日常闲聊",
+      "grade": "hard",
+      "utterance": "弟弟又抢我的积木 讨厌死了",
+      "l1Hit": "mt_GQpqoR5YOc",
+      "l2": {
+        "name": "拆开再拼起来",
+        "score": 0.388
+      }
+    },
+    {
+      "cat": "日常闲聊",
+      "grade": "hard",
+      "utterance": "我今天在幼儿园睡午觉睡着了",
+      "l1Hit": null,
+      "l2": {
+        "name": "搭个遮阳棚",
+        "score": 0.322
+      }
+    },
+    {
+      "cat": "日常闲聊",
+      "grade": "gray",
+      "utterance": "爸爸打呼噜好大声 像打雷一样",
+      "l1Hit": "mt_4pLvMN8uzL",
+      "l2": {
+        "name": "呼吸是怎么回事",
+        "score": 0.393
+      }
+    },
+    {
+      "cat": "日常闲聊",
+      "grade": "hard",
+      "utterance": "我明天生日 会有蛋糕吃",
+      "l1Hit": null,
+      "l2": {
+        "name": "耐心和等待",
+        "score": 0.3
+      }
+    },
+    {
+      "cat": "日常闲聊",
+      "grade": "gray",
+      "utterance": "楼下小狗今天冲我摇尾巴了",
+      "l1Hit": "mt_fDoE-pL6Jv",
+      "l2": {
+        "name": "地震安全",
+        "score": 0.332
+      }
+    },
+    {
+      "cat": "日常闲聊",
+      "grade": "gray",
+      "utterance": "幼儿园新来了一个小朋友 坐我旁边",
+      "l1Hit": null,
+      "l2": {
+        "name": "友谊会变化",
+        "score": 0.443
+      }
+    },
+    {
+      "cat": "日常闲聊",
+      "grade": "hard",
+      "utterance": "我不爱吃胡萝卜 但是妈妈非让吃",
+      "l1Hit": null,
+      "l2": {
+        "name": "身体的基本需要",
+        "score": 0.325
+      }
+    },
+    {
+      "cat": "天马行空",
+      "grade": "hard",
+      "utterance": "奥特曼和孙悟空打架谁赢",
+      "l1Hit": null,
+      "l2": {
+        "name": "人和机器比一比",
+        "score": 0.343
+      }
+    },
+    {
+      "cat": "天马行空",
+      "grade": "gray",
+      "utterance": "我长大了要当宇航员 开飞船",
+      "l1Hit": "mt_oiqsIP97V3",
+      "l2": {
+        "name": "太空机器人和火星车",
+        "score": 0.4
+      }
+    },
+    {
+      "cat": "天马行空",
+      "grade": "hard",
+      "utterance": "如果我有魔法 我要把作业都变没",
+      "l1Hit": null,
+      "l2": {
+        "name": "把任务拆成小步",
+        "score": 0.394
+      }
+    },
+    {
+      "cat": "天马行空",
+      "grade": "hard",
+      "utterance": "汪汪队里面我最喜欢毛毛",
+      "l1Hit": null,
+      "l2": {
+        "name": "认识常见小虫子",
+        "score": 0.312
+      }
+    },
+    {
+      "cat": "天马行空",
+      "grade": "hard",
+      "utterance": "小可你说圣诞老人是真的吗",
+      "l1Hit": null,
+      "l2": {
+        "name": "恐龙是真的",
+        "score": 0.329
+      }
+    }
+  ]
+}

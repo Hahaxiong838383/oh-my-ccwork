@@ -1,0 +1,628 @@
+{
+  "report": {
+    "正样本": {
+      "总召回": {
+        "n": 50,
+        "idFirst": "28.0%",
+        "idAny": "56.0%",
+        "domainFirst": "52.0%",
+        "anyHit": "90.0%"
+      },
+      "直接档": {
+        "n": 25,
+        "idFirst": "44.0%",
+        "idAny": "80.0%",
+        "domainFirst": "68.0%",
+        "anyHit": "96.0%"
+      },
+      "间接档": {
+        "n": 25,
+        "idFirst": "12.0%",
+        "idAny": "32.0%",
+        "domainFirst": "36.0%",
+        "anyHit": "84.0%"
+      }
+    },
+    "负样本": {
+      "hard": {
+        "n": 42,
+        "误报数": 3,
+        "误报率": "7.1%",
+        "明细": [
+          {
+            "cat": "打招呼情绪",
+            "grade": "hard",
+            "utterance": "我今天好开心 爸爸给我买了新玩具",
+            "hit": "说出基本情绪(开心)"
+          },
+          {
+            "cat": "K12数学切片外",
+            "grade": "hard",
+            "utterance": "老师留的口算题我不会做 九九八十一后面是什么",
+            "hit": "主动求助(我不会)"
+          },
+          {
+            "cat": "日常闲聊",
+            "grade": "hard",
+            "utterance": "弟弟又抢我的积木 讨厌死了",
+            "hit": "拆开再拼起来(积木)"
+          }
+        ]
+      },
+      "gray可接受触发": {
+        "n": 7,
+        "触发数": 6,
+        "明细": [
+          "再讲一遍昨天那个恐龙的故事嘛 → 恐龙有多大(恐龙)",
+          "哼 我生气了 不理你了 → 大情绪的词语(我生气了)",
+          "小可你是我最好的朋友 → 友谊会变化(最好的朋友)",
+          "爸爸打呼噜好大声 像打雷一样 → 暴风雨安全(打雷)",
+          "楼下小狗今天冲我摇尾巴了 → 动物身体分组(尾巴)",
+          "我长大了要当宇航员 开飞船 → 宇航员做什么(宇航员)"
+        ]
+      }
+    },
+    "延迟ms": {
+      "p50": "0.045",
+      "p95": "0.108",
+      "词表规模": 4622
+    },
+    "验收线": {
+      "召回_首命中id": "≥60%",
+      "误报": "≤5%",
+      "P95": "<10ms"
+    }
+  },
+  "posResults": [
+    {
+      "id": "mt_j8Pv3s7TZR",
+      "style": "direct",
+      "utterance": "小可我生气了想砸东西 难过的时候又不一样 该怎么应对呀",
+      "expectedName": "选择合适的应对办法",
+      "firstHit": "大情绪的词语(我生气了)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_zVLOm6U7bh",
+      "style": "indirect",
+      "utterance": "小可动物园里那个会游的滑溜溜 还有跳来跳去的和飞的 都叫啥呀",
+      "expectedName": "常见动物分类",
+      "firstHit": null,
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": false
+    },
+    {
+      "id": "mt_0u3QNroZ34",
+      "style": "direct",
+      "utterance": "小可热带雨林是不是在地球中间那一圈 亚马逊刚果那边",
+      "expectedName": "雨林在哪里",
+      "firstHit": "雨林在哪里(地球中间那一圈)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_Wu-ftkzoiE",
+      "style": "indirect",
+      "utterance": "小可电视上那海水突然好高好快冲过来 房子都冲垮了 好吓人",
+      "expectedName": "海啸",
+      "firstHit": "防止侵蚀(冲垮)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_oR6dwRj2Ll",
+      "style": "direct",
+      "utterance": "小可小狗小猫小时候好小 长大就变成大人了 这叫生命阶段吧",
+      "expectedName": "动物的成长阶段",
+      "firstHit": "动物的成长阶段(变成大人)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_QtIAWOcoQT",
+      "style": "indirect",
+      "utterance": "小可山上那个洞里红红的石头是不是烧化了 冒出来烫烫的",
+      "expectedName": "火山里面有什么",
+      "firstHit": "分类检索表(是不是)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_q3vRl4dddK",
+      "style": "direct",
+      "utterance": "小可过马路要看灯 不跟陌生人走 网上也不能乱点 对不对",
+      "expectedName": "日常安全意识",
+      "firstHit": "日常安全意识(过马路)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_e29VrLfmYt",
+      "style": "indirect",
+      "utterance": "小可有一次地板突然抖起来 杯子都晃了 妈妈说是地在动",
+      "expectedName": "什么是地震",
+      "firstHit": "什么是地震(突然抖起来)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_PiWZA8Z0ZJ",
+      "style": "direct",
+      "utterance": "小可太阳白天好亮好热 晚上有星星 月亮有时候白天也能看见",
+      "expectedName": "太阳月亮和星星",
+      "firstHit": "潮汐波浪和洋流(月亮)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_kCSy3Lsgme",
+      "style": "indirect",
+      "utterance": "小可海边水一会儿高一会儿低 还有浪浪打过来 好像有条河在海里流",
+      "expectedName": "潮汐波浪和洋流",
+      "firstHit": "海岸和沙滩(海边)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_M7XhBBzYof",
+      "style": "direct",
+      "utterance": "小可生产者消费者捕食者和猎物 还有食物链食物网 你能给我讲讲吗",
+      "expectedName": "生态常用词",
+      "firstHit": "简单食物链(食物链)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_Dj2xr8CoI0",
+      "style": "indirect",
+      "utterance": "小可今天下雨妈妈让我拿伞 大太阳又要戴帽子 冷了还得加衣服",
+      "expectedName": "看天气穿衣服",
+      "firstHit": "保护眼睛不被太阳光伤害(戴帽子)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_5r47Pvstyn",
+      "style": "direct",
+      "utterance": "小可这个杯子是物体 它是用塑料做的 木头也能做杯子对吧",
+      "expectedName": "物品和材料",
+      "firstHit": "认识日常材料(木头)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_4IVWRAZoNC",
+      "style": "indirect",
+      "utterance": "小可毛毛虫变成蝴蝶 小鸡从蛋里出来长大 最后也会老掉 是不是都这样",
+      "expectedName": "生物的生命周期",
+      "firstHit": "动物的成长阶段(从蛋里出来)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_jgNB2752b9",
+      "style": "direct",
+      "utterance": "小可磁铁有南北极 同极会推开 异极会吸住 对不对呀",
+      "expectedName": "磁铁的两极",
+      "firstHit": "对的和错的选择(对不对)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_l6OpmOKMuT",
+      "style": "indirect",
+      "utterance": "小可海里小小的绿绿的被小鱼吃 大鱼又吃小鱼 大鲨鱼吃大鱼",
+      "expectedName": "海洋食物链",
+      "firstHit": "海洋食物链(鲨鱼吃)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_H4YZ1rSKP3",
+      "style": "direct",
+      "utterance": "小可自我觉察 反思 触发点这些词 是说我心里怎么想的吗",
+      "expectedName": "认识自己的词",
+      "firstHit": "认识自己的词(反思)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_ytUG3yjCYt",
+      "style": "indirect",
+      "utterance": "小可海里有小小的马儿样的 还有花花的小丑鱼 还有好大好大的鲸鱼诶",
+      "expectedName": "海洋动物真多",
+      "firstHit": "海洋动物真多(小丑鱼)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_SrmHaJXKrX",
+      "style": "direct",
+      "utterance": "小可冰和雪是水冻住的 冰山大部分在水下面 冰还会浮起来对吧",
+      "expectedName": "冰和雪",
+      "firstHit": "地球上水在哪里(雪是水)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_i4bDqjyglj",
+      "style": "indirect",
+      "utterance": "小可羊好多只挤一起 狼也成群跑 这样是不是不容易被吃掉呀",
+      "expectedName": "动物抱团求生",
+      "firstHit": "分类检索表(是不是)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_lcf8lx-LkZ",
+      "style": "direct",
+      "utterance": "小可推东西要碰到才行 可磁铁隔着空气也能吸 这是非接触力吗",
+      "expectedName": "接触力与非接触力",
+      "firstHit": "接触力与非接触力(接触力)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_Wc6cOTQ1bA",
+      "style": "indirect",
+      "utterance": "小可同桌的橡皮我想拿 可是没问他 后来还是还回去了 这样对吗",
+      "expectedName": "对的和错的选择",
+      "firstHit": null,
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": false
+    },
+    {
+      "id": "mt_E1wR8IfCV6",
+      "style": "direct",
+      "utterance": "小可小动物和人一样要吃对的东西 它们自己做不了食物对吧",
+      "expectedName": "动物需要营养",
+      "firstHit": null,
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": false
+    },
+    {
+      "id": "mt_e6PP4ip39V",
+      "style": "indirect",
+      "utterance": "小可骆驼住沙漠 鱼要住水里 青蛙喜欢潮湿的地方 对不对",
+      "expectedName": "动植物的家",
+      "firstHit": "对的和错的选择(对不对)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_15FduGRf5c",
+      "style": "direct",
+      "utterance": "小可月亮围着地球转大概一个月一圈 它自己不发光 是反光对吧",
+      "expectedName": "月亮绕地球转",
+      "firstHit": "地球自转和公转(地球转)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_j7cj9eWN7w",
+      "style": "indirect",
+      "utterance": "小可你看树叶子呼呼地跑 我的风筝也飞得好高呀",
+      "expectedName": "什么是风",
+      "firstHit": "常见花草树木(树叶)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_uUa6cgv8zV",
+      "style": "direct",
+      "utterance": "小可 地球是不是都是石头做的呀 外面摸起来好硬",
+      "expectedName": "地球是石头做的",
+      "firstHit": "分类检索表(是不是)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_d-EKO-pKkP",
+      "style": "indirect",
+      "utterance": "小可为什么铁勺子一碰插头就危险 塑料勺子没事呀",
+      "expectedName": "导体和绝缘体",
+      "firstHit": "日常安全意识(危险)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_SZJ1mN7Vfk",
+      "style": "direct",
+      "utterance": "小可蜜蜂采花蜜的时候会不会帮花传粉呀",
+      "expectedName": "蜜蜂和传粉",
+      "firstHit": "小虫子的世界(蜜蜂)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_WNBHZ1d94L",
+      "style": "indirect",
+      "utterance": "小可花谢了怎么长出小果子 还有毛毛球跟着风跑",
+      "expectedName": "传粉和种子传播",
+      "firstHit": null,
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": false
+    },
+    {
+      "id": "mt_S4G6GLKr1-",
+      "style": "direct",
+      "utterance": "小可拼图好难 可是我还想再试一次",
+      "expectedName": "难了还坚持",
+      "firstHit": "难了还坚持(再试一次)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_UGf6jICEhs",
+      "style": "indirect",
+      "utterance": "小可我画画画歪了 妈妈说她小时候也画错过呢",
+      "expectedName": "从错误中学习",
+      "firstHit": "动物的成长阶段(小时候)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_lp1eTsQen7",
+      "style": "direct",
+      "utterance": "小可我把手放胸口 心脏在咚咚跳 是在泵血吗",
+      "expectedName": "心脏和血液",
+      "firstHit": "心脏和血液(心脏)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_Hah24nbToi",
+      "style": "indirect",
+      "utterance": "小可我一按墙上那个键 灯就亮 再按一下又灭了",
+      "expectedName": "开关怎么工作",
+      "firstHit": null,
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": false
+    },
+    {
+      "id": "mt_07Geg7LITa",
+      "style": "direct",
+      "utterance": "小可竹节虫是不是在伪装 还有黄黑条纹是警戒色吗",
+      "expectedName": "伪装、警戒色和拟态",
+      "firstHit": "伪装、警戒色和拟态(黄黑条纹)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_ggcamLzXAy",
+      "style": "indirect",
+      "utterance": "小可早上我开心得跳 下午妹妹抢玩具我就不开心了",
+      "expectedName": "情绪会变也会不同",
+      "firstHit": "用话说情绪(抢玩具)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_rqalOvjkj3",
+      "style": "direct",
+      "utterance": "小可因纽特人和萨米人住在很冷的地方吗",
+      "expectedName": "因纽特人和萨米人",
+      "firstHit": "因纽特人和萨米人(因纽特人和萨米人)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_uSUqTjOl8m",
+      "style": "indirect",
+      "utterance": "小可我压岁钱妈妈帮我放好 说以后会多一点点诶",
+      "expectedName": "银行和存钱",
+      "firstHit": "情绪有强弱(一点点)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_AylKwhbDWM",
+      "style": "direct",
+      "utterance": "小可我们能不能把活的东西按样子分成好几组呀",
+      "expectedName": "给生物分组",
+      "firstHit": "活的、死的和从没活过(活的东西)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_Fw0bbM1e_g",
+      "style": "indirect",
+      "utterance": "小可鱼住在水里 小鸟要窝 沙漠里的动物怎么活呀",
+      "expectedName": "栖息地相关词语",
+      "firstHit": "沙漠里的动物(沙漠里的动物)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_brgde1Vx0P",
+      "style": "direct",
+      "utterance": "小可分类钥匙是不是一步一步问问题就能认出小虫子",
+      "expectedName": "分类检索表",
+      "firstHit": "一步一步的指令(一步一步)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_oH1XC8aQYn",
+      "style": "indirect",
+      "utterance": "小可中国挖出的大骨头和美国的好像不一样诶",
+      "expectedName": "世界各地的恐龙",
+      "firstHit": "情绪会变也会不同(不一样)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_BO_AHGLCk0",
+      "style": "direct",
+      "utterance": "小可为什么先看见闪电 过一会儿才听见打雷呀",
+      "expectedName": "雷和闪电",
+      "firstHit": "雷和闪电(为什么先看见)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt__ab4knIaSL",
+      "style": "indirect",
+      "utterance": "小可我想买玩具 妈妈说要先买米和衣服 钱不够了",
+      "expectedName": "需要和想要",
+      "firstHit": "广告和花钱(买玩具)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_YPSx5pbpVl",
+      "style": "direct",
+      "utterance": "小可玻璃是透明的吗 还有声音是振动 音量可以变大吗",
+      "expectedName": "光和声音的词",
+      "firstHit": "描述材料特性(透明)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_8QOeG3CuKc",
+      "style": "indirect",
+      "utterance": "小可地球仪上蓝蓝的好大一片 好像都连在一起呀",
+      "expectedName": "五大洋",
+      "firstHit": "海洋食物网(都连在一起)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_DA7-JYRvtP",
+      "style": "direct",
+      "utterance": "小可我想用电池电线和灯泡搭一个简单电路",
+      "expectedName": "搭简单电路",
+      "firstHit": "搭简单电路(电路)",
+      "idHitFirst": true,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_C7FNeIDGc6",
+      "style": "indirect",
+      "utterance": "小可我身体是不是好多小小块拼起来的 心和肚子一起干活",
+      "expectedName": "细胞组织和器官",
+      "firstHit": "群居昆虫蚂蚁蜜蜂(一起干活)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": true
+    },
+    {
+      "id": "mt_1wxwg782yX",
+      "style": "direct",
+      "utterance": "小可我眼睛像妈妈 头发像爸爸 这是遗传特征吗",
+      "expectedName": "遗传的特征",
+      "firstHit": "孩子像爸妈(头发像爸爸)",
+      "idHitFirst": false,
+      "idHitAny": true,
+      "domainHitFirst": true,
+      "anyHit": true
+    },
+    {
+      "id": "mt_fk33IEGP-T",
+      "style": "indirect",
+      "utterance": "小可白天亮亮的会下山 晚上那圆圆的还会变胖变瘦",
+      "expectedName": "太阳月亮和星星",
+      "firstHit": "太阳月亮和星星(白天)",
+      "idHitFirst": false,
+      "idHitAny": false,
+      "domainHitFirst": false,
+      "anyHit": true
+    }
+  ]
+}
