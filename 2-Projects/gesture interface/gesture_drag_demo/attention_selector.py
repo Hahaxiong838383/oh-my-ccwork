@@ -19,7 +19,7 @@ from config import (
     CANDIDATE_LOCK_FRAMES, CANDIDATE_RELEASE_FRAMES,
     CANDIDATE_MIN_CONFIDENCE, ATTENTION_SWITCH_MARGIN,
     ATTENTION_SCORE_SIGMA,
-    BUBBLE_LOCK_FRAMES, BUBBLE_RELEASE_FRAMES,
+    BUBBLE_LOCK_FRAMES, BUBBLE_RELEASE_FRAMES, BUBBLE_PROGRESS_DECAY,
     BUBBLE_SCORE_SIGMA, BUBBLE_SWITCH_MARGIN,
 )
 
@@ -207,6 +207,11 @@ class AttentionSelector:
             bubble_lock_progress=min(1.0, self._bubble_lock_count / max(1, BUBBLE_LOCK_FRAMES)),
         )
 
+    @property
+    def bubble_lock_progress(self) -> float:
+        """气泡凝视驻留进度 [0,1]（v3.4 进度环 UI 用）"""
+        return min(1.0, self._bubble_lock_count / max(1, BUBBLE_LOCK_FRAMES))
+
     def update_bubbles(self, gaze_x: float, confidence: float,
                        bubbles: list) -> None:
         """
@@ -227,7 +232,9 @@ class AttentionSelector:
         # 没有气泡 → 清除候选
         if not bubbles or confidence < 0.15:
             self._bubble_release_count += 1
-            self._bubble_lock_count = 0
+            # v3.4：进度衰减而非清零（短暂低置信不打回原点）
+            self._bubble_lock_count = max(
+                0, self._bubble_lock_count - BUBBLE_PROGRESS_DECAY)
             if self._bubble_release_count >= BUBBLE_RELEASE_FRAMES:
                 self._bubble_candidate = None
                 self._bubble_locked = False
@@ -259,7 +266,9 @@ class AttentionSelector:
         # 候选跟踪与锁定（和卡片逻辑类似，但更快）
         if best_bubble is None or best_score < CANDIDATE_MIN_CONFIDENCE:
             self._bubble_release_count += 1
-            self._bubble_lock_count = 0
+            # v3.4：进度衰减而非清零（视线短暂飘走回来接着涨）
+            self._bubble_lock_count = max(
+                0, self._bubble_lock_count - BUBBLE_PROGRESS_DECAY)
             if self._bubble_release_count >= BUBBLE_RELEASE_FRAMES:
                 self._bubble_candidate = None
                 self._bubble_locked = False

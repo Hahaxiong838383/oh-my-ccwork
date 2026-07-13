@@ -737,7 +737,8 @@ def draw_cards(frame: np.ndarray, cards: list[Card], drag_mgr: DragManager,
 
 
 def draw_bubble(frame: np.ndarray, bubble: Bubble, now: float,
-                is_candidate: bool = False, candidate_locked: bool = False):
+                is_candidate: bool = False, candidate_locked: bool = False,
+                lock_progress: float = 0.0):
     """绘制单个气泡（半透明圆 + 浮动动画 + 淡出 + 捏住动效 + 注视候选高亮）"""
     alpha = bubble.alpha(now)
     if alpha <= 0:
@@ -839,6 +840,15 @@ def draw_bubble(frame: np.ndarray, bubble: Bubble, now: float,
         # 淡金色边框
         cv2.circle(frame, (cx, cy), r, dark_gold, 2)
 
+        # v3.4 凝视驻留进度环：底环暗灰，弧线亮青随驻留增长，
+        # 满圈 = 锁定（进入 candidate_locked 分支的橙圈态）
+        ring_r = r + 9
+        cv2.circle(frame, (cx, cy), ring_r, (70, 70, 70), 2)
+        arc = int(360 * max(0.0, min(1.0, lock_progress)))
+        if arc > 0:
+            cv2.ellipse(frame, (cx, cy), (ring_r, ring_r), -90, 0, arc,
+                        (0, 220, 255), 3)
+
     else:
         # === 普通状态：圆形 + 浮动 + 淡出 ===
         bob_y = int(math.sin(age * 2.0) * 5)
@@ -878,8 +888,12 @@ def draw_bubbles(frame: np.ndarray, bubble_mgr: 'BubbleManager',
             continue
         is_cand = (bubble is cand_bubble) if cand_bubble is not None else False
         is_locked = is_cand and cand_locked
+        prog = (attn_state.bubble_lock_progress
+                if (is_cand and attn_state is not None
+                    and hasattr(attn_state, "bubble_lock_progress")) else 0.0)
         draw_bubble(frame, bubble, now,
-                    is_candidate=is_cand, candidate_locked=is_locked)
+                    is_candidate=is_cand, candidate_locked=is_locked,
+                    lock_progress=prog)
 
     # 拖拽中的气泡最后画（最上层）
     if dragging_bubble is not None:

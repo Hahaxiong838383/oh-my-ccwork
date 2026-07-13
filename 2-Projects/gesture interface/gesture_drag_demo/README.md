@@ -1,4 +1,12 @@
-# Gesture Drag Demo v3.3
+# Gesture Drag Demo v3.4
+
+## v3.4 新特性：气泡凝视驻留环（川哥提案）
+
+- **气泡锁定改为 dwell 驻留交互**：3 帧（50ms 瞬锁）→ 30 帧（~0.5s），外围环形进度弧随凝视增长——灰底环 → 亮青弧 → 满圈进入橙色锁定态（Apple Eye Tracking Dwell Control 同款范式）
+- **进度衰减而非清零**：视线短暂飘走时弧线缓慢回退（每帧 -2），回来接着涨——消除 dwell UI 最大挫败源
+- 顺手修掉 app.py 里锁定进度硬编码 `/5` 的旧账（改用 `attn_sel.bubble_lock_progress` 属性）
+- 参数可调：`BUBBLE_LOCK_FRAMES`（嫌慢调小）、`BUBBLE_PROGRESS_DECAY`
+- 新增 `test_bubble_dwell.py`（3 测：累积锁定/衰减不清零/长离开释放）
 
 ## v3.3 新特性：校准质量闭环（川哥提案）
 
@@ -172,6 +180,7 @@ gesture_drag_demo/
 
 ## 版本历史
 
+- **v3.4**：气泡凝视驻留环——dwell锁定(3→30帧)+进度弧+衰减不清零
 - **v3.3**：校准质量闭环——FixationGate 门控(盯稳才算)+进度环反馈+超时降级防卡死
 - **v3.2**：捏取即校准路线C——隐式在线校准(pinch抓卡=注视弱标签,滑窗增量重拟合,越用越准)+uncal字段防复合漂移+4测
 - **v3.1**：注视精度升级路线A——二阶多项式校准（xy 交叉项+仿射兜底择优）+ OneEuro 平滑替代 EMA + 4 项单测

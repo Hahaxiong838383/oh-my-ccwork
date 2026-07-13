@@ -1,5 +1,5 @@
 """
-app.py - 手势拖拽 Demo 主循环 (v3.3)
+app.py - 手势拖拽 Demo 主循环 (v3.4)
 
 使用 OpenCV 窗口 + MediaPipe Hands + FaceMesh 实现：
 - 摄像头实时画面
@@ -159,8 +159,7 @@ def main():
             # 但 attn_state 快照在 update() 时已生成，需要补刷）
             attn_state.candidate_bubble = attn_sel._bubble_candidate
             attn_state.candidate_bubble_locked = attn_sel._bubble_locked
-            attn_state.bubble_lock_progress = min(
-                1.0, attn_sel._bubble_lock_count / max(1, 5))
+            attn_state.bubble_lock_progress = attn_sel.bubble_lock_progress
 
             # --- 拖拽逻辑 ---
             smooth = gesture.smooth_center
