@@ -1,0 +1,26 @@
+[Unit]
+Description=IPTV validate candidate and atomically publish last-good playlist
+Documentation=file:///opt/stacks/iptv-api/scripts/validate-and-publish.sh
+After=docker.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/opt/stacks/iptv-api/scripts/validate-and-publish.sh
+
+[Service]
+Type=oneshot
+User=root
+Environment=IPTV_ROOT=/opt/stacks/iptv-api
+Environment=TZ=Asia/Shanghai
+ExecStart=/usr/bin/flock -n /run/iptv-validate-publish.lock /opt/stacks/iptv-api/scripts/validate-and-publish.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=iptv-validate-publish
+TimeoutStartSec=300
+Nice=10
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/stacks/iptv-api /var/lib/iptv-aiops /run
+
+[Install]
+WantedBy=multi-user.target

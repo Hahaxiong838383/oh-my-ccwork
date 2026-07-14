@@ -126,6 +126,15 @@ flowchart TD
 - 自动权限仍不包含改 `PUBLISH`、删除报告、启用 Mini、跨机回滚、改代码、部署或 git；代码修复先由 Grok 产出补丁与验收方案，川哥确认后实施，mycc commit/push 由 cc 收口。
 - 部署前备份：`/opt/ai-ops-cockpit/backups/pre-theory-radar-handoff-20260714-115830/`。全量回归 `OK vibe regression`，限权巡检 Theory Radar 正常，公网探测 6/6，错误确认词被拒绝。
 
+### 2026-07-14 IPTV 每日巡检 DOWN 与发布调度修复
+
+- AI Ops 手动巡检重跑后，Kuma `私人 IPTV 每日 AI 巡检` 从 `alert:0/1` 恢复为 `recovery:1/1`，旧异常待办 `todo-20260714-030004-e4cb74` 自动关闭。
+- Grok 只读巡检任务 `20260714-122857-3f45bf` 发现：容器服务正常，candidate 已在 07-14 02:15 更新，但 published/health 停在 07-12，业务新鲜度未闭环。
+- Codex 只读取证确认生产机无 `iptv-validate-publish.service/timer` 且无 cron；Grok 根因任务 `20260714-123153-ed548b` 结论为“有日更产出，无日更校验发布调度”，verdict `FIX_NOW`。
+- 长期修复：新增 systemd oneshot + 每日 02:25 timer，用 `flock` 防并发，失败继续保留 last-good；立即 oneshot 发布成功，`79` 个频道，抽样 `13/15`，published/health 推进到 07-14 12:34，无 failure marker。
+- AI Ops 生产巡检现强制验证 timer enabled+active 和 published 年龄不超过 36 小时；新增受控动作 `repair-publish-timer`（确认词 `REPAIR_IPTV_PUBLISH_TIMER`）。
+- 修复后 Grok 巡检任务 `20260714-123453-c5e458` 返回 normal：live 1/1、生产巡检正常，timer 下次执行为 07-15 02:25。回滚点：`/var/backups/iptv-aiops/pre-validate-timer-20260714-123327/`。
+
 ## 实施记录
 
 ### 2026-07-07 Phase 1 基础驾驶舱

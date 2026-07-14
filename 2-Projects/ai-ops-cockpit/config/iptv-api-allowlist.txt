@@ -5,3 +5,6 @@ config/demo.txt
 config/local.txt
 scripts/validate-and-publish.sh
 scripts/rollback-last-good.sh
+scripts/install-validate-publish-timer.sh
+systemd/iptv-validate-publish.service
+systemd/iptv-validate-publish.timer

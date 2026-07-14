@@ -280,15 +280,17 @@ PILOT_PROJECTS = {
             "processManager": "Docker Compose",
             "services": ["iptv-api"],
             "maintenanceSecretDir": "/run/secrets/iptv-maintenance",
-            "maintenanceActions": ["inspect", "refresh", "restart-iptv", "rollback-last-good"],
+            "maintenanceActions": ["inspect", "refresh", "repair-publish-timer", "restart-iptv", "rollback-last-good"],
             "maintenanceConfirmations": {
                 "refresh": "REFRESH_IPTV",
+                "repair-publish-timer": "REPAIR_IPTV_PUBLISH_TIMER",
                 "restart-iptv": "RESTART_IPTV",
                 "rollback-last-good": "ROLLBACK_IPTV",
             },
             "maintenanceLabels": {
                 "inspect": "巡检 IPTV 状态",
                 "refresh": "确认后立即更新 M3U",
+                "repair-publish-timer": "确认后修复发布定时器并执行一次校验",
                 "restart-iptv": "确认后重启 IPTV",
                 "rollback-last-good": "确认后回滚上个合格 M3U",
             },
@@ -1323,6 +1325,15 @@ def sanitize_production_inspection(payload):
                 "uniqueCandidates": source.get("uniqueCandidates"),
             },
         }
+    scheduler = payload.get("scheduler") or {}
+    if isinstance(scheduler, dict) and scheduler:
+        sanitized["scheduler"] = {
+            "ok": bool(scheduler.get("ok")),
+            "enabled": str(scheduler.get("enabled") or "")[:40] or None,
+            "active": str(scheduler.get("active") or "")[:40] or None,
+            "nextElapse": str(scheduler.get("nextElapse") or "")[:120] or None,
+            "lastResult": str(scheduler.get("lastResult") or "")[:40] or None,
+        }
     services = payload.get("services") or {}
     if isinstance(services, dict) and services:
         sanitized["services"] = {}
@@ -1354,6 +1365,7 @@ def sanitize_production_inspection(payload):
                 "channelCount": probe.get("channelCount"),
                 "samplePassed": probe.get("samplePassed"),
                 "sampleTotal": probe.get("sampleTotal"),
+                "ageSeconds": probe.get("ageSeconds"),
                 "latencyMs": probe.get("latencyMs"),
                 "updatedAt": str(probe.get("updatedAt") or "")[:120] or None,
             }
@@ -1648,6 +1660,8 @@ def project_daily_question(project_id):
     ]
     if project_id == "chenchuan-site":
         lines.insert(4, "Theory Radar 必查：publish 是否启用、日报/周度 timer、运行日期与阶段、Grok 模型、论文数、RSS/OpenAlex 计数、publish_result、公网当日归档和双生产者覆盖风险。")
+    if project_id == "iptv-api":
+        lines.insert(4, "IPTV 必查：validate-and-publish timer 必须 enabled+active、published/health 年龄不超过 36 小时、频道数和真实抽样通过；就绪度 200 不能替代发布新鲜度。")
     return "\n".join(lines)
 
 
