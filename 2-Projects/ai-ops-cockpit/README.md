@@ -108,6 +108,15 @@ flowchart TD
 - 登录方式：本机 `~/.ssh/id_ed25519` 公钥免密
 - 密码策略：密码不入文档、不入记忆
 
+### 2026-07-14 个人站雷达维护接管
+
+- 个人站生产巡检新增 radar 专项数据：刷新年龄、aihot/yuweiwan 状态与条数、热层条数、最新发布时间、endpoint IP、健康脚本三态。
+- 新增受控动作 `refresh-radar`：缓存新鲜时只读返回；超过 20 分钟才重启个人站并触发刷新。仍保留 action token、精确确认词和限权 SSH 边界。
+- chenchuan-site allowlist 新增 `scripts/aihot-endpoint-refresh.sh` 与 `scripts/radar-health.sh`，Grok 能读维护策略但不能读取环境变量、运行数据或 secret。
+- Grok 4.5 接管任务：`20260714-100848-2573b6`；长期待办：`todo-20260714-100848-2573b6`。
+- 全量回归 `AI_OPS_REGRESSION_OK`；个人站生产限权巡检 radar 正常，公网探测 6/6。
+- 部署时合并保留 7 月 12 日 Grok 在线加入的 IPTV `config/local.txt` allowlist，未覆盖线上工作。
+
 ## 实施记录
 
 ### 2026-07-07 Phase 1 基础驾驶舱

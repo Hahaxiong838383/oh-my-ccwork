@@ -61,6 +61,8 @@ src/lib/radar/feed-cache.ts
 src/lib/radar/index.ts
 src/lib/radar/types.ts
 src/lib/radar/yuweiwan.ts
+scripts/aihot-endpoint-refresh.sh
+scripts/radar-health.sh
 
 # Shared public UI and safe data helpers
 src/components/shared/SectionTitle.tsx

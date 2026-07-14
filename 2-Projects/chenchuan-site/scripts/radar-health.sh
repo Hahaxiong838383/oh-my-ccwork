@@ -3,9 +3,14 @@
 set -uo pipefail
 
 THRESHOLD="${RADAR_PAGE_THRESHOLD:-300}"
+FRESHNESS_THRESHOLD="${RADAR_FRESHNESS_THRESHOLD_SECONDS:-1200}"
 LOG="${RADAR_HEALTH_LOG:-/var/log/radar-health.log}"
 STATE="${RADAR_HEALTH_STATE:-/opt/radar-health.state}"
 SITE_ENV="${RADAR_SITE_ENV:-/var/www/chenchuan-site/.env.local}"
+SOURCE_HEALTH="${RADAR_SOURCE_HEALTH_FILE:-/var/www/chenchuan-site/data/radar-source-health.json}"
+ENDPOINT_REFRESH="${AIHOT_ENDPOINT_REFRESH_SCRIPT:-/opt/aihot-endpoint-refresh.sh}"
+AIHOT_RETRIES="${AIHOT_HEALTH_RETRIES:-3}"
+AIHOT_RETRY_DELAY="${AIHOT_HEALTH_RETRY_DELAY_SECONDS:-2}"
 AIHOT_URL='https://aihot.virxact.com/api/public/items?mode=all&take=1'
 UA='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 TS=$(date '+%F %T')
@@ -13,33 +18,65 @@ TS=$(date '+%F %T')
 page_count=$(curl -sS --max-time 30 http://127.0.0.1:3000/radar 2>/dev/null | grep -o publishedAt | wc -l)
 [[ "$page_count" -ge "$THRESHOLD" ]] && page_state=OK || page_state=CRIT
 
-aihot_body=$(mktemp)
-aihot_code=$(curl --http1.1 -sS --max-time 10 \
-  -A "$UA" \
-  -H 'Accept: application/json, text/plain, */*' \
-  -e 'https://aihot.virxact.com/' \
-  -o "$aihot_body" \
-  -w '%{http_code}' \
-  "$AIHOT_URL" 2>/dev/null || true)
-aihot_count=$(jq -r 'if (.items | type) == "array" then (.items | length) else 0 end' "$aihot_body" 2>/dev/null || echo 0)
-aihot_count=${aihot_count:-0}
-rm -f "$aihot_body"
+aihot_code=000
+aihot_count=0
+aihot_attempt=0
+while [[ "$aihot_attempt" -lt "$AIHOT_RETRIES" ]]; do
+  aihot_attempt=$((aihot_attempt + 1))
+  aihot_body=$(mktemp)
+  aihot_code=$(curl --http1.1 -sS --max-time 10 \
+    -A "$UA" \
+    -H 'Accept: application/json, text/plain, */*' \
+    -e 'https://aihot.virxact.com/' \
+    -o "$aihot_body" \
+    -w '%{http_code}' \
+    "$AIHOT_URL" 2>/dev/null || true)
+  aihot_count=$(jq -r 'if (.items | type) == "array" then (.items | length) else 0 end' "$aihot_body" 2>/dev/null || echo 0)
+  aihot_count=${aihot_count:-0}
+  rm -f "$aihot_body"
+  [[ "$aihot_code" == 200 && "$aihot_count" -gt 0 ]] && break
+  if [[ "$aihot_attempt" -eq 1 && -x "$ENDPOINT_REFRESH" ]]; then
+    "$ENDPOINT_REFRESH" >/dev/null 2>&1 || true
+  fi
+  [[ "$aihot_attempt" -lt "$AIHOT_RETRIES" ]] && sleep "$AIHOT_RETRY_DELAY"
+done
 [[ "$aihot_code" == 200 && "$aihot_count" -gt 0 ]] && aihot_state=OK || aihot_state=CRIT
+
+# /radar uses SWR, so the page request above starts a background refresh. Give it time to
+# advance source-health before declaring the application feed stale.
+freshness_state=CRIT
+freshness_age=-1
+freshness_checked=none
+for _ in $(seq 1 15); do
+  freshness_checked=$(jq -r '.checkedAt // empty' "$SOURCE_HEALTH" 2>/dev/null || true)
+  if [[ -n "$freshness_checked" ]]; then
+    checked_epoch=$(date -d "$freshness_checked" +%s 2>/dev/null || echo 0)
+    freshness_age=$(( $(date +%s) - checked_epoch ))
+    if [[ "$checked_epoch" -gt 0 && "$freshness_age" -le "$FRESHNESS_THRESHOLD" ]]; then
+      freshness_state=OK
+      break
+    fi
+  fi
+  sleep 2
+done
 
 prev_page=OK
 prev_aihot=OK
+prev_freshness=OK
 if [[ -f "$STATE" ]]; then
   if grep -q '=' "$STATE"; then
     prev_page=$(awk -F= '$1 == "PAGE" { print $2 }' "$STATE")
     prev_aihot=$(awk -F= '$1 == "AIHOT" { print $2 }' "$STATE")
+    prev_freshness=$(awk -F= '$1 == "FRESHNESS" { print $2 }' "$STATE")
     prev_page=${prev_page:-OK}
     prev_aihot=${prev_aihot:-OK}
+    prev_freshness=${prev_freshness:-OK}
   else
     prev_page=$(cat "$STATE" 2>/dev/null || echo OK)
   fi
 fi
-printf 'PAGE=%s\nAIHOT=%s\n' "$page_state" "$aihot_state" > "$STATE"
-echo "$TS page=$page_state count=$page_count(prev=$prev_page) aihot=$aihot_state http=$aihot_code count=$aihot_count(prev=$prev_aihot)" >> "$LOG"
+printf 'PAGE=%s\nAIHOT=%s\nFRESHNESS=%s\n' "$page_state" "$aihot_state" "$freshness_state" > "$STATE"
+echo "$TS page=$page_state count=$page_count(prev=$prev_page) aihot=$aihot_state http=$aihot_code count=$aihot_count attempts=$aihot_attempt(prev=$prev_aihot) freshness=$freshness_state age=${freshness_age}s checkedAt=$freshness_checked(prev=$prev_freshness)" >> "$LOG"
 
 send_card() {
   local template="$1" title="$2" content="$3" webhook
@@ -58,6 +95,14 @@ if [[ "$page_state" != "$prev_page" ]]; then
     send_card orange '📡 雷达页面健康检查：异常' "线上 /radar 资讯条数 **$page_count** 条（阈值 $THRESHOLD）。\n- **时间**: $TS\n- **服务器**: aliyun-kr（韩国）"
   else
     send_card green '✅ 雷达页面健康检查：已恢复' "线上 /radar 资讯条数回到 **$page_count** 条。\n- **时间**: $TS"
+  fi
+fi
+
+if [[ "$freshness_state" != "$prev_freshness" ]]; then
+  if [[ "$freshness_state" == CRIT ]]; then
+    send_card orange '📡 雷达资讯刷新：停滞' "页面归档仍可用，但实时聚合缓存没有按期更新。\n- **缓存年龄**: ${freshness_age} 秒\n- **最后检查**: $freshness_checked\n- **时间**: $TS\n- **说明**: 可能是刷新锁卡住或双上游超时，页面继续使用本地归档"
+  else
+    send_card green '✅ 雷达资讯刷新：已恢复' "实时聚合缓存重新推进。\n- **缓存年龄**: ${freshness_age} 秒\n- **最后检查**: $freshness_checked\n- **时间**: $TS"
   fi
 fi
 

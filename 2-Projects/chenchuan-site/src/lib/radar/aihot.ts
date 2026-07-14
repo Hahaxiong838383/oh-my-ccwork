@@ -62,12 +62,16 @@ async function fetchPage(
   cursor: string | null,
   cacheMode: AihotCacheMode = 'next-revalidate',
   attempt = 0,
+  refreshSignal?: AbortSignal,
 ): Promise<AihotPage> {
   const params = new URLSearchParams({ mode: 'all', category, take: '100' })
   if (cursor) params.set('cursor', cursor)
   const url = `${AIHOT_BASE}/api/public/items?${params.toString()}`
   // Node fetch 无默认超时；源站挂起会拖死 ISR 再生/构建，用 AbortController 兜底
   const controller = new AbortController()
+  const abortFromRefresh = () => controller.abort()
+  if (refreshSignal?.aborted) controller.abort()
+  else refreshSignal?.addEventListener('abort', abortFromRefresh, { once: true })
   const timer = setTimeout(() => controller.abort(), PAGE_TIMEOUT_MS)
   try {
     const res = await fetch(url, {
@@ -108,7 +112,9 @@ async function fetchPage(
     return { items, hasNext: Boolean(data.hasNext), nextCursor: data.nextCursor ?? null }
   } catch (error) {
     // 单页失败（含超时 abort / !ok）：重试一次给瞬时抖动机会，仍失败则 fail-soft 返回空（不影响其余页）
-    if (attempt < PAGE_RETRY) return fetchPage(category, cursor, cacheMode, attempt + 1)
+    if (attempt < PAGE_RETRY && !refreshSignal?.aborted) {
+      return fetchPage(category, cursor, cacheMode, attempt + 1, refreshSignal)
+    }
     logFinalFailure(
       `page:${category}:${cursor ? 'cursor' : 'first'}`,
       { category, page: cursor ? 'cursor' : 'first', attempts: attempt + 1 },
@@ -117,6 +123,7 @@ async function fetchPage(
     return { items: [], hasNext: false, nextCursor: null }
   } finally {
     clearTimeout(timer)
+    refreshSignal?.removeEventListener('abort', abortFromRefresh)
   }
 }
 
@@ -127,11 +134,19 @@ async function fetchCategoryPaged(
   category: RadarCategory,
   cap = 1000,
   cacheMode: AihotCacheMode = 'next-revalidate',
+  refreshSignal?: AbortSignal,
 ): Promise<RadarItem[]> {
   const out: RadarItem[] = []
   let cursor: string | null = null
   for (let page = 0; page < 10; page++) {
-    const { items, hasNext, nextCursor } = await fetchPage(category, cursor, cacheMode)
+    if (refreshSignal?.aborted) break
+    const { items, hasNext, nextCursor } = await fetchPage(
+      category,
+      cursor,
+      cacheMode,
+      0,
+      refreshSignal,
+    )
     out.push(...items)
     if (!hasNext || !nextCursor || out.length >= cap) break
     cursor = nextCursor
@@ -148,9 +163,12 @@ function isCategory(v: unknown): v is RadarCategory {
 export async function fetchAihotAll(
   capPerCat = 1000,
   cacheMode: AihotCacheMode = 'next-revalidate',
+  refreshSignal?: AbortSignal,
 ): Promise<RadarItem[]> {
   const perCategory = await Promise.all(
-    CATEGORY_ORDER.map((category) => fetchCategoryPaged(category, capPerCat, cacheMode)),
+    CATEGORY_ORDER.map((category) =>
+      fetchCategoryPaged(category, capPerCat, cacheMode, refreshSignal),
+    ),
   )
   return perCategory.flat()
 }

@@ -77,7 +77,7 @@ PROJECT_LIVE_PROBES = {
         {"id": "smart-models", "name": "CPA Smart Router 鉴权边界", "url": "https://smart-api.hahaxiong.top/v1/models", "path": "/v1/models", "kind": "http", "expectedStatuses": [401]},
     ],
     "iptv-api": [
-        {"id": "iptv-health", "name": "IPTV 私人 M3U 就绪度", "url": "https://kidshub-ai.hahaxiong.cc/ops-health/iptv", "path": "/ops-health/iptv", "kind": "html", "marker": '"ok":true'},
+        {"id": "iptv-health", "name": "IPTV 私人 M3U 就绪度", "url": "https://kidshub-ai.hahaxiong.cc/ops-health/iptv", "path": "/ops-health/iptv", "kind": "json", "jsonOkField": "ok"},
     ],
 }
 
@@ -127,6 +127,7 @@ IPTV_API_FALLBACK_ALLOWLIST = [
     "config/config.ini",
     "config/subscribe.txt",
     "config/demo.txt",
+    "config/local.txt",
     "scripts/validate-and-publish.sh",
     "scripts/rollback-last-good.sh",
 ]
@@ -215,9 +216,16 @@ PILOT_PROJECTS = {
             "processManager": "PM2",
             "process": "chenchuan-site",
             "maintenanceSecretDir": PRODUCTION_SSH_DIR,
-            "maintenanceActions": ["inspect", "restart"],
-            "maintenanceConfirmations": {"restart": "RESTART_CHENCHUAN_SITE"},
-            "maintenanceLabels": {"inspect": "巡检生产状态", "restart": "确认后重启个人站"},
+            "maintenanceActions": ["inspect", "refresh-radar", "restart"],
+            "maintenanceConfirmations": {
+                "refresh-radar": "REFRESH_RADAR",
+                "restart": "RESTART_CHENCHUAN_SITE",
+            },
+            "maintenanceLabels": {
+                "inspect": "巡检生产状态",
+                "refresh-radar": "确认后修复雷达刷新",
+                "restart": "确认后重启个人站",
+            },
             "verifiedAt": "2026-07-10",
         },
     },
@@ -254,7 +262,7 @@ PILOT_PROJECTS = {
     "iptv-api": {
         "name": "私人 IPTV M3U",
         "path": "/workspace/readonly/iptv-api",
-        "risk": "中风险：仅允许读取脱敏 Compose、公开源清单、频道模板与验收脚本；私人 M3U 路径、完整结果、日志、Push URL 和 secrets 保持隔离。",
+        "risk": "中风险：仅允许读取脱敏 Compose、源清单、频道模板、local 固定源与验收脚本；私人 M3U 路径、完整结果、日志、Push URL 和 secrets 保持隔离。",
         "goal": "持续验证香港 IPTV 聚合任务、私人 M3U 就绪度、频道数量、抽样播放和 last-good 回滚能力。",
         "firstWorkflow": "readonly_inspect",
         "production": {
@@ -1161,6 +1169,14 @@ def probe_project_endpoint(base_url, spec):
         status_ok = result["status"] in expected_statuses
         if spec.get("kind") == "binary":
             result["ok"] = status_ok and result["contentType"].startswith(spec.get("contentTypePrefix", ""))
+        elif spec.get("kind") == "json":
+            try:
+                parsed = json.loads(body.decode("utf-8"))
+                field_ok = bool(parsed.get(spec.get("jsonOkField", "ok")))
+            except Exception:
+                field_ok = False
+            result["jsonFieldOk"] = field_ok
+            result["ok"] = status_ok and field_ok
         elif spec.get("marker"):
             marker_ok = spec.get("marker", "").encode("utf-8") in body
             result["markerOk"] = marker_ok
@@ -1255,6 +1271,21 @@ def sanitize_production_inspection(payload):
             "path": str(deployment.get("path") or "")[:240],
             "buildId": str(deployment.get("buildId") or "")[:100] or None,
             "deployedAt": deployment.get("deployedAt"),
+        }
+    radar = payload.get("radar") or {}
+    if isinstance(radar, dict) and radar:
+        sanitized["radar"] = {
+            "ok": bool(radar.get("ok")),
+            "checkedAt": str(radar.get("checkedAt") or "")[:120] or None,
+            "ageSeconds": radar.get("ageSeconds"),
+            "feedItemCount": radar.get("feedItemCount"),
+            "latestPublishedAt": str(radar.get("latestPublishedAt") or "")[:120] or None,
+            "aihotOk": bool(radar.get("aihotOk")),
+            "aihotCount": radar.get("aihotCount"),
+            "yuweiwanOk": bool(radar.get("yuweiwanOk")),
+            "yuweiwanCount": radar.get("yuweiwanCount"),
+            "endpointIp": str(radar.get("endpointIp") or "")[:64] or None,
+            "monitorState": str(radar.get("monitorState") or "")[:120] or None,
         }
     services = payload.get("services") or {}
     if isinstance(services, dict) and services:
@@ -3117,7 +3148,13 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json(403, {"ok": False, "error": "read token required"})
                     return
                 payload = self._read_json_body()
-                self._send_json(200, run_vibe_task(payload.get("mode"), payload.get("question"), payload.get("conversation"), bool(payload.get("notify"))))
+                self._send_json(200, run_vibe_task(
+                    payload.get("mode"),
+                    payload.get("question"),
+                    payload.get("conversation"),
+                    bool(payload.get("notify")),
+                    payload.get("project"),
+                ))
             elif path == "/vibe/action/refresh-readonly":
                 if not self._has_read_token():
                     self._send_json(403, {"ok": False, "error": "read token required"})
