@@ -21,9 +21,23 @@ description: CPA Smart Router 运维与迭代指南。用于检查、部署、�
 - systemd：`cpa-smart-router.service`
 - 本地监听：`127.0.0.1:8327`
 - 公网入口：`https://smart-api.hahaxiong.top/v1`
+- CPA Direct：`https://api-direct.hahaxiong.top/v1`
 - 远端 SQLite：`/opt/cpa-smart-router/router.sqlite`
 - 远端 JSONL：`/opt/cpa-smart-router/router-metrics.jsonl`
 - Codex lane：`/Users/rayman.chen/mycc/4-Assets/Prompt/omp-team-templates/_codex_lane.sh`
+- CLIProxyAPI：`aliyun-jp:/opt/cliproxy`，auth-dir `/root/.cli-proxy-api`
+- K12 池运维文档：`2-Projects/cpa-smart-router/docs/k12-auth-pool-ops.md`
+
+## K12 账号池（2026-07-14）
+
+- 源包 80500 个 sub2 k12 **全部无 refresh_token**，不能 OAuth 续期。
+- 生产保活：`k12-health-rotate.py` = 验活 → 删死号 → 从 `/opt/cliproxy/k12-pool` 补到目标（默认 25）。
+- 定时器：`cpa-k12-health.timer` 每 30 分钟；报告 `/opt/cliproxy/k12-state/last-report.json`。
+- k12 文件前缀：`zz-test-k12-*.json`；正式 Team/xAI 不要删。
+- 2026-07-14 筛后：约 **33 个活 k12** + Team + xAI。
+- k12 可用模型：`gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini`；`gpt-5.3-codex`/`gpt-5.2` 在 CPA 未注册路由；`gpt-5.6-*` 走 Team。
+- 手动：`ssh aliyun-jp 'python3 /opt/cliproxy/scripts/k12-health-rotate.py --target 25'`
+- 禁止输出/提交 token 与账号文件。
 
 ## 安全边界
 

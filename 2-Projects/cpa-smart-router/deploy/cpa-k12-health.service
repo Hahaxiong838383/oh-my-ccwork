@@ -1,0 +1,15 @@
+[Unit]
+Description=CPA k12 auth health check and pool rotation
+After=network-online.target cliproxy.service
+
+[Service]
+Type=oneshot
+Environment=CPA_AUTH_DIR=/root/.cli-proxy-api
+Environment=K12_POOL_DIR=/opt/cliproxy/k12-pool
+Environment=K12_STATE_DIR=/opt/cliproxy/k12-state
+Environment=K12_TARGET_HEALTHY=25
+Environment=K12_PROBE_CONCURRENCY=6
+Environment=K12_PROBE_TIMEOUT=20
+Environment=K12_PROBE_MODEL=gpt-5.4-mini
+ExecStart=/usr/bin/python3 /opt/cliproxy/scripts/k12-health-rotate.py --target 25
+Nice=10

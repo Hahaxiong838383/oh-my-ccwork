@@ -57,3 +57,15 @@ ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
 - `Responses State Probe`：观测 `previous_response_id`、`store`、`stream`、response id 捕获率、provider mismatch 和错误样本；只观测不强制 sticky。
 - `sqlite_path` 为空时禁用 SQLite 聚合；生产建议写到 `/opt/cpa-smart-router/router.sqlite`。
 - JSONL 指标仍保留，SQLite 写入走后台 channel，不阻塞流式转发路径。
+
+## K12 账号池（2026-07-14）
+
+CLIProxyAPI 侧可混入 k12 codex auth 文件作为补充算力。完整运维见 [`docs/k12-auth-pool-ops.md`](./docs/k12-auth-pool-ops.md)。
+
+要点：
+
+- 源包 **无 refresh_token**，保活 = 验活剔除 + 备用池补号。
+- 脚本：`scripts/k12-health-rotate.py`（生产：`aliyun-jp:/opt/cliproxy/scripts/`）。
+- 定时：`deploy/cpa-k12-health.timer` 每 30 分钟。
+- k12 实际好用模型：`gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini`。
+- **禁止**把账号 token 提交进 git。
