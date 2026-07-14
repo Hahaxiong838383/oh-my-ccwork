@@ -165,6 +165,17 @@ print(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
 PY
 }
 
+k12_status() {
+  /usr/bin/python3 /opt/cliproxy/scripts/k12-health-rotate.py --status-only
+}
+
+k12_rotate() {
+  # 验活剔死号 + 从小池/大源随机补到目标；报告无 token 正文
+  /usr/bin/python3 /opt/cliproxy/scripts/k12-health-rotate.py \
+    --target "${K12_TARGET_HEALTHY:-25}" \
+    --source "${K12_SOURCE_PATH:-/opt/cliproxy/k12-source/accounts.json}"
+}
+
 case "$ACTION" in
   inspect)
     inspect
@@ -179,6 +190,12 @@ case "$ACTION" in
     sleep 5
     inspect
     ;;
+  k12-status)
+    k12_status
+    ;;
+  k12-rotate)
+    k12_rotate
+    ;;
   *)
     printf '{"ok":false,"error":"action_not_allowed"}\n'
     exit 64
@@ -192,7 +209,7 @@ cat > /usr/local/bin/aiops-cpa-jp-dispatch <<'DISPATCH'
 #!/usr/bin/env bash
 set -euo pipefail
 case "${SSH_ORIGINAL_COMMAND:-}" in
-  inspect|restart-cliproxy|restart-router)
+  inspect|restart-cliproxy|restart-router|k12-status|k12-rotate)
     exec sudo -n /usr/local/sbin/aiops-cpa-jp-control "$SSH_ORIGINAL_COMMAND"
     ;;
   *)
@@ -206,7 +223,7 @@ chown root:root /usr/local/bin/aiops-cpa-jp-dispatch
 
 cat > /etc/sudoers.d/aiops-cpa-jp <<'SUDOERS'
 Defaults:aiops !requiretty
-aiops ALL=(root) NOPASSWD: /usr/local/sbin/aiops-cpa-jp-control inspect, /usr/local/sbin/aiops-cpa-jp-control restart-cliproxy, /usr/local/sbin/aiops-cpa-jp-control restart-router
+aiops ALL=(root) NOPASSWD: /usr/local/sbin/aiops-cpa-jp-control inspect, /usr/local/sbin/aiops-cpa-jp-control restart-cliproxy, /usr/local/sbin/aiops-cpa-jp-control restart-router, /usr/local/sbin/aiops-cpa-jp-control k12-status, /usr/local/sbin/aiops-cpa-jp-control k12-rotate
 SUDOERS
 chmod 0440 /etc/sudoers.d/aiops-cpa-jp
 visudo -cf /etc/sudoers.d/aiops-cpa-jp >/dev/null

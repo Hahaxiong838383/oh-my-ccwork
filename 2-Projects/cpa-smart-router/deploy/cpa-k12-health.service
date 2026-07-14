@@ -11,5 +11,8 @@ Environment=K12_TARGET_HEALTHY=25
 Environment=K12_PROBE_CONCURRENCY=6
 Environment=K12_PROBE_TIMEOUT=20
 Environment=K12_PROBE_MODEL=gpt-5.4-mini
+Environment=K12_SOURCE_PATH=/opt/cliproxy/k12-source/accounts.ndjson
+Environment=K12_PREFER_FRONT=2000
+Environment=K12_MAX_PROBE_ATTEMPTS=80
 ExecStart=/usr/bin/python3 /opt/cliproxy/scripts/k12-health-rotate.py --target 25
 Nice=10

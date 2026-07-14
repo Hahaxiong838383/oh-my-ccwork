@@ -28,15 +28,14 @@ description: CPA Smart Router 运维与迭代指南。用于检查、部署、�
 - CLIProxyAPI：`aliyun-jp:/opt/cliproxy`，auth-dir `/root/.cli-proxy-api`
 - K12 池运维文档：`2-Projects/cpa-smart-router/docs/k12-auth-pool-ops.md`
 
-## K12 账号池（2026-07-14）
+## K12 账号池（2026-07-14+）
 
-- 源包 80500 个 sub2 k12 **全部无 refresh_token**，不能 OAuth 续期。
-- 生产保活：`k12-health-rotate.py` = 验活 → 删死号 → 从 `/opt/cliproxy/k12-pool` 补到目标（默认 25）。
-- 定时器：`cpa-k12-health.timer` 每 30 分钟；报告 `/opt/cliproxy/k12-state/last-report.json`。
-- k12 文件前缀：`zz-test-k12-*.json`；正式 Team/xAI 不要删。
-- 2026-07-14 筛后：约 **33 个活 k12** + Team + xAI。
-- k12 可用模型：`gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini`；`gpt-5.3-codex`/`gpt-5.2` 在 CPA 未注册路由；`gpt-5.6-*` 走 Team。
-- 手动：`ssh aliyun-jp 'python3 /opt/cliproxy/scripts/k12-health-rotate.py --target 25'`
+- 大源：`aliyun-jp:/opt/cliproxy/k12-source/accounts.json`（80500，root 600）；备份在 racknerd secrets，**不进 Grok 只读**。
+- 源包 **无 refresh_token**；保活 = 验活剔除 + 小池/大源随机补号。
+- 脚本：`k12-health-rotate.py`（`--status-only` / 默认 rotate；大源优先前 2000）。
+- 定时：`cpa-k12-health.timer` 每 30 分钟。
+- AI Ops 限权动作：`k12-status`、`k12-rotate`（确认词 `ROTATE_CPA_K12`）；Grok harness：`docs/aiops-k12-grok-harness.md`。
+- k12 可用模型：`gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini`；Team 仍负责 `gpt-5.6-*`。
 - 禁止输出/提交 token 与账号文件。
 
 ## 安全边界

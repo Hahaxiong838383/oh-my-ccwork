@@ -8,15 +8,17 @@
 
 | 项 | 现状 |
 |---|---|
-| 源包 | `sub2api_20260714_验活_80500个 k12_...json`（本地 `Documents/陈川个人站/`） |
+| 源包（生产抽样） | `aliyun-jp:/opt/cliproxy/k12-source/accounts.ndjson`（约 1 万条可流式读取，root 600） |
+| 全量备份 | `racknerd:/opt/ai-ops-cockpit/secrets/cpa-k12-source/accounts.json`（216MB，**不进 Grok 只读**） |
+| 机器限制 | 日本 SWAS **仅 1GB 内存**；禁止整包 `json.load` 80500 条，否则会 OOM 挂死 sshd/CPA |
 | refresh_token | **整包 80500 全无**，无法 OAuth 自动续期 |
-| 保活机制 | **验活 → 删死号 → 从备用池补号**（不是 refresh） |
+| 保活机制 | **验活 → 删死号 → 小池/大源随机补号**（不是 refresh） |
+| AI Ops 动作 | `k12-status` / `k12-rotate`（确认词 `ROTATE_CPA_K12`） |
+| Grok harness | `docs/aiops-k12-grok-harness.md` |
 | 可用模型（k12） | `gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini` |
-| 不可用/未接 | `gpt-5.3-codex`、`gpt-5.2` 在 CPA 侧 `unknown provider`；`gpt-5.6-*` 走 Team |
 | 生产 auth-dir | `/root/.cli-proxy-api` |
 | k12 文件前缀 | `zz-test-k12-*.json`（`type=codex`） |
-| 2026-07-14 筛后在线 | **33 个 k12 活号** + 正式 Team Codex + xAI |
-| 备用池 | `/opt/cliproxy/k12-pool`（约 200） |
+| 备用池 | `/opt/cliproxy/k12-pool` |
 | 状态/报告 | `/opt/cliproxy/k12-state/last-report.json` |
 | 定时器 | `cpa-k12-health.timer` 每 30 分钟 |
 
@@ -26,8 +28,9 @@
 |---|---|
 | `/root/.cli-proxy-api/zz-test-k12-*.json` | 当前参与调度的 k12 账号 |
 | `/root/.cli-proxy-api/codex-*-team.json` | 正式 Team（必须保留） |
-| `/opt/cliproxy/k12-pool/pool-*.json` | 备用池 |
-| `/opt/cliproxy/k12-state/` | 报告、历史、脱敏 tombstone |
+| `/opt/cliproxy/k12-source/accounts.json` | 大源（token，禁止进 git/Grok） |
+| `/opt/cliproxy/k12-pool/pool-*.json` | 小备用池 |
+| `/opt/cliproxy/k12-state/` | 报告、历史、used-emails、脱敏 tombstone |
 | `/opt/cliproxy/scripts/k12-health-rotate.py` | 验活+轮换脚本（仓库副本见 `scripts/`） |
 | `deploy/cpa-k12-health.service` / `.timer` | systemd 单元 |
 

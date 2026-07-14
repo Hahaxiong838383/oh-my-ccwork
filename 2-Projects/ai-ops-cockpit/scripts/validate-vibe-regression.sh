@@ -62,7 +62,7 @@ grep -q '项目文件级 Allowlist' "$ASSETS"
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/assets.json" | jq -e '(.servers|length)>=5 and (.servers[] | select(.name=="阿里云日本 CPA" and .status=="已巡检" and .readinessScore>=90)) and (.workspaces|length)>=1' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="MyJavis" and .status=="enabled" and .fileCount>=8)' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="chenchuan-site" and .status=="enabled" and .fileCount>=60)' >/dev/null
-curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="cpa-smart-router" and .status=="enabled" and .fileCount>=5)' >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="cpa-smart-router" and .status=="enabled" and .fileCount>=8)' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="iptv-api" and .status=="enabled" and .fileCount>=6)' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/pilot.json" | jq -e '(.projects|length)>=2 and (.workflowMatrix[] | select(.id=="patch_draft" and .permission=="draft_only"))' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/kuma-context.json" | jq -e 'has("downMonitors") and has("backup")' >/dev/null
@@ -84,7 +84,7 @@ node --check /tmp/aiops-vibe-project-script.js >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project.json?id=chenchuan-site" | jq -e '.project.allowlistCount>=60 and .context.ok==true and (.context.files|length)>=60 and .context.truncated==false and .project.production.process=="chenchuan-site" and (.workflowMatrix|length)>=4' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/live.json?id=chenchuan-site" | jq -e '.ok==true and .passed==6 and .total==6 and (.checks|length)==6' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/daily.json?id=chenchuan-site" | jq -e '.ok==true and .project=="chenchuan-site" and has("active") and has("latest")' >/dev/null
-curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production.json?id=chenchuan-site" | jq -e '.ok==true and .project=="chenchuan-site" and .configured==true and (.allowedActions|index("restart"))!=null' >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production.json?id=chenchuan-site" | jq -e '.ok==true and .project=="chenchuan-site" and .configured==true and (.allowedActions|index("refresh-radar"))!=null and (.allowedActions|index("restart"))!=null' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project?id=cpa-smart-router" -o "$CPA_PROJECT"
 grep -q '个人 CPA / Smart Router 项目工作区' "$CPA_PROJECT"
 grep -q 'restart-cliproxy' "$CPA_PROJECT"
@@ -102,7 +102,7 @@ node --check /tmp/aiops-vibe-cpa-project-script.js >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project.json?id=cpa-smart-router" | jq -e '.project.allowlistCount>=5 and .context.ok==true and (.context.files|length)>=5 and .context.truncated==false and .project.production.processManager=="systemd" and (.workflowMatrix|length)>=4' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/live.json?id=cpa-smart-router" | jq -e '.ok==true and .passed==2 and .total==2 and (.checks|length)==2 and (.checks|all(.status==401))' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/daily.json?id=cpa-smart-router" | jq -e '.ok==true and .project=="cpa-smart-router" and has("active") and has("latest")' >/dev/null
-curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production.json?id=cpa-smart-router" | jq -e '.ok==true and .project=="cpa-smart-router" and .configured==true and (.allowedActions|index("restart-cliproxy"))!=null and (.allowedActions|index("restart-router"))!=null' >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production.json?id=cpa-smart-router" | jq -e '.ok==true and .project=="cpa-smart-router" and .configured==true and (.allowedActions|index("restart-cliproxy"))!=null and (.allowedActions|index("restart-router"))!=null and (.allowedActions|index("k12-status"))!=null and (.allowedActions|index("k12-rotate"))!=null' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project?id=iptv-api" -o "$IPTV_PROJECT"
 grep -q '私人 IPTV M3U 项目工作区' "$IPTV_PROJECT"
 grep -q 'productionAction-refresh' "$IPTV_PROJECT"

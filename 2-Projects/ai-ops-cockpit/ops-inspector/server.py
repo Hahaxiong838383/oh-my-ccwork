@@ -77,7 +77,7 @@ PROJECT_LIVE_PROBES = {
         {"id": "smart-models", "name": "CPA Smart Router 鉴权边界", "url": "https://smart-api.hahaxiong.top/v1/models", "path": "/v1/models", "kind": "http", "expectedStatuses": [401]},
     ],
     "iptv-api": [
-        {"id": "iptv-health", "name": "IPTV 私人 M3U 就绪度", "url": "https://kidshub-ai.hahaxiong.cc/ops-health/iptv", "path": "/ops-health/iptv", "kind": "html", "marker": '"ok":true'},
+        {"id": "iptv-health", "name": "IPTV 私人 M3U 就绪度", "url": "https://kidshub-ai.hahaxiong.cc/ops-health/iptv", "path": "/ops-health/iptv", "kind": "json", "jsonOkField": "ok"},
     ],
 }
 
@@ -116,6 +116,9 @@ CHENCHUAN_SITE_FALLBACK_ALLOWLIST = [
 
 CPA_SMART_ROUTER_FALLBACK_ALLOWLIST = [
     "README.md",
+    "docs/k12-auth-pool-ops.md",
+    "docs/aiops-k12-grok-harness.md",
+    "scripts/k12-health-rotate.py",
     "go.mod",
     "config/router.example.json",
     "cmd/router/main.go",
@@ -127,6 +130,7 @@ IPTV_API_FALLBACK_ALLOWLIST = [
     "config/config.ini",
     "config/subscribe.txt",
     "config/demo.txt",
+    "config/local.txt",
     "scripts/validate-and-publish.sh",
     "scripts/rollback-last-good.sh",
 ]
@@ -215,9 +219,16 @@ PILOT_PROJECTS = {
             "processManager": "PM2",
             "process": "chenchuan-site",
             "maintenanceSecretDir": PRODUCTION_SSH_DIR,
-            "maintenanceActions": ["inspect", "restart"],
-            "maintenanceConfirmations": {"restart": "RESTART_CHENCHUAN_SITE"},
-            "maintenanceLabels": {"inspect": "巡检生产状态", "restart": "确认后重启个人站"},
+            "maintenanceActions": ["inspect", "refresh-radar", "restart"],
+            "maintenanceConfirmations": {
+                "refresh-radar": "REFRESH_RADAR",
+                "restart": "RESTART_CHENCHUAN_SITE",
+            },
+            "maintenanceLabels": {
+                "inspect": "巡检生产状态",
+                "refresh-radar": "确认后修复雷达刷新",
+                "restart": "确认后重启个人站",
+            },
             "verifiedAt": "2026-07-10",
         },
     },
@@ -238,23 +249,27 @@ PILOT_PROJECTS = {
             "processManager": "systemd",
             "services": ["cliproxy", "cpa-smart-router"],
             "maintenanceSecretDir": "/run/secrets/cpa-jp-maintenance",
-            "maintenanceActions": ["inspect", "restart-cliproxy", "restart-router"],
+            "maintenanceActions": ["inspect", "restart-cliproxy", "restart-router", "k12-status", "k12-rotate"],
             "maintenanceConfirmations": {
                 "restart-cliproxy": "RESTART_CPA_CORE",
                 "restart-router": "RESTART_CPA_ROUTER",
+                "k12-rotate": "ROTATE_CPA_K12",
             },
             "maintenanceLabels": {
                 "inspect": "巡检生产状态",
                 "restart-cliproxy": "确认后重启 CPA 核心",
                 "restart-router": "确认后重启 Smart Router",
+                "k12-status": "查看 k12 号池状态",
+                "k12-rotate": "确认后验活并随机补号",
             },
-            "verifiedAt": "2026-07-11",
+            "maintenanceTimeoutSeconds": 300,
+            "verifiedAt": "2026-07-14",
         },
     },
     "iptv-api": {
         "name": "私人 IPTV M3U",
         "path": "/workspace/readonly/iptv-api",
-        "risk": "中风险：仅允许读取脱敏 Compose、公开源清单、频道模板与验收脚本；私人 M3U 路径、完整结果、日志、Push URL 和 secrets 保持隔离。",
+        "risk": "中风险：仅允许读取脱敏 Compose、源清单、频道模板、local 固定源与验收脚本；私人 M3U 路径、完整结果、日志、Push URL 和 secrets 保持隔离。",
         "goal": "持续验证香港 IPTV 聚合任务、私人 M3U 就绪度、频道数量、抽样播放和 last-good 回滚能力。",
         "firstWorkflow": "readonly_inspect",
         "production": {
@@ -1161,6 +1176,14 @@ def probe_project_endpoint(base_url, spec):
         status_ok = result["status"] in expected_statuses
         if spec.get("kind") == "binary":
             result["ok"] = status_ok and result["contentType"].startswith(spec.get("contentTypePrefix", ""))
+        elif spec.get("kind") == "json":
+            try:
+                parsed = json.loads(body.decode("utf-8"))
+                field_ok = bool(parsed.get(spec.get("jsonOkField", "ok")))
+            except Exception:
+                field_ok = False
+            result["jsonFieldOk"] = field_ok
+            result["ok"] = status_ok and field_ok
         elif spec.get("marker"):
             marker_ok = spec.get("marker", "").encode("utf-8") in body
             result["markerOk"] = marker_ok
@@ -1256,6 +1279,21 @@ def sanitize_production_inspection(payload):
             "buildId": str(deployment.get("buildId") or "")[:100] or None,
             "deployedAt": deployment.get("deployedAt"),
         }
+    radar = payload.get("radar") or {}
+    if isinstance(radar, dict) and radar:
+        sanitized["radar"] = {
+            "ok": bool(radar.get("ok")),
+            "checkedAt": str(radar.get("checkedAt") or "")[:120] or None,
+            "ageSeconds": radar.get("ageSeconds"),
+            "feedItemCount": radar.get("feedItemCount"),
+            "latestPublishedAt": str(radar.get("latestPublishedAt") or "")[:120] or None,
+            "aihotOk": bool(radar.get("aihotOk")),
+            "aihotCount": radar.get("aihotCount"),
+            "yuweiwanOk": bool(radar.get("yuweiwanOk")),
+            "yuweiwanCount": radar.get("yuweiwanCount"),
+            "endpointIp": str(radar.get("endpointIp") or "")[:64] or None,
+            "monitorState": str(radar.get("monitorState") or "")[:120] or None,
+        }
     services = payload.get("services") or {}
     if isinstance(services, dict) and services:
         sanitized["services"] = {}
@@ -1295,6 +1333,75 @@ def sanitize_production_inspection(payload):
         sanitized["versions"] = {
             "cliproxy": str(versions.get("cliproxy") or "")[:120] or None,
             "smartRouter": str(versions.get("smartRouter") or "")[:120] or None,
+        }
+    # k12 pool status / rotate report (never include tokens)
+    k12 = payload.get("k12") or {}
+    if isinstance(k12, dict) and k12:
+        accounts = k12.get("accounts") or []
+        safe_accounts = []
+        if isinstance(accounts, list):
+            for item in accounts[:80]:
+                if not isinstance(item, dict):
+                    continue
+                safe_accounts.append(
+                    {
+                        "file": str(item.get("file") or "")[:160],
+                        "email": str(item.get("email") or "")[:80],
+                        "disabled": bool(item.get("disabled")) if item.get("disabled") is not None else None,
+                        "expired": str(item.get("expired") or "")[:40] or None,
+                    }
+                )
+        sanitized["k12"] = {
+            "count": k12.get("count") if k12.get("count") is not None else len(safe_accounts),
+            "accounts": safe_accounts,
+        }
+    for key in ("teamPresent", "xaiCount", "poolRemaining", "usedEmailCount", "used_email_count", "source_exists", "after_total_k12", "target_healthy", "check_only"):
+        if key in payload:
+            sanitized[key] = payload.get(key)
+    source = payload.get("source") or {}
+    if isinstance(source, dict) and source:
+        sanitized["source"] = {
+            "exists": bool(source.get("exists")),
+            "sizeBytes": source.get("sizeBytes"),
+            # path basename only
+            "name": str(source.get("path") or source.get("name") or "").rsplit("/", 1)[-1][:80] or None,
+        }
+    before = payload.get("before") or {}
+    if isinstance(before, dict) and before:
+        sanitized["before"] = {
+            "total": before.get("total"),
+            "healthy": before.get("healthy"),
+            "dead": before.get("dead"),
+        }
+    for list_key in ("removed", "installed_from_pool", "installed_from_bulk", "healthy", "dead_detail"):
+        items = payload.get(list_key)
+        if not isinstance(items, list):
+            continue
+        safe = []
+        for item in items[:60]:
+            if not isinstance(item, dict):
+                continue
+            safe.append(
+                {
+                    "file": str(item.get("file") or "")[:160],
+                    "email": str(item.get("email") or "")[:80],
+                    "reason": str(item.get("reason") or item.get("probe") or "")[:120] or None,
+                    "source": str(item.get("source") or "")[:40] or None,
+                }
+            )
+        sanitized[list_key] = safe
+    if payload.get("note"):
+        sanitized["note"] = str(payload.get("note"))[:240]
+    if payload.get("ts"):
+        sanitized["ts"] = str(payload.get("ts"))[:80]
+    last_report = payload.get("lastReport") or payload.get("last_report")
+    if isinstance(last_report, dict) and last_report:
+        sanitized["lastReport"] = {
+            "ts": str(last_report.get("ts") or "")[:80] or None,
+            "after_total_k12": last_report.get("after_total_k12"),
+            "removed": last_report.get("removed"),
+            "installed_from_pool": last_report.get("installed_from_pool"),
+            "installed_from_bulk": last_report.get("installed_from_bulk"),
         }
     return sanitized
 
@@ -3117,7 +3224,13 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json(403, {"ok": False, "error": "read token required"})
                     return
                 payload = self._read_json_body()
-                self._send_json(200, run_vibe_task(payload.get("mode"), payload.get("question"), payload.get("conversation"), bool(payload.get("notify"))))
+                self._send_json(200, run_vibe_task(
+                    payload.get("mode"),
+                    payload.get("question"),
+                    payload.get("conversation"),
+                    bool(payload.get("notify")),
+                    payload.get("project"),
+                ))
             elif path == "/vibe/action/refresh-readonly":
                 if not self._has_read_token():
                     self._send_json(403, {"ok": False, "error": "read token required"})
