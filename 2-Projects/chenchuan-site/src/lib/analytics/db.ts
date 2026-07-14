@@ -105,6 +105,47 @@ function initDb(): Database.Database {
     );
     CREATE INDEX IF NOT EXISTS idx_managed_videos_published ON managed_videos(published);
     CREATE INDEX IF NOT EXISTS idx_managed_videos_sort ON managed_videos(sort);
+
+    -- 首页 / AI 对话页的 MyJavis 公开语音体验。只存匿名标识和会话元数据，不存录音或转写。
+    CREATE TABLE IF NOT EXISTS voice_experience_usage (
+      visitor_id TEXT NOT NULL,
+      cookie_hash TEXT NOT NULL,
+      ip_hash TEXT NOT NULL,
+      date TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      last_at INTEGER NOT NULL,
+      PRIMARY KEY (visitor_id, date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_voice_usage_ip_date ON voice_experience_usage(ip_hash, date);
+
+    CREATE TABLE IF NOT EXISTS voice_experience_codes (
+      code_hash TEXT PRIMARY KEY,
+      code_hint TEXT NOT NULL,
+      label TEXT,
+      max_uses INTEGER NOT NULL DEFAULT 1,
+      used_count INTEGER NOT NULL DEFAULT 0,
+      expires_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      last_used_at INTEGER,
+      revoked_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_voice_codes_created ON voice_experience_codes(created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS voice_experience_sessions (
+      id TEXT PRIMARY KEY,
+      visitor_id TEXT NOT NULL,
+      cookie_hash TEXT NOT NULL,
+      ip_hash TEXT NOT NULL,
+      source TEXT NOT NULL,
+      code_hash TEXT,
+      room_id TEXT,
+      status TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL,
+      stopped_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_voice_sessions_visitor ON voice_experience_sessions(visitor_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_voice_sessions_status ON voice_experience_sessions(status, expires_at);
   `)
 
   // 兼容已有 DB：检查 ip 列是否存在，没有则 ALTER TABLE 加上

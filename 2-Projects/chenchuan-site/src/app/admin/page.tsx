@@ -61,6 +61,12 @@ export default async function AdminDashboard() {
         </div>
         <div className="flex items-center gap-2">
           <a
+            href="/admin/voice-experience"
+            className="rounded border border-[#A99BFF]/40 bg-[#A99BFF]/[0.06] px-3 py-1.5 text-[11px] font-mono uppercase tracking-[0.16em] text-[#B8ADFF] transition hover:bg-[#A99BFF]/[0.12]"
+          >
+            语音体验码 →
+          </a>
+          <a
             href="/admin/chat-demos"
             className="rounded border border-[#7FE5FF]/40 bg-[#7FE5FF]/[0.06] px-3 py-1.5 text-[11px] font-mono uppercase tracking-[0.16em] text-[#7FE5FF] transition hover:bg-[#7FE5FF]/[0.12]"
           >

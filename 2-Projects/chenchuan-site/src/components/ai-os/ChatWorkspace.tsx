@@ -6,6 +6,7 @@ import type { ClassicDemo, DemoCategory } from '@/data/classic-demos'
 import { CATEGORY_LABELS } from '@/data/classic-demos'
 import { ReplayTimeline } from './ReplayTimeline'
 import { FreeAskPanel } from './FreeAskPanel'
+import { VoiceMirrorExperience } from './VoiceMirrorExperience'
 
 interface ChatWorkspaceProps {
   classicDemos: ClassicDemo[]
@@ -13,6 +14,7 @@ interface ChatWorkspaceProps {
 
 export function ChatWorkspace({ classicDemos }: ChatWorkspaceProps) {
   const [activeDemoId, setActiveDemoId] = useState<string | null>(null)
+  const [conversationMode, setConversationMode] = useState<'voice' | 'text'>('voice')
   const categoryGroups = groupByCategory(classicDemos)
   const activeDemo = activeDemoId ? classicDemos.find((d) => d.id === activeDemoId) ?? null : null
 
@@ -35,9 +37,8 @@ export function ChatWorkspace({ classicDemos }: ChatWorkspaceProps) {
           陈川的<span className="text-[#7FE5FF]">战略镜像</span>
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-white/70">
-          想了解陈川怎么用 AI 做产品决策？两种方式——
-          <span className="text-white/85">左边直接问 3 个问题</span>，
-          AI 会用陈川的产品思路回答；或者
+          想了解陈川怎么用 AI 做产品决策？
+          <span className="text-white/85">左边可直接开口聊 2 分钟，也可切换成文字问答</span>；或者
           <span className="text-white/85">右边点击「真实场景回放」</span>，
           看陈川和多个 AI 协作做决策的完整过程。无需技术背景，问产品 / 招聘 / 创业 /
           管理都可以。
@@ -48,7 +49,27 @@ export function ChatWorkspace({ classicDemos }: ChatWorkspaceProps) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* 左：自由提问 ===== */}
         <div className="lg:col-span-7">
-          <FreeAskPanel />
+          <div className="mb-3 inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+            <button
+              type="button"
+              onClick={() => setConversationMode('voice')}
+              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
+                conversationMode === 'voice' ? 'bg-[#725EFF] text-white' : 'text-white/55 hover:text-white'
+              }`}
+            >
+              实时语音 · 2 分钟
+            </button>
+            <button
+              type="button"
+              onClick={() => setConversationMode('text')}
+              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
+                conversationMode === 'text' ? 'bg-[#725EFF] text-white' : 'text-white/55 hover:text-white'
+              }`}
+            >
+              文字问答 · 3 轮
+            </button>
+          </div>
+          {conversationMode === 'voice' ? <VoiceMirrorExperience /> : <FreeAskPanel />}
         </div>
 
         {/* 右：经典提问 chip 列表 + inline 回放 ===== */}
