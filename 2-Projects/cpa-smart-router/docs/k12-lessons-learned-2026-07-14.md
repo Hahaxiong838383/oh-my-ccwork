@@ -82,7 +82,9 @@
 
 ## 当前生产口径（落盘时）
 
-- k12 前缀：`zz-test-k12-*.json` @ `/root/.cli-proxy-api`
+- k12 前缀：`zz-test-k12-*.json` @ `/root/.cli-proxy-api`，**priority=100**
+- Team：**priority=10**；`gpt-5.5` **优先 k12**（fill-first），Team 兜底
+- 图生：`disable-image-generation: "chat"`（修 Codex tools 冲突）
 - 脚本：`/opt/cliproxy/scripts/k12-health-rotate.py`
 - 定时：`cpa-k12-health.timer` 每 30 分钟
 - AI Ops：`k12-status` / `k12-rotate`（`ROTATE_CPA_K12`）

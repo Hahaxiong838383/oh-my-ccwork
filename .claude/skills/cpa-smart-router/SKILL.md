@@ -36,6 +36,8 @@ description: CPA Smart Router 运维与迭代指南。用于检查、部署、�
 - 定时：`cpa-k12-health.timer` 每 30 分钟。
 - AI Ops 限权动作：`k12-status`、`k12-rotate`（确认词 `ROTATE_CPA_K12`）；Grok harness：`docs/aiops-k12-grok-harness.md`。
 - k12 可用模型：`gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini`；Team 仍负责 `gpt-5.6-*`。
+- **gpt-5.5 优先 k12**：k12 auth `priority=100`，Team `priority=10`，`routing.strategy=fill-first`；Team 不 exclude 5.5（作兜底）。川哥 2026-07-14 测试 OK。
+- 图生冲突：`disable-image-generation: "chat"`（Codex `image_gen.imagegen` vs hosted tool）。
 - 禁止输出/提交 token 与账号文件。
 - 教训全文：`docs/k12-lessons-learned-2026-07-14.md`（OOM/源质量/模型/限权）。
 

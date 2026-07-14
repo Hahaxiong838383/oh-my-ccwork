@@ -16,11 +16,34 @@
 | AI Ops 动作 | `k12-status` / `k12-rotate`（确认词 `ROTATE_CPA_K12`） |
 | Grok harness | `docs/aiops-k12-grok-harness.md` |
 | 可用模型（k12） | `gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini` |
+| **gpt-5.5 路由** | **优先 k12**（auth `priority: 100`）；Team `priority: 10` 作兜底 |
+| 路由策略 | `routing.strategy: fill-first` + `session-affinity: true` |
+| 图生冲突 | `disable-image-generation: "chat"`（避免 Codex `image_gen.imagegen` 与 hosted 工具冲突） |
 | 生产 auth-dir | `/root/.cli-proxy-api` |
 | k12 文件前缀 | `zz-test-k12-*.json`（`type=codex`） |
 | 备用池 | `/opt/cliproxy/k12-pool` |
 | 状态/报告 | `/opt/cliproxy/k12-state/last-report.json` |
 | 定时器 | `cpa-k12-health.timer` 每 30 分钟 |
+
+## gpt-5.5 优先 k12（2026-07-14 川哥确认测试 OK）
+
+| auth | priority | 说明 |
+|---|---|---|
+| `zz-test-k12-*.json` | **100** | 选 `gpt-5.5` 时先绑 k12 |
+| Team `codex-*-team.json` | **10** | k12 全不可用时再兜底；**不**写 `excluded-models`（避免 5.5 无兜底） |
+| `gpt-5.6-*` | — | 仍主要走 Team（k12 卡面不带 5.6） |
+
+改 priority 后需 **重启 cliproxy** 清 session-affinity；客户端 **新开 Codex 会话**。
+
+```bash
+# 查看当前 priority（不打印 token）
+ssh aliyun-jp 'python3 -c "
+import json; from pathlib import Path
+a=Path(\"/root/.cli-proxy-api\")
+for p in list(a.glob(\"codex-*-team.json\"))+sorted(a.glob(\"zz-test-k12-*.json\"))[:1]:
+ d=json.loads(p.read_text()); print(p.name, d.get(\"priority\"), d.get(\"excluded-models\"))
+"'
+```
 
 ## 目录与组件
 
