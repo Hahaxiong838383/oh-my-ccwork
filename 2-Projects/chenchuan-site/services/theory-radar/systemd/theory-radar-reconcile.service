@@ -1,0 +1,12 @@
+[Unit]
+Description=AI Theory Radar weekly source reconciliation
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker run --rm --name theory-radar-reconcile --network host --env-file /etc/theory-radar.env --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m --mount type=bind,src=/var/lib/theory-radar,dst=/var/lib/theory-radar --cpus=0.5 --memory=384m --memory-swap=384m --pids-limit=128 --security-opt=no-new-privileges theory-radar:2.0 reconcile
+TimeoutStartSec=15min
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

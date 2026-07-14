@@ -1,0 +1,11 @@
+[Unit]
+Description=Reconcile AI Theory Radar sources weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 09:30:00 Asia/Shanghai
+RandomizedDelaySec=20m
+Persistent=true
+Unit=theory-radar-reconcile.service
+
+[Install]
+WantedBy=timers.target
