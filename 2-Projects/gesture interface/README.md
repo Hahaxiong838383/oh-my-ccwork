@@ -5,6 +5,7 @@
 > 一句话目标：用普通 USB 摄像头，通过「注视预选 + 捏住拖拽」实现自然的手势交互 Demo。
 
 ## 下一步
+- [ ] MyJavis 结合（2026-07-14 川哥拍板 V0 开工）：本项目面部算法（FaceMesh/EAR/头姿/防抖范式）改造为 MyJavis vision-probe 联调探针（契约 v0.2），评估与方案存档见 `~/mycc/2-Projects/MyJavis/docs/VISION-评估与V0方案.md`
 - [x] 川哥真机验收 v3.1 注视精度：通过（2026-07-10）
 - [x] 路线 C（捏取即校准）已落地 v3.2：隐式在线校准，越用越准（2026-07-10）
 - [ ] 路线 B（PureGaze/ETH-XGaze 外观法模型）触发条件：换环境明显退化 或 卡片网格加密需求，见 `research-gaze-accuracy-2026-07.md`
