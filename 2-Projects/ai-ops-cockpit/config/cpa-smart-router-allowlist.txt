@@ -4,7 +4,8 @@ config/router.example.json
 cmd/router/main.go
 cmd/router/main_test.go
 docs/k12-auth-pool-ops.md
+docs/aiops-k12-grok-harness.md
+docs/k12-lessons-learned-2026-07-14.md
 scripts/k12-health-rotate.py
 deploy/cpa-k12-health.service
 deploy/cpa-k12-health.timer
-docs/aiops-k12-grok-harness.md

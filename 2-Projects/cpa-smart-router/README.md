@@ -60,7 +60,7 @@ ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
 
 ## K12 账号池（2026-07-14）
 
-CLIProxyAPI 侧可混入 k12 codex auth 文件作为补充算力。完整运维见 [`docs/k12-auth-pool-ops.md`](./docs/k12-auth-pool-ops.md)。
+CLIProxyAPI 侧可混入 k12 codex auth 文件作为补充算力。完整运维见 [`docs/k12-auth-pool-ops.md`](./docs/k12-auth-pool-ops.md)；踩坑见 [`docs/k12-lessons-learned-2026-07-14.md`](./docs/k12-lessons-learned-2026-07-14.md)。
 
 要点：
 
