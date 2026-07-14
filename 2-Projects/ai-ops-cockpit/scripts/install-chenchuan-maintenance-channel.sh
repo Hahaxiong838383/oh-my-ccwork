@@ -58,11 +58,24 @@ def read_json(path, default):
     except Exception:
         return default
 
+def unit_value(unit, prop):
+    try:
+        return subprocess.check_output(
+            ["systemctl", "show", unit, "--property=" + prop, "--value"],
+            universal_newlines=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()[:160]
+    except Exception:
+        return None
+
 def iso_age_seconds(value):
     if not value:
         return None
     try:
-        parsed = datetime.datetime.strptime(value.replace("Z", "+0000"), "%Y-%m-%dT%H:%M:%S.%f%z")
+        normalized = value.replace("Z", "+0000")
+        if len(normalized) >= 6 and normalized[-3] == ":":
+            normalized = normalized[:-3] + normalized[-2:]
+        parsed = datetime.datetime.strptime(normalized, "%Y-%m-%dT%H:%M:%S.%f%z")
         return max(0, round((datetime.datetime.now(datetime.timezone.utc) - parsed).total_seconds()))
     except Exception:
         return None
@@ -90,6 +103,7 @@ disk = shutil.disk_usage(app_dir)
 started_ms = environment.get("pm_uptime") or 0
 source_health = read_json(app_dir / "data" / "radar-source-health.json", {})
 feed_cache = read_json(app_dir / "data" / "radar-feed-cache.json", {})
+theory_state = read_json(pathlib.Path("/var/lib/theory-radar/state.json"), {})
 checked_at = source_health.get("checkedAt")
 radar_age = iso_age_seconds(checked_at)
 aihot = source_health.get("aihot") or {}
@@ -116,8 +130,42 @@ radar_ok = bool(
     and aihot.get("ok")
     and yuweiwan.get("ok")
 )
+publish_enabled = False
+try:
+    for line in pathlib.Path("/etc/theory-radar.env").read_text().splitlines():
+        if line.startswith("PUBLISH="):
+            publish_enabled = line.split("=", 1)[1].strip().lower() in {"1", "true", "yes", "on"}
+            break
+except Exception:
+    pass
+theory_updated_at = theory_state.get("updated_at")
+theory_age = iso_age_seconds(theory_updated_at)
+daily_timer = unit_value("theory-radar.timer", "ActiveState")
+reconcile_timer = unit_value("theory-radar-reconcile.timer", "ActiveState")
+source_state = theory_state.get("source_state") or {}
+rss_state = source_state.get("rss") or {}
+openalex_state = source_state.get("openalex") or {}
+public_reports = sorted(app_dir.glob("data/radar/report-*.json"))
+latest_public_report = public_reports[-1].name if public_reports else None
+last_error = theory_state.get("last_error")
+if isinstance(last_error, dict):
+    last_error_type = str(last_error.get("type") or last_error.get("error") or "")[:120] or None
+elif last_error:
+    last_error_type = str(last_error).split(":", 1)[0][:120]
+else:
+    last_error_type = None
+theory_ok = bool(
+    publish_enabled
+    and theory_state.get("status") == "ok"
+    and theory_state.get("published") is True
+    and (theory_state.get("paper_count") or 0) > 0
+    and (theory_state.get("publish_result") or {}).get("ok") is True
+    and daily_timer == "active"
+    and reconcile_timer == "active"
+    and latest_public_report == "report-{}.json".format(theory_state.get("run_date"))
+)
 payload = {
-    "ok": environment.get("status") == "online" and radar_ok,
+    "ok": environment.get("status") == "online" and radar_ok and theory_ok,
     "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     "hostname": socket.gethostname(),
     "process": {
@@ -152,6 +200,34 @@ payload = {
         "endpointIp": endpoint_ip,
         "monitorState": monitor_state,
     },
+    "theoryRadar": {
+        "ok": theory_ok,
+        "publishEnabled": publish_enabled,
+        "status": theory_state.get("status"),
+        "stage": theory_state.get("stage"),
+        "runDate": theory_state.get("run_date"),
+        "updatedAt": theory_updated_at,
+        "ageSeconds": theory_age,
+        "provider": theory_state.get("provider"),
+        "paperCount": theory_state.get("paper_count"),
+        "published": bool(theory_state.get("published")),
+        "publishOk": bool((theory_state.get("publish_result") or {}).get("ok")),
+        "dailyTimer": daily_timer,
+        "dailyNext": unit_value("theory-radar.timer", "NextElapseUSecRealtime"),
+        "reconcileTimer": reconcile_timer,
+        "reconcileNext": unit_value("theory-radar-reconcile.timer", "NextElapseUSecRealtime"),
+        "serviceResult": unit_value("theory-radar.service", "Result"),
+        "latestPublicReport": latest_public_report,
+        "lastErrorType": last_error_type,
+        "source": {
+            "rssOk": bool(rss_state.get("ok")),
+            "rssCount": rss_state.get("count"),
+            "rssCategories": rss_state.get("verified_categories"),
+            "openAlexOk": bool(openalex_state.get("ok")),
+            "openAlexCount": openalex_state.get("count"),
+            "uniqueCandidates": source_state.get("unique_candidates"),
+        },
+    },
 }
 print(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
 PY
@@ -177,6 +253,15 @@ case "$ACTION" in
     fi
     inspect
     ;;
+  run-theory-radar)
+    systemctl start theory-radar.service
+    inspect
+    ;;
+  restart-theory-radar-timers)
+    systemctl daemon-reload
+    systemctl restart theory-radar.timer theory-radar-reconcile.timer
+    inspect
+    ;;
   restart)
     /usr/local/bin/pm2 restart chenchuan-site >/dev/null
     sleep 4
@@ -195,7 +280,7 @@ cat > /usr/local/bin/aiops-chenchuan-site-dispatch <<'DISPATCH'
 #!/usr/bin/env bash
 set -euo pipefail
 case "${SSH_ORIGINAL_COMMAND:-}" in
-  inspect|refresh-radar|restart)
+  inspect|refresh-radar|run-theory-radar|restart-theory-radar-timers|restart)
     exec sudo -n /usr/local/sbin/aiops-chenchuan-site-control "$SSH_ORIGINAL_COMMAND"
     ;;
   *)
@@ -209,7 +294,7 @@ chown root:root /usr/local/bin/aiops-chenchuan-site-dispatch
 
 cat > /etc/sudoers.d/aiops-chenchuan-site <<'SUDOERS'
 Defaults:aiops !requiretty
-aiops ALL=(root) NOPASSWD: /usr/local/sbin/aiops-chenchuan-site-control inspect, /usr/local/sbin/aiops-chenchuan-site-control refresh-radar, /usr/local/sbin/aiops-chenchuan-site-control restart
+aiops ALL=(root) NOPASSWD: /usr/local/sbin/aiops-chenchuan-site-control inspect, /usr/local/sbin/aiops-chenchuan-site-control refresh-radar, /usr/local/sbin/aiops-chenchuan-site-control run-theory-radar, /usr/local/sbin/aiops-chenchuan-site-control restart-theory-radar-timers, /usr/local/sbin/aiops-chenchuan-site-control restart
 SUDOERS
 chmod 0440 /etc/sudoers.d/aiops-chenchuan-site
 visudo -cf /etc/sudoers.d/aiops-chenchuan-site >/dev/null
@@ -226,7 +311,7 @@ SSH_COMMAND=(
   -p "$PRODUCTION_PORT" "aiops@$PRODUCTION_HOST"
 )
 
-ssh "$RACKNERD_ALIAS" "${SSH_COMMAND[*]} inspect" | python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["ok"] is True and data["process"]["name"]=="chenchuan-site" and data["radar"]["ok"] is True; print("maintenance inspect ok")'
+ssh "$RACKNERD_ALIAS" "${SSH_COMMAND[*]} inspect" | python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["ok"] is True and data["process"]["name"]=="chenchuan-site" and data["radar"]["ok"] is True and data["theoryRadar"]["ok"] is True; print("maintenance inspect ok")'
 if ssh "$RACKNERD_ALIAS" "${SSH_COMMAND[*]} id" >/dev/null 2>&1; then
   printf 'restricted key unexpectedly accepted arbitrary command\n' >&2
   exit 1

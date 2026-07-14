@@ -48,7 +48,7 @@ WORKSPACE_ROOT = os.environ.get("WORKSPACE_ROOT", "/workspace/projects")
 READONLY_ROOT = os.environ.get("READONLY_ROOT", "/workspace/readonly")
 ALLOWLIST_DIR = os.environ.get("ALLOWLIST_DIR", "/config")
 PRODUCTION_SSH_DIR = os.environ.get("PRODUCTION_SSH_DIR", "/run/secrets/chenchuan-maintenance")
-PROJECT_CONTEXT_MAX_CHARS = int(os.environ.get("PROJECT_CONTEXT_MAX_CHARS", "280000"))
+PROJECT_CONTEXT_MAX_CHARS = int(os.environ.get("PROJECT_CONTEXT_MAX_CHARS", "360000"))
 PROJECT_CONTEXT_FILE_MAX_CHARS = int(os.environ.get("PROJECT_CONTEXT_FILE_MAX_CHARS", "90000"))
 TASK_LOCK = threading.Lock()
 TASK_STATE = {"last_run": 0}
@@ -203,8 +203,8 @@ PILOT_PROJECTS = {
     "chenchuan-site": {
         "name": "chenchuan-site",
         "path": "/workspace/readonly/chenchuan-site",
-        "risk": "低风险：只读巡检公开页面、组件和安全业务逻辑；后台、API 鉴权、数据库、环境变量与媒体原文件保持隔离。",
-        "goal": "基于真实只读源码确认个人站结构、部署线索、潜在风险和下一步低风险优化。",
+        "risk": "低风险：只读巡检公开页面、组件、雷达服务和安全业务逻辑；后台、API 鉴权、数据库、运行态、环境变量与媒体原文件保持隔离。",
+        "goal": "持续维护个人站与 Theory Radar：结合公开探测、限权生产状态和安全源码快照定位故障，优先恢复日报发布并保护 last-good。",
         "firstWorkflow": "readonly_inspect",
         "production": {
             "domain": "https://my.chenchuan.cc",
@@ -216,17 +216,22 @@ PILOT_PROJECTS = {
             "processManager": "PM2",
             "process": "chenchuan-site",
             "maintenanceSecretDir": PRODUCTION_SSH_DIR,
-            "maintenanceActions": ["inspect", "refresh-radar", "restart"],
+            "maintenanceActions": ["inspect", "refresh-radar", "run-theory-radar", "restart-theory-radar-timers", "restart"],
             "maintenanceConfirmations": {
                 "refresh-radar": "REFRESH_RADAR",
+                "run-theory-radar": "RUN_THEORY_RADAR",
+                "restart-theory-radar-timers": "RESTART_THEORY_RADAR_TIMERS",
                 "restart": "RESTART_CHENCHUAN_SITE",
             },
             "maintenanceLabels": {
                 "inspect": "巡检生产状态",
                 "refresh-radar": "确认后修复雷达刷新",
+                "run-theory-radar": "确认后立即执行 Theory Radar",
+                "restart-theory-radar-timers": "确认后重载 Theory Radar 定时器",
                 "restart": "确认后重启个人站",
             },
-            "verifiedAt": "2026-07-10",
+            "maintenanceTimeoutSeconds": 900,
+            "verifiedAt": "2026-07-14",
         },
     },
     "cpa-smart-router": {
@@ -1287,6 +1292,37 @@ def sanitize_production_inspection(payload):
             "endpointIp": str(radar.get("endpointIp") or "")[:64] or None,
             "monitorState": str(radar.get("monitorState") or "")[:120] or None,
         }
+    theory_radar = payload.get("theoryRadar") or {}
+    if isinstance(theory_radar, dict) and theory_radar:
+        source = theory_radar.get("source") or {}
+        sanitized["theoryRadar"] = {
+            "ok": bool(theory_radar.get("ok")),
+            "publishEnabled": bool(theory_radar.get("publishEnabled")),
+            "status": str(theory_radar.get("status") or "")[:40] or None,
+            "stage": str(theory_radar.get("stage") or "")[:40] or None,
+            "runDate": str(theory_radar.get("runDate") or "")[:40] or None,
+            "updatedAt": str(theory_radar.get("updatedAt") or "")[:120] or None,
+            "ageSeconds": theory_radar.get("ageSeconds"),
+            "provider": str(theory_radar.get("provider") or "")[:120] or None,
+            "paperCount": theory_radar.get("paperCount"),
+            "published": bool(theory_radar.get("published")),
+            "publishOk": bool(theory_radar.get("publishOk")),
+            "dailyTimer": str(theory_radar.get("dailyTimer") or "")[:40] or None,
+            "dailyNext": str(theory_radar.get("dailyNext") or "")[:120] or None,
+            "reconcileTimer": str(theory_radar.get("reconcileTimer") or "")[:40] or None,
+            "reconcileNext": str(theory_radar.get("reconcileNext") or "")[:120] or None,
+            "serviceResult": str(theory_radar.get("serviceResult") or "")[:40] or None,
+            "latestPublicReport": str(theory_radar.get("latestPublicReport") or "")[:160] or None,
+            "lastErrorType": str(theory_radar.get("lastErrorType") or "")[:120] or None,
+            "source": {
+                "rssOk": bool(source.get("rssOk")),
+                "rssCount": source.get("rssCount"),
+                "rssCategories": source.get("rssCategories"),
+                "openAlexOk": bool(source.get("openAlexOk")),
+                "openAlexCount": source.get("openAlexCount"),
+                "uniqueCandidates": source.get("uniqueCandidates"),
+            },
+        }
     services = payload.get("services") or {}
     if isinstance(services, dict) and services:
         sanitized["services"] = {}
@@ -1603,13 +1639,16 @@ def run_vibe_task_with_retry(mode, question, project_id, runtime_context, attemp
 
 def project_daily_question(project_id):
     project = PILOT_PROJECTS[project_id]
-    return "\n".join([
+    lines = [
         f"请执行 {project['name']} 每日只读 AI 巡检。",
         "请同时使用系统注入的文件级 allowlist 源码快照、本轮公网实时探测和生产限权巡检 JSON。",
         "输出必须按 BRO-PDCA：O1/O2、Plan、Do/观察、Check、Action。",
         "重点判断：公网入口与鉴权边界是否符合预期、源码快照是否完整且新鲜、生产服务/资源/真实低成本探测是否需要人工处理。",
         "只能分析和给建议；不得执行写文件、重启、部署、commit、push，也不得输出或索要任何 secret。",
-    ])
+    ]
+    if project_id == "chenchuan-site":
+        lines.insert(4, "Theory Radar 必查：publish 是否启用、日报/周度 timer、运行日期与阶段、Grok 模型、论文数、RSS/OpenAlex 计数、publish_result、公网当日归档和双生产者覆盖风险。")
+    return "\n".join(lines)
 
 
 def project_daily_signature(live, snapshot, production, task):

@@ -11,6 +11,8 @@ tsconfig.json
 docs/AR-HUD-DEMO-STATUS.md
 docs/VIDEO-OPTIMIZATION.md
 docs/radar-iteration-roadmap.md
+docs/theory-radar-aiops-handoff.md
+docs/theory-radar-korea-migration-plan.md
 
 # Public application routes
 src/app/about/page.tsx
@@ -63,6 +65,17 @@ src/lib/radar/types.ts
 src/lib/radar/yuweiwan.ts
 scripts/aihot-endpoint-refresh.sh
 scripts/radar-health.sh
+
+# Theory Radar service and safe operations contract; runtime state and env stay excluded
+services/theory-radar/Dockerfile
+services/theory-radar/README.md
+services/theory-radar/config.example.env
+services/theory-radar/systemd/theory-radar-reconcile.service
+services/theory-radar/systemd/theory-radar-reconcile.timer
+services/theory-radar/systemd/theory-radar.service
+services/theory-radar/systemd/theory-radar.timer
+services/theory-radar/tests/test_theory_radar.py
+services/theory-radar/theory_radar.py
 
 # Shared public UI and safe data helpers
 src/components/shared/SectionTitle.tsx

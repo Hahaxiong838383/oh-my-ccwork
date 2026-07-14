@@ -117,6 +117,15 @@ flowchart TD
 - 全量回归 `AI_OPS_REGRESSION_OK`；个人站生产限权巡检 radar 正常，公网探测 6/6。
 - 部署时合并保留 7 月 12 日 Grok 在线加入的 IPTV `config/local.txt` allowlist，未覆盖线上工作。
 
+### 2026-07-14 Theory Radar 完整交接
+
+- Grok 4.5 已读取 `docs/theory-radar-aiops-handoff.md`、迁移方案、服务代码、测试与 systemd 单元的完整文件级只读快照；上下文 77 个文件、303586 字符，未截断。
+- 正式接管任务：`20260714-120519-3eeb37`；长期维护待办：`todo-20260714-120519-3eeb37`，状态 `doing`。Grok 已按 BRO-PDCA 输出 3 日观察清单、故障动作矩阵、日常验收和升级/回滚边界，并明确接管后续维护。
+- 个人站限权 `inspect` 新增 Theory Radar 状态：只暴露 publish 开关、timer、运行日期/阶段、模型、论文数、来源计数、发布结果和错误类型，不暴露环境变量、报告正文或 secret。
+- 新增确认后动作：`run-theory-radar`（`RUN_THEORY_RADAR`）和 `restart-theory-radar-timers`（`RESTART_THEORY_RADAR_TIMERS`）；继续经过 action token、10 分钟冷却、动作审计、飞书状态通知和公网 6 项验收。
+- 自动权限仍不包含改 `PUBLISH`、删除报告、启用 Mini、跨机回滚、改代码、部署或 git；代码修复先由 Grok 产出补丁与验收方案，川哥确认后实施，mycc commit/push 由 cc 收口。
+- 部署前备份：`/opt/ai-ops-cockpit/backups/pre-theory-radar-handoff-20260714-115830/`。全量回归 `OK vibe regression`，限权巡检 Theory Radar 正常，公网探测 6/6，错误确认词被拒绝。
+
 ## 实施记录
 
 ### 2026-07-07 Phase 1 基础驾驶舱
