@@ -39,5 +39,5 @@ docker run --rm --env-file /etc/theory-radar.env \
 
 - `/etc/theory-radar.env` 必须为 `root:root 600`，secret 不进入 Git 或日志。
 - 容器只读、非 root，限制为 0.5 CPU、384 MiB 内存。
-- 切换生产前至少影子运行 3 天；此期间 Mini 任务保持原样。
+- 切换前先做一次 `PUBLISH=false` 影子 smoke；通过后切 `PUBLISH=true` 并停用 Mini，生产观察 3 天。
 - 回滚只需停用韩国 timer；个人站进程和历史报告不需要重启或删除。

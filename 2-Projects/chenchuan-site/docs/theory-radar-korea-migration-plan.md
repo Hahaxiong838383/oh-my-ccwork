@@ -1,10 +1,10 @@
 # Theory Radar Korea Migration Plan
 
-> 状态：Phase 0-2 已完成；韩国节点已于 2026-07-14 进入 `PUBLISH=false` 的 3 天影子运行，个人站和 Mini 生产任务均未切换。
+> 状态：韩国节点已于 2026-07-14 切换为 `PUBLISH=true`，Mini 旧任务已停用，现进入 3 天生产观察期。
 
 ## 结论
 
-迁移到韩国服务器，但不原样复制 Mini 脚本。采用“独立容器任务 + 多源采集 + Grok 主分析 + 发布门禁 + systemd timer + AI Ops 限权维护”，先影子运行 3 天，再切换主发布。
+迁移到韩国服务器，但不原样复制 Mini 脚本。采用“独立容器任务 + 多源采集 + Grok 主分析 + 发布门禁 + systemd timer + AI Ops 限权维护”。先做一次不发布的影子 smoke，确认抓取、分析和门禁正常后立即切主发布，再观察 3 天真实端到端结果。
 
 arXiv Query API 不再承担每日主链路。韩国节点的 429 不通过轮换 IP、免费代理或 CDN 绕过，而是通过 RSS 日增量、OpenAlex 补全、Query API 集中限流与熔断来长期解决。即使 Query API 持续 429，每日日报仍可正常生成。
 
@@ -95,7 +95,7 @@ flowchart LR
 ### Grok 主分析网关
 
 - 主分析切换为 xAI Grok，默认模型 `grok-4.5`；模型名和 base URL 全部环境变量化，不写死在业务代码。
-- 当前影子运行使用川哥现有 CPA Direct OpenAI-compatible 网关 `https://api-direct.hahaxiong.top/v1` 调用 `grok-4.5`，已完成真实 strict JSON Schema smoke test。后续可无代码切换到官方 xAI API。
+- 当前生产使用川哥现有 CPA Direct OpenAI-compatible 网关 `https://api-direct.hahaxiong.top/v1` 调用 `grok-4.5`，已完成真实 strict JSON Schema smoke test。后续可无代码切换到官方 xAI API。
 - 每日日报不依赖 RackNerd 上 AI Ops 的 OMP OAuth 会话。AI Ops Grok 只作为维护、诊断和受控补跑的控制面。
 - 独立凭据放 `/etc/theory-radar.env`，权限 `600`，不复用个人站 `.env.local`，不进入 Git、日志、状态文件或通知。
 - 使用 strict JSON Schema 约束输出，模型只接收已筛选论文的标题和摘要，不开启联网工具；服务端再次校验字段、篇数、arXiv ID 和长度。
@@ -143,8 +143,8 @@ ANALYSIS_FALLBACK_API_KEY=
 1. Phase 0（已完成）：把 Mini 三个脚本收敛到正式项目，建立 source/analyzer、schema、退出码、状态文件、测试和 Python 3.12 容器。
 2. Phase 1（已完成）：接入 RSS + OpenAlex + Query circuit breaker，并完成 Query API 强制 429 演练；验证日报不受阻。
 3. Phase 2（已完成）：接入 Grok 4.5，完成 strict JSON Schema、真实 API smoke test、限额和故障演练。
-4. Phase 3（进行中）：韩国影子运行 3 天，`PUBLISH=false`；对比 Mini 的抓取数、入选论文和分析结构。
-5. Phase 4：韩国主发布，Mini 保持 launchd disabled 但不删除，观察 7 天。
+4. Phase 3（已完成）：韩国 `PUBLISH=false` 影子 smoke 一次，验证抓取、Grok 分析、门禁、资源限制和个人站零影响。
+5. Phase 4（进行中）：韩国 `PUBLISH=true` 主发布，Mini 保持 launchd disabled 但不删除，观察 3 天。
 6. Phase 5：接 AI Ops、飞书状态通知和补跑入口；收到国产模型网关后接入备用 Analyzer 并演练切换。
 
 ## 验收
@@ -175,6 +175,14 @@ ANALYSIS_FALLBACK_API_KEY=
 - 已排除 RSS 的 `replace` / `replace-cross` 旧论文，保留 `new` / `cross`；修复 Grok 返回顺序变化时按 arXiv ID 安全重排。
 - 强制 429 演练：首次打开 6 小时熔断，第二次直接 skip，RSS + OpenAlex 和个人站均不受影响。
 - 运行期间个人站首页和 `/radar` 持续 HTTP 200，PM2 重启次数保持 3，未重启或重新构建个人站。
+
+## 2026-07-14 生产观察切换
+
+- 川哥纠正观察口径：影子运行不触达用户，只能验证内部链路；真正的 3 天观察应在 `PUBLISH=true` 后进行。
+- 韩国 `/etc/theory-radar.env` 已原子切换为 `PUBLISH=true`；Mini `cc.theory-radar-push` 已 disable + bootout，但 plist 和三个脚本完整保留。
+- 首次真实发布成功：webhook 返回 `ok=true / date=2026-07-14 / papers=8`，公网 `/radar` 已显示 07-14 报告及首篇标题。
+- 切换期间个人站首页和 `/radar` 持续 HTTP 200，PM2 保持 online，重启次数仍为 3。
+- 生产观察回滚：韩国 `/var/backups/theory-radar/pre-production-canary-20260714-110845/`；Mini `/Users/rayman.chen/theory-radar/backups/pre-korea-cutover-20260714-110845/`。
 
 ## 实施前仅需补齐
 
