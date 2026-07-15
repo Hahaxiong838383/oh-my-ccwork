@@ -1,6 +1,7 @@
 import 'server-only'
 import { createHash } from 'node:crypto'
 import { getDb } from './db'
+import type { TrafficClassification } from './classify'
 
 // IP hash：sha256(ip + 月度盐)，UV 能算但 IP 不可逆
 // 月度盐：YYYY-MM + ANALYTICS_HASH_SECRET（env），每月轮换
@@ -16,6 +17,7 @@ interface TrackInput {
   ip: string
   ua: string | null
   country: string | null
+  classification: TrafficClassification
 }
 
 // 记录一次访问。任何失败都吞掉，确保主站不受影响。
@@ -23,7 +25,9 @@ export function trackVisit(input: TrackInput): void {
   try {
     const db = getDb()
     const stmt = db.prepare(
-      'INSERT INTO visits (ts, path, referrer, ip_hash, ip, ua, country) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      `INSERT INTO visits
+        (ts, path, referrer, ip_hash, ip, ua, country, traffic_kind, traffic_reason)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     stmt.run(
       Date.now(),
@@ -33,6 +37,8 @@ export function trackVisit(input: TrackInput): void {
       input.ip.slice(0, 64), // 明文 IP（IPv6 最长 39，留余量）
       input.ua ? input.ua.slice(0, 256) : null,
       input.country,
+      input.classification.kind,
+      input.classification.reason.slice(0, 128),
     )
   } catch (err) {
     // 静默失败：访问记录绝不能影响主站可用性

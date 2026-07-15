@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { SESSION_COOKIE_NAME, verifySession } from '@/lib/analytics/auth'
 import { getStats } from '@/lib/analytics/stats'
@@ -49,37 +50,52 @@ export default async function AdminDashboard() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <header className="mb-8 flex items-center justify-between">
-        <div>
-          <div className="mb-1 font-mono text-[11px] uppercase tracking-[0.3em] text-sky-200/85">
-            Admin · Analytics
+      <header className="mb-8">
+        <div className="grid gap-5 lg:grid-cols-[minmax(280px,1fr)_auto] lg:items-end">
+          <div className="min-w-0">
+            <div className="mb-1 font-mono text-[11px] uppercase tracking-[0.3em] text-sky-200/85">
+              Admin · Analytics
+            </div>
+            <h1 className="text-2xl font-bold leading-tight text-white">真实访客统计</h1>
           </div>
-          <h1 className="text-2xl font-bold text-white">访问统计后台</h1>
-          <p className="mt-1 text-xs text-white/50">
-            已登录：{claims.username} · 数据保留 90 天 · IP + 归属地仅管理员可见
-          </p>
+
+          <nav
+            aria-label="后台管理导航"
+            className="relative z-10 flex flex-wrap items-center gap-2 lg:justify-end"
+          >
+            <Link
+              href="/admin/system-traffic"
+              className="inline-flex min-h-10 touch-manipulation items-center justify-center whitespace-nowrap rounded border border-amber-300/40 bg-amber-300/[0.06] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-amber-200 transition hover:bg-amber-300/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/50"
+            >
+              系统流量 →
+            </Link>
+            <Link
+              href="/admin/voice-experience"
+              className="inline-flex min-h-10 touch-manipulation items-center justify-center whitespace-nowrap rounded border border-[#A99BFF]/40 bg-[#A99BFF]/[0.06] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[#B8ADFF] transition hover:bg-[#A99BFF]/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A99BFF]/50"
+            >
+              语音体验码 →
+            </Link>
+            <Link
+              href="/admin/chat-demos"
+              className="inline-flex min-h-10 touch-manipulation items-center justify-center whitespace-nowrap rounded border border-[#7FE5FF]/40 bg-[#7FE5FF]/[0.06] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[#7FE5FF] transition hover:bg-[#7FE5FF]/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7FE5FF]/50"
+            >
+              Chat Demos →
+            </Link>
+            <Link
+              href="/admin/videos"
+              className="inline-flex min-h-10 touch-manipulation items-center justify-center whitespace-nowrap rounded border border-[#7FE5FF]/40 bg-[#7FE5FF]/[0.06] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[#7FE5FF] transition hover:bg-[#7FE5FF]/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7FE5FF]/50"
+            >
+              视频管理 →
+            </Link>
+            <div className="ml-1 border-l border-white/10 pl-3">
+              <LogoutButton />
+            </div>
+          </nav>
         </div>
-        <div className="flex items-center gap-2">
-          <a
-            href="/admin/voice-experience"
-            className="rounded border border-[#A99BFF]/40 bg-[#A99BFF]/[0.06] px-3 py-1.5 text-[11px] font-mono uppercase tracking-[0.16em] text-[#B8ADFF] transition hover:bg-[#A99BFF]/[0.12]"
-          >
-            语音体验码 →
-          </a>
-          <a
-            href="/admin/chat-demos"
-            className="rounded border border-[#7FE5FF]/40 bg-[#7FE5FF]/[0.06] px-3 py-1.5 text-[11px] font-mono uppercase tracking-[0.16em] text-[#7FE5FF] transition hover:bg-[#7FE5FF]/[0.12]"
-          >
-            Chat Demos →
-          </a>
-          <a
-            href="/admin/videos"
-            className="rounded border border-[#7FE5FF]/40 bg-[#7FE5FF]/[0.06] px-3 py-1.5 text-[11px] font-mono uppercase tracking-[0.16em] text-[#7FE5FF] transition hover:bg-[#7FE5FF]/[0.12]"
-          >
-            视频管理 →
-          </a>
-          <LogoutButton />
-        </div>
+
+        <p className="mt-2 text-xs text-white/50">
+          已登录：{claims.username} · 仅统计完成页面加载的真实浏览器 · 旧版未验证记录已移至系统流量
+        </p>
       </header>
 
       {statsError && (
@@ -92,10 +108,10 @@ export default async function AdminDashboard() {
         <>
           {/* 总览卡片 */}
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatCard label="今日 PV · 浏览量" value={stats.today.pv} accent="#7dd3fc" />
-            <StatCard label="今日 UV · 访客数" value={stats.today.uv} accent="#a78bfa" />
-            <StatCard label="7 天 PV · 浏览量" value={stats.week.pv} accent="#7dd3fc" />
-            <StatCard label="7 天 UV · 访客数" value={stats.week.uv} accent="#a78bfa" />
+            <StatCard label="今日真实 PV" value={stats.today.pv} accent="#7dd3fc" />
+            <StatCard label="今日真实 UV" value={stats.today.uv} accent="#a78bfa" />
+            <StatCard label="7 天真实 PV" value={stats.week.pv} accent="#7dd3fc" />
+            <StatCard label="7 天真实 UV" value={stats.week.uv} accent="#a78bfa" />
           </div>
 
           {/* 趋势图 */}
@@ -106,7 +122,7 @@ export default async function AdminDashboard() {
               </h2>
               <span className="text-[11px] text-white/45">
                 <span className="text-[#7dd3fc]">PV</span> = 页面浏览量（每次打开都算） ·{' '}
-                <span className="text-[#a78bfa]">UV</span> = 独立访客数（按 IP+UA 去重）
+                <span className="text-[#a78bfa]">UV</span> = 独立访客数（按匿名 IP 标识去重）
               </span>
             </div>
             <TrendChart data={stats.trend} />
@@ -123,7 +139,7 @@ export default async function AdminDashboard() {
           <section className="rounded-lg border border-white/10 bg-white/[0.02] p-5">
             <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-white/60">
-                最近 50 条访问
+                最近 50 条真实访问
               </h2>
               <span className="text-[11px] text-white/45">
                 IP 归属地 / ISP 数据来自 ip-api.com（24h 缓存，外网失败时空）

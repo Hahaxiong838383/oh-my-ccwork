@@ -2,6 +2,7 @@ import 'server-only'
 import Database from 'better-sqlite3'
 import { mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
+import { classifyTraffic, getTrafficClassifierConfig } from './classify'
 
 // SQLite 单例 + WAL 模式（高并发安全 + 主线程不阻塞）
 // 数据文件：data/analytics.db（生产环境 /var/www/chenchuan-site/data/analytics.db）
@@ -37,11 +38,17 @@ function initDb(): Database.Database {
       ip_hash TEXT NOT NULL,
       ip TEXT,
       ua TEXT,
-      country TEXT
+      country TEXT,
+      traffic_kind TEXT NOT NULL DEFAULT 'legacy',
+      traffic_reason TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_visits_ts ON visits(ts);
     CREATE INDEX IF NOT EXISTS idx_visits_path ON visits(path);
     CREATE INDEX IF NOT EXISTS idx_visits_country ON visits(country);
+    CREATE TABLE IF NOT EXISTS analytics_migrations (
+      key TEXT PRIMARY KEY,
+      applied_at INTEGER NOT NULL
+    );
   `)
 
   // === ai-os/chat 1.0 ===
@@ -153,12 +160,110 @@ function initDb(): Database.Database {
   if (!cols.find((c) => c.name === 'ip')) {
     db.exec('ALTER TABLE visits ADD COLUMN ip TEXT')
   }
+  if (!cols.find((c) => c.name === 'traffic_kind')) {
+    db.exec("ALTER TABLE visits ADD COLUMN traffic_kind TEXT NOT NULL DEFAULT 'legacy'")
+  }
+  if (!cols.find((c) => c.name === 'traffic_reason')) {
+    db.exec('ALTER TABLE visits ADD COLUMN traffic_reason TEXT')
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_visits_kind_ts ON visits(traffic_kind, ts)')
+
+  backfillLegacyTraffic(db)
 
   // 启动时清理超过 90 天的记录
   const cutoff = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000
   db.prepare('DELETE FROM visits WHERE ts < ?').run(cutoff)
 
   return db
+}
+
+interface LegacyVisitRow {
+  id: number
+  ts: number
+  path: string
+  ip_hash: string
+  ip: string | null
+  ua: string | null
+}
+
+function backfillLegacyTraffic(db: Database.Database): void {
+  const migrationKey = 'traffic-kind-v2-hydration-only'
+  const alreadyApplied = db
+    .prepare('SELECT 1 FROM analytics_migrations WHERE key = ?')
+    .get(migrationKey)
+  if (alreadyApplied) return
+
+  const rows = db
+    .prepare(
+      `SELECT id, ts, path, ip_hash, ip, ua
+       FROM visits
+       WHERE traffic_kind = 'legacy'
+       ORDER BY ip_hash, ua, ts, id`,
+    )
+    .all() as LegacyVisitRow[]
+
+  const config = getTrafficClassifierConfig()
+  const update = db.prepare(
+    'UPDATE visits SET traffic_kind = ?, traffic_reason = ? WHERE id = ?',
+  )
+  const humanRows: LegacyVisitRow[] = []
+  const counts = new Map<string, number>()
+
+  db.transaction(() => {
+    for (const row of rows) {
+      const classification = classifyTraffic(
+        {
+          path: row.path,
+          ip: row.ip ?? 'unknown',
+          ua: row.ua,
+          source: 'legacy',
+        },
+        config,
+      )
+      // 旧表没有“浏览器已执行 JS”的证据。即使 UA 看起来像浏览器，也不能
+      // 证明是真人，保守放入历史未验证区，避免伪装 UA 的扫描峰值污染主统计。
+      const historicalKind = classification.kind === 'human' ? 'legacy' : classification.kind
+      const historicalReason =
+        classification.kind === 'human' ? 'unverified_legacy_browser' : classification.reason
+      update.run(historicalKind, historicalReason, row.id)
+      counts.set(historicalKind, (counts.get(historicalKind) ?? 0) + 1)
+      if (classification.kind === 'human') humanRows.push(row)
+    }
+
+    // 旧版 middleware 会把 Next.js 同秒预加载的多个页面都算成 PV。
+    // 同 IP + UA 在 3 秒内突发访问至少 3 个不同路径时，只保留第一条为真人浏览。
+    let group: LegacyVisitRow[] = []
+    const flushBurst = () => {
+      if (group.length < 3 || new Set(group.map((row) => row.path)).size < 3) {
+        group = []
+        return
+      }
+      for (const row of group.slice(1)) {
+        update.run('prefetch', 'legacy_prefetch_burst', row.id)
+        counts.set('legacy', Math.max(0, (counts.get('legacy') ?? 0) - 1))
+        counts.set('prefetch', (counts.get('prefetch') ?? 0) + 1)
+      }
+      group = []
+    }
+
+    for (const row of humanRows) {
+      const previous = group[group.length - 1]
+      const sameVisitor =
+        previous && previous.ip_hash === row.ip_hash && previous.ua === row.ua
+      const withinBurst = group.length > 0 && row.ts - group[0].ts <= 3000
+      if (!sameVisitor || !withinBurst) flushBurst()
+      group.push(row)
+    }
+    flushBurst()
+    db.prepare('INSERT INTO analytics_migrations (key, applied_at) VALUES (?, ?)').run(
+      migrationKey,
+      Date.now(),
+    )
+  })()
+
+  // 只输出分类数量，不输出 IP、UA 或访问路径。
+  // eslint-disable-next-line no-console
+  console.info('[analytics] legacy traffic backfilled', Object.fromEntries(counts))
 }
 
 export function getDb(): Database.Database {
