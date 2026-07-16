@@ -17,6 +17,8 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlparse
 
+import ops_tool_runtime
+
 KUMA_DB = os.environ.get("KUMA_DB", "/kuma/kuma.db")
 NETDATA = os.environ.get("NETDATA_URL", "http://netdata:19999")
 DISPLAY_HOSTNAME = os.environ.get("DISPLAY_HOSTNAME", "racknerd-54aa08d")
@@ -59,6 +61,7 @@ PROJECT_DAILY_LOCK = threading.Lock()
 PROJECT_DAILY_ACTIVE = set()
 PROJECT_PRODUCTION_LOCK = threading.Lock()
 PROJECT_PRODUCTION_ACTIVE = set()
+OPS_RUNTIME_LOCK = threading.Lock()
 PROJECT_RESTART_COOLDOWN_SECONDS = int(os.environ.get("PROJECT_RESTART_COOLDOWN_SECONDS", "600"))
 ASSETS_CACHE_TTL_SECONDS = int(os.environ.get("ASSETS_CACHE_TTL_SECONDS", "20"))
 READONLY_REFRESH_LOCK = threading.Lock()
@@ -1613,6 +1616,130 @@ def start_project_production_job(payload):
     return {"ok": True, "status": "queued", "jobId": job_id, "pollUrl": f"/vibe/project/production/job?id={job_id}"}
 
 
+def ops_runtime_execution_root():
+    return ops_tool_runtime.execution_dir(STATE_DIR)
+
+
+def save_ops_runtime_execution(record):
+    root = ops_runtime_execution_root()
+    ensure_private_dir(root)
+    save_json_file(os.path.join(root, record["id"] + ".json"), record)
+
+
+def load_ops_runtime_execution(execution_id):
+    execution_id = (execution_id or "").strip()
+    if not re.match(r"^ort-[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$", execution_id):
+        return None
+    return load_json_file(os.path.join(ops_runtime_execution_root(), execution_id + ".json"), None)
+
+
+def ops_runtime_executions(limit=20):
+    root = ops_runtime_execution_root()
+    ensure_private_dir(root)
+    items = []
+    for name in os.listdir(root):
+        if not name.endswith(".json"):
+            continue
+        item = load_json_file(os.path.join(root, name), None)
+        if item:
+            if "result" in item:
+                item = dict(item)
+                item.pop("result", None)
+            items.append(item)
+    return sorted(items, key=lambda item: item.get("createdAt", ""), reverse=True)[:limit]
+
+
+def ops_runtime_profiles():
+    return ops_tool_runtime.project_profiles(
+        PILOT_PROJECTS,
+        PROJECT_ALLOWLIST,
+        PROJECT_LIVE_PROBES,
+        production_allowed_actions,
+        production_action_label,
+        production_action_confirmation,
+        production_channel_configured,
+    )
+
+
+def ops_runtime_payload():
+    executions = ops_runtime_executions(12)
+    return {
+        "ok": True,
+        "runtime": ops_tool_runtime.runtime_summary(PILOT_PROJECTS, executions),
+        "projects": ops_runtime_profiles(),
+        "tools": ops_tool_runtime.tool_specs(PILOT_PROJECTS),
+        "executions": executions,
+    }
+
+
+def ops_runtime_tool_spec(tool_name):
+    return ops_tool_runtime.tool_map(PILOT_PROJECTS).get((tool_name or "").strip())
+
+
+def ops_runtime_tool_requires_action(tool_name):
+    spec = ops_runtime_tool_spec(tool_name)
+    return bool(spec and spec.get("permission") == "action_token")
+
+
+def run_ops_runtime_tool(payload):
+    payload = payload or {}
+    tool_name = (payload.get("tool") or "").strip()
+    project_id = (payload.get("project") or "").strip()
+    spec = ops_runtime_tool_spec(tool_name)
+    if not spec:
+        return {"ok": False, "error": "unknown runtime tool"}
+    if spec.get("risk") == ops_tool_runtime.RISK_BLOCKED:
+        return {"ok": False, "error": "tool blocked by policy", "policy": "deploy, shell, file write and secret access are not exposed to Grok"}
+    if project_id not in PILOT_PROJECTS:
+        return {"ok": False, "error": "project not found"}
+    if project_id not in (spec.get("projects") or []):
+        return {"ok": False, "error": "tool not enabled for project"}
+
+    started = time.time()
+    result = None
+    try:
+        if tool_name == "list-project-profile":
+            profile = [item for item in ops_runtime_profiles() if item.get("id") == project_id][0]
+            result = {"ok": True, "profile": profile}
+        elif tool_name == "inspect-live-probes":
+            result = project_live_check(project_id)
+        elif tool_name == "inspect-production-channel":
+            if not production_channel_configured(project_id):
+                result = {"ok": False, "error": "maintenance channel not configured"}
+            else:
+                result = run_production_command(project_id, "inspect")
+        elif tool_name == "inspect-latest-production-record":
+            result = project_production_status_payload(project_id) or {"ok": False, "error": "project production maintenance not configured"}
+        elif tool_name == "run-controlled-action":
+            action = (payload.get("action") or "").strip()
+            if not action or action == "inspect":
+                result = {"ok": False, "error": "controlled action required"}
+            else:
+                result = start_project_production_job({
+                    "project": project_id,
+                    "action": action,
+                    "confirmation": payload.get("confirmation"),
+                })
+        else:
+            result = {"ok": False, "error": "tool handler not implemented"}
+    except Exception as exc:
+        result = {"ok": False, "error": type(exc).__name__}
+
+    record = ops_tool_runtime.make_execution_record(
+        tool_name,
+        project_id,
+        spec.get("risk"),
+        payload,
+        result,
+        started,
+    )
+    with OPS_RUNTIME_LOCK:
+        save_ops_runtime_execution(record)
+    public_record = dict(record)
+    public_record.pop("result", None)
+    return {"ok": bool(result.get("ok")) if isinstance(result, dict) else False, "execution": public_record, "result": result}
+
+
 def project_daily_root(project_id):
     return os.path.join(PROJECT_DAILY_DIR, project_id)
 
@@ -2560,6 +2687,7 @@ def nav_html(active="home"):
         ("总览", "/ops-dashboard/", "dashboard"),
         ("AI 详情", "/ai/", "ai"),
         ("Vibe Coding", "/vibe/", "vibe"),
+        ("Tool Runtime", "/vibe/ops-runtime", "runtime"),
         ("实战试点", "/vibe/pilot", "pilot"),
         ("终端", "/terminal/", "terminal"),
         ("Kuma", "/ops-app/kuma", "kuma"),
@@ -2572,6 +2700,84 @@ def nav_html(active="home"):
         class_name = "active" if key == active else ""
         items.append(f'<a class="{class_name}" href="{href}">{html.escape(label)}</a>')
     return '<nav class="topnav">' + ''.join(items) + '</nav>'
+
+
+def render_ops_runtime_page():
+    payload = ops_runtime_payload()
+    runtime = payload["runtime"]
+    projects = payload["projects"]
+    tools = payload["tools"]
+    executions = payload["executions"]
+    project_options = "".join(f"<option value='{html.escape(item['id'])}'>{html.escape(item['name'])}</option>" for item in projects)
+    action_options = {}
+    for project in projects:
+        action_options[project["id"]] = [
+            {"id": action["id"], "label": action["label"], "risk": action["risk"], "confirmationRequired": action["confirmationRequired"]}
+            for action in project.get("actions", [])
+            if action["id"] != "inspect"
+        ]
+    tool_rows = "".join(
+        f"""<tr><td><strong>{html.escape(item['title'])}</strong><br><span>{html.escape(item['name'])}</span></td><td>{html.escape(item['description'])}</td><td><span class="risk {html.escape(item['risk'])}">{html.escape(item['risk'])}</span></td><td>{html.escape(item['permission'])}</td><td><button data-tool="{html.escape(item['name'])}" {'disabled' if item['risk'] == 'blocked' else ''}>运行</button></td></tr>"""
+        for item in tools
+    )
+    project_rows = "".join(
+        f"""<tr><td><strong>{html.escape(item['name'])}</strong><br><span>{html.escape(item['id'])}</span></td><td>{item['allowlistCount']} 文件 / {item['liveProbeCount']} 探针</td><td>{'已接入' if item['productionConfigured'] else '未接入'}</td><td>{html.escape('、'.join(action['label'] for action in item.get('actions', [])))}</td></tr>"""
+        for item in projects
+    )
+    execution_rows = "".join(
+        f"""<tr><td><code>{html.escape(item.get('id') or '')}</code></td><td>{html.escape(item.get('tool') or '')}</td><td>{html.escape(item.get('project') or '')}</td><td>{'OK' if (item.get('resultSummary') or {}).get('ok') else 'WARN'}</td><td>{html.escape(item.get('createdAt') or '')}</td></tr>"""
+        for item in executions
+    ) or "<tr><td colspan='5'>暂无运行记录。</td></tr>"
+    tools_json = json.dumps({item["name"]: item for item in tools}, ensure_ascii=False)
+    actions_json = json.dumps(action_options, ensure_ascii=False)
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ops Tool Runtime - AI Ops</title><style>
+body{{margin:0;background:#0b0f14;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}}main{{max-width:1280px;margin:0 auto;padding:28px}}.hero,.card{{background:#111827;border:1px solid #334155;border-radius:20px;padding:22px;margin:16px 0;box-shadow:0 20px 70px #0006}}.hero{{background:linear-gradient(135deg,#0f172a,#12313a 58%,#172554)}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}}.metric{{background:#0b1220;border:1px solid #263244;border-radius:16px;padding:16px}}.metric b{{display:block;font-size:30px;margin-top:8px}}.muted,span{{color:#94a3b8}}a{{color:#93c5fd}}button,a.btn{{display:inline-block;background:#2563eb;color:white;border:0;border-radius:10px;padding:9px 13px;text-decoration:none;cursor:pointer;margin:4px 8px 4px 0}}button:disabled{{opacity:.45;cursor:not-allowed}}select{{background:#020617;color:#e5e7eb;border:1px solid #334155;border-radius:10px;padding:9px;margin:4px 8px 4px 0}}table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #263244;padding:10px;text-align:left;vertical-align:top}}code,pre{{background:#020617;border:1px solid #263244;border-radius:10px}}code{{padding:2px 6px}}pre{{white-space:pre-wrap;padding:12px;max-height:360px;overflow:auto}}.risk{{display:inline-block;border-radius:999px;padding:4px 8px;border:1px solid #334155}}.risk.readonly{{color:#22c55e;border-color:#166534;background:#052e16}}.risk.confirm{{color:#f59e0b;border-color:#92400e;background:#451a03}}.risk.blocked{{color:#f87171;border-color:#991b1b;background:#450a0a}}.topnav{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}}.topnav a{{color:#cbd5e1;text-decoration:none;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:8px 12px}}.topnav a.active{{background:#2563eb;color:white}}
+</style></head><body><main>{nav_html('runtime')}<section class="hero"><h1>Ops Tool Runtime</h1><p class="muted">Grok Build 风格的最小运维运行时：工具注册、权限策略、执行记录和证据包统一入口。Grok 不拿 shell，只调用白名单工具。</p><p><a class="btn" href="/vibe/ops-runtime.json">查看 Runtime JSON</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/pilot">实战试点</a></p></section><section class="grid"><div class="metric"><span>Runtime</span><b>{html.escape(runtime['name'])}</b><p class="muted">{html.escape(runtime['mode'])}</p></div><div class="metric"><span>Tools</span><b>{runtime['toolCount']}</b><p class="muted">只读 {runtime['readonlyToolCount']} / 确认 {runtime['confirmToolCount']} / 阻断 {runtime['blockedToolCount']}</p></div><div class="metric"><span>Projects</span><b>{runtime['projectCount']}</b><p class="muted">ProjectProfile 已生成</p></div><div class="metric"><span>Policy</span><b>Allowlist</b><p class="muted">token + 确认词 + 冷却</p></div></section><section class="card"><h2>运行工具</h2><p class="muted">选择项目后点击工具运行。受控动作会要求确认词并写入 ExecutionRecord。</p><select id="runtimeProject">{project_options}</select><select id="runtimeAction"></select><pre id="runtimeResult">等待运行。</pre><table><thead><tr><th>工具</th><th>说明</th><th>风险</th><th>权限</th><th>操作</th></tr></thead><tbody>{tool_rows}</tbody></table></section><section class="card"><h2>项目 Profile</h2><table><thead><tr><th>项目</th><th>Allowlist / 探针</th><th>生产通道</th><th>动作</th></tr></thead><tbody>{project_rows}</tbody></table></section><section class="card"><h2>最近 ExecutionRecord</h2><table><thead><tr><th>ID</th><th>工具</th><th>项目</th><th>结果</th><th>时间</th></tr></thead><tbody>{execution_rows}</tbody></table></section></main><script>
+const tools = {tools_json};
+const actionsByProject = {actions_json};
+const readToken = {json.dumps(READ_TOKEN)};
+const actionToken = {json.dumps(ACTION_TOKEN)};
+sessionStorage.setItem('aiopsReadToken', readToken);
+document.querySelectorAll('[data-token-link="true"]').forEach((link) => {{
+  link.addEventListener('click', () => sessionStorage.setItem('aiopsReadToken', readToken));
+}});
+function refreshActions() {{
+  const project = document.getElementById('runtimeProject').value;
+  const select = document.getElementById('runtimeAction');
+  select.innerHTML = '';
+  (actionsByProject[project] || []).forEach((action) => {{
+    const option = document.createElement('option');
+    option.value = action.id;
+    option.textContent = action.label + ' / ' + action.risk;
+    select.appendChild(option);
+  }});
+}}
+async function runRuntimeTool(toolName) {{
+  const spec = tools[toolName];
+  const result = document.getElementById('runtimeResult');
+  const project = document.getElementById('runtimeProject').value;
+  const body = {{tool: toolName, project}};
+  const headers = {{'content-type': 'application/json'}};
+  if (spec.permission === 'action_token') {{
+    body.action = document.getElementById('runtimeAction').value;
+    body.confirmation = window.prompt('请输入该动作的精确确认词。未匹配则不会执行。') || '';
+    headers['X-AIOps-Action-Token'] = actionToken;
+  }} else {{
+    headers['X-AIOps-Read-Token'] = readToken;
+  }}
+  result.textContent = '正在运行 ' + toolName + ' ...';
+  try {{
+    const response = await fetch('/vibe/ops-runtime/run', {{method: 'POST', credentials: 'same-origin', headers, body: JSON.stringify(body)}});
+    const data = await response.json();
+    result.textContent = JSON.stringify(data, null, 2);
+  }} catch (error) {{
+    result.textContent = '执行失败：' + error;
+  }}
+}}
+document.getElementById('runtimeProject').addEventListener('change', refreshActions);
+document.querySelectorAll('[data-tool]').forEach((button) => button.addEventListener('click', () => runRuntimeTool(button.dataset.tool)));
+refreshActions();
+</script></body></html>"""
 
 
 def render_vibe_pilot_page():
@@ -3112,6 +3318,15 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, workspace_status_payload())
             elif path == "/vibe/assets.json":
                 self._send_json(200, assets_payload())
+            elif path == "/vibe/ops-runtime.json":
+                self._send_json(200, ops_runtime_payload())
+            elif path == "/vibe/ops-runtime/execution":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                execution_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
+                execution = load_ops_runtime_execution(execution_id)
+                self._send_json(200 if execution else 404, execution or {"ok": False, "error": "execution not found"})
             elif path == "/vibe/readonly-refresh.json":
                 self._send_json(200, readonly_refresh_status())
             elif path == "/vibe/allowlist.json":
@@ -3162,6 +3377,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, ops_report_payload(kind))
             elif path in ("/vibe/assets", "/vibe/assets/"):
                 self._send_text(200, render_assets_page(), "text/html; charset=utf-8")
+            elif path in ("/vibe/ops-runtime", "/vibe/ops-runtime/"):
+                self._send_text(200, render_ops_runtime_page(), "text/html; charset=utf-8")
             elif path == "/vibe/tasks.json":
                 if not self._has_read_token():
                     self._send_json(403, {"ok": False, "error": "read token required"})
@@ -3277,6 +3494,18 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 payload = self._read_json_body()
                 self._send_json(200, start_pilot_job(payload))
+            elif path == "/vibe/ops-runtime/run":
+                payload = self._read_json_body()
+                tool_name = (payload.get("tool") or "").strip()
+                if ops_runtime_tool_requires_action(tool_name):
+                    if not self._has_action_token():
+                        self._send_json(403, {"ok": False, "error": "action token required"})
+                        return
+                else:
+                    if not self._has_read_token():
+                        self._send_json(403, {"ok": False, "error": "read token required"})
+                        return
+                self._send_json(200, run_ops_runtime_tool(payload))
             elif path == "/vibe/project/daily/run":
                 if not self._has_read_token():
                     self._send_json(403, {"ok": False, "error": "read token required"})
