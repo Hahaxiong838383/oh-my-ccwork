@@ -10,6 +10,8 @@ M0:本类仍支持无真值空跑,但在 ``start_livekit_job`` 里已接入 Live
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 from collections.abc import AsyncIterator
 from contextlib import suppress
 from pathlib import Path
@@ -18,6 +20,32 @@ from typing import Any, ClassVar, cast
 from ..config import Settings
 from .base import EngineEvent, ExperienceEngine, Tier
 from .livekit_bridge import LiveKitEventBridge
+
+logger = logging.getLogger("voice_agent.tier_a")
+
+
+def _parse_myjavis_brain(raw: str) -> dict[str, str] | None:
+    """解析 dispatch metadata 里的 MyJavis 共脑指引(A 方案,2026-07-16)。
+
+    MyJavis App 签的 token 在 RoomAgentDispatch.metadata 带
+    ``{"myjavis": {"session": <房名>, "tenant": <租户id>}}``——本 worker 据此把
+    LLM 指回 MyJavis CustomLLM 端点(记忆/人设/视觉融合与 benchmark 同源)。
+    其他入口(voice-test 页/probe)无此 metadata → None → 原大脑零变化。
+    只认字符串字段,缺一即弃(fail fast 到默认大脑,不半配置运行)。
+    """
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    brain = data.get("myjavis") if isinstance(data, dict) else None
+    if not isinstance(brain, dict):
+        return None
+    session, tenant = brain.get("session"), brain.get("tenant")
+    if isinstance(session, str) and session and isinstance(tenant, str) and tenant:
+        return {"session": session, "tenant": tenant}
+    return None
 
 
 class TierACascadeEngine(ExperienceEngine):
@@ -97,6 +125,18 @@ class TierACascadeEngine(ExperienceEngine):
         # 声纹旁路(Phase 1,默认关):ring 挂 STT pump,sidecar 挂 turn 钩子
         speaker_sidecar = _load_speaker_sidecar(proc)
 
+        # A 方案共脑(2026-07-16):MyJavis 签的 dispatch metadata 带 session/tenant →
+        # LLM 指回 MyJavis CustomLLM;其他入口 None → 原大脑零变化。
+        myjavis_brain = _parse_myjavis_brain(
+            getattr(getattr(ctx, "job", None), "metadata", "") or ""
+        )
+        if myjavis_brain is not None:
+            logger.info(
+                "myjavis brain engaged: session=%s tenant=%s",
+                myjavis_brain["session"],
+                myjavis_brain["tenant"][:8],
+            )
+
         session = AgentSession(
             stt=_build_stt(
                 self._settings,
@@ -108,6 +148,7 @@ class TierACascadeEngine(ExperienceEngine):
                 context_note_provider=(
                     speaker_sidecar.context_note if speaker_sidecar is not None else None
                 ),
+                myjavis_brain=myjavis_brain,
             ),
             tts=_build_tts(self._settings),
             vad=vad,
@@ -404,13 +445,40 @@ def _build_stt(settings: Settings, *, speaker_ring: Any | None = None) -> Any:
     raise RuntimeError(f"未知 STT_PROVIDER={provider!r}（支持：sherpa/volc）")
 
 
-def _build_llm(settings: Settings, *, context_note_provider: Any | None = None) -> Any:
+def _build_llm(
+    settings: Settings,
+    *,
+    context_note_provider: Any | None = None,
+    myjavis_brain: dict[str, str] | None = None,
+) -> Any:
     """按 ``LLM_PROVIDER`` 构建 LLM(M0:OpenAI 兼容端点,接 Gemini proxy)。
 
     ``context_note_provider``:每请求动态上下文(P2 声纹身份),仅 FastLLM 路径支持。
+    ``myjavis_brain``:A 方案共脑(2026-07-16)——非 None 时 LLM 指向 MyJavis CustomLLM
+    端点(session/tenant 走 default_query),记忆/人设/视觉融合与其 benchmark 链路同源。
     """
     import importlib
     import os
+
+    if myjavis_brain is not None:
+        from .fast_llm import FastLLM
+
+        return FastLLM(
+            model="myjavis-brain",  # 端点自选模型(内部 race),此值仅日志标识
+            # 同机 localhost 直连(免公网绕行);鉴权 key 在 worker env(dispatch metadata
+            # 在 JWT 里客户端可解码,绝不经它传 key)。
+            base_url=os.environ.get("MYJAVIS_LLM_URL", "http://127.0.0.1:3001/v1"),
+            api_key=os.environ.get("MYJAVIS_LLM_API_KEY", "") or "sk-noauth",
+            thinking="off",  # 端点非 DeepSeek 直连,thinking body 由端点内部处理
+            default_query={"session": myjavis_brain["session"], "tenant": myjavis_brain["tenant"]},
+            # 不配 fallback:端点内部已有双 provider race,再套一层是浪费。
+            # 声纹身份注入不传:端点只取 user/assistant 消息,system 注入会被滤掉(白费带宽);
+            # MyJavis 侧租户即身份(solo 模式),共脑下身份由端点自己的体系负责。
+            strip_leading_filler=os.environ.get(
+                "LLM_STRIP_LEADING_FILLER", os.environ.get("FILLER_ENABLED", "1")
+            )
+            == "1",
+        )
 
     provider = settings.llm_provider
     if provider in {"openai", "gemini"}:

@@ -41,18 +41,26 @@ from openai import AsyncOpenAI
 
 logger = logging.getLogger("voice_agent.fast_llm")
 
-# 进程级 AsyncOpenAI client 单例池(key=base_url+api_key)。
+# 进程级 AsyncOpenAI client 单例池(key=base_url+api_key+query)。
 # 跨 job 复用 TLS 连接:每 job 新建 client 时首请求要建连(实测 HK ECS 2c2g ~1046ms),
 # 复用已建连的 client ~550ms,省 ~450ms(2026-06-30 grok 提出+cc 验证,详见记忆)。
 # livekit job process 是 prewarm fork 长存活,模块级单例在 process 内跨 job 复用。
-_OPENAI_CLIENT_POOL: dict[tuple[str, str], AsyncOpenAI] = {}
+# default_query 进 key:MyJavis 共脑端点按 ?session=&tenant= 区分会话(每 job 不同),
+# 同 job 内复用、跨 job 各建各的(localhost 建连近零成本,池子随 job 结束进程退出释放)。
+_PoolKey = tuple[str, str, tuple[tuple[str, str], ...] | None]
+_OPENAI_CLIENT_POOL: dict[_PoolKey, AsyncOpenAI] = {}
 
 
-def _pool_client(base_url: str, api_key: str) -> AsyncOpenAI:
-    pool_key = (base_url, api_key)
+def _pool_client(
+    base_url: str, api_key: str, default_query: dict[str, str] | None = None
+) -> AsyncOpenAI:
+    query_key = tuple(sorted(default_query.items())) if default_query else None
+    pool_key: _PoolKey = (base_url, api_key, query_key)
     client = _OPENAI_CLIENT_POOL.get(pool_key)
     if client is None:
-        client = AsyncOpenAI(base_url=base_url, api_key=api_key, max_retries=0)
+        client = AsyncOpenAI(
+            base_url=base_url, api_key=api_key, max_retries=0, default_query=default_query
+        )
         _OPENAI_CLIENT_POOL[pool_key] = client
     return client
 
@@ -208,6 +216,7 @@ class FastLLM(llm.LLM[Never]):
         fallback_strip_think: bool = True,
         context_note_provider: Callable[[], str | None] | None = None,
         strip_leading_filler: bool = False,
+        default_query: dict[str, str] | None = None,
     ) -> None:
         super().__init__()
         # 剥回复开头承接词(仅承接音启用时开,否则正文语气词是自然的该保留)
@@ -245,7 +254,8 @@ class FastLLM(llm.LLM[Never]):
         else:
             # max_retries=0:retry 交给 livekit LLMStream 基类,避免双重 retry。
             # 进程级单例复用 TLS 连接(省首请求建连 ~450ms,grok+cc 2026-06-30)。
-            self._client = _pool_client(base_url, api_key)
+            # default_query:MyJavis 共脑模式把 session/tenant 挂 query(端点按此路由会话)。
+            self._client = _pool_client(base_url, api_key, default_query)
             self._http = None
 
     def chat(
