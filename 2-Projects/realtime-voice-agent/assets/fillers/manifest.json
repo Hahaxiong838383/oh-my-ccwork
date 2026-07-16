@@ -115,14 +115,6 @@
     "bucket": "emo_pos",
     "text": "哈哈，快说说。"
   },
-  "task_01.wav": {
-    "bucket": "task",
-    "text": "没问题，包在我身上。"
-  },
-  "task_02.wav": {
-    "bucket": "task",
-    "text": "行啊，这就来。"
-  },
   "task_03.wav": {
     "bucket": "task",
     "text": "来，听好了哈。"
@@ -131,21 +123,9 @@
     "bucket": "task",
     "text": "嗯，我组织下哈。"
   },
-  "task_05.wav": {
-    "bucket": "task",
-    "text": "没问题。"
-  },
-  "task_06.wav": {
-    "bucket": "task",
-    "text": "这就来。"
-  },
   "task_07.wav": {
     "bucket": "task",
     "text": "嗯，我看看哈。"
-  },
-  "task_08.wav": {
-    "bucket": "task",
-    "text": "马上安排。"
   },
   "story_01.wav": {
     "bucket": "story",

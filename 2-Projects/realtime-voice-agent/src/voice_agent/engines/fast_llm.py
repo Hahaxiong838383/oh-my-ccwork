@@ -51,6 +51,15 @@ _PoolKey = tuple[str, str, tuple[tuple[str, str], ...] | None]
 _OPENAI_CLIENT_POOL: dict[_PoolKey, AsyncOpenAI] = {}
 
 
+# 连接健康化(2026-07-16 共脑超时事故):openai SDK 默认 connect=5s + keepalive 永不过期。
+# 事故实锤=4 次"Request timed out"仅 1 次到达 nginx——请求死在客户端建连/坏连接层:
+# ①connect 5s 恰好=glibc/resolved 单次 DNS 查询超时,上游 DNS 偶发丢包即整请求失败
+#   (64.90 冷解析实测 805ms,晚高峰更差)→ connect 放宽 10s 容 DNS 内部重试;
+# ②keepalive 永不过期=轮间隔 30-60s 后复用被对端静默掐掉的 stale 连接 → expiry 30s
+#   强制换新(跨机建连 ~2ms 无感);③总超时 600s→30s,防坏流挂死整轮(livekit 会 retry)。
+_HTTP_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
+
+
 def _pool_client(
     base_url: str, api_key: str, default_query: dict[str, str] | None = None
 ) -> AsyncOpenAI:
@@ -59,7 +68,17 @@ def _pool_client(
     client = _OPENAI_CLIENT_POOL.get(pool_key)
     if client is None:
         client = AsyncOpenAI(
-            base_url=base_url, api_key=api_key, max_retries=0, default_query=default_query
+            base_url=base_url,
+            api_key=api_key,
+            max_retries=0,
+            default_query=default_query,
+            timeout=_HTTP_TIMEOUT,
+            http_client=httpx.AsyncClient(
+                timeout=_HTTP_TIMEOUT,
+                limits=httpx.Limits(
+                    max_connections=100, max_keepalive_connections=20, keepalive_expiry=30.0
+                ),
+            ),
         )
         _OPENAI_CLIENT_POOL[pool_key] = client
     return client

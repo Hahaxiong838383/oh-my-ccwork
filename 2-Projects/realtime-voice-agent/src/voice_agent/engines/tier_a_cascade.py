@@ -604,7 +604,8 @@ def _load_filler_bank() -> Any:
         return None
     default_dir = Path(__file__).resolve().parents[3] / "assets" / "fillers"
     filler_dir = Path(os.environ.get("FILLER_DIR", str(default_dir)))
-    probability = min(1.0, float(os.environ.get("FILLER_PROBABILITY", "0.9")))
+    # v5 降频 0.9→0.6(2026-07-16 川哥实测 5min/14 次太密):人类对话不是每句都有承接词
+    probability = min(1.0, float(os.environ.get("FILLER_PROBABILITY", "0.6")))
     return FillerBank.load(filler_dir, probability)
 
 
