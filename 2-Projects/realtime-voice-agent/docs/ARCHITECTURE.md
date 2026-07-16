@@ -258,6 +258,34 @@ flowchart LR
 
 详细部署说明见 `docs/DEPLOYMENT-MINI-STUDIO.md`。
 
+### 8.2 生产三层分离架构(2026-07-16 定稿,OOM 事故催生)
+
+自研链路的生产标准形态是**信令 / worker / 大脑三层分离**——LiveKit 生态天生按此设计,worker 是注册制(连上信令服务即入池,派单自动负载均衡),**加并发 = 加 worker 机,其余两层零改动**:
+
+```mermaid
+flowchart LR
+    U[用户端 App] -->|WebRTC 信令+媒体| SFU[信令层 livekit-server<br/>轻·小机即可]
+    SFU -->|job 派单 注册制| W1[worker 机 1<br/>实时音频管线+VAD/判停/声纹<br/>350-750MB/路 内存大户]
+    SFU -.->|水平扩展| W2[worker 机 N...]
+    W1 -->|OpenAI 兼容 HTTP| B[大脑层<br/>MyJavis CustomLLM / FastLLM<br/>轻 API 服务]
+    W1 -->|云端| CLOUD[火山 ASR/TTS · LLM provider]
+```
+
+**职责与资源画像**:
+- **信令层**(livekit-server):SFU/TURN,内存 ~80M,轻。
+- **worker 层**(现场工作):每路通话一个 job 进程,承载实时音频管线(AEC/重采样/缓冲)+本地推理(silero VAD/v1-mini 判停/CAM++ 声纹)——**这是"自建 cascade 把火山机房的角色自己扛了"的那部分**,唯一的内存大户,唯一需要横向扩展的层。
+- **大脑层**:轻 API(共脑模式=MyJavis CustomLLM;独立模式=FastLLM 直连 provider)。
+
+**现状与演进路径**(阶段选择,非架构错误):
+
+| 阶段 | 形态 | 并发 |
+|---|---|---|
+| 现在(单用户+少量体验码) | 三层同机 HK 2c2G + 五道防线(限单并发 load_fnc job 计数/App 重连退避/swappiness/cgroup MemoryMax/RSS 采样) | 自研 1 路(物理约束:单 job 350-750M+基座 1.2G,2G 机 2 路必 OOM——2026-07-16 事故实证) |
+| 第一刀 | **仅 worker 搬去 4c8G**(信令+大脑留原机;同区内网 RTT 1-3ms 可忽略) | 自研 2-4 路 |
+| 规模化 | worker 池多机横向 | 按机器数线性 |
+
+**触发条件**:自研并发需求 >1 路,或自研转主链路。**代价认知**:自建 worker 池=固定容量(买几台就几路),对比火山托管的弹性计费——"摆脱火山"路线的代价清单之一,用可控性与数据主权换。
+
 ---
 
 ## 9. 失败模式 → 架构对策映射
