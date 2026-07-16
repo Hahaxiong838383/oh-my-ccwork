@@ -145,6 +145,24 @@ def _deprioritize_respawn_procs(server: Any) -> None:
     server.on("worker_started", _on_worker_started)
 
 
+def _capped_load_fnc(max_jobs: int):  # type: ignore[no-untyped-def]
+    """活跃 job 达上限即报满载(1.0),否则 0——把并发口径从 CPU 采样改为 job 计数。
+
+    2 核小机 CPU 采样口径对内存型雪球无感知(job 堆积时 CPU 反而空闲);job 计数
+    是内存占用的直接代理。返回 0 而非真实 CPU:专机无别的负载来源,避免 job 启动
+    CPU 尖峰误拒首连(load_threshold 0.95 历史坑同源)。
+    """
+
+    def _load(server: object) -> float:
+        try:
+            active = len(getattr(server, "active_jobs", []) or [])
+        except Exception:
+            return 0.0
+        return 1.0 if active >= max_jobs else 0.0
+
+    return _load
+
+
 def run_livekit_worker() -> None:
     """启动 M0 LiveKit worker。"""
     import importlib
@@ -186,6 +204,12 @@ def run_livekit_worker() -> None:
         # (挂断重连时它接管 + 同时 spawn 新 idle),内存降到 ~2 进程 800MB;配 2G swap
         # 兜底新 job spawn/声纹加载的瞬时尖峰。WORKER_NUM_IDLE=0 更省但首连要现 spawn。
         num_idle_processes=int(os.environ.get("WORKER_NUM_IDLE", "1")),
+        # 🔴 限单并发(2026-07-16 OOM 雪球事故治本件之一):2c2G 专机单 job 就要
+        # 350-750MB,重连风暴下"每次重连=新房新 job"堆进程是雪球主推手。自定义
+        # load_fnc:已有活跃 job 即报满载(1.0>threshold,livekit 拒派新 job——用户
+        # 重连会等到旧 job 随删房退出后才接),空闲时报 0 正常接单。多并发需求
+        # (演示多人)临时 WORKER_MAX_JOBS=2+盯内存。
+        load_fnc=_capped_load_fnc(max_jobs=int(os.environ.get("WORKER_MAX_JOBS", "1"))),
     )
     server.rtc_session(_livekit_entrypoint, agent_name="realtime-voice-agent")
     _deprioritize_respawn_procs(server)
