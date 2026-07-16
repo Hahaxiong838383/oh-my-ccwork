@@ -21,6 +21,7 @@ import json
 import logging
 import random
 import wave
+from collections import deque
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -165,7 +166,9 @@ class FillerBank:
     def __init__(self, clips: dict[str, list[FillerClip]], probability: float) -> None:
         self._clips = clips
         self._probability = probability
-        self._last_text: str | None = None
+        # v4(2026-07-16 川哥"重复多"反馈):防重复从"仅上一条"扩为最近 3 条滑窗——
+        # 每桶 6-9 变体下排除近 3 条仍有 3-6 候选,近距离重复感大幅降。
+        self._recent: deque[str] = deque(maxlen=3)
 
     @classmethod
     def load(cls, directory: Path, probability: float) -> FillerBank | None:
@@ -222,9 +225,9 @@ class FillerBank:
         pool = self._clips.get(bucket) or self._clips.get("gen") or []
         if not pool:
             return None
-        cands = [c for c in pool if c.text != self._last_text] or pool
+        cands = [c for c in pool if c.text not in self._recent] or pool
         clip = random.choice(cands)
-        self._last_text = clip.text
+        self._recent.append(clip.text)
         logger.info("filler picked bucket=%s text=%r", bucket, clip.text)
         return clip
 
