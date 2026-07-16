@@ -24,6 +24,31 @@ from .livekit_bridge import LiveKitEventBridge
 logger = logging.getLogger("voice_agent.tier_a")
 
 
+async def _rss_monitor_loop(interval_s: float = 30.0) -> None:
+    """job 进程 RSS 采样(定位 2026-07-16 OOM 的 750MB 膨胀源)。
+
+    读 /proc/self/status 零依赖(Linux 生产专用;macOS 无 /proc 静默退出不影响开发)。
+    journalctl 里 `grep 'job rss'` 即得膨胀曲线——膨胀复现时按 uptime 对齐对话轮数定位。
+    """
+    import time
+
+    t0 = time.monotonic()
+    while True:
+        await asyncio.sleep(interval_s)
+        try:
+            # procfs 是内存文件,读取微秒级,不值得 to_thread 的调度开销
+            with open("/proc/self/status") as f:  # noqa: ASYNC230
+                for line in f:
+                    if line.startswith("VmRSS:"):
+                        kb = int(line.split()[1])
+                        logger.info(
+                            "job rss: %dMB (uptime %ds)", kb // 1024, int(time.monotonic() - t0)
+                        )
+                        break
+        except OSError:
+            return  # 非 Linux(无 /proc)或进程收尾,停采样
+
+
 def _parse_myjavis_brain(raw: str) -> dict[str, str] | None:
     """解析 dispatch metadata 里的 MyJavis 共脑指引(A 方案,2026-07-16)。
 
@@ -56,6 +81,7 @@ class TierACascadeEngine(ExperienceEngine):
         self._queue: asyncio.Queue[EngineEvent | None] = asyncio.Queue()
         self._session: object | None = None
         self._livekit_started = False
+        self._rss_task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
         if not self._livekit_started:
@@ -75,6 +101,11 @@ class TierACascadeEngine(ExperienceEngine):
         return None
 
     async def aclose(self) -> None:
+        # RSS 采样任务回收(悬挂 task 会拖 entrypoint 收尾)
+        rss_task = getattr(self, "_rss_task", None)
+        if rss_task is not None:
+            rss_task.cancel()
+            self._rss_task = None
         # 先取消音乐播放任务——否则播放任务(流一首 4 分钟的歌)不退出,同样导致
         # "entrypoint did not exit in time" → 房间删不干净 → 用户第二次进不去
         # (2026-07-04 川哥实测:播放音乐后断开,第二次连不上)。
@@ -186,6 +217,8 @@ class TierACascadeEngine(ExperienceEngine):
         )
         self._session = session
         self._livekit_started = True
+        # RSS 采样任务(job 进程生命周期,进程退出自灭;aclose 显式回收防悬挂告警)
+        self._rss_task = asyncio.create_task(_rss_monitor_loop())
         bridge = LiveKitEventBridge(emit=self._queue.put_nowait)
         _register_livekit_handlers(session, bridge)
 
