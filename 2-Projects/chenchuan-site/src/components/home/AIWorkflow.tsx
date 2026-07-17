@@ -38,7 +38,7 @@ const capabilities: Capability[] = [
     ability:
       '把多智能体能力直接落到飞书 21 个业务节点（IM / 文档 / 知识库 / 多维表格 / 日历 / 会议 / 任务 等）。',
     implementation:
-      'lark-cli + EvoDesk 客户端 · 19 个飞书 skill 已装到 Claude / Codex / Gemini 三引擎 · 能力域路由 + 三层验证。',
+      'lark-cli + EvoDesk 客户端 · 19 个飞书 skill 接入 Claude / GPT / Gemini / Grok 四引擎 · 能力域路由 + 三层验证。',
     value:
       '为硬科技公司数字化与 AI 化提供可复制范式——AI 能力零迁移成本落在原有工作流，不打破团队协同。',
   },
@@ -170,35 +170,41 @@ export function AIWorkflow() {
               分层 AI 架构 · EvoDesk 自研
             </div>
             <div className="hidden text-[11px] text-text-muted md:block">
-              四层栈 · 不套通用方案
+              四引擎动态模型池 · 版本随路由更新
             </div>
           </div>
 
-          {/* 引擎层：保留进度条形式，体现四引擎能力域占比 */}
+          {/* 引擎层只展示稳定的模型家族，具体版本由路由层动态选择。 */}
           <div className="mb-6">
             <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-accent">
               引擎层 · Engines
             </div>
             <div className="grid gap-4 md:grid-cols-4">
               {profile.aiToolchain.map((tool) => (
-                <div key={tool.name}>
-                  <div className="mb-1 flex items-baseline justify-between gap-2">
+                <div
+                  key={tool.name}
+                  className="rounded-lg border border-border/70 bg-bg-secondary/35 p-3"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-text-primary">
                       {tool.name}
                     </span>
+                    <span
+                      className="rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider"
+                      style={{ borderColor: `${tool.tint}55`, color: tool.tint }}
+                    >
+                      {tool.role}
+                    </span>
                   </div>
-                  <div className="mb-1.5 font-mono text-[10px] text-text-muted">
+                  <div className="font-mono text-[10px] text-text-muted">
                     {tool.desc}
-                  </div>
-                  <div className="h-[3px] rounded-full bg-bg-secondary">
-                    <div
-                      className="h-full rounded-full bg-text-primary transition-all duration-1000"
-                      style={{ width: `${tool.level}%` }}
-                    />
                   </div>
                 </div>
               ))}
             </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-text-muted">
+              展示模型家族，不锁定具体版本；EvoDesk 按任务类型、上下文与可用性自动选择当前模型。
+            </p>
           </div>
 
           {/* 编排层 / 能力层 / 基础设施 三列 */}
@@ -210,6 +216,7 @@ export function AIWorkflow() {
                 'autoRouteEngine 自动路由',
                 'GWT 信息黑板（blackboard.md）',
                 'scheduler 定时任务',
+                'n8n / Dify workflow automation',
                 'multi-session 多会话并行',
                 'codex exec 直调长任务',
               ]}

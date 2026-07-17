@@ -7,6 +7,7 @@ const inputs = [
   'public/media/futurus-hud/mass-production-hud.mp4',
   'public/media/auto-show/beijing-auto-show-2024.mp4',
   'public/media/ai-agent/full-duplex-streaming-voice-agent.mp4',
+  'public/media/edge-ai/rk3588-expression-posture-recognition.mp4',
   'public/media/eye-gesture-interaction/20260319-090647.mp4',
   'public/media/eye-gesture-interaction/20260319-090658.mp4',
   'public/media/eye-gesture-interaction/20260319-090714.mp4',

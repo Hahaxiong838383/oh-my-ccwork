@@ -47,6 +47,8 @@ const mimic = (n, file, duration) => ({
 })
 
 const VIDEOS = [
+  // RK3588 端侧多模态识别（生产已上线，sort=-1 稳定置顶）
+  { id: 'rk3588-edge-multimodal', title: 'RK3588 端侧多模态边缘计算', description: '基于 RK3588 部署端侧多模态模型，采用 InspireFace 检测级联 HSEmotion-b2 表情识别，在本地实现毫秒级表情、坐姿等状态识别与实时反馈。', url: '/media/edge-ai/rk3588-expression-posture-recognition.mp4', thumbnail: '/media-posters/edge-ai/rk3588-expression-posture-recognition.jpg', duration: '0:24', tags: ['RK3588', '端侧 AI', '多模态识别', '边缘计算'], project_slug: null, published: 1, sort: -1 },
   // 眼动+手势（已接通）→ 眼动多模态项目
   { id: 'eye-1', title: '眼动+手势 多模态交互演示 1', description: '基于 FaceMesh 眼动追踪与手势识别的多模态交互原型，展示注视预选与捏住抓取的融合交互。', url: '/media/eye-gesture-interaction/20260319-090647.mp4', thumbnail: '', duration: '0:27', tags: ['眼动追踪', '手势交互', '多模态'], project_slug: 'eye-gesture-multimodal', published: 1, sort: 1 },
   { id: 'eye-2', title: '眼动+手势 多模态交互演示 2', description: '注视高亮蹦跳效果与捏住优先抓取机制的联动演示，实现自然直觉的空间交互体验。', url: '/media/eye-gesture-interaction/20260319-090658.mp4', thumbnail: '', duration: '0:33', tags: ['眼动追踪', '手势交互', '空间计算'], project_slug: 'eye-gesture-multimodal', published: 1, sort: 2 },

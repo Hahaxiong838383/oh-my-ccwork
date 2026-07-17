@@ -51,6 +51,17 @@
 - 体积：16.0MB → 6.7MB，节省 56.9%。
 - 音频：保留 AAC 96kbps；该视频以实时语音对话为核心，不适用默认静音策略。
 
+### RK3588 端侧多模态识别
+
+- 新增：`public/media/edge-ai/rk3588-expression-posture-recognition.mp4`。
+- 输出：`public/media-optimized/edge-ai/rk3588-expression-posture-recognition.mp4`。
+- 封面：`public/media-posters/edge-ai/rk3588-expression-posture-recognition.jpg`。
+- 分辨率：3840x2160 → 1280x720，保留约 60fps。
+- 体积：146.8MB → 3.1MB，节省 97.9%。
+- 音频：去除；该视频的核心价值为 RK3588 端侧视觉识别效果，音轨不是必要信息。
+- 页面说明：基于 RK3588 部署端侧多模态模型，采用 InspireFace 检测级联 HSEmotion-b2 表情识别，在本地实现毫秒级表情、坐姿等状态识别与实时反馈。
+- Git 归档：原片 146.8MB，超过 GitHub 普通单文件限制且仓库未启用 Git LFS；原片保留在素材目录、韩国生产节点与回滚备份，仓库提交优化版和封面。
+
 ## 回滚
 
 - 若压缩版观感不满意，将数据引用从 `/media-optimized/...` 改回 `/media/...`。
