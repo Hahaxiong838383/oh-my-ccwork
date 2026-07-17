@@ -226,15 +226,15 @@ class FillerBank:
             return None
 
     # 桶级概率覆盖(R2,2026-07-03):greet/thanks 场景 LLM 本来就秒回短答,
-    # 承接句+正文堆叠感强 → 降概率;其余桶用全局 FILLER_PROBABILITY。
-    # v5(2026-07-16):emo 桶逆势抬高——共情优先原则,情绪句"先接住"比沉默好;
-    # 其余桶靠全局降频(0.9→0.6,人类不是每句都有承接词)。
-    _BUCKET_PROB = {"greet": 0.5, "thanks": 0.5, "emo_neg": 0.85, "emo_pos": 0.7}
+    # 桶级概率覆盖(配了用桶值,没配用全局 FILLER_PROBABILITY;覆盖语义,v5.1 修掉 min bug):
+    # 只留 greet/thanks 低频覆盖——问候/致谢词+同类正文的堆叠是结构性重复("嗨我在呢"+
+    # "你好呀"连播),其他桶全跟全局(v5.2 全局 0.9 后 emo 覆盖 0.85 反而压低,删)。
+    _BUCKET_PROB = {"greet": 0.5, "thanks": 0.5}
 
     def pick(self, user_text: str) -> FillerClip | None:
         """语义桶(空桶回退 gen)+ 桶级概率门控 + 避免连续重复同一句。"""
         bucket = pick_bucket(user_text)
-        prob = min(self._probability, self._BUCKET_PROB.get(bucket, self._probability))
+        prob = self._BUCKET_PROB.get(bucket, self._probability)
         if random.random() >= prob:
             return None
         pool = self._clips.get(bucket) or self._clips.get("gen") or []

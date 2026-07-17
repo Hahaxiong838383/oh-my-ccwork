@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from collections.abc import AsyncIterator
 from contextlib import suppress
 from pathlib import Path
@@ -208,6 +209,19 @@ class TierACascadeEngine(ExperienceEngine):
             max_endpointing_delay=float(os.environ.get("MAX_ENDPOINTING_DELAY", "0.6")),
             allow_interruptions=True,
             resume_false_interruption=True,
+            # P0 环境音防误打断三参数(2026-07-17 川哥"容易被环境音打断";全 env 可调=回滚
+            # 设计,设回 0/0.5/2.0 即恢复旧行为):
+            # ①字数门(核心):VAD 触发打断时 ASR interim 无字 → 不打断继续播(框架对中文按
+            #   字切;final 路径同款检查,agent 说话中的无字 turn 被整体丢弃)。出不了字的环境
+            #   音(关门/键盘/配乐/咳嗽)全免疫。
+            #   v2(2026-07-17 川哥真机"插话慢很多"):2→1——插话打断=AEC 保护窗 0.5s(静音替
+            #   代送 STT)+interim 等字+时长门三层叠加 1.2-1.5s;等首字不等两字省一截,防护
+            #   几乎不降(主力防护是"出不了字"层,误识别出整字的环境音 1/2 字门都拦不全)。
+            min_interruption_words=int(os.environ.get("MIN_INTERRUPTION_WORDS", "1")),
+            # ②时长门:v2 退回 0.5 默认——字数门已管内容,0.7 的 +0.2s 在真插话是纯延迟叠加。
+            min_interruption_duration=float(os.environ.get("MIN_INTERRUPTION_DURATION", "0.5")),
+            # ③假打断恢复窗 2.0→1.5:漏网假打断更快续播(打断后该窗内无词=假打断自动恢复)。
+            false_interruption_timeout=float(os.environ.get("FALSE_INTERRUPTION_TIMEOUT", "1.5")),
             # 🔴 ASR 吃首字根因①(2026-07-04 源码实证 agent_activity.push_audio):
             # AEC warmup(默认 3.0s,首次 agent 说话起 one-shot)期间 agent_state=speaking
             # 时,喂 STT 的用户音频被替换成**纯静音**(VAD 收真帧故仍可打断)——greeting
@@ -217,6 +231,22 @@ class TierACascadeEngine(ExperienceEngine):
         )
         self._session = session
         self._livekit_started = True
+        # 急停白名单直通(P0 2026-07-17):字数门 min_interruption_words=2 的盲区=单字
+        # "停"(意图最强、长度最短)。转写标准化后**精确命中**词表 → 绕过字数门手动打断。
+        # 仅 agent 说话中触发;interim 重复命中无害(interrupt 幂等,二次触发时已非 speaking)。
+        # INTERRUPT_HOTWORDS 逗号分隔可调,设空串禁用。
+        hotwords = _parse_hotwords(os.environ.get("INTERRUPT_HOTWORDS"))
+        if hotwords:
+
+            def _on_hotword_transcribed(ev: Any) -> None:
+                if session.agent_state != "speaking":
+                    return
+                t = _normalize_utterance(getattr(ev, "transcript", "") or "")
+                if t in hotwords:
+                    logger.info("急停白名单命中: %r → interrupt", t)
+                    session.interrupt()
+
+            session.on("user_input_transcribed", _on_hotword_transcribed)
         # RSS 采样任务(job 进程生命周期,进程退出自灭;aclose 显式回收防悬挂告警)
         self._rss_task = asyncio.create_task(_rss_monitor_loop())
         bridge = LiveKitEventBridge(emit=self._queue.put_nowait)
@@ -275,6 +305,26 @@ class TierACascadeEngine(ExperienceEngine):
             # 固定问候语直接 TTS 念(say),不走 LLM——generate_reply(instructions=)
             # 在 Gemini vertex-ai 上因无 user turn 报 400 "input cannot be empty"。
             await session.say(self._settings.agent_greeting)
+
+
+# --- 急停白名单(P0 环境音防误打断,2026-07-17) ---------------------------------
+
+# 默认急停词(精确匹配,非包含——"停车场怎么走"不触发):打断意图明确的短词,
+# 其中单字"停/等"正是字数门(min_interruption_words=2)按长度误杀的对象。
+_DEFAULT_INTERRUPT_HOTWORDS = "停,停停,停下,停一下,等等,等一下,别说了,别说,闭嘴,安静"
+# ASR 转写常带尾标点与空格("停。"≠"停"会漏),标准化后再比对
+_HOTWORD_STRIP_RE = re.compile(r"[\s，。！？!?.、~～…]+")
+
+
+def _normalize_utterance(text: str) -> str:
+    """转写标准化:去空白与常见中英标点,供急停词精确比对。"""
+    return _HOTWORD_STRIP_RE.sub("", text or "")
+
+
+def _parse_hotwords(raw: str | None) -> frozenset[str]:
+    """INTERRUPT_HOTWORDS 逗号分隔 → 标准化词集;显式设空串=禁用白名单。"""
+    src = _DEFAULT_INTERRUPT_HOTWORDS if raw is None else raw
+    return frozenset(w for w in (_normalize_utterance(p) for p in src.split(",")) if w)
 
 
 def _load_vad(silero: Any) -> Any:
@@ -604,8 +654,10 @@ def _load_filler_bank() -> Any:
         return None
     default_dir = Path(__file__).resolve().parents[3] / "assets" / "fillers"
     filler_dir = Path(os.environ.get("FILLER_DIR", str(default_dir)))
-    # v5 降频 0.9→0.6(2026-07-16 川哥实测 5min/14 次太密):人类对话不是每句都有承接词
-    probability = min(1.0, float(os.environ.get("FILLER_PROBABILITY", "0.6")))
+    # v5.2 定位升级(2026-07-17 川哥拍板 0.9):filler 不是调味料,是**感知响应速度的
+    # 核心机制**——预缓存音频零合成延迟,用户停口即出声,把 LLM+TTS 等待藏进衔接语。
+    # 高频的前提是自然(9 桶语义选桶+62 条变体+滑窗 3 防重复),不自然改文案不降频。
+    probability = min(1.0, float(os.environ.get("FILLER_PROBABILITY", "0.9")))
     return FillerBank.load(filler_dir, probability)
 
 
