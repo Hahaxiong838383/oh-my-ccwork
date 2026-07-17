@@ -7,7 +7,7 @@
 - 原视频不覆盖，保留在 `public/media/`。
 - 网页预览版输出到 `public/media-optimized/`。
 - 封面图输出到 `public/media-posters/`。
-- 转码参数：H.264, CRF 28, preset slow, yuv420p, `+faststart`, 去音轨。
+- 转码参数：H.264, CRF 28, preset slow, yuv420p, `+faststart`；默认去音轨，语音核心素材保留 AAC 96kbps。
 - 尺寸上限：横屏宽 1280，竖屏高 1280，保持比例。
 
 ## 总览
@@ -41,6 +41,15 @@
 | `public/media/mimic-robot/VID_20180515_102033.mp4` | 1920x1080 | 1080x1920 | 21.9MB | 2.1MB | 90.5% | `public/media-optimized/mimic-robot/VID_20180515_102033.mp4` | `public/media-posters/mimic-robot/VID_20180515_102033.jpg` |
 | `public/media/mimic-robot/VID_20180518_165951.mp4` | 1280x720 | 720x1280 | 21.8MB | 2.1MB | 90.5% | `public/media-optimized/mimic-robot/VID_20180518_165951.mp4` | `public/media-posters/mimic-robot/VID_20180518_165951.jpg` |
 | `public/media/ar-hud-demo/driver-view-loop.mp4` | 1470x630 | 1280x548 | 6.5MB | 1.1MB | 83.1% | `public/media-optimized/ar-hud-demo/driver-view-loop.mp4` | `public/media-posters/ar-hud-demo/driver-view-loop.jpg` |
+
+## 2026-07-17 增量
+
+- 新增：`public/media/ai-agent/full-duplex-streaming-voice-agent.mp4`。
+- 输出：`public/media-optimized/ai-agent/full-duplex-streaming-voice-agent.mp4`。
+- 封面：`public/media-posters/ai-agent/full-duplex-streaming-voice-agent.jpg`。
+- 分辨率：960x540 → 960x540。
+- 体积：16.0MB → 6.7MB，节省 56.9%。
+- 音频：保留 AAC 96kbps；该视频以实时语音对话为核心，不适用默认静音策略。
 
 ## 回滚
 

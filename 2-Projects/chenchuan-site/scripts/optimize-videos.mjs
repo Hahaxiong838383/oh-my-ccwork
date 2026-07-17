@@ -6,6 +6,7 @@ const inputs = [
   'public/media/futurus-hud/full-window-hud-live.mp4',
   'public/media/futurus-hud/mass-production-hud.mp4',
   'public/media/auto-show/beijing-auto-show-2024.mp4',
+  'public/media/ai-agent/full-duplex-streaming-voice-agent.mp4',
   'public/media/eye-gesture-interaction/20260319-090647.mp4',
   'public/media/eye-gesture-interaction/20260319-090658.mp4',
   'public/media/eye-gesture-interaction/20260319-090714.mp4',
@@ -25,6 +26,10 @@ const inputs = [
   'public/media/mimic-robot/VID_20180518_165951.mp4',
   'public/media/ar-hud-demo/driver-view-loop.mp4',
 ]
+
+const audioPreservedInputs = new Set([
+  'public/media/ai-agent/full-duplex-streaming-voice-agent.mp4',
+])
 
 const outRoot = 'public/media-optimized'
 const posterRoot = 'public/media-posters'
@@ -81,8 +86,8 @@ for (const input of inputs) {
     ? 'scale=-2:min(1280\\,ih)'
     : 'scale=min(1280\\,iw):-2'
 
-  console.log(`\n[video] ${input} -> ${out}`)
-  run('ffmpeg', [
+  const keepAudio = audioPreservedInputs.has(input)
+  const videoArgs = [
     '-y',
     '-i', input,
     '-map_metadata', '-1',
@@ -92,9 +97,16 @@ for (const input of inputs) {
     '-crf', '28',
     '-pix_fmt', 'yuv420p',
     '-movflags', '+faststart',
-    '-an',
-    out,
-  ])
+  ]
+  if (keepAudio) {
+    videoArgs.push('-c:a', 'aac', '-b:a', '96k', '-ac', '2')
+  } else {
+    videoArgs.push('-an')
+  }
+  videoArgs.push(out)
+
+  console.log(`\n[video] ${input} -> ${out} (${keepAudio ? 'AAC 96k' : 'no audio'})`)
+  run('ffmpeg', videoArgs)
 
   console.log(`[poster] ${input} -> ${poster}`)
   run('ffmpeg', [
@@ -120,6 +132,7 @@ for (const input of inputs) {
     ratio: newSize / oldSize,
     oldResolution: `${width}x${height}`,
     newResolution: `${ffprobe(out).streams[0].width}x${ffprobe(out).streams[0].height}`,
+    audio: keepAudio ? 'AAC 96kbps' : '无',
   })
 }
 
@@ -136,7 +149,7 @@ const lines = [
   '- 原视频不覆盖，保留在 `public/media/`。',
   '- 网页预览版输出到 `public/media-optimized/`。',
   '- 封面图输出到 `public/media-posters/`。',
-  '- 转码参数：H.264, CRF 28, preset slow, yuv420p, `+faststart`, 去音轨。',
+  '- 转码参数：H.264, CRF 28, preset slow, yuv420p, `+faststart`。默认去音轨；语音类素材按 allowlist 保留 AAC 96kbps。',
   '- 尺寸上限：横屏宽 1280，竖屏高 1280，保持比例。',
   '',
   '## 总览',
@@ -147,10 +160,10 @@ const lines = [
   '',
   '## 明细',
   '',
-  '| 原文件 | 原尺寸 | 新尺寸 | 原体积 | 新体积 | 节省 | 输出 | 封面 |',
-  '|---|---:|---:|---:|---:|---:|---|---|',
+  '| 原文件 | 原尺寸 | 新尺寸 | 原体积 | 新体积 | 节省 | 音频 | 输出 | 封面 |',
+  '|---|---:|---:|---:|---:|---:|---|---|---|',
   ...rows.map((row) =>
-    `| \`${row.input}\` | ${row.oldResolution} | ${row.newResolution} | ${formatBytes(row.oldSize)} | ${formatBytes(row.newSize)} | ${((1 - row.ratio) * 100).toFixed(1)}% | \`${row.out}\` | \`${row.poster}\` |`,
+    `| \`${row.input}\` | ${row.oldResolution} | ${row.newResolution} | ${formatBytes(row.oldSize)} | ${formatBytes(row.newSize)} | ${((1 - row.ratio) * 100).toFixed(1)}% | ${row.audio} | \`${row.out}\` | \`${row.poster}\` |`,
   ),
   '',
   '## 回滚',
