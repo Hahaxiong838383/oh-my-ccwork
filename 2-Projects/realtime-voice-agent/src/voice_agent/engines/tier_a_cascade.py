@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from collections.abc import AsyncIterator
 from contextlib import suppress
 from pathlib import Path
@@ -251,6 +252,9 @@ class TierACascadeEngine(ExperienceEngine):
         # 让"误打断率"从体感变数字——interim 有字=真插话;无字+随后契约 false_interruption=
         # 环境音穿透(已被恢复);无字+无 false=正常播完。统计:journalctl grep 'interrupt telemetry'。
         _tele_interim: dict[str, str] = {"text": ""}
+        # 打断状态共享(B 2026-07-18):interim 非空的 speaking→listening=真插话打断,
+        # 记时刻供 on_user_turn_completed 判定"打断轮"→filler 必播(见 _make_agent)。
+        interrupt_state: dict[str, float] = {"ts": 0.0}
 
         def _on_tele_transcribed(ev: Any) -> None:
             _tele_interim["text"] = getattr(ev, "transcript", "") or ""
@@ -260,6 +264,8 @@ class TierACascadeEngine(ExperienceEngine):
                 str(getattr(ev, "old_state", "")) == "speaking"
                 and str(getattr(ev, "new_state", "")) == "listening"
             ):
+                if _tele_interim["text"]:
+                    interrupt_state["ts"] = time.monotonic()
                 logger.info(
                     "interrupt telemetry: speaking→listening interim=%r",
                     _tele_interim["text"][:40],
@@ -303,6 +309,7 @@ class TierACascadeEngine(ExperienceEngine):
                 self._settings.agent_instructions,
                 speaker_sidecar=speaker_sidecar,
                 tools=extra_tools,
+                interrupt_state=interrupt_state,
             ),
             room=ctx.room,
             # 统一输入采样率 16k:让 VAD 与 STT 收同采样率音频
@@ -688,6 +695,7 @@ def _make_agent(
     *,
     speaker_sidecar: Any | None = None,
     tools: list[Any] | None = None,
+    interrupt_state: dict[str, float] | None = None,
 ) -> Any:
     """构造带承接音的 Agent 子类实例(C1 v2,2026-07-02 川哥反馈迭代)。
 
@@ -709,7 +717,14 @@ def _make_agent(
             if bank is None:
                 return
             try:
-                clip = bank.pick(str(new_message.text_content or ""))
+                # 打断轮 filler 必播(B 2026-07-18):打断=用户最主动的动作,响应感要求最高;
+                # 概率掷丢会让"打断→静默 1.5s→才有声"的体感放大成"没反应"(21:24 轮实证)。
+                # 5s 窗口=打断到本 turn 提交的最大合理间隔(实测 0.5-2s)。
+                boost = (
+                    interrupt_state is not None
+                    and time.monotonic() - interrupt_state["ts"] < 5.0
+                )
+                clip = bank.pick(str(new_message.text_content or ""), boost=boost)
                 if clip is not None:
                     self.session.say(
                         clip.text,

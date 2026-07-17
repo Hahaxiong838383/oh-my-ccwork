@@ -64,3 +64,14 @@ class TestBucketOverrideSemantics:
         assert bank.pick("你好") is not None
         # gen 无桶级覆盖 → 用全局 0.0 → 不播
         assert bank.pick("随便聊聊天气") is None
+
+    def test_boost_bypasses_probability(self, monkeypatch) -> None:
+        # 打断轮 boost=True 绕过概率门必播(全局 0 且 random 最大也播);非 boost 照常静默
+        import random as _random
+
+        from voice_agent.engines.fillers import FillerClip
+
+        bank = FillerBank({"gen": [FillerClip(text="嗯。", frames=[])]}, probability=0.0)
+        monkeypatch.setattr(_random, "random", lambda: 0.99)
+        assert bank.pick("随便说说今天", boost=True) is not None
+        assert bank.pick("随便说说今天") is None

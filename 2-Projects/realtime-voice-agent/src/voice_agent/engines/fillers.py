@@ -231,10 +231,14 @@ class FillerBank:
     # "你好呀"连播),其他桶全跟全局(v5.2 全局 0.9 后 emo 覆盖 0.85 反而压低,删)。
     _BUCKET_PROB = {"greet": 0.5, "thanks": 0.5}
 
-    def pick(self, user_text: str) -> FillerClip | None:
-        """语义桶(空桶回退 gen)+ 桶级概率门控 + 避免连续重复同一句。"""
+    def pick(self, user_text: str, *, boost: bool = False) -> FillerClip | None:
+        """语义桶(空桶回退 gen)+ 桶级概率门控 + 避免连续重复同一句。
+
+        ``boost=True``(打断轮,2026-07-18):绕过概率门必播——打断后静默会被放大成
+        "没反应";桶选择与防重复滑窗照常。
+        """
         bucket = pick_bucket(user_text)
-        prob = self._BUCKET_PROB.get(bucket, self._probability)
+        prob = 1.0 if boost else self._BUCKET_PROB.get(bucket, self._probability)
         if random.random() >= prob:
             return None
         pool = self._clips.get(bucket) or self._clips.get("gen") or []
