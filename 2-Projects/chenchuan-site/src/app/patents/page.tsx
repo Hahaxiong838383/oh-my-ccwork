@@ -3,15 +3,53 @@ import { SectionWrapper } from '@/components/layout/SectionWrapper'
 import { SectionTitle } from '@/components/shared/SectionTitle'
 import { BlurFade } from '@/components/ui/BlurFade'
 import { NumberTicker } from '@/components/ui/NumberTicker'
+import type { Patent } from '@/data/patents'
 import { getPatents } from '@/lib/data'
 
 export const metadata: Metadata = { title: '专利' }
 export const revalidate = 60
 
+function PatentRow({ patent }: { patent: Patent }) {
+  const statusClass =
+    patent.status === '发明授权'
+      ? 'bg-emerald-500/10 text-emerald-500'
+      : patent.status === '发明'
+        ? 'bg-accent/10 text-accent'
+        : 'bg-orange-500/10 text-orange-500'
+
+  return (
+    <div className="flex items-start gap-3 px-5 py-4">
+      <span className={`mt-0.5 shrink-0 rounded-sm px-2 py-0.5 font-mono text-[10px] ${statusClass}`}>
+        {patent.statusLabel}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm text-text-primary">{patent.title}</div>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-text-muted">
+          <a
+            href={`https://patents.google.com/patent/${patent.number}/zh`}
+            target="_blank"
+            rel="noreferrer"
+            className="transition-colors hover:text-accent"
+          >
+            {patent.number}
+          </a>
+          <span>{patent.company}</span>
+          <span>申请 {patent.filingDate}</span>
+          {patent.inventorRole === '合作发明人' && (
+            <span className="text-amber-500">合作发明人</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default async function PatentsPage() {
   const patents = await getPatents()
   const inventions = patents.filter((p) => p.status === '发明' || p.status === '发明授权')
   const utilities = patents.filter((p) => p.status === '实用新型')
+  const leadInventorCount = patents.filter((p) => p.inventorRole === '首位发明人').length
+  const collaborativeCount = patents.length - leadInventorCount
 
   return (
     <div className="pt-24">
@@ -23,7 +61,12 @@ export default async function PatentsPage() {
             <span className="text-5xl font-bold text-text-primary">
               <NumberTicker value={patents.length} />
             </span>
-            <span className="mb-1 text-lg text-text-secondary">项专利</span>
+            <div className="mb-1">
+              <div className="text-lg text-text-secondary">项专利</div>
+              <div className="font-mono text-[11px] text-text-muted">
+                {leadInventorCount} 项首位发明人 · {collaborativeCount} 项合作发明人
+              </div>
+            </div>
           </div>
         </BlurFade>
 
@@ -34,23 +77,7 @@ export default async function PatentsPage() {
             </h3>
             <div className="rounded-xl border border-white/[0.06] bg-bg-card overflow-hidden divide-y divide-white/[0.04]">
               {inventions.map((patent) => (
-                <div key={patent.number} className="flex items-start gap-3 px-5 py-4">
-                  <span
-                    className={`mt-0.5 shrink-0 rounded-sm px-2 py-0.5 font-mono text-[10px] ${
-                      patent.status === '发明授权'
-                        ? 'bg-emerald-500/10 text-emerald-400'
-                        : 'bg-accent/10 text-accent'
-                    }`}
-                  >
-                    {patent.statusLabel}
-                  </span>
-                  <div>
-                    <div className="text-sm text-text-primary">{patent.title}</div>
-                    <div className="mt-0.5 font-mono text-[11px] text-text-muted">
-                      {patent.number}
-                    </div>
-                  </div>
-                </div>
+                <PatentRow key={patent.number} patent={patent} />
               ))}
             </div>
           </div>
@@ -63,17 +90,7 @@ export default async function PatentsPage() {
             </h3>
             <div className="rounded-xl border border-white/[0.06] bg-bg-card overflow-hidden divide-y divide-white/[0.04]">
               {utilities.map((patent) => (
-                <div key={patent.number} className="flex items-start gap-3 px-5 py-4">
-                  <span className="mt-0.5 shrink-0 rounded-sm bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] text-text-muted">
-                    {patent.statusLabel}
-                  </span>
-                  <div>
-                    <div className="text-sm text-text-primary">{patent.title}</div>
-                    <div className="mt-0.5 font-mono text-[11px] text-text-muted">
-                      {patent.number}
-                    </div>
-                  </div>
-                </div>
+                <PatentRow key={patent.number} patent={patent} />
               ))}
             </div>
           </div>

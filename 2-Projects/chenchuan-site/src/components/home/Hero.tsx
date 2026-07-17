@@ -15,9 +15,9 @@ const PROMPTS = [
   '想从产品经理转型 AI，第一步是什么？',
 ]
 
-const getStats = (experience: string): Array<[string, string]> => [
+const getStats = (experience: string, patentCount: number): Array<[string, string]> => [
   [experience, '硬科技产品经验'],
-  ['46', '项专利成果'],
+  [String(patentCount), '项专利成果'],
   ['>9款', '0-1 量产及运营经验'],
 ]
 
@@ -101,11 +101,16 @@ interface TickerItem {
   url: string
 }
 
-export function Hero({ tickerItems = [] }: { tickerItems?: TickerItem[] }) {
+interface HeroProps {
+  patentCount: number
+  tickerItems?: TickerItem[]
+}
+
+export function Hero({ patentCount, tickerItems = [] }: HeroProps) {
   const clock = useClock()
   const typed = useTypewriter(PROMPTS)
   const experienceLabel = useCareerExperienceLabel()
-  const stats = getStats(experienceLabel)
+  const stats = getStats(experienceLabel, patentCount)
   const [voiceOpen, setVoiceOpen] = useState(false)
 
   return (

@@ -1,5 +1,5 @@
 import { directus, readItems, readSingleton } from './directus'
-import type { DProfile, DProject, DPatent, DTimeline, DArticle } from './directus'
+import type { DProfile, DProject, DTimeline, DArticle } from './directus'
 
 // Local fallback data
 import { profile as localProfile } from '@/data/profile'
@@ -166,25 +166,10 @@ export async function getProjectBySlug(slug: string) {
 }
 
 // ── Patents ──
-function mapPatent(d: DPatent) {
-  return {
-    title: d.title,
-    number: d.number,
-    status: d.status as '发明' | '发明授权' | '实用新型',
-    statusLabel: d.status_label,
-  }
-}
-
 export async function getPatents() {
-  return tryFetch(
-    async () => {
-      const items = await directus.request(
-        readItems('patents', { sort: ['sort'], limit: -1 }),
-      )
-      return items.map(mapPatent)
-    },
-    localPatents,
-  )
+  // Patent evidence must stay complete and auditable. The legacy CMS seed only
+  // contains a partial list, so it must not replace the canonical local archive.
+  return localPatents
 }
 
 // ── Timeline ──
