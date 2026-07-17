@@ -4,7 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>实时语音测试 · realtime-voice-agent</title>
-<script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
+<!-- livekit-client 走同源本地文件(nginx 专置 location;jsdelivr CDN 国内可达性差) -->
+<script src="/livekit-client.umd.min.js"></script>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -53,7 +54,7 @@
 <body>
   <header>
     <h1>🎙️ 小可 · 实时语音测试</h1>
-    <div class="sub">sherpa STT · v1-mini 判停 · DeepSeek · VoxCPM TTS</div>
+    <div class="sub">火山豆包 STT/TTS · v1-mini 判停 · LLM 赛马 · HK 自托管</div>
     <div id="status">未连接</div>
     <div id="metrics">
       <div class="m"><span class="ml">判停</span><b class="mv" data-k="eou">–</b></div>
@@ -70,8 +71,8 @@
   </footer>
 
 <script>
-const LIVEKIT_URL = "wss://voice.hahaxiong.top";
-const TOKEN = "__LIVEKIT_TOKEN__"; // 部署时由脚本注入(24h TTL)
+const LIVEKIT_URL = "wss://voice-hk.hahaxiong.cc";
+const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidm9pY2UtdGVzdC11c2VyIiwidmlkZW8iOnsicm9vbUpvaW4iOnRydWUsInJvb20iOiJ2b2ljZS10ZXN0IiwiY2FuUHVibGlzaCI6dHJ1ZSwiY2FuU3Vic2NyaWJlIjp0cnVlLCJjYW5QdWJsaXNoRGF0YSI6dHJ1ZX0sInJvb21Db25maWciOnsiYWdlbnRzIjpbeyJhZ2VudE5hbWUiOiJyZWFsdGltZS12b2ljZS1hZ2VudCJ9XX0sInN1YiI6InZvaWNlLXRlc3QtdXNlciIsImlzcyI6InZvaWNla2V5IiwibmJmIjoxNzg0MzAxMzcyLCJleHAiOjE3ODY4OTMzNzJ9.59cNZW1nV8pjal85YEM-pAQtjdKToH530yTnUKx9IDg"; // room=voice-test 房间级 token(2026-07-17 签,30 天 TTL,带 explicit dispatch roomConfig;到期用 64.90 env key 重签)
 
 const { Room, RoomEvent, Track } = LivekitClient;
 const statusEl = document.getElementById("status");
@@ -147,7 +148,13 @@ async function connect() {
   setStatus(relay ? "连接中…(中转模式)" : "连接中…");
   btn.disabled = true;
   try {
-    room = new Room({ adaptiveStream: true, dynacast: true });
+    // audioCaptureDefaults 显式锁定(2026-07-17 降噪快赢1):此前走 livekit-client 默认
+    // (大概率开但未确认);显式声明后 AEC/降噪/AGC 行为不随库升级或浏览器默认漂移。
+    room = new Room({
+      adaptiveStream: true,
+      dynacast: true,
+      audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
 
     // 直连媒体中途被掐(建立后十几秒断,跨境 UDP QoS 典型)→ 记住走中转,立即重连
     room.on(RoomEvent.Reconnecting, () => {

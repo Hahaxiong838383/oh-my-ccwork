@@ -247,6 +247,27 @@ class TierACascadeEngine(ExperienceEngine):
                     session.interrupt()
 
             session.on("user_input_transcribed", _on_hotword_transcribed)
+        # 打断遥测(2026-07-17,降噪优化数据地基):speaking→listening 转换时快照最近 interim,
+        # 让"误打断率"从体感变数字——interim 有字=真插话;无字+随后契约 false_interruption=
+        # 环境音穿透(已被恢复);无字+无 false=正常播完。统计:journalctl grep 'interrupt telemetry'。
+        _tele_interim: dict[str, str] = {"text": ""}
+
+        def _on_tele_transcribed(ev: Any) -> None:
+            _tele_interim["text"] = getattr(ev, "transcript", "") or ""
+
+        def _on_tele_state(ev: Any) -> None:
+            if (
+                str(getattr(ev, "old_state", "")) == "speaking"
+                and str(getattr(ev, "new_state", "")) == "listening"
+            ):
+                logger.info(
+                    "interrupt telemetry: speaking→listening interim=%r",
+                    _tele_interim["text"][:40],
+                )
+                _tele_interim["text"] = ""
+
+        session.on("user_input_transcribed", _on_tele_transcribed)
+        session.on("agent_state_changed", _on_tele_state)
         # RSS 采样任务(job 进程生命周期,进程退出自灭;aclose 显式回收防悬挂告警)
         self._rss_task = asyncio.create_task(_rss_monitor_loop())
         bridge = LiveKitEventBridge(emit=self._queue.put_nowait)
