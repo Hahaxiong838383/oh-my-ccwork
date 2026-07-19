@@ -121,7 +121,7 @@ function extractText(message) {
 
 function splitText(text, limit = 3000) {
   const chunks = []
-  let rest = text
+  let rest = String(text || '')
   while (rest.length > limit) {
     const slice = rest.slice(0, limit)
     const breakAt = Math.max(
@@ -137,6 +137,117 @@ function splitText(text, limit = 3000) {
   return chunks.length ? chunks : ['(空回复)']
 }
 
+/** 表格行粗判：| a | b | */
+function looksLikeTableRow(line) {
+  const t = String(line || '').trim()
+  if (!t.includes('|')) return false
+  // 至少两段单元格
+  const cells = t.replace(/^\|/, '').replace(/\|$/, '').split('|')
+  return cells.length >= 2
+}
+
+/** | --- | :---: | */
+function looksLikeTableSep(line) {
+  const t = String(line || '').trim()
+  if (!t.includes('|') || !t.includes('-')) return false
+  return /^[\s|:\-]+$/.test(t)
+}
+
+/**
+ * 把 GFM 表格收成等宽代码块，避免飞书卡片 markdown 表格错乱。
+ */
+function convertMarkdownTables(text) {
+  const lines = String(text || '').split('\n')
+  const out = []
+  let i = 0
+  while (i < lines.length) {
+    const row = lines[i]
+    const next = lines[i + 1]
+    if (looksLikeTableRow(row) && looksLikeTableSep(next)) {
+      const table = []
+      while (i < lines.length && looksLikeTableRow(lines[i])) {
+        table.push(lines[i])
+        i += 1
+      }
+      const pretty = table
+        .filter((l) => !looksLikeTableSep(l))
+        .map((l) =>
+          l
+            .trim()
+            .replace(/^\|/, '')
+            .replace(/\|$/, '')
+            .split('|')
+            .map((c) => c.trim())
+            .join('  ·  '),
+        )
+      out.push('```')
+      out.push(...pretty)
+      out.push('```')
+      continue
+    }
+    out.push(row)
+    i += 1
+  }
+  return out.join('\n')
+}
+
+/**
+ * 清洗成飞书卡片 markdown 友好格式。
+ * 参考：飞书卡片不支持 #/##/### 一二三级标题。
+ */
+function normalizeForFeishuCard(text) {
+  let s = String(text || '')
+  // 若上游把换行写成字面量 \n，还原
+  if (s.includes('\\n') && !s.includes('\n')) {
+    s = s.replace(/\\n/g, '\n')
+  }
+  s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  // 去掉首尾多余空白、压缩 3+ 空行
+  s = s.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+  // # ## ### → 加粗（####/##### 保留）
+  s = s.replace(/^#{1,3}\s+(.+)$/gm, (_, title) => `**${title.trim()}**`)
+  // 去掉单独一行的 HTML 注释 / 渲染组件残片
+  s = s.replace(/^<!--[\s\S]*?-->$/gm, '')
+  s = s.replace(/^\s*display\s+render_inline_citation[\s\S]*$/gim, '')
+  s = convertMarkdownTables(s)
+  // 再次压缩空行
+  s = s.replace(/\n{3,}/g, '\n\n').trim()
+  return s || '(空回复)'
+}
+
+/**
+ * 短状态消息：纯文本更轻；长回复走交互卡片 markdown。
+ */
+function preferCard(text) {
+  const s = String(text || '')
+  if (s.length < 80 && !/[`|*#\n]/.test(s)) return false
+  // 含 markdown / 多行 / 较长 → 卡片
+  return s.length >= 60 || /\n/.test(s) || /```|^\s*#{1,6}\s|\*\*|^\s*[-*]\s|^\s*\d+\.\s/m.test(s)
+}
+
+function buildStatusCard({ title, body, template = 'blue' }) {
+  const content = normalizeForFeishuCard(body)
+  return {
+    config: {
+      wide_screen_mode: true,
+      enable_forward: true,
+    },
+    header: {
+      template,
+      title: {
+        tag: 'plain_text',
+        content: String(title || 'Grok').slice(0, 50),
+      },
+    },
+    elements: [
+      {
+        tag: 'markdown',
+        content: content.slice(0, 10000),
+      },
+    ],
+  }
+}
+
 function sessionIdForChat(chatId) {
   const sessionSeed = createHash('sha256').update(`feishu:${chatId}`).digest('hex')
   return [
@@ -148,6 +259,252 @@ function sessionIdForChat(chatId) {
       .padStart(2, '0')}${sessionSeed.slice(18, 20)}`,
     sessionSeed.slice(20, 32),
   ].join('-')
+}
+
+function grokHome() {
+  return process.env.GROK_HOME || path.join(process.env.HOME || '', '.grok')
+}
+
+function sessionDirFor(cwd, sessionId) {
+  return path.join(grokHome(), 'sessions', encodeURIComponent(cwd), sessionId)
+}
+
+function sessionMapPath() {
+  return (
+    process.env.GROK_SESSION_MAP ||
+    path.join(ROOT, 'workspace', '.session-map.json')
+  )
+}
+
+async function dirSizeBytes(dir) {
+  let total = 0
+  async function walk(p) {
+    let entries
+    try {
+      entries = await fs.readdir(p, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const e of entries) {
+      const fp = path.join(p, e.name)
+      if (e.isDirectory()) await walk(fp)
+      else {
+        try {
+          total += (await fs.stat(fp)).size
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  }
+  await walk(dir)
+  return total
+}
+
+async function loadSessionMap() {
+  try {
+    return JSON.parse(await fs.readFile(sessionMapPath(), 'utf8'))
+  } catch {
+    return {}
+  }
+}
+
+async function saveSessionMap(map) {
+  const p = sessionMapPath()
+  await fs.mkdir(path.dirname(p), { recursive: true })
+  await fs.writeFile(p, `${JSON.stringify(map, null, 2)}\n`, 'utf8')
+}
+
+/**
+ * 归档目录 → Grok 记忆系统（MEMORY.md / sessions 日志 / INDEX）。
+ * 失败只打日志，不阻断主流程。
+ */
+function recordArchiveToMemory({ dest, reason, size, chatKey, cwd }) {
+  const script = path.join(ROOT, 'archive-to-memory.mjs')
+  const nodeBin = process.env.NODE_BIN || process.execPath
+  const args = [
+    script,
+    '--dir',
+    dest,
+    '--reason',
+    String(reason || 'archive'),
+    '--size',
+    String(size || 0),
+  ]
+  if (chatKey) args.push('--chat-key', chatKey)
+  if (cwd) args.push('--cwd', cwd)
+  return new Promise((resolve) => {
+    const child = spawn(nodeBin, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: process.env,
+    })
+    let out = ''
+    let err = ''
+    child.stdout.on('data', (d) => {
+      out += d.toString('utf8')
+    })
+    child.stderr.on('data', (d) => {
+      err += d.toString('utf8')
+    })
+    child.on('error', (e) => {
+      log('archive memory spawn fail', String(e.message || e).slice(0, 120))
+      resolve(false)
+    })
+    child.on('close', (code) => {
+      if (code === 0) {
+        log('archive memory ok', out.trim().slice(0, 240))
+        resolve(true)
+      } else {
+        log(
+          'archive memory fail',
+          (err || out).trim().slice(0, 240) || `exit ${code}`,
+        )
+        resolve(false)
+      }
+    })
+  })
+}
+
+async function archiveSessionDir(sessionId, dir, reason, size, meta = {}) {
+  const archRoot = path.join(grokHome(), 'sessions-archive')
+  await fs.mkdir(archRoot, { recursive: true })
+  const dest = path.join(archRoot, `${sessionId}.${Date.now()}`)
+  try {
+    await fs.rename(dir, dest)
+    log(
+      'session archived',
+      sessionId.slice(0, 8),
+      reason,
+      `bytes=${size}`,
+      `-> ${path.basename(dest)}`,
+    )
+    // 写入记忆系统，保证下次可召回
+    await recordArchiveToMemory({
+      dest,
+      reason,
+      size,
+      chatKey: meta.chatKey || '',
+      cwd: meta.cwd || '',
+    })
+    return { ok: true, dest }
+  } catch (err) {
+    log('session archive fail', String(err.message || err).slice(0, 120))
+    return { ok: false, dest: null }
+  }
+}
+
+/**
+ * 解析/轮转 sticky session。
+ * - 默认沿用 map 或确定性 id
+ * - 目录 ≥ hardMax(20MB) → 归档 + 记忆 + 换新 UUID
+ * - 目录 ≥ softMax(5MB) → 同样归档 + 记忆 + 换新 UUID（不再只跳过 resume）
+ * - 注意：不是「空闲 10 分钟切 session」；GROK_TIMEOUT_MS 是单次进程墙钟超时
+ */
+async function resolveStickySession(chatId, cwd) {
+  const hardMax = Number(
+    process.env.GROK_SESSION_MAX_BYTES || 20 * 1024 * 1024,
+  )
+  const softMax = Number(
+    process.env.GROK_SESSION_RESUME_MAX_BYTES || 5 * 1024 * 1024,
+  )
+  const key = `${chatId}:${cwd}`
+  const map = await loadSessionMap()
+  let sessionId = map[key]?.sessionId || sessionIdForChat(key)
+  const dir = sessionDirFor(cwd, sessionId)
+  let size = 0
+  let exists = false
+  try {
+    await fs.access(dir)
+    exists = true
+    size = await dirSizeBytes(dir)
+  } catch {
+    exists = false
+  }
+
+  if (exists && size >= hardMax) {
+    await archiveSessionDir(sessionId, dir, 'hard_max', size, {
+      chatKey: key,
+      cwd,
+    })
+    sessionId = randomUUID()
+    map[key] = {
+      sessionId,
+      rotatedAt: new Date().toISOString(),
+      reason: 'hard_max',
+      prevSize: size,
+    }
+    await saveSessionMap(map)
+    return { sessionId, exists: false, size: 0, rotated: true, skipResume: true }
+  }
+
+  if (exists && size >= softMax) {
+    // soft 也归档进记忆，避免孤儿 session 无法召回
+    log(
+      'session soft archive+rotate',
+      sessionId.slice(0, 8),
+      `bytes=${size}`,
+      `soft=${softMax}`,
+    )
+    await archiveSessionDir(sessionId, dir, 'soft_max', size, {
+      chatKey: key,
+      cwd,
+    })
+    sessionId = randomUUID()
+    map[key] = {
+      sessionId,
+      rotatedAt: new Date().toISOString(),
+      reason: 'soft_max',
+      prevSize: size,
+    }
+    await saveSessionMap(map)
+    return { sessionId, exists: false, size: 0, rotated: true, skipResume: true }
+  }
+
+  if (!map[key]?.sessionId) {
+    map[key] = { sessionId, updatedAt: new Date().toISOString() }
+    await saveSessionMap(map)
+  }
+  return { sessionId, exists, size, rotated: false, skipResume: false }
+}
+
+/**
+ * 简单问答 → 短路径；改文件/跑命令/长文 → 全量执行型。
+ * 注意：与 GROK_TIMEOUT_MS 无关（那是单次进程墙钟超时）。
+ */
+function classifyMode(text) {
+  const t = String(text || '').trim()
+  const fullTurns = Number(process.env.GROK_MAX_TURNS || 40)
+  const shortTurns = Number(process.env.GROK_SHORT_MAX_TURNS || 8)
+  if (t.length > 180) return { mode: 'full', maxTurns: fullTurns }
+  if (/\/cwd\b|```|\.py\b|\.js\b|\.ts\b|\.sh\b|\.go\b|\.rs\b|\.mjs\b/i.test(t)) {
+    return { mode: 'full', maxTurns: fullTurns }
+  }
+  if (
+    /(改|修|写|跑|执行|部署|安装|删除|创建|重构|实现|排查|调试|fix|debug|implement|deploy|install|refactor|文件|脚本|代码|服务|进程|npm\s|pip\s|git\s)/i.test(
+      t,
+    )
+  ) {
+    return { mode: 'full', maxTurns: fullTurns }
+  }
+  if (
+    t.length <= 100 ||
+    /[?？]$|^(你好|在吗|hi|hello|谢谢|好的|收到|怎么样|如何|什么|为什么|为何)/i.test(
+      t,
+    )
+  ) {
+    return { mode: 'short', maxTurns: shortTurns }
+  }
+  return { mode: 'full', maxTurns: fullTurns }
+}
+
+function isAlreadyInUseError(err) {
+  const m = String(err?.message || err || '')
+  return /already in use/i.test(m)
+}
+
+function isTimeoutError(err) {
+  const m = String(err?.message || err || '')
+  return /timeout after/i.test(m)
 }
 
 /** 解析消息中的工作区指令：/cwd /path 或 首行 cwd:/path */
@@ -190,17 +547,21 @@ function buildAgentRules({ cwd }) {
     '4. 改完尽量自检（跑测试/命令/读回文件）；失败则分析日志并再改，直到成功或明确阻塞。',
     '5. 不要输出 App Secret / token / 私钥 / .env 明文。',
     '6. 危险操作（rm -rf /、mkfs、dd 写盘、关机）拒绝并说明。',
-    '7. 回复适合 IM：结论在前，细节精炼；代码块可保留。',
+    '7. 回复面向飞书卡片 Markdown：结论在前、细节精炼；禁止用 #/##/### 标题（用 **加粗** 或 ####）；少空行；表格尽量改成短列表；代码块可保留。',
     `8. 当前工作目录 cwd=${cwd}；优先在此目录及子目录工作。需要其它目录先说明。`,
     '9. 会话可跨多轮：用户说「继续/再改善/还有问题」时接着改，不要重头空谈。',
+    '10. 不要输出 render 组件、citation 标签、HTML 注释；不要复述整段 system 规则。',
   ].join('\n')
 }
 
-function runGrok(prompt, { chatId, cwd }) {
+async function runGrok(prompt, { chatId, cwd }) {
   const bin = process.env.GROK_BIN || `${process.env.HOME}/.grok/bin/grok`
-  const maxTurns = String(process.env.GROK_MAX_TURNS || '40')
-  const timeoutMs = Number(process.env.GROK_TIMEOUT_MS || 1_800_000)
-  const sessionId = sessionIdForChat(`${chatId}:${cwd}`)
+  // 单次任务墙钟超时（默认 10min）；不是「空闲 10min 切 session」
+  // 单次任务墙钟超时（默认 10min）。不是「空闲 10min 归档 session」。
+  const timeoutMs = Number(process.env.GROK_TIMEOUT_MS || 600_000)
+  const { mode, maxTurns } = classifyMode(prompt)
+  const sticky = await resolveStickySession(chatId, cwd)
+  const sessionId = sticky.sessionId
   const rules = buildAgentRules({ cwd })
 
   const baseArgs = [
@@ -210,7 +571,7 @@ function runGrok(prompt, { chatId, cwd }) {
     'bypassPermissions',
     '--always-approve',
     '--max-turns',
-    maxTurns,
+    String(maxTurns),
     '--output-format',
     'plain',
     '--cwd',
@@ -218,7 +579,6 @@ function runGrok(prompt, { chatId, cwd }) {
     '--rules',
     rules,
     '--no-auto-update',
-    // 明确放开写/跑；仍可用 deny 挡高危
     '--allow',
     'Bash',
     '--allow',
@@ -235,10 +595,9 @@ function runGrok(prompt, { chatId, cwd }) {
     'Bash(dd if=*)',
   ]
 
-  // 可选额外参数（空格分隔）
+  // 全量模式才挂 GROK_EXTRA_ARGS（如 --experimental-memory）；短路径减负
   const extra = (process.env.GROK_EXTRA_ARGS || '').trim()
-  if (extra) {
-    // 简单 split，不支持复杂引号
+  if (mode === 'full' && extra) {
     baseArgs.push(...extra.split(/\s+/).filter(Boolean))
   }
 
@@ -252,12 +611,11 @@ function runGrok(prompt, { chatId, cwd }) {
     ALL_PROXY: process.env.ALL_PROXY || process.env.all_proxy || '',
     NO_PROXY: process.env.NO_PROXY || 'localhost,127.0.0.1,.feishu.cn',
     no_proxy: process.env.NO_PROXY || 'localhost,127.0.0.1,.feishu.cn',
-    // headless 无人值守
     CI: '1',
     GROK_HEADLESS: '1',
   }
 
-  function once(useArgs, onProgress) {
+  function once(useArgs, wallMs) {
     return new Promise((resolve, reject) => {
       const child = spawn(bin, useArgs, {
         env,
@@ -266,34 +624,47 @@ function runGrok(prompt, { chatId, cwd }) {
       })
       let stdout = ''
       let stderr = ''
-      let lastProgressAt = Date.now()
-      const timer = setTimeout(() => {
-        child.kill('SIGTERM')
-        reject(new Error(`grok timeout after ${timeoutMs}ms`))
-      }, timeoutMs)
-
-      const bump = (chunk, stream) => {
-        if (stream === 'out') stdout += chunk
-        else stderr += chunk
-        // 粗粒度进度：stderr/stdout 有工具日志时回调
-        const now = Date.now()
-        if (onProgress && now - lastProgressAt > 25_000) {
-          lastProgressAt = now
-          const hint = (stderr + stdout).slice(-200).replace(/\s+/g, ' ').slice(0, 120)
-          onProgress(hint)
+      let settled = false
+      const killHard = () => {
+        try {
+          child.kill('SIGTERM')
+        } catch {
+          /* ignore */
         }
+        setTimeout(() => {
+          try {
+            child.kill('SIGKILL')
+          } catch {
+            /* ignore */
+          }
+        }, 2000)
       }
+      const timer = setTimeout(() => {
+        if (settled) return
+        settled = true
+        killHard()
+        reject(new Error(`grok timeout after ${wallMs}ms`))
+      }, wallMs)
 
-      child.stdout.on('data', (d) => bump(d.toString('utf8'), 'out'))
-      child.stderr.on('data', (d) => bump(d.toString('utf8'), 'err'))
+      child.stdout.on('data', (d) => {
+        stdout += d.toString('utf8')
+      })
+      child.stderr.on('data', (d) => {
+        stderr += d.toString('utf8')
+      })
       child.on('error', (err) => {
+        if (settled) return
+        settled = true
         clearTimeout(timer)
         reject(err)
       })
       child.on('close', (code) => {
+        if (settled) return
+        settled = true
         clearTimeout(timer)
-        if (code === 0) resolve(stdout.trim() || '(grok 无文本输出，可能已完成工具操作)')
-        else {
+        if (code === 0) {
+          resolve(stdout.trim() || '(grok 无文本输出，可能已完成工具操作)')
+        } else {
           const errTail = stderr.slice(-1000).replace(/Bearer\s+\S+/g, 'Bearer ***')
           reject(new Error(`grok exit ${code}: ${errTail || stdout.slice(-400)}`))
         }
@@ -301,21 +672,82 @@ function runGrok(prompt, { chatId, cwd }) {
     })
   }
 
-  const onProgress = null // 由外层 heartbeat 负责
-
-  return once([...baseArgs, '-r', sessionId], onProgress).catch(async () => {
-    log('grok resume miss, try create', sessionId.slice(0, 8))
-    try {
-      return await once([...baseArgs, '-s', sessionId], onProgress)
-    } catch (err2) {
-      log('grok -s failed, plain single', String(err2.message || err2).slice(0, 200))
-      return once(baseArgs, onProgress)
+  async function mintNewSession(reason) {
+    const key = `${chatId}:${cwd}`
+    const map = await loadSessionMap()
+    const next = randomUUID()
+    map[key] = {
+      sessionId: next,
+      rotatedAt: new Date().toISOString(),
+      reason,
     }
-  })
+    await saveSessionMap(map)
+    log('session mint', next.slice(0, 8), reason)
+    return next
+  }
+
+  log(
+    'grok start',
+    `mode=${mode}`,
+    `turns=${maxTurns}`,
+    `sid=${sessionId.slice(0, 8)}`,
+    sticky.exists ? `size=${sticky.size}` : 'new',
+    sticky.rotated ? 'rotated' : '',
+  )
+
+  // 1) 小 session 才 resume；失败立刻换新 id（already in use / miss / timeout）
+  //    大 session 已在 resolveStickySession 跳过 -r，避免加载卡死
+  if (sticky.exists && !sticky.skipResume) {
+    try {
+      return await once([...baseArgs, '-r', sessionId], timeoutMs)
+    } catch (err) {
+      const why = isAlreadyInUseError(err)
+        ? 'already_in_use'
+        : isTimeoutError(err)
+          ? 'resume_timeout'
+          : 'resume_miss'
+      log(
+        'grok resume fail fast',
+        sessionId.slice(0, 8),
+        why,
+        String(err.message || err).slice(0, 160),
+      )
+      const next = await mintNewSession(why)
+      try {
+        return await once([...baseArgs, '-s', next], timeoutMs)
+      } catch (err2) {
+        log('grok -s after rotate fail', String(err2.message || err2).slice(0, 160))
+        return once(baseArgs, timeoutMs)
+      }
+    }
+  }
+
+  // 2) 新 session：创建 sticky 并执行（完整任务超时；冲突则换 id 再跑）
+  try {
+    return await once([...baseArgs, '-s', sessionId], timeoutMs)
+  } catch (err2) {
+    log('grok -s failed', String(err2.message || err2).slice(0, 200))
+    if (isAlreadyInUseError(err2)) {
+      const next = await mintNewSession('create_already_in_use')
+      try {
+        return await once([...baseArgs, '-s', next], timeoutMs)
+      } catch (err3) {
+        log('grok -s mint fail', String(err3.message || err3).slice(0, 160))
+      }
+    }
+    // 3) 无 session 单发
+    return once(baseArgs, timeoutMs)
+  }
 }
 
 async function sendText(client, receiveId, text, receiveIdType = 'chat_id') {
-  for (const chunk of splitText(text, 3000)) {
+  // 纯文本也做基础清洗，避免字面量 \n 和过多空行
+  const cleaned = String(text || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+  for (const chunk of splitText(cleaned, 3500)) {
     const res = await client.im.message.create({
       params: { receive_id_type: receiveIdType },
       data: {
@@ -329,6 +761,71 @@ async function sendText(client, receiveId, text, receiveIdType = 'chat_id') {
       throw new Error(`feishu send failed: ${res?.code} ${res?.msg}`)
     }
   }
+}
+
+/**
+ * 发送飞书交互卡片（markdown 元素）。失败时回落纯文本。
+ * @param {'blue'|'wathet'|'green'|'orange'|'red'|'purple'|'turquoise'|'carmine'|'violet'|'yellow'|'indigo'|'grey'} template
+ */
+async function sendCard(
+  client,
+  receiveId,
+  { title, body, template = 'blue' },
+  receiveIdType = 'chat_id',
+) {
+  const md = normalizeForFeishuCard(body)
+  const chunks = splitText(md, 3800)
+  for (let i = 0; i < chunks.length; i++) {
+    const partTitle =
+      chunks.length > 1 ? `${title}（${i + 1}/${chunks.length}）` : title
+    const card = buildStatusCard({
+      title: partTitle,
+      body: chunks[i],
+      template,
+    })
+    try {
+      const res = await client.im.message.create({
+        params: { receive_id_type: receiveIdType },
+        data: {
+          receive_id: receiveId,
+          msg_type: 'interactive',
+          content: JSON.stringify(card),
+          uuid: randomUUID().slice(0, 50),
+        },
+      })
+      if (res?.code !== 0) {
+        throw new Error(`card ${res?.code} ${res?.msg}`)
+      }
+    } catch (err) {
+      log('sendCard fallback text', String(err.message || err).slice(0, 160))
+      await sendText(
+        client,
+        receiveId,
+        `${partTitle}\n\n${chunks[i]}`,
+        receiveIdType,
+      )
+    }
+  }
+}
+
+/** 智能发送：长文/markdown → 卡片；短句 → 文本 */
+async function sendReply(
+  client,
+  receiveId,
+  text,
+  { title = 'Grok', template = 'blue', forceCard = false, forceText = false } = {},
+  receiveIdType = 'chat_id',
+) {
+  if (forceText || (!forceCard && !preferCard(text))) {
+    await sendText(client, receiveId, text, receiveIdType)
+    return
+  }
+  await sendCard(
+    client,
+    receiveId,
+    { title, body: text, template },
+    receiveIdType,
+  )
 }
 
 let chain = Promise.resolve()
@@ -479,24 +976,28 @@ async function main() {
 
         // 帮助
         if (/^(help|帮助|\/help)$/i.test(cleaned)) {
-          await sendText(
-            client,
-            chatId,
-            [
-              '🛠 执行型 Grok（可改文件/跑命令）',
+          await sendCard(client, chatId, {
+            title: '🛠 执行型 Grok',
+            template: 'blue',
+            body: [
+              '可改文件 / 跑命令，直接下任务即可。',
               '',
-              '直接下任务即可，例如：',
-              '• 在 workspace 写一个 hello.py 并运行',
-              '• 把 XX 脚本改成支持参数并自测',
+              '**示例**',
+              '- 在 workspace 写一个 hello.py 并运行',
+              '- 把 XX 脚本改成支持参数并自测',
               '',
-              '指定工作目录：',
-              '  /cwd ~/某项目',
-              '  （下一行写任务）',
+              '**指定工作目录**',
+              '```',
+              '/cwd ~/某项目',
+              '（下一行写任务）',
+              '```',
               '',
-              `默认 cwd：${defaultCwd}`,
-              `max_turns=${process.env.GROK_MAX_TURNS || 40} timeout=${process.env.GROK_TIMEOUT_MS || 1800000}ms`,
+              `默认 cwd：\`${defaultCwd}\``,
+              `max_turns=${process.env.GROK_MAX_TURNS || 40}（短问 ${process.env.GROK_SHORT_MAX_TURNS || 8}）`,
+              `timeout=${process.env.GROK_TIMEOUT_MS || 600000}ms（单次任务墙钟，非空闲切 session）`,
+              `session soft/hard=${process.env.GROK_SESSION_RESUME_MAX_BYTES || 5242880}/${process.env.GROK_SESSION_MAX_BYTES || 20971520} bytes`,
             ].join('\n'),
-          )
+          })
           return 'ok'
         }
 
@@ -507,11 +1008,28 @@ async function main() {
           cwd = parsed.cwd
           body = parsed.body
         } catch (e) {
-          await sendText(client, chatId, `⚠️ ${e.message}`)
+          await sendCard(client, chatId, {
+            title: '⚠️ 参数错误',
+            template: 'orange',
+            body: String(e.message || e),
+          }).catch(() =>
+            sendText(client, chatId, `⚠️ ${e.message}`),
+          )
           return 'ok'
         }
 
-        log('inbound', chatType || '?', chatId?.slice(0, 12), 'cwd=', cwd, 'len=', body.length)
+        const modeHint = classifyMode(body)
+        log(
+          'inbound',
+          chatType || '?',
+          chatId?.slice(0, 12),
+          'cwd=',
+          cwd,
+          'len=',
+          body.length,
+          `mode=${modeHint.mode}`,
+          `turns=${modeHint.maxTurns}`,
+        )
 
         enqueue(async () => {
           const started = Date.now()
@@ -519,33 +1037,52 @@ async function main() {
           const heartbeat = setInterval(() => {
             beat += 1
             const min = Math.round((Date.now() - started) / 60000)
+            // 心跳保持轻量纯文本，避免刷屏卡片
             sendText(
               client,
               chatId,
-              `⏳ 仍在执行中… ${min} 分钟（第 ${beat} 次心跳）。Grok 正在用工具改/跑，请稍候。`,
+              `⏳ 仍在执行… ${min} 分钟（心跳 #${beat}）`,
             ).catch(() => {})
           }, 60_000)
 
           try {
             await ensureWorkspaceScaffold(cwd)
-            await sendText(
-              client,
-              chatId,
-              `🚀 开始执行\ncwd: ${cwd}\n任务: ${body.slice(0, 200)}${body.length > 200 ? '…' : ''}`,
-            ).catch(() => {})
+            const taskPreview =
+              body.slice(0, 280) + (body.length > 280 ? '…' : '')
+            await sendCard(client, chatId, {
+              title: '🚀 开始执行',
+              template: 'wathet',
+              body: [
+                `**cwd** \`${cwd}\``,
+                `**模式** ${modeHint.mode} · max_turns=${modeHint.maxTurns}`,
+                '',
+                '**任务**',
+                taskPreview,
+              ].join('\n'),
+            }).catch(() =>
+              sendText(
+                client,
+                chatId,
+                `🚀 开始执行\ncwd: ${cwd}\nmode: ${modeHint.mode}/${modeHint.maxTurns}\n任务: ${taskPreview}`,
+              ),
+            )
 
             const reply = await runGrok(body, { chatId, cwd })
             const sec = Math.round((Date.now() - started) / 1000)
-            await sendText(
-              client,
-              chatId,
-              `✅ 完成（${sec}s）\n\n${reply}`,
-            )
+            await sendReply(client, chatId, reply, {
+              title: `✅ 完成 · ${sec}s`,
+              template: 'green',
+              forceCard: true,
+            })
             log('outbound ok', 'chars=', reply.length, 'sec=', sec)
           } catch (err) {
             const msg = String(err.message || err).slice(0, 800)
             log('handle error', msg)
-            await sendText(client, chatId, `⚠️ 执行失败：${msg}`).catch(() => {})
+            await sendCard(client, chatId, {
+              title: '⚠️ 执行失败',
+              template: 'red',
+              body: msg,
+            }).catch(() => sendText(client, chatId, `⚠️ 执行失败：${msg}`))
           } finally {
             clearInterval(heartbeat)
           }
