@@ -6,7 +6,7 @@
  * 1. ~/.grok/sessions-archive/INDEX.md + index.jsonl  — 总索引
  * 2. ~/.grok/memory/MEMORY.md                        — 全局 MEMORY 条目
  * 3. ~/.grok/memory/<workspace-slug>/sessions/*.md   — 项目 session 日志
- * 4. <cwd>/MEMORY.md + FEISHU_TASKLOG.md（若 cwd 可知）— 工作区可见
+ * 4. <cwd>/MEMORY.md + WECHAT_TASKLOG.md（若 cwd 可知）— 工作区可见
  *
  * Usage:
  *   node archive-to-memory.mjs --dir /path/to/archived-session-dir \
@@ -88,7 +88,7 @@ async function extractTopics(chatPath, limit = 8) {
         if (t.length < 8) continue
         // 跳过系统/规则/续写摘要/skill 清单噪声
         if (
-          /^你是通过飞书|【铁律】|AGENTS\.md|OS Version:|Prefer using relative/i.test(
+          /^你是通过微信|你是通过飞书|【铁律】|AGENTS\.md|OS Version:|Prefer using relative/i.test(
             t,
           ) ||
           /This session is being continued|The following skills are available|MCP servers (connected|disconnected|currently connecting)|skills are available for use/i.test(
@@ -121,20 +121,38 @@ function workspaceSlug(cwd) {
 
 async function findExistingWorkspaceMemoryDir(cwd) {
   const memRoot = path.join(grokHome(), 'memory')
+  const isWechat = !!(cwd && cwd.includes('wechat-grok-bridge'))
+  const isFeishu = !!(cwd && cwd.includes('feishu-grok-bridge'))
   try {
     const entries = await fs.readdir(memRoot, { withFileTypes: true })
     for (const e of entries) {
       if (!e.isDirectory() || e.name === 'sessions') continue
-      // 优先匹配已知 feishu workspace
-      if (cwd && e.name.startsWith('workspace-') && cwd.includes('feishu-grok-bridge')) {
+      if (cwd && e.name.startsWith('workspace-') && isWechat) {
+        // prefer existing workspace-* under wechat host memory
+        const candidate = path.join(memRoot, e.name)
+        try {
+          await fs.access(path.join(candidate, 'index.sqlite'))
+          return candidate
+        } catch {
+          /* try next */
+        }
+      }
+      if (cwd && e.name.startsWith('workspace-') && isFeishu) {
         return path.join(memRoot, e.name)
       }
     }
-    // feishu bridge workspace 固定 slug 习惯：workspace-c5a0e252
-    const preferred = path.join(memRoot, 'workspace-c5a0e252')
+    // known preferred slugs
+    const preferredWechat = path.join(memRoot, 'workspace-4ef39d68')
     try {
-      await fs.access(preferred)
-      if (cwd?.includes('feishu-grok-bridge')) return preferred
+      await fs.access(preferredWechat)
+      if (isWechat) return preferredWechat
+    } catch {
+      /* fallthrough */
+    }
+    const preferredFeishu = path.join(memRoot, 'workspace-c5a0e252')
+    try {
+      await fs.access(preferredFeishu)
+      if (isFeishu) return preferredFeishu
     } catch {
       /* fallthrough */
     }
@@ -269,7 +287,7 @@ async function main() {
     `- **created**: ${createdAt}`,
     `- **updated**: ${updatedAt}`,
     `- **archived_at**: ${ts}`,
-    `- **tags**: #session-archive #飞书 #通道 #记忆`,
+    `- **tags**: #session-archive #微信 #通道 #记忆`,
     '',
     '## Topics (user prompts sample)',
     ...(topics.length ? topics.map((t, i) => `${i + 1}. ${t}`) : ['- (no user topics extracted)']),
@@ -293,7 +311,7 @@ async function main() {
     if (!idx.startsWith('#')) {
       await fs.writeFile(
         path.join(archRoot, 'INDEX.md'),
-        `# Grok Session Archive Index\n\n> 自动生成；供飞书通道 / experimental-memory 召回。\n\n${idx}`,
+        `# Grok Session Archive Index\n\n> 自动生成；供微信通道 / experimental-memory 召回。\n\n${idx}`,
         'utf8',
       )
     }
@@ -313,7 +331,7 @@ async function main() {
     topics,
     model,
     num_messages: numMsgs,
-    tags: ['session-archive', 'feishu', 'dev198'],
+    tags: ['session-archive', 'wechat', 'linux-lan'],
   }
   await fs.appendFile(
     path.join(archRoot, 'index.jsonl'),
@@ -327,7 +345,7 @@ async function main() {
 
   // 3) global MEMORY.md
   const globalMem = path.join(grokHome(), 'memory', 'MEMORY.md')
-  const memLine = `- ★★  会话归档 \`${sessionId.slice(0, 8)}\`「${title}」reason=${reason} size=${formatBytes(size)} path=\`${abs}\` topics=${topics.slice(0, 3).join(' / ') || '—'} [${date}] #session-archive #飞书 #记忆 #路径`
+  const memLine = `- ★★  会话归档 \`${sessionId.slice(0, 8)}\`「${title}」reason=${reason} size=${formatBytes(size)} path=\`${abs}\` topics=${topics.slice(0, 3).join(' / ') || '—'} [${date}] #session-archive #微信 #记忆 #路径`
   await ensureSection(globalMem, '## Archived Sessions (auto)', memLine)
 
   // 4) workspace memory sessions log
@@ -349,7 +367,7 @@ async function main() {
       await fs.access(cwd)
       await ensureSection(path.join(cwd, 'MEMORY.md'), '## Archived Sessions (auto)', memLine)
       await appendUniqueLine(
-        path.join(cwd, 'FEISHU_TASKLOG.md'),
+        path.join(cwd, 'WECHAT_TASKLOG.md'),
         `- ${date} session-archive ${sessionId.slice(0, 8)} 「${title}」${formatBytes(size)} → ${basename}`,
         sessionId.slice(0, 8),
       )

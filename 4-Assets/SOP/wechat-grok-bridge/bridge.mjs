@@ -3,16 +3,15 @@
  * wechat-grok-bridge
  * 微信 iLink Bot（getupdates 长轮询）↔ Grok Build headless
  *
- * 流程：getupdates → 白名单 → grok -p（bypassPermissions）→ sendmessage 回微信
+ * 流程：getupdates → 白名单/群策略 → 媒体下载 → grok -p → 文本+出站媒体
  * 凭据：wechat-qr-login-module AES 加密 accounts.json
- * 机制对齐 dev198 feishu-grok-bridge（session 轮转 / archive-to-memory / short|full）
+ * 机制对齐 dev198 feishu-grok-bridge（session 轮转 / archive-to-memory / short|full / media）
  */
 import { spawn } from 'node:child_process'
 import {
   createHash,
   createDecipheriv,
   randomUUID,
-  randomBytes,
 } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -20,8 +19,20 @@ import { fileURLToPath } from 'node:url'
 import {
   getWechatUpdates,
   sendWechatText,
-  extractWechatText,
 } from './wechat-api.mjs'
+import {
+  downloadInboundMedia,
+  formatMediaPrompt,
+} from './lib/media-inbound.mjs'
+import { processOutboundReply } from './lib/media-outbound.mjs'
+import {
+  extractWechatText,
+  hasMediaItems,
+  detectChatKind,
+  stripForcePrefix,
+  shouldProcessMessage,
+} from './lib/message-parse.mjs'
+import { buildSessionKey } from './lib/session-key.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = __dirname
@@ -80,17 +91,18 @@ async function loadCredential() {
   const raw = JSON.parse(await fs.readFile(filePath, 'utf8'))
   const accounts = Object.values(raw.accounts || {})
   if (!accounts.length) throw new Error('no accounts — scan WeChat QR first')
-  accounts.sort((a, b) => String(b.savedAt || '').localeCompare(String(a.savedAt || '')))
+  accounts.sort((a, b) =>
+    String(b.savedAt || '').localeCompare(String(a.savedAt || '')),
+  )
   const acc = accounts[0]
   const token =
-    typeof acc.token === 'string'
-      ? acc.token
-      : decryptSecret(secret, acc.token)
+    typeof acc.token === 'string' ? acc.token : decryptSecret(secret, acc.token)
   return {
     accountId: acc.accountId,
     token,
     baseUrl: acc.baseUrl || 'https://ilinkai.weixin.qq.com',
     userId: acc.userId || '',
+    name: acc.name || '',
     savedAt: acc.savedAt,
   }
 }
@@ -102,7 +114,6 @@ function parseAllowList(credentialUserId) {
     .filter(Boolean)
   const set = new Set(extra)
   if (credentialUserId) set.add(credentialUserId)
-  // empty allow list → allow all (first-time setup); log warning
   return set
 }
 
@@ -128,7 +139,10 @@ function normalizeReply(text) {
   let s = String(text || '')
   if (s.includes('\\n') && !s.includes('\n')) s = s.replace(/\\n/g, '\n')
   s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-  s = s.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+  s = s
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
   s = s.replace(/^#{1,3}\s+(.+)$/gm, (_, title) => `【${title.trim()}】`)
   s = s.replace(/^<!--[\s\S]*?-->$/gm, '')
   return s || '(空回复)'
@@ -285,19 +299,23 @@ async function archiveSessionDir(sessionId, dir, reason, size, meta = {}) {
   }
 }
 
-async function resolveStickySession(chatKey, cwd) {
+/**
+ * sticky session:
+ * - hard ≥20MB → archive + memory + new UUID
+ * - soft ≥5MB → archive + memory + new UUID（与 dev198 对齐，避免孤儿 session）
+ */
+async function resolveStickySession(mapKey, cwd, meta = {}) {
   const hardMax = Number(
     process.env.GROK_SESSION_MAX_BYTES || 20 * 1024 * 1024,
   )
   const softMax = Number(
     process.env.GROK_SESSION_RESUME_MAX_BYTES || 5 * 1024 * 1024,
   )
-  const key = `${chatKey}:${cwd}`
   const map = await loadSessionMap()
-  let sessionId = map[key]?.sessionId
+  let sessionId = map[mapKey]?.sessionId
   if (!sessionId) {
     sessionId = randomUUID()
-    map[key] = { sessionId, createdAt: new Date().toISOString() }
+    map[mapKey] = { sessionId, createdAt: new Date().toISOString() }
     await saveSessionMap(map)
     return {
       sessionId,
@@ -319,11 +337,11 @@ async function resolveStickySession(chatKey, cwd) {
   }
   if (exists && size >= hardMax) {
     await archiveSessionDir(sessionId, dir, 'hard_size', size, {
-      chatKey,
-      cwd,
+      chatKey: mapKey,
+      cwd: meta.cwd || cwd,
     })
     const next = randomUUID()
-    map[key] = {
+    map[mapKey] = {
       sessionId: next,
       rotatedAt: new Date().toISOString(),
       reason: 'hard_size',
@@ -339,15 +357,24 @@ async function resolveStickySession(chatKey, cwd) {
     }
   }
   if (exists && size >= softMax) {
+    log(
+      'session soft archive+rotate',
+      sessionId.slice(0, 8),
+      `bytes=${size}`,
+      `soft=${softMax}`,
+    )
+    await archiveSessionDir(sessionId, dir, 'soft_size', size, {
+      chatKey: mapKey,
+      cwd: meta.cwd || cwd,
+    })
     const next = randomUUID()
-    map[key] = {
+    map[mapKey] = {
       sessionId: next,
       rotatedAt: new Date().toISOString(),
-      reason: 'soft_size_skip_resume',
+      reason: 'soft_size',
       prevSize: size,
     }
     await saveSessionMap(map)
-    // soft: keep old dir, don't resume heavy session
     return {
       sessionId: next,
       exists: false,
@@ -370,11 +397,11 @@ function classifyMode(text) {
   const fullTurns = Number(process.env.GROK_MAX_TURNS || 40)
   const shortTurns = Number(process.env.GROK_SHORT_MAX_TURNS || 8)
   if (t.length > 180) return { mode: 'full', maxTurns: fullTurns }
-  if (/\/cwd\b|```|\.py\b|\.js\b|\.ts\b|\.sh\b/i.test(t)) {
+  if (/\/cwd\b|```|\.py\b|\.js\b|\.ts\b|\.sh\b|\.go\b|\.rs\b|\.mjs\b/i.test(t)) {
     return { mode: 'full', maxTurns: fullTurns }
   }
   if (
-    /(改|修|写|跑|执行|部署|安装|删除|创建|重构|实现|排查|调试|fix|debug|implement|deploy|install|文件|脚本|代码|服务)/i.test(
+    /(改|修|写|跑|执行|部署|安装|删除|创建|重构|实现|排查|调试|fix|debug|implement|deploy|install|文件|脚本|代码|服务|图片|附件|分析)/i.test(
       t,
     )
   ) {
@@ -415,6 +442,13 @@ function parseCwdDirective(text, defaultCwd) {
   return { cwd: resolved, body: body || text }
 }
 
+function allowedRootsList() {
+  const home = process.env.HOME || '/home'
+  return (process.env.GROK_ALLOWED_ROOTS || home)
+    .split(':')
+    .map((p) => path.resolve(p.replace(/^~(?=$|\/)/, home)))
+}
+
 function buildAgentRules({ cwd }) {
   return [
     '你是通过微信 Bot 接入的 Grok Build **执行型**助手（不是只会给建议的聊天 bot）。',
@@ -425,18 +459,20 @@ function buildAgentRules({ cwd }) {
     '4. 改完尽量自检；失败则分析再改。',
     '5. 不要输出 App Secret / token / 私钥 / .env 明文。',
     '6. 危险操作（rm -rf /、mkfs、dd 写盘）拒绝。',
-    '7. 回复面向微信纯文本：结论在前、精炼；少空行；表格改短列表。',
+    '7. 回复面向微信纯文本：结论在前、精炼；少空行；表格改短列表；禁用 Markdown 表格/代码块装饰。',
     `8. 当前 cwd=${cwd}；优先在此目录工作。`,
     '9. 会话可跨多轮；用户说「继续」接着做。',
     '10. 不要输出 render 组件、citation 标签、HTML 注释。',
+    '11. 用户附件已落盘到 cwd/.inbound-media/；用 Read 读图/读文件。',
+    '12. 回传文件：回复中写 `[[send-file:/绝对路径]]`（桥接上传发微信）；也可写 `本地路径: /abs`。',
   ].join('\n')
 }
 
-async function runGrok(prompt, { chatKey, cwd }) {
+async function runGrok(prompt, { mapKey, cwd }) {
   const bin = process.env.GROK_BIN || `${process.env.HOME}/.grok/bin/grok`
   const timeoutMs = Number(process.env.GROK_TIMEOUT_MS || 600_000)
   const { mode, maxTurns } = classifyMode(prompt)
-  const sticky = await resolveStickySession(chatKey, cwd)
+  const sticky = await resolveStickySession(mapKey, cwd, { cwd })
   const sessionId = sticky.sessionId
   const rules = buildAgentRules({ cwd })
 
@@ -555,10 +591,9 @@ async function runGrok(prompt, { chatKey, cwd }) {
   }
 
   async function mintNewSession(reason) {
-    const key = `${chatKey}:${cwd}`
     const map = await loadSessionMap()
     const next = randomUUID()
-    map[key] = {
+    map[mapKey] = {
       sessionId: next,
       rotatedAt: new Date().toISOString(),
       reason,
@@ -606,7 +641,7 @@ async function runGrok(prompt, { chatKey, cwd }) {
   }
 }
 
-async function sendReply(cred, to, text, contextToken) {
+async function sendTextChunks(cred, to, text, contextToken) {
   const cleaned = normalizeReply(text)
   for (const chunk of splitText(cleaned, 1800)) {
     await sendWechatText({
@@ -617,6 +652,19 @@ async function sendReply(cred, to, text, contextToken) {
       contextToken,
     })
   }
+}
+
+async function sendReply(cred, to, text, contextToken) {
+  await processOutboundReply({
+    baseUrl: cred.baseUrl,
+    token: cred.token,
+    to,
+    text: normalizeReply(text),
+    contextToken,
+    allowedRoots: allowedRootsList(),
+    sendTextFn: (t) => sendTextChunks(cred, to, t, contextToken),
+    log,
+  })
 }
 
 let queue = Promise.resolve()
@@ -645,6 +693,12 @@ function sleep(ms, signal) {
   })
 }
 
+function envFlag(name, def = false) {
+  const v = process.env[name]
+  if (v === undefined || v === '') return def
+  return /^(1|true|yes|on)$/i.test(v)
+}
+
 async function handleInbound(cred, message, allowSet) {
   const peerId = message.from_user_id?.trim()
   if (!peerId) return
@@ -654,8 +708,9 @@ async function handleInbound(cred, message, allowSet) {
   const seenKey = `${cred.accountId}:${message.message_id || message.seq || ''}:${peerId}:${message.create_time_ms || 0}`
   if (await hasSeen(seenKey)) return
 
-  const text = extractWechatText(message)
-  if (!text) return
+  const rawText = extractWechatText(message)
+  const mediaPresent = hasMediaItems(message)
+  if (!rawText && !mediaPresent) return
   await markSeen(seenKey)
 
   if (allowSet.size > 0 && !allowSet.has(peerId)) {
@@ -670,6 +725,30 @@ async function handleInbound(cred, message, allowSet) {
     return
   }
 
+  const { kind: chatKind, roomId } = detectChatKind(message)
+  const { forced, body: stripped, mentioned } = stripForcePrefix(rawText, {
+    botName: process.env.BOT_DISPLAY_NAME || cred.name || '',
+    botAccountId: cred.accountId || '',
+  })
+  const requireGroupPrefix = envFlag('REQUIRE_GROUP_PREFIX', true)
+
+  if (
+    !shouldProcessMessage({
+      chatKind,
+      forced,
+      mentioned,
+      hasMedia: mediaPresent,
+      requireGroupPrefix,
+    })
+  ) {
+    log(
+      'group skip (need grok: / @bot)',
+      roomId?.slice?.(0, 12) || 'group',
+      peerId.slice(0, 12),
+    )
+    return
+  }
+
   const defaultCwd = path.resolve(
     (process.env.GROK_CWD || path.join(ROOT, 'workspace')).replace(
       /^~(?=$|\/)/,
@@ -678,9 +757,9 @@ async function handleInbound(cred, message, allowSet) {
   )
 
   let cwd = defaultCwd
-  let body = text
+  let body = stripped || rawText
   try {
-    const parsed = parseCwdDirective(text, defaultCwd)
+    const parsed = parseCwdDirective(body, defaultCwd)
     cwd = parsed.cwd
     body = parsed.body
   } catch (e) {
@@ -688,7 +767,32 @@ async function handleInbound(cred, message, allowSet) {
     return
   }
 
-  if (/^(ping|健康|status)$/i.test(body.trim())) {
+  // download media into cwd
+  let mediaResult = { files: [], errors: [] }
+  if (mediaPresent) {
+    try {
+      mediaResult = await downloadInboundMedia({
+        message,
+        cwd,
+        log,
+      })
+    } catch (err) {
+      log('media batch fail', String(err.message || err).slice(0, 160))
+      mediaResult = {
+        files: [],
+        errors: [String(err.message || err).slice(0, 160)],
+      }
+    }
+  }
+
+  if (!body && mediaResult.files.length) {
+    body = '请查看附件。'
+  }
+
+  const bodyWithMedia = formatMediaPrompt(mediaResult, body)
+  if (!bodyWithMedia) return
+
+  if (/^(ping|健康|status)$/i.test((body || '').trim())) {
     await sendReply(
       cred,
       peerId,
@@ -696,25 +800,44 @@ async function handleInbound(cred, message, allowSet) {
         'wechat-grok-bridge ok',
         `account=${cred.accountId}`,
         `cwd=${cwd}`,
+        `chat=${chatKind}${roomId ? ` room=${roomId}` : ''}`,
+        `media=${mediaResult.files.length}`,
         `timeout=${process.env.GROK_TIMEOUT_MS || 600000}ms`,
+        `soft_archive=on soft_max=${process.env.GROK_SESSION_RESUME_MAX_BYTES || 5242880}`,
       ].join('\n'),
       message.context_token,
     )
     return
   }
 
-  log('inbound', peerId.slice(0, 12), body.slice(0, 80).replace(/\n/g, ' '))
+  const mapKey = buildSessionKey({
+    chatKind,
+    peerId,
+    roomId,
+    cwd,
+    groupSessionsPerUser: envFlag('GROUP_SESSIONS_PER_USER', true),
+  })
+
+  log(
+    'inbound',
+    chatKind,
+    peerId.slice(0, 12),
+    `media=${mediaResult.files.length}`,
+    (body || '').slice(0, 80).replace(/\n/g, ' '),
+  )
 
   await sendWechatText({
     baseUrl: cred.baseUrl,
     token: cred.token,
     to: peerId,
-    text: '收到，Grok 处理中…',
+    text: mediaResult.files.length
+      ? `收到（含 ${mediaResult.files.length} 个附件），Grok 处理中…`
+      : '收到，Grok 处理中…',
     contextToken: message.context_token,
   }).catch(() => {})
 
   try {
-    const reply = await runGrok(body, { chatKey: peerId, cwd })
+    const reply = await runGrok(bodyWithMedia, { mapKey, cwd })
     await sendReply(cred, peerId, reply, message.context_token)
   } catch (err) {
     log('handle fail', String(err.message || err).slice(0, 200))
@@ -787,6 +910,15 @@ async function main() {
           baseUrl: cred.baseUrl,
           userId: cred.userId ? `${cred.userId.slice(0, 8)}…` : '',
           tokenLen: cred.token?.length || 0,
+          features: {
+            mediaInbound: true,
+            mediaOutbound: true,
+            softArchive: true,
+            groupPolicy: true,
+            experimentalMemory: !!(process.env.GROK_EXTRA_ARGS || '').includes(
+              'experimental-memory',
+            ),
+          },
         },
         null,
         2,
@@ -811,6 +943,8 @@ async function main() {
     'bridge start',
     `account=${cred.accountId}`,
     `base=${cred.baseUrl}`,
+    `media=in+out`,
+    `soft_archive=on`,
     `proxy=${process.env.HTTPS_PROXY || process.env.ALL_PROXY || 'none'}`,
   )
 

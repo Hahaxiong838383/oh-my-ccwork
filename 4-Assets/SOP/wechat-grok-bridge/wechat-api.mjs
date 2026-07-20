@@ -1,6 +1,6 @@
 /**
  * WeChat iLink Bot API helpers (from 1052-OS / wechat-qr-login-module upstream).
- * getupdates long-poll + sendmessage text.
+ * getupdates long-poll + sendmessage text/media + getuploadurl.
  */
 import crypto from 'node:crypto'
 
@@ -10,6 +10,7 @@ const DEFAULT_TIMEOUT_MS = 15_000
 const DEFAULT_LONG_POLL_TIMEOUT_MS = 35_000
 
 export const WECHAT_DEFAULT_BASE_URL = 'https://ilinkai.weixin.qq.com'
+export const WECHAT_CDN_BASE_URL = 'https://novac2c.cdn.weixin.qq.com/c2c'
 
 function buildClientVersion(version) {
   const [major = 0, minor = 0, patch = 0] = version
@@ -104,6 +105,10 @@ export async function getWechatUpdates({
   )
 }
 
+function clientId(prefix = 'linux-lan-wechat') {
+  return `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(4).toString('hex')}`
+}
+
 export async function sendWechatText({
   baseUrl,
   token,
@@ -111,9 +116,7 @@ export async function sendWechatText({
   text,
   contextToken,
 }) {
-  const clientId = `linux-lan-wechat-${Date.now().toString(36)}-${crypto
-    .randomBytes(4)
-    .toString('hex')}`
+  const id = clientId()
   const response = await postJson(
     baseUrl,
     'ilink/bot/sendmessage',
@@ -121,7 +124,7 @@ export async function sendWechatText({
       msg: {
         from_user_id: '',
         to_user_id: to,
-        client_id: clientId,
+        client_id: id,
         message_type: 2,
         message_state: 2,
         item_list: text ? [{ type: 1, text_item: { text } }] : undefined,
@@ -132,10 +135,73 @@ export async function sendWechatText({
     token,
   )
   assertWechatApiOk(response, 'Wechat sendmessage')
-  return clientId
+  return id
 }
 
-/** Extract plain text from inbound WechatMessage */
+/** Send arbitrary item_list entry (image/file/video item) */
+export async function sendWechatMessageItem({
+  baseUrl,
+  token,
+  to,
+  item,
+  contextToken,
+}) {
+  const id = clientId('linux-lan-wechat-media')
+  const response = await postJson(
+    baseUrl,
+    'ilink/bot/sendmessage',
+    {
+      msg: {
+        from_user_id: '',
+        to_user_id: to,
+        client_id: id,
+        message_type: 2,
+        message_state: 2,
+        item_list: [item],
+        context_token: contextToken,
+      },
+      base_info: baseInfo(),
+    },
+    token,
+  )
+  assertWechatApiOk(response, 'Wechat sendmessage media')
+  return id
+}
+
+/**
+ * Request CDN upload URL for outbound media.
+ * mediaType: 1=image 2=video 3=file
+ */
+export async function getWechatUploadUrl({
+  baseUrl,
+  token,
+  filekey,
+  mediaType,
+  to,
+  rawsize,
+  rawfilemd5,
+  filesize,
+  aeskey,
+}) {
+  return postJson(
+    baseUrl,
+    'ilink/bot/getuploadurl',
+    {
+      filekey,
+      media_type: mediaType,
+      to_user_id: to,
+      rawsize,
+      rawfilemd5,
+      filesize,
+      no_need_thumb: true,
+      aeskey,
+      base_info: baseInfo(),
+    },
+    token,
+  )
+}
+
+/** Extract plain text from inbound WechatMessage (legacy helper) */
 export function extractWechatText(message) {
   const parts = []
   const walk = (item) => {
