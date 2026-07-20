@@ -1,6 +1,7 @@
 # linux-lan 微信 ↔ Grok Build 通道运维
 
 > 2026-07-20 从 dev198 飞书通道机制复刻；通道改为微信 iLink Bot。  
+> **状态：E2E 已通**（川哥微信私聊 Bot 已收到回复）。  
 > Secret 不入库；凭据只在 linux-lan 本机。
 
 ## 与 dev198 对照
