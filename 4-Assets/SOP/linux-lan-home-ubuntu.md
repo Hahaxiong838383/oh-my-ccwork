@@ -59,3 +59,32 @@ ssh linux-lan 'systemctl status frpc; tail -40 /var/log/frp/frpc.log'
 
 - 公网端口有扫描面；依赖密钥登录 + 连接频率限制
 - frp token 仅存本机/HK frp 配置文件，**禁止写入 git 与 memory 正文**
+
+
+## Xray 代理（GPT / Grok 用）
+
+| 项 | 值 |
+|---|---|
+| 服务 | `systemctl enable --now xray`（开机自启 + Restart=always） |
+| 保活 | `xray-watchdog.timer` 每 1 分钟检查 10808，挂了自动 restart |
+| 本地端口 | `127.0.0.1:10808` mixed |
+| 节点 | 用户指定单节点 VLESS Reality（DMIT→ZGO），配置见本机 `/usr/local/etc/xray/config.json` |
+| 开关 | SSH 登录后 `proxy_on` / `proxy_off`（`~/.xray-proxy.sh`） |
+
+```bash
+# 连通性（401=链路通，缺 API key）
+curl --socks5-hostname 127.0.0.1:10808 https://api.openai.com/v1/models
+curl --socks5-hostname 127.0.0.1:10808 https://api.x.ai/v1/models
+```
+
+**密钥不入仓。** 改节点只改 linux 本机 config 后 `systemctl restart xray`。
+
+### 保活检查
+
+```bash
+systemctl is-enabled xray xray-watchdog.timer
+systemctl is-active xray xray-watchdog.timer
+systemctl list-timers xray-watchdog.timer
+tail -20 /var/log/xray/watchdog.log
+```
+
