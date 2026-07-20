@@ -102,11 +102,12 @@ class FrameRecord:
 
     def to_json(self) -> str:
         d = self.__dict__.copy()
-        d["feat"] = [round(x, 5) for x in self.feat]
-        d["context"] = [round(x, 5) for x in self.context]
-        d["face_bbox"] = [round(x, 5) for x in self.face_bbox]
-        d["pose"] = [round(x, 2) for x in self.pose]
-        d["quality"] = round(self.quality, 4)
+        # round(float(x)) 双重职责：精度截断 + numpy 标量免疫（前端换实现也不怕）
+        d["feat"] = [round(float(x), 5) for x in self.feat]
+        d["context"] = [round(float(x), 5) for x in self.context]
+        d["face_bbox"] = [round(float(x), 5) for x in self.face_bbox]
+        d["pose"] = [round(float(x), 2) for x in self.pose]
+        d["quality"] = round(float(self.quality), 4)
         return json.dumps(d, ensure_ascii=False)
 
 

@@ -37,6 +37,16 @@ def test_frame_record_roundtrip():
     assert d["contract_version"] == 1 and len(d["feat"]) == 64
 
 
+def test_frame_record_numpy_scalar_immune():
+    """回归：真人有脸路径产生 np.float32（首跑事故 2026-07-20），序列化层必须免疫。"""
+    np = __import__("numpy")
+    r = contract.FrameRecord(1000, 0, [np.float32(0.1)] * 4, [np.float32(1.0)] * 3,
+                             True, [np.float32(0.5)] * 64, [np.float32(0.0)] * 16,
+                             True, np.float32(0.8), True)
+    d = json.loads(r.to_json())
+    assert len(d["feat"]) == 64 and d["quality"] == 0.8
+
+
 # ---------- events ----------
 
 def _elog(tmp_path):

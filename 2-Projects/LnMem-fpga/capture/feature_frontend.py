@@ -104,7 +104,7 @@ class FeatureFrontend:
         x0, y0 = lms.min(axis=0)
         x1, y1 = lms.max(axis=0)
         bbox = [float(x0), float(y0), float(x1 - x0), float(y1 - y0)]
-        center = ((x0 + x1) / 2.0, (y0 + y1) / 2.0)
+        center = (float(x0 + x1) / 2.0, float(y0 + y1) / 2.0)
         scale = math.sqrt(max(1e-9, (x1 - x0) * (y1 - y0)))
 
         # blendshapes: 52 维，按 MediaPipe 固定顺序
@@ -144,7 +144,8 @@ class FeatureFrontend:
 
         # quality v0：有脸即 0.5 起步 + 尺度加成（太小的脸降分）；上线前按手册 §6 R4 校准
         quality = min(1.0, 0.5 + scale * 2.0)
-        return FaceResult(True, bbox, pose, pose_valid, bs_vec + d, quality)
+        feat = [float(v) for v in bs_vec + d]  # numpy 标量统一转 python float（JSON 序列化）
+        return FaceResult(True, bbox, pose, pose_valid, feat, quality)
 
     def close(self):
         self._landmarker.close()
