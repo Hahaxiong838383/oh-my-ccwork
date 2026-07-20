@@ -80,7 +80,8 @@ def main() -> int:
     vad_ok = vad.start()
     sentinel = HealthSentinel(sdir / "health.json", contract.FEAT_DIM,
                               contract.CONTEXT_DIM,
-                              contract.DEAD_BY_DESIGN_V0["context_dims"])
+                              dead_ctx_whitelist=contract.dead_ctx_dims_v0(),
+                              dead_feat_whitelist=contract.FEAT_DEAD_WHITELIST_V0)
 
     PanelServer(pstate, args.panel_port).start()
 
@@ -112,7 +113,7 @@ def main() -> int:
                 kbd.sample()
                 appsw.update(ts, frontmost_bundle_id())
 
-            speaking, vad_alive, _ = vad.snapshot()
+            speaking, vad_alive, mic_db, mic_floor = vad.snapshot()
             speech.update(ts, speaking)
             leave.update(ts, face.present)
 
@@ -151,6 +152,7 @@ def main() -> int:
                 presence=round(sum(presence_hist) / max(1, len(presence_hist)), 2),
                 fps=round(fps_est, 1), frames=n,
                 elapsed_s=round((ts - mono0) / 1000.0, 1),
+                mic_db=round(mic_db, 1), mic_floor=round(mic_floor, 1),
                 warnings=last_warnings)
 
             if t_loop - last_status >= 1.0:

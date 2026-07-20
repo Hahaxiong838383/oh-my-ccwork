@@ -66,6 +66,7 @@ table{width:100%;border-collapse:collapse}td{padding:2px 4px;color:#9ca3af}
 <div class="card"><div class="row">
  <span>键鼠 <span class="bar"><i id="kbd" style="width:0"></i></span></span>
  <span>脸在场 <span class="bar"><i id="pres" style="width:0"></i></span></span>
+ <span id="mic">🎙 –</span>
  <span id="fps">– fps</span><span id="dur">0:00</span><span id="frames">0 帧</span></div></div>
 <div class="card"><b>事件流</b>（<span id="evn">0</span>）<table id="ev"></table></div>
 <div class="card" id="warncard" style="display:none"><b style="color:#f59e0b">⚠ 哨兵</b><div id="warns"></div></div>
@@ -78,6 +79,7 @@ async function tick(){try{
  $('ctx').className='tag'+(s.ctx_valid?' on':' warn');
  $('kbd').style.width=(100*(s.kbd||0))+'%';$('pres').style.width=(100*(s.presence||0))+'%';
  $('fps').textContent=(s.fps||0).toFixed(0)+' fps';$('frames').textContent=(s.frames||0)+' 帧';
+ if(s.mic_db!==undefined)$('mic').textContent=`🎙 ${s.mic_db}dB(底${s.mic_floor})`;
  const m=Math.floor((s.elapsed_s||0)/60),ss=Math.floor((s.elapsed_s||0)%60);
  $('dur').textContent=m+':'+String(ss).padStart(2,'0');
  $('bs').innerHTML=(s.bs_top||[]).map(([n,v])=>`<tr><td>${n}</td><td><span class="bar"><i style="width:${100*v}%"></i></span></td><td>${v.toFixed(2)}</td></tr>`).join('');

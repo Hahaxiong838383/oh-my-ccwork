@@ -107,6 +107,49 @@ def test_sentinel_dead_dim_whitelist(tmp_path):
     assert not any("ctx[2]" in w for w in warns)
 
 
+def test_sentinel_feat_needs_min_frames_and_whitelist(tmp_path):
+    """feat 死维: 短会话不报(n<3000)；达门槛报非白名单、放过白名单(_neutral)。"""
+    import random
+    s = HealthSentinel(tmp_path / "h.json", feat_dim=3, ctx_dim=1,
+                       dead_ctx_whitelist=[], dead_feat_whitelist=[0],
+                       feat_min_frames=200, report_every_s=0.0)
+    for _ in range(100):  # 未达门槛
+        s.update([0.0, 0.0, random.random()], [random.random()])
+    assert not any("feat" in w for w in s.maybe_report())
+    for _ in range(150):  # 达门槛
+        s.update([0.0, 0.0, random.random()], [random.random()])
+    warns = s.maybe_report()
+    assert any("feat[1]" in w for w in warns)        # 非白名单死维报
+    assert not any("feat[0]" in w for w in warns)    # _neutral 白名单放过
+
+
+def test_vad_adaptive_floor_quiet_room():
+    """安静房间: 地板收敛→说话开门→回底噪关门。"""
+    from context_sources import MicVAD
+    v, t = MicVAD(), [0.0]
+    def upd(db):
+        t[0] += 0.1; v._update(db, now=t[0])
+    for _ in range(100): upd(-50)
+    assert v.noise_floor < -45
+    for _ in range(10): upd(-30)
+    assert v.speaking
+    for _ in range(15): upd(-50)
+    assert not v.speaking
+
+
+def test_vad_adaptive_floor_noisy_room():
+    """高底噪房间(-40dB, 旧版固定close=-45在此永不关门): 自适应门限正常开关。"""
+    from context_sources import MicVAD
+    v, t = MicVAD(), [0.0]
+    def upd(db):
+        t[0] += 0.1; v._update(db, now=t[0])
+    for _ in range(100): upd(-40)
+    for _ in range(10): upd(-18)
+    assert v.speaking
+    for _ in range(20): upd(-40)
+    assert not v.speaking  # 旧版在这里卡死——2026-07-20 验收实锤场景
+
+
 # ---------- validator ----------
 
 def _mk_session():

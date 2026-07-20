@@ -59,18 +59,26 @@ def frontmost_bundle_id() -> str:
 
 
 class MicVAD:
-    """麦克风能量 VAD：RMS dBFS 滞回 + 时长去抖 → self_speaking 布尔。
+    """麦克风能量 VAD：**自适应噪声地板** + 滞回 + 时长去抖 → self_speaking 布尔。
 
+    2026-07-20 验收实锤教训：固定 close_db=-45 低于川哥房间底噪 → 门开永不关，
+    80s session 只出 1 个 speech_start、0 个 speech_end。改为门限=地板+余量：
+    - 地板跟踪：非说话态快降慢升；说话态以极慢速率跟随（防"永不关门"死锁，可自愈）
+    - open = max(floor+15dB, -48)，close = max(floor+8dB, -55)
     隐私：callback 内算 RMS 后即弃音频块；无任何缓存/落盘路径。
     """
 
-    def __init__(self, open_db: float = -38.0, close_db: float = -45.0,
+    CALIB_UPDATES = 15  # 冷启动校准 ~1.5s@10Hz：地板快速收敛、不判说话（采集是开会前手动启动的，此时没在说话是合理假设）
+
+    def __init__(self, open_margin_db: float = 15.0, close_margin_db: float = 8.0,
                  open_ms: int = 300, close_ms: int = 800):
-        self.open_db, self.close_db = open_db, close_db
+        self.open_margin, self.close_margin = open_margin_db, close_margin_db
         self.open_ms, self.close_ms = open_ms, close_ms
+        self.noise_floor = -60.0
         self.speaking = False
         self.alive = False
         self.level_db = -120.0
+        self._n_updates = 0
         self._edge_since: float | None = None
         self._lock = threading.Lock()
         self._stream = None
@@ -97,10 +105,23 @@ class MicVAD:
             self.alive = False
             return False
 
-    def _update(self, db: float) -> None:
-        now = time.monotonic()
+    def _update(self, db: float, now: float | None = None) -> None:
+        now = time.monotonic() if now is None else now
+        self._n_updates += 1
+        if self._n_updates <= self.CALIB_UPDATES:
+            self.noise_floor += 0.3 * (db - self.noise_floor)  # 冷启动快收敛
+            return                                             # 校准期不判说话
+        # 地板跟踪：非说话态 快降(0.2)/慢升(0.02)；说话态 0.01 跟随（防永不关门死锁，~1min 自愈）
         if not self.speaking:
-            if db >= self.open_db:
+            rate = 0.2 if db < self.noise_floor else 0.02
+        else:
+            rate = 0.01
+        self.noise_floor += rate * (db - self.noise_floor)
+        open_th = max(self.noise_floor + self.open_margin, -48.0)
+        close_th = max(self.noise_floor + self.close_margin, -55.0)
+
+        if not self.speaking:
+            if db >= open_th:
                 if self._edge_since is None:
                     self._edge_since = now
                 elif (now - self._edge_since) * 1000 >= self.open_ms:
@@ -109,7 +130,7 @@ class MicVAD:
             else:
                 self._edge_since = None
         else:
-            if db <= self.close_db:
+            if db <= close_th:
                 if self._edge_since is None:
                     self._edge_since = now
                 elif (now - self._edge_since) * 1000 >= self.close_ms:
@@ -118,9 +139,9 @@ class MicVAD:
             else:
                 self._edge_since = None
 
-    def snapshot(self) -> tuple[bool, bool, float]:
+    def snapshot(self) -> tuple[bool, bool, float, float]:
         with self._lock:
-            return self.speaking, self.alive, self.level_db
+            return self.speaking, self.alive, self.level_db, self.noise_floor
 
     def stop(self):
         if self._stream is not None:

@@ -11,7 +11,8 @@
 规则:
   I3 ← speech_start 锚，回溯 [t-3s, t]，窗内脸在场率 >60%；与上一 I3 窗重叠>50% 跳过
   I5 ← leave_seat 锚，回溯 [t-5s, t]
-  I1 ← 稳定段采样: 连续≥8s 在场率>95% 且 pose 抖动小 且 距事件>5s；每 120s 最多 1 段
+  I1 ← 稳定段采样: 连续≥6s pose 抖动小 且 距事件>5s；每 120s 最多 1 段
+       （2026-07-20 验收校准: 8s→6s——验收 session 最长稳定段 7.6s，真实会议听讲段远超 6s）
   I0 ← 低质量段: valid=False 或 quality<0.3 连续 ≥3s（每 session 最多 3 段）
 """
 from __future__ import annotations
@@ -76,7 +77,7 @@ def build_segments(frames: list[dict], events: list[dict], meta: dict) -> list[d
                   and all(abs(t - et) > 5.0 for et in ev_times))
         if stable:
             run_start = t if run_start is None else run_start
-            if t - run_start >= 8.0 and t >= next_allowed:
+            if t - run_start >= 6.0 and t >= next_allowed:
                 mid = (run_start + t) / 2
                 add(mid - 2.5, mid + 2.5, "I1", "manual_segment", None, 0.6, "稳定段")
                 next_allowed = t + 120.0
@@ -132,8 +133,8 @@ def write_review_html(path, segs, frames, meta):
 table{{border-collapse:collapse;width:100%}}td,th{{padding:6px 10px;border-bottom:1px solid #2a2e37;text-align:left}}
 </style></head><body>
 <h3>候选标注仲裁 · {meta.get('session_id','')}（{len(segs)} 段）</h3>
-<p>扫一眼，把要丢弃的 seg_id 记下，然后跑:<br>
-<code>confirm.py &lt;session_dir&gt; --drop seg_0002,seg_0005</code>（全收就不带 --drop）</p>
+<p>扫一眼有没有要丢的段。<b>postmeeting 流程</b>：回到终端，输入要丢的 seg_id（直接回车 = 全收）。<br>
+分步流程才用: <code>confirm.py &lt;session_dir&gt; --drop seg_0002</code></p>
 <table><tr><th>seg</th><th>标签</th><th>时间</th><th>锚事件</th><th>conf</th><th>备注</th><th>bbox_y 曲线</th></tr>
 {''.join(rows)}</table></body></html>"""
     Path(path).write_text(html, encoding="utf-8")

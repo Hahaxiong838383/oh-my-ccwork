@@ -47,6 +47,16 @@ DEAD_BY_DESIGN_V0 = {
     "event_onehot_bits": [3, 4, 5, 6, 7],
 }
 
+# feat 侧 by-design 死维：blendshape[0] = _neutral（MediaPipe 恒 0 占位）
+FEAT_DEAD_WHITELIST_V0 = [0]
+
+
+def dead_ctx_dims_v0() -> list[int]:
+    """哨兵白名单 = 无源 context 维 ∪ 无源 one-hot 事件位（其索引即 ctx 维 0-7）。
+    2026-07-20 教训：曾只传 context_dims，one-hot 死位 3-7 全部误报。"""
+    return sorted(set(DEAD_BY_DESIGN_V0["context_dims"])
+                  | set(DEAD_BY_DESIGN_V0["event_onehot_bits"]))
+
 DT_LAST_EVENT_CAP_S = 600.0
 AGENDA_DWELL_CAP_S = 1800.0
 MEETING_ELAPSED_CAP_S = 3600.0
