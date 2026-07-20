@@ -15,16 +15,15 @@ cd ~/mycc/2-Projects/LnMem-fpga/capture && .venv/bin/python capture_daemon.py --
 - 首次运行 macOS 弹**摄像头/麦克风**权限框 → 点允许（TCC 跟 Terminal 走）；
 - 散会后 `Ctrl-C`，数据落 `~/.lnmem-fpga/data/sessions/<时间戳>/`。
 
-**会后（自动标注 + 1 分钟仲裁）：**
+**会后（一条命令一条龙）：**
 
 ```bash
-S=~/.lnmem-fpga/data/sessions/<时间戳>
-.venv/bin/python autolabel.py $S     # 事件锚自动切窗生成候选 + review.html
-open $S/review.html                  # 扫一眼，记下要丢的 seg_id（通常没有）
-.venv/bin/python confirm.py $S       # 全收；要丢: confirm.py $S --drop seg_0002
+.venv/bin/python postmeeting.py
 ```
 
-I3（准备发言）由你的真实开口事件自动锚定生成——**说话本身就是标注**；I5/I1/I0 同为规则自动候选。confirm 落盘前强制过 anchor CI。
+自动完成：取最新 session → 事件锚自动标注（I3/I5/I1/I0）→ 打开仲裁报告 → anchor 保险丝自检 → 问你要丢哪些（**直接回车=全收**）→ 落盘 annotations.json → 报 MI 门进度倒计时。I3 由你的真实开口事件锚定——**说话本身就是标注**。
+
+（分步工具 autolabel.py / confirm.py 仍在，postmeeting 是它们的一条龙封装。）
 
 ## 隐私声明（设计约束，不是承诺）
 
@@ -43,8 +42,9 @@ I3（准备发言）由你的真实开口事件自动锚定生成——**说话�
 |---|---|
 | `capture_daemon.py` | 主循环：摄像头→特征 + context 组装 + 事件锚 + 落盘 + 状态行 + 面板集成 |
 | `panel.py` | **T1 实时面板**：daemon 内嵌 localhost HTTP（:17860），零新依赖 |
-| `autolabel.py` | **T2 自动标注器**：事件锚切窗（I3/I5）+ 稳定段 I1 + 低质量 I0 → draft + review.html |
-| `confirm.py` | 仲裁应用：draft →（--drop 剔除）→ anchor CI → annotations.json |
+| `postmeeting.py` | **会后一条龙**（日常入口）：自动标注→报告→保险丝自检→交互仲裁→落盘→MI 门进度 |
+| `autolabel.py` | T2 自动标注器：事件锚切窗（I3/I5）+ 稳定段 I1 + 低质量 I0 → draft + review.html |
+| `confirm.py` | 仲裁应用（分步版）：draft →（--drop 剔除）→ anchor CI → annotations.json |
 | `contract.py` | feature_contract v0.1 代码化（context 16 维 / 死维白名单声明） |
 | `feature_frontend.py` | MediaPipe FaceLandmarker → blendshapes(52)+派生几何(12)=feat[64] |
 | `context_sources.py` | 键鼠活动率 / 麦克风 VAD / 前台 app |

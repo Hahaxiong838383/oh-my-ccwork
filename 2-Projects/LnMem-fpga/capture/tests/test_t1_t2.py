@@ -83,6 +83,19 @@ def test_build_segments_rules(tmp_path):
     assert len(kinds.get("I0", [])) >= 1
 
 
+def test_postmeeting_one_shot(tmp_path):
+    """会后一条龙：--yes --no-open 全自动，落盘 annotations.json + 保险丝自检在输出里。"""
+    sdir = _mk_session(tmp_path)
+    r = subprocess.run([sys.executable, str(CAPTURE_DIR / "postmeeting.py"),
+                        str(sdir), "--yes", "--no-open"],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "保险丝自检: ✓" in r.stdout and "落盘" in r.stdout
+    final = json.loads((sdir / "annotations.json").read_text())
+    assert len(final[0]["segments"]) >= 3
+    assert (sdir / "review.html").exists()
+
+
 def test_autolabel_confirm_cli_end_to_end(tmp_path):
     sdir = _mk_session(tmp_path)
     r1 = subprocess.run([sys.executable, str(CAPTURE_DIR / "autolabel.py"), str(sdir)],
