@@ -11,6 +11,7 @@
 | [fpga-lnn-camera-expression-intent-full-v2.1.md](fpga-lnn-camera-expression-intent-full-v2.1.md) | **现行完整设计**（2026-07-20）：v2.0 基础上吸收 LnMem 实证教训 + 2026-H1 趋势刷新 |
 | [intent_annotation_handbook.md](intent_annotation_handbook.md) | **意图标注手册 v0.2**：LnMem 14 条学费固化为管线红线 + §1.4 会议场景标签集 v1（I0–I5 实例化） |
 | [feature_contract.md](feature_contract.md) | **接口契约 v0.1**：FeatureFrame v1 + 会议 context schema v1（k=16）+ 可变 dt 语义 + 车载 schema 预留 |
+| [stage0-platform-decision.md](stage0-platform-decision.md) | **阶段 0 决策件（待拍板）**：FPGA 直上 / Orin / 软件版先行三选一，cc 推荐软件先行 + FPGA gate 后置 |
 | [fpga-lnn-camera-expression-intent-full-v2.md](fpga-lnn-camera-expression-intent-full-v2.md) | v2.0 历史版（与 v2.1 diff 对照用） |
 | [fpga-lnn-camera-expression-intent.md](fpga-lnn-camera-expression-intent.md) | v1 摘要版（历史；结论以 v2.1 为准） |
 
@@ -24,5 +25,6 @@
 
 - [x] 手册 §1.4 会议场景标签集 v1（I0–I5 实例化，2026-07-20）
 - [x] `feature_contract.md` v0.1（会议 context schema v1，2026-07-20）
-- [ ] KV260 阶段 2 实施清单
+- [ ] **部署平台决策**（stage0-platform-decision.md 待川哥拍板，先于 KPI 冻结）
+- [ ] KV260 阶段 2 实施清单（若平台决策选 D1/D3 则需要；形态随决策定）
 - [ ] 阶段 0：KPI 表冻结 + 意图标签定义签字（标签集与契约已可供评审）
