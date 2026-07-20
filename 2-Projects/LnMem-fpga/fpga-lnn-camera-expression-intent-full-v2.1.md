@@ -952,7 +952,7 @@ L4 场景：用户场测 + 偏差/失效分析
 ### 17.2 阶段 0 明细
 
 - [x] 场景与非目标确认（办公会议 v1 → 车载扩展，2026-07-20 拍板，§2.1）  
-- [ ] **部署平台决策**（FPGA 直上 / Orin / 软件版先行——见 [`stage0-platform-decision.md`](stage0-platform-decision.md)；**先于 KPI 冻结**，因功耗/延迟行依赖平台）  
+- [x] **部署平台决策**：✅ D3 软件版先行（Mac 零采购），FPGA 改为阶段 2b、gate=软件版效果过 KPI 门（川哥 2026-07-20 拍板，见 [`stage0-platform-decision.md`](stage0-platform-decision.md)）  
 - [ ] KPI 表冻结（可改版，要记版本）  
 - [x] 意图类定义与标注手册 v0.1（已拆出 [`intent_annotation_handbook.md`](intent_annotation_handbook.md)，待按场景实例化标签）  
 - [ ] 硬件选型（默认 KV260）  
