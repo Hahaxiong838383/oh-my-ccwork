@@ -21,6 +21,7 @@ import contract
 from context_sources import KbdMouseActivity, MicVAD, frontmost_bundle_id
 from events import AppSwitchDetector, EventLog, LeaveSeatDetector, SpeechEdge
 from health import HealthSentinel
+from panel import PanelServer, PanelState, rule_expr_emoji
 
 DATA_ROOT = Path.home() / ".lnmem-fpga" / "data" / "sessions"
 MODEL_PATH = Path(__file__).parent / "models" / "face_landmarker.task"
@@ -31,6 +32,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--session-note", default="")
     ap.add_argument("--camera-index", type=int, default=0)
+    ap.add_argument("--panel-port", type=int, default=17860)
     args = ap.parse_args()
 
     if not MODEL_PATH.exists():
@@ -66,7 +68,10 @@ def main() -> int:
 
     frontend = FeatureFrontend(str(MODEL_PATH))
     frames_f = open(sdir / "frames.jsonl", "a", buffering=1, encoding="utf-8")
-    elog = EventLog(sdir / "events.jsonl")
+    pstate = PanelState()
+    elog = EventLog(sdir / "events.jsonl",
+                    listener=lambda ev: pstate.push_event(
+                        (ev.ts_mono_ms - mono0) / 1000.0, ev.type))
     speech = SpeechEdge(elog)
     leave = LeaveSeatDetector(elog)
     appsw = AppSwitchDetector(elog)
@@ -77,15 +82,21 @@ def main() -> int:
                               contract.CONTEXT_DIM,
                               contract.DEAD_BY_DESIGN_V0["context_dims"])
 
+    PanelServer(pstate, args.panel_port).start()
+
     stop = {"flag": False}
     signal.signal(signal.SIGINT, lambda *_: stop.update(flag=True))
     signal.signal(signal.SIGTERM, lambda *_: stop.update(flag=True))
 
     print(f"▶ 采集开始 session={sid}  数据目录={sdir}")
+    print(f"  实时面板: http://127.0.0.1:{args.panel_port}")
     print("  （散会后 Ctrl-C 结束；本进程只存特征数字，不存音视频内容）")
 
     n, last_slow, last_status = 0, 0.0, 0.0
     period = 1.0 / TARGET_FPS
+    from collections import deque
+    presence_hist, loop_ts = deque(maxlen=75), deque(maxlen=30)
+    last_warnings: list[str] = []
     try:
         while not stop["flag"]:
             t_loop = time.monotonic()
@@ -122,8 +133,25 @@ def main() -> int:
             frames_f.write(rec.to_json() + "\n")
             n += 1
             sentinel.update(face.feat, ctx)
-            for w in sentinel.maybe_report():
-                print(f"\n⚠️  哨兵告警: {w}")
+            warns = sentinel.maybe_report()
+            if warns:
+                last_warnings = warns
+                for w in warns:
+                    print(f"\n⚠️  哨兵告警: {w}")
+
+            presence_hist.append(1 if face.present else 0)
+            loop_ts.append(time.monotonic())
+            fps_est = (len(loop_ts) - 1) / max(1e-3, loop_ts[-1] - loop_ts[0]) \
+                if len(loop_ts) > 1 else 0.0
+            emoji, ename = rule_expr_emoji(face.expr or {}, face.present)
+            pstate.update(
+                face=face.present, speaking=speaking, ctx_valid=ctx_valid,
+                emoji=emoji, expr_name=ename, bs_top=face.bs_top or [],
+                kbd=round(kbd.activity, 2),
+                presence=round(sum(presence_hist) / max(1, len(presence_hist)), 2),
+                fps=round(fps_est, 1), frames=n,
+                elapsed_s=round((ts - mono0) / 1000.0, 1),
+                warnings=last_warnings)
 
             if t_loop - last_status >= 1.0:
                 last_status = t_loop
@@ -140,6 +168,9 @@ def main() -> int:
         cap.release(); frontend.close(); vad.stop(); elog.close(); frames_f.close()
         session_meta["mono_at_end_ms"] = now_mono_ms()
         session_meta["frames"] = n
+        if frontend.blendshape_names:
+            from feature_frontend import DERIVED_NAMES
+            session_meta["feat_names"] = frontend.blendshape_names + DERIVED_NAMES
         (sdir / "session_meta.json").write_text(
             json.dumps(session_meta, ensure_ascii=False, indent=1), encoding="utf-8")
         print(f"\n■ 采集结束 共{n}帧 {elog.count}事件 → {sdir}")

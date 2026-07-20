@@ -3,15 +3,28 @@
 > 对应 [feature_contract.md](../feature_contract.md) v0.1 与 [标注手册](../intent_annotation_handbook.md) 红线 R1/R2。
 > 一句话：开会前跑一条命令，散会 Ctrl-C——你开会说话这个动作本身就在自动产生 I3 标注锚。
 
-## 川哥使用方法（就这一条命令）
+## 川哥使用方法
+
+**开会时（一条命令 + 一个网页）：**
 
 ```bash
 cd ~/mycc/2-Projects/LnMem-fpga/capture && .venv/bin/python capture_daemon.py --session-note "周会"
 ```
 
-- 首次运行 macOS 会弹**摄像头/麦克风**权限框 → 点允许（TCC 权限跟 Terminal 走）；
-- 终端每秒刷一行状态：`帧N ~15fps 脸✓ 说话✗ 键鼠40% 事件3 ctx✓`；
-- 散会后 `Ctrl-C`，数据落在 `~/.lnmem-fpga/data/sessions/<时间戳>/`。
+- 浏览器开 **http://127.0.0.1:17860** → 实时面板（表情 emoji + 特征条 + 事件流 + 数据健康；emoji 是规则直觉版，非模型）；
+- 首次运行 macOS 弹**摄像头/麦克风**权限框 → 点允许（TCC 跟 Terminal 走）；
+- 散会后 `Ctrl-C`，数据落 `~/.lnmem-fpga/data/sessions/<时间戳>/`。
+
+**会后（自动标注 + 1 分钟仲裁）：**
+
+```bash
+S=~/.lnmem-fpga/data/sessions/<时间戳>
+.venv/bin/python autolabel.py $S     # 事件锚自动切窗生成候选 + review.html
+open $S/review.html                  # 扫一眼，记下要丢的 seg_id（通常没有）
+.venv/bin/python confirm.py $S       # 全收；要丢: confirm.py $S --drop seg_0002
+```
+
+I3（准备发言）由你的真实开口事件自动锚定生成——**说话本身就是标注**；I5/I1/I0 同为规则自动候选。confirm 落盘前强制过 anchor CI。
 
 ## 隐私声明（设计约束，不是承诺）
 
@@ -28,7 +41,10 @@ cd ~/mycc/2-Projects/LnMem-fpga/capture && .venv/bin/python capture_daemon.py --
 
 | 文件 | 职责 |
 |---|---|
-| `capture_daemon.py` | 主循环：摄像头→特征 + context 组装 + 事件锚 + 落盘 + 状态行 |
+| `capture_daemon.py` | 主循环：摄像头→特征 + context 组装 + 事件锚 + 落盘 + 状态行 + 面板集成 |
+| `panel.py` | **T1 实时面板**：daemon 内嵌 localhost HTTP（:17860），零新依赖 |
+| `autolabel.py` | **T2 自动标注器**：事件锚切窗（I3/I5）+ 稳定段 I1 + 低质量 I0 → draft + review.html |
+| `confirm.py` | 仲裁应用：draft →（--drop 剔除）→ anchor CI → annotations.json |
 | `contract.py` | feature_contract v0.1 代码化（context 16 维 / 死维白名单声明） |
 | `feature_frontend.py` | MediaPipe FaceLandmarker → blendshapes(52)+派生几何(12)=feat[64] |
 | `context_sources.py` | 键鼠活动率 / 麦克风 VAD / 前台 app |

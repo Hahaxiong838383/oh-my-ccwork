@@ -14,8 +14,9 @@ from contract import EventRecord
 
 
 class EventLog:
-    def __init__(self, path):
+    def __init__(self, path, listener=None):
         self._f = open(path, "a", buffering=1, encoding="utf-8")
+        self._listener = listener
         self._seq = 0
         self.last_event_type = "none"     # 供 context one-hot（仅契约 8 类更新）
         self.last_event_ts_ms: int | None = None
@@ -33,6 +34,8 @@ class EventLog:
         if etype in self._onehot_types:
             self.last_event_type = etype
             self.last_event_ts_ms = ts_ms
+        if self._listener:
+            self._listener(ev)
         return ev
 
     def dt_last_event_s(self, now_ms: int) -> float:

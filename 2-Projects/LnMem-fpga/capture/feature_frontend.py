@@ -25,6 +25,9 @@ FEAT_DIM = BLENDSHAPE_DIM + DERIVED_DIM
 # 7    face_presence_5s: 近 5s 有脸帧占比
 # 8-10 jawOpen/browDown(L+R均值)/mouthSmile(L+R均值) 一阶差分
 # 11   landmark_stability: 全部 landmark 帧间平均位移（抖动度）
+DERIVED_NAMES = ["pose_d_yaw", "pose_d_pitch", "pose_d_roll", "bbox_vx", "bbox_vy",
+                 "bbox_scale_v", "bbox_y", "presence_5s", "jawOpen_d", "browDown_d",
+                 "mouthSmile_d", "landmark_stab"]
 
 
 @dataclass
@@ -35,6 +38,8 @@ class FaceResult:
     pose_valid: bool
     feat: list[float]          # FEAT_DIM
     quality: float
+    bs_top: list = None        # [(name, score)] top6（面板显示用）
+    expr: dict = None          # 规则表情关键键（面板 emoji 用）
 
 
 class _History:
@@ -84,6 +89,7 @@ class FeatureFrontend:
         self._mp = mp
         self._landmarker = vision.FaceLandmarker.create_from_options(opts)
         self._hist = _History()
+        self.blendshape_names: list[str] = []  # 首个有脸帧填充；session_meta 落盘供训练侧对齐
 
     def reset_history(self):
         self._hist.reset()
@@ -97,7 +103,7 @@ class FeatureFrontend:
             h.presence.append(0)
             h.prev_landmarks = None
             return FaceResult(False, [0, 0, 0, 0], [0, 0, 0], False,
-                              [0.0] * FEAT_DIM, 0.0)
+                              [0.0] * FEAT_DIM, 0.0, [], {})
 
         h.presence.append(1)
         lms = np.array([[p.x, p.y] for p in res.face_landmarks[0]], dtype=np.float32)
@@ -109,6 +115,8 @@ class FeatureFrontend:
 
         # blendshapes: 52 维，按 MediaPipe 固定顺序
         bs_list = res.face_blendshapes[0]
+        if not self.blendshape_names:
+            self.blendshape_names = [c.category_name for c in bs_list][:BLENDSHAPE_DIM]
         bs = {c.category_name: float(c.score) for c in bs_list}
         bs_vec = [float(c.score) for c in bs_list][:BLENDSHAPE_DIM]
         bs_vec += [0.0] * (BLENDSHAPE_DIM - len(bs_vec))
@@ -145,7 +153,16 @@ class FeatureFrontend:
         # quality v0：有脸即 0.5 起步 + 尺度加成（太小的脸降分）；上线前按手册 §6 R4 校准
         quality = min(1.0, 0.5 + scale * 2.0)
         feat = [float(v) for v in bs_vec + d]  # numpy 标量统一转 python float（JSON 序列化）
-        return FaceResult(True, bbox, pose, pose_valid, feat, quality)
+        bs_top = sorted(((k, v) for k, v in bs.items() if k != "_neutral"),
+                        key=lambda kv: -kv[1])[:6]
+        expr = {
+            "smile": (bs.get("mouthSmileLeft", 0) + bs.get("mouthSmileRight", 0)) / 2,
+            "jawOpen": bs.get("jawOpen", 0.0),
+            "browDown": (bs.get("browDownLeft", 0) + bs.get("browDownRight", 0)) / 2,
+            "browInnerUp": bs.get("browInnerUp", 0.0),
+        }
+        return FaceResult(True, bbox, pose, pose_valid, feat, quality,
+                          [(k, round(v, 3)) for k, v in bs_top], expr)
 
     def close(self):
         self._landmarker.close()
