@@ -65,7 +65,9 @@ class SpeechEdge:
 class LeaveSeatDetector:
     """脸消失检测 → leave_seat 候选事件。"""
 
-    def __init__(self, log: EventLog, absent_s: float = 3.0, present_s: float = 60.0):
+    def __init__(self, log: EventLog, absent_s: float = 3.0, present_s: float = 30.0):
+        # present_s 2026-07-20 验收校准 60→30：60s 门槛让 57.69s 起身的真实离座差 2.4s
+        # 被漏掉；30s 仍足以防「路过/刚坐下就走」误报，且 leave_seat 仅是候选（仲裁兜底）
         self._log = log
         self._absent_ms = absent_s * 1000
         self._present_ms = present_s * 1000
