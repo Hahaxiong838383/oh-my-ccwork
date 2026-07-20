@@ -9,7 +9,8 @@
 | 文件 | 说明 |
 |---|---|
 | [fpga-lnn-camera-expression-intent-full-v2.1.md](fpga-lnn-camera-expression-intent-full-v2.1.md) | **现行完整设计**（2026-07-20）：v2.0 基础上吸收 LnMem 实证教训 + 2026-H1 趋势刷新 |
-| [intent_annotation_handbook.md](intent_annotation_handbook.md) | **意图标注手册 v0.1**：LnMem 14 条学费固化为标注管线红线（anchor 校验 / 健康哨兵 / MI 门等） |
+| [intent_annotation_handbook.md](intent_annotation_handbook.md) | **意图标注手册 v0.2**：LnMem 14 条学费固化为管线红线 + §1.4 会议场景标签集 v1（I0–I5 实例化） |
+| [feature_contract.md](feature_contract.md) | **接口契约 v0.1**：FeatureFrame v1 + 会议 context schema v1（k=16）+ 可变 dt 语义 + 车载 schema 预留 |
 | [fpga-lnn-camera-expression-intent-full-v2.md](fpga-lnn-camera-expression-intent-full-v2.md) | v2.0 历史版（与 v2.1 diff 对照用） |
 | [fpga-lnn-camera-expression-intent.md](fpga-lnn-camera-expression-intent.md) | v1 摘要版（历史；结论以 v2.1 为准） |
 
@@ -21,7 +22,7 @@
 
 ## 下一步（待川哥点名启动）
 
-- [ ] 手册 §1.3 标签模板按会议场景实例化（I1–I5 定义 + 正反例）
-- [ ] 拆 `feature_contract.md`（含 context 通道完整契约）
+- [x] 手册 §1.4 会议场景标签集 v1（I0–I5 实例化，2026-07-20）
+- [x] `feature_contract.md` v0.1（会议 context schema v1，2026-07-20）
 - [ ] KV260 阶段 2 实施清单
-- [ ] 阶段 0：KPI 表冻结 + 意图标签定义签字
+- [ ] 阶段 0：KPI 表冻结 + 意图标签定义签字（标签集与契约已可供评审）

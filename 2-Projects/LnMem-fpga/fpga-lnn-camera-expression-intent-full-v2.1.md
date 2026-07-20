@@ -334,7 +334,8 @@ FeatureFrame {
   face_bbox: [x,y,w,h],    # 像素或归一化
   pose: [yaw,pitch,roll],  # 可选
   feat: float16[d],        # d=32~128 主特征
-  context: float16[k],     # k=4~16 场景信号（事件 one-hot/距上一事件Δt/键鼠活动率），意图头必需（v2.1）
+  context: float16[k],     # k=16 会议 context schema v1，意图头必需；完整定义见 feature_contract.md（v2.1）
+  context_valid: bool,     # context 链路在线与否；false 时禁止灌缺省值（LnMem 死维教训）
   quality: float32,        # 模糊/遮挡/置信
   valid: bool
 }
@@ -1047,7 +1048,7 @@ L4 场景：用户场测 + 偏差/失效分析
 
 - [x] 本设计说明（完整详细版 v2.1）  
 - [x] 意图标注手册 v0.1（[`intent_annotation_handbook.md`](intent_annotation_handbook.md)）  
-- [ ] 接口契约 `feature_contract`  
+- [x] 接口契约 [`feature_contract.md`](feature_contract.md) v0.1（FeatureFrame v1 + 会议 context schema v1 + 可变 dt 语义）  
 - [ ] 安全与隐私说明  
 - [ ] 测试报告模板填版  
 
@@ -1209,4 +1210,4 @@ while running:
 ---
 
 **文档结束。**  
-`intent_annotation_handbook.md` 已随 v2.1 拆出；后续可再拆 `feature_contract.md`（含 context 通道定义）或 KV260 阶段 2 实施清单。
+`intent_annotation_handbook.md`（含 §1.4 会议标签集）与 `feature_contract.md` 已拆出；后续可再拆 KV260 阶段 2 实施清单。
