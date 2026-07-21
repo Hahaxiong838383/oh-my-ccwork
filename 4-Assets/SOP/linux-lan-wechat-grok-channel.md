@@ -29,7 +29,7 @@
 | QR 注册 | `~/wechat-qr-login-module` · `wechat-qr-login.service` | 扫码建 Bot，AES 存 accounts |
 | 桥接 | `~/wechat-grok-bridge` · `wechat-grok-bridge.service` | getupdates → media → `grok -p` → 回微信 |
 | Grok CLI | `~/.grok/bin/grok` | headless；OAuth `~/.grok/auth.json` |
-| OAuth 保活 | `grok-xai-refresh.timer` | 每 2h |
+| OAuth 保活 | `grok-xai-refresh.timer` | 每 2h；**仅本机** `~/.grok/auth.json` |
 | 自动更新 | `grok-auto-update.timer` | 每日 04:30 |
 | Session GC | `grok-session-gc.timer` | 每日 03:40 + archive-to-memory |
 | 本机代理 | system `xray` + watchdog | 10808 |
@@ -98,6 +98,34 @@ grok --version
 - `4-Assets/SOP/wechat-grok-bridge/`（bridge + lib + mcp + skills）
 - 本文件：`4-Assets/SOP/linux-lan-wechat-grok-channel.md`
 
+## Grok OAuth（Mac / Linux 独立）
+
+> **铁律：Mac 与 linux-lan 各自 device-auth，独立 refresh_token，禁止互拷 `auth.json`。**  
+> 互拷会触发 refresh rotation war（一方刷 token 另一方 `invalid_grant`）。
+
+| 侧 | 登录 | 保活 |
+|----|------|------|
+| linux-lan | `grok login --device-auth`（需本机 xray 代理） | `grok-xai-refresh.timer` 每 2h `--if-expiring 14400`；日志 `~/.grok/logs/xai-refresh.log` |
+| Mac | 本机 `grok login` / 现有 keep-warm | 本机 launchd / 脚本，**不要** scp 到 linux |
+
+重登（linux）：
+
+```bash
+ssh linux-lan
+export https_proxy=http://127.0.0.1:10808 http_proxy=http://127.0.0.1:10808
+grok login --device-auth   # 浏览器打开 device URL 填码
+python3 ~/.local/bin/grok-xai-token-refresh.py --check
+systemctl --user restart wechat-grok-bridge
+```
+
+检查：
+
+```bash
+python3 ~/.local/bin/grok-xai-token-refresh.py --check
+systemctl --user status grok-xai-refresh.timer
+tail -f ~/.grok/logs/xai-refresh.log
+```
+
 ## 边界
 
 - 微信 Bot 资格取决于账号；扫码失败属平台侧
@@ -106,3 +134,4 @@ grok --version
 - ai-memory HTTP MCP 未部署（可按需挂；secret 不入库）
 - `ALLOW_USER_IDS` 生产应填白名单
 - 节点密钥 / bot_token / auth.json **禁止入 git**
+- **禁止** Mac↔linux 同步 `~/.grok/auth.json`
