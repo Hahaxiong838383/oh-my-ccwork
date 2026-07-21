@@ -392,27 +392,57 @@ async function resolveStickySession(mapKey, cwd, meta = {}) {
   }
 }
 
-function classifyMode(text) {
+function isMaxTurnsError(err) {
+  const msg = String(err?.message || err || '')
+  return (
+    err?.isMaxTurns === true ||
+    /max\s*turns?\s*reached/i.test(msg) ||
+    /MaxTurnsExceeded/i.test(msg)
+  )
+}
+
+/**
+ * short = 轻聊（少轮次）；full = 执行/多步任务。
+ * 宁可误进 full，也不要把「开干/继续」压成 8 轮导致 Max turns。
+ */
+function classifyMode(text, { hasMedia = false } = {}) {
   const t = String(text || '').trim()
-  const fullTurns = Number(process.env.GROK_MAX_TURNS || 40)
-  const shortTurns = Number(process.env.GROK_SHORT_MAX_TURNS || 8)
-  if (t.length > 180) return { mode: 'full', maxTurns: fullTurns }
-  if (/\/cwd\b|```|\.py\b|\.js\b|\.ts\b|\.sh\b|\.go\b|\.rs\b|\.mjs\b/i.test(t)) {
-    return { mode: 'full', maxTurns: fullTurns }
-  }
+  // 默认给足轮次：知识库/多文件任务 40 轮很容易顶满
+  const fullTurns = Number(process.env.GROK_MAX_TURNS || 100)
+  const shortTurns = Number(process.env.GROK_SHORT_MAX_TURNS || 24)
+
+  if (hasMedia) return { mode: 'full', maxTurns: fullTurns }
+  // 稍长必 full
+  if (t.length > 80) return { mode: 'full', maxTurns: fullTurns }
+
+  // 代码 / 路径 / 工作区
   if (
-    /(改|修|写|跑|执行|部署|安装|删除|创建|重构|实现|排查|调试|fix|debug|implement|deploy|install|文件|脚本|代码|服务|图片|附件|分析)/i.test(
+    /\/cwd\b|```|\.py\b|\.js\b|\.ts\b|\.sh\b|\.go\b|\.rs\b|\.mjs\b|\.md\b|~\/|\.env\b|\/home\//i.test(
       t,
     )
   ) {
     return { mode: 'full', maxTurns: fullTurns }
   }
+
+  // 执行 / 方案 / 调研 / 阶段任务 —— 宁可误进 full
   if (
-    t.length <= 100 ||
-    /[?？]$|^(你好|在吗|hi|hello|谢谢|好的|收到)/i.test(t)
+    /(改|修|写|跑|执行|部署|安装|删除|创建|重构|实现|排查|调试|优化|修复|配置|接入|整理|处理|落地|开干|开工|接着|继续|自检|验收|完成|推进|任务|知识库|存库|入库|方案|调研|推荐|设计|架构|插件|同步|api|API|p0|p1|p2|phase|fix|debug|implement|deploy|install|setup|build|refactor|文件|脚本|代码|服务|图片|附件|分析|火山|obsidian|Obsidian)/i.test(
+      t,
+    )
+  ) {
+    return { mode: 'full', maxTurns: fullTurns }
+  }
+
+  // 仅纯寒暄 / 单字确认走 short
+  if (
+    /^(你好|在吗|hi|hello|谢谢|好的|收到|嗯|ok|OK|嗯嗯|哈哈|ping|健康|status|👍|🙏)[\s!！.。]*$/i.test(
+      t,
+    )
   ) {
     return { mode: 'short', maxTurns: shortTurns }
   }
+
+  // 默认 full（微信通道以执行为主）
   return { mode: 'full', maxTurns: fullTurns }
 }
 
@@ -468,48 +498,71 @@ function buildAgentRules({ cwd }) {
   ].join('\n')
 }
 
-async function runGrok(prompt, { mapKey, cwd }) {
+async function runGrok(prompt, { mapKey, cwd, hasMedia = false }) {
   const bin = process.env.GROK_BIN || `${process.env.HOME}/.grok/bin/grok`
   const timeoutMs = Number(process.env.GROK_TIMEOUT_MS || 600_000)
-  const { mode, maxTurns } = classifyMode(prompt)
+  const { mode, maxTurns } = classifyMode(prompt, { hasMedia })
   const sticky = await resolveStickySession(mapKey, cwd, { cwd })
-  const sessionId = sticky.sessionId
+  let sessionId = sticky.sessionId
   const rules = buildAgentRules({ cwd })
+  // max-turns 中断后续跑次数；默认 3 次，同 session 续跑不丢进度
+  const continueRounds = Math.max(
+    0,
+    Number(process.env.GROK_CONTINUE_ON_MAX_TURNS ?? 3),
+  )
+  const continueTurns = Number(
+    process.env.GROK_CONTINUE_MAX_TURNS ||
+      Math.max(maxTurns, Number(process.env.GROK_MAX_TURNS || 100)),
+  )
+  const baseContinuePrompt =
+    process.env.GROK_CONTINUE_PROMPT ||
+    '【系统续跑】上一轮因 max turns 中断。请直接接着未完成工作推进，不要从零重做；完成后中文简短自检汇报（结论先行）。'
 
-  const baseArgs = [
-    '-p',
-    prompt,
-    '--permission-mode',
-    'bypassPermissions',
-    '--always-approve',
-    '--max-turns',
-    String(maxTurns),
-    '--output-format',
-    'plain',
-    '--cwd',
-    cwd,
-    '--rules',
-    rules,
-    '--no-auto-update',
-    '--allow',
-    'Bash',
-    '--allow',
-    'Edit',
-    '--allow',
-    'Write',
-    '--allow',
-    'Read',
-    '--deny',
-    'Bash(rm -rf /*)',
-    '--deny',
-    'Bash(mkfs*)',
-    '--deny',
-    'Bash(dd if=*)',
-  ]
-
-  const extra = (process.env.GROK_EXTRA_ARGS || '').trim()
-  if (mode === 'full' && extra) {
-    baseArgs.push(...extra.split(/\s+/).filter(Boolean))
+  function buildArgs(userPrompt, turns) {
+    const args = [
+      '-p',
+      userPrompt,
+      '--permission-mode',
+      'bypassPermissions',
+      '--always-approve',
+      '--max-turns',
+      String(turns),
+      '--output-format',
+      'plain',
+      '--cwd',
+      cwd,
+      '--rules',
+      rules,
+      '--no-auto-update',
+      '--allow',
+      'Bash',
+      '--allow',
+      'Edit',
+      '--allow',
+      'Write',
+      '--allow',
+      'Read',
+      '--deny',
+      'Bash(rm -rf /*)',
+      '--deny',
+      'Bash(mkfs*)',
+      '--deny',
+      'Bash(dd if=*)',
+    ]
+    // full 带 EXTRA（如 --experimental-memory）；short 默认不加以免拖慢寒暄
+    const extra = (process.env.GROK_EXTRA_ARGS || '').trim()
+    if (extra && (mode === 'full' || envFlag('GROK_EXTRA_ARGS_ALWAYS', true))) {
+      args.push(...extra.split(/\s+/).filter(Boolean))
+    }
+    // full 至少保证 experimental-memory
+    if (
+      mode === 'full' &&
+      !args.includes('--experimental-memory') &&
+      envFlag('GROK_FORCE_MEMORY_ON_FULL', true)
+    ) {
+      args.push('--experimental-memory')
+    }
+    return args
   }
 
   const env = {
@@ -582,9 +635,13 @@ async function runGrok(prompt, { mapKey, cwd }) {
           const errTail = stderr
             .slice(-1000)
             .replace(/Bearer\s+\S+/g, 'Bearer ***')
-          reject(
-            new Error(`grok exit ${code}: ${errTail || stdout.slice(-400)}`),
-          )
+          const msg = `grok exit ${code}: ${errTail || stdout.slice(-400)}`
+          const err = new Error(msg)
+          if (/max\s*turns?\s*reached/i.test(msg) || /max\s*turns?\s*reached/i.test(stdout)) {
+            err.isMaxTurns = true
+            err.partialOutput = stdout.trim()
+          }
+          reject(err)
         }
       })
     })
@@ -603,41 +660,154 @@ async function runGrok(prompt, { mapKey, cwd }) {
     return next
   }
 
+  /**
+   * max-turns 时保留同一 session 自动续跑，避免 mint 新会话丢进度。
+   */
+  async function resumeContinue(sid, roundsLeft, seedPartial = '') {
+    let lastErr = null
+    let bestPartial = String(seedPartial || '').trim()
+    for (let i = 0; i < roundsLeft; i++) {
+      log(
+        'auto-continue',
+        `round=${i + 1}/${roundsLeft}`,
+        `turns=${continueTurns}`,
+        `sid=${sid.slice(0, 8)}`,
+      )
+      const contPrompt = bestPartial
+        ? `${baseContinuePrompt}\n\n【上一轮未完成输出片段（供衔接，勿重复废话）】\n${bestPartial.slice(-2500)}`
+        : baseContinuePrompt
+      try {
+        const out = await once(
+          [...buildArgs(contPrompt, continueTurns), '-r', sid],
+          timeoutMs,
+        )
+        // 拼接可读摘要：续跑结果优先
+        if (bestPartial && out) {
+          return `${out}\n\n（已自动续跑 ${i + 1} 轮完成）`
+        }
+        return out
+      } catch (err) {
+        lastErr = err
+        if (err?.partialOutput) {
+          bestPartial = String(err.partialOutput).trim() || bestPartial
+        }
+        log(
+          'auto-continue fail',
+          `round=${i + 1}`,
+          String(err.message || err).slice(0, 160),
+        )
+        if (!isMaxTurnsError(err)) break
+      }
+    }
+    // 续跑用尽：把已有部分结果回给用户，避免只报失败
+    if (bestPartial) {
+      log('auto-continue return partial', `chars=${bestPartial.length}`)
+      return (
+        bestPartial.slice(0, 3500) +
+        '\n\n【提示】任务轮次用尽已自动续跑仍未收尾；请发「继续」让我接着干。'
+      )
+    }
+    throw lastErr || new Error('auto-continue exhausted')
+  }
+
+  async function runOnceOnSession(sid, userPrompt, turns, { resume }) {
+    const args = buildArgs(userPrompt, turns)
+    if (resume) return once([...args, '-r', sid], timeoutMs)
+    return once([...args, '-s', sid], timeoutMs)
+  }
+
   log(
     'grok start',
     `mode=${mode}`,
     `turns=${maxTurns}`,
     `sid=${sessionId.slice(0, 8)}`,
     sticky.exists ? `size=${sticky.size}` : 'new',
+    `continue_rounds=${continueRounds}`,
   )
 
+  // 1) 优先粘性 resume
   if (sticky.exists && !sticky.skipResume) {
     try {
-      return await once([...baseArgs, '-r', sessionId], timeoutMs)
+      return await runOnceOnSession(sessionId, prompt, maxTurns, {
+        resume: true,
+      })
     } catch (err) {
       log('resume fail', String(err.message || err).slice(0, 160))
+      // max-turns：同 session 续跑，禁止 mint 丢上下文
+      if (isMaxTurnsError(err) && continueRounds > 0) {
+        try {
+          return await resumeContinue(
+            sessionId,
+            continueRounds,
+            err.partialOutput || '',
+          )
+        } catch (contErr) {
+          log(
+            'auto-continue exhausted',
+            String(contErr.message || contErr).slice(0, 160),
+          )
+          if (contErr?.partialOutput || err?.partialOutput) {
+            return (
+              String(contErr?.partialOutput || err.partialOutput).slice(0, 3500) +
+              '\n\n【提示】轮次用尽；请发「继续」接着干。'
+            )
+          }
+          throw contErr
+        }
+      }
+      // 其它 resume 失败：换新 session 重跑用户原 prompt
       const next = await mintNewSession('resume_fail')
+      sessionId = next
       try {
-        return await once([...baseArgs, '-s', next], timeoutMs)
-      } catch {
-        return once(baseArgs, timeoutMs)
+        return await runOnceOnSession(next, prompt, maxTurns, { resume: false })
+      } catch (err2) {
+        if (isMaxTurnsError(err2) && continueRounds > 0) {
+          return resumeContinue(next, continueRounds, err2.partialOutput || '')
+        }
+        try {
+          return await once(buildArgs(prompt, maxTurns), timeoutMs)
+        } catch (err3) {
+          throw err3
+        }
       }
     }
   }
 
+  // 2) 新会话 / 粘性但不 resume
   try {
-    return await once([...baseArgs, '-s', sessionId], timeoutMs)
+    return await runOnceOnSession(sessionId, prompt, maxTurns, {
+      resume: false,
+    })
   } catch (err2) {
     log('create session fail', String(err2.message || err2).slice(0, 160))
+    if (isMaxTurnsError(err2) && continueRounds > 0) {
+      try {
+        return await resumeContinue(
+          sessionId,
+          continueRounds,
+          err2.partialOutput || '',
+        )
+      } catch (contErr) {
+        if (contErr?.partialOutput || err2?.partialOutput) {
+          return (
+            String(contErr?.partialOutput || err2.partialOutput).slice(0, 3500) +
+            '\n\n【提示】轮次用尽；请发「继续」接着干。'
+          )
+        }
+        throw contErr
+      }
+    }
     if (/already in use/i.test(String(err2.message || ''))) {
       const next = await mintNewSession('create_already_in_use')
       try {
-        return await once([...baseArgs, '-s', next], timeoutMs)
+        return await runOnceOnSession(next, prompt, maxTurns, {
+          resume: false,
+        })
       } catch {
         /* fallthrough */
       }
     }
-    return once(baseArgs, timeoutMs)
+    return once(buildArgs(prompt, maxTurns), timeoutMs)
   }
 }
 
@@ -837,16 +1007,23 @@ async function handleInbound(cred, message, allowSet) {
   }).catch(() => {})
 
   try {
-    const reply = await runGrok(bodyWithMedia, { mapKey, cwd })
+    const reply = await runGrok(bodyWithMedia, {
+      mapKey,
+      cwd,
+      hasMedia: mediaResult.files.length > 0,
+    })
     await sendReply(cred, peerId, reply, message.context_token)
   } catch (err) {
     log('handle fail', String(err.message || err).slice(0, 200))
-    await sendReply(
-      cred,
-      peerId,
-      `执行失败：${String(err.message || err).slice(0, 500)}`,
-      message.context_token,
-    )
+    let msg = `执行失败：${String(err.message || err).slice(0, 500)}`
+    if (isMaxTurnsError(err)) {
+      msg =
+        (err.partialOutput
+          ? String(err.partialOutput).slice(0, 2800) + '\n\n'
+          : '') +
+        '【提示】任务轮次用尽。请直接回「继续」，我会在同一会话接着干（已启用自动续跑）。'
+    }
+    await sendReply(cred, peerId, msg, message.context_token)
   }
 }
 

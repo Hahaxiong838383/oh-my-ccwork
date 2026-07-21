@@ -65,14 +65,18 @@ grok --version
 
 | 变量 | 默认 | 含义 |
 |------|------|------|
-| `GROK_TIMEOUT_MS` | 600000 | 单次 grok 墙钟 10min |
-| `GROK_MAX_TURNS` | 40 | 执行型 |
-| `GROK_SHORT_MAX_TURNS` | 8 | 短问 |
+| `GROK_TIMEOUT_MS` | 900000 | 单次 grok 墙钟 15min |
+| `GROK_MAX_TURNS` | **100** | 执行型（默认 full；防 Max turns） |
+| `GROK_SHORT_MAX_TURNS` | **24** | 仅纯寒暄 |
+| `GROK_CONTINUE_ON_MAX_TURNS` | **3** | 触顶后同 session 自动续跑次数 |
+| `GROK_CONTINUE_MAX_TURNS` | **100** | 每次续跑轮次 |
 | `GROK_SESSION_RESUME_MAX_BYTES` | 5MB | soft **归档+换 session** |
 | `GROK_SESSION_MAX_BYTES` | 20MB | hard 归档 |
-| `GROK_EXTRA_ARGS` | `--experimental-memory` | 全量模式 |
+| `GROK_EXTRA_ARGS` | `--experimental-memory` | full 模式 |
 | `REQUIRE_GROUP_PREFIX` | 1 | 群需 `grok:` / @ |
 | `WECHAT_GROK_BRIDGE_ROOT` | `~/wechat-grok-bridge` | session-gc 脚本路径 |
+
+> **Max turns 防护（2026-07-21）**：`classifyMode` 默认 full；触顶不 mint 新会话、同 session 自动续跑最多 3 次；仍不够时回部分输出并提示发「继续」。
 
 ## 多媒体用法
 
