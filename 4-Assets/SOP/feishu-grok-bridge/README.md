@@ -21,12 +21,14 @@ journalctl --user -u feishu-grok-bridge -f
 
 | 变量 | 默认 | 含义 |
 |------|------|------|
-| `GROK_TIMEOUT_MS` | `600000` | **单次** grok 进程墙钟上限（10min）。不是空闲切 session |
-| `GROK_MAX_TURNS` | `40` | 执行型 max_turns |
-| `GROK_SHORT_MAX_TURNS` | `8` | 简单问答 max_turns |
+| `GROK_TIMEOUT_MS` | `900000` | standard 墙钟**锚点**（非全局写死） |
+| `GROK_TIMEOUT_MIN_MS` / `MAX` | 8m / 45m | 动态墙钟上下限 |
+| `GROK_MAX_TURNS` | `100` | 执行型 max_turns（默认 full） |
+| `GROK_SHORT_MAX_TURNS` | `24` | 仅寒暄 |
+| `GROK_CONTINUE_ON_MAX_TURNS` | `3` | 轮次/墙钟触顶同 session 续跑 |
 | `GROK_SESSION_MAX_BYTES` | `20971520` | ≥20MB 归档并换新 session |
 | `GROK_SESSION_RESUME_MAX_BYTES` | `5242880` | ≥5MB 跳过 `-r` 换新 id |
-| `GROK_EXTRA_ARGS` | — | 仅 **full** 模式附加（如 `--experimental-memory`） |
+| `GROK_EXTRA_ARGS` | — | full 附加（如 `--experimental-memory`） |
 
 见 `.env.example`。配套 `session-gc.sh` / `grok-session-gc.timer` 做日扫。
 

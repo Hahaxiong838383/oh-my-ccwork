@@ -76,9 +76,24 @@ ssh -f -N -L 3200:127.0.0.1:3200 dev198
 open http://127.0.0.1:3200/
 ```
 
+## Max turns / 动态墙钟（2026-07-21）
+
+与 linux-lan 微信通道对齐：
+
+| 项 | 值 |
+|----|-----|
+| `GROK_MAX_TURNS` | **100**（默认 full） |
+| `GROK_SHORT_MAX_TURNS` | **24**（仅纯寒暄） |
+| 墙钟 | **动态** light≈8m / standard≈15m / heavy≈30m / extreme≈45m（`lib/task-budget.mjs`） |
+| 触顶 | max-turns **或** timeout → **同 session 续跑 ≤3**，禁止因 Max turns mint 丢进度 |
+| 运行时 | `~/feishu-grok-bridge/lib/grok-runner.mjs` + `grok-session.mjs` |
+| 仓内 | `4-Assets/SOP/feishu-grok-bridge/lib/` |
+
+`classifyMode` 默认 full；「继续 / 开干 / p0」等不再误判 short=8。
+
 ## 仓内源码
 
-- 桥接：`4-Assets/SOP/feishu-grok-bridge/`
+- 桥接：`4-Assets/SOP/feishu-grok-bridge/`（含 modular `lib/` 关键文件）
 - Grok OAuth 保活脚本：`4-Assets/SOP/grok-xai-token-refresh.py`
 
 ## 边界
