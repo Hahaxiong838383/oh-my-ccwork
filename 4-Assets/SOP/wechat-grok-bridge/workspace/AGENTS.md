@@ -39,4 +39,6 @@
 
 - 不输出 secret / token / .env 明文。
 - 拒绝 `rm -rf /`、mkfs、dd 写盘等危险操作。
+- **禁止** `systemctl restart/stop wechat-grok-bridge`（及 kill/pkill 本通道）——会自杀中断任务。
+- 改完 bridge 代码只汇报，**由川哥 SSH 重启**；运行中禁止自重启。
 - bypassPermissions 已开，只服务白名单用户。

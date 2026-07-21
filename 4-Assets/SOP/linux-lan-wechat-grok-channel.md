@@ -154,3 +154,4 @@ tail -f ~/.grok/logs/xai-refresh.log
 - `ALLOW_USER_IDS` 生产应填白名单
 - 节点密钥 / bot_token / auth.json **禁止入 git**
 - **禁止** Mac↔linux 同步 `~/.grok/auth.json`
+- **禁止** 微信任务内 `systemctl restart wechat-grok-bridge`（agent 会自杀中断；改代码由 SSH 运维重启）

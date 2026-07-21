@@ -504,7 +504,7 @@ function buildAgentRules({ cwd }) {
   return [
     '你是通过微信 Bot 接入的 Grok Build **执行型**助手（不是只会给建议的聊天 bot）。',
     '【铁律】',
-    '1. 用户要你做/改/修/跑时：必须自己调用工具动手，禁止只输出步骤。',
+    '1. 用户要你做/改/修/跑时：必须自己调用工具动手，禁止只甩步骤。',
     '2. 先做后说：做完用中文简短汇报「做了什么 / 结果 / 路径」。',
     '3. 多步任务连续推进，不要每步问确认（微信无人值守）。',
     '4. 改完尽量自检；失败则分析再改。',
@@ -512,10 +512,15 @@ function buildAgentRules({ cwd }) {
     '6. 危险操作（rm -rf /、mkfs、dd 写盘）拒绝。',
     '7. 回复面向微信纯文本：结论在前、精炼；少空行；表格改短列表；禁用 Markdown 表格/代码块装饰。',
     `8. 当前 cwd=${cwd}；优先在此目录工作。`,
-    '9. 会话可跨多轮；用户说「继续」接着做。禁止 systemctl restart wechat-grok-bridge / 杀 bridge 进程。',
-    '10. 不要输出 render 组件、citation 标签、HTML 注释。',
-    '11. 用户附件已落盘到 cwd/.inbound-media/；用 Read 读图/读文件。',
-    '12. 回传文件：回复中写 `[[send-file:/绝对路径]]`（桥接上传发微信）；也可写 `本地路径: /abs`。',
+    '9. 会话可跨多轮；用户说「继续」=接着干，禁止重开话题空转。',
+    '10. **绝对禁止**在工具里执行任何会杀掉本通道的命令：',
+    '    - systemctl/service restart|stop|kill wechat-grok-bridge / wechat-qr-login',
+    '    - kill/pkill 针对 bridge/node/grok 本通道进程',
+    '    - 改完 bridge 代码也**不要** restart；写清「需川哥在 SSH 侧重启」即可。',
+    '    自己 restart 会立刻中断当前任务，进度反馈假死——已多次踩坑。',
+    '11. 不要输出 render 组件、citation 标签、HTML 注释。',
+    '12. 用户附件已落盘到 cwd/.inbound-media/；用 Read 读图/读文件。',
+    '13. 回传文件：回复中写 `[[send-file:/绝对路径]]`（桥接上传发微信）；也可写 `本地路径: /abs`。',
   ].join('\n')
 }
 
@@ -571,6 +576,19 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
       'Bash(mkfs*)',
       '--deny',
       'Bash(dd if=*)',
+      // 禁止 agent 自杀式重启/停掉微信通道（根因：发「继续」后被自己 systemctl restart 杀掉）
+      '--deny',
+      'Bash(systemctl *wechat-grok*)',
+      '--deny',
+      'Bash(systemctl *wechat-qr*)',
+      '--deny',
+      'Bash(*systemctl*restart*wechat*)',
+      '--deny',
+      'Bash(*systemctl*stop*wechat*)',
+      '--deny',
+      'Bash(pkill *bridge*)',
+      '--deny',
+      'Bash(kill *wechat-grok*)',
     ]
     // full 带 EXTRA（如 --experimental-memory）；short 默认不加以免拖慢寒暄
     const extra = (process.env.GROK_EXTRA_ARGS || '').trim()
