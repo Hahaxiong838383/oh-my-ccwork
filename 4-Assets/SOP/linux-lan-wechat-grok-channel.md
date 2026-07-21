@@ -78,6 +78,19 @@ grok --version
 
 > **Max turns 防护（2026-07-21）**：`classifyMode` 默认 full；触顶不 mint 新会话、同 session 自动续跑最多 3 次；仍不够时回部分输出并提示发「继续」。
 
+### 微信进度反馈（仅通道 · 默认开）
+
+| 变量 | 默认 | 含义 |
+|------|------|------|
+| `WX_STATUS` | `1` | 总开关；`0` 关闭 |
+| `WX_STATUS_FIRST_SEC` | `60` | 开跑后首次心跳延迟 |
+| `WX_STATUS_HEARTBEAT_SEC` | `120` | 心跳间隔 |
+| `WX_STATUS_MAX_BEATS` | `8` | 常规心跳上限，其后变稀 |
+| `WX_STATUS_SPARSE_SEC` | `300` | 变稀后间隔 |
+
+消息形态：`【进度】开始执行 · full/100 · sid=…` / `仍在执行 · 已 3m · 正常` / `触顶续跑 1/3` / `任务中断（服务停止/重启）`。  
+systemd 停服务时会先尝试发中断提示再杀 grok（`TimeoutStopSec=120`）。
+
 ## 多媒体用法
 
 **入站**：用户发图/文件/语音/视频 → 桥接下到  

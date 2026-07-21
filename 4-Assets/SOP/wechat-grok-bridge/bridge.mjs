@@ -33,6 +33,10 @@ import {
   shouldProcessMessage,
 } from './lib/message-parse.mjs'
 import { buildSessionKey } from './lib/session-key.mjs'
+import {
+  createProgressReporter,
+  formatElapsed,
+} from './lib/progress-status.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = __dirname
@@ -498,7 +502,7 @@ function buildAgentRules({ cwd }) {
   ].join('\n')
 }
 
-async function runGrok(prompt, { mapKey, cwd, hasMedia = false }) {
+async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null }) {
   const bin = process.env.GROK_BIN || `${process.env.HOME}/.grok/bin/grok`
   const timeoutMs = Number(process.env.GROK_TIMEOUT_MS || 600_000)
   const { mode, maxTurns } = classifyMode(prompt, { hasMedia })
@@ -607,6 +611,9 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false }) {
           }
         }, 2000)
       }
+      if (progress) {
+        progress._kill = killHard
+      }
       const timer = setTimeout(() => {
         if (settled) return
         settled = true
@@ -615,9 +622,11 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false }) {
       }, wallMs)
       child.stdout.on('data', (d) => {
         stdout += d.toString('utf8')
+        progress?.noteActivity?.()
       })
       child.stderr.on('data', (d) => {
         stderr += d.toString('utf8')
+        progress?.noteActivity?.()
       })
       child.on('error', (err) => {
         if (settled) return
@@ -637,7 +646,10 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false }) {
             .replace(/Bearer\s+\S+/g, 'Bearer ***')
           const msg = `grok exit ${code}: ${errTail || stdout.slice(-400)}`
           const err = new Error(msg)
-          if (/max\s*turns?\s*reached/i.test(msg) || /max\s*turns?\s*reached/i.test(stdout)) {
+          if (
+            /max\s*turns?\s*reached/i.test(msg) ||
+            /max\s*turns?\s*reached/i.test(stdout)
+          ) {
             err.isMaxTurns = true
             err.partialOutput = stdout.trim()
           }
@@ -673,6 +685,7 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false }) {
         `turns=${continueTurns}`,
         `sid=${sid.slice(0, 8)}`,
       )
+      await progress?.continueRound?.(i + 1, roundsLeft)
       const contPrompt = bestPartial
         ? `${baseContinuePrompt}\n\n【上一轮未完成输出片段（供衔接，勿重复废话）】\n${bestPartial.slice(-2500)}`
         : baseContinuePrompt
@@ -725,6 +738,14 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false }) {
     `continue_rounds=${continueRounds}`,
   )
 
+  progress?.setMeta?.({
+    mode,
+    turns: maxTurns,
+    sid: sessionId,
+  })
+  await progress?.start?.()
+
+  try {
   // 1) 优先粘性 resume
   if (sticky.exists && !sticky.skipResume) {
     try {
@@ -809,6 +830,9 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false }) {
     }
     return once(buildArgs(prompt, maxTurns), timeoutMs)
   }
+  } finally {
+    progress?.stop?.()
+  }
 }
 
 async function sendTextChunks(cred, to, text, contextToken) {
@@ -837,12 +861,28 @@ async function sendReply(cred, to, text, contextToken) {
   })
 }
 
-let queue = Promise.resolve()
-function enqueue(task) {
-  queue = queue.then(task).catch((e) => {
-    log('queue task error', String(e.message || e).slice(0, 200))
-  })
-  return queue
+/** @type {Set<{ progress: any, kill?: () => void }>} */
+const activeJobs = new Set()
+let queueChain = Promise.resolve()
+/** tasks waiting or running in serial queue */
+let queueLen = 0
+
+function enqueue(taskFactory) {
+  // ahead = tasks already in queue before this one
+  const ahead = queueLen
+  queueLen += 1
+  queueChain = queueChain
+    .then(async () => {
+      try {
+        await taskFactory(ahead)
+      } finally {
+        queueLen = Math.max(0, queueLen - 1)
+      }
+    })
+    .catch((e) => {
+      log('queue task error', String(e.message || e).slice(0, 200))
+    })
+  return queueChain
 }
 
 function sleep(ms, signal) {
@@ -869,7 +909,7 @@ function envFlag(name, def = false) {
   return /^(1|true|yes|on)$/i.test(v)
 }
 
-async function handleInbound(cred, message, allowSet) {
+async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
   const peerId = message.from_user_id?.trim()
   if (!peerId) return
   // message_type 2 often outbound/self — skip
@@ -996,6 +1036,22 @@ async function handleInbound(cred, message, allowSet) {
     (body || '').slice(0, 80).replace(/\n/g, ' '),
   )
 
+  const progress = createProgressReporter({
+    log,
+    sendText: (text) =>
+      sendWechatText({
+        baseUrl: cred.baseUrl,
+        token: cred.token,
+        to: peerId,
+        text,
+        contextToken: message.context_token,
+      }),
+  })
+
+  if (queueAhead > 0) {
+    await progress.queue(queueAhead)
+  }
+
   await sendWechatText({
     baseUrl: cred.baseUrl,
     token: cred.token,
@@ -1006,14 +1062,26 @@ async function handleInbound(cred, message, allowSet) {
     contextToken: message.context_token,
   }).catch(() => {})
 
+  const job = { progress, kill: () => progress?._kill?.() }
+  activeJobs.add(job)
+  const t0 = Date.now()
   try {
     const reply = await runGrok(bodyWithMedia, {
       mapKey,
       cwd,
       hasMedia: mediaResult.files.length > 0,
+      progress,
     })
-    await sendReply(cred, peerId, reply, message.context_token)
+    progress.stop()
+    let out = reply
+    // 长任务在结论后附耗时（不另起进度条）
+    const elapsedMs = Date.now() - t0
+    if (elapsedMs >= 120_000 && out && !/本次约\s*\d/.test(out)) {
+      out = `${reply}\n\n（本次约 ${formatElapsed(elapsedMs)}）`
+    }
+    await sendReply(cred, peerId, out, message.context_token)
   } catch (err) {
+    progress.stop()
     log('handle fail', String(err.message || err).slice(0, 200))
     let msg = `执行失败：${String(err.message || err).slice(0, 500)}`
     if (isMaxTurnsError(err)) {
@@ -1024,6 +1092,9 @@ async function handleInbound(cred, message, allowSet) {
         '【提示】任务轮次用尽。请直接回「继续」，我会在同一会话接着干（已启用自动续跑）。'
     }
     await sendReply(cred, peerId, msg, message.context_token)
+  } finally {
+    activeJobs.delete(job)
+    progress.stop()
   }
 }
 
@@ -1057,7 +1128,7 @@ async function monitorLoop(cred, allowSet, signal) {
       }
       for (const message of response.msgs || []) {
         if (signal.aborted) break
-        enqueue(() => handleInbound(cred, message, allowSet))
+        enqueue((ahead) => handleInbound(cred, message, allowSet, { queueAhead: ahead }))
       }
     } catch (error) {
       if (signal.aborted) return
@@ -1092,6 +1163,7 @@ async function main() {
             mediaOutbound: true,
             softArchive: true,
             groupPolicy: true,
+            wxStatus: process.env.WX_STATUS !== '0',
             experimentalMemory: !!(process.env.GROK_EXTRA_ARGS || '').includes(
               'experimental-memory',
             ),
@@ -1126,9 +1198,42 @@ async function main() {
   )
 
   const ac = new AbortController()
-  process.on('SIGINT', () => ac.abort())
-  process.on('SIGTERM', () => ac.abort())
+  let shuttingDown = false
+  async function gracefulShutdown(signal) {
+    if (shuttingDown) return
+    shuttingDown = true
+    log('shutdown', signal, `jobs=${activeJobs.size}`)
+    const jobs = [...activeJobs]
+    for (const job of jobs) {
+      try {
+        await job.progress?.interrupted?.(
+          signal === 'SIGTERM' ? '服务停止/重启' : '中断',
+        )
+      } catch {
+        /* ignore */
+      }
+      try {
+        job.kill?.()
+      } catch {
+        /* ignore */
+      }
+    }
+    ac.abort()
+    // give WeChat send a moment
+    setTimeout(() => process.exit(0), 1500)
+  }
+  process.on('SIGINT', () => {
+    void gracefulShutdown('SIGINT')
+  })
+  process.on('SIGTERM', () => {
+    void gracefulShutdown('SIGTERM')
+  })
 
+  log(
+    'wx status',
+    `enabled=${process.env.WX_STATUS ?? '1'}`,
+    `heartbeat=${process.env.WX_STATUS_HEARTBEAT_SEC ?? 120}s`,
+  )
   await monitorLoop(cred, allowSet, ac.signal)
 }
 
