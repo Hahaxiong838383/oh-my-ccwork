@@ -39,7 +39,10 @@ export function createProgressReporter(opts) {
       async queue() {},
       async start() {},
       async continueRound() {},
+      async warnDeadline() {},
+      async timedOut() {},
       async interrupted() {},
+      armDeadline() {},
       stop() {},
     }
   }
@@ -61,16 +64,37 @@ export function createProgressReporter(opts) {
     60_000,
     Number(process.env.WX_STATUS_IDLE_WARN_SEC ?? 180) * 1000,
   )
+  const preWarnMs = Math.max(
+    30_000,
+    Number(process.env.WX_STATUS_PRE_TIMEOUT_SEC ?? 120) * 1000,
+  )
 
   let startedAt = Date.now()
   let lastActivity = Date.now()
   let beatCount = 0
   let timer = null
+  let deadlineTimer = null
   let stopped = false
-  let meta = { mode: 'full', turns: '?', sid: '?' }
+  let meta = {
+    mode: 'full',
+    turns: '?',
+    sid: '?',
+    budgetMin: '?',
+    level: '',
+  }
 
   async function push(body) {
     if (stopped) return
+    const text = `【进度】${body}`
+    try {
+      await sendText(text)
+    } catch (e) {
+      log('status send fail', String(e?.message || e).slice(0, 120))
+    }
+  }
+
+  /** force push even after stop (timeout/interrupt) */
+  async function pushForce(body) {
     const text = `【进度】${body}`
     try {
       await sendText(text)
@@ -93,7 +117,11 @@ export function createProgressReporter(opts) {
     const elapsed = formatElapsed(Date.now() - startedAt)
     const idle = Date.now() - lastActivity
     const activity = idle >= idleWarnMs ? '等待工具/模型' : '正常'
-    await push(`仍在执行 · 已 ${elapsed} · ${activity}`)
+    const budget =
+      meta.budgetMin && meta.budgetMin !== '?'
+        ? ` · 预算${meta.budgetMin}`
+        : ''
+    await push(`仍在执行 · 已 ${elapsed}${budget} · ${activity}`)
     const next = beatCount >= maxBeats ? sparseMs : beatMs
     schedule(next)
   }
@@ -115,23 +143,61 @@ export function createProgressReporter(opts) {
       lastActivity = Date.now()
       beatCount = 0
       const sid = String(meta.sid || '?').slice(0, 8)
+      const budget =
+        meta.budgetMin && meta.budgetMin !== '?'
+          ? ` · 墙钟预算${meta.budgetMin}`
+          : ' · 预计数分钟'
+      const level = meta.level ? ` · ${meta.level}` : ''
       await push(
-        `开始执行 · ${meta.mode}/${meta.turns} · sid=${sid} · 预计数分钟`,
+        `开始执行 · ${meta.mode}/${meta.turns} · sid=${sid}${level}${budget}`,
       )
       if (beatMs > 0) schedule(firstMs > 0 ? firstMs : beatMs)
     },
-    async continueRound(i, total) {
-      lastActivity = Date.now()
-      await push(`触顶续跑 ${i}/${total} · 同会话接着干`)
+    /**
+     * Arm pre-timeout warning at timeoutMs - preWarnMs
+     * @param {number} timeoutMs
+     */
+    armDeadline(timeoutMs) {
+      if (deadlineTimer) clearTimeout(deadlineTimer)
+      const t = Number(timeoutMs) || 0
+      if (t <= preWarnMs + 10_000) return
+      const delay = t - preWarnMs
+      deadlineTimer = setTimeout(() => {
+        if (stopped) return
+        void push(
+          `即将到达墙钟上限（约 ${Math.round(preWarnMs / 60000)}min 内）· 复杂任务将自动续跑或提示继续`,
+        )
+      }, delay)
     },
-    async interrupted(reason = '服务停止') {
-      // allow one last message even if stop() was called first
+    async continueRound(i, total, kind = '轮次') {
+      lastActivity = Date.now()
+      await push(`触顶续跑 ${i}/${total}（${kind}）· 同会话接着干`)
+    },
+    async timedOut(budgetLabel) {
       stopped = false
       if (timer) {
         clearTimeout(timer)
         timer = null
       }
-      await push(`任务中断（${reason}）· 请发「继续」接着干`)
+      if (deadlineTimer) {
+        clearTimeout(deadlineTimer)
+        deadlineTimer = null
+      }
+      await pushForce(
+        `墙钟超时${budgetLabel ? `（${budgetLabel}）` : ''}· 将同会话续跑或请发「继续」`,
+      )
+    },
+    async interrupted(reason = '服务停止') {
+      stopped = false
+      if (timer) {
+        clearTimeout(timer)
+        timer = null
+      }
+      if (deadlineTimer) {
+        clearTimeout(deadlineTimer)
+        deadlineTimer = null
+      }
+      await pushForce(`任务中断（${reason}）· 请发「继续」接着干`)
       stopped = true
     },
     stop() {
@@ -139,6 +205,10 @@ export function createProgressReporter(opts) {
       if (timer) {
         clearTimeout(timer)
         timer = null
+      }
+      if (deadlineTimer) {
+        clearTimeout(deadlineTimer)
+        deadlineTimer = null
       }
     },
   }

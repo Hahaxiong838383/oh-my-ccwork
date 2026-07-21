@@ -37,6 +37,10 @@ import {
   createProgressReporter,
   formatElapsed,
 } from './lib/progress-status.mjs'
+import {
+  estimateTaskBudget,
+  formatBudgetMin,
+} from './lib/task-budget.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = __dirname
@@ -405,6 +409,19 @@ function isMaxTurnsError(err) {
   )
 }
 
+function isTimeoutError(err) {
+  const msg = String(err?.message || err || '')
+  return (
+    err?.isTimeout === true ||
+    /timeout after \d+ms/i.test(msg) ||
+    /grok timeout/i.test(msg)
+  )
+}
+
+function isRetriableSessionError(err) {
+  return isMaxTurnsError(err) || isTimeoutError(err)
+}
+
 /**
  * short = 轻聊（少轮次）；full = 执行/多步任务。
  * 宁可误进 full，也不要把「开干/继续」压成 8 轮导致 Max turns。
@@ -495,7 +512,7 @@ function buildAgentRules({ cwd }) {
     '6. 危险操作（rm -rf /、mkfs、dd 写盘）拒绝。',
     '7. 回复面向微信纯文本：结论在前、精炼；少空行；表格改短列表；禁用 Markdown 表格/代码块装饰。',
     `8. 当前 cwd=${cwd}；优先在此目录工作。`,
-    '9. 会话可跨多轮；用户说「继续」接着做。',
+    '9. 会话可跨多轮；用户说「继续」接着做。禁止 systemctl restart wechat-grok-bridge / 杀 bridge 进程。',
     '10. 不要输出 render 组件、citation 标签、HTML 注释。',
     '11. 用户附件已落盘到 cwd/.inbound-media/；用 Read 读图/读文件。',
     '12. 回传文件：回复中写 `[[send-file:/绝对路径]]`（桥接上传发微信）；也可写 `本地路径: /abs`。',
@@ -504,8 +521,10 @@ function buildAgentRules({ cwd }) {
 
 async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null }) {
   const bin = process.env.GROK_BIN || `${process.env.HOME}/.grok/bin/grok`
-  const timeoutMs = Number(process.env.GROK_TIMEOUT_MS || 600_000)
   const { mode, maxTurns } = classifyMode(prompt, { hasMedia })
+  const budget = estimateTaskBudget(prompt, { mode, hasMedia })
+  const timeoutMs = budget.timeoutMs
+  const budgetLabel = formatBudgetMin(timeoutMs)
   const sticky = await resolveStickySession(mapKey, cwd, { cwd })
   let sessionId = sticky.sessionId
   const rules = buildAgentRules({ cwd })
@@ -520,7 +539,7 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
   )
   const baseContinuePrompt =
     process.env.GROK_CONTINUE_PROMPT ||
-    '【系统续跑】上一轮因 max turns 中断。请直接接着未完成工作推进，不要从零重做；完成后中文简短自检汇报（结论先行）。'
+    '【系统续跑】上一轮因轮次或墙钟限制中断。请直接接着未完成工作推进，不要从零重做、不要 restart 服务；完成后中文简短自检汇报（结论先行）。'
 
   function buildArgs(userPrompt, turns) {
     const args = [
@@ -618,7 +637,10 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
         if (settled) return
         settled = true
         killHard()
-        reject(new Error(`grok timeout after ${wallMs}ms`))
+        const err = new Error(`grok timeout after ${wallMs}ms`)
+        err.isTimeout = true
+        err.partialOutput = stdout.trim()
+        reject(err)
       }, wallMs)
       child.stdout.on('data', (d) => {
         stdout += d.toString('utf8')
@@ -685,7 +707,7 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
         `turns=${continueTurns}`,
         `sid=${sid.slice(0, 8)}`,
       )
-      await progress?.continueRound?.(i + 1, roundsLeft)
+      await progress?.continueRound?.(i + 1, roundsLeft, '续跑')
       const contPrompt = bestPartial
         ? `${baseContinuePrompt}\n\n【上一轮未完成输出片段（供衔接，勿重复废话）】\n${bestPartial.slice(-2500)}`
         : baseContinuePrompt
@@ -709,7 +731,7 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
           `round=${i + 1}`,
           String(err.message || err).slice(0, 160),
         )
-        if (!isMaxTurnsError(err)) break
+        if (!isRetriableSessionError(err)) break
       }
     }
     // 续跑用尽：把已有部分结果回给用户，避免只报失败
@@ -717,7 +739,7 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
       log('auto-continue return partial', `chars=${bestPartial.length}`)
       return (
         bestPartial.slice(0, 3500) +
-        '\n\n【提示】任务轮次用尽已自动续跑仍未收尾；请发「继续」让我接着干。'
+        '\n\n【提示】自动续跑仍未收尾；请发「继续」接着干。'
       )
     }
     throw lastErr || new Error('auto-continue exhausted')
@@ -736,14 +758,21 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
     `sid=${sessionId.slice(0, 8)}`,
     sticky.exists ? `size=${sticky.size}` : 'new',
     `continue_rounds=${continueRounds}`,
+    `budget=${budgetLabel}`,
+    `level=${budget.level}`,
+    `score=${budget.score}`,
+    `why=${budget.reason}`,
   )
 
   progress?.setMeta?.({
     mode,
     turns: maxTurns,
     sid: sessionId,
+    budgetMin: budgetLabel,
+    level: budget.level,
   })
   await progress?.start?.()
+  progress?.armDeadline?.(timeoutMs)
 
   try {
   // 1) 优先粘性 resume
@@ -754,8 +783,11 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
       })
     } catch (err) {
       log('resume fail', String(err.message || err).slice(0, 160))
-      // max-turns：同 session 续跑，禁止 mint 丢上下文
-      if (isMaxTurnsError(err) && continueRounds > 0) {
+      // 轮次/墙钟：同 session 续跑，禁止 mint 丢上下文
+      if (isRetriableSessionError(err) && continueRounds > 0) {
+        if (isTimeoutError(err)) {
+          await progress?.timedOut?.(budgetLabel)
+        }
         try {
           return await resumeContinue(
             sessionId,
@@ -770,26 +802,33 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
           if (contErr?.partialOutput || err?.partialOutput) {
             return (
               String(contErr?.partialOutput || err.partialOutput).slice(0, 3500) +
-              '\n\n【提示】轮次用尽；请发「继续」接着干。'
+              '\n\n【提示】自动续跑仍未收尾；请发「继续」接着干。'
             )
           }
           throw contErr
         }
       }
-      // 其它 resume 失败：换新 session 重跑用户原 prompt
-      const next = await mintNewSession('resume_fail')
-      sessionId = next
-      try {
+      // auth 等硬失败：才 mint
+      if (/not signed in|login --device/i.test(String(err.message || ''))) {
+        const next = await mintNewSession('resume_auth_fail')
+        sessionId = next
         return await runOnceOnSession(next, prompt, maxTurns, { resume: false })
+      }
+      // 其它 resume 失败：仍尽量同 session 无 -r 重试一次，避免 mint
+      try {
+        return await runOnceOnSession(sessionId, prompt, maxTurns, {
+          resume: false,
+        })
       } catch (err2) {
-        if (isMaxTurnsError(err2) && continueRounds > 0) {
-          return resumeContinue(next, continueRounds, err2.partialOutput || '')
+        if (isRetriableSessionError(err2) && continueRounds > 0) {
+          if (isTimeoutError(err2)) await progress?.timedOut?.(budgetLabel)
+          return resumeContinue(
+            sessionId,
+            continueRounds,
+            err2.partialOutput || '',
+          )
         }
-        try {
-          return await once(buildArgs(prompt, maxTurns), timeoutMs)
-        } catch (err3) {
-          throw err3
-        }
+        throw err2
       }
     }
   }
@@ -801,7 +840,8 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
     })
   } catch (err2) {
     log('create session fail', String(err2.message || err2).slice(0, 160))
-    if (isMaxTurnsError(err2) && continueRounds > 0) {
+    if (isRetriableSessionError(err2) && continueRounds > 0) {
+      if (isTimeoutError(err2)) await progress?.timedOut?.(budgetLabel)
       try {
         return await resumeContinue(
           sessionId,
@@ -812,7 +852,7 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
         if (contErr?.partialOutput || err2?.partialOutput) {
           return (
             String(contErr?.partialOutput || err2.partialOutput).slice(0, 3500) +
-            '\n\n【提示】轮次用尽；请发「继续」接着干。'
+            '\n\n【提示】自动续跑仍未收尾；请发「继续」接着干。'
           )
         }
         throw contErr
@@ -835,16 +875,32 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
   }
 }
 
+async function sendWechatTextRetry(cred, to, text, contextToken, tries = 3) {
+  let lastErr
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await sendWechatText({
+        baseUrl: cred.baseUrl,
+        token: cred.token,
+        to,
+        text,
+        contextToken,
+      })
+    } catch (e) {
+      lastErr = e
+      const msg = String(e?.message || e)
+      log('wechat send retry', i + 1, msg.slice(0, 120))
+      // prepare failed / transient
+      await new Promise((r) => setTimeout(r, 800 * (i + 1)))
+    }
+  }
+  throw lastErr
+}
+
 async function sendTextChunks(cred, to, text, contextToken) {
   const cleaned = normalizeReply(text)
   for (const chunk of splitText(cleaned, 1800)) {
-    await sendWechatText({
-      baseUrl: cred.baseUrl,
-      token: cred.token,
-      to,
-      text: chunk,
-      contextToken,
-    })
+    await sendWechatTextRetry(cred, to, chunk, contextToken)
   }
 }
 
@@ -1039,13 +1095,7 @@ async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
   const progress = createProgressReporter({
     log,
     sendText: (text) =>
-      sendWechatText({
-        baseUrl: cred.baseUrl,
-        token: cred.token,
-        to: peerId,
-        text,
-        contextToken: message.context_token,
-      }),
+      sendWechatTextRetry(cred, peerId, text, message.context_token, 3),
   })
 
   if (queueAhead > 0) {
@@ -1084,12 +1134,14 @@ async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
     progress.stop()
     log('handle fail', String(err.message || err).slice(0, 200))
     let msg = `执行失败：${String(err.message || err).slice(0, 500)}`
-    if (isMaxTurnsError(err)) {
+    if (isMaxTurnsError(err) || isTimeoutError(err)) {
       msg =
         (err.partialOutput
           ? String(err.partialOutput).slice(0, 2800) + '\n\n'
           : '') +
-        '【提示】任务轮次用尽。请直接回「继续」，我会在同一会话接着干（已启用自动续跑）。'
+        (isTimeoutError(err)
+          ? '【提示】墙钟超时。请直接回「继续」，同会话接着干。'
+          : '【提示】任务轮次用尽。请直接回「继续」，同会话接着干。')
     }
     await sendReply(cred, peerId, msg, message.context_token)
   } finally {

@@ -65,10 +65,12 @@ grok --version
 
 | 变量 | 默认 | 含义 |
 |------|------|------|
-| `GROK_TIMEOUT_MS` | 900000 | 单次 grok 墙钟 15min |
+| `GROK_TIMEOUT_MS` | 900000 | **standard 锚点**（非写死全局） |
+| `GROK_TIMEOUT_MIN_MS` | 480000 | 墙钟下限 8min |
+| `GROK_TIMEOUT_MAX_MS` | 2700000 | 墙钟上限 45min |
 | `GROK_MAX_TURNS` | **100** | 执行型（默认 full；防 Max turns） |
 | `GROK_SHORT_MAX_TURNS` | **24** | 仅纯寒暄 |
-| `GROK_CONTINUE_ON_MAX_TURNS` | **3** | 触顶后同 session 自动续跑次数 |
+| `GROK_CONTINUE_ON_MAX_TURNS` | **3** | 轮次/墙钟触顶后同 session 续跑 |
 | `GROK_CONTINUE_MAX_TURNS` | **100** | 每次续跑轮次 |
 | `GROK_SESSION_RESUME_MAX_BYTES` | 5MB | soft **归档+换 session** |
 | `GROK_SESSION_MAX_BYTES` | 20MB | hard 归档 |
@@ -76,7 +78,7 @@ grok --version
 | `REQUIRE_GROUP_PREFIX` | 1 | 群需 `grok:` / @ |
 | `WECHAT_GROK_BRIDGE_ROOT` | `~/wechat-grok-bridge` | session-gc 脚本路径 |
 
-> **Max turns 防护（2026-07-21）**：`classifyMode` 默认 full；触顶不 mint 新会话、同 session 自动续跑最多 3 次；仍不够时回部分输出并提示发「继续」。
+> **Max turns / 墙钟（2026-07-21）**：默认 full；**超时按时长预算动态估**（light≈8m / standard≈15m / heavy≈30m / extreme≈45min，见 `lib/task-budget.mjs`）；轮次或墙钟触顶 → 同 session 续跑最多 3 次，**禁止因 timeout mint 新 session**；超时前约 2min 预告；仍不够回 partial +「继续」。
 
 ### 微信进度反馈（仅通道 · 默认开）
 
