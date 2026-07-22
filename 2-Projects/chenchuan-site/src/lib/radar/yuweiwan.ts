@@ -67,13 +67,16 @@ type YuweiwanCache = { items: RadarItem[]; fetchedAt: number }
 const g = globalThis as typeof globalThis & { __ywSourceCache?: YuweiwanCache }
 
 // 拉取第二上游（带 30min 源级缓存）。任何失败 fail-soft 返回 []（或过期缓存），绝不拖垮主链路。
-export async function fetchYuweiwanLatest(): Promise<RadarItem[]> {
+export async function fetchYuweiwanLatest(refreshSignal?: AbortSignal): Promise<RadarItem[]> {
   const cached = g.__ywSourceCache
   if (cached && Date.now() - cached.fetchedAt < SOURCE_TTL_MS) {
     return cached.items
   }
 
   const controller = new AbortController()
+  const abortFromRefresh = () => controller.abort()
+  if (refreshSignal?.aborted) controller.abort()
+  else refreshSignal?.addEventListener('abort', abortFromRefresh, { once: true })
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   try {
     const res = await fetch(YUWEIWAN_URL, {
@@ -93,5 +96,6 @@ export async function fetchYuweiwanLatest(): Promise<RadarItem[]> {
     return cached?.items ?? []
   } finally {
     clearTimeout(timer)
+    refreshSignal?.removeEventListener('abort', abortFromRefresh)
   }
 }

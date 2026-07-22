@@ -31,6 +31,7 @@ const parsedFeedCacheTtl = Number(process.env.RADAR_FEED_CACHE_TTL_SECONDS || '3
 const RADAR_FEED_CACHE_TTL_MS =
   (Number.isFinite(parsedFeedCacheTtl) ? Math.max(60, parsedFeedCacheTtl) : 300) * 1000
 const NEGATIVE_CACHE_MS = 90 * 1000 // 刷新失败后的静默窗：期间不再打上游，直接供旧数据
+const REFRESH_TIMEOUT_MS = 90 * 1000
 
 // 注意：放 data/ 根，不能进 data/radar/（那里是 theory 报告目录，readdir 按 *.json 全扫）
 const FEED_CACHE_FILE = path.join(process.cwd(), 'data', 'radar-feed-cache.json')
@@ -64,6 +65,8 @@ type RadarFeedCache = {
 const globalRadarFeed = globalThis as typeof globalThis & {
   __radarFeedCache?: RadarFeedCache
   __radarFeedRefresh?: Promise<RadarFeed>
+  __radarFeedRefreshStartedAt?: number
+  __radarFeedRefreshGeneration?: number
   __radarFeedNegativeUntil?: number
   __radarFeedDiskLoaded?: boolean
   __radarAlertLastSent?: number
@@ -166,11 +169,18 @@ async function saveSourceHealth(
 
 // 双上游并行（2026-07-07 起）：aihot（主，泛 AI 资讯 ~1900 条）+ yuweiwan（副，92 源中文聚合 ~770 条）。
 // allSettled 隔离故障——任一源挂只少一路数据，绝不拖垮另一路；归档合并天然按 url 去重叠。
-async function refreshRadarFeed(prev: RadarFeedCache | undefined): Promise<RadarFeed> {
+async function refreshRadarFeed(
+  prev: RadarFeedCache | undefined,
+  signal?: AbortSignal,
+  generation?: number,
+): Promise<RadarFeed> {
   const [aihotSettled, ywSettled] = await Promise.allSettled([
-    fetchAihotAll(1000, 'no-store'),
-    fetchYuweiwanLatest(),
+    fetchAihotAll(1000, 'no-store', signal),
+    fetchYuweiwanLatest(signal),
   ])
+  if (signal?.aborted || generation !== globalRadarFeed.__radarFeedRefreshGeneration) {
+    throw new Error('radar_refresh_superseded')
+  }
   const aihotItems = aihotSettled.status === 'fulfilled' ? aihotSettled.value : []
   const ywItems = ywSettled.status === 'fulfilled' ? ywSettled.value : []
   const freshItems = sortByTimeDesc(dedupe([...aihotItems, ...ywItems]))
@@ -266,8 +276,33 @@ export async function getRadarFeed(): Promise<RadarFeed> {
     return cached.feed
   }
 
+  const refreshAge = now - (g.__radarFeedRefreshStartedAt ?? now)
+  if (g.__radarFeedRefresh && refreshAge > REFRESH_TIMEOUT_MS) {
+    console.warn('[radar] stale refresh lock released', { refreshAgeMs: refreshAge })
+    g.__radarFeedRefreshGeneration = (g.__radarFeedRefreshGeneration ?? 0) + 1
+    g.__radarFeedRefresh = undefined
+    g.__radarFeedRefreshStartedAt = undefined
+  }
+
   if (!g.__radarFeedRefresh) {
-    g.__radarFeedRefresh = refreshRadarFeed(cached)
+    const generation = (g.__radarFeedRefreshGeneration ?? 0) + 1
+    const controller = new AbortController()
+    let timeout: ReturnType<typeof setTimeout> | undefined
+    g.__radarFeedRefreshGeneration = generation
+    g.__radarFeedRefreshStartedAt = now
+
+    const refresh = Promise.race([
+      refreshRadarFeed(cached, controller.signal, generation),
+      new Promise<RadarFeed>((_, reject) => {
+        timeout = setTimeout(() => {
+          controller.abort()
+          if (g.__radarFeedRefreshGeneration === generation) {
+            g.__radarFeedRefreshGeneration = generation + 1
+          }
+          reject(new Error('radar_refresh_timeout'))
+        }, REFRESH_TIMEOUT_MS)
+      }),
+    ])
       .catch((): RadarFeed => {
         // refreshRadarFeed 内部已 fail-soft，这里兜底意外异常：供旧或空，绝不向页面抛错
         globalRadarFeed.__radarFeedNegativeUntil = Date.now() + NEGATIVE_CACHE_MS
@@ -281,8 +316,13 @@ export async function getRadarFeed(): Promise<RadarFeed> {
         )
       })
       .finally(() => {
-        g.__radarFeedRefresh = undefined
+        if (timeout) clearTimeout(timeout)
+        if (g.__radarFeedRefresh === refresh) {
+          g.__radarFeedRefresh = undefined
+          g.__radarFeedRefreshStartedAt = undefined
+        }
       })
+    g.__radarFeedRefresh = refresh
   }
 
   if (cached) {
