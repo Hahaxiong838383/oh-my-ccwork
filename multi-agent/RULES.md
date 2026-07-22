@@ -9,8 +9,8 @@
 ## 核心结构（v3）
 
 **三大 lane × 多档模型**：
-- **A 写码档** — 4 档（grok-build / omp grok-4.3 / omp gpt-5.5 / omp gpt-5.4 review）
-- **B 调研评审档** — 5 档（omp gemini-3-flash / 3.1-pro / VPS proxy 3.5-flash / **omp grok-4.3 推理** / **omp gpt-5.5 严谨评审**）
+- **A 写码档** — 4 档（grok-build / omp grok-4.5 / omp gpt-5.5 / omp gpt-5.4 review）
+- **B 调研评审档** — 5 档（omp gemini-3-flash / 3.1-pro / VPS proxy 3.5-flash / **omp grok-4.5 推理** / **omp gpt-5.5 严谨评审**）
 - **C/D 编排+异步** — cc 主线 + hermes 长跑
 
 **成本视角**：三家订阅（SuperGrok + ChatGPT Team + Gemini OAuth）= **已付月费 sunk cost，调用边际 ¥0**。**唯一付费按量** = mycc VPS proxy 3.5-flash（仅在"需要 3.5 thinking"启用）。**默认走订阅，付费档按需触发**。
@@ -24,7 +24,7 @@
 | ID | 路径 | 引擎 | 上下文 | 速度 | 适用 |
 |---|---|---|---|---|---|
 | **A1 默认** | grok-build CLI 直调 | `grok-build` | 512k | ⚡⚡⚡ 最快 | 短任务 / 批量改 / 单文件 / <300 行 |
-| **A2 满血/长ctx** | omp | `xai-oauth/grok-4.3` | 1M | ⚡⚡ + reasoning 分档 | >512k 上下文 / 需 effort 分档 / 同家族对比 |
+| **A2 满血/长ctx** | omp | `xai-oauth/grok-4.5` | 1M | ⚡⚡ + reasoning 分档 | >512k 上下文 / 需 effort 分档 / 同家族对比 |
 | **A3 高stake默认** | **omp** | `openai-codex/gpt-5.5` | 272k | ⚡ 中等稳 | 认证 / 支付 / 数据迁移 / 生产事故 |
 | **A3-fallback** | codex CLI 直调（降级）| `gpt-5.3-codex` / `gpt-5.4` / `gpt-5.5` | 272k-1M | 同上 | A3 omp 不通时逃生 |
 | **A4 对抗审查** | omp | `openai-codex/gpt-5.4` | 400k | ⚡ 中等 | code review 主通道（轻量 review 单发即可）|
@@ -34,7 +34,7 @@
 ```
 写码任务
   ├─ <300 行 / 单文件 / 快速迭代 → A1 grok-build (默认)
-  ├─ >512k 上下文 / 需 effort 分档 → A2 omp xai-oauth/grok-4.3
+  ├─ >512k 上下文 / 需 effort 分档 → A2 omp xai-oauth/grok-4.5
   ├─ 高 stake (认证/支付/迁移/事故) → A3 omp openai-codex/gpt-5.5
   └─ 轻量 code review → A4/B5 omp openai-codex/gpt-5.4 (单发)
 ```
@@ -48,7 +48,7 @@
 | **B1 默认** | omp | `google-antigravity/gemini-3-flash` | 1M | minimal-high | ¥0 | Gemini 默认主力,短任务（⚠️ 2026-06-19 gemini-cli 被 Google 停用→切 antigravity） |
 | **B2 学术深度** | omp | `google-antigravity/gemini-3.5-flash` + thinking high | 1M | low/high | ¥0 | gemini 长综合深度（原 gemini-cli pro 停用→antigravity 3.5） |
 | **B3 顶级深度（免费）** | omp | `google-antigravity/gemini-3.5-flash` + thinking high | 1M | low/high | ¥0 | 独立 Google 深度声音（2026-06-17 antigravity 免费复活，原付费 VPS proxy 已弃用） |
-| **★ B4 grok 推理评审** | omp | `xai-oauth/grok-4.3` | 1M | minimal-**xhigh** | ¥0 | **第一性原理推理 / 反思维定式 / 物理直觉 / 非 Google 视角** |
+| **★ B4 grok 推理评审** | omp | `xai-oauth/grok-4.5` | 1M | minimal-**xhigh** | ¥0 | **第一性原理推理 / 反思维定式 / 物理直觉 / 非 Google 视角** |
 | **★ B5 codex 严谨评审** | omp | `openai-codex/gpt-5.5` 或 `gpt-5.4` | 272k-400k | minimal-xhigh | ¥0 | **结构化逻辑链清晰 / 边界用例 / 偏正式格式** |
 | ~~B-fallback~~ | ❌ gemini CLI 直调已停用 | — | — | — | — | 2026-06-19 Google 停 Code Assist 个人版；gemini 全走 antigravity，无 CLI fallback |
 
@@ -58,7 +58,7 @@
 评审/调研任务
   ├─ 短调研 / 提取 / 分类 → B1 omp gemini-3-flash (默认,最快)
   ├─ 学术综合 / 长文分析 → B2 omp antigravity gemini-3.5-flash high
-  ├─ 推理深度 / Why / 第一性原理 → B4 omp grok-4.3 thinking=high
+  ├─ 推理深度 / Why / 第一性原理 → B4 omp grok-4.5 thinking=high
   ├─ 严谨结构化 / 代码评审风格 → B5 omp gpt-5.5 thinking=high
   ├─ 顶级深度 / 批判性思考 → B3 omp antigravity gemini-3.5-flash high (免费；原付费 VPS proxy 已弃用)
   └─ 轻量 code review → B5 omp gpt-5.4 high (单发)
@@ -118,8 +118,8 @@ cc 自报格式：
 # A1 grok-build (默认写码,最快最便宜)
 ~/.grok/bin/grok --prompt-file /tmp/p.md -m grok-build --effort high --no-subagents --cwd /path
 
-# A2 omp xai-oauth/grok-4.3 (满血/长 ctx)
-omp -p --model xai-oauth/grok-4.3 --thinking high --auto-approve "..."
+# A2 omp xai-oauth/grok-4.5 (满血/长 ctx)
+omp -p --model xai-oauth/grok-4.5 --thinking high --auto-approve "..."
 
 # A3 omp openai-codex/gpt-5.5 (高 stake 写码)
 omp -p --model openai-codex/gpt-5.5 --thinking high --auto-approve "..."
@@ -143,8 +143,8 @@ omp -p --model google-antigravity/gemini-3.5-flash --thinking high --auto-approv
 # B3 omp antigravity gemini-3.5-flash (顶级深度,免费; 原付费 VPS proxy 已弃用)
 omp -p --model google-antigravity/gemini-3.5-flash --thinking high --auto-approve "..."
 
-# B4 omp xai-oauth/grok-4.3 (推理深度评审,免费)
-omp -p --model xai-oauth/grok-4.3 --thinking high --auto-approve "..."
+# B4 omp xai-oauth/grok-4.5 (推理深度评审,免费)
+omp -p --model xai-oauth/grok-4.5 --thinking high --auto-approve "..."
 
 # B5 omp openai-codex/gpt-5.4 or 5.5 (严谨结构化评审 + 轻量 code review,免费)
 omp -p --model openai-codex/gpt-5.4 --thinking high --auto-approve "..."
@@ -153,7 +153,7 @@ omp -p --model openai-codex/gpt-5.4 --thinking high --auto-approve "..."
 PROMPT_FILE=/tmp/review.md  # 评审内容 + diff + 评审角度
 
 # ⚠️ 实际请用 review-3send.sh(已加固 --no-tools 只读 + --cwd 干净目录, 防评审引擎改文件); 下方仅示意
-omp -p --model xai-oauth/grok-4.3 --thinking high --no-tools "$(cat $PROMPT_FILE)" > /tmp/r-grok.md 2>&1 &
+omp -p --model xai-oauth/grok-4.5 --thinking high --no-tools "$(cat $PROMPT_FILE)" > /tmp/r-grok.md 2>&1 &
 omp -p --model openai-codex/gpt-5.5 --thinking high --no-tools "$(cat $PROMPT_FILE)" > /tmp/r-gpt.md 2>&1 &
 omp -p --model google-antigravity/gemini-3-flash --thinking high --no-tools "$(cat $PROMPT_FILE)" > /tmp/r-gem.md 2>&1 &
 wait
@@ -172,7 +172,7 @@ wait
 # Stage 2: B 三发评审 cc 选定版本
 DIFF=$(cd /path && git diff main..HEAD)
 PROMPT="审查这段 diff: \n\n$DIFF"
-omp -p --model xai-oauth/grok-4.3 --thinking high --no-tools "$PROMPT" > /tmp/r-grok.md &
+omp -p --model xai-oauth/grok-4.5 --thinking high --no-tools "$PROMPT" > /tmp/r-grok.md &
 omp -p --model openai-codex/gpt-5.5 --thinking high --no-tools "$PROMPT" > /tmp/r-gpt.md &
 omp -p --model google-antigravity/gemini-3-flash --thinking high --no-tools "$PROMPT" > /tmp/r-gem.md &
 wait
@@ -248,7 +248,7 @@ Layer 3 自动化验收（测试 + lint + type check，cc 主 shell 自跑一遍
 Layer 4 裁决（cc 综合 A 双发实现差异 + B 三发评审 finding + 自验测试 → REVIEW.md，commit/push）
 ```
 
-> **写码 lane 由 cc 按日常路由分派**：普通走 A1（grok-build 最便宜）；超 512k 升 A2（omp grok-4.3 1M）；高 stake 走 A3（omp gpt-5.5）。**高 stake/高难度任务必须 A 双发对比**（A1 + A3，cc 跑测试挑优 / 互为对抗审查）。
+> **写码 lane 由 cc 按日常路由分派**：普通走 A1（grok-build 最便宜）；超 512k 升 A2（omp grok-4.5 1M）；高 stake 走 A3（omp gpt-5.5）。**高 stake/高难度任务必须 A 双发对比**（A1 + A3，cc 跑测试挑优 / 互为对抗审查）。
 > **评审 lane**：高 stake/高难度任务必须 **B 三发对抗**（B4 grok 推理 + B5 gpt 严谨 + B1 gemini 默认，三家跨家族独立视角）。
 > **顶级 stake**（川哥手动触发 或 cc 风险预警询问后启动）：先走 `review-4send.sh` 兼容入口（当前等同三发）；确需 B3 付费档时先显式确认并从 Keychain 取 token。
 > 多引擎并行改同仓文件时用 `grok -w`（worktree）或独立 worktree 防冲突。
@@ -284,11 +284,11 @@ git reset --soft HEAD~1
   > /tmp/grok_log.md 2>/tmp/grok_err.md &
 # 偶发 text/plain → 重试 1-2 次，仍失败降级 codex（详见 engine-routing.md grok_run 包装）。禁 `timeout grok …`（exit 127）。高 stake 可加 --best-of-n 3 / --check
 
-# omp 满血 grok-4.3（超 512k 上下文 / 需 reasoning effort 分档 / 同家族对比，xAI 原生 + SuperGrok 订阅 OAuth）
-# ⚠️ PATH 必须含 ~/.bun/bin；model 必须用完整路径 xai-oauth/grok-4.3（短名 grok-4.3 模糊匹配到 kilo gateway 出错）
+# omp 满血 grok-4.5（超 512k 上下文 / 需 reasoning effort 分档 / 同家族对比，xAI 原生 + SuperGrok 订阅 OAuth）
+# ⚠️ PATH 必须含 ~/.bun/bin；model 必须用完整路径 xai-oauth/grok-4.5（短名 grok-4.5 模糊匹配到 kilo gateway 出错）
 # ⚠️ --auto-approve 跳所有交互；--thinking 取 minimal/low/medium/high/xhigh
 PATH="$HOME/.bun/bin:$PATH" omp -p \
-  --model xai-oauth/grok-4.3 --thinking high \
+  --model xai-oauth/grok-4.5 --thinking high \
   --auto-approve \
   --no-extensions --no-skills --no-rules \
   --append-system-prompt "$(cat /tmp/omp_prompt.md)" \

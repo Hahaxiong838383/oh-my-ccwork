@@ -23,7 +23,7 @@
 | ID | 引擎 | 上下文 | 调用入口 |
 |---|---|---|---|
 | **A1 默认** | grok-build CLI 直调 | 512k | `~/.grok/bin/grok --prompt-file … -m grok-build --no-subagents` |
-| **A2 满血/长ctx** | omp xai-oauth/grok-4.3 | 1M | `omp -p --model xai-oauth/grok-4.3 --thinking high --auto-approve` |
+| **A2 满血/长ctx** | omp xai-oauth/grok-4.5 | 1M | `omp -p --model xai-oauth/grok-4.5 --thinking high --auto-approve` |
 | **A3 高stake默认** | omp openai-codex/gpt-5.5 | 272k | `omp -p --model openai-codex/gpt-5.5 --thinking high --auto-approve` |
 | **A3-fallback** | codex CLI（降级）| 同上 | `codex exec --full-auto -c model="gpt-5.5"` |
 | **A4 code review** | omp openai-codex/gpt-5.4 | 400k | `omp -p --model openai-codex/gpt-5.4 --thinking high --auto-approve` |
@@ -35,7 +35,7 @@
 | **B1 默认** | omp antigravity gemini-3-flash | 1M | Gemini 默认主力,短任务（⚠️ gemini-cli 2026-06-19 被 Google 停用） | `omp -p --model google-antigravity/gemini-3-flash` |
 | **B2 学术深度** | omp antigravity gemini-3.5-flash | 1M | gemini 长综合深度 | `omp -p --model google-antigravity/gemini-3.5-flash --thinking high` |
 | **B3 顶级深度（免费）** | omp antigravity gemini-3.5-flash | 1M | 独立 Google 深度声音（原付费 VPS proxy 已弃用） | `omp -p --model google-antigravity/gemini-3.5-flash --thinking high` |
-| **★ B4 grok 推理评审** | omp xai-oauth/grok-4.3 | 1M | **第一性原理推理 / 反思维定式 / 非 Google 视角** | `omp -p --model xai-oauth/grok-4.3 --thinking high` |
+| **★ B4 grok 推理评审** | omp xai-oauth/grok-4.5 | 1M | **第一性原理推理 / 反思维定式 / 非 Google 视角** | `omp -p --model xai-oauth/grok-4.5 --thinking high` |
 | **★ B5 codex 严谨评审** | omp openai-codex/gpt-5.5 或 5.4 | 272k-400k | **结构化逻辑链清晰 / 边界用例** | `omp -p --model openai-codex/gpt-5.5 --thinking high` |
 | ~~B-fallback~~ | ❌ gemini CLI 直调已停用 | — | 2026-06-19 Google 停 Code Assist 个人版,gemini 全走 antigravity | — |
 
@@ -55,7 +55,7 @@
 ```
 任务 → 按 stake 分档:
   ├─ 普通(<300 行/单文件) → A1 grok-build (默认最便宜)
-  ├─ 超 512k 上下文 / 需 reasoning effort → A2 omp grok-4.3 1M
+  ├─ 超 512k 上下文 / 需 reasoning effort → A2 omp grok-4.5 1M
   ├─ 高 stake (认证/支付/迁移/事故) → A3 omp openai-codex/gpt-5.5
   └─ 高 stake / 高难度(>1000 行 跨子系统 算法核心) → A 双发(A1+A3)
 ```
@@ -66,7 +66,7 @@
 任务 → 按风格分档:
   ├─ 短调研 / 提取 / 分类 → B1 omp gemini-3-flash (默认免费)
   ├─ 学术综合 / 长文分析 → B2 omp gemini-3.1-pro
-  ├─ 推理深度 / Why / 第一性原理 → B4 omp grok-4.3 thinking=high
+  ├─ 推理深度 / Why / 第一性原理 → B4 omp grok-4.5 thinking=high
   ├─ 严谨结构化 / code review → B5 omp gpt-5.5 thinking=high (单发即可)
   ├─ 顶级深度 / 批判性思考 → B3 VPS proxy 3.5-flash (付费；当前已从 team 自动脚本下线)
   └─ 高 stake / 高难度评审 → B 三发对抗(B4+B5+B1)
