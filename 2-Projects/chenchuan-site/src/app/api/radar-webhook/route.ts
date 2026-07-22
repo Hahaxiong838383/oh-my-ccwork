@@ -1,16 +1,19 @@
-// radar agent 推送入口（theory-radar 深度报告 + github-radar 风向标共用）
+// radar agent 推送入口（theory-radar + github-radar + Horizon 精选共用）
 // 用法（mini 上的 agent 跑完后调用）：
 //   curl -X POST https://my.chenchuan.cc/api/radar-webhook \
 //     -H "Authorization: Bearer $RADAR_WEBHOOK_TOKEN" \
 //     -H "Content-Type: application/json" \
 //     -d @report.json
-// body.type='github' → GithubRadarReport 落 data/radar-github/；否则按 TheoryReport 落 data/radar/
+// body.type='github' → data/radar-github/
+// body.type='horizon' → 影子报告落 data/radar-horizon/shadow/，publish=true 才进入正式归档
+// 其他 → TheoryReport 落 data/radar/
 // 报告结构见 src/lib/radar/types.ts
 
 import { NextRequest, NextResponse } from 'next/server'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { revalidatePath } from 'next/cache'
+import { sanitizeHorizonDigestPayload } from '@/lib/radar/horizon'
 
 export const runtime = 'nodejs'
 
@@ -18,6 +21,10 @@ const TOKEN = process.env.RADAR_WEBHOOK_TOKEN
 const DIR = process.env.RADAR_DATA_DIR || path.join(process.cwd(), 'data', 'radar')
 const GITHUB_DIR =
   process.env.RADAR_GITHUB_DATA_DIR || path.join(process.cwd(), 'data', 'radar-github')
+const HORIZON_DIR =
+  process.env.RADAR_HORIZON_DATA_DIR || path.join(process.cwd(), 'data', 'radar-horizon')
+const HORIZON_HEALTH_FILE =
+  process.env.RADAR_HORIZON_HEALTH_FILE || path.join(process.cwd(), 'data', 'radar-horizon-health.json')
 const MAX_BODY_BYTES = 512 * 1024 // 512KB 上限，防失控 agent/恶意 payload 撑爆磁盘
 const MAX_PAPERS = 50
 const MAX_CATEGORIES = 10
@@ -37,6 +44,24 @@ function safeUrl(u: unknown): string {
 
 function clampStr(v: unknown, max: number): string | undefined {
   return typeof v === 'string' ? v.slice(0, max) : undefined
+}
+
+async function writeAtomicJson(file: string, value: unknown): Promise<void> {
+  await fs.mkdir(path.dirname(file), { recursive: true })
+  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
+  await fs.writeFile(tmp, JSON.stringify(value), 'utf-8')
+  await fs.rename(tmp, file)
+}
+
+async function readJsonObject(file: string): Promise<Record<string, unknown>> {
+  try {
+    const parsed = JSON.parse(await fs.readFile(file, 'utf-8')) as unknown
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {}
+  } catch {
+    return {}
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -66,6 +91,10 @@ export async function POST(req: NextRequest) {
   // github-radar 分支（body.type='github'）：独立目录，绝不混入 theory 报告目录
   if ((body as { type?: unknown }).type === 'github') {
     return handleGithubReport(body)
+  }
+
+  if ((body as { type?: unknown }).type === 'horizon') {
+    return handleHorizonReport(body)
   }
 
   const report = body as { date?: unknown; papers?: unknown }
@@ -127,6 +156,63 @@ export async function POST(req: NextRequest) {
 
   revalidatePath('/radar')
   return NextResponse.json({ ok: true, date: safeDate, papers: papers.length })
+}
+
+async function handleHorizonReport(body: unknown) {
+  const sanitized = sanitizeHorizonDigestPayload(body)
+  if (!sanitized) {
+    return NextResponse.json(
+      { ok: false, error: 'Horizon 报告结构无效或没有可发布条目' },
+      { status: 400 },
+    )
+  }
+
+  const { publish, report } = sanitized
+  const receivedAt = new Date().toISOString()
+
+  try {
+    const previousHealth = await readJsonObject(HORIZON_HEALTH_FILE)
+    if (publish) {
+      await writeAtomicJson(path.join(HORIZON_DIR, `report-${report.date}.json`), report)
+    } else {
+      const stamp = receivedAt.replace(/[-:.TZ]/g, '').slice(0, 14)
+      await writeAtomicJson(
+        path.join(HORIZON_DIR, 'shadow', `shadow-${report.date}-${stamp}.json`),
+        report,
+      )
+    }
+
+    await writeAtomicJson(HORIZON_HEALTH_FILE, {
+      checkedAt: receivedAt,
+      ok: true,
+      mode: publish ? 'published' : 'shadow',
+      date: report.date,
+      itemCount: report.items.length,
+      totalFetched: report.totalFetched,
+      sourceCount: report.sourceCount,
+      realtimeDuplicateCount: report.realtimeDuplicateCount || 0,
+      relevanceFilteredCount: report.relevanceFilteredCount || 0,
+      runId: report.runId || null,
+      horizonCommit: report.horizonCommit || null,
+      lastSuccessAt: receivedAt,
+      lastPublishedAt: publish ? receivedAt : previousHealth.lastPublishedAt || null,
+      error: null,
+    })
+  } catch (error) {
+    return NextResponse.json(
+      { ok: false, error: `Horizon 报告写入失败: ${(error as Error).message}` },
+      { status: 500 },
+    )
+  }
+
+  if (publish) revalidatePath('/radar')
+  return NextResponse.json({
+    ok: true,
+    type: 'horizon',
+    mode: publish ? 'published' : 'shadow',
+    date: report.date,
+    items: report.items.length,
+  })
 }
 
 // GithubRadarReport 消毒 + 落盘（与 theory 同级安全标准：截断/白名单 url/限条数/防路径穿越）

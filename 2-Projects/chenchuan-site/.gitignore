@@ -22,3 +22,5 @@ public/media/futurus-hud/mass-production-hud.mp4
 public/media/auto-show/beijing-auto-show-2024.mp4
 data/radar-feed-cache.json
 data/radar-github/
+data/radar-horizon/
+data/radar-horizon-health.json

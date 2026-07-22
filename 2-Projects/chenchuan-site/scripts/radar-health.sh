@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Radar health v3: monitor the rendered archive and each upstream separately.
+# Radar health v4: monitor the rendered archive, upstreams, and optional Horizon digest separately.
 set -uo pipefail
 
 THRESHOLD="${RADAR_PAGE_THRESHOLD:-300}"
@@ -8,6 +8,8 @@ LOG="${RADAR_HEALTH_LOG:-/var/log/radar-health.log}"
 STATE="${RADAR_HEALTH_STATE:-/opt/radar-health.state}"
 SITE_ENV="${RADAR_SITE_ENV:-/var/www/chenchuan-site/.env.local}"
 SOURCE_HEALTH="${RADAR_SOURCE_HEALTH_FILE:-/var/www/chenchuan-site/data/radar-source-health.json}"
+HORIZON_HEALTH="${RADAR_HORIZON_HEALTH_FILE:-/var/www/chenchuan-site/data/radar-horizon-health.json}"
+HORIZON_FRESHNESS_THRESHOLD="${RADAR_HORIZON_FRESHNESS_THRESHOLD_SECONDS:-129600}"
 ENDPOINT_REFRESH="${AIHOT_ENDPOINT_REFRESH_SCRIPT:-/opt/aihot-endpoint-refresh.sh}"
 AIHOT_RETRIES="${AIHOT_HEALTH_RETRIES:-3}"
 AIHOT_RETRY_DELAY="${AIHOT_HEALTH_RETRY_DELAY_SECONDS:-2}"
@@ -60,23 +62,51 @@ for _ in $(seq 1 15); do
   sleep 2
 done
 
+# Horizon is an optional complementary digest. Its health never changes the existing
+# PAGE/AIHOT/FRESHNESS verdicts, but it has its own transition-based alert.
+horizon_state=UNKNOWN
+horizon_age=-1
+horizon_checked=none
+horizon_mode=none
+horizon_count=0
+horizon_error=none
+if [[ -f "$HORIZON_HEALTH" ]]; then
+  horizon_checked=$(jq -r '.checkedAt // empty' "$HORIZON_HEALTH" 2>/dev/null || true)
+  horizon_mode=$(jq -r '.mode // "none"' "$HORIZON_HEALTH" 2>/dev/null || echo none)
+  horizon_count=$(jq -r '.itemCount // 0' "$HORIZON_HEALTH" 2>/dev/null || echo 0)
+  horizon_error=$(jq -r '.error // "none"' "$HORIZON_HEALTH" 2>/dev/null || echo none)
+  horizon_ok=$(jq -r '.ok // false' "$HORIZON_HEALTH" 2>/dev/null || echo false)
+  horizon_checked_epoch=$(date -d "$horizon_checked" +%s 2>/dev/null || echo 0)
+  if [[ "$horizon_checked_epoch" -gt 0 ]]; then
+    horizon_age=$(( $(date +%s) - horizon_checked_epoch ))
+  fi
+  if [[ "$horizon_ok" == true && "$horizon_age" -ge 0 && "$horizon_age" -le "$HORIZON_FRESHNESS_THRESHOLD" ]]; then
+    horizon_state=OK
+  else
+    horizon_state=CRIT
+  fi
+fi
+
 prev_page=OK
 prev_aihot=OK
 prev_freshness=OK
+prev_horizon=UNKNOWN
 if [[ -f "$STATE" ]]; then
   if grep -q '=' "$STATE"; then
     prev_page=$(awk -F= '$1 == "PAGE" { print $2 }' "$STATE")
     prev_aihot=$(awk -F= '$1 == "AIHOT" { print $2 }' "$STATE")
     prev_freshness=$(awk -F= '$1 == "FRESHNESS" { print $2 }' "$STATE")
+    prev_horizon=$(awk -F= '$1 == "HORIZON" { print $2 }' "$STATE")
     prev_page=${prev_page:-OK}
     prev_aihot=${prev_aihot:-OK}
     prev_freshness=${prev_freshness:-OK}
+    prev_horizon=${prev_horizon:-UNKNOWN}
   else
     prev_page=$(cat "$STATE" 2>/dev/null || echo OK)
   fi
 fi
-printf 'PAGE=%s\nAIHOT=%s\nFRESHNESS=%s\n' "$page_state" "$aihot_state" "$freshness_state" > "$STATE"
-echo "$TS page=$page_state count=$page_count(prev=$prev_page) aihot=$aihot_state http=$aihot_code count=$aihot_count attempts=$aihot_attempt(prev=$prev_aihot) freshness=$freshness_state age=${freshness_age}s checkedAt=$freshness_checked(prev=$prev_freshness)" >> "$LOG"
+printf 'PAGE=%s\nAIHOT=%s\nFRESHNESS=%s\nHORIZON=%s\n' "$page_state" "$aihot_state" "$freshness_state" "$horizon_state" > "$STATE"
+echo "$TS page=$page_state count=$page_count(prev=$prev_page) aihot=$aihot_state http=$aihot_code count=$aihot_count attempts=$aihot_attempt(prev=$prev_aihot) freshness=$freshness_state age=${freshness_age}s checkedAt=$freshness_checked(prev=$prev_freshness) horizon=$horizon_state mode=$horizon_mode count=$horizon_count age=${horizon_age}s checkedAt=$horizon_checked(prev=$prev_horizon)" >> "$LOG"
 
 send_card() {
   local template="$1" title="$2" content="$3" webhook
@@ -113,6 +143,12 @@ if [[ "$aihot_state" != "$prev_aihot" ]]; then
   else
     send_card green '✅ aihot 主源：已恢复' "aihot 实时接口恢复，HTTP **$aihot_code**，本次 **$aihot_count** 条。\n- **时间**: $TS"
   fi
+fi
+
+if [[ "$horizon_state" == CRIT && "$prev_horizon" != CRIT ]]; then
+  send_card orange '📡 每日 AI 精选：异常' "Horizon 精选任务未按期完成，实时资讯和理论雷达不受影响。\n- **模式**: $horizon_mode\n- **精选条数**: $horizon_count\n- **最后检查**: $horizon_checked\n- **缓存年龄**: ${horizon_age} 秒\n- **错误**: ${horizon_error:0:240}\n- **时间**: $TS"
+elif [[ "$horizon_state" == OK && "$prev_horizon" == CRIT ]]; then
+  send_card green '✅ 每日 AI 精选：已恢复' "Horizon 精选任务恢复。\n- **模式**: $horizon_mode\n- **精选条数**: $horizon_count\n- **最后检查**: $horizon_checked\n- **时间**: $TS"
 fi
 
 tail -n 500 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"

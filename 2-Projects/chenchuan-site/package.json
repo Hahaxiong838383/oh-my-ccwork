@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:analytics": "node --experimental-strip-types scripts/test-analytics-classification.mjs",
-    "test:patents": "node --experimental-strip-types scripts/test-patents.mjs"
+    "test:patents": "node --experimental-strip-types scripts/test-patents.mjs",
+    "test:horizon": "node --experimental-strip-types scripts/test-horizon-radar.mjs && python3 ops/horizon-radar/test_adapter.py"
   },
   "dependencies": {
     "@directus/sdk": "^21.2.0",

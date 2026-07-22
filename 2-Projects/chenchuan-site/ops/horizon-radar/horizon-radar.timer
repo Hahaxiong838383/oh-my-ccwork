@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Horizon AI digest every morning
+
+[Timer]
+OnCalendar=*-*-* 08:10:00 Asia/Shanghai
+RandomizedDelaySec=10min
+Persistent=true
+Unit=horizon-radar.service
+
+[Install]
+WantedBy=timers.target
