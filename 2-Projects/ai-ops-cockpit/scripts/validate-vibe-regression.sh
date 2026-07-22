@@ -17,6 +17,7 @@ PILOT=/tmp/aiops-vibe-pilot.html
 PROJECT=/tmp/aiops-vibe-project.html
 CPA_PROJECT=/tmp/aiops-vibe-cpa-project.html
 IPTV_PROJECT=/tmp/aiops-vibe-iptv-project.html
+VOICE_PROJECT=/tmp/aiops-vibe-voice-project.html
 RUNTIME=/tmp/aiops-vibe-runtime.html
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/" -o "$PAGE"
 python3 - "$PAGE" > /tmp/aiops-vibe-script.js <<'PY'
@@ -49,6 +50,7 @@ grep -q 'Workflow 权限矩阵' "$PILOT"
 grep -q '/vibe/project?id=chenchuan-site' "$PILOT"
 grep -q '/vibe/project?id=cpa-smart-router' "$PILOT"
 grep -q '/vibe/project?id=iptv-api' "$PILOT"
+grep -q '/vibe/project?id=realtime-voice-agent' "$PILOT"
 python3 - "$PILOT" > /tmp/aiops-vibe-pilot-script.js <<'PY'
 import sys
 html=open(sys.argv[1]).read()
@@ -78,11 +80,12 @@ curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.haha
 runtime_action_code=$(curl --http1.1 -sS -o /tmp/aiops-runtime-action-denied.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"tool":"run-controlled-action","project":"chenchuan-site","action":"restart","confirmation":"RESTART_CHENCHUAN_SITE"}' "$BASE/vibe/ops-runtime/run")
 test "$runtime_action_code" = "403"
 jq -e '.error=="action token required"' /tmp/aiops-runtime-action-denied.json >/dev/null
-curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/assets.json" | jq -e '(.servers|length)>=5 and (.servers[] | select(.name=="阿里云日本 CPA" and .status=="已巡检" and .readinessScore>=90)) and (.workspaces|length)>=1' >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/assets.json" | jq -e '(.servers|length)>=6 and (.servers[] | select(.name=="阿里云日本 CPA" and .status=="已巡检" and .readinessScore>=90)) and (.servers[] | select(.name=="企航云香港 Voice Worker" and .status=="已巡检" and .readinessScore>=90)) and (.workspaces|length)>=1' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="MyJavis" and .status=="enabled" and .fileCount>=8)' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="chenchuan-site" and .status=="enabled" and .fileCount>=60)' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="cpa-smart-router" and .status=="enabled" and .fileCount>=8)' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="iptv-api" and .status=="enabled" and .fileCount>=6)' >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="realtime-voice-agent" and .status=="enabled" and .fileCount>=20)' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/pilot.json" | jq -e '(.projects|length)>=2 and (.workflowMatrix[] | select(.id=="patch_draft" and .permission=="draft_only"))' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/kuma-context.json" | jq -e 'has("downMonitors") and has("backup")' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project?id=chenchuan-site" -o "$PROJECT"
@@ -153,6 +156,21 @@ curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project.json?id=
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/live.json?id=iptv-api" | jq -e '.ok==true and .passed==1 and .total==1 and (.checks|length)==1' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/daily.json?id=iptv-api" | jq -e '.ok==true and .project=="iptv-api" and has("active") and has("latest")' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production.json?id=iptv-api" | jq -e '.ok==true and .project=="iptv-api" and .configured==true and (.allowedActions|index("refresh"))!=null and (.allowedActions|index("repair-publish-timer"))!=null and (.allowedActions|index("restart-iptv"))!=null and (.allowedActions|index("rollback-last-good"))!=null' >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project?id=realtime-voice-agent" -o "$VOICE_PROJECT"
+grep -q 'Realtime Voice Agent 项目工作区' "$VOICE_PROJECT"
+grep -q 'productionAction-restart-voice-worker' "$VOICE_PROJECT"
+python3 - "$VOICE_PROJECT" > /tmp/aiops-vibe-voice-project-script.js <<'PY'
+import sys
+html=open(sys.argv[1]).read()
+script=html.split('<script>',1)[1].split('</script>',1)[0]
+assert 'runDailyBtn' in script
+assert 'data-production-action' in script
+print(script)
+PY
+node --check /tmp/aiops-vibe-voice-project-script.js >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project.json?id=realtime-voice-agent" | jq -e '.project.allowlistCount>=20 and .context.ok==true and (.context.files|length)>=20 and .context.truncated==false and .project.production.processManager=="systemd" and (.workflowMatrix|length)>=4' >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/live.json?id=realtime-voice-agent" | jq -e '.ok==true and .passed==1 and .total==1 and (.checks|length)==1' >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production.json?id=realtime-voice-agent" | jq -e '.ok==true and .project=="realtime-voice-agent" and .configured==true and (.allowedActions|index("inspect"))!=null and (.allowedActions|index("restart-voice-worker"))!=null' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/report.json?kind=daily" | jq -e '(.summary | has("openTodos") and has("backupOk")) and (.pilotProjects|length)>=2' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/readonly-refresh.json" | jq -e 'has("mounted")' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"project":"chenchuan-site","workflow":"patch_draft"}' "$BASE/vibe/pilot/run" | jq -e '.ok==false and (.error|contains("pilot workflow"))' >/dev/null
@@ -165,6 +183,12 @@ jq -e '.error=="action token required"' /tmp/aiops-cpa-restart-denied.json >/dev
 iptv_restart_code=$(curl --http1.1 -sS -o /tmp/aiops-iptv-restart-denied.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"project":"iptv-api","action":"restart-iptv","confirmation":"RESTART_IPTV"}' "$BASE/vibe/project/production/action")
 test "$iptv_restart_code" = "403"
 jq -e '.error=="action token required"' /tmp/aiops-iptv-restart-denied.json >/dev/null
+voice_restart_code=$(curl --http1.1 -sS -o /tmp/aiops-voice-restart-denied.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"project":"realtime-voice-agent","action":"restart-voice-worker","confirmation":"RESTART_VOICE_WORKER"}' "$BASE/vibe/project/production/action")
+test "$voice_restart_code" = "403"
+jq -e '.error=="action token required"' /tmp/aiops-voice-restart-denied.json >/dev/null
+voice_bad_confirmation_code=$(curl --http1.1 -sS -o /tmp/aiops-voice-bad-confirmation.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" -H "X-AIOps-Action-Token: $OPS_ACTION_TOKEN" --data '{"project":"realtime-voice-agent","action":"restart-voice-worker","confirmation":"WRONG"}' "$BASE/vibe/project/production/action")
+test "$voice_bad_confirmation_code" = "200"
+jq -e '.ok==false and .error=="action confirmation required" and (has("jobId")|not)' /tmp/aiops-voice-bad-confirmation.json >/dev/null
 sleep "${AI_OPS_REGRESSION_SLEEP:-22}"
 RESP=$(curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"mode":"readonly_inspect","question":"回归验收：请只返回 AI_OPS_REGRESSION_OK。","conversation":"川哥: 回归测试发送主按钮。"}' "$BASE/vibe/task/run")
 printf "%s" "$RESP" | jq -e '.ok==true and (.answer|contains("AI_OPS_REGRESSION_OK"))' >/dev/null
@@ -184,6 +208,7 @@ docker exec ops-inspector sh -lc 'test -d /var/lib/ai-ops-state && mount | grep 
 docker exec ops-inspector sh -lc 'test -r /run/secrets/chenchuan-maintenance/id_ed25519 && test -r /run/secrets/chenchuan-maintenance/known_hosts && mount | grep -q /run/secrets/chenchuan-maintenance'
 docker exec ops-inspector sh -lc 'test -r /run/secrets/cpa-jp-maintenance/id_ed25519 && test -r /run/secrets/cpa-jp-maintenance/known_hosts && mount | grep -q /run/secrets/cpa-jp-maintenance'
 docker exec ops-inspector sh -lc 'test -r /run/secrets/iptv-maintenance/id_ed25519 && test -r /run/secrets/iptv-maintenance/known_hosts && mount | grep -q /run/secrets/iptv-maintenance'
+docker exec ops-inspector sh -lc 'test -r /run/secrets/qihang-hk-maintenance/id_ed25519 && test -r /run/secrets/qihang-hk-maintenance/known_hosts && mount | grep -q /run/secrets/qihang-hk-maintenance'
 docker exec ops-inspector python -c 'import server; data=server.parse_maintenance_response("{\n  \"ok\": true,\n  \"k12\": {\"count\": 2}\n}\n"); assert data["ok"] is True and data["k12"]["count"]==2'
-docker exec ops-terminal bash -lc 'test -f /workspace/readonly/MyJavis/README.md && test -f /workspace/readonly/chenchuan-site/README.md && test -f /workspace/readonly/chenchuan-site/src/app/page.tsx && test -f /workspace/readonly/chenchuan-site/src/lib/radar/index.ts && test -f /workspace/readonly/chenchuan-site/docs/theory-radar-aiops-handoff.md && test -f /workspace/readonly/chenchuan-site/services/theory-radar/theory_radar.py && test -f /workspace/readonly/cpa-smart-router/README.md && test -f /workspace/readonly/cpa-smart-router/cmd/router/main.go && test -f /workspace/readonly/iptv-api/compose.yaml && test -f /workspace/readonly/iptv-api/config/config.ini && test -f /workspace/readonly/iptv-api/scripts/validate-and-publish.sh && test -f /workspace/readonly/iptv-api/scripts/install-validate-publish-timer.sh && test -f /workspace/readonly/iptv-api/systemd/iptv-validate-publish.timer && ! test -e /workspace/readonly/MyJavis/.env && ! test -e /workspace/readonly/chenchuan-site/.env.local && ! test -e /workspace/readonly/chenchuan-site/services/theory-radar/.env && ! test -e /workspace/readonly/cpa-smart-router/.env && ! test -e /workspace/readonly/cpa-smart-router/router.json && ! test -e /workspace/readonly/iptv-api/.env && ! test -e /workspace/readonly/iptv-api/output && ! test -e /workspace/readonly/chenchuan-site/src/app/api && ! test -e /workspace/readonly/chenchuan-site/src/lib/analytics && ! test -e /workspace/readonly/chenchuan-site/src/lib/chat && ! test -e /workspace/readonly/chenchuan-site/data'
+docker exec ops-terminal bash -lc 'test -f /workspace/readonly/MyJavis/README.md && test -f /workspace/readonly/chenchuan-site/README.md && test -f /workspace/readonly/chenchuan-site/src/app/page.tsx && test -f /workspace/readonly/chenchuan-site/src/lib/radar/index.ts && test -f /workspace/readonly/chenchuan-site/docs/theory-radar-aiops-handoff.md && test -f /workspace/readonly/chenchuan-site/services/theory-radar/theory_radar.py && test -f /workspace/readonly/cpa-smart-router/README.md && test -f /workspace/readonly/cpa-smart-router/cmd/router/main.go && test -f /workspace/readonly/iptv-api/compose.yaml && test -f /workspace/readonly/iptv-api/config/config.ini && test -f /workspace/readonly/iptv-api/scripts/validate-and-publish.sh && test -f /workspace/readonly/iptv-api/scripts/install-validate-publish-timer.sh && test -f /workspace/readonly/iptv-api/systemd/iptv-validate-publish.timer && test -f /workspace/readonly/realtime-voice-agent/README.md && test -f /workspace/readonly/realtime-voice-agent/pyproject.toml && test -f /workspace/readonly/realtime-voice-agent/src/voice_agent/kernel/memory_kernel.py && test -f /workspace/readonly/realtime-voice-agent/tests/test_contract.py && ! test -e /workspace/readonly/MyJavis/.env && ! test -e /workspace/readonly/chenchuan-site/.env.local && ! test -e /workspace/readonly/chenchuan-site/services/theory-radar/.env && ! test -e /workspace/readonly/cpa-smart-router/.env && ! test -e /workspace/readonly/cpa-smart-router/router.json && ! test -e /workspace/readonly/iptv-api/.env && ! test -e /workspace/readonly/iptv-api/output && ! test -e /workspace/readonly/realtime-voice-agent/.env && ! test -e /workspace/readonly/realtime-voice-agent/data && ! test -e /workspace/readonly/realtime-voice-agent/assets/models && ! test -e /workspace/readonly/realtime-voice-agent/assets/speakers && ! test -e /workspace/readonly/chenchuan-site/src/app/api && ! test -e /workspace/readonly/chenchuan-site/src/lib/analytics && ! test -e /workspace/readonly/chenchuan-site/src/lib/chat && ! test -e /workspace/readonly/chenchuan-site/data'
 printf 'OK vibe regression\n'

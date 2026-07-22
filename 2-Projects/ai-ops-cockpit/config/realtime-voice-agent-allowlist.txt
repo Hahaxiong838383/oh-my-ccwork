@@ -1,0 +1,31 @@
+# Project rules and build metadata
+README.md
+Makefile
+pyproject.toml
+
+# Architecture and deployment documentation
+docs/ARCHITECTURE.md
+docs/PRODUCT-DEFINITION-v3.3.md
+docs/DEPLOYMENT-MINI-STUDIO.md
+
+# Stable contracts, kernel and runtime orchestration
+src/voice_agent/app.py
+src/voice_agent/config.py
+src/voice_agent/contract/events.py
+src/voice_agent/contract/types.py
+src/voice_agent/kernel/arbitration.py
+src/voice_agent/kernel/draft.py
+src/voice_agent/kernel/event_log.py
+src/voice_agent/kernel/extraction.py
+src/voice_agent/kernel/memory_kernel.py
+src/voice_agent/kernel/model.py
+src/voice_agent/kernel/projections.py
+src/voice_agent/pipeline/cold_path.py
+src/voice_agent/pipeline/hot_path.py
+src/voice_agent/pipeline/session.py
+
+# Safe tests used for read-only diagnosis
+tests/test_contract.py
+tests/test_event_log.py
+tests/test_memory_kernel.py
+tests/test_session.py

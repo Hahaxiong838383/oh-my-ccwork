@@ -100,6 +100,7 @@ services:
       - ./secrets/chenchuan-maintenance:/run/secrets/chenchuan-maintenance:ro
       - ./secrets/cpa-jp-maintenance:/run/secrets/cpa-jp-maintenance:ro
       - ./secrets/iptv-maintenance:/run/secrets/iptv-maintenance:ro
+      - ./secrets/qihang-hk-maintenance:/run/secrets/qihang-hk-maintenance:ro
     depends_on:
       - uptime-kuma
       - netdata

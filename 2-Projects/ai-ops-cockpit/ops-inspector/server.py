@@ -82,12 +82,16 @@ PROJECT_LIVE_PROBES = {
     "iptv-api": [
         {"id": "iptv-health", "name": "IPTV 私人 M3U 就绪度", "url": "https://kidshub-ai.hahaxiong.cc/ops-health/iptv", "path": "/ops-health/iptv", "kind": "json", "jsonOkField": "ok"},
     ],
+    "realtime-voice-agent": [
+        {"id": "voice-worker", "name": "企航云香港 Voice Worker", "url": "http://64.90.13.117:8081/", "path": "/", "kind": "http", "expectedStatuses": [200]},
+    ],
 }
 
 PROJECT_DAILY_PUSH_URLS = {
     "chenchuan-site": os.environ.get("CHENCHUAN_DAILY_PUSH_URL", ""),
     "cpa-smart-router": os.environ.get("CPA_DAILY_PUSH_URL", ""),
     "iptv-api": os.environ.get("IPTV_DAILY_PUSH_URL", ""),
+    "realtime-voice-agent": "",
 }
 
 
@@ -138,6 +142,18 @@ IPTV_API_FALLBACK_ALLOWLIST = [
     "scripts/rollback-last-good.sh",
 ]
 
+REALTIME_VOICE_AGENT_FALLBACK_ALLOWLIST = [
+    "README.md",
+    "Makefile",
+    "pyproject.toml",
+    "docs/ARCHITECTURE.md",
+    "docs/PRODUCT-DEFINITION-v3.3.md",
+    "src/voice_agent/app.py",
+    "src/voice_agent/contract/events.py",
+    "src/voice_agent/kernel/memory_kernel.py",
+    "src/voice_agent/pipeline/session.py",
+]
+
 
 PROJECT_ALLOWLIST = {
     "mycc": [
@@ -174,7 +190,7 @@ PROJECT_ALLOWLIST = {
         "apps/web/vite.config.ts",
         "apps/web/index.html",
     ],
-    "realtime-voice-agent": [],
+    "realtime-voice-agent": load_allowlist_file("realtime-voice-agent", REALTIME_VOICE_AGENT_FALLBACK_ALLOWLIST),
     "P003GameDemo20260513": [],
 }
 
@@ -314,6 +330,34 @@ PILOT_PROJECTS = {
         "risk": "中风险：仅允许读 README/HANDOFF/package/tsconfig/vite/index，禁止数据库和 secrets。",
         "goal": "确认 MyJavis 当前结构、备份关联点、可观测性缺口和下一步方案。",
         "firstWorkflow": "readonly_inspect",
+    },
+    "realtime-voice-agent": {
+        "name": "Realtime Voice Agent",
+        "path": "/workspace/readonly/realtime-voice-agent",
+        "risk": "中风险：仅允许读取架构、稳定契约、记忆内核、编排代码与安全测试；环境变量、音频、模型、声纹、事件日志、数据库和运行数据保持隔离。",
+        "goal": "持续验证企航云香港 Voice Worker 的服务状态、8081 端口、公网入口、资源余量和安全源码快照。",
+        "firstWorkflow": "readonly_inspect",
+        "production": {
+            "domain": "http://64.90.13.117:8081",
+            "sshAlias": "qihang-hk",
+            "address": "64.90.13.117",
+            "maintenanceUser": "aiops",
+            "maintenancePort": 22,
+            "path": "/root/realtime-voice-agent",
+            "processManager": "systemd",
+            "services": ["voice-worker"],
+            "maintenanceSecretDir": "/run/secrets/qihang-hk-maintenance",
+            "maintenanceActions": ["inspect", "restart-voice-worker"],
+            "maintenanceConfirmations": {
+                "restart-voice-worker": "RESTART_VOICE_WORKER",
+            },
+            "maintenanceLabels": {
+                "inspect": "巡检 Voice Worker",
+                "restart-voice-worker": "确认后重启 Voice Worker",
+            },
+            "maintenanceTimeoutSeconds": 60,
+            "verifiedAt": "2026-07-22",
+        },
     },
 }
 
@@ -906,7 +950,22 @@ def servers_matrix_payload():
         "readinessScore": 90 if cpa_ready else (60 if cpa_status.get("configured") else None),
         "risk": "最近限权巡检通过（非业务健康结论）" if cpa_ready else "维护通道已配置，等待巡检证据" if cpa_status.get("configured") else "限权维护通道未配置",
     }
-    return {"servers": [racknerd, cpa_server] + planned, "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")}
+    voice_status = project_production_status_payload("realtime-voice-agent") or {}
+    voice_latest = voice_status.get("latest") or {}
+    voice_ready = bool(voice_status.get("configured") and voice_latest.get("ok"))
+    voice_server = {
+        "name": "企航云香港 Voice Worker",
+        "role": "Realtime Voice Agent 生产节点",
+        "status": "已巡检" if voice_ready else ("待巡检" if voice_status.get("configured") else "待接入"),
+        "containers": None,
+        "unhealthy": None,
+        "maxDiskUsedPercent": ((voice_latest.get("result") or {}).get("host") or {}).get("diskUsedPercent"),
+        "monitorsDown": None,
+        "lastChecked": voice_latest.get("updatedAt"),
+        "readinessScore": 90 if voice_ready else (60 if voice_status.get("configured") else None),
+        "risk": "最近限权巡检通过（非业务健康结论）" if voice_ready else "维护通道已配置，等待巡检证据" if voice_status.get("configured") else "限权维护通道未配置",
+    }
+    return {"servers": [racknerd, cpa_server, voice_server] + planned, "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")}
 
 
 def remote_server_matrix():
@@ -1347,7 +1406,7 @@ def sanitize_production_inspection(payload):
     services = payload.get("services") or {}
     if isinstance(services, dict) and services:
         sanitized["services"] = {}
-        for name in ("cliproxy", "cpa-smart-router", "iptv-api"):
+        for name in ("cliproxy", "cpa-smart-router", "iptv-api", "voice-worker"):
             if name not in services:
                 continue
             service = services.get(name) or {}
@@ -1360,11 +1419,11 @@ def sanitize_production_inspection(payload):
             }
     ports = payload.get("ports") or {}
     if isinstance(ports, dict) and ports:
-        sanitized["ports"] = {str(port): bool(ports.get(str(port))) for port in (8317, 8327)}
+        sanitized["ports"] = {str(port): bool(ports.get(str(port))) for port in (8081, 8317, 8327) if str(port) in ports}
     probes = payload.get("probes") or {}
     if isinstance(probes, dict) and probes:
         sanitized["probes"] = {}
-        for name in ("directModels", "smartModels", "directChat", "smartChat", "playlist"):
+        for name in ("directModels", "smartModels", "directChat", "smartChat", "playlist", "voiceWorker"):
             if name not in probes:
                 continue
             probe = probes.get(name) or {}
@@ -1378,7 +1437,11 @@ def sanitize_production_inspection(payload):
                 "ageSeconds": probe.get("ageSeconds"),
                 "latencyMs": probe.get("latencyMs"),
                 "updatedAt": str(probe.get("updatedAt") or "")[:120] or None,
+                "bytes": probe.get("bytes"),
             }
+    logs = payload.get("logs") or {}
+    if isinstance(logs, dict) and logs:
+        sanitized["logs"] = {"warning24h": logs.get("warning24h")}
     versions = payload.get("versions") or {}
     if isinstance(versions, dict) and versions:
         sanitized["versions"] = {
@@ -1887,6 +1950,8 @@ def project_daily_question(project_id):
         lines.insert(4, "Theory Radar 必查：publish 是否启用、日报/周度 timer、运行日期与阶段、Grok 模型、论文数、RSS/OpenAlex 计数、publish_result、公网当日归档和双生产者覆盖风险。")
     if project_id == "iptv-api":
         lines.insert(4, "IPTV 必查：validate-and-publish timer 必须 enabled+active、published/health 年龄不超过 36 小时、频道数和真实抽样通过；就绪度 200 不能替代发布新鲜度。")
+    if project_id == "realtime-voice-agent":
+        lines.insert(4, "Voice Worker 必查：voice-worker.service 必须 active/running、8081 必须监听、本机与公网探测必须 200、NRestarts 不应异常增长，并关注最近 24 小时 warning 数与资源余量。")
     return "\n".join(lines)
 
 

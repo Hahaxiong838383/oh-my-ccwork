@@ -137,6 +137,13 @@ flowchart TD
 
 ## 实施记录
 
+### 2026-07-22 企航云香港 Voice Worker 接入
+
+- 将 `realtime-voice-agent` 从占位项目升级为文件级 allowlist 只读项目；环境变量、音频、模型、声纹、事件日志、数据库和运行数据继续隔离。
+- 新增企航云香港生产限权通道：专用 SSH key 仅允许 `inspect` 和确认后 `restart-voice-worker`，禁止任意 shell、部署和文件写入。
+- 新增公网 `8081` 探测、资产矩阵条目和 Uptime Kuma 监控；所有页面仅展示就绪度与脱敏证据，不制造业务健康结论。
+- 接入验收覆盖项目页面、Ops Tool Runtime、错误确认词拒绝、只读快照防泄漏、维护通道巡检、Kuma UP 和原有主流程回归。
+
 ### 2026-07-07 Phase 1 基础驾驶舱
 
 已在 RackNerd VPS 完成基础栈部署：

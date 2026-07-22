@@ -149,6 +149,7 @@ fi
 copy_manifest_snapshot chenchuan-site "$SRC_ROOT/chenchuan-site" "$ROOT/config/chenchuan-site-allowlist.txt"
 copy_manifest_snapshot cpa-smart-router "$SRC_ROOT/cpa-smart-router" "$ROOT/config/cpa-smart-router-allowlist.txt"
 copy_manifest_snapshot iptv-api "$SRC_ROOT/iptv-api" "$ROOT/config/iptv-api-allowlist.txt"
+copy_manifest_snapshot realtime-voice-agent "$SRC_ROOT/realtime-voice-agent" "$ROOT/config/realtime-voice-agent-allowlist.txt"
 copy_allowlist_snapshot MyJavis "$SRC_ROOT/MyJavis" \
   README.md \
   HANDOFF.md \
@@ -160,7 +161,6 @@ copy_allowlist_snapshot MyJavis "$SRC_ROOT/MyJavis" \
   apps/web/tsconfig.json \
   apps/web/vite.config.ts \
   apps/web/index.html
-create_project_placeholder realtime-voice-agent
 create_project_placeholder P003GameDemo20260513
 
 cat > "$DEST_ROOT/README.md" <<'EOF'
