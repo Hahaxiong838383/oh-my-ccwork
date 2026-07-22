@@ -143,6 +143,9 @@ flowchart TD
 - 新增企航云香港生产限权通道：专用 SSH key 仅允许 `inspect` 和确认后 `restart-voice-worker`，禁止任意 shell、部署和文件写入。
 - 新增公网 `8081` 探测、资产矩阵条目和 Uptime Kuma 监控；所有页面仅展示就绪度与脱敏证据，不制造业务健康结论。
 - 接入验收覆盖项目页面、Ops Tool Runtime、错误确认词拒绝、只读快照防泄漏、维护通道巡检、Kuma UP 和原有主流程回归。
+- 新增 n8n 工作流 `企航云 Voice Worker 每日 AI 巡检`：每天 `09:40 Asia/Shanghai` 调用 AI Ops 每日巡检入口，鉴权继续使用 n8n 私密变量 `AIOPS_READ_TOKEN`。
+- 新增同名 Kuma Push 监控：完整链路必须同时通过公网探测、文件级快照、限权生产巡检和 OPS Grok 任务后才发送成功心跳；36 小时未收到心跳则通过「飞书运维告警」通知。
+- 首次验收任务 `daily-20260722-132517-1f7bf0`：公网 `1/1`、快照 `24/24`、`voice-worker.service` 为 `active/running`、8081 监听与 HTTP 200、Grok 任务成功、Kuma 心跳 UP；全量回归 `OK vibe regression`。
 
 ### 2026-07-07 Phase 1 基础驾驶舱
 

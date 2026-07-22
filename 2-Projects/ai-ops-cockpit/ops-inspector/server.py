@@ -91,7 +91,7 @@ PROJECT_DAILY_PUSH_URLS = {
     "chenchuan-site": os.environ.get("CHENCHUAN_DAILY_PUSH_URL", ""),
     "cpa-smart-router": os.environ.get("CPA_DAILY_PUSH_URL", ""),
     "iptv-api": os.environ.get("IPTV_DAILY_PUSH_URL", ""),
-    "realtime-voice-agent": "",
+    "realtime-voice-agent": os.environ.get("VOICE_DAILY_PUSH_URL", ""),
 }
 
 

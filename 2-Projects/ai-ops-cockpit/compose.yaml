@@ -88,6 +88,7 @@ services:
       CHENCHUAN_DAILY_PUSH_URL: ${CHENCHUAN_DAILY_PUSH_URL:-}
       CPA_DAILY_PUSH_URL: ${CPA_DAILY_PUSH_URL:-}
       IPTV_DAILY_PUSH_URL: ${IPTV_DAILY_PUSH_URL:-}
+      VOICE_DAILY_PUSH_URL: ${VOICE_DAILY_PUSH_URL:-}
       PRODUCTION_SSH_DIR: /run/secrets/chenchuan-maintenance
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
