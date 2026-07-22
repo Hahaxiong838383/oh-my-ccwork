@@ -14,6 +14,11 @@ def utcish_now():
 
 def tool_specs(projects):
     project_ids = sorted(projects.keys())
+    production_project_ids = sorted(
+        project_id
+        for project_id, project in projects.items()
+        if project.get("production")
+    )
     return [
         {
             "name": "list-project-profile",
@@ -39,7 +44,7 @@ def tool_specs(projects):
             "description": "通过专用限权通道执行 inspect，只返回脱敏生产状态。",
             "risk": RISK_READONLY,
             "permission": "read_token",
-            "projects": project_ids,
+            "projects": production_project_ids,
             "schema": {"project": "string"},
         },
         {
@@ -48,7 +53,7 @@ def tool_specs(projects):
             "description": "读取最近一次生产维护审计记录，不触发远端命令。",
             "risk": RISK_READONLY,
             "permission": "read_token",
-            "projects": project_ids,
+            "projects": production_project_ids,
             "schema": {"project": "string"},
         },
         {
@@ -57,7 +62,7 @@ def tool_specs(projects):
             "description": "复用既有限权维护通道；必须 action token、确认词、冷却和动作后验收。",
             "risk": RISK_CONFIRM,
             "permission": "action_token",
-            "projects": project_ids,
+            "projects": production_project_ids,
             "schema": {"project": "string", "action": "string", "confirmation": "string"},
         },
         {
@@ -96,7 +101,7 @@ def project_profiles(projects, allowlists, live_probes, allowed_actions_fn, labe
                 {
                     "id": action,
                     "label": label_fn(project_id, action),
-                    "risk": RISK_READONLY if action == "inspect" else RISK_CONFIRM,
+                    "risk": RISK_CONFIRM if confirmation_fn(project_id, action) else RISK_READONLY,
                     "confirmationRequired": bool(confirmation_fn(project_id, action)),
                 }
                 for action in actions

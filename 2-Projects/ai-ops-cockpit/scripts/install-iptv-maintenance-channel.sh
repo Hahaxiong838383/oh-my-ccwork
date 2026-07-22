@@ -80,6 +80,26 @@ def container_status():
         return {"active": "unknown", "subState": "unknown", "pid": 0, "restartCount": 0, "activeSince": None}
 
 
+def command_value(command):
+    try:
+        return subprocess.check_output(command, universal_newlines=True, stderr=subprocess.DEVNULL).strip()[:160]
+    except Exception:
+        return None
+
+
+def iso_age_seconds(value):
+    if not value:
+        return None
+    try:
+        normalized = value.replace("Z", "+0000")
+        if len(normalized) >= 6 and normalized[-3] == ":":
+            normalized = normalized[:-3] + normalized[-2:]
+        parsed = datetime.datetime.strptime(normalized, "%Y-%m-%dT%H:%M:%S.%f%z")
+        return max(0, round((datetime.datetime.now(datetime.timezone.utc) - parsed).total_seconds()))
+    except Exception:
+        return None
+
+
 health = {}
 try:
     with open("/var/lib/iptv-aiops/health.json", encoding="utf-8") as handle:
@@ -87,13 +107,25 @@ try:
 except Exception:
     pass
 service = container_status()
+playlist_updated_at = health.get("generatedAt")
+playlist_age = iso_age_seconds(playlist_updated_at)
 playlist = {
     "ok": bool(health.get("ok")),
     "status": health.get("status") or "missing",
     "channelCount": int(health.get("channelCount") or 0),
     "samplePassed": int(health.get("samplePassed") or 0),
     "sampleTotal": int(health.get("sampleTotal") or 0),
-    "updatedAt": health.get("generatedAt"),
+    "updatedAt": playlist_updated_at,
+    "ageSeconds": playlist_age,
+}
+timer_enabled = command_value(["systemctl", "is-enabled", "iptv-validate-publish.timer"])
+timer_active = command_value(["systemctl", "is-active", "iptv-validate-publish.timer"])
+scheduler = {
+    "ok": timer_enabled == "enabled" and timer_active == "active",
+    "enabled": timer_enabled,
+    "active": timer_active,
+    "nextElapse": command_value(["systemctl", "show", "iptv-validate-publish.timer", "--property=NextElapseUSecRealtime", "--value"]),
+    "lastResult": command_value(["systemctl", "show", "iptv-validate-publish.service", "--property=Result", "--value"]),
 }
 disk = shutil.disk_usage("/")
 memory_available_kb = None
@@ -103,11 +135,12 @@ with open("/proc/meminfo", encoding="utf-8") as meminfo:
             memory_available_kb = int(line.split()[1])
             break
 payload = {
-    "ok": service["active"] == "active" and playlist["ok"],
+    "ok": service["active"] == "active" and playlist["ok"] and scheduler["ok"] and playlist_age is not None and playlist_age <= 129600,
     "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     "hostname": socket.gethostname(),
     "services": {"iptv-api": service},
     "probes": {"playlist": playlist},
+    "scheduler": scheduler,
     "host": {
         "load1": round(os.getloadavg()[0], 2),
         "diskUsedPercent": round((disk.used / disk.total) * 100, 1) if disk.total else None,
@@ -143,6 +176,10 @@ case "$ACTION" in
     printf '{"ok":false,"error":"refresh_timeout"}\n'
     exit 1
     ;;
+  repair-publish-timer)
+    "$ROOT/scripts/install-validate-publish-timer.sh" --run-now >/dev/null
+    inspect
+    ;;
   restart-iptv)
     cd "$ROOT"
     compose restart iptv-api >/dev/null
@@ -166,7 +203,7 @@ cat > /usr/local/bin/aiops-iptv-dispatch <<'DISPATCH'
 #!/usr/bin/env bash
 set -euo pipefail
 case "${SSH_ORIGINAL_COMMAND:-}" in
-  inspect|refresh|restart-iptv|rollback-last-good)
+  inspect|refresh|repair-publish-timer|restart-iptv|rollback-last-good)
     exec sudo -n /usr/local/sbin/aiops-iptv-control "$SSH_ORIGINAL_COMMAND"
     ;;
   *)
@@ -180,7 +217,7 @@ chown root:root /usr/local/bin/aiops-iptv-dispatch
 
 cat > /etc/sudoers.d/aiops-iptv <<'SUDOERS'
 Defaults:aiops !requiretty
-aiops ALL=(root) NOPASSWD: /usr/local/sbin/aiops-iptv-control inspect, /usr/local/sbin/aiops-iptv-control refresh, /usr/local/sbin/aiops-iptv-control restart-iptv, /usr/local/sbin/aiops-iptv-control rollback-last-good
+aiops ALL=(root) NOPASSWD: /usr/local/sbin/aiops-iptv-control inspect, /usr/local/sbin/aiops-iptv-control refresh, /usr/local/sbin/aiops-iptv-control repair-publish-timer, /usr/local/sbin/aiops-iptv-control restart-iptv, /usr/local/sbin/aiops-iptv-control rollback-last-good
 SUDOERS
 chmod 0440 /etc/sudoers.d/aiops-iptv
 visudo -cf /etc/sudoers.d/aiops-iptv >/dev/null

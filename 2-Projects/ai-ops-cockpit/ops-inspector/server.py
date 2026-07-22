@@ -209,8 +209,8 @@ PILOT_PROJECTS = {
     "chenchuan-site": {
         "name": "chenchuan-site",
         "path": "/workspace/readonly/chenchuan-site",
-        "risk": "低风险：只读巡检公开页面、组件和安全业务逻辑；后台、API 鉴权、数据库、环境变量与媒体原文件保持隔离。",
-        "goal": "基于真实只读源码确认个人站结构、部署线索、潜在风险和下一步低风险优化。",
+        "risk": "低风险：只读巡检公开页面、组件、雷达服务和安全业务逻辑；后台、API 鉴权、数据库、运行态、环境变量与媒体原文件保持隔离。",
+        "goal": "持续维护个人站与 Theory Radar：结合公开探测、限权生产状态和安全源码快照定位故障，优先恢复日报发布并保护 last-good。",
         "firstWorkflow": "readonly_inspect",
         "production": {
             "domain": "https://my.chenchuan.cc",
@@ -222,17 +222,22 @@ PILOT_PROJECTS = {
             "processManager": "PM2",
             "process": "chenchuan-site",
             "maintenanceSecretDir": PRODUCTION_SSH_DIR,
-            "maintenanceActions": ["inspect", "refresh-radar", "restart"],
+            "maintenanceActions": ["inspect", "refresh-radar", "run-theory-radar", "restart-theory-radar-timers", "restart"],
             "maintenanceConfirmations": {
                 "refresh-radar": "REFRESH_RADAR",
+                "run-theory-radar": "RUN_THEORY_RADAR",
+                "restart-theory-radar-timers": "RESTART_THEORY_RADAR_TIMERS",
                 "restart": "RESTART_CHENCHUAN_SITE",
             },
             "maintenanceLabels": {
                 "inspect": "巡检生产状态",
                 "refresh-radar": "确认后修复雷达刷新",
+                "run-theory-radar": "确认后立即执行 Theory Radar",
+                "restart-theory-radar-timers": "确认后重载 Theory Radar 定时器",
                 "restart": "确认后重启个人站",
             },
-            "verifiedAt": "2026-07-10",
+            "maintenanceTimeoutSeconds": 900,
+            "verifiedAt": "2026-07-14",
         },
     },
     "cpa-smart-router": {
@@ -285,15 +290,17 @@ PILOT_PROJECTS = {
             "processManager": "Docker Compose",
             "services": ["iptv-api"],
             "maintenanceSecretDir": "/run/secrets/iptv-maintenance",
-            "maintenanceActions": ["inspect", "refresh", "restart-iptv", "rollback-last-good"],
+            "maintenanceActions": ["inspect", "refresh", "repair-publish-timer", "restart-iptv", "rollback-last-good"],
             "maintenanceConfirmations": {
                 "refresh": "REFRESH_IPTV",
+                "repair-publish-timer": "REPAIR_IPTV_PUBLISH_TIMER",
                 "restart-iptv": "RESTART_IPTV",
                 "rollback-last-good": "ROLLBACK_IPTV",
             },
             "maintenanceLabels": {
                 "inspect": "巡检 IPTV 状态",
                 "refresh": "确认后立即更新 M3U",
+                "repair-publish-timer": "确认后修复发布定时器并执行一次校验",
                 "restart-iptv": "确认后重启 IPTV",
                 "rollback-last-good": "确认后回滚上个合格 M3U",
             },
@@ -1297,6 +1304,46 @@ def sanitize_production_inspection(payload):
             "endpointIp": str(radar.get("endpointIp") or "")[:64] or None,
             "monitorState": str(radar.get("monitorState") or "")[:120] or None,
         }
+    theory_radar = payload.get("theoryRadar") or {}
+    if isinstance(theory_radar, dict) and theory_radar:
+        source = theory_radar.get("source") or {}
+        sanitized["theoryRadar"] = {
+            "ok": bool(theory_radar.get("ok")),
+            "publishEnabled": bool(theory_radar.get("publishEnabled")),
+            "status": str(theory_radar.get("status") or "")[:40] or None,
+            "stage": str(theory_radar.get("stage") or "")[:40] or None,
+            "runDate": str(theory_radar.get("runDate") or "")[:40] or None,
+            "updatedAt": str(theory_radar.get("updatedAt") or "")[:120] or None,
+            "ageSeconds": theory_radar.get("ageSeconds"),
+            "provider": str(theory_radar.get("provider") or "")[:120] or None,
+            "paperCount": theory_radar.get("paperCount"),
+            "published": bool(theory_radar.get("published")),
+            "publishOk": bool(theory_radar.get("publishOk")),
+            "dailyTimer": str(theory_radar.get("dailyTimer") or "")[:40] or None,
+            "dailyNext": str(theory_radar.get("dailyNext") or "")[:120] or None,
+            "reconcileTimer": str(theory_radar.get("reconcileTimer") or "")[:40] or None,
+            "reconcileNext": str(theory_radar.get("reconcileNext") or "")[:120] or None,
+            "serviceResult": str(theory_radar.get("serviceResult") or "")[:40] or None,
+            "latestPublicReport": str(theory_radar.get("latestPublicReport") or "")[:160] or None,
+            "lastErrorType": str(theory_radar.get("lastErrorType") or "")[:120] or None,
+            "source": {
+                "rssOk": bool(source.get("rssOk")),
+                "rssCount": source.get("rssCount"),
+                "rssCategories": source.get("rssCategories"),
+                "openAlexOk": bool(source.get("openAlexOk")),
+                "openAlexCount": source.get("openAlexCount"),
+                "uniqueCandidates": source.get("uniqueCandidates"),
+            },
+        }
+    scheduler = payload.get("scheduler") or {}
+    if isinstance(scheduler, dict) and scheduler:
+        sanitized["scheduler"] = {
+            "ok": bool(scheduler.get("ok")),
+            "enabled": str(scheduler.get("enabled") or "")[:40] or None,
+            "active": str(scheduler.get("active") or "")[:40] or None,
+            "nextElapse": str(scheduler.get("nextElapse") or "")[:120] or None,
+            "lastResult": str(scheduler.get("lastResult") or "")[:40] or None,
+        }
     services = payload.get("services") or {}
     if isinstance(services, dict) and services:
         sanitized["services"] = {}
@@ -1328,6 +1375,7 @@ def sanitize_production_inspection(payload):
                 "channelCount": probe.get("channelCount"),
                 "samplePassed": probe.get("samplePassed"),
                 "sampleTotal": probe.get("sampleTotal"),
+                "ageSeconds": probe.get("ageSeconds"),
                 "latencyMs": probe.get("latencyMs"),
                 "updatedAt": str(probe.get("updatedAt") or "")[:120] or None,
             }
@@ -1411,12 +1459,16 @@ def sanitize_production_inspection(payload):
 
 def production_allowed_actions(project_id):
     production = (PILOT_PROJECTS.get(project_id) or {}).get("production") or {}
-    return list(production.get("maintenanceActions") or ["inspect", "restart"])
+    return list(production.get("maintenanceActions") or [])
 
 
 def production_action_confirmation(project_id, action):
     production = (PILOT_PROJECTS.get(project_id) or {}).get("production") or {}
     return (production.get("maintenanceConfirmations") or {}).get(action)
+
+
+def production_action_requires_confirmation(project_id, action):
+    return bool(production_action_confirmation(project_id, action))
 
 
 def production_action_label(project_id, action):
@@ -1463,13 +1515,31 @@ def run_production_command(project_id, action):
     if result.returncode != 0:
         return {"ok": False, "error": "maintenance command failed", "returnCode": result.returncode, "durationMs": round((time.time() - started) * 1000)}
     try:
-        raw_payload = json.loads(result.stdout.strip().splitlines()[-1])
-    except Exception:
+        raw_payload = parse_maintenance_response(result.stdout)
+    except ValueError:
         return {"ok": False, "error": "invalid maintenance response", "durationMs": round((time.time() - started) * 1000)}
     payload = sanitize_production_inspection(raw_payload)
     payload["durationMs"] = round((time.time() - started) * 1000)
     payload["channel"] = "restricted_ssh"
     return payload
+
+
+def parse_maintenance_response(stdout):
+    raw = (stdout or "").strip()
+    if not raw:
+        raise ValueError("empty maintenance response")
+    candidates = [raw]
+    lines = raw.splitlines()
+    if len(lines) > 1:
+        candidates.append(lines[-1].strip())
+    for candidate in candidates:
+        try:
+            payload = json.loads(candidate)
+        except Exception:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    raise ValueError("invalid maintenance response")
 
 
 def project_production_root(project_id):
@@ -1547,7 +1617,7 @@ def run_project_production_worker(job_id, project_id, action):
             "durationMs": round((time.time() - started) * 1000),
             "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
         })
-        if action != "inspect":
+        if production_action_requires_confirmation(project_id, action):
             try:
                 notification = send_feishu_text(production_action_notification_text(project_id, job))
                 job["notification"] = {"sent": True, "status": notification.get("status")}
@@ -1577,11 +1647,11 @@ def start_project_production_job(payload):
     if action not in production_allowed_actions(project_id):
         return {"ok": False, "error": "production action not allowed"}
     required_confirmation = production_action_confirmation(project_id, action)
-    if action != "inspect" and (not required_confirmation or payload.get("confirmation") != required_confirmation):
+    if required_confirmation and payload.get("confirmation") != required_confirmation:
         return {"ok": False, "error": "action confirmation required"}
     if not production_channel_configured(project_id):
         return {"ok": False, "error": "maintenance channel not configured"}
-    if action != "inspect":
+    if required_confirmation:
         restart_state_path = os.path.join(project_production_root(project_id), "last-" + re.sub(r"[^a-z0-9-]", "-", action.lower()) + ".json")
         restart_state = load_json_file(restart_state_path, {}) or {}
         elapsed = time.time() - float(restart_state.get("requestedTs") or 0)
@@ -1603,7 +1673,7 @@ def start_project_production_job(payload):
     }
     try:
         save_project_production_job(job)
-        if action != "inspect":
+        if required_confirmation:
             restart_state_path = os.path.join(project_production_root(project_id), "last-" + re.sub(r"[^a-z0-9-]", "-", action.lower()) + ".json")
             ensure_private_dir(project_production_root(project_id))
             save_json_file(restart_state_path, {"jobId": job_id, "requestedTs": time.time(), "requestedAt": job["createdAt"]})
@@ -1806,13 +1876,18 @@ def run_vibe_task_with_retry(mode, question, project_id, runtime_context, attemp
 
 def project_daily_question(project_id):
     project = PILOT_PROJECTS[project_id]
-    return "\n".join([
+    lines = [
         f"请执行 {project['name']} 每日只读 AI 巡检。",
         "请同时使用系统注入的文件级 allowlist 源码快照、本轮公网实时探测和生产限权巡检 JSON。",
         "输出必须按 BRO-PDCA：O1/O2、Plan、Do/观察、Check、Action。",
         "重点判断：公网入口与鉴权边界是否符合预期、源码快照是否完整且新鲜、生产服务/资源/真实低成本探测是否需要人工处理。",
         "只能分析和给建议；不得执行写文件、重启、部署、commit、push，也不得输出或索要任何 secret。",
-    ])
+    ]
+    if project_id == "chenchuan-site":
+        lines.insert(4, "Theory Radar 必查：publish 是否启用、日报/周度 timer、运行日期与阶段、Grok 模型、论文数、RSS/OpenAlex 计数、publish_result、公网当日归档和双生产者覆盖风险。")
+    if project_id == "iptv-api":
+        lines.insert(4, "IPTV 必查：validate-and-publish timer 必须 enabled+active、published/health 年龄不超过 36 小时、频道数和真实抽样通过；就绪度 200 不能替代发布新鲜度。")
+    return "\n".join(lines)
 
 
 def project_daily_signature(live, snapshot, production, task):
@@ -2971,8 +3046,8 @@ document.getElementById('runDailyBtn').addEventListener('click', async () => {{
 }});
 async function runProductionAction(action) {{
   const result = document.getElementById('productionResult');
-  const isMutation = action !== 'inspect';
   const config = productionActions[action] || {{label: action, confirmation: null}};
+  const isMutation = Boolean(config.confirmation);
   let confirmation = '';
   if (isMutation) {{
     confirmation = window.prompt('这是生产状态变更。请输入 ' + config.confirmation + ' 确认；系统不会部署或修改文件。') || '';
@@ -3378,6 +3453,9 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/vibe/assets.json":
                 self._send_json(200, assets_payload())
             elif path == "/vibe/ops-runtime.json":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
                 self._send_json(200, ops_runtime_payload())
             elif path == "/vibe/ops-runtime/execution":
                 if not self._has_read_token():
@@ -3581,16 +3659,16 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/vibe/project/production/action":
                 payload = self._read_json_body()
                 action = (payload.get("action") or "inspect").strip()
-                if action == "inspect":
-                    if not self._has_read_token():
-                        self._send_json(403, {"ok": False, "error": "read token required"})
-                        return
-                elif action in production_allowed_actions((payload.get("project") or "").strip()):
+                project_id = (payload.get("project") or "").strip()
+                if action not in production_allowed_actions(project_id):
+                    self._send_json(400, {"ok": False, "error": "production action not allowed"})
+                    return
+                if production_action_requires_confirmation(project_id, action):
                     if not self._has_action_token():
                         self._send_json(403, {"ok": False, "error": "action token required"})
                         return
-                else:
-                    self._send_json(400, {"ok": False, "error": "production action not allowed"})
+                elif not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
                     return
                 self._send_json(200, start_project_production_job(payload))
             else:

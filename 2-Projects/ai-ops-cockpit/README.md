@@ -108,6 +108,33 @@ flowchart TD
 - 登录方式：本机 `~/.ssh/id_ed25519` 公钥免密
 - 密码策略：密码不入文档、不入记忆
 
+### 2026-07-14 个人站雷达维护接管
+
+- 个人站生产巡检新增 radar 专项数据：刷新年龄、aihot/yuweiwan 状态与条数、热层条数、最新发布时间、endpoint IP、健康脚本三态。
+- 新增受控动作 `refresh-radar`：缓存新鲜时只读返回；超过 20 分钟才重启个人站并触发刷新。仍保留 action token、精确确认词和限权 SSH 边界。
+- chenchuan-site allowlist 新增 `scripts/aihot-endpoint-refresh.sh` 与 `scripts/radar-health.sh`，Grok 能读维护策略但不能读取环境变量、运行数据或 secret。
+- Grok 4.5 接管任务：`20260714-100848-2573b6`；长期待办：`todo-20260714-100848-2573b6`。
+- 全量回归 `AI_OPS_REGRESSION_OK`；个人站生产限权巡检 radar 正常，公网探测 6/6。
+- 部署时合并保留 7 月 12 日 Grok 在线加入的 IPTV `config/local.txt` allowlist，未覆盖线上工作。
+
+### 2026-07-14 Theory Radar 完整交接
+
+- Grok 4.5 已读取 `docs/theory-radar-aiops-handoff.md`、迁移方案、服务代码、测试与 systemd 单元的完整文件级只读快照；上下文 77 个文件、303586 字符，未截断。
+- 正式接管任务：`20260714-120519-3eeb37`；长期维护待办：`todo-20260714-120519-3eeb37`，状态 `doing`。Grok 已按 BRO-PDCA 输出 3 日观察清单、故障动作矩阵、日常验收和升级/回滚边界，并明确接管后续维护。
+- 个人站限权 `inspect` 新增 Theory Radar 状态：只暴露 publish 开关、timer、运行日期/阶段、模型、论文数、来源计数、发布结果和错误类型，不暴露环境变量、报告正文或 secret。
+- 新增确认后动作：`run-theory-radar`（`RUN_THEORY_RADAR`）和 `restart-theory-radar-timers`（`RESTART_THEORY_RADAR_TIMERS`）；继续经过 action token、10 分钟冷却、动作审计、飞书状态通知和公网 6 项验收。
+- 自动权限仍不包含改 `PUBLISH`、删除报告、启用 Mini、跨机回滚、改代码、部署或 git；代码修复先由 Grok 产出补丁与验收方案，川哥确认后实施，mycc commit/push 由 cc 收口。
+- 部署前备份：`/opt/ai-ops-cockpit/backups/pre-theory-radar-handoff-20260714-115830/`。全量回归 `OK vibe regression`，限权巡检 Theory Radar 正常，公网探测 6/6，错误确认词被拒绝。
+
+### 2026-07-14 IPTV 每日巡检 DOWN 与发布调度修复
+
+- AI Ops 手动巡检重跑后，Kuma `私人 IPTV 每日 AI 巡检` 从 `alert:0/1` 恢复为 `recovery:1/1`，旧异常待办 `todo-20260714-030004-e4cb74` 自动关闭。
+- Grok 只读巡检任务 `20260714-122857-3f45bf` 发现：容器服务正常，candidate 已在 07-14 02:15 更新，但 published/health 停在 07-12，业务新鲜度未闭环。
+- Codex 只读取证确认生产机无 `iptv-validate-publish.service/timer` 且无 cron；Grok 根因任务 `20260714-123153-ed548b` 结论为“有日更产出，无日更校验发布调度”，verdict `FIX_NOW`。
+- 长期修复：新增 systemd oneshot + 每日 02:25 timer，用 `flock` 防并发，失败继续保留 last-good；立即 oneshot 发布成功，`79` 个频道，抽样 `13/15`，published/health 推进到 07-14 12:34，无 failure marker。
+- AI Ops 生产巡检现强制验证 timer enabled+active 和 published 年龄不超过 36 小时；新增受控动作 `repair-publish-timer`（确认词 `REPAIR_IPTV_PUBLISH_TIMER`）。
+- 修复后 Grok 巡检任务 `20260714-123453-c5e458` 返回 normal：live 1/1、生产巡检正常，timer 下次执行为 07-15 02:25。回滚点：`/var/backups/iptv-aiops/pre-validate-timer-20260714-123327/`。
+
 ## 实施记录
 
 ### 2026-07-07 Phase 1 基础驾驶舱
