@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# B 三发评审对抗: B4 grok-4.3 推理 + B5 codex(API网关gpt-5.5主路+omp订阅gpt-5.4降级) 严谨 + B1 gemini 默认
+# B 三发评审对抗: B4 grok-4.5 推理 + B5 codex(API网关gpt-5.5主路+omp订阅gpt-5.4降级) 严谨 + B1 gemini 默认
 # ⚠️ 2026-06-19: google-gemini-cli(Gemini Code Assist for individuals) 被 Google 停用("no longer supported, migrate to Antigravity")
 #   → B1 gemini lane 全切 google-antigravity 通道。默认 antigravity/gemini-3-flash(快); 需深度手动换 gemini-3.5-flash。详见 memory project_antigravity_team_b3
 # 用法: bash review-3send.sh <review-prompt-file>
@@ -61,7 +61,7 @@ SIZE=$(wc -c <"$PROMPT_FILE")
 # "文件非空即完成"的等待哨兵会拿旧报告当本轮结果(假阳性,曾拿 LnMem 评审当 P003 评审读)。
 rm -f /tmp/r-grok.md /tmp/r-gpt.md /tmp/r-gem.md /tmp/r-grok.err /tmp/r-gpt.err /tmp/r-gem.err
 echo "===== B 三发评审对抗 ====="
-echo "[B4 推理] omp xai-oauth/grok-4.3 / thinking=high"
+echo "[B4 推理] omp xai-oauth/grok-4.5 / thinking=high"
 echo "[B5 严谨] codex API 网关 gpt-5.5(主) → omp 订阅 gpt-5.4(降级) / reasoning=high"
 if [ "$GEMINI_LANE_ENABLED" = "1" ]; then
   echo "[B1 默认] omp google-antigravity/gemini-3-flash / thinking=high (gemini-cli 已停用,切 antigravity)"
@@ -85,8 +85,8 @@ START=$(date +%s)
 # ⚠️ 重要: 3 个 omp 进程同时启动会撞 SQLite schema initialize race condition
 # (~/.omp/agent/agent.db, 多写者 race), 启动间错开 800ms 避开 schema init 窗口
 
-# B4 grok-4.3 推理评审 (第一性原理 / 反思维定式)
-omp -p --model xai-oauth/grok-4.3 --thinking high --no-tools --cwd "$CLEAN_CWD" \
+# B4 grok-4.5 推理评审 (第一性原理 / 反思维定式) —— 2026-07-09 切 grok-4.5(当日发布,实测 thinking high 通/16s);回退 ID: xai-oauth/grok-4.3
+omp -p --model xai-oauth/grok-4.5 --thinking high --no-tools --cwd "$CLEAN_CWD" \
   --no-extensions --no-skills --no-rules \
   "$PROMPT" \
   > /tmp/r-grok.md 2>/tmp/r-grok.err &
@@ -121,7 +121,7 @@ wait $GPT_PID; GPT_RC=$?
 END=$(date +%s)
 echo ""
 echo "===== 结果汇总 ====="
-echo "B4 grok-4.3 推理: RC=$GROK_RC, 输出 $(wc -l </tmp/r-grok.md 2>/dev/null || echo 0) 行"
+echo "B4 grok-4.5 推理: RC=$GROK_RC, 输出 $(wc -l </tmp/r-grok.md 2>/dev/null || echo 0) 行"
 echo "B5 gpt-5.5 严谨: RC=$GPT_RC, 输出 $(wc -l </tmp/r-gpt.md 2>/dev/null || echo 0) 行"
 if [ -n "$GEM_PID" ]; then
   echo "B1 gemini-3-flash 默认: RC=$GEM_RC, 输出 $(wc -l </tmp/r-gem.md 2>/dev/null || echo 0) 行"

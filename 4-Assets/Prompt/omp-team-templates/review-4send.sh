@@ -35,9 +35,9 @@ SIZE=$(wc -c <"$PROMPT_FILE")
 
 echo "===== B 四发评审顶级对抗 ====="
 if [ "$GEMINI_LANE_ENABLED" = "1" ]; then
-  echo "[B4 推理] grok-4.3 / [B5 严谨] codex gpt-5.5 / [B1 默认] gemini-3-flash / [B3 深度] antigravity gemini-3.5-flash(免费)"
+  echo "[B4 推理] grok-4.5 / [B5 严谨] codex gpt-5.5 / [B1 默认] gemini-3-flash / [B3 深度] antigravity gemini-3.5-flash(免费)"
 else
-  echo "[B4 推理] grok-4.3 / [B5 严谨] codex gpt-5.5 / [B1+B3 gemini] ⛔ 已下线(antigravity TOS 封禁 2026-06-29) → 实际 grok+codex 两发"
+  echo "[B4 推理] grok-4.5 / [B5 严谨] codex gpt-5.5 / [B1+B3 gemini] ⛔ 已下线(antigravity TOS 封禁 2026-06-29) → 实际 grok+codex 两发"
 fi
 echo "prompt: $PROMPT_FILE ($SIZE 字节)"
 echo ""

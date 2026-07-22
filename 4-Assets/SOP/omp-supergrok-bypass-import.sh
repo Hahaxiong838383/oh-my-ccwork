@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 用途：把 ~/.grok/auth.json 的 SuperGrok 订阅凭据旁路导入 omp,跳过 OAuth flow
-# 适用：装好 omp 后想用 SuperGrok 订阅调 xai-oauth/grok-4.3 等模型,但 omp auth-broker login 因 readline 死链不好走
+# 适用：装好 omp 后想用 SuperGrok 订阅调 xai-oauth/grok-4.5 等模型,但 omp auth-broker login 因 readline 死链不好走
 # 前提：~/.grok/auth.json 存在且 refresh_token 还有效（grok-build CLI 已登录过同账户）
 # 原理：grok-build 与 omp 共用同一个 xAI OAuth client_id b1a00492-073a-47ea-816f-4c329264a828
 #       scope 完全一致（openid profile email offline_access grok-cli:access api:access）
@@ -53,8 +53,8 @@ omp auth-broker import "$TMP" --provider=xai-oauth
 
 # 5. 实测 (会用 refresh_token 自动换 access_token)
 echo ""
-echo "===== 实测 xai-oauth/grok-4.3 ====="
-omp -p --model xai-oauth/grok-4.3 --auto-approve --no-tools \
+echo "===== 实测 xai-oauth/grok-4.5 ====="
+omp -p --model xai-oauth/grok-4.5 --auto-approve --no-tools \
   --no-extensions --no-skills --no-rules \
   "用一句话报告:你是哪个模型?今天日期?"
 RC=$?
@@ -62,7 +62,7 @@ RC=$?
 echo ""
 if [ $RC -eq 0 ]; then
   echo "🎉 完成。后续调用:"
-  echo '  PATH="$HOME/.bun/bin:$PATH" omp -p --model xai-oauth/grok-4.3 --thinking high "你的 prompt"'
+  echo '  PATH="$HOME/.bun/bin:$PATH" omp -p --model xai-oauth/grok-4.5 --thinking high "你的 prompt"'
 else
   echo "❌ 失败 (RC=$RC)。常见原因:"
   echo "  - refresh_token 过期 → 跑一次 grok CLI 重新登录刷新 ~/.grok/auth.json,再跑本脚本"
