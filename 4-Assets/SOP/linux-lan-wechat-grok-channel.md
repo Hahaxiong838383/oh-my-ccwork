@@ -72,7 +72,7 @@ grok --version
 | `GROK_SHORT_MAX_TURNS` | **24** | 仅纯寒暄 |
 | `GROK_CONTINUE_ON_MAX_TURNS` | **3** | 轮次/墙钟触顶后同 session 续跑 |
 | `GROK_CONTINUE_MAX_TURNS` | **100** | 每次续跑轮次 |
-| `GROK_SESSION_RESUME_MAX_BYTES` | 5MB | soft **归档+换 session** |
+| `GROK_SESSION_RESUME_MAX_BYTES` | **2MB** | soft **归档+换 session**（防大 session 慢死；2026-07-22 从 5MB 下调） |
 | `GROK_SESSION_MAX_BYTES` | 20MB | hard 归档 |
 | `GROK_EXTRA_ARGS` | `--experimental-memory` | full 模式 |
 | `REQUIRE_GROUP_PREFIX` | 1 | 群需 `grok:` / @ |
@@ -92,6 +92,34 @@ grok --version
 
 消息形态：`【进度】开始执行 · full/100 · sid=…` / `仍在执行 · 已 3m · 正常` / `触顶续跑 1/3` / `任务中断（服务停止/重启）`。  
 systemd 停服务时会先尝试发中断提示再杀 grok（`TimeoutStopSec=120`）。
+
+### 回消息 / prepare failed（2026-07-22）
+
+微信 `sendmessage` 返回 `prepare failed` 时，常见原因是 **context_token 过期**（长任务用入站消息里的旧 token 发进度/终态）。
+
+桥接已做：
+
+1. **peer 级 context 缓存** `data/context-tokens.json`：每条入站刷新  
+2. **发送重试链**：provided → cached（每轮重读）→ no_ctx  
+3. soft archive 默认 **2MB**
+
+主动推送若无可用 context，仍可能失败——用户发一条消息即可重新种 token。
+
+## 经验教训（2026-07-22 假死复盘）
+
+| # | 教训 |
+|---|------|
+| 1 | **分三层验通道**：收（inbound）/ 跑（grok 进程·超时）/ 回（sendmessage）。unit active ≠ 健康 |
+| 2 | **`prepare failed` 优先查 context**，别先重扫码；`getupdates` 通说明 bot token 多半仍活 |
+| 3 | **长任务必须用最新 peer context**（缓存重读），禁止只闭包首条消息 token |
+| 4 | **soft 过大 → 慢死**：5MB 内仍可堆出多轮 15min 超时；默认 **2MB** 更稳 |
+| 5 | **IM 无回复 ≠ 功能未交付**：查磁盘模块与启动日志；完成汇报也可能被发送失败吞掉 |
+| 6 | **杀 grok 用 PID**；`pkill -f` 易误伤包装 shell |
+| 7 | **禁止任务内 restart bridge**（自杀）；改代码只 SSH 运维重启 |
+| 8 | Hermes 可迁移：**关无用 MCP 空等、TTFT 首回执、leader 热路径、流式感知延迟**（见 `docs/QUICKSILVER-SPEED.md`） |
+
+Skill：仓内 `.agents/skills/linux-lan-wechat`；通道内 `skills/wechat-channel-rules`。  
+记忆：A `feedback_wechat_ilink_prepare_failed_zombie` / `project_linux_lan_wechat_grok_channel`。
 
 ## 多媒体用法
 

@@ -47,13 +47,14 @@ export function createProgressReporter(opts) {
     }
   }
 
+  // Quicksilver 感知延迟：首条进度默认 12s（原 60s 太空窗）
   const firstMs = Math.max(
     0,
-    Number(process.env.WX_STATUS_FIRST_SEC ?? 60) * 1000,
+    Number(process.env.WX_STATUS_FIRST_SEC ?? 12) * 1000,
   )
   const beatMs = Math.max(
     0,
-    Number(process.env.WX_STATUS_HEARTBEAT_SEC ?? 120) * 1000,
+    Number(process.env.WX_STATUS_HEARTBEAT_SEC ?? 90) * 1000,
   )
   const maxBeats = Math.max(0, Number(process.env.WX_STATUS_MAX_BEATS ?? 8))
   const sparseMs = Math.max(

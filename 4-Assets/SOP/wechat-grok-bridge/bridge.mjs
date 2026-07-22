@@ -41,6 +41,23 @@ import {
   estimateTaskBudget,
   formatBudgetMin,
 } from './lib/task-budget.mjs'
+import {
+  parseSaveIntent,
+  ingestToVault,
+  shouldAutoIngest,
+} from './lib/vault-ingest.mjs'
+import { matchKbCommand, runKbCommand } from './lib/kb-commands.mjs'
+import {
+  createGrokLeader,
+  leaderEnabled,
+} from './lib/grok-leader.mjs'
+import { createWorkerPool } from './lib/worker-pool.mjs'
+import {
+  createStreamBubble,
+  streamEnabled,
+  remainingAfterStream,
+  parseStreamLine,
+} from './lib/stream-bubble.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = __dirname
@@ -196,6 +213,37 @@ async function saveSessionMap(map) {
   await saveJson(sessionMapPath(), map)
 }
 
+
+/** peer 级 context_token 缓存：长任务期间入站消息会刷新，心跳/终态用最新 token */
+function contextTokenMapPath() {
+  return path.join(ROOT, 'data', 'context-tokens.json')
+}
+
+async function loadContextTokenMap() {
+  return loadJson(contextTokenMapPath(), {})
+}
+
+async function getCachedContextToken(accountId, peerId) {
+  if (!accountId || !peerId) return undefined
+  const map = await loadContextTokenMap()
+  const row = map[`${accountId}:${peerId}`]
+  const tok = row?.token
+  return typeof tok === 'string' && tok.trim() ? tok.trim() : undefined
+}
+
+async function setCachedContextToken(accountId, peerId, token) {
+  if (!accountId || !peerId) return
+  const tok = String(token || '').trim()
+  if (!tok) return
+  const map = await loadContextTokenMap()
+  map[`${accountId}:${peerId}`] = {
+    token: tok,
+    updatedAt: new Date().toISOString(),
+  }
+  await saveJson(contextTokenMapPath(), map)
+}
+
+
 async function loadSyncBuf(accountId) {
   const d = await loadJson(syncBufPath(accountId), {})
   return typeof d.get_updates_buf === 'string' ? d.get_updates_buf : ''
@@ -310,14 +358,14 @@ async function archiveSessionDir(sessionId, dir, reason, size, meta = {}) {
 /**
  * sticky session:
  * - hard ≥20MB → archive + memory + new UUID
- * - soft ≥5MB → archive + memory + new UUID（与 dev198 对齐，避免孤儿 session）
+ * - soft ≥2MB → archive + memory + new UUID（防大 session 慢死；可用 env 覆盖）
  */
 async function resolveStickySession(mapKey, cwd, meta = {}) {
   const hardMax = Number(
     process.env.GROK_SESSION_MAX_BYTES || 20 * 1024 * 1024,
   )
   const softMax = Number(
-    process.env.GROK_SESSION_RESUME_MAX_BYTES || 5 * 1024 * 1024,
+    process.env.GROK_SESSION_RESUME_MAX_BYTES || 2 * 1024 * 1024,
   )
   const map = await loadSessionMap()
   let sessionId = map[mapKey]?.sessionId
@@ -524,7 +572,13 @@ function buildAgentRules({ cwd }) {
   ].join('\n')
 }
 
-async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null }) {
+/** 全局 leader 句柄，main 注入；runGrok 读 clientArgs */
+let grokLeader = null
+
+async function runGrok(
+  prompt,
+  { mapKey, cwd, hasMedia = false, progress = null, streamBubble = null },
+) {
   const bin = process.env.GROK_BIN || `${process.env.HOME}/.grok/bin/grok`
   const { mode, maxTurns } = classifyMode(prompt, { hasMedia })
   const budget = estimateTaskBudget(prompt, { mode, hasMedia })
@@ -533,6 +587,7 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
   const sticky = await resolveStickySession(mapKey, cwd, { cwd })
   let sessionId = sticky.sessionId
   const rules = buildAgentRules({ cwd })
+  const useStream = streamEnabled() && !!streamBubble?.enabled
   // max-turns 中断后续跑次数；默认 3 次，同 session 续跑不丢进度
   const continueRounds = Math.max(
     0,
@@ -556,7 +611,7 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
       '--max-turns',
       String(turns),
       '--output-format',
-      'plain',
+      useStream ? 'streaming-json' : 'plain',
       '--cwd',
       cwd,
       '--rules',
@@ -590,6 +645,10 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
       '--deny',
       'Bash(kill *wechat-grok*)',
     ]
+    // 接入常驻 leader（若启用且 socket 可用）
+    if (grokLeader && leaderEnabled()) {
+      args.push(...grokLeader.clientArgs())
+    }
     // full 带 EXTRA（如 --experimental-memory）；short 默认不加以免拖慢寒暄
     const extra = (process.env.GROK_EXTRA_ARGS || '').trim()
     if (extra && (mode === 'full' || envFlag('GROK_EXTRA_ARGS_ALWAYS', true))) {
@@ -622,6 +681,7 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
       'localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,.weixin.qq.com',
     CI: '1',
     GROK_HEADLESS: '1',
+    GROK_DISABLE_AUTOUPDATER: '1',
   }
 
   function once(useArgs, wallMs) {
@@ -634,6 +694,10 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
       let stdout = ''
       let stderr = ''
       let settled = false
+      let streamText = ''
+      let lineBuf = ''
+      let sawMaxTurns = false
+      let streamErrorMsg = ''
       const killHard = () => {
         try {
           child.kill('SIGTERM')
@@ -655,14 +719,51 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
         if (settled) return
         settled = true
         killHard()
+        const partial = useStream
+          ? streamText.trim() || streamBubble?.getFullText?.() || ''
+          : stdout.trim()
         const err = new Error(`grok timeout after ${wallMs}ms`)
         err.isTimeout = true
-        err.partialOutput = stdout.trim()
+        err.partialOutput = partial
         reject(err)
       }, wallMs)
+
+      function handleStreamEvent(ev) {
+        if (!ev || typeof ev !== 'object') return
+        const t = ev.type
+        if (t === 'text' && ev.data != null) {
+          const chunk = String(ev.data)
+          streamText += chunk
+          streamBubble?.onText?.(chunk)
+          progress?.noteActivity?.()
+        } else if (t === 'thought' && ev.data != null) {
+          streamBubble?.onThought?.(String(ev.data))
+          progress?.noteActivity?.()
+        } else if (t === 'max_turns_reached') {
+          sawMaxTurns = true
+        } else if (t === 'error') {
+          streamErrorMsg = String(ev.message || ev.data || 'stream error')
+        } else if (t === 'end') {
+          progress?.noteActivity?.()
+        }
+      }
+
       child.stdout.on('data', (d) => {
-        stdout += d.toString('utf8')
+        const s = d.toString('utf8')
         progress?.noteActivity?.()
+        if (!useStream) {
+          stdout += s
+          return
+        }
+        lineBuf += s
+        let idx
+        while ((idx = lineBuf.indexOf('\n')) >= 0) {
+          const line = lineBuf.slice(0, idx)
+          lineBuf = lineBuf.slice(idx + 1)
+          const ev = parseStreamLine(line)
+          if (ev) handleStreamEvent(ev)
+          else if (line.trim()) stdout += line + '\n'
+        }
       })
       child.stderr.on('data', (d) => {
         stderr += d.toString('utf8')
@@ -678,23 +779,37 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
         if (settled) return
         settled = true
         clearTimeout(timer)
-        if (code === 0) {
-          resolve(stdout.trim() || '(grok 无文本输出，可能已完成工具操作)')
-        } else {
-          const errTail = stderr
-            .slice(-1000)
-            .replace(/Bearer\s+\S+/g, 'Bearer ***')
-          const msg = `grok exit ${code}: ${errTail || stdout.slice(-400)}`
-          const err = new Error(msg)
-          if (
-            /max\s*turns?\s*reached/i.test(msg) ||
-            /max\s*turns?\s*reached/i.test(stdout)
-          ) {
-            err.isMaxTurns = true
-            err.partialOutput = stdout.trim()
-          }
-          reject(err)
+        // 吃掉最后半行
+        if (useStream && lineBuf.trim()) {
+          const ev = parseStreamLine(lineBuf)
+          if (ev) handleStreamEvent(ev)
+          else stdout += lineBuf
+          lineBuf = ''
         }
+        const textOut = useStream
+          ? streamText.trim() || streamBubble?.getFullText?.()?.trim?.() || ''
+          : stdout.trim()
+        if (code === 0) {
+          resolve(textOut || '(grok 无文本输出，可能已完成工具操作)')
+          return
+        }
+        const errTail = stderr
+          .slice(-1000)
+          .replace(/Bearer\s+\S+/g, 'Bearer ***')
+        const msg =
+          streamErrorMsg ||
+          `grok exit ${code}: ${errTail || textOut.slice(-400) || stdout.slice(-400)}`
+        const err = new Error(msg)
+        if (
+          sawMaxTurns ||
+          /max\s*turns?\s*reached/i.test(msg) ||
+          /max\s*turns?\s*reached/i.test(stderr) ||
+          /max\s*turns?\s*reached/i.test(stdout)
+        ) {
+          err.isMaxTurns = true
+          err.partialOutput = textOut
+        }
+        reject(err)
       })
     })
   }
@@ -780,6 +895,8 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
     `level=${budget.level}`,
     `score=${budget.score}`,
     `why=${budget.reason}`,
+    `stream=${useStream ? 'on' : 'off'}`,
+    `leader=${leaderEnabled() ? 'on' : 'off'}`,
   )
 
   progress?.setMeta?.({
@@ -893,22 +1010,58 @@ async function runGrok(prompt, { mapKey, cwd, hasMedia = false, progress = null 
   }
 }
 
-async function sendWechatTextRetry(cred, to, text, contextToken, tries = 3) {
+async function sendWechatTextRetry(cred, to, text, contextToken, tries = 4) {
   let lastErr
-  for (let i = 0; i < tries; i++) {
+  const cached = await getCachedContextToken(cred.accountId, to)
+  /** @type {{ctx: string|undefined, label: string}[]} */
+  const chain = []
+  const push = (ctx, label) => {
+    if (label !== 'no_ctx') {
+      if (!ctx || !String(ctx).trim()) return
+      ctx = String(ctx).trim()
+    } else {
+      ctx = undefined
+    }
+    if (chain.some((x) => x.ctx === ctx && x.label === label)) return
+    // de-dupe same ctx value
+    if (chain.some((x) => x.ctx === ctx)) return
+    chain.push({ ctx, label })
+  }
+  push(contextToken, 'provided')
+  push(cached, 'cached')
+  push(undefined, 'no_ctx')
+
+  let chainIdx = 0
+  const rounds = Math.max(tries, chain.length)
+  for (let i = 0; i < rounds; i++) {
+    // 每轮重读 cache：长任务中用户再发消息可刷新 token
+    if (chainIdx === 0 || chain[chainIdx]?.label === 'cached') {
+      const fresh = await getCachedContextToken(cred.accountId, to)
+      if (fresh) {
+        const has = chain.find((x) => x.label === 'cached')
+        if (has) has.ctx = fresh
+        else chain.splice(Math.min(1, chain.length), 0, { ctx: fresh, label: 'cached' })
+      }
+    }
+    const step = chain[Math.min(chainIdx, chain.length - 1)]
+    const ctx = step?.ctx
+    const label = step?.label || 'unknown'
     try {
       return await sendWechatText({
         baseUrl: cred.baseUrl,
         token: cred.token,
         to,
         text,
-        contextToken,
+        contextToken: ctx,
       })
     } catch (e) {
       lastErr = e
       const msg = String(e?.message || e)
-      log('wechat send retry', i + 1, msg.slice(0, 120))
-      // prepare failed / transient
+      log('wechat send retry', i + 1, msg.slice(0, 120), label)
+      if (/prepare failed/i.test(msg) && chainIdx < chain.length - 1) {
+        chainIdx += 1
+        log('wechat send: switch context strategy ->', chain[chainIdx].label)
+      }
       await new Promise((r) => setTimeout(r, 800 * (i + 1)))
     }
   }
@@ -922,12 +1075,29 @@ async function sendTextChunks(cred, to, text, contextToken) {
   }
 }
 
-async function sendReply(cred, to, text, contextToken) {
+/**
+ * @param {object} cred
+ * @param {string} to
+ * @param {string} text
+ * @param {string} [contextToken]
+ * @param {{
+ *   mediaSourceText?: string,
+ *   skipText?: boolean,
+ * }} [opts]
+ */
+async function sendReply(cred, to, text, contextToken, opts = {}) {
+  const normalized = normalizeReply(text)
+  const mediaSource =
+    opts.mediaSourceText != null
+      ? normalizeReply(opts.mediaSourceText)
+      : normalized
   await processOutboundReply({
     baseUrl: cred.baseUrl,
     token: cred.token,
     to,
-    text: normalizeReply(text),
+    text: normalized,
+    mediaSourceText: mediaSource,
+    skipText: !!opts.skipText,
     contextToken,
     allowedRoots: allowedRootsList(),
     sendTextFn: (t) => sendTextChunks(cred, to, t, contextToken),
@@ -937,26 +1107,31 @@ async function sendReply(cred, to, text, contextToken) {
 
 /** @type {Set<{ progress: any, kill?: () => void }>} */
 const activeJobs = new Set()
-let queueChain = Promise.resolve()
-/** tasks waiting or running in serial queue */
-let queueLen = 0
+
+function poolSize() {
+  return Math.max(1, Number(process.env.GROK_WORKER_POOL_SIZE || 2))
+}
+
+/** 有界并发池（默认 2）；串行时设 GROK_WORKER_POOL_SIZE=1。main 里 loadEnv 后 init。 */
+let workerPool = createWorkerPool(2)
+
+function initWorkerPool() {
+  workerPool = createWorkerPool(poolSize())
+  return workerPool
+}
 
 function enqueue(taskFactory) {
-  // ahead = tasks already in queue before this one
-  const ahead = queueLen
-  queueLen += 1
-  queueChain = queueChain
-    .then(async () => {
+  return workerPool
+    .run(async (ahead) => {
       try {
         await taskFactory(ahead)
-      } finally {
-        queueLen = Math.max(0, queueLen - 1)
+      } catch (e) {
+        log('pool task error', String(e.message || e).slice(0, 200))
       }
     })
     .catch((e) => {
-      log('queue task error', String(e.message || e).slice(0, 200))
+      log('pool enqueue error', String(e.message || e).slice(0, 200))
     })
-  return queueChain
 }
 
 function sleep(ms, signal) {
@@ -986,6 +1161,10 @@ function envFlag(name, def = false) {
 async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
   const peerId = message.from_user_id?.trim()
   if (!peerId) return
+  // 刷新 peer context_token（长任务心跳/终态依赖）
+  if (message.context_token) {
+    await setCachedContextToken(cred.accountId, peerId, message.context_token)
+  }
   // message_type 2 often outbound/self — skip
   if (message.message_type === 2) return
 
@@ -999,13 +1178,13 @@ async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
 
   if (allowSet.size > 0 && !allowSet.has(peerId)) {
     log('deny peer', peerId.slice(0, 12))
-    await sendWechatText({
-      baseUrl: cred.baseUrl,
-      token: cred.token,
-      to: peerId,
-      text: '未授权的微信用户，请联系管理员把你的 userId 加入 ALLOW_USER_IDS。',
-      contextToken: message.context_token,
-    })
+    await sendWechatTextRetry(
+      cred,
+      peerId,
+      '未授权的微信用户，请联系管理员把你的 userId 加入 ALLOW_USER_IDS。',
+      message.context_token,
+      3,
+    )
     return
   }
 
@@ -1051,9 +1230,16 @@ async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
     return
   }
 
-  // download media into cwd
+  // Quicksilver：关键路径上尽早回执，媒体下载别吞掉首 token 感知
   let mediaResult = { files: [], errors: [] }
   if (mediaPresent) {
+    sendWechatTextRetry(
+      cred,
+      peerId,
+      '收到附件，下载中…',
+      message.context_token,
+      3,
+    ).catch(() => {})
     try {
       mediaResult = await downloadInboundMedia({
         message,
@@ -1077,6 +1263,16 @@ async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
   if (!bodyWithMedia) return
 
   if (/^(ping|健康|status)$/i.test((body || '').trim())) {
+    const pool = workerPool.stats()
+    let leaderLine = `leader=${leaderEnabled() ? 'on' : 'off'}`
+    if (grokLeader) {
+      try {
+        const st = await grokLeader.status()
+        leaderLine = `leader=${st.enabled ? (st.listening ? 'ready' : 'starting') : 'off'} sock=${path.basename(st.socket || '')}`
+      } catch {
+        /* ignore */
+      }
+    }
     await sendReply(
       cred,
       peerId,
@@ -1087,10 +1283,92 @@ async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
         `chat=${chatKind}${roomId ? ` room=${roomId}` : ''}`,
         `media=${mediaResult.files.length}`,
         `timeout=${process.env.GROK_TIMEOUT_MS || 600000}ms`,
-        `soft_archive=on soft_max=${process.env.GROK_SESSION_RESUME_MAX_BYTES || 5242880}`,
+        `soft_archive=on soft_max=${process.env.GROK_SESSION_RESUME_MAX_BYTES || 2097152}`,
+        `vault=${process.env.SECOND_BRAIN_VAULT || path.join(process.env.HOME || '', 'second-brain')}`,
+        `pool=${pool.active}/${pool.size} wait=${pool.waiting}`,
+        leaderLine,
+        `stream=${streamEnabled() ? 'on' : 'off'}`,
       ].join('\n'),
       message.context_token,
     )
+    return
+  }
+
+  // second-brain 快路径（不 spawn Grok）。磁盘已接线；进程热加载需运维侧 reload，本任务不碰服务。
+  const kbKind = matchKbCommand(body)
+  if (kbKind) {
+    log(
+      'kb cmd',
+      typeof kbKind === 'object' ? kbKind.kind : kbKind,
+      peerId.slice(0, 12),
+    )
+    try {
+      const out = await runKbCommand(kbKind)
+      await sendReply(cred, peerId, out, message.context_token)
+    } catch (err) {
+      await sendReply(
+        cred,
+        peerId,
+        `知识库命令失败：${String(err.message || err).slice(0, 400)}`,
+        message.context_token,
+      )
+    }
+    return
+  }
+
+  // 入库快路径：仅显式口令/关键词，或「薄分享 + VAULT_AUTO_INGEST」；
+  // 带任务语气的链接消息不拦截，交给 Grok 执行。
+  const saveIntent = parseSaveIntent(body)
+  const autoIngest = shouldAutoIngest(body, mediaResult.files.length)
+  if (saveIntent.isSave || autoIngest) {
+    log(
+      'vault ingest',
+      saveIntent.isSave
+        ? `save:${saveIntent.reason || 'prefix'}`
+        : 'auto-thin-share',
+      peerId.slice(0, 12),
+    )
+    try {
+      const r = await ingestToVault({
+        text: saveIntent.isSave ? saveIntent.body : body,
+        mediaFiles: mediaResult.files,
+        peerId,
+        chatKind,
+        messageId: message.message_id || message.seq || '',
+        source: saveIntent.isSave ? 'wechat-bridge' : 'wechat-bridge-auto',
+        preferWechatFetch: true,
+      })
+      const extraNotes = Array.isArray(r.notes)
+        ? r.notes
+            .slice(0, 5)
+            .map((n) => `· ${n.title} → ${n.path}${n.parseStatus ? ` (${n.parseStatus})` : ''}`)
+            .join('\n')
+        : ''
+      await sendReply(
+        cred,
+        peerId,
+        [
+          '【已入库】',
+          `title=${r.title}`,
+          `path=${r.relPath}`,
+          `kind=${r.kind || 'bridge'}`,
+          `urls=${(r.urls || []).length}`,
+          `media=${r.mediaCount || 0}`,
+          extraNotes,
+          '说「整理知识库」可生成 Sources+Literature 骨架',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        message.context_token,
+      )
+    } catch (err) {
+      await sendReply(
+        cred,
+        peerId,
+        `入库失败：${String(err.message || err).slice(0, 400)}`,
+        message.context_token,
+      )
+    }
     return
   }
 
@@ -1110,25 +1388,32 @@ async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
     (body || '').slice(0, 80).replace(/\n/g, ' '),
   )
 
+  const sendWx = (text) =>
+    sendWechatTextRetry(cred, peerId, text, message.context_token, 3)
+
   const progress = createProgressReporter({
     log,
-    sendText: (text) =>
-      sendWechatTextRetry(cred, peerId, text, message.context_token, 3),
+    sendText: sendWx,
+  })
+  const streamBubble = createStreamBubble({
+    log,
+    sendText: sendWx,
   })
 
   if (queueAhead > 0) {
     await progress.queue(queueAhead)
   }
 
-  await sendWechatText({
-    baseUrl: cred.baseUrl,
-    token: cred.token,
-    to: peerId,
-    text: mediaResult.files.length
-      ? `收到（含 ${mediaResult.files.length} 个附件），Grok 处理中…`
-      : '收到，Grok 处理中…',
-    contextToken: message.context_token,
-  }).catch(() => {})
+  // 媒体路径已提前回执；文本路径此处即时 ack（TTFT 感知）
+  await sendWechatTextRetry(
+    cred,
+    peerId,
+    mediaResult.files.length
+      ? `附件就绪（${mediaResult.files.length}），Grok 执行中…`
+      : '收到，Grok 执行中…',
+    message.context_token,
+    3,
+  ).catch(() => {})
 
   const job = { progress, kill: () => progress?._kill?.() }
   activeJobs.add(job)
@@ -1139,24 +1424,64 @@ async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
       cwd,
       hasMedia: mediaResult.files.length > 0,
       progress,
+      streamBubble,
     })
     progress.stop()
+    // 冲掉流式缓冲
+    let streamedSnap = ''
+    if (streamBubble?.enabled) {
+      const fin = await streamBubble.finalize()
+      streamedSnap = fin.streamedText || ''
+    }
     let out = reply
     // 长任务在结论后附耗时（不另起进度条）
     const elapsedMs = Date.now() - t0
     if (elapsedMs >= 120_000 && out && !/本次约\s*\d/.test(out)) {
       out = `${reply}\n\n（本次约 ${formatElapsed(elapsedMs)}）`
     }
-    await sendReply(cred, peerId, out, message.context_token)
+    const fullNorm = normalizeReply(out)
+    if (streamBubble?.enabled && streamedSnap) {
+      const remain = remainingAfterStream(fullNorm, streamedSnap)
+      // 有后缀或有附件标记：定稿补发；正文已流完且无附件则跳过正文
+      const hasMediaMark = /\[\[send-file:/i.test(out) || /本地路径:/i.test(out)
+      if (remain || hasMediaMark) {
+        await sendReply(cred, peerId, remain || '', message.context_token, {
+          mediaSourceText: fullNorm,
+          skipText: !remain,
+        })
+      } else if (elapsedMs >= 120_000) {
+        await sendReply(
+          cred,
+          peerId,
+          `（完成 · 约 ${formatElapsed(elapsedMs)}）`,
+          message.context_token,
+        )
+      }
+    } else {
+      await sendReply(cred, peerId, out, message.context_token)
+    }
   } catch (err) {
     progress.stop()
+    if (streamBubble?.enabled) {
+      try {
+        await streamBubble.finalize()
+      } catch {
+        /* ignore */
+      }
+    }
     log('handle fail', String(err.message || err).slice(0, 200))
     let msg = `执行失败：${String(err.message || err).slice(0, 500)}`
     if (isMaxTurnsError(err) || isTimeoutError(err)) {
+      const partial = err.partialOutput
+        ? String(err.partialOutput).slice(0, 2800)
+        : streamBubble?.getFullText?.()?.slice?.(0, 2800) || ''
+      // 流式已发出部分时，避免再整段重复
+      const streamed = streamBubble?.getStreamedText?.() || ''
+      const remainPartial = streamed
+        ? remainingAfterStream(normalizeReply(partial), streamed)
+        : partial
       msg =
-        (err.partialOutput
-          ? String(err.partialOutput).slice(0, 2800) + '\n\n'
-          : '') +
+        (remainPartial ? remainPartial + '\n\n' : '') +
         (isTimeoutError(err)
           ? '【提示】墙钟超时。请直接回「继续」，同会话接着干。'
           : '【提示】任务轮次用尽。请直接回「继续」，同会话接着干。')
@@ -1165,6 +1490,7 @@ async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
   } finally {
     activeJobs.delete(job)
     progress.stop()
+    streamBubble?.stop?.()
   }
 }
 
@@ -1214,6 +1540,57 @@ async function monitorLoop(cred, allowSet, signal) {
   }
 }
 
+/**
+ * Quicksilver 预热：桥启动时后台跑一次极轻 headless，预热 auth/models/二进制。
+ * 有 leader 时挂 socket，进一步热路径。不阻塞 monitorLoop；失败静默。
+ */
+function prewarmGrok() {
+  if (!envFlag('GROK_PREWARM', true)) return
+  try {
+    const bin = process.env.GROK_BIN || `${process.env.HOME}/.grok/bin/grok`
+    const cwd = path.resolve(
+      (process.env.GROK_CWD || path.join(ROOT, 'workspace')).replace(
+        /^~(?=$|\/)/,
+        process.env.HOME || '',
+      ),
+    )
+    const args = [
+      '-p',
+      'Reply with exactly: ok',
+      '--permission-mode',
+      'bypassPermissions',
+      '--always-approve',
+      '--max-turns',
+      '1',
+      '--output-format',
+      'plain',
+      '--cwd',
+      cwd,
+      '--no-auto-update',
+      '--no-memory',
+    ]
+    if (grokLeader && leaderEnabled()) {
+      args.push(...grokLeader.clientArgs())
+    }
+    const child = spawn(bin, args, {
+      cwd,
+      env: {
+        ...process.env,
+        PATH: `${path.dirname(bin)}:${process.env.PATH || ''}`,
+        CI: '1',
+        GROK_HEADLESS: '1',
+        GROK_DISABLE_AUTOUPDATER: '1',
+      },
+      stdio: 'ignore',
+      detached: true,
+    })
+    child.unref()
+    log('grok prewarm launched', `pid=${child.pid || '?'}`)
+  } catch (e) {
+    log('grok prewarm skip', String(e.message || e).slice(0, 120))
+  }
+}
+
 async function main() {
   await loadEnvFile(path.join(ROOT, '.env'))
   await loadEnvFile(path.join(process.env.HOME || '', '.wechat-grok-bridge.env'))
@@ -1237,6 +1614,11 @@ async function main() {
             experimentalMemory: !!(process.env.GROK_EXTRA_ARGS || '').includes(
               'experimental-memory',
             ),
+            prewarm: envFlag('GROK_PREWARM', true),
+            mcpWechatDisabled: true,
+            leader: leaderEnabled(),
+            workerPoolSize: poolSize(),
+            stream: streamEnabled(),
           },
         },
         null,
@@ -1258,6 +1640,23 @@ async function main() {
   await fs.mkdir(path.join(ROOT, 'data'), { recursive: true })
   await fs.mkdir(path.join(ROOT, 'logs'), { recursive: true })
 
+  // env 已加载：重建 worker 池尺寸
+  initWorkerPool()
+
+  // 常驻 leader + worker 池
+  grokLeader = createGrokLeader({ root: ROOT, log })
+  if (leaderEnabled()) {
+    const ok = await grokLeader.ensureStarted()
+    log(
+      'grok leader',
+      ok ? 'ready' : 'unavailable (fallback cold spawn)',
+      `pool=${poolSize()}`,
+      `stream=${streamEnabled() ? 'on' : 'off'}`,
+    )
+  } else {
+    log('grok leader disabled', `pool=${poolSize()}`, `stream=${streamEnabled() ? 'on' : 'off'}`)
+  }
+
   log(
     'bridge start',
     `account=${cred.accountId}`,
@@ -1265,7 +1664,13 @@ async function main() {
     `media=in+out`,
     `soft_archive=on`,
     `proxy=${process.env.HTTPS_PROXY || process.env.ALL_PROXY || 'none'}`,
+    `prewarm=${envFlag('GROK_PREWARM', true) ? 'on' : 'off'}`,
+    `pool=${poolSize()}`,
+    `leader=${leaderEnabled() ? 'on' : 'off'}`,
+    `stream=${streamEnabled() ? 'on' : 'off'}`,
   )
+  // 不阻塞长轮询；预热跑在后台（挂 leader socket）
+  prewarmGrok()
 
   const ac = new AbortController()
   let shuttingDown = false
@@ -1288,6 +1693,11 @@ async function main() {
         /* ignore */
       }
     }
+    try {
+      await grokLeader?.stop?.()
+    } catch {
+      /* ignore */
+    }
     ac.abort()
     // give WeChat send a moment
     setTimeout(() => process.exit(0), 1500)
@@ -1302,7 +1712,8 @@ async function main() {
   log(
     'wx status',
     `enabled=${process.env.WX_STATUS ?? '1'}`,
-    `heartbeat=${process.env.WX_STATUS_HEARTBEAT_SEC ?? 120}s`,
+    `heartbeat=${process.env.WX_STATUS_HEARTBEAT_SEC ?? 90}s`,
+    `stream=${streamEnabled() ? 'on' : 'off'}`,
   )
   await monitorLoop(cred, allowSet, ac.signal)
 }

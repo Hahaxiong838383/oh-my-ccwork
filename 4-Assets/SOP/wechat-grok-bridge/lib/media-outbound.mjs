@@ -289,6 +289,10 @@ export async function uploadAndSendFile({
 /**
  * Parse reply → send text chunks (caller) + media files.
  * Returns { text, mediaSent, warnings }
+ *
+ * @param {string} [opts.mediaSourceText] 附件标记提取源（默认 text）；流式定稿时
+ *   text 可为「未发出后缀」，mediaSourceText 仍用全文以免丢 [[send-file]]
+ * @param {boolean} [opts.skipText] 只发附件不发正文
  */
 export async function processOutboundReply({
   baseUrl,
@@ -299,9 +303,12 @@ export async function processOutboundReply({
   allowedRoots,
   sendTextFn,
   log = () => {},
+  mediaSourceText,
+  skipText = false,
 }) {
-  const refs = extractOutboundMediaRefs(text)
-  const cleaned = stripMediaMarkers(text)
+  const source = mediaSourceText != null ? mediaSourceText : text
+  const refs = extractOutboundMediaRefs(source)
+  const cleaned = skipText ? '' : stripMediaMarkers(text)
   const warnings = []
   let mediaSent = 0
 
