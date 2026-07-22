@@ -62,6 +62,19 @@
 - 页面说明：基于 RK3588 部署端侧多模态模型，采用 InspireFace 检测级联 HSEmotion-b2 表情识别，在本地实现毫秒级表情、坐姿等状态识别与实时反馈。
 - Git 归档：原片 146.8MB，超过 GitHub 普通单文件限制且仓库未启用 Git LFS；原片保留在素材目录、韩国生产节点与回滚备份，仓库提交优化版和封面。
 
+## 2026-07-22 增量
+
+### 多模态视觉交互 · 视线追踪优化
+
+- 新增：`public/media/multimodal-interaction/gaze-tracking-20260722.mp4`。
+- 输出：`public/media-optimized/multimodal-interaction/gaze-tracking-20260722.mp4`。
+- 封面：`public/media-posters/multimodal-interaction/gaze-tracking-20260722.jpg`。
+- 分辨率：1280x720 → 1280x720，保持横屏比例与 30fps。
+- 体积：26.0MB → 2.6MB，节省 89.9%。
+- 编码：H.264、CRF 28、preset slow、yuv420p、`+faststart`，与现有多模态视觉交互视频一致。
+- 音频：去除；该视频聚焦视线追踪与视觉交互效果，沿用现有多模态演示视频的静音预览规范。
+- 页面说明：与此前多模态视觉交互演示同源，本段更聚焦视线追踪链路优化，展示注视点定位、跟随稳定性与多模态协同交互效果。
+
 ## 回滚
 
 - 若压缩版观感不满意，将数据引用从 `/media-optimized/...` 改回 `/media/...`。

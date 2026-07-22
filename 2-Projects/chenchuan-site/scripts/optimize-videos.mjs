@@ -15,6 +15,7 @@ const inputs = [
   'public/media/multimodal-interaction/clip-01.mp4',
   'public/media/multimodal-interaction/clip-02.mp4',
   'public/media/multimodal-interaction/demo-v2.mp4',
+  'public/media/multimodal-interaction/gaze-tracking-20260722.mp4',
   'public/media/multimodal-robot/clip-01.mp4',
   'public/media/multimodal-robot/clip-02.mp4',
   'public/media/multimodal-robot/clip-03.mp4',
