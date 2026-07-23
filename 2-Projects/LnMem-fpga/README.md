@@ -12,6 +12,8 @@
 | [intent_annotation_handbook.md](intent_annotation_handbook.md) | **意图标注手册 v0.2**：LnMem 14 条学费固化为管线红线 + §1.4 会议场景标签集 v1（I0–I5 实例化） |
 | [feature_contract.md](feature_contract.md) | **接口契约 v0.1**：FeatureFrame v1 + 会议 context schema v1（k=16）+ 可变 dt 语义 + 车载 schema 预留 |
 | [stage0-platform-decision.md](stage0-platform-decision.md) | **阶段 0 决策件（待拍板）**：FPGA 直上 / Orin / 软件版先行三选一，cc 推荐软件先行 + FPGA gate 后置 |
+| [causal-discovery-literature-map.md](causal-discovery-literature-map.md) | **因果发现文献映射（2026-07-23）**：15 篇连续时间因果发现原文精读 → T4 选型决策件 + 「因果掩码 CfC」理论地基。核心：T4 从证实器降级为**证伪器**；工具改 PCMCI+ ＋ F-PCMCI ＋ 签名核 CI 双路，TSCI 出局 |
+| [causal-discovery-primer.md](causal-discovery-primer.md) | **通俗读本**（同一批文献的教材版）：零基础起步，空调/车轮倒转/冰淇淋等实例讲透四大陷阱，含思考题与答案。**先读这本，再看上面那份决策件** |
 | [fpga-lnn-camera-expression-intent-full-v2.md](fpga-lnn-camera-expression-intent-full-v2.md) | v2.0 历史版（与 v2.1 diff 对照用） |
 | [fpga-lnn-camera-expression-intent.md](fpga-lnn-camera-expression-intent.md) | v1 摘要版（历史；结论以 v2.1 为准） |
 
@@ -30,5 +32,5 @@
 - [x] **T1 实时面板**（http://127.0.0.1:17860，2026-07-20）+ **T2 自动标注**（autolabel/confirm，事件锚规则版——隐私设计不存帧故 VLM 无用武之地，事件锚本就是 v1 主力）
 - [ ] **T3 数据积累**（川哥：每场会一条命令 + 会后 autolabel/confirm，目标首批 300 条干净标注）
 - [ ] T5 阶段 0 收尾：KPI 表冻结（Mac 软件版口径）+ 意图标签定义签字
-- [ ] T4 MI 门（首批 300 条自动触发）→ T6 训练 A/B → T7 意图 demo → T8 判决点
+- [ ] **T4a MI 门**（关联层，首批 300 条自动触发）→ **T4b 因果方向门**（结构层，证伪器；PCMCI+ ＋ F-PCMCI ＋ 签名核 CI 双路，判读口径见 v2.1 §9.4）→ T6 训练 A/B → T7 意图 demo → T8 判决点
 - [ ] KV260 阶段 2b 实施清单（gate=T8 效果达标后启动）
