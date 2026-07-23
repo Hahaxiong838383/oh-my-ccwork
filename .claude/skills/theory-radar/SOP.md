@@ -3,6 +3,8 @@
 > 本文件是跨引擎标准流程，任何 AI（cc/codex/gemini）均可独立执行。
 > 每一步都有明确的输入、操作、输出，禁止跳步或自由发挥。
 
+> **生产覆盖规则（2026-07-23）**：每日生产报告只由韩国 `RSS/OpenAlex + Grok 4.5` 产线生成并发布。飞书任务必须读取 `https://my.chenchuan.cc/api/radar/report?date=YYYY-MM-DD`，不得再次运行本 SOP 的 arXiv Query API、重新分析或调用个人站 webhook。`needs_refresh` 不是授权失效，须以 sidecar 绑定状态和真实发送结果判定。以下步骤仅用于川哥明确授权的人工回溯、Wiki 补档或灾难恢复。
+
 ---
 
 ## 任务概述

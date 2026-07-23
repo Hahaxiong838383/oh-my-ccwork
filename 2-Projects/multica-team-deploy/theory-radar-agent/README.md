@@ -1,6 +1,6 @@
-# multica theory-radar autopilot（自动化日报，agent 端到端自完成）
+# multica theory-radar autopilot（正式报告飞书消费端）
 
-> 把 cc 的 theory-radar skill 能力同步到 multica agent，让 **multica autopilot 自己**抓取+分析+发飞书，不再依赖 cc 手动执行，也不再卡在多 agent 协调缺 O2。
+> 韩国正式产线负责 RSS/OpenAlex 抓取、Grok 4.5 分析和个人站发布；Multica autopilot 只读取已发布报告并发送飞书，避免双生产者、arXiv Query API 429 和重复覆盖。
 
 ## 问题（之前为什么卡）
 
@@ -10,19 +10,20 @@
 
 ## 方案（单 agent 端到端 + 自包含 skill）
 
-1. **arxiv 抓取脚本部署到 mini**：`~/theory-radar/arxiv-theory-radar.py`（纯 Python stdlib，无第三方依赖，走 xray proxy 抓 arXiv）
-2. **自包含 multica skill `theory-radar`**（id `6b8ca900-ba60-4d68-aaa5-f7f161af2fac`）：SKILL.md 含完整三步 SOP（抓取→选8篇5段式分析→sidecar 取 open_id→05_agent_spawn.sh 发川哥飞书），把所有 O2 写进 skill 自身
+1. **韩国正式产线是唯一生产者**：每日先完成 RSS/OpenAlex 抓取、Grok 4.5 分析和个人站发布。
+2. **个人站提供只读报告接口**：`GET /api/radar/report?date=YYYY-MM-DD`，Multica 只消费已经发布的同日报告。
+3. **自包含 multica skill `theory-radar`**（id `6b8ca900-ba60-4d68-aaa5-f7f161af2fac`）：等待正式报告→校验 4-8 篇→按原字段格式化→sidecar 取 open_id→飞书发送 3 条。
    - **用 `multica skill update --content` 设主体**，不放 SKILL.md supporting file（避免双 SKILL.md 写碰撞，见 feedback_multica_skill_dual_skillmd_source_collision）
    - ASCII 名 `theory-radar`（slug 与「飞书代理操作-zh」的 zh 不同，避免同 slug 撞）
-3. **挂到 agent**「Claude Code（理论雷达）」(`2876ba85`, claude-opus, 只挂此一个 skill)
-4. **autopilot 改指向该 agent + 简化描述**（`multica autopilot update 93bef85d --agent 2876ba85 --description ...`），单 agent 一个 issue 端到端完成
+4. **挂到 agent**「Claude Code（理论雷达）」(`2876ba85`, claude-opus, 只挂此一个 skill)。
+5. **autopilot 09:10 触发**，给韩国 08:35 任务留出发布缓冲；Mini 不再访问 arXiv Query API，也不再调用个人站 webhook。
 
 ## 文件
 
 | 文件 | 说明 |
 |------|------|
 | `theory-radar-SKILL.md` | multica skill `theory-radar` 的内容（已 `skill update --content` 到 6b8ca900） |
-| (mini) `~/theory-radar/arxiv-theory-radar.py` | arXiv 抓取脚本（源在 mycc `.claude/skills/theory-radar/scripts/`） |
+| 个人站 `/api/radar/report` | 韩国正式报告的公开只读 JSON 接口 |
 
 ## 关键 ID
 

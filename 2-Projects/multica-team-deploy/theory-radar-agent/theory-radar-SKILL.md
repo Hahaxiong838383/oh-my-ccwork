@@ -1,183 +1,172 @@
 ---
 name: theory-radar
-description: AI 前沿理论雷达日报端到端自动化。一个 issue 内完成:抓取 arXiv 近3天论文 → 精选论文深度分析 → 发川哥飞书 → 同步个人站。不派子 issue。脑科学×LLM / 认知科学×AI / LLM机制 / Agent 治理。
+description: AI 前沿理论雷达飞书日报。读取韩国正式产线已经发布的同日报告，验证后分 3 条发送给川哥；禁止再次抓取 arXiv 或重复写入个人站。
 ---
 
-# AI 理论雷达日报自动化（端到端单 agent）
+# AI 理论雷达飞书日报（正式报告消费端）
 
-你负责生成当天 AI 前沿理论雷达日报，发送到川哥飞书，并把同一批内容同步到个人站。**一个 issue 内端到端完成全部步骤，不要派子 issue、不要等其他 agent。** 全程中文。
+你只负责把韩国正式产线已经生成并发布的 Theory Radar 报告发送到川哥飞书。**韩国产线是唯一数据生产者；本任务是只读消费端。** 一个 issue 内完成，不派子 issue，全程中文。
 
-## Prompt Shard Kernel（时效 + 工具证据吸收版）
+## 单一真源
 
-本 skill 继承 multica `current-info` + `tool-source-of-truth` + `file-output`:
+- 正式报告接口：`https://my.chenchuan.cc/api/radar/report?date=YYYY-MM-DD`
+- 正式生产链：韩国 `arXiv RSS + OpenAlex + Grok 4.5 + 个人站发布`
+- 本任务**禁止**运行 `~/theory-radar/arxiv-theory-radar.py`，禁止访问 arXiv Query API，禁止重新分析、改写或重新选择论文。
+- 本任务**禁止**调用个人站 webhook；正式报告已经发布，再调用会造成重复生产和覆盖。
 
-- **实时源优先**: 今日论文必须以当前 arXiv 抓取 JSON 为准,不能靠训练记忆编论文。
-- **失败透明**: 抓取失败、JSON 为空、飞书发送失败都要如实 comment,不要补写虚构论文或虚构 message_id。
-- **证据收尾**: 完成必须记录 3 个真实 `message_id` + 1 个个人站 webhook 成功响应;缺任一项就不能报全成功。
-- **范围固定**: 本 skill 的 O2 已完整,不要派子 issue,不要临时加 wiki/表格/归档动作;个人站同步是本 skill 的固定步骤,不是额外扩展。
-- **版权克制**: 只摘要论文标题/摘要含义,不复制长段原文。
+## 步骤 1：等待并读取当天正式报告
 
-## 步骤 1：抓取 arXiv 论文
-
-arXiv 是境外站，**必须带 proxy**（NO_PROXY 保证本地服务直连）：
+当天日期必须按上海时区计算。最多等待 5 分钟，避免 09:10 调度时韩国任务偶发仍在收尾；每 30 秒重试一次。404 只代表报告尚未就绪，不代表今日没有论文。
 
 ```bash
-export HTTPS_PROXY=http://127.0.0.1:10808 HTTP_PROXY=http://127.0.0.1:10808 NO_PROXY=localhost,127.0.0.1
-python3 ~/theory-radar/arxiv-theory-radar.py
+REPORT_DATE=$(TZ=Asia/Shanghai date +%F)
+REPORT_URL="https://my.chenchuan.cc/api/radar/report?date=$REPORT_DATE"
+
+ok=0
+for attempt in $(seq 1 10); do
+  if curl -fsS --connect-timeout 10 --max-time 30 \
+    -H 'Cache-Control: no-cache' "$REPORT_URL" \
+    -o /tmp/theory-radar-official.json; then
+    if REPORT_DATE="$REPORT_DATE" python3 - <<'PY'
+import json
+import os
+
+data = json.load(open('/tmp/theory-radar-official.json'))
+report = data.get('report') if data.get('ok') else None
+assert isinstance(report, dict)
+assert report.get('date') == os.environ['REPORT_DATE']
+papers = report.get('papers')
+assert isinstance(papers, list) and 4 <= len(papers) <= 8
+for index, paper in enumerate(papers, 1):
+    assert paper.get('index') == index
+    assert paper.get('title') and paper.get('url', '').startswith('https://arxiv.org/abs/')
+    assert paper.get('finding') and paper.get('llmLink') and paper.get('insight')
+print('official report ok', report['date'], len(papers), report.get('generatedAt'))
+PY
+    then
+      ok=1
+      break
+    fi
+  fi
+  sleep 30
+done
+
+test "$ok" = 1
 ```
 
-输出 `/tmp/theory-radar-data.json`（近3天论文，含 sections / 各篇 title/abstract/arxiv_id/categories）。先 `cat /tmp/theory-radar-data.json | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['date'],d['total'])"` 确认抓到。
+如果 10 次后仍未取得合法报告：在 issue comment 记录 HTTP 状态、重试次数和“正式报告尚未就绪”，将 issue 置 `blocked` 并结束。**不得改用旧 arXiv 脚本，也不得发送“今日 total=0”之类未经正式产线证实的结论。**
 
-## 步骤 2：精选论文 + 深度分析
+## 步骤 2：按正式报告生成 3 条消息
 
-读 JSON，从所有 sections 合并去重，优先选最相关的 8 篇；若当天论文不足 8 篇，按实际数量输出，但不少于 4 篇。**选篇优先级**：
-1. 直接研究 LLM 内部机制 × 认知/神经科学对应
-2. 新认知计算模型可迁移 AI
-3. 脑神经实验对 attention/memory/reasoning 有启发
-4. Agent 评测/治理/行为
+只做格式化，不让模型重新总结。飞书内容必须逐字来自接口的 `summary` 和 `papers[*]` 字段。
 
-每篇 **5 段式中文**（专有名词保留英文）：
-```
-【N】中文精简标题（≤20字）
-📍 arxiv.org/abs/XXXXX | 分类
-🔬 核心发现：[2-3句论文核心结论]
-🔗 与LLM连接：[1-2句如何映射到大模型机制/AI设计]
-💡 研究启示：[1-2句对认知AI/类脑计算价值]
-```
-
-同时把同一批分析保存为结构化 JSON，供个人站 webhook 使用。**不得为个人站重新选择论文或重新生成一套不同分析**。
-
-文件：`/tmp/theory-radar-site-report.json`
-
-Schema:
-```json
-{
-  "date": "YYYY-MM-DD",
-  "summary": "一句话今日趋势综述，中文，80字以内",
-  "generatedAt": "YYYY-MM-DDTHH:mm:ss+08:00",
-  "papers": [
-    {
-      "index": 1,
-      "title": "中文精简标题",
-      "arxivId": "2606.xxxxx",
-      "url": "https://arxiv.org/abs/2606.xxxxx",
-      "published": "从 /tmp/theory-radar-data.json 回填原始 published",
-      "category": "主分类",
-      "score": 80,
-      "finding": "与飞书一致的核心发现",
-      "llmLink": "与飞书一致的 LLM 连接",
-      "insight": "与飞书一致的研究启示"
-    }
-  ]
-}
-```
-
-生成后先校验：
 ```bash
 python3 - <<'PY'
 import json
-p='/tmp/theory-radar-site-report.json'
-d=json.load(open(p))
-assert d.get('date') and d.get('generatedAt')
-assert isinstance(d.get('papers'), list) and 4 <= len(d['papers']) <= 8
-for i, paper in enumerate(d['papers'], 1):
-    assert paper.get('index') == i
-    assert paper.get('arxivId') and paper.get('url', '').startswith('https://arxiv.org/abs/')
-    assert paper.get('finding') and paper.get('llmLink') and paper.get('insight')
-print('site report ok', d['date'], len(d['papers']))
+from pathlib import Path
+
+payload = json.load(open('/tmp/theory-radar-official.json'))
+report = payload['report']
+papers = report['papers']
+month_day = report['date'][5:].replace('-', '月') + '日'
+
+def render(paper):
+    return '\n'.join([
+        f"【{paper['index']}】{paper['title']}",
+        f"📍 {paper['url']} | 分类：{paper.get('category') or '未分类'}",
+        f"🔬 核心发现：{paper['finding']}",
+        f"🔗 与LLM的连接：{paper['llmLink']}",
+        f"💡 研究启示：{paper['insight']}",
+    ])
+
+groups = (papers[:3], papers[3:6], papers[6:])
+messages = []
+messages.append('\n'.join([
+    '━━━━━━━━━━━━━━━━',
+    '🧬 AI前沿理论雷达',
+    f"📅 {month_day} | 共 {len(papers)} 篇精选",
+    '🔬 脑科学 · 认知科学 · LLM理论',
+    '━━━━━━━━━━━━━━━━',
+    '',
+    '\n\n'.join(render(paper) for paper in groups[0]),
+]))
+messages.append('\n\n'.join(render(paper) for paper in groups[1]))
+tail = '\n\n'.join(render(paper) for paper in groups[2])
+messages.append('\n'.join([
+    tail,
+    '',
+    '━━━━━━━━━━━━━━━━',
+    f"📊 今日总结：{report.get('summary') or '详见以上论文拆解'}",
+    '🌐 完整报告：https://my.chenchuan.cc/radar',
+    '━━━━━━━━━━━━━━━━',
+]).strip())
+
+for index, message in enumerate(messages, 1):
+    assert message.strip()
+    Path(f'/tmp/tr{index}.txt').write_text(message, encoding='utf-8')
+    print(f'message {index}: {len(message)} chars')
 PY
 ```
 
-## 步骤 3：发川哥飞书（3 条防截断）
+## 步骤 3：验证飞书授权并发送
 
-**收件人 = 川哥**，multica user id 固定：`ece30832-3b2c-49b6-985c-c9254cd3f108`
+收件人是川哥，Multica user id 固定为 `ece30832-3b2c-49b6-985c-c9254cd3f108`。
 
-**铁律（违反 = 事故）**：open_id **只能**从 sidecar /status 取，**禁止手敲任何 ou_/UUID**（LLM 复制长 hex 易出 c→f 一字之差，飞书 API 不验存在性会送错人）。
+open_id **只能**从 sidecar `/status` 实时读取，禁止手敲。`token_status=valid` 和 `token_status=needs_refresh` 都是可用状态；sidecar 会自动静默刷新。只有 `bound=false`、open_id 为空，或真实发送接口返回授权失效，才可以要求川哥重新授权。
 
 ```bash
 MUID=ece30832-3b2c-49b6-985c-c9254cd3f108
-OPEN=$(curl -sS "http://127.0.0.1:18090/api/feishu/device/status?multica_user_id=$MUID" | python3 -c "import sys,json;print(json.load(sys.stdin)['lark_user_open_id'])")
-# 把 3 条消息分别写文件（避免 shell 引号问题），再逐条发
-# 消息1: 标题卡 + 第1-3篇; 消息2: 第4-6篇; 消息3: 第7-8篇 + 今日总结
-cat > /tmp/tr1.txt << 'MSGEOF'
-━━━━━━━━━━━━━━━━
-🧬 AI前沿理论雷达
-📅 MM月DD日 | 共 8 篇精选
-🔬 脑科学 · 认知科学 · LLM理论
-━━━━━━━━━━━━━━━━
+curl -fsS "http://127.0.0.1:18090/api/feishu/device/status?multica_user_id=$MUID" \
+  -o /tmp/theory-radar-feishu-status.json
 
-【1】... (5段式)
-【2】...
-【3】...
-MSGEOF
-# 同理 /tmp/tr2.txt(4-6篇) /tmp/tr3.txt(7-8篇+总结)
-for f in 1 2 3; do
-  bash ~/lark_multi_user/05_agent_spawn.sh "$MUID" im +messages-send --user-id "$OPEN" --text "$(cat /tmp/tr$f.txt)"
-  sleep 2
-done
+OPEN=$(python3 - <<'PY'
+import json
+
+status = json.load(open('/tmp/theory-radar-feishu-status.json'))
+assert status.get('bound') is True, 'feishu not bound'
+assert status.get('token_status') in {'valid', 'needs_refresh'}, 'feishu token unusable'
+open_id = status.get('lark_user_open_id')
+assert isinstance(open_id, str) and open_id.startswith('ou_'), 'missing open_id'
+print(open_id)
+PY
+)
 ```
 
-每条返回 `{"ok":true,"data":{"message_id":"om_..."}}` 即成功。3 条都拿到 message_id 才算飞书发送完成。**飞书消息不要加署名/发送方标识行**，消息 3 放剩余论文 + 今日总结；若当天只有 6 篇，消息 3 只放今日总结即可。
-
-## 步骤 4：同步个人站（同源内容）
-
-个人站 webhook 已部署：
-
-- URL: `https://my.chenchuan.cc/api/radar-webhook`
-- 鉴权: `Authorization: Bearer $RADAR_WEBHOOK_TOKEN`
-- body: `/tmp/theory-radar-site-report.json`
-
-secret 只在 mini 本地 `~/.theory-radar-push.env`，**禁止 echo token，禁止写入 issue comment，禁止写入 git**。
-
-webhook 必须直连并带浏览器 UA，避免 xray/境外出口导致 403：
+逐条发送并保存原始响应。已经成功的消息绝不重发；只有 `ok:false` 的当前消息允许重试 1 次。
 
 ```bash
-set -a
-. "$HOME/.theory-radar-push.env"
-set +a
+for index in 1 2 3; do
+  bash ~/lark_multi_user/05_agent_spawn.sh "$MUID" \
+    im +messages-send --user-id "$OPEN" --text "$(cat /tmp/tr$index.txt)" \
+    | tee "/tmp/tr$index-response.json"
+  sleep 2
+done
+
 python3 - <<'PY'
-import json, os, sys, urllib.request
+import json
 
-url = os.environ.get('RADAR_WEBHOOK_URL', 'https://my.chenchuan.cc/api/radar-webhook')
-token = os.environ.get('RADAR_WEBHOOK_TOKEN')
-if not token:
-    raise SystemExit('missing RADAR_WEBHOOK_TOKEN')
-
-body = open('/tmp/theory-radar-site-report.json', 'rb').read()
-req = urllib.request.Request(
-    url,
-    data=body,
-    headers={
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-    },
-    method='POST',
-)
-opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-with opener.open(req, timeout=60) as r:
-    text = r.read().decode()
-    print(text)
-    data = json.loads(text)
-    if not data.get('ok'):
-        raise SystemExit('webhook not ok: ' + text)
+ids = []
+for index in range(1, 4):
+    response = json.load(open(f'/tmp/tr{index}-response.json'))
+    assert response.get('ok') is True, response
+    message_id = (response.get('data') or {}).get('message_id')
+    assert isinstance(message_id, str) and message_id.startswith('om_'), response
+    ids.append(message_id)
+print('\n'.join(ids))
 PY
 ```
 
-拿到 `{"ok":true,...}` 才算个人站同步完成。若个人站同步失败：不要重发已成功的飞书消息；comment 里记录“飞书成功、个人站失败”的真实状态和错误摘要，状态不要报全成功。
+## 步骤 4：验收与收尾
 
-## 铁律汇总
+1. `curl -fsS -o /dev/null -w '%{http_code}' https://my.chenchuan.cc/radar` 必须返回 `200`。
+2. issue comment 记录：正式报告日期、论文数、接口验证成功、3 个真实 `message_id`、`token_status`、`/radar=200`。
+3. 将 issue 置 `in_review`，立即结束任务。
 
-1. **一个 issue 内端到端**：抓取→分析→发送飞书→同步个人站，不派子 issue、不等其他 agent、不 block 要 O2（本 skill 已含全部 O2）
-2. **抓取必带 HTTPS_PROXY**（arxiv 境外）
-3. **open_id 走 sidecar /status，禁手敲**
-4. **全中文**，5 段式格式；优先最多 8 篇，实际不足 8 篇时至少 4 篇即可完成
-5. 完成后 issue comment 记录 3 个 message_id + 个人站 webhook ok 响应摘要 + 状态置 in_review
-6. 若某步失败：抓取失败→重试1次带 proxy；飞书 bound:false→报 token 失效让川哥重新授权；不要伪造 message_id
+## 铁律
 
-## ★ 收尾铁律（防超时 + 防重复，FUT-83 教训）
-
-7. **每条消息只发一次**：`05_agent_spawn.sh` 返回 `ok:true` + message_id 即成功，**立即发下一条，绝不重发已成功的**。只有返回 ok:false 才重试该条（max 1 次）。
-8. **同步完即停**：3 条消息 + 个人站 webhook ok + 1 条 comment(记 message_id 和 webhook ok 摘要) 完成后，**立即把 issue 置 in_review 并结束任务**。**禁止**任何额外动作：不归档 wiki、不写多维表、不反复读取检查、不再生成内容。任务到此为止。
-9. **效率优先**：精选论文分析 + 发 3 条 + 推个人站应在 10 分钟内完成，不要逐篇反复打磨。
-10. **不加署名**：飞书 3 条消息都不要加“署名/发送方/Agent 小组”之类的末尾标识行。
+1. 韩国正式报告是唯一真源；Mini 不再抓 arXiv、不再分析、不再写个人站。
+2. 404 时等待重试，不能把“尚未就绪”写成“今日无论文”。
+3. `needs_refresh` 不是授权失效；先依赖 sidecar 自动刷新和真实发送结果。
+4. 不虚构论文、报告、message_id、webhook 状态或授权状态。
+5. 每条消息只发一次；成功后禁止重发。
+6. 不输出 secret，不在 comment 中记录 token、完整 sidecar 响应或用户隐私数据。
