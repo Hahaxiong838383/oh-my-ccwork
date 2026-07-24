@@ -12,6 +12,7 @@
 | OAuth 保活 | `grok-xai-refresh.timer` | 每 2h keep-warm（`--if-expiring 14400`） |
 | **自动更新** | `grok-auto-update.timer` · `~/.local/bin/grok-auto-update.sh` | 每日 04:30 空闲时升级；`config.toml` 已 `auto_update=true` |
 | **Session GC** | `grok-session-gc.timer` · `~/.local/bin/grok-session-gc.sh` | 每日 03:40 归档 ≥20MB / 14 天未改 session |
+| **xray 出网**（2026-07-24） | `xray.service` · `~/.local/xray/xray` + `~/.config/xray/config.json`(600) | 本机代理 127.0.0.1:10808/10809；DMIT 主 + mini 兜底 |
 | Skills | `~/.grok/skills/`（lark-* / feishu-*） | 从 mycc 同步 |
 | MCP | `feishu-bot`（`~/.grok/mcp/feishu-bot`） | bot 身份 send/list/openapi |
 | lark-cli | `~/.lark-cli` + `LARK_CLI_NO_PROXY=1` | bot 凭据，飞书直连 |
@@ -20,8 +21,28 @@
 ## 网络
 
 - **SSH**：默认 `ssh dev198` → `8.218.26.17:22198`（frpc）；备用 `dev198-jump`（mini-pub）、`dev198-lan`（`10.9.1.198`）
-- **Grok / xAI**：走 mini 代理 `http://10.9.1.57:10808`（xray mixed，需 mini 开机）
+- **Grok / xAI**（2026-07-24 起）：走 **dev198 本机 xray** `http://127.0.0.1:10808`，不再依赖 mini 开机
 - **飞书 API**：`NO_PROXY` 含 `.feishu.cn` 等，**直连**
+
+### 本机 xray 出网（2026-07-24 上线）
+
+| 项 | 值 |
+|----|-----|
+| 主出口 | `DMIT-Gemini-vps-chenchuan`（VLESS+Reality，节点从 Air `~/xray/config.json` 同步） |
+| 降级 | observatory 每 60s 探活（gstatic 204）；DMIT 全挂 → balancer `fallbackTag` 自动走 **mini** `10.9.1.57:10808` |
+| 手动兜底 | `127.0.0.1:10809` 入站**直通 mini**（xray 配置坏/DMIT 换节点排障时用） |
+| 消费方 | bridge `.env`、`grok-auto-update.sh`、`grok-xai-keepalive.sh`（均已指 `127.0.0.1:10808`） |
+
+```bash
+systemctl --user status xray
+journalctl --user -u xray -n 20 --no-pager -o cat   # 路由决策日志 [in-main -> 出口tag]
+curl -sS -x http://127.0.0.1:10808 -m 10 -o /dev/null -w '%{http_code}\n' https://www.gstatic.com/generate_204
+curl -sS -x http://127.0.0.1:10808 https://ifconfig.me   # 主通道出口 IP（DMIT=38.49.38.237）
+~/.local/xray/xray run -test -c ~/.config/xray/config.json   # 改配置后先校验
+```
+
+- **DMIT 节点变更**：Air 上 `~/xray/config.json` 取新 outbound → 替换 dev198 `~/.config/xray/config.json` outbounds[0] → `-test` → `systemctl --user restart xray`
+- **回滚到 mini 直连**：bridge `.env` 与两个 grok 脚本里 `127.0.0.1:10808` 改回 `10.9.1.57:10808`，重启 bridge 即可（xray 服务可留）
 
 ## 常用命令（dev198）
 
@@ -100,4 +121,5 @@ open http://127.0.0.1:3200/
 
 - Bot 身份已通；**User OAuth**（个人云文档/日历）未从 Mac Keychain 迁到 Linux，需时在 dev198 `lark-cli auth login`
 - 桥接默认 `bypassPermissions` 无人值守，仅白名单 openId
-- mini 关机或 xray 挂掉 → Grok 出网失败；frpc 挂 → 默认 `ssh dev198` 失败，改 jump
+- Grok 出网主依赖 = 本机 xray + DMIT 节点；DMIT 挂自动降级 mini（此时才依赖 mini 开机）；frpc 挂 → 默认 `ssh dev198` 失败，改 jump
+- git 隐私墙（2026-07-24）：`workspace/leader/exports|inbox|images` 等人事产物已 gitignore 禁入库；plans/org-42x 等未跟踪文件入库需川哥拍板
