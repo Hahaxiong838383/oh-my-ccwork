@@ -75,6 +75,19 @@
 3. dest 应用永活静态域；业务站 502 ≠ 必然代理挂。
 4. DMIT 面板强制重启日志像硬切（无优雅 shutdown 序列），属正常。
 
+## 落地菲律宾（`ph-makati` / `61.245.11.252`，Makati AS19970）
+
+> 2026-07-24 补完：xray bare core（非 3x-ui）+ systemd + healthcheck。
+
+| 端口 | 协议 | dest / SNI | 状态 |
+|------|------|------------|------|
+| **443** | VLESS Reality Vision | **r.chenchuan.cc** | 已验收 E2E |
+| **10086** | VMess WS | path 见服务器 params | 已验收 E2E |
+
+- 参数指针：服务器 `/root/ph-vps-proxy-params.json`；本机密钥目录 `Documents/陈川个人站/自建 vps 密钥/菲律宾-vps-proxy-params.env`（不进 git）。
+- 性能：BBR+fq、`tcp_fastopen=3`、16MB buffer、1G swap、healthcheck 每 2min、`Restart=always`。
+- 备注：Reality **不要**对 inbound 开 `sockopt.tcpFastOpen`（曾导致握手 incomplete）；dest 优先用永活静态域 `r.chenchuan.cc`，勿绑业务站。
+
 ## 相关路径
 
 - 项目：`2-Projects/vps-proxy/`
