@@ -128,8 +128,14 @@ open http://127.0.0.1:3200/
 
 本通道正演进为多用户平台：用户扫码得**自己的** Bot + agent 实例（独立记忆/KB/skills/MCP）+ **自己的订阅**（BYOS）。
 
-- **规划/进展**：dev198 `workspace/plans/role-channel-L-M-H.md`（H 章）+ `h-p1-implementation.md` + `h-p1-3-sandbox.md`（均 push `origin/feishu-grok-bridge`）
-- **记忆**：A canonical `project_feishu_grok_h_byos`（拍板结论/账号三层/分层体系/验收协议全量）
-- **控制面**：`ai.kidshub.cn`（阿里云 HK，公网 TLS）；**执行面 dev198 不暴露公网**
-- **P1 地基三块已验收**：多 App 连接池 + 用户模型（`lib/app-registry.mjs`）+ bwrap 沙箱隔离（`lib/sandbox.mjs`）；代码在 `origin/feature/h-p1`，**未合 main**
-- ⚠️ **运维注意**：生产 = 主 checkout `main` 单账号；H 多用户开发在 worktree `~/fgb-h-p1`（`feature/h-p1`），两者勿混；测试账号 park 在 `/srv/h-platform/.test-account-parked.json`
+- **规划/进展**：dev198 `workspace/plans/role-channel-L-M-H.md`（H 章）+ `h-p1-implementation.md` + `h-p1-3-sandbox.md` + `h-p1-4-6-byos-dashboard.md`（push `origin/feature/h-p1`）
+- **记忆**：A canonical `project_feishu_grok_h_byos`（拍板结论/账号三层/分层体系/验收协议 + P1.4/1.5/1.6 全量）
+- **控制面 h-control**（`ai.kidshub.cn`，阿里云 HK 公网 TLS；**执行面 dev198 不暴露公网**）：
+  - systemd `h-control`（User=h-control，`/srv/h-control/app`，nginx→`127.0.0.1:18790`，MemoryMax 200M）
+  - 功能：dashboard(magic link 登录) + BYOS device-flow OAuth(xAI+Kimi) + AES-256-GCM vault + token-manager keep-warm(唯一刷新者防 rotation war，不碰 owner)
+  - 源码 `origin/feature/h-p1` `control-plane/`；secret（`SERVICE_TOKEN`/`SESSION_SECRET`/`.vault-key`）只在 `/srv/h-control/.env`+data(600)，**不入 git**
+  - `/internal/creds/<uid>` **只下发 access token**，refresh 永不出控制面
+- **P1 全五块机验通过**：多 App 连接池 + 用户模型（`lib/app-registry.mjs`）+ bwrap 沙箱（`lib/sandbox.mjs`）+ 引擎适配（`lib/kimi-runner.mjs` kimi 直连 / `lib/control-client.mjs` 凭据同步）+ 控制面上云；代码 `origin/feature/h-p1`（f3b0e1b/733cf56），**未合 main**
+- **引擎出网**：grok 走本机 xray `127.0.0.1:10808`；**kimi 直连**（不走 xray，川哥拍板）→ 沙箱需修 DNS（挂 `/run/systemd/resolve`，见记忆 `feedback_bwrap_sandbox_dns_direct_connect`）
+- **唯一待真机**：川哥绑真订阅走 device flow → 引擎 200 对话（harness 全绿）。验收窗口就绪：worktree `.env` 已配 `H_CONTROL_URL`+`H_CONTROL_TOKEN`
+- ⚠️ **运维注意**：生产 = 主 checkout `main` 单账号（不含 H_CONTROL，owner 不需要）；H 多用户开发在 worktree `~/fgb-h-p1`（`feature/h-p1`），两者勿混；测试账号 park 在 `/srv/h-platform/.test-account-parked.json`
