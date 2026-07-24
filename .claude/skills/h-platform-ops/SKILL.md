@@ -28,10 +28,12 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 ## 开通新用户（10 分钟）
 
 ```bash
-# ① 拿二维码（谁扫谁授权）
-ssh -f -N -L 3200:127.0.0.1:3200 dev198 && open http://127.0.0.1:3200/   # 截图发用户扫
+# ① 签发公网注册链接（30min 有效）发给用户，用户自己扫码建 Bot（凭据自动入控制面）
+TOKEN=$(ssh aliyun-hk "grep '^SERVICE_TOKEN=' /srv/h-control/.env | cut -d= -f2")
+curl -sS -X POST https://ai.kidshub.cn/internal/register-link -H "Authorization: Bearer $TOKEN"
+# → {"url":"https://ai.kidshub.cn/register/<token>"} 发用户；用户扫码后页面显示 appId
 
-# ② 激活（openId 自动从 accounts 取；engine 选 grok/kimi）
+# ② 激活（appId 不在本地自动从控制面 /internal/bot-cred 拉；openId 自动；engine grok/kimi）
 ssh dev198; cd ~/feishu-grok-bridge
 node scripts/h-user.mjs activate <uid> <appId> [grok|kimi]
 node scripts/h-user.mjs list        # 确认 ✅ active
@@ -44,6 +46,13 @@ journalctl --user -u feishu-grok-bridge -n 30 --no-pager -o cat | grep -E "activ
 ④ 用户自助：发「配置」→ magic link → dashboard → device flow 绑订阅。
 ⑤ 验收：双引擎各发一条任务 + 越界隔离复验（铁律 3）。
 完整版 `dev198:~/feishu-grok-bridge/workspace/plans/h-onboarding-sop.md`。
+
+## 注册流（公网自助建 Bot）
+
+控制面签发 `ai.kidshub.cn/register/<token>` → 用户扫码 → 控制面调 `accounts.feishu.cn`
+device-flow 注册（`lib/feishu-register.mjs`）→ Bot 凭据 AES 存控制面 `bot-store`（同 dev198
+密钥）→ dev198 激活时 `/internal/bot-cred` 拉取。执行面全程不暴露公网。`FEISHU_CREDENTIAL_SECRET`
+两端同值；控制面注册流需 `npm install`（qrcode）。
 
 ## 改 bridge 核心逻辑时的验收窗口
 
