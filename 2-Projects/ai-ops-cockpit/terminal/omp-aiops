@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+runtime_omp=/opt/omp-runtime/current/bin/omp
+if [ -x "$runtime_omp" ]; then
+  exec "$runtime_omp" "$@"
+fi
+
+exec /opt/bun/bin/omp "$@"

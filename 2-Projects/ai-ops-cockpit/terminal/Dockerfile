@@ -40,8 +40,10 @@ RUN curl -fsSL https://bun.sh/install | bash \
 
 COPY vibe-shell /usr/local/bin/vibe-shell
 COPY vibe-omp /usr/local/bin/vibe-omp
+COPY omp-aiops /usr/local/bin/omp-aiops
 COPY vibe-bashrc /etc/aiops-vibe-bashrc
-RUN chmod +x /usr/local/bin/vibe-shell /usr/local/bin/vibe-omp \
+COPY models.volcengine.yml /etc/aiops-models.yml
+RUN chmod +x /usr/local/bin/vibe-shell /usr/local/bin/vibe-omp /usr/local/bin/omp-aiops \
     && echo 'if [ -f /etc/aiops-vibe-bashrc ]; then . /etc/aiops-vibe-bashrc; fi' >> /home/ops/.bashrc \
     && chown ops:ops /home/ops/.bashrc
 

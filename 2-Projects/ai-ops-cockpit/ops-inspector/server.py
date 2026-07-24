@@ -36,6 +36,8 @@ TERMINAL_ACTION_STATE = {"last_restart": 0}
 TERMINAL_RESTART_COOLDOWN_SECONDS = int(os.environ.get("TERMINAL_RESTART_COOLDOWN_SECONDS", "30"))
 ACTION_TOKEN = os.environ.get("OPS_ACTION_TOKEN") or secrets.token_urlsafe(24)
 READ_TOKEN = os.environ.get("OPS_READ_TOKEN") or ACTION_TOKEN
+AI_OPS_OMP_MODEL = os.environ.get("AI_OPS_OMP_MODEL", "volcengine-coding/deepseek-v4-pro")
+AI_OPS_OMP_MODEL_LABEL = os.environ.get("AI_OPS_OMP_MODEL_LABEL", "DeepSeek V4 Pro")
 ACTION_HEADER = "x-aiops-action-token"
 READ_HEADER = "x-aiops-read-token"
 TASKS_DIR = os.path.join(STATE_DIR, "vibe-tasks")
@@ -828,7 +830,7 @@ print(json.dumps(result, ensure_ascii=False))
         "setupWizardDisabled": setup_disabled,
         "credentialReady": credential_ready,
         "disabledCause": redact_sensitive_text(disabled_cause or "") or None,
-        "autoModel": "xai-oauth/grok-4.5",
+        "autoModel": AI_OPS_OMP_MODEL,
         "recentSessionHasProviderSetup": "Set up your providers" in recent or "Select provider to login" in recent,
         "recentSessionHasReconnectSignal": "process exited with code 1" in recent,
     }
@@ -1058,7 +1060,7 @@ def pilot_payload():
     return {
         "policy": "实战试点默认只读；先跑低风险项目巡检，再由 Codex/cc 收口执行任何写入。",
         "acceptance": [
-            "Grok 输出必须包含 O1/O2、Plan、Check、Action。",
+            "AI 模型输出必须包含 O1/O2、Plan、Check、Action。",
             "只能引用 allowlist 文件和只读快照路径。",
             "任何写入、部署、commit、push 都必须先生成计划、风险、回滚点和验收命令。",
             "任务结果进入 /vibe/tasks，可再转入 /vibe/todos。",
@@ -1822,7 +1824,7 @@ def run_ops_runtime_tool(payload):
     if not spec:
         return {"ok": False, "error": "unknown runtime tool"}
     if spec.get("risk") == ops_tool_runtime.RISK_BLOCKED:
-        return {"ok": False, "error": "tool blocked by policy", "policy": "deploy, shell, file write and secret access are not exposed to Grok"}
+        return {"ok": False, "error": "tool blocked by policy", "policy": "deploy, shell, file write and secret access are not exposed to the AI model"}
     if project_id not in PILOT_PROJECTS:
         return {"ok": False, "error": "project not found"}
     if project_id not in (spec.get("projects") or []):
@@ -1975,7 +1977,7 @@ def create_project_daily_todo(project_id, task, job_id):
             "modeName": "只读巡检",
             "project": project_id,
             "question": f"{project_id} 每日 AI 巡检",
-            "answer": "每日巡检链路未能完成 Grok 分析，请查看实时探测与任务审计。",
+            "answer": "每日巡检链路未能完成 AI 模型分析，请查看实时探测与任务审计。",
             "createdAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
             "durationMs": 0,
         }
@@ -2317,7 +2319,7 @@ def create_todo_from_task(task_id):
         "taskId": task_id,
         "project": task.get("project"),
         "status": "open",
-        "title": (task.get("question") or "Grok 任务待办")[:120],
+        "title": (task.get("question") or "AI 模型任务待办")[:120],
         "summary": summary,
         "structured": task_structured_summary(task),
         "nextActions": ["continue_question", "plan_design", "inspect"],
@@ -2371,7 +2373,7 @@ def inspect_for_todo(todo_id):
         return {"ok": False, "error": "todo not found"}
     result = n8n_manual_inspect_payload()
     result["todoId"] = todo_id
-    result["note"] = "已基于待办触发内部巡检；未外发待办标题、摘要或 Grok 输出。"
+    result["note"] = "已基于待办触发内部巡检；未外发待办标题、摘要或 AI 模型输出。"
     return result
 
 
@@ -2483,7 +2485,16 @@ def run_vibe_task(mode, question, conversation=None, notify=False, project_id=No
         if runtime_context:
             runtime_text = redact_sensitive_text(json.dumps(runtime_context, ensure_ascii=False, indent=2))[:12000]
             prompt += "\n\n本轮实时运行上下文如下；它比源码快照更新，应优先用于判断当前状态：\n```json\n" + runtime_text + "\n```"
-        shell = 'cat > /tmp/aiops-task-prompt.txt && timeout 180 omp --model xai-oauth/grok-4.5 --cwd /workspace/projects/ai-ops-cockpit --no-tools --no-session -p @/tmp/aiops-task-prompt.txt'
+        shell = (
+            'prompt_file=$(mktemp /tmp/aiops-task-prompt.XXXXXX); '
+            'trap \'rm -f "$prompt_file"\' EXIT; '
+            'cat > "$prompt_file"; '
+            'timeout 180 omp-aiops --model '
+            + shlex.quote(AI_OPS_OMP_MODEL)
+            + ' --cwd /workspace/projects/ai-ops-cockpit --no-tools --no-session '
+            + '--append-system-prompt "$prompt_file" -p '
+            + shlex.quote('严格执行追加系统提示中的当前任务，只输出任务结果。')
+        )
         try:
             output = subprocess.check_output(["docker", "exec", "-i", "ops-terminal", "bash", "-lc", shell], input=prompt, text=True, stderr=subprocess.STDOUT, timeout=210)
             ok = True
@@ -2511,7 +2522,7 @@ def run_vibe_task(mode, question, conversation=None, notify=False, project_id=No
             item["runtimeContext"] = runtime_context
         if notify:
             try:
-                notify_text = "AI Ops Grok 任务完成\n" + f"状态：{'成功' if item['ok'] else '失败'}\n模式：{item['modeName']}\n任务ID：{item['id']}\n耗时：{item['durationMs']}ms\n审计：请在 /vibe/tasks 查看脱敏结果。"
+                notify_text = f"AI Ops {AI_OPS_OMP_MODEL_LABEL} 任务完成\n" + f"状态：{'成功' if item['ok'] else '失败'}\n模式：{item['modeName']}\n任务ID：{item['id']}\n耗时：{item['durationMs']}ms\n审计：请在 /vibe/tasks 查看脱敏结果。"
                 item["feishu"] = send_feishu_text(notify_text)
             except Exception as exc:
                 item["feishu"] = {"status": "error", "body": sanitize_terminal_text(str(exc))}
@@ -3171,7 +3182,7 @@ def render_ai_page():
 <section class="card"><h2>一键问 OMP / Grok</h2><p class="muted">需要本机先启动 OMP Bridge：<code>python3 /Users/rayman.chen/mycc/2-Projects/ai-ops-cockpit/local-omp-bridge/server.py</code>。Bridge 只监听 127.0.0.1，不把 OMP/Grok 凭据放到服务器。</p><input id="grokq" style="width:70%;padding:10px;border-radius:10px;border:1px solid #334155;background:#020617;color:#e5e7eb" value="请分析当前运维状态，并告诉我最应该关注哪三项。"><button id="askGrokBtn">问 OMP/Grok</button><pre id="grokAnswer" style="white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:14px"></pre></section>
 <section class="card"><h2>推荐本机命令</h2><p class="muted">为减少 Grok 扫描 mycc 大仓库和 MCP 配置噪音，建议先保存 Prompt 到 /tmp，再从 /tmp 运行。</p><pre style="white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:14px">curl -u chuan:你的外层密码 https://ops.hahaxiong.top/ai/prompt -o /tmp/ai-ops-prompt.txt
 cd /tmp && grok -p "$(cat /tmp/ai-ops-prompt.txt)" --no-subagents --disable-web-search --max-turns 1
-cd /tmp && omp --model xai-oauth/grok-4.5 -p "$(cat /tmp/ai-ops-prompt.txt)"</pre></section>
+cd /tmp && omp --model {html.escape(AI_OPS_OMP_MODEL)} -p "$(cat /tmp/ai-ops-prompt.txt)"</pre></section>
 <section class="card"><h2>AI 提示词</h2><textarea readonly>{html.escape(prompt)}</textarea></section>
 <section class="card"><h2>Kuma 监控</h2><table><thead><tr><th>名称</th><th>状态</th><th>消息</th><th>时间</th></tr></thead><tbody>{''.join(monitor_rows)}</tbody></table></section>
 <section class="card"><h2>容器</h2><table><thead><tr><th>名称</th><th>状态</th></tr></thead><tbody>{''.join(container_rows)}</tbody></table></section>
@@ -3294,8 +3305,8 @@ def workspace_payload():
         {"label": "查看终端日志", "command": "ls -lt /var/log/ops-terminal | head"},
         {"label": "进入工作区", "command": "cd /workspace/projects"},
         {"label": "检查权限", "command": "id && sudo -l"},
-        {"label": "重启 OMP", "command": "omp --model xai-oauth/grok-4.5 --cwd /workspace/projects/ai-ops-cockpit"},
-        {"label": "一键只读巡检", "command": "omp --model xai-oauth/grok-4.5 -p '请只读检查当前 AI Ops 驾驶舱状态，列出异常、风险、建议和验收命令。'"},
+        {"label": "重启 OMP", "command": f"omp --model {AI_OPS_OMP_MODEL} --cwd /workspace/projects/ai-ops-cockpit"},
+        {"label": "一键只读巡检", "command": f"omp --model {AI_OPS_OMP_MODEL} -p '请只读检查当前 AI Ops 驾驶舱状态，列出异常、风险、建议和验收命令。'"},
         {"label": "首次登录 Grok", "command": "omp auth-broker login xai-oauth"},
     ]
     guardrails = [
@@ -3321,7 +3332,7 @@ def render_vibe_page():
     base_harness_prompt = harness_prompt()
     for item in harness["workflows"]:
         prompt_text = base_harness_prompt + "\n\n当前工作模式：" + item["prompt"]
-        omp_command = "omp --model xai-oauth/grok-4.5 -p " + json.dumps(prompt_text, ensure_ascii=False)
+        omp_command = "omp --model " + AI_OPS_OMP_MODEL + " -p " + json.dumps(prompt_text, ensure_ascii=False)
         workflow_parts.append(
             f"""<div class="card"><h2>{html.escape(item['name'])}</h2><p class="muted">权限：{html.escape(item['permission'])}</p><p>{html.escape(item['prompt'])}</p><button data-copy="{html.escape(omp_command)}">复制 Harness OMP 命令</button></div>"""
         )
@@ -3335,7 +3346,7 @@ def render_vibe_page():
         for item in payload["servers"]
     )
     template_cards = "".join(
-        f"""<div class="card"><h2>{html.escape(item['label'])}</h2><p class="muted">{html.escape(item['prompt'])}</p><button data-copy="{html.escape('omp --model xai-oauth/grok-4.5 -p ' + json.dumps(item['prompt'], ensure_ascii=False))}">复制 OMP 命令</button></div>"""
+        f"""<div class="card"><h2>{html.escape(item['label'])}</h2><p class="muted">{html.escape(item['prompt'])}</p><button data-copy="{html.escape('omp --model ' + AI_OPS_OMP_MODEL + ' -p ' + json.dumps(item['prompt'], ensure_ascii=False))}">复制 OMP 命令</button></div>"""
         for item in payload["templates"]
     )
     session_rows = "".join(
@@ -3345,7 +3356,7 @@ def render_vibe_page():
     guardrail_items = "".join(f"<li>{html.escape(item)}</li>" for item in payload["guardrails"])
     dangerous = "、".join(DANGEROUS_PATTERNS)
     status_class = "ok" if status["ok"] else "warn"
-    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vibe Coding - AI Ops</title><style>{cockpit_page_style()}</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 Grok 版 OMP；真实项目接入前先固定规则、记忆、BRO-PDCA、工作流和权限边界。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">默认只读</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/ops-runtime">Tool Runtime</a><a class="btn" href="/vibe/pilot">实战试点</a><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/todos" data-token-link="true">AI 待办</a><a class="btn" href="/vibe/assets">资产矩阵</a><button id="refreshReadonlyBtn">刷新只读快照</button><button id="runN8nInspectBtn">触发手动巡检</button></p><pre id="actionResult">等待操作。</pre><p class="muted" id="readonlyStatus">只读快照：检查中...</p></section><section class="card"><h2>实战前护栏</h2><p class="muted">先从低风险项目开始：选择项目、选择只读/方案 workflow、发送给 Grok，结果进入任务审计并可转待办。</p><p><a class="btn" href="/vibe/pilot">进入真实项目实战试点</a></p></section><section class="card"><h2>连续对话</h2><p class="muted">保留本页上下文继续问 Grok；刷新页面会清空上下文。</p><div id="chatHistory" class="chat"><p class="muted">暂无对话。</p></div></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送只读任务。默认禁用工具调用；留空会自动执行默认只读巡检。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><label><input id="notifyFeishu" type="checkbox"> 完成后飞书通知</label></p><p><button id="sendTaskBtn">发送给 Grok</button><button id="clearTaskBtn" type="button">清空重写</button><button id="clearChatBtn" type="button">清空对话</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><p class="muted" id="taskStatus">状态：待发送</p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness prompt 并启动 <code>omp --model xai-oauth/grok-4.5</code>。默认只读；写入/部署必须先确认。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vibe Coding - AI Ops</title><style>{cockpit_page_style()}</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 {html.escape(AI_OPS_OMP_MODEL_LABEL)} 版 OMP；真实项目接入前先固定规则、记忆、BRO-PDCA、工作流和权限边界。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">默认只读</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/ops-runtime">Tool Runtime</a><a class="btn" href="/vibe/pilot">实战试点</a><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/todos" data-token-link="true">AI 待办</a><a class="btn" href="/vibe/assets">资产矩阵</a><button id="refreshReadonlyBtn">刷新只读快照</button><button id="runN8nInspectBtn">触发手动巡检</button></p><pre id="actionResult">等待操作。</pre><p class="muted" id="readonlyStatus">只读快照：检查中...</p></section><section class="card"><h2>实战前护栏</h2><p class="muted">先从低风险项目开始：选择项目、选择只读/方案 workflow、发送给 AI 模型，结果进入任务审计并可转待办。</p><p><a class="btn" href="/vibe/pilot">进入真实项目实战试点</a></p></section><section class="card"><h2>连续对话</h2><p class="muted">保留本页上下文继续问 AI 模型；刷新页面会清空上下文。</p><div id="chatHistory" class="chat"><p class="muted">暂无对话。</p></div></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送只读任务。默认禁用工具调用；留空会自动执行默认只读巡检。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><label><input id="notifyFeishu" type="checkbox"> 完成后飞书通知</label></p><p><button id="sendTaskBtn">发送给 AI 模型</button><button id="clearTaskBtn" type="button">清空重写</button><button id="clearChatBtn" type="button">清空对话</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><p class="muted" id="taskStatus">状态：待发送</p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness prompt 并启动 <code>omp --model {html.escape(AI_OPS_OMP_MODEL)}</code>。默认只读；写入/部署必须先确认。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
 document.querySelectorAll('[data-copy]').forEach((button) => {{
   button.addEventListener('click', async () => {{
     await navigator.clipboard.writeText(button.dataset.copy);
@@ -3455,6 +3466,23 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _send_text(self, code, text, content_type="text/plain; charset=utf-8"):
+        if isinstance(text, str) and content_type.startswith("text/html"):
+            text = text.replace("Grok 4.5", AI_OPS_OMP_MODEL_LABEL)
+            replacements = (
+                ("Grok 版 OMP", f"{AI_OPS_OMP_MODEL_LABEL} 版 OMP"),
+                ("Grok 任务审计", f"{AI_OPS_OMP_MODEL_LABEL} 任务审计"),
+                ("Grok 任务", f"{AI_OPS_OMP_MODEL_LABEL} 任务"),
+                ("发送给 Grok", "发送给 AI 模型"),
+                ("正在发送给 Grok", f"正在发送给 {AI_OPS_OMP_MODEL_LABEL}"),
+                ("继续问 Grok", "继续问 AI 模型"),
+                ("Grok 输出", "AI 模型输出"),
+                ("OMP / Grok", f"OMP / {AI_OPS_OMP_MODEL_LABEL}"),
+                ("OMP/Grok", f"OMP/{AI_OPS_OMP_MODEL_LABEL}"),
+                ("问 OMP/Grok", f"问 OMP/{AI_OPS_OMP_MODEL_LABEL}"),
+                ("appendChat('Grok'", f"appendChat('{AI_OPS_OMP_MODEL_LABEL}'"),
+            )
+            for old, new in replacements:
+                text = text.replace(old, new)
         body = text.encode() if isinstance(text, str) else text
         self.send_response(code)
         self.send_header("content-type", content_type)

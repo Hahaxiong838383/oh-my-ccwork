@@ -82,6 +82,8 @@ services:
       FEISHU_WEBHOOK_URL: ${FEISHU_WEBHOOK_URL}
       OPS_READ_TOKEN: ${OPS_READ_TOKEN}
       OPS_ACTION_TOKEN: ${OPS_ACTION_TOKEN}
+      AI_OPS_OMP_MODEL: ${AI_OPS_OMP_MODEL:-volcengine-coding/deepseek-v4-pro}
+      AI_OPS_OMP_MODEL_LABEL: ${AI_OPS_OMP_MODEL_LABEL:-DeepSeek V4 Pro}
       READONLY_ROOT: /workspace/readonly
       ALLOWLIST_DIR: /config
       STATE_DIR: /var/lib/ai-ops-state
@@ -137,6 +139,10 @@ services:
     restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
+      AI_OPS_OMP_MODEL: ${AI_OPS_OMP_MODEL:-volcengine-coding/deepseek-v4-pro}
+      AI_OPS_OMP_MODEL_LABEL: ${AI_OPS_OMP_MODEL_LABEL:-DeepSeek V4 Pro}
+    secrets:
+      - volcengine_coding_api_key
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /opt/ai-ops-cockpit:/workspace/projects/ai-ops-cockpit
@@ -144,6 +150,7 @@ services:
       - /opt/stacks:/workspace/stacks
       - ./terminal/logs:/var/log/ops-terminal
       - ./terminal/omp:/home/ops/.omp
+      - ./terminal/runtime:/opt/omp-runtime
     depends_on:
       - caddy
 
@@ -163,3 +170,7 @@ volumes:
   caddy_config:
   netdata_lib:
   netdata_cache:
+
+secrets:
+  volcengine_coding_api_key:
+    file: ./secrets/volcengine-coding/api-key

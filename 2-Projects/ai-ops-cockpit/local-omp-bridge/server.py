@@ -5,7 +5,7 @@ import subprocess
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("AI_OPS_OMP_BRIDGE_PORT", "18777"))
-MODEL = os.environ.get("AI_OPS_OMP_MODEL", "xai-oauth/grok-4.5")
+MODEL = os.environ.get("AI_OPS_OMP_MODEL", "volcengine-coding/deepseek-v4-pro")
 TIMEOUT = int(os.environ.get("AI_OPS_OMP_TIMEOUT", "90"))
 
 
