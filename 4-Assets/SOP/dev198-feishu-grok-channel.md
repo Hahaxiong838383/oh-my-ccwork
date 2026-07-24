@@ -137,5 +137,12 @@ open http://127.0.0.1:3200/
   - `/internal/creds/<uid>` **只下发 access token**，refresh 永不出控制面
 - **P1 全五块机验通过**：多 App 连接池 + 用户模型（`lib/app-registry.mjs`）+ bwrap 沙箱（`lib/sandbox.mjs`）+ 引擎适配（`lib/kimi-runner.mjs` kimi 直连 / `lib/control-client.mjs` 凭据同步）+ 控制面上云；代码 `origin/feature/h-p1`（f3b0e1b/733cf56），**未合 main**
 - **引擎出网**：grok 走本机 xray `127.0.0.1:10808`；**kimi 直连**（不走 xray，川哥拍板）→ 沙箱需修 DNS（挂 `/run/systemd/resolve`，见记忆 `feedback_bwrap_sandbox_dns_direct_connect`）
-- **唯一待真机**：川哥绑真订阅走 device flow → 引擎 200 对话（harness 全绿）。验收窗口就绪：worktree `.env` 已配 `H_CONTROL_URL`+`H_CONTROL_TOKEN`
-- ⚠️ **运维注意**：生产 = 主 checkout `main` 单账号（不含 H_CONTROL，owner 不需要）；H 多用户开发在 worktree `~/fgb-h-p1`（`feature/h-p1`），两者勿混；测试账号 park 在 `/srv/h-platform/.test-account-parked.json`
+- **grok BYOS 真机验收通过**（2026-07-24）：配置→绑 SuperGrok→沙箱注入 `XAI_API_KEY`（**非** auth.json，grok 校验 refresh 非空+profile 字段不认）→用川哥订阅 13s 回复；owner 凭据零触碰
+- **P1 已合 main 转正**：生产 bridge = 多 App 版，`activated=0` 只连 owner（零影响已验）。生产 `.env` 已加 `H_CONTROL_*`
+  - ⚠️ **仓库坑**：本仓 `origin/main` = **无关的飞书 MCP 开源主线**（`git merge` 报"拒绝合并无关历史"）；**bridge 部署主干在 `origin/feishu-grok-bridge`**，push 用 `git push origin main:feishu-grok-bridge`，**别推 origin/main**
+- **多用户运维**：
+  - 用户管理 `scripts/h-user.mjs`（`list`/`activate <uid> <appId> [engine]`/`deactivate`/`engine`；改 users.json 后**重启 bridge 生效**）
+  - 开通 SOP `workspace/plans/h-onboarding-sop.md`（扫码→激活→绑订阅→双引擎验+隔离复验）
+  - 引擎出网：grok 走 xray `127.0.0.1:10808`；**kimi 直连**（沙箱修 DNS，挂 `/run/systemd/resolve`）
+  - 测试账号 park 在 `/srv/h-platform/.test-account-parked.json`；worktree `~/fgb-h-p1`(feature/h-p1) 保留供 P2 开发
+- **待做**：Ryan 开通（等他扫码，有 grok+kimi 双订阅）→ P2（引擎/用户热加载免重启、主动重绑卡片、QR 公网化、org/skills 市场）
