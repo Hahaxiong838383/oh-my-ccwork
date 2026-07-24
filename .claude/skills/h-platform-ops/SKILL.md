@@ -61,13 +61,14 @@ journalctl --user -u feishu-grok-bridge -n 30 --no-pager -o cat | grep -E "activ
 - **org 层**：user 加 `org` 字段（users.json/store）→ 沙箱挂 `/srv/h-platform/orgs/<org>` → `/org`。org 目录由 admin 建：`mkdir -p /srv/h-platform/orgs/<org>/skills/<skill>`。`--ro-bind-try` 目录未建时跳过不崩。
 - 同名 skill 优先级：L2 个人 > L0 平台 >（config paths 顺序，L1 org 追加在后）。
 
-## Skills 市场（D2+4567，2026-07-24/25）
+## Skills 市场（D2+4567+market-v2，2026-07-24/25）
 
-- **入口**：管理台「Skills 市场」卡片——**搜索框搜 skills.sh（37K+）点装**，或展开「手动 URL 安装」填 raw URL；层选 L0 平台 / L1 org；移除即双端删。
-- **市场解析两层**：①常见布局候选路径直探（main/master × skills/<id>/、<id>/、.claude/skills/<id>/、根）②GitHub tree API 全仓找 `**/<skillId>/SKILL.md`（非标准仓 fallback）。skills.sh 只当索引，内容仍只从白名单域拉。
-- **L1 org 双审批**：org 层装入即 `pending`（不下发），管理台「批准」后才同步执行面；平台层单步。
-- **org 管理**：用户表 org 列行内编辑（正则 `[a-z0-9-]`，空=移出）；org 变更 → 同步 → **热加载重启该 App**（换 /org 挂载）；组织面板自动聚合成员/skills 数。
-- **用户 dashboard**：用量卡+可用 Skills 卡（L0+本人 org 已批准 L1）。
+- **入口（multica 模式）**：管理台/用户 dashboard 同一市场组件——「**搜索市场**」tab 搜 skills.sh 点装；「**链接导入**」tab 贴 URL（来源卡实时高亮，name 自动取）。管理台层选 L0/L1；用户侧固定装自己 L2。
+- **URL 来源家族**：`github.com/o/r`（bare，**多 SKILL.md 报错列出不猜**）/ `…/tree/分支/目录` / `…/blob/…/SKILL.md` / `skills.sh/o/r/skill` / raw 直链——全部归一 raw URL 过安全门，白名单零扩展。origin 入库列表显示来源。
+- **市场解析**：候选路径直探 → GitHub tree API fallback（非标准仓）。
+- **层模型**：L0 platform（全局 name 键）/ L1 org:<org>（**双审批** pending→批准）/ L2 user:<uid>（**复合键** `user:<uid>/<name>` 跨用户同名不冲突；越权删他层 403；上限 20；落 `<usersRoot>/<uid>/.grok/skills/`，grok 生效 kimi 无 skills 机制）。
+- **org 管理**：用户表 org 列行内编辑（正则 `[a-z0-9-]`，空=移出）；org 变更 → 同步 → **热加载重启该 App**（换 /org 挂载）；组织面板自动聚合。
+- **用户 dashboard**：用量卡 + 我的 Skills（装/卸）+ 市场组件 + 共享 Skills 只读。
 - **安全门（控制面下载+扫描+存内容，执行面免出网）**：①来源白名单 `raw.githubusercontent.com`（https + **禁重定向** + 仅 .md）②大小 ≤100KB ③危险模式扫描 13 类（rm -rf、管道执行、fork 炸弹、`/etc/passwd`、`XAI_API_KEY`、`.ssh` 等），命中即拒并显示原因。**宁误杀勿放行**，误杀由 admin 人工判断换源。
 - **同步**：bridge 60s 拉 `/internal/skills` 元数据 → sha 差异才拉正文（`/internal/skill/<name>` 单数前缀防路由冲突）→ **装前复扫**（纵深防御）→ 原子落 `shared/skills/<name>/SKILL.md`（L0）或 `orgs/<org>/skills/<name>/`（L1）→ 回报 → 管理台显示「✓已下发」。`H_SKILLS_SYNC=0` 可关。
 - **manifest 隔离**：`/srv/h-platform/.skills-manifest.json` 只记同步器自己装的；删除只删 manifest 内目录，**admin 手放的 skill 永不误删**。
