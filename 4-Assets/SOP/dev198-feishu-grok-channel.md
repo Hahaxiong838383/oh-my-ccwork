@@ -123,3 +123,13 @@ open http://127.0.0.1:3200/
 - 桥接默认 `bypassPermissions` 无人值守，仅白名单 openId
 - Grok 出网主依赖 = 本机 xray + DMIT 节点；DMIT 挂自动降级 mini（此时才依赖 mini 开机）；frpc 挂 → 默认 `ssh dev198` 失败，改 jump
 - git 隐私墙（2026-07-24）：`workspace/leader/exports|inbox|images` 等人事产物已 gitignore 禁入库；plans/org-42x 等未跟踪文件入库需川哥拍板
+
+## H 路线 · 多用户 BYOS 平台（2026-07-24 P1 进行中）
+
+本通道正演进为多用户平台：用户扫码得**自己的** Bot + agent 实例（独立记忆/KB/skills/MCP）+ **自己的订阅**（BYOS）。
+
+- **规划/进展**：dev198 `workspace/plans/role-channel-L-M-H.md`（H 章）+ `h-p1-implementation.md` + `h-p1-3-sandbox.md`（均 push `origin/feishu-grok-bridge`）
+- **记忆**：A canonical `project_feishu_grok_h_byos`（拍板结论/账号三层/分层体系/验收协议全量）
+- **控制面**：`ai.kidshub.cn`（阿里云 HK，公网 TLS）；**执行面 dev198 不暴露公网**
+- **P1 地基三块已验收**：多 App 连接池 + 用户模型（`lib/app-registry.mjs`）+ bwrap 沙箱隔离（`lib/sandbox.mjs`）；代码在 `origin/feature/h-p1`，**未合 main**
+- ⚠️ **运维注意**：生产 = 主 checkout `main` 单账号；H 多用户开发在 worktree `~/fgb-h-p1`（`feature/h-p1`），两者勿混；测试账号 park 在 `/srv/h-platform/.test-account-parked.json`
