@@ -104,6 +104,9 @@ async def run() -> dict:
     threshold = float(env("HORIZON_SCORE_THRESHOLD", "7"))
     min_items = max(1, int(env("HORIZON_MIN_ITEMS", "4")))
     max_items = max(min_items, min(20, int(env("HORIZON_MAX_ITEMS", "12"))))
+    # 与实时流按 URL 硬去重会把当日真热点一票否决（重大新闻必然已进 5000 条热层），
+    # 导致连续 publish gate failed；精选层的增量价值在中文深度解读，不在 URL 增量。
+    exclude_realtime = env("HORIZON_EXCLUDE_REALTIME", "true").lower() == "true"
     sources = [value for value in env("HORIZON_SOURCES", "hackernews,rss,github,google_news").split(",") if value]
 
     if not token:
@@ -144,7 +147,7 @@ async def run() -> dict:
         publish=publish,
         horizon_commit=actual_commit,
         max_items=max_items,
-        exclude_urls=load_realtime_urls(realtime_cache),
+        exclude_urls=load_realtime_urls(realtime_cache) if exclude_realtime else set(),
     )
 
     if len(report["items"]) < min_items:
