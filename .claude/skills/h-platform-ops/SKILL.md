@@ -144,6 +144,36 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
 - 排障：切引擎/激活不生效 → 查 bridge `user-sync`/`hot-reload` 日志 + 控制面 store `active` 字段；`H_USER_SYNC=0` 退回 h-user 本地管理。
 - **owner 零影响铁律**：热加载/同步器 `kind==='owner'` 全 skip，owner App 逐字节不变。
 
+## 两个后台的界面结构（v1.10.0 起，改 html.mjs 前先读）
+
+左栏 tab + 右侧内容（参照 multica dashboard 的 AppSidebar）。外壳组件在
+`control-plane/lib/html.mjs`：`SHELL_CSS` / `shellTop` / `shellRail` / `shellPane` /
+`shellTabJs`，`page(title, body, { shell: true })` 启用。
+
+| 页面 | tab（顺序即默认） |
+|------|------------------|
+| `/admin` | overview 总览 / users 用户 / skills Skills / orgs 部门 |
+| `/dashboard` | overview 总览（订阅+引擎） / memory 我的记忆 / profile 人格与规则 / skills Skills |
+
+**硬约束（改之前必看）**：
+
+1. **面板 id `pane-<tab>` 是对外契约**。飞书卡片深链 `/go/<token>?to=memory`
+   → `/dashboard#memory`，`shellTabJs` 从 `location.hash` 点亮对应面板。
+   服务端 `GO_SECTIONS = { memory:'#memory', skills:'#skills' }` 是**封闭白名单**，
+   两边同时改才行。改名 = 线上按钮点了没反应。`test/pages.test.mjs` 锁住了这条。
+2. **tab 状态必须留在 hash 上**（`history.replaceState`）。页面里大量操作走
+   `location.reload()`，不留 hash 就会每次弹回第一个 tab。
+3. **放表格的 grid 列一律 `minmax(0,1fr)`**（grid item 默认 `min-width:auto`，
+   宽表格会把整页顶出横向滚动；移动端 override 最容易漏）。
+4. **表格列宽别按 `nth-child` 配比**——插一列就错位，且 `display:none` 的列仍占宽。
+   只给首列（名称，百分比）和末列（操作，px）定宽，中间自动平分；
+   收窄用两档语义 class：`col-md-hide`（≤1180px）/ `col-sm-hide`（≤560px）。
+5. **界面里不出现 emoji**，图标一律 `I.*` 内联 SVG（本文件开头的设计约定，
+   记忆面板曾违反）。`test/pages.test.mjs` 有断言。
+6. **Skills 归属**认 `createdBy`（skills-store 写入，`'admin'` 或 uid），
+   **不能拿层级代替**——部门负责人也能往 org 层发布。存量记录无该字段时按层兜底。
+   零计数的归属选项**保留并置灰**（`dim.keepEmpty`），隐藏会让人以为没这个筛选。
+
 ## 分层 skills（L2 个人 / L1 org / L0 平台）
 
 - 沙箱内 grok config skills paths 三层：`~/.grok/skills`(L2 个人) → `/shared/skills`(L0 平台) → `/org/skills`(L1 组织)。
@@ -194,12 +224,9 @@ device-flow 注册（`lib/feishu-register.mjs`）→ Bot 凭据 AES 存控制面
 ## 必跑检查
 
 ```bash
-# 控制面改了 html.mjs 必跑：渲染出的每个 <script> 块做真实语法检查
+# 控制面改了 html.mjs 必跑：script 块语法 + 面板 id 契约 + 归属筛选，已固化成测试
 # （模板字符串会吃掉 \n，导致 JS 字面量断行 → 整块静默不执行，console 无报错）
-node --input-type=module -e "import('/srv/h-control/app/lib/html.mjs').then(m=>{
-  const pages=[m.adminPage({users:[],unlinkedBots:[],skills:[],orgs:[]}),m.dashboardPage({uid:'u'},{}),m.registerPage('t',{}),m.adminLoginPage()]
-  let bad=0; for(const h of pages) for(const b of h.matchAll(/<script>([\s\S]*?)<\/script>/g)){try{new Function(b[1])}catch(e){bad++;console.log('FAIL',e.message)}}
-  console.log(bad?'有语法错误':'script 块全 PASS')})"
+ssh dev198 'cd ~/feishu-grok-bridge/control-plane && export PATH=$HOME/.local/node/bin:$PATH && node --test test/pages.test.mjs'
 # ⚠️ dev198 非交互 ssh 的 PATH 里**没有 node**，不加绝对路径会「命令未找到」而静默跳过检查
 ssh dev198 'cd ~/feishu-grok-bridge && export PATH=$HOME/.local/node/bin:$PATH && for f in bridge.mjs lib/*.mjs; do node --check $f; done'
 # 全量单测（改了命令词/卡片/流式/沙箱必跑；注意用 test/*.test.mjs，传目录 node 会报模块找不到）
