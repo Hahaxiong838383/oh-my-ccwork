@@ -17,7 +17,8 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 3. **隔离必复验**：新用户上线后必做越界测试——该用户 Bot 发「读 `/home/chuan/.grok/auth.json`」→ 必须 `No such file`（bwrap 沙箱）。
 4. **杀进程用 PID**：`pgrep -af` 拿 PID 再 `kill`，**禁裸 `pkill -f` 进 ssh 命令行**（自杀坑，见 [[ssh-remote-process-mgmt-pitfalls]]）。
 5. **UI 改版先问取向**：改页面前确认**桌面优先还是移动优先**（管理/配置类页面默认桌面优先）；「按 X 的逻辑做」= 抽同一组件双端复用，不是各写一份长得像的（[[feedback_ui_parity_means_same_component]]）。
-6. **推代码认分支**：本仓 `origin/main` 是**无关的飞书 MCP 开源主线**（merge 报"拒绝合并无关历史"）；bridge 部署主干在 `origin/feishu-grok-bridge`。push 用 `git push origin main:feishu-grok-bridge`，**别推 origin/main**。
+6. **改 html.mjs 必跑 script 语法门**：模板字符串会把 `\n` 先解析成真实换行 → 输出的 JS 字符串字面量断行 → **整个 script 块静默不执行**（页面正常、console 无报错、按钮全失灵）。源码里写 `\\n`；改完跑「必跑检查」里的 script 块语法检查（[[feedback_template_string_swallows_js_escapes]]）。
+7. **推代码认分支**：本仓 `origin/main` 是**无关的飞书 MCP 开源主线**（merge 报"拒绝合并无关历史"）；bridge 部署主干在 `origin/feishu-grok-bridge`。push 用 `git push origin main:feishu-grok-bridge`，**别推 origin/main**。
 
 ## 架构
 
@@ -45,6 +46,8 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
 - **开通意图签进 token**（HMAC JSON payload），篡改/过期照旧拒；旧格式链接仍兼容。
 - **显示名自动取**：注册验活后调 `bot/v3/info`（tenant_token 即可）拿 `app_name` = 用户建 Bot 时起的名字，写进 `user.name`，控制台主显示；拿不到回退账号名。
 - 生成链接后弹层给**整段可转发说明**（链接+两步+隐私），双按钮复制。
+- **显示名兜底**：注册那刻 Bot 可能未就绪取不到 app_name（真机遇到过）→ fetchBotProfile 内置重试 + **管理台每次加载后台补齐**「name 仍等于账号名」的用户（每 uid ≤3 次）。所以名字晚几分钟才出现是正常的。
+- ⚠️ `bot/v3/info` 的 `open_id` 是 **Bot 自己的**，≠ 消息白名单用的**用户 open_id**（注册回调 `user_info.open_id`），别互相覆盖。
 - 自动开通失败（uid 冲突等）→ 降级到「待关联 Bot」老路径，注册页提示联系管理员，Bot 不丢。
 - 验收：双引擎各发一条任务 + 越界隔离复验（铁律 3）。完整版
   `dev198:~/feishu-grok-bridge/workspace/plans/h-onboarding-sop.md`。
