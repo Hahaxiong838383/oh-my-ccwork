@@ -17,7 +17,7 @@ export function PatentPreview({ patents }: Props) {
       <div className="grid gap-12 md:grid-cols-[1fr_2fr]">
         <BlurFade>
           <div>
-            <SectionTitle label="专利创新" title="46 项原创" className="mb-6" />
+            <SectionTitle label="专利创新" title={`${patents.length} 项原创`} className="mb-6" />
             <div className="mb-4 text-5xl font-bold text-text-primary">
               <NumberTicker value={patents.length} />
               <span className="ml-1 text-xl text-text-secondary">项专利</span>

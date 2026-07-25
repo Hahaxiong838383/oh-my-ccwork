@@ -1,0 +1,23 @@
+[Unit]
+Description=Horizon daily AI digest for chenchuan-site
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/horizon-radar
+EnvironmentFile=/etc/horizon-radar.env
+ExecStart=/opt/horizon-radar/run.sh
+TimeoutStartSec=45min
+Nice=10
+CPUQuota=60%
+MemoryMax=512M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/horizon-radar /var/lib/horizon-radar /var/www/chenchuan-site/data /run/lock
+
+[Install]
+WantedBy=multi-user.target

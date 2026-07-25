@@ -4,17 +4,23 @@ import { headers } from 'next/headers'
 import { RadarPipeline } from '@/components/radar/RadarPipeline'
 import { RadarSectionNav } from '@/components/radar/RadarSectionNav'
 import { RadarFeed } from '@/components/radar/RadarFeed'
+import { HorizonDigestSection } from '@/components/radar/HorizonDigestSection'
 import { TheoryReportSection } from '@/components/radar/TheoryReportSection'
 import { GithubRadarSection } from '@/components/radar/GithubRadarSection'
 import { SectionWrapper } from '@/components/layout/SectionWrapper'
 import { SectionTitle } from '@/components/shared/SectionTitle'
 import { BlurFade } from '@/components/ui/BlurFade'
-import { getLatestGithubRadar, getRadarFeed, getTheoryReports } from '@/lib/radar'
+import {
+  getHorizonDigestReports,
+  getLatestGithubRadar,
+  getRadarFeed,
+  getTheoryReports,
+} from '@/lib/radar'
 
 export const metadata: Metadata = {
   title: 'AI 前沿资讯雷达',
   description:
-    '一条用 AI 搭的自动化情报产线：每 30 分钟自动聚合 AI 全域信源，去重归类后上站。附 arXiv 前沿论文的中文深度拆解。',
+    '一条用 AI 搭的自动化情报产线：每日精选高价值进展，每 30 分钟聚合 AI 全域信源，并附 arXiv 前沿论文中文深度拆解。',
 }
 
 export default async function RadarPage() {
@@ -22,10 +28,11 @@ export default async function RadarPage() {
   // Upstream aihot fetches still use their own 15min Data Cache in src/lib/radar/aihot.ts.
   await headers()
 
-  const [feed, reports, githubReport] = await Promise.all([
+  const [feed, reports, githubReport, horizonReports] = await Promise.all([
     getRadarFeed(),
     getTheoryReports(),
     getLatestGithubRadar(),
+    getHorizonDigestReports(),
   ])
 
   return (
@@ -39,13 +46,25 @@ export default async function RadarPage() {
 
       <RadarSectionNav
         sections={[
+          ...(horizonReports.length > 0
+            ? [{ id: 'daily-picks', label: '今日精选', color: '#C15F22' }]
+            : []),
           { id: 'feed', label: '实时资讯', color: '#0071E3' },
           { id: 'deep-dive', label: '深度拆解', color: '#16A34A' },
           ...(githubReport ? [{ id: 'github-radar', label: '开源风向标', color: '#6D5BD0' }] : []),
         ]}
       />
 
-      <SectionWrapper id="feed" className="scroll-mt-28">
+      {horizonReports.length > 0 ? (
+        <SectionWrapper id="daily-picks" className="scroll-mt-28">
+          <HorizonDigestSection reports={horizonReports} />
+        </SectionWrapper>
+      ) : null}
+
+      <SectionWrapper
+        id="feed"
+        className={`scroll-mt-28 ${horizonReports.length > 0 ? 'pt-0' : ''}`}
+      >
         <SectionTitle label="Live Feed / 实时资讯" title="AI 全域热点" />
         <RadarFeed items={feed.items} />
       </SectionWrapper>

@@ -47,7 +47,7 @@ export function RadarSectionNav({ sections }: { sections: RadarNavSection[] }) {
 
   return (
     <>
-      <div className="sticky top-[64px] z-40 -mx-2 px-2">
+      <div className="sticky top-[64px] z-40">
         <div className="mx-auto max-w-content px-6 md:px-8">
           <div className="flex gap-2 overflow-x-auto rounded-full border border-border bg-bg-primary/85 p-1.5 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:inline-flex">
             {sections.map((s) => {

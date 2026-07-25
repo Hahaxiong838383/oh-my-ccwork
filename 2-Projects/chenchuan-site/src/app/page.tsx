@@ -24,8 +24,11 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero tickerItems={ticker.map((it) => ({ title: it.title, source: it.source, url: it.url }))} />
-      <Stats />
+      <Hero
+        patentCount={patents.length}
+        tickerItems={ticker.map((it) => ({ title: it.title, source: it.source, url: it.url }))}
+      />
+      <Stats patentCount={patents.length} />
       <ProjectGrid projects={projects} />
       <AIWorkflow />
       <AINativeDay />

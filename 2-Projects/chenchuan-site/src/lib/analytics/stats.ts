@@ -1,6 +1,6 @@
 import 'server-only'
 import { getDb } from './db'
-import type { DashboardStats } from './types'
+import type { DashboardStats, SystemTrafficStats } from './types'
 
 interface CountRow {
   c: number
@@ -15,16 +15,16 @@ export function getStats(): DashboardStats {
   const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000
 
   const todayPv = db
-    .prepare('SELECT COUNT(*) AS c FROM visits WHERE ts >= ?')
+    .prepare("SELECT COUNT(*) AS c FROM visits WHERE traffic_kind = 'human' AND ts >= ?")
     .get(startOfToday) as CountRow
   const todayUv = db
-    .prepare('SELECT COUNT(DISTINCT ip_hash) AS c FROM visits WHERE ts >= ?')
+    .prepare("SELECT COUNT(DISTINCT ip_hash) AS c FROM visits WHERE traffic_kind = 'human' AND ts >= ?")
     .get(startOfToday) as CountRow
   const weekPv = db
-    .prepare('SELECT COUNT(*) AS c FROM visits WHERE ts >= ?')
+    .prepare("SELECT COUNT(*) AS c FROM visits WHERE traffic_kind = 'human' AND ts >= ?")
     .get(sevenDaysAgo) as CountRow
   const weekUv = db
-    .prepare('SELECT COUNT(DISTINCT ip_hash) AS c FROM visits WHERE ts >= ?')
+    .prepare("SELECT COUNT(DISTINCT ip_hash) AS c FROM visits WHERE traffic_kind = 'human' AND ts >= ?")
     .get(sevenDaysAgo) as CountRow
 
   // 7 天日级 trend：按本地日期分组
@@ -35,7 +35,7 @@ export function getStats(): DashboardStats {
         COUNT(*) AS pv,
         COUNT(DISTINCT ip_hash) AS uv
       FROM visits
-      WHERE ts >= ?
+      WHERE traffic_kind = 'human' AND ts >= ?
       GROUP BY date
       ORDER BY date ASC`,
     )
@@ -45,7 +45,7 @@ export function getStats(): DashboardStats {
     .prepare(
       `SELECT path, COUNT(*) AS count
       FROM visits
-      WHERE ts >= ?
+      WHERE traffic_kind = 'human' AND ts >= ?
       GROUP BY path
       ORDER BY count DESC
       LIMIT 10`,
@@ -59,7 +59,7 @@ export function getStats(): DashboardStats {
              ELSE substr(referrer, 1, 80) END AS referrer,
         COUNT(*) AS count
       FROM visits
-      WHERE ts >= ?
+      WHERE traffic_kind = 'human' AND ts >= ?
       GROUP BY referrer
       ORDER BY count DESC
       LIMIT 10`,
@@ -72,7 +72,7 @@ export function getStats(): DashboardStats {
         COALESCE(country, '未知') AS country,
         COUNT(*) AS count
       FROM visits
-      WHERE ts >= ?
+      WHERE traffic_kind = 'human' AND ts >= ?
       GROUP BY country
       ORDER BY count DESC
       LIMIT 10`,
@@ -83,6 +83,7 @@ export function getStats(): DashboardStats {
     .prepare(
       `SELECT ts, path, referrer, country, ip
       FROM visits
+      WHERE traffic_kind = 'human'
       ORDER BY ts DESC
       LIMIT 50`,
     )
@@ -103,4 +104,57 @@ export function getStats(): DashboardStats {
     topCountries,
     recent,
   }
+}
+
+export function getSystemTrafficStats(): SystemTrafficStats {
+  const db = getDb()
+  const now = Date.now()
+  const startOfToday = new Date().setHours(0, 0, 0, 0)
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000
+
+  const buckets = db
+    .prepare(
+      `SELECT
+        traffic_kind AS kind,
+        SUM(CASE WHEN ts >= ? THEN 1 ELSE 0 END) AS today,
+        SUM(CASE WHEN ts >= ? THEN 1 ELSE 0 END) AS week,
+        COUNT(*) AS total
+       FROM visits
+       WHERE traffic_kind != 'human'
+       GROUP BY traffic_kind
+       ORDER BY total DESC`,
+    )
+    .all(startOfToday, sevenDaysAgo) as SystemTrafficStats['buckets']
+
+  const topReasons = db
+    .prepare(
+      `SELECT
+        traffic_kind AS kind,
+        COALESCE(traffic_reason, 'unknown') AS reason,
+        COUNT(*) AS count
+       FROM visits
+       WHERE traffic_kind != 'human' AND ts >= ?
+       GROUP BY traffic_kind, traffic_reason
+       ORDER BY count DESC
+       LIMIT 20`,
+    )
+    .all(sevenDaysAgo) as SystemTrafficStats['topReasons']
+
+  const recent = db
+    .prepare(
+      `SELECT
+        ts,
+        path,
+        ip,
+        ua,
+        traffic_kind AS trafficKind,
+        traffic_reason AS trafficReason
+       FROM visits
+       WHERE traffic_kind != 'human'
+       ORDER BY ts DESC
+       LIMIT 100`,
+    )
+    .all() as SystemTrafficStats['recent']
+
+  return { buckets, topReasons, recent }
 }

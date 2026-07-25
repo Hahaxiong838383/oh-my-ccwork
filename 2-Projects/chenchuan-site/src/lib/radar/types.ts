@@ -24,6 +24,46 @@ export interface RadarFeed {
   sourceCount: number // 去重后涉及的信源数
 }
 
+// ── Horizon 每日精选（独立于实时流与理论雷达） ──
+export interface HorizonDigestReference {
+  title?: string
+  url: string
+}
+
+export interface HorizonDigestItem {
+  id: string
+  title: string
+  titleEn?: string
+  url: string
+  source: string
+  sourceType?: string
+  publishedAt: string | null
+  score: number
+  summary: string
+  whyItMatters?: string
+  keyDetails?: string
+  background?: string
+  communityDiscussion?: string
+  tags: string[]
+  category: RadarCategory | null
+  references: HorizonDigestReference[]
+}
+
+export interface HorizonDigestReport {
+  type: 'horizon'
+  date: string
+  generatedAt: string
+  sourceGeneratedAt?: string
+  summary?: string
+  totalFetched: number
+  sourceCount: number
+  realtimeDuplicateCount?: number
+  relevanceFilteredCount?: number
+  runId?: string
+  horizonCommit?: string
+  items: HorizonDigestItem[]
+}
+
 // ── GitHub 风向标（github-radar agent 推送，2026-07-07 上站） ──
 export interface GithubRepoItem {
   name: string // owner/repo

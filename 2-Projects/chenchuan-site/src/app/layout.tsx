@@ -3,6 +3,7 @@ import { inter } from '@/lib/fonts'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { SiteMotion } from '@/components/layout/SiteMotion'
+import { AnalyticsTracker } from '@/components/analytics/AnalyticsTracker'
 import { formatCareerExperience } from '@/lib/experience'
 import '@/styles/globals.css'
 
@@ -46,6 +47,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className={`${inter.variable} font-sans`}>
+        <AnalyticsTracker />
         <SiteMotion />
         <Header />
         <main className="relative z-10 min-h-screen">{children}</main>

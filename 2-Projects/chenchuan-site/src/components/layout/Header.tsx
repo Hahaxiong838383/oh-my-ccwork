@@ -21,16 +21,21 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
+  const isAdminRoute = pathname.startsWith('/admin')
 
   useEffect(() => {
+    if (isAdminRoute) return
     const onScroll = () => setScrolled(window.scrollY > 60)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  }, [isAdminRoute])
 
   useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
+
+  // 后台有独立管理导航。移除固定站点 Header，避免透明导航层覆盖后台按钮热区。
+  if (isAdminRoute) return null
 
   return (
     <header

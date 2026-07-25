@@ -23,7 +23,14 @@ import {
 import { sendChatAlert } from '@/lib/chat/feishu-alert'
 import { RADAR_SEED } from '@/data/radar-seed'
 import { RADAR_ARCHIVE } from '@/data/radar-archive'
-import type { GithubRadarReport, RadarFeed, RadarItem, TheoryReport } from './types'
+import { isHorizonDigestReport } from './horizon'
+import type {
+  GithubRadarReport,
+  HorizonDigestReport,
+  RadarFeed,
+  RadarItem,
+  TheoryReport,
+} from './types'
 
 export * from './types'
 
@@ -466,5 +473,48 @@ export async function getLatestGithubRadar(): Promise<GithubRadarReport | null> 
     return isValidGithubReport(parsed) ? parsed : null
   } catch {
     return null
+  }
+}
+
+// ── Horizon 每日 AI 精选（独立数据域，默认关闭展示） ──
+const HORIZON_RADAR_DIR =
+  process.env.RADAR_HORIZON_DATA_DIR || path.join(process.cwd(), 'data', 'radar-horizon')
+
+function horizonSortTime(report: HorizonDigestReport): number {
+  const dateTime = Date.parse(report.date)
+  if (!Number.isNaN(dateTime)) return dateTime
+  const generatedTime = Date.parse(report.generatedAt)
+  return Number.isNaN(generatedTime) ? 0 : generatedTime
+}
+
+// 只有 RADAR_HORIZON_VISIBLE=true 才读取正式 report-*；shadow 子目录永不参与页面渲染。
+// 读取失败或没有数据时返回 []，不影响实时流、理论雷达和 GitHub 风向标。
+export async function getHorizonDigestReports(limit = 31): Promise<HorizonDigestReport[]> {
+  if (process.env.RADAR_HORIZON_VISIBLE !== 'true') return []
+
+  try {
+    const files = (await fs.readdir(HORIZON_RADAR_DIR))
+      .filter((file) => /^report-\d{4}-\d{2}-\d{2}\.json$/.test(file))
+      .sort()
+      .reverse()
+      .slice(0, Math.max(1, limit))
+
+    const reports = await Promise.all(
+      files.map(async (file) => {
+        try {
+          const raw = await fs.readFile(path.join(HORIZON_RADAR_DIR, file), 'utf-8')
+          const parsed = JSON.parse(raw) as unknown
+          return isHorizonDigestReport(parsed) ? parsed : null
+        } catch {
+          return null
+        }
+      }),
+    )
+
+    return reports
+      .filter((report): report is HorizonDigestReport => Boolean(report))
+      .sort((a, b) => horizonSortTime(b) - horizonSortTime(a))
+  } catch {
+    return []
   }
 }

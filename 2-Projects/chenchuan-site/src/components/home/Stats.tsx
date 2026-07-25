@@ -6,7 +6,7 @@ import { BlurFade } from '@/components/ui/BlurFade'
 import { NumberTicker } from '@/components/ui/NumberTicker'
 import { getCareerExperience } from '@/lib/experience'
 
-export function Stats() {
+export function Stats({ patentCount }: { patentCount: number }) {
   const [careerExperience, setCareerExperience] = useState(() => getCareerExperience())
   const stats = [
     {
@@ -14,7 +14,7 @@ export function Stats() {
       suffix: `年${careerExperience.months}个月${careerExperience.days}天`,
       label: '产品经验',
     },
-    { value: 46, suffix: '', label: '项专利成果' },
+    { value: patentCount, suffix: '', label: '项专利成果' },
     { value: 9, suffix: '', label: '款量产/运营产品' },
     { value: 10, suffix: '+', label: '人产品市场团队' },
   ]

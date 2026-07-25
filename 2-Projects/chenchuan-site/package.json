@@ -6,11 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:analytics": "node --experimental-strip-types scripts/test-analytics-classification.mjs",
+    "test:patents": "node --experimental-strip-types scripts/test-patents.mjs",
+    "test:horizon": "node --experimental-strip-types scripts/test-horizon-radar.mjs && python3 ops/horizon-radar/test_adapter.py"
   },
   "dependencies": {
     "@directus/sdk": "^21.2.0",
     "@mediapipe/tasks-vision": "^0.10.35",
+    "@volcengine/rtc": "^4.68.5",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.10.0",
     "clsx": "^2.1.1",

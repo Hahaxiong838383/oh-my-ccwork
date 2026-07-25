@@ -7,7 +7,7 @@
 - 原视频不覆盖，保留在 `public/media/`。
 - 网页预览版输出到 `public/media-optimized/`。
 - 封面图输出到 `public/media-posters/`。
-- 转码参数：H.264, CRF 28, preset slow, yuv420p, `+faststart`, 去音轨。
+- 转码参数：H.264, CRF 28, preset slow, yuv420p, `+faststart`；默认去音轨，语音核心素材保留 AAC 96kbps。
 - 尺寸上限：横屏宽 1280，竖屏高 1280，保持比例。
 
 ## 总览
@@ -41,6 +41,39 @@
 | `public/media/mimic-robot/VID_20180515_102033.mp4` | 1920x1080 | 1080x1920 | 21.9MB | 2.1MB | 90.5% | `public/media-optimized/mimic-robot/VID_20180515_102033.mp4` | `public/media-posters/mimic-robot/VID_20180515_102033.jpg` |
 | `public/media/mimic-robot/VID_20180518_165951.mp4` | 1280x720 | 720x1280 | 21.8MB | 2.1MB | 90.5% | `public/media-optimized/mimic-robot/VID_20180518_165951.mp4` | `public/media-posters/mimic-robot/VID_20180518_165951.jpg` |
 | `public/media/ar-hud-demo/driver-view-loop.mp4` | 1470x630 | 1280x548 | 6.5MB | 1.1MB | 83.1% | `public/media-optimized/ar-hud-demo/driver-view-loop.mp4` | `public/media-posters/ar-hud-demo/driver-view-loop.jpg` |
+
+## 2026-07-17 增量
+
+- 新增：`public/media/ai-agent/full-duplex-streaming-voice-agent.mp4`。
+- 输出：`public/media-optimized/ai-agent/full-duplex-streaming-voice-agent.mp4`。
+- 封面：`public/media-posters/ai-agent/full-duplex-streaming-voice-agent.jpg`。
+- 分辨率：960x540 → 960x540。
+- 体积：16.0MB → 6.7MB，节省 56.9%。
+- 音频：保留 AAC 96kbps；该视频以实时语音对话为核心，不适用默认静音策略。
+
+### RK3588 端侧多模态识别
+
+- 新增：`public/media/edge-ai/rk3588-expression-posture-recognition.mp4`。
+- 输出：`public/media-optimized/edge-ai/rk3588-expression-posture-recognition.mp4`。
+- 封面：`public/media-posters/edge-ai/rk3588-expression-posture-recognition.jpg`。
+- 分辨率：3840x2160 → 1280x720，保留约 60fps。
+- 体积：146.8MB → 3.1MB，节省 97.9%。
+- 音频：去除；该视频的核心价值为 RK3588 端侧视觉识别效果，音轨不是必要信息。
+- 页面说明：基于 RK3588 部署端侧多模态模型，采用 InspireFace 检测级联 HSEmotion-b2 表情识别，在本地实现毫秒级表情、坐姿等状态识别与实时反馈。
+- Git 归档：原片 146.8MB，超过 GitHub 普通单文件限制且仓库未启用 Git LFS；原片保留在素材目录、韩国生产节点与回滚备份，仓库提交优化版和封面。
+
+## 2026-07-22 增量
+
+### 多模态视觉交互 · 视线追踪优化
+
+- 新增：`public/media/multimodal-interaction/gaze-tracking-20260722.mp4`。
+- 输出：`public/media-optimized/multimodal-interaction/gaze-tracking-20260722.mp4`。
+- 封面：`public/media-posters/multimodal-interaction/gaze-tracking-20260722.jpg`。
+- 分辨率：1280x720 → 1280x720，保持横屏比例与 30fps。
+- 体积：26.0MB → 2.6MB，节省 89.9%。
+- 编码：H.264、CRF 28、preset slow、yuv420p、`+faststart`，与现有多模态视觉交互视频一致。
+- 音频：去除；该视频聚焦视线追踪与视觉交互效果，沿用现有多模态演示视频的静音预览规范。
+- 页面说明：与此前多模态视觉交互演示同源，本段更聚焦视线追踪链路优化，展示注视点定位、跟随稳定性与多模态协同交互效果。
 
 ## 回滚
 

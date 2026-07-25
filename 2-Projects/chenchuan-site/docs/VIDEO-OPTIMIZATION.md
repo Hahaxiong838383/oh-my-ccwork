@@ -23,19 +23,20 @@
 
 - H.264 (`libx264`)、`CRF 28`、`preset slow`、`yuv420p`。
 - `-movflags +faststart`，把 `moov` 元数据移到文件头，提升 metadata/首帧加载速度。
-- 去掉音轨（站内视频主要作为预览/演示素材，当前页面没有依赖音频）。
+- 默认去掉音轨；以语音内容为核心的视频加入 `audioPreservedInputs`，保留 AAC 96kbps，避免压缩后失去核心信息。
 - 横屏最大宽 1280，竖屏最大高 1280，保持比例。
 - 同步生成 JPG poster。
 
-当前结果见 `docs/video-optimization-report.md`：原始约 `608.2MB`，优化后约 `51.4MB`，节省约 `91.6%`。
+2026-07-06 批次见 `docs/video-optimization-report.md`：原始约 `608.2MB`，优化后约 `51.4MB`，节省约 `91.6%`。2026-07-17 新增全双工语音 Agent 视频：16MB → 6.7MB，保留 AAC 音轨；新增 RK3588 端侧多模态识别视频：146.8MB → 3.1MB，去除非核心音轨。
 
 ## 维护规则
 
 1. 新增视频时，先放原片到 `public/media/`。
 2. 把新视频路径加入 `scripts/optimize-videos.mjs` 的 `inputs`。
-3. 运行 `node scripts/optimize-videos.mjs`。
+3. 若视频依赖语音内容，同时加入 `audioPreservedInputs`；然后运行 `node scripts/optimize-videos.mjs`。
 4. 在页面数据里引用 `/media-optimized/...`，封面引用 `/media-posters/...`。
 5. 运行 `npm run build`，确认页面构建通过。
+6. 单个原片超过 GitHub 普通文件 `100MB` 限制且仓库未启用 Git LFS 时，原片保留在素材目录、生产节点和回滚备份；使用精确 `.gitignore` 规则排除，只提交优化版、封面、压缩脚本与报告，禁止用全局 `*.mp4` 规则误伤其他视频。
 
 ## 回滚
 

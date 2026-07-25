@@ -249,6 +249,10 @@ video.mp4
 2-Projects/cc-remote-v3/frpc
 .local/
 
+# 个人站 RK3588 演示原片 147MB，超过 GitHub 普通单文件限制。
+# 原始素材保留在 Documents 与韩国生产备份；仓库提交优化版和封面。
+2-Projects/chenchuan-site/public/media/edge-ai/rk3588-expression-posture-recognition.mp4
+
 # npx skills 符号链接（指向 .agents/skills/，不提交）
 skills/lark-*
 skills/ncm-cli-setup

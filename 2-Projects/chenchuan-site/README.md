@@ -17,6 +17,7 @@
 - 技术栈：Next.js 15 + React 19 + TypeScript + TailwindCSS（`package.json` version 1.0.0）；交互 Demo 用 three.js + @mediapipe/tasks-vision + framer-motion。
 - 站点分区（`src/app/`）：about / work / patents / lab（含 AR-HUD Demo）/ videos / ai-os（Talk-With-My-AI 聊天）/ radar / writing / contact / admin（访问统计后台）。
 - 数据层：访问统计用 better-sqlite3（`data/analytics.db`）；鉴权用 jose（JWT）+ bcryptjs。
+- AI 战略镜像公开语音：独立 `MyJavis_ccsite` 服务 + 火山 RTC，首页可直接体验，`/ai-os/chat` 语音/文字双模式；匿名日额度与后台体验码见 `docs/public-voice-experience.md`。
 - AR-HUD Demo（`/lab/ar-hud-demo`）：100% 本地推理（MediaPipe 眼动 + 手势捏合），端到端延迟 ~60-90ms，已部署上线 `my.chenchuan.cc/lab/ar-hud-demo`（依据 `docs/AR-HUD-DEMO-STATUS.md`）。
 - KidsHub-AI 展示：核心在另一目录 `2-Projects/P003GameDemo20260513/`（vite SPA，main 主线地盘），本站只做展示层；切场景卡 TTS 续播 bug 已由主线根治并两站部署生效（commit `c9278edf6`，依据 SYNC-LOG.md 2026-06-14）。
 - Directus CMS（`docker-compose.yml` + `directus/`）：早期 CMS 方案，相关文件最后修改停在 2026-03-31，当前活跃栈已转向 Next.js + SQLite + 外部 LLM provider（Directus 是否仍在用，待川哥确认）。
@@ -28,6 +29,7 @@
 | 协作铁律 | [COLLAB-RULES.md](./COLLAB-RULES.md) | 展示层 session 必读：目录墙、禁全量 add、单向数据流 |
 | 主线同步日志 | [SYNC-LOG.md](./SYNC-LOG.md) | KidsHub 主线 → 个人站展示层的关键同步留档 |
 | AR-HUD Demo 交接 | [docs/AR-HUD-DEMO-STATUS.md](./docs/AR-HUD-DEMO-STATUS.md) | `/lab/ar-hud-demo` 状态 + 技术方案 + TODO（新人只看这份） |
+| 公开语音体验 | [docs/public-voice-experience.md](./docs/public-voice-experience.md) | MyJavis 桥接、隐私边界、配额、体验码、部署与回滚 |
 | 应用源码 | [src/app/](./src/app/) | Next.js App Router 各分区页面 |
 | 环境变量样例 | [.env.example](./.env.example) | 站点 / Directus / 统计后台 / 聊天 provider 全量配置说明 |
 | 容器编排 | [docker-compose.yml](./docker-compose.yml) | site + directus + postgres 三服务（早期 CMS 方案） |

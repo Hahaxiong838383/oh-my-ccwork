@@ -6,6 +6,7 @@ import { Hand, MessageSquare, Mic } from 'lucide-react'
 import { BlurFade } from '@/components/ui/BlurFade'
 import { profile } from '@/data/profile'
 import { formatCareerExperience } from '@/lib/experience'
+import { VoiceMirrorExperience } from '@/components/ai-os/VoiceMirrorExperience'
 
 const PROMPTS = [
   '我们公司想做 AI 应用，怎么判断有没有市场？',
@@ -14,9 +15,9 @@ const PROMPTS = [
   '想从产品经理转型 AI，第一步是什么？',
 ]
 
-const getStats = (experience: string): Array<[string, string]> => [
+const getStats = (experience: string, patentCount: number): Array<[string, string]> => [
   [experience, '硬科技产品经验'],
-  ['46', '项专利成果'],
+  [String(patentCount), '项专利成果'],
   ['>9款', '0-1 量产及运营经验'],
 ]
 
@@ -100,11 +101,17 @@ interface TickerItem {
   url: string
 }
 
-export function Hero({ tickerItems = [] }: { tickerItems?: TickerItem[] }) {
+interface HeroProps {
+  patentCount: number
+  tickerItems?: TickerItem[]
+}
+
+export function Hero({ patentCount, tickerItems = [] }: HeroProps) {
   const clock = useClock()
   const typed = useTypewriter(PROMPTS)
   const experienceLabel = useCareerExperienceLabel()
-  const stats = getStats(experienceLabel)
+  const stats = getStats(experienceLabel, patentCount)
+  const [voiceOpen, setVoiceOpen] = useState(false)
 
   return (
     <section className="relative isolate min-h-[100svh] overflow-hidden bg-bg-primary">
@@ -182,14 +189,7 @@ export function Hero({ tickerItems = [] }: { tickerItems?: TickerItem[] }) {
               <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted">
                 在线体验 · 三个 AI Demo 浏览器直接玩
               </div>
-              <HeroDemoCard
-                color="violet"
-                href="/ai-os/chat"
-                icon={MessageSquare}
-                name="陈川的战略镜像"
-                meta="和我的 AI 聊聊 · 在线"
-                typed={typed}
-              />
+              <HeroStrategicMirrorCard typed={typed} onVoice={() => setVoiceOpen(true)} />
               <HeroDemoCard
                 color="blue"
                 href="/lab/ar-hud-demo"
@@ -211,7 +211,57 @@ export function Hero({ tickerItems = [] }: { tickerItems?: TickerItem[] }) {
           </BlurFade>
         </div>
       </div>
+      {voiceOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-[6vh] backdrop-blur-md"
+          role="dialog"
+          aria-modal="true"
+          aria-label="陈川的 AI 战略镜像实时语音体验"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setVoiceOpen(false)
+          }}
+        >
+          <div className="w-full max-w-4xl">
+            <VoiceMirrorExperience onClose={() => setVoiceOpen(false)} />
+          </div>
+        </div>
+      )}
     </section>
+  )
+}
+
+function HeroStrategicMirrorCard({ typed, onVoice }: { typed: string; onVoice: () => void }) {
+  const c = DEMO_COLOR.violet
+  return (
+    <div className={`group flex items-start gap-3 rounded-2xl border p-4 transition duration-300 hover:-translate-y-0.5 ${c.card}`}>
+      <span className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${c.avatar}`}>
+        <MessageSquare size={20} className="text-white" />
+        <span className={`hero-green-dot absolute -bottom-0.5 -right-0.5 h-[11px] w-[11px] rounded-full border-2 ${c.dot} bg-[#34C759]`} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-[15px] font-semibold tracking-[-0.01em] text-text-primary">陈川的战略镜像</div>
+        <div className={`mt-0.5 font-mono text-[10px] uppercase tracking-[0.12em] ${c.meta}`}>文字 + 实时语音 · 在线</div>
+        <div className="mt-2 min-h-[2.7em] rounded-md border border-white/70 bg-white/70 px-2.5 py-1.5 text-[12px] leading-snug text-text-secondary">
+          “{typed}
+          <span className="hero-cursor ml-px inline-block h-[1em] w-[2px] translate-y-0.5 bg-[#6D5BD0] align-middle" />
+        </div>
+        <div className="mt-2.5 flex gap-2">
+          <button
+            type="button"
+            onClick={onVoice}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#6D5BD0] px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-[#5f4dc4]"
+          >
+            <Mic size={13} /> 开口聊 2 分钟
+          </button>
+          <Link
+            href="/ai-os/chat"
+            className="inline-flex items-center justify-center rounded-lg border border-[#6D5BD0]/25 bg-white/60 px-3 py-2 text-[11px] font-medium text-[#55459f] transition hover:border-[#6D5BD0]/50"
+          >
+            打字聊 →
+          </Link>
+        </div>
+      </div>
+    </div>
   )
 }
 
