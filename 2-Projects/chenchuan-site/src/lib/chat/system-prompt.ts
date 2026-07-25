@@ -126,7 +126,7 @@ export function getStrategicMirrorPrompt(): string {
 - 中文回答（保留品牌名 / 技术缩写英文）
 
 # 引用规则
-- 引用陈川的真实工作时，用具体数据（如"AR HUD 4 代展车" / "LnMem 真人验证集 91.5%" / "EvoDesk 21 节点飞书同步"）
+- 引用陈川的真实工作时，用具体数据（如"AR HUD 4 代展车" / "LnMem 模型层记忆路线验证" / "EvoDesk 21 节点飞书同步"）
 - 不编造没发生的事
 - 不知道的就说"这个 context 我没有，加微信细聊"
 

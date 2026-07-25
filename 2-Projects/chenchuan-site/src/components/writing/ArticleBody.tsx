@@ -1,19 +1,38 @@
 import { Fragment } from 'react'
 
 /**
- * 文章正文轻量渲染：支持 #### 小标题、空行分段、**加粗**。
- * 不引入 markdown 依赖——writing 文章只用到这三种语法。
+ * 文章正文轻量渲染：支持 #### 小标题、空行分段、**加粗**、URL 自动链接。
+ * 不引入 markdown 依赖——writing 文章只用到这几种语法。
  */
+
+function linkify(text: string, keyPrefix: string) {
+  const parts = text.split(/(https?:\/\/[^\s，。）)]+)/g)
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={`${keyPrefix}-a${i}`}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="break-all text-accent underline-offset-4 hover:underline"
+      >
+        {part.replace(/^https?:\/\//, '')}
+      </a>
+    ) : (
+      <Fragment key={`${keyPrefix}-t${i}`}>{part}</Fragment>
+    ),
+  )
+}
 
 function renderInline(text: string, keyPrefix: string) {
   const parts = text.split(/\*\*(.+?)\*\*/g)
   return parts.map((part, i) =>
     i % 2 === 1 ? (
       <strong key={`${keyPrefix}-${i}`} className="font-semibold text-text-primary">
-        {part}
+        {linkify(part, `${keyPrefix}-s${i}`)}
       </strong>
     ) : (
-      <Fragment key={`${keyPrefix}-${i}`}>{part}</Fragment>
+      <Fragment key={`${keyPrefix}-${i}`}>{linkify(part, `${keyPrefix}-f${i}`)}</Fragment>
     ),
   )
 }
