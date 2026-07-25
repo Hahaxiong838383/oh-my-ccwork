@@ -1,4 +1,8 @@
 # AI Ops terminal guardrails. Sourced only by interactive bash.
+omp() {
+  command /usr/local/bin/omp-aiops "$@"
+}
+
 aiops_guard_command() {
   local cmd="$BASH_COMMAND"
   case "$cmd" in

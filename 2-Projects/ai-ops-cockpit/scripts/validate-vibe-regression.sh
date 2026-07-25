@@ -204,6 +204,8 @@ curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.haha
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/todos/detail?id=$TODO_ID" -o /tmp/aiops-vibe-todo-detail.html
 grep -q '待办详情' /tmp/aiops-vibe-todo-detail.html
 docker exec ops-terminal bash -lc 'test -f /workspace/readonly/mycc/AGENTS.md && mount | grep -q /workspace/readonly'
+docker exec ops-terminal bash -lc 'test -x /usr/local/bin/omp-aiops && /usr/local/bin/omp-aiops --version | grep -Eq "^omp/[0-9]+\\.[0-9]+\\.[0-9]+$"'
+docker exec ops-terminal bash -lc 'test -r /run/secrets/volcengine_coding_api_key && /usr/local/bin/omp-aiops models find "$AI_OPS_OMP_MODEL" --json | grep -q deepseek-v4-pro'
 docker exec ops-inspector sh -lc 'test -d /var/lib/ai-ops-state && mount | grep -q /var/lib/ai-ops-state'
 docker exec ops-inspector sh -lc 'test -r /run/secrets/chenchuan-maintenance/id_ed25519 && test -r /run/secrets/chenchuan-maintenance/known_hosts && mount | grep -q /run/secrets/chenchuan-maintenance'
 docker exec ops-inspector sh -lc 'test -r /run/secrets/cpa-jp-maintenance/id_ed25519 && test -r /run/secrets/cpa-jp-maintenance/known_hosts && mount | grep -q /run/secrets/cpa-jp-maintenance'

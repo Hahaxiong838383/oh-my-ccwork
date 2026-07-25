@@ -1025,7 +1025,7 @@ scripts/validate-vibe-regression.sh
 - 新增 `config/chenchuan-site-allowlist.txt`，显式列出 64 个安全文件：项目规则、构建配置、公开页面、公开组件、Radar 降级逻辑和安全数据辅助层。
 - 明确排除 `.env*`、SQLite、`data/`、媒体原文件、后台页面、API 鉴权、统计数据库和 LLM provider/secrets 处理代码。
 - `ops-inspector` 新增 `/workspace/readonly:ro` 与 `/config:ro` 挂载；项目任务保持 `--no-tools`，由服务端读取 allowlist 快照并把脱敏源码上下文注入 Grok，不开放任意 shell 或文件写入能力。
-- 大上下文通过 OMP 原生 `@/tmp/aiops-task-prompt.txt` 文件消息传入，避免 `$(cat ...)` 展开为单个 argv 后触发 `Argument list too long`；网页任务使用 `--no-session`，审计仍由 AI Ops 自己保存。
+- 大上下文通过 OMP 的 `--append-system-prompt <临时文件>` 传入，避免 `$(cat ...)` 展开为单个 argv 后触发 `Argument list too long`；网页任务使用 `--no-tools --no-session`，临时文件自动清理，审计仍由 AI Ops 自己保存。
 - 任务审计只保存项目 ID、实际注入文件名、字符数、缺失/截断状态，不保存完整源码上下文。
 - Grok 输出审计采用“保留开头 + 保留结尾”的 18K 字符压缩，避免长报告只留尾部而丢失 O1/O2 或 Action；中段截断会显示 `OUTPUT_TRUNCATED_MIDDLE`。
 - 已核实个人站生产目标：`https://my.chenchuan.cc` → `aliyun-kr`（`8.213.134.133`），目录 `/var/www/chenchuan-site`，PM2 进程 `chenchuan-site`；核实日期 2026-07-10。
@@ -1076,6 +1076,22 @@ scripts/validate-vibe-regression.sh
 - 发布门要求至少 20 个频道、关键频道存在、标准名称无重复，并用 `ffprobe` 抽样 7 个频道至少通过 5 个；失败候选写独立失败状态且不覆盖已发布 `last-good`。
 - 新增 `iptv-api` 六文件只读 allowlist、项目工作区和独立限权 SSH 通道；只允许 `inspect`、`refresh`、`restart-iptv`、`rollback-last-good`，任意 shell 被拒绝。
 - n8n 每日 `03:00` 执行公网就绪度、只读快照、生产巡检、Grok 4.5、飞书和 Kuma Push 闭环；Uptime Kuma 同时监控公开就绪度端点和 36 小时每日心跳。
+
+### 2026-07-24 · AI Ops 默认模型切换为 DeepSeek V4 Pro
+
+- 网页任务与内嵌终端统一通过 `AI_OPS_OMP_MODEL` 选择模型，默认值为 `volcengine-coding/deepseek-v4-pro`。
+- 方舟 Coding Plan 使用 OMP 自定义 OpenAI-compatible provider；API key 只挂载为 Docker secret，不进入 Git、页面、日志、任务审计或飞书通知。
+- 终端不再依赖 xAI OAuth 登录态；启动时会检查方舟 secret 和 OMP 模型注册，缺失时安全回落到普通 bash。
+- 原有 Harness、BRO-PDCA、默认只读、`--no-tools` 网页任务、动作确认、任务审计和飞书脱敏边界保持不变。
+
+### 2026-07-24 · OMP 安全自动更新
+
+- 每日 `05:20 Asia/Shanghai` 检查 npm 官方 registry 的 `@oh-my-pi/pi-coding-agent` 最新稳定版；没有新版本时只写状态，不重启服务。
+- 新版本先安装到持久化候选目录，依次验证版本号、DeepSeek V4 Pro 模型发现、真实推理和完整 `OK vibe regression`，全部通过后才原子切换。
+- 任一候选检查或切换后回归失败都会保持或恢复上一版本；Docker 镜像内的固定版本继续作为最终 fallback。
+- 当前生效版本由 `/usr/local/bin/omp-aiops` 选择；网页任务、自动终端和交互式 `omp` 命令统一走该入口。
+- 更新状态写入远端 `terminal/runtime/update-state.json`，更新日志进入 syslog 标签 `aiops-omp-update`；运行时版本目录不进入 Git。
+- 手动检查/更新：`cd /opt/ai-ops-cockpit && scripts/update-omp.sh`；重装定时任务：`scripts/install-omp-auto-update-cron.sh`。
 - 验收：初次聚合 31 个频道、服务端抽样 `7/7`；本机真实订阅解析 31 个频道、重复 0、关键频道 `5/5`、播放抽样 `4/5`；错误私人路径 `404`；故障候选隔离与 `last-good` 回滚成功；全站回归 `OK vibe regression`。
 
 ## 2026-07-11 · 私人 IPTV 迁移到香港 VPS

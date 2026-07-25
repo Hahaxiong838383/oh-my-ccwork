@@ -78,7 +78,10 @@ copy_mycc_minimal() {
     2-Projects/ai-ops-cockpit/scripts/validate-vibe-regression.sh \
     2-Projects/ai-ops-cockpit/scripts/sync-readonly-workspaces.sh \
     2-Projects/ai-ops-cockpit/scripts/install-readonly-refresh-cron.sh \
+    2-Projects/ai-ops-cockpit/scripts/install-omp-auto-update-cron.sh \
+    2-Projects/ai-ops-cockpit/scripts/update-omp.sh \
     2-Projects/ai-ops-cockpit/terminal/Dockerfile \
+    2-Projects/ai-ops-cockpit/terminal/omp-aiops \
     2-Projects/ai-ops-cockpit/terminal/vibe-bashrc \
     2-Projects/ai-ops-cockpit/terminal/vibe-omp \
     2-Projects/ai-ops-cockpit/terminal/vibe-shell; do
