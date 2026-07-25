@@ -209,6 +209,44 @@ ssh dev198 'curl -sS http://127.0.0.1:18765/healthz | python3 -m json.tool'     
 curl -s --noproxy '*' https://ai.kidshub.cn/healthz    # 公网即可核对线上 version（v1.9.0 起 healthz 带 version）
 ```
 
+## 记忆通道（v1.9.x，2026-07-26）
+
+用户后台「项目记忆/全局记忆」若是英文空壳 → 引擎脚手架模板没被真内容替换。三条链路：
+
+1. **播种** `lib/memory-seed.mjs`：中文骨架 + 历史回填，接在沙箱开通流程里，幂等。
+   `looksUnseeded` 是红线（判错即覆盖真实记忆且不可逆），改它必跑 `test/memory-seed.test.mjs`。
+2. **助手主动写**：`.grok/AGENTS.md` 的 `ai-memory` 托管块（**我们自己的中文版**，
+   不是上游那段）。上游英文块声称"hooks 已自动捕获、别手动写"，**沙箱里没有 hooks**，
+   照抄等于命令助手别写记忆。改法：沿用上游 marker、正文换我们的（幂等替换仍成立）。
+3. **网关兜底捕获** `lib/memory-capture.mjs`：每轮任务后网关自己判一次。
+   指令是概率性的、hooks 是确定性的，两条并存互为冗余。
+
+四道门的顺序不能乱（踩过）：
+- **隐私门必须第一个判**，排在长度门之前 —— 20 字的他人 HR 请求曾被 `too-short`
+  提前返回而绕过隐私判定，**短≠安全**。
+- `classifyHr` 返回的是**命中词数组**不是 `{hit}`，写成 `.hit` 恒 undefined、门形同虚设。
+- 中文字数阈值别用英文直觉：`MIN_CHARS=24` 曾把「以后都要…」(10字)、
+  「这事就定成这样吧…」(20字) 全挡在判断之外。现为 8 + 信号词短路（以后/都要/
+  就定/记住/约定/待办…命中则无视长度）。
+- 去重按**输入**哈希，不能只按 LLM 产出（每次措辞有差异）。
+
+排障：
+```bash
+# 记忆文件真实状态（英文模板 = 还没播种）
+ssh dev198 'find /srv/h-platform/memory/<uid>/wiki -name MEMORY.md -exec ls -la {} \;'
+# 捕获是否触发（看 memory captured / privacy gate / too-short）
+ssh dev198 'journalctl --user -u feishu-grok-bridge --since "-30min" --no-pager | grep -i "memory captur\|privacy"'
+# MCP 通道自检（注意 Accept 必须同时带 json 和 event-stream，否则 406）
+ssh dev198 'T=$(cat /srv/h-platform/memory/<uid>/auth.token); curl -s -X POST http://127.0.0.1:<port>/mcp \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -H "Authorization: Bearer $T" \
+  -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"memory_recent\",\"arguments\":{\"workspace\":\"default\",\"project\":\"main\",\"limit\":5}}}"'
+```
+
+⚠️ **对生产数据做写入型自测前先想好回滚**：曾把测试用例编的内容写进川哥真实记忆，
+事后清理。更好的做法是用独立测试 uid。
+
+⚠️ 遗留：同义不同措辞仍会重复入库（相似度用精确包含）。
+
 ## 关键文件与记忆
 
 - 项目记忆 [[project_feishu_grok_h_byos]]（拍板/账号三层/分层/验收协议全量）
