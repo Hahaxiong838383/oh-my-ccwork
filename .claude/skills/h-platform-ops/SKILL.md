@@ -142,6 +142,46 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
   302；同 App 60 秒内复用（防连点堆出一串 5s 轮询循环）。token 就是 `/go` 那套
   免登 token，`/internal/autologin` 直接返回 `upgradeUrl`，**执行面别自己拼**。
 - 管理台用户表有「待补授权」徽标 + 人数提示；补授权按钮保留作手动兜底。
+- **真机已验（2026-07-26）**：手机飞书里**直接点卡片按钮即完成授权，不用扫码**。
+- ⚠️ **验成功要认服务端状态，别只听用户说「点完了」**：该用户 `addonsRev` 应等于
+  当前 rev、`upgradeConfirm`/`upgradeHint` 清空、pending 归零。写回失败时用户侧
+  一样显示「授权成功」，但下一轮还会再打扰他一次。查
+  `/srv/h-control/data/users.json` 这几个字段。
+- ⚠️ 授权成功 ≠ 事件真的会来：`bot_p2p_chat_entered_v1` 要**真人打开一次会话**
+  才触发。（2026-07-26 已验：授权后日志首次出现 `chat entered`，此前三天为零。）
+
+## 授权类问答走网关代答（v1.12.0）—— 别让助手猜「授权」
+
+**用户问「授权好了吗」不能交给助手**：它在 bwrap 沙箱里看不到控制面的用户记录，
+而「授权」在本产品里被三方争用（平台补授权 / 订阅绑定 / lark-cli 登录），它只对
+lark-cli 有工具 → 必然猜到那上面去。真机翻车过：跑 `lark-cli config init --new`，
+甩出无关授权链接 + 挂两个等 stdin 的进程。
+
+- `lib/command-probe.mjs` 的 `auth` 档：短命令词精确匹配（授权状态/补授权/…）
+  **加**「整条消息 ≤20 字且含『授权』」；带 `lark|cli|skill|github` 字样的放行
+  （那是真任务）。改这条必跑 `test/command-probe.test.mjs`。
+- `handleAuthCommand()` 拿 `/internal/auth-status` 的真值出卡片，**不过 LLM**。
+- 生效后 30s 内还会自动推一张「授权已生效」（`upgradeConfirm` → 推卡 → 清标记），
+  只在"问过他/他本来是别的版本"时推，新用户不打扰。
+- ⚠️ 交互式 CLI 在无人值守通道会挂死：`lark-cli config init --new` 等 stdin 永不
+  退出。杀它记得用 `ps | grep '[l]ark-cli'` 括号法拿 PID，**禁 `pkill -f`**
+  （pattern 会匹配到自己那条 ssh 命令行）。
+
+## 沙箱凭据注入：token 不上命令行（v1.12.0 安全修复）
+
+`--setenv XAI_API_KEY <token>` 会让令牌明文躺在 `/proc/<pid>/cmdline`，**本机任何
+用户 `ps` 就能抄走**。已改走 bwrap `--args FD`（`lib/sandbox.mjs`
+`buildSecretArgsPayload` + `SECRET_ARGS_FD=3`，grok-runner 用 stdio 第 4 槽喂）。
+
+- 空载荷也**必须写并 `end()`**，否则 bwrap 读 fd 会一直阻塞。
+- 改这块必跑 `node test/sandbox.test.mjs`（有回归闸：argv 与 env 白名单里都不许
+  出现凭据形状的值）。
+- 自检取证**只查值不查名**（查名会把 `$VAR` 引用算成命中，得出假结论）：
+  ```bash
+  ssh dev198 "ps -eo args | grep -c 'XAI_API_KEY '"   # 应为 0
+  ```
+- 上线前要验到「消费方认不认」：只证明 env 在沙箱里存在是不够的，必须用真实凭据
+  跑一次真 grok（让它回两个字即可）。这一环没验就上线 = 全体用户 Not signed in。
 - 自检：
   ```bash
   ssh aliyun-hk 'set -a; . /srv/h-control/.env; set +a; curl -s -H "Authorization: Bearer $SERVICE_TOKEN" http://127.0.0.1:18790/internal/upgrade-pending | python3 -m json.tool'
