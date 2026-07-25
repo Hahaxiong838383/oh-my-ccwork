@@ -1,0 +1,205 @@
+{
+  "version": 2,
+  "nodes": [
+    {
+      "type": "frame",
+      "id": "root",
+      "width": "fit-content",
+      "height": "fit-content",
+      "layout": "horizontal",
+      "gap": 140,
+      "padding": 40,
+      "alignItems": "start",
+      "fillColor": "#FFFFFF",
+      "borderWidth": 0,
+      "children": [
+        {
+          "type": "frame",
+          "id": "screen-a",
+          "width": 375,
+          "height": "fit-content",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 0,
+          "borderWidth": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "screen-a-name",
+              "width": "fill-container",
+              "height": "fit-content",
+              "text": "屏 1 · 登录页",
+              "fontSize": 16,
+              "textColor": "#646A73",
+              "textAlign": "center"
+            },
+            {
+              "type": "frame",
+              "id": "phone-a",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "fillColor": "#FFFFFF",
+              "borderColor": "#1F2329",
+              "borderWidth": 2,
+              "borderRadius": 24,
+              "children": [
+                { "type": "rect", "id": "a-navbar", "width": "fill-container", "height": "fit-content", "text": "登录", "fillColor": "#F1F3F5", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 15, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "a-hero", "width": "fill-container", "height": 140, "fillColor": "#E8EAED", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8 },
+                { "type": "rect", "id": "a-input-phone", "width": "fill-container", "height": "fit-content", "text": "手机号", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#646A73", "textAlign": "left", "verticalAlign": "middle" },
+                { "type": "rect", "id": "a-input-code", "width": "fill-container", "height": "fit-content", "text": "短信验证码", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#646A73", "textAlign": "left", "verticalAlign": "middle" },
+                { "type": "rect", "id": "a-btn-login", "width": "fill-container", "height": "fit-content", "text": "登 录", "fillColor": "#1F2329", "borderColor": "#1F2329", "borderWidth": 2, "borderRadius": 8, "fontSize": 15, "textColor": "#FFFFFF", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "text", "id": "a-link-help", "width": "fill-container", "height": "fit-content", "text": "收不到验证码？", "fontSize": 13, "textColor": "#646A73", "textAlign": "center" }
+              ]
+            },
+            {
+              "type": "stickyNote",
+              "id": "a-note",
+              "width": "fill-container",
+              "height": "fit-content",
+              "fillColor": "#FEF1CE",
+              "text": "标注：验证码按钮 60s 倒计时；校验失败在输入框下方红字提示",
+              "fontSize": 13,
+              "textColor": "#1F2329",
+              "textAlign": "left"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "screen-b",
+          "width": 375,
+          "height": "fit-content",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 0,
+          "borderWidth": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "screen-b-name",
+              "width": "fill-container",
+              "height": "fit-content",
+              "text": "屏 2 · 首页",
+              "fontSize": 16,
+              "textColor": "#646A73",
+              "textAlign": "center"
+            },
+            {
+              "type": "frame",
+              "id": "phone-b",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "fillColor": "#FFFFFF",
+              "borderColor": "#1F2329",
+              "borderWidth": 2,
+              "borderRadius": 24,
+              "children": [
+                { "type": "rect", "id": "b-navbar", "width": "fill-container", "height": "fit-content", "text": "首页", "fillColor": "#F1F3F5", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 15, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "b-search", "width": "fill-container", "height": "fit-content", "text": "搜索内容…", "fillColor": "#F1F3F5", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#646A73", "textAlign": "left", "verticalAlign": "middle" },
+                {
+                  "type": "frame",
+                  "id": "b-card-1",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "layout": "horizontal",
+                  "gap": 12,
+                  "padding": 12,
+                  "alignItems": "center",
+                  "fillColor": "#FFFFFF",
+                  "borderColor": "#DEE0E3",
+                  "borderWidth": 2,
+                  "borderRadius": 8,
+                  "children": [
+                    { "type": "rect", "id": "b-card-1-img", "width": 48, "height": 48, "fillColor": "#E8EAED", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8 },
+                    {
+                      "type": "frame",
+                      "id": "b-card-1-body",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": 0,
+                      "borderWidth": 0,
+                      "children": [
+                        { "type": "text", "id": "b-card-1-title", "width": "fill-container", "height": "fit-content", "text": "内容标题一", "fontSize": 14, "textColor": "#1F2329", "textAlign": "left" },
+                        { "type": "text", "id": "b-card-1-desc", "width": "fill-container", "height": "fit-content", "text": "一句话摘要说明文字", "fontSize": 13, "textColor": "#646A73", "textAlign": "left" }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "b-card-2",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "layout": "horizontal",
+                  "gap": 12,
+                  "padding": 12,
+                  "alignItems": "center",
+                  "fillColor": "#FFFFFF",
+                  "borderColor": "#DEE0E3",
+                  "borderWidth": 2,
+                  "borderRadius": 8,
+                  "children": [
+                    { "type": "rect", "id": "b-card-2-img", "width": 48, "height": 48, "fillColor": "#E8EAED", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8 },
+                    {
+                      "type": "frame",
+                      "id": "b-card-2-body",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": 0,
+                      "borderWidth": 0,
+                      "children": [
+                        { "type": "text", "id": "b-card-2-title", "width": "fill-container", "height": "fit-content", "text": "内容标题二", "fontSize": 14, "textColor": "#1F2329", "textAlign": "left" },
+                        { "type": "text", "id": "b-card-2-desc", "width": "fill-container", "height": "fit-content", "text": "一句话摘要说明文字", "fontSize": 13, "textColor": "#646A73", "textAlign": "left" }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "b-tabbar",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "layout": "horizontal",
+                  "gap": 8,
+                  "padding": 0,
+                  "alignItems": "stretch",
+                  "borderWidth": 0,
+                  "children": [
+                    { "type": "rect", "id": "b-tab-1", "width": "fill-container", "height": "fit-content", "text": "首页", "fillColor": "#1F2329", "borderColor": "#1F2329", "borderWidth": 2, "borderRadius": 8, "fontSize": 13, "textColor": "#FFFFFF", "textAlign": "center", "verticalAlign": "middle" },
+                    { "type": "rect", "id": "b-tab-2", "width": "fill-container", "height": "fit-content", "text": "消息", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 13, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                    { "type": "rect", "id": "b-tab-3", "width": "fill-container", "height": "fit-content", "text": "我的", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 13, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "connector",
+      "id": "jump-login",
+      "connector": {
+        "from": "a-btn-login",
+        "to": "phone-b",
+        "fromAnchor": "right",
+        "toAnchor": "left",
+        "lineShape": "polyline",
+        "lineColor": "#BBBFC4",
+        "lineWidth": 2,
+        "endArrow": "triangle",
+        "label": "登录成功"
+      }
+    }
+  ]
+}

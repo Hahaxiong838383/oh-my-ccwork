@@ -328,7 +328,9 @@ AGENTS.md.bak.*
 2-Projects/LnMem-poc/
 2-Projects/personalt-test/
 1-Inbox/tmp-repos/
-4-Assets/external-skills/
+4-Assets/external-skills/*
+# 例外：自产 skill 包入仓（lark-whiteboard-lite 无嵌套 .git；tar.gz 分发包可再生成不入仓）
+!4-Assets/external-skills/lark-whiteboard-lite/
 .claude/skills/fireworks-tech-graph/
 2-Projects/multica-team-deploy/upgrade-v0.3.21/multica-v0.3.21/
 # 系统垃圾

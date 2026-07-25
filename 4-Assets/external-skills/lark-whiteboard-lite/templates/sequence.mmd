@@ -1,0 +1,14 @@
+%% 时序图模板 —— 只改参与方（participant）和消息文字
+%% 箭头语义（固定）：->> 同步请求（实线）  -->> 响应/异步（虚线）  -x 失败
+%% 参与方 ≤ 6 个；消息 ≤ 15 条；消息文字 ≤ 15 字
+sequenceDiagram
+    participant U as 用户
+    participant W as 网页端
+    participant S as 服务端
+    participant D as 数据库
+    U->>W: 点击登录
+    W->>S: 提交账号密码
+    S->>D: 查询用户记录
+    D-->>S: 返回用户信息
+    S-->>W: 返回登录态 token
+    W-->>U: 跳转首页

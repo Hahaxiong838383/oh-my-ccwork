@@ -1,0 +1,215 @@
+{
+  "version": 2,
+  "nodes": [
+    {
+      "type": "frame",
+      "id": "root",
+      "width": 1200,
+      "height": "fit-content",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 24,
+      "fillColor": "#FFFFFF",
+      "borderWidth": 0,
+      "children": [
+        {
+          "type": "text",
+          "id": "title",
+          "width": "fill-container",
+          "height": "fit-content",
+          "text": "电商系统架构图",
+          "fontSize": 24,
+          "textColor": "#1F2329",
+          "textAlign": "center"
+        },
+        {
+          "type": "frame",
+          "id": "row-layer-1",
+          "width": "fill-container",
+          "height": "fit-content",
+          "layout": "horizontal",
+          "gap": 24,
+          "padding": 0,
+          "alignItems": "center",
+          "borderWidth": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "label-1",
+              "width": 80,
+              "height": "fit-content",
+              "text": "接入层",
+              "fontSize": 18,
+              "textColor": "#1F2329",
+              "textAlign": "right"
+            },
+            {
+              "type": "frame",
+              "id": "layer-1",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "horizontal",
+              "gap": 16,
+              "padding": 20,
+              "alignItems": "stretch",
+              "fillColor": "#F0F4FC",
+              "borderColor": "#5178C6",
+              "borderWidth": 2,
+              "borderRadius": 8,
+              "children": [
+                { "type": "rect", "id": "n-1-1", "width": "fill-container", "height": "fit-content", "text": "Web 端", "fillColor": "#FFFFFF", "borderColor": "#5178C6", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "n-1-2", "width": "fill-container", "height": "fit-content", "text": "iOS App", "fillColor": "#FFFFFF", "borderColor": "#5178C6", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "n-1-3", "width": "fill-container", "height": "fit-content", "text": "Android App", "fillColor": "#FFFFFF", "borderColor": "#5178C6", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "n-1-4", "width": "fill-container", "height": "fit-content", "text": "管理后台", "fillColor": "#FFFFFF", "borderColor": "#5178C6", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "row-layer-2",
+          "width": "fill-container",
+          "height": "fit-content",
+          "layout": "horizontal",
+          "gap": 24,
+          "padding": 0,
+          "alignItems": "center",
+          "borderWidth": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "label-2",
+              "width": 80,
+              "height": "fit-content",
+              "text": "服务层",
+              "fontSize": 18,
+              "textColor": "#1F2329",
+              "textAlign": "right"
+            },
+            {
+              "type": "frame",
+              "id": "layer-2",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "horizontal",
+              "gap": 16,
+              "padding": 20,
+              "alignItems": "stretch",
+              "fillColor": "#EAE2FE",
+              "borderColor": "#8569CB",
+              "borderWidth": 2,
+              "borderRadius": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "subarea-core",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 12,
+                  "fillColor": "#FFFFFF",
+                  "borderColor": "#8569CB",
+                  "borderWidth": 2,
+                  "borderRadius": 8,
+                  "children": [
+                    { "type": "text", "id": "subtitle-core", "width": "fill-container", "height": "fit-content", "text": "核心服务", "fontSize": 15, "textColor": "#1F2329", "textAlign": "center" },
+                    {
+                      "type": "frame",
+                      "id": "row-core-1",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "layout": "horizontal",
+                      "gap": 8,
+                      "padding": 0,
+                      "alignItems": "stretch",
+                      "borderWidth": 0,
+                      "children": [
+                        { "type": "rect", "id": "n-2-1", "width": "fill-container", "height": "fit-content", "text": "用户服务\n注册登录鉴权", "fillColor": "#FFFFFF", "borderColor": "#8569CB", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                        { "type": "rect", "id": "n-2-2", "width": "fill-container", "height": "fit-content", "text": "订单服务\n下单与履约", "fillColor": "#FFFFFF", "borderColor": "#8569CB", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                        { "type": "rect", "id": "n-2-3", "width": "fill-container", "height": "fit-content", "text": "支付服务\n收单与对账", "fillColor": "#FFFFFF", "borderColor": "#8569CB", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "subarea-support",
+                  "width": 320,
+                  "height": "fit-content",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 12,
+                  "fillColor": "#FFFFFF",
+                  "borderColor": "#8569CB",
+                  "borderWidth": 2,
+                  "borderRadius": 8,
+                  "children": [
+                    { "type": "text", "id": "subtitle-support", "width": "fill-container", "height": "fit-content", "text": "支撑服务", "fontSize": 15, "textColor": "#1F2329", "textAlign": "center" },
+                    {
+                      "type": "frame",
+                      "id": "row-support-1",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "layout": "horizontal",
+                      "gap": 8,
+                      "padding": 0,
+                      "alignItems": "stretch",
+                      "borderWidth": 0,
+                      "children": [
+                        { "type": "rect", "id": "n-2-4", "width": "fill-container", "height": "fit-content", "text": "消息队列\n(Kafka)", "fillColor": "#FFFFFF", "borderColor": "#8569CB", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                        { "type": "rect", "id": "n-2-5", "width": "fill-container", "height": "fit-content", "text": "定时任务\n(XXL-Job)", "fillColor": "#FFFFFF", "borderColor": "#8569CB", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "row-layer-3",
+          "width": "fill-container",
+          "height": "fit-content",
+          "layout": "horizontal",
+          "gap": 24,
+          "padding": 0,
+          "alignItems": "center",
+          "borderWidth": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "label-3",
+              "width": 80,
+              "height": "fit-content",
+              "text": "数据层",
+              "fontSize": 18,
+              "textColor": "#1F2329",
+              "textAlign": "right"
+            },
+            {
+              "type": "frame",
+              "id": "layer-3",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "horizontal",
+              "gap": 16,
+              "padding": 20,
+              "justifyContent": "space-around",
+              "fillColor": "#DFF5E5",
+              "borderColor": "#509863",
+              "borderWidth": 2,
+              "borderRadius": 8,
+              "children": [
+                { "type": "cylinder", "id": "db-1", "width": 160, "height": "fit-content", "text": "MySQL\n业务主库", "fillColor": "#FFFFFF", "borderColor": "#509863", "borderWidth": 2, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "cylinder", "id": "db-2", "width": 160, "height": "fit-content", "text": "Redis\n缓存与会话", "fillColor": "#FFFFFF", "borderColor": "#509863", "borderWidth": 2, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "cylinder", "id": "db-3", "width": 160, "height": "fit-content", "text": "对象存储\n图片与文件", "fillColor": "#FFFFFF", "borderColor": "#509863", "borderWidth": 2, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

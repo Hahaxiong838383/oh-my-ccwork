@@ -1,0 +1,125 @@
+{
+  "version": 2,
+  "nodes": [
+    {
+      "type": "frame",
+      "id": "root",
+      "width": 1200,
+      "height": "fit-content",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 24,
+      "fillColor": "#FFFFFF",
+      "borderWidth": 0,
+      "children": [
+        {
+          "type": "text",
+          "id": "title",
+          "width": "fill-container",
+          "height": "fit-content",
+          "text": "技术方案对比",
+          "fontSize": 24,
+          "textColor": "#1F2329",
+          "textAlign": "center"
+        },
+        {
+          "type": "frame",
+          "id": "table",
+          "width": "fill-container",
+          "height": "fit-content",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 0,
+          "borderWidth": 0,
+          "children": [
+            {
+              "type": "frame",
+              "id": "row-header",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "horizontal",
+              "gap": 8,
+              "padding": 0,
+              "alignItems": "stretch",
+              "borderWidth": 0,
+              "children": [
+                { "type": "rect", "id": "h-dim", "width": 180, "height": "fit-content", "text": "对比维度", "fillColor": "#1F2329", "borderColor": "#1F2329", "borderWidth": 2, "borderRadius": 8, "fontSize": 15, "textColor": "#FFFFFF", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "h-plan-a", "width": "fill-container", "height": "fit-content", "text": "方案 A · 自建", "fillColor": "#1F2329", "borderColor": "#1F2329", "borderWidth": 2, "borderRadius": 8, "fontSize": 15, "textColor": "#FFFFFF", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "h-plan-b", "width": "fill-container", "height": "fit-content", "text": "方案 B · 云服务", "fillColor": "#1F2329", "borderColor": "#1F2329", "borderWidth": 2, "borderRadius": 8, "fontSize": 15, "textColor": "#FFFFFF", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "h-plan-c", "width": "fill-container", "height": "fit-content", "text": "方案 C · 混合", "fillColor": "#1F2329", "borderColor": "#1F2329", "borderWidth": 2, "borderRadius": 8, "fontSize": 15, "textColor": "#FFFFFF", "textAlign": "center", "verticalAlign": "middle" }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "row-1",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "horizontal",
+              "gap": 8,
+              "padding": 0,
+              "alignItems": "stretch",
+              "borderWidth": 0,
+              "children": [
+                { "type": "rect", "id": "r1-dim", "width": 180, "height": "fit-content", "text": "上线周期", "fillColor": "#F0F4FC", "borderColor": "#5178C6", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "r1-a", "width": "fill-container", "height": "fit-content", "text": "3 个月", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "r1-b", "width": "fill-container", "height": "fit-content", "text": "2 周", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "r1-c", "width": "fill-container", "height": "fit-content", "text": "1 个月", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "row-2",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "horizontal",
+              "gap": 8,
+              "padding": 0,
+              "alignItems": "stretch",
+              "borderWidth": 0,
+              "children": [
+                { "type": "rect", "id": "r2-dim", "width": 180, "height": "fit-content", "text": "初期成本", "fillColor": "#F0F4FC", "borderColor": "#5178C6", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "r2-a", "width": "fill-container", "height": "fit-content", "text": "高（人力+机器）", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "r2-b", "width": "fill-container", "height": "fit-content", "text": "低（按量付费）", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "r2-c", "width": "fill-container", "height": "fit-content", "text": "中", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "row-3",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "horizontal",
+              "gap": 8,
+              "padding": 0,
+              "alignItems": "stretch",
+              "borderWidth": 0,
+              "children": [
+                { "type": "rect", "id": "r3-dim", "width": 180, "height": "fit-content", "text": "数据可控性", "fillColor": "#F0F4FC", "borderColor": "#5178C6", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "r3-a", "width": "fill-container", "height": "fit-content", "text": "完全可控", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "r3-b", "width": "fill-container", "height": "fit-content", "text": "依赖厂商", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "r3-c", "width": "fill-container", "height": "fit-content", "text": "核心数据自持", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "row-4",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "horizontal",
+              "gap": 8,
+              "padding": 0,
+              "alignItems": "stretch",
+              "borderWidth": 0,
+              "children": [
+                { "type": "rect", "id": "r4-dim", "width": 180, "height": "fit-content", "text": "长期维护", "fillColor": "#F0F4FC", "borderColor": "#5178C6", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "r4-a", "width": "fill-container", "height": "fit-content", "text": "需专职团队", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "r4-b", "width": "fill-container", "height": "fit-content", "text": "厂商托管", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" },
+                { "type": "rect", "id": "r4-c", "width": "fill-container", "height": "fit-content", "text": "少量运维", "fillColor": "#FFFFFF", "borderColor": "#DEE0E3", "borderWidth": 2, "borderRadius": 8, "fontSize": 14, "textColor": "#1F2329", "textAlign": "center", "verticalAlign": "middle" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
