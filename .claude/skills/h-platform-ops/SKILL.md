@@ -19,6 +19,8 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 5. **UI 改版先问取向**：改页面前确认**桌面优先还是移动优先**（管理/配置类页面默认桌面优先）；「按 X 的逻辑做」= 抽同一组件双端复用，不是各写一份长得像的（[[feedback_ui_parity_means_same_component]]）。
 6. **改 html.mjs 必跑 script 语法门**：模板字符串会把 `\n` 先解析成真实换行 → 输出的 JS 字符串字面量断行 → **整个 script 块静默不执行**（页面正常、console 无报错、按钮全失灵）。源码里写 `\\n`；改完跑「必跑检查」里的 script 块语法检查（[[feedback_template_string_swallows_js_escapes]]）。
 7. **推代码认分支**：本仓 `origin/main` 是**无关的飞书 MCP 开源主线**（merge 报"拒绝合并无关历史"）；bridge 部署主干在 `origin/feishu-grok-bridge`。push 用 `git push origin main:feishu-grok-bridge`，**别推 origin/main**。
+8. **健康读数认实例**：bridge `/health` 的**顶层字段是 owner Bot 的**，用户 Bot 在 `apps.<appId>` 里。查「某用户的消息到没到」必须看 `apps` 分解——2026-07-25 我拿顶层 `lastInboundAt:null` 断言「一条没收到」，实际用户 Bot 那条准时到了（[[feedback_selfcheck_false_signal]]）。
+9. **远程语法检查用绝对路径**：dev198 非交互 ssh 的 PATH 没有 node，`node --check` 会「命令未找到」而静默略过；结论行必须由累计变量驱动，绝不无条件 `echo 全过`。
 
 ## 架构
 
@@ -68,6 +70,14 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
 - **显示名兜底**：注册那刻 Bot 可能未就绪取不到 app_name（真机遇到过）→ fetchBotProfile 内置重试 + **管理台每次加载后台补齐**「name 仍等于账号名」的用户（每 uid ≤3 次）。所以名字晚几分钟才出现是正常的。
 - ⚠️ `bot/v3/info` 的 `open_id` 是 **Bot 自己的**，≠ 消息白名单用的**用户 open_id**（注册回调 `user_info.open_id`），别互相覆盖。
 - 自动开通失败（uid 冲突等）→ 降级到「待关联 Bot」老路径，注册页提示联系管理员，Bot 不丢。
+- **开通前预检「这人能不能自动识别」**（省一趟往返）：owner Bot 按 union_id 直读
+  **不受**「通讯录范围」里那个部门列表限制——川哥的部门「产品」不在列表里照样读到，
+  非创建者同事也 `code=0` 姓名部门齐全。所以预检就跑一次直读，能读到即可放心发链接：
+  ```bash
+  # dev198 上：取范围内任一同事 union_id → 直读 → 看 name/department_ids 在不在
+  # 完整脚本见本次会话 scratchpad probe-ryan-ready.mjs 的思路
+  ```
+  读不到也不阻断：显示名回退 Bot 名 + 部门标「待认领」，功能完全不受影响。
 - 验收：双引擎各发一条任务 + 越界隔离复验（铁律 3）。完整版
   `dev198:~/feishu-grok-bridge/workspace/plans/h-onboarding-sop.md`。
 
