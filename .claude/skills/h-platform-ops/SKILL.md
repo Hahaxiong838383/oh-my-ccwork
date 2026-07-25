@@ -52,11 +52,16 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
   ⚠️ **open_id 按 App 隔离**：拿 A 应用的 open_id 去问 B 应用 = `99992361 open_id cross app`。
   union_id 才跨 App 通用。这是整个方案成立的前提。
   ⚠️ 分工不能合并：控制面铁律「owner 凭据不进 vault、永不触碰」，所以查询必须留在执行面。
-- **部门当前读不到**（姓名可以）：owner Bot 的 `contact:user.department:readonly` /
-  `contact:department.base:readonly` 都是 **user 档**（tenant_access_token 用不了），
-  且通讯录范围只覆盖 4 个部门。给 owner **一次性**补 tenant 档权限 + 放开范围后，
-  代码无需改动即自动生效。读不到时管理台标「**待认领**」，可手填。
-  中文部门名进不了 skills 层名正则 → slug 走稳定哈希 `d-<hash6>`，展示用 `orgLabel`。
+- **部门已打通**（2026-07-25 当天）：前提是 owner Bot 有 `contact:user.department:readonly` +
+  `contact:department.base:readonly` 的 **tenant 档**（只有 user 档时 tenant_access_token
+  读不出来，接口仍 `code=0` 但字段直接消失）+ 通讯录范围覆盖到人。新 Bot 若读不到部门，
+  先查这两条。读不到时管理台标「**待认领**」，可手填。
+- 中文部门名进不了 skills 层名正则 → `org` 存 slug（`d-<hash6>` 稳定哈希）、`orgLabel` 存
+  飞书原名。界面显示 orgLabel，**装 L1 skills 时填的是 slug**（部门面板小字给出）。
+- ⚠️ **手填与自动识别必须归一**：手填 `product` 与自动识别「产品」会分裂成两个部门层，
+  同部门同事互相看不见共享 skills。故 identity-pending 会认领「org 存在但未经飞书确认」
+  （orgLabel 空且非手填）的用户；管理员显式手填打 `orgManual` 标记让自动识别绕开
+  ——**人的决定优先于机器**。org 变更触发热加载重启该 App 换 `/org` 挂载。
 - **开通意图签进 token**（HMAC JSON payload），篡改/过期照旧拒；旧格式链接仍兼容。
 - **显示名自动取**：注册验活后调 `bot/v3/info`（tenant_token 即可）拿 `app_name` = 用户建 Bot 时起的名字，写进 `user.name`，控制台主显示；拿不到回退账号名。
 - 生成链接后弹层给**整段可转发说明**（链接+两步+隐私），双按钮复制。
@@ -164,4 +169,4 @@ ssh aliyun-hk 'curl -sS https://ai.kidshub.cn/healthz'                          
 - 通道 SOP `mycc/4-Assets/SOP/dev198-feishu-grok-channel.md`
 - P2 全收 + 4567 全收（市场搜索/org UI/用户 dashboard/L1 双审批/UI 重设计）
 - v1.4.0（2026-07-25）：通用开通链接（管理员零填写）+ union_id 身份接力（真名自动）+ 权限授权卡片 + 一键开后台按钮 + 版本号
-- 余：**给 owner Bot 补通讯录 tenant 档权限**（补完部门自动生效，一次性）；Ryan 开通（等扫码）；ClawHub 暂缓（需扩白名单不值当）
+- 余：Ryan 开通（等扫码，含 kimi 首次真订阅 E2E）；ClawHub 暂缓（需扩白名单不值当）
