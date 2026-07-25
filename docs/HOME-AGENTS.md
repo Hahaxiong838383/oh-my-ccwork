@@ -53,6 +53,17 @@ lint_ignore_globs: ['.*', '*.lock', '.DS_Store']  # 仅作用于「文件」（�
 
 > 川哥要求：**cc、codex、grok 三个引擎都要能顺利连上这台机器维护 aiops**。三者在本机同以 `Rayman.Chen` 用户运行，**共享同一份 `~/.ssh/config` 与 `~/.ssh/id_ed25519`**，因此下面的连法对三方完全一致，不需要各自配密钥。
 
+**密钥可用性已实测（2026-07-25）**：私钥 `~/.ssh/id_ed25519` **无 passphrase**（`ssh-keygen -y` 免交互通过）→ **不依赖 ssh-agent**，任何同用户进程直接可用；权限 `600`、属主 `Rayman.Chen`。最严苛验证：`env -i HOME=$HOME PATH=/usr/bin:/bin ssh racknerd` **裸环境连接成功**，证明不依赖 zshrc / 环境变量 / agent socket。
+
+⚠️ **codex 有一个额外前提（给调用方看，不是给 codex 自己看的）**：codex 执行 shell 命令受沙箱约束，默认 `workspace-write` 在 macOS 上**禁止网络出站**，ssh 会被直接拦掉。让 codex 做 aiops 运维时**启动就要带**：
+
+```bash
+codex exec --sandbox danger-full-access --skip-git-repo-check "<任务>"
+```
+
+沙箱在进程启动时即固定，codex 读到本文件时已经关在里面了，**它自己改不了**——所以这条约束由调用方（川哥 / cc）在启动命令上落实。
+grok 无沙箱概念（`~/.grok/config.toml` 的 `permission_mode = "always-approve"`），**直接 `grok -p "ssh racknerd ..."` 即可**，无需额外参数。
+
 **机器**：`racknerd` = `23.226.135.149`（RackNerd 美西 1C/2G/39G，Ubuntu 24.04）
 **跑什么**：AI Ops 驾驶舱 9 个 docker 容器（ops-caddy / ops-inspector / ops-terminal(ttyd) / ops-n8n / ops-auth / ops-netdata / ops-uptime-kuma / ops-dockge / ops-homepage），根目录 `/opt/ai-ops-cockpit`。配套 skill：`ai-ops-cockpit`。
 
