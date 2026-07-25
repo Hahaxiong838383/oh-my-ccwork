@@ -43,6 +43,8 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
 ```
 
 - **开通意图签进 token**（HMAC JSON payload），篡改/过期照旧拒；旧格式链接仍兼容。
+- **显示名自动取**：注册验活后调 `bot/v3/info`（tenant_token 即可）拿 `app_name` = 用户建 Bot 时起的名字，写进 `user.name`，控制台主显示；拿不到回退账号名。
+- 生成链接后弹层给**整段可转发说明**（链接+两步+隐私），双按钮复制。
 - 自动开通失败（uid 冲突等）→ 降级到「待关联 Bot」老路径，注册页提示联系管理员，Bot 不丢。
 - 验收：双引擎各发一条任务 + 越界隔离复验（铁律 3）。完整版
   `dev198:~/feishu-grok-bridge/workspace/plans/h-onboarding-sop.md`。
@@ -105,6 +107,12 @@ device-flow 注册（`lib/feishu-register.mjs`）→ Bot 凭据 AES 存控制面
 ## 必跑检查
 
 ```bash
+# 控制面改了 html.mjs 必跑：渲染出的每个 <script> 块做真实语法检查
+# （模板字符串会吃掉 \n，导致 JS 字面量断行 → 整块静默不执行，console 无报错）
+node --input-type=module -e "import('/srv/h-control/app/lib/html.mjs').then(m=>{
+  const pages=[m.adminPage({users:[],unlinkedBots:[],skills:[],orgs:[]}),m.dashboardPage({uid:'u'},{}),m.registerPage('t',{}),m.adminLoginPage()]
+  let bad=0; for(const h of pages) for(const b of h.matchAll(/<script>([\s\S]*?)<\/script>/g)){try{new Function(b[1])}catch(e){bad++;console.log('FAIL',e.message)}}
+  console.log(bad?'有语法错误':'script 块全 PASS')})"
 ssh dev198 'cd ~/feishu-grok-bridge && export PATH=$HOME/.local/node/bin:$PATH && for f in bridge.mjs lib/*.mjs; do node --check $f; done'
 ssh dev198 'curl -sS http://127.0.0.1:18765/healthz | python3 -m json.tool'      # connected:true
 ssh aliyun-hk 'curl -sS https://ai.kidshub.cn/healthz'                            # 控制面
