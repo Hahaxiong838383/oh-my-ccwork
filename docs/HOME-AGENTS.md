@@ -49,6 +49,31 @@ lint_ignore_globs: ['.*', '*.lock', '.DS_Store']  # 仅作用于「文件」（�
 
 ---
 
+## 三·补、AI Ops 运维服务器 SSH 接入（cc / codex / grok 三方共用 · 2026-07-25 加固后实测）
+
+> 川哥要求：**cc、codex、grok 三个引擎都要能顺利连上这台机器维护 aiops**。三者在本机同以 `Rayman.Chen` 用户运行，**共享同一份 `~/.ssh/config` 与 `~/.ssh/id_ed25519`**，因此下面的连法对三方完全一致，不需要各自配密钥。
+
+**机器**：`racknerd` = `23.226.135.149`（RackNerd 美西 1C/2G/39G，Ubuntu 24.04）
+**跑什么**：AI Ops 驾驶舱 9 个 docker 容器（ops-caddy / ops-inspector / ops-terminal(ttyd) / ops-n8n / ops-auth / ops-netdata / ops-uptime-kuma / ops-dockge / ops-homepage），根目录 `/opt/ai-ops-cockpit`。配套 skill：`ai-ops-cockpit`。
+
+**连法（两条路径，都已实测通）**：
+
+```bash
+ssh racknerd                                              # 默认，经 mini-pub 跳板（更稳）
+ssh -o ProxyJump=none -i ~/.ssh/id_ed25519 root@23.226.135.149   # 兜底直连
+```
+
+- 默认路径走 `ProxyJump mini-pub`（`cli4.hahaxiong.cc:22022` → aliyun-hk frps → Mac Mini）。
+  ⚠️ **这条链路依赖 aliyun-hk 的 frps + Mac Mini 开机**；任一不可用就改走上面的直连兜底（直连偶发 banner 超时，重试即可）。
+- **认证只有公钥一条路**：2026-07-25 已关闭密码登录与 root 密码登录（改前取证：近 60 天 1444 次成功登录 **100% publickey、密码 0 次**）。`/root/.ssh/authorized_keys` 只有一把 `id_ed25519`（`Rayman.Chen@RaymanMacBook-Air.local`）。
+- **装了 fail2ban**（sshd jail，5 次失败封 2 小时）。连不上先想「是不是自己被 ban 了」：
+  `fail2ban-client status sshd` 看封禁列表，`fail2ban-client set sshd unbanip <IP>` 解封。
+- ⚠️ **别在这台机器上跑 `pkill -f <pattern>`**：pattern 会匹配到自己那条 ssh 命令行导致自杀，改用 `pgrep` + `kill` 或 `fuser -k <PORT>/tcp`。
+
+**磁盘**：2026-07-25 清理后 49%（曾 71%）。两个会自己长的地方已设防——journald 已限 `SystemMaxUse=500M`；docker build cache 需**定期手动清**（`docker builder prune -af`，上次积了 5.59GB）。⚠️ 容器日志尚未设 `max-size` 上限（改 `daemon.json` 要重启全部容器，待川哥给时间窗）。
+
+---
+
 ## 四、并发与冲突（多 agent 共存铁律）
 
 - **git 提交权归 cc 独占**：其他 agent 不直接 commit `mycc` / `.mycc-global`，改动交 cc 收口提交（防 git index lock 竞态）。
