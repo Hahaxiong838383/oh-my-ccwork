@@ -49,6 +49,7 @@ const mimic = (n, file, duration) => ({
 const VIDEOS = [
   // RK3588 端侧多模态识别（生产已上线，sort=-1 稳定置顶）
   { id: 'rk3588-edge-multimodal', title: 'RK3588 端侧多模态边缘计算', description: '基于 RK3588 部署端侧多模态模型，采用 InspireFace 检测级联 HSEmotion-b2 表情识别，在本地实现毫秒级表情、坐姿等状态识别与实时反馈。', url: '/media/edge-ai/rk3588-expression-posture-recognition.mp4', thumbnail: '/media-posters/edge-ai/rk3588-expression-posture-recognition.jpg', duration: '0:24', tags: ['RK3588', '端侧 AI', '多模态识别', '边缘计算'], project_slug: null, published: 1, sort: -1 },
+  { id: 'full-duplex-streaming-voice-agent', title: '全双工双向流式实时语音对话 Agent', description: '展示 AI Agent 与用户进行全双工、双向流式实时语音对话的实际体验，包括连续交流、实时响应与自然打断。', url: '/media/ai-agent/full-duplex-streaming-voice-agent.mp4', thumbnail: '', duration: '1:04', tags: ['全双工语音', '实时对话', 'AI Agent'], project_slug: 'myjavis-voice-companion', published: 1, sort: 0 },
   // 与既有多模态视觉交互同源，本段聚焦视线追踪链路优化（sort=0，紧随最新 RK3588 视频）
   { id: 'multimodal-gaze-tracking-20260722', title: '多模态视觉交互 · 视线追踪优化', description: '与此前多模态视觉交互演示同源，本段更聚焦视线追踪链路优化，展示注视点定位、跟随稳定性与多模态协同交互效果。', url: '/media/multimodal-interaction/gaze-tracking-20260722.mp4', thumbnail: '/media-posters/multimodal-interaction/gaze-tracking-20260722.jpg', duration: '0:45', tags: ['视线追踪', '多模态交互', '视觉交互', '稳定性优化'], project_slug: 'eye-gesture-multimodal', published: 1, sort: 0 },
   // 眼动+手势（已接通）→ 眼动多模态项目
