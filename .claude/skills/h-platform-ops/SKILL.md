@@ -27,22 +27,36 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 - **引擎出网**：grok 走本机 xray `127.0.0.1:10808`；**kimi 直连**（沙箱挂 `/run/systemd/resolve` 修 DNS）。
 - **凭据注入**：grok 用 `XAI_API_KEY`（**非** auth.json，grok 校验 refresh 非空+profile 字段不认）；kimi 写 `config.toml` managed provider（api_key 模式）。
 
-## 开通新用户（管理员零手工，2026-07-25 起）
+## 开通新用户（管理员零填写，2026-07-25 v1.4.0 起）
 
-**管理台 → 右上「开通用户」→ 填账号名/引擎/部门 → 生成链接 → 发给用户 → 完事。**
-用户扫码后控制面自动建号 + 关联 Bot + 激活，dev198 同步器 ≤15s 热加载起 App，
-管理员**不需要**再做任何操作（原来要用户回传 appId 再手动关联，已废弃）。
+**管理台 → 右上「开通用户」→ 只选引擎 → 生成链接 → 发给用户 → 完事。**
+链接是**通用的**（可群发多人），账号名/显示名/部门全部扫码后自动识别。
+用户扫码后控制面自动建号 + 关联 Bot + 激活，dev198 同步器 ≤15s 热加载起 App。
 
 用户侧只剩两步：① 扫码授权 ② 在飞书里对自己的 Bot 发「**配置**」绑订阅。
 
 ```bash
-# 脚本/自动化入口（等价于管理台弹层）
+# 脚本/自动化入口（等价于管理台弹层）；uid/org 留空即通用链接
 TOKEN=$(ssh aliyun-hk "sudo grep '^SERVICE_TOKEN=' /srv/h-control/.env | cut -d= -f2")
 curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"uid":"ryan","engine":"grok","org":""}'
+  -d '{"engine":"grok"}'
 ```
 
+- **uid 由 openId 确定性派生**（`u-<sha256前10位>`）：同一飞书号重扫必落**同一账号**，
+  不会凭空多出孤儿号。openId 缺失退到 appId。uid 只是内部句柄，界面一律显示飞书 Bot 名。
+- **姓名/部门靠 union_id 接力**（2026-07-25 实测跑通）：
+  ① 控制面用**用户自己的 Bot** 把 open_id 换成 `union_id`（小权限就够）；
+  ② 执行面用 **owner Bot**（`cli_a9f1cd1366751bc7`，权限最全）按 union_id 查真名/部门，
+  POST 回 `/internal/identity-resolved`。**新用户零配置**——只有 owner 一个 Bot 需要权限。
+  ⚠️ **open_id 按 App 隔离**：拿 A 应用的 open_id 去问 B 应用 = `99992361 open_id cross app`。
+  union_id 才跨 App 通用。这是整个方案成立的前提。
+  ⚠️ 分工不能合并：控制面铁律「owner 凭据不进 vault、永不触碰」，所以查询必须留在执行面。
+- **部门当前读不到**（姓名可以）：owner Bot 的 `contact:user.department:readonly` /
+  `contact:department.base:readonly` 都是 **user 档**（tenant_access_token 用不了），
+  且通讯录范围只覆盖 4 个部门。给 owner **一次性**补 tenant 档权限 + 放开范围后，
+  代码无需改动即自动生效。读不到时管理台标「**待认领**」，可手填。
+  中文部门名进不了 skills 层名正则 → slug 走稳定哈希 `d-<hash6>`，展示用 `orgLabel`。
 - **开通意图签进 token**（HMAC JSON payload），篡改/过期照旧拒；旧格式链接仍兼容。
 - **显示名自动取**：注册验活后调 `bot/v3/info`（tenant_token 即可）拿 `app_name` = 用户建 Bot 时起的名字，写进 `user.name`，控制台主显示；拿不到回退账号名。
 - 生成链接后弹层给**整段可转发说明**（链接+两步+隐私），双按钮复制。
@@ -51,6 +65,27 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
 - 自动开通失败（uid 冲突等）→ 降级到「待关联 Bot」老路径，注册页提示联系管理员，Bot 不丢。
 - 验收：双引擎各发一条任务 + 越界隔离复验（铁律 3）。完整版
   `dev198:~/feishu-grok-bridge/workspace/plans/h-onboarding-sop.md`。
+
+## 权限不足 → 自动推授权卡片（v1.4.0）
+
+- **授权链接从飞书错误报文里提，不自拼**：权限不足时飞书自己在 `msg` 里给出带确切
+  scope 的官方链接（`code 99991672` → `…点击链接申请并开通任一权限即可：https://open.feishu.cn/app/<id>/auth?q=<scopes>&op_from=openapi&token_type=tenant`）。
+  ⚠️ 别拿「链接能打开」当验证：开放平台是 SPA，**真假 appId 都返回同一个 9248 字节壳**，
+  服务端不校验（[[feedback_platform_error_carries_official_remedy_link]]）。
+- 两个触发源：控制面开通时缺权限（`/internal/perm-pending` 队列，执行面 30min 轮询推卡片）
+  + 执行面运行时撞错（消息处理器顶层 catch → `maybeSendPermissionCard`，同类 30min 去重）。
+- 卡片按钮 URL 过**域名白名单**（`open.feishu.cn`/`open.larksuite.com`/`ai.kidshub.cn`），
+  防伪造报文把用户导去钓鱼站；不可信按钮丢弃但卡片照发。
+- ⚠️ **飞书对无权限字段是静默省略**：`code=0` + HTTP 200，但关心的字段（姓名/部门）
+  凭空消失。判断有无权限不能只看 code，要看字段在不在；权限档位看 App 权限清单每条的
+  `token_types`（`user` 档的 scope 用 tenant_access_token 调不出来）。
+
+## 一键打开后台（卡片按钮，v1.4.0）
+
+- `/go/<token>`：HMAC 签名、**7 天、可重复点**。magic link 是一次性 10 分钟的，
+  卡片会长期躺在聊天记录里，用它点开就是「已失效」——所以另起一套。
+- 固定落 `/dashboard`，**不接 `next` 参数**（省掉开放重定向一整类问题）。
+- 「配置」命令已改为带按钮卡片；发卡失败自动降级为带链接纯文本（仍可点）。
 
 ## 管理台 + 热加载（P2，2026-07-24）
 
@@ -116,6 +151,7 @@ node --input-type=module -e "import('/srv/h-control/app/lib/html.mjs').then(m=>{
   const pages=[m.adminPage({users:[],unlinkedBots:[],skills:[],orgs:[]}),m.dashboardPage({uid:'u'},{}),m.registerPage('t',{}),m.adminLoginPage()]
   let bad=0; for(const h of pages) for(const b of h.matchAll(/<script>([\s\S]*?)<\/script>/g)){try{new Function(b[1])}catch(e){bad++;console.log('FAIL',e.message)}}
   console.log(bad?'有语法错误':'script 块全 PASS')})"
+# ⚠️ dev198 非交互 ssh 的 PATH 里**没有 node**，不加绝对路径会「命令未找到」而静默跳过检查
 ssh dev198 'cd ~/feishu-grok-bridge && export PATH=$HOME/.local/node/bin:$PATH && for f in bridge.mjs lib/*.mjs; do node --check $f; done'
 ssh dev198 'curl -sS http://127.0.0.1:18765/healthz | python3 -m json.tool'      # connected:true
 ssh aliyun-hk 'curl -sS https://ai.kidshub.cn/healthz'                            # 控制面
@@ -126,4 +162,6 @@ ssh aliyun-hk 'curl -sS https://ai.kidshub.cn/healthz'                          
 - 项目记忆 [[project_feishu_grok_h_byos]]（拍板/账号三层/分层/验收协议全量）
 - 控制面源码 `dev198:~/feishu-grok-bridge/control-plane/`（部署到 aliyun-hk `/srv/h-control/app/`）
 - 通道 SOP `mycc/4-Assets/SOP/dev198-feishu-grok-channel.md`
-- P2 全收 + 4567 全收（市场搜索/org UI/用户 dashboard/L1 双审批/UI 重设计）；余：Ryan 开通（等扫码）、ClawHub 暂缓（需扩白名单不值当）
+- P2 全收 + 4567 全收（市场搜索/org UI/用户 dashboard/L1 双审批/UI 重设计）
+- v1.4.0（2026-07-25）：通用开通链接（管理员零填写）+ union_id 身份接力（真名自动）+ 权限授权卡片 + 一键开后台按钮 + 版本号
+- 余：**给 owner Bot 补通讯录 tenant 档权限**（补完部门自动生效，一次性）；Ryan 开通（等扫码）；ClawHub 暂缓（需扩白名单不值当）
