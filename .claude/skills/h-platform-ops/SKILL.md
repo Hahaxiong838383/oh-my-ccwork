@@ -26,27 +26,26 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 - **引擎出网**：grok 走本机 xray `127.0.0.1:10808`；**kimi 直连**（沙箱挂 `/run/systemd/resolve` 修 DNS）。
 - **凭据注入**：grok 用 `XAI_API_KEY`（**非** auth.json，grok 校验 refresh 非空+profile 字段不认）；kimi 写 `config.toml` managed provider（api_key 模式）。
 
-## 开通新用户（10 分钟）
+## 开通新用户（管理员零手工，2026-07-25 起）
+
+**管理台 → 右上「开通用户」→ 填账号名/引擎/部门 → 生成链接 → 发给用户 → 完事。**
+用户扫码后控制面自动建号 + 关联 Bot + 激活，dev198 同步器 ≤15s 热加载起 App，
+管理员**不需要**再做任何操作（原来要用户回传 appId 再手动关联，已废弃）。
+
+用户侧只剩两步：① 扫码授权 ② 在飞书里对自己的 Bot 发「**配置**」绑订阅。
 
 ```bash
-# ① 签发公网注册链接（30min 有效）发给用户，用户自己扫码建 Bot（凭据自动入控制面）
-TOKEN=$(ssh aliyun-hk "grep '^SERVICE_TOKEN=' /srv/h-control/.env | cut -d= -f2")
-curl -sS -X POST https://ai.kidshub.cn/internal/register-link -H "Authorization: Bearer $TOKEN"
-# → {"url":"https://ai.kidshub.cn/register/<token>"} 发用户；用户扫码后页面显示 appId
-
-# ② 激活（appId 不在本地自动从控制面 /internal/bot-cred 拉；openId 自动；engine grok/kimi）
-ssh dev198; cd ~/feishu-grok-bridge
-node scripts/h-user.mjs activate <uid> <appId> [grok|kimi]
-node scripts/h-user.mjs list        # 确认 ✅ active
-
-# ③ 重启生效（owner 离线几秒）
-systemctl --user restart feishu-grok-bridge
-journalctl --user -u feishu-grok-bridge -n 30 --no-pager -o cat | grep -E "activated|WS started|sandbox enabled"
+# 脚本/自动化入口（等价于管理台弹层）
+TOKEN=$(ssh aliyun-hk "sudo grep '^SERVICE_TOKEN=' /srv/h-control/.env | cut -d= -f2")
+curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"uid":"ryan","engine":"grok","org":""}'
 ```
 
-④ 用户自助：发「配置」→ magic link → dashboard → device flow 绑订阅。
-⑤ 验收：双引擎各发一条任务 + 越界隔离复验（铁律 3）。
-完整版 `dev198:~/feishu-grok-bridge/workspace/plans/h-onboarding-sop.md`。
+- **开通意图签进 token**（HMAC JSON payload），篡改/过期照旧拒；旧格式链接仍兼容。
+- 自动开通失败（uid 冲突等）→ 降级到「待关联 Bot」老路径，注册页提示联系管理员，Bot 不丢。
+- 验收：双引擎各发一条任务 + 越界隔离复验（铁律 3）。完整版
+  `dev198:~/feishu-grok-bridge/workspace/plans/h-onboarding-sop.md`。
 
 ## 管理台 + 热加载（P2，2026-07-24）
 
