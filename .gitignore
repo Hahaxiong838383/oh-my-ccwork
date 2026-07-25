@@ -347,3 +347,6 @@ AGENTS.md.bak.*
 
 # codex worktree 陈旧工作存档(本地冷藏,不进仓)
 5-Archive/codex-worktree-stale-20260704/
+
+# LnMem-fpga 因果发现参考论文(本地资料,不进仓;仓库瘦身后保持轻量)
+2-Projects/LnMem-fpga/*.pdf
