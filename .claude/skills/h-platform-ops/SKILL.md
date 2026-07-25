@@ -125,7 +125,32 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
 - 客户端 <7.20 对 JSON 2.0 卡片显示兜底升级提示而 **API 仍返回 code=0**，
   服务端探测不到 → 只能真机观察 + 用开关兜底。
 
-## 存量用户补权限/事件（「补授权」，v1.9.0）
+## 补授权自动化（v1.11.0）—— 机器人主动问，管理台只是兜底
+
+**平台改了 `H_ADDONS`（加权限/加事件订阅）后不用再挨个点补授权**，机器人会自己问。
+
+- **判定靠 `addonsRev`**：`H_ADDONS` 的内容哈希（`lib/feishu-register.mjs`）。
+  授权成功时由 `onGranted` 写进用户记录，与当前 `H_ADDONS_REV` 不一致 = 待补。
+  **用内容哈希不用手工版本号**——手工的一定会忘记升，而漏升的失败是静默的
+  （新事件订阅不到就是"事件永远不来"，不报错不告警）。
+  没有该字段的存量记录一律算待补，正是要找的那批人。
+- **链路**：控制面 `/internal/upgrade-pending`（72h 冷却 + 同版最多 3 次，
+  `UPGRADE_NOTIFY_COOLDOWN_MS` / `UPGRADE_NOTIFY_MAX`）→ bridge `pushUpgradeCards()`
+  每小时 + 开机 30s 后一次（`H_UPGRADE_PUSH=0` 关）→ `upgrade-notified` 回报。
+- ⚠️ **卡片按钮必须指向 `/au/<token>` 稳定入口，不能烤授权链接**：授权流是
+  10 分钟的 device-grant，卡片会在聊天记录里躺几天。`/au` 在点击时现开流程再
+  302；同 App 60 秒内复用（防连点堆出一串 5s 轮询循环）。token 就是 `/go` 那套
+  免登 token，`/internal/autologin` 直接返回 `upgradeUrl`，**执行面别自己拼**。
+- 管理台用户表有「待补授权」徽标 + 人数提示；补授权按钮保留作手动兜底。
+- 自检：
+  ```bash
+  ssh aliyun-hk 'set -a; . /srv/h-control/.env; set +a; curl -s -H "Authorization: Bearer $SERVICE_TOKEN" http://127.0.0.1:18790/internal/upgrade-pending | python3 -m json.tool'
+  ssh dev198 'journalctl --user -u feishu-grok-bridge --since "-2h" --no-pager | grep -i upgrade'
+  ```
+  `/au` 应 302 到 `open.feishu.cn/page/launcher?...&clientID=<用户App>&addons=...`
+  —— **带 clientID 才是增量授权**（不新建 App）；没有 clientID 说明走成新建了，停下查。
+
+## 存量用户补权限/事件（「补授权」，v1.9.0 手动入口，仍保留）
 
 平台新增权限或事件订阅后，**存量用户不会自动获得**。管理台用户行「补授权」：
 `POST /admin/api/register-upgrade {appId}` → 起 `clientID=<appId>` 模式的注册流 →
