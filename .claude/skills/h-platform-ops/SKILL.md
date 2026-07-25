@@ -95,12 +95,46 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
   凭空消失。判断有无权限不能只看 code，要看字段在不在；权限档位看 App 权限清单每条的
   `token_types`（`user` 档的 scope 用 tenant_access_token 调不出来）。
 
-## 一键打开后台（卡片按钮，v1.4.0）
+## 一键打开后台（卡片按钮，v1.4.0 → v1.9.0 直达版）
 
 - `/go/<token>`：HMAC 签名、**7 天、可重复点**。magic link 是一次性 10 分钟的，
   卡片会长期躺在聊天记录里，用它点开就是「已失效」——所以另起一套。
-- 固定落 `/dashboard`，**不接 `next` 参数**（省掉开放重定向一整类问题）。
-- 「配置」命令已改为带按钮卡片；发卡失败自动降级为带链接纯文本（仍可点）。
+- **不接 `next` 参数**（省掉开放重定向一整类问题）。v1.9.0 要深链到页面内某块时，
+  用**封闭白名单** `GO_SECTIONS = {memory:'#memory', skills:'#skills'}`：`?to=` 查表
+  得常量片段，用户输入永远不进 `Location`，表外值静默忽略落 `/dashboard`。
+  验收必测三种：表内值 / `../evil` / `https://evil.com`（后两者必须落默认页）。
+- 按钮走 `behaviors:[{type:'open_url'}]`，链接**发卡时**就嵌好 → 一次点击到位。
+  `open_url` 与 `callback` **不能同时挂**（都会触发＝开链接还多发一张卡）。
+  拿不到链接（控制面不可达 / owner 无用户后台）自动退回 callback 两跳路径。
+- 🔴 **嵌了免登链接的卡必须 `enable_forward:false`**：`/go` 链接等价于登录凭据，
+  转发一张回复卡 = 把后台登录态送人。
+
+## 常用命令按钮与流式回复（v1.9.0）
+
+- 三个命令 `配置 / 新会话 / 我的记忆` 单一真源在 `lib/feishu-card.mjs` 的 `COMMANDS`：
+  `text`=按钮文案、`say`=纯文本命令词。**改 say 必须同步改三处落点**（配置正则 /
+  role-identity `isNewTopic` / 记忆正则），否则点了会静默掉进 agent 当任务跑。
+  `test/command-probe.test.mjs` 锁着这条不变式。
+- **横排**靠分栏：`column_set → column{direction:"horizontal"} → button[]`。
+  JSON 2.0 没有 1.0 的 `tag:"action"` 容器，button 平铺各占一行。
+- **跟随气泡没有布局参数**（只有 content/i18n_contents），固定竖排，改不了；
+  现只在流式降级路径当兜底用。
+- 流式回复开关 `H_STREAM_REPLY=0` 关闭。**收尾必须显式关 streaming_mode**，
+  不关则聊天栏卡在「[生成中...]」+ 卡片不能转发 + **卡片回调无法更新卡片（按钮变哑）**。
+  完整约束见记忆 [[reference_feishu_card_streaming_and_layout]]。
+- 客户端 <7.20 对 JSON 2.0 卡片显示兜底升级提示而 **API 仍返回 code=0**，
+  服务端探测不到 → 只能真机观察 + 用开关兜底。
+
+## 存量用户补权限/事件（「补授权」，v1.9.0）
+
+平台新增权限或事件订阅后，**存量用户不会自动获得**。管理台用户行「补授权」：
+`POST /admin/api/register-upgrade {appId}` → 起 `clientID=<appId>` 模式的注册流 →
+用户重扫确认权限 diff 即可，不用逐个进开发者后台发版审核。
+
+- 只允许升级**本平台已托管**的 appId（否则成了给任意 App 索权的通用入口）。
+- 升级流跳过 `onProvision`（账号已存在，重复开通是错的）；选错 App 直接拒；
+  平台若不下发 secret 则沿用已存密文（**不能覆盖成空，那会把用户 Bot 弄哑**）。
+- 新用户走注册链接的 `addons` 自动带上事件，无需此步。
 
 ## 管理台 + 热加载（P2，2026-07-24）
 
@@ -168,8 +202,11 @@ node --input-type=module -e "import('/srv/h-control/app/lib/html.mjs').then(m=>{
   console.log(bad?'有语法错误':'script 块全 PASS')})"
 # ⚠️ dev198 非交互 ssh 的 PATH 里**没有 node**，不加绝对路径会「命令未找到」而静默跳过检查
 ssh dev198 'cd ~/feishu-grok-bridge && export PATH=$HOME/.local/node/bin:$PATH && for f in bridge.mjs lib/*.mjs; do node --check $f; done'
+# 全量单测（改了命令词/卡片/流式/沙箱必跑；注意用 test/*.test.mjs，传目录 node 会报模块找不到）
+ssh dev198 'cd ~/feishu-grok-bridge && export PATH=$HOME/.local/node/bin:$PATH && node --test test/*.test.mjs 2>&1 | tail -5'
+ssh dev198 'cd ~/feishu-grok-bridge/control-plane && export PATH=$HOME/.local/node/bin:$PATH && node --test test/*.test.mjs 2>&1 | tail -5'
 ssh dev198 'curl -sS http://127.0.0.1:18765/healthz | python3 -m json.tool'      # connected:true
-ssh aliyun-hk 'curl -sS https://ai.kidshub.cn/healthz'                            # 控制面
+curl -s --noproxy '*' https://ai.kidshub.cn/healthz    # 公网即可核对线上 version（v1.9.0 起 healthz 带 version）
 ```
 
 ## 关键文件与记忆
