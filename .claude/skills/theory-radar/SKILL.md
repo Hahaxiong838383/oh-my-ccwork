@@ -1,11 +1,22 @@
 ---
 name: theory-radar
-description: AI 前沿理论雷达 - 每日 08:00 从 arXiv 抓取脑科学×LLM、认知科学×AI、神经计算等交叉领域最新论文，深度分析后发飞书日报。触发词："/theory-radar"、"理论雷达"、"前沿论文"、"今日论文"
+description: AI 前沿理论雷达。生产日报由韩国 RSS/OpenAlex + Grok 4.5 单一产线生成；飞书任务只读取已发布报告。旧 arXiv Query API 流程仅用于明确授权的手动回溯。触发词："/theory-radar"、"理论雷达"、"前沿论文"、"今日论文"
 ---
 
 # AI 前沿理论雷达
 
 监控领域：脑科学、神经科学、认知心理学、行为学 × 大模型基本原理
+
+## 生产模式覆盖规则（2026-07-23 生效）
+
+以下规则优先级高于本文件后面的历史流程：
+
+1. **单一生产者**：韩国 `aliyun-kr:/opt/theory-radar` 负责 arXiv RSS、OpenAlex、Grok 4.5 分析和个人站发布；Mini、Multica、飞书 agent 不得再次抓取或重新分析。
+2. **飞书只读消费**：每日 09:10 从 `https://my.chenchuan.cc/api/radar/report?date=YYYY-MM-DD` 读取当天正式报告，验证 4-8 篇后按原字段分 3 条发送。
+3. **404 是尚未就绪**：最多等待 5 分钟后再判失败；不得把接口 404、arXiv Query API 429 或本地空文件解释成“今日无论文”。
+4. **禁止重复写站**：飞书任务不得调用 `/api/radar-webhook`，避免同一日期被第二生产者覆盖。
+5. **授权以实证为准**：sidecar 的 `token_status=valid` 或 `needs_refresh` 都视为可用；只有 `bound=false`、open_id 缺失或真实发送返回授权失效，才要求重新登录。
+6. **旧流程降级**：下方 arXiv Query API、Wiki 和多维表步骤只保留为历史/人工回溯资料，任何定时日报不得直接执行。
 
 ## 执行流程
 
@@ -247,16 +258,11 @@ node /Users/rayman.chen/mycc/.claude/skills/tell-me/send.js \
 
 当 codex/gemini 通过飞书群 @mention 接到 theory-radar 任务时，mycc 后端会**自动注入 SOP.md** 到 prompt 中，确保任何引擎都按标准流程执行。
 
-### 双引擎协作（已自动化）
+### 当前自动化
 
-在 `tasks.md` 中配置为两个独立定时任务，自动串联：
-- **08:15 cc** 执行 Step 1→2→3（抓取 + 分析 + 飞书通知）
-- **08:45 codex** 执行 Step 3.5→4→5（去重 + Wiki 存档 + 索引更新）
-
-codex 的输入来自 `/tmp/theory-radar-data.json`（Step 1 输出），30 分钟间隔确保 cc 已完成。
-
-> 2026-03-15：归档从 Gemini 迁移到 Codex（质量问题）
-> 2026-03-23：从单任务拆为双任务自动串联（codex 之前收到全量 SOP 但只执行到 Step 3 就停了）
+- **08:35 韩国正式产线**：RSS/OpenAlex 抓取 → Grok 4.5 分析 → 个人站发布。
+- **09:10 Multica 飞书消费端**：读取个人站只读报告 API → 校验日期与论文数 → 分 3 条发送 → 记录真实 message_id。
+- 旧 08:15/08:45 双任务、Mini launchd 和 arXiv Query API 日报链均已退出生产，不得重新启用为并行生产者。
 
 ## 注意事项
 
@@ -264,10 +270,9 @@ codex 的输入来自 `/tmp/theory-radar-data.json`（Step 1 输出），30 分�
 - 论文数量视当日不同，通常 8-15 篇；若不足 8 篇，降低过滤门槛（扩大到 7 天）
 - 内容为学术参考，不代表任何观点
 
-## 个人站推送支线（前沿资讯雷达，2026-06-14 新增，独立于飞书流）
+## 个人站旧推送支线（已退役，仅灾难回滚）
 
-把 theory-radar 的论文拆解推到陈川个人站 https://my.chenchuan.cc/radar 的「深度拆解」区，
-**与上面的飞书流完全解耦**（互不影响、零风险）。部署在 mini，由 launchd 每 3 天触发。
+该链路曾部署在 Mini；2026-07-14 韩国正式产线切换后已 disable + bootout。保留脚本和 plist 仅用于灾难回滚，**恢复前必须先停止韩国发布，禁止双生产者并行。**
 
 | 文件（`scripts/`，已部署到 mini `~/theory-radar/`） | 作用 |
 |------|------|
@@ -285,4 +290,4 @@ codex 的输入来自 `/tmp/theory-radar-data.json`（Step 1 输出），30 分�
 `RADAR_WEBHOOK_TOKEN` / `CODEX_API_GATEWAY_KEY` / `CODEX_API_GATEWAY_BASE_URL` / `GEMINI_PROXY_KEY`。
 脚本仅引用 env 变量，零明文。站点侧 token 在 VPS `/var/www/chenchuan-site/.env.local`。
 
-**手动触发 / 排障**：`ssh mini-pub 'bash ~/theory-radar/daily-radar-push.sh'`，日志 `/tmp/radar-push-*.log`。
+**回滚边界**：只有韩国正式产线不可恢复且川哥明确确认时，才允许重新启用；普通抓取失败、飞书失败或上游 429 不得触发该回滚。
