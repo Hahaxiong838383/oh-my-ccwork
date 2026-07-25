@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { SectionWrapper } from '@/components/layout/SectionWrapper'
 import { BlurFade } from '@/components/ui/BlurFade'
 import { Tag } from '@/components/shared/Tag'
+import { ArticleBody } from '@/components/writing/ArticleBody'
 import { getArticles, getArticleBySlug } from '@/lib/data'
 
 interface Props {
@@ -63,13 +64,10 @@ export default async function ArticleDetailPage({ params }: Props) {
         </BlurFade>
 
         <BlurFade delay={0.2}>
-          <div className="prose prose-invert mx-auto max-w-3xl prose-p:text-text-secondary prose-headings:text-text-primary">
-            <p className="text-lg leading-relaxed">{article.excerpt}</p>
-            <hr className="my-8 border-white/[0.06]" />
-            <p>{article.content}</p>
-            <p className="mt-8 text-sm text-text-muted">
-              完整内容即将发布，敬请期待。
-            </p>
+          <div className="mx-auto max-w-3xl">
+            <p className="text-lg leading-relaxed text-text-secondary">{article.excerpt}</p>
+            <hr className="my-8 border-border" />
+            <ArticleBody content={article.content} />
           </div>
         </BlurFade>
       </SectionWrapper>
