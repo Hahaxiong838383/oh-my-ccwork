@@ -8,14 +8,63 @@
     "temperature": 0.2,
     "max_tokens": 8192,
     "throttle_sec": 1,
-    "languages": ["zh"],
+    "languages": [
+      "zh"
+    ],
     "analysis_concurrency": 2,
     "enrichment_concurrency": 2
   },
   "sources": {
     "github": [
-      {"type": "repo_releases", "owner": "vllm-project", "repo": "vllm", "enabled": true, "category": "ai-models"},
-      {"type": "repo_releases", "owner": "huggingface", "repo": "transformers", "enabled": true, "category": "ai-tools"}
+      {
+        "type": "repo_releases",
+        "owner": "vllm-project",
+        "repo": "vllm",
+        "enabled": true,
+        "category": "ai-models"
+      },
+      {
+        "type": "repo_releases",
+        "owner": "huggingface",
+        "repo": "transformers",
+        "enabled": true,
+        "category": "ai-tools"
+      },
+      {
+        "type": "repo_releases",
+        "owner": "ollama",
+        "repo": "ollama",
+        "enabled": true,
+        "category": "ai-tools"
+      },
+      {
+        "type": "repo_releases",
+        "owner": "ggml-org",
+        "repo": "llama.cpp",
+        "enabled": true,
+        "category": "ai-models"
+      },
+      {
+        "type": "repo_releases",
+        "owner": "langchain-ai",
+        "repo": "langchain",
+        "enabled": true,
+        "category": "ai-tools"
+      },
+      {
+        "type": "repo_releases",
+        "owner": "sgl-project",
+        "repo": "sglang",
+        "enabled": true,
+        "category": "ai-models"
+      },
+      {
+        "type": "repo_releases",
+        "owner": "vercel",
+        "repo": "ai",
+        "enabled": true,
+        "category": "ai-tools"
+      }
     ],
     "hackernews": {
       "enabled": true,
@@ -25,17 +74,59 @@
       "category": "ai-news"
     },
     "rss": [
-      {"name": "Simon Willison", "url": "https://simonwillison.net/atom/everything/", "enabled": true, "category": "ai-tools"},
-      {"name": "OpenAI News", "url": "https://openai.com/news/rss.xml", "enabled": true, "category": "ai-models"},
-      {"name": "Google DeepMind", "url": "https://deepmind.google/blog/rss.xml", "enabled": true, "category": "ai-models"},
-      {"name": "Hugging Face Blog", "url": "https://huggingface.co/blog/feed.xml", "enabled": true, "category": "ai-tools"},
-      {"name": "NVIDIA AI Blog", "url": "https://blogs.nvidia.com/blog/category/deep-learning/feed/", "enabled": true, "category": "ai-models"}
+      {
+        "name": "Simon Willison",
+        "url": "https://simonwillison.net/atom/everything/",
+        "enabled": true,
+        "category": "ai-tools"
+      },
+      {
+        "name": "OpenAI News",
+        "url": "https://openai.com/news/rss.xml",
+        "enabled": true,
+        "category": "ai-models"
+      },
+      {
+        "name": "Google DeepMind",
+        "url": "https://deepmind.google/blog/rss.xml",
+        "enabled": true,
+        "category": "ai-models"
+      },
+      {
+        "name": "Hugging Face Blog",
+        "url": "https://huggingface.co/blog/feed.xml",
+        "enabled": true,
+        "category": "ai-tools"
+      },
+      {
+        "name": "NVIDIA AI Blog",
+        "url": "https://blogs.nvidia.com/blog/category/deep-learning/feed/",
+        "enabled": true,
+        "category": "ai-models"
+      }
     ],
-    "reddit": {"enabled": false, "subreddits": [], "users": [], "fetch_comments": 0},
-    "telegram": {"enabled": false, "channels": []},
-    "twitter": {"enabled": false, "users": [], "fetch_limit": 0},
-    "openbb": {"enabled": false, "watchlists": []},
-    "ossinsight": {"enabled": false},
+    "reddit": {
+      "enabled": false,
+      "subreddits": [],
+      "users": [],
+      "fetch_comments": 0
+    },
+    "telegram": {
+      "enabled": false,
+      "channels": []
+    },
+    "twitter": {
+      "enabled": false,
+      "users": [],
+      "fetch_limit": 0
+    },
+    "openbb": {
+      "enabled": false,
+      "watchlists": []
+    },
+    "ossinsight": {
+      "enabled": false
+    },
     "gdelt": {
       "enabled": false,
       "query": "(artificial intelligence OR large language model OR AI agent)",
@@ -58,12 +149,36 @@
     "time_window_hours": 30,
     "max_items": 12,
     "category_groups": {
-      "models": {"name": "模型与研究", "limit": 5, "categories": ["ai-models", "research"]},
-      "products": {"name": "产品与工具", "limit": 4, "categories": ["ai-tools", "ai-products"]},
-      "industry": {"name": "产业与工程", "limit": 4, "categories": ["ai-news", "industry", "software-engineering"]}
+      "models": {
+        "name": "模型与研究",
+        "limit": 5,
+        "categories": [
+          "ai-models",
+          "research"
+        ]
+      },
+      "products": {
+        "name": "产品与工具",
+        "limit": 4,
+        "categories": [
+          "ai-tools",
+          "ai-products"
+        ]
+      },
+      "industry": {
+        "name": "产业与工程",
+        "limit": 4,
+        "categories": [
+          "ai-news",
+          "industry",
+          "software-engineering"
+        ]
+      }
     },
     "default_group": "other",
     "default_group_limit": 2
   },
-  "webhook": {"enabled": false}
+  "webhook": {
+    "enabled": false
+  }
 }
