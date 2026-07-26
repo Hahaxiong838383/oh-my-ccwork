@@ -647,3 +647,52 @@ ssh aliyun-hk 'chown -R h-control:h-control /srv/h-control/app && cd /srv/h-cont
 - **cookie domain 别混** —— 全程锁 `https://ai.kidshub.cn`，混 127.0.0.1 会
   给出假阴性。
 - **页面 script 块逐块 `node --check`** —— 模板字符串吞 `\n` 会让整块静默不执行。
+
+## 隧道告警：判定在控制面，投递在执行面（v1.15.0）
+
+分工是被物理位置逼出来的：控制面**能探**（frps 与它同机）但没有飞书身份；
+执行面**有身份**（owner Bot）却探不到自己那条入站隧道。
+
+- 判定：`control-plane/lib/tunnel-probe.mjs`，连续 3 次失败才翻状态。
+  **必须读到 `SSH-` banner 才算通** —— frps 无客户端时照样 accept 再立刻关。
+- 投递：`lib/tunnel-alert.mjs` + `lib/alert-target.mjs`，bridge 每 5 分钟拉一次
+  `/internal/tunnel-status`。隧道断时这条路照样通（两跳都是出站 HTTPS）。
+- 送达目标优先级：`H_ALERT_CHAT_ID` > 观察到的 owner 单聊 > **owner 凭据里的
+  `openId`**（= 当初扫码那个人，用 `receive_id_type=open_id` 直发）。
+  最后那条是兜底，缺了它**从装机到管理员第一次开口那段时间告警是哑的**。
+- 三条防打扰：同一次故障只报一次（认 `since`）／不修就按 6h 重复提醒
+  （**不能报一次就闭嘴**）／恢复补一张。「状态未知」不算故障。
+- 关：`H_TUNNEL_ALERT=0`。
+
+**验收必须真发一次**，走与真实告警完全相同的那条路（同一 client、同一段目标
+解析、同一个 `sendCard` 调用），内容写明是自检。只跑单测等于没验投递。
+
+## 用户任务摩擦：只记形状，不记正文（v1.15.0）
+
+`lib/evolve-log.mjs` 的 `appendFriction` 记原话（`summary`=提问 / `detail`=回复），
+那是 **owner 专用**，因为记的是管理员自己的数据、且要喂自进化顾问。
+
+BYOS 用户走 `lib/user-friction.mjs`：只有 `ts/kind/ok/sec/promptChars/replyChars`
+六个字段，**连错误文本都不留**（引擎报错可能回显提示词片段）。
+落在 `workspace/evolve/users/<uid>.jsonl`（bridge 侧，**不在用户沙箱里**）。
+
+- 改这块前先读 `lib/user-friction.mjs` 开头 —— 那里写了为什么不能复用上面那份。
+- 失败归类梯子 `classifyFailure()` **两边共用**，别再各抄一份。
+- 展示在用户后台「它怎么工作」与管理台上下文查看器，两处都必须写明
+  「不保存对话内容」。
+- 测试里故意按老写法把正文塞进事件对象，断言落盘一个字都搜不到。
+
+## 租户维度：tenant_key 怎么来（v1.15.0）
+
+- 飞书 **v2 事件的 header 自带 `tenant_key`**，SDK 的 `parse()` 会把 header
+  展开进 handler 的 `data`（`node-sdk/lib/index.js:93603`）——
+  所以 `data.tenant_key` 直接可取，**零额外权限点**。
+  验法：造一条合成 v2 事件喂 `EventDispatcher.invoke`，看 handler 收到什么。
+  （脚本要放在**仓库目录内**，ESM 按文件位置找 node_modules，放 /tmp 会 404。）
+- 采集端点 `/internal/tenant-key`，**只在变化时写盘**。
+- ⚠️ **别把 union_id 相同当成跨租户证据**：2026-07-26 现网两条记录 appId 不同、
+  union_id 相同 —— 那是同一个人开了两个 App。union_id 只在**同一开发者**下跨
+  App 通用，不同租户的值不可比，所以身份合并主键必须 `(tenantKey, unionId)` 复合。
+- ⚠️ `readUnionId` 依赖哪个 scope 目前**存疑**：注释写 `contact:contact.base:readonly`，
+  addons 预置的是 `contact:user.base:readonly`，两者对不上。
+  可确证的只有结果（走现行流程的用户 2/2 都拿到了 union_id）。
