@@ -506,3 +506,144 @@ ssh dev198 'T=$(cat /srv/h-platform/memory/<uid>/auth.token); curl -s -X POST ht
 - P2 全收 + 4567 全收（市场搜索/org UI/用户 dashboard/L1 双审批/UI 重设计）
 - v1.4.0（2026-07-25）：通用开通链接（管理员零填写）+ union_id 身份接力（真名自动）+ 权限授权卡片 + 一键开后台按钮 + 版本号
 - 余：Ryan 开通（等扫码，含 kimi 首次真订阅 E2E）；ClawHub 暂缓（需扩白名单不值当）
+
+## 记忆的语义索引：向量只对新建页算（v1.13.5-6，排障必读）
+
+**症状**：用户说「它没记住我说的话」，但记忆条目在后台看得见、内容也对。
+**根因**：ai-memory 只在**新建页**时算向量。页面被重写时它新插一行
+`is_latest=1`，向量仍挂在被 `supersedes` 的旧行上、**不重算**。而 memory-sync
+是整页覆盖写入 —— 同步越勤，能被语义检索到的记忆越少。
+中文 FTS 走 unicode61 会把整段中文压成一个 token，**向量是中文唯一可靠的
+检索腿**，所以这等于核心功能静默失效，且界面上看不出来。
+
+**查真值**（别看 `page_embeddings` 总条数，那是假象；要按 `is_latest=1` 算）：
+
+```bash
+ssh dev198 'python3 -c "
+import sqlite3
+db=\"/srv/h-platform/memory/<uid>/db/memory.sqlite\"
+c=sqlite3.connect(\"file:%s?mode=ro\"%db, uri=True)
+t=c.execute(\"select count(*) from pages where is_latest=1\").fetchone()[0]
+w=c.execute(\"select count(*) from pages p where p.is_latest=1 and exists(select 1 from page_embeddings e where e.page_id=p.id)\").fetchone()[0]
+print(\"有效页\",t,\"有向量\",w,\"缺\",t-w)"'
+```
+
+**手动补**（memory-sync 现在每次同步收尾会自动跑；手动补用这条）：
+
+```bash
+ssh dev198 'bash -lc "D=/srv/h-platform/memory/<uid>
+export AI_MEMORY_SERVER_URL=http://127.0.0.1:\$(grep -oE \"127.0.0.1:[0-9]+\" \$D/config.toml | head -1 | cut -d: -f2)
+export AI_MEMORY_SERVER_URL=http://\$(grep -oE \"127.0.0.1:[0-9]+\" \$D/config.toml | head -1)
+export AI_MEMORY_AUTH_TOKEN=\$(cat \$D/auth.token)
+~/.local/bin/ai-memory embed --data-dir \$D --workspace default --project main"'
+```
+
+⚠️ **三个条件缺一必失败**：
+1. `AI_MEMORY_SERVER_URL` —— **不在 `--help` 里**，缺了必 401。CLI 永远代理到
+   一个 HTTP 地址，客户端那半不从 `--data-dir`/config 推导服务地址。
+   （曾为此试错五轮：设 AUTH_TOKEN / 停服务 / 不设变量 / config 加 auth_token /
+   起临时无认证实例，全部 401，连只读的 `status` 子命令都一样。）
+2. `AI_MEMORY_AUTH_TOKEN` —— `<data-dir>/auth.token`
+3. 显式 `--workspace default --project main` —— 省略时它从 **cwd / git 仓名**
+   推导，与钉死的作用域对不上（历史上因此 404）
+
+**验收别只看表里有行**：拿一个与原文零逐字重合的中文问法跑 `memory_query`，
+返回里 `rank` 是 RRF 签名（如 -0.0164）才说明走的是向量腿。
+
+## 反向隧道探针（v1.13.7）
+
+dev198 的 frpc 曾**静默失联两天**：`systemctl is-active` 是 active、进程在跑、
+日志停在「start proxy success」后一片空白 —— 没有断连记录、没报错、没重连。
+只影响运维通道（bridge 是出站连接，Bot 照常工作）→ **永远不会有人报障**。
+
+- 现状：控制面每 5 分钟探一次 `127.0.0.1:22198`，`healthz` 与
+  `/internal/tunnel-status` 都暴露。连续 3 次失败才翻状态（防抖动误报）。
+- **判活必须等到 `SSH-` banner**：frps 后端没客户端时照样 accept 再立刻关，
+  只看 connect 成功会一路报绿 —— 那正是这次能藏两天的形态。
+- 隧道断了怎么办：`ssh -t dev198-jump 'sudo systemctl restart frpc'`
+  （`-t` 分配伪终端，否则 sudo 报 "a terminal is required"；密码是 dev198 上
+  chuan 的密码，cc 不碰）。
+- **备用路由**：`dev198-jump` 经 mini-pub 走内网，隧道断时功能等价，
+  排查隧道本身要用它。
+
+## 白盒三件套（v1.13.8 → v1.14.0）
+
+定位是川哥定的：**「白盒是为了你出 bug 的时候我能发现」** —— 受众是运维者
+与用户本人，不是教育租户。所以**静态机制说明书不做**（它出 bug 时不会变，
+还会随引擎升级静默过期）。
+
+| 入口 | 看什么 |
+|---|---|
+| 管理台用户表「上下文」按钮 | 引擎版本 / 各配置文件字符数 / 四个托管块在不在 / skills 三层真读结果 / 记忆通道 / 最近 8 次任务原始数值 |
+| 用户后台「它怎么工作」tab | 同上但说人话，且**服务端剥掉** `engine.bin` 等内部路径 |
+
+- 数据链路：执行面 `buildContextReport` → `POST /internal/context-report`
+  → 控制面按 uid 落盘 → `/admin/api/context`（admin 会话）与 `/api/context`
+  （用户会话，**无 uid 参数位**）。
+- 任务轨迹是**只读**的：读引擎自己写的 `<沙箱>/.grok/logs/unified.jsonl`，
+  不在执行路径埋点。引擎不写了就退化成「没有数据」，主流程零影响。
+- ⚠️ 该日志的 `ctx.output_preview` **带最长 200 字符的模型输出正文** ——
+  取字段必须白名单，不能黑名单排除。
+
+## 引擎行为：三处「我们一直说错的话」（v1.13.5 对着源码核出来）
+
+开源仓 `xai-org/grok-build`，harness 主体在 `crates/codegen/xai-grok-agent/`
+（目录名是「代码生成 agent」，不是「自动生成的代码」）：
+
+1. **AGENTS.md 不进 system prompt** —— 包成 `<system-reminder>` 的合成 user
+   消息插在对话首部。
+2. **「每文件 10000 字符硬上限」源码里找不到** —— 收集路径上没有任何截断
+   逻辑，反有回归测试断言正文不得被截断；全仓唯一的 10_000 是 git status 的
+   上限。该说法出自 README。我们的体积纪律保留但已降级为**自定预算**。
+3. **「更深的文件优先」只有排序，没有覆盖逻辑** —— 真正的「谁压过谁」是提示词
+   里的一句话，**是给模型的建议不是系统保证**。对外文案禁用「以这份为准」
+   这类确定性措辞。
+4. skills 优先级：`config.paths` 的档位**低于** `~/.grok/skills`（User 档），
+   而 L2 目录正是它 —— sandbox.mjs 老注释写的「paths 里排第一」结论对但理由错。
+
+⚠️ **边界**：开源仓 `SOURCE_REV` 与线上二进制 rev **不同**（线上 0.2.112）。
+源码解释得了机制，保证不了「线上这个二进制逐行如此」。
+
+## 部署前必做：验「远端 ↔ 线上」同源（血的教训）
+
+**git 远端不是线上真相**，两个漂移方向都存在且都不报错。曾出现
+**仓库 v1.13.0 / 线上 v1.13.4** —— 四个提交在 dev198 本地 commit 了从没 push，
+照仓库部署会静默回滚生产改动，而且测试还会全绿。
+
+```bash
+# 三行核对，缺一不可
+ssh aliyun-hk 'grep -oE "v[0-9.]+" /srv/h-control/app/lib/version.mjs | head -1'   # 线上控制面
+grep -oE 'v[0-9.]+' control-plane/lib/version.mjs | head -1                        # 仓库
+ssh dev198 'bash -lc "cd ~/feishu-grok-bridge && git log --oneline origin/feishu-grok-bridge..HEAD; git log --oneline HEAD..origin/feishu-grok-bridge"'
+```
+
+不一致时顺序固定：**先 push 部署机的提交让远端追上线上，再 rebase 自己的改动。**
+反过来做就是覆盖。
+
+## 控制面部署手法（rsync + 时间戳备份）
+
+`/srv/h-control/app` **不是 git checkout**，是 rsync 部署。`.env` 在 app 外层
+（`/srv/h-control/.env`），不会被覆盖；`node_modules` 不同步。
+
+```bash
+TS=$(date +%m%d%H%M)
+ssh aliyun-hk "cp -a /srv/h-control/app /srv/h-control/app.bak-$TS"
+rsync -az --no-owner --no-group control-plane/server.mjs aliyun-hk:/srv/h-control/app/server.mjs
+rsync -az --no-owner --no-group --delete control-plane/lib/  aliyun-hk:/srv/h-control/app/lib/
+rsync -az --no-owner --no-group --delete control-plane/test/ aliyun-hk:/srv/h-control/app/test/
+ssh aliyun-hk 'chown -R h-control:h-control /srv/h-control/app && cd /srv/h-control/app \
+  && node --test test/*.test.mjs && systemctl restart h-control'
+```
+
+⚠️ **chown 不能省** —— root 写出的文件服务自己改不动。
+
+## 验收：拿真凭据打那个 URL，别只看代码
+
+- **管理员端点**：服务端登录取 cookie（密码不出服务器），再从公网打：
+  `POST http://127.0.0.1:18790/admin/login`，body 是 **JSON** `{"password":...}`。
+- **越权负例必须用「真实存在但不该看见」的探针** —— 拿一个**有效的用户会话
+  cookie** 去打 admin 端点。用不存在的 id 只会走 404 早退，测了等于没测。
+  正确结果：同一 cookie 打 `/api/memory` 是 200、打 `/admin/api/*` 是 401。
+- **cookie domain 别混** —— 全程锁 `https://ai.kidshub.cn`，混 127.0.0.1 会
+  给出假阴性。
+- **页面 script 块逐块 `node --check`** —— 模板字符串吞 `\n` 会让整块静默不执行。
