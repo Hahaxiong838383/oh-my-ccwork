@@ -617,6 +617,10 @@ grep -oE 'v[0-9.]+' control-plane/lib/version.mjs | head -1                     
 ssh dev198 'bash -lc "cd ~/feishu-grok-bridge && git log --oneline origin/feishu-grok-bridge..HEAD; git log --oneline HEAD..origin/feishu-grok-bridge"'
 ```
 
+⚠️ **未推判定必须 `git ls-remote origin feishu-grok-bridge` 问真远端** ——
+本地 `origin/*` ref 不 fetch 就是旧的。2026-07-26 实锤：据本地 ref 报了
+「0 未推」，ls-remote 一问远端 tip 差两个提交（从未 push 成功过）。
+
 不一致时顺序固定：**先 push 部署机的提交让远端追上线上，再 rebase 自己的改动。**
 反过来做就是覆盖。
 
@@ -624,6 +628,12 @@ ssh dev198 'bash -lc "cd ~/feishu-grok-bridge && git log --oneline origin/feishu
 
 `/srv/h-control/app` **不是 git checkout**，是 rsync 部署。`.env` 在 app 外层
 （`/srv/h-control/.env`），不会被覆盖；`node_modules` 不同步。
+
+⚠️ **dev198 没有 aliyun-hk 的 ssh 别名**（2026-07-26 实测 name resolution 失败）
+——下面的 rsync 要在**有别名的机器（Air）**上跑：先
+`rsync dev198:feishu-grok-bridge/control-plane/{server.mjs,lib,test} <staging>/`
+（排除 node_modules，md5 抽一个文件对撞确认同源），再从 staging 按下述参数推
+aliyun-hk。
 
 ```bash
 TS=$(date +%m%d%H%M)
@@ -763,3 +773,38 @@ BYOS 用户走 `lib/user-friction.mjs`：只有 `ts/kind/ok/sec/promptChars/repl
 
 `test/pages.test.mjs` 有断言盯着：页面里不许再出现裸切写法，
 且会把时间助手从渲染结果里抠出来真跑（UTC 08:01→16:01、跨日进位、坏输入）。
+
+## 多引擎（v1.17-1.19，grok/kimi/zhipu/minimax）：接入、排障、模型动态化
+
+### 新接一家 apikey 型国产订阅 = 只改注册表
+`control-plane/lib/providers.mjs` 加一条（keyUrl/validateBaseUrl/envVar/
+ompProvider/fallbackModel），绑定 UI、验活、vault、creds 下发、模型动态发现、
+引擎白名单**全部自动继承**。执行面 runner 是 omp 通用承载
+（`lib/omp-runner.mjs`，bwrap 挂 `~/.bun`→`/opt/bun`，key 走 `--args FD`
+不落盘不上 argv）。envVar 名以 omp 源码 `stream.ts` 映射表为准
+（`ZHIPU_API_KEY` / `MINIMAX_CODE_CN_API_KEY`）。
+
+### 「用户说引擎不对」三层排障（2026-07-26 三轮实锤，症状全一样）
+1. **路由层**：`journalctl --user -u feishu-grok-bridge | grep -E "omp start|grok start|kimi start"`
+   ——先定谁在跑。踩过：app-registry 两处 `kimi?kimi:grok` 三元把 minimax
+   吞回 grok（枚举扩容必须灰 grep 扫全消费点；现有 `sanitizeEngine` 单点 +
+   `test/omp-engine.test.mjs` 全仓扫描钉死）。
+2. **身份层**：路由对但模型 cosplay 注入历史（自称/口癖/行为格式整体照抄，
+   越问越强化）。防线=历史块**对话内双重框定**（system 追加会被压掉）。
+   判别性证据源：**omp 会话落盘** `<用户树>/.omp/agent/sessions/<cwd>/*.jsonl`
+   ——真实 prompt + 模型真实输出，一读定分。
+3. **模型层**：`/internal/creds/<uid>` 看下发的 model/candidates。
+   模型动态发现：绑定时 `GET <baseUrl>/models`（=验活，401 即 key 坏，零推理
+   配额）→ `person.subs[p].models` 新→旧；存量懒发现、24h 后台刷；用户可在
+   dashboard 固定某模型（服务端白名单校验）。**执行面与 omp catalog 求交集**
+   （omp 拒跑 catalog 外模型），omp 升级要重启 bridge 刷 catalog 缓存。
+
+### 订阅 Person 级（v1.18.0）
+凭据 vault 落 `personId` 条目（绑一次全部助手共用；同 provider 物理一份防
+rotation war）；状态真源 `persons[pid].subs`；孤账号回退 uid 级。改绑定/凭据
+链路时走 `lib/person-subs.mjs` 的分派函数，**别直接 `store.upsert(vaultKey,…)`**
+——vault.list() 的键可能是 personId，直写会造出幽灵用户。
+
+### 文案纪律
+身份声明/引导文案模型会**原样复述**给用户——别写 BYOS 这类黑话（川哥真机
+问过「BYOS 是什么」），一律说人话（「使用用户自己绑定的订阅」）。
