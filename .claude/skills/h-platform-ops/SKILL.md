@@ -850,3 +850,13 @@ jq -r 'select(.type=="task_end") | "ok=\(.ok) \(.durationMs)ms in=\(.usage.input
   最小请求；生产同源装配，8 项断言）。改 runner/trace 后必跑 grok+omp 各一条。
 - 保留 30 天（session-gc.sh，`H_TRACE_KEEP_DAYS` 调）；轨迹含对话全文，
   只在用户树，不进 git、禁外派。
+
+## F2 skills 三引擎生效面（2026-07-27）
+
+- 三层：L0 `/shared/skills`（29 个）/ L1 `/org/skills` / L2 `<userRoot>/.grok/skills`
+  ——**L2 落盘点三引擎共用**（skills-sync user 层落这，装一次全引擎生效）。
+- omp 接线：`~/.omp/h-skills.yml` overlay（bridge 每任务前重写，手改无效）+
+  runner `--config`；「用户问技能答没有」先查 bridge 日志 `omp skills cfg fail`。
+- kimi：runner 三个 `--skills-dir`（显式传入会替代 kimi 原生自动发现，by design）。
+- 验收口令：给用户 L2 放探针技能（description 写触发条件+暗号）→ 问引擎
+  「执行 XX 探针」→ 回暗号 = 元数据注入+正文阅读全链通。测完删探针。
