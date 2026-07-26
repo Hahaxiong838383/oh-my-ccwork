@@ -817,3 +817,14 @@ h-mem，幂等、保留用户内容、runner 每任务前 ensure 保鲜 SOUL）�
 记忆**写入**侧本就引擎无关（网关 captureExchange）。
 待办：kimi 认不认 workspace/AGENTS.md 未验；omp 三层 skills 走
 `skills.customDirectories`（认标准 SKILL.md 非递归布局）待接。
+
+### 「回复怪」双层排障 + M3 黑名单（2026-07-26 收尾）
+- **内容层**：文件里有 ≠ prompt 里有。omp 何时注入 AGENTS.md 不可控（生产
+  session 实锤读不到）→ SOUL/方法论/记忆指引走 runner `--append-system-prompt`
+  确定性注入（`omp-harness.mjs::buildSystemAppend`，每任务现读 SOUL）。
+- **传输层**：MiniMax M3 思考是**内联 `<think>`**（M2.x 是 reasoning_content
+  字段，两代不同）；omp 流式剥离在 M3 长回复吞正文开头（上游
+  stream-markup-healing 缺陷）→ `providers.mjs` `knownBadDefaults:['MiniMax-M3']`
+  自动档降 M2.7、手选保留。**omp 升级后复查**：长回复开头齐了删黑名单。
+- 排障链：chat-history 看表象 → `.omp/agent/sessions/` 看真 prompt/真输出 →
+  厂商 API 直测响应结构 → omp 源码定位。
