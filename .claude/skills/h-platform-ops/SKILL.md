@@ -291,6 +291,32 @@ L0 是**所有租户都挂得到**的。往那儿放 owner 自己的 skill = 直
   也要可见，否则「方法可见、方法产生了什么不可见」白盒只做一半。加减注册表项
   会被 `method-defaults.test.mjs` 的数量断言拦住，提醒同步确认前端 tab。
 
+## 用户姓名 / 部门为什么是错的（v1.13.2，排障先读这段）
+
+**大概率不是坏了，是中间态。** 开通那一刻新 App 通常还没有通讯录权限
+（`readIdentityViaTenant` 返回 `reason: 'no_field'`），所以：
+
+1. `name` 先用 **Bot 名**兜底，`org` 为 null，写下 `permHint`
+2. 执行面的**目录机器人**靠 `union_id` 查到真名 → POST `/internal/identity` →
+   姓名与部门自动补上。**真机实测约 16 分钟。**
+
+判断是谁写的：`realName` 字段**只有** `/internal/identity` 会写。
+`nameSource==='directory'` 是 v1.13.2 起的新标记。两者任一为真 = 已是真人姓名。
+
+⚠️ 别误判成用户 OAuth 那条路：`/feishu/authz` 需要 `H_FEISHU_AUTHZ=1`，
+生产 `.env` **没配**，那条是关着的。
+
+**什么时候才是真出问题：**
+
+- 超过半小时还是 Bot 名（管理台会标「· 待识别」）→ 查目录机器人；
+  再不行点管理台的「待认领 · 去开权限」开 `contact:user.base:readonly`
+- `uid` 是 `u-<hash>` 形态**不是问题**：通用开通链接就是按飞书身份确定性派生的，
+  只有管理员在链接里预分配过 uid 才会是可读账号名
+
+**改这块判定时的雷：** 存量记录只有 `realName`、没有 `nameSource`，
+判定漏了它就会把**已经正确**的姓名重新标成"机器人名"（v1.13.2 第一版就这么错的，
+`test/identity-name.test.mjs` 锁住了）。改判定前先列全"真值可能从哪些历史路径写进来"。
+
 ## 开通链接：能不能选存量飞书 App（v1.13.1）
 
 二维码上的 `createOnly=true` 会让飞书落地页**隐藏「选择已有应用」**（v1.9.0
@@ -379,6 +405,8 @@ ssh dev198 'cd ~/feishu-grok-bridge/control-plane && export PATH=$HOME/.local/no
 ssh dev198 'cd ~/feishu-grok-bridge && export PATH=$HOME/.local/node/bin:$PATH && node test/method-defaults.test.mjs'
 # 改注册流 / session token 必跑：默认只能新建 + 开关签在 token 里 + 伪造 token 被拒
 ssh dev198 'cd ~/feishu-grok-bridge/control-plane && export PATH=$HOME/.local/node/bin:$PATH && node --test test/register-link.test.mjs'
+# 改显示名/身份回填判定必跑：兜底名要判成待补 + 存量 realName 不能被误标
+ssh dev198 'cd ~/feishu-grok-bridge/control-plane && export PATH=$HOME/.local/node/bin:$PATH && node --test test/identity-name.test.mjs'
 ssh dev198 'curl -sS http://127.0.0.1:18765/healthz | python3 -m json.tool'      # connected:true
 curl -s --noproxy '*' https://ai.kidshub.cn/healthz    # 公网即可核对线上 version（v1.9.0 起 healthz 带 version）
 ```
