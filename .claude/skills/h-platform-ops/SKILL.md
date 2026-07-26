@@ -709,12 +709,26 @@ BYOS 用户走 `lib/user-friction.mjs`：只有 `ts/kind/ok/sec/promptChars/repl
 - ⚠️ **`pushMirror` 里的 hash 去重曾把尾部的 `pushContext` 一起 return 掉**
   （v1.15.1 修）。稳态下记忆内容不变 = 去重必命中 = 白盒永远停在旧快照。
   往这个函数尾部加东西前，先数一遍上面有几个 `return`。
-- ⚠️ **`org` 要一路带下来**：`runMemorySync` 漏传会让报告里「部门共享 skills」
-  恒为 null，与定时器那条路径推的结果**互相打架**，表现为数据反复横跳。
+- ⚠️ **`org` 要一路带下来**（**四个调用点**：debounce、bootPush、30 分钟兜底
+  定时器、memory-ops 轮询）。漏任何一个，那条路推的报告里「部门共享
+  skills」（l1）就恒 null，与带了 org 的那条**互相打架**，表现为数据反复横跳。
+  v1.15.1 只改对一个、注释还写反了，16:37 才补齐（`1900509`）。
+  现在有 `test/context-org-passing.test.mjs` 源码扫描钉着 ——
+  行为测试盖不到（要真起定时器 + 真建 `/srv/h-platform/orgs/<org>/skills`）。
+  **暴露条件是 orgs 目录非空**，目录空着时两条路都是 null，看不出问题。
 - ⚠️ **验「去重类修复」必须落在缓存命中那一次**：每次 restart 都会清空
   `mirrorSent`，重启后第一次推送新旧代码表现完全一样。
-  要拿判别性证据，就得**不重启**地等下一个周期，看是否出现
-  「ctx 有增量、mirror 零增量」。
+  要拿判别性证据，就得**不重启**地等下一个周期。
+  最硬的看法是直接比 `/srv/h-control/data/memory-manage/` 里两个文件的 mtime：
+
+  ```bash
+  ssh aliyun-hk "ls -la /srv/h-control/data/memory-manage/"
+  ```
+
+  `*.mirror.json` 冻着而 `*.context.json` 在动 = 去重命中了但尾调用照跑
+  （旧代码下两者必然同时间）。再用
+  `systemctl --user show feishu-grok-bridge -p ActiveEnterTimestamp,NRestarts`
+  证明期间没重启，条件才闭合。
 
 ### 时间显示
 
