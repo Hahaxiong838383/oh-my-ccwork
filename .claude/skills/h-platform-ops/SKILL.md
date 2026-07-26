@@ -291,6 +291,29 @@ L0 是**所有租户都挂得到**的。往那儿放 owner 自己的 skill = 直
   也要可见，否则「方法可见、方法产生了什么不可见」白盒只做一半。加减注册表项
   会被 `method-defaults.test.mjs` 的数量断言拦住，提醒同步确认前端 tab。
 
+## 新 Bot 预置了哪些权限与事件（addons，v1.13.3）
+
+`control-plane/lib/feishu-register.mjs` 的 `H_ADDONS` —— **用户扫码确认那一下**
+就把这些给了，不用事后补：
+
+```js
+scopes: { tenant/user: ['contact:user.base:readonly'] }   // 姓名 + 部门字段
+events: { items: { tenant: ['im.chat.access_event.bot_p2p_chat_entered_v1'] } }
+```
+
+- **只放已被飞书官方报文验证过的标识串。** `contact:user.base:readonly` 是飞书
+  自己在权限错误里给出的（`buildApplyUrl` 用的同一个）。猜错一个串可能让整个
+  addons blob 被落地页拒掉，坏的是**整条开通流程** —— 代价远大于少要一个权限。
+- **改了 addons 就不用管"谁要重扫"**：`addonsRev` 是内容哈希，一变，存量用户
+  自动在管理台标「待补授权」、bot 也会主动推卡片。
+- ⚠️ **部门不在 addons 覆盖范围**：它要「通讯录数据范围」（数据权限，不是 API
+  scope，管的是应用能看见哪些部门），得去开发者后台放开。实测新 Bot 能读姓名、
+  读不到部门（`reason=no_dept`）。
+- 改前先跑 `node --test test/pages.test.mjs`（有一条断言盯着 scopes 不许被删回去），
+  改后离线验证编码往返：`encodeAddons` → gunzip → JSON 应与原对象全等。
+- **别假设"老 Bot 权限更全"**：实测第一个 Bot 反而 `no_field` 读不到，后建的能读。
+  要知道某个 Bot 的实际能力，拿它的凭据真调一次 `readIdentityViaTenant`。
+
 ## 用户姓名 / 部门为什么是错的（v1.13.2，排障先读这段）
 
 **大概率不是坏了，是中间态。** 开通那一刻新 App 通常还没有通讯录权限
@@ -305,6 +328,10 @@ L0 是**所有租户都挂得到**的。往那儿放 owner 自己的 skill = 直
 
 ⚠️ 别误判成用户 OAuth 那条路：`/feishu/authz` 需要 `H_FEISHU_AUTHZ=1`，
 生产 `.env` **没配**，那条是关着的。
+
+**先分清是"数据错"还是"没展示"：** 用户报「没识别出我的信息」时，先看记录里
+`name`/`orgLabel` 是不是已经对了。v1.13.3 之前用户后台侧栏只有 uid + appId 两串
+哈希、从不显示姓名 —— 数据全对，用户照样觉得系统没认出他。
 
 **什么时候才是真出问题：**
 
