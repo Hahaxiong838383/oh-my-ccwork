@@ -808,3 +808,12 @@ rotation war）；状态真源 `persons[pid].subs`；孤账号回退 uid 级。�
 ### 文案纪律
 身份声明/引导文案模型会**原样复述**给用户——别写 BYOS 这类黑话（川哥真机
 问过「BYOS 是什么」），一律说人话（「使用用户自己绑定的订阅」）。
+
+### omp 引擎的平台 harness（2026-07-26 补齐）
+切 omp 引擎后 SOUL/方法论/记忆不生效的修法（引擎无关层，勿逐引擎重做）：
+`lib/omp-harness.mjs` —— ①`workspace/AGENTS.md` 三个托管块（h-soul/h-method/
+h-mem，幂等、保留用户内容、runner 每任务前 ensure 保鲜 SOUL）；
+②`<用户树>/.omp/agent/mcp.json` 注入 ai-memory（标准 mcpServers）。
+记忆**写入**侧本就引擎无关（网关 captureExchange）。
+待办：kimi 认不认 workspace/AGENTS.md 未验；omp 三层 skills 走
+`skills.customDirectories`（认标准 SKILL.md 非递归布局）待接。
