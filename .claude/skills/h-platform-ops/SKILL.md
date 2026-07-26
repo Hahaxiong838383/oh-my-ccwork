@@ -860,3 +860,15 @@ jq -r 'select(.type=="task_end") | "ok=\(.ok) \(.durationMs)ms in=\(.usage.input
 - kimi：runner 三个 `--skills-dir`（显式传入会替代 kimi 原生自动发现，by design）。
 - 验收口令：给用户 L2 放探针技能（description 写触发条件+暗号）→ 问引擎
   「执行 XX 探针」→ 回暗号 = 元数据注入+正文阅读全链通。测完删探针。
+
+## F3 定时任务运维（2026-07-27）
+
+- 定义：控制面 store user.schedules（dashboard 定时任务 pane 编辑）；
+  执行面状态 `~/feishu-grok-bridge/workspace/evolve/schedule-state.json`。
+- 排障链：`journalctl --user -u feishu-grok-bridge | grep schedule` →
+  fire/delivered 两行定位；任务本身的问题看 F1 轨迹 `sched_<name>.jsonl`。
+- 语义要点：改任务（defHash 变）= 新实例，**当天已过时刻不补发**（用户报
+  「改完没跑」先看这条）；拉控制面失败跳过整轮 tick（不用陈旧定义触发）。
+- 开关：`H_SCHEDULES=0` 停调度器；`H_SCHEDULE_TICK_MS` 调 tick。
+- E2E：写测试任务设 now+4min → 看 fire/delivered 日志 + 飞书卡片，
+  **测完必删**（否则每天到点触发）。
