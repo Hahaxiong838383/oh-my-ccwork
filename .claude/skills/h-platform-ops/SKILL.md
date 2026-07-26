@@ -828,3 +828,25 @@ h-mem，幂等、保留用户内容、runner 每任务前 ensure 保鲜 SOUL）�
   自动档降 M2.7、手选保留。**omp 升级后复查**：长回复开头齐了删黑名单。
 - 排障链：chat-history 看表象 → `.omp/agent/sessions/` 看真 prompt/真输出 →
   厂商 API 直测响应结构 → omp 源码定位。
+
+## F1 统一任务轨迹层（排障第一入口，2026-07-27 上线）
+
+**排障先看这里，再看三方 agent 原生落盘。**每任务两行 JSONL：
+`/srv/h-platform/users/<uid>/traces/<yyyy-mm-dd>/<chatId>.jsonl`
+（task_begin=engine/model/prompt/history/systemAppend 全文；task_end=
+ok/exitCode/durationMs/reply 全文/usage 三桶）。
+
+```bash
+# 四问一步答：谁在跑/注了什么/回复完整吗/花多少
+jq -r 'select(.type=="task_begin") | "\(.ts) \(.engine)/\(.model) hist=\(.historyChars)ch"' <trace.jsonl>
+jq -r 'select(.type=="task_end") | "ok=\(.ok) \(.durationMs)ms in=\(.usage.input) out=\(.usage.output)"' <trace.jsonl>
+```
+
+- 实现 `lib/trace.mjs`；**与 `lib/task-trace.mjs` 别混**（那是只读展示层，
+  白名单防正文泄漏；未来管理员看他人轨迹必须走那边的白名单模式）。
+- usage 口径：omp=会话落盘内嵌 / grok=unified.jsonl 增量窗口（带 sid）/
+  kimi=**null 待补**（无真实会话，首会话后按实测口径补采集器）。
+- E2E：`node scripts/f1-trace-smoke.mjs <uid> <engine>`（消耗该用户一条
+  最小请求；生产同源装配，8 项断言）。改 runner/trace 后必跑 grok+omp 各一条。
+- 保留 30 天（session-gc.sh，`H_TRACE_KEEP_DAYS` 调）；轨迹含对话全文，
+  只在用户树，不进 git、禁外派。
