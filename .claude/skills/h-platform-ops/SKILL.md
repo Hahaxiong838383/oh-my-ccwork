@@ -291,6 +291,24 @@ L0 是**所有租户都挂得到**的。往那儿放 owner 自己的 skill = 直
   也要可见，否则「方法可见、方法产生了什么不可见」白盒只做一半。加减注册表项
   会被 `method-defaults.test.mjs` 的数量断言拦住，提醒同步确认前端 tab。
 
+## 开通链接：能不能选存量飞书 App（v1.13.1）
+
+二维码上的 `createOnly=true` 会让飞书落地页**隐藏「选择已有应用」**（v1.9.0
+`d449d45` 加的防护：防用户误选自己别的 App 被本流程 addons 覆盖）。
+
+- **默认只能新建。** 要把一个平台还不认识的存量 Bot 接进来 → 管理台「开通新用户」
+  弹层勾「允许选择已有的飞书应用」。代价要讲给用户：**被选中应用的权限与事件订阅
+  会被平台配置覆盖**，别选到他在用的其它应用上。
+- 开关**签在 register token 里**（`x=1`），不是前端字段——改请求体绕不过。
+- `register-upgrade`（带 appId）**不能**用来接入新 App：它要求 appId 已在
+  botStore 托管，只用于给已托管 Bot 补权限/事件。
+- 三条路的落地页行为：默认开通 `createOnly=true` 只能新建 / 勾选后无该参数可选已有 /
+  补授权带 `clientID=cli_xxx` 强制 `createOnly=false`。createOnly 与 appId 互斥，
+  同时传会抛错（别指望落地页兜）。
+- **离线复现链接参数**（不用真调飞书）：`buildQrUrl` 是纯函数，但必须连同
+  `registerBegin` 里 `createOnly: wantAppId ? false : opts.createOnly !== false`
+  一起复刻——直接喂 `buildQrUrl` 会跳过这层默认值计算，得出反向结论。
+
 ## 分层 skills（L2 个人 / L1 org / L0 平台）
 
 - 沙箱内 grok config skills paths 三层：`~/.grok/skills`(L2 个人) → `/shared/skills`(L0 平台) → `/org/skills`(L1 组织)。
@@ -351,6 +369,8 @@ ssh dev198 'cd ~/feishu-grok-bridge && export PATH=$HOME/.local/node/bin:$PATH &
 ssh dev198 'cd ~/feishu-grok-bridge/control-plane && export PATH=$HOME/.local/node/bin:$PATH && node --test test/*.test.mjs 2>&1 | tail -5'
 # 改了方法论摘要 / profile 注册表必跑：AGENTS.md 预算 + 托管块幂等 + 注册表项数
 ssh dev198 'cd ~/feishu-grok-bridge && export PATH=$HOME/.local/node/bin:$PATH && node test/method-defaults.test.mjs'
+# 改注册流 / session token 必跑：默认只能新建 + 开关签在 token 里 + 伪造 token 被拒
+ssh dev198 'cd ~/feishu-grok-bridge/control-plane && export PATH=$HOME/.local/node/bin:$PATH && node --test test/register-link.test.mjs'
 ssh dev198 'curl -sS http://127.0.0.1:18765/healthz | python3 -m json.tool'      # connected:true
 curl -s --noproxy '*' https://ai.kidshub.cn/healthz    # 公网即可核对线上 version（v1.9.0 起 healthz 带 version）
 ```
