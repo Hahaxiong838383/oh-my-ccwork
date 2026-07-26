@@ -40,7 +40,7 @@ git diff main..HEAD > /tmp/review.md
 echo "评审角度: 找 bug + 安全问题 + 性能问题" >> /tmp/review.md
 bash 4-Assets/Prompt/omp-team-templates/review-3send.sh /tmp/review.md
 
-# 5. cc 综合 /tmp/r-grok.md + /tmp/r-gpt.md + /tmp/r-gem.md, 取并集去重, 标各家独有发现
+# 5. cc 综合 /tmp/r-grok.<run-tag>.md + /tmp/r-gpt.<run-tag>.md + /tmp/r-gem.<run-tag>.md, 取并集去重, 标各家独有发现
 ```
 
 ## cc 综合三家评审的标准流程

@@ -3,12 +3,14 @@
 # ⚠️ 2026-06-19: google-gemini-cli(Gemini Code Assist for individuals) 被 Google 停用("no longer supported, migrate to Antigravity")
 #   → B1 gemini lane 全切 google-antigravity 通道。默认 antigravity/gemini-3-flash(快); 需深度手动换 gemini-3.5-flash。详见 memory project_antigravity_team_b3
 # 用法: bash review-3send.sh <review-prompt-file>
-# 输出: /tmp/r-grok.md / /tmp/r-gpt.md / /tmp/r-gem.md (三家独立 finding)
+# 输出: /tmp/r-grok.$RUN_TAG.md / /tmp/r-gpt.$RUN_TAG.md / /tmp/r-gem.$RUN_TAG.md (三家独立 finding)
 # cc 后续: 三方综合 / 取并集 / 标各家独有发现 / 跑测试验证
 # 适用: 高 stake/高难度评审 / code review / 顶级评审第一阶段
 
 set -uo pipefail
 PROMPT_FILE="${1:-/tmp/review.md}"
+# per-run 产物路径(2026-07-26 P2④): 时间戳+PID 防并发评审互踩;实际路径以 stdout 报告为准
+RUN_TAG="${TEAM_RUN_TAG:-$(date +%m%d-%H%M%S).$$}"
 
 if [ ! -f "$PROMPT_FILE" ]; then
   echo "❌ review prompt file 不存在: $PROMPT_FILE"
@@ -57,9 +59,8 @@ REVIEW_GUARD='【评审约束·最高优先级】你是只读评审者。禁止�
 '
 PROMPT="$REVIEW_GUARD$(cat "$PROMPT_FILE")"
 SIZE=$(wc -c <"$PROMPT_FILE")
-# 清旧产物(2026-07-03 实踩):固定输出路径 /tmp/r-*.md 若留有上一轮评审残留,调用方
-# "文件非空即完成"的等待哨兵会拿旧报告当本轮结果(假阳性,曾拿 LnMem 评审当 P003 评审读)。
-rm -f /tmp/r-grok.md /tmp/r-gpt.md /tmp/r-gem.md /tmp/r-grok.err /tmp/r-gpt.err /tmp/r-gem.err
+# (2026-07-26 P2④) per-run 唯一路径已根治"旧残留假阳性"(2026-07-03 实踩),故不再 rm 清理——
+# 并发下 rm /tmp/r-*.md 通配反而会误删别轮进行中的产物。
 echo "===== B 三发评审对抗 ====="
 echo "[B4 推理] omp xai-oauth/grok-4.5 / thinking=high"
 echo "[B5 严谨] codex API 网关 gpt-5.5(主) → omp 订阅 gpt-5.4(降级) / reasoning=high"
@@ -89,13 +90,13 @@ START=$(date +%s)
 omp -p --model xai-oauth/grok-4.5 --thinking high --no-tools --cwd "$CLEAN_CWD" \
   --no-extensions --no-skills --no-rules \
   "$PROMPT" \
-  > /tmp/r-grok.md 2>/tmp/r-grok.err &
+  > /tmp/r-grok.$RUN_TAG.md 2>/tmp/r-grok.$RUN_TAG.err &
 GROK_PID=$!
 
 sleep 0.8
 
 # B5 codex 严谨评审: API 网关 gpt-5.5 主路 + omp 订阅 gpt-5.4 降级 (见 _codex_lane.sh)
-run_codex_lane "$PROMPT" /tmp/r-gpt.md /tmp/r-gpt.err "B5" &
+run_codex_lane "$PROMPT" /tmp/r-gpt.$RUN_TAG.md /tmp/r-gpt.$RUN_TAG.err "B5" &
 GPT_PID=$!
 
 sleep 0.8
@@ -106,11 +107,11 @@ if [ "$GEMINI_LANE_ENABLED" = "1" ]; then
   omp -p --model google-antigravity/gemini-3-flash --thinking high --no-tools --cwd "$CLEAN_CWD" \
     --no-extensions --no-skills --no-rules \
     "$PROMPT" \
-    > /tmp/r-gem.md 2>/tmp/r-gem.err &
+    > /tmp/r-gem.$RUN_TAG.md 2>/tmp/r-gem.$RUN_TAG.err &
   GEM_PID=$!
 else
   GEM_PID=""
-  echo "⛔ B1 gemini lane 已下线(antigravity 账户 TOS 封禁 2026-06-29) — 本轮按 grok+codex 两发综合。" > /tmp/r-gem.md
+  echo "⛔ B1 gemini lane 已下线(antigravity 账户 TOS 封禁 2026-06-29) — 本轮按 grok+codex 两发综合。" > /tmp/r-gem.$RUN_TAG.md
 fi
 
 echo "lane 错开启动跑中 (PID grok=$GROK_PID gpt=$GPT_PID gem=${GEM_PID:-下线}, 间隔 800ms)..."
@@ -121,10 +122,10 @@ wait $GPT_PID; GPT_RC=$?
 END=$(date +%s)
 echo ""
 echo "===== 结果汇总 ====="
-echo "B4 grok-4.5 推理: RC=$GROK_RC, 输出 $(wc -l </tmp/r-grok.md 2>/dev/null || echo 0) 行"
-echo "B5 gpt-5.5 严谨: RC=$GPT_RC, 输出 $(wc -l </tmp/r-gpt.md 2>/dev/null || echo 0) 行"
+echo "B4 grok-4.5 推理: RC=$GROK_RC, 输出 $(wc -l </tmp/r-grok.$RUN_TAG.md 2>/dev/null || echo 0) 行"
+echo "B5 gpt-5.5 严谨: RC=$GPT_RC, 输出 $(wc -l </tmp/r-gpt.$RUN_TAG.md 2>/dev/null || echo 0) 行"
 if [ -n "$GEM_PID" ]; then
-  echo "B1 gemini-3-flash 默认: RC=$GEM_RC, 输出 $(wc -l </tmp/r-gem.md 2>/dev/null || echo 0) 行"
+  echo "B1 gemini-3-flash 默认: RC=$GEM_RC, 输出 $(wc -l </tmp/r-gem.$RUN_TAG.md 2>/dev/null || echo 0) 行"
 else
   echo "B1 gemini-3-flash 默认: ⛔ 已下线(antigravity TOS 封禁) — 本轮 grok+codex 两发"
 fi
@@ -136,9 +137,9 @@ for var in "grok GROK" "gpt GPT" "gem GEM"; do
   name=$(echo $var | cut -d' ' -f1)
   PREFIX=$(echo $var | cut -d' ' -f2)
   eval RC=\${${PREFIX}_RC}
-  if [ "$RC" -ne 0 ] || [ ! -s "/tmp/r-$name.md" ]; then
+  if [ "$RC" -ne 0 ] || [ ! -s "/tmp/r-$name.$RUN_TAG.md" ]; then
     echo "⚠️ B-$name 失败/无正文:"
-    tail -5 "/tmp/r-$name.err"
+    tail -5 "/tmp/r-$name.$RUN_TAG.err"
   fi
 done
 
@@ -151,3 +152,5 @@ echo "  4. 写 REVIEW.md 综合各家观点 + cc 自验补充"
 echo ""
 echo "若需升级到顶级四发评审 (+ B3 antigravity gemini-3.5-flash 免费深度档):"
 echo "  bash review-4send.sh $PROMPT_FILE"
+
+echo "本轮产物: /tmp/r-grok.$RUN_TAG.md | /tmp/r-gpt.$RUN_TAG.md | /tmp/r-gem.$RUN_TAG.md"

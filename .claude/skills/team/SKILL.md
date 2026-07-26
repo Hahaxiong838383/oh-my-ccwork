@@ -22,7 +22,7 @@ description: 多重意见圆桌讨论——同时把代码/方案/问题/文档�
    - 需要审查代码/方案时，把内容原样附在 prompt 里(不要只给摘要，两家要看到真实内容)
    - 结尾要求按真实身份署名：grok→「署名：grok（xAI）」/ codex→「署名：codex（OpenAI）」
 3. **写 prompt 到临时文件**，调用 `bash ~/mycc/.claude/skills/team/dispatch.sh <prompt文件>`
-4. **读回两家产出**：`/tmp/team-grok.md` + `/tmp/team-codex.md`
+4. **读回两家产出**：产物是 per-run 唯一文件（2026-07-26 起，防并发 team 互踩），**实际路径从 dispatch.sh 的 stdout 读**（`grok: ... → /tmp/team-grok.<tag>.md` 两行）
 5. **综合汇报**给用户：
    - 两家共识的点→高置信度，直接点出
    - 分歧的点→都摆出来，不要替用户选边，除非有明显证据支持一方

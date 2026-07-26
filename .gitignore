@@ -350,3 +350,6 @@ AGENTS.md.bak.*
 
 # LnMem-fpga 因果发现参考论文(本地资料,不进仓;仓库瘦身后保持轻量)
 2-Projects/LnMem-fpga/*.pdf
+
+# RTC 参考文档 100MB（2026-07-26 自 HOME 根移入，超 GitHub 单文件限制，不入库）
+4-Assets/*.pdf

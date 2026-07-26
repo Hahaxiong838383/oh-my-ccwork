@@ -6,11 +6,13 @@
 #         避开通用美宅节点被 Google Cloud Code Assist 判 400「location not supported」。详见 memory project_antigravity_team_b3。
 #   并行: 先后台起 B3, sleep 1 错开 omp SQLite(agent.db) race, 再调 review-3send.sh 跑 B4+B5+B1, 最后 wait B3 合并。
 # 用法: bash review-4send.sh <review-prompt-file>
-# 输出: /tmp/r-grok.md + /tmp/r-gpt.md + /tmp/r-gem.md (三发) + /tmp/r-gem35.md (B3 深度)
+# 输出: per-run 唯一文件 /tmp/r-{grok,gpt,gem,gem35}.$TEAM_RUN_TAG.md（防并发互踩），实际路径以 stdout 报告为准
 # cc 后续: 四家综合 / 取并集 / 标各家独有 finding / 跑测试验证
 
 set -uo pipefail
 PROMPT_FILE="${1:-/tmp/review.md}"
+# per-run 产物路径(2026-07-26 P2④): export 给子脚本 review-3send.sh 共用同一 tag → 四发产物同批可拼接定位
+TEAM_RUN_TAG="$(date +%m%d-%H%M%S).$$"; export TEAM_RUN_TAG
 
 if [ ! -f "$PROMPT_FILE" ]; then
   echo "❌ review prompt file 不存在: $PROMPT_FILE"
@@ -50,13 +52,13 @@ if [ "$GEMINI_LANE_ENABLED" = "1" ]; then
   omp -p --model google-antigravity/gemini-3.5-flash --thinking high --no-tools --cwd "$CLEAN_CWD" \
     --no-extensions --no-skills --no-rules \
     "$PROMPT" \
-    > /tmp/r-gem35.md 2>/tmp/r-gem35.err &
+    > /tmp/r-gem35.$TEAM_RUN_TAG.md 2>/tmp/r-gem35.$TEAM_RUN_TAG.err &
   B3_PID=$!
   # 错开 omp SQLite schema-init race 窗口(三发内部还会再各自错开 800ms)
   sleep 1
 else
   B3_PID=""
-  echo "⛔ B3 gemini 深度 lane 已下线(antigravity 账户 TOS 封禁 2026-06-29)。" > /tmp/r-gem35.md
+  echo "⛔ B3 gemini 深度 lane 已下线(antigravity 账户 TOS 封禁 2026-06-29)。" > /tmp/r-gem35.$TEAM_RUN_TAG.md
 fi
 
 # B4 + B5 + B1 三发(review-3send.sh 内部并行 + 800ms 错开)
@@ -72,10 +74,10 @@ if [ -z "$B3_PID" ]; then
   echo "B3 gemini-3.5-flash 深度: ⛔ 已下线(antigravity 账户 TOS 封禁 2026-06-29) — 四发实际降级为 grok+codex 两发(B1 同步下线)"
   echo "   恢复: 账户申诉成功/换干净 Google 号后 export GEMINI_LANE_ENABLED=1; 详见 memory project_antigravity_team_b3"
 else
-  echo "B3 gemini-3.5-flash 深度: RC=$B3_RC, 输出 $(wc -l </tmp/r-gem35.md 2>/dev/null || echo 0) 行 | 四发总耗时 ≈ $((END-START))s"
-  if [ "$B3_RC" -ne 0 ] || [ ! -s /tmp/r-gem35.md ]; then
+  echo "B3 gemini-3.5-flash 深度: RC=$B3_RC, 输出 $(wc -l </tmp/r-gem35.$TEAM_RUN_TAG.md 2>/dev/null || echo 0) 行 | 四发总耗时 ≈ $((END-START))s"
+  if [ "$B3_RC" -ne 0 ] || [ ! -s /tmp/r-gem35.$TEAM_RUN_TAG.md ]; then
     echo "⚠️ B3 失败/无正文:"
-    tail -5 /tmp/r-gem35.err 2>/dev/null
+    tail -5 /tmp/r-gem35.$TEAM_RUN_TAG.err 2>/dev/null
     echo "   排障: ① pgrep -fl 'xray run' 确认代理在跑 ② grep cloudcode ~/xray/access.log | tail 确认走 Gemini专用-US2"
     echo "        ③ omp models | grep -A2 google-antigravity 确认通道 ④ 详见 memory project_antigravity_team_b3"
     echo "   降级: 四发缺 B3 时按三发(B4+B5+B1)综合, 不阻塞顶级评审"
@@ -84,7 +86,7 @@ fi
 
 echo ""
 echo "===== 四发评审完成 ====="
-echo "产出: /tmp/r-grok.md + /tmp/r-gpt.md + /tmp/r-gem.md + /tmp/r-gem35.md"
+echo "产出: /tmp/r-grok.$TEAM_RUN_TAG.md + /tmp/r-gpt.$TEAM_RUN_TAG.md + /tmp/r-gem.$TEAM_RUN_TAG.md + /tmp/r-gem35.$TEAM_RUN_TAG.md"
 echo "cc 综合标准流程:"
 echo "  1. 四家共识 finding → 最高置信度, 必修"
 echo "  2. 三家共识 → 高置信度, 必修"
