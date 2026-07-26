@@ -239,6 +239,58 @@ lark-cli 有工具 → 必然猜到那上面去。真机翻车过：跑 `lark-cl
    **不能拿层级代替**——部门负责人也能往 org 层发布。存量记录无该字段时按层兜底。
    零计数的归属选项**保留并置灰**（`dim.keepEmpty`），隐藏会让人以为没这个筛选。
 
+## 默认工作方法 / 方法论（v1.13.0）
+
+**载体是两层，改一层要想另一层。**
+
+| 层 | 位置 | 作用 |
+|---|---|---|
+| 正文 13KB | L0 skill `agent-method`，源码 `control-plane/builtin-skills/agent-method/SKILL.md` | 全套方法：目标→计划→切片→回读→自检 + 规则棘轮 + 记忆策略 + 预算熔断 |
+| 摘要 787 字符 | `lib/memory-routing.mjs` 的 `<!-- h-method -->` 托管块 | 不可让渡的几条 + **指向 agent-method 的强制指针** |
+
+- **为什么要摘要那层**：grok skill 是**按 description 匹配触发**的（README 原话
+  "this is how Grok decides to invoke it"），不保证每轮加载；而工作方法要的是缺省
+  行为。托管块进 AGENTS.md（全文入 system prompt）才每轮必生效。删了指针 = 正文
+  可能永远不被加载。
+- **AGENTS.md 每文件 10000 字符是静默截断**，超出吃掉的是**用户自己写在块外的规则**。
+  `test/method-defaults.test.mjs` 锁死预算（<55%）与幂等，改摘要必跑。当前 1782/10000。
+- 摘要与 skill 正文**是同一套话**，改一边要改另一边；界面上的方法卡（`methodCard()`
+  in html.mjs）是第三处，一共三处要对齐。
+- 托管块 marker 必须同时出现在两个地方：`memory-routing.mjs`（定义 + 自愈写入）
+  和 `lib/profile-files.mjs` 的 `MANAGED_MARKERS`（「恢复默认」时保住它）。
+- 用户覆盖路径：`SOUL.md` / `~/.grok/AGENTS.md` / `~/workspace/AGENTS.md`，
+  **用户写的永远压过平台默认**——方法卡上这句话不能删，否则用户以为改不动。
+
+## L0 平台层脱敏（v1.13.0，往共享层放东西前必读）
+
+L0 是**所有租户都挂得到**的。往那儿放 owner 自己的 skill = 直接对全体租户开放。
+
+- 迁移/清理工具：`control-plane/scripts/migrate-l0-desensitize.mjs`，**词表外置**
+  `scrub-terms.local.json`（gitignore）——「要替换掉哪些真名和内部域名」这份清单
+  本身就是敏感数据，进仓等于发布它。抄 `scrub-terms.example.json` 填。
+- 三分法：骨架通用只是样例带内部信息 → 脱敏；**绑定特定表/字段/组织流程 → 下架**
+  （泛化等于重写，泛化后没那张表对租户就是空指导）；**含他人姓名/open_id → 必须
+  下架**，不是"脱敏"的选项。
+- 验收扫描按**整类**内部标识（域名 / 人 / 部门 / 可写资源 id），不是按已知命中
+  ——盯着已知命中会变成打地鼠。当前 7 类 × 29 个 skill 零残留。
+- 改 L0 后必做：① 控制面 `systemctl restart h-control`（**跑着的进程内存里是旧的，
+  下次写盘会把你的改动盖掉**）；② 等执行面 60s 同步（`SKILLS_SYNC_INTERVAL_MS`）；
+  ③ 复扫 `/srv/h-platform/shared/skills/`；④ 核对 owner 的 `~/.grok/skills` 没被动
+  （两套目录，owner 零影响是铁律）。
+- 直接改 store 用 `sudo -u h-control node`，**别用 root**——root 写出来的文件
+  服务自己改不动。
+
+## Skills 正文白盒（v1.13.0）
+
+- `GET /api/skill-content?key=`（用户面）/ `/admin/api/skill-content`（管理台）。
+- 可见性**服务端判**：只放行 platform / 本部门 org / 自己 user 三层，越界 403。
+  验这个分支必须造一条**真实存在但不该看见**的 skill —— 用不存在的 key 测只会走
+  404 那条早退分支，等于没验授权。
+- 正文用 `textContent` 渲染，不用 innerHTML（skill 正文是任意 markdown）。
+- `workspace/BEHAVIORAL_RULES.md` 已进 `PROFILE_FILES`（共 4 项）：棘轮的**产物**
+  也要可见，否则「方法可见、方法产生了什么不可见」白盒只做一半。加减注册表项
+  会被 `method-defaults.test.mjs` 的数量断言拦住，提醒同步确认前端 tab。
+
 ## 分层 skills（L2 个人 / L1 org / L0 平台）
 
 - 沙箱内 grok config skills paths 三层：`~/.grok/skills`(L2 个人) → `/shared/skills`(L0 平台) → `/org/skills`(L1 组织)。
@@ -297,6 +349,8 @@ ssh dev198 'cd ~/feishu-grok-bridge && export PATH=$HOME/.local/node/bin:$PATH &
 # 全量单测（改了命令词/卡片/流式/沙箱必跑；注意用 test/*.test.mjs，传目录 node 会报模块找不到）
 ssh dev198 'cd ~/feishu-grok-bridge && export PATH=$HOME/.local/node/bin:$PATH && node --test test/*.test.mjs 2>&1 | tail -5'
 ssh dev198 'cd ~/feishu-grok-bridge/control-plane && export PATH=$HOME/.local/node/bin:$PATH && node --test test/*.test.mjs 2>&1 | tail -5'
+# 改了方法论摘要 / profile 注册表必跑：AGENTS.md 预算 + 托管块幂等 + 注册表项数
+ssh dev198 'cd ~/feishu-grok-bridge && export PATH=$HOME/.local/node/bin:$PATH && node test/method-defaults.test.mjs'
 ssh dev198 'curl -sS http://127.0.0.1:18765/healthz | python3 -m json.tool'      # connected:true
 curl -s --noproxy '*' https://ai.kidshub.cn/healthz    # 公网即可核对线上 version（v1.9.0 起 healthz 带 version）
 ```
