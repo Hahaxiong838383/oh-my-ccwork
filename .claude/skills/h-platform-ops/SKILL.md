@@ -308,6 +308,10 @@ L0 是**所有租户都挂得到**的。往那儿放 owner 自己的 skill = 直
 - **离线复现链接参数**（不用真调飞书）：`buildQrUrl` 是纯函数，但必须连同
   `registerBegin` 里 `createOnly: wantAppId ? false : opts.createOnly !== false`
   一起复刻——直接喂 `buildQrUrl` 会跳过这层默认值计算，得出反向结论。
+- **验收分层，别笼统说"已验证"**：① 参数计算 → 纯函数离线验；② 飞书真实返回的
+  二维码 URL 有没有 `createOnly` → 真起一条 `/register/api/start` 流验；
+  ③ 落地页真渲染出「选择已有应用」且能选到 → **必须真人扫码，cc 够不到**，
+  交棒时说清"看到什么算过"。2026-07-26 三层已全部通过（③ 由川哥真机确认）。
 
 ## 分层 skills（L2 个人 / L1 org / L0 平台）
 
@@ -357,6 +361,10 @@ device-flow 注册（`lib/feishu-register.mjs`）→ Bot 凭据 AES 存控制面
 | 新扫码账号误上线 | owner 锚定 | 未登记 appId 拒绝启动（`app-registry` ownerAppId 锚定） |
 
 ## 必跑检查
+
+> 涉及真人操作的功能（扫码 / 手机点卡片 / 落地页渲染），cc 验到**服务端产出**为止
+> （参数、URL、日志、DB 状态），最后一厘米交给川哥真机确认——交棒时写明"看到什么
+> 现象算过"。别笼统写"已验证"，那会在将来排障时把人带偏。
 
 ```bash
 # 控制面改了 html.mjs 必跑：script 块语法 + 面板 id 契约 + 归属筛选，已固化成测试
