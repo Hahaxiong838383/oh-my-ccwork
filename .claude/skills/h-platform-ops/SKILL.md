@@ -872,3 +872,39 @@ jq -r 'select(.type=="task_end") | "ok=\(.ok) \(.durationMs)ms in=\(.usage.input
 - 开关：`H_SCHEDULES=0` 停调度器；`H_SCHEDULE_TICK_MS` 调 tick。
 - E2E：写测试任务设 now+4min → 看 fire/delivered 日志 + 飞书卡片，
   **测完必删**（否则每天到点触发）。
+
+## F4 配置快照运维（2026-07-27）
+
+**用户侧**：单聊发「快照」→ 存一版（内容没变则不新建）+ 列表卡，点「⏪ 恢复 vN」
+→ 确认卡 → 结果卡。owner 无此功能（这几个词在 owner 上不消费，照常进引擎）。
+
+**落盘**：`/srv/h-platform/users/<uid>/snapshots/{meta.json, v<N>.tar.gz}`。
+`meta.json` 是索引，**磁盘上的包才是真相**——meta 丢了也能被扫出来（合成条目，
+trigger 显示「磁盘恢复」）。
+
+排障四问一条命令解决：
+```bash
+ssh dev198 'bash -lc "u=<uid>; cat /srv/h-platform/users/$u/snapshots/meta.json; ls -la /srv/h-platform/users/$u/snapshots/"'
+```
+
+- **「用户说配置被改坏了」**：让他发「快照」看列表，选改坏之前的时间点恢复。
+  恢复前系统自动存当前状态，所以恢复错版本也能再恢复回来（结果卡会告诉他撤销
+  点的版本号）。
+- **「恢复失败」**：看日志 `journalctl --user -u feishu-grok-bridge | grep snap`，
+  错误带 code：`BUSY`(有恢复在跑) / `NOT_FOUND` / `EXTRACT`(包损坏) /
+  `VERIFY`(包内容没过白名单校验，可能被手工替换过) / `SWAP`。
+  **卡片文案里出现「配置可能处于不一致状态」= 回滚也失败了**，按卡片指示立刻
+  恢复它给出的备份版本，别先派任务。
+- **发现 `<文件>.old-*` 或 `snapshots/.restore-*` 残留**：说明进程在 swap 中途
+  被 kill。不用手动收拾——下次装配/快照操作的 janitor 会自动回收（目标缺失就
+  把 .old 移回位，目标在就删残留）。要立刻回收就让该用户发一句话触发装配。
+- **验证凭据没进包**（安全巡检）：
+  ```bash
+  ssh dev198 'bash -lc "for f in /srv/h-platform/users/*/snapshots/v*.tar.gz; do tar -tzf $f | grep -qE \"auth.json|kimi-code/config.toml\" && echo \"LEAK: $f\"; done; echo scan-done"'
+  ```
+  应只输出 `scan-done`。
+
+**改白名单时**（`lib/config-snapshot.mjs` 的 `SNAPSHOT_FILES`/`SNAPSHOT_DIRS`）：
+按「引擎 × 配置载体」矩阵过一遍别凭印象——grok 用 `.grok/AGENTS.md`，omp 用
+`workspace/AGENTS.md`，kimi 用 `.kimi-code/AGENTS.md`，三个不同位置。加目录项
+时注意目录根会被 lstat 校验（软链目录整个跳过，这是安全防线不是 bug）。
