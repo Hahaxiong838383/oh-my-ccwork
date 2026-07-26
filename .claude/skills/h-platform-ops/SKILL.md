@@ -681,6 +681,13 @@ BYOS 用户走 `lib/user-friction.mjs`：只有 `ts/kind/ok/sec/promptChars/repl
 - 展示在用户后台「它怎么工作」与管理台上下文查看器，两处都必须写明
   「不保存对话内容」。
 - 测试里故意按老写法把正文塞进事件对象，断言落盘一个字都搜不到。
+- ⚠️ **`workspace/evolve/users/` 必须留在 `.gitignore` 里**（`b81e472` 补的）。
+  当初只想了"文件里写哪些字段"，漏了"这文件最后会去哪"——
+  它落在一个被 git 跟踪的目录下，同目录的 `friction.jsonl` 早就因为
+  「含原始对话摩擦文本」被 ignore，**隔壁就是答案却没继承**。
+  **无正文 ≠ 无隐私**：「谁在什么时候用了多久、问题多长」是租户行为数据。
+  **通则：在这个仓里新建任何落盘目录，都要同步过一遍 `.gitignore`**，
+  并且先 `git log --all -- <路径>` 确认没已经泄出去。
 
 ## 租户维度：tenant_key 怎么来（v1.15.0）
 
@@ -703,6 +710,16 @@ BYOS 用户走 `lib/user-friction.mjs`：只有 `ts/kind/ok/sec/promptChars/repl
 → `runMemorySync` → `pushMirror(uid, org)` → **`pushContext`**
 → 控制面 `/internal/context-report` → 后台页面。
 另有 30 分钟定时器兜底。**所以正常时延约 1.5 分钟，不是半小时。**
+
+2026-07-26 真实流量实测（川哥发消息 → 后台）：
+
+```
+16:42:58  outbound ok            ← 任务收尾
+16:44:28  context report pushed  ← 正好 +90s，debounce
+17:07:41  context report pushed  ← 16:37:41 起的 30 分钟定时器
+```
+
+两条路都在跑。**川哥反馈"白盒更新了、时间正常了"= 全链路闭环。**
 
 排查「后台数据不更新」时按这条链顺着看，三个真踩过的坑：
 
@@ -729,6 +746,9 @@ BYOS 用户走 `lib/user-friction.mjs`：只有 `ts/kind/ok/sec/promptChars/repl
   （旧代码下两者必然同时间）。再用
   `systemctl --user show feishu-grok-bridge -p ActiveEnterTimestamp,NRestarts`
   证明期间没重启，条件才闭合。
+  ⚠️ **但 mtime 只是「最后一次写入」，不是「写了几次」**——
+  想知道推了几次、什么时候推的，必须看 journalctl。
+  用 mtime 判过「debounce 没走」，其实走了，只是被半小时后那次覆盖了。
 
 ### 时间显示
 
