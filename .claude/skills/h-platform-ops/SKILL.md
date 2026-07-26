@@ -291,6 +291,26 @@ L0 是**所有租户都挂得到**的。往那儿放 owner 自己的 skill = 直
   也要可见，否则「方法可见、方法产生了什么不可见」白盒只做一半。加减注册表项
   会被 `method-defaults.test.mjs` 的数量断言拦住，提醒同步确认前端 tab。
 
+## 账号唯一键是 appId，不是 uid（v1.13.4）
+
+同一个 Bot 重扫（补授权 / 再走一次开通）**必须合并进既有账号**，不能新增。
+
+- `uid` 可能是管理员当初在链接里**预分配**的（如 `rayman.chen`），也可能是通用
+  链接按飞书身份**派生**的（`u-<hash>`）—— 对同一个 App 这两者**不相等**。
+  只按 uid 判重，就会凭空多出一个空账号（同 appId、同 openId、无用量无绑定）。
+- `onProvision` 先 `store.list().find(x => x.appId === appId)`，找到就复用它的 uid。
+- **合并写回不许降级**：`upsert` 跳过 `undefined` 但**会写入 `null`**。本轮通讯录
+  没读到时给 `null` 会把已有部门清掉 —— 降级项一律给 `undefined`。
+  已是真名的记录也不许被 Bot 名 / `nameSource='bot'` 覆盖回去。
+- 清重复账号前先校验「appId + openId 同源，且无用量、无订阅绑定」，并备份
+  `users.json`。删账号不可逆。
+- 改这块必跑 `node --test test/provision-merge.test.mjs`。
+
+⚠️ **放宽入口时的通用检查**：v1.13.1 放开「选择已有应用」后才撞出这个洞——
+旧路径下 uid 与 appId 恒同源，反向校验永远用不上。**放宽任何入口，都要把它
+现在能到达的状态列一遍，逐条问「原来是靠什么拦住的」**；被绕过的常常不是显式
+校验，而是「旧路径下这种情况不可能发生」这个隐含前提。
+
 ## 新 Bot 预置了哪些权限与事件（addons，v1.13.3）
 
 `control-plane/lib/feishu-register.mjs` 的 `H_ADDONS` —— **用户扫码确认那一下**
@@ -434,6 +454,8 @@ ssh dev198 'cd ~/feishu-grok-bridge && export PATH=$HOME/.local/node/bin:$PATH &
 ssh dev198 'cd ~/feishu-grok-bridge/control-plane && export PATH=$HOME/.local/node/bin:$PATH && node --test test/register-link.test.mjs'
 # 改显示名/身份回填判定必跑：兜底名要判成待补 + 存量 realName 不能被误标
 ssh dev198 'cd ~/feishu-grok-bridge/control-plane && export PATH=$HOME/.local/node/bin:$PATH && node --test test/identity-name.test.mjs'
+# 改开通/合并逻辑必跑：同 appId 要合并、合并不许把真名部门用量覆盖没
+ssh dev198 'cd ~/feishu-grok-bridge/control-plane && export PATH=$HOME/.local/node/bin:$PATH && node --test test/provision-merge.test.mjs'
 ssh dev198 'curl -sS http://127.0.0.1:18765/healthz | python3 -m json.tool'      # connected:true
 curl -s --noproxy '*' https://ai.kidshub.cn/healthz    # 公网即可核对线上 version（v1.9.0 起 healthz 带 version）
 ```
