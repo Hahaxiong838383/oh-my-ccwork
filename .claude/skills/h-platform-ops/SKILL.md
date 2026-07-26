@@ -696,3 +696,36 @@ BYOS 用户走 `lib/user-friction.mjs`：只有 `ts/kind/ok/sec/promptChars/repl
 - ⚠️ `readUnionId` 依赖哪个 scope 目前**存疑**：注释写 `contact:contact.base:readonly`，
   addons 预置的是 `contact:user.base:readonly`，两者对不上。
   可确证的只有结果（走现行流程的用户 2/2 都拿到了 union_id）。
+
+## 白盒数据的更新链路与新鲜度（v1.15.1）
+
+一条完整的路：用户任务收尾 → `scheduleMemorySync(uid, org)`（debounce 90s）
+→ `runMemorySync` → `pushMirror(uid, org)` → **`pushContext`**
+→ 控制面 `/internal/context-report` → 后台页面。
+另有 30 分钟定时器兜底。**所以正常时延约 1.5 分钟，不是半小时。**
+
+排查「后台数据不更新」时按这条链顺着看，三个真踩过的坑：
+
+- ⚠️ **`pushMirror` 里的 hash 去重曾把尾部的 `pushContext` 一起 return 掉**
+  （v1.15.1 修）。稳态下记忆内容不变 = 去重必命中 = 白盒永远停在旧快照。
+  往这个函数尾部加东西前，先数一遍上面有几个 `return`。
+- ⚠️ **`org` 要一路带下来**：`runMemorySync` 漏传会让报告里「部门共享 skills」
+  恒为 null，与定时器那条路径推的结果**互相打架**，表现为数据反复横跳。
+- ⚠️ **验「去重类修复」必须落在缓存命中那一次**：每次 restart 都会清空
+  `mirrorSent`，重启后第一次推送新旧代码表现完全一样。
+  要拿判别性证据，就得**不重启**地等下一个周期，看是否出现
+  「ctx 有增量、mirror 零增量」。
+
+### 时间显示
+
+页面上**禁止裸切 ISO 串**（`slice(5,19)` / `replace('T',' ')`）——
+服务端存 UTC，川哥在 UTC+8，北京 16:01 会显示成「08:01」，
+真的因此收到过一个"数据不更新"的误报。
+
+统一走 `TIME_JS` 里的三个助手（管理台与用户后台共用）：
+`hAgo()` 相对时间（主显，时区无关）／`hCn()` 北京时间／`hWhen()` 两者拼接。
+用户侧标签列只有 150px，**相对时间放标签、绝对时间放副行**，否则挤成两行。
+快照类页面还要写明更新节奏，否则用户分不清"我看到的旧"还是"它真没动"。
+
+`test/pages.test.mjs` 有断言盯着：页面里不许再出现裸切写法，
+且会把时间助手从渲染结果里抠出来真跑（UTC 08:01→16:01、跨日进位、坏输入）。
