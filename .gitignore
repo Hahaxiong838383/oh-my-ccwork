@@ -353,3 +353,7 @@ AGENTS.md.bak.*
 
 # RTC 参考文档 100MB（2026-07-26 自 HOME 根移入，超 GitHub 单文件限制，不入库）
 4-Assets/*.pdf
+
+# openspace 工具写的本机安装实例 ID(imp_<hash>),可再生、无 secret。
+# 跨机共享语义未确认——若 openspace 需要同一 ID 跟随仓库,删掉这行即可。
+**/.skill_id
