@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>JavisVoice 公网验收</title>
+<body>
+<button id="go">connect (public)</button>
+<pre id="out">idle</pre>
+<script>
+  // 假麦 shim(无麦环境验收用;真实接入不需要这段)
+  navigator.mediaDevices.getUserMedia = async () => {
+    const ctx = new AudioContext({ sampleRate: 48000 });
+    await ctx.resume();
+    const src = new ConstantSourceNode(ctx, { offset: 0 });
+    const dst = ctx.createMediaStreamDestination();
+    src.connect(dst); src.start();
+    return dst.stream;
+  };
+</script>
+<!-- 同事的真实路径:SDK 从公网加载 -->
+<script src="https://voice-api.hahaxiong.cc/sdk/v1.js"></script>
+<script>
+  const lines = [];
+  const log = (k, v) => {
+    lines.push(`${k}: ${v}`);
+    document.getElementById("out").textContent = lines.join("\n");
+  };
+  log("sdk_from_public", typeof window.JavisVoice === "object");
+  document.getElementById("go").onclick = async () => {
+    const apiKey = decodeURIComponent(location.hash.slice(1));
+    if (!apiKey) return log("fatal", "no key in hash");
+    try {
+      const s = await JavisVoice.connect({ apiKey }); // endpoint 默认即公网
+      log("connect", "resolved");
+      s.on("state", (st) => log("state", st));
+      s.on("transcript", (t) => log("transcript", `[${t.role}${t.final ? "/final" : ""}] ${t.text}`));
+      s.on("metrics", (m) => log("metrics", JSON.stringify(m)));
+      window._session = s;
+    } catch (e) {
+      log("error", e.message);
+    }
+  };
+</script>

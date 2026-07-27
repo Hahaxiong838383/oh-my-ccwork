@@ -36,3 +36,4 @@ assets/speakers/
 
 # OS
 .DS_Store
+web/sdk/node_modules/

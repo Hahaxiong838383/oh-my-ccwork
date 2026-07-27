@@ -1,0 +1,45 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>JavisVoice E2E</title>
+<body>
+<button id="go">connect</button>
+<pre id="out">idle</pre>
+<script>
+  // 假麦 shim(沙箱浏览器无真麦):getUserMedia 返回 ConstantSource 静音轨,
+  // 满足 setMicrophoneEnabled 发布要求;下行(agent 音频/字幕)不受影响。
+  navigator.mediaDevices.getUserMedia = async (constraints) => {
+    const ctx = new AudioContext({ sampleRate: 48000 });
+    await ctx.resume();
+    const src = new ConstantSourceNode(ctx, { offset: 0 });
+    const dst = ctx.createMediaStreamDestination();
+    src.connect(dst); src.start();
+    return dst.stream;
+  };
+</script>
+<script src="./dist/v1.js"></script>
+<script>
+  const lines = [];
+  const log = (k, v) => {
+    lines.push(`${k}: ${v}`);
+    document.getElementById("out").textContent = lines.join("\n");
+  };
+  document.getElementById("go").onclick = async () => {
+    const apiKey = decodeURIComponent(location.hash.slice(1));
+    if (!apiKey) return log("fatal", "no key in hash");
+    try {
+      const s = await JavisVoice.connect({
+        apiKey,
+        endpoint: "http://localhost:18930", // ssh 隧道 → 64.90 控制面
+      });
+      log("connect", "resolved");
+      s.on("state", (st) => log("state", st));
+      s.on("warning", (w) => log("warning", w));
+      s.on("transcript", (t) => log("transcript", `[${t.role}${t.final ? "/final" : ""}] ${t.text}`));
+      s.on("metrics", (m) => log("metrics", JSON.stringify(m)));
+      window._session = s;
+      log("state", "connected"); // connect resolve 即已连
+    } catch (e) {
+      log("error", e.message);
+    }
+  };
+</script>

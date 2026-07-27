@@ -553,7 +553,29 @@ def _build_stt(settings: Settings, *, speaker_ring: Any | None = None) -> Any:
             # AI 不回应咳嗽),但需配 volc_stt._emit 里的空 final 告警兜底(见该文件注释)。
             enable_ddc=os.environ.get("VOLC_ASR_ENABLE_DDC", "1") == "1",
         )
-    raise RuntimeError(f"未知 STT_PROVIDER={provider!r}（支持：sherpa/volc）")
+    if provider == "xfyun":
+        # 讯飞大模型实时转写(租户 provider,2026-07-27):凭据优先租户加密存储
+        # (每 job 读,改 key 热生效),缺租户上下文回退 env 直配(本机调试)。
+        import os
+
+        from voice_agent.tenant import load_tenant_credentials
+
+        from .xfyun_stt import XfyunSTT
+
+        creds = load_tenant_credentials("xfyun_stt") or {
+            "app_id": os.environ.get("XFYUN_STT_APP_ID", ""),
+            "access_key_id": os.environ.get("XFYUN_STT_ACCESS_KEY_ID", ""),
+            "access_key_secret": os.environ.get("XFYUN_STT_ACCESS_KEY_SECRET", ""),
+        }
+        missing = [k for k in ("app_id", "access_key_id", "access_key_secret") if not creds.get(k)]
+        if missing:
+            raise RuntimeError(f"xfyun STT 凭据缺失 {missing}:租户未写入且 env 未配")
+        return XfyunSTT(
+            app_id=creds["app_id"],
+            access_key_id=creds["access_key_id"],
+            access_key_secret=creds["access_key_secret"],
+        )
+    raise RuntimeError(f"未知 STT_PROVIDER={provider!r}（支持：sherpa/volc/xfyun）")
 
 
 def _build_llm(
@@ -629,7 +651,28 @@ def _build_llm(
             )
         openai = importlib.import_module("livekit.plugins.openai")
         return openai.LLM(model=model, base_url=base_url, api_key=api_key)
-    raise RuntimeError(f"未知 LLM_PROVIDER={provider!r}（M0 支持：openai/gemini）")
+    if provider == "tenant-brain":
+        # 模式 B(2026-07-27):大脑归租户——LLM 指向同事自己的 OpenAI 兼容端点,
+        # prompt/记忆/工具全在他侧;我们只管耳(STT)嘴(TTS)喉(编排/门控/filler)。
+        # 结构与 myjavis_brain 共脑同构;不配 fallback(他端点的可用性归他)。
+        from voice_agent.tenant import load_tenant_credentials
+
+        from .fast_llm import FastLLM
+
+        creds = load_tenant_credentials("brain")
+        if not creds:
+            raise RuntimeError("tenant-brain: 租户未写入 brain 凭据(POST /v1/credentials)")
+        return FastLLM(
+            model=creds.get("model") or "default",
+            base_url=creds["base_url"],
+            api_key=creds["api_key"],
+            thinking="off",
+            strip_leading_filler=os.environ.get(
+                "LLM_STRIP_LEADING_FILLER", os.environ.get("FILLER_ENABLED", "1")
+            )
+            == "1",
+        )
+    raise RuntimeError(f"未知 LLM_PROVIDER={provider!r}（M0 支持：openai/gemini/tenant-brain）")
 
 
 def _build_tts(settings: Settings) -> Any:
@@ -667,7 +710,30 @@ def _build_tts(settings: Settings) -> Any:
                 retain_format=True, min_sentence_len=min_sent
             ),
         )
-    raise RuntimeError(f"未知 TTS_PROVIDER={provider!r}（支持：voxcpm/volc）")
+    if provider == "xfyun":
+        # 讯飞超拟人合成(租户 provider):凭据同 STT 策略,vcn 随凭据可选字段
+        import os
+
+        from voice_agent.tenant import load_tenant_credentials
+
+        from .xfyun_tts import DEFAULT_VCN, XfyunTTS
+
+        creds = load_tenant_credentials("xfyun_tts") or {
+            "app_id": os.environ.get("XFYUN_TTS_APP_ID", ""),
+            "api_key": os.environ.get("XFYUN_TTS_API_KEY", ""),
+            "api_secret": os.environ.get("XFYUN_TTS_API_SECRET", ""),
+            "vcn": os.environ.get("XFYUN_TTS_VCN", ""),
+        }
+        missing = [k for k in ("app_id", "api_key", "api_secret") if not creds.get(k)]
+        if missing:
+            raise RuntimeError(f"xfyun TTS 凭据缺失 {missing}:租户未写入且 env 未配")
+        return XfyunTTS(
+            app_id=creds["app_id"],
+            api_key=creds["api_key"],
+            api_secret=creds["api_secret"],
+            vcn=creds.get("vcn") or DEFAULT_VCN,
+        )
+    raise RuntimeError(f"未知 TTS_PROVIDER={provider!r}（支持：voxcpm/volc/xfyun）")
 
 
 def _load_filler_bank() -> Any:

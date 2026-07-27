@@ -210,8 +210,16 @@ def run_livekit_worker() -> None:
         # 重连会等到旧 job 随删房退出后才接),空闲时报 0 正常接单。多并发需求
         # (演示多人)临时 WORKER_MAX_JOBS=2+盯内存。
         load_fnc=_capped_load_fnc(max_jobs=int(os.environ.get("WORKER_MAX_JOBS", "1"))),
+        # 健康检查 HTTP 端口(2026-07-27):默认 8081;同机多 worker 实例(租户 worker)
+        # 必须错开,否则第二个实例 bind 失败直接退
+        port=int(os.environ.get("WORKER_HTTP_PORT", "8081")),
     )
-    server.rtc_session(_livekit_entrypoint, agent_name="realtime-voice-agent")
+    # AGENT_NAME env 化(2026-07-27 租户 worker):租户实例各用专属名(javis-<tenant_id>),
+    # 控制面签的 token 按名 dispatch;不设=主 worker 原名,行为不变。
+    server.rtc_session(
+        _livekit_entrypoint,
+        agent_name=os.environ.get("AGENT_NAME", "realtime-voice-agent"),
+    )
     _deprioritize_respawn_procs(server)
     agents.cli.run_app(server)
 

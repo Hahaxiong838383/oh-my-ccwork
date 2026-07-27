@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>JavisVoice SDK smoke</title>
+<body>
+<pre id="out">loading…</pre>
+<script src="./dist/v1.js"></script>
+<script>
+  const lines = [];
+  const log = (k, v) => { lines.push(`${k}: ${v}`); document.getElementById("out").textContent = lines.join("\n"); };
+  log("sdk_loaded", typeof window.JavisVoice === "object");
+  log("connect_fn", typeof JavisVoice.connect === "function");
+  log("version", JavisVoice.version);
+  // 参数校验路径(不真联网)
+  JavisVoice.connect({}).then(
+    () => log("missing_key_check", "FAIL: resolved"),
+    (e) => log("missing_key_check", e.message.includes("apiKey") ? "OK" : "FAIL: " + e.message)
+  );
+  // 坏 endpoint → fetch 报错路径(证明 connect 走到 createSession)
+  JavisVoice.connect({ apiKey: "jv_test", endpoint: "http://127.0.0.1:1" }).then(
+    () => log("bad_endpoint_check", "FAIL: resolved"),
+    (e) => log("bad_endpoint_check", "OK (rejected: " + e.constructor.name + ")")
+  );
+</script>

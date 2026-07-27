@@ -112,6 +112,12 @@
       "port": 3001
     },
     {
+      "name": "sdk-smoke",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8931", "--directory", "/Users/rayman.chen/mycc/2-Projects/realtime-voice-agent/web/sdk"],
+      "port": 8931
+    },
+    {
       "name": "myjavis-web-prodapi",
       "runtimeExecutable": "bash",
       "runtimeArgs": [
