@@ -1048,3 +1048,17 @@ pattern 会匹配到你自己那条 ssh 命令行，把连接杀掉（exit 255�
 - ⚠️ wiki 路径段 `grok/` 是三引擎共用的历史布局名，**改名会破 findMemoryFiles 与镜像映射**。
 - 最后一厘米：kimi 真实任务调 memory_query / 任务后 `memory captured` 日志——只能等用户真实消息验，
   测试别烧用户订阅额度。
+
+## F5 长任务后台句柄（v1.24.0，2026-07-27）
+
+- 语义：user 单聊任务跑超 `H_BG_YIELD_MS`（默认 120s）→ 发「已转后台 · #句柄」卡+释放会话；完成/失败自动推卡（标句柄）；「进度」网关代答（纯读）；「停 #句柄」精确停；重启推「已中断」卡。owner 默认关（`H_BG_YIELD_OWNER=1` 开）；群聊不启用。
+- **红线**：轮询/新消息绝不杀后台任务（penguin 纪律）；停止判定是 **child 级** `hStopRequested`（key 级 flag 会误杀转后台任务——改 runner close 判定时别回退）。
+- 落盘：`<userRoot>/tasks-bg.jsonl`（隐私域）；孤儿恢复幂等（register 没 end → orphaned）。
+- 排障：`journalctl --user -u feishu-grok-bridge | grep "bg yield"` 看转后台；`grep "bg orphaned"` 看重启中断。
+
+## kimi MCP 工具 schema 兼容（2026-07-27 生产事故）
+
+- **症状**：kimi 任务全败 `400 tools.function.parameters is not a valid moonshot flavored json schema (anyOf...)`。
+- **根因**：kimi 把 MCP 工具 schema 原样交 Moonshot API（严格校验）；ai-memory 1.14.0 的 `memory_read_page` root 层 anyOf+type 同级——**一个工具毒死整包 tools**。
+- **修法**：mcp.json 条目带 `enabledTools` 白名单（现为 memory_query/write_page/recent/status 四个）。**给 kimi 挂任何新 MCP server 前**，先对每个工具跑 schema 体检（anyOf 与 type 同级即拒），脚本范式见 bridge 仓提交 7879a87 的描述。
+- 止血口径：手工从用户 `.kimi-code/mcp.json` 删条目即刻恢复（重启会按白名单重注入）。
