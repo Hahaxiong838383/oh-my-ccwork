@@ -9,6 +9,9 @@ struct Summary: Decodable {
     let refreshableAccounts: Int
     let expiredAccounts: Int
     let services: [String: Bool]
+    let xaiUsage: XAIUsage?
+    let xaiUsageStatus: String?
+    let xaiUsageError: String?
 
     enum CodingKeys: String, CodingKey {
         case generatedAt = "generated_at"
@@ -19,6 +22,52 @@ struct Summary: Decodable {
         case refreshableAccounts = "refreshable_accounts"
         case expiredAccounts = "expired_accounts"
         case services
+        case xaiUsage = "xai_usage"
+        case xaiUsageStatus = "xai_usage_status"
+        case xaiUsageError = "xai_usage_error"
+    }
+}
+
+struct XAIUsage: Decodable, Equatable {
+    let windowHours: Int
+    let requests: Int64
+    let successes: Int64
+    let errors: Int64
+    let inputTokens: Int64
+    let outputTokens: Int64
+    let totalTokens: Int64
+    let todayTokens: Int64
+    let dailyTokenLimit: Int64
+    let lastRequestAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case requests, successes, errors
+        case windowHours = "window_hours"
+        case inputTokens = "input_tokens"
+        case outputTokens = "output_tokens"
+        case totalTokens = "total_tokens"
+        case todayTokens = "today_tokens"
+        case dailyTokenLimit = "daily_token_limit"
+        case lastRequestAt = "last_request_at"
+    }
+
+    var successPercent: Double? {
+        guard requests > 0 else { return nil }
+        return Double(successes) / Double(requests) * 100
+    }
+
+    var todayBudgetUsedPercent: Double? {
+        guard dailyTokenLimit > 0 else { return nil }
+        return min(100, max(0, Double(todayTokens) / Double(dailyTokenLimit) * 100))
+    }
+
+    var todayBudgetRemainingTokens: Int64? {
+        guard dailyTokenLimit > 0 else { return nil }
+        return max(0, dailyTokenLimit - todayTokens)
+    }
+
+    var todayBudgetRemainingPercent: Double? {
+        todayBudgetUsedPercent.map { max(0, 100 - $0) }
     }
 }
 

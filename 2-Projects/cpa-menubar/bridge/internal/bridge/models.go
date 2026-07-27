@@ -22,14 +22,30 @@ type Account struct {
 }
 
 type Summary struct {
-	GeneratedAt   time.Time       `json:"generated_at"`
-	AccountsTotal int             `json:"accounts_total"`
-	CodexAccounts int             `json:"codex_accounts"`
-	XAIAccounts   int             `json:"xai_accounts"`
-	K12Accounts   int             `json:"k12_accounts"`
-	Refreshable   int             `json:"refreshable_accounts"`
-	Expired       int             `json:"expired_accounts"`
-	Services      map[string]bool `json:"services"`
+	GeneratedAt    time.Time       `json:"generated_at"`
+	AccountsTotal  int             `json:"accounts_total"`
+	CodexAccounts  int             `json:"codex_accounts"`
+	XAIAccounts    int             `json:"xai_accounts"`
+	K12Accounts    int             `json:"k12_accounts"`
+	Refreshable    int             `json:"refreshable_accounts"`
+	Expired        int             `json:"expired_accounts"`
+	Services       map[string]bool `json:"services"`
+	XAIUsage       *XAIUsage       `json:"xai_usage,omitempty"`
+	XAIUsageStatus string          `json:"xai_usage_status"`
+	XAIUsageError  string          `json:"xai_usage_error,omitempty"`
+}
+
+type XAIUsage struct {
+	WindowHours     int    `json:"window_hours"`
+	Requests        int64  `json:"requests"`
+	Successes       int64  `json:"successes"`
+	Errors          int64  `json:"errors"`
+	InputTokens     int64  `json:"input_tokens"`
+	OutputTokens    int64  `json:"output_tokens"`
+	TotalTokens     int64  `json:"total_tokens"`
+	TodayTokens     int64  `json:"today_tokens"`
+	DailyTokenLimit int64  `json:"daily_token_limit"`
+	LastRequestAt   string `json:"last_request_at,omitempty"`
 }
 
 type AccountsResponse struct {

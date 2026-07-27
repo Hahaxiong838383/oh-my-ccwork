@@ -94,6 +94,95 @@ func TestSanitizeUsageUsesAllowlistAndRemovesSensitiveNestedFields(t *testing.T)
 	}
 }
 
+func TestReadEnvFileValue(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "router.env")
+	if err := os.WriteFile(path, []byte("# ignored\nOTHER=value\nCPA_SMART_ROUTER_KEY='router-secret'\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	value, err := readEnvFileValue(path, "CPA_SMART_ROUTER_KEY")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value != "router-secret" {
+		t.Fatalf("router key = %q", value)
+	}
+}
+
+func TestFetchXAIUsageAggregatesSmartRouterMetrics(t *testing.T) {
+	server := newTestServer(t, t.TempDir())
+	server.cfg.RouterURL = "http://router.test"
+	server.cfg.RouterAPIKey = "router-secret"
+	server.client = &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		if request.Method != http.MethodGet || request.URL.Path != "/debug/summary" || request.URL.Query().Get("hours") != "24" {
+			t.Fatalf("unexpected router request: %s %s", request.Method, request.URL)
+		}
+		if request.Header.Get("Authorization") != "Bearer router-secret" {
+			t.Fatal("router request missing authorization")
+		}
+		return jsonResponse(http.StatusOK, `{
+			"providers":[
+				{"id":"cpa-grok-fast","route_model":"grok-3-mini-fast","upstream_model":"grok-3-mini-fast","tokens_today":1421,"daily_token_limit":1000000},
+				{"id":"codex","route_model":"gpt-5.5","tokens_today":99,"daily_token_limit":1000}
+			],
+			"by_provider":[
+				{"name":"cpa-grok-fast","requests":23,"successes":22,"errors":1,"input_tokens":4522,"output_tokens":3529,"total_tokens":8051,"last_request_at":"2026-07-27T13:20:53+08:00"},
+				{"name":"codex","requests":100,"successes":100,"total_tokens":9000}
+			],
+			"recent_errors":[{"error":"must not be forwarded"}]
+		}`), nil
+	})}
+
+	usage, status, err := server.fetchXAIUsage(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != "ok" {
+		t.Fatalf("status = %q", status)
+	}
+	if usage.Requests != 23 || usage.Successes != 22 || usage.Errors != 1 || usage.TotalTokens != 8051 {
+		t.Fatalf("unexpected usage: %+v", usage)
+	}
+	if usage.TodayTokens != 1421 || usage.DailyTokenLimit != 1000000 {
+		t.Fatalf("unexpected daily usage: %+v", usage)
+	}
+}
+
+func TestSummaryIncludesSanitizedXAIUsage(t *testing.T) {
+	authDir := t.TempDir()
+	writeFixture(t, filepath.Join(authDir, "xai.json"), map[string]any{
+		"type":          "xai",
+		"email":         "person@example.com",
+		"access_token":  "xai-access-secret",
+		"refresh_token": "xai-refresh-secret",
+	})
+	server := newTestServer(t, authDir)
+	server.cfg.RouterURL = "http://router.test"
+	server.cfg.RouterAPIKey = "router-secret"
+	server.client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return jsonResponse(http.StatusOK, `{
+			"providers":[{"id":"xai-main","route_model":"grok-3-mini-fast","tokens_today":10,"daily_token_limit":100}],
+			"by_provider":[{"name":"xai-main","requests":2,"successes":2,"input_tokens":7,"output_tokens":3,"total_tokens":10}]
+		}`), nil
+	})}
+
+	request := httptest.NewRequest(http.MethodGet, "/desktop/v1/summary", nil)
+	request.Header.Set("Authorization", "Bearer "+testDesktopToken)
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("summary returned %d: %s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, forbidden := range []string{"router-secret", "xai-access-secret", "xai-refresh-secret", "person@example.com"} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("summary leaked %q: %s", forbidden, body)
+		}
+	}
+	if !strings.Contains(body, `"xai_usage_status":"ok"`) || !strings.Contains(body, `"total_tokens":10`) {
+		t.Fatalf("summary missing xAI usage: %s", body)
+	}
+}
+
 func TestOAuthSessionRejectsExpiredState(t *testing.T) {
 	server := newTestServer(t, t.TempDir())
 	server.sessions["expired"] = &oauthSession{

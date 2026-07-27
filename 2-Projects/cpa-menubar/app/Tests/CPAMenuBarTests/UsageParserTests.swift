@@ -30,6 +30,29 @@ final class UsageParserTests: XCTestCase {
         XCTAssertEqual(payload.resetCredits?.applicableAvailableCount, 1)
     }
 
+    func testDecodesXAIUsageAndCalculatesRates() throws {
+        let usage = try JSONDecoder().decode(
+            XAIUsage.self,
+            from: Data(#"{"window_hours":24,"requests":23,"successes":22,"errors":1,"input_tokens":4522,"output_tokens":3529,"total_tokens":8051,"today_tokens":1421,"daily_token_limit":1000000,"last_request_at":"2026-07-27T13:20:53+08:00"}"#.utf8)
+        )
+        XCTAssertEqual(usage.totalTokens, 8051)
+        XCTAssertEqual(usage.successPercent ?? 0, 95.652173913, accuracy: 0.000001)
+        XCTAssertEqual(usage.todayBudgetUsedPercent ?? 0, 0.1421, accuracy: 0.000001)
+        XCTAssertEqual(usage.todayBudgetRemainingTokens, 998579)
+        XCTAssertEqual(usage.todayBudgetRemainingPercent ?? 0, 99.8579, accuracy: 0.000001)
+    }
+
+    func testZeroXAIRequestsHasNoSuccessPercentage() throws {
+        let usage = try JSONDecoder().decode(
+            XAIUsage.self,
+            from: Data(#"{"window_hours":24,"requests":0,"successes":0,"errors":0,"input_tokens":0,"output_tokens":0,"total_tokens":0,"today_tokens":0,"daily_token_limit":0}"#.utf8)
+        )
+        XCTAssertNil(usage.successPercent)
+        XCTAssertNil(usage.todayBudgetUsedPercent)
+        XCTAssertNil(usage.todayBudgetRemainingTokens)
+        XCTAssertNil(usage.todayBudgetRemainingPercent)
+    }
+
     private func decode(_ json: String) throws -> UsagePayload {
         try JSONDecoder().decode(UsagePayload.self, from: Data(json.utf8))
     }

@@ -12,6 +12,7 @@ struct MenuContentView: View {
                 settings
             } else {
                 serviceStatus
+                xaiUsageCard
                 Divider()
                 accounts
                 footer
@@ -102,6 +103,17 @@ struct MenuContentView: View {
         }
     }
 
+    @ViewBuilder
+    private var xaiUsageCard: some View {
+        if let summary = model.summary, summary.xaiAccounts > 0 {
+            XAIUsageCard(
+                usage: summary.xaiUsage,
+                status: summary.xaiUsageStatus,
+                error: summary.xaiUsageError
+            )
+        }
+    }
+
     private var footer: some View {
         HStack {
             Button {
@@ -158,6 +170,71 @@ struct MenuContentView: View {
         Label(title, systemImage: healthy == true ? "checkmark.circle.fill" : "xmark.circle.fill")
             .font(.caption.bold())
             .foregroundStyle(healthy == true ? .green : .red)
+    }
+}
+
+private struct XAIUsageCard: View {
+    let usage: XAIUsage?
+    let status: String?
+    let error: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("xAI · CPA 聚合用量", systemImage: "bolt.horizontal.circle.fill")
+                    .font(.subheadline.bold())
+                Spacer()
+                Text("近 \(usage?.windowHours ?? 24) 小时")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            if status == "ok", let usage {
+                HStack(spacing: 16) {
+                    metric("请求", value: UsageFormatting.integer(usage.requests))
+                    metric("成功率", value: UsageFormatting.percent(usage.successPercent))
+                    metric("Token", value: UsageFormatting.integer(usage.totalTokens))
+                }
+
+                if let remainingPercent = usage.todayBudgetRemainingPercent,
+                   let remainingTokens = usage.todayBudgetRemainingTokens {
+                    HStack(spacing: 8) {
+                        Text("今日剩余")
+                            .font(.caption)
+                            .frame(width: 52, alignment: .leading)
+                        ProgressView(value: remainingPercent, total: 100)
+                            .tint(remainingPercent <= 10 ? .red : (remainingPercent <= 35 ? .orange : .cyan))
+                        Text(UsageFormatting.percent(remainingPercent))
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    Text("剩余 \(UsageFormatting.integer(remainingTokens)) / \(UsageFormatting.integer(usage.dailyTokenLimit)) · 已用 \(UsageFormatting.integer(usage.todayTokens))")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("输入 \(UsageFormatting.integer(usage.inputTokens)) · 输出 \(UsageFormatting.integer(usage.outputTokens)) · 最近 \(UsageFormatting.timestamp(usage.lastRequestAt))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(error ?? "CPA 暂时无法读取 xAI 用量")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(10)
+        .background(Color.cyan.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func metric(_ title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.caption.monospacedDigit().bold())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

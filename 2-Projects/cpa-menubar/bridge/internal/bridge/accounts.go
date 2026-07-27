@@ -45,7 +45,7 @@ type jwtClaims struct {
 	} `json:"https://api.openai.com/auth"`
 }
 
-func (s *Server) handleSummary(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleSummary(w http.ResponseWriter, r *http.Request) {
 	files, err := s.loadAuthFiles()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to read account status")
@@ -76,6 +76,16 @@ func (s *Server) handleSummary(w http.ResponseWriter, _ *http.Request) {
 		if expired(file.Expired, file.Claims.Exp, now) {
 			summary.Expired++
 		}
+	}
+	if summary.XAIAccounts > 0 {
+		usage, status, usageErr := s.fetchXAIUsage(r.Context())
+		summary.XAIUsage = usage
+		summary.XAIUsageStatus = status
+		if usageErr != nil {
+			summary.XAIUsageError = publicRouterUsageError(usageErr)
+		}
+	} else {
+		summary.XAIUsageStatus = "not_applicable"
 	}
 	writeJSON(w, http.StatusOK, summary)
 }

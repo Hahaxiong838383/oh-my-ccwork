@@ -6,6 +6,7 @@ macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 
 - 显示 CLIProxyAPI 与 Smart Router 在线状态。
 - 显示 Codex/XAI 账号数量、脱敏邮箱、套餐、每周剩余额度和重置倒计时；Codex 当前无 5 小时限制，因此隐藏短周期进度条。
+- 显示 xAI 经 CPA Smart Router 的近 24 小时请求数、成功率、输入/输出/总 Token，以及今日路由预算；这是 CPA 聚合统计，不冒充 xAI 官方余额。
 - 显示充值余额与重置卡数量；仅当官方接口返回可用且适用的重置卡时，才允许经过二次确认消耗 1 张。
 - 标记账号是否具备 refresh token；CLIProxyAPI 继续负责正常的 access token 自动刷新与调度。
 - 从菜单栏启动 Codex PKCE 登录，授权结果直接写入生产 auth-dir。
@@ -27,6 +28,7 @@ smart-api.hahaxiong.top / nginx
 cpa-desktop-bridge :8330
   ├─ 只读扫描 /root/.cli-proxy-api/*.json
   ├─ 使用 access token 查询 wham/usage
+  ├─ 使用 /etc/cpa-smart-router.env 中的现有本地访问密钥只读查询 /debug/summary
   └─ 仅在 OAuth 完成时原子写入对应 auth JSON
 ```
 

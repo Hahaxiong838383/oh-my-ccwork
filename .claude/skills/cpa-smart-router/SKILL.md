@@ -80,9 +80,12 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - macOS App 只通过 `https://smart-api.hahaxiong.top/desktop/v1/*` 访问 Bridge；Desktop Token 只存远端 `0600` 文件与本机 Keychain。
 - 账号列表返回脱敏邮箱、套餐、是否可刷新、周额度、`credits` 充值余额和 `rate_limit_reset_credits` 重置卡状态；Bridge 必须继续使用顶层白名单并递归删除敏感字段。
 - Codex 当前没有 5 小时限制，界面不显示 5 小时进度条；`primary_window` 现在也可能是周窗口，必须按 `limit_window_seconds` 分类，不能按 primary/secondary 槽位命名。
+- xAI 用量只读来源是 Smart Router `GET /debug/summary?hours=24`；Bridge 从 `/etc/cpa-smart-router.env` 读取既有本机密钥，但接口响应、日志和错误文案不得返回密钥、Token、上游响应正文或内部错误正文。
+- xAI 数据是 provider 级 CPA 聚合，不能归因到某个 OAuth 账号；`daily_token_limit - tokens_today` 只能称“路由日预算剩余”，禁止标成 xAI 官方余额、官方配额或账号剩余量。
 - 重置卡消费入口为 `POST /desktop/v1/accounts/{id}/reset-credit`。这是不可逆写操作，必须同时满足 App 二次确认、Bridge 固定确认词 `CONSUME_RESET_CREDIT`、消费前实时 `available_count > 0` 与 `applicable_available_count > 0` 校验。
 - AI Ops、Grok、定时任务和自动刷新只能读取余额/卡数，禁止自动消费重置卡；卡数、余额属于实时状态，不得把历史快照当成当前结论。
 - 部署新 Bridge 二进制后必须显式 `systemctl restart cpa-desktop-bridge.service`；`systemctl enable --now` 不会重启已运行服务。验收要同时检查进程启动时间、新字段和接口行为。
+- 覆盖安装新版 macOS App 前必须先结束旧 `CPAMenuBar` 进程，再复制 Bundle、启动并核对新进程启动时间；否则旧进程可能继续运行被替换前的代码。
 
 验证命令：
 

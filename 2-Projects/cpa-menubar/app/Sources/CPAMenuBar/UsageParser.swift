@@ -70,4 +70,13 @@ enum UsageFormatting {
         if hours > 0 { return "\(hours)小时 \(minutes)分" }
         return "\(minutes)分钟"
     }
+
+    static func integer(_ value: Int64) -> String {
+        value.formatted(.number.grouping(.automatic))
+    }
+
+    static func timestamp(_ value: String?) -> String {
+        guard let value, let date = ISO8601DateFormatter().date(from: value) else { return "--" }
+        return date.formatted(date: .omitted, time: .shortened)
+    }
 }
