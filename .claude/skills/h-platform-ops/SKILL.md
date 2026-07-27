@@ -1087,3 +1087,19 @@ pattern 会匹配到你自己那条 ssh 命令行，把连接杀掉（exit 255�
     活性看门狗（候选方案，见项目记忆）。
 - 杀卡死引擎进程：`ps -eo pid,etime,args | grep bwrap` 找 pid 后 `kill -TERM <pid>`
   （**绝不 pkill -f**）；被杀的转后台任务会给用户发失败卡=正常收尾回执。
+
+## F5.2 后台任务送达契约（v1.25.1，2026-07-27）
+
+**契约（红线）**：转过后台（bgHandle 非空）的任务，完成/失败结果**必须发新卡到
+会话底部**（sendReply/sendCard 新消息=有推送通知）；旧流式卡只封口指路「结果见
+下方 ⬇️」。禁止把 streamCard.finish 的原地更新当送达——旧卡在 N 屏之上，改完
+用户看不见（#86a6 kimi 901s 超时真机翻车「感觉没有结果输出」）。
+
+- 面板状态：`ended` + `result.ok === false` → 「⚠️ 已结束（失败）」，不许顶绿勾。
+- 非流式失败卡带 partialOutput（失败也别让用户白等；sendCard 自带 9000 字符分片）。
+- 排「用户说没收到结果」：`grep <句柄> logs/bridge.log` 看有无 `outbound ok`/
+  `handle error` 后的新消息发送；再查 `tasks-bg.jsonl` 的 bg_result（digest 在不在）。
+  digest 在而聊天没新卡 = 送达通道断（本节 bug 的特征指纹）。
+- 尉鸿轩类「查通讯录」任务挂 15 分钟到超时 = kimi 在等 lark-cli 设备码授权（digest
+  里有 open.feishu.cn/page/cli 授权链接）。F5.2 后链接会送达，用户授权一次即通；
+  再挂死考虑 lark-cli 预授权或缩短设备码等待（观察项 A4）。
