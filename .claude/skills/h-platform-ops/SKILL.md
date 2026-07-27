@@ -1072,3 +1072,18 @@ pattern 会匹配到你自己那条 ssh 命令行，把连接杀掉（exit 255�
   （grok=memory-routing h-method / kimi·omp=omp-harness h-method / L0 agent-method skill，
   **三处同一套话，改一处同步三处**）。
 - 停止类消息绝不入队是红线；「停」相关改动必须过 test/f5-stop-semantics.test.mjs。
+
+### F5.1 按钮化 + 寒暄/脏会话排障（2026-07-27 下午）
+
+- 加卡片按钮：动 `PANEL_COMMANDS`（feishu-card.mjs），**别动 COMMANDS**——跟随气泡
+  平台上限 3 个，FOLLOW_UP_CONTENTS 测试锁死；回调三分支（bg_progress/bg_stop/bg_recall）
+  在 bridge card.action.trigger，bg_stop fail-closed。
+- 用户报「简单消息卡很久/被转后台」排查顺序：
+  ① `journalctl | grep "grok start"` 看 mode——寒暄落 full = classifyMode 词表缺词
+    （grok-session.mjs，改词表必配 classify-mode.test 回归锁，动作词底线不动）；
+  ② mode 对但仍卡 → 看同行 `size=`——**resume 脏会话**（含引擎自身 background 任务
+    残留的会话，resume 后零日志卡死）。处置：让用户点【新会话】轮换（或杀进程+查
+    `.session-map.json`）。short 已免疫（一次性会话）；full 再现就上 resume 首轮
+    活性看门狗（候选方案，见项目记忆）。
+- 杀卡死引擎进程：`ps -eo pid,etime,args | grep bwrap` 找 pid 后 `kill -TERM <pid>`
+  （**绝不 pkill -f**）；被杀的转后台任务会给用户发失败卡=正常收尾回执。
