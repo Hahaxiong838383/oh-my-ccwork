@@ -1,0 +1,52 @@
+#!/bin/zsh
+set -euo pipefail
+
+ROOT="${0:A:h:h}"
+REMOTE="${1:-aliyun-jp}"
+BUILD_DIR="$(mktemp -d /tmp/cpa-desktop-bridge.XXXXXX)"
+trap 'rm -rf "$BUILD_DIR"' EXIT
+
+cd "$ROOT"
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o "$BUILD_DIR/cpa-desktop-bridge" ./cmd/cpa-desktop-bridge
+scp "$BUILD_DIR/cpa-desktop-bridge" "$ROOT/deploy/cpa-desktop-bridge.service" "$ROOT/deploy/nginx-location.conf" "$REMOTE:/tmp/"
+
+ssh "$REMOTE" 'bash -s' <<'REMOTE_SCRIPT'
+set -euo pipefail
+install -d -m 0755 /opt/cpa-desktop-bridge /etc/nginx/snippets
+install -m 0755 /tmp/cpa-desktop-bridge /opt/cpa-desktop-bridge/cpa-desktop-bridge
+install -m 0644 /tmp/cpa-desktop-bridge.service /etc/systemd/system/cpa-desktop-bridge.service
+install -m 0644 /tmp/nginx-location.conf /etc/nginx/snippets/cpa-desktop-bridge.conf
+
+if [ ! -s /etc/cpa-desktop-bridge.token ]; then
+    umask 077
+    openssl rand -base64 48 | tr -d '\n' > /etc/cpa-desktop-bridge.token
+fi
+chmod 0600 /etc/cpa-desktop-bridge.token
+
+python3 - <<'PY'
+from pathlib import Path
+
+path = Path('/etc/nginx/sites-enabled/smart-api')
+text = path.read_text()
+include = '    include /etc/nginx/snippets/cpa-desktop-bridge.conf;\n'
+if include not in text:
+    marker = '    client_max_body_size 32m;\n'
+    if marker not in text:
+        raise SystemExit('smart-api nginx marker not found')
+    backup = path.with_name(path.name + '.before-cpa-desktop-bridge')
+    if not backup.exists():
+        backup.write_text(text)
+    text = text.replace(marker, marker + '\n' + include, 1)
+    path.write_text(text)
+PY
+
+systemctl daemon-reload
+systemctl enable --now cpa-desktop-bridge.service
+nginx -t
+systemctl reload nginx
+curl --fail --silent http://127.0.0.1:8330/healthz >/dev/null
+systemctl is-active --quiet cpa-desktop-bridge.service
+rm -f /tmp/cpa-desktop-bridge /tmp/cpa-desktop-bridge.service /tmp/nginx-location.conf
+REMOTE_SCRIPT
+
+echo "CPA Desktop Bridge deployed to $REMOTE"

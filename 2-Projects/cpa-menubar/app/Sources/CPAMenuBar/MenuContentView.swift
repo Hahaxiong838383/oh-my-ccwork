@@ -1,0 +1,188 @@
+import SwiftUI
+
+struct MenuContentView: View {
+    @ObservedObject var model: AppModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            header
+            if model.showSettings || !model.isConfigured {
+                settings
+            } else {
+                serviceStatus
+                Divider()
+                accounts
+                footer
+            }
+        }
+        .padding(16)
+        .frame(width: 380)
+    }
+
+    private var header: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("CPA 状态")
+                    .font(.headline)
+                Text(model.statusMessage ?? "本机安全读取远端用量")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if model.isRefreshing {
+                ProgressView().controlSize(.small)
+            }
+            Button {
+                model.showSettings.toggle()
+            } label: {
+                Image(systemName: model.showSettings ? "xmark" : "gearshape")
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var serviceStatus: some View {
+        HStack(spacing: 8) {
+            serviceBadge("CPA", healthy: model.summary?.services["cliproxy"])
+            serviceBadge("Router", healthy: model.summary?.services["router"])
+            Spacer()
+            let codexCount = model.summary?.codexAccounts ?? model.accounts.filter { $0.provider == "codex" }.count
+            let k12Count = model.summary?.k12Accounts ?? model.accounts.filter(\.isK12).count
+            Text("\(codexCount) 个 Codex · \(k12Count) 个 K12")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var accounts: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if model.accounts.isEmpty {
+                ContentUnavailableView("暂无账号", systemImage: "person.crop.circle.badge.questionmark")
+                    .frame(maxWidth: .infinity, minHeight: 100)
+            } else {
+                ForEach(model.accounts) { account in
+                    AccountRow(account: account)
+                }
+            }
+            if let error = model.errorMessage {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
+            }
+        }
+    }
+
+    private var footer: some View {
+        HStack {
+            Button {
+                Task { await model.refresh() }
+            } label: {
+                Label("刷新", systemImage: "arrow.clockwise")
+            }
+            .disabled(model.isRefreshing)
+
+            Button(action: model.addCodexAuthorization) {
+                Label(model.isAuthorizing ? "等待授权" : "添加 Codex 授权", systemImage: "person.badge.plus")
+            }
+            .disabled(model.isAuthorizing)
+
+            Spacer()
+            Button("退出") { NSApplication.shared.terminate(nil) }
+        }
+        .buttonStyle(.borderless)
+    }
+
+    private var settings: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("连接设置").font(.subheadline.bold())
+            TextField("Bridge 地址", text: $model.endpoint)
+                .textFieldStyle(.roundedBorder)
+            SecureField(model.isConfigured ? "Desktop Token（留空不修改）" : "Desktop Token", text: $model.tokenInput)
+                .textFieldStyle(.roundedBorder)
+            HStack {
+                Text("自动刷新")
+                Slider(value: $model.refreshMinutes, in: 1...30, step: 1)
+                Text("\(Int(model.refreshMinutes)) 分")
+                    .monospacedDigit()
+                    .frame(width: 42, alignment: .trailing)
+            }
+            Toggle("开机自动启动", isOn: $model.launchAtLogin)
+            if let error = model.errorMessage {
+                Text(error).font(.caption).foregroundStyle(.red).textSelection(.enabled)
+            }
+            HStack {
+                Button("保存并连接", action: model.saveSettings)
+                    .buttonStyle(.borderedProminent)
+                if model.isConfigured {
+                    Button("清除本机 Token", role: .destructive, action: model.clearToken)
+                }
+                Spacer()
+                Button("退出") { NSApplication.shared.terminate(nil) }
+            }
+        }
+    }
+
+    private func serviceBadge(_ title: String, healthy: Bool?) -> some View {
+        Label(title, systemImage: healthy == true ? "checkmark.circle.fill" : "xmark.circle.fill")
+            .font(.caption.bold())
+            .foregroundStyle(healthy == true ? .green : .red)
+    }
+}
+
+private struct AccountRow: View {
+    let account: Account
+
+    var body: some View {
+        let usage = account.usageSnapshot
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(account.emailMasked).font(.subheadline.bold())
+                    Text(account.isK12 ? "K12" : (usage.planType ?? account.plan ?? account.provider).uppercased())
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if account.hasRefreshToken {
+                    Label("可自动刷新", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.caption2)
+                        .foregroundStyle(.green)
+                }
+            }
+
+            if account.usageStatus == "ok" {
+                quotaRow("5 小时", remaining: usage.primaryRemainingPercent, reset: usage.primaryResetSeconds)
+                quotaRow("每周", remaining: usage.weeklyRemainingPercent, reset: usage.weeklyResetSeconds)
+            } else {
+                Text(account.usageError ?? (account.disabled ? "账号已停用" : "暂时无法读取用量"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(10)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func quotaRow(_ title: String, remaining: Double?, reset: TimeInterval?) -> some View {
+        HStack(spacing: 8) {
+            Text(title).font(.caption).frame(width: 42, alignment: .leading)
+            ProgressView(value: remaining ?? 0, total: 100)
+                .tint(color(for: remaining))
+            Text(UsageFormatting.percent(remaining))
+                .font(.caption.monospacedDigit().bold())
+                .frame(width: 38, alignment: .trailing)
+            Text(UsageFormatting.duration(reset))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(width: 76, alignment: .trailing)
+        }
+    }
+
+    private func color(for remaining: Double?) -> Color {
+        guard let remaining else { return .gray }
+        if remaining <= 10 { return .red }
+        if remaining <= 35 { return .orange }
+        return .green
+    }
+}

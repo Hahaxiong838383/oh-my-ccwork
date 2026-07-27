@@ -1,0 +1,4 @@
+app/.build/
+app/dist/
+bridge/cpa-desktop-bridge
+.DS_Store
