@@ -989,3 +989,37 @@ ssh dev198 'cd ~/feishu-grok-bridge && node scripts/evolve/eval-bench.mjs --runs
 
 **加 case 前先做两件事**（否则白做）：① grep 整个 `workspace/leader/` 确认
 探针信息不在别处；② 确认它不是模型凭常识就能答对的东西。
+
+## 用户报「发了消息没反应」怎么查（2026-07-27 路宁实录）
+
+**别先猜并行度/历史大小**，这两个当时都被数据推翻了。按顺序查：
+
+```bash
+ssh dev198 'curl -s --noproxy "*" http://127.0.0.1:18765/healthz' | python3 -m json.tool | head -30
+```
+
+- `queueStats.activeGlobal` **远小于** `maxParallel` → 并行度不是瓶颈（同会话
+  串行是 by design，调 maxParallel 一条都不会快）
+- `depths` 全堆在一个 key → 该用户连发了多条，在排自己的队
+
+**真正常见的根因是卡片发不出去**，日志里找：
+
+```bash
+ssh dev198 'journalctl --user -u feishu-grok-bridge --since "30 min ago" --no-pager | grep -B30 "sendCard retry\|give-up" | grep -iE "code:|msg:|ErrMsg"'
+```
+
+飞书卡片被拒 = **整条消息发不出去**（不只是某个元素显示异常），入队提示卡与
+执行心跳卡会一并消失，用户端就是长时间死寂。已知触发源：回复里的 markdown
+图片引用（`230099 / ErrCode 11310`，已在 normalizeForFeishuCard 修掉）。
+
+**日志现在带业务码**（`http=400 code=230099 msg=...`），不再是光秃秃的
+「status code 400」。看到 `give-up (not retryable)` 是正常行为——内容类 4xx
+首次即降级，不再白等三轮退避。
+
+**重启验证认 uptime 不认命令退出码**：
+```bash
+ssh dev198 'curl -s --noproxy "*" http://127.0.0.1:18765/healthz' | python3 -c "import sys,json;print('uptime', int(json.load(sys.stdin)['uptimeSec']))"
+```
+uptime 没归零就是没重启成。另：**别在 ssh 命令里写 `pkill -f <脚本名>`**——
+pattern 会匹配到你自己那条 ssh 命令行，把连接杀掉（exit 255），重启看似执行
+实则没跑。用 `pgrep -af` 查真 PID 再按 PID kill。
