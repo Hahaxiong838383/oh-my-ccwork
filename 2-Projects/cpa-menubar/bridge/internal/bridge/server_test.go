@@ -186,6 +186,94 @@ func TestReadLimitedRejectsOversizedResponses(t *testing.T) {
 	}
 }
 
+func TestResetCreditRequiresExplicitConfirmation(t *testing.T) {
+	authDir := t.TempDir()
+	writeFixture(t, filepath.Join(authDir, "codex.json"), map[string]any{
+		"type":         "codex",
+		"account_id":   "acct-1",
+		"access_token": "access",
+	})
+	server := newTestServer(t, authDir)
+	server.client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		t.Fatal("reset endpoint contacted without explicit confirmation")
+		return nil, nil
+	})}
+
+	request := httptest.NewRequest(http.MethodPost, "/desktop/v1/accounts/"+accountPublicID("codex.json")+"/reset-credit", strings.NewReader(`{}`))
+	request.Header.Set("Authorization", "Bearer "+testDesktopToken)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("missing reset confirmation returned %d", response.Code)
+	}
+}
+
+func TestResetCreditRejectsWhenNoApplicableCreditExists(t *testing.T) {
+	authDir := t.TempDir()
+	writeFixture(t, filepath.Join(authDir, "codex.json"), map[string]any{
+		"type":         "codex",
+		"account_id":   "acct-1",
+		"access_token": "access",
+	})
+	server := newTestServer(t, authDir)
+	server.client = &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		if request.Method != http.MethodGet {
+			t.Fatalf("unexpected write request when no applicable credit exists: %s", request.Method)
+		}
+		return jsonResponse(http.StatusOK, `{"rate_limit_reset_credits":{"available_count":2,"applicable_available_count":0}}`), nil
+	})}
+
+	response := performResetRequest(server, accountPublicID("codex.json"))
+	if response.Code != http.StatusConflict {
+		t.Fatalf("unavailable reset credit returned %d: %s", response.Code, response.Body.String())
+	}
+}
+
+func TestResetCreditConsumesOneApplicableCredit(t *testing.T) {
+	authDir := t.TempDir()
+	writeFixture(t, filepath.Join(authDir, "codex.json"), map[string]any{
+		"type":         "codex",
+		"account_id":   "acct-1",
+		"access_token": "access",
+	})
+	server := newTestServer(t, authDir)
+	requests := 0
+	server.client = &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		requests++
+		switch requests {
+		case 1:
+			if request.Method != http.MethodGet {
+				t.Fatalf("first request method = %s", request.Method)
+			}
+			return jsonResponse(http.StatusOK, `{"rate_limit_reset_credits":{"available_count":2,"applicable_available_count":1}}`), nil
+		case 2:
+			if request.Method != http.MethodPost || request.URL.String() != codexResetCreditsURL {
+				t.Fatalf("unexpected reset request: %s %s", request.Method, request.URL)
+			}
+			var body map[string]string
+			if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			if len(body["redeem_request_id"]) != 36 {
+				t.Fatalf("invalid redeem request id: %q", body["redeem_request_id"])
+			}
+			return jsonResponse(http.StatusOK, `{}`), nil
+		default:
+			t.Fatalf("unexpected request count: %d", requests)
+			return nil, nil
+		}
+	})}
+
+	response := performResetRequest(server, accountPublicID("codex.json"))
+	if response.Code != http.StatusOK {
+		t.Fatalf("reset returned %d: %s", response.Code, response.Body.String())
+	}
+	if requests != 2 {
+		t.Fatalf("request count = %d, want 2", requests)
+	}
+}
+
 func newTestServer(t *testing.T, authDir string) *Server {
 	t.Helper()
 	server, err := NewServer(Config{
@@ -210,6 +298,27 @@ func writeFixture(t *testing.T, path string, value any) {
 	}
 	if err = os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func performResetRequest(server *Server, accountID string) *httptest.ResponseRecorder {
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/desktop/v1/accounts/"+accountID+"/reset-credit",
+		strings.NewReader(`{"confirm":"CONSUME_RESET_CREDIT"}`),
+	)
+	request.Header.Set("Authorization", "Bearer "+testDesktopToken)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	return response
+}
+
+func jsonResponse(status int, body string) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Body:       io.NopCloser(strings.NewReader(body)),
+		Header:     make(http.Header),
 	}
 }
 

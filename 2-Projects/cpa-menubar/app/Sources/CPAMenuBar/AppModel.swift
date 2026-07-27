@@ -8,6 +8,7 @@ final class AppModel: ObservableObject {
     @Published var accounts: [Account] = []
     @Published var isRefreshing = false
     @Published var isAuthorizing = false
+    @Published var resettingAccountID: String?
     @Published var errorMessage: String?
     @Published var statusMessage: String?
     @Published var showSettings = false
@@ -47,9 +48,7 @@ final class AppModel: ObservableObject {
     }
 
     var minimumRemaining: Double? {
-        accounts.flatMap { account in
-            [account.usageSnapshot.primaryRemainingPercent, account.usageSnapshot.weeklyRemainingPercent].compactMap { $0 }
-        }.min()
+        accounts.compactMap { $0.usageSnapshot.weeklyRemainingPercent }.min()
     }
 
     var menuLabel: String {
@@ -167,6 +166,24 @@ final class AppModel: ObservableObject {
                 isAuthorizing = false
                 errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    func consumeResetCredit(for account: Account) async {
+        guard resettingAccountID == nil else { return }
+        guard let client = makeClient() else {
+            showSettings = true
+            return
+        }
+        resettingAccountID = account.id
+        errorMessage = nil
+        defer { resettingAccountID = nil }
+        do {
+            _ = try await client.consumeResetCredit(accountID: account.id)
+            statusMessage = "已使用 1 张重置卡：\(account.emailMasked)"
+            await refresh()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 

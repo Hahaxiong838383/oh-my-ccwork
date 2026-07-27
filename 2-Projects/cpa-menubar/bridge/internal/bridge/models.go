@@ -56,3 +56,12 @@ type OAuthStatusResponse struct {
 	Message       string `json:"message,omitempty"`
 	AccountMasked string `json:"account_masked,omitempty"`
 }
+
+type ResetCreditRequest struct {
+	Confirm string `json:"confirm"`
+}
+
+type ResetCreditResponse struct {
+	AccountID string `json:"account_id"`
+	Status    string `json:"status"`
+}

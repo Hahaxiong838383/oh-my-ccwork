@@ -3,6 +3,7 @@ import SwiftUI
 struct MenuContentView: View {
     @ObservedObject var model: AppModel
     @State private var showTokenClearConfirmation = false
+    @State private var resetAccount: Account?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -23,6 +24,23 @@ struct MenuContentView: View {
             Button("清除 Token", role: .destructive, action: model.clearToken)
         } message: {
             Text("清除后应用将立即断开 CPA，重新连接需要再次输入 Desktop Token。")
+        }
+        .confirmationDialog(
+            "使用 1 张重置卡？",
+            isPresented: Binding(
+                get: { resetAccount != nil },
+                set: { if !$0 { resetAccount = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("取消", role: .cancel) { resetAccount = nil }
+            Button("确认使用", role: .destructive) {
+                guard let account = resetAccount else { return }
+                resetAccount = nil
+                Task { await model.consumeResetCredit(for: account) }
+            }
+        } message: {
+            Text("这会消耗 1 张重置卡并重置该账号当前适用的短周期额度，操作不可撤销。")
         }
     }
 
@@ -68,7 +86,11 @@ struct MenuContentView: View {
                     .frame(maxWidth: .infinity, minHeight: 100)
             } else {
                 ForEach(model.accounts) { account in
-                    AccountRow(account: account)
+                    AccountRow(
+                        account: account,
+                        isResetting: model.resettingAccountID == account.id,
+                        onRequestReset: { resetAccount = account }
+                    )
                 }
             }
             if let error = model.errorMessage {
@@ -141,6 +163,8 @@ struct MenuContentView: View {
 
 private struct AccountRow: View {
     let account: Account
+    let isResetting: Bool
+    let onRequestReset: () -> Void
 
     var body: some View {
         let usage = account.usageSnapshot
@@ -161,8 +185,8 @@ private struct AccountRow: View {
             }
 
             if account.usageStatus == "ok" {
-                quotaRow("5 小时", remaining: usage.primaryRemainingPercent, reset: usage.primaryResetSeconds)
                 quotaRow("每周", remaining: usage.weeklyRemainingPercent, reset: usage.weeklyResetSeconds)
+                creditsRow
             } else {
                 Text(account.usageError ?? (account.disabled ? "账号已停用" : "暂时无法读取用量"))
                     .font(.caption)
@@ -171,6 +195,27 @@ private struct AccountRow: View {
         }
         .padding(10)
         .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var creditsRow: some View {
+        HStack(spacing: 10) {
+            if let credits = account.usage?.credits {
+                let balance = credits.unlimited ? "不限" : (credits.balance ?? "0")
+                Text("充值余额 \(balance)")
+                    .font(.caption2)
+                    .foregroundStyle(credits.overageLimitReached ? .red : .secondary)
+            }
+            if let resetCredits = account.usage?.resetCredits {
+                Text("重置卡 \(resetCredits.availableCount)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button(isResetting ? "重置中…" : "使用重置卡", action: onRequestReset)
+                    .font(.caption2)
+                    .buttonStyle(.borderless)
+                    .disabled(isResetting || resetCredits.applicableAvailableCount <= 0)
+            }
+        }
     }
 
     private func quotaRow(_ title: String, remaining: Double?, reset: TimeInterval?) -> some View {

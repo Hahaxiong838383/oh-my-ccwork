@@ -23,6 +23,13 @@ final class UsageParserTests: XCTestCase {
         XCTAssertEqual(snapshot.weeklyRemainingPercent, 75)
     }
 
+    func testDecodesCreditsAndResetCards() throws {
+        let payload = try decode(#"{"credits":{"has_credits":true,"unlimited":false,"overage_limit_reached":false,"balance":"12.50"},"rate_limit_reset_credits":{"available_count":3,"applicable_available_count":1}}"#)
+        XCTAssertEqual(payload.credits?.balance, "12.50")
+        XCTAssertEqual(payload.resetCredits?.availableCount, 3)
+        XCTAssertEqual(payload.resetCredits?.applicableAvailableCount, 1)
+    }
+
     private func decode(_ json: String) throws -> UsagePayload {
         try JSONDecoder().decode(UsagePayload.self, from: Data(json.utf8))
     }

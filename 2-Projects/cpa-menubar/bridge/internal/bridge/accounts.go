@@ -177,9 +177,8 @@ func (s *Server) loadAuthFiles() ([]authFile, error) {
 }
 
 func accountFromAuth(file authFile) Account {
-	digest := sha256.Sum256([]byte(file.FileName))
 	return Account{
-		ID:                hex.EncodeToString(digest[:])[:12],
+		ID:                accountPublicID(file.FileName),
 		Provider:          file.Provider,
 		EmailMasked:       maskEmail(file.Email),
 		Plan:              file.Plan,
@@ -229,7 +228,7 @@ func sanitizeUsage(data []byte) (json.RawMessage, error) {
 		return nil, err
 	}
 	allowed := make(map[string]any)
-	for _, key := range []string{"plan_type", "rate_limit", "usage", "limits", "message_cap", "credits"} {
+	for _, key := range []string{"plan_type", "rate_limit", "rate_limit_reset_credits", "usage", "limits", "message_cap", "credits"} {
 		if value, ok := raw[key]; ok {
 			allowed[key] = sanitizeUsageValue(value)
 		}
@@ -238,6 +237,11 @@ func sanitizeUsage(data []byte) (json.RawMessage, error) {
 		return nil, errors.New("usage response did not contain supported fields")
 	}
 	return json.Marshal(allowed)
+}
+
+func accountPublicID(fileName string) string {
+	digest := sha256.Sum256([]byte(fileName))
+	return hex.EncodeToString(digest[:])[:12]
 }
 
 func sanitizeUsageValue(value any) any {

@@ -67,10 +67,38 @@ struct Account: Decodable, Identifiable {
 struct UsagePayload: Decodable {
     let planType: String?
     let rateLimit: RateLimit?
+    let resetCredits: ResetCreditsInfo?
+    let credits: CreditsInfo?
 
     enum CodingKeys: String, CodingKey {
         case planType = "plan_type"
         case rateLimit = "rate_limit"
+        case resetCredits = "rate_limit_reset_credits"
+        case credits
+    }
+}
+
+struct ResetCreditsInfo: Decodable {
+    let availableCount: Int
+    let applicableAvailableCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case availableCount = "available_count"
+        case applicableAvailableCount = "applicable_available_count"
+    }
+}
+
+struct CreditsInfo: Decodable {
+    let hasCredits: Bool
+    let unlimited: Bool
+    let overageLimitReached: Bool
+    let balance: String?
+
+    enum CodingKeys: String, CodingKey {
+        case hasCredits = "has_credits"
+        case unlimited
+        case overageLimitReached = "overage_limit_reached"
+        case balance
     }
 }
 
@@ -154,6 +182,20 @@ struct OAuthStatusResponse: Decodable {
     enum CodingKeys: String, CodingKey {
         case state, status, message
         case accountMasked = "account_masked"
+    }
+}
+
+struct ResetCreditRequest: Encodable {
+    let confirm = "CONSUME_RESET_CREDIT"
+}
+
+struct ResetCreditResponse: Decodable {
+    let accountID: String
+    let status: String
+
+    enum CodingKeys: String, CodingKey {
+        case accountID = "account_id"
+        case status
     }
 }
 

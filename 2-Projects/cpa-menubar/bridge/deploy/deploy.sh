@@ -41,7 +41,8 @@ if include not in text:
 PY
 
 systemctl daemon-reload
-systemctl enable --now cpa-desktop-bridge.service
+systemctl enable cpa-desktop-bridge.service
+systemctl restart cpa-desktop-bridge.service
 nginx -t
 systemctl reload nginx
 curl --fail --silent http://127.0.0.1:8330/healthz >/dev/null

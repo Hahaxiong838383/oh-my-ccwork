@@ -60,6 +60,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handleOAuthCallback(w, r)
 	case r.Method == http.MethodGet && r.URL.Path == "/desktop/v1/oauth/status":
 		s.handleOAuthStatus(w, r)
+	case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/desktop/v1/accounts/") && strings.HasSuffix(r.URL.Path, "/reset-credit"):
+		s.handleResetCredit(w, r)
 	default:
 		writeError(w, http.StatusNotFound, "not found")
 	}

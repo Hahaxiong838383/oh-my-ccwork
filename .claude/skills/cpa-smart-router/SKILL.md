@@ -27,6 +27,8 @@ description: CPA Smart Router 运维与迭代指南。用于检查、部署、�
 - Codex lane：`/Users/rayman.chen/mycc/4-Assets/Prompt/omp-team-templates/_codex_lane.sh`
 - CLIProxyAPI：`aliyun-jp:/opt/cliproxy`，auth-dir `/root/.cli-proxy-api`
 - K12 池运维文档：`2-Projects/cpa-smart-router/docs/k12-auth-pool-ops.md`
+- CPA 菜单栏：`/Users/rayman.chen/mycc/2-Projects/cpa-menubar`
+- 桌面 Bridge：`cpa-desktop-bridge.service`，本地监听 `127.0.0.1:8330`
 
 ## K12 账号池（2026-07-14+）
 
@@ -72,6 +74,26 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - `gpt-5.5` 必须包含 `input_modalities: ["text", "image"]`。
 - `~/.codex/refresh-cc-switch-model-catalog.mjs` 会通过 LaunchAgent 每小时刷新 catalog；持久修复要改刷新脚本，不能只手改 JSON。
 - API 层验证可直接向 `https://smart-api.hahaxiong.top/v1/responses` 发送带 `input_image` 的 `gpt-5.5` 请求；若返回 200，说明 CPA/smart-router 实际支持图片，问题在 Codex app catalog。
+
+## CPA Menu 桌面监控
+
+- macOS App 只通过 `https://smart-api.hahaxiong.top/desktop/v1/*` 访问 Bridge；Desktop Token 只存远端 `0600` 文件与本机 Keychain。
+- 账号列表返回脱敏邮箱、套餐、是否可刷新、周额度、`credits` 充值余额和 `rate_limit_reset_credits` 重置卡状态；Bridge 必须继续使用顶层白名单并递归删除敏感字段。
+- Codex 当前没有 5 小时限制，界面不显示 5 小时进度条；`primary_window` 现在也可能是周窗口，必须按 `limit_window_seconds` 分类，不能按 primary/secondary 槽位命名。
+- 重置卡消费入口为 `POST /desktop/v1/accounts/{id}/reset-credit`。这是不可逆写操作，必须同时满足 App 二次确认、Bridge 固定确认词 `CONSUME_RESET_CREDIT`、消费前实时 `available_count > 0` 与 `applicable_available_count > 0` 校验。
+- AI Ops、Grok、定时任务和自动刷新只能读取余额/卡数，禁止自动消费重置卡；卡数、余额属于实时状态，不得把历史快照当成当前结论。
+- 部署新 Bridge 二进制后必须显式 `systemctl restart cpa-desktop-bridge.service`；`systemctl enable --now` 不会重启已运行服务。验收要同时检查进程启动时间、新字段和接口行为。
+
+验证命令：
+
+```bash
+cd /Users/rayman.chen/mycc/2-Projects/cpa-menubar/bridge
+go test -race ./...
+go vet ./...
+
+cd ../app
+swift test
+```
 
 ## 构建部署
 

@@ -24,6 +24,14 @@ struct BridgeClient: Sendable {
         )
     }
 
+    func consumeResetCredit(accountID: String) async throws -> ResetCreditResponse {
+        try await request(
+            path: "accounts/\(accountID)/reset-credit",
+            method: "POST",
+            body: ResetCreditRequest()
+        )
+    }
+
     private func request<Response: Decodable, Body: Encodable>(
         path: String,
         method: String = "GET",
