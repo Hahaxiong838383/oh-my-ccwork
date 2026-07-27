@@ -1062,3 +1062,13 @@ pattern 会匹配到你自己那条 ssh 命令行，把连接杀掉（exit 255�
 - **根因**：kimi 把 MCP 工具 schema 原样交 Moonshot API（严格校验）；ai-memory 1.14.0 的 `memory_read_page` root 层 anyOf+type 同级——**一个工具毒死整包 tools**。
 - **修法**：mcp.json 条目带 `enabledTools` 白名单（现为 memory_query/write_page/recent/status 四个）。**给 kimi 挂任何新 MCP server 前**，先对每个工具跑 schema 体检（anyOf 与 type 同级即拒），脚本范式见 bridge 仓提交 7879a87 的描述。
 - 止血口径：手工从用户 `.kimi-code/mcp.json` 删条目即刻恢复（重启会按白名单重注入）。
+
+### F5 验收翻车三连的排障线索（2026-07-27 实录）
+
+- 用户说「停没生效/入队了」→ 先查 F1 轨迹看**原文**（`grep task_begin traces/<日期>/*.jsonl`）：
+  ①带「」书名号？→ 解析线剥壳问题（role-identity stripWrapChars 探针，2026-07-27 已修）
+  ②36 位 UUID？→ **引擎自带 background 工具在抢协议**（grok 会自造任务 id 教用户停），
+  平台侧「停 <像id的token>」已兜底停前台；根治靠方法论三投放面的长任务禁令
+  （grok=memory-routing h-method / kimi·omp=omp-harness h-method / L0 agent-method skill，
+  **三处同一套话，改一处同步三处**）。
+- 停止类消息绝不入队是红线；「停」相关改动必须过 test/f5-stop-semantics.test.mjs。
