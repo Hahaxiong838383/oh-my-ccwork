@@ -24,7 +24,11 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 10. **Kimi 通道名不能混**：开放平台模型是 `kimi-k3`；Kimi Code 订阅的 CLI alias 是 `kimi-code/k3`，其 provider model 是 `k3`。桥接层必须使用订阅命名，不能把开放平台名字直接塞进 managed provider。
 11. **锁模型而非信默认值**：Kimi 配置生成和 Runner 必须共用 `lib/kimi-model.mjs`；Runner 每次显式传 `--model kimi-code/k3`。只改 `default_model` 不算完成。
 12. **真任务归因到真引擎**：用户要求“由 Kimi 完成”时，Codex/cc 只做编排、权限、送达和验收；业务结论必须来自真实 `createKimiRunner`。验收证据同时看 trace 的 `engine/model/providerModel`、真实回复和飞书 message_id。
-13. **macOS 部署禁 AppleDouble**：从 Mac 用 tar 向 Linux 发文件会夹带 `._*`；优先 `COPYFILE_DISABLE=1 tar`、`rsync` 或部署后精确清理 `._*`，禁止把这些杂物留进生产 Git 状态。
+13. **验收必须由 Bot 主动闭环**：修复、补权限、换模型或恢复凭据后，运维方必须直接用目标用户的真实 Runner 发起任务，并由目标 Bot 主动把结果送到目标 open_id；禁止把“请用户再发一次测试”当验收步骤。若权限不足，禁止只发文字报错，必须主动发送带“去开通权限”按钮的权限申请卡；只有外部平台明确要求用户本人确认、扫码或不可代理授权时，才让用户完成该动作。授权完成后仍由 Bot 自动续跑、主动汇报，不要求用户再发消息。验收证据至少包含真实 trace 与飞书 message_id。
+14. **macOS 部署禁 AppleDouble**：从 Mac 用 tar 向 Linux 发文件会夹带 `._*`；优先 `COPYFILE_DISABLE=1 tar`、`rsync` 或部署后精确清理 `._*`，禁止把这些杂物留进生产 Git 状态。
+15. **飞书接口先查官方文档**：管理台常驻 `https://open.feishu.cn/document/home/index`。Bot 对接口、字段、scope 或参数不确定时，优先用用户身份执行 `lark-cli schema <service.resource.method> --as user`；无 typed command 再查官方文档对应板块，并用 `lark-cli api ... --as user --dry-run` 核对。遇到缺权必须保留官方 scope/link，由网关主动发权限申请卡；授权后自动续跑，禁止要求用户重发。
+16. **授权链接只认官方精确地址**：`lark-cli` device-flow 需同时兼容旧 `https://open.feishu.cn/page/cli` 与新版 `https://accounts.feishu.cn/oauth/v1/device/verify`，以及对应 Lark 域名；校验必须限定 HTTPS、官方 hostname 和精确 pathname，禁止用宽泛正则放行任意相似域名。
+17. **短效授权要在用户活跃时现开**：device-flow 实测约 600 秒，无人时提前生成只会留下过期卡。延迟补发的真实语义是“到达 notBefore **并且** 用户下一次单聊入站”，不是“到点立即执行”；现有 F3 调度器只有时间条件，不能冒充事件门。一次性运维可用持久 timer 在 notBefore 后挂只读入站监听，命中目标用户后再创建新授权流；用户标识只留生产机，不入 Git、共享记忆或通用 Skill。
 
 ## 架构
 
@@ -50,7 +54,7 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 3. 真实任务前必须走 `syncCredentials`；手工拿磁盘旧 token 直打出现 401，只能说明“这份 token 不可用”，不能说明 K3 不可用。
 4. 用真实 sandbox `createKimiRunner` 发无工具短请求；日志必须出现 `model=kimi-code/k3 provider_model=k3`。
 5. 查用户 trace：`task_begin.engine=kimi`、`model=kimi-code/k3`、`providerModel=k3`，且 `task_end.ok=true`。
-6. 最后一跳用目标 Bot 主动发给目标 open_id，拿真实 message_id；只看到 Kimi stdout 不算飞书可用。
+6. 最后一跳用目标 Bot 主动发给目标 open_id，拿真实 message_id；只看到 Kimi stdout 不算飞书可用。禁止让用户重发消息代替这一步。
 
 ### Kimi 15 分钟 access token 陷阱（2026-07-27 真机）
 
@@ -914,6 +918,7 @@ jq -r 'select(.type=="task_end") | "ok=\(.ok) \(.durationMs)ms in=\(.usage.input
 - 开关：`H_SCHEDULES=0` 停调度器；`H_SCHEDULE_TICK_MS` 调 tick。
 - E2E：写测试任务设 now+4min → 看 fire/delivered 日志 + 飞书卡片，
   **测完必删**（否则每天到点触发）。
+- **边界**：F3 是纯时间触发，会在到点后执行 Runner 并主动推卡；“某时间后首次对话再做”是 `notBefore AND nextInbound`，禁止塞进 F3。一次性补授权应先终止旧 device-flow，再用持久 timer 到点挂监听，首次单聊命中后现开 600 秒授权流；验证 timer 的下一触发时间、到点前 service=inactive、旧授权进程为空、Bot 健康仍为全连接。长期产品化应做控制面声明式 deferred-action 队列，替代用户专属脚本。
 
 ## F4 配置快照运维（2026-07-27）
 
