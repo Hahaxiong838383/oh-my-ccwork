@@ -1,0 +1,13 @@
+{
+  "id": "leader-core",
+  "role": "leader",
+  "note": "测 leader PROMPT 的行为纪律与独有知识是否真的生效。每条 rubric 都对应 PROMPT 里的明文约定——模型不读 PROMPT 就答不出，所以分数反映配置效果而非模型基础能力。 maxTurns=8：decision-fourpart 是多步推理题，4 轮会 Max turns reached 导致该 case 恒 invalid（2026-07-27 实测）。",
+  "runs": 3,
+  "maxTurns": 8,
+  "timeoutMs": 120000,
+  "regressTolerance": 1.0,
+  "cases": [
+    "decision-fourpart",
+    "evidence-rule"
+  ]
+}

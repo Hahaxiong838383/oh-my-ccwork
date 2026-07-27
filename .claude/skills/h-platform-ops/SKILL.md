@@ -947,3 +947,45 @@ pid 探活 + 10 分钟 TTL）。看到 `FAIL（另一个 apply 正在运行）` 
 按「去掉日期行与来源提案行后的实质内容」分组、每组留最早一遍，内容独特的块
 全部保留。纪律：本地全量预演 → 验证「非补丁内容逐字节一致」→ 生产快照 +
 lineage 备份 → 写入 → eval → 生产结果与本地预演逐字节比对。
+
+## F6b 效果闸（真跑评估）运维（2026-07-27）
+
+apply 现在有**两道闸**：结构闸 `eval-skills`（静态 lint，秒级）→ 过了才跑
+效果闸 `eval-bench`（真拉起引擎答题，分钟级，花钱）。
+
+**资产在仓外**：`dev198:~/.h-evolve/`（benchmarks/ + scoreboard.jsonl）。
+放仓里会被被测引擎读到——它 cwd 是 `workspace/leader`、有 Read 权限，而
+leader PROMPT 正文就写着「进化记录见 workspace/evolve/」。版本副本在 mycc
+`4-Assets/h-platform-benchmarks/`，改完两边都要同步。
+
+```bash
+ssh dev198 'cd ~/feishu-grok-bridge && node scripts/evolve/eval-bench.mjs --runs 2'
+```
+
+- `--gate` 与基线比（退步 exit 1）｜`--record` 记入 scoreboard｜`--runs N`
+- 退出码：**0=过或噪声，1=退步（已复测确认），2=评估无效**
+- 效果闸只在结构闸通过后跑；`EVOLVE_BENCH=0` 或 `--no-bench` 停用
+
+**⚠️ 它是弱闸，别高估**：实测抽掉 PROMPT 里的单条纪律，分数纹丝不动甚至更高
+（工作区知识冗余 + 真实纪律本身是模型常识，详见记忆
+`[[feedback_eval_probe_must_be_arbitrary]]`）。当前能挡的是引擎/装配级崩坏，
+挡不住「改坏一条纪律」。看到 `effectGate: pass` 别理解成「补丁没问题」。
+
+**排障看 failures 里的码**：
+- `engine_max_turns` — bench.json 的 maxTurns 设小了。**这个码要盯**：某 case
+  长期 max-turns 会让整轮恒 invalid，效果闸对它等于永久失效。
+- `rubric_leak` — 输出里出现了只在 rubric 文件里的 canary，说明被测读到了
+  评分标准。该轮判无效（不是判 0 分），检查 benchmark 是否被挪进引擎可达面。
+- `bench_reachable` — benchmark 目录落在引擎 cwd 之下，直接拒绝评估。
+- `engine_timeout` / `engine_error` / `empty_output` — 基础设施故障，**不回滚**。
+
+**基线语义**（这几条都是对抗 review 抓出来的，别改坏）：
+- 只有 `gate: pass` / `baseline_established` 的记录能当基线——退步分数对应的
+  配置已被回滚，拿它当基线会让闸门每拦一次就下调一档（单向自我解除）。
+- 基线必须**同 fingerprint**：增删 case 或改 rubric 分值即换口径，旧基线作废，
+  要重建（`--record` 跑一轮）。
+- 容差默认 1 分（bench.json 的 `regressTolerance`）；掉出容差带会**自动复测
+  一次**，两次都低才判退步——模型非确定性会例行让分数波动。
+
+**加 case 前先做两件事**（否则白做）：① grep 整个 `workspace/leader/` 确认
+探针信息不在别处；② 确认它不是模型凭常识就能答对的东西。
