@@ -69,3 +69,14 @@ CLIProxyAPI 侧可混入 k12 codex auth 文件作为补充算力。完整运维�
 - 定时：`deploy/cpa-k12-health.timer` 每 30 分钟。
 - k12 实际好用模型：`gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini`。
 - **禁止**把账号 token 提交进 git。
+
+## Codex OAuth 自动刷新（2026-07-27）
+
+生产 CLIProxyAPI 已开启核心 auth 自动刷新：`auth-auto-refresh-workers: 16`（配置位于 `aliyun-jp:/opt/cliproxy/config.yaml`）。
+
+要点：
+
+- 只有 auth 文件内存在 `refresh_token` 的 Codex OAuth 授权才可自动续期；无 `refresh_token` 的 K12 源包不能靠此机制续期。
+- 刷新线程日志应出现 `core auth auto-refresh started (interval=15m0s)`。
+- 配置修改后需重启 `cliproxy.service`，并用低成本 `gpt-5.4-mini` / `gpt-5.5` 请求确认仍返回 200。
+- 不要把 `access_token`、`refresh_token`、`id_token`、API key 或响应正文写入 git、记忆、通知或 Grok payload。

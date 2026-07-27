@@ -1,6 +1,6 @@
 # CPA K12 账号池运维
 
-> 更新：2026-07-14  
+> 更新：2026-07-27  
 > 节点：`aliyun-jp` / CLIProxyAPI `cliproxy.service`  
 > 目标：在 **无 refresh_token** 的前提下，让 CPA 上始终保留可用的 k12 codex 账号。
 
@@ -24,8 +24,12 @@
 | 备用池 | `/opt/cliproxy/k12-pool` |
 | 状态/报告 | `/opt/cliproxy/k12-state/last-report.json` |
 | 定时器 | `cpa-k12-health.timer` 每 30 分钟 |
+| 2026-07-27 生产状态 | 激活 k12=0；`k12-pool`=0；生产抽样源 `accounts.ndjson` 仍有 10000 条但 JWT 已全过期；定时轮换只能产出 `after_total_k12=0` |
+| Codex Plus 自动刷新 | 正式 Codex OAuth 授权带 `refresh_token` 时，由 CLIProxyAPI `auth-auto-refresh-workers: 16` 自动刷新；K12 源包无 `refresh_token`，不适用 |
 
 ## gpt-5.5 优先 k12（2026-07-14 川哥确认测试 OK）
+
+> 2026-07-27 注意：该策略只有在 `zz-test-k12-*.json` 实际存在且验活通过时才成立。当前生产激活 k12 为 0，`gpt-5.5` 实际由正式 Codex Plus OAuth 混池承载。
 
 | auth | priority | 说明 |
 |---|---|---|
@@ -86,6 +90,8 @@ ssh aliyun-jp 'systemctl status cpa-k12-health.timer --no-pager'
 - 不把 access_token / API key 写入记忆、飞书、git。
 - tombstone 归档会脱敏 token 正文。
 - 正式 Team 与 xAI 账号不要用本脚本删除（脚本只匹配 `zz-test-k12-` 前缀）。
+- 清理失效 Team/Plus 授权时只移动整个 auth 文件到禁用目录并重启 `cliproxy.service`；不要打印、复制或记录文件内 token。
+- 判断“自动刷新是否可用”只看布尔事实：auth 是否存在 `refresh_token`、服务日志是否启动 core auth auto-refresh、低成本模型请求是否 200；不要把 token 正文带出服务器。
 
 ## 与 smart-router 的关系
 
