@@ -1396,6 +1396,35 @@ def sanitize_production_inspection(payload):
                 "uniqueCandidates": source.get("uniqueCandidates"),
             },
         }
+    analytics = payload.get("analytics") or {}
+    if isinstance(analytics, dict) and analytics:
+        yesterday = analytics.get("yesterday") or {}
+        seven_days = analytics.get("sevenDays") or {}
+        top_paths = analytics.get("topPaths") or []
+        sanitized["analytics"] = {
+            "ok": bool(analytics.get("ok")),
+            "date": str(analytics.get("date") or "")[:20] or None,
+            "scope": "human_only",
+            "yesterday": {
+                "pv": yesterday.get("pv"),
+                "uv": yesterday.get("uv"),
+                "pagesPerVisitor": yesterday.get("pagesPerVisitor"),
+            },
+            "sevenDays": {
+                "pv": seven_days.get("pv"),
+                "uv": seven_days.get("uv"),
+            },
+            "topPaths": [
+                {
+                    "path": str(item.get("path") or "")[:160],
+                    "pv": item.get("pv"),
+                }
+                for item in top_paths[:3]
+                if isinstance(item, dict)
+            ],
+            "excludedPv": analytics.get("excludedPv"),
+            "error": str(analytics.get("error") or "")[:80] or None,
+        }
     scheduler = payload.get("scheduler") or {}
     if isinstance(scheduler, dict) and scheduler:
         sanitized["scheduler"] = {
@@ -1949,6 +1978,7 @@ def project_daily_question(project_id):
         "只能分析和给建议；不得执行写文件、重启、部署、commit、push，也不得输出或索要任何 secret。",
     ]
     if project_id == "chenchuan-site":
+        lines.insert(4, "访问统计必查：读取仅含 human 聚合的昨日 UV/PV、近 7 日 UV/PV 和热门页面；不得输出 IP、UA、referrer 或任何访问明细。")
         lines.insert(4, "Theory Radar 必查：publish 是否启用、日报/周度 timer、运行日期与阶段、Grok 模型、论文数、RSS/OpenAlex 计数、publish_result、公网当日归档和双生产者覆盖风险。")
     if project_id == "iptv-api":
         lines.insert(4, "IPTV 必查：validate-and-publish timer 必须 enabled+active、published/health 年龄不超过 36 小时、频道数和真实抽样通过；就绪度 200 不能替代发布新鲜度。")
@@ -1958,10 +1988,12 @@ def project_daily_question(project_id):
 
 
 def project_daily_signature(live, snapshot, production, task):
+    analytics = production.get("analytics") or {}
     payload = {
         "failedIds": sorted(live.get("failedIds") or []),
         "snapshot": None if snapshot.get("ok") else "stale_or_incomplete",
         "production": None if production.get("ok") else "maintenance_unavailable",
+        "analytics": None if analytics.get("ok") else "aggregate_unavailable",
         "task": None if task.get("ok") else "grok_failed",
     }
     return json.dumps(payload, ensure_ascii=False, sort_keys=True)
@@ -2018,18 +2050,50 @@ def project_daily_notification_text(project_id, job, event):
     live = job.get("live") or {}
     snapshot = job.get("snapshot") or {}
     production = job.get("production") or {}
+    channel_ok = production.get("channel") == "restricted_ssh"
     labels = {"normal": "每日简报", "alert": "异常告警", "recovery": "恢复通知"}
-    return "\n".join([
+    lines = [
         f"AI Ops {project_id} {labels.get(event, event)}",
         f"状态：{'通过' if job.get('ok') else '需要关注'}",
         f"实时探测：{live.get('passed', 0)}/{live.get('total', 0)}",
         f"失败项：{','.join(live.get('failedIds') or []) or '-'}",
         f"源码快照：{'可用' if snapshot.get('ok') else '过期或不完整'} / {snapshot.get('ageHours')} 小时",
-        f"生产维护通道：{'可用' if production.get('ok') else '不可用'} / {production_service_summary(production)}",
+        f"生产维护通道：{'可用' if channel_ok else '不可用'}",
+        f"生产服务：{production_service_summary(production)}",
         f"任务ID：{job.get('taskId') or '-'}",
         f"待办ID：{job.get('todoId') or '-'}",
         f"审计：https://ops.hahaxiong.top/vibe/project?id={project_id}",
-    ])
+    ]
+    if project_id == "chenchuan-site":
+        radar = production.get("radar") or {}
+        theory_radar = production.get("theoryRadar") or {}
+        analytics = production.get("analytics") or {}
+        lines[7:7] = [
+            f"实时资讯雷达：{'正常' if radar.get('ok') else '异常'}",
+            f"Theory Radar：{'正常' if theory_radar.get('ok') else '异常'} / 最新 {theory_radar.get('latestPublicReport') or '-'}",
+            f"真实访客统计：{'正常' if analytics.get('ok') else '不可用'}",
+        ]
+        if analytics.get("ok"):
+            yesterday = analytics.get("yesterday") or {}
+            seven_days = analytics.get("sevenDays") or {}
+            top_paths = analytics.get("topPaths") or []
+            top_paths_text = "、".join(
+                f"{item.get('path') or '/'}（{item.get('pv') or 0} PV）"
+                for item in top_paths[:3]
+                if isinstance(item, dict)
+            ) or "-"
+            lines[10:10] = [
+                f"昨日真实访客（{analytics.get('date') or '-'}）：{yesterday.get('uv') or 0} 人 / {yesterday.get('pv') or 0} PV / 人均 {yesterday.get('pagesPerVisitor') or 0} 页",
+                f"近 7 日真实访客：{seven_days.get('uv') or 0} 人 / {seven_days.get('pv') or 0} PV",
+                f"昨日热门页面：{top_paths_text}",
+                "统计口径：仅 human；已排除本人调试、AI Ops、预加载、机器人和旧版未验证流量",
+            ]
+        else:
+            lines[10:10] = [
+                f"昨日真实访客：聚合数据暂不可用（{analytics.get('date') or '-'}）",
+                "统计口径：不降级使用系统流量或旧版未验证数据",
+            ]
+    return "\n".join(lines)
 
 
 def run_project_daily_worker(job_id, project_id, simulate_failure, force_notify):

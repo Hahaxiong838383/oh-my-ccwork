@@ -15,6 +15,8 @@ output_levels: L2
 3. **只读优先**：Grok/OMP 默认只读。真实项目默认只建占位；接入前必须做文件级 allowlist，禁止目录级 `rsync`/`git clone` 整仓暴露。
 4. **不要制造假健康**：有限探测只能叫 `readinessScore`/“就绪度”，不能叫“健康分”，也不能用“正常”暗示业务健康。
 5. **先验收再通知体验**：本地静态检查 + 线上回归通过后，才告诉川哥体验；未体验 OK 前不 commit/push，除非川哥明确要求。
+6. **通道与业务状态分离**：飞书日报的“生产维护通道”只表示限权 SSH/维护调用是否成功，不能复用业务聚合 `ok`。站点进程、实时雷达、Theory Radar、访问统计等子项必须独立展示，避免一个业务异常被误报成通道不可用。
+7. **访问统计只发聚合**：个人站日报使用前一完整自然日的 `human` UV/PV；排除 `owner/aiops/prefetch/bot/legacy`，只允许发送日期、UV/PV、人均页数和公开热门路径，禁止发送 IP、UA、referrer 或访问明细。
 
 ## 必跑检查
 
@@ -52,6 +54,8 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && AI_OPS_REGRESSION_SLEEP=22 scripts/valid
 ## Review 清单
 
 - 飞书通知：确认 `notify_text` 不含 `question`、`conversation`、`answer`、异常正文。
+- 飞书状态语义：确认维护通道可达性不依赖业务聚合 `ok`；每个业务子项单独显示状态和证据。
+- 访客日报：确认使用昨日完整自然日、仅 `human` 聚合；消息里没有 IP、UA、referrer、原始数据库行或被排除流量明细。
 - 资产页：确认页面文案为“就绪度”，JSON 字段为 `readinessScore`，没有 `healthScore`。
 - 只读快照：确认非 `mycc` 真实项目是占位；如要接入，必须先列文件级 allowlist。
 - 待办闭环：确认 `/vibe/tasks` 的“转待办”能写入 `/vibe/todos`，只保存脱敏摘要和任务 ID。

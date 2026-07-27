@@ -47,6 +47,7 @@ import json
 import os
 import pathlib
 import shutil
+import sqlite3
 import socket
 import subprocess
 import time
@@ -79,6 +80,79 @@ def iso_age_seconds(value):
         return max(0, round((datetime.datetime.now(datetime.timezone.utc) - parsed).total_seconds()))
     except Exception:
         return None
+
+def analytics_summary(app_dir):
+    timezone = datetime.timezone(datetime.timedelta(hours=8))
+    today = datetime.datetime.combine(
+        datetime.datetime.now(timezone).date(),
+        datetime.time.min,
+    ).replace(tzinfo=timezone)
+    yesterday = today - datetime.timedelta(days=1)
+    week_start = today - datetime.timedelta(days=7)
+    to_milliseconds = lambda value: int(value.timestamp() * 1000)
+    result = {
+        "ok": False,
+        "date": yesterday.date().isoformat(),
+        "scope": "human_only",
+    }
+    database_path = app_dir / "data" / "analytics.db"
+    try:
+        connection = sqlite3.connect(
+            "file:{}?mode=ro".format(database_path),
+            uri=True,
+            timeout=3,
+        )
+        connection.execute("PRAGMA query_only = ON")
+        yesterday_row = connection.execute(
+            """SELECT COUNT(*), COUNT(DISTINCT ip_hash)
+               FROM visits
+               WHERE traffic_kind = ? AND ts >= ? AND ts < ?""",
+            ("human", to_milliseconds(yesterday), to_milliseconds(today)),
+        ).fetchone()
+        week_row = connection.execute(
+            """SELECT COUNT(*), COUNT(DISTINCT ip_hash)
+               FROM visits
+               WHERE traffic_kind = ? AND ts >= ? AND ts < ?""",
+            ("human", to_milliseconds(week_start), to_milliseconds(today)),
+        ).fetchone()
+        top_paths = connection.execute(
+            """SELECT path, COUNT(*) AS pv
+               FROM visits
+               WHERE traffic_kind = ? AND ts >= ? AND ts < ?
+               GROUP BY path
+               ORDER BY pv DESC, path ASC
+               LIMIT 3""",
+            ("human", to_milliseconds(yesterday), to_milliseconds(today)),
+        ).fetchall()
+        excluded_row = connection.execute(
+            """SELECT COUNT(*)
+               FROM visits
+               WHERE traffic_kind != ? AND ts >= ? AND ts < ?""",
+            ("human", to_milliseconds(yesterday), to_milliseconds(today)),
+        ).fetchone()
+        connection.close()
+
+        yesterday_pv = int((yesterday_row or (0, 0))[0] or 0)
+        yesterday_uv = int((yesterday_row or (0, 0))[1] or 0)
+        week_pv = int((week_row or (0, 0))[0] or 0)
+        week_uv = int((week_row or (0, 0))[1] or 0)
+        result.update({
+            "ok": True,
+            "yesterday": {
+                "pv": yesterday_pv,
+                "uv": yesterday_uv,
+                "pagesPerVisitor": round(yesterday_pv / yesterday_uv, 1) if yesterday_uv else 0,
+            },
+            "sevenDays": {"pv": week_pv, "uv": week_uv},
+            "topPaths": [
+                {"path": str(path)[:160], "pv": int(pv or 0)}
+                for path, pv in top_paths
+            ],
+            "excludedPv": int((excluded_row or (0,))[0] or 0),
+        })
+    except Exception as exc:
+        result["error"] = type(exc).__name__
+    return result
 
 app_dir = pathlib.Path("/var/www/chenchuan-site")
 raw = subprocess.check_output(
@@ -164,8 +238,9 @@ theory_ok = bool(
     and reconcile_timer == "active"
     and latest_public_report == "report-{}.json".format(theory_state.get("run_date"))
 )
+analytics = analytics_summary(app_dir)
 payload = {
-    "ok": environment.get("status") == "online" and radar_ok and theory_ok,
+    "ok": environment.get("status") == "online" and radar_ok and theory_ok and analytics.get("ok"),
     "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     "hostname": socket.gethostname(),
     "process": {
@@ -228,6 +303,7 @@ payload = {
             "uniqueCandidates": source_state.get("unique_candidates"),
         },
     },
+    "analytics": analytics,
 }
 print(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
 PY
@@ -311,7 +387,7 @@ SSH_COMMAND=(
   -p "$PRODUCTION_PORT" "aiops@$PRODUCTION_HOST"
 )
 
-ssh "$RACKNERD_ALIAS" "${SSH_COMMAND[*]} inspect" | python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["ok"] is True and data["process"]["name"]=="chenchuan-site" and data["radar"]["ok"] is True and data["theoryRadar"]["ok"] is True; print("maintenance inspect ok")'
+ssh "$RACKNERD_ALIAS" "${SSH_COMMAND[*]} inspect" | python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["process"]["name"]=="chenchuan-site" and data["process"]["status"]=="online" and data["radar"]["ok"] is True and data["analytics"]["ok"] is True and "theoryRadar" in data; print("maintenance inspect ok")'
 if ssh "$RACKNERD_ALIAS" "${SSH_COMMAND[*]} id" >/dev/null 2>&1; then
   printf 'restricted key unexpectedly accepted arbitrary command\n' >&2
   exit 1
