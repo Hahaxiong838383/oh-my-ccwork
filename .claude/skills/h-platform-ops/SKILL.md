@@ -52,6 +52,15 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 5. 查用户 trace：`task_begin.engine=kimi`、`model=kimi-code/k3`、`providerModel=k3`，且 `task_end.ok=true`。
 6. 最后一跳用目标 Bot 主动发给目标 open_id，拿真实 message_id；只看到 Kimi stdout 不算飞书可用。
 
+### Kimi 15 分钟 access token 陷阱（2026-07-27 真机）
+
+- Kimi OAuth 实测 `expires_in=900`（15 分钟），控制面又按客户端语义预扣 5 分钟；旧版默认每 20 分钟 sweep 一次，**刷新周期长于 token 生命周期，必然出现 401 空窗**。
+- `/internal/creds/<uid>` 在每次 Kimi 任务启动前按需保鲜：token 年龄超过 2 分钟或已过期就刷新；同一 person 的并发刷新必须用单飞锁合并，避免重复 rotation。
+- Kimi Runner 不持有 refresh token，无法在进程内续期；单次墙钟预算必须封顶 12 分钟，为 15 分钟 access token 留出网络与收尾余量。Grok 不受这个上限影响。
+- refresh 被撤销时立刻标 `needRebind`，不得继续把 vault 里的旧 access 下发；普通刷新故障返回 503，不用旧 token 冒充可用。
+- `health.apps.<appId>.lastError` 是“最近未恢复错误”，成功送达后必须清零；只更新 `lastOutboundOkAt` 会让控制台永久挂着历史 401。
+- 验收至少含：①控制面日志出现 `token-manager kimi refreshed <person> on-demand`；②真实 Runner 的 K3 trace 成功；③目标 App `lastOutboundOkAt` 更新且 `lastError=null`。
+
 健康端口以生产日志为真，当前是 `127.0.0.1:18765`。不要猜 `3000/18080`；先查 `journalctl` 的 `health server` 行。
 
 部署 bridge 代码时只传明确文件，并先备份；生产 `workspace/PROMPT.md`、`workspace/evolve/*` 等运行态脏文件必须保留。Mac → Linux 示例：
