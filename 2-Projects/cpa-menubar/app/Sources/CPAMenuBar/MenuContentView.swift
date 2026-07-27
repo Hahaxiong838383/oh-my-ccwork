@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MenuContentView: View {
     @ObservedObject var model: AppModel
+    @State private var showTokenClearConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -17,6 +18,12 @@ struct MenuContentView: View {
         }
         .padding(16)
         .frame(width: 380)
+        .alert("确认清除本机 Token？", isPresented: $showTokenClearConfirmation) {
+            Button("取消", role: .cancel) {}
+            Button("清除 Token", role: .destructive, action: model.clearToken)
+        } message: {
+            Text("清除后应用将立即断开 CPA，重新连接需要再次输入 Desktop Token。")
+        }
     }
 
     private var header: some View {
@@ -115,7 +122,9 @@ struct MenuContentView: View {
                 Button("保存并连接", action: model.saveSettings)
                     .buttonStyle(.borderedProminent)
                 if model.isConfigured {
-                    Button("清除本机 Token", role: .destructive, action: model.clearToken)
+                    Button("清除本机 Token", role: .destructive) {
+                        showTokenClearConfirmation = true
+                    }
                 }
                 Spacer()
                 Button("退出") { NSApplication.shared.terminate(nil) }
