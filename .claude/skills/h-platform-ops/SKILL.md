@@ -544,6 +544,27 @@ ssh dev198 'T=$(cat /srv/h-platform/memory/<uid>/auth.token); curl -s -X POST ht
 
 ⚠️ 遗留：同义不同措辞仍会重复入库（相似度用精确包含）。
 
+### 全用户历史补偿与向量一致性（2026-07-27 生产事故）
+
+- **控制面“几分钟前更新”只证明镜像刚推，不证明源记忆刚写**。排障必须分别核对：
+  聊天历史最后完整 `user → assistant`、源 `wiki/**/MEMORY.md`、SQLite 最新页、
+  `page_embeddings`、控制面 `*.mirror.json`；不能拿任一层的时间戳替代整条链路。
+- 历史补偿的 `limit` 必须作用在“**全历史中过滤出的未处理交换**”上，不能先截
+  最近 N 轮再查 ledger。否则积压超过 N 时，更早记录会永久落在扫描窗口之外。
+  ledger 只保存交换哈希、权限 `600`，不保存 uid/open_id 映射或聊天正文；临时
+  `error/no-target` 不记账，下一轮继续重试。
+- `captureExchange` 可把助手回复当作“任务完成结果”的证据，但偏好、决定和待办
+  仍必须来自用户明确表达，禁止把助手建议反写成用户事实。
+- **Kimi 没有 `.grok/memory` 不等于没有 ai-memory**。`syncUserGrokMemory` 即使无
+  Grok 原生目录，也必须确保用户实例存在并执行最新页向量补算；禁止在源目录检查处
+  提前 return。
+- 网关捕获直接更新 wiki 文件后，ai-memory 文件监听器还需要短暂落库时间。立即
+  embed 会抢在新 `is_latest=1` 版本产生前，表面成功、重启后却重新显示缺向量。
+  历史补偿和实时捕获统一走短 debounce，再执行同步、向量、镜像和摘要刷新。
+- **全用户验收矩阵**：每个活跃 uid 的 `历史交换数 = ledger 已处理数`、pending=0；
+  SQLite 所有 `is_latest=1` 页均有向量；控制面镜像 `missing=0`；Bridge 所有 App
+  connected 且 `lastError=null`。最后必须重启后再查一次，避免把 WAL/监听竞态当成功。
+
 ## 关键文件与记忆
 
 - 项目记忆 [[project_feishu_grok_h_byos]]（拍板/账号三层/分层/验收协议全量）
