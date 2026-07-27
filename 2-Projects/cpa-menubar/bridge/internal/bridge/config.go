@@ -8,30 +8,38 @@ import (
 )
 
 type Config struct {
-	Listen           string
-	AuthDir          string
-	DesktopToken     string
-	DesktopTokenFile string
-	CLIProxyURL      string
-	RouterURL        string
-	RouterAPIKey     string
-	RouterAPIKeyFile string
-	UsageTimeout     time.Duration
-	OAuthTimeout     time.Duration
+	Listen               string
+	AuthDir              string
+	DesktopToken         string
+	DesktopTokenFile     string
+	CLIProxyURL          string
+	RouterURL            string
+	RouterAPIKey         string
+	RouterAPIKeyFile     string
+	XAIManagementURL     string
+	XAIManagementAPIKey  string
+	XAIManagementTeamID  string
+	XAIManagementKeyFile string
+	UsageTimeout         time.Duration
+	OAuthTimeout         time.Duration
 }
 
 func LoadConfig() (Config, error) {
 	cfg := Config{
-		Listen:           envOr("CPA_DESKTOP_LISTEN", "127.0.0.1:8330"),
-		AuthDir:          envOr("CPA_AUTH_DIR", "/root/.cli-proxy-api"),
-		DesktopToken:     strings.TrimSpace(os.Getenv("CPA_DESKTOP_TOKEN")),
-		DesktopTokenFile: envOr("CPA_DESKTOP_TOKEN_FILE", "/etc/cpa-desktop-bridge.token"),
-		CLIProxyURL:      envOr("CPA_CLIPROXY_URL", "http://127.0.0.1:8317"),
-		RouterURL:        envOr("CPA_ROUTER_URL", "http://127.0.0.1:8327"),
-		RouterAPIKey:     strings.TrimSpace(os.Getenv("CPA_ROUTER_API_KEY")),
-		RouterAPIKeyFile: envOr("CPA_ROUTER_API_KEY_FILE", "/etc/cpa-smart-router.env"),
-		UsageTimeout:     15 * time.Second,
-		OAuthTimeout:     5 * time.Minute,
+		Listen:               envOr("CPA_DESKTOP_LISTEN", "127.0.0.1:8330"),
+		AuthDir:              envOr("CPA_AUTH_DIR", "/root/.cli-proxy-api"),
+		DesktopToken:         strings.TrimSpace(os.Getenv("CPA_DESKTOP_TOKEN")),
+		DesktopTokenFile:     envOr("CPA_DESKTOP_TOKEN_FILE", "/etc/cpa-desktop-bridge.token"),
+		CLIProxyURL:          envOr("CPA_CLIPROXY_URL", "http://127.0.0.1:8317"),
+		RouterURL:            envOr("CPA_ROUTER_URL", "http://127.0.0.1:8327"),
+		RouterAPIKey:         strings.TrimSpace(os.Getenv("CPA_ROUTER_API_KEY")),
+		RouterAPIKeyFile:     envOr("CPA_ROUTER_API_KEY_FILE", "/etc/cpa-smart-router.env"),
+		XAIManagementURL:     envOr("XAI_MANAGEMENT_URL", "https://management-api.x.ai"),
+		XAIManagementAPIKey:  strings.TrimSpace(os.Getenv("XAI_MANAGEMENT_API_KEY")),
+		XAIManagementTeamID:  strings.TrimSpace(os.Getenv("XAI_TEAM_ID")),
+		XAIManagementKeyFile: envOr("XAI_MANAGEMENT_API_KEY_FILE", "/etc/xai-management.env"),
+		UsageTimeout:         15 * time.Second,
+		OAuthTimeout:         5 * time.Minute,
 	}
 
 	if cfg.DesktopToken == "" && cfg.DesktopTokenFile != "" {
@@ -50,6 +58,22 @@ func LoadConfig() (Config, error) {
 			return Config{}, err
 		}
 		cfg.RouterAPIKey = value
+	}
+	if cfg.XAIManagementKeyFile != "" && (cfg.XAIManagementAPIKey == "" || cfg.XAIManagementTeamID == "") {
+		if cfg.XAIManagementAPIKey == "" {
+			value, err := readEnvFileValue(cfg.XAIManagementKeyFile, "XAI_MANAGEMENT_API_KEY")
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return Config{}, err
+			}
+			cfg.XAIManagementAPIKey = value
+		}
+		if cfg.XAIManagementTeamID == "" {
+			value, err := readEnvFileValue(cfg.XAIManagementKeyFile, "XAI_TEAM_ID")
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return Config{}, err
+			}
+			cfg.XAIManagementTeamID = value
+		}
 	}
 	return cfg, nil
 }

@@ -29,6 +29,16 @@ struct Summary: Decodable {
 }
 
 struct XAIUsage: Decodable, Equatable {
+    let officialStatus: String?
+    let officialError: String?
+    let officialPeriodStart: String?
+    let officialPeriodEnd: String?
+    let officialSpendUSD: Double?
+    let prepaidBalanceUSD: Double?
+    let hasPrepaidCredit: Bool?
+    let officialLimitReached: Bool?
+    let cpaStatus: String?
+    let cpaError: String?
     let windowHours: Int
     let requests: Int64
     let successes: Int64
@@ -42,6 +52,16 @@ struct XAIUsage: Decodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case requests, successes, errors
+        case officialStatus = "official_status"
+        case officialError = "official_error"
+        case officialPeriodStart = "official_period_start"
+        case officialPeriodEnd = "official_period_end"
+        case officialSpendUSD = "official_spend_usd"
+        case prepaidBalanceUSD = "prepaid_balance_usd"
+        case hasPrepaidCredit = "has_prepaid_credit"
+        case officialLimitReached = "official_limit_reached"
+        case cpaStatus = "cpa_status"
+        case cpaError = "cpa_error"
         case windowHours = "window_hours"
         case inputTokens = "input_tokens"
         case outputTokens = "output_tokens"
@@ -68,6 +88,14 @@ struct XAIUsage: Decodable, Equatable {
 
     var todayBudgetRemainingPercent: Double? {
         todayBudgetUsedPercent.map { max(0, 100 - $0) }
+    }
+
+    var hasOfficialBilling: Bool {
+        (officialStatus == "ok" || officialStatus == "partial") && officialSpendUSD != nil
+    }
+
+    var hasCPARouterUsage: Bool {
+        cpaStatus == nil || cpaStatus == "ok"
     }
 }
 

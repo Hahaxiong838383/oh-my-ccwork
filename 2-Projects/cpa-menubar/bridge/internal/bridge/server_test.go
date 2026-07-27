@@ -147,6 +147,65 @@ func TestFetchXAIUsageAggregatesSmartRouterMetrics(t *testing.T) {
 	}
 }
 
+func TestFetchXAIUsageCombinesOfficialBillingAndSmartRouterMetrics(t *testing.T) {
+	server := newTestServer(t, t.TempDir())
+	server.cfg.RouterURL = "http://router.test"
+	server.cfg.RouterAPIKey = "router-secret"
+	server.cfg.XAIManagementURL = "https://management.test"
+	server.cfg.XAIManagementAPIKey = "management-secret"
+	server.cfg.XAIManagementTeamID = "team-123"
+	server.client = &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		switch {
+		case request.URL.Host == "router.test":
+			return jsonResponse(http.StatusOK, `{
+				"providers":[{"id":"xai-main","route_model":"grok-4","tokens_today":40,"daily_token_limit":100}],
+				"by_provider":[{"name":"xai-main","requests":4,"successes":4,"input_tokens":30,"output_tokens":10,"total_tokens":40}]
+			}`), nil
+		case request.URL.Host == "management.test" && request.URL.Path == "/v1/billing/teams/team-123/usage":
+			if request.Method != http.MethodPost || request.Header.Get("Authorization") != "Bearer management-secret" {
+				t.Fatalf("unexpected official usage request: %s %s", request.Method, request.Header.Get("Authorization"))
+			}
+			var body map[string]any
+			if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			analyticsRequest, ok := body["analyticsRequest"].(map[string]any)
+			if !ok || analyticsRequest["timeUnit"] != "TIME_UNIT_DAY" {
+				t.Fatalf("unexpected analytics request: %#v", body)
+			}
+			return jsonResponse(http.StatusOK, `{
+				"timeSeries":[{"dataPoints":[{"values":[0.25]},{"values":[0.5]}]}],
+				"limitReached":false
+			}`), nil
+		case request.URL.Host == "management.test" && request.URL.Path == "/v1/billing/teams/team-123/prepaid/balance":
+			if request.Method != http.MethodGet {
+				t.Fatalf("unexpected balance method: %s", request.Method)
+			}
+			return jsonResponse(http.StatusOK, `{"availableBalance":12.34,"hasPrepaidCredit":true}`), nil
+		default:
+			t.Fatalf("unexpected request: %s %s", request.Method, request.URL)
+			return nil, nil
+		}
+	})}
+
+	usage, status, err := server.fetchXAIUsage(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != "ok" || usage.OfficialStatus != "ok" || usage.CPAStatus != "ok" {
+		t.Fatalf("unexpected statuses: overall=%q usage=%+v", status, usage)
+	}
+	if usage.OfficialSpendUSD == nil || *usage.OfficialSpendUSD != 0.75 {
+		t.Fatalf("official spend = %#v", usage.OfficialSpendUSD)
+	}
+	if usage.PrepaidBalanceUSD == nil || *usage.PrepaidBalanceUSD != 12.34 || usage.HasPrepaidCredit == nil || !*usage.HasPrepaidCredit {
+		t.Fatalf("unexpected prepaid balance: %+v", usage)
+	}
+	if usage.TotalTokens != 40 || usage.TodayTokens != 40 || usage.DailyTokenLimit != 100 {
+		t.Fatalf("unexpected CPA routing usage: %+v", usage)
+	}
+}
+
 func TestSummaryIncludesSanitizedXAIUsage(t *testing.T) {
 	authDir := t.TempDir()
 	writeFixture(t, filepath.Join(authDir, "xai.json"), map[string]any{

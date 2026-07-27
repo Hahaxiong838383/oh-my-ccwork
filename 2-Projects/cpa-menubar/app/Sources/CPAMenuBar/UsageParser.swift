@@ -75,6 +75,14 @@ enum UsageFormatting {
         value.formatted(.number.grouping(.automatic))
     }
 
+    static func usd(_ value: Double?) -> String {
+        guard let value else { return "--" }
+        return value.formatted(
+            .currency(code: "USD")
+                .precision(.fractionLength(2 ... 4))
+        )
+    }
+
     static func timestamp(_ value: String?) -> String {
         guard let value, let date = ISO8601DateFormatter().date(from: value) else { return "--" }
         return date.formatted(date: .omitted, time: .shortened)

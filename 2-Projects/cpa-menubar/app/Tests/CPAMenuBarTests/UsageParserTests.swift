@@ -42,6 +42,19 @@ final class UsageParserTests: XCTestCase {
         XCTAssertEqual(usage.todayBudgetRemainingPercent ?? 0, 99.8579, accuracy: 0.000001)
     }
 
+    func testDecodesOfficialXAIBilling() throws {
+        let usage = try JSONDecoder().decode(
+            XAIUsage.self,
+            from: Data(#"{"official_status":"ok","official_period_start":"2026-07-01T00:00:00+08:00","official_period_end":"2026-07-27T22:00:00+08:00","official_spend_usd":0.75,"prepaid_balance_usd":12.34,"has_prepaid_credit":true,"official_limit_reached":false,"cpa_status":"ok","window_hours":24,"requests":4,"successes":4,"errors":0,"input_tokens":30,"output_tokens":10,"total_tokens":40,"today_tokens":40,"daily_token_limit":100}"#.utf8)
+        )
+        XCTAssertTrue(usage.hasOfficialBilling)
+        XCTAssertTrue(usage.hasCPARouterUsage)
+        XCTAssertEqual(usage.officialSpendUSD, 0.75)
+        XCTAssertEqual(usage.prepaidBalanceUSD, 12.34)
+        XCTAssertEqual(usage.hasPrepaidCredit, true)
+        XCTAssertTrue(UsageFormatting.usd(usage.officialSpendUSD).hasSuffix("0.75"))
+    }
+
     func testZeroXAIRequestsHasNoSuccessPercentage() throws {
         let usage = try JSONDecoder().decode(
             XAIUsage.self,

@@ -105,7 +105,7 @@ struct MenuContentView: View {
 
     @ViewBuilder
     private var xaiUsageCard: some View {
-        if let summary = model.summary, summary.xaiAccounts > 0 {
+        if let summary = model.summary, summary.xaiAccounts > 0 || summary.xaiUsage != nil {
             XAIUsageCard(
                 usage: summary.xaiUsage,
                 status: summary.xaiUsageStatus,
@@ -181,15 +181,91 @@ private struct XAIUsageCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Label("xAI · CPA 聚合用量", systemImage: "bolt.horizontal.circle.fill")
+                Label("xAI · 官方账单与 CPA 路由", systemImage: "bolt.horizontal.circle.fill")
                     .font(.subheadline.bold())
+            }
+
+            if let usage {
+                officialBilling(usage)
+
+                Divider()
+
+                cpaRouterUsage(usage)
+            } else {
+                Text(error ?? "暂时无法读取 xAI 用量")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if status == "unavailable", let error {
+                Text(error)
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding(10)
+        .background(Color.cyan.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    @ViewBuilder
+    private func officialBilling(_ usage: XAIUsage) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("xAI 官方 · 本月")
+                    .font(.caption.bold())
                 Spacer()
-                Text("近 \(usage?.windowHours ?? 24) 小时")
+                if usage.hasOfficialBilling {
+                    Text("Management API")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if usage.hasOfficialBilling {
+                HStack(spacing: 16) {
+                    metric("本月费用", value: UsageFormatting.usd(usage.officialSpendUSD))
+                    if usage.hasPrepaidCredit == true {
+                        metric("预付余额", value: UsageFormatting.usd(usage.prepaidBalanceUSD))
+                    } else if usage.hasPrepaidCredit == false {
+                        metric("计费方式", value: "后付费")
+                    }
+                }
+
+                Text("统计至 \(UsageFormatting.timestamp(usage.officialPeriodEnd))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                if usage.officialLimitReached == true {
+                    Label("官方查询触达返回上限，结果可能不完整", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+                if let officialError = usage.officialError {
+                    Text(officialError)
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+            } else {
+                Text(usage.officialError ?? "尚未配置 xAI Management Key，当前只显示 CPA 路由统计")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func cpaRouterUsage(_ usage: XAIUsage) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("CPA 路由 · 近 \(usage.windowHours) 小时")
+                    .font(.caption.bold())
+                Spacer()
+                Text("非官方账单")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
 
-            if status == "ok", let usage {
+            if usage.hasCPARouterUsage {
                 HStack(spacing: 16) {
                     metric("请求", value: UsageFormatting.integer(usage.requests))
                     metric("成功率", value: UsageFormatting.percent(usage.successPercent))
@@ -199,7 +275,7 @@ private struct XAIUsageCard: View {
                 if let remainingPercent = usage.todayBudgetRemainingPercent,
                    let remainingTokens = usage.todayBudgetRemainingTokens {
                     HStack(spacing: 8) {
-                        Text("今日剩余")
+                        Text("路由预算")
                             .font(.caption)
                             .frame(width: 52, alignment: .leading)
                         ProgressView(value: remainingPercent, total: 100)
@@ -208,7 +284,7 @@ private struct XAIUsageCard: View {
                             .font(.caption2.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
-                    Text("剩余 \(UsageFormatting.integer(remainingTokens)) / \(UsageFormatting.integer(usage.dailyTokenLimit)) · 已用 \(UsageFormatting.integer(usage.todayTokens))")
+                    Text("内部剩余 \(UsageFormatting.integer(remainingTokens)) / \(UsageFormatting.integer(usage.dailyTokenLimit)) · 已用 \(UsageFormatting.integer(usage.todayTokens))")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -217,13 +293,11 @@ private struct XAIUsageCard: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             } else {
-                Text(error ?? "CPA 暂时无法读取 xAI 用量")
+                Text(usage.cpaError ?? "CPA 暂时无法读取 xAI 路由统计")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(10)
-        .background(Color.cyan.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
     }
 
     private func metric(_ title: String, value: String) -> some View {

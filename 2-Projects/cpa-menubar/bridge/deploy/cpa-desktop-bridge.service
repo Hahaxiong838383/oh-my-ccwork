@@ -15,6 +15,7 @@ Environment=CPA_DESKTOP_TOKEN_FILE=/etc/cpa-desktop-bridge.token
 Environment=CPA_CLIPROXY_URL=http://127.0.0.1:8317
 Environment=CPA_ROUTER_URL=http://127.0.0.1:8327
 Environment=CPA_ROUTER_API_KEY_FILE=/etc/cpa-smart-router.env
+Environment=XAI_MANAGEMENT_API_KEY_FILE=/etc/xai-management.env
 ExecStart=/opt/cpa-desktop-bridge/cpa-desktop-bridge
 Restart=always
 RestartSec=5

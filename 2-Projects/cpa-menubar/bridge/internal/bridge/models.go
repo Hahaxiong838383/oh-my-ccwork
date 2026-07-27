@@ -36,16 +36,26 @@ type Summary struct {
 }
 
 type XAIUsage struct {
-	WindowHours     int    `json:"window_hours"`
-	Requests        int64  `json:"requests"`
-	Successes       int64  `json:"successes"`
-	Errors          int64  `json:"errors"`
-	InputTokens     int64  `json:"input_tokens"`
-	OutputTokens    int64  `json:"output_tokens"`
-	TotalTokens     int64  `json:"total_tokens"`
-	TodayTokens     int64  `json:"today_tokens"`
-	DailyTokenLimit int64  `json:"daily_token_limit"`
-	LastRequestAt   string `json:"last_request_at,omitempty"`
+	OfficialStatus       string   `json:"official_status"`
+	OfficialError        string   `json:"official_error,omitempty"`
+	OfficialPeriodStart  string   `json:"official_period_start,omitempty"`
+	OfficialPeriodEnd    string   `json:"official_period_end,omitempty"`
+	OfficialSpendUSD     *float64 `json:"official_spend_usd,omitempty"`
+	PrepaidBalanceUSD    *float64 `json:"prepaid_balance_usd,omitempty"`
+	HasPrepaidCredit     *bool    `json:"has_prepaid_credit,omitempty"`
+	OfficialLimitReached bool     `json:"official_limit_reached"`
+	CPAStatus            string   `json:"cpa_status"`
+	CPAError             string   `json:"cpa_error,omitempty"`
+	WindowHours          int      `json:"window_hours"`
+	Requests             int64    `json:"requests"`
+	Successes            int64    `json:"successes"`
+	Errors               int64    `json:"errors"`
+	InputTokens          int64    `json:"input_tokens"`
+	OutputTokens         int64    `json:"output_tokens"`
+	TotalTokens          int64    `json:"total_tokens"`
+	TodayTokens          int64    `json:"today_tokens"`
+	DailyTokenLimit      int64    `json:"daily_token_limit"`
+	LastRequestAt        string   `json:"last_request_at,omitempty"`
 }
 
 type AccountsResponse struct {

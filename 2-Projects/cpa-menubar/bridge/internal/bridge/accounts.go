@@ -77,7 +77,7 @@ func (s *Server) handleSummary(w http.ResponseWriter, r *http.Request) {
 			summary.Expired++
 		}
 	}
-	if summary.XAIAccounts > 0 {
+	if summary.XAIAccounts > 0 || s.hasXAIOfficialConfig() {
 		usage, status, usageErr := s.fetchXAIUsage(r.Context())
 		summary.XAIUsage = usage
 		summary.XAIUsageStatus = status
