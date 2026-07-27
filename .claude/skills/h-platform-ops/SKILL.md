@@ -908,3 +908,42 @@ ssh dev198 'bash -lc "u=<uid>; cat /srv/h-platform/users/$u/snapshots/meta.json;
 按「引擎 × 配置载体」矩阵过一遍别凭印象——grok 用 `.grok/AGENTS.md`，omp 用
 `workspace/AGENTS.md`，kimi 用 `.kimi-code/AGENTS.md`，三个不同位置。加目录项
 时注意目录根会被 lstat 校验（软链目录整个跳过，这是安全防线不是 bug）。
+
+## F6a 进化管线安全网（2026-07-27）
+
+owner 在飞书点「应用提案」后的链路变了：**pre-apply 快照 → 追加补丁 → 跑
+eval-skills → 不过就自动回滚**。快照落 `workspace/evolve/snapshots/`，与用户树
+快照共用一套逻辑（`createSnapshotStore`，两套白名单）。
+
+**看卡片就能分流处置**，别只看 OK/FAIL：
+
+| 卡片文案 | 含义 | 该做什么 |
+|---|---|---|
+| `OK` | 应用成功且 eval 通过 | 无 |
+| `FAIL（内容重复，已应用过 → 跳过）` | 去重拦下，提案已标 `status: duplicate` | 正常，无需处理 |
+| `FAIL（回归检查未过，已自动回滚）` | 编辑面已复原，提案退回 pending | 看 eval 为什么挂 |
+| `FAIL（已回滚，但记账未完全撤销…）` | 编辑面回滚了，提案状态/记录没对齐 | 手工对齐 status 与 applied 记录 |
+| `⚠️ 回滚失败（补丁仍在生效…）` | **补丁还在 PROMPT 里** | 立刻处置，见下 |
+| `FAIL（无可信回滚点，未改动任何配置）` | 快照失败或编辑面与最新快照不符 | 先手动跑一次快照 |
+
+**回滚失败的人工处置**：`workspace/evolve/applied/` 下会有
+`*.rollback-failed.txt` 说明现场。步骤：①用它记的 lineage bak 或快照恢复
+PROMPT；②确认恢复后，**删掉对应的 applied 记录**才能解除内容去重、允许重试。
+去重在此时是 fail-closed 的（补丁还在编辑面，放行重试就是二次叠加）。
+
+**去重是双闸**：applied 记录的 contentHash + 活体校验（补丁正文是否已在目标
+PROMPT 里）。后者覆盖旧版写的、没有 hash 行的历史记录。确需重复应用时加
+`--allow-duplicate`（CLI 专用，飞书按钮走不到）。
+
+**改 role 或新增角色时**：`apply.mjs` 的 `ROLES` 数组是唯一真源——白名单由
+`editSurfaceFiles()` 枚举 promptPath/rulesPath/seed 推导，加了角色白名单自动
+跟上。非白名单 role 的提案会被 `unknown_role` 拒绝（不静默折叠到 ai）。
+
+**并发**：`workspace/evolve/snapshots/.apply-lock` 是跨进程锁（apply 全程持有，
+pid 探活 + 10 分钟 TTL）。看到 `FAIL（另一个 apply 正在运行）` 就是它在起作用；
+陈旧锁会被自动抢占，一般不用手删。
+
+**清理重复补丁**（存量整理，不可逆，先问川哥）：脚本思路见 2026-07-27 那次——
+按「去掉日期行与来源提案行后的实质内容」分组、每组留最早一遍，内容独特的块
+全部保留。纪律：本地全量预演 → 验证「非补丁内容逐字节一致」→ 生产快照 +
+lineage 备份 → 写入 → eval → 生产结果与本地预演逐字节比对。
