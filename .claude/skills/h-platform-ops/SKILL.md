@@ -18,16 +18,49 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 4. **杀进程用 PID**：`pgrep -af` 拿 PID 再 `kill`，**禁裸 `pkill -f` 进 ssh 命令行**（自杀坑，见 [[ssh-remote-process-mgmt-pitfalls]]）。
 5. **UI 改版先问取向**：改页面前确认**桌面优先还是移动优先**（管理/配置类页面默认桌面优先）；「按 X 的逻辑做」= 抽同一组件双端复用，不是各写一份长得像的（[[feedback_ui_parity_means_same_component]]）。
 6. **改 html.mjs 必跑 script 语法门**：模板字符串会把 `\n` 先解析成真实换行 → 输出的 JS 字符串字面量断行 → **整个 script 块静默不执行**（页面正常、console 无报错、按钮全失灵）。源码里写 `\\n`；改完跑「必跑检查」里的 script 块语法检查（[[feedback_template_string_swallows_js_escapes]]）。
-7. **推代码认分支**：本仓 `origin/main` 是**无关的飞书 MCP 开源主线**（merge 报"拒绝合并无关历史"）；bridge 部署主干在 `origin/feishu-grok-bridge`。push 用 `git push origin main:feishu-grok-bridge`，**别推 origin/main**。
+7. **推代码前查实时分支**：历史上部署主干曾在 `origin/feishu-grok-bridge`，但 2026-07-27 已确认 GitHub 当前生产主干是 `origin/main`，旧分支落后。每次先跑 `git fetch origin && git rev-list --left-right --count HEAD...origin/main`，不要把历史记忆当现状。
 8. **健康读数认实例**：bridge `/health` 的**顶层字段是 owner Bot 的**，用户 Bot 在 `apps.<appId>` 里。查「某用户的消息到没到」必须看 `apps` 分解——2026-07-25 我拿顶层 `lastInboundAt:null` 断言「一条没收到」，实际用户 Bot 那条准时到了（[[feedback_selfcheck_false_signal]]）。
 9. **远程语法检查用绝对路径**：dev198 非交互 ssh 的 PATH 没有 node，`node --check` 会「命令未找到」而静默略过；结论行必须由累计变量驱动，绝不无条件 `echo 全过`。
+10. **Kimi 通道名不能混**：开放平台模型是 `kimi-k3`；Kimi Code 订阅的 CLI alias 是 `kimi-code/k3`，其 provider model 是 `k3`。桥接层必须使用订阅命名，不能把开放平台名字直接塞进 managed provider。
+11. **锁模型而非信默认值**：Kimi 配置生成和 Runner 必须共用 `lib/kimi-model.mjs`；Runner 每次显式传 `--model kimi-code/k3`。只改 `default_model` 不算完成。
+12. **真任务归因到真引擎**：用户要求“由 Kimi 完成”时，Codex/cc 只做编排、权限、送达和验收；业务结论必须来自真实 `createKimiRunner`。验收证据同时看 trace 的 `engine/model/providerModel`、真实回复和飞书 message_id。
+13. **macOS 部署禁 AppleDouble**：从 Mac 用 tar 向 Linux 发文件会夹带 `._*`；优先 `COPYFILE_DISABLE=1 tar`、`rsync` 或部署后精确清理 `._*`，禁止把这些杂物留进生产 Git 状态。
 
 ## 架构
 
 - **执行面** dev198 `~/feishu-grok-bridge`（main=生产多 App 版，不暴露公网）：bridge WS 出站连飞书；per-user grok/kimi 跑 bwrap 沙箱。
 - **控制面** aliyun-hk `/srv/h-control`（systemd `h-control`，nginx `ai.kidshub.cn`→127.0.0.1:18790）：dashboard/BYOS OAuth/vault/token-manager。
 - **引擎出网**：grok 走本机 xray `127.0.0.1:10808`；**kimi 直连**（沙箱挂 `/run/systemd/resolve` 修 DNS）。
-- **凭据注入**：grok 用 `XAI_API_KEY`（**非** auth.json，grok 校验 refresh 非空+profile 字段不认）；kimi 写 `config.toml` managed provider（api_key 模式）。
+- **凭据注入**：grok 用 `XAI_API_KEY`（**非** auth.json，grok 校验 refresh 非空+profile 字段不认）；kimi 每次任务前同步最新 access token，并重写 `config.toml` managed provider（api_key 模式）。
+
+## Kimi Code K3 契约与验收（2026-07-27）
+
+| 层 | 正确值 | 常见误用 |
+|---|---|---|
+| Kimi 开放平台 API | `kimi-k3` | 把它直接用于订阅 endpoint |
+| Kimi Code CLI alias | `kimi-code/k3` | 继续沿用 `kimi-code/kimi-for-coding` |
+| managed provider model | `k3` | `kimi-for-coding` |
+| endpoint | `https://api.kimi.com/coding/v1` | 与开放平台 endpoint 混用 |
+| context | `1048576` | 沿用旧 `262144` |
+
+排障顺序固定：
+
+1. 查官方文档当天状态，再查生产 `kimi --version` / `kimi --help` 是否支持 `--model`。
+2. 查 `<userRoot>/.kimi-code/config.toml`，只输出模型/endpoint 字段，禁止输出 `api_key`。
+3. 真实任务前必须走 `syncCredentials`；手工拿磁盘旧 token 直打出现 401，只能说明“这份 token 不可用”，不能说明 K3 不可用。
+4. 用真实 sandbox `createKimiRunner` 发无工具短请求；日志必须出现 `model=kimi-code/k3 provider_model=k3`。
+5. 查用户 trace：`task_begin.engine=kimi`、`model=kimi-code/k3`、`providerModel=k3`，且 `task_end.ok=true`。
+6. 最后一跳用目标 Bot 主动发给目标 open_id，拿真实 message_id；只看到 Kimi stdout 不算飞书可用。
+
+健康端口以生产日志为真，当前是 `127.0.0.1:18765`。不要猜 `3000/18080`；先查 `journalctl` 的 `health server` 行。
+
+部署 bridge 代码时只传明确文件，并先备份；生产 `workspace/PROMPT.md`、`workspace/evolve/*` 等运行态脏文件必须保留。Mac → Linux 示例：
+
+```bash
+COPYFILE_DISABLE=1 tar -cf - lib/control-client.mjs lib/kimi-runner.mjs lib/kimi-model.mjs lib/trace.mjs test/kimi-k3.test.mjs package.json README.md \
+  | ssh dev198 'cd ~/feishu-grok-bridge && tar -xf -'
+ssh dev198 'find ~/feishu-grok-bridge -maxdepth 3 -type f -name "._*" -print -delete'
+```
 
 ## 开通新用户（管理员零填写，2026-07-25 v1.4.0 起）
 
