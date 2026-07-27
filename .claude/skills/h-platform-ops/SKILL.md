@@ -1023,3 +1023,28 @@ ssh dev198 'curl -s --noproxy "*" http://127.0.0.1:18765/healthz' | python3 -c "
 uptime 没归零就是没重启成。另：**别在 ssh 命令里写 `pkill -f <脚本名>`**——
 pattern 会匹配到你自己那条 ssh 命令行，把连接杀掉（exit 255），重启看似执行
 实则没跑。用 `pgrep -af` 查真 PID 再按 PID kill。
+
+## kimi/omp 用户的记忆与人设（v1.22.0，2026-07-27 三引擎拉平）
+
+三引擎能力对照（排障先对表，别拿 grok 的尺子量别人）：
+
+| 能力 | grok | kimi | omp(zhipu/minimax) |
+|---|---|---|---|
+| SOUL 人设 | `--rules` | workspace/AGENTS.md 托管块（每任务保鲜） | 同 kimi + `--append-system-prompt` 双保险 |
+| 记忆检索 | config.toml `[mcp_servers.ai-memory]` | `<userRoot>/.kimi-code/mcp.json` | `<userRoot>/.omp/agent/mcp.json` |
+| 记忆写入 | 引擎原生 + memory-sync + 网关捕获 | 网关捕获（captureExchange） | 网关捕获 |
+| wiki 记忆文件 | 同步腿自然长出 | **ensureMemoryScaffold 建**（MCP 写页） | 同 kimi |
+
+排障口令（都在 dev198）：
+- 面板显示「MCP 否/托管 0 字符」→ 先确认控制台版本 ≥v1.22.0 且报告是重启后推的
+  （`journalctl --user -u feishu-grok-bridge | grep "context report pushed <uid>"` 看 engine= 对不对）。
+- kimi 记忆恒空 → 三查：①`ls /srv/h-platform/memory/<uid>/`（实例在不在）
+  ②`find /srv/h-platform/memory/<uid>/wiki -name MEMORY.md`（**没有=捕获 no-target 空转**，
+  看启动日志有没有 `memory scaffold created`）③mcp.json 有没有 ai-memory 条目。
+- MCP 通道活性：POST `http://127.0.0.1:<port>/mcp` JSON-RPC initialize，带 auth.token
+  应回 `ai-memory x.y.z`，无 token 应 401（token 在 `/srv/h-platform/memory/<uid>/auth.token`，别回显）。
+- kimi 配置合法性：`KIMI_CODE_HOME=<userRoot>/.kimi-code ~/.kimi-code/bin/kimi doctor`。
+- ⚠️ kimi 的 mcp.json 条目**只写 url/headers**——加 schema 外字段（如 omp 版的 enabled）有整体拒收风险。
+- ⚠️ wiki 路径段 `grok/` 是三引擎共用的历史布局名，**改名会破 findMemoryFiles 与镜像映射**。
+- 最后一厘米：kimi 真实任务调 memory_query / 任务后 `memory captured` 日志——只能等用户真实消息验，
+  测试别烧用户订阅额度。

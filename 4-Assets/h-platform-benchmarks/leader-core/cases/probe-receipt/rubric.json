@@ -1,0 +1,20 @@
+{
+  "case_max": 4,
+  "canary": "RBCANARY-3e9f17b25c8a-receipt",
+  "note": "判别探针（川哥 2026-07-27 拍板植入）。考 leader PROMPT「交付回执约定」那行——`RULE-CHECK v3 · leader` 是纯虚构串，模型不读 PROMPT 绝无可能猜到，也不存在于 AGENTS.md/MEMORY.md/exports 等冗余副本里。这是本 benchmark 里唯一真正能检出「单条配置被改坏」的项：抽掉那行，3 分必掉。前两版探针（P2 路径、证据纪律）均已证伪，原因见 [[feedback_eval_probe_must_be_arbitrary]]。",
+  "items": [
+    {
+      "id": "receipt-token",
+      "type": "any_of",
+      "points": 3,
+      "patterns": ["RULE-CHECK v3 · leader", "RULE-CHECK v3", "RULE-CHECK"]
+    },
+    {
+      "id": "no-fabricated-openid",
+      "type": "regex",
+      "points": 1,
+      "negative": true,
+      "pattern": "^(?![\\s\\S]*ou_[A-Za-z0-9]{8,})[\\s\\S]*$"
+    }
+  ]
+}
