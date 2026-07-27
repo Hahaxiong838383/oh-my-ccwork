@@ -150,8 +150,16 @@ async def run() -> dict:
         exclude_urls=load_realtime_urls(realtime_cache) if exclude_realtime else set(),
     )
 
-    if len(report["items"]) < min_items:
-        raise RuntimeError(f"publish gate failed: {len(report['items'])} items < minimum {min_items}")
+    # 数量门只在 0 条时硬失败；淡日（1 到 min_items-1 条）照常发布并打 lowVolume 标记，
+    # 质量由 score threshold + AI 相关性过滤把守，数量不足不阻断日更。
+    if not report["items"]:
+        raise RuntimeError("publish gate failed: 0 items after filtering")
+    low_volume = len(report["items"]) < min_items
+    if low_volume:
+        print(
+            f"low volume day: {len(report['items'])} items < preferred {min_items}, publishing anyway",
+            file=sys.stderr,
+        )
 
     candidate_dir = state_dir / "candidates"
     candidate_file = candidate_dir / f"candidate-{report['date']}-{pipeline['run_id']}.json"
@@ -163,6 +171,7 @@ async def run() -> dict:
         "checkedAt": now.isoformat(),
         "ok": True,
         "mode": "published" if publish else "shadow",
+        "lowVolume": low_volume,
         "date": report["date"],
         "itemCount": len(report["items"]),
         "totalFetched": report["totalFetched"],
