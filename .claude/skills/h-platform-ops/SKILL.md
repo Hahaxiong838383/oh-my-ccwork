@@ -1242,3 +1242,19 @@ bridge 传入的 `isStopped()` oracle（后台任务看句柄 status / 前台看
 禁止「Mac 侧推远端 + dev198 rsync 不入账」的双轨（本次三方漂移根因）；
 ② 判主干/推送前，关键文件三方 md5 对撞（线上 /srv/h-control/app/... ↔ dev198
 工作区 ↔ origin/main），任何单一 git 视角都会骗人；③ 切忌 reset --hard 任一边。
+
+## F5.4 登录保活（v1.28.0，2026-07-28）
+
+**机制**：hsid（用户控制台）24h 硬过期 → **30 天滑动续期**；hadm（管理台）12h →
+**7 天滑动**；`/go/` 卡片自动登录链接 7→30 天拉齐。滑动=带有效 cookie 的请求
+每小时最多换发一张全额 TTL 新 cookie（`session.mjs renewCookie/renewAdminCookie`，
+**先验签后换发**，过期/伪造绝不复活）。开着的 dashboard 标签靠每分钟轮询自动
+续命=永不掉线；离开满一个 TTL 才需重新走入口。
+
+- dashboard 未登录：不再 302 首页装死，直接 401 + 指引页（发「配置」/点 30 天
+  内的「打开我的后台」按钮）。
+- 排「登不上」：先看响应字节数分形态（登录壳 vs 全页），再浏览器真机测 console；
+  cookie 语义都在 `control-plane/lib/session.mjs` 一个文件里。
+- 测试锁 `control-plane/test/session-renewal.test.mjs`（4 个）；改 TTL/续期节流
+  必过它。Set-Cookie 优先级：路径自带的（如切换助手）覆盖续期的——writeHead
+  显式头覆盖 setHeader，语义正确勿"修复"。
