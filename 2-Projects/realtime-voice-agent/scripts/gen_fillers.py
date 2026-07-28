@@ -154,7 +154,11 @@ async def _synth_one(fname: str, text: str) -> float:
     async for chunk in agen:
         if chunk:
             pcm.extend(bytes(chunk))
-    with wave.open(str(OUT_DIR / fname), "wb") as w:
+    return _write_wav(OUT_DIR / fname, pcm)
+
+
+def _write_wav(path: Path, pcm: bytes | bytearray) -> float:
+    with wave.open(str(path), "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
         w.setframerate(SR)
@@ -162,27 +166,101 @@ async def _synth_one(fname: str, text: str) -> float:
     return len(pcm) / 2 / SR
 
 
-async def main() -> int:
-    _load_env()
-    if not os.environ.get("VOLC_APP_ID") or not os.environ.get("VOLC_ACCESS_TOKEN"):
-        print("缺 VOLC_APP_ID / VOLC_ACCESS_TOKEN(项目根 .env 或环境变量)", file=sys.stderr)
-        return 1
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    for old in OUT_DIR.glob("*.wav"):
-        old.unlink()
-    (OUT_DIR / "manifest.json").unlink(missing_ok=True)
+async def _synth_one_xfyun(
+    out_dir: Path, fname: str, text: str, creds: dict[str, str], vcn: str
+) -> float:
+    """讯飞超拟人合成一条(2026-07-28 租户音色版:与租户正式链路同 vcn,解双音色穿帮)。"""
+    import base64
 
-    speaker = os.environ.get("VOLC_TTS_SPEAKER", "zh_female_vv_uranus_bigtts")
+    import aiohttp
+
+    sys.path.insert(0, str(PROJ / "src"))
+    from voice_agent.engines.xfyun_common import build_tts_request, build_xfyun_auth_ws_url
+
+    url = build_xfyun_auth_ws_url(creds["api_key"], creds["api_secret"])
+    req = build_tts_request(text, app_id=creds["app_id"], vcn=vcn, sample_rate=SR)
+    pcm = bytearray()
+    async with aiohttp.ClientSession() as http:
+        async with http.ws_connect(url) as ws:
+            await ws.send_str(json.dumps(req, ensure_ascii=False))
+            while True:
+                msg = await ws.receive(timeout=20)
+                if msg.type != aiohttp.WSMsgType.TEXT:
+                    break
+                obj = json.loads(msg.data)
+                code = (obj.get("header") or {}).get("code")
+                if code not in (0, None):
+                    raise RuntimeError(
+                        f"讯飞合成失败 {fname}: code={code} "
+                        f"{(obj.get('header') or {}).get('message', '')}"
+                    )
+                audio = (obj.get("payload") or {}).get("audio") or {}
+                if audio.get("audio"):
+                    pcm.extend(base64.b64decode(audio["audio"]))
+                if audio.get("status") == 2:
+                    break
+    if not pcm:
+        raise RuntimeError(f"讯飞合成 0 字节: {fname}")
+    return _write_wav(out_dir / fname, pcm)
+
+
+def _xfyun_creds() -> tuple[dict[str, str], str]:
+    """讯飞凭据:优先租户加密存储(TENANT_* env 齐,凭据不出服务器),回退 XFYUN_TTS_* env。"""
+    sys.path.insert(0, str(PROJ / "src"))
+    from voice_agent.tenant import load_tenant_credentials
+
+    creds = load_tenant_credentials("xfyun_tts") or {
+        "app_id": os.environ.get("XFYUN_TTS_APP_ID", ""),
+        "api_key": os.environ.get("XFYUN_TTS_API_KEY", ""),
+        "api_secret": os.environ.get("XFYUN_TTS_API_SECRET", ""),
+        "vcn": os.environ.get("XFYUN_TTS_VCN", ""),
+    }
+    missing = [k for k in ("app_id", "api_key", "api_secret") if not creds.get(k)]
+    if missing:
+        raise RuntimeError(f"讯飞 TTS 凭据缺失 {missing}(租户存储或 XFYUN_TTS_* env)")
+    return creds, creds.get("vcn") or "x6_lingxiaoxuan_pro"
+
+
+async def main() -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="生成语义分桶承接音资产")
+    parser.add_argument("--engine", choices=["volc", "xfyun"], default="volc")
+    parser.add_argument(
+        "--out", default="", help="输出目录(默认 assets/fillers;租户资产必须换独立目录,勿混主链路)"
+    )
+    args = parser.parse_args()
+    out_dir = Path(args.out) if args.out else OUT_DIR
+
+    _load_env()
+    if args.engine == "volc":
+        if not os.environ.get("VOLC_APP_ID") or not os.environ.get("VOLC_ACCESS_TOKEN"):
+            print("缺 VOLC_APP_ID / VOLC_ACCESS_TOKEN(项目根 .env 或环境变量)", file=sys.stderr)
+            return 1
+        speaker = os.environ.get("VOLC_TTS_SPEAKER", "zh_female_vv_uranus_bigtts")
+        creds, vcn = {}, ""
+    else:
+        creds, vcn = _xfyun_creds()
+        speaker = f"xfyun/{vcn}"
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for old in out_dir.glob("*.wav"):
+        old.unlink()
+    (out_dir / "manifest.json").unlink(missing_ok=True)
+
     n = sum(len(v) for v in FILLERS.values())
-    print(f"合成承接音 × {n}(speaker={speaker})→ {OUT_DIR}")
+    print(f"合成承接音 × {n}(speaker={speaker})→ {out_dir}")
     manifest: dict[str, dict[str, str]] = {}
     for bucket, texts in FILLERS.items():
         for i, text in enumerate(texts, 1):
             fname = f"{bucket}_{i:02d}.wav"
-            dur = await _synth_one(fname, text)
+            if args.engine == "xfyun":
+                dur = await _synth_one_xfyun(out_dir, fname, text, creds, vcn)
+            else:
+                dur = await _synth_one(fname, text)
             manifest[fname] = {"bucket": bucket, "text": text}
             print(f"  {fname}: {text!r} → {dur:.2f}s")
-    (OUT_DIR / "manifest.json").write_text(
+    (out_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
     )
     print("manifest.json 已写。worker 重启后生效(FILLER_ENABLED=0 可关)。")
