@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import re
 import time
 from collections.abc import AsyncIterator
@@ -329,7 +330,20 @@ class TierACascadeEngine(ExperienceEngine):
             # 连接 reset(python client 能协商 RED 但浏览器协商失败)。dtx/red 跨境优化改走客户端侧。
         )
         _register_metrics(session, ctx, agents_mod)  # 链路延迟 → web 页面板
-        if self._settings.agent_greeting:
+        if os.environ.get("GREETING_MODE", "fixed") == "llm":
+            # 开场白走 LLM(2026-07-28 租户诉求:欢迎语也由租户提示词体系生成)——
+            # 指令走 **user_input 位**(非 instructions):instructions 只生成 system-only
+            # 请求,严格端点(DashScope 20015/Gemini vertex)都拒"无 user 消息";user 位
+            # 全兼容,租户端点还可识别这条固定开场指令定制开场。失败不挡主链路。
+            hint = os.environ.get(
+                "GREETING_LLM_HINT",
+                "(用户刚接通语音通话。请按你的人设自然地打个招呼,一句话,10字以内。)",
+            )
+            try:
+                session.generate_reply(user_input=hint)
+            except Exception:
+                logger.exception("LLM 开场白失败(降级静默,用户开口即正常对话)")
+        elif self._settings.agent_greeting:
             # 固定问候语直接 TTS 念(say),不走 LLM——generate_reply(instructions=)
             # 在 Gemini vertex-ai 上因无 user turn 报 400 "input cannot be empty"。
             await session.say(self._settings.agent_greeting)
