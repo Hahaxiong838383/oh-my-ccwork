@@ -192,7 +192,7 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 
 **64.90 三服务**:`voice-console`(FastAPI 127.0.0.1:8930,对外 https://voice-api.hahaxiong.cc 经 caddy)/`caddy`(自动证书)/`voice-worker-colleague`(租户实例)。主 worker 与它们互不依赖,全撤=`systemctl disable --now` 三件。
 
-**租户配置真源**:`/root/realtime-voice-agent/tenant-colleague.env`——unit 的**最后一个 EnvironmentFile**。⚠️ **systemd EnvironmentFile 覆盖 Environment=**,差异配置绝不写 unit Environment 行(2026-07-28 实战:写了=服务 active 但 provider 根本没切)。当前:STT/TTS_PROVIDER=xfyun、LLM_PROVIDER=tenant-brain、WORKER_MAX_JOBS=2、WORKER_HTTP_PORT=8082(错开主 8081)、FILLER_DIR=/opt/voice-agent/fillers-colleague(聆小璇音色,租户专属,勿混主 assets/fillers)。内存护栏 drop-in:`voice-worker-colleague.service.d/memory.conf`(High 1600M/Max 2000M)。
+**租户配置真源**:`/root/realtime-voice-agent/tenant-colleague.env`——unit 的**最后一个 EnvironmentFile**。⚠️ **systemd EnvironmentFile 覆盖 Environment=**,差异配置绝不写 unit Environment 行(2026-07-28 实战:写了=服务 active 但 provider 根本没切)。当前:STT/TTS_PROVIDER=xfyun、LLM_PROVIDER=tenant-brain、WORKER_MAX_JOBS=2、WORKER_HTTP_PORT=8082(错开主 8081)、FILLER_DIR=/opt/voice-agent/fillers-colleague(聆小璇音色,租户专属,勿混主 assets/fillers)、GREETING_MODE=llm(开场白走租户大脑;指令走 user 消息位——instructions=system-only 被 DashScope 20015 拒;GREETING_LLM_HINT 换文案,删行=回固定句)。内存护栏 drop-in:`voice-worker-colleague.service.d/memory.conf`(High 1600M/Max 2000M)。
 
 **常用操作**:开租户=`source console.env && python -m voice_agent.console.tenantctl add <名>`(key 只显示一次);凭据状态=`GET /v1/credentials`(Bearer 租户key,只回指纹);换 filler 音色=`gen_fillers.py --engine xfyun --out <独立目录>`(64.90 上跑,凭据走租户存储不出服务器)+FILLER_DIR 指过去。
 
