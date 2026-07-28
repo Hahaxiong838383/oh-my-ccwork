@@ -1205,3 +1205,38 @@ pattern 会匹配到你自己那条 ssh 命令行，把连接杀掉（exit 255�
 本轮基线：本地 Bridge `319/319`、生产 Bridge `321/321`、生产控制面 `108/108`；
 6 个登记用户目录四项配置完整，5 个用户 Bot + 1 个 owner Bot 在线、错误 0；5 份在线
 用户镜像完整、规则缺失 0、pending 0；本地与生产源码哈希一致。
+
+## F5.3 kimi 超时自动续跑（v1.27.0，2026-07-28）
+
+**机制**：kimi 单轮墙钟 12min（token 15min 约束，`kimi-model.mjs KIMI_MAX_RUN_MS`）；
+超时不再终局——刷新凭据后 `--session <id>` 带完整上下文接力，默认再续 2 轮
+（`KIMI_CONTINUE_ROUNDS`，总墙钟 ≤36min）；群聊不续（不转后台会占队列 36min）。
+成功回复带「（已自动续跑 N 轮）」角标；轮次耗尽把半成品当降级答复送达+「发继续」。
+
+**关键事实（bundle 实证+探针，别靠猜）**：
+- kimi CLI `appendSessionIndexEntry` 只在 create/fork 写 `session_index.jsonl`，
+  **resume 不写**——session id 只在首轮超时后对撞一次（恰好一条新增才算数），
+  之后各轮复用；逐轮对撞第 2 轮必扑空还可能领养并发任务的会话。
+- `--session` 指向无效会话时 CLI 在 API 调用前 exit 1（`Session "x" not found`，
+  零额度）→ runner 自动换 prompt 兜底重试，不占接力名额。
+- `-p` 与 `--session` 可组合（2026-07-28 探针实测）。
+
+**停止语义（红线，对抗审查修正）**：续跑轮**绝不读 session 级 stopRequested**
+（裸「停」/「/new」会置它，读了=误杀后台任务，F5-2 同类病）。任务级停止走
+bridge 传入的 `isStopped()` oracle（后台任务看句柄 status / 前台看键级旗标）+
+`child.hStopRequested`；「停止 #句柄」后 `attachChild` 拒收新轮 → bridge 直接
+标停+SIGTERM，绝不回落前台注册。
+
+**授权墙**：撞过 `onUserActionRequired` 的超时不硬续（墙不会自己消失）——半成品
+降级送达+「完成授权后自动续跑」；授权在主跑期间完成 → `pendingAuthRetry` 闩，
+主跑失败收场时补触发重跑（带半成品衔接，挂原会话键可被「停」）。主跑成功且
+没撞墙 → 授权回调不重跑（省额度）。
+
+**排障关键词**：`kimi continue`（接力轮日志，含 round/session）、
+`auth_wall_yield`/`continue_exhausted`/`rebind_needed`（trace note）、
+`auth retry deferred|skipped`（门闸行为）。测试锁 `test/kimi-continue.test.mjs`（12 个）。
+
+⚠️ **仓库对账未决（2026-07-28）**：dev198 工作区≈生产真相（aliyun-hk oauth.mjs
+md5 与工作区一致、与 origin/main **不一致**），HEAD 本地提交 f6fa06d **未推**。
+「origin/main 是生产主干」的说法只对了一半——推送前必须三方 md5 对撞
+（线上/工作区/origin），谁新谁旧要人工裁决，切忌 reset --hard 任一边。
