@@ -77,6 +77,21 @@ async def verify_xfyun_tts(creds: dict[str, str]) -> VerifyResult:
         return False, f"连接失败: {e}"
 
 
+async def verify_xfyun_spark_iat(creds: dict[str, str]) -> VerifyResult:
+    """中文识别大模型(spark iat):同套 hmac-sha256 鉴权,握手 101 即凭据有效。"""
+    from voice_agent.engines.xfyun_spark_iat import SPARK_IAT_WS_URL
+
+    url = build_xfyun_auth_ws_url(creds["api_key"], creds["api_secret"], SPARK_IAT_WS_URL)
+    try:
+        async with aiohttp.ClientSession(timeout=_TIMEOUT) as session:
+            async with session.ws_connect(url):
+                return True, "握手通过"
+    except aiohttp.WSServerHandshakeError as e:
+        return False, f"鉴权失败(HTTP {e.status}): api_key/api_secret 有误"
+    except aiohttp.ClientError as e:
+        return False, f"连接失败: {e}"
+
+
 async def verify_brain(creds: dict[str, str]) -> VerifyResult:
     """模式 B 大脑端点:OpenAI 兼容 chat/completions 最小请求(max_tokens=1)。"""
     base = creds["base_url"].rstrip("/")
@@ -106,6 +121,7 @@ async def verify_brain(creds: dict[str, str]) -> VerifyResult:
 
 VERIFIERS: dict[str, Verifier] = {
     "xfyun_stt": verify_xfyun_stt,
+    "xfyun_spark_iat": verify_xfyun_spark_iat,
     "xfyun_tts": verify_xfyun_tts,
     "brain": verify_brain,
 }

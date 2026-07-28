@@ -575,7 +575,33 @@ def _build_stt(settings: Settings, *, speaker_ring: Any | None = None) -> Any:
             access_key_id=creds["access_key_id"],
             access_key_secret=creds["access_key_secret"],
         )
-    raise RuntimeError(f"未知 STT_PROVIDER={provider!r}（支持：sherpa/volc/xfyun）")
+    if provider == "xfyun_spark_iat":
+        # 讯飞中文识别大模型(对话线,eos 静音断句解碎句,2026-07-28 替代 xfyun 转写线)
+        import os
+
+        from voice_agent.tenant import load_tenant_credentials
+
+        from .xfyun_spark_iat import XfyunSparkIatSTT
+
+        creds = load_tenant_credentials("xfyun_spark_iat") or {
+            "app_id": os.environ.get("XFYUN_IAT_APP_ID", ""),
+            "api_key": os.environ.get("XFYUN_IAT_API_KEY", ""),
+            "api_secret": os.environ.get("XFYUN_IAT_API_SECRET", ""),
+        }
+        missing = [k for k in ("app_id", "api_key", "api_secret") if not creds.get(k)]
+        if missing:
+            raise RuntimeError(f"spark iat 凭据缺失 {missing}:租户未写入且 env 未配")
+        return XfyunSparkIatSTT(
+            app_id=creds["app_id"],
+            api_key=creds["api_key"],
+            api_secret=creds["api_secret"],
+            # eos:服务端静音断句窗(碎句解药);amp:说话检测幅度门(回合制开会话)
+            eos_ms=int(os.environ.get("XFYUN_IAT_EOS_MS", "700")),
+            speech_amp=float(os.environ.get("XFYUN_IAT_SPEECH_AMP", "250")),
+        )
+    raise RuntimeError(
+        f"未知 STT_PROVIDER={provider!r}（支持：sherpa/volc/xfyun/xfyun_spark_iat）"
+    )
 
 
 def _build_llm(

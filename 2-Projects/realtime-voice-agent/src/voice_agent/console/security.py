@@ -23,8 +23,11 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 # 凭据 schema:provider → (必填字段, 可选字段)。控制面写入时校验,worker 读取时信任。
 PROVIDER_SCHEMAS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
-    # 大模型实时转写(iflyaisol 系凭据,与 TTS 三件套不是一套!)
+    # 大模型实时转写(iflyaisol 系凭据,与 TTS 三件套不是一套!)——会议转写定位,碎句,已被
+    # xfyun_spark_iat 取代为对话首选,保留兼容
     "xfyun_stt": (("app_id", "access_key_id", "access_key_secret"), ()),
+    # 中文识别大模型 spark iat(对话线,eos 静音断句;开放平台三件套,与超拟人 TTS 同套鉴权)
+    "xfyun_spark_iat": (("app_id", "api_key", "api_secret"), ()),
     # 超拟人合成(开放平台三件套)
     "xfyun_tts": (("app_id", "api_key", "api_secret"), ("vcn",)),
     # 模式 B 大脑:同事自己的 OpenAI 兼容端点
