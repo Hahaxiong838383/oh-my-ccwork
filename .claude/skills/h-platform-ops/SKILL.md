@@ -325,6 +325,22 @@ L0 是**所有租户都挂得到**的。往那儿放 owner 自己的 skill = 直
 - 改 L0 后必做：① 控制面 `systemctl restart h-control`（**跑着的进程内存里是旧的，
   下次写盘会把你的改动盖掉**）；② 等执行面 60s 同步（`SKILLS_SYNC_INTERVAL_MS`）；
   ③ 复扫 `/srv/h-platform/shared/skills/`；④ 核对 owner 的 `~/.grok/skills` 没被动
+
+### owner 私有 Skill 升 L0 的可信发布链（2026-07-28）
+
+- `workspace/.grok/skills`、`workspace/leader/skills` 只属于 owner 私有层；在那里创建文件，
+  **不等于**用户平台已有 L0。Bot 未拿到控制面证据时禁止说“已同步用户后台”。
+- L0 唯一真源是控制面 `/srv/h-control/data/skills.json`。owner 私有 Skill 必须先泛化：
+  删除姓名、邮箱、飞书标识符、内部域名/路径、组织专属会议室与案例；人员和会议室改为
+  运行时查询；依赖只保留平台真实存在的 Skill。
+- 发布固定走 `POST /internal/skills-publish`，只能写 `platform`、`createdBy=admin`，复用
+  `skillsStore.upsertContent()`；同名跨层禁止覆盖。L0/L1 过危险扫描与共享隐私扫描，L2
+  个人层不受共享隐私规则误伤；控制面本地 `scrub-terms.local.json` 追加环境特有词条。
+- 执行面命令：`scripts/publish-l0-skill.mjs --file <SKILL.md> --summary <简介>`。它必须等到
+  控制面记录、`.skills-manifest.json`、`shared/skills/<name>/SKILL.md` 三方 sha256 一致；
+  再用至少一个 Grok 用户和一个 Kimi 用户的真实 dashboard 验证 `sharedSkills` 可见。
+- 完成证据缺一不可：控制面 `platform/active/installedSha`、执行面 manifest、共享文件哈希、
+  两类真实用户后台。只检查目录、只跑静态扫描或只看 Bot 自述都不是验收。
   （两套目录，owner 零影响是铁律）。
 - 直接改 store 用 `sudo -u h-control node`，**别用 root**——root 写出来的文件
   服务自己改不动。
