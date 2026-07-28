@@ -15,6 +15,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -578,8 +579,8 @@ func (s *Server) tryCandidate(w http.ResponseWriter, r *http.Request, body []byt
 	if err != nil {
 		return 0, false, s.metric(routeModel, candidate.ID, 0, start, "rewrite model: "+err.Error(), nil, probe)
 	}
-	url := upstreamURL(candidate.BaseURL, r.URL.Path)
-	req, err := http.NewRequestWithContext(context.Background(), r.Method, url, bytes.NewReader(upstreamBody))
+	upstream := upstreamURL(candidate.BaseURL, r.URL.Path, r.URL.RawQuery)
+	req, err := http.NewRequestWithContext(context.Background(), r.Method, upstream, bytes.NewReader(upstreamBody))
 	if err != nil {
 		return 0, false, s.metric(routeModel, candidate.ID, 0, start, err.Error(), nil, probe)
 	}
@@ -681,12 +682,21 @@ func rewriteModel(body []byte, payload map[string]any, model string, includeStre
 	return json.Marshal(clone)
 }
 
-func upstreamURL(baseURL, requestPath string) string {
+func upstreamURL(baseURL, requestPath, rawQuery string) string {
 	path := requestPath
 	if strings.HasPrefix(path, "/v1/") {
 		path = strings.TrimPrefix(path, "/v1")
 	}
-	return strings.TrimRight(baseURL, "/") + path
+	upstream := strings.TrimRight(baseURL, "/") + path
+	if rawQuery == "" {
+		return upstream
+	}
+	parsed, err := url.Parse(upstream)
+	if err != nil {
+		return upstream
+	}
+	parsed.RawQuery = rawQuery
+	return parsed.String()
 }
 
 func copyHeaders(dst, src http.Header) {
@@ -1051,8 +1061,8 @@ func (s *Server) record(event MetricEvent) {
 }
 
 func (s *Server) proxyRaw(w http.ResponseWriter, r *http.Request, candidate Candidate) {
-	url := upstreamURL(candidate.BaseURL, r.URL.Path)
-	req, err := http.NewRequestWithContext(r.Context(), r.Method, url, nil)
+	upstream := upstreamURL(candidate.BaseURL, r.URL.Path, r.URL.RawQuery)
+	req, err := http.NewRequestWithContext(r.Context(), r.Method, upstream, nil)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return

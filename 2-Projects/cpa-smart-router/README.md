@@ -80,3 +80,12 @@ CLIProxyAPI 侧可混入 k12 codex auth 文件作为补充算力。完整运维�
 - 刷新线程日志应出现 `core auth auto-refresh started (interval=15m0s)`。
 - 配置修改后需重启 `cliproxy.service`，并用低成本 `gpt-5.4-mini` / `gpt-5.5` 请求确认仍返回 200。
 - 不要把 `access_token`、`refresh_token`、`id_token`、API key 或响应正文写入 git、记忆、通知或 Grok payload。
+
+## Codex Fast 模式（2026-07-28）
+
+- Codex 客户端配置使用 `service_tier = "fast"`，实际 `/v1/responses` 请求应发送 `service_tier: "priority"`。
+- CLIProxyAPI 的 Codex 专用模型目录接口是 `GET /v1/models?client_version=<version>`；响应中的 `service_tiers` 与 `additional_speed_tiers` 是客户端是否发送 Fast 意图的能力真源。
+- smart-router 转发模型目录和推理请求时必须保留 `r.URL.RawQuery`；丢失 `client_version` 会让 CPA 降级返回普通四字段模型列表，导致本地 catalog 看不到 Fast。
+- 受 Git 管理的刷新器维护源是 `scripts/refresh-cc-switch-model-catalog.mjs`；本机 `~/.codex/refresh-cc-switch-model-catalog.mjs` 应指向该文件，由 LaunchAgent 每小时刷新。
+- 验收必须分开记录：客户端请求是否携带 `priority`、CPA 是否返回 HTTP 200、上游响应回报的 service tier。当前真实请求已携带 `priority`，但上游流式响应仍回 `auto/default`，不得把“请求已发出”写成“后台加速已确认”。
+- 现网 CLIProxyAPI 继续使用 `7.2.58`；Fast 链路不需要为了本次修复直接跨版本升级，升级应另做回归和时间窗。

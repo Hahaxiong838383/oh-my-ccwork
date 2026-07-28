@@ -75,6 +75,15 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - `~/.codex/refresh-cc-switch-model-catalog.mjs` 会通过 LaunchAgent 每小时刷新 catalog；持久修复要改刷新脚本，不能只手改 JSON。
 - API 层验证可直接向 `https://smart-api.hahaxiong.top/v1/responses` 发送带 `input_image` 的 `gpt-5.5` 请求；若返回 200，说明 CPA/smart-router 实际支持图片，问题在 Codex app catalog。
 
+## Codex Fast 模式排障
+
+- Codex 本机配置 `service_tier = "fast"` 只是意图；模型 catalog 还必须为目标模型声明 `service_tiers: [{"id":"priority",...}]` 和 `additional_speed_tiers: ["fast"]`，否则客户端会在发请求前省略 Fast。
+- CLIProxyAPI 官方能力接口是 `GET /v1/models?client_version=<version>`。普通 `GET /v1/models` 只返回 OpenAI 四字段目录，不能用于判断 Fast、图片或推理级别。
+- smart-router 的所有上游 URL 都必须保留 `r.URL.RawQuery`；尤其不能丢失 `client_version`，否则 Codex 专用目录会被静默降级。
+- 本机目录刷新器维护源：`2-Projects/cpa-smart-router/scripts/refresh-cc-switch-model-catalog.mjs`；运行态路径 `~/.codex/refresh-cc-switch-model-catalog.mjs` 由 LaunchAgent 每小时执行。
+- 真实验收优先使用透明转发或安全日志，只记录 `model`、`service_tier`、状态码和脱敏 client metadata key，禁止记录 Authorization 或请求正文。
+- 当前已验证 Codex 0.145.0 经 `smart-api` 对 `gpt-5.6-sol` 发送 `service_tier: "priority"` 并返回 200；但响应元数据仍显示 `auto/default`。结论只能是“Fast 意图已成功发送和透传”，不能声称上游调度档位已确认。
+
 ## CPA Menu 桌面监控
 
 - macOS App 只通过 `https://smart-api.hahaxiong.top/desktop/v1/*` 访问 Bridge；Desktop Token 只存远端 `0600` 文件与本机 Keychain。

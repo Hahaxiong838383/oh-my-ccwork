@@ -50,3 +50,38 @@ func TestDefaultBackendReturnsRetryableUpstreamError(t *testing.T) {
 		t.Fatalf("metric = %#v", metric)
 	}
 }
+
+func TestModelsForwardsClientVersionQuery(t *testing.T) {
+	queryCh := make(chan string, 1)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		queryCh <- r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"models":[]}`)
+	}))
+	defer upstream.Close()
+
+	server := &Server{
+		cfg: Config{
+			DefaultBackend: Candidate{
+				ID:      "cpa-mixed",
+				BaseURL: upstream.URL + "/v1",
+				APIKey:  "upstream-key",
+			},
+		},
+		clientKeys: map[string]struct{}{"client-key": {}},
+		httpClient: upstream.Client(),
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/models?client_version=0.145.0&include_hidden=true", nil)
+	req.Header.Set("Authorization", "Bearer client-key")
+	recorder := httptest.NewRecorder()
+
+	server.handleModels(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
+	}
+	if got := <-queryCh; got != "client_version=0.145.0&include_hidden=true" {
+		t.Fatalf("query = %q, want client version query", got)
+	}
+}
