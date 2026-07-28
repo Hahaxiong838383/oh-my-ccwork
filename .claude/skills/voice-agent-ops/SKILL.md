@@ -187,3 +187,17 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 - cc 改安全组/开公网端口会被 harness 拦 → 给现成命令川哥自己跑。
 - 部署自验必须 rtc_probe 真跑(editable 装才 rsync 即生效;曾栽过 site-packages 旧副本)。
 - **git 归属(2026-07-04 川哥拍板定稿)**:随 mycc 仓隐私剥离曾短暂出仓,当日川哥拍板**回归 oh-my-ccwork 仓 `2-Projects/` 正常管理**(1c2c14462 快照入仓;旧历史已被 filter-repo 洗净,从快照重新开始)。"部署过的代码立即 commit"落 mycc 仓即可;`.gitignore`/`.git/info/exclude` 的剥离清单里**不再有本项目**(其余 4 个剥离项目不受影响)。
+
+## 租户 worker(BYOK 服务化,2026-07-28 起)
+
+**64.90 三服务**:`voice-console`(FastAPI 127.0.0.1:8930,对外 https://voice-api.hahaxiong.cc 经 caddy)/`caddy`(自动证书)/`voice-worker-colleague`(租户实例)。主 worker 与它们互不依赖,全撤=`systemctl disable --now` 三件。
+
+**租户配置真源**:`/root/realtime-voice-agent/tenant-colleague.env`——unit 的**最后一个 EnvironmentFile**。⚠️ **systemd EnvironmentFile 覆盖 Environment=**,差异配置绝不写 unit Environment 行(2026-07-28 实战:写了=服务 active 但 provider 根本没切)。当前:STT/TTS_PROVIDER=xfyun、LLM_PROVIDER=tenant-brain、WORKER_MAX_JOBS=2、WORKER_HTTP_PORT=8082(错开主 8081)、FILLER_DIR=/opt/voice-agent/fillers-colleague(聆小璇音色,租户专属,勿混主 assets/fillers)。内存护栏 drop-in:`voice-worker-colleague.service.d/memory.conf`(High 1600M/Max 2000M)。
+
+**常用操作**:开租户=`source console.env && python -m voice_agent.console.tenantctl add <名>`(key 只显示一次);凭据状态=`GET /v1/credentials`(Bearer 租户key,只回指纹);换 filler 音色=`gen_fillers.py --engine xfyun --out <独立目录>`(64.90 上跑,凭据走租户存储不出服务器)+FILLER_DIR 指过去。
+
+**排障口径**:
+- **agent 不进房间**(用户侧一切正常、无 participantConnected)→ 先查 worker 满载:`journalctl grep "full capacity"` + 最近 job 的 `rss` 打点是否还在打(悬挂会话占名额)。2026-07-28 实锤:cc 自己 E2E 没关页签占死 MAX_JOBS=1 一小时。**E2E 纪律:验完必 `session.close()` + 关页签,日志见 "process exiting" 才算退干净**。
+- **对话里出现第二个音色** → `journalctl grep "filler picked"`:承接音是预缓存 wav 直接播帧,**不经 TTS 引擎,切 provider 管不住它**——换 TTS 引擎 checklist 必含"预缓存音频资产盘点"(filler/greeting/提示音)。
+- **切链路验证** → 唯一凭据=job 真实路径日志(`grep -E "xfyun|volc"`,目标引擎成功路径静默、旧引擎必留痕);unit grep+active+registered 全是假象。
+- **讯飞碎句**(stt final 两三字一条,每条都成 turn)→ "实时语音转写大模型"是会议转写定位,官方文档**无断句粒度参数**(仅 eng_vad_mdn 远近场);出路=①同事问讯飞对话线服务(带 vad_eos 的)②我们判停层聚合适配(观察期,证据在 job 日志 stt final 密度)。
