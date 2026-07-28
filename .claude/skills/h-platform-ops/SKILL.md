@@ -12,7 +12,7 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 
 ## 铁律（每次操作自查）
 
-1. **owner 零影响**：任何多用户改动，owner Bot（`cli_a9f1cd1366751bc7`）逐字节不变。验证：重启后日志 `activated=N` 且 owner `WS started` + `connected:True`，owner 走 `sandbox=null`/无 `syncCredentials`。
+1. **共享行为覆盖 owner**：owner 与所有登记用户必须共用任务分类、队列、后台移交、送达、权限恢复、日志、记忆和错误脱敏机制；owner 只允许保留 `sandbox=null`、凭据来源与隐私边界差异，禁止以“零影响”为由留下一套用户可见旧行为。验证：重启后所有 App 的 `behaviorContractVersion` 必须一致。
 2. **secret 不入 git**：`SERVICE_TOKEN`/`SESSION_SECRET`/`.vault-key`/用户订阅凭据只在两端 `.env`+data（600）。控制面 `/internal/creds` **只下发 access，refresh_token 永不出控制面**。
 3. **隔离必复验**：新用户上线后必做越界测试——该用户 Bot 发「读 `/home/chuan/.grok/auth.json`」→ 必须 `No such file`（bwrap 沙箱）。
 4. **杀进程用 PID**：`pgrep -af` 拿 PID 再 `kill`，**禁裸 `pkill -f` 进 ssh 命令行**（自杀坑，见 [[ssh-remote-process-mgmt-pitfalls]]）。
@@ -29,6 +29,9 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 15. **飞书接口先查官方文档**：管理台常驻 `https://open.feishu.cn/document/home/index`。Bot 对接口、字段、scope 或参数不确定时，优先用用户身份执行 `lark-cli schema <service.resource.method> --as user`；无 typed command 再查官方文档对应板块，并用 `lark-cli api ... --as user --dry-run` 核对。遇到缺权必须保留官方 scope/link，由网关主动发权限申请卡；授权后自动续跑，禁止要求用户重发。
 16. **授权链接只认官方精确地址**：`lark-cli` device-flow 需同时兼容旧 `https://open.feishu.cn/page/cli` 与新版 `https://accounts.feishu.cn/oauth/v1/device/verify`，以及对应 Lark 域名；校验必须限定 HTTPS、官方 hostname 和精确 pathname，禁止用宽泛正则放行任意相似域名。
 17. **短效授权要在用户活跃时现开**：device-flow 实测约 600 秒，无人时提前生成只会留下过期卡。延迟补发的真实语义是“到达 notBefore **并且** 用户下一次单聊入站”，不是“到点立即执行”；现有 F3 调度器只有时间条件，不能冒充事件门。一次性运维可用持久 timer 在 notBefore 后挂只读入站监听，命中目标用户后再创建新授权流；用户标识只留生产机，不入 Git、共享记忆或通用 Skill。
+18. **共享机制禁止用户补丁**：机制修复只能落在 Bridge、共享 Runner 接口或共享 `lib/`；禁止按 `uid`、`appId`、姓名、测试账号或 Bot 名称写分支。每次共享行为变更必须提升 `BOT_BEHAVIOR_CONTRACT_VERSION`，跑全引擎契约与全量测试，并从 `/healthz` 匿名确认所有 App 的版本唯一值数量为 1。
+19. **同会话任务有限并发**：私聊新任务到达时，若实际未完成任务数小于 `GROK_MAX_PARALLEL`，立即把当前前台任务转后台并释放同会话链，新任务直接开始；实际 Runner 完成前仍占并发名额。达到上限或群聊场景才排队，禁止用“per-session 串行”让独立任务无条件互相等待，也禁止释放链后无限启动后台任务。
+20. **任务完成必须晚于送达确认**：Runner 成功只代表计算结束，不代表用户收到结果；持久交付链必须遵守 `Runner success -> durable enqueue -> send -> delivery ack -> task_completed`。`delivery_started`、TaskSessionLog 或一次发送调用均不能替代 ACK；Outbox/送达失败时禁止提前写完成。
 
 ## 架构
 
@@ -1206,6 +1209,69 @@ pattern 会匹配到你自己那条 ssh 命令行，把连接杀掉（exit 255�
 6 个登记用户目录四项配置完整，5 个用户 Bot + 1 个 owner Bot 在线、错误 0；5 份在线
 用户镜像完整、规则缺失 0、pending 0；本地与生产源码哈希一致。
 
+## 全用户运行机制契约（2026-07-28）
+
+1. **共享层单一实现**：`short/full`、debounce、session queue、自行转后台纠偏、私聊
+   120 秒后台移交、最终成功/失败卡、权限申请与自动续跑、TaskSessionLog、记忆触发、
+   错误脱敏必须在 `startApp` 后的共享路径或共享 `lib/` 实现。
+2. **owner/user 用户体验同约**：owner 与登记用户的凭据、沙箱、隐私边界允许不同；同一
+   chat type 的用户可见行为不得不同。群聊可因多人语义禁用后台移交，但私聊不能再按
+   owner/user 分叉。
+3. **引擎差异只留适配层**：Grok 可处理 sticky session/冲突 mint，Kimi 可刷新短 Token/
+   自动续跑，OMP 可适配 provider/model；Runner 返回后必须统一进入
+   `runWithSelfBackgroundGuard`、`deliverFinalResult`、日志、记忆和失败处理链。
+4. **禁止 per-user patch**：不得在产品代码中固化 `uid`、`appId`、姓名、测试账号或 Bot
+   名称；一次性运维脚本不得演变为长期产品逻辑。
+5. **版本化与匿名验收**：契约版本只在 `lib/bot-behavior-contract.mjs` 定义；`/healthz`
+   顶层与每个 App 必须一致。发布前跑契约测试、全量测试、语法/凭据检查；发布后只报
+   App 总数、引擎数量、在线/错误数、契约唯一版本数，不输出用户标识。
+6. **主动真机闭环**：至少选一个 Grok 与一个 Kimi 的真实 Runner 主动发验收卡；不得
+   要求用户重发。缺权时主动发权限卡，授权后自动续跑。
+7. **同会话有限并发**：私聊新任务到达且全局容量未满时，当前任务立即转后台，新任务
+   直接执行；并发计数跟随真实 work 生命周期，不能在转后台时提前释放。达到
+   `GROK_MAX_PARALLEL` 后才显示“已入队”。
+
+### 同会话并发排障与验收（2026-07-28 owner 实录）
+
+**症状**：同一私聊先发一个长任务，再发独立任务，第二条出现“已入队 #2”；此时
+`queueStats.activeGlobal` 明明小于 `GROK_MAX_PARALLEL`。
+
+**根因**：`sessionQueue` 是“同 key 串行、不同 key 并行”，把同一私聊的上下文顺序与
+真实 work 并发混成了一个约束。只调大 `GROK_MAX_PARALLEL` 无效，因为两条任务仍命中同一
+`sessionKey`。
+
+**正确修法**：
+
+1. 私聊新任务到达且 `workConcurrency.active < max` 时，请求当前前台 lease 立即 yield；
+2. 旧任务注册后台句柄并释放 `sessionQueue` 链，但 lease 要等真实 Runner 完成才 `finish()`；
+3. 新任务启动时若 sticky session 仍被旧任务占用，必须由 live-session preflight mint 新
+   session，禁止并发 resume 同一个 session；
+4. 达到真实 work 上限或群聊才显示“已入队”；禁止释放链后无限扩张后台任务。
+
+**排障读数要同时看**：
+
+```bash
+ssh dev198 'curl -s --noproxy "*" http://127.0.0.1:18765/healthz' \
+  | jq '{queueStats,workConcurrency,runtime,liveGrokSessions}'
+```
+
+- `queueStats`：Bridge 会话链占用，不等于真实 Runner 数；
+- `workConcurrency`：转后台后仍未完成的真实 work 数，是并发上限的准绳；
+- `runtime.children` / `liveGrokSessions`：查 child 移交与 session 冲突；
+- 日志锚点：`foreground yield requested` → `bg yield ... reason=new_task` → 第二个
+  `grok start` 必须早于第一个任务的 `outbound ok`。
+
+**真机验收**：由运维方用目标 Bot 主动发起一慢一快两个真实任务；快任务必须先完成，
+慢任务随后完成，两张结果卡都要在会话底部可见。只看单测、health=ok 或消息发送成功都
+不算完整验收。
+
+**远程测试坑**：dev198 非交互 SSH 的 PATH 不含 Node。即使用绝对路径启动主命令，测试或
+子进程的 shebang 仍可能走 `/usr/bin/env node`。全测前必须：
+
+```bash
+export PATH=/home/chuan/.local/node/bin:$PATH
+```
+
 ## F5.3 kimi 超时自动续跑（v1.27.0，2026-07-28）
 
 **机制**：kimi 单轮墙钟 12min（token 15min 约束，`kimi-model.mjs KIMI_MAX_RUN_MS`）；
@@ -1258,3 +1324,35 @@ bridge 传入的 `isStopped()` oracle（后台任务看句柄 status / 前台看
 - 测试锁 `control-plane/test/session-renewal.test.mjs`（4 个）；改 TTL/续期节流
   必过它。Set-Cookie 优先级：路径自带的（如切换助手）覆盖续期的——writeHead
   显式头覆盖 setHeader，语义正确勿"修复"。
+
+## Pi 路线 durable 可靠性规则（2026-07-28）
+
+这套能力属于全 Bot 平台契约，owner 与登记用户必须共用；只能在 Runner 适配层保留引擎差异。
+
+1. **用户闭环时序固定**：`Runner success → durable enqueue → send → Feishu ACK → terminal event`。
+   Runner 成功不等于用户收到；未 ACK 禁止写 completed。Outbox ACK 后的旁路回调失败只告警，
+   禁止重发已 ACK 消息。
+2. **稳定外发幂等键**：每个 `deliveryId` 派生稳定 request UUID；重启补发必须复用，不能每次
+   生成新 UUID。后台最终结果仍发会话底部新卡，不能回写旧流式卡冒充送达。
+3. **恢复分级**：pending delivery 与未开跑 follow-up 可自动恢复；已 applied follow-up、
+   Runner RPC 已 ACK、后台 running orphan 只标记和告警，除非工具副作用有可靠幂等证明，
+   禁止盲目重跑。
+4. **SQLite 是单机事务真源**：Node 22+ 默认 `H_DURABLE_STORE=sqlite`，TaskSessionLog、
+   Outbox、follow-up、RPC 共库并保留 `0600` JSONL 回滚镜像；`jsonl` 是降级开关，
+   `sqlite-required` 用于要求不可回退的环境。SQLite 不代表跨主机一致性。
+5. **RPC 边界不等于进程隔离**：当前 durable RPC 已有 request/ACK/result/error/cancel、超时、
+   背压和 orphan 检测，但 worker 仍与 Bridge 同进程。对外宣称“Runner 卡死不影响 Bridge”前，
+   必须拆独立 systemd worker 并完成 kill/重启验收。
+6. **持久参数最小化**：RPC durable args 剥离 callback、runtime、mapStore、Token、cookie、
+   credential；TaskSessionLog 不存 prompt/回复。Outbox/follow-up 为完成任务所需的用户私有
+   运行态数据，只能在哈希 scope、`0700` 目录、`0600` 文件或 SQLite 中保存，禁止进入 Git、
+   共享记忆、日志和健康页。
+7. **影子流量绝不送达**：Native Kimi shadow 默认关闭，不得接任何飞书发送函数，只记录匿名
+   延迟/Token/字符数/相似度。Native API 当前模型与 Kimi Code 订阅模型分开配置：
+   `kimi-k2.6` 不能替换正式 `kimi-code/k3 → k3`。
+8. **上线验收不能只看单测**：部署前精确备份并记录用户级服务 PID/启动时间/关键哈希；部署后
+   必做 >120 秒新完成卡、一慢一快并发、权限卡自动续跑、enqueue/send/ACK 断点 kill、
+   飞书 429 与重启补发。健康页只暴露匿名聚合，禁止 appId/uid/正文。
+
+回滚入口：仓库 `docs/rollbacks/2026-07-28-pi-durability-roadmap.md`。SQLite 异常可先设
+`H_DURABLE_STORE=jsonl`；Outbox 主链异常必须 Git revert，不能绕过 durable enqueue。
