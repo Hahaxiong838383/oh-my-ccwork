@@ -24,55 +24,12 @@ from livekit.agents.tts.tts import AudioEmitter
 from livekit.agents.types import DEFAULT_API_CONNECT_OPTIONS, APIConnectOptions
 
 from .volc_tts import has_speakable, strip_stage_directions
-from .xfyun_common import build_xfyun_auth_ws_url
+# build_tts_request/DEFAULT_VCN 在协议层 xfyun_common(与控制面探针同源),此处 re-export 兼容
+from .xfyun_common import DEFAULT_VCN, build_tts_request, build_xfyun_auth_ws_url
 
 logger = logging.getLogger("voice_agent.xfyun_tts")
 
 XFYUN_TTS_SR = 24000  # 超拟人默认 24k(8k/16k/24k 可选),raw=PCM16
-DEFAULT_VCN = "x6_lingxiaoxuan_pro"
-
-
-def build_tts_request(
-    text: str,
-    *,
-    app_id: str,
-    vcn: str,
-    sample_rate: int = XFYUN_TTS_SR,
-    speed: int = 50,
-    volume: int = 50,
-    pitch: int = 50,
-    oral_level: str = "mid",
-) -> dict:
-    """单帧完整合成请求(纯函数,可单测)。status 全 2:一句一会话,文本一次发完。"""
-    return {
-        "header": {"app_id": app_id, "status": 2},
-        "parameter": {
-            "oral": {"oral_level": oral_level},
-            "tts": {
-                "vcn": vcn,
-                "speed": speed,
-                "volume": volume,
-                "pitch": pitch,
-                "audio": {
-                    "encoding": "raw",  # raw=PCM16,免 mp3 解码
-                    "sample_rate": sample_rate,
-                    "channels": 1,
-                    "bit_depth": 16,
-                    "frame_size": 0,
-                },
-            },
-        },
-        "payload": {
-            "text": {
-                "encoding": "utf8",
-                "compress": "raw",
-                "format": "plain",
-                "status": 2,
-                "seq": 1,
-                "text": base64.b64encode(text.encode("utf-8")).decode("ascii"),
-            }
-        },
-    }
 
 
 def parse_tts_frame(raw: str) -> tuple[str, bytes, bool]:

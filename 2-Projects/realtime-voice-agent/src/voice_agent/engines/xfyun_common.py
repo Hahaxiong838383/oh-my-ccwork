@@ -96,9 +96,62 @@ def build_xfyun_auth_ws_url(
     return f"{endpoint}?{query}"
 
 
+DEFAULT_VCN = "x6_lingxiaoxuan_pro"
+
+
+def build_tts_request(
+    text: str,
+    *,
+    app_id: str,
+    vcn: str,
+    sample_rate: int = 24000,
+    speed: int = 50,
+    volume: int = 50,
+    pitch: int = 50,
+    oral_level: str = "mid",
+) -> dict:
+    """超拟人单帧完整合成请求(status 全 2:一句一会话)。
+
+    放协议层(无 livekit 依赖)供 adapter 与控制面活性校验探针共用——
+    2026-07-27 同事实测教训:探针曾手拼一份明文 text 版,讯飞报 10163;
+    text 必须 base64(生产实现实锤),单一构造源杜绝再漂移。
+    """
+    return {
+        "header": {"app_id": app_id, "status": 2},
+        "parameter": {
+            "oral": {"oral_level": oral_level},
+            "tts": {
+                "vcn": vcn,
+                "speed": speed,
+                "volume": volume,
+                "pitch": pitch,
+                "audio": {
+                    "encoding": "raw",  # raw=PCM16,免 mp3 解码
+                    "sample_rate": sample_rate,
+                    "channels": 1,
+                    "bit_depth": 16,
+                    "frame_size": 0,
+                },
+            },
+        },
+        "payload": {
+            "text": {
+                "encoding": "utf8",
+                "compress": "raw",
+                "format": "plain",
+                "status": 2,
+                "seq": 1,
+                "text": base64.b64encode(text.encode("utf-8")).decode("ascii"),
+            }
+        },
+    }
+
+
 __all__ = [
+    "DEFAULT_VCN",
     "STT_LLM_WS_URL",
     "TTS_SMART_WS_URL",
     "build_stt_llm_ws_url",
+    "build_tts_request",
     "build_xfyun_auth_ws_url",
 ]

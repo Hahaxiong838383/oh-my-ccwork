@@ -13,7 +13,12 @@ from typing import Awaitable, Callable
 
 import aiohttp
 
-from voice_agent.engines.xfyun_common import build_stt_llm_ws_url, build_xfyun_auth_ws_url
+from voice_agent.engines.xfyun_common import (
+    DEFAULT_VCN,
+    build_stt_llm_ws_url,
+    build_tts_request,
+    build_xfyun_auth_ws_url,
+)
 
 _TIMEOUT = aiohttp.ClientTimeout(total=10)
 
@@ -48,26 +53,10 @@ async def verify_xfyun_stt(creds: dict[str, str]) -> VerifyResult:
 async def verify_xfyun_tts(creds: dict[str, str]) -> VerifyResult:
     """超拟人合成:最小合成请求("你")一发即收。11200=key 对但发音人未开通→收下+warning。"""
     url = build_xfyun_auth_ws_url(creds["api_key"], creds["api_secret"])
-    vcn = creds.get("vcn", "x6_lingxiaoxuan_pro")
-    request = {
-        "header": {"app_id": creds["app_id"], "status": 2},
-        "parameter": {
-            "tts": {
-                "vcn": vcn,
-                "audio": {"encoding": "raw", "sample_rate": 16000},
-            }
-        },
-        "payload": {
-            "text": {
-                "encoding": "utf8",
-                "compress": "raw",
-                "format": "plain",
-                "status": 2,
-                "seq": 1,
-                "text": "你",
-            }
-        },
-    }
+    vcn = creds.get("vcn") or DEFAULT_VCN
+    # 探针请求与 adapter 同一构造源(2026-07-27 同事实测 10163 教训:曾手拼明文 text
+    # 版——text 必须 base64,手拼副本必然漂移,统一走 build_tts_request)
+    request = build_tts_request("你", app_id=creds["app_id"], vcn=vcn, sample_rate=16000)
     try:
         async with aiohttp.ClientSession(timeout=_TIMEOUT) as session:
             async with session.ws_connect(url) as ws:
