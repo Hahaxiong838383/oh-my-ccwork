@@ -1236,7 +1236,9 @@ bridge 传入的 `isStopped()` oracle（后台任务看句柄 status / 前台看
 `auth_wall_yield`/`continue_exhausted`/`rebind_needed`（trace note）、
 `auth retry deferred|skipped`（门闸行为）。测试锁 `test/kimi-continue.test.mjs`（12 个）。
 
-⚠️ **仓库对账未决（2026-07-28）**：dev198 工作区≈生产真相（aliyun-hk oauth.mjs
-md5 与工作区一致、与 origin/main **不一致**），HEAD 本地提交 f6fa06d **未推**。
-「origin/main 是生产主干」的说法只对了一半——推送前必须三方 md5 对撞
-（线上/工作区/origin），谁新谁旧要人工裁决，切忌 reset --hard 任一边。
+**仓库对账已闭环（2026-07-28，川哥拍板「线上为真相」）**：f6fa06d(F5.3)+bb7f241(快照)
++21ea7d4(merge -X ours) 已推 origin/main。**纪律（给所有引擎，含 codex）**：
+① origin/main 从此就是唯一主干，dev198 改动**必须在 dev198 上 commit+push**，
+禁止「Mac 侧推远端 + dev198 rsync 不入账」的双轨（本次三方漂移根因）；
+② 判主干/推送前，关键文件三方 md5 对撞（线上 /srv/h-control/app/... ↔ dev198
+工作区 ↔ origin/main），任何单一 git 视角都会骗人；③ 切忌 reset --hard 任一边。
