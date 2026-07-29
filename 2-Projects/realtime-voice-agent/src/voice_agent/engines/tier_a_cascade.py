@@ -634,6 +634,10 @@ def _build_stt(settings: Settings, *, speaker_ring: Any | None = None) -> Any:
             # 静音幅度阈值(PCM16 mean-abs):说话 ~1000+,底噪 <~200;底噪重环境可调高
             preflight_silence_amp=float(os.environ.get("VOLC_PREFLIGHT_SILENCE_AMP", "250")),
             speaker_ring=speaker_ring,
+            # B5 interim 提交(POC 2026-07-29):S1 触发即伪 final 提交 turn,不等
+            # definite——判停地板 definite 到达(~500ms)→interim 静止(~330ms)。
+            # 需配套 MIN_ENDPOINTING_DELAY≈0.40(伪 final 到达线之上)。默认关。
+            interim_commit=os.environ.get("POC_INTERIM_COMMIT", "0") == "1",
             # 语义顺滑(2026-07-04 team 圆桌定案,grok+codex 共识):火山服务端默认 False,
             # 我们 vendored 客户端签名默认 True——之前从未显式决定过,现改为显式产品策略。
             # 顺滑会删语气词/停顿词/重复词("嗯/哦/咳咳"),陪伴场景利大于弊(字幕干净+

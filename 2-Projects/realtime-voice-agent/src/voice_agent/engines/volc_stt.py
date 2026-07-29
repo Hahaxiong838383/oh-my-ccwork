@@ -95,6 +95,20 @@ def _mean_abs_amp(chunk: bytes) -> float:
     return float(np.abs(arr.astype(np.int32)).mean())
 
 
+def _ic_definite_action(pending: str, definite: str) -> str:
+    """B5 interim 提交后,真 definite 到达时的三分决策(纯函数,可单测):
+    - swallow  : 与伪 final 全等(canonical)——正常吞,本句已提交过
+    - emit_new : definite 是 pending 的**真前缀延长**(用户在伪 final 后续说,如
+                 "帮我放"→"帮我放周杰伦的歌")——补发全文开新一轮,比丢内容好
+    - swallow_mismatch: 其余(识别改字/重排)——吞掉+遥测;再 emit 会对同一句重复回答
+    """
+    if definite == pending:
+        return "swallow"
+    if definite.startswith(pending) and len(definite) > len(pending) + 2:
+        return "emit_new"
+    return "swallow_mismatch"
+
+
 def _pf_should_fire(
     *,
     tail: str,
@@ -136,6 +150,7 @@ class VolcSTT(STT[Never]):
         preflight_silence_amp: float = 250.0,
         speaker_ring: object | None = None,
         enable_ddc: bool = True,
+        interim_commit: bool = False,
     ) -> None:
         super().__init__(capabilities=STTCapabilities(streaming=True, interim_results=True))
         self._app_id = app_id
@@ -161,6 +176,10 @@ class VolcSTT(STT[Never]):
         # 风险:纯语气词整轮(如单字"嗯")理论上可能被顺滑清空成空文本——_run() 里有对应
         # 告警日志兜底观测,VOLC_ASR_ENABLE_DDC=0 可临时关闭验证是否命中。
         self._enable_ddc = enable_ddc
+        # B5 interim 提交(POC,2026-07-29):S1 触发时刻直接用 canonical interim 发
+        # FINAL 提交 turn(不等火山 definite ~350-550ms)——判停地板从"definite 到达"
+        # 打到"interim 静止"(~330ms)。真 definite 到达后按 _ic_definite_action 三分。
+        self._interim_commit = interim_commit
 
     async def _recognize_impl(
         self,
@@ -188,6 +207,9 @@ class VolcRecognizeStream(RecognizeStream):
         super().__init__(stt=stt_, conn_options=conn_options, sample_rate=VOLC_ASR_SR)
         self._volc = stt_
         self._pf_silence_since_ms: float | None = None  # 连续静音起点(音频时钟,pump 侧维护)
+        # B5:最近一次伪 final 的 canonical 文本(None=本句未伪提交)。不进 _reset_pf——
+        # 生命周期到"对应 definite 到达被消化"为止,跨越 pf 状态重置。
+        self._ic_pending: str | None = None
         self._reset_pf()
 
     def _reset_pf(self) -> None:
@@ -246,6 +268,12 @@ class VolcRecognizeStream(RecognizeStream):
                 now_ms - self._pf_last_change_ms,
                 self._pf_last_text[-16:],
             )
+            if self._volc._interim_commit:
+                # B5:同一时刻同一 canonical 文本直接发 FINAL 提交 turn——与 PREFLIGHT
+                # 同源,投机命中率理论满格;真 definite 稍后到达由 _run 三分消化。
+                self._ic_pending = self._pf_last_text
+                self._emit(self._pf_last_text, final=True)
+                logger.info("poc interim-commit: %r", self._pf_last_text[:40])
 
     async def _run(self) -> None:
         from ._volc_asr import asr_stream  # vendored:补 end_window_size 判停参数
@@ -302,6 +330,26 @@ class VolcRecognizeStream(RecognizeStream):
                 for i in range(final_n, len(utts)):
                     if utts[i].get("definite"):
                         canon_text = self._canon(str(utts[i].get("text") or ""))
+                        if self._ic_pending is not None:
+                            # B5:本句已伪 final 提交过,definite 按三分消化(绝不能
+                            # 原样重发 FINAL——会对同一句开第二轮回答)
+                            action = _ic_definite_action(self._ic_pending, canon_text)
+                            if action == "swallow_mismatch":
+                                logger.info(
+                                    "poc interim-commit mismatch: pending=%r definite=%r",
+                                    self._ic_pending[:40],
+                                    canon_text[:40],
+                                )
+                            elif action == "emit_new":
+                                # 伪 final 后用户续说:definite 全文当新 turn 补发
+                                logger.info(
+                                    "poc interim-commit continuation: %r", canon_text[:40]
+                                )
+                                self._emit(canon_text, final=True)
+                            self._ic_pending = None
+                            final_n = i + 1
+                            self._reset_pf()
+                            continue
                         if not canon_text.strip():
                             # 顺滑风险观测(2026-07-04 team 圆桌 grok+codex 共识):definite
                             # 句段文本为空——可能是纯语气词/停顿词被 enable_ddc 整段清空
@@ -332,7 +380,14 @@ class VolcRecognizeStream(RecognizeStream):
                 # 整流结束(is_final/LastNoSeq):剩余尾句全部转 FINAL
                 if res.get("is_final"):
                     for i in range(final_n, len(utts)):
-                        self._emit(self._canon(str(utts[i].get("text") or "")), final=True)
+                        tail_text = self._canon(str(utts[i].get("text") or ""))
+                        if self._ic_pending is not None:
+                            # B5:整流结束路径同样消化伪 final(仅首个剩余句可能对应)
+                            if _ic_definite_action(self._ic_pending, tail_text) == "emit_new":
+                                self._emit(tail_text, final=True)
+                            self._ic_pending = None
+                            continue
+                        self._emit(tail_text, final=True)
                     final_n = len(utts)
         except Exception:
             logger.exception("火山 ASR 流异常(鉴权/连接/解码),本轮 STT 中止")

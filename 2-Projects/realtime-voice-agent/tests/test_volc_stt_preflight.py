@@ -110,3 +110,35 @@ class TestCanonTranscript:
         assert _canon_transcript("给我讲恐龙故事好不好") == _canon_transcript(
             "给我讲恐龙故事好不好?"
         )
+
+
+class TestIcDefiniteAction:
+    """B5 interim 提交后 definite 三分消化(2026-07-29)。"""
+
+    def test_exact_match_swallows(self) -> None:
+        from voice_agent.engines.volc_stt import _ic_definite_action
+
+        assert _ic_definite_action("今天天气怎么样", "今天天气怎么样") == "swallow"
+
+    def test_continuation_emits_new_turn(self) -> None:
+        # 伪 final "帮我放" 后用户续说→definite 全文补发新一轮,不丢内容
+        from voice_agent.engines.volc_stt import _ic_definite_action
+
+        assert _ic_definite_action("帮我放", "帮我放周杰伦的歌") == "emit_new"
+
+    def test_minor_rewrite_swallowed_with_mismatch(self) -> None:
+        # 识别改字(非前缀延长)→吞+遥测,重发会对同一句二次回答
+        from voice_agent.engines.volc_stt import _ic_definite_action
+
+        assert _ic_definite_action("今天天期怎么样", "今天天气怎么样") == "swallow_mismatch"
+
+    def test_tiny_suffix_growth_not_continuation(self) -> None:
+        # 尾部只多 1-2 字(标点残留/尾字补齐)≠续说,按 mismatch 吞防重复回答
+        from voice_agent.engines.volc_stt import _ic_definite_action
+
+        assert _ic_definite_action("讲个笑话", "讲个笑话吧") == "swallow_mismatch"
+
+    def test_shorter_definite_is_mismatch(self) -> None:
+        from voice_agent.engines.volc_stt import _ic_definite_action
+
+        assert _ic_definite_action("今天天气怎么样呀", "今天天气") == "swallow_mismatch"
