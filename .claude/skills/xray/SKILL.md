@@ -89,6 +89,39 @@ strings ~/xray/xray.log | tail -30
 # 排查完改回 "warning"
 ```
 
+### /xray dns — 移动热点与 DoH 故障排查
+
+页面打不开时，先判断请求消失在哪一层，**不要看到网页故障就重启远端服务**：
+
+1. `ipconfig getsummary en0` 检查 DHCP 与 `ANDROID_METERED`，确认是否为移动热点；移动公网
+   出口频繁变化会让持久 DoH 连接出现 `context deadline exceeded` 或 `read/write on closed pipe`。
+2. `~/xray/access.log` 的 `accepted` 只表示本机 mixed/SOCKS 入口接单，不表示 DNS、出站 TCP/TLS
+   或远端服务成功；必须与目标服务器 nginx/access log 按秒对撞。
+3. 旧页面还能轮询、新页面打不开，优先检查 DNS cache 与 keep-alive：旧连接可能复用现有
+   HTTP/2/TLS，新连接必须重新解析域名。
+4. 国内域名不要只依赖 DoH。推荐配置语义：系统 resolver + `223.5.5.5` + `119.29.29.29`
+   并行、`serveStale=true`、`serveExpiredTTL=86400`、`disableFallbackIfMatch=true`。server 级
+   `skipFallback` 不能替代顶层 `disableFallbackIfMatch`；否则命中国内规则后仍可能触发默认 DoH。
+5. 仅对自有、IP 稳定且有回滚备份的关键域名设置 `dns.hosts`；固定 IP 后同时核对 domain/IP
+   路由标签，避免域名解析改变后落入错误的默认 outbound。第三方域名禁止随意固定。
+
+修改后必须完成：
+
+```bash
+~/xray/xray run -test -c ~/xray/config.json
+launchctl kickstart -k gui/$(id -u)/com.xray.proxy
+
+START=$(date '+%Y/%m/%d %H:%M:%S')
+for url in https://<关键入口> https://open.feishu.cn/document/home/index https://www.baidu.com; do
+  curl -x socks5h://127.0.0.1:10808 -sS -L -o /dev/null --max-time 15 \
+    -w "$url %{http_code} %{time_total}\n" "$url"
+done
+awk -v s="$START" '$0 >= s && /app\/dns: failed/ {print}' ~/xray/xray.log
+```
+
+验收至少包括：`Configuration OK`、launchd 单一 PID、目标路由标签正确、目标服务器确有请求、
+重载后主动探测的新增 DNS 错误为 0。物理断网无法由 DNS 配置消除，结论必须明确边界。
+
 ## 路由规则速查
 
 | 分组 | 策略 | 节点池 |
@@ -294,4 +327,3 @@ grep generativelanguage ~/xray/access.log | tail -1             # 见 [socks -> 
 - **双口并存**（旧端口不动 + 新域名挂新端口）→ 旧链接照用、新链接是增量，**平滑迁移零中断**。这才是零中断的正解（≠ 同口多挂 serverNames，那个 dest/证书单一做不到）。适合客户端分散 / 不能同时改 / 要过渡期。
 
 详见 memory `feedback_xray_reality_serverName_swap`。
-
