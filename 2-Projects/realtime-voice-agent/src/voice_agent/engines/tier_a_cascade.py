@@ -202,7 +202,17 @@ class TierACascadeEngine(ExperienceEngine):
             # 语义判停:本地音频 EOT(纯 native .so,零下载零认证)。钉死 v1-mini——
             # 不钉则默认值遇 is_dev_mode()/is_hosted() 环境会切 v1(livekit cloud)→401;
             # 与 sherpa endpoint 叠加:v1-mini 精修判停时机,sherpa FINAL 仍负责把文本交 LLM。
-            turn_detection=inference.TurnDetector(version="v1-mini"),
+            # POC 预测式判停(2026-07-29):unlikely_threshold 可 env 覆盖服务端校准值——
+            # 概率<阈值→走 MAX 等待,故**调低=更激进**(更多句直接走 MIN 快路)。
+            # 未设=完全原行为。配套激进 delay 见 MIN/MAX_ENDPOINTING_DELAY 注释。
+            turn_detection=inference.TurnDetector(
+                version="v1-mini",
+                **(
+                    {"unlikely_threshold": float(os.environ["POC_EOU_UNLIKELY_THRESHOLD"])}
+                    if os.environ.get("POC_EOU_UNLIKELY_THRESHOLD")
+                    else {}
+                ),
+            ),
             # preemptive_generation=True:投机跑 LLM(不含 TTS)。
             # ⚠️ 2026-06-25 回退 preemptive_tts=True:川哥实测"延时没改善还断断续续"——
             # 投机 TTS 片段与正式片段拼接在 VoxCPM 非流式下撕裂(codex 早警告的风险坐实)。
@@ -288,6 +298,56 @@ class TierACascadeEngine(ExperienceEngine):
 
         session.on("user_input_transcribed", _on_tele_transcribed)
         session.on("agent_state_changed", _on_tele_state)
+
+        # --- POC 预测式判停遥测(2026-07-29,POC_PREDICTIVE_EOU=1 时挂;整块可删) ---
+        # 两条日志线:①每轮 EOU 概率/阈值/延迟——⚠️ session 级 eot_prediction 事件是框架
+        # 半成品(只投 LiveKit Cloud 的 _session_host,本地永不发射,实测订阅零触发),
+        # 改为放行框架原生 debug 行"eot prediction"(audio_recognition logger 提 DEBUG,
+        # 带 probability/unlikely_threshold/endpointing_delay 全字段);
+        # ②疑似截断:commit(listening→thinking/speaking)后 <1.2s 用户又开口——配合①
+        # 离线区分"真截断(高概率被续说)"vs"用户主动追问"。统计:grep 'eot prediction|poc eou'。
+        if os.environ.get("POC_PREDICTIVE_EOU") == "1":
+            # ⚠️ audio_recognition 等模块共用包级 logger "livekit.agents"(非模块名 logger,
+            # 实测 setLevel 模块名 logger 无效);提共享 logger 到 DEBUG + Filter 只放行
+            # "eot prediction" 一种 debug 消息,INFO+ 不受影响,其余 debug 噪音全拦。
+            _lk_logger = logging.getLogger("livekit.agents")
+
+            class _PocEotOnlyDebug(logging.Filter):
+                # tap 转发而非放行:cli 的 JSON handler level=INFO 会拦 debug 记录
+                # (实测放行到 handler 仍 0 条),故嗅到目标记录用本模块 logger 重发 INFO。
+                def filter(self, record: logging.LogRecord) -> bool:
+                    if record.levelno >= logging.INFO:
+                        return True
+                    if record.msg == "eot prediction":
+                        d = record.__dict__
+                        logger.info(
+                            "poc eou telemetry: probability=%s threshold=%s delay=%s",
+                            d.get("probability"),
+                            d.get("unlikely_threshold"),
+                            d.get("endpointing_delay"),
+                        )
+                    return False
+
+            if not any(isinstance(f, _PocEotOnlyDebug) for f in _lk_logger.filters):
+                _lk_logger.setLevel(logging.DEBUG)
+                _lk_logger.addFilter(_PocEotOnlyDebug())
+            _poc_commit_ts: dict[str, float] = {"ts": 0.0}
+
+            def _on_poc_agent_state(ev: Any) -> None:
+                # listening→thinking(或直接 speaking)≈ turn commit 完成时刻
+                if str(getattr(ev, "old_state", "")) == "listening" and str(
+                    getattr(ev, "new_state", "")
+                ) in ("thinking", "speaking"):
+                    _poc_commit_ts["ts"] = time.monotonic()
+
+            def _on_poc_user_state(ev: Any) -> None:
+                if str(getattr(ev, "new_state", "")) == "speaking" and _poc_commit_ts["ts"]:
+                    gap = time.monotonic() - _poc_commit_ts["ts"]
+                    if gap < 1.2:
+                        logger.info("poc eou telemetry: truncation-suspect gap_ms=%.0f", gap * 1000)
+
+            session.on("agent_state_changed", _on_poc_agent_state)
+            session.on("user_state_changed", _on_poc_user_state)
         # RSS 采样任务(job 进程生命周期,进程退出自灭;aclose 显式回收防悬挂告警)
         self._rss_task = asyncio.create_task(_rss_monitor_loop())
         bridge = LiveKitEventBridge(emit=self._queue.put_nowait)
