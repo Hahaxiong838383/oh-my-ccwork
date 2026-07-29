@@ -1,6 +1,6 @@
 ---
 name: h-platform-ops
-description: H 平台（BYOS 多用户飞书 agent 网关）运维：开通新用户、真机验收、引擎排障、合并部署。适用 dev198 feishu-grok-bridge + aliyun-hk 控制面 ai.kidshub.cn。触发词："H 平台"、"开通 H 用户"、"给用户开通飞书 agent"、"BYOS 开通"、"feishu-grok bridge 多用户"、"H-P 运维"
+description: H 平台（BYOS 多用户飞书 agent 网关）运维：开通新用户、真机验收、引擎排障、需求与缺陷闭环、合并部署。适用 dev198 feishu-grok-bridge + aliyun-hk 控制面 ai.kidshub.cn。触发词："H 平台"、"开通 H 用户"、"给用户开通飞书 agent"、"BYOS 开通"、"feishu-grok bridge 多用户"、"需求与缺陷闭环"、"H-P 运维"
 layer: 项目层
 authorization: B区（生产 bridge + 控制面变更需明确 scope）
 output_levels: L2
@@ -1401,3 +1401,32 @@ bridge 传入的 `isStopped()` oracle（后台任务看句柄 status / 前台看
 
 回滚入口：仓库 `docs/rollbacks/2026-07-28-pi-durability-roadmap.md`。SQLite 异常可先设
 `H_DURABLE_STORE=jsonl`；Outbox 主链异常必须 Git revert，不能绕过 durable enqueue。
+
+## 需求与缺陷闭环（2026-07-29）
+
+H 平台使用飞书多维表格给人阅读、编辑、反馈和验收，但它不是任务执行真源。
+
+1. **人类控制面与执行真源分离**：飞书 Base 保存需求、状态、验收结论和安全摘要；
+   Bridge/SQLite/TaskSessionLog/Delivery Outbox 保存真实任务状态。Base 显示“成功”不能替代
+   Runner、飞书 ACK 和终态事件证据，反过来也不能用执行日志替代用户验收。
+2. **入口配置不入 Git**：控制台只读取 `H_ISSUE_TRACKER_URL`；真实 Base URL 仅放生产
+   `/srv/h-control/.env`（`0600`）。代码仓只保留空的 `.env.example` 字段和页面能力。
+3. **写入前先读结构和现有记录**：使用用户身份操作；先读取字段，再串行读取全部记录，
+   建立“标题 → record_id”映射。禁止不查重直接创建，也禁止在同一 Base 并发执行 list/write。
+4. **按语义去重，按标题 upsert**：标题已有就带 `record_id` 更新；没有才创建。重复描述
+   合并成一条人话需求，例如多次出现的“我要吐槽”只保留一个闭环事项。
+5. **状态语义固定**：用户明确标记 `✅` 或体验确认 OK，写成 `已关闭 + 通过`；ongoing
+   只能是 `已排期`、`执行中` 或 `待确认`，并保持 `未验收`。同一事项不能同时存在开放版
+   和关闭版；变更范围不清时宁可更新原记录，不新造近义标题。
+6. **每次同步都写审计并回读**：执行表记录 Runner、结果摘要、请求 UUID、真实开始/完成时间
+   和验收证据；写后重新读取主表，至少检查标题重复、已完成状态、ongoing 状态、重复反馈数、
+   开放 P0 数量。时间字段必须来自当前真实时间，不能手填未来时间。
+7. **内容给人看**：标题表达用户价值；“问题描述”说清为什么做；“预期结果”写完成定义；
+   “实际结果”和“测试证据”只写安全摘要，禁止写 Token、授权链接、open_id、对话正文或
+   用户隐私。技术文件名和提交号只放在确有排障价值的字段。
+8. **自动 Intake 是下一层，不与 P0 混淆**：当前 Base + 控制台入口完成，只代表人工闭环
+   可用；`Base Intake Worker` 仍需另行实现自动认领、稳定 UUID 防重、真实 Runner、主动送达、
+   Delivery Outbox ACK 和 Base 回填。未做真实触发验收前不得宣称自动闭环完成。
+
+控制台入口验收锁：管理员左栏同时保留“需求与缺陷闭环”和“飞书开发文档”，均使用
+`target="_blank" rel="noopener noreferrer"`；未配置 URL 时不渲染需求入口，不能产生空链接。
