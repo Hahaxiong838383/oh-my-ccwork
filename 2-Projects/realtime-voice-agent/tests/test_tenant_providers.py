@@ -88,3 +88,17 @@ class TestTenantBrainWiring:
     def test_llm_fail_fast_without_brain(self, tenant_env) -> None:
         with pytest.raises(RuntimeError, match="brain"):
             _build_llm(Settings(llm_provider="tenant-brain"))
+
+    def test_participant_identity_becomes_openai_user(self, tenant_env) -> None:
+        # 租户记忆诉求(2026-07-29):participantName(激活码)→ OpenAI 标准 user 字段
+        tid, store = tenant_env
+        store.put_credentials(
+            tid, "brain", {"base_url": "https://brain.example.com/v1", "api_key": "bk1"}
+        )
+        llm = _build_llm(
+            Settings(llm_provider="tenant-brain"), participant_identity="P3ZSUH6J"
+        )
+        assert llm._user == "P3ZSUH6J"
+        # 不传身份(超时降级)→ 空串,不注入 user 字段
+        llm2 = _build_llm(Settings(llm_provider="tenant-brain"))
+        assert llm2._user == ""

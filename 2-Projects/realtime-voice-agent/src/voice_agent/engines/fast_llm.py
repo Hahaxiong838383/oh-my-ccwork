@@ -236,8 +236,13 @@ class FastLLM(llm.LLM[Never]):
         context_note_provider: Callable[[], str | None] | None = None,
         strip_leading_filler: bool = False,
         default_query: dict[str, str] | None = None,
+        user: str = "",
     ) -> None:
         super().__init__()
+        # OpenAI 标准 user 字段(2026-07-29 租户记忆诉求):随每次请求进 body,
+        # 值=LiveKit participant identity(前端 connect 的 participantName 原样透传),
+        # 租户端点按它读用户记忆。per-request 注入(extra_body),不污染进程级 client 池。
+        self._user = user
         # 剥回复开头承接词(仅承接音启用时开,否则正文语气词是自然的该保留)
         self._strip_leading_filler = strip_leading_filler
         # 每次请求前调用,返回要注入 messages 近因位的动态上下文(如声纹身份);
@@ -402,6 +407,8 @@ class FastLLMStream(llm.LLMStream):
                 if ep.thinking in ("disabled", "enabled", "adaptive")
                 else {}
             )
+            if self._fast._user:
+                extra_body = {**extra_body, "user": self._fast._user}
             stripper = ThinkStripper() if ep.strip_think else None
             # race 路径也尽量透传 tools（但外层在有 tools 时已优选单路）
             req_tools = None
@@ -477,6 +484,8 @@ class FastLLMStream(llm.LLMStream):
             if self._fast._thinking in ("disabled", "enabled", "adaptive")
             else {}
         )
+        if self._fast._user:
+            extra_body = {**extra_body, "user": self._fast._user}
         # function calling 支持：把 LiveKit Tool 转成 openai 格式透传
         request_tools = None
         if self.tools:

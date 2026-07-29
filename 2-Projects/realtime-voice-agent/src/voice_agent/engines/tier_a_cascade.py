@@ -171,6 +171,18 @@ class TierACascadeEngine(ExperienceEngine):
                 myjavis_brain["tenant"][:8],
             )
 
+        # 租户大脑按用户读记忆(2026-07-29):participant identity(=前端 connect 的
+        # participantName,激活码)随每次 LLM 请求以 OpenAI 标准 user 字段透传。
+        # 仅 tenant-brain 需要;dispatch 由用户 join 触发,正常立即返回,10s 超时兜底降级。
+        participant_identity = ""
+        if self._settings.llm_provider == "tenant-brain":
+            try:
+                p = await asyncio.wait_for(ctx.wait_for_participant(), timeout=10)
+                participant_identity = p.identity or ""
+                logger.info("tenant-brain user identity: %s", participant_identity)
+            except asyncio.TimeoutError:
+                logger.warning("等 participant 超时,本 job 不透传 user(记忆退化为无身份)")
+
         session = AgentSession(
             stt=_build_stt(
                 self._settings,
@@ -183,6 +195,7 @@ class TierACascadeEngine(ExperienceEngine):
                     speaker_sidecar.context_note if speaker_sidecar is not None else None
                 ),
                 myjavis_brain=myjavis_brain,
+                participant_identity=participant_identity,
             ),
             tts=_build_tts(self._settings),
             vad=vad,
@@ -623,6 +636,7 @@ def _build_llm(
     *,
     context_note_provider: Any | None = None,
     myjavis_brain: dict[str, str] | None = None,
+    participant_identity: str = "",
 ) -> Any:
     """按 ``LLM_PROVIDER`` 构建 LLM(M0:OpenAI 兼容端点,接 Gemini proxy)。
 
@@ -706,6 +720,8 @@ def _build_llm(
             model=creds.get("model") or "default",
             base_url=creds["base_url"],
             api_key=creds["api_key"],
+            # participant identity 原样透传(OpenAI 标准 user 字段)→ 租户按用户读记忆
+            user=participant_identity,
             thinking="off",
             strip_leading_filler=os.environ.get(
                 "LLM_STRIP_LEADING_FILLER", os.environ.get("FILLER_ENABLED", "1")
