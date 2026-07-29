@@ -165,7 +165,7 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 基线(2026-07-02):判停 550-700 / commit→tts connect ~950(ttft 750 投机抵 150-270 + 首句 flush ~200)/ TTS 694-820 / 真实端到端 ~2.5s,开承接音感知 <1s。
 - 判停恶化 → VOLC_ASR_END_WINDOW_MS(200)/MIN_ENDPOINTING_DELAY(0.65,**不可 <0.55** 否则火山 FINAL 迟到丢尾字);MAX(1.30)−MIN=v1-mini 语义决策窗 650ms(判"没说完"多扛/误判慢最坏 +650ms;0.90 时川哥两报"长句被打断",2026-07-04 加到 1.30——只影响判"没说完"的等待,判"说完"仍走 MIN 快路)。
 - LLM 段恶化 → `scripts/llm_ttft_bench.py --only deepseek`(测"首个非空 content"+tps,首字节空 role chunk 会骗人)。
-- **POC 预测式判停(2026-07-29,主 worker 独享)**:配置=/root/realtime-voice-agent/poc-eou.env(主 unit 第二 EnvironmentFile,勿写共享 .env——会穿透租户 worker);当前激进档 MIN 0.55/MAX 0.8+POC_PREDICTIVE_EOU=1;遥测=grep 'poc eou telemetry'(概率/阈值/delay+truncation-suspect);回滚=三行改回 0/0.65/1.30+restart(快照 /root/rollback-poc-eou-0729.tar.gz)。⚠️ MIN<0.55=被 late-final 兜底**静默旁路**(遥测零输出+eou_ms≈stt_ms 即此症);v1-mini 中文阈值真值 0.355,POC_EOU_UNLIKELY_THRESHOLD 可覆盖(调低=更激进)。
+- **POC 预测式判停全家桶(2026-07-29,主 worker)**:配置=/root/realtime-voice-agent/poc-eou.env(主 unit 第二 EnvironmentFile,勿写共享 .env——会穿透租户 worker)。在线组合:阈值 0.18+MIN 0.40/MAX 0.8+POC_INTERIM_COMMIT=1(B5 伪 final,判停 401ms)+END_WINDOW 150+MIN_INTERRUPTION_WORDS=0(插话瞬停)+FALSE_INTERRUPTION_TIMEOUT=0.7+POC_RESUME_FADE_MS=250(恢复渐起)。遥测=grep 'poc eou telemetry|interim-commit'(概率/delay/mismatch/truncation);回滚=删 poc-eou.env+restart(快照 rollback-poc-eou/-b5-interim-0729.tar.gz)。⚠️ 三坑:MIN<定 final 到达=late-final **静默旁路**(遥测零输出+eou_ms≈stt_ms 即此症);B5/END_WINDOW 是 **volc 专属**(讯飞线无伪 final 机制,MIN 按其 final 时序另算);fade 挂载必须 session.start 之后(output 由 RoomIO 组装,早挂静默跳过——所有开关必须有"生效证据日志")。
 - 首句 flush 恶化 → TTS_MIN_SENTENCE_LEN(6;调大攒字变慢,过小句间断音:首段播放时长须 > 下段 TTS 建连 ~700ms)。
 
 ## 关键 env(HK /root/realtime-voice-agent/.env)
