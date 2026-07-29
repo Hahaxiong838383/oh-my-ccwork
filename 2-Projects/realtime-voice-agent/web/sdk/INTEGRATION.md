@@ -51,7 +51,13 @@ curl https://voice-api.hahaxiong.cc/v1/credentials -H "Authorization: Bearer jv_
 <script>
   // 必须在用户点击等手势里调用(浏览器麦克风/自动播放限制)
   async function startVoice() {
-    const session = await JavisVoice.connect({ apiKey: "jv_你的key" });
+    const session = await JavisVoice.connect({
+      apiKey: "jv_你的key",
+      // ⚠️ 每次必传你的用户标识(如激活码):它会以 OpenAI 标准 user 字段
+      // 原样出现在发往你 LLM 端点的每个请求里(含开场白请求),你按它读用户记忆。
+      // 不传时默认 "user"——所有人的记忆会串到同一个名下。
+      participantName: "P3ZSUH6J",
+    });
 
     session.on("transcript", ({ role, text, final }) => {
       // role: "user"(你说的) | "agent"(AI 说的);final=false 是打字机中间态

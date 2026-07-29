@@ -199,5 +199,6 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 **排障口径**:
 - **agent 不进房间**(用户侧一切正常、无 participantConnected)→ 先查 worker 满载:`journalctl grep "full capacity"` + 最近 job 的 `rss` 打点是否还在打(悬挂会话占名额)。2026-07-28 实锤:cc 自己 E2E 没关页签占死 MAX_JOBS=1 一小时。**E2E 纪律:验完必 `session.close()` + 关页签,日志见 "process exiting" 才算退干净**。
 - **对话里出现第二个音色** → `journalctl grep "filler picked"`:承接音是预缓存 wav 直接播帧,**不经 TTS 引擎,切 provider 管不住它**——换 TTS 引擎 checklist 必含"预缓存音频资产盘点"(filler/greeting/提示音)。
+- **租户后台"记忆读不到/用户全是同一人"** → 查两层:①job 日志 `tenant-brain user identity: <值>`——值是"user"=前端没传 participantName(SDK 缺省值,激活码必须每次带);②该值经 OpenAI 标准 user 字段进租户端点每个请求(per-request extra_body 注入——池级 header 会串用户,禁改)。
 - **切链路验证** → 唯一凭据=job 真实路径日志(`grep -E "xfyun|volc"`,目标引擎成功路径静默、旧引擎必留痕);unit grep+active+registered 全是假象。
 - **讯飞碎句(已解)** → 换对话线 provider `xfyun_spark_iat`(中文识别大模型):eos 静音断句(XFYUN_IAT_EOS_MS 默认700,600-800 可调)+dwa=wpgs 中间结果(字数门生命线)+回合制会话(幅度门控/预滚400ms/50s收尾)。切换=租户写 xfyun_spark_iat 凭据(app_id/api_key/api_secret,与超拟人 TTS 同套)→ tenant env STT_PROVIDER=xfyun_spark_iat + restart。旧 xfyun(转写线,accessKey 鉴权)保留兼容。碎句复发排障:job 日志 stt final 密度+调大 EOS_MS。
