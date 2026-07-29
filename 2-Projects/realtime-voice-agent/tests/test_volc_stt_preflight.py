@@ -142,3 +142,32 @@ class TestIcDefiniteAction:
         from voice_agent.engines.volc_stt import _ic_definite_action
 
         assert _ic_definite_action("今天天气怎么样呀", "今天天气") == "swallow_mismatch"
+
+
+class TestFadeGains:
+    """假打断恢复渐起斜坡(B 丝滑化,2026-07-29)。"""
+
+    def test_ramp_from_zero_reaches_one(self) -> None:
+        import numpy as np
+
+        from voice_agent.engines.fade_output import fade_gains
+
+        # 24k 单声道 250ms 渐变:step=1/6000;6000 样本后应封顶 1.0
+        g = fade_gains(0.0, 8000, 1.0 / 6000.0)
+        assert g[0] == 0.0
+        assert abs(g[5999] - 1.0) < 1e-3
+        assert np.all(g[6000:] == 1.0)
+        assert np.all(np.diff(g) >= 0)  # 单调不降
+
+    def test_midway_start_continues(self) -> None:
+        from voice_agent.engines.fade_output import fade_gains
+
+        g = fade_gains(0.5, 100, 0.001)
+        assert abs(g[0] - 0.5) < 1e-6
+        assert abs(g[99] - 0.599) < 1e-3
+
+    def test_full_gain_passthrough_shape(self) -> None:
+        from voice_agent.engines.fade_output import fade_gains
+
+        g = fade_gains(1.0, 50, 0.001)
+        assert (g == 1.0).all()

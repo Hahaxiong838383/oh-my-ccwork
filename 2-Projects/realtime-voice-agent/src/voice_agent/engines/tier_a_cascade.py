@@ -299,6 +299,7 @@ class TierACascadeEngine(ExperienceEngine):
         session.on("user_input_transcribed", _on_tele_transcribed)
         session.on("agent_state_changed", _on_tele_state)
 
+
         # --- POC 预测式判停遥测(2026-07-29,POC_PREDICTIVE_EOU=1 时挂;整块可删) ---
         # 两条日志线:①每轮 EOU 概率/阈值/延迟——⚠️ session 级 eot_prediction 事件是框架
         # 半成品(只投 LiveKit Cloud 的 _session_host,本地永不发射,实测订阅零触发),
@@ -403,6 +404,18 @@ class TierACascadeEngine(ExperienceEngine):
             # 连接 reset(python client 能协商 RED 但浏览器协商失败)。dtx/red 跨境优化改走客户端侧。
         )
         _register_metrics(session, ctx, agents_mod)  # 链路延迟 → web 页面板
+
+        # 假打断恢复渐起(POC 2026-07-29):resume 后音量 0→1 爬坡,消"声音突然冒回来"
+        # 的断差感(0 字门两阶段打断的配套件)。⚠️ 必须在 session.start 之后挂——
+        # output.audio 由 RoomIO 在 start 时组装,start 前是 None(首版挂早了静默跳过)。
+        # POC_RESUME_FADE_MS=0(默认)不挂载。
+        _fade_ms = int(os.environ.get("POC_RESUME_FADE_MS", "0"))
+        if _fade_ms > 0 and session.output.audio is not None:
+            from .fade_output import FadeInAudioOutput
+
+            session.output.audio = FadeInAudioOutput(session.output.audio, fade_ms=_fade_ms)
+            logger.info("resume fade-in enabled: %dms", _fade_ms)
+
         if os.environ.get("GREETING_MODE", "fixed") == "llm":
             # 开场白走 LLM(2026-07-28 租户诉求:欢迎语也由租户提示词体系生成)——
             # 指令走 **user_input 位**(非 instructions):instructions 只生成 system-only
