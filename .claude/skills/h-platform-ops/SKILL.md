@@ -41,7 +41,19 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 ## 架构
 
 - **执行面** dev198 `~/feishu-grok-bridge`（main=生产多 App 版，不暴露公网）：bridge WS 出站连飞书；per-user grok/kimi 跑 bwrap 沙箱。
-- **控制面** aliyun-hk `/srv/h-control`（systemd `h-control`，nginx `ai.kidshub.cn`→127.0.0.1:18790）：dashboard/BYOS OAuth/vault/token-manager。
+  - **服务是 user 级 systemd**（2026-07-29 起拆两个进程）：
+    `systemctl --user feishu-grok-bridge` + `systemctl --user feishu-grok-runner-worker`。
+    **漏 `--user` 会报 `Unit could not be found`，看着像服务没了**（我 07-30 踩过，
+    自己 skill 里本来就写着 `--user`）。日志同理 `journalctl --user -u ...`。
+  - **bridge healthz = `http://127.0.0.1:18765/healthz`**（不是 8788）。`version` 字段
+    恒为 null（版本只在控制面），要看版本别在这儿找；契约版本看
+    `behaviorContractVersion`（顶层与每个 App 必须唯一值 1 个）。
+- **控制面** aliyun-hk（systemd `h-control`，nginx `ai.kidshub.cn`→127.0.0.1:18790）：
+  dashboard/BYOS OAuth/vault/token-manager。**代码在 `/srv/h-control/app`**，
+  `.env` 才在 `/srv/h-control`（`WorkingDirectory=/srv/h-control/app`，
+  `ExecStart=/usr/bin/node /srv/h-control/app/server.mjs`）——直接 `md5sum
+  /srv/h-control/lib/version.mjs` 会 No such file。同目录还堆着几十个
+  `app.bak-*` 历史备份，别把备份当现役对撞。
 - **引擎出网**：grok 走本机 xray `127.0.0.1:10808`；**kimi 直连**（沙箱挂 `/run/systemd/resolve` 修 DNS）。
 - **凭据注入**：grok 用 `XAI_API_KEY`（**非** auth.json，grok 校验 refresh 非空+profile 字段不认）；kimi 每次任务前同步最新 access token，并重写 `config.toml` managed provider（api_key 模式）。
 
@@ -1476,3 +1488,57 @@ H-0037、H-0051 已开发、双端部署并写回 Base，当前统一为“已�
 
 - `docs/handoffs/2026-07-30-h-five-p0-p1-closure.md`
 - `docs/retrospectives/2026-07-30-h-five-p0-p1-lessons.md`
+
+## 发布收口必查「入账」（2026-07-30 立，cc 补）
+
+上面第 8 条之外还缺一条，而它已经咬过两次（07-28 立纪律，07-30 同模式复现且危害
+升级）：**"运行态不进 Git"只管住了不该进的，没管住该进的没进。**
+
+**每次发布收口，除了测试/健康/契约版本，必须再断言一行**（dev198 上跑）：
+
+```bash
+cd ~/feishu-grok-bridge && git fetch origin main --quiet
+echo "behind=$(git rev-list --count HEAD..origin/main) ahead=$(git rev-list --count origin/main..HEAD)"
+echo "untracked=$(git status --short | grep -c '^??') modified=$(git status --short | grep -c '^ M')"
+git status --short | grep '^??' | grep -E '^\?\? (lib|test|control-plane)/.*\.mjs$'   # 必须为空
+```
+
+最后那行是要害：**未跟踪清单里出现 `lib/*.mjs` 就是生产模块没入账**。
+07-30 实测曾是 untracked=38 / modified=71，其中含 `base-intake-worker.mjs`
+`memory-lifecycle.mjs` `evolve-card-acceptance.mjs` `system-metrics.mjs`
+`lark-base-adapter.mjs` `proactive-acceptance.mjs`——磁盘内容 md5 == origin/main，
+测试 369/369，服务 9/9，**一切正常，但一次 `git clean -fd` 就把它们全删了**。
+
+**追账手法**（内容已等于远端、只是指针落后时）：
+
+```bash
+# 前置：ahead 必须为 0，否则本地独有提交会被摊成未提交改动 → 停手人工判断
+md5sum bridge.mjs lib/<核心>.mjs runner-worker.mjs > /tmp/before.md5
+git reset --mixed origin/main        # --mixed 移 HEAD+重置 index，不碰工作树
+md5sum <同一批文件> > /tmp/after.md5
+diff /tmp/before.md5 /tmp/after.md5  # 必须逐行一致 = 工作树零改动
+systemctl --user show feishu-grok-bridge -p ActiveEnterTimestamp,NRestarts  # 证明没重启
+```
+
+⚠️ **别用 `--soft`**：它只移 HEAD 不重置 index，`git status` 会把目标提交的新增
+文件显示成「staged 删除」，下一次 `commit` 真删生产模块。`--hard`/`clean -fd`/
+`checkout .` 更是直接覆盖工作树，生产机上一律禁用。详见
+[[feedback_git_ledger_lags_disk_content]]。
+
+**顺带**：dev198 那份 `control-plane/lib/version.mjs` 属于"在场但不参与运行"
+（控制面跑在 aliyun-hk），最容易漂。它漂了不影响线上，但**日后从 dev198 rsync
+控制面会把线上版本号降级**，所以也要跟着对齐。改前先 grep 确认引用面
+（只应被 `control-plane/server.mjs` 与 `control-plane/lib/html.mjs` 引用）。
+
+## 远程侦察脚本：先"发现"再"正式"（2026-07-30）
+
+给 dev198/aliyun-hk 写侦察脚本，第一版凭记忆写路径/端口/服务名**必踩**（我 07-30
+一次踩了三个：系统级 `systemctl` 而非 `--user`、healthz 用 8788 而非 18765、
+控制面 `/srv/h-control` 而非 `/srv/h-control/app`），而且失败长得像"服务挂了"
+（`Unit could not be found` + healthz 空响应），差点误判成生产故障。
+
+**顺序固定**：先跑一轮**发现型**探测拿真值 —— `systemctl --user list-units | grep`、
+`ss -ltnp`、`ps -eo pid,lstart,etime,args`、`systemctl cat <svc> | grep
+ExecStart\|WorkingDirectory`、`find <root> -name <file> -maxdepth 4` —— **再**写
+正式脚本。另：ssh 内联一旦出现嵌套引号/中文括号/`$()` 就写脚本文件 scp 过去跑
+（这条已是老账，07-30 又被中文括号咬了一次：`未预期的记号 "(" 附近有语法错误`）。
