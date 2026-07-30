@@ -127,11 +127,59 @@ skills.json → chown + restart h-control → 等同步 → 核验 privacy rejec
 与 `(ou|oc|on|om|omm|cli)_+8位`，含**看起来像 token 的示例占位**也会被拦，
 写之前先用 `ops/l0-skill-patches/fix-privacy-reject.mjs` 的模式自查。
 
+✅ **E1 已收口（2026-07-30 18:0x，cc）——9 个全部进 L0（实测清单 9 个，
+「第 10 个」是 owner 目录里一个名字含 ANSI 色码的垃圾目录，无 SKILL.md，未动）**：
+- 3 个走官方 `scripts/publish-l0-skill.mjs`（lark-whiteboard-lite /
+  feishu-doc-collab-review / prompt-skill-evolve）；6 个被控制面 extraPatterns
+  （scrub-terms 词表：企业域名/部门代号/wiki token——川哥已推翻的旧策略）拦下，
+  按本节预案走 `ops/l0-skill-patches` 直写模式（备份+原子写+600+h-control 身份
+  +restart，脚本内置与 bridge 装前复扫同门的基础 6 类扫描）。
+- 脱敏边界执行：人名/open_id/appId/真实 base/table/record/obj token 全部改
+  占位+现查命令（+url-resolve / +record-search / contact +search-user /
+  wiki get_node）；公司 wiki 链接、部门名、编码、业务案例、会议室名单照搬；
+  owner 专属基础设施（evolve 管线/proactive 通道/systemd 定时）如实标注
+  「平台管理员/owner 设施」防止租户 Bot 照做挂死。
+- 附件同步：lark-whiteboard-lite 的 templates/+validate.py+out/（SKILL 硬依赖）、
+  feishu-whiteboard-to-bitable 的 references/ ×3（template-sample 脱敏版）、
+  bitable-status-sync-remind 的 references/+scripts/（脚本默认值去身份，py 语法过）。
+- 证据：9/9 `skill installed` 零 privacy reject；控制面 store 9 条
+  status=active 且 installedSha==sha256（含 bridge 回执）；shared/skills 文件
+  sha 与发布稿逐一相等；无同名 L2 fork 遮蔽。
+
 **E2 · lark-calendar 剩余 −2 行**（微小，疑似 frontmatter 差异，低优先）
+
+✅ **E2 已收口（2026-07-30 18:2x，cc）——不是 frontmatter，是行为级矛盾**：
+L0 版第 37 行写着「**目前不支持主动预定会议室**」（正是川哥 E4 拍板要消除的
+文本源头），且缺 owner 版指向 lark-schedule-collab 的扩展指针。已改为
+`+room-find` 运行时现查流程（保留 F5→F2 楼层偏好与排除名单=公司共享信息，
+去掉内部规则编号与人名）+ 补共享层指针；经控制面 store 修改 + 正规同步通道
+下发 dev198（旧行 grep 归零，新行 37 就位）。owner 侧未动。
 
 **E3 · 让 skills-sync 原生支持 references**（治本）。当前靠
 `ops/sync-skill-references.sh` 手动同步；改 `lib/skills-sync.mjs` 让它同步整个
 skill 子树才能免除漂移。⚠️ 改后必须**同时重启 bridge 与 runner-worker**。
+
+✅ **E3 已收口（2026-07-30 18:2x，cc）——v1.34.0，治本落地**：
+- 控制面：新增 `lib/skill-refs-store.mjs`（附件存 `data/skill-refs/`，路径白名单/
+  128 文件/512KB/6MB 上限/危险扫描/**附件专用真实 ID 隐私门**）+ 三端点
+  `/internal/skill-refs|skill-ref|skill-refs-put`；`/internal/skills` 每条带 `refsSha`。
+- 执行面：`lib/skills-sync.mjs` 按 refsSha 增量拉取 + **每轮本地自愈**（删/改都补），
+  manifest 只跟踪自己装的（**手放文件永不删**）；老控制面无字段时零行为，双端可独立升级。
+- 关键设计决策：附件门与 SKILL.md 基础门**分层**——官方参考文档的示例邮箱/示例
+  token 是合法内容，基础门整类误杀（实测现网 18 处命中全为假阳性）；附件门只拦
+  ou_32hex / omm_16hex+ / 租户根路径。
+- 部署：先做「远端↔线上」对撞（**抓到线上 skills-store 的 pristine-fork 跟随功能
+  未入仓，已按 deployed-first 追账回填** commit 44a5cb1）；控制面部署+restart；
+  bridge+runner-worker 双重启（ActiveEnterTimestamp 均晚于 mtime）；nginx h-ai
+  的 `location /` 有 256k body 上限（location 级覆盖 server 级），为
+  `/internal/skill-refs-put` 单开 16m 精确 location。
+- 种子：`ops/push-skill-refs.mjs` 把 dev198 现存已审计附件推成控制面真源，
+  18 个 skill 全部入库（含 whiteboard-lite templates/validate.py/out）。
+- 测试：+11 全过（store 安全/往返 + sync 装载/自愈/远端删除/手放保留/老端兼容），
+  全量基线 npm test 整链 exit 0。
+- **验收（铁项）**：删 `lark-calendar/references/lark-calendar-create.md` →
+  **20 秒**自动补回，sha 前后一致（要求 ≤120s）。
+- 提交：`44a5cb1` / `7e35572` / `fa7a71b` 已推 origin/main；发布收口四断言全过。
 
 **E4 · 沙箱用户 Bot 必须能真订会议室（川哥 07-30 17:xx 新拍板）**
 
@@ -151,3 +199,20 @@ skill 子树才能免除漂移。⚠️ 改后必须**同时重启 bridge 与 ru
 - 验收（铁律 13，Bot 主动闭环）：产品专家 Bot 真订一间会议室——深夜短时段 +
   标题带「测试可删」+ 验完立即删日程；回读 attendees 含 resource 且 room 状态
   正常；与 owner Bot 同操作效果对齐。**绝不占用同事正常时段的会议室。**
+
+✅ **E4 已收口（2026-07-30 17:40，cc）——路径①成立，零代码改动**：
+- 真机验收（proactive-acceptance `e4-room-20260730a`）：产品专家 Bot 在沙箱内
+  `+room-find`（真查回 4 间可选）→ `+create` 只带会议室资源 → 回读 attendees 含
+  `type=resource` + `room_id=omm_bf7d6ce…` + **`rsvp_status=accept`**（会议室
+  F5-505-狄拉克(8)，event_id `08ebbb17-…_0`，2026-07-31 02:00–02:20 深夜段，
+  标题「【测试可删】沙箱会议室预订验收」，零同事邀请）。
+- 独立复核：owner 通道 `+get` + `event.attendees list` 逐字段一致（Bot 未编造）；
+  审计日志 09:30:54–09:31:31Z 完整调用链为证。验完即删：`status=cancelled` +
+  「测试可删」搜索归零，会议室已释放。
+- 用户 token scope 实证够用（`calendar:calendar.free_busy:read` 在授权集内）；
+  装前复扫只拦共享层**文本**里的硬编码 omm_，不拦运行时查询——两者不冲突，
+  **路径②不需要**。
+- 附带发现 2 条：① AI 专家 Bot（u-aca292be3f）`token_missing`——川哥从未对它做
+  「配置」用户授权，属开通流程未走完，非会议室专属缺口；② 工具级权限报错只由
+  Bot 文字转述，**不触发**平台权限卡（卡片只挂消息处理器顶层 catch）——待川哥
+  定夺是否要把 runner 内权限错也接进 `maybeSendPermissionCard`。

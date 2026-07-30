@@ -1460,7 +1460,7 @@ H 平台使用飞书多维表格给人阅读、编辑、反馈和验收，但它
 
 ## 五项需求发布收口（2026-07-30）
 
-本阶段发布版本 `v1.33.1`，全 Bot 行为契约 `2026-07-30.1`。H-0027、H-0031、H-0011、
+本阶段发布版本 `v1.33.1`（E3 后为 `v1.34.0`），全 Bot 行为契约 `2026-07-30.1`。H-0027、H-0031、H-0011、
 H-0037、H-0051 已开发、双端部署并写回 Base，当前统一为“已修复待验收 / 未验收”。
 
 1. **公平调度验收必须制造真实竞争**：至少两只 Bot、总任务数大于全局容量，核对双方都有
@@ -1622,6 +1622,15 @@ Bot 自述的事实。
    create 4.7KB / freebusy 3.9KB / agenda 2.3KB）**全部不存在**；`lark-base` owner
    有 **87 个** references，L0 零。Bot 顺着链接读不到文件**不会报错，只会凭猜** ——
    这是隐形的能力缺失，比报错难发现得多。已同步 157 个文件到 L0 + 各用户 fork。
+   ✅ **E3 已治本（2026-07-30，v1.34.0）**：附件（references/templates/scripts
+   整个子树）原生同步——控制面 `data/skill-refs/` 为真源（`/internal/skill-refs*`
+   三端点），执行面按 `refsSha` 差异拉取 + **每轮本地自愈**（实测删文件 20s 补回，
+   sha 一致），只删自己跟踪的、手放文件不动。发布/修订附件走
+   `node ops/push-skill-refs.mjs --apply [--only skill]`（dev198，先 source .env；
+   `>256KB` 的推送靠 nginx h-ai 里 `/internal/skill-refs-put` 专属 16m location，
+   别改 `location /` 的 256k）。⚠️ **附件隐私门是真实 ID 门**（ou_32hex/omm_16hex+/
+   租户根路径），与 SKILL.md 基础门刻意分层——官方参考文档的示例邮箱/示例 token
+   是合法内容，拿基础门扫附件=整类误杀（实测 18 处全为假阳性）。
 
 ### 两个例行工具（都在 bridge 仓 `ops/`）
 
@@ -1653,7 +1662,16 @@ owner 有 10 个 L0 没有的 skill。按含专属标记数量分：零标记的
 125 行 / `lark-whiteboard-lite` 256 行 / `feishu-whiteboard-to-bitable` 207 行 /
 `h2-sop-onboarding` 98 行）**可脱敏后进 L0**；有标记的（`ai-collab-method` 5 处 /
 `bitable-status-sync-remind` 7 处 / `org-capability-gap-diagnosis` 7 处 /
-`feishu-doc-collab-review` 6 处）需人工判断。**待川哥拍板范围，勿擅自搬。**
+`feishu-doc-collab-review` 6 处）需人工判断。~~待川哥拍板范围~~
+✅ **已全量搬完（2026-07-30，川哥拍板「10 个都脱敏之后都搬过去」）**：实测清单
+9 个（「第 10 个」是 owner 目录里名字含 ANSI 色码的垃圾目录）；3 个走
+`scripts/publish-l0-skill.mjs`，6 个被控制面 extraPatterns（scrub-terms 词表仍执行
+旧策略：企业域名/部门代号/wiki token 全拦）拦下、按预案走 `ops/l0-skill-patches`
+直写（模板：`ops/l0-skill-patches/e1-e2-migration/e1-direct-write.mjs`，内置与
+bridge 装前复扫同门的基础扫描）。脱敏口径：人名/open_id/appId/真实资源 token →
+占位+现查命令；公司 wiki 链接/部门名/编码/业务案例/会议室名单照搬；owner 专属
+基础设施（evolve 管线/proactive 通道/systemd 定时）在正文里**如实标注**，防租户
+Bot 照做挂死。
 
 ⚠️ 反向也要看：`lark-sheets` 现在 L0 **比 owner 多 93 行**（写入/标红配方是 L0 先加的），
 owner 侧反而缺 —— **一致是双向的**。
