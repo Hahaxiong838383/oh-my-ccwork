@@ -1671,6 +1671,33 @@ Bot 自述的事实。
    租户根路径），与 SKILL.md 基础门刻意分层——官方参考文档的示例邮箱/示例 token
    是合法内容，拿基础门扫附件=整类误杀（实测 18 处全为假阳性）。
 
+### 🔴 新用户/新变更自动生效的三层机制（2026-07-30 立，川哥要求）
+
+今天三个缺口全靠人工 grep 才发现，共同点是**零报错、纯静默**：某用户 fork 冻在旧版、
+kimi 用户走另一条 harness 腿少一条铁律、某 skill 被装前复扫永久拒收卡 5 天。
+
+| 层 | 机制 | 位置 |
+|---|---|---|
+| 自动生效 | L0 共享目录 + 托管块（App 启动时写）+ runner 代码 → 新用户天然继承 | 无需动作 |
+| 自动跟随 | 共享层记 `shaHistory`（上限 30）；`forkIsPristine` 判「正文命中当前/任一历史/记账 sha」→ 未修改就继续跟随 | `control-plane/lib/skills-store.mjs` |
+| 自动发现 | 逐用户断言托管块/L0 落盘/附件 refsSha/fork 跟随，有落后 exit 1；user 级 timer 每小时跑 | `ops/tenant-parity-audit.mjs`、`ops/parity-timer.sh` |
+
+```bash
+set -a; . ./.env; set +a
+node ops/tenant-parity-audit.mjs            # 人读版（有落后项退出码 1）
+node ops/tenant-parity-audit.mjs --json     # 机读版；timer 落 /srv/h-platform/audit/tenant-parity.json
+systemctl --user list-timers h-tenant-parity.timer
+```
+
+- **fork 冻结的原理**（务必记住）：旧判定只比 `origin.sourceSha`，一旦 fork 正文与
+  记账不同步（**历史上绕过 store 直改 skills.json 就会**）→ 永久判成"用户改过" →
+  停止跟随、能力冻结、**零报错**。所以「绕过 API 直写」的代价会在几天后以
+  "某个用户的 Bot 跟别人不一样"的形式回来。
+- ⚠️ **门控必须证伪**：交付巡检前**人为造一个落后**（删掉某用户托管块的 marker）
+  确认它报得出来 + exit 1，再恢复并 diff 逐字节一致。永远返回绿的门比没有门更危险。
+- 巡检认 `users.json` 遍历，所以**新用户加入后下一轮自动纳入**；kimi/omp 与 grok
+  的托管块文件位置不同，脚本已按引擎分流（改引擎归属时注意）。
+
 ### 两个例行工具（都在 bridge 仓 `ops/`）
 
 ```bash
