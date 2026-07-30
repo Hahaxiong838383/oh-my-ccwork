@@ -101,9 +101,12 @@ AI 语义 compaction + 管理台 fork/merge → Native Kimi 影子看板与灰�
   （同步，带脏词扫描 + 补丁优先）、`ops/l0-skill-patches/`（脱敏补丁与执行脚本）
 - 提交：`128e6c1` / `b803a15` / `27f6ec8` 均已推 origin/main
 
-### 待办（川哥已拍板要做，本轮未完成）
+### 待办（川哥已拍板要做，本轮未完成 → **已移交专项 session，2026-07-30 17:xx**）
 
 **E1 · 搬 10 个 owner 独有 skill（川哥：「10 个都脱敏之后都搬过去」）**
+
+> ⚠️ 下表实录 9 个；标题「10」来自当时口径。**以重跑 `ops/skill-parity-audit.sh`
+> 的输出为唯一真源**（清单必实测，不猜第 10 个）。
 
 | skill | 行数 | 专属标记 | 备注 |
 |---|---|---|---|
@@ -129,3 +132,22 @@ skills.json → chown + restart h-control → 等同步 → 核验 privacy rejec
 **E3 · 让 skills-sync 原生支持 references**（治本）。当前靠
 `ops/sync-skill-references.sh` 手动同步；改 `lib/skills-sync.mjs` 让它同步整个
 skill 子树才能免除漂移。⚠️ 改后必须**同时重启 bridge 与 runner-worker**。
+
+**E4 · 沙箱用户 Bot 必须能真订会议室（川哥 07-30 17:xx 新拍板）**
+
+川哥原话：「我不希望阻止用户 Bot 去订会议室，我希望沙箱里用户的 bot 能去订会议室。」
+
+现状与疑点（先取证，不预设根因）：
+- L0 `lark-schedule-collab` 的会议室段已同步（楼层优先级/会场名单/`+room-find` 指引），
+  但真实 `omm_` 会议室 ID 被脱敏成 `omm_<会议室>` 占位——装前复扫
+  `(ou|oc|on|om|omm|cli)_+8位` 也拦着，真 ID 写不进 L0。
+- 因此沙箱 Bot 订会议室的可行路径只有两条：
+  ① **运行时现查**：Bot 用 `+room-find`（或会议室搜索 API）拿真 `omm_` 再作为
+  resource 塞进 attendee-ids——零硬编码、隐私门不动，**首选**；前提是用户
+  user token 有查会议室的 scope（用飞书开发文档查证 + 真机验证）。
+  ② 若用户身份查会议室权限不足 → 调整装前复扫，对**会议室类 `omm_`** 单独放行
+  （川哥已定性会议室为公司共享信息）。这是代码改动：version.mjs 必升 +
+  重启矩阵 + 对抗测试（放行面只限会议室资源，别把个人标识一起放进来）。
+- 验收（铁律 13，Bot 主动闭环）：产品专家 Bot 真订一间会议室——深夜短时段 +
+  标题带「测试可删」+ 验完立即删日程；回读 attendees 含 resource 且 room 状态
+  正常；与 owner Bot 同操作效果对齐。**绝不占用同事正常时段的会议室。**
