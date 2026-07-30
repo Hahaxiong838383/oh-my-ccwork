@@ -1,8 +1,12 @@
-# H 平台后续 TODO（2026-07-30 16:1x 快照）
+# H 平台后续 TODO（2026-07-30 21:2x 快照）
 
-> **线上终态**：控制面 `v1.33.1`（aliyun-hk `/srv/h-control/app`）/ 全 Bot 行为契约
-> `2026-07-30.1` / bridge+runner-worker 双进程（dev198 user 级 systemd）/ dev198 git
-> 已入账追平 `origin/main` = **`4e60dd7`**（A 方案审计）。测试 **377/377**。
+> **线上终态**：控制面 **`v1.35.1`**（aliyun-hk `/srv/h-control/app`）/ 全 Bot 行为契约
+> **`2026-07-30.3`** / bridge+runner-worker 双进程（dev198 user 级 systemd）/ dev198 git
+> 已入账追平 `origin/main` = **`edc7262ba`**。全量测试 0 fail。
+> 当前登记用户 **9 人**（含 21:14 新注册的 `u-9a037b10f7`）；全租户对等巡检
+> `ops/tenant-parity-audit.mjs` 每小时自动跑（user timer `h-tenant-parity.timer`），
+> 最近一次 **9/9 用户 + 共享层全绿**。详见 G 章。
+> （历史基线：`v1.33.1` / 契约 `2026-07-30.1` / `4e60dd7` / 测试 377/377）
 > ⚠️ **重启矩阵**：改 `sandbox.mjs`/`grok-runner.mjs`/任何 Runner 侧共享 lib，
 > **必须 bridge + runner-worker 两个都重启**（真实 Runner 在 `runner-worker.mjs:84`）；
 > 只重启 bridge = 静默失效零报错。改控制面代码/`data/*.json` → `restart h-control`。
@@ -242,3 +246,38 @@ skill 子树才能免除漂移。⚠️ 改后必须**同时重启 bridge 与 ru
 **残留（未扩，等川哥要）**：agent 是否走 `--no-wait` 三步法是**概率性**的（v3 探针里
 它照自己历史模式又跑了阻塞式命令）。要 100% 确定性需在 lark-cli wrapper 层注入
 `--no-wait`（属 A 方案审计 wrapper 的同一挂载点，改动小但影响全体用户，需单独验收）。
+
+---
+
+## G · 排版一致性 → 全平台同步 → 新用户自动生效机制（2026-07-30 晚收官）
+
+川哥三张截图（owner 分段漂亮 / 两个用户 Bot 一坨字面 `\n`）起头，追到最后修了**六层**，
+每层都零报错、只有逐层取证才看得见：
+
+| 层 | 缺口 | 修法 | 提交 |
+|---|---|---|---|
+| 1 内容 | 共享版 skill 丢了私有版的 `$(cat 文件)` 传参手法（把「怎么做」当业务细节泛化掉了） | 补两步法 + 模板骨架对齐 owner 分段式 | `a91896c` |
+| 2 载体 | skill 按 description 匹配触发、**不保证每轮加载**（川哥说了"用最新技能"仍复现） | 铁律进 AGENTS.md 托管块（每轮必进 system prompt） | `2d197ca` |
+| 3 上下文 | 托管块被 chat-history 里的旧「成功先例」压过（老用户中招、新用户没事） | 历史注入免责声明扩到「输出格式/排版/命令写法」 | `24be423` |
+| 4 副本 | per-tenant fork 因记账落后被永久判「用户改过」而**冻结** | 共享层记 `shaHistory`，命中任一历史版本即判未修改 | `07298ea` |
+| 5 分流 | kimi/omp 走另一条 harness 腿，托管块少一条铁律 | 两条腿都补，巡检按引擎分流 | `07298ea` |
+| 6 附件 | fork **只复制正文**，`references/` 不跟随共享版（144 个里 1 个是旧模板） | 附件来源指向同名共享版；巡检逐文件比 sha | `edc7262` |
+
+**新用户自动生效三层机制**（川哥点名要的）：自动生效（共享目录+启动写托管块+runner
+代码，新用户天然继承）/ 自动跟随（`shaHistory` + `forkIsPristine`）/ 自动发现
+（`ops/tenant-parity-audit.mjs` 逐用户断言五项 + user 级 timer 每小时，有落后 exit 1）。
+
+**验收**：全平台 9/9 用户 + 共享层对等 ✓；8-bot 只读巡检 7/8 通过（含杨平的 Bot 答出
+heredoc+`$(cat)`+F5→F2+排除名单+回读）；**巡检门已证伪**（人为删 marker → 准确指名
++ exit 1，恢复后 exit 0 且文件逐字节一致）；**新用户活体实证** `u-9a037b10f7` 零干预全绿。
+
+### ⏸ 挂起（川哥 2026-07-30 21:2x 决定，非遗忘）
+
+1. **Luxapex（kimi，`u-dec457e69d`）真机验收未跑通**：报 `provider.api_error`，日志显示
+   runner 正常启动（`model=kimi-code/k3`），属 kimi provider 服务端/配额侧，非平台缺陷。
+   **机制层已到位**（`workspace/AGENTS.md` 托管块含铁律、对等巡检绿），只差"真机跑一次
+   成功"。复跑条件：provider 恢复，或让该用户发一句话触发。
+2. **lark-cli wrapper 注入 `--no-wait`**（授权流 100% 确定性）：现在 agent 走不走三步法
+   是概率性的，走错也只是慢（卡片仍会发出）。要绝对确定性需在审计 wrapper 挂载点注入，
+   改动小但影响全体用户，需单独验收——**等川哥要再做**。
+3. **孤儿目录 `u-ad7292bc60`**：已删用户残留（users.json 计数 0），未动，可择机清理。
