@@ -1742,6 +1742,11 @@ systemctl --user list-timers h-tenant-parity.timer
   记账不同步（**历史上绕过 store 直改 skills.json 就会**）→ 永久判成"用户改过" →
   停止跟随、能力冻结、**零报错**。所以「绕过 API 直写」的代价会在几天后以
   "某个用户的 Bot 跟别人不一样"的形式回来。
+- 🔴 **直写 skills.json 后必须紧跟 `align-forks.mjs`**（否则 fork 立刻落后一版）：
+  直写绕过 `upsertContent` → 不触发 `refreshPristineForks` → 有 fork 的用户当场
+  掉队。2026-07-30 我一天内犯了两次，**第二次是巡检替我抓到的**
+  （`parity=LAG items=1`，fork 停在上一版 sha）。固定动作：
+  `直写 → restart h-control → align-forks --dry-run 看有无落后 → --apply → 复跑巡检`。
 - ⚠️ **门控必须证伪**：交付巡检前**人为造一个落后**（删掉某用户托管块的 marker）
   确认它报得出来 + exit 1，再恢复并 diff 逐字节一致。永远返回绿的门比没有门更危险。
 - 巡检认 `users.json` 遍历，所以**新用户加入后下一轮自动纳入**；kimi/omp 与 grok
