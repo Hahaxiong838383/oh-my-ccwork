@@ -1530,6 +1530,81 @@ systemctl --user show feishu-grok-bridge -p ActiveEnterTimestamp,NRestarts  # �
 控制面会把线上版本号降级**，所以也要跟着对齐。改前先 grep 确认引用面
 （只应被 `control-plane/server.mjs` 与 `control-plane/lib/html.mjs` 引用）。
 
+## ⚠️ 重启矩阵：改哪些代码要重启哪些进程（2026-07-30 血泪）
+
+Codex 07-29 把真实 Runner 拆进了独立进程，**只重启 bridge 已经不够了**：
+
+| 改了什么 | 必须重启 |
+|---|---|
+| `lib/sandbox.mjs` / `lib/grok-runner.mjs` / `lib/kimi-runner.mjs` / `lib/omp-*` / 任何 Runner 侧共享 lib | **bridge + runner-worker 两个都要**（真实 Runner 在 `runner-worker.mjs:84` 的 `createGrokRunner`） |
+| `bridge.mjs` / WS / 送达 / 卡片 / 编排 | bridge |
+| 控制面 `server.mjs` / `lib/*` / `data/*.json` | `sudo systemctl restart h-control`（内存缓存，不重启等于没改） |
+
+```bash
+# 判据不是"我重启了"，而是每个进程的启动时间都晚于代码 mtime
+systemctl --user show feishu-grok-bridge -p ActiveEnterTimestamp --value
+systemctl --user show feishu-grok-runner-worker -p ActiveEnterTimestamp --value
+stat -c %y lib/sandbox.mjs
+```
+
+漏重启 runner-worker 的后果是**静默失效 + 零报错**：我 07-30 因此看到"审计日志空"，
+差点把它当成"Bot 没调用 lark-cli"的证据，已经写出错误结论才发现。
+详见 [[feedback_verification_path_vs_production_path]]。
+**找齐进程的方法**：`grep -rn "from '.*<模块名>'" *.mjs` —— 每个 import 方都是一个入口。
+
+## lark-cli 调用审计（A 方案，2026-07-30 上线）
+
+**它解决什么**：Bot 声称"已更新表格/已标红"而实际一次写命令都没发。L0 方法论早有
+"写完回读拿证据"铁律仍被违反（13:07 上线修复、15:16 同一 Bot 照犯）→ 需要不依赖
+Bot 自述的事实。
+
+- **原理**：ro-bind 覆盖 lark-cli 的 **Go 二进制**（`run.js` 用
+  `path.join(__dirname,"..","bin","lark-cli")` 调它，绕过 PATH 直接调也拦得住），
+  真二进制换挂 `/opt/lark-cli-real`。wrapper 只记命令结构，**flag 值一律不记**
+  （载荷里有人事数据）。
+- **灰度开关**：`.env` 的 `H_LARK_AUDIT`（空/`0`/`off`=关；`all`/`1`=全开；
+  否则逗号分隔 uid 白名单）。**owner Bot 不进沙箱，天然不受影响。**
+- **日志**：`/srv/h-platform/audit/lark-cli/<uid>.log`。
+  **新增灰度用户前必须先 `touch` 他的日志文件** —— 降级门查不到文件会静默关掉审计。
+- **回滚**：`H_LARK_AUDIT=0` + 重启 bridge **和 runner-worker**，挂载即摘。
+- **判读**：`cmd=` 后面是「域 子命令 flag名」。写类看 `+cells-set` / `+cells-set-style`
+  / `+workbook-create` / `docs +update` 等；只有 `+cells-get` / `--help` / `get_node`
+  这类 = 没写过。
+- **诚实边界（别当铁证用）**：日志证明「发生过调用」，**不证明「没发生过」**——
+  Bot 能追加伪造行（删改历史做不到：bind-mount 文件内核禁 unlink，truncate 被
+  字节偏移检测抓到）。所以对外只说"本次实际执行的调用"，**绝不说"已验证写入"**。
+- 部署源在仓库 `ops/lark-cli-audit`，与 `/srv/h-platform/shared/bin/lark-cli-audit`
+  必须 md5 一致（别只改生产不入库）。
+
+## 改 L0 共享 skill 的正确路径（2026-07-30 踩过）
+
+**控制面才是 skills 的 source of truth**，dev198 的 `/srv/h-platform/shared/skills/`
+只是 bridge 每 60 秒同步下来的落盘——**直接改 dev198 会在一分钟内被盖回去**。
+
+正确入口：管理台 / `POST /admin/api/skill`（`action: add-content`，内部走 `intake()`）。
+**别直接改控制面的 `data/skills.json`**：那会绕过 `intake()` 的全部副作用 ——
+① 属主/权限（我用 sudo 写成 `root:root` → h-control 读不到 → **crashloop 73 秒**）
+② 内存缓存（不重启不生效，而重启正是踩到权限坑的那一刻）
+③ `refreshPristineForks()` 级联刷新（有用户是 fork 副本，**沙箱 L2 优先于 L0**，
+不刷新他就永远吃旧版）④ 安全/隐私扫描。
+迫不得已直改时，逐条把副作用补回：`chown` 到服务用户 + `chmod 600` 对齐邻居文件 +
+重启 h-control + 手工同步 fork（连 fork 头部的「原版 sha / 最近同步」注释一起改，
+否则注释在说谎）。详见 [[feedback_bypassing_app_write_path]]。
+
+## 主动验收入口 proactive-acceptance（Codex 建，2026-07-30 实战）
+
+铁律 13 要 Bot 主动闭环时用它，别手搓 runner（grok runner 还要 `mapStore`，
+且它在 worker 进程里）。写请求文件即触发，完整过公平容量/TaskSessionLog/Outbox/飞书 ACK：
+
+- 请求：`workspace/.state/proactive-acceptance-request.v1.json`（0600），
+  `{version:1, requestId, probes:[{id,botLabel,appId,openId,prompt,expectText}]}`，
+  **至少 2 个 probe**；结果落 `…-result.v1.json`；bridge 每 2 秒轮询。
+- ⚠️ **`expectedMatched` 是字符串匹配，判据很脆弱**：实战中一个 Bot 明明全做对了，
+  只因回复措辞没原文引用 `expectText` 就被判 `ok` 但 `expectedMatched=false`、
+  整个 request `status=failed`。**可靠判据是审计日志与目标副作用，不是文本匹配。**
+- ⚠️ 验收任务**一律让 Bot 自建带「可删」标记的新表/新文档**，绝不在用户既有的
+  人事/业务文件上做写入测试。
+
 ## 远程侦察脚本：先"发现"再"正式"（2026-07-30）
 
 给 dev198/aliyun-hk 写侦察脚本，第一版凭记忆写路径/端口/服务名**必踩**（我 07-30

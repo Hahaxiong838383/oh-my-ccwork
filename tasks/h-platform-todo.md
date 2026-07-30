@@ -1,8 +1,11 @@
-# H 平台后续 TODO（2026-07-30 12:0x 快照）
+# H 平台后续 TODO（2026-07-30 16:1x 快照）
 
 > **线上终态**：控制面 `v1.33.1`（aliyun-hk `/srv/h-control/app`）/ 全 Bot 行为契约
 > `2026-07-30.1` / bridge+runner-worker 双进程（dev198 user 级 systemd）/ dev198 git
-> 已入账追平 `origin/main` = `258bcc1`。
+> 已入账追平 `origin/main` = **`4e60dd7`**（A 方案审计）。测试 **377/377**。
+> ⚠️ **重启矩阵**：改 `sandbox.mjs`/`grok-runner.mjs`/任何 Runner 侧共享 lib，
+> **必须 bridge + runner-worker 两个都重启**（真实 Runner 在 `runner-worker.mjs:84`）；
+> 只重启 bridge = 静默失效零报错。改控制面代码/`data/*.json` → `restart h-control`。
 > **实测基线**（cc 07-30 11:2x–12:0x 亲验）：9/9 Bot 在线、契约唯一值 1 个、bridge
 > 全量 369/369、Delivery Outbox pending 0、`grants` 持续增长（真实流量）、
 > orphan compute=1（设计内保守标记，Recovery 实见两次成功重放）。
@@ -16,6 +19,14 @@
 - ~~dev198 `control-plane/lib/version.mjs` v1.33.0 滞后~~ **已修**：sed 对齐 v1.33.1，
   md5 与 aliyun-hk 线上、origin/main 三方一致（防日后 rsync 把线上版本号降级）。
 - dev198 磁盘上缺的两份交接文档已补回（handoffs / retrospectives）。
+- ~~Bot 谎报「已更新表格并标红」而实际零写入~~ **已根治**（下午批次）：
+  ① 三处 L0 skill 补写入/标红配方 + 强制 `--include style` 回读 + 诚实条款（配方经真机
+  实测，抓到 `--cells @绝对路径` 被拒须走 stdin）② **A 方案 lark-cli 调用审计上线**
+  （wrapper ro-bind 覆盖 Go 二进制，只记命令结构不记 flag 值，fail-open + 降级门 +
+  `H_LARK_AUDIT` 灰度）③ 真机验收：两个灰度 Bot 各自建新表→写入→标红→回读**全部真做成**，
+  审计实录与自述逐条吻合。bridge `4e60dd7` 已推。
+- ~~控制面 crashloop 73 秒（我直改 skills.json 漏 chown）~~ 已修并沉淀纪律：
+  改 L0 skill 只走控制面 API，不直改 `data/skills.json`。
 
 ## A · 观察中（无需操作，触发即处理）
 
