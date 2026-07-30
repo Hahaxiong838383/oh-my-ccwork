@@ -493,6 +493,15 @@ events: { items: { tenant: ['im.chat.access_event.bot_p2p_chat_entered_v1'] } }
 - **同步**：bridge 60s 拉 `/internal/skills` 元数据 → sha 差异才拉正文（`/internal/skill/<name>` 单数前缀防路由冲突）→ **装前复扫**（纵深防御）→ 原子落 `shared/skills/<name>/SKILL.md`（L0）或 `orgs/<org>/skills/<name>/`（L1）→ 回报 → 管理台显示「✓已下发」。`H_SKILLS_SYNC=0` 可关。
 - **manifest 隔离**：`/srv/h-platform/.skills-manifest.json` 只记同步器自己装的；删除只删 manifest 内目录，**admin 手放的 skill 永不误删**。
 - 排障：待同步不变 ✓ → 查 bridge `skills-sync`/`skill installed` 日志；`install fail sha mismatch` = 控制面内容变更中，下轮自愈。
+- 🔴 **改了 L0 但沙箱里没变 → 一定要看 `install fail` 而不是"再等等"**：装前复扫
+  会**永久**拒收命中脏词的正文，每分钟重试每分钟失败，控制面侧看起来一切正常
+  （store 已更新、`/internal/skills` 也吐新 sha），只有 bridge 日志在报。
+  实证：`lark-shared` 因正文里一句 owner 专属文案含 `127.0.0.1:10808`（命中
+  「内网地址」类），**自 07-25 起任何更新都装不上，卡了 5 天没人发现**——
+  是我给它加新章节时才暴露。核对一行：
+  `journalctl --user -u feishu-grok-bridge --since -10min | grep "install fail"`。
+  意味着：**共享层正文里不许留任何本机/owner 环境细节**（路径、代理端口、zshrc），
+  它们既是错误指引，又会把这个 skill 永久钉在旧版本上。
 
 ## 注册流（公网自助建 Bot）
 

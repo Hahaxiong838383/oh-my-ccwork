@@ -216,3 +216,29 @@ skill 子树才能免除漂移。⚠️ 改后必须**同时重启 bridge 与 ru
   「配置」用户授权，属开通流程未走完，非会议室专属缺口；② 工具级权限报错只由
   Bot 文字转述，**不触发**平台权限卡（卡片只挂消息处理器顶层 catch）——待川哥
   定夺是否要把 runner 内权限错也接进 `maybeSendPermissionCard`。
+  → ✅ **②已修（川哥当晚拍板，v1.35.0 / 契约 2026-07-30.2）**，详见下方 F 章。
+
+---
+
+## F · 授权墙 → 授权卡全链路修通（2026-07-30 晚，川哥连续复测逼出三根因）
+
+川哥两次复测「还是不一样」「还是发链接不是卡片」，逐层取证后修完三处：
+
+1. **grok-runner 从未接 `interactive-wait` 检测**（机制只实现在 kimi 侧）→ 接入
+   `createOutputPublisher`（跨轮单发 + 撞墙不硬续 + 授权后 `retryAfterAuth` 续跑）。
+   `c330308`，测试 +4。
+2. **阻塞式 `lark-cli auth login` 把授权 URL 困在未返回的工具调用里**，检测器挂对了
+   流也看不见 → L0 `lark-shared` 改教 CLI 官方 agent 模式三步法：
+   `auth login --no-wait --json` 拿 `verification_url` → **写进回复正文** → 平台发卡续跑。
+3. **`runProactiveTask`（验收/探针通道）不带 `onUserActionRequired`** → 检测器遇空
+   回调整个跳过，**授权卡在验收通道结构性不可能出现**（川哥截图那张文本链接正是
+   这条通道发的；我因此连误判三轮、白改两版指引）。`c015263` 补齐三路径同构，
+   契约测试锁 `larkAuthTarget && larkAuthBroker` 触发点 **必须=3 处**。
+
+**真机对比**：修复前 628s 挂死 + 仅文本链接；修复后 **12s 完成、授权卡 13s 送达**
+（`lark auth flow started uid=…` → `user action delivered (proactive) feishu_cli_auth`
+→ probe `completed`），产品专家对照组 7s 正常回 4 条日程零回归。全量测试链两轮全绿。
+
+**残留（未扩，等川哥要）**：agent 是否走 `--no-wait` 三步法是**概率性**的（v3 探针里
+它照自己历史模式又跑了阻塞式命令）。要 100% 确定性需在 lark-cli wrapper 层注入
+`--no-wait`（属 A 方案审计 wrapper 的同一挂载点，改动小但影响全体用户，需单独验收）。
