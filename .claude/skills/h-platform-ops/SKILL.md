@@ -1460,7 +1460,7 @@ H 平台使用飞书多维表格给人阅读、编辑、反馈和验收，但它
 
 ## 五项需求发布收口（2026-07-30）
 
-本阶段发布版本 `v1.33.1`（E3 后为 `v1.34.0`），全 Bot 行为契约 `2026-07-30.1`。H-0027、H-0031、H-0011、
+本阶段发布版本 `v1.33.1`（E3 后 `v1.34.0`；grok 授权墙接线后 `v1.35.0`），全 Bot 行为契约 `2026-07-30.1`（→ `2026-07-30.2`，grok 撞授权墙自动推卡）。H-0027、H-0031、H-0011、
 H-0037、H-0051 已开发、双端部署并写回 Base，当前统一为“已修复待验收 / 未验收”。
 
 1. **公平调度验收必须制造真实竞争**：至少两只 Bot、总任务数大于全局容量，核对双方都有
@@ -1590,6 +1590,29 @@ Bot 自述的事实。
 迫不得已直改时，逐条把副作用补回：`chown` 到服务用户 + `chmod 600` 对齐邻居文件 +
 重启 h-control + 手工同步 fork（连 fork 头部的「原版 sha / 最近同步」注释一起改，
 否则注释在说谎）。详见 [[feedback_bypassing_app_write_path]]。
+
+## lark 用户授权墙：auth login = device-flow 轮询，不是 stdin 交互（2026-07-30 晚）
+
+- **表象是「挂住」，本质是在轮询等用户授权**：沙箱 agent 跑 `lark-cli auth login`
+  会打印授权链接后轮询等待；有人点授权卡完成授权，命令即自行解除阻塞继续任务。
+  挂死 628s 的真机事故根因不是「跑了 auth login」，是**卡片没发出去**没人授权。
+- 检测链：runner 输出过 `lib/interactive-wait.mjs` 的 `createOutputPublisher`
+  （**必须见到真实授权 URL 才触发**，纯报错文本 fail-closed）→ IPC
+  `runner-worker-ipc` 转发 `onUserActionRequired` → bridge 起 auth broker 发
+  「授权当前机器人」卡 → 授权完成 `retryAfterAuth` 自动续跑。**kimi/grok 两个
+  runner 都已接线**（grok 2026-07-30 晚补齐，此前只有 kimi——grok Bot 撞墙
+  平台无感知是 AI 专家事故的根因）。撞墙不硬续：超时降级送达等自动续跑。
+- 排障顺序：journal 搜 `user action required feishu_cli_auth`（消息路径）或
+  `user action delivered (proactive)`（探针路径）→
+  没有=检测没触发（看 runner 输出里有没有授权 URL）→ 有但没卡=broker/发卡段。
+- ⚠️ **三条路径都要带 `onUserActionRequired`**：权限卡路径 / 真实消息路径 /
+  proactive 探针路径（第三条 2026-07-30 晚补齐——此前探针通道不带回调，
+  检测器整个跳过，授权卡在验收通道**结构性不可能出现**，正是「验证路径≠
+  生产路径」；契约测试锁 broker 触发点=3 处）。
+- L0 `lark-shared` 教 agent 三步法：`auth login --no-wait --json` 拿
+  verification_url → **写进回复正文**（阻塞式写法会把 URL 困在未返回的
+  工具里，检测器看不到）→ 平台发卡+授权后续跑。禁 `config init`。
+  真机对比：修复前挂死 628s 只回文本链接；修复后 12s 完成、授权卡 13s 送达。
 
 ## 主动验收入口 proactive-acceptance（Codex 建，2026-07-30 实战）
 
