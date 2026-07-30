@@ -76,3 +76,56 @@ AI 语义 compaction + 管理台 fork/merge → Native Kimi 影子看板与灰�
 - 飞书扫码自动申请全部权限（川哥 2026-07-27 拍板搁置；重启需他提供具体报错抠 scope 串）
 - aliyun-hk `/srv/h-control/` 下几十个 `app.bak-*` 历史备份目录待清（磁盘卫生，非紧急；
   清前必须确认哪个是现役——`systemctl cat h-control` 认 `WorkingDirectory`）
+
+## E · 沙箱内外能力对等（2026-07-30 新增专章，川哥定为验收规则）
+
+**规则**：沙箱内用户使用 skills 的效果必须与 owner Bot 一致。差异只允许存在于
+凭据来源、沙箱边界、个人身份标识脱敏；**不允许"owner 会做而用户 Bot 不会做"**。
+
+**脱敏边界（被纠正三次后确定）**：这是**公司内部平台、租户即同事**，公司共享信息
+（公司名、会议室、业务案例、内部流程）**都该搬**，只拦个人身份标识与真实资源 token；
+含真实 token 的段落**不要整段丢弃**，改成占位 + 补自查命令。
+
+### 已完成
+
+- `lark-schedule-collab` 116 → **279 行**（反超 owner 255）：时间换算/patch/邀人/
+  回读清单/汇报口径/多日行程/反模式 + 会议室段（楼层优先级/会场名单/排除规则）+
+  行程案例结构；references/description-bro-p2.md 已放（脱敏版）
+- `lark-doc` +37 / `lark-whiteboard` +57 / `lark-wiki` +56（token 占位+自查命令）/
+  `feishu-mcp` +7（含公司知识库归档闭环）/ `lark-im` +6 / `lark-drive` +6 /
+  `feishu-channel-rules` +7
+- **references 全线补齐**：157+1 个文件同步到 L0 与 6 个用户 fork（此前 17 个 skill
+  的 references 在 L0 完全不存在 → SKILL.md 里的链接全是断的）
+- **反向同步**：owner `lark-sheets` 196 → 289 行（写入/标红配方先在 L0 补的）
+- 工具入库：`ops/skill-parity-audit.sh`（对账）、`ops/sync-skill-references.sh`
+  （同步，带脏词扫描 + 补丁优先）、`ops/l0-skill-patches/`（脱敏补丁与执行脚本）
+- 提交：`128e6c1` / `b803a15` / `27f6ec8` 均已推 origin/main
+
+### 待办（川哥已拍板要做，本轮未完成）
+
+**E1 · 搬 10 个 owner 独有 skill（川哥：「10 个都脱敏之后都搬过去」）**
+
+| skill | 行数 | 专属标记 | 备注 |
+|---|---|---|---|
+| ai-collab-method | 300 | 5 处 | 方法论，通用价值高 |
+| lark-whiteboard-lite | 256 | 0 | 可直接搬 |
+| feishu-whiteboard-to-bitable | 207 | 0 | 可直接搬 |
+| bitable-status-sync-remind | 173 | 7 处 | 需脱敏 |
+| org-capability-gap-diagnosis | 170 | 7 处 | 需脱敏 |
+| feishu-doc-collab-review | 160 | 6 处 | 需脱敏 |
+| agent-self-improve | 125 | 0 | 可直接搬 |
+| h2-sop-onboarding | 98 | 0 | 可直接搬 |
+| prompt-skill-evolve | 41 | 1 处 | 需脱敏 |
+
+做法：owner 侧读全文 → 按上面的脱敏边界处理（只拦个人 ID 与真实资源 token，
+后者改占位+自查命令）→ 用 `add-content` 或 `ops/l0-skill-patches/` 模式写入
+skills.json → chown + restart h-control → 等同步 → 核验 privacy reject 归零。
+⚠️ 平台装前复扫会拦 `(tbl|bascn|fld|docx|wikcn|shtcn|doxcn|boxcn|nodcn)+8位`
+与 `(ou|oc|on|om|omm|cli)_+8位`，含**看起来像 token 的示例占位**也会被拦，
+写之前先用 `ops/l0-skill-patches/fix-privacy-reject.mjs` 的模式自查。
+
+**E2 · lark-calendar 剩余 −2 行**（微小，疑似 frontmatter 差异，低优先）
+
+**E3 · 让 skills-sync 原生支持 references**（治本）。当前靠
+`ops/sync-skill-references.sh` 手动同步；改 `lib/skills-sync.mjs` 让它同步整个
+skill 子树才能免除漂移。⚠️ 改后必须**同时重启 bridge 与 runner-worker**。
