@@ -96,6 +96,11 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - AI Ops、Grok、定时任务和自动刷新只能读取余额/卡数，禁止自动消费重置卡；卡数、余额属于实时状态，不得把历史快照当成当前结论。
 - 部署新 Bridge 二进制后必须显式 `systemctl restart cpa-desktop-bridge.service`；`systemctl enable --now` 不会重启已运行服务。验收要同时检查进程启动时间、新字段和接口行为。
 - 覆盖安装新版 macOS App 前必须先结束旧 `CPAMenuBar` 进程，再复制 Bundle、启动并核对新进程启动时间；否则旧进程可能继续运行被替换前的代码。
+- `MenuBarExtra(.window)` 的内容不能随账号数量无限增高：窗口使用固定尺寸（当前 `400×560`），标题/Tab/底部操作栏固定，只有中间内容区域进入 `ScrollView`；账号列表使用 `LazyVStack`。
+- 菜单栏浮窗优先使用紧凑的分段 `Picker` 做“总览 / 账号 / xAI”切换，不使用会引入额外页签装饰和尺寸波动的默认 `TabView`。设置继续由齿轮入口独立承载。
+- 账号页按“停用 → 用量读取失败 → 周额度不高于 10% → 其余账号”排序，并提供“全部 / Plus / K12 / 异常”筛选；xAI 账号不混入 Codex 账号列表。
+- 账号卡默认折叠，只保留邮箱、套餐、自动刷新标记和周额度；充值余额、重置卡等低频或危险操作只在展开区显示，重置卡仍必须走 App 二次确认与 Bridge 实时校验。
+- CPA Menu 发布验收至少包括：`swift test`、Release 构建、结束旧进程后覆盖安装、核对 Bundle 版本、新进程启动时间、安装包与运行二进制 SHA-256 一致、`codesign --verify` 通过。
 
 验证命令：
 

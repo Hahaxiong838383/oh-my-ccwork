@@ -1,25 +1,69 @@
 import SwiftUI
 
+private enum DashboardTab: String, CaseIterable, Identifiable {
+    case overview
+    case accounts
+    case xai
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .overview: "总览"
+        case .accounts: "账号"
+        case .xai: "xAI"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .overview: "rectangle.grid.2x2"
+        case .accounts: "person.2"
+        case .xai: "bolt.horizontal.circle"
+        }
+    }
+}
+
 struct MenuContentView: View {
     @ObservedObject var model: AppModel
+    @State private var selectedTab: DashboardTab = .overview
+    @State private var accountFilter: AccountListFilter = .all
+    @State private var expandedAccountIDs: Set<String> = []
     @State private var showTokenClearConfirmation = false
     @State private var resetAccount: Account?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(spacing: 0) {
             header
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
+            Divider()
+
             if model.showSettings || !model.isConfigured {
-                settings
+                ScrollView {
+                    settings
+                        .padding(16)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                serviceStatus
-                xaiUsageCard
+                tabPicker
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+
                 Divider()
-                accounts
+
+                tabContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                Divider()
+
                 footer
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
             }
         }
-        .padding(16)
-        .frame(width: 380)
+        .frame(width: 400, height: 560)
         .alert("确认清除本机 Token？", isPresented: $showTokenClearConfirmation) {
             Button("取消", role: .cancel) {}
             Button("清除 Token", role: .destructive, action: model.clearToken)
@@ -46,24 +90,65 @@ struct MenuContentView: View {
     }
 
     private var header: some View {
-        HStack {
+        HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("CPA 状态")
                     .font(.headline)
                 Text(model.statusMessage ?? "本机安全读取远端用量")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             Spacer()
             if model.isRefreshing {
                 ProgressView().controlSize(.small)
             }
             Button {
+                guard model.isConfigured else { return }
                 model.showSettings.toggle()
             } label: {
-                Image(systemName: model.showSettings ? "xmark" : "gearshape")
+                Image(systemName: model.showSettings || !model.isConfigured ? "xmark" : "gearshape")
+                    .frame(width: 20, height: 20)
             }
             .buttonStyle(.plain)
+            .disabled(!model.isConfigured)
+            .help(model.isConfigured ? "连接设置" : "请先完成连接设置")
+        }
+    }
+
+    private var tabPicker: some View {
+        Picker("页面", selection: $selectedTab) {
+            ForEach(DashboardTab.allCases) { tab in
+                Label(tab.title, systemImage: tab.symbol)
+                    .tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+    }
+
+    @ViewBuilder
+    private var tabContent: some View {
+        switch selectedTab {
+        case .overview:
+            overview
+        case .accounts:
+            accounts
+        case .xai:
+            xaiDetails
+        }
+    }
+
+    private var overview: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+                serviceStatus
+                overviewMetrics
+                quotaOverview
+                xaiOverview
+                errorBanner
+            }
+            .padding(16)
         }
     }
 
@@ -72,50 +157,185 @@ struct MenuContentView: View {
             serviceBadge("CPA", healthy: model.summary?.services["cliproxy"])
             serviceBadge("Router", healthy: model.summary?.services["router"])
             Spacer()
-            let codexCount = model.summary?.codexAccounts ?? model.accounts.filter { $0.provider == "codex" }.count
-            let k12Count = model.summary?.k12Accounts ?? model.accounts.filter(\.isK12).count
-            Text("\(codexCount) 个 Codex · \(k12Count) 个 K12")
+            let refreshable = model.summary?.refreshableAccounts ?? model.accounts.filter(\.hasRefreshToken).count
+            Label("\(refreshable) 个可刷新", systemImage: "arrow.triangle.2.circlepath")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
     }
 
-    private var accounts: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if model.accounts.isEmpty {
-                ContentUnavailableView("暂无账号", systemImage: "person.crop.circle.badge.questionmark")
-                    .frame(maxWidth: .infinity, minHeight: 100)
-            } else {
-                ForEach(model.accounts) { account in
-                    AccountRow(
-                        account: account,
-                        isResetting: model.resettingAccountID == account.id,
-                        onRequestReset: { resetAccount = account }
-                    )
-                }
-            }
-            if let error = model.errorMessage {
-                Label(error, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .textSelection(.enabled)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var xaiUsageCard: some View {
-        if let summary = model.summary, summary.xaiAccounts > 0 || summary.xaiUsage != nil {
-            XAIUsageCard(
-                usage: summary.xaiUsage,
-                status: summary.xaiUsageStatus,
-                error: summary.xaiUsageError
+    private var overviewMetrics: some View {
+        HStack(spacing: 8) {
+            summaryMetric(
+                "Codex",
+                value: model.summary?.codexAccounts ?? AccountListPresentation.codexAccounts(from: model.accounts).count,
+                symbol: "person.2.fill"
+            )
+            summaryMetric(
+                "K12",
+                value: model.summary?.k12Accounts ?? model.accounts.filter(\.isK12).count,
+                symbol: "graduationcap.fill"
+            )
+            summaryMetric(
+                "异常",
+                value: attentionAccounts.count,
+                symbol: attentionAccounts.isEmpty ? "checkmark.circle.fill" : "exclamationmark.triangle.fill",
+                tint: attentionAccounts.isEmpty ? .green : .orange
             )
         }
     }
 
+    @ViewBuilder
+    private var quotaOverview: some View {
+        if let account = lowestQuotaAccount {
+            let usage = account.usageSnapshot
+            VStack(alignment: .leading, spacing: 9) {
+                HStack {
+                    Label("最低周额度", systemImage: "gauge.with.dots.needle.67percent")
+                        .font(.subheadline.bold())
+                    Spacer()
+                    Button("查看账号") { selectedTab = .accounts }
+                        .font(.caption)
+                        .buttonStyle(.borderless)
+                }
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(account.emailMasked)
+                            .font(.caption.bold())
+                        Text(account.isK12 ? "K12" : (usage.planType ?? account.plan ?? "Codex").uppercased())
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text(UsageFormatting.percent(usage.weeklyRemainingPercent))
+                        .font(.title3.monospacedDigit().bold())
+                        .foregroundStyle(quotaColor(usage.weeklyRemainingPercent))
+                }
+
+                ProgressView(value: usage.weeklyRemainingPercent ?? 0, total: 100)
+                    .tint(quotaColor(usage.weeklyRemainingPercent))
+
+                Text("距离重置 \(UsageFormatting.duration(usage.weeklyResetSeconds))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .cardStyle(tint: quotaColor(usage.weeklyRemainingPercent).opacity(0.08))
+        } else {
+            ContentUnavailableView("暂无周额度数据", systemImage: "gauge.with.dots.needle.0percent")
+                .frame(maxWidth: .infinity, minHeight: 110)
+        }
+    }
+
+    @ViewBuilder
+    private var xaiOverview: some View {
+        if let summary = model.summary, summary.xaiAccounts > 0 || summary.xaiUsage != nil {
+            VStack(alignment: .leading, spacing: 9) {
+                HStack {
+                    Label("xAI 摘要", systemImage: "bolt.horizontal.circle.fill")
+                        .font(.subheadline.bold())
+                    Spacer()
+                    Button("查看详情") { selectedTab = .xai }
+                        .font(.caption)
+                        .buttonStyle(.borderless)
+                }
+
+                if let usage = summary.xaiUsage {
+                    HStack(spacing: 8) {
+                        compactMetric("本月费用", value: UsageFormatting.usd(usage.officialSpendUSD))
+                        compactMetric("预付余额", value: usage.hasPrepaidCredit == true ? UsageFormatting.usd(usage.prepaidBalanceUSD) : "后付费")
+                        compactMetric("24h Token", value: UsageFormatting.integer(usage.totalTokens))
+                    }
+                } else {
+                    Text(summary.xaiUsageError ?? "暂时无法读取 xAI 用量")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .cardStyle(tint: Color.cyan.opacity(0.08))
+        }
+    }
+
+    private var accounts: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                Picker("账号筛选", selection: $accountFilter) {
+                    ForEach(AccountListFilter.allCases) { filter in
+                        Text(filter.title).tag(filter)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+
+                Text("显示 \(filteredAccounts.count) / \(AccountListPresentation.codexAccounts(from: model.accounts).count) 个账号 · 异常与低额度优先")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+
+            Divider()
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 10) {
+                    if filteredAccounts.isEmpty {
+                        ContentUnavailableView(
+                            accountFilter == .attention ? "没有异常账号" : "没有符合条件的账号",
+                            systemImage: accountFilter == .attention ? "checkmark.circle" : "person.crop.circle.badge.questionmark"
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 180)
+                    } else {
+                        ForEach(filteredAccounts) { account in
+                            AccountRow(
+                                account: account,
+                                isExpanded: expandedAccountIDs.contains(account.id),
+                                isResetting: model.resettingAccountID == account.id,
+                                onToggleExpanded: { toggleExpanded(account.id) },
+                                onRequestReset: { resetAccount = account }
+                            )
+                        }
+                    }
+                    errorBanner
+                }
+                .padding(16)
+            }
+        }
+    }
+
+    private var xaiDetails: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+                if let summary = model.summary, summary.xaiAccounts > 0 || summary.xaiUsage != nil {
+                    XAIUsageCard(
+                        usage: summary.xaiUsage,
+                        status: summary.xaiUsageStatus,
+                        error: summary.xaiUsageError
+                    )
+                } else {
+                    ContentUnavailableView("暂无 xAI 数据", systemImage: "bolt.horizontal.circle")
+                        .frame(maxWidth: .infinity, minHeight: 180)
+                }
+                errorBanner
+            }
+            .padding(16)
+        }
+    }
+
+    @ViewBuilder
+    private var errorBanner: some View {
+        if let error = model.errorMessage {
+            Label(error, systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .textSelection(.enabled)
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
     private var footer: some View {
-        HStack {
+        HStack(spacing: 12) {
             Button {
                 Task { await model.refresh() }
             } label: {
@@ -124,7 +344,7 @@ struct MenuContentView: View {
             .disabled(model.isRefreshing)
 
             Button(action: model.addCodexAuthorization) {
-                Label(model.isAuthorizing ? "等待授权" : "添加 Codex 授权", systemImage: "person.badge.plus")
+                Label(model.isAuthorizing ? "等待授权" : "添加授权", systemImage: "person.badge.plus")
             }
             .disabled(model.isAuthorizing)
 
@@ -166,10 +386,67 @@ struct MenuContentView: View {
         }
     }
 
+    private var filteredAccounts: [Account] {
+        AccountListPresentation.filtered(model.accounts, by: accountFilter)
+    }
+
+    private var attentionAccounts: [Account] {
+        AccountListPresentation.filtered(model.accounts, by: .attention)
+    }
+
+    private var lowestQuotaAccount: Account? {
+        AccountListPresentation.codexAccounts(from: model.accounts)
+            .filter { $0.usageSnapshot.weeklyRemainingPercent != nil }
+            .min {
+                ($0.usageSnapshot.weeklyRemainingPercent ?? 101) <
+                    ($1.usageSnapshot.weeklyRemainingPercent ?? 101)
+            }
+    }
+
+    private func toggleExpanded(_ accountID: String) {
+        if expandedAccountIDs.contains(accountID) {
+            expandedAccountIDs.remove(accountID)
+        } else {
+            expandedAccountIDs.insert(accountID)
+        }
+    }
+
+    private func summaryMetric(_ title: String, value: Int, symbol: String, tint: Color = .accentColor) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Label(title, systemImage: symbol)
+                .font(.caption2)
+                .foregroundStyle(tint)
+            Text("\(value)")
+                .font(.title3.monospacedDigit().bold())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func compactMetric(_ title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.caption.monospacedDigit().bold())
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private func serviceBadge(_ title: String, healthy: Bool?) -> some View {
         Label(title, systemImage: healthy == true ? "checkmark.circle.fill" : "xmark.circle.fill")
             .font(.caption.bold())
             .foregroundStyle(healthy == true ? .green : .red)
+    }
+
+    private func quotaColor(_ remaining: Double?) -> Color {
+        guard let remaining else { return .gray }
+        if remaining <= 10 { return .red }
+        if remaining <= 35 { return .orange }
+        return .green
     }
 }
 
@@ -180,10 +457,8 @@ private struct XAIUsageCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label("xAI · 官方账单与 CPA 路由", systemImage: "bolt.horizontal.circle.fill")
-                    .font(.subheadline.bold())
-            }
+            Label("xAI · 官方账单与 CPA 路由", systemImage: "bolt.horizontal.circle.fill")
+                .font(.subheadline.bold())
 
             if let usage {
                 officialBilling(usage)
@@ -203,8 +478,7 @@ private struct XAIUsageCard: View {
                     .foregroundStyle(.orange)
             }
         }
-        .padding(10)
-        .background(Color.cyan.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        .cardStyle(tint: Color.cyan.opacity(0.08))
     }
 
     @ViewBuilder
@@ -314,40 +588,76 @@ private struct XAIUsageCard: View {
 
 private struct AccountRow: View {
     let account: Account
+    let isExpanded: Bool
     let isResetting: Bool
+    let onToggleExpanded: () -> Void
     let onRequestReset: () -> Void
 
     var body: some View {
         let usage = account.usageSnapshot
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(account.emailMasked).font(.subheadline.bold())
-                    Text(account.isK12 ? "K12" : (usage.planType ?? account.plan ?? account.provider).uppercased())
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if account.hasRefreshToken {
-                    Label("可自动刷新", systemImage: "arrow.triangle.2.circlepath")
-                        .font(.caption2)
-                        .foregroundStyle(.green)
-                }
-            }
+        VStack(alignment: .leading, spacing: 9) {
+            Button(action: onToggleExpanded) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(account.emailMasked)
+                                .font(.subheadline.bold())
+                                .lineLimit(1)
+                            Text(account.isK12 ? "K12" : (usage.planType ?? account.plan ?? account.provider).uppercased())
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if account.hasRefreshToken {
+                            Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                                .foregroundStyle(.green)
+                                .help("可自动刷新")
+                        }
+                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                    }
 
-            if account.usageStatus == "ok" {
-                quotaRow("每周", remaining: usage.weeklyRemainingPercent, reset: usage.weeklyResetSeconds)
+                    if account.usageStatus == "ok" {
+                        compactQuotaRow(remaining: usage.weeklyRemainingPercent, reset: usage.weeklyResetSeconds)
+                    } else {
+                        Label(
+                            account.usageError ?? (account.disabled ? "账号已停用" : "暂时无法读取用量"),
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(account.disabled ? .red : .orange)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                Divider()
+
+                HStack(spacing: 12) {
+                    Label(account.hasRefreshToken ? "可自动刷新" : "需重新授权", systemImage: account.hasRefreshToken ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                        .foregroundStyle(account.hasRefreshToken ? .green : .orange)
+                    if account.disabled {
+                        Label("已停用", systemImage: "nosign")
+                            .foregroundStyle(.red)
+                    }
+                }
+                .font(.caption2)
+
                 creditsRow
-            } else {
-                Text(account.usageError ?? (account.disabled ? "账号已停用" : "暂时无法读取用量"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
         }
         .padding(10)
         .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(AccountListPresentation.needsAttention(account) ? Color.orange.opacity(0.45) : Color.clear)
+        }
     }
 
+    @ViewBuilder
     private var creditsRow: some View {
         HStack(spacing: 10) {
             if let credits = account.usage?.credits {
@@ -369,9 +679,11 @@ private struct AccountRow: View {
         }
     }
 
-    private func quotaRow(_ title: String, remaining: Double?, reset: TimeInterval?) -> some View {
+    private func compactQuotaRow(remaining: Double?, reset: TimeInterval?) -> some View {
         HStack(spacing: 8) {
-            Text(title).font(.caption).frame(width: 42, alignment: .leading)
+            Text("每周")
+                .font(.caption)
+                .frame(width: 32, alignment: .leading)
             ProgressView(value: remaining ?? 0, total: 100)
                 .tint(color(for: remaining))
             Text(UsageFormatting.percent(remaining))
@@ -380,7 +692,7 @@ private struct AccountRow: View {
             Text(UsageFormatting.duration(reset))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                .frame(width: 76, alignment: .trailing)
+                .frame(width: 72, alignment: .trailing)
         }
     }
 
@@ -389,5 +701,12 @@ private struct AccountRow: View {
         if remaining <= 10 { return .red }
         if remaining <= 35 { return .orange }
         return .green
+    }
+}
+
+private extension View {
+    func cardStyle(tint: Color) -> some View {
+        padding(12)
+            .background(tint, in: RoundedRectangle(cornerRadius: 10))
     }
 }
