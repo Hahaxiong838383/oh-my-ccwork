@@ -1605,6 +1605,59 @@ Bot 自述的事实。
 - ⚠️ 验收任务**一律让 Bot 自建带「可删」标记的新表/新文档**，绝不在用户既有的
   人事/业务文件上做写入测试。
 
+## 🔴 沙箱内外能力对等（川哥 2026-07-30 定为开发与验收规则）
+
+**沙箱内的用户 Bot 使用 skills 的效果，必须与 owner Bot 一致。** 允许存在差异的只有
+凭据来源、沙箱边界、隐私脱敏；**不允许出现"owner 会做而用户 Bot 不会做"**。
+
+### 已发现的两类系统性缺口
+
+1. **共享版 SKILL.md 比 owner 私有版少内容**。实证：`lark-schedule-collab`
+   owner 255 行 / L0 **116 行** —— 时间换算（禁心算用 `date -d`）、`events patch`
+   改 location、邀人规则、写后回读清单、汇报口径、多日行程、反模式**整段全缺**。
+   这就是"约日程效果差别很大"的一半原因。已补到 233 行（余下 22 行是个人 open_id
+   列表/会议室楼层/业务案例，**本就不该进多租户共享层**）。
+2. **`skills-sync` 只同步 SKILL.md，从不同步 `references/`** → **断链**。
+   实证：L0 `lark-calendar/SKILL.md` 引用 4 个 references（suggestion 7.2KB /
+   create 4.7KB / freebusy 3.9KB / agenda 2.3KB）**全部不存在**；`lark-base` owner
+   有 **87 个** references，L0 零。Bot 顺着链接读不到文件**不会报错，只会凭猜** ——
+   这是隐形的能力缺失，比报错难发现得多。已同步 157 个文件到 L0 + 各用户 fork。
+
+### 两个例行工具（都在 bridge 仓 `ops/`）
+
+```bash
+bash ops/skill-parity-audit.sh            # 对账：owner 独有 / L0 独有 / 同名内容差（按行数差排序）+ references 缺失
+bash ops/sync-skill-references.sh         # dry-run 看哪些 references 可安全同步
+bash ops/sync-skill-references.sh --apply # 真同步到 L0 + 所有用户 fork
+```
+
+**触发时机**：owner 侧装了新 skill / 改了 skill、给平台加 L0 skill、用户报"Bot 不会做某事"。
+**读法**：行数差 ≥10 优先审（很可能整段能力缺失）；差 1~2 行多为 frontmatter，但别默认无碍。
+
+### 脱敏判定要"准"，不能一味从严
+
+同步脚本的脏词判定初版用 `ou_[a-zA-Z0-9]{10}`，把官方示例占位符 `omm_xxx` / `ou_…`
+也当成真实 ID 拦掉了 —— **连约日程最需要的 `lark-calendar-create.md` 都被跳过**。
+收紧为真实 ID 模式后只剩 1 个真需要拦的（含 `mycc/` 本地项目路径）：
+
+- **拦**：真实 open_id `ou_[0-9a-f]{32}`、真实会议室 `omm_[0-9a-f]{16,}`、真实人名、
+  业务代号、本地绝对路径（`mycc/…`）
+- **放**：官方占位符（`ou_xxx` / `omm_xxx` / `ou_…`）、内部规则编号（对用户 Bot 只是
+  噪音不是隐私）
+
+**过严的脱敏会以"保护隐私"的名义造成能力缺失**，和过松一样有害，方向相反。
+
+### owner 独有 skill 的处理
+
+owner 有 10 个 L0 没有的 skill。按含专属标记数量分：零标记的（`agent-self-improve`
+125 行 / `lark-whiteboard-lite` 256 行 / `feishu-whiteboard-to-bitable` 207 行 /
+`h2-sop-onboarding` 98 行）**可脱敏后进 L0**；有标记的（`ai-collab-method` 5 处 /
+`bitable-status-sync-remind` 7 处 / `org-capability-gap-diagnosis` 7 处 /
+`feishu-doc-collab-review` 6 处）需人工判断。**待川哥拍板范围，勿擅自搬。**
+
+⚠️ 反向也要看：`lark-sheets` 现在 L0 **比 owner 多 93 行**（写入/标红配方是 L0 先加的），
+owner 侧反而缺 —— **一致是双向的**。
+
 ## 远程侦察脚本：先"发现"再"正式"（2026-07-30）
 
 给 dev198/aliyun-hk 写侦察脚本，第一版凭记忆写路径/端口/服务名**必踩**（我 07-30
