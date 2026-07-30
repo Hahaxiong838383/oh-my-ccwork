@@ -1698,6 +1698,22 @@ bash ops/sync-skill-references.sh --apply # 真同步到 L0 + 所有用户 fork
   命中即写成了字面量。`events.patch --data @file.json` 里的 `\n` 是合法 JSON 转义、
   会被解析成真换行，那条路可用；**纯文本 flag 上写 `\n` 永远是错的**。
 
+**🔴 改完 skill 还不够：skill 是概率性载体，铁律要进托管块**
+补完 L0 后川哥真实使用（原话说了「用最新的技能」「注意议程排版」）依旧内联 `\n`
+——会议室那段读到了、传参那段没执行。grok skill **按 description 匹配触发、不保证
+每轮加载**；而 `lib/memory-routing.mjs` 的 `h-method` 托管块**全文进 system prompt、
+每轮必生效**。所以：「一句话就能说清、且不可让渡」的铁律放托管块，详版留 skill。
+- 块体积纪律：当前 1002 字符，`test/method-defaults.test.mjs` 锁着体积与幂等（预算
+  5500；AGENTS.md 每文件 10000 字符是**静默截断**，超了挤掉的是用户自己写的规则）。
+- 改完必须**重启 bridge**：`ensureMemoryRouting` 在 `bridge.mjs:1632` 启沙箱时写入；
+  内容没变则幂等不写盘（用户 AGENTS.md 的 mtime 不动是正常的，别当没生效）。
+  判据看 mtime + 真实渲染文本：`grep -A2 '<关键词>' /srv/h-platform/users/<uid>/.grok/AGENTS.md`。
+- ⚠️ **验收必须用用户的原始措辞**：prompt 里凡提示了正确做法（"先读最新 skill"、
+  "注意排版"），就只验证了"能不能"，没验证"会不会"。要证明确定性，用纯自然措辞复验。
+- ⚠️ **不要在 wrapper 层自动把 `\n` 转成换行**（我评估过并否掉）：实测
+  `sed 's/\\n/换行/g'` 会把 `C:\new_folder` 一起转坏——静默改用户数据 + 有损坏风险，
+  违反不可变红线。机制层要做的是**给信息**（托管块）而不是**改数据**。
+
 ### 脱敏判定要"准"，不能一味从严
 
 同步脚本的脏词判定初版用 `ou_[a-zA-Z0-9]{10}`，把官方示例占位符 `omm_xxx` / `ou_…`
