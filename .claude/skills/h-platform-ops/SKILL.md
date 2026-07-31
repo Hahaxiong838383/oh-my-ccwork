@@ -1573,15 +1573,29 @@ Bot 自述的事实。
   （载荷里有人事数据）。
 - **灰度开关**：`.env` 的 `H_LARK_AUDIT`（空/`0`/`off`=关；`all`/`1`=全开；
   否则逗号分隔 uid 白名单）。**owner Bot 不进沙箱，天然不受影响。**
-- **日志**：`/srv/h-platform/audit/lark-cli/<uid>.log`。
-  **新增灰度用户前必须先 `touch` 他的日志文件** —— 降级门查不到文件会静默关掉审计。
-  （曾写过自动补建 `89862ec`，被 2026-07-31 那次动作门 revert 一起退掉，所以这条
-  手工纪律仍然有效。）
-- ⚠️ **现状（2026-07-31）**：`H_LARK_AUDIT=rayman.chen,u-01481f4a32`（2 户灰度），
-  目录下**只应有 3 个文件**（两个白名单户 + `u-aca292be3f` 的历史实测记录）。
-  当初为全量覆盖预建的 8 个 0 字节残留**已删**——留着会说谎：
-  **空文件不代表「这个租户没调过 lark-cli」，是审计压根没对他开。**
-  判"某租户有没有调用"之前，**先看 `.env` 白名单里有没有他**，再看日志。
+- **日志**：`/srv/h-platform/audit/lark-cli/<uid>.log`。**缺文件会自动补建**
+  （`resolveSandboxSpec` 里，排在降级门之前；补建失败照旧降级，绝不让 bwrap 起不来）。
+  所以加灰度用户不再需要手工 `touch` —— 但**这段代码被 revert 误伤过一次**，
+  改这块前先确认它还在（`grep -n "自动补建\|fs.open(spec.larkAuditLogHost" lib/sandbox.mjs`）。
+- **现状（2026-07-31 09:0x）**：`H_LARK_AUDIT=all`，`ops/verify-audit-tenants.mjs`
+  实测 **9/9 已登记租户覆盖**。
+- ⚠️ **判"某租户没调用过"之前先看开关**：空日志既可能是真没调，也可能是审计没对他开。
+  历史上出现过 8 个 0 字节残留文件（预建后开关被回滚），差点被读成"这些人没调过"。
+- **验收链三层，别混用**（每层只回答它那一问）：
+
+  | 脚本 | 回答什么 |
+  |---|---|
+  | `test/lark-audit.test.mjs` | 补建/降级/不截断的单元语义（11 条） |
+  | `ops/verify-audit-coverage.mjs` | 机制能不能工作（一次性 uid，自清理） |
+  | `ops/verify-audit-tenants.mjs` | **开关真开着吗、每个真实租户真覆盖吗** |
+  | 同上 `--live <uid>` | 真实 uid 跑一次 lark-cli，断言它自己的日志真增长 |
+
+  ⚠️ `verify-audit-coverage.mjs` **自己注入 `H_LARK_AUDIT: 'all'`**，
+  所以它永远绿，**不能拿它当"覆盖证明"**——探针把答案写进了自己的输入。
+  这跟验收 prompt 自带答案是同一个毛病（[[feedback_acceptance_prompt_carried_the_answer]]）。
+- ⚠️ **`test/lark-audit.test.mjs` 曾经根本不在 `npm test` 里**（从建立起就没接线，
+  `git log -S"lark-audit.test.mjs" -- package.json` 空）。文件在 ≠ 套件跑它。
+  **判"某测试在守着"要去 `package.json` 的 test 脚本里 grep 文件名**，别看目录。
 - **回滚**：`H_LARK_AUDIT=0` + 重启 bridge **和 runner-worker**，挂载即摘。
 - **判读**：`cmd=` 后面是「域 子命令 flag名」。写类看 `+cells-set` / `+cells-set-style`
   / `+workbook-create` / `docs +update` 等；只有 `+cells-get` / `--help` / `get_node`
