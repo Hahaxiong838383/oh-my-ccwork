@@ -842,15 +842,13 @@ dev198 **10 个 App connected 10/10**、lastError 全 null，未受影响。
 2. **Mini 仍是 macOS `native` POC**，不代表 Linux bwrap/gVisor 物理隔离完成 ——
    外部租户必须留在 Linux。
 3. Mini `H_USER_MEMORY=0`，独立 ai-memory 原生服务未补齐。
-4. `help` skill 含个人绝对路径被隐私门拒，待改可移植路径
-   （Mini 日志里每 30 秒复现一次 `privacy reject: 个人或租户绝对路径`）。
+4. ~~`help` skill 含个人绝对路径被隐私门拒~~ ✅ `022618c` 已改为可移植路径并部署。
 5. 长任务验证的是**主动完成卡 + ACK**，不等于「用户消息触发、前台 120 秒后转后台」
    的视觉验收。
-6. **Mini 的版本不可查**：`.git` 是悬空指针，git 完全用不了，这次靠 md5 逐文件
-   对撞才确认版本。要么重建成正常 worktree/clone，要么部署脚本落
-   `.deploy-meta.json` 记 commit sha。
-7. **两端 healthz 结构不一致**：dev198 是多 app（`apps{}` 带 lease/contract/
-   botOpenId），Mini 是单 app 扁平结构，巡检脚本得写两套。建议对齐。
+6. ~~Mini 的版本不可查~~ ✅ `022618c` 已用 `.deploy-meta.json` + healthz `version/deploy`
+   自报版本；`.git` 悬空指针仍是低优先级运维债，不再阻塞版本取证。
+7. ~~两端 healthz 结构不一致~~ ✅ 当前两端均使用统一 `apps{}` envelope；Mini
+   `appCount=1`，dev198 为多 App。巡检共用结构解析，顶层字段只作兼容。
 8. `MEMORY.md` 已 18.4KB（绊线 12KB），`/rule-compress` 需川哥在场跑。
 
 
@@ -928,8 +926,8 @@ dev198          10 apps  connected 10/10  lastError 0  租约 9/10
 1. ~~清 Mini 上两处遗留~~ ✅ **已做（16:30，川哥批准）**，详见下节。
 2. `bridge.mjs:1552` 的 `process.env.HOME || '/home/chuan'` 硬编码 fallback
    （既有技术债，不在本次 diff；Mini 上 HOME 有值所以不触发）。
-3. 两端 healthz 结构仍不一致（dev198 多 app `apps{}` / Mini 单 app 扁平），
-   巡检脚本要写两套。
+3. ~~两端 healthz 结构仍不一致~~ ✅ 已核源码与真机：两端均为统一 `apps{}` envelope，
+   只需按端口分别采集，不维护两套结构解析。
 4. dev198 仍在 `08074df`，未部署 `022618c`（本次只部署 Mini，按分工）。
 5. 分支仍不合 main，等 codex 的 Mini 线全部完成。
 
@@ -971,3 +969,55 @@ grep -rn "deploy-stage" *.mjs lib/ scripts/ deploy/   # 代码零引用
 清理后复验：tracked 376/0/0、healthz `version=022618c26352 dirty=false
 fileCount=517` `manifestSha256=9f77d336…`、connected=true、Outbox pending=0；
 dev198 10/10 未受影响。
+
+---
+
+## N · Mini A/B P0 第二批：站点指标 + B3 证据链（2026-07-31 17:15）
+
+### 当前状态
+
+Codex 独立工作树 `/private/tmp/feishu-grok-mini-ab-poc-20260730`、分支
+`codex/h-mini-ab-poc` 已由 cc 选择性收口为 `6bc38ca88696e95ea4806672612c74767b648ee8`
+并 push；控制面和 Mini 已部署该批次。`main`、dev198 Bridge 与 owner workspace 均未改动。
+
+已完成：
+
+1. Runtime report 增加脱敏站点身份和部署版本；不包含 appId、uid、路径、进程参数或凭据。
+2. 控制面 runtime store 从单站结构迁移为按 `executionSite` 独立保存 latest、分钟样本、
+   24 小时峰值、stale 与容量判断；旧文件自动归入 dev198。
+3. 管理台「dev198 性能」改为「站点性能」，并列展示 Mini / dev198；任一预期站点未上报
+   会明确显示等待，不能被另一站点健康状态掩盖。
+4. 新增 `scripts/verify-b3-long-task.mjs`：只读 TaskSessionLog + Delivery Outbox，验证真实
+   飞书入站、120 秒转后台、新消息 ACK、TaskSessionLog/Outbox messageId 强一致、Outbox
+   清零和事件顺序；输出只含脱敏指纹。
+5. 修正 skill/todo 中“两端 healthz 结构不同”的过期结论：两端当前均为统一 `apps{}` envelope。
+
+### 已通过证据
+
+- 聚焦指标/B3/页面测试：60/60。
+- `npm run test:runtime`：11/11。
+- `npm run test:mini-ab`：23/23。
+- 控制面全量：140/140。
+- 仓库 `npm test`：412 tests / 0 fail；`git diff --check`：通过；新增 diff 的七类
+  secret/个人绝对路径扫描零命中。
+- 2026-07-31 17:12 真机只读复核：Mini 1/1 connected、版本 `022618c26352`、
+  Outbox=0；dev198 10/10 connected、owner 留在 dev198、lastError=0、Outbox=0。
+- 当前控制面数据仍是单站 schema v1（1439 个样本），证明新 store 的兼容迁移路径是必要项。
+
+### 生产部署与验收证据（2026-07-31 17:32）
+
+1. cc 独立复核后只提交指定 13 个路径；commit `6bc38ca`，远端分支已更新，工作树无残留。
+2. aliyun-hk 控制面部署前发现线上真实版本为 `v1.34.0`，并非旧文档声称的
+   `v1.35.1`；三方逐文件比对确认差异仅为本批功能、版本文件及线上遗留 `.bak`，未覆盖
+   未收口热修。外置回滚点：`/srv/h-control/rollback/mini-ab-p0-20260731-172920-pre-6bc38ca`。
+3. 控制面线上测试 140/140，服务 active，healthz `v1.35.1`。旧 schema v1 的 1439 个样本
+   无损迁入 `sites.dev198`；新报告写入后文件为 schema v2、权限 0600。
+4. Mini 外置回滚点：`~/local/h-mini-rollback-20260731-173103-pre-6bc38ca`。正式 commit
+   tracked 清单核对为 380/0 mismatch/0 missing；deploy-meta `dirty=false`、fileCount=519，
+   runner 与 bridge 按顺序双重启。
+5. 当前双站：dev198 10/10（owner 1 + 用户 9、租约 9）、Mini 1/1（用户 1、租约 1），
+   两站 App 交集为 0、lastError=0、Outbox pending/retrying=0；控制面汇总 11/11、两站均新鲜。
+6. 性能面板当前显示“暂停扩容”是**真实状态而非页面误判**：dev198 有 2 条待人工决策的
+   RPC/孤儿记录，Mini 有 1 条旧 compute orphan；本次只读取证，未自动重跑或清除。
+7. 唯一未闭环项是 B3 视觉验收：川哥需在 AI 专家会话发真实 >120 秒任务；后台完成后运行
+   `scripts/verify-b3-long-task.mjs`，脚本全绿且截图确认新完成卡位于会话底部才正式通过。

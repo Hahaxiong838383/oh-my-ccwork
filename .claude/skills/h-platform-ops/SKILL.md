@@ -1213,6 +1213,25 @@ pattern 会匹配到你自己那条 ssh 命令行，把连接杀掉（exit 255�
 - 排「用户说没收到结果」：`grep <句柄> logs/bridge.log` 看有无 `outbound ok`/
   `handle error` 后的新消息发送；再查 `tasks-bg.jsonl` 的 bg_result（digest 在不在）。
   digest 在而聊天没新卡 = 送达通道断（本节 bug 的特征指纹）。
+
+### B3 长任务闭环验收（2026-07-31）
+
+`proactive-acceptance` 只能证明 Runner、主动送达和飞书 ACK，**不能替代**真实用户消息
+触发的「前台约 120 秒后转后台、会话底部出现新完成卡」视觉验收。
+
+开发侧用 `scripts/verify-b3-long-task.mjs` 读取 TaskSessionLog 与 Delivery Outbox，必须同时满足：
+
+- `task_accepted.source=feishu`；
+- `background_yielded.elapsedMs >= 120000`；
+- `task_completed.background=true`；
+- `delivery_started.background=true`；
+- `delivery_acked.inline=false` 且存在飞书 messageId；
+- 对应 Outbox 已 ACK，且 Outbox messageId 与 TaskSessionLog messageId 完全一致；
+- 当前 scope pending/retrying 为 0；
+- 事件顺序为 accepted → yielded → delivery_started → delivery_acked → completed。
+
+脚本输出只含脱敏 task/uid/message 指纹，不输出 prompt、reply、open_id、appId、token 或租户路径。
+脚本全绿仍只代表后端闭环；最终必须由用户截图确认**新卡位于会话底部，而不是旧卡原地更新**。
 - 尉鸿轩类「查通讯录」任务挂 15 分钟到超时 = kimi 在等 lark-cli 设备码授权（digest
   里有 open.feishu.cn/page/cli 授权链接）。F5.2 后链接会送达，用户授权一次即通；
   再挂死考虑 lark-cli 预授权或缩短设备码等待（观察项 A4）。
@@ -2061,7 +2080,8 @@ curl -s -X POST -H "Authorization: Bearer $H_CONTROL_TOKEN" -H 'Content-Type: ap
 
 ### Mini 站点的部署形态（与 dev198 处处不同，别套用）
 
-两端**没有一处运维接口是一样的**，照搬 dev198 的命令会得到误导性的空结果：
+两端的部署路径、守护和日志入口不同，不能照搬命令；但 `/healthz` 已统一使用
+`apps{}` envelope，巡检读取逻辑应共用：
 
 | 项 | dev198 | Mini |
 |---|---|---|
@@ -2069,7 +2089,10 @@ curl -s -X POST -H "Authorization: Bearer $H_CONTROL_TOKEN" -H 'Content-Type: ap
 | healthz | `127.0.0.1:18765` | `127.0.0.1:18775` |
 | 进程管理 | `systemctl --user feishu-grok-{bridge,runner-worker}` | launchd `com.hplatform.mini-bot.{bridge,runner}` |
 | 日志 | `journalctl --user -u …` | `workspace/.logs/bridge.{out,err}.log` |
-| healthz 结构 | 多 app：`apps{}` 带 lease/contract/botOpenId | 单 app 扁平结构（**巡检脚本得写两套**） |
+| healthz 结构 | 统一 `apps{}`，`appCount` 为多 App | 统一 `apps{}`，`appCount=1` |
+
+`apps{}` 是当前真值，顶层单 App 字段只作兼容。不要再维护两套结构解析器；站点差异只在
+端口、进程管理和日志读取方式。
 
 ⚠️ **找 Mini 的守护别 grep `feishu` / `grok` / `h-mini`** —— 标签是 `com.hplatform.*`，
 三个词一个都不匹配，`launchctl list | grep -i feishu` 会返回空，让你误判成「没有守护、
