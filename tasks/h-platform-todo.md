@@ -1021,3 +1021,102 @@ Codex 独立工作树 `/private/tmp/feishu-grok-mini-ab-poc-20260730`、分支
    RPC/孤儿记录，Mini 有 1 条旧 compute orphan；本次只读取证，未自动重跑或清除。
 7. 唯一未闭环项是 B3 视觉验收：川哥需在 AI 专家会话发真实 >120 秒任务；后台完成后运行
    `scripts/verify-b3-long-task.mjs`，脚本全绿且截图确认新完成卡位于会话底部才正式通过。
+
+
+---
+
+## O · 某租户 calendar 授权死循环（2026-07-31 18:0x，⚠️ 根因未定案）
+
+> 隐私边界：本节记 uid / appId（川哥 2026-07-31 定为非敏感），**不记任何 `ou_` 真实
+> openId、token、scope 缓存文件名**（那些文件名本身疑似 access token）。
+
+### 现象
+
+`u-9a037b10f7` / `cli_aae1f1703278dbdf` 约日程持续失败。Bot 自述「仍因缺少
+`calendar:calendar.event:create` 和 `update` scopes 无法创建日程，平台已发送最新授权卡」。
+用户连点三轮授权卡，每轮都失败。
+
+### 已验证的事实（证据来自 dev198，非转述）
+
+**① 授权流程报"完成"，但权限没到手 —— 三轮全同**
+
+```
+17:58:09  lark auth flow started
+17:58:20  lark auth flow completed     ← 流程完成
+17:58:30  仍缺 create + update          ← 完成后 10 秒
+```
+
+（17:57 / 17:59 两轮同形）。**如果是用户没点完，flow 不会走到 `completed`。**
+
+**② 缺的 scope 在交替，但 create/update 从没拿到过**
+
+```
+17:56:54  缺 create + update
+17:56:56  缺 read
+17:57:24  缺 create + update
+17:58:30  缺 create + update
+18:01:01  缺 create + update
+```
+
+`read` 有时不缺（说明 read 拿到过），`create`/`update` **一次都没成功**。
+
+**③ 关键：她的 lark-cli scope 缓存里，从来没有 calendar 系列**
+
+`~/.lark-cli/cache/auth_login_scopes/` 共 10 个条目，最大一次（12:37:38）请求了
+**130+ 个 scope**，覆盖 base / docs / docx / drive / im / mail / minutes / sheets /
+slides / space / spark / task / vc / wiki —— **没有一个 `calendar:` 开头的**。
+
+且缓存**停在 12:37**，17:5x 那三轮授权一个新条目都没产生 —— 这符合本轮上线的
+`FAILFAST_AUTH_LOGIN=1`：wrapper 拦下 `auth login`、改由平台发卡，不再走 lark-cli
+自己的 auth 路径，所以不写它的 scope 缓存。
+
+**④ 横向对比：不是平台性故障**
+
+今日缺 `calendar:calendar.event:create` 的调用次数 / 今日总调用：
+
+```
+u-9a037b10f7   4 / 125
+rayman.chen    2 / 71      ← 川哥自己的产品专家今天也缺过
+u-f7870bc4b3   0 / 52
+u-01481f4a32   0 / 1
+```
+
+**⑤ 控制面 `/internal/auth-status?uid=` 查不到飞书 scope**
+
+返回的只有 provider 绑定状态（addons / xai / kimi / zhipu / minimax）与 dashboard 链接，
+**没有任何飞书授权字段**。这坐实了 G 章挂起的那条「授权状态无可查询字段」——
+排障时无法从平台侧回答"这个租户现在到底有哪些 scope"。
+
+### 两个候选根因（都还没定案，别当结论用）
+
+**候选 A：应用级权限未在飞书开发者后台开通。**
+飞书是两层模型：应用级（后台申请 + 管理员审批）→ 用户级（点卡授权）。第一层没开通时，
+授权页压根不列该权限，用户能顺利"完成"授权但 scope 到不了手 —— 完美解释 ① 的死循环。
+**证伪方法**：开发者后台 → 该 App → 权限管理，看 `calendar:calendar.event:create` /
+`update` 在不在已开通列表。**我够不到这个界面。**
+
+**候选 B：平台发卡请求的 scope 里不含 calendar。**
+本轮方案 2′ 后，发卡由 `lib/interactive-wait.mjs` 从 agent 散文里清洗出 `--domain` /
+`--scope` 再交 broker。若清洗结果丢了 calendar，卡再点也要不到。
+**证伪方法**：bridge 日志**不记** scope 参数（只有 `lark-audit calls=N writes=N`），
+需要给发卡路径补一行 scope 落盘，或直接读 broker 的 flow 记录。
+
+⚠️ 证据 ③ 对两个候选都成立，**区分不开** —— 因为 12:37 之后本来就不走 lark-cli 的
+auth 路径了。别拿"缓存里没有 calendar"直接判 A。
+
+### 下一步
+
+1. **【需川哥】** 开发者后台核 `cli_aae1f1703278dbdf` 的 calendar create/update 是否已开通
+   —— 这一步定 A 的生死。
+2. **【需川哥】** 顺带核 `cli_a970695d27221bb3`（产品专家），它今天也缺过 2 次 create。
+3. **【可做】** 给发卡路径补 scope 落盘日志，让候选 B 可证伪。当前排障只能靠猜，
+   这本身就是缺口。
+4. **【可做】** 控制面 `auth-status` 补飞书 scope 字段（G 章挂起项，本次再次被它卡住）。
+
+### 教训
+
+**「flow completed」是流程信号，不是目标达成。** 三轮 completed 全都没拿到权限，
+而系统里没有任何一处会说"完成了但你要的东西没到"。这与本轮另外两次同源：
+`runner started` 不是任务开始、`grep` 没命中不等于不存在 —— 都是**把符号的字面语义
+当成了实际状态**。凡是"完成/成功/已发送"这类信号，都要再问一句：**它保证的是
+动作发生了，还是目标达成了？**
