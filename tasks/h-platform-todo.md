@@ -587,9 +587,7 @@ broker 拿脏值调 CLI → exit 2 → 起不了流 → 降级成通用提示。
 
 1. ~~`inferLarkAuthorization` 的 domain 提示可能丢~~ ✅ **已确认是真问题并修掉**
    （当时标为「大概率是孤立测试的假象」——**是我判轻了，它就是真的**）。
-2. **孤儿流仍在**：agent 那条设备流没人轮询，10 分钟过期。已用 L0 消歧把「用户点错」
-   这个危害挡掉，但流本身还在起。要彻底消除得走方案 2（wrapper fail-fast +
-   放宽检测器判据），**需要改 bridge 代码 + 契约测试**，等这批灰度跑出数据再定。
+2. ~~孤儿流仍在~~ ✅ **已消除**（方案 2′，`d3b1b03`，见 K 章）。
    ⚠️ 顺带发现：**CLI 自己的 hint 文本明确教 agent「YOU must execute
    `auth login --device-code <device_code>` yourself」** —— 与平台设计冲突
    （平台自己轮询自己那条流）。L0 第 3 步已经写了「不要跑 `--device-code`」压住它，
@@ -624,3 +622,79 @@ wrapper 根本没挂。
 
 **都不用重启、不用发版**；只想收窄范围最省事：直接改 `NOWAIT_UIDS` 那一行，
 下一个新沙箱即时生效。
+
+
+---
+
+## K · 方案 2′：授权信号改走审计日志（2026-07-31 10:5x，`d3b1b03`）
+
+### 先说推翻了什么
+
+原方案 2 打算「wrapper 打提示串 + 放宽检测器判据」，前提是**检测器能看见工具输出**。
+真机探针把这个前提证伪了：
+
+```
+grok --output-format plain 跑 `echo <标记>`
+→ stdout 全文只有最终回复 "done"，标记出现 0 次；stderr 0 行
+```
+
+**`publishOutput(stdout, stderr)` 从来就看不见工具输出。** 今天能发授权卡，靠的是
+L0 教 agent 把 URL **复述**进正文——那不是冗余，是唯一的信号通道，而且是概率性的。
+按原方案改成复述一个标记串只会**更不可靠**（URL 必须逐字粘贴，标记串容易被 agent
+改写成散文）。
+
+> 这条值得单记：**做方案设计时"检测器能看到 X"这类前提，必须先花一次探针验证。**
+> 我原本已经把方案 2 写进 todo 当成待办，差点直接照做。
+
+### 改成什么
+
+| 层 | 做法 |
+|---|---|
+| wrapper | 对 `auth login`（不带 `--device-code`）**fail-fast**，不真跑设备流；写结构化记录 `authreq=domain:slides` 进审计日志 |
+| `lib/auth-signal.mjs`（新） | 跟着单次 run 生命周期盯该租户审计日志的新增部分，看到 `authreq=` 就构造与真实路径同构的 `feishu_cli_auth` 请求 |
+| 接线点 | **`runner-adapter`**，不是 `grok-runner` —— 那是四条腿的唯一必经路径，一处接线全覆盖；而且 grok-runner 里有 codex 未提交的改动，不该动 |
+
+`request.url` 留空是对的：`bridge.mjs:1764` 对 `feishu_cli_auth` **显式忽略**
+`request.url`，发卡实际用 broker 自己那条 `flow.url`。
+
+⚠️ **wrapper 里故意记 `--domain`/`--scope` 的值**，是「只记 flag 名不记值」隐私规则的
+**唯一例外**：它们是权限范围声明（`calendar`/`slides`），不含用户数据，而平台需要它
+才能申请到对的 scope。消费端 `auth-signal.mjs` 还会再过一遍白名单，脏值绝不外传给 CLI。
+
+### 收益
+
+撞墙 **25ms** 返回（旧行为阻塞到超时）· **零孤儿设备流** · 用户不会再看到两条 URL ·
+**触发不再依赖 agent 说什么**。
+
+### 边界（别高估）
+
+**只在审计 wrapper 挂着时有效。** 关掉 `H_LARK_AUDIT`，本通道一起失效，退回
+「靠 agent 复述」的老路——不会更糟，但要知道这层耦合。`H_AUTH_SIGNAL=0` 可单独关本通道。
+
+### 验收
+
+- **9 条单测**，含端到端（run 期间写记录 → 断言 `onUserActionRequired` 真被调到）
+  和两个反证（`H_AUTH_SIGNAL=0` 零信号 / 无 sandbox 零行为）
+- **真沙箱** `rayman.chen`：fail-fast `exit=1` 25ms、输出**无 URL**、
+  watcher 拿到 `{"domains":["calendar","slides"]}`、审计日志有 `authreq=`
+- 相关 8 个测试文件全绿；healthz ok / 契约 `2026-07-30.3` / err 日志空
+- **部署顺序**：先重启（watcher 上线但惰性）→ 再放 wrapper。反过来会出现
+  「wrapper 拦了但没人接管 = 完全没卡」的窗口
+
+### L0 同轮改（sha `6ddefa07c74e`）
+
+三步法改成「**这条命令会失败，而且这是正常的**；你不会也不需要拿到链接；
+**不要编造链接**；不要重试；不要跑 `--device-code` / `auth qrcode`」。
+
+### 回滚
+
+`~/h-ops-rollback/20260731-plan2prime/`（wrapper + adapter + worker 三份备份 + 卡片）。
+分档：`H_AUTH_SIGNAL=0` 只关信号通道；wrapper 里 `FAILFAST_AUTH_LOGIN=0` 退回注入
+`--no-wait`（即时生效不用重启）；全撤按卡片走。
+
+### 自省
+
+改 wrapper 时用 `String.replace` 把 `"$$"`（shell 的 PID）写成了 `"$"` ——
+**replace 的替换串里 `$$` 是「插入一个 `$`」的特殊语法**。审计日志的 pid 字段
+当场变成字面 `$`，靠逐行看输出才发现。改用函数式 replacer 才对。
+今晚第 N 次栽在转义层数上，这次的层在 JS 而不是 sh。
