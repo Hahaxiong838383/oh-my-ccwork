@@ -801,13 +801,54 @@ Mini    connected  apps=1  uid=u-aca292be3f  site=mini  Outbox pending=0
 npm test  全量 exit 0、0 not-ok
 ```
 
+### 补：Mini 拉平到 08074df（当天 15:00–15:12）
+
+给 codex 更新交接文档时顺手核对两端版本，发现 **Mini 跑的根本不是 `08074df`**：
+`bridge.mjs` 的 md5 对上的是 `2fbd4ef`，且 `lib/safe-logger.mjs`、
+`lib/auth-signal.mjs` **两个文件压根不存在**，`lib/app-placement.mjs` 是旧版。
+
+也就是说，当天在 dev198 上真发作过的两个缺陷，**在 Mini 上原封不动地留着**：
+飞书 API 一报错就把 app_secret 写进日志；租约丢了不会自愈。
+
+拉平过程（方法本身沉进了 skill，值得复用）：
+
+1. **全量 md5 对撞**定位差异 —— Mini 的 `.git` 是悬空指针
+   （指向已不存在的 `/private/tmp/feishu-grok-bridge-codex.0RIHus/...`），
+   git 完全用不了，只能逐文件比。372 个代码面文件里 13 个不一致 + 6 个缺失。
+2. **先判方向再覆盖**：mtime 全是部署批次时间戳、逐个 diff 也全是「Mini 缺新东西」，
+   确认零本地改动才敢覆盖。
+3. `git archive 08074df` 取 **git 对象**（不取工作树，避免夹带未提交改动），
+   保留可执行位（`ops/lark-cli-audit` 需要），**`workspace/` 的 304 个文件一个不动**。
+4. 复跑对撞 → **372 一致 / 0 不一致 / 0 缺失**。
+
+验收：Mini 上真跑 `safe-logger` + `app-placement-reclaim` 两个测试 **15/15 pass**；
+healthz `ok=true connected=true`，契约 2026-07-30.3，Outbox pending=0；
+dev198 **10 个 App connected 10/10**、lastError 全 null，未受影响。
+回滚点 `~/local/h-mini-rollback-20260731-150247`。
+
+**过程中两个教训**：
+
+- **KeepAlive 抢跑**：我 kill 进程后 launchd **4 秒内**就用旧代码拉起来了，
+  而我的脚本还在往下走「解包 → 启动」。差一点就在没生效的部署上宣布成功。
+  正确顺序是**先拷文件再 `kickstart -k`**。
+- **我误判了「Mini 无守护」并写进了交接文档**：`launchctl list | grep -i
+  "feishu\|grok\|h-mini"` 返回空，可真实标签是 `com.hplatform.mini-bot.*`，
+  三个自编关键词一个都不匹配。见 [[feedback_truncated_output_negative_conclusion]]
+  案例三 —— 过滤词是猜的时候，「没搜到」只证明我猜错了名字。
+
 ### ⏸ 本章挂起
 
 1. **分支不合 main**，等 codex 的 Mini 线全部完成 + 验证。
 2. **Mini 仍是 macOS `native` POC**，不代表 Linux bwrap/gVisor 物理隔离完成 ——
    外部租户必须留在 Linux。
 3. Mini `H_USER_MEMORY=0`，独立 ai-memory 原生服务未补齐。
-4. `help` skill 含个人绝对路径被隐私门拒，待改可移植路径。
+4. `help` skill 含个人绝对路径被隐私门拒，待改可移植路径
+   （Mini 日志里每 30 秒复现一次 `privacy reject: 个人或租户绝对路径`）。
 5. 长任务验证的是**主动完成卡 + ACK**，不等于「用户消息触发、前台 120 秒后转后台」
    的视觉验收。
-6. `MEMORY.md` 已 18.4KB（绊线 12KB），`/rule-compress` 需川哥在场跑。
+6. **Mini 的版本不可查**：`.git` 是悬空指针，git 完全用不了，这次靠 md5 逐文件
+   对撞才确认版本。要么重建成正常 worktree/clone，要么部署脚本落
+   `.deploy-meta.json` 记 commit sha。
+7. **两端 healthz 结构不一致**：dev198 是多 app（`apps{}` 带 lease/contract/
+   botOpenId），Mini 是单 app 扁平结构，巡检脚本得写两套。建议对齐。
+8. `MEMORY.md` 已 18.4KB（绊线 12KB），`/rule-compress` 需川哥在场跑。

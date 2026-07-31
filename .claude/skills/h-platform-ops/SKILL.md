@@ -2019,8 +2019,9 @@ python3 -c "import json;d=json.load(open('/srv/h-platform/users.json'));
 ```
 
 - dev198 的 user-sync 会**把非本站用户从本地 users.json 过滤掉并写回**。
-  所以 dev198 上看到 8 个用户、Mini 上看到 1 个，是设计如此，**不是掉了用户**。
-  全量真值在控制面。
+  所以两端各自只看得见本站用户（2026-07-31 实测 dev198 = 10 个 App / 9 个用户 + owner，
+  Mini = 1 个），是设计如此，**不是掉了用户**。数字会随开通漂移，别记死——
+  全量真值在控制面，本地只是本站视图。
 - owner **不参与 placement**：`shouldUseAppPlacement` 要求 `ctx.kind==='user'`，
   且控制面 claim 只在用户注册表里找 appId，owner 不在其中直接 404。健康页里
   owner 那条 `lease` 恒为 null，正常。
@@ -2043,6 +2044,49 @@ curl -s -X POST -H "Authorization: Bearer $H_CONTROL_TOKEN" -H 'Content-Type: ap
   -d '{"appId":"<appId>","leaseId":"<leaseId>"}' "$H_CONTROL_URL/internal/app-placement/release"
 # 然后看日志：lease lost → reacquired attempts=N down=Nms → 重建 WS 长连接
 ```
+
+### Mini 站点的部署形态（与 dev198 处处不同，别套用）
+
+两端**没有一处运维接口是一样的**，照搬 dev198 的命令会得到误导性的空结果：
+
+| 项 | dev198 | Mini |
+|---|---|---|
+| 路径 | `~/feishu-grok-bridge`（git 仓库） | `~/local/h-platform-mini-bot`（**非 git**） |
+| healthz | `127.0.0.1:18765` | `127.0.0.1:18775` |
+| 进程管理 | `systemctl --user feishu-grok-{bridge,runner-worker}` | launchd `com.hplatform.mini-bot.{bridge,runner}` |
+| 日志 | `journalctl --user -u …` | `workspace/.logs/bridge.{out,err}.log` |
+| healthz 结构 | 多 app：`apps{}` 带 lease/contract/botOpenId | 单 app 扁平结构（**巡检脚本得写两套**） |
+
+⚠️ **找 Mini 的守护别 grep `feishu` / `grok` / `h-mini`** —— 标签是 `com.hplatform.*`，
+三个词一个都不匹配，`launchctl list | grep -i feishu` 会返回空，让你误判成「没有守护、
+进程是孤儿」。用 `launchctl list | grep -i hplatform`。我 2026-07-31 就这么误判过，
+还把错误结论写进了交接文档。
+
+⚠️ **KeepAlive=true 会抢跑你的部署**：kill 掉进程后 launchd **4 秒内**就拉起来。
+若流程是「停 → 拷文件 → 起」，launchd 会在拷贝完成前用**旧代码**把服务拉起来，
+healthz 一切正常，你以为部署成功了其实跑的是旧的。
+**正确顺序：先拷文件，再 `launchctl kickstart -k gui/$(id -u)/com.hplatform.mini-bot.bridge`**
+（runner 同理，先 runner 后 bridge）。别用 nohup 手工起——会被下面的 app lock 挡下。
+
+⚠️ 本机还有一道应用层互斥：bridge 启动抢 `logs/bridge-<appId>.lock`，抢不到直接
+`[fatal] Another feishu-grok-bridge holds app lock (pid=…)` 退出。这是好事（双实例在
+代码层就走不通），但意味着手工起的进程会**静默失败**，得去 `err.log` 才看得到原因。
+
+**Mini 在跑哪个版本？`git` 指望不上** —— `.git` 是个悬空指针，内容为
+`gitdir: /private/tmp/feishu-grok-bridge-codex.0RIHus/...`，该路径已不存在。
+版本只能靠逐文件 md5 对撞，也是 dev198 → Mini 的拉平方法（2026-07-31 实操）：
+
+```bash
+# ① dev198：从 git 对象取（不取工作树，避免夹带未提交改动），排除 owner 的 workspace/
+ssh dev198 'cd ~/feishu-grok-bridge && git ls-tree -r <sha> --name-only | grep -v "^workspace/" \
+  | while IFS= read -r f; do printf "%s  %s\n" "$(git show "<sha>:$f" | md5sum | cut -d" " -f1)" "$f"; done > /tmp/manifest.txt'
+# ② Mini 侧比对（macOS 用 md5 不是 md5sum，所以用 python3 跨平台算）→ 得到差异集
+# ③ git archive <sha> -- <差异文件> 打 tar 过去解开（保留可执行位，ops/lark-cli-audit 需要）
+# ④ 复跑 ② 应得「0 不一致 0 缺失」，再 kickstart -k
+```
+
+⚠️ **绝不整目录 rsync**：dev198 是 Linux、Mini 是 macOS，`node_modules` 里有平台相关的
+原生模块；`workspace/` 是 owner 的活文件（硬边界禁止同步）；`.env` / `data/` 是站点私有。
 
 ## 🔴 dev198 出站代理（2026-07-31 事故后重构）
 
