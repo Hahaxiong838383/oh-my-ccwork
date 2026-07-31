@@ -241,6 +241,61 @@ async function setCachedContextToken(accountId, peerId, token) {
     updatedAt: new Date().toISOString(),
   }
   await saveJson(contextTokenMapPath(), map)
+  // 有 pending 梦志时立刻冲发（iLink 主动发依赖新鲜 context_token）
+  schedulePendingDreamFlush()
+}
+
+/** debounce：同一波入站只 spawn 一次 pending 梦志推送 */
+let _pendingDreamFlushTimer = null
+let _pendingDreamFlushRunning = false
+function schedulePendingDreamFlush() {
+  if (_pendingDreamFlushTimer) clearTimeout(_pendingDreamFlushTimer)
+  _pendingDreamFlushTimer = setTimeout(() => {
+    _pendingDreamFlushTimer = null
+    void flushPendingDreamPush()
+  }, 800)
+}
+
+async function flushPendingDreamPush() {
+  if (_pendingDreamFlushRunning) return
+  const home = process.env.HOME || ''
+  const pending = path.join(
+    home,
+    'second-brain/90-System/state/pending-morning-push.json',
+  )
+  try {
+    await fs.access(pending)
+  } catch {
+    return
+  }
+  const script = path.join(
+    home,
+    'second-brain/90-System/scripts/dream-morning-push.mjs',
+  )
+  _pendingDreamFlushRunning = true
+  log('pending dream flush: spawn --pending-only')
+  try {
+    const child = spawn(
+      process.execPath,
+      [script, '--pending-only', '--no-memory'],
+      {
+        detached: true,
+        stdio: 'ignore',
+        env: {
+          ...process.env,
+          SECOND_BRAIN_VAULT: path.join(home, 'second-brain'),
+        },
+      },
+    )
+    child.unref()
+  } catch (e) {
+    log('pending dream flush spawn err', String(e?.message || e).slice(0, 120))
+  } finally {
+    // 60s 内不重复 spawn，避免连发消息刷屏
+    setTimeout(() => {
+      _pendingDreamFlushRunning = false
+    }, 60_000)
+  }
 }
 
 
@@ -504,7 +559,7 @@ function classifyMode(text, { hasMedia = false } = {}) {
 
   // 仅纯寒暄 / 单字确认走 short
   if (
-    /^(你好|在吗|hi|hello|谢谢|好的|收到|嗯|ok|OK|嗯嗯|哈哈|ping|健康|status|👍|🙏)[\s!！.。]*$/i.test(
+    /^(你好|在吗|hi|hello|谢谢|好的|收到|嗯|ok|OK|嗯嗯|哈哈|ping|健康|status|保活|续期|keepalive|👍|🙏)[\s!！.。]*$/i.test(
       t,
     )
   ) {
@@ -1016,19 +1071,25 @@ async function sendWechatTextRetry(cred, to, text, contextToken, tries = 4) {
   /** @type {{ctx: string|undefined, label: string}[]} */
   const chain = []
   const push = (ctx, label) => {
-    if (label !== 'no_ctx') {
+    if (label === 'empty_ctx') {
+      ctx = ''
+    } else if (label === 'no_ctx') {
+      ctx = undefined
+    } else {
       if (!ctx || !String(ctx).trim()) return
       ctx = String(ctx).trim()
-    } else {
-      ctx = undefined
     }
-    if (chain.some((x) => x.ctx === ctx && x.label === label)) return
-    // de-dupe same ctx value
-    if (chain.some((x) => x.ctx === ctx)) return
+    if (chain.some((x) => x.label === label)) return
+    // de-dupe same non-empty ctx value
+    if (label !== 'empty_ctx' && label !== 'no_ctx' && chain.some((x) => x.ctx === ctx)) {
+      return
+    }
     chain.push({ ctx, label })
   }
   push(contextToken, 'provided')
   push(cached, 'cached')
+  // hermes-style: stale token → try empty string then omit
+  push('', 'empty_ctx')
   push(undefined, 'no_ctx')
 
   let chainIdx = 0
@@ -1262,6 +1323,17 @@ async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
   const bodyWithMedia = formatMediaPrompt(mediaResult, body)
   if (!bodyWithMedia) return
 
+  // 通道保活快路径：用户回「保活/续期」只续 context_token，不 spawn Grok
+  if (/^(保活|续期|keepalive)$/i.test((body || '').trim())) {
+    await sendReply(
+      cred,
+      peerId,
+      '✓ 会话已续期（context_token 已刷新）',
+      message.context_token,
+    )
+    return
+  }
+
   if (/^(ping|健康|status)$/i.test((body || '').trim())) {
     const pool = workerPool.stats()
     let leaderLine = `leader=${leaderEnabled() ? 'on' : 'off'}`
@@ -1272,6 +1344,21 @@ async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
       } catch {
         /* ignore */
       }
+    }
+    // token age for ops
+    let tokenAge = 'n/a'
+    try {
+      const map = await loadContextTokenMap()
+      const row = map[`${cred.accountId}:${peerId}`]
+      if (row?.updatedAt) {
+        const sec = Math.max(
+          0,
+          Math.round((Date.now() - Date.parse(row.updatedAt)) / 1000),
+        )
+        tokenAge = `${sec}s (~${(sec / 3600).toFixed(1)}h)`
+      }
+    } catch {
+      /* ignore */
     }
     await sendReply(
       cred,
@@ -1288,6 +1375,7 @@ async function handleInbound(cred, message, allowSet, { queueAhead = 0 } = {}) {
         `pool=${pool.active}/${pool.size} wait=${pool.waiting}`,
         leaderLine,
         `stream=${streamEnabled() ? 'on' : 'off'}`,
+        `ctx_token_age=${tokenAge}`,
       ].join('\n'),
       message.context_token,
     )

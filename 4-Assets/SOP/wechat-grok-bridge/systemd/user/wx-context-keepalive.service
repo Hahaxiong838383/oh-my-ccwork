@@ -1,0 +1,17 @@
+[Unit]
+Description=WeChat iLink context_token keepalive (nudge if aging)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/wechat-grok-bridge
+Environment=PATH=%h/.local/node/bin:%h/.local/bin:/usr/bin:/bin
+EnvironmentFile=-%h/wechat-grok-bridge/.env
+# 超过 14h 无入站则软提醒回 ping；冷却 10h 防刷屏
+Environment=WX_KEEPALIVE_NUDGE_AGE_H=14
+Environment=WX_KEEPALIVE_STALE_AGE_H=22
+Environment=WX_KEEPALIVE_COOLDOWN_H=10
+ExecStart=/usr/bin/node %h/wechat-grok-bridge/scripts/wechat-context-keepalive.mjs
+Nice=10
+TimeoutStartSec=90

@@ -32,6 +32,7 @@
 | OAuth 保活 | `grok-xai-refresh.timer` | 每 2h；**仅本机** `~/.grok/auth.json` |
 | 自动更新 | `grok-auto-update.timer` | 每日 04:30 |
 | Session GC | `grok-session-gc.timer` | 每日 03:40 + archive-to-memory |
+| Context 软保活 | `wx-context-keepalive*.timer` · `scripts/wechat-context-keepalive.mjs` | 监控 peer context 年龄；过期风险时提醒用户回 `ping`/`保活` |
 | 本机代理 | system `xray` + watchdog | 10808 |
 | 记忆 | `~/.grok/memory/MEMORY.md` | experimental-memory |
 | MCP | config.toml `wechat-bot` | 主动发消息 |
@@ -53,10 +54,12 @@ ssh -f -N -L 3100:127.0.0.1:3100 linux-lan
 ```bash
 ssh linux-lan
 systemctl --user status wechat-qr-login wechat-grok-bridge \
-  grok-xai-refresh.timer grok-auto-update.timer grok-session-gc.timer
+  grok-xai-refresh.timer grok-auto-update.timer grok-session-gc.timer \
+  wx-context-keepalive.timer wx-context-keepalive-pre.timer
 journalctl --user -u wechat-grok-bridge -f
 tail -f ~/wechat-grok-bridge/logs/bridge.log
 node ~/wechat-grok-bridge/bridge.mjs --check
+node ~/wechat-grok-bridge/scripts/wechat-context-keepalive.mjs --status
 ~/.local/bin/grok-session-gc.sh   # 手动 GC（应写记忆，不再 skip）
 grok --version
 ```
@@ -102,8 +105,10 @@ systemd 停服务时会先尝试发中断提示再杀 grok（`TimeoutStopSec=120
 1. **peer 级 context 缓存** `data/context-tokens.json`：每条入站刷新  
 2. **发送重试链**：provided → cached（每轮重读）→ no_ctx  
 3. soft archive 默认 **2MB**
+4. **pending 梦志补发**：入站刷新 context 后，bridge 会 debounce 触发 `dream-morning-push.mjs --pending-only --no-memory`
+5. **软保活**：`wx-context-keepalive-pre.timer` 06:45 预检；`wx-context-keepalive.timer` 12:00 / 18:00 / 21:30 检查 context 年龄
 
-主动推送若无可用 context，仍可能失败——用户发一条消息即可重新种 token。
+主动推送若无可用 context，仍可能失败——iLink context 不能由脚本凭空刷新，用户发 `ping` / `保活` / 任意消息才会重新种 token。
 
 ## 经验教训（2026-07-22 假死复盘）
 

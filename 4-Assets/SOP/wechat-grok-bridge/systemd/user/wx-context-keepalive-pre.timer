@@ -1,0 +1,11 @@
+[Unit]
+Description=Pre-morning WeChat context_token at 06:45
+
+[Timer]
+# 梦志 07:30 前 45 分钟预检；若 token 过老，提醒用户回 ping
+OnCalendar=*-*-* 06:45:00
+Persistent=true
+Unit=wx-context-keepalive-pre.service
+
+[Install]
+WantedBy=timers.target
