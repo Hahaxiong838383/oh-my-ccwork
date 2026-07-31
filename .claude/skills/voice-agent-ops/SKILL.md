@@ -215,3 +215,6 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 - 转正流程:先跑观测,确认**主用户轮稳定 registered、他人/电视轮稳定 unregistered** 才置 ACT=1。跨信道注册会让 score 整体崩(实测 0.072),直接开动作=主用户插话全被否决,比不做更差。
 - ⚠️ **绝不上租户 worker**:注册库里没有租户的用户,开了=所有打断被否决。租户 env 保持无 BARGE_* 即可(默认关)。
 - 生效证据:job 日志 `barge speaker gate enabled: delay=700ms act=...`;缺这行=没挂上(声纹旁路未启用时会打 warning)。
+**B9 租户红线(2026-07-31)**:⚠️ **永远不要给租户 worker 开 `BARGE_SPEAKER_*`**——声纹注册库只有本机主人的样本,租户用户从未注册,开了=**他们的用户说话被判"外人"→ 所有打断被否决**,比不做还差(负收益,不是效果差一点)。这类"依赖用户特有注册数据"的能力,验收也不能外包给对方,详见 [[feedback_acceptance_needs_owner_specific_data]]。要给租户上,前置交付物是**自助声纹注册流程**,不是打开开关。
+
+**B8 回滚**:`bash 2-Projects/realtime-voice-agent/scripts/rollback-b8.sh`(revert 330d75ce1 + rsync + restart 两 worker,分钟级)。触发条件=开场白丢失/身份错乱/对话行为变化。更早的整体快照 `/root/rollback-batch2-0731.tar.gz`(含 B9 之前全部代码)只在要连 B9 一起退时用。
