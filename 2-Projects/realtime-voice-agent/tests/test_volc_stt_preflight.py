@@ -171,3 +171,51 @@ class TestFadeGains:
 
         g = fade_gains(1.0, 50, 0.001)
         assert (g == 1.0).all()
+
+
+class TestEngineModulesForEnv:
+    """B8 预 import 表:只列真实存在的模块,且只列本 worker 配置会用到的。"""
+
+    def test_tenant_stack(self) -> None:
+        from voice_agent.engines.tier_a_cascade import _engine_modules_for_env
+
+        mods = _engine_modules_for_env(
+            {
+                "STT_PROVIDER": "xfyun_spark_iat",
+                "TTS_PROVIDER": "xfyun",
+                "LLM_PROVIDER": "tenant-brain",
+            }
+        )
+        assert mods == [
+            "voice_agent.engines.xfyun_spark_iat",
+            "voice_agent.engines.xfyun_tts",
+            "voice_agent.engines.fast_llm",
+        ]
+
+    def test_main_stack_dedups_shared_module(self) -> None:
+        from voice_agent.engines.tier_a_cascade import _engine_modules_for_env
+
+        mods = _engine_modules_for_env(
+            {"STT_PROVIDER": "volc", "TTS_PROVIDER": "volc", "LLM_PROVIDER": "openai"}
+        )
+        assert mods == [
+            "voice_agent.engines.volc_stt",
+            "voice_agent.engines.volc_tts",
+            "voice_agent.engines.fast_llm",
+        ]
+
+    def test_unknown_or_missing_provider_ignored(self) -> None:
+        from voice_agent.engines.tier_a_cascade import _engine_modules_for_env
+
+        assert _engine_modules_for_env({}) == []
+        assert _engine_modules_for_env({"STT_PROVIDER": "nonexistent"}) == []
+
+    def test_all_listed_modules_are_importable(self) -> None:
+        # 表里写错模块名(如曾经的 gemini_llm)只会在生产静默打日志,单测必须拦住
+        import importlib
+
+        from voice_agent.engines.tier_a_cascade import _PROVIDER_MODULES
+
+        for table in _PROVIDER_MODULES.values():
+            for mod in set(table.values()):
+                assert importlib.util.find_spec(mod) is not None, f"{mod} 不存在"

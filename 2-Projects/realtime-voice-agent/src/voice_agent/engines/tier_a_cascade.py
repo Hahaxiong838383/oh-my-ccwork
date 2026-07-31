@@ -146,9 +146,14 @@ class TierACascadeEngine(ExperienceEngine):
         Agent = agents_mod.Agent
         AgentSession = agents_mod.AgentSession
         inference = agents_mod.inference  # 本地音频 EOT(turn-detector-v1-mini)
+        _join_t_imports = time.monotonic()
 
         await ctx.connect()  # 先连入 room,ctx.room 才可用
         _join_t_conn = time.monotonic()
+        _join_marks: list[tuple[str, float]] = []
+
+        def _mark(label: str) -> None:
+            _join_marks.append((label, time.monotonic()))
 
         room_input = agents_mod.RoomInputOptions
 
@@ -159,9 +164,11 @@ class TierACascadeEngine(ExperienceEngine):
             vad = proc.userdata.get("vad")
         if vad is None:
             vad = _load_vad(silero)
+        _mark("vad")
 
         # 声纹旁路(Phase 1,默认关):ring 挂 STT pump,sidecar 挂 turn 钩子
         speaker_sidecar = _load_speaker_sidecar(proc)
+        _mark("sidecar")
 
         # A 方案共脑(2026-07-16):MyJavis 签的 dispatch metadata 带 session/tenant →
         # LLM 指回 MyJavis CustomLLM;其他入口 None → 原大脑零变化。
@@ -175,17 +182,23 @@ class TierACascadeEngine(ExperienceEngine):
                 myjavis_brain["tenant"][:8],
             )
 
-        # 租户大脑按用户读记忆(2026-07-29):participant identity(=前端 connect 的
-        # participantName,激活码)随每次 LLM 请求以 OpenAI 标准 user 字段透传。
-        # 仅 tenant-brain 需要;dispatch 由用户 join 触发,正常立即返回,10s 超时兜底降级。
-        participant_identity = ""
-        if self._settings.llm_provider == "tenant-brain":
-            try:
-                p = await asyncio.wait_for(ctx.wait_for_participant(), timeout=10)
-                participant_identity = p.identity or ""
-                logger.info("tenant-brain user identity: %s", participant_identity)
-            except asyncio.TimeoutError:
-                logger.warning("等 participant 超时,本 job 不透传 user(记忆退化为无身份)")
+        # 租户大脑按用户读记忆:participant identity(=前端 connect 的 participantName,
+        # 激活码)随每次 LLM 请求以 OpenAI 标准 user 字段透传。
+        # 🔴 B8(2026-07-31 遥测驱动):**等 participant 挪到 session.start 之后**——
+        # 实测该等待 9~1570ms 剧烈波动(取决于用户何时进房),而 identity 是 per-request
+        # 读 `_user`(fast_llm.py:410/487),建 session 时并不需要它。原来在这里 await =
+        # agent 空转等人、等完才开始装配;现在装配/启动与等待重叠,agent 先到场景省下
+        # 整个 session.start 耗时(实测 274-411ms)。顺带修掉"用户没进房就 greeting"
+        # 的潜在漏说(greeting 现在必在 participant 到达之后)。
+        _llm = _build_llm(
+            self._settings,
+            context_note_provider=(
+                speaker_sidecar.context_note if speaker_sidecar is not None else None
+            ),
+            myjavis_brain=myjavis_brain,
+            participant_identity="",  # 延迟注入,见下方 _await_participant
+        )
+        _mark("build_llm")
 
         session = AgentSession(
             stt=_build_stt(
@@ -193,14 +206,7 @@ class TierACascadeEngine(ExperienceEngine):
                 speaker_ring=speaker_sidecar.ring if speaker_sidecar is not None else None,
             ),
             # P2:声纹粘滞身份注入 LLM 近因位(sidecar 关闭时为 None=零变化)
-            llm=_build_llm(
-                self._settings,
-                context_note_provider=(
-                    speaker_sidecar.context_note if speaker_sidecar is not None else None
-                ),
-                myjavis_brain=myjavis_brain,
-                participant_identity=participant_identity,
-            ),
+            llm=_llm,
             tts=_build_tts(self._settings),
             vad=vad,
             # 语义判停:本地音频 EOT(纯 native .so,零下载零认证)。钉死 v1-mini——
@@ -422,11 +428,32 @@ class TierACascadeEngine(ExperienceEngine):
             # ⚠️ 回退:room_output_options(dtx=False/red=True) 致浏览器 livekit-client WS 升级后
             # 连接 reset(python client 能协商 RED 但浏览器协商失败)。dtx/red 跨境优化改走客户端侧。
         )
+        _mark("session_start")
+
+        # identity 延迟注入(B8):等待与上面的装配/启动已重叠,此处通常立即返回。
+        # 写 `_user` 即对后续每个 LLM 请求生效(per-request 读取);LLM 首用必在用户
+        # 说话之后,而 participant 到达远早于此,不存在"请求带空 user"的窗口。
+        if self._settings.llm_provider == "tenant-brain":
+            try:
+                p = await asyncio.wait_for(ctx.wait_for_participant(), timeout=10)
+                _llm._user = p.identity or ""
+                logger.info("tenant-brain user identity: %s", _llm._user)
+            except asyncio.TimeoutError:
+                logger.warning("等 participant 超时,本 job 不透传 user(记忆退化为无身份)")
+        _mark("wait_participant")
         _join_t_started = time.monotonic()
+        # 分段口径:相邻 mark 差值(B8 定位用——2026-07-31 实测各引擎构造仅毫秒级,
+        # 真正的时间在别处,靠这行日志逐段定位)
+        _prev = _join_t_conn
+        _segs = []
+        for _label, _ts in _join_marks:
+            _segs.append(f"{_label}={round((_ts - _prev) * 1000)}ms")
+            _prev = _ts
         logger.info(
-            "join timing: entry→room_connected=%dms, engines+session_start=%dms, total=%dms",
-            round((_join_t_conn - _join_t0) * 1000),
-            round((_join_t_started - _join_t_conn) * 1000),
+            "join timing: imports=%dms ctx.connect=%dms | %s | total=%dms",
+            round((_join_t_imports - _join_t0) * 1000),
+            round((_join_t_conn - _join_t_imports) * 1000),
+            " ".join(_segs),
             round((_join_t_started - _join_t0) * 1000),
         )
         _register_metrics(session, ctx, agents_mod)  # 链路延迟 → web 页面板
@@ -501,14 +528,49 @@ def _load_vad(silero: Any) -> Any:
     )
 
 
+_PROVIDER_MODULES: dict[str, dict[str, str]] = {
+    "STT_PROVIDER": {
+        "volc": "voice_agent.engines.volc_stt",
+        "sherpa": "voice_agent.engines.sherpa_stt",
+        "xfyun": "voice_agent.engines.xfyun_stt",
+        "xfyun_spark_iat": "voice_agent.engines.xfyun_spark_iat",
+    },
+    "TTS_PROVIDER": {
+        "volc": "voice_agent.engines.volc_tts",
+        "voxcpm": "voice_agent.engines.voxcpm_tts",
+        "xfyun": "voice_agent.engines.xfyun_tts",
+    },
+    # gemini 与 openai 共用 fast_llm(_build_llm 同一分支),非独立模块
+    "LLM_PROVIDER": {
+        "openai": "voice_agent.engines.fast_llm",
+        "gemini": "voice_agent.engines.fast_llm",
+        "tenant-brain": "voice_agent.engines.fast_llm",
+    },
+}
+
+
+def _engine_modules_for_env(env: Any) -> list[str]:
+    """按 env 里配置的 provider 列出该预 import 的 adapter 模块(纯函数,可单测)。
+
+    只预热"这个 worker 真会用到的"——预热无关 provider 纯属浪费 idle 进程内存。
+    """
+    mods: list[str] = []
+    for key, table in _PROVIDER_MODULES.items():
+        mod = table.get(env.get(key, ""))
+        if mod and mod not in mods:
+            mods.append(mod)
+    return mods
+
+
 def setup_process(proc: Any) -> None:
-    """AgentServer ``setup_fnc``:idle 子进程初始化时预载 silero VAD。
+    """AgentServer ``setup_fnc``:idle 子进程初始化时预载 silero VAD + 引擎模块。
 
     2026-07-02 HK 实测:restart 后**首个 job 必崩**——FFI panic "timed out waiting for
     ReadyForRoomEventRequest after ConnectCallback"。根因=2 核机上 job 进程内 silero onnx
     冷加载阻塞 event loop,ctx.connect 的 room 事件握手超时。预载后 job 到来时模型已就绪。
     """
     import importlib
+    import sys
 
     silero = importlib.import_module("livekit.plugins.silero")
     proc.userdata["vad"] = _load_vad(silero)
@@ -519,13 +581,21 @@ def setup_process(proc: Any) -> None:
     # 1s deadline)→ panic(2026-07-03 py-spy 栈实锤;补位进程 initialize 实测仅
     # 84ms,是同秒出现的旁观者非真凶)。
     importlib.import_module("voice_agent.engines._openai_preload")
+    # B8(2026-07-31 遥测驱动):按配置预 import 引擎 adapter 模块。
+    # 实测 job 内 _build_llm 首次 320ms、二次 0.2ms——开销全在**模块首次 import**
+    # (构造本身微秒级);预热在 idle 进程付清,job 到来时命中 sys.modules 缓存。
+    # 失败只记不抛:预热是加速不是依赖,provider 真配错该由 job 内的 fail fast 报。
+    for _mod in _engine_modules_for_env(os.environ):
+        try:
+            importlib.import_module(_mod)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[preimport] {_mod} 失败(忽略): {exc}", file=sys.stderr, flush=True)
     # 声纹旁路 extractor 预载:**后台线程 + 延迟错峰**,不在 setup 同步做。
     # 🔴 2026-07-03 HK 实测竞态:job 分配的同一瞬间主进程 spawn 补位 idle 进程,
     # 若补位进程 setup 同步载 27MB onnx(0.9-1.1s),2 核上与 job 进程的 FFI 握手
     # (ReadyForRoomEventRequest,~1s 超时)抢 CPU → job ~50% 概率 FFI panic 秒崩。
     # 错峰后补位初始化回到轻量;延迟窗内 job 到来 → userdata 未就绪 → 该 job 旁路
     # 禁用(零伤害)。观测用 stderr print(setup/线程阶段 logging 可能未接转发管道)。
-    import sys
     import threading
     import time as _time
 
