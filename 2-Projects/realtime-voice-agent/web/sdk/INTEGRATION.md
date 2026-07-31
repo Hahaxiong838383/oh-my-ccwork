@@ -65,8 +65,12 @@ curl https://voice-api.hahaxiong.cc/v1/credentials -H "Authorization: Bearer jv_
     });
     session.on("state", (s) => console.log("state:", s));      // connected/reconnecting/disconnected
     session.on("metrics", (m) => console.log("延迟:", m));      // {stt_ms,eou_ms,ttft_ms,ttfb_ms}
+    session.on("speaking", ({ speaking }) => {                  // 服务端权威说话状态
+      // true=AI 开始播报;false=本轮播报完毕(切图标/起超时计时用它,别再猜电平)
+      console.log("speaking:", speaking);
+    });
 
-    // session.setMicEnabled(false);  // 静音
+    // session.setMicEnabled(false);  // 闭麦(同时真正释放麦克风设备,见 §5.1)
     // await session.close();          // 挂断
     window.session = session;
   }
@@ -76,6 +80,51 @@ curl https://voice-api.hahaxiong.cc/v1/credentials -H "Authorization: Bearer jv_
 
 就这些。连接后：对着麦克风说话 → 你的大脑回答 → 讯飞音色播出，随时插话可打断。
 
+## 2.5 新能力（2026-07-31 上线）
+
+### `JavisVoice.prewarm()` —— 唤醒前预热网络层
+
+```js
+// 页面加载后/定时保温(替换你现有的 40s 轻量请求逻辑)
+await JavisVoice.prewarm();   // 预热 API 域 + 信令域的 DNS/TCP/TLS
+```
+
+不创建会话、不占 worker 名额、不发声，幂等可重复调，失败静默。唤醒瞬间只剩真正的会话创建开销。
+
+### `speaking` 事件 —— 每轮"说完了"的权威信号
+
+见上方示例。`{speaking:false}` 在服务端本轮播报完成时触发（实测紧跟最后一条 final 字幕）。语义是"服务端播完"，与扬声器实际放完之间有极小的播放缓冲差（百毫秒级），做图标切换与超时计时足够。
+
+### `session.room` —— 公开 API（稳定承诺）
+
+`session.room` 返回底层房间对象，`room.startAudio()`（解锁自动播放）、`room.localParticipant`（本地音轨→电平分析）、`room.activeSpeakers` 都可放心用。**接口稳定承诺**：不会静默变更，如需调整会提前在本文档同步。另有 `session.agentAudioTrack` 直接拿 AI 的远端音频轨（做"说话中"声纹的真实驱动）。
+
+### 说完即挂断（哨兵 `[[END_SESSION]]`）—— 服务端已就绪
+
+你的大脑在告别语**末尾**输出 `[[END_SESSION]]`：我们在进 TTS/字幕**之前**把它剥离（绝不会被念出、不进 transcript），等这句真正播完后服务端结束会话，你的前端收到现有 `disconnected` 事件即可收尾。你侧只需打开输出开关（`BRAIN_END_SENTINEL`）。
+
+### `POST /v1/tts` —— 场景语音（文本→流式 mp3，不开房间）
+
+```bash
+curl -X POST https://voice-api.hahaxiong.cc/v1/tts \
+  -H "Authorization: Bearer jv_你的key" -H "Content-Type: application/json" \
+  -d '{"text":"欢迎回来,今天也一起冒险吧!"}' --output line.mp3
+```
+
+- 用你已写入的讯飞 TTS 凭据合成，默认聆小璇，`audio/mpeg` 流式返回（浏览器直接 `new Audio(URL.createObjectURL(await r.blob()))` 播）；
+- **按文本缓存**：同一句第二次起近零延迟；text 上限 500 字，format 目前仅 mp3。
+
+### `POST /v1/tts/prewarm` —— 台词表批量预热
+
+```bash
+curl -X POST https://voice-api.hahaxiong.cc/v1/tts/prewarm \
+  -H "Authorization: Bearer jv_你的key" -H "Content-Type: application/json" \
+  -d '{"texts":["开机欢迎语","夜航报告开场","开箱播报"]}'
+# → {"accepted":3,"already_cached":0}  后台逐条预合成,完成后首次播放也是缓存速度
+```
+
+设备空闲时把 100+ 条台词推一遍（单次上限 200 条），"一天只播一次"的台词首次也快。
+
 ## 3. 大脑端点要求（provider=brain）
 
 - 标准 OpenAI `POST {base_url}/chat/completions`，`stream=true` SSE 流式返回；
@@ -84,6 +133,7 @@ curl https://voice-api.hahaxiong.cc/v1/credentials -H "Authorization: Bearer jv_
 
 ## 4. 注意事项
 
+- **闭麦=真正释放麦克风**（2026-07-31 起）：`setMicEnabled(false)` 会停掉采集轨并释放麦克风设备——常连房间下你的浏览器唤醒词识别可正常拿麦。代价是重新开麦时会重新获取设备（约 +100ms，已授权域无弹窗）。
 - 页面必须 **HTTPS**（或 localhost）才能开麦克风。
 - `apiKey` 在前端可见即可（demo 级设计）；泄露了找我们换发。
 - 凭据写入接口返回 `422` = 校验失败，响应里有具体原因（哪个 key 错/端点不通）。

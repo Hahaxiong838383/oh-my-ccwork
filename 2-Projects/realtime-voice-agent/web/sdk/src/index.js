@@ -20,9 +20,23 @@ class JavisSession {
   constructor(room, opts) {
     this._room = room;
     this._opts = opts;
-    this._handlers = { transcript: [], state: [], metrics: [], warning: [] };
+    this._handlers = { transcript: [], state: [], metrics: [], warning: [], speaking: [] };
     this._audioEls = [];
     this._metrics = {};
+    this._agentAudioTrack = null;
+  }
+
+  /**
+   * 底层房间对象(公开 API,接口稳定承诺):localParticipant / startAudio() /
+   * activeSpeakers 等可放心使用;变更会提前在集成文档同步,不会静默改。
+   */
+  get room() {
+    return this._room;
+  }
+
+  /** agent 的远端音频轨(未订阅到时为 null),供电平可视化等取用。 */
+  get agentAudioTrack() {
+    return this._agentAudioTrack;
   }
 
   on(event, fn) {
@@ -36,7 +50,7 @@ class JavisSession {
     }
   }
 
-  /** 静音/恢复麦克风。 */
+  /** 静音/恢复麦克风。stopMicTrackOnMute 下 false 会真正释放麦克风设备。 */
   async setMicEnabled(enabled) {
     await this._room.localParticipant.setMicrophoneEnabled(!!enabled);
   }
@@ -77,6 +91,10 @@ export async function connect(opts) {
   const room = new Room({
     adaptiveStream: true,
     dynacast: true,
+    // 闭麦时真正停掉采集轨、释放麦克风设备——常连房间模式下设备侧的
+    // 唤醒词识别(webkitSpeechRecognition)才拿得到麦;代价是重新开麦
+    // 需重新 getUserMedia(约 +100ms,已授权域无弹窗)
+    stopMicTrackOnMute: true,
     audioCaptureDefaults: {
       echoCancellation: true,
       noiseSuppression: true,
@@ -107,6 +125,7 @@ export async function connect(opts) {
 
   room.on(RoomEvent.TrackSubscribed, (track) => {
     if (track.kind === Track.Kind.Audio) {
+      session._agentAudioTrack = track;
       const el = track.attach();
       el.autoplay = true;
       (opts.audioContainer || document.body).appendChild(el);
@@ -125,6 +144,12 @@ export async function connect(opts) {
     try {
       const m = JSON.parse(new TextDecoder().decode(payload));
       if (!m.k) return;
+      if (m.k === "speaking") {
+        // 服务端权威状态:true=agent 开始播报;false=本轮播报完毕
+        // (比前端轮询音频电平准——句间停顿/低音量不会误判)
+        session._emit("speaking", { speaking: !!m.speaking });
+        return;
+      }
       if (m.k === "eou") { session._metrics.eou_ms = m.eou_ms; session._metrics.stt_ms = m.stt_ms; }
       else if (m.k === "llm") session._metrics.ttft_ms = m.ttft_ms;
       else if (m.k === "tts") session._metrics.ttfb_ms = m.ttfb_ms;
@@ -156,4 +181,24 @@ export async function connect(opts) {
   return session;
 }
 
-export const version = "1.0.0";
+/**
+ * 预热网络层(DNS/TCP/TLS,含信令域):不创建会话、不占 worker 名额、不发声。
+ * 幂等可重复调用;建议在唤醒前(页面加载/定时保温)调用。失败静默——预热
+ * 本身是尽力而为,不应影响业务流程。
+ * @param {{endpoint?: string}} [opts]
+ */
+export async function prewarm(opts) {
+  const endpoint = ((opts && opts.endpoint) || DEFAULT_ENDPOINT).replace(/\/$/, "");
+  await fetch(`${endpoint}/healthz`, { cache: "no-store" })
+    .then((r) => r.json())
+    .then((h) => {
+      if (h && h.ws_url) {
+        // wss 与 https 同 host 共享 TLS 会话缓存:预热 https 即预热信令握手
+        const httpsUrl = String(h.ws_url).replace(/^wss:/, "https:").replace(/^ws:/, "http:");
+        return fetch(httpsUrl, { mode: "no-cors", cache: "no-store" }).catch(() => {});
+      }
+    })
+    .catch(() => {});
+}
+
+export const version = "1.1.0";

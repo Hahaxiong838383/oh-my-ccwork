@@ -109,6 +109,7 @@ def build_tts_request(
     volume: int = 50,
     pitch: int = 50,
     oral_level: str = "mid",
+    encoding: str = "raw",
 ) -> dict:
     """超拟人单帧完整合成请求(status 全 2:一句一会话)。
 
@@ -126,7 +127,8 @@ def build_tts_request(
                 "volume": volume,
                 "pitch": pitch,
                 "audio": {
-                    "encoding": "raw",  # raw=PCM16,免 mp3 解码
+                    # raw=PCM16(对话链路,免解码);lame=mp3(TTS-only 场景语音接口)
+                    "encoding": encoding,
                     "sample_rate": sample_rate,
                     "channels": 1,
                     "bit_depth": 16,

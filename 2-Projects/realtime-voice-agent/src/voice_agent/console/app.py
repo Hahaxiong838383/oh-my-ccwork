@@ -13,8 +13,8 @@ import time
 from datetime import timedelta
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from .security import PROVIDER_SCHEMAS, TenantStore, fingerprint, load_master_key
@@ -32,6 +32,15 @@ class CredentialsIn(BaseModel):
 
 class SessionIn(BaseModel):
     participant_name: str = "user"
+
+
+class TtsIn(BaseModel):
+    text: str
+    format: str = "mp3"
+
+
+class TtsPrewarmIn(BaseModel):
+    texts: list[str]
 
 
 def create_app(
@@ -70,7 +79,12 @@ def create_app(
 
     @app.get("/healthz")
     async def healthz() -> dict:
-        return {"ok": True, "service": "javis-voice-console"}
+        # ws_url 供 SDK prewarm() 预热信令域 TLS(公开信息:会话创建本就下发)
+        out = {"ok": True, "service": "javis-voice-console"}
+        ws_url = os.environ.get("LIVEKIT_WS_URL", "")
+        if ws_url:
+            out["ws_url"] = ws_url
+        return out
 
     @app.post("/v1/credentials")
     async def put_credentials(
@@ -161,6 +175,85 @@ def create_app(
         if missing:
             out["warning"] = f"尚未配置 provider: {missing},语音链路可能不完整"
         return out
+
+    @app.post("/v1/tts")
+    async def tts_synthesize(body: TtsIn, tenant_id: str = Depends(tenant_of)):
+        """TTS-only 场景语音(§四方案 A):文本 → 流式 mp3。
+
+        不开房间不占 worker;按 音色+文本 落盘缓存,命中直接回文件
+        (预热过的台词首次播放也近零延迟)。
+        """
+        from . import tts_service
+
+        text = body.text.strip()
+        if not text:
+            raise HTTPException(400, "text 不能为空")
+        if len(text) > tts_service.MAX_TEXT_LEN:
+            raise HTTPException(400, f"text 超长(上限 {tts_service.MAX_TEXT_LEN} 字)")
+        if body.format != "mp3":
+            raise HTTPException(400, "format 目前仅支持 mp3")
+        creds = store.get_credentials(tenant_id, "xfyun_tts")
+        if creds is None:
+            raise HTTPException(409, "尚未配置 provider: xfyun_tts,先写入 TTS 凭据")
+
+        cache_root = Path(os.environ.get("TTS_CACHE_DIR", "/opt/voice-agent/tts-cache"))
+        vcn = creds.get("vcn") or tts_service.DEFAULT_VCN
+        target = tts_service.cache_path(cache_root, tenant_id, vcn, text)
+        if target.exists():
+            logger.info("tts cache hit: tenant=%s len=%d", tenant_id, len(text))
+            return FileResponse(target, media_type="audio/mpeg")
+
+        logger.info("tts synthesize: tenant=%s len=%d", tenant_id, len(text))
+
+        async def _stream():
+            async with tts_service.tenant_lock(tenant_id):
+                async for chunk in tts_service.synthesize_to_cache(creds, text, target):
+                    yield chunk
+
+        return StreamingResponse(_stream(), media_type="audio/mpeg")
+
+    @app.post("/v1/tts/prewarm")
+    async def tts_prewarm(
+        body: TtsPrewarmIn,
+        background: BackgroundTasks,
+        tenant_id: str = Depends(tenant_of),
+    ) -> dict:
+        """批量预热(9.8):设备空闲时推台词表,后台逐条预合成入缓存。
+
+        立即返回受理结果;进度看服务日志(tts prewarm done 行)。
+        """
+        from . import tts_service
+
+        texts = [t.strip() for t in body.texts if t and t.strip()]
+        if not texts:
+            raise HTTPException(400, "texts 不能为空")
+        if len(texts) > 200:
+            raise HTTPException(400, "texts 上限 200 条/次")
+        too_long = [t for t in texts if len(t) > tts_service.MAX_TEXT_LEN]
+        if too_long:
+            raise HTTPException(400, f"{len(too_long)} 条超长(上限 {tts_service.MAX_TEXT_LEN} 字)")
+        creds = store.get_credentials(tenant_id, "xfyun_tts")
+        if creds is None:
+            raise HTTPException(409, "尚未配置 provider: xfyun_tts,先写入 TTS 凭据")
+
+        cache_root = Path(os.environ.get("TTS_CACHE_DIR", "/opt/voice-agent/tts-cache"))
+        vcn = creds.get("vcn") or tts_service.DEFAULT_VCN
+        pending = [
+            t for t in texts
+            if not tts_service.cache_path(cache_root, tenant_id, vcn, t).exists()
+        ]
+        if pending:
+            background.add_task(
+                tts_service.prewarm_texts, creds, pending, cache_root, tenant_id
+            )
+        logger.info(
+            "tts prewarm accepted: tenant=%s total=%d pending=%d",
+            tenant_id, len(texts), len(pending),
+        )
+        return {
+            "accepted": len(pending),
+            "already_cached": len(texts) - len(pending),
+        }
 
     @app.get("/sdk/v1.js")
     async def sdk() -> FileResponse:

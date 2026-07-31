@@ -210,3 +210,94 @@ class TestSdkRoute:
         assert r.status_code == 200
         assert "JavisVoice" in r.text
         assert r.headers["content-type"].startswith("application/javascript")
+
+
+class TestTts:
+    """TTS-only 场景语音(§四方案 A):鉴权/校验/缓存/预热受理。"""
+
+    TTS_CREDS = {"app_id": "app1", "api_key": "AK123456", "api_secret": "SK654321"}
+
+    def _fake_synth(self, chunks: list[bytes], calls: list[str]):
+        async def fake(creds: dict, text: str):
+            calls.append(text)
+            for c in chunks:
+                yield c
+
+        return fake
+
+    def _client_with_tts(self, store, tenant, tmp_path, monkeypatch, chunks, calls):
+        import voice_agent.console.tts_service as ts
+
+        tid, key = tenant
+        store.put_credentials(tid, "xfyun_tts", self.TTS_CREDS)
+        monkeypatch.setenv("TTS_CACHE_DIR", str(tmp_path / "tts-cache"))
+        monkeypatch.setattr(ts, "synthesize_mp3", self._fake_synth(chunks, calls))
+        return make_client(store), key
+
+    def test_requires_credentials(self, store, tenant, tmp_path, monkeypatch) -> None:
+        tid, key = tenant
+        monkeypatch.setenv("TTS_CACHE_DIR", str(tmp_path / "tts-cache"))
+        client = make_client(store)
+        r = client.post("/v1/tts", json={"text": "你好"}, headers={"Authorization": f"Bearer {key}"})
+        assert r.status_code == 409
+
+    def test_input_validation(self, store, tenant, tmp_path, monkeypatch) -> None:
+        client, key = self._client_with_tts(store, tenant, tmp_path, monkeypatch, [b"x"], [])
+        h = {"Authorization": f"Bearer {key}"}
+        assert client.post("/v1/tts", json={"text": "  "}, headers=h).status_code == 400
+        assert client.post("/v1/tts", json={"text": "长" * 501}, headers=h).status_code == 400
+        assert client.post("/v1/tts", json={"text": "好", "format": "pcm"}, headers=h).status_code == 400
+
+    def test_synthesize_streams_and_caches(self, store, tenant, tmp_path, monkeypatch) -> None:
+        calls: list[str] = []
+        client, key = self._client_with_tts(
+            store, tenant, tmp_path, monkeypatch, [b"ID3", b"audio-data"], calls
+        )
+        h = {"Authorization": f"Bearer {key}"}
+        r = client.post("/v1/tts", json={"text": "开机欢迎"}, headers=h)
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("audio/mpeg")
+        assert r.content == b"ID3audio-data"
+        assert calls == ["开机欢迎"]
+        # 二次请求走缓存:合成不再被调用,内容一致
+        r2 = client.post("/v1/tts", json={"text": "开机欢迎"}, headers=h)
+        assert r2.status_code == 200
+        assert r2.content == b"ID3audio-data"
+        assert calls == ["开机欢迎"]
+
+    def test_prewarm_accepts_and_synthesizes(self, store, tenant, tmp_path, monkeypatch) -> None:
+        calls: list[str] = []
+        client, key = self._client_with_tts(store, tenant, tmp_path, monkeypatch, [b"mp3"], calls)
+        h = {"Authorization": f"Bearer {key}"}
+        # 先缓存一条
+        client.post("/v1/tts", json={"text": "夜航报告"}, headers=h)
+        calls.clear()
+        r = client.post(
+            "/v1/tts/prewarm",
+            json={"texts": ["夜航报告", "开箱播报", "状态询问"]},
+            headers=h,
+        )
+        assert r.status_code == 200
+        assert r.json() == {"accepted": 2, "already_cached": 1}
+        # TestClient 同步执行 BackgroundTasks:两条新文本已被合成
+        assert sorted(calls) == ["开箱播报", "状态询问"]
+
+    def test_prewarm_validation(self, store, tenant, tmp_path, monkeypatch) -> None:
+        client, key = self._client_with_tts(store, tenant, tmp_path, monkeypatch, [b"x"], [])
+        h = {"Authorization": f"Bearer {key}"}
+        assert client.post("/v1/tts/prewarm", json={"texts": []}, headers=h).status_code == 400
+        assert (
+            client.post(
+                "/v1/tts/prewarm", json={"texts": ["x"] * 201}, headers=h
+            ).status_code
+            == 400
+        )
+
+
+class TestHealthz:
+    def test_ws_url_exposed_for_prewarm(self, store: TenantStore, monkeypatch) -> None:
+        monkeypatch.setenv("LIVEKIT_WS_URL", "wss://voice-hk.example.com")
+        client = make_client(store)
+        r = client.get("/healthz")
+        assert r.status_code == 200
+        assert r.json()["ws_url"] == "wss://voice-hk.example.com"

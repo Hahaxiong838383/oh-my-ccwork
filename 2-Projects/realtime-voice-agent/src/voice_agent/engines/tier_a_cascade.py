@@ -138,6 +138,9 @@ class TierACascadeEngine(ExperienceEngine):
         import importlib
         import os
 
+        # 入房分段遥测(2026-07-30 同事 §3.4/8.2.2:拆"入会 924ms"的构成)
+        _join_t0 = time.monotonic()
+
         agents_mod = importlib.import_module("livekit.agents")
         silero = importlib.import_module("livekit.plugins.silero")
         Agent = agents_mod.Agent
@@ -145,6 +148,7 @@ class TierACascadeEngine(ExperienceEngine):
         inference = agents_mod.inference  # 本地音频 EOT(turn-detector-v1-mini)
 
         await ctx.connect()  # 先连入 room,ctx.room 才可用
+        _join_t_conn = time.monotonic()
 
         room_input = agents_mod.RoomInputOptions
 
@@ -378,6 +382,19 @@ class TierACascadeEngine(ExperienceEngine):
                     "music tools 注册失败，音乐能力关闭"
                 )
 
+        # 说完即挂断(2026-07-30 同事需求 §五方案 B):租户大脑在告别语末尾输出哨兵,
+        # llm_node 层剥离(不进 TTS/字幕),播完本轮后服务端关房→前端收 disconnected。
+        # env 未配置(默认)=完全关闭,主链路零影响。
+        _sentinel = os.environ.get("SENTINEL_END_TOKEN", "").strip() or None
+        _sentinel_state = {"armed": False}
+
+        def _on_sentinel() -> None:
+            _sentinel_state["armed"] = True
+            logger.info("end sentinel detected: farewell turn, will hang up after playout")
+
+        if _sentinel:
+            logger.info("end sentinel armed: %r", _sentinel)
+
         await session.start(
             agent=_make_agent(
                 Agent,
@@ -385,6 +402,8 @@ class TierACascadeEngine(ExperienceEngine):
                 speaker_sidecar=speaker_sidecar,
                 tools=extra_tools,
                 interrupt_state=interrupt_state,
+                end_sentinel=_sentinel,
+                on_sentinel=_on_sentinel,
             ),
             room=ctx.room,
             # 统一输入采样率 16k:让 VAD 与 STT 收同采样率音频
@@ -403,7 +422,17 @@ class TierACascadeEngine(ExperienceEngine):
             # ⚠️ 回退:room_output_options(dtx=False/red=True) 致浏览器 livekit-client WS 升级后
             # 连接 reset(python client 能协商 RED 但浏览器协商失败)。dtx/red 跨境优化改走客户端侧。
         )
+        _join_t_started = time.monotonic()
+        logger.info(
+            "join timing: entry→room_connected=%dms, engines+session_start=%dms, total=%dms",
+            round((_join_t_conn - _join_t0) * 1000),
+            round((_join_t_started - _join_t_conn) * 1000),
+            round((_join_t_started - _join_t0) * 1000),
+        )
         _register_metrics(session, ctx, agents_mod)  # 链路延迟 → web 页面板
+        _register_speaking(session, ctx)  # 说话状态 → SDK speaking 事件(9.2)
+        if _sentinel:
+            _register_sentinel_hangup(session, ctx, _sentinel_state)
 
         # 假打断恢复渐起(POC 2026-07-29):resume 后音量 0→1 爬坡,消"声音突然冒回来"
         # 的断差感(0 字门两阶段打断的配套件)。⚠️ 必须在 session.start 之后挂——
@@ -895,6 +924,8 @@ def _make_agent(
     speaker_sidecar: Any | None = None,
     tools: list[Any] | None = None,
     interrupt_state: dict[str, float] | None = None,
+    end_sentinel: str | None = None,
+    on_sentinel: Any | None = None,
 ) -> Any:
     """构造带承接音的 Agent 子类实例(C1 v2,2026-07-02 川哥反馈迭代)。
 
@@ -909,6 +940,53 @@ def _make_agent(
     bank = _load_filler_bank()
 
     class _FillerAgent(agent_cls):  # type: ignore[misc, valid-type]
+        async def llm_node(self, chat_ctx: Any, tools_: Any, model_settings: Any) -> Any:
+            """LLM 输出流哨兵剥离(说完即挂断,§五方案 B)。
+
+            在 llm_node 层滤=TTS 与 transcript 全部拿到净化文本(哨兵绝不被念出、
+            不进字幕);未配置哨兵时零开销直通 default 实现。
+            """
+            source = agent_cls.default.llm_node(self, chat_ctx, tools_, model_settings)
+            if not end_sentinel:
+                async for chunk in source:
+                    yield chunk
+                return
+            from .sentinel import SentinelStripper
+
+            stripper = SentinelStripper(end_sentinel)
+            notified = False
+            last_chunk: Any = None
+            async for chunk in source:
+                delta = getattr(chunk, "delta", None)
+                content = getattr(delta, "content", None) if delta is not None else None
+                if isinstance(chunk, str):
+                    cleaned = stripper.feed(chunk)
+                elif content:
+                    last_chunk = chunk
+                    cleaned = stripper.feed(content)
+                else:
+                    yield chunk  # usage/tool_call/FlushSentinel 等原样透传
+                    continue
+                if stripper.found and not notified and on_sentinel is not None:
+                    notified = True
+                    on_sentinel()
+                if not cleaned:
+                    continue  # 整段被扣(哨兵本体或其前缀),不放行
+                if isinstance(chunk, str):
+                    yield cleaned
+                else:
+                    delta.content = cleaned
+                    yield chunk
+            tail = stripper.flush()
+            if tail:
+                # 尾部扣住的"疑似前缀"实为正常文本,补发(不能丢字)
+                if last_chunk is not None:
+                    nc = last_chunk.model_copy(deep=True)
+                    nc.delta.content = tail
+                    yield nc
+                else:
+                    yield tail
+
         async def on_user_turn_completed(self, turn_ctx: Any, new_message: Any) -> None:
             if speaker_sidecar is not None:
                 # 旁路声纹:只调度不等待(create_task ~µs,不拖承接音/回复)
@@ -965,6 +1043,58 @@ def _register_livekit_handlers(session: Any, bridge: LiveKitEventBridge) -> None
     on("agent_state_changed", _on_agent_state_changed)
     on("overlapping_speech", _on_overlapping_speech)
     on("agent_false_interruption", _on_agent_false_interruption)
+
+
+def _register_sentinel_hangup(session: Any, ctx: Any, state: dict[str, Any]) -> None:
+    """哨兵检出后,等本轮播报真正结束(speaking→非 speaking)再关房。
+
+    关房走 server API(ctx.delete_room):房间删除会把前端参与者踢出,
+    SDK 收到现有 disconnected 事件——前端零改动。延迟 0.8s 留客户端
+    播放缓冲余量(服务端 playout 结束≠扬声器放完最后一截)。
+    """
+
+    def _on_state(ev: Any) -> None:
+        if not state.get("armed"):
+            return
+        if str(getattr(ev, "old_state", "")) != "speaking":
+            return
+        if str(getattr(ev, "new_state", "")) == "speaking":
+            return
+        state["armed"] = False
+
+        async def _hangup() -> None:
+            await asyncio.sleep(0.8)
+            logger.info("end sentinel: farewell played out, deleting room %s", ctx.room.name)
+            ctx.delete_room()
+
+        asyncio.create_task(_hangup())
+
+    session.on("agent_state_changed", _on_state)
+
+
+def _register_speaking(session: Any, ctx: Any) -> None:
+    """agent 说话状态 publish 到 room → SDK `speaking` 事件。
+
+    租户纯图标 UI 的状态机依赖(9.2):speaking=false 即本轮播报完毕
+    (框架 playout 结束),替代前端轮询音频电平的猜测式判断。
+    """
+    import json
+
+    def _on_state(ev: Any) -> None:
+        new = str(getattr(ev, "new_state", ""))
+        old = str(getattr(ev, "old_state", ""))
+        d: dict[str, Any] | None = None
+        if new == "speaking":
+            d = {"k": "speaking", "speaking": True}
+        elif old == "speaking":
+            d = {"k": "speaking", "speaking": False}
+        if d is None:
+            return
+        asyncio.create_task(
+            ctx.room.local_participant.publish_data(json.dumps(d), reliable=True, topic="state")
+        )
+
+    session.on("agent_state_changed", _on_state)
 
 
 def _register_metrics(session: Any, ctx: Any, agents_mod: Any) -> None:

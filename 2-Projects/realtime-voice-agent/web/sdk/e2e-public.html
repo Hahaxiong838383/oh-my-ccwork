@@ -24,13 +24,19 @@
     document.getElementById("out").textContent = lines.join("\n");
   };
   log("sdk_from_public", typeof window.JavisVoice === "object");
+  log("has_prewarm", typeof JavisVoice.prewarm === "function");
   document.getElementById("go").onclick = async () => {
     const apiKey = decodeURIComponent(location.hash.slice(1));
     if (!apiKey) return log("fatal", "no key in hash");
     try {
+      const t0 = performance.now();
+      await JavisVoice.prewarm();
+      log("prewarm", `resolved ${Math.round(performance.now() - t0)}ms`);
       const s = await JavisVoice.connect({ apiKey }); // endpoint 默认即公网
       log("connect", "resolved");
+      log("room_public_api", !!(s.room && s.room.localParticipant));
       s.on("state", (st) => log("state", st));
+      s.on("speaking", (p) => log("speaking", JSON.stringify(p)));
       s.on("transcript", (t) => log("transcript", `[${t.role}${t.final ? "/final" : ""}] ${t.text}`));
       s.on("metrics", (m) => log("metrics", JSON.stringify(m)));
       window._session = s;
