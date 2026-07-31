@@ -1575,6 +1575,12 @@ Bot 自述的事实。
   否则逗号分隔 uid 白名单）。**owner Bot 不进沙箱，天然不受影响。**
 - **日志**：`/srv/h-platform/audit/lark-cli/<uid>.log`。
   **新增灰度用户前必须先 `touch` 他的日志文件** —— 降级门查不到文件会静默关掉审计。
+  （曾写过自动补建 `89862ec`，被 2026-07-31 那次动作门 revert 一起退掉，所以这条
+  手工纪律仍然有效。）
+- ⚠️ **现状（2026-07-31）**：`H_LARK_AUDIT=rayman.chen,u-01481f4a32`（2 户灰度），
+  但目录下躺着 **8 个 0 字节日志文件**（当初为全量覆盖预建的残留）。
+  **看到空文件不要读成「这个租户没调过 lark-cli」——是审计压根没对他开。**
+  判"某租户有没有调用"之前，先看 `.env` 白名单里有没有他。
 - **回滚**：`H_LARK_AUDIT=0` + 重启 bridge **和 runner-worker**，挂载即摘。
 - **判读**：`cmd=` 后面是「域 子命令 flag名」。写类看 `+cells-set` / `+cells-set-style`
   / `+workbook-create` / `docs +update` 等；只有 `+cells-get` / `--help` / `get_node`
