@@ -535,13 +535,58 @@ lark-cli 1.0.71：**`--device-code` 优先于 `--no-wait`，与顺序无关**，
 2. **删掉自相矛盾的阻塞式示例**：同一份 skill 里 46 行教 `--no-wait`、79 行却给阻塞式
    写法当「推荐」，agent 会挑错的那个跑。改成正误对照。
 
-### ⏸ 两个待观察（都不阻塞，但别忘）
+### 真机验收（三次才过，前两次是我出题的问题）
 
-1. **`inferLarkAuthorization` 的 domain 提示可能丢**：我用 `--domain calendar` 跑，
-   它推断出 `{domains:[],scopes:[],recommend:true}`。生产里域提示通常来自更早那条
-   权限报错文本，所以**大概率是孤立测试的假象**；但若真丢，broker 会用 `--recommend`
-   起流，可能不含所需 scope → 用户授权了仍然缺权。**观察点**：撞墙后看
-   `lark auth flow started` 那条日志的 domain 参数。
+| 轮 | 指令 | 结果 |
+|---|---|---|
+| 1 | 「帮我授权一下 slides（演示文稿）的权限」 | ❌ Bot 理解成「给文档开权限」，跑 `drive permission.members create`，**全程没碰 `auth login`** |
+| 2 | 「你现在有 slides 域的 user 身份授权吗？没有的话去申请」 | ❌ Bot 看 `auth status` 里有 `drive:docs` 相关 scope，**自己错判成「已有 slides 授权」**，不申请 |
+| 3 | 「用 lark-cli 申请 slides 域的 user 授权：auth login --domain slides」 | ✅ 走到了，但**暴露真 bug**（见下） |
+
+**教训**：题目只要留给 Bot 判断「需不需要 X」，测的就是它的判断力，不是我要测的机制。
+想测机制就直接指名命令。前两轮白跑，还差点被当成平台失效。
+
+### 真 bug：卡片发不出来（`6d33ad4` 已修）
+
+第 3 轮里注入生效、Bot 16s 秒回、URL 也出来了、检测器也触发了，
+**但用户只收到一张没有按钮的通用提示**。bridge 日志：
+
+```
+lark auth broker start fail uid=rayman.chen  lark auth CLI exit 2: "param": "--domain"
+```
+
+根因不在检测器，在 `inferLarkAuthorization`：域名是从 **Bot 的自然语言正文**里正则抠的，
+措辞一变就带脏字——
+
+```
+执行 `lark-cli auth login --domain slides` …    →  抠成  slides`
+（lark-cli auth login --domain slides）。        →  抠成  slides）。
+```
+
+broker 拿脏值调 CLI → exit 2 → 起不了流 → 降级成通用提示。
+
+**这个脆弱性本来就在**，是我的注入把常见情形从 `--scope "带引号"`（正则有引号分支，
+抠得干净）挪到了 `--domain 裸词`，才踩中。**一个改动的影响面不止于它改的那行，
+还包括它让哪条既有路径变成了主路径。**
+
+修法：按 CLI `--help` 列的合法域做白名单，两端削非标识字符，认不出就丢掉退回
+`--recommend`；scope 过 `domain:resource:action` 形状校验。宁可授权范围宽一点，
+也不能让整条链断掉。+3 条回归测试钉住。
+
+### ✅ 终局验收（2026-07-31 10:17）
+
+```
+10:17:20  lark auth flow started uid=rayman.chen expires=600s
+10:17:21  user action delivered feishu_cli_auth          ← 撞墙到发卡 1 秒
+10:17:36  lark auth flow completed uid=rayman.chen       ← 川哥点卡完成闭环
+```
+审计日志同轮记录 `auth login --domain --as --no-wait(injected)`。
+对比旧行为：620s 墙钟打满 + 卡片不来。**川哥确认「有授权卡片了」。**
+
+### ⏸ 一个待观察
+
+1. ~~`inferLarkAuthorization` 的 domain 提示可能丢~~ ✅ **已确认是真问题并修掉**
+   （当时标为「大概率是孤立测试的假象」——**是我判轻了，它就是真的**）。
 2. **孤儿流仍在**：agent 那条设备流没人轮询，10 分钟过期。已用 L0 消歧把「用户点错」
    这个危害挡掉，但流本身还在起。要彻底消除得走方案 2（wrapper fail-fast +
    放宽检测器判据），**需要改 bridge 代码 + 契约测试**，等这批灰度跑出数据再定。
