@@ -2004,3 +2004,73 @@ description 里另加一句「凡创建或修改日程，描述都要写完整�
 即使用户没明说『要议程』也照此执行」。
 发布走 `scripts/publish-l0-skill.mjs`（控制面 API，自带 control/local 双向 sha 验收）。
 盘点结论：39 个 L0 skill 里**只有这一个**丢过触发词，其余都完好。
+
+
+## 多站点执行（Mini A/B）· 运维要点（2026-07-31 起）
+
+**分支**：`codex/h-mini-ab-poc`（**尚未合 main**，codex 还在做 Mini 线）。
+dev198 已切到该分支运行。合并前先跑 `npm test` 全量 + 两端 healthz + 控制面唯一租约。
+
+**站点归属真源是 `users.json` 的 `executionSite`**，不是任何健康页读数：
+
+```bash
+python3 -c "import json;d=json.load(open('/srv/h-platform/users.json'));
+[print(u['uid'],u.get('botName'),u.get('executionSite','dev198')) for u in d['users']]"
+```
+
+- dev198 的 user-sync 会**把非本站用户从本地 users.json 过滤掉并写回**。
+  所以 dev198 上看到 8 个用户、Mini 上看到 1 个，是设计如此，**不是掉了用户**。
+  全量真值在控制面。
+- owner **不参与 placement**：`shouldUseAppPlacement` 要求 `ctx.kind==='user'`，
+  且控制面 claim 只在用户注册表里找 appId，owner 不在其中直接 404。健康页里
+  owner 那条 `lease` 恒为 null，正常。
+
+**唯一长连接怎么保证的**（改这块前先看懂）：控制面冲突返 409 → `control-client.mjs`
+的 `call()` 对 `!res.ok || !data.ok` **两者都抛** → `start()` 抛 → bridge 不建连。
+另有一道 `body.site === user.executionSite` 校验，没租约也抢不走别站的 App。
+
+**租约丢失会自愈**（`08074df` 起）：`lose()` → 断 WS → 指数退避重新申领
+（5s 起、×2、封顶 60s）→ claim 成功才 `onRegained` 重建 WS。
+`lease.status()` 能看出「正在重试 / 已掉线多久」。
+⚠️ 改自愈逻辑时**必须保住**「claim 成功才重连」——否则会出现双长连接。
+测试 `test/app-placement-reclaim.test.mjs` 第②条就是钉这条的。
+
+**真机验证租约自愈**（比读代码有用）：
+
+```bash
+# 强制释放某 App 的租约，看它能不能自己回来（选川哥的测试 Bot，别碰同事的）
+curl -s -X POST -H "Authorization: Bearer $H_CONTROL_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"appId":"<appId>","leaseId":"<leaseId>"}' "$H_CONTROL_URL/internal/app-placement/release"
+# 然后看日志：lease lost → reacquired attempts=N down=Nms → 重建 WS 长连接
+```
+
+## 🔴 dev198 出站代理（2026-07-31 事故后重构）
+
+**曾经的坑**：`/etc/environment` 里写着 `HTTP_PROXY=http://10.9.1.57:10808`
+（2026-07-17 配的，指向 **Mini 的 DHCP 地址**）。Mini 换手动 IP 后该目标失联，
+xAI 只能走代理（直连超时）、飞书 token 刷新也走它，**9 个 Bot 全线不可用 12 分钟**。
+
+现在三层都指向 dev198 自己的 Xray `127.0.0.1:10808`（`protocol=mixed`，HTTP/SOCKS 都支持）：
+
+| 层 | 位置 |
+|---|---|
+| 两个 Bot 服务 | `~/.config/systemd/user/feishu-grok-{bridge,runner-worker}.service.d/10-proxy.conf` |
+| 登录 shell | `~/.config/proxy-mini.env`（由 `.profile:36` 加载，**排在 source .bashrc 之后**，会覆盖 .bashrc） |
+| 系统级 | `/etc/environment`（需 root，川哥手动改的） |
+
+⚠️ **注入点有三个，改代理要三处都看**。当初我只修了 `/etc/environment` 就宣布收工，
+结果登录 shell 仍是死地址——第二个注入点藏在 `.profile:36`。
+⚠️ unit 级 `Environment=` **优先于**继承来的环境（实测证伪过：把管理器环境设成
+死地址重启，进程内仍是 127.0.0.1）。
+
+## 🔴 日志绝不 dump 第三方错误对象
+
+`lib/safe-logger.mjs`（`e06858e` 起）：飞书 SDK 的默认 logger、Node 的
+unhandledRejection 默认处理器、以及 `main().catch` 里的 `console.error(err)`，
+三处都会 `util.inspect` 展开 `err.config.data` —— 那正是
+`{app_id, app_secret}`，2026-07-31 真把某个 Bot 的凭据反复写进了 journald。
+
+- 已注入 bridge 全部 4 处 Lark 客户端的 `logger:`，并接管进程级异常。
+- **加新的 Lark 客户端时记得带 `logger: createSafeLarkLogger(log)`**，否则又走默认。
+- 排查时用 `journalctl … | grep -v app_secret` 过滤，别为看上下文把凭据再复述一遍。
+- 详见 [[feedback_never_dump_foreign_objects_to_logs]]。

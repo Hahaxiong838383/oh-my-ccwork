@@ -727,3 +727,87 @@ L0 教 agent 把 URL **复述**进正文——那不是冗余，是唯一的信�
 **② 守卫锚点写太宽**：接线脚本用 `includes('sandbox,')` 判断「是否已接线」，
 而文件里别处就有这个串，于是报了「已接线」实际没接上，靠事后 grep 才发现。
 **守卫的锚点必须唯一**，宁可长一点。
+
+
+---
+
+## L · Mini A/B POC 收口 + 一场跨机事故（2026-07-31 下午）
+
+### 分支状态
+
+`codex/h-mini-ab-poc`，**不合 main**（川哥定：codex 还在做 Mini 线，全做完验证完再合）。
+dev198 已切到该分支运行。
+
+| commit | 内容 |
+|---|---|
+| `2fbd4ef` | Mini A/B POC 收口（executionSite / 租约 CAS / Mini 独立栈 / LaunchAgent / skills 站点过滤） |
+| `e06858e` | 日志脱敏——不再 dump 第三方错误对象 |
+| `08074df` | 租约丢失后自动重新申领 |
+
+**边界⑤达成**：`6d33ad4` 的授权参数清洗与方案 2′ 五个文件，合并后与 `origin/main`
+**逐字节一致**，未回退。合并零冲突（先 `checkout HEAD --` 撤掉工作树里那份内容相同的
+副本，再 merge，让它以 commit 形式进来）。
+
+### 事故：一条 2026-07-17 写下的跨机依赖
+
+`/etc/environment` 里 `HTTP_PROXY=http://10.9.1.57:10808` —— **Mini 的 DHCP 地址**。
+Mini 换手动 IP（`.54`）后该目标失联：xAI 只能走代理（直连超时）、飞书 token 刷新
+也走它，**9 个 Bot 全线不可用 12 分钟**（11:20:47 起）。
+
+- **不是我的部署引起的**：首条 EHOSTUNREACH 在 11:20:47（旧进程），我重启在 11:24:14。
+- **配置藏得深**：不在 `.env`、不在 systemd unit、不在任何仓库文件，而在
+  `/etc/environment`（PAM 在 session 建立时读，早于一切 shell rc）。
+- **注入点不止一个**：修完 `/etc/environment` 登录 shell 仍是死地址 ——
+  第二处在 `~/.profile:36` 加载的 `~/.config/proxy-mini.env`，而那行**排在
+  source .bashrc 之后**，会覆盖 .bashrc。**我当时先宣布了一次部分胜利，是个教训。**
+
+现在三层都指向 dev198 自己的 Xray `127.0.0.1:10808`，跨机依赖断干净。
+unit 级 `Environment=` 优先级**实测证伪过**（把管理器环境设成死地址重启，进程内仍是本地）。
+
+### 排查中发现的凭据泄漏（已修 `e06858e`）
+
+飞书 SDK 报错时，三处把整个 error 对象丢进日志（SDK 默认 logger / Node 的
+unhandledRejection 默认处理器 / `main().catch` 里的 `console.error`），
+`util.inspect` 展开 `err.config.data` —— **某个用户 Bot 的真实 `app_secret`
+十几分钟内落进 journald 几十次**。
+
+修法是**白名单提取**（只拿 name/code/message/method/url…，绝不碰 config.data /
+headers / request / response.data）+ 键名与值形态双层兜底。
+⚠️ 给 unhandledRejection 加监听器会抑制 Node 默认崩溃，**必须显式 `exit(1)`**
+保留「崩溃→systemd 拉起」的原语义（实测确认过原来确实是 exit 1）。
+
+川哥定：**不轮换该 secret、不清历史日志**。
+
+### 租约自愈（已修 `08074df`）
+
+复核时撞见 `connected 5/9` —— 12:32 一次几秒的网络抖动让 4 个 App 租约续约失败、
+断开，网络恢复后**再也没回来**。根因：`lose()` 置 `stopped=true`、清定时器、关连接，
+**之后什么都没有**。症状极隐蔽（healthz `ok=false`，无告警，日志一片安静）。
+
+修法：指数退避重新申领（5s 起 ×2 封顶 60s），claim 成功才 `onRegained` 重建 WS。
+**安全不变量未削弱**：claim 的互斥在控制面（409），别站持有期间一直退避绝不连接。
+新增 `status()` 让降级可观测。
+
+**真机证伪**：强制 release 产品专家的租约 → `lease lost` → 5 秒后
+`reacquired attempts=1 down=5058ms` → 重建 WS，`connected` 全程 9/9，新 leaseId 为证。
+
+### 终态
+
+```
+dev198  08074df / codex/h-mini-ab-poc   apps=9  connected 9/9  botOpenId 9/9
+        契约 2026-07-30.3  有效租约 8/8  owner 无租约  lastError=null
+Mini    connected  apps=1  uid=u-aca292be3f  site=mini  Outbox pending=0
+控制面  cli_a9768… 唯一租约 site=mini / instanceId=mini-primary
+npm test  全量 exit 0、0 not-ok
+```
+
+### ⏸ 本章挂起
+
+1. **分支不合 main**，等 codex 的 Mini 线全部完成 + 验证。
+2. **Mini 仍是 macOS `native` POC**，不代表 Linux bwrap/gVisor 物理隔离完成 ——
+   外部租户必须留在 Linux。
+3. Mini `H_USER_MEMORY=0`，独立 ai-memory 原生服务未补齐。
+4. `help` skill 含个人绝对路径被隐私门拒，待改可移植路径。
+5. 长任务验证的是**主动完成卡 + ACK**，不等于「用户消息触发、前台 120 秒后转后台」
+   的视觉验收。
+6. `MEMORY.md` 已 18.4KB（绊线 12KB），`/rule-compress` 需川哥在场跑。
