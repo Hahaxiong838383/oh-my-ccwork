@@ -17,6 +17,19 @@
 > orphan compute=1（设计内保守标记，Recovery 实见两次成功重放）。
 > **真值备忘**：healthz `127.0.0.1:18765`；`systemctl --user`；控制面代码在 `app/` 子目录。
 
+## 📌 做记忆 / 自进化优化前必读
+
+**[`h-platform-memory-write-gates.md`](h-platform-memory-write-gates.md)**（2026-07-31，方案未实施）
+—— 记忆写入路径的五道提交门 + score-before-update，源自论文 arXiv 2607.26598
+Living-Harness。**cc 与 codex 同看**，动 `memory-capture.mjs` / `captureExchange` /
+自进化相关代码前先读，避免重复走一遍已经证伪的路。
+
+其中两条已核实的代码事实值得先记住：
+- `captureExchange` 全仓**唯一真实调用点** `bridge.mjs:3289`，在成功送达分支；
+  **失败路径不写记忆**（走 `appendUserFriction`）。
+- 写入路径把 `delivered`（送达成功）当成「任务成功」的代理，唯一"证据"是
+  `replyText` = **Bot 自述**。`lib/lark-audit.mjs` 是现成的客观证据源，尚未接线。
+
 ## ⓪ 已闭环（本轮 cc 处理）
 
 - ~~dev198 生产 git 零入账~~ **已修**：`git reset --mixed origin/main`，
