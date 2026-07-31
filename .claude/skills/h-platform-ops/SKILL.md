@@ -1605,6 +1605,21 @@ Bot 自述的事实。
   字节偏移检测抓到）。所以对外只说"本次实际执行的调用"，**绝不说"已验证写入"**。
 - 部署源在仓库 `ops/lark-cli-audit`，与 `/srv/h-platform/shared/bin/lark-cli-audit`
   必须 md5 一致（别只改生产不入库）。
+- **wrapper 同时负责给 `auth login` 注入 `--no-wait`**（2026-07-31 起，`NOWAIT_UIDS="all"`）。
+  为什么：阻塞式 `auth login` 把授权 URL 困在没返回的工具调用里，检测器
+  （`lib/interactive-wait.mjs:78`）要求输出里有 URL 才触发 → 撞墙 = 620s 打满 +
+  不发卡 + 堵住 proactive 串行队列。注入后实测**撞墙到发卡 1 秒**。
+  `NOWAIT_UIDS` 语义与 `H_LARK_AUDIT` 一致（`all`/空/uid 白名单），改它即时生效、
+  **不用重启不用发版**（wrapper 每次 exec 重新读）。owner 不进沙箱，碰不到。
+- ⚠️ **改 wrapper 必须用原子 rename，不能原地截断写**：正在跑的沙箱 ro-bind 着这个
+  文件，`cat >` 会破坏它正在 exec 的脚本，违反 fail-open 铁律。
+  `cp 新文件 .tmp && chmod 755 && mv -f .tmp 目标` —— 旧 inode 被 mount 钉住，
+  在跑的任务不受影响，新沙箱绑新文件。
+- ⚠️ **`inferLarkAuthorization` 是从 Bot 的自然语言正文里正则抠 `--domain` 值的**，
+  措辞带 markdown 反引号或中文标点就会抠出脏值 → broker 调 CLI 判非法 →
+  **卡片发不出来，只降级成一张没按钮的通用提示**。已加合法域白名单
+  （`6d33ad4`，+3 回归测试）。日后扩域名要同步改那个白名单，否则新域会被静默丢弃。
+  详见 [[feedback_parsing_agent_prose_for_machine_params]]。
 
 ## 改 L0 共享 skill 的正确路径（2026-07-30 踩过）
 
