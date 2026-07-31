@@ -692,9 +692,38 @@ L0 教 agent 把 URL **复述**进正文——那不是冗余，是唯一的信�
 分档：`H_AUTH_SIGNAL=0` 只关信号通道；wrapper 里 `FAILFAST_AUTH_LOGIN=0` 退回注入
 `--no-wait`（即时生效不用重启）；全撤按卡片走。
 
+### 上线后从生产日志里抓到自己一个 bug（`e5497d5` 已修）
+
+```
+02:56:21Z  cmd=auth login --domain --help (failfast:platform-takeover)  authreq=domain:slides
+```
+
+**`auth login --help` 被 fail-fast 拦了** —— agent 只是想查帮助，结果查不到，
+还多发了一次授权信号。同一个 run 里 watcher 只发一次所以没造成重复发卡，
+但跨 run 就会重复弹卡。
+
+根因：判据只看**子命令名**（`$1=auth && $2=login`），没看后面的 flag 在要什么。
+`--device-code` 排除了，`--help`/`-h` 漏了。补上后七种情形逐一实测
+（四种放行零信号 / 三种拦下各发一次）。
+
+> 「门只能判它看得见的东西」的又一例 —— 这次是**看得见却没看全**。
+
+### 生产实录（川哥真机确认）
+
+```
+10:56:02.189  runner-worker auth signal from audit log {"domains":["slides"]}
+10:56:02.430  lark auth flow started        ← 信号到起流 240ms
+10:56:03.163  user action delivered          ← 卡片 1 秒
+10:56:18.126  lark auth flow completed       ← 川哥点卡完成
+```
+
 ### 自省
 
-改 wrapper 时用 `String.replace` 把 `"$$"`（shell 的 PID）写成了 `"$"` ——
+**① 转义层数（第 N 次）**：改 wrapper 时用 `String.replace` 把 `"$$"`（shell 的 PID）写成了 `"$"` ——
 **replace 的替换串里 `$$` 是「插入一个 `$`」的特殊语法**。审计日志的 pid 字段
 当场变成字面 `$`，靠逐行看输出才发现。改用函数式 replacer 才对。
-今晚第 N 次栽在转义层数上，这次的层在 JS 而不是 sh。
+这次的层在 JS 而不是 sh。
+
+**② 守卫锚点写太宽**：接线脚本用 `includes('sandbox,')` 判断「是否已接线」，
+而文件里别处就有这个串，于是报了「已接线」实际没接上，靠事后 grep 才发现。
+**守卫的锚点必须唯一**，宁可长一点。
