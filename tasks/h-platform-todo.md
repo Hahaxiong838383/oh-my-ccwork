@@ -279,9 +279,8 @@ heredoc+`$(cat)`+F5→F2+排除名单+回读）；**巡检门已证伪**（人�
    runner 正常启动（`model=kimi-code/k3`），属 kimi provider 服务端/配额侧，非平台缺陷。
    **机制层已到位**（`workspace/AGENTS.md` 托管块含铁律、对等巡检绿），只差"真机跑一次
    成功"。复跑条件：provider 恢复，或让该用户发一句话触发。
-2. **lark-cli wrapper 注入 `--no-wait`**（授权流 100% 确定性）：现在 agent 走不走三步法
-   是概率性的，走错也只是慢（卡片仍会发出）。要绝对确定性需在审计 wrapper 挂载点注入，
-   改动小但影响全体用户，需单独验收——**等川哥要再做**。
+2. ~~lark-cli wrapper 注入 `--no-wait`~~ ✅ **已做，灰度两台测试 Bot**（2026-07-31 09:3x，
+   `cfb4329`）。详见下方 J 章。
 3. ~~孤儿目录 `u-ad7292bc60`~~ ✅ **已清**（2026-07-31 09:2x）。
    **来历**：v1.13.1 开放「选择已有应用」后，同一个 App 再走一次开通流程会按飞书身份
    派生出**新 uid**，凭空多出一个空账号（同 appId/openId、无订阅无用量无部门）——
@@ -471,3 +470,74 @@ package.json 从未引用过它）。文件在、11 条测试写了、套件根�
 9 用户 / 平台落后 0 / 用户落后 0。回滚点 `~/h-ops-rollback/20260731-L0-redo/`
 （**外科式回滚卡**：工作树里 12 个 modified 全是 owner Bot 活文件，
 `git reset --hard` 会覆盖 owner 线上配置，卡里已写死只 checkout 三个文件）。
+
+---
+
+## J · wrapper 注入 `--no-wait` + L0 消歧（2026-07-31 09:3x，`cfb4329` / L0 sha `2766bd4f8f3a`）
+
+### 先纠正一个理解偏差
+
+**这条注入不参与授权本身。** 真正完成授权的一直是平台 broker
+（`lib/lark-auth-broker.mjs`：自己跑 `--no-wait --json` 拿码 → 发卡 → 后台
+`--device-code` 轮询 → `retryAfterAuth` 重跑）。
+
+注入的唯一作用是**让 agent 的输出里出现一条 URL，好让检测器触发**——
+`lib/interactive-wait.mjs:78` 的判据是「输出里必须匹配到 verification URL」，
+匹配不到 `return null`。阻塞式把 URL 困在没返回的工具调用里 = 检测器眼里什么都没发生
+= **620s 墙钟打满 + 不发卡 + 堵住 proactive 串行队列后续轮次**。
+
+### 实测（动手前先做掉的那条）
+
+lark-cli 1.0.71：**`--device-code` 优先于 `--no-wait`，与顺序无关**，两者同给等价于
+只给 `--device-code`（都报无效码 exit=3）。所以无条件注入其实安全；实现里仍显式排除，
+是为了 CLI 升级后优先级万一变了不会静默改变行为（线上 1.0.71 / 最新 1.0.80）。
+
+### 实现
+
+灰度名单写在 wrapper 文件里（`NOWAIT_UIDS`），用已经 setenv 进沙箱的 `H_AUDIT_UID`
+匹配。**零 bridge 代码改动、零重启、零发版**；改名单那一行即时生效，清空 = 全关。
+
+**部署用原子 rename 不用原地截断**——当时有正在跑的沙箱 ro-bind 着这个文件，
+截断写会破坏它正在 exec 的脚本，违反 fail-open 铁律。rename 后旧 inode 被 mount
+钉住，在跑的沙箱不受影响，新沙箱绑新文件。
+
+审计日志记的是**实际执行的命令**（含 `--no-wait(injected)`），不是用户给的那条 ——
+记账要匹配真正发生的事。
+
+### 验收
+
+| 层 | 内容 | 结果 |
+|---|---|---|
+| 假 REAL 八例 | 注入位置 / 不重复注入 / `--device-code` 排除 / 非 auth login 不动 / 灰度外不动 / uid 未设不动 / `--cells` 载荷值仍不进日志 | 8/8 |
+| 真沙箱 | 带 `--device-code` → 不注入，5.2s exit=3 | ✓ |
+| 真沙箱 | 裸 `auth login` → 注入，**0.2s 秒回** exit=0，stdout 含 verification URL | ✓ |
+| 检测器 | 把上面那段真实 stdout 喂给 `extractUserActionRequest` | `kind=feishu_cli_auth` ✓ |
+| 回归 | `npm test` exit 0 / 对等巡检 9 用户 0 落后 / L0 落盘两段都在 | ✓ |
+
+### L0 `lark-shared` 同轮改两处（sha `2766bd4f8f3a`）
+
+1. **三步法第 2 步消歧**：正文那条 URL 是**给平台看的触发信号**，不是给用户点的 ——
+   agent 必须明说「请点卡片上的按钮」，且**不要引导用户点正文里那条**
+   （那条流由 CLI 起、平台不轮询，点了不生效）。
+2. **删掉自相矛盾的阻塞式示例**：同一份 skill 里 46 行教 `--no-wait`、79 行却给阻塞式
+   写法当「推荐」，agent 会挑错的那个跑。改成正误对照。
+
+### ⏸ 两个待观察（都不阻塞，但别忘）
+
+1. **`inferLarkAuthorization` 的 domain 提示可能丢**：我用 `--domain calendar` 跑，
+   它推断出 `{domains:[],scopes:[],recommend:true}`。生产里域提示通常来自更早那条
+   权限报错文本，所以**大概率是孤立测试的假象**；但若真丢，broker 会用 `--recommend`
+   起流，可能不含所需 scope → 用户授权了仍然缺权。**观察点**：撞墙后看
+   `lark auth flow started` 那条日志的 domain 参数。
+2. **孤儿流仍在**：agent 那条设备流没人轮询，10 分钟过期。已用 L0 消歧把「用户点错」
+   这个危害挡掉，但流本身还在起。要彻底消除得走方案 2（wrapper fail-fast +
+   放宽检测器判据），**需要改 bridge 代码 + 契约测试**，等这批灰度跑出数据再定。
+   ⚠️ 顺带发现：**CLI 自己的 hint 文本明确教 agent「YOU must execute
+   `auth login --device-code <device_code>` yourself」** —— 与平台设计冲突
+   （平台自己轮询自己那条流）。L0 第 3 步已经写了「不要跑 `--device-code`」压住它，
+   但这是**skill 对抗 CLI 内置提示**，属概率性压制，是方案 2 的另一个理由。
+
+### 回滚
+
+`~/h-ops-rollback/20260731-nowait-inject/`（生产 + 仓库两份 wrapper 备份）。
+**1 分钟，不用重启、不用发版**；只想收窄灰度范围就改 `NOWAIT_UIDS` 那一行。
