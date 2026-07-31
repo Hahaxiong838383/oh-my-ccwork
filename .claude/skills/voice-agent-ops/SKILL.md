@@ -206,3 +206,12 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 - **"你们 TLS 握手 800ms+"类外部指控** → 先自己同城测点复现:`curl --noproxy '*' -w 'tcp=%{time_connect} tls=%{time_appconnect}'`;不复现(净值 ~35ms)=第一嫌疑**对方测量机代理**(特征:TCP 极快+TLS 极慢+复用省大头+.cn 对照组正常),交棒复测清单勿改自己服务端。测 resumption 用 `sleep 1 | openssl s_client -sess_out`(echo 管道在 ticket 到达前退出=假阴性)。
 
 **在途需求(2026-07-29 接单,同事需求文档回复见飞书 wiki `MGR4wOvy9i600OkAAEncWZcQnre` §七)**:①SDK `JavisVoice.prewarm()`(纯网络层预热,不建会话)②`POST /v1/tts` TTS-only(Bearer 租户 key→流式 mp3+固定台词文本缓存)③说完即挂=文本哨兵 `[[END_SESSION]]`(待同事确认;agent 流内剥离→播完→关房)④voice-hk nginx 加固(http2+掐 TLSv1.0/1.1,待川哥批)。
+
+## 入房提速与打断门控(2026-07-31,B8/B9)
+
+**入房分段遥测**:`journalctl grep "join timing"` → `imports/ctx.connect/vad/sidecar/build_llm/session_start/wait_participant` 逐段 ms。基线(主 worker)=630ms(210/0/5/116/299)。⚠️ **wait_participant 大不是故障**——那是等用户进房(9~1570ms 全正常),已挪到 session.start 之后不再阻塞装配;真要排查看其余段。build_llm 明显 >150ms → 预 import 没生效(查 setup 日志有无 `[preimport]` 失败行)。
+
+**B9 打断声纹门控**(仅主 worker,`poc-eou.env`):`BARGE_SPEAKER_GATE_MS=700`(0=关)+`BARGE_SPEAKER_GATE_ACT`(默认 0=**只观测不改行为**)+`BARGE_SPEAKER_MIN_SPEECH_S=0.8`。看数据:`journalctl grep "barge gate"` → `resume/act/reason/scores/speech/infer`。
+- 转正流程:先跑观测,确认**主用户轮稳定 registered、他人/电视轮稳定 unregistered** 才置 ACT=1。跨信道注册会让 score 整体崩(实测 0.072),直接开动作=主用户插话全被否决,比不做更差。
+- ⚠️ **绝不上租户 worker**:注册库里没有租户的用户,开了=所有打断被否决。租户 env 保持无 BARGE_* 即可(默认关)。
+- 生效证据:job 日志 `barge speaker gate enabled: delay=700ms act=...`;缺这行=没挂上(声纹旁路未启用时会打 warning)。
