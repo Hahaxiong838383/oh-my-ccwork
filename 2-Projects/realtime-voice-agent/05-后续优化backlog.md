@@ -20,12 +20,29 @@
 
 ## 判停/全双工线(2026-07-29 POC 后续)
 
-### B5 interim 文本提交(破 500ms 判停地板的唯一路)
-- 现状:判停地板=火山 definite 到达(~500ms);S1 canonical 基建已铺路(interim 与 final 去标点全等率高)。
-- 形态:高置信轮不等 definite,用 canonical interim 文本 commit;错字风险由 canonical 对齐兜底。
-
-### B6 极限档联调(数据后拧)
-- POC_EOU_UNLIKELY_THRESHOLD(已有旋钮;2026-07-29 真机数据:川哥对话轮 8/9 概率 0.19-0.35<默认阈值 0.355 走慢路——阈值 0.18 试验中)+VOLC_ASR_END_WINDOW_MS 150(切碎险)。
+### ~~B5 interim 文本提交~~ ✅ 已完成(2026-07-29,判停 551→401ms,见 04-决策记录)
+### ~~B6 极限档联调~~ ✅ 已完成(阈值 0.18 + END_WINDOW 150 + MIN 0.40 已上线主 worker)
 
 ### B7 backchannel(L4,框架有现成挂点)
 - 1.6.3 有 _AgentBackchannelOpportunityEvent(暂内部 TODO);filler 机制升级为"说话中语义 backchannel"。
+
+## 性能线(2026-07-31 遥测数据后)
+
+### B8 ★★★ 引擎装配前移到进程预热(入房 1089ms 的一半)
+- 实测构成:job 派发→入房 542ms + **引擎装配+session.start 547ms**;后者是 STT/TTS/LLM 客户端与 EOT 模型的每 job 重建。
+- 形态:能在 prewarm_fnc(进程级)复用的挪进 proc.userdata(VAD 已是此形态),per-job 只留必须新建的。风险:租户 BYOK 凭据热读语义不能破(每 job 读一次是特性)。
+
+### B9 ★★ 声纹门控替代 0 字门(两阶段打断的终解)
+- 现状:MIN_INTERRUPTION_WORDS=0 换来插话瞬停,代价=环境音让 AI 卡壳(安静桌面划算,客厅要回调 1 字门)。
+- 形态:P1 声纹旁路已有 sidecar 基建,判"是不是主用户在说"再决定打断,两头好处都要。
+
+## 对外协作线(同事 demo,2026-07-31 §十 交付后)
+
+### C1 哨兵挂断实弹联调(等同事开 BRAIN_END_SENTINEL)
+- 服务端已 armed,同事侧 6/6 用例已备;约时间一起看日志(剥离是否干净、播完时机是否自然)。
+
+### C2 level 事件(9.3 B 档,约半天)——等同事拍板
+- A/C 档已零成本上线,B 的必要性下降;同事说要才做。
+
+### C3 唤醒词放服务侧(9.5,仅评估)
+- 前置:常连房间成默认形态。难点=持续音频计费模型(需本地轻量检测+命中才进云端识别)+自定义唤醒词训练。
