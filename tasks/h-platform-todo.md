@@ -852,3 +852,85 @@ dev198 **10 个 App connected 10/10**、lastError 全 null，未受影响。
 7. **两端 healthz 结构不一致**：dev198 是多 app（`apps{}` 带 lease/contract/
    botOpenId），Mini 是单 app 扁平结构，巡检脚本得写两套。建议对齐。
 8. `MEMORY.md` 已 18.4KB（绊线 12KB），`/rule-compress` 需川哥在场跑。
+
+
+---
+
+## M · 收口 codex 的 deploy-meta + help 可移植（2026-07-31 傍晚）
+
+### 成果
+
+`022618c` = `feat(mini-ab): expose deploy version and fix portable help skill`，
+7 文件 +290 行，已 push `origin/codex/h-mini-ab-poc`（`main` 停 `e5497d5` 未动）。
+
+Mini 从此**能回答自己在跑哪个版本**：healthz 暴露 `version`（commit 前 12 位，
+不一致时带 `+dirty`）与 `deploy` 对象。之前只能靠逐文件 md5 对撞，太笨。
+
+`lib/deploy-meta.mjs` 的写法值得留意：`normalizeDeployMeta` 是**白名单构造**
+——只从原始 JSON 取 7 个已知字段、逐个正则校验、返回全新对象，任何塞进
+`.deploy-meta.json` 的多余字段都进不了 healthz；校验失败 fail closed 成
+`{available:false}`，绝不回显原文；写入走 tmp+rename 原子替换。
+
+`help` skill 的 `/home/chuan/.grok` 改成 `~/.grok`，SHA `4595c5fc…f17c62`
+控制面已发布。部署后 5422 行日志里 **privacy reject 计数 0**，最后一次停在
+07:32:43（部署在 07:57）—— 有明确时间分界，不是"我没看到"。
+
+### 验收数字
+
+```
+全量 npm test   398 pass / 0 fail / 0 not ok（15 批次）
+test:mini-ab    20/20
+Mini            version=022618c26352  dirty=false  fileCount=521
+                ok/connected=true  mode=ws  Outbox pending=0
+dev198          10 apps  connected 10/10  lastError 0  租约 9/10
+                不含 AI 专家；owner connected + executionSite=dev198
+主动消息        cc-verify-022618c-r2  completed  probes=2，两条均有 om_ messageId
+```
+
+### 三条教训
+
+**① 验证动作的产物污染了被验证对象。** 我在部署第 ⓪ 步规规矩矩备份了
+`.deploy-meta.json`，结果那个 `.bak` 被 manifest 扫进去，`fileCount` 从 521
+变 522 —— **我为了能安全回滚而做的动作，改变了我正要用来证明"部署干净"的
+那个指纹**，而且每次部署都会累积。能发现全靠部署前抄了基线 521。
+已单独立记忆 [[feedback_verification_artifact_pollutes_measurement]]。
+
+**② 断言强度必须匹配验收目标。** 主动消息验收我只想证明「Runner 真跑了 +
+消息送达 + 拿到 ACK」，却给探针设了 `expectText="147714"`（Bot 心算 3517×42）。
+两条消息全部 `ok=true` 且都有 messageId——**通道完全正常**——却因这条精确子串
+没命中判成 `status=failed`。查源码才知道 `expectText` 留空会记 `null`，而
+`status` 判据是 `expectedMatched !== false`，**空断言根本不拖垮 `completed`**。
+只验通道就该留空。出报告时「通道成功但断言失败」和「通道失败」必须分开写。
+
+**③ 「started」是个动词歧义，我按错的那个意思理解了。**
+`proactive acceptance runner started` 只是**轮询器起来了**（每 2 秒扫 request
+文件），没有待处理请求时它静默待命、永远不会有 `finished`。我按"任务开始了"
+理解，等了 400 秒没等到，一度判成"卡住"，直到读源码才明白是空转。
+判卡住的正确依据是 runner 日志的 `grok start skey=accept:<requestId>:<probeId>`
+和 healthz 的 `liveGrokSessions`/`activeSessions`/`queueDepthTotal`。
+
+另外两次低级错误：zsh 不对未加引号的变量做词分割，导致我的比对脚本一段说
+"完全吻合"另一段说"全部缺失"（自相矛盾→整轮读数作废重验）；
+`git diff --no-index` 有差异时返回 1 是 **diff 语义不是错误语义**，我拿它当
+空白错误判据，误报了 4 个文件。同族：拿 `cmd | tail` 的 exit code 当上游结果。
+
+### 额外文件分类（步骤 9 要求，145 个全部有归属）
+
+`376 + 145 = 521`，与 manifest 精确吻合。
+`shared/skills/**` 132（控制面同步的 L0 资产）/ `logs/**` 5 / `.deploy-stage/**` 3
+（10:54 部署暂存残留，其 `bridge.mjs` md5=`7dfc1619…` 即 **2fbd4ef 版**陈旧副本，
+不被加载）/ `.env.example`+`.gitignore` 2（tracked，被清单规则排除，已补验一致）/
+`.env.bak.proxy-*` 1（600 权限，改代理时的备份）/ `.skills-manifest.json` +
+`memory/…/history-backfill.json` 2。无不明来源项，故 `dirty=false` 诚实。
+
+### ⏸ 本章挂起
+
+1. 建议清 Mini 上两处遗留：`.deploy-stage/`（含 2fbd4ef 版 bridge.mjs，会误导
+   排查）、`.env.bak.proxy-*`（含凭据的遗留备份，权限虽对但留着无益）。**未做，
+   等川哥点头。**
+2. `bridge.mjs:1552` 的 `process.env.HOME || '/home/chuan'` 硬编码 fallback
+   （既有技术债，不在本次 diff；Mini 上 HOME 有值所以不触发）。
+3. 两端 healthz 结构仍不一致（dev198 多 app `apps{}` / Mini 单 app 扁平），
+   巡检脚本要写两套。
+4. dev198 仍在 `08074df`，未部署 `022618c`（本次只部署 Mini，按分工）。
+5. 分支仍不合 main，等 codex 的 Mini 线全部完成。

@@ -1701,6 +1701,20 @@ Bot 自述的事实。
 - ⚠️ **`expectedMatched` 是字符串匹配，判据很脆弱**：实战中一个 Bot 明明全做对了，
   只因回复措辞没原文引用 `expectText` 就被判 `ok` 但 `expectedMatched=false`、
   整个 request `status=failed`。**可靠判据是审计日志与目标副作用，不是文本匹配。**
+- 💡 **`expectText` 留空 = 不断言，只验送达**（2026-07-31 查证源码）：
+  `expectedMatched: probe.expectText ? reply.includes(expectText) : null`，
+  而 `status: every(p => p.ok && p.messageId && p.expectedMatched !== false)`
+  —— `null !== false`，所以**空断言不会拖垮 `completed`**。
+  只想验证「主动消息通道 + 飞书 ACK」时就该留空，别硬塞一个测模型能力的断言。
+  我 2026-07-31 设 `expectText="147714"`（让 Bot 算 3517×42），Bot 两条消息
+  都 `ok=true` 且拿到 messageId，却因这条精确子串没命中判成 `status=failed`
+  —— **通道是好的，失败的是我的断言**。报告时要分清这两者。
+- ⚠️ **`proactive acceptance runner started` 不等于"任务开始了"**，它只是
+  `start()` 完成、**轮询器起来了**（每 2 秒扫 request 文件）。没有待处理请求时
+  它就静默待命，**永远不会有对应的 `finished`**。我 2026-07-31 按字面理解，
+  等了 400 秒没等到 finished，一度判成"卡住了"，直到读源码才发现是空转。
+  判断卡住的正确依据：runner 日志有没有 `grok start skey=accept:<requestId>:<probeId>`，
+  以及 healthz 的 `liveGrokSessions` / `activeSessions` / `queueDepthTotal`。
 - ⚠️ 验收任务**一律让 Bot 自建带「可删」标记的新表/新文档**，绝不在用户既有的
   人事/业务文件上做写入测试。
 - ⚠️ **清理要按"搜索"清，不能按 Bot 自述的 id 清**：2026-07-30 晚 AI 专家重试过，
@@ -2072,9 +2086,36 @@ healthz 一切正常，你以为部署成功了其实跑的是旧的。
 `[fatal] Another feishu-grok-bridge holds app lock (pid=…)` 退出。这是好事（双实例在
 代码层就走不通），但意味着手工起的进程会**静默失败**，得去 `err.log` 才看得到原因。
 
-**Mini 在跑哪个版本？`git` 指望不上** —— `.git` 是个悬空指针，内容为
-`gitdir: /private/tmp/feishu-grok-bridge-codex.0RIHus/...`，该路径已不存在。
-版本只能靠逐文件 md5 对撞，也是 dev198 → Mini 的拉平方法（2026-07-31 实操）：
+**Mini 在跑哪个版本？先看 healthz，别再手工对撞**（`022618c` 起）：
+
+```bash
+ssh rayman.chen@192.168.61.66 'curl -fsS --noproxy 127.0.0.1 http://127.0.0.1:18775/healthz' \
+  | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["version"]);print(json.dumps(d["deploy"],indent=2))'
+# version = <commit 前12位>，代码与该 commit 不完全一致时带 +dirty 后缀
+```
+
+真源是部署根目录的 `.deploy-meta.json`（`lib/deploy-meta.mjs` 读，白名单构造，
+非法内容 fail closed 成 `{available:false}`，绝不回显原文）。生成/校验：
+
+```bash
+node scripts/write-deploy-meta.mjs --root <PROJECT_ROOT> \
+  --commit <40位sha> --branch <分支> --source-host <主机名>   # 省略 --dirty 即 dirty=false
+node scripts/write-deploy-meta.mjs --root <PROJECT_ROOT> --check   # 只校验
+```
+
+⚠️ **`dirty=false` 是一句承诺，别随手给**：置 false 前必须用该 commit 的 git 清单
+核对到「tracked 0 不一致 0 缺失」，且额外文件逐一分类到位。分不清的就留 `+dirty`
+—— 虚报干净版本比没有版本更糟。
+⚠️ `manifestSha256` 覆盖整个部署目录（只排顶层 `.git/.env/.deploy-meta.json/
+data/node_modules/workspace`），所以 `logs/` 一变它就变，**只能用于自我一致性
+校验，不能跨机比对**。`fileCount` 同理。
+⚠️ **别在部署根目录留备份文件**：`.deploy-meta.json.bak.*` 这种会被算进 manifest，
+`fileCount` 直接 +1（我 2026-07-31 就这么把 521 弄成了 522），而且每次部署累积。
+详见 [[feedback_verification_artifact_pollutes_measurement]]。
+
+`.git` 仍是悬空指针（`gitdir: /private/tmp/feishu-grok-bridge-codex.0RIHus/...`，
+路径已不存在），所以 `git` 命令在 Mini 上依然不可用。**md5 逐文件对撞仍是
+dev198/工作树 → Mini 的拉平与核对方法**（2026-07-31 两次实操）：
 
 ```bash
 # ① dev198：从 git 对象取（不取工作树，避免夹带未提交改动），排除 owner 的 workspace/
