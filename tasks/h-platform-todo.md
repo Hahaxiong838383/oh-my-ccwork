@@ -282,7 +282,20 @@ heredoc+`$(cat)`+F5→F2+排除名单+回读）；**巡检门已证伪**（人�
 2. **lark-cli wrapper 注入 `--no-wait`**（授权流 100% 确定性）：现在 agent 走不走三步法
    是概率性的，走错也只是慢（卡片仍会发出）。要绝对确定性需在审计 wrapper 挂载点注入，
    改动小但影响全体用户，需单独验收——**等川哥要再做**。
-3. **孤儿目录 `u-ad7292bc60`**：已删用户残留（users.json 计数 0），未动，可择机清理。
+3. ~~孤儿目录 `u-ad7292bc60`~~ ✅ **已清**（2026-07-31 09:2x）。
+   **来历**：v1.13.1 开放「选择已有应用」后，同一个 App 再走一次开通流程会按飞书身份
+   派生出**新 uid**，凭空多出一个空账号（同 appId/openId、无订阅无用量无部门）——
+   它就是 `rayman.chen` 旁边多出来的那个幻影。**该 bug 早已修**：
+   `control-plane/server.mjs` 按 appId 合并复用既有账号，`provision-merge.test.mjs`
+   断言 `resolveUid(store,'u-ad7292bc60','cli_AAA') === 'rayman.chen'`。
+   **删前守卫**（任一不成立即中止）：不在 users.json / 无 systemd unit / 无进程持有 /
+   文件数 ≤8。内容只有 4 个平台脚手架模板（SOUL.md、两个 AGENTS.md、BEHAVIORAL_RULES.md），
+   创建于 07-29 07:06:42 后从未改动，**零用户数据**。
+   备份 `~/h-ops-rollback/20260731-orphan-cleanup/`（tar + md5 + 来历说明，本地不进 git）。
+   删后：`users/` 9 个目录与 users.json 9 个注册用户**一一对应**；healthz ok /
+   审计 9/9 / 对等巡检 0 落后 / err 日志空。
+   ⚠️ 源码里 `ad7292bc60` 还有两处，**是注释和测试 fixture，别跟着删** ——
+   它们记录的正是这个 bug 的历史案例。
 
 ### 第 7 层（同日 22:0x–23:1x 追加）：规范只以「知识」存在，没成为缺省行为
 
