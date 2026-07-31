@@ -2129,6 +2129,41 @@ ssh dev198 'cd ~/feishu-grok-bridge && git ls-tree -r <sha> --name-only | grep -
 ⚠️ **绝不整目录 rsync**：dev198 是 Linux、Mini 是 macOS，`node_modules` 里有平台相关的
 原生模块；`workspace/` 是 owner 的活文件（硬边界禁止同步）；`.env` / `data/` 是站点私有。
 
+### 清部署根遗留文件：删之前先证明能删
+
+部署根会攒下暂存目录、`.env` 备份这类东西，它们**都会被算进 `fileCount` 和
+`manifestSha256`**，留着既污染指纹又误导排查。但删是不可逆的，按类型选证法：
+
+**代码类副本（如 `.deploy-stage/`）—— 证「无人用 + 是旧副本」**：
+
+```bash
+lsof +D "$D/.deploy-stage"                                  # 有无进程打开
+grep -rn "deploy-stage" "$D"/*.mjs "$D"/lib "$D"/scripts "$D"/deploy   # 代码有无引用
+md5 -q "$D/.deploy-stage/bridge.mjs"; md5 -q "$D/bridge.mjs"           # 逐个与运行版对
+```
+三项都过才删——**尤其第三项**：要确认它是「陈旧副本」而不是「唯一副本」。
+2026-07-31 实测三个文件分别是 2fbd4ef 版 bridge、租约自愈前的 app-placement、
+旧版 install 脚本，全是残留。
+
+**`.env` 备份 —— 证「是当前配置的真子集」，只比键名绝不看值**（含凭据，隐私墙）：
+
+```python
+# 解析成 {key: value} 后只输出键名集合的差集；值只判等，永不打印
+只在备份里有的键 = set(bak) - set(cur)   # ← 必须为空，否则删掉会丢配置
+只在当前里有的键 = set(cur) - set(bak)   # ← 正常，说明备份更旧
+值不同的共同键   = [k for k in cur&bak if cur[k]!=bak[k]]   # 只列键名
+```
+2026-07-31 实测：当前 53 键 / 备份 47 键，**只在备份里有的键 = 无**，
+差的正好是 6 个代理键 —— 备份 ⊂ 当前，删除零信息损失，也反证了它就是
+改代理那次的快照。
+
+⚠️ **回滚副本一律放到部署根之外**（如 `~/local/h-mini-cleanup-<ts>/`，700，
+`.env` 类保持 600）。放在部署根下等于白清——又会被 manifest 扫进去。
+见 [[feedback_verification_artifact_pollutes_measurement]]。
+
+清完记得重生成元数据 + `kickstart -k` bridge，并复验「tracked 0 不一致 0 缺失 +
+tracked 数 + 额外数 = fileCount」闭合。
+
 ## 🔴 dev198 出站代理（2026-07-31 事故后重构）
 
 **曾经的坑**：`/etc/environment` 里写着 `HTTP_PROXY=http://10.9.1.57:10808`

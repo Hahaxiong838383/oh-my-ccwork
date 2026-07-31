@@ -925,12 +925,49 @@ dev198          10 apps  connected 10/10  lastError 0  租约 9/10
 
 ### ⏸ 本章挂起
 
-1. 建议清 Mini 上两处遗留：`.deploy-stage/`（含 2fbd4ef 版 bridge.mjs，会误导
-   排查）、`.env.bak.proxy-*`（含凭据的遗留备份，权限虽对但留着无益）。**未做，
-   等川哥点头。**
+1. ~~清 Mini 上两处遗留~~ ✅ **已做（16:30，川哥批准）**，详见下节。
 2. `bridge.mjs:1552` 的 `process.env.HOME || '/home/chuan'` 硬编码 fallback
    （既有技术债，不在本次 diff；Mini 上 HOME 有值所以不触发）。
 3. 两端 healthz 结构仍不一致（dev198 多 app `apps{}` / Mini 单 app 扁平），
    巡检脚本要写两套。
 4. dev198 仍在 `08074df`，未部署 `022618c`（本次只部署 Mini，按分工）。
 5. 分支仍不合 main，等 codex 的 Mini 线全部完成。
+
+
+### 清理部署根遗留（16:30，川哥批准）
+
+从 Mini 部署根移出 4 个文件，`fileCount` **521 → 517**，闭合仍精确：
+tracked 376（0 不一致 0 缺失）+ 额外 141 = 517。
+
+**删之前先证明能删** —— 两类遗留用了两种不同的证法：
+
+`.deploy-stage/`（3 个文件）走「无人用 + 是旧副本」：
+
+```bash
+lsof +D "$D/.deploy-stage"                    # 无进程打开
+grep -rn "deploy-stage" *.mjs lib/ scripts/ deploy/   # 代码零引用
+# 再逐个与运行版对 md5，确认都是陈旧副本而非唯一副本：
+#   bridge.mjs        stage=7dfc1619（2fbd4ef 版）  vs 运行版 e5dcd3e6
+#   app-placement.mjs stage=6ec3327c（租约自愈前）  vs 运行版 b3634f93
+#   install-mini-bot.sh stage=c30371e6            vs 运行版 b9da410c
+```
+
+`.env.bak.proxy-*` 走「是当前配置的真子集」——**只比键名，绝不看值**
+（隐私墙：备份含凭据）：
+
+```
+当前 .env 53 键 / 备份 47 键
+只在备份里有的键 = 无        ← 关键判据，删掉不会丢任何配置
+只在当前有的键   = 6 个代理键（HTTP_PROXY 等大小写各 3）
+共同键值不同的   = 无
+```
+
+结论：备份 ⊂ 当前，删除零信息损失，也印证了它就是 10:24 改代理前的快照。
+
+**回滚副本放在部署根之外** `~/local/h-mini-cleanup-20260731-1630`（700，
+`.env.bak` 保持 600）—— 这正是本章教训 ① 的处置方式①：备份若留在部署根下，
+又会被 manifest 扫进去，重演 `fileCount` 漂移。
+
+清理后复验：tracked 376/0/0、healthz `version=022618c26352 dirty=false
+fileCount=517` `manifestSha256=9f77d336…`、connected=true、Outbox pending=0；
+dev198 10/10 未受影响。
