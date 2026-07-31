@@ -90,6 +90,14 @@ class AudioRingBuffer:
         self._total_bytes = 0
         return out
 
+    def peek(self) -> bytes:
+        """非破坏性取样(B9 打断门控用)。
+
+        打断判定发生在 turn **中途**,不能清空——清了会让 turn 结束时的
+        身份识别拿不到音频(两条路径共用同一个 ring)。
+        """
+        return b"".join(self._chunks)
+
 
 @dataclass(frozen=True)
 class SpeakerProfile:

@@ -293,11 +293,33 @@ class TierACascadeEngine(ExperienceEngine):
         def _on_tele_transcribed(ev: Any) -> None:
             _tele_interim["text"] = getattr(ev, "transcript", "") or ""
 
+        # B9 打断声纹门控(2026-07-31,默认关):电视/旁人说话能出字,字数门拦不住、
+        # 假打断 timer 又被持续人声不断重置——只有声纹能判"不是主用户"。乐观打断
+        # 不变,事后否决(详见 barge_gate 模块文档)。需声纹旁路已启用。
+        _barge_gate = None
+        _gate_ms = int(os.environ.get("BARGE_SPEAKER_GATE_MS", "0"))
+        if _gate_ms > 0 and speaker_sidecar is not None:
+            from .barge_gate import BargeSpeakerGate
+
+            _gate_act = os.environ.get("BARGE_SPEAKER_GATE_ACT", "0") == "1"
+            _barge_gate = BargeSpeakerGate(
+                speaker_sidecar,
+                session,
+                delay_s=_gate_ms / 1000.0,
+                min_speech_s=float(os.environ.get("BARGE_SPEAKER_MIN_SPEECH_S", "0.8")),
+                act=_gate_act,
+            )
+            logger.info(
+                "barge speaker gate enabled: delay=%dms act=%s%s",
+                _gate_ms, _gate_act, "" if _gate_act else " (只观测,不改打断行为)",
+            )
+        elif _gate_ms > 0:
+            logger.warning("BARGE_SPEAKER_GATE_MS 已设但声纹旁路未启用,门控未挂载")
+
         def _on_tele_state(ev: Any) -> None:
-            if (
-                str(getattr(ev, "old_state", "")) == "speaking"
-                and str(getattr(ev, "new_state", "")) == "listening"
-            ):
+            _old = str(getattr(ev, "old_state", ""))
+            _new = str(getattr(ev, "new_state", ""))
+            if _old == "speaking" and _new == "listening":
                 if _tele_interim["text"]:
                     interrupt_state["ts"] = time.monotonic()
                 logger.info(
@@ -305,6 +327,11 @@ class TierACascadeEngine(ExperienceEngine):
                     _tele_interim["text"][:40],
                 )
                 _tele_interim["text"] = ""
+                if _barge_gate is not None:
+                    _barge_gate.on_interrupt()
+            elif _new == "speaking" and _barge_gate is not None:
+                # 已开口(恢复或新回复)→ 本次判定作废,避免误恢复下一段
+                _barge_gate.cancel()
 
         session.on("user_input_transcribed", _on_tele_transcribed)
         session.on("agent_state_changed", _on_tele_state)

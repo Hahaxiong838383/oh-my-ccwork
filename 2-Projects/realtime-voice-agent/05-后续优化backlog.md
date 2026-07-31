@@ -28,13 +28,18 @@
 
 ## 性能线(2026-07-31 遥测数据后)
 
-### B8 ★★★ 引擎装配前移到进程预热(入房 1089ms 的一半)
-- 实测构成:job 派发→入房 542ms + **引擎装配+session.start 547ms**;后者是 STT/TTS/LLM 客户端与 EOT 模型的每 job 重建。
-- 形态:能在 prewarm_fnc(进程级)复用的挪进 proc.userdata(VAD 已是此形态),per-job 只留必须新建的。风险:租户 BYOK 凭据热读语义不能破(每 job 读一次是特性)。
+### ~~B8 引擎装配前移~~ ✅ 已完成(2026-07-31,330d75ce1)
+**立项假设被实测推翻**:引擎构造只要毫秒级(TurnDetector 1.7ms),547ms 不在那里。细粒度打点后真凶有二,都已解决:
+- **等 participant 串行阻塞**(9~1570ms 剧烈波动=等用户进房):挪到 session.start 之后,identity 改延迟注入(`_user` 本就 per-request 读)→ 装配与等待重叠,agent 先到场景整段省掉;顺带修了"用户没进房就 greeting"的漏说。
+- **模块首次 import**(job 内 _build_llm 首次 320ms/二次 0.2ms):按 provider 预 import 到 idle 进程 → 320→115ms。
+- 实测终态(主 worker):`ctx.connect=210 vad=0 sidecar=5 build_llm=116 session_start=299 → total 630ms`。
+- 余量:`ctx.connect` 210ms 与 `session_start` 299ms 是框架/网络内部,再压需动 worker↔livekit 直连(明文降级,未做)。
 
-### B9 ★★ 声纹门控替代 0 字门(两阶段打断的终解)
-- 现状:MIN_INTERRUPTION_WORDS=0 换来插话瞬停,代价=环境音让 AI 卡壳(安静桌面划算,客厅要回调 1 字门)。
-- 形态:P1 声纹旁路已有 sidecar 基建,判"是不是主用户在说"再决定打断,两头好处都要。
+### B9 声纹打断门控 🔶 已上线**观测模式**(2026-07-31,主 worker 独享)
+- 形态定稿=**乐观打断+事后否决**(不是"先判再打断"——声纹要 ~1s 音频、打断要 ~100ms,物理不可调和):VAD 一响照常瞬停,并行攒音频跑声纹,判非注册用户则提前恢复播报。
+- 真实价值场景=**电视/旁人持续说话**:能出字(字数门拦不住)+人声不断(假打断 timer 被反复重置永不恢复),声纹是唯一解。
+- 现状 `BARGE_SPEAKER_GATE_MS=700 act=False`:**只打日志不改行为**。开真动作前必须先看日志——注册与识别若非同信道,score 整体崩(2026-07-03 实测 0.072),此时开动作=主用户插话全被否决,比不做更差。
+- 转正条件:日志里川哥自己的轮次稳定 `registered(...)`、电视/他人轮次稳定 `unregistered`,再置 `BARGE_SPEAKER_GATE_ACT=1`。
 
 ## 对外协作线(同事 demo,2026-07-31 §十 交付后)
 
