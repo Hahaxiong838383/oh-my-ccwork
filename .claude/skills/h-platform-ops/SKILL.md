@@ -2543,3 +2543,118 @@ mv /srv/h-platform/memory/<uid> /srv/h-platform/memory/.archived-<ts>/<uid>
 - 输出解析：先确认被验对象**会不会产出我要 grep 的那个东西**。
 
 详见 [[feedback_truncated_output_negative_conclusion]]。
+
+## 🔴 权限引导链路（2026-08-01 一整天真机打通）
+
+用户缺权限时的完整自助闭环。**四个环节任一断了，用户就永远等不到那张卡。**
+
+### 环节一：授权卡有三个发卡入口，引导必须三处都接
+
+`feishu_cli_auth` 的 `onUserActionRequired` 在 bridge 里有 **3 处**：
+权限申请卡 / proactive 探针 / **真实任务**。真实消息走的是第三处。
+
+我最初只接了第一处 → 日志出现 `lark auth needs console missing=510`
+（引导对象造出来了）却没有一条 `guidance sent`（没人发）。用户看到的就是
+「点了授权卡直接完成，还是没有引导」。
+
+抽 `deliverConsoleGuidance` 统一投递，契约测试锁「1 处定义 + N 处调用」总数。
+**验收要认消费端日志（`guidance sent`），不能只认生产端（`needs console`）。**
+详见 [[feedback_multi_entry_single_consumer]]。
+
+### 环节二：域从**审计记录**推断，不要解析 grok 的 stdout
+
+`extractUserActionRequest` 只看输出末尾 6000 字符，而授权墙那段里**只有
+device code**——真正说明「这次要什么权限」的调用在更前面，被 tail 截掉了。
+结果卡上永远 `mode=recommend`，引导甩出全部 374 项而不是日历那 24 项。
+
+⚠️ 走过的弯路：试图用「累积上下文」补。但 grok-runner 传给 `publish` 的
+**本来就是累积全量**——问题从来不在没累积，而在 stdout 里根本没有可靠的域字面。
+
+正解：`lark-audit`。wrapper 落的 `cmd=<域 子命令 --flag…>` 是**平台自己的
+观测**，`head` 取第一个 token 就是域。`collect` 是纯读、不推进 offset，
+撞墙时中途调用安全。推出域后**不再退回 recommend**，否则引导重新覆盖全部缺口。
+
+```
+17:00:21  lark auth domains from audit  calendar
+17:00:21  lark auth request domains=calendar mode=exact   ← 不再是 recommend
+17:00:22  needs console missing=24                        ← 374 → 24
+17:00:25  guidance sent domains=1 asFile=0 json=1899      ← 1.9KB，贴得进卡
+```
+
+### 环节三：JSON 一律送到用户手里，**绝不建议「后台全选」**
+
+🔴 曾经的兜底是「缺口太大就去后台全选一次」。**那是错的**：全选会勾上
+corehr / payroll / attendance / acs 等 **11 个禁止域**——正是标准包特意排除的。
+照做等于先开一个隐私风险窗口，再让巡检去收拾。测试里有一条**安全断言**
+锁死：任何情况下渲染文案都不许出现「全选」。
+
+投递统一收口到 `deliverGuidanceJson`，**内容一字不减，只换通道**：
+
+| 体积 | 通道 |
+|---|---|
+| ≤8KB | 单独发一条**纯文本**（长按整条即可复制；卡片代码块只能框选，手机上选不准） |
+| >8KB | **文件**（`im.file.create` + `msg_type=file`） |
+| 文件发不出 | 按域拆多份，**每份完整可单独导入** |
+
+最后那层降级不是多余：**发文件本身要 im 权限，而最缺权限的用户恰恰最可能
+发不出文件**。没有它，这类用户会收到一张说「文件在下一条」的卡然后什么都等不到。
+
+⚠️ 上传必须落**真实临时文件**再 `createReadStream`。`Readable.from(buffer)`
+没有 path，form-data 定不出 filename/长度，`im.file.create` 直接
+`return res?.data || null`，表现是「code/msg 全 undefined」，看不出任何原因。
+
+`tenant` 档按 user 缺口的域收窄——不收窄的话「缺 24 项 calendar」会生成
+24.3KB（体积全是 tenant 那 668 项撑的），收窄后 1.9KB。
+
+### 环节四：Bot 声称发了卡而平台没发 → 对账补发
+
+grok 会照抄历史里自己上次的话，声称「已触发授权卡」而平台什么都没做
+（见下一节）。任务成功收尾时：**本轮没发过卡 + 回复里声称发了** → 探测权限，
+真缺才补发。**判据是平台自己的探测，不是 Bot 的措辞。** 探测拿不到时保守补发
+（漏发＝永远等不到，多发＝一次轻打扰）。补发成功要置 `userActionSeen`，
+否则授权完成时 `retryAfterAuth` 会因「主跑已成功且没撞过授权墙」skip 掉。
+
+## 🔴 「新会话」必须真的断历史（2026-08-01）
+
+新会话按钮原先只 `bumpGeneration` 换 sessionId + append 一条标记，
+**从没截断过历史**，而 toast 写着「后续消息不再带旧上下文」。
+
+后果：下一轮 prompt 仍带着上轮的 assistant 回复「我已触发飞书日历授权」，
+grok 一字不差照抄——`turns 15→5`、**一次 lark-cli 都没调**。
+
+`loadHistory` 现在截到最近一次重置之后；标记结构化落盘 `reset: true`
+（靠文案识别一改文案就静默失效），并兼容线上已有的旧文案标记。
+详见 [[feedback_reset_done_halfway]]。
+
+## 🔴 巡检输出经管道会被腰斩（2026-08-01）
+
+`ops/verify-lark-scopes.mjs --json | ...` 在 **65503 字节**处截断，
+退出码却是正常的 1。根因是结尾 `process.exit(code)`——stdout 是管道时写入
+异步，不等 flush 就走。**重定向到文件不触发**，所以只在脚本化调用时暴露。
+
+已改 `process.exitCode`。⚠️ 中途的 `process.exit(1)` 是流程中止，**不能改**。
+排查期间如果必须拿完整数据，先 `> /tmp/x.json` 再读。
+详见 [[feedback_guard_itself_can_be_hollow]]。
+
+## 权限现状快照（2026-08-01 17:20 实测，11 租户）
+
+```
+uid                app  token   缺app  待授权  越权
+u-c7b6746691       588     91      0    422     7 ⚠️
+u-f7870bc4b3       588    138      0    375     7 ⚠️
+rayman.chen        512    171      0    342     0
+u-e58e198624       481    151     79    283     7 ⚠️
+u-001422f6e5       240    148    272     93     0   ← 测试 bot
+u-01481f4a32       198    163    315     35     1 ⚠️
+u-40a24632d0       168    159    344     10     0
+u-aca292be3f       156    155    356      2     0
+u-9a037b10f7       146    145    366      2     0
+u-dec457e69d        97     53    415     45     0
+u-93577af39a         2      0    510      2     0
+```
+
+🔴 **4 个租户持有禁止域**，其中 3 个含 `corehr`（人事 16–44 项）与
+`payroll`（薪酬 10 项）——隐私红线，需本人去后台取消勾选。
+
+**`token < app` 是普遍现象**：后台开通不会更新已签发的 user token，
+必须重新点一次授权卡才追得上。**token 侧才是 Bot 的实际能力真值。**
