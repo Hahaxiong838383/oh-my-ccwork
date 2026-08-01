@@ -2707,3 +2707,25 @@ for i in $(seq 1 20); do sleep 10; n=$(curl -s .../healthz | jq '[.apps[]|select
 结构与坑：表格必须在**卡片根节点**（不可内嵌）、`width` 范围 `[80px,600px]`、
 `padding` 多值必须写满四个。⚠️ 报错里的 `column idx` **会偏一位**，
 别照着索引盲改。完整踩坑记录见 `feishu-docs` skill。
+
+## 🔴 部署一律走 `ops/deploy-sites.sh`（2026-08-01 起）
+
+**别再手敲 ssh 部署。** 上面「部署收尾三查」那几条我当天写进 skill、
+一小时后照犯了三次——commit 手抄编错、merge 吞掉失败、meta 写失败没发现。
+知道≠做到，所以固化成脚本：
+
+```bash
+ops/deploy-sites.sh both            # 双站部署
+ops/deploy-sites.sh dev198 --check  # 只体检，不动任何东西
+SKIP_RESTART=1 ops/deploy-sites.sh dev198   # 只改 ops/ 脚本时
+```
+
+脚本内建的硬约束（每条都对应一次真实事故）：
+commit 只由 `git rev-parse` 取一次 · 失败即停不"部分成功" · meta 写完
+**全量**回读对撞（比前缀等于没比）· healthz version 必须等于目标 commit ·
+HEAD 未推送直接拦 · 工作区脏时只有内容与远端一致才敢丢弃、`workspace/**`
+拒绝触碰 · Mini 先拷文件再 kickstart（KeepAlive 会 4 秒抢跑）· 重启后
+轮询到全 App 连接才算成功。
+
+⚠️ 脚本跑完仍会提醒：**新增命令/分支必须真机触发一次**——healthz 全绿
+证明不了它能跑（当天权限对账命令上线即 ReferenceError，四道绿灯全没拦住）。
