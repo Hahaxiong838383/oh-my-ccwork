@@ -16,6 +16,19 @@ Pi 的核心价值是提供一组值得吸收的架构模式：执行隔离、�
 - OMP：`can1357/oh-my-pi`，审阅 HEAD `80627462b4e91f46795ba87f3678174bd3c0b907`。
 - 两者均为 MIT；如复制具体实现而非只借鉴设计，必须保留对应许可证和署名。
 
+## P0 落地状态（2026-08-01）
+
+本方案的 Brain / Hands 分离、`readonly_safe` 和 Tool Policy Gate 已部署到 RackNerd 生产环境，不再只是设计稿：
+
+- `ops-brain` 与 `ops-terminal` 均为无 Docker Socket、无生产 SSH、无真实项目挂载的 Brain 沙箱。
+- `ops-tool-runner` 独占只读快照，执行 `read`、`grep`、`find`、`ls`；路径逃逸、敏感路径、软链接、未知项目/workflow 和写工具全部拒绝。
+- `ops-inspector` 继续作为受控 Hands，生产动作仍必须走既有结构化动作、确认词和审计链路。
+- 后台 Brain 与网页 Terminal 使用独立 OMP agent 目录；Terminal 的最小配置固定关闭首次 Provider Setup Wizard，打开后直接进入 `readonly_safe`。
+- 本地单元测试、Python/Shell/最终页面 JavaScript 静态检查、完整线上回归、真实 DeepSeek 只读任务和真实浏览器七页面检查均通过。
+- 生产回滚锚点为 `/opt/ai-ops-cockpit/backups/brain-hands-20260801-055028`；终端首次启动修复回滚点为 `/opt/ai-ops-cockpit/backups/terminal-setup-fix-20260801-141913`。
+
+仍未实施的内容保持原优先级：OMP 更新供应链 48 小时冷静期与 integrity/依赖快照属于下一项 P0 收口；权威 Snapshot/revision/reconnect/abort、会话树与结构化压缩属于 P1；Project Trust Registry 和生产离线模式属于 P2。
+
 ## 2. 当前 AI Ops 基线
 
 当前闭环：

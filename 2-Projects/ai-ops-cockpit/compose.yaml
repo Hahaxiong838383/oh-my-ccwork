@@ -82,6 +82,9 @@ services:
       FEISHU_WEBHOOK_URL: ${FEISHU_WEBHOOK_URL}
       OPS_READ_TOKEN: ${OPS_READ_TOKEN}
       OPS_ACTION_TOKEN: ${OPS_ACTION_TOKEN}
+      AI_OPS_INTERNAL_TOKEN: ${AI_OPS_INTERNAL_TOKEN}
+      AI_OPS_BRAIN_URL: http://ops-brain:8090
+      AI_OPS_TOOL_RUNNER_URL: http://ops-tool-runner:8091
       AI_OPS_OMP_MODEL: ${AI_OPS_OMP_MODEL:-volcengine-coding/deepseek-v4-pro}
       AI_OPS_OMP_MODEL_LABEL: ${AI_OPS_OMP_MODEL_LABEL:-DeepSeek V4 Pro}
       READONLY_ROOT: /workspace/readonly
@@ -97,16 +100,86 @@ services:
       # 挂整个 data 目录，确保能读到 SQLite WAL/SHM；只挂 kuma.db 会读到过期心跳
       - ./kuma/data:/kuma:ro
       - ./terminal/logs:/terminal-logs:ro
-      - ./readonly:/workspace/readonly:ro
+      - ./readonly:/workspace/readonly
       - ./config:/config:ro
+      - ./:/workspace/ai-ops-root:ro
+      - /opt/ai-ops-workspaces:/opt/ai-ops-workspaces:ro
       - ./ops-inspector/state:/var/lib/ai-ops-state
       - ./secrets/chenchuan-maintenance:/run/secrets/chenchuan-maintenance:ro
       - ./secrets/cpa-jp-maintenance:/run/secrets/cpa-jp-maintenance:ro
       - ./secrets/iptv-maintenance:/run/secrets/iptv-maintenance:ro
       - ./secrets/qihang-hk-maintenance:/run/secrets/qihang-hk-maintenance:ro
     depends_on:
-      - uptime-kuma
-      - netdata
+      uptime-kuma:
+        condition: service_started
+      netdata:
+        condition: service_started
+      ops-brain:
+        condition: service_healthy
+      ops-tool-runner:
+        condition: service_healthy
+
+  ops-tool-runner:
+    build: ./ops-readonly-runner
+    container_name: ops-tool-runner
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      AI_OPS_INTERNAL_TOKEN: ${AI_OPS_INTERNAL_TOKEN}
+      AI_OPS_READONLY_PROJECTS: mycc,chenchuan-site,cpa-smart-router,iptv-api,MyJavis,realtime-voice-agent,P003GameDemo20260513
+      READONLY_ROOT: /workspace/readonly
+      AUDIT_DIR: /var/lib/aiops-tool-runner/audit
+    volumes:
+      - ./readonly:/workspace/readonly:ro
+      - ops_tool_runner_state:/var/lib/aiops-tool-runner
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json,urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8091/health',timeout=3)); assert data['ok'] and data['mountReadonly']"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  ops-brain:
+    build: ./terminal
+    container_name: ops-brain
+    restart: unless-stopped
+    command: ["python3", "/usr/local/lib/aiops-brain-server.py"]
+    environment:
+      TZ: Asia/Shanghai
+      AI_OPS_OMP_MODEL: ${AI_OPS_OMP_MODEL:-volcengine-coding/deepseek-v4-pro}
+      AI_OPS_OMP_MODEL_LABEL: ${AI_OPS_OMP_MODEL_LABEL:-DeepSeek V4 Pro}
+      AI_OPS_INTERNAL_TOKEN: ${AI_OPS_INTERNAL_TOKEN}
+      AI_OPS_TOOL_RUNNER_URL: http://ops-tool-runner:8091/tool
+      AI_OPS_BRAIN_AGENT_DIR: /home/ops/.omp/brain-agent
+      AI_OPS_BRAIN_CWD: /workspace/brain/session
+    secrets:
+      - volcengine_coding_api_key
+    volumes:
+      - ./terminal/omp:/home/ops/.omp
+      - ./terminal/runtime:/opt/omp-runtime
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /workspace/brain:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      ops-tool-runner:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import json,urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8090/health',timeout=3)); assert data['ok'] and data['toolMode']=='readonly_safe' and data['ambientExtensions']==0 and data['agentDir']=='/home/ops/.omp/brain-agent' and data['workdir']=='/workspace/brain/session' and data['workdirReady'] and not data['directWorkspace'] and not data['dockerSocket'] and not data['productionSsh']"]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
 
   n8n:
     image: n8nio/n8n:latest
@@ -133,26 +206,34 @@ services:
   ops-terminal:
     build:
       context: ./terminal
-      args:
-        DOCKER_GID: 988
     container_name: ops-terminal
     restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
       AI_OPS_OMP_MODEL: ${AI_OPS_OMP_MODEL:-volcengine-coding/deepseek-v4-pro}
       AI_OPS_OMP_MODEL_LABEL: ${AI_OPS_OMP_MODEL_LABEL:-DeepSeek V4 Pro}
+      AI_OPS_INTERNAL_TOKEN: ${AI_OPS_INTERNAL_TOKEN}
+      AI_OPS_TOOL_RUNNER_URL: http://ops-tool-runner:8091/tool
+      AI_OPS_BRAIN_AGENT_DIR: /home/ops/.omp/terminal-agent
+      AI_OPS_BRAIN_CWD: /workspace/brain/session
     secrets:
       - volcengine_coding_api_key
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /opt/ai-ops-cockpit:/workspace/projects/ai-ops-cockpit
-      - ./readonly:/workspace/readonly:ro
-      - /opt/stacks:/workspace/stacks
       - ./terminal/logs:/var/log/ops-terminal
       - ./terminal/omp:/home/ops/.omp
       - ./terminal/runtime:/opt/omp-runtime
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /workspace/brain:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     depends_on:
-      - caddy
+      ops-inspector:
+        condition: service_started
+      ops-tool-runner:
+        condition: service_healthy
 
   dockge:
     image: louislam/dockge:1
@@ -170,6 +251,7 @@ volumes:
   caddy_config:
   netdata_lib:
   netdata_cache:
+  ops_tool_runner_state:
 
 secrets:
   volcengine_coding_api_key:

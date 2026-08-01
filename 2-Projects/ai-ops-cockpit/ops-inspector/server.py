@@ -38,6 +38,9 @@ ACTION_TOKEN = os.environ.get("OPS_ACTION_TOKEN") or secrets.token_urlsafe(24)
 READ_TOKEN = os.environ.get("OPS_READ_TOKEN") or ACTION_TOKEN
 AI_OPS_OMP_MODEL = os.environ.get("AI_OPS_OMP_MODEL", "volcengine-coding/deepseek-v4-pro")
 AI_OPS_OMP_MODEL_LABEL = os.environ.get("AI_OPS_OMP_MODEL_LABEL", "DeepSeek V4 Pro")
+AI_OPS_INTERNAL_TOKEN = os.environ.get("AI_OPS_INTERNAL_TOKEN", "")
+AI_OPS_BRAIN_URL = os.environ.get("AI_OPS_BRAIN_URL", "http://ops-brain:8090").rstrip("/")
+AI_OPS_TOOL_RUNNER_URL = os.environ.get("AI_OPS_TOOL_RUNNER_URL", "http://ops-tool-runner:8091").rstrip("/")
 ACTION_HEADER = "x-aiops-action-token"
 READ_HEADER = "x-aiops-read-token"
 TASKS_DIR = os.path.join(STATE_DIR, "vibe-tasks")
@@ -371,6 +374,36 @@ def run(cmd):
 
 def run_quiet(cmd, timeout=10):
     return subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT, timeout=timeout).strip()
+
+
+def internal_service_json(base_url, path, payload=None, timeout=12, require_token=False):
+    url = base_url.rstrip("/") + path
+    headers = {"User-Agent": "AI-Ops-Cockpit/1.0"}
+    data = None
+    if payload is not None:
+        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        headers["content-type"] = "application/json"
+    if require_token:
+        if not AI_OPS_INTERNAL_TOKEN:
+            return {"ok": False, "error": "internal_auth_unavailable"}
+        headers["x-aiops-internal-token"] = AI_OPS_INTERNAL_TOKEN
+    try:
+        request = urllib.request.Request(url, data=data, headers=headers, method="POST" if data is not None else "GET")
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        try:
+            payload = json.loads(exc.read().decode("utf-8"))
+        except Exception:
+            payload = None
+        if isinstance(payload, dict):
+            payload = dict(payload)
+            payload.setdefault("ok", False)
+            payload["httpStatus"] = exc.code
+            return payload
+        return {"ok": False, "error": "internal_http_error", "status": exc.code}
+    except Exception as exc:
+        return {"ok": False, "error": type(exc).__name__}
 
 
 def docker_ps():
@@ -787,55 +820,43 @@ def terminal_status():
     return {"ok": "ops-terminal" in output and "Up" in output, "raw": output}
 
 
+def brain_status():
+    payload = internal_service_json(AI_OPS_BRAIN_URL, "/health", timeout=6)
+    if payload.get("dockerSocket") or payload.get("productionSsh"):
+        payload = dict(payload)
+        payload["ok"] = False
+        payload["error"] = "brain boundary violated"
+    return payload
+
+
+def tool_runner_status():
+    return internal_service_json(AI_OPS_TOOL_RUNNER_URL, "/health", timeout=6)
+
+
 def omp_status(sessions=None):
     sessions = sessions if sessions is not None else terminal_sessions(5)
+    brain = brain_status()
     try:
-        raw = run(["docker", "exec", "ops-terminal", "python3", "-c", """
-import json, sqlite3
-db='/home/ops/.omp/agent/agent.db'
-cfg='/home/ops/.omp/agent/config.yml'
-result={'dbExists': False, 'setupWizardDisabled': False, 'credentialReady': False, 'disabledCause': None}
-try:
-    open(db, 'rb').close(); result['dbExists'] = True
-    result['setupWizardDisabled'] = 'setupWizard: false' in open(cfg, encoding='utf-8').read()
-    conn = sqlite3.connect(db)
-    row = conn.execute(\"select disabled_cause from auth_credentials where provider='xai-oauth' order by updated_at desc limit 1\").fetchone()
-    if row:
-        result['disabledCause'] = row[0]
-        result['credentialReady'] = row[0] in (None, '')
-except Exception as exc:
-    result['error'] = str(exc)
-print(json.dumps(result, ensure_ascii=False))
-"""])
-        credential = json.loads(raw)
-        db_exists = credential.get("dbExists", False)
-        setup_disabled = credential.get("setupWizardDisabled", False)
-        credential_ready = credential.get("credentialReady", False)
-        disabled_cause = credential.get("disabledCause")
-        error = credential.get("error")
+        version = run(["docker", "exec", "ops-brain", "/usr/local/bin/omp-aiops", "--version"])
+        version_error = None
     except Exception as exc:
-        db_exists = False
-        setup_disabled = False
-        credential_ready = False
-        disabled_cause = None
-        error = str(exc)
+        version = None
+        version_error = type(exc).__name__
     recent = ""
     for item in sessions[:5]:
         if item.get("preview"):
             recent = item["preview"]
             break
     payload = {
-        "ok": db_exists and setup_disabled and credential_ready,
-        "dbExists": db_exists,
-        "setupWizardDisabled": setup_disabled,
-        "credentialReady": credential_ready,
-        "disabledCause": redact_sensitive_text(disabled_cause or "") or None,
+        "ok": bool(brain.get("ok") and version and version.startswith("omp/")),
+        "brain": brain,
+        "version": version,
         "autoModel": AI_OPS_OMP_MODEL,
         "recentSessionHasProviderSetup": "Set up your providers" in recent or "Select provider to login" in recent,
         "recentSessionHasReconnectSignal": "process exited with code 1" in recent,
     }
-    if error:
-        payload["error"] = error
+    if version_error:
+        payload["error"] = version_error
     return payload
 
 
@@ -843,10 +864,13 @@ def vibe_status_payload():
     terminal = terminal_status()
     sessions = terminal_sessions(8)
     omp = omp_status(sessions)
+    runner = tool_runner_status()
     return {
-        "ok": terminal.get("ok") and omp.get("ok"),
+        "ok": terminal.get("ok") and omp.get("ok") and runner.get("ok"),
         "terminal": terminal,
         "omp": omp,
+        "brain": omp.get("brain"),
+        "toolRunner": runner,
         "sessions": sessions,
         "dangerousPatterns": DANGEROUS_PATTERNS,
         "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
@@ -891,28 +915,26 @@ def display_value(value):
 
 def workspace_status_payload():
     items = []
+    runner = tool_runner_status()
     for project in workspace_payload()["projects"]:
         path = project["path"]
         exists = False
         git = False
         status = "not_mounted"
         details = ""
-        if path.startswith(WORKSPACE_ROOT) or path.startswith(READONLY_ROOT):
+        if path.startswith(READONLY_ROOT):
             try:
-                quoted_path = shlex.quote(path)
-                output = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", f"test -d {quoted_path} && echo exists || true; test -d {quoted_path}/.git && echo git || true; test -w {quoted_path} || echo readonly"], timeout=6)
-                exists = "exists" in output.splitlines()
-                git = "git" in output.splitlines()
-                readonly = "readonly" in output.splitlines()
-                if exists and git:
-                    status = "ready_readonly" if readonly else "ready_writable"
-                    details = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", f"cd {quoted_path} && git status --short --branch | head -n 12"], timeout=8)
+                exists = os.path.isdir(path)
+                git = os.path.isdir(os.path.join(path, ".git"))
+                if exists and runner.get("ok") and runner.get("mountReadonly"):
+                    status = "ready_readonly" if git else "mounted_readonly_no_git"
+                    details = "Brain 仅可经 readonly_safe Tool Policy Gate 访问；不直接挂载工作区。"
                 elif exists:
-                    status = "mounted_readonly_no_git" if readonly else "mounted_no_git"
-                details = sanitize_terminal_text(details)
+                    status = "error"
+                    details = "只读快照存在，但 Tool Runner 只读挂载或策略服务未就绪。"
             except Exception as exc:
                 status = "error"
-                details = str(exc)
+                details = type(exc).__name__
         score, risk = workspace_readiness(status)
         items.append({**project, "exists": exists, "git": git, "status": status, "readinessScore": score, "risk": risk, "details": details})
     return {"workspaces": items, "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z")}
@@ -980,14 +1002,7 @@ def remote_server_matrix():
         status = "待接入"
         risk = "SSH 只读探测未配置或不可达"
         readiness = None
-        try:
-            output = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", f"timeout 6 ssh -o BatchMode=yes -o ConnectTimeout=3 {shlex.quote(alias)} 'hostname && uptime'"], timeout=8)
-            if output:
-                status = "UP"
-                risk = "SSH 只读探测可用"
-                readiness = 80
-        except Exception:
-            pass
+        risk = "Brain 容器不持有 SSH；待接入资产必须走 ops-inspector 的专用限权维护通道。"
         items.append({"name": name, "role": role, "status": status, "containers": None, "unhealthy": None, "maxDiskUsedPercent": None, "monitorsDown": None, "lastChecked": time.strftime("%Y-%m-%d %H:%M:%S %Z"), "readinessScore": readiness, "risk": risk})
     return items
 
@@ -1008,13 +1023,13 @@ def assets_payload(force=False):
 def readonly_refresh_status():
     state = load_json_file(READONLY_STATE_FILE, {}) or {}
     try:
-        raw = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", "test -d /workspace/readonly/mycc && stat -c '%y' /workspace/readonly/mycc 2>/dev/null | cut -d. -f1 || true"], timeout=6)
-        if raw:
-            state["mountedAt"] = raw.strip()
-        state["mounted"] = bool(raw)
+        stat_result = os.stat(os.path.join(READONLY_ROOT, "mycc"))
+        state["mountedAt"] = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime(stat_result.st_mtime))
+        state["mounted"] = True
     except Exception as exc:
         state["mounted"] = False
-        state["error"] = str(exc)
+        state["error"] = type(exc).__name__
+    state["toolRunner"] = tool_runner_status()
     return state
 
 
@@ -1024,7 +1039,19 @@ def refresh_readonly_payload():
     started = time.time()
     try:
         try:
-            output = run_quiet(["docker", "exec", "ops-terminal", "bash", "-lc", "cd /workspace/projects/ai-ops-cockpit && if [ -x scripts/sync-readonly-workspaces.sh ]; then AI_OPS_ROOT=/workspace/projects/ai-ops-cockpit scripts/sync-readonly-workspaces.sh; else echo 'sync script missing'; exit 1; fi"], timeout=120)
+            env = os.environ.copy()
+            env.update({
+                "AI_OPS_ROOT": "/workspace/ai-ops-root",
+                "AI_OPS_READONLY_SRC": "/opt/ai-ops-workspaces",
+                "AI_OPS_READONLY_DEST": READONLY_ROOT,
+            })
+            output = subprocess.check_output(
+                ["bash", "/workspace/ai-ops-root/scripts/sync-readonly-workspaces.sh"],
+                env=env,
+                text=True,
+                stderr=subprocess.STDOUT,
+                timeout=120,
+            )
             payload = {"ok": True, "refreshedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"), "durationMs": round((time.time() - started) * 1000), "output": sanitize_terminal_text(output)[-2000:]}
         except Exception as exc:
             payload = {"ok": False, "refreshedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"), "durationMs": round((time.time() - started) * 1000), "error": sanitize_terminal_text(str(exc))}
@@ -1830,6 +1857,16 @@ def ops_runtime_payload():
     return {
         "ok": True,
         "runtime": ops_tool_runtime.runtime_summary(PILOT_PROJECTS, executions),
+        "architecture": {
+            "brain": brain_status(),
+            "readonlyRunner": tool_runner_status(),
+            "hands": "ops-inspector controlled actions only",
+        },
+        "readonlySafe": {
+            "workflow": "readonly_safe",
+            "tools": ["aiops_read", "aiops_grep", "aiops_find", "aiops_ls"],
+            "policy": "registered project + relative realpath + no symlink + sensitive-path deny + bounded output",
+        },
         "projects": ops_runtime_profiles(),
         "tools": ops_tool_runtime.tool_specs(PILOT_PROJECTS),
         "executions": executions,
@@ -2521,15 +2558,16 @@ def run_vibe_task(mode, question, conversation=None, notify=False, project_id=No
     mode = (mode or "readonly_inspect").strip()
     question = (question or "").strip()
     conversation = (conversation or "").strip()[-4000:]
+    bound_project = (project_id or "mycc").strip()
     workflows = {item["id"]: item for item in harness_payload()["workflows"]}
     workflow = workflows.get(mode) or workflows["readonly_inspect"]
     if not question:
         return {"ok": False, "error": "empty question"}
     if len(question) > 1600:
         return {"ok": False, "error": "question too long"}
-    context = build_project_context(project_id) if project_id else None
-    if project_id and not context.get("ok"):
-        return {"ok": False, "error": "project context not ready", "project": project_id, "context": {key: value for key, value in context.items() if key != "prompt"}}
+    context = build_project_context(bound_project)
+    if not context.get("ok"):
+        return {"ok": False, "error": "project context not ready", "project": bound_project, "context": {key: value for key, value in context.items() if key != "prompt"}}
     if not TASK_LOCK.acquire(blocking=False):
         return {"ok": False, "error": "task already running"}
     created = time.strftime("%Y-%m-%d %H:%M:%S %Z")
@@ -2544,41 +2582,39 @@ def run_vibe_task(mode, question, conversation=None, notify=False, project_id=No
         if conversation:
             prompt += "\n\n网页端连续对话上下文（已脱敏，仅供理解当前轮）：\n" + conversation
         prompt += "\n\n川哥发来的任务：" + question
-        if context:
-            prompt += context["prompt"]
+        prompt += "\n\n本轮已绑定只读项目：" + bound_project
+        prompt += "\n允许读取的文件清单：" + json.dumps(context.get("files") or [], ensure_ascii=False)
+        prompt += "\n源码正文未注入 prompt；需要核对时必须调用 aiops_read、aiops_grep、aiops_find 或 aiops_ls。"
         if runtime_context:
             runtime_text = redact_sensitive_text(json.dumps(runtime_context, ensure_ascii=False, indent=2))[:12000]
             prompt += "\n\n本轮实时运行上下文如下；它比源码快照更新，应优先用于判断当前状态：\n```json\n" + runtime_text + "\n```"
-        shell = (
-            'prompt_file=$(mktemp /tmp/aiops-task-prompt.XXXXXX); '
-            'trap \'rm -f "$prompt_file"\' EXIT; '
-            'cat > "$prompt_file"; '
-            'timeout 180 omp-aiops --model '
-            + shlex.quote(AI_OPS_OMP_MODEL)
-            + ' --cwd /workspace/projects/ai-ops-cockpit --no-tools --no-session '
-            + '--append-system-prompt "$prompt_file" -p '
-            + shlex.quote('严格执行追加系统提示中的当前任务，只输出任务结果。')
+        brain_result = internal_service_json(
+            AI_OPS_BRAIN_URL,
+            "/run",
+            {
+                "taskId": task_id,
+                "project": bound_project,
+                "workflow": "readonly_safe",
+                "prompt": prompt,
+            },
+            timeout=210,
+            require_token=True,
         )
-        try:
-            output = subprocess.check_output(["docker", "exec", "-i", "ops-terminal", "bash", "-lc", shell], input=prompt, text=True, stderr=subprocess.STDOUT, timeout=210)
-            ok = True
-        except subprocess.CalledProcessError as exc:
-            output = exc.output
-            ok = False
-        except Exception as exc:
-            output = str(exc)
-            ok = False
+        output = brain_result.get("output") or brain_result.get("error") or "brain returned no output"
+        ok = bool(brain_result.get("ok"))
         item = {
             "id": task_id,
             "ok": ok,
             "mode": workflow["id"],
             "modeName": workflow["name"],
-            "project": project_id,
+            "project": bound_project,
             "question": redact_sensitive_text(question),
             "conversationPreview": redact_sensitive_text(conversation)[-1000:],
             "answer": compact_task_answer(output),
             "createdAt": created,
             "durationMs": round((time.time() - started) * 1000),
+            "toolMode": "readonly_safe",
+            "brainBoundary": "model-only-no-docker-no-ssh",
         }
         if context:
             item["context"] = {key: value for key, value in context.items() if key != "prompt"}
@@ -2771,15 +2807,15 @@ def harness_payload():
         "purpose": "让 OMP/Grok 在真实项目接入前先具备规则、记忆、方法论、工作流和权限边界。",
         "identity": {"user": "川哥", "assistant": "grok（xAI via OMP）", "language": "中文"},
         "ruleSources": [
-            {"name": "HOME AGENTS", "path": "~/AGENTS.md", "scope": "HOME 白名单、secret、并发、git 权限"},
-            {"name": "mycc CLAUDE", "path": "~/mycc/CLAUDE.md", "scope": "BRO-PDCA、记忆系统、归档、验收"},
-            {"name": "project AGENTS", "path": "~/mycc/AGENTS.md", "scope": "Codex/mycc 项目规则"},
-            {"name": "AI Ops README", "path": "/workspace/projects/ai-ops-cockpit/README.md", "scope": "本项目部署、踩坑、验收记录"},
+            {"name": "HOME AGENTS", "path": "aiops_read(mycc, AGENTS.md)", "scope": "HOME 白名单、secret、并发、git 权限"},
+            {"name": "mycc CLAUDE", "path": "aiops_read(mycc, CLAUDE.md)", "scope": "BRO-PDCA、记忆系统、归档、验收"},
+            {"name": "project AGENTS", "path": "aiops_read(mycc, AGENTS.md)", "scope": "Codex/mycc 项目规则"},
+            {"name": "AI Ops README", "path": "aiops_read(mycc, 2-Projects/ai-ops-cockpit/README.md)", "scope": "本项目部署、踩坑、验收记录"},
         ],
         "memorySources": [
-            {"name": "recent_events", "path": "0-System/RECENT_EVENTS.md", "mode": "read_before_work", "secretPolicy": "no_secret"},
-            {"name": "memory_items", "path": "0-System/memory-items.md", "mode": "query_relevant_only", "secretPolicy": "no_secret"},
-            {"name": "status", "path": "0-System/status.md", "mode": "current_snapshot", "secretPolicy": "no_secret"},
+            {"name": "recent_events", "path": "仅在 mycc 文件级 allowlist 登记后通过 aiops_read", "mode": "read_before_work", "secretPolicy": "no_secret"},
+            {"name": "memory_items", "path": "仅在 mycc 文件级 allowlist 登记后通过 aiops_grep/read", "mode": "query_relevant_only", "secretPolicy": "no_secret"},
+            {"name": "status", "path": "仅在 mycc 文件级 allowlist 登记后通过 aiops_read", "mode": "current_snapshot", "secretPolicy": "no_secret"},
         ],
         "methodology": {
             "name": "BRO-PDCA",
@@ -2787,10 +2823,17 @@ def harness_payload():
             "stopRules": ["缺关键约束先问", "发现 secret 立即停止", "发现并发冲突立即停止", "真实项目写入前先给计划和验收标准"],
         },
         "permissions": {
-            "defaultMode": "read_only",
-            "writeRequires": "川哥明确授权 + 计划 + diff 范围 + 验收命令；/workspace/readonly 始终只读",
+            "defaultMode": "readonly_safe",
+            "allowedTools": ["aiops_read", "aiops_grep", "aiops_find", "aiops_ls"],
+            "writeRequires": "Brain 不具备文件写入、Docker、SSH、部署、commit 或 push 能力；生产动作只能走网页受控动作入口",
             "commitPushOwner": "Codex/cc 收口，OMP/Grok 默认不直接 commit/push",
             "dangerousActions": DANGEROUS_PATTERNS,
+        },
+        "executionBoundary": {
+            "brain": "OMP + 模型密钥；无 Docker Socket、生产 SSH、真实项目写挂载",
+            "readonlyRunner": "仅挂载文件级 allowlist 只读快照；无模型密钥、Webhook、Push URL、SSH、Docker Socket",
+            "hands": "ops-inspector 保留人工受控动作、确认票据、冷却、审计和动作后验收",
+            "policy": "未知项目、未知 workflow、未知工具、敏感路径、绝对路径、.. 和软链接全部 fail closed",
         },
         "workflows": workflows,
         "projects": projects,
@@ -2805,11 +2848,12 @@ def harness_prompt():
 
 核心要求：
 1. 全程中文，称呼用户为川哥。
-2. 默认只读；任何写文件、重启、部署、删除、commit、push 前，必须先说明 O1/O2、风险、计划、回滚点和验收命令，等待明确确认。
+2. 默认 readonly_safe；只能使用 aiops_read/grep/find/ls 读取已登记文件级快照。Brain 没有写文件、Docker、SSH、部署、commit 或 push 能力。
 3. 真实项目接入前，不能凭空假设路径、密钥、部署方式；先读项目规则和 README。
 4. secret、Webhook、Kuma Push URL、OAuth code/token、密码、cookie、API key 不得输出到文档、git、记忆或日志摘要。
 5. 遇到 UI 白屏/接口异常/服务不响应，必须先做根因检查和真实页面验收，不能只看 HTTP 200。
-6. 输出按 BRO-PDCA：O1/O2 → Plan → Do/建议 → Check 验收 → Action 沉淀。
+6. 需要生产动作时只能输出建议和验收方案，等待川哥在网页受控动作入口确认；不要尝试绕过 Tool Policy Gate。
+7. 输出按 BRO-PDCA：O1/O2 → Plan → Do/建议 → Check 验收 → Action 沉淀。
 
 Harness JSON：
 ```json
@@ -2985,6 +3029,8 @@ def render_ops_runtime_page():
     projects = payload["projects"]
     tools = payload["tools"]
     executions = payload["executions"]
+    readonly_safe = payload["readonlySafe"]
+    architecture = payload["architecture"]
     project_options = "".join(f"<option value='{html.escape(item['id'])}'>{html.escape(item['name'])}</option>" for item in projects)
     action_options = {}
     for project in projects:
@@ -3013,7 +3059,12 @@ def render_ops_runtime_page():
     latest_summary = latest.get("resultSummary") or {}
     tools_json = json.dumps({item["name"]: item for item in tools}, ensure_ascii=False)
     actions_json = json.dumps(action_options, ensure_ascii=False)
-    return f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Ops Tool Runtime - AI Ops</title><style>
+    brain = architecture.get("brain") or {}
+    runner = architecture.get("readonlyRunner") or {}
+    brain_state = "隔离正常" if brain.get("ok") and not brain.get("directWorkspace") and not brain.get("dockerSocket") and not brain.get("productionSsh") else "边界异常"
+    runner_state = "策略门正常" if runner.get("ok") and runner.get("mountReadonly") else "策略门异常"
+    architecture_card = f"""<div class=\"card\" style=\"margin-bottom:14px\"><div class=\"label\">Brain / Hands 安全架构 <span>enforced boundary</span></div><div class=\"grid-2\"><div><h3>Brain：{html.escape(brain_state)}</h3><p class=\"sub\">OMP + 模型密钥；无 Docker Socket、生产 SSH 和真实项目挂载。</p></div><div><h3>Readonly Runner：{html.escape(runner_state)}</h3><p class=\"sub\">{html.escape(readonly_safe.get('workflow') or 'readonly_safe')} · {html.escape('、'.join(readonly_safe.get('tools') or []))}</p></div></div><p class=\"sub\" style=\"margin-top:12px\">Hands：{html.escape(architecture.get('hands') or '')}。未知项目、未知工具、绝对路径、..、软链接和敏感路径全部 fail closed。</p></div>"""
+    page = f"""<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Ops Tool Runtime - AI Ops</title><style>
 :root{{--bg:#070b10;--panel:#101821;--panel2:#14202b;--line:rgba(148,163,184,.18);--text:#e7edf5;--muted:#8b9aae;--dim:#607083;--green:#55d68b;--yellow:#f4c95d;--orange:#ff9a5c;--red:#ff6b6b;--blue:#65a9ff;--cyan:#49d4d4;--violet:#a48cff}}*{{box-sizing:border-box}}body{{margin:0;min-height:100vh;background:radial-gradient(circle at 10% 0%,rgba(73,212,212,.14),transparent 26%),radial-gradient(circle at 90% 10%,rgba(101,169,255,.14),transparent 30%),linear-gradient(180deg,#091017,#070b10 62%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI','PingFang SC',sans-serif}}.app{{display:grid;grid-template-columns:270px minmax(720px,1fr) 340px;gap:16px;min-height:100vh;padding:16px}}.sidebar,.main,.right{{background:rgba(16,24,33,.86);border:1px solid var(--line);box-shadow:0 24px 80px rgba(0,0,0,.38);backdrop-filter:blur(20px);overflow:hidden}}.sidebar{{border-radius:24px;display:flex;flex-direction:column}}.brand{{padding:22px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center}}.logo{{width:40px;height:40px;border-radius:13px;background:linear-gradient(145deg,var(--cyan),var(--blue) 65%,var(--violet));display:grid;place-items:center;color:#041118;font-weight:900}}h1,h2,h3,p{{margin:0}}.brand h1{{font-size:17px}}.brand p,.muted{{color:var(--muted)}}.nav{{padding:14px 10px;display:grid;gap:6px}}.side-item{{border:0;color:var(--muted);background:transparent;border-radius:14px;min-height:42px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;text-align:left;font:inherit}}.side-item.primary,.side-item:hover{{color:var(--text);background:linear-gradient(90deg,rgba(73,212,212,.16),rgba(101,169,255,.08));outline:1px solid rgba(73,212,212,.22)}}.side-item span{{display:flex;align-items:center;gap:10px}}.side-item em{{font-style:normal;border:1px solid var(--line);border-radius:999px;padding:3px 8px;color:var(--muted);font-size:11px}}.status-dot{{width:8px;height:8px;border-radius:99px;background:var(--dim);box-shadow:0 0 0 3px rgba(136,152,170,.08)}}.status-dot.green{{background:var(--green)}}.status-dot.yellow{{background:var(--yellow)}}.safe-card{{margin:auto 14px 14px;border:1px solid rgba(85,214,139,.2);background:rgba(85,214,139,.06);border-radius:18px;padding:14px;color:var(--muted);font-size:12px;line-height:1.55}}.safe-card b{{display:block;color:var(--text);font-size:13px;margin-bottom:6px}}.main{{border-radius:24px;display:flex;flex-direction:column}}.topbar{{min-height:78px;padding:17px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:18px}}.topbar h2{{font-size:24px;letter-spacing:-.04em}}.badges{{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}}.badge{{border:1px solid var(--line);background:rgba(255,255,255,.035);border-radius:999px;padding:8px 11px;color:var(--muted);font-size:12px}}.badge strong{{color:var(--text)}}.content{{padding:18px;overflow:auto}}.hero-grid{{display:grid;grid-template-columns:1.25fr .75fr .75fr;gap:14px;margin-bottom:14px}}.card,.tool-card{{position:relative;background:linear-gradient(180deg,rgba(20,32,43,.94),rgba(12,18,26,.94));border:1px solid var(--line);border-radius:18px;padding:16px;overflow:hidden}}.card:before,.tool-card:before{{content:'';position:absolute;inset:0;background:radial-gradient(circle at top right,rgba(101,169,255,.08),transparent 36%);pointer-events:none}}.card>* ,.tool-card>*{{position:relative}}.label{{color:var(--muted);font-size:12px;margin-bottom:12px;display:flex;justify-content:space-between}}.big{{font-size:38px;font-weight:780;letter-spacing:-.06em;line-height:1.05}}.sub{{color:var(--muted);font-size:12px;line-height:1.55;margin-top:10px}}.flow{{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:15px}}.step{{border:1px solid var(--line);background:rgba(255,255,255,.035);border-radius:13px;padding:10px;min-height:76px}}.step b{{display:block;font-size:12px;margin:5px 0}}.step i{{font-style:normal;color:var(--cyan);font-weight:800;font-size:11px}}.step span{{display:block;color:var(--muted);font-size:11px;line-height:1.35}}.metric{{font-size:36px;font-weight:780;letter-spacing:-.05em}}.tool-grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}.tool-card{{min-height:150px;display:flex;flex-direction:column;justify-content:space-between}}.tool-card p{{color:var(--cyan);font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}}.tool-card h3{{font-size:16px;margin:7px 0 8px}}.tool-card span{{color:var(--muted);font-size:12px;line-height:1.5}}.tool-foot{{display:flex;align-items:center;justify-content:space-between;margin-top:14px}}button,a.btn{{border:1px solid rgba(73,212,212,.38);background:linear-gradient(135deg,rgba(73,212,212,.20),rgba(101,169,255,.16));color:var(--text);border-radius:12px;padding:9px 12px;text-decoration:none;font-weight:650;cursor:pointer}}button:disabled{{opacity:.35;cursor:not-allowed}}select{{background:#071018;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px;margin-right:8px}}pre,code{{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}}pre{{white-space:pre-wrap;background:#050a0f;border:1px solid rgba(73,212,212,.14);border-radius:16px;padding:14px;max-height:280px;overflow:auto;color:#b8c7d7;font-size:12px;line-height:1.55}}.risk{{border-radius:999px;padding:5px 9px;font-size:11px;border:1px solid var(--line)}}.risk.readonly{{color:var(--green);background:rgba(85,214,139,.08);border-color:rgba(85,214,139,.22)}}.risk.confirm{{color:var(--yellow);background:rgba(244,201,93,.08);border-color:rgba(244,201,93,.22)}}.risk.blocked{{color:var(--red);background:rgba(255,107,107,.08);border-color:rgba(255,107,107,.22)}}.grid-2{{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}}table{{width:100%;border-collapse:collapse;font-size:12px}}td,th{{border-bottom:1px solid rgba(148,163,184,.14);padding:10px;text-align:left;vertical-align:top}}th{{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.08em}}td small{{display:block;color:var(--muted);margin-top:3px}}.right{{border-radius:24px;display:flex;flex-direction:column}}.right-head{{padding:18px;border-bottom:1px solid var(--line)}}.right-head h3{{font-size:16px}}.right-body{{padding:14px;display:grid;gap:12px;overflow:auto}}.panel{{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.035);padding:14px}}.panel h4{{margin:0 0 10px;font-size:13px;display:flex;justify-content:space-between}}.kv{{display:grid;gap:8px;font-size:12px}}.kv div{{display:flex;justify-content:space-between;gap:10px;color:var(--muted)}}.kv strong{{color:var(--text);text-align:right}}.approval{{border:1px solid rgba(255,154,92,.24);background:rgba(255,154,92,.06);border-radius:14px;padding:12px;color:var(--muted);font-size:12px;line-height:1.5}}.record{{display:grid;gap:5px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.035);padding:11px;font-size:12px}}.record span{{color:var(--muted)}}.record em{{font-style:normal;font-weight:700}}.record em.ok{{color:var(--green)}}.record em.warn{{color:var(--yellow)}}.record code{{color:var(--dim);word-break:break-all}}.topnav{{display:none}}@media(max-width:1180px){{.app{{grid-template-columns:240px 1fr}}.right{{display:none}}.hero-grid,.grid-2{{grid-template-columns:1fr}}.tool-grid{{grid-template-columns:1fr}}}}
 </style></head><body><div class=\"app\"><aside class=\"sidebar\"><div class=\"brand\"><div class=\"logo\">OPS</div><div><h1>AI Ops Cockpit</h1><p>Grok Build style runtime</p></div></div><div class=\"nav\"><a class=\"side-item\" href=\"/\"><span><i class=\"status-dot green\"></i>首页</span><em>home</em></a><a class=\"side-item primary\" href=\"/vibe/ops-runtime\"><span><i class=\"status-dot green\"></i>Ops Tool Runtime</span><em>new</em></a><a class=\"side-item\" href=\"/vibe/\"><span><i class=\"status-dot green\"></i>Vibe Coding</span><em>grok</em></a>{sidebar_projects}</div><div class=\"safe-card\"><b>安全边界</b>Grok 只能调用白名单工具。重启、修复、回滚必须 action token、确认词、冷却和动作后验收。</div></aside><main class=\"main\"><header class=\"topbar\"><div><h2>Ops Tool Runtime</h2><p class=\"muted\">把巡检、证据、受控动作统一成 Grok 可调用的工具运行时</p></div><div class=\"badges\"><span class=\"badge\"><strong>Grok 4.5</strong> online</span><span class=\"badge\"><strong>Mode</strong> {html.escape(runtime['mode'])}</span><span class=\"badge\"><strong>Trace</strong> enabled</span></div></header><section class=\"content\"><div class=\"hero-grid\"><div class=\"card\"><div class=\"label\">当前智能体闭环 <span>runtime turn</span></div><div class=\"big\">Inspect → Evidence → Act</div><p class=\"sub\">Grok 不直接拿 shell；它只看到工具定义、风险等级、参数 schema 和执行后的证据包。</p><div class=\"flow\"><div class=\"step\"><i>01</i><b>Goal</b><span>用户或定时任务发起目标</span></div><div class=\"step\"><i>02</i><b>Inspect</b><span>调用只读工具收集状态</span></div><div class=\"step\"><i>03</i><b>Evidence</b><span>生成可追溯证据包</span></div><div class=\"step\"><i>04</i><b>Confirm</b><span>高风险动作请求确认</span></div><div class=\"step\"><i>05</i><b>Verify</b><span>动作后公网验收</span></div></div></div><div class=\"card\"><div class=\"label\">Registered Tools <span>schema</span></div><div class=\"metric\">{runtime['toolCount']}</div><p class=\"sub\">只读 {runtime['readonlyToolCount']} 个，受控动作 {runtime['confirmToolCount']} 个，高风险阻断 {runtime['blockedToolCount']} 个。</p></div><div class=\"card\"><div class=\"label\">Projects <span>profile</span></div><div class=\"metric\">{runtime['projectCount']}</div><p class=\"sub\">每个项目都有独立 allowlist、生产通道和动作边界。</p></div></div><div class=\"card\"><div class=\"label\">运行工具 <span>ToolRegistry</span></div><p class=\"sub\" style=\"margin-bottom:12px\">选择项目与动作后运行；结果会写入 ExecutionRecord。</p><select id=\"runtimeProject\">{project_options}</select><select id=\"runtimeAction\"></select><pre id=\"runtimeResult\">等待运行。</pre><div class=\"tool-grid\">{tool_cards}</div></div><div class=\"grid-2\"><div class=\"card\"><div class=\"label\">项目工具矩阵 <span>ProjectProfile</span></div><table><thead><tr><th>项目</th><th>Allowlist / 探针</th><th>生产通道</th><th>动作</th></tr></thead><tbody>{project_rows}</tbody></table></div><div class=\"card\"><div class=\"label\">最近执行轨迹 <span>ExecutionRecord</span></div>{execution_cards}</div></div></section></main><aside class=\"right\"><div class=\"right-head\"><h3>证据与确认队列</h3><p>给人看的“为什么要动”和“动完是否好了”。</p></div><div class=\"right-body\"><div class=\"panel\"><h4>最新证据包 <span class=\"risk readonly\">verified</span></h4><div class=\"kv\"><div><span>Execution ID</span><strong>{html.escape(latest.get('id') or '-')}</strong></div><div><span>Tool</span><strong>{html.escape(latest.get('tool') or '-')}</strong></div><div><span>Project</span><strong>{html.escape(latest.get('project') or '-')}</strong></div><div><span>Duration</span><strong>{html.escape(str(latest.get('durationMs') or '-'))}ms</strong></div><div><span>Secret Exposure</span><strong>0</strong></div><div><span>Result</span><strong>{'OK' if latest_summary.get('ok') else '等待'}</strong></div></div></div><div class=\"panel\"><h4>待确认动作 <span class=\"risk confirm\">safe gate</span></h4><div class=\"approval\"><b>run-controlled-action</b><br>仅允许项目 profile 内的固定动作；确认词不匹配则不会执行。</div></div><div class=\"panel\"><h4>安全策略 <span>PermissionPolicy</span></h4><div class=\"kv\"><div><span>Readonly</span><strong style=\"color:var(--green)\">auto</strong></div><div><span>Restart / Repair</span><strong style=\"color:var(--yellow)\">confirm</strong></div><div><span>Deploy / Shell</span><strong style=\"color:var(--red)\">blocked</strong></div><div><span>Secret</span><strong style=\"color:var(--red)\">never echo</strong></div></div></div></div></aside></div><script>
 const tools = {tools_json};
@@ -3063,6 +3114,7 @@ document.querySelectorAll('[data-tool]').forEach((button) => button.addEventList
 document.querySelectorAll('[data-select-project]').forEach((button) => button.addEventListener('click', () => setProject(button.dataset.selectProject)));
 refreshActions();
 </script></body></html>"""
+    return page.replace('<section class="content">', '<section class="content">' + architecture_card, 1)
 
 
 def render_vibe_pilot_page():
@@ -3348,38 +3400,32 @@ def render_dashboard_page():
 
 def workspace_payload():
     projects = [
-        {"name": "AI Ops Cockpit", "path": "/workspace/projects/ai-ops-cockpit", "purpose": "运维驾驶舱配置、页面、终端容器", "start": "cd /workspace/projects/ai-ops-cockpit && git status --short"},
-        {"name": "mycc", "path": "/workspace/readonly/mycc", "purpose": "本机 AI 协作中枢只读快照", "start": "cd /workspace/readonly/mycc && git status --short --branch"},
-        {"name": "个人站", "path": "/workspace/readonly/chenchuan-site", "purpose": "个人站开发、构建、部署检查只读快照", "start": "cd /workspace/readonly/chenchuan-site && git status --short --branch"},
-        {"name": "MyJavis", "path": "/workspace/readonly/MyJavis", "purpose": "MyJavis 服务、备份、发布相关检查只读快照", "start": "cd /workspace/readonly/MyJavis && git status --short --branch"},
-        {"name": "Voice Agent", "path": "/workspace/readonly/realtime-voice-agent", "purpose": "实时语音 Agent 与声纹链路只读快照", "start": "cd /workspace/readonly/realtime-voice-agent && git status --short --branch"},
-        {"name": "P003", "path": "/workspace/readonly/P003GameDemo20260513", "purpose": "P003 游戏 demo / 实验项目只读快照", "start": "cd /workspace/readonly/P003GameDemo20260513 && git status --short --branch"},
-        {"name": "Remote Stacks", "path": "/workspace/stacks", "purpose": "远端 Docker Compose stacks", "start": "cd /workspace/stacks && find . -maxdepth 2 -name 'compose*.yml' -o -name 'docker-compose*.yml'"},
-        {"name": "Ops Scratchpad", "path": "/workspace/scratch", "purpose": "临时排障记录和命令输出，不放 secret", "start": "mkdir -p /workspace/scratch && cd /workspace/scratch"},
+        {"name": "mycc", "path": "/workspace/readonly/mycc", "purpose": "本机 AI 协作中枢文件级只读快照", "start": "请使用 aiops_ls(project=mycc, path=.)"},
+        {"name": "个人站", "path": "/workspace/readonly/chenchuan-site", "purpose": "个人站文件级只读快照", "start": "请使用 aiops_read(project=chenchuan-site, path=README.md)"},
+        {"name": "个人 CPA", "path": "/workspace/readonly/cpa-smart-router", "purpose": "CPA 路由器文件级只读快照", "start": "请使用 aiops_read(project=cpa-smart-router, path=README.md)"},
+        {"name": "私人 IPTV", "path": "/workspace/readonly/iptv-api", "purpose": "IPTV 聚合服务文件级只读快照", "start": "请使用 aiops_read(project=iptv-api, path=compose.yaml)"},
+        {"name": "MyJavis", "path": "/workspace/readonly/MyJavis", "purpose": "MyJavis 文件级只读快照", "start": "请使用 aiops_read(project=MyJavis, path=README.md)"},
+        {"name": "Voice Agent", "path": "/workspace/readonly/realtime-voice-agent", "purpose": "实时语音 Agent 文件级只读快照", "start": "请使用 aiops_read(project=realtime-voice-agent, path=README.md)"},
+        {"name": "P003", "path": "/workspace/readonly/P003GameDemo20260513", "purpose": "P003 实验项目文件级只读快照", "start": "请使用 aiops_ls(project=P003GameDemo20260513, path=.)"},
     ]
     servers = [
-        {"name": "RackNerd", "target": "本机 ops-terminal 当前宿主", "command": "hostname && uptime && docker ps --format 'table {{.Names}}\t{{.Status}}'"},
-        {"name": "阿里云", "target": "按 memory SSH alias 连接", "command": "ssh aliyun 'hostname && uptime'"},
-        {"name": "Mini", "target": "家庭 Mini 编排中枢", "command": "ssh mini 'hostname && uptime'"},
-        {"name": "NAS", "target": "家庭 NAS / fnOS", "command": "ssh nas 'hostname && uptime'"},
+        {"name": "RackNerd", "target": "当前 AI Ops 宿主", "command": "请在资产矩阵查看实时状态"},
+        {"name": "已接入生产节点", "target": "专用限权维护通道", "command": "请在项目页使用受控巡检/动作按钮"},
     ]
     commands = [
-        {"label": "查看容器", "command": "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'"},
-        {"label": "查看 Compose", "command": "docker compose ls"},
-        {"label": "查看终端日志", "command": "ls -lt /var/log/ops-terminal | head"},
-        {"label": "进入工作区", "command": "cd /workspace/projects"},
-        {"label": "检查权限", "command": "id && sudo -l"},
-        {"label": "重启 OMP", "command": f"omp --model {AI_OPS_OMP_MODEL} --cwd /workspace/projects/ai-ops-cockpit"},
-        {"label": "一键只读巡检", "command": f"omp --model {AI_OPS_OMP_MODEL} -p '请只读检查当前 AI Ops 驾驶舱状态，列出异常、风险、建议和验收命令。'"},
-        {"label": "首次登录 Grok", "command": "omp auth-broker login xai-oauth"},
+        {"label": "列只读文件", "command": "让 OMP 使用 aiops_ls，并明确 project 与相对 path"},
+        {"label": "读取文件", "command": "让 OMP 使用 aiops_read；禁止绝对路径、..、软链接和敏感路径"},
+        {"label": "搜索源码", "command": "让 OMP 使用 aiops_grep 或 aiops_find；结果自动限长并审计"},
+        {"label": "生产动作", "command": "返回网页项目页，使用带确认词、冷却和验收的受控动作"},
     ]
     guardrails = [
-        "默认用户 ops：高权限非 root，sudo 免密；需要 root 能力时显式 sudo。",
+        "Brain/Terminal 不挂载 Docker Socket、生产 SSH、真实项目目录或远端 stacks。",
+        "Tool Runner 不持有模型密钥、Webhook、Kuma Push URL、SSH 或 Docker Socket。",
+        "readonly_safe 仅允许 aiops_read、aiops_grep、aiops_find、aiops_ls，未知工具和未知项目默认拒绝。",
         "终端会话记录在 /var/log/ops-terminal/session-*.log，用于复盘。",
-        "OMP 已安装；Grok OAuth 登录态持久化在 /home/ops/.omp，重建容器不会丢。",
+        f"OMP 已安装，模型固定为 {AI_OPS_OMP_MODEL_LABEL}；模型密钥仅存在 Brain 边界。",
         "不要在终端里粘贴或保存密码、Webhook、Push URL token、API key。",
-        "改生产服务前先说明目标、备份点、回滚方式、验收命令。",
-        "高危命令命中护栏词时，先停下让 OMP/Codex 给风险说明和回滚方案。",
+        "需要生产变更时先说明目标、备份点、回滚方式和验收命令，再回网页受控动作入口确认。",
     ]
     return {"projects": projects, "servers": servers, "commands": commands, "templates": command_templates(), "guardrails": guardrails}
 
@@ -3420,7 +3466,7 @@ def render_vibe_page():
     guardrail_items = "".join(f"<li>{html.escape(item)}</li>" for item in payload["guardrails"])
     dangerous = "、".join(DANGEROUS_PATTERNS)
     status_class = "ok" if status["ok"] else "warn"
-    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vibe Coding - AI Ops</title><style>{cockpit_page_style()}</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 {html.escape(AI_OPS_OMP_MODEL_LABEL)} 版 OMP；真实项目接入前先固定规则、记忆、BRO-PDCA、工作流和权限边界。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">默认只读</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/ops-runtime">Tool Runtime</a><a class="btn" href="/vibe/pilot">实战试点</a><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/todos" data-token-link="true">AI 待办</a><a class="btn" href="/vibe/assets">资产矩阵</a><button id="refreshReadonlyBtn">刷新只读快照</button><button id="runN8nInspectBtn">触发手动巡检</button></p><pre id="actionResult">等待操作。</pre><p class="muted" id="readonlyStatus">只读快照：检查中...</p></section><section class="card"><h2>实战前护栏</h2><p class="muted">先从低风险项目开始：选择项目、选择只读/方案 workflow、发送给 AI 模型，结果进入任务审计并可转待办。</p><p><a class="btn" href="/vibe/pilot">进入真实项目实战试点</a></p></section><section class="card"><h2>连续对话</h2><p class="muted">保留本页上下文继续问 AI 模型；刷新页面会清空上下文。</p><div id="chatHistory" class="chat"><p class="muted">暂无对话。</p></div></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送只读任务。默认禁用工具调用；留空会自动执行默认只读巡检。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><label><input id="notifyFeishu" type="checkbox"> 完成后飞书通知</label></p><p><button id="sendTaskBtn">发送给 AI 模型</button><button id="clearTaskBtn" type="button">清空重写</button><button id="clearChatBtn" type="button">清空对话</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><p class="muted" id="taskStatus">状态：待发送</p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness prompt 并启动 <code>omp --model {html.escape(AI_OPS_OMP_MODEL)}</code>。默认只读；写入/部署必须先确认。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>命令</th><th>操作</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>常用命令</h2><table><thead><tr><th>用途</th><th>命令</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vibe Coding - AI Ops</title><style>{cockpit_page_style()}</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 {html.escape(AI_OPS_OMP_MODEL_LABEL)} 版 OMP；Brain 与生产 Hands 已隔离，源码核验只走 readonly_safe 策略门。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">readonly_safe</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/ops-runtime">Tool Runtime</a><a class="btn" href="/vibe/pilot">实战试点</a><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/todos" data-token-link="true">AI 待办</a><a class="btn" href="/vibe/assets">资产矩阵</a><button id="refreshReadonlyBtn">刷新只读快照</button><button id="runN8nInspectBtn">触发手动巡检</button></p><pre id="actionResult">等待操作。</pre><p class="muted" id="readonlyStatus">只读快照：检查中...</p></section><section class="card"><h2>实战前护栏</h2><p class="muted">先从低风险项目开始：选择项目、选择只读/方案 workflow、发送给 AI 模型，结果进入任务审计并可转待办。</p><p><a class="btn" href="/vibe/pilot">进入真实项目实战试点</a></p></section><section class="card"><h2>连续对话</h2><p class="muted">保留本页上下文继续问 AI 模型；刷新页面会清空上下文。</p><div id="chatHistory" class="chat"><p class="muted">暂无对话。</p></div></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送任务。模型只能使用 aiops_read/grep/find/ls 核验已登记只读快照，不能写入、SSH、Docker、部署或提交。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><label><input id="notifyFeishu" type="checkbox"> 完成后飞书通知</label></p><p><button id="sendTaskBtn">发送给 AI 模型</button><button id="clearTaskBtn" type="button">清空重写</button><button id="clearChatBtn" type="button">清空对话</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><p class="muted" id="taskStatus">状态：待发送</p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness 并启动 <code>omp --model {html.escape(AI_OPS_OMP_MODEL)}</code>。终端是 Brain 沙箱，不挂载真实项目、Docker Socket 或生产 SSH；生产动作请回网页受控入口。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>操作方式</th><th>复制</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>安全工具</h2><table><thead><tr><th>用途</th><th>方式</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
 document.querySelectorAll('[data-copy]').forEach((button) => {{
   button.addEventListener('click', async () => {{
     await navigator.clipboard.writeText(button.dataset.copy);

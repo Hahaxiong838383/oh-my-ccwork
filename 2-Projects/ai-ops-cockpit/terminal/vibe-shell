@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-mkdir -p /var/log/ops-terminal /workspace/projects
+mkdir -p /var/log/ops-terminal /workspace/brain
 log_file="/var/log/ops-terminal/session-$(date +%Y%m%d-%H%M%S)-$$.log"
 echo "正在启动 AI Ops ${AI_OPS_OMP_MODEL_LABEL:-DeepSeek V4 Pro} OMP Terminal..."
-cd /workspace
+cd /workspace/brain
 exec /usr/bin/script -q -f -a "$log_file" -c /usr/local/bin/vibe-omp

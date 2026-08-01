@@ -1,6 +1,6 @@
 # AI Ops Cockpit — AI 运维驾驶舱
 
-> 状态：v1 方案已确认，准备在 RackNerd VPS 上实施。
+> 状态：生产运行中；2026-08-01 已完成 Pi 启发的 Brain / Hands P0 安全加固。
 
 ## 一句话目标
 
@@ -1097,6 +1097,16 @@ scripts/validate-vibe-regression.sh
 - 生产 AI Ops 继续使用 OMP，不直接迁移到 Pi Agent；Pi 更适合作为架构参考和未来只读影子引擎。
 - 优先借鉴 Brain/Hands 分离、`readonly_safe` 工具档、Tool Policy Gate、更新供应链冷静期、权威任务快照、会话树、结构化压缩和 Project Trust Registry。
 - 完整设计、权限边界、实施顺序和验收标准见 [`docs/pi-source-borrowing-plan.md`](./docs/pi-source-borrowing-plan.md)。
+
+### 2026-08-01 · Brain / Hands P0 已上线
+
+- `ops-brain` 只持有 OMP、模型密钥和临时会话，不挂载 Docker Socket、生产 SSH、真实项目或只读快照；所有源码核验必须调用 `ops-tool-runner`。
+- `ops-tool-runner` 使用只读根文件系统、只读快照挂载、`cap_drop: ALL` 和 `no-new-privileges`，只允许 `read`、`grep`、`find`、`ls`；绝对路径、`..`、敏感路径、软链接、未知项目、未知 workflow 和写工具全部 fail closed。
+- `ops-inspector` 保留受控 Hands 职责，继续承载结构化 Docker/限权 SSH 动作；不持有模型密钥。`ops-terminal` 同样是 Brain 沙箱，不再拥有 Docker、SSH、sudo 或真实项目挂载。
+- 后台 Brain 与网页终端使用独立 OMP agent 目录，避免状态竞争；终端启动脚本会写入最小 `config.yml` 关闭首次 Provider Setup Wizard，然后自动进入 `readonly_safe`。
+- 生产验证：11 个容器运行，Brain/Runner 健康；真实 DeepSeek 只读任务返回 `PRODUCTION_BRAIN_OK`；未授权请求、敏感路径、软链接和 write 均被拒绝；完整回归返回 `OK vibe regression`。
+- 真实浏览器验证：`/vibe/`、`/vibe/tasks`、`/vibe/todos`、`/vibe/assets`、`/vibe/ops-runtime`、`/vibe/pilot`、`/terminal/` 均为 HTTP 200、无控制台错误；终端实屏确认显示 `readonly_safe（无直连生产权限）`。
+- 主回滚锚点：`/opt/ai-ops-cockpit/backups/brain-hands-20260801-055028`；终端 Setup Wizard 修复回滚点：`/opt/ai-ops-cockpit/backups/terminal-setup-fix-20260801-141913`。
 
 ### 2026-07-24 · OMP 安全自动更新
 

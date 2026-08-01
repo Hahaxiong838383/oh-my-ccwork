@@ -93,7 +93,7 @@ if ! docker exec "$CONTAINER" bash -lc \
 fi
 
 smoke_output="$(docker exec "$CONTAINER" bash -lc \
-  "HOME=/home/ops PI_CODING_AGENT_DIR=/home/ops/.omp/agent timeout 180 '$candidate' --model \"\$AI_OPS_OMP_MODEL\" --cwd /workspace/projects/ai-ops-cockpit --no-tools --no-session -p '只回复：OMP_AUTO_UPDATE_OK'" 2>&1 || true)"
+  "HOME=/home/ops PI_CODING_AGENT_DIR=/home/ops/.omp/brain-agent timeout 180 '$candidate' --model \"\$AI_OPS_OMP_MODEL\" --cwd /workspace/brain --no-tools --no-session --no-rules --no-skills --no-extensions --no-lsp --no-pty --no-prewalk --no-title -p '只回复：OMP_AUTO_UPDATE_OK'" 2>&1 || true)"
 if ! grep -q 'OMP_AUTO_UPDATE_OK' <<<"$smoke_output"; then
   rm -rf "$release_dir"
   write_state "candidate_failed" "candidate inference smoke test failed" "$latest_version" "$current"

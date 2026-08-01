@@ -1,4 +1,4 @@
-# AI Ops terminal guardrails. Sourced only by interactive bash.
+# AI Ops Brain terminal. No Docker socket, production SSH, writable project mount, or sudo.
 omp() {
   command /usr/local/bin/omp-aiops "$@"
 }
@@ -6,15 +6,11 @@ omp() {
 aiops_guard_command() {
   local cmd="$BASH_COMMAND"
   case "$cmd" in
-    *"rm -rf"*|*"docker compose down"*|*"docker rm"*|*"docker volume rm"*|*"ufw "*|*"iptables"*|*"mkfs"*|*"drop database"*|*"truncate table"*|*"reboot"*|*"shutdown"*)
+    *"rm -rf"*|*"sudo "*|*"docker "*|*"ssh "*|*"scp "*|*"rsync "*|*"curl "*|*"wget "*|*"chmod 777"*|*"chown 777"*|*"git push"*|*"git commit"*)
       echo
-      echo "⚠️  AI Ops 护栏：检测到高危命令：$cmd"
-      echo "请先让 OMP/Codex 说明风险、备份点、回滚方式和验收命令。"
-      read -r -p "确认继续执行？输入 YES 继续：" aiops_confirm
-      if [ "$aiops_confirm" != "YES" ]; then
-        echo "已取消。"
-        return 1
-      fi
+      echo "⛔ AI Ops Brain 护栏：当前终端只允许模型交互和临时草稿，不允许生产命令。"
+      echo "请通过网页受控动作入口执行已登记操作。"
+      return 1
       ;;
   esac
 }

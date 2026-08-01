@@ -1,13 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd /workspace/projects/ai-ops-cockpit
 model="${AI_OPS_OMP_MODEL:-volcengine-coding/deepseek-v4-pro}"
 model_label="${AI_OPS_OMP_MODEL_LABEL:-DeepSeek V4 Pro}"
+agent_dir="${AI_OPS_BRAIN_AGENT_DIR:-/home/ops/.omp/brain-agent}"
+brain_cwd="${AI_OPS_BRAIN_CWD:-/workspace/brain/session}"
+mkdir -p "$brain_cwd"
+chmod 700 "$brain_cwd"
+cd "$brain_cwd"
+mkdir -p "$agent_dir"
+chmod 700 "$agent_dir"
+if [ ! -f "$agent_dir/models.yml" ]; then
+  cp /etc/aiops-models.yml "$agent_dir/models.yml"
+  chmod 600 "$agent_dir/models.yml"
+fi
+if [ ! -f "$agent_dir/config.yml" ]; then
+  cat > "$agent_dir/config.yml" <<'YAML'
+setupVersion: 1
+startup:
+  setupWizard: false
+YAML
+  chmod 600 "$agent_dir/config.yml"
+fi
+export PI_CODING_AGENT_DIR="$agent_dir"
+
+run_readonly_omp() {
+  AI_OPS_BRAIN_TASK_ID="interactive-$(date +%Y%m%d-%H%M%S)" \
+    omp-aiops --model "$model" --cwd "$brain_cwd" \
+      --no-tools --no-rules --no-skills --no-lsp --no-pty --no-title \
+      --extension /opt/aiops/extensions/readonly-safe.ts \
+      --approval-mode yolo "$@"
+}
 cat <<BANNER
 ╭────────────────────────────────────────────╮
 │ AI Ops OMP Terminal                        │
 │ 自动启动: Harness + ${model_label}          │
-│ 工作区: /workspace/projects/ai-ops-cockpit │
+│ 模式: readonly_safe（无直连生产权限）      │
 │ 退出 OMP 后会回到普通 bash                 │
 ╰────────────────────────────────────────────╯
 
@@ -16,11 +43,6 @@ if ! command -v omp-aiops >/dev/null 2>&1; then
   echo "未找到 omp，回落到 bash。"
   exec /bin/bash
 fi
-mkdir -p /home/ops/.omp/agent
-if [ ! -f /home/ops/.omp/agent/models.yml ]; then
-  cp /etc/aiops-models.yml /home/ops/.omp/agent/models.yml
-  chmod 600 /home/ops/.omp/agent/models.yml
-fi
 if [ ! -r /run/secrets/volcengine_coding_api_key ]; then
   echo "⚠️  方舟 Coding Plan 密钥未挂载，已进入普通 bash。"
   echo "请检查 Docker secret volcengine_coding_api_key 后重新打开 /terminal/。"
@@ -28,7 +50,7 @@ if [ ! -r /run/secrets/volcengine_coding_api_key ]; then
 fi
 if ! omp-aiops models find "$model" --json 2>/dev/null | grep -q 'deepseek-v4-pro'; then
   echo "⚠️  OMP 未识别模型 $model，已进入普通 bash。"
-  echo "请检查 /home/ops/.omp/agent/models.yml 后重新打开 /terminal/。"
+  echo "请检查 $agent_dir/models.yml 后重新打开 /terminal/。"
   echo "Harness prompt 可查看：curl -fsS http://ops-inspector:8080/vibe/harness-prompt"
   exec /bin/bash
 fi
@@ -44,14 +66,12 @@ Harness 已加载到 /tmp/aiops/harness-prompt.md。
 如果需要查看完整 Harness，可在 OMP 里让它读取该文件。
 
 READY
-  omp-aiops --model "$model" --cwd /workspace/projects/ai-ops-cockpit || true
+  run_readonly_omp || true
 else
   echo "未能读取 Harness prompt，使用普通 OMP 启动。"
-  omp-aiops --model "$model" --cwd /workspace/projects/ai-ops-cockpit || true
+  run_readonly_omp || true
 fi
 echo
 echo "OMP 已退出，已回到普通 bash。重新启动可运行："
 echo "  /usr/local/bin/vibe-omp"
-echo "或："
-echo "  omp --model $model --cwd /workspace/projects/ai-ops-cockpit"
 exec /bin/bash

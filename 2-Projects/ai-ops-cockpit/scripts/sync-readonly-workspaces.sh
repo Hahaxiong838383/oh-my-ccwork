@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="${AI_OPS_ROOT:-/opt/ai-ops-cockpit}"
 SRC_ROOT="${AI_OPS_READONLY_SRC:-/opt/ai-ops-workspaces}"
-DEST_ROOT="$ROOT/readonly"
+DEST_ROOT="${AI_OPS_READONLY_DEST:-$ROOT/readonly}"
 mkdir -p "$SRC_ROOT" "$DEST_ROOT"
 
 RSYNC_EXCLUDES=(
@@ -72,9 +72,14 @@ copy_mycc_minimal() {
     docs/rules/CONTEXT-BUDGET.md \
     docs/rules/FEISHU-FALLBACK.md \
     2-Projects/ai-ops-cockpit/README.md \
+    2-Projects/ai-ops-cockpit/docs/pi-source-borrowing-plan.md \
     2-Projects/ai-ops-cockpit/compose.yaml \
     2-Projects/ai-ops-cockpit/caddy/Caddyfile \
     2-Projects/ai-ops-cockpit/ops-inspector/server.py \
+    2-Projects/ai-ops-cockpit/ops-inspector/ops_tool_runtime.py \
+    2-Projects/ai-ops-cockpit/ops-readonly-runner/Dockerfile \
+    2-Projects/ai-ops-cockpit/ops-readonly-runner/policy.py \
+    2-Projects/ai-ops-cockpit/ops-readonly-runner/server.py \
     2-Projects/ai-ops-cockpit/scripts/validate-vibe-regression.sh \
     2-Projects/ai-ops-cockpit/scripts/sync-readonly-workspaces.sh \
     2-Projects/ai-ops-cockpit/scripts/install-readonly-refresh-cron.sh \
@@ -82,6 +87,8 @@ copy_mycc_minimal() {
     2-Projects/ai-ops-cockpit/scripts/update-omp.sh \
     2-Projects/ai-ops-cockpit/terminal/Dockerfile \
     2-Projects/ai-ops-cockpit/terminal/omp-aiops \
+    2-Projects/ai-ops-cockpit/terminal/brain-server.py \
+    2-Projects/ai-ops-cockpit/terminal/readonly-safe.ts \
     2-Projects/ai-ops-cockpit/terminal/vibe-bashrc \
     2-Projects/ai-ops-cockpit/terminal/vibe-omp \
     2-Projects/ai-ops-cockpit/terminal/vibe-shell; do
@@ -92,6 +99,47 @@ copy_mycc_minimal() {
   done
   purge_sensitive_paths "$dest"
   make_readonly "$dest"
+}
+
+overlay_current_aiops_project() {
+  local dest="$DEST_ROOT/mycc/2-Projects/ai-ops-cockpit"
+  local relative source
+  mkdir -p "$dest"
+  chmod -R u+w "$DEST_ROOT/mycc" 2>/dev/null || true
+  for relative in \
+    README.md \
+    compose.yaml \
+    caddy/Caddyfile \
+    docs/pi-source-borrowing-plan.md \
+    ops-inspector/Dockerfile \
+    ops-inspector/server.py \
+    ops-inspector/ops_tool_runtime.py \
+    ops-readonly-runner/Dockerfile \
+    ops-readonly-runner/policy.py \
+    ops-readonly-runner/server.py \
+    scripts/validate-vibe-regression.sh \
+    scripts/sync-readonly-workspaces.sh \
+    scripts/install-readonly-refresh-cron.sh \
+    scripts/install-omp-auto-update-cron.sh \
+    scripts/update-omp.sh \
+    terminal/Dockerfile \
+    terminal/omp-aiops \
+    terminal/brain-server.py \
+    terminal/readonly-safe.ts \
+    terminal/vibe-bashrc \
+    terminal/vibe-omp \
+    terminal/vibe-shell; do
+    source="$ROOT/$relative"
+    if [ ! -f "$source" ]; then
+      source="$ROOT/2-Projects/ai-ops-cockpit/$relative"
+    fi
+    if [ -f "$source" ]; then
+      mkdir -p "$dest/$(dirname -- "$relative")"
+      cp "$source" "$dest/$relative"
+    fi
+  done
+  purge_sensitive_paths "$DEST_ROOT/mycc"
+  make_readonly "$DEST_ROOT/mycc"
 }
 
 copy_allowlist_snapshot() {
@@ -148,6 +196,7 @@ Push a sanitized snapshot from the trusted local machine.
 EOF
   make_readonly "$DEST_ROOT/mycc"
 fi
+overlay_current_aiops_project
 
 copy_manifest_snapshot chenchuan-site "$SRC_ROOT/chenchuan-site" "$ROOT/config/chenchuan-site-allowlist.txt"
 copy_manifest_snapshot cpa-smart-router "$SRC_ROOT/cpa-smart-router" "$ROOT/config/cpa-smart-router-allowlist.txt"
@@ -169,8 +218,8 @@ create_project_placeholder P003GameDemo20260513
 cat > "$DEST_ROOT/README.md" <<'EOF'
 # AI Ops readonly workspaces
 
-This directory is mounted into ops-terminal as /workspace/readonly:ro.
-It is for Grok/OMP inspection only. Do not put secrets here.
+This directory is mounted only into ops-tool-runner as /workspace/readonly:ro.
+Brain containers cannot access it directly. Do not put secrets here.
 EOF
 chmod 0444 "$DEST_ROOT/README.md"
 rm -f "$DEST_ROOT/.last-sync"
