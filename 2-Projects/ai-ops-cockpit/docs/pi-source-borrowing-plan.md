@@ -36,23 +36,25 @@ Pi 的核心价值是提供一组值得吸收的架构模式：执行隔离、�
 ```mermaid
 flowchart LR
   UI["AI Ops 网页 / Terminal"] --> Inspector["ops-inspector"]
-  Inspector --> OMP["OMP + DeepSeek V4 Pro"]
-  OMP --> Readonly["只读快照"]
-  OMP --> Actions["受控动作 / 限权 SSH"]
+  Inspector --> Brain["ops-brain\nOMP + DeepSeek V4 Pro"]
+  Brain --> ReadRunner["ops-tool-runner\nreadonly_safe"]
+  ReadRunner --> Readonly["文件级只读快照"]
+  Inspector --> Actions["受控 Hands\nDocker / 限权 SSH"]
   Inspector --> Audit["任务审计 / 待办"]
   Inspector --> Notify["n8n / Kuma / 飞书"]
 ```
 
 已有保护：
 
-- 网页任务默认 `--no-tools`。
-- 真实项目使用文件级 allowlist。
-- 生产维护通过独立限权 SSH 动作。
+- Brain 不挂载 Docker Socket、生产 SSH、真实项目或只读快照。
+- `readonly_safe` 只允许 `read`、`grep`、`find`、`ls`，并由 Tool Policy Gate 做路径、项目、workflow 和结果限制。
+- 真实项目使用文件级 allowlist，快照只挂载到无模型密钥的 `ops-tool-runner`。
+- 生产维护由 `ops-inspector` 的结构化动作和独立限权 SSH 通道执行。
 - Harness 注入 BRO-PDCA、默认只读、动作确认和验收要求。
 - OMP 更新采用 candidate/current/fallback，必须通过真实推理和 `OK vibe regression` 才切换。
 - 模型密钥只通过 Docker secret 挂载。
 
-当前主要结构风险：`ops-terminal` 同时持有模型密钥、完整 OMP、Docker Socket 和运维工作区。网页无工具模式能降低日常风险，但完整终端模式仍把“大脑、凭据和高权限手脚”放在同一信任边界。
+当前剩余风险：OMP 更新器尚未实现 48 小时发布冷静期、npm integrity 和依赖快照；受控 Hands 仍集中在 `ops-inspector`，后续应继续收敛为参数 schema 固定的独立 Action Runner。
 
 ## 3. P0：优先借鉴
 
