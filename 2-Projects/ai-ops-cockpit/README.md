@@ -1084,6 +1084,20 @@ scripts/validate-vibe-regression.sh
 - 终端不再依赖 xAI OAuth 登录态；启动时会检查方舟 secret 和 OMP 模型注册，缺失时安全回落到普通 bash。
 - 原有 Harness、BRO-PDCA、默认只读、`--no-tools` 网页任务、动作确认、任务审计和飞书脱敏边界保持不变。
 
+### 2026-08-01 · DeepSeek V4 Pro 配置复核与回滚锚点
+
+- 指定 RTF 中的方舟 Coding Plan 密钥与 RackNerd 当前 Docker secret 通过完整 SHA-256 比对一致；未记录、输出或重新写入明文密钥。
+- 线上在任务开始前已经使用 `volcengine-coding/deepseek-v4-pro`，因此本次没有重复旋转密钥或重建容器，避免无意义变更影响既有功能。
+- 当前运行入口为 `omp-aiops`，实测版本 `17.2.1`；真实推理返回预期标记，完整线上回归返回 `OK vibe regression`。
+- 远端受限回滚锚点：`/opt/ai-ops-cockpit/backups/model-config-verify-20260801-003028/`，目录权限 `700`、文件权限 `600`，包含任务前配置、模型注册、运行入口、回归脚本和受限 secret 备份。
+- 该锚点保存的是任务开始时的真实线上状态；由于任务前模型本身已经是 DeepSeek V4 Pro，它不是另一模型的备用方案。历史 Grok 4.5 配置可从 `c4e975ccb^` 追溯，但 OAuth 登录态具有时效性，切回前必须重新验证凭据、真实推理和全量回归，禁止自动降级。
+
+### 2026-08-01 · Pi 源码借鉴决策
+
+- 生产 AI Ops 继续使用 OMP，不直接迁移到 Pi Agent；Pi 更适合作为架构参考和未来只读影子引擎。
+- 优先借鉴 Brain/Hands 分离、`readonly_safe` 工具档、Tool Policy Gate、更新供应链冷静期、权威任务快照、会话树、结构化压缩和 Project Trust Registry。
+- 完整设计、权限边界、实施顺序和验收标准见 [`docs/pi-source-borrowing-plan.md`](./docs/pi-source-borrowing-plan.md)。
+
 ### 2026-07-24 · OMP 安全自动更新
 
 - 每日 `05:20 Asia/Shanghai` 检查 npm 官方 registry 的 `@oh-my-pi/pi-coding-agent` 最新稳定版；没有新版本时只写状态，不重启服务。
