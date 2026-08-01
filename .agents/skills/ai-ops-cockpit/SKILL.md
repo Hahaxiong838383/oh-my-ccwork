@@ -17,6 +17,8 @@ output_levels: L2
 5. **先验收再通知体验**：本地静态检查 + 线上回归通过后，才告诉川哥体验；未体验 OK 前不 commit/push，除非川哥明确要求。
 6. **通道与业务状态分离**：飞书日报的“生产维护通道”只表示限权 SSH/维护调用是否成功，不能复用业务聚合 `ok`。站点进程、实时雷达、Theory Radar、访问统计等子项必须独立展示，避免一个业务异常被误报成通道不可用。
 7. **访问统计只发聚合**：个人站日报使用前一完整自然日的 `human` UV/PV；排除 `owner/aiops/prefetch/bot/legacy`，只允许发送日期、UV/PV、人均页数和公开热门路径，禁止发送 IP、UA、referrer 或访问明细。
+8. **验收真正消费点**：文件存在、HTTP 200、容器 healthy、模型列表可见都只能算中间证据；必须验证用户实际消费的浏览器页面、终端 TUI、真实模型调用和策略审计记录。
+9. **阴性结果必须带正向锚点**：任何“0 泄漏 / 0 错误 / 0 命中 / 全部阻断”前，先证明扫描面非空、测试确实执行、审计记录确实生成；无正向锚点的零结果一律无效。
 
 ## 必跑检查
 
@@ -50,6 +52,16 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && AI_OPS_REGRESSION_SLEEP=22 scripts/valid
 ```
 
 通过标记：`OK vibe regression`。
+
+## Brain / Hands 与策略门专项验收
+
+- **隔离 OMP 配置**：每个独立 agent/profile 除 `models.yml` 外，还必须创建权限 `0600` 的最小 `config.yml`，至少包含 `setupVersion: 1` 与 `startup.setupWizard: false`；最终以真实浏览器终端未进入 Provider Setup Wizard 为准。
+- **容器 stdin**：通过 heredoc 向容器内脚本喂输入时，`docker exec` 必须带 `-i`；同时输出执行计数或固定成功锚点，避免“脚本零执行但退出码为 0”的假绿。
+- **Inspect 字段语义**：Docker `SecurityOpt` 等字段按语义解析，兼容 `no-new-privileges:true` 这类带状态后缀的实际返回；不要只精确匹配文档示例字符串。
+- **真实模型与审计**：真实只读任务必须核对模型输出和 Tool Policy audit 的 `task/project/workflow/tool/decision`；若模型读错路径或审计字段缺失，不能判定通过。
+- **策略负向矩阵**：至少覆盖未授权、write、未知项目、未知 workflow、绝对路径、路径穿越、敏感文件、软链接；每项既验拒绝结果，也验对应审计记录。
+- **生产一致性**：部署后比较本地与远端核心源码 SHA256；只比镜像标签、文件时间或容器启动时间不足以证明生产代码一致。
+- **测试现场清理**：软链接、临时敏感文件和浏览器配置必须使用 trap/finally 清理；secret 临时文件权限必须为 `0600`，结束后复核不存在。
 
 ## Review 清单
 
