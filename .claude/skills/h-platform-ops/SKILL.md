@@ -2239,3 +2239,87 @@ unhandledRejection 默认处理器、以及 `main().catch` 里的 `console.error
 - **加新的 Lark 客户端时记得带 `logger: createSafeLarkLogger(log)`**，否则又走默认。
 - 排查时用 `journalctl … | grep -v app_secret` 过滤，别为看上下文把凭据再复述一遍。
 - 详见 [[feedback_never_dump_foreign_objects_to_logs]]。
+
+## 双站升级与稳定性门（2026-08-01 实操）
+
+**稳定性门要求两端 deploy commit 一致** —— `lib/mini-ab-observer.mjs:67`
+`if (!dev.commit || dev.commit !== mini.commit) throw new Error('deploy commit mismatch')`。
+只部署一端就跑这个门，会 1 秒内失败、`samples: []`，看起来像脚本坏了，其实是
+它正确报出了真实的版本分叉。要么两端都升，要么明确跳过该门。
+
+**升级 dev198 前的三个前提**（改的是共享 lib 时必查，别只读 diff 就说安全）：
+
+```bash
+# ① 平台分支依赖的脚本在不在（改动常是 darwin/else 分支，Linux 走 else）
+ssh dev198 'ls -l ~/feishu-grok-bridge/scripts/ai-memory-provision.sh'
+# ② 有没有环境变量把默认路径改掉（.env 与进程 environ 都要查）
+ssh dev198 'grep -c "^H_MEMORY_PROVISION_SCRIPT=" ~/feishu-grok-bridge/.env;
+  PID=$(systemctl --user show -p MainPID --value feishu-grok-bridge);
+  tr "\0" "\n" < /proc/$PID/environ | grep -c "^H_MEMORY_PROVISION_SCRIPT="'
+# ③ 确认它真走 else 分支
+ssh dev198 '~/.local/node/bin/node -e "console.log(process.platform)"'   # linux
+```
+
+再加零交集核对（待部署改动 vs dev198 本地已改 tracked），全过才 `merge --ff-only`。
+2026-08-01 实测：`lib/memory-provision.mjs` 的改动全是平台分支、Linux 路径逐字未变，
+升级后 10 个 h-memory 实例一个没掉、owner 13 项活文件原封未动。
+
+⚠️ **dev198 的 healthz 就绪要 ~57 秒，Mini 只要 ~4 秒**（10 个 App 的长连接 vs 1 个）。
+这个差异要记住：**哪天 dev198 重启后 10 秒就"就绪"，反而要怀疑没连全**，
+别把快当成好。
+
+⚠️ `.deploy-meta.json` 是未跟踪文件，`git merge --ff-only` **不会更新它** ——
+快进后会出现「代码已是新 commit、元数据仍写旧 commit」的脱节。升级流程必须包含
+「重写元数据 + 再重启一次 Bridge（Runner 不读元数据）」。
+
+## 清理已迁走用户的 ai-memory 残留
+
+用户迁站后，原站的 per-user ai-memory 实例**不会自动回收**：systemd 服务仍
+`active`、进程仍在写日志、`ports.json` 仍有条目、data-dir 仍在。它没有消费方，
+但占资源，且将来若有人误连会造成记忆分叉。
+
+清理前先证明它确实闲置（三项都要）：
+
+```bash
+# ① 站点归属真源里已无此 uid
+python3 -c "import json;d=json.load(open('/srv/h-platform/users.json'));
+print([u['uid'] for u in d['users']])" | grep -c <uid>
+# ② 本站 healthz 的 apps{} 里没有它的 appId
+# ③ data-dir 近期修改情况（注意：服务自己会写心跳日志，
+#    「文件在被写」≠「有人在用」，别被这条吓住）
+```
+
+清理动作（顺序不能反）：
+
+```bash
+systemctl --user stop  h-memory@<uid>.service
+systemctl --user disable h-memory@<uid>.service     # 不 disable 的话重启后自起
+cp -p /srv/h-platform/memory/ports.json{,.bak.$(date +%Y%m%d-%H%M%S)}
+# 从 ports.json 移除该 uid 条目
+mv /srv/h-platform/memory/<uid> /srv/h-platform/memory/.archived-<ts>/<uid>
+```
+
+⚠️ **data-dir 归档不删** —— 那是用户的记忆数据，不可逆。停服务 + 移出注册已经
+消除了资源占用与误连风险；删数据是另一个决定，必须单独请示。
+恢复就是反向三步：移回原路径 → `ports.json` 补条目 → `systemctl --user enable --now`。
+
+## 🔴 期望「零命中」的检查，必须配一个「期望非零」的锚
+
+2026-08-01 提交前跑安全扫描，8 项全部「0 处」，看着完美——实际是
+`cat $FILES`（zsh 不对未加引号变量分词）把整个字符串当成一个文件名，
+**扫描面 0 行，一个字节都没扫**。而它正要给「能不能提交」背书。
+
+同一轮还栽了两次同族的：用外层 `ALL_PROXY` 测 fail-closed 得 `exit=0`
+（脚本 `exec` 时会覆盖它，真正注入点是 `H_MINI_XRAY_PROXY`），
+用文件名 grep 验新测试是否执行得 0 次（`node --test` 根本不打印文件名）。
+
+**三次都是「没找到」，成因却是没执行 / 没打到点 / 输出形态不匹配。**
+补救很便宜，就一行：
+
+- 安全扫描：先打印 `实际读入 N 个文件 / M 行`，M=0 直接判检查无效；
+  再加一个必然出现的正向项（如「`127.0.0.1:10808` 应 ≥1 处」），非零才算真扫了。
+- 防护探测：先读实现确认**防护的作用点在哪**，把注入打在那个点上。
+  说"没防住"之前先自问"我这一击落在它身上没有"。
+- 输出解析：先确认被验对象**会不会产出我要 grep 的那个东西**。
+
+详见 [[feedback_truncated_output_negative_conclusion]]。

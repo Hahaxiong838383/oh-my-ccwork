@@ -1120,3 +1120,79 @@ auth 路径了。别拿"缓存里没有 calendar"直接判 A。
 `runner started` 不是任务开始、`grep` 没命中不等于不存在 —— 都是**把符号的字面语义
 当成了实际状态**。凡是"完成/成功/已发送"这类信号，都要再问一句：**它保证的是
 动作发生了，还是目标达成了？**
+
+
+---
+
+## P · 收口 codex 的 Mini 原生记忆 + GitHub 强制代理（2026-08-01 08:0x）
+
+### 两个提交
+
+| 仓库 | commit | 内容 |
+|---|---|---|
+| feishu-grok-bridge | `3232145` | feat(mini-ab): add native memory parity and force GitHub through Xray（14 文件） |
+| mycc | `0216555` | docs(h-platform): require Mini GitHub access through Xray（1 文件） |
+
+`main` 停 `e5497d5` 未动未合并。暂存严格受控：bridge 侧 14 项与指令预期逐一吻合、
+6 个 `.sh` 保留 `100755`；mycc 侧只 1 项，evomap/current/scheduler 三个运行态文件
+保持未暂存。
+
+### 终态
+
+```
+dev198  3232145+dirty  10/10 connected  lastError 0  租约 9  Outbox 0  h-memory 9
+Mini    3232145        1/1  connected   lastError 0  租约 1  Outbox 0  h-memory 1
+        dirty=false  fileCount=738（390 tracked + 348 额外，全部归类）
+双站 App 交集 0 · owner 固定 dev198 · 契约统一 2026-07-31.4
+稳定性观察 21 样本 / 625 秒 / 异常 0
+npm test 430 pass / 0 fail · test:mini-ab 29/29
+```
+
+Mini ai-memory 闭环：`{ok, serviceReady, mcpInjected, writeQueryDelete}` 全 true，
+输出只含聚合状态无 token/正文。GitHub 强制代理四项 + 两道额外防线全过
+（死端口 exit=128、非 loopback exit=2、`-c` 覆盖 exit=2）。
+
+### 超出原指令的两处（均经川哥批准）
+
+**① dev198 也升到了 3232145。** 触发原因：稳定性门 `lib/mini-ab-observer.mjs:67`
+要求双站 commit 一致，而原指令只让部 Mini。升级前三个前提逐一实测（Linux 分支
+依赖脚本存在、`H_MEMORY_PROVISION_SCRIPT` 未定义、`process.platform=linux`），
+确认改动全是平台分支、Linux 路径逐字未变，零交集核对后快进。10 个 h-memory
+实例一个没掉，owner 13 项活文件原封未动。
+
+**② 清掉 dev198 上已迁走用户的 ai-memory 残留。** 服务停+disable、`ports.json`
+移除条目（原文件备份），**7.3M 数据归档保留未删**（川哥定：留着当备份）。
+
+### 三条教训（同一个根）
+
+本轮连栽三次「阴性结果」，成因各不相同：
+
+| 现象 | 我的判断 | 实际成因 |
+|---|---|---|
+| 安全扫描 8 项全 0 处 | 干净可提交 | `cat $FILES` 在 zsh 未分词 → 扫描面 0 行，一个字节没扫 |
+| fail-closed 测出 exit=0 | 脚本有洞 | 注入点错：脚本 exec 时覆盖 `ALL_PROXY`，真入口是 `H_MINI_XRAY_PROXY` |
+| grep 新测试文件名 0 次 | 新测试没跑 | `node --test` 根本不打印文件名，只打印用例名 |
+
+第一次尤其危险：**安全扫描的「全 0」既可能是通过也可能是没执行，两者长得一模一样**，
+而它正要给"能不能提交"背书。
+
+**纪律：凡期望零命中的检查，必须同时带一个期望非零的对照锚。** 先打印扫描面规模
+（0 行直接判无效），再加一个必然出现的正向项（如 `127.0.0.1:10808` 应 ≥1 处）。
+防护探测则要先读实现确认作用点，说"没防住"之前先问"我这一击落在它身上没有"。
+已并入 [[feedback_truncated_output_negative_conclusion]] 案例四五六 + 第三条纪律。
+
+另记两个运维基线：**dev198 healthz 就绪要 ~57 秒而 Mini 只要 ~4 秒**（10 个长连接
+vs 1 个）——哪天 dev198 十秒就"就绪"反而要怀疑没连全；`.deploy-meta.json` 是未跟踪
+文件，`merge --ff-only` 不会更新它，升级流程必须含「重写元数据 + 再重启一次 Bridge」。
+
+### ⏸ 本章挂起
+
+1. **剩余边界**：当前是 macOS 应用/运维入口的 fail closed，**不是 PF/netns 级物理
+   封锁**。三道防线都在应用层，有 shell 的进程仍可绕过。要"任何进程都无法绕过"，
+   须纳入 Mandatory Action Gateway 或 Linux 网络命名空间/防火墙白名单。
+2. 控制面 `auth-status` 补飞书 scope 字段（原第 11 条的 ②），方案已定：bridge 复用
+   `evaluateScopes` 随 runtime report 上报 → 控制面新端点 → `auth-status` 加
+   `larkScopes` → 管理台展示。
+3. 三个租户的 calendar 权限需川哥去开发者后台开通（`u-9a037b10f7` 张雨琦周一回来前、
+   `u-dec457e69d`、`u-93577af39a`）；`u-f7870bc4b3` 只需重新点一次授权卡。
+4. 分支仍不合 main。
