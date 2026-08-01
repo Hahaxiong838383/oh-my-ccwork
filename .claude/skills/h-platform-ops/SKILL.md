@@ -146,6 +146,67 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
   读不到也不阻断：显示名回退 Bot 名 + 部门标「待认领」，功能完全不受影响。
 - 验收：双引擎各发一条任务 + 越界隔离复验（铁律 3）。完整版
   `dev198:~/feishu-grok-bridge/workspace/plans/h-onboarding-sop.md`。
+- 🔴 **开通不算完成，直到权限门过**——见下一节。
+
+## 🔴 开通权限门：标准包对标（2026-08-01 立）
+
+**开通流程的最后一步必须是权限巡检，缺必备域不算开通完成。**
+
+```bash
+# dev198 上，或把 ops/ 拷到临时目录跑（纯只读，不动生产）
+node ops/verify-lark-scopes.mjs --profile tenant-standard --uid <uid>
+```
+
+### 为什么要有这道门
+
+2026-08-01 全量导出 owner 与 10 个租户的应用侧 scope，分布是：
+**owner 334；租户 2 / 97 / 146 / 156 / 168 / 170 / 198 / 481 / 588 / 588。**
+
+不是「租户比 owner 少」，是**根本没有标准**：有人开通时全勾（两个 588 的超出项
+完全一致，同一份全选模板），有人手挑十几个，还有人只剩 2 个就算「开通完成」了。
+
+后果是能力随机缺失且不可预期。张雨琦 Bot 约日程连续失败三轮授权卡，根因就是
+应用侧压根没配 calendar——**用户点多少次授权卡都不会好**。而平台侧当时答不出
+「这个租户现在到底有哪些权限」，排查绕了一大圈。
+
+### 标准包边界（川哥 2026-08-01 拍板）
+
+- **给全 20 个域**（`tenant-standard`，274 个 scope）：im / calendar / contact /
+  mail / vc / minutes / docs / docx / sheets / drive / wiki / space / slides /
+  board / bitable / base / task / search / profile / offline_access。
+  **contact / mail / vc 三类都给**——公司内部同事，先把权限范围拉齐。
+- **按需申请**（不进标准包）：directory / approval / application / admin /
+  helpdesk / tenant / serviceaccount / event。有副作用或超出办公协作范畴。
+- **🚨 禁止域**（`FORBIDDEN_DOMAINS`）：`corehr` 人事核心（含薪酬档案**写**）、
+  `payroll` 薪酬发放、`hire` 招聘、`security_and_compliance` 合规审计、`mdm` 设备管理。
+  **前四个 owner 自己都是 0**，租户持有它们只可能来自全选模板。
+  这些 Bot 会把上下文送进外部引擎（Grok），人事薪酬数据进去就收不回来——撞隐私墙铁律。
+
+### 三种判定，处理方式完全不同（别搞混）
+
+| 判定 | 含义 | 怎么办 |
+|---|---|---|
+| ❌ 应用未配置 | 应用侧就没勾 | **只能去开发者后台勾 + 管理员审批**；催用户点授权卡是无效的 |
+| 🔸 待重新授权 | 应用侧有、token 没拿到 | 让用户重新点一次授权卡即可，不用动后台 |
+| 🚨 越权域 | 持有禁止域 | 去后台取消勾选；确有业务需要则单独记录例外 |
+
+⚠️ **权限无法通过 API 申请**（三方查证：lark-cli 全命令树无 apply/grant/authorize；
+它调的 application v6 端点源码写死 `http.MethodGet`；飞书官方文档要求后台配置 +
+企业管理员审批）。所以这套工具只能**发现**缺口，修复必须人去后台。
+
+### 相关文件
+
+- `ops/lark-scope-profiles.mjs` —— 标准包/禁止域定义，三个 profile
+  （`tenant-standard` / `calendar-min` 约日程 / `meeting-room` 订会议室）
+- `ops/data/lark-scope-baseline.json` —— owner 基线快照（只有 scope 名，无 appId/token）
+- `ops/verify-lark-scopes.mjs` —— 巡检入口，`--json` 出结构化结果
+- `docs/2026-08-01-lark-scope-actions.md` —— 全员对标行动清单（拿着就能去后台操作）
+
+### 基线会过期，怎么刷新
+
+owner 的 334 是**快照**。飞书新增 scope 后基线会落后，表现为「租户在标准域里持有
+owner 基线没有的 scope」。重新导出 owner `auth scopes --json`、按 `standardDomains`
+重切即可。**不要手工往 baseline 里加条目**——那样就分不清是飞书新增还是有人放宽了边界。
 
 ## 权限不足 → 自动推授权卡片（v1.4.0）
 
