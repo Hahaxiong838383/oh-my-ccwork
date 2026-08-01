@@ -2658,3 +2658,52 @@ u-93577af39a         2      0    510      2     0
 
 **`token < app` 是普遍现象**：后台开通不会更新已签发的 user token，
 必须重新点一次授权卡才追得上。**token 侧才是 Bot 的实际能力真值。**
+
+## 部署收尾三查（2026-08-01 补，每条都踩过）
+
+部署后**必须**核这三样，缺一样就可能「以为部署了其实没有」：
+
+### ① 版本号对齐（healthz ≠ 磁盘是常态）
+
+`healthz.version` 来自进程**启动时**读的 `.deploy-meta.json`。改了代码不更新
+meta、或更新了 meta 不重启，两边都会不一致。今天两次踩到：
+
+- 只 `git merge` 没重启 → healthz 停在旧 commit（这次是对的，因为改的是 ops
+  脚本不影响 bridge；但版本号说谎会误导下一次判断）
+- `write-deploy-meta ... >/dev/null 2>&1 && echo "meta ok"` **失败了**，
+  而我盯着同批输出里别的结果，没发现少了 "meta ok" 那行
+
+**写完 meta 立刻回读对撞**，别信「应该成功了」：
+```bash
+node scripts/write-deploy-meta.mjs --root . --commit "$(git rev-parse HEAD)" ...
+python3 -c "import json;print(json.load(open('.deploy-meta.json'))['commit'])"   # 对撞
+```
+⚠️ **commit 必须 `git rev-parse HEAD` 取真值**，别手写——我伪造过一次 hash，
+而稳定性门正是靠它比对双站。
+
+### ② 重启后的「未连接」多半是中间态，别急着报故障
+
+`systemctl restart` 后立刻查 healthz，常见 `ok:false` + 几个 App 未连接——
+dev198 起 11 个 App 要 ~60s。**轮询到全连上再下结论**：
+
+```bash
+for i in $(seq 1 20); do sleep 10; n=$(curl -s .../healthz | jq '[.apps[]|select(.connected|not)]|length'); [ "$n" = 0 ] && break; done
+```
+
+今天第一次查显示 2 个未连接，10 秒后就全好了。急着诊断会浪费一轮。
+
+### ③ 改了什么就重启什么
+
+- 改 `bridge.mjs` / `lib/**` → **必须**双重启（bridge + runner-worker）
+- 只改 `ops/**` 脚本 → **不用**重启（独立进程，直接读磁盘代码），但要更新 meta
+- Mini 侧顺序固定：**先拷文件，再 kickstart runner，再 kickstart bridge**
+  （KeepAlive 会在拷完前用旧代码拉起来）
+
+## 权限对账卡（卡片 2.0）
+
+真机验证于 2026-08-01，川哥客户端 7.73.9，**渲染正常、无版本提示**。
+2.0 门槛 7.20，公司内全员已超过，可安全推广。
+
+结构与坑：表格必须在**卡片根节点**（不可内嵌）、`width` 范围 `[80px,600px]`、
+`padding` 多值必须写满四个。⚠️ 报错里的 `column idx` **会偏一位**，
+别照着索引盲改。完整踩坑记录见 `feishu-docs` skill。
