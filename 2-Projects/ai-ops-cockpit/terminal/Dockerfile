@@ -43,4 +43,6 @@ RUN chmod +x /usr/local/bin/vibe-shell /usr/local/bin/vibe-omp /usr/local/bin/om
 USER ops
 WORKDIR /workspace/brain
 ENV HOME=/home/ops
-CMD ["ttyd", "--writable", "--base-path", "/terminal", "--terminal-type", "xterm-256color", "-t", "fontSize=14", "-t", "theme={\"background\":\"#020617\",\"foreground\":\"#e5e7eb\",\"cursor\":\"#38bdf8\"}", "/usr/local/bin/vibe-shell"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:7681/terminal/ >/dev/null || exit 1
+CMD ["ttyd", "--writable", "--exit-no-conn", "--max-clients", "1", "--base-path", "/terminal", "--terminal-type", "xterm-256color", "-t", "fontSize=14", "-t", "theme={\"background\":\"#020617\",\"foreground\":\"#e5e7eb\",\"cursor\":\"#38bdf8\"}", "/usr/local/bin/vibe-shell"]

@@ -2,6 +2,7 @@ import hmac
 import json
 import os
 import re
+import signal
 import shutil
 import subprocess
 import tempfile
@@ -24,6 +25,10 @@ MAX_PROMPT_CHARS = 720000
 MAX_OUTPUT_CHARS = 120000
 WORKFLOW = "readonly_safe"
 TASK_LOCK = threading.Lock()
+PROCESS_LOCK = threading.Lock()
+ACTIVE_PROCESS = {"taskId": None, "process": None, "abortRequested": False}
+PENDING_ABORTS = {}
+PENDING_ABORT_TTL_SECONDS = 300
 SECRET_PATTERNS = (
     re.compile(r"(?i)\b(?:sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b"),
     re.compile(r"(?i)\b(?:api[_-]?key|access[_-]?token|refresh[_-]?token|password)\b\s*[:=]\s*['\"]?[^\s'\"]{10,}"),
@@ -87,6 +92,55 @@ def build_omp_command(prompt_path):
     ]
 
 
+def _signal_process(process, sig):
+    if process is None or process.poll() is not None:
+        return False
+    try:
+        os.killpg(process.pid, sig)
+    except (OSError, ProcessLookupError):
+        return False
+    return True
+
+
+def _force_kill_task(task_id, process):
+    with PROCESS_LOCK:
+        if ACTIVE_PROCESS.get("taskId") != task_id or ACTIVE_PROCESS.get("process") is not process:
+            return
+    _signal_process(process, signal.SIGKILL)
+
+
+def _consume_pending_abort(task_id):
+    now = time.time()
+    with PROCESS_LOCK:
+        expired = [item for item, created_at in PENDING_ABORTS.items() if now - created_at > PENDING_ABORT_TTL_SECONDS]
+        for item in expired:
+            PENDING_ABORTS.pop(item, None)
+        return PENDING_ABORTS.pop(task_id, None) is not None
+
+
+def abort_task(payload):
+    if not isinstance(payload, dict):
+        return {"ok": False, "error": "invalid_request"}
+    task_id = str(payload.get("taskId") or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}", task_id):
+        return {"ok": False, "error": "invalid_task_id"}
+    with PROCESS_LOCK:
+        process = ACTIVE_PROCESS.get("process")
+        active_task_id = ACTIVE_PROCESS.get("taskId")
+        if active_task_id and active_task_id != task_id and process is not None and process.poll() is None:
+            return {"ok": False, "error": "task_not_running"}
+        if active_task_id != task_id or process is None or process.poll() is not None:
+            PENDING_ABORTS[task_id] = time.time()
+            return {"ok": True, "taskId": task_id, "status": "abort_pending"}
+        ACTIVE_PROCESS["abortRequested"] = True
+        signalled = _signal_process(process, signal.SIGTERM)
+    if signalled:
+        timer = threading.Timer(3, _force_kill_task, args=(task_id, process))
+        timer.daemon = True
+        timer.start()
+    return {"ok": signalled, "taskId": task_id, "status": "aborting" if signalled else "not_running"}
+
+
 def health_payload():
     direct_workspace = any(os.path.exists(path) for path in (
         "/workspace/readonly",
@@ -147,7 +201,10 @@ def run_task(payload):
         return {"ok": False, "error": "brain_busy"}
     started = time.time()
     prompt_path = None
+    process = None
     try:
+        if _consume_pending_abort(task_id):
+            return {"ok": False, "error": "brain_aborted", "durationMs": round((time.time() - started) * 1000)}
         ensure_model_config()
         ensure_workdir()
         if ambient_extension_count() != 0:
@@ -162,16 +219,37 @@ def run_task(payload):
         env["AI_OPS_BRAIN_TASK_ID"] = task_id
         env["AI_OPS_BRAIN_PROJECT"] = project
         command = build_omp_command(prompt_path)
-        result = subprocess.run(command, cwd=WORKDIR, env=env, text=True, capture_output=True, timeout=190, check=False)
-        output = sanitize_output((result.stdout or result.stderr or "")[-MAX_OUTPUT_CHARS:])
+        process = subprocess.Popen(
+            command,
+            cwd=WORKDIR,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            start_new_session=True,
+        )
+        with PROCESS_LOCK:
+            ACTIVE_PROCESS.update({"taskId": task_id, "process": process, "abortRequested": False})
+        stdout, stderr = process.communicate(timeout=190)
+        with PROCESS_LOCK:
+            aborted = ACTIVE_PROCESS.get("taskId") == task_id and bool(ACTIVE_PROCESS.get("abortRequested"))
+        output = sanitize_output((stdout or stderr or "")[-MAX_OUTPUT_CHARS:])
+        if aborted:
+            return {"ok": False, "error": "brain_aborted", "durationMs": round((time.time() - started) * 1000)}
         return {
-            "ok": result.returncode == 0,
+            "ok": process.returncode == 0,
             "output": output,
-            "exitCode": result.returncode,
+            "exitCode": process.returncode,
             "durationMs": round((time.time() - started) * 1000),
             "toolMode": "readonly_safe",
         }
     except subprocess.TimeoutExpired:
+        if process is not None:
+            _signal_process(process, signal.SIGKILL)
+            try:
+                process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
         return {"ok": False, "error": "brain_timeout", "durationMs": round((time.time() - started) * 1000)}
     except Exception as exc:
         return {"ok": False, "error": type(exc).__name__, "durationMs": round((time.time() - started) * 1000)}
@@ -181,6 +259,9 @@ def run_task(payload):
                 os.remove(prompt_path)
             except OSError:
                 pass
+        with PROCESS_LOCK:
+            if ACTIVE_PROCESS.get("taskId") == task_id:
+                ACTIVE_PROCESS.update({"taskId": None, "process": None, "abortRequested": False})
         TASK_LOCK.release()
 
 
@@ -210,7 +291,7 @@ class Handler(BaseHTTPRequestHandler):
         self._json(404, {"ok": False, "error": "not_found"})
 
     def do_POST(self):
-        if self.path != "/run":
+        if self.path not in ("/run", "/abort"):
             self._json(404, {"ok": False, "error": "not_found"})
             return
         if not self._authorized():
@@ -228,7 +309,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             self._json(400, {"ok": False, "error": "invalid_json"})
             return
-        result = run_task(payload)
+        result = abort_task(payload) if self.path == "/abort" else run_task(payload)
         self._json(200 if result.get("ok") else 502, result)
 
 

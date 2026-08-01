@@ -18,6 +18,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import ops_tool_runtime
+from self_monitor import monitor_signature, summarize_audits, summarize_omp_update, summarize_tasks, transition_event
+from task_lifecycle import ACTIVE_STATUSES, RevisionedTaskStore, TERMINAL_STATUSES, now_text
 
 KUMA_DB = os.environ.get("KUMA_DB", "/kuma/kuma.db")
 NETDATA = os.environ.get("NETDATA_URL", "http://netdata:19999")
@@ -26,6 +28,7 @@ STATE_DIR = os.environ.get("STATE_DIR", "/tmp/ai-ops-state")
 ALERT_STATE_FILE = os.path.join(STATE_DIR, "alert-state.json")
 DAILY_STATE_FILE = os.path.join(STATE_DIR, "daily-state.json")
 SNAPSHOT_FILE = os.path.join(STATE_DIR, "last-report.json")
+SELF_MONITOR_STATE_FILE = os.path.join(STATE_DIR, "self-monitor-state.json")
 CACHE_TTL_SECONDS = int(os.environ.get("CACHE_TTL_SECONDS", "15"))
 REPORT_CACHE = {"ts": 0, "data": None}
 ASSETS_CACHE = {"ts": 0, "data": None}
@@ -51,6 +54,11 @@ TODO_JOBS_DIR = os.path.join(STATE_DIR, "vibe-todo-jobs")
 PROJECT_DAILY_DIR = os.path.join(STATE_DIR, "project-daily")
 PROJECT_PRODUCTION_DIR = os.path.join(STATE_DIR, "project-production")
 READONLY_STATE_FILE = os.path.join(STATE_DIR, "readonly-refresh.json")
+TOOL_AUDIT_DIR = os.environ.get("TOOL_AUDIT_DIR", "/tool-runner-state/audit")
+OMP_UPDATE_STATE_FILE = os.environ.get("OMP_UPDATE_STATE_FILE", "/workspace/ai-ops-root/terminal/runtime/update-state.json")
+SELF_MONITOR_TASK_STALE_SECONDS = int(os.environ.get("SELF_MONITOR_TASK_STALE_SECONDS", "900"))
+SELF_MONITOR_OMP_MAX_AGE_SECONDS = int(os.environ.get("SELF_MONITOR_OMP_MAX_AGE_SECONDS", "129600"))
+SELF_MONITOR_TERMINAL_MAX_CLIENTS = int(os.environ.get("SELF_MONITOR_TERMINAL_MAX_CLIENTS", "1"))
 WORKSPACE_ROOT = os.environ.get("WORKSPACE_ROOT", "/workspace/projects")
 READONLY_ROOT = os.environ.get("READONLY_ROOT", "/workspace/readonly")
 ALLOWLIST_DIR = os.environ.get("ALLOWLIST_DIR", "/config")
@@ -60,6 +68,9 @@ PROJECT_CONTEXT_FILE_MAX_CHARS = int(os.environ.get("PROJECT_CONTEXT_FILE_MAX_CH
 TASK_LOCK = threading.Lock()
 TASK_STATE = {"last_run": 0}
 TASK_COOLDOWN_SECONDS = int(os.environ.get("TASK_COOLDOWN_SECONDS", "20"))
+TASK_STORE = RevisionedTaskStore(TASKS_DIR)
+TASK_WORKERS_LOCK = threading.Lock()
+TASK_WORKERS = {}
 PILOT_JOB_LOCK = threading.Lock()
 TODO_JOB_LOCK = threading.Lock()
 PROJECT_DAILY_LOCK = threading.Lock()
@@ -67,6 +78,7 @@ PROJECT_DAILY_ACTIVE = set()
 PROJECT_PRODUCTION_LOCK = threading.Lock()
 PROJECT_PRODUCTION_ACTIVE = set()
 OPS_RUNTIME_LOCK = threading.Lock()
+SELF_MONITOR_LOCK = threading.Lock()
 PROJECT_RESTART_COOLDOWN_SECONDS = int(os.environ.get("PROJECT_RESTART_COOLDOWN_SECONDS", "600"))
 ASSETS_CACHE_TTL_SECONDS = int(os.environ.get("ASSETS_CACHE_TTL_SECONDS", "20"))
 READONLY_REFRESH_LOCK = threading.Lock()
@@ -503,6 +515,7 @@ def save_json_file(path, payload):
     tmp_path = f"{path}.{os.getpid()}.{threading.get_ident()}.tmp"
     with open(tmp_path, "w", encoding="utf-8") as file:
         json.dump(payload, file, ensure_ascii=False, indent=2)
+    os.chmod(tmp_path, 0o600)
     os.replace(tmp_path, path)
 
 
@@ -875,6 +888,100 @@ def vibe_status_payload():
         "dangerousPatterns": DANGEROUS_PATTERNS,
         "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
     }
+
+
+def self_monitor_notification_text(report, event):
+    failed_labels = [item["label"] for item in report["components"] if not item.get("ok")]
+    audit = report["policyAudit"]
+    tasks = report["taskQueue"]
+    if event == "recovery":
+        title = "✅ AI Ops 自监控恢复"
+        state_text = "核心组件已恢复正常"
+    else:
+        title = "⚠️ AI Ops 自监控告警"
+        state_text = "异常组件：" + "、".join(failed_labels)
+    return "\n".join([
+        title,
+        state_text,
+        f"任务队列：活动 {tasks['activeCount']}，超时 {tasks['staleCount']}",
+        f"网页终端：OMP 会话 {report['terminalSessions']['count']} / 上限 {report['terminalSessions']['maxClients']}",
+        f"策略门 24h：审计 {audit['records24h']}，允许 {audit['allowed24h']}，阻断 {audit['blocked24h']}",
+        f"OMP 更新：{report['ompUpdate']['outcome']}，最近检查 {report['ompUpdate']['checkedAt'] or '未知'}",
+        f"时间：{report['generatedAt']}",
+        "入口：https://ops.hahaxiong.top/vibe/ops-runtime",
+    ])
+
+
+def build_self_monitor_report():
+    generated_at = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+    brain = brain_status()
+    runner = tool_runner_status()
+    audit = summarize_audits(TOOL_AUDIT_DIR)
+    tasks = summarize_tasks(TASK_STORE.list(500), stale_seconds=SELF_MONITOR_TASK_STALE_SECONDS)
+    omp_update = summarize_omp_update(load_json_file(OMP_UPDATE_STATE_FILE, {}), max_age_seconds=SELF_MONITOR_OMP_MAX_AGE_SECONDS)
+    try:
+        terminal_session_count = int(run(["docker", "exec", "ops-terminal", "sh", "-lc", "ps -eo comm= | grep -cx omp || true"]) or 0)
+        terminal_sessions = {
+            "ok": terminal_session_count <= SELF_MONITOR_TERMINAL_MAX_CLIENTS,
+            "count": terminal_session_count,
+            "maxClients": SELF_MONITOR_TERMINAL_MAX_CLIENTS,
+        }
+    except Exception as exc:
+        terminal_sessions = {
+            "ok": False,
+            "count": -1,
+            "maxClients": SELF_MONITOR_TERMINAL_MAX_CLIENTS,
+            "error": type(exc).__name__,
+        }
+    try:
+        n8n_probe = probe_url("http://n8n:5678/healthz")
+        n8n_ok = bool(n8n_probe.get("ok") and "ok" in n8n_probe.get("bodyPreview", ""))
+    except Exception as exc:
+        n8n_probe = {"ok": False, "error": type(exc).__name__}
+        n8n_ok = False
+    components = [
+        {"id": "brain", "label": "AI Brain", "ok": bool(brain.get("ok")), "status": "ready" if brain.get("ok") else brain.get("error", "unavailable")},
+        {"id": "runner", "label": "只读 Runner", "ok": bool(runner.get("ok")), "status": "ready" if runner.get("ok") else runner.get("error", "unavailable")},
+        {"id": "policy-audit", "label": "Tool Policy 审计", "ok": bool(audit["readable"] and audit["malformedFiles"] == 0 and audit["secretExposure24h"] == 0), "status": "ready" if audit["readable"] else "audit_unavailable"},
+        {"id": "task-queue", "label": "权威任务队列", "ok": bool(tasks["activeCount"] <= 1 and tasks["staleCount"] == 0), "status": "ready" if tasks["staleCount"] == 0 else "stale_task"},
+        {"id": "terminal-sessions", "label": "网页终端会话", "ok": bool(terminal_sessions["ok"]), "status": "ready" if terminal_sessions["ok"] else "session_limit_exceeded"},
+        {"id": "omp-update", "label": "OMP 自动更新", "ok": bool(omp_update["ok"]), "status": omp_update["outcome"]},
+        {"id": "n8n", "label": "n8n 调度", "ok": n8n_ok, "status": "ready" if n8n_ok else n8n_probe.get("error", "unavailable")},
+    ]
+    report = {
+        "ok": all(item["ok"] for item in components),
+        "generatedAt": generated_at,
+        "components": components,
+        "policyAudit": audit,
+        "taskQueue": tasks,
+        "terminalSessions": terminal_sessions,
+        "ompUpdate": omp_update,
+    }
+    report["signature"] = monitor_signature(report)
+    return report
+
+
+def run_self_monitor(notify=True):
+    with SELF_MONITOR_LOCK:
+        previous = load_json_file(SELF_MONITOR_STATE_FILE, {})
+        report = build_self_monitor_report()
+        event = transition_event(previous, report)
+        notification = {"status": "deduped"}
+        if notify and event:
+            try:
+                result = send_feishu_text(self_monitor_notification_text(report, event))
+                notification = {"status": result.get("status"), "event": event}
+            except Exception as exc:
+                return {"ok": False, "error": "notification_failed", "errorType": type(exc).__name__, "report": report, "event": event}
+        state = {
+            "ok": report["ok"],
+            "signature": report["signature"],
+            "updatedAt": report["generatedAt"],
+            "lastEvent": event or previous.get("lastEvent"),
+            "lastNotifiedAt": report["generatedAt"] if notify and event else previous.get("lastNotifiedAt"),
+        }
+        save_json_file(SELF_MONITOR_STATE_FILE, state)
+        return {"ok": report["ok"], "report": report, "event": event, "notification": notification}
 
 
 def terminal_action_payload(action):
@@ -2541,20 +2648,10 @@ def run_todo_job_worker(job_id, mode, question, project_id):
 
 
 def task_history(limit=20):
-    ensure_state_dir()
-    ensure_private_dir(TASKS_DIR)
-    items = []
-    for name in os.listdir(TASKS_DIR):
-        if not name.endswith(".json"):
-            continue
-        path = os.path.join(TASKS_DIR, name)
-        item = load_json_file(path, None)
-        if item:
-            items.append(item)
-    return sorted(items, key=lambda item: item.get("createdAt", ""), reverse=True)[:limit]
+    return TASK_STORE.list(limit)
 
 
-def run_vibe_task(mode, question, conversation=None, notify=False, project_id=None, runtime_context=None):
+def prepare_vibe_task(mode, question, conversation=None, project_id=None, runtime_context=None):
     mode = (mode or "readonly_inspect").strip()
     question = (question or "").strip()
     conversation = (conversation or "").strip()[-4000:]
@@ -2568,70 +2665,195 @@ def run_vibe_task(mode, question, conversation=None, notify=False, project_id=No
     context = build_project_context(bound_project)
     if not context.get("ok"):
         return {"ok": False, "error": "project context not ready", "project": bound_project, "context": {key: value for key, value in context.items() if key != "prompt"}}
+    return {
+        "ok": True,
+        "mode": mode,
+        "question": question,
+        "conversation": conversation,
+        "project": bound_project,
+        "workflow": workflow,
+        "context": context,
+        "runtimeContext": runtime_context,
+    }
+
+
+def execute_vibe_task(task_id, prepared, notify=False):
+    workflow = prepared["workflow"]
+    question = prepared["question"]
+    conversation = prepared["conversation"]
+    bound_project = prepared["project"]
+    context = prepared["context"]
+    runtime_context = prepared.get("runtimeContext")
+    started = time.time()
+    prompt = harness_prompt() + "\n\n当前工作模式：" + workflow["prompt"]
+    if conversation:
+        prompt += "\n\n网页端连续对话上下文（已脱敏，仅供理解当前轮）：\n" + conversation
+    prompt += "\n\n川哥发来的任务：" + question
+    prompt += "\n\n本轮已绑定只读项目：" + bound_project
+    prompt += "\n允许读取的文件清单：" + json.dumps(context.get("files") or [], ensure_ascii=False)
+    prompt += "\n源码正文未注入 prompt；需要核对时必须调用 aiops_read、aiops_grep、aiops_find 或 aiops_ls。"
+    if runtime_context:
+        runtime_text = redact_sensitive_text(json.dumps(runtime_context, ensure_ascii=False, indent=2))[:12000]
+        prompt += "\n\n本轮实时运行上下文如下；它比源码快照更新，应优先用于判断当前状态：\n```json\n" + runtime_text + "\n```"
+    brain_result = internal_service_json(
+        AI_OPS_BRAIN_URL,
+        "/run",
+        {
+            "taskId": task_id,
+            "project": bound_project,
+            "workflow": "readonly_safe",
+            "prompt": prompt,
+        },
+        timeout=210,
+        require_token=True,
+    )
+    output = brain_result.get("output") or brain_result.get("error") or "brain returned no output"
+    ok = bool(brain_result.get("ok"))
+    item = {
+        "ok": ok,
+        "mode": workflow["id"],
+        "modeName": workflow["name"],
+        "project": bound_project,
+        "question": redact_sensitive_text(question),
+        "conversationPreview": redact_sensitive_text(conversation)[-1000:],
+        "answer": compact_task_answer(output),
+        "durationMs": round((time.time() - started) * 1000),
+        "toolMode": "readonly_safe",
+        "brainBoundary": "model-only-no-docker-no-ssh",
+    }
+    if brain_result.get("error"):
+        item["error"] = brain_result.get("error")
+    if context:
+        item["context"] = {key: value for key, value in context.items() if key != "prompt"}
+    if runtime_context:
+        item["runtimeContext"] = runtime_context
+    if notify:
+        try:
+            notify_text = f"AI Ops {AI_OPS_OMP_MODEL_LABEL} 任务完成\n" + f"状态：{'成功' if item['ok'] else '失败'}\n模式：{item['modeName']}\n任务ID：{task_id}\n耗时：{item['durationMs']}ms\n审计：请在 /vibe/tasks 查看脱敏结果。"
+            item["feishu"] = send_feishu_text(notify_text)
+        except Exception as exc:
+            item["feishu"] = {"status": "error", "body": sanitize_terminal_text(str(exc))}
+    return item
+
+
+def run_vibe_task(mode, question, conversation=None, notify=False, project_id=None, runtime_context=None):
+    prepared = prepare_vibe_task(mode, question, conversation, project_id, runtime_context)
+    if not prepared.get("ok"):
+        return prepared
     if not TASK_LOCK.acquire(blocking=False):
         return {"ok": False, "error": "task already running"}
-    created = time.strftime("%Y-%m-%d %H:%M:%S %Z")
     task_id = time.strftime("%Y%m%d-%H%M%S") + "-" + secrets.token_hex(3)
-    started = time.time()
     try:
         now = time.time()
         elapsed = now - TASK_STATE["last_run"]
         if elapsed < TASK_COOLDOWN_SECONDS:
             return {"ok": False, "error": "cooldown", "retryAfterSeconds": round(TASK_COOLDOWN_SECONDS - elapsed)}
-        prompt = harness_prompt() + "\n\n当前工作模式：" + workflow["prompt"]
-        if conversation:
-            prompt += "\n\n网页端连续对话上下文（已脱敏，仅供理解当前轮）：\n" + conversation
-        prompt += "\n\n川哥发来的任务：" + question
-        prompt += "\n\n本轮已绑定只读项目：" + bound_project
-        prompt += "\n允许读取的文件清单：" + json.dumps(context.get("files") or [], ensure_ascii=False)
-        prompt += "\n源码正文未注入 prompt；需要核对时必须调用 aiops_read、aiops_grep、aiops_find 或 aiops_ls。"
-        if runtime_context:
-            runtime_text = redact_sensitive_text(json.dumps(runtime_context, ensure_ascii=False, indent=2))[:12000]
-            prompt += "\n\n本轮实时运行上下文如下；它比源码快照更新，应优先用于判断当前状态：\n```json\n" + runtime_text + "\n```"
-        brain_result = internal_service_json(
-            AI_OPS_BRAIN_URL,
-            "/run",
-            {
-                "taskId": task_id,
-                "project": bound_project,
-                "workflow": "readonly_safe",
-                "prompt": prompt,
-            },
-            timeout=210,
-            require_token=True,
-        )
-        output = brain_result.get("output") or brain_result.get("error") or "brain returned no output"
-        ok = bool(brain_result.get("ok"))
-        item = {
+        created = TASK_STORE.create({
             "id": task_id,
-            "ok": ok,
-            "mode": workflow["id"],
-            "modeName": workflow["name"],
-            "project": bound_project,
-            "question": redact_sensitive_text(question),
-            "conversationPreview": redact_sensitive_text(conversation)[-1000:],
-            "answer": compact_task_answer(output),
-            "createdAt": created,
-            "durationMs": round((time.time() - started) * 1000),
+            "ok": None,
+            "mode": prepared["workflow"]["id"],
+            "modeName": prepared["workflow"]["name"],
+            "project": prepared["project"],
+            "question": redact_sensitive_text(prepared["question"]),
+            "conversationPreview": redact_sensitive_text(prepared["conversation"])[-1000:],
+            "answer": "",
             "toolMode": "readonly_safe",
             "brainBoundary": "model-only-no-docker-no-ssh",
-        }
-        if context:
-            item["context"] = {key: value for key, value in context.items() if key != "prompt"}
-        if runtime_context:
-            item["runtimeContext"] = runtime_context
-        if notify:
-            try:
-                notify_text = f"AI Ops {AI_OPS_OMP_MODEL_LABEL} 任务完成\n" + f"状态：{'成功' if item['ok'] else '失败'}\n模式：{item['modeName']}\n任务ID：{item['id']}\n耗时：{item['durationMs']}ms\n审计：请在 /vibe/tasks 查看脱敏结果。"
-                item["feishu"] = send_feishu_text(notify_text)
-            except Exception as exc:
-                item["feishu"] = {"status": "error", "body": sanitize_terminal_text(str(exc))}
-        ensure_private_dir(TASKS_DIR)
-        save_json_file(os.path.join(TASKS_DIR, task_id + ".json"), item)
+        })
+        TASK_STORE.update(task_id, {"status": "running", "startedAt": now_text()}, expected_revision=created["revision"])
+        item = execute_vibe_task(task_id, prepared, notify)
+        status = "completed" if item.get("ok") else "failed"
+        result = TASK_STORE.update(task_id, {**item, "status": status, "finishedAt": now_text()})
         TASK_STATE["last_run"] = time.time()
-        return item
+        return result.get("task") or item
     finally:
         TASK_LOCK.release()
+
+
+def run_vibe_task_worker(task_id, prepared, notify):
+    try:
+        if not TASK_LOCK.acquire(timeout=5):
+            TASK_STORE.update(task_id, {"ok": False, "status": "failed", "error": "task_lock_unavailable", "finishedAt": now_text()})
+            return
+        try:
+            current = TASK_STORE.load(task_id) or {}
+            if current.get("status") in TERMINAL_STATUSES:
+                return
+            if current.get("status") == "aborting":
+                TASK_STORE.update(task_id, {"ok": False, "status": "aborted", "error": "aborted_before_start", "answer": "任务已终止。", "finishedAt": now_text()})
+                return
+            running_result = TASK_STORE.update(task_id, {"status": "running", "startedAt": now_text()})
+            if not running_result.get("ok"):
+                return
+            item = execute_vibe_task(task_id, prepared, notify)
+            current = TASK_STORE.load(task_id) or {}
+            aborted = current.get("status") in {"aborting", "aborted"} or item.get("error") == "brain_aborted"
+            status = "aborted" if aborted else ("completed" if item.get("ok") else "failed")
+            if aborted:
+                item.update({"ok": False, "error": "aborted", "answer": "任务已由用户终止。"})
+            TASK_STORE.update(task_id, {**item, "status": status, "finishedAt": now_text()})
+            TASK_STATE["last_run"] = time.time()
+        finally:
+            TASK_LOCK.release()
+    except Exception as exc:
+        TASK_STORE.update(task_id, {"ok": False, "status": "failed", "error": type(exc).__name__, "answer": "任务执行失败，请查看审计状态。", "finishedAt": now_text()})
+    finally:
+        with TASK_WORKERS_LOCK:
+            TASK_WORKERS.pop(task_id, None)
+
+
+def start_vibe_task(payload):
+    payload = payload if isinstance(payload, dict) else {}
+    client_request_id = str(payload.get("clientRequestId") or "").strip()
+    if client_request_id and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,119}", client_request_id):
+        return {"ok": False, "error": "invalid client request id"}
+    existing = TASK_STORE.find_by_client_request_id(client_request_id) if client_request_id else None
+    if existing:
+        return {"ok": True, "accepted": not existing.get("terminal"), "duplicate": True, "task": existing, "pollUrl": f"/vibe/task?id={existing['id']}"}
+    active = TASK_STORE.active()
+    if TASK_LOCK.locked() or active:
+        return {"ok": False, "error": "task already running", "activeTask": active[0] if active else None}
+    elapsed = time.time() - TASK_STATE["last_run"]
+    if elapsed < TASK_COOLDOWN_SECONDS:
+        return {"ok": False, "error": "cooldown", "retryAfterSeconds": round(TASK_COOLDOWN_SECONDS - elapsed)}
+    prepared = prepare_vibe_task(payload.get("mode"), payload.get("question"), payload.get("conversation"), payload.get("project"), payload.get("runtimeContext"))
+    if not prepared.get("ok"):
+        return prepared
+    task_id = time.strftime("%Y%m%d-%H%M%S") + "-" + secrets.token_hex(3)
+    snapshot = TASK_STORE.create({
+        "id": task_id,
+        "clientRequestId": client_request_id or None,
+        "ok": None,
+        "mode": prepared["workflow"]["id"],
+        "modeName": prepared["workflow"]["name"],
+        "project": prepared["project"],
+        "question": redact_sensitive_text(prepared["question"]),
+        "conversationPreview": redact_sensitive_text(prepared["conversation"])[-1000:],
+        "answer": "",
+        "toolMode": "readonly_safe",
+        "brainBoundary": "model-only-no-docker-no-ssh",
+    })
+    worker = threading.Thread(target=run_vibe_task_worker, args=(task_id, prepared, bool(payload.get("notify"))), daemon=True)
+    with TASK_WORKERS_LOCK:
+        TASK_WORKERS[task_id] = worker
+    worker.start()
+    return {"ok": True, "accepted": True, "duplicate": False, "task": snapshot, "pollUrl": f"/vibe/task?id={task_id}"}
+
+
+def abort_vibe_task(task_id, expected_revision=None):
+    snapshot = TASK_STORE.load(task_id)
+    if not snapshot:
+        return {"ok": False, "error": "task_not_found"}
+    if snapshot.get("status") in TERMINAL_STATUSES:
+        return {"ok": True, "alreadyTerminal": True, "task": snapshot}
+    result = TASK_STORE.update(task_id, {"status": "aborting", "abortRequestedAt": now_text()}, expected_revision=expected_revision)
+    if not result.get("ok"):
+        return result
+    brain = internal_service_json(AI_OPS_BRAIN_URL, "/abort", {"taskId": task_id}, timeout=12, require_token=True)
+    if brain.get("error") == "task_not_running":
+        final = TASK_STORE.update(task_id, {"ok": False, "status": "aborted", "error": "aborted_before_start", "answer": "任务已终止。", "finishedAt": now_text()})
+        return {"ok": True, "brain": brain, "task": final.get("task")}
+    return {"ok": bool(brain.get("ok")), "brain": brain, "task": TASK_STORE.load(task_id)}
 
 
 def render_vibe_tasks_page():
@@ -2639,12 +2861,16 @@ def render_vibe_tasks_page():
 const token = sessionStorage.getItem('aiopsReadToken') || '';
 let allTasks = [];
 function escapeHtml(value) {{ return String(value || '').replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
+function auditStatus(item) {{
+  const status = item.status || (item.ok ? 'completed' : 'failed');
+  return ({{queued:'⏳ 排队',running:'🔄 运行中',aborting:'⏹️ 终止中',completed:'✅ 成功',failed:'⚠️ 失败',aborted:'⏹️ 已终止'}})[status] || status;
+}}
 function renderTasks() {{
   const body = document.getElementById('taskRows');
   const filter = document.getElementById('statusFilter').value;
-  const tasks = allTasks.filter(item => filter === 'all' || (filter === 'ok' ? item.ok : !item.ok));
+  const tasks = allTasks.filter(item => filter === 'all' || (filter === 'ok' ? (item.status === 'completed' || item.ok === true) : ((item.terminal !== false && item.status !== 'completed') || item.ok === false)));
   document.getElementById('taskSummary').textContent = `共 ${{allTasks.length}} 条，当前显示 ${{tasks.length}} 条`;
-  body.innerHTML = tasks.map((item, index) => `<tr class="${{item.ok ? 'ok' : 'fail'}}"><td>${{escapeHtml(item.createdAt)}}</td><td>${{escapeHtml(item.modeName)}}</td><td>${{escapeHtml(item.question)}}</td><td>${{item.ok ? '✅ 成功' : '⚠️ 失败'}}</td><td><button data-copy-index="${{index}}">复制结果</button><button data-todo-id="${{escapeHtml(item.id)}}">转待办</button><details><summary>查看</summary><pre>${{escapeHtml(item.answer)}}</pre></details></td></tr>`).join('') || '<tr><td colspan=5>暂无任务</td></tr>';
+  body.innerHTML = tasks.map((item, index) => `<tr class="${{item.status === 'completed' || item.ok ? 'ok' : (item.terminal === false ? '' : 'fail')}}"><td>${{escapeHtml(item.createdAt)}}<br><span class="muted">rev ${{item.revision || 0}}</span></td><td>${{escapeHtml(item.modeName)}}</td><td>${{escapeHtml(item.question)}}</td><td>${{auditStatus(item)}}</td><td><button data-copy-index="${{index}}">复制结果</button><button data-todo-id="${{escapeHtml(item.id)}}" ${{item.status && item.status !== 'completed' ? 'disabled' : ''}}>转待办</button><details><summary>查看</summary><pre>${{escapeHtml(item.answer || item.error || '任务仍在运行')}}</pre></details></td></tr>`).join('') || '<tr><td colspan=5>暂无任务</td></tr>';
   document.querySelectorAll('[data-copy-index]').forEach(button => button.addEventListener('click', async () => {{
     const item = tasks[Number(button.dataset.copyIndex)];
     await navigator.clipboard.writeText(item.answer || '');
@@ -2669,6 +2895,7 @@ async function loadTasks() {{
 document.getElementById('statusFilter').addEventListener('change', renderTasks);
 document.getElementById('reloadTasks').addEventListener('click', loadTasks);
 loadTasks();
+setInterval(() => {{ if (allTasks.some(item => item.terminal === false)) loadTasks(); }}, 5000);
 </script></body></html>"""
 
 
@@ -3466,7 +3693,7 @@ def render_vibe_page():
     guardrail_items = "".join(f"<li>{html.escape(item)}</li>" for item in payload["guardrails"])
     dangerous = "、".join(DANGEROUS_PATTERNS)
     status_class = "ok" if status["ok"] else "warn"
-    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vibe Coding - AI Ops</title><style>{cockpit_page_style()}</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 {html.escape(AI_OPS_OMP_MODEL_LABEL)} 版 OMP；Brain 与生产 Hands 已隔离，源码核验只走 readonly_safe 策略门。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">readonly_safe</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/ops-runtime">Tool Runtime</a><a class="btn" href="/vibe/pilot">实战试点</a><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/todos" data-token-link="true">AI 待办</a><a class="btn" href="/vibe/assets">资产矩阵</a><button id="refreshReadonlyBtn">刷新只读快照</button><button id="runN8nInspectBtn">触发手动巡检</button></p><pre id="actionResult">等待操作。</pre><p class="muted" id="readonlyStatus">只读快照：检查中...</p></section><section class="card"><h2>实战前护栏</h2><p class="muted">先从低风险项目开始：选择项目、选择只读/方案 workflow、发送给 AI 模型，结果进入任务审计并可转待办。</p><p><a class="btn" href="/vibe/pilot">进入真实项目实战试点</a></p></section><section class="card"><h2>连续对话</h2><p class="muted">保留本页上下文继续问 AI 模型；刷新页面会清空上下文。</p><div id="chatHistory" class="chat"><p class="muted">暂无对话。</p></div></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送任务。模型只能使用 aiops_read/grep/find/ls 核验已登记只读快照，不能写入、SSH、Docker、部署或提交。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><label><input id="notifyFeishu" type="checkbox"> 完成后飞书通知</label></p><p><button id="sendTaskBtn">发送给 AI 模型</button><button id="clearTaskBtn" type="button">清空重写</button><button id="clearChatBtn" type="button">清空对话</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><p class="muted" id="taskStatus">状态：待发送</p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">打开后会自动加载 Harness 并启动 <code>omp --model {html.escape(AI_OPS_OMP_MODEL)}</code>。终端是 Brain 沙箱，不挂载真实项目、Docker Socket 或生产 SSH；生产动作请回网页受控入口。</p><div class="terminal"><iframe src="/terminal/" title="Vibe Terminal"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>操作方式</th><th>复制</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>安全工具</h2><table><thead><tr><th>用途</th><th>方式</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vibe Coding - AI Ops</title><style>{cockpit_page_style()}</style></head><body><main>{nav_html('vibe')}<section class="hero"><h1>Vibe Coding 工作台</h1><p class="muted">打开终端会自动进入带 Harness 的 {html.escape(AI_OPS_OMP_MODEL_LABEL)} 版 OMP；Brain 与生产 Hands 已隔离，源码核验只走 readonly_safe 策略门。</p><p><span class="pill {status_class}">终端/OMP：{html.escape('正常' if status['ok'] else '需要关注')}</span><span class="pill">Harness：AI Ops Harness v1</span><span class="pill">readonly_safe</span><span class="pill">日志 {len(status['sessions'])} 条</span></p><p><a class="btn" href="/terminal/" target="_blank">新窗口打开终端</a><button id="restartTerminalBtn">重启终端容器</button><a class="btn" href="/vibe/ops-runtime">Tool Runtime</a><a class="btn" href="/vibe/pilot">实战试点</a><a class="btn" href="/vibe/harness.json">Harness JSON</a><a class="btn" href="/vibe/harness-prompt">Harness Prompt</a><a class="btn" href="/vibe/tasks" data-token-link="true">任务审计</a><a class="btn" href="/vibe/todos" data-token-link="true">AI 待办</a><a class="btn" href="/vibe/assets">资产矩阵</a><button id="refreshReadonlyBtn">刷新只读快照</button><button id="runN8nInspectBtn">触发手动巡检</button></p><pre id="actionResult">等待操作。</pre><p class="muted" id="readonlyStatus">只读快照：检查中...</p></section><section class="card"><h2>实战前护栏</h2><p class="muted">先从低风险项目开始：选择项目、选择只读/方案 workflow、发送给 AI 模型，结果进入任务审计并可转待办。</p><p><a class="btn" href="/vibe/pilot">进入真实项目实战试点</a></p></section><section class="card"><h2>连续对话</h2><p class="muted">保留本页上下文继续问 AI 模型；刷新页面会清空上下文。</p><div id="chatHistory" class="chat"><p class="muted">暂无对话。</p></div></section><section class="card"><h2>发任务给 Grok</h2><p class="muted">无需进入终端，选择工作模式后直接发送任务。模型只能使用 aiops_read/grep/find/ls 核验已登记只读快照，不能写入、SSH、Docker、部署或提交。</p><select id="taskMode"><option value="readonly_inspect">只读巡检</option><option value="plan_design">方案设计</option><option value="patch_draft">补丁草案</option><option value="deploy_verify">部署验收</option></select><textarea id="taskQuestion" rows="4" placeholder="例如：请只读检查 AI Ops 当前状态，并列出风险和下一步。">请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。</textarea><p><label><input id="notifyFeishu" type="checkbox"> 完成后飞书通知</label></p><p><button id="sendTaskBtn">发送给 AI 模型</button><button id="clearTaskBtn" type="button">清空重写</button><button id="clearChatBtn" type="button">清空对话</button><a class="btn" href="/vibe/tasks" data-token-link="true">查看任务审计</a></p><p class="muted" id="taskStatus">状态：待发送</p><pre id="taskResult">等待任务。</pre></section><section class="card"><h2>内嵌终端</h2><p class="muted">为保护 2GB 运维主机，终端默认不自动启动。点击后才加载 Harness 并启动 <code>omp --model {html.escape(AI_OPS_OMP_MODEL)}</code>；关闭或离开页面会结束本次会话。终端是 Brain 沙箱，不挂载真实项目、Docker Socket 或生产 SSH。</p><p><button id="startTerminalBtn" type="button">启动内嵌终端</button><span class="muted" id="terminalLaunchStatus">尚未启动</span></p><div class="terminal"><iframe id="terminalFrame" src="about:blank" data-src="/terminal/" title="Vibe Terminal" loading="lazy"></iframe></div></section><section><h2>工作模式</h2><div class="grid">{workflow_cards}</div></section><section><h2>项目入口</h2><div class="grid">{project_cards}</div></section><section class="card"><h2>服务器入口</h2><table><thead><tr><th>服务器</th><th>说明</th><th>操作方式</th><th>复制</th></tr></thead><tbody>{server_rows}</tbody></table></section><section class="card"><h2>安全工具</h2><table><thead><tr><th>用途</th><th>方式</th><th>操作</th></tr></thead><tbody>{command_rows}</tbody></table></section><section><h2>AI 任务模板</h2><div class="grid">{template_cards}</div></section><section class="card"><h2>审计日志</h2><p class="muted">最近终端日志，只展示尾部预览。完整日志在远端 <code>/opt/ai-ops-cockpit/terminal/logs/</code>。</p><table><thead><tr><th>文件</th><th>大小</th><th>更新时间</th><th>预览</th></tr></thead><tbody>{session_rows}</tbody></table></section><section class="card"><h2>护栏</h2><p class="muted">高危关键词：{html.escape(dangerous)}</p><ul>{guardrail_items}</ul></section></main><script>
 document.querySelectorAll('[data-copy]').forEach((button) => {{
   button.addEventListener('click', async () => {{
     await navigator.clipboard.writeText(button.dataset.copy);
@@ -3474,6 +3701,17 @@ document.querySelectorAll('[data-copy]').forEach((button) => {{
     button.textContent = '已复制';
     setTimeout(() => button.textContent = oldText, 1200);
   }});
+}});
+const startTerminalBtn = document.getElementById('startTerminalBtn');
+const terminalFrame = document.getElementById('terminalFrame');
+const terminalLaunchStatus = document.getElementById('terminalLaunchStatus');
+startTerminalBtn.addEventListener('click', () => {{
+  if (terminalFrame.dataset.started === 'true') return;
+  terminalFrame.dataset.started = 'true';
+  terminalFrame.src = terminalFrame.dataset.src;
+  startTerminalBtn.disabled = true;
+  startTerminalBtn.textContent = '终端已启动';
+  terminalLaunchStatus.textContent = '正在加载，只允许 1 个网页终端会话';
 }});
 sessionStorage.setItem('aiopsReadToken', '{READ_TOKEN}');
 document.querySelectorAll('[data-token-link="true"]').forEach((link) => {{
@@ -3488,31 +3726,6 @@ document.getElementById('clearChatBtn').addEventListener('click', () => {{
   document.getElementById('chatHistory').innerHTML = '<p class="muted">暂无对话。</p>';
   document.getElementById('taskStatus').textContent = '状态：已清空对话';
 }});
-document.getElementById('sendTaskBtn').addEventListener('click', async () => {{
-  const result = document.getElementById('taskResult');
-  const input = document.getElementById('taskQuestion');
-  const question = input.value.trim() || '请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。';
-  input.value = question;
-  const startedAt = Date.now();
-  const status = document.getElementById('taskStatus');
-  result.textContent = '正在发送给 Grok，通常需要 30-120 秒...';
-  status.textContent = '状态：运行中 0s';
-  const timer = setInterval(() => {{ status.textContent = `状态：运行中 ${{Math.round((Date.now() - startedAt) / 1000)}}s`; }}, 1000);
-  const conversation = Array.from(document.querySelectorAll('[data-chat-line]')).map(node => node.textContent).join('\\n');
-  try {{
-    const response = await fetch('/vibe/task/run', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Read-Token': '{READ_TOKEN}' }}, body: JSON.stringify({{ mode: document.getElementById('taskMode').value, question, conversation, notify: document.getElementById('notifyFeishu').checked }}) }});
-    const data = await response.json();
-    result.textContent = JSON.stringify(data, null, 2);
-    status.textContent = `状态：${{data.ok ? '完成' : '失败'}}，耗时 ${{data.durationMs || (Date.now() - startedAt)}}ms${{data.error ? '，原因：' + data.error : ''}}`;
-    appendChat('川哥', question, 'user');
-    appendChat('Grok', data.answer || data.error || JSON.stringify(data), 'assistant');
-  }} catch (error) {{
-    result.textContent = String(error);
-    status.textContent = '状态：请求失败，原因：' + error;
-  }} finally {{
-    clearInterval(timer);
-  }}
-}});
 function appendChat(role, text, kind) {{
   const history = document.getElementById('chatHistory');
   if (history.querySelector('.muted')) history.innerHTML = '';
@@ -3521,6 +3734,136 @@ function appendChat(role, text, kind) {{
   item.className = kind || '';
   item.innerHTML = `<p><strong>${{role}}</strong></p><pre>${{String(text || '').replace(/[&<>]/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;'}}[ch]))}}</pre>`;
   history.appendChild(item);
+}}
+const sendTaskBtn = document.getElementById('sendTaskBtn');
+const abortTaskBtn = document.createElement('button');
+abortTaskBtn.id = 'abortTaskBtn';
+abortTaskBtn.type = 'button';
+abortTaskBtn.textContent = '终止当前任务';
+abortTaskBtn.disabled = true;
+sendTaskBtn.insertAdjacentElement('afterend', abortTaskBtn);
+let activeTaskId = sessionStorage.getItem('aiopsActiveTaskId') || '';
+let activeTaskRevision = Number(sessionStorage.getItem('aiopsActiveTaskRevision') || 0);
+let taskPollTimer = null;
+let taskPollBackoff = 2000;
+function taskStatusLabel(task) {{
+  return ({{queued:'排队中',running:'运行中',aborting:'终止中',completed:'完成',failed:'失败',aborted:'已终止'}})[task.status] || task.status || '未知';
+}}
+function rememberActiveTask(task) {{
+  activeTaskId = task.id;
+  activeTaskRevision = Number(task.revision || 0);
+  sessionStorage.setItem('aiopsActiveTaskId', activeTaskId);
+  sessionStorage.setItem('aiopsActiveTaskRevision', String(activeTaskRevision));
+  sendTaskBtn.disabled = !task.terminal;
+  abortTaskBtn.disabled = Boolean(task.terminal);
+}}
+function clearActiveTask() {{
+  activeTaskId = '';
+  activeTaskRevision = 0;
+  sessionStorage.removeItem('aiopsActiveTaskId');
+  sessionStorage.removeItem('aiopsActiveTaskRevision');
+  sessionStorage.removeItem('aiopsPendingRequestId');
+  sendTaskBtn.disabled = false;
+  abortTaskBtn.disabled = true;
+}}
+function renderTaskSnapshot(task) {{
+  if (!task || !task.id) return;
+  const revision = Number(task.revision || 0);
+  if (task.id === activeTaskId && revision <= activeTaskRevision) return;
+  rememberActiveTask(task);
+  document.getElementById('taskStatus').textContent = `状态：${{taskStatusLabel(task)}} · 任务 ${{task.id}} · revision ${{revision}}${{task.error ? ' · ' + task.error : ''}}`;
+  document.getElementById('taskResult').textContent = task.terminal ? JSON.stringify(task, null, 2) : `任务已进入权威状态存储。\nID：${{task.id}}\n状态：${{taskStatusLabel(task)}}\nrevision：${{revision}}\n页面刷新或网络闪断后会自动恢复。`;
+  if (task.terminal) {{
+    const renderedTaskId = sessionStorage.getItem('aiopsRenderedTaskId');
+    if (renderedTaskId !== task.id) {{
+      appendChat('川哥', task.question || '', 'user');
+      appendChat('{html.escape(AI_OPS_OMP_MODEL_LABEL)}', task.answer || task.error || '任务无输出', 'assistant');
+      sessionStorage.setItem('aiopsRenderedTaskId', task.id);
+    }}
+    clearActiveTask();
+    if (taskPollTimer) clearTimeout(taskPollTimer);
+    return;
+  }}
+  scheduleTaskPoll(2000);
+}}
+function scheduleTaskPoll(delay) {{
+  if (taskPollTimer) clearTimeout(taskPollTimer);
+  taskPollTimer = setTimeout(pollActiveTask, delay);
+}}
+async function pollActiveTask() {{
+  if (!activeTaskId) return;
+  try {{
+    const response = await fetch(`/vibe/task?id=${{encodeURIComponent(activeTaskId)}}`, {{ credentials: 'same-origin', headers: {{ 'X-AIOps-Read-Token': '{READ_TOKEN}' }} }});
+    const data = await response.json();
+    if (!response.ok || !data.ok || !data.task) throw new Error(data.error || `HTTP ${{response.status}}`);
+    taskPollBackoff = 2000;
+    renderTaskSnapshot(data.task);
+    if (!data.task.terminal) scheduleTaskPoll(taskPollBackoff);
+  }} catch (error) {{
+    document.getElementById('taskStatus').textContent = `状态：连接中断，${{Math.round(taskPollBackoff / 1000)}} 秒后重连 · ${{error}}`;
+    taskPollBackoff = Math.min(15000, taskPollBackoff * 2);
+    scheduleTaskPoll(taskPollBackoff);
+  }}
+}}
+async function submitTaskRequest(body, attempt=0) {{
+  try {{
+    const response = await fetch('/vibe/task/run', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Read-Token': '{READ_TOKEN}' }}, body: JSON.stringify(body) }});
+    const data = await response.json();
+    if (!data.ok) {{
+      if (data.activeTask) renderTaskSnapshot(data.activeTask);
+      else {{
+        document.getElementById('taskResult').textContent = JSON.stringify(data, null, 2);
+        document.getElementById('taskStatus').textContent = '状态：未启动 · ' + (data.error || '未知错误');
+        sendTaskBtn.disabled = false;
+        sessionStorage.removeItem('aiopsPendingRequestId');
+      }}
+      return;
+    }}
+    sessionStorage.removeItem('aiopsPendingRequestId');
+    activeTaskRevision = 0;
+    renderTaskSnapshot(data.task);
+  }} catch (error) {{
+    if (attempt < 2) {{
+      document.getElementById('taskStatus').textContent = `状态：发送响应中断，正在按相同请求 ID 重试（${{attempt + 1}}/2）`;
+      await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)));
+      return submitTaskRequest(body, attempt + 1);
+    }}
+    document.getElementById('taskResult').textContent = String(error);
+    document.getElementById('taskStatus').textContent = '状态：发送失败，可再次点击；服务端会按请求 ID 去重。';
+    sendTaskBtn.disabled = false;
+  }}
+}}
+sendTaskBtn.addEventListener('click', async () => {{
+  if (activeTaskId) {{ pollActiveTask(); return; }}
+  const input = document.getElementById('taskQuestion');
+  const question = input.value.trim() || '请只读检查当前 AI Ops 驾驶舱状态，按异常、风险、建议、验收命令输出。';
+  input.value = question;
+  const conversation = Array.from(document.querySelectorAll('[data-chat-line]')).map(node => node.textContent).join('\\n');
+  const requestId = sessionStorage.getItem('aiopsPendingRequestId') || `web-${{Date.now()}}-${{Math.random().toString(16).slice(2, 10)}}`;
+  sessionStorage.setItem('aiopsPendingRequestId', requestId);
+  sendTaskBtn.disabled = true;
+  document.getElementById('taskResult').textContent = '正在创建权威任务快照...';
+  document.getElementById('taskStatus').textContent = '状态：提交中';
+  await submitTaskRequest({{ clientRequestId: requestId, mode: document.getElementById('taskMode').value, question, conversation, notify: document.getElementById('notifyFeishu').checked }});
+}});
+abortTaskBtn.addEventListener('click', async () => {{
+  if (!activeTaskId) return;
+  abortTaskBtn.disabled = true;
+  const response = await fetch('/vibe/task/abort', {{ method: 'POST', credentials: 'same-origin', headers: {{ 'content-type': 'application/json', 'X-AIOps-Read-Token': '{READ_TOKEN}' }}, body: JSON.stringify({{ taskId: activeTaskId, expectedRevision: activeTaskRevision }}) }});
+  const data = await response.json();
+  if (data.task) {{
+    activeTaskRevision = Math.max(0, Number(data.task.revision || 0) - 1);
+    renderTaskSnapshot(data.task);
+  }} else {{
+    document.getElementById('taskStatus').textContent = '状态：终止失败 · ' + (data.error || '未知错误');
+    abortTaskBtn.disabled = false;
+  }}
+}});
+if (activeTaskId) {{
+  sendTaskBtn.disabled = true;
+  abortTaskBtn.disabled = false;
+  activeTaskRevision = 0;
+  pollActiveTask();
 }}
 document.getElementById('restartTerminalBtn').addEventListener('click', async () => {{
   const result = document.getElementById('actionResult');
@@ -3715,10 +4058,22 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/vibe/report.json":
                 kind = parse_qs(urlparse(self.path).query).get("kind", ["daily"])[0]
                 self._send_json(200, ops_report_payload(kind))
+            elif path == "/vibe/self-monitor.json":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                self._send_json(200, {"ok": True, "report": build_self_monitor_report(), "state": load_json_file(SELF_MONITOR_STATE_FILE, {})})
             elif path in ("/vibe/assets", "/vibe/assets/"):
                 self._send_text(200, render_assets_page(), "text/html; charset=utf-8")
             elif path in ("/vibe/ops-runtime", "/vibe/ops-runtime/"):
                 self._send_text(200, render_ops_runtime_page(), "text/html; charset=utf-8")
+            elif path == "/vibe/task":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                task_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
+                task = TASK_STORE.load(task_id)
+                self._send_json(200 if task else 404, {"ok": True, "task": task} if task else {"ok": False, "error": "task not found"})
             elif path == "/vibe/tasks.json":
                 if not self._has_read_token():
                     self._send_json(403, {"ok": False, "error": "read token required"})
@@ -3781,13 +4136,20 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json(403, {"ok": False, "error": "read token required"})
                     return
                 payload = self._read_json_body()
-                self._send_json(200, run_vibe_task(
-                    payload.get("mode"),
-                    payload.get("question"),
-                    payload.get("conversation"),
-                    bool(payload.get("notify")),
-                    payload.get("project"),
-                ))
+                self._send_json(200, start_vibe_task(payload))
+            elif path == "/vibe/task/abort":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                payload = self._read_json_body()
+                expected_revision = payload.get("expectedRevision")
+                if expected_revision is not None:
+                    try:
+                        expected_revision = int(expected_revision)
+                    except (TypeError, ValueError):
+                        self._send_json(400, {"ok": False, "error": "invalid revision"})
+                        return
+                self._send_json(200, abort_vibe_task(payload.get("taskId"), expected_revision))
             elif path == "/vibe/action/refresh-readonly":
                 if not self._has_read_token():
                     self._send_json(403, {"ok": False, "error": "read token required"})
@@ -3853,6 +4215,12 @@ class Handler(BaseHTTPRequestHandler):
                 payload = self._read_json_body()
                 payload.pop("simulateFailure", None)
                 self._send_json(200, start_project_daily_job(payload))
+            elif path == "/vibe/self-monitor/run":
+                if not self._has_read_token():
+                    self._send_json(403, {"ok": False, "error": "read token required"})
+                    return
+                self._read_json_body()
+                self._send_json(200, run_self_monitor(notify=True))
             elif path == "/vibe/project/daily/test":
                 if not self._has_action_token():
                     self._send_json(403, {"ok": False, "error": "action token required"})
@@ -3886,4 +4254,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8080"))
+    TASK_STORE.reconcile_interrupted()
     ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()

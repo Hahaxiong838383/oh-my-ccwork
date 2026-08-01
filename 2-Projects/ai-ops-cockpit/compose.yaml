@@ -22,7 +22,7 @@ services:
       - "443:443"
       - "443:443/udp"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -90,6 +90,9 @@ services:
       READONLY_ROOT: /workspace/readonly
       ALLOWLIST_DIR: /config
       STATE_DIR: /var/lib/ai-ops-state
+      TOOL_AUDIT_DIR: /tool-runner-state/audit
+      OMP_UPDATE_STATE_FILE: /workspace/ai-ops-root/terminal/runtime/update-state.json
+      SELF_MONITOR_TERMINAL_MAX_CLIENTS: 1
       CHENCHUAN_DAILY_PUSH_URL: ${CHENCHUAN_DAILY_PUSH_URL:-}
       CPA_DAILY_PUSH_URL: ${CPA_DAILY_PUSH_URL:-}
       IPTV_DAILY_PUSH_URL: ${IPTV_DAILY_PUSH_URL:-}
@@ -105,6 +108,7 @@ services:
       - ./:/workspace/ai-ops-root:ro
       - /opt/ai-ops-workspaces:/opt/ai-ops-workspaces:ro
       - ./ops-inspector/state:/var/lib/ai-ops-state
+      - ops_tool_runner_state:/tool-runner-state:ro
       - ./secrets/chenchuan-maintenance:/run/secrets/chenchuan-maintenance:ro
       - ./secrets/cpa-jp-maintenance:/run/secrets/cpa-jp-maintenance:ro
       - ./secrets/iptv-maintenance:/run/secrets/iptv-maintenance:ro
@@ -150,6 +154,9 @@ services:
     build: ./terminal
     container_name: ops-brain
     restart: unless-stopped
+    mem_limit: 640m
+    cpus: 0.60
+    pids_limit: 192
     command: ["python3", "/usr/local/lib/aiops-brain-server.py"]
     environment:
       TZ: Asia/Shanghai
@@ -208,6 +215,9 @@ services:
       context: ./terminal
     container_name: ops-terminal
     restart: unless-stopped
+    mem_limit: 448m
+    cpus: 0.35
+    pids_limit: 128
     environment:
       TZ: Asia/Shanghai
       AI_OPS_OMP_MODEL: ${AI_OPS_OMP_MODEL:-volcengine-coding/deepseek-v4-pro}
@@ -236,7 +246,8 @@ services:
         condition: service_healthy
 
   dockge:
-    image: louislam/dockge:1
+    build: ./dockge
+    image: ai-ops-dockge-subpath:1
     container_name: ops-dockge
     restart: unless-stopped
     volumes:

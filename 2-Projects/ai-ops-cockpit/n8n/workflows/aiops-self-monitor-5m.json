@@ -1,0 +1,81 @@
+[
+  {
+    "id": "aiops-self-monitor-5m",
+    "name": "AI Ops 核心链路每 5 分钟自监控",
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "*/5 * * * *"
+              }
+            ]
+          }
+        },
+        "id": "schedule-aiops-self-monitor",
+        "name": "每 5 分钟触发",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [0, 0]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://ops-inspector:8080/vibe/self-monitor/run",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-AIOps-Read-Token",
+                "value": "={{ $vars.AIOPS_READ_TOKEN }}"
+              },
+              {
+                "name": "Origin",
+                "value": "http://ops-inspector:8080"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/json",
+          "body": "{}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "id": "run-aiops-self-monitor",
+        "name": "检查核心链路并按状态通知",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [300, 0]
+      }
+    ],
+    "connections": {
+      "每 5 分钟触发": {
+        "main": [
+          [
+            {
+              "node": "检查核心链路并按状态通知",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1",
+      "timezone": "Asia/Shanghai"
+    },
+    "staticData": null,
+    "meta": {
+      "templateCredsSetupCompleted": true
+    },
+    "pinData": {},
+    "tags": []
+  }
+]

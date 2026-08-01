@@ -47,14 +47,6 @@ ops.hahaxiong.top, :80 {
     reverse_proxy homepage:3000
   }
 
-  @dockgeAssets {
-    path /assets/* /socket.io/* /manifest.json /icon.svg /apple-touch-icon.png
-    header Referer *://ops.hahaxiong.top/dockge/*
-  }
-  handle @dockgeAssets {
-    reverse_proxy dockge:5001
-  }
-
   handle_path /kuma* {
     reverse_proxy uptime-kuma:3001
   }

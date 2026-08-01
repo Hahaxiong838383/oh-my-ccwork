@@ -9,6 +9,12 @@ set -a
 source .env
 set +a
 BASE="${AI_OPS_BASE:-https://ops.hahaxiong.top}"
+CAPACITY_CHECK="${AI_OPS_ROOT:-/opt/ai-ops-cockpit}/scripts/validate-runtime-capacity.sh"
+DOCKGE_PAGE=/tmp/aiops-dockge-regression.html
+DOCKGE_ENTRY=/tmp/aiops-dockge-entry.js
+DOCKGE_DYNAMIC=/tmp/aiops-dockge-dynamic.js
+KUMA_PAGE=/tmp/aiops-kuma-regression.html
+KUMA_ENTRY=/tmp/aiops-kuma-entry.js
 PAGE=/tmp/aiops-vibe-regression.html
 TASKS=/tmp/aiops-vibe-tasks.html
 ASSETS=/tmp/aiops-vibe-assets.html
@@ -19,6 +25,7 @@ CPA_PROJECT=/tmp/aiops-vibe-cpa-project.html
 IPTV_PROJECT=/tmp/aiops-vibe-iptv-project.html
 VOICE_PROJECT=/tmp/aiops-vibe-voice-project.html
 RUNTIME=/tmp/aiops-vibe-runtime.html
+"$CAPACITY_CHECK"
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/" -o "$PAGE"
 python3 - "$PAGE" > /tmp/aiops-vibe-script.js <<'PY'
 import sys
@@ -26,6 +33,8 @@ html=open(sys.argv[1]).read()
 script=html.split('<script>',1)[1].split('</script>',1)[0]
 assert 'sendTaskBtn' in script
 assert "join('\\n')" in script
+assert 'id="terminalFrame" src="about:blank" data-src="/terminal/"' in html
+assert '<iframe src="/terminal/" title="Vibe Terminal">' not in html
 print(script)
 PY
 node --check /tmp/aiops-vibe-script.js >/dev/null
@@ -35,6 +44,49 @@ page=open(sys.argv[1]).read()
 print('READ_TOKEN=' + re.search(r"X-AIOps-Read-Token': '([^']+)'", page).group(1))
 PY
 source /tmp/aiops-vibe-token.env
+
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/dockge/" -o "$DOCKGE_PAGE"
+DOCKGE_ENTRY_PATH=$(sed -n 's#.*src="\(/dockge/assets/[^\"]*\.js\)".*#\1#p' "$DOCKGE_PAGE" | head -1)
+test -n "$DOCKGE_ENTRY_PATH"
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -D /tmp/aiops-dockge-entry.headers "$BASE$DOCKGE_ENTRY_PATH" -o "$DOCKGE_ENTRY"
+grep -Eqi '^content-type: (application|text)/(javascript|ecmascript)' /tmp/aiops-dockge-entry.headers
+grep -q 'path:"/dockge/socket.io"' "$DOCKGE_ENTRY"
+grep -Eq 'history:[A-Za-z_$][A-Za-z0-9_$]*\("/dockge/"\),routes:' "$DOCKGE_ENTRY"
+DOCKGE_DYNAMIC_NAME=$(grep -oE 'import\("\./[^"/]+\.js"\)' "$DOCKGE_ENTRY" | head -1 | sed 's#import("\./##; s#")##')
+test -n "$DOCKGE_DYNAMIC_NAME"
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -D /tmp/aiops-dockge-dynamic.headers "$BASE/dockge/assets/$DOCKGE_DYNAMIC_NAME" -o "$DOCKGE_DYNAMIC"
+grep -Eqi '^content-type: (application|text)/(javascript|ecmascript)' /tmp/aiops-dockge-dynamic.headers
+! grep -qi '<!doctype html' "$DOCKGE_DYNAMIC"
+
+curl --http1.1 -fsSL -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/kuma/" -o "$KUMA_PAGE"
+KUMA_ENTRY_PATH=$(sed -n 's#.*src="\(/assets/[^\"]*\.js\)".*#\1#p' "$KUMA_PAGE" | head -1)
+test -n "$KUMA_ENTRY_PATH"
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -D /tmp/aiops-kuma-entry.headers "$BASE$KUMA_ENTRY_PATH" -o "$KUMA_ENTRY"
+grep -Eqi '^content-type: (application|text)/(javascript|ecmascript)' /tmp/aiops-kuma-entry.headers
+! grep -qi '<title>Dockge</title>' "$KUMA_PAGE"
+docker inspect ops-caddy | jq -e '.[0].Mounts | any(.Source=="/opt/ai-ops-cockpit/caddy/Caddyfile" and .Destination=="/etc/caddy/Caddyfile" and .RW==false)' >/dev/null
+docker exec ops-dockge sh -lc 'grep -q '\''src="/dockge/assets/'\'' /app/frontend-dist/index.html && ! test -e /app/frontend-dist/index.html.gz && ! test -e /app/frontend-dist/index.html.br'
+
+poll_task_terminal() {
+  local task_id="$1"
+  local output_file="$2"
+  local previous_revision=0
+  local revision status
+  for _ in $(seq 1 120); do
+    curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "X-AIOps-Read-Token: $READ_TOKEN" "$BASE/vibe/task?id=$task_id" -o "$output_file"
+    revision=$(jq -r '.task.revision // 0' "$output_file")
+    test "$revision" -ge "$previous_revision"
+    previous_revision="$revision"
+    status=$(jq -r '.task.status // ""' "$output_file")
+    if jq -e '.task.terminal==true' "$output_file" >/dev/null; then
+      return 0
+    fi
+    sleep 2
+  done
+  printf 'task did not reach terminal state: %s status=%s revision=%s\n' "$task_id" "$status" "$revision" >&2
+  return 1
+}
+
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/tasks" -o "$TASKS"
 grep -q 'statusFilter' "$TASKS"
 grep -q '复制结果' "$TASKS"
@@ -67,6 +119,8 @@ grep -q 'Ops Tool Runtime' "$RUNTIME"
 grep -q 'ExecutionRecord' "$RUNTIME"
 grep -q 'Brain / Hands 安全架构' "$RUNTIME"
 grep -q 'readonly_safe' "$RUNTIME"
+docker inspect ops-terminal | jq -e '.[0].Config.Cmd | index("--exit-no-conn") != null and index("--max-clients") != null and index("1") != null' >/dev/null
+docker exec ops-terminal sh -lc 'test "$(ps -eo comm= | grep -cx omp || true)" -le 1'
 docker exec ops-terminal grep -q '^setupVersion: 1$' /home/ops/.omp/terminal-agent/config.yml
 docker exec ops-terminal grep -q '^  setupWizard: false$' /home/ops/.omp/terminal-agent/config.yml
 runtime_json_code=$(curl --http1.1 -sS -o /tmp/aiops-runtime-no-token.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/ops-runtime.json")
@@ -194,12 +248,29 @@ voice_bad_confirmation_code=$(curl --http1.1 -sS -o /tmp/aiops-voice-bad-confirm
 test "$voice_bad_confirmation_code" = "200"
 jq -e '.ok==false and .error=="action confirmation required" and (has("jobId")|not)' /tmp/aiops-voice-bad-confirmation.json >/dev/null
 sleep "${AI_OPS_REGRESSION_SLEEP:-22}"
-RESP=$(curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"mode":"readonly_inspect","project":"chenchuan-site","question":"回归验收：必须调用 aiops_read 读取 chenchuan-site 的 README.md 第 1 行，然后返回 AI_OPS_REGRESSION_OK，并明确写出 readonly_safe。","conversation":"川哥: 回归测试发送主按钮与安全只读工具。"}' "$BASE/vibe/task/run")
-printf "%s" "$RESP" | jq -e '.ok==true and .toolMode=="readonly_safe" and .brainBoundary=="model-only-no-docker-no-ssh" and (.answer|contains("AI_OPS_REGRESSION_OK")) and (.answer|contains("readonly_safe"))' >/dev/null
-TASK_ID=$(printf '%s' "$RESP" | jq -r '.id')
+"$CAPACITY_CHECK"
+CLIENT_REQUEST_ID="regression-$(date +%s)-$RANDOM"
+RESP=$(curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data "{\"clientRequestId\":\"$CLIENT_REQUEST_ID\",\"mode\":\"readonly_inspect\",\"project\":\"chenchuan-site\",\"question\":\"回归验收：必须调用 aiops_read 读取 chenchuan-site 的 README.md 第 1 行，然后返回 AI_OPS_REGRESSION_OK，并明确写出 readonly_safe。\",\"conversation\":\"川哥: 回归测试发送主按钮、刷新恢复与安全只读工具。\"}" "$BASE/vibe/task/run")
+printf "%s" "$RESP" | jq -e '.ok==true and .accepted==true and .duplicate==false and .task.status=="queued" and .task.revision==1 and .task.terminal==false' >/dev/null
+TASK_ID=$(printf '%s' "$RESP" | jq -r '.task.id')
 export TASK_ID
+DUPLICATE=$(curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data "{\"clientRequestId\":\"$CLIENT_REQUEST_ID\",\"mode\":\"readonly_inspect\",\"project\":\"chenchuan-site\",\"question\":\"网络重试不得重复创建任务。\"}" "$BASE/vibe/task/run")
+printf '%s' "$DUPLICATE" | jq -e --arg id "$TASK_ID" '.ok==true and .duplicate==true and .task.id==$id' >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "X-AIOps-Read-Token: $READ_TOKEN" "$BASE/vibe/task?id=$TASK_ID" | jq -e --arg id "$TASK_ID" '.task.id==$id and .task.revision>=1 and .task.terminal==false' >/dev/null
+poll_task_terminal "$TASK_ID" /tmp/aiops-regression-task-final.json
+jq -e '.task.status=="completed" and .task.revision>=3 and .task.toolMode=="readonly_safe" and .task.brainBoundary=="model-only-no-docker-no-ssh" and (.task.answer|contains("AI_OPS_REGRESSION_OK")) and (.task.answer|contains("readonly_safe"))' /tmp/aiops-regression-task-final.json >/dev/null
+"$CAPACITY_CHECK"
 docker exec -e MODEL_TASK_ID="$TASK_ID" ops-tool-runner python -c 'import glob,json,os; records=[json.load(open(path,encoding="utf-8")) for path in glob.glob("/var/lib/aiops-tool-runner/audit/*.json")[-120:]]; assert any(item.get("taskId")==os.environ["MODEL_TASK_ID"] and item.get("tool")=="read" and item.get("decision")=="allowed" for item in records)'
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "X-AIOps-Read-Token: $READ_TOKEN" "$BASE/vibe/tasks.json" | jq -e --arg id "$TASK_ID" '.tasks[0].id==$id and (.tasks[0].answer|contains("AI_OPS_REGRESSION_OK"))' >/dev/null
+sleep "${AI_OPS_REGRESSION_SLEEP:-22}"
+ABORT_RESP=$(curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data "{\"clientRequestId\":\"abort-$CLIENT_REQUEST_ID\",\"mode\":\"readonly_inspect\",\"project\":\"chenchuan-site\",\"question\":\"终止回归：依次读取 README.md、package.json、src/app/page.tsx、src/lib/radar/index.ts、docs/theory-radar-aiops-handoff.md，并逐项分析后再回答。\"}" "$BASE/vibe/task/run")
+ABORT_TASK_ID=$(printf '%s' "$ABORT_RESP" | jq -r '.task.id')
+printf '%s' "$ABORT_RESP" | jq -e '.ok==true and .accepted==true and .task.revision==1' >/dev/null
+ABORT_RESULT=$(curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data "{\"taskId\":\"$ABORT_TASK_ID\"}" "$BASE/vibe/task/abort")
+printf '%s' "$ABORT_RESULT" | jq -e '.ok==true and (.task.status=="aborting" or .task.status=="aborted")' >/dev/null
+poll_task_terminal "$ABORT_TASK_ID" /tmp/aiops-regression-abort-final.json
+jq -e '.task.status=="aborted" and .task.terminal==true and .task.revision>=3' /tmp/aiops-regression-abort-final.json >/dev/null
+"$CAPACITY_CHECK"
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data "{\"taskId\":\"$TASK_ID\"}" "$BASE/vibe/todos/create" | jq -e '.ok==true and .todo.taskId==env.TASK_ID' >/dev/null
 TODO_ID=$(curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "X-AIOps-Read-Token: $READ_TOKEN" "$BASE/vibe/todos.json" | jq -r '.todos[0].id')
 export TODO_ID
@@ -232,11 +303,27 @@ for payload in \
   docker exec -e POLICY_PAYLOAD="$payload" ops-brain sh -lc 'curl -sS -H "content-type: application/json" -H "x-aiops-internal-token: $AI_OPS_INTERNAL_TOKEN" --data "$POLICY_PAYLOAD" http://ops-tool-runner:8091/tool' | jq -e '.ok==false and (.error=="policy_denied" or .error=="snapshot_not_ready")' >/dev/null
 done
 docker exec ops-tool-runner python -c 'import glob,json; records=[json.load(open(path,encoding="utf-8")) for path in glob.glob("/var/lib/aiops-tool-runner/audit/*.json")[-80:]]; assert any(item.get("taskId")=="regression-safe-read" and item.get("decision")=="allowed" for item in records); assert any(item.get("taskId")=="regression-block-write" and item.get("decision")=="blocked" for item in records); assert all(item.get("secretExposure")==0 for item in records); assert all("path" not in (item.get("paramsSummary") or {}) for item in records); assert all("query" not in (item.get("paramsSummary") or {}) for item in records); assert all("path" not in (item.get("resultSummary") or {}) for item in records)'
-docker exec ops-inspector sh -lc 'test -d /var/lib/ai-ops-state && mount | grep -q /var/lib/ai-ops-state'
-docker exec ops-inspector sh -lc 'test -r /run/secrets/chenchuan-maintenance/id_ed25519 && test -r /run/secrets/chenchuan-maintenance/known_hosts && mount | grep -q /run/secrets/chenchuan-maintenance'
-docker exec ops-inspector sh -lc 'test -r /run/secrets/cpa-jp-maintenance/id_ed25519 && test -r /run/secrets/cpa-jp-maintenance/known_hosts && mount | grep -q /run/secrets/cpa-jp-maintenance'
-docker exec ops-inspector sh -lc 'test -r /run/secrets/iptv-maintenance/id_ed25519 && test -r /run/secrets/iptv-maintenance/known_hosts && mount | grep -q /run/secrets/iptv-maintenance'
-docker exec ops-inspector sh -lc 'test -r /run/secrets/qihang-hk-maintenance/id_ed25519 && test -r /run/secrets/qihang-hk-maintenance/known_hosts && mount | grep -q /run/secrets/qihang-hk-maintenance'
+docker exec ops-inspector sh -lc 'test -d /var/lib/ai-ops-state && test -r /tool-runner-state/audit'
+docker inspect ops-inspector | jq -e '.[0].Mounts | any(.Destination=="/var/lib/ai-ops-state" and .RW==true) and any(.Destination=="/tool-runner-state" and .Type=="volume" and .RW==false)' >/dev/null
+SELF_MONITOR_CODE=$(curl --http1.1 -sS -o /tmp/aiops-self-monitor-no-token.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/self-monitor.json")
+test "$SELF_MONITOR_CODE" = "403"
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "X-AIOps-Read-Token: $READ_TOKEN" "$BASE/vibe/self-monitor.json" | jq -e '.report.policyAudit.readable==true and .report.policyAudit.scannedFiles>0 and .report.policyAudit.records24h>0 and .report.policyAudit.secretExposure24h==0 and .report.taskQueue.staleCount==0 and .report.terminalSessions.ok==true and .report.terminalSessions.count<=1 and .report.terminalSessions.maxClients==1 and (.report.components|length)==7 and .report.ompUpdate.outcome!="missing"' >/dev/null
+jq -e '.[0].nodes[] | select(.id=="run-aiops-self-monitor") | .parameters.headerParameters.parameters as $headers | any($headers[]; .name=="X-AIOps-Read-Token" and .value=="={{ $vars.AIOPS_READ_TOKEN }}") and any($headers[]; .name=="Origin" and .value=="http://ops-inspector:8080")' n8n/workflows/aiops-self-monitor-5m.json >/dev/null
+python3 - n8n/data/database.sqlite <<'PY'
+import sqlite3
+import sys
+
+connection = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
+latest = connection.execute(
+    "SELECT status FROM execution_entity WHERE workflowId=? ORDER BY startedAt DESC LIMIT 1",
+    ("aiops-self-monitor-5m",),
+).fetchone()
+assert latest and latest[0] == "success", latest
+PY
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{}' "$BASE/vibe/self-monitor/run" | jq -e '.report.policyAudit.scannedFiles>0 and (.notification.status!=null)' >/dev/null
+jq -e 'has("publishedAt") and has("releaseAgeSeconds") and .cooldownSeconds==172800 and (.registryIntegrity|startswith("sha512-")) and .tarballHost=="registry.npmjs.org"' terminal/runtime/update-state.json >/dev/null
+docker exec ops-inspector sh -lc 'for directory in chenchuan-maintenance cpa-jp-maintenance iptv-maintenance qihang-hk-maintenance; do test -r "/run/secrets/$directory/id_ed25519" && test -r "/run/secrets/$directory/known_hosts"; done'
+docker inspect ops-inspector | jq -e '.[0].Mounts as $mounts | ["chenchuan-maintenance","cpa-jp-maintenance","iptv-maintenance","qihang-hk-maintenance"] | all(. as $name | any($mounts[]; .Destination==("/run/secrets/"+$name) and .Type=="bind" and .RW==false))' >/dev/null
 docker exec ops-inspector python -c 'import server; data=server.parse_maintenance_response("{\n  \"ok\": true,\n  \"k12\": {\"count\": 2}\n}\n"); assert data["ok"] is True and data["k12"]["count"]==2'
 docker exec ops-tool-runner sh -lc 'test -f /workspace/readonly/MyJavis/README.md && test -f /workspace/readonly/chenchuan-site/README.md && test -f /workspace/readonly/chenchuan-site/src/app/page.tsx && test -f /workspace/readonly/chenchuan-site/src/lib/radar/index.ts && test -f /workspace/readonly/chenchuan-site/docs/theory-radar-aiops-handoff.md && test -f /workspace/readonly/chenchuan-site/services/theory-radar/theory_radar.py && test -f /workspace/readonly/cpa-smart-router/README.md && test -f /workspace/readonly/cpa-smart-router/cmd/router/main.go && test -f /workspace/readonly/iptv-api/compose.yaml && test -f /workspace/readonly/iptv-api/config/config.ini && test -f /workspace/readonly/iptv-api/scripts/validate-and-publish.sh && test -f /workspace/readonly/iptv-api/scripts/install-validate-publish-timer.sh && test -f /workspace/readonly/iptv-api/systemd/iptv-validate-publish.timer && test -f /workspace/readonly/realtime-voice-agent/README.md && test -f /workspace/readonly/realtime-voice-agent/pyproject.toml && test -f /workspace/readonly/realtime-voice-agent/src/voice_agent/kernel/memory_kernel.py && test -f /workspace/readonly/realtime-voice-agent/tests/test_contract.py && ! test -e /workspace/readonly/MyJavis/.env && ! test -e /workspace/readonly/chenchuan-site/.env.local && ! test -e /workspace/readonly/chenchuan-site/services/theory-radar/.env && ! test -e /workspace/readonly/cpa-smart-router/.env && ! test -e /workspace/readonly/cpa-smart-router/router.json && ! test -e /workspace/readonly/iptv-api/.env && ! test -e /workspace/readonly/iptv-api/output && ! test -e /workspace/readonly/realtime-voice-agent/.env && ! test -e /workspace/readonly/realtime-voice-agent/data && ! test -e /workspace/readonly/realtime-voice-agent/assets/models && ! test -e /workspace/readonly/realtime-voice-agent/assets/speakers && ! test -e /workspace/readonly/chenchuan-site/src/app/api && ! test -e /workspace/readonly/chenchuan-site/src/lib/analytics && ! test -e /workspace/readonly/chenchuan-site/src/lib/chat && ! test -e /workspace/readonly/chenchuan-site/data'
 printf 'OK vibe regression\n'

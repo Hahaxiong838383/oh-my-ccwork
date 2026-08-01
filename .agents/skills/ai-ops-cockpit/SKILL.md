@@ -19,6 +19,8 @@ output_levels: L2
 7. **访问统计只发聚合**：个人站日报使用前一完整自然日的 `human` UV/PV；排除 `owner/aiops/prefetch/bot/legacy`，只允许发送日期、UV/PV、人均页数和公开热门路径，禁止发送 IP、UA、referrer 或访问明细。
 8. **验收真正消费点**：文件存在、HTTP 200、容器 healthy、模型列表可见都只能算中间证据；必须验证用户实际消费的浏览器页面、终端 TUI、真实模型调用和策略审计记录。
 9. **阴性结果必须带正向锚点**：任何“0 泄漏 / 0 错误 / 0 命中 / 全部阻断”前，先证明扫描面非空、测试确实执行、审计记录确实生成；无正向锚点的零结果一律无效。
+10. **2GB 主机验收必须分阶段**：`/vibe/` 不得自动加载 `/terminal/`；网页终端最多 1 个客户端。浏览器回归前后必须运行 `scripts/validate-runtime-capacity.sh`，`load1 > 2.50`、`MemAvailable < 300MiB` 或存在活动 OMP 时立即停止，禁止继续叠加真实模型任务。
+11. **n8n 内部 POST 的 Origin 必须匹配内部 Host**：请求 `http://ops-inspector:8080/...` 时使用 `Origin: http://ops-inspector:8080`，不能填公网域名；验收必须查询 n8n 最新真实 execution 为 `success`，仅看 workflow active 无效。
 
 ## 必跑检查
 
@@ -53,6 +55,16 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && AI_OPS_REGRESSION_SLEEP=22 scripts/valid
 
 通过标记：`OK vibe regression`。
 
+真实浏览器验收使用可复现包装器，并强制前后检查服务器容量：
+
+```bash
+AI_OPS_BROWSER_AUTH_FILE=/tmp/aiops-browser-auth.json \
+AI_OPS_CAPACITY_SSH_TARGET=racknerd \
+2-Projects/ai-ops-cockpit/scripts/run-browser-acceptance.sh
+```
+
+浏览器验收顺序固定为：普通页面 → 单独 `/terminal/` → 确认 OMP 清零 → 任务刷新/终止。不要让网页终端 OMP 与网页任务 OMP 并行。
+
 ## Brain / Hands 与策略门专项验收
 
 - **隔离 OMP 配置**：每个独立 agent/profile 除 `models.yml` 外，还必须创建权限 `0600` 的最小 `config.yml`，至少包含 `setupVersion: 1` 与 `startup.setupWizard: false`；最终以真实浏览器终端未进入 Provider Setup Wizard 为准。
@@ -62,6 +74,10 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && AI_OPS_REGRESSION_SLEEP=22 scripts/valid
 - **策略负向矩阵**：至少覆盖未授权、write、未知项目、未知 workflow、绝对路径、路径穿越、敏感文件、软链接；每项既验拒绝结果，也验对应审计记录。
 - **生产一致性**：部署后比较本地与远端核心源码 SHA256；只比镜像标签、文件时间或容器启动时间不足以证明生产代码一致。
 - **测试现场清理**：软链接、临时敏感文件和浏览器配置必须使用 trap/finally 清理；secret 临时文件权限必须为 `0600`，结束后复核不存在。
+- **资源现场清理**：浏览器关闭后，`ops-terminal` 与 `ops-brain` 中活动 OMP 必须均为 0；只看浏览器成功文案不足以证明子进程已退出。
+- **契约值变更要搜索全部消费点**：连接数、阈值、路径或状态语义变化后，必须用 `rg` 搜索实现、回归脚本、自监控、文档中的旧常量；本轮把终端上限从 2 改为 1 后，旧回归仍断言 2，证明只改生产配置会制造测试漂移。
+- **n8n 单机导入流程**：普通单机模式不支持 `import:workflow --activeState=fromJson`；使用“停止 n8n → 备份 SQLite/工作流 → import → publish → 启动 n8n”，最终等待真实 cron 触发并查询 `execution_entity` 最新状态。Schedule Trigger 的 CLI 手动 execute 不能替代定时消费点验收。
+- **告警返回值按真实协议验收**：飞书通知成功可表现为 HTTP 状态 `200`，重复故障为 `deduped`，并带 `incident/recovery` 事件；不要脆弱断言固定字符串 `sent`。故障、去重、恢复三态都要结合持久化状态与真实返回验证。
 
 ## Review 清单
 

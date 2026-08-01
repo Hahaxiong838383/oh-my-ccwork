@@ -1124,3 +1124,19 @@ scripts/validate-vibe-regression.sh
 - 香港 `kidshub-ai.hahaxiong.cc` 提供私人 M3U 与脱敏健康端点；韩国 `my.chenchuan.cc` 的原 IPTV 路径仅反代到香港，韩国本地 `iptv-api` 容器已停止并关闭自动重启。
 - AI Ops 的 `iptv-api` 生产维护目标改为香港 VPS；韩国目录保留为短期回滚备份，不再承载 IPTV 服务。
 - 扩海外源不能直接在生产 Guovin 全量拉取；必须先低负载影子验证、限并发、确认主机可达性不受影响，再进入发布门。
+
+## 2026-08-01 · P0 收口：统一登录、Dockge 子路径与 OMP 资源保护
+
+- `auth-gateway/` 正式纳入仓库；`/n8n/rest/login` 同时接受合法外层 Cookie 或 Basic Auth。首次 Basic 请求会同时返回 `ops_auth` 和当前浏览器对应的 `n8n-auth`，错误凭据保持 `401`。
+- Dockge 使用可重复构建的子路径镜像，前端资源固定为 `/dockge/assets/*`，Router base 为 `/dockge/`，Socket.IO 为 `/dockge/socket.io`；Caddy 不再依赖 Referer 分流根路径 `/assets/*`。
+- `/vibe/` 的内嵌终端改为点击后按需启动，默认 iframe 为 `about:blank`，避免仅查看工作台就启动 OMP。
+- `ops-terminal` 最多 1 个客户端，限制为 `448m / 0.35 CPU / 128 PIDs`；`ops-brain` 限制为 `640m / 0.60 CPU / 192 PIDs`。
+- `vibe-shell` 将 `script` 与 OMP 放入独立进程组；页面断开、收到 HUP/TERM 或脚本结束时，会清理完整进程组，避免孤儿 OMP。
+- `scripts/validate-runtime-capacity.sh` 在真实模型或浏览器验收前后检查 1 分钟负载、可用内存和活动 OMP。默认门槛为 `load1 <= 2.50`、`MemAvailable >= 300MiB`、活动 OMP 为 0。
+- `scripts/run-browser-acceptance.sh` 复用项目本地或 Codex 工作区 Playwright，并可通过 `AI_OPS_CAPACITY_SSH_TARGET=racknerd` 强制执行前后容量门。
+- 回归顺序固定为：普通页面 → 单独终端 → 等待 OMP 清零 → 任务刷新/终止；禁止网页终端和网页任务模型并行验收。
+- 本轮故障根因是 2GB 主机同时运行网页终端 OMP 与网页任务 OMP，触发 Swap 抖动并让 SSH/HTTP 用户态无响应；RackNerd 面板重启恢复后，资源门、懒加载和进程组清理共同防止复发。
+- n8n 自监控曾出现“workflow active 但连续 execution error”的假健康：内部 POST 到 `ops-inspector:8080` 时，`Origin` 必须同样使用 `http://ops-inspector:8080`，不能使用公网域名。
+- n8n 普通单机模式的工作流更新采用停机备份、import、publish、重启；最终以真实 5 分钟 cron execution `status=success` 为准，不用 Schedule Trigger 的 CLI 手动执行冒充定时验收。
+- 终端客户端上限由 2 改为 1 时，旧回归脚本仍硬编码 2；已修复并固化“配置契约变化后搜索所有消费点”的检查，防止生产配置与验收脚本漂移。
+- 最终验收：11 个页面真实浏览器无控制台/资源错误，终端断连后 OMP 为 0，任务刷新/终止正常，飞书故障去重与恢复通知完成，完整回归 `OK vibe regression`，本地与生产核心文件 SHA256 一致。

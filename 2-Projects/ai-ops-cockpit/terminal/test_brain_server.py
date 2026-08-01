@@ -12,6 +12,23 @@ brain = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(brain)
 
 
+class FakeProcess:
+    def __init__(self, stdout="", stderr="", returncode=0, pid=4321, timeout=False):
+        self.stdout = stdout
+        self.stderr = stderr
+        self.returncode = returncode
+        self.pid = pid
+        self.timeout = timeout
+
+    def communicate(self, timeout=None):
+        if self.timeout:
+            raise subprocess.TimeoutExpired(["omp"], timeout)
+        return self.stdout, self.stderr
+
+    def poll(self):
+        return self.returncode
+
+
 class BrainServerTests(unittest.TestCase):
     def test_command_loads_only_explicit_policy_extension(self):
         command = brain.build_omp_command("/tmp/prompt.md")
@@ -71,19 +88,19 @@ class BrainServerTests(unittest.TestCase):
             agent_dir = os.path.join(temp, "agent")
             with open(source, "w", encoding="utf-8") as file:
                 file.write("providers: {}\n")
-            completed = subprocess.CompletedProcess(["omp"], 0, stdout="TASK_OK\n", stderr="")
+            process = FakeProcess(stdout="TASK_OK\n", returncode=0)
             with (
                 mock.patch.object(brain, "WORKDIR", workdir),
                 mock.patch.object(brain, "AGENT_DIR", agent_dir),
                 mock.patch.object(brain, "MODEL_CONFIG_SOURCE", source),
-                mock.patch.object(brain.subprocess, "run", return_value=completed) as run,
+                mock.patch.object(brain.subprocess, "Popen", return_value=process) as popen,
             ):
                 result = brain.run_task({"taskId": "unit-task", "project": "chenchuan-site", "workflow": "readonly_safe", "prompt": "inspect"})
             self.assertTrue(result["ok"])
             self.assertEqual(result["output"], "TASK_OK\n")
-            self.assertEqual(run.call_args.kwargs["cwd"], workdir)
-            self.assertEqual(run.call_args.kwargs["env"]["AI_OPS_BRAIN_TASK_ID"], "unit-task")
-            self.assertEqual(run.call_args.kwargs["env"]["AI_OPS_BRAIN_PROJECT"], "chenchuan-site")
+            self.assertEqual(popen.call_args.kwargs["cwd"], workdir)
+            self.assertEqual(popen.call_args.kwargs["env"]["AI_OPS_BRAIN_TASK_ID"], "unit-task")
+            self.assertEqual(popen.call_args.kwargs["env"]["AI_OPS_BRAIN_PROJECT"], "chenchuan-site")
 
     def test_run_task_timeout_is_structured_and_releases_lock(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -96,12 +113,44 @@ class BrainServerTests(unittest.TestCase):
                 mock.patch.object(brain, "WORKDIR", workdir),
                 mock.patch.object(brain, "AGENT_DIR", agent_dir),
                 mock.patch.object(brain, "MODEL_CONFIG_SOURCE", source),
-                mock.patch.object(brain.subprocess, "run", side_effect=subprocess.TimeoutExpired(["omp"], 190)),
+                mock.patch.object(brain.subprocess, "Popen", return_value=FakeProcess(returncode=None, timeout=True)),
+                mock.patch.object(brain, "_signal_process", return_value=True),
             ):
                 result = brain.run_task({"taskId": "unit-timeout", "project": "chenchuan-site", "workflow": "readonly_safe", "prompt": "inspect"})
             self.assertEqual(result["error"], "brain_timeout")
             self.assertTrue(brain.TASK_LOCK.acquire(blocking=False))
             brain.TASK_LOCK.release()
+
+    def test_abort_only_signals_matching_active_task(self):
+        process = FakeProcess(returncode=None)
+        with brain.PROCESS_LOCK:
+            brain.ACTIVE_PROCESS.update({"taskId": "unit-abort", "process": process, "abortRequested": False})
+        with mock.patch.object(brain, "_signal_process", return_value=True) as signal_process:
+            result = brain.abort_task({"taskId": "unit-abort"})
+        self.assertTrue(result["ok"])
+        self.assertTrue(brain.ACTIVE_PROCESS["abortRequested"])
+        signal_process.assert_called_once_with(process, brain.signal.SIGTERM)
+        with brain.PROCESS_LOCK:
+            brain.ACTIVE_PROCESS.update({"taskId": None, "process": None, "abortRequested": False})
+
+    def test_abort_rejects_other_task(self):
+        process = FakeProcess(returncode=None)
+        with brain.PROCESS_LOCK:
+            brain.ACTIVE_PROCESS.update({"taskId": "active-task", "process": process, "abortRequested": False})
+        result = brain.abort_task({"taskId": "other-task"})
+        self.assertEqual(result["error"], "task_not_running")
+        with brain.PROCESS_LOCK:
+            brain.ACTIVE_PROCESS.update({"taskId": None, "process": None, "abortRequested": False})
+
+    def test_abort_before_process_start_is_consumed(self):
+        with brain.PROCESS_LOCK:
+            brain.ACTIVE_PROCESS.update({"taskId": None, "process": None, "abortRequested": False})
+            brain.PENDING_ABORTS.clear()
+        result = brain.abort_task({"taskId": "pending-task"})
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["status"], "abort_pending")
+        self.assertTrue(brain._consume_pending_abort("pending-task"))
+        self.assertFalse(brain._consume_pending_abort("pending-task"))
 
 
 if __name__ == "__main__":
