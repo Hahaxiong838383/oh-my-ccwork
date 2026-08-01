@@ -232,6 +232,32 @@ bridge memory-capture → 127.0.0.1:18241 (ai-memory-llm-proxy)
 - 判断 primary 是否真在用：`journalctl --user -u ai-memory-llm-proxy | grep -c 'primary ok'`。
   **计数为 0 = 从来没通过**，那是配置/路由问题，别往「掉线/抖动」方向查。
 
+### 权限现状已进 context-report（2026-08-01）
+
+`buildContextReport(uid)` 返回里新增 `larkScopes`，随每任务的上下文报告推给控制面：
+
+```js
+larkScopes: { appId, reachable, ok, appScopeCount, tokenScopeCount, requiredCount,
+              missingByDomain,            // 按域汇总，不平铺几百个 scope 名
+              needsConsole,               // 只能去开发者后台勾
+              needsReauth,                // 用户重新点授权卡即可
+              forbidden }                 // 持有人事/薪酬等不该给 agent 的域
+```
+
+⚠️ **为什么不是加在 `/internal/auth-status`**：那个端点的数据全部来自控制面自己的
+store，而 scope 是 dev198 上 lark-cli 的本地状态；控制面在公网、bridge 在内网，
+**只能 bridge 往外推**。context-report 本来就是 per-uid 的能力报告（已含
+skills/memory/trace/friction），权限属于同一个问题，不该另开上报通道。
+
+带 15 分钟缓存（`H_SCOPE_CACHE_MS`）——探一次要起两个 lark-cli 子进程，而 scope
+只有人去后台改才会变；失败单独用 60 秒短 TTL（`H_SCOPE_CACHE_ERR_MS`），
+避免 lark-cli 挂掉时每次报告都卡在超时上。
+
+**给川哥的后台操作清单**：[`tasks/飞书权限开通.md`](../../../tasks/飞书权限开通.md)
+（mycc 仓，含最小必做集 + 每个 App 的姓名部门 + 按域折叠的 scope 标识符）。
+⚠️ 飞书**未在 API 暴露权限的中文名**，lark-cli 也没有 scope→中文名映射，
+清单里的中文是按语义写的说明，权威标识始终是 scope 字符串本身。
+
 ## 🔴 开通权限门：标准包对标（2026-08-01 立）
 
 **开通流程的最后一步必须是权限巡检，缺必备域不算开通完成。**
