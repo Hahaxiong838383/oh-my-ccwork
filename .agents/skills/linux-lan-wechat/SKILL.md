@@ -20,6 +20,13 @@ description: 家用 linux-lan 微信↔Grok 通道运维与假死排障。触发
 | OAuth | **仅本机** `~/.grok/auth.json`（禁与 Mac 互拷） |
 | Context 软保活 | `wx-context-keepalive*.timer` · `scripts/wechat-context-keepalive.mjs` |
 
+## Git 规则（second-brain）
+
+- `~/second-brain` 的 GitHub 远端是 `github`，推送必须走 linux-lan 本机 xray：`http://127.0.0.1:10808`。
+- **禁止 push 到 NAS**：`origin` 是家里 NAS 裸仓，只能作为 fetch/参考；不要执行 `git push origin ...`。
+- 已在 linux-lan 固化：`remote.pushDefault=github`、`branch.main.pushRemote=github`、`remote.origin.pushurl=DISABLED-NAS-PUSH-FORBIDDEN`。
+- 规则文档：`~/second-brain/90-System/docs/GIT-RULES.md`。
+
 ## 「没动静」先分三层
 
 1. **收**：`grep inbound ~/wechat-grok-bridge/logs/bridge.log`
