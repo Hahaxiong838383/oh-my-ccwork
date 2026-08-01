@@ -212,6 +212,91 @@ du -ch /srv/h-platform/memory/<uid>/db/memory.sqlite* | tail -1
 
 **文件大小从来不是数据量的可靠指标**，WAL / 稀疏文件 / 预分配都会让它说谎。
 
+### ⚠️ 第二个判空陷阱：不传作用域时 `memory_status`/`memory_query` 恒返回 0
+
+比 WAL 那条更隐蔽，因为它是**服务自己**报的 0，看起来权威。
+
+```
+不传参数：  memory_status → pages_all:0, pages_latest:0   ← 假的
+显式传参：  workspace:"default" + project:"main"
+            → pages_all:40, pages_latest:5               ← 与直读 sqlite 一致
+```
+
+根因：作用域靠「近期 hook 活动」解析（见 `memory_query` 的 inputSchema 原文），
+而沙箱里**跑不了 hooks**——实测全租户 `observations` 表都是 0 条，所以默认作用域
+永远解析不到任何东西。`lib/memory-routing.mjs` 的 `SCOPE_BLOCK` 就是为此存在：
+它在每个租户 `.grok/AGENTS.md` 里钉死「调任何 MCP 工具必须显式传
+`workspace:"default"`、`project:"main"`」。
+
+**推论**：任何读记忆状态的代码（巡检脚本、控制面用户管理界面）**必须显式传作用域**，
+否则会一直显示"记忆是空的"。查托管块也别用 `find <用户目录> -name AGENTS.md | head -1`
+——租户名下有两个，`~/workspace/AGENTS.md` 是用户自己的、`~/.grok/AGENTS.md`
+才是托管的，取错必然报"块全丢"。
+
+### 🔴 查托管块必须按引擎分派判据，否则必然误报
+
+三套 harness 的落点与 marker 完全不同。**拿 grok 判据查 kimi 用户，会一次造出
+三个假故障**（2026-08-01 我就是这么误报的）：
+
+| 引擎 | 托管块文件 | marker | 块名 |
+|---|---|---|---|
+| grok | `~/.grok/AGENTS.md` | `:start` | `h-mem-scope` `h-method` `h-identity` `ai-memory` |
+| kimi | `~/workspace/AGENTS.md` | `:begin` | `h-soul` `h-global` `h-rules` `h-method` `h-mem` `h-feishu-docs` |
+| omp（智谱/MiniMax） | `~/workspace/AGENTS.md` | `:begin` | 同 kimi（`lib/omp-harness.mjs`） |
+
+对应的三条安装腿（`bridge.mjs`，改记忆链路前先读）：
+
+```
+kimi : ensureUserMemory → ensureKimiMemoryMcp → ensureMemoryScaffold → ensureAgentsBlocks
+omp  : ensureUserMemory → …                                          → ensureAgentsBlocks
+grok : ensureUserMemory → ensureUserMemoryMcp                        → ensureMemoryRouting
+```
+
+**三条腿都完整，不存在"某引擎没有记忆"。** 所以下面这三个现象出现在 kimi/omp
+用户身上时**全是正常的**，别当故障：`.grok/AGENTS.md` 里没有 grok 块（它不读该
+文件）、`grok-sync-state.json` 为 `{}`（kimi **无 grok 同步腿**，wiki 文件自己建）、
+`memory routing` 日志 0 条（它压根不走 `ensureMemoryRouting`）。
+
+### 两个已知非故障（巡检遇到直接跳过）
+
+| 租户 | 现象 | 定性 |
+|---|---|---|
+| `u-aca292be3f`（AI 专家） | dev198 上没有 ai-memory 实例 | **设计如此**：B1 灰度已迁 Mini，Mini 侧 `H_USER_MEMORY=0`、ai-memory 未原生化。等 Mini 记忆 parity 做完才会有 |
+| `u-dec457e69d`（kimi 订阅） | 用 grok 判据查会显示"托管块全无" | **记忆本身是好的**（六个 kimi 块全齐、mcp.json 在、实例 running、latest 页向量 100%）。川哥 2026-08-01 拍板挂起是因为 **kimi 整体适配优化没做透**，属产品优先级，**不是它坏了** |
+
+### ✅ 巡检工具：`ops/memory-health-audit.mjs`（别再手工查）
+
+上面这些判据全部固化在里面了，按 engine 自动分派，不用再记哪套对哪套。
+
+```bash
+# dev198 上跑（非交互 SSH 必须先导 PATH）
+export PATH=/home/chuan/.local/node/bin:$PATH
+cd ~/feishu-grok-bridge
+node ops/memory-health-audit.mjs             # 人类可读
+node ops/memory-health-audit.mjs --json      # 给控制面/CI 消费
+node ops/memory-health-audit.mjs --uid u-x   # 只查一个
+node ops/memory-health-audit.mjs --probe     # 额外做写-查-删端到端探针（会写库）
+```
+
+退出码：`0` 全绿 / `1` 有租户不达标 / `2` 巡检自身失败。
+⚠️ 别用 `node … | grep` 之后取 `$?` —— 那是 grep 的退出码，我就这么误读过一次。
+
+每行输出的含义（`页87/latest7=磁盘 向量7/7 检索5(RRF)`）：
+- `=磁盘` 表示**服务读数与直读 sqlite 同口径对撞一致**。两条独立路径读出同一个数
+  才算证据；不一致会显式报「服务视图与磁盘脱节」。
+- `向量 a/b` 是**作用域内** latest 页的向量覆盖，b−a>0 才是真故障（旧版本行没向量
+  是 by design）。
+- `检索 N(RRF)` 带 RRF 标记说明 FTS + 向量两条腿都在参与融合排序。
+
+**写这类工具时最该防的坑：空值不许当通过。** 第一版 `mcpCall` 返回的是 MCP result
+信封（真数据在 `content[0].text` 里**还套一层 JSON，不解包**），我直接读 `.counts`
+恒为 undefined，页数渲染成 `?`，而 `ok` 判定没算这项 —— **报告 10/10 全绿，两个核心
+指标其实是空的**。现在判定里每个展示指标都有形状断言，缺值即失败。
+
+改完必须双向验收：负向用假环境（脚本认 `H_MEMORY_ROOT`/`H_USERS_ROOT`/`H_USERS_JSON`
+三个 env，不碰生产）确认退出码 1 且精确点名缺失项；正向锚补齐后确认对应项转绿而
+其余仍红。只做正向的话，"全过"和"没执行"分不清。
+
 ## 🔴 LLM 抽取链路与代理陷阱
 
 ```
