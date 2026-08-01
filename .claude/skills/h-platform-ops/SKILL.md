@@ -2091,6 +2091,28 @@ curl -s -X POST -H "Authorization: Bearer $H_CONTROL_TOKEN" -H 'Content-Type: ap
 | 日志 | `journalctl --user -u …` | `workspace/.logs/bridge.{out,err}.log` |
 | healthz 结构 | 统一 `apps{}`，`appCount` 为多 App | 统一 `apps{}`，`appCount=1` |
 
+### 🔴 Mini 连接 GitHub：只能走本机 Xray，禁止直连
+
+这是 Mini 的硬性出站规则，不是可选优化：所有 `git clone/fetch/pull/ls-remote`、GitHub
+Release 下载、Raw/API/Codeload/Objects 请求，都必须经 Mini 本机 Xray
+`socks5h://127.0.0.1:10808`。**Xray 不在线就让操作失败，禁止直连、禁止静默回退、禁止临时
+清空代理“先把活干完”。**
+
+- Git 操作只走 `scripts/mini-github-git.sh`；它强制注入 `http.proxy` 和空 `NO_PROXY`，并拒绝
+  调用方覆盖代理配置。
+- 下载只走 `scripts/mini-github-fetch.sh`；只接受 GitHub 官方域名，并显式使用
+  `--proxy ... --noproxy ''`。
+- Mini 初始化或规则更新后执行 `scripts/configure-mini-github-proxy.sh`，把 GitHub 官方域名的
+  Git 全局配置锁到本机 Xray；该脚本先验代理、再写配置、最后用 `git ls-remote` 闭环。
+- 禁止在 Mini 上直接运行裸 `git ...github...`、`curl https://github...` 或
+  `wget https://github...`。发现旧脚本存在这些路径，先改为统一入口再执行。
+- 验收至少包含：10808 单一 Xray 监听、代理请求 HTTP 200、Git 全局配置值为 loopback Xray、
+  `mini-github-git.sh ls-remote` 成功；不得通过任何关闭代理后的直连成功来“验收”。
+
+边界：这是应用/运维入口的 fail-closed 约束；macOS 原生 POC 尚未用 PF/netns 做网络层物理封锁。
+若未来要求“任何进程都无法绕过”，必须把 GitHub 出站也纳入 Mandatory Action Gateway 或
+Linux 网络命名空间/防火墙白名单，不能把当前规则误报成物理不可绕过。
+
 `apps{}` 是当前真值，顶层单 App 字段只作兼容。不要再维护两套结构解析器；站点差异只在
 端口、进程管理和日志读取方式。
 
