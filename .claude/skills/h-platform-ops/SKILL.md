@@ -154,7 +154,7 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
 
 | 层 | 决定什么 | 怎么查 | 2026-08-01 实测 |
 |---|---|---|---|
-| 权限 | 能不能调这个 API | `verify-lark-scopes --profile tenant-standard` | owner 334 / 租户 2–588 无标准 |
+| 权限 | 能不能调这个 API | `verify-lark-scopes --profile tenant-standard` | 对标 owner 实测 512；租户 2–588 曾无标准 |
 | 知识 | 知不知道怎么做 | 比 L0 与 owner 私有 skill 的**行数与章节** | 39:39 已对齐 ✅ |
 | **行为规则** | **做得对不对** | 比 `BEHAVIORAL_RULES.md` 的**规则条数** | **owner 28 条 vs 租户 0 条** |
 | 记忆 | 记不记得住 | 服务 active + **`pages` 表行数**（见下） | 9 个实例均有数据 ✅ |
@@ -271,6 +271,7 @@ node ops/verify-lark-scopes.mjs --profile tenant-standard --uid <uid>
 
 2026-08-01 全量导出 owner 与 10 个租户的应用侧 scope，分布是：
 **owner 334；租户 2 / 97 / 146 / 156 / 168 / 170 / 198 / 481 / 588 / 588。**
+（这是 2026-08-01 上午的观测值；当天下午 owner 已批量开通到 512，见下方「口径演进」）
 
 不是「租户比 owner 少」，是**根本没有标准**：有人开通时全勾（两个 588 的超出项
 完全一致，同一份全选模板），有人手挑十几个，还有人只剩 2 个就算「开通完成」了。
@@ -279,18 +280,38 @@ node ops/verify-lark-scopes.mjs --profile tenant-standard --uid <uid>
 应用侧压根没配 calendar——**用户点多少次授权卡都不会好**。而平台侧当时答不出
 「这个租户现在到底有哪些权限」，排查绕了一大圈。
 
-### 标准包边界（川哥 2026-08-01 拍板）
+### 标准包边界（2026-08-01 定稿，口径已换过一次）
 
-- **给全 20 个域**（`tenant-standard`，274 个 scope）：im / calendar / contact /
-  mail / vc / minutes / docs / docx / sheets / drive / wiki / space / slides /
-  board / bitable / base / task / search / profile / offline_access。
-  **contact / mail / vc 三类都给**——公司内部同事，先把权限范围拉齐。
-- **按需申请**（不进标准包）：directory / approval / application / admin /
-  helpdesk / tenant / serviceaccount / event。有副作用或超出办公协作范畴。
-- **🚨 禁止域**（`FORBIDDEN_DOMAINS`）：`corehr` 人事核心（含薪酬档案**写**）、
-  `payroll` 薪酬发放、`hire` 招聘、`security_and_compliance` 合规审计、`mdm` 设备管理。
-  **前四个 owner 自己都是 0**，租户持有它们只可能来自全选模板。
-  这些 Bot 会把上下文送进外部引擎（Grok），人事薪酬数据进去就收不回来——撞隐私墙铁律。
+**`tenant-standard` = 与 owner 完全一致**（实测 **512 项 / 43 个域**）。
+
+不再由平台划「标准域/按需域」两档——owner 那 512 项已由川哥对着飞书全量
+62 个域逐条审定，平台再切一刀只会引入第二套标准，而目标恰恰是**能力对等**。
+
+> 口径演进：初版是「平台自划 20 域 274 项，以 owner 334 为基线切分」。
+> 2026-08-01 川哥导出全量权限、审定后批量开通 owner（334→512），基线随即
+> 替换为 owner 实测值。**看到 274 / 334 这两个数字的文档都是旧的。**
+
+**🚨 禁止域 11 个**（`FORBIDDEN_DOMAINS`）：
+
+| 域 | 说明 |
+|---|---|
+| `corehr` | 人事核心（薪酬档案**写**、调薪、离职、员工全量档案） |
+| `payroll` | 薪酬发放 |
+| `security_and_compliance` | 组织级审计日志 |
+| `mdm` | 企业设备、法人银行账户 |
+| `attendance` / `attendance_machine` | 考勤（含加班审批**写**）、打卡记录写入 |
+| `acs` | 门禁出入记录，**可写** |
+| `passport` | 登录凭据，含 `password:full` |
+| `ehr` | 人力资源档案 |
+| `financial_access_platform` | 财务数据，**可写** |
+| `verification` | 企业认证信息 |
+
+⚠️ **`hire` / `performance` / `okr` / `admin` / `trust_party` 曾在此清单里，
+被川哥否决并给出业务理由（H 平台要协助招聘、绩效评价、目标制定），不要再加回来。**
+它们属人事域，但**权限给了不等于使用边界也开了**——代人查看他人绩效仍受隐私墙
+约束，那是行为规则该管的事，不在权限清单里解决。
+
+这些 Bot 会把上下文送进外部引擎（Grok），进去就收不回来——撞隐私墙铁律。
 
 ### 三种判定，处理方式完全不同（别搞混）
 
@@ -310,13 +331,41 @@ node ops/verify-lark-scopes.mjs --profile tenant-standard --uid <uid>
   （`tenant-standard` / `calendar-min` 约日程 / `meeting-room` 订会议室）
 - `ops/data/lark-scope-baseline.json` —— owner 基线快照（只有 scope 名，无 appId/token）
 - `ops/verify-lark-scopes.mjs` —— 巡检入口，`--json` 出结构化结果
-- `docs/2026-08-01-lark-scope-actions.md` —— 全员对标行动清单（拿着就能去后台操作）
+- `tasks/飞书权限开通.md`（mycc 仓）—— 全员行动清单，含最小必做集与姓名部门
+- `4-Assets/SOP/lark-scopes/`（mycc 仓）—— 批量导入 JSON + 用法说明
+
+### 基线的两档：证据等级不同，别混着用
+
+`lark-scope-baseline.json` 里有两份数据，**不是一回事**：
+
+| 档 | 项数 | 证据 |
+|---|---|---|
+| `user`（= 顶层 `scopes`） | 512 | **已验证** · lark-cli 实测 |
+| `tenant` | 668 | **未验证** · 来自批量导入配置 |
+
+`lark-cli auth scopes` **只能查 user 档**（返回 `tokenType: user`，命令无任何指定
+token 类型的参数），所以 tenant 档实际开通与否，**平台没有任何手段能读到**。
+数据里各带一个 `evidence` 字段说明这件事，测试也钉住了「顶层 scopes 必须等于
+user 档」，防止将来被悄悄改成两档合并。
+
+这不是学究气——踩过的坑是读部门时缺 `contact:user.department:readonly` 的
+tenant 档，接口仍返回 `code=0`，字段却**静默消失、不报错**。
 
 ### 基线会过期，怎么刷新
 
-owner 的 334 是**快照**。飞书新增 scope 后基线会落后，表现为「租户在标准域里持有
-owner 基线没有的 scope」。重新导出 owner `auth scopes --json`、按 `standardDomains`
-重切即可。**不要手工往 baseline 里加条目**——那样就分不清是飞书新增还是有人放宽了边界。
+owner 的 512 是**快照**。刷新流程：
+
+1. 川哥从后台「批量导入/导出权限 → 导出」拿全量（那份带 tenant 档）
+2. 剔除 11 个禁止域 → `4-Assets/SOP/lark-scopes/lark-import-full-safe.json`
+3. 按它批量开通 owner，管理员审批
+4. `lark-cli auth scopes --json` 实测导出，**与预期做集合双向差集**
+   （数量相同不等于内容相同，必须比交集与两侧差集）
+5. 写回 baseline 的 `scopes` / `byDomain`，tenant 档另存并标 `未验证`
+
+**不要手工往 baseline 里加条目**——那样就分不清是飞书新增还是有人放宽了边界。
+
+⚠️ **换基线会让所有租户的「缺口数」变大，那是尺子换了不是问题恶化。**
+2026-08-01 从 274 换到 512，缺口从 120–272 变成 342–510，要跟川哥说清楚。
 
 ## 权限不足 → 自动推授权卡片（v1.4.0）
 
