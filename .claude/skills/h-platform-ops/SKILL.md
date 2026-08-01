@@ -157,7 +157,7 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
 | 权限 | 能不能调这个 API | `verify-lark-scopes --profile tenant-standard` | owner 334 / 租户 2–588 无标准 |
 | 知识 | 知不知道怎么做 | 比 L0 与 owner 私有 skill 的**行数与章节** | 39:39 已对齐 ✅ |
 | **行为规则** | **做得对不对** | 比 `BEHAVIORAL_RULES.md` 的**规则条数** | **owner 28 条 vs 租户 0 条** |
-| 记忆 | 记不记得住 | 服务 active + **db 文件大小** | 服务全 active，半数 db 仅 4K |
+| 记忆 | 记不记得住 | 服务 active + **`pages` 表行数**（见下） | 9 个实例均有数据 ✅ |
 
 **能不能做 ≠ 做得对不对。** 最典型：租户缺 `calendar:room:readonly` 订不了会议室，
 但把 scope 补上它**依然不会去订**——没有规则告诉它「线下会必须挂会议室」（现 P18）。
@@ -193,8 +193,24 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
 排查记忆没积累时，先分清三件事（它们各自的证据不同）：
 1. `memory-capture` 写的是 **markdown**（`memory/<uid>/wiki/**/MEMORY.md`）
 2. `ai-memory` 服务管的是 **sqlite**（`memory/<uid>/db/memory.sqlite`）
-3. 二者是**独立链路**，sqlite 为空不能推出 capture 断了
+3. 二者是**独立链路**，sqlite 看着空不能推出 capture 断了
    （实测 capture 全平台成功 120 次，日志关键词是 `memory captured`，不是 wrote/ok）
+
+### ⚠️ 判断记忆有没有积累，绝不能看 db 文件大小
+
+这些库是 **WAL 模式**，主库文件可以长期停在 **4096 字节（一个 page）** 而数据
+全在 `-wal` 里。2026-08-01 我据此误判「半数租户记忆为空」并报了两次，实际
+每个实例都有数据（张雨琦那个主库 4096、WAL 3.3MB、23 条 pages）。
+
+```bash
+# 对：数行数
+python3 -c "import sqlite3;c=sqlite3.connect('file:/srv/h-platform/memory/<uid>/db/memory.sqlite?mode=ro',uri=True);\
+print(c.execute('select count(*) from pages').fetchone()[0])"
+# 也可以：把 -wal 一起算进去
+du -ch /srv/h-platform/memory/<uid>/db/memory.sqlite* | tail -1
+```
+
+**文件大小从来不是数据量的可靠指标**，WAL / 稀疏文件 / 预分配都会让它说谎。
 
 ## 🔴 LLM 抽取链路与代理陷阱
 
