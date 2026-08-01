@@ -86,3 +86,50 @@ lark-cli api ... --dry-run                       # 不执行，只看请求长�
 2026-08-01 关于「卡片有没有一键复制组件」的结论，是抓完 2.0 全部 13 个展示类
 组件清单后才敢下的（结论：无原生复制组件，代码块只能靠富文本 markdown 渲染，
 按钮只能跳链接或触发回调，摸不到剪贴板）。
+
+## 卡片 2.0 实操坑（2026-08-01 真机）
+
+### padding 多值必须写满四个值
+
+```
+"padding": "4px 8px"        ❌ → ErrMsg: invalid panel header padding
+"padding": "4px 8px 4px 8px" ✅
+"padding": "8px"             ✅ 单值也合法
+```
+
+文档字面写着「四个值必填，使用空格间隔」——**1.0 会静默忽略非法值，2.0 直接
+报错**。迁 2.0 时任何写了两值/三值的 padding 都会炸。
+
+### 报错信息给了精确路径，照着改就行
+
+```json
+"code": 230099,
+"message": "ErrCode: 10002; ErrPath: ROOT -> body -> elements -> [2](tag: collapsible_panel); ErrMsg: invalid panel header padding"
+```
+
+`ErrPath` 直接定位到第几个 element、哪个 tag、哪个字段。**别猜别全量重写**，
+按路径改那一处即可。
+
+### 组件嵌套有硬约束，设计前先查
+
+- **表格（table）不可内嵌在任何组件内**，只能放卡片根节点下；表格内也不能嵌组件。
+  → 「表格塞进折叠面板」这种设计直接不成立，得改成表格在外、折叠面板放明细。
+- 折叠面板不支持内嵌表单容器（form）。
+- 容器最多嵌套五层。
+
+### 客户端版本门槛不同，按最高的那个算
+
+| 能力 | 最低客户端 |
+|---|---|
+| 卡片 JSON 2.0 | **7.20+**（低于此只显示标题 + 升级提示） |
+| 折叠面板 | 7.9+ |
+
+### 发送方式
+
+```bash
+lark-cli im +messages-send --as bot --user-id ou_xxx \
+  --msg-type interactive --content "$(cat card.json)"
+```
+
+成功返回 `ok:true` + `message_id`。**API 通过 ≠ 渲染正常**——版本兼容、布局效果
+只能真机看，要让用户确认。
