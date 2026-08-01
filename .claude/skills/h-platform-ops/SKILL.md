@@ -224,9 +224,28 @@ du -ch /srv/h-platform/memory/<uid>/db/memory.sqlite* | tail -1
 
 根因：作用域靠「近期 hook 活动」解析（见 `memory_query` 的 inputSchema 原文），
 而沙箱里**跑不了 hooks**——实测全租户 `observations` 表都是 0 条，所以默认作用域
-永远解析不到任何东西。`lib/memory-routing.mjs` 的 `SCOPE_BLOCK` 就是为此存在：
-它在每个租户 `.grok/AGENTS.md` 里钉死「调任何 MCP 工具必须显式传
-`workspace:"default"`、`project:"main"`」。
+永远解析不到任何东西。`lib/memory-routing.mjs` 的 `SCOPE_BLOCK` 就是为此存在。
+
+### 🔴 第三个陷阱：显式传 main 会漏掉 `_global`（2026-08-01 川哥真机反馈换来的）
+
+显式作用域修好了「恒返回 0」，却挖开另一个盲区：**用户常驻偏好按 ai-memory 的
+设计写在保留 project `_global`**（`memory_write_page` 的 `scope:"global"`，工具
+description 自己教模型这么写，拦不住），而 `_global` 只在「省略参数的默认查询」里
+被 union 进来——显式传 project **不做 union**。后果：偏好写得进、读不出，
+「界面看得见、bot 不记得」（川哥的时间偏好就是这么丢的）。
+
+**现行姿势（v2026-08-01.1 契约，SCOPE_BLOCK/h-mem 块已教）**：
+- 检索 `memory_query`：`scopes: [{workspace:"default",project:"main"},{workspace:"default",project:"_global"}]`
+  ——**必须是对象数组**（字符串数组报 `expected struct MemoryScopeArg`）；
+  `global:true` 别用（实测连英文词都 0 命中）。
+- 其余工具：仍显式 `workspace:"default"` + `project:"main"`。
+- 页数口径：main+_global 之和（`lib/memory-health.mjs` 的 GLOBAL_PROJECT）。
+
+⚠️ **scopes 里带不存在的 project 直接 RPC 报错**（不是跳过）——没写过偏好的用户
+没有 `_global`，上线当晚 9/10 租户全红。现由 `ensureGlobalScope`（memory-seed，
+挂 syncUserGrokMemory 必经路径）写一页「常驻个人偏好」说明预建；health 侧对
+not found 容错计 0。**教训**：只在状态最富的用户（有 _global 的自己号）上验过
+就发全量 → 详见 [[fix-verified-on-richest-variant-only]]。
 
 **推论**：任何读记忆状态的代码（巡检脚本、控制面用户管理界面）**必须显式传作用域**，
 否则会一直显示"记忆是空的"。查托管块也别用 `find <用户目录> -name AGENTS.md | head -1`
