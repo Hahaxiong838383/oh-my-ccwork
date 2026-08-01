@@ -148,6 +148,74 @@ curl -sS -X POST https://ai.kidshub.cn/internal/register-link \
   `dev198:~/feishu-grok-bridge/workspace/plans/h-onboarding-sop.md`。
 - 🔴 **开通不算完成，直到权限门过**——见下一节。
 
+## 🔴 能力对等的四层（2026-08-01 实测立）
+
+问「租户怎样才能和 owner Bot 一个效果」时，按这四层查，**别只看权限**：
+
+| 层 | 决定什么 | 怎么查 | 2026-08-01 实测 |
+|---|---|---|---|
+| 权限 | 能不能调这个 API | `verify-lark-scopes --profile tenant-standard` | owner 334 / 租户 2–588 无标准 |
+| 知识 | 知不知道怎么做 | 比 L0 与 owner 私有 skill 的**行数与章节** | 39:39 已对齐 ✅ |
+| **行为规则** | **做得对不对** | 比 `BEHAVIORAL_RULES.md` 的**规则条数** | **owner 28 条 vs 租户 0 条** |
+| 记忆 | 记不记得住 | 服务 active + **db 文件大小** | 服务全 active，半数 db 仅 4K |
+
+**能不能做 ≠ 做得对不对。** 最典型：租户缺 `calendar:room:readonly` 订不了会议室，
+但把 scope 补上它**依然不会去订**——没有规则告诉它「线下会必须挂会议室」（现 P18）。
+只补权限会得到一个「有能力但不会用」的助手。
+
+⚠️ 规则层最容易漏，因为租户**确实有** `BEHAVIORAL_RULES.md`（35 行、有标题有格式），
+但那是空模板，`R01 — 一句话说清约束` 是示例占位。**只看文件存不存在会判成通过。**
+
+### 预置规则基线与编号分段
+
+`lib/data/default-behavioral-rules.md` 预置 24 条：
+
+- **P01–P24 平台段**，平台可升级；**R01 起用户段**，平台永不触碰。
+  合用一套编号的话，平台升级迟早覆盖用户纠正换来的规则——那才是最不能丢的。
+- **P07「纠正必须晋升为规则」是发动机**，不给它规则库永远停在交付那天。
+- 迁移只认「一字未改的旧空模板」，用户写过的正文绝不覆盖。
+- 生效链路：真源 → `workspace/AGENTS.md` 运行镜像（每任务保鲜）→ 注入对话首部。
+
+下放边界判据：**这条规则换个人、换个部门还成立吗？** 不成立就别下放
+（绑死具体业务表的字段名/标题前缀已剔除；「所有者必须是川哥」改写成「用户本人」）。
+
+## 🔴 记忆链路：故障不得伪装成「没什么可记」
+
+`memory-capture` 的 `extract()` 返回值有语义区分，**改这块务必保持**：
+
+- `''` → LLM 正常应答、判定没价值 → `skipped: nothing-worth`
+- `null` → 调用失败（502/超时/网络）→ `skipped: llm-unavailable`
+
+2026-07-31 代价：两者都返回 `''`，抽取 LLM 连续 502 共 54 次全被记成
+「没什么值得记的」。某租户 161 次会话只捕获 4 条，日志里 19 次 nothing-worth
+其中 16 次其实是上游挂了——**故障被伪装成正常判定，既没人查也无从补偿**。
+
+排查记忆没积累时，先分清三件事（它们各自的证据不同）：
+1. `memory-capture` 写的是 **markdown**（`memory/<uid>/wiki/**/MEMORY.md`）
+2. `ai-memory` 服务管的是 **sqlite**（`memory/<uid>/db/memory.sqlite`）
+3. 二者是**独立链路**，sqlite 为空不能推出 capture 断了
+   （实测 capture 全平台成功 120 次，日志关键词是 `memory captured`，不是 wrote/ok）
+
+## 🔴 LLM 抽取链路与代理陷阱
+
+```
+bridge memory-capture → 127.0.0.1:18241 (ai-memory-llm-proxy)
+                          ├ PRIMARY : Studio Ollama  192.168.61.66:11436（有线+雷电）
+                          └ FALLBACK: 火山方舟
+```
+
+- **PRIMARY 必须走有线**：`dev198 →(有线)→ Mini 192.168.61.66 →(雷电)→ Studio`。
+  Mini 上由 `com.cc.studio-ollama-lan` LaunchAgent 维持转发；连接 0.001s vs WiFi 0.045s。
+  **不要用 `10.9.1.x`**（WiFi 浮动段）。
+- **`no_proxy` 必须写具体 IP，不能写 CIDR**：Python 的 urllib 与 httpx **都**只做
+  字符串后缀匹配，`192.168.0.0/16` 对它们完全无效，内网请求照样被 Xray 接走并回
+  **空 body 的 503**。详见 [[feedback_no_proxy_cidr_not_honored_by_urllib]]。
+- **超时预算要放得进调用方的耐心**：proxy 启动会自检并打
+  `timeout budget ok: worst-case 42s < caller 45s`。现为 PRIMARY 12s×(1+1 重试)
+  + FALLBACK 18s；bridge 侧是 `AbortSignal.timeout(45s)`。改任一个数都要重算这道不等式。
+- 判断 primary 是否真在用：`journalctl --user -u ai-memory-llm-proxy | grep -c 'primary ok'`。
+  **计数为 0 = 从来没通过**，那是配置/路由问题，别往「掉线/抖动」方向查。
+
 ## 🔴 开通权限门：标准包对标（2026-08-01 立）
 
 **开通流程的最后一步必须是权限巡检，缺必备域不算开通完成。**
