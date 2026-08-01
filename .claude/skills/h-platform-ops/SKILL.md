@@ -234,18 +234,29 @@ description 自己教模型这么写，拦不住），而 `_global` 只在「省
 被 union 进来——显式传 project **不做 union**。后果：偏好写得进、读不出，
 「界面看得见、bot 不记得」（川哥的时间偏好就是这么丢的）。
 
-**现行姿势（v2026-08-01.1 契约，SCOPE_BLOCK/h-mem 块已教）**：
-- 检索 `memory_query`：`scopes: [{workspace:"default",project:"main"},{workspace:"default",project:"_global"}]`
-  ——**必须是对象数组**（字符串数组报 `expected struct MemoryScopeArg`）；
+**现行姿势（v2026-08-02.2 契约）**：
+- **教 bot 的（SCOPE_BLOCK / h-mem / task-hint）**：`memory_query` **分两次查**
+  ——第 1 次 `workspace:"default"`+`project:"main"`，第 2 次同 workspace +
+  `project:"_global"`，两次都空才许说「记忆里没有」。
+  ⚠️ 不教 scopes 一次搞定：嵌套对象数组模型**照着原文也抄不对**（真机取证：
+  hint 里参数贴脸，grok 连试两种错误形状被 -32602 秒拒，然后**静默退回
+  main-only** 查空报"未找到"——availability 页 last_accessed_at 全程未动坐实）。
+  给模型的接口要用它天天在用的平铺形状。
+- **代码里的（巡检/镜像探针）**：scopes 对象数组一次调用（代码不会写错），
   `global:true` 别用（实测连英文词都 0 命中）。
 - 其余工具：仍显式 `workspace:"default"` + `project:"main"`。
 - 页数口径：main+_global 之和（`lib/memory-health.mjs` 的 GLOBAL_PROJECT）。
 
-⚠️ **scopes 里带不存在的 project 直接 RPC 报错**（不是跳过）——没写过偏好的用户
-没有 `_global`，上线当晚 9/10 租户全红。现由 `ensureGlobalScope`（memory-seed，
+⚠️ **scopes/查询里带不存在的 project 直接 RPC 报错**（不是跳过）——没写过偏好的
+用户没有 `_global`，上线当晚 9/10 租户全红。现由 `ensureGlobalScope`（memory-seed，
 挂 syncUserGrokMemory 必经路径）写一页「常驻个人偏好」说明预建；health 侧对
 not found 容错计 0。**教训**：只在状态最富的用户（有 _global 的自己号）上验过
 就发全量 → 详见 [[fix-verified-on-richest-variant-only]]。
+
+💡 **验「bot 有没有真查到某页」认 access_count，不认它自述**：ai-memory 命中页
+会 `access_count++` + 更新 `last_accessed_at`——探活污染读数的那个副作用，反过来
+就是最硬的取证（自述"查了没找到"可能是范围错了，计数器不说谎）。取证窗口内
+别自己跑重放查询，会污染基线。
 
 **推论**：任何读记忆状态的代码（巡检脚本、控制面用户管理界面）**必须显式传作用域**，
 否则会一直显示"记忆是空的"。查托管块也别用 `find <用户目录> -name AGENTS.md | head -1`
