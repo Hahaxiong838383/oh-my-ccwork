@@ -1196,3 +1196,17 @@ vs 1 个）——哪天 dev198 十秒就"就绪"反而要怀疑没连全；`.dep
 3. 三个租户的 calendar 权限需川哥去开发者后台开通（`u-9a037b10f7` 张雨琦周一回来前、
    `u-dec457e69d`、`u-93577af39a`）；`u-f7870bc4b3` 只需重新点一次授权卡。
 4. 分支仍不合 main。
+
+## 2026-08-02 · Studio 网络与模型调用（川哥拍板）
+
+**决策**：不修 Mini↔Studio 雷电转发的 crash-loop。下周川哥给 Studio 接**有线网络**（192.168.61.x 段），此后凡是调 Studio 上的模型，一律**走有线直连**，不再经 Mini 中转（`192.168.61.66:11436` 那条转发链退役）。
+
+**网线接好后的切换清单**：
+1. 确认 Studio 有线 IP（进 192.168.61.x 段，静态优先），实测 `curl <ip>:11434/api/version`。
+2. dev198 `ai-memory-llm-proxy`（`~/.local/share/ai-memory-llm-proxy` env / repo `deploy/dev198/ai-memory-llm-proxy/`）：PRIMARY_BASE 从 `192.168.61.66:11436` 改为 Studio 有线 IP 直连；**注意 no_proxy 加具体 IP（CIDR 无效）**。
+3. dev198 KidsBench chat shim（18231，`kidsbench.middleware.ollama_chat_shim --upstream`）同步改 upstream。
+4. Mini 两个 LaunchAgent `com.cc.studio-ollama-lan` / `com.cc.studio-ollama-tunnel` 退役（unload + 移 plist），当前本就 crash-loop（255）。
+5. 顺带处理 Studio 的空壳模型：qwen2.5:3b 在 Ollama 0.31.2 返回空壳 200（换模型或重拉 blob；qwen2.5:7b 实测正常），换完 proxy 的 PRIMARY_MODEL 跟着改。
+6. 验收：dev198 `journalctl --user -u ai-memory-llm-proxy` 出现 `primary ok` 且返回真内容（33c0f74 起空壳已判失败）；`node ops/memory-embed-probe.mjs` 5/5。
+
+**现状（不阻塞）**：dev198 记忆抽取/D3 检测由火山方舟 fallback 接管，功能正常；向量检索走 dev198 本机 Ollama（127.0.0.1:11434，qwen3-embedding:0.6b），与 Studio 链路无关，2026-08-02 端到端探针 5/5 全过。

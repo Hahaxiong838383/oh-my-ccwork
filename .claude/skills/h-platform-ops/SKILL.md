@@ -316,7 +316,9 @@ cd ~/feishu-grok-bridge
 node ops/memory-health-audit.mjs             # 人类可读
 node ops/memory-health-audit.mjs --json      # 给控制面/CI 消费
 node ops/memory-health-audit.mjs --uid u-x   # 只查一个
-node ops/memory-health-audit.mjs --probe     # 额外做写-查-删端到端探针（会写库）
+node ops/memory-embed-probe.mjs [--uid u-x]  # 端到端探针（写→向量→语义检索→删净，会写库）
+# ⚠️ audit 没有 --probe 参数（2026-08-02 实测：未知参数被静默忽略、照跑普通巡检
+# ——「通过」和「没执行」长一样）。端到端探针是上面这个独立脚本。
 ```
 
 退出码：`0` 全绿 / `1` 有租户不达标 / `2` 巡检自身失败。
