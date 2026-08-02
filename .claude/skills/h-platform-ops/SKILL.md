@@ -3084,3 +3084,24 @@ session、公平队列、Outbox pending/retrying、Runner inflight/active/childr
 若本轮只改 Base、文档、Skill 和共享记忆，没有运行代码差异，则**不重启、不重新部署** Bridge、
 Runner Worker 或控制面。cc 只需按仓库边界选择性提交和推送，并复核生产健康；把无代码重启
 写进“部署步骤”反而会增加中断风险。
+
+## H-0048 入口防复发监控（2026-08-02 上线，跑在川哥本机）
+
+H-0048 故障形态是「生产端全绿、用户打不开」（本机移动出口漂移 + Xray 国内域名单路
+DoH 不回退），所以监控**必须在用户视角侧（本机）跑**，服务器自测永远 200。
+
+- 脚本：bridge 仓 `ops/h-entry-watch.py`；launchd `com.cc.h-entry-watch`
+  （`~/Library/LaunchAgents/`，StartCalendarInterval 每 5 分钟——铁律禁 StartInterval）。
+- 三层探测对应铁律 25 分层：L1 DNS@223.5.5.5 / L2 直连 healthz / L3 代理(10808) healthz，
+  判成认 `200 + "ok":true` 载荷（防空壳 200）。判层：直连好代理坏=Xray 层（复发形态）；
+  DNS 好直连坏=生产侧；双坏=本机出口。
+- 告警通道显式 `LARK_CLI_NO_PROXY=1` 直连飞书 bot 私聊——**不依赖被监控的代理**；
+  连续 ≥2 轮才告警（防抖），持续故障 6h 重提醒，恢复时通报期间失败轮数；
+  发送判成认 `data.message_id` 非空，失败不置 alerted（下轮重试）。
+- 状态/日志：`~/.local/state/h-entry-watch/`（state.json / probe-log.jsonl / launchd.*.log）。
+- 验链路：`python3 ops/h-entry-watch.py --test-alert`；造可控失败：
+  `--probe-url https://<不存在子域>.kidshub.cn/healthz` 连跑两轮（非默认 URL 的所有
+  通知自动带 [TEST] 前缀，含后续恢复通报——标记记在 state.testAlert 里跟状态走）。
+- 卸载：`launchctl bootout gui/$(id -u)/com.cc.h-entry-watch` + 删 plist。
+- 已知边界：本机整体断网时告警发不出（监控无法自证），恢复后 probe-log 可回溯；
+  Xray error log 未落盘（config `error:None`），DNS 错误无被动观测——行为级探测即替代。
