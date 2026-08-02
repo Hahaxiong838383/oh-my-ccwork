@@ -2926,3 +2926,74 @@ HEAD 未推送直接拦 · 工作区脏时只有内容与远端一致才敢丢�
 
 ⚠️ 脚本跑完仍会提醒：**新增命令/分支必须真机触发一次**——healthz 全绿
 证明不了它能跑（当天权限对账命令上线即 ReferenceError，四道绿灯全没拦住）。
+
+## 🔴 控制面“系统架构”Tab 发布与验收（2026-08-02 起）
+
+### 五态必须分开报告
+
+控制面功能有五个独立状态：**本地实现 → Git 提交 → 远端推送 → 生产部署 → 用户可见**。
+任一环未完成都不能写“已上线”。尤其是页面本地测试全绿，但 aliyun-hk 仍是旧版本、
+目标文件不存在、公网页面没有入口时，结论只能是“本地完成，待发布”；这不是浏览器缓存。
+
+最小证据链：
+
+```bash
+# 本地：确认改动、版本和专项测试
+git status --short --branch
+grep H_VERSION control-plane/lib/version.mjs
+node --test control-plane/test/architecture-snapshot.test.mjs \
+  control-plane/test/pages.test.mjs \
+  control-plane/test/runtime-endpoints.test.mjs
+npm run test:runtime
+npm test
+git diff --check
+
+# 线上：确认真正部署和用户入口，不能只看 systemd active
+ssh aliyun-hk 'sudo systemctl is-active h-control'
+ssh aliyun-hk 'grep H_VERSION /srv/h-control/app/lib/version.mjs'
+ssh aliyun-hk 'test -f /srv/h-control/app/lib/architecture-registry.mjs'
+curl -fsS https://ai.kidshub.cn/admin | grep -q 'data-tab="architecture"'
+curl -fsS https://ai.kidshub.cn/admin/api/architecture
+```
+
+若公网需要登录，使用现有管理员会话做浏览器验收，不得把 cookie/token 写入命令历史、
+文档、日志或 Git。线上验收必须再打开页面确认左侧“系统架构”Tab、画板交互、节点详情、
+多租户链路筛选和原有 Tab 均可用。
+
+### 架构图双真源与刷新机制
+
+- `control-plane/lib/architecture-registry.mjs`：真实代码节点、链路、协议、功能分组和多租户阶段。
+- `control-plane/lib/architecture-snapshot.mjs`：把 runtime reports、租约、用户/订阅、TaskSessionLog、
+  Outbox 与恢复信息合成为匿名运行快照。
+- `GET /admin/api/architecture`：轮询快照。
+- `GET /admin/api/architecture/events`：SSE 被动推送；服务端每 5 秒检测变化。
+- 页面可见时 30 秒轮询兜底，隐藏时 120 秒；SSE 断开必须明确显示并继续轮询。
+
+展示边界固定：产品名只写“H 引擎”；允许真实代码文件名和通讯协议；禁止用户/App 标识、
+凭据、内部地址、私有绝对路径和网络出口实现。没有运行报告的组件只能显示未知/待验证，
+禁止用静态接线冒充健康。
+
+### 多租户一致性的可视化验收
+
+“所有租户 Bot 与 owner Bot 机制统一”不能只写一句说明，架构页必须展示并验证完整链路：
+
+1. 租户开通与生命周期；
+2. Person / Bot / 飞书租户身份归属；
+3. BYOS 订阅与加密凭据保险库；
+4. 全租户统一行为契约；
+5. 多站点唯一租约；
+6. 公平并发与容量调度；
+7. 工作区与执行隔离；
+8. TaskSessionLog、Delivery Outbox、恢复与主动送达。
+
+一致性判据是各站点上报的 `behaviorContractVersion` 唯一且新鲜；只要 dev198/Mini 版本不同、
+任一站点 stale 或缺报，就必须显示告警，禁止标记“统一正常”。功能修复还要经过真实 Runner
+和 Bot 主动送达验收，架构图绿灯不能替代业务链路验收。
+
+### 本轮发布边界
+
+“系统架构”Tab 属于 aliyun-hk 控制面发布，只同步 `control-plane/server.mjs`、
+`control-plane/lib/`、`control-plane/test/` 并重启 `h-control`。**不修改、不重启** dev198/Mini
+Bridge 或 Runner Worker；远端 `.env`、`data/`、`node_modules` 必须保留。发布前备份
+`/srv/h-control/app` 到部署根之外，回滚只恢复控制面代码并重启 `h-control`，禁止
+`git reset --hard`，禁止覆盖用户数据和运行配置。
