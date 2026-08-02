@@ -2997,3 +2997,30 @@ curl -fsS https://ai.kidshub.cn/admin/api/architecture
 Bridge 或 Runner Worker；远端 `.env`、`data/`、`node_modules` 必须保留。发布前备份
 `/srv/h-control/app` 到部署根之外，回滚只恢复控制面代码并重启 `h-control`，禁止
 `git reset --hard`，禁止覆盖用户数据和运行配置。
+
+### v1.38.0 首发实录补充（2026-08-02，cc 收口实测）
+
+- **计数口径在 snapshot 层**：「28 节点/38 链路」= 26 个 registry 代码组件 + `site:dev198`
+  + `site:mini` 两个站点节点；34 条 registry 链路 + 4 条站点链路。registry 层数出 26/34
+  不是缺数，别拿错层的数卡门。8 阶段在 `tenantManagement.stages`（`mechanisms=9` 是页面
+  另一个机制区块，非阶段口径）。
+- **远端预检若报「`引用了不存在的文件 bridge.mjs`」**：那是 2026-08-02 前的旧版
+  `architecture-snapshot.test.mjs` 在子树布局下的假红（仓根假设）。新版已适配（仓根特征
+  bridge.mjs/.git 在场才全量校验，子树部署跳过仓根侧文件并打 diagnostic「跳过 84 个」），
+  生产预检应 52/52——还看到假红就把新版测试文件同步上去，纯测试文件不用重启。
+- **带鉴权的新路由必须真机触发**：`/admin/api/architecture` 与 SSE 的既有测试全是源码
+  字符串断言，handler 没真跑过。标准解法=生产机隔离实例真打
+  （[[feedback_isolated_instance_live_probe]]）：同磁盘代码+独立端口+空 DATA_DIR+一次性
+  env（`SERVICE_TOKEN` 有 ≥32 字符启动门），登录→API 验载荷 28/38/18/8→SSE 收帧→
+  POST `/internal/runtime-report` 注入双站不同 `behaviorContractVersion`（形状抄
+  `runtime-metrics-store.test.mjs`，顶层 `schemaVersion:1`+`site.executionSite`，猜错
+  =400 `unsupported runtime metrics schema`）→ 验漂移进快照+SSE 推新帧 → PID 精确杀。
+- **侧板浏览器验「30 秒轮询兜底」会假阴**：app 侧板 WebView `visibilityState` 恒为
+  hidden，轮询走 120 秒档（`document.hidden?120000:30000`），36 秒零轮询是设计不是故障
+  （[[feedback_visibility_gated_logic_needs_state_check]]）。SSE 断开兜底的验法：
+  `architectureEvents.close()` + 手动调 `onerror` → 徽标转「SSE 断开，轮询兜底」→
+  按当前档位等满周期看 performance resource 里轮询请求真实发出 → 刷新页面还原 SSE。
+- **管理员会话拿不到时的分层验收**：公网 healthz 有版本（无鉴权）；`/admin/api/*` 的
+  401 对存在/不存在路径长一样，证不了路由存在。密码红线不可代输、不自签 cookie 冒充
+  「已有会话」；正路=侧板 Browser pane 停在登录页请川哥现场输一次，会话即归 cc 用。
+  Chrome 扩展（claude-in-chrome）连不上时别死磕，它不是唯一入口。
