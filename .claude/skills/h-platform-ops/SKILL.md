@@ -369,6 +369,15 @@ bridge memory-capture → 127.0.0.1:18241 (ai-memory-llm-proxy)
 - **D3 冲突检测（memory-conflict.mjs）也吃这条 LLM 链路**：挂在 pushMirror，
   指纹门控（内容没变零调用）+ 失败 10 分钟退避。它的 lastError 会显示在用户后台
   「记忆校准」区块——看到「检测暂不可用」先查本节的 proxy/Ollama，不是 D3 坏了。
+  - 查某租户检测状态：`cat /srv/h-platform/memory/<uid>/conflict-state.json`
+    （open/dismissed 在 `conflicts`，已判决历史在 `resolved`，`lastError` 非空=LLM 挂）。
+  - 手动触发一轮检测+推送（不等 debounce/30min）：buildMirror → detectMemoryConflicts
+    →（清 `lastError`+`lastScanAt` 可绕退避）→ conflictsForMirror 塞 `m.conflicts`
+    → pushMemoryMirror。样例脚本思路见 2c30fa0b 会话 scratchpad `accept-d3-detect.mjs`。
+  - 后台「记忆校准」区块**只在有 open 冲突或有历史时出现**——用户说「没看到入口」
+    先查 conflict-state 是不是本来就空，别当渲染故障排。
+  - 判决执行由 memory-ops 队列下发（10s 轮询），日志关键词 `memory conflict resolved`；
+    excerpt 乐观锁失败（用户手改过）会回报「内容已变化」并自动重扫，属正常防御。
 
 ### 权限现状已进 context-report（2026-08-01）
 
