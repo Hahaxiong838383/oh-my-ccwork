@@ -357,6 +357,16 @@ bridge memory-capture → 127.0.0.1:18241 (ai-memory-llm-proxy)
   + FALLBACK 18s；bridge 侧是 `AbortSignal.timeout(45s)`。改任一个数都要重算这道不等式。
 - 判断 primary 是否真在用：`journalctl --user -u ai-memory-llm-proxy | grep -c 'primary ok'`。
   **计数为 0 = 从来没通过**，那是配置/路由问题，别往「掉线/抖动」方向查。
+- **「primary ok」也可能是空壳**（2026-08-02 实锤）：Ollama 对坏死模型返回
+  HTTP 200 + 信封完整 + `content:""` + 0 token + created=Go zero time 的空壳应答。
+  proxy 已修（33c0f74 起 content 空即判失败走 fallback），但排障判据要记住：
+  **探针必须断言返回内容本身**，「服务 active + 模型 loaded + 200」三样都真不代表
+  模型能吐字。同症状跨机出现先做**换模型对照**（冷启动第一发就空 = 模型 blob 与
+  Ollama 版本不兼容，重启不救、换模型立好；qwen2.5:3b/qwen3:4b 在 0.31.2 都中过，
+  qwen2.5:7b 正常）。详见 [[feedback_hollow_200_needs_payload_check]]。
+- **D3 冲突检测（memory-conflict.mjs）也吃这条 LLM 链路**：挂在 pushMirror，
+  指纹门控（内容没变零调用）+ 失败 10 分钟退避。它的 lastError 会显示在用户后台
+  「记忆校准」区块——看到「检测暂不可用」先查本节的 proxy/Ollama，不是 D3 坏了。
 
 ### 权限现状已进 context-report（2026-08-01）
 
