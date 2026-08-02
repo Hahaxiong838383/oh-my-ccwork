@@ -3024,3 +3024,63 @@ Bridge 或 Runner Worker；远端 `.env`、`data/`、`node_modules` 必须保留
   401 对存在/不存在路径长一样，证不了路由存在。密码红线不可代输、不自签 cookie 冒充
   「已有会话」；正路=侧板 Browser pane 停在登录页请川哥现场输一次，会话即归 cc 用。
   Chrome 扩展（claude-in-chrome）连不上时别死磕，它不是唯一入口。
+
+## 公平调度当前版本验收与 Base 关闭（2026-08-02 实测）
+
+历史上验过公平调度，不代表当前版本仍然成立。Runner 拆进独立进程、行为契约、容量策略或
+送达链发生变化后，必须重新用当前生产版本制造真实竞争，不能引用旧 message ID 或旧测试结论。
+
+### 验收前回滚门
+
+在部署根和 Git 仓库之外建立受限目录，至少保存：
+
+1. Base 表、字段、目标视图配置、主表记录和视图记录；
+2. 待修改文档的原始副本；
+3. Bridge、mycc、`.mycc-global` 三仓状态；
+4. dev198/Mini/控制面健康快照；
+5. 主动验收入口原始状态。
+
+目录 `0700`、文件 `0600`，生成 SHA256 清单。Mini 当前不可达时如实记录，不得回退使用已废弃
+的浮动地址，也不得因此跳过 dev198 单站验收。
+
+### 真实竞争设计
+
+- 只用川哥自己的测试 Bot，不把同事 Bot 当实验流量。
+- 至少两个 App，每个 App 多个任务；总任务数必须明显超过 `workConcurrency.max`。
+- 任务必须通过真实 Runner 和真实沙箱执行，不能用 sleep mock、直接调用调度器单测或 Bot 自述。
+- 只验证通道和 ACK 时，主动验收的 `expectText` 留空；空值代表不做正文精确断言，不会拖垮
+  `completed`。不要拿模型自由回答做精确字符串断言。
+- 成功不仅要求结果文件 `status=completed`；每个 probe 必须 `ok=true` 且有唯一 `messageId`，
+  两个 Bot 都至少有一个任务真实等待，容量释放后的获批顺序不能长期偏向单一 App。
+
+### 终态与无残留判据
+
+逐任务读取 TaskSessionLog，必须看到：
+
+```
+task_accepted → delivery_started → delivery_acked → task_completed
+```
+
+`delivery_acked` 必须早于 `task_completed`，每个任务只能有一个 terminal 事件。Bridge/worker 日志
+不得出现本轮 request 的 timeout、failed、give-up。
+
+⚠️ `runnerRpc.running/orphaned`、Recovery Planner 和 orphanRecovery 可能包含历史或累计值。
+**非零绝对值不是本轮泄漏证据**。验收前后必须对同一字段做差值；只有增量大于 0，或当前
+active/waiting/inflight/child/lease/Outbox 不收敛，才能判本轮留下残留。
+
+最终健康门：所有 App connected、`lastError=0`、行为契约唯一值 1 个，active session、live
+session、公平队列、Outbox pending/retrying、Runner inflight/active/children/leases 全为 0。
+
+### Base 关闭流程
+
+1. 按铁律重新串行读取 Base、表、字段、视图、表单、主表和目标视图；旧快照不能直接写。
+2. 重新定位目标 record ID，再 `record-get` 读取完整当前记录。
+3. 只增量更新状态、验收结论、实际结果、测试证据和运行版本；保留历史证据，不整段覆盖。
+4. 写后再次 `record-get`，确认状态与证据落盘；再读人工开放视图，确认记录按筛选自然退出。
+5. 禁止删除、重建、改名或改筛选来制造“已关闭”；没有用户授权，不处理空白/异常记录。
+
+### 收口与部署边界
+
+若本轮只改 Base、文档、Skill 和共享记忆，没有运行代码差异，则**不重启、不重新部署** Bridge、
+Runner Worker 或控制面。cc 只需按仓库边界选择性提交和推送，并复核生产健康；把无代码重启
+写进“部署步骤”反而会增加中断风险。
