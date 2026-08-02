@@ -287,6 +287,17 @@ grok : ensureUserMemory → ensureUserMemoryMcp                        → ensur
 文件）、`grok-sync-state.json` 为 `{}`（kimi **无 grok 同步腿**，wiki 文件自己建）、
 `memory routing` 日志 0 条（它压根不走 `ensureMemoryRouting`）。
 
+### 🔴 grok 原生记忆四坑（2026-08-02 源码 0.2.117×生产 0.2.118 真机探针，动导出腿/查原生检索前必读）
+
+外部直改 `.grok/memory/*.md` 是**官方接口**（watcher + session 启动全量重扫，探针 PASS：写入→新进程→memory_search score 1.00）。但有四个坑：
+
+1. **memory_search 查询词含连字符 = 静默空结果**（FTS5 把 `-` 解析成列过滤 → 语法错被 `unwrap_or_default` 吞）。教模型用空格分隔。
+2. **脚手架连坐过滤**：chunk trimmed <500B 且含 `Add any cross-project preferences here` 等标记 → 搜索时整 chunk 被 `is_scaffold_template` 滤掉。**往 MEMORY.md 写内容必须整文件重写并剔除脚手架行，追加式不可用**。
+3. **中文纯词查询废**：FTS5 默认 unicode61 把整段 CJK 压成单 token（真机：同份内容 ASCII 查得到、「听雨轩」查不到）。向量腿 0.2.118 有实现但 **embedding 默认 `model=None`=出厂关闭**，生产 `chunks_vec` 恒 0 行 = FTS-only。
+4. **chunks 行数不是索引更新指标**（小文件同 chunk 原地 UPDATE）；验收认 `updated_at`/`access_count`/FTS 直查。⚠️ python `immutable=1` 不读 WAL。
+
+另：原生写侧 session 归档门槛 **≥3 条真实用户消息**——一发式 bot 任务永远触发不了（租户原生 MEMORY.md 全空是 by design 的休眠，不是故障）；dream 只重写 workspace MEMORY.md 不碰 global；`list_memory_files` 只认 global/workspace MEMORY.md + sessions/*.md 三类（独立文件名进不了启动重扫）。完整地图：bridge 仓 `docs/architecture/2026-08-02-memory-reverse-flow-and-truth-reconciliation.md`。
+
 ### 两个已知非故障（巡检遇到直接跳过）
 
 | 租户 | 现象 | 定性 |
