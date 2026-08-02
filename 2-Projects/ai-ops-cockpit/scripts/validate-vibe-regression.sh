@@ -280,7 +280,7 @@ curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.haha
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/todos/detail?id=$TODO_ID" -o /tmp/aiops-vibe-todo-detail.html
 grep -q '待办详情' /tmp/aiops-vibe-todo-detail.html
 docker exec ops-terminal bash -lc 'test -x /usr/local/bin/omp-aiops && /usr/local/bin/omp-aiops --version | grep -Eq "^omp/[0-9]+\\.[0-9]+\\.[0-9]+$"'
-docker exec ops-terminal bash -lc 'test -r /run/secrets/volcengine_coding_api_key && /usr/local/bin/omp-aiops models find "$AI_OPS_OMP_MODEL" --json | grep -q deepseek-v4-pro'
+docker exec ops-terminal bash -lc 'test -r /run/secrets/volcengine_coding_api_key && grep -q "id: deepseek-v4-pro" /home/ops/.omp/terminal-agent/models.yml'
 docker exec ops-terminal bash -lc 'test ! -S /var/run/docker.sock && test ! -e /run/secrets/chenchuan-maintenance && test ! -e /workspace/readonly && test ! -e /workspace/projects && test ! -e /workspace/stacks && ! command -v docker && ! command -v ssh && ! command -v sudo'
 docker exec ops-brain bash -lc 'test -r /run/secrets/volcengine_coding_api_key && test ! -S /var/run/docker.sock && test ! -e /run/secrets/chenchuan-maintenance && test ! -e /workspace/readonly && test ! -e /workspace/projects && test ! -e /workspace/stacks && ! command -v docker && ! command -v ssh && ! command -v sudo'
 docker exec ops-tool-runner sh -lc 'test ! -e /run/secrets/volcengine_coding_api_key && test ! -S /var/run/docker.sock && test ! -e /run/secrets/chenchuan-maintenance && ! env | grep -Eq "FEISHU_WEBHOOK|PUSH_URL|OMP_MODEL|VOLCENGINE"'

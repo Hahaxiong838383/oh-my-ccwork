@@ -733,15 +733,34 @@ def send_feishu(report, force=False):
     return {"status": response.status, "body": body, "dedupe": dedupe}
 
 
+def parse_feishu_webhook_response(status, body):
+    if not 200 <= status < 300:
+        raise RuntimeError("feishu_http_error")
+    try:
+        payload = json.loads(body)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError("feishu_invalid_response") from exc
+    provider_code = payload.get("code")
+    if provider_code is None:
+        provider_code = payload.get("StatusCode")
+    if provider_code not in (0, "0"):
+        raise RuntimeError("feishu_rejected")
+    return {
+        "status": status,
+        "providerCode": int(provider_code),
+        "providerStatus": payload.get("msg") or payload.get("StatusMessage") or "success",
+    }
+
+
 def send_feishu_text(text):
     webhook = os.environ.get("FEISHU_WEBHOOK_URL")
     if not webhook:
-        return {"status": "skipped", "body": "FEISHU_WEBHOOK_URL is not configured"}
+        raise RuntimeError("FEISHU_WEBHOOK_URL is not configured")
     payload = json.dumps({"msg_type": "text", "content": {"text": text}}, ensure_ascii=False).encode()
     request = urllib.request.Request(webhook, data=payload, headers={"content-type": "application/json"}, method="POST")
     with urllib.request.urlopen(request, timeout=15) as response:
         body = response.read().decode("utf-8", "replace")
-    return {"status": response.status, "body": body}
+    return parse_feishu_webhook_response(response.status, body)
 
 
 def probe_url(url):
@@ -2212,6 +2231,7 @@ def project_daily_notification_text(project_id, job, event):
         radar = production.get("radar") or {}
         theory_radar = production.get("theoryRadar") or {}
         analytics = production.get("analytics") or {}
+        lines[0] = f"个人站真实访客{labels.get(event, event)}"
         lines[7:7] = [
             f"实时资讯雷达：{'正常' if radar.get('ok') else '异常'}",
             f"Theory Radar：{'正常' if theory_radar.get('ok') else '异常'} / 最新 {theory_radar.get('latestPublicReport') or '-'}",
@@ -2226,15 +2246,17 @@ def project_daily_notification_text(project_id, job, event):
                 for item in top_paths[:3]
                 if isinstance(item, dict)
             ) or "-"
-            lines[10:10] = [
-                f"昨日真实访客（{analytics.get('date') or '-'}）：{yesterday.get('uv') or 0} 人 / {yesterday.get('pv') or 0} PV / 人均 {yesterday.get('pagesPerVisitor') or 0} 页",
+            lines[2:2] = [
+                f"统计日期（前一完整自然日）：{analytics.get('date') or '-'}",
+                f"真实访客：{yesterday.get('uv') or 0} 人 / {yesterday.get('pv') or 0} PV / 人均 {yesterday.get('pagesPerVisitor') or 0} 页",
                 f"近 7 日真实访客：{seven_days.get('uv') or 0} 人 / {seven_days.get('pv') or 0} PV",
-                f"昨日热门页面：{top_paths_text}",
+                f"热门页面：{top_paths_text}",
                 "统计口径：仅 human；已排除本人调试、AI Ops、预加载、机器人和旧版未验证流量",
             ]
         else:
-            lines[10:10] = [
-                f"昨日真实访客：聚合数据暂不可用（{analytics.get('date') or '-'}）",
+            lines[2:2] = [
+                f"统计日期（前一完整自然日）：{analytics.get('date') or '-'}",
+                "真实访客：聚合数据暂不可用",
                 "统计口径：不降级使用系统流量或旧版未验证数据",
             ]
     return "\n".join(lines)
@@ -2284,7 +2306,11 @@ def run_project_daily_worker(job_id, project_id, simulate_failure, force_notify)
         if should_notify:
             try:
                 notification = send_feishu_text(project_daily_notification_text(project_id, job, event))
-                job["notification"] = {"status": notification.get("status"), "sent": True}
+                job["notification"] = {
+                    "status": notification.get("status"),
+                    "providerCode": notification.get("providerCode"),
+                    "sent": True,
+                }
             except Exception as exc:
                 job["notification"] = {"status": "error", "sent": False, "error": type(exc).__name__}
         else:

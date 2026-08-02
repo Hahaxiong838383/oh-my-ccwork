@@ -21,6 +21,10 @@ output_levels: L2
 9. **阴性结果必须带正向锚点**：任何“0 泄漏 / 0 错误 / 0 命中 / 全部阻断”前，先证明扫描面非空、测试确实执行、审计记录确实生成；无正向锚点的零结果一律无效。
 10. **2GB 主机验收必须分阶段**：`/vibe/` 不得自动加载 `/terminal/`；网页终端最多 1 个客户端。浏览器回归前后必须运行 `scripts/validate-runtime-capacity.sh`，`load1 > 2.50`、`MemAvailable < 300MiB` 或存在活动 OMP 时立即停止，禁止继续叠加真实模型任务。
 11. **n8n 内部 POST 的 Origin 必须匹配内部 Host**：请求 `http://ops-inspector:8080/...` 时使用 `Origin: http://ops-inspector:8080`，不能填公网域名；验收必须查询 n8n 最新真实 execution 为 `success`，仅看 workflow active 无效。
+12. **飞书成功必须双层判定**：Webhook 只有在 HTTP 为 `2xx` 且响应 JSON 的 `code` 或 `StatusCode` 为 `0` 时才能记为 `sent`；HTTP 200 但业务码非 0、响应不是 JSON、或 Webhook 缺失都必须记为失败。
+13. **KPI 日报先给人读懂**：个人站访客日报标题必须明确包含“真实访客”，统计日期、UV、PV、近 7 日与热门页面置于消息前部；`0 UV / 0 PV` 是有效业务结果，不能因数字为零隐藏或误判成任务未执行。
+14. **未来时间不能作为正式证据**：若远端主机时间晚于本会话权威日期，未来任务 ID、未来统计日期和未来日志只能用于格式/通道测试，不能证明正式自然日日报；先记录时钟偏差，不擅自修改生产系统时间。
+15. **外部发现命令必须有时间边界**：模型发现、网络检索等可能无输出卡住的命令必须设置超时；已有真实模型任务覆盖时，优先使用真实任务结果加确定性配置检查，避免回归脚本无限等待。
 
 ## 必跑检查
 
@@ -78,12 +82,16 @@ AI_OPS_CAPACITY_SSH_TARGET=racknerd \
 - **契约值变更要搜索全部消费点**：连接数、阈值、路径或状态语义变化后，必须用 `rg` 搜索实现、回归脚本、自监控、文档中的旧常量；本轮把终端上限从 2 改为 1 后，旧回归仍断言 2，证明只改生产配置会制造测试漂移。
 - **n8n 单机导入流程**：普通单机模式不支持 `import:workflow --activeState=fromJson`；使用“停止 n8n → 备份 SQLite/工作流 → import → publish → 启动 n8n”，最终等待真实 cron 触发并查询 `execution_entity` 最新状态。Schedule Trigger 的 CLI 手动 execute 不能替代定时消费点验收。
 - **告警返回值按真实协议验收**：飞书通知成功可表现为 HTTP 状态 `200`，重复故障为 `deduped`，并带 `incident/recovery` 事件；不要脆弱断言固定字符串 `sent`。故障、去重、恢复三态都要结合持久化状态与真实返回验证。
+- **飞书业务码**：HTTP `2xx` 只是传输成功；必须解析响应 JSON 并确认 `code/StatusCode=0`。无效 JSON、非零业务码、Webhook 缺失都要进入失败状态和测试覆盖。
+- **回归脚本阻塞**：禁止把无超时的 `models find`、外部搜索等发现命令放入全量回归关键路径；用真实推理验模型，用 `models.yml` 等确定性来源验配置。
 
 ## Review 清单
 
 - 飞书通知：确认 `notify_text` 不含 `question`、`conversation`、`answer`、异常正文。
 - 飞书状态语义：确认维护通道可达性不依赖业务聚合 `ok`；每个业务子项单独显示状态和证据。
 - 访客日报：确认使用昨日完整自然日、仅 `human` 聚合；消息里没有 IP、UA、referrer、原始数据库行或被排除流量明细。
+- 访客日报可读性：确认标题明确、日期和 UV/PV 在前 6 行；零流量仍显示 `0 UV / 0 PV`，不能省略。
+- 时间证据：确认任务日期不晚于当前权威日期；若远端时钟超前，相关记录只标为测试证据并单独告知。
 - CPA/Codex 授权：确认正式 Codex OAuth 授权带 `refresh_token` 时已开启 `auth-auto-refresh-workers`；只记录是否可刷新、服务状态、低成本探测状态，禁止记录 token 正文。
 - CPA/Codex 用量：Codex 当前不展示 5 小时额度；`primary_window`/`secondary_window` 只按 `limit_window_seconds` 判定真实周期，菜单栏与告警只使用周额度，禁止按字段槽位硬编码周期名称。
 - CPA/xAI 用量：官方费用与预付余额只读 xAI Management API，并隐藏 Management Key；Smart Router `/debug/summary?hours=24` 仅作 provider 级路由观测，`daily_token_limit - tokens_today` 只能叫“路由日预算剩余”，不得冒充官方账单。
