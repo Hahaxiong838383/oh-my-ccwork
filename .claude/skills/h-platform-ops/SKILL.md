@@ -17,7 +17,7 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 3. **隔离必复验**：新用户上线后必做越界测试——该用户 Bot 发「读 `/home/chuan/.grok/auth.json`」→ 必须 `No such file`（bwrap 沙箱）。
 4. **杀进程用 PID**：`pgrep -af` 拿 PID 再 `kill`，**禁裸 `pkill -f` 进 ssh 命令行**（自杀坑，见 [[ssh-remote-process-mgmt-pitfalls]]）。
 5. **UI 改版先问取向**：改页面前确认**桌面优先还是移动优先**（管理/配置类页面默认桌面优先）；「按 X 的逻辑做」= 抽同一组件双端复用，不是各写一份长得像的（[[feedback_ui_parity_means_same_component]]）。
-6. **改 html.mjs 必跑 script 语法门**：模板字符串会把 `\n` 先解析成真实换行 → 输出的 JS 字符串字面量断行 → **整个 script 块静默不执行**（页面正常、console 无报错、按钮全失灵）。源码里写 `\\n`；改完跑「必跑检查」里的 script 块语法检查（[[feedback_template_string_swallows_js_escapes]]）。
+6. **改 html.mjs 必跑 script 语法门**：模板字符串会把 `\n` 先解析成真实换行 → 输出的 JS 字符串字面量断行 → **整个 script 块静默不执行**（页面正常、console 无报错、按钮全失灵）。源码里写 `\\n`；改完跑「必跑检查」里的 script 块语法检查（[[feedback_template_string_swallows_js_escapes]]）。**加弹层/fixed 组件还有第二道**：`.pane.on` 这类祖先的动画 fill 若用 both/forwards 会固化恒等 transform，静默把 fixed 的包含块从视口劫持成 pane（v1.37.0 真机抓到，fill 已去掉别加回来）；弹层上线前在真实页面断言 `getBoundingClientRect≈视口`（[[feedback_fixed_position_hijacked_by_ancestor_transform]]）。
 7. **推代码前查实时分支**：历史上部署主干曾在 `origin/feishu-grok-bridge`，但 2026-07-27 已确认 GitHub 当前生产主干是 `origin/main`，旧分支落后。每次先跑 `git fetch origin && git rev-list --left-right --count HEAD...origin/main`，不要把历史记忆当现状。
 8. **健康读数认实例**：bridge `/health` 的**顶层字段是 owner Bot 的**，用户 Bot 在 `apps.<appId>` 里。查「某用户的消息到没到」必须看 `apps` 分解——2026-07-25 我拿顶层 `lastInboundAt:null` 断言「一条没收到」，实际用户 Bot 那条准时到了（[[feedback_selfcheck_false_signal]]）。
 9. **远程语法检查用绝对路径**：dev198 非交互 ssh 的 PATH 没有 node，`node --check` 会「命令未找到」而静默略过；结论行必须由累计变量驱动，绝不无条件 `echo 全过`。
@@ -378,6 +378,12 @@ bridge memory-capture → 127.0.0.1:18241 (ai-memory-llm-proxy)
     先查 conflict-state 是不是本来就空，别当渲染故障排。
   - 判决执行由 memory-ops 队列下发（10s 轮询），日志关键词 `memory conflict resolved`；
     excerpt 乐观锁失败（用户手改过）会回报「内容已变化」并自动重扫，属正常防御。
+  - **v1.37.0 起记忆页是混合版**（A 分组清单 + B 常驻编辑窗/仪表带 + C 软视觉）：
+    校准收件箱在仪表带下方首屏内；仪表「待校准」有待办变暖色、点击滚到卡。四格口径
+    ＝ mirror.pages 拆分（含 /sessions/ 的算存档）+ vectors + conflicts.open；侧导航
+    数字是 bridge digest 的**库全量页数**（含非镜像页），与 tab 内不同口径是 by design。
+    旧 DOM id（memCnt/memVec/memLifecycle/memCognitive/memKind/memPinned）已死，
+    巡检脚本别再引用；meta 编辑改圆片（状态在 MEM_META，memSave 读它发 op）。
 
 ### 权限现状已进 context-report（2026-08-01）
 
