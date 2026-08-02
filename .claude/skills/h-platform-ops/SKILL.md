@@ -40,6 +40,10 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 
 ## 架构
 
+- **本地开发副本（Air）** `~/mycc/2-Projects/feishu-grok-bridge`（git，分支
+  `codex/h-mini-ab-poc`，push 同时推 main；mycc 仓已 .gitignore 整目录出仓）。
+  2026-08-02 从 `/private/tmp/feishu-grok-mini-ab-poc-20260730` 迁入——**旧 tmp
+  路径已死**，重启即清的历史遗留，文档再见到一律读作新路径。
 - **执行面** dev198 `~/feishu-grok-bridge`（main=生产多 App 版，不暴露公网）：bridge WS 出站连飞书；per-user grok/kimi 跑 bwrap 沙箱。
   - **服务是 user 级 systemd**（2026-07-29 起拆两个进程）：
     `systemctl --user feishu-grok-bridge` + `systemctl --user feishu-grok-runner-worker`。

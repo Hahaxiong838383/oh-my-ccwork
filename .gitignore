@@ -326,6 +326,7 @@ AGENTS.md.bak.*
 # 这些目录各自有 .git，是独立项目或临时克隆，commit 进来会变成坏 gitlink + 仓库膨胀
 2-Projects/LnMem/
 2-Projects/LnMem-poc/
+2-Projects/feishu-grok-bridge/
 2-Projects/personalt-test/
 1-Inbox/tmp-repos/
 4-Assets/external-skills/*

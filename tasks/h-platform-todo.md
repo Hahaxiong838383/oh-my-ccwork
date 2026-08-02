@@ -976,7 +976,7 @@ dev198 10/10 未受影响。
 
 ### 当前状态
 
-Codex 独立工作树 `/private/tmp/feishu-grok-mini-ab-poc-20260730`、分支
+Codex 独立工作树 `~/mycc/2-Projects/feishu-grok-bridge（2026-08-02 从 /private/tmp 迁入）`、分支
 `codex/h-mini-ab-poc` 已由 cc 选择性收口为 `6bc38ca88696e95ea4806672612c74767b648ee8`
 并 push；控制面和 Mini 已部署该批次。`main`、dev198 Bridge 与 owner workspace 均未改动。
 
