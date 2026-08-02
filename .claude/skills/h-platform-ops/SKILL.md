@@ -384,6 +384,20 @@ bridge memory-capture → 127.0.0.1:18241 (ai-memory-llm-proxy)
     数字是 bridge digest 的**库全量页数**（含非镜像页），与 tab 内不同口径是 by design。
     旧 DOM id（memCnt/memVec/memLifecycle/memCognitive/memKind/memPinned）已死，
     巡检脚本别再引用；meta 编辑改圆片（状态在 MEM_META，memSave 读它发 op）。
+  - **v1.37.1 判决有进度三件套**（点击即在途 spinner／在途期他卡禁用／完成 5 秒绿横幅）。
+    语法门脚本已固化 `ops/memory-pane-gate.mjs`（改 html.mjs 记忆页后必跑：script 块
+    编译＋DOM 锚＋「先渲染在途态再发请求」顺序断言）。
+  - **给用户造演示冲突的安全流程**（v1.37.1 验收实证）：直改 conflict-state.json 加
+    `conflicts[<纯hex id>]={status:'open',...}`（id 必须匹配控制面 `/^[0-9a-f]{6,16}$/`），
+    然后**绕过 detect** 手动 buildMirror + conflictsForMirror 塞 conflicts 推
+    `/internal/memory-mirror`（跑 detect 会按指纹重扫把手工条目洗掉）。假 excerpt 四个
+    按钮都安全——替换路径会被逐字乐观锁拦下。收尾删记录再推干净 mirror；等用户判决
+    可挂 Monitor 轮询 status 自动清场。
+  - **模拟租户会话做验收**：`document.cookie` 写不掉已有的 HttpOnly hsid（同名新值
+    排后，服务器正则取第一个）——首次登录能骗过是因为当时还没有 HttpOnly 旧值。
+    正路：服务器侧铸 `/go/<autoLogin token>`（`base64url(JSON{t:'go',uid,exp})+HMAC`，
+    SESSION_SECRET 不出服务器），访问后由服务器 Set-Cookie 覆盖。抽验他人租户时
+    只读结构状态（元素/数字/健康级），不截图不记录记忆正文（隐私墙）。
 
 ### 权限现状已进 context-report（2026-08-01）
 
