@@ -3170,3 +3170,43 @@ CLI 成功后才写 reset marker → 失败恢复旧 mapping**。`/new + 任务�
 - **脚本必须放仓根跑**（/tmp 解析不到 node_modules），跑完立即删，不入 git。
 - 纪律：`--dry-run` 先核对目标清单再真发；`uuid` 幂等键（`ns-upgrade-<日期>-<app后8>`）
   防重跑重复发；判成认 `data.message_id` 非空并逐条留存；两端（dev198+Mini）各跑。
+
+## 架构画板路由与关系高亮（v1.38.1，2026-08-03 上线）
+
+schemaVersion 3→4：每条边新增 `path`（正交圆角 M/L/Q 串）、`points`、`fromSide/toSide`；
+组件新增 `h`（显式高度，站点 118 / 紧凑引擎 90）。路由在服务端
+`control-plane/lib/architecture-routing.mjs`（直连候选 + 可见图 A*，两路都强制
+`segmentClear` 不穿任何节点内部；`architectureRelations` 只算**直接**上下游，无传递闭包）。
+
+### 验收判据（生产 API + 真机各一遍）
+
+- API（`/admin/api/architecture`，注意**信封 `{ok, architecture}`**，顶层直读全 0
+  是假读数）：schemaVersion=4、components=28、edges=38、protocols≥18、
+  tenantManagement.stages=8；38 边全有 path 且 points≥2；快照全文扫
+  uid/appId/openId/内网 IP/绝对路径必须零命中。
+- 真机（JS 数值层，pane 隐藏也能做）：选中 `site:mini` → 摘要「mini · 上游 1 ·
+  下游 1」；类名 is-upstream=app-placement / is-downstream=runner-worker；入边描边
+  `rgb(47,111,237)` 蓝、出边 `rgb(124,92,231)` 紫；无关 25 节点/36 边 is-dim；
+  关联边被 appendChild 到 SVG 末位（顶层渲染）；抽屉「直接关联」chip 可点导航。
+- ⚠️ **验色读 longhand**（`borderTopColor`）：shorthand `borderColor` 序列化不可靠，
+  会读出基色灰造成「规则没生效」假故障（[[feedback_computed_style_shorthand_unreliable]]）。
+- 设计行为：选中节点期间链路筛选让位于关系高亮，关抽屉后筛选恢复（预览评审版一致）。
+
+### 管理台带鉴权生产截图通道（侧板 pane 收起时）
+
+pane `document.hidden=true` → 渲染冻结：截图白屏、click/scroll 超时，**javascript_tool
+仍可用**——数值验收先行，截图殿后。截图走本地认证代理 + headless Chrome：
+
+```bash
+# jar 由 /admin/login 换取（密码经 stdin 传 curl，不进 argv；用完删 jar）
+SHOT_MODE=fit  python3 .claude/skills/h-platform-ops/tools/admin-shot-proxy.py <cookie-jar> &
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
+  --window-size=1680,1000 --virtual-time-budget=13000 --screenshot=out.png \
+  http://127.0.0.1:18999/admin
+```
+
+SHOT_MODE=fit（适配全局）/ mini（选中 mini 高亮）。四个坑（详见
+[[feedback_headless_chrome_prod_screenshot_workflow]]）：jar 的 `#HttpOnly_` 行不是注释；
+virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed 铺满代替）；交互全靠
+注入 driver 模拟点击；**SSE 端点代理故意 502**——既防流式挂死代理，又让页面 EventSource
+走真 onerror，顺手拿「SSE 断开，轮询兜底」真机 UI 证据（不扰动生产 SSE 的兜底验收法）。

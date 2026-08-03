@@ -1,6 +1,6 @@
 # H 平台后续 TODO（持续更新）
 
-## 2026-08-03 10:3x 当前真值
+## 2026-08-03 12:2x 当前真值
 
 > 本节覆盖下面的 2026-08-02/07-31 历史快照；历史章节保留用于追溯，不能再当当前运行状态。
 
@@ -14,7 +14,12 @@
   CLI child、map 切换（reason=card_new_cli）、reset marker 时序、旧上下文清空。
   全员升级通知 12/12 送达（逐条 message_id）。
 - **面向用户文案统一「H 引擎」**（川哥拍板）：新会话交互不再出现 Grok/Kimi 字眼。
-- aliyun-hk 控制面 `v1.38.0`，`h-control` active；系统架构 Tab 漂移告警链已真机验证。
+- **aliyun-hk 控制面 `v1.38.1`**（2026-08-03 12:0x 上线，bridge 仓 `5c89d49`）：架构画板
+  连线四向端口+正交避障+圆角+halo，选中节点上游蓝/下游紫/无关降透明/关联线顶层，
+  抽屉「直接关联」可导航；快照 schemaVersion 4（边带 path/points/fromSide/toSide）。
+  生产验收全过：API 4/28/38/18/8、38 边零穿越（真机数值复核）、控制台 0 错误、
+  「SSE 断开→轮询兜底」真机触发验证；备份 `/srv/h-control/app.bak-20260803-115324`
+  验收通过后可清。系统架构 Tab 漂移告警链 v1.38.0 起已真机验证。
 - dev198 11/11 + Mini 1/1 connected，deliveryOutbox 0/0；双端 bridge+runner-worker
   已于本轮部署同时重启（dev198 10:02:11 / Mini 两轮）。
 - ⚠️ 遗留：dev198 10:02 部署打断一条在途任务（川哥本人 09:57 发 owner Bot 的
