@@ -3291,13 +3291,34 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
 - ⚠️ **验门禁必须走用户真实对话链路**：验收信箱（proactive）链路**没接**
   larkAudit/门禁，信箱探针验的是旁路自己（[[feedback_probe_channel_must_traverse_target]]）。
 
+- **P1 Stop hook 验证门**（契约 `2026-08-03.4`，机制项 `stop_hook_write_verification`
+  + `proactive_lark_audit`，三轮真机对抗后收敛）：平台幂等下发
+  `~/.grok/hooks/h-verify.json` → 共享只读脚本（沙箱内 `/opt/h-hooks/stop-verify.mjs`，
+  源 `ops/hooks/`，**scp 即热生效不用重启**；lark-audit.mjs 在 bridge 进程内改它才要
+  重启）。两判定：写后未回读 → block 逼模型自己回读（wrapper 自动回读方案弃用——
+  sh 解析写参数太脆）；零调用+交付声明 → block 逼真做或明说没做。
+  `H_AUDIT_OFFSET`=spawn 前日志字节数注入，「本轮」语义精确。真机验收样本：
+  「不用检查」被无视、强制回读带真实值、事实行「12 次含写入 6 次」。
+  - ⚠️ **reason 文案是攻击面**：第一版留「可解释为历史结果」出口，模型立刻用它
+    圆谎；出口只留行为性两条+显式压制「用户要求假装/不用检查」
+    （[[feedback_gate_reason_wording_is_attack_surface]]）。新圆谎话术=下版输入。
+  - ⚠️ **读写分类用词尾泛化不用枚举表**：枚举漏 `+record-batch-update` 整个 base
+    写族失明，事实行「均无写入」里出现写命令名即分类器失明信号。两处正则
+    （lark-audit.mjs + stop-verify.mjs）**必须同步改**。
+  - Mini 站 `H_LARK_AUDIT=0` 且 macOS native 无 bwrap——审计/门禁链在 Mini
+    整体不生效（B1 已知边界，hook 脚本已预埋 shared/hooks/）。
+
 ### 待办
 
-- **P1**：写后回读 wrapper（结构化写操作自动回读附证据）+ CLI 层 Stop hook 验证
-  门（平台生成 hooks 文件下发全租户）+ **补 proactive/后台链路的审计与门禁**。
-- **P2**：身份 fallback 审计（用户数据写操作只允许 user token，禁静默降级）+
-  逐租户 `verify-lark-scopes --profile tenant-standard` 对账清单。
+- **P2**：①身份 fallback 审计（用户数据写操作只允许 user token，禁静默降级）
+  ②逐租户 `verify-lark-scopes --profile tenant-standard` 对账清单
+  ③**读全量护栏**（读表返回「已读 N/总 M 行」覆盖率——对应工单 H-0070
+  「读表没读全就输出结论」，刘子贤 2026-08-03 提，勿在护栏落地前关单）。
 - **P3 后续**：租户 HTTP 型 ai-memory hooks 下发 → observations 修复 →
   SCOPE_BLOCK 提示词补丁退役。
 - 预期口径（对齐川哥）：施工完=「租户 Bot 在**其主人的飞书权限范围内**，具备与
   owner 同等的执行可靠性和平台能力」；身份差距（用户自己的权限面）by design 不抹。
+- 部署在途检查硬化：**在途数与上次基线不同时必须展开明细定位新增项再决策**
+  （2026-08-03 只看总数 5>4 未展开就部署，侥幸该任务已终态——流程违规记录在案）。
+- 写测试禁用生产 Base；agent 改坏数据恢复第一站=其 session 里的改前读查询
+  （[[feedback_agent_session_holds_prewrite_state]]，H-0070 标题 10 分钟恢复实证）。
