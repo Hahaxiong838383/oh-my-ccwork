@@ -1336,3 +1336,63 @@ vs 1 个）——哪天 dev198 十秒就"就绪"反而要怀疑没连全；`.dep
 - **等真实流量**：租户任务 trace model=grok-4.5 读数；后台模型下拉出现（需一次
   context-report 上报）；判定④首次真实拦截。
 - **P2b 尾巴不变**（王宣凯 18:31 点卡 600s 超时可再点/南鸽未点/越权域/后台补勾）。
+
+## 2026-08-03 · P0 本地收口：人格编辑边界 + 纯 compute orphan 终态
+
+### 已完成（本地，待 cc 提交部署）
+
+1. **刘子贤 `SOUL.md` 不是写丢**：生产文件在 11:49:59 +08:00 已成功写入，Bridge
+   有 `memory op ok`，当前 SHA256 与控制面镜像证据一致。根因是平台维护的
+   `h-profile-index` 被错误放进可编辑框，用户改后服务端按设计重建，视觉上像“保存失败”。
+2. **编辑边界修正**：textarea 只展示真正可写的用户正文；索引仍保留在真实文件供 H 引擎
+   读取；页面增加独立只读的“四份配置如何配合”说明。该机制走共享 `profile-topology`，
+   对全部用户和 Grok/Kimi/OMP 生效，不按 uid 打补丁。
+3. **恢复项闭环修正**：纯 compute orphan 没有 replay/RPC 胶囊时，以 coordinator 的
+   `identity` 作为原 taskId 写 `task_cancelled/task_completed`，防止取消后下一轮重新出现。
+4. **共享契约**：行为契约提升到 `2026-08-03.10`，新增 `profile_editable_boundary` 与
+   `orphan_terminal_reconciliation`，便于两站和所有 App 对账是否真正吃到新机制。
+5. **控制面版本**：页面修复对应 `v1.39.2`，顶栏版本号由单一真源注入。
+6. **测试**：orphan 9/9；人格/记忆/并发保存 16/16；页面脚本语法门全过；完整
+   `npm test` exit 0；`git diff --check` 与相关语法检查通过。
+7. **回滚记录**：`2-Projects/feishu-grok-bridge/docs/rollbacks/2026-08-03-profile-editor-orphan-terminal.md`。
+
+### 部署后待验收
+
+1. cc 选择性提交并部署控制面、dev198 Bridge、Mini Bridge；执行面按 Runner Worker → Bridge
+   顺序重启，既有运行产物和其他脏文件不提交。
+2. 再次取消 Mini AI 专家的纯 compute orphan，连续两轮恢复报告确认不再出现。
+3. 王宣凯两条恢复项继续保留人工决策，不替用户重跑或取消。
+4. 刘子贤 Bot 主动通知修复完成，不要求刘子贤重发消息测试。
+5. 川哥人工只验一次：编辑框无平台索引；修改正文→保存成功→刷新不回退；只读说明仍能看到
+   四份配置关系。
+
+### 部署实录（cc，2026-08-04 01:37–01:50）
+
+- 提交 `246786945568648bc4635d7e1ebd75a1afc62722`，只暂存授权的 10 个文件，
+  4 项运行产物原样留未跟踪区；已推 `origin/codex/h-mini-ab-poc`。
+- 复验：专项 36/36（4 个测试文件合计）、`memory-pane-gate` 全过且确认页面 badge
+  已是 v1.39.2、`npm test` 真实退出码 0（`not ok` 0 条）、`git diff --check` CLEAN。
+- 三处受限回滚点（0700/0600 + sha256 自校验全 OK）：dev198
+  `~/.h-rollbacks/feishu-grok-bridge/20260804-0140-pre-profile-orphan`、Mini
+  `~/local/h-platform-rollbacks/20260804-0140-pre-profile-orphan`、控制面
+  `/srv/h-control/backups/20260804-0140-pre-profile-orphan`（备份确认原版本 v1.39.1）。
+- 部署顺序 dev198 → Mini → 控制面；两执行面均 Runner Worker 先、Bridge 后。
+  dev198 用 `SKIP_RESTART=1` 取脚本的 merge+meta 真值机制，重启手动按序
+  （脚本 dev198 段是 `restart bridge runner-worker`，bridge 在前，与规程相反）。
+- 读数：两站 deploy commit 均为新 SHA、`dirty=false`、契约唯一值 `2026-08-03.10`；
+  dev198 11/11、Mini 1/1、`lastError` 全 null、Outbox 与队列全 0；两站 App 交集 0
+  （并集 12 = 11+1）；控制面公网 healthz `v1.39.2`。
+- 生产实证（只读，未碰他人文件）：刘子贤四份配置**真实文件均含 `h-profile-index`、
+  编辑面零托管 marker**；其 `SOUL.md` sha256 `90e492df96ff1075…` 与回滚手册记录
+  的基线一致，佐证内容从未丢失。真实写入路径往返在川哥自己租户账号上跑通
+  （改一行→writeProfile→重读保留→还原后编辑面 body sha 一致、标记行消失、索引仍在）。
+- Mini 纯 compute orphan `b0e4301a7af6` 已 probe：`PROBE_OK`、`deliveryPending=false`、
+  `workerConnected=true`。**取消留给川哥点击**（按指令）。审计里保留了修复前的病历：
+  17:15:16 该项 `cancel ok=True ORPHAN_CANCELLED`，17:46 它仍在且 status=accepted。
+- 刘子贤 Workbuddy助理 已主动送达修复通知，`message_id=om_x100b6839083158a0b1a2abdbdb3ffe6`
+  （用该 App 凭据从运维脚本直发，未走 bridge 送达链，故 App 的 `lastOutboundOkAt` 不体现）。
+
+### 仍待川哥
+
+1. 管理台点击取消 Mini 的 `b0e4301a7af6`，随后两轮恢复上报确认不再出现。
+2. 用户后台肉眼确认：编辑框无平台索引、改正文保存刷新不回退、只读说明可见。

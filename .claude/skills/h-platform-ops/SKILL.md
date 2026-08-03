@@ -312,7 +312,7 @@ grok : ensureUserMemory → ensureUserMemoryMcp                        → ensur
 
 | 租户 | 现象 | 定性 |
 |---|---|---|
-| `u-aca292be3f`（AI 专家） | dev198 上没有 ai-memory 实例 | **设计如此**：B1 灰度已迁 Mini，Mini 侧 `H_USER_MEMORY=0`、ai-memory 未原生化。等 Mini 记忆 parity 做完才会有 |
+| `u-aca292be3f`（AI 专家） | dev198 上没有 ai-memory 实例 | **设计如此**：B1 灰度已迁 Mini。Mini 记忆 parity 已于 2026-08-01 收口，巡检必须查 Mini 当前实例，不能继续拿 dev198 的缺失当故障 |
 | `u-dec457e69d`（kimi 订阅） | 用 grok 判据查会显示"托管块全无" | **记忆本身是好的**（六个 kimi 块全齐、mcp.json 在、实例 running、latest 页向量 100%）。川哥 2026-08-01 拍板挂起是因为 **kimi 整体适配优化没做透**，属产品优先级，**不是它坏了** |
 
 ### ✅ 巡检工具：`ops/memory-health-audit.mjs`（别再手工查）
@@ -1675,9 +1675,10 @@ pattern 会匹配到你自己那条 ssh 命令行，把连接杀掉（exit 255�
    `SOUL.md`；跨项目通用约定认 `~/.grok/AGENTS.md`；当前项目规则认
    `~/workspace/AGENTS.md`；纠错和事故沉淀认 `BEHAVIORAL_RULES.md`。禁止在其它文件
    重复称呼或人设。
-2. **四份文档必须互相可导航**：每份文件都维护 `h-profile-index`，说明四类文件路径、
-   内容归属和冲突处理。用户平台展示可编辑正文与索引，但必须剥离 `h-soul`、`h-global`、
-   `h-rules`、`h-method`、`h-mem` 等运行镜像，避免用户编辑平台生成副本。
+2. **四份文档必须互相可导航，但索引不能进入编辑框**：每份真实文件都维护
+   `h-profile-index`，说明四类文件路径、内容归属和冲突处理；用户平台 textarea 只展示
+   可编辑正文，索引关系另用只读说明展示。必须同时剥离 `h-profile-index`、`h-soul`、
+   `h-global`、`h-rules`、`h-method`、`h-mem` 等托管块，避免用户编辑平台生成副本。
 3. **默认模板不能替用户决定称呼**：新用户默认直接称“你”，禁止硬编码“老板”“川哥”
    或任何姓名。存量迁移只替换与旧默认模板完全相等的正文；宽泛搜索替换会毁掉用户主动
    写入的业务语义和个性化内容。
@@ -1693,6 +1694,10 @@ pattern 会匹配到你自己那条 ssh 命令行，把连接杀掉（exit 255�
    可编辑工作区称呼泄漏 `0`、旧默认称呼 `0`；动态侧至少各跑一次真实 Grok/Kimi Runner，
    查回复、`task_begin/task_end`、模型字段和 Bot 送达。用户明确设有静默窗口时，窗口内只做
    不送达 Runner 探针；主动送达必须遵守 `notBefore AND nextInbound`。
+8. **“保存后被恢复”先分 UI 边界与真实写入**：先查 Bridge `memory op ok`、源文件
+   修改时间/SHA256、控制面镜像哈希。真实文件和镜像一致时，不得宣称数据丢失；检查是否把
+   服务端必然重建的托管块放进了 textarea。修复必须在共享 `profile-topology`，禁止按 uid
+   特判；上线后由 Bot 主动通知用户，用户只做最终页面体验确认。
 
 ## 全用户运行机制契约（2026-07-28）
 
