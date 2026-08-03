@@ -3117,3 +3117,56 @@ DoH 不回退），所以监控**必须在用户视角侧（本机）跑**，服
 - 卸载：`launchctl bootout gui/$(id -u)/com.cc.h-entry-watch` + 删 plist。
 - 已知边界：本机整体断网时告警发不出（监控无法自证），恢复后 probe-log 可回溯；
   Xray error log 未落盘（config `error:None`），DNS 错误无被动观测——行为级探测即替代。
+
+## 新会话真实 CLI 执行（契约 2026-08-03.1，双站已上线）
+
+「新会话」按钮与纯文本 `/new`（无正文）共用 `queueNewSessionCommand` →
+`lib/new-session-command.mjs`。语义：**先写新 sessionId 到 map → 真实 Runner 跑
+CLI 初始化（short/2 turns，`replayable:false`）→ onChildSpawn 未触发即判失败 →
+CLI 成功后才写 reset marker → 失败恢复旧 mapping**。`/new + 任务正文` 保持旧语义
+（换 session 后直接执行任务）。机制项 `verified_new_session_command`。
+
+- **面向用户文案统一「H 引擎」**（川哥 2026-08-03 拍板）：`engineCliLabel()` 恒返
+  「H 引擎」，toast/成功卡/失败卡不得出现 Grok/Kimi 供应商品牌；内部日志仍分引擎。
+  测试有反断言（`doesNotMatch /grok|kimi/i`），改文案先看它。
+- **真机验收判据五件**（healthz 全绿证明不了它能跑）：①RPC 三态 `new-session-<uuid>`
+  requested→acked→result；②runner 日志 `grok start mode=short
+  mode_reason=new_session_cli_init sid=<uuid>`；③map entry `reason=card_new_cli`
+  且 sessionId=同一 uuid；④reset marker（`role:system, reset:true`）时间戳晚于
+  rpc_result；⑤后续任务日志 `sid=` 用新 uuid（切换真实生效）。
+- ⚠️ **验 session map 按 sessionId 全 map 搜，别盯死历史 key**：租户 map key
+  （`feishu:dm:<open_id>:<hash>`）的 hash 随 cwd/role 布局演进换代，同一用户会留
+  多个代际 key。2026-08-03 我拿 7-30 的旧 key 当"主会话"做基线，写后读它当然没变
+  ——全 map 按新 sessionId 反查才找到真实落点。同族教训：record_id 重定位（Base 节）。
+- 观测点：租户 map `<usersRoot>/<uid>/.session-map.json`；RPC 事件
+  `workspace/.runner-rpc/<sha256(appId:uid|owner)>.v1.jsonl`（**scope hash 对撞
+  定位法**：`printf 'cli_xxx:owner' | shasum -a 256` 前 12 位=文件名，可反查文件
+  归属哪个 App）；历史 `<cwd>/.chat-history/<hash>.jsonl`。
+
+## 部署窗口与在途任务（2026-08-03 实测教训）
+
+**重启会把在途任务打断成 orphan**：10:02 部署 dev198 时，川哥 09:57 发给 owner Bot
+的任务正在跑，重启后 runnerRpc orphaned 净增 1。判读与处置：
+
+1. **部署前看一眼在途**：healthz `queueDepthTotal`/app 级 `activeTasks`，非零时
+   要么等要么接受打断并事后对账。`--check` 体检不含这项，得自己看。
+2. **orphan 增量=部署账**：orphan 绝对值含历史累计（7-30 起挂着 2 个），只有
+   部署前后差值归本轮。定位归属：orphan 的 RPC 文件名→scope hash 对撞→appId:uid；
+   事件里 `record.args.options.sessionKey` 含 open_id。
+3. **orphan 恢复是管理台人工触发**（`/admin/api/orphan`，rerun 需 confirm=RERUN，
+   cancel 不需），执行面 15s 拉一次 ops。`lastOpAt=null`=从来没人操作过，
+   recovery planner 的周期日志只是报告不是执行。
+4. `replayable:false` 的内部任务（新会话初始化）不会进 orphan 重放（replayRecord
+   =null），用户任务才会——这是 2026-08-03.1 修复特意划的边界。
+
+## 全员通知的最小合规路径（2026-08-03 实测，12/12）
+
+共享机制变更后按铁律 13 全员主动通知。没有现成广播入口，标准做法：
+
+- 一次性脚本复用 `lib/app-registry.mjs` 的 `loadAllCredentials`（需 env
+  `FEISHU_CREDENTIAL_SECRET`+`FEISHU_ACCOUNTS_FILE`，仓根 `set -a && . ./.env`）
+  + `loadUserRegistry` 过滤已激活 App + `buildStatusCard` 发 interactive 卡。
+- 收件人=凭据 store 里各 App 的 `openId`（扫码人，即绑定用户）；owner 也发。
+- **脚本必须放仓根跑**（/tmp 解析不到 node_modules），跑完立即删，不入 git。
+- 纪律：`--dry-run` 先核对目标清单再真发；`uuid` 幂等键（`ns-upgrade-<日期>-<app后8>`）
+  防重跑重复发；判成认 `data.message_id` 非空并逐条留存；两端（dev198+Mini）各跑。

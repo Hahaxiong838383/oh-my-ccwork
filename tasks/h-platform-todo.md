@@ -1,18 +1,25 @@
 # H 平台后续 TODO（持续更新）
 
-## 2026-08-02 20:48 当前真值
+## 2026-08-03 10:3x 当前真值
 
-> 本节覆盖下面的 2026-07-31 历史快照；历史章节保留用于追溯，不能再当当前运行状态。
+> 本节覆盖下面的 2026-08-02/07-31 历史快照；历史章节保留用于追溯，不能再当当前运行状态。
 
 ### 已确认上线
 
-- Bridge 分支 `codex/h-mini-ab-poc` 本地与远端均为 `3a6423b`；`main` 保持 `9119311`，尚未合并。
-- aliyun-hk 控制面 `v1.38.0`，`h-control` active；“系统架构”Tab 已完成生产 API/SSE
-  18/18、浏览器 13 项和远端专项 52/52 验收。
-- 系统架构页当前展示 28 个节点、38 条链路、18 类协议和多租户 8 阶段；
-  `behaviorContractVersion=2026-08-02.5` 单值正常，漂移告警链已真机验证。
-- dev198 当前 11/11 App connected，active/waiting/queue/live session/Outbox pending 均为 0；
-  owner 和两个自有测试 Bot 均未被本轮控制面发布重启。
+- **新会话真实 CLI 执行已双站上线**（契约 `2026-08-03.1`，机制项
+  `verified_new_session_command`）：Bridge 分支 `codex/h-mini-ab-poc` =
+  `44b3ac2f5e38`（`fe8f0c1` 主修复 + `44b3ac2` H 引擎文案统一），双站
+  HEAD/meta/healthz 五处对齐；`main` 保持 `9119311` 未合并。
+- 真机验收四轮全过（Mini AI 专家 ×3 + dev198 川哥测试 Bot ×1）：RPC 三态、
+  CLI child、map 切换（reason=card_new_cli）、reset marker 时序、旧上下文清空。
+  全员升级通知 12/12 送达（逐条 message_id）。
+- **面向用户文案统一「H 引擎」**（川哥拍板）：新会话交互不再出现 Grok/Kimi 字眼。
+- aliyun-hk 控制面 `v1.38.0`，`h-control` active；系统架构 Tab 漂移告警链已真机验证。
+- dev198 11/11 + Mini 1/1 connected，deliveryOutbox 0/0；双端 bridge+runner-worker
+  已于本轮部署同时重启（dev198 10:02:11 / Mini 两轮）。
+- ⚠️ 遗留：dev198 10:02 部署打断一条在途任务（川哥本人 09:57 发 owner Bot 的
+  任务管理指令，orphan `9cc13a22…`）——川哥拍板自己重发 + 自行通过 owner bot
+  cancel 该 orphan；其余 2 个 orphan 为 7-30/31 历史累计。
 
 ### 飞书需求看板现状
 
