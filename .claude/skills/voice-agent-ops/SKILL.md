@@ -218,3 +218,16 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 **B9 租户红线(2026-07-31)**:⚠️ **永远不要给租户 worker 开 `BARGE_SPEAKER_*`**——声纹注册库只有本机主人的样本,租户用户从未注册,开了=**他们的用户说话被判"外人"→ 所有打断被否决**,比不做还差(负收益,不是效果差一点)。这类"依赖用户特有注册数据"的能力,验收也不能外包给对方,详见 [[feedback_acceptance_needs_owner_specific_data]]。要给租户上,前置交付物是**自助声纹注册流程**,不是打开开关。
 
 **B8 回滚**:`bash 2-Projects/realtime-voice-agent/scripts/rollback-b8.sh`(revert 330d75ce1 + rsync + restart 两 worker,分钟级)。触发条件=开场白丢失/身份错乱/对话行为变化。更早的整体快照 `/root/rollback-batch2-0731.tar.gz`(含 B9 之前全部代码)只在要连 B9 一起退时用。
+## 租户链路自主 E2E(2026-08-03,不再等同事真机)
+
+**能力**:自产测试音频+probe 打租户 agent,5 分钟闭环复现租户线任何对话问题。
+```bash
+# 64.90 上:① 用租户凭据合成问句 wav(16k,零转码)——模板在 /tmp/mk_story_wav.py 思路:
+#   build_tts_request(问句, sample_rate=16000, encoding raw) → wave 写 /tmp/q.wav
+# ② probe 打租户 agent(PROBE_AGENT 环境变量,2026-08-03 加):
+cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=javis-colleaguedem-5675d9 timeout 75 /root/voice-venv/bin/python   scripts/rtc_probe.py --wav /tmp/q.wav --room probe-$(date +%s) --warmup 8 --listen 40 --record /tmp/a.wav
+```
+注意:会真跑同事 /v1 一轮(花他少量 token,联调范畴);probe identity 会出现在他后台。
+
+**「只说一句/内容缺失」诊断遥测**(常驻,2026-08-03):三行日志一次定层——
+`journalctl grep "llm stream done"`(上游给了多少字)+`grep "xfyun tts synthesize"`(每句进合成的文本,数行数=句数)+录音有效时长。三层对齐=己方无罪(实战:上游只给 15 字,全部念完,责任面一次切清);llm chars 大而 tts 一段=切句层;tts 多段而听到一句=播放/打断层(配 interrupt telemetry interim 判)。
