@@ -144,10 +144,42 @@ ssh dev198 'echo OK'; ssh mini-pub 'echo OK'                # 公网回路
 
 ---
 
+## 六、幽灵接口：查不明 enX 的正确姿势（2026-08-03 实查）
+
+macOS 上常见一堆来路不明的 `enX`——`ifconfig` 有、`status: active`、却只有 `169.254.x` link-local，且**不在 `networksetup -listallhardwareports` 里**。别急着当故障。
+
+**`ifconfig` / `networksetup` 都答不了这个问题，权威数据源是这个文件：**
+
+```bash
+plutil -p /Library/Preferences/SystemConfiguration/NetworkInterfaces.plist \
+  | grep -B3 -A22 '"BSD Name" => "en12"'
+```
+
+看三个字段就够定性：
+
+| 字段 | 含义 |
+|------|------|
+| `IOPathMatch` | 设备树路径，**接口的真实来源**（USB/雷电/虚拟） |
+| `SCNetworkInterfaceInfo` | `idVendor`（1452=Apple）/ `kUSBProductString`（对端设备名） |
+| `HiddenConfiguration` / `HiddenInterface` | true = 不进网络设置界面、不参与服务顺序 → **抢不走默认路由** |
+
+**已定性的本地案例**：Studio 的 `en11`/`en12`、Mini 的 `en5-en7`/`en10` 全是 **USB NCM**（Network Control Model）接口——两台 Mac 用 USB-C 线连接时 macOS 自动创建，属原生特性。看路径关键字分辨方向：
+
+- `USBXHCI/...Mac@.../NCM Data/AppleUSBNCMData` = **Host 侧**（对端插进来的是一台 Mac）
+- `USBXDCI/AppleUSBDeviceNCMData` = **Device 侧**（本机作为设备等待被连）
+
+**判非故障的三条依据**（缺一都不能下结论）：① `HiddenConfiguration=true` 不参与路由；② `169.254.x` 是 NCM 直连的正常形态（这条链路本来就没 DHCP）；③ `arp -i en12 -a` 只有 mDNS 组播、**无真实邻居** = 链路上没有实际流量。
+
+⚠️ **两个易错点**：
+1. **服务顺序里的名字 ≠ 当前插着的硬件**。Studio 服务顺序有 "USB 10/100/1000 LAN (en10)"，但硬件端口列表里**根本没有 en10** —— 那是网卡拔走后残留的服务配置。别把它跟别的 enX 张冠李戴（本次就先错认过一次）。
+2. **`ioreg` 树形行前面有 `|` 缩进前缀**，正则写 `^\s*\+-o` 匹配不到会静默返回空，看着像"查无此物"。要么用 `\+-o` 不锚定行首，要么直接查上面那个 plist。
+
+---
+
 ## 待办（需要川哥出手）
 
 - [ ] 在 `http://192.168.61.254` 把 `.18 / .66 / .177 / .233` 做成 **DHCP 保留**或从池中排除（Mini 的 `.66` 原是池内地址）
-- [ ] Studio 的 `en12` 接口 status active 但只有 link-local `169.254.x`（没拿到 IP），服务顺序里排第 2 的 "USB 10/100/1000 LAN"——空跑还是接了条不通的线，待确认
+- [x] ~~Studio 的 `en12` 只有 link-local 待确认~~ → **已查清，非故障**：见下方「幽灵接口」一节
 - [ ] Studio 的 Ollama 只监听 `127.0.0.1:11434`，外机连不上；MLX `:8000` 与 brain `:19080` 均未在跑（2026-08-03 实测，与旧记忆描述不符）
 
 ---
