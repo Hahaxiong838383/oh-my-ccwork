@@ -1044,45 +1044,70 @@ def _make_agent(
             不进字幕);未配置哨兵时零开销直通 default 实现。
             """
             source = agent_cls.default.llm_node(self, chat_ctx, tools_, model_settings)
+            # 诊断遥测(2026-08-03"只说一句"排查):流结束打字符数——LLM 侧到底给了多少。
+            # 对齐 xfyun tts synthesize 行即可判层:llm chars 大+tts 一段=我们切句层;
+            # llm chars 小=上游 SSE 早断;llm chars 大+tts 多段=播放/打断层。
+            n_chars = 0
+            n_chunks = 0
             if not end_sentinel:
-                async for chunk in source:
-                    yield chunk
+                try:
+                    async for chunk in source:
+                        n_chunks += 1
+                        d = getattr(chunk, "delta", None)
+                        c = getattr(d, "content", None) if d is not None else None
+                        if isinstance(chunk, str):
+                            n_chars += len(chunk)
+                        elif c:
+                            n_chars += len(c)
+                        yield chunk
+                finally:
+                    logger.info("llm stream done: chunks=%d chars=%d", n_chunks, n_chars)
                 return
             from .sentinel import SentinelStripper
 
             stripper = SentinelStripper(end_sentinel)
             notified = False
             last_chunk: Any = None
-            async for chunk in source:
-                delta = getattr(chunk, "delta", None)
-                content = getattr(delta, "content", None) if delta is not None else None
-                if isinstance(chunk, str):
-                    cleaned = stripper.feed(chunk)
-                elif content:
-                    last_chunk = chunk
-                    cleaned = stripper.feed(content)
-                else:
-                    yield chunk  # usage/tool_call/FlushSentinel 等原样透传
-                    continue
-                if stripper.found and not notified and on_sentinel is not None:
-                    notified = True
-                    on_sentinel()
-                if not cleaned:
-                    continue  # 整段被扣(哨兵本体或其前缀),不放行
-                if isinstance(chunk, str):
-                    yield cleaned
-                else:
-                    delta.content = cleaned
-                    yield chunk
-            tail = stripper.flush()
-            if tail:
-                # 尾部扣住的"疑似前缀"实为正常文本,补发(不能丢字)
-                if last_chunk is not None:
-                    nc = last_chunk.model_copy(deep=True)
-                    nc.delta.content = tail
-                    yield nc
-                else:
-                    yield tail
+            try:
+                async for chunk in source:
+                    delta = getattr(chunk, "delta", None)
+                    content = getattr(delta, "content", None) if delta is not None else None
+                    if isinstance(chunk, str):
+                        n_chunks += 1
+                        n_chars += len(chunk)
+                        cleaned = stripper.feed(chunk)
+                    elif content:
+                        n_chunks += 1
+                        n_chars += len(content)
+                        last_chunk = chunk
+                        cleaned = stripper.feed(content)
+                    else:
+                        yield chunk  # usage/tool_call/FlushSentinel 等原样透传
+                        continue
+                    if stripper.found and not notified and on_sentinel is not None:
+                        notified = True
+                        on_sentinel()
+                    if not cleaned:
+                        continue  # 整段被扣(哨兵本体或其前缀),不放行
+                    if isinstance(chunk, str):
+                        yield cleaned
+                    else:
+                        delta.content = cleaned
+                        yield chunk
+                tail = stripper.flush()
+                if tail:
+                    # 尾部扣住的"疑似前缀"实为正常文本,补发(不能丢字)
+                    if last_chunk is not None:
+                        nc = last_chunk.model_copy(deep=True)
+                        nc.delta.content = tail
+                        yield nc
+                    else:
+                        yield tail
+            finally:
+                logger.info(
+                    "llm stream done: chunks=%d chars=%d sentinel=%s",
+                    n_chunks, n_chars, stripper.found,
+                )
 
         async def on_user_turn_completed(self, turn_ctx: Any, new_message: Any) -> None:
             if speaker_sidecar is not None:

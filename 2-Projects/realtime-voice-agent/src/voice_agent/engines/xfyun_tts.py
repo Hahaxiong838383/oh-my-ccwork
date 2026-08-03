@@ -96,6 +96,9 @@ class XfyunChunkedStream(tts.ChunkedStream):
         self._text = text
 
     async def _run(self, output_emitter: AudioEmitter) -> None:
+        # 诊断遥测(2026-08-03"只说一句"排查):每段合成一行——数这行=数实际进
+        # 讯飞的句子数,与 "llm stream done: chars" 对齐即可定层
+        logger.info("xfyun tts synthesize: %d chars %.24r", len(self._text), self._text)
         output_emitter.initialize(
             request_id=utils.shortuuid(),
             sample_rate=self._xf._sr,

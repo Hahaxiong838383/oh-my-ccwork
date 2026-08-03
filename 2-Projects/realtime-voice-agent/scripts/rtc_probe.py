@@ -47,7 +47,7 @@ WS = os.environ.get("LIVEKIT_URL", "ws://127.0.0.1:7880")
 HTTP = WS.replace("wss://", "https://").replace("ws://", "http://")
 KEY = os.environ.get("LIVEKIT_API_KEY", "devkey")
 SECRET = os.environ.get("LIVEKIT_API_SECRET", "secret")
-AGENT = "realtime-voice-agent"
+AGENT = os.environ.get("PROBE_AGENT", "realtime-voice-agent")
 
 
 def load_wav(path: str) -> tuple[np.ndarray, int]:
