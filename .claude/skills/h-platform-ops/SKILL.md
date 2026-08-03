@@ -3436,7 +3436,24 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
     `ensureGrokModelPin`（sandbox.mjs，App 装配即自愈：写前查 models_cache 池，
     desired 不在池回退默认、默认也不在池**保持现状+告警绝不硬写**；幂等短路）。
     部署重启当场 9/9 grok 租户全量钉回 4.5（journal `grok model pinned`）。
-    trace task_begin 的 model/providerModel 记钉定值（原「CLI 自管」=盲区）。
+    ~~trace task_begin 的 model/providerModel 记钉定值~~ ⚠️ **勘误（2026-08-03
+    深夜）：钉定值是纸面账**——pin 写的 config default **只对新会话生效，resume
+    旧 session 沿用会话创建时的模型**（grok session 持久化模型状态）。真机铁证：
+    12:08 任务 trace 记 4.5、unified.jsonl 真实调用 grok-4.20-non-reasoning；
+    8/10 租户在 4.20 上跑了大半天而观测全绿。**「配置已下发」永远证不了
+    「运行时在用」，长生命周期载体（session/连接/进程）会把旧配置钉住。**
+  - **模型锁定二件套（cb36829，双站已上线）**：①grok-runner 每任务显式
+    `-m <钉定值>`（kimi 铁律 11 横搬——当时只立给 kimi 没横向到 grok；`-m` 是
+    CLI 解析链第一优先级，**resume 也被覆盖**，真机反向实验 4.5 会话→4.3 实证；
+    钉定值 spawn 前现读 config.toml，fail-open）②trace 的 `usage.actualModel`
+    记**真实调用**（unified.jsonl 的 `model changed` 事件 ctx.model——CLI 每次
+    进程启动都打含 resume，与配置意图分开记账）。存量旧会话下次任务自动矫正，
+    无需轮换 session。
+  - **验「租户真实在用什么模型」只认两处**：`unified.jsonl` 的 `model changed`
+    事件（引擎侧真值）/ trace `task_end.usage.actualModel`（平台侧采集）。全租户
+    扫描：遍历 `/srv/h-platform/users/*/.grok/logs/unified.jsonl` 取各自最后一条
+    model changed。**bot 自述（「我是 Grok 4」）与 trace 的 model 字段（配置意图）
+    都不是证据。** owner 能答「Grok 4.5」是订阅通道品牌展示，非自我认知。
   - **用户自选链**：租户后台「对话引擎」区模型下拉（xai 分支，html.mjs）→
     `POST /api/model`（形状+池双校验）→ store.grokModel → `/internal/users` →
     执行面 mergeControlUsers → ctx.grokModel → pin desired。可选列表 = bridge
