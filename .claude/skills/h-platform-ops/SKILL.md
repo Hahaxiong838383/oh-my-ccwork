@@ -3594,6 +3594,61 @@ ORPHAN_CANCELLED，它下一轮照样回来**。所以这类问题的判据是�
 证据是 `message_id` + 飞书 API 回执，**别拿 healthz 的出站计数当送达证明**，也别因为
 它是 null 就判定没发出去。发前先 `--dry-run` 打印卡片全文留档。
 
+## Base Intake 验收门与上下文运行真值（v1.39.3，2026-08-04 三处上线，commit 6fb65da）
+
+### 上下文运行真值的判据
+
+旧实现用**执行站宿主机 HOME** 拼引擎路径当租户上下文上报，管理台因此显示
+`/home/chuan`、`/Users/<管理员>`——那些路径在 bwrap 租户沙箱里**物理不可达**。
+现在按运行环境登记，验收认这三个值（`lib/sandbox.mjs` 常量真值，别手写）：
+
+| 运行环境 | 应显示 |
+|---|---|
+| bwrap · grok | `/opt/grok/grok` |
+| bwrap · kimi | `/opt/kimi/kimi` |
+| bwrap · omp | `/opt/bun/bin/omp` |
+| Mini native | `站点共享 H 引擎（native）` |
+
+控制面 `runtimeEntry()` 对 `bin`/`entry` 双侧兜底：命中
+`^/(home|Users|srv|root|private|tmp)/` 或 `^/var/folders/` 一律置 null，`/opt/…` 放行。
+**验收扫全部 `data/memory-manage/*.context.json`**，不是只看一个用户。
+
+### 验收门拦的四类（`lib/base-intake-policy.mjs`）
+
+门在**成功卡送达之前**（`runProactiveTask` 里 `validateResult` 抛错 → 不发送 →
+worker catch → Base 回填「被阻塞」）。四类判据全部依赖 `larkAudit` 的真实字段
+（`writes`/`failed`/`unfinishedListRead`/`tampered`，由 `lib/lark-audit.mjs` 产出，
+**不是空门**）：验收码缺失、必需事实缺失（版本/Bot 数/队列深度）、敏感串
+（App ID / open_id / uid / 内网 10-8·127-8·192.168-16·172.16-12 / 凭据 / 绝对路径）、
+lark-cli 越界（只读任务发生写入、非飞书任务调 lark-cli、失败调用、列表未翻页到底）。
+
+需要平台运行状态的任务由控制面 `/internal/runtime-status` 下发可信真值，
+禁止模型自己猜。该端点无 token 应返回 **401 而非 404**——用这个判端点在不在。
+
+⚠️ **扫「模型有没有泄露」只能扫它写入的那两列**（实际结果 / 测试与验收证据）。
+主表整行含 `创建人/负责人/验收人` 系统字段，渲染成 `[{"id":"ou_…"}]`，
+**扫整行必然命中系统 open_id 而误判成泄露**（2026-08-04 我就这么误报过一次）。
+
+### 真机验收 SOP
+
+1. **先读后改**（铁律 23）：字段用 `+field-list`（返回在 `data.fields`）、
+   视图条件用 `+view-get-filter`、视图内容用封装 `+record-list --view-id`。
+   完整命令契约见记忆 [[reference_lark_cli_pitfalls]] §8——**别猜 flag 和格式**。
+2. **新样本要落进 Worker 认领的视图**：需求看板筛选是
+   `类型∈{需求,Bug,优化,运维}` AND `状态∉{已关闭,验收通过,验收通过关闭}`；
+   Worker 只认 `状态=已排期`。建记录用 `+record-batch-create --json`
+   （列序形式 `{"fields":[…],"rows":[[…]]}`），**先 `--dry-run` 验形状**。
+3. **先确认目标 Bot 归属**：`H_BASE_INTAKE_TARGETS` 的 appId 映射到人。
+   完成卡会主动发到那个人，别把验收样本的卡发到同事那里。
+4. **证据五件套**：Base 状态转 `已修复待验收`、实际结果含验收码、证据含
+   `TaskSessionLog task_id=…`、`Feishu message_id=om_…`、`Base Intake 验收门=通过`。
+
+**H-0071 实录（2026-08-04）**：验收码 `H-ACCEPT-B-20260804-5EB7`，
+`task_id=base-cvrhkWuzSh1C-3e6683af6f`、`message_id=om_x100b68265063c4a0c07e73059756121`，
+五件套齐、Runner 输出敏感串零命中。对照组是同表的 H-0053 / H-0067——
+两条历史**验收失败**，失败原因（没查控制面信息、调无关飞书命令、越权写日志、
+回复暴露身份标识）正好是这道门的四类判据。
+
 ### 待办
 
 - **执行保真层留给真实流量的验证**：①下一个租户任务 trace 出 `model=grok-4.5`
