@@ -3510,6 +3510,51 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
   非零」——应用侧 okr 全缺但 token 攥着旧授权照样能调（token=授权快照，双向
   都成立）；「后台开了≠能用」的反面是「后台没配≠不能用」。
 
+## 🔴 多站点恢复收口（v1.39.1，2026-08-04 双站+控制面上线，commit f329560）
+
+dev198 与 Mini 的 orphan 报告此前**互相覆盖**（谁后上报谁赢），管理台总数在
+6 和 1 之间跳；操作也会跨站误领。现按执行站点分桶。
+
+**站点真值只认控制面收到的 `site`**：`H_EXECUTION_SITE` → `createControlClient({site})`
+→ 三个 `/internal/orphan-*` 全带 site；控制面 `sanitizeOrphan(item, site)` 用参数
+**覆写** `item.site`——报告正文里的站点字段不可信（执行面可能被篡改或写错）。
+旧 `state.report` 读时迁成 `reports.legacy`，首个显式站点上报后 `delete reports.legacy`。
+同一 `orphanId` 在两站同时出现时 `enqueue` **fail closed 不建操作**。
+
+### 处置 orphan 的三条硬约束
+
+1. **入队只有管理员 cookie 一条路**。38 个 `/internal` 路由（全量枚举过）**没有**
+   orphan 入队口，`POST /admin/api/orphan` 在 `isAdmin` 守卫内。cc **不铸造管理员
+   会话**——那等于以川哥身份认证。要么川哥在管理台点，要么授权 cc 从旁进程调
+   store API（见下）。
+2. **store 没有跨进程锁**。`withFileMutationQueue` 是**进程内 Map**，
+   `atomicWriteJson` 只保证不撕裂**不保证互斥**；而 h-control 每 ~15s 写一次报告。
+   旁进程读-改-写会静默丢更新，**且可能丢的是我这条**（我报"已入队"、磁盘上没有）。
+   所以：走 `import` 调 `enqueue()`（保留全部校验与副作用，别手改 JSON）+ **回读
+   磁盘复验**，用磁盘态而非返回值下结论（[[feedback_inprocess_lock_is_not_crossprocess_lock]]）。
+3. **probe / cancel 无对外副作用**（`resolve()` 只做 followUpQueue.cancel +
+   runnerRpc.resolve + taskSessionLog 审计，**不发飞书**）；**rerun 会真跑任务并把
+   结果推到用户 chat**。所以**他人 Bot 的恢复项一律不代决**——重跑等于替同事往他
+   飞书发消息。2026-08-04 王宣凯那两条就是这么留着没动的。
+
+### ⚠️ `probe` 的 `deliveryPending` 对 rpc 型 orphan 恒真
+
+判据是 `outbox.pending 含该 taskId` **或** `runnerRpc.orphans() 含该 requestId/taskId`。
+kind=rpc 的 orphan **按定义就在第二个集合里** → 永远 true，在最需要判别的场景
+没有判别力（Mini 那条返回 false 只因它是 kind=compute、不在 rpc 列表）。
+**判「真有没有卡住的投递」看 healthz 的 `deliveryOutbox.pending`**，别信这个字段。
+
+### 部署顺序与脚本差异
+
+执行面**先**发（向后兼容：旧控制面忽略新增 `site` 字段），双站都到位后**再**发控制面；
+反过来会让 `legacy` 过渡态长期存在。控制面部署结构是 `/srv/h-control/app/{server.mjs,lib/**}`，
+不是仓库里的 `control-plane/**` 路径。
+
+⚠️ `ops/deploy-sites.sh` 的 **dev198 段重启是 `restart bridge runner-worker`（bridge 在前）**，
+而规程要求 **runner-worker 先**。要按规程顺序就 `SKIP_RESTART=1 ops/deploy-sites.sh dev198`
+拿它的 merge+meta 真值机制（防编 hash / 吞 merge 失败 / 漏看 meta 三错），重启自己按序做。
+Mini 段本来就是 runner→bridge，可整段跑。
+
 ### 待办
 
 - **执行保真层留给真实流量的验证**：①下一个租户任务 trace 出 `model=grok-4.5`
@@ -3522,9 +3567,14 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
   skill-content API + fork 对齐流程）：①读任务表优先用表内现成公式/状态字段当
   口径（「应结束未结束/应开始未开始」），禁自己发明「逾期」定义；②读**视图**
   内容必须用封装 `+record-list --view-id`（Meta 的 has_more 可靠），**禁用裸
-  api GET+view_id 当视图数据**（那是只排序不筛选的全表投影=假全量）。同步考虑
-  url-scope hint 里「api 命令可用 --page-all」的措辞加限定（--page-all 只适用
-  全表读；视图读用封装命令翻页）。
+  api GET+view_id 当视图数据**（那是只排序不筛选的全表投影=假全量）。
+  ~~同步考虑 url-scope hint 措辞加限定~~（✅ 2026-08-03 `5d88dd1` 已修并双站上线：
+  视图读用封装命令翻页，`--page-all` 限定全表）。
+- **orphan `2d51ca81d4f6` 待定处置**（川哥 08-03 01:57 P2 表格批量状态更新）：
+  probe 已回 `PROBE_OK`，`deliveryPending=true` 属 rpc 型恒真**不是**真卡投递
+  （同刻 dev198 `deliveryOutbox.pending=0`）。cc 建议 **cancel 后由川哥重发**——
+  该任务距今约一天、内容是对共享 Base 批量改状态，重跑会按过期口径写生产表格。
+  未经川哥点头不动。
 - **判定⑤范围披露的口径微调评估**：视图筛选后条数（封装真值）与裸 api total
   不同源，bot 披露「120 条读完」时用户按 UI 口径核对是一致的——现行为已对，
   仅当披露词表误伤时再调。
