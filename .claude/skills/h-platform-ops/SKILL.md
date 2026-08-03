@@ -3388,6 +3388,21 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
     调用序列（谁翻了几页、rc/meta）→ grok session 的 tool_result（有限：shell
     循环落临时文件统计时页面原文不进历史）→ 独立仲裁读数定案。usage input
     tokens 量级差（766K vs 1036K）是「读取完成度不同」的第一嗅探信号。
+  - **范围三件套（契约 2026-08-03.8，双站已上线）**：①`lib/task-hints.mjs`
+    `url-scope` hint——消息里飞书资源链接带 table/view/sheet 参数即把**参数原值**
+    连同读取纪律注入任务尾部（注入点 runner-adapter，**直连 runGrok 的探针会
+    绕过它**=假阴，验收必须穿 adapter）；②wrapper 对 `--table-id/--view-id` 的
+    **值**入审计（`res=table:tblX,view:vewY` 字段，纯字母数字白名单）；③Stop hook
+    判定⑤——≥3 次带 res= 的读 + 数量结论 + 回复无范围披露词（视图/全表/vew/tbl）
+    → block 要求补披露。真机验收（测试 bot、川哥原话）：回复出现完整「读取范围」
+    区块（表/视图 id + 累计条数 + has_more 状态 + 扩范围先请示），三判据 PASS。
+  - 🔴 **「bot 报的条数和用户 UI 里看的不一样」先查 token 视角，别当偷懒**
+    （2026-08-03 验收实测）：同一个视图（vewtgglpKH），owner user 通道
+    `total:121, has_more:true`，测试 bot 通道同参数只见 ~10 条且服务端
+    `has_more:false`——**Base 高级权限按接入 App 的授权身份过滤记录，两边都是
+    服务端真话**。租户 bot 忠实读完+披露后数字仍与用户 UI 不同，属「租户在其
+    主人的飞书权限范围内」的数据面边界（by design 口径），处置是给该 App 提权/
+    调 Base 协作者角色，不是修 bot。
 - **P2b scope 对账+自助重授权**（机制项 `scope_reauth_self_serve`）：
   - 权限对账卡带「🔁 重新授权」回调按钮（`cmd:lark_reauth`）→ `startLarkReauthChain`
     分批设备流：**飞书设备流 scope 数上限实测 250 过/350 拒，取 200/批**；每批
