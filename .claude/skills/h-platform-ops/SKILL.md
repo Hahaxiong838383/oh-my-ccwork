@@ -3372,6 +3372,22 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
   即停不拦。③事实行披露「⚠️ 有列表读取未读到末尾…」+「🚫 拦截 N 次身份越权调用」。
   不捕获集合：auth/config/doctor/profile/update/help/schema/skills/**event**（长轮询
   缓冲会改变行为）；mktemp 失败直接 exec（fail-open）。
+  - 🔴 **已知盲区（2026-08-03 双 bot 同题实测暴露）**：护栏只认「最后一次列表读
+    has_more=false」，防不住**范围本身错误**——①offset 翻过头的空页（count=0）
+    has_more 照样 false，「一串假 false」看起来像读全了；②读错视图/丢 URL 的
+    `&view=` 参数/中途从视图漂到全表，每一步 has_more 都可以是 true→false 的
+    「完整」序列。真机形态：产品专家 bot 分页翻车后换 JSON 姿势重拉，读到全表
+    ~27% 碎片就自信收尾（报「主责 79 条逾期 2 条」，视图口径 32/0、全表口径
+    297/14，**哪个口径都对不上**，还错误声称「按视图全量读取」）；同题测试 bot
+    读全了全表（297/逾期14/将到期10 与独立仲裁逐编码全对）但无视了 URL 指定的
+    view。升级方向（未做，待拍板）：结论必须披露「读取范围（表/视图 id）+累计
+    条数」，Stop hook 校验披露在场；view 参数从 prompt URL 机制化透传。
+  - **双 agent 同题输出分歧的仲裁法**：别对着两份自述比对（两份都可能错）——
+    **自己独立读一次拿基准**（裸 api + `--page-all` 落盘，同口径统计），再逐编码
+    对撞。取证顺序：trace 的 prompt 全文（URL 参数是指令的一部分）→ lark-audit
+    调用序列（谁翻了几页、rc/meta）→ grok session 的 tool_result（有限：shell
+    循环落临时文件统计时页面原文不进历史）→ 独立仲裁读数定案。usage input
+    tokens 量级差（766K vs 1036K）是「读取完成度不同」的第一嗅探信号。
 - **P2b scope 对账+自助重授权**（机制项 `scope_reauth_self_serve`）：
   - 权限对账卡带「🔁 重新授权」回调按钮（`cmd:lark_reauth`）→ `startLarkReauthChain`
     分批设备流：**飞书设备流 scope 数上限实测 250 过/350 拒，取 200/批**；每批
