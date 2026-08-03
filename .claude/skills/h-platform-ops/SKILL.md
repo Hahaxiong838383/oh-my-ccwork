@@ -3210,3 +3210,15 @@ SHOT_MODE=fit（适配全局）/ mini（选中 mini 高亮）。四个坑（详�
 virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed 铺满代替）；交互全靠
 注入 driver 模拟点击；**SSE 端点代理故意 502**——既防流式挂死代理，又让页面 EventSource
 走真 onerror，顺手拿「SSE 断开，轮询兜底」真机 UI 证据（不扰动生产 SSE 的兜底验收法）。
+
+## 控制面备份清理（app.bak-*，2026-08-03 起保留策略）
+
+`/srv/h-control/app.bak-*` 每次部署新增一个（约 3.5M），保留策略：**只留最近 3 个**
+（2026-08-03 已从 34 清到 3）。清理铁律：
+
+- 命名四代混用（`MMDDHHMM`/`YYYYMMDD-HHMMSS`/`标签-epoch`/带文字后缀），
+  **字典序 sort 不是时序**——曾把 epoch 命名的 7 月末老备份当成最新，差点删掉
+  真正最近的两个。排序用 `stat -c %Z`（inode ctime，cp -a 伪造不了），并与
+  名字语义对撞一致才执行（[[feedback_newest_n_by_ctime_not_lexical]]）。
+- 删前先列保留/删除双清单 + `wc -l` 数量断言（不符中止），删后验
+  `app` 本体在 + `h-control` active。
