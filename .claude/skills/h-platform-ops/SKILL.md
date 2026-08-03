@@ -2513,6 +2513,13 @@ curl -s -X POST -H "Authorization: Bearer $H_CONTROL_TOKEN" -H 'Content-Type: ap
 | 进程管理 | `systemctl --user feishu-grok-{bridge,runner-worker}` | launchd `com.hplatform.mini-bot.{bridge,runner}` |
 | 日志 | `journalctl --user -u …` | `workspace/.logs/bridge.{out,err}.log` |
 | healthz 结构 | 统一 `apps{}`，`appCount` 为多 App | 统一 `apps{}`，`appCount=1` |
+| node 路径 | `~/.local/node/bin`（非交互 ssh 必先 export PATH） | `~/.hermes/node/bin`（**同样不在非交互 PATH**；真值取自 launchd plist 的 ProgramArguments，2026-08-03 实测 which/homebrew/usr-local 全无） |
+
+- 单文件热修同步 Mini 的实操（2026-08-03 走通）：dev198 `git diff --name-only
+  <mini基线>..<目标>` 定差异集 → 逐文件 md5 对撞 → scp 经 Air 中转（家网走
+  `mini-pub` 公网别名）→ `write-deploy-meta --commit <目标全sha>`（差异集全拷齐
+  才许不带 dirty）→ **先拷完再 kickstart**（先 runner 后 bridge）→ healthz 验
+  version=目标 commit。
 
 ### 🔴 Mini 连接 GitHub：只能走本机 Xray，禁止直连
 
@@ -3175,6 +3182,25 @@ CLI 成功后才写 reset marker → 失败恢复旧 mapping**。`/new + 任务�
 - 真机验收判据在五件基础上加一件：⑥同一张卡完成 ⏳→🚀→✅（消息列表只有一张
   状态卡，无刷屏）。
 
+### 🔴 init prompt 必须带一次性范围限定（2026-08-03 晚复读事故，91da6dd 修复）
+
+旧版 init prompt「不要调用任何工具…只回复：新会话已就绪。」**没有范围限定**，
+而它永久留在新 session 首轮。用户点完「新会话」后若只发少量消息，这条指令在
+上下文里还很「近」——**模型钉定升到 grok-4.5（服从性更强）后当场显形**：产品专家
+四条真实消息（「你现在什么模型」「哈喽哈喽」）全被回复「新会话已就绪」，且历史
+注入把旧复读带回来正反馈强化。同一时段测试 bot 正常（其会话 1.8MB，init 指令早被
+多轮任务稀释）——**「同一改动 A Bot 中招 B Bot 正常」再次先比上下文构成**。
+
+- 修复：prompt 追加「本条指令随本次回复作废：之后的用户消息不再受本条约束，一律
+  按正常任务处理，禁止再回复『新会话已就绪』」。给模型的一次性指令**永远显式
+  写明生效范围**，别默认它能从「初始化」语境推断出来。
+- 排障判据：trace 里 `task_begin.prompt=真实用户消息` 而 `task_end.reply=新会话
+  已就绪` = init 指令泄漏（路由是好的，别查 command-probe）。
+- 已中招会话的解法：rotate——生产同源装配（仿 `scripts/f1-trace-smoke.mjs`）调
+  `executeNewSessionCommand`（真实写路径：换 sessionId + 新版 init + reset marker，
+  失败自动恢复旧 entry），再同 skey 用**用户原话**发一条验证正常应答。
+  `SessionMapStore` 无内存缓存（每次读写直达磁盘），外部脚本与 bridge 行为等价。
+
 ## RPC 事件流在途对账（2026-08-03 三连坑后固化）
 
 部署前查在途量的标准方法（[[feedback_deploy_window_interrupts_inflight_tasks]]），
@@ -3368,6 +3394,8 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
 （权限/知识/规则/记忆之上）：执行保真 = 模型档位 + 机制门禁。
 
 - **grok 模型体系真值（先记这个，排「租户效果差」第一嫌疑）**：
+  - 用户问「你什么模型」答「我是 Grok 4」＝**正常自述非故障**（grok-4.5 的自我
+    认知无小版本号）；判模型真值只认 trace `task_begin.model/providerModel`。
   - owner：**订阅 session 通道**（cli-chat-proxy），池={grok-4.5}，191 次全 4.5。
   - 租户：**API key 通道**（api.x.ai），池含 grok-4.5/4.3/4.20 系/imagine/build。
   - 事故：scaffold 模板写死 `grok-code-fast-1`（已下架）→ CLI **静默 fallback
@@ -3384,6 +3412,20 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
     context-report 上报的 `grokModels`（读 models_cache，过滤 imagine/build，
     **CLI 每任务自刷新——grok-4.6 上线自动可选，平台零维护**）。列表未上报时
     页面显示占位文案；控制面 v1.39.0。
+  - ⚠️ **下拉「没显示」先查时序再查代码**（2026-08-03 实录）：grokModels 随
+    context-report 上报（任务收尾 +90s debounce），bridge 重启后要等该用户下一次
+    任务才首次落库（server.mjs 收到后拆进 **user store** 的 `grokModelsAvailable`
+    等字段，**不进** context.json——查数据别查错文件）。html.mjs 里变量名是
+    `extras.grokModel`（单数），grep `grokModels` 零命中不等于没实现。
+  - **grok-build 源码实证（2026-08-03 clone 通读，SOURCE_REV≠线上二进制仍适用）**：
+    模型解析在 `xai-grok-shell/src/agent/models/resolution.rs::resolve_default_model`，
+    优先级 **CLI `--model` > env `GROK_DEFAULT_MODEL` > config.toml `[models] default`
+    > remote settings > 内嵌 default_models.json（开源版 baked=grok-4.5）**。
+    preferred 不在可见 catalog = `tracing::warn` + **静默 fallback `visible.first()`
+    （池第一个）**——「死模型静默降级」的机制本源，源码坐实；平台 pin 前查池的设计
+    因此是必要的，不是防御性冗余。models_cache.json **TTL 300 秒**（非「每任务」），
+    CLI 版本号/origin 不匹配即 cache miss 强制重拉；外部写该文件会被 config-watcher
+    热加载。`GROK_DEFAULT_MODEL` env 档位高于 config.toml，是比改模板更强的备用钉法。
 - **Stop hook 判定④**（写声明对账）：回复声称写入/修改 + 本轮审计**只读零写**
   → block。判定②只拦零调用——「2 次读+编造写入」正落在矩阵空格
   （[[feedback_gate_matrix_gaps_attract_behavior]]）。本地产物句
