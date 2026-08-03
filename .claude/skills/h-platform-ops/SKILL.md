@@ -227,8 +227,14 @@ du -ch /srv/h-platform/memory/<uid>/db/memory.sqlite* | tail -1
 ```
 
 根因：作用域靠「近期 hook 活动」解析（见 `memory_query` 的 inputSchema 原文），
-而沙箱里**跑不了 hooks**——实测全租户 `observations` 表都是 0 条，所以默认作用域
-永远解析不到任何东西。`lib/memory-routing.mjs` 的 `SCOPE_BLOCK` 就是为此存在。
+而全租户 `observations` 表都是 0 条，所以默认作用域永远解析不到任何东西。
+`lib/memory-routing.mjs` 的 `SCOPE_BLOCK` 就是为此存在。
+⚠️ **归因勘误（2026-08-03 P3 实验）**：observations 全 0 的真因是 **hooks 配置
+从未下发给租户**（owner 宿主装 ai-memory 时自动生成 `~/.grok/hooks/ai-memory.json`
+九事件采集，平台起租户实例只写了 MCP 段）——**不是**「沙箱跑不了 hooks」。真实
+生产链路实验证明 SessionStart/PostToolUse/Stop 在 bwrap 沙箱内全部正常触发
+（[[feedback_unverified_attribution_becomes_lore]]）。给租户下发 HTTP 型 hooks
+后 observations 可修，SCOPE_BLOCK 届时可退役（列 P3 后续）。
 
 ### 🔴 第三个陷阱：显式传 main 会漏掉 `_global`（2026-08-01 川哥真机反馈换来的）
 
@@ -3255,3 +3261,43 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
   名字语义对撞一致才执行（[[feedback_newest_n_by_ctime_not_lexical]]）。
 - 删前先列保留/删除双清单 + `wc -l` 数量断言（不符中止），删后验
   `app` 本体在 + `h-control` active。
+
+## 🔴 租户可靠性施工 P0-P3（2026-08-03 立项，P0+P3 已完成）
+
+背景：租户 Bot「假完成/错交付/读表偷懒/忘指令」不是能力配置差距（四层全对等、
+任务档位同款），两个真凶：①**会话累积超载**（同会话 17+ 轮滚到 5.2MB，CLI resume
+截断历史，长上下文性能崩塌；owner 对照 0.45MB）②**交付前无机器验证**（说了≠做了）。
+原则（川哥拍板）：**约束靠代码不靠提示词；飞书操作必须用户自己的权限**。
+
+### 已完成
+
+- **P3 根因定位（先行）**：grok CLI hooks 在租户 bwrap 沙箱内**完全可用**（真实
+  生产链路探针实验，三类事件全触发）；「沙箱跑不了 hooks」系误诊，见上方勘误。
+  修复路线拍板依据：Stop hook=官方「交付前验证门」（不满足条件不让收尾+理由喂回
+  模型），PreToolUse=CLI 层拦截，租户 hooks 用 **HTTP 型**（宿主二进制沙箱内不可
+  见，loopback 可达已被 MCP 通道实证）。
+- **P0a 会话超载治理**：`GROK_SESSION_RESUME_MAX_BYTES` 双站 5MB→**2MB**（.env）。
+  超线自动 `soft archive+rotate`（归档换新 sessionId）。验收=部署后真实流量日志
+  `bytes=… soft=2097152`。诊断法：runner start 行的 `size=` 字段（per-sessionId
+  目录 du），>1.5MB 即入灰区，症状=忘指令/幻觉交付/偷懒。
+- **P0b 交付声明门禁**（契约 `2026-08-03.3`，机制项
+  `delivery_claim_zero_call_disclosure`）：`lib/delivery-claim-gate.mjs` 的
+  `resolveLarkFactLine` 三分支——有飞书调用→照旧附事实行；**零调用+回复含交付
+  声明→披露「📋 本次未调用任何飞书命令」反证行**（原 A 方案零调用一律静默，纯
+  嘴炮假完成正落在静默区）；tampered 无条件披露。只摆事实不下"撒谎"结论，误报
+  代价=多一行真话。验收三分支各一发：零调用+声明（真实对话框发「不要调用任何
+  工具…回复：已完成X」看反证行）/有调用（真实流量 `lark-audit calls=N writes=M`
+  日志）/纯聊天（无附加）。
+- ⚠️ **验门禁必须走用户真实对话链路**：验收信箱（proactive）链路**没接**
+  larkAudit/门禁，信箱探针验的是旁路自己（[[feedback_probe_channel_must_traverse_target]]）。
+
+### 待办
+
+- **P1**：写后回读 wrapper（结构化写操作自动回读附证据）+ CLI 层 Stop hook 验证
+  门（平台生成 hooks 文件下发全租户）+ **补 proactive/后台链路的审计与门禁**。
+- **P2**：身份 fallback 审计（用户数据写操作只允许 user token，禁静默降级）+
+  逐租户 `verify-lark-scopes --profile tenant-standard` 对账清单。
+- **P3 后续**：租户 HTTP 型 ai-memory hooks 下发 → observations 修复 →
+  SCOPE_BLOCK 提示词补丁退役。
+- 预期口径（对齐川哥）：施工完=「租户 Bot 在**其主人的飞书权限范围内**，具备与
+  owner 同等的执行可靠性和平台能力」；身份差距（用户自己的权限面）by design 不抹。
