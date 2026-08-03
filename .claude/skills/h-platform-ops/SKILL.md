@@ -3361,13 +3361,57 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
   - 排障时同名卡片会混淆归属：owner 对话框里的验卡测试卡与推送卡同款样式，
     用户报「发错 bot」时先发**定位标记文本**分辨，别急着查发送链路。
 
+### 执行保真层（契约 `2026-08-03.7`，晚间第二轮；勿与上午 P0a/P0b 撞名）
+
+触发现场：刘子贤 bot「8 条已批量更新为进行中」实际 2 次 record-list 零写入；
+产品专家 bot okr 全 rc=3 权限失败仍编出 cycle_id。深挖出**第五层能力差距**
+（权限/知识/规则/记忆之上）：执行保真 = 模型档位 + 机制门禁。
+
+- **grok 模型体系真值（先记这个，排「租户效果差」第一嫌疑）**：
+  - owner：**订阅 session 通道**（cli-chat-proxy），池={grok-4.5}，191 次全 4.5。
+  - 租户：**API key 通道**（api.x.ai），池含 grok-4.5/4.3/4.20 系/imagine/build。
+  - 事故：scaffold 模板写死 `grok-code-fast-1`（已下架）→ CLI **静默 fallback
+    池子第一个** = `grok-4.20-0309-non-reasoning`（非推理档），四租户 6/22/29/70
+    次实测全中，trace model 恒 null 零观测（[[feedback_pinned_default_rots_without_pool_check]]）。
+  - 修复：`DEFAULT_GROK_MODEL`（env `H_GROK_MODEL_DEFAULT`，现 grok-4.5）+
+    `ensureGrokModelPin`（sandbox.mjs，App 装配即自愈：写前查 models_cache 池，
+    desired 不在池回退默认、默认也不在池**保持现状+告警绝不硬写**；幂等短路）。
+    部署重启当场 9/9 grok 租户全量钉回 4.5（journal `grok model pinned`）。
+    trace task_begin 的 model/providerModel 记钉定值（原「CLI 自管」=盲区）。
+  - **用户自选链**：租户后台「对话引擎」区模型下拉（xai 分支，html.mjs）→
+    `POST /api/model`（形状+池双校验）→ store.grokModel → `/internal/users` →
+    执行面 mergeControlUsers → ctx.grokModel → pin desired。可选列表 = bridge
+    context-report 上报的 `grokModels`（读 models_cache，过滤 imagine/build，
+    **CLI 每任务自刷新——grok-4.6 上线自动可选，平台零维护**）。列表未上报时
+    页面显示占位文案；控制面 v1.39.0。
+- **Stop hook 判定④**（写声明对账）：回复声称写入/修改 + 本轮审计**只读零写**
+  → block。判定②只拦零调用——「2 次读+编造写入」正落在矩阵空格
+  （[[feedback_gate_matrix_gaps_attract_behavior]]）。本地产物句
+  （FEISHU_TASKLOG/.md/本地）按句剔除防误伤；CLAIM 正则补 `(?:批量|全部)?`
+  前缀（「已批量更新」两档原先都漏，delivery-claim-gate 同步）。
+- **rc 入审计**：wrapper 业务域命令补 `rc=<n>` 第三种行（管理类 exec 拿不到，
+  权限失败恰好都在业务域）；lark-audit/Stop hook 按 pid 合并；事实行披露
+  「其中 M 次调用失败（非零退出）」——**「调了」≠「调成了」，只数次数的披露
+  给编造背书**。
+- 验收读数：契约 .7 双站唯一；wrapper/hook md5 对撞；pin 真机 9/9 + 幂等复验
+  changed:false + mcp 托管块无损；rc 行真机 cmd+rc 同 pid（host 手跑得 127 是
+  ssh 非交互 PATH 无 node 的老坑=铁律 9，非 wrapper 缺陷）。
+- 判「必撞墙」的正确判据是 **token 池里没有该 scope**，不是「应用侧缺口域计数
+  非零」——应用侧 okr 全缺但 token 攥着旧授权照样能调（token=授权快照，双向
+  都成立）；「后台开了≠能用」的反面是「后台没配≠不能用」。
+
 ### 待办
 
+- **执行保真层留给真实流量的验证**：①下一个租户任务 trace 出 `model=grok-4.5`
+  ②context-report 上报后租户后台出现模型下拉（川哥可开自己后台看）③判定④
+  首次真实拦截（自然发生时从审计+journal 对账）。
 - **P2b 尾巴**：①王宣凯/南鸽点卡后复扫 `verify-lark-scopes` 出新对账
   ②越权域后台清理复验（川哥已联系持有人）③「应用未配置」户刷新
   `tasks/飞书权限开通.md` 后台批量导入清单（只能人去开发者后台勾）。
 - **P3 后续**：租户 HTTP 型 ai-memory hooks 下发 → observations 修复 →
   SCOPE_BLOCK 提示词补丁退役。
+- 小项：租户 config.toml 里 ai-memory 的 localhost Bearer 曾在排障终端明文展示
+  过一次（2026-08-03，沙箱内 127.0.0.1 面，风险低）——下次动记忆链路时顺手轮转。
 - 预期口径（对齐川哥）：施工完=「租户 Bot 在**其主人的飞书权限范围内**，具备与
   owner 同等的执行可靠性和平台能力」；身份差距（用户自己的权限面）by design 不抹。
 - 部署在途检查硬化：**在途数与上次基线不同时必须展开明细定位新增项再决策**

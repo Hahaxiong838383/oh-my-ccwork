@@ -1320,3 +1320,19 @@ vs 1 个）——哪天 dev198 十秒就"就绪"反而要怀疑没连全；`.dep
 6. 验收：dev198 `journalctl --user -u ai-memory-llm-proxy` 出现 `primary ok` 且返回真内容（33c0f74 起空壳已判失败）；`node ops/memory-embed-probe.mjs` 5/5。
 
 **现状（不阻塞）**：dev198 记忆抽取/D3 检测由火山方舟 fallback 接管，功能正常；向量检索走 dev198 本机 Ollama（127.0.0.1:11434，qwen3-embedding:0.6b），与 Studio 链路无关，2026-08-02 端到端探针 5/5 全过。
+
+## 2026-08-03 20:0x 真值（执行保真层上线，契约 2026-08-03.7）
+
+- **P2b 思路重构落地（.6）**：撞墙自动发卡=既有机制（方案 2′）；本轮增量=①窄流
+  完成跟发「一次补齐」对账卡（≥20 项，24h 去重，按钮回调不过期）②「应用未配置」
+  owner 摘要卡（24h/app 去重）。管理员退出发送环；push-scope-card.mjs 降级兜底。
+- **执行保真层（.7）真凶实锤**：租户 grok 全跑 grok-4.20-non-reasoning（scaffold
+  钉死已下架的 grok-code-fast-1 → CLI 静默降级），owner=grok-4.5 订阅通道。
+  编造交付两例（刘子贤零写声称批量更新 / 产品专家 okr 全 rc=3 编 cycle_id）。
+- **已上线**：grok 模型钉死（9/9 租户启动装配即回 4.5，池校验绝不硬写）+ trace
+  记实际模型 + 用户后台模型自选（/api/model，列表随 models_cache 自动更新，
+  控制面 v1.39.0）+ Stop hook 判定④（写声明×零写）+ wrapper rc 行 + 事实行
+  失败披露。双站 8504b9d，契约 .7 唯一；wrapper/hook md5 对撞一致。
+- **等真实流量**：租户任务 trace model=grok-4.5 读数；后台模型下拉出现（需一次
+  context-report 上报）；判定④首次真实拦截。
+- **P2b 尾巴不变**（王宣凯 18:31 点卡 600s 超时可再点/南鸽未点/越权域/后台补勾）。
