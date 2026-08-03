@@ -2911,6 +2911,16 @@ for i in $(seq 1 20); do sleep 10; n=$(curl -s .../healthz | jq '[.apps[]|select
 `padding` 多值必须写满四个。⚠️ 报错里的 `column idx` **会偏一位**，
 别照着索引盲改。完整踩坑记录见 `feishu-docs` skill。
 
+**第 4 条硬约束（2026-08-03 真机 400）**：2.0 **废弃 `tag:'action'` 交互模块**且
+属性校验从「忽略」改「报错」——按钮直接放 `body.elements` 根层（`behaviors:
+[{type:'callback',value:{…}}]`，回调数据到 `action.value`）；带回调按钮必须
+`config.enable_forward:false`（转发出去按钮会被别人点）。
+**验卡 harness 三坑**（当天连环踩，全红三轮后才发现是通道错）：
+① `lark-cli api` 的 query 必须走 `--params '{"receive_id_type":"open_id"}'`，
+塞进 path 会得到与卡片内容无关的恒定 99992402——先用**生产送达过的正例**钉通道；
+② 发 interactive 卡必须 **bot 身份**（user 身份发卡受限，同码报错）；
+③ 单发时错误在 stdout、批量 subprocess 里在 stderr，两个流都要读。
+
 ## 🔴 部署一律走 `ops/deploy-sites.sh`（2026-08-01 起）
 
 **别再手敲 ssh 部署。** 上面「部署收尾三查」那几条我当天写进 skill、
@@ -3197,6 +3207,12 @@ Mini 日志真值 `workspace/.logs/`（部署根 `logs/` 是 7-31 前的旧目�
    recovery planner 的周期日志只是报告不是执行。
 4. `replayable:false` 的内部任务（新会话初始化）不会进 orphan 重放（replayRecord
    =null），用户任务才会——这是 2026-08-03.1 修复特意划的边界。
+5. **在途授权流也是在途**（2026-08-03 真机：川哥点完授权卡的瞬间撞上重启，
+   `flow failed exit null`×2）：broker 的 onComplete 监听与 `--device-code`
+   轮询子进程都是**内存态**，重启即丢——用户浏览器里授权成功、token 却没写盘、
+   链式下一批永不发。部署前 `journalctl` 查最近 10 分钟有无
+   `lark auth flow started` 而无对应 `completed/failed`；有就等 600s 过期或
+   让用户重点。恢复=让用户重新点按钮（流是点击时现开的，无状态可续）。
 
 ## 全员通知的最小合规路径（2026-08-03 实测，12/12）
 
@@ -3262,7 +3278,7 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
 - 删前先列保留/删除双清单 + `wc -l` 数量断言（不符中止），删后验
   `app` 本体在 + `h-control` active。
 
-## 🔴 租户可靠性施工 P0-P3（2026-08-03 立项，P0+P3 已完成）
+## 🔴 租户可靠性施工 P0-P3（2026-08-03 立项，P0/P1/P2 代码侧全部完成）
 
 背景：租户 Bot「假完成/错交付/读表偷懒/忘指令」不是能力配置差距（四层全对等、
 任务档位同款），两个真凶：①**会话累积超载**（同会话 17+ 轮滚到 5.2MB，CLI resume
@@ -3308,12 +3324,48 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
   - Mini 站 `H_LARK_AUDIT=0` 且 macOS native 无 bwrap——审计/门禁链在 Mini
     整体不生效（B1 已知边界，hook 脚本已预埋 shared/hooks/）。
 
+- **P2a 身份硬约束**（契约 `2026-08-03.5`，机制项 `user_identity_strict_mode`）：
+  两层钉死「飞书操作必须用户本人身份」——
+  ①配置层：`ensureLarkStrictMode`（lib/sandbox.mjs）对全租户 lark-cli 执行
+  `config strict-mode user --global`（CLI 原生身份策略，实测 strict 下
+  auth scopes/status 探测与默认读全部正常、`--as bot` 干净拒绝）；每次 app 启动
+  读 config 自愈漂移，判断只读、**写必须走 CLI**。重启后 9 租户全部落位。
+  ②执行层：wrapper 拦「显式 `--as bot`」与「`config strict-mode/default-as` 修改」
+  （查看/--help 放行），审计行带 `(blocked:identity-bot|policy-config)` 标记；
+  `--as` 的**值**进 `as=` 字段（白名单 user/bot/auto/other）。
+  ⚠️ 翻案记录：此前「784 条调用 0 条 --as bot」**方法学不成立**——wrapper 只记
+  flag 名不记值，该日志数不出任何 as 值结论；risk 真实存在（租户 config 里有
+  appSecret，defaultAs=auto，bot 身份沙箱内真实可用）。
+- **P2c 读全量护栏**（H-0070，机制项 `read_coverage_guardrail`，三层）：
+  ①wrapper 对业务域命令经临时文件转发 stdout，从尾部抽分页事实（markdown 尾行
+  `Meta: count=N; has_more=…` 为 lark-cli 1.0.71 自带；JSON 抽 `"has_more"/"total"`），
+  补 `meta=has_more:…,count:…,total:…` 审计行（与 cmd 行同 pid，消费端按 pid 合并）；
+  has_more=true 时**当场**给 agent 一条 stderr 提示（stderr 不破坏 --format json）。
+  ②Stop hook 第三判定：最后一条**列表族**读（`-list`/裸 `list`）停在 has_more=true
+  → block，出口只有两条行为路（翻页读全 / 明写「仅基于前 N 条」）；search 命中
+  即停不拦。③事实行披露「⚠️ 有列表读取未读到末尾…」+「🚫 拦截 N 次身份越权调用」。
+  不捕获集合：auth/config/doctor/profile/update/help/schema/skills/**event**（长轮询
+  缓冲会改变行为）；mktemp 失败直接 exec（fail-open）。
+- **P2b scope 对账+自助重授权**（机制项 `scope_reauth_self_serve`）：
+  - 权限对账卡带「🔁 重新授权」回调按钮（`cmd:lark_reauth`）→ `startLarkReauthChain`
+    分批设备流：**飞书设备流 scope 数上限实测 250 过/350 拒，取 200/批**；每批
+    onComplete 自动发下一批卡，末批完成后 bust 探测缓存→重探→回发最新对账卡。
+    只请求 `grantableByReauth`（**飞书授权按 user×app 累积**，实测 owner 164→500、
+    rayman 171→513、测试 bot 148→241，老权限不丢）；禁止域不在 required 里，
+    链式补权与越权域清理**正交**，不用互等。
+  - 批量推送：`ops/push-scope-card.mjs`（仓根 `set -a && . ./.env` 后跑，凭据走
+    bridge AES store——⚠️ **`.lark-cli/config.json` 的 appSecret 是 lark-cli 自己的
+    加密 dict**，直拿换 token 必得 10003）。卡片不过期，授权流点按钮才现开，
+    天然满足铁律 19。已推：rayman/测试 bot（已完成）+ 王宣凯(375 项/2 批)、
+    南鸽(422 项/3 批)（待点）。
+  - 排障时同名卡片会混淆归属：owner 对话框里的验卡测试卡与推送卡同款样式，
+    用户报「发错 bot」时先发**定位标记文本**分辨，别急着查发送链路。
+
 ### 待办
 
-- **P2**：①身份 fallback 审计（用户数据写操作只允许 user token，禁静默降级）
-  ②逐租户 `verify-lark-scopes --profile tenant-standard` 对账清单
-  ③**读全量护栏**（读表返回「已读 N/总 M 行」覆盖率——对应工单 H-0070
-  「读表没读全就输出结论」，刘子贤 2026-08-03 提，勿在护栏落地前关单）。
+- **P2b 尾巴**：①王宣凯/南鸽点卡后复扫 `verify-lark-scopes` 出新对账
+  ②越权域后台清理复验（川哥已联系持有人）③「应用未配置」户刷新
+  `tasks/飞书权限开通.md` 后台批量导入清单（只能人去开发者后台勾）。
 - **P3 后续**：租户 HTTP 型 ai-memory hooks 下发 → observations 修复 →
   SCOPE_BLOCK 提示词补丁退役。
 - 预期口径（对齐川哥）：施工完=「租户 Bot 在**其主人的飞书权限范围内**，具备与
