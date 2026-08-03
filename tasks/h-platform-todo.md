@@ -1,15 +1,20 @@
 # H 平台后续 TODO（持续更新）
 
-## 2026-08-03 12:2x 当前真值
+## 2026-08-03 15:1x 当前真值
 
 > 本节覆盖下面的 2026-08-02/07-31 历史快照；历史章节保留用于追溯，不能再当当前运行状态。
 
 ### 已确认上线
 
-- **新会话真实 CLI 执行已双站上线**（契约 `2026-08-03.1`，机制项
-  `verified_new_session_command`）：Bridge 分支 `codex/h-mini-ab-poc` =
-  `44b3ac2f5e38`（`fe8f0c1` 主修复 + `44b3ac2` H 引擎文案统一），双站
-  HEAD/meta/healthz 五处对齐；`main` 保持 `9119311` 未合并。
+- **新会话单卡状态机已双站上线**（契约 `2026-08-03.2`，机制项
+  `new_session_live_status_card`，bridge `508a623`）：点击 0s 出 ⏳ 状态卡 →
+  CLI 真启动 patch 🚀 → 成功同卡收敛 ✅（`updateCard`=im.message.patch）；失败
+  ⚠️+新消息强提醒。双站真机各一轮三段流（Mini sid=e45d1e80 / dev198
+  sid=6e6d375a），三类 card fail 日志全零，部署零打断（在途对账前后恒 4）。
+  川哥拍板：本次体验增强**不发全员通知**。
+- 新会话真实 CLI 执行（契约 `2026-08-03.1`，机制项
+  `verified_new_session_command`）：`fe8f0c1` 主修复 + `44b3ac2` H 引擎文案统一；
+  `main` 保持 `9119311` 未合并。
 - 真机验收四轮全过（Mini AI 专家 ×3 + dev198 川哥测试 Bot ×1）：RPC 三态、
   CLI child、map 切换（reason=card_new_cli）、reset marker 时序、旧上下文清空。
   全员升级通知 12/12 送达（逐条 message_id）。

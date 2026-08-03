@@ -3118,7 +3118,7 @@ DoH 不回退），所以监控**必须在用户视角侧（本机）跑**，服
 - 已知边界：本机整体断网时告警发不出（监控无法自证），恢复后 probe-log 可回溯；
   Xray error log 未落盘（config `error:None`），DNS 错误无被动观测——行为级探测即替代。
 
-## 新会话真实 CLI 执行（契约 2026-08-03.1，双站已上线）
+## 新会话真实 CLI 执行（契约 2026-08-03.1 → .2 单卡状态机，双站已上线）
 
 「新会话」按钮与纯文本 `/new`（无正文）共用 `queueNewSessionCommand` →
 `lib/new-session-command.mjs`。语义：**先写新 sessionId 到 map → 真实 Runner 跑
@@ -3139,9 +3139,42 @@ CLI 成功后才写 reset marker → 失败恢复旧 mapping**。`/new + 任务�
   多个代际 key。2026-08-03 我拿 7-30 的旧 key 当"主会话"做基线，写后读它当然没变
   ——全 map 按新 sessionId 反查才找到真实落点。同族教训：record_id 重定位（Base 节）。
 - 观测点：租户 map `<usersRoot>/<uid>/.session-map.json`；RPC 事件
-  `workspace/.runner-rpc/<sha256(appId:uid|owner)>.v1.jsonl`（**scope hash 对撞
-  定位法**：`printf 'cli_xxx:owner' | shasum -a 256` 前 12 位=文件名，可反查文件
+  `workspace/.runner-rpc/<sha256(appId:uid|owner)>`（**scope hash 对撞
+  定位法**：`printf 'cli_xxx:owner' | shasum -a 256` 前 12 位=文件名前缀，可反查
   归属哪个 App）；历史 `<cwd>/.chat-history/<hash>.jsonl`。
+
+### 单卡状态机（契约 2026-08-03.2，2026-08-03 双站上线）
+
+点击后 10-20s 静默黑盒拆成单卡三段流：0s 发「⏳ 创建中」状态卡（`update_multi:true`）
+→ `onStage('spawned')`（从 `onChildSpawn` 抛）原地 patch「🚀 已启动」→ CLI 成功
+退出后同卡收敛「✅ 已就绪」。失败：状态卡收敛 ⚠️ + **另发新消息强提醒**（patch 无
+推送，失败必须有提醒）；重复点击 toast「创建中请稍候」（后端 `newSessionJobs` 防抖）。
+真实验证语义不变。机制项 `new_session_live_status_card`。基础设施
+`lib/feishu-send.mjs#updateCard`（im.message.patch 整卡替换）可复用于其他长等待场景。
+
+- **日志判读**：成功路径三段更新**不打日志**；只有失败才打
+  `new session status card fail / stage card fail / final card update fail`。
+  验收=真机看三段流 + 这三类 fail 全量计数为 0，别把"点击后 bridge 日志安静"
+  误判为没执行（CLI start 在 **runner** 侧日志，点击后 ~250ms 出现）。
+- 真机验收判据在五件基础上加一件：⑥同一张卡完成 ⏳→🚀→✅（消息列表只有一张
+  状态卡，无刷屏）。
+
+## RPC 事件流在途对账（2026-08-03 三连坑后固化）
+
+部署前查在途量的标准方法（[[feedback_deploy_window_interrupts_inflight_tasks]]），
+三个参数全是待验事实，各配非零锚：
+
+| 参数 | 真值 | 我踩过的错值 |
+|---|---|---|
+| 目录 | 双站均 `workspace/.runner-rpc/`（文件名=scope hash 无扩展名，JSONL） | `data/runner-rpc/`（不存在，glob 空转返回假 0） |
+| 事件类型 | `rpc_requested / rpc_acked / rpc_result / rpc_error`（后两个=终态） | 词表写 `result/done/...`，496 全量假阳性 |
+| 聚合键 | requestId **需归一化 `split(':')[0]`**：requested/acked 带 `:main` 后缀、result 不带，原样聚合把一个任务劈成两条假在途 | 原样聚合（[[feedback_event_stream_id_variants_split_aggregation]]） |
+
+判读纪律：大数字异常清单先怀疑判据，抽一条单文件重放独立复核；正常完成的记录会
+被回收（文件轮转），**持久滞留的才是真 orphan**（对照 recovery plan 周期日志的
+orphan 计数）。dev198 users 注册表真值 `/srv/h-platform/users.json`
+（`DEFAULT_USERS_FILE`，.env 无覆盖键）；Mini 在 `<部署根>/data/users.json`；
+Mini 日志真值 `workspace/.logs/`（部署根 `logs/` 是 7-31 前的旧目录，别看错）。
 
 ## 部署窗口与在途任务（2026-08-03 实测教训）
 
