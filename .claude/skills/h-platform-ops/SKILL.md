@@ -3513,8 +3513,21 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
 ### 待办
 
 - **执行保真层留给真实流量的验证**：①下一个租户任务 trace 出 `model=grok-4.5`
-  ②context-report 上报后租户后台出现模型下拉（川哥可开自己后台看）③判定④
-  首次真实拦截（自然发生时从审计+journal 对账）。
+  ~~②context-report 上报后租户后台出现模型下拉~~（✅ 2026-08-03 E2E 验过，
+  五选项下拉已渲染）③判定④首次真实拦截（自然发生时从审计+journal 对账）。
+- **模型锁定次日复核（2026-08-04）**：7 个昨晚无流量租户首条消息后，扫
+  `unified.jsonl` 各自最后一条 `model changed` 应全为 grok-4.5：
+  `for f in /srv/h-platform/users/*/.grok/logs/unified.jsonl; do echo "$(echo $f|cut -d/ -f5): $(grep "model changed" $f | tail -1 | grep -o "grok-[a-z0-9.-]*")"; done`
+- **L0 lark-base 补两条知识**（2026-08-03 漏读排查沉淀，走 publish-l0-skill/
+  skill-content API + fork 对齐流程）：①读任务表优先用表内现成公式/状态字段当
+  口径（「应结束未结束/应开始未开始」），禁自己发明「逾期」定义；②读**视图**
+  内容必须用封装 `+record-list --view-id`（Meta 的 has_more 可靠），**禁用裸
+  api GET+view_id 当视图数据**（那是只排序不筛选的全表投影=假全量）。同步考虑
+  url-scope hint 里「api 命令可用 --page-all」的措辞加限定（--page-all 只适用
+  全表读；视图读用封装命令翻页）。
+- **判定⑤范围披露的口径微调评估**：视图筛选后条数（封装真值）与裸 api total
+  不同源，bot 披露「120 条读完」时用户按 UI 口径核对是一致的——现行为已对，
+  仅当披露词表误伤时再调。
 - **P2b 尾巴**：①王宣凯/南鸽点卡后复扫 `verify-lark-scopes` 出新对账
   ②越权域后台清理复验（川哥已联系持有人）③「应用未配置」户刷新
   `tasks/飞书权限开通.md` 后台批量导入清单（只能人去开发者后台勾）。
