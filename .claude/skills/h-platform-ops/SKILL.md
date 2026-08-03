@@ -3454,6 +3454,15 @@ virtual-time 下禁用滚动截图（driver 把 `.arch-workbench` 临时 fixed �
     扫描：遍历 `/srv/h-platform/users/*/.grok/logs/unified.jsonl` 取各自最后一条
     model changed。**bot 自述（「我是 Grok 4」）与 trace 的 model 字段（配置意图）
     都不是证据。** owner 能答「Grok 4.5」是订阅通道品牌展示，非自我认知。
+  - **「什么模型」网关代答（契约 2026-08-03.9，双站已上线，川哥拍板）**：
+    `command-probe.mjs` model 档（精确命令词 + ≤20 字含「模型」+问句特征；带
+    训练/部署/生成等任务动词放行）→ `handleModelCommand`（bridge.mjs）拿真值
+    出「🔎 引擎与模型」卡，不过 LLM：**配置模型（config.toml 钉定值）与最近
+    实际调用（unified.jsonl 尾部 512KB 的 model changed）并示**，两值不一致时
+    卡片自带 ⚠️ 提示——用户随口一问就是一次配置↔运行时对账，排障入口下沉到
+    对话框。kimi 显示 kimi-code/k3（import kimi-model.mjs 单一真源）；omp 引导
+    后台。owner 同答（共享行为铁律）。时间显示转北京时间（裸切 ISO 差 8 小时
+    老坑）。测试 test/command-probe.test.mjs 19 条锁互抢边界。
   - **用户自选链**：租户后台「对话引擎」区模型下拉（xai 分支，html.mjs）→
     `POST /api/model`（形状+池双校验）→ store.grokModel → `/internal/users` →
     执行面 mergeControlUsers → ctx.grokModel → pin desired。可选列表 = bridge
