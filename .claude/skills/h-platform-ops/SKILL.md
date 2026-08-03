@@ -3560,6 +3560,40 @@ kind=rpc 的 orphan **按定义就在第二个集合里** → 永远 true，在�
 拿它的 merge+meta 真值机制（防编 hash / 吞 merge 失败 / 漏看 meta 三错），重启自己按序做。
 Mini 段本来就是 runner→bridge，可整段跑。
 
+## 人格编辑边界与 orphan 终态（v1.39.2，2026-08-04 三处上线，commit 2467869）
+
+### 「保存后被恢复」的验收要钉两头
+
+`profileContentForUi` 现在剥掉**全部**托管块（含 `h-profile-index`）。验收判据必须
+同时成立，只验一头会从「用户改动被吃」翻车成「托管块被用户抹掉」：
+
+- 编辑面：`/<!--\s*h-[a-z-]+:(start|begin)\s*-->/` **零命中**
+- 真实文件：**仍含** `h-profile-index`（`writeProfile` 落盘后 `ensureProfileIndexes`
+  重建，该链路本轮未改动）
+
+往返必须走**真实写入路径**（`writeProfile` → 重读 → 还原），内存模拟只能证明剥离
+语义、证明不了写入链。⚠️ **往返测试只在川哥自己的租户账号上做**，绝不拿别人的
+`SOUL.md` 当试验田；查他人文件时探针只输出布尔/长度/哈希，不打印正文。
+
+### orphan 终态：验收看下一轮，不看回执
+
+纯 compute 恢复项没有 replay/RPC 胶囊，原 taskId 只在 coordinator 的 `identity` 里。
+修复前 `resolve()` 取不到就跳过写终态，于是**取消返回 ok=True、审计记
+ORPHAN_CANCELLED，它下一轮照样回来**。所以这类问题的判据是「再等两个恢复上报周期
+还在不在」，**回执和审计都不算数**。审计里同一 orphanId 被成功取消过多次 = 这个 bug
+的指纹，别当用户手滑（[[feedback_identifier_fallback_chain_misses_a_variant]]）。
+
+### 给租户发主动通知的范式
+
+抄 `ops/push-scope-card.mjs`：`loadUserRegistry` 拿 uid→appId、`loadAllCredentials`
+解密拿 appSecret/openId（需先 `set -a; . ./.env; set +a`）、换 tenant_access_token、
+打 `im/v1/messages?receive_id_type=open_id`，卡片用 `schema:'2.0'`。
+⚠️ 别打 `.lark-cli/config.json` 的主意（appSecret 是加密结构，直接用必得 10003）。
+
+⚠️ **这样发的消息不走 bridge 送达链**，所以该 App 的 `lastOutboundOkAt` 不会更新。
+证据是 `message_id` + 飞书 API 回执，**别拿 healthz 的出站计数当送达证明**，也别因为
+它是 null 就判定没发出去。发前先 `--dry-run` 打印卡片全文留档。
+
 ### 待办
 
 - **执行保真层留给真实流量的验证**：①下一个租户任务 trace 出 `model=grok-4.5`
