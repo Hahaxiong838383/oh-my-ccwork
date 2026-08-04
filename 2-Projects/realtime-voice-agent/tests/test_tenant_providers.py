@@ -61,8 +61,10 @@ class TestXfyunWiring:
             {"app_id": "a1", "api_key": "k1", "api_secret": "s1", "vcn": "x6_lingfeiyi_pro"},
         )
         tts = _build_tts(Settings(tts_provider="xfyun"))
-        assert type(tts).__name__ == "XfyunTTS"
-        assert tts._vcn == "x6_lingfeiyi_pro"
+        # 2026-08-03 切句对齐:xfyun 与 volc 同包 StreamAdapter,不再裸返回
+        assert type(tts).__name__ == "StreamAdapter"
+        assert type(tts._wrapped_tts).__name__ == "XfyunTTS"
+        assert tts._wrapped_tts._vcn == "x6_lingfeiyi_pro"
 
     def test_tts_default_vcn_when_absent(self, tenant_env) -> None:
         tid, store = tenant_env
@@ -70,7 +72,21 @@ class TestXfyunWiring:
             tid, "xfyun_tts", {"app_id": "a1", "api_key": "k1", "api_secret": "s1"}
         )
         tts = _build_tts(Settings(tts_provider="xfyun"))
-        assert tts._vcn == "x6_lingxiaoxuan_pro"
+        assert tts._wrapped_tts._vcn == "x6_lingxiaoxuan_pro"
+
+    def test_tts_sentence_split_aligned_with_volc_line(self, tenant_env, monkeypatch) -> None:
+        """守护切句对齐(飞书 §12.5):min_sentence_len 默认 6、TTS_MIN_SENTENCE_LEN 可调。
+        裸返回会被框架用官方默认 min=20 包装,短首句晚开播 ~300-800ms——此测试防回退。"""
+        tid, store = tenant_env
+        store.put_credentials(
+            tid, "xfyun_tts", {"app_id": "a1", "api_key": "k1", "api_secret": "s1"}
+        )
+        monkeypatch.delenv("TTS_MIN_SENTENCE_LEN", raising=False)
+        tts = _build_tts(Settings(tts_provider="xfyun"))
+        assert tts._sentence_tokenizer._config.min_sentence_len == 6
+        monkeypatch.setenv("TTS_MIN_SENTENCE_LEN", "9")
+        tts2 = _build_tts(Settings(tts_provider="xfyun"))
+        assert tts2._sentence_tokenizer._config.min_sentence_len == 9
 
 
 class TestTenantBrainWiring:

@@ -934,6 +934,28 @@ def _build_llm(
     raise RuntimeError(f"未知 LLM_PROVIDER={provider!r}（M0 支持：openai/gemini/tenant-brain）")
 
 
+def _wrap_sentence_stream(tts_instance: Any) -> Any:
+    """非流式 TTS 统一包 StreamAdapter——切句参数全链路一致的唯一入口。
+
+    🔴 首句提速关键(2026-07-02 volc 实锤;2026-08-03 xfyun 对齐):不自己包时,
+    框架自动包官方默认 blingfire min_sentence_len=20(agent.py:507)——中文短首句
+    (如 9 字"小朋友，你知道吗？")被攒到 ≥20 字才 flush 给 TTS,首段被拖成前两句,
+    开口慢 ~300-800ms。自己包 + min_len 6:短首句立即 flush;不设更小(首段播放
+    时长须 > 下段 TTS 建连:volc 池化 ~500ms/xfyun 每句 ws ~150-250ms,否则句间
+    断音;6 字 ≈1.2s 播放,两家都安全)。
+    """
+    import importlib
+
+    agents_mod = importlib.import_module("livekit.agents")
+    min_sent = int(os.environ.get("TTS_MIN_SENTENCE_LEN", "6"))
+    return agents_mod.tts.StreamAdapter(
+        tts=tts_instance,
+        sentence_tokenizer=agents_mod.tokenize.blingfire.SentenceTokenizer(
+            retain_format=True, min_sentence_len=min_sent
+        ),
+    )
+
+
 def _build_tts(settings: Settings) -> Any:
     """按 ``TTS_PROVIDER`` 构建真实 TTS 插件实例(M0:本地 VoxCPM2)。"""
     provider = settings.tts_provider
@@ -944,7 +966,6 @@ def _build_tts(settings: Settings) -> Any:
         return VoxCPMTTS(load_voxcpm_model(model_dir))
     if provider == "volc":
         # 火山豆包在线双向流式 TTS(固定音色+真流式,解音色随机/非流式);凭据 env 注入
-        import importlib
         import os
 
         from .volc_tts import VolcTTS
@@ -956,19 +977,7 @@ def _build_tts(settings: Settings) -> Any:
             resource_id=os.environ.get("VOLC_TTS_RESOURCE_ID", "seed-tts-2.0"),
             speed_ratio=float(os.environ.get("VOLC_TTS_SPEED", "1.15")),
         )
-        # 🔴 首句提速关键(2026-07-02 HK 实锤):不自己包 StreamAdapter 时,官方默认
-        # blingfire min_sentence_len=20(agent.py:507)——中文短首句(如"稍等,我查一下。"
-        # 8 字)被攒到 ≥20 字才 flush 给 TTS,首段 TTS 输入被拖成前两句,开口慢 ~500-800ms。
-        # 自己包 + min_len 6:8 字首句立即 flush;不设更小(首段播放时长须 > 下段 TTS
-        # 建连 ~700ms,否则句间断音;6 字 ≈1.2s+ 播放,安全)。
-        agents_mod = importlib.import_module("livekit.agents")
-        min_sent = int(os.environ.get("TTS_MIN_SENTENCE_LEN", "6"))
-        return agents_mod.tts.StreamAdapter(
-            tts=volc,
-            sentence_tokenizer=agents_mod.tokenize.blingfire.SentenceTokenizer(
-                retain_format=True, min_sentence_len=min_sent
-            ),
-        )
+        return _wrap_sentence_stream(volc)
     if provider == "xfyun":
         # 讯飞超拟人合成(租户 provider):凭据同 STT 策略,vcn 随凭据可选字段
         import os
@@ -986,11 +995,15 @@ def _build_tts(settings: Settings) -> Any:
         missing = [k for k in ("app_id", "api_key", "api_secret") if not creds.get(k)]
         if missing:
             raise RuntimeError(f"xfyun TTS 凭据缺失 {missing}:租户未写入且 env 未配")
-        return XfyunTTS(
-            app_id=creds["app_id"],
-            api_key=creds["api_key"],
-            api_secret=creds["api_secret"],
-            vcn=creds.get("vcn") or DEFAULT_VCN,
+        # 与 volc 线切句参数对齐(2026-08-03,飞书文档 §12.5):此前裸返回走框架默认
+        # min_sentence_len=20,租户线短首句(实测 9-18 字居多)晚开播 ~300-800ms。
+        return _wrap_sentence_stream(
+            XfyunTTS(
+                app_id=creds["app_id"],
+                api_key=creds["api_key"],
+                api_secret=creds["api_secret"],
+                vcn=creds.get("vcn") or DEFAULT_VCN,
+            )
         )
     raise RuntimeError(f"未知 TTS_PROVIDER={provider!r}（支持：voxcpm/volc/xfyun）")
 
