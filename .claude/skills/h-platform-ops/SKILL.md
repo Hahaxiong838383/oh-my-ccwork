@@ -3685,3 +3685,79 @@ lark-cli 越界（只读任务发生写入、非飞书任务调 lark-cli、失�
   （2026-08-03 只看总数 5>4 未展开就部署，侥幸该任务已终态——流程违规记录在案）。
 - 写测试禁用生产 Base；agent 改坏数据恢复第一站=其 session 里的改前读查询
   （[[feedback_agent_session_holds_prewrite_state]]，H-0070 标题 10 分钟恢复实证）。
+
+## 可见能力二阶段（v1.40.0 → v1.40.1，2026-08-04 三处上线，commit 1c7a8f5 / eace771 / bfe24ac）
+
+契约 `2026-08-04.1` → `.2`。控制面 `v1.40.1`，双站 `bfe24ac7c2fe`。
+
+### 🔴 快照白名单必须覆盖「会被 restore 撤回」的文件
+
+`workspace/BEHAVIORAL_RULES.md` 此前**不在** `SNAPSHOT_FILES` 里，而 H-0050 应用正是改它、
+成功卡还对用户显示「快照版本 N」、失败走 `restoreSnapshot`。生产实证：真实 apply 产生的
+v23 快照 restore 后规则文件原样不动——**「打了快照」和「包里有你要撤回的东西」是两件事**，
+缺口在成功路径上全程静默。
+
+⚠️ **加白名单会同时打开一条数据丢失路径**：`swapToVersion` 的语义是「包里没有=当时不存在=删掉」，
+而所有**存量**快照里都没有新加的条目，用户点一次「恢复到旧版本」就丢掉自己的文件（恢复有卡片 UI）。
+现由 `SNAPSHOT_REL_SINCE` 兜：条目记加入时间，快照时间早于它就只保留不删除，老快照轮换完自然失效。
+**往 `SNAPSHOT_FILES`/`SNAPSHOT_DIRS` 加条目必须同时在 `SNAPSHOT_REL_SINCE` 加一行。**
+详见 [[feedback_allowlist_addition_opens_deletion_path]]。
+
+测试纪律：`test/tenant-evolve.test.mjs` 里那条「真快照端到端」**禁止改成 mock**。本缺口能活到
+生产，就是因为既有四条测试全把 `maybeSnapshot`/`restoreSnapshot` 换成假的，`rolledBack:true`
+年年绿而安全网从未被执行过（[[feedback_mocked_dependency_hides_hollow_safety_net]]）。
+
+### H-0050 租户自进化：哪些能自动验、哪些只能人点
+
+- `createEvolveCardAcceptanceRunner` 按设计是 **owner-only 且只允许 `evolve_detail`**
+  （`validateRequest` 里硬拒其它 action）。**租户的 建议→详情→接受→应用 链自动化不了**，
+  只能由本人在飞书点。cc 能做的是模块层验证 + 隔离假树端到端。
+- 自动建议走 ready 门（`score>=3`）；**只有主动发「评估进化」才 force 绕过 ready 与冷却**。
+  所以「score=0 也能一路应用」只发生在用户主动要求时，自动路径不会拿套话骚扰人。
+- force 命令正则极严：`/^(评估进化|检查进化|要不要进化|进化评估)([\s!！.。]*)$/i`。
+  **`评估进化？`（问号，全角半角都算）、`帮我评估进化`、`评估一下进化` 全不匹配**，
+  会静默当普通任务跑且无任何「没听懂」反馈。排查「用户说他触发了但没弹卡」先看这个。
+- 判断某次建议是 force 还是自动：**看入站到 `evolve advisor notified` 的间隔**。
+  force 是同步立刻发；自动路径要等任务跑完（实测 64–76 秒）。
+- 全租户化后**同事任务完成、score≥3 就会自动收到进化卡**（2026-08-04 王宣凯即如此）。
+  要控铺开节奏只能提高 ready 门槛或加租户白名单——**别用 `EVOLVE_ADVISOR_ENABLE=0`**，
+  它在 `maybeProactiveEvolveAdvise` 第一行，会把「评估进化」主动命令一起关掉。
+- 覆盖 `state.pending` 会让旧卡按钮永久失效（decisionId 不匹配=已过期），旧提案文件却停在
+  `pending`。现由 `supersedeTenantProposal` 标终态并在新卡上告知。
+
+### 架构漂移门：造可回滚测试漂移的正确手法
+
+- 生产控制面 `fullRepo=false`（`repoRoot` 下没有 bridge.mjs/.git），**只检查 `control-plane/*`
+  文件**，其余跳过并给一条 by-design 的 info。健康态生产应为 `drift=healthy`，
+  只有 `code:execution-source-unavailable` + `service:memory-observability-gap` 两条 info。
+- ⚠️ **别靠移走已登记文件来造漂移**：`codeWatch` 里所有 `control-plane/*` 条目都是 server.mjs
+  真 import 的，运行中的进程无感（模块已在内存），但**下次重启就起不来**。
+- 正确手法：往副本 server.mjs 追加**一行注释**伪造未登记路由——`extractRoutes` 是逐行正则
+  不是解析器，会扫到；Node 不执行注释，跨重启存活。路径要落在 `ROUTE_PREFIXES` 内
+  （如 `/internal/skill-drift-probe`）才算 critical surface。
+- 验收平台请用**生产机隔离实例**：`cp -a /srv/h-control/app /tmp/h-iso/app` + 独立
+  `DATA_DIR`/`PORT`/一次性 `ADMIN_PASSWORD`。`SERVICE_TOKEN` 有 **≥32 字符**硬门，短了直接
+  `exit 2`。跑的是逐字节相同的部署代码，生产数据与进程零影响。
+- ⚠️ 停隔离实例**别用 `pkill -f`/`pgrep -f` 加进程特征串**——ssh 远端命令行本身含该串，
+  会连自己的会话一起杀（exit 255）。用 `ss -ltnp` 按端口反查 PID。
+
+### 架构历史 revision 噪声（已知，未修）
+
+`revision = digest(完整快照)` 含站点 CPU/内存/上报时间，而**入历史的只是脱敏摘要**。
+实测 9 对相邻历史条目里 **6 对内容逐字节相同、只有 revision 变了**，40 条环形缓冲约
+**9.8 分钟**写满。验收门「revision 不变时历史不增长」字面成立，但「历史 / 与上一版本对比」
+实际只覆盖最近几分钟。告警审计（maxAudit=120）独立于历史，不受影响。
+
+### H-0069 新建记忆：接口真值
+
+- 客户端**不能**指定路径；服务端生成 `grok/manual/YYYY-MM-DD/<随机8位>.md`，
+  入队回执里带 `path` 字段。正文是 `# ${title}\n\n${content}\n`，落盘后 ai-memory 会
+  再加 YAML frontmatter（`---\ntier: semantic\n---`）——**回读断言别写 `startsWith('# 标题')`**。
+- ⚠️ `GET /api/memory` 的返回体是 `{ok, mirror:{uid,totals,pages[],vectors,...}, ops:{pending,done}}`。
+  **不是** `{pages}` 也不是 `{memory:{pages}}`——猜错会把「解析不到」读成「一条都没有」
+  （2026-08-04 我据此误报「4 分钟未回读」，实际执行面 40 秒就 `memory op ok` 了）。
+- `GET /internal/app-placement` **必须带 `?appId=`**，不带返回 `{"ok":false,"error":"appId required"}`；
+  owner Bot 查它会返回 `unknown app`，这是 by design（owner 不是租户、不进 placement store），
+  不是「没有租约」。解析前先断言 `ok===true`（[[feedback_tool_contract_guess_chain]]）。
+- 用户后台会话：`POST /internal/magic-link {uid}`（SERVICE_TOKEN 门）拿 URL，
+  `curl -c jar -L` 换 cookie。`store.upsert` 对 `undefined` 字段 `continue`，不会覆盖既有档案。
