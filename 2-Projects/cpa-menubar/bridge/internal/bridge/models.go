@@ -18,21 +18,47 @@ type Account struct {
 	Usage             json.RawMessage `json:"usage,omitempty"`
 	UsageStatus       string          `json:"usage_status"`
 	UsageError        string          `json:"usage_error,omitempty"`
+	RuntimeUsage      *RuntimeUsage   `json:"runtime_usage,omitempty"`
 	SubscriptionUntil string          `json:"subscription_until,omitempty"`
 }
 
 type Summary struct {
-	GeneratedAt    time.Time       `json:"generated_at"`
-	AccountsTotal  int             `json:"accounts_total"`
-	CodexAccounts  int             `json:"codex_accounts"`
-	XAIAccounts    int             `json:"xai_accounts"`
-	K12Accounts    int             `json:"k12_accounts"`
-	Refreshable    int             `json:"refreshable_accounts"`
-	Expired        int             `json:"expired_accounts"`
-	Services       map[string]bool `json:"services"`
-	XAIUsage       *XAIUsage       `json:"xai_usage,omitempty"`
-	XAIUsageStatus string          `json:"xai_usage_status"`
-	XAIUsageError  string          `json:"xai_usage_error,omitempty"`
+	GeneratedAt      time.Time       `json:"generated_at"`
+	AccountsTotal    int             `json:"accounts_total"`
+	CodexAccounts    int             `json:"codex_accounts"`
+	XAIAccounts      int             `json:"xai_accounts"`
+	K12Accounts      int             `json:"k12_accounts"`
+	Refreshable      int             `json:"refreshable_accounts"`
+	Expired          int             `json:"expired_accounts"`
+	Services         map[string]bool `json:"services"`
+	CodexUsage       *RuntimeUsage   `json:"codex_usage,omitempty"`
+	CodexUsageStatus string          `json:"codex_usage_status"`
+	CodexUsageError  string          `json:"codex_usage_error,omitempty"`
+	XAIUsage         *XAIUsage       `json:"xai_usage,omitempty"`
+	XAIUsageStatus   string          `json:"xai_usage_status"`
+	XAIUsageError    string          `json:"xai_usage_error,omitempty"`
+}
+
+type RuntimeUsage struct {
+	Window              string  `json:"window"`
+	Requests            int64   `json:"requests"`
+	Successes           int64   `json:"successes"`
+	Errors              int64   `json:"errors"`
+	InputTokens         int64   `json:"input_tokens"`
+	OutputTokens        int64   `json:"output_tokens"`
+	ReasoningTokens     int64   `json:"reasoning_tokens"`
+	CacheReadTokens     int64   `json:"cache_read_tokens"`
+	CacheCreationTokens int64   `json:"cache_creation_tokens"`
+	TotalTokens         int64   `json:"total_tokens"`
+	AverageLatencyMS    float64 `json:"average_latency_ms"`
+	AverageTTFTMS       float64 `json:"average_ttft_ms"`
+	FastRequested       int64   `json:"fast_requested"`
+	FastActual          int64   `json:"fast_actual"`
+	UsageSamples        int64   `json:"usage_samples"`
+	TopModel            string  `json:"top_model,omitempty"`
+	LastRequestAt       string  `json:"last_request_at,omitempty"`
+	LastErrorAt         string  `json:"last_error_at,omitempty"`
+	LastErrorStatus     int     `json:"last_error_status,omitempty"`
 }
 
 type XAIUsage struct {

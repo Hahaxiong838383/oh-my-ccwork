@@ -8,38 +8,46 @@ import (
 )
 
 type Config struct {
-	Listen               string
-	AuthDir              string
-	DesktopToken         string
-	DesktopTokenFile     string
-	CLIProxyURL          string
-	RouterURL            string
-	RouterAPIKey         string
-	RouterAPIKeyFile     string
-	XAIManagementURL     string
-	XAIManagementAPIKey  string
-	XAIManagementTeamID  string
-	XAIManagementKeyFile string
-	UsageTimeout         time.Duration
-	OAuthTimeout         time.Duration
+	Listen                    string
+	AuthDir                   string
+	DesktopToken              string
+	DesktopTokenFile          string
+	CLIProxyURL               string
+	CLIProxyManagementKey     string
+	CLIProxyManagementKeyFile string
+	UsageStorePath            string
+	UsagePollInterval         time.Duration
+	RouterURL                 string
+	RouterAPIKey              string
+	RouterAPIKeyFile          string
+	XAIManagementURL          string
+	XAIManagementAPIKey       string
+	XAIManagementTeamID       string
+	XAIManagementKeyFile      string
+	UsageTimeout              time.Duration
+	OAuthTimeout              time.Duration
 }
 
 func LoadConfig() (Config, error) {
 	cfg := Config{
-		Listen:               envOr("CPA_DESKTOP_LISTEN", "127.0.0.1:8330"),
-		AuthDir:              envOr("CPA_AUTH_DIR", "/root/.cli-proxy-api"),
-		DesktopToken:         strings.TrimSpace(os.Getenv("CPA_DESKTOP_TOKEN")),
-		DesktopTokenFile:     envOr("CPA_DESKTOP_TOKEN_FILE", "/etc/cpa-desktop-bridge.token"),
-		CLIProxyURL:          envOr("CPA_CLIPROXY_URL", "http://127.0.0.1:8317"),
-		RouterURL:            envOr("CPA_ROUTER_URL", "http://127.0.0.1:8327"),
-		RouterAPIKey:         strings.TrimSpace(os.Getenv("CPA_ROUTER_API_KEY")),
-		RouterAPIKeyFile:     envOr("CPA_ROUTER_API_KEY_FILE", "/etc/cpa-smart-router.env"),
-		XAIManagementURL:     envOr("XAI_MANAGEMENT_URL", "https://management-api.x.ai"),
-		XAIManagementAPIKey:  strings.TrimSpace(os.Getenv("XAI_MANAGEMENT_API_KEY")),
-		XAIManagementTeamID:  strings.TrimSpace(os.Getenv("XAI_TEAM_ID")),
-		XAIManagementKeyFile: envOr("XAI_MANAGEMENT_API_KEY_FILE", "/etc/xai-management.env"),
-		UsageTimeout:         15 * time.Second,
-		OAuthTimeout:         5 * time.Minute,
+		Listen:                    envOr("CPA_DESKTOP_LISTEN", "127.0.0.1:8330"),
+		AuthDir:                   envOr("CPA_AUTH_DIR", "/root/.cli-proxy-api"),
+		DesktopToken:              strings.TrimSpace(os.Getenv("CPA_DESKTOP_TOKEN")),
+		DesktopTokenFile:          envOr("CPA_DESKTOP_TOKEN_FILE", "/etc/cpa-desktop-bridge.token"),
+		CLIProxyURL:               envOr("CPA_CLIPROXY_URL", "http://127.0.0.1:8317"),
+		CLIProxyManagementKey:     strings.TrimSpace(os.Getenv("CPA_CLIPROXY_MANAGEMENT_KEY")),
+		CLIProxyManagementKeyFile: envOr("CPA_CLIPROXY_MANAGEMENT_KEY_FILE", "/etc/cpa-cliproxy-management.env"),
+		UsageStorePath:            envOr("CPA_USAGE_STORE_PATH", "/var/lib/cpa-desktop-bridge/usage.json"),
+		UsagePollInterval:         5 * time.Second,
+		RouterURL:                 envOr("CPA_ROUTER_URL", "http://127.0.0.1:8327"),
+		RouterAPIKey:              strings.TrimSpace(os.Getenv("CPA_ROUTER_API_KEY")),
+		RouterAPIKeyFile:          envOr("CPA_ROUTER_API_KEY_FILE", "/etc/cpa-smart-router.env"),
+		XAIManagementURL:          envOr("XAI_MANAGEMENT_URL", "https://management-api.x.ai"),
+		XAIManagementAPIKey:       strings.TrimSpace(os.Getenv("XAI_MANAGEMENT_API_KEY")),
+		XAIManagementTeamID:       strings.TrimSpace(os.Getenv("XAI_TEAM_ID")),
+		XAIManagementKeyFile:      envOr("XAI_MANAGEMENT_API_KEY_FILE", "/etc/xai-management.env"),
+		UsageTimeout:              15 * time.Second,
+		OAuthTimeout:              5 * time.Minute,
 	}
 
 	if cfg.DesktopToken == "" && cfg.DesktopTokenFile != "" {
@@ -51,6 +59,13 @@ func LoadConfig() (Config, error) {
 	}
 	if len(cfg.DesktopToken) < 32 {
 		return Config{}, errors.New("CPA desktop token must contain at least 32 characters")
+	}
+	if cfg.CLIProxyManagementKey == "" && cfg.CLIProxyManagementKeyFile != "" {
+		value, err := readEnvFileValue(cfg.CLIProxyManagementKeyFile, "CPA_CLIPROXY_MANAGEMENT_KEY")
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return Config{}, err
+		}
+		cfg.CLIProxyManagementKey = value
 	}
 	if cfg.RouterAPIKey == "" && cfg.RouterAPIKeyFile != "" {
 		value, err := readEnvFileValue(cfg.RouterAPIKeyFile, "CPA_SMART_ROUTER_KEY")

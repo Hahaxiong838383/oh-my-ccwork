@@ -144,11 +144,56 @@ struct MenuContentView: View {
             LazyVStack(alignment: .leading, spacing: 12) {
                 serviceStatus
                 overviewMetrics
+                codexRuntimeOverview
                 quotaOverview
                 xaiOverview
                 errorBanner
             }
             .padding(16)
+        }
+    }
+
+    @ViewBuilder
+    private var codexRuntimeOverview: some View {
+        if let summary = model.summary {
+            VStack(alignment: .leading, spacing: 9) {
+                HStack {
+                    Label("Codex · 今日使用", systemImage: "waveform.path.ecg.rectangle")
+                        .font(.subheadline.bold())
+                    Spacer()
+                    Text("CPA 原生统计")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let usage = summary.codexUsage, usage.requests > 0 {
+                    HStack(spacing: 8) {
+                        compactMetric("请求", value: UsageFormatting.integer(usage.requests))
+                        compactMetric("Token", value: UsageFormatting.compactInteger(usage.totalTokens))
+                        compactMetric("首字", value: UsageFormatting.milliseconds(usage.averageTTFTMS))
+                        compactMetric("Fast 命中", value: UsageFormatting.percent(usage.fastActualPercent))
+                    }
+
+                    Text(runtimeSummaryLine(usage))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    if usage.requests > usage.usageSamples {
+                        Text("Token 覆盖率 \(UsageFormatting.percent(usage.usageCoveragePercent))，部分上游未返回完整 usage")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
+                } else if summary.codexUsageStatus == "error" {
+                    Text(summary.codexUsageError ?? "CPA 请求统计暂时不可用")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                } else {
+                    Text(summary.codexUsageStatus == "not_configured" ? "请求级统计尚未接入" : "正在采集今日请求数据")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .cardStyle(tint: Color.indigo.opacity(0.08))
         }
     }
 
@@ -448,6 +493,19 @@ struct MenuContentView: View {
         if remaining <= 35 { return .orange }
         return .green
     }
+
+    private func runtimeSummaryLine(_ usage: RuntimeUsage) -> String {
+        var parts = [
+            "成功率 \(UsageFormatting.percent(usage.successPercent))",
+            "平均延迟 \(UsageFormatting.milliseconds(usage.averageLatencyMS))",
+            "推理 \(UsageFormatting.compactInteger(usage.reasoningTokens))",
+            "缓存读取 \(UsageFormatting.compactInteger(usage.cacheReadTokens))"
+        ]
+        if usage.fastRequested > 0 {
+            parts.append("Fast \(usage.fastActual)/\(usage.fastRequested)")
+        }
+        return parts.joined(separator: " · ")
+    }
 }
 
 private struct XAIUsageCard: View {
@@ -646,6 +704,8 @@ private struct AccountRow: View {
                 }
                 .font(.caption2)
 
+                runtimeUsageDetails
+
                 creditsRow
             }
         }
@@ -654,6 +714,40 @@ private struct AccountRow: View {
         .overlay {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(AccountListPresentation.needsAttention(account) ? Color.orange.opacity(0.45) : Color.clear)
+        }
+    }
+
+    @ViewBuilder
+    private var runtimeUsageDetails: some View {
+        if let runtime = account.runtimeUsage, runtime.requests > 0 {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 14) {
+                    runtimeMetric("今日请求", UsageFormatting.integer(runtime.requests))
+                    runtimeMetric("今日 Token", UsageFormatting.compactInteger(runtime.totalTokens))
+                    runtimeMetric("首字", UsageFormatting.milliseconds(runtime.averageTTFTMS))
+                }
+
+                HStack(spacing: 14) {
+                    runtimeMetric("Fast", runtime.fastRequested > 0 ? "\(runtime.fastActual)/\(runtime.fastRequested)" : "--")
+                    runtimeMetric("成功率", UsageFormatting.percent(runtime.successPercent))
+                    runtimeMetric("最后使用", UsageFormatting.timestamp(runtime.lastRequestAt))
+                }
+
+                if runtime.errors > 0 {
+                    Label(
+                        runtime.lastErrorStatus.map { "今日 \(runtime.errors) 次错误 · 最近 HTTP \($0)" } ?? "今日 \(runtime.errors) 次错误",
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                }
+            }
+            .padding(8)
+            .background(Color.indigo.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+        } else {
+            Text("今日暂无该账号的请求记录")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -694,6 +788,18 @@ private struct AccountRow: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 72, alignment: .trailing)
         }
+    }
+
+    private func runtimeMetric(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.caption.monospacedDigit().bold())
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func color(for remaining: Double?) -> Color {

@@ -21,6 +21,7 @@ import (
 
 type authFile struct {
 	FileName     string
+	AuthIndex    string
 	Provider     string
 	Email        string
 	Plan         string
@@ -60,6 +61,11 @@ func (s *Server) handleSummary(w http.ResponseWriter, r *http.Request) {
 			"router":   s.tcpHealthy(s.cfg.RouterURL),
 		},
 	}
+	if s.usageStore != nil {
+		usage, _ := s.usageStore.snapshot(now)
+		summary.CodexUsage = &usage
+	}
+	summary.CodexUsageStatus, summary.CodexUsageError = s.usageCollector.publicStatus()
 	for _, file := range files {
 		switch file.Provider {
 		case "codex":
@@ -98,6 +104,7 @@ func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	accounts := make([]Account, len(files))
+	_, accountRuntimeUsage := s.usageStore.snapshot(time.Now())
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 4)
 	for index := range files {
@@ -107,6 +114,10 @@ func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
 			defer wg.Done()
 			file := files[index]
 			account := accountFromAuth(file)
+			if usage, ok := accountRuntimeUsage[file.AuthIndex]; ok {
+				usageCopy := usage
+				account.RuntimeUsage = &usageCopy
+			}
 			if file.Provider == "codex" && !file.Disabled && file.AccessToken != "" {
 				sem <- struct{}{}
 				usage, status, usageErr := s.fetchUsage(r.Context(), file)
@@ -181,6 +192,7 @@ func (s *Server) loadAuthFiles() ([]authFile, error) {
 		if strings.Contains(strings.ToLower(file.Plan), "k12") {
 			file.IsK12 = true
 		}
+		file.AuthIndex = authRuntimeIndex(file.Provider, s.cfg.AuthDir, file.FileName)
 		files = append(files, file)
 	}
 	return files, nil

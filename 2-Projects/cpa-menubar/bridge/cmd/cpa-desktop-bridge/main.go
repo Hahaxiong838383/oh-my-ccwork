@@ -23,6 +23,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("create bridge: %v", err)
 	}
+	runCtx, cancelRun := context.WithCancel(context.Background())
+	defer cancelRun()
+	handler.Start(runCtx)
 
 	server := &http.Server{
 		Addr:              cfg.Listen,
@@ -43,6 +46,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
+	cancelRun()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

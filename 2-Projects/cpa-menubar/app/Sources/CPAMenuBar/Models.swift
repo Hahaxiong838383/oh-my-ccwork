@@ -9,6 +9,9 @@ struct Summary: Decodable {
     let refreshableAccounts: Int
     let expiredAccounts: Int
     let services: [String: Bool]
+    let codexUsage: RuntimeUsage?
+    let codexUsageStatus: String?
+    let codexUsageError: String?
     let xaiUsage: XAIUsage?
     let xaiUsageStatus: String?
     let xaiUsageError: String?
@@ -22,9 +25,68 @@ struct Summary: Decodable {
         case refreshableAccounts = "refreshable_accounts"
         case expiredAccounts = "expired_accounts"
         case services
+        case codexUsage = "codex_usage"
+        case codexUsageStatus = "codex_usage_status"
+        case codexUsageError = "codex_usage_error"
         case xaiUsage = "xai_usage"
         case xaiUsageStatus = "xai_usage_status"
         case xaiUsageError = "xai_usage_error"
+    }
+}
+
+struct RuntimeUsage: Decodable, Equatable {
+    let window: String
+    let requests: Int64
+    let successes: Int64
+    let errors: Int64
+    let inputTokens: Int64
+    let outputTokens: Int64
+    let reasoningTokens: Int64
+    let cacheReadTokens: Int64
+    let cacheCreationTokens: Int64
+    let totalTokens: Int64
+    let averageLatencyMS: Double
+    let averageTTFTMS: Double
+    let fastRequested: Int64
+    let fastActual: Int64
+    let usageSamples: Int64
+    let topModel: String?
+    let lastRequestAt: String?
+    let lastErrorAt: String?
+    let lastErrorStatus: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case window, requests, successes, errors
+        case inputTokens = "input_tokens"
+        case outputTokens = "output_tokens"
+        case reasoningTokens = "reasoning_tokens"
+        case cacheReadTokens = "cache_read_tokens"
+        case cacheCreationTokens = "cache_creation_tokens"
+        case totalTokens = "total_tokens"
+        case averageLatencyMS = "average_latency_ms"
+        case averageTTFTMS = "average_ttft_ms"
+        case fastRequested = "fast_requested"
+        case fastActual = "fast_actual"
+        case usageSamples = "usage_samples"
+        case topModel = "top_model"
+        case lastRequestAt = "last_request_at"
+        case lastErrorAt = "last_error_at"
+        case lastErrorStatus = "last_error_status"
+    }
+
+    var successPercent: Double? {
+        guard requests > 0 else { return nil }
+        return Double(successes) / Double(requests) * 100
+    }
+
+    var fastActualPercent: Double? {
+        guard fastRequested > 0 else { return nil }
+        return Double(fastActual) / Double(fastRequested) * 100
+    }
+
+    var usageCoveragePercent: Double? {
+        guard requests > 0 else { return nil }
+        return Double(usageSamples) / Double(requests) * 100
     }
 }
 
@@ -122,6 +184,7 @@ struct Account: Decodable, Identifiable {
     let usage: UsagePayload?
     let usageStatus: String
     let usageError: String?
+    let runtimeUsage: RuntimeUsage?
     let subscriptionUntil: String?
 
     enum CodingKeys: String, CodingKey {
@@ -133,6 +196,7 @@ struct Account: Decodable, Identifiable {
         case isK12 = "is_k12"
         case usageStatus = "usage_status"
         case usageError = "usage_error"
+        case runtimeUsage = "runtime_usage"
         case subscriptionUntil = "subscription_until"
     }
 

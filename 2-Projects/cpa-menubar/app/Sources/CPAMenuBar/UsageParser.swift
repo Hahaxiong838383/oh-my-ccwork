@@ -75,6 +75,34 @@ enum UsageFormatting {
         value.formatted(.number.grouping(.automatic))
     }
 
+    static func compactInteger(_ value: Int64) -> String {
+        let magnitude = abs(Double(value))
+        let divisor: Double
+        let suffix: String
+        switch magnitude {
+        case 1_000_000_000...:
+            divisor = 1_000_000_000
+            suffix = "B"
+        case 1_000_000...:
+            divisor = 1_000_000
+            suffix = "M"
+        case 1_000...:
+            divisor = 1_000
+            suffix = "K"
+        default:
+            return integer(value)
+        }
+        return (Double(value) / divisor).formatted(.number.precision(.fractionLength(0 ... 2))) + suffix
+    }
+
+    static func milliseconds(_ value: Double) -> String {
+        guard value > 0 else { return "--" }
+        if value >= 1_000 {
+            return (value / 1_000).formatted(.number.precision(.fractionLength(1 ... 2))) + "秒"
+        }
+        return Int(value.rounded()).formatted() + "ms"
+    }
+
     static func usd(_ value: Double?) -> String {
         guard let value else { return "--" }
         return value.formatted(

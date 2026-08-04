@@ -66,6 +66,19 @@ final class UsageParserTests: XCTestCase {
         XCTAssertNil(usage.todayBudgetRemainingPercent)
     }
 
+    func testDecodesRuntimeUsageAndCalculatesFastHitRate() throws {
+        let usage = try JSONDecoder().decode(
+            RuntimeUsage.self,
+            from: Data(#"{"window":"today","requests":12,"successes":11,"errors":1,"input_tokens":1000,"output_tokens":500,"reasoning_tokens":200,"cache_read_tokens":300,"cache_creation_tokens":100,"total_tokens":1500,"average_latency_ms":1250,"average_ttft_ms":420,"fast_requested":10,"fast_actual":4,"usage_samples":9,"top_model":"gpt-5.5","last_request_at":"2026-08-04T12:00:00Z","last_error_at":"2026-08-04T11:00:00Z","last_error_status":429}"#.utf8)
+        )
+        XCTAssertEqual(usage.successPercent ?? 0, 91.666666667, accuracy: 0.000001)
+        XCTAssertEqual(usage.fastActualPercent, 40)
+        XCTAssertEqual(usage.usageCoveragePercent, 75)
+        XCTAssertEqual(usage.topModel, "gpt-5.5")
+        XCTAssertEqual(UsageFormatting.compactInteger(1_500), "1.5K")
+        XCTAssertEqual(UsageFormatting.milliseconds(1_250), "1.25秒")
+    }
+
     private func decode(_ json: String) throws -> UsagePayload {
         try JSONDecoder().decode(UsagePayload.self, from: Data(json.utf8))
     }

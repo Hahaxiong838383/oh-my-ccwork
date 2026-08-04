@@ -100,6 +100,14 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - 菜单栏浮窗优先使用紧凑的分段 `Picker` 做“总览 / 账号 / xAI”切换，不使用会引入额外页签装饰和尺寸波动的默认 `TabView`。设置继续由齿轮入口独立承载。
 - 账号页按“停用 → 用量读取失败 → 周额度不高于 10% → 其余账号”排序，并提供“全部 / Plus / K12 / 异常”筛选；xAI 账号不混入 Codex 账号列表。
 - 账号卡默认折叠，只保留邮箱、套餐、自动刷新标记和周额度；充值余额、重置卡等低频或危险操作只在展开区显示，重置卡仍必须走 App 二次确认与 Bridge 实时校验。
+- Codex 请求级统计优先读取 CLIProxyAPI 本地 `GET /v0/management/usage-queue?count=500`，Bridge 默认每 5 秒拉取并按小时持久化到 `/var/lib/cpa-desktop-bridge/usage.json`；该文件必须为 root-only `0600`，只保留最近 8 天。
+- `usage-queue` 请求数可能包含重试、账号重选等上游尝试，不等同于用户对话轮数。总请求与 `usage_samples` 要分开统计；部分上游未返回 usage 时，浮窗必须显示 Token 覆盖率，不能把缺失 usage 解释成 0 消耗。
+- 原始队列记录在进入持久化前必须丢弃 API Key、Token 指纹、IP/X-Forwarded-For、User-Agent、响应 Header 和错误正文；稳定 auth index 只用于 root-only 聚合与账号关联，Desktop API 只返回既有脱敏账号 ID。
+- Fast 统计必须分开记录请求 `service_tier=priority/fast` 和响应 `response_service_tier=priority/fast`。验收至少同时证明请求档位、HTTP 状态、响应档位；请求 `priority` 但响应 `default` 时，实际命中必须记为 0。
+- CLIProxyAPI Management Key 若只剩 bcrypt 哈希无法恢复明文。需要轮换时生成新随机值，只保存到 macOS Keychain 与 VPS `/etc/cpa-cliproxy-management.env`（`0600`），不得打印、下载或写入 Git/记忆。
+- 开启 usage statistics 的远端切换脚本要忽略 YAML section 内无缩进注释，并限制 run id 为 `[A-Za-z0-9._-]+`；终态不能只看成功 marker，还要验证 systemd result、三个服务、`8317/8327/8330`、真实请求和 Bridge 增量。
+- HTTP 200 不是请求级统计验收充分条件；还要核对响应 ID、model、usage、服务端请求日志，以及 `/desktop/v1/summary` 和 `/desktop/v1/accounts` 的增量与敏感字段零命中。
+- xAI 请求级 usage 本轮明确暂缓；继续保留官方 Billing/Prepaid 与 Smart Router 聚合两层语义，禁止把 Codex 队列采集逻辑顺手扩展到 xAI。
 - CPA Menu 发布验收至少包括：`swift test`、Release 构建、结束旧进程后覆盖安装、核对 Bundle 版本、新进程启动时间、安装包与运行二进制 SHA-256 一致、`codesign --verify` 通过。
 
 验证命令：

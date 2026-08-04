@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
@@ -12,21 +13,35 @@ import (
 )
 
 type Server struct {
-	cfg      Config
-	client   *http.Client
-	sessions map[string]*oauthSession
-	mu       sync.Mutex
+	cfg            Config
+	client         *http.Client
+	sessions       map[string]*oauthSession
+	usageStore     *usageStore
+	usageCollector *usageCollector
+	mu             sync.Mutex
 }
 
 func NewServer(cfg Config) (*Server, error) {
+	store, err := newUsageStore(cfg.UsageStorePath)
+	if err != nil {
+		return nil, err
+	}
 	server := &Server{
 		cfg: cfg,
 		client: &http.Client{
 			Timeout: cfg.UsageTimeout,
 		},
-		sessions: make(map[string]*oauthSession),
+		sessions:   make(map[string]*oauthSession),
+		usageStore: store,
 	}
+	server.usageCollector = newUsageCollector(cfg, server.client, store)
 	return server, nil
+}
+
+func (s *Server) Start(ctx context.Context) {
+	if s.usageCollector != nil {
+		go s.usageCollector.run(ctx)
+	}
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
