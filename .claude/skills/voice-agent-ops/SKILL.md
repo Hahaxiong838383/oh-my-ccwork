@@ -193,7 +193,7 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 
 **64.90 三服务**:`voice-console`(FastAPI 127.0.0.1:8930,对外 https://voice-api.hahaxiong.cc 经 caddy)/`caddy`(自动证书)/`voice-worker-colleague`(租户实例)。主 worker 与它们互不依赖,全撤=`systemctl disable --now` 三件。
 
-**租户配置真源**:`/root/realtime-voice-agent/tenant-colleague.env`——unit 的**最后一个 EnvironmentFile**。⚠️ **systemd EnvironmentFile 覆盖 Environment=**,差异配置绝不写 unit Environment 行(2026-07-28 实战:写了=服务 active 但 provider 根本没切)。当前(2026-07-29 拉齐终态,回滚=tenant-colleague.env.bak-0729+restart):STT_PROVIDER=**xfyun_spark_iat**、TTS_PROVIDER=xfyun、LLM_PROVIDER=tenant-brain、打断体验包=POC_PREDICTIVE_EOU=1+POC_EOU_UNLIKELY_THRESHOLD=0.18+MIN/MAX_ENDPOINTING_DELAY=**0.8/1.0**(spark_iat 判停由 eos=700 主导,MIN 按其 final 时序配;⚠️ B5/END_WINDOW=volc 专属勿带)+MIN_INTERRUPTION_WORDS=0+FALSE_INTERRUPTION_TIMEOUT=0.7+POC_RESUME_FADE_MS=250、WORKER_MAX_JOBS=2、WORKER_HTTP_PORT=8082(错开主 8081)、FILLER_DIR=/opt/voice-agent/fillers-colleague(聆小璇音色,租户专属,勿混主 assets/fillers)、GREETING_MODE=llm(开场白走租户大脑;指令走 user 消息位——instructions=system-only 被 DashScope 20015 拒;GREETING_LLM_HINT 换文案,删行=回固定句)。内存护栏 drop-in:`voice-worker-colleague.service.d/memory.conf`(High 1600M/Max 2000M)。
+**租户配置真源**:`/root/realtime-voice-agent/tenant-colleague.env`——unit 的**最后一个 EnvironmentFile**。⚠️ **systemd EnvironmentFile 覆盖 Environment=**,差异配置绝不写 unit Environment 行(2026-07-28 实战:写了=服务 active 但 provider 根本没切)。当前(2026-07-29 拉齐终态,回滚=tenant-colleague.env.bak-0729+restart):STT_PROVIDER=**xfyun_spark_iat**、TTS_PROVIDER=xfyun、LLM_PROVIDER=tenant-brain、打断体验包=POC_PREDICTIVE_EOU=1+POC_EOU_UNLIKELY_THRESHOLD=0.18+MIN/MAX_ENDPOINTING_DELAY=**0.8/1.0**(spark_iat 判停由 eos=700 主导,MIN 按其 final 时序配;⚠️ B5/END_WINDOW=volc 专属勿带)+**MIN_INTERRUPTION_WORDS=1**(2026-08-04 改,原 0;租户线独有,主 worker 仍 0——同事嘈杂 demo 场景,回滚=改回 0+restart 或 tenant-colleague.env.bak-0804-wordgate)+FALSE_INTERRUPTION_TIMEOUT=0.7+POC_RESUME_FADE_MS=250、WORKER_MAX_JOBS=2、WORKER_HTTP_PORT=8082(错开主 8081)、FILLER_DIR=/opt/voice-agent/fillers-colleague(聆小璇音色,租户专属,勿混主 assets/fillers)、GREETING_MODE=llm(开场白走租户大脑;指令走 user 消息位——instructions=system-only 被 DashScope 20015 拒;GREETING_LLM_HINT 换文案,删行=回固定句)。内存护栏 drop-in:`voice-worker-colleague.service.d/memory.conf`(High 1600M/Max 2000M)。
 
 **常用操作**:开租户=`source console.env && python -m voice_agent.console.tenantctl add <名>`(key 只显示一次);凭据状态=`GET /v1/credentials`(Bearer 租户key,只回指纹);换 filler 音色=`gen_fillers.py --engine xfyun --out <独立目录>`(64.90 上跑,凭据走租户存储不出服务器)+FILLER_DIR 指过去。
 
@@ -228,6 +228,16 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=javis-colleaguedem-5675d9 timeout 75 /root/voice-venv/bin/python   scripts/rtc_probe.py --wav /tmp/q.wav --room probe-$(date +%s) --warmup 8 --listen 40 --record /tmp/a.wav
 ```
 注意:会真跑同事 /v1 一轮(花他少量 token,联调范畴);probe identity 会出现在他后台。
+⚠️ **probe 会被 `WORKER_MAX_JOBS=2` 挡在门外**(2026-08-04 实战):同事在用时两个 slot 占满,worker 打 `at full capacity, marking as unavailable`,probe 侧只表现为"未录到 agent 音频"+**目标 room 在 worker 日志零命中**——像 dispatch 坏了,其实是排队排不上。跑前先 `journalctl grep "full capacity"` 或数活跃 room,别把容量问题当故障查。
+
+**向协作方收集体验反馈的模板(2026-08-04)**:体验类调整(打断灵敏度/语速/音色)服务端指标只能证明"链路对",**好不好用只有对方知道**,但直接问"是不是变好了"= 把答案印在卷子上(见 [[feedback_acceptance_prompt_carried_the_answer]])。给对方的 prompt 只让记现象,四项:①大致时间点(我方据此对齐服务端日志)②当时环境里在响什么③agent 的表现(卡一下续播/彻底停/换话题)④**反向问题**——"我说话了它没停"(即本次调整的代价面,不主动问就系统性看不见,等对方忍不了才爆)。另附**先分流一个高频真凶**:外放测试时 agent 自己的声音被麦克风收回,产生的是**内容清晰的**打断,字数门拦不住——让对方外放/耳机各测几轮对比,耳机下好转=问题主成分是回声不是环境音,解决方向完全不同。⚠️ 对外文字**不出现架构与开源组件名**(只讲行为:"提高了打断的准入门槛"),回滚承诺要给("分钟级可退")。
+
+**打断遥测(`interrupt telemetry`)判读法(2026-08-04,踩坑修正)**:该行记的是 **agent_state speaking→listening 的全部转换**,`正常播完` 和 `被打断` 混在一起,**`interim=''` 绝不等于"环境音打断"**(实测 3 天 122 条空 interim 里 104 条是正常播完)。正确判据:
+- **正常播完** = 空 interim 且同 room ±1.5s 内有 `契约 AgentTranscriptFinal`
+- **无字打断(环境音穿透)** = 空 interim 且附近**无** AgentTranscriptFinal
+- **有字打断(真插话)** = interim 非空;紧跟同一 turn 的 `AgentSpeechStopped`+`AgentSpeechStarted` = 打断后恢复
+统计脚本模板见 `~/mycc` scratchpad `gate_stats.py`/`gate_len.py`(判据自带锚点自检:改前窗口必须数出非零,否则判据本身坏了)。
+⚠️ 写这类统计脚本**别用 `ssh host '...'` 内嵌 heredoc**:脚本里的字面单引号会被外层引号吃掉,判据静默失效并报出漂亮的 0(本轮连栽两次:先是正则 `$` 锚点匹配不上 JSON 行,再是引号被吞)。改用**本地写文件 + `cat file | ssh host 'cat > /tmp/x.py && python /tmp/x.py'`**。
 
 **「只说一句/内容缺失」诊断遥测**(常驻,2026-08-03):三行日志一次定层——
 `journalctl grep "llm stream done"`(上游给了多少字)+`grep "xfyun tts synthesize"`(每句进合成的文本,数行数=句数)+录音有效时长。三层对齐=己方无罪(实战:上游只给 15 字,全部念完,责任面一次切清);llm chars 大而 tts 一段=切句层;tts 多段而听到一句=播放/打断层(配 interrupt telemetry interim 判)。
