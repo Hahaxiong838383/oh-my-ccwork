@@ -3846,7 +3846,7 @@ control-plane/** —— 控制面改动到不了 Mini，这是 by design 不是�
 「验收结论是验收通过」时，要按字段真实选项池落成「通过」并说明，别硬塞不存在的枚举。
 另：`+table-list` 返回的表 ID 键是 **`id`** 不是 `table_id`。
 
-## Mini B2：Lima VM + bwrap 影子线（2026-08-04 影子就绪，commit 5e1df24；**尚未割接**）
+## Mini B2：Lima VM + bwrap 影子线（2026-08-04 影子就绪，**当前 commit 3ba27a5**；**尚未割接**）
 
 把 Mini 租户执行面从 macOS 原生搬进 Linux VM，为的是拿到真 bwrap 沙箱
 （macOS 上没有）。当前状态：**影子就绪，生产流量仍全部走原生**。
@@ -3874,6 +3874,28 @@ h-mini-b2-runner.service   enabled 但 inactive
 
 割接唯一入口 `cutover-mini-b2.sh --confirm-cutover`。**没跑它 = 没割接**，
 原生 launchd 两个进程还在、18775 还是原生 PID 持有，就是铁证。
+更硬的一条：**部署前后原生 PID 不变**（如 bridge=46926 / runner=46884）＝影子部署没碰原生。
+
+### 影子态验收的两个取数陷阱（都会造假故障 / 假通过）
+
+**① Mini healthz 没有 `queue`/`active` 这两个键。** 猜名字取到的是 `None`，
+干净、不报错，看着像「查了，是空的」。真键名（`18775/healthz`，先 `list(d.keys())` 再取）：
+
+| 要验的 | 真实路径 |
+|---|---|
+| queue | `queueDepthTotal`、`queueStats.totalDepth`、`queueStats.activeGlobal` |
+| active | `workConcurrency.active` / `.waiting` |
+| Runner pending/children | `runnerWorker.pending` / `.children` / `.remoteChildren` |
+| Outbox pending | `deliveryOutbox.pending` / `.retrying` |
+| 连接 | 顶层 `connected` + `runnerWorker.connected` |
+
+**② 数 VM 里的进程别用 `pgrep -f <路径>`——会匹配到自己。**
+`limactl shell h-b2 -- bash -lc 'pgrep -fc "h-platform/app/bridge.mjs"'` 返回 **1**，
+真值是 0（那个 1 是这条 `bash -lc` 自身的命令行）。差点报出「割接前发现双长连接」的假故障。
+改用 `ps -eo pid,ppid,etime,args` 交给外部 grep（观察者不在被观察集合里），或方括号
+`pgrep -fc "[b]ridge[.]mjs"`；并留一个非零锚（如 ps 总行数）证明通道是活的。
+⚠️ **我只因为期望值恰好是 0 才发现**——期望非零时这个 +1 会被静默吸收。
+详见 [[feedback_ssh_pkill_pgrep_self_match]]。
 
 ### 🔴 影子态验收的固有天花板（写交接文档前必读）
 
@@ -3898,10 +3920,33 @@ scp /tmp/a.tar.gz mini-pub:/tmp/h-mini-b2-$COMMIT.tar.gz
 ```
 
 四步顺序固定：`install-mini-b2-shadow.sh`（含 VM 内 `npm ci`，最慢）→
-`install-mini-b2-host.sh` → `sync-mini-b2-state.sh shadow` → `write-deploy-meta --check`
-→ `verify-mini-b2-shadow.sh`（出 `shadow=ready …` 即通过）。
+`install-mini-b2-host.sh` → `sync-mini-b2-state.sh shadow` → `verify-mini-b2-shadow.sh`
+（出 `shadow=ready …` 即通过）。
 `install-mini-b2-shadow.sh` 自带守门：动手前先 curl 原生 healthz，不健康直接 fail；
 rsync 排除 `/.env /data/ /memory/ /workspace/`，只读不写原生。
+
+### 🔴 影子重装会删掉 VM 的 deploy meta，必须手工补写（不是 `--check`）
+
+**别写成 `write-deploy-meta --check`——那一定失败。** 影子安装是两段 rsync：
+第一段 `--exclude '/.deploy-meta.json'` 把它挡在暂存目录外，第二段
+`rsync -a --delete "$APP_ROOT.stage/" "$APP_ROOT/"` **不带排除**，于是目标侧那份被删
+（exclude 是"不传"，delete 是"清扫"，两者独立——[[feedback_rsync_exclude_delete_pitfall]]）。
+而 `grep -rc write-deploy-meta deploy/lima/` **零命中**：整条影子链没有写它的地方，
+只有原生腿 `deploy/launchd/install-mini-bot.sh` 会写。
+
+所以每次影子重装后自己补：
+
+```sh
+limactl shell h-b2 -- node /opt/h-platform/app/scripts/write-deploy-meta.mjs \
+  --root /opt/h-platform/app --commit "$COMMIT" --branch codex/h-mini-ab-poc \
+  --source-host chenchuandeMac-mini          # 约定=执行部署的那台主机
+# 再 --check 回读，并直接 cat 磁盘原文对撞（三通道一致才算数）
+```
+
+⚠️ **这个缺口曾隐形整整一轮**：上一轮验收「VM deploy meta = 新提交」是绿的，
+因为有人手工写过——清单只验值对不对，验不了谁生产的。
+详见 [[feedback_manual_fill_masks_missing_mechanism]]；根治办法是把写入并进
+`install-mini-b2-shadow.sh` 尾部。
 
 ### ⚠️ 判"VM 有没有挂 Host HOME"别用 `[ -d /Users ]`
 
@@ -3926,7 +3971,7 @@ Air 与 Mini 的 home **都是** `/Users/rayman.chen`，dev198 是 `/home/chuan`
 **结论：运维文档用绝对路径 + 标明主机**（如「站外回滚点（Mini，`ssh mini-pub`）：`/Users/...`」），
 不要为"可移植"改成 `~`。
 
-## 🔴 Mini B2 首次割接事故与修复（2026-08-04，commit aba43b7；影子已重部署，仍未割接）
+## 🔴 Mini B2 首次割接事故与修复（2026-08-04，修复收口于 commit 3ba27a5；影子已重部署，仍未割接）
 
 第一次跑 `cutover-mini-b2.sh --confirm-cutover` 失败，**且自动回滚也失败**，
 最后靠人工恢复。两个根因都在 launchd 的语义上，写下来免得重演。
@@ -3963,22 +4008,35 @@ wait_launchd_unloaded() {           # cutover-mini-b2.sh
 ⚠️ 同一个坑的通用形态：**`stop`/`bootout`/`kill` 这类命令的返回只代表"请求已受理"**，
 不代表状态已到达。下一步依赖"已停"时必须自己轮询确认。
 
-### 🔴 仍未堵的活雷：回滚器缺省指向旧安装器
+### ✅ 回滚器缺省活雷已堵（commit 3ba27a5，本条留作模式）
 
-`rollback-mini-b2.sh` 里 `SOURCE_ROOT=${PROJECT_ROOT:-"$HOME/local/h-platform-mini-bot"}`。
-**原生部署根上的 `install-mini-bot.sh` 仍是旧顺序**（影子部署只更新影子源，不更新原生根）。
-所以割接时忘传 `PROJECT_ROOT` → 回退到旧安装器 → 原样复现本次事故。
+曾经是 `SOURCE_ROOT=${PROJECT_ROOT:-"$HOME/local/h-platform-mini-bot"}` —— 缺省回退到
+**原生部署根，而那份 `install-mini-bot.sh` 仍是旧顺序**（影子部署只更新影子源，不更新
+原生根），忘传 `PROJECT_ROOT` 就原样复现事故。现改为 fail-fast 且在**任何服务动作前**：
 
-割接前必须先堵：缺省改 fail-fast（不传就退出），或执行前断言所用安装器
-`enable` 出现在 `bootstrap` 之前。详见 [[feedback_fallback_default_points_at_unfixed_copy]]。
+```sh
+SOURCE_ROOT=${PROJECT_ROOT:-}
+[ -n "$SOURCE_ROOT" ] || { echo "Mini B2 rollback failed: PROJECT_ROOT is required" >&2; exit 1; }
+[ -x "$SOURCE_ROOT/deploy/launchd/install-mini-bot.sh" ] || { …; exit 1; }
+[ -x "$SOURCE_ROOT/scripts/ai-memory-provision-macos.sh" ] || { …; exit 1; }
+# ↑ 全部在第一条 launchctl/systemctl 之前
+```
 
-### 已知 flaky（别记到自己头上）
+实测 `env -u PROJECT_ROOT bash rollback-mini-b2.sh --confirm-rollback` → exit 1 且**零个
+服务动作被触达**。**留这条是为了模式**：关键路径（回滚/恢复/灾备）的缺省一律 fail-fast，
+别 fallback —— 人在事故里最容易漏传环境变量（[[feedback_fallback_default_points_at_unfixed_copy]]）。
 
-`test/runner-worker-ipc.test.mjs`「kill worker 后调用标 orphan」偶发报
-`runner worker app not registered`。机理：kill → 固定 `sleep 350ms` → 同 socket 重启 →
-断言 `client.snapshot().connected`（**socket 层**）→ 立刻 `remote.execute`（需要的是
-**app 已重新注册**）。负载高时重注册慢于重连就炸。隔离重跑 5/5 过、整套重跑绿。
-判它是不是本轮回归用三证据法（[[feedback_classify_test_failure_before_deciding]]）。
+### ✅ 曾经的 flaky 已修（同 commit）
+
+`test/runner-worker-ipc.test.mjs`「kill worker 后调用标 orphan」曾偶发
+`runner worker app not registered`。机理是**等的信号不是下一步依赖的信号**：
+断言 `snapshot().connected`（socket 层）却紧接着 `remote.execute`（需要 app 已重注册）。
+现双向修好——生产侧 `isConnected() = ready && isSocketConnected()`，`ready` 只在
+`await registerAll()` 之后置真（socket close / register 失败 / close 时清零）；
+测试侧去掉固定 `sleep 350ms` 改等真实条件。**验收跑了 8×2 = 16/16**。
+
+⚠️ **修竞态后"首跑绿"不是证据**——间歇缺陷修复前也经常首跑绿。必须重复 N 次
+（N 覆盖原故障率），最好同时证伪机理。见 [[feedback_classify_test_failure_before_deciding]]。
 
 ### ⚠️ 别信 harness 通知里的退出码
 
