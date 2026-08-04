@@ -113,16 +113,43 @@ cd ../app
 swift test
 ```
 
+## 生产升级与自断线预案（2026-08-04）
+
+CPA 是 Codex 当前连接链路的一部分，升级 `cliproxy` 或 `cpa-smart-router` 时不能依赖当前会话继续完成回滚：
+
+1. **先锁基线**：记录三个 service 的 PID/启动时间/重启次数、监听端口、账号数量、健康 Codex 数、xAI 状态、rich model catalog 和低成本真实请求。
+2. **root-only 备份**：二进制、配置、unit、auth-dir 和环境文件留在 VPS，目录 `0700`、敏感文件 `0600`，不下载、不打印正文。
+3. **新版先旁路 canary**：Bridge 使用独立 `18330`，Router 使用独立 `18327`；确认 rich catalog、真实请求和账号基线后才允许动生产端口。
+4. **远端自治切换**：通过独立 systemd job 原子替换并重启；可能影响当前 Codex 的 Router/CLIProxy 使用延迟 job，让当前回复先结束。Bridge 不影响 Codex，可先部署。
+5. **双重回滚**：升级脚本任一验收失败立即恢复旧二进制；另设从升级开始计时约 120 秒的 watchdog，无终态 marker 时二次回滚。auth-dir 不自动回滚，避免覆盖已轮换的 refresh token。
+6. **最终验收不能只看 marker**：同时验证生产 SHA-256、service active/PID、`8317/8327/8330`、内外网目录、公开真实请求、Bridge 账号与 xAI、近时段 panic/fatal。
+
+推荐顺序：`CLIProxyAPI → Desktop Bridge → Smart Router`。2026-08-04 已按此顺序验证 CLIProxyAPI `7.2.116`；当时 5 个 Codex 中 4 个用量正常、原有 1 个 401，属于升级前后相同基线，后续仍须实时复核。
+
+### 本次踩坑与防复发
+
+- 备份二进制可以安全地设为 `0600`；回滚源只需存在且可读，升级前门禁用 `test -f`，不要用 `test -x`。`install -m 755 <backup> <staged>` 会恢复执行位。
+- `git archive HEAD:<project>` 得到的源码没有 `.git`，Go 构建必须显式加 `-buildvcs=false`；同时把源码 commit 单独写入 root-only release metadata。禁止从含无关脏文件的主工作区直接构建生产二进制。
+- macOS 一次性后台监控不要用裸 `launchctl submit`；该任务可能在退出后被 launchd 反复拉起，造成通知轰炸。若必须使用 launchd，提供 `KeepAlive=false` 的 plist 并在终态卸载；默认不发通知，只保留可查询日志/marker。
+- zsh 的 `status` 是只读特殊变量，轮询状态使用 `result_state` 等名字；macOS BSD `date` 不支持 `date -Is`，统一用 `date '+%Y-%m-%dT%H:%M:%S%z'`。
+- 任何 run id、目录名和 unit 名都要限制为 `[A-Za-z0-9._-]+`，禁止把终端颜色、Markdown 或控制字符拼进生产路径。
+- Fast 验收继续拆分：请求是否携带 `priority`、HTTP 是否 200、上游回报档位。上游仍回 `default` 时只能称“意图已发送”，不能称“加速已确认”。
+
 ## 构建部署
 
 ```bash
-cd /Users/rayman.chen/mycc/2-Projects/cpa-smart-router
+BUILD_ROOT="$(mktemp -d /tmp/cpa-clean-build.XXXXXX)"
+git -C /Users/rayman.chen/mycc archive HEAD:2-Projects/cpa-smart-router | tar -x -C "$BUILD_ROOT"
+cd "$BUILD_ROOT"
 go test ./...
-GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /tmp/cpa-smart-router ./cmd/router
-
-scp -q /tmp/cpa-smart-router aliyun-jp:/tmp/cpa-smart-router
-ssh aliyun-jp 'install -m 755 /tmp/cpa-smart-router /opt/cpa-smart-router/cpa-smart-router && rm -f /tmp/cpa-smart-router && systemctl restart cpa-smart-router && sleep 2 && systemctl is-active cpa-smart-router'
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+  go build -buildvcs=false -trimpath -ldflags='-s -w -buildid=' \
+  -o /tmp/cpa-smart-router ./cmd/router
+go version -m /tmp/cpa-smart-router
+sha256sum /tmp/cpa-smart-router
 ```
+
+构建完成后按“生产升级与自断线预案”部署，禁止退化为无备份的直接覆盖重启。
 
 ## 当前实现状态
 
