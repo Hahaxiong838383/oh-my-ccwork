@@ -3845,3 +3845,83 @@ control-plane/** —— 控制面改动到不了 Mini，这是 by design 不是�
 ⚠️ **「验收通过」只存在于 `状态`**；`验收结论` 的对应值叫「通过」。川哥口头说
 「验收结论是验收通过」时，要按字段真实选项池落成「通过」并说明，别硬塞不存在的枚举。
 另：`+table-list` 返回的表 ID 键是 **`id`** 不是 `table_id`。
+
+## Mini B2：Lima VM + bwrap 影子线（2026-08-04 影子就绪，commit 5e1df24；**尚未割接**）
+
+把 Mini 租户执行面从 macOS 原生搬进 Linux VM，为的是拿到真 bwrap 沙箱
+（macOS 上没有）。当前状态：**影子就绪，生产流量仍全部走原生**。
+
+### 两条路径的真值表（判"现在谁在服务"先看这个）
+
+| | 原生（在服务） | B2 VM（影子待命） |
+|---|---|---|
+| 位置 | `~/local/h-platform-mini-bot` | Lima 实例 `h-b2`，app 在 `/opt/h-platform/app` |
+| 状态根 | `<部署根>/data/users` | `/srv/h-platform/{users,memory,workspace,config,shared,orgs}` |
+| 进程 | launchd `com.hplatform.mini-bot.{bridge,runner}` | systemd --user `h-mini-b2-{bridge,runner}.service` |
+| 健康 | `127.0.0.1:18775`（原生 bridge 持有） | 无（health 转发 agent 影子期 disabled） |
+| node | `~/.hermes/node/bin/node` | VM 内 v22.22.1 |
+
+**判进程在不在 VM 里，看命令行路径**：`/Users/...` = macOS 原生，`/opt/h-platform/app` = VM。
+`limactl` 真值 `/opt/homebrew/bin/limactl`（非交互 ssh 的 PATH 里没有，写全路径）。
+
+### 影子态 = 三个同时成立，缺一就不是影子
+
+```
+h-mini-b2-bridge.service   enabled 但 inactive
+h-mini-b2-runner.service   enabled 但 inactive
+/srv/h-platform/config/mini-b2-enabled   不存在   ← 割接 marker
+```
+
+割接唯一入口 `cutover-mini-b2.sh --confirm-cutover`。**没跑它 = 没割接**，
+原生 launchd 两个进程还在、18775 还是原生 PID 持有，就是铁证。
+
+### 🔴 影子态验收的固有天花板（写交接文档前必读）
+
+服务 inactive ⇒ **VM 里的 `bridge → runner → 送达` 主链路一次都没执行过**。
+所以哪怕 12 条硬验收全绿，正确措辞是「**就绪（未经真实流量）**」，不是「验收通过」。
+`verify-mini-b2-grok.mjs` 只证明 grok 二进制 + bwrap + 凭据渲染这一段通
+（输出 `{"ok":true,"model":"grok-4.5","replyChars":N}`，只给字符数不给正文）。
+详见 [[feedback_shadow_deploy_verification_boundary]]。
+
+**第二个固有属性：影子状态副本会漂移。** `sync-mini-b2-state.sh shadow` 是快照不是镜像，
+同步后用户新产生的对话/记忆/规则只进原生。**割接前必须用 `quiesced` 模式重同步**
+——该模式强制先停原生 launchd、确认 18775 下线，才做最终同步；直接在原生运行时拷会拿到撕裂状态。
+同步是单向（原生 → VM），脚本里无反向路径，所以 VM 里怎么折腾都污染不了生产。
+
+### 部署方式：Air 打包推送，Mini 全程不碰 GitHub
+
+```bash
+COMMIT=$(git rev-parse HEAD)
+git archive --format=tar.gz --output=/tmp/a.tar.gz "$COMMIT"   # 干净归档，无工作区产物
+scp /tmp/a.tar.gz mini-pub:/tmp/h-mini-b2-$COMMIT.tar.gz
+# Mini 上解到【提交级】源目录，不覆盖旧证据：~/local/h-mini-b2-source-${COMMIT:0:12}
+```
+
+四步顺序固定：`install-mini-b2-shadow.sh`（含 VM 内 `npm ci`，最慢）→
+`install-mini-b2-host.sh` → `sync-mini-b2-state.sh shadow` → `write-deploy-meta --check`
+→ `verify-mini-b2-shadow.sh`（出 `shadow=ready …` 即通过）。
+`install-mini-b2-shadow.sh` 自带守门：动手前先 curl 原生 healthz，不健康直接 fail；
+rsync 排除 `/.env /data/ /memory/ /workspace/`，只读不写原生。
+
+### ⚠️ 判"VM 有没有挂 Host HOME"别用 `[ -d /Users ]`
+
+VM 里**确实存在** `/Users/rayman.chen`，但它是 Lima 默认配置留下的**空目录**
+（与 `/` 同设备号、`mountpoint` 报 not a mountpoint、递归 0 文件、4.0K 仅 inode）。
+正确判据是 `findmnt` / `/proc/mounts` 里有无对应条目，并配判别器（对照 `/` 应报 is a mountpoint）。
+用目录存在性判会得到假阳性「Host HOME 被挂了」。
+
+### 资源占用（新增的常驻成本）
+
+`com.hplatform.mini-b2-lima` LaunchAgent `RunAtLoad=true` → Mini 登录即拉起 VM。
+规格 4 CPU / 8GiB / 100GiB 上限，**实占约 4.0G 磁盘**；另有提交级源目录各约 5–10M 累积
+（旧的按"不覆盖旧证据"保留，割接验收后可清）。临时停：`limactl stop h-b2` +
+`launchctl disable gui/$(id -u)/com.hplatform.mini-b2-lima`。
+
+### ⚠️ 运维文档里的路径：多机同名 home，别写 `~`
+
+Air 与 Mini 的 home **都是** `/Users/rayman.chen`，dev198 是 `/home/chuan`。
+所以回滚点写成 `~/local/h-mini-b2-rollback-…` 在 Air 上会解析成一个**语法合法但不存在**的路径
+——而「不存在」与「回滚点真被删了」同信号，恰好在出事那一刻误导人。
+本仓 `ops/deploy-sites.sh:33` 另有一条实测教训：`~` 进了引号不展开，ssh 过去是字面量。
+**结论：运维文档用绝对路径 + 标明主机**（如「站外回滚点（Mini，`ssh mini-pub`）：`/Users/...`」），
+不要为"可移植"改成 `~`。
