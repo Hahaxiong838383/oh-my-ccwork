@@ -143,6 +143,31 @@ CPA 是 Codex 当前连接链路的一部分，升级 `cliproxy` 或 `cpa-smart-
 - 任何 run id、目录名和 unit 名都要限制为 `[A-Za-z0-9._-]+`，禁止把终端颜色、Markdown 或控制字符拼进生产路径。
 - Fast 验收继续拆分：请求是否携带 `priority`、HTTP 是否 200、上游回报档位。上游仍回 `default` 时只能称“意图已发送”，不能称“加速已确认”。
 
+## CPA Menu 感叹号与 VPS 卡死排障
+
+浮窗感叹号只是“Desktop Bridge 刷新失败”的汇总信号，不能直接归因于 App 或 Bridge。按以下顺序缩小故障域：
+
+1. **本机层**：确认 `/Applications/CPA Menu.app/Contents/MacOS/CPAMenuBar` 进程存在、Bundle 版本正确、Keychain Token 存在；不要输出 Token。
+2. **公网层**：分别测试 `https://smart-api.hahaxiong.top/desktop/v1/summary` 与 `/v1/models` 的 DNS、TCP、TLS 和 HTTP。无凭据 401 只能证明入口与鉴权门在线，不能证明 Bridge 或真实推理正常。
+3. **主机层**：测试 `443`、SSH 端口和 SSH banner，再检查 `8317/8327/8330`。TCP connect 成功但 SSH banner/TLS handshake 同时超时，通常是主机 OS 已卡住，不是单纯 nginx 配置错误。
+4. **控制面层**：先查 SWAS instance status、Cloud Assistant 和 CloudMonitor；实例显示 Running 但 Assistant 不在线时，结合 CPU、磁盘 IOPS、内存与 `sar` 判断是否为主机级资源故障。
+5. **恢复层**：普通 reboot 超过合理窗口仍停在 Stopping，才使用 force reboot。开机后先隔离可疑旁路服务，确认 nginx/CLIProxyAPI/Router，再恢复 Bridge；不要一次性把全部服务同时拉起后只看 active。
+
+关键取证与验收：
+
+```bash
+ssh aliyun-jp 'sar -u -f /var/log/sysstat/sa$(date +%d) | tail -20'
+ssh aliyun-jp 'sar -b -f /var/log/sysstat/sa$(date +%d) | tail -20'
+ssh aliyun-jp 'pidstat -d -u -p ALL 5 12'
+ssh aliyun-jp 'systemctl is-active nginx cliproxy cpa-smart-router cpa-desktop-bridge'
+ssh aliyun-jp 'ss -lnt | grep -E "[:](8317|8327|8330)[[:space:]]"'
+```
+
+- `GET /v0/management/usage-queue` 是 **destructive pop**。返回恰好 500 条时继续拉取是正确排空队列，不是重复读取；同一 CPA 实例只能保留一个消费者。
+- 怀疑采集器热循环前，必须同时验证官方 handler 语义、服务端 `usage-queue` 请求时序、连续两次实机读取结果和 Bridge 进程 CPU/I/O。只看一段 `for` 循环不能定根因。
+- 强制重启会丢失 `/proc` 活现场。若 SSH 尚可用，优先用 `pidstat -d`、`iotop -oPa`、`systemd-cgtop` 记录具体 reader；没有进程证据时只写“系统级 I/O 卡死，具体来源未知”。
+- 最终恢复必须同时满足：四服务 active、端口监听、Desktop `summary`/`accounts` 带 Keychain Token 返回 200、敏感字段零泄漏、App 重启后感叹号消失、账号数据可见，以及至少 60 秒 CPU/内存/磁盘稳定观察。
+
 ## 构建部署
 
 ```bash
