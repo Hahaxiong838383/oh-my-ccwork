@@ -27,6 +27,7 @@
 |-----------|------|------|
 | `gost-lisa-r` | `:8446` | 丽萨 `154.44.3.170:8446` |
 | `gost-zgo-r` | `:8447` | ZGO `38.49.38.237:8447` |
+| `gost-ph-r` | `:8448` | 菲律宾 Makati `61.245.11.252:443` |
 
 ## 落地丽萨（`lisa` / `154.44.3.170`，SSH 端口见本地 RTF）
 
@@ -55,16 +56,17 @@
 
 ```
 手机/电脑
-  → DMIT 64.186.235.107:<8446|8447>
-  → 丽萨:8446 或 ZGO:8447
+  → DMIT 64.186.235.107:<8446|8447|8448>
+  → 丽萨:8446、ZGO:8447 或菲律宾:443
   → Reality dest TLS: r.chenchuan.cc
-  → 出口：住宅(丽萨) / 机房(ZGO)
+  → 出口：住宅(丽萨) / 美国机房(ZGO) / 菲律宾机房(Makati)
 ```
 
 | 场景 | 建议 |
 |------|------|
 | ChatGPT / Claude / 需住宅 | DMIT **:8446** → 丽萨 |
 | 速度 / Gemini / 机房即可 | DMIT **:8447** → ZGO |
+| 菲律宾出口 / 独立测试 | DMIT **:8448** → 菲律宾 Makati |
 
 导入链接以会话交付为准；重建时从对应服务器 params 生成。
 
@@ -85,7 +87,11 @@
 | **10086** | VMess WS | path 见服务器 params | 已验收 E2E |
 
 - 参数指针：服务器 `/root/ph-vps-proxy-params.json`；本机密钥目录 `Documents/陈川个人站/自建 vps 密钥/菲律宾-vps-proxy-params.env`（不进 git）。
+- DMIT 中转：`gost-ph-r.service`，监听 `64.186.235.107:8448`，转发到菲律宾 `:443`；`Restart=always`，随系统启动。
+- 客户端导入：DMIT 中转 VLESS 链接保存在本机密钥 env 的 `VLESS_DMIT_LINK`，不写入 `~/xray/config.json`，不新增本地监听端口。
 - 性能：BBR+fq、`tcp_fastopen=3`、16MB buffer、1G swap、healthcheck 每 2min、`Restart=always`。
+- 2026-08-04 优化：修正网卡实际 qdisc 从 `pfifo_fast` 为 `fq`，由 `proxy-fq-qdisc.service` 开机持久化；TCP keepalive 调为 `120/30/4`；healthcheck 增加配置校验、dest TLS 与本地 Reality TLS 闭环。
+- 2026-08-04 验收：使用临时 Xray 客户端验证 `VLESS_DMIT_LINK`，出口确认为菲律宾公网，OpenAI 返回预期 401；此前压力测试 Cloudflare 20/20 成功，5MB 下载约 1.37–1.42 MB/s（约 11 Mbps）。
 - 备注：Reality **不要**对 inbound 开 `sockopt.tcpFastOpen`（曾导致握手 incomplete）；dest 优先用永活静态域 `r.chenchuan.cc`，勿绑业务站。
 
 ## 相关路径

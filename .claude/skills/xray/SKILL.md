@@ -241,6 +241,37 @@ done'
 
 > ⚠️ 上面全是**客户端**（本机走代理）。这一节是**服务端**：在 VPS 上管 Xray REALITY inbound。配置通常 `/usr/local/etc/xray/config.json`，systemd 服务 `xray.service`（**服务端用 `systemctl restart xray`，不是 launchd**）。
 
+### DMIT 裸 TCP 中转落地节点（直连路径不可用，2026-08-04 实战）
+
+适用：客户端直连落地公网端口超时，但中转机到落地端口正常。目标是**不改落地现有 Reality inbound**，只在中转机增加独立 TCP 透传端口。
+
+1. **先分段取证**：客户端→中转、中转→落地分别测 RTT 和 TCP 端口；不能用「ping 通」替代端口验证。
+2. **中转增量上线**：选未占用端口，新建独立 gost unit，旧链路一律不动：
+
+```ini
+[Unit]
+Description=gost relay to Reality landing
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/gost -L tcp://:<中转监听端口>/<落地IP>:<Reality端口>
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+```
+
+3. **客户端链接只替换入口**：`address/port` 改为中转机，其余 UUID、flow、SNI、publicKey、shortId、fingerprint 必须继续取 secret 文件原值。链接存 Documents/Keychain/secret env，不进 git、skill 或 memory。
+4. **不要擅自写入本机主配置**：用户要的是导入链接时，不新增 `~/xray/config.json` 的永久 inbound/outbound。验收用临时 Xray SOCKS 入口，测完立即退出；必须同时证明出口 IP 和目标站状态码。
+5. **队列真值看网卡，不看 sysctl 声明**：`net.core.default_qdisc=fq` 不代表已运行网卡就是 fq，必须执行 `tc qdisc show dev <iface>`。若仍为 `pfifo_fast`，用 oneshot systemd unit 在 `network-online.target` 后执行 `tc qdisc replace dev <iface> root fq` 并复验。
+6. **健康检查分层**：配置无效时保留当前工作进程、禁止盲重启；端口缺失才重启；dest TLS 不通只告警；dest 正常但本地 Reality TLS 闭环失败时才重启 Xray。
+
+验收门：gost/Xray `NRestarts=0`、临时客户端出口 IP=落地公网、关键目标返回预期状态码、连续请求无失败、服务端无新增 Reality 握手错误。只测 TCP OPEN 或回落证书仍是假绿。
+
 ### 换伪装域名（dest / serverNames）零风险 SOP
 
 REALITY 的 `serverNames`/`dest` **不是「随便填的伪装名」**：它去「借」一个真实站的 TLS 握手，非法探测来访时把流量回落转发到 `dest`。填错=代理握手失败用不了；**绝不直接改生产口断现网**。
