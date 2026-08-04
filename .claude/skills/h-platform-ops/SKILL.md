@@ -3925,3 +3925,64 @@ Air 与 Mini 的 home **都是** `/Users/rayman.chen`，dev198 是 `/home/chuan`
 本仓 `ops/deploy-sites.sh:33` 另有一条实测教训：`~` 进了引号不展开，ssh 过去是字面量。
 **结论：运维文档用绝对路径 + 标明主机**（如「站外回滚点（Mini，`ssh mini-pub`）：`/Users/...`」），
 不要为"可移植"改成 `~`。
+
+## 🔴 Mini B2 首次割接事故与修复（2026-08-04，commit aba43b7；影子已重部署，仍未割接）
+
+第一次跑 `cutover-mini-b2.sh --confirm-cutover` 失败，**且自动回滚也失败**，
+最后靠人工恢复。两个根因都在 launchd 的语义上，写下来免得重演。
+
+### 根因① macOS launchd：必须 `enable` 再 `bootstrap`，反了直接报错
+
+```
+launchctl bootstrap ... ; launchctl enable ...     ← 旧顺序
+→ Bootstrap failed: 5: Input/output error
+```
+
+任务被 `disable` 过之后（割接第一步就会 disable 原生 bridge/runner），
+再 `bootstrap` 会被 launchd 拒绝。**必须先 `enable` 解除禁用，再 `bootstrap` 装载，
+最后 `kickstart -k` 拉起。** 三处已修：`deploy/launchd/install-mini-bot.sh`
+的 runner 与 bridge、`scripts/ai-memory-provision-macos.sh`。
+人工恢复用的也是这个顺序：`enable → bootstrap → kickstart`。
+
+### 根因② `launchctl bootout` 返回 ≠ 任务已从 domain 消失
+
+bootout 是**异步**的：命令返回后 Bridge 仍可能短暂存在于 launchd domain，
+于是紧接着的静止态门（要求原生已停）正确地拒绝了同步——脚本"卡对了但流程断了"。
+现修为 bootout 后轮询 `launchctl print` 直到查不到该 label（上限 40×0.25s=10s，超时 fail）：
+
+```sh
+wait_launchd_unloaded() {           # cutover-mini-b2.sh
+  for attempt in $(seq 1 40); do
+    launchctl print "gui/$UID_VALUE/$1" >/dev/null 2>&1 || return 0
+    sleep 0.25
+  done
+  fail "launchd job did not unload: $1"
+}
+```
+
+⚠️ 同一个坑的通用形态：**`stop`/`bootout`/`kill` 这类命令的返回只代表"请求已受理"**，
+不代表状态已到达。下一步依赖"已停"时必须自己轮询确认。
+
+### 🔴 仍未堵的活雷：回滚器缺省指向旧安装器
+
+`rollback-mini-b2.sh` 里 `SOURCE_ROOT=${PROJECT_ROOT:-"$HOME/local/h-platform-mini-bot"}`。
+**原生部署根上的 `install-mini-bot.sh` 仍是旧顺序**（影子部署只更新影子源，不更新原生根）。
+所以割接时忘传 `PROJECT_ROOT` → 回退到旧安装器 → 原样复现本次事故。
+
+割接前必须先堵：缺省改 fail-fast（不传就退出），或执行前断言所用安装器
+`enable` 出现在 `bootstrap` 之前。详见 [[feedback_fallback_default_points_at_unfixed_copy]]。
+
+### 已知 flaky（别记到自己头上）
+
+`test/runner-worker-ipc.test.mjs`「kill worker 后调用标 orphan」偶发报
+`runner worker app not registered`。机理：kill → 固定 `sleep 350ms` → 同 socket 重启 →
+断言 `client.snapshot().connected`（**socket 层**）→ 立刻 `remote.execute`（需要的是
+**app 已重新注册**）。负载高时重注册慢于重连就炸。隔离重跑 5/5 过、整套重跑绿。
+判它是不是本轮回归用三证据法（[[feedback_classify_test_failure_before_deciding]]）。
+
+### ⚠️ 别信 harness 通知里的退出码
+
+后台跑 `npm test > log 2>&1; echo $?` 时，harness 的完成通知报的是**整条复合命令**
+的退出码（末尾 `echo` 恒 0）。实测同一晚两次通知都写 "exit code 0"，
+真实一次是 1 一次是 0。**认自己 echo 出来的值 + 日志侧 `not ok` 计数对撞**，
+别拿通知给"测试通过"背书（[[feedback_exit_code_ownership]]）。
