@@ -3846,25 +3846,25 @@ control-plane/** —— 控制面改动到不了 Mini，这是 by design 不是�
 「验收结论是验收通过」时，要按字段真实选项池落成「通过」并说明，别硬塞不存在的枚举。
 另：`+table-list` 返回的表 ID 键是 **`id`** 不是 `table_id`。
 
-## Mini B2：Lima VM + bwrap 影子线（2026-08-04 影子就绪，**当前 commit 3ba27a5**；**尚未割接**）
+## Mini B2：Lima VM + bwrap 生产线（2026-08-05 已割接；运行时加固 commit `7d441b5`）
 
 把 Mini 租户执行面从 macOS 原生搬进 Linux VM，为的是拿到真 bwrap 沙箱
-（macOS 上没有）。当前状态：**影子就绪，生产流量仍全部走原生**。
+（macOS 上没有）。当前状态：**AI 专家测试 Bot 已由 VM 接管，原生 launchd 已停用；owner 仍在 dev198**。
 
 ### 两条路径的真值表（判"现在谁在服务"先看这个）
 
-| | 原生（在服务） | B2 VM（影子待命） |
+| | 原生（回滚保留） | B2 VM（当前生产） |
 |---|---|---|
 | 位置 | `~/local/h-platform-mini-bot` | Lima 实例 `h-b2`，app 在 `/opt/h-platform/app` |
 | 状态根 | `<部署根>/data/users` | `/srv/h-platform/{users,memory,workspace,config,shared,orgs}` |
-| 进程 | launchd `com.hplatform.mini-bot.{bridge,runner}` | systemd --user `h-mini-b2-{bridge,runner}.service` |
-| 健康 | `127.0.0.1:18775`（原生 bridge 持有） | 无（health 转发 agent 影子期 disabled） |
+| 进程 | launchd 已 disable/unloaded | systemd --user `h-mini-b2-{bridge,runner}.service` active |
+| 健康 | 不持有 18775 | health 转发到 VM `127.0.0.1:18775` |
 | node | `~/.hermes/node/bin/node` | VM 内 v22.22.1 |
 
 **判进程在不在 VM 里，看命令行路径**：`/Users/...` = macOS 原生，`/opt/h-platform/app` = VM。
 `limactl` 真值 `/opt/homebrew/bin/limactl`（非交互 ssh 的 PATH 里没有，写全路径）。
 
-### 影子态 = 三个同时成立，缺一就不是影子
+### 割接前影子态 = 三个同时成立，缺一就不是影子
 
 ```
 h-mini-b2-bridge.service   enabled 但 inactive
@@ -3925,7 +3925,7 @@ scp /tmp/a.tar.gz mini-pub:/tmp/h-mini-b2-$COMMIT.tar.gz
 `install-mini-b2-shadow.sh` 自带守门：动手前先 curl 原生 healthz，不健康直接 fail；
 rsync 排除 `/.env /data/ /memory/ /workspace/`，只读不写原生。
 
-### 🔴 影子重装会删掉 VM 的 deploy meta，必须手工补写（不是 `--check`）
+### ✅ 影子重装必须自动重写 deploy meta（commit `7d441b5` 已根治）
 
 **别写成 `write-deploy-meta --check`——那一定失败。** 影子安装是两段 rsync：
 第一段 `--exclude '/.deploy-meta.json'` 把它挡在暂存目录外，第二段
@@ -3934,19 +3934,20 @@ rsync 排除 `/.env /data/ /memory/ /workspace/`，只读不写原生。
 而 `grep -rc write-deploy-meta deploy/lima/` **零命中**：整条影子链没有写它的地方，
 只有原生腿 `deploy/launchd/install-mini-bot.sh` 会写。
 
-所以每次影子重装后自己补：
+旧链路只能手工补，人工写入曾把“部署机制缺失”伪装成验收通过。现在
+`install-mini-b2-shadow.sh` 的目标 rsync 排除 `/.deploy-meta.json`，并在 `npm ci` 后调用
+`scripts/write-deploy-meta.mjs` 重新计算 VM 代码清单。提交级归档没有 `.git`，调用时必须显式传：
 
 ```sh
-limactl shell h-b2 -- node /opt/h-platform/app/scripts/write-deploy-meta.mjs \
-  --root /opt/h-platform/app --commit "$COMMIT" --branch codex/h-mini-ab-poc \
-  --source-host chenchuandeMac-mini          # 约定=执行部署的那台主机
-# 再 --check 回读，并直接 cat 磁盘原文对撞（三通道一致才算数）
+PROJECT_ROOT=/Users/rayman.chen/local/h-mini-b2-source-<commit> \
+H_DEPLOY_COMMIT=<40位提交> \
+H_DEPLOY_BRANCH=codex/h-mini-ab-poc \
+H_DEPLOY_SOURCE_HOST=<部署主机名> \
+  "$PROJECT_ROOT/deploy/lima/install-mini-b2-shadow.sh"
 ```
 
-⚠️ **这个缺口曾隐形整整一轮**：上一轮验收「VM deploy meta = 新提交」是绿的，
-因为有人手工写过——清单只验值对不对，验不了谁生产的。
-详见 [[feedback_manual_fill_masks_missing_mechanism]]；根治办法是把写入并进
-`install-mini-b2-shadow.sh` 尾部。
+缺 commit/branch 会在安装前 fail-fast；安装后必须 `--check` 回读，并与 healthz 的 deploy
+对象对撞。**保留旧 meta 只是避免 rsync 窗口丢证据，最终必须由本次代码重新写。**
 
 ### ⚠️ 判"VM 有没有挂 Host HOME"别用 `[ -d /Users ]`
 
@@ -3971,7 +3972,7 @@ Air 与 Mini 的 home **都是** `/Users/rayman.chen`，dev198 是 `/home/chuan`
 **结论：运维文档用绝对路径 + 标明主机**（如「站外回滚点（Mini，`ssh mini-pub`）：`/Users/...`」），
 不要为"可移植"改成 `~`。
 
-## 🔴 Mini B2 首次割接事故与修复（2026-08-04，修复收口于 commit 3ba27a5；影子已重部署，仍未割接）
+## 🔴 Mini B2 首次割接事故与修复（2026-08-04；2026-08-05 已重新割接成功）
 
 第一次跑 `cutover-mini-b2.sh --confirm-cutover` 失败，**且自动回滚也失败**，
 最后靠人工恢复。两个根因都在 launchd 的语义上，写下来免得重演。
@@ -4008,7 +4009,7 @@ wait_launchd_unloaded() {           # cutover-mini-b2.sh
 ⚠️ 同一个坑的通用形态：**`stop`/`bootout`/`kill` 这类命令的返回只代表"请求已受理"**，
 不代表状态已到达。下一步依赖"已停"时必须自己轮询确认。
 
-### ✅ 回滚器缺省活雷已堵（commit 3ba27a5，本条留作模式）
+### ✅ 割接与回滚的缺省活雷均已堵（rollback `3ba27a5`；cutover `7d441b5`）
 
 曾经是 `SOURCE_ROOT=${PROJECT_ROOT:-"$HOME/local/h-platform-mini-bot"}` —— 缺省回退到
 **原生部署根，而那份 `install-mini-bot.sh` 仍是旧顺序**（影子部署只更新影子源，不更新
@@ -4025,6 +4026,8 @@ SOURCE_ROOT=${PROJECT_ROOT:-}
 实测 `env -u PROJECT_ROOT bash rollback-mini-b2.sh --confirm-rollback` → exit 1 且**零个
 服务动作被触达**。**留这条是为了模式**：关键路径（回滚/恢复/灾备）的缺省一律 fail-fast，
 别 fallback —— 人在事故里最容易漏传环境变量（[[feedback_fallback_default_points_at_unfixed_copy]]）。
+`cutover-mini-b2.sh` 也采用同一规则，并预检 shadow verify 与 state sync 脚本存在；不能再依赖
+“旧原生根刚好没有 deploy/lima”这种目录布局巧合来保证安全。
 
 ### ✅ 曾经的 flaky 已修（同 commit）
 
@@ -4044,3 +4047,33 @@ SOURCE_ROOT=${PROJECT_ROOT:-}
 的退出码（末尾 `echo` 恒 0）。实测同一晚两次通知都写 "exit code 0"，
 真实一次是 1 一次是 0。**认自己 echo 出来的值 + 日志侧 `not ok` 计数对撞**，
 别拿通知给"测试通过"背书（[[feedback_exit_code_ownership]]）。
+
+## Mini B2 正式割接后的两条 VM 专属根因（2026-08-05）
+
+### ① `install -d` 只修叶子，不代表父目录可写
+
+首次主链路启动时 Bridge 连续重启，日志为 skill manifest 临时文件原子写 `EACCES`。根因是
+bootstrap 只对 `$STATE_ROOT/config` 等叶子目录指定运行用户，`/srv/h-platform` 与 `audit`
+父目录仍可能由 root 创建。现在必须显式创建并改属主：
+
+```sh
+sudo install -d -o "$USER" -g "$USER" -m 0755 "$STATE_ROOT"
+for directory in config users memory shared orgs workspace runtime audit audit/lark-cli rollback; do
+  sudo install -d -o "$USER" -g "$USER" -m 0700 "$STATE_ROOT/$directory"
+done
+```
+
+验收不能只看 service active；要看 `NRestarts=0`、目标原子写成功和目录逐级属主。
+
+### ② 跨 VM 后 `127.0.0.1` 换了含义
+
+Host 原生的记忆 URL 若直接复制到 Guest，`127.0.0.1:11434` 会指向 Guest 自己，不再是
+Mini Host。`render-mini-b2-env.mjs` 现强制把 LLM 与 embedding 地址渲染为
+`http://host.lima.internal:11434/v1`。验收必须从 VM 内发真实 chat/embedding 请求并取得 200，
+不能用 Host 上 curl 成功代替。
+
+### ③ B3 长任务必须验“新消息”，不是只看完成文字
+
+正式验收实测：用户消息进入 VM Runner，120 秒出现 `background_yielded`，255 秒完成；
+会话底部新增一张完成卡。证据必须同时包含不同的飞书 message ID、TaskSessionLog 的
+`delivery_acked` 与 Outbox 清零。复用旧卡、只编辑流式卡或 Bot 自述“已完成”均不算通过。
