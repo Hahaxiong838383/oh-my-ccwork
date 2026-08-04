@@ -3761,3 +3761,87 @@ v23 快照 restore 后规则文件原样不动——**「打了快照」和「�
   不是「没有租约」。解析前先断言 `ok===true`（[[feedback_tool_contract_guess_chain]]）。
 - 用户后台会话：`POST /internal/magic-link {uid}`（SERVICE_TOKEN 门）拿 URL，
   `curl -c jar -L` 换 cookie。`store.upsert` 对 `undefined` 字段 `continue`，不会覆盖既有档案。
+
+## 上下文报告按引擎判定（v1.40.1+，2026-08-04 收口，commit 04b6942）
+
+管理台「用户上下文」此前用**同一份 marker 全集**量所有引擎，于是 Grok 用户被报
+缺 `h-soul/h-global/h-mem/h-rules/h-feishu-docs`（那是 kimi/omp 的块），假故障。
+现改成按引擎投影：`splitManaged(text, expectedBlocks)` 只保留当前 harness 要求的
+块名，额外检测到的进 `unexpectedBlocks`（展示但不判故障）。
+
+### 各引擎 expectedBlocks 真值（改判据前先对这张表）
+
+| 引擎 | 托管文件 | 必备块 | 数量 |
+|---|---|---|---|
+| grok | `.grok/AGENTS.md` | `ai-memory` `h-mem-scope` `h-identity` `h-method` + `h-profile-index` | **5** |
+| kimi / omp | `workspace/AGENTS.md` | `h-soul` `h-global` `h-rules` `h-method` `h-mem` `h-feishu-docs` + `h-profile-index` | **7** |
+
+代码是 `[...harnessFor(engine).blocks, 'h-profile-index']`。**`h-profile-index` 要单独
+追加**，因为它不在任何 harness 的 blocks 里，而是 `ensureProfileIndexes` 写进
+**`PROFILE_PATHS` 全部四个文件**（SOUL.md / .grok/AGENTS.md / workspace/AGENTS.md /
+BEHAVIORAL_RULES.md）。⚠️ 追加前必须确认这一点——**若某引擎的托管文件里没有它，
+这一行就会凭空造出一个假缺失**。它的 marker 是 `:start` 版式，与 kimi/omp 其余块的
+`:begin` 不同，别按引擎版式去推。
+
+四源（SOUL / 全局约定 / 工作区约定 / 积累规则）改为单列展示存在性+字符数+真实通道：
+grok 标 `--rules 四源配置`，kimi 标 `workspace/AGENTS.md 运行镜像`，omp 标
+`--append-system-prompt + workspace 运行镜像`。**`chars=0` 是「文件在但用户没填」，
+不是故障**——页面要写明，否则管理员照样误读。
+
+### 🔴 改这块必做的负向验证
+
+「只检查当前引擎要求的块」和「把所有缺失都藏起来」在全绿时**输出完全一样**。
+所以必须构造缺块树反证：三引擎各抠掉一个必备块，断言仍**精确**报出那一个且不牵连。
+一次性脚本思路：造假树 → `buildContextReport(uid,{engine})` → 读
+`conversationHead.agentsGlobal/agentsWorkspace.blocks`。跑在 dev198 **已部署字节**上
+最有说服力（平台目前无 omp 租户，这是唯一能验 omp 分支的办法）。
+
+### 上下文报告的存储与触发真值（排障前先读，别猜）
+
+- **落盘**：`/srv/h-control/data/memory-manage/<uid>.context.json`（每 uid 一个文件）。
+  **不在 `users.json` 里**——去那儿找会得到「带 context 的用户数: 0」这种
+  合理但错误的结论。
+- **时间字段是 `generatedAt`**（UTC），不是 `collectedAt`/`at`。
+- **触发三条**：任务结束后 90s 去抖（`scheduleMemorySync`）/ memory-capture 后 2s /
+  每 30 分钟全量 sweep（`MEMORY_SYNC_INTERVAL_MS`）。全部经 `runMemorySync` → `pushContext`。
+- **怎么区分「真实任务触发」还是「定时 sweep」**：sweep 会在同一秒批量推一堆；
+  真实任务是**单条**，且 `inbound 时间 + 90s ≈ push 时间`。验收要求「真实 Runner 触发」
+  时必须按这个判，否则拿 sweep 冒充。
+- **owner Bot `sandbox=null` 不产报告**：dev198 12 个 App 只会推 11 份，
+  11+Mini 1 = 12 份落盘。数量对不上先想这个，别当故障。
+
+### 控制面部署没有脚本，手工四步（`ops/deploy-sites.sh` 只管 dev198/Mini）
+
+```bash
+# 0) 先验仓库↔线上同源——线上若有仓库外改动，这一拷就是覆盖生产
+git show <基线>:control-plane/server.mjs | shasum -a 256      # 对撞线上 sha256sum
+# 1) scp 到 /tmp（不能直写 /srv，需 sudo）  2) sudo cp 落位并回读 sha 对撞
+# 3) node --check 跑【线上实际文件】       4) sudo systemctl restart h-control
+```
+
+映射：`control-plane/server.mjs` → `/srv/h-control/app/server.mjs`；
+`control-plane/lib/html.mjs` → `/srv/h-control/app/lib/html.mjs`。
+⚠️ Mini 同步清单是 `bridge.mjs lib ops scripts test package.json`，**不含
+control-plane/** —— 控制面改动到不了 Mini，这是 by design 不是漏传。
+
+验页面别只看 HTTP 200（空壳 200 骗过三层）。用**线上实际字节**渲染再断言载荷：
+`cd /srv/h-control/app && node -e "import('./lib/html.mjs').then(m => …)"`，
+检查新标记在不在 + 所有 `<script>` 块 `new Function()` 可解析。
+
+### Mini 的用户根不是 `/srv/h-platform/users`
+
+真值 `H_USERS_ROOT=$HOME/local/h-platform-mini-bot/data/users`（在部署目录内）。
+拿 dev198 的路径去 Mini 上搜，会得到**假零命中**。判「Mini 上没有 X」必须配
+必然非零的锚（如该租户自己的 uid），锚返回 0 说明我搜错地方了
+（[[feedback_truncated_output_negative_conclusion]] 2026-08-04 补丁）。
+
+### 需求 Base 两个状态字段的选项池**不同**（写前必读，别互抄）
+
+| 字段 | 选项池 |
+|---|---|
+| `状态` | 新反馈 / 待确认 / 已排期 / 执行中 / 已修复待验收 / **验收通过** / 已关闭 / 验收失败 / 已重新打开 / 被阻塞 / **验收通过关闭** |
+| `验收结论` | 未验收 / **通过** / 失败 / 部分通过 |
+
+⚠️ **「验收通过」只存在于 `状态`**；`验收结论` 的对应值叫「通过」。川哥口头说
+「验收结论是验收通过」时，要按字段真实选项池落成「通过」并说明，别硬塞不存在的枚举。
+另：`+table-list` 返回的表 ID 键是 **`id`** 不是 `table_id`。
