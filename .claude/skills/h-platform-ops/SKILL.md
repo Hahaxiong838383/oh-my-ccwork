@@ -4317,6 +4317,17 @@ botOpenId,larkCliReady,lastInboundAt,lastOutboundOkAt,placementLeaseExpiresAt,st
 不打印不回传。只读性已验到整个调用图：`GET /internal/app-placement` 是纯读
 （`store.list().find` + `appPlacements.get` 只过滤过期、不落盘）。
 
+🔴 **阻断：`--dev198-health-url` today 无解，criterion07 必然 fail-closed（2026-08-05 实测）**
+dev198 的 healthz **只绑 `127.0.0.1:18765`**（`ss -ltnp` 直读），Mini 上打它连接被拒。
+三条独立证据排除了别的解释：dev198 本机自打 **http=200**（服务活着）、Mini→dev198
+`ping` **0% 丢包 0.5ms**（三层通）、地址 `192.168.61.233` 对齐 memory `user_hardware`
+真值锚。**不是服务挂了、不是网不通——是这个 URL 从来不存在**，文档里
+`http://<dev198有线地址>:18765/healthz` 是没验过的前提。Mini 也没有 `Host dev198` 的
+ssh 配置（`grep -c` = 0），走 SSH 取数同样不可行。
+**正解**：dev198 那一侧改用控制面 `GET /internal/users`（已存在的只读端点，返回每个
+user 的 `{uid, appId, active, executionSite}`，VM 内用同一个 token 就能调）。它比原设计更强
+——原设计只能发现"两边都在跑"，用控制面能同时发现"跑的位置和登记的位置不一致"。
+
 ⚠️ **三处已知覆盖缺口，窗口当天要现场补**：
 1. 测试里 limactl 是桩，**丢弃 GUEST heredoc**——guest 侧那段 python 和
    `node --env-file` 租约查询**从未真执行过**，只有宿主编排层被覆盖。
