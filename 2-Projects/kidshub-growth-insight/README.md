@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- 阶段：Phase 1 Day 8–11 / M3 已完成自检并部署，等待川哥体验验收
+- 阶段：Phase 1 Day 8–11 / M3 已由川哥体验验收通过，下一步 Day 12–13 / M4
 - 部署决策：Studio 单机 MVP，前端域名 `insight.kidshub.cn`
 - 当前体验入口：`http://192.168.61.177:3200`（Studio 有线局域网）
 - 主技术栈：Next.js 15 App Router + TypeScript + PostgreSQL 17 + Prisma；第一版不引入 Python Worker

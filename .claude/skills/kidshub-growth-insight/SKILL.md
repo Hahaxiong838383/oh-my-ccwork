@@ -73,10 +73,10 @@ ssh studio 'lsof -nP -iTCP:3200 -sTCP:LISTEN'
 - M1：37 张表与数据层已验收
 - M2：登录、数据库 Session、三角色 RBAC、限流、强制改密、Session 吊销、审计与 CSRF 已验收
 - Day 7：root 账号管理、角色/状态变更吊销 Session、最后 active root 保护已验收
-- M3：五类主数据 CRUD、软删除/root 恢复、达人/商品跨源别名合并已完成自检并部署
+- M3：五类主数据 CRUD、软删除/root 恢复、达人/商品跨源别名合并已由川哥体验验收
 - 当前正式用户只有 `rayman.chen@futurus.co` root
-- 当前正式主数据仍为空，等待川哥体验并手动录入
-- 下一步：川哥确认 M3 后进入 Day 12–13 / M4；不得提前实现数据源或 Token
+- 当前正式主数据仍为空，等待川哥手动录入
+- 下一步：Day 12–13 / M4 数据源、Token 活性校验、脱敏和配额；不得提前进入 Day 14 导入
 
 ## 验收脚本自检
 
