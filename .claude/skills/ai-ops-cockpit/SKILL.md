@@ -31,8 +31,14 @@ output_levels: L2
 ```bash
 cd /Users/rayman.chen/mycc
 python3 -m py_compile 2-Projects/ai-ops-cockpit/ops-inspector/server.py
-bash -n 2-Projects/ai-ops-cockpit/scripts/*.sh
+for f in 2-Projects/ai-ops-cockpit/scripts/*.sh; do bash -n "$f" || echo "SYNTAX ${f}"; done
 ```
+
+⚠️ **别写回 `bash -n .../*.sh`**：`bash -n` 只解析第一个文件，其余全变成位置参数
+`$1 $2 …`。2026-08-05 在这 14 个脚本上实测——把 `update-omp.sh` 换成语法错文件，
+`bash -n scripts/*.sh` 照样 **exit 0**，逐文件循环才抓到。`node --check a.mjs b.mjs`
+同坑（`python3 -m py_compile` 反而会全查）——**是不是真批量，每个工具契约不同，
+从 `cmd f1 f2` 的外形看不出来**。
 
 修改 Python 生成的 HTML/JS 后，必须抽取最终 `<script>`：
 

@@ -4147,6 +4147,23 @@ VM 状态导出并覆盖原生。Lima Guest 实测（bash 5.3.9）：`! true` �
 `launchctl`/`limactl` 证明零服务动作，再配一次真调用证明绊线本身有效
 （[[feedback_exit_code_ownership]]）。
 
+#### 🔴 验收清单里的 `bash -n deploy/lima/*.sh` 本身是空闸门（2026-08-05 实测）
+
+**`bash -n` 只解析第一个文件，其余全变成位置参数**。这条写进 B2 验收清单已经多轮、
+每轮 exit 0、每轮当"14 个脚本语法都 OK"用——实测把非首位的脚本换成语法错文件，
+`bash -n deploy/lima/*.sh` **照样 exit 0**。改逐文件：
+
+```bash
+BAD=0; for f in deploy/lima/*.sh; do bash -n "$f" || { echo "SYNTAX $f"; BAD=$((BAD+1)); }; done
+echo "语法错文件数=$BAD"
+```
+
+`node --check a.mjs b.mjs` 同坑（也只查第一个），而 `python3 -m py_compile a.py b.py`
+**会全查**——同族三个工具两种行为，`cmd f1 f2` 的外形分辨不出来。本仓现有 `node --check`
+用法全是一文件一调用（skill 940 行是 `for` 循环、`install-mini-b2-shadow.sh:70-71` 分两行），
+**没有活的问题，别顺手"优化"成一行多文件**。判据见 [[feedback_guard_itself_can_be_hollow]] 案例八：
+任何声称覆盖 N 个对象的检查，先往**非首位**塞一个必然失败的对象，确认它真的红。
+
 #### ✅ 全仓空闸门已归零（`2eb827d`，2026-08-05 15:0x）
 
 `ba4fb4c` 只修了 `sync-mini-b2-state-back.sh` 一处，同一惯用法在兄弟脚本里活了两轮。
@@ -4263,7 +4280,12 @@ orphanRecovery.total / apps`；`runnerWorker.{connected,registeredApps,pending,a
 workerPid,workerStartedAt,apps,lastHeartbeatAt,oldestLeaseMs,protocolVersion,remoteChildren}`；
 `orphanRecovery.{total,compute,followUp,rpc,replayable,lastOpAt,lastReportAt}`；
 每个 app 条目 `{uid,kind,engine,connected,lastError,executionSite,behaviorContractVersion,
-botOpenId,larkCliReady,lastInboundAt,lastOutboundOkAt,placementLeaseExpiresAt,startedAt}`。
+botOpenId,larkCliReady,lastInboundAt,lastOutboundOkAt,placementLeaseExpiresAt,startedAt}`；
+另有 `followUps.{pending,applied}` / `runnerRpc.{running,inflight}` /
+`workConcurrency.{active,waiting}`（2026-08-05 补测，升级预检的第 10 条判据用它们）。
+🔴 两个易踩的**值**语义：`lastError` 健康时是 **JSON `null` 不是 `''`**，所以判据可以
+严格写 `is None`；`followUps.applied` 是**当前处于 applied 未 ack 的记录数（瞬时量）**，
+不是累计计数器，要求它为 0 才成立——换成累计值就会在第一次 follow-up 后永久变红。
 🔴 审这类核对时**每个 `.get(k, 期望值)` 都是待验**：键名写错 → 返回默认值 → 恒真，
 与「状态正常」同信号。证伪只能靠**拉真实响应 JSON 逐键探**，读源码看不出来
 （`runnerWorker: runnerWorkerClient.snapshot()` 不告诉你 snapshot 有哪些字段）。
@@ -4272,9 +4294,36 @@ botOpenId,larkCliReady,lastInboundAt,lastOutboundOkAt,placementLeaseExpiresAt,st
 #### 📋 升级窗口方案：`docs/rollbacks/2026-08-05-mini-b2-upgrade-window.md`（`6bbcd51`）
 
 `1d5ccc5` → `2eb827d` 的完整执行顺序、十条静止判据、两个站外回滚包清单、割接后三通道
-回读。**回滚包的 launchd 清单记得补 `com.hplatform.mini-b2-health.plist` 与
-`com.hplatform.mini-b2-lima.plist`**（文档只列了 `mini-bot.{bridge,runner}` + `memory.*`，
-但 Mini 上这两个 B2 专属 plist 也在，回迁原生时状态要留证）。
+回读。回滚包 launchd 清单已在 `a2e93b9` 补齐两个 B2 专属 plist 及其期望状态：
+`mini-b2-lima` 回迁与重割接期间**都**保持 enabled+loaded（VM 得能起，状态同步和影子
+重建都依赖它）；`mini-b2-health` 回迁原生后 disabled+unloaded（否则健康隧道抢 `18775`），
+重割接后再 enabled+loaded。状态要写进 `evidence/launchd-state-before.txt` 留证。
+
+#### 🔎 升级预检 `preflight-mini-b2-upgrade.sh`（`1456803`，窗口当天先跑这个）
+
+十条静止判据从"人工逐条翻"变成一次只读调用，输出结构化 JSON，非零退出即不满足：
+
+```bash
+"$OPS_ROOT/deploy/lima/preflight-mini-b2-upgrade.sh" \
+  --expected-commit <完整40位SHA> --target-app-id <AppID> --target-uid <uid> \
+  --owner-app-id <ownerAppID> --dev198-health-url http://<dev198有线>:18765/healthz \
+  > "$EVIDENCE_DIR/preflight-before.json"
+```
+
+`criteria` 恰好 `criterion01`…`criterion10`，每项带 `ok/current/errors`；顶层
+`snapshotExitCodes` 三项（miniHealth / dev198Health / guestAndPlacement）必须全 0，
+证明三个快照都真取到——**空快照会让所有判据"没红"，那不是通过**。健康计数每次重取，
+不读历史日志或累计值。控制面 token 只在 VM 内用（`node --env-file` 读 `mini-b2.env`），
+不打印不回传。只读性已验到整个调用图：`GET /internal/app-placement` 是纯读
+（`store.list().find` + `appPlacements.get` 只过滤过期、不落盘）。
+
+⚠️ **三处已知覆盖缺口，窗口当天要现场补**：
+1. 测试里 limactl 是桩，**丢弃 GUEST heredoc**——guest 侧那段 python 和
+   `node --env-file` 租约查询**从未真执行过**，只有宿主编排层被覆盖。
+2. curl 桩恒 exit 0，`snapshotExitCodes ≠ 0`（快照取不到）分支从未走过。
+3. `criterion09` 拿 `presentCount` 比 `expectedCount`，**两个数都来自 guest 自己那张
+   键表**——把表改小两个数一起变小、照样通过。它靠 `expectedCount` 出现在输出 JSON
+   里被人看见兜底。（当下值是准的：17 键与 `render-mini-b2-env.mjs` 逐键相同零漂移。）
 
 #### 📌 版本落差是刻意保留的，别"对齐"它（2026-08-05 决策，`65d23c9` 记录在案）
 
