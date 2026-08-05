@@ -18,6 +18,14 @@ output_levels: L2
 6. **通道与业务状态分离**：飞书日报的“生产维护通道”只表示限权 SSH/维护调用是否成功，不能复用业务聚合 `ok`。站点进程、实时雷达、Theory Radar、访问统计等子项必须独立展示，避免一个业务异常被误报成通道不可用。
 7. **访问统计只发聚合**：个人站日报使用前一完整自然日的 `human` UV/PV；排除 `owner/aiops/prefetch/bot/legacy`，只允许发送日期、UV/PV、人均页数和公开热门路径，禁止发送 IP、UA、referrer 或访问明细。
 
+## 证书续期专项
+
+- **公网入口与回源证书分开验收**：先用 DNS、Nginx `proxy_pass`、`Host`、TLS SNI 和访问日志确认请求链。浏览器看到的公网证书不等于后端回源证书；两台机器的到期日、renewal 配置和调度器必须分别检查。
+- **HTTP-01 必须命中证书所在主机**：域名已经迁到其他节点时，原节点 HTTP-01 必然失败；仍承担 HTTPS 回源时改用限定 Zone 的 DNS-01，废弃链路才清 server block。
+- **unit 名不准猜**：先查 `systemctl list-unit-files`、`list-timers` 和 unit 内容。Ubuntu/Debian 常见 `certbot.timer`，其他镜像可能使用 `certbot-renew.timer`；名称不同不等于没有自动续期。
+- **IPv6 故障要最小范围修复**：若 Python/urllib3 因不可达 AAAA 卡住而 `curl -4` 正常，只在 Certbot Python 客户端范围内强制 IPv4；不要全局关闭 IPv6，也不要用 AF_INET-only 沙箱阻断 Nginx 的 `[::]` 配置测试。
+- **生产验收闭环**：备份必须放在 Nginx include 目录之外；保存全部证书和站点状态基线；依次验证 targeted dry-run、真实续期、新到期日、其他证书不变、`nginx -t`、reload、公网 E2E、timer enabled/active 和最近 service result。
+
 ## 必跑检查
 
 ```bash
@@ -56,6 +64,9 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && AI_OPS_REGRESSION_SLEEP=22 scripts/valid
 - 飞书通知：确认 `notify_text` 不含 `question`、`conversation`、`answer`、异常正文。
 - 飞书状态语义：确认维护通道可达性不依赖业务聚合 `ok`；每个业务子项单独显示状态和证据。
 - 访客日报：确认使用昨日完整自然日、仅 `human` 聚合；消息里没有 IP、UA、referrer、原始数据库行或被排除流量明细。
+- 证书拓扑：确认公网 TLS 终止节点与 HTTPS 回源节点，分别记录证书到期日和自动续期入口。
+- 证书调度：以实际 unit/cron 证据为准，至少验证 enabled、active、最近一次退出码和 targeted dry-run。
+- 证书隔离：只允许目标 renewal 配置和目标证书变化；其他证书的序列号、到期日和哈希必须与操作前一致。
 - CPA/Codex 授权：确认正式 Codex OAuth 授权带 `refresh_token` 时已开启 `auth-auto-refresh-workers`；只记录是否可刷新、服务状态、低成本探测状态，禁止记录 token 正文。
 - CPA/Codex 用量：Codex 当前不展示 5 小时额度；`primary_window`/`secondary_window` 只按 `limit_window_seconds` 判定真实周期，菜单栏与告警只使用周额度，禁止按字段槽位硬编码周期名称。
 - CPA/xAI 用量：官方费用与预付余额只读 xAI Management API，并隐藏 Management Key；Smart Router `/debug/summary?hours=24` 仅作 provider 级路由观测，`daily_token_limit - tokens_today` 只能叫“路由日预算剩余”，不得冒充官方账单。
