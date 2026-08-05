@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-08-05 22:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "test_section",
+  "device_unit",
+  "test_type",
+  "result",
+  "column_break_test",
+  "test_template_version",
+  "tested_at",
+  "execution_section",
+  "workstation",
+  "operator",
+  "raw_data_ref"
+ ],
+ "fields": [
+  {
+   "fieldname": "test_section",
+   "fieldtype": "Section Break",
+   "label": "测试结果"
+  },
+  {
+   "fieldname": "device_unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "设备档案",
+   "options": "Aishike Device Unit",
+   "reqd": 1
+  },
+  {
+   "fieldname": "test_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "测试类型",
+   "options": "OPTICAL\nSENSOR\nFUNCTION\nAI\nAGING\nOQC",
+   "reqd": 1
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "结果",
+   "options": "PASS\nFAIL",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_test",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "test_template_version",
+   "fieldtype": "Data",
+   "label": "测试模板版本",
+   "reqd": 1
+  },
+  {
+   "default": "Now",
+   "fieldname": "tested_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "测试时间",
+   "reqd": 1
+  },
+  {
+   "fieldname": "execution_section",
+   "fieldtype": "Section Break",
+   "label": "执行信息"
+  },
+  {
+   "fieldname": "workstation",
+   "fieldtype": "Link",
+   "label": "测试工位",
+   "options": "Workstation"
+  },
+  {
+   "default": "__user",
+   "fieldname": "operator",
+   "fieldtype": "Link",
+   "label": "操作员",
+   "options": "User"
+  },
+  {
+   "description": "Reference only. Raw test data remains in QMS/MES storage.",
+   "fieldname": "raw_data_ref",
+   "fieldtype": "Data",
+   "label": "原始数据引用"
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-05 22:10:00.000000",
+ "modified_by": "Administrator",
+ "module": "Aishike ERP",
+ "name": "Aishike Device Test Record",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Quality Manager",
+   "share": 1
+  }
+ ],
+ "sort_field": "tested_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

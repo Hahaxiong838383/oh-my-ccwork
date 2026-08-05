@@ -1,0 +1,132 @@
+name: aishike-erp-test
+
+x-aishike-image: &aishike_image
+  image: ${CUSTOM_IMAGE:-aishike-erp}:${CUSTOM_TAG:-test-v16.31.0}
+  pull_policy: ${PULL_POLICY:-never}
+  restart: ${RESTART_POLICY:-unless-stopped}
+
+x-backend-defaults: &backend_defaults
+  <<: *aishike_image
+  depends_on:
+    configurator:
+      condition: service_completed_successfully
+  volumes:
+    - sites:/home/frappe/frappe-bench/sites
+    - logs:/home/frappe/frappe-bench/logs
+
+services:
+  db:
+    image: ${MARIADB_IMAGE:-dockerproxy.net/library/mariadb:11.8@sha256:d9f7eb2637296652f24b484afd5d246f759f49f5babcadc6a9e344c9acb75fbf}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+    environment:
+      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MARIADB_AUTO_UPGRADE: "1"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    secrets:
+      - db_root_password
+    volumes:
+      - db-data:/var/lib/mysql
+
+  redis-cache:
+    image: ${REDIS_IMAGE:-dockerproxy.net/library/redis:8.6-alpine@sha256:cd218f4b106a332c5c992e38a9480bfb9d7e9f8f7b0ec9a0023bfa36d9a408f9}
+    restart: ${RESTART_POLICY:-unless-stopped}
+
+  redis-queue:
+    image: ${REDIS_IMAGE:-dockerproxy.net/library/redis:8.6-alpine@sha256:cd218f4b106a332c5c992e38a9480bfb9d7e9f8f7b0ec9a0023bfa36d9a408f9}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    volumes:
+      - redis-queue-data:/data
+
+  configurator:
+    <<: *aishike_image
+    restart: on-failure
+    entrypoint: ["bash", "-c"]
+    command:
+      - >
+        ls -1 apps > sites/apps.txt;
+        bench set-config -g db_host db;
+        bench set-config -gp db_port 3306;
+        bench set-config -g redis_cache "redis://redis-cache:6379";
+        bench set-config -g redis_queue "redis://redis-queue:6379";
+        bench set-config -g redis_socketio "redis://redis-queue:6379";
+        bench set-config -gp socketio_port 9000;
+        bench set-config -g chromium_path /usr/bin/chromium-headless-shell;
+    depends_on:
+      db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_started
+      redis-queue:
+        condition: service_started
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - logs:/home/frappe/frappe-bench/logs
+
+  backend:
+    <<: *backend_defaults
+    environment:
+      SITE_NAME: ${SITE_NAME:-aishike.localhost}
+      GUNICORN_THREADS: "4"
+      GUNICORN_WORKERS: "4"
+      GUNICORN_TIMEOUT: "120"
+    secrets:
+      - db_root_password
+      - admin_password
+
+  frontend:
+    <<: *aishike_image
+    command: ["nginx-entrypoint.sh"]
+    environment:
+      BACKEND: backend:8000
+      SOCKETIO: websocket:9000
+      FRAPPE_SITE_NAME_HEADER: ${SITE_NAME:-aishike.localhost}
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      PROXY_READ_TIMEOUT: "120"
+      CLIENT_MAX_BODY_SIZE: 50m
+    ports:
+      - "127.0.0.1:${HTTP_PUBLISH_PORT:-18080}:8080"
+    depends_on:
+      - backend
+      - websocket
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - logs:/home/frappe/frappe-bench/logs
+
+  websocket:
+    <<: *backend_defaults
+    command: ["node", "/home/frappe/frappe-bench/apps/frappe/socketio.js"]
+
+  queue-short:
+    <<: *backend_defaults
+    command: ["bench", "worker", "--queue", "short,default"]
+
+  queue-long:
+    <<: *backend_defaults
+    command: ["bench", "worker", "--queue", "long,default,short"]
+
+  scheduler:
+    <<: *backend_defaults
+    command: ["bench", "schedule"]
+
+secrets:
+  db_root_password:
+    file: ./secrets/db_root_password.txt
+  admin_password:
+    file: ./secrets/admin_password.txt
+
+volumes:
+  db-data:
+  redis-queue-data:
+  sites:
+  logs:

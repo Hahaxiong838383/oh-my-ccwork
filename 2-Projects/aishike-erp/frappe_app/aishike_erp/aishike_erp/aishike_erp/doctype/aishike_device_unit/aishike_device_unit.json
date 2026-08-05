@@ -1,0 +1,190 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 0,
+ "autoname": "field:serial_no",
+ "creation": "2026-08-05 22:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "serial_no",
+  "sku_configuration",
+  "item_code",
+  "column_break_identity",
+  "lifecycle_state",
+  "production_batch",
+  "manufacturing_section",
+  "bom",
+  "work_order",
+  "column_break_manufacturing",
+  "firmware_version",
+  "agent_version",
+  "commercial_section",
+  "current_channel",
+  "channel_order_id",
+  "column_break_commercial",
+  "activation_ref",
+  "last_event_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "设备基本信息"
+  },
+  {
+   "fieldname": "serial_no",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "设备序列号",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "sku_configuration",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "SKU 配置",
+   "options": "Aishike SKU Configuration",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "sku_configuration.item_code",
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "ERP 物料",
+   "options": "Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_identity",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "CREATED",
+   "fieldname": "lifecycle_state",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "生命周期状态",
+   "options": "CREATED\nASSEMBLED\nFLASHED\nQC_PASSED\nSTOCKED\nALLOCATED\nSHIPPED\nACTIVATED\nRMA_OPEN\nREPAIRING\nRETURNED\nREFURBISHED\nSCRAPPED",
+   "reqd": 1
+  },
+  {
+   "fieldname": "production_batch",
+   "fieldtype": "Data",
+   "label": "生产批次"
+  },
+  {
+   "fieldname": "manufacturing_section",
+   "fieldtype": "Section Break",
+   "label": "生产制造"
+  },
+  {
+   "fetch_from": "sku_configuration.bom",
+   "fieldname": "bom",
+   "fieldtype": "Link",
+   "label": "物料清单（BOM）",
+   "options": "BOM",
+   "read_only": 1
+  },
+  {
+   "fieldname": "work_order",
+   "fieldtype": "Link",
+   "label": "生产工单",
+   "options": "Work Order"
+  },
+  {
+   "fieldname": "column_break_manufacturing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "firmware_version",
+   "fieldtype": "Data",
+   "label": "固件版本"
+  },
+  {
+   "fieldname": "agent_version",
+   "fieldtype": "Data",
+   "label": "AI Agent 版本"
+  },
+  {
+   "fieldname": "commercial_section",
+   "fieldtype": "Section Break",
+   "label": "销售与服务"
+  },
+  {
+   "fieldname": "current_channel",
+   "fieldtype": "Select",
+   "label": "当前销售渠道",
+   "options": "\nTMALL\nJD\nDEALER"
+  },
+  {
+   "fieldname": "channel_order_id",
+   "fieldtype": "Data",
+   "label": "渠道订单号"
+  },
+  {
+   "fieldname": "column_break_commercial",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "activation_ref",
+   "fieldtype": "Data",
+   "label": "脱敏激活引用"
+  },
+  {
+   "fieldname": "last_event_at",
+   "fieldtype": "Datetime",
+   "label": "最后事件时间",
+   "read_only": 1
+  }
+ ],
+ "links": [
+  {
+   "link_doctype": "Aishike Device Test Record",
+   "link_fieldname": "device_unit"
+  },
+  {
+   "link_doctype": "Aishike Device Lifecycle Event",
+   "link_fieldname": "device_unit"
+  }
+ ],
+ "modified": "2026-08-05 22:10:00.000000",
+ "modified_by": "Administrator",
+ "module": "Aishike ERP",
+ "name": "Aishike Device Unit",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "show_name_in_global_search": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

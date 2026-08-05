@@ -1,0 +1,52 @@
+{
+ "app": "aishike_erp",
+ "charts": [],
+ "content": "[{\"id\":\"header-masters\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>产品与设备主数据</b></span>\",\"col\":12}},{\"id\":\"shortcut-sku\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"SKU 配置\",\"col\":4}},{\"id\":\"shortcut-device\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"设备档案\",\"col\":4}},{\"id\":\"shortcut-test\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"设备测试\",\"col\":4}}]",
+ "creation": "2026-08-05 22:10:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "package",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Aishike ERP",
+ "links": [],
+ "modified": "2026-08-05 22:10:00.000000",
+ "modified_by": "Administrator",
+ "module": "Aishike ERP",
+ "name": "Aishike ERP",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 20.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "SKU 配置",
+   "link_to": "Aishike SKU Configuration",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "设备档案",
+   "link_to": "Aishike Device Unit",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "设备测试",
+   "link_to": "Aishike Device Test Record",
+   "type": "DocType"
+  }
+ ],
+ "title": "Aishike ERP",
+ "type": "Workspace"
+}

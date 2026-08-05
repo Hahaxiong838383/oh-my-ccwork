@@ -1,0 +1,113 @@
+Aishike ERP,爱视可 ERP
+Aishike SKU Configuration,爱视可 SKU 配置
+Aishike Device Unit,爱视可设备档案
+Aishike Device Test Record,爱视可设备测试记录
+Aishike Device Lifecycle Event,爱视可设备生命周期事件
+SKU Configuration,SKU 配置
+Device Units,设备档案
+Device Tests,设备测试
+Draft,草稿
+Approved,已批准
+Disabled,已停用
+STAR_WHITE,星光白
+DEEP_GRAY,深空灰
+STANDARD,标准版
+PRO,专业版
+CN,中国
+CREATED,已创建设备
+ASSEMBLED,已完成组装
+FLASHED,已完成烧录
+QC_PASSED,已通过质量门
+STOCKED,已入成品库
+ALLOCATED,已分配订单
+SHIPPED,已发货
+ACTIVATED,已激活
+RMA_OPEN,售后处理中
+REPAIRING,维修中
+RETURNED,已退回
+REFURBISHED,已翻新
+SCRAPPED,已报废
+TMALL,天猫
+JD,京东
+DEALER,线下经销
+OPTICAL,光学测试
+SENSOR,传感器测试
+FUNCTION,功能测试
+AI,AI 功能测试
+AGING,老化测试
+OQC,出货质量检验
+PASS,通过
+FAIL,不通过
+Approve SKU,批准 SKU
+Disable SKU,停用 SKU
+Status,状态
+Reason,停用原因
+Lifecycle,生命周期
+Mark Assembled,标记组装完成
+Complete Flashing,完成固件烧录
+Pass Quality Gate,通过质量门
+Move To Finished Goods,转入成品库存
+Allocate To Order,分配销售订单
+Confirm Shipment,确认发货
+Confirm Activation,确认设备激活
+Open RMA,发起售后工单
+Start Repair,开始维修
+Sign In,登录
+Welcome! Please sign in to continue.,欢迎，请登录后继续。
+Forgot password?,忘记密码？
+Continue,继续
+Log in with email link,通过邮箱链接登录
+Begin typing for results.,输入关键词搜索。
+Last Edited By You,最后由你编辑
+Created By You,由你创建
+Framework,系统管理
+Organization,组织管理
+Accounting,财务管理
+Assets,资产管理
+Buying,采购管理
+Manufacturing,生产制造
+Projects,项目管理
+Quality,质量管理
+Selling,销售管理
+Stock,库存管理
+Subcontracting,委外加工
+ERPNext Settings,ERPNext 设置
+Invoicing,开票管理
+Payments,收付款管理
+Financial Reports,财务报表
+Accounts Setup,财务设置
+Taxes,税务管理
+Banking,银行业务
+Budget,预算管理
+Share Management,股东管理
+Subscription,订阅管理
+CRM,客户关系管理
+Support,客户支持
+My Workspaces,我的工作台
+Printing,打印管理
+Asset,资产
+Item,物料
+Customer,客户
+Supplier,供应商
+Sales Order,销售订单
+Purchase Order,采购订单
+Work Order,生产工单
+Bill of Materials,物料清单
+Delivery Note,发货单
+Purchase Receipt,采购收货单
+Quotation,报价单
+Lead,销售线索
+Opportunity,销售机会
+Warehouse,仓库
+Serial No,序列号
+Stock Entry,库存调拨单
+Material Request,物料需求单
+Production Plan,生产计划
+Job Card,工序卡
+Quality Inspection,质量检验
+Sales Invoice,销售发票
+Purchase Invoice,采购发票
+Payment Entry,收付款单
+Clear all filters,清除全部筛选条件
+Item Group,物料组
+Products,产品

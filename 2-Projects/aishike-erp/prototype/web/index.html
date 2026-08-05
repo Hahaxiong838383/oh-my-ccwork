@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f5f5f7" />
+    <title>爱视可 ERP · 设备生命周期</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect rx=%2216%22 width=%2264%22 height=%2264%22 fill=%22%230071e3%22/><text x=%2217%22 y=%2245%22 font-size=%2236%22 font-family=%22Arial%22 font-weight=%22700%22 fill=%22white%22>A</text></svg>" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-symbol">A</span>
+          <div>
+            <strong>爱视可 ERP</strong>
+            <span>智能硬件运营系统</span>
+          </div>
+        </div>
+
+        <nav class="side-nav" aria-label="页面导航">
+          <a class="nav-item active" href="#overview">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z" /></svg>
+            <span>总览</span>
+          </a>
+          <a class="nav-item" href="#configuration">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v10l8 4 8-4V7l-8-4Zm0 2.2L17.6 8 12 10.8 6.4 8 12 5.2ZM6 9.6l5 2.5v6.3l-5-2.5V9.6Zm7 8.8v-6.3l5-2.5v6.3l-5 2.5Z" /></svg>
+            <span>商品配置</span>
+          </a>
+          <a class="nav-item" href="#execution">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v4H5V4Zm0 6h14v4H5v-4Zm0 6h14v4H5v-4Z" /></svg>
+            <span>生产流转</span>
+          </a>
+          <a class="nav-item" href="#quality">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 8 3v6c0 5.1-3.4 9.4-8 11-4.6-1.6-8-5.9-8-11V5l8-3Zm0 2.1L6 6.3V11c0 3.9 2.4 7.3 6 8.8 3.6-1.5 6-4.9 6-8.8V6.3l-6-2.2Zm-1 10.6-3-3 1.4-1.4 1.6 1.6 3.6-3.6 1.4 1.4-5 5Z" /></svg>
+            <span>质量控制</span>
+          </a>
+          <a class="nav-item" href="#trace">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 2v14h14V5H5Zm3 3h8v2H8V8Zm0 4h8v2H8v-2Zm0 4h5v2H8v-2Z" /></svg>
+            <span>SN履历</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="environment-state">
+            <i></i>
+            <div><strong>本地验收环境</strong><span>数据仅在内存中保存</span></div>
+          </div>
+          <span class="version">Prototype 0.2</span>
+        </div>
+      </aside>
+
+      <div class="app-content">
+        <header class="topbar">
+          <div>
+            <p>设备运营 / 生命周期管理</p>
+            <h1>设备生命周期</h1>
+          </div>
+          <div class="top-actions">
+            <span class="environment-pill"><i></i>服务正常</span>
+            <button class="button button-secondary" id="reset-button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 5.6A9 9 0 1 0 21 12h-2a7 7 0 1 1-2-4.9L14 10h7V3l-2.6 2.6Z" /></svg>
+              重置演示
+            </button>
+          </div>
+        </header>
+
+        <main>
+          <section class="overview" id="overview">
+            <div class="overview-copy">
+              <span class="section-label">设备数字线程</span>
+              <h2>从产品配置到售后，<br />掌握每一台设备的完整状态。</h2>
+              <p>围绕唯一SN连接SKU、BOM、工单、质量测试、渠道订单、物流、激活和售后，让生产与经营共享同一份事实。</p>
+            </div>
+            <div class="device-status-card">
+              <div class="status-card-top">
+                <span>当前演示设备</span>
+                <i class="status-indicator"></i>
+              </div>
+              <strong id="hero-device-state">等待创建</strong>
+              <span id="hero-serial">SN 尚未生成</span>
+              <div class="status-progress"><i id="status-progress-bar"></i></div>
+            </div>
+          </section>
+
+          <section class="metrics" id="metrics" aria-label="业务指标"></section>
+
+          <section class="primary-grid">
+            <article class="surface configuration-panel" id="configuration">
+              <div class="panel-heading">
+                <div>
+                  <span class="section-label">商品中心</span>
+                  <h3>受控SKU配置</h3>
+                  <p>销售可在工程批准范围内组合颜色、硬件版本和销售区域。</p>
+                </div>
+                <span class="approval-badge">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 16.2-3.7-3.7 1.4-1.4 2.3 2.3 7.3-7.3 1.4 1.4-8.7 8.7Z" /></svg>
+                  工程白名单
+                </span>
+              </div>
+
+              <form id="sku-form" class="sku-form">
+                <label>
+                  <span>颜色</span>
+                  <select id="color-select" name="color">
+                    <option value="STAR_WHITE">星际白</option>
+                    <option value="DEEP_GRAY">深空灰</option>
+                  </select>
+                </label>
+                <label>
+                  <span>硬件配置</span>
+                  <select id="hardware-select" name="hardware">
+                    <option value="STANDARD">标准版</option>
+                    <option value="PRO">PRO版</option>
+                  </select>
+                </label>
+                <label>
+                  <span>销售区域</span>
+                  <select id="region-select" name="region">
+                    <option value="CN">中国大陆</option>
+                  </select>
+                </label>
+                <button class="button button-primary" type="submit">生成实体SKU</button>
+              </form>
+
+              <div class="sku-result" id="sku-result">
+                <div><span>内部SKU</span><strong>尚未创建</strong></div>
+                <p>深空灰＋PRO尚未通过工程批准，可用于体验规则拦截。</p>
+              </div>
+            </article>
+
+            <article class="surface dossier-panel" id="trace">
+              <div class="panel-heading compact-heading">
+                <div>
+                  <span class="section-label">设备档案</span>
+                  <h3>SN数字身份</h3>
+                </div>
+                <span class="dossier-state" id="dossier-state">等待创建</span>
+              </div>
+              <div class="serial-display">
+                <span>Serial Number</span>
+                <strong id="dossier-serial">—</strong>
+              </div>
+              <dl id="dossier-details" class="dossier-details">
+                <div><dt>SKU</dt><dd>—</dd></div>
+                <div><dt>BOM版本</dt><dd>—</dd></div>
+                <div><dt>生产工单</dt><dd>—</dd></div>
+                <div><dt>固件版本</dt><dd>—</dd></div>
+                <div><dt>Agent版本</dt><dd>—</dd></div>
+                <div><dt>销售渠道</dt><dd>—</dd></div>
+              </dl>
+            </article>
+          </section>
+
+          <section class="surface flow-panel" id="execution">
+            <div class="panel-heading">
+              <div>
+                <span class="section-label">业务执行</span>
+                <h3>设备全生命周期</h3>
+                <p>每一步都由领域状态机校验，不允许跳过质量门或绕过SN分配。</p>
+              </div>
+              <div class="progress-summary">
+                <span id="progress-label">0 / 11</span>
+                <small>已完成步骤</small>
+              </div>
+            </div>
+            <div class="pipeline" id="pipeline"></div>
+            <div class="action-console">
+              <div class="action-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 8 7-8 7V5Z" /></svg>
+              </div>
+              <div class="action-description">
+                <span>下一步操作</span>
+                <strong id="next-action-title">请先配置SKU</strong>
+                <p id="next-action-help">每一步都会经过真实领域规则校验。</p>
+              </div>
+              <div class="action-buttons" id="action-buttons"></div>
+            </div>
+          </section>
+
+          <section class="secondary-grid" id="quality">
+            <article class="surface test-panel">
+              <div class="panel-heading compact-heading">
+                <div>
+                  <span class="section-label">质量管理</span>
+                  <h3>出厂质量门</h3>
+                  <p>六项测试最新结果全部通过后才允许成品入库。</p>
+                </div>
+                <span class="quality-count" id="quality-count">0 / 6</span>
+              </div>
+              <div class="test-list" id="test-list"></div>
+            </article>
+
+            <article class="surface event-panel">
+              <div class="panel-heading compact-heading">
+                <div>
+                  <span class="section-label">审计追踪</span>
+                  <h3>SN事件记录</h3>
+                  <p>事件只追加不覆盖，复测、发货、激活和售后均保留历史。</p>
+                </div>
+                <span class="event-count" id="event-count">0 条</span>
+              </div>
+              <div class="event-ledger" id="event-ledger">
+                <div class="empty-state">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 2v14h14V5H5Zm3 3h8v2H8V8Zm0 4h8v2H8v-2Z" /></svg>
+                  <strong>尚无设备事件</strong>
+                  <span>生成设备SN后，完整事件记录将在这里展示。</span>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="acceptance-note">
+            <div>
+              <span class="section-label">人工验收建议</span>
+              <h3>建议先体验一次异常流程，再完成正常闭环。</h3>
+            </div>
+            <ol>
+              <li>选择“深空灰＋PRO”，验证未批准SKU被拒绝。</li>
+              <li>在质量环节注入光学失败，确认入库按钮不会出现。</li>
+              <li>复测通过后继续完成京东订单、发货、激活和售后。</li>
+            </ol>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>

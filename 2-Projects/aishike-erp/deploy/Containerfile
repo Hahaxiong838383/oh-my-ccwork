@@ -1,0 +1,21 @@
+ARG ERPNEXT_IMAGE=dockerproxy.net/frappe/erpnext:v16.31.0@sha256:473407805828fd0afa0df15ae72c17a0030113e0cb0ea24be0ec0d91d822b392
+FROM ${ERPNEXT_IMAGE}
+
+USER root
+COPY --chown=frappe:frappe frappe_app/aishike_erp /home/frappe/frappe-bench/apps/aishike_erp
+RUN sed -i 's|proxy_set_header Origin .*|proxy_set_header Origin $http_origin;|' \
+    /templates/nginx/frappe.conf.template \
+    && sed -i 's|proxy_set_header Host $host;|proxy_set_header Host ${FRAPPE_SITE_NAME_HEADER};|g' \
+    /templates/nginx/frappe.conf.template \
+    && sed -i 's#get_hostname(socket.request.headers.host)#get_hostname(socket.request.headers["x-frappe-site-name"] || socket.request.headers.host)#' \
+    /home/frappe/frappe-bench/apps/frappe/realtime/middlewares/authenticate.js \
+    && sed -i 's#get_hostname(socket.request.headers.origin))#get_hostname(socket.request.headers.origin || socket.request.headers.referer))#' \
+    /home/frappe/frappe-bench/apps/frappe/realtime/middlewares/authenticate.js \
+    && sed -i 's#let headers = {};#let headers = {"X-Frappe-Site-Name": get_site_name(socket)};#' \
+    /home/frappe/frappe-bench/apps/frappe/realtime/middlewares/authenticate.js \
+    && sed -i 's#let url = socket.request.headers.origin;#let url = "http://backend:8000";#' \
+    /home/frappe/frappe-bench/apps/frappe/realtime/utils.js
+
+USER frappe
+WORKDIR /home/frappe/frappe-bench
+RUN ./env/bin/pip install --no-cache-dir -e apps/aishike_erp

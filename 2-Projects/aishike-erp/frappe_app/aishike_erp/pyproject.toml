@@ -1,0 +1,22 @@
+[project]
+name = "aishike_erp"
+authors = [
+    { name = "FUTURUS" }
+]
+description = "Aishike smart hardware ERP extensions for Frappe"
+requires-python = ">=3.14,<3.15"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = []
+
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.bench.frappe-dependencies]
+frappe = ">=16.21.0,<17.0.0"
+erpnext = ">=16.0.0,<17.0.0"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"

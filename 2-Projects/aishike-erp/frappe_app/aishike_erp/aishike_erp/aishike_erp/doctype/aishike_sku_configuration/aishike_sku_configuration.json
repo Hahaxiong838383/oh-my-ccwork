@@ -1,0 +1,178 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 0,
+ "autoname": "field:item_code",
+ "creation": "2026-08-05 22:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "item_template",
+  "item_code",
+  "status",
+  "column_break_identity",
+  "color",
+  "hardware_configuration",
+  "sales_region",
+  "erp_section",
+  "bom",
+  "product_bundle",
+  "channel_ready",
+  "approval_section",
+  "approved_by",
+  "approved_on",
+  "column_break_approval",
+  "disabled_reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "SKU 基本信息"
+  },
+  {
+   "fieldname": "item_template",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "产品模板",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "SKU 编码",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "状态",
+   "options": "Draft\nApproved\nDisabled",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_identity",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "color",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "颜色",
+   "options": "STAR_WHITE\nDEEP_GRAY",
+   "reqd": 1
+  },
+  {
+   "fieldname": "hardware_configuration",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "硬件配置",
+   "options": "STANDARD\nPRO",
+   "reqd": 1
+  },
+  {
+   "default": "CN",
+   "fieldname": "sales_region",
+   "fieldtype": "Select",
+   "label": "销售区域",
+   "options": "CN",
+   "reqd": 1
+  },
+  {
+   "fieldname": "erp_section",
+   "fieldtype": "Section Break",
+   "label": "ERP 关联"
+  },
+  {
+   "fieldname": "bom",
+   "fieldtype": "Link",
+   "label": "默认物料清单（BOM）",
+   "options": "BOM"
+  },
+  {
+   "fieldname": "product_bundle",
+   "fieldtype": "Link",
+   "label": "销售套餐",
+   "options": "Product Bundle"
+  },
+  {
+   "default": "0",
+   "fieldname": "channel_ready",
+   "fieldtype": "Check",
+   "label": "渠道已就绪"
+  },
+  {
+   "fieldname": "approval_section",
+   "fieldtype": "Section Break",
+   "label": "审批信息"
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "批准人",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_on",
+   "fieldtype": "Datetime",
+   "label": "批准时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_approval",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.status == 'Disabled'",
+   "fieldname": "disabled_reason",
+   "fieldtype": "Small Text",
+   "label": "停用原因"
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-05 22:10:00.000000",
+ "modified_by": "Administrator",
+ "module": "Aishike ERP",
+ "name": "Aishike SKU Configuration",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Item Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "show_name_in_global_search": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
