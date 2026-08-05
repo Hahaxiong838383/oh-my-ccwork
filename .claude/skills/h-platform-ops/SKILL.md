@@ -4041,6 +4041,52 @@ SOURCE_ROOT=${PROJECT_ROOT:-}
 `cutover-mini-b2.sh` 也采用同一规则，并预检 shadow verify 与 state sync 脚本存在；不能再依赖
 “旧原生根刚好没有 deploy/lima”这种目录布局巧合来保证安全。
 
+### 🔴 回滚必须先把 VM 状态反向回迁（`sync-mini-b2-state-back.sh`，commit `ba4fb4c`）
+
+割接后 VM 里的会话、TaskSessionLog、Outbox、用户规则和记忆已经**比 macOS 原生副本新**。
+只停 VM + 删 marker + 重启原生 = 让原生带着割接前的旧状态上线，任务历史/记忆/幂等送达
+状态集体倒退。回滚的正确顺序是三段，缺一不可：
+
+```
+停 VM bridge+runner+ai-memory  →  反向回迁(fail-closed)  →  恢复原生 launchd
+```
+
+回迁范围与 `sync-mini-b2-state.sh` 精确互逆：`data/users`↔`users`、`data/{users,accounts}.json`
+↔`config/*.json`、`memory`/`shared`/`orgs`/`workspace` 同名。VM 权威状态先归档进
+`$H_B2_ROLLBACK_DIR/state/vm-state-pre-rollback.tar.gz`（700/600 + sha256 落 `evidence/`），
+`H_B2_ROLLBACK_DIR` 必须存在、带 `evidence/`、且不在原生部署根内，否则 fail-closed。
+
+⚠️ **`config.toml` 是 VM 的派生物，原生根本不读它。** `ai-memory-provision-macos.sh` 让
+LaunchAgent 直接 `--config config.mini.toml`，`config.toml` 只在 Guest 侧由 `config.mini.toml`
+经 `host.lima.internal` 替换生成。所以防 Guest 地址回流有双保险：回迁时从 `config.mini.toml`
+重建，加上回滚末尾按 uid 重跑 provisioner 重写它。改这块别把两者搞反。
+
+### 🔴 停止闸门禁止写成裸 `! cmd`（2026-08-05 复核抓到，差点带进演练）
+
+`set -e` 对被 `!` 取反的命令**有豁免**（POSIX 明文）。所以下面这行拦不住任何东西：
+
+```sh
+! systemctl --user is-active --quiet h-mini-b2-bridge.service   # ← 服务在跑时照样往下走
+```
+
+服务仍在运行 → `is-active` 返 0 → `!` 反成 1 → **脚本不中止**，继续把一个正在写入的
+VM 状态导出并覆盖原生。Lima Guest 实测（bash 5.3.9）：`! true` 后续语句照常执行、
+退出码 0；同 shell 里裸 `false` 正常中止（对照锚，排除「`set -e` 没生效」）。
+一律写 `if cmd; then echo …>&2; exit 1; fi`，或 `! cmd || fail "…"`（`sync-mini-b2-state.sh:21`
+用的就是后者）。这条与 `|| true` 是**致命组合**——回滚里 `systemctl stop … || true` 吞掉
+停止失败，下游闸门再空转，就没有任何一层会红。
+
+⚠️ **配套的测试断言也不能只断言服务名出现在文件里**：`assert.match(script, /h-mini-b2-bridge\.service/)`
+在把整行注释掉之后依然通过。正确做法是抽出 Guest 代码块、桩掉 `systemctl` 真跑——任一
+服务 active 必须非零退出且**不产出归档**，全停时必须产出归档（正例锚防闸门恒失败）。
+写完把原 bug 注入回去做负向验证，确认真的变红。详见 [[feedback_guard_itself_can_be_hollow]]
+案例五、[[feedback_bash_short_circuit_pipefail_trap]]。
+
+验 fail-closed 时别只看退出码非零：`env` 的选项必须写在赋值之前，否则拿到的 127 是 `env`
+自己的、脚本压根没跑——**期望失败的用例更要核对失败原因**。用绊线桩替换
+`launchctl`/`limactl` 证明零服务动作，再配一次真调用证明绊线本身有效
+（[[feedback_exit_code_ownership]]）。
+
 ### ✅ 曾经的 flaky 已修（同 commit）
 
 `test/runner-worker-ipc.test.mjs`「kill worker 后调用标 orphan」曾偶发
