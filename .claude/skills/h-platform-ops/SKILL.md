@@ -20,6 +20,7 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 6. **改 html.mjs 必跑 script 语法门**：模板字符串会把 `\n` 先解析成真实换行 → 输出的 JS 字符串字面量断行 → **整个 script 块静默不执行**（页面正常、console 无报错、按钮全失灵）。源码里写 `\\n`；改完跑「必跑检查」里的 script 块语法检查（[[feedback_template_string_swallows_js_escapes]]）。**加弹层/fixed 组件还有第二道**：`.pane.on` 这类祖先的动画 fill 若用 both/forwards 会固化恒等 transform，静默把 fixed 的包含块从视口劫持成 pane（v1.37.0 真机抓到，fill 已去掉别加回来）；弹层上线前在真实页面断言 `getBoundingClientRect≈视口`（[[feedback_fixed_position_hijacked_by_ancestor_transform]]）。
 7. **推代码前查实时分支**：历史上部署主干曾在 `origin/feishu-grok-bridge`，但 2026-07-27 已确认 GitHub 当前生产主干是 `origin/main`，旧分支落后。每次先跑 `git fetch origin && git rev-list --left-right --count HEAD...origin/main`，不要把历史记忆当现状。
 8. **健康读数认实例**：bridge `/health` 的**顶层字段是 owner Bot 的**，用户 Bot 在 `apps.<appId>` 里。查「某用户的消息到没到」必须看 `apps` 分解——2026-07-25 我拿顶层 `lastInboundAt:null` 断言「一条没收到」，实际用户 Bot 那条准时到了（[[feedback_selfcheck_false_signal]]）。
+   - ⚠️ **`lastInboundAt` 只统计文本消息，卡片按钮不进**。用户点「新会话」等卡片按钮走 card action 回调，日志里是 `card action cmd=… chat=… by=…`，而 `lastInboundAt` **纹丝不动**——2026-08-05 我差点据此报「你说测过了但我这边没收到」。验收要么盯日志事件流（全量），要么把动作说死（「发一条文字消息」而非「测一下」）。见 [[feedback_criteria_must_match_object_variant]]。
 9. **远程语法检查用绝对路径**：dev198 非交互 ssh 的 PATH 没有 node，`node --check` 会「命令未找到」而静默略过；结论行必须由累计变量驱动，绝不无条件 `echo 全过`。
 10. **Kimi 通道名不能混**：开放平台模型是 `kimi-k3`；Kimi Code 订阅的 CLI alias 是 `kimi-code/k3`，其 provider model 是 `k3`。桥接层必须使用订阅命名，不能把开放平台名字直接塞进 managed provider。
 11. **锁模型而非信默认值**：Kimi 配置生成和 Runner 必须共用 `lib/kimi-model.mjs`；Runner 每次显式传 `--model kimi-code/k3`。只改 `default_model` 不算完成。
@@ -37,6 +38,10 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 23. **生产 Base 一律先读后改**：编辑《H 产品需求与缺陷闭环》前，必须使用飞书 CLI/API 以 user 身份串行回读当前 Base、数据表、字段、视图、表单问题和记录数量；涉及视图时还要读取其筛选、排序、分组和可见字段。人工编辑后旧快照立即作废，必须重新读取，禁止按历史记忆或上一次返回直接写。既有视图只允许原位更新，不得删除、重建或改名，除非川哥明确点名要求。表单问题与底层字段共用 ID，`+form-questions-delete` 可能连带删除字段和数据；生产主表默认禁用该命令，简化人类入口优先新建独立 intake 表/表单。
 24. **字段结构恢复不等于数据恢复**：同名重建字段会生成新 field ID，旧单元格值不会自动回来。任何删字段/删表单问题前都要把实时字段、视图配置和全量记录快照放在 `0600` 的 `/tmp` 临时文件；恢复值时必须同时校验 `record_id` 与主描述文本一一对应，再按原值分组，仅 patch 目标字段。回读验收要检查目标值全匹配、其他业务单元格零变化、视图 ID/名称/类型不变；记录写入会自动刷新只读“更新时间”，必须如实说明。`field-list` 返回顺序不稳定，结构对比按 field ID 映射，禁止直接比较数组顺序。
 25. **双端网页打不开先定位请求消失层**：管理台与用户后台同时打不开，不等于控制面宕机。先对齐浏览器时间、本机 Xray `access.log`、DNS 错误、远端 nginx access/error、`h-control` systemd 与监听端口；本机日志显示 `accepted` 只代表代理入口接单，不能证明远端收到。旧页面轮询仍活着而新页面打不开时，优先排查 DNS/cache/keep-alive 和移动网络切换，禁止先重启或重部署生产。H 入口验收必须同时覆盖代理与直连 HTTP、远端 nginx、应用进程和重载后的新增 DNS 错误数。
+26. **「Bot 没反应」先数这个 appId 有几个消费者**（2026-08-05 换来的）：owner Bot `cli_a9f1cd1366751bc7` 当时**同时**配在 H 平台（dev198）和 **Mini 的 mycc 后端**（`~/mycc/.claude/skills/mycc/scripts/.env` 的 `FEISHU2_APP_ID`），两条 WS 抢同一批事件。**从 H 平台内部看，「消息被另一个后端抢走」和「用户压根没发」读数完全相同**（零入站 + 无报错 + 全绿 + 12 条 TCP 长连接都在），系统内部没有任何观测能区分这两者。所以第一步是 `grep -rl <appId>` **全机全仓**找其他持有方，别在 bridge 里往下挖。已于 2026-08-05 摘除（注释掉 `FEISHU2_*` 六行，备份 `~/local/mycc-backend-env-backup-*`，重启 `dev.mycc.backend` 后只剩 feishu-codex / feishu-gemini 两条通道）。详见 [[feedback_identifier_owned_by_two_systems]]。
+    - Mini mycc 后端通道布局：`FEISHU_*`（配着但未注册）/ ~~`FEISHU2_*`=owner，已摘~~ / `FEISHU4_*` engine=codex / `FEISHU5_*` engine=gemini。**没配 `_ENGINE` 的通道走默认路由**，owner 当时就是这样被派给 gemini 的。
+    - ⚠️ 查这类配置别用 `ps eww`：**dotenv 启动后写进内存的变量不进进程环境**，两台机的 `ps` 都报 FEISHU 键数 0（仪器验过是真零），真值在 `.env` 文件里躺着 22 个键。
+    - ⚠️ mycc 后端的 gemini 腿本来就是坏的：`adapters/gemini-api.ts` 硬编码 `gemini-3-flash-preview` 且**直连**（全文件 proxy/agent/dispatcher 零命中），dev198 实测直连 `generativelanguage.googleapis.com` = `HTTP 000/12s 超时`、走 xray = `403/1.0s`；同仓 `llm-verifier.ts` 走 `GEMINI_PROXY_URL` 才是对的。另 feishu-gemini 通道 secret 也是失效的（`code 10014`，早于本次改动）。
 
 ## 架构
 
