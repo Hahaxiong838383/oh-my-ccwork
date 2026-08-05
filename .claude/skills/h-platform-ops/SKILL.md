@@ -3598,6 +3598,22 @@ ORPHAN_CANCELLED，它下一轮照样回来**。所以这类问题的判据是�
 ⚠️ **这样发的消息不走 bridge 送达链**，所以该 App 的 `lastOutboundOkAt` 不会更新。
 证据是 `message_id` + 飞书 API 回执，**别拿 healthz 的出站计数当送达证明**，也别因为
 它是 null 就判定没发出去。发前先 `--dry-run` 打印卡片全文留档。
+2026-08-05 复验：发送时刻 06:54:29Z，事后 healthz 的 `lastOutboundOkAt` 仍是 06:08:27Z
+——**回报时必须写清「这条不在平台的送达记账里」**，只贴 message_id 会让人以为它走了
+正规链路（[[feedback_bypassing_app_write_path]] 的发送路径变体）。
+
+三条实操补充（2026-08-05）：
+
+- 加载 `.env` 用 `node --env-file=.env script.mjs`（Node ≥20.6），比 `set -a; . ./.env`
+  干净，也不会把 secret 灌进 shell 历史与子进程。dev198 非交互 ssh 记得先
+  `export PATH=/home/chuan/.local/node/bin:$PATH`。
+- **发前做收件人双源对撞**：控制面 `data/users.json` 的 `openId` 与执行面凭据库的
+  `cred.openId` 必须同一个，不一致就拒发。发错人不可撤销，值得为它单独立一道闸。
+  脚本先 `--dry-run` 只打印前缀（`ou_xxxxx…` + 长度），确认后再 `--send`。
+- **发完回读一次** `GET im/v1/messages/<message_id>`：确认存在、`deleted=false`、
+  `sender.id` == 该 Bot appId、正文一字不差。发送 API 的 `code=0` 只是受理回执
+  （[[feedback_hollow_200_needs_payload_check]]）。写探针时别在输出里塞写死的
+  `xxx = true`——那不是校验结果，是我自己编的字面量。
 
 ## Base Intake 验收门与上下文运行真值（v1.39.3，2026-08-04 三处上线，commit 6fb65da）
 
@@ -3832,6 +3848,50 @@ control-plane/** —— 控制面改动到不了 Mini，这是 by design 不是�
 验页面别只看 HTTP 200（空壳 200 骗过三层）。用**线上实际字节**渲染再断言载荷：
 `cd /srv/h-control/app && node -e "import('./lib/html.mjs').then(m => …)"`，
 检查新标记在不在 + 所有 `<script>` 块 `new Function()` 可解析。
+
+#### 补两步（2026-08-05 `95d948b` 实操，比上面四步稳）
+
+- **备份放 `/srv/h-control-backups/app-<ts>`，别放 `/srv/h-control/app.bak-*`。** 后者与
+  部署根同级、容易被当现役对撞（skill 前文已记「同目录堆着几十个备份」）。落完立刻
+  `md5sum` 三个关键文件与**部署前线上**逐一对撞，不一致就别往下走。
+- **重启前先在生产机上起一个隔离实例验新代码能跑**：临时 DATA_DIR + 合成 users.json +
+  随机端口，`cd /srv/h-control/app && node server.mjs`，打一次目标接口。10 秒成本，换掉
+  「重启进崩溃循环」的风险；顺带用**生产的 node 版本**验一遍（Air v22.14 / hk v22.22）。
+  合成数据即可，**别把生产 users.json 拷进 /tmp**。
+- 文件级同步用 `sudo rsync -rlpt --chown=h-control:h-control`，**不加 `--delete`**；加之前
+  先用 `LC_ALL=C sort` 两端对清单确认线上无独有文件（locale 不一致会让 `comm` 给出
+  同一文件同时出现在两侧的自相矛盾结果）。
+- `node --check` 要跑**全部**线上 `.mjs` 且结论由累计变量驱动，并配一个坏语法负向锚证明
+  它真会拦——这台机 PATH 里有 node，但 dev198 没有（前文铁律 9）。
+
+#### 🔴 控制面测试大多是「源码文本断言」，别把它的绿数字当验收证据
+
+`control-plane/test/*.test.mjs` 里相当一部分是 `readFile(server.mjs)` 后跑正则，例如
+`assert.match(endpoint, /slice\(0, 20\)/)` 挂着「接口限制最多 20 项」的名字。
+**这类断言在接口 100% HTTP 500 时照样全绿。** 2026-08-05 `/api/model-state` 因跨块引用
+`cap`（`/internal/context-report` 块内的局部 const）恒 500，而 179/179 全绿——**没有任何
+一条调用过它**。
+
+- 收到「N/N 通过」先问：**哪一行真的调用了被测对象**（`readFile` 还是 `fetch`/`import`）。
+- 新增/改动控制面路由，必须补一条**真起服务、真发请求**的测试。范式见
+  `control-plane/test/providers.test.mjs` 末条：临时 DATA_DIR + `lib/session.mjs`
+  签 cookie + `spawn(server.mjs)` + fetch，并用 loader 钩子存根 `qrcode`
+  （control-plane 唯一外部依赖，只在二维码路由用）——移走整个 `control-plane/node_modules`
+  仍须全绿，**不许写成 skip**。
+- 模块级小工具（`cap` 这类）放模块作用域，别定义在某个路由处理块里。
+  详见 [[feedback_acceptance_numbers_need_causal_link]]、[[feedback_syntax_check_is_not_a_smoke_test]]。
+
+#### 新用户模型下拉自动同步（v1.40.2）
+
+模型目录由 Grok CLI 首次任务时生成 → context report 回传 → `user.grokModelsAvailable`。
+先开后台的新用户会停在空列表，故 `GET /api/model-state` 只返回**当前登录 uid** 的
+`{engine,current,available(≤20),defaultModel,updatedAt}`；页面占位区 10s×30 轮询，
+到达后 DOM 就地换真下拉（不整页刷新，不影响正在编辑的记忆/人格/规则）。
+⚠️ 轮询里**接口异常必须与「列表还没到」分开提示**——否则服务端 500 会被渲染成
+「首次对话后自动出现」，用户只会一直等（同 [[feedback_hollow_200_needs_payload_check]] 的
+反向形态：这次是把失败说成进行中）。
+判据一致性：`engine === 'xai'`（`ENGINES=['xai','kimi','zhipu','minimax']`，grok 的注册表
+id 是 `xai`），服务端与 `dashboardPage` 都走同一个 `sanitizeEngine`。
 
 ### Mini 的用户根不是 `/srv/h-platform/users`
 
@@ -4087,30 +4147,33 @@ VM 状态导出并覆盖原生。Lima Guest 实测（bash 5.3.9）：`! true` �
 `launchctl`/`limactl` 证明零服务动作，再配一次真调用证明绊线本身有效
 （[[feedback_exit_code_ownership]]）。
 
-#### 🔴 全仓扫描结果：`deploy/lima/` 还有 5 处空闸门待修（2026-08-05 13:4x 实测）
+#### ✅ 全仓空闸门已归零（`2eb827d`，2026-08-05 15:0x）
 
-`ba4fb4c` 只修了 `sync-mini-b2-state-back.sh` 一处，**同一惯用法在兄弟脚本里还活着**。
-扫描命令 `grep -rn '^[[:space:]]*![[:space:]]' --include='*.sh' .`（9 处命中，逐条读上下文定性）：
+`ba4fb4c` 只修了 `sync-mini-b2-state-back.sh` 一处，同一惯用法在兄弟脚本里活了两轮。
+扫描命令 `grep -rn '^[[:space:]]*![[:space:]]' --include='*.sh' .`——当时 9 处命中、5 处真空，
+`2eb827d` 修完后 **4 处命中 / 0 处空闸门**：
 
 | 文件:行 | 内容 | 判定 |
 |---|---|---|
-| `install-mini-b2-shadow.sh:73,74` | `! systemctl --user is-active --quiet h-mini-b2-{runner,bridge}.service` | ❌ 空 |
-| **`verify-mini-b2-shadow.sh:17,18`** | 同上 | ❌ 空 |
-| **`verify-mini-b2-shadow.sh:23`** | `! grep -q '<原生根>' mini-b2.env` | ❌ 空 |
+| ~~`install-mini-b2-shadow.sh:73,74`~~ | ~~`! systemctl --user is-active`~~ | ✅ `2eb827d` 已改 helper |
+| ~~`verify-mini-b2-shadow.sh:17,18,23`~~ | ~~同上 + `! grep -q '<原生根>'`~~ | ✅ 同上 |
 | `sync-mini-b2-state.sh:21,23` | `! … \|\| fail`（23 行的 `\|\|` 在 `\` 接续的下一行） | ✅ 安全 |
 | `cutover-mini-b2.sh:60` | `! curl … && break` — 轮询循环退出条件，豁免即预期 | ✅ 合法 |
 | `cutover-mini-b2.sh:63` | `! … \` + `\|\| fail` | ✅ 安全 |
 
-**`verify-mini-b2-shadow.sh` 那三处最要命**：这个脚本的全部职责就是割接前认证「VM 处于
-影子态」，而它验「服务 inactive」和「渲染后 env 不含原生路径」的断言恒真。
-**「影子态验证通过」目前不构成证据**——割接前请手工复核这三项，或先修脚本。
+**统一 helper：`deploy/lima/assert-mini-b2-shadow-state.sh <preflight|ready> STATE_ROOT NATIVE_ROOT`**
+——显式 `if …; then fail; fi` 判 marker / Runner / Bridge，`ready` 另查 `mini-b2.env`
+未泄漏原生部署根。install 与 verify 复用同一份，避免两套判定漂移。
 
-⚠️ `install-mini-b2-shadow.sh` 还有**位置**问题：那几项检查在 guest 块末尾（L70–74），
-排在 L50 `rsync --delete` 覆盖应用根、L53 `npm ci`、L54 改写 deploy meta、
-**L59 覆盖运行中的 `mini-b2.env`** 之后。**闸门排在破坏之后＝文档不是保护。**
-所以「不能拿 shadow installer 原地升级活动 VM」这条纪律**由人保证，脚本不会替你拦住**
-（今天误跑会被 L72 的 `test ! -e <marker>` 拦下——`test` 的 `!` 是参数不是 shell 取反，
-实测有效——但那已在覆盖之后）。
+**位置也修了**：preflight 现在紧跟 `limactl start`，早于 bootstrap、ai-memory 安装、
+`rsync --delete`、`npm ci`、deploy meta 与 env 渲染。`limactl start` 留在闸门之前，
+是因为必须先启 VM 才查得到 Guest systemd，且该动作不覆盖应用代码或持久状态。
+（旧形态的教训保留：**闸门排在破坏之后＝文档不是保护**；当时唯一真会拦的是
+L72 的 `test ! -e <marker>`——`test` 的 `!` 是参数不是 shell 取反——但那已在覆盖之后。）
+
+回归守卫已进 `test/mini-ab-lima-b2.test.mjs`：桩 `systemctl` 真跑 helper + 哨兵文件验证
+闸门后无副作用；断言 install 闸门位置早于全部覆盖动作；**`deploy/lima` 取反命中数锁死为 4**
+（新增任何裸 `!` 即红）。
 
 > 教训：**修完一个缺陷要当场用它的特征全仓扫描并贴出计数。** 我 `ba4fb4c` 时就把扫描命令
 > 写进了本 skill，**写了没跑**，两轮后才撞见。写进文档 ≠ 本次已清扫。
@@ -4169,6 +4232,23 @@ follow-up、会话映射、去重、开场白、角色粘滞、主动验收、�
 `.env` 跑渲染器，断言输出全部落在 `/srv/h-platform/workspace` 下，并配一个未管理键保持空值
 的锚（防"渲染器给所有键都填了值"的假通过）。枚举全集时先拿已知子集验证枚举器本身：
 我第一版正则漏了 `GROK_SESSION_MAP` 等，是拿 override 表比对才发现的。
+
+#### 📌 版本落差是刻意保留的，别"对齐"它（2026-08-05 决策，`65d23c9` 记录在案）
+
+| 位置 | 版本 |
+|---|---|
+| Mini 活动 VM 运行态 | `1d5ccc53872c`、`dirty=false`（deploy meta mtime 12:10:27，勿动） |
+| 仓库 / 远端 | 持续前进（`4947889` → `65d23c9` → `2eb827d` → `95d948b`） |
+| 下一次安装源 | `~/local/h-mini-b2-source-49478898d062`（Mini 上，795 文件） |
+
+运行时 `mini-b2.env` 的 17 个持久键**已全部热修到** `/srv/h-platform/workspace`，所以
+`4947889` 之后的补丁对当前运行态零行为变化，只防未来用空值 `.env` 重装/新建 VM 时退化。
+为一个零行为变化的预防性修复重走回滚→影子安装→割接，是拿长连接与状态同步换空气。
+
+🔴 **禁止为了"看起来一致"手工改活动 VM 的 `.deploy-meta.json`——虚报新版本比不更新更危险。**
+下次必须在低峰窗口、且在任何重装或新建 VM **之前**用 `2eb827d` 及以上版本（含空闸门修复）：
+先建站外回滚包并确认运行态静止，再回迁/影子安装/割接；割接后回读 deploy meta、17 个持久键、
+健康状态和一条真实飞书任务。
 
 ### 🔧 查 VM 运行时配置：`/proc/<pid>/environ` 看不到
 
