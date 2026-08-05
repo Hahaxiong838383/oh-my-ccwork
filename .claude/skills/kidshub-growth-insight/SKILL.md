@@ -11,7 +11,7 @@ output_levels: L2
 ## 先读真源
 
 1. `~/mycc/2-Projects/kidshub-growth-insight/docs/architecture-v0.4.md`
-2. 最新阶段验收文档，如 `docs/m3-day8-11-acceptance.md`
+2. 最新阶段验收文档，如 `docs/m4-day12-13-acceptance.md`
 3. Studio 实际代码：`ssh studio` → `/Users/fu-121/kidshub-growth/app`
 
 不根据旧摘要猜路径、版本、端口、表数或运行状态；每次先实测。
@@ -64,6 +64,7 @@ ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm ops:verify-schema'
 ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm ops:verify-m2'
 ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm ops:verify-day7'
 ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm ops:verify-m3'
+ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm ops:verify-m4'
 ssh studio 'launchctl print gui/$(id -u)/cn.kidshub.insight.web'
 ssh studio 'lsof -nP -iTCP:3200 -sTCP:LISTEN'
 ```
@@ -74,9 +75,11 @@ ssh studio 'lsof -nP -iTCP:3200 -sTCP:LISTEN'
 - M2：登录、数据库 Session、三角色 RBAC、限流、强制改密、Session 吊销、审计与 CSRF 已验收
 - Day 7：root 账号管理、角色/状态变更吊销 Session、最后 active root 保护已验收
 - M3：五类主数据 CRUD、软删除/root 恢复、达人/商品跨源别名合并已由川哥体验验收
+- M4：数据源、配额、JustOneAPI Token 真实校验、不回显、脱敏和本地密钥文件已完成自检并部署
 - 当前正式用户只有 `rayman.chen@futurus.co` root
 - 当前正式主数据仍为空，等待川哥手动录入
-- 下一步：Day 12–13 / M4 数据源、Token 活性校验、脱敏和配额；不得提前进入 Day 14 导入
+- 当前正式数据源和 Token 仍为空，等待川哥体验
+- 下一步：川哥确认 M4 后进入 Day 14–16 / M5；不得提前实现导入
 
 ## 验收脚本自检
 
@@ -84,3 +87,6 @@ ssh studio 'lsof -nP -iTCP:3200 -sTCP:LISTEN'
 - 预期失败的请求也必须携带 run-specific 清理标识；真实 bug 会让“本应失败”的写入成功。
 - API 与 HTML 页面混合验收时按 `content-type` 解析，不能把任意 200 响应都 `JSON.parse`。
 - 软删除恢复权限要检查所有可复活路径，尤其 upsert/create-on-conflict，不能只守 `/restore`。
+- Token 验收必须同时覆盖真实无效端点和隔离有效 mock；不能因没有付费 Token 就省略成功路径。
+- 日志泄密检查前先 `which grep/rg`，工具不存在时的空输出不构成 0 命中证据。
+- Provider 校验器未接入时必须拒绝保存 Token，不能把 pending 当成安全兜底。
