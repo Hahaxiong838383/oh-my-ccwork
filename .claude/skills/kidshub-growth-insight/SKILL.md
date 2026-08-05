@@ -11,7 +11,7 @@ output_levels: L2
 ## 先读真源
 
 1. `~/mycc/2-Projects/kidshub-growth-insight/docs/architecture-v0.4.md`
-2. 最新阶段验收文档，如 `docs/day7-account-management-acceptance.md`
+2. 最新阶段验收文档，如 `docs/m3-day8-11-acceptance.md`
 3. Studio 实际代码：`ssh studio` → `/Users/fu-121/kidshub-growth/app`
 
 不根据旧摘要猜路径、版本、端口、表数或运行状态；每次先实测。
@@ -63,6 +63,7 @@ ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm build'
 ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm ops:verify-schema'
 ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm ops:verify-m2'
 ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm ops:verify-day7'
+ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm ops:verify-m3'
 ssh studio 'launchctl print gui/$(id -u)/cn.kidshub.insight.web'
 ssh studio 'lsof -nP -iTCP:3200 -sTCP:LISTEN'
 ```
@@ -72,5 +73,14 @@ ssh studio 'lsof -nP -iTCP:3200 -sTCP:LISTEN'
 - M1：37 张表与数据层已验收
 - M2：登录、数据库 Session、三角色 RBAC、限流、强制改密、Session 吊销、审计与 CSRF 已验收
 - Day 7：root 账号管理、角色/状态变更吊销 Session、最后 active root 保护已验收
+- M3：五类主数据 CRUD、软删除/root 恢复、达人/商品跨源别名合并已完成自检并部署
 - 当前正式用户只有 `rayman.chen@futurus.co` root
-- 下一步：Day 8–11 / M3 主数据 CRUD 与跨源别名合并；不得提前做 Day 12 数据源配置
+- 当前正式主数据仍为空，等待川哥体验并手动录入
+- 下一步：川哥确认 M3 后进入 Day 12–13 / M4；不得提前实现数据源或 Token
+
+## 验收脚本自检
+
+- 负向验证必须确认具体失败断言命中注入缺陷，不能只看 exit code 非零。
+- 预期失败的请求也必须携带 run-specific 清理标识；真实 bug 会让“本应失败”的写入成功。
+- API 与 HTML 页面混合验收时按 `content-type` 解析，不能把任意 200 响应都 `JSON.parse`。
+- 软删除恢复权限要检查所有可复活路径，尤其 upsert/create-on-conflict，不能只守 `/restore`。
