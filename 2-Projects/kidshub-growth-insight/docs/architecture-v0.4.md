@@ -262,7 +262,7 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.lnmem.studio-nightly
 | **数据质量** | 指标表带 `is_estimated`（第三方 API 的销量/粉丝数常为估算值，不可当真值进决策） |
 | **审计** | 所有写操作经统一中间件记 `audit_logs` |
 
-### 9.2 表清单（33 张）
+### 9.2 表清单（37 张）
 
 **认证与系统（6）**
 
@@ -526,7 +526,7 @@ pnpm ops:rotate-secrets
 | 阶段 | Day | 任务 | 里程碑 |
 |---|---|---|---|
 | 环境 | 1 | Node 24 + pnpm + Postgres.app + 目录 + launchd 骨架 | `psql -c 'select 1'` 通、开机自启验证 |
-| 数据层 | 2–4 | Prisma schema 33 张表 + 全局规范（时区/唯一约束/溯源/软删除）+ migrate + seed | **M1** `migrate deploy` 跑通 |
+| 数据层 | 2–4 | Prisma schema 37 张表 + 全局规范（时区/唯一约束/溯源/软删除）+ migrate + seed | **M1** `migrate deploy` 跑通 |
 | 认证 | 5–6 | session 认证 + RBAC 中间件 + audit 中间件 + 登录限流 + session 吊销 | **M2** root 可登录，三角色越权测试全部 403 |
 | 账号 | 7 | 账号管理入口（入口 9） | |
 | 主数据 | 8–11 | 品类/品牌/关键词/达人/商品 CRUD + `entity_aliases` 合并（入口 1–5） | **M3** 五类实体可增删改查，跨源别名可合并 |

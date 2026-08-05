@@ -150,6 +150,24 @@ team 的 gemini lane（omp `google-antigravity/*`）和 antigravity 调用走 **
 
 ### GitHub / HuggingFace / 包管理器下载节点优化（2026-06-24）
 
+#### GitHub 强制出口（2026-08-05，川哥确认）
+
+- **所有 GitHub clone/fetch/pull/push/ls-remote 必须显式走本机 xray**：`socks5h://127.0.0.1:10808`。
+- **fail-closed**：xray 不可用或代理请求失败时立即停止，禁止去掉代理参数改成直连重试。
+- Git 命令统一加：`-c http.proxy=socks5h://127.0.0.1:10808 -c http.version=HTTP/1.1`。
+- push 使用本机凭据时，可额外加：`-c credential.helper='!gh auth git-credential'`，但 token 不得出现在命令行或日志。
+- 验收不能只看 Git 返回成功，还必须检查 `~/xray/access.log` 新增的 `github.com:443 [socks -> <节点>]`；当前开发者下载固定节点为 `JP-Linode-V1`。
+- **Studio 例外不是直连**：Studio 无 GitHub 凭据/本机 xray 时，不在 Studio 上连 GitHub；由 Air 经 xray push 后，用 Git bundle/局域网同步 Studio。
+
+标准探测：
+
+```bash
+git -c http.proxy=socks5h://127.0.0.1:10808 \
+  -c http.version=HTTP/1.1 \
+  ls-remote https://github.com/<org>/<repo>.git refs/heads/main
+rg 'github\.com' ~/xray/access.log | tail -3
+```
+
 rule[5] 是「开发者下载」大组（github + githubusercontent + codeload + PyPI + crates + conda + **huggingface.co + cdn-lfs**）。原走 `美宅-Claud-GPT专用US` 单住宅节点 → **git clone/push、HF 大文件下载反复 `SSL_ERROR_SYSCALL` / curl `exit 35` / `000`**（住宅节点带宽小 + 无冗余，还挤占 Claude 命脉节点）。
 
 **连锁病根（最关键）**：observatory + burstObservatory 探测 URL 是 `google.com/generate_204`（**被墙**）→ 所有节点探测超时被判 dead → **所有 leastPing/leastLoad balancer 失效、全 fallback 美宅**。balancer 形同虚设（这也是 media/asia-fast balancer 一直只走美宅的原因）。
