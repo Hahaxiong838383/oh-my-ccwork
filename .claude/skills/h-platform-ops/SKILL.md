@@ -4117,6 +4117,38 @@ master 仍监听 18775，原生 Bridge 只能以 `health=off` 起来。修法是
 同样只证明这句话在文件里出现过。24 小时内同一文件第二次踩——现已改为抽出探针真跑
 （活监听→占用 / TIME_WAIT→空闲），并用不带 `SO_REUSEADDR` 的裸探针做锚证明脏状态真形成。
 
+### 🔴 VM 持久状态必须钉在 `/srv/h-platform/workspace`（commit `4947889`）
+
+状态同步与回滚操作的是 `/srv/h-platform/workspace`，但 SQLite、Delivery Outbox、Runner RPC、
+follow-up、会话映射、去重、开场白、角色粘滞、主动验收、进化状态**默认写在
+`/opt/h-platform/app/workspace`**（`ROOT/workspace`）。空闲切换看不出问题，
+处理过任务后回滚就会漏掉最新权威状态。现由 `render-mini-b2-env.mjs` 显式钉住 17 个键。
+
+⚠️ **「钉住」有两条路径，健壮性不同——别只看线上读数**：
+
+| 路径 | 前提 | 健壮性 |
+|---|---|---|
+| 显式 override 表 | 无 | 无条件 |
+| 通用 `mapSourcePath` | 原生值**非空**且在 `<sourceRoot>/workspace/...` 下 | **条件** |
+
+`GROK_CWD` 原先只有后一条兜着。生产 `.env` 恰好非空 → 线上 17 个键全显示 `/srv`，
+**完全看不出差别**；而 `.env.example:7` 出厂即 `GROK_CWD=`，全新部署会回退到
+`/opt/h-platform/app/workspace`，而 `ensureWorkspaceScaffold()` 正写在那儿。已加显式 override。
+
+**复核手法（下次照做）**：完整性检查用**退化输入**而非生产输入——喂一份全部持久键为空的
+`.env` 跑渲染器，断言输出全部落在 `/srv/h-platform/workspace` 下，并配一个未管理键保持空值
+的锚（防"渲染器给所有键都填了值"的假通过）。枚举全集时先拿已知子集验证枚举器本身：
+我第一版正则漏了 `GROK_SESSION_MAP` 等，是拿 override 表比对才发现的。
+
+### 🔧 查 VM 运行时配置：`/proc/<pid>/environ` 看不到
+
+这些变量由 `bridge.mjs` 启动后 `loadEnvFile()` 注入内存，**不进 OS 环境**——
+查 17 个键全返回「未设置」，而同一份 environ 读得出 19 个变量含 `PATH`（仪器是好的）。
+真载体查法：`systemctl --user cat h-mini-b2-bridge.service` → 当前是
+`Environment=H_ENV_FILE=/srv/h-platform/config/mini-b2.env`（**不是** `app/.env`，那个文件不存在）。
+再核对「该文件 mtime < 进程 `ActiveEnterTimestamp`」才算证明进程加载了它。
+⚠️ 对不存在的 `.env` 路径 grep 会得到一堆「未出现」，与真缺失同信号，先 `stat` 确认文件在。
+
 ### ✅ 曾经的 flaky 已修（同 commit）
 
 `test/runner-worker-ipc.test.mjs`「kill worker 后调用标 orphan」曾偶发
