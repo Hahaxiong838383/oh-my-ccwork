@@ -11,7 +11,7 @@ output_levels: L2
 ## 先读真源
 
 1. `~/mycc/2-Projects/kidshub-growth-insight/docs/architecture-v0.4.md`
-2. 最新阶段验收文档，如 `docs/m2-day5-6-acceptance.md`
+2. 最新阶段验收文档，如 `docs/day7-account-management-acceptance.md`
 3. Studio 实际代码：`ssh studio` → `/Users/fu-121/kidshub-growth/app`
 
 不根据旧摘要猜路径、版本、端口、表数或运行状态；每次先实测。
@@ -42,6 +42,10 @@ git -c http.proxy=socks5h://127.0.0.1:10808 \
 
 Studio 不配置 GitHub token；Air push 后使用 Git bundle 离线同步 Studio。
 
+Studio 已有未提交部署文件时，先 `git stash push -u`，从 bundle 快进后用
+`git stash show --include-untracked --binary -p` 与目标提交完整补丁比对；一致后再丢弃 stash。
+不能用默认 `git stash show -p` 做完整性判断，因为它不包含 untracked 文件。
+
 ## 施工纪律
 
 1. 一次只做蓝图当前 Day，不顺手进入下一阶段。
@@ -58,6 +62,7 @@ Studio 不配置 GitHub token；Air push 后使用 Git bundle 离线同步 Studi
 ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm build'
 ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm ops:verify-schema'
 ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm ops:verify-m2'
+ssh studio 'cd /Users/fu-121/kidshub-growth/app && pnpm ops:verify-day7'
 ssh studio 'launchctl print gui/$(id -u)/cn.kidshub.insight.web'
 ssh studio 'lsof -nP -iTCP:3200 -sTCP:LISTEN'
 ```
@@ -66,5 +71,6 @@ ssh studio 'lsof -nP -iTCP:3200 -sTCP:LISTEN'
 
 - M1：37 张表与数据层已验收
 - M2：登录、数据库 Session、三角色 RBAC、限流、强制改密、Session 吊销、审计与 CSRF 已验收
+- Day 7：root 账号管理、角色/状态变更吊销 Session、最后 active root 保护已验收
 - 当前正式用户只有 `rayman.chen@futurus.co` root
-- 下一步：Day 7 账号管理；不得提前做 Day 8 主数据 CRUD
+- 下一步：Day 8–11 / M3 主数据 CRUD 与跨源别名合并；不得提前做 Day 12 数据源配置
