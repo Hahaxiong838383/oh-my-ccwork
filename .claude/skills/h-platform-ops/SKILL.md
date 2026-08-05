@@ -3856,6 +3856,13 @@ control-plane/** —— 控制面改动到不了 Mini，这是 by design 不是�
 把 Mini 租户执行面从 macOS 原生搬进 Linux VM，为的是拿到真 bwrap 沙箱
 （macOS 上没有）。当前状态：**AI 专家测试 Bot 已由 VM 接管，原生 launchd 已停用；owner 仍在 dev198**。
 
+> ⚠️ **运行态与仓不同源（2026-08-05 10:3x 实测）**：VM 的 `.deploy-meta.json` 是
+> **`3ba27a555478`**，而分支已到 `7d441b5` —— 割接后的两条 VM 根因是**现场改好 VM、
+> 再补提交**，没有再次重新部署。所以 `7d441b5` 的修复**在仓里，也已生效在这台 VM 上，
+> 但没有走过一次完整的"从该提交部署"的路径**。下次重装/新建 VM 才是它的首次真跑。
+> 判「现在跑的是什么」认 VM 的 deploy meta，不认分支 HEAD（[[feedback_deployed_code_is_the_source_of_truth]]）。
+> 实测口径：`limactl shell h-b2 -- cat /opt/h-platform/app/.deploy-meta.json`。
+
 ### 两条路径的真值表（判"现在谁在服务"先看这个）
 
 | | 原生（回滚保留） | B2 VM（当前生产） |
