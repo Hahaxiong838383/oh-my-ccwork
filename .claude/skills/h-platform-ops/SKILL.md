@@ -4291,7 +4291,27 @@ botOpenId,larkCliReady,lastInboundAt,lastOutboundOkAt,placementLeaseExpiresAt,st
 （`runnerWorker: runnerWorkerClient.snapshot()` 不告诉你 snapshot 有哪些字段）。
 详见 [[feedback_guard_itself_can_be_hollow]] 案例七。
 
-#### 📋 升级窗口方案：`docs/rollbacks/2026-08-05-mini-b2-upgrade-window.md`（`6bbcd51`）
+#### 🔴 窗口脚本必须显式 `export NODE_BIN`（2026-08-05 真机 90 秒停服换来的）
+
+`ssh mini-pub "..."` 是**非交互 shell，PATH 里没有 node**（铁律 9 在 dev198 上记过同一件事，
+Mini 一样）。而 `deploy/launchd/install-mini-bot.sh` 第 6 行
+`NODE_BIN=${NODE_BIN:-$(command -v node)}` 找不到就 fail——**它排在回滚器「停 VM 服务 +
+删 marker」之后**，一失败就是 VM 已下线、原生没起来，租户直接无服务。
+真机实测：19:12:48 停服 → 19:14:18 恢复，**90 秒**。
+
+- **取值不猜**：读回滚包备份的 `launchd/com.hplatform.mini-bot.bridge.plist`，其 `PATH` 里
+  `dirname(NODE_BIN)` 就是上次能跑起来的那个（本机 `/Users/rayman.chen/.local/bin/node`）。
+- **恢复姿势**：别重跑整个回滚器（会重复 reverse sync）。此时 VM 已停、marker 已删、
+  reverse sync 已完成，只需 `NODE_BIN=... PROJECT_ROOT=<原生根> install-mini-bot.sh`
+  再验原生 healthz。
+- **不受影响的**：`install-mini-b2-shadow.sh` / `verify-mini-b2-shadow.sh` 的 node 调用都在
+  `limactl shell` 内（Guest 有 node）；`sync-mini-b2-state.sh` / `cutover-mini-b2.sh` 不依赖
+  node。但统一 export 最省事。
+- 🔴 **一般化**：**闸门后置的失败会把「回滚」本身变成事故**。脚本的环境前提要在**动任何
+  状态之前**校验，而不是等用到时才发现。审运维脚本时问一句：**它第一次可能失败的地方，
+  前面已经破坏了什么？**
+
+#### 📋 升级窗口方案：`docs/rollbacks/2026-08-05-mini-b2-upgrade-window.md`（`6bbcd51`，`c6cd408` 后含真机执行记录）
 
 `1d5ccc5` → `2eb827d` 的完整执行顺序、十条静止判据、两个站外回滚包清单、割接后三通道
 回读。回滚包 launchd 清单已在 `a2e93b9` 补齐两个 B2 专属 plist 及其期望状态：
