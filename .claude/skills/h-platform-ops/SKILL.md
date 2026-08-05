@@ -3996,19 +3996,28 @@ scp /tmp/a.tar.gz mini-pub:/tmp/h-mini-b2-$COMMIT.tar.gz
 （出 `shadow=ready …` 即通过）。
 `install-mini-b2-shadow.sh` 自带守门：动手前先 curl 原生 healthz，不健康直接 fail；
 rsync 排除 `/.env /data/ /memory/ /workspace/`，只读不写原生。
+**App 切换本身已下沉到 Guest helper**（`e5a3d65`，见下节），Host 侧只负责打包与投递。
 
-### ✅ 影子重装必须自动重写 deploy meta（commit `7d441b5` 已根治）
+### ✅ 影子重装：build-then-swap，活动 App 不再被就地覆盖（`e5a3d65` 取代 `7d441b5` 形态）
 
-**别写成 `write-deploy-meta --check`——那一定失败。** 影子安装是两段 rsync：
-第一段 `--exclude '/.deploy-meta.json'` 把它挡在暂存目录外，第二段
-`rsync -a --delete "$APP_ROOT.stage/" "$APP_ROOT/"` **不带排除**，于是目标侧那份被删
-（exclude 是"不传"，delete 是"清扫"，两者独立——[[feedback_rsync_exclude_delete_pitfall]]）。
-而 `grep -rc write-deploy-meta deploy/lima/` **零命中**：整条影子链没有写它的地方，
-只有原生腿 `deploy/launchd/install-mini-bot.sh` 会写。
+**旧形态（已废，别再按它排障）**：两段 rsync，第二段
+`rsync -a --delete "$APP_ROOT.stage/" "$APP_ROOT/"` 就地覆盖活动 App，而 `npm ci`、
+`node --check`、env 渲染**全排在它后面**——任一失败，VM 上留下一个装了一半的 App，没有回头路。
 
-旧链路只能手工补，人工写入曾把“部署机制缺失”伪装成验收通过。现在
-`install-mini-b2-shadow.sh` 的目标 rsync 排除 `/.deploy-meta.json`，并在 `npm ci` 后调用
-`scripts/write-deploy-meta.mjs` 重新计算 VM 代码清单。提交级归档没有 `.git`，调用时必须显式传：
+**现形态**：Host 只到「解包进 `$APP_ROOT.stage`」为止，随后把控制权交给
+`deploy/lima/install-mini-b2-shadow-guest.sh`。**所有构建与校验都在 stage 里做完**——
+shadow 闸门 → unit enabled → node/npm 存在 → `npm ci` → 写 deploy meta（`--root $STAGE_ROOT`）
+→ 渲染候选 env → 两入口 `node --check` → 候选 env 断言（不含原生根、三个 `H_*` 键齐）——
+**第一个破坏动作是 `:83` 的 `mv "$APP_ROOT" "$APP_ROOT.pre-shadow.$$"`**，在这之前活动 App
+一个字节没动。切换用两次 `mv`（app、env），任一步失败或事后 `assert …shadow-state.sh ready`
+不过，都把备份 `mv` 回来并恢复旧 env。
+
+于是「exclude 挡下的 meta 被 delete 清扫」那个坑**结构性消失**了：meta 是每次在 stage 里
+重算的，旧的那份跟着备份目录一起走。源侧 rsync 的 `--exclude '/.deploy-meta.json'` 仍在
+（`install-mini-b2-shadow.sh:39`），作用只剩「别把 Host 的 meta 混进包里」。
+（rsync 语义本身没变，别忘：[[feedback_rsync_exclude_delete_pitfall]]。）
+
+提交级归档没有 `.git`，调用时必须显式传：
 
 ```sh
 PROJECT_ROOT=/Users/rayman.chen/local/h-mini-b2-source-<commit> \
@@ -4019,7 +4028,31 @@ H_DEPLOY_SOURCE_HOST=<部署主机名> \
 ```
 
 缺 commit/branch 会在安装前 fail-fast；安装后必须 `--check` 回读，并与 healthz 的 deploy
-对象对撞。**保留旧 meta 只是避免 rsync 窗口丢证据，最终必须由本次代码重新写。**
+对象对撞。**meta 必须由本次代码在 stage 内重新算，人工补写会把「部署机制缺失」伪装成验收通过。**
+
+### 🔑 通用解法：闸门排在破坏之后，先问「能不能让破坏动作可回退」
+
+这是 2026-08-05 那次 90 秒停服的**第二层**修法，比第一层（把闸门前移）更值钱：
+
+| 层次 | 做法 | 局限 |
+|---|---|---|
+| 最弱 | 列一张前提清单逐条 `-x` 查 | 只覆盖「我想到的前提」——那次漏的正是 node |
+| 中 | 给下游脚本加 `--check-only`，闸门里真跑一遍 | 覆盖确定性前提；瞬时故障仍会打在破坏之后 |
+| **最强** | **改造破坏动作本身**：候选/临时目录里构建 → 校验 → 原子切换 → 失败即恢复 | 失败落在候选侧，活动态从未离开可用状态 |
+
+`e5a3d65` 四处按这个顺序落地：影子安装（stage + 双 `mv` + 恢复）、正反向状态同步
+（`--check-only` 解到 `mktemp` 而非 `STATE_ROOT`）、ai-memory 二进制（候选 `--version`
+过了才替换现役）、LaunchAgent plist（候选先 `plutil -lint`）。
+
+**dry-run 的正确形态是「真代码路径 + 真数据 + 假落点」**，不是「跑一段前置检查然后 exit」。
+`sync-mini-b2-state.sh --check-only` 真打包、真 `limactl copy`、真解包、真做 config 转换，
+只把目的地换成临时目录——所以它能抓到传输和解包故障；只查文件存在性的版本抓不到。
+
+失败文案统一带 `no runtime state has been changed`，让读日志的人一眼知道要不要收拾现场。
+
+**全量审计存档**：`docs/architecture/2026-08-05-window-script-gate-audit.md`——21 个脚本逐条列
+「首个破坏点行号 / 破坏前校验 / 结论」，**含 9 个「无需修改」及其理由**。只列有问题的等于
+没说覆盖了哪些；下次改窗口脚本先读这张表，别重新审一遍。
 
 ### ⚠️ 判"VM 有没有挂 Host HOME"别用 `[ -d /Users ]`
 
@@ -4183,7 +4216,9 @@ echo "语法错文件数=$BAD"
 未泄漏原生部署根。install 与 verify 复用同一份，避免两套判定漂移。
 
 **位置也修了**：preflight 现在紧跟 `limactl start`，早于 bootstrap、ai-memory 安装、
-`rsync --delete`、`npm ci`、deploy meta 与 env 渲染。`limactl start` 留在闸门之前，
+App 切换、`npm ci`、deploy meta 与 env 渲染。（当时被它挡在后面的那个
+`rsync -a --delete "$APP_ROOT.stage/" "$APP_ROOT/"` 已在 `e5a3d65` 整个删掉，换成
+stage 内构建 + 原子 `mv`——见上文 build-then-swap。）`limactl start` 留在闸门之前，
 是因为必须先启 VM 才查得到 Guest systemd，且该动作不覆盖应用代码或持久状态。
 （旧形态的教训保留：**闸门排在破坏之后＝文档不是保护**；当时唯一真会拦的是
 L72 的 `test ! -e <marker>`——`test` 的 `!` 是参数不是 shell 取反——但那已在覆盖之后。）
