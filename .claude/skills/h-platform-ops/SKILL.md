@@ -4087,6 +4087,36 @@ VM 状态导出并覆盖原生。Lima Guest 实测（bash 5.3.9）：`! true` �
 `launchctl`/`limactl` 证明零服务动作，再配一次真调用证明绊线本身有效
 （[[feedback_exit_code_ownership]]）。
 
+#### 🔴 全仓扫描结果：`deploy/lima/` 还有 5 处空闸门待修（2026-08-05 13:4x 实测）
+
+`ba4fb4c` 只修了 `sync-mini-b2-state-back.sh` 一处，**同一惯用法在兄弟脚本里还活着**。
+扫描命令 `grep -rn '^[[:space:]]*![[:space:]]' --include='*.sh' .`（9 处命中，逐条读上下文定性）：
+
+| 文件:行 | 内容 | 判定 |
+|---|---|---|
+| `install-mini-b2-shadow.sh:73,74` | `! systemctl --user is-active --quiet h-mini-b2-{runner,bridge}.service` | ❌ 空 |
+| **`verify-mini-b2-shadow.sh:17,18`** | 同上 | ❌ 空 |
+| **`verify-mini-b2-shadow.sh:23`** | `! grep -q '<原生根>' mini-b2.env` | ❌ 空 |
+| `sync-mini-b2-state.sh:21,23` | `! … \|\| fail`（23 行的 `\|\|` 在 `\` 接续的下一行） | ✅ 安全 |
+| `cutover-mini-b2.sh:60` | `! curl … && break` — 轮询循环退出条件，豁免即预期 | ✅ 合法 |
+| `cutover-mini-b2.sh:63` | `! … \` + `\|\| fail` | ✅ 安全 |
+
+**`verify-mini-b2-shadow.sh` 那三处最要命**：这个脚本的全部职责就是割接前认证「VM 处于
+影子态」，而它验「服务 inactive」和「渲染后 env 不含原生路径」的断言恒真。
+**「影子态验证通过」目前不构成证据**——割接前请手工复核这三项，或先修脚本。
+
+⚠️ `install-mini-b2-shadow.sh` 还有**位置**问题：那几项检查在 guest 块末尾（L70–74），
+排在 L50 `rsync --delete` 覆盖应用根、L53 `npm ci`、L54 改写 deploy meta、
+**L59 覆盖运行中的 `mini-b2.env`** 之后。**闸门排在破坏之后＝文档不是保护。**
+所以「不能拿 shadow installer 原地升级活动 VM」这条纪律**由人保证，脚本不会替你拦住**
+（今天误跑会被 L72 的 `test ! -e <marker>` 拦下——`test` 的 `!` 是参数不是 shell 取反，
+实测有效——但那已在覆盖之后）。
+
+> 教训：**修完一个缺陷要当场用它的特征全仓扫描并贴出计数。** 我 `ba4fb4c` 时就把扫描命令
+> 写进了本 skill，**写了没跑**，两轮后才撞见。写进文档 ≠ 本次已清扫。
+> 另注：一行正则判不了多行语法，我第一版「行尾有 `\|\|` 才安全」产生 4 个假阳性，
+> 必须逐条读上下文（[[feedback_guard_itself_can_be_hollow]] 案例六）。
+
 ### 🔴 健康端口闸门必须带 `SO_REUSEADDR`（commit `1d5ccc5`）
 
 真实回滚演练暴露过 OpenSSH multiplex 孤儿转发：health LaunchAgent 已卸载，Lima 的 SSH
