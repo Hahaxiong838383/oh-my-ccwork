@@ -4233,6 +4233,49 @@ follow-up、会话映射、去重、开场白、角色粘滞、主动验收、�
 的锚（防"渲染器给所有键都填了值"的假通过）。枚举全集时先拿已知子集验证枚举器本身：
 我第一版正则漏了 `GROK_SESSION_MAP` 等，是拿 override 表比对才发现的。
 
+#### ✅ 已割接态验证器（`e0525b5`，割接后用它，别再手工翻 healthz）
+
+影子态验证器只能证明「割接前是影子态」；割接**之后**的结构化验收现在有专用只读工具：
+
+```bash
+# Mini 上，验证器单独归档在 ~/local/h-mini-b2-verifier-<sha12>/（不进 VM app，不改 deploy meta）
+"$OPS_ROOT/deploy/lima/verify-mini-b2-active.sh" \
+  --expected-commit <完整40位SHA> --expected-contract 2026-08-04.2 \
+  --uid <目标uid> --after "$(date -u +%FT%TZ)" [--task-id <id>]
+```
+
+三层依次 fail-closed，任一层挂掉下游不执行：
+1. `assert-mini-b2-active-state.sh`（Guest 侧）：marker 存在 / Runner+Bridge active /
+   env 0600 且不含原生根 / **17 个持久键全在 `/srv/h-platform/workspace`** /
+   deploy meta 命中期望 SHA 且 dirty=false / manifest `--check` / Runner socket 存在。
+2. healthz 全量：站点、契约版本、`deploy.commit`、队列、Outbox、Runner、Orphan、
+   目标 App 唯一且 connected 且 lastError 为空。
+3. `scripts/verify-b3-long-task.mjs`：TaskSessionLog 顺序、`background_yielded.elapsedMs ≥ 120000`、
+   Outbox acked 与飞书 messageId 一致、拒绝 operator 探针冒充。
+
+⚠️ **验证器比 `2eb827d` 晚**，不能从 `2eb827d` 归档，**更不能手工拷进部署目录后还宣称
+deploy meta 是纯净的 `2eb827d`**——那就是虚报版本。单独归档到 `h-mini-b2-verifier-<sha>`。
+
+**healthz 键真值（2026-08-05 生产实测，改判据前对这张表，别读源码猜）**：
+顶层 `ok / connected / executionSite / behaviorContractVersion / queueDepthTotal /
+activeSessions / liveGrokSessions / deploy.{commit,dirty} / deliveryOutbox.{pending,retrying} /
+orphanRecovery.total / apps`；`runnerWorker.{connected,registeredApps,pending,active,children,leases,
+workerPid,workerStartedAt,apps,lastHeartbeatAt,oldestLeaseMs,protocolVersion,remoteChildren}`；
+`orphanRecovery.{total,compute,followUp,rpc,replayable,lastOpAt,lastReportAt}`；
+每个 app 条目 `{uid,kind,engine,connected,lastError,executionSite,behaviorContractVersion,
+botOpenId,larkCliReady,lastInboundAt,lastOutboundOkAt,placementLeaseExpiresAt,startedAt}`。
+🔴 审这类核对时**每个 `.get(k, 期望值)` 都是待验**：键名写错 → 返回默认值 → 恒真，
+与「状态正常」同信号。证伪只能靠**拉真实响应 JSON 逐键探**，读源码看不出来
+（`runnerWorker: runnerWorkerClient.snapshot()` 不告诉你 snapshot 有哪些字段）。
+详见 [[feedback_guard_itself_can_be_hollow]] 案例七。
+
+#### 📋 升级窗口方案：`docs/rollbacks/2026-08-05-mini-b2-upgrade-window.md`（`6bbcd51`）
+
+`1d5ccc5` → `2eb827d` 的完整执行顺序、十条静止判据、两个站外回滚包清单、割接后三通道
+回读。**回滚包的 launchd 清单记得补 `com.hplatform.mini-b2-health.plist` 与
+`com.hplatform.mini-b2-lima.plist`**（文档只列了 `mini-bot.{bridge,runner}` + `memory.*`，
+但 Mini 上这两个 B2 专属 plist 也在，回迁原生时状态要留证）。
+
 #### 📌 版本落差是刻意保留的，别"对齐"它（2026-08-05 决策，`65d23c9` 记录在案）
 
 | 位置 | 版本 |
