@@ -97,3 +97,50 @@ pgrep -f "cloudflared tunnel" && echo "运行中" || echo "未运行"
 - 另一台电脑也需要安装 `cloudflared`（macOS: `brew install cloudflared`，Windows: `winget install cloudflare.cloudflared`）
 - 无 SLA 保证（免费 quick tunnel），生产用途建议用 Named Tunnel
 - 本机 SSH 必须开启（`sudo systemsetup -setremotelogin on`）
+
+## 持久入口：公司 Ubuntu 虚拟机
+
+### 连接方式
+
+```bash
+ssh company-vm       # 公网：cli4.hahaxiong.cc:22043
+ssh company-vm-lan   # 公司局域网：10.2.2.43:22
+```
+
+- 目标用户：`futurus`；主机名：`ubt2404`。
+- Claude、Codex、Grok、OMP 共享本机 `~/.ssh/config` 与 `~/.ssh/id_ed25519`；禁止复制私钥或把私钥写进项目。
+- 正常项目编辑直接使用 `ssh company-vm`；家目录可写，SFTP 与 TCP 端口转发已启用。
+- 系统级变更必须经过明确授权和 `sudo`；密码不得进入 Skill、Git、日志或记忆。
+
+### 生产拓扑与安全边界
+
+```text
+本机 SSH key
+  -> cli4.hahaxiong.cc:22043
+  -> aliyun-hk frps 0.61.1
+  -> company VM frpc 0.61.1
+  -> 127.0.0.1:2222 独立 sshd
+  -> futurus
+```
+
+- 公网 sshd：`/etc/ssh/sshd_config_public_tunnel`，只监听 `127.0.0.1:2222`，强制公钥、禁密码、禁 root、仅允许 `futurus`。
+- FRP 配置：`/etc/frp/frpc.toml`，权限 `root:frpc 640`；token 只存远端文件，禁止输出或持久化到本机。
+- 服务：`sshd-public-tunnel.service`、`frpc.service` 均 enabled；frpc 使用独立低权限用户和 `NoNewPrivileges`。
+- 原局域网 `22/tcp` 是回滚入口；公网只开放香港 `TCP 22043`，不得把原密码 SSH 直接暴露公网。
+
+### 必跑验收
+
+```bash
+ssh -o BatchMode=yes company-vm 'hostname; id -un; test -w "$HOME"'
+ssh company-vm-lan 'sudo systemctl status sshd-public-tunnel frpc --no-pager'
+nc -z -w 5 cli4.hahaxiong.cc 22043
+printf 'pwd\nquit\n' | sftp -q -b - company-vm
+```
+
+必须证明公网密钥成功、密码失败、SFTP 成功、服务重启后恢复、LAN 回滚入口可用；只看服务 active 不算完成。
+
+### 回滚与排障
+
+- 公司机回滚备份：`/var/backups/public-access-20260805-191911`。
+- 排查顺序：`company-vm-lan` → 独立 sshd → frpc → aliyun-hk frps → 22043 监听 → 阿里云安全组。
+- 公网异常时不得先改原 SSH 22；禁止模糊 `pkill -f`。
