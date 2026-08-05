@@ -4324,18 +4324,28 @@ Mini 一样）。而 `deploy/launchd/install-mini-bot.sh` 第 6 行
 十条静止判据从"人工逐条翻"变成一次只读调用，输出结构化 JSON，非零退出即不满足：
 
 ```bash
+export NODE_BIN=/Users/rayman.chen/.local/bin/node   # 非交互 ssh 无 node，见上方红框
 "$OPS_ROOT/deploy/lima/preflight-mini-b2-upgrade.sh" \
-  --expected-commit <完整40位SHA> --target-app-id <AppID> --target-uid <uid> \
-  --owner-app-id <ownerAppID> --dev198-health-url http://<dev198有线>:18765/healthz \
+  --expected-commit <当前部署的完整40位SHA> --target-app-id <AppID> --target-uid <uid> \
+  --owner-app-id <ownerAppID> \
+  --target-source-root "$HOME/local/h-mini-b2-source-<目标sha12>" \
   > "$EVIDENCE_DIR/preflight-before.json"
 ```
 
 `criteria` 恰好 `criterion01`…`criterion10`，每项带 `ok/current/errors`；顶层
-`snapshotExitCodes` 三项（miniHealth / dev198Health / guestAndPlacement）必须全 0，
-证明三个快照都真取到——**空快照会让所有判据"没红"，那不是通过**。健康计数每次重取，
+`snapshotExitCodes` 三项 **`miniHealth` / `guestAndControl` / `targetRenderer`** 必须全 0，
+证明四路快照都真取到——**空快照会让所有判据"没红"，那不是通过**。健康计数每次重取，
 不读历史日志或累计值。控制面 token 只在 VM 内用（`node --env-file` 读 `mini-b2.env`），
-不打印不回传。只读性已验到整个调用图：`GET /internal/app-placement` 是纯读
-（`store.list().find` + `appPlacements.get` 只过滤过期、不落盘）。
+不打印不回传。只读性已验到整个调用图：`GET /internal/app-placement` 与 `GET /internal/users`
+都是纯读（`store.list()` + `appPlacements.get` 只过滤过期、不落盘）。
+
+🔴 **`--target-source-root` 必须指向【升级目标】的 commit 级源目录，不是活动 VM。**
+持久键双源对撞比的是目标版本的 `render-mini-b2-env.mjs`。2026-08-05 首次真机 dry-run
+就栽在这里：原实现读 `$APP_ROOT`（＝活动 VM，`1d5ccc5`，25 个 override、一个持久键都不钉），
+于是 `rendererCount=0`、`checkerOnly` 是全部 17 个键，criterion09 **在升级前必然红**。
+一般化：**一条用于"决定要不要升级"的闸门，若拿当前部署当参照系，它就只能在升级后变绿
+——守不了它本该守的那次升级。** 升级前闸门的参照系必须是目标态。（`c6cd408` 修复；
+目标 renderer 在 Mini 宿主执行，对 `/dev/null` 输入只做纯路径计算，不读 VM 文件系统。）
 
 🔴 **阻断：`--dev198-health-url` today 无解，criterion07 必然 fail-closed（2026-08-05 实测）**
 dev198 的 healthz **只绑 `127.0.0.1:18765`**（`ss -ltnp` 直读），Mini 上打它连接被拒。
@@ -4348,30 +4358,36 @@ ssh 配置（`grep -c` = 0），走 SSH 取数同样不可行。
 user 的 `{uid, appId, active, executionSite}`，VM 内用同一个 token 就能调）。它比原设计更强
 ——原设计只能发现"两边都在跑"，用控制面能同时发现"跑的位置和登记的位置不一致"。
 
-⚠️ **三处已知覆盖缺口，窗口当天要现场补**：
-1. 测试里 limactl 是桩，**丢弃 GUEST heredoc**——guest 侧那段 python 和
-   `node --env-file` 租约查询**从未真执行过**，只有宿主编排层被覆盖。
-2. curl 桩恒 exit 0，`snapshotExitCodes ≠ 0`（快照取不到）分支从未走过。
-3. `criterion09` 拿 `presentCount` 比 `expectedCount`，**两个数都来自 guest 自己那张
-   键表**——把表改小两个数一起变小、照样通过。它靠 `expectedCount` 出现在输出 JSON
-   里被人看见兜底。（当下值是准的：17 键与 `render-mini-b2-env.mjs` 逐键相同零漂移。）
+✅ **原先记的三处覆盖缺口已全部补掉**（`9308d32` / `8d59143` / `a7b2cea` / `c6cd408`）：
+limactl 桩现在真把 stdin 交给 `bash -s`，guest 侧 python 与 `node --env-file` 控制面查询
+真执行（负向注入实证：把 guest 的 env 权限读数改成恒报 `0600`，测试立刻红）；curl 桩可
+注入非零退出，覆盖「快照取不到」分支；criterion09 改成与目标 renderer 逐键对撞，
+并把「取不到目标 renderer」与「两源不一致」分开报错。
 
-#### 📌 版本落差是刻意保留的，别"对齐"它（2026-08-05 决策，`65d23c9` 记录在案）
+⚠️ **仍未被自动化覆盖的一点**：`verify-mini-b2-active.sh` 的第三层（真实长任务）只能靠
+真发一条 ≥130s 的飞书任务触发。2026-08-05 已真机跑通一次（`ok=true`，`elapsedMs=120014`、
+`durationMs=428160`、Outbox 与 TaskSessionLog 同 messageId、`task_completed` 晚于
+`delivery_acked` 5ms）。前两层可随时只读复跑，第三层没有长任务时会以
+`没有找到符合条件的飞书入站任务` 失败——**那是预期，不是故障**。
+
+#### ✅ 版本落差已于 2026-08-05 窗口消除（`1d5ccc5 → 2eb827d` 已割接闭环）
 
 | 位置 | 版本 |
 |---|---|
-| Mini 活动 VM 运行态 | `1d5ccc53872c`、`dirty=false`（deploy meta mtime 12:10:27，勿动） |
-| 仓库 / 远端 | 持续前进（`4947889` → `65d23c9` → `2eb827d` → `95d948b`） |
-| 下一次安装源 | `~/local/h-mini-b2-source-49478898d062`（Mini 上，795 文件） |
+| Mini 活动 VM 运行态 | **`2eb827dd8aaa`**、`dirty=false`、492 文件（19:19:21 起，闭环快照 `uptimeSec=6086`） |
+| 仓库 / 远端 | 继续前进（`a7b2cea` → `c6cd408` → `1331cbc`，均为验证器/文档，**不含 VM 运行时代码**） |
+| 安装源 | `~/local/h-mini-b2-source-2eb827dd8aaa`（Mini 上，796 文件） |
+| 验证器 | `~/local/h-mini-b2-verifier-c6cd40845a19`（独立归档，**不进 VM app**） |
 
-运行时 `mini-b2.env` 的 17 个持久键**已全部热修到** `/srv/h-platform/workspace`，所以
-`4947889` 之后的补丁对当前运行态零行为变化，只防未来用空值 `.env` 重装/新建 VM 时退化。
-为一个零行为变化的预防性修复重走回滚→影子安装→割接，是拿长连接与状态同步换空气。
+⚠️ **落差仍然是常态，别再"对齐"**：`2eb827d` 之后的提交全是 `deploy/lima/` 验证工具、
+docs、test 和控制面（跑在 aliyun-hk），**对 VM 运行时零行为变化**——`1d5ccc5→2eb827d`
+那次实测也只动了 8 个文件且无一是 `bridge.mjs`/`lib/`/`runner-worker.mjs`。判断要不要再开
+窗口，看的是**目标 commit 有没有改到 VM 内真正运行的代码**，不是 SHA 看着不一样。
 
 🔴 **禁止为了"看起来一致"手工改活动 VM 的 `.deploy-meta.json`——虚报新版本比不更新更危险。**
-下次必须在低峰窗口、且在任何重装或新建 VM **之前**用 `2eb827d` 及以上版本（含空闸门修复）：
-先建站外回滚包并确认运行态静止，再回迁/影子安装/割接；割接后回读 deploy meta、17 个持久键、
-健康状态和一条真实飞书任务。
+再开窗口时照 `docs/rollbacks/2026-08-05-mini-b2-upgrade-window.md` 走（该文档已含真机执行
+记录与 `NODE_BIN` 红框）：低峰、先建站外回滚包、确认静止、回迁→影子安装→割接，
+割接后回读 deploy meta、17 个持久键、健康状态和一条真实飞书长任务。
 
 ### 🔧 查 VM 运行时配置：`/proc/<pid>/environ` 看不到
 
