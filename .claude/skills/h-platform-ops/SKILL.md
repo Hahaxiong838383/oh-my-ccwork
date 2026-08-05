@@ -26,6 +26,7 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 11. **锁模型而非信默认值**：Kimi 配置生成和 Runner 必须共用 `lib/kimi-model.mjs`；Runner 每次显式传 `--model kimi-code/k3`。只改 `default_model` 不算完成。
 12. **真任务归因到真引擎**：用户要求“由 Kimi 完成”时，Codex/cc 只做编排、权限、送达和验收；业务结论必须来自真实 `createKimiRunner`。验收证据同时看 trace 的 `engine/model/providerModel`、真实回复和飞书 message_id。
 13. **验收必须由每个 Bot 主动闭环**：任意用户 Bot 的功能修复或优化都视为全平台变更。发布后必须遍历所有登记用户及其全部 Bot，直接使用各 Bot 的真实 Runner 发起验收，并由每个 Bot 主动把完成结果送到其绑定 open_id；禁止把“请用户再发一次测试”、等待用户回复“继续”或另行触发当作验收步骤。若权限不足，禁止只发文字报错，必须主动发送带“去开通权限”按钮的权限申请卡；只有外部平台明确要求用户本人确认、扫码或不可代理授权时，才让用户完成该动作。授权完成后仍由 Bot 自动续跑、主动汇报，不要求用户再发消息。每个 Bot 都必须留下真实 trace 与飞书 ACK/message_id，漏掉任何 Bot 都不能宣称全量生效。
+   - **跨用户动作不得用自操作冒充**：验收记录必须明确来源 Bot、创建者、目标收件人、`receive_id_type` 与真实 `message_id`。例如“张雨琦 Bot 提醒川哥”只能由张雨琦 Bot 创建并发送给川哥；AI 专家 Bot 自提醒川哥只能验证调度器通路，不能验证跨用户授权和目标 App 的送达能力。
 14. **macOS 部署禁 AppleDouble**：从 Mac 用 tar 向 Linux 发文件会夹带 `._*`；优先 `COPYFILE_DISABLE=1 tar`、`rsync` 或部署后精确清理 `._*`，禁止把这些杂物留进生产 Git 状态。
 15. **飞书接口先查官方文档**：管理台常驻 `https://open.feishu.cn/document/home/index`。Bot 对接口、字段、scope 或参数不确定时，优先用用户身份执行 `lark-cli schema <service.resource.method> --as user`；无 typed command 再查官方文档对应板块，并用 `lark-cli api ... --as user --dry-run` 核对。遇到缺权必须保留官方 scope/link，由网关主动发权限申请卡；授权后自动续跑，禁止要求用户重发。
 16. **授权链接只认当前 Bot 直授权页**：只允许 `https://accounts.feishu.cn/oauth/v1/device/verify` 与对应 Lark 地址，且必须限定 HTTPS、官方 hostname、精确 pathname，并同时含 `flow_id + user_code`。旧 `https://open.feishu.cn/page/cli` 会进入选择/创建 Bot 的通用页，必须 fail-closed：可用于识别“需要重建授权流”，但禁止透传给用户。
@@ -1387,6 +1388,14 @@ jq -r 'select(.type=="task_end") | "ok=\(.ok) \(.durationMs)ms in=\(.usage.input
 - E2E：写测试任务设 now+4min → 看 fire/delivered 日志 + 飞书卡片，
   **测完必删**（否则每天到点触发）。
 - **边界**：F3 是纯时间触发，会在到点后执行 Runner 并主动推卡；“某时间后首次对话再做”是 `notBefore AND nextInbound`，禁止塞进 F3。一次性补授权应先终止旧 device-flow，再用持久 timer 到点挂监听，首次单聊命中后现开 600 秒授权流；验证 timer 的下一触发时间、到点前 service=inactive、旧授权进程为空、Bot 健康仍为全连接。长期产品化应做控制面声明式 deferred-action 队列，替代用户专属脚本。
+
+### F3.1 跨用户一次性提醒（2026-08-05）
+
+- 身份边界：`open_id` 按 App 隔离，不能把 A 应用拿到的 `open_id` 交给 B 应用直发；同一开发者体系内跨 App 收件人使用 `union_id`，但**发送 Bot 的应用可用范围必须覆盖目标用户**。
+- 授权边界：跨用户提醒必须有显式收件人授权记录；执行时固定使用创建者 Bot 的应用身份发送，禁止静默改由 owner Bot 或其他 Bot 代发。
+- 飞书错误 `230013`（目标用户不在应用可用范围）属于**永久阻断**，不得重试风暴或假报“提醒已创建/已送达”。用户提示必须明确：先在飞书开发者后台发布应用新版本，并把目标用户加入应用可用范围，随后再重新创建或重试。
+- 真机验收必须留下五元证据：来源 Bot、创建者、目标收件人、`receive_id_type=union_id`、飞书 `message_id`。只看到 timer 到点、Runner 完成或本 Bot 自提醒成功，都不能证明跨用户提醒成功。
+- 直发探针必须捕获 SDK/Axios 异常，只打印 HTTP 状态、飞书业务码和脱敏后的短消息；严禁把原始错误对象交给 `console.error`、未捕获异常或 Node 默认打印器，否则 `err.config.data` 可能展开临时 token 或应用凭据。
 
 ## F4 配置快照运维（2026-07-27）
 
