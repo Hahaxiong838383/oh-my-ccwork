@@ -4291,25 +4291,35 @@ botOpenId,larkCliReady,lastInboundAt,lastOutboundOkAt,placementLeaseExpiresAt,st
 （`runnerWorker: runnerWorkerClient.snapshot()` 不告诉你 snapshot 有哪些字段）。
 详见 [[feedback_guard_itself_can_be_hollow]] 案例七。
 
-#### 🔴 窗口脚本必须显式 `export NODE_BIN`（2026-08-05 真机 90 秒停服换来的）
+#### ✅ 窗口环境预检已内建（`3606b7c`；起因是 2026-08-05 真机 90 秒停服）
 
-`ssh mini-pub "..."` 是**非交互 shell，PATH 里没有 node**（铁律 9 在 dev198 上记过同一件事，
-Mini 一样）。而 `deploy/launchd/install-mini-bot.sh` 第 6 行
-`NODE_BIN=${NODE_BIN:-$(command -v node)}` 找不到就 fail——**它排在回滚器「停 VM 服务 +
-删 marker」之后**，一失败就是 VM 已下线、原生没起来，租户直接无服务。
-真机实测：19:12:48 停服 → 19:14:18 恢复，**90 秒**。
+**事故**：`ssh mini-pub "..."` 是非交互 shell、PATH 里没有 node（铁律 9 在 dev198 记过同一件
+事），而 `install-mini-bot.sh` 用 `command -v node` 找它、找不到就 fail——**它排在回滚器
+「停 VM 服务 + 删 marker」之后**，一失败就是 VM 已下线、原生没起来。19:12:48 停服 →
+19:14:18 恢复，**90 秒**。
 
-- **取值不猜**：读回滚包备份的 `launchd/com.hplatform.mini-bot.bridge.plist`，其 `PATH` 里
-  `dirname(NODE_BIN)` 就是上次能跑起来的那个（本机 `/Users/rayman.chen/.local/bin/node`）。
-- **恢复姿势**：别重跑整个回滚器（会重复 reverse sync）。此时 VM 已停、marker 已删、
-  reverse sync 已完成，只需 `NODE_BIN=... PROJECT_ROOT=<原生根> install-mini-bot.sh`
-  再验原生 healthz。
-- **不受影响的**：`install-mini-b2-shadow.sh` / `verify-mini-b2-shadow.sh` 的 node 调用都在
-  `limactl shell` 内（Guest 有 node）；`sync-mini-b2-state.sh` / `cutover-mini-b2.sh` 不依赖
-  node。但统一 export 最省事。
-- 🔴 **一般化**：**闸门后置的失败会把「回滚」本身变成事故**。脚本的环境前提要在**动任何
-  状态之前**校验，而不是等用到时才发现。审运维脚本时问一句：**它第一次可能失败的地方，
-  前面已经破坏了什么？**
+**现在的护栏**（`rollback-mini-b2.sh` / `cutover-mini-b2.sh` 在**动任何状态之前**调用）：
+- `deploy/lima/assert-mini-b2-window-env.sh <SOURCE_ROOT> <NATIVE_ROOT>`：验 6 个必需可执行
+  文件 + 解析 node + 验 `ai-memory` + **用 `install-mini-bot.sh --check-only` 无副作用地真跑
+  一遍安装器前置**，通过则把解析出的 node 路径打到 stdout 供调用方复用。
+  失败文案统一带 `no runtime state has been changed`。
+- `deploy/lima/resolve-node-bin.sh`：三级解析 `H_B2_NODE_BIN/NODE_BIN` → 当前 PATH →
+  登录 shell（`H_B2_LOGIN_SHELL`，默认 `/bin/bash`），每级都要求 `-f` 且 `-x`
+  （**目录不能冒充可执行文件**），全落空则 fail-loud。
+- 所以**不再需要手工 export `NODE_BIN`**；显式传仍然有效且优先级最高，出问题时可用它锁定。
+
+🔴 **一般化（两条，比这个具体 bug 值钱）**：
+1. **闸门后置的失败会把「回滚」本身变成事故。** 审运维脚本时逐点问：**它第一次可能失败
+   的地方，前面已经破坏了什么？** 环境前提一律提到破坏动作之前。
+2. **前置校验的最强形态不是"核对前提清单"，而是"用无副作用模式把那个会失败的步骤真跑
+   一遍"。** 清单会漏项（这次漏的就是 node），dry-run 真跑漏不掉——`--check-only` 就是
+   为此加的。给关键脚本加 dry-run 开关，比给它加一页前提文档有用。
+
+**若仍在安装器处失败**（此时 VM 已停、marker 已删、reverse sync 已完成）：**别重跑整个
+回滚器**（会重复 reverse sync），只补跑 `NODE_BIN=... PROJECT_ROOT=<原生根>
+install-mini-bot.sh` 再验原生 healthz。取值去回滚包备份的
+`launchd/com.hplatform.mini-bot.bridge.plist`，其 `PATH` 里 `dirname(NODE_BIN)` 就是上次
+真跑起来过的那个（本机 `/Users/rayman.chen/.local/bin/node`）。
 
 #### 📋 升级窗口方案：`docs/rollbacks/2026-08-05-mini-b2-upgrade-window.md`（`6bbcd51`，`c6cd408` 后含真机执行记录）
 
@@ -4364,11 +4374,12 @@ limactl 桩现在真把 stdin 交给 `bash -s`，guest 侧 python 与 `node --en
 注入非零退出，覆盖「快照取不到」分支；criterion09 改成与目标 renderer 逐键对撞，
 并把「取不到目标 renderer」与「两源不一致」分开报错。
 
-⚠️ **仍未被自动化覆盖的一点**：`verify-mini-b2-active.sh` 的第三层（真实长任务）只能靠
-真发一条 ≥130s 的飞书任务触发。2026-08-05 已真机跑通一次（`ok=true`，`elapsedMs=120014`、
-`durationMs=428160`、Outbox 与 TaskSessionLog 同 messageId、`task_completed` 晚于
-`delivery_acked` 5ms）。前两层可随时只读复跑，第三层没有长任务时会以
-`没有找到符合条件的飞书入站任务` 失败——**那是预期，不是故障**。
+**第三层（真实长任务）只能靠真发一条 ≥130s 的飞书任务触发。** 2026-08-05 已真机跑通一次
+（`ok=true`，`elapsedMs=120014`、`durationMs=428160`、Outbox 与 TaskSessionLog 同 messageId、
+`task_completed` 晚于 `delivery_acked` 5ms）。想**只读复跑前两层**用 `3606b7c` 新增的
+`--skip-long-task`：它会输出 `partial` 并标注跳过原因，**顶层不会伪装成 `ok=true`**
+——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
+`没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
 #### ✅ 版本落差已于 2026-08-05 窗口消除（`1d5ccc5 → 2eb827d` 已割接闭环）
 
