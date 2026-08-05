@@ -8,4 +8,7 @@ app_home = "/app/aishike-erp"
 
 required_apps = ["erpnext"]
 
-after_migrate = ["aishike_erp.localization.apply_chinese_defaults"]
+after_migrate = [
+    "aishike_erp.localization.apply_chinese_defaults",
+    "aishike_erp.sn.ensure_default_rule",
+]

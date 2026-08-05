@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_ROOT = ROOT / "aishike_erp"
 DOCTYPE_ROOT = PACKAGE_ROOT / "aishike_erp" / "doctype"
 WORKSPACE_ROOT = PACKAGE_ROOT / "aishike_erp" / "workspace"
+PAGE_ROOT = PACKAGE_ROOT / "aishike_erp" / "page"
 
 
 def validate_doctype(path: Path) -> tuple[str, int]:
@@ -50,17 +51,30 @@ def main() -> None:
             raise ValueError(f"{path}: workspace type must be Workspace")
         if data.get("label") != "Aishike ERP" or data.get("title") != "Aishike ERP":
             raise ValueError(f"{path}: workspace route identity must stay canonical")
+        shortcuts = {(row.get("type"), row.get("link_to")) for row in data.get("shortcuts", [])}
+        if ("Page", "aishike-sn-console") not in shortcuts:
+            raise ValueError(f"{path}: SN console shortcut is required")
+
+    pages = list(PAGE_ROOT.glob("*/*.json"))
+    page_names = {json.loads(path.read_text(encoding="utf-8"))["name"] for path in pages}
+    if "aishike-sn-console" not in page_names:
+        raise ValueError("SN console page is required")
 
     expected = {
         "Aishike SKU Configuration",
         "Aishike Device Unit",
         "Aishike Device Test Record",
         "Aishike Device Lifecycle Event",
+        "Aishike Serial Number Rule",
+        "Aishike Serial Number Batch",
     }
     if set(doctypes) != expected:
         raise ValueError(f"DocType set mismatch: {doctypes}")
 
-    print(f"OK: {len(doctypes)} DocTypes, {field_count} fields, {len(workspaces)} workspace")
+    print(
+        f"OK: {len(doctypes)} DocTypes, {field_count} fields, "
+        f"{len(workspaces)} workspace, {len(pages)} pages"
+    )
 
 
 if __name__ == "__main__":

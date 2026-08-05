@@ -73,6 +73,7 @@ Serial No的爱视可业务扩展。
 | bom_revision | Link BOM | 实际生产BOM |
 | work_order | Link Work Order | 生产工单 |
 | production_batch | Data | 生产批次 |
+| generation_date | Date | 显式生产日期，避免服务器时区影响 SN |
 | firmware_version | Data | 出厂固件 |
 | agent_version | Data | 出厂Agent版本 |
 | lifecycle_state | Enum | 生命周期状态 |
@@ -154,6 +155,31 @@ ERP只保存敏感数据引用，不保存内容。
 | consent_record_id | Data | 授权记录ID |
 | retention_until | Date | 保存期限 |
 | status | Enum | ACTIVE/REVOKED/DELETED |
+
+### 3.10 Serial Number Rule
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| rule_code | ID | 稳定规则编号 |
+| pattern | Data | 支持 PREFIX/DATE/SKU/BATCH/SEQ/SUFFIX 占位符 |
+| date_format | Enum | NONE/YYMM/YYMMDD/YYYYMMDD |
+| sequence_digits | Int | 流水号位数，4–10 |
+| reset_policy | Enum | NEVER/DAILY/MONTHLY/BATCH |
+| current_scope_key | Data | 当前序号作用域 |
+| next_sequence | Int | 下一个可用流水号 |
+| barcode_format | Enum | CODE128/CODE39 |
+
+### 3.11 Serial Number Generation Batch
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| serial_rule | Link Serial Number Rule | 使用的生成规则 |
+| sku_configuration | Link Sellable SKU | 目标 SKU |
+| production_batch | Data | 生产批次 |
+| requested_quantity | Int | 请求生成数量 |
+| sequence_start/end | Int | 占用流水号范围 |
+| generated_count | Int | 实际生成数量 |
+| generated_by/at | User/Datetime | 操作审计 |
 
 ## 4. 关键关系
 

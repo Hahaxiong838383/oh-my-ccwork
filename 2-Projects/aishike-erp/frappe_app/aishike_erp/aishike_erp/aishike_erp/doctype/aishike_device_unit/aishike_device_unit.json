@@ -14,6 +14,9 @@
   "column_break_identity",
   "lifecycle_state",
   "production_batch",
+  "sn_generation_batch",
+  "codes_section",
+  "identity_codes",
   "manufacturing_section",
   "bom",
   "work_order",
@@ -76,6 +79,23 @@
    "fieldname": "production_batch",
    "fieldtype": "Data",
    "label": "生产批次"
+  },
+  {
+   "fieldname": "sn_generation_batch",
+   "fieldtype": "Link",
+   "label": "SN 生成批次",
+   "options": "Aishike Serial Number Batch",
+   "read_only": 1
+  },
+  {
+   "fieldname": "codes_section",
+   "fieldtype": "Section Break",
+   "label": "设备标识码"
+  },
+  {
+   "fieldname": "identity_codes",
+   "fieldtype": "HTML",
+   "label": "条形码与二维码"
   },
   {
    "fieldname": "manufacturing_section",

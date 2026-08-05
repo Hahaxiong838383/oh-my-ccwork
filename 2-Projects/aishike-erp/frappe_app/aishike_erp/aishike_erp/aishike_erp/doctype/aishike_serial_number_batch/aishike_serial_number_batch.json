@@ -1,0 +1,167 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:SNB-{YYYY}-{MM}-{#####}",
+ "creation": "2026-08-05 23:59:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "serial_rule",
+  "sku_configuration",
+  "production_batch",
+  "generation_date",
+  "column_break_identity",
+  "status",
+  "requested_quantity",
+  "generated_count",
+  "sequence_section",
+  "sequence_start",
+  "sequence_end",
+  "column_break_sequence",
+  "generated_by",
+  "generated_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "生成批次"
+  },
+  {
+   "fieldname": "serial_rule",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "SN 规则",
+   "options": "Aishike Serial Number Rule",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "sku_configuration",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "SKU 配置",
+   "options": "Aishike SKU Configuration",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "production_batch",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "生产批次",
+   "read_only": 1
+  },
+  {
+   "fieldname": "generation_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "生产日期",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_identity",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "GENERATED",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "状态",
+   "options": "GENERATED",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "requested_quantity",
+   "fieldtype": "Int",
+   "label": "请求数量",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "generated_count",
+   "fieldtype": "Int",
+   "label": "生成数量",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "sequence_section",
+   "fieldtype": "Section Break",
+   "label": "流水号范围"
+  },
+  {
+   "fieldname": "sequence_start",
+   "fieldtype": "Int",
+   "label": "起始流水号",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "sequence_end",
+   "fieldtype": "Int",
+   "label": "结束流水号",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_sequence",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "generated_by",
+   "fieldtype": "Link",
+   "label": "生成人",
+   "options": "User",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "generated_at",
+   "fieldtype": "Datetime",
+   "label": "生成时间",
+   "read_only": 1,
+   "reqd": 1
+  }
+ ],
+ "links": [
+  {
+   "link_doctype": "Aishike Device Unit",
+   "link_fieldname": "sn_generation_batch"
+  }
+ ],
+ "modified": "2026-08-05 23:59:00.000000",
+ "modified_by": "Administrator",
+ "module": "Aishike ERP",
+ "name": "Aishike Serial Number Batch",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "share": 1
+  }
+ ],
+ "show_name_in_global_search": 1,
+ "sort_field": "generated_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}

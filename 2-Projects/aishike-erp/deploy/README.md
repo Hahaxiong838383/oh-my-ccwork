@@ -28,11 +28,12 @@ cd ~/aishike-erp
 ## 本机访问
 
 ```bash
-ssh -N -L 18080:127.0.0.1:18080 company-vm
+ssh -N -L 18081:127.0.0.1:18080 company-vm
 ```
 
-然后浏览器打开 `http://aishike.localhost:18080`，使用 `Administrator` 登录。
+然后浏览器打开 `http://aishike.localhost:18081`，使用 `Administrator` 登录。
 必须使用该地址而不是裸 `127.0.0.1`，以确保实时通知与后台任务进度连接正常。
+本机 `18080` 已被 MyCC 使用，因此 ERP 隧道固定使用本机 `18081`；服务器端仍保持 `127.0.0.1:18080`。
 
 管理员密码只在需要人工登录时从服务器读取：
 
@@ -47,4 +48,4 @@ cd ~/aishike-erp
 ./deploy/doctor.sh
 ```
 
-检查内容包括容器状态、站点应用列表、四个爱视可 DocType 和 HTTP 接口。
+检查内容包括容器状态、站点应用列表、六个爱视可 DocType、SN 工作台和 HTTP 接口。

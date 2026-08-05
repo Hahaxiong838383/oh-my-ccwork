@@ -28,6 +28,8 @@ set -a
 source .env
 set +a
 
+LOCAL_TUNNEL_PORT="${LOCAL_TUNNEL_PORT:-18081}"
+
 mkdir -p secrets backups
 chmod 700 secrets backups
 
@@ -94,7 +96,7 @@ docker compose --env-file .env exec -T backend \
 
 echo
 echo "测试环境已就绪。"
-echo "本机访问方式：ssh -N -L ${HTTP_PUBLISH_PORT}:127.0.0.1:${HTTP_PUBLISH_PORT} company-vm"
-echo "浏览器地址：http://aishike.localhost:${HTTP_PUBLISH_PORT}"
+echo "本机访问方式：ssh -N -L ${LOCAL_TUNNEL_PORT}:127.0.0.1:${HTTP_PUBLISH_PORT} company-vm"
+echo "浏览器地址：http://aishike.localhost:${LOCAL_TUNNEL_PORT}"
 echo "用户名：Administrator"
 echo "管理员密码保存在服务器 deploy/secrets/admin_password.txt，仅在需要登录时读取。"

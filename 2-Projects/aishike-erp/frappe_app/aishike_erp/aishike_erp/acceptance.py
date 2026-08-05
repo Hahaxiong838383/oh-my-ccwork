@@ -10,6 +10,8 @@ EXPECTED_DOCTYPES = (
     "Aishike Device Unit",
     "Aishike Device Test Record",
     "Aishike Device Lifecycle Event",
+    "Aishike Serial Number Rule",
+    "Aishike Serial Number Batch",
 )
 
 ACCEPTANCE_FINISHED_ITEM = "ASK-RW-DESK-STAR-WHITE-STD"
@@ -26,6 +28,7 @@ def runtime_check() -> dict[str, object]:
         "app_installed": "aishike_erp" in installed_apps,
         "expected_doctypes": list(EXPECTED_DOCTYPES),
         "missing_doctypes": missing_doctypes,
+        "sn_console_available": bool(frappe.db.exists("Page", "aishike-sn-console")),
     }
 
 
@@ -88,6 +91,32 @@ def seed_acceptance_fixture() -> dict[str, str]:
 
 def enable_chinese_ui() -> dict[str, str]:
     return apply_chinese_defaults()
+
+
+def reset_m2_acceptance_fixture() -> dict[str, int]:
+    serials = frappe.get_all(
+        "Aishike Device Unit",
+        filters={"production_batch": "M2-ACCEPT-001"},
+        pluck="name",
+    )
+    batches = frappe.get_all(
+        "Aishike Serial Number Batch",
+        filters={"production_batch": "M2-ACCEPT-001"},
+        pluck="name",
+    )
+    if serials:
+        frappe.db.delete("Aishike Device Lifecycle Event", {"device_unit": ["in", serials]})
+        frappe.db.delete("Aishike Device Test Record", {"device_unit": ["in", serials]})
+        frappe.db.delete("Aishike Device Unit", {"name": ["in", serials]})
+    if batches:
+        frappe.db.delete("Aishike Serial Number Batch", {"name": ["in", batches]})
+    frappe.db.set_value(
+        "Aishike Serial Number Rule",
+        "ASK-DEFAULT",
+        {"pattern": "{PREFIX}-{SEQ}", "current_scope_key": "GLOBAL", "next_sequence": 1},
+    )
+    frappe.db.commit()
+    return {"devices": len(serials), "batches": len(batches)}
 
 
 def _ensure_item(item_code: str, item_name: str, item_group: str) -> None:

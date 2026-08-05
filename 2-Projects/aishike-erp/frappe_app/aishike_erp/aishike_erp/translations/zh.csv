@@ -111,3 +111,13 @@ Payment Entry,收付款单
 Clear all filters,清除全部筛选条件
 Item Group,物料组
 Products,产品
+Aishike Serial Number Rule,爱视可 SN 规则
+Aishike Serial Number Batch,爱视可 SN 生成批次
+SN Console,SN 工作台
+NEVER,永不重置
+DAILY,每日重置
+MONTHLY,每月重置
+BATCH,按生产批次重置
+GENERATED,已生成
+Scan QRCode,扫描二维码
+Open Camera,打开摄像头

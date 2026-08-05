@@ -1,0 +1,203 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 0,
+ "autoname": "field:rule_code",
+ "creation": "2026-08-05 23:59:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "rule_code",
+  "rule_name",
+  "column_break_identity",
+  "enabled",
+  "template_section",
+  "pattern",
+  "prefix",
+  "suffix",
+  "column_break_template",
+  "date_format",
+  "sequence_digits",
+  "reset_policy",
+  "state_section",
+  "current_scope_key",
+  "next_sequence",
+  "column_break_state",
+  "barcode_format",
+  "qr_payload_prefix",
+  "sample_serial"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "规则基本信息"
+  },
+  {
+   "fieldname": "rule_code",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "规则编号",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "rule_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "规则名称",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_identity",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "启用"
+  },
+  {
+   "fieldname": "template_section",
+   "fieldtype": "Section Break",
+   "label": "生成模板"
+  },
+  {
+   "default": "{PREFIX}-{SEQ}",
+   "description": "支持 {PREFIX}、{DATE}、{SKU}、{BATCH}、{SEQ}、{SUFFIX}",
+   "fieldname": "pattern",
+   "fieldtype": "Data",
+   "label": "SN 模板",
+   "reqd": 1
+  },
+  {
+   "default": "ASK",
+   "fieldname": "prefix",
+   "fieldtype": "Data",
+   "label": "前缀"
+  },
+  {
+   "fieldname": "suffix",
+   "fieldtype": "Data",
+   "label": "后缀"
+  },
+  {
+   "fieldname": "column_break_template",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "YYMMDD",
+   "fieldname": "date_format",
+   "fieldtype": "Select",
+   "label": "日期格式",
+   "options": "NONE\nYYMM\nYYMMDD\nYYYYMMDD",
+   "reqd": 1
+  },
+  {
+   "default": "6",
+   "fieldname": "sequence_digits",
+   "fieldtype": "Int",
+   "label": "流水号位数",
+   "reqd": 1
+  },
+  {
+   "default": "NEVER",
+   "fieldname": "reset_policy",
+   "fieldtype": "Select",
+   "label": "序号重置策略",
+   "options": "NEVER\nDAILY\nMONTHLY\nBATCH",
+   "reqd": 1
+  },
+  {
+   "fieldname": "state_section",
+   "fieldtype": "Section Break",
+   "label": "运行状态"
+  },
+  {
+   "default": "GLOBAL",
+   "fieldname": "current_scope_key",
+   "fieldtype": "Data",
+   "label": "当前序号作用域",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "next_sequence",
+   "fieldtype": "Int",
+   "label": "下一个流水号",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_state",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "CODE128",
+   "fieldname": "barcode_format",
+   "fieldtype": "Select",
+   "label": "条形码格式",
+   "options": "CODE128\nCODE39",
+   "reqd": 1
+  },
+  {
+   "default": "ASK:DEVICE:",
+   "fieldname": "qr_payload_prefix",
+   "fieldtype": "Data",
+   "label": "二维码内容前缀",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sample_serial",
+   "fieldtype": "Data",
+   "label": "示例 SN",
+   "read_only": 1
+  }
+ ],
+ "links": [
+  {
+   "link_doctype": "Aishike Serial Number Batch",
+   "link_fieldname": "serial_rule"
+  }
+ ],
+ "modified": "2026-08-05 23:59:00.000000",
+ "modified_by": "Administrator",
+ "module": "Aishike ERP",
+ "name": "Aishike Serial Number Rule",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "show_name_in_global_search": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -8,12 +8,14 @@ import frappe
 SIDEBAR_LABELS = {
     "Home": "主页",
     "SKU Configuration": "SKU 配置",
+    "SN Console": "SN 工作台",
     "Device Units": "设备档案",
     "Device Tests": "设备测试",
 }
 
 WORKSPACE_SHORTCUT_LABELS = {
     "Aishike SKU Configuration": "SKU 配置",
+    "aishike-sn-console": "SN 工作台",
     "Aishike Device Unit": "设备档案",
     "Aishike Device Test Record": "设备测试",
 }
@@ -28,6 +30,11 @@ WORKSPACE_CONTENT = [
         "id": "shortcut-sku",
         "type": "shortcut",
         "data": {"shortcut_name": "SKU 配置", "col": 4},
+    },
+    {
+        "id": "shortcut-sn",
+        "type": "shortcut",
+        "data": {"shortcut_name": "SN 工作台", "col": 4},
     },
     {
         "id": "shortcut-device",
@@ -62,6 +69,16 @@ def apply_chinese_defaults() -> dict[str, str]:
         sidebar.title = "爱视可 ERP"
         for item in sidebar.items:
             item.label = SIDEBAR_LABELS.get(item.label, item.label)
+        if not any(item.link_to == "aishike-sn-console" for item in sidebar.items):
+            sidebar.append(
+                "items",
+                {
+                    "type": "Link",
+                    "label": "SN 工作台",
+                    "link_type": "Page",
+                    "link_to": "aishike-sn-console",
+                },
+            )
         sidebar.save(ignore_permissions=True)
 
     if frappe.db.exists("Workspace", "Aishike ERP"):
@@ -70,6 +87,16 @@ def apply_chinese_defaults() -> dict[str, str]:
         workspace.label = "Aishike ERP"
         workspace.title = "Aishike ERP"
         workspace.content = json.dumps(WORKSPACE_CONTENT, ensure_ascii=False, separators=(",", ":"))
+        if not any(shortcut.link_to == "aishike-sn-console" for shortcut in workspace.shortcuts):
+            workspace.append(
+                "shortcuts",
+                {
+                    "type": "Page",
+                    "link_to": "aishike-sn-console",
+                    "label": "SN 工作台",
+                    "color": "Blue",
+                },
+            )
         for shortcut in workspace.shortcuts:
             shortcut.label = WORKSPACE_SHORTCUT_LABELS.get(shortcut.link_to, shortcut.label)
         workspace.save(ignore_permissions=True)
