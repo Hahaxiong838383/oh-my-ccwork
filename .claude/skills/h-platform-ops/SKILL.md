@@ -4087,6 +4087,36 @@ VM 状态导出并覆盖原生。Lima Guest 实测（bash 5.3.9）：`! true` �
 `launchctl`/`limactl` 证明零服务动作，再配一次真调用证明绊线本身有效
 （[[feedback_exit_code_ownership]]）。
 
+### 🔴 健康端口闸门必须带 `SO_REUSEADDR`（commit `1d5ccc5`）
+
+真实回滚演练暴露过 OpenSSH multiplex 孤儿转发：health LaunchAgent 已卸载，Lima 的 SSH
+master 仍监听 18775，原生 Bridge 只能以 `health=off` 起来。修法是 forwarder 强制
+`ControlMaster=no`/`ControlPath=none` + 回滚兼容 `-O cancel` + **以端口能否 bind 作独立闸门**。
+
+⚠️ 但那个闸门的探针不能用裸 bind：
+
+| 量 | 实测值 |
+|---|---|
+| macOS `net.inet.tcp.msl` | 15000ms → `TIME_WAIT` = 2×MSL = **30s** |
+| 闸门重试窗口 | 40 × 0.25s = **10s** |
+
+隧道关掉后，先前经它 accept 的连接会在本地端口留 `TIME_WAIT`，**窗口熬不过去**，
+裸 bind 必然假报「端口仍被占用」并中断回滚。加 `SO_REUSEADDR` 后 TIME_WAIT 下可绑定，
+但**仍被真实 LISTEN 拒绝**（macOS 实测 errno 48），所以不漏放。
+
+**诊断必须同时打 `netstat`**：`TIME_WAIT` 的 socket 无属主，`lsof -iTCP:<port>` 与
+`-sTCP:LISTEN` **都是 0 行**（实测）。只打 lsof 会在事故现场给出「端口被占用」+
+空白进程列表的自相矛盾输出，操作者只能误判成工具坏了或脚本瞎报
+（[[feedback_negative_result_needs_signal_capable_channel]] 例三）。
+
+> **备用端口测试（新建 forwarder 持 18776、杀 PID 后立即释放）覆盖不到这个场景**——
+> 那条链路从没 accept 过连接，结构上不可能有 TIME_WAIT。**通过是因为场景缺触发条件。**
+> 验「释放/回收/清理」类逻辑一律**先把资源用脏再验**（[[feedback_fix_verified_on_richest_variant_only]]）。
+
+⚠️ **文本断言这次又来了一遍**：闸门配的测试是 `assert.match(rollback, /still occupied/)`，
+同样只证明这句话在文件里出现过。24 小时内同一文件第二次踩——现已改为抽出探针真跑
+（活监听→占用 / TIME_WAIT→空闲），并用不带 `SO_REUSEADDR` 的裸探针做锚证明脏状态真形成。
+
 ### ✅ 曾经的 flaky 已修（同 commit）
 
 `test/runner-worker-ipc.test.mjs`「kill worker 后调用标 orphan」曾偶发
