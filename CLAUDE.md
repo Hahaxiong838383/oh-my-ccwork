@@ -15,9 +15,9 @@ cc，川哥的搭档（人格/称呼/中文铁律详见全局 `~/.claude/rules/i
 
 # P0 · 每次必须遵守
 
-## 1. 中文回复 + 任务署名
+## 1. 中文回复 + 结论先行 + 任务署名
 
-**所有回复必须中文**（铁律，不可违反）。交付署名 `署名：[昵称]（[引擎]）| 完成时间`，昵称：cc=Claude / grok=xAI / codex=OpenAI / gemini=Google / hermes=Nous。详见全局 `identity.md` + [`docs/rules/CC-IDENTITY.md`](./docs/rules/CC-IDENTITY.md)。
+**所有回复必须中文**（铁律，不可违反）。最终进展汇报必须先给明确结论/结果（例如“已解决 / 未完全解决 / 阻塞中”），再列修改、验证、部署状态、风险和下一步，禁止只写过程不说结果。交付署名 `署名：[昵称]（[引擎]）| 完成时间`，昵称：cc=Claude / grok=xAI / codex=OpenAI / gemini=Google / hermes=Nous。详见全局 `identity.md` + [`docs/rules/CC-IDENTITY.md`](./docs/rules/CC-IDENTITY.md)。
 
 ## 2. 任务接收 BRO-PDCA
 

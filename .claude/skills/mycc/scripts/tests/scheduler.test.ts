@@ -10,6 +10,12 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { parseTasks, matchTime, TaskLock, startScheduler, stopScheduler } from "../src/scheduler.js";
+import {
+  buildSchedulerPrompt,
+  formatSchedulerHistoryStatus,
+  parseSchedulerResult,
+  sendSchedulerResultNotification,
+} from "../src/scheduler-result.js";
 import fs from "fs";
 
 // Mock fs 模块
@@ -23,6 +29,89 @@ vi.mock("fs", () => ({
 }));
 
 describe("Scheduler 模块", () => {
+  describe("结构化业务结果", () => {
+    it("Agent 返回 failed 且引擎正常退出时，history 应记为失败", () => {
+      const result = parseSchedulerResult('日志\nSCHEDULER_RESULT {"status":"failed","summary":"SSH 不可达","error":"connect timeout"}');
+
+      expect(result.status).toBe("failed");
+      expect(formatSchedulerHistoryStatus(result)).toContain("❌ 失败");
+      expect(formatSchedulerHistoryStatus(result)).not.toContain("✅ 成功");
+    });
+
+    it("Agent 返回 success 时，history 应记为成功", () => {
+      const result = parseSchedulerResult('SCHEDULER_RESULT {"status":"success","summary":"清理完成"}');
+
+      expect(result.status).toBe("success");
+      expect(formatSchedulerHistoryStatus(result)).toContain("✅ 成功");
+    });
+
+    it("Agent 没有结构化结果时，history 应为业务结果未知", () => {
+      const result = parseSchedulerResult("引擎正常结束，但没有结果标记");
+
+      expect(result.status).toBe("unknown");
+      expect(formatSchedulerHistoryStatus(result)).toBe("⚠️ 引擎完成，业务结果未知");
+    });
+
+    it("Scheduler 默认只调用一次 owner P2P 发送", async () => {
+      const sendOwnerP2P = vi.fn().mockResolvedValue(true);
+      const sendGroup = vi.fn().mockResolvedValue(true);
+
+      await sendSchedulerResultNotification(
+        { name: "测试任务", desc: "默认通知" },
+        "2026-08-05 10:00",
+        { status: "success", summary: "完成" },
+        { sendOwnerP2P, sendGroup },
+      );
+
+      expect(sendOwnerP2P).toHaveBeenCalledTimes(1);
+      expect(sendGroup).toHaveBeenCalledTimes(0);
+    });
+
+    it("默认配置下群聊和话题群发送次数为 0", async () => {
+      const sendOwnerP2P = vi.fn().mockResolvedValue(true);
+      const sendGroup = vi.fn().mockResolvedValue(true);
+
+      await sendSchedulerResultNotification(
+        { name: "测试任务", desc: "没有群 opt-in" },
+        "2026-08-05 10:00",
+        { status: "failed", summary: "失败", error: "业务失败" },
+        { sendOwnerP2P, sendGroup },
+      );
+
+      expect(sendGroup).not.toHaveBeenCalled();
+    });
+
+    it("P2P 发送失败时不得 fallback 到广播或群聊", async () => {
+      const sendOwnerP2P = vi.fn().mockResolvedValue(false);
+      const sendGroup = vi.fn().mockResolvedValue(true);
+
+      const notifyResult = await sendSchedulerResultNotification(
+        { name: "测试任务", desc: "默认通知" },
+        "2026-08-05 10:00",
+        { status: "failed", summary: "失败", error: "业务失败" },
+        { sendOwnerP2P, sendGroup },
+      );
+
+      expect(notifyResult).toEqual({ target: "owner_p2p", delivered: false });
+      expect(sendOwnerP2P).toHaveBeenCalledTimes(1);
+      expect(sendGroup).toHaveBeenCalledTimes(0);
+    });
+
+    it("Scheduler Prompt 不再包含 /tell-me 指令", () => {
+      const prompt = buildSchedulerPrompt({
+        time: "10:00",
+        name: "测试任务",
+        skill: "-",
+        desc: "做一件事",
+        type: "daily",
+      }, "2026-08-05 10:00");
+
+      expect(prompt).not.toContain("完成后用 /tell-me");
+      expect(prompt).toContain("禁止调用 /tell-me");
+      expect(prompt).toContain("SCHEDULER_RESULT");
+    });
+  });
+
   // ============================================
   // 1. 任务解析
   // ============================================
@@ -573,10 +662,10 @@ describe("Scheduler 模块", () => {
       vi.mocked(fs.readFileSync).mockReturnValue(`
 | 时间 | 任务 | Skill | 说明 |
 |------|------|-------|------|
-| 08:00 | 早起任务 | /morning | 早安 |
+| 20:00 | 晚间任务 | /evening | 晚安 |
 `);
 
-      // 设置当前时间为 18:30（不匹配 08:00）
+      // 设置当前时间为 18:30（不匹配未来的 20:00，也不会触发补执行）
       vi.setSystemTime(new Date("2026-01-30T18:30:00"));
 
       const executeTaskMock = vi.fn();

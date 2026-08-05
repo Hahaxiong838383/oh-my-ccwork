@@ -6,7 +6,7 @@
 
 你是 mycc 的 cc，被 mycc scheduler 在本地触发执行 BFO 实体锚定 V0.1 上线一周后的阈值校准任务。
 
-你**跑在本地**，可以访问 `~/.claude/`、`~/mycc/`、`lark-cli` 等所有本地资源。
+你**跑在本地**，可以访问 `~/.claude/`、`~/mycc/` 等必要本地资源；禁止调用 `lark-cli` 或任何飞书发送工具。
 
 ## 上下文（读完再动手）
 
@@ -50,9 +50,9 @@ V0.1 设计起源 + 试跑结果记录：
 
 ## 输出（三件套）
 
-### 1. 飞书简报
+### 1. 简报内容
 
-用 `lark-cli` 推到 cc 群（chat_id 自查 `~/.claude/skills/lark-im/SKILL.md` 或调用 `/tell-me` skill），≤200 字，结构：
+只在最终结构化结果里返回 ≤200 字简报内容，禁止调用 `lark-cli`、`/tell-me`、`send_message` 或任何飞书发送工具。结构：
 
 ```
 📊 BFO V0.1 一周校准
@@ -125,16 +125,16 @@ git push origin main
 
 ## 数据不足时（一周内 5 个数据源全部零相关）
 
-- 飞书简报输出「样本不足，延后 2 周再校准」+ 简短说明缺什么数据
+- 结构化结果输出「样本不足，延后 2 周再校准」+ 简短说明缺什么数据
 - 不写 memory，但更新 task-log（说明本轮无数据 + 下次校准计划日期 2026-05-19）
-- 飞书提示老板：是否手动触发更密的使用观察 / 是否需要给 cc 加自检触发计数埋点
+- 在 summary 里提示是否手动触发更密的使用观察 / 是否需要给 cc 加自检触发计数埋点
 
 ## 约束（重要，不可违反）
 
-- **不得修改 `~/.claude/docs/no-guessing-full.md` 或 `~/.claude/rules/behavior.md`**——校准只输出建议到 memory + 飞书。任何阈值修改必须等老板下次手动批准
+- **不得修改 `~/.claude/docs/no-guessing-full.md` 或 `~/.claude/rules/behavior.md`**——校准只输出建议到 memory + 结构化结果。任何阈值修改必须等老板下次手动批准
 - 任何"具体阈值改成 X"的建议必须附数据依据（grep 命中数 / git diff 行数 / memory 摘录），禁止凭直觉
-- 飞书推送如遇限速 429，按 `feedback_lark_cli_keychain_ssh` 走 open-feishu-mcp `send_message` 备用通道
-- **自检字段必带（按 V0.1 规则演练）**：在向飞书推送 / 写 memory / push 仓 三个对外操作前各跑一次 `[自检]` 自报，作为 V0.1 dogfood 数据——这次校准本身也是 V0.1 的真实使用样本
+- 禁止自行处理飞书推送；通知由外层 Scheduler 统一发送
+- **自检字段必带（按 V0.1 规则演练）**：在写 memory / push 仓两个对外操作前各跑一次 `[自检]` 自报，作为 V0.1 dogfood 数据——这次校准本身也是 V0.1 的真实使用样本
 
 ## 完成后
 

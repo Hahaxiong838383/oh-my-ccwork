@@ -132,6 +132,8 @@ export declare class HttpServer {
      * 向所有飞书通道广播消息（用于系统级通知，如 auth 过期）
      */
     broadcastToFeishu(text: string): Promise<void>;
+    sendSchedulerOwnerNotification(text: string): Promise<boolean>;
+    sendSchedulerGroupNotification(text: string): Promise<boolean>;
     private formatTimeAgo;
     private handleHistoryList;
     private handleHistoryDetail;

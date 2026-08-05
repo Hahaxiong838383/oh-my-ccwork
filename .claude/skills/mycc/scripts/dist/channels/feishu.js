@@ -197,6 +197,25 @@ export class FeishuChannel {
         // 发送消息到飞书（先发送图片，再发送文字）
         await this.sendMessageToFeishu(text, sessionId, effectiveChatId);
     }
+    isConfiguredP2PReceiver() {
+        return Boolean(this.config.appId
+            && this.config.appSecret
+            && this.config.receiveUserId
+            && (this.config.receiveIdType || "open_id") === "open_id");
+    }
+    isConfiguredSender() {
+        return Boolean(this.config.appId && this.config.appSecret);
+    }
+    async sendConfiguredP2PText(text) {
+        if (!this.isConfiguredP2PReceiver())
+            return false;
+        return this.sendTextToFeishuTarget(text, this.config.receiveUserId, "open_id");
+    }
+    async sendToChatId(text, chatId) {
+        if (!this.isConfiguredSender() || !chatId.trim())
+            return false;
+        return this.sendTextToFeishuTarget(text, chatId.trim(), "chat_id");
+    }
     /**
      * 设置消息接收回调
      * @param callback - 收到飞书消息时的回调函数
@@ -733,6 +752,35 @@ export class FeishuChannel {
         }
         catch (error) {
             console.error("[FeishuChannel] ✗ Send error:", error);
+            return false;
+        }
+    }
+    async sendTextToFeishuTarget(text, receiveId, receiveIdType) {
+        try {
+            const tableData = this.parseMarkdownTable(text);
+            if (tableData) {
+                const cardContent = this.buildTableCard(tableData.beforeTable, tableData.headers, tableData.rows, tableData.afterTable);
+                const cardSent = await this.sendViaSDK(receiveId, "interactive", JSON.stringify(cardContent), receiveIdType);
+                if (cardSent.ok)
+                    return true;
+                console.warn("[FeishuChannel] 交互卡片发送失败，降级到 Markdown");
+            }
+            const mdContent = JSON.stringify({ zh_cn: { content: [[{ tag: "md", text }]] } });
+            const mdSent = await this.sendViaSDK(receiveId, "post", mdContent, receiveIdType);
+            if (mdSent.ok)
+                return true;
+            console.warn("[FeishuChannel] Markdown 发送失败，降级到纯文本");
+            const plainText = text
+                .replace(/\*\*([^*]+)\*\*/g, "$1")
+                .replace(/\*([^*]+)\*/g, "$1")
+                .replace(/`([^`]+)`/g, "$1")
+                .replace(/```[\s\S]*?```/g, "[代码块]")
+                .replace(/#{1,6}\s/g, "")
+                .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+            return (await this.sendViaSDK(receiveId, "text", JSON.stringify({ text: plainText }), receiveIdType)).ok;
+        }
+        catch (error) {
+            console.error("[FeishuChannel] ✗ Strict send error:", error);
             return false;
         }
     }

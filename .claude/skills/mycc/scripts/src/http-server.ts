@@ -2143,6 +2143,43 @@ export class HttpServer {
     }
   }
 
+  async sendSchedulerOwnerNotification(text: string): Promise<boolean> {
+    for (const ctx of this.channelContexts.values()) {
+      if (!ctx.channel.isConfiguredP2PReceiver()) continue;
+      try {
+        return await ctx.channel.sendConfiguredP2PText(text);
+      } catch (err) {
+        console.error(`[CC][${ctx.channelId}] Scheduler owner P2P 通知失败:`, err);
+        return false;
+      }
+    }
+    console.warn("[Scheduler] 未找到合法 owner P2P 通知目标，通知未送达");
+    return false;
+  }
+
+  async sendSchedulerGroupNotification(text: string): Promise<boolean> {
+    if (process.env.SCHEDULER_NOTIFY_GROUP_ENABLED !== "true") {
+      console.warn("[Scheduler] 群通知未显式启用，通知未送达");
+      return false;
+    }
+    const chatId = process.env.SCHEDULER_NOTIFY_GROUP_CHAT_ID?.trim();
+    if (!chatId) {
+      console.warn("[Scheduler] 群通知未配置 SCHEDULER_NOTIFY_GROUP_CHAT_ID，通知未送达");
+      return false;
+    }
+    for (const ctx of this.channelContexts.values()) {
+      if (!ctx.channel.isConfiguredSender()) continue;
+      try {
+        return await ctx.channel.sendToChatId(text, chatId);
+      } catch (err) {
+        console.error(`[CC][${ctx.channelId}] Scheduler 群通知失败:`, err);
+        return false;
+      }
+    }
+    console.warn("[Scheduler] 未找到可用飞书发送通道，群通知未送达");
+    return false;
+  }
+
   private formatTimeAgo(timestamp: string | number): string {
     const now = Date.now();
     const time = typeof timestamp === "string" ? new Date(timestamp).getTime() : timestamp;

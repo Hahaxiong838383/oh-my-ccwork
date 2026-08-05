@@ -118,4 +118,4 @@ QNAP docker binary 可能不在 PATH，优先使用 `/share/CACHEDEV1_DATA/.qpkg
 - 跳过或失败原因。
 - 报告文件路径：`2-Projects/multica-team-deploy/auto-update/reports/maintenance-log.md`。
 
-不要求调用 `/tell-me`。如需要飞书通知，后续由外层 scheduler 或人工处理。
+禁止调用 `/tell-me`、`lark-cli` 或任何飞书发送工具；如需要飞书通知，后续由外层 scheduler 或人工处理。

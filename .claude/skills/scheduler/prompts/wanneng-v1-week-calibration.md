@@ -95,7 +95,7 @@ git -C /Users/rayman.chen/mycc log --since="7 days ago" --diff-filter=A --name-o
 
 ## 输出三件套
 
-1. **飞书简报推 cc 群**（用 `/tell-me` skill 或 `lark-im send`）格式：
+1. **简报内容写入最终结构化结果**，禁止调用 `/tell-me`、`lark-im send`、`lark-cli` 或任何飞书发送工具。格式：
 
 ```
 万能公式 v1 试运行 1 周复盘（2026-04-28→2026-05-05）

@@ -97,6 +97,10 @@ export declare class FeishuChannel implements MessageChannel {
      * @param event - SSE 事件
      */
     send(event: SSEEvent, targetChatId?: string): Promise<void>;
+    isConfiguredP2PReceiver(): boolean;
+    isConfiguredSender(): boolean;
+    sendConfiguredP2PText(text: string): Promise<boolean>;
+    sendToChatId(text: string, chatId: string): Promise<boolean>;
     /**
      * 设置消息接收回调
      * @param callback - 收到飞书消息时的回调函数
@@ -160,6 +164,7 @@ export declare class FeishuChannel implements MessageChannel {
      * 发送消息到飞书
      */
     private sendMessageToFeishu;
+    private sendTextToFeishuTarget;
     /**
      * 通过 SDK 发送消息（统一入口，SDK 自动管理 token）
      */

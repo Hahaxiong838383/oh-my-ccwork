@@ -40,6 +40,15 @@ import { agentIntrospection } from "./introspection.js";
 import { startStatusUpdater, stopStatusUpdater, refreshStatus, addStatusEvent } from "./services/status-updater.js";
 import { TerminalWsHandler } from "./terminal-ws.js";
 import { updateDnsRecord, loadDnsConfig } from "./cf-dns.js";
+import {
+  buildSchedulerPrompt,
+  extractSchedulerEventText,
+  formatSchedulerHistoryStatus,
+  parseSchedulerResult,
+  schedulerEngineErrorResult,
+  sendSchedulerResultNotification,
+  type SchedulerBusinessResult,
+} from "./scheduler-result.js";
 
 // 清除 CLAUDECODE 环境变量：后端从 Claude Code session 启动时会继承此变量，
 // 导致所有 claude 子进程（HealthMonitor、SDK session）被误判为嵌套会话而拒绝启动
@@ -355,6 +364,23 @@ async function startServer(args: string[]) {
     }
   };
 
+  const fullMessageForEngine = (message: string, task: Task, taskCwd: string) => {
+    let fullMessage = message;
+    if (task.skill && task.skill !== "-") {
+      const skillMdPath = join(taskCwd, ".claude", "skills", task.skill, "SKILL.md");
+      if (existsSync(skillMdPath)) {
+        try {
+          const skillContent = readFileSync(skillMdPath, "utf-8");
+          fullMessage = `${message}\n\n---\n# 技能执行指南（SKILL.md）\n\n${skillContent}`;
+          console.log(chalk.gray(`[Scheduler] 已内联 ${task.skill}/SKILL.md`));
+        } catch {
+          // 读取失败，使用原始 message
+        }
+      }
+    }
+    return fullMessage;
+  };
+
   // 启动定时任务调度器
   const executeTask = async (task: Task, taskCwd: string) => {
     // Dream 记忆巩固：直接调用内部函数，不走 Claude/Codex
@@ -381,104 +407,78 @@ async function startServer(args: string[]) {
     const now = new Date();
     const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-    // 构造带上下文的消息
-    const skillLine = task.skill && task.skill !== "-"
-      ? `1. 执行技能：${task.skill}（位置：.claude/skills/${task.skill.replace("/", "")}）`
-      : "1. 无需执行特定技能，直接完成任务";
-
-    const message = `[定时任务] ${task.name}
-
-时间：${timestamp}
-任务：${task.desc}
-
----
-执行要求：
-${skillLine}
-2. 完成后用 /tell-me 发飞书通知（位置：.claude/skills/tell-me）
-3. 通知标题格式：【定时任务】${task.name}
-4. 卡片底部 note 填写时间戳：${timestamp}
-
-重要：只执行上述任务，不要执行任何其他定时任务或额外操作。完成后立即结束。`;
+    const message = buildSchedulerPrompt(task, timestamp);
 
     // 记录开始执行
     recordHistory(taskCwd, task.name, "执行中...");
+
+    const finalizeTask = async (businessResult: SchedulerBusinessResult) => {
+      recordHistory(taskCwd, task.name, formatSchedulerHistoryStatus(businessResult));
+      const statusLabel = businessResult.status === "success" ? "完成" : businessResult.status === "failed" ? "失败" : businessResult.status === "skipped" ? "跳过" : "结果未知";
+      addStatusEvent(`${task.name} 定时任务${statusLabel}`);
+      refreshStatus(taskCwd);
+
+      const notifyResult = await sendSchedulerResultNotification(task, timestamp, businessResult, {
+        sendOwnerP2P: (text) => server.sendSchedulerOwnerNotification(text),
+        sendGroup: (text) => server.sendSchedulerGroupNotification(text),
+      });
+      if (!notifyResult.delivered) {
+        const targetLabel = notifyResult.target === "owner_p2p" ? "owner P2P" : "显式群聊";
+        recordHistory(taskCwd, task.name, `⚠️ 通知未送达（${targetLabel} 未配置或发送失败）`);
+      }
+    };
+
+    const runCliSchedulerTask = async (engineType: EngineType): Promise<SchedulerBusinessResult> => {
+      const result = await runCliEngine(engineType, fullMessageForEngine(message, task, taskCwd), taskCwd, { source: `scheduler:${task.name}` });
+      if (!result.error) return parseSchedulerResult(result.output);
+
+      const isNetworkError = /TIMEOUT|ECONNRESET|ECONNREFUSED|EPIPE|socket hang up|network|fetch failed/i.test(result.error);
+      const fallbackEngine: EngineType = engineType === "codex" ? "gemini" : "codex";
+
+      if (isNetworkError) {
+        console.warn(chalk.yellow(`[Scheduler][${engineType}] 网络错误，等待 90s 后重试: ${task.name}`));
+        recordHistory(taskCwd, task.name, `⚠️ 网络错误，等待重试(${engineType})`);
+        await new Promise(r => setTimeout(r, 90_000));
+        const retryResult = await runCliEngine(engineType, fullMessageForEngine(message, task, taskCwd), taskCwd, { source: `scheduler:${task.name}` });
+        if (retryResult.error) {
+          console.error(chalk.red(`[Scheduler] 网络重试仍失败: ${task.name}`));
+          return schedulerEngineErrorResult(`${engineType} 网络重试失败`, retryResult.error);
+        }
+        console.log(chalk.green(`[Scheduler] 任务完成(网络重试): ${task.name} (${engineType})`));
+        return parseSchedulerResult(retryResult.output);
+      }
+
+      console.warn(chalk.yellow(`[Scheduler][${engineType}] 失败，自动转移到 ${fallbackEngine}: ${task.name}`));
+      recordHistory(taskCwd, task.name, `⚠️ 转移(${engineType}→${fallbackEngine})`);
+      const fallbackResult = await runCliEngine(fallbackEngine, fullMessageForEngine(message, task, taskCwd), taskCwd, { source: `scheduler:${task.name}` });
+      if (fallbackResult.error) {
+        console.error(chalk.red(`[Scheduler] 双引擎全部失败: ${task.name}`));
+        return schedulerEngineErrorResult(`${engineType}+${fallbackEngine} 双引擎全部失败`, fallbackResult.error);
+      }
+      console.log(chalk.green(`[Scheduler] 任务完成(fallback): ${task.name} (${fallbackEngine})`));
+      return parseSchedulerResult(fallbackResult.output);
+    };
 
     try {
       if (task.engine === "gemini" || task.engine === "codex") {
         const engineType = task.engine as EngineType;
         console.log(chalk.cyan(`[Scheduler] 路由到 ${engineType}: ${task.name}`));
-
-        // 内联 SKILL.md：让 gemini/codex 知道完整执行步骤
-        let fullMessage = message;
-        if (task.skill && task.skill !== "-") {
-          const skillMdPath = join(taskCwd, ".claude", "skills", task.skill, "SKILL.md");
-          if (existsSync(skillMdPath)) {
-            try {
-              const skillContent = readFileSync(skillMdPath, "utf-8");
-              fullMessage = `${message}\n\n---\n# 技能执行指南（SKILL.md）\n\n${skillContent}`;
-              console.log(chalk.gray(`[Scheduler] 已内联 ${task.skill}/SKILL.md`));
-            } catch {
-              // 读取失败，使用原始 message
-            }
-          }
-        }
-
-        const result = await runCliEngine(engineType, fullMessage, taskCwd);
-        if (result.error) {
-          const isNetworkError = /TIMEOUT|ECONNRESET|ECONNREFUSED|EPIPE|socket hang up|network|fetch failed/i.test(result.error);
-          const fallbackEngine: EngineType = engineType === "codex" ? "gemini" : "codex";
-
-          if (isNetworkError) {
-            // 网络错误：等代理恢复后用主引擎重试，而非立即切换（两引擎共用代理，切换无意义）
-            console.warn(chalk.yellow(`[Scheduler][${engineType}] 网络错误，等待 90s 后重试: ${task.name}`));
-            recordHistory(taskCwd, task.name, `⚠️ 网络错误，等待重试(${engineType})`);
-            await new Promise(r => setTimeout(r, 90_000));
-            const retryResult = await runCliEngine(engineType, fullMessage, taskCwd);
-            if (retryResult.error) {
-              console.error(chalk.red(`[Scheduler] 网络重试仍失败: ${task.name}`));
-              recordHistory(taskCwd, task.name, `❌ 网络重试失败(${engineType})`);
-              server.broadcastToFeishu?.(`⚠️ 定时任务网络重试失败：${task.name}\n引擎 ${engineType} 两次失败（疑似代理中断），需要人工介入\n错误: ${retryResult.error.substring(0, 200)}`);
-            } else {
-              console.log(chalk.green(`[Scheduler] 任务完成(网络重试): ${task.name} (${engineType})`));
-              recordHistory(taskCwd, task.name, `✅ 成功(网络重试:${engineType})`);
-              addStatusEvent(`${task.name} 定时任务完成（网络重试:${engineType}）`);
-              refreshStatus(taskCwd);
-            }
-          } else {
-            // 非网络错误：走原有 fallback 逻辑
-            console.warn(chalk.yellow(`[Scheduler][${engineType}] 失败，自动转移到 ${fallbackEngine}: ${task.name}`));
-            recordHistory(taskCwd, task.name, `⚠️ 转移(${engineType}→${fallbackEngine})`);
-
-            const fallbackResult = await runCliEngine(fallbackEngine, fullMessage, taskCwd);
-            if (fallbackResult.error) {
-              console.error(chalk.red(`[Scheduler] 双引擎全部失败: ${task.name}`));
-              recordHistory(taskCwd, task.name, `❌ 全部失败(${engineType}+${fallbackEngine})`);
-              server.broadcastToFeishu?.(`⚠️ 定时任务双引擎全部失败：${task.name}\n主引擎 ${engineType} 失败 → 备引擎 ${fallbackEngine} 也失败，需要人工介入`);
-            } else {
-              console.log(chalk.green(`[Scheduler] 任务完成(fallback): ${task.name} (${fallbackEngine})`));
-              recordHistory(taskCwd, task.name, `✅ 成功(fallback:${fallbackEngine})`);
-              addStatusEvent(`${task.name} 定时任务完成（fallback:${fallbackEngine}）`);
-              refreshStatus(taskCwd);
-            }
-          }
-        } else {
-          console.log(chalk.green(`[Scheduler] 任务完成: ${task.name} (${engineType})`));
-          recordHistory(taskCwd, task.name, `✅ 成功(${engineType})`);
-          addStatusEvent(`${task.name} 定时任务完成（${engineType}）`);
-          refreshStatus(taskCwd);
-        }
+        const businessResult = await runCliSchedulerTask(engineType);
+        console.log(chalk.green(`[Scheduler] 任务结束: ${task.name} (${engineType}, ${businessResult.status})`));
+        await finalizeTask(businessResult);
       } else {
-        for await (const _event of adapter.chat({ message, cwd: taskCwd })) {
-          // 忽略输出，只需要执行
+        const chunks: string[] = [];
+        for await (const event of adapter.chat({ message, cwd: taskCwd })) {
+          const text = extractSchedulerEventText(event);
+          if (text) chunks.push(text);
         }
-        console.log(chalk.green(`[Scheduler] 任务完成: ${task.name}`));
-        recordHistory(taskCwd, task.name, "✅ 成功");
-        addStatusEvent(`${task.name} 定时任务完成`);
-        refreshStatus(taskCwd);
+        const businessResult = parseSchedulerResult(chunks.join("\n"));
+        console.log(chalk.green(`[Scheduler] 任务结束: ${task.name} (${businessResult.status})`));
+        await finalizeTask(businessResult);
       }
     } catch (error) {
       console.error(chalk.red(`[Scheduler] 任务失败: ${task.name}`), error);
-      recordHistory(taskCwd, task.name, "❌ 失败");
+      await finalizeTask(schedulerEngineErrorResult("Scheduler 执行异常", error));
     }
   };
   startScheduler(cwd, executeTask);

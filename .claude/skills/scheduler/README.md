@@ -6,7 +6,7 @@
 
 ## 一句话说明
 
-**daemon.sh 每分钟检查 tasks.md，时间匹配就通过 cc-webui 唤醒 cc 执行任务。**
+**mycc 后端每分钟检查 tasks.md，时间匹配就唤醒指定引擎执行任务，并按结构化业务结果落 history。**
 
 ---
 
@@ -15,13 +15,15 @@
 ```
 tasks.md (任务文档)
     ↓ 每60秒读取
-daemon.sh (守护进程)
+mycc scheduler 模块
     ↓ 时间匹配 ±2分钟
     ↓ 检查锁（防重复）
-    ↓ POST /api/chat
-cc-webui (HTTP 服务)
+    ↓ 构造无通知权限的任务 Prompt
+Claude / Codex / Gemini (执行任务)
     ↓
-Claude Code (执行任务)
+SCHEDULER_RESULT 结构化结果
+    ↓
+history.md + owner P2P 单次通知
 ```
 
 ---
@@ -49,16 +51,22 @@ Claude Code (执行任务)
 | cc 无法访问项目文件 | workingDirectory 未传 | daemon.sh 加 PROJECT_DIR 参数 |
 | cc 无法写 /tmp/ | acceptEdits 不允许项目外写入 | 改写项目内文件 |
 | curl 响应被截断 | daemon 循环干扰 | curl 后台运行 + wait |
+| 引擎正常退出但业务失败被记成功 | 只看 adapter/CLI 退出状态 | 改为解析 `SCHEDULER_RESULT`，`failed` 必记失败 |
+| Agent 自行搜索并发送群通知 | Prompt 要求调用 `/tell-me` | 收回通知控制权，Scheduler 默认只发 owner P2P |
 
 ---
 
-## 关键配置（开源时需用户修改）
+## 结果与通知协议
 
-daemon.sh 里的两个变量：
-```bash
-WEBUI_URL="http://localhost:18080"  # cc-webui 地址
-PROJECT_DIR="/path/to/project"     # 项目根目录
-```
+- Agent 最后一行必须输出：`SCHEDULER_RESULT {"status":"success|failed|skipped","summary":"...","error":"..."}`。
+- `status=failed` 必须记为失败，即使 Claude/Codex/Gemini 引擎退出码为 0。
+- 无标记、JSON 非法或无法判断时，记录 `⚠️ 引擎完成，业务结果未知`，不能写成功。
+- 定时任务结果默认仅发送 owner 私聊；Agent 不拥有通知目标选择权；群通知必须显式授权。
+- 找不到合法 P2P 目标时只记录“通知未送达”，不得自动搜索群聊、选择最近聊天或广播。
+
+## 可选群通知配置
+
+默认不开启群通知。只有任务说明包含 `notify:group`，且环境变量 `SCHEDULER_NOTIFY_GROUP_ENABLED=true`、`SCHEDULER_NOTIFY_GROUP_CHAT_ID` 同时配置时，Scheduler 才会发送到该群；否则 fail-closed。
 
 ---
 
@@ -82,7 +90,6 @@ cc-webui 支持的 permissionMode：
 - [ ] 执行超时处理
 
 ### 体验优化
-- [ ] 执行结果通知（推送到手机？）
 - [ ] Web 界面管理任务
 - [ ] 任务执行日志可视化
 
@@ -103,11 +110,6 @@ tasks.md 中添加任务：
 | 22:00 | 日志审计 | /check-log | 审计今日日志 |
 ```
 
-启动守护进程：
-```bash
-nohup .claude/skills/scheduler/scripts/daemon.sh &
-```
-
 ---
 
-*最后更新：2026-01-26*
+*最后更新：2026-08-05*
