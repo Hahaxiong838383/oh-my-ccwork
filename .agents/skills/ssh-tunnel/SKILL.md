@@ -1,6 +1,6 @@
 ---
 name: ssh-tunnel
-description: 公网 SSH 隧道维护指南，覆盖临时 cloudflared Quick Tunnel 与持久 FRP 密钥入口。适用于远程连接、公司虚拟机、远程开发、FRP、SSH 安全入口。
+description: 公网 SSH 与反向转发维护指南，覆盖临时 cloudflared Quick Tunnel、受限反向 SSH 与持久 FRP 密钥入口。适用于远程连接、固定公网域名、公司虚拟机、远程开发、FRP、SSH 安全入口。
 ---
 
 # ssh-tunnel
@@ -23,9 +23,9 @@ description: 公网 SSH 隧道维护指南，覆盖临时 cloudflared Quick Tunn
 
 ### 启动隧道（默认）
 
-1. 检查是否已有 cloudflared tunnel 进程在跑（`pgrep -f "cloudflared tunnel"`）
-   - 有：输出当前 tunnel 信息，不重复启动
-   - 没有：启动新 tunnel
+1. 先读取本项目 `current.json` 的精确 PID，再用 `ps -p <PID> -o command=` 核对它是否属于本项目。
+   - PID 与命令均匹配：输出当前 tunnel 信息，不重复启动。
+   - PID 不存在或不匹配：只清理本项目的失效状态文件，不处理其他 cloudflared 进程。
 
 2. 确认前置条件：
    ```bash
@@ -83,11 +83,11 @@ description: 公网 SSH 隧道维护指南，覆盖临时 cloudflared Quick Tunn
 ```bash
 # 读取 current.json 获取 PID
 kill {PID}
-# 或兜底
-pkill -f "cloudflared tunnel --url ssh"
 # 清理 current.json
 rm current.json
 ```
+
+禁止使用 `pkill -f cloudflared` 或其他宽泛模式作为兜底；同一台机器可能并存多个项目的 tunnel。
 
 ### 查看状态（status）
 
@@ -100,8 +100,33 @@ pgrep -f "cloudflared tunnel" && echo "运行中" || echo "未运行"
 
 - tunnel 地址是**临时的**，每次启动都会变，重启后需重新获取
 - 另一台电脑也需要安装 `cloudflared`（macOS: `brew install cloudflared`，Windows: `winget install cloudflare.cloudflared`）
-- 无 SLA 保证（免费 quick tunnel），生产用途建议用 Named Tunnel
+- 无 SLA 保证（免费 Quick Tunnel），只允许短时诊断，不作为用户体验、生产或长期入口，也不把 `trycloudflare.com` 地址交付给用户
 - 本机 SSH 必须开启（`sudo systemsetup -setremotelogin on`）
+
+## 固定 Web 入口：受限反向 SSH
+
+适合内网主机没有可入站公网 IPv4/IPv6，但能主动连接公网 VPS 的场景：
+
+```text
+浏览器
+  → 固定域名 HTTPS
+  → 公网 VPS Nginx/Caddy
+  → VPS 回环端口
+  → 内网主机主动建立的受限反向 SSH
+  → 本机 Web 服务
+```
+
+安全要求：
+
+- VPS 的反向转发端口只监听 `127.0.0.1`，不直接公开。
+- 使用项目独立密钥；`authorized_keys` 限制 shell、PTY、agent/X11 forwarding，只允许指定 `permitlisten`。
+- 用户公网入口和管理员 SSH 运维入口分离，不能因为网页可访问就宣称远程维护已打通。
+- Web 服务和数据库不直接暴露公网，公网只开放反向代理的 443。
+- launchd/systemd 负责重启恢复；检查进程时记录 PID/runs，连续观察不能只看瞬时 active。
+
+验收至少包含：DNS、TLS、VPS 本机回源、独立公网访问、登录后真实业务页面、两个网络连续多轮请求、转发进程无重启抖动。
+
+KidsHub Growth Insight 的已验证模式：`insight.kidshub.cn` → aliyun-hk Nginx → 回环 13200 → Studio 受限反向 SSH → Next.js 3200。Error 1016/1033 属于 Cloudflare/DNS/隧道层，不应在应用或数据库层盲改。
 
 ## 持久入口：公司 Ubuntu 虚拟机
 
