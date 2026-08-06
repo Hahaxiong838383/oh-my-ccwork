@@ -30,6 +30,7 @@ class AishikeProductionConsole {
             <p>以设备 SN 为主线，记录每次烧录、失败重试和六项测试，历史结果永久保留。</p>
           </div>
           <div class="production-hero-actions">
+            <button class="btn btn-primary production-open-quality">质量与入库</button>
             <button class="btn btn-default production-open-flash-list">烧录历史</button>
             <button class="btn btn-default production-open-test-list">测试记录</button>
           </div>
@@ -73,6 +74,7 @@ class AishikeProductionConsole {
     this.wrapper.on("click", ".production-lookup", () => this.lookup());
     this.wrapper.on("click", ".production-camera", () => this.open_camera());
     this.wrapper.on("click", ".production-open-device", () => this.open_device());
+    this.wrapper.on("click", ".production-open-quality", () => this.open_quality());
     this.wrapper.on("click", ".production-open-sn", () => frappe.set_route("aishike-sn-console"));
     this.wrapper.on("click", ".production-refresh", () => this.refresh_device());
     this.wrapper.on("click", ".production-flash-pass", () => this.open_flash_dialog("PASS"));
@@ -146,6 +148,7 @@ class AishikeProductionConsole {
       </div>
       <div class="production-device-actions">
         <button class="btn btn-default production-refresh">刷新</button>
+        <button class="btn btn-default production-open-quality">质量与入库</button>
         <button class="btn btn-default production-open-device">打开设备档案</button>
       </div>
     `);
@@ -161,15 +164,20 @@ class AishikeProductionConsole {
       ["01", "组装", assembled, "设备结构与部件装配"],
       ["02", "烧录", flashed, "固件与 AI Agent 写入"],
       ["03", "六项测试", summary.complete, `${summary.passed}/6 项通过`],
-      ["04", "质量门", false, "M2.3 解锁"],
+      [
+        "04",
+        "质量门",
+        ["QC_PASSED", "STOCKED", "ALLOCATED", "SHIPPED", "ACTIVATED"].includes(device.lifecycle_state),
+        summary.complete ? "进入质量与入库工作台" : "等待六项测试通过",
+      ],
     ];
     this.wrapper
       .find(".production-flow")
       .html(
         steps
           .map(
-            ([number, title, complete, note], index) => `
-              <div class="production-flow-step ${complete ? "is-complete" : ""} ${index === 3 ? "is-locked" : ""}">
+            ([number, title, complete, note]) => `
+              <div class="production-flow-step ${complete ? "is-complete" : ""}">
                 <span>${number}</span><div><strong>${title}</strong><small>${note}</small></div>
               </div>`,
           )
@@ -249,7 +257,7 @@ class AishikeProductionConsole {
     this.wrapper.find(".production-test-panel").html(`
       <div class="production-panel-heading">
         <div><span>02</span><h3>六项出厂测试</h3></div>
-        <em>${summary.complete ? "六项已通过，等待 M2.3" : `${summary.passed}/6 已通过`}</em>
+        <em>${summary.complete ? "六项已通过，可进入质量放行" : `${summary.passed}/6 已通过`}</em>
       </div>
       <div class="production-test-grid">${cards}</div>
       ${canTest ? "" : '<div class="production-test-lock">设备烧录通过后自动解锁测试操作。</div>'}
@@ -333,6 +341,13 @@ class AishikeProductionConsole {
     if (this.current_serial()) {
       frappe.set_route("Form", "Aishike Device Unit", this.current_serial());
     }
+  }
+
+  open_quality() {
+    if (this.current_serial()) {
+      frappe.route_options = { scan_value: this.current_serial() };
+    }
+    frappe.set_route("aishike-quality-console");
   }
 
   current_serial() {

@@ -23,11 +23,24 @@
   "column_break_manufacturing",
   "firmware_version",
   "agent_version",
+  "quality_stock_section",
+  "quality_release_record",
+  "current_warehouse",
+  "column_break_quality_stock",
+  "latest_stock_movement",
   "commercial_section",
   "current_channel",
   "channel_order_id",
+  "latest_fulfillment_record",
   "column_break_commercial",
+  "current_customer_ref",
+  "logistics_section",
+  "logistics_carrier",
+  "tracking_no",
+  "shipped_at",
+  "column_break_logistics",
   "activation_ref",
+  "activated_at",
   "last_event_at"
  ],
  "fields": [
@@ -134,6 +147,37 @@
    "read_only": 1
   },
   {
+   "fieldname": "quality_stock_section",
+   "fieldtype": "Section Break",
+   "label": "质量与库存"
+  },
+  {
+   "fieldname": "quality_release_record",
+   "fieldtype": "Link",
+   "label": "质量放行凭证",
+   "options": "Aishike Quality Release Record",
+   "read_only": 1
+  },
+  {
+   "fieldname": "current_warehouse",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "当前仓库",
+   "options": "Warehouse",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_quality_stock",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "latest_stock_movement",
+   "fieldtype": "Link",
+   "label": "最近库存凭证",
+   "options": "Aishike Device Stock Movement",
+   "read_only": 1
+  },
+  {
    "fieldname": "commercial_section",
    "fieldtype": "Section Break",
    "label": "销售与服务"
@@ -142,21 +186,72 @@
    "fieldname": "current_channel",
    "fieldtype": "Select",
    "label": "当前销售渠道",
-   "options": "\nTMALL\nJD\nDEALER"
+   "options": "\nTMALL\nJD\nDEALER",
+   "read_only": 1
   },
   {
    "fieldname": "channel_order_id",
-   "fieldtype": "Data",
-   "label": "渠道订单号"
+   "fieldtype": "Link",
+   "label": "渠道订单",
+   "options": "Aishike Channel Order",
+   "read_only": 1
+  },
+  {
+   "fieldname": "latest_fulfillment_record",
+   "fieldtype": "Link",
+   "label": "最近履约凭证",
+   "options": "Aishike Device Fulfillment Record",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_commercial",
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "current_customer_ref",
+   "fieldtype": "Data",
+   "label": "脱敏客户引用",
+   "read_only": 1
+  },
+  {
+   "fieldname": "logistics_section",
+   "fieldtype": "Section Break",
+   "label": "物流与激活"
+  },
+  {
+   "fieldname": "logistics_carrier",
+   "fieldtype": "Data",
+   "label": "物流承运商",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tracking_no",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "物流单号",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shipped_at",
+   "fieldtype": "Datetime",
+   "label": "发货时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_logistics",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "activation_ref",
    "fieldtype": "Data",
-   "label": "脱敏激活引用"
+   "label": "脱敏激活引用",
+   "read_only": 1
+  },
+  {
+   "fieldname": "activated_at",
+   "fieldtype": "Datetime",
+   "label": "激活时间",
+   "read_only": 1
   },
   {
    "fieldname": "last_event_at",
@@ -176,6 +271,18 @@
   },
   {
    "link_doctype": "Aishike Device Lifecycle Event",
+   "link_fieldname": "device_unit"
+  },
+  {
+   "link_doctype": "Aishike Quality Release Record",
+   "link_fieldname": "device_unit"
+  },
+  {
+   "link_doctype": "Aishike Device Stock Movement",
+   "link_fieldname": "device_unit"
+  },
+  {
+   "link_doctype": "Aishike Device Fulfillment Record",
    "link_fieldname": "device_unit"
   }
  ],
@@ -207,6 +314,27 @@
    "role": "Manufacturing Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Quality Manager"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager"
   }
  ],
  "show_name_in_global_search": 1,

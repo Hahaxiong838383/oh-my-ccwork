@@ -1,0 +1,154 @@
+{
+ "actions": [],
+ "allow_import": 0,
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-08-06 19:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "mapping_section",
+  "mapping_key",
+  "channel",
+  "channel_scope",
+  "column_break_mapping",
+  "external_sku",
+  "sku_configuration",
+  "status",
+  "validity_section",
+  "valid_from",
+  "valid_to"
+ ],
+ "fields": [
+  {
+   "fieldname": "mapping_section",
+   "fieldtype": "Section Break",
+   "label": "渠道 SKU 映射"
+  },
+  {
+   "fieldname": "mapping_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "映射唯一键",
+   "read_only": 1,
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "销售渠道",
+   "options": "TMALL\nJD\nDEALER",
+   "reqd": 1
+  },
+  {
+   "fieldname": "channel_scope",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "渠道范围",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_mapping",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "external_sku",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "渠道 SKU",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sku_configuration",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "内部 SKU",
+   "options": "Aishike SKU Configuration",
+   "reqd": 1
+  },
+  {
+   "default": "ACTIVE",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "映射状态",
+   "options": "ACTIVE\nDISABLED",
+   "reqd": 1
+  },
+  {
+   "fieldname": "validity_section",
+   "fieldtype": "Section Break",
+   "label": "有效期"
+  },
+  {
+   "fieldname": "valid_from",
+   "fieldtype": "Date",
+   "label": "生效日期"
+  },
+  {
+   "fieldname": "valid_to",
+   "fieldtype": "Date",
+   "label": "失效日期"
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-06 19:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Aishike ERP",
+ "name": "Aishike Channel SKU Mapping",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Quality Manager"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

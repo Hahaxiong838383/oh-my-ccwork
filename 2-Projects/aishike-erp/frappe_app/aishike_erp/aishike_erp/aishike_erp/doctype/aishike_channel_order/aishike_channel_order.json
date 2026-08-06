@@ -1,0 +1,243 @@
+{
+ "actions": [],
+ "allow_import": 0,
+ "allow_rename": 0,
+ "autoname": "format:ASK-ORD-{#####}",
+ "creation": "2026-08-06 19:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "order_section",
+  "external_order_key",
+  "channel",
+  "channel_scope",
+  "external_order_id",
+  "column_break_order",
+  "channel_sku_mapping",
+  "external_sku",
+  "sku_configuration",
+  "order_quantity",
+  "progress_section",
+  "order_status",
+  "allocated_count",
+  "column_break_progress",
+  "shipped_count",
+  "activated_count",
+  "reference_section",
+  "recipient_ref",
+  "internal_sales_order",
+  "raw_payload_ref",
+  "column_break_reference",
+  "imported_at",
+  "imported_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "order_section",
+   "fieldtype": "Section Break",
+   "label": "统一渠道订单"
+  },
+  {
+   "fieldname": "external_order_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "外部订单唯一键",
+   "read_only": 1,
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "销售渠道",
+   "options": "TMALL\nJD\nDEALER",
+   "reqd": 1
+  },
+  {
+   "fieldname": "channel_scope",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "渠道范围",
+   "reqd": 1
+  },
+  {
+   "fieldname": "external_order_id",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "渠道订单号",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_order",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "channel_sku_mapping",
+   "fieldtype": "Link",
+   "label": "渠道 SKU 映射",
+   "options": "Aishike Channel SKU Mapping",
+   "reqd": 1
+  },
+  {
+   "fieldname": "external_sku",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "渠道 SKU",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "sku_configuration",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "内部 SKU",
+   "options": "Aishike SKU Configuration",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "order_quantity",
+   "fieldtype": "Int",
+   "label": "订单数量",
+   "reqd": 1
+  },
+  {
+   "fieldname": "progress_section",
+   "fieldtype": "Section Break",
+   "label": "履约进度"
+  },
+  {
+   "default": "OPEN",
+   "fieldname": "order_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "订单状态",
+   "options": "OPEN\nPARTIALLY_ALLOCATED\nALLOCATED\nPARTIALLY_SHIPPED\nSHIPPED\nPARTIALLY_ACTIVATED\nACTIVATED",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "allocated_count",
+   "fieldtype": "Int",
+   "label": "已分配数量",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_progress",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "shipped_count",
+   "fieldtype": "Int",
+   "label": "已发货数量",
+   "read_only": 1
+  },
+  {
+   "fieldname": "activated_count",
+   "fieldtype": "Int",
+   "label": "已激活数量",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_section",
+   "fieldtype": "Section Break",
+   "label": "引用与审计"
+  },
+  {
+   "fieldname": "recipient_ref",
+   "fieldtype": "Data",
+   "label": "脱敏收货对象引用"
+  },
+  {
+   "fieldname": "internal_sales_order",
+   "fieldtype": "Link",
+   "label": "ERP 销售订单（可选）",
+   "options": "Sales Order"
+  },
+  {
+   "fieldname": "raw_payload_ref",
+   "fieldtype": "Data",
+   "label": "脱敏原始报文引用"
+  },
+  {
+   "fieldname": "column_break_reference",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "imported_at",
+   "fieldtype": "Datetime",
+   "label": "录入时间",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "imported_by",
+   "fieldtype": "Link",
+   "label": "录入人",
+   "options": "User",
+   "read_only": 1,
+   "reqd": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-06 19:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Aishike ERP",
+ "name": "Aishike Channel Order",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Quality Manager"
+  }
+ ],
+ "sort_field": "imported_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

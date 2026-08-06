@@ -4,6 +4,11 @@ Aishike Device Unit,爱视可设备档案
 Aishike Device Test Record,爱视可设备测试记录
 Aishike Device Lifecycle Event,爱视可设备生命周期事件
 Aishike Firmware Flash Record,爱视可固件烧录记录
+Aishike Quality Release Record,爱视可质量放行记录
+Aishike Device Stock Movement,爱视可设备库存移动
+Aishike Channel SKU Mapping,爱视可渠道 SKU 映射
+Aishike Channel Order,爱视可渠道订单
+Aishike Device Fulfillment Record,爱视可设备履约凭证
 SKU Configuration,SKU 配置
 Device Units,设备档案
 Device Tests,设备测试
@@ -39,6 +44,9 @@ AGING,老化测试
 OQC,出货质量检验
 PASS,通过
 FAIL,不通过
+REJECT,驳回
+RECEIVE,成品入库
+TRANSFER,仓库调拨
 Approve SKU,批准 SKU
 Disable SKU,停用 SKU
 Status,状态
@@ -116,6 +124,13 @@ Aishike Serial Number Rule,爱视可 SN 规则
 Aishike Serial Number Batch,爱视可 SN 生成批次
 SN Console,SN 工作台
 Production Console,生产测试
+Quality Console,质量与入库
+Quality Releases,质量放行记录
+Stock Movements,库存移动记录
+Fulfillment Console,销售履约
+Channel SKU Mappings,渠道 SKU 映射
+Channel Orders,渠道订单
+Fulfillment Records,设备履约凭证
 PENDING,待测试
 FLASH_PASS,烧录通过
 FLASH_FAIL,烧录失败
@@ -128,3 +143,14 @@ BATCH,按生产批次重置
 GENERATED,已生成
 Scan QRCode,扫描二维码
 Open Camera,打开摄像头
+QUALITY_REJECTED,质量驳回
+STOCK_TRANSFERRED,仓库调拨
+DEVICE_CREATED,设备创建
+ACTIVE,启用
+OPEN,待分配
+PARTIALLY_ALLOCATED,部分分配
+PARTIALLY_SHIPPED,部分发货
+PARTIALLY_ACTIVATED,部分激活
+ALLOCATE,设备分配
+SHIP,物流发货
+ACTIVATE,设备激活

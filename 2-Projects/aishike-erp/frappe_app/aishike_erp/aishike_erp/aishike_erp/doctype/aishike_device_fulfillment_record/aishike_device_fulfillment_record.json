@@ -1,0 +1,209 @@
+{
+ "actions": [],
+ "allow_import": 0,
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-08-06 19:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "action_section",
+  "action_key",
+  "channel_order",
+  "device_unit",
+  "action",
+  "action_no",
+  "column_break_action",
+  "action_at",
+  "operator",
+  "source_system",
+  "operation_section",
+  "operation_warehouse",
+  "logistics_carrier",
+  "tracking_no",
+  "column_break_operation",
+  "activation_ref",
+  "customer_ref",
+  "source_record_id",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "action_section",
+   "fieldtype": "Section Break",
+   "label": "设备履约动作"
+  },
+  {
+   "fieldname": "action_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "动作唯一键",
+   "read_only": 1,
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "channel_order",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "渠道订单",
+   "options": "Aishike Channel Order",
+   "reqd": 1
+  },
+  {
+   "fieldname": "device_unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "设备档案",
+   "options": "Aishike Device Unit",
+   "reqd": 1
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "履约动作",
+   "options": "ALLOCATE\nSHIP\nACTIVATE",
+   "reqd": 1
+  },
+  {
+   "fieldname": "action_no",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "设备动作序号",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_action",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "action_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "动作时间",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "operator",
+   "fieldtype": "Link",
+   "label": "操作人",
+   "options": "User",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "source_system",
+   "fieldtype": "Select",
+   "label": "来源系统",
+   "options": "OMS\nWMS\nIOT",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "operation_section",
+   "fieldtype": "Section Break",
+   "label": "仓储、物流与激活信息"
+  },
+  {
+   "fieldname": "operation_warehouse",
+   "fieldtype": "Link",
+   "label": "操作仓库",
+   "options": "Warehouse",
+   "read_only": 1
+  },
+  {
+   "fieldname": "logistics_carrier",
+   "fieldtype": "Data",
+   "label": "物流承运商"
+  },
+  {
+   "fieldname": "tracking_no",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "物流单号"
+  },
+  {
+   "fieldname": "column_break_operation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "activation_ref",
+   "fieldtype": "Data",
+   "label": "脱敏激活引用"
+  },
+  {
+   "fieldname": "customer_ref",
+   "fieldtype": "Data",
+   "label": "脱敏客户引用"
+  },
+  {
+   "fieldname": "source_record_id",
+   "fieldtype": "Data",
+   "label": "来源记录编号"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-06 19:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Aishike ERP",
+ "name": "Aishike Device Fulfillment Record",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager",
+   "share": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Quality Manager"
+  }
+ ],
+ "sort_field": "action_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}

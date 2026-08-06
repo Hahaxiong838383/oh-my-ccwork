@@ -3,40 +3,40 @@ from __future__ import annotations
 import unittest
 
 from aishike_erp.phase_gate import (
-    derive_m2_device_state,
-    is_m23_fixture_batch,
-    is_m2_event_type,
+    is_m3_device_state,
+    is_m3_event_type,
+    is_m23_device_state,
+    is_m23_event_type,
 )
 
 
 class PhaseGateTest(unittest.TestCase):
-    def test_passed_flash_has_priority_over_assembly(self) -> None:
-        self.assertEqual(
-            "FLASHED",
-            derive_m2_device_state(has_passed_flash=True, has_assembly_event=True),
-        )
+    def test_quality_and_stock_states_are_inside_m23(self) -> None:
+        self.assertTrue(is_m23_device_state("QC_PASSED"))
+        self.assertTrue(is_m23_device_state("STOCKED"))
 
-    def test_assembly_without_passed_flash_stays_assembled(self) -> None:
-        self.assertEqual(
-            "ASSEMBLED",
-            derive_m2_device_state(has_passed_flash=False, has_assembly_event=True),
-        )
+    def test_channel_states_remain_outside_m23(self) -> None:
+        self.assertFalse(is_m23_device_state("ALLOCATED"))
+        self.assertFalse(is_m23_device_state("SHIPPED"))
 
-    def test_device_without_manufacturing_evidence_returns_to_created(self) -> None:
-        self.assertEqual(
-            "CREATED",
-            derive_m2_device_state(has_passed_flash=False, has_assembly_event=False),
-        )
+    def test_quality_and_stock_events_are_inside_m23(self) -> None:
+        self.assertTrue(is_m23_event_type("QUALITY_REJECTED"))
+        self.assertTrue(is_m23_event_type("QC_PASSED"))
+        self.assertTrue(is_m23_event_type("STOCKED"))
+        self.assertTrue(is_m23_event_type("STOCK_TRANSFERRED"))
 
-    def test_only_explicit_m23_batches_are_cleanup_fixtures(self) -> None:
-        self.assertTrue(is_m23_fixture_batch("M23-BROWSER-ACCEPT-001"))
-        self.assertFalse(is_m23_fixture_batch("M2-ACCEPT-001"))
-        self.assertFalse(is_m23_fixture_batch(None))
+    def test_channel_events_remain_outside_m23(self) -> None:
+        self.assertFalse(is_m23_event_type("ALLOCATED"))
+        self.assertFalse(is_m23_event_type("SHIPPED"))
 
-    def test_quality_and_stock_events_are_outside_m2(self) -> None:
-        self.assertTrue(is_m2_event_type("TEST_PASS"))
-        self.assertFalse(is_m2_event_type("QC_PASSED"))
-        self.assertFalse(is_m2_event_type("STOCKED"))
+    def test_fulfillment_states_and_events_are_inside_m3(self) -> None:
+        for value in ("ALLOCATED", "SHIPPED", "ACTIVATED"):
+            self.assertTrue(is_m3_device_state(value))
+            self.assertTrue(is_m3_event_type(value))
+
+    def test_rma_states_remain_outside_m3(self) -> None:
+        self.assertFalse(is_m3_device_state("RMA_OPEN"))
+        self.assertFalse(is_m3_event_type("RMA_OPEN"))
 
 
 if __name__ == "__main__":

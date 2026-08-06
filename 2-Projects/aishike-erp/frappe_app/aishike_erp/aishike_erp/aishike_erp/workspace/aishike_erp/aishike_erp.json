@@ -1,7 +1,7 @@
 {
  "app": "aishike_erp",
  "charts": [],
- "content": "[{\"id\":\"header-masters\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>产品与设备主数据</b></span>\",\"col\":12}},{\"id\":\"shortcut-sku\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"SKU 配置\",\"col\":4}},{\"id\":\"shortcut-sn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"SN 工作台\",\"col\":4}},{\"id\":\"shortcut-device\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"设备档案\",\"col\":4}},{\"id\":\"shortcut-production\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"生产测试\",\"col\":4}},{\"id\":\"shortcut-test\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"设备测试\",\"col\":4}}]",
+ "content": "[{\"id\":\"header-masters\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>产品与设备主数据</b></span>\",\"col\":12}},{\"id\":\"shortcut-sku\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"SKU 配置\",\"col\":4}},{\"id\":\"shortcut-sn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"SN 工作台\",\"col\":4}},{\"id\":\"shortcut-device\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"设备档案\",\"col\":4}},{\"id\":\"shortcut-production\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"生产测试\",\"col\":4}},{\"id\":\"shortcut-test\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"设备测试\",\"col\":4}},{\"id\":\"header-quality-stock\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>质量、库存与追溯</b></span>\",\"col\":12}},{\"id\":\"shortcut-quality-console\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"质量与入库\",\"col\":4}},{\"id\":\"shortcut-quality-record\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"质量放行记录\",\"col\":4}},{\"id\":\"shortcut-stock-movement\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"库存移动记录\",\"col\":4}},{\"id\":\"header-fulfillment\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>渠道订单与设备履约</b></span>\",\"col\":12}},{\"id\":\"shortcut-fulfillment-console\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"销售履约\",\"col\":4}},{\"id\":\"shortcut-channel-mapping\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"渠道 SKU 映射\",\"col\":4}},{\"id\":\"shortcut-channel-order\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"渠道订单\",\"col\":4}},{\"id\":\"shortcut-fulfillment-record\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"设备履约凭证\",\"col\":4}}]",
  "creation": "2026-08-05 22:10:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Aishike ERP",
  "links": [],
- "modified": "2026-08-05 22:10:00.000000",
+ "modified": "2026-08-06 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Aishike ERP",
  "name": "Aishike ERP",
@@ -56,6 +56,53 @@
    "doc_view": "List",
    "label": "设备测试",
    "link_to": "Aishike Device Test Record",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "label": "质量与入库",
+   "link_to": "aishike-quality-console",
+   "type": "Page"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "质量放行记录",
+   "link_to": "Aishike Quality Release Record",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "库存移动记录",
+   "link_to": "Aishike Device Stock Movement",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "label": "销售履约",
+   "link_to": "aishike-fulfillment-console",
+   "type": "Page"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "渠道 SKU 映射",
+   "link_to": "Aishike Channel SKU Mapping",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "渠道订单",
+   "link_to": "Aishike Channel Order",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "设备履约凭证",
+   "link_to": "Aishike Device Fulfillment Record",
    "type": "DocType"
   }
  ],

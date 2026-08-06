@@ -1,6 +1,6 @@
 ---
 name: aishike-erp
-description: 爱视可智能 ERP 项目开发、部署与验收入口。用户提到爱视可 ERP、读写台产品线、公司虚拟机上的 ERPNext、SKU、SN、扫码枪、烧录、六项测试、质量门、成品入库、设备追溯或 M1/M2/M2.1/M2.2/M2.3 时使用。
+description: 爱视可智能 ERP 项目开发、部署与验收入口。用户提到爱视可 ERP、读写台产品线、公司虚拟机上的 ERPNext、SKU、SN、扫码枪、烧录、六项测试、质量门、成品入库、渠道订单、发货、激活、设备追溯或 M1/M2/M2.1/M2.2/M2.3/M3 时使用。
 layer: 项目层
 authorization: B区（部署与阶段推进必须遵守用户验收闸门）
 output_levels: L2
@@ -16,7 +16,8 @@ output_levels: L2
 4. M1 复盘：`docs/m1-retrospective.md`
 5. M2 SN 方案：`docs/m2-sn-plan-v0.1.md`
 6. M2.2 复盘：`docs/m2-2-retrospective.md`
-7. 公司虚拟机运行状态：`ssh company-vm 'cd /home/futurus/aishike-erp && ./deploy/doctor.sh'`
+7. M3 复盘：`docs/m3-retrospective.md`
+8. 公司虚拟机运行状态：`ssh company-vm 'cd /home/futurus/aishike-erp && ./deploy/doctor.sh'`
 
 历史文档只能作为基线；涉及容器、页面、数据或端口时必须重新实测。
 
@@ -30,6 +31,8 @@ output_levels: L2
 - 浏览器：`http://aishike.localhost:18081`
 - SN 工作台：`/desk/aishike-sn-console`
 - 生产测试工作台：`/desk/aishike-production-console`
+- 质量与入库工作台：`/desk/aishike-quality-console`
+- 销售履约工作台：`/desk/aishike-fulfillment-console`
 - 运行版本基线：Frappe `16.30.0`、ERPNext `16.31.0`、`aishike_erp 0.1.0`
 
 密码、Token、私钥、部署 `.env`、`deploy/secrets/`、备份和原始设备日志不得进入 Git、skill、记忆、截图或命令输出。
@@ -41,9 +44,11 @@ output_levels: L2
 | M1 | 已验收 | 中文化、SKU 主数据、批准锁定 |
 | M2.1 | 已验收 | SN 规则、批量生成、条形码/二维码、扫码枪、组装登记 |
 | M2.2 | 已验收 | 烧录历史、失败重试、六项测试、复测历史 |
-| M2.3 | 等待指令 | 质量门、成品入库、完整设备追溯 |
+| M2.3 | 已验收 | 质量门、成品入库、仓库调拨、完整设备追溯 |
+| M3 | 已验收 | 渠道订单、设备分配、发货与激活 |
+| M4 | 未授权 | 售后 RMA、退换货、设备解绑与逆向物流 |
 
-**硬规则**：用户未明确说启动 M2.3 前，不写 M2.3 代码、不部署质量放行/入库入口，也不把设备推进到 `QC_PASSED` 或 `STOCKED`。
+**硬规则**：M3 已通过人工验收；川哥未发出新的明确 M4 指令前，不规划或启动 M4，不创建 RMA、退换货、设备解绑或逆向物流对象。
 
 每次继续开发前同时核对用户最后一条阶段指令、项目 README、Git 工作区和服务器实际页面；任一处超出已授权阶段都必须停止，不能把“代码已写”或“自动化已通过”当成阶段授权。
 
@@ -67,6 +72,28 @@ output_levels: L2
 - 六项测试为 `OPTICAL/SENSOR/FUNCTION/AI/AGING/OQC`；
 - 当前测试状态取每项最新记录，完整历史永久保留；
 - ERP 只保存日志引用、脱敏摘要和必要结构化测量值。
+
+### 渠道订单与履约
+
+- 支持 `TMALL`、`JD`、`DEALER`，渠道 SKU 只能映射到已批准内部 SKU；
+- `渠道 + 渠道范围 + 外部订单号` 是订单幂等键，重复内容冲突时拒绝覆盖；
+- 新订单必须使用启用映射，映射停用后历史订单仍可继续履约和刷新投影；
+- 只有 `STOCKED`、SKU 匹配且存在当前仓库的设备可以分配；
+- 发货必须先分配并保存承运商、物流单号和实际出库仓库；
+- 激活必须发生在发货后，收货对象、原始报文、激活和客户脱敏引用均禁止出现手机号和邮箱；
+- 分配、发货和激活记录不可修改、不可删除，设备和订单状态只能由凭证派生；
+- Sales Manager 维护映射和订单，Stock Manager 分配与发货，System Manager 或设备云受控入口激活。
+
+### M3 经验规则
+
+- 权限 JSON 和按钮显隐只证明“配置看起来正确”；必须用临时真实用户执行销售建单、仓库分配/发货、系统激活，并在事务回滚后验证用户、订单、映射和凭证残留为 0；
+- 设备与订单状态必须由不可修改凭证投影，验收同时核对订单计数、设备状态、最近凭证、仓库清空、物流/激活投影和生命周期事件，不能只看一个状态字段；
+- 新订单要求启用映射，但映射停用不能阻断历史订单的投影刷新与后续履约；新建约束和历史可追溯性要分开处理；
+- 所有标为“脱敏引用”的字段都要执行同一隐私校验，不能只保护收货对象和激活字段而漏掉原始报文引用；
+- 浏览器自动化工具可能在操作日志中回显填充值；敏感值一旦被工具回显，立即轮换服务端凭据，后续只通过受限文件到剪贴板传递；
+- 部署前同时备份源码和数据库，`rsync` 排除 `.env`、`secrets/`、`backups/`、`output/` 和浏览器产物；部署后做连续自动验收、容器重启复验、全新浏览器闭环和源码零漂移检查；
+- 公网目标必须先核对设备真值；爱视可 ERP 只部署 `company-vm`，Studio 仅可做连通性验证，不得因用户口误把业务系统部署到错误主机；
+- 阶段完成不等于下一阶段获批；M3 已验收，但 M4 仍保持 `WAIT_EXPLICIT_USER_COMMAND`。
 
 ### Frappe 实现约束
 
@@ -93,6 +120,8 @@ python3 -m unittest discover -s tests -v
 cd ~/mycc/2-Projects/aishike-erp
 node --check frappe_app/aishike_erp/aishike_erp/aishike_erp/page/aishike_sn_console/aishike_sn_console.js
 node --check frappe_app/aishike_erp/aishike_erp/aishike_erp/page/aishike_production_console/aishike_production_console.js
+node --check frappe_app/aishike_erp/aishike_erp/aishike_erp/page/aishike_quality_console/aishike_quality_console.js
+node --check frappe_app/aishike_erp/aishike_erp/aishike_erp/page/aishike_fulfillment_console/aishike_fulfillment_console.js
 bash -n deploy/bootstrap.sh deploy/doctor.sh
 ```
 
@@ -114,12 +143,19 @@ bash -n deploy/bootstrap.sh deploy/doctor.sh
 - 不能用容器 active 或 HTTP 200 替代业务验收；
 - M2.1 必须证明连续生成不重复、扫码定位和组装登记；
 - M2.2 必须证明失败烧录不推进、成功重烧推进、未烧录禁止测试、失败后复测恢复、记录不可修改、六项通过后仍停在 `FLASHED`；
+- M2.3 必须证明质量驳回不推进、再次放行进入 `QC_PASSED`、成品入库进入 `STOCKED`、仓库调拨保留完整历史、岗位权限最小化和 M3 状态防越界；
+- M3 必须证明订单幂等、SKU/库存/数量门禁、缺物流不可发货、未发货不可激活、隐私字段阻断、凭证不可篡改、五岗位真实动作链及事务回滚、桌面/手机无横向溢出和控制台 0 错误；
 - 截图保存在项目 `output/playwright/`，该目录不进入 Git；
 - 提交和推送后核对本地与远端 SHA 一致；
 - 主仓或共享记忆仓存在其他任务脏文件时，只做路径或索引级选择性暂存。
 
 ## 当前验收样本
 
-- `ASK-000002`：两次烧录，第一次失败、第二次通过；光学第一次失败、第二次通过；六项最新结果全部通过，状态仍为 `FLASHED`；
+- `ASK-000002`：M2.3 自动闭环样机，已完成驳回、放行、入库和调拨；
 - `ASK-000003`：已组装、未烧录，作为后续人工体验样本；
-- M2.3：`WAIT_EXPLICIT_USER_COMMAND`。
+- `ASK-000015`：M2.3 人工验收样机，六项测试通过，停在 `FLASHED`；
+- `ASK-000016`：M2.3 浏览器端完整闭环样机，已调拨至 `Stores - ASK`；
+- `ASK-000017` / `ASK-ORD-00009`：M3 自动闭环样机与订单，已激活；
+- `ASK-000019` / `ASK-ORD-00013`：M3 浏览器完整闭环样机与订单，已激活；
+- `ASK-000020` / `ASK-ORD-00015`：M3 人工验收样机与订单，已完成分配、发货和激活；
+- M3：`ACCEPTED`；M4：`WAIT_EXPLICIT_USER_COMMAND`。

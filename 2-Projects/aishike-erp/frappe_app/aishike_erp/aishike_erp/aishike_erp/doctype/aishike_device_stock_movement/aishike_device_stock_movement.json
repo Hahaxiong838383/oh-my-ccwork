@@ -1,0 +1,170 @@
+{
+ "actions": [],
+ "allow_import": 0,
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-08-06 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "movement_section",
+  "device_unit",
+  "movement_type",
+  "movement_no",
+  "column_break_movement",
+  "from_warehouse",
+  "to_warehouse",
+  "movement_at",
+  "reference_section",
+  "operator",
+  "erp_stock_entry",
+  "column_break_reference",
+  "reference_type",
+  "reference_id",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "movement_section",
+   "fieldtype": "Section Break",
+   "label": "库存移动"
+  },
+  {
+   "fieldname": "device_unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "设备档案",
+   "options": "Aishike Device Unit",
+   "reqd": 1
+  },
+  {
+   "fieldname": "movement_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "移动类型",
+   "options": "RECEIVE\nTRANSFER",
+   "reqd": 1
+  },
+  {
+   "fieldname": "movement_no",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "移动次数",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_movement",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_warehouse",
+   "fieldtype": "Link",
+   "label": "来源仓库",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "to_warehouse",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "目标仓库",
+   "options": "Warehouse",
+   "reqd": 1
+  },
+  {
+   "default": "Now",
+   "fieldname": "movement_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "移动时间",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "reference_section",
+   "fieldtype": "Section Break",
+   "label": "凭证与执行信息"
+  },
+  {
+   "default": "__user",
+   "fieldname": "operator",
+   "fieldtype": "Link",
+   "label": "操作员",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erp_stock_entry",
+   "fieldtype": "Link",
+   "label": "ERP 库存凭证",
+   "options": "Stock Entry"
+  },
+  {
+   "fieldname": "column_break_reference",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reference_type",
+   "fieldtype": "Data",
+   "label": "外部凭证类型"
+  },
+  {
+   "fieldname": "reference_id",
+   "fieldtype": "Data",
+   "label": "外部凭证编号"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-06 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Aishike ERP",
+ "name": "Aishike Device Stock Movement",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager",
+   "share": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Quality Manager"
+  }
+ ],
+ "sort_field": "movement_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}

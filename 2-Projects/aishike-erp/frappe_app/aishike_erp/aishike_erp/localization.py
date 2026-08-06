@@ -4,36 +4,36 @@ import json
 
 import frappe
 
-from aishike_erp.phase_gate import (
-    M2_ALLOWED_EVENT_TYPES,
-    M23_DEVICE_COLUMNS,
-    M23_FIXTURE_BATCH_PREFIX,
-    M23_ORPHAN_DOCTYPES,
-    derive_m2_device_state,
-)
-
 
 SIDEBAR_LABELS = {
     "Home": "主页",
     "SKU Configuration": "SKU 配置",
     "SN Console": "SN 工作台",
     "Production Console": "生产测试",
+    "Quality Console": "质量与入库",
+    "Fulfillment Console": "销售履约",
     "Device Units": "设备档案",
     "Device Tests": "设备测试",
+    "Quality Releases": "质量放行记录",
+    "Stock Movements": "库存移动记录",
+    "Channel SKU Mappings": "渠道 SKU 映射",
+    "Channel Orders": "渠道订单",
+    "Fulfillment Records": "设备履约凭证",
 }
 
 WORKSPACE_SHORTCUT_LABELS = {
     "Aishike SKU Configuration": "SKU 配置",
     "aishike-sn-console": "SN 工作台",
     "aishike-production-console": "生产测试",
+    "aishike-quality-console": "质量与入库",
+    "aishike-fulfillment-console": "销售履约",
     "Aishike Device Unit": "设备档案",
     "Aishike Device Test Record": "设备测试",
-}
-
-M23_NAVIGATION_TARGETS = {
-    "aishike-quality-console",
-    "Aishike Quality Release Record",
-    "Aishike Device Stock Movement",
+    "Aishike Quality Release Record": "质量放行记录",
+    "Aishike Device Stock Movement": "库存移动记录",
+    "Aishike Channel SKU Mapping": "渠道 SKU 映射",
+    "Aishike Channel Order": "渠道订单",
+    "Aishike Device Fulfillment Record": "设备履约凭证",
 }
 
 WORKSPACE_CONTENT = [
@@ -67,12 +67,55 @@ WORKSPACE_CONTENT = [
         "type": "shortcut",
         "data": {"shortcut_name": "设备测试", "col": 4},
     },
+    {
+        "id": "header-quality-stock",
+        "type": "header",
+        "data": {"text": '<span class="h4"><b>质量、库存与追溯</b></span>', "col": 12},
+    },
+    {
+        "id": "shortcut-quality-console",
+        "type": "shortcut",
+        "data": {"shortcut_name": "质量与入库", "col": 4},
+    },
+    {
+        "id": "shortcut-quality-record",
+        "type": "shortcut",
+        "data": {"shortcut_name": "质量放行记录", "col": 4},
+    },
+    {
+        "id": "shortcut-stock-movement",
+        "type": "shortcut",
+        "data": {"shortcut_name": "库存移动记录", "col": 4},
+    },
+    {
+        "id": "header-fulfillment",
+        "type": "header",
+        "data": {"text": '<span class="h4"><b>渠道订单与设备履约</b></span>', "col": 12},
+    },
+    {
+        "id": "shortcut-fulfillment-console",
+        "type": "shortcut",
+        "data": {"shortcut_name": "销售履约", "col": 4},
+    },
+    {
+        "id": "shortcut-channel-mapping",
+        "type": "shortcut",
+        "data": {"shortcut_name": "渠道 SKU 映射", "col": 4},
+    },
+    {
+        "id": "shortcut-channel-order",
+        "type": "shortcut",
+        "data": {"shortcut_name": "渠道订单", "col": 4},
+    },
+    {
+        "id": "shortcut-fulfillment-record",
+        "type": "shortcut",
+        "data": {"shortcut_name": "设备履约凭证", "col": 4},
+    },
 ]
 
 
 def apply_chinese_defaults() -> dict[str, str]:
-    phase_cleanup = cleanup_m23_artifacts()
-
     if frappe.db.exists("Language", "zh"):
         frappe.db.set_value("Language", "zh", "enabled", 1)
 
@@ -90,10 +133,6 @@ def apply_chinese_defaults() -> dict[str, str]:
     if frappe.db.exists("Workspace Sidebar", "Aishike ERP"):
         sidebar = frappe.get_doc("Workspace Sidebar", "Aishike ERP")
         sidebar.title = "爱视可 ERP"
-        sidebar.set(
-            "items",
-            [item for item in sidebar.items if item.link_to not in M23_NAVIGATION_TARGETS],
-        )
         for item in sidebar.items:
             item.label = SIDEBAR_LABELS.get(item.label, item.label)
         if not any(item.link_to == "aishike-sn-console" for item in sidebar.items):
@@ -116,6 +155,26 @@ def apply_chinese_defaults() -> dict[str, str]:
                     "link_to": "aishike-production-console",
                 },
             )
+        if not any(item.link_to == "aishike-quality-console" for item in sidebar.items):
+            sidebar.append(
+                "items",
+                {
+                    "type": "Link",
+                    "label": "质量与入库",
+                    "link_type": "Page",
+                    "link_to": "aishike-quality-console",
+                },
+            )
+        if not any(item.link_to == "aishike-fulfillment-console" for item in sidebar.items):
+            sidebar.append(
+                "items",
+                {
+                    "type": "Link",
+                    "label": "销售履约",
+                    "link_type": "Page",
+                    "link_to": "aishike-fulfillment-console",
+                },
+            )
         sidebar.save(ignore_permissions=True)
 
     if frappe.db.exists("Workspace", "Aishike ERP"):
@@ -124,14 +183,6 @@ def apply_chinese_defaults() -> dict[str, str]:
         workspace.label = "Aishike ERP"
         workspace.title = "Aishike ERP"
         workspace.content = json.dumps(WORKSPACE_CONTENT, ensure_ascii=False, separators=(",", ":"))
-        workspace.set(
-            "shortcuts",
-            [
-                shortcut
-                for shortcut in workspace.shortcuts
-                if shortcut.link_to not in M23_NAVIGATION_TARGETS
-            ],
-        )
         if not any(shortcut.link_to == "aishike-sn-console" for shortcut in workspace.shortcuts):
             workspace.append(
                 "shortcuts",
@@ -154,105 +205,47 @@ def apply_chinese_defaults() -> dict[str, str]:
                     "color": "Orange",
                 },
             )
+        if not any(
+            shortcut.link_to == "aishike-quality-console" for shortcut in workspace.shortcuts
+        ):
+            workspace.append(
+                "shortcuts",
+                {
+                    "type": "Page",
+                    "link_to": "aishike-quality-console",
+                    "label": "质量与入库",
+                    "color": "Green",
+                },
+            )
+        if not any(
+            shortcut.link_to == "aishike-fulfillment-console"
+            for shortcut in workspace.shortcuts
+        ):
+            workspace.append(
+                "shortcuts",
+                {
+                    "type": "Page",
+                    "link_to": "aishike-fulfillment-console",
+                    "label": "销售履约",
+                    "color": "Blue",
+                },
+            )
+        for doctype, label, color in (
+            ("Aishike Quality Release Record", "质量放行记录", "Green"),
+            ("Aishike Device Stock Movement", "库存移动记录", "Blue"),
+            ("Aishike Channel SKU Mapping", "渠道 SKU 映射", "Blue"),
+            ("Aishike Channel Order", "渠道订单", "Orange"),
+            ("Aishike Device Fulfillment Record", "设备履约凭证", "Green"),
+        ):
+            if not any(shortcut.link_to == doctype for shortcut in workspace.shortcuts):
+                workspace.append(
+                    "shortcuts",
+                    {"type": "DocType", "link_to": doctype, "label": label, "color": color},
+                )
         for shortcut in workspace.shortcuts:
             shortcut.label = WORKSPACE_SHORTCUT_LABELS.get(shortcut.link_to, shortcut.label)
         workspace.save(ignore_permissions=True)
 
     frappe.db.commit()
     frappe.clear_cache()
-    return {
-        "language": "zh",
-        "user": "Administrator",
-        "display_name": "系统管理员",
-        "phase_cleanup": phase_cleanup,
-    }
-
-
-def cleanup_m23_artifacts() -> dict[str, int]:
-    fixture_devices = frappe.get_all(
-        "Aishike Device Unit",
-        filters={"production_batch": ["like", f"{M23_FIXTURE_BATCH_PREFIX}%"]},
-        pluck="name",
-    )
-    fixture_batches = frappe.get_all(
-        "Aishike Serial Number Batch",
-        filters={"production_batch": ["like", f"{M23_FIXTURE_BATCH_PREFIX}%"]},
-        pluck="name",
-    )
-
-    if fixture_devices:
-        for doctype in (
-            "Aishike Device Lifecycle Event",
-            "Aishike Firmware Flash Record",
-            "Aishike Device Test Record",
-        ):
-            frappe.db.delete(doctype, {"device_unit": ["in", fixture_devices]})
-        frappe.db.delete("Aishike Device Unit", {"name": ["in", fixture_devices]})
-
-    if fixture_batches:
-        frappe.db.delete("Aishike Serial Number Batch", {"name": ["in", fixture_batches]})
-
-    stale_events = frappe.get_all(
-        "Aishike Device Lifecycle Event",
-        filters={"event_type": ["not in", sorted(M2_ALLOWED_EVENT_TYPES)]},
-        pluck="name",
-    )
-    if stale_events:
-        frappe.db.delete("Aishike Device Lifecycle Event", {"name": ["in", stale_events]})
-
-    restored_devices = 0
-    for device in frappe.get_all(
-        "Aishike Device Unit",
-        fields=["name", "lifecycle_state"],
-    ):
-        target_state = derive_m2_device_state(
-            has_passed_flash=bool(
-                frappe.db.exists(
-                    "Aishike Firmware Flash Record",
-                    {"device_unit": device.name, "result": "PASS"},
-                )
-            ),
-            has_assembly_event=bool(
-                frappe.db.exists(
-                    "Aishike Device Lifecycle Event",
-                    {"device_unit": device.name, "event_type": "ASSEMBLED"},
-                )
-            ),
-        )
-        latest_event_at = frappe.db.get_value(
-            "Aishike Device Lifecycle Event",
-            {"device_unit": device.name},
-            "occurred_at",
-            order_by="occurred_at desc, creation desc",
-        )
-        if device.lifecycle_state != target_state:
-            restored_devices += 1
-        frappe.db.set_value(
-            "Aishike Device Unit",
-            device.name,
-            {"lifecycle_state": target_state, "last_event_at": latest_event_at},
-            update_modified=False,
-        )
-
-    dropped_columns = 0
-    for column in M23_DEVICE_COLUMNS:
-        if frappe.db.has_column("Aishike Device Unit", column):
-            frappe.db.sql_ddl(
-                f"ALTER TABLE `tabAishike Device Unit` DROP COLUMN `{column}`"
-            )
-            dropped_columns += 1
-
-    dropped_tables = 0
-    for doctype in M23_ORPHAN_DOCTYPES:
-        if frappe.db.table_exists(doctype, cached=False):
-            frappe.db.sql_ddl(f"DROP TABLE `tab{doctype}`")
-            dropped_tables += 1
-
-    return {
-        "fixture_devices": len(fixture_devices),
-        "fixture_batches": len(fixture_batches),
-        "stale_events": len(stale_events),
-        "restored_devices": restored_devices,
-        "dropped_columns": dropped_columns,
-        "dropped_tables": dropped_tables,
-    }
+    return {"language": "zh", "user": "Administrator", "display_name": "系统管理员"}
