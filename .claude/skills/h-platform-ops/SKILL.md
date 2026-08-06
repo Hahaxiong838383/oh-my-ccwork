@@ -1144,6 +1144,29 @@ ssh dev198 'bash -lc "cd ~/feishu-grok-bridge && git log --oneline origin/feishu
 `/srv/h-control/app` **不是 git checkout**，是 rsync 部署。`.env` 在 app 外层
 （`/srv/h-control/.env`），不会被覆盖；`node_modules` 不同步。
 
+### 🔴 控制面是【子树部署】——它不能引用仓根 `lib/`
+
+两个子系统的部署形态不对称，这是最容易漏、且本地全绿的一类缺陷：
+
+| 子系统 | 搬运方式 | 后果 |
+|---|---|---|
+| Bridge（dev198 / Mini） | **整棵仓库树** | `lib/` 引 `../control-plane/lib/` 安全（多处在用） |
+| 控制面（aliyun-hk） | **只 rsync `control-plane/` 子树** | 仓根 `lib/` 从不发；`control-plane/` 引 `../lib/` = 生产 `ERR_MODULE_NOT_FOUND`，服务直接起不来 |
+
+2026-08-06 真实拦截：`84cbf80` 给 `control-plane/server.mjs` 加了
+`'../lib/schedule-contract.mjs'`。**`npm test` 953 全过、`node --check` 全过**——因为开发机上
+那个路径真实存在。隔离实例第一次启动就崩，才暴露出来。修法是把该模块挪进
+`control-plane/lib/`（跨界方向回到既有约定），并加守卫
+`control-plane/test/deploy-boundary.test.mjs`：`control-plane/` 内任何 import 解析到子树之外
+即红并点名文件，已接进 `npm test`。
+
+⚠️ **起隔离实例时不要给它补一个仓根 `lib/` 让它跑起来**——那等于把缺陷掩盖掉。
+正确姿势是**只发 `control-plane/` 子树、根下不建 `lib/`**（用 `ls <隔离根> | grep -c '^lib$'` = 0
+留证），它能自己起来才算自包含。**隔离实例的价值取决于它复刻生产形态的程度。**
+
+顺带：控制面**没有部署脚本**（`ops/*.sh` 里 h-control 零命中），全靠本节这几行手敲 rsync。
+所以任何「还要额外发某个文件」的前提，写在交接文档里一定会丢——必须变成代码守卫。
+
 ⚠️ **dev198 没有 aliyun-hk 的 ssh 别名**（2026-07-26 实测 name resolution 失败）
 ——下面的 rsync 要在**有别名的机器（Air）**上跑：先
 `rsync dev198:feishu-grok-bridge/control-plane/{server.mjs,lib,test} <staging>/`
@@ -4240,6 +4263,33 @@ L72 的 `test ! -e <marker>`——`test` 的 `!` 是参数不是 shell 取反—
 > 写进了本 skill，**写了没跑**，两轮后才撞见。写进文档 ≠ 本次已清扫。
 > 另注：一行正则判不了多行语法，我第一版「行尾有 `\|\|` 才安全」产生 4 个假阳性，
 > 必须逐条读上下文（[[feedback_guard_itself_can_be_hollow]] 案例六）。
+
+### Mini launchd label 真值（别自己编，2026-08-06 编错过一次）
+
+`launchctl list | grep -i hplatform` 实际列出来的才算数：
+
+| label | 何时存在 | 作用 |
+|---|---|---|
+| `com.hplatform.mini-b2-health` | 已割接态 | ssh `-L 18775:18775` 把 VM healthz 转到主机 |
+| `com.hplatform.mini-b2-lima` | 常驻 | Lima 实例自启 |
+| `com.hplatform.mini-ab` | 常驻 | A/B 观察器 |
+| `com.hplatform.mini-bot.bridge` / `.runner` / `memory.<uid>` | **仅原生承载期** | 回迁后由原生 launchd 提供服务 |
+
+⚠️ **同一个名字在不同承载态下真假不同**：割接态查 `mini-bot.bridge` 会得到「未加载」——
+那是**对的**（VM 在服务），不是故障。所以 unit 存在性结论必须**连承载态一起说**，
+不能孤立地断言「这个 unit 不存在」。而不存在的 unit 与真挂了的 unit 返回同一信号
+（[[feedback_probe_parameters_are_facts_too]]）。
+
+判承载方最硬的一招：`lsof -nP -iTCP:18775 -sTCP:LISTEN` 看是 `ssh`（转发→VM 承载）
+还是 `node`（原生承载）。
+
+### 🔴 割接就绪判据里的契约版本必须动态取（`d47edb7`）
+
+`cutover-mini-b2.sh` 原本钉着 `assert behaviorContractVersion=="2026-08-04.2"`。契约一升级
+它就**永远 not ready**，40 次重试后报「Lima health did not become ready」——**症状看着像
+VM 起不来，实际是判据过期了**。现改为从 `$SOURCE_ROOT/lib/bot-behavior-contract.mjs`
+用 sed 抽 `BOT_BEHAVIOR_CONTRACT_VERSION`，抽不到即 fail-closed。
+**换一个新字面量只是把同一颗雷往后挪一轮**（[[feedback_criteria_must_match_object_variant]]）。
 
 ### 🔴 健康端口闸门必须带 `SO_REUSEADDR`（commit `1d5ccc5`）
 
