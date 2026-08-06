@@ -73,6 +73,7 @@
    "in_standard_filter": 1,
    "label": "生命周期状态",
    "options": "CREATED\nASSEMBLED\nFLASHED\nQC_PASSED\nSTOCKED\nALLOCATED\nSHIPPED\nACTIVATED\nRMA_OPEN\nREPAIRING\nRETURNED\nREFURBISHED\nSCRAPPED",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -123,12 +124,14 @@
   {
    "fieldname": "firmware_version",
    "fieldtype": "Data",
-   "label": "固件版本"
+   "label": "固件版本",
+   "read_only": 1
   },
   {
    "fieldname": "agent_version",
    "fieldtype": "Data",
-   "label": "AI Agent 版本"
+   "label": "AI Agent 版本",
+   "read_only": 1
   },
   {
    "fieldname": "commercial_section",
@@ -163,6 +166,10 @@
   }
  ],
  "links": [
+  {
+   "link_doctype": "Aishike Firmware Flash Record",
+   "link_fieldname": "device_unit"
+  },
   {
    "link_doctype": "Aishike Device Test Record",
    "link_fieldname": "device_unit"

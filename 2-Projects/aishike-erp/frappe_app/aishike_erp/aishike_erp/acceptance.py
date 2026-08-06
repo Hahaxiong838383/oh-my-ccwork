@@ -10,6 +10,7 @@ EXPECTED_DOCTYPES = (
     "Aishike Device Unit",
     "Aishike Device Test Record",
     "Aishike Device Lifecycle Event",
+    "Aishike Firmware Flash Record",
     "Aishike Serial Number Rule",
     "Aishike Serial Number Batch",
 )
@@ -23,12 +24,18 @@ def runtime_check() -> dict[str, object]:
     missing_doctypes = [
         doctype for doctype in EXPECTED_DOCTYPES if not frappe.db.exists("DocType", doctype)
     ]
+    expected_pages = ("aishike-sn-console", "aishike-production-console")
+    missing_pages = [page for page in expected_pages if not frappe.db.exists("Page", page)]
     return {
-        "status": "ok" if not missing_doctypes else "incomplete",
+        "status": "ok" if not missing_doctypes and not missing_pages else "incomplete",
         "app_installed": "aishike_erp" in installed_apps,
         "expected_doctypes": list(EXPECTED_DOCTYPES),
         "missing_doctypes": missing_doctypes,
+        "missing_pages": missing_pages,
         "sn_console_available": bool(frappe.db.exists("Page", "aishike-sn-console")),
+        "production_console_available": bool(
+            frappe.db.exists("Page", "aishike-production-console")
+        ),
     }
 
 
@@ -106,6 +113,7 @@ def reset_m2_acceptance_fixture() -> dict[str, int]:
     )
     if serials:
         frappe.db.delete("Aishike Device Lifecycle Event", {"device_unit": ["in", serials]})
+        frappe.db.delete("Aishike Firmware Flash Record", {"device_unit": ["in", serials]})
         frappe.db.delete("Aishike Device Test Record", {"device_unit": ["in", serials]})
         frappe.db.delete("Aishike Device Unit", {"name": ["in", serials]})
     if batches:

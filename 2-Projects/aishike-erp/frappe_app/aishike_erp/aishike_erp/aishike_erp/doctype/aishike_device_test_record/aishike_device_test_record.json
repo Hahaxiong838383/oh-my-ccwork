@@ -11,13 +11,17 @@
   "device_unit",
   "test_type",
   "result",
+  "attempt_no",
   "column_break_test",
   "test_template_version",
   "tested_at",
   "execution_section",
   "workstation",
   "operator",
-  "raw_data_ref"
+  "raw_data_ref",
+  "result_summary",
+  "measurement_json",
+  "failure_reason"
  ],
  "fields": [
   {
@@ -50,6 +54,14 @@
    "in_standard_filter": 1,
    "label": "结果",
    "options": "PASS\nFAIL",
+   "reqd": 1
+  },
+  {
+   "fieldname": "attempt_no",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "尝试次数",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -93,6 +105,24 @@
    "fieldname": "raw_data_ref",
    "fieldtype": "Data",
    "label": "原始数据引用"
+  },
+  {
+   "fieldname": "result_summary",
+   "fieldtype": "Small Text",
+   "label": "结果摘要"
+  },
+  {
+   "description": "可选的结构化测量值，必须为有效 JSON。",
+   "fieldname": "measurement_json",
+   "fieldtype": "Code",
+   "label": "测量数据（JSON）",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "failure_reason",
+   "fieldtype": "Small Text",
+   "label": "失败原因",
+   "mandatory_depends_on": "eval:doc.result=='FAIL'"
   }
  ],
  "links": [],

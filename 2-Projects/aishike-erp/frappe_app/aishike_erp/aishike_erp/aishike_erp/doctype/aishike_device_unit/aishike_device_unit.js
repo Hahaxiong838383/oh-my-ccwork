@@ -1,7 +1,5 @@
 const nextStateActions = {
   CREATED: ["标记组装完成", "ASSEMBLED"],
-  ASSEMBLED: ["完成固件烧录", "FLASHED"],
-  FLASHED: ["通过质量门", "QC_PASSED"],
   QC_PASSED: ["转入成品库存", "STOCKED"],
   STOCKED: ["分配销售订单", "ALLOCATED"],
   ALLOCATED: ["确认发货", "SHIPPED"],
@@ -26,6 +24,12 @@ frappe.ui.form.on("Aishike Device Unit", {
     }
 
     if (!frm.is_new()) {
+      if (["ASSEMBLED", "FLASHED"].includes(frm.doc.lifecycle_state)) {
+        frm.add_custom_button(__("打开生产测试工作台"), () => {
+          frappe.route_options = { scan_value: frm.doc.name };
+          frappe.set_route("aishike-production-console");
+        }, __("生产测试"));
+      }
       frm.add_custom_button(__("打开 SN 工作台"), () => {
         frappe.set_route("aishike-sn-console");
       }, __("设备标识"));

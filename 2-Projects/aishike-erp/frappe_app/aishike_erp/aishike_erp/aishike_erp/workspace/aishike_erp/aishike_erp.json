@@ -1,7 +1,7 @@
 {
  "app": "aishike_erp",
  "charts": [],
- "content": "[{\"id\":\"header-masters\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>产品与设备主数据</b></span>\",\"col\":12}},{\"id\":\"shortcut-sku\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"SKU 配置\",\"col\":4}},{\"id\":\"shortcut-sn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"SN 工作台\",\"col\":4}},{\"id\":\"shortcut-device\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"设备档案\",\"col\":4}},{\"id\":\"shortcut-test\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"设备测试\",\"col\":4}}]",
+ "content": "[{\"id\":\"header-masters\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>产品与设备主数据</b></span>\",\"col\":12}},{\"id\":\"shortcut-sku\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"SKU 配置\",\"col\":4}},{\"id\":\"shortcut-sn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"SN 工作台\",\"col\":4}},{\"id\":\"shortcut-device\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"设备档案\",\"col\":4}},{\"id\":\"shortcut-production\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"生产测试\",\"col\":4}},{\"id\":\"shortcut-test\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"设备测试\",\"col\":4}}]",
  "creation": "2026-08-05 22:10:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -44,6 +44,12 @@
    "label": "设备档案",
    "link_to": "Aishike Device Unit",
    "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "label": "生产测试",
+   "link_to": "aishike-production-console",
+   "type": "Page"
   },
   {
    "color": "Orange",

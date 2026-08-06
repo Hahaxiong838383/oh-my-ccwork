@@ -48,4 +48,4 @@ cd ~/aishike-erp
 ./deploy/doctor.sh
 ```
 
-检查内容包括容器状态、站点应用列表、六个爱视可 DocType、SN 工作台和 HTTP 接口。
+检查内容包括容器状态、站点应用列表、七个爱视可 DocType、SN/生产测试工作台和 HTTP 接口。

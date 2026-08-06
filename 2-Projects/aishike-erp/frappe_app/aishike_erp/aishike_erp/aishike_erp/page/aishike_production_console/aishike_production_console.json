@@ -1,0 +1,30 @@
+{
+ "content": null,
+ "creation": "2026-08-05 23:59:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "octicon octicon-checklist",
+ "idx": 0,
+ "modified": "2026-08-05 23:59:00.000000",
+ "modified_by": "Administrator",
+ "module": "Aishike ERP",
+ "name": "aishike-production-console",
+ "owner": "Administrator",
+ "page_name": "aishike-production-console",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Manufacturing Manager"
+  },
+  {
+   "role": "Quality Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "生产测试工作台"
+}

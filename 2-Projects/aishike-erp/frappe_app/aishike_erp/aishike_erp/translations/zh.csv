@@ -3,6 +3,7 @@ Aishike SKU Configuration,爱视可 SKU 配置
 Aishike Device Unit,爱视可设备档案
 Aishike Device Test Record,爱视可设备测试记录
 Aishike Device Lifecycle Event,爱视可设备生命周期事件
+Aishike Firmware Flash Record,爱视可固件烧录记录
 SKU Configuration,SKU 配置
 Device Units,设备档案
 Device Tests,设备测试
@@ -114,6 +115,12 @@ Products,产品
 Aishike Serial Number Rule,爱视可 SN 规则
 Aishike Serial Number Batch,爱视可 SN 生成批次
 SN Console,SN 工作台
+Production Console,生产测试
+PENDING,待测试
+FLASH_PASS,烧录通过
+FLASH_FAIL,烧录失败
+TEST_PASS,测试通过
+TEST_FAIL,测试不通过
 NEVER,永不重置
 DAILY,每日重置
 MONTHLY,每月重置

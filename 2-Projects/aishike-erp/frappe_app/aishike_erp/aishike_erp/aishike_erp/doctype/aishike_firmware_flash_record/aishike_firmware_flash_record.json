@@ -1,0 +1,164 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-08-05 23:59:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "result_section",
+  "device_unit",
+  "result",
+  "attempt_no",
+  "column_break_result",
+  "firmware_version",
+  "agent_version",
+  "package_checksum",
+  "execution_section",
+  "flash_tool_version",
+  "workstation",
+  "column_break_execution",
+  "operator",
+  "flashed_at",
+  "raw_log_ref",
+  "failure_reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "result_section",
+   "fieldtype": "Section Break",
+   "label": "烧录结果"
+  },
+  {
+   "fieldname": "device_unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "设备档案",
+   "options": "Aishike Device Unit",
+   "reqd": 1
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "结果",
+   "options": "PASS\nFAIL",
+   "reqd": 1
+  },
+  {
+   "fieldname": "attempt_no",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "尝试次数",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_result",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "firmware_version",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "固件版本",
+   "reqd": 1
+  },
+  {
+   "fieldname": "agent_version",
+   "fieldtype": "Data",
+   "label": "AI Agent 版本",
+   "reqd": 1
+  },
+  {
+   "description": "建议填写发布包 SHA-256，用于追溯实际烧录文件。",
+   "fieldname": "package_checksum",
+   "fieldtype": "Data",
+   "label": "固件包校验值"
+  },
+  {
+   "fieldname": "execution_section",
+   "fieldtype": "Section Break",
+   "label": "执行信息"
+  },
+  {
+   "fieldname": "flash_tool_version",
+   "fieldtype": "Data",
+   "label": "烧录工具版本"
+  },
+  {
+   "fieldname": "workstation",
+   "fieldtype": "Link",
+   "label": "烧录工位",
+   "options": "Workstation"
+  },
+  {
+   "fieldname": "column_break_execution",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "__user",
+   "fieldname": "operator",
+   "fieldtype": "Link",
+   "label": "操作员",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "default": "Now",
+   "fieldname": "flashed_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "烧录时间",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "description": "只保存烧录日志引用，不保存敏感凭据。",
+   "fieldname": "raw_log_ref",
+   "fieldtype": "Data",
+   "label": "烧录日志引用"
+  },
+  {
+   "fieldname": "failure_reason",
+   "fieldtype": "Small Text",
+   "label": "失败原因",
+   "mandatory_depends_on": "eval:doc.result=='FAIL'"
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-05 23:59:00.000000",
+ "modified_by": "Administrator",
+ "module": "Aishike ERP",
+ "name": "Aishike Firmware Flash Record",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "share": 1
+  }
+ ],
+ "sort_field": "flashed_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}

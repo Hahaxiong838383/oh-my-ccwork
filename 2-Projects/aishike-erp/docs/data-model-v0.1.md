@@ -97,9 +97,28 @@ Serial No的爱视可业务扩展。
 |---|---|---|
 | device_serial | Link Device Unit | 设备SN |
 | test_type | Enum | OPTICAL/SENSOR/FUNCTION/AI/AGING/OQC |
+| attempt_no | Int | 同一设备同一测试的尝试次数 |
 | test_template_version | Data | 测试规范版本 |
 | result | Enum | PASS/FAIL |
 | raw_data_ref | Data | MES/QMS原始数据引用 |
+| result_summary | Small Text | 脱敏结果摘要 |
+| measurement_json | JSON | 可选结构化测量值 |
+| failure_reason | Small Text | 不通过时必填 |
+
+### 3.5.1 Firmware Flash Record
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| device_unit | Link Device Unit | 设备 SN |
+| attempt_no | Int | 烧录尝试次数 |
+| result | Enum | PASS/FAIL |
+| firmware_version | Data | 固件版本 |
+| agent_version | Data | AI Agent 版本 |
+| package_checksum | Data | 发布包 SHA-256 等校验值 |
+| flash_tool_version | Data | 烧录工具版本 |
+| workstation/operator | Link | 工位和操作员 |
+| raw_log_ref | Data | 烧录日志引用 |
+| failure_reason | Small Text | 失败时必填 |
 | operator | User | 操作人员 |
 | workstation | Link Workstation | 工位 |
 | tested_at | Datetime | 测试时间 |

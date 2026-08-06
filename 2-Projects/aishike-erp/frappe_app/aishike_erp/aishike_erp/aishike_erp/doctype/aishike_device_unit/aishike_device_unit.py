@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import now_datetime
-
 from aishike_erp.events import append_device_event
 from aishike_erp.rules import (
     RuleViolation,
@@ -36,6 +34,9 @@ class AishikeDeviceUnit(Document):
             if changed:
                 frappe.throw(f"设备进入生产后不可修改身份字段: {', '.join(changed)}")
 
+        if self.lifecycle_state == "FLASHED" and previous_state != "FLASHED":
+            self._validate_flash_gate()
+
         if self.lifecycle_state == "QC_PASSED":
             self._validate_quality_gate()
 
@@ -44,7 +45,6 @@ class AishikeDeviceUnit(Document):
 
     def after_insert(self) -> None:
         append_device_event(self.name, "DEVICE_CREATED", "ERP", self.name)
-        frappe.db.set_value(self.doctype, self.name, "last_event_at", now_datetime())
 
     def on_update(self) -> None:
         previous = self.get_doc_before_save()
@@ -55,7 +55,16 @@ class AishikeDeviceUnit(Document):
                 "ERP",
                 self.work_order or self.channel_order_id or self.name,
             )
-            frappe.db.set_value(self.doctype, self.name, "last_event_at", now_datetime())
+
+    def _validate_flash_gate(self) -> None:
+        latest_result = frappe.db.get_value(
+            "Aishike Firmware Flash Record",
+            {"device_unit": self.name},
+            "result",
+            order_by="flashed_at desc, creation desc",
+        )
+        if latest_result != "PASS":
+            frappe.throw("设备必须有最新烧录通过记录才能进入已完成烧录状态")
 
     def _validate_quality_gate(self) -> None:
         rows = frappe.get_all(

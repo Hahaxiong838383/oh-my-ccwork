@@ -54,17 +54,21 @@ def main() -> None:
         shortcuts = {(row.get("type"), row.get("link_to")) for row in data.get("shortcuts", [])}
         if ("Page", "aishike-sn-console") not in shortcuts:
             raise ValueError(f"{path}: SN console shortcut is required")
+        if ("Page", "aishike-production-console") not in shortcuts:
+            raise ValueError(f"{path}: production console shortcut is required")
 
     pages = list(PAGE_ROOT.glob("*/*.json"))
     page_names = {json.loads(path.read_text(encoding="utf-8"))["name"] for path in pages}
-    if "aishike-sn-console" not in page_names:
-        raise ValueError("SN console page is required")
+    expected_pages = {"aishike-sn-console", "aishike-production-console"}
+    if not expected_pages.issubset(page_names):
+        raise ValueError(f"Required pages are missing: {sorted(expected_pages - page_names)}")
 
     expected = {
         "Aishike SKU Configuration",
         "Aishike Device Unit",
         "Aishike Device Test Record",
         "Aishike Device Lifecycle Event",
+        "Aishike Firmware Flash Record",
         "Aishike Serial Number Rule",
         "Aishike Serial Number Batch",
     }

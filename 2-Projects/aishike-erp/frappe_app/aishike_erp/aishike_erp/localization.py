@@ -9,6 +9,7 @@ SIDEBAR_LABELS = {
     "Home": "主页",
     "SKU Configuration": "SKU 配置",
     "SN Console": "SN 工作台",
+    "Production Console": "生产测试",
     "Device Units": "设备档案",
     "Device Tests": "设备测试",
 }
@@ -16,6 +17,7 @@ SIDEBAR_LABELS = {
 WORKSPACE_SHORTCUT_LABELS = {
     "Aishike SKU Configuration": "SKU 配置",
     "aishike-sn-console": "SN 工作台",
+    "aishike-production-console": "生产测试",
     "Aishike Device Unit": "设备档案",
     "Aishike Device Test Record": "设备测试",
 }
@@ -40,6 +42,11 @@ WORKSPACE_CONTENT = [
         "id": "shortcut-device",
         "type": "shortcut",
         "data": {"shortcut_name": "设备档案", "col": 4},
+    },
+    {
+        "id": "shortcut-production",
+        "type": "shortcut",
+        "data": {"shortcut_name": "生产测试", "col": 4},
     },
     {
         "id": "shortcut-test",
@@ -79,6 +86,16 @@ def apply_chinese_defaults() -> dict[str, str]:
                     "link_to": "aishike-sn-console",
                 },
             )
+        if not any(item.link_to == "aishike-production-console" for item in sidebar.items):
+            sidebar.append(
+                "items",
+                {
+                    "type": "Link",
+                    "label": "生产测试",
+                    "link_type": "Page",
+                    "link_to": "aishike-production-console",
+                },
+            )
         sidebar.save(ignore_permissions=True)
 
     if frappe.db.exists("Workspace", "Aishike ERP"):
@@ -95,6 +112,18 @@ def apply_chinese_defaults() -> dict[str, str]:
                     "link_to": "aishike-sn-console",
                     "label": "SN 工作台",
                     "color": "Blue",
+                },
+            )
+        if not any(
+            shortcut.link_to == "aishike-production-console" for shortcut in workspace.shortcuts
+        ):
+            workspace.append(
+                "shortcuts",
+                {
+                    "type": "Page",
+                    "link_to": "aishike-production-console",
+                    "label": "生产测试",
+                    "color": "Orange",
                 },
             )
         for shortcut in workspace.shortcuts:
