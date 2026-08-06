@@ -22,6 +22,12 @@ WORKSPACE_SHORTCUT_LABELS = {
     "Aishike Device Test Record": "设备测试",
 }
 
+M23_NAVIGATION_TARGETS = {
+    "aishike-quality-console",
+    "Aishike Quality Release Record",
+    "Aishike Device Stock Movement",
+}
+
 WORKSPACE_CONTENT = [
     {
         "id": "header-masters",
@@ -74,6 +80,10 @@ def apply_chinese_defaults() -> dict[str, str]:
     if frappe.db.exists("Workspace Sidebar", "Aishike ERP"):
         sidebar = frappe.get_doc("Workspace Sidebar", "Aishike ERP")
         sidebar.title = "爱视可 ERP"
+        sidebar.set(
+            "items",
+            [item for item in sidebar.items if item.link_to not in M23_NAVIGATION_TARGETS],
+        )
         for item in sidebar.items:
             item.label = SIDEBAR_LABELS.get(item.label, item.label)
         if not any(item.link_to == "aishike-sn-console" for item in sidebar.items):
@@ -104,6 +114,14 @@ def apply_chinese_defaults() -> dict[str, str]:
         workspace.label = "Aishike ERP"
         workspace.title = "Aishike ERP"
         workspace.content = json.dumps(WORKSPACE_CONTENT, ensure_ascii=False, separators=(",", ":"))
+        workspace.set(
+            "shortcuts",
+            [
+                shortcut
+                for shortcut in workspace.shortcuts
+                if shortcut.link_to not in M23_NAVIGATION_TARGETS
+            ],
+        )
         if not any(shortcut.link_to == "aishike-sn-console" for shortcut in workspace.shortcuts):
             workspace.append(
                 "shortcuts",
