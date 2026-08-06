@@ -4351,8 +4351,17 @@ follow-up、会话映射、去重、开场白、角色粘滞、主动验收、�
 ```bash
 # Mini 上，验证器单独归档在 ~/local/h-mini-b2-verifier-<sha12>/（不进 VM app，不改 deploy meta）
 "$OPS_ROOT/deploy/lima/verify-mini-b2-active.sh" \
-  --expected-commit <完整40位SHA> --expected-contract 2026-08-04.2 \
+  --expected-commit <完整40位SHA> --expected-contract <从源码取,别抄这里的字面量> \
   --uid <目标uid> --after "$(date -u +%FT%TZ)" [--task-id <id>]
+# 契约真值：rg BOT_BEHAVIOR_CONTRACT_VERSION lib/bot-behavior-contract.mjs
+# 2026-08-06 起 = 2026-08-05.3；钉死字面量必然腐烂，见下方「闸门的期望值必须从源码取」
+```
+
+⚠️ **顶层 `ok` 的语义**：带 `--skip-long-task` 时顶层恒为 `"ok": false, "status": "partial"`，
+即使 16 项 healthChecks 全绿——那是**长任务层未验**，不是不合格。**「取不到」与「值不对」
+必须分开报**，别把 partial 当失败、更别把它当通过。长任务层是**校验既有记录**
+（`verify-b3-long-task.mjs` 查 `--after` 之后 ≥120s 的任务），不自己发起，
+所以要先真机跑一条重任务才谈得上 `complete`。
 ```
 
 三层依次 fail-closed，任一层挂掉下游不执行：
@@ -4475,14 +4484,17 @@ limactl 桩现在真把 stdin 交给 `bash -s`，guest 侧 python 与 `node --en
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本落差已于 2026-08-05 窗口消除（`1d5ccc5 → 2eb827d` 已割接闭环）
+#### ✅ 版本态（2026-08-06 H-0076 窗口后，双站契约 `2026-08-05.3` 唯一）
 
 | 位置 | 版本 |
 |---|---|
-| Mini 活动 VM 运行态 | **`2eb827dd8aaa`**、`dirty=false`、492 文件（19:19:21 起，闭环快照 `uptimeSec=6086`） |
-| 仓库 / 远端 | 继续前进（`a7b2cea` → `c6cd408` → `1331cbc`，均为验证器/文档，**不含 VM 运行时代码**） |
-| 安装源 | `~/local/h-mini-b2-source-2eb827dd8aaa`（Mini 上，796 文件） |
-| 验证器 | `~/local/h-mini-b2-verifier-c6cd40845a19`（独立归档，**不进 VM app**） |
+| Mini 活动 VM 运行态 | **`615ce626f208`**、`dirty=false`、514 文件 |
+| dev198 | **`e2263af7c368`**（多一个纯文档提交 `prompts/pm`，行为无差异） |
+| 安装源 | `~/local/h-mini-b2-source-615ce626f208`（Mini 上，819 文件） |
+| 验证器 | 已随 `d47edb7` 起进入部署源码树，**不必再单独归档**（`$SRC/deploy/lima/verify-mini-b2-active.sh` 直接跑；`$SRC` ≠ VM app，不污染 deploy meta） |
+
+> 历史：`1d5ccc5 → 2eb827d`（2026-08-05）→ `d47edb7 → f3336bc → 615ce62`（2026-08-06，
+> 三轮完整循环，见下方 H-0076 段）。
 
 ⚠️ **落差仍然是常态，别再"对齐"**：`2eb827d` 之后的提交全是 `deploy/lima/` 验证工具、
 docs、test 和控制面（跑在 aliyun-hk），**对 VM 运行时零行为变化**——`1d5ccc5→2eb827d`
@@ -4551,3 +4563,103 @@ Mini Host。`render-mini-b2-env.mjs` 现强制把 LLM 与 embedding 地址渲染
 正式验收实测：用户消息进入 VM Runner，120 秒出现 `background_yielded`，255 秒完成；
 会话底部新增一张完成卡。证据必须同时包含不同的飞书 message ID、TaskSessionLog 的
 `delivery_acked` 与 Outbox 清零。复用旧卡、只编辑流式卡或 Bot 自述“已完成”均不算通过。
+
+## 🔴 H-0076 会话式 Skill L2 上生产（2026-08-06，两站已全开）
+
+**终态**：Mini VM `615ce62`（AI 专家）/ dev198 `e2263af`（12 App），契约 `2026-08-05.3` 全站唯一。
+灰度五变量 `H_SKILL_{PROPOSALS,PROPOSAL_UIDS,REPEAT_DAYS,REPEAT_MIN,SUGGEST_COOLDOWN_DAYS}`，
+熔断=`H_SKILL_PROPOSALS=0`。**2026-08-06 川哥拍板 dev198 全量放开 11 租户**（`=1` 且不设名单）；
+`H_ONCE_REMINDERS=0` 两站保持关闭（按字面不扩展）。
+
+### 🔴 这两个开关是「空名单＝全量放开」语义（配错方向的经典陷阱）
+
+```js
+// lib/skill-proposal-engine.mjs parseSkillProposalUidAllowlist：空串 → return null
+// bridge.mjs: process.env.H_SKILL_PROPOSALS !== '0' && (!uids || uids.has(ctx.uid))
+```
+- **什么都不配 ＝ 对所有租户默认开**（`undefined !== '0'` 为真、`!null` 为真）。
+- 要关必须**显式写 `=0`**；「不放任何 UID」按字面理解成留空，恰恰是最危险的配置。
+- 同型开关：`H_ONCE_REMINDERS` / `H_ONCE_REMINDER_UIDS`（reminders 腿，同一套写法）。
+- owner 永远收不到：闸门含 `sandbox &&`，而 owner `sandbox=null`（结构性排除，不靠 env）。
+
+### 灰度变量的落位链（VM 侧改 env 的唯一正确姿势）
+
+`~/local/h-platform-mini-bot/.env`（原生）→ `install-mini-b2-shadow.sh:45` `limactl copy` →
+`render-mini-b2-env.mjs` → `/srv/h-platform/config/mini-b2.env`（VM 内真值，**不在 app 目录**）。
+非路径值原样透传（`mapSourcePath` 只对绝对路径重映射）。改完必查渲染产物那 5 行，
+别只看原生 .env 就宣布生效。
+
+### 真机灰度当天逼出的两个 bug（都只有真机能发现）
+
+1. **`f3336bc`**：`fork_update` 的 `targetKey` 原样带共享层 key → 控制面正确 403
+   `target skill is outside user layer` → 用户点确认必失败。四种 action 只有它会踩。
+   **为什么测试没拦住**：①断言写成两可 `assert.ok(['use_existing','fork_update'].includes(x))`
+   ——从没钉死走哪支，`targetKey` 一个断言都没有 ②mock 的 controlClient 恒返 ok，
+   把跨系统 403 校验整个挡在测试外。见 [[feedback_disjunctive_assertion_never_tests_the_branch]]。
+2. **`615ce62`**：确认后有最长 70s 空白（`waitForSkillInstalled` 轮询执行站点回读），
+   toast 一闪即逝 → 用户以为没成功会再点 → 而重复点击拿到的「已经处理过或暂时无法应用」
+   在刚成功场景下是**误导**。修法三件套：apply 受理即发**过程卡**（真实消息才保证送达，
+   toast 不是送达）、handler 入口按 `proposal.status` 分流各回对症文案、
+   gateway `not_pending` 带回当前 status 供调用方区分。
+
+### 勘误：后台编辑正文**存在**（推翻 2026-08-05 的「未实现」结论）
+
+`control-plane/lib/html.mjs` 有完整链路：查看既有 skill → `svEditBtn` → `svEdit()` 载入
+`SV_CONTENT` → `svEditor` → `svSave()` 提交 `action:'upsert-content'` +
+`expectedSha`（乐观锁，STALE→409）+ `summaryZh`（所以简介不会被清空）；
+路由 `/api/skill`(2862) → `handleSkillMutation`(310)。
+**当初查错的原因**：只看到 696/735 行那个 `add-content` textarea（那是**创建**面板），
+漏了 `svEditor`。教训：`POST /api/skill` 的 action 不止路由块里显式列的那几个，
+**还有兜底转发到 `handleSkillMutation` 的一整批**——只 grep 路由块会漏。
+
+- **个人 Skill 编辑器只在「用户后台」**，管理台没有该入口（管理台是平台层市场管理）。
+  入口：单聊发「配置」→「打开我的后台」，或结果卡上的「打开 Skills 后台」（magic link 按租户签发）。
+- **revisions 存在独立目录**：`/srv/h-control/data/skill-revisions/<sha256(key)>/<id>.json`，
+  **不在 `skills.json` 里**——在 skills.json 里数 revisions 恒为 0，会误判「版本历史没生成」。
+
+### VM 更新＝完整循环，没有捷径
+
+`assert-mini-b2-shadow-state.sh` 在 active 态直接 fail（marker 在/unit active 都拦），
+所以每次改 VM 代码都必须：**rollback → 传新源 → install shadow → sync shadow → verify shadow
+→ 建新回滚包 → 静止门 → cutover → 三通道对撞**。一轮约 10 分钟。
+- rollback 内嵌 `sync-mini-b2-state-back.sh`，**用户状态（提案/冷却/skills）会被带回原生**，
+  跨轮存活，不会丢。
+- `install-mini-b2-shadow.sh` 对 `git archive` 传的源目录（**无 .git**）必须显式给
+  `H_DEPLOY_COMMIT`（40 位）/`H_DEPLOY_BRANCH`/`H_DEPLOY_SOURCE_HOST`，否则前置校验直接 fail
+  （fail 在任何 mutation 之前，安全）。
+
+## 🔴 部署机 git 分叉手术（HEAD 精确对齐 + owner 工作区逐字节不动）
+
+`ops/deploy-sites.sh` 要求 dev198 HEAD **精确等于**本地 COMMIT，且 dirty 检查对
+`workspace/**` 是**硬拒**（`die "拒绝处理 workspace/ 下的改动"`，不是放行）。
+当 dev198 有本地提交（owner Bot 在飞书对话产生的 skill/规则被 commit 了）就会死锁。
+
+**`reset --mixed` 解决不了**：它只移指针不动工作区，落后版本新增的文件会全部变成 ` D`，
+撞死在 dirty 检查上（本轮实测 41 个 D）。
+
+**可行手术**（2026-08-06 实操，owner 内容零改动）：
+```bash
+cp -a workspace "$HOME/ws-copy-$TS"                 # 1. 物理备份(139M)，脱离 git
+git switch -c h0076-owner-ws-backup-$TS             # 2. 备份分支
+git add -u workspace/ && git commit                 #    连未提交漂移一起入袋
+git add <其它脏文件> && git commit                   #    非 workspace 的也要收(否则第3步拒绝)
+git checkout -B <branch> origin/<branch>            # 3. HEAD 精确到目标
+git checkout <BK> -- workspace/ && git restore --staged workspace/   # 4. 复原 owner 内容
+git checkout HEAD -- <上游新增的那些文件>             # 5. 目标版新增文件要显式检回
+LC_ALL=C diff -rq workspace "$HOME/ws-copy-$TS"     # 6. 对撞:差异只允许运行态点文件
+```
+- 第 5 步易漏：备份分支里**没有**上游新增的文件，第 4 步会把它们删掉。
+- 第 6 步判据：`Only in` 应恰好 = 上游新增数；`differ` 只允许 `.state/`、`.follow-ups/`、
+  `.runner-rpc/`、`.msg-dedupe.json`、`.chat-history/` 这类活文件（cp 与 diff 之间服务仍在跑）。
+- **owner 攒的通用规则（不含隐私）应经授权收编进仓**，否则每次部署都要重做这套手术
+  （本轮把 `prompts/pm/PROMPT.md` 的 R32 收编为 `e2263af`，死结永久消除）。
+- 拉平纯文档提交用 `SKIP_RESTART=1 ops/deploy-sites.sh dev198`（healthz 版本滞后是声明预期）。
+
+### 🔴 跨机文本判据必须钉 locale
+
+dev198 是中文 locale，`diff -rq` 输出「只在…中存在」「文件…不同」——
+`grep -c "^Only in"` / `grep -c "differ$"` **全部零命中**，把一次完美复原连报两轮假 ABORT。
+**跨机跑文本判据前 `LC_ALL=C`**，或改用 locale 无关通道（退出码、`--name-only`、计数）。
+同日第二跳：改用 `git diff <commit>` 后又踩「它对 untracked 文件失明」，磁盘上好好存在的
+9 个文件被报成差异。三连问：**什么语言？什么通道？该通道对哪类对象失明？**
+见 [[feedback_criteria_must_match_object_variant]]。
