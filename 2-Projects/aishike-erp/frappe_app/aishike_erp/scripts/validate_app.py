@@ -9,6 +9,7 @@ PACKAGE_ROOT = ROOT / "aishike_erp"
 DOCTYPE_ROOT = PACKAGE_ROOT / "aishike_erp" / "doctype"
 WORKSPACE_ROOT = PACKAGE_ROOT / "aishike_erp" / "workspace"
 PAGE_ROOT = PACKAGE_ROOT / "aishike_erp" / "page"
+DOCTOR_PATH = ROOT.parents[1] / "deploy" / "doctor.sh"
 
 
 def validate_doctype(path: Path) -> tuple[str, int]:
@@ -74,6 +75,10 @@ def main() -> None:
     }
     if set(doctypes) != expected:
         raise ValueError(f"DocType set mismatch: {doctypes}")
+
+    doctor_script = DOCTOR_PATH.read_text(encoding="utf-8")
+    if "aishike_erp.acceptance.assert_runtime_check" not in doctor_script:
+        raise ValueError("doctor.sh must use the fail-closed runtime assertion")
 
     print(
         f"OK: {len(doctypes)} DocTypes, {field_count} fields, "

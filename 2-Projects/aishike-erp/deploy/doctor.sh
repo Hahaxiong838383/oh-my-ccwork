@@ -14,7 +14,7 @@ docker compose --env-file .env exec -T backend \
   bash -lc 'bench --site "${SITE_NAME}" list-apps'
 
 docker compose --env-file .env exec -T backend \
-  bash -lc 'bench --site "${SITE_NAME}" execute aishike_erp.acceptance.runtime_check'
+  bash -lc 'bench --site "${SITE_NAME}" execute aishike_erp.acceptance.assert_runtime_check'
 
 curl -fsS \
   -H "Host: ${SITE_NAME}" \

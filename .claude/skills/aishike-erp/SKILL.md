@@ -76,6 +76,7 @@ output_levels: L2
 - 生命周期事件追加写，并同步设备 `last_event_at`；
 - 回退到较早阶段时，先清理 Workspace/Sidebar 中指向待删除 Page 或 DocType 的入口；Frappe 会先删除孤立对象再执行 `after_migrate`，残留链接会让迁移在保存导航时失败；
 - 目标阶段的迁移钩子必须主动剔除后续阶段导航目标，不能只依赖人工清理或 Frappe 的孤立对象删除；M2.2 当前需清除 `aishike-quality-console`、质量放行和库存移动入口；
+- Frappe 删除 DocType/字段元数据后可能继续保留物理表、隐藏列和已投影的设备状态；M2.2 回退必须清理 M2.3 夹具与越界事件、由组装/烧录凭证重新派生状态，并确认孤立表与隐藏列为 0；
 - 正常浏览器路径必须做到控制台 0 错误，负向业务校验另行保留证据。
 
 ## 开发验证
@@ -102,11 +103,11 @@ bash -n deploy/bootstrap.sh deploy/doctor.sh
 1. 先在服务器 `deploy/backups/` 创建不含 `.env` 和 `secrets/` 的源码备份；
 2. `rsync` 时排除 `deploy/.env`、`deploy/secrets/`、`deploy/backups/`、`output/` 和 `.playwright-cli/`；
 3. 服务器运行 `./deploy/bootstrap.sh`，执行镜像构建、容器更新、站点迁移和翻译构建；
-4. 运行 `./deploy/doctor.sh`，确认容器、应用、DocType、Page 和 ping；
+4. 运行 `./deploy/doctor.sh`，确认容器、应用、DocType、Page、阶段内设备状态/事件、夹具、孤立表、隐藏列和 ping；该脚本必须调用 fail-closed 的 `assert_runtime_check`；
 5. 使用全新浏览器会话完成实际用户流程和控制台检查；如果复用登录态，必须清空 localStorage 和 sessionStorage，避免已删除页面被旧缓存伪装成仍可访问；
 6. 项目源码提交前运行差异检查、密钥模式扫描并只暂存 `2-Projects/aishike-erp` 和本 skill。
 
-阶段回退必须先备份源码与数据库，再同步目标提交、由目标阶段迁移钩子清理孤立导航、重跑迁移；最后同时证明目标阶段 DocType/Page 存在、越界阶段 DocType/Page、侧栏链接和 Workspace 快捷入口均为 0，并用清空浏览器存储的独立上下文证明越界路由返回“页面未找到”。
+阶段回退必须先备份源码与数据库，再同步目标提交、由目标阶段迁移钩子清理导航、测试夹具、越界事件、状态投影、孤立表和隐藏列，重跑迁移；最后用 fail-closed 运行检查和清空浏览器存储的独立上下文证明所有越界对象为 0、正常设备状态由凭证派生、越界路由返回“页面未找到”。
 
 ## 验收证据要求
 

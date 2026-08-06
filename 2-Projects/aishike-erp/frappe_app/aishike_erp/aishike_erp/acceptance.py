@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import json
+
 import frappe
 
 from aishike_erp.localization import apply_chinese_defaults
+from aishike_erp.phase_gate import (
+    M2_ALLOWED_DEVICE_STATES,
+    M2_ALLOWED_EVENT_TYPES,
+    M23_DEVICE_COLUMNS,
+    M23_FIXTURE_BATCH_PREFIX,
+    M23_ORPHAN_DOCTYPES,
+)
 
 
 EXPECTED_DOCTYPES = (
@@ -26,17 +35,85 @@ def runtime_check() -> dict[str, object]:
     ]
     expected_pages = ("aishike-sn-console", "aishike-production-console")
     missing_pages = [page for page in expected_pages if not frappe.db.exists("Page", page)]
+    unexpected_doctypes = [
+        doctype for doctype in M23_ORPHAN_DOCTYPES if frappe.db.exists("DocType", doctype)
+    ]
+    unexpected_pages = [
+        page for page in ("aishike-quality-console",) if frappe.db.exists("Page", page)
+    ]
+    out_of_phase_devices = frappe.get_all(
+        "Aishike Device Unit",
+        filters={"lifecycle_state": ["not in", sorted(M2_ALLOWED_DEVICE_STATES)]},
+        pluck="name",
+    )
+    out_of_phase_events = frappe.get_all(
+        "Aishike Device Lifecycle Event",
+        filters={"event_type": ["not in", sorted(M2_ALLOWED_EVENT_TYPES)]},
+        pluck="name",
+    )
+    m23_fixture_devices = frappe.get_all(
+        "Aishike Device Unit",
+        filters={"production_batch": ["like", f"{M23_FIXTURE_BATCH_PREFIX}%"]},
+        pluck="name",
+    )
+    m23_fixture_batches = frappe.get_all(
+        "Aishike Serial Number Batch",
+        filters={"production_batch": ["like", f"{M23_FIXTURE_BATCH_PREFIX}%"]},
+        pluck="name",
+    )
+    orphan_tables = [
+        doctype
+        for doctype in M23_ORPHAN_DOCTYPES
+        if frappe.db.table_exists(doctype, cached=False)
+    ]
+    orphan_columns = [
+        column
+        for column in M23_DEVICE_COLUMNS
+        if frappe.db.has_column("Aishike Device Unit", column)
+    ]
+    incomplete = any(
+        (
+            "aishike_erp" not in installed_apps,
+            missing_doctypes,
+            missing_pages,
+            unexpected_doctypes,
+            unexpected_pages,
+            out_of_phase_devices,
+            out_of_phase_events,
+            m23_fixture_devices,
+            m23_fixture_batches,
+            orphan_tables,
+            orphan_columns,
+        )
+    )
     return {
-        "status": "ok" if not missing_doctypes and not missing_pages else "incomplete",
+        "status": "incomplete" if incomplete else "ok",
         "app_installed": "aishike_erp" in installed_apps,
         "expected_doctypes": list(EXPECTED_DOCTYPES),
         "missing_doctypes": missing_doctypes,
         "missing_pages": missing_pages,
+        "unexpected_doctypes": unexpected_doctypes,
+        "unexpected_pages": unexpected_pages,
+        "out_of_phase_devices": out_of_phase_devices,
+        "out_of_phase_events": out_of_phase_events,
+        "m23_fixture_devices": m23_fixture_devices,
+        "m23_fixture_batches": m23_fixture_batches,
+        "orphan_tables": orphan_tables,
+        "orphan_columns": orphan_columns,
         "sn_console_available": bool(frappe.db.exists("Page", "aishike-sn-console")),
         "production_console_available": bool(
             frappe.db.exists("Page", "aishike-production-console")
         ),
     }
+
+
+def assert_runtime_check() -> dict[str, object]:
+    result = runtime_check()
+    if result["status"] != "ok":
+        frappe.throw(
+            f"爱视可 ERP 运行检查未通过: {json.dumps(result, ensure_ascii=False)}"
+        )
+    return result
 
 
 def seed_acceptance_fixture() -> dict[str, str]:

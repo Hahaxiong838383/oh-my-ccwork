@@ -4,6 +4,14 @@ import json
 
 import frappe
 
+from aishike_erp.phase_gate import (
+    M2_ALLOWED_EVENT_TYPES,
+    M23_DEVICE_COLUMNS,
+    M23_FIXTURE_BATCH_PREFIX,
+    M23_ORPHAN_DOCTYPES,
+    derive_m2_device_state,
+)
+
 
 SIDEBAR_LABELS = {
     "Home": "主页",
@@ -63,6 +71,8 @@ WORKSPACE_CONTENT = [
 
 
 def apply_chinese_defaults() -> dict[str, str]:
+    phase_cleanup = cleanup_m23_artifacts()
+
     if frappe.db.exists("Language", "zh"):
         frappe.db.set_value("Language", "zh", "enabled", 1)
 
@@ -150,4 +160,99 @@ def apply_chinese_defaults() -> dict[str, str]:
 
     frappe.db.commit()
     frappe.clear_cache()
-    return {"language": "zh", "user": "Administrator", "display_name": "系统管理员"}
+    return {
+        "language": "zh",
+        "user": "Administrator",
+        "display_name": "系统管理员",
+        "phase_cleanup": phase_cleanup,
+    }
+
+
+def cleanup_m23_artifacts() -> dict[str, int]:
+    fixture_devices = frappe.get_all(
+        "Aishike Device Unit",
+        filters={"production_batch": ["like", f"{M23_FIXTURE_BATCH_PREFIX}%"]},
+        pluck="name",
+    )
+    fixture_batches = frappe.get_all(
+        "Aishike Serial Number Batch",
+        filters={"production_batch": ["like", f"{M23_FIXTURE_BATCH_PREFIX}%"]},
+        pluck="name",
+    )
+
+    if fixture_devices:
+        for doctype in (
+            "Aishike Device Lifecycle Event",
+            "Aishike Firmware Flash Record",
+            "Aishike Device Test Record",
+        ):
+            frappe.db.delete(doctype, {"device_unit": ["in", fixture_devices]})
+        frappe.db.delete("Aishike Device Unit", {"name": ["in", fixture_devices]})
+
+    if fixture_batches:
+        frappe.db.delete("Aishike Serial Number Batch", {"name": ["in", fixture_batches]})
+
+    stale_events = frappe.get_all(
+        "Aishike Device Lifecycle Event",
+        filters={"event_type": ["not in", sorted(M2_ALLOWED_EVENT_TYPES)]},
+        pluck="name",
+    )
+    if stale_events:
+        frappe.db.delete("Aishike Device Lifecycle Event", {"name": ["in", stale_events]})
+
+    restored_devices = 0
+    for device in frappe.get_all(
+        "Aishike Device Unit",
+        fields=["name", "lifecycle_state"],
+    ):
+        target_state = derive_m2_device_state(
+            has_passed_flash=bool(
+                frappe.db.exists(
+                    "Aishike Firmware Flash Record",
+                    {"device_unit": device.name, "result": "PASS"},
+                )
+            ),
+            has_assembly_event=bool(
+                frappe.db.exists(
+                    "Aishike Device Lifecycle Event",
+                    {"device_unit": device.name, "event_type": "ASSEMBLED"},
+                )
+            ),
+        )
+        latest_event_at = frappe.db.get_value(
+            "Aishike Device Lifecycle Event",
+            {"device_unit": device.name},
+            "occurred_at",
+            order_by="occurred_at desc, creation desc",
+        )
+        if device.lifecycle_state != target_state:
+            restored_devices += 1
+        frappe.db.set_value(
+            "Aishike Device Unit",
+            device.name,
+            {"lifecycle_state": target_state, "last_event_at": latest_event_at},
+            update_modified=False,
+        )
+
+    dropped_columns = 0
+    for column in M23_DEVICE_COLUMNS:
+        if frappe.db.has_column("Aishike Device Unit", column):
+            frappe.db.sql_ddl(
+                f"ALTER TABLE `tabAishike Device Unit` DROP COLUMN `{column}`"
+            )
+            dropped_columns += 1
+
+    dropped_tables = 0
+    for doctype in M23_ORPHAN_DOCTYPES:
+        if frappe.db.table_exists(doctype, cached=False):
+            frappe.db.sql_ddl(f"DROP TABLE `tab{doctype}`")
+            dropped_tables += 1
+
+    return {
+        "fixture_devices": len(fixture_devices),
+        "fixture_batches": len(fixture_batches),
+        "stale_events": len(stale_events),
+        "restored_devices": restored_devices,
+        "dropped_columns": dropped_columns,
+        "dropped_tables": dropped_tables,
+    }
