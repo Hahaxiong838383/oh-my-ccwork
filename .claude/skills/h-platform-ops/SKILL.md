@@ -4484,7 +4484,7 @@ limactl 桩现在真把 stdin 交给 `bash -s`，guest 侧 python 与 `node --en
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-06 H-0032/H-0029 窗口后，双站契约 `2026-08-06.1` 唯一）
+#### ✅ 版本态（2026-08-07 起：线上仍 `65a4ff92afc6`，仓库 HEAD/main 已到 `d1db455`，双站契约 `2026-08-06.1` 唯一）
 
 | 位置 | 版本 |
 |---|---|
@@ -4756,3 +4756,62 @@ dev198 是 `Asia/Shanghai`，`journalctl --since "12:08:00"` 被当作**本地**
 两站 `H_RELEASE_ANNOUNCEMENTS=0` + 清空 `H_FEEDBACK_FORM_URL`。
 公告持久文件与 Outbox **都不删**，已 ACK 不重放；失败卡熔断后只剩「新会话」。
 回滚文档：`docs/rollbacks/2026-08-06-feedback-release-announcements.md`。
+
+---
+
+## 2026-08-07 收口（H-0029 缺口 + Mini B2 部署脚本 + 合 main）
+
+### ⚠️ H-0029 没做完：交付的是「手动群发」不是「主动通知」
+
+需求原文：「平台**每次有明确的新功能上线时**，由 Bot **主动**发送一张更新说明卡」。
+交付物把真源/领取/person 去重/Outbox/ACK/幂等全做了，**唯独没有触发器**——
+「何时发」仍是人肉手写 JSON + 跑 `--confirm-publish`。
+
+**为什么验收没抓住**：需求记录三个字段里，「修复方案」和「预期结果」都是**实现方自己写的**，
+两者都已把触发条件丢掉；我逐条核的是「预期结果」，六格表全对完也漏了核心动词「主动」。
+触发条件**只保留在「需求 & 问题描述」里**。
+→ 判据见 [[feedback_acceptance_baseline_must_be_the_requirement]]：
+**验收前先圈出需求原文的动词与限定词**（主动 / 每次 / 自动 / 明确的 / 不再采用 X），
+每一个都必须有对应检查项；方案相对需求的取舍必须显式披露，没写＝声称没取舍。
+
+**补齐设计（已定，明日实施）**：触发信号 = `BOT_BEHAVIOR_CONTRACT_VERSION`
+（行为变才动它，改错别字不动；用 deploy commit 会把每次修 bug 当新功能）；
+文案来自仓库内 `release-announcements/<契约版本>.json`，随代码提交与 review，
+**机器绝不从 commit message 生成文案**；触发点在部署流程健康检查通过之后；
+**表里没有对应版本就静默不发（默认沉默，不是默认发）**；受众必须文件里显式写，
+字段不合法由既有 `normalizeAnnouncement` 抛错拒绝发布；投递链路一个字不改。
+
+### ⚠️ `ops/deploy-sites.sh` 的 Mini 分支曾整个失效（`d1db455` 已修）
+
+B2 割接后部署目标是 Lima VM `/opt/h-platform/app`，脚本却仍指宿主
+`local/h-platform-mini-bot`——那里的 launchd label `com.hplatform.mini-bot.{bridge,runner}`
+**早已注销**，宿主零进程跑它。**别只把这当"体检读错目录"**：
+真跑一次部署会**先把文件写进遗留目录、把 meta 改写成新 commit，才在重启步炸**；
+下一次体检读那个目录会看到"版本对上了"，而 VM 里一字节没变——
+**一次失败的部署反而把体检骗过去了**。而验证通道 healthz:18775 是 VM 的 ssh 转发，
+**观测不到宿主目录**，所以它永远不会替你发现。
+
+现状：`--check` 读 VM 内 meta，遗留目录降为提示并标注不参与判定；
+部署分支 fail closed，指向 `deploy/lima/` 影子→割接流程（README.md 有完整步骤）。
+
+**Mini B2 真值（别猜）**：VM 名 `h-b2`；unit 是 `h-mini-b2-bridge.service` /
+`h-mini-b2-runner.service`（**不是** `h-bridge`/`h-runner-worker`）；
+`limactl` 在 `/opt/homebrew/bin/limactl`，**非交互 ssh 的 PATH 里没有**，写脚本要给全路径；
+宿主 launchd 实际注册的是 `com.hplatform.mini-b2-health` / `mini-ab` / `mini-b2-lima`
+——grep 时注意是 `hplatform` 没有连字符，写成 `h-platform` 会零命中且看起来像"没有"。
+
+### 合 main 完成
+
+`origin/main` `9119311` → `d1db455`，**纯 fast-forward** 前进 71 个提交
+（`HEAD..origin/main`=0，结构上不可能有冲突）。
+合 main **不动线上**：两站跟的是 `codex/h-mini-ab-poc`，`deploy-sites.sh` 里
+`BRANCH=codex/h-mini-ab-poc`；合完复检两站仍 `65a4ff92afc6`（验过，不是断言）。
+⚠️ 分支名仍叫 `h-mini-ab-poc` 但早已是生产主线，建议改名；
+其中 **6 个提交是 `chuan` 在 dev198 生产机上直接写的**（每任务 `-m` 钉模型那批），
+此前从未进过 main。
+
+### 写 Base 时的锚
+
+禁写自检的锚**必须与本次载荷同批构造**。本轮我沿用上一轮的锚（载荷里的 message_id 前缀），
+而这次载荷只含另外两个字段 → 锚归零、按设计拦下写入。
+改法：给每条禁写正则各喂一个当场造的合成正例，**逐条自证能命中**，再跑真实载荷。
