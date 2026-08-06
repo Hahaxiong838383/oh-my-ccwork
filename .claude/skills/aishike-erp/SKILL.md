@@ -17,7 +17,9 @@ output_levels: L2
 5. M2 SN 方案：`docs/m2-sn-plan-v0.1.md`
 6. M2.2 复盘：`docs/m2-2-retrospective.md`
 7. M3 复盘：`docs/m3-retrospective.md`
-8. 公司虚拟机运行状态：`ssh company-vm 'cd /home/futurus/aishike-erp && ./deploy/doctor.sh'`
+8. SKU 命名规则：`docs/sku-naming-rule-v1.md`
+9. Sheet1 SKU 导入复盘：`docs/sku-sheet1-retrospective.md`
+10. 公司虚拟机运行状态：`ssh company-vm 'cd /home/futurus/aishike-erp && ./deploy/doctor.sh'`
 
 历史文档只能作为基线；涉及容器、页面、数据或端口时必须重新实测。
 
@@ -58,6 +60,10 @@ output_levels: L2
 
 - 销售只能选择工程批准的 SKU 属性组合；
 - 已批准 SKU 的身份字段锁定，变更通过复制新版本完成；
+- P003 SKU 统一使用 `EC-{ProductLine}-{Model}-{Screen}-{Bundle}-{Version}`，产品线为 `T/S/T&S`，屏幕为 `N/A/V`，套装为 `N/S1/S2`；
+- 内部 SKU 编码和 ERP 料号必须分离；不完整的 `FQT` 前缀只能标记为 `PENDING`，不能作为唯一主键；
+- 飞书 Sheet1 外部主数据默认导入为 `Draft`，正式 ERP 料号、BOM 和审批责任未齐全前不得自动批准；
+- Sheet1 当前验收基线为第 4–14 行 11 条唯一 SKU，其中 7 条 `CONFIRMED`、4 条 `PENDING`；
 - SN 全局唯一且不可修改，生产日期必须显式选择，不能依赖服务器时钟；
 - SN 批量分配在数据库事务中锁定规则记录，保持全成功或全失败；
 - 条形码和二维码由 SN 即时派生，不保存图片真值；
@@ -94,6 +100,15 @@ output_levels: L2
 - 部署前同时备份源码和数据库，`rsync` 排除 `.env`、`secrets/`、`backups/`、`output/` 和浏览器产物；部署后做连续自动验收、容器重启复验、全新浏览器闭环和源码零漂移检查；
 - 公网目标必须先核对设备真值；爱视可 ERP 只部署 `company-vm`，Studio 仅可做连通性验证，不得因用户口误把业务系统部署到错误主机；
 - 阶段完成不等于下一阶段获批；M3 已验收，但 M4 仍保持 `WAIT_EXPLICIT_USER_COMMAND`。
+
+### SKU 外部主数据经验规则
+
+- 表格元数据行数不能作为业务数量；先读取目标 Sheet 的有效业务列，过滤空白模板行，并保留来源表、Sheet 和行号；
+- 命名规则如果分散在生成器或配置 Sheet，应先核对生成公式，再以用户指定的业务 Sheet 作为导入内容真源；
+- 导入器必须以结构化 SKU 编码幂等，重复运行应只返回复用记录，不能生成重复 Item 或 SKU；
+- 新结构化模型与历史颜色/硬件模型并存时，唯一性校验按模型分支执行，并在新 SKU 表单隐藏无关兼容字段；
+- 数据库计数、迁移成功和 HTTP 200 不足以验收；必须在真实列表与详情页确认数量、字段、状态、来源追踪和控制台 0 错误；
+- Playwright CLI 填写敏感字段可能回显内容；剪贴板粘贴在无头浏览器中也可能不可用。必须从服务器受限文件读入临时 shell 变量，执行填充时重定向标准输出与错误输出，使用后立即 `unset`，禁止把真实值写入命令文本、截图、日志或记忆。
 
 ### Frappe 实现约束
 
@@ -158,4 +173,5 @@ bash -n deploy/bootstrap.sh deploy/doctor.sh
 - `ASK-000017` / `ASK-ORD-00009`：M3 自动闭环样机与订单，已激活；
 - `ASK-000019` / `ASK-ORD-00013`：M3 浏览器完整闭环样机与订单，已激活；
 - `ASK-000020` / `ASK-ORD-00015`：M3 人工验收样机与订单，已完成分配、发货和激活；
+- 飞书 Sheet1 SKU：11 条已导入并通过人工界面验收，正式料号 7 条、待补料号 4 条，全部保持草稿；
 - M3：`ACCEPTED`；M4：`WAIT_EXPLICIT_USER_COMMAND`。

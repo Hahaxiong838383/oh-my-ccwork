@@ -4,12 +4,27 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
-from aishike_erp.rules import RuleViolation, changed_locked_fields, validate_sku_status_transition
+from aishike_erp.rules import (
+    RuleViolation,
+    build_sku_code,
+    changed_locked_fields,
+    validate_sku_status_transition,
+)
 
 
 LOCKED_FIELDS = (
     "item_template",
     "item_code",
+    "product_name",
+    "erp_item_code",
+    "erp_item_code_status",
+    "channel_spec_name",
+    "short_spec_name",
+    "product_line_code",
+    "model_code",
+    "screen_code",
+    "bundle_code",
+    "version_code",
     "color",
     "hardware_configuration",
     "sales_region",
@@ -20,6 +35,7 @@ LOCKED_FIELDS = (
 
 class AishikeSKUConfiguration(Document):
     def validate(self) -> None:
+        self._apply_structured_sku_code()
         previous = self.get_doc_before_save()
         previous_status = previous.status if previous else None
         try:
@@ -53,6 +69,28 @@ class AishikeSKUConfiguration(Document):
             frappe.throw(f"SKU批准前必须补齐字段: {', '.join(missing)}")
 
     def _validate_unique_combination(self) -> None:
+        structured_fields = (
+            "product_line_code",
+            "model_code",
+            "screen_code",
+            "bundle_code",
+            "version_code",
+        )
+        if any(self.get(field) for field in structured_fields):
+            missing = [field for field in structured_fields if not self.get(field)]
+            if missing:
+                frappe.throw(f"结构化SKU编码字段不完整: {', '.join(missing)}")
+            duplicate = frappe.db.exists(
+                "Aishike SKU Configuration",
+                {
+                    **{field: self.get(field) for field in structured_fields},
+                    "name": ["!=", self.name or ""],
+                },
+            )
+            if duplicate:
+                frappe.throw(f"相同结构化SKU已存在: {duplicate}")
+            return
+
         duplicate = frappe.db.exists(
             "Aishike SKU Configuration",
             {
@@ -65,3 +103,34 @@ class AishikeSKUConfiguration(Document):
         )
         if duplicate:
             frappe.throw(f"相同属性组合已存在: {duplicate}")
+
+    def _apply_structured_sku_code(self) -> None:
+        fields = (
+            "product_line_code",
+            "model_code",
+            "screen_code",
+            "bundle_code",
+            "version_code",
+        )
+        if not any(self.get(field) for field in fields):
+            return
+        missing = [field for field in fields if not self.get(field)]
+        if missing:
+            frappe.throw(f"结构化SKU编码字段不完整: {', '.join(missing)}")
+        try:
+            expected = build_sku_code(*(self.get(field) for field in fields))
+        except RuleViolation as error:
+            frappe.throw(str(error))
+        if self.item_code and self.item_code != expected:
+            frappe.throw(f"SKU编码必须遵循命名规则，预期值: {expected}")
+        self.item_code = expected
+
+        required = ("product_name", "channel_spec_name", "short_spec_name")
+        missing = [field for field in required if not self.get(field)]
+        if missing:
+            frappe.throw(f"Sheet1 SKU必须补齐字段: {', '.join(missing)}")
+
+        if self.erp_item_code_status == "CONFIRMED":
+            erp_item_code = (self.erp_item_code or "").strip()
+            if len(erp_item_code) != 14 or not erp_item_code.startswith("FQT"):
+                frappe.throw("已确认ERP料号必须使用 FQT000000AV000 格式")

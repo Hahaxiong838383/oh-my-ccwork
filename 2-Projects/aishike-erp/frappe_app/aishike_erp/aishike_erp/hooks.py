@@ -11,4 +11,5 @@ required_apps = ["erpnext"]
 after_migrate = [
     "aishike_erp.localization.apply_chinese_defaults",
     "aishike_erp.sn.ensure_default_rule",
+    "aishike_erp.sku_master.ensure_sheet1_skus",
 ]

@@ -15,6 +15,13 @@ SKU_STATUS_TRANSITIONS = {
 }
 
 
+SKU_PRODUCT_LINES = {"T", "S", "T&S"}
+SKU_MODELS = {"MaxLite", "Max", "Ultra", "LF"}
+SKU_SCREENS = {"N", "A", "V"}
+SKU_BUNDLES = {"N", "S1", "S2"}
+SKU_VERSIONS = {"V1", "V2"}
+
+
 DEVICE_STATE_TRANSITIONS = {
     None: {"CREATED"},
     "CREATED": {"CREATED", "ASSEMBLED"},
@@ -47,6 +54,26 @@ def validate_transition(
 
 def validate_sku_status_transition(previous: str | None, current: str) -> None:
     validate_transition(SKU_STATUS_TRANSITIONS, previous, current, "SKU状态")
+
+
+def build_sku_code(
+    product_line: str,
+    model: str,
+    screen: str,
+    bundle: str,
+    version: str,
+) -> str:
+    values = {
+        "产品线": (product_line, SKU_PRODUCT_LINES),
+        "机型": (model, SKU_MODELS),
+        "屏幕": (screen, SKU_SCREENS),
+        "套装": (bundle, SKU_BUNDLES),
+        "版本": (version, SKU_VERSIONS),
+    }
+    for label, (value, allowed) in values.items():
+        if value not in allowed:
+            raise RuleViolation(f"SKU{label}代码无效: {value}")
+    return f"EC-{product_line}-{model}-{screen}-{bundle}-{version}"
 
 
 def validate_device_state_transition(previous: str | None, current: str) -> None:

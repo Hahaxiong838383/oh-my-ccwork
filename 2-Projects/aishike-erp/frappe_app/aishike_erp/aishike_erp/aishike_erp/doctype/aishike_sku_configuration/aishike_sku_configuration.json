@@ -8,10 +8,26 @@
  "engine": "InnoDB",
  "field_order": [
   "identity_section",
-  "item_template",
   "item_code",
+  "product_name",
   "status",
   "column_break_identity",
+  "item_template",
+  "erp_item_code",
+  "erp_item_code_status",
+  "channel_section",
+  "channel_spec_name",
+  "short_spec_name",
+  "source_reference",
+  "source_row",
+  "rule_section",
+  "product_line_code",
+  "model_code",
+  "screen_code",
+  "column_break_rule",
+  "bundle_code",
+  "version_code",
+  "legacy_section",
   "color",
   "hardware_configuration",
   "sales_region",
@@ -32,21 +48,21 @@
    "label": "SKU 基本信息"
   },
   {
-   "fieldname": "item_template",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "产品模板",
-   "options": "Item",
-   "reqd": 1
-  },
-  {
    "fieldname": "item_code",
    "fieldtype": "Data",
    "in_global_search": 1,
    "in_list_view": 1,
    "label": "SKU 编码",
+   "read_only_depends_on": "eval:doc.product_line_code",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "product_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "产品内部名称"
   },
   {
    "default": "Draft",
@@ -63,20 +79,112 @@
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "item_template",
+   "fieldtype": "Link",
+   "label": "ERP 物料",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "erp_item_code",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "ERP 料号"
+  },
+  {
+   "default": "PENDING",
+   "fieldname": "erp_item_code_status",
+   "fieldtype": "Select",
+   "label": "ERP 料号状态",
+   "options": "PENDING\nCONFIRMED",
+   "reqd": 1
+  },
+  {
+   "fieldname": "channel_section",
+   "fieldtype": "Section Break",
+   "label": "渠道规格名称"
+  },
+  {
+   "fieldname": "channel_spec_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "天猫/京东规格名"
+  },
+  {
+   "fieldname": "short_spec_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "简化规格名"
+  },
+  {
+   "fieldname": "source_reference",
+   "fieldtype": "Data",
+   "label": "数据来源",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_row",
+   "fieldtype": "Int",
+   "label": "来源行号",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rule_section",
+   "fieldtype": "Section Break",
+   "label": "SKU 命名规则：EC-产品线-机型-屏幕-套装-版本"
+  },
+  {
+   "fieldname": "product_line_code",
+   "fieldtype": "Select",
+   "label": "产品线代码",
+   "options": "T\nS\nT&S"
+  },
+  {
+   "fieldname": "model_code",
+   "fieldtype": "Select",
+   "label": "机型代码",
+   "options": "MaxLite\nMax\nUltra\nLF"
+  },
+  {
+   "fieldname": "screen_code",
+   "fieldtype": "Select",
+   "label": "屏幕代码",
+   "options": "N\nA\nV"
+  },
+  {
+   "fieldname": "column_break_rule",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "bundle_code",
+   "fieldtype": "Select",
+   "label": "套装代码",
+   "options": "N\nS1\nS2"
+  },
+  {
+   "fieldname": "version_code",
+   "fieldtype": "Select",
+   "label": "版本代码",
+   "options": "V1\nV2"
+  },
+  {
+   "depends_on": "eval:!doc.product_line_code",
+   "fieldname": "legacy_section",
+   "fieldtype": "Section Break",
+   "label": "兼容属性"
+  },
+  {
    "fieldname": "color",
    "fieldtype": "Select",
-   "in_list_view": 1,
    "label": "颜色",
-   "options": "STAR_WHITE\nDEEP_GRAY",
-   "reqd": 1
+   "options": "STAR_WHITE\nDEEP_GRAY"
   },
   {
    "fieldname": "hardware_configuration",
    "fieldtype": "Select",
-   "in_list_view": 1,
    "label": "硬件配置",
-   "options": "STANDARD\nPRO",
-   "reqd": 1
+   "options": "STANDARD\nPRO"
   },
   {
    "default": "CN",
@@ -192,8 +300,10 @@
   }
  ],
  "show_name_in_global_search": 1,
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
+ "title_field": "short_spec_name",
  "states": [],
  "track_changes": 1
 }

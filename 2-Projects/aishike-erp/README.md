@@ -42,6 +42,8 @@
 - `docs/m3-channel-fulfillment-plan-v0.1.md`：M3 渠道订单、设备分配、发货与激活边界
 - `docs/m3-manual-acceptance-guide.md`：M3 人工验收步骤和通过标准
 - `docs/m3-retrospective.md`：M2.3/M3 质量库存、渠道履约、部署与验收复盘
+- `docs/sku-naming-rule-v1.md`：飞书 Sheet1 SKU 命名规则和 ERP 导入边界
+- `docs/sku-sheet1-retrospective.md`：飞书 Sheet1 SKU 导入、部署和人工验收复盘
 - `prototype/`：不依赖第三方库的可执行领域原型与人工验收界面
 - `frappe_app/`：Frappe v16 自定义应用源码，包含真实DocType与控制器
 - `deploy/`：公司虚拟机的隔离测试环境、主机准备、部署和运行检查脚本
@@ -71,6 +73,8 @@ python3 web_app.py
 
 ## SKU编辑规则
 
+- 新 SKU 编码统一使用 `EC-{产品线}-{机型}-{屏幕}-{套装}-{版本}`；
+- 飞书 Sheet1 的 11 条 SKU 已纳入可重复导入目录，缺少正式 ERP 料号的记录保持草稿并标记待补；
 - 当前轻量演示数据是已批准状态，因此界面只读符合预期；
 - 真实ERPNext中，`Draft` SKU可以编辑颜色、硬件配置、区域、BOM和套餐；
 - `Approved` 后关键属性锁定，只允许停用或复制为新SKU；
