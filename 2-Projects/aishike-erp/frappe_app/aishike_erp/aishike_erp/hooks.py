@@ -13,3 +13,9 @@ after_migrate = [
     "aishike_erp.sn.ensure_default_rule",
     "aishike_erp.sku_master.ensure_sheet1_skus",
 ]
+
+doc_events = {
+    "User": {
+        "validate": "aishike_erp.user_policy.validate_system_user_email_domain",
+    }
+}

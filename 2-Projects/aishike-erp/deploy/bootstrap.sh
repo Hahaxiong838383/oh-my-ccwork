@@ -98,5 +98,5 @@ echo
 echo "测试环境已就绪。"
 echo "本机访问方式：ssh -N -L ${LOCAL_TUNNEL_PORT}:127.0.0.1:${HTTP_PUBLISH_PORT} company-vm"
 echo "浏览器地址：http://aishike.localhost:${LOCAL_TUNNEL_PORT}"
-echo "用户名：Administrator"
-echo "管理员密码保存在服务器 deploy/secrets/admin_password.txt，仅在需要登录时读取。"
+echo "日常登录：使用 @futurus.co 飞书企业邮箱账号。"
+echo "Administrator 仅用于紧急恢复，密码保存在服务器 deploy/secrets/admin_password.txt。"

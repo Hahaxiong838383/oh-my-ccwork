@@ -19,7 +19,8 @@ output_levels: L2
 7. M3 复盘：`docs/m3-retrospective.md`
 8. SKU 命名规则：`docs/sku-naming-rule-v1.md`
 9. Sheet1 SKU 导入复盘：`docs/sku-sheet1-retrospective.md`
-10. 公司虚拟机运行状态：`ssh company-vm 'cd /home/futurus/aishike-erp && ./deploy/doctor.sh'`
+10. 公网发布方案：`docs/public-access-v0.1.md`
+11. 公司虚拟机运行状态：`ssh company-vm 'cd /home/futurus/aishike-erp && ./deploy/doctor.sh && ./deploy/public-doctor.sh'`
 
 历史文档只能作为基线；涉及容器、页面、数据或端口时必须重新实测。
 
@@ -31,6 +32,8 @@ output_levels: L2
 - 服务端 Web：仅监听 `127.0.0.1:18080`
 - 本机隧道：`ssh -N -L 18081:127.0.0.1:18080 company-vm`
 - 浏览器：`http://aishike.localhost:18081`
+- 公网正式入口：`https://erp.hahaxiong.cc`
+- 旧调试域名：`https://aishike-erp.8-218-26-17.sslip.io`，仅保留为跳转和回滚入口
 - SN 工作台：`/desk/aishike-sn-console`
 - 生产测试工作台：`/desk/aishike-production-console`
 - 质量与入库工作台：`/desk/aishike-quality-console`
@@ -38,6 +41,15 @@ output_levels: L2
 - 运行版本基线：Frappe `16.30.0`、ERPNext `16.31.0`、`aishike_erp 0.1.0`
 
 密码、Token、私钥、部署 `.env`、`deploy/secrets/`、备份和原始设备日志不得进入 Git、skill、记忆、截图或命令输出。
+
+## 员工账号治理
+
+- 所有新增员工 `System User` 必须使用 `@futurus.co` 飞书企业邮箱，运行时由 `User.validate` 硬性阻断其他域名；
+- 日常管理员使用 `rayman.chen@futurus.co`，`Administrator` 只保留为紧急恢复账号；
+- 新账号默认设置中文、`Asia/Shanghai` 和最小必要角色，禁止共享账号；
+- ERP 未配置出站 SMTP 时，创建账号需关闭欢迎邮件，由 ERP 生成一次性密码设置链接，再通过已验证的飞书企业邮箱投递；
+- 一次性链接不得出现在聊天、命令输出、截图或 Git 中；投递后验证收件箱、链接对应用户、密钥消费和 `Login Success` 记录；
+- 删除、停用或修改管理员账号前必须保留一个已验证可登录的 `System Manager` 和 `Administrator` 回滚入口。
 
 ## 阶段闸门
 
@@ -97,8 +109,12 @@ output_levels: L2
 - 新订单要求启用映射，但映射停用不能阻断历史订单的投影刷新与后续履约；新建约束和历史可追溯性要分开处理；
 - 所有标为“脱敏引用”的字段都要执行同一隐私校验，不能只保护收货对象和激活字段而漏掉原始报文引用；
 - 浏览器自动化工具可能在操作日志中回显填充值；敏感值一旦被工具回显，立即轮换服务端凭据，后续只通过受限文件到剪贴板传递；
+- 无头浏览器快照可能直接包含密码框当前值；密码填充后不得生成 snapshot，登录前只验证用户名，登录成功跳转后才能截图；
+- Docker Secret 绑定旧文件 inode；原子替换宿主密码文件后，运行中容器可能仍读取旧值，必须复制新文件到容器更新密码或重建容器，并做真实登录验证；
 - 部署前同时备份源码和数据库，`rsync` 排除 `.env`、`secrets/`、`backups/`、`output/` 和浏览器产物；部署后做连续自动验收、容器重启复验、全新浏览器闭环和源码零漂移检查；
 - 公网目标必须先核对设备真值；爱视可 ERP 只部署 `company-vm`，Studio 仅可做连通性验证，不得因用户口误把业务系统部署到错误主机；
+- 公网 Web 使用香港 Nginx → 回环端口 → company-vm 受限反向 SSH；ERP 容器和香港转发端口都不得直接监听公网；
+- 固定公网验收必须覆盖 DNS、TLS、HTTP→HTTPS、香港回源、隧道 PID、两地连续请求、真实登录、业务页面和 Socket.IO 控制台；
 - 阶段完成不等于下一阶段获批；M3 已验收，但 M4 仍保持 `WAIT_EXPLICIT_USER_COMMAND`。
 
 ### SKU 外部主数据经验规则

@@ -7,8 +7,8 @@ RUN sed -i 's|proxy_set_header Origin .*|proxy_set_header Origin $http_origin;|'
     /templates/nginx/frappe.conf.template \
     && sed -i 's|proxy_set_header Host $host;|proxy_set_header Host ${FRAPPE_SITE_NAME_HEADER};|g' \
     /templates/nginx/frappe.conf.template \
-    && sed -i 's#get_hostname(socket.request.headers.host)#get_hostname(socket.request.headers["x-frappe-site-name"] || socket.request.headers.host)#' \
-    /home/frappe/frappe-bench/apps/frappe/realtime/middlewares/authenticate.js \
+    && sed -i 's#get_hostname(socket.request.headers.host)#get_hostname(socket.request.headers["x-forwarded-host"] || socket.request.headers.host)#' \
+        /home/frappe/frappe-bench/apps/frappe/realtime/middlewares/authenticate.js \
     && sed -i 's#get_hostname(socket.request.headers.origin))#get_hostname(socket.request.headers.origin || socket.request.headers.referer))#' \
     /home/frappe/frappe-bench/apps/frappe/realtime/middlewares/authenticate.js \
     && sed -i 's#let headers = {};#let headers = {"X-Frappe-Site-Name": get_site_name(socket)};#' \

@@ -9,6 +9,8 @@
 - 第一优先级：SKU/BOM、采购、组装测试、库存、渠道订单、SN追溯、售后RMA
 - 暂缓：AI会员订阅计费、复杂经销商返利、自动化AI审批
 - 测试环境：公司 Ubuntu 虚拟机仅绑定 `127.0.0.1:18080`，本机通过 `http://aishike.localhost:18081` 访问
+- 公网正式入口：`https://erp.hahaxiong.cc`，香港 HTTPS 入口通过受限反向 SSH 回源公司虚拟机；旧 `sslip.io` 域名自动跳转到正式域名
+- 员工账号治理：所有新增 `System User` 必须使用 `@futurus.co` 飞书企业邮箱；`Administrator` 仅保留为紧急恢复账号
 - M1 验收：中文登录、工作台、SKU 列表、草稿编辑、批准锁定和浏览器控制台均已通过
 - M2.1 验收入口：`http://aishike.localhost:18081/desk/aishike-sn-console`
 - M2.1 已覆盖：自定义 SN 规则、批量生成、Code 128/Code 39、二维码、HID 扫码枪、摄像头扫码和组装登记
@@ -44,6 +46,7 @@
 - `docs/m3-retrospective.md`：M2.3/M3 质量库存、渠道履约、部署与验收复盘
 - `docs/sku-naming-rule-v1.md`：飞书 Sheet1 SKU 命名规则和 ERP 导入边界
 - `docs/sku-sheet1-retrospective.md`：飞书 Sheet1 SKU 导入、部署和人工验收复盘
+- `docs/public-access-v0.1.md`：公网域名、HTTPS、受限反向隧道、验收与回滚方案
 - `prototype/`：不依赖第三方库的可执行领域原型与人工验收界面
 - `frappe_app/`：Frappe v16 自定义应用源码，包含真实DocType与控制器
 - `deploy/`：公司虚拟机的隔离测试环境、主机准备、部署和运行检查脚本

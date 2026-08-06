@@ -12,6 +12,7 @@ from aishike_erp.phase_gate import (
     M3_DEVICE_COLUMNS,
     M3_REQUIRED_DOCTYPES,
 )
+from aishike_erp.user_policy import find_noncompliant_system_users
 
 
 EXPECTED_DOCTYPES = (
@@ -84,6 +85,7 @@ def runtime_check() -> dict[str, object]:
         filters={"event_type": ["not in", sorted(M3_ALLOWED_EVENT_TYPES)]},
         pluck="name",
     )
+    noncompliant_system_users = find_noncompliant_system_users()
     incomplete = any(
         (
             "aishike_erp" not in installed_apps,
@@ -93,6 +95,7 @@ def runtime_check() -> dict[str, object]:
             missing_columns,
             out_of_phase_devices,
             out_of_phase_events,
+            noncompliant_system_users,
         )
     )
     return {
@@ -105,6 +108,7 @@ def runtime_check() -> dict[str, object]:
         "missing_columns": missing_columns,
         "out_of_phase_devices": out_of_phase_devices,
         "out_of_phase_events": out_of_phase_events,
+        "noncompliant_system_users": noncompliant_system_users,
         "sn_console_available": bool(frappe.db.exists("Page", "aishike-sn-console")),
         "production_console_available": bool(
             frappe.db.exists("Page", "aishike-production-console")

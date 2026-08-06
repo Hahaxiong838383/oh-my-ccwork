@@ -10,6 +10,10 @@ DOCTYPE_ROOT = PACKAGE_ROOT / "aishike_erp" / "doctype"
 WORKSPACE_ROOT = PACKAGE_ROOT / "aishike_erp" / "workspace"
 PAGE_ROOT = PACKAGE_ROOT / "aishike_erp" / "page"
 DOCTOR_PATH = ROOT.parents[1] / "deploy" / "doctor.sh"
+CONTAINERFILE_PATH = ROOT.parents[1] / "deploy" / "Containerfile"
+HOOKS_PATH = PACKAGE_ROOT / "hooks.py"
+USER_POLICY_PATH = PACKAGE_ROOT / "user_policy.py"
+ACCEPTANCE_PATH = PACKAGE_ROOT / "acceptance.py"
 
 
 def validate_doctype(path: Path) -> tuple[str, int]:
@@ -89,6 +93,24 @@ def validate_m3_controller_guards() -> None:
         raise ValueError(f"M3 controller guards are missing: {missing}")
 
 
+def validate_employee_email_policy() -> None:
+    hooks = HOOKS_PATH.read_text(encoding="utf-8")
+    policy = USER_POLICY_PATH.read_text(encoding="utf-8")
+    acceptance = ACCEPTANCE_PATH.read_text(encoding="utf-8")
+    expected_markers = {
+        "User validation hook": (
+            hooks,
+            "aishike_erp.user_policy.validate_system_user_email_domain",
+        ),
+        "employee domain": (policy, 'ALLOWED_EMPLOYEE_EMAIL_DOMAIN = "futurus.co"'),
+        "employee domain error": (policy, "员工系统账号必须使用 @futurus.co 飞书企业邮箱"),
+        "runtime user audit": (acceptance, '"noncompliant_system_users"'),
+    }
+    missing = [label for label, (content, marker) in expected_markers.items() if marker not in content]
+    if missing:
+        raise ValueError(f"employee email policy guards are missing: {missing}")
+
+
 def main() -> None:
     doctypes = []
     field_count = 0
@@ -164,10 +186,15 @@ def main() -> None:
             validate_trace_permissions(path, data["name"])
 
     validate_m3_controller_guards()
+    validate_employee_email_policy()
 
     doctor_script = DOCTOR_PATH.read_text(encoding="utf-8")
     if "aishike_erp.acceptance.assert_runtime_check" not in doctor_script:
         raise ValueError("doctor.sh must use the fail-closed runtime assertion")
+
+    containerfile = CONTAINERFILE_PATH.read_text(encoding="utf-8")
+    if 'socket.request.headers["x-forwarded-host"] || socket.request.headers.host' not in containerfile:
+        raise ValueError("Containerfile must validate realtime Origin against forwarded public host")
 
     print(
         f"OK: {len(doctypes)} DocTypes, {field_count} fields, "
