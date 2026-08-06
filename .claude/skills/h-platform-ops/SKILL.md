@@ -4484,17 +4484,19 @@ limactl 桩现在真把 stdin 交给 `bash -s`，guest 侧 python 与 `node --en
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-06 H-0076 窗口后，双站契约 `2026-08-05.3` 唯一）
+#### ✅ 版本态（2026-08-06 H-0032/H-0029 窗口后，双站契约 `2026-08-06.1` 唯一）
 
 | 位置 | 版本 |
 |---|---|
-| Mini 活动 VM 运行态 | **`615ce626f208`**、`dirty=false`、514 文件 |
-| dev198 | **`e2263af7c368`**（多一个纯文档提交 `prompts/pm`，行为无差异） |
-| 安装源 | `~/local/h-mini-b2-source-615ce626f208`（Mini 上，819 文件） |
+| 控制面 aliyun-hk | **`v1.43.0`**（公网 `https://ai.kidshub.cn/healthz` 取真值） |
+| Mini 活动 VM 运行态 | **`65a4ff92afc6`**、`dirty=false`、525 文件 |
+| dev198 | **`65a4ff92afc6`**（12 App，与 Mini 同 commit） |
+| 安装源 | `~/local/h-mini-b2-source-65a4ff92afc6`（Mini 上，830 文件） |
 | 验证器 | 已随 `d47edb7` 起进入部署源码树，**不必再单独归档**（`$SRC/deploy/lima/verify-mini-b2-active.sh` 直接跑；`$SRC` ≠ VM app，不污染 deploy meta） |
 
-> 历史：`1d5ccc5 → 2eb827d`（2026-08-05）→ `d47edb7 → f3336bc → 615ce62`（2026-08-06，
-> 三轮完整循环，见下方 H-0076 段）。
+> 历史：`1d5ccc5 → 2eb827d`（08-05）→ `d47edb7 → f3336bc → 615ce62`（08-06 上午，H-0076）
+> → `29cfb3f → 65a4ff9`（08-06 下午，H-0032/H-0029，见下方专段）。
+> **版本号一律现场取，别引用本表**——它每轮都会腐烂。
 
 ⚠️ **落差仍然是常态，别再"对齐"**：`2eb827d` 之后的提交全是 `deploy/lima/` 验证工具、
 docs、test 和控制面（跑在 aliyun-hk），**对 VM 运行时零行为变化**——`1d5ccc5→2eb827d`
@@ -4663,3 +4665,94 @@ dev198 是中文 locale，`diff -rq` 输出「只在…中存在」「文件…�
 同日第二跳：改用 `git diff <commit>` 后又踩「它对 untracked 文件失明」，磁盘上好好存在的
 9 个文件被报成差异。三连问：**什么语言？什么通道？该通道对哪类对象失明？**
 见 [[feedback_criteria_must_match_object_variant]]。
+
+---
+
+## H-0032 / H-0029 上线（2026-08-06 下午 · 反馈入口 + 新功能公告卡）
+
+**终态**：控制面 `v1.43.0`；dev198 与 Mini VM 同为 `65a4ff92afc6`，契约 `2026-08-06.1` 双站唯一。
+三提交：`7db7800`（25 文件主体）→ `29cfb3f`（按钮文案改「吐槽」）→ `65a4ff9`（失败卡收窄）。
+
+### 🔴 控制面子树部署下，生产机跑全套测试恒 5 红——那不是回归
+
+`node --test test/*.test.mjs` 在 `/srv/h-control/app` 恒失败 5 条（v1.42.0 时代同环境红同样 4 条）。
+根因：那几条「真跑」测试用 `repoRoot = new URL('../..')` 找仓根去 spawn `control-plane/server.mjs`，
+而控制面**只 rsync `control-plane/` 子树**，`/srv/h-control/control-plane/server.mjs` 根本不存在。
+
+⚠️ **本 skill 上文那条 `node --test test/*.test.mjs && systemctl restart h-control` 是坏配方**
+——`&&` 永远等不到 0，照抄等于永不重启。正确做法：**跑之前先在旧版本（站外备份目录）跑一遍做对照组**，
+失败集合相同即环境性失败，手动重启；新增的红必须逐条归因到"同族"才放行。
+
+### 部署后唯一能证明新分支跑过的东西：healthz 新字段
+
+`bridge.mjs` 里 `if (controlClient?.enabled && …)` 这类块**单测永远进不去**。
+本轮判据是 healthz 的 `releaseAnnouncements` 从缺失变 `{enabled:true,…}`。
+配套：dev198 的 `runnerWorker.workerPid` 变化才证明 **Runner Worker 真重启**（不是只重启 bridge）。
+970 个测试全绿 + `node --check` 全过，这两样加起来仍证明不了新分支能跑。
+
+### 灰度前必须先算 person 去重，否则验收标准自相矛盾
+
+12 个 H 用户**全在同一飞书租户**（tenantKey 去重 =1；unionId 有 10 个不同值）。
+`rayman.chen`(owner) / `u-001422f6e5`(陈川测试bot) / `u-aca292be3f`(Mini AI 专家)
+**同属 person `p-b1d55450cc05`**。公告 `perBot:false` 时同一 person 只发最近活跃的那个
+——所以"给两个 Bot 各发一张"和 `perBot:false` **不可能同时成立**。
+拆两张公告解决：A 用 `perBot:true` 拿两个 message_id，B 用 `perBot:false` 专验去重
+（发布**前**先锁死预测，本轮两者只差 565ms，命中才算数）。详见 [[feedback_acceptance_must_be_computable_before_you_run_it]]。
+
+⚠️ `/internal/users` 的投影里**没有 personId 字段**，别据此说"生产没有 personId"；
+去重用的是 `store.list()`，真值查 `/srv/h-control/data/users.json`。
+
+### 反馈表单权限：不要开编辑权限
+
+`/share/base/form/<token>` 分享页**匿名浏览器可直接渲染并提交** → 用户无需任何授权。
+**给多维表格开编辑权限 = 11 个租户互相看见对方的反馈内容**，是隐私事故。
+验证方法：用浏览器工具真渲染一次；**HTTP 200 不能作为结论**（飞书表单是 SPA，
+空壳 200 骗过判断，见 [[feedback_hollow_200_needs_payload_check]]）。
+
+### Delivery Outbox 的存储形态
+
+`<sha256(scope)>.v1.jsonl` —— **JSONL 不是 JSON**，`find -name "*.json"` 查不到任何东西，
+且那个 0 长得和"没有记录"一模一样。事件链形如
+`delivery_enqueued → delivery_attempted(attempt:N) → delivery_acked(带 messageId)`。
+根目录：dev198 `~/feishu-grok-bridge/workspace/.delivery-outbox`；Mini VM `/srv/h-platform/workspace/.delivery-outbox`。
+
+### Mini renderer 对新 env 键是透传的（已实测）
+
+`render-mini-b2-env.mjs` 遍历**所有**键，非 override 键走 `mapSourcePath`；
+URL 这类非绝对路径值只做 `127.0.0.1:10808 → host.lima.internal:10808` 替换，**其余原样**。
+**无白名单丢弃**。实测锚：URL 的 sha256 穿过渲染不变，同时 `GROK_CWD` 被正确重写
+（证明 renderer 真跑了而不是原样复制）——只验前者会把"没跑"误判成"透传正确"。
+
+### 跨嵌套层传命令一律用脚本文件
+
+`ssh → limactl shell h-b2 -- bash -lc "…"` 三层嵌套会把引号吃掉，产出 `grep: action":`
+这种**坏探针**，而它的输出（空/0）与真结论同形。本轮踩了两次。
+做法：本地写 `.sh`/`.py` → `scp` 到 Mini → `limactl copy` 进 VM → 执行 → 清理。
+
+### 时间窗口判据用相对时间
+
+dev198 是 `Asia/Shanghai`，`journalctl --since "12:08:00"` 被当作**本地** 12:08（= 04:08 UTC）。
+跨机一律 `--since "-8 min"`（时区无关）；必须用绝对时刻先 `date -u` 取该机基准。
+同族的 locale 坑见 [[feedback_criteria_must_match_object_variant]]。
+
+### 需求 Base 写入流程（本轮实走）
+
+表：`需求与问题` `tblnA4nQjXNFiu8B` / `执行记录` `tblxkoFQKfJgA0oy`；app_token 在
+`/srv/h-control/.env` 的 `H_ISSUE_TRACKER_URL`（**不进 Git**）。
+`lark-cli --as user api PUT …/records/<rec> --data -` 走 stdin；写完必回读。
+证据字段禁写 Token / 授权链接 / open_id / 对话正文 / 表单真实地址——**写之前跑一遍禁写自检并配可命中的锚**。
+
+### 失败卡的按钮集（川哥 2026-08-06 拍板）
+
+失败终态卡只挂 `FAILURE_COMMAND_KEYS = {new_session, feedback}`。
+原因：改动前失败卡**零按钮**，挂整个面板既超范围，且「配置/我的记忆」在失败卡上
+拿不到链接会退成两跳 callback，与成功卡的一步直达不一致——**同一控件跨上下文两种行为**。
+守卫：`test/f5-completion-wiring.test.mjs` 断言两处调用必须带 `only: FAILURE_COMMAND_KEYS`；
+`test/feedback-entry.test.mjs` 用 `deepEqual` 断言**整个标签数组**（只 `find` 到一个就算过，
+会漏掉"多塞了三样进来"，见 [[feedback_disjunctive_assertion_never_tests_the_branch]]）。
+
+### 熔断
+
+两站 `H_RELEASE_ANNOUNCEMENTS=0` + 清空 `H_FEEDBACK_FORM_URL`。
+公告持久文件与 Outbox **都不删**，已 ACK 不重放；失败卡熔断后只剩「新会话」。
+回滚文档：`docs/rollbacks/2026-08-06-feedback-release-announcements.md`。
