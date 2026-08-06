@@ -4815,3 +4815,41 @@ B2 割接后部署目标是 Lima VM `/opt/h-platform/app`，脚本却仍指宿�
 禁写自检的锚**必须与本次载荷同批构造**。本轮我沿用上一轮的锚（载荷里的 message_id 前缀），
 而这次载荷只含另外两个字段 → 锚归零、按设计拦下写入。
 改法：给每条禁写正则各喂一个当场造的合成正例，**逐条自证能命中**，再跑真实载荷。
+
+### 2026-08-07 深夜：H-0029 触发器已补齐（`ccbddd3`）
+
+`release-announcements/<契约版本>.json` **存在与否就是开关**——
+`ops/announce-release.mjs` 接在 `deploy-sites.sh` 部署成功之后跑一次，查不到就静默退 0。
+格式与 fail-closed 全表见仓库 `release-announcements/README.md`（那是单一真源，别在这儿抄一份）。
+
+**跑之前必须知道的三件**：
+- 触发器在 **dev198** 上跑（它有全树 + `H_CONTROL_URL`/`H_CONTROL_TOKEN`；
+  控制面只收 `control-plane/` 子树，清单到不了那儿；Air 的 secrets 里没有这两个键）。
+- 它拿**线上 healthz** 的契约版本与仓库 `BOT_BEHAVIOR_CONTRACT_VERSION` 对撞，
+  不一致直接退 2。**部署没生效却发公告 = 对用户宣布一个他还用不上的功能。**
+- 清单坏了退 2 让部署红灯，**不是**静默跳过——坏清单静默跳过等于这次上线的公告永远丢了。
+  代码此时已经上线，修完清单重跑 `deploy-sites.sh` 即可，publish 幂等不会重发。
+
+**验收状态**：③无清单静默、④三种坏清单退 2，都真机验过（配合法清单 `--dry-run` 退 0 的正例锚，
+证明那些 2 是校验拦的而非"什么都跑不通"）。**①新契约版本→用户真收到卡、②重跑零重复，
+要等下一次真实契约版本变更才能验**——这是设计使然，别为了验它去假造版本号。
+
+### 分支：统一走 `main`
+
+`deploy-sites.sh` 的 `BRANCH` 已改 `main`，dev198 已切。
+`origin/codex/h-mini-ab-poc` 是 main 祖先、零独有提交，可删（待执行）。
+
+⚠️ **在任何机器上切分支前先问「这台机器上这个名字指向哪个 commit」**。
+当时 dev198 的本地 `main` 停在 133 个提交之前、与 HEAD 差 **297 个文件**，
+直接 `git checkout main` 会把生产代码倒回旧版本，而 healthz 还会绿一阵子
+（进程没重启，磁盘却已经换了）。安全姿势：`git branch -f main HEAD`（零文件变化）
+→ checkout（纯指针移动）→ 让部署流程正常 ff-merge 前进；用 `HEAD^{tree}` 对撞确认零内容变动。
+力推分支指针前先查独有提交数（`git rev-list --count origin/X..X`），为 0 才安全——
+dev198 以前真的自己写过代码。
+
+### 加了测试 ≠ 测试被跑
+
+仓库自带 `test/test-coverage-guard.test.mjs`：`test/` 与 `control-plane/test/` 下
+每个文件都必须被 `npm test` 覆盖。本轮它当场抓到新增的 `release-manifest.test.mjs`
+没挂进去。新增测试文件记得加到 `package.json` 的 `test:uncovered-batch`。
+测试数与基线不同时**先解释增减**：980 = 967 基线 + `65a4ff9` 净增 3 + 本次 10。
