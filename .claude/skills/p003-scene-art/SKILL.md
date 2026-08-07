@@ -16,6 +16,8 @@ description: P003 K1 demo 场景美术化标准方法论：把抽象 CSS 占位�
 
 ## 适用场景
 
+> **边界**：本 Skill 只负责 P003 K1 demo 的栅格场景美术与前端轻动效；P003 CMF、包装、镭雕、蚀刻、铭牌等 `.ai`/SVG/PDF 矢量图纸检查与文字转曲修改，统一使用 `vector-artwork-editing` Skill，避免把制造图纸流程混入场景美术。
+
 P003 K1 demo (`/Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/`) 内任何一个 boot scene / reward scene / focus scene 需要从"抽象 CSS 占位"升级为"静态写实 PNG + 轻动效 + 真实 TTS 开口"。
 
 **已实施**：SetupGuide / Welcome / AskMode（boot）

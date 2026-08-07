@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vector Artwork Editing"
+  short_description: "Inspect and edit AI, SVG, and PDF vector artwork safely"
+  default_prompt: "Use $vector-artwork-editing to inspect and edit this vector artwork while preserving typography, geometry, and export integrity."
