@@ -5000,3 +5000,27 @@ dev198 的 systemd drop-in 已纳入 `deploy/dev198/systemd/`——**真源仍�
 所以外层非零退出时你**看不到那份最有用的 checks 明细**——直接调子验证器看。
 选任务的逻辑是「`--after` 之后、`source=feishu`、按 ts 倒序取第一条」，
 所以它永远只看**最近一条**，把 `--after` 往前放并不会翻出更早的样本。
+
+## 公司 AI Ontology 基座复用边界（2026-08-07）
+
+当 H 平台被接入公司 AI Ontology 基座时，H 平台只作为 **Bot / Runner / Delivery Layer** 复用，不能被提升为业务真源或超级管理员 Agent。
+
+可直接复用：飞书 Bot Bridge、精确 scope 授权卡片、device-flow 自动续跑、Runner/Grok 调用链、`short/full` taskMode、多用户 profile、隔离 HOME/lark-cli HOME、Delivery Outbox、Feishu ACK、Task Session Log、并发调度和任务恢复。
+
+必须新增并强制经过：
+
+- `Ontology Service`：目标、P2、任务、决策、ERP、社媒、成果、证据的公司语义真源。
+- `Permissioned Retrieval Gateway`：先算用户/部门/项目/密级权限，再检索并组证据包。
+- `Task Compiler`：把经营目标/P2 拆成任务图和个人任务，再交 H 平台投递给员工 Bot。
+- `Mandatory Action Gateway`：Runner 只能提交 Action Intent；写 ERP、飞书、Git、报表必须 dry-run、人审、执行、读回校验、审计和回滚。
+
+集成红线：
+
+- 全员 `Company Front-door Agent` 只做接待、澄清、意图分类、路由、证据摘要和任务状态解释，不直接持有全库权限。
+- Runner 不直接查全量 Ontology、ERP、社媒或飞书文档。
+- Runner 不直接写业务系统；stdout 成功、进程退出 0、Feishu ACK 任一单点都不等于业务完成。
+- P0 可沿用当前单机 durable store，但公司级多节点/多安全域必须迁 Postgres + `tenant_id` + RLS。
+- 不共享 Grok HOME、memory root、MCP 凭据和日志给不同安全域。
+
+完整方案见 `company-ai-ontology` skill 与飞书文档《公司 AI Ontology 基座架构方案 V1.0》：
+`https://futurus.feishu.cn/docx/Xd3qdCtmXogh0rxmEhDc8pL1nub`。
