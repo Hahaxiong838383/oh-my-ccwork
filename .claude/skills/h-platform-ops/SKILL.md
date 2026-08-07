@@ -4477,21 +4477,24 @@ limactl 桩现在真把 stdin 交给 `bash -s`，guest 侧 python 与 `node --en
 注入非零退出，覆盖「快照取不到」分支；criterion09 改成与目标 renderer 逐键对撞，
 并把「取不到目标 renderer」与「两源不一致」分开报错。
 
-**第三层（真实长任务）只能靠真发一条 ≥130s 的飞书任务触发。** 2026-08-05 已真机跑通一次
-（`ok=true`，`elapsedMs=120014`、`durationMs=428160`、Outbox 与 TaskSessionLog 同 messageId、
-`task_completed` 晚于 `delivery_acked` 5ms）。想**只读复跑前两层**用 `3606b7c` 新增的
+**第三层（真实长任务）只能靠真发一条 ≥130s 的飞书任务触发。** 已真机跑通两次：
+2026-08-05 割接（`elapsedMs=120014`、`durationMs=428160`）与 2026-08-07 升级后复验
+（`elapsedMs=120004`、`durationMs=201251`，10 项 checks 全真）——两次都是 Outbox 与
+TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
+**每次升级都要重跑这一层**，理由与造任务的两个前置条件见下方「Mini B2 升级实战补充」。
+想**只读复跑前两层**用 `3606b7c` 新增的
 `--skip-long-task`：它会输出 `partial` 并标注跳过原因，**顶层不会伪装成 `ok=true`**
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-07 11:30：dev198 与 Mini VM 同为 **`c62485a04785`**，仓库 main `f82cc50`，双站契约 `2026-08-06.1` 唯一）
+#### ✅ 版本态（2026-08-07 13:45：dev198 与 Mini VM 同为 **`c62485a04785`**，仓库 main `f82cc50`，双站契约 `2026-08-06.1` 唯一；Mini 三层验证 `status=complete`）
 
 | 位置 | 版本 |
 |---|---|
 | 控制面 aliyun-hk | **`v1.43.0`**（公网 `https://ai.kidshub.cn/healthz` 取真值） |
-| Mini 活动 VM 运行态 | **`65a4ff92afc6`**、`dirty=false`、525 文件 |
-| dev198 | **`65a4ff92afc6`**（12 App，与 Mini 同 commit） |
-| 安装源 | `~/local/h-mini-b2-source-65a4ff92afc6`（Mini 上，830 文件） |
+| Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件（`deployedAt` 2026-08-07T02:54:19Z，服务 10:55:32 重启）、1 App |
+| dev198 | **`c62485a04785`**（12 App，与 Mini 同 commit；两站持有集合零交集，互斥成立） |
+| 安装源 | Mini 上 `~/local/h-mini-b2-source-<commit>`，**具体路径现场 `ls` 取**（随 commit 变，写死必腐烂） |
 | 验证器 | 已随 `d47edb7` 起进入部署源码树，**不必再单独归档**（`$SRC/deploy/lima/verify-mini-b2-active.sh` 直接跑；`$SRC` ≠ VM app，不污染 deploy meta） |
 
 > 历史：`1d5ccc5 → 2eb827d`（08-05）→ `d47edb7 → f3336bc → 615ce62`（08-06 上午，H-0076）
@@ -4929,5 +4932,42 @@ dev198 的 systemd drop-in 已纳入 `deploy/dev198/systemd/`——**真源仍�
 - 中断：回迁 ~20s + 割接 ~14s（上次 90s 事故的 `NODE_BIN` 护栏这次生效，没重演）。
 - `verify-mini-b2-active --skip-long-task` 得到 `status=partial`、`healthChecks 16/16`。
   **partial ＝未验，不是不合格**；longTask 层需真机 ≥130s 任务。
+  **当日 13:40 已补验为 `status=complete`**（三层全真、健康 16/16、长任务 10/10；
+  13:36:48 入站 → 120.004s 转后台 → 201.3s 完成）。
 - ⚠️ marker 真路径是 `/srv/h-platform/config/mini-b2-enabled`（我一度猜成 `.mini-b2-active`，
   回迁那步碰巧结论正确、割接后才被验证器照出矛盾——**以验证器为权威**）。
+
+#### 造一条能过 longTask 层的真机任务（2026-08-07 实走，两个前置条件在源码里）
+
+两条都是**查源码定的，不是试出来的**——试错会得到「跑了 3 分钟却还是 false」这种无信息的失败：
+
+| 前置 | 真值 | 出处 |
+|---|---|---|
+| 必须**单聊** | `chatType !== 'p2p'` → `yieldMs = 0`，群聊根本不进 yield 分支 | `bridge.mjs` 的 `bgYieldMsFor()` |
+| 必须**明显跑过 120s** | 窗口 `H_BG_YIELD_MS` 默认 `120_000`；两站均未覆盖（查进程 env + env 文件双证） | 同上 + 验证器 `thresholdMs=120_000` |
+
+⚠️ **发出去后不能再补消息**：转后台是 `120s 定时器` 和 `新任务信号` 的 `Promise.race`，
+中途再说一句会以 `reason=new_task` 提前触发，`elapsedMs < 120000` → 该次作废。
+
+可直接给川哥粘贴的任务（4 轮 × `sleep 45`，实测 201s，稳过）：
+
+```
+分 4 轮做一次只读的运行环境自检，每轮之间必须真实等待 45 秒，全程真实耗时不少于 180 秒。
+不许把等待合并、不许模拟等待、不许提前收尾。
+每一轮：① date '+%H:%M:%S'; uptime  ② sleep 45
+四轮跑完后把时间戳与负载列表回报，并给出首轮/末轮时间与实际总耗时（秒）。
+约束：全程只读，不创建/修改/删除任何文件（含任务日志），不调用 lark-cli，
+不输出绝对路径、凭据、用户 ID 或 App ID。
+```
+
+⚠️ **升级后必须重验，别拿旧版本的验收当数**：8-05 割接时长任务层就绿过一次，
+但 8-07 升级到 `c62485a` 后**到这条任务之前该版本零任务样本**——
+「这个能力验过」与「**现在这个版本**验过」是两件事，`.deploy-meta.json` 的
+`deployedAt` 与服务 `ActiveEnterTimestamp` 就是分界线。查一句
+`--after <重启时刻>` 返回「没有找到符合条件的飞书入站任务」即可判定。
+
+排查用法：`scripts/verify-b3-long-task.mjs` 的 stdout 是 JSON、stderr 也可能是 JSON，
+**外层 `verify-mini-b2-active.sh` 把子验证器 stdout 重定向进临时文件**，
+所以外层非零退出时你**看不到那份最有用的 checks 明细**——直接调子验证器看。
+选任务的逻辑是「`--after` 之后、`source=feishu`、按 ts 倒序取第一条」，
+所以它永远只看**最近一条**，把 `--after` 往前放并不会翻出更早的样本。
