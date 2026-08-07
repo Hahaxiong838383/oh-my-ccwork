@@ -4484,7 +4484,7 @@ limactl 桩现在真把 stdin 交给 `bash -s`，guest 侧 python 与 `node --en
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-07 起：线上仍 `65a4ff92afc6`，仓库 HEAD/main 已到 `d1db455`，双站契约 `2026-08-06.1` 唯一）
+#### ✅ 版本态（2026-08-07 11:30：dev198 与 Mini VM 同为 **`c62485a04785`**，仓库 main `f82cc50`，双站契约 `2026-08-06.1` 唯一）
 
 | 位置 | 版本 |
 |---|---|
@@ -4853,3 +4853,81 @@ dev198 以前真的自己写过代码。
 每个文件都必须被 `npm test` 覆盖。本轮它当场抓到新增的 `release-manifest.test.mjs`
 没挂进去。新增测试文件记得加到 `package.json` 的 `test:uncovered-batch`。
 测试数与基线不同时**先解释增减**：980 = 967 基线 + `65a4ff9` 净增 3 + 本次 10。
+
+---
+
+## 2026-08-07 上午：213 秒中断归因 + Mini 升级 + 探针 + 飞书改直连
+
+### 事故归因：不是 xray，是裸直连；放大机制在租约
+
+dev198→控制面**直连**断 213 秒（09:55:54–09:59:27），**同期 xray→DMIT 隧道全程正常**。
+放大在 `app-placement`：续租第一次失败（T+20s）就 `lose()` → 拆掉 11 个租户的飞书 WS，
+用户看到「目标回调服务当前未在线」。已修（`6defe1d`，见上一节）。
+**Mini 同期只挨 1 次 fetch failed、零 lease lost** —— 两站对照是把放大机制照出来的关键。
+
+⚠️ **那 213 秒本身为什么断，至今未知。** 已排除 xray 进程重启、内核 link 事件、控制面重启、负载。
+dev198 是双默认路由（有线 metric 100 / WiFi 600），上行不可达时内核不报事件、路由也不自动切——
+这是最像的猜测但**没有证据**。靠 `h-egress-probe` 等下次。
+
+### 读日志前先确认 unit 层级
+
+**xray 在 dev198 是 user unit。** `journalctl -u xray`（系统级）只给 1 行、锚也是 1 行——
+我据此正确地拒绝下结论，但**停在了「通道是死的」**。`journalctl --user -u xray` 有 5530 行，
+关键证据就在里面。**锚归零之后必须再追一层：权限？unit 名？还是 user/system 层级？**
+
+### 进程标识向服务管理器要，别用 pgrep 猜
+
+验证 NO_PROXY 时我用 `pgrep -f "node .*bridge.mjs" | head -1` 取 PID，读出「改动没生效」，
+**差点回滚一个成功的生产变更**。真值：
+
+```bash
+MAIN=$(systemctl --user show feishu-grok-bridge -p MainPID --value)
+```
+
+bridge + runner-worker + 正在退出的旧进程同时在，`pgrep | head -1` 返回哪个纯看运气。
+
+### 出网路径：每个 HTTP 客户端各一条，不是每个服务一条
+
+| 客户端 | 读 proxy 环境变量？ |
+|---|---|
+| node 内置 `fetch`（undici，Node 22.17 实测） | **不读** |
+| `axios` / `ws`（lark-sdk 用） | 读 |
+| `curl` | 读 |
+
+所以**「用 curl 测出来快/慢」不代表 bridge 的行为**——那是两条不同的路径。
+我先按旧记忆假定 bridge 走代理，提了「kidshub.cn 加进 NO_PROXY」的修复，
+**那是纯空操作**，还拿 curl 的 0.16s vs 3.3s 给它背书。是死端口反证把它拦下来的：
+全套 proxy 变量指向 `127.0.0.1:59999`，node fetch 仍 200，而同组变量下 curl 退 7（反向锚）。
+
+### 飞书流量改直连（`f82cc50`）
+
+dev198 的 `NO_PROXY` 加 `.feishu.cn`。**这不是新决策**——6/22 就拍板「飞书统一直连」，
+只是六周没传到 dev198（7/31 那份 drop-in 是为修另一个故障写的，没回头问该不该走代理）。
+收益实测 **15–25 倍**（直连 0.05–0.10s vs 经 xray 1.2–1.4s），飞书占该机代理流量 **56%**。
+
+**验证判据用连接去向，不用环境变量字面值**：
+
+```bash
+MAIN=$(systemctl --user show feishu-grok-bridge -p MainPID --value)
+ss -tnp | grep "pid=$MAIN,"        # 经 127.0.0.1:10808 的应为 0
+```
+
+实测：14 条 ESTABLISHED，经代理 **0**；xray 里 `open.feishu.cn`=0 而 grok/x.ai=7（锚）。
+
+⚠️ **反直觉的一面**：两次事故各打一边——7/31 代理断→飞书挂；8/7 直连断→**飞书恰因走代理而幸存**。
+飞书直连换掉了一条冗余路径，兜底靠 WS 自动重连 + 租约宽限 + Outbox + 探针。回退=删一行+重启。
+
+**未覆盖**：grok CLI 子进程（含飞书 MCP）仍走代理，要收干净得改 xray 路由并重启 xray（挑无任务窗口）。
+
+dev198 的 systemd drop-in 已纳入 `deploy/dev198/systemd/`——**真源仍是机器，只准回抄不准反推**
+（线上修复常先落机器，反推会抹掉正在生效的修复）。
+
+### Mini B2 升级实战补充（`65a4ff9 → c62485a`）
+
+- preflight 首轮 **9 绿 1 红**：红在 AI 专家 `lastError` 残留。**成功送达会自动清零**——
+  让川哥发一条消息即可，不必豁免判据。
+- 中断：回迁 ~20s + 割接 ~14s（上次 90s 事故的 `NODE_BIN` 护栏这次生效，没重演）。
+- `verify-mini-b2-active --skip-long-task` 得到 `status=partial`、`healthChecks 16/16`。
+  **partial ＝未验，不是不合格**；longTask 层需真机 ≥130s 任务。
+- ⚠️ marker 真路径是 `/srv/h-platform/config/mini-b2-enabled`（我一度猜成 `.mini-b2-active`，
+  回迁那步碰巧结论正确、割接后才被验证器照出矛盾——**以验证器为权威**）。
