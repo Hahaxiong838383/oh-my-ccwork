@@ -3303,6 +3303,13 @@ Air 是移动办公本，通勤就没网。实测 6 天 1361 轮：83 轮异常�
   **验收看 `heartbeat` 表不看 UI 绿点**：`msg` 应为 `200 - OK, keyword is found`
   ——那句话证明关键词判定真的跑过，绿点证明不了。
 
+### ⚠️ 告警投递仍未验证（2026-08-07 记，别当已验）
+
+飞书通道（notification id=1）历史触发过 33 次、`type=Feishu`、`active=1`、webhook 已配。
+**但 Kuma 的 heartbeat 表只记事件，不记投递结果**——「触发过」≠「送达过」。
+真要确认只有两条路：①问川哥历史告警是否收到 ②造一次可控故障看真机送达。
+在任一条完成前，这层的**告警能力**属未验证，只有**探测能力**是验过的。
+
 ### 客户端层（Air，已降级）
 
 - 开关 `H_ENTRY_WATCH_ALERT`（**默认 0 = 不告警**）；抑制时写
@@ -5122,17 +5129,17 @@ dev198 的 systemd drop-in 已纳入 `deploy/dev198/systemd/`——**真源仍�
 
 ## 公司 AI Ontology 基座复用边界（2026-08-07）
 
-当 H 平台被接入公司 AI Ontology 基座时，采用同一代码库的 `company-qnap-lite` 部署 profile，在 QNAP 同机运行 **H-Lite + Company Agent Core**。H-Lite 只作为 Bot / Subscription / Delivery Layer，不能被提升为业务真源或超级管理员 Agent。
+当 H 平台被接入公司 AI Ontology 基座时，采用同一代码库的 `company-qnap-lite` 部署 profile，在 QNAP 同机运行 **公司级 Bot H-Lite + Company Agent Core**。现有员工私人 Bot 继续由当前 H 平台运行，不迁移、不切换 Consumer。H-Lite 只作为公司级 Bot 的 Bot / Subscription / Delivery Layer，不能被提升为业务真源或超级管理员 Agent。
 
 H-Lite 可直接复用：飞书 WebSocket 订阅、Bot Bridge、精确 scope 授权卡片、device-flow 自动续跑、Company Front-door profile、Delivery Outbox、Feishu ACK/读回、Task Session Log、提醒、任务恢复和 Agent Core Adapter。必须使用现有 H 代码与统一 `behaviorContractVersion`，禁止复制形成长期 fork。
 
-生产订阅约束：同一个飞书 App 只允许一个 active consumer。QNAP H-Lite 是主消费者；Mini/dev198 等其他实例只能通过 lease/fencing 作为 standby，禁止双消费、双回复和双写 Outbox。
+生产订阅约束：新建独立公司级飞书 App/Bot，由 QNAP H-Lite 作为其主消费者；Mini/dev198 等公司 Bot 备用实例只能通过 lease/fencing 作为 standby，禁止双消费、双回复和双写 Outbox。员工私人 Bot 的原 App 和原 Consumer 不受影响。
 
 必须新增并强制经过：
 
 - `Ontology Service`：目标、P2、任务、决策、ERP、社媒、成果、证据的公司语义真源。
 - `Permissioned Retrieval Gateway`：先算用户/部门/项目/密级权限，再检索并组证据包。
-- `Company Agent Core`：部署在 QNAP，基于 Grok Build CLI，是全员 Agent 的唯一逻辑主实例。
+- `Company Agent Core`：部署在 QNAP，通过 H 引擎执行，是全员 Agent 的唯一逻辑主实例。
 - `Task Proposal Compiler`：只生成任务图和个人任务草案，经 DRI 批准后再交 H-Lite 投递。
 - `Mandatory Action Gateway`：Runner 只能提交 Action Intent；写 ERP、飞书、Git、报表必须 dry-run、人审、执行、读回校验、审计和回滚。
 
@@ -5142,7 +5149,7 @@ H-Lite 可直接复用：飞书 WebSocket 订阅、Bot Bridge、精确 scope 授
 - Runner 不直接查全量 Ontology、ERP、社媒或飞书文档。
 - Runner 不直接写业务系统；stdout 成功、进程退出 0、Feishu ACK 任一单点都不等于业务完成。
 - H-Lite durable store 只保存 append-only 投递/运行事件；公司任务状态从 P0 起由 Ontology/Postgres + `tenant_id` + RLS 单写。
-- 不共享 Grok HOME、memory root、MCP 凭据和日志给不同安全域。
+- 不共享 H 引擎 HOME、memory root、MCP 凭据和日志给不同安全域；底层 Provider 实现不得成为跨域共享入口。
 
 完整方案见 `company-ai-ontology` skill 与飞书文档《公司 AI Ontology 基座架构方案 V2.2》：
 `https://futurus.feishu.cn/docx/Xd3qdCtmXogh0rxmEhDc8pL1nub`。
