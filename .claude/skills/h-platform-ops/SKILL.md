@@ -4516,13 +4516,13 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-07 13:45：dev198 与 Mini VM 同为 **`c62485a04785`**，仓库 main `f82cc50`，双站契约 `2026-08-06.1` 唯一；Mini 三层验证 `status=complete`）
+#### ✅ 版本态（2026-08-07 16:05：dev198 **`e5b397815d1c`** / Mini VM **`c62485a04785`**（**刻意落差**，见下），仓库 main `e5b3978`，双站契约 `2026-08-06.1` 唯一；Mini 三层验证 `status=complete`）
 
 | 位置 | 版本 |
 |---|---|
 | 控制面 aliyun-hk | **`v1.43.0`**（公网 `https://ai.kidshub.cn/healthz` 取真值） |
-| Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件（`deployedAt` 2026-08-07T02:54:19Z，服务 10:55:32 重启）、1 App |
-| dev198 | **`c62485a04785`**（12 App，与 Mini 同 commit；两站持有集合零交集，互斥成立） |
+| Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件、1 App。**本次未随 dev198 升级**——`e5b3978` 对 bridge 运行时零行为变化（新模块只被 `ops/announce-release.mjs` 引用，`bridge.mjs` 那 8 行全在注释块内），不值得为注释付 Lima 割接的约 35 秒中断 |
+| dev198 | **`e5b397815d1c`**（12 App 全连、零 lastError；两站持有集合零交集，互斥成立） |
 | 安装源 | Mini 上 `~/local/h-mini-b2-source-<commit>`，**具体路径现场 `ls` 取**（随 commit 变，写死必腐烂） |
 | 验证器 | 已随 `d47edb7` 起进入部署源码树，**不必再单独归档**（`$SRC/deploy/lima/verify-mini-b2-active.sh` 直接跑；`$SRC` ≠ VM app，不污染 deploy meta） |
 
