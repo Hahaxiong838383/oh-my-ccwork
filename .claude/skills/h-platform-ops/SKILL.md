@@ -3258,10 +3258,62 @@ session、公平队列、Outbox pending/retrying、Runner inflight/active/childr
 Runner Worker 或控制面。cc 只需按仓库边界选择性提交和推送，并复核生产健康；把无代码重启
 写进“部署步骤”反而会增加中断风险。
 
-## H-0048 入口防复发监控（2026-08-02 上线，跑在川哥本机）
+## H 入口监控：三层视角（2026-08-07 重构，取代原「只在本机跑」）
 
 H-0048 故障形态是「生产端全绿、用户打不开」（本机移动出口漂移 + Xray 国内域名单路
-DoH 不回退），所以监控**必须在用户视角侧（本机）跑**，服务器自测永远 200。
+DoH 不回退），所以监控**不能只靠服务器自测**——它永远 200。
+
+⚠️ **但 2026-08-02 我把这条落地成了「只装在川哥的 MacBook Air 上」，是错的。**
+Air 是移动办公本，通勤就没网。实测 6 天 1361 轮：83 轮异常里 **76 轮是本机网络**、
+只有 7 轮是服务端，NETWORK 异常全堆在 09/18/19/20 点；**12 次告警 11 次是「你在路上」**。
+
+根因不是选错机器，是**一个探测器同时回答了两个问题**：
+
+| 问题 | 影响面 | 该告警？ |
+|---|---|---|
+| 平台真的挂了 | 所有人 | ✅ |
+| 我这台机器连不上 | 一台 | ❌ 那是诊断信息 |
+
+它没能力区分，而人会按最吓人的那个解读（"🔴 H 入口异常"读起来像平台事故）。
+**分不开就说明视角不够，该加视角而不是加告警**（[[feedback_user_side_outage_needs_user_side_monitor]]）。
+
+### 现行三层
+
+| 层 | 位置 | 回答 | 告警 |
+|---|---|---|---|
+| **公网视角** | RackNerd `ops-uptime-kuma` 监控项 **id=16「H 平台控制面 HTTPS」** | 平台对外可用吗 | ✅ 飞书运维告警（通道 id=1，13 个监控项共用） |
+| **站点视角** | dev198 `h-egress-probe`（`ops/egress-probe.mjs`） | 执行站点够不够得着控制面 | ✅ journal，2026-08-07 晚已两次抓到抖动 |
+| **客户端视角** | Air `h-entry-watch` | 我这台机现在怎么回事 | ❌ **只记录不告警** |
+
+**装监控前先过三问**，缺一条就别配告警：①这个点网络稳不稳（笔记本/手机/家里 WiFi 都不算）
+②它在被监控系统之外吗 ③它回答的是哪一个问题。
+
+### 公网层（Kuma id=16）
+
+- 类型 **keyword**（不是普通 HTTP）：`url=https://ai.kidshub.cn/healthz`、`keyword="ok":true`、
+  interval 60s、retries 2。**纯状态码检查会被空壳 200 骗过去**（[[feedback_hollow_200_needs_payload_check]]）。
+- ⚠️ **Kuma 的关键词是字面匹配，不像 `h-entry-watch` 会先 `replace(" ","")`**。
+  配之前必须先取原始字节确认形态——真值是 `{"ok":true,` 无空格；若线上改成 `{"ok": true}`
+  这个监控会立刻判 DOWN 发假告警。**换控制面版本后重验这一条。**
+- Kuma **没有创建监控项的 REST 接口**（`api_key` 表只对 `/metrics` 有效），
+  官方路径是 socket.io + 登录态。所以本条是**直改 `/app/data/kuma.db` 建的**——
+  做法：先备份（`kuma.db.bak-*`），**不从零构造行，而是从 pragma 动态取 76 个列名、
+  克隆一条已知能跑的 http 监控**，再 UPDATE 需要改的字段 + 插 `monitor_notification`，
+  最后 `docker compose restart uptime-kuma` 让它按正常路径加载。
+  **验收看 `heartbeat` 表不看 UI 绿点**：`msg` 应为 `200 - OK, keyword is found`
+  ——那句话证明关键词判定真的跑过，绿点证明不了。
+
+### 客户端层（Air，已降级）
+
+- 开关 `H_ENTRY_WATCH_ALERT`（**默认 0 = 不告警**）；抑制时写
+  `~/.local/state/h-entry-watch/suppressed-alerts.jsonl` 留痕——**诊断价值不能因为闭嘴而消失**。
+- `--test-alert` **绕过该开关**：否则「测告警」会静默成功，而静默成功与真发出去了长得一样。
+- 抑制分支返回真值哨兵 `"suppressed"` 而非 `None`：**「决定不发」与「发失败」对状态机是两回事**
+  ——前者照常置 `alerted`，后者保持未告警等下轮重试。混用会让 state 永不收敛。
+- 保留它的理由：三层探测的**诊断**价值是真的。2026-08-07 那次就是靠
+  **L3 代理绿而 L1/L2 红** 一眼判定「是本机解析，不是平台」。
+
+### 原有实现细节（仍有效）
 
 - 脚本：bridge 仓 `ops/h-entry-watch.py`；launchd `com.cc.h-entry-watch`
   （`~/Library/LaunchAgents/`，StartCalendarInterval 每 5 分钟——铁律禁 StartInterval）。
@@ -5070,15 +5122,18 @@ dev198 的 systemd drop-in 已纳入 `deploy/dev198/systemd/`——**真源仍�
 
 ## 公司 AI Ontology 基座复用边界（2026-08-07）
 
-当 H 平台被接入公司 AI Ontology 基座时，H 平台只作为 **Bot / Runner / Delivery Layer** 复用，不能被提升为业务真源或超级管理员 Agent。
+当 H 平台被接入公司 AI Ontology 基座时，采用同一代码库的 `company-qnap-lite` 部署 profile，在 QNAP 同机运行 **H-Lite + Company Agent Core**。H-Lite 只作为 Bot / Subscription / Delivery Layer，不能被提升为业务真源或超级管理员 Agent。
 
-可直接复用：飞书 Bot Bridge、精确 scope 授权卡片、device-flow 自动续跑、Runner/Grok 调用链、`short/full` taskMode、多用户 profile、隔离 HOME/lark-cli HOME、Delivery Outbox、Feishu ACK、Task Session Log、并发调度和任务恢复。
+H-Lite 可直接复用：飞书 WebSocket 订阅、Bot Bridge、精确 scope 授权卡片、device-flow 自动续跑、Company Front-door profile、Delivery Outbox、Feishu ACK/读回、Task Session Log、提醒、任务恢复和 Agent Core Adapter。必须使用现有 H 代码与统一 `behaviorContractVersion`，禁止复制形成长期 fork。
+
+生产订阅约束：同一个飞书 App 只允许一个 active consumer。QNAP H-Lite 是主消费者；Mini/dev198 等其他实例只能通过 lease/fencing 作为 standby，禁止双消费、双回复和双写 Outbox。
 
 必须新增并强制经过：
 
 - `Ontology Service`：目标、P2、任务、决策、ERP、社媒、成果、证据的公司语义真源。
 - `Permissioned Retrieval Gateway`：先算用户/部门/项目/密级权限，再检索并组证据包。
-- `Task Compiler`：把经营目标/P2 拆成任务图和个人任务，再交 H 平台投递给员工 Bot。
+- `Company Agent Core`：部署在 QNAP，基于 Grok Build CLI，是全员 Agent 的唯一逻辑主实例。
+- `Task Proposal Compiler`：只生成任务图和个人任务草案，经 DRI 批准后再交 H-Lite 投递。
 - `Mandatory Action Gateway`：Runner 只能提交 Action Intent；写 ERP、飞书、Git、报表必须 dry-run、人审、执行、读回校验、审计和回滚。
 
 集成红线：
@@ -5086,8 +5141,8 @@ dev198 的 systemd drop-in 已纳入 `deploy/dev198/systemd/`——**真源仍�
 - 全员 `Company Front-door Agent` 只做接待、澄清、意图分类、路由、证据摘要和任务状态解释，不直接持有全库权限。
 - Runner 不直接查全量 Ontology、ERP、社媒或飞书文档。
 - Runner 不直接写业务系统；stdout 成功、进程退出 0、Feishu ACK 任一单点都不等于业务完成。
-- P0 可沿用当前单机 durable store，但公司级多节点/多安全域必须迁 Postgres + `tenant_id` + RLS。
+- H-Lite durable store 只保存 append-only 投递/运行事件；公司任务状态从 P0 起由 Ontology/Postgres + `tenant_id` + RLS 单写。
 - 不共享 Grok HOME、memory root、MCP 凭据和日志给不同安全域。
 
-完整方案见 `company-ai-ontology` skill 与飞书文档《公司 AI Ontology 基座架构方案 V1.0》：
+完整方案见 `company-ai-ontology` skill 与飞书文档《公司 AI Ontology 基座架构方案 V2.2》：
 `https://futurus.feishu.cn/docx/Xd3qdCtmXogh0rxmEhDc8pL1nub`。
