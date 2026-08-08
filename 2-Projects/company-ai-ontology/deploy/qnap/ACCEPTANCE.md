@@ -4,7 +4,19 @@
 
 ## 结论
 
-P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎和知识 Connector 均已部署。Agent Core 已切到真实远程 H Runtime 并返回 `productionReady=true`；H Worker 已使用独立 CPA API Key，通过 Grok Build 调用 `grok-4.5`。试点飞书文档因公司 App 缺少分享权限被 fail-closed 跳过，未读取正文。真实 P2/DRI 尚未接入。
+P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、知识 Connector 和 V3 P0-S Foundation Pack 均已部署。Agent Core 已切到真实远程 H Runtime 并返回 `productionReady=true`；Ontology Registry 已与 Git 定义保持 `in_sync`。试点飞书文档因公司 App 缺少分享权限被 fail-closed 跳过，未读取正文。真实 P2/DRI 尚未接入。
+
+## P0-S：V3 Foundation Pack
+
+- Contracts Package 已固化 13 个命名空间、41 个 Object Types、17 个 Link Types、3 个 Functions、2 个 Action Types、3 个 Policies、5 个 Constraints；稳定内容哈希为 `0e1690bbced6b4b4f676b2bdf32434814123687b1df754a457453ad85ff34730`。
+- Ontology Registry `2026-08-08.1` 已按 Git 提交 `72055c38c` 部署，生产 active 版本唯一，Schema `3.0.0`、元素 71 个，`/readyz` 为 `in_sync`。
+- Registry 只部署镜像内 Git Definition；远程候选只能 dry-run 编译。部署必须提供 Proposal、批准人和 Git commit；migration-required 还必须显式批准迁移并提交 migration plan。
+- PostgreSQL 17 已建立 `ontology_registry`、`ontology_runtime`、`epistemic`、`decision`、`security`、`work`、`action` 逻辑 Schema，并在既有事实表上补双时间、来源、安全域、Ontology 版本和 Provenance 字段，没有建立并行事实真源。
+- 隔离 PG17 验收通过：迁移重复执行、7 个稳定语义 View、RLS、最小权限、历史版本再激活、双审计、Registry Docker build 和本地文件依赖均通过。
+- 生产权限负测通过：Registry 无 DELETE、无 Domain Event UPDATE、无 `ontology.entities` 直接读取权；未设置 Tenant 时查询版本为 0，设置当前 Tenant 后为 1。
+- 生产恢复性验收通过：重启 Registry 后 `in_sync`，`restart_count=0`；重复部署同一版本返回 `already_active`，版本/元素/Domain Event/传统 Audit 数量保持 `1/71/1/1`。
+- 变更前新鲜 `pg_basebackup` 已通过 `pg_verifybackup`；配置快照位于 QNAP 生产备份目录，可独立回滚 Compose、Caddy、迁移、脚本和 `.env`。
+- H 控制面已升级到 `v1.49.1`：公网管理员看板显示 7/7 运行组件就绪和 Registry 独立绿色节点；真实 Chrome 登录后控制台错误、页面异常、失败请求、HTTP 4xx/5xx 和桌面/390px 横向溢出均为 0。
 
 ## P0-PROD-2：H 引擎 Runtime
 
@@ -93,9 +105,10 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎和知识 Connecto
 
 ## 最终完成审计
 
-最终运行标识：`qnap-p0-f-completion-20260807`。
+最终运行标识：`qnap-p0-s-foundation-20260808`。
 
-- Agent Core 当前定向测试 14/14、Knowledge Connector 8/8、H Worker 2/2、Action Gateway 1/1、H-Lite 目录/客户端/服务/Profile 定向测试 11/11 全部通过；本轮 JavaScript 语法检查通过。
+- Contracts 6/6、Registry 6/6、控制面 Ontology 聚合 4/4、控制面页面/部署边界 54/54 通过；Agent Core 14/14、Knowledge Connector 8/8、H Worker 2/2、Action Gateway 1/1、H-Lite 目录/客户端/服务/Profile 11/11 的既有验收继续有效。
+- QNAP 完整生产自检再次通过：全部关键容器健康，Registry/Knowledge Connector 纳入硬门禁，H-Lite 飞书 WebSocket 在线，Agent Core `productionReady=true`，关键容器 `restart_count=0`。
 - QNAP 完整自检已补入 Action Gateway 健康、十人任务/成果/ACK、五类任务事件、Action Intent 终态、数据库权限边界和 H 引擎外网路径硬门禁。
 - 最终 Canary：5/10/20 并发全部成功且全部标记演示模式，P95 分别为 264ms、358ms、326ms。
 - 十名普通员工 restricted 结果均为 0，DRI 为 1，未知用户为 0；员工个人数据接口继续明确不保存私人对话全文。

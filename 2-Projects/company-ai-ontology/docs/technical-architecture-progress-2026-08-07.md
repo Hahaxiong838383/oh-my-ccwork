@@ -26,6 +26,9 @@ flowchart TB
   KNOWLEDGE["飞书知识 Connector<br/>Docx / Sheet / Minutes / ACL / RLS"]:::done
   KNOWLEDGE_ACCESS["试点文档分享权限<br/>真实正文索引与撤权复测"]:::todo
   TASK["Task Proposal Compiler<br/>P2 → 个人任务草案 → DRI 批准"]:::done
+  CONTRACTS["Ontology Contracts Package<br/>Definition / Event / Tool Contracts"]:::done
+  REGISTRY["Ontology Compiler & Registry<br/>版本 / 兼容性 / Proposal / 激活"]:::done
+  RECONCILE["Git ↔ Runtime Reconciliation<br/>Hash / Drift / 历史版本再激活"]:::done
 
   PG["Postgres 17 + pgvector<br/>Ontology / RLS / 幂等 / 审计"]:::done
   QDRANT["Qdrant<br/>可重建向量召回层"]:::done
@@ -36,7 +39,7 @@ flowchart TB
   ACTION["Mandatory Action Gateway<br/>Dry-run / 人审 / 执行 / 读回 / 回滚"]:::done
   ERP["爱视可 ERP 接管<br/>M3 只读证据 → 后续受控写回"]:::todo
   SOCIAL["社媒监控接管<br/>归一化 Signal / 不可信输入隔离"]:::todo
-  CANARY["10 人 Canary<br/>5/10/20 并发 / ACK / 恢复验收"]:::done
+  CANARY["演示负载与恢复验收<br/>5/10/20 并发 / ACK / 重启恢复"]:::done
   OFFSITE["Mac Mini 离机加密备份<br/>解密与可恢复性校验"]:::done
   CAPACITY["24 小时容量数据<br/>Admission Control 参数"]:::todo
 
@@ -53,6 +56,9 @@ flowchart TB
   FEISHU --> KNOWLEDGE --> RETRIEVAL
   KNOWLEDGE --> KNOWLEDGE_ACCESS
   CORE --> TASK
+  CONTRACTS --> REGISTRY --> RECONCILE
+  REGISTRY --> PG
+  CORE -. "只读契约与版本" .-> REGISTRY
   CORE --> PG
   RETRIEVAL --> PG
   RETRIEVAL --> QDRANT
@@ -92,6 +98,10 @@ flowchart TB
 12. 飞书知识 Connector `2026-08-08.2` 已上线；Base64 配置、四张知识表、RLS、ACL fail-closed 和同步审计通过。
 13. 生产权限链路已通过合成证据正负测试：授权员工 Evidence 与 H 回复命中，无权限员工 Evidence 为 0，测试数据已删除。
 14. 当前试点飞书文档返回 `1063004`，系统未读取正文；待公司 App 获得该文档分享权限后完成真实索引。
+15. V3 P0-S Contracts Package 已完成 13 个命名空间、41 个 Object Types、17 个 Link Types、3 个 Functions、2 个 Action Types、3 个 Policies 和 5 个 Constraints。
+16. 独立 Ontology Registry `2026-08-08.1` 已在 QNAP 上线；生产 active 版本唯一，Schema `3.0.0`、71 个元素、Hash `0e1690bbced6`，Git/运行时状态为 `in_sync`。
+17. PostgreSQL 17 隔离验收覆盖迁移重复执行、7 个逻辑 Schema、7 个稳定 View、RLS、最小权限、双审计和历史版本再激活；生产重启与重复部署后版本/元素/审计数量保持不变。
+18. 公网管理看板已升级到 H 控制面 `v1.49.1`，Ontology Registry 独立标绿；真实 Chrome 验收为 7/7 运行组件就绪、控制台错误 0、失败请求 0、桌面和 390px 横向溢出 0。
 
 ## P0 A-F 已完成
 
@@ -115,4 +125,4 @@ flowchart TB
 - ✅ 认证边界：复用 H 控制面管理员 Cookie；未认证访问跳转 `/admin`。
 - ✅ 状态通道：Mini LaunchAgent → aliyun-hk `127.0.0.1:19180` → QNAP `192.168.61.18:19080`。
 - ✅ 脱敏边界：QNAP 仅开放固定健康路径，H 控制面按字段白名单聚合，不返回凭据、内部路径、文档 URL、员工 ID 或原始错误正文。
-- ✅ 真实浏览器验收：HTTP 200、标题正确、运行正常、控制台 0 错误、无横向溢出、绿色 4 项、灰色 5 项。
+- ✅ 真实浏览器验收：HTTP 200、标题正确、运行正常、运行组件 7/7、里程碑绿色 5 项/灰色 5 项、控制台错误 0、失败请求 0、桌面与 390px 横向溢出 0。

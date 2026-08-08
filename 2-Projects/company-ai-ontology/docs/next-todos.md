@@ -4,17 +4,18 @@
 
 ## 当前结论
 
-P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector 和认证后公网运行看板均已上线。V2.2 继续作为生产基线，V3 按“骨架完整、血肉渐进”增量建设。当前主要门禁是 V3 P0-S 骨架、公司专用 CPA 凭据、试点飞书文档分享权限、10 人真实 Canary 和真实 P2。
+P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector、V3 P0-S Foundation Pack 和认证后公网运行看板均已上线。V2.2 继续承载业务运行，V3 按“骨架完整、血肉渐进”增量建设。当前主线转入 P0-EPI；人工门禁仍是公司专用 CPA 凭据、试点飞书文档分享权限、10 人真实 Canary 和真实 P2。
 
-## P0-S：V3 大骨架先行
+## ✅ P0-S：V3 大骨架先行
 
-1. 固定 `system.ontology`、`core.identity`、`core.policy`、`core.epistemic`、`core.decision`、`core.work`、`core.action` 和各领域命名空间。
-2. 建立统一对象基类、关系基类、双时间字段、来源和 Ontology 版本字段。
-3. 建立统一 Event Envelope、跨域 correlation/causation、幂等和分类字段。
-4. 建立 `ontology_registry`、`ontology_runtime`、`epistemic`、`decision`、`work`、`security`、`action`、`audit` 逻辑 Schema。
-5. 建立 Ontology Definition DSL、Compiler、Registry、兼容性分级和 Git/运行时 reconciliation skeleton。
-6. 固定 Data/Logic/Action 三类 Agent 工具契约，继续保持 Permissioned Retrieval 和 Mandatory Action Gateway 不可绕过。
-7. 只写骨架、约束和少量样例，不批量导入公司全部数据，不提前穷举全部对象。
+1. ✅ 固定 13 个命名空间、统一对象/关系基类、双时间、来源、版本和 Provenance 字段。
+2. ✅ 建立 Event Envelope、correlation/causation、幂等、Purpose 和 Classification 契约。
+3. ✅ 建立 7 个逻辑 Schema、3 张 Registry/对账表、Provenance、Domain Event 和 7 个稳定语义 View。
+4. ✅ 建立 Git Definition、Compiler、兼容性分级、Registry、显式 Proposal/批准和 reconciliation。
+5. ✅ 固定 Data/Logic/Action 三类工具契约，Data 只能走 Permissioned Retrieval，Action 只能走 Mandatory Action Gateway。
+6. ✅ PostgreSQL 17 隔离验收、迁移重复执行、RLS、最小权限、历史版本再激活和双审计通过。
+7. ✅ QNAP 生产 active 版本唯一：Schema `3.0.0`、71 个元素、Hash `0e1690bbced6`；重启与重复部署后数量不变。
+8. ✅ H 控制面 `v1.49.1` 公网看板显示 7/7 组件就绪，真实 Chrome 控制台、页面异常、失败请求和横向溢出均为 0。
 
 ## P0-EPI：认识论最小闭环
 

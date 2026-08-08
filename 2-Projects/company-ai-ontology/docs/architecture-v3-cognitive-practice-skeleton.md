@@ -344,6 +344,8 @@ Git Definition
 
 ### P0-S：骨架先行
 
+状态：✅ 已于 2026-08-08 上线 QNAP。当前生产 Registry Schema `3.0.0`，受治理元素 71 个，Git/运行时 Hash `0e1690bbced6` 一致；认识论与决策对象只完成稳定类型骨架，尚未批量导入业务数据。
+
 1. 建立命名空间、对象基类、关系基类和 Event Envelope。
 2. 建立 Postgres 逻辑 Schema 和跨域 ID 规则。
 3. 建立 Ontology Definition、Compiler、Registry 和 reconciliation skeleton。
@@ -413,4 +415,3 @@ Git Definition
 - Palantir 官方：Ontology、Action Types、Functions、Agent Studio、Data Connection、Pipeline Builder、Ontology branching。
 - W3C：PROV-O、OWL 2、SHACL。
 - NIST：AI Risk Management Framework。
-

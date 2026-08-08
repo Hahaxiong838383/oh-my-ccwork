@@ -6,6 +6,9 @@ docker_path=/share/CACHEDEV1_DATA/.qpkg/container-station/bin/docker
 project_root=${PROJECT_ROOT:-/share/CACHEDEV1_DATA/ai-ontology/foundation}
 
 cd "$project_root"
+set -a
+. ./.env
+set +a
 
 printf '=== compose ===\n'
 "$docker_path" compose ps
@@ -13,7 +16,14 @@ printf '=== compose ===\n'
 printf '\n=== health ===\n'
 failed=0
 for container in company-ai-foundation-postgres-1 company-ai-foundation-qdrant-1 company-ai-foundation-redis-1 company-ai-foundation-agent-core-1 company-ai-foundation-ontology-registry-1 company-ai-foundation-knowledge-connector-1 company-ai-foundation-action-gateway-1 company-ai-foundation-h-lite-1 company-ai-foundation-prometheus-1 company-ai-foundation-gateway-1; do
-  status=$("$docker_path" inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" 2>/dev/null || echo missing)
+  attempt=0
+  status=missing
+  while [ "$attempt" -lt 30 ]; do
+    status=$("$docker_path" inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" 2>/dev/null || echo missing)
+    [ "$status" = healthy ] && break
+    attempt=$((attempt + 1))
+    sleep 2
+  done
   printf '%s=%s\n' "$container" "$status"
   [ "$status" = healthy ] || failed=1
 done
@@ -30,13 +40,22 @@ printf '\n=== postgres ===\n'
 "$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT extname FROM pg_extension WHERE extname IN ('pgcrypto','vector') ORDER BY extname;"
 "$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM pg_tables WHERE schemaname IN ('iam','ontology','workflow','evidence','delivery','actions','audit','runtime');"
 "$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM pg_policies WHERE policyname='tenant_isolation';"
-"$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM ontology_registry.versions WHERE status='active';"
-"$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM ontology_registry.elements;"
-"$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM audit.domain_events WHERE event_type='ontology.version.deployed';"
+registry_active=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM ontology_registry.versions WHERE status='active';")
+registry_elements=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM ontology_registry.elements;")
+registry_domain_events=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM audit.domain_events WHERE event_type='ontology.version.deployed';")
+registry_legacy_events=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM audit.events WHERE event_type='ontology_version_deployed';")
+printf 'registry_active=%s registry_elements=%s domain_events=%s legacy_events=%s\n' "$registry_active" "$registry_elements" "$registry_domain_events" "$registry_legacy_events"
+[ "$registry_active" -eq 1 ]
+[ "$registry_elements" -eq 71 ]
+[ "$registry_domain_events" -ge 1 ]
+[ "$registry_legacy_events" -eq "$registry_domain_events" ]
 "$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT archived_count, failed_count FROM pg_stat_archiver;"
 
 printf '\n=== ontology registry ===\n'
 "$docker_path" compose exec -T ontology-registry node -e "fetch('http://127.0.0.1:8084/readyz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));if(!r.ok||body.status!=='in_sync'||!body.local?.contentHash||body.local.contentHash!==body.active?.contentHash)process.exit(1)})"
+registry_gateway_status=$(curl --silent --show-error --fail --connect-timeout 5 --max-time 10 "http://192.168.61.18:19080/ontology/status/registry")
+printf '%s\n' "$registry_gateway_status"
+printf '%s' "$registry_gateway_status" | grep -q '"status":"in_sync"'
 
 printf '\n=== agent core ===\n'
 "$docker_path" compose exec -T agent-core node -e "fetch('http://127.0.0.1:8080/healthz').then(async r=>{console.log(await r.text());if(!r.ok)process.exit(1)})"
@@ -78,10 +97,26 @@ printf '\n=== privilege boundaries ===\n'
 ontology_app_action_update=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_app','actions.intents','UPDATE');")
 ontology_app_demo_update=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_app','actions.demo_task_status','UPDATE');")
 gateway_task_update=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('action_gateway','workflow.tasks','UPDATE');")
-printf 'ontology_app_action_update=%s ontology_app_demo_update=%s gateway_task_update=%s\n' "$ontology_app_action_update" "$ontology_app_demo_update" "$gateway_task_update"
+registry_delete=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_registry','ontology_registry.versions','DELETE');")
+registry_event_update=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_registry','audit.domain_events','UPDATE');")
+registry_entity_select=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_registry','ontology.entities','SELECT');")
+registry_audit_usage=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_schema_privilege('ontology_registry','audit','USAGE');")
+printf 'ontology_app_action_update=%s ontology_app_demo_update=%s gateway_task_update=%s registry_delete=%s registry_event_update=%s registry_entity_select=%s registry_audit_usage=%s\n' "$ontology_app_action_update" "$ontology_app_demo_update" "$gateway_task_update" "$registry_delete" "$registry_event_update" "$registry_entity_select" "$registry_audit_usage"
 [ "$ontology_app_action_update" = f ]
 [ "$ontology_app_demo_update" = f ]
 [ "$gateway_task_update" = f ]
+[ "$registry_delete" = f ]
+[ "$registry_event_update" = f ]
+[ "$registry_entity_select" = f ]
+[ "$registry_audit_usage" = t ]
+
+registry_rows_without_tenant=$("$docker_path" compose exec -T -e PGPASSWORD="$ONTOLOGY_REGISTRY_PASSWORD" postgres \
+  psql -h 127.0.0.1 -U ontology_registry -d ontology -Atc "SELECT count(*) FROM ontology_registry.versions;")
+registry_rows_with_tenant=$("$docker_path" compose exec -T -e PGPASSWORD="$ONTOLOGY_REGISTRY_PASSWORD" postgres \
+  psql -h 127.0.0.1 -U ontology_registry -d ontology -Atc "SELECT set_config('app.tenant_id','$FUTURUS_TENANT_ID',false); SELECT count(*) FROM ontology_registry.versions;" | tail -1)
+printf 'registry_rows_without_tenant=%s registry_rows_with_tenant=%s\n' "$registry_rows_without_tenant" "$registry_rows_with_tenant"
+[ "$registry_rows_without_tenant" -eq 0 ]
+[ "$registry_rows_with_tenant" -ge 1 ]
 
 printf '\n=== h engine egress ===\n'
 h_engine_proxy_url=${H_ENGINE_PROXY_URL:-socks5h://192.168.61.66:10808}
