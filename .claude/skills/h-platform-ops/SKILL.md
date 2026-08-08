@@ -2163,7 +2163,7 @@ Base 里 H-0080 会一直停在「已修复待验收」，这三条已写进它�
 （[[feedback_verification_handoff_at_the_last_inch]]）。
 
 
-## H-0081 用户后台「它怎么工作」白盒画板（2026-08-08 上线 · v1.45.0 · 川哥已验收通过）
+## H-0081/H-0082 用户后台「它怎么工作」白盒画板（v1.45.0 画板已验收通过 · v1.46.0 补全到全链，待验收）
 
 把用户侧 runtime tab 从平铺清单改成「节点 + SVG 连线 + 上下游高亮」，与管理台
 架构 Tab 同一套视觉语言。11 个节点 = 一次任务真实经过的环节，16 条连线 = 谁喂给谁。
@@ -2195,8 +2195,46 @@ Base 里 H-0080 会一直停在「已修复待验收」，这三条已写进它�
 坐标系整个错位时**照样 0 越界**（列内坐标比画板小，当然在范围内）。
 基准必须独立于被验对象：改成「**每条线的起点必须落在源节点自己的框里**，终点落在
 目标框里」，节点框由 DOM 现量。并做负向验证：源节点框人为平移 400px，
-不匹配数 0 → 16。同理 `runtime-board.test.mjs` 里那条「抠图没抠空」的正例锚——
-没有它，所有一致性断言都会真空通过。见 [[feedback_criteria_must_match_object_variant]]。
+不匹配数 0 → 16。同理 `runtime-board.test.mjs` 里那条完整性锚。见 [[feedback_criteria_must_match_object_variant]]。
+
+**v1.46 又栽了两次，都是判据自己的病（负向验证才逼出来的）**：
+①「注入通道取自服务端」写成 `DASH.includes('sp.via')` —— 把那处 value 改成写死字符串后
+**照样全绿**，因为该字符串在 rows 里还出现。**全文包含式断言的作用域比缺陷大**，
+必须先抠出该节点自己的字面量再匹配。
+②节点 id 改小驼峰后，正则 `[a-z]+` 只抠到 19 个里的 14 个，而当时的正例锚是
+`>= 10` —— **门槛比真实数量松，静默放过**。现改为与「数 `,band:` 键出现几次」
+这套独立计数逐个 `assert.equal` 对撞。
+**判据：负向验证没变红时，先怀疑断言，别急着庆祝实现是对的。**
+
+### v1.46.0：五泳道与机制真值（改文案前先对这张表）
+
+19 节点 27 连线，泳道＝你在哪儿改 / 怎么送到你的实例 / 你的实例上落了什么 /
+开工时怎么装进去 / 跑起来回到你。写给用户看的节奏值**必须从代码常量取**，不许凭记忆：
+
+| 腿 | 常量（`bridge.mjs`） | 值 |
+|---|---|---|
+| 记忆与配置操作队列 | `MEMORY_OPS_INTERVAL_MS` | 10 秒 |
+| Skills 同步 | `SKILLS_SYNC_INTERVAL_MS` | 60 秒 |
+| 运行时上报 | `H_RUNTIME_REPORT_INTERVAL_MS` | 30 秒 |
+| users 热加载 | `HOT_RELOAD_INTERVAL_MS` | 5 秒 |
+| 控制面 users 同步 | `USER_SYNC_INTERVAL_MS` | 15 秒 |
+| 记忆同步 | `MEMORY_SYNC_INTERVAL_MS` | **30 分钟** |
+| 记忆摘要 | `MEMORY_DIGEST_INTERVAL_MS` | 10 分钟 |
+
+⚠️ **取这些值别用 `grep -oE`**：它把 `|| 30 * 60 * 1000` 截成 `30`，
+而 `30` 是个看着完全正常的毫秒数——差点把「记忆同步每 30 毫秒」印到用户屏幕上。
+要读值就取完整行或直接 Read（[[feedback_truncated_output_negative_conclusion]]）。
+
+🔴 **注入通道的文字一律取服务端实测 via，不许前端写死**：
+`systemPrompt.via` / `conversationHead.via` / `skills.via` 由 `lib/context-report.mjs`
+按引擎算出（grok `--rules` 四源 / kimi workspace 运行镜像 / omp 双通道），
+写死任何一条，换引擎的租户看到的就是假的。同理 `scopeNote` 那句源码注释写着
+**「界面必须原样显示这句」**，别再用自己写的近义文案替代。
+`larkScopes`（缺哪些域、是要管理员开通还是用户重新授权）也是服务端早就下发的，
+v1.46 起才真正用上——**改这一屏前先通读 context-report 的返回，别重新发明字段**。
+
+🔴 **机制常量必须与实测读数视觉可分**：轮询节奏那类节点带 `mech:true`（虚线边框 +
+详情里明说「不是刚量出来的读数」）。混在一起显示，用户会把「每 10 秒」当成实时值。
 
 ### 浏览器验收清单（改完照跑）
 
@@ -4814,7 +4852,7 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | **`v1.45.0`**（2026-08-08 「它怎么工作」白盒画板 + 事故卡补中断起点；公网 `https://ai.kidshub.cn/healthz` 取真值） |
+| 控制面 aliyun-hk | **`v1.46.0`**（2026-08-08 「它怎么工作」补全到编辑→装载全链；公网 `https://ai.kidshub.cn/healthz` 取真值） |
 | Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件、1 App。**本次未随 dev198 升级**——`e5b3978` 对 bridge 运行时零行为变化（新模块只被 `ops/announce-release.mjs` 引用，`bridge.mjs` 那 8 行全在注释块内），不值得为注释付 Lima 割接的约 35 秒中断 |
 | dev198 | **`e5b397815d1c`**（12 App 全连、零 lastError；两站持有集合零交集，互斥成立） |
 | 安装源 | Mini 上 `~/local/h-mini-b2-source-<commit>`，**具体路径现场 `ls` 取**（随 commit 变，写死必腐烂） |
