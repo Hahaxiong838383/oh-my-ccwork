@@ -1,0 +1,21 @@
+{
+  admin off
+  auto_https off
+}
+:8080 {
+  bind 0.0.0.0
+  header {
+    -Server
+    X-Content-Type-Options nosniff
+    X-Frame-Options DENY
+    Cache-Control no-store
+  }
+
+  @health path /healthz
+  respond @health `{"status":"ok","component":"qnap-foundation","exposure":"lan-only"}` 200
+
+  @ready path /readyz
+  respond @ready `{"status":"foundation-ready","next":"h-lite-and-agent-core"}` 200
+
+  respond `{"status":"not-found"}` 404
+}

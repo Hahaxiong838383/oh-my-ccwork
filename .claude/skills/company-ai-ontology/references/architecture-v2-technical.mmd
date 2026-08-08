@@ -1,0 +1,27 @@
+flowchart TD
+    F["新建公司级飞书入口"] --> HL["QNAP H-Lite"]
+    PH["现有员工私人Bot/H平台"] -.仅复用代码与契约<br/>运行完全独立.-> HL
+    HL --> HB["订阅/Bridge/Outbox/ACK"]
+    HB --> GW["QNAP API Gateway"]
+    GW --> AC["Company Agent Core"]
+    AC --> AR["Agent Router"]
+    AC --> CC["Context Compiler"]
+    AC --> TC["任务草案编译器"]
+    AC --> GP["主 H引擎 Runtime Pool"]
+    GP --> X["H 引擎上游推理服务"]
+    AC --> IP["Identity与Policy"]
+    IP --> OS["Ontology Service"]
+    OS --> PG["Postgres唯一真源"]
+    OS --> V["Qdrant派生索引"]
+    TC --> HL
+    AC --> AG["Mandatory Action Gateway"]
+    AC --> RP["Mini/Studio H引擎扩展Worker"]
+    RP --> X
+    RP --> AG
+    AG --> FS["飞书业务写回"]
+    AG --> ER["ERP写回"]
+    AG --> GI["Git与报表写回"]
+    ER0["ERP只读连接器"] --> OS
+    SM0["社媒隔离区"] --> OS
+    AG --> AU["审计与读回校验"]
+    PG --> BK["RAID1与离机备份"]

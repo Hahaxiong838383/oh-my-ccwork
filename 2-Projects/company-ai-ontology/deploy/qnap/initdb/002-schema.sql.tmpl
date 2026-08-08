@@ -1,0 +1,259 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE SCHEMA platform;
+CREATE SCHEMA iam;
+CREATE SCHEMA ontology;
+CREATE SCHEMA workflow;
+CREATE SCHEMA evidence;
+CREATE SCHEMA delivery;
+CREATE SCHEMA actions;
+CREATE SCHEMA audit;
+CREATE SCHEMA runtime;
+
+CREATE TABLE platform.tenants (
+  id uuid PRIMARY KEY,
+  slug text NOT NULL UNIQUE,
+  display_name text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+INSERT INTO platform.tenants (id, slug, display_name)
+VALUES (:'tenant_id', 'futurus', 'FUTURUS');
+
+CREATE FUNCTION platform.current_tenant_id()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT nullif(current_setting('app.tenant_id', true), '')::uuid
+$$;
+
+CREATE TABLE iam.principals (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
+  principal_type text NOT NULL CHECK (principal_type IN ('person', 'service', 'group')),
+  external_key text NOT NULL,
+  display_name text NOT NULL,
+  department_key text,
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+  attributes jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, principal_type, external_key)
+);
+
+CREATE TABLE iam.grants (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
+  principal_id uuid NOT NULL REFERENCES iam.principals(id),
+  resource_scope text NOT NULL,
+  permission text NOT NULL,
+  constraints jsonb NOT NULL DEFAULT '{}'::jsonb,
+  expires_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, principal_id, resource_scope, permission)
+);
+
+CREATE TABLE ontology.entities (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
+  entity_type text NOT NULL,
+  external_key text,
+  display_name text NOT NULL,
+  classification text NOT NULL DEFAULT 'internal' CHECK (classification IN ('public', 'internal', 'confidential', 'restricted')),
+  attributes jsonb NOT NULL DEFAULT '{}'::jsonb,
+  version bigint NOT NULL DEFAULT 1,
+  created_by uuid REFERENCES iam.principals(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, entity_type, external_key)
+);
+
+CREATE TABLE ontology.relations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
+  relation_type text NOT NULL,
+  from_entity_id uuid NOT NULL REFERENCES ontology.entities(id),
+  to_entity_id uuid NOT NULL REFERENCES ontology.entities(id),
+  attributes jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_by uuid REFERENCES iam.principals(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, relation_type, from_entity_id, to_entity_id)
+);
+
+CREATE TABLE workflow.tasks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
+  external_key text,
+  parent_task_id uuid REFERENCES workflow.tasks(id),
+  source_entity_id uuid REFERENCES ontology.entities(id),
+  assignee_id uuid REFERENCES iam.principals(id),
+  dri_id uuid REFERENCES iam.principals(id),
+  title text NOT NULL,
+  description text NOT NULL DEFAULT '',
+  acceptance_criteria jsonb NOT NULL DEFAULT '[]'::jsonb,
+  status text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'approved', 'assigned', 'in_progress', 'blocked', 'submitted', 'accepted', 'rejected', 'cancelled')),
+  priority text NOT NULL DEFAULT 'P2' CHECK (priority IN ('P0', 'P1', 'P2', 'P3')),
+  due_at timestamptz,
+  approved_by uuid REFERENCES iam.principals(id),
+  approved_at timestamptz,
+  version bigint NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE workflow.task_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
+  task_id uuid NOT NULL REFERENCES workflow.tasks(id),
+  event_type text NOT NULL,
+  actor_id uuid REFERENCES iam.principals(id),
+  payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  occurred_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE evidence.artifacts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
+  task_id uuid REFERENCES workflow.tasks(id),
+  source_system text NOT NULL,
+  object_uri text NOT NULL,
+  checksum_sha256 text,
+  media_type text,
+  classification text NOT NULL DEFAULT 'internal' CHECK (classification IN ('public', 'internal', 'confidential', 'restricted')),
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  submitted_by uuid REFERENCES iam.principals(id),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE delivery.outbox (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
+  channel text NOT NULL,
+  recipient_key text NOT NULL,
+  event_type text NOT NULL,
+  payload jsonb NOT NULL,
+  idempotency_key text NOT NULL,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'leased', 'sent', 'acked', 'failed', 'dead_letter')),
+  lease_owner text,
+  lease_expires_at timestamptz,
+  provider_message_id text,
+  attempt_count integer NOT NULL DEFAULT 0,
+  next_attempt_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, idempotency_key)
+);
+
+CREATE TABLE actions.intents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
+  requester_id uuid REFERENCES iam.principals(id),
+  target_system text NOT NULL,
+  action_type text NOT NULL,
+  payload jsonb NOT NULL,
+  risk_level text NOT NULL CHECK (risk_level IN ('low', 'medium', 'high', 'critical')),
+  status text NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'dry_run_ready', 'approved', 'executing', 'verified', 'rejected', 'failed', 'rolled_back')),
+  approval_required boolean NOT NULL DEFAULT true,
+  approved_by uuid REFERENCES iam.principals(id),
+  approved_at timestamptz,
+  execution_receipt jsonb,
+  readback_receipt jsonb,
+  idempotency_key text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, target_system, idempotency_key)
+);
+
+CREATE TABLE audit.events (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
+  actor_id uuid REFERENCES iam.principals(id),
+  actor_service text,
+  event_type text NOT NULL,
+  resource_type text NOT NULL,
+  resource_id text,
+  request_id text,
+  payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE runtime.idempotency_keys (
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
+  namespace text NOT NULL,
+  idempotency_key text NOT NULL,
+  request_hash text NOT NULL,
+  response jsonb,
+  status text NOT NULL DEFAULT 'started' CHECK (status IN ('started', 'completed', 'failed')),
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (tenant_id, namespace, idempotency_key)
+);
+
+CREATE TABLE platform.restore_markers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
+  marker text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX principals_department_idx ON iam.principals (tenant_id, department_key);
+CREATE INDEX relations_from_idx ON ontology.relations (tenant_id, from_entity_id, relation_type);
+CREATE INDEX relations_to_idx ON ontology.relations (tenant_id, to_entity_id, relation_type);
+CREATE INDEX tasks_assignee_status_idx ON workflow.tasks (tenant_id, assignee_id, status);
+CREATE INDEX tasks_dri_status_idx ON workflow.tasks (tenant_id, dri_id, status);
+CREATE UNIQUE INDEX tasks_external_key_idx ON workflow.tasks (tenant_id, external_key) WHERE external_key IS NOT NULL;
+CREATE INDEX task_events_task_time_idx ON workflow.task_events (tenant_id, task_id, occurred_at);
+CREATE INDEX evidence_task_idx ON evidence.artifacts (tenant_id, task_id, created_at);
+CREATE INDEX outbox_due_idx ON delivery.outbox (tenant_id, status, next_attempt_at);
+CREATE INDEX action_intents_status_idx ON actions.intents (tenant_id, target_system, status);
+CREATE INDEX audit_resource_idx ON audit.events (tenant_id, resource_type, resource_id, created_at);
+CREATE INDEX audit_request_idx ON audit.events (tenant_id, request_id);
+
+DO $$
+DECLARE
+  table_name text;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'iam.principals',
+    'iam.grants',
+    'ontology.entities',
+    'ontology.relations',
+    'workflow.tasks',
+    'workflow.task_events',
+    'evidence.artifacts',
+    'delivery.outbox',
+    'actions.intents',
+    'audit.events',
+    'runtime.idempotency_keys',
+    'platform.restore_markers'
+  ]
+  LOOP
+    EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', table_name);
+    EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', table_name);
+    EXECUTE format(
+      'CREATE POLICY tenant_isolation ON %s USING (tenant_id = platform.current_tenant_id()) WITH CHECK (tenant_id = platform.current_tenant_id())',
+      table_name
+    );
+  END LOOP;
+END
+$$;
+
+GRANT USAGE ON SCHEMA platform, iam, ontology, workflow, evidence, delivery, actions, audit, runtime TO ontology_app, ontology_readonly, action_gateway;
+GRANT SELECT ON platform.tenants TO ontology_app, ontology_readonly, action_gateway;
+
+GRANT SELECT, INSERT, UPDATE ON iam.principals, iam.grants, ontology.entities, ontology.relations, workflow.tasks TO ontology_app;
+GRANT SELECT, INSERT ON workflow.task_events, evidence.artifacts, delivery.outbox, actions.intents, audit.events, runtime.idempotency_keys TO ontology_app;
+GRANT UPDATE ON delivery.outbox, runtime.idempotency_keys TO ontology_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA audit TO ontology_app, action_gateway;
+
+GRANT SELECT ON ALL TABLES IN SCHEMA platform, iam, ontology, workflow, evidence, delivery, actions, audit, runtime TO ontology_readonly;
+
+GRANT SELECT ON actions.intents, iam.principals, platform.tenants TO action_gateway;
+GRANT UPDATE ON actions.intents TO action_gateway;
+GRANT INSERT ON audit.events TO action_gateway;
+
+REVOKE UPDATE, DELETE ON workflow.task_events, audit.events FROM ontology_app, ontology_readonly, action_gateway;
+REVOKE DELETE ON ALL TABLES IN SCHEMA iam, ontology, workflow, evidence, delivery, actions, audit, runtime FROM ontology_app, ontology_readonly, action_gateway;

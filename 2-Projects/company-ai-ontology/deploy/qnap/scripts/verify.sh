@@ -1,0 +1,103 @@
+#!/bin/sh
+set -eu
+exec </dev/null
+
+docker_path=/share/CACHEDEV1_DATA/.qpkg/container-station/bin/docker
+project_root=${PROJECT_ROOT:-/share/CACHEDEV1_DATA/ai-ontology/foundation}
+
+cd "$project_root"
+
+printf '=== compose ===\n'
+"$docker_path" compose ps
+
+printf '\n=== health ===\n'
+failed=0
+for container in company-ai-foundation-postgres-1 company-ai-foundation-qdrant-1 company-ai-foundation-redis-1 company-ai-foundation-agent-core-1 company-ai-foundation-action-gateway-1 company-ai-foundation-h-lite-1 company-ai-foundation-prometheus-1 company-ai-foundation-gateway-1; do
+  status=$("$docker_path" inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" 2>/dev/null || echo missing)
+  printf '%s=%s\n' "$container" "$status"
+  [ "$status" = healthy ] || failed=1
+done
+
+printf '\n=== isolation ===\n'
+published=$("$docker_path" compose ps --format json | grep -Eo '0\.0\.0\.0:[0-9]+|192\.168\.61\.18:[0-9]+' || true)
+printf '%s\n' "${published:-only-gateway-expected}"
+if [ "$published" != "192.168.61.18:19080" ]; then
+  echo 'unexpected published ports' >&2
+  exit 1
+fi
+
+printf '\n=== postgres ===\n'
+"$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT extname FROM pg_extension WHERE extname IN ('pgcrypto','vector') ORDER BY extname;"
+"$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM pg_tables WHERE schemaname IN ('iam','ontology','workflow','evidence','delivery','actions','audit','runtime');"
+"$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM pg_policies WHERE policyname='tenant_isolation';"
+"$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT archived_count, failed_count FROM pg_stat_archiver;"
+
+printf '\n=== agent core ===\n'
+"$docker_path" compose exec -T agent-core node -e "fetch('http://127.0.0.1:8080/healthz').then(async r=>{console.log(await r.text());if(!r.ok)process.exit(1)})"
+"$docker_path" compose exec -T agent-core node -e "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));if(r.status!==200||body.status!=='demo_ready'||body.productionReady!==false)process.exit(1)})"
+
+printf '\n=== action gateway ===\n'
+"$docker_path" compose exec -T action-gateway node -e "fetch('http://127.0.0.1:8082/healthz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));if(!r.ok||body.component!=='mandatory-action-gateway')process.exit(1)})"
+
+printf '\n=== h-lite shadow ===\n'
+h_lite_expected_mode=${H_COMPANY_RUNTIME_MODE:-shadow}
+"$docker_path" compose exec -T h-lite node -e "fetch('http://127.0.0.1:8081/healthz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));const active=process.argv[1]==='active';if(!r.ok||body.mode!==process.argv[1]||body.subscriptionEnabled!==active)process.exit(1)})" "$h_lite_expected_mode"
+"$docker_path" compose exec -T h-lite node -e "fetch('http://127.0.0.1:8081/readyz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));const expected=process.argv[1]==='active'?'active_ready':'shadow_ready';if(!r.ok||body.status!==expected)process.exit(1)})" "$h_lite_expected_mode"
+
+printf '\n=== p0 evidence ===\n'
+accepted_tasks=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM workflow.tasks WHERE external_key LIKE 'demo-p2-2026-001:task:%' AND status='accepted';")
+artifacts=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM evidence.artifacts AS artifact JOIN workflow.tasks AS task ON task.id=artifact.task_id WHERE task.external_key LIKE 'demo-p2-2026-001:task:%';")
+acked_deliveries=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM delivery.outbox WHERE event_type='task_assigned' AND status='acked';")
+printf 'accepted_tasks=%s artifacts=%s acked_deliveries=%s\n' "$accepted_tasks" "$artifacts" "$acked_deliveries"
+[ "$accepted_tasks" -eq 10 ]
+[ "$artifacts" -eq 10 ]
+[ "$acked_deliveries" -eq 10 ]
+
+for event_type in task_approve task_assign task_start task_submit task_accept; do
+  event_count=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM workflow.task_events WHERE event_type='$event_type';")
+  printf '%s=%s\n' "$event_type" "$event_count"
+  [ "$event_count" -eq 10 ]
+done
+
+verified_rollbacks=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM actions.intents WHERE status='rolled_back' AND COALESCE((readback_receipt->>'verified')::boolean,false) AND COALESCE((rollback_receipt->>'verified')::boolean,false);")
+non_terminal_actions=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM actions.intents WHERE status NOT IN ('rolled_back','rejected','failed');")
+printf 'verified_rollbacks=%s non_terminal_actions=%s\n' "$verified_rollbacks" "$non_terminal_actions"
+[ "$verified_rollbacks" -ge 2 ]
+[ "$non_terminal_actions" -eq 0 ]
+
+printf '\n=== privilege boundaries ===\n'
+ontology_app_action_update=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_app','actions.intents','UPDATE');")
+ontology_app_demo_update=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_app','actions.demo_task_status','UPDATE');")
+gateway_task_update=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('action_gateway','workflow.tasks','UPDATE');")
+printf 'ontology_app_action_update=%s ontology_app_demo_update=%s gateway_task_update=%s\n' "$ontology_app_action_update" "$ontology_app_demo_update" "$gateway_task_update"
+[ "$ontology_app_action_update" = f ]
+[ "$ontology_app_demo_update" = f ]
+[ "$gateway_task_update" = f ]
+
+printf '\n=== h engine egress ===\n'
+h_engine_proxy_url=${H_ENGINE_PROXY_URL:-socks5h://192.168.61.66:10808}
+h_engine_probe_url=${H_ENGINE_EGRESS_PROBE_URL:-https://api.x.ai/v1/models}
+h_engine_status=$(curl --silent --show-error --connect-timeout 10 --max-time 20 --proxy "$h_engine_proxy_url" -o /dev/null -w '%{http_code}' "$h_engine_probe_url" || true)
+printf 'proxy_configured=true http_status=%s\n' "$h_engine_status"
+case "$h_engine_status" in
+  200|401|403) ;;
+  *) echo 'H engine egress probe failed' >&2; exit 1 ;;
+esac
+
+printf '\n=== backup ===\n'
+verified_backups=$(find /share/CACHEDEV2_DATA/ai-ontology-backup/postgres/base -mindepth 2 -maxdepth 2 -type f -name VERIFIED | wc -l | tr -d ' ')
+wal_files=$(find /share/CACHEDEV2_DATA/ai-ontology-backup/postgres/wal -maxdepth 1 -type f | wc -l | tr -d ' ')
+printf 'verified_backups=%s wal_files=%s\n' "$verified_backups" "$wal_files"
+[ "$verified_backups" -gt 0 ]
+[ "$wal_files" -gt 0 ]
+
+printf '\n=== host ===\n'
+printf 'vm.overcommit_memory='; cat /proc/sys/vm/overcommit_memory
+[ "$(cat /proc/sys/vm/overcommit_memory)" = "1" ]
+
+printf '\n=== resources ===\n'
+"$docker_path" stats --no-stream --format '{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}' $("$docker_path" compose ps -q)
+
+if [ "$failed" -ne 0 ]; then
+  exit 1
+fi

@@ -1,0 +1,21 @@
+flowchart LR
+    F["新建公司级飞书Bot"] --> H["QNAP H-Lite"]
+    PB["现有员工私人Bot"] --> HP["现有H平台"]
+    HP -.仅复用代码与契约<br/>私人Bot不迁移.-> H
+    H --> AC["Company Agent Core"]
+    G["公司经营目标"] --> P["真实P2"]
+    P --> AC
+    AC --> C["AI任务草案"]
+    C --> D{"DRI批准"}
+    D -->|批准| T["个人任务"]
+    D -->|退回| C
+    T --> H
+    H --> B["员工与公司Bot会话"]
+    B --> A["成果与证据"]
+    A --> Q["QA规则预检"]
+    Q --> R{"DRI验收"}
+    R -->|通过| O["Ontology状态"]
+    R -->|退回| B
+    E["ERP只读证据"] -.-> O
+    M["社媒只读证据"] -.-> O
+    O --> V["经营驾驶舱"]

@@ -1,0 +1,16 @@
+flowchart TD
+    F["新建公司级飞书Bot"] --> W["独立WebSocket订阅"]
+    W --> B["QNAP H-Lite Bridge"]
+    B --> I["身份与Scope授权"]
+    I --> P["Company Front-door Profile"]
+    P --> A["Agent Core Adapter"]
+    A --> C["Company Agent Core"]
+    C --> A
+    A --> O["Delivery Outbox"]
+    O --> K["Feishu ACK与读回"]
+    K --> F
+    B --> L["Task Session Log"]
+    O --> R["失败重投与恢复"]
+    S["公司Bot待命 H-Lite 实例"] -.租约与防双消费.-> W
+    P0["现有员工私人Bot/H平台"] -.保持不变且不迁移.-> F
+    X["业务任务真源"] -.禁止写入.-> B

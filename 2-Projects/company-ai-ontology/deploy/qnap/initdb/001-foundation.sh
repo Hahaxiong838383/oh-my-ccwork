@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+
+psql --set=ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<SQL
+CREATE ROLE ontology_app LOGIN PASSWORD '$ONTOLOGY_APP_PASSWORD' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+CREATE ROLE ontology_readonly LOGIN PASSWORD '$ONTOLOGY_READONLY_PASSWORD' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+CREATE ROLE action_gateway LOGIN PASSWORD '$ACTION_GATEWAY_PASSWORD' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+CREATE ROLE ontology_backup LOGIN REPLICATION PASSWORD '$POSTGRES_BACKUP_PASSWORD' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+SQL
+
+cat >> "$PGDATA/pg_hba.conf" <<'HBA'
+host replication ontology_backup 0.0.0.0/0 scram-sha-256
+host replication ontology_backup ::/0 scram-sha-256
+HBA
+
+psql \
+  --set=ON_ERROR_STOP=1 \
+  --username "$POSTGRES_USER" \
+  --dbname "$POSTGRES_DB" \
+  --set=tenant_id="$FUTURUS_TENANT_ID" \
+  --file=/docker-entrypoint-initdb.d/002-schema.sql.tmpl

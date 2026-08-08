@@ -27,11 +27,16 @@ output_levels: L2
 
 架构分工：
 
-- H 平台：飞书 Bot 接入、授权卡片、Runner、Outbox、任务日志、并发调度、完成回执。
+- QNAP H-Lite：从现有 H 平台同源移植的精简生产 profile，承载飞书 WebSocket 订阅、Bot Bridge、授权、Outbox、ACK/读回、提醒和 Runner Adapter。
+- Company Agent Core：与 H-Lite 同机部署在 QNAP，通过 H 引擎承载 Agent 身份、路由、上下文编译、任务提案、会话编排和主 Runtime Pool，是 Ontology 的核心 AI。
+- H 平台上游：继续服务现有员工私人 Bot，并提供统一代码、契约、管理能力和 Mini/Studio 扩展 Worker；私人 Bot 不迁移、不切换飞书事件订阅连接。
 - AI Ontology：目标、P2、任务、决策、产品、ERP、市场信号、成果、证据和权限语义。
-- Grok Build：AI 执行核心。
-- Cognee + Qdrant + Postgres：公司级共享记忆、知识图谱、向量召回和结构化真源。
+- H 引擎：Company Agent Core 的统一 AI 执行抽象；主实例和首批 Runtime Pool 部署在 QNAP，底层模型实现和版本作为可替换部署细节，不进入业务架构描述。
+- Postgres：Ontology 对象、关系、任务、权限、审计与证据的唯一结构化真源。
+- Qdrant：可重建的向量召回派生层，不承担事实真源或权限判断。
+- Cognee：移出 P0 在线关键路径；后续只能作为离线实验候选，不能承担权限体系。
 - Action Gateway：所有业务写回的强制安全边界。
+- QNAP：P0 起即作为公司局域网内的主硬件底座，承载公司级 Bot 的 H-Lite、Company Agent Core、主 H 引擎 Runtime Pool、Ontology 控制面与数据面。
 
 ## 五层 Ontology
 
@@ -47,27 +52,63 @@ output_levels: L2
 
 可以复用：
 
-- 飞书 Bot Bridge。
+- 飞书 WebSocket 订阅、Bot Bridge。
 - 精确 scope 授权卡片、device-flow、自动续跑。
-- Runner / Grok 调用链。
+- H 引擎调用链作为 Mini/Studio 扩展 Worker Cell，不承担 Company Agent 主实例。
 - `short/full` taskMode。
 - 多用户 profile、隔离 HOME / lark-cli HOME。
 - Delivery Outbox、Feishu ACK、完成卡片。
 - Task Session Log、并发调度、任务恢复。
 
+QNAP H-Lite 移植原则：
+
+- 使用同一 H 平台代码库和 `behaviorContractVersion`，新增 `company-qnap-lite` 部署 profile；禁止复制后形成长期 fork。
+- 只启用飞书订阅、Bridge、授权、Company Front-door profile、Delivery Outbox、ACK/读回、Task Session Log、提醒、恢复和 Agent Core Adapter。
+- 不启用通用多租户控制台、公司业务状态存储、全量工具凭据和直接业务写回。
+- 新建一个独立的公司级飞书 App/Bot，由 QNAP H-Lite 接收其事件；现有 H 平台员工私人 Bot 的 App、事件订阅、记忆和会话全部保持不变。
+- 公司级 Bot 是一个面向全员并发服务的唯一逻辑入口；为避免同一条飞书事件被重复处理，同一时刻只允许一个 H-Lite 主订阅实例接收事件，其余实例通过 lease/fencing 保持待命。该机制不切换员工私人 Bot，也不限制公司 Agent 同时服务多人。
+
 不能裸复用：
 
 - Runner 不能直接查全量 Ontology、ERP、社媒或飞书文档。
 - Runner 不能直接写 ERP、飞书、Git、报表。
-- SQLite/JSONL 不能作为公司级长期唯一真源；P0 可过渡，P1 迁 Postgres + `tenant_id` + RLS。
+- 从 P0 起，Ontology/Postgres 就是业务任务唯一真源；SQLite/JSONL 只保存 H 平台 append-only 运行事件。
 - 全员 Agent 不能成为超级管理员 Agent。
 
 必须新增：
 
+- `Company Agent Core`：部署在 QNAP，是全员 Agent 的唯一逻辑主实例，统一调用 H 引擎、Ontology、Policy 和 Action Gateway。
+- `H-Lite Agent Core Adapter`：通过 QNAP loopback/内部网络把飞书请求交给 Company Agent Core，并把结果交回 Outbox。
 - `Ontology Service`：公司经营语义对象与关系。
 - `Permissioned Retrieval Gateway`：先算权限，再检索，再组证据包。
-- `Task Compiler`：经营目标/P2 拆成任务图和个人任务。
+- `Task Proposal Compiler`：只生成任务图、个人任务草案和验收标准，等待 DRI 修改批准。
 - `Mandatory Action Gateway`：Action Intent、dry-run、人审、执行、读回校验、审计、回滚。
+
+## 飞书身份与通讯录同步
+
+- 飞书的 API Scope、通讯录数据范围、应用可用范围是三个独立门禁，必须分别用真实 API 和真实用户验证；不能用后台已勾选或单一错误码推断全部生效。
+- 通讯录 Connector 必须从授权入口递归展开子部门，再拉取人员；授权入口数量不等于最终可见部门数量。
+- 同步入口只接受专用服务身份与 HMAC 签名，普通员工身份必须返回 403；员工 Bot 不得借此获得公司通讯录批量导出能力。
+- Ontology Principal 只保存任务派发需要的最小字段：姓名、飞书身份、部门和启用状态；默认不保存邮箱、手机号、私聊正文或私人属性。
+- Principal Upsert 必须幂等；重复同步不得重复创建人员。暂时只更新本轮可见人员，不因“本轮未出现”自动禁用历史人员，避免通讯录范围临时收缩造成误停用。
+- 每次生产同步至少验收：授权入口数、递归部门数、人员数、新增/更新数、敏感字段命中数、普通员工 403 负测和重复同步幂等。
+
+QNAP 运行命令：
+
+```bash
+node ops/sync-company-directory.mjs
+```
+
+命令只从 QNAP 本地 secret 指针读取凭据；输出和日志不得打印 App Secret、访问令牌、完整身份 ID 或私人字段。
+
+## 飞书知识 Connector 与 ACL 红线
+
+- “公司 App 能读取文档”不等于“当前员工有权读取文档”。公司 App 只负责建立索引，不向员工继承 App 的全局可见性。
+- Connector 入库前必须保存文档、知识空间、文件夹、用户、部门、群组和密级的 ACL 映射；无法确定 ACL 的内容默认拒绝进入员工上下文。
+- 检索顺序固定为：解析当前 Principal → 计算授权集合 → 在授权集合内召回 → 生成带来源和权限快照的 `Permissioned Evidence Package` → 交给 Company Agent Core。
+- 向量库只保存可重建派生索引；权限判断必须回到 Postgres/Ontology 的当前 ACL，不允许仅依赖向量过滤标签。
+- ACL 变更后必须支持索引失效或重建；离职、转岗、部门调整和文档移权必须在规定 SLA 内收敛。
+- 跨部门、已撤权、无 ACL、链接直猜和提示词诱导越权必须作为 Canary 负测，不得只测正常检索。
 
 ## 爱视可 ERP 接管边界
 
@@ -82,20 +123,47 @@ output_levels: L2
 - TikHub、JustOneAPI、MediaCrawler 继续作为 Provider。
 - Ontology 只接归一化后的业务结果；HTTP 200 不是业务成功。
 - 每条信号必须保留来源、平台、外部 ID、采集时间、归一化规则和去重关系。
+- 社媒正文必须先进入不可信输入隔离区，只允许规则抽取后的结构化 Signal 进入推理链，不能直接触发工具。
 - 信号不是结论，必须经过 Opportunity / Decision Agent 形成建议。
 - MediaCrawler 若触发小红书 re-login/risk-control，不自动恢复、不绕过登录、不加并发，等待用户明确指令。
 
 ## P0 最小闭环
 
-1. 从社媒痛点生成 `Opportunity`。
-2. 生成 `Decision Proposal`。
-3. DRI 审批后生成公司 P2。
-4. `Task Compiler` 拆成个人任务。
-5. H 平台投递到员工飞书 Bot。
-6. 员工提交成果链接、文档或表格。
-7. QA Agent 按验收标准预检。
-8. DRI 验收。
-9. Ontology 回写目标、任务、成果、卡点、ERP/市场关联。
+1. 选择一条真实公司 P2 和唯一 DRI。
+2. `Task Proposal Compiler` 只生成个人任务草案和验收标准。
+3. DRI 修改并批准任务草案；未经批准不得进入 `assigned`。
+4. H 平台将已批准任务投递到员工飞书 Bot，并取得 Feishu ACK。
+5. Bot 解释任务、提醒、协助执行并收集成果。
+6. QA Agent 只做规则预检，不替代业务验收。
+7. DRI 验收或退回成果。
+8. Ontology/Postgres 作为任务状态唯一真源，H 平台只保留 append-only 投递与运行事件。
+9. ERP 和社媒在 P0 只作为只读证据源，不触发 P2、不写回业务数据。
+
+## QNAP 主底座边界
+
+- QNAP 从 P0 开始进入在线关键路径，承载公司级 Bot H-Lite、Company Agent Core、主 H 引擎 Runtime Pool、API Gateway、Identity/Policy、Ontology Service、Postgres、Qdrant、Redis、Action Gateway、Audit/Observability 和备份编排。
+- H-Lite 与 Company Agent Core 通过 loopback/内部 Docker 网络连接；飞书入站不再绕行外部 H Bridge，QNAP 断网恢复后由本地 Outbox 和订阅重连继续处理。
+- 面向全员的 Agent 身份、系统提示词、版本、路由、Context Compiler、Task Proposal Compiler 和会话编排只在 QNAP Company Agent Core 中维护。
+- 50 人首发的短任务池与长任务池优先运行在 QNAP；当扩至 150/300 人时，再通过 H 平台把无状态 H 引擎 Worker Cell 扩展到 Mini/Studio。
+- 扩展 Worker 只接收签名任务包和短期 Gateway Token，不保存公司长期记忆、不持有业务系统长期凭据，也不能成为任务真源。
+- QNAP 上不运行本地大模型；推理由 H 引擎上游服务提供，NAS 只承担公司数据、控制与调度。
+- P0 接受 QNAP 为单主节点，但必须同时具备：容器资源硬限制、健康探针、自动重启、Postgres PITR、WAL/快照写入 RAID1、离机加密备份、恢复演练和明确 RTO/RPO。
+- QNAP 故障时禁止把缓存、H 平台 SQLite 或人工消息提升为任务真源；恢复后只能从 Postgres 备份与 append-only 事件重放恢复。
+- 当前 16GB 设备首批平台容器总内存硬上限建议不超过 6GB，并至少为 QTS 和既有生产容器保留 6GB；未完成 24 小时峰值压测前不得提高上限。
+
+## 50 到 300 人扩容
+
+- 10 人 canary → 20 人 → 50 人正式首批，均通过 feature flag 放量。
+- 50 人：QNAP 运行 H-Lite、Company Agent Core、主短任务池和主长任务池；Mini/Studio 可保留一个故障隔离 Worker Pool。
+- 150 人：增加独立 Worker Cell，按任务类型分池并建立部门配额。
+- 300 人：按 public/product/erp/management 安全域分 Cell；QNAP 保持单一控制/数据主底座，执行面横向扩展。
+- 每阶段必须通过 Admission Control、H 引擎限流、队列等待上限、Worker 崩溃恢复、跨员工/跨部门越权负测和 Feishu ACK 重投验收。
+
+## 员工数据章程
+
+- 只跟踪公司任务对象、成果、证据、状态和卡点，不采集在线时长、键盘行为、私人情绪或与任务无关的私聊正文。
+- 员工可查看系统保存了自己的哪些数据；管理层默认不能读取个人 Bot 私聊全文。
+- 员工提交成果时必须明确提示哪些内容会进入公司 Ontology 和管理视图。
 
 ## 验收红线
 
@@ -105,11 +173,36 @@ output_levels: L2
 - 无权限过滤证据包不许回答公司内部信息。
 - 无 Action Gateway 不许写回业务系统。
 - 管理层看任务状态、成果和卡点，不默认看员工私人对话全文。
+- 无 DRI 批准不许自动派发个人任务。
+- 无单一任务真源不许同时上线 H/Ontology 双写。
+- 无 QNAP 备份恢复演练不许扩大到 50 人正式首批。
+
+## QNAP 滚动部署与复验
+
+1. 部署前保存当前 compose、环境指针、镜像摘要和数据库备份，禁止把 secret 打进传输包或 Git。
+2. 先升级 Company Agent Core；健康探针、版本、数据库连接和定向测试通过后，再升级 H-Lite。
+3. H-Lite 升级后必须重新验证飞书 WebSocket 在线、私聊/群聊入站、Outbox 回复、去重、版本和 `restart_count=0`。
+4. 通讯录相关改动必须重跑同步正例、重复同步幂等、普通员工 403 和敏感字段扫描。
+5. 新版本的验收证据必须发生在新容器启动时间之后；旧版本曾经通过不能替代当前版本复验。
+6. 回滚时先恢复兼容版本的 H-Lite，再恢复 Agent Core；业务真源只从 Postgres 备份和 append-only 事件恢复。
+
+## 架构决策基线
+
+V2.2 的持久文本与图源见：
+
+- `references/architecture-v2.md`
+- `references/architecture-v2-overall.mmd`
+- `references/architecture-v2-technical.mmd`
+- `references/architecture-v2-qnap.mmd`
+- `references/architecture-v2-task-flow.mmd`
+- `references/architecture-v2-bot-flow.mmd`
+- `references/architecture-v2-market-loop.mmd`
+- `references/architecture-v2-agent-core.mmd`
+- `references/architecture-v2-h-lite.mmd`
 
 ## 既有飞书文档
 
 当前方案沉淀文档：
 
-- `公司 AI Ontology 基座架构方案 V1.0`
+- `公司 AI Ontology 基座架构方案 V2.2`
 - `https://futurus.feishu.cn/docx/Xd3qdCtmXogh0rxmEhDc8pL1nub`
-

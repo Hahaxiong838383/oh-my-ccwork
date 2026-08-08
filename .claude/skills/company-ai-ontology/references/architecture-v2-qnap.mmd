@@ -1,0 +1,23 @@
+flowchart TD
+    F["公司级飞书Bot独立事件订阅<br/>面向全员并发服务"] --> H["QNAP H-Lite"]
+    H --> C["QNAP Caddy/API"]
+    C --> A["Company Agent Core"]
+    A --> G["主 H引擎 Runtime Pool"]
+    G --> X["H 引擎上游推理服务"]
+    A --> I["Identity与Policy"]
+    I --> O["Ontology Service"]
+    O --> P["Postgres唯一真源"]
+    O --> Q["Qdrant派生索引"]
+    O --> R["Redis队列缓存"]
+    A --> AG["Action Gateway"]
+    AG --> W["业务系统写回"]
+    AG --> U["审计与读回"]
+    A --> E["Mini/Studio H引擎扩展Worker"]
+    E --> X
+    E --> AG
+    P --> B1["RAID1 WAL快照"]
+    B1 --> B2["离机加密备份"]
+    M["监控告警"] --> C
+    M --> P
+    M --> H
+    M --> A

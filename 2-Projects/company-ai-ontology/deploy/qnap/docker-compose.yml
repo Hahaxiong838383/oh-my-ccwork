@@ -1,0 +1,412 @@
+name: company-ai-foundation
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging: *default-logging
+
+services:
+  foundation-init:
+    image: docker.1ms.run/library/redis:7.4.9-alpine
+    user: "0:0"
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - >-
+        mkdir -p /hot/postgres /hot/qdrant/storage /hot/redis /hot/prometheus
+        /hot/agent-core/home /hot/agent-core/workspace /hot/h-lite/state
+        /backup/postgres/wal /backup/postgres/base /backup/qdrant/snapshots
+        /backup/restore-drills;
+        chown 1000:999 /backup;
+        chmod 750 /backup;
+        chown -R 999:999 /hot/postgres;
+        chown -R 999:100 /backup/postgres;
+        chown -R 1000:100 /hot/prometheus;
+        chown -R 10001:10001 /hot/agent-core;
+        chown -R 10002:10002 /hot/h-lite;
+        chmod 700 /hot/postgres;
+        chmod 750 /backup/postgres /backup/postgres/wal /backup/postgres/base;
+        chmod 750 /hot/qdrant /hot/redis /hot/prometheus /backup/qdrant /backup/restore-drills
+    volumes:
+      - ${HOT_DATA_ROOT}/data:/hot
+      - ${BACKUP_ROOT}:/backup
+    restart: "no"
+    mem_limit: 64m
+    cpus: 0.20
+    pids_limit: 64
+    logging: *default-logging
+
+  postgres:
+    <<: *service-defaults
+    image: docker.1ms.run/pgvector/pgvector:pg17-bookworm
+    environment:
+      POSTGRES_DB: ontology
+      POSTGRES_USER: ontology_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_BACKUP_PASSWORD: ${POSTGRES_BACKUP_PASSWORD}
+      POSTGRES_INITDB_ARGS: --data-checksums --auth-host=scram-sha-256
+      ONTOLOGY_APP_PASSWORD: ${ONTOLOGY_APP_PASSWORD}
+      ONTOLOGY_READONLY_PASSWORD: ${ONTOLOGY_READONLY_PASSWORD}
+      ACTION_GATEWAY_PASSWORD: ${ACTION_GATEWAY_PASSWORD}
+      FUTURUS_TENANT_ID: ${FUTURUS_TENANT_ID}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=768MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - max_connections=100
+      - -c
+      - password_encryption=scram-sha-256
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=test ! -f /backups/postgres/wal/%f && cp %p /backups/postgres/wal/%f
+      - -c
+      - archive_timeout=900s
+      - -c
+      - wal_compression=on
+      - -c
+      - log_connections=on
+      - -c
+      - log_disconnections=on
+      - -c
+      - log_line_prefix=%m [%p] %q%u@%d
+    volumes:
+      - ${HOT_DATA_ROOT}/data/postgres:/var/lib/postgresql/data
+      - ${BACKUP_ROOT}:/backups
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    networks:
+      - data
+      - observability
+    depends_on:
+      foundation-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ontology_admin -d ontology"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    mem_limit: 1536m
+    mem_reservation: 512m
+    cpus: 1.50
+    pids_limit: 256
+    shm_size: 256m
+    stop_grace_period: 60s
+
+  postgres-backup:
+    <<: *service-defaults
+    image: docker.1ms.run/pgvector/pgvector:pg17-bookworm
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ontology_backup
+      PGPASSWORD: ${POSTGRES_BACKUP_PASSWORD}
+      PGDATABASE: ontology
+      BACKUP_RETENTION_DAYS: "7"
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - >-
+        sleep 300;
+        while true; do
+          /scripts/postgres-backup.sh;
+          sleep 86400;
+        done
+    volumes:
+      - ${BACKUP_ROOT}:/backups
+      - ./scripts:/scripts:ro
+    networks:
+      - data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 192m
+    cpus: 0.35
+    pids_limit: 64
+
+  qdrant:
+    <<: *service-defaults
+    image: docker.1ms.run/qdrant/qdrant:v1.18.2
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+      QDRANT__SERVICE__ENABLE_TLS: "false"
+      QDRANT__TELEMETRY_DISABLED: "true"
+      QDRANT__LOG_LEVEL: INFO
+    volumes:
+      - ${HOT_DATA_ROOT}/data/qdrant/storage:/qdrant/storage
+      - ${BACKUP_ROOT}/qdrant/snapshots:/qdrant/snapshots
+    networks:
+      - data
+    depends_on:
+      foundation-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333'"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    mem_limit: 768m
+    mem_reservation: 256m
+    cpus: 1.00
+    pids_limit: 256
+    stop_grace_period: 45s
+
+  redis:
+    <<: *service-defaults
+    image: docker.1ms.run/library/redis:7.4.9-alpine
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD}
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --maxmemory
+      - 192mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - "900"
+      - "1"
+    volumes:
+      - ${HOT_DATA_ROOT}/data/redis:/data
+    networks:
+      - data
+    depends_on:
+      foundation-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    mem_limit: 256m
+    mem_reservation: 64m
+    cpus: 0.40
+    pids_limit: 96
+
+  agent-core:
+    <<: *service-defaults
+    build:
+      context: ${AGENT_CORE_BUILD_CONTEXT:-../../services/agent-core}
+    environment:
+      AGENT_CORE_HOST: 0.0.0.0
+      AGENT_CORE_PORT: "8080"
+      AGENT_CORE_HMAC_SECRET: ${AGENT_CORE_HMAC_SECRET}
+      FUTURUS_TENANT_ID: ${FUTURUS_TENANT_ID}
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ontology
+      PGUSER: ontology_app
+      PGPASSWORD: ${ONTOLOGY_APP_PASSWORD}
+      PGPOOL_MAX: "8"
+      H_ENGINE_MODE: ${H_ENGINE_MODE:-demo}
+      H_ENGINE_BIN: /app/node_modules/.bin/grok
+      H_ENGINE_HOME: /var/lib/company-agent/home
+      H_ENGINE_GROK_HOME: /var/lib/company-agent/home/.grok
+      H_ENGINE_WORKSPACE: /var/lib/company-agent/workspace
+      H_ENGINE_PROXY_URL: ${H_ENGINE_PROXY_URL:-socks5h://192.168.61.66:10808}
+      H_ENGINE_MAX_CONCURRENCY: ${H_ENGINE_MAX_CONCURRENCY:-4}
+      H_ENGINE_QUEUE_LIMIT: ${H_ENGINE_QUEUE_LIMIT:-32}
+      H_ENGINE_QUEUE_TIMEOUT_MS: ${H_ENGINE_QUEUE_TIMEOUT_MS:-5000}
+      H_ENGINE_DEMO_DELAY_MS: ${H_ENGINE_DEMO_DELAY_MS:-50}
+      XAI_API_KEY: ${XAI_API_KEY:-}
+      COMPANY_AGENT_PROMPT_FILE: /app/prompts/company-front-door.md
+    volumes:
+      - ${HOT_DATA_ROOT}/data/agent-core/home:/var/lib/company-agent/home
+      - ${HOT_DATA_ROOT}/data/agent-core/workspace:/var/lib/company-agent/workspace
+    networks:
+      - edge
+      - data
+    depends_on:
+      foundation-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    mem_limit: 512m
+    mem_reservation: 128m
+    cpus: 0.75
+    pids_limit: 128
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+
+  action-gateway:
+    <<: *service-defaults
+    build:
+      context: ${ACTION_GATEWAY_BUILD_CONTEXT:-../../services/action-gateway}
+    environment:
+      ACTION_GATEWAY_HOST: 0.0.0.0
+      ACTION_GATEWAY_PORT: "8082"
+      ACTION_GATEWAY_CONTROL_TOKEN: ${ACTION_GATEWAY_CONTROL_TOKEN}
+      FUTURUS_TENANT_ID: ${FUTURUS_TENANT_ID}
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ontology
+      PGUSER: action_gateway
+      PGPASSWORD: ${ACTION_GATEWAY_PASSWORD}
+      PGPOOL_MAX: "4"
+    networks:
+      - edge
+      - data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8082/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    mem_limit: 256m
+    mem_reservation: 64m
+    cpus: 0.40
+    pids_limit: 96
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+
+  h-lite:
+    <<: *service-defaults
+    build:
+      context: ${H_LITE_BUILD_CONTEXT:-../../../feishu-grok-bridge}
+      dockerfile: deploy/company-qnap-lite/Dockerfile
+    environment:
+      H_LITE_HOST: 0.0.0.0
+      H_LITE_PORT: "8081"
+      H_COMPANY_RUNTIME_MODE: ${H_COMPANY_RUNTIME_MODE:-shadow}
+      FEISHU_APP_ID: ${FEISHU_APP_ID:-}
+      FEISHU_APP_SECRET: ${FEISHU_APP_SECRET:-}
+      H_AGENT_CORE_URL: http://agent-core:8080
+      H_AGENT_CORE_SECRET: ${AGENT_CORE_HMAC_SECRET}
+      H_ACTION_GATEWAY_URL: http://action-gateway:8082
+      H_ACTION_GATEWAY_TOKEN: ${ACTION_GATEWAY_CONTROL_TOKEN}
+      H_LITE_SHADOW_TOKEN: ${H_LITE_SHADOW_TOKEN}
+      H_SQLITE_STATE_FILE: /var/lib/h-lite/state/h-lite.sqlite
+      FUTURUS_TENANT_ID: ${FUTURUS_TENANT_ID}
+    volumes:
+      - ${HOT_DATA_ROOT}/data/h-lite/state:/var/lib/h-lite/state
+    networks:
+      - edge
+    depends_on:
+      foundation-init:
+        condition: service_completed_successfully
+      agent-core:
+        condition: service_healthy
+      action-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8081/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    mem_limit: 256m
+    mem_reservation: 64m
+    cpus: 0.40
+    pids_limit: 96
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+
+  node-exporter:
+    <<: *service-defaults
+    image: docker.1ms.run/prom/node-exporter:v1.12.1
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|share/CACHEDEV1_DATA/Container/container-station-data/lib/docker/.+)($|/)
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - observability
+    read_only: true
+    mem_limit: 64m
+    cpus: 0.20
+    pids_limit: 64
+
+  prometheus:
+    <<: *service-defaults
+    image: docker.1ms.run/prom/prometheus:v3.12.0
+    user: "1000:100"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.retention.size=1GB
+      - --web.enable-lifecycle
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${HOT_DATA_ROOT}/data/prometheus:/prometheus
+    networks:
+      - observability
+    depends_on:
+      - node-exporter
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:9090/-/ready >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    mem_limit: 384m
+    mem_reservation: 128m
+    cpus: 0.50
+    pids_limit: 128
+
+  gateway:
+    <<: *service-defaults
+    image: docker.1ms.run/library/caddy:2.11.4-alpine
+    ports:
+      - 192.168.61.18:19080:8080
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${HOT_DATA_ROOT}/data/caddy:/data
+      - ${HOT_DATA_ROOT}/config/caddy:/config
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz | grep -q qnap-foundation"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 96
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+
+networks:
+  edge:
+    name: company_ai_edge
+  data:
+    name: company_ai_data
+    internal: true
+  observability:
+    name: company_ai_observability
+    internal: true

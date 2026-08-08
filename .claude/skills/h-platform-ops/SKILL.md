@@ -5249,3 +5249,26 @@ H-Lite 可直接复用：飞书 WebSocket 订阅、Bot Bridge、精确 scope 授
 
 完整方案见 `company-ai-ontology` skill 与飞书文档《公司 AI Ontology 基座架构方案 V2.2》：
 `https://futurus.feishu.cn/docx/Xd3qdCtmXogh0rxmEhDc8pL1nub`。
+
+## Company H-Lite 通讯录同步运维（2026-08-08）
+
+公司 Bot 使用独立飞书 App，由 QNAP `company-qnap-lite` 负责订阅和投递。通讯录同步是服务身份后台作业，不是员工对话能力；员工私人 Bot 和原 Consumer 不迁移、不切换。
+
+运行入口：
+
+```bash
+node ops/sync-company-directory.mjs
+```
+
+运维与验收顺序：
+
+1. 分别确认 API Scope、通讯录数据范围和应用可用范围，不能把三者混为一个授权状态。
+2. 从飞书返回的授权入口递归展开部门，再同步可见人员；只看顶层部门会漏人。
+3. 只允许 `company-directory-sync` 服务身份通过 HMAC 内部接口写入 Principal；普通员工身份必须返回 403。
+4. 连续执行两次：第二次应只更新现有人员，不重复创建；当前策略不自动禁用本轮未出现人员。
+5. 检查入库字段仅含姓名、飞书身份、部门和启用状态；邮箱、手机号、私聊正文与私人属性命中必须为 0。
+6. 完成后复验 H-Lite 飞书 WebSocket 在线、Agent Core/H-Lite 版本、健康探针和 `restart_count=0`。
+
+2026-08-08 生产锚点：4 个授权入口递归展开为 83 个可见部门，414 名可见人员首次新增 414；第二次新增 0、更新 414；普通员工同步负测为 403。该数字只代表当日权限快照，后续运维应以实时 API 结果为准。
+
+知识检索红线：公司 App 能读到文档不代表当前员工能读。H-Lite 不直接把文档正文交给 Runner；必须由 Permissioned Retrieval Gateway 根据当前 Principal 和文档 ACL 生成 `Permissioned Evidence Package` 后再进入上下文。

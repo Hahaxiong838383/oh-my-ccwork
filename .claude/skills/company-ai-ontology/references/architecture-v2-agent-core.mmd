@@ -1,0 +1,18 @@
+flowchart TD
+    F["新建公司级飞书Bot<br/>面向全员并发服务"] --> H["QNAP H-Lite"]
+    H --> API["QNAP API Gateway"]
+    API --> A["Company Agent Core"]
+    A --> R["Agent Router"]
+    A --> C["Context Compiler"]
+    A --> T["Task Proposal Compiler"]
+    A --> S["Session Orchestrator"]
+    A --> P["Prompt与版本注册"]
+    A --> G["主 H引擎 Runtime Pool"]
+    G --> X["H 引擎上游推理服务"]
+    C --> O["Ontology/Policy"]
+    O --> D["Postgres/Qdrant"]
+    A --> AG["Mandatory Action Gateway"]
+    AG --> B["ERP/飞书/Git写回"]
+    A --> W["Mini/Studio H引擎扩展Worker"]
+    W --> X
+    W --> AG
