@@ -53,8 +53,14 @@ func TestUsageStoreAggregatesTodayByAccount(t *testing.T) {
 		},
 		{
 			Timestamp: now.Add(-time.Hour),
+			AuthIndex: "xai-account",
 			Provider:  "xai",
-			Tokens:    nativeUsageTokens{TotalTokens: 999},
+			Model:     "grok-4.3",
+			Tokens: nativeUsageTokens{
+				InputTokens:  600,
+				OutputTokens: 399,
+				TotalTokens:  999,
+			},
 		},
 		{
 			Timestamp: now.Add(-25 * time.Hour),
@@ -82,6 +88,10 @@ func TestUsageStoreAggregatesTodayByAccount(t *testing.T) {
 	account := accounts["account-a"]
 	if account.Requests != 2 || account.LastErrorStatus != http.StatusTooManyRequests {
 		t.Fatalf("unexpected account usage: %+v", account)
+	}
+	xaiAccount := accounts["xai-account"]
+	if xaiAccount.Requests != 1 || xaiAccount.TotalTokens != 999 || xaiAccount.TopModel != "grok-4.3" {
+		t.Fatalf("unexpected xAI account usage: %+v", xaiAccount)
 	}
 
 	reloaded, err := newUsageStore(path)
@@ -136,11 +146,19 @@ func TestUsageCollectorReadsManagementQueue(t *testing.T) {
 
 func TestAuthRuntimeIndexMatchesCLIProxyAlgorithm(t *testing.T) {
 	authDir := t.TempDir()
-	path := filepath.Join(authDir, "codex.json")
-	seed := "codex:" + path
-	digest := sha256.Sum256([]byte(seed))
-	want := hex.EncodeToString(digest[:8])
-	if got := authRuntimeIndex("codex", authDir, "codex.json"); got != want {
-		t.Fatalf("auth index = %q, want %q", got, want)
+	for _, testCase := range []struct {
+		provider string
+		fileName string
+	}{
+		{provider: "codex", fileName: "codex.json"},
+		{provider: "xai", fileName: "xai.json"},
+	} {
+		path := filepath.Join(authDir, testCase.fileName)
+		seed := testCase.provider + ":" + path
+		digest := sha256.Sum256([]byte(seed))
+		want := hex.EncodeToString(digest[:8])
+		if got := authRuntimeIndex(testCase.provider, authDir, testCase.fileName); got != want {
+			t.Fatalf("%s auth index = %q, want %q", testCase.provider, got, want)
+		}
 	}
 }

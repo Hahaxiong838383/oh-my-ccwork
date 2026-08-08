@@ -1018,17 +1018,46 @@ func extractUsage(body []byte) usageInfo {
 }
 
 func extractUsageFromJSON(body []byte) (usageInfo, bool) {
-	var payload struct {
-		Usage *struct {
-			PromptTokens     int64 `json:"prompt_tokens"`
-			CompletionTokens int64 `json:"completion_tokens"`
-			TotalTokens      int64 `json:"total_tokens"`
-		} `json:"usage"`
+	type rawUsage struct {
+		PromptTokens     *int64 `json:"prompt_tokens"`
+		CompletionTokens *int64 `json:"completion_tokens"`
+		InputTokens      *int64 `json:"input_tokens"`
+		OutputTokens     *int64 `json:"output_tokens"`
+		TotalTokens      *int64 `json:"total_tokens"`
 	}
-	if err := json.Unmarshal(body, &payload); err != nil || payload.Usage == nil {
+	var payload struct {
+		Usage    *rawUsage `json:"usage"`
+		Response *struct {
+			Usage *rawUsage `json:"usage"`
+		} `json:"response"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
 		return usageInfo{}, false
 	}
-	return usageInfo{Prompt: payload.Usage.PromptTokens, Completion: payload.Usage.CompletionTokens, Total: payload.Usage.TotalTokens}, true
+	usage := payload.Usage
+	if usage == nil && payload.Response != nil {
+		usage = payload.Response.Usage
+	}
+	if usage == nil {
+		return usageInfo{}, false
+	}
+	prompt := int64Value(usage.PromptTokens, usage.InputTokens)
+	completion := int64Value(usage.CompletionTokens, usage.OutputTokens)
+	total := prompt + completion
+	if usage.TotalTokens != nil {
+		total = *usage.TotalTokens
+	}
+	return usageInfo{Prompt: prompt, Completion: completion, Total: total}, true
+}
+
+func int64Value(primary, fallback *int64) int64 {
+	if primary != nil {
+		return *primary
+	}
+	if fallback != nil {
+		return *fallback
+	}
+	return 0
 }
 
 func extractModel(body []byte) string {

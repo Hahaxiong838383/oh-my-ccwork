@@ -2,7 +2,7 @@
 
 macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 
-当前版本：`0.3.2`。
+当前版本：`0.3.3`。
 
 ## 当前能力
 
@@ -15,6 +15,8 @@ macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 - 账号展开区域显示该账号今日请求、Token、最后使用时间、Fast 命中和最近 HTTP 错误；账号关联只使用 CLIProxyAPI 的稳定 auth index，客户端不会收到原始索引。
 - 优先通过 xAI Management API 显示本月官方费用、预付余额和查询完整性状态；Management Key 与普通推理/OAuth 凭据分离。
 - 同时显示 xAI 经 CPA Smart Router 的近 24 小时请求数、成功率、输入/输出/总 Token，以及内部路由日预算；CPA 数据只用于运维观测，不冒充官方账单。
+- xAI 页面分别显示两个 OAuth 订阅账号的今日请求、Token、成功率、最近使用、主要模型和授权刷新状态。
+- xAI 未提供账号级官方订阅剩余额度时明确标记“官方未提供”，不使用内部预算冒充官方额度。
 - 显示充值余额与重置卡数量；仅当官方接口返回可用且适用的重置卡时，才允许经过二次确认消耗 1 张。
 - 标记账号是否具备 refresh token；CLIProxyAPI 继续负责正常的 access token 自动刷新与调度。
 - “添加订阅”统一提供 Codex 与 xAI Grok 两种 OAuth 登录；Codex 保留 PKCE 回调，xAI 使用官方设备码流程并自动轮询完成状态。
@@ -53,7 +55,7 @@ CLIProxyAPI 请求统计配置位于 `/etc/cpa-cliproxy-management.env`：
 CPA_CLIPROXY_MANAGEMENT_KEY=<CLIProxyAPI Management Key>
 ```
 
-聚合状态写入 `/var/lib/cpa-desktop-bridge/usage.json`，仅保留最近 8 天的小时桶。浮窗当前展示当天 Codex 汇总；xAI 请求级明细暂不接入该视图。
+聚合状态写入 `/var/lib/cpa-desktop-bridge/usage.json`，仅保留最近 8 天的小时桶。浮窗展示当天 Codex 汇总，并按 CLIProxyAPI auth index 将 xAI 请求归属到对应 OAuth 账号。
 
 可选的官方账单配置位于 `/etc/xai-management.env`：
 

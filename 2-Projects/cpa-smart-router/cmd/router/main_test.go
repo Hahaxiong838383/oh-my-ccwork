@@ -85,3 +85,43 @@ func TestModelsForwardsClientVersionQuery(t *testing.T) {
 		t.Fatalf("query = %q, want client version query", got)
 	}
 }
+
+func TestExtractUsageFromJSONSupportsChatCompletions(t *testing.T) {
+	usage, ok := extractUsageFromJSON([]byte(`{"usage":{"prompt_tokens":11,"completion_tokens":7,"total_tokens":18}}`))
+	if !ok {
+		t.Fatal("extractUsageFromJSON returned no usage")
+	}
+	if usage != (usageInfo{Prompt: 11, Completion: 7, Total: 18}) {
+		t.Fatalf("usage = %#v", usage)
+	}
+}
+
+func TestExtractUsageFromJSONSupportsResponses(t *testing.T) {
+	usage, ok := extractUsageFromJSON([]byte(`{"usage":{"input_tokens":200,"output_tokens":74,"total_tokens":274}}`))
+	if !ok {
+		t.Fatal("extractUsageFromJSON returned no usage")
+	}
+	if usage != (usageInfo{Prompt: 200, Completion: 74, Total: 274}) {
+		t.Fatalf("usage = %#v", usage)
+	}
+}
+
+func TestExtractUsageFromJSONSupportsNestedResponseEvent(t *testing.T) {
+	usage, ok := extractUsageFromJSON([]byte(`{"type":"response.completed","response":{"usage":{"input_tokens":31,"output_tokens":13,"total_tokens":44}}}`))
+	if !ok {
+		t.Fatal("extractUsageFromJSON returned no usage")
+	}
+	if usage != (usageInfo{Prompt: 31, Completion: 13, Total: 44}) {
+		t.Fatalf("usage = %#v", usage)
+	}
+}
+
+func TestExtractSSEUsageSupportsNestedResponseEvent(t *testing.T) {
+	usage, _, ok := extractSSEUsage([]byte(`data: {"type":"response.completed","response":{"usage":{"input_tokens":31,"output_tokens":13,"total_tokens":44}}}`))
+	if !ok {
+		t.Fatal("extractSSEUsage returned no usage")
+	}
+	if usage != (usageInfo{Prompt: 31, Completion: 13, Total: 44}) {
+		t.Fatalf("usage = %#v", usage)
+	}
+}

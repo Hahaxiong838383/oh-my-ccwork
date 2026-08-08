@@ -142,7 +142,8 @@ func (s *usageStore) add(records []nativeUsageRecord, now time.Time) error {
 	defer s.mu.Unlock()
 
 	for _, record := range records {
-		if !strings.EqualFold(strings.TrimSpace(record.Provider), "codex") {
+		provider := strings.ToLower(strings.TrimSpace(record.Provider))
+		if provider != "codex" && provider != "xai" {
 			continue
 		}
 		timestamp := record.Timestamp
@@ -158,7 +159,9 @@ func (s *usageStore) add(records []nativeUsageRecord, now time.Time) error {
 		if bucket.Accounts == nil {
 			bucket.Accounts = make(map[string]*usageCounter)
 		}
-		bucket.Total.add(record, timestamp)
+		if provider == "codex" {
+			bucket.Total.add(record, timestamp)
+		}
 		authIndex := strings.TrimSpace(record.AuthIndex)
 		if authIndex != "" {
 			counter := bucket.Accounts[authIndex]

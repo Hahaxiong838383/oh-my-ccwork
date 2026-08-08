@@ -38,6 +38,19 @@ description: CPA Smart Router 运维与迭代指南。用于检查、部署、�
 - 每次升级模型先调用带鉴权的 `/v1/models`，只输出模型 ID 等非敏感字段，再做隔离 HOME 最小推理和 Worker HMAC 推理。
 - 当前个人 CPA 的 xAI 来源是单账号，无同厂冗余；公司正式放量前应建立公司专用 Key/账号和故障切换策略。
 
+## CPA Menu xAI 账号用量与最新模型路由（2026-08-08）
+
+- xAI 总览和账号明细是两套口径：Smart Router `/debug/summary?hours=24` 提供 provider 级近 24 小时聚合；CLIProxyAPI `usage-queue` 的 `provider + auth_index` 用于 CPA Menu 当日账号归因。
+- `usage-queue` 是 destructive pop，同一 CPA 实例只能保留一个消费者。Canary Bridge 必须禁用 Management Key/collector，禁止与生产 Bridge 并发消费。
+- Bridge 的 Codex 总桶只能累计 `provider=codex`；按账号桶可以累计 `codex/xai`。直接放开 provider 过滤而同时写总桶，会把 xAI Token 污染到 Codex 今日汇总。
+- auth index 只在 Bridge 内用于匹配 auth 文件，Desktop API 只返回脱敏账号与聚合结果，不返回原始 index、文件名、Token、Key、Header、IP 或上游正文。
+- xAI OAuth 当前没有稳定的账号级官方订阅剩余额度接口。账号卡只展示真实请求、Token、成功率、最近使用、主要模型和刷新状态，并明确写“官方未提供”；不得用 Management API 团队账单、Smart Router 日预算或自定义预算冒充。
+- 用量解析必须同时支持 Chat Completions 的 `prompt_tokens/completion_tokens`、Responses 的 `input_tokens/output_tokens`，以及 SSE 完成事件中的 `response.usage`。若总 Token 更新但输入/输出为 0，先查 schema 覆盖，不要误判 App 没刷新。
+- xAI 文本主路由当前使用 `grok-4.5`。`grok-3-mini*`、`grok-4.3`、`grok-4.20-*` 旧文本别名重写到 `grok-4.5`；图像、视频、Build 与 Composer 是专用模型，不做文本模型强制替换。
+- 模型升级验收必须覆盖五层：带鉴权 `/v1/models` 可见、Router 候选明确重写、旧别名与新名 Canary 均 200、真实响应 `model` 命中目标系列、Bridge 与 macOS Accessibility 文本显示新主模型。配置文件写了新名字不算完成。
+- `fill-first` 会优先使用一个 xAI OAuth 账号；第二张卡显示“今日暂无请求记录”不代表坏账号。只有调度实际切换或显式安全测试后，第二个账号才会产生自己的用量。
+- 生产切换使用独立 systemd oneshot：备份二进制/配置/usage state，原子替换，重启后验证 health、鉴权模型目录、真实推理、Bridge 内外网与近期错误；失败或超时立即回滚。
+
 ## K12 账号池（2026-07-14+）
 
 - 大源：`aliyun-jp:/opt/cliproxy/k12-source/accounts.json`（80500，root 600）；备份在 racknerd secrets，**不进 Grok 只读**。

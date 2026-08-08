@@ -426,7 +426,8 @@ struct MenuContentView: View {
     }
 
     private var xaiDetails: some View {
-        ScrollView {
+        let xaiAccounts = model.accounts.filter { $0.provider.lowercased() == "xai" }
+        return ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
                 if let summary = model.summary, summary.xaiAccounts > 0 || summary.xaiUsage != nil {
                     XAIUsageCard(
@@ -437,6 +438,21 @@ struct MenuContentView: View {
                 } else {
                     ContentUnavailableView("暂无 xAI 数据", systemImage: "bolt.horizontal.circle")
                         .frame(maxWidth: .infinity, minHeight: 180)
+                }
+
+                if !xaiAccounts.isEmpty {
+                    HStack {
+                        Label("xAI 订阅账号", systemImage: "person.2.fill")
+                            .font(.subheadline.bold())
+                        Spacer()
+                        Text("\(xaiAccounts.count) 个")
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+
+                    ForEach(xaiAccounts) { account in
+                        XAIAccountUsageCard(account: account)
+                    }
                 }
                 errorBanner
             }
@@ -797,6 +813,104 @@ private struct XAIUsageCard: View {
     }
 
     private func metric(_ title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.caption.monospacedDigit().bold())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct XAIAccountUsageCard: View {
+    let account: Account
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(account.emailMasked)
+                        .font(.subheadline.bold())
+                        .lineLimit(1)
+                    Text("xAI OAuth")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Label(statusText, systemImage: statusSymbol)
+                    .font(.caption2)
+                    .foregroundStyle(statusColor)
+            }
+
+            if let runtime = account.runtimeUsage, runtime.requests > 0 {
+                HStack(spacing: 14) {
+                    metric("今日请求", UsageFormatting.integer(runtime.requests))
+                    metric("今日 Token", UsageFormatting.compactInteger(runtime.totalTokens))
+                    metric("成功率", UsageFormatting.percent(runtime.successPercent))
+                }
+
+                Text("输入 \(UsageFormatting.integer(runtime.inputTokens)) · 输出 \(UsageFormatting.integer(runtime.outputTokens)) · 最近 \(UsageFormatting.timestamp(runtime.lastRequestAt))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                if let topModel = runtime.topModel, !topModel.isEmpty {
+                    Text("主要模型 \(topModel)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                if runtime.errors > 0 {
+                    Label(
+                        runtime.lastErrorStatus.map { "今日 \(runtime.errors) 次错误 · 最近 HTTP \($0)" } ?? "今日 \(runtime.errors) 次错误",
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                }
+            } else {
+                Text("今日暂无该账号的 CPA 请求记录")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Divider()
+
+            HStack(spacing: 6) {
+                Image(systemName: "gauge.with.dots.needle.50percent")
+                Text("订阅剩余：xAI 未提供账号级官方额度")
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+        }
+        .padding(10)
+        .background(Color.cyan.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(account.disabled || !account.hasRefreshToken ? Color.orange.opacity(0.45) : Color.clear)
+        }
+    }
+
+    private var statusText: String {
+        if account.disabled { return "已停用" }
+        if account.hasRefreshToken { return "可自动刷新" }
+        return "需重新授权"
+    }
+
+    private var statusSymbol: String {
+        if account.disabled { return "nosign" }
+        if account.hasRefreshToken { return "checkmark.circle.fill" }
+        return "exclamationmark.circle.fill"
+    }
+
+    private var statusColor: Color {
+        if account.disabled { return .red }
+        if account.hasRefreshToken { return .green }
+        return .orange
+    }
+
+    private func metric(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(title)
                 .font(.caption2)

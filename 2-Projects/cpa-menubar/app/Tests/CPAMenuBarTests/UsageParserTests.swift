@@ -79,6 +79,18 @@ final class UsageParserTests: XCTestCase {
         XCTAssertEqual(UsageFormatting.milliseconds(1_250), "1.25秒")
     }
 
+    func testDecodesXAIAccountRuntimeUsage() throws {
+        let account = try JSONDecoder().decode(
+            Account.self,
+            from: Data(#"{"id":"xai-account","provider":"xai","email_masked":"xa***@example.com","disabled":false,"has_refresh_token":true,"is_k12":false,"usage_status":"not_applicable","runtime_usage":{"window":"today","requests":3,"successes":3,"errors":0,"input_tokens":200,"output_tokens":85,"reasoning_tokens":0,"cache_read_tokens":0,"cache_creation_tokens":0,"total_tokens":285,"average_latency_ms":700,"average_ttft_ms":0,"fast_requested":0,"fast_actual":0,"usage_samples":3,"top_model":"grok-4.3","last_request_at":"2026-08-08T13:47:20Z"}}"#.utf8)
+        )
+        XCTAssertEqual(account.provider, "xai")
+        XCTAssertTrue(account.hasRefreshToken)
+        XCTAssertEqual(account.runtimeUsage?.requests, 3)
+        XCTAssertEqual(account.runtimeUsage?.totalTokens, 285)
+        XCTAssertEqual(account.runtimeUsage?.topModel, "grok-4.3")
+    }
+
     func testDecodesAPIKeyRemainingBudget() throws {
         let budget = try JSONDecoder().decode(
             APIKeyBudget.self,
