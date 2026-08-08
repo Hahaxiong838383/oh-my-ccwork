@@ -134,6 +134,8 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - 原始队列记录在进入持久化前必须丢弃 API Key、Token 指纹、IP/X-Forwarded-For、User-Agent、响应 Header 和错误正文；稳定 auth index 只用于 root-only 聚合与账号关联，Desktop API 只返回既有脱敏账号 ID。
 - Fast 统计必须分开记录请求 `service_tier=priority/fast` 和响应 `response_service_tier=priority/fast`。验收至少同时证明请求档位、HTTP 状态、响应档位；请求 `priority` 但响应 `default` 时，实际命中必须记为 0。
 - CLIProxyAPI Management Key 若只剩 bcrypt 哈希无法恢复明文。需要轮换时生成新随机值，只保存到 macOS Keychain 与 VPS `/etc/cpa-cliproxy-management.env`（`0600`），不得打印、下载或写入 Git/记忆。
+- Management Center 登录出现 `HTTP 401` 时不要先轮换密钥：先在 VPS 内用 `/etc/cpa-cliproxy-management.env` 对 `127.0.0.1:8317/v0/management/config` 做只输出状态码的探针，再确认 macOS Keychain 与服务器当前值一致，最后按时间/IP 对齐公开 `/v0/management/config` 日志。VPS 本地 200、浏览器公开请求 401 通常是浏览器仍提交旧值或表单状态未真正更新，不是服务或配置失效。
+- 自动恢复网页登录时必须先确认 Accessibility 焦点角色为 `AXTextField`；仅看到密码圆点、执行剪贴板粘贴或按回车，不代表 React 表单状态已更新或登录按钮已触发。优先逐字符输入以触发真实 input 事件，再激活登录按钮；登录后刷新页面并确认公开管理接口继续 200。密钥进入剪贴板后必须立即清空，浏览器额外密码保存提示默认关闭，避免增加新的凭据副本。
 - 开启 usage statistics 的远端切换脚本要忽略 YAML section 内无缩进注释，并限制 run id 为 `[A-Za-z0-9._-]+`；终态不能只看成功 marker，还要验证 systemd result、三个服务、`8317/8327/8330`、真实请求和 Bridge 增量。
 - HTTP 200 不是请求级统计验收充分条件；还要核对响应 ID、model、usage、服务端请求日志，以及 `/desktop/v1/summary` 和 `/desktop/v1/accounts` 的增量与敏感字段零命中。
 - xAI 请求级 usage 本轮明确暂缓；继续保留官方 Billing/Prepaid 与 Smart Router 聚合两层语义，禁止把 Codex 队列采集逻辑顺手扩展到 xAI。
