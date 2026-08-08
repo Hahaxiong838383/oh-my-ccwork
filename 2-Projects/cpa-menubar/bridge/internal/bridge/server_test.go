@@ -337,6 +337,140 @@ func TestOAuthSessionRejectsExpiredState(t *testing.T) {
 	}
 }
 
+func TestXAIAuthStartReturnsAllowlistedFields(t *testing.T) {
+	server := newTestServer(t, t.TempDir())
+	server.cfg.CLIProxyURL = "http://cliproxy.test"
+	server.cfg.CLIProxyManagementKey = "management-secret"
+	server.client = &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		if request.Method != http.MethodGet || request.URL.Path != "/v0/management/xai-auth-url" {
+			t.Fatalf("unexpected xAI start request: %s %s", request.Method, request.URL)
+		}
+		if request.URL.Query().Get("is_webui") != "true" {
+			t.Fatalf("missing is_webui query: %s", request.URL)
+		}
+		if request.Header.Get("Authorization") != "Bearer management-secret" {
+			t.Fatal("xAI start request missing management authorization")
+		}
+		return jsonResponse(http.StatusOK, `{
+			"expires_in":1800,
+			"flow":"device",
+			"state":"opaque-state",
+			"status":"ok",
+			"url":"https://accounts.x.ai/device",
+			"user_code":"ABCD-EFGH",
+			"access_token":"must-not-leak",
+			"cookie":"must-not-leak"
+		}`), nil
+	})}
+
+	request := httptest.NewRequest(http.MethodPost, "/desktop/v1/oauth/xai/start", nil)
+	request.Header.Set("Authorization", "Bearer "+testDesktopToken)
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("xAI start returned %d: %s", response.Code, response.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	wantKeys := []string{"expires_in", "state", "status", "user_code", "verification_url"}
+	if len(payload) != len(wantKeys) {
+		t.Fatalf("xAI start keys = %#v", payload)
+	}
+	for _, key := range wantKeys {
+		if _, ok := payload[key]; !ok {
+			t.Fatalf("xAI start response missing %q: %#v", key, payload)
+		}
+	}
+	for _, forbidden := range []string{"management-secret", "must-not-leak", "access_token", "cookie", "flow"} {
+		if strings.Contains(response.Body.String(), forbidden) {
+			t.Fatalf("xAI start response leaked %q: %s", forbidden, response.Body.String())
+		}
+	}
+}
+
+func TestXAIAuthStartRejectsUntrustedURL(t *testing.T) {
+	server := newTestServer(t, t.TempDir())
+	server.cfg.CLIProxyURL = "http://cliproxy.test"
+	server.cfg.CLIProxyManagementKey = "management-secret"
+	server.client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return jsonResponse(http.StatusOK, `{"expires_in":1800,"flow":"device","state":"opaque-state","status":"ok","url":"https://accounts.x.ai.example.com/device","user_code":"ABCD-EFGH"}`), nil
+	})}
+
+	request := httptest.NewRequest(http.MethodPost, "/desktop/v1/oauth/xai/start", nil)
+	request.Header.Set("Authorization", "Bearer "+testDesktopToken)
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	if response.Code != http.StatusBadGateway {
+		t.Fatalf("untrusted xAI URL returned %d: %s", response.Code, response.Body.String())
+	}
+	if strings.Contains(response.Body.String(), "accounts.x.ai.example.com") {
+		t.Fatalf("untrusted upstream URL leaked: %s", response.Body.String())
+	}
+}
+
+func TestXAIOAuthStatusMapsStatesAndSanitizesErrors(t *testing.T) {
+	for _, testCase := range []struct {
+		name       string
+		upstream   string
+		wantStatus string
+		wantMsg    string
+	}{
+		{name: "pending", upstream: `{"status":"wait"}`, wantStatus: "pending"},
+		{name: "complete", upstream: `{"status":"ok"}`, wantStatus: "complete"},
+		{name: "error", upstream: `{"status":"error","error":"sensitive upstream detail"}`, wantStatus: "error", wantMsg: "xAI authorization failed"},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			server := newTestServer(t, t.TempDir())
+			server.cfg.CLIProxyURL = "http://cliproxy.test"
+			server.cfg.CLIProxyManagementKey = "management-secret"
+			server.xaiSession = &xaiOAuthSession{State: "opaque state", ExpiresAt: time.Now().Add(time.Minute)}
+			server.client = &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+				if request.Method != http.MethodGet || request.URL.Path != "/v0/management/get-auth-status" {
+					t.Fatalf("unexpected xAI status request: %s %s", request.Method, request.URL)
+				}
+				if request.URL.Query().Get("state") != "opaque state" {
+					t.Fatalf("state was not encoded correctly: %s", request.URL)
+				}
+				if request.Header.Get("Authorization") != "Bearer management-secret" {
+					t.Fatal("xAI status request missing management authorization")
+				}
+				return jsonResponse(http.StatusOK, testCase.upstream), nil
+			})}
+
+			request := httptest.NewRequest(http.MethodGet, "/desktop/v1/oauth/xai/status?state=opaque%20state", nil)
+			request.Header.Set("Authorization", "Bearer "+testDesktopToken)
+			response := httptest.NewRecorder()
+			server.ServeHTTP(response, request)
+			if response.Code != http.StatusOK {
+				t.Fatalf("xAI status returned %d: %s", response.Code, response.Body.String())
+			}
+			var payload XAIOAuthStatusResponse
+			if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+				t.Fatal(err)
+			}
+			if payload.State != "opaque state" || payload.Status != testCase.wantStatus || payload.Message != testCase.wantMsg {
+				t.Fatalf("xAI status payload = %+v", payload)
+			}
+			if strings.Contains(response.Body.String(), "sensitive upstream detail") || strings.Contains(response.Body.String(), "management-secret") {
+				t.Fatalf("xAI status leaked sensitive data: %s", response.Body.String())
+			}
+		})
+	}
+}
+
+func TestXAIOAuthStatusRequiresState(t *testing.T) {
+	server := newTestServer(t, t.TempDir())
+	request := httptest.NewRequest(http.MethodGet, "/desktop/v1/oauth/xai/status", nil)
+	request.Header.Set("Authorization", "Bearer "+testDesktopToken)
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("missing xAI state returned %d: %s", response.Code, response.Body.String())
+	}
+}
+
 func TestExchangeAndSavePreservesOperationalFields(t *testing.T) {
 	authDir := t.TempDir()
 	existingPath := filepath.Join(authDir, "codex-existing.json")

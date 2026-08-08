@@ -2,7 +2,7 @@
 
 macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 
-当前版本：`0.3.1`。
+当前版本：`0.3.2`。
 
 ## 当前能力
 
@@ -17,7 +17,9 @@ macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 - 同时显示 xAI 经 CPA Smart Router 的近 24 小时请求数、成功率、输入/输出/总 Token，以及内部路由日预算；CPA 数据只用于运维观测，不冒充官方账单。
 - 显示充值余额与重置卡数量；仅当官方接口返回可用且适用的重置卡时，才允许经过二次确认消耗 1 张。
 - 标记账号是否具备 refresh token；CLIProxyAPI 继续负责正常的 access token 自动刷新与调度。
-- 从菜单栏启动 Codex PKCE 登录，授权结果直接写入生产 auth-dir。
+- “添加订阅”统一提供 Codex 与 xAI Grok 两种 OAuth 登录；Codex 保留 PKCE 回调，xAI 使用官方设备码流程并自动轮询完成状态。
+- xAI 设备码只在当前授权弹层短时显示，可复制或重新打开 `accounts.x.ai`，不会写入 Keychain、UserDefaults、磁盘或普通日志。
+- 最终授权结果仍由 CLIProxyAPI 官方流程写入生产 auth-dir，CPA Menu 和 Bridge 不自行保存 xAI OAuth 凭据。
 - Desktop Token 只保存在远端 `0600` 文件和本机 macOS Keychain。
 - 支持 1–30 分钟自动刷新和 macOS 原生开机启动。
 
@@ -39,7 +41,8 @@ cpa-desktop-bridge :8330
   ├─ 每 5 秒读取 CLIProxyAPI 本地 usage queue，脱敏后按小时持久化
   ├─ 可选读取 /etc/xai-management.env，查询 xAI 官方团队账单与预付余额
   ├─ 使用 /etc/cpa-smart-router.env 中的现有本地访问密钥只读查询 /debug/summary
-  └─ 仅在 OAuth 完成时原子写入对应 auth JSON
+  ├─ 代理 CLIProxyAPI Management xAI 设备码登录，只返回授权所需白名单字段
+  └─ Codex OAuth 完成时原子写入 auth JSON；xAI auth 文件由 CLIProxyAPI 官方流程写入
 ```
 
 Bridge 不返回 access token、refresh token、ID token、Management Key、完整邮箱或 account ID；用量响应采用固定结构并只公开金额、聚合 Token 和状态。CLIProxyAPI Management Key 与 xAI Management Key 都只从远端 `0600` 文件读取，不写入日志或接口响应；usage queue 中的 API Key、Token 指纹、IP、User-Agent、原始错误正文和响应 Header 会在持久化前丢弃。
@@ -94,5 +97,6 @@ ssh aliyun-jp 'systemctl disable --now cpa-desktop-bridge; rm -f /etc/systemd/sy
 - Bridge 只监听 `127.0.0.1:8330`，公网入口必须走现有 HTTPS。
 - CLIProxyAPI usage queue 只由 Bridge 在本机读取；原始记录不会经公网接口返回。
 - OAuth state 与 PKCE verifier 只存在于 Bridge 内存，5 分钟过期。
+- xAI 授权 URL 必须是 `https://accounts.x.ai`，设备码和临时 state 不持久化；Bridge 不透传上游错误正文。
 - 重置卡属于不可逆消耗操作：App 二次确认，Bridge 再校验固定确认词与 `applicable_available_count > 0`。
 - auth 文件通过同目录临时文件、`0600` 权限和原子 rename 更新，并保留账号原有 `priority`、`excluded-models`、`prefix`、`proxy_url` 字段。

@@ -30,6 +30,7 @@ struct MenuContentView: View {
     @State private var accountFilter: AccountListFilter = .all
     @State private var expandedAccountIDs: Set<String> = []
     @State private var showTokenClearConfirmation = false
+    @State private var showSubscriptionPicker = false
     @State private var resetAccount: Account?
 
     var body: some View {
@@ -86,6 +87,25 @@ struct MenuContentView: View {
             }
         } message: {
             Text("这会消耗 1 张重置卡并重置该账号当前适用的短周期额度，操作不可撤销。")
+        }
+        .confirmationDialog(
+            "添加订阅",
+            isPresented: $showSubscriptionPicker,
+            titleVisibility: .visible
+        ) {
+            Button("Codex") { model.addCodexAuthorization() }
+            Button("xAI Grok") { model.startXAIAuthorization() }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("选择要添加到 CPA 的 OAuth 订阅账号。")
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { model.xaiAuthorizationSession != nil },
+                set: { if !$0 { model.cancelXAIAuthorization() } }
+            )
+        ) {
+            xaiAuthorizationSheet
         }
     }
 
@@ -446,15 +466,101 @@ struct MenuContentView: View {
             }
             .disabled(model.isRefreshing)
 
-            Button(action: model.addCodexAuthorization) {
-                Label(model.isAuthorizing ? "等待授权" : "添加授权", systemImage: "person.badge.plus")
+            Button {
+                showSubscriptionPicker = true
+            } label: {
+                Label(model.isAuthorizationActive ? "等待授权" : "添加订阅", systemImage: "person.badge.plus")
             }
-            .disabled(model.isAuthorizing)
+            .disabled(model.isAuthorizationActive)
 
             Spacer()
             Button("退出") { NSApplication.shared.terminate(nil) }
         }
         .buttonStyle(.borderless)
+    }
+
+    @ViewBuilder
+    private var xaiAuthorizationSheet: some View {
+        if let session = model.xaiAuthorizationSession {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Label("添加 xAI Grok 订阅", systemImage: "bolt.horizontal.circle.fill")
+                        .font(.headline)
+                    Spacer()
+                    Button {
+                        model.cancelXAIAuthorization()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                }
+
+                Text("在已打开的 xAI 页面输入以下设备码。授权完成后，CPA 会自动刷新账号列表。")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+
+                VStack(spacing: 8) {
+                    Text(session.userCode)
+                        .font(.title2.monospaced().bold())
+                        .textSelection(.enabled)
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text("有效期剩余 \(UsageFormatting.duration(TimeInterval(session.remainingSeconds(at: context.date))))")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(16)
+                .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+
+                Label(xaiAuthorizationStatusText(session), systemImage: xaiAuthorizationStatusSymbol(session.status))
+                    .font(.callout)
+                    .foregroundStyle(xaiAuthorizationStatusColor(session.status))
+
+                HStack {
+                    Button("复制设备码", action: model.copyXAIDeviceCode)
+                    Button("打开授权网页", action: model.openXAIVerificationPage)
+                    Spacer()
+                    if session.status.isTerminal {
+                        Button("重试", action: model.startXAIAuthorization)
+                            .buttonStyle(.borderedProminent)
+                    } else {
+                        Button("取消", role: .cancel, action: model.cancelXAIAuthorization)
+                    }
+                }
+            }
+            .padding(20)
+            .frame(width: 380)
+            .interactiveDismissDisabled(session.status == .pending)
+        }
+    }
+
+    private func xaiAuthorizationStatusText(_ session: XAIOAuthSession) -> String {
+        if let message = session.message, !message.isEmpty { return message }
+        return switch session.status {
+        case .pending: "等待 xAI 授权"
+        case .complete: "xAI 授权已完成"
+        case .declined: "xAI 授权已取消"
+        case .expired: "xAI 授权已过期"
+        case .error: "xAI 授权失败"
+        }
+    }
+
+    private func xaiAuthorizationStatusSymbol(_ status: XAIOAuthStatus) -> String {
+        switch status {
+        case .pending: "clock.arrow.circlepath"
+        case .complete: "checkmark.circle.fill"
+        case .declined, .expired, .error: "exclamationmark.triangle.fill"
+        }
+    }
+
+    private func xaiAuthorizationStatusColor(_ status: XAIOAuthStatus) -> Color {
+        switch status {
+        case .pending: .secondary
+        case .complete: .green
+        case .declined, .expired, .error: .orange
+        }
     }
 
     private var settings: some View {

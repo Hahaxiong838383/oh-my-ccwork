@@ -8,6 +8,8 @@ final class AppModel: ObservableObject {
     @Published var accounts: [Account] = []
     @Published var isRefreshing = false
     @Published var isAuthorizing = false
+    @Published var isStartingXAIAuthorization = false
+    @Published var xaiAuthorizationSession: XAIOAuthSession?
     @Published var resettingAccountID: String?
     @Published var errorMessage: String?
     @Published var statusMessage: String?
@@ -20,6 +22,7 @@ final class AppModel: ObservableObject {
     private let defaults = UserDefaults.standard
     private let oauthListener = OAuthCallbackListener()
     private var refreshTask: Task<Void, Never>?
+    private var xaiAuthorizationTask: Task<Void, Never>?
 
     init() {
         endpoint = defaults.string(forKey: "bridgeEndpoint") ?? "https://smart-api.hahaxiong.top/desktop/v1"
@@ -40,6 +43,7 @@ final class AppModel: ObservableObject {
 
     deinit {
         refreshTask?.cancel()
+        xaiAuthorizationTask?.cancel()
         oauthListener.stop()
     }
 
@@ -53,6 +57,10 @@ final class AppModel: ObservableObject {
 
     var activeAPIKeyBudgets: [APIKeyBudget] {
         summary?.apiKeyBudgets?.filter(\.enabled) ?? []
+    }
+
+    var isAuthorizationActive: Bool {
+        isAuthorizing || isStartingXAIAuthorization || xaiAuthorizationSession?.status == .pending
     }
 
     var primaryAPIKeyBudget: APIKeyBudget? {
@@ -136,11 +144,12 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func refresh() async {
-        guard !isRefreshing else { return }
+    @discardableResult
+    func refresh() async -> Bool {
+        guard !isRefreshing else { return false }
         guard let client = makeClient() else {
             showSettings = true
-            return
+            return false
         }
         isRefreshing = true
         defer { isRefreshing = false }
@@ -152,8 +161,10 @@ final class AppModel: ObservableObject {
             accounts = accountResponse.accounts
             errorMessage = nil
             statusMessage = "更新于 \(Date().formatted(date: .omitted, time: .shortened))"
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 
@@ -196,6 +207,84 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func startXAIAuthorization() {
+        guard !isAuthorizationActive else { return }
+        guard let client = makeClient() else {
+            showSettings = true
+            return
+        }
+        cancelXAIAuthorization()
+        isStartingXAIAuthorization = true
+        errorMessage = nil
+        statusMessage = "正在启动 xAI 授权"
+        xaiAuthorizationTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let response = try await client.startXAIOAuth()
+                guard response.status == "pending",
+                      !response.state.isEmpty,
+                      !response.userCode.isEmpty,
+                      response.expiresIn > 0,
+                      XAIOAuthValidation.isAllowedVerificationURL(response.verificationURL)
+                else {
+                    throw XAIOAuthAppError.invalidStartResponse
+                }
+                let startedAt = Date()
+                xaiAuthorizationSession = XAIOAuthSession(
+                    state: response.state,
+                    verificationURL: response.verificationURL,
+                    userCode: response.userCode,
+                    startedAt: startedAt,
+                    expiresAt: startedAt.addingTimeInterval(TimeInterval(response.expiresIn)),
+                    status: .pending,
+                    message: nil
+                )
+                isStartingXAIAuthorization = false
+                statusMessage = "请在 xAI 页面完成授权"
+                if !NSWorkspace.shared.open(response.verificationURL) {
+                    errorMessage = "无法打开 xAI 授权网页，请在授权窗口中重试"
+                }
+                await pollXAIAuthorization(client: client, state: response.state)
+            } catch is CancellationError {
+                isStartingXAIAuthorization = false
+            } catch {
+                isStartingXAIAuthorization = false
+                xaiAuthorizationSession = nil
+                errorMessage = error is XAIOAuthAppError ? error.localizedDescription : "xAI 授权启动失败，请稍后重试"
+            }
+        }
+    }
+
+    func cancelXAIAuthorization() {
+        xaiAuthorizationTask?.cancel()
+        xaiAuthorizationTask = nil
+        isStartingXAIAuthorization = false
+        xaiAuthorizationSession = nil
+    }
+
+    func openXAIVerificationPage() {
+        guard let url = xaiAuthorizationSession?.verificationURL,
+              XAIOAuthValidation.isAllowedVerificationURL(url)
+        else {
+            errorMessage = "xAI 授权地址无效"
+            return
+        }
+        if !NSWorkspace.shared.open(url) {
+            errorMessage = "无法打开 xAI 授权网页"
+        }
+    }
+
+    func copyXAIDeviceCode() {
+        guard let code = xaiAuthorizationSession?.userCode, !code.isEmpty else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        if pasteboard.setString(code, forType: .string) {
+            statusMessage = "xAI 设备码已复制"
+        } else {
+            errorMessage = "无法复制 xAI 设备码"
+        }
+    }
+
     func consumeResetCredit(for account: Account) async {
         guard resettingAccountID == nil else { return }
         guard let client = makeClient() else {
@@ -225,6 +314,64 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func pollXAIAuthorization(client: BridgeClient, state: String) async {
+        while !Task.isCancelled {
+            guard let session = xaiAuthorizationSession, session.state == state else { return }
+            if session.remainingSeconds() == 0 {
+                updateXAIAuthorization(status: .expired, message: "xAI 授权已过期")
+                statusMessage = "xAI 授权已过期"
+                return
+            }
+            do {
+                try await Task.sleep(for: .seconds(2))
+                let response = try await client.xaiOAuthStatus(state: state)
+                guard response.state == state else {
+                    throw XAIOAuthAppError.invalidStatusResponse
+                }
+                switch response.status {
+                case "pending":
+                    continue
+                case "complete":
+                    statusMessage = response.accountMasked.map { "已添加 xAI 订阅：\($0)" } ?? "xAI 订阅已添加"
+                    xaiAuthorizationSession = nil
+                    xaiAuthorizationTask = nil
+                    if !(await refresh()) {
+                        statusMessage = "授权已完成，账号刷新失败"
+                    }
+                    return
+                case "declined":
+                    updateXAIAuthorization(status: .declined, message: response.message ?? "xAI 授权已取消")
+                    statusMessage = "xAI 授权已取消"
+                    return
+                case "expired":
+                    updateXAIAuthorization(status: .expired, message: response.message ?? "xAI 授权已过期")
+                    statusMessage = "xAI 授权已过期"
+                    return
+                case "error":
+                    updateXAIAuthorization(status: .error, message: response.message ?? "xAI 授权失败")
+                    statusMessage = "xAI 授权失败"
+                    return
+                default:
+                    throw XAIOAuthAppError.invalidStatusResponse
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                updateXAIAuthorization(status: .error, message: "xAI 授权状态检查失败")
+                statusMessage = "xAI 授权状态检查失败"
+                return
+            }
+        }
+    }
+
+    private func updateXAIAuthorization(status: XAIOAuthStatus, message: String?) {
+        guard var session = xaiAuthorizationSession else { return }
+        session.status = status
+        session.message = message
+        xaiAuthorizationSession = session
+        xaiAuthorizationTask = nil
+    }
+
     private func makeClient() -> BridgeClient? {
         guard let baseURL = URL(string: endpoint), let token = KeychainStore.loadToken(), !token.isEmpty else {
             return nil
@@ -241,6 +388,20 @@ final class AppModel: ObservableObject {
                 guard !Task.isCancelled else { return }
                 await self?.refresh()
             }
+        }
+    }
+}
+
+private enum XAIOAuthAppError: LocalizedError {
+    case invalidStartResponse
+    case invalidStatusResponse
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidStartResponse:
+            return "Bridge 返回的 xAI 授权信息无效"
+        case .invalidStatusResponse:
+            return "Bridge 返回的 xAI 授权状态无效"
         }
     }
 }

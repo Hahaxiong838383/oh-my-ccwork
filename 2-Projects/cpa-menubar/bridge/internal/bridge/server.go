@@ -16,6 +16,7 @@ type Server struct {
 	cfg            Config
 	client         *http.Client
 	sessions       map[string]*oauthSession
+	xaiSession     *xaiOAuthSession
 	usageStore     *usageStore
 	usageCollector *usageCollector
 	mu             sync.Mutex
@@ -75,6 +76,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handleOAuthCallback(w, r)
 	case r.Method == http.MethodGet && r.URL.Path == "/desktop/v1/oauth/status":
 		s.handleOAuthStatus(w, r)
+	case r.Method == http.MethodPost && r.URL.Path == "/desktop/v1/oauth/xai/start":
+		s.handleXAIOAuthStart(w, r)
+	case r.Method == http.MethodGet && r.URL.Path == "/desktop/v1/oauth/xai/status":
+		s.handleXAIOAuthStatus(w, r)
 	case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/desktop/v1/accounts/") && strings.HasSuffix(r.URL.Path, "/reset-credit"):
 		s.handleResetCredit(w, r)
 	default:

@@ -130,6 +130,21 @@ type OAuthStatusResponse struct {
 	AccountMasked string `json:"account_masked,omitempty"`
 }
 
+type XAIOAuthStartResponse struct {
+	State           string `json:"state"`
+	VerificationURL string `json:"verification_url"`
+	UserCode        string `json:"user_code"`
+	ExpiresIn       int    `json:"expires_in"`
+	Status          string `json:"status"`
+}
+
+type XAIOAuthStatusResponse struct {
+	State         string `json:"state"`
+	Status        string `json:"status"`
+	Message       string `json:"message,omitempty"`
+	AccountMasked string `json:"account_masked,omitempty"`
+}
+
 type ResetCreditRequest struct {
 	Confirm string `json:"confirm"`
 }

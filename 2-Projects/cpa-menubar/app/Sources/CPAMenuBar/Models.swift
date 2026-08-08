@@ -365,6 +365,68 @@ struct OAuthStatusResponse: Decodable {
     }
 }
 
+struct XAIOAuthStartResponse: Decodable, Equatable {
+    let state: String
+    let verificationURL: URL
+    let userCode: String
+    let expiresIn: Int
+    let status: String
+
+    enum CodingKeys: String, CodingKey {
+        case state, status
+        case verificationURL = "verification_url"
+        case userCode = "user_code"
+        case expiresIn = "expires_in"
+    }
+}
+
+struct XAIOAuthStatusResponse: Decodable, Equatable {
+    let state: String
+    let status: String
+    let message: String?
+    let accountMasked: String?
+
+    enum CodingKeys: String, CodingKey {
+        case state, status, message
+        case accountMasked = "account_masked"
+    }
+}
+
+enum XAIOAuthStatus: String, Equatable {
+    case pending
+    case complete
+    case declined
+    case expired
+    case error
+
+    var isTerminal: Bool { self != .pending }
+}
+
+struct XAIOAuthSession: Equatable {
+    let state: String
+    let verificationURL: URL
+    let userCode: String
+    let startedAt: Date
+    let expiresAt: Date
+    var status: XAIOAuthStatus
+    var message: String?
+
+    func remainingSeconds(at date: Date = Date()) -> Int {
+        max(0, Int(ceil(expiresAt.timeIntervalSince(date))))
+    }
+}
+
+enum XAIOAuthValidation {
+    static func isAllowedVerificationURL(_ url: URL) -> Bool {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return false }
+        return components.scheme?.lowercased() == "https"
+            && components.host?.lowercased() == "accounts.x.ai"
+            && components.user == nil
+            && components.password == nil
+            && components.port == nil
+    }
+}
+
 struct ResetCreditRequest: Encodable {
     let confirm = "CONSUME_RESET_CREDIT"
 }

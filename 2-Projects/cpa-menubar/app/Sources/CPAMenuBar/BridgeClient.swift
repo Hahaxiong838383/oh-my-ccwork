@@ -24,6 +24,24 @@ struct BridgeClient: Sendable {
         )
     }
 
+    func startXAIOAuth() async throws -> XAIOAuthStartResponse {
+        try await request(path: "oauth/xai/start", method: "POST")
+    }
+
+    func xaiOAuthStatus(state: String) async throws -> XAIOAuthStatusResponse {
+        guard var components = URLComponents(
+            url: baseURL.appending(path: "oauth/xai/status"),
+            resolvingAgainstBaseURL: false
+        ) else {
+            throw BridgeClientError.invalidURL
+        }
+        components.queryItems = [URLQueryItem(name: "state", value: state)]
+        guard let url = components.url else {
+            throw BridgeClientError.invalidURL
+        }
+        return try await request(url: url)
+    }
+
     func consumeResetCredit(accountID: String) async throws -> ResetCreditResponse {
         try await request(
             path: "accounts/\(accountID)/reset-credit",
@@ -37,7 +55,14 @@ struct BridgeClient: Sendable {
         method: String = "GET",
         body: Body?
     ) async throws -> Response {
-        let url = baseURL.appending(path: path)
+        try await request(url: baseURL.appending(path: path), method: method, body: body)
+    }
+
+    private func request<Response: Decodable, Body: Encodable>(
+        url: URL,
+        method: String = "GET",
+        body: Body?
+    ) async throws -> Response {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.timeoutInterval = 30
@@ -61,18 +86,25 @@ struct BridgeClient: Sendable {
     private func request<Response: Decodable>(path: String, method: String = "GET") async throws -> Response {
         try await request(path: path, method: method, body: Optional<EmptyBody>.none)
     }
+
+    private func request<Response: Decodable>(url: URL, method: String = "GET") async throws -> Response {
+        try await request(url: url, method: method, body: Optional<EmptyBody>.none)
+    }
 }
 
 private struct EmptyBody: Encodable {}
 
 enum BridgeClientError: LocalizedError {
     case invalidResponse
+    case invalidURL
     case server(String)
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
             return "Bridge 返回无效响应"
+        case .invalidURL:
+            return "Bridge 请求地址无效"
         case let .server(message):
             return message
         }
