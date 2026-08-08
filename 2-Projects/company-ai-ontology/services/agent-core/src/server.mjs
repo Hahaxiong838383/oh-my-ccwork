@@ -7,7 +7,7 @@ import { createHEngineRuntime } from './runtime.mjs'
 import { createPostgresStore } from './store.mjs'
 import { createAdmissionController } from './admission.mjs'
 
-export const AGENT_CORE_CONTRACT_VERSION = '2026-08-08.1'
+export const AGENT_CORE_CONTRACT_VERSION = '2026-08-08.3'
 
 function json(response, statusCode, payload, headers = {}) {
   const body = JSON.stringify(payload)

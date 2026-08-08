@@ -186,6 +186,31 @@ node ops/sync-company-directory.mjs
 5. 新版本的验收证据必须发生在新容器启动时间之后；旧版本曾经通过不能替代当前版本复验。
 6. 回滚时先恢复兼容版本的 H-Lite，再恢复 Agent Core；业务真源只从 Postgres 备份和 append-only 事件恢复。
 
+## P0-PROD-2/3 生产经验（2026-08-08）
+
+### 公司 H 引擎凭据
+
+- 临时联调可以让独立公司 H Worker **只读取**既有 H 平台 OAuth，但禁止复制 `auth.json`，避免多个 Runtime 竞争 refresh token 轮换。
+- 临时模式必须明确报告 `credentialMode=existing-h-platform-oauth`，不得因真实推理成功就宣称正式凭据隔离完成。
+- 正式模式必须使用独立 `H_ENGINE_WORKER_HOME`、`GROK_HOME`、Workspace 和刷新生命周期，并报告 `credentialMode=company-dedicated-oauth`。
+- 正式切换需要用户完成一次交互式登录；凭据只落在远端 0600 文件，不经过聊天、Git、记忆、文档或部署包。
+- Worker 必须保留 HMAC、墙钟偏差、请求/输出大小、并发和超时门禁；Prompt 使用 0600 临时文件，进程参数不得包含公司正文。
+
+### 飞书知识 Connector
+
+- App Scope、App 对文档的分享权限、当前员工的读取权限是三道独立门。`1063004` 等分享权限错误必须 fail-closed，ACL 未知时禁止读取正文。
+- 显式资源 JSON 不直接经过 Compose YAML 字符串插值；使用 Base64 或只读配置文件，启动时严格解码并校验数组结构。
+- Knowledge Connector 只负责发现、ACL 快照、正文分块和同步审计；最终回答仍由 Agent Core 按当前 Principal/部门 ACL 查询 Evidence Package。
+- ACL 正确不等于召回正确。中文自然问句不能只依赖整句 `ILIKE` 或 Postgres `simple` 分词，应使用有上限的关键词/短语召回，并限制数量防止过宽匹配。
+- 生产验收必须同时包含：有权 Principal Evidence 命中且 H 回复命中、无权 Principal Evidence 为零且标题/摘要/正文不泄露、临时合成数据清理、撤权后重新同步并复测。
+- 同步状态只输出资源数、索引数、跳过原因和 chunk 数，不输出文档 Token、人员 ID 或正文。
+
+当前实现与切换流程见：
+
+- `2-Projects/company-ai-ontology/services/knowledge-connector/`
+- `2-Projects/company-ai-ontology/docs/h-engine-credential-cutover.md`
+- `2-Projects/company-ai-ontology/docs/technical-architecture-progress-2026-08-07.md`
+
 ## 架构决策基线
 
 V2.2 的持久文本与图源见：

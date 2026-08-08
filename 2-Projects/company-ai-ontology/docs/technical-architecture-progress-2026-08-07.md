@@ -19,10 +19,12 @@ flowchart TB
   ADAPTER["H-Lite → Agent Core Adapter<br/>HMAC / Request ID / Scope / 幂等键"]:::done
 
   CORE["Company Agent Core<br/>/healthz /readyz /v1/turns"]:::done
-  H_ENGINE["公司 H 引擎 Demo Runtime<br/>独立 HOME / Workspace / 标准结果"]:::done
-  H_CREDENTIAL["H 引擎企业凭据与生产模式<br/>productionReady=true"]:::todo
+  H_ENGINE["公司 H 引擎远程 Runtime<br/>真实推理 / HMAC / 限流 / 标准结果"]:::done
+  H_CREDENTIAL["公司 H 引擎独立 OAuth<br/>company-dedicated-oauth"]:::todo
   CONTEXT["Context Compiler<br/>证据上下文与会话编排"]:::done
   RETRIEVAL["Permissioned Retrieval Gateway<br/>先鉴权后检索"]:::done
+  KNOWLEDGE["飞书知识 Connector<br/>Docx / Sheet / Minutes / ACL / RLS"]:::done
+  KNOWLEDGE_ACCESS["试点文档分享权限<br/>真实正文索引与撤权复测"]:::todo
   TASK["Task Proposal Compiler<br/>P2 → 个人任务草案 → DRI 批准"]:::done
 
   PG["Postgres 17 + pgvector<br/>Ontology / RLS / 幂等 / 审计"]:::done
@@ -48,6 +50,8 @@ flowchart TB
   CORE --> H_ENGINE
   H_ENGINE --> H_CREDENTIAL
   CORE --> CONTEXT --> RETRIEVAL
+  FEISHU --> KNOWLEDGE --> RETRIEVAL
+  KNOWLEDGE --> KNOWLEDGE_ACCESS
   CORE --> TASK
   CORE --> PG
   RETRIEVAL --> PG
@@ -78,13 +82,16 @@ flowchart TB
 2. 新增 H-Lite → Company Agent Core 内部签名 Adapter。
 3. QNAP 部署 Company Agent Core 最小服务，不发布宿主机端口。
 4. 接入现有 Postgres RLS、幂等键与 append-only 审计。
-5. 完成 H-Lite → Agent Core → H 引擎演示 Runtime → Postgres/SQLite 的真实 shadow 闭环。
-6. 演示模式强制返回 `simulation=true`、`productionReady=false`，不冒充生产就绪。
+5. 完成 H-Lite → Agent Core → 远程 H Worker → Postgres/SQLite 的真实推理闭环。
+6. 临时凭据模式明确返回 `existing-h-platform-oauth`，不冒充正式独立凭据完成。
 7. 明确现有员工私人 Bot 不迁移、不切换事件订阅；公司 Bot 使用独立飞书 App。
 8. 公司 App 凭据已通过非 Git 的 600 权限环境文件写入 QNAP，租户 Token 和 WebSocket 长连接验证通过。
-9. H-Lite 已从 shadow 切到 active；Agent Core 仍返回 `demo_ready`，真实回复必须带“演示模式”。
+9. H-Lite 已从 shadow 切到 active；Agent Core `2026-08-08.3` 返回 `ready`、`productionReady=true`、`mode=remote`。
 10. 首名真实员工链路已通过：SQLite 读回 `p2p:post`、`p2p:text`、`group:text`，3 次处理全部 `completed`，无 `feishu_turn_failed`，去重记录 3 条，H-Lite 健康且 `restart_count=0`。
 11. 通讯录数据范围已生效并上线只读同步：4 个授权范围展开为 83 个可见部门，414 名可见人员进入 Ontology Principal；重复同步新增 0、更新 414，数据库敏感属性行数为 0。
+12. 飞书知识 Connector `2026-08-08.2` 已上线；Base64 配置、四张知识表、RLS、ACL fail-closed 和同步审计通过。
+13. 生产权限链路已通过合成证据正负测试：授权员工 Evidence 与 H 回复命中，无权限员工 Evidence 为 0，测试数据已删除。
+14. 当前试点飞书文档返回 `1063004`，系统未读取正文；待公司 App 获得该文档分享权限后完成真实索引。
 
 ## P0 A-F 已完成
 
@@ -97,7 +104,7 @@ flowchart TB
 
 ## 待用户确认的生产门禁
 
-1. H 引擎企业凭据与生产模式验收。
-2. 飞书公司知识库只读 Connector 和 ACL → Evidence Package 验收。
+1. 公司 H 引擎独立 OAuth 登录与 `company-dedicated-oauth` 切换验收。
+2. 试点飞书文档给公司 App 分享权限，完成真实 ACL → Evidence Package 与撤权复测。
 3. 扩到 10 名真实员工，完成并发会话、群内多人 @ 隔离、失败重投和回复送达验收。
 4. 真实试点部门、DRI 和 P2；24 小时容量观测完成后再决定 20/50 人放量。

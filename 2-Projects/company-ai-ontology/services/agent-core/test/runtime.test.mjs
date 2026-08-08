@@ -1,8 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
+import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
+import { createHmac } from 'node:crypto'
 
 import { createHEngineRuntime } from '../src/runtime.mjs'
 
@@ -34,4 +36,43 @@ test('H 引擎 CLI 超时后中止并返回 runtime_timeout', async () => {
     runtime.run({ intent: 'query', conversationId: 'timeout-test', evidence: [], message: 'test' }),
     (error) => error.code === 'runtime_timeout',
   )
+})
+
+test('H 引擎 remote 模式签名调用临时 H Worker', async (t) => {
+  const secret = 'r'.repeat(48)
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'h-engine-remote-'))
+  const promptFile = path.join(root, 'prompt.md')
+  await fs.writeFile(promptFile, '只根据权限化证据回答。')
+  const worker = http.createServer(async (request, response) => {
+    if (request.method === 'GET' && request.url === '/readyz') {
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(JSON.stringify({ ready: true, credentialMode: 'existing-h-platform-oauth' }))
+      return
+    }
+    const chunks = []
+    for await (const chunk of request) chunks.push(chunk)
+    const body = Buffer.concat(chunks).toString('utf8')
+    const expected = createHmac('sha256', secret).update(`${request.headers['x-h-engine-timestamp']}.${body}`).digest('hex')
+    assert.equal(request.headers['x-h-engine-signature'], expected)
+    assert.match(JSON.parse(body).prompt, /权限化证据/)
+    response.writeHead(200, { 'content-type': 'application/json' })
+    response.end(JSON.stringify({ ok: true, reply: '远程 H 已回答', runtime: { credentialMode: 'existing-h-platform-oauth', workerVersion: 'test' } }))
+  })
+  await new Promise((resolve) => worker.listen(0, '127.0.0.1', resolve))
+  t.after(() => new Promise((resolve) => worker.close(resolve)))
+  const runtime = createHEngineRuntime({
+    config: {
+      provider: 'h-engine',
+      mode: 'remote',
+      remoteUrl: `http://127.0.0.1:${worker.address().port}/v1/infer`,
+      remoteSecret: secret,
+      promptFile,
+      timeoutMs: 1000,
+      maxOutputBytes: 4096,
+    },
+  })
+  assert.equal((await runtime.ready()).productionReady, true)
+  const result = await runtime.run({ intent: 'query', conversationId: 'remote-test', evidence: [{ title: '制度' }], message: '请回答' })
+  assert.equal(result.reply, '远程 H 已回答')
+  assert.equal(result.runtime.mode, 'remote')
 })

@@ -1,6 +1,7 @@
+import { spawn } from 'node:child_process'
+import { createHmac } from 'node:crypto'
 import { constants as fsConstants } from 'node:fs'
 import fs from 'node:fs/promises'
-import { spawn } from 'node:child_process'
 
 async function exists(path, mode = fsConstants.F_OK) {
   try {
@@ -17,6 +18,27 @@ export function createHEngineRuntime({ config } = {}) {
   async function ready() {
     if (config.mode === 'demo') {
       return { ready: true, productionReady: false, provider: config.provider, mode: 'demo' }
+    }
+    if (config.mode === 'remote') {
+      if (!config.remoteUrl || config.remoteSecret?.length < 32) {
+        return { ready: false, productionReady: false, reason: 'h_engine_remote_config_missing' }
+      }
+      try {
+        const response = await fetch(new URL('/readyz', config.remoteUrl), { signal: AbortSignal.timeout(5000) })
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok || !payload.ready) {
+          return { ready: false, productionReady: false, reason: payload.reason || 'h_engine_remote_not_ready' }
+        }
+        return {
+          ready: true,
+          productionReady: true,
+          provider: config.provider,
+          mode: 'remote',
+          credentialMode: payload.credentialMode || 'remote-managed',
+        }
+      } catch {
+        return { ready: false, productionReady: false, reason: 'h_engine_remote_unreachable' }
+      }
     }
     if (config.mode !== 'cli') return { ready: false, productionReady: false, reason: 'h_engine_mode_invalid' }
     if (!(await exists(config.bin, fsConstants.X_OK))) return { ready: false, productionReady: false, reason: 'h_engine_cli_missing' }
@@ -40,28 +62,8 @@ export function createHEngineRuntime({ config } = {}) {
     return promptCache
   }
 
-  async function run(turn) {
-    const readiness = await ready()
-    if (!readiness.ready) {
-      const error = new Error(readiness.reason)
-      error.code = 'runtime_not_ready'
-      error.runtime = readiness
-      throw error
-    }
-    if (config.mode === 'demo') {
-      if (config.demoDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, config.demoDelayMs))
-      const evidenceCount = Array.isArray(turn.evidence) ? turn.evidence.length : 0
-      return {
-        reply: `【演示模式】H 引擎已处理请求：${turn.message.slice(0, 300)}${evidenceCount ? `；已加载 ${evidenceCount} 条权限化证据` : ''}`,
-        runtime: {
-          provider: config.provider,
-          mode: 'demo',
-          simulation: true,
-          productionReady: false,
-        },
-      }
-    }
-    const compiled = [
+  async function compiledPrompt(turn) {
+    return [
       await systemPrompt(),
       `当前意图：${turn.intent}`,
       `会话标识：${turn.conversationId}`,
@@ -69,7 +71,67 @@ export function createHEngineRuntime({ config } = {}) {
       '用户请求：',
       turn.message,
     ].filter(Boolean).join('\n\n')
+  }
 
+  async function runRemote(turn) {
+    const body = JSON.stringify({
+      prompt: await compiledPrompt(turn),
+      conversationId: turn.conversationId,
+      requestId: turn.requestId || '',
+    })
+    const timestamp = String(Date.now())
+    const signature = createHmac('sha256', config.remoteSecret).update(`${timestamp}.${body}`).digest('hex')
+    let response
+    try {
+      response = await fetch(config.remoteUrl, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json; charset=utf-8',
+          'x-h-engine-timestamp': timestamp,
+          'x-h-engine-signature': signature,
+        },
+        body,
+        signal: AbortSignal.timeout(config.timeoutMs),
+      })
+    } catch (error) {
+      const wrapped = new Error('H Engine remote request failed')
+      wrapped.code = error?.name === 'TimeoutError' ? 'runtime_timeout' : 'runtime_failed'
+      throw wrapped
+    }
+    const text = await response.text()
+    if (Buffer.byteLength(text) > config.maxOutputBytes) {
+      const error = new Error('H Engine remote output exceeded limit')
+      error.code = 'runtime_output_limit'
+      throw error
+    }
+    let payload
+    try {
+      payload = JSON.parse(text || '{}')
+    } catch {
+      const error = new Error('H Engine remote returned invalid JSON')
+      error.code = 'runtime_failed'
+      throw error
+    }
+    if (!response.ok || !payload.ok || typeof payload.reply !== 'string') {
+      const error = new Error('H Engine remote runtime failed')
+      error.code = String(payload.status || 'runtime_failed')
+      throw error
+    }
+    return {
+      reply: payload.reply.trim(),
+      runtime: {
+        provider: config.provider,
+        mode: 'remote',
+        simulation: false,
+        productionReady: true,
+        credentialMode: payload.runtime?.credentialMode || 'remote-managed',
+        workerVersion: payload.runtime?.workerVersion || null,
+      },
+    }
+  }
+
+  async function runCli(turn) {
+    const compiled = await compiledPrompt(turn)
     return new Promise((resolve, reject) => {
       const child = spawn(config.bin, ['-p', compiled], {
         cwd: config.workspace,
@@ -81,7 +143,7 @@ export function createHEngineRuntime({ config } = {}) {
           ALL_PROXY: config.proxyUrl,
           HTTPS_PROXY: config.proxyUrl,
           HTTP_PROXY: config.proxyUrl,
-          NO_PROXY: '127.0.0.1,localhost,postgres,redis,qdrant,agent-core,h-lite,action-gateway',
+          NO_PROXY: '127.0.0.1,localhost,postgres,redis,qdrant,agent-core,h-lite,action-gateway,knowledge-connector',
           LANG: 'C.UTF-8',
           LC_ALL: 'C.UTF-8',
         },
@@ -141,6 +203,26 @@ export function createHEngineRuntime({ config } = {}) {
         })
       })
     })
+  }
+
+  async function run(turn) {
+    const readiness = await ready()
+    if (!readiness.ready) {
+      const error = new Error(readiness.reason)
+      error.code = 'runtime_not_ready'
+      error.runtime = readiness
+      throw error
+    }
+    if (config.mode === 'demo') {
+      if (config.demoDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, config.demoDelayMs))
+      const evidenceCount = Array.isArray(turn.evidence) ? turn.evidence.length : 0
+      return {
+        reply: `【演示模式】H 引擎已处理请求：${turn.message.slice(0, 300)}${evidenceCount ? `；已加载 ${evidenceCount} 条权限化证据` : ''}`,
+        runtime: { provider: config.provider, mode: 'demo', simulation: true, productionReady: false },
+      }
+    }
+    if (config.mode === 'remote') return runRemote(turn)
+    return runCli(turn)
   }
 
   return { ready, run }

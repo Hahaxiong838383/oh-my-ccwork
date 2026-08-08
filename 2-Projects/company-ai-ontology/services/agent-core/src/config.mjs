@@ -40,6 +40,8 @@ export function loadConfig(env = process.env) {
       workspace: String(env.H_ENGINE_WORKSPACE || '/var/lib/company-agent/workspace'),
       proxyUrl: String(env.H_ENGINE_PROXY_URL || '').trim(),
       apiKey: String(env.XAI_API_KEY || '').trim(),
+      remoteUrl: String(env.H_ENGINE_REMOTE_URL || '').trim(),
+      remoteSecret: String(env.H_ENGINE_REMOTE_SECRET || '').trim(),
       promptFile: String(env.COMPANY_AGENT_PROMPT_FILE || path.resolve('prompts/company-front-door.md')),
       timeoutMs: Math.max(10_000, Number(env.H_ENGINE_TIMEOUT_MS || 120_000)),
       maxOutputBytes: Math.max(4096, Number(env.H_ENGINE_MAX_OUTPUT_BYTES || 2_097_152)),

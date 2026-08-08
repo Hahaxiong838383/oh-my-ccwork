@@ -1,5 +1,29 @@
 import { Pool } from 'pg'
 
+const SEARCH_STOP_TERMS = new Set([
+  '一下', '什么', '公司', '是否', '有关', '相关', '现在', '目前', '可以', '如何', '怎么', '请问', '告诉', '需要',
+])
+
+export function buildSearchTerms(query, limit = 24) {
+  const normalized = String(query || '').normalize('NFKC').toLowerCase().slice(0, 200)
+  const tokens = normalized.match(/[a-z0-9_:@.-]{2,}|\p{Script=Han}{2,}/gu) || []
+  const output = new Set()
+  for (const token of tokens.filter((value) => /^[a-z0-9_:@.-]+$/u.test(value))) {
+    output.add(token)
+    if (output.size >= limit) return [...output]
+  }
+  for (const token of tokens.filter((value) => !/^[a-z0-9_:@.-]+$/u.test(value))) {
+    for (let size = 2; size <= 4; size += 1) {
+      for (let offset = 0; offset + size <= token.length; offset += 1) {
+        const term = token.slice(offset, offset + size)
+        if (!SEARCH_STOP_TERMS.has(term)) output.add(term)
+        if (output.size >= limit) return [...output]
+      }
+    }
+  }
+  return [...output].slice(0, limit)
+}
+
 export function createPostgresStore({ database, logger = () => {} } = {}) {
   const pool = new Pool(database)
 
@@ -75,13 +99,84 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
   async function permissionedSearch({ tenantId, personId, query, limit = 8 }) {
     return withTenant(tenantId, async (client) => {
       const principal = await client.query(
-        `SELECT id, external_key, display_name, department_key
+        `SELECT id, external_key, display_name, department_key, attributes
            FROM iam.principals
           WHERE tenant_id = $1 AND external_key = $2 AND status = 'active'
           LIMIT 1`,
         [tenantId, personId],
       )
       if (!principal.rows[0]) return []
+      const normalizedQuery = String(query || '').trim().slice(0, 200)
+      const normalizedLimit = Math.max(1, Math.min(20, Number(limit) || 8))
+      const searchTerms = buildSearchTerms(normalizedQuery)
+      const knowledge = await client.query(
+        `SELECT c.id, c.content, c.chunk_index,
+                r.id AS resource_id, r.resource_type, r.external_key, r.title,
+                r.source_url, r.classification, r.source_updated_at, r.synced_at,
+                CASE WHEN $4 = '' THEN 0
+                     ELSE ts_rank_cd(c.search_vector, plainto_tsquery('simple', $4)) END
+                + COALESCE((
+                    SELECT count(*)::real
+                      FROM unnest($6::text[]) AS term
+                     WHERE position(lower(term) in lower(r.title)) > 0
+                        OR position(lower(term) in lower(c.content)) > 0
+                  ), 0) AS rank
+           FROM knowledge.chunks c
+           JOIN knowledge.resources r
+             ON r.tenant_id = c.tenant_id AND r.id = c.resource_id
+          WHERE r.tenant_id = $1
+            AND r.status = 'active'
+            AND r.acl_status = 'known'
+            AND (
+              $4 = ''
+              OR c.search_vector @@ plainto_tsquery('simple', $4)
+              OR r.title ILIKE '%' || $4 || '%'
+              OR c.content ILIKE '%' || $4 || '%'
+              OR EXISTS (
+                SELECT 1
+                  FROM unnest($6::text[]) AS term
+                 WHERE position(lower(term) in lower(r.title)) > 0
+                    OR position(lower(term) in lower(c.content)) > 0
+              )
+            )
+            AND EXISTS (
+              SELECT 1
+                FROM knowledge.acl_entries a
+               WHERE a.tenant_id = r.tenant_id
+                 AND a.resource_id = r.id
+                 AND a.permission = 'read'
+                 AND (
+                   a.subject_type = 'tenant'
+                   OR (a.subject_type = 'person' AND a.subject_key = $2)
+                   OR (
+                     a.subject_type = 'department'
+                     AND (
+                       a.subject_key = $3
+                       OR COALESCE($5::jsonb->'departmentIds', '[]'::jsonb) ? a.subject_key
+                     )
+                   )
+                 )
+          )
+          ORDER BY rank DESC, r.source_updated_at DESC NULLS LAST, r.synced_at DESC, c.chunk_index
+          LIMIT $7`,
+        [tenantId, personId, principal.rows[0].department_key, normalizedQuery, JSON.stringify(principal.rows[0].attributes || {}), searchTerms, normalizedLimit],
+      )
+      const knowledgeEvidence = knowledge.rows.map((row) => ({
+        evidenceId: `knowledge:${row.id}`,
+        resourceId: row.resource_id,
+        source: 'feishu-knowledge',
+        objectType: row.resource_type,
+        externalKey: row.external_key,
+        title: row.title,
+        classification: row.classification,
+        updatedAt: row.source_updated_at || row.synced_at,
+        sourceUrl: row.source_url,
+        excerpt: String(row.content || '').slice(0, 1600),
+        chunkIndex: row.chunk_index,
+        permissionSnapshot: true,
+        simulation: false,
+      }))
+      if (knowledgeEvidence.length >= normalizedLimit) return knowledgeEvidence
       const result = await client.query(
         `SELECT e.id, e.entity_type, e.external_key, e.display_name, e.classification,
                 e.attributes, e.updated_at
@@ -121,9 +216,9 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
           ORDER BY CASE e.classification WHEN 'public' THEN 1 WHEN 'internal' THEN 2 WHEN 'confidential' THEN 3 ELSE 4 END,
                    e.updated_at DESC
           LIMIT $4`,
-        [tenantId, principal.rows[0].id, String(query || '').trim().slice(0, 200), Math.max(1, Math.min(20, Number(limit) || 8))],
+        [tenantId, principal.rows[0].id, normalizedQuery, normalizedLimit - knowledgeEvidence.length],
       )
-      return result.rows.map((row) => ({
+      return [...knowledgeEvidence, ...result.rows.map((row) => ({
         evidenceId: row.id,
         source: 'ontology',
         objectType: row.entity_type,
@@ -133,7 +228,7 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
         updatedAt: row.updated_at,
         summary: String(row.attributes?.summary || ''),
         simulation: Boolean(row.attributes?.simulation),
-      }))
+      }))]
     })
   }
 
