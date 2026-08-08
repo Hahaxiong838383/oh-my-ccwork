@@ -148,6 +148,17 @@ node ops/sync-company-directory.mjs
 8. Ontology/Postgres 作为任务状态唯一真源，H 平台只保留 append-only 投递与运行事件。
 9. ERP 和社媒在 P0 只作为只读证据源，不触发 P2、不写回业务数据。
 
+## 公司 QNAP 资产身份门禁
+
+这是 P0 安全门禁，不是命名偏好：
+
+- 本 Skill 中的 `QNAP`、`prnas`、`company-qnap-lite` 均只指公司局域网生产 NAS：`prnas` / `prnas-pub`、`TS-X65`、当前地址 `192.168.61.18`。
+- 家庭 QNAP 是另一资产、另一安全域、另一数据域，不属于公司 AI Ontology 项目。禁止跨资产复用部署目录、Compose、端口、卷、凭据、备份、恢复步骤和验收结论。
+- 每次 SSH、同步、部署、重启、备份或恢复前，必须核对五元组：`用途=公司`、主机别名、型号、当前地址、项目根目录 `/share/CACHEDEV1_DATA/ai-ontology/foundation`。
+- 若用户只说“QNAP”且上下文不能唯一证明是公司 QNAP，先查 `0-System/memory-items.md` 和当前 SSH 配置；仍不唯一则停止并询问，不得凭历史 IP、设备型号或目录猜测。
+- `TS-X65` 公司生产机不得套用历史 `TS-431P` 改机资料，也不得套用家庭 NAS 的 fnOS、Docker、存储或网络操作流程。
+- 设备地址、QTS 版本、容量和运行服务是快照；写配置或执行生产操作前必须在线复核，文档只能作为基线。
+
 ## QNAP 主底座边界
 
 - QNAP 从 P0 开始进入在线关键路径，承载公司级 Bot H-Lite、Company Agent Core、主 H 引擎 Runtime Pool、API Gateway、Identity/Policy、Ontology Service、Postgres、Qdrant、Redis、Action Gateway、Audit/Observability 和备份编排。
@@ -194,6 +205,16 @@ node ops/sync-company-directory.mjs
 4. 通讯录相关改动必须重跑同步正例、重复同步幂等、普通员工 403 和敏感字段扫描。
 5. 新版本的验收证据必须发生在新容器启动时间之后；旧版本曾经通过不能替代当前版本复验。
 6. 回滚时先恢复兼容版本的 H-Lite，再恢复 Agent Core；业务真源只从 Postgres 备份和 append-only 事件恢复。
+
+## P0-S Foundation Pack 经验（2026-08-08）
+
+- “骨架完整”应固定命名空间、元模型、双时间、Provenance、Event Envelope、工具契约、兼容性和安全路径；不等于提前穷举全部企业对象和字段。
+- Definition、Compiler、Registry 必须分层：Git Definition 是设计真源，Compiler 做静态校验和稳定哈希，Registry 管 Proposal、批准、激活、历史再激活和 Git/运行时对账。
+- Postgres 继续作为唯一事实与权限真源。V3 使用逻辑 Schema、View、版本列和 Provenance 扩展现有事实表，不为“新架构”复制一套平行业务真源。
+- 破坏性变更必须被 Compiler 标记并携带 migration plan；运行时部署必须有 Proposal、批准者、来源提交和 Domain Event，禁止 Agent 自行改 Schema 后直接生效。
+- 验收必须覆盖重复迁移、重复部署、并发部署收敛、重启恢复、历史版本再激活、漂移检测和最小数据库权限；单次部署成功不能证明 Registry 可治理。
+- 公网控制面只展示认证后的脱敏派生状态，不能把 QNAP 健康响应原样透传，也不能因可视化需求改变 QNAP 的局域网边界。
+- 本地测试、生产容器健康、真实业务闭环和用户验收是四层不同证据；不得用其中一层替代其他层。
 
 ## P0-PROD-2/3 生产经验（2026-08-08）
 
