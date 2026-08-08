@@ -12,7 +12,7 @@ printf '=== compose ===\n'
 
 printf '\n=== health ===\n'
 failed=0
-for container in company-ai-foundation-postgres-1 company-ai-foundation-qdrant-1 company-ai-foundation-redis-1 company-ai-foundation-agent-core-1 company-ai-foundation-ontology-registry-1 company-ai-foundation-action-gateway-1 company-ai-foundation-h-lite-1 company-ai-foundation-prometheus-1 company-ai-foundation-gateway-1; do
+for container in company-ai-foundation-postgres-1 company-ai-foundation-qdrant-1 company-ai-foundation-redis-1 company-ai-foundation-agent-core-1 company-ai-foundation-ontology-registry-1 company-ai-foundation-knowledge-connector-1 company-ai-foundation-action-gateway-1 company-ai-foundation-h-lite-1 company-ai-foundation-prometheus-1 company-ai-foundation-gateway-1; do
   status=$("$docker_path" inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" 2>/dev/null || echo missing)
   printf '%s=%s\n' "$container" "$status"
   [ "$status" = healthy ] || failed=1
@@ -40,7 +40,10 @@ printf '\n=== ontology registry ===\n'
 
 printf '\n=== agent core ===\n'
 "$docker_path" compose exec -T agent-core node -e "fetch('http://127.0.0.1:8080/healthz').then(async r=>{console.log(await r.text());if(!r.ok)process.exit(1)})"
-"$docker_path" compose exec -T agent-core node -e "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));if(r.status!==200||body.status!=='demo_ready'||body.productionReady!==false)process.exit(1)})"
+"$docker_path" compose exec -T agent-core node -e "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));const mode=body.runtime?.mode;if(r.status!==200||!['ready','demo_ready'].includes(body.status))process.exit(1);if(mode==='remote'&&body.productionReady!==true)process.exit(1);if(mode!=='remote'&&body.productionReady!==false)process.exit(1)})"
+
+printf '\n=== knowledge connector ===\n'
+"$docker_path" compose exec -T knowledge-connector node -e "fetch('http://127.0.0.1:8083/readyz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));if(!r.ok||body.status!=='ready'||body.database?.ready!==true)process.exit(1)})"
 
 printf '\n=== action gateway ===\n'
 "$docker_path" compose exec -T action-gateway node -e "fetch('http://127.0.0.1:8082/healthz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));if(!r.ok||body.component!=='mandatory-action-gateway')process.exit(1)})"
