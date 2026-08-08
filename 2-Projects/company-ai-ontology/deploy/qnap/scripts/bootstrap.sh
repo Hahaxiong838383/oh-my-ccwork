@@ -34,6 +34,9 @@ ACTION_GATEWAY_BUILD_CONTEXT=$HOT_DATA_ROOT/action-gateway-source
 KNOWLEDGE_CONNECTOR_PASSWORD=$(random_hex 32)
 KNOWLEDGE_CONNECTOR_CONTROL_TOKEN=$(random_hex 32)
 KNOWLEDGE_CONNECTOR_BUILD_CONTEXT=$HOT_DATA_ROOT/knowledge-connector-source
+ONTOLOGY_REGISTRY_PASSWORD=$(random_hex 32)
+ONTOLOGY_REGISTRY_CONTROL_TOKEN=$(random_hex 32)
+ONTOLOGY_REGISTRY_BUILD_CONTEXT=$HOT_DATA_ROOT/ontology-registry-source
 FEISHU_KNOWLEDGE_DISCOVER_PUBLIC_TEAM_SPACES=1
 FEISHU_KNOWLEDGE_SPACE_IDS=
 FEISHU_KNOWLEDGE_RESOURCES_B64=W10=
@@ -94,6 +97,20 @@ if ! grep -q '^KNOWLEDGE_CONNECTOR_BUILD_CONTEXT=' "$ENV_FILE"; then
   printf 'KNOWLEDGE_CONNECTOR_BUILD_CONTEXT=%s\n' "$HOT_DATA_ROOT/knowledge-connector-source" >> "$ENV_FILE"
 fi
 
+if ! grep -q '^ONTOLOGY_REGISTRY_PASSWORD=' "$ENV_FILE"; then
+  umask 077
+  printf 'ONTOLOGY_REGISTRY_PASSWORD=%s\n' "$(random_hex 32)" >> "$ENV_FILE"
+fi
+
+if ! grep -q '^ONTOLOGY_REGISTRY_CONTROL_TOKEN=' "$ENV_FILE"; then
+  umask 077
+  printf 'ONTOLOGY_REGISTRY_CONTROL_TOKEN=%s\n' "$(random_hex 32)" >> "$ENV_FILE"
+fi
+
+if ! grep -q '^ONTOLOGY_REGISTRY_BUILD_CONTEXT=' "$ENV_FILE"; then
+  printf 'ONTOLOGY_REGISTRY_BUILD_CONTEXT=%s\n' "$HOT_DATA_ROOT/ontology-registry-source" >> "$ENV_FILE"
+fi
+
 if ! grep -q '^FEISHU_KNOWLEDGE_DISCOVER_PUBLIC_TEAM_SPACES=' "$ENV_FILE"; then
   printf 'FEISHU_KNOWLEDGE_DISCOVER_PUBLIC_TEAM_SPACES=1\n' >> "$ENV_FILE"
 fi
@@ -113,6 +130,8 @@ docker_path=/share/CACHEDEV1_DATA/.qpkg/container-station/bin/docker
 
 "$docker_path" compose config --quiet
 "$docker_path" compose pull
-"$docker_path" compose up -d
+"$docker_path" compose up -d foundation-init postgres
+PROJECT_ROOT="$PROJECT_ROOT" "$PROJECT_ROOT/scripts/migrate.sh"
+"$docker_path" compose up -d --build
 
 printf 'QNAP Foundation bootstrap completed.\n'

@@ -41,5 +41,11 @@
     reverse_proxy action-gateway:8082
   }
 
+  @registry path /ontology/status/registry
+  handle @registry {
+    rewrite * /readyz
+    reverse_proxy ontology-registry:8084
+  }
+
   respond `{"status":"not-found"}` 404
 }

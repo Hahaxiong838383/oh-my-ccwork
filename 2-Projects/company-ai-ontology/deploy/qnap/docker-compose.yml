@@ -258,6 +258,43 @@ services:
     tmpfs:
       - /tmp:size=32m,noexec,nosuid
 
+  ontology-registry:
+    <<: *service-defaults
+    build:
+      context: ${ONTOLOGY_REGISTRY_BUILD_CONTEXT:-../..}
+      dockerfile: services/ontology-registry/Dockerfile
+    environment:
+      ONTOLOGY_REGISTRY_HOST: 0.0.0.0
+      ONTOLOGY_REGISTRY_PORT: "8084"
+      ONTOLOGY_REGISTRY_CONTROL_TOKEN: ${ONTOLOGY_REGISTRY_CONTROL_TOKEN}
+      ONTOLOGY_DEFINITIONS_DIR: /app/packages/ontology-contracts/definitions
+      FUTURUS_TENANT_ID: ${FUTURUS_TENANT_ID}
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ontology
+      PGUSER: ontology_registry
+      PGPASSWORD: ${ONTOLOGY_REGISTRY_PASSWORD}
+      PGPOOL_MAX: "4"
+    networks:
+      - edge
+      - data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8084/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    mem_limit: 256m
+    mem_reservation: 64m
+    cpus: 0.40
+    pids_limit: 96
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+
   knowledge-connector:
     <<: *service-defaults
     build:

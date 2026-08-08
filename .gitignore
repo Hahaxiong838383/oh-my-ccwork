@@ -192,6 +192,8 @@ ieee_results.html
 package-lock.json
 !2-Projects/company-ai-ontology/services/agent-core/package-lock.json
 !2-Projects/company-ai-ontology/services/action-gateway/package-lock.json
+!2-Projects/company-ai-ontology/services/knowledge-connector/package-lock.json
+!2-Projects/company-ai-ontology/services/ontology-registry/package-lock.json
 
 # EvoMap 调试文件
 .omc/

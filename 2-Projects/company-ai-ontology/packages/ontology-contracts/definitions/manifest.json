@@ -1,0 +1,58 @@
+{
+  "formatVersion": "1",
+  "schemaVersion": "3.0.0",
+  "files": [
+    "foundation.json"
+  ],
+  "toolContracts": {
+    "data": {
+      "gateway": "permissioned-retrieval-gateway",
+      "returns": "permissioned-evidence-package",
+      "directDatabaseAccess": false
+    },
+    "logic": {
+      "gateway": "logic-function-gateway",
+      "deterministicBoundary": true,
+      "directDatabaseAccess": false,
+      "directWrite": false
+    },
+    "action": {
+      "gateway": "mandatory-action-gateway",
+      "approvalRequired": true,
+      "directDatabaseAccess": false,
+      "directWrite": false
+    }
+  },
+  "eventEnvelope": {
+    "requiredFields": [
+      "eventId",
+      "eventType",
+      "occurredAt",
+      "receivedAt",
+      "producer",
+      "principal",
+      "purpose",
+      "correlationId",
+      "causationId",
+      "idempotencyKey",
+      "payloadSchemaVersion",
+      "ontologyVersion",
+      "classification"
+    ],
+    "fieldTypes": {
+      "eventId": "string",
+      "eventType": "string",
+      "occurredAt": "timestamp",
+      "receivedAt": "timestamp",
+      "producer": "string",
+      "principal": "string",
+      "purpose": "string",
+      "correlationId": "string",
+      "causationId": "string",
+      "idempotencyKey": "string",
+      "payloadSchemaVersion": "string",
+      "ontologyVersion": "string",
+      "classification": "string"
+    }
+  }
+}

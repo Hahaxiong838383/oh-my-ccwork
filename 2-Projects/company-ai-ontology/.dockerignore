@@ -1,0 +1,8 @@
+**/node_modules
+**/.DS_Store
+.git
+docs
+deploy
+services/action-gateway
+services/agent-core
+services/knowledge-connector

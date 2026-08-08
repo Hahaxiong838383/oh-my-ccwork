@@ -1,0 +1,554 @@
+{
+  "namespaces": [
+    { "name": "system.ontology", "description": "Ontology meta-model and governance" },
+    { "name": "core.identity", "description": "People, organizations, roles and service principals" },
+    { "name": "core.policy", "description": "Purpose, classification and policy decisions" },
+    { "name": "core.epistemic", "description": "Observations, evidence, claims and hypotheses" },
+    { "name": "core.decision", "description": "Decision cases, alternatives and scenarios" },
+    { "name": "core.work", "description": "Goals, P2 work, tasks, artifacts and verification" },
+    { "name": "core.action", "description": "Governed action intents and outcomes" },
+    { "name": "domain.company", "description": "Company and business metrics" },
+    { "name": "domain.product", "description": "Products, SKU, BOM and firmware" },
+    { "name": "domain.operations", "description": "Quality, inventory, orders, logistics and activation" },
+    { "name": "domain.market", "description": "Market signals, pain points and opportunities" },
+    { "name": "domain.customer", "description": "Customer scenarios and feedback" },
+    { "name": "domain.device", "description": "Device state, diagnostics and safety constraints" }
+  ],
+  "objectTypes": [
+    {
+      "qualifiedName": "system.ontology.BaseObject",
+      "description": "Common immutable identity and temporal contract",
+      "extends": [],
+      "properties": [
+        { "name": "objectId", "type": "uuid", "required": true },
+        { "name": "schemaVersion", "type": "string", "required": true },
+        { "name": "securityDomain", "type": "string", "required": true },
+        { "name": "classification", "type": "string", "required": true },
+        { "name": "validFrom", "type": "timestamp", "required": true },
+        { "name": "validTo", "type": "timestamp", "required": false },
+        { "name": "recordedAt", "type": "timestamp", "required": true },
+        { "name": "sourceSystem", "type": "string", "required": true },
+        { "name": "sourceReference", "type": "string", "required": false },
+        { "name": "ontologyVersion", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "system.ontology.OntologyChangeProposal",
+      "description": "Reviewed proposal for governed ontology evolution",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "proposalId", "type": "string", "required": true },
+        { "name": "sourceCommit", "type": "string", "required": true },
+        { "name": "compatibility", "type": "string", "required": true },
+        { "name": "migrationPlan", "type": "json", "required": false }
+      ]
+    },
+    {
+      "qualifiedName": "core.identity.Person",
+      "description": "Company employee identity",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "personId", "type": "string", "required": true },
+        { "name": "displayName", "type": "string", "required": true },
+        { "name": "departmentKey", "type": "string", "required": false },
+        { "name": "enabled", "type": "boolean", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.identity.Department",
+      "description": "Company organization unit",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "departmentKey", "type": "string", "required": true },
+        { "name": "displayName", "type": "string", "required": true },
+        { "name": "enabled", "type": "boolean", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.identity.ServicePrincipal",
+      "description": "Non-human service identity",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "serviceKey", "type": "string", "required": true },
+        { "name": "purpose", "type": "string", "required": true },
+        { "name": "enabled", "type": "boolean", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.policy.Purpose",
+      "description": "Declared business purpose for data use",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "purposeKey", "type": "string", "required": true },
+        { "name": "description", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.policy.PolicyDecision",
+      "description": "Recorded allow, deny or filter decision",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "effect", "type": "string", "required": true },
+        { "name": "reason", "type": "string", "required": true },
+        { "name": "policyVersion", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.epistemic.EpistemicItem",
+      "description": "Base type for knowledge-status objects",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "confidence", "type": "decimal", "required": false },
+        { "name": "validityWindow", "type": "json", "required": false },
+        { "name": "provenanceId", "type": "uuid", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.epistemic.Source",
+      "description": "Originating system, document, person or sensor",
+      "extends": ["core.epistemic.EpistemicItem"],
+      "properties": [
+        { "name": "sourceType", "type": "string", "required": true },
+        { "name": "sourceKey", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.epistemic.Observation",
+      "description": "Raw observation before interpretation",
+      "extends": ["core.epistemic.EpistemicItem"],
+      "properties": [
+        { "name": "observedValue", "type": "json", "required": true },
+        { "name": "observationType", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.epistemic.Evidence",
+      "description": "Permissioned evidence supporting or contradicting a claim",
+      "extends": ["core.epistemic.EpistemicItem"],
+      "properties": [
+        { "name": "evidenceType", "type": "string", "required": true },
+        { "name": "contentReference", "type": "string", "required": true },
+        { "name": "supports", "type": "boolean", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.epistemic.Claim",
+      "description": "Testable statement derived from evidence",
+      "extends": ["core.epistemic.EpistemicItem"],
+      "properties": [
+        { "name": "statement", "type": "string", "required": true },
+        { "name": "claimStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.epistemic.Hypothesis",
+      "description": "Unverified causal explanation",
+      "extends": ["core.epistemic.EpistemicItem"],
+      "properties": [
+        { "name": "statement", "type": "string", "required": true },
+        { "name": "testPlan", "type": "json", "required": false }
+      ]
+    },
+    {
+      "qualifiedName": "core.epistemic.Contradiction",
+      "description": "Recorded conflict between claims or evidence",
+      "extends": ["core.epistemic.EpistemicItem"],
+      "properties": [
+        { "name": "description", "type": "string", "required": true },
+        { "name": "resolutionStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.decision.DecisionCase",
+      "description": "Governed business decision under consideration",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "question", "type": "string", "required": true },
+        { "name": "decisionStatus", "type": "string", "required": true },
+        { "name": "driPersonId", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.decision.DecisionAlternative",
+      "description": "Alternative within a decision case",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "title", "type": "string", "required": true },
+        { "name": "expectedOutcome", "type": "json", "required": true },
+        { "name": "risk", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.decision.Scenario",
+      "description": "Isolated assumptions and projected outcomes",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "assumptions", "type": "json", "required": true },
+        { "name": "projectedOutcome", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.decision.Decision",
+      "description": "Approved selection with rationale",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "rationale", "type": "string", "required": true },
+        { "name": "approvedBy", "type": "string", "required": true },
+        { "name": "approvedAt", "type": "timestamp", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.work.WorkItem",
+      "description": "Base type for goals, P2 and tasks",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "title", "type": "string", "required": true },
+        { "name": "status", "type": "string", "required": true },
+        { "name": "ownerPersonId", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.work.Goal",
+      "description": "Company or department goal",
+      "extends": ["core.work.WorkItem"],
+      "properties": [
+        { "name": "metricDefinition", "type": "json", "required": true },
+        { "name": "targetValue", "type": "decimal", "required": false }
+      ]
+    },
+    {
+      "qualifiedName": "core.work.P2",
+      "description": "Company priority work item",
+      "extends": ["core.work.WorkItem"],
+      "properties": [
+        { "name": "priority", "type": "string", "required": true },
+        { "name": "acceptanceCriteria", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.work.Task",
+      "description": "Approved employee task",
+      "extends": ["core.work.WorkItem"],
+      "properties": [
+        { "name": "assigneePersonId", "type": "string", "required": true },
+        { "name": "dueAt", "type": "timestamp", "required": false },
+        { "name": "acceptanceCriteria", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.work.Artifact",
+      "description": "Employee-submitted task result",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "artifactType", "type": "string", "required": true },
+        { "name": "contentReference", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.work.Verification",
+      "description": "Verification of execution, operational and goal outcomes",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "executionSuccess", "type": "boolean", "required": true },
+        { "name": "operationalSuccess", "type": "boolean", "required": true },
+        { "name": "goalSuccess", "type": "boolean", "required": true },
+        { "name": "evidenceReferences", "type": "string[]", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.work.Learning",
+      "description": "Learning produced by outcome verification",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "finding", "type": "string", "required": true },
+        { "name": "recommendedChange", "type": "json", "required": false }
+      ]
+    },
+    {
+      "qualifiedName": "core.action.ActionIntent",
+      "description": "Proposed governed write action",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "targetSystem", "type": "string", "required": true },
+        { "name": "actionType", "type": "string", "required": true },
+        { "name": "riskLevel", "type": "string", "required": true },
+        { "name": "expectedOutcome", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.company.CompanyMetric",
+      "description": "Versioned business metric",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "metricKey", "type": "string", "required": true },
+        { "name": "value", "type": "decimal", "required": true },
+        { "name": "unit", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.product.ProductModel",
+      "description": "Commercial product model",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "modelKey", "type": "string", "required": true },
+        { "name": "displayName", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.product.SKU",
+      "description": "Sellable stock keeping unit",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "skuCode", "type": "string", "required": true },
+        { "name": "erpItemCode", "type": "string", "required": false }
+      ]
+    },
+    {
+      "qualifiedName": "domain.product.BOM",
+      "description": "Versioned bill of materials",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "bomCode", "type": "string", "required": true },
+        { "name": "revision", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.product.FirmwareVersion",
+      "description": "Device firmware release",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "versionCode", "type": "string", "required": true },
+        { "name": "releaseStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.operations.Order",
+      "description": "ERP order fact",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "orderKey", "type": "string", "required": true },
+        { "name": "orderStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.operations.QualityInspection",
+      "description": "ERP quality inspection fact",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "inspectionKey", "type": "string", "required": true },
+        { "name": "result", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.operations.Shipment",
+      "description": "ERP logistics fact",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "shipmentKey", "type": "string", "required": true },
+        { "name": "shipmentStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.market.MarketSignal",
+      "description": "Normalized market observation",
+      "extends": ["core.epistemic.Observation"],
+      "properties": [
+        { "name": "provider", "type": "string", "required": true },
+        { "name": "signalType", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.market.Opportunity",
+      "description": "Business opportunity supported by market evidence",
+      "extends": ["core.epistemic.Claim"],
+      "properties": [
+        { "name": "opportunityType", "type": "string", "required": true },
+        { "name": "businessImpact", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.customer.CustomerScenario",
+      "description": "Customer use scenario",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "scenarioKey", "type": "string", "required": true },
+        { "name": "description", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.customer.CustomerFeedback",
+      "description": "Permissioned customer feedback",
+      "extends": ["core.epistemic.Observation"],
+      "properties": [
+        { "name": "feedbackType", "type": "string", "required": true },
+        { "name": "contentReference", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.device.DeviceUnit",
+      "description": "Physical device identity linked to ERP serial number",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "serialNumber", "type": "string", "required": true },
+        { "name": "deviceStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.device.DeviceState",
+      "description": "Time-valid device state estimate",
+      "extends": ["core.epistemic.Observation"],
+      "properties": [
+        { "name": "stateVector", "type": "json", "required": true },
+        { "name": "estimationMethod", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.device.SafetyConstraint",
+      "description": "Non-bypassable device safety rule",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "constraintKey", "type": "string", "required": true },
+        { "name": "rule", "type": "string", "required": true }
+      ]
+    }
+  ],
+  "linkTypes": [
+    { "qualifiedName": "core.identity.BELONGS_TO", "fromType": "core.identity.Person", "toType": "core.identity.Department", "cardinality": "many_to_many" },
+    { "qualifiedName": "core.epistemic.DERIVED_FROM", "fromType": "core.epistemic.EpistemicItem", "toType": "core.epistemic.Source", "cardinality": "many_to_many" },
+    { "qualifiedName": "core.epistemic.SUPPORTS", "fromType": "core.epistemic.Evidence", "toType": "core.epistemic.Claim", "cardinality": "many_to_many" },
+    { "qualifiedName": "core.epistemic.CONTRADICTS", "fromType": "core.epistemic.Evidence", "toType": "core.epistemic.Claim", "cardinality": "many_to_many" },
+    { "qualifiedName": "core.epistemic.TESTS", "fromType": "core.epistemic.Evidence", "toType": "core.epistemic.Hypothesis", "cardinality": "many_to_many" },
+    { "qualifiedName": "core.decision.CONSIDERS", "fromType": "core.decision.DecisionCase", "toType": "core.decision.DecisionAlternative", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.decision.MODELED_AS", "fromType": "core.decision.DecisionAlternative", "toType": "core.decision.Scenario", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.decision.SELECTS", "fromType": "core.decision.Decision", "toType": "core.decision.DecisionAlternative", "cardinality": "one_to_one" },
+    { "qualifiedName": "core.work.DECOMPOSES_TO", "fromType": "core.work.P2", "toType": "core.work.Task", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.work.PRODUCES", "fromType": "core.work.Task", "toType": "core.work.Artifact", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.work.VERIFIED_BY", "fromType": "core.work.Task", "toType": "core.work.Verification", "cardinality": "one_to_many" },
+    { "qualifiedName": "domain.product.HAS_SKU", "fromType": "domain.product.ProductModel", "toType": "domain.product.SKU", "cardinality": "one_to_many" },
+    { "qualifiedName": "domain.product.USES_BOM", "fromType": "domain.product.SKU", "toType": "domain.product.BOM", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.product.RUNS_FIRMWARE", "fromType": "domain.device.DeviceUnit", "toType": "domain.product.FirmwareVersion", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.operations.FULFILLS", "fromType": "domain.operations.Shipment", "toType": "domain.operations.Order", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.market.INDICATES", "fromType": "domain.market.MarketSignal", "toType": "domain.market.Opportunity", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.device.REPORTS_STATE", "fromType": "domain.device.DeviceUnit", "toType": "domain.device.DeviceState", "cardinality": "one_to_many" }
+  ],
+  "functionTypes": [
+    {
+      "qualifiedName": "core.epistemic.assessEvidence",
+      "description": "Deterministically assess evidence completeness and contradiction",
+      "deterministic": true,
+      "inputs": [
+        { "name": "claim", "type": "core.epistemic.Claim", "required": true },
+        { "name": "evidence", "type": "json", "required": true }
+      ],
+      "outputs": [
+        { "name": "assessment", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.decision.compareScenarios",
+      "description": "Compare scenarios using governed metrics and constraints",
+      "deterministic": true,
+      "inputs": [
+        { "name": "decisionCase", "type": "core.decision.DecisionCase", "required": true },
+        { "name": "scenarios", "type": "json", "required": true }
+      ],
+      "outputs": [
+        { "name": "comparison", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.work.verifyOutcome",
+      "description": "Separate execution, operational and goal success",
+      "deterministic": true,
+      "inputs": [
+        { "name": "expectedOutcome", "type": "json", "required": true },
+        { "name": "observedOutcome", "type": "json", "required": true }
+      ],
+      "outputs": [
+        { "name": "verification", "type": "core.work.Verification", "required": true }
+      ]
+    }
+  ],
+  "actionTypes": [
+    {
+      "qualifiedName": "core.work.assignTask",
+      "description": "Assign an approved task through the governed delivery path",
+      "targetType": "core.work.Task",
+      "effect": "write",
+      "gateway": "mandatory-action-gateway",
+      "approval": "required",
+      "inputs": [
+        { "name": "task", "type": "core.work.Task", "required": true },
+        { "name": "assigneePersonId", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.action.executeIntent",
+      "description": "Execute an approved action intent with readback and rollback",
+      "targetType": "core.action.ActionIntent",
+      "effect": "write",
+      "gateway": "mandatory-action-gateway",
+      "approval": "required",
+      "inputs": [
+        { "name": "intent", "type": "core.action.ActionIntent", "required": true }
+      ]
+    }
+  ],
+  "policyTypes": [
+    {
+      "qualifiedName": "core.policy.permissionedEvidence",
+      "description": "Evidence enters Agent context only after principal, purpose and resource ACL filtering",
+      "appliesTo": ["core.epistemic.Evidence", "core.epistemic.Observation"],
+      "effect": "filter"
+    },
+    {
+      "qualifiedName": "core.policy.noDirectBusinessWrite",
+      "description": "H Engine and Company Agent Core cannot write business systems directly",
+      "appliesTo": ["core.action.ActionIntent"],
+      "effect": "deny"
+    },
+    {
+      "qualifiedName": "core.policy.privateBotIsolation",
+      "description": "Employee private Bot history does not enter Company Ontology by default",
+      "appliesTo": ["core.identity.Person"],
+      "effect": "deny"
+    }
+  ],
+  "constraintTypes": [
+    {
+      "qualifiedName": "core.epistemic.requireProvenance",
+      "description": "Every epistemic item must carry provenance",
+      "targetType": "core.epistemic.EpistemicItem",
+      "severity": "error",
+      "rule": "provenanceId != null"
+    },
+    {
+      "qualifiedName": "core.decision.requireDri",
+      "description": "Every decision case must have one DRI",
+      "targetType": "core.decision.DecisionCase",
+      "severity": "error",
+      "rule": "driPersonId != null"
+    },
+    {
+      "qualifiedName": "core.work.separateOutcomeLevels",
+      "description": "Verification records execution, operational and goal outcomes independently",
+      "targetType": "core.work.Verification",
+      "severity": "error",
+      "rule": "executionSuccess != null && operationalSuccess != null && goalSuccess != null"
+    },
+    {
+      "qualifiedName": "core.action.requireExpectedOutcome",
+      "description": "Every action intent declares expected business outcome before approval",
+      "targetType": "core.action.ActionIntent",
+      "severity": "error",
+      "rule": "expectedOutcome != null"
+    },
+    {
+      "qualifiedName": "domain.device.noAutomaticControl",
+      "description": "Device state is read-only until a deterministic safety kernel is approved",
+      "targetType": "domain.device.DeviceUnit",
+      "severity": "error",
+      "rule": "directControlEnabled == false"
+    }
+  ]
+}

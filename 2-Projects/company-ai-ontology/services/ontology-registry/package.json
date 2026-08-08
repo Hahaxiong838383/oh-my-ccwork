@@ -1,0 +1,17 @@
+{
+  "name": "company-ontology-registry",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@futurus/ontology-contracts": "file:../../packages/ontology-contracts",
+    "pg": "^8.16.3"
+  }
+}

@@ -12,7 +12,7 @@ printf '=== compose ===\n'
 
 printf '\n=== health ===\n'
 failed=0
-for container in company-ai-foundation-postgres-1 company-ai-foundation-qdrant-1 company-ai-foundation-redis-1 company-ai-foundation-agent-core-1 company-ai-foundation-action-gateway-1 company-ai-foundation-h-lite-1 company-ai-foundation-prometheus-1 company-ai-foundation-gateway-1; do
+for container in company-ai-foundation-postgres-1 company-ai-foundation-qdrant-1 company-ai-foundation-redis-1 company-ai-foundation-agent-core-1 company-ai-foundation-ontology-registry-1 company-ai-foundation-action-gateway-1 company-ai-foundation-h-lite-1 company-ai-foundation-prometheus-1 company-ai-foundation-gateway-1; do
   status=$("$docker_path" inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" 2>/dev/null || echo missing)
   printf '%s=%s\n' "$container" "$status"
   [ "$status" = healthy ] || failed=1
@@ -30,7 +30,13 @@ printf '\n=== postgres ===\n'
 "$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT extname FROM pg_extension WHERE extname IN ('pgcrypto','vector') ORDER BY extname;"
 "$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM pg_tables WHERE schemaname IN ('iam','ontology','workflow','evidence','delivery','actions','audit','runtime');"
 "$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM pg_policies WHERE policyname='tenant_isolation';"
+"$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM ontology_registry.versions WHERE status='active';"
+"$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM ontology_registry.elements;"
+"$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM audit.domain_events WHERE event_type='ontology.version.deployed';"
 "$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT archived_count, failed_count FROM pg_stat_archiver;"
+
+printf '\n=== ontology registry ===\n'
+"$docker_path" compose exec -T ontology-registry node -e "fetch('http://127.0.0.1:8084/readyz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));if(!r.ok||body.status!=='in_sync'||!body.local?.contentHash||body.local.contentHash!==body.active?.contentHash)process.exit(1)})"
 
 printf '\n=== agent core ===\n'
 "$docker_path" compose exec -T agent-core node -e "fetch('http://127.0.0.1:8080/healthz').then(async r=>{console.log(await r.text());if(!r.ok)process.exit(1)})"

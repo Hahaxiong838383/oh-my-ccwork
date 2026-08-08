@@ -1,0 +1,14 @@
+{
+  "name": "@futurus/ontology-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": "./src/index.mjs",
+  "scripts": {
+    "compile": "node bin/ontology-compile.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
