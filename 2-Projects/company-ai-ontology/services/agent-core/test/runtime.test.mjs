@@ -46,7 +46,12 @@ test('H 引擎 remote 模式签名调用临时 H Worker', async (t) => {
   const worker = http.createServer(async (request, response) => {
     if (request.method === 'GET' && request.url === '/readyz') {
       response.writeHead(200, { 'content-type': 'application/json' })
-      response.end(JSON.stringify({ ready: true, credentialMode: 'existing-h-platform-oauth' }))
+      response.end(JSON.stringify({
+        ready: true,
+        credentialMode: 'cpa-api-key',
+        provider: 'cpa-openai-compatible',
+        model: 'grok-4.5',
+      }))
       return
     }
     const chunks = []
@@ -56,7 +61,16 @@ test('H 引擎 remote 模式签名调用临时 H Worker', async (t) => {
     assert.equal(request.headers['x-h-engine-signature'], expected)
     assert.match(JSON.parse(body).prompt, /权限化证据/)
     response.writeHead(200, { 'content-type': 'application/json' })
-    response.end(JSON.stringify({ ok: true, reply: '远程 H 已回答', runtime: { credentialMode: 'existing-h-platform-oauth', workerVersion: 'test' } }))
+    response.end(JSON.stringify({
+      ok: true,
+      reply: '远程 H 已回答',
+      runtime: {
+        credentialMode: 'cpa-api-key',
+        provider: 'cpa-openai-compatible',
+        model: 'grok-4.5',
+        workerVersion: 'test',
+      },
+    }))
   })
   await new Promise((resolve) => worker.listen(0, '127.0.0.1', resolve))
   t.after(() => new Promise((resolve) => worker.close(resolve)))
@@ -71,8 +85,13 @@ test('H 引擎 remote 模式签名调用临时 H Worker', async (t) => {
       maxOutputBytes: 4096,
     },
   })
-  assert.equal((await runtime.ready()).productionReady, true)
+  const readiness = await runtime.ready()
+  assert.equal(readiness.productionReady, true)
+  assert.equal(readiness.engineProvider, 'cpa-openai-compatible')
+  assert.equal(readiness.model, 'grok-4.5')
   const result = await runtime.run({ intent: 'query', conversationId: 'remote-test', evidence: [{ title: '制度' }], message: '请回答' })
   assert.equal(result.reply, '远程 H 已回答')
   assert.equal(result.runtime.mode, 'remote')
+  assert.equal(result.runtime.engineProvider, 'cpa-openai-compatible')
+  assert.equal(result.runtime.model, 'grok-4.5')
 })

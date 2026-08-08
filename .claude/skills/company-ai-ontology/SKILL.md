@@ -190,10 +190,10 @@ node ops/sync-company-directory.mjs
 
 ### 公司 H 引擎凭据
 
-- 临时联调可以让独立公司 H Worker **只读取**既有 H 平台 OAuth，但禁止复制 `auth.json`，避免多个 Runtime 竞争 refresh token 轮换。
-- 临时模式必须明确报告 `credentialMode=existing-h-platform-oauth`，不得因真实推理成功就宣称正式凭据隔离完成。
-- 正式模式必须使用独立 `H_ENGINE_WORKER_HOME`、`GROK_HOME`、Workspace 和刷新生命周期，并报告 `credentialMode=company-dedicated-oauth`。
-- 正式切换需要用户完成一次交互式登录；凭据只落在远端 0600 文件，不经过聊天、Git、记忆、文档或部署包。
+- 当前生产模式为 `credentialMode=cpa-api-key`：独立公司 H Worker 使用 Grok Build 自定义模型，通过 CPA OpenAI 兼容入口调用实时确认的 Grok 模型。
+- 使用独立 `H_ENGINE_WORKER_HOME`、`GROK_HOME` 和 Workspace；CPA Key 仅落在 dev198 的 0600 环境文件，QNAP 不持有模型凭据。
+- 自定义模型必须使用独立本地别名，例如 `cpa-grok-4-5`，再映射上游 `grok-4.5`；与内置模型同名会误走 xAI 官方鉴权。
+- 模型版本必须先读 CPA `GET /v1/models`，再与 xAI/Grok Build 官方文档交叉验证，不沿用旧快照。
 - Worker 必须保留 HMAC、墙钟偏差、请求/输出大小、并发和超时门禁；Prompt 使用 0600 临时文件，进程参数不得包含公司正文。
 
 ### 飞书知识 Connector

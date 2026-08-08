@@ -5449,16 +5449,14 @@ node ops/sync-company-directory.mjs
 
 公司 Agent Core 可通过 HMAC 调用独立 `company-h-engine-worker`，但该 Worker 不得成为员工私人 Bot Runtime 的别名或共享会话入口。
 
-临时模式：
+当前生产模式：
 
-- `credentialMode=existing-h-platform-oauth` 只允许读取现有 Grok OAuth，禁止复制 `auth.json` 或另起刷新器。
+- `credentialMode=cpa-api-key`，Worker 继续运行 Grok Build CLI，通过独立自定义模型配置调用 CPA OpenAI 兼容入口。
+- 使用 `H_ENGINE_WORKER_HOME=/srv/h-platform/company-agent-home`、独立 `GROK_HOME` 和 Workspace；CPA Key 只在 dev198 0600 环境文件中，禁止复制到 QNAP。
+- Grok Build 本地模型别名与上游模型 ID 必须分离，例如 `cpa-grok-4-5 → grok-4.5`；同名会优先命中内置 xAI 模型。
 - 必须使用独立 Workspace、最大并发、单轮执行、超时/输出上限，并禁用 Web Search、Memory 和 Subagent。
 - Prompt 通过 0600 临时文件传递，完成、超时或失败后都要删除。
-
-正式模式：
-
-- 使用 `H_ENGINE_WORKER_HOME=/srv/h-platform/company-agent-home`、独立 `GROK_HOME` 和 `credentialMode=company-dedicated-oauth`。
-- 用户完成一次交互式登录后，先验 Worker `/readyz`，再验 QNAP Agent Core `/readyz`，最后做权限化知识正测与越权负测。
-- 正式切换不迁移、不重启、不修改员工私人 Bot Consumer；回滚只切 Worker 的 HOME/Grok HOME 指针。
+- `/readyz` 与推理结果必须同时报告 `provider`、`model`、`credentialMode` 和 Worker 版本，但不得报告 Key。
+- 切换不迁移、不重启、不修改员工私人 Bot Consumer；回滚只恢复 Worker 的配置和备份。
 
 知识链路验收补充：ACL 正确与召回正确分开验证。中文自然问句应证明 Evidence 实际命中；无权限 Principal 必须 Evidence 为零，且合成验收数据结束后删除。

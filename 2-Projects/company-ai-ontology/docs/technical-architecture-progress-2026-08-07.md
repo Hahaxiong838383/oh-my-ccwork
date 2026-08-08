@@ -20,7 +20,7 @@ flowchart TB
 
   CORE["Company Agent Core<br/>/healthz /readyz /v1/turns"]:::done
   H_ENGINE["公司 H 引擎远程 Runtime<br/>真实推理 / HMAC / 限流 / 标准结果"]:::done
-  H_CREDENTIAL["公司 H 引擎独立 OAuth<br/>company-dedicated-oauth"]:::todo
+  H_CREDENTIAL["公司 H 引擎独立 CPA 凭据<br/>Grok Build → grok-4.5"]:::done
   CONTEXT["Context Compiler<br/>证据上下文与会话编排"]:::done
   RETRIEVAL["Permissioned Retrieval Gateway<br/>先鉴权后检索"]:::done
   KNOWLEDGE["飞书知识 Connector<br/>Docx / Sheet / Minutes / ACL / RLS"]:::done
@@ -83,10 +83,10 @@ flowchart TB
 3. QNAP 部署 Company Agent Core 最小服务，不发布宿主机端口。
 4. 接入现有 Postgres RLS、幂等键与 append-only 审计。
 5. 完成 H-Lite → Agent Core → 远程 H Worker → Postgres/SQLite 的真实推理闭环。
-6. 临时凭据模式明确返回 `existing-h-platform-oauth`，不冒充正式独立凭据完成。
+6. 公司 H Worker 已切到独立 `cpa-api-key`，Grok Build 通过 CPA OpenAI 兼容入口真实调用 `grok-4.5`，不再复用员工私人 Bot OAuth。
 7. 明确现有员工私人 Bot 不迁移、不切换事件订阅；公司 Bot 使用独立飞书 App。
 8. 公司 App 凭据已通过非 Git 的 600 权限环境文件写入 QNAP，租户 Token 和 WebSocket 长连接验证通过。
-9. H-Lite 已从 shadow 切到 active；Agent Core `2026-08-08.3` 返回 `ready`、`productionReady=true`、`mode=remote`。
+9. H-Lite 已从 shadow 切到 active；Agent Core `2026-08-08.4` 返回 `ready`、`productionReady=true`、`mode=remote`，并透传 H Worker provider/model 元数据。
 10. 首名真实员工链路已通过：SQLite 读回 `p2p:post`、`p2p:text`、`group:text`，3 次处理全部 `completed`，无 `feishu_turn_failed`，去重记录 3 条，H-Lite 健康且 `restart_count=0`。
 11. 通讯录数据范围已生效并上线只读同步：4 个授权范围展开为 83 个可见部门，414 名可见人员进入 Ontology Principal；重复同步新增 0、更新 414，数据库敏感属性行数为 0。
 12. 飞书知识 Connector `2026-08-08.2` 已上线；Base64 配置、四张知识表、RLS、ACL fail-closed 和同步审计通过。
@@ -104,7 +104,7 @@ flowchart TB
 
 ## 待用户确认的生产门禁
 
-1. 公司 H 引擎独立 OAuth 登录与 `company-dedicated-oauth` 切换验收。
+1. 为公司 H 引擎建立独立 CPA Key/账号与同厂冗余，替换当前个人 CPA 单账号依赖。
 2. 试点飞书文档给公司 App 分享权限，完成真实 ACL → Evidence Package 与撤权复测。
 3. 扩到 10 名真实员工，完成并发会话、群内多人 @ 隔离、失败重投和回复送达验收。
 4. 真实试点部门、DRI 和 P2；24 小时容量观测完成后再决定 20/50 人放量。

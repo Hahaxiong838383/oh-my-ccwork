@@ -30,6 +30,14 @@ description: CPA Smart Router 运维与迭代指南。用于检查、部署、�
 - CPA 菜单栏：`/Users/rayman.chen/mycc/2-Projects/cpa-menubar`
 - 桌面 Bridge：`cpa-desktop-bridge.service`，本地监听 `127.0.0.1:8330`
 
+## 公司 H 引擎接入（2026-08-08）
+
+- 公司 H Worker 通过 CPA Direct `https://api-direct.hahaxiong.top/v1` 调用实时模型目录中的 `grok-4.5`。
+- H Worker 必须继续通过 Grok Build CLI 执行；使用 `[model.cpa-grok-4-5]` 映射 `model = "grok-4.5"`，不能用与内置模型相同的配置名。
+- Grok Build 配置使用 `env_key = "CPA_API_KEY"`，Key 只保存在 dev198 0600 环境文件，不写 TOML、不放命令行、不复制到 QNAP。
+- 每次升级模型先调用带鉴权的 `/v1/models`，只输出模型 ID 等非敏感字段，再做隔离 HOME 最小推理和 Worker HMAC 推理。
+- 当前个人 CPA 的 xAI 来源是单账号，无同厂冗余；公司正式放量前应建立公司专用 Key/账号和故障切换策略。
+
 ## K12 账号池（2026-07-14+）
 
 - 大源：`aliyun-jp:/opt/cliproxy/k12-source/accounts.json`（80500，root 600）；备份在 racknerd secrets，**不进 Grok 只读**。

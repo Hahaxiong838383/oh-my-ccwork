@@ -35,6 +35,8 @@ export function createHEngineRuntime({ config } = {}) {
           provider: config.provider,
           mode: 'remote',
           credentialMode: payload.credentialMode || 'remote-managed',
+          engineProvider: payload.provider || 'remote-managed',
+          model: payload.model || null,
         }
       } catch {
         return { ready: false, productionReady: false, reason: 'h_engine_remote_unreachable' }
@@ -125,6 +127,8 @@ export function createHEngineRuntime({ config } = {}) {
         simulation: false,
         productionReady: true,
         credentialMode: payload.runtime?.credentialMode || 'remote-managed',
+        engineProvider: payload.runtime?.provider || 'remote-managed',
+        model: payload.runtime?.model || null,
         workerVersion: payload.runtime?.workerVersion || null,
       },
     }

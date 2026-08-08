@@ -4,17 +4,17 @@
 
 ## 结论
 
-P0-A 至 P0-F、独立公司 Bot、通讯录、临时 H 引擎和知识 Connector 均已部署。Agent Core 已切到真实远程 H Runtime 并返回 `productionReady=true`；但当前凭据模式仍是临时复用 `existing-h-platform-oauth`。试点飞书文档因公司 App 缺少分享权限被 fail-closed 跳过，未读取正文。真实 P2/DRI 尚未接入。
+P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎和知识 Connector 均已部署。Agent Core 已切到真实远程 H Runtime 并返回 `productionReady=true`；H Worker 已使用独立 CPA API Key，通过 Grok Build 调用 `grok-4.5`。试点飞书文档因公司 App 缺少分享权限被 fail-closed 跳过，未读取正文。真实 P2/DRI 尚未接入。
 
 ## P0-PROD-2：H 引擎 Runtime
 
 - Agent Core 已集成 H 引擎 Adapter，架构和 API 只暴露统一的 H 引擎能力，不暴露底层模型品牌。
 - dev198 公司 H Worker 使用 HMAC、最大并发 2、单轮执行、禁用 Web Search/Memory/Subagent，并通过 0600 临时文件传递 Prompt。
-- QNAP Agent Core `2026-08-08.3` `/readyz` 返回 `ready`、`productionReady=true`、`mode=remote`、`credentialMode=existing-h-platform-oauth`。
+- QNAP Agent Core `2026-08-08.4` `/readyz` 返回 `ready`、`productionReady=true`、`mode=remote`、`credentialMode=cpa-api-key`、`engineProvider=cpa-openai-compatible`、`model=grok-4.5`。
 - 真实 H 推理已返回预期校验结果；Worker 与 Agent Core 均 `restart_count=0`。
-- 正式独立凭据 HOME、配置项、回滚和验收流程已开发，等待川哥回来完成交互式 OAuth 登录。
+- Worker 使用独立 HOME/Grok HOME；CPA Key 仅位于 dev198 的 0600 环境文件，QNAP 不持有模型凭据。
 - CLI 超时、输出上限、崩溃错误和凭据门禁具备明确状态码。
-- 临时方案不复制现有 H 平台 OAuth 文件，避免两个 Runtime 竞争 refresh token；正式方案切换到独立公司 HOME/Grok HOME。
+- Grok Build 自定义模型使用独立别名 `cpa-grok-4-5` 映射上游 `grok-4.5`，避免与内置模型同名后误走 xAI 官方鉴权。
 
 ## P0-PROD-3：公司知识 Connector
 
@@ -33,7 +33,7 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、临时 H 引擎和知识 Connecto
 - H-Lite SQLite 保存 append-only 运行事件，不保存公司任务真源。
 - 独立公司飞书 App/Bot 已使用 QNAP 本地 600 权限环境文件接入；真实验收读回 `p2p:post`、`p2p:text`、`group:text` 三类消息。
 - 真实处理结果：3 条 `feishu_turn_received`、3 条 `feishu_turn_completed`、0 条 `feishu_turn_failed`，去重记录 3 条；H-Lite 健康且 `restart_count=0`。
-- Agent Core 当前为 `ready`、`productionReady=true`、`mode=remote`；公司 Bot 仍需在川哥回来后完成正式独立凭据与真实员工问答验收。
+- Agent Core 当前为 `ready`、`productionReady=true`、`mode=remote`；后续继续完成 10 人 Canary 与真实 P2/DRI 闭环。
 
 ## P0-PROD-1.5：通讯录身份同步
 
@@ -42,7 +42,7 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、临时 H 引擎和知识 Connecto
 - 新增只读目录枚举器、HMAC 服务身份 `company-directory-sync` 和 Agent Core Principal Upsert；普通员工身份调用同步接口返回 403。
 - 首次同步发现并写入 414 名可见人员；第二次同步新增 0、更新 414，证明 Upsert 幂等。
 - PostgreSQL 读回 414 个 `source=feishu-directory` Principal、2 条同步审计；邮箱、手机号和私人文本属性命中 0 行。
-- 当前 Agent Core `2026-08-08.3`、H-Lite `2026-08-08.2` 均健康，飞书 WebSocket 保持连接，两个容器 `restart_count=0`。
+- 当前 Agent Core `2026-08-08.4`、H-Lite `2026-08-08.2` 均健康，飞书 WebSocket 保持连接，两个容器 `restart_count=0`。
 
 ## P0-C：权限化检索
 
@@ -83,7 +83,7 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、临时 H 引擎和知识 Connecto
 
 ## 仍需用户确认的生产门禁
 
-- 完成公司 H 引擎独立 OAuth 登录，把凭据模式从 `existing-h-platform-oauth` 切换为 `company-dedicated-oauth`。
+- 建立公司专用 CPA Key/账号和同厂冗余，消除当前个人 CPA 单账号依赖。
 - 将公司 App 加为试点飞书文档协作者并授予分享权限读取，完成真实文档索引和撤权复测。
 - 指定真实试点部门、唯一 DRI 和一条真实 P2。
 - 扩到 10 名真实员工，完成并发会话、群内多人 @ 隔离、失败重投和回复送达验收。
