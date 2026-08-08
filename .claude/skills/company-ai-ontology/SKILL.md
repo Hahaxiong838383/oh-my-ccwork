@@ -25,6 +25,15 @@ output_levels: L2
 市场为什么要做 -> 公司决定做什么 -> 员工具体做什么 -> ERP 证明做到哪里 -> 市场再验证效果如何
 ```
 
+V3 目标架构在 V2.2 生产基线上新增“三个闭环、两个世界、一个编译器”：
+
+- 认识闭环：Observation → Evidence → Claim → Hypothesis → Decision。
+- 实践闭环：Decision → Action → Outcome → Verification。
+- 演化闭环：Learning → Ontology Change Proposal → Review → Deploy → Reconciliation。
+- 运营世界与产品/物理世界使用双层本体连接，不把 ERP 设备记录当成完整物理状态。
+- Ontology Compiler & Registry 统一类型、引用、行为、约束、版本和 Git/运行时对账。
+- 建设原则是“骨架完整、血肉渐进”：先固定元模型、命名空间、事件和安全契约，不一次性穷举全部业务对象。
+
 架构分工：
 
 - QNAP H-Lite：从现有 H 平台同源移植的精简生产 profile，承载飞书 WebSocket 订阅、Bot Bridge、授权、Outbox、ACK/读回、提醒和 Runner Adapter。
@@ -233,6 +242,14 @@ V2.2 的持久文本与图源见：
 - `references/architecture-v2-market-loop.mmd`
 - `references/architecture-v2-agent-core.mmd`
 - `references/architecture-v2-h-lite.mmd`
+
+V3 的目标骨架、认知—实践闭环和技术图源见：
+
+- `../../../2-Projects/company-ai-ontology/docs/architecture-v3-cognitive-practice-skeleton.md`
+- `references/architecture-v3-overall.mmd`
+- `references/architecture-v3-technical.mmd`
+
+V2.2 仍是当前生产运行基线；V3 是增量建设目标，未经真实 P2、权限负测和 Change Proposal 验收，不得把目标架构描述为生产完成。
 
 ## 既有飞书文档
 

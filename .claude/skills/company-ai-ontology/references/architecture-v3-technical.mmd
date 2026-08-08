@@ -1,0 +1,65 @@
+flowchart TB
+  FEISHU["公司飞书 App/Bot"] --> HLITE["H-Lite<br/>WebSocket / Bridge / Outbox / ACK"]
+  HLITE --> API["Company Agent Core API"]
+
+  subgraph CORE["Company Agent Core"]
+    ROUTER["Agent Router"]
+    CONTEXT["Context Compiler"]
+    EPI["Epistemic Engine"]
+    SCENARIO["Scenario Lab"]
+    DECISION["Decision Compiler"]
+    PRACTICE["Practice Engine"]
+    SESSION["Session Orchestrator"]
+  end
+
+  API --> ROUTER --> CONTEXT
+  CONTEXT --> EPI --> SCENARIO --> DECISION --> PRACTICE
+  ROUTER --> SESSION --> HENGINE["H 引擎 Runtime Pool"]
+
+  subgraph GATE["Gateway Plane"]
+    RETRIEVAL["Permissioned Retrieval Gateway"]
+    LOGIC["Logic / Function Gateway"]
+    ACTION["Mandatory Action Gateway"]
+  end
+
+  CONTEXT --> RETRIEVAL
+  SCENARIO --> LOGIC
+  PRACTICE --> ACTION
+
+  subgraph REGISTRY["Ontology Definition Plane"]
+    GIT["Git Definitions"] --> COMPILER["Ontology Compiler"]
+    COMPILER --> PROPOSAL["Change Proposal / Review"]
+    PROPOSAL --> REG["Runtime Registry"]
+    REG --> RECON["Reconciliation / Drift Gate"]
+  end
+
+  subgraph PG["Postgres 17"]
+    META["ontology_registry"]
+    RUNTIME["ontology_runtime"]
+    EPI_DB["epistemic"]
+    DEC_DB["decision"]
+    WORK_DB["work"]
+    SEC_DB["security"]
+    ACT_DB["action"]
+    AUDIT_DB["audit"]
+  end
+
+  REG --> META
+  RECON --> RUNTIME
+  RETRIEVAL --> RUNTIME
+  RETRIEVAL --> EPI_DB
+  RETRIEVAL --> SEC_DB
+  ACTION --> ACT_DB
+  DECISION --> DEC_DB
+  PRACTICE --> WORK_DB
+
+  CONNECTORS["Feishu / ERP / Market / Device Connectors"] --> INGEST["Event Envelope / Normalization"]
+  INGEST --> RUNTIME
+  INGEST --> EPI_DB
+  INGEST --> AUDIT_DB
+
+  RETRIEVAL --> QDRANT["Qdrant<br/>可重建召回层"]
+  API --> REDIS["Redis<br/>队列 / 限流 / Lease"]
+  PG --> BACKUP["PITR / WAL / 离机加密备份"]
+  HENGINE -. "150/300 人扩展" .-> WORKERS["Mini / Studio<br/>无状态 Worker Cells"]
+

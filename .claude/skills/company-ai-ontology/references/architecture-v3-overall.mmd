@@ -1,0 +1,57 @@
+flowchart TB
+  STAFF["全体员工<br/>飞书私聊 / 群聊 / 任务卡片"]
+  HLITE["QNAP H-Lite<br/>公司 Bot 订阅 / Outbox / ACK / 去重"]
+  CORE["Company Agent Core<br/>H 引擎统一 AI 中枢"]
+
+  subgraph COG["认识、决策与实践层"]
+    CONTEXT["Context Compiler<br/>权限化最小上下文"]
+    EPI["Epistemic Engine<br/>事实 / 证据 / 主张 / 假设 / 冲突"]
+    SCENARIO["Scenario Lab<br/>备选方案 / 反事实 / 风险模拟"]
+    DECISION["Decision Compiler<br/>决策依据 / DRI / Decision Lineage"]
+    PRACTICE["Practice Engine<br/>P2 / 任务 / 行动 / 成果 / 验证"]
+    LEARNING["Learning Engine<br/>偏差分析 / 规则修订 / 学习"]
+  end
+
+  subgraph ONTO["Ontology Kernel"]
+    OP["运营本体<br/>Company / Operations / Market / Customer"]
+    PHY["产品与物理本体<br/>Product / Device / State / Constraint"]
+    PROV["认识论与溯源图<br/>Source / Evidence / Claim / Provenance"]
+    POLICY["权限与政策<br/>Principal / Purpose / Grant / Classification"]
+    COMPILER["Ontology Compiler & Registry<br/>类型 / 约束 / 版本 / 对账"]
+  end
+
+  subgraph GATE["确定性工具与安全边界"]
+    DATA["Data Tools<br/>Permissioned Retrieval Gateway"]
+    LOGIC["Logic Tools<br/>规则 / 函数 / 统计 / 模型"]
+    ACTION["Action Tools<br/>Mandatory Action Gateway"]
+  end
+
+  subgraph SOURCES["公司事实源"]
+    FEISHU["飞书知识 / 通讯录"]
+    ERP["爱视可 ERP M3"]
+    SOCIAL["社交媒体监控"]
+    DEVICE["设备日志 / 产品遥测<br/>后续只读接入"]
+  end
+
+  STAFF --> HLITE --> CORE --> CONTEXT
+  CONTEXT --> EPI --> SCENARIO --> DECISION --> PRACTICE --> LEARNING
+  LEARNING -. "Ontology Change Proposal" .-> COMPILER
+  CONTEXT --> DATA
+  SCENARIO --> LOGIC
+  PRACTICE --> ACTION
+  DATA --> ONTO
+  LOGIC --> ONTO
+  ACTION --> ONTO
+  FEISHU --> DATA
+  ERP --> DATA
+  SOCIAL --> DATA
+  DEVICE --> DATA
+  OP <--> PHY
+  OP --> PROV
+  PHY --> PROV
+  POLICY --> DATA
+  POLICY --> ACTION
+  COMPILER --> OP
+  COMPILER --> PHY
+  COMPILER --> PROV
+

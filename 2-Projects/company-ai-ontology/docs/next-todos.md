@@ -4,7 +4,31 @@
 
 ## 当前结论
 
-P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector 和认证后公网运行看板均已上线。当前主要门禁是公司专用 CPA 凭据、试点飞书文档分享权限、10 人真实 Canary 和真实 P2。
+P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector 和认证后公网运行看板均已上线。V2.2 继续作为生产基线，V3 按“骨架完整、血肉渐进”增量建设。当前主要门禁是 V3 P0-S 骨架、公司专用 CPA 凭据、试点飞书文档分享权限、10 人真实 Canary 和真实 P2。
+
+## P0-S：V3 大骨架先行
+
+1. 固定 `system.ontology`、`core.identity`、`core.policy`、`core.epistemic`、`core.decision`、`core.work`、`core.action` 和各领域命名空间。
+2. 建立统一对象基类、关系基类、双时间字段、来源和 Ontology 版本字段。
+3. 建立统一 Event Envelope、跨域 correlation/causation、幂等和分类字段。
+4. 建立 `ontology_registry`、`ontology_runtime`、`epistemic`、`decision`、`work`、`security`、`action`、`audit` 逻辑 Schema。
+5. 建立 Ontology Definition DSL、Compiler、Registry、兼容性分级和 Git/运行时 reconciliation skeleton。
+6. 固定 Data/Logic/Action 三类 Agent 工具契约，继续保持 Permissioned Retrieval 和 Mandatory Action Gateway 不可绕过。
+7. 只写骨架、约束和少量样例，不批量导入公司全部数据，不提前穷举全部对象。
+
+## P0-EPI：认识论最小闭环
+
+1. 增加 Source、Observation、Evidence、Claim、Hypothesis、Assumption、Unknown、Contradiction、ValidityWindow 和 Provenance。
+2. Permissioned Evidence Package 增加事实类型、来源、有效期、反证、未知项、置信度和 Ontology 版本。
+3. Company Agent 回答明确区分源事实、推导事实、模型预测、人工判断、假设和未知。
+4. 用一条 ERP 事实和一条社媒 Signal 完成正证、反证和假设验证。
+
+## P0-DEC：决策与实践闭环
+
+1. 增加 DecisionCase、DecisionAlternative、Scenario、ExpectedOutcome、ObservedOutcome、Verification 和 Learning。
+2. Task Proposal 必须引用已批准 Decision；每条真实 P2 形成完整 Decision Lineage。
+3. Action Gateway 在执行、读回和回滚之后增加业务结果与目标结果验证。
+4. 用一个真实试点部门、一名 DRI 和一条真实 P2 完成端到端验收。
 
 ## 需要用户确认或提供
 
@@ -38,6 +62,7 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector 和认�
 3. 接入 TikHub、JustOneAPI 和现有社媒系统的归一化业务结果，不把 HTTP 200 当作业务成功。
 4. 社媒正文先进入不可信输入隔离区，只允许结构化 Signal 进入 Permissioned Retrieval。
 5. 保持 MediaCrawler 风控任务暂停，未经明确指令不恢复、不绕过登录、不增加并发。
+6. 先建立 Product/SKU/BOM/Firmware/SN/DeviceState 骨架；当前只读接入，不开放设备自动控制。
 
 ## P1-B：扩容与高可用
 

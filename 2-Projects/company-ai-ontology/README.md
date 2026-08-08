@@ -4,7 +4,8 @@
 
 ## 当前状态
 
-- 架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
+- 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
+- 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；V3 目前是设计与实施路线，不代表生产已完成。
 - 当前里程碑：`P0-PROD-2/3 H Engine + Knowledge Connector + Public Admin Dashboard`。公司 H 引擎已通过 CPA 调用 `grok-4.5`；飞书知识 Connector 已部署并执行 fail-closed 同步；公网看板只在 H 管理员认证后展示脱敏状态。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
@@ -27,6 +28,7 @@
 - `deploy/qnap/ACCEPTANCE.md`：本次生产验收证据和剩余门禁。
 - `docs/lessons-learned-2026-08-08.md`：公司 Bot、通讯录同步、权限和 QNAP 部署的经验教训。
 - `docs/h-engine-credential-cutover.md`：从临时 H 平台 OAuth 切换到公司独立凭据的正式流程。
+- `docs/architecture-v3-cognitive-practice-skeleton.md`：认识论、实践论、双层本体、Ontology Compiler 和大骨架优先实施方案。
 - `services/agent-core/`：Company Agent Core 内部 API、Postgres 幂等审计和 H 引擎独立 Runtime 门禁。
 - `services/knowledge-connector/`：飞书知识发现、ACL 映射、正文分块和同步审计。
 
@@ -42,7 +44,8 @@
 
 ## 下一阶段
 
-1. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
-2. 在飞书把公司 App 加为试点文档协作者并开放分享权限读取，再触发同步和真实 ACL 正负测试。
-3. 扩到 10 名真实员工，验证并发会话、群内多人 @ 隔离、失败重投和回复送达。
-4. 指定试点部门、唯一 DRI 和一条真实 P2；运行 24 小时容量观测后再决定 20/50 人放量。
+1. P0-S 先搭 V3 稳定骨架：命名空间、对象/关系基类、Event Envelope、Ontology Compiler/Registry 和三类工具契约。
+2. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
+3. 在飞书把公司 App 加为试点文档协作者并开放分享权限读取，再触发同步和真实 ACL 正负测试。
+4. 扩到 10 名真实员工，验证并发会话、群内多人 @ 隔离、失败重投和回复送达。
+5. 指定试点部门、唯一 DRI 和一条真实 P2，运行认知、决策、实践和验证闭环；完成 24 小时容量观测后再决定 20/50 人放量。
