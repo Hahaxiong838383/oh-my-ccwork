@@ -2300,6 +2300,76 @@ v1.46 起才真正用上——**改这一屏前先通读 context-report 的返�
 补 H-0070 空标题；H-0077 按川哥指示维持挂起、只加一行说明。
 现状：开放 31 条，开放 P0 两条（H-0076、H-0078）。
 
+## H-0083 grok 自定义端点绑定（URL + API key）· v1.50.x · 2026-08-08 上线
+
+用户可把 grok 指向**任意 OpenAI 兼容网关**，从该网关真实模型表里选模型 + 设上下文窗口。
+灰度开关 `H_GROK_ENDPOINT_BINDING_UIDS`（`/srv/h-control/.env`，默认谁都不开、
+**代码里无自动放开路径**，放开必须川哥拍板改这一行并重启）。
+
+### 机制真值（源码 xai-org/grok-build @afbc0fb × grok 1.0.0 真机双证）
+
+只需两个环境变量：`GROK_MODELS_BASE_URL` + `XAI_API_KEY`，经已有的 bwrap `--args FD`
+通道注入（key 不落盘）。**bwrap 腿和 native 腿必须传同一组变量**，漏一条那台机静默失效。
+
+- `ModelFetchAuth::resolve()`：custom_endpoint **优先级高于 session**，设了 URL 就强制
+  API key 鉴权，不需要 `grok login`，也不会被残留旧 session 抢回去。
+- `resolve_model_list()`：custom endpoint 下**跳过内置模型表**，模型全来自网关 `/models`。
+- 🔴 `EndpointsConfig::from_config_value`：config 的 `[endpoints]` **覆盖 env**。
+  所以**绝不能**往用户 config.toml 写 `[endpoints]`——写了就把注入的
+  `GROK_MODELS_BASE_URL` 废掉，整个端点静默退回官方端点。
+- 上下文窗口只能经 `[model."<id>"] context_window` 覆盖块给（无 CLI/env 开关）。
+  不写则落兜底 `DEFAULT_CONTEXT_WINDOW = 256_000`（`remote/client.rs:702`），
+  而 grok-4.5 实际 500k → **白丢一半上下文且无任何提示**。合并语义已验：
+  只写 `context_window` 一个字段安全，`model`/`base_url` 从网关那条继承。
+
+### 三个实测坑（改这块前先看）
+
+1. **不指定模型时 grok 按网关返回顺序取第一个** —— 抓到过它选中 `gpt-image-2`
+   （图像模型）。对话助手落到图像模型上表现为**答非所问而不是报错**。
+   故端点模式下模型**必选、无默认**，没选就不下发凭据（runner 报可读错误）。
+2. **模型过滤判据只能看 `models_cache.json` 的 `origin`，不能看 `auth_method`** ——
+   生产 11 个租户在普通 BYOS 模式下 `auth_method` 就已经是 `api_key`，按它分派会
+   把全部现存租户误判成自定义端点。
+3. **`-m` 的模型名正则要放开 `/` 与 `:`**（网关 id 常带路径前缀，如 `ccsub2/gpt-5.4`），
+   老正则 `[A-Za-z0-9._-]+` 会静默丢弃 → 退回网关默认。
+
+### 🔴 第三方网关会静默换模型
+
+CPA 网关实测：请求 `grok-3-mini` 实际回 `grok-4.3`、`codex-auto-review` 回
+`gpt-5.6-luna`、`grok-composer-2.5-fast` 回 `grok-4.5-build`——**不报错、不提示**。
+**「我选了 X」≠「跑的是 X」**，验收必须看响应里的 `model` 字段。
+
+### 「后台设什么 = bot 用什么」的三重保障（川哥 2026-08-08 立的验收标准）
+
+1. runner **每任务**向控制面拉凭据取模型，不依赖任何缓存
+2. 后台改模型 → user-sync 15s 内**热补丁**进运行中 App 的 ctx
+   （`VOLATILE_CTX_FIELDS` + `patchVolatileCtx`），**不重启不掉线**。
+   判据：这个字段有没有人在启动时把值抄走？没有 → 可热补丁。
+3. 「什么模型」卡片并列「后台设置 ↔ 最近实际调用」，不一致自己告警；
+   端点模式**不展示 config.toml 钉定值**——它不决定行为（CLI `-m` 压过 config）
+   且必然滞后（命令代答不走任务路径），显示它只会制造假警报。
+
+### 翻车记录：加字段要数清链上有几个白名单
+
+端点四字段（`grokEndpointModel`/`endpointMode`/`endpointHost`/`endpointContextWindow`）
+从控制面到运行时要穿过**四个逐字段硬编码白名单**：
+
+```
+控制面 /internal/users → mergeControlUsers(两个分支) → loadUserRegistry 归一化 → userCtx
+```
+
+**同一个 bug 修了两轮**（v1.50.3 / v1.50.4），因为补三个漏一个的症状与一个都没补
+完全相同：控制面查得到、执行面永远空、全程零报错。以后动这条链：
+先 `rg '<某个已有字段名>' lib/app-registry.mjs control-plane/server.mjs` **数一遍**，
+测试写**端到端断言**（控制面下发 → 合并 → userCtx），别只测单跳。
+
+### 排障必读的两条通道真值
+
+- **bridge 的真日志在 `~/feishu-grok-bridge/logs/bridge.log`（十几 MB），不在
+  journalctl** —— journald 只漏出启动/housekeeping。在 journalctl 里查消息处理会
+  得出「一条消息都没处理」的假结论（2026-08-08 我就这么误判过）。
+- **卡片按钮走 card action，`lastInboundAt` 纹丝不动**（只统计文本消息）。
+  用户点「新会话」查不到入站记录是正常的。
 ## 五项需求发布收口（2026-07-30）
 
 本阶段发布版本 `v1.33.1`（E3 后 `v1.34.0`；grok 授权墙接线后 `v1.35.0`），全 Bot 行为契约 `2026-07-30.1`（→ `2026-07-30.2`，grok 撞授权墙自动推卡）。H-0027、H-0031、H-0011、
@@ -4899,7 +4969,7 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | **`v1.47.1`**（2026-08-08 画板正交走线 + 详情浮层自适应左右；公网 `https://ai.kidshub.cn/healthz` 取真值） |
+| 控制面 aliyun-hk | **`v1.50.6`**（2026-08-08 grok 自定义端点绑定 URL+API key + 上下文窗口 + 模型一致性；公网 `https://ai.kidshub.cn/healthz` 取真值） |
 | Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件、1 App。**本次未随 dev198 升级**——`e5b3978` 对 bridge 运行时零行为变化（新模块只被 `ops/announce-release.mjs` 引用，`bridge.mjs` 那 8 行全在注释块内），不值得为注释付 Lima 割接的约 35 秒中断 |
 | dev198 | **`e5b397815d1c`**（12 App 全连、零 lastError；两站持有集合零交集，互斥成立） |
 | 安装源 | Mini 上 `~/local/h-mini-b2-source-<commit>`，**具体路径现场 `ls` 取**（随 commit 变，写死必腐烂） |
