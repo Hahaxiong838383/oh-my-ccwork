@@ -24,7 +24,7 @@ flowchart TB
   CONTEXT["Context Compiler<br/>证据上下文与会话编排"]:::done
   RETRIEVAL["Permissioned Retrieval Gateway<br/>先鉴权后检索"]:::done
   KNOWLEDGE["飞书知识 Connector<br/>Docx / Sheet / Minutes / ACL / RLS"]:::done
-  KNOWLEDGE_ACCESS["整库 ACL 安全门禁<br/>两个 P0 修复 / Canary / 撤权复测"]:::todo
+  KNOWLEDGE_ACCESS["整库 ACL 安全门禁<br/>P0 代码已修 / 部署 Canary 待完成"]:::todo
   TASK["Task Proposal Compiler<br/>P2 → 个人任务草案 → DRI 批准"]:::done
   CONTRACTS["Ontology Contracts Package<br/>Definition / Event / Tool Contracts"]:::done
   REGISTRY["Ontology Compiler & Registry<br/>版本 / 兼容性 / Proposal / 激活"]:::done
@@ -98,10 +98,11 @@ flowchart TB
 12. 飞书知识 Connector `2026-08-08.2` 服务骨架已上线；Base64 配置、四张知识表、RLS、单个显式资源 ACL fail-closed 和同步审计通过。
 13. 生产权限链路已通过合成证据正负测试：授权员工 Evidence 与 H 回复命中，无权限员工 Evidence 为 0，测试数据已删除。
 14. 产品研究部知识库只读 ACL 审计完成，未触发导入；发现两个整库导入 P0，正式索引保持灰色并被硬阻断。
-15. V3 P0-S Contracts Package 已完成 13 个命名空间、41 个 Object Types、17 个 Link Types、3 个 Functions、2 个 Action Types、3 个 Policies 和 5 个 Constraints。
-16. 独立 Ontology Registry `2026-08-08.1` 已在 QNAP 上线；生产 active 版本唯一，Schema `3.0.0`、71 个元素、Hash `0e1690bbced6`，Git/运行时状态为 `in_sync`。
-17. PostgreSQL 17 隔离验收覆盖迁移重复执行、7 个逻辑 Schema、7 个稳定 View、RLS、最小权限、双审计和历史版本再激活；生产重启与重复部署后版本/元素/审计数量保持不变。
-18. 公网管理看板已升级到 H 控制面 `v1.49.1`，Ontology Registry 独立标绿；真实 Chrome 验收为 7/7 运行组件就绪、控制台错误 0、失败请求 0、桌面和 390px 横向溢出 0。
+15. Knowledge Connector 本地候选 `2026-08-08.3` 已修复 ACL 错误 fail-open 和无 `wikispaceid` 权限继承；Connector 14/14、Agent Core 14/14，未部署 QNAP。
+16. V3 P0-S Contracts Package 已完成 13 个命名空间、41 个 Object Types、17 个 Link Types、3 个 Functions、2 个 Action Types、3 个 Policies 和 5 个 Constraints。
+17. 独立 Ontology Registry `2026-08-08.1` 已在 QNAP 上线；生产 active 版本唯一，Schema `3.0.0`、71 个元素、Hash `0e1690bbced6`，Git/运行时状态为 `in_sync`。
+18. PostgreSQL 17 隔离验收覆盖迁移重复执行、7 个逻辑 Schema、7 个稳定 View、RLS、最小权限、双审计和历史版本再激活；生产重启与重复部署后版本/元素/审计数量保持不变。
+19. 公网管理看板已升级到 H 控制面 `v1.49.1`，Ontology Registry 独立标绿；真实 Chrome 验收为 7/7 运行组件就绪、控制台错误 0、失败请求 0、桌面和 390px 横向溢出 0。
 
 ## P0 A-F 已完成
 
@@ -115,7 +116,7 @@ flowchart TB
 ## 待用户确认的生产门禁
 
 1. 为公司 H 引擎建立独立 CPA Key/账号与同厂冗余，替换当前个人 CPA 单账号依赖。
-2. 修复知识 Connector 两个 P0：ACL 错误无条件跳过；仅在文档 ACL 明确含 `wikispaceid` 时继承空间权限。随后完成小范围 Canary 与撤权复测。
+2. 经明确授权部署 Knowledge Connector `2026-08-08.3`，随后完成小范围 Canary 与撤权复测；正式导入继续单独审批。
 3. 扩到 10 名真实员工，完成并发会话、群内多人 @ 隔离、失败重投和回复送达验收。
 4. 真实试点部门、DRI 和 P2；24 小时容量观测完成后再决定 20/50 人放量。
 

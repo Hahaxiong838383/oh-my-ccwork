@@ -6,7 +6,7 @@ import { createFeishuKnowledgeClient } from './feishu-client.mjs'
 import { createKnowledgeStore } from './store.mjs'
 import { createKnowledgeSync } from './sync.mjs'
 
-export const KNOWLEDGE_CONNECTOR_VERSION = '2026-08-08.2'
+export const KNOWLEDGE_CONNECTOR_VERSION = '2026-08-08.3'
 
 function json(response, statusCode, payload) {
   const body = JSON.stringify(payload)

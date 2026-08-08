@@ -49,6 +49,13 @@ function validateExplicitResource(input) {
   }
 }
 
+function normalizedAclErrorCode(error) {
+  const candidate = String(error?.code ?? error?.statusCode ?? 'acl_unavailable')
+  if (/^\d{3,12}$/.test(candidate)) return candidate
+  if (/^(acl|feishu)_[a-z0-9_.-]{1,48}$/.test(candidate)) return candidate
+  return 'acl_unavailable'
+}
+
 export function createKnowledgeSync({ config, client, store, logger = () => {} } = {}) {
   let running = false
   let cachedSpaces = null
@@ -76,32 +83,42 @@ export function createKnowledgeSync({ config, client, store, logger = () => {} }
     return uniqueAcl(direct)
   }
 
-  async function syncResource(resource, inheritedAcl = []) {
-    let documentAcl = []
-    let aclError = null
-    try {
-      documentAcl = await client.listPermissionMembers(resource.resourceToken, resource.resourceType)
-    } catch (error) {
-      aclError = String(error?.code || error?.statusCode || 'acl_unavailable')
-    }
-    const aclEntries = await expandWikiSpaceAcl(uniqueAcl([...inheritedAcl, ...documentAcl]))
-    const aclKnown = aclEntries.length > 0 && (!aclError || inheritedAcl.length > 0)
-    if (!aclKnown) {
-      await store.replaceResource({
-        tenantId: config.tenantId,
-        resource: {
-          ...resource,
-          externalKey: `feishu:${resource.resourceType}:${resource.resourceToken}`,
-          aclStatus: 'unknown',
-          status: 'skipped',
-          contentHash: null,
-          metadata: { ...resource.metadata, skipReason: 'acl_unknown', aclError },
+  async function skipResource(resource, { reason, aclErrorCode = null } = {}) {
+    await store.replaceResource({
+      tenantId: config.tenantId,
+      resource: {
+        ...resource,
+        externalKey: `feishu:${resource.resourceType}:${resource.resourceToken}`,
+        aclStatus: 'unknown',
+        status: 'skipped',
+        contentHash: null,
+        metadata: {
+          ...resource.metadata,
+          skipReason: reason,
+          ...(aclErrorCode ? { aclErrorCode } : {}),
         },
-        aclEntries: [],
-        chunks: [],
-      })
-      return { indexed: false, reason: 'acl_unknown' }
+      },
+      aclEntries: [],
+      chunks: [],
+    })
+    return { indexed: false, reason, aclErrorCode }
+  }
+
+  async function syncResource(resource) {
+    let documentAcl
+    try {
+      documentAcl = uniqueAcl(await client.listPermissionMembers(resource.resourceToken, resource.resourceType))
+    } catch (error) {
+      return skipResource(resource, { reason: 'acl_unavailable', aclErrorCode: normalizedAclErrorCode(error) })
     }
+
+    let aclEntries
+    try {
+      aclEntries = await expandWikiSpaceAcl(documentAcl)
+    } catch (error) {
+      return skipResource(resource, { reason: 'acl_inheritance_unavailable', aclErrorCode: normalizedAclErrorCode(error) })
+    }
+    if (!aclEntries.length) return skipResource(resource, { reason: 'acl_empty' })
 
     const fetched = await contentFor(resource)
     if (fetched.ownerId) aclEntries.push({ subjectType: 'person', subjectKey: `feishu:${fetched.ownerId}`, source: 'feishu_owner' })
@@ -118,7 +135,7 @@ export function createKnowledgeSync({ config, client, store, logger = () => {} }
         aclStatus: 'known',
         status: chunks.length ? 'active' : 'skipped',
         contentHash,
-        metadata: { ...resource.metadata, emptyContent: chunks.length === 0, aclError },
+        metadata: { ...resource.metadata, emptyContent: chunks.length === 0 },
       },
       aclEntries: uniqueAcl(aclEntries),
       chunks,
@@ -130,7 +147,7 @@ export function createKnowledgeSync({ config, client, store, logger = () => {} }
     if (running) return { ok: false, status: 'already_running' }
     running = true
     const runId = await store.startRun({ tenantId: config.tenantId })
-    const stats = { spaces: 0, resourcesSeen: 0, indexed: 0, skipped: 0, failed: 0, chunks: 0, skipReasons: {} }
+    const stats = { spaces: 0, resourcesSeen: 0, indexed: 0, skipped: 0, failed: 0, chunks: 0, skipReasons: {}, aclErrorCodes: {} }
     const recordResult = (result) => {
       if (result.indexed) {
         stats.indexed += 1
@@ -140,6 +157,7 @@ export function createKnowledgeSync({ config, client, store, logger = () => {} }
       stats.skipped += 1
       const reason = String(result.reason || 'not_indexed')
       stats.skipReasons[reason] = (stats.skipReasons[reason] || 0) + 1
+      if (result.aclErrorCode) stats.aclErrorCodes[result.aclErrorCode] = (stats.aclErrorCodes[result.aclErrorCode] || 0) + 1
     }
     try {
       cachedSpaces = await client.listSpaces()
@@ -147,10 +165,6 @@ export function createKnowledgeSync({ config, client, store, logger = () => {} }
       stats.spaces = spaces.length
       for (const space of spaces) {
         const spaceId = String(space.space_id)
-        let inheritedAcl = space.visibility === 'public'
-          ? [{ subjectType: 'tenant', subjectKey: config.tenantId, source: 'feishu_public_team_space' }]
-          : await client.listSpaceMembers(spaceId)
-        inheritedAcl = uniqueAcl(inheritedAcl)
         const nodes = await client.listNodes(spaceId)
         for (const node of nodes) {
           if (stats.resourcesSeen >= config.sync.maxResources) break
@@ -168,7 +182,7 @@ export function createKnowledgeSync({ config, client, store, logger = () => {} }
               classification: classificationFor(space),
               sourceUpdatedAt: node.obj_edit_time ? new Date(Number(node.obj_edit_time) * 1000) : null,
               metadata: { nodeToken: node.node_token, spaceName: space.name, spaceVisibility: space.visibility },
-            }, inheritedAcl)
+            })
             recordResult(result)
           } catch (error) {
             stats.failed += 1

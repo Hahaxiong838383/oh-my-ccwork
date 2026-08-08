@@ -4,7 +4,7 @@
 
 ## 结论
 
-本轮只验证公司智慧中枢 App 能否枚举知识库节点、读取文档成员权限和公开权限设置，**没有触发正式导入**。审计发现当前 Knowledge Connector 存在两个会造成权限放大的 P0 缺陷，因此在修复、测试、部署和撤权复测完成前，禁止把任何飞书知识空间批量导入 Ontology。
+本轮只验证公司智慧中枢 App 能否枚举知识库节点、读取文档成员权限和公开权限设置，**没有触发正式导入**。审计发现生产 Knowledge Connector `2026-08-08.2` 存在两个会造成权限放大的 P0 缺陷。本地候选 `2026-08-08.3` 已完成代码和测试修复，但在部署、小范围 Canary 和撤权复测完成前，仍禁止把任何飞书知识空间批量导入 Ontology。
 
 当前知识表保持空索引状态：
 
@@ -36,12 +36,14 @@ knowledge.acl_entries = 0
 
 这不是理论风险：本次 42 个 ACL 读取失败的 Docx/Sheet 中，有 10 个正文仍可被 App 身份读取。若按当前整库同步逻辑运行，这 10 个文档可能在文档权限未知时被索引，属于明确的 fail-open。
 
-### 必须修改
+### Goal 1 修复
 
 - `listPermissionMembers()` 发生任何错误时，立即写入 `acl_status=unknown`、`status=skipped` 和脱敏错误码。
 - 不得调用正文接口，不得计算正文 Hash，不得生成 Chunk，不得写入任何继承 ACL。
 - 空间公开、空间成员已知或正文可读都不能覆盖文档 ACL 读取失败。
 - 增加测试：`document ACL error + inherited space ACL` 必须断言正文读取次数为 0、Chunk 为 0、资源为 skipped。
+
+本地 `2026-08-08.3` 已将 ACL 异常处理提前到任何正文或空间 ACL 调用之前，并把资源替换为 `acl_status=unknown/status=skipped`；同步统计只保留白名单错误码。
 
 ## P0-2：只有文档 ACL 明确包含 `wikispaceid` 才能继承空间权限
 
@@ -51,13 +53,15 @@ knowledge.acl_entries = 0
 
 本次 916 个 ACL 可读文档中，有 58 个没有 `wikispaceid`。按当前算法，这些文档会额外合并 1～2 个可映射的空间成员，形成高风险权限放大候选。
 
-### 必须修改
+### Goal 1 修复
 
 - 先读取文档直接 ACL，并保留是否出现 `subjectType=wiki_space` 的证据。
 - 只有文档 ACL 明确包含对应空间的 `wikispaceid` 时，才调用 `listSpaceMembers()` 并展开空间权限。
 - 没有 `wikispaceid` 时，只保存文档直接 ACL；不能因为节点位于某知识空间就推断权限继承。
 - 公开团队空间也遵循同一规则：只有文档 ACL 明确声明空间继承时，才能映射为 tenant 可读。
 - 增加正反测试：含 `wikispaceid` 正常继承；不含 `wikispaceid` 时空间成员不得进入资源 ACL。
+
+本地 `2026-08-08.3` 已移除整库循环预加载和传入 `inheritedAcl` 的逻辑；空间成员只由文档 ACL 中的 `wiki_space` 条目触发展开。
 
 ## P1 后续缺口
 
@@ -87,6 +91,7 @@ Agent Core 当前 Knowledge SQL 只匹配 `tenant`、`person`、`department`。�
 
 - Knowledge Connector 服务与数据库骨架：已部署。
 - 单个显式资源 `1063004` fail-closed：已验证。
-- 整库 ACL 安全性：未通过。
+- 两个 P0 本地代码与测试：已通过，Connector 14/14、Agent Core 14/14。
+- 公司 QNAP 生产部署与整库 ACL Canary：未通过，生产仍为 `2026-08-08.2`。
 - 产品研究部知识库正式导入：禁止。
-- 下一步：先修复 P0-1、P0-2，再处理 P1 映射和检索主体支持。
+- 下一步：经明确授权部署 `2026-08-08.3`，执行小范围 Canary 和撤权复测；随后处理 P1 映射和检索主体支持。
