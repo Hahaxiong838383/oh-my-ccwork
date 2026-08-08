@@ -17,5 +17,29 @@
   @ready path /readyz
   respond @ready `{"status":"foundation-ready","next":"h-lite-and-agent-core"}` 200
 
+  @agentCore path /ontology/status/agent-core
+  handle @agentCore {
+    rewrite * /readyz
+    reverse_proxy agent-core:8080
+  }
+
+  @hLite path /ontology/status/h-lite
+  handle @hLite {
+    rewrite * /readyz
+    reverse_proxy h-lite:8081
+  }
+
+  @knowledge path /ontology/status/knowledge
+  handle @knowledge {
+    rewrite * /healthz
+    reverse_proxy knowledge-connector:8083
+  }
+
+  @action path /ontology/status/action
+  handle @action {
+    rewrite * /readyz
+    reverse_proxy action-gateway:8082
+  }
+
   respond `{"status":"not-found"}` 404
 }

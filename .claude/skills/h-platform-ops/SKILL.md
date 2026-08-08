@@ -5460,3 +5460,11 @@ node ops/sync-company-directory.mjs
 - 切换不迁移、不重启、不修改员工私人 Bot Consumer；回滚只恢复 Worker 的配置和备份。
 
 知识链路验收补充：ACL 正确与召回正确分开验证。中文自然问句应证明 Evidence 实际命中；无权限 Principal 必须 Evidence 为零，且合成验收数据结束后删除。
+
+## Company Ontology 公网看板运维（2026-08-08）
+
+- 公司 Ontology 看板复用 `ai.kidshub.cn` 的 H 控制面管理员认证，路径为 `/admin/company-ontology`；不得单独新建无认证站点或把 QNAP 端口直接暴露公网。
+- 控制面环境变量 `COMPANY_ONTOLOGY_STATUS_BASE_URL` 只允许指向回环地址。当前标准链路为 aliyun-hk `127.0.0.1:19180`，由 Mini LaunchAgent 维护反向 SSH 到 QNAP `192.168.61.18:19080`。
+- 发布顺序：先更新并验证 QNAP Caddy 固定健康路径，再安装/重启 Mini 隧道并从 aliyun-hk 逐条读回，最后备份和发布 `/srv/h-control/app`、升 `H_VERSION`、重启 `h-control`。
+- 控制面部署后按调试前置检查核对单进程、systemd 环境、Nginx 双侧配置、`18790/19180` 监听和真实服务日志；不要把发布脚本的一次瞬时 curl 失败直接当成服务故障。
+- 真机验收使用管理员 Cookie 走真实公网 HTTPS；除 HTTP/API 断言外，还要检查页面标题、运行状态、控制台错误、横向溢出和绿色/灰色节点。favicon 等无业务影响的 404 也应清零，避免掩盖真实前端错误。

@@ -4,13 +4,13 @@
 
 ## 当前结论
 
-P0-A 至 P0-F、公司 Bot、通讯录、临时 H 引擎和知识 Connector 代码均已上线。当前不是开发阻塞，而是两个人工配置门禁：公司 H 引擎独立 OAuth 登录，以及试点飞书文档给公司 App 的分享权限。
+P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector 和认证后公网运行看板均已上线。当前主要门禁是公司专用 CPA 凭据、试点飞书文档分享权限、10 人真实 Canary 和真实 P2。
 
 ## 需要用户确认或提供
 
-1. 回来后完成一次公司 H 引擎独立 OAuth 登录；配置流程已写入 `docs/h-engine-credential-cutover.md`。
+1. 准备公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
 2. 将公司 App 加为试点文档协作者并授予分享权限读取；当前错误码为 `1063004`。
-3. 一个真实试点部门、唯一 DRI 和一条真实 P2。
+3. 指定一个真实试点部门、唯一 DRI 和一条真实 P2。
 
 ## P0-A 至 P0-F 状态
 
@@ -25,10 +25,11 @@ P0-A 至 P0-F、公司 Bot、通讯录、临时 H 引擎和知识 Connector 代�
 
 1. `P0-PROD-1 公司 Bot`：✅ App 凭据、QNAP H-Lite active、租户 Token、WebSocket 长连接和首名真实员工链路已完成；已读回 `p2p:post`、`p2p:text`、`group:text`，3 次处理全部完成、0 次失败、去重记录 3 条、容器无重启。下一步扩到 10 名真实员工，验证并发会话、群内多人 @ 隔离、回复送达与失败重投。
 2. `P0-PROD-1.5 通讯录身份同步`：✅ 数据范围接口、部门分页、员工主动定位和最小字段同步已完成；4 个授权范围展开为 83 个可见部门和 414 名可见人员，二次同步新增 0、更新 414，敏感属性行数为 0。
-3. `P0-PROD-2 H 引擎`：🟡 临时方案已上线。QNAP Agent Core 通过 HMAC 调用 dev198 Worker，真实 Grok 推理和权限证据入 Prompt 已通过；当前复用既有 H 平台 OAuth 但不复制凭据。待川哥回来切换 `company-dedicated-oauth`。
+3. `P0-PROD-2 H 引擎`：✅ 生产调用已上线。QNAP Agent Core 通过 HMAC 调用 dev198 Worker，Worker 通过个人 CPA API Key 调用 `grok-4.5`，真实推理和权限证据入 Prompt 已通过；下一门禁是公司专用 CPA Key/账号与同厂冗余。
 4. `P0-PROD-3 公司知识 Connector`：🟡 代码、迁移、容器和 ACL fail-closed 已上线。支持 Docx/Sheet/Minutes、公开团队空间发现、人员/部门/空间 ACL 和中文自然问句召回；当前试点文档因 App 缺少分享权限被安全跳过，正文与标题未向无权限员工泄露。
 5. `P0-PROD-4 真实 P2`：指定试点部门、唯一 DRI 和一条真实 P2，完成草案、批准、下发、执行协助、成果提交、退回/验收和状态读回闭环。
 6. `P0-PROD-5 容量观测`：连续采集 24 小时并发、队列等待、H 引擎限流、Outbox backlog、错误率、P95 延迟和 QNAP 资源数据，再决定 20/50 人放量。
+7. `P0-PROD-6 公网管理看板`：✅ `https://ai.kidshub.cn/admin/company-ontology` 已复用 H 控制面管理员认证；Mini 仅向 aliyun-hk 回环地址维护 QNAP 状态通道，页面展示绿色已完成与灰色待完成节点，不暴露 QNAP、凭据、文档正文或员工个人数据。
 
 ## P0-G：ERP 与社媒只读证据接管
 

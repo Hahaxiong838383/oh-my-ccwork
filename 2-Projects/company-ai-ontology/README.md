@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
-- 当前里程碑：`P0-PROD-2/3 Temporary H Engine + Knowledge Connector`。公司 H 引擎临时远程 Runtime 已真实可用；飞书知识 Connector 已部署并执行 fail-closed 同步。
+- 当前里程碑：`P0-PROD-2/3 H Engine + Knowledge Connector + Public Admin Dashboard`。公司 H 引擎已通过 CPA 调用 `grok-4.5`；飞书知识 Connector 已部署并执行 fail-closed 同步；公网看板只在 H 管理员认证后展示脱敏状态。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
 ## 部署边界
@@ -23,6 +23,7 @@
 - `deploy/qnap/config/`：Caddy、Prometheus 配置。
 - `deploy/qnap/scripts/`：远端初始化、验证、备份与恢复演练脚本。
 - `deploy/qnap/images.lock`：生产镜像内容摘要。
+- `deploy/mini/`：Mini → aliyun-hk 的回环反向 SSH 状态通道。
 - `deploy/qnap/ACCEPTANCE.md`：本次生产验收证据和剩余门禁。
 - `docs/lessons-learned-2026-08-08.md`：公司 Bot、通讯录同步、权限和 QNAP 部署的经验教训。
 - `docs/h-engine-credential-cutover.md`：从临时 H 平台 OAuth 切换到公司独立凭据的正式流程。
@@ -34,14 +35,14 @@
 - 不迁移、不切换任何员工私人 Bot 的飞书 App 或事件订阅。
 - 公司级飞书 App/Bot 已接入，H-Lite 当前为 `active` 且真实飞书长连接健康；已验收 `p2p:post`、`p2p:text`、`group:text` 三类真实消息，3 次处理全部完成、0 次失败，SQLite 去重记录为 3 条，容器 `restart_count=0`。
 - 飞书通讯录数据范围已生效：4 个授权范围、83 个可见部门、414 名可见人员已只读同步到 Ontology Principal；重复同步结果为新增 0、更新 414，未写入邮箱、手机号或聊天内容。
-- Agent Core `2026-08-08.3` 当前通过 HMAC 调用 dev198 临时 H Worker，真实推理 `productionReady=true`；凭据模式为 `existing-h-platform-oauth`，正式独立凭据切换仍待川哥回来完成交互式登录。
+- Agent Core `2026-08-08.4` 当前通过 HMAC 调用 dev198 H Worker，真实推理 `productionReady=true`；Worker 经个人 CPA API Key 调用 `grok-4.5`，后续仍需切换公司专用 CPA Key/账号与同厂冗余。
 - Knowledge Connector `2026-08-08.2` 已上线；当前显式试点文档因公司 App 缺少文档分享权限返回 `1063004`，系统已按设计拒绝读取正文，未产生知识块。
 - 本阶段不开放数据库端口到员工网段。
 - 24 小时容量数据、真实公司 Bot 和真实 P2 未完成前，不进入 50 人正式首批。
 
 ## 下一阶段
 
-1. 川哥回来后完成公司 H 引擎独立 OAuth 登录，并按 `docs/h-engine-credential-cutover.md` 切换和验收。
+1. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
 2. 在飞书把公司 App 加为试点文档协作者并开放分享权限读取，再触发同步和真实 ACL 正负测试。
 3. 扩到 10 名真实员工，验证并发会话、群内多人 @ 隔离、失败重投和回复送达。
 4. 指定试点部门、唯一 DRI 和一条真实 P2；运行 24 小时容量观测后再决定 20/50 人放量。

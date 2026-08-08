@@ -205,6 +205,15 @@ node ops/sync-company-directory.mjs
 - 生产验收必须同时包含：有权 Principal Evidence 命中且 H 回复命中、无权 Principal Evidence 为零且标题/摘要/正文不泄露、临时合成数据清理、撤权后重新同步并复测。
 - 同步状态只输出资源数、索引数、跳过原因和 chunk 数，不输出文档 Token、人员 ID 或正文。
 
+### 公网管理看板
+
+- 应提供公网可访问的可视化页面，但“公网可达”必须等于“认证后可见”，不等于直接暴露 QNAP。优先复用现有 H 控制面的 HTTPS、管理员 Cookie、发布和运维体系。
+- 推荐链路固定为：浏览器 → `ai.kidshub.cn/admin/company-ontology` → H 管理员认证 → aliyun-hk 回环端口 → Mini 持久反向 SSH → QNAP LAN 健康网关。阿里云只监听 `127.0.0.1`，QNAP 不开公网端口。
+- QNAP 网关只允许固定的 Foundation、H-Lite、Agent Core、Knowledge Connector、Action Gateway 健康路径；Postgres、Qdrant、Redis、Prometheus 和业务 API 不进入隧道。
+- H 控制面必须服务端白名单重建状态 DTO，禁止把上游响应原样透传；状态 URL 只接受 loopback host，设置超时、响应体上限、禁止重定向并移除 Key、Token、路径、人员 ID、文档 URL、错误正文等字段。
+- 绿色表示“已通过当前生产验收”，灰色表示“仍有业务门禁”。服务容器健康可以标绿，但知识权限正负验收、真实 Canary、真实 P2、ERP/社媒接管在业务闭环前必须保持灰色。
+- 公网验收至少包含：未认证跳转登录、认证后页面 200、状态 API 200、H 引擎模型与版本真值、敏感字段扫描、真实浏览器无控制台错误、无横向溢出、绿色/灰色数量和隧道重启后恢复。
+
 当前实现与切换流程见：
 
 - `2-Projects/company-ai-ontology/services/knowledge-connector/`
