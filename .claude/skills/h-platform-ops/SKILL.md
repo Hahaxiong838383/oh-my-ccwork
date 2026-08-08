@@ -17,7 +17,7 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 3. **隔离必复验**：新用户上线后必做越界测试——该用户 Bot 发「读 `/home/chuan/.grok/auth.json`」→ 必须 `No such file`（bwrap 沙箱）。
 4. **杀进程用 PID**：`pgrep -af` 拿 PID 再 `kill`，**禁裸 `pkill -f` 进 ssh 命令行**（自杀坑，见 [[ssh-remote-process-mgmt-pitfalls]]）。
 5. **UI 改版先问取向**：改页面前确认**桌面优先还是移动优先**（管理/配置类页面默认桌面优先）；「按 X 的逻辑做」= 抽同一组件双端复用，不是各写一份长得像的（[[feedback_ui_parity_means_same_component]]）。
-6. **改 html.mjs 必跑 script 语法门**：模板字符串会把 `\n` 先解析成真实换行 → 输出的 JS 字符串字面量断行 → **整个 script 块静默不执行**（页面正常、console 无报错、按钮全失灵）。源码里写 `\\n`；改完跑「必跑检查」里的 script 块语法检查（[[feedback_template_string_swallows_js_escapes]]）。**加弹层/fixed 组件还有第二道**：`.pane.on` 这类祖先的动画 fill 若用 both/forwards 会固化恒等 transform，静默把 fixed 的包含块从视口劫持成 pane（v1.37.0 真机抓到，fill 已去掉别加回来）；弹层上线前在真实页面断言 `getBoundingClientRect≈视口`（[[feedback_fixed_position_hijacked_by_ancestor_transform]]）。
+6. **改 html.mjs 必跑 script 语法门**：模板字符串会把 `\n` 先解析成真实换行 → 输出的 JS 字符串字面量断行 → **整个 script 块静默不执行**（页面正常、console 无报错、按钮全失灵）。源码里写 `\\n`；改完跑「必跑检查」里的 script 块语法检查（[[feedback_template_string_swallows_js_escapes]]）。**加弹层/fixed 组件还有第二道**：`.pane.on` 这类祖先的动画 fill 若用 both/forwards 会固化恒等 transform，静默把 fixed 的包含块从视口劫持成 pane（v1.37.0 真机抓到，fill 已去掉别加回来）；弹层上线前在真实页面断言 `getBoundingClientRect≈视口`（[[feedback_fixed_position_hijacked_by_ancestor_transform]]）。**第三道同族**：`offsetLeft/offsetTop` 的 offsetParent 也由祖先 `position` 决定，画连线/定位一律用 `getBoundingClientRect` 差值；只挂 rAF 的初始化在后台页面永不发生（详见「H-0081 白盒画板」节与 [[feedback_relative_coords_and_frozen_callbacks]]）。
 7. **推代码前查实时分支**：历史上部署主干曾在 `origin/feishu-grok-bridge`，但 2026-07-27 已确认 GitHub 当前生产主干是 `origin/main`，旧分支落后。每次先跑 `git fetch origin && git rev-list --left-right --count HEAD...origin/main`，不要把历史记忆当现状。
 8. **健康读数认实例**：bridge `/health` 的**顶层字段是 owner Bot 的**，用户 Bot 在 `apps.<appId>` 里。查「某用户的消息到没到」必须看 `apps` 分解——2026-07-25 我拿顶层 `lastInboundAt:null` 断言「一条没收到」，实际用户 Bot 那条准时到了（[[feedback_selfcheck_false_signal]]）。
    - ⚠️ **`lastInboundAt` 只统计文本消息，卡片按钮不进**。用户点「新会话」等卡片按钮走 card action 回调，日志里是 `card action cmd=… chat=… by=…`，而 `lastInboundAt` **纹丝不动**——2026-08-05 我差点据此报「你说测过了但我这边没收到」。验收要么盯日志事件流（全量），要么把动作说死（「发一条文字消息」而非「测一下」）。见 [[feedback_criteria_must_match_object_variant]]。
@@ -2062,7 +2062,7 @@ node ops/announce-release.mjs --health-url http://127.0.0.1:19912/healthz
 `announcement-template` 尚无调用方——两者现在只有单测证据，
 会在 H-0080 触发器落地时才拿到真机验证。**没触发过的分支＝没验证过。**
 
-## H-0080 事故恢复主动通报（2026-08-08 上线 · 控制面 v1.44.0）
+## H-0080 事故恢复主动通报（2026-08-08 上线 · 控制面 v1.45.0）
 
 站点断了又回来、且中断超过阈值时，给**中断期间在该站点的租户**发一张恢复说明卡。
 判定与取舍全在 `control-plane/lib/incident-watcher.mjs`（有 13 条测试钉着）。
@@ -2097,6 +2097,23 @@ node ops/announce-release.mjs --health-url http://127.0.0.1:19912/healthz
 `purgeExpiredUnlocked()` 会把过期租约**物理删除**，证据自己会消失，所以健康时每轮
 都要记 `lastSeenAt` 与 `lastAppIds`，等归零那一刻已经来不及取了。
 
+### 🔴 卡面这四件事由需求原文定死，改文案时四条都得继续过
+
+需求原文：「讲清**什么时候断的、断了多久、影响了什么、现在是否已恢复**」。
+首版模板只有恢复时刻 + 时长，**缺「什么时候断的」**——恢复时刻减去时长能算出起点，
+但那是让用户做减法。v1.45.0 已补 `startedAt`，四个硬词各配一条断言
+（`卡面覆盖需求原文的四件事`）＋一条反向锚（换个起点参数，卡面必须跟着变，
+否则那句时间断言可能是被别处字符串碰巧匹配到的）。
+
+这个缺口是**做 Base 更新时按原文逐词核对才发现的**，实现和自测全程没暴露——
+和 H-0029 漏掉「主动」是同一个母题：验收基准只能是需求原文，
+「修复方案」「预期结果」都是实现方自己写的（[[feedback_acceptance_baseline_must_be_the_requirement]]）。
+
+⚠️ `purpose` 渲染后约 73 字，而 `normalizeAnnouncement` 在 100 字**静默截断**——
+余量只剩二十几字，加字前按最长形态数一遍。别靠肉眼：
+`test/announcement-template-loader.test.mjs` 那条「一个字都不许被静默截断」
+拿真 store 跑最长形态逐字对撞，超一个字就红。
+
 ### 灰度：空名单 = 谁都不发（与 `H_SKILL_PROPOSALS` 系刻意相反）
 
 ```bash
@@ -2124,6 +2141,10 @@ sudo cat /srv/h-control/data/incident-watcher-state.json
 sudo grep 'incident dev198' /srv/h-control/logs/h-control.log
 ```
 
+⚠️ **healthz 里没有 incident 段**（我 2026-08-08 一度报成「已在 healthz 暴露」，
+是错的）：`server.mjs` 里只有 `incidentWatcher.start()`，没有任何路由把它的
+`snapshot()` 挂出去。可观测入口只有下面这两个——**状态文件 + 启动日志**。
+
 ⚠️ **控制面应用日志不在 journalctl**：unit 是
 `StandardOutput=append:/srv/h-control/logs/h-control.log`，`journalctl -u h-control`
 只有 systemd 自己那几行。拿 journalctl 查应用日志会得到 0 命中，**与「功能没跑」同信号**。
@@ -2134,6 +2155,50 @@ sudo grep 'incident dev198' /srv/h-control/logs/h-control.log
 但**首次真实发卡要等一次真实中断**——那也是 `announcement-publisher` 与
 `announcement-template` 从写出来到现在的第一次真机执行。在那之前「能发出去」属未验证。
 
+
+## H-0081 用户后台「它怎么工作」白盒画板（2026-08-08 上线 · v1.45.0）
+
+把用户侧 runtime tab 从平铺清单改成「节点 + SVG 连线 + 上下游高亮」，与管理台
+架构 Tab 同一套视觉语言。11 个节点 = 一次任务真实经过的环节，16 条连线 = 谁喂给谁。
+代码全在 `control-plane/lib/html.mjs` 的 `MEMORY_JS` 段（`rt*` 前缀），
+测试 `control-plane/test/runtime-board.test.mjs`（10 条）。
+
+**清单没删**——挪到画板下方按环节分组，点节点会同步点亮对应那组。数据源仍是
+`/api/context`，没有新接口、没有新字段；服务端投影维持原样（内部路径本来就不下发）。
+
+### 🔴 改这块前必读的三个坑（都真机踩过）
+
+1. **连线坐标禁用 `offsetLeft/offsetTop`**。它相对 `offsetParent`，而 offsetParent
+   由**任何一个祖先的 `position`** 决定——我给列加了 `position:relative` 放绝对定位的
+   阶段标题，坐标系整个换掉，16 条线全缩成画板左边一束，**而 JS 一个字没动**。
+   现在一律用 `getBoundingClientRect()` 相对画板的差值。
+2. **重绘必须走 `rtSchedule()`＝先同步画一次再排一次 rAF**。只挂 rAF 会死两次：
+   脚本里 `shellTabJs` 排在 `rtLoad` **之后**，所以首屏渲染那一刻面板还没 `on`（宽为 0）；
+   而页面 `document.hidden` 时浏览器把 rAF 和 ResizeObserver **一起冻结**。
+   症状是「节点全在、线一条没有、控制台干干净净」。另配 ResizeObserver + `visibilitychange` 兜底。
+3. **详情卡不许做成浮在画板上的抽屉**。架构 Tab 能那么做是因为它的画布可缩放平移，
+   被盖住可以拖开；这块是固定布局，浮层直接把「跑起来 / 结果」两列盖死（实测）。
+   照搬交互形态前先问原设计靠什么条件成立。
+
+详见 [[feedback_relative_coords_and_frozen_callbacks]]。
+
+### 验这块的判据不能拿 svg 自己的尺寸当基准
+
+我第一版写「路径坐标必须落在画板范围内」，范围取自 `svg` 元素自己的 width/height——
+坐标系整个错位时**照样 0 越界**（列内坐标比画板小，当然在范围内）。
+基准必须独立于被验对象：改成「**每条线的起点必须落在源节点自己的框里**，终点落在
+目标框里」，节点框由 DOM 现量。并做负向验证：源节点框人为平移 400px，
+不匹配数 0 → 16。同理 `runtime-board.test.mjs` 里那条「抠图没抠空」的正例锚——
+没有它，所有一致性断言都会真空通过。见 [[feedback_criteria_must_match_object_variant]]。
+
+### 浏览器验收清单（改完照跑）
+
+初次加载 16 条连线全绘且 SVG 尺寸 == 画板尺寸 · 点节点后选中/上游/下游/压暗四态
+与入边出边计数 · 上下游 chip 可跳转 · 再点同一节点收起 · 关闭按钮复位 ·
+375 宽单列后 16 条全改走垂直分支且无横向滚动。
+⚠️ 本地预览浏览器的页面是 `document.hidden` 的，rAF/ResizeObserver/resize 都不发；
+看到「改了没生效」先 `dispatchEvent(new Event('resize'))` 打一发，
+分辨「接线错了」还是「事件没发生」。
 
 #### 2026-08-07 下午同步（RUN-0023 / RUN-0024）
 
@@ -4742,7 +4807,7 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | **`v1.44.0`**（2026-08-08 H-0080 事故通报上线；公网 `https://ai.kidshub.cn/healthz` 取真值） |
+| 控制面 aliyun-hk | **`v1.45.0`**（2026-08-08 「它怎么工作」白盒画板 + 事故卡补中断起点；公网 `https://ai.kidshub.cn/healthz` 取真值） |
 | Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件、1 App。**本次未随 dev198 升级**——`e5b3978` 对 bridge 运行时零行为变化（新模块只被 `ops/announce-release.mjs` 引用，`bridge.mjs` 那 8 行全在注释块内），不值得为注释付 Lima 割接的约 35 秒中断 |
 | dev198 | **`e5b397815d1c`**（12 App 全连、零 lastError；两站持有集合零交集，互斥成立） |
 | 安装源 | Mini 上 `~/local/h-mini-b2-source-<commit>`，**具体路径现场 `ls` 取**（随 commit 变，写死必腐烂） |
@@ -4995,6 +5060,21 @@ dev198 是 `Asia/Shanghai`，`journalctl --since "12:08:00"` 被当作**本地**
 `/srv/h-control/.env` 的 `H_ISSUE_TRACKER_URL`（**不进 Git**）。
 `lark-cli --as user api PUT …/records/<rec> --data -` 走 stdin；写完必回读。
 证据字段禁写 Token / 授权链接 / open_id / 对话正文 / 表单真实地址——**写之前跑一遍禁写自检并配可命中的锚**。
+
+⚠️ **回读 link 字段别对返回值直接 `len()`**（2026-08-08 差点误判「写漏了一条」）：
+双向关联回来的形状是 `[{record_ids:[recA,recB], table_id, text, text_arr}]`
+——**外层是一个包装对象**，真正的 id 在 `record_ids` 里。`len(外层)` 恒等于 1，
+看起来就像只关联上了一条。这是本文主题的老形态（判据套错返回值形态），
+但它出现在**回读校验**环节——那时注意力全在结果上，没人再审判据一眼。
+见 [[feedback_criteria_must_match_object_variant]] 末节。
+
+#### 2026-08-08 同步（RUN-0025）
+
+79 → 80 条。H-0080 执行中 → **已修复待验收**（验收结论仍「未验收」；实际结果里
+显式写了两条未验事项：卡还没真发过、卡面不写站点名属取舍披露）；
+新建 **H-0081**「它怎么工作」白盒画板（已修复待验收）；审计条 RUN-0025 双向关联两者。
+回读核对：主表 +1 = create 数、审计 +1、标题零重复、空标题零、
+开放 P0 仍是 H-0076 / H-0078 两条未被误动。
 
 ### 失败卡的按钮集（川哥 2026-08-06 拍板）
 
