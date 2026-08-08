@@ -2149,14 +2149,21 @@ sudo grep 'incident dev198' /srv/h-control/logs/h-control.log
 `StandardOutput=append:/srv/h-control/logs/h-control.log`，`journalctl -u h-control`
 只有 systemd 自己那几行。拿 journalctl 查应用日志会得到 0 命中，**与「功能没跑」同信号**。
 
-### 状态：卡还没真发过
+### 状态：卡还没真发过 —— 验收方式川哥已定（2026-08-08）
 
 判定链在跑（状态文件与租约表交叉对上：dev198 healthy 11 App / mini healthy 1 App），
 但**首次真实发卡要等一次真实中断**——那也是 `announcement-publisher` 与
 `announcement-template` 从写出来到现在的第一次真机执行。在那之前「能发出去」属未验证。
 
+**川哥定的验收链**：平台发卡 → 他看到 → 他通知 cc → cc 更新 Base 验收。
+**在等的具体信号**：`/srv/h-control/logs/h-control.log` 出现 `incident <站点> 已发布`。
+**届时按什么验**：对照需求原文四件事（何时断 / 断多久 / 影响什么 / 是否已恢复）逐条核。
+Base 里 H-0080 会一直停在「已修复待验收」，这三条已写进它的「实际结果」——
+挂起态条目不写清「等什么信号 / 谁通知谁 / 什么算过」就会静默腐烂
+（[[feedback_verification_handoff_at_the_last_inch]]）。
 
-## H-0081 用户后台「它怎么工作」白盒画板（2026-08-08 上线 · v1.45.0）
+
+## H-0081 用户后台「它怎么工作」白盒画板（2026-08-08 上线 · v1.45.0 · 川哥已验收通过）
 
 把用户侧 runtime tab 从平铺清单改成「节点 + SVG 连线 + 上下游高亮」，与管理台
 架构 Tab 同一套视觉语言。11 个节点 = 一次任务真实经过的环节，16 条连线 = 谁喂给谁。
