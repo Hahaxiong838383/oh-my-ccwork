@@ -111,6 +111,16 @@ enum UsageFormatting {
         )
     }
 
+    static func compactUSD(_ value: Double?) -> String {
+        guard let value else { return "--" }
+        return "$" + value.formatted(.number.precision(.fractionLength(2)))
+    }
+
+    static func usdOrUnlimited(_ remaining: Double?, limit: Double) -> String {
+        guard limit > 0 else { return "不限额" }
+        return usd(remaining)
+    }
+
     static func timestamp(_ value: String?) -> String {
         guard let value, let date = ISO8601DateFormatter().date(from: value) else { return "--" }
         return date.formatted(date: .omitted, time: .shortened)

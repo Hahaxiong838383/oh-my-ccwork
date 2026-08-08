@@ -242,6 +242,82 @@ func TestSummaryIncludesSanitizedXAIUsage(t *testing.T) {
 	}
 }
 
+func TestSummaryCalculatesAPIKeyRemainingBudget(t *testing.T) {
+	server := newTestServer(t, t.TempDir())
+	server.cfg.CLIProxyURL = "http://cliproxy.test"
+	server.cfg.CLIProxyManagementKey = "management-secret"
+	server.client = &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		if request.Header.Get("Authorization") != "Bearer management-secret" {
+			t.Fatal("key policy request missing management authorization")
+		}
+		switch request.URL.Path {
+		case "/v0/management/plugins/cpa-key-policy/keys":
+			return jsonResponse(http.StatusOK, `{
+				"keys":[{
+					"id":"temporary-key",
+					"name":"Temporary USD 20",
+					"enabled":true,
+					"rpm":30,
+					"daily_limit_usd":20,
+					"weekly_limit_usd":10,
+					"key_hash":"must-not-leak",
+					"key_preview":"must-not-leak",
+					"models":[{"alias":"gpt-5.6-sol"},{"alias":"gpt-5.6-luna"}]
+				}]
+			}`), nil
+		case "/v0/management/plugins/cpa-key-policy/keys/usage":
+			if request.URL.Query().Get("id") != "temporary-key" {
+				t.Fatalf("unexpected key id: %s", request.URL.Query().Get("id"))
+			}
+			return jsonResponse(http.StatusOK, `{
+				"aliases":[
+					{"daily":{"total_usd":2},"weekly":{"total_usd":4}},
+					{"daily":{"total_usd":1},"weekly":{"total_usd":2}}
+				]
+			}`), nil
+		default:
+			t.Fatalf("unexpected request: %s", request.URL)
+			return nil, nil
+		}
+	})}
+
+	request := httptest.NewRequest(http.MethodGet, "/desktop/v1/summary", nil)
+	request.Header.Set("Authorization", "Bearer "+testDesktopToken)
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("summary returned %d: %s", response.Code, response.Body.String())
+	}
+	var summary Summary
+	if err := json.Unmarshal(response.Body.Bytes(), &summary); err != nil {
+		t.Fatal(err)
+	}
+	if len(summary.APIKeyBudgets) != 1 {
+		t.Fatalf("API key budgets = %+v", summary.APIKeyBudgets)
+	}
+	budget := summary.APIKeyBudgets[0]
+	if budget.DailyRemainingUSD == nil || *budget.DailyRemainingUSD != 17 {
+		t.Fatalf("daily remaining = %#v", budget.DailyRemainingUSD)
+	}
+	if budget.WeeklyRemainingUSD == nil || *budget.WeeklyRemainingUSD != 4 {
+		t.Fatalf("weekly remaining = %#v", budget.WeeklyRemainingUSD)
+	}
+	if budget.EffectiveRemainingUSD == nil || *budget.EffectiveRemainingUSD != 4 {
+		t.Fatalf("effective remaining = %#v", budget.EffectiveRemainingUSD)
+	}
+	if budget.EffectiveRemainingPercent == nil || *budget.EffectiveRemainingPercent != 40 {
+		t.Fatalf("effective remaining percent = %#v", budget.EffectiveRemainingPercent)
+	}
+	if budget.ModelCount != 2 || budget.UsageStatus != "ok" || summary.APIKeyBudgetStatus != "ok" {
+		t.Fatalf("unexpected budget status: summary=%q budget=%+v", summary.APIKeyBudgetStatus, budget)
+	}
+	for _, forbidden := range []string{"management-secret", "must-not-leak"} {
+		if strings.Contains(response.Body.String(), forbidden) {
+			t.Fatalf("summary leaked %q: %s", forbidden, response.Body.String())
+		}
+	}
+}
+
 func TestOAuthSessionRejectsExpiredState(t *testing.T) {
 	server := newTestServer(t, t.TempDir())
 	server.sessions["expired"] = &oauthSession{

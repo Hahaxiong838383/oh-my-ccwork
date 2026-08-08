@@ -66,6 +66,10 @@ func (s *Server) handleSummary(w http.ResponseWriter, r *http.Request) {
 		summary.CodexUsage = &usage
 	}
 	summary.CodexUsageStatus, summary.CodexUsageError = s.usageCollector.publicStatus()
+	summary.APIKeyBudgets, summary.APIKeyBudgetStatus, err = s.fetchAPIKeyBudgets(r.Context())
+	if err != nil {
+		summary.APIKeyBudgetError = publicAPIKeyBudgetError(err)
+	}
 	for _, file := range files {
 		switch file.Provider {
 		case "codex":

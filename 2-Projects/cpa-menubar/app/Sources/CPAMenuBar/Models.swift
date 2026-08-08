@@ -12,6 +12,9 @@ struct Summary: Decodable {
     let codexUsage: RuntimeUsage?
     let codexUsageStatus: String?
     let codexUsageError: String?
+    let apiKeyBudgets: [APIKeyBudget]?
+    let apiKeyBudgetStatus: String?
+    let apiKeyBudgetError: String?
     let xaiUsage: XAIUsage?
     let xaiUsageStatus: String?
     let xaiUsageError: String?
@@ -28,9 +31,45 @@ struct Summary: Decodable {
         case codexUsage = "codex_usage"
         case codexUsageStatus = "codex_usage_status"
         case codexUsageError = "codex_usage_error"
+        case apiKeyBudgets = "api_key_budgets"
+        case apiKeyBudgetStatus = "api_key_budget_status"
+        case apiKeyBudgetError = "api_key_budget_error"
         case xaiUsage = "xai_usage"
         case xaiUsageStatus = "xai_usage_status"
         case xaiUsageError = "xai_usage_error"
+    }
+}
+
+struct APIKeyBudget: Decodable, Equatable, Identifiable {
+    let id: String
+    let name: String
+    let enabled: Bool
+    let rpm: Int
+    let modelCount: Int
+    let dailyLimitUSD: Double
+    let weeklyLimitUSD: Double
+    let dailySpendUSD: Double?
+    let weeklySpendUSD: Double?
+    let dailyRemainingUSD: Double?
+    let weeklyRemainingUSD: Double?
+    let effectiveRemainingUSD: Double?
+    let effectiveRemainingPercent: Double?
+    let usageStatus: String
+    let usageError: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, enabled, rpm
+        case modelCount = "model_count"
+        case dailyLimitUSD = "daily_limit_usd"
+        case weeklyLimitUSD = "weekly_limit_usd"
+        case dailySpendUSD = "daily_spend_usd"
+        case weeklySpendUSD = "weekly_spend_usd"
+        case dailyRemainingUSD = "daily_remaining_usd"
+        case weeklyRemainingUSD = "weekly_remaining_usd"
+        case effectiveRemainingUSD = "effective_remaining_usd"
+        case effectiveRemainingPercent = "effective_remaining_percent"
+        case usageStatus = "usage_status"
+        case usageError = "usage_error"
     }
 }
 

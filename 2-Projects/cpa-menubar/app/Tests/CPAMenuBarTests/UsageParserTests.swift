@@ -79,6 +79,18 @@ final class UsageParserTests: XCTestCase {
         XCTAssertEqual(UsageFormatting.milliseconds(1_250), "1.25秒")
     }
 
+    func testDecodesAPIKeyRemainingBudget() throws {
+        let budget = try JSONDecoder().decode(
+            APIKeyBudget.self,
+            from: Data(#"{"id":"temporary-key","name":"Temporary USD 20","enabled":true,"rpm":30,"model_count":4,"daily_limit_usd":20,"weekly_limit_usd":20,"daily_spend_usd":0.25,"weekly_spend_usd":1.5,"daily_remaining_usd":19.75,"weekly_remaining_usd":18.5,"effective_remaining_usd":18.5,"effective_remaining_percent":92.5,"usage_status":"ok"}"#.utf8)
+        )
+        XCTAssertEqual(budget.effectiveRemainingUSD, 18.5)
+        XCTAssertEqual(budget.effectiveRemainingPercent, 92.5)
+        XCTAssertEqual(budget.modelCount, 4)
+        XCTAssertEqual(UsageFormatting.compactUSD(budget.effectiveRemainingUSD), "$18.50")
+        XCTAssertEqual(UsageFormatting.usdOrUnlimited(nil, limit: 0), "不限额")
+    }
+
     private func decode(_ json: String) throws -> UsagePayload {
         try JSONDecoder().decode(UsagePayload.self, from: Data(json.utf8))
     }

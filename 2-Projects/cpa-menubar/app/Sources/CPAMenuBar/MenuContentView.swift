@@ -145,11 +145,69 @@ struct MenuContentView: View {
                 serviceStatus
                 overviewMetrics
                 codexRuntimeOverview
+                apiKeyBudgetOverview
                 quotaOverview
                 xaiOverview
                 errorBanner
             }
             .padding(16)
+        }
+    }
+
+    @ViewBuilder
+    private var apiKeyBudgetOverview: some View {
+        if let summary = model.summary, !model.activeAPIKeyBudgets.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("API Key 剩余额度", systemImage: "key.horizontal.fill")
+                        .font(.subheadline.bold())
+                    Spacer()
+                    Text("日 / 周限制取较小值")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                ForEach(model.activeAPIKeyBudgets) { budget in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(budget.name.isEmpty ? budget.id : budget.name)
+                                    .font(.caption.bold())
+                                    .lineLimit(1)
+                                Text("RPM \(budget.rpm) · \(budget.modelCount) 个模型")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(budget.usageStatus == "ok" ? UsageFormatting.usd(budget.effectiveRemainingUSD) : "--")
+                                .font(.title3.monospacedDigit().bold())
+                                .foregroundStyle(quotaColor(budget.effectiveRemainingPercent))
+                        }
+
+                        ProgressView(value: budget.effectiveRemainingPercent ?? 0, total: 100)
+                            .tint(quotaColor(budget.effectiveRemainingPercent))
+
+                        if budget.usageStatus == "ok" {
+                            Text("日剩余 \(UsageFormatting.usdOrUnlimited(budget.dailyRemainingUSD, limit: budget.dailyLimitUSD)) · 周剩余 \(UsageFormatting.usdOrUnlimited(budget.weeklyRemainingUSD, limit: budget.weeklyLimitUSD))")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text(budget.usageError ?? summary.apiKeyBudgetError ?? "额度暂时无法计算")
+                                .font(.caption2)
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                    if budget.id != model.activeAPIKeyBudgets.last?.id {
+                        Divider()
+                    }
+                }
+            }
+            .cardStyle(tint: Color.green.opacity(0.08))
+        } else if model.summary?.apiKeyBudgetStatus == "error" {
+            Label(model.summary?.apiKeyBudgetError ?? "API Key 额度暂时不可用", systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .cardStyle(tint: Color.orange.opacity(0.08))
         }
     }
 
@@ -236,7 +294,7 @@ struct MenuContentView: View {
             let usage = account.usageSnapshot
             VStack(alignment: .leading, spacing: 9) {
                 HStack {
-                    Label("最低周额度", systemImage: "gauge.with.dots.needle.67percent")
+                    Label("OAuth 最低周额度", systemImage: "gauge.with.dots.needle.67percent")
                         .font(.subheadline.bold())
                     Spacer()
                     Button("查看账号") { selectedTab = .accounts }

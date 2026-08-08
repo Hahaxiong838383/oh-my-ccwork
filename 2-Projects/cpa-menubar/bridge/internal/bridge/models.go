@@ -23,20 +23,41 @@ type Account struct {
 }
 
 type Summary struct {
-	GeneratedAt      time.Time       `json:"generated_at"`
-	AccountsTotal    int             `json:"accounts_total"`
-	CodexAccounts    int             `json:"codex_accounts"`
-	XAIAccounts      int             `json:"xai_accounts"`
-	K12Accounts      int             `json:"k12_accounts"`
-	Refreshable      int             `json:"refreshable_accounts"`
-	Expired          int             `json:"expired_accounts"`
-	Services         map[string]bool `json:"services"`
-	CodexUsage       *RuntimeUsage   `json:"codex_usage,omitempty"`
-	CodexUsageStatus string          `json:"codex_usage_status"`
-	CodexUsageError  string          `json:"codex_usage_error,omitempty"`
-	XAIUsage         *XAIUsage       `json:"xai_usage,omitempty"`
-	XAIUsageStatus   string          `json:"xai_usage_status"`
-	XAIUsageError    string          `json:"xai_usage_error,omitempty"`
+	GeneratedAt        time.Time       `json:"generated_at"`
+	AccountsTotal      int             `json:"accounts_total"`
+	CodexAccounts      int             `json:"codex_accounts"`
+	XAIAccounts        int             `json:"xai_accounts"`
+	K12Accounts        int             `json:"k12_accounts"`
+	Refreshable        int             `json:"refreshable_accounts"`
+	Expired            int             `json:"expired_accounts"`
+	Services           map[string]bool `json:"services"`
+	CodexUsage         *RuntimeUsage   `json:"codex_usage,omitempty"`
+	CodexUsageStatus   string          `json:"codex_usage_status"`
+	CodexUsageError    string          `json:"codex_usage_error,omitempty"`
+	APIKeyBudgets      []APIKeyBudget  `json:"api_key_budgets,omitempty"`
+	APIKeyBudgetStatus string          `json:"api_key_budget_status"`
+	APIKeyBudgetError  string          `json:"api_key_budget_error,omitempty"`
+	XAIUsage           *XAIUsage       `json:"xai_usage,omitempty"`
+	XAIUsageStatus     string          `json:"xai_usage_status"`
+	XAIUsageError      string          `json:"xai_usage_error,omitempty"`
+}
+
+type APIKeyBudget struct {
+	ID                        string   `json:"id"`
+	Name                      string   `json:"name"`
+	Enabled                   bool     `json:"enabled"`
+	RPM                       int      `json:"rpm"`
+	ModelCount                int      `json:"model_count"`
+	DailyLimitUSD             float64  `json:"daily_limit_usd"`
+	WeeklyLimitUSD            float64  `json:"weekly_limit_usd"`
+	DailySpendUSD             *float64 `json:"daily_spend_usd,omitempty"`
+	WeeklySpendUSD            *float64 `json:"weekly_spend_usd,omitempty"`
+	DailyRemainingUSD         *float64 `json:"daily_remaining_usd,omitempty"`
+	WeeklyRemainingUSD        *float64 `json:"weekly_remaining_usd,omitempty"`
+	EffectiveRemainingUSD     *float64 `json:"effective_remaining_usd,omitempty"`
+	EffectiveRemainingPercent *float64 `json:"effective_remaining_percent,omitempty"`
+	UsageStatus               string   `json:"usage_status"`
+	UsageError                string   `json:"usage_error,omitempty"`
 }
 
 type RuntimeUsage struct {

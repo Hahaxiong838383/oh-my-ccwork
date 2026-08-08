@@ -51,8 +51,35 @@ final class AppModel: ObservableObject {
         accounts.compactMap { $0.usageSnapshot.weeklyRemainingPercent }.min()
     }
 
+    var activeAPIKeyBudgets: [APIKeyBudget] {
+        summary?.apiKeyBudgets?.filter(\.enabled) ?? []
+    }
+
+    var primaryAPIKeyBudget: APIKeyBudget? {
+        activeAPIKeyBudgets.min { left, right in
+            switch (left.effectiveRemainingPercent, right.effectiveRemainingPercent) {
+            case let (leftValue?, rightValue?):
+                if leftValue != rightValue { return leftValue < rightValue }
+                return (left.effectiveRemainingUSD ?? .greatestFiniteMagnitude) < (right.effectiveRemainingUSD ?? .greatestFiniteMagnitude)
+            case (_?, nil):
+                return true
+            case (nil, _?):
+                return false
+            case (nil, nil):
+                return left.name < right.name
+            }
+        }
+    }
+
+    var displayedRemainingPercent: Double? {
+        primaryAPIKeyBudget?.effectiveRemainingPercent ?? minimumRemaining
+    }
+
     var menuLabel: String {
         guard isConfigured else { return "设置" }
+        if let budget = primaryAPIKeyBudget, budget.usageStatus == "ok" {
+            return UsageFormatting.compactUSD(budget.effectiveRemainingUSD)
+        }
         guard let minimumRemaining else { return accounts.isEmpty ? "--" : "在线" }
         return UsageFormatting.percent(minimumRemaining)
     }
@@ -60,9 +87,9 @@ final class AppModel: ObservableObject {
     var statusSymbol: String {
         if !isConfigured { return "gauge.with.dots.needle.0percent" }
         if errorMessage != nil { return "exclamationmark.triangle.fill" }
-        guard let minimumRemaining else { return "gauge.with.dots.needle.50percent" }
-        if minimumRemaining <= 10 { return "gauge.with.dots.needle.100percent" }
-        if minimumRemaining <= 35 { return "gauge.with.dots.needle.67percent" }
+        guard let displayedRemainingPercent else { return "gauge.with.dots.needle.50percent" }
+        if displayedRemainingPercent <= 10 { return "gauge.with.dots.needle.100percent" }
+        if displayedRemainingPercent <= 35 { return "gauge.with.dots.needle.67percent" }
         return "gauge.with.dots.needle.33percent"
     }
 
