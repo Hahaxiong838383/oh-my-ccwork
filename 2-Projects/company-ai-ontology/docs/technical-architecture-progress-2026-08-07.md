@@ -24,7 +24,7 @@ flowchart TB
   CONTEXT["Context Compiler<br/>证据上下文与会话编排"]:::done
   RETRIEVAL["Permissioned Retrieval Gateway<br/>先鉴权后检索"]:::done
   KNOWLEDGE["飞书知识 Connector<br/>Docx / Sheet / Minutes / ACL / RLS"]:::done
-  KNOWLEDGE_ACCESS["试点文档分享权限<br/>真实正文索引与撤权复测"]:::todo
+  KNOWLEDGE_ACCESS["整库 ACL 安全门禁<br/>两个 P0 修复 / Canary / 撤权复测"]:::todo
   TASK["Task Proposal Compiler<br/>P2 → 个人任务草案 → DRI 批准"]:::done
   CONTRACTS["Ontology Contracts Package<br/>Definition / Event / Tool Contracts"]:::done
   REGISTRY["Ontology Compiler & Registry<br/>版本 / 兼容性 / Proposal / 激活"]:::done
@@ -95,9 +95,9 @@ flowchart TB
 9. H-Lite 已从 shadow 切到 active；Agent Core `2026-08-08.4` 返回 `ready`、`productionReady=true`、`mode=remote`，并透传 H Worker provider/model 元数据。
 10. 首名真实员工链路已通过：SQLite 读回 `p2p:post`、`p2p:text`、`group:text`，3 次处理全部 `completed`，无 `feishu_turn_failed`，去重记录 3 条，H-Lite 健康且 `restart_count=0`。
 11. 通讯录数据范围已生效并上线只读同步：4 个授权范围展开为 83 个可见部门，414 名可见人员进入 Ontology Principal；重复同步新增 0、更新 414，数据库敏感属性行数为 0。
-12. 飞书知识 Connector `2026-08-08.2` 已上线；Base64 配置、四张知识表、RLS、ACL fail-closed 和同步审计通过。
+12. 飞书知识 Connector `2026-08-08.2` 服务骨架已上线；Base64 配置、四张知识表、RLS、单个显式资源 ACL fail-closed 和同步审计通过。
 13. 生产权限链路已通过合成证据正负测试：授权员工 Evidence 与 H 回复命中，无权限员工 Evidence 为 0，测试数据已删除。
-14. 当前试点飞书文档返回 `1063004`，系统未读取正文；待公司 App 获得该文档分享权限后完成真实索引。
+14. 产品研究部知识库只读 ACL 审计完成，未触发导入；发现两个整库导入 P0，正式索引保持灰色并被硬阻断。
 15. V3 P0-S Contracts Package 已完成 13 个命名空间、41 个 Object Types、17 个 Link Types、3 个 Functions、2 个 Action Types、3 个 Policies 和 5 个 Constraints。
 16. 独立 Ontology Registry `2026-08-08.1` 已在 QNAP 上线；生产 active 版本唯一，Schema `3.0.0`、71 个元素、Hash `0e1690bbced6`，Git/运行时状态为 `in_sync`。
 17. PostgreSQL 17 隔离验收覆盖迁移重复执行、7 个逻辑 Schema、7 个稳定 View、RLS、最小权限、双审计和历史版本再激活；生产重启与重复部署后版本/元素/审计数量保持不变。
@@ -115,7 +115,7 @@ flowchart TB
 ## 待用户确认的生产门禁
 
 1. 为公司 H 引擎建立独立 CPA Key/账号与同厂冗余，替换当前个人 CPA 单账号依赖。
-2. 试点飞书文档给公司 App 分享权限，完成真实 ACL → Evidence Package 与撤权复测。
+2. 修复知识 Connector 两个 P0：ACL 错误无条件跳过；仅在文档 ACL 明确含 `wikispaceid` 时继承空间权限。随后完成小范围 Canary 与撤权复测。
 3. 扩到 10 名真实员工，完成并发会话、群内多人 @ 隔离、失败重投和回复送达验收。
 4. 真实试点部门、DRI 和 P2；24 小时容量观测完成后再决定 20/50 人放量。
 

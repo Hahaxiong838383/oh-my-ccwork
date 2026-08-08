@@ -4,7 +4,7 @@
 
 ## 结论
 
-P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、知识 Connector 和 V3 P0-S Foundation Pack 均已部署。Agent Core 已切到真实远程 H Runtime 并返回 `productionReady=true`；Ontology Registry 已与 Git 定义保持 `in_sync`。试点飞书文档因公司 App 缺少分享权限被 fail-closed 跳过，未读取正文。真实 P2/DRI 尚未接入。
+P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、知识 Connector 服务骨架和 V3 P0-S Foundation Pack 均已部署。Agent Core 已切到真实远程 H Runtime 并返回 `productionReady=true`；Ontology Registry 已与 Git 定义保持 `in_sync`。后续整库只读 ACL 审计发现两个正式导入阻断级 P0，因此既有单资源 fail-closed 验收不能外推为整库安全；当前未正式导入产品研究部知识库。真实 P2/DRI 尚未接入。
 
 ## P0-S：V3 Foundation Pack
 
@@ -37,6 +37,10 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、知识 Connecto
 - 当前试点资源同步结果为 `resourcesSeen=1`、`indexed=0`、`skipped=1`、`failed=0`、`chunks=0`；原因是文档分享权限接口返回 `1063004`。
 - 系统在 ACL 不明时未读取正文、未生成 chunk，并保持资源 `acl_status=unknown`、`status=skipped`。
 - 使用临时合成知识证据完成生产链路验收：授权员工 Evidence 命中且 H 回复命中；另一名员工 Evidence 为 0、无泄露；测试数据已删除。
+- 2026-08-08 产品研究部知识库只读 ACL 审计覆盖 1,222 个节点，未触发导入；`knowledge.chunks=0`、`knowledge.acl_entries=0`。
+- 审计发现 P0-1：42 个 Docx/Sheet 的文档 ACL 读取失败，其中 10 个正文仍可读取；当前代码可能因已有空间 ACL 而继续索引。
+- 审计发现 P0-2：916 个 ACL 可读 Docx/Sheet 中，58 个没有 `wikispaceid`；当前代码仍会无条件合并空间成员，存在权限放大风险。
+- 两个 P0 修复、部署、小范围 Canary 和撤权复测完成前，整库正式导入判定为未通过；详细证据见 `docs/feishu-knowledge-acl-audit-2026-08-08.md`。
 
 ## P0-B：公司 Bot H-Lite
 
@@ -96,10 +100,10 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、知识 Connecto
 ## 仍需用户确认的生产门禁
 
 - 建立公司专用 CPA Key/账号和同厂冗余，消除当前个人 CPA 单账号依赖。
-- 将公司 App 加为试点飞书文档协作者并授予分享权限读取，完成真实文档索引和撤权复测。
+- 修复知识 Connector 两个 P0，并完成小范围真实 ACL Canary 与撤权复测；在此之前禁止正式导入飞书知识空间。
 - 指定真实试点部门、唯一 DRI 和一条真实 P2。
 - 扩到 10 名真实员工，完成并发会话、群内多人 @ 隔离、失败重投和回复送达验收。
-- 使用真实文档再做一次有权员工/无权员工正负测试；合成证据的跨员工越权负测已通过。
+- 使用真实文档完成有权员工/无权员工正负测试；合成证据的跨员工越权负测已通过，但不能替代整库继承语义和撤权验收。
 - 24 小时容量数据完成前，不从 10 人 Canary 放大到 50 人正式首批。
 - ERP 和社媒继续只读；爱视可 ERP M4 和 MediaCrawler 风控恢复仍不在本轮范围。
 
@@ -107,7 +111,7 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、知识 Connecto
 
 最终运行标识：`qnap-p0-s-foundation-20260808`。
 
-- Contracts 6/6、Registry 6/6、控制面 Ontology 聚合 4/4、控制面页面/部署边界 54/54 通过；Agent Core 14/14、Knowledge Connector 8/8、H Worker 2/2、Action Gateway 1/1、H-Lite 目录/客户端/服务/Profile 11/11 的既有验收继续有效。
+- Contracts 6/6、Registry 6/6、控制面 Ontology 聚合 4/4、控制面页面/部署边界 54/54 通过；Agent Core 14/14、H Worker 2/2、Action Gateway 1/1、H-Lite 目录/客户端/服务/Profile 11/11 的既有验收继续有效。Knowledge Connector 原 8/8 只证明既有测试范围，不再作为整库 ACL 安全通过证据。
 - QNAP 完整生产自检再次通过：全部关键容器健康，Registry/Knowledge Connector 纳入硬门禁，H-Lite 飞书 WebSocket 在线，Agent Core `productionReady=true`，关键容器 `restart_count=0`。
 - QNAP 完整自检已补入 Action Gateway 健康、十人任务/成果/ACK、五类任务事件、Action Intent 终态、数据库权限边界和 H 引擎外网路径硬门禁。
 - 最终 Canary：5/10/20 并发全部成功且全部标记演示模式，P95 分别为 264ms、358ms、326ms。

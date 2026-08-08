@@ -118,6 +118,11 @@ node ops/sync-company-directory.mjs
 - 向量库只保存可重建派生索引；权限判断必须回到 Postgres/Ontology 的当前 ACL，不允许仅依赖向量过滤标签。
 - ACL 变更后必须支持索引失效或重建；离职、转岗、部门调整和文档移权必须在规定 SLA 内收敛。
 - 跨部门、已撤权、无 ACL、链接直猜和提示词诱导越权必须作为 Canary 负测，不得只测正常检索。
+- 正式整库导入前必须先做只读 ACL 分布审计；服务健康、单资源安全跳过和合成越权负测都不能替代整库继承语义验收。
+- 文档 ACL 读取失败是最高优先级拒绝条件：即使已有空间 ACL、空间公开或正文接口可读，也必须在读取正文前终止并保存 `acl_status=unknown/status=skipped`。
+- 只有文档直接 ACL 明确包含对应 `wikispaceid` 才能展开知识空间成员；文档位于空间、存在父节点或空间成员可枚举都不是权限继承证据。
+- `department/openchat/group` 等主体必须从飞书原始字段到 ACL 入库再到 Retrieval 查询端到端保真；群聊授权需要当前会话证据和撤权语义，不能转换为个人永久权限。
+- 当前产品研究部知识库正式导入处于 P0 阻断，两个 P0 修复、测试、公司 QNAP 部署、小范围 Canary 和撤权复测完成前不得触发批量同步。
 
 ## 爱视可 ERP 接管边界
 
@@ -234,6 +239,9 @@ node ops/sync-company-directory.mjs
 - ACL 正确不等于召回正确。中文自然问句不能只依赖整句 `ILIKE` 或 Postgres `simple` 分词，应使用有上限的关键词/短语召回，并限制数量防止过宽匹配。
 - 生产验收必须同时包含：有权 Principal Evidence 命中且 H 回复命中、无权 Principal Evidence 为零且标题/摘要/正文不泄露、临时合成数据清理、撤权后重新同步并复测。
 - 同步状态只输出资源数、索引数、跳过原因和 chunk 数，不输出文档 Token、人员 ID 或正文。
+- 2026-08-08 整库只读审计新增强制门禁：ACL 读取错误必须无条件跳过；空间权限只在文档 ACL 明确含 `wikispaceid` 时继承。原 8/8 测试只代表既有覆盖范围，不得描述为整库 ACL 安全通过。
+- 当前代码风险点：`services/knowledge-connector/src/sync.mjs` 的 ACL 错误与 `inheritedAcl` 合并路径，以及整库循环无条件传入空间成员；正式导入前必须修复并增加正文零读取和空间权限不扩散断言。
+- 后续 P1：补齐 `spaceAclEntry()` 对 `department/openchat` 原始类型映射，并扩展 Retrieval 对受控 `chat/group` Principal 的支持；未定义会话证据前不得启用群组授权。
 
 ### 公网管理看板
 
