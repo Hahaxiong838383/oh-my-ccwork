@@ -34,6 +34,7 @@
 - `deploy/mini/`：Mini → aliyun-hk 的回环反向 SSH 状态通道。
 - `deploy/qnap/ACCEPTANCE.md`：本次生产验收证据和剩余门禁。
 - `docs/feishu-knowledge-acl-audit-2026-08-08.md`：产品研究部知识库只读 ACL 审计、两个正式导入 P0 和 Canary 门禁。
+- `docs/knowledge-acl-canary-2026-08-08.md`：Knowledge Connector `2026-08-08.3` 生产部署、真实撤权、越权负测、回滚和清理证据。
 - `docs/lessons-learned-2026-08-08.md`：公司 Bot、通讯录同步、权限和 QNAP 部署的经验教训。
 - `docs/h-engine-credential-cutover.md`：从临时 H 平台 OAuth 切换到公司独立凭据的正式流程。
 - `docs/architecture-v3-cognitive-practice-skeleton.md`：认识论、实践论、双层本体、Ontology Compiler 和大骨架优先实施方案。
@@ -48,7 +49,7 @@
 - 公司级飞书 App/Bot 已接入，H-Lite 当前为 `active` 且真实飞书长连接健康；已验收 `p2p:post`、`p2p:text`、`group:text` 三类真实消息，3 次处理全部完成、0 次失败，SQLite 去重记录为 3 条，容器 `restart_count=0`。
 - 飞书通讯录数据范围已生效：4 个授权范围、83 个可见部门、414 名可见人员已只读同步到 Ontology Principal；重复同步结果为新增 0、更新 414，未写入邮箱、手机号或聊天内容。
 - Agent Core `2026-08-08.4` 当前通过 HMAC 调用 dev198 H Worker，真实推理 `productionReady=true`；Worker 经个人 CPA API Key 调用 `grok-4.5`，后续仍需切换公司专用 CPA Key/账号与同厂冗余。
-- Knowledge Connector 生产 `2026-08-08.2` 服务与数据库骨架已上线；本地候选 `2026-08-08.3` 已修复“ACL 失败仍可能继承空间权限”和“未声明 `wikispaceid` 仍无条件继承空间权限”两个 P0，Connector 与 Agent Core 回归均为 14/14。当前未部署 QNAP、未正式导入产品研究部知识库，完成小范围 Canary 和撤权复测前禁止批量索引。
+- Knowledge Connector `2026-08-08.3` 已部署到公司 QNAP；Connector 与 Agent Core 回归均为 14/14，生产只读 Canary 已覆盖直接授权、空间继承、无空间继承、ACL 失败、正文可读但 ACL 失败、员工真实撤权、跨部门和链接直猜负测。撤权后 37.757 秒内 Evidence 归零，临时文档删除后 ACL/Chunk 均归零，回滚 `2026-08-08.2 → 2026-08-08.3` 演练通过。产品研究部整库导入仍未批准，`department/openchat` P1 映射完成前继续禁止批量索引。
 - Ontology Registry `2026-08-08.1` 已上线：Schema `3.0.0`、71 个受治理元素、内容哈希 `0e1690bbced6`，生产 active 版本唯一且 Git/运行时一致。
 - 本阶段不开放数据库端口到员工网段。
 - 10 人真实员工 Canary、24 小时容量数据和真实 P2 未完成前，不进入 50 人正式首批。
@@ -57,7 +58,7 @@
 
 1. P0-EPI 建立 Source、Observation、Evidence、Claim、Hypothesis、Unknown、Contradiction 和 Provenance 最小闭环。
 2. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
-3. 经明确授权后把 Knowledge Connector `2026-08-08.3` 部署到公司 QNAP，完成小范围 Canary 和撤权复测后才能正式导入。
-4. 补齐空间成员 `department/openchat` 映射和 Retrieval 对群组主体的授权语义。
+3. 补齐空间成员 `department/openchat` 映射和 Retrieval 对群组主体的授权语义；完成后再单独审批产品研究部整库导入窗口。
+4. 保持 Knowledge Connector 自动发现关闭、启动自动同步关闭；正式导入前重新确认资源清单、撤权 SLA 和回滚窗口。
 5. 扩到 10 名真实员工，验证并发会话、群内多人 @ 隔离、失败重投和回复送达。
 6. 指定试点部门、唯一 DRI 和一条真实 P2，运行认知、决策、实践和验证闭环；完成 24 小时容量观测后再决定 20/50 人放量。

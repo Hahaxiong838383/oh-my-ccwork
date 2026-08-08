@@ -240,8 +240,9 @@ node ops/sync-company-directory.mjs
 - 生产验收必须同时包含：有权 Principal Evidence 命中且 H 回复命中、无权 Principal Evidence 为零且标题/摘要/正文不泄露、临时合成数据清理、撤权后重新同步并复测。
 - 同步状态只输出资源数、索引数、跳过原因和 chunk 数，不输出文档 Token、人员 ID 或正文。
 - 2026-08-08 整库只读审计新增强制门禁：ACL 读取错误必须无条件跳过；空间权限只在文档 ACL 明确含 `wikispaceid` 时继承。原 8/8 测试只代表旧覆盖范围，不得描述为整库 ACL 安全通过。
-- 本地候选 `2026-08-08.3` 已移除 `inheritedAcl` 无条件注入，并在文档 ACL 或空间 ACL 错误时于正文读取前写入 skipped；同步审计只保存白名单错误码。Connector 14/14、Agent Core 14/14。
-- 本地修复不等于生产完成；没有明确部署授权时只允许提交代码和文档，不得重启公司 QNAP 或触发同步。
+- `2026-08-08.3` 已部署公司 QNAP：移除 `inheritedAcl` 无条件注入，并在文档 ACL 或空间 ACL 错误时于正文读取前写入 skipped；同步审计只保存白名单错误码。Connector 14/14、Agent Core 14/14。
+- 生产 Canary 已覆盖直接授权、空间继承、无继承、ACL 失败、正文可读但 ACL 失败、真实员工撤权、跨部门和链接直猜；撤权后 Evidence 在 37.757 秒内归零，临时数据已清理。
+- 发布必须使用版本化源码目录、旧镜像回滚标签、Knowledge Schema 快照和校验清单；只保留 `latest` 镜像不算可恢复部署。
 - 后续 P1：补齐 `spaceAclEntry()` 对 `department/openchat` 原始类型映射，并扩展 Retrieval 对受控 `chat/group` Principal 的支持；未定义会话证据前不得启用群组授权。
 
 ### 公网管理看板

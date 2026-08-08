@@ -4,7 +4,7 @@
 
 ## 结论
 
-P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、知识 Connector 服务骨架和 V3 P0-S Foundation Pack 均已部署。Agent Core 已切到真实远程 H Runtime 并返回 `productionReady=true`；Ontology Registry 已与 Git 定义保持 `in_sync`。后续整库只读 ACL 审计发现两个正式导入阻断级 P0，因此既有单资源 fail-closed 验收不能外推为整库安全；当前未正式导入产品研究部知识库。真实 P2/DRI 尚未接入。
+P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、Knowledge Connector `2026-08-08.3` 和 V3 P0-S Foundation Pack 均已部署。Agent Core 已切到真实远程 H Runtime 并返回 `productionReady=true`；Ontology Registry 已与 Git 定义保持 `in_sync`。知识 ACL 两个正式导入阻断级 P0 已完成生产修复、28/28 回归、真实小范围 Canary、员工撤权、跨部门与链接直猜负测、回滚及测试数据清理。产品研究部整库导入仍未批准，`department/openchat` 主体映射和受控 `chat/group` 会话授权语义完成前继续禁止批量同步；真实 P2/DRI 尚未接入。
 
 ## P0-S：V3 Foundation Pack
 
@@ -30,18 +30,18 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、知识 Connecto
 
 ## P0-PROD-3：公司知识 Connector
 
-- Knowledge Connector `2026-08-08.2` 已在 QNAP 健康运行，`restart_count=0`。
+- Knowledge Connector `2026-08-08.3` 已在公司 QNAP 健康运行，`restart_count=0`。
 - PostgreSQL 已具备 `knowledge.resources`、`knowledge.acl_entries`、`knowledge.chunks`、`knowledge.sync_runs`，独立登录角色、RLS 和最小授权均存在。
 - 支持公开团队知识空间自动发现、显式私有资源、Docx/Sheet/Minutes、文档 ACL、空间成员、人员和部门映射。
 - Compose 显式资源改用 Base64 JSON，已修复 JSON 环境变量被转义导致的容器重启问题。
-- 当前试点资源同步结果为 `resourcesSeen=1`、`indexed=0`、`skipped=1`、`failed=0`、`chunks=0`；原因是文档分享权限接口返回 `1063004`。
-- 系统在 ACL 不明时未读取正文、未生成 chunk，并保持资源 `acl_status=unknown`、`status=skipped`。
-- 使用临时合成知识证据完成生产链路验收：授权员工 Evidence 命中且 H 回复命中；另一名员工 Evidence 为 0、无泄露；测试数据已删除。
 - 2026-08-08 产品研究部知识库只读 ACL 审计覆盖 1,222 个节点，未触发导入；`knowledge.chunks=0`、`knowledge.acl_entries=0`。
-- 审计发现 P0-1：42 个 Docx/Sheet 的文档 ACL 读取失败，其中 10 个正文仍可读取；当前代码可能因已有空间 ACL 而继续索引。
-- 审计发现 P0-2：916 个 ACL 可读 Docx/Sheet 中，58 个没有 `wikispaceid`；当前代码仍会无条件合并空间成员，存在权限放大风险。
-- 本地候选 `2026-08-08.3` 已修复两个 P0 并通过 Connector 14/14、Agent Core 14/14；本报告记录的 QNAP 生产版本仍是 `2026-08-08.2`，没有部署、重启或导入。
-- `2026-08-08.3` 部署、小范围 Canary 和撤权复测完成前，整库正式导入判定仍为未通过；详细证据见 `docs/feishu-knowledge-acl-audit-2026-08-08.md`。
+- P0-1 已修复：文档 ACL 或空间 ACL 读取失败时，在正文读取前无条件写入 `skipped/unknown`，不生成 ACL、Chunk 或索引。
+- P0-2 已修复：只有文档直接 ACL 明确包含对应 `wikispaceid` 时才展开空间成员；没有该标识时仅保留文档直接 ACL。
+- Connector 14/14、Agent Core 14/14 回归通过；生产 Canary 覆盖直接人员授权、明确空间继承、无空间继承、ACL 接口失败和正文可读但 ACL 失败。
+- 有权员工 Evidence 为 1；无权员工、撤权员工、跨部门员工、原始 Token 和直接链接猜测均为 0。真实员工撤权后的观测收敛时间为 `37,757ms`，该实测值不作为永久 SLA。
+- 旧镜像 `2026-08-08.2` 回滚和新镜像 `2026-08-08.3` 恢复均健康、未自动同步；备份清单校验通过。
+- 临时飞书文档、员工协作者、4 条 Canary Resource、本机及 QNAP 临时 Token/员工 ID 文件均已清理。最终知识表为 Resource 1、ACL Entry 0、Chunk 0；原单资源继续因 `1063004` fail-closed。
+- 当前公开空间自动发现和启动同步均关闭，周期保持 900000ms；产品研究部整库导入仍未批准。详细证据见 `docs/knowledge-acl-canary-2026-08-08.md`。
 
 ## P0-B：公司 Bot H-Lite
 
@@ -101,10 +101,10 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、知识 Connecto
 ## 仍需用户确认的生产门禁
 
 - 建立公司专用 CPA Key/账号和同厂冗余，消除当前个人 CPA 单账号依赖。
-- 经明确授权部署 Knowledge Connector `2026-08-08.3`，并完成小范围真实 ACL Canary 与撤权复测；在此之前禁止正式导入飞书知识空间。
+- 补齐空间成员 `department/openchat` 主体映射，并定义 Retrieval 对 `chat/group` 授权主体的当前会话证据、用途边界和撤权语义。
+- 上述 P1 完成后，由用户单独批准产品研究部整库导入的资源范围、时间窗口和回滚窗口。
 - 指定真实试点部门、唯一 DRI 和一条真实 P2。
 - 扩到 10 名真实员工，完成并发会话、群内多人 @ 隔离、失败重投和回复送达验收。
-- 使用真实文档完成有权员工/无权员工正负测试；合成证据的跨员工越权负测已通过，但不能替代整库继承语义和撤权验收。
 - 24 小时容量数据完成前，不从 10 人 Canary 放大到 50 人正式首批。
 - ERP 和社媒继续只读；爱视可 ERP M4 和 MediaCrawler 风控恢复仍不在本轮范围。
 
@@ -112,9 +112,11 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、知识 Connecto
 
 最终运行标识：`qnap-p0-s-foundation-20260808`。
 
-- Contracts 6/6、Registry 6/6、控制面 Ontology 聚合 4/4、控制面页面/部署边界 54/54 通过；Agent Core 14/14、H Worker 2/2、Action Gateway 1/1、H-Lite 目录/客户端/服务/Profile 11/11 的既有验收继续有效。Knowledge Connector 原 8/8 只证明既有测试范围，不再作为整库 ACL 安全通过证据。
+- Contracts 6/6、Registry 6/6、控制面 Ontology 聚合 4/4、控制面页面/部署边界 54/54 通过；Agent Core 14/14、Knowledge Connector 14/14、H Worker 2/2、Action Gateway 1/1、H-Lite 目录/客户端/服务/Profile 11/11 的验收有效。
 - QNAP 完整生产自检再次通过：全部关键容器健康，Registry/Knowledge Connector 纳入硬门禁，H-Lite 飞书 WebSocket 在线，Agent Core `productionReady=true`，关键容器 `restart_count=0`。
 - QNAP 完整自检已补入 Action Gateway 健康、十人任务/成果/ACK、五类任务事件、Action Intent 终态、数据库权限边界和 H 引擎外网路径硬门禁。
+- Knowledge Connector 真实 ACL Canary、员工撤权、跨部门、原始 Token、链接直猜和文档删除负测通过；测试数据清理后 Resource/ACL/Chunk 为 `1/0/0`，最近 30 分钟严重错误为 0。
+- Knowledge Connector 实际回滚 `2026-08-08.2 → 2026-08-08.3` 通过，两次均健康且未自动同步；脱敏运行摘要 SHA-256 为 `de75ae82571d44c7b5a8b66424d21c2e73bb84ace376614ea9f6d8fee8335ba1`。
 - 最终 Canary：5/10/20 并发全部成功且全部标记演示模式，P95 分别为 264ms、358ms、326ms。
 - 十名普通员工 restricted 结果均为 0，DRI 为 1，未知用户为 0；员工个人数据接口继续明确不保存私人对话全文。
 - 两个 P0-E Action Intent 均为 `rolled_back`，执行读回和回滚读回均为 `true`，不存在非终态 Action Intent。
