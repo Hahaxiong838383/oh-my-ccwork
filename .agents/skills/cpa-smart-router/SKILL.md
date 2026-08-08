@@ -87,6 +87,11 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 ## CPA Menu 桌面监控
 
 - macOS App 只通过 `https://smart-api.hahaxiong.top/desktop/v1/*` 访问 Bridge；Desktop Token 只存远端 `0600` 文件与本机 Keychain。
+- CPA Menu `0.3.2+` 的“添加订阅”统一提供 Codex PKCE 与 xAI Grok 设备码 OAuth。xAI 生产契约以 CLIProxyAPI 实机为准：`GET /v0/management/xai-auth-url?is_webui=true` 返回 `flow=device`、`url`、`user_code`、`state`、`expires_in`，状态轮询为 `GET /v0/management/get-auth-status?state=...`；Management Center 前端源码可能仍保留旧的手工 callback 兼容逻辑，不能替代生产契约探测。
+- Desktop Bridge 只暴露 `POST /desktop/v1/oauth/xai/start` 与 `GET /desktop/v1/oauth/xai/status?state=...` 的白名单字段；授权 URL 必须是 HTTPS 且 host 精确等于 `accounts.x.ai`。Management Key、Token、Cookie、上游错误正文、设备码和 state 不得持久化或进入日志；最终 xAI auth 文件仍由 CLIProxyAPI 官方流程写入。
+- `MenuBarExtra(.window)` 打开浏览器后可能因失焦关闭浮窗；xAI 授权会话必须由 `AppModel` 独立持有，用户重新点开菜单时继续显示设备码弹层和倒计时，不能把会话状态只放在临时 View 状态里。
+- xAI 设备码测试会创建真实的短时待授权会话：自动验收只报告字段名、官方 host、有效期和 `pending/complete`，禁止输出设备码/state；含设备码的临时截图必须在验收后删除。不能在用户完成网页授权前声称“账号已添加”。
+- 用户完成后，以 Bridge `/summary` 的 `xai_accounts` 与 `/accounts` 中 provider=xAI 的过滤数量双重核对，并确认账号未停用且具备 refresh token。2026-08-08 17:45 CST 的验收快照为 2 个 xAI 授权账号，均启用且可自动刷新；这是时效快照，复用前必须实时查询。
 - 账号列表返回脱敏邮箱、套餐、是否可刷新、周额度、`credits` 充值余额和 `rate_limit_reset_credits` 重置卡状态；Bridge 必须继续使用顶层白名单并递归删除敏感字段。
 - Codex 当前没有 5 小时限制，界面不显示 5 小时进度条；`primary_window` 现在也可能是周窗口，必须按 `limit_window_seconds` 分类，不能按 primary/secondary 槽位命名。
 - xAI 官方账单真源是 Management API：`POST /v1/billing/teams/{team_id}/usage` 查询本月费用，`GET /v1/billing/teams/{team_id}/prepaid/balance` 查询预付余额；Management Key 与普通推理/OAuth 凭据分离，只从 `/etc/xai-management.env` 读取。
