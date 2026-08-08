@@ -776,6 +776,30 @@ L0 是**所有租户都挂得到**的。往那儿放 owner 自己的 skill = 直
   也要可见，否则「方法可见、方法产生了什么不可见」白盒只做一半。加减注册表项
   会被 `method-defaults.test.mjs` 的数量断言拦住，提醒同步确认前端 tab。
 
+## 🔴 判「这条记录是不是 owner」只认 appId 锚，不认 uid 长相（2026-08-08 栽过）
+
+**owner 根本不在控制面 users.json 里。** 判别一条命令：
+
+```bash
+# owner 真值：bridge healthz 里 kind=owner 那条（它的 uid 是 null，因为不在注册表）
+ssh dev198 "curl -s --noproxy '*' http://127.0.0.1:18765/healthz" | python3 -c "
+import sys,json
+for appId,a in json.load(sys.stdin).get('apps',{}).items():
+    if a.get('kind')=='owner': print('owner appId=', appId, 'uid=', a.get('uid'))"
+```
+
+2026-08-08 我在同一轮里从字符串长相认错两次，第二次是川哥当场拦下的：
+
+| 我看到的 | 我的结论 | 真值 |
+|---|---|---|
+| `botName=智能助手_产品专家` | 这条是「产品专家」角色 | botName 只是 Bot 名，与角色归属无关 |
+| `uid=rayman.chen`（可读账号名，不是 `u-<hash>`） | 这条是 **owner** | 可读 uid 只说明**开通时管理员预分配过**；它的 appId 是 `cli_a970…1bb3`，而 owner 是 `cli_a9f1…1bc7` —— 它是**普通租户** |
+
+⚠️ **最危险的不是认错，是据此推翻既有记录**：我当时写下「skill 说 owner 不参与
+placement、lease 恒 null，那条已过期」——其实没过期，是我把**租户的租约**认成了
+owner 的。错误从一次操作固化成了知识库里的公论。拿新观察推翻既有记录前，先自问
+「会不会是我认错了对象」。详见 [[feedback_identifier_shape_is_not_identity]]。
+
 ## 账号唯一键是 appId，不是 uid（v1.13.4）
 
 同一个 Bot 重扫（补授权 / 再走一次开通）**必须合并进既有账号**，不能新增。
@@ -1179,11 +1203,17 @@ ssh aliyun-hk "cp -a /srv/h-control/app /srv/h-control/app.bak-$TS"
 rsync -az --no-owner --no-group control-plane/server.mjs aliyun-hk:/srv/h-control/app/server.mjs
 rsync -az --no-owner --no-group --delete control-plane/lib/  aliyun-hk:/srv/h-control/app/lib/
 rsync -az --no-owner --no-group --delete control-plane/test/ aliyun-hk:/srv/h-control/app/test/
+rsync -az --no-owner --no-group control-plane/announcement-templates/ aliyun-hk:/srv/h-control/app/announcement-templates/
 ssh aliyun-hk 'chown -R h-control:h-control /srv/h-control/app && cd /srv/h-control/app \
   && node --test test/*.test.mjs && systemctl restart h-control'
 ```
 
 ⚠️ **chown 不能省** —— root 写出的文件服务自己改不动。
+
+⚠️ **新增顶层目录必须自己加进这张清单**（2026-08-08 差点漏）：这几行 rsync 是**逐项
+枚举**的，`announcement-templates/` 这类新目录不会自动跟着走。漏了的后果是运行时
+`ENOENT`——而且**只在那条代码路径真被执行时才爆**（模板只在事故发生时才读），
+本地全绿、部署全绿、healthz 全绿，可能几周后才炸。加新目录时同步改这里。
 
 ## 验收：拿真凭据打那个 URL，别只看代码
 
@@ -2032,11 +2062,77 @@ node ops/announce-release.mjs --health-url http://127.0.0.1:19912/healthz
 `announcement-template` 尚无调用方——两者现在只有单测证据，
 会在 H-0080 触发器落地时才拿到真机验证。**没触发过的分支＝没验证过。**
 
-### 下一步的已知难点
+## H-0080 事故恢复主动通报（2026-08-08 上线 · 控制面 v1.44.0）
 
-H-0080 触发器：**误报一次的代价大于漏发一次**。判错「站点恢复了」就是给全平台
-推一张假故障通报。必须先有：最小中断时长阈值（川哥定 60 秒）、同一事故只发一次、
-全局熔断，且**先只灰度到川哥自己的 Bot**跑过若干次真实故障再放开。
+站点断了又回来、且中断超过阈值时，给**中断期间在该站点的租户**发一张恢复说明卡。
+判定与取舍全在 `control-plane/lib/incident-watcher.mjs`（有 13 条测试钉着）。
+
+### 判据：控制面侧的 app-placement 租约
+
+站点每 20 秒续租、TTL 60 秒。控制面这边「某站点有效租约归零」= 它至少一个 TTL
+没续上 = 用户 Bot 已掉线。选它不选站点自报的 healthz，是因为**观测者必须在被观测
+系统之外**——站点真挂了它就报不出来了。而且它是 2026-08-07 那次 213 秒事故的因果链
+上游（续租失败 → `lose()` → 拆 11 个租户 WS → 用户看到「目标回调服务当前未在线」）。
+
+已知盲区（别当缺陷排查）：飞书侧挂了（WS 断但控制面连接正常）、runner-worker 死了
+（租约照续但任务跑不了）——这两种租约都看不见。
+
+### 🔴 两个会凭空造出「事故」的运维动作（都已挡掉，改判据前先读）
+
+| 动作 | 为什么会误判 | 怎么挡的 |
+|---|---|---|
+| **站点部署重启** | `instanceId` 含 pid+随机片段（`bridge.mjs:5214`），重启即变 → 新进程 claim 冲突 → 等旧租约过期才接管 → 反推中断 **60–80 秒，正好越过 60 秒阈值** | instanceId 变 = 进程重启，不通报；但**超过 5 分钟仍通报**（机器宕机不能漏） |
+| **控制面自己重启** | 控制面 down 期间所有站点续不上租、租约全过期，而站点进程好好的、`instanceId` **没变**，上一条挡不住 | `load()` 时把 `healthy` 降级为 `unknown`（必须重新观察到租约才回 healthy）；`degraded` 原样保留——那是重启前基于真实观察的判定，丢了就白漏一次事故 |
+
+详见 [[feedback_new_criterion_vs_ops_actions]]。
+
+### 其余防误报
+
+最小时长 60 秒（川哥定）· 恢复防抖连续 2 轮 · 同一事故靠 `announcementId` 幂等
+（`incident.<site>.<中断起点>`，**用中断起点不用发布时刻**，重跑不重发）·
+24h 内超 3 次熔断 · 发布失败重试 3 次后放弃。
+
+**中断起点用上一轮记的 `renewedAt`，不是「我发现归零的时刻」**——TTL 60 秒意味着
+发现时已经断了最多一个 TTL，拿发现时刻当起点会系统性低估。而
+`purgeExpiredUnlocked()` 会把过期租约**物理删除**，证据自己会消失，所以健康时每轮
+都要记 `lastSeenAt` 与 `lastAppIds`，等归零那一刻已经来不及取了。
+
+### 灰度：空名单 = 谁都不发（与 `H_SKILL_PROPOSALS` 系刻意相反）
+
+```bash
+# /srv/h-control/.env（0600）
+H_INCIDENT_ANNOUNCE_UIDS=u-001422f6e5,rayman.chen   # 空=不发；逗号分隔=只发这些；all=全量
+H_INCIDENT_ANNOUNCE=0                               # 熔断，优先于上面的名单
+```
+
+🔴 **川哥 2026-08-08 定：灰度何时结束必须他拍板**，代码里没有任何自动放开路径
+（没有「连续成功 N 次自动扩大」「满 X 天转正」）。任何配不明白的情况都收敛到「不发」。
+
+受众**照常真实计算**（从租约快照算全量），只在发布前取交集收窄——这样灰度期跑的
+就是生产路径，放开只改 env、受众逻辑一行不改。反过来做（灰度期把受众写死成某个人）
+会让「从租约快照算受众」在整个灰度期一次都没真跑过。
+
+### 排查入口
+
+```bash
+# 灰度当前对谁开着：启动日志这行由 resolveGate() 返回值算出，不是无条件旁白
+sudo grep 'incident watcher' /srv/h-control/logs/h-control.log | tail -1
+#   → incident watcher 已启动 每 15s 灰度=list(allowlist) 受众上限=2 人
+# watcher 观察到什么（真在跑才有这个文件；0600）
+sudo cat /srv/h-control/data/incident-watcher-state.json
+# 判定痕迹
+sudo grep 'incident dev198' /srv/h-control/logs/h-control.log
+```
+
+⚠️ **控制面应用日志不在 journalctl**：unit 是
+`StandardOutput=append:/srv/h-control/logs/h-control.log`，`journalctl -u h-control`
+只有 systemd 自己那几行。拿 journalctl 查应用日志会得到 0 命中，**与「功能没跑」同信号**。
+
+### 状态：卡还没真发过
+
+判定链在跑（状态文件与租约表交叉对上：dev198 healthy 11 App / mini healthy 1 App），
+但**首次真实发卡要等一次真实中断**——那也是 `announcement-publisher` 与
+`announcement-template` 从写出来到现在的第一次真机执行。在那之前「能发出去」属未验证。
 
 
 #### 2026-08-07 下午同步（RUN-0023 / RUN-0024）
@@ -4646,7 +4742,7 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | **`v1.43.0`**（公网 `https://ai.kidshub.cn/healthz` 取真值） |
+| 控制面 aliyun-hk | **`v1.44.0`**（2026-08-08 H-0080 事故通报上线；公网 `https://ai.kidshub.cn/healthz` 取真值） |
 | Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件、1 App。**本次未随 dev198 升级**——`e5b3978` 对 bridge 运行时零行为变化（新模块只被 `ops/announce-release.mjs` 引用，`bridge.mjs` 那 8 行全在注释块内），不值得为注释付 Lima 割接的约 35 秒中断 |
 | dev198 | **`e5b397815d1c`**（12 App 全连、零 lastError；两站持有集合零交集，互斥成立） |
 | 安装源 | Mini 上 `~/local/h-mini-b2-source-<commit>`，**具体路径现场 `ls` 取**（随 commit 变，写死必腐烂） |
