@@ -2416,6 +2416,42 @@ syncCredentials gate 在 `sandbox &&` 上），grok 钉死本机 device OAuth，
 - dev198 git 漂移（tar 直传致工作区超前 HEAD）已于 2026-08-09 追平：md5 对撞确认
   = 6671e57 后 `git stash push` 入库，之后一律走 `ops/deploy-sites.sh`，别再 tar 直传。
 
+## H-0085 L0 skill 同步 SOP + 空壳 fork 劫持（v1.54.1 · 2026-08-09 晚）
+
+**做「把 owner/某版 skill 同步给租户」类任务时按这个来：**
+
+1. **先双向 diff，别拿「新」当「超集」**：租户 L0 可能反向补齐过并各自演化（约日程
+   skill 就是——L0 独有 rsvp accept/decline 换房重订等四块资产，owner 版没有）。
+   产物是**合并版**。见 [[feedback_sync_needs_bidirectional_diff]]。
+2. **同名 L2 遮蔽排查**（同步前必查，否则发了也有租户收不到）：
+   ```bash
+   # dev198：L2/L0 撞名 + 空壳指纹（行数悬殊 + h-skill-pattern 标记）
+   for d in /srv/h-platform/users/*/.grok/skills/*/; do n=$(basename "$d"); \
+     [ -d "/srv/h-platform/shared/skills/$n" ] && echo "$(dirname "$d"|xargs basename) $n $(wc -l < "$d/SKILL.md") $(grep -c h-skill-pattern "$d/SKILL.md")"; done
+   ```
+   pristine fork（正文=L0，仅多 fork 注释）会自动跟随不用管；`h-skill-pattern` 空壳
+   =劫持产物，走控制面 remove 清除（**不直改磁盘**）。用户真改过的 fork 绝不动。
+3. **脱敏 + 本地预扫带正例锚**：`node` 调仓内 `scanSharedSkillContent`/
+   `scanSharedRefContent` 扫合并版（PASS）**并扫 owner 原版（必须 REJECT**——
+   证明扫描器活着）；grep 人名/`ou_[0-9a-f]{8,}`/邮箱全 0，同一 grep 打原版非 0。
+4. **发布链**（aliyun-hk 本机 127.0.0.1:18790，凭据 sudo grep 进进程不进 argv）：
+   `POST /admin/login` 拿 cookie → `POST /admin/api/skill` `{action:'upsert-content',
+   layer:'platform', expectedSha:<现版完整sha 乐观锁>}` → 附件 `POST
+   /internal/skill-refs-put` `{key, files:[{path, contentBase64}]}`（Bearer
+   SERVICE_TOKEN）→ 删除 `{action:'remove', key:'user:<uid>/<name>'}`。
+   仓里另有 `npm run publish:l0`（scripts/publish-l0-skill.mjs）——下次先看它。
+5. **验证（60s 同步周期后）**：dev198 全量 sha 核对（L0 自身=正例锚，零输出=命令
+   错了不是全同步）；pristine fork 剥 `<!--…-->` 后正文 sha 必须=新 L0；空壳目录
+   gone；manifest 无残留。新租户天然继承（挂载同一 shared 目录），零动作。
+
+**空壳劫持机制**（详见 [[feedback_hollow_fork_shadows_source]]）：提炼引擎相似度
+中间带（0.36–0.62）走 fork_update，v1.54.1 前 content 误用全新模板——空壳带共享
+原名落 L2 盖 L0，`bot-assisted-fork` 不在 forkIsPristine 跟随白名单永不自愈，提案
+卡文案却写「复制后更新」（批的是增强落的是降级）。真机 2 例已清（rayman.chen 约
+日程 / u-01481f4a32 白板 lite）。修复：engine 走 buildUpdatedContent（source 正文+
+追加段）+ 控制面 400 拒不含 source 正文的 fork content。**注意 store 入库改写
+frontmatter name——防线/测试比对都用存储版 content，别拿原始文本重新生成**。
+
 ## 五项需求发布收口（2026-07-30）
 
 本阶段发布版本 `v1.33.1`（E3 后 `v1.34.0`；grok 授权墙接线后 `v1.35.0`），全 Bot 行为契约 `2026-07-30.1`（→ `2026-07-30.2`，grok 撞授权墙自动推卡）。H-0027、H-0031、H-0011、
@@ -5015,9 +5051,9 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | **`v1.51.0`**（2026-08-09 Owner Bot 端点绑定管理台版 + per-model env_key 鉴权钉定；公网 `https://ai.kidshub.cn/healthz` 取真值） |
-| Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件、1 App。**本次未随 dev198 升级**——`e5b3978` 对 bridge 运行时零行为变化（新模块只被 `ops/announce-release.mjs` 引用，`bridge.mjs` 那 8 行全在注释块内），不值得为注释付 Lima 割接的约 35 秒中断 |
-| dev198 | **`e5b397815d1c`**（12 App 全连、零 lastError；两站持有集合零交集，互斥成立） |
+| 控制面 aliyun-hk | 线上 **`v1.53.0`**（2026-08-09 20:37 起；仓库 main 已到 `v1.54.1` 但 goal 6 的 v1.54.0 控制面被其自身 gate 闸着未上线，**别替它开闸整树 rsync**；v1.54.1 的 fork 空壳防线随下次控制面部署生效；公网 `https://ai.kidshub.cn/healthz` 取真值） |
+| Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件、1 App。落后 main（含 fork_update 空壳修复 `e113f5d`）——升级要走 `deploy/lima/` 影子割接流程，约 35 秒中断，待川哥定窗口 |
+| dev198 | **`e113f5dc95f8`**（2026-08-09 晚 fork_update 空壳修复 + goal 6 主线随 ff 带上；11 App 全连 healthz version 对撞一致） |
 | 安装源 | Mini 上 `~/local/h-mini-b2-source-<commit>`，**具体路径现场 `ls` 取**（随 commit 变，写死必腐烂） |
 | 验证器 | 已随 `d47edb7` 起进入部署源码树，**不必再单独归档**（`$SRC/deploy/lima/verify-mini-b2-active.sh` 直接跑；`$SRC` ≠ VM app，不污染 deploy meta） |
 
