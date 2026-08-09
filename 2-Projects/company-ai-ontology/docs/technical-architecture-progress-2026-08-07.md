@@ -45,7 +45,7 @@ flowchart TB
   OPERATIONS_DOMAIN["Operations Domain<br/>Order / Quality / Shipment / Activation"]:::done
   MARKET_DOMAIN["Market Domain<br/>Signal / Topic / Trend / Opportunity"]:::done
   ARCH_CONTRACT["3D-ready Architecture Contract<br/>2D / 2.5D / topology-3d contract_only"]:::done
-  H_V154["H 控制面 v1.54.0<br/>代码与发布门禁完成 / 待授权上线"]:::todo
+  H_V1551["H 控制面 v1.55.1<br/>生产上线 / Chrome 59/59"]:::done
   ERP["爱视可 ERP M3 Read Model<br/>38 Operations + 57 Device"]:::done
   SOCIAL["Market Signal Read Model<br/>369 条归一化结果"]:::done
   CANARY["演示负载与恢复验收<br/>5/10/20 并发 / ACK / 重启恢复"]:::done
@@ -85,7 +85,7 @@ flowchart TB
   DEVICE_DOMAIN --> PG
   OPERATIONS_DOMAIN --> PG
   MARKET_DOMAIN --> PG
-  ARCH_CONTRACT --> H_V154
+  ARCH_CONTRACT --> H_V1551
   ACTION -. "受控写回" .-> ERP
   SOCIAL -. "只读 Signal" .-> RETRIEVAL
   ERP -. "只读履约证据" .-> RETRIEVAL
@@ -130,7 +130,7 @@ flowchart TB
 24. Replay、Live Cursor 保护、Active/Deleted/Expired/Revoked、Dead Letter、上游失败恢复和 Action Gateway 禁读负测已通过。
 25. 跨域只读演示链已形成 11 节点/9 关系，不向员工下发、不写回 ERP/社媒、不产生 ActionIntent 或 Delivery Outbox。
 26. 3D-ready Contract 已统一 Node、Edge、Layer、Focus、Selection、Camera、Filter、Trace 和 ViewMode；`topology-3d` 继续灰色。
-27. H 控制面 `v1.54.0` 源码与 260/260 测试已完成，但生产因变更授权边界恢复到 `v1.53.0`；发布脚本只读检查已通过，真实浏览器验收仍为灰色。
+27. H 控制面 `v1.55.1` 已生产上线；服务 active、`NRestarts=0`、错误日志 0，真实 Chrome `59/59`，节点重叠、错接、穿卡连线、焦点偏差、控制台错误、失败请求和横向溢出均为 0。
 
 ## P0 A-F 已完成
 

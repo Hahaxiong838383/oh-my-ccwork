@@ -13,7 +13,7 @@
 
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
-- 当前里程碑：公司 QNAP 已进入 `Goal 6 / P1-DOMAIN`，Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 为 `active`；ERP M3 和社媒归一化结果已通过只读 Connector、稳定 View、幂等、重放、错误隔离和权限负测。Company Capability Governance v1 已形成 `contract_only` 骨架，不改变当前生产 Schema。H 控制面 `v1.55.0` 已上线 Goal 6 白盒、`v1.54.1` Skill Fork 安全修复和能力治理显示，隔离 Chrome 验收 `57/57` 通过。
+- 当前里程碑：公司 QNAP 已进入 `Goal 6 / P1-DOMAIN`，Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 为 `active`；ERP M3 和社媒归一化结果已通过只读 Connector、稳定 View、幂等、重放、错误隔离和权限负测。Company Capability Governance v1 已形成 `contract_only` 骨架，不改变当前生产 Schema。H 控制面 `v1.55.1` 已上线 Goal 6 白盒、Skill Fork 安全修复、能力治理显示和连线路由修复，真实 Chrome 验收 `59/59` 通过。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
 ## 部署边界
@@ -59,7 +59,7 @@
 - Ontology Registry `2026-08-08.1` 已上线：Schema `3.2.0`、111 个 active 受治理元素、内容哈希 `ffa8943255b9`，生产 active 版本唯一且 Git/运行时一致。
 - Goal 4 已完成 ERP/社媒 fixture 的正证、反证、过期、无 ACL 和不存在 Principal 五类生产验证；无证据路径在策略层失败关闭，不调用 H 引擎，不泄露标题、URL、人员或正文。
 - Goal 5 已跑通一名真实 DRI、一个受控 P2、一个 Task、一个 Action、一个 Verification 和一个 Learning Proposal；技术执行、业务结果、经营目标三层结果均为 `true`。失败演练保留审计并退役，不算正式 P2。
-- H 控制面 `v1.55.0` 已上线 WorkCase、Evidence Map、Answer Basis、Decision Lineage、Goal 6 领域白盒和能力治理灰色节点；真实浏览器 `57/57` 检查通过，控制台错误、失败请求、节点重叠和横向溢出均为 0。
+- H 控制面 `v1.55.1` 已上线 WorkCase、Evidence Map、Answer Basis、Decision Lineage、Goal 6 领域白盒和能力治理灰色节点；真实浏览器 `59/59` 检查通过，控制台错误、失败请求、节点重叠、错接、穿卡连线和横向溢出均为 0。
 - 本阶段不开放数据库端口到员工网段。
 - 10 人真实员工 Canary 和 24 小时容量数据未完成前，不进入 50 人正式首批。
 

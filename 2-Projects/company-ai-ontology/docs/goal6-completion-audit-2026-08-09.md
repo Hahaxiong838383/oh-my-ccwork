@@ -4,7 +4,7 @@
 
 ## 结论
 
-Goal 6-A 尚未完整完成。QNAP 数据面、Operating Model、P1-DOMAIN、只读演示链和 3D-ready 协议已有生产证据；Company Capability Governance v1 已完成 `contract_only` 骨架。H 控制面 `v1.55.0` 已上线并完成 `57/57` 隔离 Chrome 验收；剩余缺口为 Domain Connector 回滚恢复演练、飞书方案文档和最终记忆收口。
+Goal 6-A 尚未完整完成。QNAP 数据面、Operating Model、P1-DOMAIN、只读演示链和 3D-ready 协议已有生产证据；Company Capability Governance v1 已完成 `contract_only` 骨架。H 控制面 `v1.55.1` 已上线并完成 `59/59` 真实 Chrome 验收；公司 QNAP 已于 `2026-08-09 23:19 CST` 重新在线复核并通过完整 `verify.sh`。剩余缺口为 Domain Connector 回滚恢复演练、飞书方案文档和最终记忆收口。
 
 状态含义：
 
@@ -17,8 +17,8 @@ Goal 6-A 尚未完整完成。QNAP 数据面、Operating Model、P1-DOMAIN、只
 | 要求 | 状态 | 权威证据 | 缺口 |
 |---|---|---|---|
 | Phase 0 多仓、H、QNAP、ERP、社媒、Registry 在线基线 | 已证明 | 当前 Git 状态、公网 `/healthz`、QNAP 五元组与状态接口、完整 `verify.sh` | 无 |
-| Phase 1 二维/2.5D 部署到认证 H 控制面 | 已证明 | `v1.55.0` 于 `2026-08-09 22:29:11 CST` 上线，备份和管理员认证通过 | 无 |
-| Phase 1 真实浏览器交互 | 已证明 | 新服务启动后的隔离 Chrome `57/57`，焦点距离/错误/失败请求/溢出均为 0 | 无 |
+| Phase 1 二维/2.5D 部署到认证 H 控制面 | 已证明 | `v1.55.1` 于 `2026-08-09 23:06:38 CST` 上线，备份和管理员认证通过 | 无 |
+| Phase 1 真实浏览器交互 | 已证明 | 新服务启动后的真实 Chrome `59/59`，节点重叠、端口错误、穿卡、焦点距离、错误、失败请求和溢出均为 0 | 无 |
 | Phase 2 Company Brain Operating Model v1 | 已证明 | `company-brain-operating-model-v1.json`、Contracts 12/12、Schema `3.3.0` | 无 |
 | Phase 3 Product/Device/Operations/Market 最小骨架 | 已证明 | `domain-v1.json`、Compiler、Registry `in_sync` | 无 |
 | Phase 4 ERP M3 只读接入 | 已证明 | ERP Read Model 95 条、应用角色/RLS、Replay 与敏感扫描 | 无 |
@@ -54,16 +54,16 @@ Goal 6-A 尚未完整完成。QNAP 数据面、Operating Model、P1-DOMAIN、只
 |---|---|
 | QNAP Domain Runtime 代码 | `mycc@57c3b2123` 已推送 |
 | Goal 6 状态、Skill 和技术架构文档 | `mycc@605f47646` 已推送 |
-| H Goal 6 白盒 | `feishu-grok-bridge@396210f` 已推送 |
-| 生产重启门禁与回滚脚本 | `feishu-grok-bridge@b7d7dbf` 已推送 |
-| 浏览器验收自动化 | `feishu-grok-bridge@b8ea156` 已推送 |
-| H `v1.55.0` 发布源码与发布器修复 | `feishu-grok-bridge@483088d` 已推送，生产备份 `20260809-222855-goal6-v1550` |
-| H 生产浏览器验收 | `57/57`，证据 `goal6-whitebox-20260809-223449.{json,png}` |
-| 共享记忆与 Codex 私有 memory note | 待 Goal 完成后更新 |
-| 飞书《公司 AI Ontology 基座架构方案》 | 待最终生产与浏览器证据后更新 |
+| H Goal 6 白盒与连线路由修复 | `feishu-grok-bridge@f9518cb` 已推送 |
+| H `v1.55.1` 发布源码 | `feishu-grok-bridge@02e3ab4` 已推送，生产备份 `20260809-230616-goal6-v1550` |
+| H 发布证据 | `feishu-grok-bridge@6260061` 已推送 |
+| H 生产浏览器验收 | `59/59`，证据 `goal6-whitebox-20260809-230734.{json,png}` |
+| 共享记忆 | 已更新当前生产真值；最终提交号待 Goal 收口补齐 |
+| Codex 私有 memory note | 待 Goal 完成后写入最终状态 |
+| 飞书《公司 AI Ontology 基座架构方案》 | 已追加第 20 章并读回验证；回滚演练完成后更新最终门禁状态 |
 
 ## 剩余严格顺序
 
 1. 单独申请 Domain Connector 回滚/恢复演练窗口并执行。
-2. 更新飞书方案文档、共享记忆和 Codex memory note。
+2. 回滚恢复完成后更新飞书第 20 章最终门禁状态和 Codex memory note。
 3. 复跑完成审计；所有项目均有权威证据后才标记 Goal complete。

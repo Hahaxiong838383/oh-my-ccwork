@@ -4,13 +4,13 @@
 
 ## 当前结论
 
-P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI 和 Goal 5 P0-DEC 已上线。Goal 6 的 Company Brain Operating Model v1、Schema `3.3.0`、ERP M3/社媒只读领域骨架、跨域演示链和 3D-ready 数据协议已完成当前层级验收；Company Capability Governance v1 已完成 `contract_only` 骨架。H 控制面 `v1.55.0` 已上线，隔离 Chrome `57/57` 通过。10 名真实员工 Canary 继续延后。
+P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI 和 Goal 5 P0-DEC 已上线。Goal 6 的 Company Brain Operating Model v1、Schema `3.3.0`、ERP M3/社媒只读领域骨架、跨域演示链和 3D-ready 数据协议已完成当前层级验收；Company Capability Governance v1 已完成 `contract_only` 骨架。H 控制面 `v1.55.1` 已上线，真实 Chrome `59/59` 通过。10 名真实员工 Canary 继续延后。
 
 ## 2026-08-09 Goal 顺序重排
 
 1. `Goal 4`：✅ P0-EPI + 公司大脑工作逻辑显式建模，Intake 至可解释回答已生产 active。
 2. `Goal 5`：✅ P0-DEC + Decision/P2/Task/Action/Verification/Learning 实践闭环已生产 active。
-3. `Goal 6`：🟡 QNAP P1-DOMAIN、Operating Model、3D-ready 协议和 H `v1.55.0` 白盒浏览器验收已完成；Capability Governance v1 为 `contract_only`。Domain Connector 回滚恢复演练、飞书方案和最终记忆收口仍待完成。
+3. `Goal 6`：🟡 QNAP P1-DOMAIN、Operating Model、3D-ready 协议和 H `v1.55.1` 白盒浏览器验收已完成；Capability Governance v1 为 `contract_only`。Domain Connector 回滚恢复演练、飞书方案和最终记忆收口仍待完成。
 4. `Goal 3`：10 名真实员工 Canary，继续延后但仍是 20/50 人放量前硬门禁。
 5. 公司专用 CPA 凭据和 P1 `department/openchat` 映射可并行推进，不改变业务验收顺序。
 
@@ -68,8 +68,8 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 5. ✅ 幂等、重放、Live Cursor 保护、Active/Deleted/Expired/Revoked、Dead Letter、错误恢复和无权角色负测通过。
 6. ✅ 跨域只读演示链已形成 11 节点/9 关系，Decision/Task 保持提案态，ActionIntent 和 Delivery Outbox 均为 0。
 7. ✅ 二维、2.5D、未来真 3D 共用的 Architecture DTO 已完成自动测试；真 3D 保持 `contract_only`。
-8. ✅ H 控制面 `v1.55.0` 已发布，源码锚点 `483088d`，自动备份、管理员认证、`NRestarts=0` 和公网健康通过。
-9. ✅ 隔离 Chrome 浏览器交互 `57/57` 通过；⏳ Domain Connector 旧版回滚/新版恢复演练未完成。
+8. ✅ H 控制面 `v1.55.1` 已发布，源码锚点 `02e3ab4`，证据提交 `6260061`；自动备份、管理员认证、`NRestarts=0` 和公网健康通过。
+9. ✅ 真实 Chrome 浏览器交互 `59/59` 通过；⏳ Domain Connector 旧版回滚/新版恢复演练未完成。
 
 ## 需要用户确认或提供
 
@@ -94,7 +94,7 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 4. `P0-PROD-3 公司知识 Connector`：✅ `2026-08-08.3` 已生产部署，Connector/Agent Core 14/14、真实 ACL Canary、撤权、越权负测、备份与回滚通过；正式整库导入仍保持灰色，等待 P1 `department/openchat` 映射和单独批准，详见 `docs/knowledge-acl-canary-2026-08-08.md`。
 5. `P0-PROD-4 架构试点 P2`：✅ 一名真实 DRI 的受控 P2 已完成 Decision、Task、Action、Verification、Learning 闭环；真实业务部门 P2 留到 Goal 6 领域接入后再选取。
 6. `P0-PROD-5 容量观测`：连续采集 24 小时并发、队列等待、H 引擎限流、Outbox backlog、错误率、P95 延迟和 QNAP 资源数据，再决定 20/50 人放量。
-7. `P0-PROD-6 公网管理看板`：✅ `v1.55.0` 已上线 Goal 6、`v1.54.1` 安全修复和能力治理灰色白盒；隔离 Chrome `57/57`，认证、回环状态通道、控制台、失败请求和横向溢出均正常。
+7. `P0-PROD-6 公网管理看板`：✅ `v1.55.1` 已上线 Goal 6、安全修复、能力治理灰色白盒和连线路由修复；真实 Chrome `59/59`，认证、回环状态通道、控制台、失败请求、节点几何和横向溢出均正常。
 
 ## P0-G：ERP 与社媒只读证据接管
 
