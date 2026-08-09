@@ -9,11 +9,12 @@ import {
   stageContract,
 } from '../src/work-protocol.mjs'
 
-test('工作协议只激活可解释回答，后续阶段保持契约灰色', () => {
+test('工作协议定义完整实践阶段，知识问答显式跳过后续阶段', () => {
   const contract = stageContract()
-  assert.deepEqual(contract.filter((item) => item.status === 'pending').map((item) => item.stageType), ACTIVE_STAGES)
+  assert.deepEqual(ACTIVE_STAGES, contract.map((item) => item.stageType))
   assert.deepEqual(contract.filter((item) => item.status === 'contract_only').map((item) => item.stageType), CONTRACT_ONLY_STAGES)
-  assert.equal(contract.find((item) => item.stageType === 'decision').status, 'contract_only')
+  assert.equal(contract.find((item) => item.stageType === 'decision').status, 'skipped')
+  assert.equal(stageContract('decision_execution').find((item) => item.stageType === 'decision').status, 'pending')
 })
 
 test('WorkCase 只保存脱敏摘要与会话哈希', () => {

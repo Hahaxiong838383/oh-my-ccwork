@@ -17,6 +17,7 @@ function config() {
     maxBodyBytes: 262_144,
     maxClockSkewMs: 300_000,
     idempotencyTtlSeconds: 86_400,
+    practiceProtocol: { mode: 'shadow' },
   }
 }
 
@@ -196,7 +197,11 @@ test('权限检索与 P2 路由只使用签名身份并返回标准结果', asyn
   assert.deepEqual(ordinary.payload.evidence, [])
   assert.equal(dri.payload.evidence[0].classification, 'restricted')
 
-  const compileBody = JSON.stringify({ p2ExternalKey: 'demo-p2-2026-001', assigneeCount: 10 })
+  const compileBody = JSON.stringify({
+    p2ExternalKey: 'demo-p2-2026-001',
+    decisionExternalKey: 'demo-decision-2026-001:approved',
+    assigneeCount: 10,
+  })
   const forbidden = await request(port, {
     path: '/v1/p2/compile',
     body: compileBody,
@@ -215,6 +220,7 @@ test('权限检索与 P2 路由只使用签名身份并返回标准结果', asyn
   const actionBody = JSON.stringify({
     targetSystem: 'feishu-demo',
     actionType: 'feishu_task_status_demo',
+    decisionExternalKey: 'demo-decision-2026-001:approved',
     payload: { taskExternalKey: 'demo-p2-2026-001:task:demo-person-01', desiredStatus: 'done' },
     riskLevel: 'low',
   })
@@ -335,7 +341,23 @@ test('Goal 4 active 模式完成 WorkCase、Evidence v2 与结构化回答闭环
   assert.equal(protocolStatus.status, 200)
   assert.equal(protocolStatus.payload.status, 'active')
   assert.equal(protocolStatus.payload.recentCases[0].status, 'completed')
-  assert.equal(protocolStatus.payload.contractOnlyStages.includes('decision'), true)
+  assert.equal(protocolStatus.payload.contractOnlyStages.length, 0)
+  assert.equal(protocolStatus.payload.recentCases[0].stages.find((stage) => stage.stageType === 'decision').status, 'skipped')
+})
+
+test('实践协议关闭时拒绝 Decision/P2/Action/Learning 路由', async (t) => {
+  const server = createAgentCoreServer({
+    config: { ...config(), practiceProtocol: { mode: 'off' } },
+    store: createMemoryStore(),
+    runtime: { ready: async () => ({ ready: true, productionReady: false, mode: 'demo' }) },
+    now: () => now,
+  })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const port = await listen(server)
+  const body = JSON.stringify({ p2ExternalKey: 'demo-p2-2026-001', decisionExternalKey: 'demo-decision-2026-001:approved', assigneeCount: 1 })
+  const result = await request(port, { path: '/v1/p2/compile', body, headers: signed(body, { requestId: 'practice-off', idempotencyKey: 'practice-off' }) })
+  assert.equal(result.status, 503)
+  assert.equal(result.payload.status, 'practice_protocol_disabled')
 })
 
 test('Goal 4 无权限主体 Evidence 0 且不调用 H 引擎', async (t) => {

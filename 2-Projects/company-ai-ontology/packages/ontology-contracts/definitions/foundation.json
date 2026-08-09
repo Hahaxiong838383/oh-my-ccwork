@@ -203,7 +203,11 @@
       "properties": [
         { "name": "question", "type": "string", "required": true },
         { "name": "decisionStatus", "type": "string", "required": true },
-        { "name": "driPersonId", "type": "string", "required": true }
+        { "name": "driPersonId", "type": "string", "required": true },
+        { "name": "workCaseId", "type": "string", "required": false },
+        { "name": "purpose", "type": "string", "required": false },
+        { "name": "riskLevel", "type": "string", "required": false },
+        { "name": "evidencePackageId", "type": "string", "required": false }
       ]
     },
     {
@@ -230,9 +234,41 @@
       "description": "Approved selection with rationale",
       "extends": ["system.ontology.BaseObject"],
       "properties": [
+        { "name": "decisionCaseId", "type": "string", "required": false },
+        { "name": "selectedAlternativeId", "type": "string", "required": false },
         { "name": "rationale", "type": "string", "required": true },
+        { "name": "decisionStatus", "type": "string", "required": false },
         { "name": "approvedBy", "type": "string", "required": true },
-        { "name": "approvedAt", "type": "timestamp", "required": true }
+        { "name": "approvedAt", "type": "timestamp", "required": true },
+        { "name": "approvalEvidenceReferences", "type": "string[]", "required": false }
+      ]
+    },
+    {
+      "qualifiedName": "core.decision.ExpectedOutcome",
+      "description": "Versioned target metric and acceptance condition authorized by a decision",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "ownerType", "type": "string", "required": true },
+        { "name": "ownerReference", "type": "string", "required": true },
+        { "name": "metricKey", "type": "string", "required": true },
+        { "name": "targetOperator", "type": "string", "required": true },
+        { "name": "targetValue", "type": "decimal", "required": false },
+        { "name": "unit", "type": "string", "required": false },
+        { "name": "dueAt", "type": "timestamp", "required": false },
+        { "name": "acceptanceCriteria", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.decision.ObservedOutcome",
+      "description": "Time-valid observed metric supported by governed evidence",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "expectedOutcomeId", "type": "string", "required": true },
+        { "name": "observedValue", "type": "decimal", "required": false },
+        { "name": "observedStatus", "type": "string", "required": true },
+        { "name": "observedAt", "type": "timestamp", "required": true },
+        { "name": "evidenceReferences", "type": "string[]", "required": true },
+        { "name": "confidenceLevel", "type": "string", "required": true }
       ]
     },
     {
@@ -306,7 +342,9 @@
       "properties": [
         { "name": "assigneePersonId", "type": "string", "required": true },
         { "name": "dueAt", "type": "timestamp", "required": false },
-        { "name": "acceptanceCriteria", "type": "json", "required": true }
+        { "name": "acceptanceCriteria", "type": "json", "required": true },
+        { "name": "decisionId", "type": "string", "required": false },
+        { "name": "expectedOutcomeId", "type": "string", "required": false }
       ]
     },
     {
@@ -326,7 +364,14 @@
         { "name": "executionSuccess", "type": "boolean", "required": true },
         { "name": "operationalSuccess", "type": "boolean", "required": true },
         { "name": "goalSuccess", "type": "boolean", "required": true },
-        { "name": "evidenceReferences", "type": "string[]", "required": true }
+        { "name": "evidenceReferences", "type": "string[]", "required": true },
+        { "name": "executionStatus", "type": "string", "required": false },
+        { "name": "operationalStatus", "type": "string", "required": false },
+        { "name": "goalStatus", "type": "string", "required": false },
+        { "name": "expectedOutcomeId", "type": "string", "required": false },
+        { "name": "observedOutcomeId", "type": "string", "required": false },
+        { "name": "verifiedBy", "type": "string", "required": false },
+        { "name": "verifiedAt", "type": "timestamp", "required": false }
       ]
     },
     {
@@ -335,7 +380,10 @@
       "extends": ["system.ontology.BaseObject"],
       "properties": [
         { "name": "finding", "type": "string", "required": true },
-        { "name": "recommendedChange", "type": "json", "required": false }
+        { "name": "recommendedChange", "type": "json", "required": false },
+        { "name": "verificationId", "type": "string", "required": false },
+        { "name": "decisionId", "type": "string", "required": false },
+        { "name": "learningStatus", "type": "string", "required": false }
       ]
     },
     {
@@ -346,7 +394,10 @@
         { "name": "targetSystem", "type": "string", "required": true },
         { "name": "actionType", "type": "string", "required": true },
         { "name": "riskLevel", "type": "string", "required": true },
-        { "name": "expectedOutcome", "type": "json", "required": true }
+        { "name": "expectedOutcome", "type": "json", "required": true },
+        { "name": "decisionId", "type": "string", "required": false },
+        { "name": "taskId", "type": "string", "required": false },
+        { "name": "expectedOutcomeId", "type": "string", "required": false }
       ]
     },
     {
@@ -497,9 +548,20 @@
     { "qualifiedName": "core.decision.CONSIDERS", "fromType": "core.decision.DecisionCase", "toType": "core.decision.DecisionAlternative", "cardinality": "one_to_many" },
     { "qualifiedName": "core.decision.MODELED_AS", "fromType": "core.decision.DecisionAlternative", "toType": "core.decision.Scenario", "cardinality": "one_to_many" },
     { "qualifiedName": "core.decision.SELECTS", "fromType": "core.decision.Decision", "toType": "core.decision.DecisionAlternative", "cardinality": "one_to_one" },
+    { "qualifiedName": "core.decision.HAS_DECISION", "fromType": "core.decision.DecisionCase", "toType": "core.decision.Decision", "cardinality": "one_to_one" },
+    { "qualifiedName": "core.decision.AUTHORIZES", "fromType": "core.decision.Decision", "toType": "core.work.P2", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.decision.DEFINES_OUTCOME", "fromType": "core.decision.Decision", "toType": "core.decision.ExpectedOutcome", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.decision.OBSERVED_AS", "fromType": "core.decision.ExpectedOutcome", "toType": "core.decision.ObservedOutcome", "cardinality": "one_to_many" },
     { "qualifiedName": "core.work.DECOMPOSES_TO", "fromType": "core.work.P2", "toType": "core.work.Task", "cardinality": "one_to_many" },
     { "qualifiedName": "core.work.PRODUCES", "fromType": "core.work.Task", "toType": "core.work.Artifact", "cardinality": "one_to_many" },
     { "qualifiedName": "core.work.VERIFIED_BY", "fromType": "core.work.Task", "toType": "core.work.Verification", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.work.IMPLEMENTS", "fromType": "core.work.Task", "toType": "core.decision.Decision", "cardinality": "many_to_one" },
+    { "qualifiedName": "core.work.VERIFIES_EXPECTATION", "fromType": "core.work.Verification", "toType": "core.decision.ExpectedOutcome", "cardinality": "many_to_one" },
+    { "qualifiedName": "core.work.VERIFIES_OBSERVATION", "fromType": "core.work.Verification", "toType": "core.decision.ObservedOutcome", "cardinality": "many_to_one" },
+    { "qualifiedName": "core.work.PRODUCES_LEARNING", "fromType": "core.work.Verification", "toType": "core.work.Learning", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.action.EXECUTES_TASK", "fromType": "core.action.ActionIntent", "toType": "core.work.Task", "cardinality": "many_to_one" },
+    { "qualifiedName": "core.action.EXPECTS", "fromType": "core.action.ActionIntent", "toType": "core.decision.ExpectedOutcome", "cardinality": "many_to_one" },
+    { "qualifiedName": "core.action.PRODUCES_OUTCOME", "fromType": "core.action.ActionIntent", "toType": "core.decision.ObservedOutcome", "cardinality": "one_to_one" },
     { "qualifiedName": "core.work.HAS_STAGE", "fromType": "core.work.WorkCase", "toType": "core.work.WorkStage", "cardinality": "one_to_many" },
     { "qualifiedName": "core.work.USES_EVIDENCE", "fromType": "core.work.WorkCase", "toType": "core.epistemic.Evidence", "cardinality": "many_to_many" },
     { "qualifiedName": "core.work.PRODUCES_CLAIM", "fromType": "core.work.WorkCase", "toType": "core.epistemic.Claim", "cardinality": "one_to_many" },
@@ -573,6 +635,18 @@
       "outputs": [
         { "name": "verification", "type": "core.work.Verification", "required": true }
       ]
+    },
+    {
+      "qualifiedName": "core.decision.buildDecisionLineage",
+      "description": "Build a replayable lineage from evidence and decision through P2, task, action, verification and learning",
+      "deterministic": true,
+      "inputs": [
+        { "name": "decision", "type": "core.decision.Decision", "required": true },
+        { "name": "practiceObjects", "type": "json", "required": true }
+      ],
+      "outputs": [
+        { "name": "lineage", "type": "json", "required": true }
+      ]
     }
   ],
   "actionTypes": [
@@ -597,6 +671,18 @@
       "approval": "required",
       "inputs": [
         { "name": "intent", "type": "core.action.ActionIntent", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.decision.approveDecision",
+      "description": "Approve one selected alternative and authorize downstream P2 work",
+      "targetType": "core.decision.DecisionCase",
+      "effect": "write",
+      "gateway": "mandatory-action-gateway",
+      "approval": "required",
+      "inputs": [
+        { "name": "decisionCase", "type": "core.decision.DecisionCase", "required": true },
+        { "name": "selectedAlternative", "type": "core.decision.DecisionAlternative", "required": true }
       ]
     }
   ],
@@ -629,6 +715,24 @@
       "qualifiedName": "core.policy.noHiddenChainOfThought",
       "description": "Persist only evidence references, rules, claims, assumptions, unknowns, conflicts and audit summaries",
       "appliesTo": ["core.work.WorkStage", "core.epistemic.EpistemicAssessment"],
+      "effect": "deny"
+    },
+    {
+      "qualifiedName": "core.policy.approvedDecisionBeforeTask",
+      "description": "P2 task proposals require an approved decision and selected alternative",
+      "appliesTo": ["core.decision.Decision", "core.work.P2", "core.work.Task"],
+      "effect": "filter"
+    },
+    {
+      "qualifiedName": "core.policy.verificationBeforeGoalSuccess",
+      "description": "Technical execution cannot be promoted to operational or goal success without explicit verification evidence",
+      "appliesTo": ["core.action.ActionIntent", "core.work.Verification"],
+      "effect": "filter"
+    },
+    {
+      "qualifiedName": "core.policy.noAutomaticLearningDeployment",
+      "description": "Learning may propose a change but cannot deploy ontology, policy or business writes automatically",
+      "appliesTo": ["core.work.Learning", "system.ontology.OntologyChangeProposal"],
       "effect": "deny"
     }
   ],
@@ -688,6 +792,27 @@
       "targetType": "core.work.WorkStage",
       "severity": "error",
       "rule": "outputReferences excludes hidden_chain_of_thought"
+    },
+    {
+      "qualifiedName": "core.work.taskRequiresApprovedDecision",
+      "description": "Every newly compiled P2 task references an approved decision",
+      "targetType": "core.work.Task",
+      "severity": "error",
+      "rule": "decisionId != null"
+    },
+    {
+      "qualifiedName": "core.work.verificationRequiresEvidence",
+      "description": "Completed verification references governed evidence for all three outcome levels",
+      "targetType": "core.work.Verification",
+      "severity": "error",
+      "rule": "evidenceReferences != null && executionStatus != null && operationalStatus != null && goalStatus != null"
+    },
+    {
+      "qualifiedName": "core.work.learningRequiresVerification",
+      "description": "Learning can only be created from a completed verification",
+      "targetType": "core.work.Learning",
+      "severity": "error",
+      "rule": "verificationId != null"
     }
   ]
 }

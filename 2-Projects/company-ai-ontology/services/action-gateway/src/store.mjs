@@ -7,8 +7,8 @@ function gatewayError(message, statusCode, code) {
 function actionPayload(intent) {
   const taskExternalKey = String(intent?.payload?.taskExternalKey || '').trim()
   const desiredStatus = String(intent?.payload?.desiredStatus || '').trim()
-  if (!/^demo-p2-2026-001:task:demo-person-[0-9]{2}$/.test(taskExternalKey)) {
-    throw gatewayError('unsupported demo task target', 400, 'unsupported_target')
+  if (!/^[A-Za-z0-9:_-]{8,240}$/.test(taskExternalKey)) {
+    throw gatewayError('unsupported task target', 400, 'unsupported_target')
   }
   if (!['todo', 'in_progress', 'done'].includes(desiredStatus)) {
     throw gatewayError('unsupported demo task status', 400, 'unsupported_status')
@@ -87,7 +87,11 @@ export function createActionGatewayStore({ database, logger = () => {} } = {}) {
     return withTenant(tenantId, async (client) => {
       const intent = await getIntent(client, tenantId, intentId, true)
       if (intent.status !== 'proposed') throw gatewayError(`cannot dry-run action in ${intent.status}`, 409, 'invalid_transition')
-      if (intent.target_system !== 'feishu-demo' || intent.action_type !== 'feishu_task_status_demo') {
+      const supported = (
+        (intent.target_system === 'feishu-demo' && intent.action_type === 'feishu_task_status_demo') ||
+        (intent.target_system === 'ontology-internal' && intent.action_type === 'record_task_status')
+      )
+      if (!supported) {
         throw gatewayError('unsupported action type', 400, 'unsupported_action')
       }
       const { taskExternalKey, desiredStatus } = actionPayload(intent)
@@ -98,8 +102,8 @@ export function createActionGatewayStore({ database, logger = () => {} } = {}) {
       )
       if (!target.rows[0]) throw gatewayError('demo target not found', 404, 'target_not_found')
       const receipt = {
-        simulation: true,
-        targetSystem: 'feishu-demo',
+        simulation: intent.target_system === 'feishu-demo',
+        targetSystem: intent.target_system,
         taskExternalKey,
         previousStatus: target.rows[0].remote_status,
         desiredStatus,
@@ -152,8 +156,9 @@ export function createActionGatewayStore({ database, logger = () => {} } = {}) {
         [tenantId, taskExternalKey, desiredStatus],
       )
       if (!target.rows[0]) throw gatewayError('demo target not found', 404, 'target_not_found')
-      const executionReceipt = { simulation: true, taskExternalKey, requestedStatus: desiredStatus, targetVersion: Number(target.rows[0].version) }
-      const readbackReceipt = { simulation: true, taskExternalKey, observedStatus: target.rows[0].remote_status, verified: target.rows[0].remote_status === desiredStatus }
+      const simulation = intent.target_system === 'feishu-demo'
+      const executionReceipt = { simulation, taskExternalKey, requestedStatus: desiredStatus, targetVersion: Number(target.rows[0].version) }
+      const readbackReceipt = { simulation, taskExternalKey, observedStatus: target.rows[0].remote_status, verified: target.rows[0].remote_status === desiredStatus }
       const status = readbackReceipt.verified ? 'verified' : 'failed'
       const updated = await client.query(
         `UPDATE actions.intents
@@ -166,6 +171,120 @@ export function createActionGatewayStore({ database, logger = () => {} } = {}) {
       )
       await audit(client, { tenantId, intentId, eventType: `action_${status}`, payload: { executionReceipt, readbackReceipt } })
       return updated.rows[0]
+    })
+  }
+
+  async function verifyOutcome({
+    tenantId,
+    intentId,
+    actorPersonId,
+    operationalSuccess,
+    goalSuccess,
+    evidenceReferences,
+    sourceSystem,
+    sourceReference,
+    observedValue,
+    observedText,
+    confidenceLevel,
+    notes,
+  }) {
+    return withTenant(tenantId, async (client) => {
+      const actor = await approver(client, tenantId, actorPersonId)
+      const intent = await getIntent(client, tenantId, intentId, true)
+      if (!['verified', 'rolled_back'].includes(intent.status)) throw gatewayError(`cannot verify outcome in ${intent.status}`, 409, 'invalid_transition')
+      if (!intent.decision_id || !intent.expected_outcome_id) throw gatewayError('action is not linked to decision outcome', 409, 'decision_outcome_required')
+      const references = [...new Set(evidenceReferences.map((item) => String(item || '').trim()).filter(Boolean))]
+      if (!references.length || references.length > 50 || references.some((item) => item.length > 500)) {
+        throw gatewayError('verification evidence references are required', 400, 'invalid_evidence')
+      }
+      if (goalSuccess && !operationalSuccess) throw gatewayError('goal success requires operational success', 409, 'invalid_outcome_levels')
+      if (!['high', 'medium', 'low', 'insufficient'].includes(confidenceLevel)) throw gatewayError('invalid confidence level', 400, 'invalid_confidence')
+      const executionSuccess = intent.readback_receipt?.verified === true
+      const observedStatus = goalSuccess ? 'met' : operationalSuccess ? 'partial' : 'not_met'
+      const existing = await client.query(
+        `SELECT * FROM decision.verifications
+          WHERE tenant_id=$1 AND action_intent_id=$2 AND expected_outcome_id=$3`,
+        [tenantId, intent.id, intent.expected_outcome_id],
+      )
+      if (existing.rows[0]) return { ...existing.rows[0], simulation: intent.target_system === 'feishu-demo' }
+      const ontologyVersion = await client.query(
+        `SELECT id FROM ontology_registry.versions WHERE tenant_id=$1 AND status='active' LIMIT 1`,
+        [tenantId],
+      )
+      const observed = await client.query(
+        `INSERT INTO decision.observed_outcomes (
+           tenant_id, expected_outcome_id, source_system, source_reference,
+           observed_value, observed_text, observed_status, evidence_references,
+           confidence_level, observed_at, ontology_version_id
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,now(),$10)
+         RETURNING *`,
+        [
+          tenantId,
+          intent.expected_outcome_id,
+          String(sourceSystem || 'human-verification').slice(0, 128),
+          String(sourceReference || '').slice(0, 500) || null,
+          Number.isFinite(Number(observedValue)) ? Number(observedValue) : null,
+          String(observedText || '').slice(0, 1000) || null,
+          observedStatus,
+          JSON.stringify(references),
+          confidenceLevel,
+          ontologyVersion.rows[0]?.id || null,
+        ],
+      )
+      const verification = await client.query(
+        `INSERT INTO decision.verifications (
+           tenant_id, decision_id, task_id, action_intent_id, expected_outcome_id, observed_outcome_id,
+           execution_success, operational_success, goal_success,
+           execution_status, operational_status, goal_status,
+           evidence_references, verification_status, verified_by, notes, ontology_version_id
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,'completed',$14,$15,$16)
+         ON CONFLICT (tenant_id, action_intent_id, expected_outcome_id) DO NOTHING
+         RETURNING *`,
+        [
+          tenantId,
+          intent.decision_id,
+          intent.task_id,
+          intent.id,
+          intent.expected_outcome_id,
+          observed.rows[0].id,
+          executionSuccess,
+          operationalSuccess,
+          goalSuccess,
+          executionSuccess ? 'success' : 'failure',
+          operationalSuccess ? 'success' : 'failure',
+          goalSuccess ? 'achieved' : 'missed',
+          JSON.stringify(references),
+          actor.id,
+          String(notes || '').slice(0, 2000) || null,
+          ontologyVersion.rows[0]?.id || null,
+        ],
+      )
+      if (!verification.rows[0]) {
+        const concurrent = await client.query(
+          `SELECT * FROM decision.verifications
+            WHERE tenant_id=$1 AND action_intent_id=$2 AND expected_outcome_id=$3`,
+          [tenantId, intent.id, intent.expected_outcome_id],
+        )
+        return { ...concurrent.rows[0], simulation: intent.target_system === 'feishu-demo' }
+      }
+      await client.query(
+        `UPDATE decision.expected_outcomes SET status=$3, updated_at=now()
+          WHERE tenant_id=$1 AND id=$2`,
+        [tenantId, intent.expected_outcome_id, goalSuccess ? 'achieved' : 'missed'],
+      )
+      await client.query(
+        `UPDATE actions.intents SET observed_outcome_id=$3, verification_id=$4, updated_at=now()
+          WHERE tenant_id=$1 AND id=$2`,
+        [tenantId, intent.id, observed.rows[0].id, verification.rows[0].id],
+      )
+      await audit(client, {
+        tenantId,
+        intentId,
+        actorId: actor.id,
+        eventType: 'action_outcome_verified',
+        payload: { executionSuccess, operationalSuccess, goalSuccess, verificationId: verification.rows[0].id },
+      })
+      return { ...verification.rows[0], simulation: intent.target_system === 'feishu-demo' }
     })
   }
 
@@ -208,5 +327,5 @@ export function createActionGatewayStore({ database, logger = () => {} } = {}) {
     return withTenant(tenantId, (client) => getIntent(client, tenantId, intentId, false))
   }
 
-  return { ready, dryRun, approve, execute, rollback, get, close: () => pool.end() }
+  return { ready, dryRun, approve, execute, verifyOutcome, rollback, get, close: () => pool.end() }
 }

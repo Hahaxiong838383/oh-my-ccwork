@@ -139,8 +139,14 @@ printf 'tables=%s policies=%s views=%s event_update=%s assessment_update=%s work
 
 work_protocol_http=$(curl --silent --show-error --max-time 10 http://192.168.61.18:19080/ontology/status/work-protocol || true)
 printf 'work_protocol_http=%s\n' "$(printf '%s' "$work_protocol_http" | cut -c1-240)"
-printf '%s' "$work_protocol_http" | grep -q '"protocolVersion":"1.0.0"'
-printf '%s' "$work_protocol_http" | grep -q '"ontologySchemaVersion":"3.1.0"'
+printf '%s' "$work_protocol_http" | grep -q '"protocolVersion":"1.1.0"'
+printf '%s' "$work_protocol_http" | grep -q '"ontologySchemaVersion":"3.2.0"'
+
+practice_protocol_http=$(curl --silent --show-error --max-time 10 http://192.168.61.18:19080/ontology/status/practice-protocol || true)
+printf 'practice_protocol_http=%s\n' "$(printf '%s' "$practice_protocol_http" | cut -c1-240)"
+printf '%s' "$practice_protocol_http" | grep -q '"protocolVersion":"1.1.0"'
+printf '%s' "$practice_protocol_http" | grep -q '"ontologySchemaVersion":"3.2.0"'
+printf '%s' "$practice_protocol_http" | grep -Eq '"status":"(shadow|active)"'
 
 printf '\n=== h engine egress ===\n'
 h_engine_proxy_url=${H_ENGINE_PROXY_URL:-socks5h://192.168.61.66:10808}

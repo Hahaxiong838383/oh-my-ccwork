@@ -31,6 +31,11 @@ test('Action Gateway 强制令牌并按 dry-run 到 rollback 顺序执行', asyn
     dryRun: async () => { calls.push('dry-run'); status = 'dry_run_ready'; return { id: actionId, status } },
     approve: async ({ actorPersonId }) => { calls.push(`approve:${actorPersonId}`); status = 'approved'; return { id: actionId, status } },
     execute: async () => { calls.push('execute'); status = 'verified'; return { id: actionId, status, readback_receipt: { verified: true } } },
+    verifyOutcome: async ({ actorPersonId, operationalSuccess, goalSuccess }) => {
+      calls.push(`verify:${actorPersonId}:${operationalSuccess}:${goalSuccess}`)
+      if (goalSuccess && !operationalSuccess) throw Object.assign(new Error('goal success requires operational success'), { statusCode: 409, code: 'invalid_outcome_levels' })
+      return { id: 'verification-1', verification_status: 'completed', simulation: true }
+    },
     rollback: async ({ actorPersonId }) => { calls.push(`rollback:${actorPersonId}`); status = 'rolled_back'; return { id: actionId, status, rollback_receipt: { verified: true } } },
     get: async () => ({ id: actionId, status }),
   }
@@ -43,6 +48,29 @@ test('Action Gateway 强制令牌并按 dry-run 到 rollback 顺序执行', asyn
   assert.equal((await request(port, '/v1/actions/dry-run', { intentId: actionId })).payload.status, 'dry_run_ready')
   assert.equal((await request(port, '/v1/actions/approve', { intentId: actionId, actorPersonId: 'demo-dri-01' })).payload.status, 'approved')
   assert.equal((await request(port, '/v1/actions/execute', { intentId: actionId })).payload.status, 'verified')
+  const invalid = await request(port, '/v1/actions/verify-outcome', {
+    intentId: actionId,
+    actorPersonId: 'demo-dri-01',
+    operationalSuccess: false,
+    goalSuccess: true,
+    evidenceReferences: ['evidence:invalid'],
+  })
+  assert.equal(invalid.status, 409)
+  assert.equal(invalid.payload.status, 'invalid_outcome_levels')
+  assert.equal((await request(port, '/v1/actions/verify-outcome', {
+    intentId: actionId,
+    actorPersonId: 'demo-dri-01',
+    operationalSuccess: true,
+    goalSuccess: true,
+    evidenceReferences: ['evidence:goal5'],
+  })).payload.status, 'completed')
   assert.equal((await request(port, '/v1/actions/rollback', { intentId: actionId, actorPersonId: 'demo-dri-01' })).payload.status, 'rolled_back')
-  assert.deepEqual(calls, ['dry-run', 'approve:demo-dri-01', 'execute', 'rollback:demo-dri-01'])
+  assert.deepEqual(calls, [
+    'dry-run',
+    'approve:demo-dri-01',
+    'execute',
+    'verify:demo-dri-01:false:true',
+    'verify:demo-dri-01:true:true',
+    'rollback:demo-dri-01',
+  ])
 })

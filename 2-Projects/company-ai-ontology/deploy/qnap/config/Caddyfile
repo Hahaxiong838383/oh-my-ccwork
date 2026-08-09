@@ -53,5 +53,11 @@
     reverse_proxy agent-core:8080
   }
 
+  @practiceProtocol path /ontology/status/practice-protocol
+  handle @practiceProtocol {
+    rewrite * /status/practice-protocol
+    reverse_proxy agent-core:8080
+  }
+
   respond `{"status":"not-found"}` 404
 }

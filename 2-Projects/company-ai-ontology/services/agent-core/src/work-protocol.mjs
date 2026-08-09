@@ -1,7 +1,7 @@
 import { sha256 } from './protocol.mjs'
 
-export const WORK_PROTOCOL_VERSION = '1.0.0'
-export const ONTOLOGY_SCHEMA_VERSION = '3.1.0'
+export const WORK_PROTOCOL_VERSION = '1.1.0'
+export const ONTOLOGY_SCHEMA_VERSION = '3.2.0'
 
 export const WORK_STAGES = Object.freeze([
   'intake',
@@ -18,8 +18,8 @@ export const WORK_STAGES = Object.freeze([
   'learning',
 ])
 
-export const ACTIVE_STAGES = Object.freeze(WORK_STAGES.slice(0, 7))
-export const CONTRACT_ONLY_STAGES = Object.freeze(WORK_STAGES.slice(7))
+export const ACTIVE_STAGES = Object.freeze([...WORK_STAGES])
+export const CONTRACT_ONLY_STAGES = Object.freeze([])
 
 const TRANSITIONS = Object.freeze({
   received: new Set(['scoped', 'clarification_required', 'blocked']),
@@ -30,7 +30,15 @@ const TRANSITIONS = Object.freeze({
   insufficient_evidence: new Set(['synthesizing', 'evidence_collecting', 'blocked']),
   synthesizing: new Set(['response_ready', 'review_required', 'blocked']),
   review_required: new Set(['response_ready', 'blocked']),
-  response_ready: new Set(['completed', 'blocked']),
+  response_ready: new Set(['decision_pending', 'completed', 'blocked']),
+  decision_pending: new Set(['decision_approved', 'review_required', 'blocked']),
+  decision_approved: new Set(['planning', 'blocked']),
+  planning: new Set(['plan_ready', 'review_required', 'blocked']),
+  plan_ready: new Set(['executing', 'blocked']),
+  executing: new Set(['verification_pending', 'blocked']),
+  verification_pending: new Set(['verified', 'review_required', 'blocked']),
+  verified: new Set(['learning', 'completed', 'blocked']),
+  learning: new Set(['completed', 'review_required', 'blocked']),
   clarification_required: new Set(['scoped', 'blocked']),
   blocked: new Set(['evidence_collecting', 'synthesizing']),
   permission_denied: new Set(),
@@ -105,10 +113,11 @@ export function assertWorkCaseTransition(fromStatus, toStatus) {
   return true
 }
 
-export function stageContract() {
+export function stageContract(workMode = 'answer_query') {
+  const knowledgeOnly = ['answer_query', 'situation_analysis'].includes(workMode)
   return WORK_STAGES.map((stageType, sequenceNo) => ({
     sequenceNo,
     stageType,
-    status: ACTIVE_STAGES.includes(stageType) ? 'pending' : 'contract_only',
+    status: knowledgeOnly && sequenceNo >= 7 ? 'skipped' : 'pending',
   }))
 }

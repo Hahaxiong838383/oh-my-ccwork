@@ -7,6 +7,15 @@ const SEARCH_STOP_TERMS = new Set([
   '一下', '什么', '公司', '是否', '有关', '相关', '现在', '目前', '可以', '如何', '怎么', '请问', '告诉', '需要',
 ])
 
+function workflowError(message, statusCode, code) {
+  return Object.assign(new Error(message), { statusCode, code })
+}
+
+function boundedText(value, maxLength, fallback = '') {
+  const text = String(value || '').trim()
+  return (text || fallback).slice(0, maxLength)
+}
+
 export function buildSearchTerms(query, limit = 24) {
   const normalized = String(query || '').normalize('NFKC').toLowerCase().slice(0, 200)
   const tokens = normalized.match(/[a-z0-9_:@.-]{2,}|\p{Script=Han}{2,}/gu) || []
@@ -316,7 +325,7 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
         ],
       )
       const workCase = inserted.rows[0]
-      for (const stage of stageContract()) {
+      for (const stage of stageContract(draft.workMode)) {
         const initialStatus = stage.stageType === 'intake' ? 'completed' : stage.status
         await client.query(
           `INSERT INTO work.brain_case_stages (
@@ -536,7 +545,348 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
     })
   }
 
-  async function compileP2({ tenantId, actorPersonId, p2ExternalKey, assigneeCount = 5 }) {
+  async function proposeDecision({
+    tenantId,
+    actorPersonId,
+    workCaseId,
+    decisionExternalKey,
+    p2ExternalKey,
+    question,
+    purpose,
+    riskLevel,
+    evidencePackageId,
+    alternatives,
+  }) {
+    return withTenant(tenantId, async (client) => {
+      const actor = await client.query(
+        `SELECT p.id, p.department_key
+           FROM iam.principals p
+          WHERE p.tenant_id = $1 AND p.external_key = $2 AND p.status = 'active'
+            AND EXISTS (
+              SELECT 1 FROM iam.grants g
+              WHERE g.tenant_id = p.tenant_id AND g.principal_id = p.id
+                AND g.resource_scope = 'workflow:p2' AND g.permission = 'approve'
+            )`,
+        [tenantId, actorPersonId],
+      )
+      if (!actor.rows[0]) throw workflowError('actor cannot propose decision', 403, 'forbidden')
+      const p2 = await client.query(
+        `SELECT id, external_key, display_name, attributes
+           FROM ontology.entities
+          WHERE tenant_id = $1 AND entity_type = 'p2' AND external_key = $2 LIMIT 1`,
+        [tenantId, p2ExternalKey],
+      )
+      if (!p2.rows[0]) throw workflowError('P2 entity not found', 404, 'not_found')
+      await client.query(
+        `UPDATE ontology.entities
+            SET attributes = attributes || jsonb_build_object('decision_case_external_key', $3), updated_at=now()
+          WHERE tenant_id=$1 AND id=$2`,
+        [tenantId, p2.rows[0].id, decisionExternalKey],
+      )
+      const ontologyVersion = await client.query(
+        `SELECT id FROM ontology_registry.versions WHERE tenant_id = $1 AND status = 'active' LIMIT 1`,
+        [tenantId],
+      )
+      const inserted = await client.query(
+        `INSERT INTO decision.cases (
+           tenant_id, external_key, work_case_id, question_summary, purpose, risk_level,
+           status, dri_id, evidence_package_id, ontology_version_id
+         ) VALUES ($1,$2,$3,$4,$5,$6,'pending_approval',$7,$8,$9)
+         ON CONFLICT (tenant_id, external_key) DO UPDATE SET updated_at = now()
+         RETURNING id, external_key, work_case_id, question_summary, purpose, risk_level, status, dri_id, evidence_package_id`,
+        [
+          tenantId,
+          decisionExternalKey,
+          workCaseId || null,
+          boundedText(question, 1000, p2.rows[0].display_name),
+          boundedText(purpose, 200, 'company-priority-decision'),
+          riskLevel,
+          actor.rows[0].id,
+          evidencePackageId || null,
+          ontologyVersion.rows[0]?.id || null,
+        ],
+      )
+      if (inserted.rows[0].status === 'approved') throw workflowError('approved decision cannot be reproposed', 409, 'invalid_transition')
+      const decisionCase = inserted.rows[0]
+      const savedAlternatives = []
+      for (const [index, alternative] of alternatives.entries()) {
+        const externalKey = `${decisionExternalKey}:alternative:${index + 1}`
+        const saved = await client.query(
+          `INSERT INTO decision.alternatives (
+             tenant_id, decision_case_id, external_key, title, expected_outcome, risks, status, ontology_version_id
+           ) VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,'candidate',$7)
+           ON CONFLICT (tenant_id, decision_case_id, external_key) DO UPDATE SET
+             title = EXCLUDED.title, expected_outcome = EXCLUDED.expected_outcome,
+             risks = EXCLUDED.risks, status = 'candidate', updated_at = now()
+           RETURNING id, external_key, title, expected_outcome, risks, status`,
+          [
+            tenantId,
+            decisionCase.id,
+            externalKey,
+            boundedText(alternative.title, 500, `方案 ${index + 1}`),
+            JSON.stringify(alternative.expectedOutcome || {}),
+            JSON.stringify(alternative.risks || []),
+            ontologyVersion.rows[0]?.id || null,
+          ],
+        )
+        await client.query(
+          `INSERT INTO decision.scenarios (
+             tenant_id, decision_case_id, alternative_id, external_key, assumptions,
+             projected_outcome, metric_impacts, risk_score, status, ontology_version_id
+           ) VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb,$8,'modeled',$9)
+           ON CONFLICT (tenant_id, decision_case_id, external_key) DO UPDATE SET
+             assumptions = EXCLUDED.assumptions, projected_outcome = EXCLUDED.projected_outcome,
+             metric_impacts = EXCLUDED.metric_impacts, risk_score = EXCLUDED.risk_score,
+             status = 'modeled', updated_at = now()`,
+          [
+            tenantId,
+            decisionCase.id,
+            saved.rows[0].id,
+            `${externalKey}:scenario`,
+            JSON.stringify(alternative.assumptions || []),
+            JSON.stringify(alternative.projectedOutcome || alternative.expectedOutcome || {}),
+            JSON.stringify(alternative.metricImpacts || {}),
+            Number.isFinite(Number(alternative.riskScore)) ? Math.max(0, Math.min(1, Number(alternative.riskScore))) : null,
+            ontologyVersion.rows[0]?.id || null,
+          ],
+        )
+        savedAlternatives.push(saved.rows[0])
+      }
+      return {
+        ...decisionCase,
+        p2ExternalKey: p2.rows[0].external_key,
+        departmentKey: actor.rows[0].department_key,
+        alternatives: savedAlternatives,
+      }
+    })
+  }
+
+  async function approveDecision({
+    tenantId,
+    actorPersonId,
+    decisionExternalKey,
+    selectedAlternativeExternalKey,
+    rationale,
+    approvalEvidenceReferences,
+    expectedOutcome,
+  }) {
+    return withTenant(tenantId, async (client) => {
+      const actor = await client.query(
+        `SELECT p.id
+           FROM iam.principals p
+          WHERE p.tenant_id = $1 AND p.external_key = $2 AND p.status = 'active'
+            AND EXISTS (
+              SELECT 1 FROM iam.grants g
+              WHERE g.tenant_id = p.tenant_id AND g.principal_id = p.id
+                AND g.resource_scope = 'workflow:p2' AND g.permission = 'approve'
+            )`,
+        [tenantId, actorPersonId],
+      )
+      if (!actor.rows[0]) throw workflowError('actor cannot approve decision', 403, 'forbidden')
+      const decisionCaseResult = await client.query(
+        `SELECT * FROM decision.cases
+          WHERE tenant_id = $1 AND external_key = $2
+          FOR UPDATE`,
+        [tenantId, decisionExternalKey],
+      )
+      const decisionCase = decisionCaseResult.rows[0]
+      if (!decisionCase) throw workflowError('decision case not found', 404, 'not_found')
+      if (decisionCase.dri_id !== actor.rows[0].id) throw workflowError('only decision DRI can approve', 403, 'forbidden')
+      const existing = await client.query(
+        `SELECT d.*, a.external_key AS selected_alternative_external_key,
+                p2.external_key AS p2_external_key, dc.work_case_id,
+                to_jsonb(outcome.*) AS expected_outcome
+           FROM decision.decisions d
+           JOIN decision.cases dc ON dc.tenant_id=d.tenant_id AND dc.id=d.decision_case_id
+           JOIN decision.alternatives a ON a.tenant_id=d.tenant_id AND a.id=d.selected_alternative_id
+           LEFT JOIN decision.p2_bindings binding ON binding.tenant_id=d.tenant_id AND binding.decision_id=d.id
+           LEFT JOIN ontology.entities p2 ON p2.tenant_id=binding.tenant_id AND p2.id=binding.p2_entity_id
+           LEFT JOIN decision.expected_outcomes outcome ON outcome.tenant_id=binding.tenant_id AND outcome.id=binding.expected_outcome_id
+          WHERE d.tenant_id=$1 AND d.decision_case_id=$2`,
+        [tenantId, decisionCase.id],
+      )
+      if (existing.rows[0]) {
+        if (existing.rows[0].selected_alternative_external_key !== selectedAlternativeExternalKey) {
+          throw workflowError('decision was already approved with a different alternative', 409, 'idempotency_conflict')
+        }
+        return {
+          ...existing.rows[0],
+          expectedOutcome: existing.rows[0].expected_outcome,
+          p2ExternalKey: existing.rows[0].p2_external_key,
+          workCaseId: existing.rows[0].work_case_id,
+        }
+      }
+      if (!['pending_approval', 'scenario_ready'].includes(decisionCase.status)) {
+        throw workflowError(`cannot approve decision in ${decisionCase.status}`, 409, 'invalid_transition')
+      }
+      const alternative = await client.query(
+        `SELECT id, external_key, expected_outcome
+           FROM decision.alternatives
+          WHERE tenant_id=$1 AND decision_case_id=$2 AND external_key=$3`,
+        [tenantId, decisionCase.id, selectedAlternativeExternalKey],
+      )
+      if (!alternative.rows[0]) throw workflowError('selected alternative not found', 404, 'not_found')
+      const ontologyVersion = await client.query(
+        `SELECT id FROM ontology_registry.versions WHERE tenant_id = $1 AND status = 'active' LIMIT 1`,
+        [tenantId],
+      )
+      const decision = await client.query(
+        `INSERT INTO decision.decisions (
+           tenant_id, decision_case_id, external_key, selected_alternative_id,
+           rationale_summary, status, approved_by, approval_evidence_references, ontology_version_id
+         ) VALUES ($1,$2,$3,$4,$5,'approved',$6,$7::jsonb,$8)
+         RETURNING *`,
+        [
+          tenantId,
+          decisionCase.id,
+          `${decisionExternalKey}:approved`,
+          alternative.rows[0].id,
+          boundedText(rationale, 2000, 'DRI 已基于可用证据批准所选方案'),
+          actor.rows[0].id,
+          JSON.stringify(approvalEvidenceReferences),
+          ontologyVersion.rows[0]?.id || null,
+        ],
+      )
+      await client.query(
+        `UPDATE decision.alternatives
+            SET status = CASE WHEN id=$3 THEN 'selected' ELSE 'rejected' END, updated_at=now()
+          WHERE tenant_id=$1 AND decision_case_id=$2`,
+        [tenantId, decisionCase.id, alternative.rows[0].id],
+      )
+      const p2 = await client.query(
+        `SELECT id, external_key FROM ontology.entities
+          WHERE tenant_id=$1 AND entity_type='p2'
+            AND attributes->>'decision_case_external_key'=$2
+          ORDER BY created_at LIMIT 1`,
+        [tenantId, decisionExternalKey],
+      )
+      if (!p2.rows[0]) throw workflowError('decision P2 binding target not found', 409, 'p2_binding_missing')
+      const outcomeInput = expectedOutcome && Object.keys(expectedOutcome).length
+        ? expectedOutcome
+        : alternative.rows[0].expected_outcome || {}
+      const expected = await client.query(
+        `INSERT INTO decision.expected_outcomes (
+           tenant_id, decision_id, owner_type, owner_reference, metric_key, target_operator,
+           target_value, target_text, unit, baseline, acceptance_criteria, due_at, ontology_version_id
+         ) VALUES ($1,$2,'p2',$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11,$12)
+         RETURNING *`,
+        [
+          tenantId,
+          decision.rows[0].id,
+          p2.rows[0].external_key,
+          boundedText(outcomeInput.metricKey, 200, 'goal5_acceptance'),
+          ['eq', 'gte', 'lte', 'contains', 'status'].includes(outcomeInput.targetOperator) ? outcomeInput.targetOperator : 'status',
+          Number.isFinite(Number(outcomeInput.targetValue)) ? Number(outcomeInput.targetValue) : null,
+          outcomeInput.targetText ? boundedText(outcomeInput.targetText, 500) : null,
+          outcomeInput.unit ? boundedText(outcomeInput.unit, 64) : null,
+          JSON.stringify(outcomeInput.baseline || {}),
+          JSON.stringify(Array.isArray(outcomeInput.acceptanceCriteria) ? outcomeInput.acceptanceCriteria : []),
+          outcomeInput.dueAt || null,
+          ontologyVersion.rows[0]?.id || null,
+        ],
+      )
+      await client.query(
+        `INSERT INTO decision.p2_bindings (tenant_id, decision_id, p2_entity_id, expected_outcome_id)
+         VALUES ($1,$2,$3,$4)
+         ON CONFLICT (tenant_id, p2_entity_id) DO UPDATE SET
+           decision_id=EXCLUDED.decision_id, expected_outcome_id=EXCLUDED.expected_outcome_id`,
+        [tenantId, decision.rows[0].id, p2.rows[0].id, expected.rows[0].id],
+      )
+      await client.query(
+        `UPDATE decision.cases SET status='approved', updated_at=now() WHERE tenant_id=$1 AND id=$2`,
+        [tenantId, decisionCase.id],
+      )
+      return { ...decision.rows[0], expectedOutcome: expected.rows[0], p2ExternalKey: p2.rows[0].external_key, workCaseId: decisionCase.work_case_id }
+    })
+  }
+
+  async function practiceProtocolStatus({ tenantId, limit = 8 }) {
+    return withTenant(tenantId, async (client) => {
+      const result = await client.query(
+        `SELECT * FROM decision.practice_status_v1
+          WHERE tenant_id=$1 ORDER BY updated_at DESC LIMIT $2`,
+        [tenantId, Math.max(1, Math.min(20, Number(limit) || 8))],
+      )
+      const counts = await client.query(
+        `SELECT practice_status, count(*)::integer AS count
+           FROM decision.practice_status_v1 WHERE tenant_id=$1
+          GROUP BY practice_status ORDER BY practice_status`,
+        [tenantId],
+      )
+      return {
+        counts: Object.fromEntries(counts.rows.map((row) => [row.practice_status, Number(row.count)])),
+        recentLineages: result.rows.map((row) => ({
+          decisionCaseId: row.decision_case_id,
+          decisionCaseExternalKey: row.decision_case_external_key,
+          questionSummary: row.question_summary,
+          decisionStatus: row.decision_status,
+          selectedAlternativeExternalKey: row.selected_alternative_external_key,
+          p2ExternalKey: row.p2_external_key,
+          p2Title: row.p2_title,
+          taskCount: Number(row.task_count || 0),
+          acceptedTaskCount: Number(row.accepted_task_count || 0),
+          actionCount: Number(row.action_count || 0),
+          verificationCount: Number(row.verification_count || 0),
+          learningCount: Number(row.learning_count || 0),
+          executionSuccess: row.execution_success,
+          operationalSuccess: row.operational_success,
+          goalSuccess: row.goal_success,
+          practiceStatus: row.practice_status,
+          updatedAt: row.updated_at,
+        })),
+      }
+    })
+  }
+
+  async function recordLearning({ tenantId, actorPersonId, decisionExternalKey, verificationId, finding, causeCategory, recommendedChange, changeScope }) {
+    return withTenant(tenantId, async (client) => {
+      const actor = await client.query(
+        `SELECT p.id FROM iam.principals p
+          WHERE p.tenant_id=$1 AND p.external_key=$2 AND p.status='active'
+            AND EXISTS (
+              SELECT 1 FROM iam.grants g WHERE g.tenant_id=p.tenant_id AND g.principal_id=p.id
+                AND g.resource_scope='workflow:p2' AND g.permission='approve'
+            )`,
+        [tenantId, actorPersonId],
+      )
+      if (!actor.rows[0]) throw workflowError('actor cannot record learning', 403, 'forbidden')
+      const verification = await client.query(
+        `SELECT v.id, v.decision_id, v.verification_status, d.external_key, dc.work_case_id
+           FROM decision.verifications v
+           JOIN decision.decisions d ON d.tenant_id=v.tenant_id AND d.id=v.decision_id
+           JOIN decision.cases dc ON dc.tenant_id=d.tenant_id AND dc.id=d.decision_case_id
+          WHERE v.tenant_id=$1 AND v.id=$2 AND d.external_key=$3`,
+        [tenantId, verificationId, decisionExternalKey],
+      )
+      if (!verification.rows[0]) throw workflowError('verification not found', 404, 'not_found')
+      if (verification.rows[0].verification_status !== 'completed') throw workflowError('learning requires completed verification', 409, 'verification_incomplete')
+      const ontologyVersion = await client.query(
+        `SELECT id FROM ontology_registry.versions WHERE tenant_id=$1 AND status='active' LIMIT 1`,
+        [tenantId],
+      )
+      const learning = await client.query(
+        `INSERT INTO decision.learnings (
+           tenant_id, verification_id, decision_id, finding_summary, cause_category,
+           recommended_change, change_scope, status, ontology_version_id
+         ) VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,'proposed',$8)
+         ON CONFLICT (tenant_id, verification_id, finding_summary) DO UPDATE SET updated_at=now()
+         RETURNING *`,
+        [
+          tenantId,
+          verification.rows[0].id,
+          verification.rows[0].decision_id,
+          boundedText(finding, 2000),
+          causeCategory,
+          JSON.stringify(recommendedChange || {}),
+          changeScope,
+          ontologyVersion.rows[0]?.id || null,
+        ],
+      )
+      return { ...learning.rows[0], work_case_id: verification.rows[0].work_case_id }
+    })
+  }
+
+  async function compileP2({ tenantId, actorPersonId, p2ExternalKey, decisionExternalKey, assigneePersonIds = [], assigneeCount = 1 }) {
     return withTenant(tenantId, async (client) => {
       const actor = await client.query(
         `SELECT p.id
@@ -551,47 +901,73 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
       )
       if (!actor.rows[0]) throw Object.assign(new Error('actor cannot compile P2 tasks'), { statusCode: 403, code: 'forbidden' })
       const p2 = await client.query(
-        `SELECT id, display_name FROM ontology.entities
-          WHERE tenant_id = $1 AND entity_type = 'p2' AND external_key = $2 LIMIT 1`,
-        [tenantId, p2ExternalKey],
+        `SELECT p2.id, p2.display_name, p2.attributes,
+                d.id AS decision_id, d.external_key AS decision_external_key,
+                d.approved_by, binding.expected_outcome_id, dc.work_case_id
+           FROM ontology.entities p2
+           JOIN decision.p2_bindings binding
+             ON binding.tenant_id=p2.tenant_id AND binding.p2_entity_id=p2.id
+           JOIN decision.decisions d
+             ON d.tenant_id=binding.tenant_id AND d.id=binding.decision_id AND d.status='approved'
+           JOIN decision.cases dc
+             ON dc.tenant_id=d.tenant_id AND dc.id=d.decision_case_id
+          WHERE p2.tenant_id = $1 AND p2.entity_type = 'p2' AND p2.external_key = $2
+            AND d.external_key = $3
+          LIMIT 1`,
+        [tenantId, p2ExternalKey, decisionExternalKey],
       )
       if (!p2.rows[0]) throw Object.assign(new Error('P2 entity not found'), { statusCode: 404, code: 'not_found' })
-      const assignees = await client.query(
-        `SELECT id, external_key, display_name FROM iam.principals
-          WHERE tenant_id = $1 AND external_key LIKE 'demo-person-%' AND status = 'active'
-          ORDER BY external_key LIMIT $2`,
-        [tenantId, Math.max(1, Math.min(10, Number(assigneeCount) || 5))],
-      )
+      const requestedAssignees = Array.isArray(assigneePersonIds) ? [...new Set(assigneePersonIds.map(String))].slice(0, 10) : []
+      const assignees = requestedAssignees.length
+        ? await client.query(
+            `SELECT id, external_key, display_name FROM iam.principals
+              WHERE tenant_id=$1 AND external_key=ANY($2::text[]) AND status='active'
+              ORDER BY array_position($2::text[], external_key)`,
+            [tenantId, requestedAssignees],
+          )
+        : await client.query(
+            `SELECT id, external_key, display_name FROM iam.principals
+              WHERE tenant_id = $1 AND external_key LIKE 'demo-person-%' AND status = 'active'
+              ORDER BY external_key LIMIT $2`,
+            [tenantId, Math.max(1, Math.min(10, Number(assigneeCount) || 1))],
+          )
+      if (requestedAssignees.length && assignees.rows.length !== requestedAssignees.length) {
+        throw workflowError('one or more assignees are not active principals', 400, 'invalid_assignee')
+      }
       const tasks = []
       for (const [index, assignee] of assignees.rows.entries()) {
         const externalKey = `${p2ExternalKey}:task:${assignee.external_key}`
         const result = await client.query(
           `INSERT INTO workflow.tasks (
              tenant_id, external_key, source_entity_id, assignee_id, dri_id,
-             title, description, acceptance_criteria, status, priority
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, 'draft', 'P2')
+             title, description, acceptance_criteria, status, priority, decision_id, expected_outcome_id
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, 'draft', 'P2', $9, $10)
            ON CONFLICT (tenant_id, external_key) WHERE external_key IS NOT NULL
            DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description,
-             acceptance_criteria = EXCLUDED.acceptance_criteria, updated_at = now()
-           RETURNING id, external_key, title, status`,
+             acceptance_criteria = EXCLUDED.acceptance_criteria,
+             decision_id = EXCLUDED.decision_id, expected_outcome_id = EXCLUDED.expected_outcome_id,
+             updated_at = now()
+           RETURNING id, external_key, title, status, decision_id, expected_outcome_id`,
           [
             tenantId,
             externalKey,
             p2.rows[0].id,
             assignee.id,
-            actor.rows[0].id,
-            `任务 ${index + 1}：${assignee.display_name} 完成 Ontology 演示交付`,
-            `[demo:${p2ExternalKey}] 使用公司级 Bot 完成任务解释、执行记录和成果提交。`,
-            JSON.stringify(['通过公司级 Bot 确认任务', '提交一条可读成果', '由 DRI 完成验收']),
+            p2.rows[0].approved_by,
+            `任务 ${index + 1}：${assignee.display_name} 执行 ${p2.rows[0].display_name}`,
+            `[decision:${decisionExternalKey}] 按批准决策执行任务、提交成果并接受三层结果验证。`,
+            JSON.stringify(['任务引用已批准 Decision', '提交可验证成果', '分别验证执行、业务与目标结果']),
+            p2.rows[0].decision_id,
+            p2.rows[0].expected_outcome_id,
           ],
         )
-        tasks.push(result.rows[0])
+        tasks.push({ ...result.rows[0], work_case_id: p2.rows[0].work_case_id })
       }
       return tasks
     })
   }
 
-  async function transitionTask({ tenantId, actorPersonId, taskExternalKey, action, resultText = '' }) {
+  async function transitionTask({ tenantId, actorPersonId, taskExternalKey, action, resultText = '', suppressDelivery = false }) {
     return withTenant(tenantId, async (client) => {
       const actorResult = await client.query(
         `SELECT id, external_key FROM iam.principals
@@ -611,6 +987,7 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
       )
       const task = taskResult.rows[0]
       if (!task) throw Object.assign(new Error('task not found'), { statusCode: 404, code: 'not_found' })
+      if (!task.decision_id) throw workflowError('task is not linked to an approved decision', 409, 'decision_required')
       const driAction = ['approve', 'assign', 'accept', 'reject'].includes(action)
       const assigneeAction = ['start', 'submit', 'block'].includes(action)
       if ((driAction && actor.external_key !== task.dri_external_key) || (assigneeAction && actor.external_key !== task.assignee_external_key)) {
@@ -643,26 +1020,27 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
       await client.query(
         `INSERT INTO workflow.task_events (tenant_id, task_id, event_type, actor_id, payload)
          VALUES ($1, $2, $3, $4, $5::jsonb)`,
-        [tenantId, task.id, `task_${action}`, actor.id, JSON.stringify({ from: task.status, to: transition.to, simulation: true })],
+        [tenantId, task.id, `task_${action}`, actor.id, JSON.stringify({ from: task.status, to: transition.to, simulation: task.external_key.startsWith('demo-'), deliverySuppressed: Boolean(suppressDelivery) })],
       )
-      if (action === 'assign') {
+      if (action === 'assign' && !suppressDelivery) {
         await client.query(
           `INSERT INTO delivery.outbox (
              tenant_id, channel, recipient_key, event_type, payload, idempotency_key
            ) VALUES ($1, 'company-bot', $2, 'task_assigned', $3::jsonb, $4)
            ON CONFLICT (tenant_id, idempotency_key) DO NOTHING`,
-          [tenantId, task.assignee_external_key, JSON.stringify({ taskExternalKey, title: task.title, simulation: true }), `task-assigned:${taskExternalKey}`],
+          [tenantId, task.assignee_external_key, JSON.stringify({ taskExternalKey, title: task.title, simulation: task.external_key.startsWith('demo-') }), `task-assigned:${taskExternalKey}`],
         )
       }
       if (action === 'submit') {
-        const text = String(resultText || '演示成果').trim().slice(0, 4000)
+        const text = String(resultText || '任务成果').trim().slice(0, 4000)
+        const simulation = task.external_key.startsWith('demo-')
         await client.query(
           `INSERT INTO evidence.artifacts (
              tenant_id, task_id, source_system, object_uri, checksum_sha256,
              media_type, classification, metadata, submitted_by
-           ) VALUES ($1, $2, 'company-bot-demo', $3, encode(digest($4, 'sha256'), 'hex'),
+           ) VALUES ($1, $2, $7, $3, encode(digest($4, 'sha256'), 'hex'),
                      'text/plain', 'internal', $5::jsonb, $6)`,
-          [tenantId, task.id, `demo://task/${taskExternalKey}/result`, text, JSON.stringify({ text, simulation: true }), actor.id],
+          [tenantId, task.id, simulation ? `demo://task/${taskExternalKey}/result` : `ontology://task/${taskExternalKey}/result`, text, JSON.stringify({ text, simulation }), actor.id, simulation ? 'company-bot-demo' : 'company-bot'],
         )
       }
       return update.rows[0]
@@ -701,16 +1079,20 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
     })
   }
 
-  async function createActionIntent({ tenantId, actorPersonId, targetSystem, actionType, payload, riskLevel = 'low', idempotencyKey }) {
+  async function createActionIntent({ tenantId, actorPersonId, targetSystem, actionType, payload, riskLevel = 'low', idempotencyKey, decisionExternalKey, taskExternalKey }) {
     return withTenant(tenantId, async (client) => {
-      if (targetSystem !== 'feishu-demo' || actionType !== 'feishu_task_status_demo') {
+      const supported = (
+        (targetSystem === 'feishu-demo' && actionType === 'feishu_task_status_demo') ||
+        (targetSystem === 'ontology-internal' && actionType === 'record_task_status')
+      )
+      if (!supported) {
         throw Object.assign(new Error('unsupported action type'), { statusCode: 400, code: 'unsupported_action' })
       }
-      if (riskLevel !== 'low') throw Object.assign(new Error('demo action must be low risk'), { statusCode: 400, code: 'invalid_risk' })
-      const taskExternalKey = String(payload?.taskExternalKey || '').trim()
+      if (!['low', 'medium'].includes(riskLevel)) throw Object.assign(new Error('action risk is not allowed'), { statusCode: 400, code: 'invalid_risk' })
+      const normalizedTaskExternalKey = String(taskExternalKey || payload?.taskExternalKey || '').trim()
       const desiredStatus = String(payload?.desiredStatus || '').trim()
-      if (!/^demo-p2-2026-001:task:demo-person-[0-9]{2}$/.test(taskExternalKey) || !['todo', 'in_progress', 'done'].includes(desiredStatus)) {
-        throw Object.assign(new Error('invalid demo action payload'), { statusCode: 400, code: 'invalid_action_payload' })
+      if (!/^[A-Za-z0-9:_-]{8,240}$/.test(normalizedTaskExternalKey) || !['todo', 'in_progress', 'done'].includes(desiredStatus)) {
+        throw Object.assign(new Error('invalid action payload'), { statusCode: 400, code: 'invalid_action_payload' })
       }
       const actor = await client.query(
         `SELECT id FROM iam.principals
@@ -718,16 +1100,45 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
         [tenantId, actorPersonId],
       )
       if (!actor.rows[0]) throw Object.assign(new Error('actor not found'), { statusCode: 403, code: 'forbidden' })
-      const normalizedPayload = { taskExternalKey, desiredStatus, simulation: true }
+      const task = await client.query(
+        `SELECT t.id, t.external_key, t.decision_id, t.expected_outcome_id, t.status,
+                d.external_key AS decision_external_key
+           FROM workflow.tasks t
+           JOIN decision.decisions d ON d.tenant_id=t.tenant_id AND d.id=t.decision_id AND d.status='approved'
+          WHERE t.tenant_id=$1 AND t.external_key=$2 AND d.external_key=$3`,
+        [tenantId, normalizedTaskExternalKey, decisionExternalKey],
+      )
+      if (!task.rows[0]) throw workflowError('action task or approved decision not found', 404, 'not_found')
+      if (!['assigned', 'in_progress', 'submitted', 'accepted'].includes(task.rows[0].status)) {
+        throw workflowError(`cannot propose action for task in ${task.rows[0].status}`, 409, 'invalid_transition')
+      }
+      const simulation = targetSystem === 'feishu-demo'
+      const normalizedPayload = { taskExternalKey: normalizedTaskExternalKey, desiredStatus, simulation }
+      await client.query(
+        `INSERT INTO actions.demo_task_status (tenant_id, task_external_key, remote_status)
+         VALUES ($1,$2,'todo') ON CONFLICT (tenant_id, task_external_key) DO NOTHING`,
+        [tenantId, normalizedTaskExternalKey],
+      )
       const inserted = await client.query(
         `INSERT INTO actions.intents (
            tenant_id, requester_id, target_system, action_type, payload,
-           risk_level, approval_required, idempotency_key
-         ) VALUES ($1, $2, $3, $4, $5::jsonb, $6, true, $7)
+           risk_level, approval_required, idempotency_key, decision_id, task_id, expected_outcome_id
+         ) VALUES ($1, $2, $3, $4, $5::jsonb, $6, true, $7, $8, $9, $10)
          ON CONFLICT (tenant_id, target_system, idempotency_key) DO NOTHING
          RETURNING id, target_system, action_type, payload, risk_level, status,
-                   approval_required, idempotency_key, created_at, updated_at`,
-        [tenantId, actor.rows[0].id, targetSystem, actionType, JSON.stringify(normalizedPayload), riskLevel, idempotencyKey],
+                   approval_required, idempotency_key, decision_id, task_id, expected_outcome_id, created_at, updated_at`,
+        [
+          tenantId,
+          actor.rows[0].id,
+          targetSystem,
+          actionType,
+          JSON.stringify(normalizedPayload),
+          riskLevel,
+          idempotencyKey,
+          task.rows[0].decision_id,
+          task.rows[0].id,
+          task.rows[0].expected_outcome_id,
+        ],
       )
       if (inserted.rows[0]) return inserted.rows[0]
       const existing = await client.query(
@@ -832,6 +1243,10 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
     completeWorkCase,
     finalizeWorkCase,
     workProtocolStatus,
+    proposeDecision,
+    approveDecision,
+    practiceProtocolStatus,
+    recordLearning,
     compileP2,
     transitionTask,
     ackDemoDeliveries,
@@ -884,7 +1299,7 @@ export function createMemoryStore({ retrieval = null } = {}) {
     },
     async createWorkCase({ draft }) {
       const caseId = randomUUID()
-      const stages = stageContract().map((stage) => ({ ...stage, status: stage.stageType === 'intake' ? 'completed' : stage.status }))
+      const stages = stageContract(draft.workMode).map((stage) => ({ ...stage, status: stage.stageType === 'intake' ? 'completed' : stage.status }))
       const workCase = { caseId, externalCaseId: draft.externalCaseId, status: 'received', workMode: draft.workMode, processingMode: draft.processingMode, principalFound: retrieval?.principalFound !== false, startedAt: draft.startedAt, stages }
       workCases.set(caseId, workCase)
       return structuredClone(workCase)
@@ -927,6 +1342,65 @@ export function createMemoryStore({ retrieval = null } = {}) {
       const counts = {}
       for (const workCase of workCases.values()) counts[workCase.status] = (counts[workCase.status] || 0) + 1
       return { counts, recentCases }
+    },
+    async proposeDecision(input) {
+      const decisionCase = {
+        id: randomUUID(),
+        external_key: input.decisionExternalKey,
+        work_case_id: input.workCaseId,
+        status: 'pending_approval',
+        question_summary: input.question,
+        alternatives: input.alternatives.map((alternative, index) => ({
+          id: randomUUID(),
+          external_key: `${input.decisionExternalKey}:alternative:${index + 1}`,
+          title: alternative.title,
+          expected_outcome: alternative.expectedOutcome || {},
+          risks: alternative.risks || [],
+          status: 'candidate',
+        })),
+      }
+      workCases.set(`decision:${input.decisionExternalKey}`, decisionCase)
+      return structuredClone(decisionCase)
+    },
+    async approveDecision(input) {
+      const decisionCase = workCases.get(`decision:${input.decisionExternalKey}`)
+      if (!decisionCase) throw workflowError('decision case not found', 404, 'not_found')
+      const selected = decisionCase.alternatives.find((item) => item.external_key === input.selectedAlternativeExternalKey)
+      if (!selected) throw workflowError('selected alternative not found', 404, 'not_found')
+      Object.assign(decisionCase, { status: 'approved', selectedAlternative: selected })
+      return {
+        id: randomUUID(),
+        external_key: `${input.decisionExternalKey}:approved`,
+        status: 'approved',
+        selected_alternative_id: selected.id,
+        workCaseId: decisionCase.work_case_id,
+        expectedOutcome: { id: randomUUID(), ...(input.expectedOutcome || selected.expected_outcome) },
+      }
+    },
+    async practiceProtocolStatus() {
+      return { counts: {}, recentLineages: [] }
+    },
+    async recordLearning(input) {
+      return { id: randomUUID(), status: 'proposed', ...input }
+    },
+    async compileP2(input) {
+      return [{
+        id: randomUUID(),
+        external_key: `${input.p2ExternalKey}:task:${input.assigneePersonIds?.[0] || 'person-001'}`,
+        title: '决策驱动任务',
+        status: 'draft',
+        decision_id: 'memory-decision',
+        expected_outcome_id: 'memory-outcome',
+      }]
+    },
+    async transitionTask(input) {
+      return { external_key: input.taskExternalKey, status: input.action === 'accept' ? 'accepted' : input.action, decision_id: 'memory-decision' }
+    },
+    async ackDemoDeliveries() {
+      return []
+    },
+    async listP2Tasks() {
+      return []
     },
     async createActionIntent(input) {
       return { id: 'memory-action-intent', status: 'proposed', ...input }

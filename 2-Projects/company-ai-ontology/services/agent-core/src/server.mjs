@@ -7,9 +7,9 @@ import { createHEngineRuntime } from './runtime.mjs'
 import { createPostgresStore } from './store.mjs'
 import { createAdmissionController } from './admission.mjs'
 import { createCompanyBrain } from './company-brain.mjs'
-import { ACTIVE_STAGES, CONTRACT_ONLY_STAGES, ONTOLOGY_SCHEMA_VERSION, WORK_PROTOCOL_VERSION } from './work-protocol.mjs'
+import { ACTIVE_STAGES, CONTRACT_ONLY_STAGES, ONTOLOGY_SCHEMA_VERSION, WORK_PROTOCOL_VERSION, createWorkCaseDraft } from './work-protocol.mjs'
 
-export const AGENT_CORE_CONTRACT_VERSION = '2026-08-09.1'
+export const AGENT_CORE_CONTRACT_VERSION = '2026-08-09.2'
 
 function json(response, statusCode, payload, headers = {}) {
   const body = JSON.stringify(payload)
@@ -46,6 +46,44 @@ function parseJson(body) {
   } catch {
     throw Object.assign(new Error('request body must be valid JSON'), { statusCode: 400, code: 'invalid_request' })
   }
+}
+
+function externalKey(value, fieldName) {
+  const text = String(value || '').trim()
+  if (!/^[A-Za-z0-9:_-]{8,240}$/.test(text)) {
+    throw Object.assign(new Error(`${fieldName} is invalid`), { statusCode: 400, code: 'invalid_request' })
+  }
+  return text
+}
+
+function normalizeAlternatives(value) {
+  if (!Array.isArray(value) || value.length < 2 || value.length > 8) {
+    throw Object.assign(new Error('alternatives must contain 2 to 8 items'), { statusCode: 400, code: 'invalid_request' })
+  }
+  return value.map((item) => {
+    const title = String(item?.title || '').trim()
+    if (!title || title.length > 500) throw Object.assign(new Error('alternative title is invalid'), { statusCode: 400, code: 'invalid_request' })
+    return {
+      title,
+      expectedOutcome: item?.expectedOutcome && typeof item.expectedOutcome === 'object' ? item.expectedOutcome : {},
+      projectedOutcome: item?.projectedOutcome && typeof item.projectedOutcome === 'object' ? item.projectedOutcome : {},
+      assumptions: Array.isArray(item?.assumptions) ? item.assumptions.slice(0, 20) : [],
+      risks: Array.isArray(item?.risks) ? item.risks.slice(0, 20) : [],
+      metricImpacts: item?.metricImpacts && typeof item.metricImpacts === 'object' ? item.metricImpacts : {},
+      riskScore: item?.riskScore,
+    }
+  })
+}
+
+function evidenceReferences(value) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 50) {
+    throw Object.assign(new Error('evidenceReferences must contain 1 to 50 items'), { statusCode: 400, code: 'invalid_request' })
+  }
+  const output = [...new Set(value.map((item) => String(item || '').trim()).filter(Boolean))]
+  if (!output.length || output.some((item) => item.length > 500)) {
+    throw Object.assign(new Error('evidenceReferences are invalid'), { statusCode: 400, code: 'invalid_request' })
+  }
+  return output
 }
 
 function authenticate({ request, body, config, now }) {
@@ -143,19 +181,47 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
         })
         return
       }
+      if (request.method === 'GET' && request.url === '/status/practice-protocol') {
+        const status = await store.practiceProtocolStatus({
+          tenantId: config.tenantId,
+          limit: config.workProtocol?.recentCaseLimit || 8,
+        })
+        json(response, 200, {
+          ok: true,
+          status: config.practiceProtocol?.mode || 'off',
+          protocolVersion: WORK_PROTOCOL_VERSION,
+          ontologySchemaVersion: config.workProtocol?.ontologyVersion || ONTOLOGY_SCHEMA_VERSION,
+          activeStages: ACTIVE_STAGES,
+          contractOnlyStages: CONTRACT_ONLY_STAGES,
+          ...status,
+        })
+        return
+      }
       if (request.method === 'POST' && [
         '/v1/retrieve',
+        '/v1/decisions/propose',
+        '/v1/decisions/approve',
         '/v1/p2/compile',
         '/v1/tasks/transition',
         '/v1/delivery/demo-ack',
         '/v1/p2/tasks',
         '/v1/actions/propose',
+        '/v1/learnings/record',
         '/v1/privacy/my-data',
         '/v1/identity/sync',
       ].includes(request.url)) {
         const body = await readBody(request, config.maxBodyBytes)
         const scope = authenticate({ request, body, config, now })
         const input = parseJson(body)
+        if ([
+          '/v1/decisions/propose',
+          '/v1/decisions/approve',
+          '/v1/p2/compile',
+          '/v1/actions/propose',
+          '/v1/learnings/record',
+        ].includes(request.url) && (config.practiceProtocol?.mode || 'off') === 'off') {
+          throw Object.assign(new Error('practice protocol is disabled'), { statusCode: 503, code: 'practice_protocol_disabled' })
+        }
         if (request.url === '/v1/identity/sync') {
           if (scope.personId !== 'company-directory-sync') {
             throw Object.assign(new Error('directory sync requires service identity'), { statusCode: 403, code: 'forbidden' })
@@ -195,19 +261,114 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
           })
           return
         }
-        if (request.url === '/v1/p2/compile') {
-          const tasks = await store.compileP2({
+        if (request.url === '/v1/decisions/propose') {
+          const decisionExternalKey = externalKey(input.decisionExternalKey, 'decisionExternalKey')
+          const p2ExternalKey = externalKey(input.p2ExternalKey, 'p2ExternalKey')
+          const question = String(input.question || '').trim()
+          if (!question || question.length > 1000) throw Object.assign(new Error('question is invalid'), { statusCode: 400, code: 'invalid_request' })
+          const alternatives = normalizeAlternatives(input.alternatives)
+          const references = evidenceReferences(input.evidenceReferences)
+          const workCaseDraft = createWorkCaseDraft({
+            requestId: scope.requestId,
+            personId: scope.personId,
+            turn: { conversationId: String(input.conversationId || ''), message: question, intent: 'decision' },
+            processingMode: config.workProtocol?.mode || 'active',
+            now: () => new Date(now()),
+          })
+          const workCase = await store.createWorkCase({ tenantId: scope.tenantId, draft: workCaseDraft })
+          if (!workCase.principalFound) throw Object.assign(new Error('decision principal is not active'), { statusCode: 403, code: 'forbidden' })
+          await store.advanceWorkCase({ tenantId: scope.tenantId, caseId: workCase.caseId, toStatus: 'scoped', stageType: 'scope' })
+          await store.advanceWorkCase({ tenantId: scope.tenantId, caseId: workCase.caseId, toStatus: 'authority_checked', stageType: 'authority' })
+          await store.advanceWorkCase({ tenantId: scope.tenantId, caseId: workCase.caseId, toStatus: 'evidence_collecting', stageType: 'context' })
+          await store.advanceWorkCase({
+            tenantId: scope.tenantId,
+            caseId: workCase.caseId,
+            toStatus: 'evidence_ready',
+            stageType: 'evidence',
+            inputReferences: references,
+            outputReferences: [`evidence-package:${scope.requestId}`],
+          })
+          await store.advanceWorkCase({ tenantId: scope.tenantId, caseId: workCase.caseId, toStatus: 'synthesizing', stageType: 'synthesis' })
+          await store.advanceWorkCase({ tenantId: scope.tenantId, caseId: workCase.caseId, toStatus: 'response_ready', stageType: 'response' })
+          await store.advanceWorkCase({ tenantId: scope.tenantId, caseId: workCase.caseId, toStatus: 'decision_pending', stageType: 'decision', stageStatus: 'active' })
+          const decisionCase = await store.proposeDecision({
             tenantId: scope.tenantId,
             actorPersonId: scope.personId,
-            p2ExternalKey: String(input.p2ExternalKey || 'demo-p2-2026-001'),
-            assigneeCount: input.assigneeCount,
+            workCaseId: workCase.caseId,
+            decisionExternalKey,
+            p2ExternalKey,
+            question,
+            purpose: String(input.purpose || 'company-priority-decision'),
+            riskLevel: ['low', 'medium', 'high', 'critical'].includes(input.riskLevel) ? input.riskLevel : 'high',
+            evidencePackageId: `evidence-package:${scope.requestId}`,
+            alternatives,
           })
           await store.audit({
             tenantId: scope.tenantId,
             requestId: scope.requestId,
             personId: scope.personId,
+            eventType: 'decision_case_proposed',
+            payload: { decisionExternalKey, p2ExternalKey, workCaseId: workCase.caseId, alternativeCount: alternatives.length },
+          })
+          json(response, 200, { ok: true, status: decisionCase.status, requestId: scope.requestId, workCaseId: workCase.caseId, decisionCase })
+          return
+        }
+        if (request.url === '/v1/decisions/approve') {
+          const decision = await store.approveDecision({
+            tenantId: scope.tenantId,
+            actorPersonId: scope.personId,
+            decisionExternalKey: externalKey(input.decisionExternalKey, 'decisionExternalKey'),
+            selectedAlternativeExternalKey: externalKey(input.selectedAlternativeExternalKey, 'selectedAlternativeExternalKey'),
+            rationale: String(input.rationale || ''),
+            approvalEvidenceReferences: evidenceReferences(input.approvalEvidenceReferences),
+            expectedOutcome: input.expectedOutcome && typeof input.expectedOutcome === 'object' ? input.expectedOutcome : {},
+          })
+          if (decision.workCaseId) {
+            await store.advanceWorkCase({
+              tenantId: scope.tenantId,
+              caseId: decision.workCaseId,
+              toStatus: 'decision_approved',
+              stageType: 'decision',
+              outputReferences: [`decision:${decision.id}`],
+            })
+            await store.advanceWorkCase({ tenantId: scope.tenantId, caseId: decision.workCaseId, toStatus: 'planning', stageType: 'plan', stageStatus: 'active' })
+          }
+          await store.audit({
+            tenantId: scope.tenantId,
+            requestId: scope.requestId,
+            personId: scope.personId,
+            eventType: 'decision_approved',
+            payload: { decisionId: decision.id, p2ExternalKey: decision.p2ExternalKey, workCaseId: decision.workCaseId },
+          })
+          json(response, 200, { ok: true, status: decision.status, requestId: scope.requestId, decision })
+          return
+        }
+        if (request.url === '/v1/p2/compile') {
+          const tasks = await store.compileP2({
+            tenantId: scope.tenantId,
+            actorPersonId: scope.personId,
+            p2ExternalKey: externalKey(input.p2ExternalKey, 'p2ExternalKey'),
+            decisionExternalKey: externalKey(input.decisionExternalKey, 'decisionExternalKey'),
+            assigneePersonIds: Array.isArray(input.assigneePersonIds) ? input.assigneePersonIds.map(String) : [],
+            assigneeCount: input.assigneeCount,
+          })
+          const workCaseId = tasks[0]?.work_case_id || null
+          if (workCaseId) {
+            await store.advanceWorkCase({
+              tenantId: scope.tenantId,
+              caseId: workCaseId,
+              toStatus: 'plan_ready',
+              stageType: 'plan',
+              outputReferences: tasks.map((task) => `task:${task.id}`),
+            })
+            await store.advanceWorkCase({ tenantId: scope.tenantId, caseId: workCaseId, toStatus: 'executing', stageType: 'execution', stageStatus: 'active' })
+          }
+          await store.audit({
+            tenantId: scope.tenantId,
+            requestId: scope.requestId,
+            personId: scope.personId,
             eventType: 'p2_tasks_compiled',
-            payload: { p2ExternalKey: input.p2ExternalKey || 'demo-p2-2026-001', taskCount: tasks.length, simulation: true },
+            payload: { p2ExternalKey: input.p2ExternalKey, decisionExternalKey: input.decisionExternalKey, taskCount: tasks.length, workCaseId },
           })
           json(response, 200, { ok: true, status: 'draft', requestId: scope.requestId, tasks })
           return
@@ -219,13 +380,14 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
             taskExternalKey: String(input.taskExternalKey || ''),
             action: String(input.action || '').trim().toLowerCase(),
             resultText: input.resultText,
+            suppressDelivery: input.suppressDelivery === true,
           })
           await store.audit({
             tenantId: scope.tenantId,
             requestId: scope.requestId,
             personId: scope.personId,
             eventType: 'task_transition_completed',
-            payload: { taskExternalKey: task.external_key, status: task.status, simulation: true },
+            payload: { taskExternalKey: task.external_key, status: task.status, deliverySuppressed: input.suppressDelivery === true },
           })
           json(response, 200, { ok: true, status: task.status, requestId: scope.requestId, task })
           return
@@ -251,15 +413,44 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
             payload: input.payload,
             riskLevel: String(input.riskLevel || 'low'),
             idempotencyKey: scope.idempotencyKey,
+            decisionExternalKey: externalKey(input.decisionExternalKey, 'decisionExternalKey'),
+            taskExternalKey: externalKey(input.taskExternalKey || input.payload?.taskExternalKey, 'taskExternalKey'),
           })
           await store.audit({
             tenantId: scope.tenantId,
             requestId: scope.requestId,
             personId: scope.personId,
             eventType: 'action_intent_proposed',
-            payload: { actionIntentId: action.id, targetSystem: action.target_system, actionType: action.action_type, simulation: true },
+            payload: { actionIntentId: action.id, targetSystem: action.target_system, actionType: action.action_type, decisionId: action.decision_id, taskId: action.task_id },
           })
-          json(response, 200, { ok: true, status: action.status, requestId: scope.requestId, simulation: true, action })
+          json(response, 200, { ok: true, status: action.status, requestId: scope.requestId, action })
+          return
+        }
+        if (request.url === '/v1/learnings/record') {
+          const learning = await store.recordLearning({
+            tenantId: scope.tenantId,
+            actorPersonId: scope.personId,
+            decisionExternalKey: externalKey(input.decisionExternalKey, 'decisionExternalKey'),
+            verificationId: String(input.verificationId || ''),
+            finding: String(input.finding || ''),
+            causeCategory: ['assumption', 'execution', 'operation', 'market', 'measurement', 'unknown'].includes(input.causeCategory) ? input.causeCategory : 'unknown',
+            recommendedChange: input.recommendedChange && typeof input.recommendedChange === 'object' ? input.recommendedChange : {},
+            changeScope: ['none', 'task', 'process', 'policy', 'ontology'].includes(input.changeScope) ? input.changeScope : 'none',
+          })
+          if (learning.work_case_id) {
+            await store.advanceWorkCase({ tenantId: scope.tenantId, caseId: learning.work_case_id, toStatus: 'verification_pending', stageType: 'execution' })
+            await store.advanceWorkCase({ tenantId: scope.tenantId, caseId: learning.work_case_id, toStatus: 'verified', stageType: 'verification', outputReferences: [`verification:${input.verificationId}`] })
+            await store.advanceWorkCase({ tenantId: scope.tenantId, caseId: learning.work_case_id, toStatus: 'learning', stageType: 'learning', stageStatus: 'active' })
+            await store.advanceWorkCase({ tenantId: scope.tenantId, caseId: learning.work_case_id, toStatus: 'completed', stageType: 'learning', outputReferences: [`learning:${learning.id}`] })
+          }
+          await store.audit({
+            tenantId: scope.tenantId,
+            requestId: scope.requestId,
+            personId: scope.personId,
+            eventType: 'decision_learning_recorded',
+            payload: { learningId: learning.id, verificationId: input.verificationId, decisionExternalKey: input.decisionExternalKey },
+          })
+          json(response, 200, { ok: true, status: learning.status, requestId: scope.requestId, learning })
           return
         }
         if (request.url === '/v1/privacy/my-data') {

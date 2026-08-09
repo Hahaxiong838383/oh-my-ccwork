@@ -22,7 +22,7 @@ test('foundation definition compiles with stable governed contracts', async () =
   assert.equal(compiled.ok, true, JSON.stringify(compiled.errors))
   assert.match(compiled.bundle.contentHash, /^[0-9a-f]{64}$/)
   assert.ok(compiled.bundle.counts.object_type >= 30)
-  assert.equal(compiled.bundle.counts.action_type, 2)
+  assert.ok(compiled.bundle.counts.action_type >= 3)
   assert.equal(compiled.bundle.definition.toolContracts.action.gateway, 'mandatory-action-gateway')
 })
 
@@ -128,6 +128,60 @@ test('Goal 4 work protocol additions remain additive and governed', async () => 
   assert.ok(after.bundle.counts.object_type >= 46)
   assert.ok(after.bundle.counts.link_type >= 24)
   assert.equal(after.bundle.definition.toolContracts.data.returns, 'permissioned-evidence-package-v2')
+})
+
+test('Goal 5 decision lineage contracts remain additive and governed', async () => {
+  const current = await baseline()
+  const previous = structuredClone(current)
+  previous.objectTypes = previous.objectTypes.filter((entry) => ![
+    'core.decision.ExpectedOutcome',
+    'core.decision.ObservedOutcome',
+  ].includes(entry.qualifiedName))
+  previous.linkTypes = previous.linkTypes.filter((entry) => ![
+    'core.decision.HAS_DECISION',
+    'core.decision.AUTHORIZES',
+    'core.decision.DEFINES_OUTCOME',
+    'core.decision.OBSERVED_AS',
+    'core.work.IMPLEMENTS',
+    'core.work.VERIFIES_EXPECTATION',
+    'core.work.VERIFIES_OBSERVATION',
+    'core.work.PRODUCES_LEARNING',
+    'core.action.EXECUTES_TASK',
+    'core.action.EXPECTS',
+    'core.action.PRODUCES_OUTCOME',
+  ].includes(entry.qualifiedName))
+  previous.functionTypes = previous.functionTypes.filter((entry) => entry.qualifiedName !== 'core.decision.buildDecisionLineage')
+  previous.actionTypes = previous.actionTypes.filter((entry) => entry.qualifiedName !== 'core.decision.approveDecision')
+  previous.policyTypes = previous.policyTypes.filter((entry) => ![
+    'core.policy.approvedDecisionBeforeTask',
+    'core.policy.verificationBeforeGoalSuccess',
+    'core.policy.noAutomaticLearningDeployment',
+  ].includes(entry.qualifiedName))
+  previous.constraintTypes = previous.constraintTypes.filter((entry) => ![
+    'core.work.taskRequiresApprovedDecision',
+    'core.work.verificationRequiresEvidence',
+    'core.work.learningRequiresVerification',
+  ].includes(entry.qualifiedName))
+  for (const [typeName, properties] of Object.entries({
+    'core.decision.DecisionCase': ['workCaseId', 'purpose', 'riskLevel', 'evidencePackageId'],
+    'core.decision.Decision': ['decisionCaseId', 'selectedAlternativeId', 'decisionStatus', 'approvalEvidenceReferences'],
+    'core.work.Task': ['decisionId', 'expectedOutcomeId'],
+    'core.work.Verification': ['executionStatus', 'operationalStatus', 'goalStatus', 'expectedOutcomeId', 'observedOutcomeId', 'verifiedBy', 'verifiedAt'],
+    'core.work.Learning': ['verificationId', 'decisionId', 'learningStatus'],
+    'core.action.ActionIntent': ['decisionId', 'taskId', 'expectedOutcomeId'],
+  })) {
+    const type = previous.objectTypes.find((entry) => entry.qualifiedName === typeName)
+    type.properties = type.properties.filter((property) => !properties.includes(property.name))
+  }
+  const before = compileDefinition(previous)
+  const after = compileDefinition(current)
+  assert.equal(before.ok, true, JSON.stringify(before.errors))
+  assert.equal(after.ok, true, JSON.stringify(after.errors))
+  const compatibility = compareDefinitions(before.bundle.definition, after.bundle.definition)
+  assert.equal(compatibility.classification, 'compatible')
+  assert.ok(after.bundle.counts.object_type >= 48)
+  assert.ok(after.bundle.counts.link_type >= 35)
+  assert.ok(after.bundle.definition.policyTypes.some((entry) => entry.qualifiedName === 'core.policy.verificationBeforeGoalSuccess'))
 })
 
 test('event envelope normalizes time and rejects unsafe identifiers', () => {
