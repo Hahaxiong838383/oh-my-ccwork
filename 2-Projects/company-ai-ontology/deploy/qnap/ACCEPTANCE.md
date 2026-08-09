@@ -143,3 +143,17 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、Knowledge Conne
 - Runtime 构建上下文已从临时 `goal5-hotfix-*` 切换到版本化 release `19793e100`；Registry Definition Source Commit 保持 `e6a98c6dc`，没有把运行时热修复伪装成 Definition 变更。
 - H 控制面 `v1.53.0` 已显示 9/9 组件、P0-DEC 绿色、Practice active、Goal Verified 1；真实浏览器控制台错误、页面错误、失败请求和横向溢出均为 0。
 - 完整验收证据见 `docs/decision-practice-loop-acceptance-2026-08-09.md`。本轮未执行 10 名真实员工 Canary、未导入产品研究部整库、未启用真实 ERP/社媒写回。
+
+## Goal 6：P1-DOMAIN 与 Company Brain Operating Model v1
+
+- 公司 QNAP 五元组已重新在线核对；13 个容器健康，唯一宿主机发布端口仍为公司 LAN 健康入口。
+- Schema 已升级为 `3.3.0`，Registry `in_sync`，内容哈希 `41689393289d9514d1ed9cd22455a164f1bc59286f0db16deb9235e703e6ae77`，Definition Source Commit 为 `86108cc700df4e1f1d6802765cadb47e0bb65bcb`。
+- Company Brain Operating Model v1 已覆盖 Goal Owner、P2 Owner、DRI、Domain Owner、Data Steward、Evidence Owner、Decision/Action/Verification/Ontology Change Approver、Company Agent 和 Employee Agent，并固化读取、提案、批准、执行、验证和人工介入边界。
+- Product、Device、Operations、Market 最小领域对象和跨域关系已进入受治理 Definition，没有建立第二套事实真源。
+- Domain Connector `2026-08-09.3` 已只读接入 ERP M3 和社媒归一化结果；ERP Operations 38 条、Device 57 条、Market 369 条，敏感字段命中 0。
+- ERP 和 Market Replay 均保持幂等；Live Cursor 不被失败或历史 Replay 覆盖。Active、Deleted、Expired、Revoked、Dead Letter、模拟上游失败和恢复同步负测通过。
+- 未设置 Tenant 的应用角色读取 0，设置当前 Tenant 后可读取受治理 View；Action Gateway 读取领域表被拒绝。
+- 跨域只读演示链形成 11 节点/9 关系，Decision/Task 仅为提案，Verification 为 pending、Learning 为 proposed，ActionIntent 和 Delivery Outbox 均为 0。
+- 完整 `verify.sh` 于 2026-08-09 再次只读通过，没有新增公网端口、员工投递、ERP/社媒写回、ERP M4 或 MediaCrawler 操作。
+- H 控制面生产当前保持 `v1.53.0`。`v1.54.0` 白盒和 3D-ready DTO 已完成代码与测试，但重新部署、管理员密码切换、真实浏览器验收和 Domain Connector 回滚恢复演练仍需当前明确生产授权。
+- 完整当前状态见 `docs/goal6-operating-domain-acceptance-2026-08-09.md`。

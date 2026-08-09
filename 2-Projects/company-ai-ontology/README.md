@@ -1,6 +1,6 @@
 # Company AI Ontology
 
-公司级 AI Ontology 基座实施项目。P0-A 至 P0-F、V3 P0-S Foundation Pack、Goal 4 P0-EPI 和 Goal 5 P0-DEC 已在公司 QNAP 部署并完成生产验收；现有 H 平台员工私人 Bot 保持不变，真实 ERP/社媒写回继续关闭。
+公司级 AI Ontology 基座实施项目。P0-A 至 P0-F、V3 P0-S Foundation Pack、Goal 4 P0-EPI、Goal 5 P0-DEC 和 Goal 6 P1-DOMAIN 只读领域骨架已在公司 QNAP 部署并完成当前层级生产验收；现有 H 平台员工私人 Bot 保持不变，真实 ERP/社媒写回继续关闭。
 
 ## 资产身份门禁
 
@@ -13,7 +13,7 @@
 
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
-- 当前里程碑：`Goal 5 / P0-DEC + Decision Practice Protocol v1.1` 已完成并处于 `active`；Schema `3.2.0`、111 个 active Ontology 元素，已有一条三层结果均验证成功的 Decision Lineage。10 名真实员工 Canary 继续延后，下一阶段推荐 Goal 6 P1-DOMAIN + Company Brain Operating Model v1。
+- 当前里程碑：公司 QNAP 已进入 `Goal 6 / P1-DOMAIN`，Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 为 `active`；ERP M3 和社媒归一化结果已通过只读 Connector、稳定 View、幂等、重放、错误隔离和权限负测。H 控制面仍保持 `v1.53.0`，`v1.54.0` 白盒代码和发布门禁已准备完成，但尚未获得重新启动生产的明确授权，因此真实浏览器验收仍为灰色。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
 ## 部署边界
@@ -41,10 +41,12 @@
 - `docs/company-brain-work-logic-modeling-plan-2026-08-09.md`：公司大脑工作阶段、状态机、显式对象、Evidence Package v2、可视化和 Goal 4 实施计划。
 - `docs/company-brain-work-protocol-acceptance-2026-08-09.md`：Goal 4 生产发布、正负 fixture、回滚恢复、重启回放和 H 控制面验收证据。
 - `docs/decision-practice-loop-acceptance-2026-08-09.md`：Goal 5 决策、P2、任务、行动、三层结果、Learning、失败尝试退役和 H 控制面验收证据。
+- `docs/goal6-operating-domain-acceptance-2026-08-09.md`：Goal 6 Operating Model、P1-DOMAIN、只读演示链、负向验证、H 控制面待授权门禁和当前完成审计。
 - `packages/ontology-contracts/`：Git 管理的 V3 Definition、Compiler、兼容性、Event Envelope 和 Data/Logic/Action 契约。
 - `services/ontology-registry/`：独立 Registry、部署审批、版本激活、历史版本再激活和 Git/运行时对账服务。
 - `services/agent-core/`：Company Agent Core 内部 API、Postgres 幂等审计和 H 引擎独立 Runtime 门禁。
 - `services/knowledge-connector/`：飞书知识发现、ACL 映射、正文分块和同步审计。
+- `services/domain-connector/`：ERP M3 与社媒归一化结果的只读同步、双时间、幂等、重放、Dead Letter 和脱敏状态服务。
 
 ## 上线门禁
 
@@ -62,8 +64,8 @@
 
 ## 下一阶段
 
-1. 启动 Goal 6：P1-DOMAIN + Company Brain Operating Model v1，只读接入 ERP M3、社媒归一化结果和产品/设备最小骨架。
-2. Goal 3 的 10 名真实员工 Canary 继续延后，但仍是 20/50 人放量前的强制门禁。
-3. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
-4. 补齐空间成员 `department/openchat` 映射和 Retrieval 对群组主体的授权语义；完成后再单独审批产品研究部整库导入窗口。
-5. 保持 Knowledge Connector 自动发现关闭、启动自动同步关闭；正式导入前重新确认资源清单、撤权 SLA 和回滚窗口。
+1. 获得当前明确生产重启授权后，将 H 控制面从 `v1.53.0` 发布到 `v1.54.0`，同时切换管理员密码，并完成真实 Mac 浏览器二维/2.5D 交互验收。
+2. 在独立变更窗口完成 Domain Connector 旧版回滚与新版恢复演练；未获明确授权前不重启 QNAP 生产容器。
+3. Goal 3 的 10 名真实员工 Canary 继续延后，但仍是 20/50 人放量前的强制门禁。
+4. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
+5. 补齐空间成员 `department/openchat` 映射和 Retrieval 对群组主体的授权语义；完成后再单独审批产品研究部整库导入窗口。

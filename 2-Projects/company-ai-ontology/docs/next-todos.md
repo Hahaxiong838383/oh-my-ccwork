@@ -4,13 +4,13 @@
 
 ## 当前结论
 
-P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI、Goal 5 P0-DEC 和认证后公网运行看板均已上线。Work / Practice Protocol `1.1.0` 当前为 `active`，Decision 至 Learning 已有一条完整 `goal_verified` Lineage。10 名真实员工 Canary 继续延后；下一主线推荐 Goal 6：P1-DOMAIN + Company Brain Operating Model v1。产品研究部整库导入仍需 P1 主体映射与单独审批。
+P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI 和 Goal 5 P0-DEC 已上线。Goal 6 的 Company Brain Operating Model v1、Schema `3.3.0`、ERP M3/社媒只读领域骨架、跨域演示链和 3D-ready 数据协议已完成当前层级验收；H 控制面 `v1.54.0` 仍是已测试代码，生产已恢复并保持 `v1.53.0`，等待当前明确重启授权和真实浏览器验收。10 名真实员工 Canary 继续延后。
 
 ## 2026-08-09 Goal 顺序重排
 
 1. `Goal 4`：✅ P0-EPI + 公司大脑工作逻辑显式建模，Intake 至可解释回答已生产 active。
 2. `Goal 5`：✅ P0-DEC + Decision/P2/Task/Action/Verification/Learning 实践闭环已生产 active。
-3. `Goal 6`：推荐 P1-DOMAIN + Company Brain Operating Model v1，只读接入 ERP M3、社媒归一化结果和产品/设备最小骨架。
+3. `Goal 6`：🟡 QNAP P1-DOMAIN、Operating Model 和 3D-ready 协议已完成；H `v1.54.0` 发布、管理员密码切换、浏览器验收和 Domain Connector 回滚恢复演练待明确生产授权。
 4. `Goal 3`：10 名真实员工 Canary，继续延后但仍是 20/50 人放量前硬门禁。
 5. 公司专用 CPA 凭据和 P1 `department/openchat` 映射可并行推进，不改变业务验收顺序。
 
@@ -59,20 +59,23 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 8. ✅ H 控制面 `v1.53.0` 显示 9/9 组件、P0-DEC 绿色、Practice active 和 Goal Verified 1。
 9. 验收报告见 `docs/decision-practice-loop-acceptance-2026-08-09.md`。
 
-## Goal 6 推荐范围：P1-DOMAIN + Operating Model
+## Goal 6 当前状态：P1-DOMAIN + Operating Model
 
-1. 固化经营主干：Objective → Metric → Decision → P2 → Task → Action → Outcome → Verification → Learning。
-2. 为爱视可 ERP M3 建只读 Connector：SKU、SN、质检、库存、订单、物流、激活和设备追溯。
-3. 接入 TikHub、JustOneAPI 和既有社媒系统的归一化业务结果；不恢复 MediaCrawler，不以 HTTP 200 代替业务成功。
-4. 实例化 Product/SKU/BOM/Firmware/SN/DeviceState、Market Signal 和 Customer Scenario 的最小对象与关系，不一次建全企业本体。
-5. H 控制面增加经营目标、决策、P2、三层结果、失败/退役 Lineage、证据时效、未知和冲突视图；禁止显示隐藏思维链。
-6. 验收使用合成或只读事实，不批量通知员工、不切换员工私人 Bot、不启用真实 ERP/社媒写回。
+1. ✅ Company Brain Operating Model v1 已固化经营主干、12 类角色、生命周期和人工门禁。
+2. ✅ 爱视可 ERP M3 已验收对象已通过只读 Connector 映射为 Operations/Device Read Model。
+3. ✅ 既有社媒系统的归一化结果已映射为 Market Read Model；MediaCrawler 继续关闭。
+4. ✅ Product、Device、Operations、Market 最小对象与关系已进入 Schema `3.3.0`，没有建设大而全企业本体。
+5. ✅ 幂等、重放、Live Cursor 保护、Active/Deleted/Expired/Revoked、Dead Letter、错误恢复和无权角色负测通过。
+6. ✅ 跨域只读演示链已形成 11 节点/9 关系，Decision/Task 保持提案态，ActionIntent 和 Delivery Outbox 均为 0。
+7. ✅ 二维、2.5D、未来真 3D 共用的 Architecture DTO 已完成自动测试；真 3D 保持 `contract_only`。
+8. ⏳ H 控制面 `v1.54.0` 已完成 260/260 测试和只读发布检查；生产仍为 `v1.53.0`，等待当前明确重启授权。
+9. ⏳ 真实 Mac 浏览器交互验收与 Domain Connector 旧版回滚/新版恢复演练未完成。
 
 ## 需要用户确认或提供
 
 1. 准备公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
 2. P1 主体映射完成后，单独确认产品研究部知识库正式导入窗口和资源范围。
-3. Goal 6 启动时确认首批只读 ERP M3 对象范围和社媒归一化结果入口；暂不需要选择 10 名真实员工。
+3. Goal 6 首批只读 ERP M3 与社媒入口已完成；暂不需要选择 10 名真实员工。
 
 ## P0-A 至 P0-F 状态
 
@@ -91,16 +94,16 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 4. `P0-PROD-3 公司知识 Connector`：✅ `2026-08-08.3` 已生产部署，Connector/Agent Core 14/14、真实 ACL Canary、撤权、越权负测、备份与回滚通过；正式整库导入仍保持灰色，等待 P1 `department/openchat` 映射和单独批准，详见 `docs/knowledge-acl-canary-2026-08-08.md`。
 5. `P0-PROD-4 架构试点 P2`：✅ 一名真实 DRI 的受控 P2 已完成 Decision、Task、Action、Verification、Learning 闭环；真实业务部门 P2 留到 Goal 6 领域接入后再选取。
 6. `P0-PROD-5 容量观测`：连续采集 24 小时并发、队列等待、H 引擎限流、Outbox backlog、错误率、P95 延迟和 QNAP 资源数据，再决定 20/50 人放量。
-7. `P0-PROD-6 公网管理看板`：✅ `https://ai.kidshub.cn/admin/company-ontology` 已复用 H 控制面管理员认证；Mini 仅向 aliyun-hk 回环地址维护 QNAP 状态通道，页面展示绿色已完成与灰色待完成节点，不暴露 QNAP、凭据、文档正文或员工个人数据。
+7. `P0-PROD-6 公网管理看板`：🟡 认证、回环状态通道和 `v1.53.0` 页面正常；Goal 6 `v1.54.0` 白盒代码已完成但已从生产回滚，等待明确重启授权后再做真实浏览器验收。
 
 ## P0-G：ERP 与社媒只读证据接管
 
-1. 为爱视可 ERP M3 已验收对象建立只读 Connector：SKU、SN、质检、仓库、渠道订单、物流、激活和设备追溯。
-2. 将 ERP 事实映射为 Ontology Entity、Relation 和 Evidence，不改变 ERPNext/Frappe 事务真源地位。
-3. 接入 TikHub、JustOneAPI 和现有社媒系统的归一化业务结果，不把 HTTP 200 当作业务成功。
-4. 社媒正文先进入不可信输入隔离区，只允许结构化 Signal 进入 Permissioned Retrieval。
-5. 保持 MediaCrawler 风控任务暂停，未经明确指令不恢复、不绕过登录、不增加并发。
-6. 先建立 Product/SKU/BOM/Firmware/SN/DeviceState 骨架；当前只读接入，不开放设备自动控制。
+1. ✅ 爱视可 ERP M3 已验收对象已通过只读 Connector 映射为 Operations/Device Read Model。
+2. ✅ ERPNext/Frappe 继续作为事务真源；Ontology 只保存受治理只读投影、Provenance 和同步审计。
+3. ✅ 现有社媒系统归一化结果已映射为 Market Read Model；来源事实、推导、预测和人工判断显式区分。
+4. ✅ 只允许结构化 Signal 进入领域层，敏感字段扫描为 0。
+5. ✅ MediaCrawler 继续暂停，未恢复登录、采集或风控绕过。
+6. ✅ Product、Device、Operations、Market 最小骨架已建立；设备自动控制和业务写回继续关闭。
 
 ## P1-B：扩容与高可用
 

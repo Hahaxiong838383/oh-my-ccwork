@@ -1,9 +1,9 @@
 # 公司 AI Ontology 技术架构开发进展
 
-更新时间：2026-08-08（Asia/Shanghai）
+更新时间：2026-08-09（Asia/Shanghai）
 
-- 绿色：已完成代码、测试或生产 shadow 验证。
-- 灰色：未完成，或仍在上线门禁之后。
+- 绿色：该节点标注的当前层级已经完成真实验收。
+- 灰色：只完成代码/协议，或仍在生产授权、浏览器验收及业务门禁之后。
 - 架构统一使用“H 引擎”描述 AI 执行层；底层模型实现和版本只属于部署细节。
 - 现有 H 平台员工私人 Bot 完全保持不变；另行新建一个公司级飞书 App/Bot 作为 Ontology 全员入口。
 
@@ -38,8 +38,16 @@ flowchart TB
   BACKUP["Base Backup + WAL + PITR<br/>真实恢复演练"]:::done
 
   ACTION["Mandatory Action Gateway<br/>Dry-run / 人审 / 执行 / 读回 / 回滚"]:::done
-  ERP["爱视可 ERP 接管<br/>M3 只读证据 → 后续受控写回"]:::todo
-  SOCIAL["社媒监控接管<br/>归一化 Signal / 不可信输入隔离"]:::todo
+  DOMAIN_CONNECTOR["Domain Connector<br/>只读同步 / 重放 / Dead Letter"]:::done
+  OPERATING_MODEL["Company Brain Operating Model v1<br/>角色 / 生命周期 / 人工门禁"]:::done
+  PRODUCT_DOMAIN["Product Domain<br/>Product / Version / SKU / Feature"]:::done
+  DEVICE_DOMAIN["Device Domain<br/>Model / Instance / Firmware / Event"]:::done
+  OPERATIONS_DOMAIN["Operations Domain<br/>Order / Quality / Shipment / Activation"]:::done
+  MARKET_DOMAIN["Market Domain<br/>Signal / Topic / Trend / Opportunity"]:::done
+  ARCH_CONTRACT["3D-ready Architecture Contract<br/>2D / 2.5D / topology-3d contract_only"]:::done
+  H_V154["H 控制面 v1.54.0<br/>代码与发布门禁完成 / 待授权上线"]:::todo
+  ERP["爱视可 ERP M3 Read Model<br/>38 Operations + 57 Device"]:::done
+  SOCIAL["Market Signal Read Model<br/>369 条归一化结果"]:::done
   CANARY["演示负载与恢复验收<br/>5/10/20 并发 / ACK / 重启恢复"]:::done
   OFFSITE["Mac Mini 离机加密备份<br/>解密与可恢复性校验"]:::done
   CAPACITY["24 小时容量数据<br/>Admission Control 参数"]:::todo
@@ -68,6 +76,16 @@ flowchart TB
   TASK --> PG
   TASK --> H_PROCESS
   CORE -. "Action Intent" .-> ACTION
+  ERP --> DOMAIN_CONNECTOR
+  SOCIAL --> DOMAIN_CONNECTOR
+  DOMAIN_CONNECTOR --> PG
+  DOMAIN_CONNECTOR --> RETRIEVAL
+  OPERATING_MODEL --> CORE
+  PRODUCT_DOMAIN --> PG
+  DEVICE_DOMAIN --> PG
+  OPERATIONS_DOMAIN --> PG
+  MARKET_DOMAIN --> PG
+  ARCH_CONTRACT --> H_V154
   ACTION -. "受控写回" .-> ERP
   SOCIAL -. "只读 Signal" .-> RETRIEVAL
   ERP -. "只读履约证据" .-> RETRIEVAL
@@ -106,6 +124,13 @@ flowchart TB
 18. PostgreSQL 17 隔离验收覆盖迁移重复执行、7 个逻辑 Schema、7 个稳定 View、RLS、最小权限、双审计和历史版本再激活；生产重启与重复部署后版本/元素/审计数量保持不变。
 19. 公网管理看板已升级到 H 控制面 `v1.49.1`，Ontology Registry 独立标绿；真实 Chrome 验收为 7/7 运行组件就绪、控制台错误 0、失败请求 0、桌面和 390px 横向溢出 0。
 20. Knowledge Connector 旧镜像回滚和恢复演练通过；临时飞书文档与 4 条 Canary Resource 已清理，最终知识表为 Resource 1、ACL 0、Chunk 0。
+21. Goal 6 Schema `3.3.0` 已生产激活，Registry Hash 为 `41689393289d`，Definition 与 Runtime 保持 `in_sync`。
+22. Company Brain Operating Model v1 已固化 12 个角色、关键生命周期、三层结果和 Learning 人工门禁。
+23. Domain Connector `2026-08-09.3` 已只读接入 ERP M3 与社媒归一化结果；ERP 95 条、Market 369 条，敏感字段命中 0。
+24. Replay、Live Cursor 保护、Active/Deleted/Expired/Revoked、Dead Letter、上游失败恢复和 Action Gateway 禁读负测已通过。
+25. 跨域只读演示链已形成 11 节点/9 关系，不向员工下发、不写回 ERP/社媒、不产生 ActionIntent 或 Delivery Outbox。
+26. 3D-ready Contract 已统一 Node、Edge、Layer、Focus、Selection、Camera、Filter、Trace 和 ViewMode；`topology-3d` 继续灰色。
+27. H 控制面 `v1.54.0` 源码与 260/260 测试已完成，但生产因变更授权边界恢复到 `v1.53.0`；发布脚本只读检查已通过，真实浏览器验收仍为灰色。
 
 ## P0 A-F 已完成
 

@@ -20,7 +20,7 @@ const response = await fetch(`http://127.0.0.1:8085/v1/${operation}/${source}${o
   headers: { authorization: `Bearer ${process.env.DOMAIN_CONNECTOR_CONTROL_TOKEN}` },
 })
 const payload = await response.json()
-console.log(JSON.stringify(payload))
+console.log(JSON.stringify({ ok: payload.ok, status: payload.status, source: payload.source, stats: payload.stats }))
 if (!response.ok || payload.status !== 'completed') process.exit(1)
 if (operation === 'replay' && (payload.stats.inserted !== 0 || payload.stats.updated !== 0 || payload.stats.unchanged < 1)) process.exit(1)
 NODE

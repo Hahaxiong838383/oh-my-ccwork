@@ -278,11 +278,15 @@ node ops/sync-company-directory.mjs
 - 生产 `Evidence=0` 必须在策略层 fail-closed：Principal 不存在返回 `permission_denied`，Principal 存在但没有可用 Evidence 返回 `insufficient_evidence`；两类路径都不得调用 H 引擎。
 - Migration/View 验收不能只使用数据库 owner；必须以真实应用角色读取稳定 View 和状态接口，避免遗漏 `GRANT SELECT` 造成生产 `42501`。
 - 在公司 QNAP 远端执行含 `docker compose exec -T` 的脚本时，禁止通过 SSH stdin/heredoc 直接喂脚本；必须先把脚本传到远端版本化目录，再从文件执行，防止容器命令抢占 stdin 造成半执行或假绿。
-- Goal 5 生产锚点为 Schema `3.2.0`、Agent Core / Action Gateway `2026-08-09.2`、Work / Practice Protocol `1.1.0 / active`、111 个 active 元素；完整验收见 `docs/decision-practice-loop-acceptance-2026-08-09.md`。版本与运行状态属于快照，后续操作前仍需在线复核。
+- Goal 6 QNAP 生产锚点为 Schema `3.3.0`、Agent Core / Domain Connector `2026-08-09.3`、Work / Practice Protocol `1.1.0 / active`、Registry Hash `41689393289d`；完整当前状态见 `docs/goal6-operating-domain-acceptance-2026-08-09.md`。版本与运行状态属于快照，后续操作前仍需在线复核。
 - Decision Lineage 必须区分技术执行、业务结果、经营目标三层成功；`execution_success=true` 不能推出 `goal_success=true`。Learning 默认只能写为 `proposed`。
 - 失败 Canary 必须保留审计并显式退役：WorkCase `blocked`、Decision `superseded`、Practice Status `retired`；禁止删除历史，也禁止退役 `goal_verified` Lineage。
 - Ontology Definition Source Commit 与 Runtime Release Commit 分开记录。Definition 未变化时不得用运行时热修复提交覆盖 Registry Source Commit。
-- 下一主线推荐 Goal 6：只读接入 ERP M3、社媒归一化结果和 Product/Device/Market 最小领域骨架，并深化经营可视化；不恢复 MediaCrawler、不开发 ERP M4、不开放真实写回。
+- Goal 6 的 QNAP 领域数据面、Operating Model 和 3D-ready 协议已完成当前层级生产验收；H 控制面 `v1.54.0` 仍是待授权发布代码，生产继续保持 `v1.53.0`。不得把代码完成或测试通过描述为白盒已上线。
+- 任何 H 控制面、QNAP 或其他生产服务的重启都必须获得川哥在当前变更窗口的明确授权；Goal 文件、历史部署授权和“继续 Goal”都不能替代即时批准。申请前必须完成只读基线、目标测试、备份/回滚设计、影响与预计中断说明。
+- 修改 `/srv/h-control/.env` 后必须显式恢复 `h-control:h-control / 0600`，并以服务用户验证可读；临时文件原子替换会改变属主，是本次 502 的直接根因之一。
+- 管理员密码、Cookie 和登录表单内容不得进入 Playwright 参数、快照或工具输出。密码切换必须从 Git 外来源读取、只报告候选数量和长度，并在新密码登录通过后才更新 Keychain 指针。
+- Domain Connector 状态只允许返回 `sourceSystem`、`cursorPresent` 和 `lastSuccessAt`；验证脚本不得打印完整同步 payload 或真实 Cursor。
 - 详细实施计划见 `2-Projects/company-ai-ontology/docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
 
 当前实现与切换流程见：
