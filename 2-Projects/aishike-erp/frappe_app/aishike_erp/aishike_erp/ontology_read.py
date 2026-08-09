@@ -14,6 +14,8 @@ def ensure_ontology_reader_role() -> None:
 
 
 def _require_reader() -> None:
+    if frappe.session.user in {"Administrator", "Guest"}:
+        frappe.throw("仅公司 Ontology 只读服务账号可访问。", frappe.PermissionError)
     if ONTOLOGY_READER_ROLE not in set(frappe.get_roles()):
         frappe.throw("仅公司 Ontology 只读服务账号可访问。", frappe.PermissionError)
 
