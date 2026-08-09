@@ -1,4 +1,5 @@
 export { canonicalJson, contentHash, normalizeDefinition } from './canonical.mjs'
+export { evaluateCapabilityOverride, loadCompanyCapabilityGovernance, validateCapabilityExecutionSnapshot } from './capability-governance.mjs'
 export { compareDefinitions } from './compatibility.mjs'
 export { compileDefinition, ontologyPrimitives } from './compiler.mjs'
 export { createEventEnvelope } from './event-envelope.mjs'

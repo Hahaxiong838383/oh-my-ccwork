@@ -1,0 +1,94 @@
+{
+  "contractVersion": "1.0.0",
+  "status": "contract_only",
+  "purpose": "Govern executable Company Agent capabilities without storing skill bodies in the business ontology",
+  "canonicalStores": {
+    "skillBody": "git-and-h-platform-l0-store",
+    "governanceMetadata": "ontology-registry",
+    "executionSnapshot": "workcase-audit-store"
+  },
+  "governedObjects": [
+    {
+      "name": "CapabilityDefinition",
+      "requiredFields": ["capabilityKey", "name", "capabilityClass", "criticality", "ownerRole", "lifecycleStatus"]
+    },
+    {
+      "name": "CapabilityRelease",
+      "requiredFields": ["capabilityKey", "releaseVersion", "contentHash", "sourceCommit", "behaviorContractVersion", "compatibilityStatus", "releaseStatus"]
+    },
+    {
+      "name": "CapabilityBinding",
+      "requiredFields": ["bindingKey", "capabilityKey", "subjectType", "subjectKey", "bindingLayer", "purposeScope", "bindingStatus"]
+    },
+    {
+      "name": "CapabilityOverride",
+      "requiredFields": ["overrideKey", "sourceReleaseHash", "overrideHash", "overrideLayer", "approvalStatus", "canonicalBodyPresent", "sourceHashMatches"]
+    },
+    {
+      "name": "CapabilityExecutionSnapshot",
+      "requiredFields": ["workCaseId", "behaviorContractVersion", "capabilityBundleHash", "ontologySchemaVersion", "modelProvider", "modelId", "evidencePackageVersion", "capturedAt"]
+    }
+  ],
+  "capabilityClasses": [
+    {
+      "id": "company-core",
+      "personalOverrideAllowed": false,
+      "sameNameShadowAllowed": false,
+      "examples": ["authority", "permissioned-retrieval", "task-compiler", "mandatory-action-gateway"]
+    },
+    {
+      "id": "department-extension",
+      "personalOverrideAllowed": false,
+      "sameNameShadowAllowed": false,
+      "examples": ["product-research-workflow", "erp-read-analysis"]
+    },
+    {
+      "id": "employee-private",
+      "personalOverrideAllowed": true,
+      "sameNameShadowAllowed": true,
+      "examples": ["personal-writing-style", "private-reminder-format"]
+    }
+  ],
+  "bindingLayers": [
+    { "id": "company-canonical", "precedence": 100, "mayBindCompanyCore": true },
+    { "id": "department-extension", "precedence": 200, "mayBindCompanyCore": false },
+    { "id": "employee-private", "precedence": 300, "mayBindCompanyCore": false }
+  ],
+  "forkPolicy": {
+    "requireCanonicalBody": true,
+    "requireSourceHashMatch": true,
+    "requireApproval": true,
+    "rejectHollowFork": true,
+    "rejectCorePersonalShadow": true,
+    "rejectCoreNoncanonicalShadow": true,
+    "preserveLegitimateUserFork": true
+  },
+  "releaseChannels": [
+    {
+      "id": "skill-content-hot-publish",
+      "restartRequired": false,
+      "requiredChecks": ["bidirectional-diff", "privacy-scan-positive-negative-anchors", "optimistic-lock", "post-publish-hash-readback", "shadow-audit"]
+    },
+    {
+      "id": "h-control-code-release",
+      "restartRequired": true,
+      "requiredChecks": ["current-window-approval", "reviewed-pushed-commit", "backup", "automatic-rollback", "browser-acceptance"]
+    },
+    {
+      "id": "h-runtime-release",
+      "restartRequired": true,
+      "requiredChecks": ["separate-change-window", "shadow-cutover", "runtime-state-readback", "real-message-acceptance"]
+    }
+  ],
+  "executionSnapshot": {
+    "requiredFields": ["workCaseId", "behaviorContractVersion", "capabilityBundleHash", "ontologySchemaVersion", "modelProvider", "modelId", "evidencePackageVersion", "capturedAt"],
+    "hashFields": ["capabilityBundleHash"],
+    "hiddenReasoningAllowed": false
+  },
+  "rolloutGates": [
+    "no-override-canary",
+    "legitimate-private-override-canary",
+    "malicious-core-shadow-negative-test",
+    "revocation-and-rollback-readback"
+  ]
+}

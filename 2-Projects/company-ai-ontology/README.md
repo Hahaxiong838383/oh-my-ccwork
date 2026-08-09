@@ -13,7 +13,7 @@
 
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
-- 当前里程碑：公司 QNAP 已进入 `Goal 6 / P1-DOMAIN`，Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 为 `active`；ERP M3 和社媒归一化结果已通过只读 Connector、稳定 View、幂等、重放、错误隔离和权限负测。H 控制面仍保持 `v1.53.0`，`v1.54.0` 白盒代码和发布门禁已准备完成，但尚未获得重新启动生产的明确授权，因此真实浏览器验收仍为灰色。
+- 当前里程碑：公司 QNAP 已进入 `Goal 6 / P1-DOMAIN`，Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 为 `active`；ERP M3 和社媒归一化结果已通过只读 Connector、稳定 View、幂等、重放、错误隔离和权限负测。Company Capability Governance v1 已形成 `contract_only` 骨架，不改变当前生产 Schema。H 控制面 `v1.55.0` 已上线 Goal 6 白盒、`v1.54.1` Skill Fork 安全修复和能力治理显示，隔离 Chrome 验收 `57/57` 通过。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
 ## 部署边界
@@ -41,9 +41,9 @@
 - `docs/company-brain-work-logic-modeling-plan-2026-08-09.md`：公司大脑工作阶段、状态机、显式对象、Evidence Package v2、可视化和 Goal 4 实施计划。
 - `docs/company-brain-work-protocol-acceptance-2026-08-09.md`：Goal 4 生产发布、正负 fixture、回滚恢复、重启回放和 H 控制面验收证据。
 - `docs/decision-practice-loop-acceptance-2026-08-09.md`：Goal 5 决策、P2、任务、行动、三层结果、Learning、失败尝试退役和 H 控制面验收证据。
-- `docs/goal6-operating-domain-acceptance-2026-08-09.md`：Goal 6 Operating Model、P1-DOMAIN、只读演示链、负向验证、H 控制面待授权门禁和当前完成审计。
+- `docs/goal6-operating-domain-acceptance-2026-08-09.md`：Goal 6 Operating Model、P1-DOMAIN、只读演示链、负向验证和生产验收。
 - `docs/goal6-completion-audit-2026-08-09.md`：按 Goal 原始要求逐项核对“已证明/部分证明/待证明”，防止把代码、测试或容器健康误报为完整完成。
-- `packages/ontology-contracts/`：Git 管理的 V3 Definition、Compiler、兼容性、Event Envelope 和 Data/Logic/Action 契约。
+- `packages/ontology-contracts/`：Git 管理的 V3 Definition、Compiler、兼容性、Event Envelope、Data/Logic/Action、Operating Model 和 Capability Governance 契约。
 - `services/ontology-registry/`：独立 Registry、部署审批、版本激活、历史版本再激活和 Git/运行时对账服务。
 - `services/agent-core/`：Company Agent Core 内部 API、Postgres 幂等审计和 H 引擎独立 Runtime 门禁。
 - `services/knowledge-connector/`：飞书知识发现、ACL 映射、正文分块和同步审计。
@@ -59,14 +59,14 @@
 - Ontology Registry `2026-08-08.1` 已上线：Schema `3.2.0`、111 个 active 受治理元素、内容哈希 `ffa8943255b9`，生产 active 版本唯一且 Git/运行时一致。
 - Goal 4 已完成 ERP/社媒 fixture 的正证、反证、过期、无 ACL 和不存在 Principal 五类生产验证；无证据路径在策略层失败关闭，不调用 H 引擎，不泄露标题、URL、人员或正文。
 - Goal 5 已跑通一名真实 DRI、一个受控 P2、一个 Task、一个 Action、一个 Verification 和一个 Learning Proposal；技术执行、业务结果、经营目标三层结果均为 `true`。失败演练保留审计并退役，不算正式 P2。
-- H 控制面 `v1.53.0` 已上线 WorkCase、Evidence Map、Answer Basis、Decision Lineage 和三层结果；真实浏览器显示 9/9 运行组件就绪、控制台错误 0、无横向溢出。
+- H 控制面 `v1.55.0` 已上线 WorkCase、Evidence Map、Answer Basis、Decision Lineage、Goal 6 领域白盒和能力治理灰色节点；真实浏览器 `57/57` 检查通过，控制台错误、失败请求、节点重叠和横向溢出均为 0。
 - 本阶段不开放数据库端口到员工网段。
 - 10 人真实员工 Canary 和 24 小时容量数据未完成前，不进入 50 人正式首批。
 
 ## 下一阶段
 
-1. 获得当前明确生产重启授权后，将 H 控制面从 `v1.53.0` 发布到 `v1.54.0`，同时切换管理员密码，并完成真实 Mac 浏览器二维/2.5D 交互验收。
-2. 在独立变更窗口完成 Domain Connector 旧版回滚与新版恢复演练；未获明确授权前不重启 QNAP 生产容器。
+1. 在独立变更窗口完成 Domain Connector 旧版回滚与新版恢复演练；未获明确授权前不重启 QNAP 生产容器。
+2. 更新飞书《公司 AI Ontology 基座架构方案》、共享记忆和最终 Goal 6 审计。
 3. Goal 3 的 10 名真实员工 Canary 继续延后，但仍是 20/50 人放量前的强制门禁。
 4. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
 5. 补齐空间成员 `department/openchat` 映射和 Retrieval 对群组主体的授权语义；完成后再单独审批产品研究部整库导入窗口。

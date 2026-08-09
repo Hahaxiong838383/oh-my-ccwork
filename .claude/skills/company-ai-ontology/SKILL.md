@@ -265,6 +265,16 @@ node ops/sync-company-directory.mjs
 - 3D 控制优先使用明确按钮：Z0-Z4 层级切换、只看当前层、展开/压缩层距、跟随当前 WorkCase、俯视/正视/侧视、重置相机；自由 Orbit 旋转是辅助能力，不是主导航方式。
 - 3D 必须复用同一 Ontology Registry、节点 ID、状态 DTO、权限与焦点模型，不能建立第二套架构数据源。验收至少覆盖卡片点击命中、相机重置、层级切换、键盘回退、低性能设备降级到 2.5D、稳定帧率和无权限数据不进入场景。
 
+### Company Capability Governance
+
+- Skill 是会改变 Agent 行为的可执行能力，不得仅按提示词文档管理。能力治理最小对象固定为 `CapabilityDefinition`、`CapabilityRelease`、`CapabilityBinding`、`CapabilityOverride` 和 `CapabilityExecutionSnapshot`。
+- Skill 正文继续以 Git 和 H 平台 L0 Store 为真源；Ontology Registry 只保存版本、Hash、来源、绑定、审批、兼容性和执行快照元数据，不把 Skill 正文复制进业务本体。
+- 公司核心能力禁止员工个人层同名遮蔽；部门扩展必须使用独立命名空间。合法员工私人能力继续留在员工私人 Bot，不覆盖公司中枢的 Authority、Retrieval、Task Compiler 或 Action Gateway。
+- Fork 必须包含共享正文、匹配 source SHA 并经过明确审批；空壳 Fork、来源漂移和未批准覆盖全部 fail-closed。真实用户修改过的合法 Fork 不得自动删除。
+- 发布通道必须拆分：Skill 内容走热发布且不重启，H 控制面代码走独立重启窗口，Mini/H Runtime 走独立影子割接窗口；禁止为了 SHA 对齐把三类发布捆绑。
+- 重要 WorkCase 必须记录 `behaviorContractVersion`、Capability Bundle Hash、Ontology Schema、模型和 Evidence Package 版本，保证决策可以按当时真实行为配置回放。
+- Capability Governance v1 当前为 `contract_only`，白盒必须保持灰色；只有 Registry 元数据、运行时解析、遮蔽审计、执行快照和真实 Canary 全部闭环后才能标绿。
+
 ### 公司大脑工作逻辑显式建模
 
 - 一次公司大脑处理过程必须建模为 `WorkCase`，阶段建模为 `WorkStage`；不能只保存最终回答或 H 引擎运行日志。
@@ -282,7 +292,7 @@ node ops/sync-company-directory.mjs
 - Decision Lineage 必须区分技术执行、业务结果、经营目标三层成功；`execution_success=true` 不能推出 `goal_success=true`。Learning 默认只能写为 `proposed`。
 - 失败 Canary 必须保留审计并显式退役：WorkCase `blocked`、Decision `superseded`、Practice Status `retired`；禁止删除历史，也禁止退役 `goal_verified` Lineage。
 - Ontology Definition Source Commit 与 Runtime Release Commit 分开记录。Definition 未变化时不得用运行时热修复提交覆盖 Registry Source Commit。
-- Goal 6 的 QNAP 领域数据面、Operating Model 和 3D-ready 协议已完成当前层级生产验收；H 控制面 `v1.54.0` 仍是待授权发布代码，生产继续保持 `v1.53.0`。不得把代码完成或测试通过描述为白盒已上线。
+- Goal 6 的 QNAP 领域数据面、Operating Model 和 3D-ready 协议已完成当前层级生产验收；Capability Governance v1 为 `contract_only`。H 控制面 `v1.55.0` 已于 `2026-08-09` 上线，隔离 Chrome `57/57` 通过；后续不得把代码完成或测试通过替代新的生产证据。
 - 任何 H 控制面、QNAP 或其他生产服务的重启都必须获得川哥在当前变更窗口的明确授权；Goal 文件、历史部署授权和“继续 Goal”都不能替代即时批准。申请前必须完成只读基线、目标测试、备份/回滚设计、影响与预计中断说明。
 - 修改 `/srv/h-control/.env` 后必须显式恢复 `h-control:h-control / 0600`，并以服务用户验证可读；临时文件原子替换会改变属主，是本次 502 的直接根因之一。
 - 管理员密码、Cookie 和登录表单内容不得进入 Playwright 参数、快照或工具输出。密码切换必须从 Git 外来源读取、只报告候选数量和长度，并在新密码登录通过后才更新 Keychain 指针。

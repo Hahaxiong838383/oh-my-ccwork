@@ -7,10 +7,13 @@ import {
   compareDefinitions,
   compileDefinition,
   createEventEnvelope,
+  evaluateCapabilityOverride,
+  loadCompanyCapabilityGovernance,
   loadCompanyBrainOperatingModel,
   loadDefinitionDirectory,
   operatingRole,
   operatingTransition,
+  validateCapabilityExecutionSnapshot,
 } from '../src/index.mjs'
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -213,6 +216,51 @@ test('Company Brain Operating Model v1 defines roles, lifecycles and learning ga
   assert.ok(operatingRole(model, 'company-agent').deniedData.includes('database direct access'))
   assert.deepEqual(operatingTransition(model, 'Learning', 'proposed', 'reviewed').ok, true)
   assert.deepEqual(operatingTransition(model, 'Learning', 'accepted', 'proposed').ok, false)
+})
+
+test('Company Capability Governance v1 separates skill bodies, metadata and release channels', async () => {
+  const model = await loadCompanyCapabilityGovernance()
+  assert.equal(model.contractVersion, '1.0.0')
+  assert.equal(model.status, 'contract_only')
+  assert.equal(model.canonicalStores.skillBody, 'git-and-h-platform-l0-store')
+  assert.equal(model.canonicalStores.governanceMetadata, 'ontology-registry')
+  assert.deepEqual(model.releaseChannels.map((item) => item.restartRequired), [false, true, true])
+  assert.equal(model.governedObjects.length, 5)
+})
+
+test('Company Capability Governance fails closed on hollow forks and core personal shadow', async () => {
+  const model = await loadCompanyCapabilityGovernance()
+  assert.deepEqual(evaluateCapabilityOverride(model, {
+    capabilityClass: 'company-core', overrideLayer: 'employee-private', canonicalBodyPresent: true, sourceHashMatches: true, approved: true,
+  }), { allowed: false, reason: 'core_noncanonical_shadow_denied' })
+  assert.deepEqual(evaluateCapabilityOverride(model, {
+    capabilityClass: 'company-core', overrideLayer: 'department-extension', canonicalBodyPresent: true, sourceHashMatches: true, approved: true,
+  }), { allowed: false, reason: 'core_noncanonical_shadow_denied' })
+  assert.deepEqual(evaluateCapabilityOverride(model, {
+    capabilityClass: 'employee-private', overrideLayer: 'employee-private', canonicalBodyPresent: false, sourceHashMatches: true, approved: true,
+  }), { allowed: false, reason: 'hollow_fork_denied' })
+  assert.deepEqual(evaluateCapabilityOverride(model, {
+    capabilityClass: 'employee-private', overrideLayer: 'employee-private', canonicalBodyPresent: true, sourceHashMatches: true, approved: true,
+  }), { allowed: true, reason: 'approved_override' })
+})
+
+test('Company Capability Governance requires a complete WorkCase execution snapshot', async () => {
+  const model = await loadCompanyCapabilityGovernance()
+  const snapshot = {
+    workCaseId: 'work-case-001',
+    behaviorContractVersion: '2026-08-09.1',
+    capabilityBundleHash: 'a'.repeat(64),
+    ontologySchemaVersion: '3.3.0',
+    modelProvider: 'H Engine',
+    modelId: 'grok-4.5',
+    evidencePackageVersion: '2.0.0',
+    capturedAt: '2026-08-09T14:00:00.000Z',
+  }
+  assert.deepEqual(validateCapabilityExecutionSnapshot(model, snapshot), { ok: true, errors: [] })
+  const invalid = validateCapabilityExecutionSnapshot(model, { ...snapshot, capabilityBundleHash: 'bad', hiddenReasoning: 'forbidden' })
+  assert.equal(invalid.ok, false)
+  assert.ok(invalid.errors.includes('capabilityBundleHash must be sha256'))
+  assert.ok(invalid.errors.includes('hiddenReasoning is forbidden'))
 })
 
 test('Goal 6 read models retain governed payload requirements', async () => {
