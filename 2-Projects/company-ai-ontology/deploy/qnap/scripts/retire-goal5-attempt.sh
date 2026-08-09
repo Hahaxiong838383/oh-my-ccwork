@@ -30,18 +30,18 @@ set +a
   --set=decision_external_key="$decision_external_key" <<'SQL'
 BEGIN;
 
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1
-      FROM decision.practice_status_v1
-     WHERE tenant_id=:'tenant_id'::uuid
-       AND decision_case_external_key=:'decision_external_key'
-       AND practice_status='goal_verified'
-  ) THEN
-    RAISE EXCEPTION 'refusing to retire a goal_verified lineage';
-  END IF;
-END $$;
+SELECT EXISTS (
+  SELECT 1
+    FROM decision.practice_status_v1
+   WHERE tenant_id=:'tenant_id'::uuid
+     AND decision_case_external_key=:'decision_external_key'
+     AND practice_status='goal_verified'
+) AS lineage_verified \gset
+
+\if :lineage_verified
+  \echo 'refusing to retire a goal_verified lineage'
+  \quit 3
+\endif
 
 UPDATE decision.decisions decision
    SET status='superseded', updated_at=now()
