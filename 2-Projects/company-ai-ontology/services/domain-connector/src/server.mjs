@@ -7,7 +7,7 @@ import { createHttpReadSource } from './source-client.mjs'
 import { createDomainStore } from './store.mjs'
 import { createDomainSync } from './sync.mjs'
 
-export const DOMAIN_CONNECTOR_VERSION = '2026-08-09.2'
+export const DOMAIN_CONNECTOR_VERSION = '2026-08-09.3'
 
 function json(response, statusCode, payload) {
   const body = JSON.stringify(payload)

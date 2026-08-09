@@ -62,7 +62,7 @@ try {
   const recoveryConfig = { tenantId, pageLimit: 100, maxPages: 2, sources: { [recoverySource.key]: recoverySource } }
   const failedSync = createDomainSync({
     config: recoveryConfig,
-    clients: { [recoverySource.key]: { page: async () => { throw Object.assign(new Error('controlled outage'), { code: 'source_unavailable' }) } },
+    clients: { [recoverySource.key]: { page: async () => { throw Object.assign(new Error('controlled outage'), { code: 'source_unavailable' }) } } },
     store,
   })
   const failed = await failedSync.run(recoverySource.key)

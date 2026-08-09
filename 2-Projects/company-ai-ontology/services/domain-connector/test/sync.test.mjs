@@ -70,3 +70,12 @@ test('control routes fail closed and never accept a wrong bearer token', async (
     await new Promise((resolve) => server.close(resolve))
   }
 })
+
+test('status never exposes source cursors', async () => {
+  const store = createMemoryDomainStore()
+  store.state.cursors.set('aishike-erp-m3', 'opaque-live-cursor')
+  const status = await store.status()
+  assert.equal(status.sources[0].sourceSystem, 'aishike-erp-m3')
+  assert.equal(status.sources[0].cursorPresent, true)
+  assert.doesNotMatch(JSON.stringify(status), /opaque-live-cursor|cursorValue|cursor_value/)
+})
