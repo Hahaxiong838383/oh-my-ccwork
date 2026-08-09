@@ -84,13 +84,13 @@ printf 'accepted_tasks=%s artifacts=%s acked_deliveries=%s\n' "$accepted_tasks" 
 [ "$acked_deliveries" -eq 10 ]
 
 for event_type in task_approve task_assign task_start task_submit task_accept; do
-  event_count=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM workflow.task_events WHERE event_type='$event_type';")
+  event_count=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM workflow.task_events event JOIN workflow.tasks task ON task.id=event.task_id WHERE event.event_type='$event_type' AND task.external_key LIKE 'demo-p2-2026-001:task:%';")
   printf '%s=%s\n' "$event_type" "$event_count"
   [ "$event_count" -eq 10 ]
 done
 
 verified_rollbacks=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM actions.intents WHERE status='rolled_back' AND COALESCE((readback_receipt->>'verified')::boolean,false) AND COALESCE((rollback_receipt->>'verified')::boolean,false);")
-non_terminal_actions=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM actions.intents WHERE status NOT IN ('rolled_back','rejected','failed');")
+non_terminal_actions=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM actions.intents WHERE status NOT IN ('rolled_back','rejected','failed','verified') OR (status='verified' AND verification_id IS NULL);")
 printf 'verified_rollbacks=%s non_terminal_actions=%s\n' "$verified_rollbacks" "$non_terminal_actions"
 [ "$verified_rollbacks" -ge 2 ]
 [ "$non_terminal_actions" -eq 0 ]
@@ -146,7 +146,13 @@ practice_protocol_http=$(curl --silent --show-error --max-time 10 http://192.168
 printf 'practice_protocol_http=%s\n' "$(printf '%s' "$practice_protocol_http" | cut -c1-240)"
 printf '%s' "$practice_protocol_http" | grep -q '"protocolVersion":"1.1.0"'
 printf '%s' "$practice_protocol_http" | grep -q '"ontologySchemaVersion":"3.2.0"'
-printf '%s' "$practice_protocol_http" | grep -Eq '"status":"(shadow|active)"'
+practice_expected_mode=${PRACTICE_PROTOCOL_MODE:-shadow}
+printf '%s' "$practice_protocol_http" | grep -q "\"status\":\"$practice_expected_mode\""
+if [ "$practice_expected_mode" = active ]; then
+  goal_verified_lineages=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM decision.practice_status_v1 WHERE practice_status='goal_verified' AND task_count >= 1 AND action_count >= 1 AND verification_count >= 1 AND learning_count >= 1 AND execution_success IS TRUE AND operational_success IS TRUE AND goal_success IS TRUE;")
+  printf 'goal_verified_lineages=%s\n' "$goal_verified_lineages"
+  [ "$goal_verified_lineages" -ge 1 ]
+fi
 
 printf '\n=== h engine egress ===\n'
 h_engine_proxy_url=${H_ENGINE_PROXY_URL:-socks5h://192.168.61.66:10808}

@@ -95,6 +95,11 @@ export function createActionGatewayStore({ database, logger = () => {} } = {}) {
         throw gatewayError('unsupported action type', 400, 'unsupported_action')
       }
       const { taskExternalKey, desiredStatus } = actionPayload(intent)
+      await client.query(
+        `INSERT INTO actions.demo_task_status (tenant_id, task_external_key, remote_status)
+         VALUES ($1,$2,'todo') ON CONFLICT (tenant_id, task_external_key) DO NOTHING`,
+        [tenantId, taskExternalKey],
+      )
       const target = await client.query(
         `SELECT remote_status, version FROM actions.demo_task_status
           WHERE tenant_id = $1 AND task_external_key = $2`,

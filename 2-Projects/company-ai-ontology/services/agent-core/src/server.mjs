@@ -323,7 +323,7 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
             approvalEvidenceReferences: evidenceReferences(input.approvalEvidenceReferences),
             expectedOutcome: input.expectedOutcome && typeof input.expectedOutcome === 'object' ? input.expectedOutcome : {},
           })
-          if (decision.workCaseId) {
+          if (decision.workCaseId && !decision.replayed) {
             await store.advanceWorkCase({
               tenantId: scope.tenantId,
               caseId: decision.workCaseId,
@@ -338,7 +338,12 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
             requestId: scope.requestId,
             personId: scope.personId,
             eventType: 'decision_approved',
-            payload: { decisionId: decision.id, p2ExternalKey: decision.p2ExternalKey, workCaseId: decision.workCaseId },
+            payload: {
+              decisionId: decision.id,
+              p2ExternalKey: decision.p2ExternalKey,
+              workCaseId: decision.workCaseId,
+              replayed: Boolean(decision.replayed),
+            },
           })
           json(response, 200, { ok: true, status: decision.status, requestId: scope.requestId, decision })
           return

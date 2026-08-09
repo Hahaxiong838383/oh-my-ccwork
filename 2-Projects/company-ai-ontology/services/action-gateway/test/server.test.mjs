@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import http from 'node:http'
+import { readFile } from 'node:fs/promises'
 
 import { createActionGatewayServer } from '../src/server.mjs'
 
@@ -73,4 +74,15 @@ test('Action Gateway 强制令牌并按 dry-run 到 rollback 顺序执行', asyn
     'verify:demo-dri-01:true:true',
     'rollback:demo-dri-01',
   ])
+})
+
+test('Action Gateway 独占演示目标初始化权限', async () => {
+  const store = await readFile(new URL('../src/store.mjs', import.meta.url), 'utf8')
+  const migration = await readFile(
+    new URL('../../../deploy/qnap/migrations/008-decision-practice-loop.sql', import.meta.url),
+    'utf8',
+  )
+  assert.match(store, /INSERT INTO actions\.demo_task_status/)
+  assert.match(migration, /GRANT SELECT, INSERT, UPDATE ON actions\.demo_task_status TO action_gateway/)
+  assert.match(migration, /REVOKE ALL ON actions\.demo_task_status FROM ontology_app/)
 })

@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 
 import {
   ACTIVE_STAGES,
@@ -38,4 +39,46 @@ test('WorkCase 只保存脱敏摘要与会话哈希', () => {
 test('状态机拒绝把 completed 冒充后续任务成功', () => {
   assert.equal(assertWorkCaseTransition('response_ready', 'completed'), true)
   assert.throws(() => assertWorkCaseTransition('completed', 'execution'), /invalid work case transition/)
+})
+
+test('数据库迁移允许工作协议的全部实践状态', async () => {
+  const migration = await readFile(
+    new URL('../../../deploy/qnap/migrations/008-decision-practice-loop.sql', import.meta.url),
+    'utf8',
+  )
+  for (const status of [
+    'decision_pending',
+    'decision_approved',
+    'planning',
+    'plan_ready',
+    'executing',
+    'verification_pending',
+    'verified',
+    'learning',
+  ]) {
+    assert.match(migration, new RegExp(`'${status}'`), `migration is missing ${status}`)
+  }
+})
+
+test('Decision 外键写入显式约束 PostgreSQL 参数类型', async () => {
+  const store = await readFile(new URL('../src/store.mjs', import.meta.url), 'utf8')
+  assert.match(
+    store,
+    /jsonb_build_object\('decision_case_external_key', \$3::text\)/,
+    'decision case external key must be cast before jsonb polymorphic dispatch',
+  )
+})
+
+test('Agent Core 不直接初始化 Action Gateway 目标状态', async () => {
+  const store = await readFile(new URL('../src/store.mjs', import.meta.url), 'utf8')
+  assert.doesNotMatch(store, /INSERT INTO actions\.demo_task_status/)
+})
+
+test('失败或撤销的 Decision Lineage 在状态视图中明确退役', async () => {
+  const migration = await readFile(
+    new URL('../../../deploy/qnap/migrations/008-decision-practice-loop.sql', import.meta.url),
+    'utf8',
+  )
+  assert.match(migration, /decision_case_status IN \('rejected', 'superseded', 'closed'\) THEN 'retired'/)
+  assert.match(migration, /decision_status IN \('superseded', 'revoked'\) THEN 'retired'/)
 })

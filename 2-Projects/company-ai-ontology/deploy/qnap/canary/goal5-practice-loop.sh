@@ -18,6 +18,77 @@ set -a
 . ./.env
 set +a
 
+run_completed=0
+
+retire_failed_attempt() {
+  exit_status=$?
+  [ "$run_completed" -eq 1 ] && return
+  set +e
+  "$docker_path" compose exec -T postgres psql \
+    --set=ON_ERROR_STOP=1 \
+    --username ontology_admin \
+    --dbname ontology \
+    --set=tenant_id="$FUTURUS_TENANT_ID" \
+    --set=run_id="$run_id" \
+    --set=p2_external_key="$p2_external_key" \
+    --set=decision_external_key="$decision_external_key" \
+    --set=exit_status="$exit_status" <<'SQL' >/dev/null
+UPDATE decision.decisions decision
+   SET status='superseded', updated_at=now()
+  FROM decision.cases decision_case
+ WHERE decision.tenant_id=:'tenant_id'::uuid
+   AND decision_case.tenant_id=decision.tenant_id
+   AND decision_case.id=decision.decision_case_id
+   AND decision_case.external_key=:'decision_external_key'
+   AND decision.status='approved';
+
+UPDATE decision.cases
+   SET status='superseded', updated_at=now()
+ WHERE tenant_id=:'tenant_id'::uuid
+   AND external_key=:'decision_external_key'
+   AND status NOT IN ('rejected', 'superseded', 'closed');
+
+UPDATE ontology.entities
+   SET attributes=attributes || jsonb_build_object(
+         'canaryAttemptStatus', 'retired',
+         'canaryRunId', :'run_id'::text
+       ),
+       updated_at=now()
+ WHERE tenant_id=:'tenant_id'::uuid
+   AND entity_type='p2'
+   AND external_key=:'p2_external_key';
+
+WITH target_case AS (
+  SELECT tenant_id, id, status AS from_status
+    FROM work.brain_cases
+   WHERE tenant_id=:'tenant_id'::uuid
+     AND external_case_id='workcase:' || :'run_id' || '-decision-propose'
+     AND status <> 'completed'
+), retired_case AS (
+  UPDATE work.brain_cases brain_case
+     SET status='blocked', updated_at=now()
+    FROM target_case
+   WHERE brain_case.tenant_id=target_case.tenant_id
+     AND brain_case.id=target_case.id
+  RETURNING target_case.tenant_id, target_case.id, target_case.from_status
+)
+INSERT INTO work.brain_case_events (
+  tenant_id, case_id, event_type, from_status, to_status, idempotency_key, payload
+)
+SELECT tenant_id, id, 'canary_attempt_retired', from_status, 'blocked',
+       :'run_id' || '-retired',
+       jsonb_build_object('simulation', true, 'exitStatus', :'exit_status'::integer)
+  FROM retired_case
+ON CONFLICT (tenant_id, idempotency_key) DO NOTHING;
+
+UPDATE iam.principals SET status='disabled', updated_at=now()
+ WHERE tenant_id=:'tenant_id'::uuid AND external_key='goal5-reviewer-fixture';
+SQL
+  exit "$exit_status"
+}
+
+trap retire_failed_attempt EXIT
+
 dri_person_key=$(
   "$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -At \
     --set=tenant_id="$FUTURUS_TENANT_ID" --set=dri_display_name="$dri_display_name" <<'SQL'
@@ -312,3 +383,6 @@ NODE
 UPDATE iam.principals SET status='disabled', updated_at=now()
  WHERE tenant_id=:'tenant_id'::uuid AND external_key='goal5-reviewer-fixture';
 SQL
+
+run_completed=1
+trap - EXIT

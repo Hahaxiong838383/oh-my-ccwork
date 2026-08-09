@@ -579,7 +579,7 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
       if (!p2.rows[0]) throw workflowError('P2 entity not found', 404, 'not_found')
       await client.query(
         `UPDATE ontology.entities
-            SET attributes = attributes || jsonb_build_object('decision_case_external_key', $3), updated_at=now()
+            SET attributes = attributes || jsonb_build_object('decision_case_external_key', $3::text), updated_at=now()
           WHERE tenant_id=$1 AND id=$2`,
         [tenantId, p2.rows[0].id, decisionExternalKey],
       )
@@ -714,6 +714,7 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
           expectedOutcome: existing.rows[0].expected_outcome,
           p2ExternalKey: existing.rows[0].p2_external_key,
           workCaseId: existing.rows[0].work_case_id,
+          replayed: true,
         }
       }
       if (!['pending_approval', 'scenario_ready'].includes(decisionCase.status)) {
@@ -796,7 +797,13 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
         `UPDATE decision.cases SET status='approved', updated_at=now() WHERE tenant_id=$1 AND id=$2`,
         [tenantId, decisionCase.id],
       )
-      return { ...decision.rows[0], expectedOutcome: expected.rows[0], p2ExternalKey: p2.rows[0].external_key, workCaseId: decisionCase.work_case_id }
+      return {
+        ...decision.rows[0],
+        expectedOutcome: expected.rows[0],
+        p2ExternalKey: p2.rows[0].external_key,
+        workCaseId: decisionCase.work_case_id,
+        replayed: false,
+      }
     })
   }
 
@@ -1114,11 +1121,6 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
       }
       const simulation = targetSystem === 'feishu-demo'
       const normalizedPayload = { taskExternalKey: normalizedTaskExternalKey, desiredStatus, simulation }
-      await client.query(
-        `INSERT INTO actions.demo_task_status (tenant_id, task_external_key, remote_status)
-         VALUES ($1,$2,'todo') ON CONFLICT (tenant_id, task_external_key) DO NOTHING`,
-        [tenantId, normalizedTaskExternalKey],
-      )
       const inserted = await client.query(
         `INSERT INTO actions.intents (
            tenant_id, requester_id, target_system, action_type, payload,
@@ -1367,15 +1369,24 @@ export function createMemoryStore({ retrieval = null } = {}) {
       if (!decisionCase) throw workflowError('decision case not found', 404, 'not_found')
       const selected = decisionCase.alternatives.find((item) => item.external_key === input.selectedAlternativeExternalKey)
       if (!selected) throw workflowError('selected alternative not found', 404, 'not_found')
+      if (decisionCase.approvedDecision) {
+        if (decisionCase.approvedDecision.selected_alternative_id !== selected.id) {
+          throw workflowError('decision was already approved with a different alternative', 409, 'idempotency_conflict')
+        }
+        return { ...structuredClone(decisionCase.approvedDecision), replayed: true }
+      }
       Object.assign(decisionCase, { status: 'approved', selectedAlternative: selected })
-      return {
+      const approvedDecision = {
         id: randomUUID(),
         external_key: `${input.decisionExternalKey}:approved`,
         status: 'approved',
         selected_alternative_id: selected.id,
         workCaseId: decisionCase.work_case_id,
         expectedOutcome: { id: randomUUID(), ...(input.expectedOutcome || selected.expected_outcome) },
+        replayed: false,
       }
+      decisionCase.approvedDecision = structuredClone(approvedDecision)
+      return approvedDecision
     },
     async practiceProtocolStatus() {
       return { counts: {}, recentLineages: [] }

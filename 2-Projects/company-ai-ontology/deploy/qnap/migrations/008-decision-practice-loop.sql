@@ -1,5 +1,20 @@
 BEGIN;
 
+ALTER TABLE work.brain_cases
+  DROP CONSTRAINT IF EXISTS brain_cases_status_check;
+
+ALTER TABLE work.brain_cases
+  ADD CONSTRAINT brain_cases_status_check CHECK (status IN (
+    'received', 'scoped', 'authority_checked', 'evidence_collecting', 'evidence_ready',
+    'synthesizing', 'response_ready', 'decision_pending', 'decision_approved',
+    'planning', 'plan_ready', 'executing', 'verification_pending', 'verified', 'learning',
+    'completed', 'clarification_required', 'permission_denied', 'blocked',
+    'insufficient_evidence', 'review_required'
+  ));
+
+GRANT SELECT, INSERT, UPDATE ON actions.demo_task_status TO action_gateway;
+REVOKE ALL ON actions.demo_task_status FROM ontology_app;
+
 CREATE TABLE IF NOT EXISTS decision.cases (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
@@ -514,6 +529,8 @@ AS
 SELECT
   lineage.*,
   CASE
+    WHEN lineage.decision_case_status IN ('rejected', 'superseded', 'closed') THEN 'retired'
+    WHEN lineage.decision_status IN ('superseded', 'revoked') THEN 'retired'
     WHEN lineage.decision_status IS NULL THEN 'decision_pending'
     WHEN lineage.p2_entity_id IS NULL THEN 'plan_pending'
     WHEN lineage.task_count = 0 THEN 'plan_pending'

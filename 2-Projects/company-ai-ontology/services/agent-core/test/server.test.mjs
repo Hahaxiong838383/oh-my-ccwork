@@ -234,6 +234,59 @@ test('权限检索与 P2 路由只使用签名身份并返回标准结果', asyn
   assert.equal(calls.find(([name]) => name === 'propose')[1].actorPersonId, 'demo-dri-01')
 })
 
+test('Decision 审批重放读回同一结果且不重复推进 WorkCase', async (t) => {
+  const store = createMemoryStore()
+  const server = createAgentCoreServer({
+    config: config(),
+    store,
+    runtime: { ready: async () => ({ ready: true, productionReady: false, mode: 'demo' }) },
+    now: () => now,
+  })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const port = await listen(server)
+  const decisionExternalKey = 'decision-replay-001'
+  const proposeBody = JSON.stringify({
+    decisionExternalKey,
+    p2ExternalKey: 'p2-replay-001',
+    question: '是否执行单 DRI 实践闭环？',
+    alternatives: [
+      { title: '执行', expectedOutcome: { targetText: 'accepted' } },
+      { title: '暂缓', expectedOutcome: { targetText: 'deferred' } },
+    ],
+    evidenceReferences: ['evidence:replay'],
+  })
+  const proposed = await request(port, {
+    path: '/v1/decisions/propose',
+    body: proposeBody,
+    headers: signed(proposeBody, { requestId: 'decision-propose', idempotencyKey: 'decision-propose' }),
+  })
+  assert.equal(proposed.status, 200)
+
+  const approveBody = JSON.stringify({
+    decisionExternalKey,
+    selectedAlternativeExternalKey: `${decisionExternalKey}:alternative:1`,
+    rationale: '批准执行',
+    approvalEvidenceReferences: ['evidence:replay'],
+  })
+  const first = await request(port, {
+    path: '/v1/decisions/approve',
+    body: approveBody,
+    headers: signed(approveBody, { requestId: 'decision-approve-1', idempotencyKey: 'decision-approve-1' }),
+  })
+  const replay = await request(port, {
+    path: '/v1/decisions/approve',
+    body: approveBody,
+    headers: signed(approveBody, { requestId: 'decision-approve-2', idempotencyKey: 'decision-approve-2' }),
+  })
+  assert.equal(first.status, 200)
+  assert.equal(replay.status, 200)
+  assert.equal(first.payload.decision.id, replay.payload.decision.id)
+  assert.equal(first.payload.decision.replayed, false)
+  assert.equal(replay.payload.decision.replayed, true)
+  assert.equal(store.events.filter((event) => event.eventType === 'work_case_decision_approved').length, 1)
+  assert.equal(store.events.filter((event) => event.eventType === 'work_case_planning').length, 1)
+})
+
 test('通讯录同步只接受服务身份并最小化人员字段', async (t) => {
   const store = createMemoryStore()
   const calls = []
