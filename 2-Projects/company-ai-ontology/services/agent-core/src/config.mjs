@@ -21,7 +21,7 @@ export function loadConfig(env = process.env) {
       mode: ['off', 'shadow', 'active'].includes(String(env.WORK_PROTOCOL_MODE || 'shadow').trim().toLowerCase())
         ? String(env.WORK_PROTOCOL_MODE || 'shadow').trim().toLowerCase()
         : 'shadow',
-      ontologyVersion: String(env.ONTOLOGY_SCHEMA_VERSION || '3.2.0').trim(),
+      ontologyVersion: String(env.ONTOLOGY_SCHEMA_VERSION || '3.3.0').trim(),
       evidenceMaxAgeDays: Math.max(1, Number(env.EVIDENCE_MAX_AGE_DAYS || 180)),
       recentCaseLimit: Math.max(1, Math.min(20, Number(env.WORK_PROTOCOL_RECENT_CASE_LIMIT || 8))),
     },

@@ -18,6 +18,7 @@ for migration in migrations/*.sql; do
     --dbname ontology \
     --set=tenant_id="$FUTURUS_TENANT_ID" \
     --set=knowledge_connector_password="$KNOWLEDGE_CONNECTOR_PASSWORD" \
+    --set=domain_connector_password="$DOMAIN_CONNECTOR_PASSWORD" \
     --set=ontology_registry_password="$ONTOLOGY_REGISTRY_PASSWORD" \
     < "$migration"
 done

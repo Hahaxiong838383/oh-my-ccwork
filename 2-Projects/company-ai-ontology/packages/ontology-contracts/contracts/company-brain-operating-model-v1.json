@@ -1,0 +1,43 @@
+{
+  "contractVersion": "1.0.0",
+  "status": "active",
+  "loop": ["Observation", "Evidence", "Claim", "Hypothesis", "Decision", "Goal", "P2", "Task", "Action", "Outcome", "Verification", "Learning", "OntologyChangeProposal"],
+  "roles": [
+    { "key": "goal-owner", "label": "Goal Owner", "read": ["goal", "metric", "verification"], "propose": ["goal", "decision-case"], "approve": ["goal"], "execute": [], "verify": ["goal-result"], "humanIntervention": ["goal approval", "goal retirement"], "deniedData": ["unpermissioned evidence body", "secrets"] },
+    { "key": "p2-owner", "label": "P2 Owner", "read": ["approved decision", "p2", "task status"], "propose": ["p2", "task"], "approve": ["p2 plan"], "execute": [], "verify": ["business process result"], "humanIntervention": ["scope change", "assignee change"], "deniedData": ["unpermissioned evidence body", "secrets"] },
+    { "key": "dri", "label": "DRI", "read": ["permissioned evidence", "decision case", "task"], "propose": ["decision", "task result"], "approve": ["decision selection"], "execute": ["approved task"], "verify": ["task outcome"], "humanIntervention": ["decision approval", "risk acceptance"], "deniedData": ["resources outside authority", "secrets"] },
+    { "key": "domain-owner", "label": "Domain Owner", "read": ["domain objects", "mapping health"], "propose": ["domain mapping", "ontology change"], "approve": ["domain semantic mapping"], "execute": [], "verify": ["domain correctness"], "humanIntervention": ["semantic conflict", "breaking change"], "deniedData": ["foreign security domains", "secrets"] },
+    { "key": "data-steward", "label": "Data Steward", "read": ["source metadata", "provenance", "quality status"], "propose": ["data correction", "retention change"], "approve": ["source mapping"], "execute": ["approved replay"], "verify": ["freshness", "completeness", "revocation"], "humanIntervention": ["source conflict", "privacy incident"], "deniedData": ["credentials", "unapproved raw content"] },
+    { "key": "evidence-owner", "label": "Evidence Owner", "read": ["permissioned evidence", "counter-evidence"], "propose": ["claim support", "evidence expiry"], "approve": ["evidence classification"], "execute": [], "verify": ["provenance", "validity"], "humanIntervention": ["evidence dispute"], "deniedData": ["unpermissioned evidence body", "secrets"] },
+    { "key": "decision-approver", "label": "Decision Approver", "read": ["decision case", "alternatives", "evidence package"], "propose": ["approval conditions"], "approve": ["decision"], "execute": [], "verify": ["approval evidence"], "humanIntervention": ["all decision approvals"], "deniedData": ["unpermissioned evidence body", "secrets"] },
+    { "key": "action-approver", "label": "Action Approver", "read": ["action intent", "expected outcome", "rollback plan"], "propose": ["action conditions"], "approve": ["action intent"], "execute": [], "verify": ["readback requirement"], "humanIntervention": ["all external writes"], "deniedData": ["credentials", "unscoped target data"] },
+    { "key": "verification-owner", "label": "Verification Owner", "read": ["expected outcome", "observed outcome", "evidence"], "propose": ["verification"], "approve": ["verification conclusion"], "execute": [], "verify": ["execution", "business process", "goal result"], "humanIntervention": ["goal success declaration"], "deniedData": ["unpermissioned evidence body", "secrets"] },
+    { "key": "ontology-change-approver", "label": "Ontology Change Approver", "read": ["definition", "compiler result", "migration plan", "reconciliation"], "propose": ["change conditions"], "approve": ["ontology change"], "execute": ["approved deployment"], "verify": ["registry reconciliation", "rollback"], "humanIntervention": ["breaking or migration-required change"], "deniedData": ["secrets", "business content"] },
+    { "key": "company-agent", "label": "Company Agent", "read": ["minimum permissioned evidence package", "public operating status"], "propose": ["claim", "hypothesis", "decision case", "task proposal"], "approve": [], "execute": ["read-only functions"], "verify": ["response contract"], "humanIntervention": ["privileged user operation", "decision", "writeback"], "deniedData": ["database direct access", "credentials", "unpermissioned evidence", "employee private bot memory"] },
+    { "key": "employee-agent", "label": "Employee Agent", "read": ["employee-authorized context", "assigned task"], "propose": ["task progress", "artifact", "blocker"], "approve": [], "execute": ["employee-authorized personal actions"], "verify": ["submitted artifact"], "humanIntervention": ["user-authorized personal operation"], "deniedData": ["other employees private context", "company secrets outside entitlement"] }
+  ],
+  "lifecycles": {
+    "Observation": { "states": ["captured", "qualified", "expired", "retracted"], "owner": "data-steward", "exit": "source identity and valid time recorded" },
+    "Evidence": { "states": ["candidate", "admissible", "excluded", "expired", "revoked"], "owner": "evidence-owner", "exit": "provenance, authority, purpose and permission snapshot verified" },
+    "Claim": { "states": ["proposed", "supported", "challenged", "rejected", "superseded"], "owner": "evidence-owner", "exit": "supporting and contradicting evidence assessed" },
+    "Hypothesis": { "states": ["proposed", "testable", "supported", "rejected", "expired"], "owner": "domain-owner", "exit": "test and falsification conditions recorded" },
+    "DecisionCase": { "states": ["draft", "evidence_ready", "pending_approval", "approved", "rejected", "superseded"], "owner": "dri", "exit": "one alternative approved by the authorized DRI" },
+    "Decision": { "states": ["proposed", "approved", "superseded", "revoked"], "owner": "decision-approver", "exit": "approval evidence and expected outcome recorded" },
+    "Goal": { "states": ["draft", "approved", "active", "verified", "failed", "retired"], "owner": "goal-owner", "exit": "goal-result verification completed" },
+    "P2": { "states": ["draft", "approved", "active", "blocked", "completed", "retired"], "owner": "p2-owner", "exit": "business-process verification completed" },
+    "Task": { "states": ["proposed", "accepted", "in_progress", "blocked", "submitted", "verified", "rejected", "retired"], "owner": "dri", "exit": "artifact and outcome verified" },
+    "ActionIntent": { "states": ["proposed", "dry_run", "pending_approval", "approved", "executing", "readback_pending", "verified", "failed", "rolled_back", "retired"], "owner": "action-approver", "exit": "readback and rollback status recorded" },
+    "Action": { "states": ["requested", "executing", "succeeded", "failed", "rolled_back"], "owner": "action-approver", "exit": "technical execution result recorded" },
+    "Outcome": { "states": ["observed", "qualified", "disputed", "invalidated"], "owner": "verification-owner", "exit": "source and measurement method recorded" },
+    "Verification": { "states": ["pending", "execution_verified", "process_verified", "goal_verified", "failed", "inconclusive"], "owner": "verification-owner", "exit": "three success levels explicitly decided" },
+    "Learning": { "states": ["proposed", "reviewed", "accepted", "rejected", "superseded"], "owner": "domain-owner", "exit": "accepted learning links to a reviewed change proposal" },
+    "OntologyChangeProposal": { "states": ["draft", "compiled", "review_pending", "approved", "deployed", "reconciled", "rejected", "rolled_back"], "owner": "ontology-change-approver", "exit": "Registry reconciliation proves the approved version active" }
+  },
+  "invariants": [
+    "WorkCase completed does not imply Task, Action, P2 or Goal success",
+    "technical execution, business process and operating goal success are independently verified",
+    "Learning is created as proposed and never mutates Ontology, prompts or processes automatically",
+    "Company Agent has no direct business-system write or database access",
+    "permission failure and missing evidence fail closed before H Engine invocation"
+  ]
+}

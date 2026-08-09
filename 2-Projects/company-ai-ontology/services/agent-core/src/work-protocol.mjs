@@ -1,7 +1,7 @@
 import { sha256 } from './protocol.mjs'
 
 export const WORK_PROTOCOL_VERSION = '1.1.0'
-export const ONTOLOGY_SCHEMA_VERSION = '3.2.0'
+export const ONTOLOGY_SCHEMA_VERSION = '3.3.0'
 
 export const WORK_STAGES = Object.freeze([
   'intake',

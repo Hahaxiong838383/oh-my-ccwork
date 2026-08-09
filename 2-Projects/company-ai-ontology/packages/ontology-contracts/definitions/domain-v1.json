@@ -1,0 +1,341 @@
+{
+  "objectTypes": [
+    {
+      "qualifiedName": "core.identity.OperatingRole",
+      "description": "Governed Company Brain operating role",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "roleKey", "type": "string", "required": true },
+        { "name": "roleVersion", "type": "string", "required": true },
+        { "name": "humanRequired", "type": "boolean", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.identity.RoleAssignment",
+      "description": "Time-bounded assignment of an operating role",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "assignmentKey", "type": "string", "required": true },
+        { "name": "authorityScope", "type": "string", "required": true },
+        { "name": "purposeScope", "type": "string", "required": true },
+        { "name": "assignmentStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.product.ProductLine",
+      "description": "Stable product portfolio line",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "productLineKey", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "status", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.product.Product",
+      "description": "Business product identity independent of version and SKU",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "productKey", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "status", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.product.ProductVersion",
+      "description": "Versioned product definition used by decisions and delivery",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "versionKey", "type": "string", "required": true },
+        { "name": "versionLabel", "type": "string", "required": true },
+        { "name": "lifecycleStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.product.BOMReference",
+      "description": "Read-only reference to an authoritative BOM",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "bomKey", "type": "string", "required": true },
+        { "name": "revision", "type": "string", "required": false },
+        { "name": "approvalStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.product.Feature",
+      "description": "Version-scoped product capability",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "featureKey", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "featureStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.product.ProductConstraint",
+      "description": "Engineering, safety or business constraint on a product version",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "constraintKey", "type": "string", "required": true },
+        { "name": "constraintType", "type": "string", "required": true },
+        { "name": "severity", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.device.DeviceModel",
+      "description": "Physical device model identity",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "modelKey", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "modelStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.device.DeviceInstance",
+      "description": "Physical device instance mapped from an authoritative source",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "instanceKey", "type": "string", "required": true },
+        { "name": "currentState", "type": "string", "required": true },
+        { "name": "sourceUpdatedAt", "type": "timestamp", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.device.SerialNumber",
+      "description": "Stable, non-reassignable device serial identifier",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "serialKey", "type": "string", "required": true },
+        { "name": "serialStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.device.DeviceEvent",
+      "description": "Append-only device lifecycle event",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "eventKey", "type": "string", "required": true },
+        { "name": "eventType", "type": "string", "required": true },
+        { "name": "occurredAt", "type": "timestamp", "required": true },
+        { "name": "payload", "type": "json", "required": false }
+      ]
+    },
+    {
+      "qualifiedName": "domain.operations.OrderLine",
+      "description": "Read-only line projection from an accepted ERP M3 order",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "lineKey", "type": "string", "required": true },
+        { "name": "skuKey", "type": "string", "required": true },
+        { "name": "quantity", "type": "integer", "required": true },
+        { "name": "lineStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.operations.InventoryPosition",
+      "description": "Point-in-time inventory position from the ERP read model",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "positionKey", "type": "string", "required": true },
+        { "name": "warehouseKey", "type": "string", "required": true },
+        { "name": "onHand", "type": "integer", "required": true },
+        { "name": "available", "type": "integer", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.operations.Activation",
+      "description": "Privacy-safe activation evidence from ERP M3",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "activationKey", "type": "string", "required": true },
+        { "name": "activationStatus", "type": "string", "required": true },
+        { "name": "activatedAt", "type": "timestamp", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.operations.FulfillmentEvidence",
+      "description": "Immutable allocation, shipment or activation evidence",
+      "extends": ["core.epistemic.Evidence"],
+      "properties": [
+        { "name": "evidenceKey", "type": "string", "required": true },
+        { "name": "evidenceType", "type": "string", "required": true },
+        { "name": "readModelVersion", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.market.ContentItem",
+      "description": "Normalized social or commerce content item",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "contentKey", "type": "string", "required": true },
+        { "name": "platform", "type": "string", "required": true },
+        { "name": "publishedAt", "type": "timestamp", "required": false },
+        { "name": "contentStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.market.CommentSignal",
+      "description": "Normalized privacy-safe comment signal",
+      "extends": ["core.epistemic.Observation"],
+      "properties": [
+        { "name": "commentKey", "type": "string", "required": true },
+        { "name": "sentiment", "type": "string", "required": false },
+        { "name": "signalStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.market.Topic",
+      "description": "Governed market topic",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "topicKey", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.market.Trend",
+      "description": "Time-bounded derived market trend",
+      "extends": ["core.epistemic.Hypothesis"],
+      "properties": [
+        { "name": "trendKey", "type": "string", "required": true },
+        { "name": "trendDirection", "type": "string", "required": true },
+        { "name": "validUntil", "type": "timestamp", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.market.PainPoint",
+      "description": "Evidence-linked customer or market pain point",
+      "extends": ["core.epistemic.Claim"],
+      "properties": [
+        { "name": "painPointKey", "type": "string", "required": true },
+        { "name": "severity", "type": "string", "required": true },
+        { "name": "frequency", "type": "integer", "required": false }
+      ]
+    },
+    {
+      "qualifiedName": "domain.market.Competitor",
+      "description": "Governed competitor identity",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "competitorKey", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "status", "type": "string", "required": true }
+      ]
+    }
+  ],
+  "linkTypes": [
+    { "qualifiedName": "core.identity.ASSIGNED_ROLE", "fromType": "core.identity.Person", "toType": "core.identity.RoleAssignment", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.identity.USES_ROLE", "fromType": "core.identity.RoleAssignment", "toType": "core.identity.OperatingRole", "cardinality": "many_to_one" },
+    { "qualifiedName": "domain.product.HAS_PRODUCT", "fromType": "domain.product.ProductLine", "toType": "domain.product.Product", "cardinality": "one_to_many" },
+    { "qualifiedName": "domain.product.HAS_VERSION", "fromType": "domain.product.Product", "toType": "domain.product.ProductVersion", "cardinality": "one_to_many" },
+    { "qualifiedName": "domain.product.VERSION_HAS_SKU", "fromType": "domain.product.ProductVersion", "toType": "domain.product.SKU", "cardinality": "one_to_many" },
+    { "qualifiedName": "domain.product.REFERENCES_BOM", "fromType": "domain.product.SKU", "toType": "domain.product.BOMReference", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.product.HAS_FEATURE", "fromType": "domain.product.ProductVersion", "toType": "domain.product.Feature", "cardinality": "one_to_many" },
+    { "qualifiedName": "domain.product.CONSTRAINED_BY", "fromType": "domain.product.ProductVersion", "toType": "domain.product.ProductConstraint", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.device.INSTANCE_OF", "fromType": "domain.device.DeviceInstance", "toType": "domain.device.DeviceModel", "cardinality": "many_to_one" },
+    { "qualifiedName": "domain.device.HAS_SERIAL", "fromType": "domain.device.DeviceInstance", "toType": "domain.device.SerialNumber", "cardinality": "one_to_one" },
+    { "qualifiedName": "domain.device.HAS_STATE", "fromType": "domain.device.DeviceInstance", "toType": "domain.device.DeviceState", "cardinality": "one_to_many" },
+    { "qualifiedName": "domain.device.EMITS_EVENT", "fromType": "domain.device.DeviceInstance", "toType": "domain.device.DeviceEvent", "cardinality": "one_to_many" },
+    { "qualifiedName": "domain.operations.HAS_LINE", "fromType": "domain.operations.Order", "toType": "domain.operations.OrderLine", "cardinality": "one_to_many" },
+    { "qualifiedName": "domain.operations.LINE_USES_SKU", "fromType": "domain.operations.OrderLine", "toType": "domain.product.SKU", "cardinality": "many_to_one" },
+    { "qualifiedName": "domain.operations.POSITION_OF_SKU", "fromType": "domain.operations.InventoryPosition", "toType": "domain.product.SKU", "cardinality": "many_to_one" },
+    { "qualifiedName": "domain.operations.INSPECTS_INSTANCE", "fromType": "domain.operations.QualityInspection", "toType": "domain.device.DeviceInstance", "cardinality": "many_to_one" },
+    { "qualifiedName": "domain.operations.SHIPS_INSTANCE", "fromType": "domain.operations.Shipment", "toType": "domain.device.DeviceInstance", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.operations.ACTIVATES_INSTANCE", "fromType": "domain.operations.Activation", "toType": "domain.device.DeviceInstance", "cardinality": "many_to_one" },
+    { "qualifiedName": "domain.operations.PROVES_OUTCOME", "fromType": "domain.operations.FulfillmentEvidence", "toType": "core.decision.ObservedOutcome", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.market.HAS_COMMENT", "fromType": "domain.market.ContentItem", "toType": "domain.market.CommentSignal", "cardinality": "one_to_many" },
+    { "qualifiedName": "domain.market.TAGGED_TOPIC", "fromType": "domain.market.ContentItem", "toType": "domain.market.Topic", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.market.SUMMARIZES_TOPIC", "fromType": "domain.market.Trend", "toType": "domain.market.Topic", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.market.EXPRESSES_PAIN", "fromType": "domain.market.CommentSignal", "toType": "domain.market.PainPoint", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.market.MENTIONS_COMPETITOR", "fromType": "domain.market.ContentItem", "toType": "domain.market.Competitor", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.market.SUPPORTS_CLAIM", "fromType": "domain.market.MarketSignal", "toType": "core.epistemic.Claim", "cardinality": "many_to_many" },
+    { "qualifiedName": "domain.market.CHALLENGES_CLAIM", "fromType": "domain.market.MarketSignal", "toType": "core.epistemic.Claim", "cardinality": "many_to_many" },
+    { "qualifiedName": "core.epistemic.INFLUENCES_DECISION_CASE", "fromType": "core.epistemic.Claim", "toType": "core.decision.DecisionCase", "cardinality": "many_to_many" },
+    { "qualifiedName": "core.decision.PRIORITIZES_PRODUCT", "fromType": "core.decision.Decision", "toType": "domain.product.Product", "cardinality": "many_to_many" },
+    { "qualifiedName": "core.decision.PRIORITIZES_VERSION", "fromType": "core.decision.Decision", "toType": "domain.product.ProductVersion", "cardinality": "many_to_many" },
+    { "qualifiedName": "core.work.GOAL_DECOMPOSES_TO", "fromType": "core.work.Goal", "toType": "core.work.P2", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.work.TASK_PRODUCES_OUTCOME", "fromType": "core.work.Task", "toType": "core.decision.ObservedOutcome", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.work.VALIDATES_ACTION", "fromType": "core.work.Verification", "toType": "core.action.ActionIntent", "cardinality": "many_to_one" },
+    { "qualifiedName": "core.work.VALIDATES_GOAL", "fromType": "core.work.Verification", "toType": "core.work.Goal", "cardinality": "many_to_one" },
+    { "qualifiedName": "core.work.PROPOSES_ONTOLOGY_CHANGE", "fromType": "core.work.Learning", "toType": "system.ontology.OntologyChangeProposal", "cardinality": "many_to_many" }
+  ],
+  "functionTypes": [
+    {
+      "qualifiedName": "core.work.evaluateOperatingTransition",
+      "description": "Validate role authority, evidence gates and lifecycle exit conditions",
+      "deterministic": true,
+      "inputs": [
+        { "name": "objectType", "type": "string", "required": true },
+        { "name": "currentState", "type": "string", "required": true },
+        { "name": "targetState", "type": "string", "required": true },
+        { "name": "authority", "type": "json", "required": true },
+        { "name": "evidence", "type": "json", "required": true }
+      ],
+      "outputs": [
+        { "name": "transitionDecision", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.operations.mapErpM3ReadModel",
+      "description": "Map accepted ERP M3 records to governed domain objects without business writeback",
+      "deterministic": true,
+      "inputs": [
+        { "name": "sourceRecord", "type": "json", "required": true },
+        { "name": "sourceCursor", "type": "string", "required": true }
+      ],
+      "outputs": [
+        { "name": "domainEnvelope", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "domain.market.mapNormalizedSignal",
+      "description": "Map normalized social results while preserving fact, inference and prediction labels",
+      "deterministic": true,
+      "inputs": [
+        { "name": "sourceRecord", "type": "json", "required": true },
+        { "name": "sourceCursor", "type": "string", "required": true }
+      ],
+      "outputs": [
+        { "name": "domainEnvelope", "type": "json", "required": true }
+      ]
+    }
+  ],
+  "policyTypes": [
+    {
+      "qualifiedName": "core.policy.readOnlyDomainSources",
+      "description": "ERP M3 and social connectors may only call approved read surfaces and never business write APIs",
+      "effect": "deny",
+      "appliesTo": ["domain.operations.Order", "domain.operations.FulfillmentEvidence", "domain.market.MarketSignal", "domain.market.ContentItem"]
+    },
+    {
+      "qualifiedName": "core.policy.normalizedSignalsOnly",
+      "description": "Only normalized, credential-free social results may enter the Ontology",
+      "effect": "deny",
+      "appliesTo": ["domain.market.MarketSignal", "domain.market.CommentSignal", "domain.market.Trend"]
+    }
+  ],
+  "constraintTypes": [
+    {
+      "qualifiedName": "domain.operations.requireStableSourceIdentity",
+      "description": "Every mapped ERP record requires a stable source ID, source cursor and idempotency key",
+      "targetType": "domain.operations.FulfillmentEvidence",
+      "severity": "error",
+      "rule": "sourceReference != null && readModelVersion != null"
+    },
+    {
+      "qualifiedName": "domain.market.requireEpistemicLabel",
+      "description": "Every market record declares source fact, derived fact, prediction or human judgment",
+      "targetType": "domain.market.MarketSignal",
+      "severity": "error",
+      "rule": "epistemicType in source_fact,derived_fact,prediction,human_judgment"
+    },
+    {
+      "qualifiedName": "core.work.learningDefaultsToProposed",
+      "description": "Learning cannot directly mutate Ontology, prompts or business processes",
+      "targetType": "core.work.Learning",
+      "severity": "error",
+      "rule": "learningStatus == proposed when created"
+    }
+  ]
+}

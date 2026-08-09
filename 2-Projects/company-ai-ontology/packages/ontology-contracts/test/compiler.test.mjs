@@ -7,7 +7,10 @@ import {
   compareDefinitions,
   compileDefinition,
   createEventEnvelope,
+  loadCompanyBrainOperatingModel,
   loadDefinitionDirectory,
+  operatingRole,
+  operatingTransition,
 } from '../src/index.mjs'
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -149,6 +152,8 @@ test('Goal 5 decision lineage contracts remain additive and governed', async () 
     'core.action.EXECUTES_TASK',
     'core.action.EXPECTS',
     'core.action.PRODUCES_OUTCOME',
+    'domain.operations.PROVES_OUTCOME',
+    'core.work.TASK_PRODUCES_OUTCOME',
   ].includes(entry.qualifiedName))
   previous.functionTypes = previous.functionTypes.filter((entry) => entry.qualifiedName !== 'core.decision.buildDecisionLineage')
   previous.actionTypes = previous.actionTypes.filter((entry) => entry.qualifiedName !== 'core.decision.approveDecision')
@@ -182,6 +187,43 @@ test('Goal 5 decision lineage contracts remain additive and governed', async () 
   assert.ok(after.bundle.counts.object_type >= 48)
   assert.ok(after.bundle.counts.link_type >= 35)
   assert.ok(after.bundle.definition.policyTypes.some((entry) => entry.qualifiedName === 'core.policy.verificationBeforeGoalSuccess'))
+})
+
+test('Goal 6 domain skeleton remains additive and complete', async () => {
+  const current = await baseline()
+  const compiled = compileDefinition(current)
+  assert.equal(compiled.ok, true, JSON.stringify(compiled.errors))
+  assert.equal(compiled.bundle.schemaVersion, '3.3.0')
+  for (const name of [
+    'domain.product.ProductLine', 'domain.product.Product', 'domain.product.ProductVersion',
+    'domain.device.DeviceModel', 'domain.device.DeviceInstance', 'domain.device.SerialNumber', 'domain.device.DeviceEvent',
+    'domain.operations.OrderLine', 'domain.operations.InventoryPosition', 'domain.operations.Activation', 'domain.operations.FulfillmentEvidence',
+    'domain.market.ContentItem', 'domain.market.CommentSignal', 'domain.market.Topic', 'domain.market.Trend', 'domain.market.PainPoint', 'domain.market.Competitor',
+  ]) assert.ok(compiled.bundle.definition.objectTypes.some((entry) => entry.qualifiedName === name), name)
+  assert.ok(compiled.bundle.definition.linkTypes.some((entry) => entry.qualifiedName === 'core.work.PROPOSES_ONTOLOGY_CHANGE'))
+  assert.ok(compiled.bundle.definition.policyTypes.some((entry) => entry.qualifiedName === 'core.policy.readOnlyDomainSources'))
+})
+
+test('Company Brain Operating Model v1 defines roles, lifecycles and learning gate', async () => {
+  const model = await loadCompanyBrainOperatingModel()
+  assert.equal(model.contractVersion, '1.0.0')
+  assert.equal(model.roles.length, 12)
+  assert.equal(Object.keys(model.lifecycles).length, 15)
+  assert.equal(operatingRole(model, 'company-agent').approve.length, 0)
+  assert.ok(operatingRole(model, 'company-agent').deniedData.includes('database direct access'))
+  assert.deepEqual(operatingTransition(model, 'Learning', 'proposed', 'reviewed').ok, true)
+  assert.deepEqual(operatingTransition(model, 'Learning', 'accepted', 'proposed').ok, false)
+})
+
+test('Goal 6 read models retain governed payload requirements', async () => {
+  const definition = await baseline()
+  const byName = new Map(definition.objectTypes.map((item) => [item.qualifiedName, item]))
+  const required = (name) => new Set(byName.get(name).properties.filter((property) => property.required).map((property) => property.name))
+  assert.deepEqual(required('domain.market.ContentItem'), new Set(['contentKey', 'platform', 'contentStatus']))
+  assert.deepEqual(required('domain.market.CommentSignal'), new Set(['commentKey', 'signalStatus']))
+  assert.deepEqual(required('domain.market.MarketSignal'), new Set(['provider', 'signalType']))
+  assert.equal(required('domain.device.DeviceInstance').has('sourceUpdatedAt'), true)
+  assert.equal(required('domain.operations.Shipment').has('shipmentStatus'), true)
 })
 
 test('event envelope normalizes time and rejects unsafe identifiers', () => {

@@ -15,7 +15,7 @@ printf '=== compose ===\n'
 
 printf '\n=== health ===\n'
 failed=0
-for container in company-ai-foundation-postgres-1 company-ai-foundation-qdrant-1 company-ai-foundation-redis-1 company-ai-foundation-agent-core-1 company-ai-foundation-ontology-registry-1 company-ai-foundation-knowledge-connector-1 company-ai-foundation-action-gateway-1 company-ai-foundation-h-lite-1 company-ai-foundation-prometheus-1 company-ai-foundation-gateway-1; do
+for container in company-ai-foundation-postgres-1 company-ai-foundation-qdrant-1 company-ai-foundation-redis-1 company-ai-foundation-agent-core-1 company-ai-foundation-ontology-registry-1 company-ai-foundation-knowledge-connector-1 company-ai-foundation-domain-connector-1 company-ai-foundation-action-gateway-1 company-ai-foundation-h-lite-1 company-ai-foundation-prometheus-1 company-ai-foundation-gateway-1; do
   attempt=0
   status=missing
   while [ "$attempt" -lt 30 ]; do
@@ -65,6 +65,19 @@ printf '\n=== agent core ===\n'
 
 printf '\n=== knowledge connector ===\n'
 "$docker_path" compose exec -T knowledge-connector node -e "fetch('http://127.0.0.1:8083/readyz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));if(!r.ok||body.status!=='ready'||body.database?.ready!==true)process.exit(1)})"
+
+printf '\n=== domain connector ===\n'
+"$docker_path" compose exec -T domain-connector node -e "fetch('http://127.0.0.1:8085/readyz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));if(!r.ok||body.status!=='ready'||body.database?.ready!==true)process.exit(1)})"
+domain_status=$(curl --silent --show-error --fail --max-time 10 http://192.168.61.18:19080/ontology/status/domain)
+printf '%s\n' "$domain_status"
+printf '%s' "$domain_status" | grep -q '"status":"read_only"'
+domain_views=$($docker_path compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM information_schema.views WHERE table_schema='domain_read' AND table_name IN ('erp_m3_v1','market_signal_v1');")
+domain_app_select=$($docker_path compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_app','domain_read.erp_m3_v1','SELECT') AND has_table_privilege('ontology_app','domain_read.market_signal_v1','SELECT');")
+domain_connector_write=$($docker_path compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('domain_connector','domain_read.records','INSERT') AND has_table_privilege('domain_connector','domain_read.records','UPDATE');")
+printf 'domain_views=%s app_select=%s connector_write=%s\n' "$domain_views" "$domain_app_select" "$domain_connector_write"
+[ "$domain_views" -eq 2 ]
+[ "$domain_app_select" = t ]
+[ "$domain_connector_write" = t ]
 
 printf '\n=== action gateway ===\n'
 "$docker_path" compose exec -T action-gateway node -e "fetch('http://127.0.0.1:8082/healthz').then(async r=>{const body=await r.json();console.log(JSON.stringify(body));if(!r.ok||body.component!=='mandatory-action-gateway')process.exit(1)})"
@@ -140,12 +153,12 @@ printf 'tables=%s policies=%s views=%s event_update=%s assessment_update=%s work
 work_protocol_http=$(curl --silent --show-error --max-time 10 http://192.168.61.18:19080/ontology/status/work-protocol || true)
 printf 'work_protocol_http=%s\n' "$(printf '%s' "$work_protocol_http" | cut -c1-240)"
 printf '%s' "$work_protocol_http" | grep -q '"protocolVersion":"1.1.0"'
-printf '%s' "$work_protocol_http" | grep -q '"ontologySchemaVersion":"3.2.0"'
+printf '%s' "$work_protocol_http" | grep -q '"ontologySchemaVersion":"3.3.0"'
 
 practice_protocol_http=$(curl --silent --show-error --max-time 10 http://192.168.61.18:19080/ontology/status/practice-protocol || true)
 printf 'practice_protocol_http=%s\n' "$(printf '%s' "$practice_protocol_http" | cut -c1-240)"
 printf '%s' "$practice_protocol_http" | grep -q '"protocolVersion":"1.1.0"'
-printf '%s' "$practice_protocol_http" | grep -q '"ontologySchemaVersion":"3.2.0"'
+printf '%s' "$practice_protocol_http" | grep -q '"ontologySchemaVersion":"3.3.0"'
 practice_expected_mode=${PRACTICE_PROTOCOL_MODE:-shadow}
 printf '%s' "$practice_protocol_http" | grep -q "\"status\":\"$practice_expected_mode\""
 if [ "$practice_expected_mode" = active ]; then

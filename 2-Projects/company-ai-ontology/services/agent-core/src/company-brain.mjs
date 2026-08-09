@@ -11,7 +11,7 @@ function stripHiddenReasoning(value) {
 }
 
 export function createCompanyBrain({ store, runtime, admission, config, now = () => new Date() } = {}) {
-  const protocol = config?.workProtocol || { mode: 'off', ontologyVersion: '3.2.0', evidenceMaxAgeDays: 180 }
+  const protocol = config?.workProtocol || { mode: 'off', ontologyVersion: '3.3.0', evidenceMaxAgeDays: 180 }
 
   async function legacyRun({ scope, turn }) {
     const evidence = await store.permissionedSearch({

@@ -9,7 +9,7 @@ import { createAdmissionController } from './admission.mjs'
 import { createCompanyBrain } from './company-brain.mjs'
 import { ACTIVE_STAGES, CONTRACT_ONLY_STAGES, ONTOLOGY_SCHEMA_VERSION, WORK_PROTOCOL_VERSION, createWorkCaseDraft } from './work-protocol.mjs'
 
-export const AGENT_CORE_CONTRACT_VERSION = '2026-08-09.2'
+export const AGENT_CORE_CONTRACT_VERSION = '2026-08-09.3'
 
 function json(response, statusCode, payload, headers = {}) {
   const body = JSON.stringify(payload)

@@ -47,6 +47,12 @@
     reverse_proxy ontology-registry:8084
   }
 
+  @domain path /ontology/status/domain
+  handle @domain {
+    rewrite * /status
+    reverse_proxy domain-connector:8085
+  }
+
   @workProtocol path /ontology/status/work-protocol
   handle @workProtocol {
     rewrite * /status/work-protocol

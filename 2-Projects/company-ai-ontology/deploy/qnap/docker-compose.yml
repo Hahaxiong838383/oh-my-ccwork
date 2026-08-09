@@ -55,6 +55,7 @@ services:
       ONTOLOGY_APP_PASSWORD: ${ONTOLOGY_APP_PASSWORD}
       ONTOLOGY_READONLY_PASSWORD: ${ONTOLOGY_READONLY_PASSWORD}
       ACTION_GATEWAY_PASSWORD: ${ACTION_GATEWAY_PASSWORD}
+      DOMAIN_CONNECTOR_PASSWORD: ${DOMAIN_CONNECTOR_PASSWORD}
       FUTURUS_TENANT_ID: ${FUTURUS_TENANT_ID}
     command:
       - postgres
@@ -231,7 +232,7 @@ services:
       H_ENGINE_DEMO_DELAY_MS: ${H_ENGINE_DEMO_DELAY_MS:-50}
       WORK_PROTOCOL_MODE: ${WORK_PROTOCOL_MODE:-shadow}
       PRACTICE_PROTOCOL_MODE: ${PRACTICE_PROTOCOL_MODE:-shadow}
-      ONTOLOGY_SCHEMA_VERSION: ${ONTOLOGY_SCHEMA_VERSION:-3.2.0}
+      ONTOLOGY_SCHEMA_VERSION: ${ONTOLOGY_SCHEMA_VERSION:-3.3.0}
       EVIDENCE_MAX_AGE_DAYS: ${EVIDENCE_MAX_AGE_DAYS:-180}
       WORK_PROTOCOL_RECENT_CASE_LIMIT: ${WORK_PROTOCOL_RECENT_CASE_LIMIT:-8}
       XAI_API_KEY: ${XAI_API_KEY:-}
@@ -375,6 +376,53 @@ services:
     mem_limit: 256m
     mem_reservation: 64m
     cpus: 0.40
+    pids_limit: 96
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+
+  domain-connector:
+    <<: *service-defaults
+    build:
+      context: ${DOMAIN_CONNECTOR_BUILD_CONTEXT:-../../services/domain-connector}
+    environment:
+      DOMAIN_CONNECTOR_HOST: 0.0.0.0
+      DOMAIN_CONNECTOR_PORT: "8085"
+      DOMAIN_CONNECTOR_CONTROL_TOKEN: ${DOMAIN_CONNECTOR_CONTROL_TOKEN}
+      FUTURUS_TENANT_ID: ${FUTURUS_TENANT_ID}
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ontology
+      PGUSER: domain_connector
+      PGPASSWORD: ${DOMAIN_CONNECTOR_PASSWORD}
+      PGPOOL_MAX: "4"
+      DOMAIN_CONNECTOR_PAGE_LIMIT: ${DOMAIN_CONNECTOR_PAGE_LIMIT:-100}
+      DOMAIN_CONNECTOR_MAX_PAGES: ${DOMAIN_CONNECTOR_MAX_PAGES:-100}
+      DOMAIN_CONNECTOR_INTERVAL_MS: ${DOMAIN_CONNECTOR_INTERVAL_MS:-900000}
+      DOMAIN_CONNECTOR_SYNC_ON_START: ${DOMAIN_CONNECTOR_SYNC_ON_START:-0}
+      AISHIKE_ERP_M3_READ_ENABLED: ${AISHIKE_ERP_M3_READ_ENABLED:-0}
+      AISHIKE_ERP_M3_READ_URL: ${AISHIKE_ERP_M3_READ_URL:-}
+      AISHIKE_ERP_M3_READ_AUTHORIZATION: ${AISHIKE_ERP_M3_READ_AUTHORIZATION:-}
+      AISHIKE_ERP_M3_READ_PURPOSE: operations-read-model
+      KIDSHUB_MARKET_READ_ENABLED: ${KIDSHUB_MARKET_READ_ENABLED:-0}
+      KIDSHUB_MARKET_READ_URL: ${KIDSHUB_MARKET_READ_URL:-}
+      KIDSHUB_MARKET_READ_AUTHORIZATION: ${KIDSHUB_MARKET_READ_AUTHORIZATION:-}
+      KIDSHUB_MARKET_READ_PURPOSE: market-intelligence
+    networks:
+      - edge
+      - data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8085/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    mem_limit: 192m
+    mem_reservation: 48m
+    cpus: 0.35
     pids_limit: 96
     read_only: true
     tmpfs:

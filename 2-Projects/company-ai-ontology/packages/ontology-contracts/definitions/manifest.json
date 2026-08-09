@@ -1,8 +1,9 @@
 {
   "formatVersion": "1",
-  "schemaVersion": "3.2.0",
+  "schemaVersion": "3.3.0",
   "files": [
-    "foundation.json"
+    "foundation.json",
+    "domain-v1.json"
   ],
   "toolContracts": {
     "data": {
