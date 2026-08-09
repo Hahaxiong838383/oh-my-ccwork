@@ -32,11 +32,11 @@ export function createDomainSync({ config, clients, store, logger = () => {} } =
         if (!page.hasMore) break
         if (pageIndex === config.maxPages - 1) throw Object.assign(new Error('source pagination limit exceeded'), { code: 'pagination_limit' })
       }
-      await store.finishRun({ tenantId: config.tenantId, runId, sourceSystem: sourceKey, status: 'completed', cursorAfter: cursor, stats })
+      await store.finishRun({ tenantId: config.tenantId, runId, sourceSystem: sourceKey, status: 'completed', cursorAfter: cursor, stats, advanceCursor: !replay })
       return { ok: true, status: 'completed', source: sourceKey, runId, cursorBefore, cursorAfter: cursor, stats }
     } catch (error) {
       logger('domain sync failed', sourceKey, String(error?.code || error?.message || error).slice(0, 160))
-      await store.finishRun({ tenantId: config.tenantId, runId, sourceSystem: sourceKey, status: 'failed', cursorAfter: cursor, stats, errorCode: String(error?.code || 'sync_failed') })
+      await store.finishRun({ tenantId: config.tenantId, runId, sourceSystem: sourceKey, status: 'failed', cursorAfter: cursor, stats, errorCode: String(error?.code || 'sync_failed'), advanceCursor: false })
       return { ok: false, status: 'failed', source: sourceKey, runId, errorCode: String(error?.code || 'sync_failed'), stats }
     } finally { running.delete(sourceKey) }
   }

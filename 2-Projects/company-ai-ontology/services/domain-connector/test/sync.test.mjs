@@ -38,6 +38,20 @@ test('sync is idempotent, advances cursor and isolates invalid records', async (
   const second = await replay.run('aishike-erp-m3', { cursorOverride: '', replay: true })
   assert.equal(second.stats.unchanged, 1)
   assert.equal(store.state.records.size, 2)
+  assert.equal(await store.cursor({ sourceSystem: 'aishike-erp-m3' }), 'cursor-2')
+})
+
+test('failed runs and partial replays never replace the live cursor', async () => {
+  const store = createMemoryDomainStore()
+  store.state.cursors.set('aishike-erp-m3', 'live-cursor')
+  const config = { tenantId: 'tenant-1', pageLimit: 100, maxPages: 10, sources: { 'aishike-erp-m3': source } }
+  const failed = createDomainSync({ config, clients: { 'aishike-erp-m3': { page: async () => { throw Object.assign(new Error('offline'), { code: 'source_unavailable' }) } } }, store })
+  assert.equal((await failed.run('aishike-erp-m3')).status, 'failed')
+  assert.equal(await store.cursor({ sourceSystem: 'aishike-erp-m3' }), 'live-cursor')
+
+  const replay = createDomainSync({ config, clients: { 'aishike-erp-m3': { page: async () => ({ items: [record()], nextCursor: 'historical-cursor', hasMore: false }) } }, store })
+  assert.equal((await replay.run('aishike-erp-m3', { cursorOverride: 'old-cursor', replay: true })).status, 'completed')
+  assert.equal(await store.cursor({ sourceSystem: 'aishike-erp-m3' }), 'live-cursor')
 })
 
 test('control routes fail closed and never accept a wrong bearer token', async () => {

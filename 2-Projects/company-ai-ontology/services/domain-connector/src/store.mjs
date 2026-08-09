@@ -47,10 +47,10 @@ export function createDomainStore({ database, logger = () => {} } = {}) {
   async function deadLetter({ tenantId, runId, sourceSystem, sourceReference, errorCode }) {
     return withTenant(tenantId, (client) => client.query(`INSERT INTO domain_read.dead_letters(tenant_id,run_id,source_system,source_reference,error_code) VALUES($1,$2,$3,$4,$5)`, [tenantId, runId, sourceSystem, sourceReference || null, errorCode]))
   }
-  async function finishRun({ tenantId, runId, sourceSystem, status, cursorAfter, stats, errorCode = null }) {
+  async function finishRun({ tenantId, runId, sourceSystem, status, cursorAfter, stats, errorCode = null, advanceCursor = status === 'completed' }) {
     return withTenant(tenantId, async (client) => {
       await client.query(`UPDATE domain_read.sync_runs SET status=$3,cursor_after=$4,stats=$5::jsonb,error_code=$6,finished_at=now() WHERE tenant_id=$1 AND id=$2`, [tenantId, runId, status, cursorAfter || null, JSON.stringify(stats), errorCode])
-      if (status === 'completed') await client.query(`INSERT INTO domain_read.source_cursors(tenant_id,source_system,cursor_value,last_success_at,last_run_id) VALUES($1,$2,$3,now(),$4) ON CONFLICT(tenant_id,source_system) DO UPDATE SET cursor_value=EXCLUDED.cursor_value,last_success_at=now(),last_run_id=EXCLUDED.last_run_id,updated_at=now()`, [tenantId, sourceSystem, cursorAfter || '', runId])
+      if (status === 'completed' && advanceCursor) await client.query(`INSERT INTO domain_read.source_cursors(tenant_id,source_system,cursor_value,last_success_at,last_run_id) VALUES($1,$2,$3,now(),$4) ON CONFLICT(tenant_id,source_system) DO UPDATE SET cursor_value=EXCLUDED.cursor_value,last_success_at=now(),last_run_id=EXCLUDED.last_run_id,updated_at=now()`, [tenantId, sourceSystem, cursorAfter || '', runId])
       await client.query(`INSERT INTO audit.events(tenant_id,actor_service,event_type,resource_type,resource_id,payload) VALUES($1,'company-domain-connector',$2,'domain_sync',$3,$4::jsonb)`, [tenantId, `domain_sync_${status}`, runId, JSON.stringify({ sourceSystem, cursorAfter: cursorAfter || null, stats, errorCode })])
     })
   }
@@ -73,7 +73,7 @@ export function createMemoryDomainStore() {
     async startRun(input) { const id = `run-${state.runs.length + 1}`; state.runs.push({ id, ...input, status: 'running' }); return id },
     async upsert({ record }) { const key = `${record.sourceSystem}:${record.externalId}`, prior = state.records.get(key); state.records.set(key, structuredClone(record)); return prior && JSON.stringify(prior) === JSON.stringify(record) ? { unchanged: true } : { id: key, inserted: !prior } },
     async deadLetter(input) { state.deadLetters.push(structuredClone(input)) },
-    async finishRun(input) { const run = state.runs.find((item) => item.id === input.runId); Object.assign(run, input); if (input.status === 'completed') state.cursors.set(input.sourceSystem, input.cursorAfter || '') },
+    async finishRun(input) { const run = state.runs.find((item) => item.id === input.runId); Object.assign(run, input); if (input.status === 'completed' && input.advanceCursor !== false) state.cursors.set(input.sourceSystem, input.cursorAfter || '') },
     async status() { return { sources: [...state.cursors].map(([source_system, cursor_value]) => ({ source_system, cursor_value })), counts: [] } },
     async close() {},
   }
