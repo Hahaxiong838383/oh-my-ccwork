@@ -2370,6 +2370,52 @@ CPA 网关实测：请求 `grok-3-mini` 实际回 `grok-4.3`、`codex-auto-revie
   得出「一条消息都没处理」的假结论（2026-08-08 我就这么误判过）。
 - **卡片按钮走 card action，`lastInboundAt` 纹丝不动**（只统计文本消息）。
   用户点「新会话」查不到入站记录是正常的。
+
+## H-0084 Owner Bot 端点绑定（管理台版）· v1.51.0 · 2026-08-09 上线
+
+owner（`sandbox=null`）此前从不调 `/internal/creds`（runner-worker 的
+syncCredentials gate 在 `sandbox &&` 上），grok 钉死本机 device OAuth，订阅耗尽
+即全瘫。v1.51.0 给 owner 开独立凭据链，**租户链（含 v1.50.4 那四个白名单）零接触**。
+
+### 架构（与租户链的隔离面）
+
+- 入口：管理台 overview「**Owner Bot 引擎**」面板（oep* JS）→
+  `/admin/api/owner-endpoint(-model/-context/-clear)`，admin cookie 鉴权，
+  **不走 ENDPOINT_GATE**。绑定改动**下一条消息生效**（每任务拉凭据），无需重启。
+- 存储：元数据 `DATA_DIR/owner-endpoint.json`（`lib/owner-endpoint-store.mjs`）、
+  key 进 vault 键 **`'owner'`**。**不进 users store**（进了会被同步器当租户 App 启动）；
+  注册流拒绝 `uid='owner'` 保留字。
+- 下发：`/internal/creds/owner` 分支在 `store.get` **之前**提前返回，形状与租户
+  endpoint 模式同构；卡片 meta 走 `GET /internal/owner-endpoint`（无 key）。
+- 执行面：bridge registerApp 传 `kind` → runner-worker `isOwnerGrok` →
+  makeCredentialSync(`uid='owner'`, `spec=null`)。owner 未绑定 = `xai:null` 干净
+  返回 → grok-runner **静默 fall through 走 auth.json** 并剜托管块（回退=上线前原状）。
+
+### 🔴 grok 每请求鉴权序（本次最大的坑，官方 docs/user-guide/02-authentication.md）
+
+**per-model `env_key` > session(`auth.json`) > 全局 `XAI_API_KEY`**。全局 env key
+只在**无 session** 时兜底——owner 宿主有 auth.json，session 压过注入的 key，grok
+拿 SuperGrok token 打 CPA → 401×4「Auth recovery succeeded but ... rejected」。
+租户沙箱无 auth.json，所以 v1.48–v1.50 三版全绿从未暴露（**洁净沙箱验过 ≠ 脏宿主
+验过**）。修法：端点托管块恒写 `env_key = "XAI_API_KEY"`（cw 行有值才写）。
+⚠️ H-0083 记的「custom_endpoint 优先于 session」只覆盖**模型表拉取**
+（`ModelFetchAuth::resolve()`），推理请求另有一套序——**优先级结论必须绑操作类型**。
+
+### 排障
+
+- owner 402 `usage balance exhausted` = 打的是**官方端点**（SuperGrok 余额耗尽原状）
+  → 说明未绑定或凭据没注入；owner 401×N「Auth recovery succeeded」= 绑了但
+  env_key 块缺失（session 压 key）→ 查 `~/.grok/config.toml` 托管块。
+- 定界手法：`mv ~/.grok/auth.json{,.hold}` 再跑一发（通 = session 干扰），验完必还原。
+- E2E 探针：dev198 上用生产同构件（createControlClient + makeCredentialSync('owner')
+  + createGrokRunner(sandbox:null)）跑真任务，一发验凭据/注入/-m/CW/网关五层；用完删。
+- 终态（2026-08-09）：CPA `api-direct.hahaxiong.top` · grok-4.5 · cw 500000；
+  config 备份 `~/.grok/config.toml.bak-v1.50.6-202608091022`；owner config 的
+  `[models] default` 仍是已下架的 grok-code-fast-1（端点模式下被 `-m` 压过无影响，
+  device 回退时靠 CLI 静默 fallback——**要不要改由川哥拍板，别擅动**）。
+- dev198 git 漂移（tar 直传致工作区超前 HEAD）已于 2026-08-09 追平：md5 对撞确认
+  = 6671e57 后 `git stash push` 入库，之后一律走 `ops/deploy-sites.sh`，别再 tar 直传。
+
 ## 五项需求发布收口（2026-07-30）
 
 本阶段发布版本 `v1.33.1`（E3 后 `v1.34.0`；grok 授权墙接线后 `v1.35.0`），全 Bot 行为契约 `2026-07-30.1`（→ `2026-07-30.2`，grok 撞授权墙自动推卡）。H-0027、H-0031、H-0011、
@@ -4969,7 +5015,7 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | **`v1.50.6`**（2026-08-08 grok 自定义端点绑定 URL+API key + 上下文窗口 + 模型一致性；公网 `https://ai.kidshub.cn/healthz` 取真值） |
+| 控制面 aliyun-hk | **`v1.51.0`**（2026-08-09 Owner Bot 端点绑定管理台版 + per-model env_key 鉴权钉定；公网 `https://ai.kidshub.cn/healthz` 取真值） |
 | Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件、1 App。**本次未随 dev198 升级**——`e5b3978` 对 bridge 运行时零行为变化（新模块只被 `ops/announce-release.mjs` 引用，`bridge.mjs` 那 8 行全在注释块内），不值得为注释付 Lima 割接的约 35 秒中断 |
 | dev198 | **`e5b397815d1c`**（12 App 全连、零 lastError；两站持有集合零交集，互斥成立） |
 | 安装源 | Mini 上 `~/local/h-mini-b2-source-<commit>`，**具体路径现场 `ls` 取**（随 commit 变，写死必腐烂） |
