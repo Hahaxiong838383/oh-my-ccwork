@@ -254,6 +254,18 @@ node ops/sync-company-directory.mjs
 - 绿色表示“已通过当前生产验收”，灰色表示“仍有业务门禁”。服务容器健康可以标绿，但知识权限正负验收、真实 Canary、真实 P2、ERP/社媒接管在业务闭环前必须保持灰色。
 - 公网验收至少包含：未认证跳转登录、认证后页面 200、状态 API 200、H 引擎模型与版本真值、敏感字段扫描、真实浏览器无控制台错误、无横向溢出、绿色/灰色数量和隧道重启后恢复。
 
+### 公司大脑工作逻辑显式建模
+
+- 一次公司大脑处理过程必须建模为 `WorkCase`，阶段建模为 `WorkStage`；不能只保存最终回答或 H 引擎运行日志。
+- 工作阶段固定为 Intake、Scope、Authority、Context、Evidence、Synthesis、Decision、Plan、Execution、Verification、Learning。Goal 4 只激活至可解释回答，后续阶段先建契约并保持灰色。
+- P0-EPI 在既有 13 个命名空间内增量增加 WorkCase、WorkStage、Assumption、Unknown 和 EpistemicAssessment，不新增第二套 Ontology 或事实真源。
+- Permissioned Evidence Package v2 必须带事实类型、Provenance、有效期、权限快照、反证、未知、置信依据和 Ontology 版本；无权限资源不得泄露标题、URL、人员或正文。
+- Company Agent 必须区分源事实、推导事实、预测、人工判断、假设、未知和冲突；证据不足时允许拒绝形成确定性结论。
+- 显式推理只保存证据引用、规则结果、主张、假设、未知、冲突和判断摘要，禁止保存模型隐藏思维链。
+- `WorkCase=completed` 不等于 Task、Action 或 Goal 成功；三层结果仍由 Verification 独立记录。
+- 10 名真实员工 Canary 延后到 Goal 4 P0-EPI 和 Goal 5 P0-DEC 大框架稳定之后，但仍是 20/50 人放量前强制门禁。
+- 详细实施计划见 `2-Projects/company-ai-ontology/docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
+
 当前实现与切换流程见：
 
 - `2-Projects/company-ai-ontology/services/knowledge-connector/`

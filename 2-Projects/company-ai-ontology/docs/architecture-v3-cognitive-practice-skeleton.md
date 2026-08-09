@@ -1,6 +1,6 @@
 # 公司 AI Ontology V3 认知—实践骨架方案
 
-更新时间：2026-08-08（Asia/Shanghai）
+更新时间：2026-08-09（Asia/Shanghai）
 
 ## 1. 结论
 
@@ -232,6 +232,14 @@ H 引擎不持有公司数据库直连权限，不持有长期 ERP、飞书、Gi
 - 冲突证据。
 
 Company Agent 回答必须能够同时返回结论、证据来源、时间有效性、权限范围、反证、未知项和建议验证动作。
+
+### 5.3 公司大脑工作协议
+
+只有对象定义，没有工作阶段和状态机，仍无法解释 Company Agent 如何从员工请求走到结论、决策、任务和学习。V3 因此把一次公司大脑处理过程显式建模为 `WorkCase`，并以 `WorkStage` 记录 Intake、Scope、Authority、Context、Evidence、Synthesis、Decision、Plan、Execution、Verification 和 Learning。
+
+Goal 4 只激活 Intake 至可解释回答；Decision 之后先建立兼容契约并在管理页面保持灰色，Goal 5 再接真实 Decision/P2。完整模型与实施计划见 `company-brain-work-logic-modeling-plan-2026-08-09.md`。
+
+显式建模不等于保存模型隐藏思维链。系统只保存可审计的业务请求摘要、证据引用、规则判断、主张、假设、未知、冲突、决策依据摘要、批准和结果，不保存模型内部逐 token 推理过程。
 
 ## 6. 实践论层骨架
 

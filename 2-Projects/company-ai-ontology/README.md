@@ -13,7 +13,7 @@
 
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
-- 当前里程碑：`P0-S Ontology Contracts + Compiler + Registry + Reconciliation`。Registry 已与 Git 定义保持 `in_sync`，公网看板只在 H 管理员认证后展示脱敏状态。
+- 当前里程碑：P0-S 已完成，下一阶段为 `Goal 4 / P0-EPI + Company Brain Work Protocol v1.0`。10 名真实员工 Canary 延后到 P0-EPI、P0-DEC 大框架稳定之后执行。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
 ## 部署边界
@@ -38,6 +38,7 @@
 - `docs/lessons-learned-2026-08-08.md`：公司 Bot、通讯录同步、权限和 QNAP 部署的经验教训。
 - `docs/h-engine-credential-cutover.md`：从临时 H 平台 OAuth 切换到公司独立凭据的正式流程。
 - `docs/architecture-v3-cognitive-practice-skeleton.md`：认识论、实践论、双层本体、Ontology Compiler 和大骨架优先实施方案。
+- `docs/company-brain-work-logic-modeling-plan-2026-08-09.md`：公司大脑工作阶段、状态机、显式对象、Evidence Package v2、可视化和 Goal 4 实施计划。
 - `packages/ontology-contracts/`：Git 管理的 V3 Definition、Compiler、兼容性、Event Envelope 和 Data/Logic/Action 契约。
 - `services/ontology-registry/`：独立 Registry、部署审批、版本激活、历史版本再激活和 Git/运行时对账服务。
 - `services/agent-core/`：Company Agent Core 内部 API、Postgres 幂等审计和 H 引擎独立 Runtime 门禁。
@@ -56,9 +57,9 @@
 
 ## 下一阶段
 
-1. P0-EPI 建立 Source、Observation、Evidence、Claim、Hypothesis、Unknown、Contradiction 和 Provenance 最小闭环。
-2. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
-3. 补齐空间成员 `department/openchat` 映射和 Retrieval 对群组主体的授权语义；完成后再单独审批产品研究部整库导入窗口。
-4. 保持 Knowledge Connector 自动发现关闭、启动自动同步关闭；正式导入前重新确认资源清单、撤权 SLA 和回滚窗口。
-5. 扩到 10 名真实员工，验证并发会话、群内多人 @ 隔离、失败重投和回复送达。
-6. 指定试点部门、唯一 DRI 和一条真实 P2，运行认知、决策、实践和验证闭环；完成 24 小时容量观测后再决定 20/50 人放量。
+1. 启动 Goal 4：P0-EPI + Company Brain Work Protocol v1.0，先激活 Intake 至可解释回答，Decision 之后只建契约并保持灰色。
+2. Goal 5 激活 DecisionCase、P2、Task、Action Result、Verification 和 Learning 实践闭环。
+3. Goal 3 的 10 名真实员工 Canary 延后到 Goal 4、Goal 5 大框架稳定之后，但仍是 20/50 人放量前的强制门禁。
+4. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
+5. 补齐空间成员 `department/openchat` 映射和 Retrieval 对群组主体的授权语义；完成后再单独审批产品研究部整库导入窗口。
+6. 保持 Knowledge Connector 自动发现关闭、启动自动同步关闭；正式导入前重新确认资源清单、撤权 SLA 和回滚窗口。

@@ -1,10 +1,17 @@
 # 公司 AI Ontology 后续 TODO
 
-更新时间：2026-08-08（Asia/Shanghai）
+更新时间：2026-08-09（Asia/Shanghai）
 
 ## 当前结论
 
-P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S Foundation Pack 和认证后公网运行看板均已上线。V2.2 继续承载业务运行，V3 按“骨架完整、血肉渐进”增量建设。知识 ACL 两个 P0 已完成生产部署、28/28 回归、小范围真实 Canary、员工撤权、跨部门与链接直猜负测和回滚演练；当前最高优先级转为公司专用 CPA 凭据、10 人真实员工 Canary 和 P0-EPI。产品研究部整库导入仍需 P1 主体映射与单独审批。
+P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S Foundation Pack 和认证后公网运行看板均已上线。V2.2 继续承载业务运行，V3 按“骨架完整、血肉渐进”增量建设。知识 ACL 两个 P0 已完成生产部署、28/28 回归、小范围真实 Canary、员工撤权、跨部门与链接直猜负测和回滚演练。下一主线调整为 Goal 4：P0-EPI + Company Brain Work Protocol v1.0；10 名真实员工 Canary 延后到 P0-EPI、P0-DEC 大框架稳定之后执行。产品研究部整库导入仍需 P1 主体映射与单独审批。
+
+## 2026-08-09 Goal 顺序重排
+
+1. `Goal 4`：P0-EPI + 公司大脑工作逻辑显式建模，先激活 Intake 至可解释回答。
+2. `Goal 5`：P0-DEC + Decision/P2/Task/Action/Verification/Learning 实践闭环。
+3. `Goal 3`：10 名真实员工 Canary，延后但仍是 20/50 人放量前硬门禁。
+4. 公司专用 CPA 凭据和 P1 `department/openchat` 映射可并行推进，不改变业务验收顺序。
 
 ## P0-KB-ACL：正式导入前硬阻断
 
@@ -29,10 +36,14 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 
 ## P0-EPI：认识论最小闭环
 
-1. 增加 Source、Observation、Evidence、Claim、Hypothesis、Assumption、Unknown、Contradiction、ValidityWindow 和 Provenance。
-2. Permissioned Evidence Package 增加事实类型、来源、有效期、反证、未知项、置信度和 Ontology 版本。
-3. Company Agent 回答明确区分源事实、推导事实、模型预测、人工判断、假设和未知。
-4. 用一条 ERP 事实和一条社媒 Signal 完成正证、反证和假设验证。
+1. 增加 WorkCase、WorkStage、Assumption、Unknown、EpistemicAssessment，并复用现有 Source、Observation、Evidence、Claim、Hypothesis、Contradiction 和 Provenance。
+2. 固化 Intake、Scope、Authority、Context、Evidence、Synthesis、Decision、Plan、Execution、Verification、Learning 完整阶段；Goal 4 只激活至可解释回答。
+3. Permissioned Evidence Package v2 增加事实类型、来源、有效期、反证、未知项、置信依据、权限快照和 Ontology 版本。
+4. Company Agent 回答明确区分源事实、推导事实、模型预测、人工判断、假设、未知和冲突。
+5. 只保存证据引用和可审计判断摘要，禁止保存模型隐藏思维链。
+6. 用一条 fixture ERP 事实和一条 fixture 社媒 Signal 完成正证、反证、过期、未知和无权限验证。
+7. H 控制面增加 WorkCase 时间线、Evidence Map 和认识状态；Decision 之后阶段保持灰色。
+8. 详细计划见 `docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
 
 ## P0-DEC：决策与实践闭环
 
@@ -58,7 +69,7 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 
 ## 下一阶段
 
-1. `P0-PROD-1 公司 Bot`：✅ App 凭据、QNAP H-Lite active、租户 Token、WebSocket 长连接和首名真实员工链路已完成；已读回 `p2p:post`、`p2p:text`、`group:text`，3 次处理全部完成、0 次失败、去重记录 3 条、容器无重启。下一步扩到 10 名真实员工，验证并发会话、群内多人 @ 隔离、回复送达与失败重投。
+1. `P0-PROD-1 公司 Bot`：✅ App 凭据、QNAP H-Lite active、租户 Token、WebSocket 长连接和首名真实员工链路已完成；10 名真实员工 Canary 暂缓到 Goal 4、Goal 5 大框架稳定后执行，不在当前阶段扩大真实用户范围。
 2. `P0-PROD-1.5 通讯录身份同步`：✅ 数据范围接口、部门分页、员工主动定位和最小字段同步已完成；4 个授权范围展开为 83 个可见部门和 414 名可见人员，二次同步新增 0、更新 414，敏感属性行数为 0。
 3. `P0-PROD-2 H 引擎`：✅ 生产调用已上线。QNAP Agent Core 通过 HMAC 调用 dev198 Worker，Worker 通过个人 CPA API Key 调用 `grok-4.5`，真实推理和权限证据入 Prompt 已通过；下一门禁是公司专用 CPA Key/账号与同厂冗余。
 4. `P0-PROD-3 公司知识 Connector`：✅ `2026-08-08.3` 已生产部署，Connector/Agent Core 14/14、真实 ACL Canary、撤权、越权负测、备份与回滚通过；正式整库导入仍保持灰色，等待 P1 `department/openchat` 映射和单独批准，详见 `docs/knowledge-acl-canary-2026-08-08.md`。
