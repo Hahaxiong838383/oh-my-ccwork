@@ -47,5 +47,11 @@
     reverse_proxy ontology-registry:8084
   }
 
+  @workProtocol path /ontology/status/work-protocol
+  handle @workProtocol {
+    rewrite * /status/work-protocol
+    reverse_proxy agent-core:8080
+  }
+
   respond `{"status":"not-found"}` 404
 }

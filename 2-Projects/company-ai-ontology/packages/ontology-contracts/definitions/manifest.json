@@ -1,13 +1,13 @@
 {
   "formatVersion": "1",
-  "schemaVersion": "3.0.0",
+  "schemaVersion": "3.1.0",
   "files": [
     "foundation.json"
   ],
   "toolContracts": {
     "data": {
       "gateway": "permissioned-retrieval-gateway",
-      "returns": "permissioned-evidence-package",
+      "returns": "permissioned-evidence-package-v2",
       "directDatabaseAccess": false
     },
     "logic": {

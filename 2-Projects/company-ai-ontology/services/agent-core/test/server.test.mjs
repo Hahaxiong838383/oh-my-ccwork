@@ -275,3 +275,92 @@ test('通讯录同步只接受服务身份并最小化人员字段', async (t) =
   }])
   assert.equal(store.events.at(-1).eventType, 'directory_principals_synced')
 })
+
+test('Goal 4 active 模式完成 WorkCase、Evidence v2 与结构化回答闭环', async (t) => {
+  const store = createMemoryStore({
+    retrieval: {
+      principalFound: true,
+      evidence: [{
+        evidenceId: 'erp-fixture:order-001',
+        source: 'aishike-erp-fixture',
+        objectType: 'order',
+        title: '测试订单',
+        excerpt: '测试订单已完成质检',
+        classification: 'internal',
+        updatedAt: '2026-08-08T10:00:00Z',
+        validUntil: '2028-08-10T10:00:00Z',
+        permissionSnapshot: true,
+      }],
+      excludedReasonCounts: {},
+      policyDecisionReference: 'fixture-policy',
+      limit: 8,
+      truncated: false,
+    },
+  })
+  const server = createAgentCoreServer({
+    config: {
+      ...config(),
+      workProtocol: { mode: 'active', ontologyVersion: '3.1.0', evidenceMaxAgeDays: 180, recentCaseLimit: 8 },
+    },
+    store,
+    runtime: {
+      ready: async () => ({ ready: true, productionReady: true, provider: 'test-h-engine' }),
+      run: async (turn) => ({
+        reply: JSON.stringify({
+          conclusion: '测试订单已完成质检。',
+          factBasis: ['ERP fixture 显示订单已完成质检'],
+          derivedSummary: '仅依据当前授权 fixture。',
+          assumptions: [], contradictions: [], unknowns: [], confidenceLevel: 'medium',
+          validityWindow: { validUntil: turn.workContext.evidencePackage.validUntil },
+          recommendedNextAction: '由业务 DRI 复核真实订单。', approvalRequired: false,
+          evidenceReferences: ['erp-fixture:order-001'],
+        }),
+        runtime: { provider: 'test-h-engine', productionReady: true },
+      }),
+    },
+    now: () => now,
+  })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const port = await listen(server)
+  const body = JSON.stringify({ conversationId: 'conversation-goal4', message: '测试订单质检完成了吗', intent: 'query', channel: 'h-lite' })
+  const result = await request(port, { body, headers: signed(body, { requestId: 'goal4-active', idempotencyKey: 'goal4-active' }) })
+  assert.equal(result.status, 200)
+  assert.equal(result.payload.workCase.status, 'completed')
+  assert.equal(result.payload.workCase.processingMode, 'active')
+  assert.equal(result.payload.evidencePackage.packageVersion, '2.0.0')
+  assert.equal(result.payload.epistemicAssessment.deterministicConclusionAllowed, true)
+  assert.equal(result.payload.answer.confidenceLevel, 'medium')
+  assert.match(result.payload.reply, /测试订单已完成质检/)
+  const protocolStatus = await request(port, { method: 'GET', path: '/status/work-protocol' })
+  assert.equal(protocolStatus.status, 200)
+  assert.equal(protocolStatus.payload.status, 'active')
+  assert.equal(protocolStatus.payload.recentCases[0].status, 'completed')
+  assert.equal(protocolStatus.payload.contractOnlyStages.includes('decision'), true)
+})
+
+test('Goal 4 无权限主体 Evidence 0 且不调用 H 引擎', async (t) => {
+  const store = createMemoryStore({ retrieval: { principalFound: false, evidence: [], excludedReasonCounts: { principal_not_active: 1 } } })
+  let runtimeCalls = 0
+  const server = createAgentCoreServer({
+    config: {
+      ...config(),
+      workProtocol: { mode: 'active', ontologyVersion: '3.1.0', evidenceMaxAgeDays: 180, recentCaseLimit: 8 },
+    },
+    store,
+    runtime: {
+      ready: async () => ({ ready: true, productionReady: true, provider: 'test-h-engine' }),
+      run: async () => { runtimeCalls += 1; throw new Error('must not run') },
+    },
+    now: () => now,
+  })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const port = await listen(server)
+  const body = JSON.stringify({ conversationId: 'conversation-denied', message: '给我受限资料', intent: 'query', channel: 'h-lite' })
+  const result = await request(port, { body, headers: signed(body, { requestId: 'goal4-denied', idempotencyKey: 'goal4-denied', personId: 'person-denied' }) })
+  assert.equal(result.status, 200)
+  assert.equal(runtimeCalls, 0)
+  assert.equal(result.payload.workCase.status, 'permission_denied')
+  assert.equal(result.payload.evidence.length, 0)
+  assert.equal(result.payload.evidencePackage.facts.length, 0)
+  assert.doesNotMatch(JSON.stringify(result.payload), /机密标题|https?:\/\//)
+})

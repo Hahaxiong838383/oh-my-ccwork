@@ -1,4 +1,7 @@
+import { randomUUID } from 'node:crypto'
 import { Pool } from 'pg'
+
+import { assertWorkCaseTransition, stageContract } from './work-protocol.mjs'
 
 const SEARCH_STOP_TERMS = new Set([
   '一下', '什么', '公司', '是否', '有关', '相关', '现在', '目前', '可以', '如何', '怎么', '请问', '告诉', '需要',
@@ -229,6 +232,280 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
         summary: String(row.attributes?.summary || ''),
         simulation: Boolean(row.attributes?.simulation),
       }))]
+    })
+  }
+
+  async function permissionedRetrieve({ tenantId, personId, query, limit = 8 }) {
+    const principal = await withTenant(tenantId, (client) => client.query(
+      `SELECT id FROM iam.principals
+        WHERE tenant_id = $1 AND external_key = $2 AND status = 'active' LIMIT 1`,
+      [tenantId, personId],
+    ))
+    if (!principal.rows[0]) {
+      return {
+        evidence: [],
+        principalFound: false,
+        policyDecisionReference: 'principal-not-active',
+        excludedReasonCounts: { principal_not_active: 1 },
+        limit: Math.max(1, Math.min(20, Number(limit) || 8)),
+        truncated: false,
+      }
+    }
+    const evidence = await permissionedSearch({ tenantId, personId, query, limit })
+    return {
+      evidence,
+      principalFound: true,
+      policyDecisionReference: 'permissioned-retrieval-gateway',
+      excludedReasonCounts: {},
+      limit: Math.max(1, Math.min(20, Number(limit) || 8)),
+      truncated: false,
+    }
+  }
+
+  async function createWorkCase({ tenantId, draft }) {
+    return withTenant(tenantId, async (client) => {
+      const [principal, ontologyVersion] = await Promise.all([
+        client.query(
+          `SELECT id FROM iam.principals
+            WHERE tenant_id = $1 AND external_key = $2 AND status = 'active' LIMIT 1`,
+          [tenantId, draft.principalExternalKey],
+        ),
+        client.query(
+          `SELECT id FROM ontology_registry.versions
+            WHERE tenant_id = $1 AND status = 'active' LIMIT 1`,
+          [tenantId],
+        ),
+      ])
+      const inserted = await client.query(
+        `INSERT INTO work.brain_cases (
+           tenant_id, external_case_id, principal_id, principal_external_key, purpose, work_mode,
+           request_summary, request_fingerprint, requested_outcome, status, risk_level,
+           policy_snapshot_id, policy_snapshot, ontology_version_id, protocol_version,
+           processing_mode, conversation_reference_hash, started_at
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16,$17,$18)
+         ON CONFLICT (tenant_id, external_case_id) DO UPDATE SET updated_at = now()
+         RETURNING id, external_case_id, status, work_mode, processing_mode, started_at`,
+        [
+          tenantId, draft.externalCaseId, principal.rows[0]?.id || null, draft.principalExternalKey,
+          draft.purpose, draft.workMode, draft.requestSummary, draft.requestFingerprint,
+          draft.requestedOutcome, draft.status, draft.riskLevel, draft.policySnapshotId,
+          JSON.stringify(draft.policySnapshot), ontologyVersion.rows[0]?.id || null,
+          draft.protocolVersion, draft.processingMode, draft.conversationReferenceHash, draft.startedAt,
+        ],
+      )
+      const workCase = inserted.rows[0]
+      for (const stage of stageContract()) {
+        const initialStatus = stage.stageType === 'intake' ? 'completed' : stage.status
+        await client.query(
+          `INSERT INTO work.brain_case_stages (
+             tenant_id, case_id, sequence_no, stage_type, status, input_references, output_references,
+             ontology_version_id, started_at, ended_at
+           ) VALUES ($1,$2,$3,$4,$5,'[]'::jsonb,'[]'::jsonb,$6,$7,$8)
+           ON CONFLICT (tenant_id, case_id, stage_type) DO NOTHING`,
+          [
+            tenantId, workCase.id, stage.sequenceNo, stage.stageType, initialStatus,
+            ontologyVersion.rows[0]?.id || null,
+            stage.stageType === 'intake' ? draft.startedAt : null,
+            stage.stageType === 'intake' ? draft.startedAt : null,
+          ],
+        )
+      }
+      await client.query(
+        `INSERT INTO work.brain_case_events (
+           tenant_id, case_id, event_type, from_status, to_status, idempotency_key, payload, occurred_at
+         ) VALUES ($1,$2,'work_case_received',NULL,'received',$3,$4::jsonb,$5)
+         ON CONFLICT (tenant_id, idempotency_key) DO NOTHING`,
+        [tenantId, workCase.id, `${draft.externalCaseId}:received`, JSON.stringify({ workMode: draft.workMode }), draft.startedAt],
+      )
+      return {
+        caseId: workCase.id,
+        externalCaseId: workCase.external_case_id,
+        status: workCase.status,
+        workMode: workCase.work_mode,
+        processingMode: workCase.processing_mode,
+        principalFound: Boolean(principal.rows[0]),
+        startedAt: workCase.started_at,
+      }
+    })
+  }
+
+  async function recordWorkStage({ tenantId, caseId, stageType, status, inputReferences = [], outputReferences = [], policyDecisionReference = null, blockReasonCode = null }) {
+    return withTenant(tenantId, async (client) => {
+      const result = await client.query(
+        `UPDATE work.brain_case_stages
+            SET status = $4,
+                input_references = $5::jsonb,
+                output_references = $6::jsonb,
+                policy_decision_reference = $7,
+                block_reason_code = $8,
+                started_at = COALESCE(started_at, now()),
+                ended_at = CASE WHEN $4 IN ('completed','blocked','skipped') THEN now() ELSE ended_at END,
+                updated_at = now()
+          WHERE tenant_id = $1 AND case_id = $2 AND stage_type = $3
+          RETURNING id, stage_type, status, started_at, ended_at`,
+        [tenantId, caseId, stageType, status, JSON.stringify(inputReferences), JSON.stringify(outputReferences), policyDecisionReference, blockReasonCode],
+      )
+      return result.rows[0] || null
+    })
+  }
+
+  async function advanceWorkCase({ tenantId, caseId, toStatus, stageType, stageStatus = 'completed', inputReferences = [], outputReferences = [], policyDecisionReference = null, blockReasonCode = null }) {
+    return withTenant(tenantId, async (client) => {
+      const current = await client.query(
+        `SELECT status FROM work.brain_cases WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+        [tenantId, caseId],
+      )
+      if (!current.rows[0]) throw Object.assign(new Error('work case not found'), { statusCode: 404, code: 'not_found' })
+      const fromStatus = current.rows[0].status
+      assertWorkCaseTransition(fromStatus, toStatus)
+      const stage = await client.query(
+        `UPDATE work.brain_case_stages
+            SET status = $4, input_references = $5::jsonb, output_references = $6::jsonb,
+                policy_decision_reference = $7, block_reason_code = $8,
+                started_at = COALESCE(started_at, now()),
+                ended_at = CASE WHEN $4 IN ('completed','blocked','skipped') THEN now() ELSE ended_at END,
+                updated_at = now()
+          WHERE tenant_id = $1 AND case_id = $2 AND stage_type = $3
+          RETURNING id`,
+        [tenantId, caseId, stageType, stageStatus, JSON.stringify(inputReferences), JSON.stringify(outputReferences), policyDecisionReference, blockReasonCode],
+      )
+      await client.query(
+        `UPDATE work.brain_cases
+            SET status = $3, updated_at = now(),
+                completed_at = CASE WHEN $3 = 'completed' THEN now() ELSE completed_at END
+          WHERE tenant_id = $1 AND id = $2`,
+        [tenantId, caseId, toStatus],
+      )
+      await client.query(
+        `INSERT INTO work.brain_case_events (
+           tenant_id, case_id, stage_id, event_type, from_status, to_status, idempotency_key, payload
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)`,
+        [
+          tenantId, caseId, stage.rows[0]?.id || null, `work_case_${toStatus}`, fromStatus, toStatus,
+          `workcase:${caseId}:${toStatus}:${randomUUID()}`,
+          JSON.stringify({ stageType, stageStatus, blockReasonCode, outputReferenceCount: outputReferences.length }),
+        ],
+      )
+      return { caseId, fromStatus, status: toStatus }
+    })
+  }
+
+  async function recordEpistemicAssessment({ tenantId, caseId, evidencePackage, assessment }) {
+    return withTenant(tenantId, async (client) => {
+      const ontologyVersion = await client.query(
+        `SELECT id FROM ontology_registry.versions WHERE tenant_id = $1 AND status = 'active' LIMIT 1`,
+        [tenantId],
+      )
+      await client.query(
+        `INSERT INTO epistemic.assessments (
+           tenant_id, case_id, evidence_package_id, completeness, freshness_status,
+           contradiction_status, confidence_level, deterministic_conclusion_allowed,
+           reasons, evidence_references, excluded_reason_counts, freshness_summary,
+           truncation_summary, ontology_version_id, valid_until
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11::jsonb,$12::jsonb,$13::jsonb,$14,$15)
+         ON CONFLICT (tenant_id, case_id, evidence_package_id) DO NOTHING`,
+        [
+          tenantId, caseId, assessment.evidencePackageId, assessment.completeness, assessment.freshnessStatus,
+          assessment.contradictionStatus, assessment.confidenceLevel, assessment.deterministicConclusionAllowed,
+          JSON.stringify(assessment.reasons), JSON.stringify(assessment.evidenceReferences),
+          JSON.stringify(assessment.excludedReasonCounts), JSON.stringify(assessment.freshnessSummary),
+          JSON.stringify(assessment.truncationSummary), ontologyVersion.rows[0]?.id || null,
+          assessment.validityWindow?.validUntil || null,
+        ],
+      )
+      for (const assumption of evidencePackage.assumptions || []) {
+        await client.query(
+          `INSERT INTO epistemic.assumptions (
+             tenant_id, case_id, statement_summary, impact, verification_status, ontology_version_id
+           ) VALUES ($1,$2,$3,$4,'unverified',$5)`,
+          [tenantId, caseId, String(assumption.statement || assumption.code || '').slice(0, 1000), String(assumption.impact || '影响待评估').slice(0, 500), ontologyVersion.rows[0]?.id || null],
+        )
+      }
+      for (const unknown of evidencePackage.unknowns || []) {
+        await client.query(
+          `INSERT INTO epistemic.unknowns (
+             tenant_id, case_id, description, impact, resolution_status, ontology_version_id
+           ) VALUES ($1,$2,$3,$4,'open',$5)`,
+          [tenantId, caseId, String(unknown.code || unknown.description || '').slice(0, 1000), String(unknown.impact || '影响待评估').slice(0, 500), ontologyVersion.rows[0]?.id || null],
+        )
+      }
+    })
+  }
+
+  async function completeWorkCase({ tenantId, caseId, evidenceCount, confidenceLevel, deterministicConclusionAllowed, responseValidationStatus }) {
+    await advanceWorkCase({ tenantId, caseId, toStatus: 'completed', stageType: 'response', stageStatus: 'completed', outputReferences: ['employee-answer'] })
+    return withTenant(tenantId, (client) => client.query(
+      `UPDATE work.brain_cases
+          SET evidence_count = $3, confidence_level = $4,
+              deterministic_conclusion_allowed = $5, response_validation_status = $6,
+              completed_at = COALESCE(completed_at, now()), updated_at = now()
+        WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, caseId, evidenceCount, confidenceLevel, deterministicConclusionAllowed, responseValidationStatus],
+    ))
+  }
+
+  async function finalizeWorkCase({ tenantId, caseId, evidenceCount, confidenceLevel, deterministicConclusionAllowed, responseValidationStatus }) {
+    return withTenant(tenantId, (client) => client.query(
+      `UPDATE work.brain_cases
+          SET evidence_count = $3, confidence_level = $4,
+              deterministic_conclusion_allowed = $5, response_validation_status = $6,
+              updated_at = now()
+        WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, caseId, evidenceCount, confidenceLevel, deterministicConclusionAllowed, responseValidationStatus],
+    ))
+  }
+
+  async function workProtocolStatus({ tenantId, limit = 8 }) {
+    return withTenant(tenantId, async (client) => {
+      const [counts, recent] = await Promise.all([
+        client.query(
+          `SELECT status, count(*)::integer AS count
+             FROM work.brain_cases WHERE tenant_id = $1 GROUP BY status ORDER BY status`,
+          [tenantId],
+        ),
+        client.query(
+          `SELECT case_id, work_mode, status, processing_mode, evidence_count, confidence_level,
+                  deterministic_conclusion_allowed, response_validation_status, started_at, completed_at,
+                  stage_count, completed_stage_count, contract_only_stage_count
+             FROM work.brain_case_status_v1
+            WHERE tenant_id = $1 ORDER BY started_at DESC LIMIT $2`,
+          [tenantId, Math.max(1, Math.min(20, Number(limit) || 8))],
+        ),
+      ])
+      const caseIds = recent.rows.map((row) => row.case_id)
+      const stages = caseIds.length ? await client.query(
+        `SELECT case_id, sequence_no, stage_type, status, block_reason_code, started_at, ended_at
+           FROM work.brain_case_stages
+          WHERE tenant_id = $1 AND case_id = ANY($2::uuid[])
+          ORDER BY case_id, sequence_no`,
+        [tenantId, caseIds],
+      ) : { rows: [] }
+      return {
+        counts: Object.fromEntries(counts.rows.map((row) => [row.status, Number(row.count)])),
+        recentCases: recent.rows.map((row) => ({
+          caseId: row.case_id,
+          workMode: row.work_mode,
+          status: row.status,
+          processingMode: row.processing_mode,
+          evidenceCount: Number(row.evidence_count || 0),
+          confidenceLevel: row.confidence_level,
+          deterministicConclusionAllowed: row.deterministic_conclusion_allowed,
+          responseValidationStatus: row.response_validation_status,
+          startedAt: row.started_at,
+          completedAt: row.completed_at,
+          stageCount: Number(row.stage_count || 0),
+          completedStageCount: Number(row.completed_stage_count || 0),
+          contractOnlyStageCount: Number(row.contract_only_stage_count || 0),
+          stages: stages.rows.filter((stage) => stage.case_id === row.case_id).map((stage) => ({
+            sequenceNo: stage.sequence_no,
+            stageType: stage.stage_type,
+            status: stage.status,
+            blockReasonCode: stage.block_reason_code,
+            startedAt: stage.started_at,
+            endedAt: stage.ended_at,
+          })),
+        })),
+      }
     })
   }
 
@@ -520,6 +797,14 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
     finish,
     audit,
     permissionedSearch,
+    permissionedRetrieve,
+    createWorkCase,
+    recordWorkStage,
+    advanceWorkCase,
+    recordEpistemicAssessment,
+    completeWorkCase,
+    finalizeWorkCase,
+    workProtocolStatus,
     compileP2,
     transitionTask,
     ackDemoDeliveries,
@@ -532,10 +817,11 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
   }
 }
 
-export function createMemoryStore() {
+export function createMemoryStore({ retrieval = null } = {}) {
   const records = new Map()
   const events = []
   const principals = new Map()
+  const workCases = new Map()
   const keyOf = ({ tenantId, namespace, idempotencyKey }) => `${tenantId}:${namespace}:${idempotencyKey}`
   return {
     events,
@@ -562,7 +848,58 @@ export function createMemoryStore() {
       return { ready: true }
     },
     async permissionedSearch() {
-      return []
+      return Array.isArray(retrieval) ? retrieval : retrieval?.evidence || []
+    },
+    async permissionedRetrieve() {
+      return Array.isArray(retrieval)
+        ? { evidence: retrieval, principalFound: true, excludedReasonCounts: {}, policyDecisionReference: 'memory', limit: 8, truncated: false }
+        : retrieval || { evidence: [], principalFound: true, excludedReasonCounts: {}, policyDecisionReference: 'memory', limit: 8, truncated: false }
+    },
+    async createWorkCase({ draft }) {
+      const caseId = randomUUID()
+      const stages = stageContract().map((stage) => ({ ...stage, status: stage.stageType === 'intake' ? 'completed' : stage.status }))
+      const workCase = { caseId, externalCaseId: draft.externalCaseId, status: 'received', workMode: draft.workMode, processingMode: draft.processingMode, principalFound: retrieval?.principalFound !== false, startedAt: draft.startedAt, stages }
+      workCases.set(caseId, workCase)
+      return structuredClone(workCase)
+    },
+    async recordWorkStage({ caseId, stageType, status, blockReasonCode = null }) {
+      const workCase = workCases.get(caseId)
+      const stage = workCase?.stages.find((item) => item.stageType === stageType)
+      if (stage) Object.assign(stage, { status, blockReasonCode })
+      return stage ? structuredClone(stage) : null
+    },
+    async advanceWorkCase({ caseId, toStatus, stageType, stageStatus = 'completed', blockReasonCode = null }) {
+      const workCase = workCases.get(caseId)
+      if (!workCase) throw new Error('work case not found')
+      assertWorkCaseTransition(workCase.status, toStatus)
+      const fromStatus = workCase.status
+      workCase.status = toStatus
+      const stage = workCase.stages.find((item) => item.stageType === stageType)
+      if (stage) Object.assign(stage, { status: stageStatus, blockReasonCode })
+      events.push({ eventType: `work_case_${toStatus}`, caseId, fromStatus, toStatus })
+      return { caseId, fromStatus, status: toStatus }
+    },
+    async recordEpistemicAssessment({ caseId, assessment }) {
+      const workCase = workCases.get(caseId)
+      if (workCase) workCase.assessment = structuredClone(assessment)
+    },
+    async completeWorkCase({ caseId, evidenceCount, confidenceLevel, deterministicConclusionAllowed, responseValidationStatus }) {
+      const workCase = workCases.get(caseId)
+      assertWorkCaseTransition(workCase.status, 'completed')
+      workCase.status = 'completed'
+      const stage = workCase.stages.find((item) => item.stageType === 'response')
+      if (stage) stage.status = 'completed'
+      Object.assign(workCase, { evidenceCount, confidenceLevel, deterministicConclusionAllowed, responseValidationStatus, completedAt: new Date().toISOString() })
+    },
+    async finalizeWorkCase({ caseId, evidenceCount, confidenceLevel, deterministicConclusionAllowed, responseValidationStatus }) {
+      const workCase = workCases.get(caseId)
+      Object.assign(workCase, { evidenceCount, confidenceLevel, deterministicConclusionAllowed, responseValidationStatus })
+    },
+    async workProtocolStatus({ limit = 8 } = {}) {
+      const recentCases = [...workCases.values()].slice(-limit).reverse().map((workCase) => structuredClone(workCase))
+      const counts = {}
+      for (const workCase of workCases.values()) counts[workCase.status] = (counts[workCase.status] || 0) + 1
+      return { counts, recentCases }
     },
     async createActionIntent(input) {
       return { id: 'memory-action-intent', status: 'proposed', ...input }

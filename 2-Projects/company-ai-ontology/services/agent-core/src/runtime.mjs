@@ -65,11 +65,33 @@ export function createHEngineRuntime({ config } = {}) {
   }
 
   async function compiledPrompt(turn) {
+    const workContext = turn.workContext && typeof turn.workContext === 'object' ? turn.workContext : null
     return [
       await systemPrompt(),
       `当前意图：${turn.intent}`,
       `会话标识：${turn.conversationId}`,
-      turn.evidence?.length ? `权限化证据：\n${JSON.stringify(turn.evidence)}` : '',
+      workContext?.processingMode === 'active' ? `Company Brain Work Protocol：\n${JSON.stringify({
+        caseId: workContext.caseId,
+        workMode: workContext.workMode,
+        evidencePackage: workContext.evidencePackage,
+        epistemicAssessment: workContext.assessment,
+        responseContract: {
+          conclusion: 'string',
+          factBasis: 'string[]',
+          derivedSummary: 'string',
+          assumptions: 'string[]',
+          contradictions: 'string[]',
+          unknowns: 'string[]',
+          confidenceLevel: 'high|medium|low|insufficient',
+          validityWindow: { validUntil: 'ISO timestamp|null' },
+          recommendedNextAction: 'string',
+          approvalRequired: 'boolean',
+          evidenceReferences: 'authorized evidenceId[]',
+        },
+      })}` : '',
+      workContext?.processingMode === 'active'
+        ? '只输出一个 JSON 对象，不要 Markdown，不要代码围栏，不要输出或保存隐藏思维链、内部推理过程或 reasoning 字段。只能引用 Evidence Package 中的 evidenceId。'
+        : turn.evidence?.length ? `权限化证据：\n${JSON.stringify(turn.evidence)}` : '',
       '用户请求：',
       turn.message,
     ].filter(Boolean).join('\n\n')
@@ -214,14 +236,30 @@ export function createHEngineRuntime({ config } = {}) {
     if (!readiness.ready) {
       const error = new Error(readiness.reason)
       error.code = 'runtime_not_ready'
+      error.statusCode = 503
       error.runtime = readiness
       throw error
     }
     if (config.mode === 'demo') {
       if (config.demoDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, config.demoDelayMs))
       const evidenceCount = Array.isArray(turn.evidence) ? turn.evidence.length : 0
+      const reply = turn.workContext?.processingMode === 'active'
+        ? JSON.stringify({
+            conclusion: evidenceCount ? '演示模式已根据权限化证据生成回答。' : '当前可用证据不足，无法形成确定性结论。',
+            factBasis: evidenceCount ? [`已加载 ${evidenceCount} 条权限化证据`] : [],
+            derivedSummary: '演示模式不代表生产业务结论。',
+            assumptions: [],
+            contradictions: [],
+            unknowns: evidenceCount ? [] : ['未检索到权限化证据'],
+            confidenceLevel: evidenceCount ? 'medium' : 'insufficient',
+            validityWindow: { validUntil: turn.workContext?.evidencePackage?.validUntil || null },
+            recommendedNextAction: '使用生产 H 引擎和真实授权证据复核。',
+            approvalRequired: false,
+            evidenceReferences: turn.workContext?.evidencePackage?.facts?.map((item) => item.evidenceId) || [],
+          })
+        : `【演示模式】H 引擎已处理请求：${turn.message.slice(0, 300)}${evidenceCount ? `；已加载 ${evidenceCount} 条权限化证据` : ''}`
       return {
-        reply: `【演示模式】H 引擎已处理请求：${turn.message.slice(0, 300)}${evidenceCount ? `；已加载 ${evidenceCount} 条权限化证据` : ''}`,
+        reply,
         runtime: { provider: config.provider, mode: 'demo', simulation: true, productionReady: false },
       }
     }

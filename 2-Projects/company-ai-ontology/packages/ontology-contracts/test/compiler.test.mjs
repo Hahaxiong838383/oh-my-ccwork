@@ -49,6 +49,16 @@ test('compiler rejects dangling links and inheritance cycles', async () => {
   assert.ok(compiled.errors.some((entry) => entry.message.includes('inheritance cycle detected')))
 })
 
+test('compiler supports explicit many-to-one work lineage', async () => {
+  const definition = await baseline()
+  const compiled = compileDefinition(definition)
+  assert.equal(compiled.ok, true, JSON.stringify(compiled.errors))
+  assert.equal(
+    compiled.bundle.definition.linkTypes.find((entry) => entry.qualifiedName === 'core.work.ESCALATES_TO').cardinality,
+    'many_to_one',
+  )
+})
+
 test('compiler rejects action and tool paths that bypass mandatory gateways', async () => {
   const definition = await baseline()
   definition.actionTypes[0].gateway = 'direct-erp-client'
@@ -73,6 +83,51 @@ test('compatibility requires migration for removals and new required properties'
   assert.equal(compatibility.classification, 'migration_required')
   assert.ok(compatibility.changes.some((entry) => entry.message === 'required property added'))
   assert.ok(compatibility.changes.some((entry) => entry.message === 'element removed'))
+})
+
+test('Goal 4 work protocol additions remain additive and governed', async () => {
+  const current = await baseline()
+  const previous = structuredClone(current)
+  previous.objectTypes = previous.objectTypes.filter((entry) => ![
+    'core.work.WorkCase',
+    'core.work.WorkStage',
+    'core.epistemic.Assumption',
+    'core.epistemic.Unknown',
+    'core.epistemic.EpistemicAssessment',
+  ].includes(entry.qualifiedName))
+  previous.linkTypes = previous.linkTypes.filter((entry) => ![
+    'core.work.HAS_STAGE',
+    'core.work.USES_EVIDENCE',
+    'core.work.PRODUCES_CLAIM',
+    'core.work.HAS_UNKNOWN',
+    'core.work.ESCALATES_TO',
+    'core.epistemic.DEPENDS_ON',
+    'core.epistemic.ASSESSES',
+  ].includes(entry.qualifiedName))
+  previous.functionTypes = previous.functionTypes.filter((entry) => ![
+    'core.epistemic.buildEvidencePackageV2',
+    'core.work.validateStructuredResponse',
+  ].includes(entry.qualifiedName))
+  previous.policyTypes = previous.policyTypes.filter((entry) => ![
+    'core.policy.workCaseAuthorityGate',
+    'core.policy.noHiddenChainOfThought',
+  ].includes(entry.qualifiedName))
+  previous.constraintTypes = previous.constraintTypes.filter((entry) => ![
+    'core.epistemic.requirePermissionSnapshot',
+    'core.epistemic.blockUnsupportedCertainty',
+    'core.work.noHiddenChainOfThought',
+  ].includes(entry.qualifiedName))
+  const evidence = previous.objectTypes.find((entry) => entry.qualifiedName === 'core.epistemic.Evidence')
+  evidence.properties = evidence.properties.filter((property) => !['epistemicType', 'permissionSnapshot', 'freshnessStatus'].includes(property.name))
+  const before = compileDefinition(previous)
+  const after = compileDefinition(current)
+  assert.equal(before.ok, true, JSON.stringify(before.errors))
+  assert.equal(after.ok, true, JSON.stringify(after.errors))
+  const compatibility = compareDefinitions(before.bundle.definition, after.bundle.definition)
+  assert.equal(compatibility.classification, 'compatible')
+  assert.ok(after.bundle.counts.object_type >= 46)
+  assert.ok(after.bundle.counts.link_type >= 24)
+  assert.equal(after.bundle.definition.toolContracts.data.returns, 'permissioned-evidence-package-v2')
 })
 
 test('event envelope normalizes time and rejects unsafe identifiers', () => {

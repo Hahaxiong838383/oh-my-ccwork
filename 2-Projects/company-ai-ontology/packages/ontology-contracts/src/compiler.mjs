@@ -164,7 +164,7 @@ export function compileDefinition(input) {
   ;(input.linkTypes || []).forEach((link, index) => {
     if (!objectNames.has(link.fromType)) pushError(errors, `linkTypes[${index}].fromType`, `unknown object type ${link.fromType}`)
     if (!objectNames.has(link.toType)) pushError(errors, `linkTypes[${index}].toType`, `unknown object type ${link.toType}`)
-    if (!['one_to_one', 'one_to_many', 'many_to_many'].includes(link.cardinality)) pushError(errors, `linkTypes[${index}].cardinality`, 'unsupported cardinality')
+    if (!['one_to_one', 'one_to_many', 'many_to_one', 'many_to_many'].includes(link.cardinality)) pushError(errors, `linkTypes[${index}].cardinality`, 'unsupported cardinality')
   })
 
   for (const [key, elements] of [['functionTypes', input.functionTypes || []]]) {

@@ -118,6 +118,24 @@ printf 'registry_rows_without_tenant=%s registry_rows_with_tenant=%s\n' "$regist
 [ "$registry_rows_without_tenant" -eq 0 ]
 [ "$registry_rows_with_tenant" -ge 1 ]
 
+printf '\n=== company brain work protocol ===\n'
+work_protocol_tables=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM information_schema.tables WHERE (table_schema, table_name) IN (('work','brain_cases'),('work','brain_case_stages'),('work','brain_case_events'),('epistemic','assumptions'),('epistemic','unknowns'),('epistemic','assessments'));")
+work_protocol_policies=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM pg_policies WHERE policyname='tenant_isolation' AND (schemaname, tablename) IN (('work','brain_cases'),('work','brain_case_stages'),('work','brain_case_events'),('epistemic','assumptions'),('epistemic','unknowns'),('epistemic','assessments'));")
+work_protocol_views=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM pg_views WHERE (schemaname, viewname) IN (('work','brain_case_status_v1'),('epistemic','answer_basis_v1'));")
+work_event_update=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_app','work.brain_case_events','UPDATE');")
+assessment_update=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_app','epistemic.assessments','UPDATE');")
+printf 'tables=%s policies=%s views=%s event_update=%s assessment_update=%s\n' "$work_protocol_tables" "$work_protocol_policies" "$work_protocol_views" "$work_event_update" "$assessment_update"
+[ "$work_protocol_tables" -eq 6 ]
+[ "$work_protocol_policies" -eq 6 ]
+[ "$work_protocol_views" -eq 2 ]
+[ "$work_event_update" = f ]
+[ "$assessment_update" = f ]
+
+work_protocol_http=$(curl --silent --show-error --max-time 10 http://127.0.0.1:19080/ontology/status/work-protocol || true)
+printf 'work_protocol_http=%s\n' "$(printf '%s' "$work_protocol_http" | cut -c1-240)"
+printf '%s' "$work_protocol_http" | grep -q '"protocolVersion":"1.0.0"'
+printf '%s' "$work_protocol_http" | grep -q '"ontologySchemaVersion":"3.1.0"'
+
 printf '\n=== h engine egress ===\n'
 h_engine_proxy_url=${H_ENGINE_PROXY_URL:-socks5h://192.168.61.66:10808}
 h_engine_probe_url=${H_ENGINE_EGRESS_PROBE_URL:-https://api.x.ai/v1/models}

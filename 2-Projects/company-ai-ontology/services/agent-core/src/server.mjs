@@ -6,8 +6,10 @@ import { parseTurnBody, sha256, verifySignedRequest } from './protocol.mjs'
 import { createHEngineRuntime } from './runtime.mjs'
 import { createPostgresStore } from './store.mjs'
 import { createAdmissionController } from './admission.mjs'
+import { createCompanyBrain } from './company-brain.mjs'
+import { ACTIVE_STAGES, CONTRACT_ONLY_STAGES, ONTOLOGY_SCHEMA_VERSION, WORK_PROTOCOL_VERSION } from './work-protocol.mjs'
 
-export const AGENT_CORE_CONTRACT_VERSION = '2026-08-08.4'
+export const AGENT_CORE_CONTRACT_VERSION = '2026-08-09.1'
 
 function json(response, statusCode, payload, headers = {}) {
   const body = JSON.stringify(payload)
@@ -91,6 +93,7 @@ function normalizeDirectoryPeople(input) {
 
 export function createAgentCoreServer({ config, store, runtime, logger = () => {}, now = () => Date.now() } = {}) {
   const admission = createAdmissionController(config.admission || {})
+  const companyBrain = createCompanyBrain({ store, runtime, admission, config, now: () => new Date(now()) })
   return http.createServer(async (request, response) => {
     try {
       if (request.method === 'GET' && request.url === '/healthz') {
@@ -113,7 +116,30 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
           database,
           runtime: engine,
           contractVersion: AGENT_CORE_CONTRACT_VERSION,
+          workProtocol: {
+            mode: config.workProtocol?.mode || 'off',
+            protocolVersion: WORK_PROTOCOL_VERSION,
+            ontologySchemaVersion: config.workProtocol?.ontologyVersion || ONTOLOGY_SCHEMA_VERSION,
+            activeStages: ACTIVE_STAGES,
+            contractOnlyStages: CONTRACT_ONLY_STAGES,
+          },
           admission: admission.snapshot(),
+        })
+        return
+      }
+      if (request.method === 'GET' && request.url === '/status/work-protocol') {
+        const status = await store.workProtocolStatus({
+          tenantId: config.tenantId,
+          limit: config.workProtocol?.recentCaseLimit || 8,
+        })
+        json(response, 200, {
+          ok: true,
+          status: config.workProtocol?.mode || 'off',
+          protocolVersion: WORK_PROTOCOL_VERSION,
+          ontologySchemaVersion: config.workProtocol?.ontologyVersion || ONTOLOGY_SCHEMA_VERSION,
+          activeStages: ACTIVE_STAGES,
+          contractOnlyStages: CONTRACT_ONLY_STAGES,
+          ...status,
         })
         return
       }
@@ -293,15 +319,8 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
         payload: { intent: turn.intent, channel: turn.channel, requestHash },
       })
 
-      const evidence = await store.permissionedSearch({
-        tenantId: scope.tenantId,
-        personId: scope.personId,
-        query: turn.message,
-        limit: 8,
-      })
-
       const readiness = await runtime.ready()
-      if (!readiness.ready) {
+      if (!readiness.ready && (config.workProtocol?.mode || 'off') === 'off') {
         const payload = {
           ok: false,
           status: 'runtime_not_ready',
@@ -322,20 +341,18 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
       }
 
       try {
-        const release = await admission.acquire()
-        let result
-        try {
-          result = await runtime.run({ ...turn, evidence })
-        } finally {
-          release()
-        }
+        const result = await companyBrain.execute({ scope, turn })
         const payload = {
           ok: true,
           status: 'completed',
           requestId: scope.requestId,
           reply: String(result.reply || ''),
-          permissionFiltered: true,
-          evidence,
+          permissionFiltered: result.permissionFiltered === true,
+          evidence: result.evidence || [],
+          evidencePackage: result.evidencePackage || null,
+          epistemicAssessment: result.assessment || null,
+          answer: result.answer || null,
+          workCase: result.workCase || null,
           runtime: result.runtime || readiness,
         }
         await store.finish({ tenantId: scope.tenantId, namespace, idempotencyKey: scope.idempotencyKey, status: 'completed', response: payload })
@@ -344,7 +361,13 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
           requestId: scope.requestId,
           personId: scope.personId,
           eventType: 'agent_turn_completed',
-          payload: { provider: payload.runtime?.provider || 'unknown', evidenceCount: evidence.length },
+          payload: {
+            provider: payload.runtime?.provider || 'unknown',
+            evidenceCount: payload.evidence.length,
+            workCaseId: payload.workCase?.caseId || null,
+            workCaseStatus: payload.workCase?.status || null,
+            confidenceLevel: payload.epistemicAssessment?.confidenceLevel || null,
+          },
         })
         json(response, 200, payload)
       } catch (error) {
@@ -359,7 +382,7 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
           tenantId: scope.tenantId,
           requestId: scope.requestId,
           personId: scope.personId,
-          eventType: 'agent_turn_failed',
+          eventType: payload.status === 'runtime_not_ready' ? 'agent_turn_runtime_not_ready' : 'agent_turn_failed',
           payload: { code: payload.status },
         })
         logger('agent turn failed', scope.requestId, payload.status)

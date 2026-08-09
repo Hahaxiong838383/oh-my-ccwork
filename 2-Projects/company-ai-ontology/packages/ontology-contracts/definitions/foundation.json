@@ -128,7 +128,10 @@
       "properties": [
         { "name": "evidenceType", "type": "string", "required": true },
         { "name": "contentReference", "type": "string", "required": true },
-        { "name": "supports", "type": "boolean", "required": true }
+        { "name": "supports", "type": "boolean", "required": true },
+        { "name": "epistemicType", "type": "string", "required": false },
+        { "name": "permissionSnapshot", "type": "json", "required": false },
+        { "name": "freshnessStatus", "type": "string", "required": false }
       ]
     },
     {
@@ -156,6 +159,41 @@
       "properties": [
         { "name": "description", "type": "string", "required": true },
         { "name": "resolutionStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.epistemic.Assumption",
+      "description": "Unverified premise that materially affects a work case conclusion",
+      "extends": ["core.epistemic.EpistemicItem"],
+      "properties": [
+        { "name": "statement", "type": "string", "required": true },
+        { "name": "impact", "type": "string", "required": true },
+        { "name": "verificationStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.epistemic.Unknown",
+      "description": "Known missing information that limits a work case conclusion",
+      "extends": ["core.epistemic.EpistemicItem"],
+      "properties": [
+        { "name": "description", "type": "string", "required": true },
+        { "name": "impact", "type": "string", "required": true },
+        { "name": "resolutionStatus", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.epistemic.EpistemicAssessment",
+      "description": "Deterministic assessment of evidence coverage, freshness and contradiction",
+      "extends": ["core.epistemic.EpistemicItem"],
+      "properties": [
+        { "name": "caseId", "type": "string", "required": true },
+        { "name": "evidencePackageId", "type": "string", "required": true },
+        { "name": "completeness", "type": "string", "required": true },
+        { "name": "freshnessStatus", "type": "string", "required": true },
+        { "name": "contradictionStatus", "type": "string", "required": true },
+        { "name": "confidenceLevel", "type": "string", "required": true },
+        { "name": "deterministicConclusionAllowed", "type": "boolean", "required": true },
+        { "name": "reasons", "type": "json", "required": true }
       ]
     },
     {
@@ -205,6 +243,42 @@
         { "name": "title", "type": "string", "required": true },
         { "name": "status", "type": "string", "required": true },
         { "name": "ownerPersonId", "type": "string", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.work.WorkCase",
+      "description": "Auditable company-brain work instance from intake through governed completion",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "caseId", "type": "string", "required": true },
+        { "name": "principalId", "type": "string", "required": true },
+        { "name": "purpose", "type": "string", "required": true },
+        { "name": "workMode", "type": "string", "required": true },
+        { "name": "requestSummary", "type": "string", "required": true },
+        { "name": "requestedOutcome", "type": "string", "required": false },
+        { "name": "status", "type": "string", "required": true },
+        { "name": "riskLevel", "type": "string", "required": true },
+        { "name": "policySnapshotId", "type": "string", "required": false },
+        { "name": "conversationReference", "type": "string", "required": false },
+        { "name": "startedAt", "type": "timestamp", "required": true },
+        { "name": "completedAt", "type": "timestamp", "required": false }
+      ]
+    },
+    {
+      "qualifiedName": "core.work.WorkStage",
+      "description": "Auditable input, output and blocking state for one work protocol stage",
+      "extends": ["system.ontology.BaseObject"],
+      "properties": [
+        { "name": "stageId", "type": "string", "required": true },
+        { "name": "caseId", "type": "string", "required": true },
+        { "name": "stageType", "type": "string", "required": true },
+        { "name": "status", "type": "string", "required": true },
+        { "name": "inputReferences", "type": "json", "required": true },
+        { "name": "outputReferences", "type": "json", "required": true },
+        { "name": "policyDecisionReference", "type": "string", "required": false },
+        { "name": "blockReasonCode", "type": "string", "required": false },
+        { "name": "startedAt", "type": "timestamp", "required": false },
+        { "name": "endedAt", "type": "timestamp", "required": false }
       ]
     },
     {
@@ -418,12 +492,19 @@
     { "qualifiedName": "core.epistemic.SUPPORTS", "fromType": "core.epistemic.Evidence", "toType": "core.epistemic.Claim", "cardinality": "many_to_many" },
     { "qualifiedName": "core.epistemic.CONTRADICTS", "fromType": "core.epistemic.Evidence", "toType": "core.epistemic.Claim", "cardinality": "many_to_many" },
     { "qualifiedName": "core.epistemic.TESTS", "fromType": "core.epistemic.Evidence", "toType": "core.epistemic.Hypothesis", "cardinality": "many_to_many" },
+    { "qualifiedName": "core.epistemic.DEPENDS_ON", "fromType": "core.epistemic.Claim", "toType": "core.epistemic.Assumption", "cardinality": "many_to_many" },
+    { "qualifiedName": "core.epistemic.ASSESSES", "fromType": "core.epistemic.EpistemicAssessment", "toType": "core.work.WorkCase", "cardinality": "many_to_one" },
     { "qualifiedName": "core.decision.CONSIDERS", "fromType": "core.decision.DecisionCase", "toType": "core.decision.DecisionAlternative", "cardinality": "one_to_many" },
     { "qualifiedName": "core.decision.MODELED_AS", "fromType": "core.decision.DecisionAlternative", "toType": "core.decision.Scenario", "cardinality": "one_to_many" },
     { "qualifiedName": "core.decision.SELECTS", "fromType": "core.decision.Decision", "toType": "core.decision.DecisionAlternative", "cardinality": "one_to_one" },
     { "qualifiedName": "core.work.DECOMPOSES_TO", "fromType": "core.work.P2", "toType": "core.work.Task", "cardinality": "one_to_many" },
     { "qualifiedName": "core.work.PRODUCES", "fromType": "core.work.Task", "toType": "core.work.Artifact", "cardinality": "one_to_many" },
     { "qualifiedName": "core.work.VERIFIED_BY", "fromType": "core.work.Task", "toType": "core.work.Verification", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.work.HAS_STAGE", "fromType": "core.work.WorkCase", "toType": "core.work.WorkStage", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.work.USES_EVIDENCE", "fromType": "core.work.WorkCase", "toType": "core.epistemic.Evidence", "cardinality": "many_to_many" },
+    { "qualifiedName": "core.work.PRODUCES_CLAIM", "fromType": "core.work.WorkCase", "toType": "core.epistemic.Claim", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.work.HAS_UNKNOWN", "fromType": "core.work.WorkCase", "toType": "core.epistemic.Unknown", "cardinality": "one_to_many" },
+    { "qualifiedName": "core.work.ESCALATES_TO", "fromType": "core.work.WorkCase", "toType": "core.decision.DecisionCase", "cardinality": "many_to_one" },
     { "qualifiedName": "domain.product.HAS_SKU", "fromType": "domain.product.ProductModel", "toType": "domain.product.SKU", "cardinality": "one_to_many" },
     { "qualifiedName": "domain.product.USES_BOM", "fromType": "domain.product.SKU", "toType": "domain.product.BOM", "cardinality": "many_to_many" },
     { "qualifiedName": "domain.product.RUNS_FIRMWARE", "fromType": "domain.device.DeviceUnit", "toType": "domain.product.FirmwareVersion", "cardinality": "many_to_many" },
@@ -454,6 +535,31 @@
       ],
       "outputs": [
         { "name": "comparison", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.epistemic.buildEvidencePackageV2",
+      "description": "Build a permissioned evidence package with provenance, freshness and exclusion summaries",
+      "deterministic": true,
+      "inputs": [
+        { "name": "workCase", "type": "core.work.WorkCase", "required": true },
+        { "name": "permissionedEvidence", "type": "json", "required": true }
+      ],
+      "outputs": [
+        { "name": "package", "type": "json", "required": true }
+      ]
+    },
+    {
+      "qualifiedName": "core.work.validateStructuredResponse",
+      "description": "Validate answer basis, evidence references and certainty against the epistemic assessment",
+      "deterministic": true,
+      "inputs": [
+        { "name": "workCase", "type": "core.work.WorkCase", "required": true },
+        { "name": "assessment", "type": "core.epistemic.EpistemicAssessment", "required": true },
+        { "name": "response", "type": "json", "required": true }
+      ],
+      "outputs": [
+        { "name": "validation", "type": "json", "required": true }
       ]
     },
     {
@@ -512,6 +618,18 @@
       "description": "Employee private Bot history does not enter Company Ontology by default",
       "appliesTo": ["core.identity.Person"],
       "effect": "deny"
+    },
+    {
+      "qualifiedName": "core.policy.workCaseAuthorityGate",
+      "description": "Every work case must bind the requester, purpose and policy snapshot before evidence retrieval",
+      "appliesTo": ["core.work.WorkCase", "core.work.WorkStage"],
+      "effect": "filter"
+    },
+    {
+      "qualifiedName": "core.policy.noHiddenChainOfThought",
+      "description": "Persist only evidence references, rules, claims, assumptions, unknowns, conflicts and audit summaries",
+      "appliesTo": ["core.work.WorkStage", "core.epistemic.EpistemicAssessment"],
+      "effect": "deny"
     }
   ],
   "constraintTypes": [
@@ -549,6 +667,27 @@
       "targetType": "domain.device.DeviceUnit",
       "severity": "error",
       "rule": "directControlEnabled == false"
+    },
+    {
+      "qualifiedName": "core.epistemic.requirePermissionSnapshot",
+      "description": "Evidence used by the company brain carries a permission decision snapshot",
+      "targetType": "core.epistemic.Evidence",
+      "severity": "error",
+      "rule": "permissionSnapshot != null"
+    },
+    {
+      "qualifiedName": "core.epistemic.blockUnsupportedCertainty",
+      "description": "Stale, conflicting or insufficient evidence cannot support a deterministic conclusion",
+      "targetType": "core.epistemic.EpistemicAssessment",
+      "severity": "error",
+      "rule": "deterministicConclusionAllowed == false when completeness != 'sufficient' || freshnessStatus == 'stale' || contradictionStatus == 'conflicting'"
+    },
+    {
+      "qualifiedName": "core.work.noHiddenChainOfThought",
+      "description": "Work stages exclude private model reasoning and store only governed references and summaries",
+      "targetType": "core.work.WorkStage",
+      "severity": "error",
+      "rule": "outputReferences excludes hidden_chain_of_thought"
     }
   ]
 }

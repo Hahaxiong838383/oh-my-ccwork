@@ -86,12 +86,24 @@ schema_result=$("$docker_path" exec "$postgres_container" psql -U ontology_admin
 [ "$schema_result" -eq 7 ]
 
 view_result=$("$docker_path" exec "$postgres_container" psql -U ontology_admin -d ontology -Atc \
-  "SELECT count(*) FROM pg_views WHERE (schemaname, viewname) IN (('ontology_runtime','objects'),('ontology_runtime','links'),('security','principals'),('security','grants'),('work','tasks'),('work','task_events'),('action','intents'));")
-[ "$view_result" -eq 7 ]
+  "SELECT count(*) FROM pg_views WHERE (schemaname, viewname) IN (('ontology_runtime','objects'),('ontology_runtime','links'),('security','principals'),('security','grants'),('work','tasks'),('work','task_events'),('action','intents'),('work','brain_case_status_v1'),('epistemic','answer_basis_v1'));")
+[ "$view_result" -eq 9 ]
 
 policy_result=$("$docker_path" exec "$postgres_container" psql -U ontology_admin -d ontology -Atc \
   "SELECT count(*) FROM pg_policies WHERE policyname='tenant_isolation' AND schemaname IN ('ontology_registry','epistemic','audit');")
 [ "$policy_result" -ge 5 ]
+
+work_protocol_table_result=$("$docker_path" exec "$postgres_container" psql -U ontology_admin -d ontology -Atc \
+  "SELECT count(*) FROM information_schema.tables WHERE (table_schema, table_name) IN (('work','brain_cases'),('work','brain_case_stages'),('work','brain_case_events'),('epistemic','assumptions'),('epistemic','unknowns'),('epistemic','assessments'));")
+[ "$work_protocol_table_result" -eq 6 ]
+
+work_protocol_policy_result=$("$docker_path" exec "$postgres_container" psql -U ontology_admin -d ontology -Atc \
+  "SELECT count(*) FROM pg_policies WHERE policyname='tenant_isolation' AND (schemaname, tablename) IN (('work','brain_cases'),('work','brain_case_stages'),('work','brain_case_events'),('epistemic','assumptions'),('epistemic','unknowns'),('epistemic','assessments'));")
+[ "$work_protocol_policy_result" -eq 6 ]
+
+event_update_privilege=$("$docker_path" exec "$postgres_container" psql -U ontology_admin -d ontology -Atc \
+  "SELECT has_table_privilege('ontology_app','work.brain_case_events','UPDATE');")
+[ "$event_update_privilege" = f ]
 
 delete_privilege=$("$docker_path" exec "$postgres_container" psql -U ontology_admin -d ontology -Atc \
   "SELECT has_table_privilege('ontology_registry','ontology_registry.versions','DELETE');")
@@ -206,5 +218,5 @@ rls_with_tenant=$("$docker_path" exec -e PGPASSWORD="$registry_password" "$postg
   "SELECT set_config('app.tenant_id','$tenant_id',false); SELECT count(*) FROM ontology_registry.versions;" | tail -1)
 [ "$rls_with_tenant" -eq 2 ]
 
-printf 'isolated ontology registry validation passed: schemas=%s views=%s policies=%s versions=%s audits=%s\n' \
-  "$schema_result" "$view_result" "$policy_result" "$version_result" "$audit_result"
+printf 'isolated ontology registry validation passed: schemas=%s views=%s policies=%s work_protocol_tables=%s work_protocol_policies=%s versions=%s audits=%s\n' \
+  "$schema_result" "$view_result" "$policy_result" "$work_protocol_table_result" "$work_protocol_policy_result" "$version_result" "$audit_result"

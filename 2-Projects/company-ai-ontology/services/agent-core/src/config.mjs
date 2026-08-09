@@ -17,6 +17,14 @@ export function loadConfig(env = process.env) {
     maxBodyBytes: Math.max(1024, Number(env.AGENT_CORE_MAX_BODY_BYTES || 262_144)),
     maxClockSkewMs: Math.max(10_000, Number(env.AGENT_CORE_MAX_CLOCK_SKEW_MS || 300_000)),
     idempotencyTtlSeconds: Math.max(60, Number(env.AGENT_CORE_IDEMPOTENCY_TTL_SECONDS || 86_400)),
+    workProtocol: {
+      mode: ['off', 'shadow', 'active'].includes(String(env.WORK_PROTOCOL_MODE || 'shadow').trim().toLowerCase())
+        ? String(env.WORK_PROTOCOL_MODE || 'shadow').trim().toLowerCase()
+        : 'shadow',
+      ontologyVersion: String(env.ONTOLOGY_SCHEMA_VERSION || '3.1.0').trim(),
+      evidenceMaxAgeDays: Math.max(1, Number(env.EVIDENCE_MAX_AGE_DAYS || 180)),
+      recentCaseLimit: Math.max(1, Math.min(20, Number(env.WORK_PROTOCOL_RECENT_CASE_LIMIT || 8))),
+    },
     admission: {
       maxConcurrency: Math.max(1, Number(env.H_ENGINE_MAX_CONCURRENCY || 4)),
       maxQueue: Math.max(0, Number(env.H_ENGINE_QUEUE_LIMIT || 32)),
