@@ -122,7 +122,7 @@ node ops/sync-company-directory.mjs
 - 文档 ACL 读取失败是最高优先级拒绝条件：即使已有空间 ACL、空间公开或正文接口可读，也必须在读取正文前终止并保存 `acl_status=unknown/status=skipped`。
 - 只有文档直接 ACL 明确包含对应 `wikispaceid` 才能展开知识空间成员；文档位于空间、存在父节点或空间成员可枚举都不是权限继承证据。
 - `department/openchat/group` 等主体必须从飞书原始字段到 ACL 入库再到 Retrieval 查询端到端保真；群聊授权需要当前会话证据和撤权语义，不能转换为个人永久权限。
-- 产品研究部知识库正式导入仍处于阻断：本地 `2026-08-08.3` 已完成两个 P0 修复和 14/14 回归，但公司 QNAP 仍运行 `2026-08-08.2`；部署、小范围 Canary 和撤权复测完成前不得触发批量同步。
+- 产品研究部知识库正式导入仍处于阻断，但两个 ACL P0 已在公司 QNAP 生产闭环：Knowledge Connector `2026-08-08.3`、Connector/Agent Core 28/28、真实小范围 Canary、撤权、跨部门和链接直猜负测均通过。下一门禁是 `department/openchat` 原始主体映射与受控 `chat/group` 会话证据、用途和撤权语义，完成后仍需单独批准导入范围与窗口。
 
 ## 爱视可 ERP 接管边界
 
@@ -257,13 +257,17 @@ node ops/sync-company-directory.mjs
 ### 公司大脑工作逻辑显式建模
 
 - 一次公司大脑处理过程必须建模为 `WorkCase`，阶段建模为 `WorkStage`；不能只保存最终回答或 H 引擎运行日志。
-- 工作阶段固定为 Intake、Scope、Authority、Context、Evidence、Synthesis、Decision、Plan、Execution、Verification、Learning。Goal 4 只激活至可解释回答，后续阶段先建契约并保持灰色。
+- 工作阶段固定为 Intake、Scope、Authority、Context、Evidence、Synthesis、Response、Decision、Plan、Execution、Verification、Learning。Goal 4 已在生产激活至可解释回答；Decision 及之后阶段只保留兼容契约并保持灰色，下一主线是 Goal 5 P0-DEC。
 - P0-EPI 在既有 13 个命名空间内增量增加 WorkCase、WorkStage、Assumption、Unknown 和 EpistemicAssessment，不新增第二套 Ontology 或事实真源。
 - Permissioned Evidence Package v2 必须带事实类型、Provenance、有效期、权限快照、反证、未知、置信依据和 Ontology 版本；无权限资源不得泄露标题、URL、人员或正文。
 - Company Agent 必须区分源事实、推导事实、预测、人工判断、假设、未知和冲突；证据不足时允许拒绝形成确定性结论。
 - 显式推理只保存证据引用、规则结果、主张、假设、未知、冲突和判断摘要，禁止保存模型隐藏思维链。
 - `WorkCase=completed` 不等于 Task、Action 或 Goal 成功；三层结果仍由 Verification 独立记录。
 - 10 名真实员工 Canary 延后到 Goal 4 P0-EPI 和 Goal 5 P0-DEC 大框架稳定之后，但仍是 20/50 人放量前强制门禁。
+- 生产 `Evidence=0` 必须在策略层 fail-closed：Principal 不存在返回 `permission_denied`，Principal 存在但没有可用 Evidence 返回 `insufficient_evidence`；两类路径都不得调用 H 引擎。
+- Migration/View 验收不能只使用数据库 owner；必须以真实应用角色读取稳定 View 和状态接口，避免遗漏 `GRANT SELECT` 造成生产 `42501`。
+- 在公司 QNAP 远端执行含 `docker compose exec -T` 的脚本时，禁止通过 SSH stdin/heredoc 直接喂脚本；必须先把脚本传到远端版本化目录，再从文件执行，防止容器命令抢占 stdin 造成半执行或假绿。
+- Goal 4 生产锚点为 Schema `3.1.0`、Agent Core `2026-08-09.1`、Work Protocol `1.0.0 / active`；完整验收见 `docs/company-brain-work-protocol-acceptance-2026-08-09.md`。版本与运行状态属于快照，后续操作前仍需在线复核。
 - 详细实施计划见 `2-Projects/company-ai-ontology/docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
 
 当前实现与切换流程见：

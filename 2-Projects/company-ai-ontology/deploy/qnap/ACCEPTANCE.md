@@ -123,3 +123,12 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、Knowledge Conne
 - Agent Core 与 H-Lite 重启后仍读回 10 个 accepted tasks、10 个 artifacts 和两类 H-Lite durable event。
 - H 引擎已从“仅出口可达”升级为真实远程推理成功；当前临时凭据模式明确可见，不冒充正式独立凭据完成。
 - 最新离机加密包 SHA-256：`c18a5f5e8ac073c4262c4b462dc4a07a44911170764c35f2f13014c23393d35f`；Mac Mini 解密、校验和逻辑恢复再次通过。
+
+## Goal 4：P0-EPI 与 Company Brain Work Protocol v1.0
+
+- 公司 QNAP 已切换到 Schema `3.1.0`、Agent Core `2026-08-09.1`、Work Protocol `1.0.0 / active`，Ontology Registry 唯一 active 版本共 90 个元素。
+- 本轮只激活 Intake、Scope、Authority、Context、Evidence、Synthesis、Response；Decision、Plan、Execution、Verification、Learning 仅有兼容契约并保持灰色。
+- fresh、冲突、过期、Principal 无 ACL、Principal 不存在五类生产 fixture 通过；Evidence 0 在策略层失败关闭且不调用 H 引擎，无权限响应未泄露 fixture 标题、URL、人员或正文。
+- Migration 007、Tenant RLS、稳定 View、最小权限、Permissioned Evidence Package v2、Response Validator、WorkCase 状态机、重启回放和真实回滚恢复均通过。
+- H 控制面 `v1.52.0` 已显示 WorkCase、Evidence Map、Answer Basis 和未激活灰色阶段；真实公网浏览器 8/8 组件就绪、控制台错误 0、无横向溢出。
+- 完整验收证据见 `docs/company-brain-work-protocol-acceptance-2026-08-09.md`。本轮未导入产品研究部整库、未启用真实 ERP/社媒写回、未执行 10 名真实员工 Canary。

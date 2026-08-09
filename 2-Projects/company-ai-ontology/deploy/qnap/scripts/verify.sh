@@ -42,11 +42,13 @@ printf '\n=== postgres ===\n'
 "$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM pg_policies WHERE policyname='tenant_isolation';"
 registry_active=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM ontology_registry.versions WHERE status='active';")
 registry_elements=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM ontology_registry.elements;")
+registry_active_elements=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM ontology_registry.elements e JOIN ontology_registry.versions v ON v.tenant_id=e.tenant_id AND v.id=e.version_id WHERE v.status='active';")
 registry_domain_events=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM audit.domain_events WHERE event_type='ontology.version.deployed';")
 registry_legacy_events=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM audit.events WHERE event_type='ontology_version_deployed';")
-printf 'registry_active=%s registry_elements=%s domain_events=%s legacy_events=%s\n' "$registry_active" "$registry_elements" "$registry_domain_events" "$registry_legacy_events"
+printf 'registry_active=%s registry_elements=%s registry_active_elements=%s domain_events=%s legacy_events=%s\n' "$registry_active" "$registry_elements" "$registry_active_elements" "$registry_domain_events" "$registry_legacy_events"
 [ "$registry_active" -eq 1 ]
-[ "$registry_elements" -eq 71 ]
+[ "$registry_active_elements" -gt 0 ]
+[ "$registry_elements" -ge "$registry_active_elements" ]
 [ "$registry_domain_events" -ge 1 ]
 [ "$registry_legacy_events" -eq "$registry_domain_events" ]
 "$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT archived_count, failed_count FROM pg_stat_archiver;"
@@ -124,14 +126,18 @@ work_protocol_policies=$("$docker_path" compose exec -T postgres psql -U ontolog
 work_protocol_views=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT count(*) FROM pg_views WHERE (schemaname, viewname) IN (('work','brain_case_status_v1'),('epistemic','answer_basis_v1'));")
 work_event_update=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_app','work.brain_case_events','UPDATE');")
 assessment_update=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_app','epistemic.assessments','UPDATE');")
-printf 'tables=%s policies=%s views=%s event_update=%s assessment_update=%s\n' "$work_protocol_tables" "$work_protocol_policies" "$work_protocol_views" "$work_event_update" "$assessment_update"
+work_status_select=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_app','work.brain_case_status_v1','SELECT');")
+answer_basis_select=$("$docker_path" compose exec -T postgres psql -U ontology_admin -d ontology -Atc "SELECT has_table_privilege('ontology_app','epistemic.answer_basis_v1','SELECT');")
+printf 'tables=%s policies=%s views=%s event_update=%s assessment_update=%s work_status_select=%s answer_basis_select=%s\n' "$work_protocol_tables" "$work_protocol_policies" "$work_protocol_views" "$work_event_update" "$assessment_update" "$work_status_select" "$answer_basis_select"
 [ "$work_protocol_tables" -eq 6 ]
 [ "$work_protocol_policies" -eq 6 ]
 [ "$work_protocol_views" -eq 2 ]
 [ "$work_event_update" = f ]
 [ "$assessment_update" = f ]
+[ "$work_status_select" = t ]
+[ "$answer_basis_select" = t ]
 
-work_protocol_http=$(curl --silent --show-error --max-time 10 http://127.0.0.1:19080/ontology/status/work-protocol || true)
+work_protocol_http=$(curl --silent --show-error --max-time 10 http://192.168.61.18:19080/ontology/status/work-protocol || true)
 printf 'work_protocol_http=%s\n' "$(printf '%s' "$work_protocol_http" | cut -c1-240)"
 printf '%s' "$work_protocol_http" | grep -q '"protocolVersion":"1.0.0"'
 printf '%s' "$work_protocol_http" | grep -q '"ontologySchemaVersion":"3.1.0"'

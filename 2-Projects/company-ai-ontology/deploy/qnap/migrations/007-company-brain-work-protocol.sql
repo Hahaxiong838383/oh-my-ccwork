@@ -255,6 +255,11 @@ GRANT SELECT, INSERT ON
 TO ontology_app;
 
 GRANT SELECT ON
+  work.brain_case_status_v1,
+  epistemic.answer_basis_v1
+TO ontology_app;
+
+GRANT SELECT ON
   work.brain_cases,
   work.brain_case_stages,
   work.brain_case_events,

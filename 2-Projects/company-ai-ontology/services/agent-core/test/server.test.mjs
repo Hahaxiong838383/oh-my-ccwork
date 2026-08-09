@@ -364,3 +364,33 @@ test('Goal 4 无权限主体 Evidence 0 且不调用 H 引擎', async (t) => {
   assert.equal(result.payload.evidencePackage.facts.length, 0)
   assert.doesNotMatch(JSON.stringify(result.payload), /机密标题|https?:\/\//)
 })
+
+test('Goal 4 已识别主体但无授权证据时失败关闭且不调用 H 引擎', async (t) => {
+  const store = createMemoryStore({ retrieval: { principalFound: true, evidence: [], excludedReasonCounts: { permission_denied: 4 } } })
+  let runtimeCalls = 0
+  const server = createAgentCoreServer({
+    config: {
+      ...config(),
+      workProtocol: { mode: 'active', ontologyVersion: '3.1.0', evidenceMaxAgeDays: 180, recentCaseLimit: 8 },
+    },
+    store,
+    runtime: {
+      ready: async () => ({ ready: true, productionReady: true, provider: 'test-h-engine' }),
+      run: async () => { runtimeCalls += 1; throw new Error('must not run') },
+    },
+    now: () => now,
+  })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const port = await listen(server)
+  const body = JSON.stringify({ conversationId: 'conversation-no-acl', message: '查询受限资料', intent: 'query', channel: 'h-lite' })
+  const result = await request(port, {
+    body,
+    headers: signed(body, { requestId: 'goal4-no-acl', idempotencyKey: 'goal4-no-acl', personId: 'person-no-acl' }),
+  })
+  assert.equal(result.status, 200)
+  assert.equal(runtimeCalls, 0)
+  assert.equal(result.payload.workCase.status, 'insufficient_evidence')
+  assert.equal(result.payload.evidence.length, 0)
+  assert.equal(result.payload.epistemicAssessment.deterministicConclusionAllowed, false)
+  assert.doesNotMatch(JSON.stringify(result.payload), /机密标题|https?:\/\//)
+})

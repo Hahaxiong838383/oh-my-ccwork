@@ -105,6 +105,14 @@ event_update_privilege=$("$docker_path" exec "$postgres_container" psql -U ontol
   "SELECT has_table_privilege('ontology_app','work.brain_case_events','UPDATE');")
 [ "$event_update_privilege" = f ]
 
+work_status_select_privilege=$("$docker_path" exec "$postgres_container" psql -U ontology_admin -d ontology -Atc \
+  "SELECT has_table_privilege('ontology_app','work.brain_case_status_v1','SELECT');")
+[ "$work_status_select_privilege" = t ]
+
+answer_basis_select_privilege=$("$docker_path" exec "$postgres_container" psql -U ontology_admin -d ontology -Atc \
+  "SELECT has_table_privilege('ontology_app','epistemic.answer_basis_v1','SELECT');")
+[ "$answer_basis_select_privilege" = t ]
+
 delete_privilege=$("$docker_path" exec "$postgres_container" psql -U ontology_admin -d ontology -Atc \
   "SELECT has_table_privilege('ontology_registry','ontology_registry.versions','DELETE');")
 [ "$delete_privilege" = f ]

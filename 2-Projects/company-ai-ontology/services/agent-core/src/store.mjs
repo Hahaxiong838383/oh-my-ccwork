@@ -27,6 +27,51 @@ export function buildSearchTerms(query, limit = 24) {
   return [...output].slice(0, limit)
 }
 
+export function mapKnowledgeEvidence(row) {
+  const metadata = row?.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata : {}
+  return {
+    evidenceId: `knowledge:${row.id}`,
+    resourceId: row.resource_id,
+    source: String(metadata.sourceSystem || row.provider || 'feishu-knowledge'),
+    objectType: row.resource_type,
+    externalKey: row.external_key,
+    title: row.title,
+    classification: row.classification,
+    updatedAt: row.source_updated_at || row.synced_at,
+    validUntil: metadata.validUntil || null,
+    sourceUrl: row.source_url,
+    sourceReference: metadata.sourceReference || row.external_key,
+    excerpt: String(row.content || '').slice(0, 1600),
+    epistemicType: metadata.epistemicType || 'source_fact',
+    supports: metadata.supports !== false,
+    contradicts: metadata.contradicts === true,
+    chunkIndex: row.chunk_index,
+    permissionSnapshot: true,
+    simulation: metadata.simulation === true,
+  }
+}
+
+export function mapOntologyEvidence(row) {
+  const attributes = row?.attributes && typeof row.attributes === 'object' && !Array.isArray(row.attributes) ? row.attributes : {}
+  return {
+    evidenceId: row.id,
+    source: String(attributes.sourceSystem || 'ontology'),
+    objectType: row.entity_type,
+    externalKey: row.external_key,
+    title: row.display_name,
+    classification: row.classification,
+    updatedAt: row.updated_at,
+    validUntil: attributes.validUntil || null,
+    sourceReference: attributes.sourceReference || row.external_key,
+    summary: String(attributes.summary || ''),
+    epistemicType: attributes.epistemicType || 'source_fact',
+    supports: attributes.supports !== false,
+    contradicts: attributes.contradicts === true,
+    permissionSnapshot: true,
+    simulation: attributes.simulation === true,
+  }
+}
+
 export function createPostgresStore({ database, logger = () => {} } = {}) {
   const pool = new Pool(database)
 
@@ -114,8 +159,9 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
       const searchTerms = buildSearchTerms(normalizedQuery)
       const knowledge = await client.query(
         `SELECT c.id, c.content, c.chunk_index,
-                r.id AS resource_id, r.resource_type, r.external_key, r.title,
+                r.id AS resource_id, r.provider, r.resource_type, r.external_key, r.title,
                 r.source_url, r.classification, r.source_updated_at, r.synced_at,
+                r.metadata,
                 CASE WHEN $4 = '' THEN 0
                      ELSE ts_rank_cd(c.search_vector, plainto_tsquery('simple', $4)) END
                 + COALESCE((
@@ -164,21 +210,7 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
           LIMIT $7`,
         [tenantId, personId, principal.rows[0].department_key, normalizedQuery, JSON.stringify(principal.rows[0].attributes || {}), searchTerms, normalizedLimit],
       )
-      const knowledgeEvidence = knowledge.rows.map((row) => ({
-        evidenceId: `knowledge:${row.id}`,
-        resourceId: row.resource_id,
-        source: 'feishu-knowledge',
-        objectType: row.resource_type,
-        externalKey: row.external_key,
-        title: row.title,
-        classification: row.classification,
-        updatedAt: row.source_updated_at || row.synced_at,
-        sourceUrl: row.source_url,
-        excerpt: String(row.content || '').slice(0, 1600),
-        chunkIndex: row.chunk_index,
-        permissionSnapshot: true,
-        simulation: false,
-      }))
+      const knowledgeEvidence = knowledge.rows.map(mapKnowledgeEvidence)
       if (knowledgeEvidence.length >= normalizedLimit) return knowledgeEvidence
       const result = await client.query(
         `SELECT e.id, e.entity_type, e.external_key, e.display_name, e.classification,
@@ -221,17 +253,7 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
           LIMIT $4`,
         [tenantId, principal.rows[0].id, normalizedQuery, normalizedLimit - knowledgeEvidence.length],
       )
-      return [...knowledgeEvidence, ...result.rows.map((row) => ({
-        evidenceId: row.id,
-        source: 'ontology',
-        objectType: row.entity_type,
-        externalKey: row.external_key,
-        title: row.display_name,
-        classification: row.classification,
-        updatedAt: row.updated_at,
-        summary: String(row.attributes?.summary || ''),
-        simulation: Boolean(row.attributes?.simulation),
-      }))]
+      return [...knowledgeEvidence, ...result.rows.map(mapOntologyEvidence)]
     })
   }
 
@@ -449,6 +471,11 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
       `UPDATE work.brain_cases
           SET evidence_count = $3, confidence_level = $4,
               deterministic_conclusion_allowed = $5, response_validation_status = $6,
+              completed_at = CASE
+                WHEN status IN ('permission_denied','blocked','insufficient_evidence','review_required')
+                THEN COALESCE(completed_at, now())
+                ELSE completed_at
+              END,
               updated_at = now()
         WHERE tenant_id = $1 AND id = $2`,
       [tenantId, caseId, evidenceCount, confidenceLevel, deterministicConclusionAllowed, responseValidationStatus],

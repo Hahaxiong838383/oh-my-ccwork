@@ -338,3 +338,17 @@ Goal 4：P0-EPI + Company Brain Work Protocol v1.0
 ## 11. 建议启动 Goal 文本
 
 > 实施公司 AI Ontology Goal 4：在 V2.2 生产基线和 V3 P0-S Foundation Pack 上，完成 P0-EPI 认识论最小闭环与 Company Brain Work Protocol v1.0。一次性固化公司大脑从 Intake、Scope、Authority、Context、Evidence、Synthesis 到 Decision、Plan、Execution、Verification、Learning 的完整阶段和状态契约，但本轮只激活至可解释回答；新增 WorkCase、WorkStage、Assumption、Unknown、EpistemicAssessment，升级 Permissioned Evidence Package v2 和 Company Agent 回答契约，明确区分源事实、推导、预测、人工判断、假设、未知和冲突；禁止保存隐藏思维链。完成兼容性编译、数据库迁移、RLS、Agent Core、结构化 H 引擎输出、管理可视化、fixture 正负测试、QNAP shadow/active 切换、重启回放和回滚验收。不得导入产品研究部整库，不得启用真实 ERP/社媒写回，不执行 10 名真实员工 Canary。
+
+## 12. 实施结果（2026-08-09）
+
+Goal 4 已按上述范围完成生产部署，状态为 `active`：
+
+1. Ontology Schema `3.1.0`、Hash `117074b5e6b0`，46 Object、24 Link、5 Function、2 Action、5 Policy、8 Constraint。
+2. Agent Core `2026-08-09.1` 已启用 Work Protocol `1.0.0`；当前 active 阶段为 Intake、Scope、Authority、Context、Evidence、Synthesis、Response。
+3. ERP/社媒 fixture 的 fresh、conflict、stale、no-ACL、missing-principal 五类场景均通过；过期、冲突和证据不足禁止确定性结论。
+4. 无 ACL 路径在策略层直接返回 `insufficient_evidence`，不存在 Principal 返回 `permission_denied`，两类路径均不调用 H 引擎且 Evidence 为 0。
+5. QNAP 完整自检、旧版 `3.0.0`/Agent Core `2026-08-08.4` 回滚、新版恢复、WorkCase 重启回放、日志敏感值扫描和 `restart_count=0` 通过。
+6. H 控制面 `v1.52.0` 已显示 WorkCase、Evidence Map、Answer Basis；真实浏览器 8/8 组件就绪、控制台错误 0、无横向溢出，Goal 5 五个阶段保持灰色。
+7. 产品研究部整库、真实 ERP/社媒写回和 10 名真实员工 Canary 均未触发。
+
+详细证据见 `company-brain-work-protocol-acceptance-2026-08-09.md`。下一主线转为 Goal 5 P0-DEC。

@@ -139,6 +139,27 @@ export function createCompanyBrain({ store, runtime, admission, config, now = ()
         policyDecisionReference: evidencePackage.policyDecisionReference,
         blockReasonCode: assessment.completeness === 'insufficient' ? 'insufficient_evidence' : null,
       })
+      if (assessment.completeness === 'insufficient') {
+        const validation = validateStructuredResponse({ rawResponse: null, assessment, evidencePackage })
+        await store.finalizeWorkCase({
+          tenantId: scope.tenantId,
+          caseId: workCase.caseId,
+          evidenceCount: 0,
+          confidenceLevel: assessment.confidenceLevel,
+          deterministicConclusionAllowed: false,
+          responseValidationStatus: validation.status,
+        })
+        return {
+          reply: formatEmployeeAnswer(validation.response),
+          evidence: [],
+          evidencePackage,
+          assessment,
+          answer: validation.response,
+          permissionFiltered: true,
+          runtime: { provider: 'policy-engine', mode: protocol.mode, productionReady: true },
+          workCase: { caseId: workCase.caseId, status: 'insufficient_evidence', workMode: draft.workMode, processingMode: protocol.mode },
+        }
+      }
       await advance('synthesizing', 'synthesis', {
         stageStatus: 'active',
         inputReferences: [evidencePackage.packageId, `assessment:${assessment.confidenceLevel}`],

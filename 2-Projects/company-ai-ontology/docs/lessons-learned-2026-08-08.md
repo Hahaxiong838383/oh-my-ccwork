@@ -167,6 +167,36 @@ WorkCase `completed` 只表示一次分析或回答完成，不代表 P2 完成�
 ### 27. 全链路先固化契约，激活范围必须逐阶段推进
 
 “骨架完整、血肉渐进”意味着 Goal 4 可以一次定义 Intake 到 Learning 的完整阶段，但只激活认识闭环；Decision、任务和学习保持灰色，等 Goal 5 再接真实业务。这样既避免后续重构，也不会把未实现能力包装为生产完成。
+
+## Goal 4 生产收口经验（2026-08-09）
+
+### 28. migration 成功不等于运行角色真的能读稳定 View
+
+表、RLS、View 都创建成功，管理员查询也正常，但 `ontology_app` 缺少 View 的 `SELECT` 仍会让生产状态接口返回 PostgreSQL `42501`。迁移验收必须同时检查对象存在、底层表权限、View 权限和真实应用角色查询，不能只用管理员账号验证。
+
+### 29. 反证和有效期必须从 Connector 数据一路映射到 Evidence Package
+
+纯函数单测能识别 `contradicts` 和 `validUntil`，不代表生产检索结果真的携带这些字段。知识资源 metadata 和 Ontology attributes 必须显式映射 sourceSystem、validUntil、supports/contradicts、epistemicType 和 sourceReference，否则线上所有证据都会被误当成普通支持事实。
+
+### 30. 有身份但无授权证据时应在策略层失败关闭
+
+Principal 存在但 Evidence 为 0 时继续调用 H 引擎，会增加成本、放大幻觉面并把远程模型故障引入本可本地回答的权限拒绝路径。正确做法是直接形成 `insufficient_evidence`、跳过模型、返回固定可审计解释；不存在 Principal 则形成 `permission_denied`。
+
+### 31. 生产脚本不得通过 stdin 直接管给含 docker exec 的远端 shell
+
+`docker compose exec -T` 可能消费剩余 stdin，导致后续脚本静默丢失或提前结束。所有复杂 QNAP 发布、回滚和验收脚本必须先传为远端文件，再按文件执行；脚本内部 heredoc 才是可控边界。
+
+### 32. 验收器不能硬编码历史版本总数
+
+Registry 保留历史版本元素，Schema 升级后 `elements` 总数会累加。把旧版 71 写死为生产断言会把正确升级判成失败。验收应检查“唯一 active 版本 + active 版本元素数 > 0 + Git/本地/active Hash 一致”，历史总数只作审计，不作当前版本真值。
+
+### 33. 回滚必须同时证明旧版可运行和新版可恢复
+
+只保留旧镜像标签不算回滚闭环。本轮真实切回 Schema `3.0.0`、Agent Core `2026-08-08.4` 和旧 Caddy 路由，验证旧版健康后再恢复 `3.1.0`/`2026-08-09.1`/active Work Protocol，并确认三个容器 `restart_count=0`、WorkCase 事件回放不变。
+
+### 34. 管理页面绿色必须来自业务状态，不来自代码已合并
+
+P0-EPI 只有在 QNAP active、fixture 正负测试、回滚恢复和真实浏览器验收全部通过后才标绿。Decision、Plan、Execution、Verification、Learning 即使契约已存在，也必须保持灰色，直到 Goal 5 有真实 Decision Lineage 和业务结果证据。
 - 10 名真实员工 Canary 必须覆盖并发会话、多人 @ 隔离、失败重投和真实送达。
 - 必须指定唯一 DRI 和一条真实 P2，完成任务提案、批准、投递、成果提交和 DRI 验收闭环。
 - ERP M3 与社媒保持只读证据源；ERP M4 和 MediaCrawler 风控恢复继续等待显式指令。

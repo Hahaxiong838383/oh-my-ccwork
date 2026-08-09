@@ -4,11 +4,11 @@
 
 ## 当前结论
 
-P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S Foundation Pack 和认证后公网运行看板均已上线。V2.2 继续承载业务运行，V3 按“骨架完整、血肉渐进”增量建设。知识 ACL 两个 P0 已完成生产部署、28/28 回归、小范围真实 Canary、员工撤权、跨部门与链接直猜负测和回滚演练。下一主线调整为 Goal 4：P0-EPI + Company Brain Work Protocol v1.0；10 名真实员工 Canary 延后到 P0-EPI、P0-DEC 大框架稳定之后执行。产品研究部整库导入仍需 P1 主体映射与单独审批。
+P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S Foundation Pack、Goal 4 P0-EPI 和认证后公网运行看板均已上线。Company Brain Work Protocol `1.0.0` 当前为 `active`，只激活至可解释回答；Decision 之后仍是灰色契约。下一主线为 Goal 5：P0-DEC + Decision/P2/Task/Action/Verification/Learning 实践闭环。10 名真实员工 Canary 延后到 Goal 5 大框架稳定之后执行。产品研究部整库导入仍需 P1 主体映射与单独审批。
 
 ## 2026-08-09 Goal 顺序重排
 
-1. `Goal 4`：P0-EPI + 公司大脑工作逻辑显式建模，先激活 Intake 至可解释回答。
+1. `Goal 4`：✅ P0-EPI + 公司大脑工作逻辑显式建模，Intake 至可解释回答已生产 active。
 2. `Goal 5`：P0-DEC + Decision/P2/Task/Action/Verification/Learning 实践闭环。
 3. `Goal 3`：10 名真实员工 Canary，延后但仍是 20/50 人放量前硬门禁。
 4. 公司专用 CPA 凭据和 P1 `department/openchat` 映射可并行推进，不改变业务验收顺序。
@@ -34,16 +34,17 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 7. ✅ QNAP 生产 active 版本唯一：Schema `3.0.0`、71 个元素、Hash `0e1690bbced6`；重启与重复部署后数量不变。
 8. ✅ H 控制面 `v1.49.1` 公网看板显示 7/7 组件就绪，真实 Chrome 控制台、页面异常、失败请求和横向溢出均为 0。
 
-## P0-EPI：认识论最小闭环
+## ✅ P0-EPI：认识论最小闭环
 
-1. 增加 WorkCase、WorkStage、Assumption、Unknown、EpistemicAssessment，并复用现有 Source、Observation、Evidence、Claim、Hypothesis、Contradiction 和 Provenance。
-2. 固化 Intake、Scope、Authority、Context、Evidence、Synthesis、Decision、Plan、Execution、Verification、Learning 完整阶段；Goal 4 只激活至可解释回答。
-3. Permissioned Evidence Package v2 增加事实类型、来源、有效期、反证、未知项、置信依据、权限快照和 Ontology 版本。
-4. Company Agent 回答明确区分源事实、推导事实、模型预测、人工判断、假设、未知和冲突。
-5. 只保存证据引用和可审计判断摘要，禁止保存模型隐藏思维链。
-6. 用一条 fixture ERP 事实和一条 fixture 社媒 Signal 完成正证、反证、过期、未知和无权限验证。
-7. H 控制面增加 WorkCase 时间线、Evidence Map 和认识状态；Decision 之后阶段保持灰色。
-8. 详细计划见 `docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
+1. ✅ WorkCase、WorkStage、Assumption、Unknown、EpistemicAssessment 已进入 Schema `3.1.0`，active 元素 90 个，Hash `117074b5e6b0`。
+2. ✅ Intake、Scope、Authority、Context、Evidence、Synthesis、Response 已 active；Decision、Plan、Execution、Verification、Learning 保持 `contract_only`。
+3. ✅ Permissioned Evidence Package v2 已带来源、有效期、反证、未知、置信依据、权限快照和 Ontology 版本。
+4. ✅ 结构化回答 Validator 能拒绝越权证据、隐藏思维链、过期/冲突证据上的确定性结论。
+5. ✅ ERP/社媒 fixture 的正证、反证、过期、无 ACL 和不存在 Principal 已在公司 QNAP 生产链验证。
+6. ✅ 无 ACL 或不存在 Principal 时 Evidence 为 0，策略层失败关闭，不调用 H 引擎，不泄露标题、URL、人员或正文。
+7. ✅ shadow→active、完整 Foundation 自检、旧版回滚、新版恢复、重启回放和敏感日志扫描通过。
+8. ✅ H 控制面 `v1.52.0` 已显示 WorkCase 时间线、Evidence Map、Answer Basis 和 Goal 5 灰色阶段。
+9. 验收报告见 `docs/company-brain-work-protocol-acceptance-2026-08-09.md`。
 
 ## P0-DEC：决策与实践闭环
 
