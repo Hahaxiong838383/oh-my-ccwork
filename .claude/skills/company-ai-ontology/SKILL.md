@@ -257,17 +257,21 @@ node ops/sync-company-directory.mjs
 ### 公司大脑工作逻辑显式建模
 
 - 一次公司大脑处理过程必须建模为 `WorkCase`，阶段建模为 `WorkStage`；不能只保存最终回答或 H 引擎运行日志。
-- 工作阶段固定为 Intake、Scope、Authority、Context、Evidence、Synthesis、Response、Decision、Plan、Execution、Verification、Learning。Goal 4 已在生产激活至可解释回答；Decision 及之后阶段只保留兼容契约并保持灰色，下一主线是 Goal 5 P0-DEC。
+- 工作阶段固定为 Intake、Scope、Authority、Context、Evidence、Synthesis、Response、Decision、Plan、Execution、Verification、Learning。Goal 4 与 Goal 5 已在生产激活全阶段；每个阶段仍必须受身份、证据、批准、Action Gateway 和 Verification 门禁约束。
 - P0-EPI 在既有 13 个命名空间内增量增加 WorkCase、WorkStage、Assumption、Unknown 和 EpistemicAssessment，不新增第二套 Ontology 或事实真源。
 - Permissioned Evidence Package v2 必须带事实类型、Provenance、有效期、权限快照、反证、未知、置信依据和 Ontology 版本；无权限资源不得泄露标题、URL、人员或正文。
 - Company Agent 必须区分源事实、推导事实、预测、人工判断、假设、未知和冲突；证据不足时允许拒绝形成确定性结论。
 - 显式推理只保存证据引用、规则结果、主张、假设、未知、冲突和判断摘要，禁止保存模型隐藏思维链。
 - `WorkCase=completed` 不等于 Task、Action 或 Goal 成功；三层结果仍由 Verification 独立记录。
-- 10 名真实员工 Canary 延后到 Goal 4 P0-EPI 和 Goal 5 P0-DEC 大框架稳定之后，但仍是 20/50 人放量前强制门禁。
+- 10 名真实员工 Canary 延后到 Goal 6 P1-DOMAIN 与 Operating Model 大框架稳定之后，但仍是 20/50 人放量前强制门禁；不得因为单 DRI Lineage 成功就提前放量。
 - 生产 `Evidence=0` 必须在策略层 fail-closed：Principal 不存在返回 `permission_denied`，Principal 存在但没有可用 Evidence 返回 `insufficient_evidence`；两类路径都不得调用 H 引擎。
 - Migration/View 验收不能只使用数据库 owner；必须以真实应用角色读取稳定 View 和状态接口，避免遗漏 `GRANT SELECT` 造成生产 `42501`。
 - 在公司 QNAP 远端执行含 `docker compose exec -T` 的脚本时，禁止通过 SSH stdin/heredoc 直接喂脚本；必须先把脚本传到远端版本化目录，再从文件执行，防止容器命令抢占 stdin 造成半执行或假绿。
-- Goal 4 生产锚点为 Schema `3.1.0`、Agent Core `2026-08-09.1`、Work Protocol `1.0.0 / active`；完整验收见 `docs/company-brain-work-protocol-acceptance-2026-08-09.md`。版本与运行状态属于快照，后续操作前仍需在线复核。
+- Goal 5 生产锚点为 Schema `3.2.0`、Agent Core / Action Gateway `2026-08-09.2`、Work / Practice Protocol `1.1.0 / active`、111 个 active 元素；完整验收见 `docs/decision-practice-loop-acceptance-2026-08-09.md`。版本与运行状态属于快照，后续操作前仍需在线复核。
+- Decision Lineage 必须区分技术执行、业务结果、经营目标三层成功；`execution_success=true` 不能推出 `goal_success=true`。Learning 默认只能写为 `proposed`。
+- 失败 Canary 必须保留审计并显式退役：WorkCase `blocked`、Decision `superseded`、Practice Status `retired`；禁止删除历史，也禁止退役 `goal_verified` Lineage。
+- Ontology Definition Source Commit 与 Runtime Release Commit 分开记录。Definition 未变化时不得用运行时热修复提交覆盖 Registry Source Commit。
+- 下一主线推荐 Goal 6：只读接入 ERP M3、社媒归一化结果和 Product/Device/Market 最小领域骨架，并深化经营可视化；不恢复 MediaCrawler、不开发 ERP M4、不开放真实写回。
 - 详细实施计划见 `2-Projects/company-ai-ontology/docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
 
 当前实现与切换流程见：

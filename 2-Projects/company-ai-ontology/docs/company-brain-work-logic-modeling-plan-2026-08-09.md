@@ -2,6 +2,8 @@
 
 日期：2026-08-09（Asia/Shanghai）
 
+> 实施状态：Goal 4 已按本计划完成，Goal 5 也已激活 Decision 至 Learning。当前生产基线为 Schema `3.2.0`、Work / Practice Protocol `1.1.0 / active`；详见 `decision-practice-loop-acceptance-2026-08-09.md`。
+
 ## 1. 结论
 
 下一阶段推荐直接启动 **Goal 4：P0-EPI 认识论最小闭环 + Company Brain Work Protocol v1.0**。

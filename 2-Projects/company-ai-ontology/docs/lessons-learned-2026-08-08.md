@@ -197,6 +197,36 @@ Registry 保留历史版本元素，Schema 升级后 `elements` 总数会累加�
 ### 34. 管理页面绿色必须来自业务状态，不来自代码已合并
 
 P0-EPI 只有在 QNAP active、fixture 正负测试、回滚恢复和真实浏览器验收全部通过后才标绿。Decision、Plan、Execution、Verification、Learning 即使契约已存在，也必须保持灰色，直到 Goal 5 有真实 Decision Lineage 和业务结果证据。
+
+## Goal 5 生产收口经验（2026-08-09）
+
+### 35. 幂等返回相同对象还不够，状态推进也必须幂等
+
+Decision 审批重放虽然能返回同一个 Decision，但如果仍重复推进 WorkCase、重复追加阶段事件，审计时间线就会失真。幂等验收必须同时检查对象 ID、`replayed` 标志、事件数量和状态推进次数。
+
+### 36. PostgreSQL 多态 JSON 函数不能依赖未知参数猜类型
+
+`jsonb_build_object` 接收 bind parameter 时，驱动传入的 unknown 类型可能在生产触发多态解析错误。进入 JSON 构造、数组或复合类型函数前，应显式转换为 `text`、`uuid`、`jsonb` 等确定类型，并用真实 PostgreSQL 版本验证。
+
+### 37. 最小权限不仅是撤销权限，还要把初始化责任放到正确组件
+
+Agent Core 不应初始化 Action Gateway 的目标状态。即使是演示目标，也应由真正拥有目标系统写权限的 Gateway 完成，保证未来切换真实 ERP、飞书或报表时不会形成旁路写权限。
+
+### 38. 历史验收计数必须限定业务对象，不能统计全库
+
+旧 P0 任务事件按全表固定等于 10 验收，新 P2 进入后会把正确系统判成失败。稳定验收器应按外部键、Run ID、时间窗或受控标签限定对象；全库总数只适合观测，不能作为版本升级后的固定断言。
+
+### 39. 失败 Canary 也是审计事实，但不能长期冒充待执行业务
+
+删除失败 WorkCase 会破坏证据，保留为 `plan_pending` / `execution_pending` 又会污染管理看板。正确做法是保留对象和 append-only 事件，同时把 WorkCase 标为 `blocked`、Decision 标为 `superseded`、Lineage 显示为 `retired`；成功 Lineage 的退役必须强制拒绝。
+
+### 40. Definition 来源与 Runtime Release 必须分开记录
+
+本轮 Ontology Definition 内容未变，Registry Source Commit 应继续指向 `e6a98c6dc`；运行时修复则用独立 Runtime Release Commit `19793e100` 记录。把任意最新提交都写成 Definition 来源，会破坏 Git/Registry 对账语义。
+
+### 41. 三层成功必须独立验证，Learning 只能先成为提案
+
+Action 读回成功只证明技术执行；业务流程成功和经营目标成功必须由 Verification 分别给出证据。Learning 在没有 Change Proposal 审批、兼容性检查和回滚计划前只能是 `proposed`，不能让模型自动改本体或流程。
 - 10 名真实员工 Canary 必须覆盖并发会话、多人 @ 隔离、失败重投和真实送达。
 - 必须指定唯一 DRI 和一条真实 P2，完成任务提案、批准、投递、成果提交和 DRI 验收闭环。
 - ERP M3 与社媒保持只读证据源；ERP M4 和 MediaCrawler 风控恢复继续等待显式指令。

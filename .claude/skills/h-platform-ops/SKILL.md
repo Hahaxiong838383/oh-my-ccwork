@@ -5584,6 +5584,7 @@ node ops/sync-company-directory.mjs
 - 发布顺序：先更新并验证 QNAP Caddy 固定健康路径，再安装/重启 Mini 隧道并从 aliyun-hk 逐条读回，最后备份和发布 `/srv/h-control/app`、升 `H_VERSION`、重启 `h-control`。
 - 控制面部署后按调试前置检查核对单进程、systemd 环境、Nginx 双侧配置、`18790/19180` 监听和真实服务日志；不要把发布脚本的一次瞬时 curl 失败直接当成服务故障。
 - 真机验收使用管理员 Cookie 走真实公网 HTTPS；除 HTTP/API 断言外，还要检查页面标题、运行状态、控制台错误、横向溢出和绿色/灰色节点。favicon 等无业务影响的 404 也应清零，避免掩盖真实前端错误。
-- H 控制面 `v1.52.0` 已增加 WorkCase 时间线、Evidence Map 与 Answer Basis，必须展示 Agent Core、Schema、Work Protocol、模型真值和最近 WorkCase；Decision、Plan、Execution、Verification、Learning 在 Goal 5 前只能显示为灰色契约节点。
+- H 控制面 `v1.53.0` 已增加 WorkCase 时间线、Evidence Map、Answer Basis、Decision Lineage 和三层结果，必须展示 Agent Core、Schema、Work / Practice Protocol、模型真值、最近 WorkCase 与 Goal Verified 数量。
 - 管理员密码、Cookie、Key 和其他 secret 禁止进入 Playwright 命令参数、工具输出、截图、日志或仓库；浏览器自动化必须采用不回显的凭据输入路径。
-- 当前页面生产验收基线为 8/8 组件就绪、最近 WorkCase 可见、Goal 5 后续阶段保持灰色、浏览器控制台错误 0、`scrollWidth == clientWidth`；任何一项失败都不能只凭 API 200 判定上线完成。
+- 当前页面生产验收基线为 9/9 组件就绪、P0-DEC 标绿、Practice active、Goal Verified 至少 1、失败 Lineage 显式 `retired`、浏览器控制台错误 0、失败请求 0、`scrollWidth == clientWidth`；任何一项失败都不能只凭 API 200 判定上线完成。
+- 控制面不得把失败 Canary 长期显示为 `plan_pending` / `execution_pending`。失败 WorkCase 保留审计，但 Decision 已 superseded 时必须显示 `retired`，且不能计入业务待办或正式 P2 成功数。

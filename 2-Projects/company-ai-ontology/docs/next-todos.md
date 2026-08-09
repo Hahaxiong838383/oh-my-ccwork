@@ -4,14 +4,15 @@
 
 ## 当前结论
 
-P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S Foundation Pack、Goal 4 P0-EPI 和认证后公网运行看板均已上线。Company Brain Work Protocol `1.0.0` 当前为 `active`，只激活至可解释回答；Decision 之后仍是灰色契约。下一主线为 Goal 5：P0-DEC + Decision/P2/Task/Action/Verification/Learning 实践闭环。10 名真实员工 Canary 延后到 Goal 5 大框架稳定之后执行。产品研究部整库导入仍需 P1 主体映射与单独审批。
+P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI、Goal 5 P0-DEC 和认证后公网运行看板均已上线。Work / Practice Protocol `1.1.0` 当前为 `active`，Decision 至 Learning 已有一条完整 `goal_verified` Lineage。10 名真实员工 Canary 继续延后；下一主线推荐 Goal 6：P1-DOMAIN + Company Brain Operating Model v1。产品研究部整库导入仍需 P1 主体映射与单独审批。
 
 ## 2026-08-09 Goal 顺序重排
 
 1. `Goal 4`：✅ P0-EPI + 公司大脑工作逻辑显式建模，Intake 至可解释回答已生产 active。
-2. `Goal 5`：P0-DEC + Decision/P2/Task/Action/Verification/Learning 实践闭环。
-3. `Goal 3`：10 名真实员工 Canary，延后但仍是 20/50 人放量前硬门禁。
-4. 公司专用 CPA 凭据和 P1 `department/openchat` 映射可并行推进，不改变业务验收顺序。
+2. `Goal 5`：✅ P0-DEC + Decision/P2/Task/Action/Verification/Learning 实践闭环已生产 active。
+3. `Goal 6`：推荐 P1-DOMAIN + Company Brain Operating Model v1，只读接入 ERP M3、社媒归一化结果和产品/设备最小骨架。
+4. `Goal 3`：10 名真实员工 Canary，继续延后但仍是 20/50 人放量前硬门禁。
+5. 公司专用 CPA 凭据和 P1 `department/openchat` 映射可并行推进，不改变业务验收顺序。
 
 ## P0-KB-ACL：正式导入前硬阻断
 
@@ -43,21 +44,35 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 5. ✅ ERP/社媒 fixture 的正证、反证、过期、无 ACL 和不存在 Principal 已在公司 QNAP 生产链验证。
 6. ✅ 无 ACL 或不存在 Principal 时 Evidence 为 0，策略层失败关闭，不调用 H 引擎，不泄露标题、URL、人员或正文。
 7. ✅ shadow→active、完整 Foundation 自检、旧版回滚、新版恢复、重启回放和敏感日志扫描通过。
-8. ✅ H 控制面 `v1.52.0` 已显示 WorkCase 时间线、Evidence Map、Answer Basis 和 Goal 5 灰色阶段。
+8. ✅ H 控制面 `v1.52.0` 已完成 Goal 4 验收，当时 Goal 5 阶段保持灰色；Goal 5 完成后已升级到 `v1.53.0` 并标绿 P0-DEC。
 9. 验收报告见 `docs/company-brain-work-protocol-acceptance-2026-08-09.md`。
 
-## P0-DEC：决策与实践闭环
+## ✅ P0-DEC：决策与实践闭环
 
-1. 增加 DecisionCase、DecisionAlternative、Scenario、ExpectedOutcome、ObservedOutcome、Verification 和 Learning。
-2. Task Proposal 必须引用已批准 Decision；每条真实 P2 形成完整 Decision Lineage。
-3. Action Gateway 在执行、读回和回滚之后增加业务结果与目标结果验证。
-4. 用一个真实试点部门、一名 DRI 和一条真实 P2 完成端到端验收。
+1. ✅ DecisionCase、DecisionAlternative、Scenario、ExpectedOutcome、ObservedOutcome、Verification 和 Learning 已进入 Schema `3.2.0`。
+2. ✅ Task 编译强制引用已批准 Decision；未批准 Decision 的编译请求失败关闭。
+3. ✅ Action Gateway 已区分执行读回、业务结果和经营目标结果，非法层级组合被拒绝。
+4. ✅ 一名真实 DRI、一个受控 P2、一个 Task、一个 Action、一个 Verification、一个 Learning Proposal 已形成完整 Lineage。
+5. ✅ 技术执行、业务结果、经营目标三层结果均为 `true`；Learning 保持 `proposed`，不自动修改系统。
+6. ✅ 失败演练 `a–d` 保留审计：4 个 WorkCase `blocked`、2 条 Lineage `retired`、待执行失败 Lineage 为 0。
+7. ✅ Schema `3.1.0` 受控回滚、`3.2.0` 恢复、重启回放、完整自检和敏感日志扫描通过。
+8. ✅ H 控制面 `v1.53.0` 显示 9/9 组件、P0-DEC 绿色、Practice active 和 Goal Verified 1。
+9. 验收报告见 `docs/decision-practice-loop-acceptance-2026-08-09.md`。
+
+## Goal 6 推荐范围：P1-DOMAIN + Operating Model
+
+1. 固化经营主干：Objective → Metric → Decision → P2 → Task → Action → Outcome → Verification → Learning。
+2. 为爱视可 ERP M3 建只读 Connector：SKU、SN、质检、库存、订单、物流、激活和设备追溯。
+3. 接入 TikHub、JustOneAPI 和既有社媒系统的归一化业务结果；不恢复 MediaCrawler，不以 HTTP 200 代替业务成功。
+4. 实例化 Product/SKU/BOM/Firmware/SN/DeviceState、Market Signal 和 Customer Scenario 的最小对象与关系，不一次建全企业本体。
+5. H 控制面增加经营目标、决策、P2、三层结果、失败/退役 Lineage、证据时效、未知和冲突视图；禁止显示隐藏思维链。
+6. 验收使用合成或只读事实，不批量通知员工、不切换员工私人 Bot、不启用真实 ERP/社媒写回。
 
 ## 需要用户确认或提供
 
 1. 准备公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
 2. P1 主体映射完成后，单独确认产品研究部知识库正式导入窗口和资源范围。
-3. 指定一个真实试点部门、唯一 DRI 和一条真实 P2。
+3. Goal 6 启动时确认首批只读 ERP M3 对象范围和社媒归一化结果入口；暂不需要选择 10 名真实员工。
 
 ## P0-A 至 P0-F 状态
 
@@ -70,11 +85,11 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 
 ## 下一阶段
 
-1. `P0-PROD-1 公司 Bot`：✅ App 凭据、QNAP H-Lite active、租户 Token、WebSocket 长连接和首名真实员工链路已完成；10 名真实员工 Canary 暂缓到 Goal 4、Goal 5 大框架稳定后执行，不在当前阶段扩大真实用户范围。
+1. `P0-PROD-1 公司 Bot`：✅ App 凭据、QNAP H-Lite active、租户 Token、WebSocket 长连接和首名真实员工链路已完成；按用户决定，10 名真实员工 Canary 继续延后到 Goal 6 大框架稳定后执行，不在当前阶段扩大真实用户范围。
 2. `P0-PROD-1.5 通讯录身份同步`：✅ 数据范围接口、部门分页、员工主动定位和最小字段同步已完成；4 个授权范围展开为 83 个可见部门和 414 名可见人员，二次同步新增 0、更新 414，敏感属性行数为 0。
 3. `P0-PROD-2 H 引擎`：✅ 生产调用已上线。QNAP Agent Core 通过 HMAC 调用 dev198 Worker，Worker 通过个人 CPA API Key 调用 `grok-4.5`，真实推理和权限证据入 Prompt 已通过；下一门禁是公司专用 CPA Key/账号与同厂冗余。
 4. `P0-PROD-3 公司知识 Connector`：✅ `2026-08-08.3` 已生产部署，Connector/Agent Core 14/14、真实 ACL Canary、撤权、越权负测、备份与回滚通过；正式整库导入仍保持灰色，等待 P1 `department/openchat` 映射和单独批准，详见 `docs/knowledge-acl-canary-2026-08-08.md`。
-5. `P0-PROD-4 真实 P2`：指定试点部门、唯一 DRI 和一条真实 P2，完成草案、批准、下发、执行协助、成果提交、退回/验收和状态读回闭环。
+5. `P0-PROD-4 架构试点 P2`：✅ 一名真实 DRI 的受控 P2 已完成 Decision、Task、Action、Verification、Learning 闭环；真实业务部门 P2 留到 Goal 6 领域接入后再选取。
 6. `P0-PROD-5 容量观测`：连续采集 24 小时并发、队列等待、H 引擎限流、Outbox backlog、错误率、P95 延迟和 QNAP 资源数据，再决定 20/50 人放量。
 7. `P0-PROD-6 公网管理看板`：✅ `https://ai.kidshub.cn/admin/company-ontology` 已复用 H 控制面管理员认证；Mini 仅向 aliyun-hk 回环地址维护 QNAP 状态通道，页面展示绿色已完成与灰色待完成节点，不暴露 QNAP、凭据、文档正文或员工个人数据。
 

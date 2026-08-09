@@ -4,7 +4,7 @@
 
 ## 结论
 
-P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、Knowledge Connector `2026-08-08.3` 和 V3 P0-S Foundation Pack 均已部署。Agent Core 已切到真实远程 H Runtime 并返回 `productionReady=true`；Ontology Registry 已与 Git 定义保持 `in_sync`。知识 ACL 两个正式导入阻断级 P0 已完成生产修复、28/28 回归、真实小范围 Canary、员工撤权、跨部门与链接直猜负测、回滚及测试数据清理。产品研究部整库导入仍未批准，`department/openchat` 主体映射和受控 `chat/group` 会话授权语义完成前继续禁止批量同步；真实 P2/DRI 尚未接入。
+P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、Knowledge Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI 和 Goal 5 P0-DEC 均已部署。Agent Core 已切到真实远程 H Runtime 并返回 `productionReady=true`；Ontology Registry 已与 Git 定义保持 `in_sync`。一名真实 DRI 的受控 P2 已形成 Decision→Task→Action→Verification→Learning 完整 Lineage，三层结果均为 `true`。产品研究部整库导入仍未批准，`department/openchat` 主体映射和受控 `chat/group` 会话授权语义完成前继续禁止批量同步；10 名真实员工 Canary 继续延后。
 
 ## P0-S：V3 Foundation Pack
 
@@ -132,3 +132,14 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、Knowledge Conne
 - Migration 007、Tenant RLS、稳定 View、最小权限、Permissioned Evidence Package v2、Response Validator、WorkCase 状态机、重启回放和真实回滚恢复均通过。
 - H 控制面 `v1.52.0` 已显示 WorkCase、Evidence Map、Answer Basis 和未激活灰色阶段；真实公网浏览器 8/8 组件就绪、控制台错误 0、无横向溢出。
 - 完整验收证据见 `docs/company-brain-work-protocol-acceptance-2026-08-09.md`。本轮未导入产品研究部整库、未启用真实 ERP/社媒写回、未执行 10 名真实员工 Canary。
+
+## Goal 5：P0-DEC 与 Decision Practice Protocol v1.1
+
+- 公司 QNAP 已切换到 Schema `3.2.0`、Agent Core / Action Gateway `2026-08-09.2`、Work / Practice Protocol `1.1.0 / active`，Ontology Registry 唯一 active 版本共 111 个元素。
+- 一名真实 DRI 的受控 P2 已形成 Decision、Task、Action、Verification、Learning 完整 Lineage；计数为 `1/1/1/1`，技术执行、业务结果、经营目标三层结果均为 `true`。
+- Learning 只处于 `proposed`，没有自动修改 Ontology、Prompt、流程或外部业务系统。
+- 失败演练 `a–d` 保留审计：4 个 WorkCase 为 `blocked`，2 条已形成 Decision 的 Lineage 为 `retired`，失败尝试待执行状态为 0。
+- Agent Core `34/34`、Action Gateway `2/2`、完整 `verify.sh`、Schema `3.1.0` 回滚/`3.2.0` 恢复、重启回放和敏感日志扫描通过。
+- Runtime 构建上下文已从临时 `goal5-hotfix-*` 切换到版本化 release `19793e100`；Registry Definition Source Commit 保持 `e6a98c6dc`，没有把运行时热修复伪装成 Definition 变更。
+- H 控制面 `v1.53.0` 已显示 9/9 组件、P0-DEC 绿色、Practice active、Goal Verified 1；真实浏览器控制台错误、页面错误、失败请求和横向溢出均为 0。
+- 完整验收证据见 `docs/decision-practice-loop-acceptance-2026-08-09.md`。本轮未执行 10 名真实员工 Canary、未导入产品研究部整库、未启用真实 ERP/社媒写回。

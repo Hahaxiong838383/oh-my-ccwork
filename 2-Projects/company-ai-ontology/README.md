@@ -1,6 +1,6 @@
 # Company AI Ontology
 
-公司级 AI Ontology 基座实施项目。P0-A 至 P0-F、V3 P0-S Foundation Pack 和 Goal 4 P0-EPI 已在公司 QNAP 部署并完成生产验收；现有 H 平台员工私人 Bot 保持不变，真实 ERP/社媒写回继续关闭。
+公司级 AI Ontology 基座实施项目。P0-A 至 P0-F、V3 P0-S Foundation Pack、Goal 4 P0-EPI 和 Goal 5 P0-DEC 已在公司 QNAP 部署并完成生产验收；现有 H 平台员工私人 Bot 保持不变，真实 ERP/社媒写回继续关闭。
 
 ## 资产身份门禁
 
@@ -13,7 +13,7 @@
 
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
-- 当前里程碑：`Goal 4 / P0-EPI + Company Brain Work Protocol v1.0` 已完成并处于 `active`；下一阶段为 `Goal 5 / P0-DEC`。10 名真实员工 Canary 延后到 Goal 5 大框架稳定之后执行。
+- 当前里程碑：`Goal 5 / P0-DEC + Decision Practice Protocol v1.1` 已完成并处于 `active`；Schema `3.2.0`、111 个 active Ontology 元素，已有一条三层结果均验证成功的 Decision Lineage。10 名真实员工 Canary 继续延后，下一阶段推荐 Goal 6 P1-DOMAIN + Company Brain Operating Model v1。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
 ## 部署边界
@@ -40,6 +40,7 @@
 - `docs/architecture-v3-cognitive-practice-skeleton.md`：认识论、实践论、双层本体、Ontology Compiler 和大骨架优先实施方案。
 - `docs/company-brain-work-logic-modeling-plan-2026-08-09.md`：公司大脑工作阶段、状态机、显式对象、Evidence Package v2、可视化和 Goal 4 实施计划。
 - `docs/company-brain-work-protocol-acceptance-2026-08-09.md`：Goal 4 生产发布、正负 fixture、回滚恢复、重启回放和 H 控制面验收证据。
+- `docs/decision-practice-loop-acceptance-2026-08-09.md`：Goal 5 决策、P2、任务、行动、三层结果、Learning、失败尝试退役和 H 控制面验收证据。
 - `packages/ontology-contracts/`：Git 管理的 V3 Definition、Compiler、兼容性、Event Envelope 和 Data/Logic/Action 契约。
 - `services/ontology-registry/`：独立 Registry、部署审批、版本激活、历史版本再激活和 Git/运行时对账服务。
 - `services/agent-core/`：Company Agent Core 内部 API、Postgres 幂等审计和 H 引擎独立 Runtime 门禁。
@@ -50,19 +51,19 @@
 - 不迁移、不切换任何员工私人 Bot 的飞书 App 或事件订阅。
 - 公司级飞书 App/Bot 已接入，H-Lite 当前为 `active` 且真实飞书长连接健康；已验收 `p2p:post`、`p2p:text`、`group:text` 三类真实消息，3 次处理全部完成、0 次失败，SQLite 去重记录为 3 条，容器 `restart_count=0`。
 - 飞书通讯录数据范围已生效：4 个授权范围、83 个可见部门、414 名可见人员已只读同步到 Ontology Principal；重复同步结果为新增 0、更新 414，未写入邮箱、手机号或聊天内容。
-- Agent Core `2026-08-09.1` 当前通过 HMAC 调用 dev198 H Worker，真实推理 `productionReady=true`；Company Brain Work Protocol `1.0.0` 已处于 `active`，只激活 Intake、Scope、Authority、Context、Evidence、Synthesis、Response。Worker 经个人 CPA API Key 调用 `grok-4.5`，后续仍需切换公司专用 CPA Key/账号与同厂冗余。
+- Agent Core `2026-08-09.2` 当前通过 HMAC 调用 dev198 H Worker，真实推理 `productionReady=true`；Work / Practice Protocol `1.1.0` 已处于 `active`，Intake 至 Learning 全阶段可回放。Worker 经个人 CPA API Key 调用 `grok-4.5`，后续仍需切换公司专用 CPA Key/账号与同厂冗余。
 - Knowledge Connector `2026-08-08.3` 已部署到公司 QNAP；Connector 与 Agent Core 回归均为 14/14，生产只读 Canary 已覆盖直接授权、空间继承、无空间继承、ACL 失败、正文可读但 ACL 失败、员工真实撤权、跨部门和链接直猜负测。撤权后 37.757 秒内 Evidence 归零，临时文档删除后 ACL/Chunk 均归零，回滚 `2026-08-08.2 → 2026-08-08.3` 演练通过。产品研究部整库导入仍未批准，`department/openchat` P1 映射完成前继续禁止批量索引。
-- Ontology Registry `2026-08-08.1` 已上线：Schema `3.1.0`、90 个 active 受治理元素、内容哈希 `117074b5e6b0`，生产 active 版本唯一且 Git/运行时一致。
+- Ontology Registry `2026-08-08.1` 已上线：Schema `3.2.0`、111 个 active 受治理元素、内容哈希 `ffa8943255b9`，生产 active 版本唯一且 Git/运行时一致。
 - Goal 4 已完成 ERP/社媒 fixture 的正证、反证、过期、无 ACL 和不存在 Principal 五类生产验证；无证据路径在策略层失败关闭，不调用 H 引擎，不泄露标题、URL、人员或正文。
-- H 控制面 `v1.52.0` 已上线 WorkCase 时间线、Evidence Map、Answer Basis 和 Goal 5 灰色阶段；真实浏览器显示 8/8 运行组件就绪、控制台错误 0、无横向溢出。
+- Goal 5 已跑通一名真实 DRI、一个受控 P2、一个 Task、一个 Action、一个 Verification 和一个 Learning Proposal；技术执行、业务结果、经营目标三层结果均为 `true`。失败演练保留审计并退役，不算正式 P2。
+- H 控制面 `v1.53.0` 已上线 WorkCase、Evidence Map、Answer Basis、Decision Lineage 和三层结果；真实浏览器显示 9/9 运行组件就绪、控制台错误 0、无横向溢出。
 - 本阶段不开放数据库端口到员工网段。
-- 10 人真实员工 Canary、24 小时容量数据和真实 P2 未完成前，不进入 50 人正式首批。
+- 10 人真实员工 Canary 和 24 小时容量数据未完成前，不进入 50 人正式首批。
 
 ## 下一阶段
 
-1. 启动 Goal 5：P0-DEC + Decision/P2/Task/Action Result/Verification/Learning 实践闭环；所有动作继续经过 Mandatory Action Gateway 和 DRI 审批。
-2. Goal 3 的 10 名真实员工 Canary 延后到 Goal 5 大框架稳定之后，但仍是 20/50 人放量前的强制门禁。
-3. Goal 5 完成前不把 Decision、Plan、Execution、Verification、Learning 从灰色改为已上线。
-4. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
-5. 补齐空间成员 `department/openchat` 映射和 Retrieval 对群组主体的授权语义；完成后再单独审批产品研究部整库导入窗口。
-6. 保持 Knowledge Connector 自动发现关闭、启动自动同步关闭；正式导入前重新确认资源清单、撤权 SLA 和回滚窗口。
+1. 启动 Goal 6：P1-DOMAIN + Company Brain Operating Model v1，只读接入 ERP M3、社媒归一化结果和产品/设备最小骨架。
+2. Goal 3 的 10 名真实员工 Canary 继续延后，但仍是 20/50 人放量前的强制门禁。
+3. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
+4. 补齐空间成员 `department/openchat` 映射和 Retrieval 对群组主体的授权语义；完成后再单独审批产品研究部整库导入窗口。
+5. 保持 Knowledge Connector 自动发现关闭、启动自动同步关闭；正式导入前重新确认资源清单、撤权 SLA 和回滚窗口。
