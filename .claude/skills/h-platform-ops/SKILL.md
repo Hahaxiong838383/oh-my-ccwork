@@ -5051,9 +5051,15 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | 线上 **`v1.56.0`**（2026-08-10 H-0065 UI；此前 goal 6 线自行部署过 v1.55.1，fork 空壳防线已随其在生产；公网 `https://ai.kidshub.cn/healthz` 取真值） |
+| 控制面 aliyun-hk | 线上 **`v1.56.1`**（2026-08-10 H-0065 徽章多跳白名单修复；公网 `https://ai.kidshub.cn/healthz` 取真值） |
 | Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件、1 App。落后 main（含 fork 空壳修复与 H-0065）——升级走 `deploy/lima/` 影子割接，约 35 秒中断，待川哥定窗口 |
-| dev198 | **`1533d85c9ad2`**（2026-08-10 H-0065 自动分类，契约 2026-08-09.1 全 12 App 唯一；healthz version 对撞一致） |
+| dev198 | **`f076e7642fab`**（2026-08-10 H-0065 自动分类+v1.56.1 hotfix，契约 2026-08-09.1 全 12 App 唯一，真机验收：AI 分类徽章川哥点验通过） |
+
+⚠️ **跨 bridge+控制面的字段/行为修复，部署顺序=先控制面后 bridge**（2026-08-10 实测）：
+bridge 一重启 bootPush 立即推镜像，若控制面新代码还没起，数据被旧代码处理一次，
+且 mirrorHash 门控让内容不变永不重推——旧结果被防重机制固化。顺序反了的补救=
+两端就位后再重启一次 bridge 清门控。验收认**部署后新产生的数据**（其时间戳必须
+晚于链上最后一个组件的 startedAt）。详见 [[feedback_multi_hop_field_whitelist]]。
 
 **公告送达验收判据（2026-08-10 实测）**：送达成功是**静默的**（代码只在 ack fail 打日志），
 `journalctl` 零命中 ≠ 没送达。真值两处：① dev198 healthz 的 `releaseAnnouncements` snapshot
