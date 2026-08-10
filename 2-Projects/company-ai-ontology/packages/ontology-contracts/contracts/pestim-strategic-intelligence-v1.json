@@ -1,0 +1,302 @@
+{
+  "contractVersion": "1.0.0",
+  "status": "contract_only",
+  "proposalKey": "P1-SI-A",
+  "baseSchemaVersion": "3.3.0",
+  "candidateSchemaVersion": "3.4.0",
+  "compatibilityExpectation": "compatible",
+  "deploymentAllowed": false,
+  "activationDefaults": {
+    "generationStatus": "generated_draft",
+    "verificationStatus": "unverified",
+    "activationStatus": "inactive"
+  },
+  "forbiddenAutonomy": [
+    "create_formal_p2",
+    "assign_employee_task",
+    "write_erp",
+    "write_social_system",
+    "activate_impact_hypothesis"
+  ],
+  "activationGates": [
+    "ontology-change-proposal-approved",
+    "goal7-prod-readiness-complete",
+    "source-registry-approved",
+    "hud-dri-review-20-to-50-links",
+    "qnap-shadow-accepted",
+    "registry-reconciliation-in-sync"
+  ],
+  "additions": {
+    "namespaces": [
+      {
+        "name": "domain.intelligence",
+        "description": "External strategic intelligence, causal impact assessment and governed reports"
+      }
+    ],
+    "objectTypes": [
+      {
+        "qualifiedName": "domain.intelligence.ExternalFactor",
+        "description": "Stable PEST, industry or market factor definition used as a governed causal driver",
+        "extends": ["system.ontology.BaseObject"],
+        "properties": [
+          { "name": "factorKey", "type": "string", "required": true },
+          { "name": "factorLayer", "type": "string", "required": true },
+          { "name": "pestimCategory", "type": "string", "required": true },
+          { "name": "name", "type": "string", "required": true },
+          { "name": "definitionVersion", "type": "string", "required": true },
+          { "name": "lifecycleStatus", "type": "string", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "core.work.GoalFacet",
+        "description": "Governed goal, purpose, principle or reason facet used as an impact target",
+        "extends": ["system.ontology.BaseObject"],
+        "properties": [
+          { "name": "facetKey", "type": "string", "required": true },
+          { "name": "facetType", "type": "string", "required": true },
+          { "name": "title", "type": "string", "required": true },
+          { "name": "semanticQualityStatus", "type": "string", "required": true },
+          { "name": "facetStatus", "type": "string", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.ImpactHypothesis",
+        "description": "Unverified and inactive causal hypothesis connecting an external factor to a goal facet",
+        "extends": ["core.epistemic.Hypothesis"],
+        "properties": [
+          { "name": "hypothesisKey", "type": "string", "required": true },
+          { "name": "generationStatus", "type": "string", "required": true },
+          { "name": "verificationStatus", "type": "string", "required": true },
+          { "name": "activationStatus", "type": "string", "required": true },
+          { "name": "impactDirection", "type": "string", "required": true },
+          { "name": "expectedLagDays", "type": "integer", "required": false },
+          { "name": "causalGraphVersion", "type": "string", "required": true },
+          { "name": "semanticQualityStatus", "type": "string", "required": true },
+          { "name": "reviewerDri", "type": "string", "required": false }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.ImpactAssessment",
+        "description": "Time-bounded evidence-backed assessment of one impact hypothesis",
+        "extends": ["core.epistemic.EpistemicAssessment"],
+        "properties": [
+          { "name": "assessmentKey", "type": "string", "required": true },
+          { "name": "windowStart", "type": "timestamp", "required": true },
+          { "name": "windowEnd", "type": "timestamp", "required": true },
+          { "name": "evidenceCutoffAt", "type": "timestamp", "required": true },
+          { "name": "impactDirection", "type": "string", "required": true },
+          { "name": "impactMagnitude", "type": "decimal", "required": false },
+          { "name": "confidenceBand", "type": "string", "required": true },
+          { "name": "assessmentStatus", "type": "string", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.StrategicIntelligenceReport",
+        "description": "Permission-filtered company or product-line strategic intelligence report",
+        "extends": ["system.ontology.BaseObject"],
+        "properties": [
+          { "name": "reportKey", "type": "string", "required": true },
+          { "name": "reportType", "type": "string", "required": true },
+          { "name": "periodStart", "type": "timestamp", "required": true },
+          { "name": "periodEnd", "type": "timestamp", "required": true },
+          { "name": "evidenceCutoffAt", "type": "timestamp", "required": true },
+          { "name": "audienceScope", "type": "string", "required": true },
+          { "name": "reportStatus", "type": "string", "required": true },
+          { "name": "contentReference", "type": "string", "required": false }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.ReportRun",
+        "description": "Replayable execution record for one strategic intelligence report window",
+        "extends": ["system.ontology.BaseObject"],
+        "properties": [
+          { "name": "runKey", "type": "string", "required": true },
+          { "name": "reportType", "type": "string", "required": true },
+          { "name": "periodStart", "type": "timestamp", "required": true },
+          { "name": "periodEnd", "type": "timestamp", "required": true },
+          { "name": "evidenceCutoffAt", "type": "timestamp", "required": true },
+          { "name": "sourceSnapshotIds", "type": "string[]", "required": true },
+          { "name": "ontologyVersionUsed", "type": "string", "required": true },
+          { "name": "causalGraphVersion", "type": "string", "required": true },
+          { "name": "inputHash", "type": "string", "required": true },
+          { "name": "modelProvider", "type": "string", "required": true },
+          { "name": "modelId", "type": "string", "required": true },
+          { "name": "promptVersion", "type": "string", "required": true },
+          { "name": "tokensIn", "type": "integer", "required": false },
+          { "name": "tokensOut", "type": "integer", "required": false },
+          { "name": "costAmount", "type": "decimal", "required": false },
+          { "name": "durationMs", "type": "integer", "required": false },
+          { "name": "runStatus", "type": "string", "required": true },
+          { "name": "errorCode", "type": "string", "required": false }
+        ]
+      }
+    ],
+    "linkTypes": [
+      {
+        "qualifiedName": "core.work.FACET_OF",
+        "fromType": "core.work.GoalFacet",
+        "toType": "core.work.Goal",
+        "cardinality": "many_to_one"
+      },
+      {
+        "qualifiedName": "domain.intelligence.TRANSMITS_TO",
+        "fromType": "domain.intelligence.ExternalFactor",
+        "toType": "domain.intelligence.ExternalFactor",
+        "cardinality": "many_to_many"
+      },
+      {
+        "qualifiedName": "domain.intelligence.HAS_DRIVER",
+        "fromType": "domain.intelligence.ImpactHypothesis",
+        "toType": "domain.intelligence.ExternalFactor",
+        "cardinality": "many_to_one"
+      },
+      {
+        "qualifiedName": "domain.intelligence.TARGETS_GOAL_FACET",
+        "fromType": "domain.intelligence.ImpactHypothesis",
+        "toType": "core.work.GoalFacet",
+        "cardinality": "many_to_one"
+      },
+      {
+        "qualifiedName": "domain.intelligence.ASSESSES_HYPOTHESIS",
+        "fromType": "domain.intelligence.ImpactAssessment",
+        "toType": "domain.intelligence.ImpactHypothesis",
+        "cardinality": "many_to_one"
+      },
+      {
+        "qualifiedName": "domain.intelligence.USES_EVIDENCE",
+        "fromType": "domain.intelligence.ImpactAssessment",
+        "toType": "core.epistemic.Evidence",
+        "cardinality": "many_to_many"
+      },
+      {
+        "qualifiedName": "domain.intelligence.RUN_USES_ASSESSMENT",
+        "fromType": "domain.intelligence.ReportRun",
+        "toType": "domain.intelligence.ImpactAssessment",
+        "cardinality": "many_to_many"
+      },
+      {
+        "qualifiedName": "domain.intelligence.PRODUCES_REPORT",
+        "fromType": "domain.intelligence.ReportRun",
+        "toType": "domain.intelligence.StrategicIntelligenceReport",
+        "cardinality": "one_to_one"
+      },
+      {
+        "qualifiedName": "domain.intelligence.REPORT_INFORMS_DECISION",
+        "fromType": "domain.intelligence.StrategicIntelligenceReport",
+        "toType": "core.decision.DecisionCase",
+        "cardinality": "many_to_many"
+      },
+      {
+        "qualifiedName": "domain.intelligence.REPORT_SCOPES_PRODUCT_LINE",
+        "fromType": "domain.intelligence.StrategicIntelligenceReport",
+        "toType": "domain.product.ProductLine",
+        "cardinality": "many_to_many"
+      }
+    ],
+    "functionTypes": [
+      {
+        "qualifiedName": "domain.intelligence.validateImpactHypothesisActivation",
+        "description": "Validate DRI review, evidence coverage and activation state without activating a hypothesis",
+        "deterministic": true,
+        "inputs": [
+          { "name": "hypothesis", "type": "domain.intelligence.ImpactHypothesis", "required": true },
+          { "name": "evidenceSummary", "type": "json", "required": true }
+        ],
+        "outputs": [
+          { "name": "validation", "type": "json", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.buildStrategicReportInput",
+        "description": "Build a permissioned report input from structured assessments for one independent time window",
+        "deterministic": true,
+        "inputs": [
+          { "name": "reportRun", "type": "domain.intelligence.ReportRun", "required": true },
+          { "name": "permissionedAssessments", "type": "json", "required": true }
+        ],
+        "outputs": [
+          { "name": "reportInput", "type": "json", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.validateStrategicReportLineage",
+        "description": "Validate report evidence cutoff, source snapshots, model, prompt and ontology lineage",
+        "deterministic": true,
+        "inputs": [
+          { "name": "reportRun", "type": "domain.intelligence.ReportRun", "required": true },
+          { "name": "report", "type": "domain.intelligence.StrategicIntelligenceReport", "required": true }
+        ],
+        "outputs": [
+          { "name": "validation", "type": "json", "required": true }
+        ]
+      }
+    ],
+    "actionTypes": [],
+    "policyTypes": [
+      {
+        "qualifiedName": "domain.intelligence.permissionedStrategicIntelligence",
+        "description": "Strategic assessments and reports expose only evidence authorized for the requesting principal and purpose",
+        "appliesTo": [
+          "domain.intelligence.ImpactAssessment",
+          "domain.intelligence.StrategicIntelligenceReport",
+          "domain.intelligence.ReportRun"
+        ],
+        "effect": "filter"
+      },
+      {
+        "qualifiedName": "domain.intelligence.noAutomaticP2",
+        "description": "Strategic intelligence may create a decision proposal but cannot directly create formal P2 or employee tasks",
+        "appliesTo": [
+          "domain.intelligence.ImpactAssessment",
+          "domain.intelligence.StrategicIntelligenceReport"
+        ],
+        "effect": "deny"
+      },
+      {
+        "qualifiedName": "domain.intelligence.noAutomaticHypothesisActivation",
+        "description": "Generated impact hypotheses remain inactive until explicit DRI review and governed deployment",
+        "appliesTo": ["domain.intelligence.ImpactHypothesis"],
+        "effect": "deny"
+      },
+      {
+        "qualifiedName": "domain.intelligence.noRecursiveReportEvidence",
+        "description": "Higher-period reports must recompute from structured evidence and assessments rather than lower-period prose",
+        "appliesTo": [
+          "domain.intelligence.StrategicIntelligenceReport",
+          "domain.intelligence.ReportRun"
+        ],
+        "effect": "deny"
+      }
+    ],
+    "constraintTypes": [
+      {
+        "qualifiedName": "domain.intelligence.importedMatrixDefaultsInactive",
+        "description": "Imported Feishu matrix cells are generated drafts, unverified and inactive",
+        "targetType": "domain.intelligence.ImpactHypothesis",
+        "severity": "error",
+        "rule": "sourceSystem != 'feishu-pestim-matrix' || (generationStatus == 'generated_draft' && verificationStatus == 'unverified' && activationStatus == 'inactive')"
+      },
+      {
+        "qualifiedName": "domain.intelligence.activationRequiresDriReview",
+        "description": "An active impact hypothesis requires a verified status and named DRI reviewer",
+        "targetType": "domain.intelligence.ImpactHypothesis",
+        "severity": "error",
+        "rule": "activationStatus != 'active' || (verificationStatus == 'verified' && reviewerDri != null)"
+      },
+      {
+        "qualifiedName": "domain.intelligence.reportRunRequiresReplayLineage",
+        "description": "Every report run retains source, model, prompt, ontology and causal graph lineage",
+        "targetType": "domain.intelligence.ReportRun",
+        "severity": "error",
+        "rule": "sourceSnapshotIds != null && inputHash != null && ontologyVersionUsed != null && causalGraphVersion != null && modelId != null && promptVersion != null"
+      },
+      {
+        "qualifiedName": "domain.intelligence.assessmentWindowIsBounded",
+        "description": "Every impact assessment uses a bounded window and explicit evidence cutoff",
+        "targetType": "domain.intelligence.ImpactAssessment",
+        "severity": "error",
+        "rule": "windowStart < windowEnd && evidenceCutoffAt >= windowEnd"
+      }
+    ]
+  }
+}

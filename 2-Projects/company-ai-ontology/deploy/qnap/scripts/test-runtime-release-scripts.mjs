@@ -6,6 +6,8 @@ const agentDeployUrl = new URL('./deploy-agent-runtime.sh', import.meta.url)
 const agentRollbackUrl = new URL('./rollback-agent-runtime.sh', import.meta.url)
 const domainDeployUrl = new URL('./deploy-domain-runtime.sh', import.meta.url)
 const domainRollbackUrl = new URL('./rollback-domain-runtime.sh', import.meta.url)
+const ontologyContractsDeployUrl = new URL('./deploy-ontology-contracts-release.sh', import.meta.url)
+const ontologyContractsRollbackUrl = new URL('./rollback-ontology-contracts-release.sh', import.meta.url)
 
 test('Agent Core 独立发布只重建 agent-core 并具备自动恢复', async () => {
   const source = await readFile(agentDeployUrl, 'utf8')
@@ -47,4 +49,24 @@ test('Domain Connector 独立发布与回滚保持最小变更面', async () => 
   assert.match(deploy, /inspect --format '\{\{\.RestartCount\}\}'/)
   assert.match(rollback, /compose up -d --no-build domain-connector/)
   assert.match(rollback, /inspect --format '\{\{\.RestartCount\}\}'/)
+})
+
+test('PESTIM contract-only 发布只重建 Registry 并保持 active Schema 不变', async () => {
+  const [deploy, rollback] = await Promise.all([
+    readFile(ontologyContractsDeployUrl, 'utf8'),
+    readFile(ontologyContractsRollbackUrl, 'utf8'),
+  ])
+  assert.match(deploy, /ONTOLOGY_CONTRACTS_ACTIVE_SCHEMA:-3\.3\.0/)
+  assert.match(deploy, /ONTOLOGY_CONTRACTS_CANDIDATE_SCHEMA:-3\.4\.0/)
+  assert.match(deploy, /deploymentAllowed === false/)
+  assert.match(deploy, /compose build ontology-registry/)
+  assert.match(deploy, /compose up -d --no-deps --force-recreate ontology-registry/)
+  assert.doesNotMatch(deploy, /deploy-ontology-registry\.sh/)
+  assert.doesNotMatch(deploy, /compose (?:build|up).*agent-core/)
+  assert.doesNotMatch(deploy, /compose (?:build|up).*domain-connector/)
+  assert.match(deploy, /rollback_on_error\(\)/)
+  assert.match(deploy, /payload\.status === 'in_sync'/)
+  assert.match(deploy, /inspect --format '\{\{\.RestartCount\}\}'/)
+  assert.match(rollback, /image tag "\$previous_image" company-ai-foundation-ontology-registry:latest/)
+  assert.match(rollback, /compose up -d --no-deps --force-recreate --no-build ontology-registry/)
 })

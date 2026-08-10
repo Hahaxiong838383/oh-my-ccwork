@@ -171,14 +171,16 @@ dri
 
 | 对象 | 作用 |
 |---|---|
-| `domain.environment.ExternalFactorDefinition` | 43 个 PESTIM 稳定维度 |
-| `domain.strategy.GoalFacet` | 108 个目标、目的、原则和原因要素 |
-| `domain.environment.ImpactHypothesis` | 4644 条候选传导关系 |
-| `domain.environment.ImpactAssessment` | 某时点对公司或产品线的影响判断 |
+| `domain.intelligence.ExternalFactor` | 43 个 PESTIM 稳定维度 |
+| `core.work.GoalFacet` | 108 个目标、目的、原则和原因要素 |
+| `domain.intelligence.ImpactHypothesis` | 4644 条候选传导关系 |
+| `domain.intelligence.ImpactAssessment` | 某时点对公司或产品线的影响判断 |
 | `domain.intelligence.StrategicIntelligenceReport` | 结构化多周期报告 |
-| `system.run.ReportRun` | 数据范围、模型、Prompt、输入哈希、成本和执行结果 |
+| `domain.intelligence.ReportRun` | 数据范围、模型、Prompt、输入哈希、成本和执行结果 |
 
 报告先生成结构化 JSON，再渲染到飞书文档、飞书消息卡片和 H 控制面。报告正文是投影，不是真源。
+
+P1-SI-A 已将以上六个对象固化为独立候选 Schema `3.4.0`，兼容性为 `compatible`，但保持 `contract_only / deploymentAllowed=false`，生产 active Schema 继续为 `3.3.0`。验收证据见 `docs/p1-si-a-pestim-ontology-definition-acceptance-2026-08-10.md`。
 
 ## 9. 个人站雷达复用评估
 
@@ -303,7 +305,7 @@ status / error_code
 
 ## 14. 当前后续 TODO
 
-1. `P1-SI-A`：完成 PESTIM Ontology Definition 和兼容性方案，不改生产 Schema。
+1. ✅ `P1-SI-A`：已完成 PESTIM Ontology Definition 和兼容性方案；候选 `3.4.0` 为纯增量兼容，生产 active Schema 保持 `3.3.0`。
 2. `P1-SI-B`：建立公司 Source Registry、许可/频率/保留期清单和第一批白名单信源。
 3. `P1-SI-C`：从 Horizon/Theory Radar 抽取公司版 collector contract、JSON Schema 和镜像方案。
 4. `P1-SI-D`：设计 Raw Snapshot、Signal、Impact Assessment、ReportRun 数据表与保留策略。

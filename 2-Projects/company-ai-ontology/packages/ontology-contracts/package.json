@@ -9,6 +9,7 @@
   "exports": "./src/index.mjs",
   "scripts": {
     "compile": "node bin/ontology-compile.mjs",
+    "compile:pestim": "node bin/pestim-compile.mjs",
     "test": "node --test test/*.test.mjs"
   }
 }

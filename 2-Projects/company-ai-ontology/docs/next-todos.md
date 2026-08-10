@@ -52,7 +52,7 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 1. ✅ 已读取 PESTIM 关系文档、27 个目标、108 个 GoalFacet、43 个外部维度和 4644 条完整传导矩阵。
 2. ✅ 已确认 4644 条应作为 `generated_draft / unverified` Impact Hypothesis，不得直接成为事实或触发正式 P2。
 3. ✅ 已完成个人站前沿资讯雷达评估：可复用 Horizon/Theory Radar 的采集、去重、评分、富化、影子运行和 last-good 门禁；不得原样迁移个人站、公开 Webhook、个人账号和报告目录。
-4. ⏳ `P1-SI-A`：定义 ExternalFactor、GoalFacet、ImpactHypothesis、ImpactAssessment、StrategicIntelligenceReport 和 ReportRun 契约。
+4. ✅ `P1-SI-A`：已定义 ExternalFactor、GoalFacet、ImpactHypothesis、ImpactAssessment、StrategicIntelligenceReport 和 ReportRun；候选 Schema `3.4.0` 编译兼容，生产 `3.3.0` 未变更，测试 `18/18` 通过。
 5. ⏳ `P1-SI-B`：建立 Source Registry、许可/频率/保留期和第一批 PESTIM 白名单信源。
 6. ⏳ `P1-SI-C`：抽取公司版 Horizon Collector Contract、固定上游 Commit、镜像和 QNAP oneshot Worker 方案。
 7. ⏳ `P1-SI-D`：设计 Raw Snapshot、双时间、内容哈希、去重、数据质量和热冷保留策略。
@@ -60,7 +60,7 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 9. ⏳ `P1-SI-F`：制定公司 QNAP 7 天 Shadow 验收包；资源上限、成本、来源成功率、重复率、时效、回滚和敏感信息均需实测。
 10. ⏳ `P1-SI-G`：HUD 首批选择 20–50 条高价值传导关系，由产品、销售、采购、财务和研发 DRI 评审后激活。
 11. ⛔ 自动创建正式 P2、向员工下发任务或写回 ERP/社媒继续关闭；只允许生成 Impact Assessment、报告和 Decision Proposal。
-12. 详细方案见 `docs/pestim-strategic-intelligence-architecture-2026-08-10.md`。
+12. P1-SI-A 验收见 `docs/p1-si-a-pestim-ontology-definition-acceptance-2026-08-10.md`；总体方案见 `docs/pestim-strategic-intelligence-architecture-2026-08-10.md`。
 
 ## P0-KB-ACL：正式导入前硬阻断
 

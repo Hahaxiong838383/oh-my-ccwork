@@ -312,6 +312,8 @@ node ops/sync-company-directory.mjs
 - 个人站“前沿资讯雷达”是多个生产者加 Next.js 展示层的聚合，不是可原样迁移的单体项目。公司 QNAP 只复用 Horizon/Theory Radar 的采集、去重、评分、富化、oneshot、影子运行和 last-good 门禁；必须使用公司独立实例、目录、账号、Key 和报告契约，禁止调用个人站 Webhook 或读取个人数据。
 - 公司 QNAP 建议采用轻量常驻 Intelligence Orchestrator + 受资源约束的临时 Collector Worker；任何 Shadow/正式部署都需要重新核对公司 QNAP 五元组、做 7 天资源/来源/成本验收并取得当次部署授权。第一条产品线推荐 HUD，仅激活经 DRI 审查的 20–50 条高价值传导关系。
 - PESTIM Strategic Intelligence 详细方案见 `2-Projects/company-ai-ontology/docs/pestim-strategic-intelligence-architecture-2026-08-10.md`。
+- P1-SI-A 已完成 contract-only 候选 Schema `3.4.0`：新增 `domain.intelligence`、ExternalFactor、GoalFacet、ImpactHypothesis、ImpactAssessment、StrategicIntelligenceReport 和 ReportRun，离线编译兼容且没有新增 Action Type；生产 active Schema 仍为 `3.3.0`。任何激活必须经过 Goal 7、Source Registry、HUD DRI、QNAP Shadow、Ontology Change Proposal 和 Registry reconciliation 门禁。
+- P1-SI-A 验收见 `2-Projects/company-ai-ontology/docs/p1-si-a-pestim-ontology-definition-acceptance-2026-08-10.md`。
 - 详细实施计划见 `2-Projects/company-ai-ontology/docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
 
 当前实现与切换流程见：

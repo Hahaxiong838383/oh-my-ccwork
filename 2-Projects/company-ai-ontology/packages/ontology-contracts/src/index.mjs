@@ -5,4 +5,9 @@ export { compileDefinition, ontologyPrimitives } from './compiler.mjs'
 export { createEventEnvelope } from './event-envelope.mjs'
 export { loadDefinitionDirectory } from './loader.mjs'
 export { loadCompanyBrainOperatingModel, operatingRole, operatingTransition } from './operating-model.mjs'
+export {
+  applyPestimStrategicIntelligenceContract,
+  compilePestimStrategicIntelligenceProposal,
+  loadPestimStrategicIntelligenceContract,
+} from './pestim-strategic-intelligence.mjs'
 export { TOOL_CONTRACTS } from './tool-contracts.mjs'
