@@ -288,11 +288,11 @@ node ops/sync-company-directory.mjs
 - 生产 `Evidence=0` 必须在策略层 fail-closed：Principal 不存在返回 `permission_denied`，Principal 存在但没有可用 Evidence 返回 `insufficient_evidence`；两类路径都不得调用 H 引擎。
 - Migration/View 验收不能只使用数据库 owner；必须以真实应用角色读取稳定 View 和状态接口，避免遗漏 `GRANT SELECT` 造成生产 `42501`。
 - 在公司 QNAP 远端执行含 `docker compose exec -T` 的脚本时，禁止通过 SSH stdin/heredoc 直接喂脚本；必须先把脚本传到远端版本化目录，再从文件执行，防止容器命令抢占 stdin 造成半执行或假绿。
-- Goal 6 QNAP 生产锚点为 Schema `3.3.0`、Agent Core / Domain Connector `2026-08-09.3`、Work / Practice Protocol `1.1.0 / active`、Registry Hash `41689393289d`；完整当前状态见 `docs/goal6-operating-domain-acceptance-2026-08-09.md`。版本与运行状态属于快照，后续操作前仍需在线复核。
+- Goal 6 当前生产锚点为 Schema `3.3.0`、Agent Core `2026-08-10.2`、Domain Connector `2026-08-10.1`、Work / Practice Protocol `1.1.0 / active`、Registry `in_sync`；ERP 95、Operations 38、Device 57、Market 369。版本与运行状态属于快照，后续操作前仍需在线复核。
 - Decision Lineage 必须区分技术执行、业务结果、经营目标三层成功；`execution_success=true` 不能推出 `goal_success=true`。Learning 默认只能写为 `proposed`。
 - 失败 Canary 必须保留审计并显式退役：WorkCase `blocked`、Decision `superseded`、Practice Status `retired`；禁止删除历史，也禁止退役 `goal_verified` Lineage。
 - Ontology Definition Source Commit 与 Runtime Release Commit 分开记录。Definition 未变化时不得用运行时热修复提交覆盖 Registry Source Commit。
-- Goal 6-A 已完整完成当前授权范围：QNAP 领域数据面、Operating Model、P1-DOMAIN 和 3D-ready 协议均有生产证据，Capability Governance v1 保持 `contract_only`。H 控制面 `v1.55.1` 已上线；Domain Connector 于 `2026-08-10` 完成 `2026-08-09.3 → .2 → .3` 真实回滚恢复，数据指纹、ERP 95、Market 369、ActionIntent 0 和 Delivery Outbox 0 全程不变，最终完整 `verify.sh` 与恢复后真实 Chrome `59/59` 通过。
+- Goal 6-A 已完成工程与人工体验验收：QNAP 领域数据面、Operating Model、P1-DOMAIN 和 3D-ready 协议均有生产证据，Capability Governance v1 保持 `contract_only`。H 控制面 `v1.56.2`、Agent Core `2026-08-10.2`、Domain Connector `2026-08-10.1` 已上线；最终完整 `verify.sh` 与真实 Chrome `92/92` 通过，川哥于 `2026-08-10` 明确确认验收 ok。
 - 生产切换后的健康断言必须轮询到核心服务 ready，不能在容器刚启动时做一次即时断言；否则会把实际成功的切换误判为失败并触发不必要的恢复。自动恢复仍必须保留，且每次回滚都同时证明旧版可运行、新版可恢复、业务数据不变。
 - 任何 H 控制面、QNAP 或其他生产服务的重启都必须获得川哥在当前变更窗口的明确授权；Goal 文件、历史部署授权和“继续 Goal”都不能替代即时批准。申请前必须完成只读基线、目标测试、备份/回滚设计、影响与预计中断说明。
 - 修改 `/srv/h-control/.env` 后必须显式恢复 `h-control:h-control / 0600`，并以服务用户验证可读；临时文件原子替换会改变属主，是本次 502 的直接根因之一。
@@ -302,6 +302,9 @@ node ops/sync-company-directory.mjs
 - 每个可视化或员工入口 Goal 在最终汇报前必须交付可直接操作的体验验收包：真实 URL、登录入口、点击/触控步骤、页面预期真值、安全 Bot 测试 Prompt、通过/失败判据、仍关闭的能力和异常反馈入口。不能等用户追问“怎么体验”才补验收说明。
 - 人工体验验收至少覆盖三个表面：架构白盒验证“系统如何运转”，运行看板验证“当前真实状态”，全员飞书 Bot 验证“员工如何使用”；三者通过仍不能替代真实业务结果和 DRI 验收。
 - 提供验收入口前必须在线复核版本、登录跳转和关键状态；历史截图、旧 URL、测试报告或记忆只能作为线索，不能冒充当前可体验状态。
+- H 版本号不能单独证明生产源码与 Git 一致。本轮 `/healthz` 报告 `v1.56.1`，但 Dashboard/Whitebox 仍是较旧文件；后续必须从已推送 Source Commit 构建，并在重启后对账 Source Commit、目标文件哈希、API DTO 和真实 DOM。发现同版本源码漂移时升补丁版本，不以同一版本静默覆盖。
+- Agent Core 热修后的重新验收必须使用全新 `run_id`、`requestId` 和 `idempotencyKey`；复用旧键只会重放旧失败。策略治理意图不得直接穿透数据库 `work_mode` 约束，应映射到稳定枚举并保留原治理意图供审计。
+- 推荐后续顺序：Task 6-R Release Provenance Guard → Goal 7 P1-PROD-READINESS → Goal 3 十人真实 Canary → Goal 8 24 小时容量与 20/50 人扩容。整库导入、Capability Governance 激活、A2A、真 3D 和业务写回继续独立审批。
 - 详细实施计划见 `2-Projects/company-ai-ontology/docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
 
 当前实现与切换流程见：

@@ -5637,3 +5637,11 @@ node ops/sync-company-directory.mjs
 - 管理员密码、Cookie、Key 和其他 secret 禁止进入 Playwright 命令参数、工具输出、截图、日志或仓库；浏览器自动化必须采用不回显的凭据输入路径。
 - 当前页面生产验收基线为 9/9 组件就绪、P0-DEC 标绿、Practice active、Goal Verified 至少 1、失败 Lineage 显式 `retired`、浏览器控制台错误 0、失败请求 0、`scrollWidth == clientWidth`；任何一项失败都不能只凭 API 200 判定上线完成。
 - 控制面不得把失败 Canary 长期显示为 `plan_pending` / `execution_pending`。失败 WorkCase 保留审计，但 Decision 已 superseded 时必须显示 `retired`，且不能计入业务待办或正式 P2 成功数。
+
+### H v1.56.2 生产源码漂移修复（2026-08-10）
+
+- **版本标识不是源码证明**：生产 `/healthz` 曾报告 `v1.56.1`，但 `company-ontology-dashboard.mjs` 与 `company-ontology-whitebox.mjs` 仍是 UAT 修复前文件。以后必须从已推送 Source Commit 打包，并在重启后对账版本、目标文件 SHA-256、API DTO 和真实 DOM。
+- **禁止同版本静默覆盖**：发现版本标识与生产文件不一致时，升补丁版本形成新发布事件。本次从漂移的 `v1.56.1` 修复到 `v1.56.2`，回滚锚为 `/srv/h-control/backups/20260810-145600-goal6-v1562`。
+- **重启授权不跨组件继承**：QNAP Domain/Agent 发布授权不包含 H 控制面。必须单独说明只重启 `h-control`、正常中断和异常回滚窗口，并取得当前明确授权后执行。
+- **发布验收真值**：本次 systemd 停止与启动发生在同一秒，完整发布流程 29 秒，`NRestarts=0`；真实 Chrome `92/92`，34 条光晕位于彩线下层，运行真值、卡片点击、平移缩放、焦点、错误请求和横向溢出全部通过。
+- **发布脚本门禁**：提交必须已推送且发布工作树与 Source Commit 一致；暂存子树测试、生产环境文件属主/权限、管理员登录、公网健康、服务稳定期和失败自动回滚缺一不可。

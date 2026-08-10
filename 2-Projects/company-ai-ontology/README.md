@@ -13,7 +13,7 @@
 
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
-- 当前里程碑：`Goal 6-A / P1-DOMAIN` 已完整完成当前授权范围。公司 QNAP 为 Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`；ERP M3 和社媒归一化结果已通过只读 Connector、稳定 View、幂等、重放、错误隔离和权限负测。Domain Connector 已完成 `2026-08-09.3 → .2 → .3` 真实回滚恢复，数据指纹与 ERP 95 / Market 369 / ActionIntent 0 / Outbox 0 均保持不变。Company Capability Governance v1 保持 `contract_only`；H 控制面 `v1.55.1` 恢复后真实 Chrome 验收 `59/59` 通过。
+- 当前里程碑：`Goal 6-A / P1-DOMAIN` 已完成工程验收和川哥人工体验验收。公司 QNAP 为 Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`；Domain Connector `2026-08-10.1`、Agent Core `2026-08-10.2`，ERP 95 / Operations 38 / Device 57 / Market 369，数据指纹 `ae0a73d126cb9d2dc1417e0eae7c0e94`。ActionIntent 3、Delivery Outbox 12 均为既有已验证/已回滚/已确认记录，无 pending/leased 写回。H 控制面 `v1.56.2` 已修复生产源码漂移，真实 Chrome `92/92` 通过。Company Capability Governance v1 继续保持 `contract_only`。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
 ## 部署边界
@@ -54,19 +54,19 @@
 - 不迁移、不切换任何员工私人 Bot 的飞书 App 或事件订阅。
 - 公司级飞书 App/Bot 已接入，H-Lite 当前为 `active` 且真实飞书长连接健康；已验收 `p2p:post`、`p2p:text`、`group:text` 三类真实消息，3 次处理全部完成、0 次失败，SQLite 去重记录为 3 条，容器 `restart_count=0`。
 - 飞书通讯录数据范围已生效：4 个授权范围、83 个可见部门、414 名可见人员已只读同步到 Ontology Principal；重复同步结果为新增 0、更新 414，未写入邮箱、手机号或聊天内容。
-- Agent Core `2026-08-09.2` 当前通过 HMAC 调用 dev198 H Worker，真实推理 `productionReady=true`；Work / Practice Protocol `1.1.0` 已处于 `active`，Intake 至 Learning 全阶段可回放。Worker 经个人 CPA API Key 调用 `grok-4.5`，后续仍需切换公司专用 CPA Key/账号与同厂冗余。
+- Agent Core `2026-08-10.2` 当前通过 HMAC 调用 dev198 H Worker，真实推理 `productionReady=true`；Work / Practice Protocol `1.1.0` 已处于 `active`，Intake 至 Learning 全阶段可回放。Worker 经个人 CPA API Key 调用 `grok-4.5`，后续仍需切换公司专用 CPA Key/账号与同厂冗余。
 - Knowledge Connector `2026-08-08.3` 已部署到公司 QNAP；Connector 与 Agent Core 回归均为 14/14，生产只读 Canary 已覆盖直接授权、空间继承、无空间继承、ACL 失败、正文可读但 ACL 失败、员工真实撤权、跨部门和链接直猜负测。撤权后 37.757 秒内 Evidence 归零，临时文档删除后 ACL/Chunk 均归零，回滚 `2026-08-08.2 → 2026-08-08.3` 演练通过。产品研究部整库导入仍未批准，`department/openchat` P1 映射完成前继续禁止批量索引。
-- Ontology Registry `2026-08-08.1` 已上线：Schema `3.2.0`、111 个 active 受治理元素、内容哈希 `ffa8943255b9`，生产 active 版本唯一且 Git/运行时一致。
+- Ontology Registry 当前 Schema `3.3.0`、状态 `in_sync`，生产 active 版本唯一且 Git/运行时一致；Definition Source Commit 与 Runtime Release Commit 继续分开记录。
 - Goal 4 已完成 ERP/社媒 fixture 的正证、反证、过期、无 ACL 和不存在 Principal 五类生产验证；无证据路径在策略层失败关闭，不调用 H 引擎，不泄露标题、URL、人员或正文。
 - Goal 5 已跑通一名真实 DRI、一个受控 P2、一个 Task、一个 Action、一个 Verification 和一个 Learning Proposal；技术执行、业务结果、经营目标三层结果均为 `true`。失败演练保留审计并退役，不算正式 P2。
-- H 控制面 `v1.55.1` 已上线 WorkCase、Evidence Map、Answer Basis、Decision Lineage、Goal 6 领域白盒和能力治理灰色节点；真实浏览器 `59/59` 检查通过，控制台错误、失败请求、节点重叠、错接、穿卡连线和横向溢出均为 0。
+- H 控制面 `v1.56.2` 已上线 WorkCase、Evidence Map、Answer Basis、Decision Lineage、Goal 6 领域白盒、实时运行真值和能力治理灰色节点；真实浏览器 `92/92` 检查通过，34 条连线光晕全部位于彩线下层，控制台错误、失败请求、节点重叠、错接、穿卡连线和横向溢出均为 0。川哥已于 `2026-08-10` 明确确认验收通过。
 - 本阶段不开放数据库端口到员工网段。
 - 10 人真实员工 Canary 和 24 小时容量数据未完成前，不进入 50 人正式首批。
 
 ## 下一阶段
 
-1. Goal 3 的 10 名真实员工 Canary 继续延后，但仍是 20/50 人放量前的强制门禁。
-2. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
-3. 补齐空间成员 `department/openchat` 映射和 Retrieval 对群组主体的授权语义；完成后再单独审批产品研究部整库导入窗口。
-4. 建立 24 小时容量观测、H-Lite lease/fencing 和 Worker 分池，再规划 20/50 人扩容。
-5. 真 3D、ERP/社媒写回、ERP M4 和 MediaCrawler 风控恢复继续作为独立 Goal，必须重新授权。
+1. 先完成短任务 `Goal 6-R / Release Provenance Guard`：让 H 控制面公开脱敏 Runtime Source Commit 与目标文件哈希对账状态，防止“版本号正确、生产源码错误”再次发生。
+2. Goal 7 `P1-PROD-READINESS`：建立公司专用 H 引擎 CPA 账号/Key 与同厂冗余，并补齐 `department/openchat`、`chat/group` Principal、用途和撤权语义；本 Goal 不执行整库导入。
+3. Goal 3 的 10 名真实员工 Canary 在 Goal 7 后执行，仍是 20/50 人放量前的强制门禁。
+4. Goal 8 建立 24 小时容量观测、H-Lite lease/fencing 和 Worker 分池，再规划 20/50 人扩容。
+5. 产品研究部整库导入、Capability Governance 激活、A2A、真 3D、ERP/社媒写回、ERP M4 和 MediaCrawler 风控恢复继续拆为独立 Goal，必须重新授权。
