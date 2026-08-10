@@ -19,14 +19,15 @@
 
 Runtime 证据：
 
-- Source Commit：`12e68910fd8bc19cb78a139ed5651a18c23be903`；
-- Workflow Run：`31421018728`；
-- Artifact：`p1-si-runtime-12e68910fd8bc19cb78a139ed5651a18c23be903`，Artifact ID `9075350766`；
-- Collector Image ID：`sha256:fbe343ed995e3e658100d3c160f38d5e8c89b28b70902ff3ce9439a969e5fb1d`；
+- Source Commit：`2974c19eaab1282a0f2dd168ed7056e5a79e6f68`；
+- Workflow Run：`31421625978`；
+- Artifact：`p1-si-runtime-2974c19eaab1282a0f2dd168ed7056e5a79e6f68`，Artifact ID `9075587049`；
+- Artifact 保留期：90 天，GitHub 返回到期时间 `2026-11-08T18:56:45Z`；
+- Collector Image ID：`sha256:e642103af70444f67c27fa4f1804541ae9a87f7bd6a0502531decbe7f23a8e7e`；
 - Platform：`linux/amd64`；
-- Image Archive SHA-256：`50610a4c75f3c02cd0c9f28266962fb6281a18f03eedf1088b73a9c280ed5881`；
-- Source Archive SHA-256：`b762c872123b6e621ee2ee70960838adb1a065ba9bb9424048fbaaa8f3b781ab`；
-- Release Manifest SHA-256：`b26b860aa5129161f0191cdbcfbbdb589ab3840232fad52423f98984510c55d9`；
+- Image Archive SHA-256：`8d286478fbd84645f753c8b8788c616fed03f089430e7c78d8e1211e2f9abead`；
+- Source Archive SHA-256：`bf9e6fd82f6aaefc42cdcb1706bd66f7cbc88c75d3f5156d9c45f7f1ef532723`；
+- Release Manifest SHA-256：`c19cb35eb9e14f869d4fdf980cb4c921588e153b6349ad24b98e8130ab6c094f`；
 - PostgreSQL Image：`pgvector/pgvector:pg17-bookworm@sha256:7ae6051efd0e60444282c27c7e141af07f322ce033300e727a49c3dd11075e38`；
 - Candidate tables：`19`；
 - Forced RLS tables：`19`；
@@ -147,7 +148,7 @@ Collector 测试由 `6/6` 增至 `7/7`，覆盖 metadata-only 不留正文、str
 
 手动 Workflow：`.github/workflows/p1-si-runtime-verify.yml`。
 
-运行 `31421018728` 对已推送 Source Commit `12e68910fd8bc19cb78a139ed5651a18c23be903` 执行：
+运行 `31421625978` 对已推送 Source Commit `2974c19eaab1282a0f2dd168ed7056e5a79e6f68` 执行：
 
 1. Ontology `52/52`、Collector `7/7`、Shadow `10/10` 和全部候选编译；
 2. 构建 Collector Linux/amd64 镜像并取得不可变 Image ID；

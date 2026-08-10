@@ -64,9 +64,9 @@ Dispatcher 使用 QNAP 既有 crontab 每分钟检查队列，安装过程不会
 
 ## 当前 Runtime 与发布候选证据
 
-当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此没有在开发机伪造 Runtime 结果。手动 GitHub Actions Run `31421018728` 已对已推送 Source Commit `12e68910fd8bc19cb78a139ed5651a18c23be903` 完成：
+当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此没有在开发机伪造 Runtime 结果。手动 GitHub Actions Run `31421625978` 已对已推送 Source Commit `2974c19eaab1282a0f2dd168ed7056e5a79e6f68` 完成：
 
-- Collector Linux/amd64 镜像真实构建，Image ID `sha256:fbe343ed995e3e658100d3c160f38d5e8c89b28b70902ff3ce9439a969e5fb1d`；
+- Collector Linux/amd64 镜像真实构建，Image ID `sha256:e642103af70444f67c27fa4f1804541ae9a87f7bd6a0502531decbe7f23a8e7e`；
 - 010/011 候选 SQL 的隔离 PostgreSQL Runtime 验证；
 - 19/19 候选表强制 RLS；
 - baseline dump/restore；
@@ -74,7 +74,7 @@ Dispatcher 使用 QNAP 既有 crontab 每分钟检查队列，安装过程不会
 - Artifact 解压目录内直接执行 `sha256sum -c SHA256SUMS` 全部通过；
 - `immutableReleaseCandidateVerified=true`、`publish=false`、`productionDeploymentAuthorized=false`。
 
-Artifact：`p1-si-runtime-12e68910fd8bc19cb78a139ed5651a18c23be903`。当前仍未完成：
+Artifact：`p1-si-runtime-2974c19eaab1282a0f2dd168ed7056e5a79e6f68`，保留 90 天，到期时间 `2026-11-08T18:56:45Z`。当前仍未完成：
 
 - 公司来源许可和合规审批；
 - Goal 7 完成证据；
