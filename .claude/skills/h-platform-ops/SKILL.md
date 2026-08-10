@@ -21,6 +21,7 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 7. **推代码前查实时分支**：历史上部署主干曾在 `origin/feishu-grok-bridge`，但 2026-07-27 已确认 GitHub 当前生产主干是 `origin/main`，旧分支落后。每次先跑 `git fetch origin && git rev-list --left-right --count HEAD...origin/main`，不要把历史记忆当现状。
 8. **健康读数认实例**：bridge `/health` 的**顶层字段是 owner Bot 的**，用户 Bot 在 `apps.<appId>` 里。查「某用户的消息到没到」必须看 `apps` 分解——2026-07-25 我拿顶层 `lastInboundAt:null` 断言「一条没收到」，实际用户 Bot 那条准时到了（[[feedback_selfcheck_false_signal]]）。
    - ⚠️ **`lastInboundAt` 只统计文本消息，卡片按钮不进**。用户点「新会话」等卡片按钮走 card action 回调，日志里是 `card action cmd=… chat=… by=…`，而 `lastInboundAt` **纹丝不动**——2026-08-05 我差点据此报「你说测过了但我这边没收到」。验收要么盯日志事件流（全量），要么把动作说死（「发一条文字消息」而非「测一下」）。见 [[feedback_criteria_must_match_object_variant]]。
+   - ⚠️ **任务日志的 `#序号` 只出现在 `bg yield` 行**，完成链（runner/outbox/ack）用内部 task ID——journal grep `#6568` 等序号等完成事件会**永远空转**，与「任务没完成」同信号（2026-08-10 监视器白等 7 分钟）。等任务完成认**持久层**（TaskSessionLog/Outbox）或直接跑 `verify-mini-b2-active.sh`，别盯日志序号。
 9. **远程语法检查用绝对路径**：dev198 非交互 ssh 的 PATH 没有 node，`node --check` 会「命令未找到」而静默略过；结论行必须由累计变量驱动，绝不无条件 `echo 全过`。
 10. **Kimi 通道名不能混**：开放平台模型是 `kimi-k3`；Kimi Code 订阅的 CLI alias 是 `kimi-code/k3`，其 provider model 是 `k3`。桥接层必须使用订阅命名，不能把开放平台名字直接塞进 managed provider。
 11. **锁模型而非信默认值**：Kimi 配置生成和 Runner 必须共用 `lib/kimi-model.mjs`；Runner 每次显式传 `--model kimi-code/k3`。只改 `default_model` 不算完成。
