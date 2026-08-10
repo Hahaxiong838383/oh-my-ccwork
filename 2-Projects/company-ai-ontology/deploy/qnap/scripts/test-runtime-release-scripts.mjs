@@ -9,7 +9,7 @@ const domainRollbackUrl = new URL('./rollback-domain-runtime.sh', import.meta.ur
 
 test('Agent Core 独立发布只重建 agent-core 并具备自动恢复', async () => {
   const source = await readFile(agentDeployUrl, 'utf8')
-  assert.match(source, /AGENT_RUNTIME_EXPECTED_VERSION:-2026-08-10\.1/)
+  assert.match(source, /AGENT_RUNTIME_EXPECTED_VERSION:-2026-08-10\.2/)
   assert.match(source, /\[ "\$\(hostname\)" = PRNas \]/)
   assert.match(source, /refusing unexpected company ontology root/)
   assert.match(source, /image tag company-ai-foundation-agent-core:latest "\$previous_image"/)

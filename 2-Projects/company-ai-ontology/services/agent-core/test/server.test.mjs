@@ -490,7 +490,7 @@ test('Goal 6-UAT 状态查询返回实时脱敏真值且不调用 H 引擎', asy
         schemaVersion: '3.3.0',
         registryStatus: 'in_sync',
         registryVersion: '2026-08-08.1',
-        agentCoreVersion: '2026-08-10.1',
+        agentCoreVersion: '2026-08-10.2',
         agentCoreReady: true,
         hEngineProductionReady: true,
         domainConnectorVersion: '2026-08-10.1',
@@ -520,7 +520,7 @@ test('Goal 6-UAT 状态查询返回实时脱敏真值且不调用 H 引擎', asy
   assert.equal(result.payload.runtime.governedIntent, 'system_status')
   assert.match(result.payload.reply, /Schema 3\.3\.0/)
   assert.match(result.payload.reply, /Registry in_sync/)
-  assert.match(result.payload.reply, /Agent Core 2026-08-10\.1/)
+  assert.match(result.payload.reply, /Agent Core 2026-08-10\.2/)
   assert.match(result.payload.reply, /Domain Connector 2026-08-10\.1 \/ read_only/)
   assert.match(result.payload.reply, /ERP Read Model 95（Operations 38、Device 57）/)
   assert.match(result.payload.reply, /Market Read Model 369/)

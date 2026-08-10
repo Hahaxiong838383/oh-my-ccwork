@@ -7,8 +7,15 @@ import {
   CONTRACT_ONLY_STAGES,
   assertWorkCaseTransition,
   createWorkCaseDraft,
+  inferWorkMode,
   stageContract,
 } from '../src/work-protocol.mjs'
+
+test('治理意图映射到数据库既有 work_mode 枚举', () => {
+  assert.equal(inferWorkMode({ message: '请告诉我公司智慧中枢当前运行状态。', intent: 'query' }), 'answer_query')
+  assert.equal(inferWorkMode({ message: '说明公司大脑形成经营决策会经过哪些阶段。', intent: 'decision' }), 'situation_analysis')
+  assert.equal(inferWorkMode({ message: '请用我的个人身份在飞书里新建任务。', intent: 'task_assist' }), 'answer_query')
+})
 
 test('工作协议定义完整实践阶段，知识问答显式跳过后续阶段', () => {
   const contract = stageContract()

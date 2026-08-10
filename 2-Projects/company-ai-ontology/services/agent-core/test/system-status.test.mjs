@@ -26,7 +26,7 @@ test('系统状态提供器只读取白名单目标并聚合运行真值', async
     config: baseConfig(),
     store: { operationalStatus: async () => ({ actionIntents: 2, deliveryOutbox: 3 }) },
     runtime: { ready: async () => ({ ready: true, productionReady: true }) },
-    agentCoreVersion: '2026-08-10.1',
+    agentCoreVersion: '2026-08-10.2',
     fetchImpl: async (url, options) => {
       requests.push({ url: String(url), options })
       if (new URL(url).pathname === '/readyz') {
@@ -85,7 +85,7 @@ test('单个状态源失败、重定向或超限时显式降级且不伪造 in_s
     config: baseConfig(),
     store: { operationalStatus: async () => { throw new Error('database unavailable') } },
     runtime: { ready: async () => { throw new Error('runtime unavailable') } },
-    agentCoreVersion: '2026-08-10.1',
+    agentCoreVersion: '2026-08-10.2',
     fetchImpl: async (url) => {
       if (new URL(url).pathname === '/readyz') {
         return new Response('', { status: 302, headers: { location: 'http://attacker.example/status' } })
