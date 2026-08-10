@@ -16,6 +16,8 @@ Git 中的脱敏 JSON/CSV 模板
 
 工程闭环完成不等于真实审批完成。当前 8 个来源仍保持 `paused`，36 条 P003 关系仍保持 `inactive`；没有启用采集、发布报告、创建正式 P2、员工投递或业务写回。
 
+真实飞书审核工作台已经建立：`https://futurus.feishu.cn/base/OqLZbB3Tza2d1ysQUFlcuZkQnZx`。来源 8 条、P003 36 条已经导入，并完成飞书读取、CSV 重建、强类型 JSON 导入和普通校验往返验证；详细证据见 `p1-si-feishu-review-workbench-acceptance-2026-08-10.md`。当前仍未邀请或替代任何实名 DRI，也未伪造 final 校验。
+
 ## 2. 交付物
 
 | 类型 | 文件 | 用途 |

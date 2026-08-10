@@ -53,15 +53,15 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 2. ✅ 已确认 4644 条应作为 `generated_draft / unverified` Impact Hypothesis，不得直接成为事实或触发正式 P2。
 3. ✅ 已完成个人站前沿资讯雷达评估：可复用 Horizon/Theory Radar 的采集、去重、评分、富化、影子运行和 last-good 门禁；不得原样迁移个人站、公开 Webhook、个人账号和报告目录。
 4. ✅ `P1-SI-A`：已定义 ExternalFactor、GoalFacet、ImpactHypothesis、ImpactAssessment、StrategicIntelligenceReport 和 ReportRun；候选 Schema `3.4.0` 编译兼容并已以 contract-only 能力发布到公司 QNAP，生产 active `3.3.0` 未变更，测试 `18/18`、Registry `in_sync`、切换 2 秒、restart count 0。
-5. 🟡 `P1-SI-B`：Source Registry contract-only 候选 `3.5.0`、首批 8 个来源、fail-closed 判定，以及“飞书 CSV → 强类型 JSON → final 校验 → Shadow Registry compile”人工审核闭环已完成工程验证；全部来源仍为 `paused`，等待实名许可审核人与公司合规 DRI 逐项批准许可、保存级别、保留期和负责人。
+5. 🟡 `P1-SI-B`：Source Registry contract-only 候选 `3.5.0`、首批 8 个来源、fail-closed 判定，以及“飞书 CSV → 强类型 JSON → final 校验 → Shadow Registry compile”人工审核闭环已完成工程验证；真实飞书审核工作台已建立并导入 8 条，往返校验逐条一致。全部来源仍为 `paused`，等待实名许可审核人与公司合规 DRI 逐项批准许可、保存级别、保留期和负责人。
 6. 🟡 `P1-SI-C`：公司独立 Collector Contract、3 份 JSON Schema、oneshot Worker、Source Registry 前置准入、去重、last-good、固定 Base Digest 和构建脚本已通过 `7/7` 测试；metadata/reference/summary 来源不保存完整响应体，只有获批 full-text/structured-data 才保留 payload。手动 CI 已构建 Linux/amd64 镜像，并形成绑定源码与镜像 Hash 的公司 QNAP 不可变发布候选包；尚未在 QNAP 部署。
 7. 🟡 `P1-SI-D`：contract-only 候选 `3.6.0`、Postgres 唯一真源、Raw/Observation/Signal、双时间、幂等/Replay、热冷保留和 ACL fail-closed 候选迁移已通过 `30/30` 测试；CI 隔离 PostgreSQL 已验证 010/011、19/19 强制 RLS 与 baseline restore，`sql_static_verified=true / sql_runtime_verified=true`，仍未进入生产 migrations。
 8. 🟡 `P1-SI-E`：候选 `3.7.0`、上海时区日/周/月/季/半年/年窗口、Alert/公司/P003 报告、非递归 Input Set、完整 ReportRun 谱系和飞书文档/卡片/H 控制面只读模板已通过 `36/36` 测试；未调用模型、未创建飞书产物、未执行候选 SQL。
 9. 🟡 `P1-SI-F`：Shadow Compose、0.1 CPU/96 MiB Orchestrator、0.5 CPU/512 MiB oneshot Worker、无端口/无 Docker Socket、授权门禁、备份/Freeze/回滚、七日证据包、发布 Manifest 和已审批 Registry 准入已通过 `10/10`；CI Run `31421625978` 已对 Source Commit `2974c19eaab1282a0f2dd168ed7056e5a79e6f68` 完成 Linux/amd64 镜像、010/011 PostgreSQL Runtime 和可直接 `sha256sum -c` 的 90 天不可变发布候选验证。公司 QNAP 五元组在线复核、部署授权和七日 Shadow 仍未完成。
-10. 🟡 `P1-SI-G`：已只读核对真实 4644 条矩阵并筛选 P003 36 条候选，六类各 6 条；飞书 CSV 回填、强类型 JSON、final 校验、只读锚点防篡改和提案候选 compile 已完成工程验证。active/verified/evidence/named DRI 仍均为 0，下一步由实名产品、AI、研发、销售、采购、财务及必要合规 DRI 逐条重写和补证。
+10. 🟡 `P1-SI-G`：已只读核对真实 4644 条矩阵并筛选 P003 36 条候选，六类各 6 条；真实飞书审核工作台、六类筛选视图、CSV 回填、强类型 JSON、final 校验、只读锚点防篡改和提案候选 compile 均已完成工程验证。active/verified/evidence/named DRI 仍均为 0，下一步由实名产品、AI、研发、销售、采购、财务及必要合规 DRI 逐条重写和补证。
 11. ⏳ `P1-SI-H`：Goal 7 完成且取得当次部署授权后，将公司版雷达部署到公司 QNAP，连续运行 7 天 Shadow；只写入 Raw Snapshot、Signal、Impact Assessment 和报告草稿，不向全员 Bot 发布、不创建正式 P2、不写回 ERP/社媒。
 12. ⛔ 自动创建正式 P2、向员工下发任务或写回 ERP/社媒继续关闭；只允许生成 Impact Assessment、报告和 Decision Proposal。
-13. P1-SI-A～G 工程证据见对应 `docs/p1-si-*-2026-08-10.md`；人工审核闭环见 `docs/p1-si-human-review-workflow-acceptance-2026-08-10.md`；P003 DRI 审核清单见 `docs/p1-si-g-p003-dri-review-pack-2026-08-10.md`；总体方案见 `docs/pestim-strategic-intelligence-architecture-2026-08-10.md`。
+13. P1-SI-A～G 工程证据见对应 `docs/p1-si-*-2026-08-10.md`；人工审核闭环见 `docs/p1-si-human-review-workflow-acceptance-2026-08-10.md`；真实飞书工作台验收见 `docs/p1-si-feishu-review-workbench-acceptance-2026-08-10.md`；P003 DRI 审核清单见 `docs/p1-si-g-p003-dri-review-pack-2026-08-10.md`；总体方案见 `docs/pestim-strategic-intelligence-architecture-2026-08-10.md`。
 
 ## P0-KB-ACL：正式导入前硬阻断
 
