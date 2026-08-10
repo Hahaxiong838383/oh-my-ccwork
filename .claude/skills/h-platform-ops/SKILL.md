@@ -2417,7 +2417,7 @@ syncCredentials gate 在 `sandbox &&` 上），grok 钉死本机 device OAuth，
 - dev198 git 漂移（tar 直传致工作区超前 HEAD）已于 2026-08-09 追平：md5 对撞确认
   = 6671e57 后 `git stash push` 入库，之后一律走 `ops/deploy-sites.sh`，别再 tar 直传。
 
-## H-0028 定向分享通道（v1.58.0/.1 · 2026-08-10，川哥真机验收通过）
+## H-0028 定向分享通道（v1.58.0/.1/.2 · 2026-08-10，川哥真机验收通过）
 
 个人 L2 skill → 指定同事的受控分发。**分享=受控 fork 到目标 L2（origin.type='share'），
 执行面零改动**——装载/跟随/清理全走既有 sync 链。运维要点：
@@ -2427,6 +2427,8 @@ syncCredentials gate 在 `sandbox &&` 上），grok 钉死本机 device OAuth，
 - **动作**：`/api/skill` action=`share`/`share-decide`/`share-revoke`；
   `GET /api/skill-shares`（双视角）、`GET /api/share-targets`（**全员**已激活，
   v1.58.1 川哥拍板从同部门放开；不许再加部门收窄，pages wiring 测试反向锁死）。
+- **v1.58.2 语义收口**：分享按钮和架构白盒统一显示“公司同事 / 全员已激活用户”；
+  只修正文案与架构登记，不改变接收确认、隐私门、同名拒绝、跟随或撤回规则。
 - **三道门**：离开本人沙箱前过共享隐私门（user 层入库时刻意不过，分享时必须过）；
   同名 fail-closed 绝不遮蔽（H-0083 教训）；撤回只删 pristine 副本、改过的保留断跟随。
 - **跟随**：user 层源有存活 share 时记 shaHistory（平时不记），refreshPristineForks
@@ -2439,7 +2441,51 @@ syncCredentials gate 在 `sandbox &&` 上），grok 钉死本机 device OAuth，
   `demo-share-test` 即当时预置，川哥用完可清）。
 - 排障：分享记录 `sudo cat /srv/h-control/data/skills.json | python3 -c "...shares..."`；
   E2E 会话构造=用生产 SESSION_SECRET 按 session.mjs 格式签 hsid cookie（服务器上签，
-  不出机）。测试 14 个在 `control-plane/test/skill-shares.test.mjs`。
+  不出机）。⚠️ **cookie 的 exp 是毫秒**（`Date.now()+ttl`）——python 签的时候写秒级
+  时间戳会被当 1970 年判过期，报 unauthorized（2026-08-10 踩过）。
+  测试 14 个在 `control-plane/test/skill-shares.test.mjs`。
+
+### H-0086 接收方 Bot 提醒腿（v1.59.0 + 深链修复 · 2026-08-10）
+
+分享创建后接收方 Bot 主动发提醒卡（此前唯一可见面是网页后台，pending 会静默躺——
+川哥那条实测躺了 5 小时）。B2 重绑推送同款「控制面清单 + 执行面发卡」模式：
+
+- **控制面**：`GET /internal/share-pending`（pending 且无 `notifiedAt`，已过滤到
+  active+appId+openId 可送达，带 `fromName`）+ `POST /internal/share-notified`
+  （写 `notifiedAt` + events `notified`）。**被拒后重新 shareCreate 会清 notifiedAt**
+  = 重新提醒一轮。已 accepted/revoked 的不进清单。
+- **执行面 bridge**：`pushShareInviteCards` 60s 轮询 + **启动 15s kick（重启不吞
+  在途提醒——上线当晚就是靠 kick 补发了川哥那条 5 小时前的分享）**；用**接收方
+  自己的 Bot** sendActionCard；发失败不回报下轮重试。`H_SHARE_PUSH=0` 关，
+  `H_SHARE_PUSH_INTERVAL_MS` 调周期。日志锚 `share invite card sent`。
+- **按钮深链**：`/go/<token>?to=skills` → 302 `/dashboard#skills` 直落 Skills 面板
+  （`GO_SECTIONS` 封闭白名单；裸 /go 落总览，川哥真机打回过一次）。
+- **排障**：日志零命中有二义性（清单空 vs 腿没跑）——先打 `/internal/share-pending`
+  看清单真值再判。⚠️ **dev198 用户 skills 目录里有 ≠ 控制面账本里有**（历史手放
+  文件不入账本），分享报「skill 不存在」先查 `skills.json` 的 `user:<uid>/` 键。
+  wiring 白盒锚在 `test/share-invite-wiring.test.mjs`（bridge 侧三件套/深链/开关）。
+
+## Task 6-R：Runtime Release Provenance（v1.58.2 · 2026-08-10）
+
+- **当前生产锚点（2026-08-10 晚更新）**：`v1.59.0`、Source Commit
+  `01da296dd09cbe4e8ee9f39c4778996d34bfdb5c`、Release ID
+  `20260810-225534-h-control-1.59.0`、50 个运行文件、`state=in_sync`、`mismatchCount=0`、
+  `NRestarts=0`。cc 手工四步部署 + 手工按 attest 逻辑生成 manifest（git archive 01da296 →
+  buildRuntimeReleaseProvenanceManifest → 全 50 文件对照线上 → 落盘重启），溯源完整保持。
+  （v1.58.2 codex 锚点：Source `8f63fb9`、Release `20260810-175955-h-control-1.58.2`）
+- **发布前重新取真值**：多 Agent 并发时，准备完成后 CC 可能已更新生产。正式发布前必须
+  再次 `git fetch`、读取公网 `/healthz`、远端版本、启动时间和文件哈希；旧检查结果不继承。
+- **同版本不重启**：运行文件已经与 Source Commit 一致但 Manifest 缺失时，用
+  `ops/attest-current-h-control-release.sh` 补签。Runtime Source Commit 与 Tool Commit 分开校验，
+  写入后对比 `MainPID`、`ActiveEnterTimestamp`、`NRestarts`，证明零重启。
+- **新版本发布**：`ops/deploy-company-ontology-control-plane.sh` 动态发现完整运行时文件，
+  在暂存目录全量测试、备份、生成 Manifest 后才覆盖生产；同版本会 fail-closed，正式发布只允许
+  一次 `systemctl restart h-control`，并验证回环、公网、管理员登录、Source Commit 与文件集合哈希。
+- **Shell 防坑**：EXIT trap 必须捕获真实临时目录路径，不能引用函数返回后失效的局部变量；
+  zsh 包装器不要使用只读特殊变量 `status`，统一使用 `rc`。脚本退出异常时独立核验生产，
+  不以外层退出码直接推断部署失败。
+- **回滚锚点**：`/srv/h-control/backups/20260810-175955-h-control-1.58.2`。任何后续发布仍需
+  川哥在当次窗口明确授权，历史授权和 Goal 状态不能继承。
 
 ## H-0083/H-0084 L0 skill 同步 SOP + 空壳 fork 劫持（v1.54.1 · 2026-08-09 晚）
 
@@ -5078,11 +5124,11 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | 线上 **`v1.58.1`**（2026-08-10 H-0028 定向分享全员放开 + ontology provenance guard；公网 `https://ai.kidshub.cn/healthz` 取真值） |
+| 控制面 aliyun-hk | 线上 **`v1.59.0`**（H-0086 分享提醒清单端点；Source `01da296`、50 文件 `in_sync`、`mismatchCount=0`；公网 `/healthz` 取真值） |
 | Mini 活动 VM 运行态 | **`f076e7642fab`**、`dirty=false`、581 文件、1 App（2026-08-10 三段割接零停服；真实长任务验证器 10/10 全绿，Base H-0085） |
-| dev198 | **`f076e7642fab`**（2026-08-10 H-0065 自动分类+v1.56.1 hotfix，契约 2026-08-09.1 全 12 App 唯一，真机验收：AI 分类徽章川哥点验通过） |
+| dev198 | **bridge.mjs/control-client 已到 `46fe78e`**（H-0086 分享提醒腿+深链，2026-08-10 晚两次热更；git HEAD 仍 `f076e76` 属正常——按文件 sha 对撞判断，契约 2026-08-09.1 全 12 App 唯一） |
 
-> 仓库 main 已到 `8973d41`（f076e76 之上 3 个 ontology/acceptance 侧提交，非 bridge 运行链），bridge 双站运行 `f076e76` 即本轮升级目标态。
+> 仓库 main 已到 `46fe78e`（`f076e76` 之上包含控制面/Ontology/发布治理/H-0086 提交）；dev198 运行文件按需热更（bridge.mjs 当前=46fe78e 内容），不要把控制面 Source Commit 当成 Bridge Runtime Commit，也不要拿 dev198 的 git HEAD 当运行态真值——认文件 sha 对撞。
 
 ⚠️ **跨 bridge+控制面的字段/行为修复，部署顺序=先控制面后 bridge**（2026-08-10 实测）：
 bridge 一重启 bootPush 立即推镜像，若控制面新代码还没起，数据被旧代码处理一次，
