@@ -2417,6 +2417,30 @@ syncCredentials gate 在 `sandbox &&` 上），grok 钉死本机 device OAuth，
 - dev198 git 漂移（tar 直传致工作区超前 HEAD）已于 2026-08-09 追平：md5 对撞确认
   = 6671e57 后 `git stash push` 入库，之后一律走 `ops/deploy-sites.sh`，别再 tar 直传。
 
+## H-0028 定向分享通道（v1.58.0/.1 · 2026-08-10，川哥真机验收通过）
+
+个人 L2 skill → 指定同事的受控分发。**分享=受控 fork 到目标 L2（origin.type='share'），
+执行面零改动**——装载/跟随/清理全走既有 sync 链。运维要点：
+
+- **数据**：分享关系与 skills 同存控制面 `skills.json` 顶层 `shares`（单文件原子），
+  记录终态不删 + `events` 时间线即审计。id=`<fromUid>:<toUid>:<name>` 确定性。
+- **动作**：`/api/skill` action=`share`/`share-decide`/`share-revoke`；
+  `GET /api/skill-shares`（双视角）、`GET /api/share-targets`（**全员**已激活，
+  v1.58.1 川哥拍板从同部门放开；不许再加部门收窄，pages wiring 测试反向锁死）。
+- **三道门**：离开本人沙箱前过共享隐私门（user 层入库时刻意不过，分享时必须过）；
+  同名 fail-closed 绝不遮蔽（H-0083 教训）；撤回只删 pristine 副本、改过的保留断跟随。
+- **跟随**：user 层源有存活 share 时记 shaHistory（平时不记），refreshPristineForks
+  认 `['fork','share']` 两种 origin。share 注释文案「来自 H 平台同事分享」，
+  stripForkNote 正则同时兼容 fork/share 两种——**改注释文案必须同步改正则**，
+  否则 pristine 判定全断（跟随与撤回双失灵）。
+- **UI 入口在网页后台 Skills 面板**，且只有「我创建的」条目有分享按钮——用户报
+  「找不到入口」先查这两点（2026-08-10 川哥第一反应在飞书卡片里找）。真机验收前
+  给验收账号预置 demo skill（验收后可删；rayman.chen / u-001422f6e5 名下的
+  `demo-share-test` 即当时预置，川哥用完可清）。
+- 排障：分享记录 `sudo cat /srv/h-control/data/skills.json | python3 -c "...shares..."`；
+  E2E 会话构造=用生产 SESSION_SECRET 按 session.mjs 格式签 hsid cookie（服务器上签，
+  不出机）。测试 14 个在 `control-plane/test/skill-shares.test.mjs`。
+
 ## H-0083/H-0084 L0 skill 同步 SOP + 空壳 fork 劫持（v1.54.1 · 2026-08-09 晚）
 
 > Base 表编号：H-0083=空壳 fork Bug、H-0084=约日程 L0 v1.3.0 同步。（本节曾误自编 H-0085，该编号已被后续记录占用，2026-08-10 修正。）
