@@ -11,8 +11,10 @@ backup_root=/share/CACHEDEV2_DATA/ai-ontology-backup/domain-runtime/$run_id
 previous_image=company-ai-foundation-domain-connector:pre-$run_id
 
 [ "$(hostname)" = PRNas ] || { echo 'refusing non-company QNAP host' >&2; exit 1; }
+[ "$project_root" = /share/CACHEDEV1_DATA/ai-ontology/foundation ] || { echo 'refusing unexpected company ontology root' >&2; exit 1; }
 [ -f "$release_root/services/domain-connector/Dockerfile" ] || { echo 'domain runtime release incomplete' >&2; exit 1; }
 case "$runtime_commit" in *[!0-9a-fA-F]*|'') echo 'DOMAIN_RUNTIME_COMMIT must be a Git commit hash' >&2; exit 2 ;; esac
+[ "${#runtime_commit}" -ge 7 ] || { echo 'DOMAIN_RUNTIME_COMMIT must contain at least 7 hex characters' >&2; exit 2; }
 
 mkdir -p "$backup_root"
 chmod 700 "$backup_root"
@@ -22,9 +24,9 @@ previous_context=$(awk -F= '/^DOMAIN_CONNECTOR_BUILD_CONTEXT=/{print $2; exit}' 
 previous_version=$("$docker_path" compose -f "$project_root/docker-compose.yml" exec -T domain-connector node -e \
   "fetch('http://127.0.0.1:8085/readyz').then(async r=>{const p=await r.json();process.stdout.write(String(p.version||''))}).catch(()=>process.exit(1))" \
   </dev/null 2>/dev/null || true)
-if "$docker_path" image inspect company-ai-foundation-domain-connector:latest >/dev/null 2>&1; then
-  "$docker_path" image tag company-ai-foundation-domain-connector:latest "$previous_image"
-fi
+[ -n "$previous_version" ] || { echo 'current domain runtime version is unavailable' >&2; exit 1; }
+"$docker_path" image inspect company-ai-foundation-domain-connector:latest >/dev/null
+"$docker_path" image tag company-ai-foundation-domain-connector:latest "$previous_image"
 
 rollback_on_error() {
   status=$?
@@ -37,6 +39,15 @@ rollback_on_error() {
     "$docker_path" image tag "$previous_image" company-ai-foundation-domain-connector:latest
     cd "$project_root"
     "$docker_path" compose up -d --no-build domain-connector
+    attempt=0
+    until "$docker_path" compose exec -T domain-connector node -e \
+      "fetch('http://127.0.0.1:8085/readyz').then(async r=>{const p=await r.json();process.exit(r.ok&&p.status==='ready'&&p.version===process.argv[1]?0:1)}).catch(()=>process.exit(1))" \
+      "$previous_version" \
+      </dev/null 2>/dev/null; do
+      attempt=$((attempt + 1))
+      [ "$attempt" -lt 60 ] || break
+      sleep 2
+    done
   fi
   printf 'domain runtime deployment failed; previous env and image were restored\n' >&2
   exit "$status"
@@ -61,12 +72,16 @@ cd "$project_root"
 attempt=0
 until "$docker_path" compose exec -T domain-connector node -e \
   "fetch('http://127.0.0.1:8085/readyz').then(async r=>{const p=await r.json();console.log(JSON.stringify(p));process.exit(r.ok&&p.status==='ready'&&p.version===process.argv[1]?0:1)}).catch(()=>process.exit(1))" \
-  "${DOMAIN_RUNTIME_EXPECTED_VERSION:-2026-08-09.3}" \
+  "${DOMAIN_RUNTIME_EXPECTED_VERSION:-2026-08-10.1}" \
   </dev/null; do
   attempt=$((attempt + 1))
   [ "$attempt" -lt 60 ] || { "$docker_path" compose logs --tail 160 domain-connector; exit 1; }
   sleep 2
 done
+
+container_id=$("$docker_path" compose ps -q domain-connector)
+[ -n "$container_id" ]
+[ "$("$docker_path" inspect --format '{{.RestartCount}}' "$container_id")" = 0 ]
 
 cat > "$backup_root/release-manifest.txt" <<EOF
 runtime_commit=$runtime_commit
@@ -77,4 +92,4 @@ previous_image=$previous_image
 EOF
 
 trap - EXIT HUP INT TERM
-printf 'domain_runtime_run_id=%s\nbackup_root=%s\nruntime_commit=%s\n' "$run_id" "$backup_root" "$runtime_commit"
+printf 'domain_runtime_run_id=%s\nbackup_root=%s\nruntime_commit=%s\nversion=%s\nrestart_count=0\n' "$run_id" "$backup_root" "$runtime_commit" "${DOMAIN_RUNTIME_EXPECTED_VERSION:-2026-08-10.1}"

@@ -1,5 +1,6 @@
 import { assessEvidencePackage, buildEvidencePackageV2 } from './evidence-package.mjs'
 import { formatEmployeeAnswer, validateStructuredResponse } from './response-validator.mjs'
+import { resolveGovernedResponse } from './governed-response.mjs'
 import { createWorkCaseDraft } from './work-protocol.mjs'
 
 function stripHiddenReasoning(value) {
@@ -10,7 +11,7 @@ function stripHiddenReasoning(value) {
     .slice(0, 12_000)
 }
 
-export function createCompanyBrain({ store, runtime, admission, config, now = () => new Date() } = {}) {
+export function createCompanyBrain({ store, runtime, admission, config, systemStatusProvider, now = () => new Date() } = {}) {
   const protocol = config?.workProtocol || { mode: 'off', ontologyVersion: '3.3.0', evidenceMaxAgeDays: 180 }
 
   async function legacyRun({ scope, turn }) {
@@ -118,6 +119,74 @@ export function createCompanyBrain({ store, runtime, admission, config, now = ()
         inputReferences: ['request-summary', 'principal-snapshot'],
         outputReferences: ['minimal-context'],
       })
+      const governed = await resolveGovernedResponse({ turn, systemStatusProvider, now })
+      if (governed) {
+        await advance('evidence_collecting', 'evidence', { stageStatus: 'active' })
+        const retrieval = {
+          evidence: governed.evidence,
+          principalFound: true,
+          excludedReasonCounts: {},
+          policyDecisionReference: governed.intent.evidencePolicy,
+          limit: governed.evidence.length,
+          truncated: false,
+        }
+        const evidencePackage = buildEvidencePackageV2({
+          caseId: workCase.caseId,
+          principalId: scope.personId,
+          purpose: draft.purpose,
+          ontologyVersion: protocol.ontologyVersion,
+          retrieval,
+          now,
+          maxAgeDays: protocol.evidenceMaxAgeDays,
+        })
+        const assessment = assessEvidencePackage(evidencePackage)
+        await store.recordEpistemicAssessment({ tenantId: scope.tenantId, caseId: workCase.caseId, evidencePackage, assessment })
+        await advance('evidence_ready', 'evidence', {
+          stageStatus: 'completed',
+          outputReferences: [evidencePackage.packageId],
+          policyDecisionReference: evidencePackage.policyDecisionReference,
+        })
+        await advance('synthesizing', 'synthesis', {
+          stageStatus: 'active',
+          inputReferences: [evidencePackage.packageId, `governed:${governed.intent.kind}`],
+        })
+        const validation = validateStructuredResponse({
+          rawResponse: JSON.stringify(governed.answer),
+          assessment,
+          evidencePackage,
+        })
+        await store.recordWorkStage({
+          tenantId: scope.tenantId,
+          caseId: workCase.caseId,
+          stageType: 'synthesis',
+          status: 'completed',
+          inputReferences: [evidencePackage.packageId],
+          outputReferences: [`governed-answer:${governed.intent.kind}`],
+        })
+        await advance('response_ready', 'response', {
+          stageStatus: 'active',
+          inputReferences: [`governed-answer:${governed.intent.kind}`],
+        })
+        await store.completeWorkCase({
+          tenantId: scope.tenantId,
+          caseId: workCase.caseId,
+          evidenceCount: evidencePackage.facts.length,
+          confidenceLevel: assessment.confidenceLevel,
+          deterministicConclusionAllowed: assessment.deterministicConclusionAllowed,
+          responseValidationStatus: validation.status,
+        })
+        currentStatus = 'completed'
+        return {
+          reply: formatEmployeeAnswer(validation.response),
+          evidence: governed.evidence,
+          evidencePackage,
+          assessment,
+          answer: validation.response,
+          permissionFiltered: true,
+          runtime: { provider: 'policy-engine', mode: protocol.mode, productionReady: true, governedIntent: governed.intent.kind },
+          workCase: { caseId: workCase.caseId, status: currentStatus, workMode: draft.workMode, processingMode: protocol.mode },
+        }
+      }
       await advance('evidence_collecting', 'evidence', { stageStatus: 'active' })
       const retrieval = store.permissionedRetrieve
         ? await store.permissionedRetrieve({ tenantId: scope.tenantId, personId: scope.personId, query: turn.message, limit: 8 })

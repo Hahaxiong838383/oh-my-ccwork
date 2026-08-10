@@ -469,3 +469,125 @@ test('Goal 4 已识别主体但无授权证据时失败关闭且不调用 H 引�
   assert.equal(result.payload.epistemicAssessment.deterministicConclusionAllowed, false)
   assert.doesNotMatch(JSON.stringify(result.payload), /机密标题|https?:\/\//)
 })
+
+test('Goal 6-UAT 状态查询返回实时脱敏真值且不调用 H 引擎', async (t) => {
+  let runtimeCalls = 0
+  let statusCalls = 0
+  const server = createAgentCoreServer({
+    config: {
+      ...config(),
+      workProtocol: { mode: 'active', ontologyVersion: '3.3.0', evidenceMaxAgeDays: 180, recentCaseLimit: 8 },
+    },
+    store: createMemoryStore(),
+    runtime: {
+      ready: async () => ({ ready: true, productionReady: true, provider: 'test-h-engine' }),
+      run: async () => { runtimeCalls += 1; throw new Error('must not run') },
+    },
+    systemStatusProvider: async () => {
+      statusCalls += 1
+      return {
+        generatedAt: new Date(now).toISOString(),
+        schemaVersion: '3.3.0',
+        registryStatus: 'in_sync',
+        registryVersion: '2026-08-08.1',
+        agentCoreVersion: '2026-08-10.1',
+        agentCoreReady: true,
+        hEngineProductionReady: true,
+        domainConnectorVersion: '2026-08-10.1',
+        domainConnectorStatus: 'read_only',
+        erpRecords: 95,
+        operationsRecords: 38,
+        deviceRecords: 57,
+        marketRecords: 369,
+        actionIntents: 0,
+        deliveryOutbox: 0,
+      }
+    },
+    now: () => now,
+  })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const port = await listen(server)
+  const body = JSON.stringify({
+    conversationId: 'goal6-uat-status',
+    message: '请告诉我当前公司 AI Ontology 智慧中枢的运行状态，包括 Schema、Registry、Agent Core、Domain Connector、ERP 和市场读模型。',
+    intent: 'query',
+    channel: 'h-lite',
+  })
+  const result = await request(port, { body, headers: signed(body, { requestId: 'goal6-uat-status', idempotencyKey: 'goal6-uat-status' }) })
+  assert.equal(result.status, 200)
+  assert.equal(runtimeCalls, 0)
+  assert.equal(statusCalls, 1)
+  assert.equal(result.payload.runtime.governedIntent, 'system_status')
+  assert.match(result.payload.reply, /Schema 3\.3\.0/)
+  assert.match(result.payload.reply, /Registry in_sync/)
+  assert.match(result.payload.reply, /Agent Core 2026-08-10\.1/)
+  assert.match(result.payload.reply, /Domain Connector 2026-08-10\.1 \/ read_only/)
+  assert.match(result.payload.reply, /ERP Read Model 95（Operations 38、Device 57）/)
+  assert.match(result.payload.reply, /Market Read Model 369/)
+  assert.doesNotMatch(result.payload.reply, /当前可用证据不足|insufficient/)
+})
+
+test('Goal 6-UAT 经营决策说明返回八阶段并明确不下发不写回', async (t) => {
+  let runtimeCalls = 0
+  const server = createAgentCoreServer({
+    config: {
+      ...config(),
+      workProtocol: { mode: 'active', ontologyVersion: '3.3.0', evidenceMaxAgeDays: 180, recentCaseLimit: 8 },
+    },
+    store: createMemoryStore(),
+    runtime: {
+      ready: async () => ({ ready: true, productionReady: true, provider: 'test-h-engine' }),
+      run: async () => { runtimeCalls += 1; throw new Error('must not run') },
+    },
+    now: () => now,
+  })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const port = await listen(server)
+  const body = JSON.stringify({
+    conversationId: 'goal6-uat-model',
+    message: '请基于 ERP M3 与市场信号，说明公司大脑形成经营决策会经过哪些阶段。本次只做说明，不下发任务，也不写回任何系统。',
+    intent: 'decision',
+    channel: 'h-lite',
+  })
+  const result = await request(port, { body, headers: signed(body, { requestId: 'goal6-uat-model', idempotencyKey: 'goal6-uat-model' }) })
+  assert.equal(result.status, 200)
+  assert.equal(runtimeCalls, 0)
+  assert.equal(result.payload.runtime.governedIntent, 'operating_model_explanation')
+  assert.match(result.payload.reply, /八个阶段/)
+  assert.match(result.payload.reply, /事实接入/)
+  assert.match(result.payload.reply, /三层验证/)
+  assert.match(result.payload.reply, /不下发任务、不写回任何业务系统/)
+  assert.doesNotMatch(result.payload.reply, /当前可用证据不足|insufficient/)
+})
+
+test('Goal 6-UAT 个人权限操作确定性转交私人 Bot 且不调用 H 引擎', async (t) => {
+  let runtimeCalls = 0
+  const server = createAgentCoreServer({
+    config: {
+      ...config(),
+      workProtocol: { mode: 'active', ontologyVersion: '3.3.0', evidenceMaxAgeDays: 180, recentCaseLimit: 8 },
+    },
+    store: createMemoryStore(),
+    runtime: {
+      ready: async () => ({ ready: true, productionReady: true, provider: 'test-h-engine' }),
+      run: async () => { runtimeCalls += 1; throw new Error('must not run') },
+    },
+    now: () => now,
+  })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const port = await listen(server)
+  const body = JSON.stringify({
+    conversationId: 'goal6-uat-personal',
+    message: '请用我的个人身份在飞书里新建一个任务并发送给同事。',
+    intent: 'task_assist',
+    channel: 'h-lite',
+  })
+  const result = await request(port, { body, headers: signed(body, { requestId: 'goal6-uat-personal', idempotencyKey: 'goal6-uat-personal' }) })
+  assert.equal(result.status, 200)
+  assert.equal(runtimeCalls, 0)
+  assert.equal(result.payload.runtime.governedIntent, 'personal_identity_handoff')
+  assert.match(result.payload.reply, /需要你的个人飞书权限/)
+  assert.match(result.payload.reply, /私人 Bot/)
+  assert.match(result.payload.reply, /不会尝试读取、索取或代用你的 user_access_token/)
+  assert.doesNotMatch(result.payload.reply, /当前可用证据不足|insufficient/)
+})

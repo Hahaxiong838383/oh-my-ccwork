@@ -9,6 +9,7 @@ expected_version=${DOMAIN_RUNTIME_EXPECTED_VERSION:-}
 manifest=$backup_root/release-manifest.txt
 
 [ "$(hostname)" = PRNas ] || { echo 'refusing non-company QNAP host' >&2; exit 1; }
+[ "$project_root" = /share/CACHEDEV1_DATA/ai-ontology/foundation ] || { echo 'refusing unexpected company ontology root' >&2; exit 1; }
 [ -f "$backup_root/.env" ] || { echo 'domain runtime backup env missing' >&2; exit 1; }
 [ -f "$manifest" ] || { echo 'domain runtime backup manifest missing' >&2; exit 1; }
 
@@ -35,4 +36,8 @@ until "$docker_path" compose exec -T domain-connector node -e \
   sleep 2
 done
 
-printf 'domain_runtime_rollback=%s\nrestored_version=%s\n' "$backup_root" "$target_version"
+container_id=$("$docker_path" compose ps -q domain-connector)
+[ -n "$container_id" ]
+[ "$("$docker_path" inspect --format '{{.RestartCount}}' "$container_id")" = 0 ]
+
+printf 'domain_runtime_rollback=%s\nrestored_version=%s\nrestart_count=0\n' "$backup_root" "$target_version"

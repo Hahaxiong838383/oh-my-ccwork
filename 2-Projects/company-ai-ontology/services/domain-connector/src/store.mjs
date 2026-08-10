@@ -58,9 +58,11 @@ export function createDomainStore({ database, logger = () => {} } = {}) {
     return withTenant(tenantId, async (client) => {
       const rows = await client.query(`SELECT source_system,cursor_value,last_success_at FROM domain_read.source_cursors WHERE tenant_id=$1 ORDER BY source_system`, [tenantId])
       const counts = await client.query(`SELECT source_system,status,count(*)::int AS count FROM domain_read.records WHERE tenant_id=$1 GROUP BY source_system,status ORDER BY source_system,status`, [tenantId])
+      const objectTypeCounts = await client.query(`SELECT object_type,count(*)::int AS count FROM domain_read.records WHERE tenant_id=$1 GROUP BY object_type ORDER BY object_type`, [tenantId])
       return {
         sources: rows.rows.map((row) => ({ sourceSystem: row.source_system, cursorPresent: Boolean(row.cursor_value), lastSuccessAt: row.last_success_at })),
         counts: counts.rows.map((row) => ({ sourceSystem: row.source_system, status: row.status, count: row.count })),
+        objectTypeCounts: objectTypeCounts.rows.map((row) => ({ objectType: row.object_type, count: row.count })),
       }
     })
   }
@@ -77,7 +79,15 @@ export function createMemoryDomainStore() {
     async upsert({ record }) { const key = `${record.sourceSystem}:${record.externalId}`, prior = state.records.get(key); state.records.set(key, structuredClone(record)); return prior && JSON.stringify(prior) === JSON.stringify(record) ? { unchanged: true } : { id: key, inserted: !prior } },
     async deadLetter(input) { state.deadLetters.push(structuredClone(input)) },
     async finishRun(input) { const run = state.runs.find((item) => item.id === input.runId); Object.assign(run, input); if (input.status === 'completed' && input.advanceCursor !== false) state.cursors.set(input.sourceSystem, input.cursorAfter || '') },
-    async status() { return { sources: [...state.cursors].map(([sourceSystem, cursorValue]) => ({ sourceSystem, cursorPresent: Boolean(cursorValue), lastSuccessAt: null })), counts: [] } },
+    async status() {
+      const counts = new Map()
+      for (const record of state.records.values()) counts.set(record.objectType, (counts.get(record.objectType) || 0) + 1)
+      return {
+        sources: [...state.cursors].map(([sourceSystem, cursorValue]) => ({ sourceSystem, cursorPresent: Boolean(cursorValue), lastSuccessAt: null })),
+        counts: [],
+        objectTypeCounts: [...counts].map(([objectType, count]) => ({ objectType, count })),
+      }
+    },
     async close() {},
   }
 }

@@ -74,8 +74,10 @@ test('control routes fail closed and never accept a wrong bearer token', async (
 test('status never exposes source cursors', async () => {
   const store = createMemoryDomainStore()
   store.state.cursors.set('aishike-erp-m3', 'opaque-live-cursor')
+  await store.upsert({ record: record() })
   const status = await store.status()
   assert.equal(status.sources[0].sourceSystem, 'aishike-erp-m3')
   assert.equal(status.sources[0].cursorPresent, true)
+  assert.deepEqual(status.objectTypeCounts, [{ objectType: 'domain.operations.Order', count: 1 }])
   assert.doesNotMatch(JSON.stringify(status), /opaque-live-cursor|cursorValue|cursor_value/)
 })

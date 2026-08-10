@@ -30,6 +30,11 @@ export function loadConfig(env = process.env) {
         ? String(env.PRACTICE_PROTOCOL_MODE || 'shadow').trim().toLowerCase()
         : 'shadow',
     },
+    systemStatus: {
+      registryUrl: String(env.ONTOLOGY_REGISTRY_STATUS_URL || 'http://ontology-registry:8084/readyz').trim(),
+      domainUrl: String(env.DOMAIN_CONNECTOR_STATUS_URL || 'http://domain-connector:8085/status').trim(),
+      timeoutMs: Math.max(200, Number(env.SYSTEM_STATUS_TIMEOUT_MS || 2000)),
+    },
     admission: {
       maxConcurrency: Math.max(1, Number(env.H_ENGINE_MAX_CONCURRENCY || 4)),
       maxQueue: Math.max(0, Number(env.H_ENGINE_QUEUE_LIMIT || 32)),

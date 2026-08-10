@@ -1,4 +1,5 @@
 import { sha256 } from './protocol.mjs'
+import { classifyGovernedIntent } from './governed-intent.mjs'
 
 export const WORK_PROTOCOL_VERSION = '1.1.0'
 export const ONTOLOGY_SCHEMA_VERSION = '3.3.0'
@@ -58,6 +59,8 @@ function redactRequest(value) {
 }
 
 export function inferWorkMode(turn = {}) {
+  const governed = classifyGovernedIntent(turn)
+  if (governed) return governed.kind
   const intent = String(turn.intent || '').toLowerCase()
   const message = String(turn.message || '')
   if (intent === 'decision') return 'decision_support'
@@ -84,7 +87,9 @@ export function createWorkCaseDraft({ requestId, personId, turn, processingMode 
     workMode,
     requestSummary: requestSummary || '未提供可用请求摘要',
     requestFingerprint: sha256(String(turn?.message || '')),
-    requestedOutcome: workMode === 'answer_query' ? '可解释回答' : '可审计分析与后续建议',
+    requestedOutcome: ['answer_query', 'system_status', 'operating_model_explanation', 'personal_identity_handoff'].includes(workMode)
+      ? '可解释回答'
+      : '可审计分析与后续建议',
     status: 'received',
     riskLevel: riskLevelFor(workMode),
     policySnapshotId: `policy:${requestId}`,
@@ -114,7 +119,7 @@ export function assertWorkCaseTransition(fromStatus, toStatus) {
 }
 
 export function stageContract(workMode = 'answer_query') {
-  const knowledgeOnly = ['answer_query', 'situation_analysis'].includes(workMode)
+  const knowledgeOnly = ['answer_query', 'situation_analysis', 'system_status', 'operating_model_explanation', 'personal_identity_handoff'].includes(workMode)
   return WORK_STAGES.map((stageType, sequenceNo) => ({
     sequenceNo,
     stageType,

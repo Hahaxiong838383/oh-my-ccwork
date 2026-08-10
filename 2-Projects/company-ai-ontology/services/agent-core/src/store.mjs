@@ -845,6 +845,19 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
     })
   }
 
+  async function operationalStatus({ tenantId }) {
+    return withTenant(tenantId, async (client) => {
+      const [actions, outbox] = await Promise.all([
+        client.query(`SELECT count(*)::integer AS count FROM actions.intents WHERE tenant_id=$1`, [tenantId]),
+        client.query(`SELECT count(*)::integer AS count FROM delivery.outbox WHERE tenant_id=$1`, [tenantId]),
+      ])
+      return {
+        actionIntents: Number(actions.rows[0]?.count || 0),
+        deliveryOutbox: Number(outbox.rows[0]?.count || 0),
+      }
+    })
+  }
+
   async function recordLearning({ tenantId, actorPersonId, decisionExternalKey, verificationId, finding, causeCategory, recommendedChange, changeScope }) {
     return withTenant(tenantId, async (client) => {
       const actor = await client.query(
@@ -1248,6 +1261,7 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
     proposeDecision,
     approveDecision,
     practiceProtocolStatus,
+    operationalStatus,
     recordLearning,
     compileP2,
     transitionTask,
@@ -1390,6 +1404,9 @@ export function createMemoryStore({ retrieval = null } = {}) {
     },
     async practiceProtocolStatus() {
       return { counts: {}, recentLineages: [] }
+    },
+    async operationalStatus() {
+      return { actionIntents: 0, deliveryOutbox: 0 }
     },
     async recordLearning(input) {
       return { id: randomUUID(), status: 'proposed', ...input }

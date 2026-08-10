@@ -7,9 +7,10 @@ import { createHEngineRuntime } from './runtime.mjs'
 import { createPostgresStore } from './store.mjs'
 import { createAdmissionController } from './admission.mjs'
 import { createCompanyBrain } from './company-brain.mjs'
+import { createCompanySystemStatusProvider } from './system-status.mjs'
 import { ACTIVE_STAGES, CONTRACT_ONLY_STAGES, ONTOLOGY_SCHEMA_VERSION, WORK_PROTOCOL_VERSION, createWorkCaseDraft } from './work-protocol.mjs'
 
-export const AGENT_CORE_CONTRACT_VERSION = '2026-08-09.3'
+export const AGENT_CORE_CONTRACT_VERSION = '2026-08-10.1'
 
 function json(response, statusCode, payload, headers = {}) {
   const body = JSON.stringify(payload)
@@ -129,9 +130,16 @@ function normalizeDirectoryPeople(input) {
   })
 }
 
-export function createAgentCoreServer({ config, store, runtime, logger = () => {}, now = () => Date.now() } = {}) {
+export function createAgentCoreServer({ config, store, runtime, systemStatusProvider: providedSystemStatusProvider, logger = () => {}, now = () => Date.now() } = {}) {
   const admission = createAdmissionController(config.admission || {})
-  const companyBrain = createCompanyBrain({ store, runtime, admission, config, now: () => new Date(now()) })
+  const systemStatusProvider = providedSystemStatusProvider || createCompanySystemStatusProvider({
+    config,
+    store,
+    runtime,
+    agentCoreVersion: AGENT_CORE_CONTRACT_VERSION,
+    now: () => new Date(now()),
+  })
+  const companyBrain = createCompanyBrain({ store, runtime, admission, config, systemStatusProvider, now: () => new Date(now()) })
   return http.createServer(async (request, response) => {
     try {
       if (request.method === 'GET' && request.url === '/healthz') {
@@ -182,10 +190,13 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
         return
       }
       if (request.method === 'GET' && request.url === '/status/practice-protocol') {
-        const status = await store.practiceProtocolStatus({
-          tenantId: config.tenantId,
-          limit: config.workProtocol?.recentCaseLimit || 8,
-        })
+        const [status, operationalCounts] = await Promise.all([
+          store.practiceProtocolStatus({
+            tenantId: config.tenantId,
+            limit: config.workProtocol?.recentCaseLimit || 8,
+          }),
+          store.operationalStatus ? store.operationalStatus({ tenantId: config.tenantId }) : { actionIntents: 0, deliveryOutbox: 0 },
+        ])
         json(response, 200, {
           ok: true,
           status: config.practiceProtocol?.mode || 'off',
@@ -193,6 +204,7 @@ export function createAgentCoreServer({ config, store, runtime, logger = () => {
           ontologySchemaVersion: config.workProtocol?.ontologyVersion || ONTOLOGY_SCHEMA_VERSION,
           activeStages: ACTIVE_STAGES,
           contractOnlyStages: CONTRACT_ONLY_STAGES,
+          operationalCounts,
           ...status,
         })
         return
