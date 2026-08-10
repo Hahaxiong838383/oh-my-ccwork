@@ -7,12 +7,12 @@
 - Goal 6-A：`engineering_verified=true`、`owner_accepted=true`。
 - QNAP：Schema `3.3.0`、Registry `in_sync`、Domain Connector `2026-08-10.1`、Agent Core `2026-08-10.2`。
 - 领域读模型：ERP 95、Operations 38、Device 57、Market 369。
-- H 控制面：`v1.56.2`，真实 Chrome `92/92`，生产文件与发布提交哈希一致。
+- H 控制面：`v1.58.2`，Source Commit `8f63fb9`，50 个运行文件 `in_sync`，真实 Chrome `99/99`。
 - 仍关闭：整库导入、员工规模放量、ERP/社媒写回、ERP M4、MediaCrawler、Capability Governance 激活、真 3D。
 
 ## 推荐顺序
 
-### Task 6-R：Release Provenance Guard
+### ✅ Task 6-R：Release Provenance Guard（已完成）
 
 目标：防止再次出现“版本号正确、生产源码错误”。
 
@@ -23,7 +23,7 @@
 3. 管理看板显示 Runtime 与 Git 是否一致，但不暴露主机路径或凭据。
 4. 制造一个文件漂移负测，确认状态变为 `drifted`；恢复后回到 `in_sync`。
 
-门禁：代码完成不等于允许重启；生产部署继续单独申请窗口。
+结果：既有 `v1.58.1` 完成零重启补签，随后 `v1.58.2` 走完整发布链上线；停启跨 1 秒、`NRestarts=0`，回滚备份与 99 项浏览器验收齐备。未来 H 发布继续按本门禁执行。
 
 ### Goal 7：P1-PROD-READINESS
 
@@ -57,8 +57,9 @@
 
 ## 后续独立 Goal
 
-1. 受控知识库批量导入：仅在群组权限语义和真实 Canary 通过后审批范围与窗口。
-2. Capability Governance 激活：从 `contract_only` 进入提案、评审、发布、回滚闭环。
-3. Task Compiler / A2A：经营目标自动拆解与个人 Bot 协作，但保留 DRI 批准和 Action Gateway。
-4. 真 3D：以大规模节点、跨域层级和时间演化的真实可视化瓶颈作为启动条件。
-5. ERP/社媒写回：独立安全 Goal；不包含 ERP M4 或 MediaCrawler 风控恢复的默认授权。
+1. PESTIM Strategic Intelligence：43 个维度、108 个 GoalFacet 和 4644 个 draft Impact Hypothesis；持续采集外部情报，生成日/周/月/季/半年/年度报告。Schema/Source Registry 可只读并行规划；QNAP Shadow 和自动 P2 分别审批。
+2. 受控知识库批量导入：仅在群组权限语义和真实 Canary 通过后审批范围与窗口。
+3. Capability Governance 激活：从 `contract_only` 进入提案、评审、发布、回滚闭环。
+4. Task Compiler / A2A：经营目标自动拆解与个人 Bot 协作，但保留 DRI 批准和 Action Gateway。
+5. 真 3D：以大规模节点、跨域层级和时间演化的真实可视化瓶颈作为启动条件。
+6. ERP/社媒写回：独立安全 Goal；不包含 ERP M4 或 MediaCrawler 风控恢复的默认授权。

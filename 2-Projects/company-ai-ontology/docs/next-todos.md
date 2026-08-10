@@ -4,24 +4,19 @@
 
 ## 当前结论
 
-P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI、Goal 5 P0-DEC 和 Goal 6-A P1-DOMAIN 均已完成工程验收。Domain Connector `.3 → .2 → .3` 回滚恢复和 H `v1.55.1` Chrome `59/59` 已通过；川哥人工体验验收仍待明确确认。10 名真实员工 Canary 继续关闭，不能因为工程 Goal 完成自动启动。
+P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI、Goal 5 P0-DEC、Goal 6-A P1-DOMAIN 和 Task 6-R 均已完成工程验收。Goal 6-A 已获川哥人工体验确认；H `v1.58.2` 发布溯源为 `in_sync`，真实 Chrome `99/99`。10 名真实员工 Canary 继续关闭，不能因为工程 Goal 完成自动启动。
 
 ## 2026-08-10 Goal 顺序重排
 
 1. `Goal 4`：✅ P0-EPI + 公司大脑工作逻辑显式建模，Intake 至可解释回答已生产 active。
 2. `Goal 5`：✅ P0-DEC + Decision/P2/Task/Action/Verification/Learning 实践闭环已生产 active。
-3. `Goal 6`：✅ QNAP P1-DOMAIN、Operating Model、3D-ready 协议、H `v1.55.1` 白盒和 Domain Connector 回滚恢复均已完成；Capability Governance v1 按范围保持 `contract_only`。
-4. `Goal 6-UAT`：🟡 川哥人工体验验收，当前只需要体验和反馈，不包含生产变更。
-5. `Goal 7`：推荐下一工程 Goal，完成生产归属与权限主体就绪。
-6. `Goal 3`：10 名真实员工 Canary，在 Goal 7 完成并单独授权后启动，仍是 20/50 人放量前硬门禁。
+3. `Goal 6`：✅ QNAP P1-DOMAIN、Operating Model、3D-ready 协议、H `v1.58.2` 白盒和 Domain Connector 回滚恢复均已完成；Capability Governance v1 按范围保持 `contract_only`。
+4. `Goal 6-UAT`：✅ 川哥人工体验验收通过。
+5. `Task 6-R`：✅ 发布溯源、零重启补签、完整运行时 Manifest、单次重启发布与 Chrome `99/99` 已完成。
+6. `Goal 7`：推荐下一工程 Goal，完成生产归属与权限主体就绪。
+7. `Goal 3`：10 名真实员工 Canary，在 Goal 7 完成并单独授权后启动，仍是 20/50 人放量前硬门禁。
 
 ## 推荐后续 Goal 路线
-
-### Goal 6-UAT：川哥人工体验验收
-
-- 打开架构白盒和运行看板，检查二维/2.5D 交互、焦点居中、Schema、Registry、ERP 95、Market 369 和灰色门禁。
-- 私聊“公司智慧中枢”，验证只读状态查询、决策提案不下发、用户身份操作转交私人 Bot。
-- 川哥明确回复“通过”后记录 `owner_accepted`；问题进入缺陷 WorkCase，不修改生产直到重新授权。
 
 ### Goal 7：P1-PROD-READINESS 生产归属与权限主体就绪（推荐下一 Goal）
 
@@ -51,6 +46,21 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 - `Goal 11`：Agent-to-Agent Gateway，连接员工私人 Agent 与 Company Agent。
 - `Goal 12`：真 3D WebGL 观察模式；不替代二维默认视图。
 - `Goal 13`：ERP/社媒受控写回；ERP M4 与 MediaCrawler 仍需各自独立指令。
+
+## P1-STRATEGIC-INTELLIGENCE：PESTIM 战略情报系统
+
+1. ✅ 已读取 PESTIM 关系文档、27 个目标、108 个 GoalFacet、43 个外部维度和 4644 条完整传导矩阵。
+2. ✅ 已确认 4644 条应作为 `generated_draft / unverified` Impact Hypothesis，不得直接成为事实或触发正式 P2。
+3. ✅ 已完成个人站前沿资讯雷达评估：可复用 Horizon/Theory Radar 的采集、去重、评分、富化、影子运行和 last-good 门禁；不得原样迁移个人站、公开 Webhook、个人账号和报告目录。
+4. ⏳ `P1-SI-A`：定义 ExternalFactor、GoalFacet、ImpactHypothesis、ImpactAssessment、StrategicIntelligenceReport 和 ReportRun 契约。
+5. ⏳ `P1-SI-B`：建立 Source Registry、许可/频率/保留期和第一批 PESTIM 白名单信源。
+6. ⏳ `P1-SI-C`：抽取公司版 Horizon Collector Contract、固定上游 Commit、镜像和 QNAP oneshot Worker 方案。
+7. ⏳ `P1-SI-D`：设计 Raw Snapshot、双时间、内容哈希、去重、数据质量和热冷保留策略。
+8. ⏳ `P1-SI-E`：定义日/周/月/季/半年/年报告机器契约、飞书模板和 H 控制面投影。
+9. ⏳ `P1-SI-F`：制定公司 QNAP 7 天 Shadow 验收包；资源上限、成本、来源成功率、重复率、时效、回滚和敏感信息均需实测。
+10. ⏳ `P1-SI-G`：HUD 首批选择 20–50 条高价值传导关系，由产品、销售、采购、财务和研发 DRI 评审后激活。
+11. ⛔ 自动创建正式 P2、向员工下发任务或写回 ERP/社媒继续关闭；只允许生成 Impact Assessment、报告和 Decision Proposal。
+12. 详细方案见 `docs/pestim-strategic-intelligence-architecture-2026-08-10.md`。
 
 ## P0-KB-ACL：正式导入前硬阻断
 

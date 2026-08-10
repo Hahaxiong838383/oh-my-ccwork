@@ -2,7 +2,7 @@
 
 ## 结论
 
-Task 6-R 已完成本地工程实现、专项测试、选择性提交、推送和只读发布准备检查。发布 Source Commit 为 `916ee03c4a22028d5b78c1aee72d37b98ceb9fdb`，准备状态为 `change_readiness=ready`。当前生产 H 控制面仍是健康的 `v1.56.2`，尚未部署、重启或改变生产流量；待川哥单独授权后发布 `v1.57.0`。
+Task 6-R 已完成生产工程闭环。当前 H 控制面为 `v1.58.2`，Source Commit `8f63fb9296bdb3cc5c658181f3d2fb78f986d919`，Release ID `20260810-175955-h-control-1.58.2`，50 个运行文件 `release.state=in_sync`、`mismatchCount=0`。发布停启跨 1 秒、`NRestarts=0`，真实 Chrome 白盒 `99/99`；Bridge、员工私人 Bot、Agent Core、Domain Connector 和公司 QNAP 未重启。
 
 ## 要解决的问题
 
@@ -59,22 +59,24 @@ H 控制面的版本号只能证明进程声明了哪个版本，不能证明生
 - 发布脚本生成、安装、备份、回滚和发布后对账静态测试；
 - 浏览器验收新增 Source Commit、文件集合哈希和 12 组件断言。
 
-## 仍待完成
+## 生产闭环证据
 
-只读发布检查已验证：
+最终发布已验证：
 
 - 已推送提交与本地发布文件一致；
-- `v1.57.0` 控制面测试通过；
+- `v1.58.2` 控制面 `289/289`、默认治理批次 `307/307`；
 - 管理员密码来源文件格式有效，未输出密码内容；
-- 生产服务 active，当前版本 `v1.56.2`；
+- 生产服务 active，当前版本 `v1.58.2`；
 - `/srv/h-control/.env` 属主和 `0600` 权限正确；
 - 公网健康检查为 200，未登录管理页继续 302；
-- 发布归档 SHA-256 为 `6513532aef76a79bbfb0b4098ae8505f92dbe5cefaab41d75aa0e93f12310b7d`；
-- `restart_executed=false`。
+- 发布 Manifest 跟踪 50 个运行文件，Source Commit、文件集合哈希和公网读回一致；
+- 回滚备份为 `/srv/h-control/backups/20260810-175955-h-control-1.58.2`；
+- 真实 Chrome `99/99`，控制台错误、失败请求、卡片/连线碰撞和横向溢出均为 0。
 
-下一步：
+后续规则：
 
-1. 川哥确认预计影响和回滚门禁后，单独授权生产重启；
-2. 发布 `v1.57.0`，发布脚本只执行一次 `systemctl restart h-control`；
-3. 完成回环、公网、管理员登录、发布对账和真实 Chrome 验收；
-4. 分开记录 `engineering_verified` 与 `owner_accepted`。
+1. 发布准备与正式操作之间必须重新 fetch 并读取生产版本、启动时间、文件哈希和 Manifest；
+2. 同版本运行文件一致但 Manifest 缺失时只做零重启补签；
+3. 新版本必须从已推送 Source Commit 构建完整运行时清单、暂存测试、备份和单次重启；
+4. Runtime Source Commit 与发布 Tool Commit 分开记录；
+5. `engineering_verified` 与 `owner_accepted` 继续分开记录。

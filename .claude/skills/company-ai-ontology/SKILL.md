@@ -292,7 +292,7 @@ node ops/sync-company-directory.mjs
 - Decision Lineage 必须区分技术执行、业务结果、经营目标三层成功；`execution_success=true` 不能推出 `goal_success=true`。Learning 默认只能写为 `proposed`。
 - 失败 Canary 必须保留审计并显式退役：WorkCase `blocked`、Decision `superseded`、Practice Status `retired`；禁止删除历史，也禁止退役 `goal_verified` Lineage。
 - Ontology Definition Source Commit 与 Runtime Release Commit 分开记录。Definition 未变化时不得用运行时热修复提交覆盖 Registry Source Commit。
-- Goal 6-A 已完成工程与人工体验验收：QNAP 领域数据面、Operating Model、P1-DOMAIN 和 3D-ready 协议均有生产证据，Capability Governance v1 保持 `contract_only`。H 控制面 `v1.56.2`、Agent Core `2026-08-10.2`、Domain Connector `2026-08-10.1` 已上线；最终完整 `verify.sh` 与真实 Chrome `92/92` 通过，川哥于 `2026-08-10` 明确确认验收 ok。
+- Goal 6-A 已完成工程与人工体验验收：QNAP 领域数据面、Operating Model、P1-DOMAIN 和 3D-ready 协议均有生产证据，Capability Governance v1 保持 `contract_only`。H 控制面 `v1.58.2`、Agent Core `2026-08-10.2`、Domain Connector `2026-08-10.1` 已上线；H 发布溯源跟踪 50 个运行文件并为 `in_sync`，真实 Chrome 白盒 `99/99` 通过。川哥于 `2026-08-10` 明确确认 Goal 6-A 验收 ok；Task 6-R 工程闭环单独记录，不从自动化推导新的 owner acceptance。
 - 生产切换后的健康断言必须轮询到核心服务 ready，不能在容器刚启动时做一次即时断言；否则会把实际成功的切换误判为失败并触发不必要的恢复。自动恢复仍必须保留，且每次回滚都同时证明旧版可运行、新版可恢复、业务数据不变。
 - 任何 H 控制面、QNAP 或其他生产服务的重启都必须获得川哥在当前变更窗口的明确授权；Goal 文件、历史部署授权和“继续 Goal”都不能替代即时批准。申请前必须完成只读基线、目标测试、备份/回滚设计、影响与预计中断说明。
 - 修改 `/srv/h-control/.env` 后必须显式恢复 `h-control:h-control / 0600`，并以服务用户验证可读；临时文件原子替换会改变属主，是本次 502 的直接根因之一。
@@ -303,8 +303,15 @@ node ops/sync-company-directory.mjs
 - 人工体验验收至少覆盖三个表面：架构白盒验证“系统如何运转”，运行看板验证“当前真实状态”，全员飞书 Bot 验证“员工如何使用”；三者通过仍不能替代真实业务结果和 DRI 验收。
 - 提供验收入口前必须在线复核版本、登录跳转和关键状态；历史截图、旧 URL、测试报告或记忆只能作为线索，不能冒充当前可体验状态。
 - H 版本号不能单独证明生产源码与 Git 一致。本轮 `/healthz` 报告 `v1.56.1`，但 Dashboard/Whitebox 仍是较旧文件；后续必须从已推送 Source Commit 构建，并在重启后对账 Source Commit、目标文件哈希、API DTO 和真实 DOM。发现同版本源码漂移时升补丁版本，不以同一版本静默覆盖。
+- Task 6-R 已完成：既有同版本运行文件一致但 Manifest 缺失时走零重启补签；新版本从已推送 Source Commit 构建完整运行时清单、暂存测试、备份、单次重启和浏览器读回。Runtime Source Commit 与发布工具 Tool Commit 必须分离记录；发布前重新 fetch 与读取生产真值，旧准备结论不得继承。
 - Agent Core 热修后的重新验收必须使用全新 `run_id`、`requestId` 和 `idempotencyKey`；复用旧键只会重放旧失败。策略治理意图不得直接穿透数据库 `work_mode` 约束，应映射到稳定枚举并保留原治理意图供审计。
-- 推荐后续顺序：Task 6-R Release Provenance Guard → Goal 7 P1-PROD-READINESS → Goal 3 十人真实 Canary → Goal 8 24 小时容量与 20/50 人扩容。整库导入、Capability Governance 激活、A2A、真 3D 和业务写回继续独立审批。
+- 推荐后续顺序：✅ Task 6-R Release Provenance Guard → **Goal 7 P1-PROD-READINESS（下一工程 Goal）** → Goal 3 十人真实 Canary → Goal 8 24 小时容量与 20/50 人扩容。整库导入、Capability Governance 激活、A2A、真 3D 和业务写回继续独立审批。
+- PEST + Industry + Market 是持续运行的公司外部战略情报层，不是一次性知识文档。标准链路为 `Raw Item → Observation → Signal → Trend/Claim → Impact Assessment → Report/Decision Proposal`，再由 DRI 或已批准政策决定是否进入 P2；重大事件可即时创建 Alert/WorkCase，但不得绕过 Decision 和 Action Gateway。
+- PESTIM 在因果上采用 `PEST 宏观 → Industry 行业 → Market 市场力量 → GoalFacet` 的多跳图，同时保留政策、融资、人才和技术对公司目标的直接路径。飞书 43 × 108 的 4644 条矩阵全部作为 `generated_draft / unverified / inactive` Impact Hypothesis 导入，不得当作 Fact/Claim 或自动任务规则。
+- 日、周、月、季、半年、年度报告必须基于同一批结构化 Evidence/Impact Assessment 在不同窗口重新计算，禁止递归总结下级报告正文；每次 ReportRun 记录 evidence cutoff、source snapshot、Ontology/causal graph 版本、input hash、model、prompt、成本和状态。
+- 个人站“前沿资讯雷达”是多个生产者加 Next.js 展示层的聚合，不是可原样迁移的单体项目。公司 QNAP 只复用 Horizon/Theory Radar 的采集、去重、评分、富化、oneshot、影子运行和 last-good 门禁；必须使用公司独立实例、目录、账号、Key 和报告契约，禁止调用个人站 Webhook 或读取个人数据。
+- 公司 QNAP 建议采用轻量常驻 Intelligence Orchestrator + 受资源约束的临时 Collector Worker；任何 Shadow/正式部署都需要重新核对公司 QNAP 五元组、做 7 天资源/来源/成本验收并取得当次部署授权。第一条产品线推荐 HUD，仅激活经 DRI 审查的 20–50 条高价值传导关系。
+- PESTIM Strategic Intelligence 详细方案见 `2-Projects/company-ai-ontology/docs/pestim-strategic-intelligence-architecture-2026-08-10.md`。
 - 详细实施计划见 `2-Projects/company-ai-ontology/docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
 
 当前实现与切换流程见：
