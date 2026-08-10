@@ -2416,7 +2416,9 @@ syncCredentials gate 在 `sandbox &&` 上），grok 钉死本机 device OAuth，
 - dev198 git 漂移（tar 直传致工作区超前 HEAD）已于 2026-08-09 追平：md5 对撞确认
   = 6671e57 后 `git stash push` 入库，之后一律走 `ops/deploy-sites.sh`，别再 tar 直传。
 
-## H-0085 L0 skill 同步 SOP + 空壳 fork 劫持（v1.54.1 · 2026-08-09 晚）
+## H-0083/H-0084 L0 skill 同步 SOP + 空壳 fork 劫持（v1.54.1 · 2026-08-09 晚）
+
+> Base 表编号：H-0083=空壳 fork Bug、H-0084=约日程 L0 v1.3.0 同步。（本节曾误自编 H-0085，该编号已被后续记录占用，2026-08-10 修正。）
 
 **做「把 owner/某版 skill 同步给租户」类任务时按这个来：**
 
@@ -5047,13 +5049,15 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-07 16:05：dev198 **`e5b397815d1c`** / Mini VM **`c62485a04785`**（**刻意落差**，见下），仓库 main `e5b3978`，双站契约 `2026-08-06.1` 唯一；Mini 三层验证 `status=complete`）
+#### ✅ 版本态（2026-08-10 15:45：dev198 与 Mini VM **同版 `f076e7642fab`**，双站契约 `2026-08-09.1` 唯一；Mini 完整验证器 `ok=true, status=complete`）
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | 线上 **`v1.56.1`**（2026-08-10 H-0065 徽章多跳白名单修复；公网 `https://ai.kidshub.cn/healthz` 取真值） |
-| Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件、1 App。落后 main（含 fork 空壳修复与 H-0065）——升级走 `deploy/lima/` 影子割接，约 35 秒中断，待川哥定窗口 |
+| 控制面 aliyun-hk | 线上 **`v1.56.2`**（2026-08-10 ontology 会话 production drift repair；公网 `https://ai.kidshub.cn/healthz` 取真值） |
+| Mini 活动 VM 运行态 | **`f076e7642fab`**、`dirty=false`、581 文件、1 App（2026-08-10 三段割接零停服；真实长任务验证器 10/10 全绿，Base H-0085） |
 | dev198 | **`f076e7642fab`**（2026-08-10 H-0065 自动分类+v1.56.1 hotfix，契约 2026-08-09.1 全 12 App 唯一，真机验收：AI 分类徽章川哥点验通过） |
+
+> 仓库 main 已到 `8973d41`（f076e76 之上 3 个 ontology/acceptance 侧提交，非 bridge 运行链），bridge 双站运行 `f076e76` 即本轮升级目标态。
 
 ⚠️ **跨 bridge+控制面的字段/行为修复，部署顺序=先控制面后 bridge**（2026-08-10 实测）：
 bridge 一重启 bootPush 立即推镜像，若控制面新代码还没起，数据被旧代码处理一次，
