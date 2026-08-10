@@ -2437,8 +2437,8 @@ syncCredentials gate 在 `sandbox &&` 上），grok 钉死本机 device OAuth，
   否则 pristine 判定全断（跟随与撤回双失灵）。
 - **UI 入口在网页后台 Skills 面板**，且只有「我创建的」条目有分享按钮——用户报
   「找不到入口」先查这两点（2026-08-10 川哥第一反应在飞书卡片里找）。真机验收前
-  给验收账号预置 demo skill（验收后可删；rayman.chen / u-001422f6e5 名下的
-  `demo-share-test` 即当时预置，川哥用完可清）。
+  给验收账号预置 demo skill；历史两轮预置（`demo-share-test`、`share-card-demo`）
+  均已随验收通过清理零残留，share 记录按审计原则保留终态。
 - 排障：分享记录 `sudo cat /srv/h-control/data/skills.json | python3 -c "...shares..."`；
   E2E 会话构造=用生产 SESSION_SECRET 按 session.mjs 格式签 hsid cookie（服务器上签，
   不出机）。⚠️ **cookie 的 exp 是毫秒**（`Date.now()+ttl`）——python 签的时候写秒级
