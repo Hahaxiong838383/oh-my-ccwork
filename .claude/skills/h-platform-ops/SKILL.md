@@ -5054,7 +5054,7 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | 线上 **`v1.56.2`**（2026-08-10 ontology 会话 production drift repair；公网 `https://ai.kidshub.cn/healthz` 取真值） |
+| 控制面 aliyun-hk | 线上 **`v1.58.0`**（2026-08-10 H-0028 定向分享 + ontology provenance guard；公网 `https://ai.kidshub.cn/healthz` 取真值） |
 | Mini 活动 VM 运行态 | **`f076e7642fab`**、`dirty=false`、581 文件、1 App（2026-08-10 三段割接零停服；真实长任务验证器 10/10 全绿，Base H-0085） |
 | dev198 | **`f076e7642fab`**（2026-08-10 H-0065 自动分类+v1.56.1 hotfix，契约 2026-08-09.1 全 12 App 唯一，真机验收：AI 分类徽章川哥点验通过） |
 
