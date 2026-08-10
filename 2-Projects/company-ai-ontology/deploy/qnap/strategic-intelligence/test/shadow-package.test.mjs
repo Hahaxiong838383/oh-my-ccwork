@@ -8,7 +8,9 @@ import { fileURLToPath } from 'node:url'
 
 import {
   compileShadowSourceRegistry,
+  createP003ReviewWorkbook,
   createSourceApprovalWorkbook,
+  loadP003ReviewContext,
   loadSourceApprovalContext,
 } from '../../../../packages/ontology-contracts/src/index.mjs'
 import { tick } from '../orchestrator/orchestrator.mjs'
@@ -27,6 +29,16 @@ function principal(role) {
     principalRef: `company-directory:${role}-reviewer`,
     decision: 'approve',
   }
+}
+
+function finalizeP003Workbook(workbook) {
+  for (const review of workbook.reviews) {
+    review.decision = 'keep_inactive'
+    review.reviewedAt = '2026-08-10T09:00:00Z'
+    review.decisionReason = '真实 DRI 已完成审核，本条关系继续保持 inactive。'
+    review.reviewParticipants = [principal(review.proposedDriRoles[0] || 'product')]
+  }
+  return workbook
 }
 
 function sha256(value) {
@@ -109,6 +121,8 @@ test('deployment scripts only target strategic intelligence services and keep ex
   assert.match(deploy, /SHADOW_DEPLOY_APPROVED/)
   assert.match(deploy, /GOAL7_STATUS/)
   assert.match(deploy, /validate-release-manifest\.mjs/)
+  assert.match(deploy, /SI_APPROVED_P003_REVIEW_FILE/)
+  assert.match(deploy, /validate-approved-p003-review\.mjs/)
   assert.match(deploy, /up -d --no-deps intelligence-orchestrator/)
   assert.doesNotMatch(deploy, /up -d[^\n]*(?:agent-core|h-lite|connector|gateway|postgres|redis|qdrant)/)
 })
@@ -192,6 +206,35 @@ test('approved registry validator accepts only enabled sources from a shadow-rev
   const denied = spawnSync(process.execPath, [validator, registryFile, configFile], { encoding: 'utf8' })
   assert.notEqual(denied.status, 0)
   assert.match(denied.stderr, /source approval gate denied/)
+})
+
+test('P003 deployment gate requires all real-review decisions and keeps every relation inactive', async () => {
+  const { catalog } = await loadP003ReviewContext()
+  const outputRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'company-si-p003-review-gate-'))
+  const reviewFile = path.join(outputRoot, 'p003-review.json')
+  const validator = path.join(ROOT, 'scripts/validate-approved-p003-review.mjs')
+  const { spawnSync } = await import('node:child_process')
+
+  const reviewed = finalizeP003Workbook(createP003ReviewWorkbook(catalog))
+  await fs.writeFile(reviewFile, JSON.stringify(reviewed))
+  const accepted = spawnSync(process.execPath, [validator, reviewFile], { encoding: 'utf8' })
+  assert.equal(accepted.status, 0, accepted.stderr)
+  const result = JSON.parse(accepted.stdout)
+  assert.equal(result.reviewCount, 36)
+  assert.equal(result.finalDecisionCount, 36)
+  assert.equal(result.productionActivationAllowed, false)
+
+  const pending = createP003ReviewWorkbook(catalog)
+  await fs.writeFile(reviewFile, JSON.stringify(pending))
+  const incomplete = spawnSync(process.execPath, [validator, reviewFile], { encoding: 'utf8' })
+  assert.notEqual(incomplete.status, 0)
+  assert.match(incomplete.stderr, /P003 review gate denied/)
+
+  reviewed.reviews[0].activationStatus = 'active'
+  await fs.writeFile(reviewFile, JSON.stringify(reviewed))
+  const activated = spawnSync(process.execPath, [validator, reviewFile], { encoding: 'utf8' })
+  assert.notEqual(activated.status, 0)
+  assert.match(activated.stderr, /activationStatus must remain inactive/)
 })
 
 test('candidate migrations remain outside production migrations and isolated validation restores baseline', async () => {

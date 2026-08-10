@@ -10,10 +10,11 @@ script_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 release_root=${SI_RELEASE_ROOT:?SI_RELEASE_ROOT is required}
 approved_registry=${SI_APPROVED_SOURCE_REGISTRY_FILE:?SI_APPROVED_SOURCE_REGISTRY_FILE is required}
 approved_config=${SI_APPROVED_COLLECTOR_CONFIG_FILE:?SI_APPROVED_COLLECTOR_CONFIG_FILE is required}
+approved_p003_review=${SI_APPROVED_P003_REVIEW_FILE:?SI_APPROVED_P003_REVIEW_FILE is required}
 manifest=$release_root/release-manifest.json
 source_archive=$release_root/source.tar.gz
 image_archive=$release_root/collector-image.tar.gz
-for file in "$manifest" "$source_archive" "$image_archive" "$approved_registry" "$approved_config"; do
+for file in "$manifest" "$source_archive" "$image_archive" "$approved_registry" "$approved_config" "$approved_p003_review"; do
   [ -f "$file" ] || { echo 'required release or approval file missing' >&2; exit 1; }
 done
 case "$release_root" in /share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence/release/*) ;; *) echo 'refusing unexpected release root' >&2; exit 1 ;; esac
@@ -34,6 +35,7 @@ release_project_root=$staging/company-ai-ontology
 node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-release-manifest.mjs" \
   "$manifest" "$source_archive" "$image_archive" >/dev/null
 node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-approved-registry.mjs" "$approved_registry" "$approved_config" >/dev/null
+node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-approved-p003-review.mjs" "$approved_p003_review" >/dev/null
 
 if [ -f "$shadow_root/.env.shadow" ] && [ -d "$shadow_root/package" ]; then
   SI_PACKAGE_ROOT="$shadow_root/package" SI_BACKUP_RUN_ID=pre-shadow-$source_commit "$script_root/backup-shadow.sh" >/dev/null

@@ -49,6 +49,7 @@
 - `docs/p1-si-g-p003-review-candidate-acceptance-2026-08-10.md`：真实 4644 条矩阵到 P003 36 条审核候选的来源、Hash、负向门禁和 DRI 待办。
 - `docs/p1-si-human-review-workflow-acceptance-2026-08-10.md`：来源合规与 P003 DRI 的飞书 CSV 回填、强类型 JSON、final 校验、编译和实名数据边界。
 - `docs/p1-si-feishu-review-workbench-acceptance-2026-08-10.md`：P1-SI-B/G 真实飞书人工审核工作台、筛选视图和 CSV 往返验收。
+- `docs/p1-si-dri-selection-handoff-2026-08-10.md`：实名 DRI 候选的隐私隔离交接、待拍板角色和 P003 部署门禁补强。
 - `docs/goal7-p1-prod-readiness-plan-2026-08-10.md`：Goal 7 部门 / 群聊 Principal、用途与撤权语义，以及 H 引擎冗余、熔断、预算和真实模型读回实施计划。
 - `docs/pestim-strategic-intelligence-architecture-2026-08-10.md`：PESTIM 持续情报、多周期经营报告、Horizon/个人站雷达复用边界和公司 QNAP Shadow 方案。
 - `docs/p1-si-a-pestim-ontology-definition-acceptance-2026-08-10.md`：PESTIM 候选 Schema `3.4.0`、纯增量兼容性、禁止自动 P2/写回和生产不变验收证据。
@@ -80,7 +81,7 @@
 
 1. `Task 6-R / Release Provenance Guard` 已完成；未来所有 H 发布继续执行 Source Commit、完整运行时 Manifest、文件哈希和真实浏览器门禁。
 2. Goal 7 `P1-PROD-READINESS`：建立公司专用 H 引擎 CPA 账号/Key 与同厂冗余，并补齐 `department/openchat`、`chat/group` Principal、用途和撤权语义；本 Goal 不执行整库导入。
-3. PESTIM P1-SI-B～G 的 Source Registry、Collector、数据底座、多周期报告、Shadow 准备和飞书 CSV 人工审核闭环已完成工程验证；Linux/amd64 镜像、010/011、19/19 强制 RLS 和 baseline restore 已通过 CI。下一步由真实实名 DRI 完成来源合规与 P003 联合审核，再从目标部署 Commit 生成公司 QNAP 最终发布包，不提前执行生产切换。
+3. PESTIM P1-SI-B～G 的 Source Registry、Collector、数据底座、多周期报告、Shadow 准备和飞书 CSV 人工审核闭环已完成工程验证；Linux/amd64 镜像、010/011、19/19 强制 RLS 和 baseline restore 已通过 CI。实名候选已在 `work-private` 收敛为 7 类各 4 人，合规/法务仍需川哥指定；部署入口已新增 P003 36 条最终审核 fail-closed 门禁。下一步由川哥拍板实名 DRI，再完成真实审核和最终发布包，不提前执行生产切换。
 4. Goal 3 的 10 名真实员工 Canary 在 Goal 7 后执行，仍是 20/50 人放量前的强制门禁。
 5. Goal 8 建立 24 小时容量观测、H-Lite lease/fencing 和 Worker 分池，再规划 20/50 人扩容。
 6. 产品研究部整库导入、Capability Governance 激活、A2A、真 3D、PESTIM 自动 P2、ERP/社媒写回、ERP M4 和 MediaCrawler 风控恢复继续拆为独立 Goal，必须重新授权。

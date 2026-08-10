@@ -57,7 +57,10 @@ scripts/prepare-shadow-release.sh
 - `SHADOW_DATABASE_MIGRATION_APPROVED=YES`；
 - `GOAL7_STATUS=complete`；
 - 已审批 Source Registry 和 Collector Config；
+- P003 36 条候选均有实名 DRI 最终决定，且所有关系继续保持 `inactive`；
 - 完整且 Hash 一致的不可变发布包。
+
+部署时必须通过 `SI_APPROVED_P003_REVIEW_FILE` 指向公司受控目录中的最终审核工作簿。部署入口会执行 `validate-approved-p003-review.mjs`：任何 `pending`、候选 Hash 漂移、缺少实名参与者、审核字段不完整或 `activationStatus` 被改为 `active` 都会在数据库迁移和服务启动前失败关闭。该审核文件包含个人信息，不进入 Git、共享记忆或公开验收报告。
 
 部署脚本只应用 010/011 战略情报候选迁移并启动 `intelligence-orchestrator`，不会执行任何既有核心服务的 `up`、`restart` 或 `stop`。
 Dispatcher 使用 QNAP 既有 crontab 每分钟检查队列，安装过程不会重启 cron daemon。
