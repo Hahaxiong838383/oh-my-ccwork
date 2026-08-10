@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -26,6 +27,10 @@ function principal(role) {
     principalRef: `company-directory:${role}-reviewer`,
     decision: 'approve',
   }
+}
+
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex')
 }
 
 test('shadow compose isolates services, ports, socket, privileges and side effects', async () => {
@@ -99,11 +104,56 @@ test('deployment scripts only target strategic intelligence services and keep ex
   assert.match(prepare, /HEAD must equal the pushed upstream commit/)
   assert.match(prepare, /release requires a clean project subtree/)
   assert.match(prepare, /source_commit}:2-Projects\/company-ai-ontology/)
+  assert.match(prepare, /validate-release-manifest\.mjs/)
   const deploy = await fs.readFile(path.join(ROOT, 'scripts/deploy-shadow.sh'), 'utf8')
   assert.match(deploy, /SHADOW_DEPLOY_APPROVED/)
   assert.match(deploy, /GOAL7_STATUS/)
+  assert.match(deploy, /validate-release-manifest\.mjs/)
   assert.match(deploy, /up -d --no-deps intelligence-orchestrator/)
   assert.doesNotMatch(deploy, /up -d[^\n]*(?:agent-core|h-lite|connector|gateway|postgres|redis|qdrant)/)
+})
+
+test('release manifest validator binds immutable archives and keeps deployment disabled', async () => {
+  const outputRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'company-si-release-manifest-'))
+  const sourceArchive = path.join(outputRoot, 'source.tar.gz')
+  const imageArchive = path.join(outputRoot, 'collector-image.tar.gz')
+  const manifestFile = path.join(outputRoot, 'release-manifest.json')
+  const sourceBytes = Buffer.from('immutable source archive')
+  const imageBytes = Buffer.from('immutable collector image archive')
+  await fs.writeFile(sourceArchive, sourceBytes)
+  await fs.writeFile(imageArchive, imageBytes)
+  const manifest = {
+    manifestVersion: '1.0.0',
+    releaseType: 'P1-SI-F-shadow-candidate',
+    createdAt: '2026-08-10T09:00:00Z',
+    sourceCommit: 'a'.repeat(40),
+    collectorImageId: `sha256:${'b'.repeat(64)}`,
+    sourceArchiveSha256: sha256(sourceBytes),
+    collectorImageArchiveSha256: sha256(imageBytes),
+    candidateOntologySchema: '3.7.0',
+    candidateOntologyHash: 'c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860',
+    sourceRegistryCandidateHash: '0ce4022adcfc177ced670a8d7fd2e4b4e119c2fc1bc5c19cabefb3223c010eae',
+    publish: false,
+    productionDeploymentAuthorized: false,
+    requiredGate: 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH',
+  }
+  await fs.writeFile(manifestFile, JSON.stringify(manifest))
+  const { spawnSync } = await import('node:child_process')
+  const validator = path.join(ROOT, 'scripts/validate-release-manifest.mjs')
+  const accepted = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, imageArchive], { encoding: 'utf8' })
+  assert.equal(accepted.status, 0, accepted.stderr)
+  assert.equal(JSON.parse(accepted.stdout).productionDeploymentAuthorized, false)
+
+  await fs.writeFile(manifestFile, JSON.stringify({ ...manifest, publish: true }))
+  const unsafe = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, imageArchive], { encoding: 'utf8' })
+  assert.notEqual(unsafe.status, 0)
+  assert.match(unsafe.stderr, /publish must remain false/)
+
+  await fs.writeFile(manifestFile, JSON.stringify(manifest))
+  await fs.writeFile(sourceArchive, 'tampered source archive')
+  const tampered = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, imageArchive], { encoding: 'utf8' })
+  assert.notEqual(tampered.status, 0)
+  assert.match(tampered.stderr, /source archive hash mismatch/)
 })
 
 test('approved registry validator accepts only enabled sources from a shadow-reviewed registry', async () => {

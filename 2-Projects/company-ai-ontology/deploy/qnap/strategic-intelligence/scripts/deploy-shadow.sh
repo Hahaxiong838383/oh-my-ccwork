@@ -24,12 +24,15 @@ source_sha=$(node -e "const x=require(process.argv[1]); process.stdout.write(x.s
 image_sha=$(node -e "const x=require(process.argv[1]); process.stdout.write(x.collectorImageArchiveSha256)" "$manifest")
 [ "$(sha256sum "$source_archive" | awk '{print $1}')" = "$source_sha" ] || { echo 'source archive hash mismatch' >&2; exit 1; }
 [ "$(sha256sum "$image_archive" | awk '{print $1}')" = "$image_sha" ] || { echo 'collector image archive hash mismatch' >&2; exit 1; }
+node "$script_root/validate-release-manifest.mjs" "$manifest" "$source_archive" "$image_archive" >/dev/null
 
 staging=$release_root/staging-$source_commit
 rm -rf "$staging"
 mkdir -p "$staging"
 tar -C "$staging" -xzf "$source_archive"
 release_project_root=$staging/company-ai-ontology
+node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-release-manifest.mjs" \
+  "$manifest" "$source_archive" "$image_archive" >/dev/null
 node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-approved-registry.mjs" "$approved_registry" "$approved_config" >/dev/null
 
 if [ -f "$shadow_root/.env.shadow" ] && [ -d "$shadow_root/package" ]; then

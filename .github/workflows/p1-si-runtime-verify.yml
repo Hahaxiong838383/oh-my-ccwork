@@ -70,12 +70,56 @@ jobs:
             "$project/deploy/qnap/strategic-intelligence/scripts/validate-candidate-migrations-isolated.sh" \
             | tee runtime-evidence/postgres-validation.txt
 
+      - name: Build immutable release candidate
+        id: release
+        shell: bash
+        env:
+          IMAGE_ID: ${{ steps.image.outputs.image_id }}
+          IMAGE_ARCHIVE_SHA: ${{ steps.image.outputs.archive_sha }}
+        run: |
+          set -euo pipefail
+          project=2-Projects/company-ai-ontology
+          git archive --format=tar.gz --prefix=company-ai-ontology/ "${GITHUB_SHA}:${project}" \
+            > runtime-evidence/source.tar.gz
+          source_sha=$(sha256sum runtime-evidence/source.tar.gz | awk '{print $1}')
+          export SOURCE_ARCHIVE_SHA="$source_sha"
+          node <<'NODE'
+          const fs = require('node:fs')
+          const manifest = {
+            manifestVersion: '1.0.0',
+            releaseType: 'P1-SI-F-shadow-candidate',
+            createdAt: new Date().toISOString(),
+            sourceCommit: process.env.GITHUB_SHA,
+            collectorImageId: process.env.IMAGE_ID,
+            sourceArchiveSha256: process.env.SOURCE_ARCHIVE_SHA,
+            collectorImageArchiveSha256: process.env.IMAGE_ARCHIVE_SHA,
+            candidateOntologySchema: '3.7.0',
+            candidateOntologyHash: 'c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860',
+            sourceRegistryCandidateHash: '0ce4022adcfc177ced670a8d7fd2e4b4e119c2fc1bc5c19cabefb3223c010eae',
+            publish: false,
+            productionDeploymentAuthorized: false,
+            requiredGate: 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH',
+          }
+          fs.writeFileSync('runtime-evidence/release-manifest.json', `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 })
+          NODE
+          node "$project/deploy/qnap/strategic-intelligence/scripts/validate-release-manifest.mjs" \
+            runtime-evidence/release-manifest.json \
+            runtime-evidence/source.tar.gz \
+            runtime-evidence/collector-image.tar.gz
+          manifest_sha=$(sha256sum runtime-evidence/release-manifest.json | awk '{print $1}')
+          {
+            echo "source_sha=$source_sha"
+            echo "manifest_sha=$manifest_sha"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Write verification manifest
         shell: bash
         env:
           IMAGE_ID: ${{ steps.image.outputs.image_id }}
           IMAGE_PLATFORM: ${{ steps.image.outputs.platform }}
           IMAGE_ARCHIVE_SHA: ${{ steps.image.outputs.archive_sha }}
+          SOURCE_ARCHIVE_SHA: ${{ steps.release.outputs.source_sha }}
+          RELEASE_MANIFEST_SHA: ${{ steps.release.outputs.manifest_sha }}
           POSTGRES_IMAGE: pgvector/pgvector:pg17-bookworm@sha256:7ae6051efd0e60444282c27c7e141af07f322ce033300e727a49c3dd11075e38
         run: |
           set -euo pipefail
@@ -91,15 +135,23 @@ jobs:
             collectorImageId: process.env.IMAGE_ID,
             collectorPlatform: process.env.IMAGE_PLATFORM,
             collectorImageArchiveSha256: process.env.IMAGE_ARCHIVE_SHA,
+            sourceArchiveSha256: process.env.SOURCE_ARCHIVE_SHA,
+            releaseManifestSha256: process.env.RELEASE_MANIFEST_SHA,
             postgresImage: process.env.POSTGRES_IMAGE,
             imageBuildVerified: true,
             sqlRuntimeVerified: true,
+            immutableReleaseCandidateVerified: true,
             companyQnapDeployed: false,
             publish: false,
           }
           fs.writeFileSync('runtime-evidence/runtime-verification.json', `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 })
           NODE
-          sha256sum runtime-evidence/runtime-verification.json runtime-evidence/postgres-validation.txt \
+          sha256sum \
+            runtime-evidence/runtime-verification.json \
+            runtime-evidence/postgres-validation.txt \
+            runtime-evidence/release-manifest.json \
+            runtime-evidence/source.tar.gz \
+            runtime-evidence/collector-image.tar.gz \
             > runtime-evidence/SHA256SUMS
 
       - name: Upload runtime evidence
@@ -108,4 +160,4 @@ jobs:
           name: p1-si-runtime-${{ github.sha }}
           path: runtime-evidence/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30

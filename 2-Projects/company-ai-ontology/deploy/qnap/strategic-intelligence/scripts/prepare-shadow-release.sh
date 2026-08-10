@@ -45,4 +45,6 @@ cat > "$output_root/release-manifest.json" <<EOF
 }
 EOF
 chmod 600 "$output_root/source.tar.gz" "$output_root/collector-image.tar.gz" "$output_root/release-manifest.json"
+node "$project_root/deploy/qnap/strategic-intelligence/scripts/validate-release-manifest.mjs" \
+  "$output_root/release-manifest.json" "$output_root/source.tar.gz" "$output_root/collector-image.tar.gz" >/dev/null
 printf 'shadow_release_candidate=%s\nsource_commit=%s\ncollector_image_id=%s\n' "$output_root" "$source_commit" "$image_id"
