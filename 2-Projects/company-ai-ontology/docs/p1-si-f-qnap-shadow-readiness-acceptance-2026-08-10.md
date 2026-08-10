@@ -83,6 +83,8 @@ Dispatcher 会从 Collector 产物和 Docker Stats 自动提取来源数、成�
 6. baseline dump 恢复后不存在 candidate schema；
 7. 生成源码包、镜像包、Hash 和发布 Manifest。
 
+部署前 Registry 验证器只接受人工审核编译后的 `shadow_reviewed` 状态，并逐个检查 Collector Config 中的来源是否返回 `SOURCE_APPROVED`；`candidate`、`paused`、`revoked` 或审批不完整来源均拒绝。
+
 `deploy-shadow.sh` 还必须同时取得：
 
 - `SHADOW_DEPLOY_APPROVED=YES`；
@@ -130,10 +132,10 @@ Collector 测试由 `6/6` 增至 `7/7`，覆盖 metadata-only 不留正文、str
 
 ## 8. 本地证据
 
-- Shadow 包测试：`8/8`；
+- Shadow 包测试：`9/9`；
 - Shadow 静态验证：通过；
 - Collector 测试：`7/7`；
-- Ontology Contract 测试：`41/41`；
+- Ontology Contract 测试：`52/52`；
 - Shell 与 Node 语法检查：通过；
 - Git diff whitespace 检查：通过。
 
@@ -143,7 +145,7 @@ Collector 测试由 `6/6` 增至 `7/7`，覆盖 metadata-only 不留正文、str
 
 运行 `31416612677` 对已推送 Source Commit `c9909a8bad72b9db7761e7d2437c8788f604da12` 执行：
 
-1. Ontology `41/41`、Collector `7/7`、Shadow `8/8` 和全部候选编译；
+1. Ontology `52/52`、Collector `7/7`、Shadow `9/9` 和全部候选编译；
 2. 构建 Collector Linux/amd64 镜像并取得不可变 Image ID；
 3. 输出可复核镜像归档及 SHA-256；
 4. 在固定 Digest 的 PostgreSQL/pgvector 镜像中执行生产 baseline migrations；

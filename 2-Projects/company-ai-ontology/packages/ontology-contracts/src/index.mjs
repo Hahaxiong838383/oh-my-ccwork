@@ -42,4 +42,24 @@ export {
   p003ReviewHash,
   validateP003ImpactReviewCatalog,
 } from './p003-impact-review.mjs'
+export {
+  compileShadowSourceRegistry,
+  createSourceApprovalWorkbook,
+  loadPestimSourceApprovalContract,
+  loadSourceApprovalContext,
+  loadSourceApprovalWorkbook,
+  sourceApprovalWorkbookFromCsv,
+  sourceApprovalWorkbookCsv,
+  validateSourceApprovalWorkbook,
+} from './source-approval-workbook.mjs'
+export {
+  compileP003HumanReviewResults,
+  createP003ReviewWorkbook,
+  loadP003ReviewContext,
+  loadP003ReviewSubmissionContract,
+  loadP003ReviewWorkbook,
+  p003ReviewWorkbookFromCsv,
+  p003ReviewWorkbookCsv,
+  validateP003ReviewWorkbook,
+} from './p003-review-workbook.mjs'
 export { TOOL_CONTRACTS } from './tool-contracts.mjs'

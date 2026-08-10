@@ -321,6 +321,7 @@ node ops/sync-company-directory.mjs
 - Source Registry 的“允许采集”和“允许保存内容”是两道独立门：`reference_only / metadata_only / summary_metadata` 的 Raw Snapshot 只能保存 Hash、长度、来源和时间，不能保存完整响应体；`metadata_only / reference_only` 的 normalized item 不能保留摘要。只有明确批准的 `full_text` 或合法 `structured_data` 才能保存对应 payload，Collector 必须直接执行 Policy Decision 返回的 retention。
 - P1-SI-F 已形成公司 QNAP Shadow 工程候选：轻量 Orchestrator、受限 oneshot Collector、无宿主端口、无 Docker Socket、只读根文件系统、显式部署/数据库/回滚授权门禁，以及七个真实自然日证据包。手动 CI Run `31416612677` 已对 Source Commit `c9909a8bad72b9db7761e7d2437c8788f604da12` 完成 Linux/amd64 镜像构建、010/011、19/19 强制 RLS 和 baseline restore，因此 `image_build_verified=true / sql_runtime_verified=true`；但公司 QNAP 最终发布包、五元组在线复核、真实资源数据和部署均未完成，`company_qnap_deployed=false`。
 - P1-SI-G 已从真实 4644 条矩阵中筛选 36 条 P003 候选，六类各 6 条；源矩阵覆盖完整但语义模板化，所有候选固定为 `generated_generic_requires_rewrite / generated_draft / unverified / inactive / pending_dri_review`。每条关系必须由实名 DRI 重写传导逻辑并补齐支持证据、挑战证据、适用条件、方向、强度、滞后、验证指标和失效条件，不能只用角色名或模型生成文本通过审核。
+- P1-SI 来源与 P003 人工审核统一使用“Git 脱敏模板 → 飞书填写 → CSV 导出 → `import-csv` 强类型 JSON → `validate --final` → compile”闭环。数组和对象必须保存为 JSON 单元格；只读候选字段、Hash、来源入口、建议角色和指标发生漂移时 fail-closed。实名审核结果默认进入 `~/work-private/company-ai-ontology/reviews/` 或批准的公司受控目录，不进 Git、共享记忆、截图或公开日志。来源 compile 只生成 `shadow_reviewed` 且禁止发布；P003 compile 只生成激活提案资格且关系继续 `inactive`。
 - P1-SI-H 才是公司 QNAP 雷达实际部署阶段；必须同时满足 Goal 7、来源合规批准、P003 真实 DRI 审核、镜像与 SQL Runtime 验证、已推送不可变发布包、公司 QNAP 五元组在线核对和当次部署授权。部署、服务重启和真实回滚演练分别授权；七个真实自然日 `PUBLISH=false` Shadow 完成前不得关闭 P1-SI Goal。
 - P1-SI-A 已通过提交 `8444fb10f` 发布候选编译能力到公司 QNAP Registry 镜像，但没有激活 `3.4.0`。专项发布先离线编译，再仅重建 Registry，切换 2 秒、`restart_count=0`、Registry `in_sync`；回滚备份位于 `/share/CACHEDEV2_DATA/ai-ontology-backup/p1-si-a/20260810-p1-si-a-8444fb10f`。用户授权“部署 contract-only 能力”不能外推为“激活候选 Schema”或“授权真实回滚演练”。
 - P1-SI-A 验收见 `2-Projects/company-ai-ontology/docs/p1-si-a-pestim-ontology-definition-acceptance-2026-08-10.md`。
@@ -330,6 +331,7 @@ node ops/sync-company-directory.mjs
 - P1-SI-E 验收见 `2-Projects/company-ai-ontology/docs/p1-si-e-multi-period-reporting-acceptance-2026-08-10.md`。
 - P1-SI-F 验收见 `2-Projects/company-ai-ontology/docs/p1-si-f-qnap-shadow-readiness-acceptance-2026-08-10.md`。
 - P1-SI-G 验收见 `2-Projects/company-ai-ontology/docs/p1-si-g-p003-review-candidate-acceptance-2026-08-10.md`；人工审核工作包见 `2-Projects/company-ai-ontology/docs/p1-si-g-p003-dri-review-pack-2026-08-10.md`。
+- 来源合规与 P003 DRI 人工审核闭环见 `2-Projects/company-ai-ontology/docs/p1-si-human-review-workflow-acceptance-2026-08-10.md`。
 - 详细实施计划见 `2-Projects/company-ai-ontology/docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
 
 当前实现与切换流程见：

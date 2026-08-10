@@ -159,10 +159,11 @@ export async function loadPestimSourceRegistryContract(file = CONTRACT_URL) {
   return contract
 }
 
-export function validateSourceRegistryCatalog(catalog, contract) {
+export function validateSourceRegistryCatalog(catalog, contract, options = {}) {
   const errors = []
+  const allowedStatuses = options.allowedStatuses || ['candidate']
   if (!SEMVER_RE.test(String(catalog?.registryVersion || ''))) errors.push('registryVersion must be semantic version')
-  if (catalog?.status !== 'candidate') errors.push('status must remain candidate before approval')
+  if (!allowedStatuses.includes(catalog?.status)) errors.push(`status must be one of ${allowedStatuses.join(', ')}`)
   if (catalog?.defaultDecision !== 'deny') errors.push('defaultDecision must be deny')
   if (!validTimestamp(catalog?.generatedAt)) errors.push('generatedAt must be a timestamp')
   if (!Array.isArray(catalog?.entries) || catalog.entries.length === 0) errors.push('entries must be a non-empty array')
@@ -190,7 +191,7 @@ export async function loadPestimSourceRegistryCatalog(options = {}) {
 }
 
 export function evaluateSourceCollectionPolicy(catalog, contract, sourceKey, evaluatedAt = new Date()) {
-  const validation = validateSourceRegistryCatalog(catalog, contract)
+  const validation = validateSourceRegistryCatalog(catalog, contract, { allowedStatuses: ['candidate', 'shadow_reviewed'] })
   const timestamp = evaluatedAt instanceof Date ? evaluatedAt : new Date(evaluatedAt)
   const deny = (reasonCode, entry = null) => ({
     allowed: false,

@@ -17,7 +17,7 @@ if (!process.argv[2] || !process.argv[3]) throw new Error('registry and collecto
 const contract = await loadPestimSourceRegistryContract()
 const registry = JSON.parse(await fs.readFile(registryFile, 'utf8'))
 const config = JSON.parse(await fs.readFile(configFile, 'utf8'))
-const validation = validateSourceRegistryCatalog(registry, contract)
+const validation = validateSourceRegistryCatalog(registry, contract, { allowedStatuses: ['shadow_reviewed'] })
 if (!validation.ok) throw new Error(`invalid source registry: ${validation.errors.join('; ')}`)
 if (!Array.isArray(config.sourceKeys) || config.sourceKeys.length === 0) throw new Error('collector config must select at least one source')
 const decisions = config.sourceKeys.map((sourceKey) => evaluateSourceCollectionPolicy(registry, contract, sourceKey, new Date()))

@@ -1,0 +1,238 @@
+{
+  "workbookVersion": "1.0.0-template.1",
+  "reviewType": "pestim-source-compliance",
+  "sourceRegistryVersion": "1.0.0-candidate.1",
+  "sourceCatalogHash": "0ce4022adcfc177ced670a8d7fd2e4b4e119c2fc1bc5c19cabefb3223c010eae",
+  "status": "pending_human_review",
+  "generatedAt": "2026-08-10T00:00:00Z",
+  "productionCollectionAllowed": false,
+  "publishAllowed": false,
+  "reviews": [
+    {
+      "sourceKey": "arxiv-official-rss-api",
+      "sourceName": "arXiv official RSS and API",
+      "sourceType": "rss",
+      "sourceCategory": "paper",
+      "endpointRefs": [
+        "https://export.arxiv.org/rss/",
+        "https://export.arxiv.org/api/query"
+      ],
+      "candidateStorageLevel": "summary_metadata",
+      "candidateRetentionDays": 365,
+      "candidateInternalUseScopes": [
+        "internal-strategic-intelligence",
+        "p003-ai-technology-monitoring"
+      ],
+      "candidateLicenseEvidenceRef": "https://info.arxiv.org/help/api/index.html",
+      "decision": "pending",
+      "licenseDecision": "pending",
+      "complianceDecision": "pending",
+      "approvedStorageLevel": null,
+      "approvedRetentionDays": null,
+      "licenseExpiresAt": null,
+      "licenseEvidenceRefs": [],
+      "complianceEvidenceRefs": [],
+      "namedLicenseReviewer": null,
+      "namedComplianceDri": null,
+      "approvedAt": null,
+      "decisionReason": null
+    },
+    {
+      "sourceKey": "openalex-official-api",
+      "sourceName": "OpenAlex official API",
+      "sourceType": "api",
+      "sourceCategory": "paper",
+      "endpointRefs": [
+        "https://api.openalex.org/works"
+      ],
+      "candidateStorageLevel": "metadata_only",
+      "candidateRetentionDays": 365,
+      "candidateInternalUseScopes": [
+        "internal-strategic-intelligence",
+        "expert-and-paper-monitoring"
+      ],
+      "candidateLicenseEvidenceRef": "https://docs.openalex.org/",
+      "decision": "pending",
+      "licenseDecision": "pending",
+      "complianceDecision": "pending",
+      "approvedStorageLevel": null,
+      "approvedRetentionDays": null,
+      "licenseExpiresAt": null,
+      "licenseEvidenceRefs": [],
+      "complianceEvidenceRefs": [],
+      "namedLicenseReviewer": null,
+      "namedComplianceDri": null,
+      "approvedAt": null,
+      "decisionReason": null
+    },
+    {
+      "sourceKey": "world-bank-indicators-api",
+      "sourceName": "World Bank Indicators API",
+      "sourceType": "api",
+      "sourceCategory": "dataset",
+      "endpointRefs": [
+        "https://api.worldbank.org/v2/"
+      ],
+      "candidateStorageLevel": "structured_data",
+      "candidateRetentionDays": 1095,
+      "candidateInternalUseScopes": [
+        "internal-strategic-intelligence",
+        "macro-market-monitoring"
+      ],
+      "candidateLicenseEvidenceRef": "https://datahelpdesk.worldbank.org/knowledgebase/topics/125589-developer-information",
+      "decision": "pending",
+      "licenseDecision": "pending",
+      "complianceDecision": "pending",
+      "approvedStorageLevel": null,
+      "approvedRetentionDays": null,
+      "licenseExpiresAt": null,
+      "licenseEvidenceRefs": [],
+      "complianceEvidenceRefs": [],
+      "namedLicenseReviewer": null,
+      "namedComplianceDri": null,
+      "approvedAt": null,
+      "decisionReason": null
+    },
+    {
+      "sourceKey": "unicef-data-sdmx-api",
+      "sourceName": "UNICEF Data Warehouse SDMX API",
+      "sourceType": "api",
+      "sourceCategory": "dataset",
+      "endpointRefs": [
+        "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"
+      ],
+      "candidateStorageLevel": "structured_data",
+      "candidateRetentionDays": 1095,
+      "candidateInternalUseScopes": [
+        "internal-strategic-intelligence",
+        "child-and-family-context-monitoring"
+      ],
+      "candidateLicenseEvidenceRef": "https://data.unicef.org/resources/resource-type/datasets/",
+      "decision": "pending",
+      "licenseDecision": "pending",
+      "complianceDecision": "pending",
+      "approvedStorageLevel": null,
+      "approvedRetentionDays": null,
+      "licenseExpiresAt": null,
+      "licenseEvidenceRefs": [],
+      "complianceEvidenceRefs": [],
+      "namedLicenseReviewer": null,
+      "namedComplianceDri": null,
+      "approvedAt": null,
+      "decisionReason": null
+    },
+    {
+      "sourceKey": "federal-register-api",
+      "sourceName": "U.S. Federal Register API",
+      "sourceType": "api",
+      "sourceCategory": "official",
+      "endpointRefs": [
+        "https://www.federalregister.gov/api/v1/documents.json"
+      ],
+      "candidateStorageLevel": "summary_metadata",
+      "candidateRetentionDays": 1095,
+      "candidateInternalUseScopes": [
+        "internal-strategic-intelligence",
+        "ai-and-product-regulation-monitoring"
+      ],
+      "candidateLicenseEvidenceRef": "https://www.federalregister.gov/developers/documentation/api/v1",
+      "decision": "pending",
+      "licenseDecision": "pending",
+      "complianceDecision": "pending",
+      "approvedStorageLevel": null,
+      "approvedRetentionDays": null,
+      "licenseExpiresAt": null,
+      "licenseEvidenceRefs": [],
+      "complianceEvidenceRefs": [],
+      "namedLicenseReviewer": null,
+      "namedComplianceDri": null,
+      "approvedAt": null,
+      "decisionReason": null
+    },
+    {
+      "sourceKey": "sec-edgar-data-api",
+      "sourceName": "SEC EDGAR data APIs",
+      "sourceType": "api",
+      "sourceCategory": "official",
+      "endpointRefs": [
+        "https://data.sec.gov/submissions/",
+        "https://data.sec.gov/api/xbrl/companyfacts/"
+      ],
+      "candidateStorageLevel": "structured_data",
+      "candidateRetentionDays": 1095,
+      "candidateInternalUseScopes": [
+        "internal-strategic-intelligence",
+        "competitor-and-supplier-financial-monitoring"
+      ],
+      "candidateLicenseEvidenceRef": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+      "decision": "pending",
+      "licenseDecision": "pending",
+      "complianceDecision": "pending",
+      "approvedStorageLevel": null,
+      "approvedRetentionDays": null,
+      "licenseExpiresAt": null,
+      "licenseEvidenceRefs": [],
+      "complianceEvidenceRefs": [],
+      "namedLicenseReviewer": null,
+      "namedComplianceDri": null,
+      "approvedAt": null,
+      "decisionReason": null
+    },
+    {
+      "sourceKey": "nvd-cve-api",
+      "sourceName": "NIST National Vulnerability Database API",
+      "sourceType": "api",
+      "sourceCategory": "official",
+      "endpointRefs": [
+        "https://services.nvd.nist.gov/rest/json/cves/2.0"
+      ],
+      "candidateStorageLevel": "structured_data",
+      "candidateRetentionDays": 1095,
+      "candidateInternalUseScopes": [
+        "internal-strategic-intelligence",
+        "ai-product-security-monitoring"
+      ],
+      "candidateLicenseEvidenceRef": "https://nvd.nist.gov/developers/start-here",
+      "decision": "pending",
+      "licenseDecision": "pending",
+      "complianceDecision": "pending",
+      "approvedStorageLevel": null,
+      "approvedRetentionDays": null,
+      "licenseExpiresAt": null,
+      "licenseEvidenceRefs": [],
+      "complianceEvidenceRefs": [],
+      "namedLicenseReviewer": null,
+      "namedComplianceDri": null,
+      "approvedAt": null,
+      "decisionReason": null
+    },
+    {
+      "sourceKey": "github-approved-repository-releases",
+      "sourceName": "GitHub releases for explicitly approved repositories",
+      "sourceType": "repository_release",
+      "sourceCategory": "repository",
+      "endpointRefs": [
+        "https://api.github.com/repos/{owner}/{repo}/releases"
+      ],
+      "candidateStorageLevel": "summary_metadata",
+      "candidateRetentionDays": 365,
+      "candidateInternalUseScopes": [
+        "internal-strategic-intelligence",
+        "ai-runtime-and-tooling-monitoring"
+      ],
+      "candidateLicenseEvidenceRef": "https://docs.github.com/en/rest/releases/releases",
+      "decision": "pending",
+      "licenseDecision": "pending",
+      "complianceDecision": "pending",
+      "approvedStorageLevel": null,
+      "approvedRetentionDays": null,
+      "licenseExpiresAt": null,
+      "licenseEvidenceRefs": [],
+      "complianceEvidenceRefs": [],
+      "namedLicenseReviewer": null,
+      "namedComplianceDri": null,
+      "approvedAt": null,
+      "decisionReason": null
+    }
+  ]
+}

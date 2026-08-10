@@ -1,0 +1,24 @@
+{
+  "contractVersion": "1.0.0",
+  "reviewType": "pestim-source-compliance",
+  "allowedDecisions": ["pending", "approve_for_shadow", "keep_paused", "revoke"],
+  "finalDecisions": ["approve_for_shadow", "keep_paused", "revoke"],
+  "allowedStorageLevels": ["reference_only", "metadata_only", "summary_metadata", "structured_data", "full_text"],
+  "approvalRequirements": {
+    "namedLicenseReviewerRequired": true,
+    "namedComplianceDriRequired": true,
+    "licenseEvidenceMinimum": 1,
+    "complianceEvidenceMinimum": 1,
+    "approvedAtRequired": true,
+    "retentionCannotExceedCandidate": true,
+    "fullTextRequiresSeparateChangeProposal": true,
+    "personalCredentialForbidden": true,
+    "loginRequiredForbidden": true,
+    "antiAutomationBypassForbidden": true
+  },
+  "output": {
+    "registryStatus": "shadow_reviewed",
+    "productionCollectionAllowed": false,
+    "publishAllowed": false
+  }
+}

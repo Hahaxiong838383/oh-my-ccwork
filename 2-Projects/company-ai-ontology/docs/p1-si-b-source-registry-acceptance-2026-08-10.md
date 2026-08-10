@@ -22,6 +22,9 @@ P1-SI-B 的工程契约、候选数据模型、首批来源清单和 fail-closed
 | 结构校验、加载和 fail-closed 判定 | `packages/ontology-contracts/src/pestim-source-registry.mjs` | 完成 |
 | CLI 编译入口 | `packages/ontology-contracts/bin/source-registry-compile.mjs` | 完成 |
 | 正向和负向测试 | `packages/ontology-contracts/test/pestim-source-registry.test.mjs` | 完成 |
+| 来源实名审批契约 | `packages/ontology-contracts/contracts/pestim-source-approval-v1.json` | 工程完成，真实审批待 DRI |
+| 飞书 JSON/CSV 模板 | `packages/ontology-contracts/templates/reviews/source-registry-review-template-v1.*` | 完成，8 个来源 |
+| CSV 导入、final 校验和 Shadow 编译 | `packages/ontology-contracts/src/source-approval-workbook.mjs` | 完成，默认失败关闭 |
 
 ## 3. Ontology 增量
 
@@ -100,8 +103,9 @@ npm run compile:source-registry
 
 结果：
 
-- 总测试 `24/24` 通过；
+- 当前 Ontology Contract 总测试 `52/52` 通过；
 - P1-SI-B 新增测试 `6/6` 通过；
+- 人工审核闭环共享测试 `11/11` 通过；
 - P1-SI-A candidate Hash 保持 `e254ee1f82d985828e50b6148b9ffd22f6f0e0ce920ebe75ff6bc6e55d9a5410`；
 - P1-SI-B candidate Schema：`3.5.0`；
 - P1-SI-B candidate Hash：`082c4eec516ecc8a08fbd24ce21f3e97a34500dc5a010a715b108ef0137c6154`；
@@ -127,3 +131,4 @@ npm run compile:source-registry
 2. 公司合规 DRI 逐项确认来源许可、存储级别、保留期和负责人；
 3. 只有审批后的条目才能从 `paused` 变更为 `enabled`；
 4. 来源审批不能授权 QNAP 部署，P1-SI-H 仍需 Goal 7 和当次明确生产授权。
+5. 实名审批操作和机器验收流程见 `p1-si-human-review-workflow-acceptance-2026-08-10.md`。

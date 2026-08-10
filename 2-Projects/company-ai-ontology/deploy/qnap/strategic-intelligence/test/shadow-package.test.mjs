@@ -5,6 +5,11 @@ import path from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 
+import {
+  compileShadowSourceRegistry,
+  createSourceApprovalWorkbook,
+  loadSourceApprovalContext,
+} from '../../../../packages/ontology-contracts/src/index.mjs'
 import { tick } from '../orchestrator/orchestrator.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -12,6 +17,15 @@ const PROJECT_ROOT = path.resolve(ROOT, '../../..')
 
 async function json(relative) {
   return JSON.parse(await fs.readFile(path.join(ROOT, relative), 'utf8'))
+}
+
+function principal(role) {
+  return {
+    role,
+    displayName: `${role}-reviewer`,
+    principalRef: `company-directory:${role}-reviewer`,
+    decision: 'approve',
+  }
 }
 
 test('shadow compose isolates services, ports, socket, privileges and side effects', async () => {
@@ -90,6 +104,44 @@ test('deployment scripts only target strategic intelligence services and keep ex
   assert.match(deploy, /GOAL7_STATUS/)
   assert.match(deploy, /up -d --no-deps intelligence-orchestrator/)
   assert.doesNotMatch(deploy, /up -d[^\n]*(?:agent-core|h-lite|connector|gateway|postgres|redis|qdrant)/)
+})
+
+test('approved registry validator accepts only enabled sources from a shadow-reviewed registry', async () => {
+  const { sourceContract, catalog, approvalContract } = await loadSourceApprovalContext()
+  const workbook = createSourceApprovalWorkbook(catalog)
+  for (const review of workbook.reviews) {
+    review.decision = 'keep_paused'
+    review.approvedAt = '2026-08-10T09:00:00Z'
+    review.decisionReason = '来源继续暂停。'
+    review.namedComplianceDri = principal('compliance')
+  }
+  const approved = workbook.reviews[0]
+  approved.decision = 'approve_for_shadow'
+  approved.licenseDecision = 'approved'
+  approved.complianceDecision = 'approved'
+  approved.approvedStorageLevel = approved.candidateStorageLevel
+  approved.approvedRetentionDays = approved.candidateRetentionDays
+  approved.licenseEvidenceRefs = [approved.candidateLicenseEvidenceRef]
+  approved.complianceEvidenceRefs = ['feishu:doc/company-source-approval']
+  approved.namedLicenseReviewer = principal('license')
+  approved.decisionReason = '批准仅用于 PUBLISH=false Shadow。'
+  const compiled = compileShadowSourceRegistry(workbook, catalog, sourceContract, approvalContract)
+
+  const outputRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'company-si-approved-registry-'))
+  const registryFile = path.join(outputRoot, 'registry.json')
+  const configFile = path.join(outputRoot, 'config.json')
+  await fs.writeFile(registryFile, JSON.stringify(compiled.registry))
+  await fs.writeFile(configFile, JSON.stringify({ sourceKeys: [approved.sourceKey] }))
+  const { spawnSync } = await import('node:child_process')
+  const validator = path.join(ROOT, 'scripts/validate-approved-registry.mjs')
+  const accepted = spawnSync(process.execPath, [validator, registryFile, configFile], { encoding: 'utf8' })
+  assert.equal(accepted.status, 0, accepted.stderr)
+  assert.equal(JSON.parse(accepted.stdout).approvedSourceCount, 1)
+
+  await fs.writeFile(configFile, JSON.stringify({ sourceKeys: [workbook.reviews[1].sourceKey] }))
+  const denied = spawnSync(process.execPath, [validator, registryFile, configFile], { encoding: 'utf8' })
+  assert.notEqual(denied.status, 0)
+  assert.match(denied.stderr, /source approval gate denied/)
 })
 
 test('candidate migrations remain outside production migrations and isolated validation restores baseline', async () => {

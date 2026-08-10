@@ -14,6 +14,8 @@
 
 `p003-impact-review-v1.json` 是 P1-SI-G 审核包契约：从真实 4644 条飞书 draft 中选取 36 条 P003 候选，六类各 6 条。所有候选继续保持 `generated_draft / unverified / inactive`，必须由实名 DRI 重写模板化逻辑、补齐正反证据、方向、强度、滞后和验证指标后，才允许进入独立激活提案。
 
+`pestim-source-approval-v1.json` 与 `p003-impact-review-submission-v1.json` 定义飞书人工审核回填门禁。仓库只保存脱敏 JSON/CSV 模板；实名审核结果默认保存在受控目录，不进入 Git。CSV 中数组和对象使用 JSON 单元格，导出后必须先 `import-csv`，再执行 final 校验和 compile。
+
 ## 命令
 
 ```bash
@@ -24,8 +26,16 @@ npm run compile:source-registry
 npm run compile:data-foundation
 npm run compile:reporting
 npm run compile:p003-review
+npm run review:source:generate
+npm run review:source:import-csv -- --input /受控目录/source-reviewed.csv --output /受控目录/source-reviewed.json
+npm run review:p003:generate
+npm run review:p003:import-csv -- --input /受控目录/p003-reviewed.csv --output /受控目录/p003-reviewed.json
+node bin/source-approval-workbook.mjs validate --input /受控目录/source-reviewed.json --final
+node bin/p003-review-workbook.mjs validate --input /受控目录/p003-reviewed.json --final
 ```
 
 PESTIM 候选定义通过 `compilePestimStrategicIntelligenceProposal()` 单独编译和兼容性比较；Source Registry 再通过 `compilePestimSourceRegistryProposal()` 叠加到 `3.4.0`，不得改写 P1-SI-A Hash。只有 Ontology Change Proposal、Goal 7、Source Registry 审批、P003 DRI 审核、QNAP Shadow 和 Registry 对账全部通过后，才允许另行提出生产激活。
+
+来源审批 compile 只能生成 `shadow_reviewed` Registry，且始终保持 `productionCollectionAllowed=false / publishAllowed=false`。P003 审核 compile 只能生成 `eligibleForActivationProposal`，且始终保持 `inactive / formalP2Allowed=false / employeeDeliveryAllowed=false`。
 
 默认定义目录为 `definitions/`。编译成功会输出 schema version、内容 hash、元素数量和兼容性摘要；校验失败返回非零退出码。

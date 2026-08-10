@@ -1,0 +1,31 @@
+{
+  "contractVersion": "1.0.0",
+  "reviewType": "p003-impact-dri-review",
+  "allowedDecisions": ["pending", "approve_for_activation_proposal", "keep_inactive", "reject"],
+  "finalDecisions": ["approve_for_activation_proposal", "keep_inactive", "reject"],
+  "approvalRequirements": {
+    "semanticRewriteMinimumCharacters": 80,
+    "supportEvidenceMinimum": 1,
+    "challengeEvidenceMinimum": 1,
+    "applicabilityConditionMinimum": 1,
+    "activationConditionMinimum": 1,
+    "pauseConditionMinimum": 1,
+    "invalidationConditionMinimum": 1,
+    "validationMetricMinimum": 1,
+    "namedIndividualDriRequired": true,
+    "allProposedReviewRolesRequired": true,
+    "reviewedAtRequired": true,
+    "activationStatusMustRemainInactive": true
+  },
+  "allowedAssessmentValues": {
+    "directions": ["positive", "negative", "mixed", "context_dependent"],
+    "strengths": ["low", "medium", "high"],
+    "lagUnits": ["days", "weeks", "months", "quarters"]
+  },
+  "output": {
+    "status": "human_reviewed_candidate",
+    "productionActivationAllowed": false,
+    "formalP2Allowed": false,
+    "employeeDeliveryAllowed": false
+  }
+}

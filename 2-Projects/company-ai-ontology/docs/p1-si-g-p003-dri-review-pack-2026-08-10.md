@@ -78,3 +78,12 @@
 4. 明确方向、强度、预期滞后和验证指标基线。
 5. 合规、安全或供应风险涉及否决项时必须先关闭风险。
 6. 未通过审核时继续保持 inactive，不得创建正式 P2 或员工任务。
+
+## 机器回填流程
+
+1. 将 `packages/ontology-contracts/templates/reviews/p003-impact-review-template-v1.csv` 导入飞书。
+2. 数组和对象字段必须保持 JSON 单元格；候选 Key、Hash、来源维度、原始逻辑、建议角色和候选指标不得编辑。
+3. 实名审核完成后从飞书导出 CSV，并保存到公司受控目录，不提交 Git 或共享记忆。
+4. 先执行 `p003-review-workbook.mjs import-csv`，再执行 `validate --final`。
+5. compile 只产生 `eligibleForActivationProposal` 候选，所有关系继续保持 `inactive`。
+6. 完整操作与失败关闭规则见 `p1-si-human-review-workflow-acceptance-2026-08-10.md`。

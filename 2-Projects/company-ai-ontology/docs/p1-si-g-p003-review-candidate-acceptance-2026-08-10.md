@@ -86,6 +86,11 @@ reviewStatus = pending_dri_review
 - `bin/p003-review-compile.mjs`；
 - `test/p003-impact-review.test.mjs`；
 - `docs/p1-si-g-p003-dri-review-pack-2026-08-10.md`。
+- `contracts/p003-impact-review-submission-v1.json`；
+- `templates/reviews/p003-impact-review-template-v1.json`；
+- `templates/reviews/p003-impact-review-template-v1.csv`；
+- `src/p003-review-workbook.mjs` 与 `bin/p003-review-workbook.mjs`；
+- `test/human-review-workbooks.test.mjs`。
 
 候选包 Hash：`ba6a77fd52d1558c946bdaf5bad290f9898d3ce0d4c8af399a7ebba98df866ff`。
 
@@ -104,8 +109,9 @@ reviewStatus = pending_dri_review
 
 ## 8. 测试证据
 
-- Ontology Contract 总测试：`41/41`；
+- 当前 Ontology Contract 总测试：`52/52`；
 - P003 Review 新增测试：`5/5`；
+- 人工审核闭环共享测试：`11/11`；
 - 六类各 6 条；
 - 36 个源记录 ID 唯一；
 - 36 个矩阵编号唯一；
@@ -118,3 +124,4 @@ reviewStatus = pending_dri_review
 3. 只有审核通过的子集才可进入独立 Ontology Change Proposal；
 4. 未审核候选继续 inactive，其余 4608 条矩阵关系不激活；
 5. P003 DRI 审核不等于授权雷达部署，也不等于授权创建 P2 或员工任务。
+6. 飞书 CSV 回填、强类型 JSON、final 校验和 compile 流程见 `p1-si-human-review-workflow-acceptance-2026-08-10.md`。
