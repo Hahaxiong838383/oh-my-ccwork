@@ -5051,9 +5051,16 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | 线上 **`v1.53.0`**（2026-08-09 20:37 起；仓库 main 已到 `v1.54.1` 但 goal 6 的 v1.54.0 控制面被其自身 gate 闸着未上线，**别替它开闸整树 rsync**；v1.54.1 的 fork 空壳防线随下次控制面部署生效；公网 `https://ai.kidshub.cn/healthz` 取真值） |
-| Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件、1 App。落后 main（含 fork_update 空壳修复 `e113f5d`）——升级要走 `deploy/lima/` 影子割接流程，约 35 秒中断，待川哥定窗口 |
-| dev198 | **`e113f5dc95f8`**（2026-08-09 晚 fork_update 空壳修复 + goal 6 主线随 ff 带上；11 App 全连 healthz version 对撞一致） |
+| 控制面 aliyun-hk | 线上 **`v1.56.0`**（2026-08-10 H-0065 UI；此前 goal 6 线自行部署过 v1.55.1，fork 空壳防线已随其在生产；公网 `https://ai.kidshub.cn/healthz` 取真值） |
+| Mini 活动 VM 运行态 | **`c62485a04785`**、`dirty=false`、531 文件、1 App。落后 main（含 fork 空壳修复与 H-0065）——升级走 `deploy/lima/` 影子割接，约 35 秒中断，待川哥定窗口 |
+| dev198 | **`1533d85c9ad2`**（2026-08-10 H-0065 自动分类，契约 2026-08-09.1 全 12 App 唯一；healthz version 对撞一致） |
+
+**公告送达验收判据（2026-08-10 实测）**：送达成功是**静默的**（代码只在 ack fail 打日志），
+`journalctl` 零命中 ≠ 没送达。真值两处：① dev198 healthz 的 `releaseAnnouncements` snapshot
+（fetched=0 且发布过 = 多半已送完）② 控制面 `data/release-announcements.json` **顶层
+`deliveries`** 的 `<announcementId>:<recipientKey>` 平铺 key（不在公告对象里——别在
+announcement 里找 recipients 字段，那是判据套错形态）。`perBot:false` 按 person 去重，
+同人多 Bot 只有**最近活跃的**收卡——「某 Bot 没收到」先查同 person 的其它 Bot。
 | 安装源 | Mini 上 `~/local/h-mini-b2-source-<commit>`，**具体路径现场 `ls` 取**（随 commit 变，写死必腐烂） |
 | 验证器 | 已随 `d47edb7` 起进入部署源码树，**不必再单独归档**（`$SRC/deploy/lima/verify-mini-b2-active.sh` 直接跑；`$SRC` ≠ VM app，不污染 deploy meta） |
 
