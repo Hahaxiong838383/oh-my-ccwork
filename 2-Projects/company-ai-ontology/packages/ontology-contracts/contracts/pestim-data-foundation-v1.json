@@ -1,0 +1,243 @@
+{
+  "contractVersion": "1.0.0",
+  "status": "contract_only",
+  "proposalKey": "P1-SI-D",
+  "baseSchemaVersion": "3.5.0",
+  "candidateSchemaVersion": "3.6.0",
+  "compatibilityExpectation": "compatible",
+  "deploymentAllowed": false,
+  "structuredTruthStore": "postgres",
+  "vectorStoreRole": "rebuildable_retrieval_derivative",
+  "rawEvidenceMode": "append_only",
+  "externalContentTrust": "untrusted",
+  "requiredLineage": [
+    "sourceRegistryVersion",
+    "collectorVersion",
+    "parserVersion",
+    "promptVersion",
+    "modelProvider",
+    "modelId",
+    "ontologyVersion",
+    "causalGraphVersion",
+    "inputHash"
+  ],
+  "retentionClasses": {
+    "hot": "postgres-primary",
+    "cold": "qnap-archive-with-postgres-manifest",
+    "vector": "qdrant-rebuildable"
+  },
+  "candidateMigration": "deploy/qnap/candidate-migrations/010-pestim-strategic-intelligence.sql",
+  "additions": {
+    "namespaces": [],
+    "objectTypes": [
+      {
+        "qualifiedName": "domain.intelligence.RawSnapshot",
+        "description": "Append-only byte-level snapshot of one allowed external source response",
+        "extends": ["system.ontology.BaseObject"],
+        "properties": [
+          { "name": "snapshotKey", "type": "string", "required": true },
+          { "name": "sourceKey", "type": "string", "required": true },
+          { "name": "sourceReference", "type": "string", "required": true },
+          { "name": "fetchedAt", "type": "timestamp", "required": true },
+          { "name": "validFrom", "type": "timestamp", "required": true },
+          { "name": "validTo", "type": "timestamp", "required": false },
+          { "name": "recordedAt", "type": "timestamp", "required": true },
+          { "name": "contentHash", "type": "string", "required": true },
+          { "name": "dedupKey", "type": "string", "required": true },
+          { "name": "contentType", "type": "string", "required": true },
+          { "name": "byteLength", "type": "integer", "required": true },
+          { "name": "storageTier", "type": "string", "required": true },
+          { "name": "retentionExpiresAt", "type": "timestamp", "required": true },
+          { "name": "sanitizationStatus", "type": "string", "required": true },
+          { "name": "sourceRegistryVersion", "type": "string", "required": true },
+          { "name": "collectorVersion", "type": "string", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.ExternalObservation",
+        "description": "Parser-versioned observation derived from exactly one raw snapshot with dual-time semantics",
+        "extends": ["core.epistemic.Observation"],
+        "properties": [
+          { "name": "observationKey", "type": "string", "required": true },
+          { "name": "observedAt", "type": "timestamp", "required": true },
+          { "name": "validFrom", "type": "timestamp", "required": true },
+          { "name": "validTo", "type": "timestamp", "required": false },
+          { "name": "recordedAt", "type": "timestamp", "required": true },
+          { "name": "parserVersion", "type": "string", "required": true },
+          { "name": "payloadHash", "type": "string", "required": true },
+          { "name": "dataQualityStatus", "type": "string", "required": true },
+          { "name": "freshnessStatus", "type": "string", "required": true },
+          { "name": "conflictStatus", "type": "string", "required": true },
+          { "name": "purpose", "type": "string", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.StrategicSignal",
+        "description": "Governed multi-observation signal that remains distinct from evidence, claims and decisions",
+        "extends": ["system.ontology.BaseObject"],
+        "properties": [
+          { "name": "signalKey", "type": "string", "required": true },
+          { "name": "signalType", "type": "string", "required": true },
+          { "name": "title", "type": "string", "required": true },
+          { "name": "firstSeenAt", "type": "timestamp", "required": true },
+          { "name": "lastSeenAt", "type": "timestamp", "required": true },
+          { "name": "validFrom", "type": "timestamp", "required": true },
+          { "name": "validTo", "type": "timestamp", "required": false },
+          { "name": "recordedAt", "type": "timestamp", "required": true },
+          { "name": "strength", "type": "decimal", "required": true },
+          { "name": "confidence", "type": "decimal", "required": true },
+          { "name": "signalStatus", "type": "string", "required": true },
+          { "name": "dataQualityStatus", "type": "string", "required": true },
+          { "name": "freshnessStatus", "type": "string", "required": true },
+          { "name": "conflictStatus", "type": "string", "required": true },
+          { "name": "ontologyVersion", "type": "string", "required": true },
+          { "name": "causalGraphVersion", "type": "string", "required": true }
+        ]
+      }
+    ],
+    "linkTypes": [
+      {
+        "qualifiedName": "domain.intelligence.SNAPSHOT_FROM_SOURCE",
+        "fromType": "domain.intelligence.RawSnapshot",
+        "toType": "domain.intelligence.SourceRegistryEntry",
+        "cardinality": "many_to_one"
+      },
+      {
+        "qualifiedName": "domain.intelligence.OBSERVATION_DERIVED_FROM_SNAPSHOT",
+        "fromType": "domain.intelligence.ExternalObservation",
+        "toType": "domain.intelligence.RawSnapshot",
+        "cardinality": "many_to_one"
+      },
+      {
+        "qualifiedName": "domain.intelligence.SIGNAL_AGGREGATES_OBSERVATION",
+        "fromType": "domain.intelligence.StrategicSignal",
+        "toType": "domain.intelligence.ExternalObservation",
+        "cardinality": "many_to_many"
+      },
+      {
+        "qualifiedName": "domain.intelligence.EVIDENCE_DERIVED_FROM_OBSERVATION",
+        "fromType": "core.epistemic.Evidence",
+        "toType": "domain.intelligence.ExternalObservation",
+        "cardinality": "many_to_many"
+      },
+      {
+        "qualifiedName": "domain.intelligence.SIGNAL_INFORMS_ASSESSMENT",
+        "fromType": "domain.intelligence.StrategicSignal",
+        "toType": "domain.intelligence.ImpactAssessment",
+        "cardinality": "many_to_many"
+      }
+    ],
+    "functionTypes": [
+      {
+        "qualifiedName": "domain.intelligence.deriveRawSnapshotIdentity",
+        "description": "Derive deterministic content and idempotency keys without source I/O",
+        "inputs": [
+          { "name": "tenantKey", "type": "string", "required": true },
+          { "name": "sourceKey", "type": "string", "required": true },
+          { "name": "contentHash", "type": "string", "required": true },
+          { "name": "runKey", "type": "string", "required": true }
+        ],
+        "outputs": [
+          { "name": "identity", "type": "json", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.validateDualTimeRecord",
+        "description": "Validate valid time, transaction time, lineage, hashes and lifecycle fields",
+        "inputs": [
+          { "name": "recordType", "type": "string", "required": true },
+          { "name": "record", "type": "json", "required": true }
+        ],
+        "outputs": [
+          { "name": "validation", "type": "json", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.validateReplayLineage",
+        "description": "Prove replay inputs and version lineage without mutating existing raw evidence",
+        "inputs": [
+          { "name": "originalRun", "type": "json", "required": true },
+          { "name": "replayRun", "type": "json", "required": true }
+        ],
+        "outputs": [
+          { "name": "validation", "type": "json", "required": true }
+        ]
+      }
+    ],
+    "actionTypes": [],
+    "policyTypes": [
+      {
+        "qualifiedName": "domain.intelligence.rawSnapshotsAppendOnly",
+        "description": "Collectors may insert raw snapshots but cannot update or delete source bytes",
+        "appliesTo": ["domain.intelligence.RawSnapshot"],
+        "effect": "deny"
+      },
+      {
+        "qualifiedName": "domain.intelligence.externalContentUntrusted",
+        "description": "Raw external content must be parsed and sanitized before retrieval, prompting or evidence promotion",
+        "appliesTo": [
+          "domain.intelligence.RawSnapshot",
+          "domain.intelligence.ExternalObservation"
+        ],
+        "effect": "filter"
+      },
+      {
+        "qualifiedName": "domain.intelligence.permissionedIntelligenceRetrieval",
+        "description": "Signals, evidence, assessments and reports require explicit principal and purpose ACL",
+        "appliesTo": [
+          "domain.intelligence.StrategicSignal",
+          "domain.intelligence.ImpactAssessment",
+          "domain.intelligence.StrategicIntelligenceReport"
+        ],
+        "effect": "filter"
+      },
+      {
+        "qualifiedName": "domain.intelligence.qdrantIsDerivedOnly",
+        "description": "Vector indexes are disposable retrieval derivatives and cannot establish fact, ACL or lineage",
+        "appliesTo": [
+          "domain.intelligence.ExternalObservation",
+          "domain.intelligence.StrategicSignal",
+          "domain.intelligence.ImpactAssessment"
+        ],
+        "effect": "deny"
+      }
+    ],
+    "constraintTypes": [
+      {
+        "qualifiedName": "domain.intelligence.rawSnapshotRequiresAllowedSourceDecision",
+        "description": "A raw snapshot requires a successful Source Registry decision from the same registry snapshot",
+        "targetType": "domain.intelligence.RawSnapshot",
+        "severity": "error",
+        "rule": "sourceDecision.decision == 'allow' && sourceDecision.registryVersion == sourceRegistryVersion"
+      },
+      {
+        "qualifiedName": "domain.intelligence.rawSnapshotHasContentIdentity",
+        "description": "Raw snapshots require SHA-256 content and deduplication identities",
+        "targetType": "domain.intelligence.RawSnapshot",
+        "severity": "error",
+        "rule": "contentHash matches '^[0-9a-f]{64}$' && dedupKey matches '^[0-9a-f]{64}$' && byteLength >= 0"
+      },
+      {
+        "qualifiedName": "domain.intelligence.externalObservationHasDualTime",
+        "description": "External observations require bounded valid time and an explicit transaction time",
+        "targetType": "domain.intelligence.ExternalObservation",
+        "severity": "error",
+        "rule": "validFrom <= observedAt && (validTo == null || validTo > validFrom) && recordedAt >= observedAt"
+      },
+      {
+        "qualifiedName": "domain.intelligence.strategicSignalHasQualityState",
+        "description": "Signals require bounded strength/confidence plus explicit freshness, quality and conflict states",
+        "targetType": "domain.intelligence.StrategicSignal",
+        "severity": "error",
+        "rule": "strength >= 0 && strength <= 1 && confidence >= 0 && confidence <= 1 && lastSeenAt >= firstSeenAt"
+      },
+      {
+        "qualifiedName": "domain.intelligence.replayDoesNotMutateRawSnapshot",
+        "description": "Replay may create new derived records but must retain the original raw snapshot identity",
+        "targetType": "domain.intelligence.RawSnapshot",
+        "severity": "error",
+        "rule": "replay.contentHash == original.contentHash && replay.snapshotKey == original.snapshotKey"
+      }
+    ]
+  }
+}

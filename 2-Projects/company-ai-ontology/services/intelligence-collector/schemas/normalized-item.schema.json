@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.local/schemas/company-intelligence-normalized-item-v1.json",
+  "title": "Company Intelligence Normalized Item v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "itemKey",
+    "sourceKey",
+    "sourceItemId",
+    "title",
+    "url",
+    "summary",
+    "publishedAt",
+    "fetchedAt",
+    "contentHash"
+  ],
+  "properties": {
+    "itemKey": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "sourceKey": { "type": "string" },
+    "sourceItemId": { "type": "string" },
+    "title": { "type": "string", "maxLength": 500 },
+    "url": { "type": "string", "format": "uri" },
+    "summary": { "type": "string", "maxLength": 4000 },
+    "publishedAt": { "type": ["string", "null"], "format": "date-time" },
+    "fetchedAt": { "type": "string", "format": "date-time" },
+    "contentHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

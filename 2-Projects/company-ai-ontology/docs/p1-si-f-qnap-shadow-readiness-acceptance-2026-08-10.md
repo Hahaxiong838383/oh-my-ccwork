@@ -1,0 +1,138 @@
+# P1-SI-F 公司 QNAP Shadow 部署准备工程验收
+
+日期：2026-08-10（Asia/Shanghai）
+
+## 1. 结论
+
+公司战略情报雷达的 Shadow 部署候选包已经形成，并完成本地静态、负向和脚本级验证：
+
+- `engineering_package_verified=true`；
+- `resource_and_security_limits_verified=true`；
+- `deployment_gate_verified=true`；
+- `image_build_verified=false`；
+- `sql_runtime_verified=false`；
+- `company_qnap_deployed=false`；
+- `publish=false`。
+
+当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此不能声称 Collector 镜像已经构建，也不能声称候选迁移已经在真实 PostgreSQL 中运行。没有连接、部署或重启公司 QNAP。
+
+## 2. 部署形态
+
+目录：`deploy/qnap/strategic-intelligence/`
+
+部署包采用：
+
+```text
+轻量常驻 Intelligence Orchestrator
+  → 内部文件队列
+  → QNAP 既有 crontab Dispatcher
+  → docker compose run --no-deps
+  → 临时 Intelligence Collector Worker
+```
+
+- Orchestrator：`0.1 CPU / 96 MiB`，只连接 internal scheduler 网络；
+- Collector：`0.5 CPU / 512 MiB / 128 PIDs`；
+- Collector 根文件系统只读、`cap_drop=ALL`、`no-new-privileges`、`restart=no`；
+- 不挂载 Docker Socket；
+- 不发布宿主机端口；
+- 不长期运行个人站或完整雷达系统；
+- 不执行 Agent Core、H-Lite、Connector、Gateway、Postgres、Redis 或 Qdrant 的 `up/restart/stop`。
+
+Compose SHA-256：`cf731b4a15adc09b63c788f56e7303bb266269090f5459445b92d40286edbaa1`。
+
+## 3. Shadow 指标
+
+策略文件：`config/shadow-policy.json`，SHA-256：`91612d5cc8d2737322b46e03c2c9f3f1707a011cb155f31b7c35aac9ae12d64f`。
+
+固定指标包括：
+
+- 来源成功率至少 95%；
+- 重复率不超过 30%；
+- P95 时效不超过 6 小时；
+- Worker 失败率不超过 5%，超时率不超过 2%；
+- 单日报成本不超过 2 美元、单周报不超过 8 美元；
+- Raw Snapshot 每日不超过 1 GiB，网络每日不超过 2 GB；
+- Source 撤销 300 秒内生效，撤销后网络请求数为 0；
+- 未脱敏敏感信息、正式 P2、员工投递、ERP 写回、社媒写回、因果激活、新端口和容器重启均必须为 0；
+- last-good 保存率必须为 100%。
+
+Dispatcher 会从 Collector 产物和 Docker Stats 自动提取来源数、成功数、重复数、P95 时效、Raw 字节、CPU、内存和网络流量。资源证据缺失时该自然日不能通过验收。
+
+## 4. 发布与授权门禁
+
+`prepare-shadow-release.sh` 要求：
+
+1. 项目子树相对 Git HEAD 干净；
+2. HEAD 等于已推送 upstream；
+3. Ontology、Collector 和 Shadow 包测试通过；
+4. Collector 镜像真实构建并取得不可变 Image ID；
+5. 010/011 在隔离 PostgreSQL 中应用成功；
+6. baseline dump 恢复后不存在 candidate schema；
+7. 生成源码包、镜像包、Hash 和发布 Manifest。
+
+`deploy-shadow.sh` 还必须同时取得：
+
+- `SHADOW_DEPLOY_APPROVED=YES`；
+- `SHADOW_DATABASE_MIGRATION_APPROVED=YES`；
+- `GOAL7_STATUS=complete`；
+- 公司合规批准的 Source Registry；
+- 与 Source Registry 对应的 Collector Config；
+- 公司 QNAP 五元组在线一致。
+
+任一门禁不满足时不得部署。
+
+## 5. 自动保护与回滚
+
+- Critical 指标触发时默认自动 Freeze，只停止战略情报 Orchestrator；
+- `SHADOW_AUTO_ROLLBACK_APPROVED=YES` 只有在真实回滚获得预授权时才允许设置；
+- 回滚恢复战略情报包、配置和镜像引用，不删除 append-only 证据；
+- 数据库恢复使用独立备份和独立授权；
+- 部署、服务重启和真实回滚授权不得互相继承。
+
+## 6. 七日证据
+
+已提供：
+
+- 日证据 JSON Schema；
+- 单日模板；
+- 七日汇总模板；
+- 七个真实自然日证据文件生成器；
+- 阈值评估器；
+- Critical Freeze 和预授权回滚入口。
+
+生成器只创建 `pending_real_run / simulated=false` 模板，不能把模板或补录数据当成七日运行证据。
+
+## 7. Collector 许可留存修复
+
+F 阶段自检发现并修复一个正式 Shadow 前必须关闭的问题：Collector 原实现虽然在网络前执行 Source Registry 准入，但仍会把 `summary_metadata` 或 `metadata_only` 来源的完整响应保存为 Base64。
+
+修复后：
+
+- `reference_only / metadata_only / summary_metadata` 的 Raw Snapshot 只保留 Hash、长度、来源和时间，不保存响应体；
+- `metadata_only / reference_only` 的 normalized item 不保留摘要；
+- 只有 `full_text` 或合法 `structured_data` 来源才保留对应 payload；
+- 留存行为直接使用 Source Policy Decision 返回的 retention 约束。
+
+Collector 测试由 `6/6` 增至 `7/7`，覆盖 metadata-only 不留正文、structured-data 可留结构化 payload 的正负验证。
+
+## 8. 本地证据
+
+- Shadow 包测试：`8/8`；
+- Shadow 静态验证：通过；
+- Collector 测试：`7/7`；
+- Ontology Contract 测试：`41/41`；
+- Shell 与 Node 语法检查：通过；
+- Git diff whitespace 检查：通过。
+
+## 9. 当前未完成
+
+- 未构建真实 Collector 镜像；
+- 未执行隔离 PostgreSQL 010/011 Runtime 验证；
+- 未取得公司来源合规审批；
+- Goal 7 尚未在本 Goal 中证明完成；
+- 未连接公司 QNAP；
+- 未部署 Orchestrator 或 Collector；
+- 未开始七日 Shadow；
+- 未执行真实 Freeze 或回滚。
+
+因此 P1-SI-F 当前是“部署准备工程候选已完成、Runtime 验收待具备容器环境后执行”，不能标记为生产完成。

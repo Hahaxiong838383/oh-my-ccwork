@@ -1,0 +1,16 @@
+{
+  "formatVersion": "1",
+  "capturedAt": "2026-08-10T00:00:00Z",
+  "horizon": {
+    "upstreamCommit": "1e2fdc7ccb177f33c59aef2082c4093e1e82b22c",
+    "runnerSha256": "fd944120e79774eca37ea7a12752e69d8eef282a138ba7949d7cbc1851043498",
+    "adapterSha256": "20e58b0b51294185899ecee38edd969ae7637556fad812e5f6df62357909185e"
+  },
+  "theoryRadar": {
+    "sourceCommit": "3f5b7e3899532b905c0c5463af6e4bfd7b40eae2",
+    "serviceSha256": "4bae1336bc0eda388e119e30e05e972a0d7290167aaead4248f404b2445e38dd",
+    "dockerfileSha256": "a1df1968ecc5f6ef3fa6a270e4561c9a5dc776ca22d23bed2131ad23a13c5c7d"
+  },
+  "copiedSourceCode": false,
+  "personalRuntimeDependency": false
+}

@@ -1,0 +1,58 @@
+{
+  "policyVersion": "1.0.0-candidate.1",
+  "timezone": "Asia/Shanghai",
+  "deploymentMode": "shadow",
+  "publish": false,
+  "requiredConsecutiveNaturalDays": 7,
+  "dispatcherIntervalSeconds": 60,
+  "workerTimeoutSeconds": 300,
+  "schedules": [
+    {
+      "scheduleKey": "daily-collection-shadow",
+      "jobType": "collector",
+      "localTime": "06:30",
+      "enabled": true
+    }
+  ],
+  "resourceLimits": {
+    "orchestratorCpuCores": 0.1,
+    "orchestratorMemoryMiB": 96,
+    "collectorCpuCores": 0.5,
+    "collectorMemoryMiB": 512,
+    "collectorPids": 128,
+    "rawSnapshotBytesPerDayMax": 1073741824,
+    "networkBytesPerDayMax": 2147483648
+  },
+  "acceptanceThresholds": {
+    "sourceSuccessRateMin": 0.95,
+    "duplicateRateMax": 0.3,
+    "freshnessP95SecondsMax": 21600,
+    "workerFailureRateMax": 0.05,
+    "workerTimeoutRateMax": 0.02,
+    "dailyReportCostUsdMax": 2,
+    "weeklyReportCostUsdMax": 8,
+    "unredactedSensitiveOutputCountMax": 0,
+    "sourceRevocationEffectiveSecondsMax": 300,
+    "postRevocationNetworkRequestCountMax": 0,
+    "lastGoodPreservationRateMin": 1,
+    "formalP2CountMax": 0,
+    "employeeDeliveryCountMax": 0,
+    "erpWritebackCountMax": 0,
+    "socialWritebackCountMax": 0,
+    "causalActivationCountMax": 0
+  },
+  "automaticResponse": {
+    "criticalViolations": [
+      "publish_enabled",
+      "unredacted_sensitive_output",
+      "post_revocation_network_request",
+      "formal_p2_created",
+      "employee_delivery_created",
+      "erp_writeback_created",
+      "social_writeback_created",
+      "causal_relation_activated"
+    ],
+    "defaultAction": "freeze_shadow",
+    "rollbackRequiresPreapprovalEnvironment": "SHADOW_AUTO_ROLLBACK_APPROVED=YES"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/strategic-intelligence-shadow-day-evidence-v1.json",
+  "title": "Strategic Intelligence Shadow Day Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidenceVersion",
+    "requestKey",
+    "localDate",
+    "timezone",
+    "policyVersion",
+    "policyHash",
+    "status",
+    "startedAt",
+    "completedAt",
+    "durationSeconds",
+    "exitCode",
+    "security",
+    "sideEffects",
+    "runtime",
+    "coverage"
+  ],
+  "properties": {
+    "evidenceVersion": { "const": "1.0.0" },
+    "requestKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{4,120}$" },
+    "localDate": { "type": "string", "format": "date" },
+    "timezone": { "const": "Asia/Shanghai" },
+    "policyVersion": { "type": "string", "minLength": 1 },
+    "policyHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "status": { "enum": ["succeeded", "failed", "timed_out"] },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "durationSeconds": { "type": "integer", "minimum": 0 },
+    "exitCode": { "type": "integer", "minimum": 0 },
+    "timeoutCount": { "type": "integer", "minimum": 0 },
+    "sourceAttemptCount": { "type": "integer", "minimum": 0 },
+    "sourceSuccessCount": { "type": "integer", "minimum": 0 },
+    "rawSnapshotCount": { "type": "integer", "minimum": 0 },
+    "normalizedItemCount": { "type": "integer", "minimum": 0 },
+    "duplicateCount": { "type": "integer", "minimum": 0 },
+    "freshnessP95Seconds": { "type": "integer", "minimum": 0 },
+    "rawSnapshotBytes": { "type": "integer", "minimum": 0 },
+    "networkBytes": { "type": "integer", "minimum": 0 },
+    "peakCpuPermille": { "type": "integer", "minimum": 0 },
+    "peakMemoryBytes": { "type": "integer", "minimum": 0 },
+    "reportCostsUsd": { "type": "object" },
+    "security": { "type": "object" },
+    "sideEffects": { "type": "object" },
+    "runtime": { "type": "object" },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "collectorMetricsCollected",
+        "resourceMetricsCollected",
+        "sensitiveOutputAuditCompleted",
+        "sourceRevocationAuditCompleted",
+        "businessSideEffectAuditCompleted"
+      ],
+      "properties": {
+        "collectorMetricsCollected": { "type": "boolean" },
+        "resourceMetricsCollected": { "type": "boolean" },
+        "sensitiveOutputAuditCompleted": { "type": "boolean" },
+        "sourceRevocationAuditCompleted": { "type": "boolean" },
+        "businessSideEffectAuditCompleted": { "type": "boolean" }
+      }
+    }
+  }
+}

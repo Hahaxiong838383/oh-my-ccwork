@@ -1,0 +1,13 @@
+{
+  "name": "@futurus/company-intelligence-collector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "validate": "node src/cli.mjs validate --config config.example.json --registry ../../packages/ontology-contracts/catalogs/pestim-source-registry-candidate-v1.json",
+    "test": "node --test test/*.test.mjs"
+  }
+}

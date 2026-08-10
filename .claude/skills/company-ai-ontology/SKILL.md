@@ -310,11 +310,26 @@ node ops/sync-company-directory.mjs
 - PESTIM 在因果上采用 `PEST 宏观 → Industry 行业 → Market 市场力量 → GoalFacet` 的多跳图，同时保留政策、融资、人才和技术对公司目标的直接路径。飞书 43 × 108 的 4644 条矩阵全部作为 `generated_draft / unverified / inactive` Impact Hypothesis 导入，不得当作 Fact/Claim 或自动任务规则。
 - 日、周、月、季、半年、年度报告必须基于同一批结构化 Evidence/Impact Assessment 在不同窗口重新计算，禁止递归总结下级报告正文；每次 ReportRun 记录 evidence cutoff、source snapshot、Ontology/causal graph 版本、input hash、model、prompt、成本和状态。
 - 个人站“前沿资讯雷达”是多个生产者加 Next.js 展示层的聚合，不是可原样迁移的单体项目。公司 QNAP 只复用 Horizon/Theory Radar 的采集、去重、评分、富化、oneshot、影子运行和 last-good 门禁；必须使用公司独立实例、目录、账号、Key 和报告契约，禁止调用个人站 Webhook 或读取个人数据。
-- 公司 QNAP 建议采用轻量常驻 Intelligence Orchestrator + 受资源约束的临时 Collector Worker；任何 Shadow/正式部署都需要重新核对公司 QNAP 五元组、做 7 天资源/来源/成本验收并取得当次部署授权。第一条产品线推荐 HUD，仅激活经 DRI 审查的 20–50 条高价值传导关系。
+- 公司 QNAP 建议采用轻量常驻 Intelligence Orchestrator + 受资源约束的临时 Collector Worker；任何 Shadow/正式部署都需要重新核对公司 QNAP 五元组、做 7 天资源/来源/成本验收并取得当次部署授权。第一条试点改为 P003 读写台及 AI 产品，仅激活经产品、AI、研发、销售、采购和财务 DRI 审查的 20–50 条高价值传导关系。
 - PESTIM Strategic Intelligence 详细方案见 `2-Projects/company-ai-ontology/docs/pestim-strategic-intelligence-architecture-2026-08-10.md`。
-- P1-SI-A 已完成 contract-only 候选 Schema `3.4.0`：新增 `domain.intelligence`、ExternalFactor、GoalFacet、ImpactHypothesis、ImpactAssessment、StrategicIntelligenceReport 和 ReportRun，离线编译兼容且没有新增 Action Type；生产 active Schema 仍为 `3.3.0`。任何激活必须经过 Goal 7、Source Registry、HUD DRI、QNAP Shadow、Ontology Change Proposal 和 Registry reconciliation 门禁。
+- P1-SI-A 已完成 contract-only 候选 Schema `3.4.0`：新增 `domain.intelligence`、ExternalFactor、GoalFacet、ImpactHypothesis、ImpactAssessment、StrategicIntelligenceReport 和 ReportRun，离线编译兼容且没有新增 Action Type；生产 active Schema 仍为 `3.3.0`。任何激活必须经过 Goal 7、Source Registry、P003 读写台及 AI 产品 DRI 评审、QNAP Shadow、Ontology Change Proposal 和 Registry reconciliation 门禁。
+- P1-SI-B 以 P1-SI-A `3.4.0` 为不可变基线叠加 Source Registry 候选 `3.5.0`，不得改写 P1-SI-A Hash。来源准入必须默认 deny；未登记、暂停、撤销、许可未批/过期、合规未批、个人账号、登录态、反自动化绕过和未授权全文保存全部 fail-closed。工程候选可以先完成，但没有实名公司合规 DRI 审批时，来源必须保持 `paused`，不能把“官方公开 API”自动等价为公司已获许可。
+- 公司版雷达的实施位置固定为：P1-SI-C 形成可部署镜像与 Collector；P1-SI-F 完成资源、回滚和 7 天 Shadow 验收准备；P1-SI-H 在 Goal 7 完成且取得当次授权后，才部署到公司 QNAP 并以 `PUBLISH=false` 运行 7 天。P1-SI-G 负责 P003 读写台及 AI 产品传导关系审核，不等于雷达生产部署。
+- P1-SI-C Collector 必须在全部网络请求前完成 Source Registry 判定；任一配置来源被拒绝时整次 oneshot 在网络前失败。个人站仅提供设计模式和锁定证据，公司包不得读取个人目录、报告、凭据或 Webhook；构建配方完成不等于镜像已构建，镜像实构、digest 和资源数据必须在 P1-SI-F 单独验收。
+- P1-SI-D 数据底座固定 Postgres 为唯一结构化真源，Qdrant 只能是可删除、可重建派生层。Raw Snapshot 保留内容 Hash、dedup/idempotency、双时间、Source Decision 和 Collector 版本；Replay 只能生成新派生记录，不能修改 Raw identity。候选 SQL 必须留在 `candidate-migrations/`，完成隔离 Postgres/回滚验收前不得放进自动生产迁移目录。
+- P1-SI-E 报告窗口统一使用 `Asia/Shanghai` 的上一个完整自然周期；周/月/季等报告必须从 Evidence/Signal/Assessment/经营指标重新计算，禁止把日报或周报正文作为上级报告输入。飞书文档、卡片和 H 控制面只是 ACL 过滤后的派生投影，ReportRun 必须保存 source snapshot、input hash、Ontology/causal graph、真实 model ID、Prompt、token、成本、耗时、状态和重试。
+- Source Registry 的“允许采集”和“允许保存内容”是两道独立门：`reference_only / metadata_only / summary_metadata` 的 Raw Snapshot 只能保存 Hash、长度、来源和时间，不能保存完整响应体；`metadata_only / reference_only` 的 normalized item 不能保留摘要。只有明确批准的 `full_text` 或合法 `structured_data` 才能保存对应 payload，Collector 必须直接执行 Policy Decision 返回的 retention。
+- P1-SI-F 已形成公司 QNAP Shadow 工程候选：轻量 Orchestrator、受限 oneshot Collector、无宿主端口、无 Docker Socket、只读根文件系统、显式部署/数据库/回滚授权门禁，以及七个真实自然日证据包。静态测试 `8/8` 不等于 Runtime 验收；镜像实构、不可变 digest、010/011 隔离 PostgreSQL、公司 QNAP 五元组和真实资源数据未完成前，必须保持 `image_build_verified=false / sql_runtime_verified=false / company_qnap_deployed=false`。
+- P1-SI-G 已从真实 4644 条矩阵中筛选 36 条 P003 候选，六类各 6 条；源矩阵覆盖完整但语义模板化，所有候选固定为 `generated_generic_requires_rewrite / generated_draft / unverified / inactive / pending_dri_review`。每条关系必须由实名 DRI 重写传导逻辑并补齐支持证据、挑战证据、适用条件、方向、强度、滞后、验证指标和失效条件，不能只用角色名或模型生成文本通过审核。
+- P1-SI-H 才是公司 QNAP 雷达实际部署阶段；必须同时满足 Goal 7、来源合规批准、P003 真实 DRI 审核、镜像与 SQL Runtime 验证、已推送不可变发布包、公司 QNAP 五元组在线核对和当次部署授权。部署、服务重启和真实回滚演练分别授权；七个真实自然日 `PUBLISH=false` Shadow 完成前不得关闭 P1-SI Goal。
 - P1-SI-A 已通过提交 `8444fb10f` 发布候选编译能力到公司 QNAP Registry 镜像，但没有激活 `3.4.0`。专项发布先离线编译，再仅重建 Registry，切换 2 秒、`restart_count=0`、Registry `in_sync`；回滚备份位于 `/share/CACHEDEV2_DATA/ai-ontology-backup/p1-si-a/20260810-p1-si-a-8444fb10f`。用户授权“部署 contract-only 能力”不能外推为“激活候选 Schema”或“授权真实回滚演练”。
 - P1-SI-A 验收见 `2-Projects/company-ai-ontology/docs/p1-si-a-pestim-ontology-definition-acceptance-2026-08-10.md`。
+- P1-SI-B 验收见 `2-Projects/company-ai-ontology/docs/p1-si-b-source-registry-acceptance-2026-08-10.md`。
+- P1-SI-C 验收见 `2-Projects/company-ai-ontology/docs/p1-si-c-company-radar-package-acceptance-2026-08-10.md`。
+- P1-SI-D 验收见 `2-Projects/company-ai-ontology/docs/p1-si-d-strategic-intelligence-data-foundation-acceptance-2026-08-10.md`。
+- P1-SI-E 验收见 `2-Projects/company-ai-ontology/docs/p1-si-e-multi-period-reporting-acceptance-2026-08-10.md`。
+- P1-SI-F 验收见 `2-Projects/company-ai-ontology/docs/p1-si-f-qnap-shadow-readiness-acceptance-2026-08-10.md`。
+- P1-SI-G 验收见 `2-Projects/company-ai-ontology/docs/p1-si-g-p003-review-candidate-acceptance-2026-08-10.md`；人工审核工作包见 `2-Projects/company-ai-ontology/docs/p1-si-g-p003-dri-review-pack-2026-08-10.md`。
 - 详细实施计划见 `2-Projects/company-ai-ontology/docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
 
 当前实现与切换流程见：

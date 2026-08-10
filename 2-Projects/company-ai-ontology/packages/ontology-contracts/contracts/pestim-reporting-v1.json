@@ -1,0 +1,218 @@
+{
+  "contractVersion": "1.0.0",
+  "status": "contract_only",
+  "proposalKey": "P1-SI-E",
+  "baseSchemaVersion": "3.6.0",
+  "candidateSchemaVersion": "3.7.0",
+  "compatibilityExpectation": "compatible",
+  "deploymentAllowed": false,
+  "timezone": "Asia/Shanghai",
+  "reportTypes": ["daily", "weekly", "monthly", "quarterly", "semiannual", "annual", "alert", "company", "p003"],
+  "structuredInputTypes": ["raw_snapshot", "observation", "signal", "evidence", "impact_assessment", "operating_metric"],
+  "forbiddenInputTypes": ["report", "report_text", "feishu_document", "rendered_summary"],
+  "projectionChannels": ["feishu_document", "feishu_card", "h_control_plane"],
+  "templateFiles": {
+    "feishuDocument": "templates/strategic-intelligence/feishu-document-v1.json",
+    "feishuCard": "templates/strategic-intelligence/feishu-card-v1.json",
+    "hControlPlane": "templates/strategic-intelligence/h-control-plane-v1.json"
+  },
+  "candidateMigration": "deploy/qnap/candidate-migrations/011-pestim-reporting.sql",
+  "reportCadence": {
+    "daily": "previous_completed_local_day",
+    "weekly": "previous_completed_iso_week",
+    "monthly": "previous_completed_calendar_month",
+    "quarterly": "previous_completed_calendar_quarter",
+    "semiannual": "previous_completed_calendar_half",
+    "annual": "previous_completed_calendar_year",
+    "alert": "event_bounded",
+    "company": "explicit_window",
+    "p003": "explicit_window"
+  },
+  "additions": {
+    "namespaces": [],
+    "objectTypes": [
+      {
+        "qualifiedName": "domain.intelligence.ReportInputSet",
+        "description": "Content-addressed structured input manifest recomputed for one report period",
+        "extends": ["system.ontology.BaseObject"],
+        "properties": [
+          { "name": "inputSetKey", "type": "string", "required": true },
+          { "name": "reportType", "type": "string", "required": true },
+          { "name": "periodStart", "type": "timestamp", "required": true },
+          { "name": "periodEnd", "type": "timestamp", "required": true },
+          { "name": "evidenceCutoffAt", "type": "timestamp", "required": true },
+          { "name": "inputHash", "type": "string", "required": true },
+          { "name": "sourceSnapshotIds", "type": "uuid[]", "required": true },
+          { "name": "ontologyVersion", "type": "string", "required": true },
+          { "name": "causalGraphVersion", "type": "string", "required": true },
+          { "name": "sourceRegistryVersion", "type": "string", "required": true },
+          { "name": "createdAt", "type": "timestamp", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.ReportProjection",
+        "description": "Derived Feishu or H control-plane rendering of a structured strategic intelligence report",
+        "extends": ["system.ontology.BaseObject"],
+        "properties": [
+          { "name": "projectionKey", "type": "string", "required": true },
+          { "name": "channel", "type": "string", "required": true },
+          { "name": "templateVersion", "type": "string", "required": true },
+          { "name": "projectionStatus", "type": "string", "required": true },
+          { "name": "renderedHash", "type": "string", "required": true },
+          { "name": "targetScope", "type": "string", "required": true },
+          { "name": "createdAt", "type": "timestamp", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.StrategicIntelligenceAlert",
+        "description": "Evidence-backed immediate alert that may open a WorkCase but cannot create formal P2 automatically",
+        "extends": ["system.ontology.BaseObject"],
+        "properties": [
+          { "name": "alertKey", "type": "string", "required": true },
+          { "name": "alertType", "type": "string", "required": true },
+          { "name": "severity", "type": "string", "required": true },
+          { "name": "detectedAt", "type": "timestamp", "required": true },
+          { "name": "evidenceCutoffAt", "type": "timestamp", "required": true },
+          { "name": "alertStatus", "type": "string", "required": true },
+          { "name": "confidenceBand", "type": "string", "required": true },
+          { "name": "workCaseReference", "type": "string", "required": false },
+          { "name": "ontologyVersion", "type": "string", "required": true },
+          { "name": "causalGraphVersion", "type": "string", "required": true }
+        ]
+      }
+    ],
+    "linkTypes": [
+      {
+        "qualifiedName": "domain.intelligence.REPORT_RUN_USES_INPUT_SET",
+        "fromType": "domain.intelligence.ReportRun",
+        "toType": "domain.intelligence.ReportInputSet",
+        "cardinality": "many_to_one"
+      },
+      {
+        "qualifiedName": "domain.intelligence.REPORT_HAS_PROJECTION",
+        "fromType": "domain.intelligence.StrategicIntelligenceReport",
+        "toType": "domain.intelligence.ReportProjection",
+        "cardinality": "one_to_many"
+      },
+      {
+        "qualifiedName": "domain.intelligence.ALERT_SUPPORTED_BY_EVIDENCE",
+        "fromType": "domain.intelligence.StrategicIntelligenceAlert",
+        "toType": "core.epistemic.Evidence",
+        "cardinality": "many_to_many"
+      },
+      {
+        "qualifiedName": "domain.intelligence.ALERT_OPENS_WORK_CASE",
+        "fromType": "domain.intelligence.StrategicIntelligenceAlert",
+        "toType": "core.work.WorkCase",
+        "cardinality": "many_to_one"
+      }
+    ],
+    "functionTypes": [
+      {
+        "qualifiedName": "domain.intelligence.computeReportWindow",
+        "description": "Compute a completed report period in Asia/Shanghai without reading lower-period prose",
+        "inputs": [
+          { "name": "reportType", "type": "string", "required": true },
+          { "name": "anchorAt", "type": "timestamp", "required": true }
+        ],
+        "outputs": [
+          { "name": "window", "type": "json", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.buildReportInputSet",
+        "description": "Build a deterministic manifest from structured inputs and complete version lineage",
+        "inputs": [
+          { "name": "reportRequest", "type": "json", "required": true },
+          { "name": "structuredInputs", "type": "json", "required": true }
+        ],
+        "outputs": [
+          { "name": "inputSet", "type": "json", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.validateReportRun",
+        "description": "Validate period, evidence cutoff, model, prompt, cost, status and retry lineage",
+        "inputs": [
+          { "name": "reportRun", "type": "json", "required": true }
+        ],
+        "outputs": [
+          { "name": "validation", "type": "json", "required": true }
+        ]
+      }
+    ],
+    "actionTypes": [],
+    "policyTypes": [
+      {
+        "qualifiedName": "domain.intelligence.reportInputsAreStructured",
+        "description": "Every period recomputes from structured Evidence, Signal, Assessment and operating metrics rather than report prose",
+        "appliesTo": [
+          "domain.intelligence.ReportInputSet",
+          "domain.intelligence.ReportRun"
+        ],
+        "effect": "deny"
+      },
+      {
+        "qualifiedName": "domain.intelligence.reportProjectionIsDerived",
+        "description": "Feishu documents, cards and H panels are permission-filtered projections and never facts",
+        "appliesTo": [
+          "domain.intelligence.StrategicIntelligenceReport",
+          "domain.intelligence.ReportProjection"
+        ],
+        "effect": "filter"
+      },
+      {
+        "qualifiedName": "domain.intelligence.reportRequiresReviewBeforePublish",
+        "description": "Reports remain draft or review-required until an authorized DRI approves publication",
+        "appliesTo": [
+          "domain.intelligence.StrategicIntelligenceReport",
+          "domain.intelligence.ReportProjection"
+        ],
+        "effect": "deny"
+      },
+      {
+        "qualifiedName": "domain.intelligence.alertCannotCreateFormalP2",
+        "description": "Alerts may open a WorkCase or Decision Proposal but cannot create formal P2 or employee tasks",
+        "appliesTo": ["domain.intelligence.StrategicIntelligenceAlert"],
+        "effect": "deny"
+      }
+    ],
+    "constraintTypes": [
+      {
+        "qualifiedName": "domain.intelligence.reportInputSetWindowIsBounded",
+        "description": "Every report input set has a completed bounded window and cutoff at or after period end",
+        "targetType": "domain.intelligence.ReportInputSet",
+        "severity": "error",
+        "rule": "periodStart < periodEnd && evidenceCutoffAt >= periodEnd"
+      },
+      {
+        "qualifiedName": "domain.intelligence.reportInputSetForbidsReportText",
+        "description": "Input manifests cannot contain report, report_text, feishu_document or rendered_summary types",
+        "targetType": "domain.intelligence.ReportInputSet",
+        "severity": "error",
+        "rule": "inputs.every(inputType in structuredInputTypes)"
+      },
+      {
+        "qualifiedName": "domain.intelligence.reportRunHasCompleteExecutionLineage",
+        "description": "Every report run records input, source, ontology, causal, model, prompt, token, cost and retry lineage",
+        "targetType": "domain.intelligence.ReportRun",
+        "severity": "error",
+        "rule": "inputHash != null && sourceSnapshotIds != null && ontologyVersionUsed != null && causalGraphVersion != null && modelProvider != null && modelId != null && promptVersion != null && tokenUsage != null && costMicrounits != null && retryCount >= 0"
+      },
+      {
+        "qualifiedName": "domain.intelligence.reportProjectionRequiresRenderedHash",
+        "description": "Every projection is content-addressed and tied to one template version and target scope",
+        "targetType": "domain.intelligence.ReportProjection",
+        "severity": "error",
+        "rule": "renderedHash matches '^[0-9a-f]{64}$' && templateVersion != null && targetScope != null"
+      },
+      {
+        "qualifiedName": "domain.intelligence.alertRequiresEvidenceBeforeWorkCase",
+        "description": "An alert may open a WorkCase only when evidence and cutoff are present",
+        "targetType": "domain.intelligence.StrategicIntelligenceAlert",
+        "severity": "error",
+        "rule": "workCaseReference == null || (evidenceIds != null && evidenceCutoffAt <= detectedAt)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "summaryVersion": "1.0.0",
+  "shadowStartDate": "YYYY-MM-DD",
+  "shadowEndDate": "YYYY-MM-DD",
+  "timezone": "Asia/Shanghai",
+  "requiredNaturalDays": 7,
+  "completedNaturalDays": 0,
+  "publish": false,
+  "dayEvidenceFiles": [],
+  "allThresholdsPassed": false,
+  "formalP2Count": 0,
+  "employeeDeliveryCount": 0,
+  "erpWritebackCount": 0,
+  "socialWritebackCount": 0,
+  "causalActivationCount": 0,
+  "newHostPortCount": 0,
+  "finalContainerRestartCount": null,
+  "engineeringVerified": false,
+  "ownerAccepted": false
+}

@@ -1,0 +1,17 @@
+{
+  "templateVersion": "1.0.0",
+  "channel": "h_control_plane",
+  "status": "read_only_projection",
+  "requiredPanels": [
+    "run_health",
+    "source_coverage",
+    "signal_freshness",
+    "evidence_conflicts",
+    "p003_impact_graph",
+    "report_lineage",
+    "cost_and_latency",
+    "closed_gates"
+  ],
+  "sensitiveFields": "server_side_allowlist_only",
+  "writeControls": false
+}

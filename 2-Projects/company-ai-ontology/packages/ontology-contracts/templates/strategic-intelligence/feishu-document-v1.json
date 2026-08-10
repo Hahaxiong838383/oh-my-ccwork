@@ -1,0 +1,18 @@
+{
+  "templateVersion": "1.0.0",
+  "channel": "feishu_document",
+  "status": "draft_only",
+  "requiredSections": [
+    "report_identity",
+    "executive_conclusion",
+    "what_changed",
+    "pestim_map",
+    "p003_impact",
+    "evidence_and_counterevidence",
+    "unknowns_and_limits",
+    "decision_proposals",
+    "lineage_and_cost"
+  ],
+  "forbiddenFields": ["raw_body", "secret", "personal_identifier", "hidden_acl_content"],
+  "publicationGate": "authorized_dri_review"
+}

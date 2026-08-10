@@ -1,0 +1,77 @@
+{
+  "contractVersion": "1.0.0",
+  "serviceKey": "company-intelligence-collector",
+  "status": "deployable_package",
+  "productionDeploymentAllowed": false,
+  "publishAllowed": false,
+  "requiredSourceRegistryProposal": "P1-SI-B",
+  "requiredSourceRegistryDefaultDecision": "deny",
+  "identity": {
+    "accountNamespace": "company-ai-ontology-strategic-intelligence",
+    "credentialNamespace": "company-intelligence",
+    "databaseNamespace": "company_strategic_intelligence",
+    "stateNamespace": "company-intelligence-collector",
+    "reportNamespace": "company-intelligence-reports",
+    "feishuOutletNamespace": "company-intelligence-feishu-outlet"
+  },
+  "runtime": {
+    "mode": "oneshot",
+    "runAsNonRoot": true,
+    "readOnlyRootFilesystem": true,
+    "defaultPublish": false,
+    "maxSourcesPerRun": 20,
+    "maxItemsPerSource": 100,
+    "maxResponseBytes": 5242880,
+    "defaultTimeoutSeconds": 30
+  },
+  "supportedCollectionModes": ["rss_api", "api"],
+  "outputArtifacts": [
+    "run.json",
+    "source-decisions.json",
+    "raw/{sourceKey}.snapshot.json",
+    "items.json",
+    "last-good.json"
+  ],
+  "forbiddenInputs": [
+    "personal_site_data_directory",
+    "personal_report_directory",
+    "personal_credential",
+    "personal_webhook",
+    "login_session",
+    "cookie_jar",
+    "anti_automation_bypass",
+    "publish_true"
+  ],
+  "forbiddenPathFragments": [
+    "/chenchuan-site/",
+    "/horizon-radar/",
+    "/theory-radar/",
+    "/Users/rayman.chen/Documents/",
+    "/Users/rayman.chen/.mycc-secrets"
+  ],
+  "hardGates": [
+    "source-registry-allow-before-network",
+    "https-only-source-endpoint",
+    "response-size-limit",
+    "content-hash-and-url-deduplication",
+    "atomic-run-artifacts",
+    "failed-run-does-not-overwrite-last-good",
+    "publish-false-only",
+    "no-feishu-delivery",
+    "no-formal-p2",
+    "no-employee-task",
+    "no-erp-or-social-writeback"
+  ],
+  "upstreamReuse": {
+    "horizon": {
+      "repository": "https://github.com/Thysrael/Horizon.git",
+      "commit": "1e2fdc7ccb177f33c59aef2082c4093e1e82b22c",
+      "license": "MIT",
+      "reuse": ["oneshot-pipeline", "stage-artifacts", "deduplication", "last-good-gate"]
+    },
+    "theoryRadar": {
+      "sourceCommit": "3f5b7e3899532b905c0c5463af6e4bfd7b40eae2",
+      "reuse": ["rss-api-sources", "candidate-snapshot", "retry-without-refetch", "publish-false-shadow"]
+    }
+  }
+}

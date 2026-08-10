@@ -10,6 +10,10 @@
   "scripts": {
     "compile": "node bin/ontology-compile.mjs",
     "compile:pestim": "node bin/pestim-compile.mjs",
+    "compile:source-registry": "node bin/source-registry-compile.mjs",
+    "compile:data-foundation": "node bin/data-foundation-compile.mjs",
+    "compile:reporting": "node bin/reporting-compile.mjs",
+    "compile:p003-review": "node bin/p003-review-compile.mjs",
     "test": "node --test test/*.test.mjs"
   }
 }

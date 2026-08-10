@@ -1,0 +1,47 @@
+{
+  "contractVersion": "1.0.0",
+  "proposalKey": "P1-SI-G-P003-IMPACT-REVIEW",
+  "status": "review_candidate_only",
+  "productionActivationAllowed": false,
+  "productLineKey": "p003-reading-writing-desk-ai",
+  "candidateCount": {
+    "minimum": 20,
+    "maximum": 50
+  },
+  "requiredCategories": [
+    "product_definition",
+    "children_user_scenario",
+    "supply_chain_cost_quality",
+    "channel_sales_competition",
+    "ai_technology",
+    "privacy_safety_compliance"
+  ],
+  "requiredDriRolesAcrossPack": [
+    "product",
+    "ai",
+    "research_and_development",
+    "sales",
+    "procurement",
+    "finance",
+    "compliance"
+  ],
+  "requiredCandidateState": {
+    "generationStatus": "generated_draft",
+    "verificationStatus": "unverified",
+    "activationStatus": "inactive",
+    "reviewStatus": "pending_dri_review"
+  },
+  "requiredEvidenceState": {
+    "supportEvidenceMinimumBeforeActivation": 1,
+    "challengeEvidenceMinimumBeforeActivation": 1,
+    "namedIndividualDriRequired": true,
+    "metricBaselineRequired": true,
+    "semanticRewriteRequired": true
+  },
+  "source": {
+    "baseToken": "Wz3EbCQwBa7elVsjU5xcOI4RnRh",
+    "tableId": "tblTSoJMk6BNqQFq",
+    "viewId": "vewI3BEgug",
+    "expectedMatrixRecordCount": 4644
+  }
+}

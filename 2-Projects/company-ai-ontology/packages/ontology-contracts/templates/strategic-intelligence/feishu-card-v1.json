@@ -1,0 +1,17 @@
+{
+  "templateVersion": "1.0.0",
+  "channel": "feishu_card",
+  "status": "draft_only",
+  "requiredFields": [
+    "report_key",
+    "report_type",
+    "period",
+    "top_changes",
+    "p003_impact_summary",
+    "confidence_band",
+    "unknown_count",
+    "review_status"
+  ],
+  "allowedActions": ["open_authorized_report", "request_review"],
+  "forbiddenActions": ["create_formal_p2", "assign_employee_task", "write_erp", "write_social_system"]
+}

@@ -1,0 +1,97 @@
+{
+  "planVersion": "1.0.0",
+  "selectionDate": "2026-08-10",
+  "selectionMethod": "curated_structural_relevance_from_4644_generated_drafts",
+  "categories": [
+    {
+      "categoryKey": "product_definition",
+      "displayName": "产品定义与功能",
+      "driRoles": ["product", "ai", "research_and_development"],
+      "validationMetrics": ["p003_feature_adoption_rate", "product_requirement_change_rate", "product_return_rate", "parent_product_satisfaction"],
+      "selectionReasons": ["直接影响P003功能定义与差异化", "可由产品使用及退货数据验证", "同时覆盖硬件与AI能力"],
+      "pairs": [
+        ["智能化", "3.1 产品&市场-O1目标"],
+        ["HUD", "3.1 产品&市场-O1目标"],
+        ["科技成果转化", "3.1 产品&市场-O1目标"],
+        ["客户议价能力", "3.1 产品&市场-O1目的"],
+        ["替代品威胁", "3.1 产品&市场-O1目标"],
+        ["法律法规", "3.1 产品&市场-O2原则"]
+      ]
+    },
+    {
+      "categoryKey": "children_user_scenario",
+      "displayName": "儿童用户、家长与使用场景",
+      "driRoles": ["product", "ai", "user_research", "compliance"],
+      "validationMetrics": ["child_safe_usage_duration", "parent_satisfaction", "scenario_retention_rate", "content_safety_incident_rate"],
+      "selectionReasons": ["直接影响儿童与家长价值判断", "覆盖家庭和学习场景变化", "可用真实使用及安全指标验证"],
+      "pairs": [
+        ["文化与价值观", "3.1 EyesCare-O1目标"],
+        ["社会制度与结构", "3.1 EyesCare-O1目标"],
+        ["客户议价能力", "3.1 EyesCare-O1目的"],
+        ["智能化", "3.1 EyesCare-O1目标"],
+        ["法律法规", "3.1 EyesCare-O2原则"],
+        ["替代品威胁", "3.1 EyesCare-O1目标"]
+      ]
+    },
+    {
+      "categoryKey": "supply_chain_cost_quality",
+      "displayName": "供应链、成本、质量与交付",
+      "driRoles": ["procurement", "manufacturing", "quality", "finance"],
+      "validationMetrics": ["bom_cost_variance", "supplier_on_time_delivery", "first_pass_yield", "rma_rate"],
+      "selectionReasons": ["直接影响P003可量产性和单位经济性", "可由ERP与质量数据验证", "覆盖采购制造售后闭环"],
+      "pairs": [
+        ["供应商议价能力", "3.1 采购-O1目标"],
+        ["宏观经济", "3.1 采购-O1目的"],
+        ["产业布局", "3.1 制造和工艺-O1目标"],
+        ["科技成果转化", "3.1 制造和工艺-O1目的"],
+        ["法律法规", "3.1 质量&售后-O2原则"],
+        ["客户议价能力", "3.1 质量&售后-O1目标"]
+      ]
+    },
+    {
+      "categoryKey": "channel_sales_competition",
+      "displayName": "渠道、销售与竞争",
+      "driRoles": ["sales", "marketing", "product", "finance"],
+      "validationMetrics": ["channel_sell_through_rate", "sales_conversion_rate", "channel_inventory_days", "competitor_price_gap"],
+      "selectionReasons": ["直接影响P003上市和渠道策略", "覆盖五力中的客户与竞争风险", "可由销售和渠道经营数据验证"],
+      "pairs": [
+        ["行业现有竞争", "3.1 销售-O1目标"],
+        ["客户议价能力", "3.1 销售-O1目的"],
+        ["替代品威胁", "3.1 销售-O1目标"],
+        ["潜在竞争者", "3.1 销售-O2原则"],
+        ["宏观经济", "3.1 销售-O1目标"],
+        ["流动性", "3.1 销售-O1目标"]
+      ]
+    },
+    {
+      "categoryKey": "ai_technology",
+      "displayName": "AI模型、内容、交互与技术能力",
+      "driRoles": ["ai", "research_and_development", "product", "intellectual_property"],
+      "validationMetrics": ["ai_task_success_rate", "model_latency_p95", "content_quality_pass_rate", "ai_unit_cost"],
+      "selectionReasons": ["直接影响P003 AI体验和技术路线", "覆盖研究转化人才标准与资金", "可通过模型及研发指标验证"],
+      "pairs": [
+        ["基础研究进展", "3.1 技术-O1目标"],
+        ["科技成果转化", "3.1 研发-O1目标"],
+        ["专利和技术标准", "3.1 知识产权-O1目标"],
+        ["科技人才和教育", "3.1 研发-O1目的"],
+        ["科技资金支持", "3.1 技术-O1目的"],
+        ["科技政策法规", "3.1 技术-O2原则"]
+      ]
+    },
+    {
+      "categoryKey": "privacy_safety_compliance",
+      "displayName": "儿童隐私、内容安全、产品及AI合规",
+      "driRoles": ["compliance", "legal", "ai_safety", "product", "quality", "procurement"],
+      "validationMetrics": ["child_privacy_audit_findings", "consent_coverage_rate", "content_safety_incident_rate", "regulatory_requirement_closure_days"],
+      "selectionReasons": ["儿童及AI产品属于高风险合规域", "覆盖法规标准文化环境与跨境供应", "任何失败都可能阻断产品上市"],
+      "pairs": [
+        ["法律法规", "3.2 治理-O1目标"],
+        ["科技政策法规", "3.2 治理-O1目的"],
+        ["专利和技术标准", "3.1 知识产权-O2原则"],
+        ["文化与价值观", "3.2 治理-O2原则"],
+        ["环境和资源", "3.1 制造和工艺-O2原则"],
+        ["外交关系 & 国际冲突", "3.1 采购-O2原则"]
+      ]
+    }
+  ]
+}

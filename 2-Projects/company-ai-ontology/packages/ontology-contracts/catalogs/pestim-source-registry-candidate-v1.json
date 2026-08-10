@@ -1,0 +1,384 @@
+{
+  "registryVersion": "1.0.0-candidate.1",
+  "status": "candidate",
+  "defaultDecision": "deny",
+  "generatedAt": "2026-08-10T00:00:00Z",
+  "approvalNote": "Engineering allowlist candidate only. Every source remains paused until a named company compliance DRI approves its license, storage scope and collection policy.",
+  "entries": [
+    {
+      "sourceKey": "arxiv-official-rss-api",
+      "name": "arXiv official RSS and API",
+      "sourceType": "rss",
+      "sourceCategory": "paper",
+      "ownerRole": "strategic-intelligence-owner",
+      "pestimLayers": ["technology", "industry"],
+      "endpointRefs": ["https://export.arxiv.org/rss/", "https://export.arxiv.org/api/query"],
+      "license": {
+        "status": "pending",
+        "basis": "official-api-documentation-and-terms",
+        "evidenceRef": "https://info.arxiv.org/help/api/index.html",
+        "reviewedAt": "2026-08-10T00:00:00Z",
+        "expiresAt": null,
+        "fullTextRetentionAllowed": false
+      },
+      "internalUseScopes": ["internal-strategic-intelligence", "p003-ai-technology-monitoring"],
+      "collection": {
+        "mode": "rss_api",
+        "fetchIntervalMinutes": 1440,
+        "rateLimitPerHour": 30,
+        "timeoutSeconds": 30,
+        "requiresLogin": false,
+        "antiAutomationBypass": false,
+        "credentialMode": "none"
+      },
+      "trust": {
+        "tier": "authoritative",
+        "historicalAccuracyStatus": "unmeasured",
+        "historicalAccuracyScore": null
+      },
+      "retention": {
+        "dataClassification": "public-external",
+        "retentionDays": 365,
+        "deletionPolicy": "delete-expired-snapshots-preserve-derived-lineage",
+        "storageLevel": "summary_metadata"
+      },
+      "governance": {
+        "complianceOwnerRole": "company-compliance-dri",
+        "incidentContactRole": "strategic-intelligence-operations",
+        "approvalStatus": "pending",
+        "approvedBy": null,
+        "approvedAt": null
+      },
+      "lifecycleStatus": "paused"
+    },
+    {
+      "sourceKey": "openalex-official-api",
+      "name": "OpenAlex official API",
+      "sourceType": "api",
+      "sourceCategory": "paper",
+      "ownerRole": "strategic-intelligence-owner",
+      "pestimLayers": ["technology", "industry"],
+      "endpointRefs": ["https://api.openalex.org/works"],
+      "license": {
+        "status": "pending",
+        "basis": "cc0-data-with-api-terms",
+        "evidenceRef": "https://docs.openalex.org/",
+        "reviewedAt": "2026-08-10T00:00:00Z",
+        "expiresAt": null,
+        "fullTextRetentionAllowed": false
+      },
+      "internalUseScopes": ["internal-strategic-intelligence", "expert-and-paper-monitoring"],
+      "collection": {
+        "mode": "api",
+        "fetchIntervalMinutes": 1440,
+        "rateLimitPerHour": 30,
+        "timeoutSeconds": 30,
+        "requiresLogin": false,
+        "antiAutomationBypass": false,
+        "credentialMode": "company_managed"
+      },
+      "trust": {
+        "tier": "high",
+        "historicalAccuracyStatus": "unmeasured",
+        "historicalAccuracyScore": null
+      },
+      "retention": {
+        "dataClassification": "public-external",
+        "retentionDays": 365,
+        "deletionPolicy": "delete-expired-snapshots-preserve-derived-lineage",
+        "storageLevel": "metadata_only"
+      },
+      "governance": {
+        "complianceOwnerRole": "company-compliance-dri",
+        "incidentContactRole": "strategic-intelligence-operations",
+        "approvalStatus": "pending",
+        "approvedBy": null,
+        "approvedAt": null
+      },
+      "lifecycleStatus": "paused"
+    },
+    {
+      "sourceKey": "world-bank-indicators-api",
+      "name": "World Bank Indicators API",
+      "sourceType": "api",
+      "sourceCategory": "dataset",
+      "ownerRole": "strategic-intelligence-owner",
+      "pestimLayers": ["economic", "social", "market"],
+      "endpointRefs": ["https://api.worldbank.org/v2/"],
+      "license": {
+        "status": "pending",
+        "basis": "official-public-data-api-terms",
+        "evidenceRef": "https://datahelpdesk.worldbank.org/knowledgebase/topics/125589-developer-information",
+        "reviewedAt": "2026-08-10T00:00:00Z",
+        "expiresAt": null,
+        "fullTextRetentionAllowed": false
+      },
+      "internalUseScopes": ["internal-strategic-intelligence", "macro-market-monitoring"],
+      "collection": {
+        "mode": "api",
+        "fetchIntervalMinutes": 10080,
+        "rateLimitPerHour": 12,
+        "timeoutSeconds": 30,
+        "requiresLogin": false,
+        "antiAutomationBypass": false,
+        "credentialMode": "none"
+      },
+      "trust": {
+        "tier": "authoritative",
+        "historicalAccuracyStatus": "unmeasured",
+        "historicalAccuracyScore": null
+      },
+      "retention": {
+        "dataClassification": "public-external",
+        "retentionDays": 1095,
+        "deletionPolicy": "retain-versioned-structured-series-delete-transient-responses",
+        "storageLevel": "structured_data"
+      },
+      "governance": {
+        "complianceOwnerRole": "company-compliance-dri",
+        "incidentContactRole": "strategic-intelligence-operations",
+        "approvalStatus": "pending",
+        "approvedBy": null,
+        "approvedAt": null
+      },
+      "lifecycleStatus": "paused"
+    },
+    {
+      "sourceKey": "unicef-data-sdmx-api",
+      "name": "UNICEF Data Warehouse SDMX API",
+      "sourceType": "api",
+      "sourceCategory": "dataset",
+      "ownerRole": "strategic-intelligence-owner",
+      "pestimLayers": ["social", "market"],
+      "endpointRefs": ["https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"],
+      "license": {
+        "status": "pending",
+        "basis": "official-public-data-api-terms",
+        "evidenceRef": "https://data.unicef.org/resources/resource-type/datasets/",
+        "reviewedAt": "2026-08-10T00:00:00Z",
+        "expiresAt": null,
+        "fullTextRetentionAllowed": false
+      },
+      "internalUseScopes": ["internal-strategic-intelligence", "child-and-family-context-monitoring"],
+      "collection": {
+        "mode": "api",
+        "fetchIntervalMinutes": 10080,
+        "rateLimitPerHour": 12,
+        "timeoutSeconds": 30,
+        "requiresLogin": false,
+        "antiAutomationBypass": false,
+        "credentialMode": "none"
+      },
+      "trust": {
+        "tier": "authoritative",
+        "historicalAccuracyStatus": "unmeasured",
+        "historicalAccuracyScore": null
+      },
+      "retention": {
+        "dataClassification": "public-external",
+        "retentionDays": 1095,
+        "deletionPolicy": "retain-versioned-structured-series-delete-transient-responses",
+        "storageLevel": "structured_data"
+      },
+      "governance": {
+        "complianceOwnerRole": "company-compliance-dri",
+        "incidentContactRole": "strategic-intelligence-operations",
+        "approvalStatus": "pending",
+        "approvedBy": null,
+        "approvedAt": null
+      },
+      "lifecycleStatus": "paused"
+    },
+    {
+      "sourceKey": "federal-register-api",
+      "name": "U.S. Federal Register API",
+      "sourceType": "api",
+      "sourceCategory": "official",
+      "ownerRole": "strategic-intelligence-owner",
+      "pestimLayers": ["political", "industry", "market"],
+      "endpointRefs": ["https://www.federalregister.gov/api/v1/documents.json"],
+      "license": {
+        "status": "pending",
+        "basis": "official-government-publication-api",
+        "evidenceRef": "https://www.federalregister.gov/developers/documentation/api/v1",
+        "reviewedAt": "2026-08-10T00:00:00Z",
+        "expiresAt": null,
+        "fullTextRetentionAllowed": false
+      },
+      "internalUseScopes": ["internal-strategic-intelligence", "ai-and-product-regulation-monitoring"],
+      "collection": {
+        "mode": "api",
+        "fetchIntervalMinutes": 1440,
+        "rateLimitPerHour": 24,
+        "timeoutSeconds": 30,
+        "requiresLogin": false,
+        "antiAutomationBypass": false,
+        "credentialMode": "none"
+      },
+      "trust": {
+        "tier": "authoritative",
+        "historicalAccuracyStatus": "unmeasured",
+        "historicalAccuracyScore": null
+      },
+      "retention": {
+        "dataClassification": "public-external",
+        "retentionDays": 1095,
+        "deletionPolicy": "delete-expired-snapshots-preserve-citation-lineage",
+        "storageLevel": "summary_metadata"
+      },
+      "governance": {
+        "complianceOwnerRole": "company-compliance-dri",
+        "incidentContactRole": "strategic-intelligence-operations",
+        "approvalStatus": "pending",
+        "approvedBy": null,
+        "approvedAt": null
+      },
+      "lifecycleStatus": "paused"
+    },
+    {
+      "sourceKey": "sec-edgar-data-api",
+      "name": "SEC EDGAR data APIs",
+      "sourceType": "api",
+      "sourceCategory": "official",
+      "ownerRole": "strategic-intelligence-owner",
+      "pestimLayers": ["economic", "industry", "market"],
+      "endpointRefs": ["https://data.sec.gov/submissions/", "https://data.sec.gov/api/xbrl/companyfacts/"],
+      "license": {
+        "status": "pending",
+        "basis": "official-government-public-data-api",
+        "evidenceRef": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+        "reviewedAt": "2026-08-10T00:00:00Z",
+        "expiresAt": null,
+        "fullTextRetentionAllowed": false
+      },
+      "internalUseScopes": ["internal-strategic-intelligence", "competitor-and-supplier-financial-monitoring"],
+      "collection": {
+        "mode": "api",
+        "fetchIntervalMinutes": 1440,
+        "rateLimitPerHour": 30,
+        "timeoutSeconds": 30,
+        "requiresLogin": false,
+        "antiAutomationBypass": false,
+        "credentialMode": "none"
+      },
+      "trust": {
+        "tier": "authoritative",
+        "historicalAccuracyStatus": "unmeasured",
+        "historicalAccuracyScore": null
+      },
+      "retention": {
+        "dataClassification": "public-external",
+        "retentionDays": 1095,
+        "deletionPolicy": "retain-versioned-structured-facts-delete-transient-responses",
+        "storageLevel": "structured_data"
+      },
+      "governance": {
+        "complianceOwnerRole": "company-compliance-dri",
+        "incidentContactRole": "strategic-intelligence-operations",
+        "approvalStatus": "pending",
+        "approvedBy": null,
+        "approvedAt": null
+      },
+      "lifecycleStatus": "paused"
+    },
+    {
+      "sourceKey": "nvd-cve-api",
+      "name": "NIST National Vulnerability Database API",
+      "sourceType": "api",
+      "sourceCategory": "official",
+      "ownerRole": "strategic-intelligence-owner",
+      "pestimLayers": ["technology", "industry"],
+      "endpointRefs": ["https://services.nvd.nist.gov/rest/json/cves/2.0"],
+      "license": {
+        "status": "pending",
+        "basis": "official-government-public-data-api",
+        "evidenceRef": "https://nvd.nist.gov/developers/start-here",
+        "reviewedAt": "2026-08-10T00:00:00Z",
+        "expiresAt": null,
+        "fullTextRetentionAllowed": false
+      },
+      "internalUseScopes": ["internal-strategic-intelligence", "ai-product-security-monitoring"],
+      "collection": {
+        "mode": "api",
+        "fetchIntervalMinutes": 360,
+        "rateLimitPerHour": 10,
+        "timeoutSeconds": 30,
+        "requiresLogin": false,
+        "antiAutomationBypass": false,
+        "credentialMode": "none"
+      },
+      "trust": {
+        "tier": "authoritative",
+        "historicalAccuracyStatus": "unmeasured",
+        "historicalAccuracyScore": null
+      },
+      "retention": {
+        "dataClassification": "public-external",
+        "retentionDays": 1095,
+        "deletionPolicy": "retain-versioned-structured-facts-delete-transient-responses",
+        "storageLevel": "structured_data"
+      },
+      "governance": {
+        "complianceOwnerRole": "company-compliance-dri",
+        "incidentContactRole": "strategic-intelligence-operations",
+        "approvalStatus": "pending",
+        "approvedBy": null,
+        "approvedAt": null
+      },
+      "lifecycleStatus": "paused"
+    },
+    {
+      "sourceKey": "github-approved-repository-releases",
+      "name": "GitHub releases for explicitly approved repositories",
+      "sourceType": "repository_release",
+      "sourceCategory": "repository",
+      "ownerRole": "strategic-intelligence-owner",
+      "pestimLayers": ["technology", "industry", "market"],
+      "endpointRefs": ["https://api.github.com/repos/{owner}/{repo}/releases"],
+      "repositoryAllowlist": [
+        "vllm-project/vllm",
+        "huggingface/transformers",
+        "ollama/ollama",
+        "ggml-org/llama.cpp",
+        "sgl-project/sglang"
+      ],
+      "license": {
+        "status": "pending",
+        "basis": "github-api-terms-plus-repository-specific-license",
+        "evidenceRef": "https://docs.github.com/en/rest/releases/releases",
+        "reviewedAt": "2026-08-10T00:00:00Z",
+        "expiresAt": null,
+        "fullTextRetentionAllowed": false
+      },
+      "internalUseScopes": ["internal-strategic-intelligence", "ai-runtime-and-tooling-monitoring"],
+      "collection": {
+        "mode": "api",
+        "fetchIntervalMinutes": 360,
+        "rateLimitPerHour": 30,
+        "timeoutSeconds": 30,
+        "requiresLogin": false,
+        "antiAutomationBypass": false,
+        "credentialMode": "none"
+      },
+      "trust": {
+        "tier": "high",
+        "historicalAccuracyStatus": "unmeasured",
+        "historicalAccuracyScore": null
+      },
+      "retention": {
+        "dataClassification": "public-external",
+        "retentionDays": 365,
+        "deletionPolicy": "delete-expired-snapshots-preserve-release-lineage",
+        "storageLevel": "summary_metadata"
+      },
+      "governance": {
+        "complianceOwnerRole": "company-compliance-dri",
+        "incidentContactRole": "strategic-intelligence-operations",
+        "approvalStatus": "pending",
+        "approvedBy": null,
+        "approvedAt": null
+      },
+      "lifecycleStatus": "paused"
+    }
+  ]
+}

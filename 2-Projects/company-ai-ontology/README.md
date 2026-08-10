@@ -13,7 +13,7 @@
 
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
-- 当前里程碑：`Goal 6-A / P1-DOMAIN` 已完成工程验收和川哥人工体验验收。公司 QNAP 为 Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`；Domain Connector `2026-08-10.1`、Agent Core `2026-08-10.2`，ERP 95 / Operations 38 / Device 57 / Market 369，数据指纹 `ae0a73d126cb9d2dc1417e0eae7c0e94`。ActionIntent 3、Delivery Outbox 12 均为既有已验证/已回滚/已确认记录，无 pending/leased 写回。H 控制面 `v1.58.2`、50 个运行文件 `in_sync`、真实 Chrome `99/99`。Company Capability Governance v1 继续保持 `contract_only`。
+- 当前里程碑：`Goal 6-A / P1-DOMAIN` 已完成工程验收和川哥人工体验验收。公司 QNAP 为 Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`；Domain Connector `2026-08-10.1`、Agent Core `2026-08-10.2`，ERP 95 / Operations 38 / Device 57 / Market 369，数据指纹 `ae0a73d126cb9d2dc1417e0eae7c0e94`。ActionIntent 3、Delivery Outbox 12 均为既有已验证/已回滚/已确认记录，无 pending/leased 写回。H 控制面 `v1.58.2`、50 个运行文件 `in_sync`、真实 Chrome `99/99`。Company Capability Governance v1 继续保持 `contract_only`。PESTIM B～E 契约候选、F Shadow 部署准备包和 G 的 P003 36 条审核候选已完成本地工程验证；来源审批、镜像实构、SQL Runtime、实名 DRI 审核、QNAP 部署和七日 Shadow 均未完成。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
 ## 部署边界
@@ -31,6 +31,7 @@
 - `deploy/qnap/config/`：Caddy、Prometheus 配置。
 - `deploy/qnap/scripts/`：远端初始化、验证、备份与恢复演练脚本。
 - `deploy/qnap/images.lock`：生产镜像内容摘要。
+- `deploy/qnap/strategic-intelligence/`：P1-SI-F 资源受限 Shadow Compose、调度、部署门禁、备份、Freeze、回滚和七日证据候选包。
 - `deploy/mini/`：Mini → aliyun-hk 的回环反向 SSH 状态通道。
 - `deploy/qnap/ACCEPTANCE.md`：本次生产验收证据和剩余门禁。
 - `docs/feishu-knowledge-acl-audit-2026-08-08.md`：产品研究部知识库只读 ACL 审计、两个正式导入 P0 和 Canary 门禁。
@@ -44,9 +45,15 @@
 - `docs/goal6-operating-domain-acceptance-2026-08-09.md`：Goal 6 Operating Model、P1-DOMAIN、只读演示链、负向验证和生产验收。
 - `docs/goal6-completion-audit-2026-08-09.md`：按 Goal 原始要求逐项核对“已证明/部分证明/待证明”，防止把代码、测试或容器健康误报为完整完成。
 - `docs/task6-r-release-provenance-guard-2026-08-10.md`：H 控制面 Source Commit、目标文件哈希、运行时对账和发布回滚门禁。
+- `docs/p1-si-f-qnap-shadow-readiness-acceptance-2026-08-10.md`：战略情报 Shadow 部署准备、资源限制、授权门禁和当前 Runtime 待验项。
+- `docs/p1-si-g-p003-review-candidate-acceptance-2026-08-10.md`：真实 4644 条矩阵到 P003 36 条审核候选的来源、Hash、负向门禁和 DRI 待办。
 - `docs/goal7-p1-prod-readiness-plan-2026-08-10.md`：Goal 7 部门 / 群聊 Principal、用途与撤权语义，以及 H 引擎冗余、熔断、预算和真实模型读回实施计划。
 - `docs/pestim-strategic-intelligence-architecture-2026-08-10.md`：PESTIM 持续情报、多周期经营报告、Horizon/个人站雷达复用边界和公司 QNAP Shadow 方案。
 - `docs/p1-si-a-pestim-ontology-definition-acceptance-2026-08-10.md`：PESTIM 候选 Schema `3.4.0`、纯增量兼容性、禁止自动 P2/写回和生产不变验收证据。
+- `docs/p1-si-b-source-registry-acceptance-2026-08-10.md`：Source Registry `3.5.0` 候选、首批来源目录、fail-closed 判定和本地工程验收证据。
+- `docs/p1-si-c-company-radar-package-acceptance-2026-08-10.md`：公司独立 Collector、JSON Schema、oneshot/last-good、固定镜像配方和无个人运行时依赖验收。
+- `docs/p1-si-d-strategic-intelligence-data-foundation-acceptance-2026-08-10.md`：Postgres 唯一真源、Raw/Observation/Signal 双时间、Replay、ACL fail-closed 和候选迁移验收。
+- `docs/p1-si-e-multi-period-reporting-acceptance-2026-08-10.md`：多周期窗口、非递归输入、ReportRun 谱系、Alert 和飞书/H 只读投影验收。
 - `packages/ontology-contracts/`：Git 管理的 V3 Definition、Compiler、兼容性、Event Envelope、Data/Logic/Action、Operating Model 和 Capability Governance 契约。
 - `services/ontology-registry/`：独立 Registry、部署审批、版本激活、历史版本再激活和 Git/运行时对账服务。
 - `services/agent-core/`：Company Agent Core 内部 API、Postgres 幂等审计和 H 引擎独立 Runtime 门禁。
@@ -71,7 +78,7 @@
 
 1. `Task 6-R / Release Provenance Guard` 已完成；未来所有 H 发布继续执行 Source Commit、完整运行时 Manifest、文件哈希和真实浏览器门禁。
 2. Goal 7 `P1-PROD-READINESS`：建立公司专用 H 引擎 CPA 账号/Key 与同厂冗余，并补齐 `department/openchat`、`chat/group` Principal、用途和撤权语义；本 Goal 不执行整库导入。
-3. PESTIM Strategic Intelligence 的 Schema、Source Registry 和报告契约可只读并行规划；QNAP Shadow 仍需独立容量、回滚与部署授权。
+3. PESTIM P1-SI-B～E 的 Source Registry、Collector、数据底座和多周期报告候选已完成工程验证；下一步 P1-SI-F 实际构建镜像、隔离验证候选迁移/回滚并形成 QNAP Shadow 准备包，但不执行生产切换。
 4. Goal 3 的 10 名真实员工 Canary 在 Goal 7 后执行，仍是 20/50 人放量前的强制门禁。
 5. Goal 8 建立 24 小时容量观测、H-Lite lease/fencing 和 Worker 分池，再规划 20/50 人扩容。
 6. 产品研究部整库导入、Capability Governance 激活、A2A、真 3D、PESTIM 自动 P2、ERP/社媒写回、ERP M4 和 MediaCrawler 风控恢复继续拆为独立 Goal，必须重新授权。

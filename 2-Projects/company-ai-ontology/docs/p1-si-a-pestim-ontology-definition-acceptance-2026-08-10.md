@@ -101,7 +101,7 @@ StrategicIntelligenceReport ──REPORT_SCOPES_PRODUCT_LINE──> ProductLine
 
 1. Goal 7 P1-PROD-READINESS 完成；
 2. P1-SI-B Source Registry 和许可策略获批；
-3. HUD 首批 20–50 条关系完成多部门 DRI 评审；
+3. P003 读写台及 AI 产品首批 20–50 条关系完成产品、AI、研发、销售、采购和财务 DRI 评审；
 4. 公司 QNAP 七天 Shadow 验收通过；
 5. Ontology Change Proposal 由 `ontology-change-approver` 批准；
 6. 部署后 Registry reconciliation 为 `in_sync`；
@@ -131,11 +131,12 @@ npm test
 P1-SI-A 只解决“语义骨架和兼容性”，不提前完成后续任务：
 
 - P1-SI-B：Source Registry、许可、采集频率和保留期；
-- P1-SI-C：公司版 Horizon Collector Contract；
+- P1-SI-C：公司版 Horizon Collector Contract 与可部署雷达包，不启动 QNAP 服务；
 - P1-SI-D：Raw Snapshot、Signal、物理数据表、双时间、去重和保留策略；
 - P1-SI-E：报告机器契约、飞书模板和 H 控制面投影；
-- P1-SI-F：公司 QNAP 七天 Shadow 验收包；
-- P1-SI-G：HUD 20–50 条真实传导关系 DRI 评审。
+- P1-SI-F：公司 QNAP 雷达部署前准备与七天 Shadow 验收包；
+- P1-SI-G：P003 读写台及 AI 产品 20–50 条真实传导关系 DRI 评审；
+- P1-SI-H：Goal 7 完成并获得当次授权后，在公司 QNAP 部署雷达并运行七天 `PUBLISH=false` Shadow。
 
 ## 9. 公司 QNAP contract-only 发布
 

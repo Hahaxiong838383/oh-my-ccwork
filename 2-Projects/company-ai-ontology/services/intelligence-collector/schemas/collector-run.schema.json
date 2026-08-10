@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.local/schemas/company-intelligence-collector-run-v1.json",
+  "title": "Company Intelligence Collector Run v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runId",
+    "collectorVersion",
+    "startedAt",
+    "completedAt",
+    "publish",
+    "status",
+    "sourceRegistryVersion",
+    "sourceRegistryHash",
+    "sourceDecisionCount",
+    "sourceCount",
+    "rawSnapshotCount",
+    "itemCount",
+    "duplicateCount",
+    "errorCode"
+  ],
+  "properties": {
+    "runId": { "type": "string" },
+    "collectorVersion": { "type": "string" },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "publish": { "const": false },
+    "status": { "enum": ["succeeded", "failed"] },
+    "sourceRegistryVersion": { "type": "string" },
+    "sourceRegistryHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "sourceDecisionCount": { "type": "integer", "minimum": 0 },
+    "sourceCount": { "type": "integer", "minimum": 0 },
+    "rawSnapshotCount": { "type": "integer", "minimum": 0 },
+    "itemCount": { "type": "integer", "minimum": 0 },
+    "duplicateCount": { "type": "integer", "minimum": 0 },
+    "errorCode": { "type": ["string", "null"] }
+  }
+}

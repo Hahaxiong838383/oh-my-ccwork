@@ -1,0 +1,19 @@
+{
+  "configVersion": "1.0.0",
+  "publish": false,
+  "sourceRegistryFile": "/etc/company-intelligence/source-registry.json",
+  "stateDir": "/var/lib/company-intelligence/state",
+  "reportDir": "/var/lib/company-intelligence/reports",
+  "databaseNamespace": "company_strategic_intelligence",
+  "accountNamespace": "company-ai-ontology-strategic-intelligence",
+  "credentialNamespace": "company-intelligence",
+  "feishuOutlet": {
+    "mode": "disabled",
+    "namespace": "company-intelligence-feishu-outlet"
+  },
+  "sourceKeys": [
+    "arxiv-official-rss-api"
+  ],
+  "maxItemsPerSource": 50,
+  "maxResponseBytes": 5242880
+}

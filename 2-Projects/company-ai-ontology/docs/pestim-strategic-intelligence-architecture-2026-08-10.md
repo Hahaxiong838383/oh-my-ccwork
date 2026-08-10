@@ -94,7 +94,7 @@ flowchart TB
     MACRO["宏观经济 / 金融 / 大宗商品"]
     SOCIAL["社会趋势 / 搜索 / 社交媒体"]
     TECH["论文 / 专利 / 标准 / 技术发布"]
-    INDUSTRY["汽车 / 新能源 / 智能化 / HUD"]
+    INDUSTRY["儿童学习硬件 / AI 产品 / 智能化"]
     MARKET["客户 / 供应商 / 竞品 / 替代品"]
     ERP["ERP / 销售 / 成本 / 库存 / 回款"]
   end
@@ -161,7 +161,7 @@ opportunity_thresholds
 dri
 ```
 
-推荐首个试点选择 HUD：当前 PESTIM 文档的 Industry/Market 逻辑最完整，同时 ERP 可提供订单、成本、库存和回款验证证据。
+推荐首个试点选择 P003 读写台及 AI 产品：读写台可连接产品定义、硬件、供应链、渠道和 ERP 履约事实，AI 产品可连接儿童用户、内容、交互、模型能力、合规和市场反馈，能够同时验证“外部变化如何传导到硬件经营”和“外部变化如何传导到 AI 产品决策”。
 
 ## 8. Ontology 最小扩展
 
@@ -177,10 +177,24 @@ dri
 | `domain.intelligence.ImpactAssessment` | 某时点对公司或产品线的影响判断 |
 | `domain.intelligence.StrategicIntelligenceReport` | 结构化多周期报告 |
 | `domain.intelligence.ReportRun` | 数据范围、模型、Prompt、输入哈希、成本和执行结果 |
+| `domain.intelligence.SourceRegistryEntry` | 来源许可、频率、限流、可信度、存储级别、保留期与负责人 |
+| `domain.intelligence.SourceRegistryDecision` | 每次采集前的 append-only allow/deny 判定证据 |
+| `domain.intelligence.RawSnapshot` | 许可来源的 append-only 原始响应与内容身份 |
+| `domain.intelligence.ExternalObservation` | 由单一 Snapshot 解析出的双时间观察 |
+| `domain.intelligence.StrategicSignal` | 多 Observation 聚合但尚未成为 Claim/Decision 的战略信号 |
+| `domain.intelligence.ReportInputSet` | 每个周期从结构化输入重算的内容寻址清单 |
+| `domain.intelligence.ReportProjection` | 飞书文档、卡片和 H 控制面的权限化派生投影 |
+| `domain.intelligence.StrategicIntelligenceAlert` | 可打开 WorkCase 但不能自动创建 P2 的即时预警 |
 
 报告先生成结构化 JSON，再渲染到飞书文档、飞书消息卡片和 H 控制面。报告正文是投影，不是真源。
 
 P1-SI-A 已将以上六个对象固化为独立候选 Schema `3.4.0`，兼容性为 `compatible`，但保持 `contract_only / deploymentAllowed=false`，生产 active Schema 继续为 `3.3.0`。验收证据见 `docs/p1-si-a-pestim-ontology-definition-acceptance-2026-08-10.md`。
+
+P1-SI-B 在不修改 P1-SI-A Hash 的前提下叠加 Source Registry 候选 `3.5.0`：新增 2 Object、3 Link、2 Function、0 Action、3 Policy 和 5 Constraint。首批 8 个来源覆盖 PESTIM 六层，但全部保持 `paused + license pending + compliance pending`；未登记、暂停、撤销、未审批、许可过期、个人账号、登录态、反自动化绕过和未授权全文保存均 fail-closed。验收证据见 `docs/p1-si-b-source-registry-acceptance-2026-08-10.md`。
+
+P1-SI-D 再叠加数据底座候选 `3.6.0`，固定 Postgres 为唯一结构化真源，Qdrant 只作为可重建召回派生层。候选迁移留在 `candidate-migrations/`，覆盖 Source Registry、Run、Raw Snapshot、Observation、Signal、Evidence、Impact、Report 与 ACL；未执行生产迁移。验收证据见 `docs/p1-si-d-strategic-intelligence-data-foundation-acceptance-2026-08-10.md`。
+
+P1-SI-E 叠加报告候选 `3.7.0`，固化上海时区多周期窗口、结构化非递归 Input Set、完整模型/Prompt/成本/重试谱系，以及飞书文档、飞书卡片和 H 控制面三类只读投影。验收证据见 `docs/p1-si-e-multi-period-reporting-acceptance-2026-08-10.md`。
 
 ## 9. 个人站雷达复用评估
 
@@ -276,16 +290,16 @@ status / error_code
 2. 从飞书只读导入 43 个维度、27 个目标、108 个 GoalFacet 和 4644 个 draft Hypothesis。
 3. 建立版本、双时间、来源和语义质量审计；不激活因果关系，不生成任务。
 
-### Phase B：QNAP 雷达 Shadow
+### Phase B：公司版雷达与 QNAP Shadow
 
-1. 从个人站代码抽取 Horizon Adapter/Runner 模式，建立公司独立镜像和固定上游 Commit。
+1. 从个人站代码抽取 Horizon Adapter/Runner 模式，建立公司独立镜像和固定上游 Commit；P1-SI-C 只形成可部署包，不直接启动生产服务。
 2. 先接 RSS、官方站、GitHub、论文/专利和允许的公开 API；浏览器型采集器默认关闭。
-3. QNAP 连续 7 天 `PUBLISH=false`，验证资源、来源成功率、去重、成本、时效和敏感信息。
+3. P1-SI-F 完成资源、回滚和验收准备，P1-SI-H 在 Goal 7 完成并获得当次部署授权后，才在公司 QNAP 连续运行 7 天 `PUBLISH=false` Shadow，验证资源、来源成功率、去重、成本、时效和敏感信息。
 4. 输出结构化 Daily Report，但只在管理控制台可见，不发全员 Bot。
 
-### Phase C：HUD 产品线试点
+### Phase C：P003 读写台及 AI 产品试点
 
-1. 选择 20–50 条高价值传导路径，经产品、销售、采购、财务和研发 DRI 评审后激活。
+1. 围绕 P003 读写台及 AI 产品的产品、用户、供应链、渠道、技术和合规目标选择 20–50 条高价值传导路径，经产品、AI、研发、销售、采购和财务 DRI 评审后激活。
 2. 跑通日报、周报和月报；加入 ERP 只读结果验证。
 3. 建立重大事件 Alert 和 Decision Proposal，不自动创建正式 P2。
 
@@ -301,15 +315,15 @@ status / error_code
 - PESTIM Schema、源清单和报告契约可以只读并行规划。
 - QNAP Shadow 部署属于独立生产变更，需要单独完成容量、备份、回滚和当次部署授权。
 - Goal 3 十人真实员工 Canary 继续使用受控 P2，不由 PESTIM 自动生成任务。
-- PESTIM → Decision Proposal 可在 Goal 7 和 HUD Shadow 验收后启用；正式 P2 自动化需另行决策。
+- PESTIM → Decision Proposal 可在 Goal 7、P003 DRI 评审和公司 QNAP 雷达 Shadow 验收后启用；正式 P2 自动化需另行决策。
 
 ## 14. 当前后续 TODO
 
 1. ✅ `P1-SI-A`：已完成 PESTIM Ontology Definition 和兼容性方案；候选 `3.4.0` 为纯增量兼容，生产 active Schema 保持 `3.3.0`。
-2. `P1-SI-B`：建立公司 Source Registry、许可/频率/保留期清单和第一批白名单信源。
-3. `P1-SI-C`：从 Horizon/Theory Radar 抽取公司版 collector contract、JSON Schema 和镜像方案。
-4. `P1-SI-D`：设计 Raw Snapshot、Signal、Impact Assessment、ReportRun 数据表与保留策略。
-5. `P1-SI-E`：定义日报、周报、月报机器契约、飞书模板和 H 控制面投影。
-6. `P1-SI-F`：制定公司 QNAP 7 天 Shadow 的资源、成本、失败率、来源覆盖和回滚验收包。
-7. `P1-SI-G`：选择 HUD 首批 20–50 条传导链及对应 DRI，不激活其余 4594+ 条候选关系。
-8. `P1-SI-H`：在 Goal 7 完成后申请 QNAP Shadow 部署授权。
+2. 🟡 `P1-SI-B`：Source Registry 工程候选 `3.5.0`、首批 8 个来源和 fail-closed 判定已完成；来源启用仍等待公司合规 DRI 审批。
+3. 🟡 `P1-SI-C`：公司独立 Collector Contract、JSON Schema、oneshot Worker、Source Registry 前置准入、去重、last-good 和固定镜像配方已完成；当前环境未实际构建镜像，也未启动 QNAP 服务。
+4. 🟡 `P1-SI-D`：Postgres 真源、Raw/Observation/Signal、Evidence/Impact/Report 物理模型、双时间、Replay、热冷保留和 ACL 候选已完成；SQL 尚未在隔离 Postgres 运行。
+5. 🟡 `P1-SI-E`：日/周/月/季/半年/年、Alert、公司和 P003 报告机器契约及三类只读投影已完成；未运行真实报告。
+6. 🟡 `P1-SI-F`：资源受限 Shadow Compose、轻量 Orchestrator、oneshot Worker、授权门禁、备份、Freeze、回滚和七日证据包已通过 `8/8` 静态测试；当前环境无容器运行时，镜像实构、SQL Runtime 和 QNAP 部署仍未执行。
+7. 🟡 `P1-SI-G`：已从真实 4644 条矩阵中筛选 P003 36 条候选，六类各 6 条，候选包 Hash `ba6a77fd52d1558c946bdaf5bad290f9898d3ce0d4c8af399a7ebba98df866ff`；全部保持 inactive，等待实名 DRI 逐条重写和补证，不能直接激活。
+8. `P1-SI-H`：Goal 7 完成并获得当次授权后，将公司版雷达部署到公司 QNAP 并运行 7 天 `PUBLISH=false` Shadow。

@@ -288,3 +288,25 @@ Ontology Registry 新镜像先在旧容器继续服务时构建，并通过独�
 ### 54. 授权发布不自动包含真实回滚演练授权
 
 发布脚本必须先创建旧镜像标签、环境备份、Release Manifest 和自动失败恢复；但成功发布后再主动切回旧镜像属于新的生产切换。本轮只验证回滚抓手可用，没有擅自执行真实回滚。今后“有回滚能力”和“已做真实回滚演练”必须分开陈述。
+
+## P1-SI-B～G 战略情报工程候选经验（2026-08-10）
+
+### 55. 来源准入和内容留存必须分成两次判定
+
+Source Registry 判定允许访问某个来源，只说明这次网络请求获得公司批准，不代表可以保存返回正文。`reference_only / metadata_only / summary_metadata` 必须在 Raw Snapshot 层丢弃响应体，只保留 Hash、长度、来源和时间；`metadata_only / reference_only` 还要在 normalized item 层去掉摘要。采集权限和留存权限合并判断，会让“允许看”被错误放大为“允许长期复制”。
+
+### 56. 可部署包通过静态测试不等于 Runtime 已验证
+
+Compose、脚本、资源限制和授权门禁可以在没有容器运行时的开发机上完成静态与负向验证，但镜像是否可构建、镜像 digest 是否固定、候选 SQL 是否能在真实 PostgreSQL 应用并恢复、QNAP 资源是否满足，只能由对应 Runtime 证据证明。验收字段必须显式拆成 `engineering_package_verified`、`image_build_verified`、`sql_runtime_verified` 和 `company_qnap_deployed`，禁止用一个绿色状态覆盖四层事实。
+
+### 57. 关系矩阵覆盖完整不代表因果语义可信
+
+PESTIM 4644 条矩阵能够证明 43 个外部维度与 108 个 GoalFacet 在结构上全部有映射，但大量“目标直接影响”“O1目的”“灵魂优先”等模板文本不能证明真实因果链。正确做法是先筛选 20～50 条高价值候选，固定为 `generated_draft / unverified / inactive`，再由实名 DRI 重写逻辑、补充正反证据、适用条件、滞后和验证指标，而不是批量激活整张矩阵。
+
+### 58. 七日 Shadow 的最小单位是真实自然日，不是运行次数
+
+Shadow 生成器只能提前创建 `pending_real_run / simulated=false` 的证据模板；七次短时运行、补录数据或模拟日期都不能替代七个真实自然日。每个自然日都必须保存来源成功率、重复率、时效、成本、资源、撤销生效、last-good、敏感信息和业务副作用计数，缺少资源或副作用证据的当天不能通过。
+
+### 59. 战略情报部署必须只操作自己的服务边界
+
+P1-SI-H 发布脚本只能启动、冻结或回滚 Intelligence Orchestrator 和临时 Collector，不能借雷达部署重启 Agent Core、H-Lite、Connector、Gateway 或数据库。部署授权、数据库迁移授权、服务重启授权和真实回滚授权互不继承；即便最终共用 Postgres、Redis、Qdrant 和 Outbox，也不得绕过既有权限、安全网关和发布来源证明。

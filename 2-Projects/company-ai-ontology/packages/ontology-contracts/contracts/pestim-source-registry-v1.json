@@ -1,0 +1,198 @@
+{
+  "contractVersion": "1.0.0",
+  "status": "contract_only",
+  "proposalKey": "P1-SI-B",
+  "baseSchemaVersion": "3.4.0",
+  "candidateSchemaVersion": "3.5.0",
+  "compatibilityExpectation": "compatible",
+  "deploymentAllowed": false,
+  "defaultDecision": "deny",
+  "registryStatus": "candidate",
+  "initialRegistryFile": "catalogs/pestim-source-registry-candidate-v1.json",
+  "supersedesGateAliases": {
+    "hud-dri-review-20-to-50-links": "p003-dri-review-20-to-50-links"
+  },
+  "allowedValues": {
+    "sourceTypes": ["api", "rss", "official_web", "repository_release", "dataset"],
+    "sourceCategories": ["official", "media", "paper", "patent", "social", "api", "rss", "repository", "dataset"],
+    "lifecycleStatuses": ["pending", "enabled", "paused", "revoked"],
+    "licenseStatuses": ["pending", "approved", "expired", "rejected"],
+    "complianceApprovalStatuses": ["pending", "approved", "rejected"],
+    "storageLevels": ["reference_only", "metadata_only", "summary_metadata", "structured_data", "full_text"],
+    "credentialModes": ["none", "company_managed", "personal"],
+    "trustTiers": ["authoritative", "high", "medium", "low", "unrated"],
+    "accuracyStatuses": ["measured", "unmeasured", "degraded"]
+  },
+  "forbiddenCollectionDefaults": [
+    "unregistered_source",
+    "license_not_approved",
+    "license_expired",
+    "compliance_not_approved",
+    "paused_source",
+    "revoked_source",
+    "login_required",
+    "anti_automation_bypass",
+    "personal_account",
+    "unclear_storage_permission"
+  ],
+  "additions": {
+    "namespaces": [],
+    "objectTypes": [
+      {
+        "qualifiedName": "domain.intelligence.SourceRegistryEntry",
+        "description": "Governed allowlist entry defining whether and how one external source may be collected and retained",
+        "extends": ["system.ontology.BaseObject"],
+        "properties": [
+          { "name": "sourceKey", "type": "string", "required": true },
+          { "name": "name", "type": "string", "required": true },
+          { "name": "sourceType", "type": "string", "required": true },
+          { "name": "sourceCategory", "type": "string", "required": true },
+          { "name": "ownerRole", "type": "string", "required": true },
+          { "name": "pestimLayers", "type": "string[]", "required": true },
+          { "name": "licenseStatus", "type": "string", "required": true },
+          { "name": "licenseEvidenceRef", "type": "string", "required": true },
+          { "name": "internalUseScope", "type": "string", "required": true },
+          { "name": "collectionMode", "type": "string", "required": true },
+          { "name": "fetchIntervalMinutes", "type": "integer", "required": true },
+          { "name": "rateLimitPerHour", "type": "integer", "required": true },
+          { "name": "trustTier", "type": "string", "required": true },
+          { "name": "historicalAccuracyScore", "type": "decimal", "required": false },
+          { "name": "historicalAccuracyStatus", "type": "string", "required": true },
+          { "name": "dataClassification", "type": "string", "required": true },
+          { "name": "retentionDays", "type": "integer", "required": true },
+          { "name": "deletionPolicy", "type": "string", "required": true },
+          { "name": "storageLevel", "type": "string", "required": true },
+          { "name": "complianceOwnerRole", "type": "string", "required": true },
+          { "name": "incidentContactRole", "type": "string", "required": true },
+          { "name": "credentialMode", "type": "string", "required": true },
+          { "name": "requiresLogin", "type": "boolean", "required": true },
+          { "name": "antiAutomationBypass", "type": "boolean", "required": true },
+          { "name": "lifecycleStatus", "type": "string", "required": true },
+          { "name": "licenseExpiresAt", "type": "timestamp", "required": false },
+          { "name": "approvedAt", "type": "timestamp", "required": false },
+          { "name": "approvedBy", "type": "string", "required": false },
+          { "name": "registryVersion", "type": "string", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.SourceRegistryDecision",
+        "description": "Append-only fail-closed policy decision produced before every external collection attempt",
+        "extends": ["system.ontology.BaseObject"],
+        "properties": [
+          { "name": "decisionKey", "type": "string", "required": true },
+          { "name": "sourceKey", "type": "string", "required": true },
+          { "name": "evaluatedAt", "type": "timestamp", "required": true },
+          { "name": "decision", "type": "string", "required": true },
+          { "name": "reasonCode", "type": "string", "required": true },
+          { "name": "policyVersion", "type": "string", "required": true },
+          { "name": "registryVersion", "type": "string", "required": true }
+        ]
+      }
+    ],
+    "linkTypes": [
+      {
+        "qualifiedName": "domain.intelligence.SOURCE_COVERS_FACTOR",
+        "fromType": "domain.intelligence.SourceRegistryEntry",
+        "toType": "domain.intelligence.ExternalFactor",
+        "cardinality": "many_to_many"
+      },
+      {
+        "qualifiedName": "domain.intelligence.EVIDENCE_ORIGINATES_FROM_SOURCE",
+        "fromType": "core.epistemic.Evidence",
+        "toType": "domain.intelligence.SourceRegistryEntry",
+        "cardinality": "many_to_one"
+      },
+      {
+        "qualifiedName": "domain.intelligence.HAS_SOURCE_DECISION",
+        "fromType": "domain.intelligence.SourceRegistryEntry",
+        "toType": "domain.intelligence.SourceRegistryDecision",
+        "cardinality": "one_to_many"
+      }
+    ],
+    "functionTypes": [
+      {
+        "qualifiedName": "domain.intelligence.validateSourceRegistryEntry",
+        "description": "Validate source identity, license, retention, ownership and collection settings without performing I/O",
+        "inputs": [
+          { "name": "entry", "type": "json", "required": true }
+        ],
+        "outputs": [
+          { "name": "validation", "type": "json", "required": true }
+        ]
+      },
+      {
+        "qualifiedName": "domain.intelligence.authorizeSourceCollection",
+        "description": "Return a deterministic allow or deny decision before a collector accesses an external source",
+        "inputs": [
+          { "name": "sourceKey", "type": "string", "required": true },
+          { "name": "evaluatedAt", "type": "timestamp", "required": true },
+          { "name": "registrySnapshot", "type": "json", "required": true }
+        ],
+        "outputs": [
+          { "name": "decision", "type": "json", "required": true }
+        ]
+      }
+    ],
+    "actionTypes": [],
+    "policyTypes": [
+      {
+        "qualifiedName": "domain.intelligence.sourceRegistryFailClosed",
+        "description": "Collection is denied unless the source is registered, enabled, licensed and compliance-approved at evaluation time",
+        "appliesTo": [
+          "domain.intelligence.SourceRegistryEntry",
+          "domain.intelligence.SourceRegistryDecision"
+        ],
+        "effect": "deny"
+      },
+      {
+        "qualifiedName": "domain.intelligence.noPersonalOrBypassCollection",
+        "description": "Personal credentials, login-dependent collection and anti-automation bypass are denied by default",
+        "appliesTo": ["domain.intelligence.SourceRegistryEntry"],
+        "effect": "deny"
+      },
+      {
+        "qualifiedName": "domain.intelligence.sourceRetentionIsBounded",
+        "description": "Collectors may persist only the content level and retention period explicitly approved by the registry entry",
+        "appliesTo": ["domain.intelligence.SourceRegistryEntry"],
+        "effect": "filter"
+      }
+    ],
+    "constraintTypes": [
+      {
+        "qualifiedName": "domain.intelligence.enabledSourceRequiresApproval",
+        "description": "An enabled source requires approved license and compliance records plus named approver metadata",
+        "targetType": "domain.intelligence.SourceRegistryEntry",
+        "severity": "error",
+        "rule": "lifecycleStatus != 'enabled' || (licenseStatus == 'approved' && approvedBy != null && approvedAt != null)"
+      },
+      {
+        "qualifiedName": "domain.intelligence.sourceLicenseMustBeCurrent",
+        "description": "A source with an expiry cannot be collected after the approved license window",
+        "targetType": "domain.intelligence.SourceRegistryEntry",
+        "severity": "error",
+        "rule": "licenseExpiresAt == null || lifecycleStatus != 'enabled' || licenseExpiresAt > now()"
+      },
+      {
+        "qualifiedName": "domain.intelligence.personalCredentialCollectionForbidden",
+        "description": "Company strategic intelligence cannot use personal accounts or credentials",
+        "targetType": "domain.intelligence.SourceRegistryEntry",
+        "severity": "error",
+        "rule": "credentialMode != 'personal'"
+      },
+      {
+        "qualifiedName": "domain.intelligence.loginAndBypassCollectionForbidden",
+        "description": "Login-required and anti-automation-bypass collection remain disabled in this contract",
+        "targetType": "domain.intelligence.SourceRegistryEntry",
+        "severity": "error",
+        "rule": "requiresLogin == false && antiAutomationBypass == false"
+      },
+      {
+        "qualifiedName": "domain.intelligence.fullTextRequiresExplicitApproval",
+        "description": "Full-text retention is invalid without an explicit source-specific approval record",
+        "targetType": "domain.intelligence.SourceRegistryEntry",
+        "severity": "error",
+        "rule": "storageLevel != 'full_text' || internalUseScope == 'explicit_full_text_internal_approval'"
+      }
+    ]
+  }
+}
