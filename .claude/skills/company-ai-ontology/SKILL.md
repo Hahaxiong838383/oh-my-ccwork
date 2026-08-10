@@ -298,6 +298,10 @@ node ops/sync-company-directory.mjs
 - 修改 `/srv/h-control/.env` 后必须显式恢复 `h-control:h-control / 0600`，并以服务用户验证可读；临时文件原子替换会改变属主，是本次 502 的直接根因之一。
 - 管理员密码、Cookie 和登录表单内容不得进入 Playwright 参数、快照或工具输出。密码切换必须从 Git 外来源读取、只报告候选数量和长度，并在新密码登录通过后才更新 Keychain 指针。
 - Domain Connector 状态只允许返回 `sourceSystem`、`cursorPresent` 和 `lastSuccessAt`；验证脚本不得打印完整同步 payload 或真实 Cursor。
+- 公司 AI Ontology 的 Goal 完成状态必须拆成“工程验收完成”和“川哥人工体验验收通过”两个字段；自动测试、真实 Chrome、生产健康和回滚恢复可以关闭工程门禁，但不得自动推导川哥已经完成产品体验验收。
+- 每个可视化或员工入口 Goal 在最终汇报前必须交付可直接操作的体验验收包：真实 URL、登录入口、点击/触控步骤、页面预期真值、安全 Bot 测试 Prompt、通过/失败判据、仍关闭的能力和异常反馈入口。不能等用户追问“怎么体验”才补验收说明。
+- 人工体验验收至少覆盖三个表面：架构白盒验证“系统如何运转”，运行看板验证“当前真实状态”，全员飞书 Bot 验证“员工如何使用”；三者通过仍不能替代真实业务结果和 DRI 验收。
+- 提供验收入口前必须在线复核版本、登录跳转和关键状态；历史截图、旧 URL、测试报告或记忆只能作为线索，不能冒充当前可体验状态。
 - 详细实施计划见 `2-Projects/company-ai-ontology/docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
 
 当前实现与切换流程见：

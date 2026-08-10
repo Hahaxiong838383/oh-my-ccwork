@@ -4,15 +4,53 @@
 
 ## 当前结论
 
-P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI、Goal 5 P0-DEC 和 Goal 6-A P1-DOMAIN 均已上线并完成当前授权范围验收。Domain Connector 已完成 `.3 → .2 → .3` 真实回滚恢复；Company Capability Governance v1 保持 `contract_only`。H 控制面 `v1.55.1` 恢复后真实 Chrome `59/59` 通过。10 名真实员工 Canary 继续延后。
+P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI、Goal 5 P0-DEC 和 Goal 6-A P1-DOMAIN 均已完成工程验收。Domain Connector `.3 → .2 → .3` 回滚恢复和 H `v1.55.1` Chrome `59/59` 已通过；川哥人工体验验收仍待明确确认。10 名真实员工 Canary 继续关闭，不能因为工程 Goal 完成自动启动。
 
-## 2026-08-09 Goal 顺序重排
+## 2026-08-10 Goal 顺序重排
 
 1. `Goal 4`：✅ P0-EPI + 公司大脑工作逻辑显式建模，Intake 至可解释回答已生产 active。
 2. `Goal 5`：✅ P0-DEC + Decision/P2/Task/Action/Verification/Learning 实践闭环已生产 active。
 3. `Goal 6`：✅ QNAP P1-DOMAIN、Operating Model、3D-ready 协议、H `v1.55.1` 白盒和 Domain Connector 回滚恢复均已完成；Capability Governance v1 按范围保持 `contract_only`。
-4. `Goal 3`：10 名真实员工 Canary，继续延后但仍是 20/50 人放量前硬门禁。
-5. 公司专用 CPA 凭据和 P1 `department/openchat` 映射可并行推进，不改变业务验收顺序。
+4. `Goal 6-UAT`：🟡 川哥人工体验验收，当前只需要体验和反馈，不包含生产变更。
+5. `Goal 7`：推荐下一工程 Goal，完成生产归属与权限主体就绪。
+6. `Goal 3`：10 名真实员工 Canary，在 Goal 7 完成并单独授权后启动，仍是 20/50 人放量前硬门禁。
+
+## 推荐后续 Goal 路线
+
+### Goal 6-UAT：川哥人工体验验收
+
+- 打开架构白盒和运行看板，检查二维/2.5D 交互、焦点居中、Schema、Registry、ERP 95、Market 369 和灰色门禁。
+- 私聊“公司智慧中枢”，验证只读状态查询、决策提案不下发、用户身份操作转交私人 Bot。
+- 川哥明确回复“通过”后记录 `owner_accepted`；问题进入缺陷 WorkCase，不修改生产直到重新授权。
+
+### Goal 7：P1-PROD-READINESS 生产归属与权限主体就绪（推荐下一 Goal）
+
+1. 用公司专用 H 引擎账号/CPA Key 替换个人凭据依赖，并建立同厂第二路由、配额、成本和故障切换证据。
+2. 补齐飞书 `department/openchat` 与 `chat/group` Principal 映射、用途绑定、会话证据和撤权语义。
+3. 对少量受控知识资源做授权、撤权、跨部门和群组负测；不执行产品研究部整库导入。
+4. 把凭据、权限主体、Connector 和 H 引擎当前状态加入脱敏运行看板与告警。
+5. 完成回滚、故障切换、最小权限、真实浏览器和 Bot 只读验收后再关闭 Goal。
+
+### Goal 3：10 名真实员工 Canary
+
+1. Goal 7 完成后，由川哥选择 10 名真实员工并明确 Canary 时间窗。
+2. 覆盖私聊、多人群聊 @、并发隔离、权限差异、任务提案、批准、投递、ACK、成果提交、失败重投和 DRI 验收。
+3. 不切换员工私人 Bot，不导入私人会话，不开放 ERP/社媒写回。
+4. 输出真实送达率、权限拒绝率、错误率、P95 延迟、H 引擎成本和用户反馈。
+
+### Goal 8：P1-SCALE 20/50 人扩容地基
+
+1. 采集至少 24 小时并发、队列、限流、Outbox、错误率、P95 和 QNAP 资源数据。
+2. 完成 H-Lite lease/fencing、待命副本、故障接管和短/长任务 Worker 分池。
+3. 10 人 Canary 通过后先扩 20 人，容量指标和权限负测通过后再扩 50 人。
+
+### 后续独立 Goal
+
+- `Goal 9`：产品研究部整库导入，必须在 Principal/撤权语义完成后单独审批范围和窗口。
+- `Goal 10`：Capability Governance 从 `contract_only` 升级为运行闭环。
+- `Goal 11`：Agent-to-Agent Gateway，连接员工私人 Agent 与 Company Agent。
+- `Goal 12`：真 3D WebGL 观察模式；不替代二维默认视图。
+- `Goal 13`：ERP/社媒受控写回；ERP M4 与 MediaCrawler 仍需各自独立指令。
 
 ## P0-KB-ACL：正式导入前硬阻断
 

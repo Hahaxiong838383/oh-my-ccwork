@@ -6,6 +6,19 @@
 
 Goal 6-A 已完整完成当前授权范围。QNAP 数据面、Operating Model、P1-DOMAIN、只读演示链、3D-ready 协议和 Domain Connector 灾备均有生产证据；Company Capability Governance v1 按范围保持 `contract_only`。H 控制面 `v1.55.1` 与恢复后真实 Chrome `59/59` 均通过，公司 QNAP 最终完整 `verify.sh` 通过。
 
+工程验收已经完成；川哥的人工体验验收仍需单独确认。不得把自动化 `59/59`、生产健康或 Goal 工具完成状态写成“用户已验收通过”。
+
+## 人工体验验收门禁
+
+| 验收表面 | 入口与操作 | 预期结果 | 当前状态 |
+|---|---|---|---|
+| 架构白盒 | `https://ai.kidshub.cn/admin/company-ontology#architecture`，检查卡片点击、双指平移、右键拖动、缩放、焦点居中和二维/2.5D 切换 | 节点可点击，连线不穿卡，真 3D 保持灰色 | 待川哥确认 |
+| 运行看板 | `https://ai.kidshub.cn/admin/company-ontology#runtime` | Schema `3.3.0`、Registry `in_sync`、ERP 95、Market 369、ActionIntent/Outbox 0 | 待川哥确认 |
+| 全员飞书 Bot | 私聊“公司智慧中枢”，执行只读状态、决策提案和用户身份操作三类 Prompt | 只读证据可解释；提案不下发；用户身份操作转交私人 Bot | 待川哥确认 |
+| 方案文档 | 飞书方案第 20 章 | 灾备标绿、技术架构画板存在、关闭门禁无漂移 | 待川哥确认 |
+
+川哥明确回复“通过”后，才把 Goal 6-A 的产品体验状态记为 `owner_accepted`；发现问题则按缺陷进入新 WorkCase，不回写为虚假完成。
+
 状态含义：
 
 - `已证明`：当前权威证据覆盖完整要求。
