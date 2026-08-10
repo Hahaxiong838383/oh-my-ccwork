@@ -1,10 +1,10 @@
 # Goal 6-A：Company Brain Operating Model + P1-DOMAIN 验收记录
 
-验收日期：2026-08-09（Asia/Shanghai）
+验收日期：2026-08-09；最终恢复演练：2026-08-10（Asia/Shanghai）
 
 ## 当前结论
 
-Goal 6 的 QNAP 数据面、Operating Model、P1-DOMAIN 只读骨架、跨域演示链和 3D-ready 数据协议已经完成当前层级生产验收。H 控制面 `v1.55.1` 已于 `2026-08-09 23:06:38 CST` 上线，真实 Chrome `59/59` 通过；`2026-08-09 23:19 CST` 又通过 Mini 既有安全密码助手恢复公司 QNAP 只读连接并复跑完整 `verify.sh`。当前剩余生产缺口只有 Domain Connector 旧版回滚与新版恢复演练；该演练会切换 QNAP 生产容器，必须另获当前变更窗口明确授权。
+Goal 6-A 已完整完成当前授权范围。QNAP 数据面、Operating Model、P1-DOMAIN 只读骨架、跨域演示链、3D-ready 数据协议和 Domain Connector 回滚恢复均已有生产证据。H 控制面 `v1.55.1` 已于 `2026-08-09 23:06:38 CST` 上线；Domain Connector 于 `2026-08-10` 完成 `2026-08-09.3 → 2026-08-09.2 → 2026-08-09.3` 真实切换，最终完整 `verify.sh` 与恢复后真实 Chrome `59/59` 均通过。
 
 ## 生产真值
 
@@ -17,6 +17,7 @@ Goal 6 的 QNAP 数据面、Operating Model、P1-DOMAIN 只读骨架、跨域演
 | Definition Source Commit | `86108cc700df4e1f1d6802765cadb47e0bb65bcb` | 绿色 |
 | Agent Core | `2026-08-09.3` | 绿色 |
 | Domain Connector | `2026-08-09.3 / read_only` | 绿色 |
+| Domain Connector 灾备 | `.3 → .2 → .3` 真实回滚恢复完成，数据指纹不变 | 绿色 |
 | Work / Practice Protocol | `1.1.0 / active` | 绿色 |
 | H 控制面生产 | `v1.55.1`，服务 active，`NRestarts=0`，错误日志 0 | 绿色 |
 | H Goal 6 白盒 | 真实 Chrome `59/59`，节点重叠、错接、穿卡、焦点偏差均为 0 | 绿色 |
@@ -64,6 +65,16 @@ Schema `3.3.0` 增量增加 Product、Device、Operations 和 Market 最小对�
 - 删除、撤销、过期和恢复状态均有显式记录；非法记录进入 Dead Letter，不进入稳定 View。
 - 本 Goal 未恢复 ERP M4、MediaCrawler、自动登录、平台风控绕过或任何业务写回。
 
+## Domain Connector 回滚恢复演练
+
+- 演练前重新核对公司 QNAP 五元组并执行完整 `verify.sh`，生产基线健康。
+- 应急快照 Run ID：`20260810-092811-goal6-domain-drill`；保存当前 `2026-08-09.3` 镜像与配置快照，未记录凭据值。
+- 第一次切换时，`2026-08-09.2` 实际已成功启动，但外层包装器在服务尚未完成就绪时立即断言，触发自动恢复；应急恢复到 `2026-08-09.3` 后生产健康，ERP 95、Market 369。
+- 正式重跑加入核心服务健康轮询，成功回滚到 `2026-08-09.2`，再从版本化 release `57c3b2123` 重建恢复到 `2026-08-09.3`。
+- 恢复 Run ID：`20260810-093156-goal6-domain-restore`；正式演练耗时 41 秒。
+- 回滚前、旧版运行、新版恢复三个阶段的数据指纹均为 `4d32a546bb3543cf61bfec183df80cb1`；ERP 95、Market 369、ActionIntent 0、Delivery Outbox 0 始终不变。
+- 最终 Domain Connector `health=healthy`、`restart_count=0`，完整 `verify.sh` 通过，既有发布端口未变化。
+
 ## 跨域只读演示链
 
 生产演示链为：
@@ -105,9 +116,9 @@ ArchitectureViewMode
 
 - Ontology Contracts：15/15。
 - Domain Connector：5/5。
-- H Goal 6 专项：8/8。
-- H 控制面完整测试：260/260。
-- QNAP 完整 `verify.sh`：通过。
+- Agent Core：34/34。
+- H Goal 6 架构专项：16/16。
+- QNAP 完整 `verify.sh`：恢复前、应急恢复后、正式恢复后和最终只读复验均通过。
 - Registry Definition/Runtime：`in_sync`。
 - 状态 Cursor：只返回 `cursorPresent` 和时间，不返回真实 Cursor。
 - 无权角色：fail-closed。
@@ -120,14 +131,13 @@ ArchitectureViewMode
 - 自动回滚点已创建并完成完整性校验；内部路径不进入方案文档。
 - 公网 `/healthz` 为 `v1.55.1`；未认证管理页面继续返回 `302`。
 - `h-control` 为 active，`NRestarts=0`，`.env` 保持 `h-control:h-control / 0600`，新启动后错误日志为 0。
-- 真实 Chrome `59/59`：节点重叠 0、端口错误 0、穿卡连线 0、焦点偏差 0、控制台错误 0、失败请求 0、横向溢出 0。
-- 验收证据：`output/playwright/goal6/goal6-whitebox-20260809-230734.{json,png}`。
+- 恢复后真实 Chrome `59/59`：节点重叠 0、端口错误 0、穿卡连线 0、焦点偏差 0、控制台错误 0、失败请求 0、横向溢出 0。
+- 最终验收证据：`output/playwright/goal6/goal6-whitebox-20260810-093353.{json,png}`。
 
 后续任何 H 控制面重新发布或重启仍必须先说明目标版本、影响范围、预计中断、备份与回滚，再获得当前明确批准；本次 `v1.55.1` 授权不能继承到下一次变更窗口。
 
-## 尚未完成
+## Goal 收口结论
 
-1. Domain Connector 旧版真实回滚与新版恢复演练。
-2. 完成后的共享记忆、Skill、最终 commit/push 和飞书方案文档更新。
+Goal 6-A 原始要求在当前授权范围内均已有权威证据，回滚恢复门禁已关闭。后续工作属于新 Goal 或独立审批，不是 Goal 6-A 遗留缺口。
 
 10 名真实员工 Canary、20/50/300 人扩容、产品研究部整库导入、ERP/社媒写回、ERP M4、MediaCrawler 和真 3D 继续不属于本 Goal 的已完成范围。

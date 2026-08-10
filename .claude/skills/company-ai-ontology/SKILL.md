@@ -292,7 +292,8 @@ node ops/sync-company-directory.mjs
 - Decision Lineage 必须区分技术执行、业务结果、经营目标三层成功；`execution_success=true` 不能推出 `goal_success=true`。Learning 默认只能写为 `proposed`。
 - 失败 Canary 必须保留审计并显式退役：WorkCase `blocked`、Decision `superseded`、Practice Status `retired`；禁止删除历史，也禁止退役 `goal_verified` Lineage。
 - Ontology Definition Source Commit 与 Runtime Release Commit 分开记录。Definition 未变化时不得用运行时热修复提交覆盖 Registry Source Commit。
-- Goal 6 的 QNAP 领域数据面、Operating Model 和 3D-ready 协议已完成当前层级生产验收；Capability Governance v1 为 `contract_only`。H 控制面 `v1.55.1` 已于 `2026-08-09 23:06:38 CST` 上线，真实 Chrome `59/59` 通过；公司 QNAP 又于 `23:19 CST` 完成五元组、完整 `verify.sh`、11/9 演示链、应用角色/RLS 和 Action Gateway 禁读的只读复验。Domain Connector 回滚恢复仍需单独的当前生产切换授权；后续不得把代码完成或测试通过替代新的生产证据。
+- Goal 6-A 已完整完成当前授权范围：QNAP 领域数据面、Operating Model、P1-DOMAIN 和 3D-ready 协议均有生产证据，Capability Governance v1 保持 `contract_only`。H 控制面 `v1.55.1` 已上线；Domain Connector 于 `2026-08-10` 完成 `2026-08-09.3 → .2 → .3` 真实回滚恢复，数据指纹、ERP 95、Market 369、ActionIntent 0 和 Delivery Outbox 0 全程不变，最终完整 `verify.sh` 与恢复后真实 Chrome `59/59` 通过。
+- 生产切换后的健康断言必须轮询到核心服务 ready，不能在容器刚启动时做一次即时断言；否则会把实际成功的切换误判为失败并触发不必要的恢复。自动恢复仍必须保留，且每次回滚都同时证明旧版可运行、新版可恢复、业务数据不变。
 - 任何 H 控制面、QNAP 或其他生产服务的重启都必须获得川哥在当前变更窗口的明确授权；Goal 文件、历史部署授权和“继续 Goal”都不能替代即时批准。申请前必须完成只读基线、目标测试、备份/回滚设计、影响与预计中断说明。
 - 修改 `/srv/h-control/.env` 后必须显式恢复 `h-control:h-control / 0600`，并以服务用户验证可读；临时文件原子替换会改变属主，是本次 502 的直接根因之一。
 - 管理员密码、Cookie 和登录表单内容不得进入 Playwright 参数、快照或工具输出。密码切换必须从 Git 外来源读取、只报告候选数量和长度，并在新密码登录通过后才更新 Keychain 指针。

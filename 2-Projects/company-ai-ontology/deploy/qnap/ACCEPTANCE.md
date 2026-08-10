@@ -155,5 +155,6 @@ P0-A 至 P0-F、独立公司 Bot、通讯录、公司 H 引擎、Knowledge Conne
 - 未设置 Tenant 的应用角色读取 0，设置当前 Tenant 后可读取受治理 View；Action Gateway 读取领域表被拒绝。
 - 跨域只读演示链形成 11 节点/9 关系，Decision/Task 仅为提案，Verification 为 pending、Learning 为 proposed，ActionIntent 和 Delivery Outbox 均为 0。
 - 完整 `verify.sh` 于 2026-08-09 再次只读通过，没有新增公网端口、员工投递、ERP/社媒写回、ERP M4 或 MediaCrawler 操作。
-- H 控制面 `v1.55.1` 已生产上线；服务 active、`NRestarts=0`、错误日志 0，真实 Chrome `59/59` 通过。Domain Connector 回滚恢复演练仍需单独的当前 QNAP 生产切换授权。
+- Domain Connector 已完成 `2026-08-09.3 → .2 → .3` 真实回滚恢复；正式演练 41 秒，数据指纹、ERP 95、Market 369、ActionIntent 0 和 Delivery Outbox 0 均保持不变。
+- H 控制面 `v1.55.1` 已生产上线；服务 active、`NRestarts=0`、错误日志 0，恢复后真实 Chrome `59/59` 通过。
 - 完整当前状态见 `docs/goal6-operating-domain-acceptance-2026-08-09.md`。

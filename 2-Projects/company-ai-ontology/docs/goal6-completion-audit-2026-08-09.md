@@ -1,10 +1,10 @@
 # Goal 6-A 逐项完成审计
 
-审计时间：2026-08-09（Asia/Shanghai）
+审计时间：2026-08-10（Asia/Shanghai）
 
 ## 结论
 
-Goal 6-A 尚未完整完成。QNAP 数据面、Operating Model、P1-DOMAIN、只读演示链和 3D-ready 协议已有生产证据；Company Capability Governance v1 已完成 `contract_only` 骨架。H 控制面 `v1.55.1` 已上线并完成 `59/59` 真实 Chrome 验收；公司 QNAP 已于 `2026-08-09 23:19 CST` 重新在线复核并通过完整 `verify.sh`。剩余缺口为 Domain Connector 回滚恢复演练、飞书方案文档和最终记忆收口。
+Goal 6-A 已完整完成当前授权范围。QNAP 数据面、Operating Model、P1-DOMAIN、只读演示链、3D-ready 协议和 Domain Connector 灾备均有生产证据；Company Capability Governance v1 按范围保持 `contract_only`。H 控制面 `v1.55.1` 与恢复后真实 Chrome `59/59` 均通过，公司 QNAP 最终完整 `verify.sh` 通过。
 
 状态含义：
 
@@ -24,7 +24,7 @@ Goal 6-A 尚未完整完成。QNAP 数据面、Operating Model、P1-DOMAIN、只
 | Phase 4 ERP M3 只读接入 | 已证明 | ERP Read Model 95 条、应用角色/RLS、Replay 与敏感扫描 | 无 |
 | Phase 4 社媒归一化结果只读接入 | 已证明 | Market Read Model 369 条、事实类型/置信度/有效期契约 | 无 |
 | Phase 4 删除、撤销、过期、错误恢复 | 已证明 | Lifecycle、Dead Letter、失败恢复和 Live Cursor 保护负测 | 无 |
-| Phase 4 真实回滚与恢复 | 待证明 | 回滚脚本和既有备份存在 | 未获 QNAP 生产重启授权 |
+| Phase 4 真实回滚与恢复 | 已证明 | `2026-08-09.3 → .2 → .3`、两次 Run ID、41 秒、指纹不变、最终健康 | 无 |
 | Phase 5 3D-ready 统一协议 | 已证明 | 10 类 Architecture DTO、Z0–Z4、ViewMode、严格验证器 8/8 | 真 3D 按范围保持灰色 |
 | Phase 6 新领域与能力治理白盒 | 已证明 | 新领域节点和能力治理灰色节点已上线；搜索、选择、聚焦、连线与 Z0–Z4 浏览器验收通过 | 能力治理运行闭环仍按 `contract_only` 保持灰色 |
 
@@ -47,23 +47,22 @@ Goal 6-A 尚未完整完成。QNAP 数据面、Operating Model、P1-DOMAIN、只
 | 无 Evidence 不调用 H 引擎 | 已证明 | Goal 4 策略层 fail-closed 生产证据继续有效 |
 | 敏感信息扫描为 0 | 已证明 | 发布差异扫描通过，验收结果和截图未包含密码、Cookie、Token 或内部路径正文 |
 | 没有新增公网端口 | 已证明 | QNAP 仍只有公司 LAN 健康入口，H 复用既有 HTTPS |
+| 旧版可运行且新版可恢复 | 已证明 | `.2` 健康运行，`.3` 从版本化 release 重建恢复；ERP 95、Market 369、Action/Outbox 0 |
 
 ## Git 与沉淀审计
 
 | 项目 | 当前状态 |
 |---|---|
 | QNAP Domain Runtime 代码 | `mycc@57c3b2123` 已推送 |
-| Goal 6 状态、Skill 和技术架构文档 | `mycc@605f47646` 已推送 |
+| Goal 6 状态、Skill 和技术架构文档 | `mycc@9f70fdb89` 已推送；最终收口提交见本轮 Git 记录 |
 | H Goal 6 白盒与连线路由修复 | `feishu-grok-bridge@f9518cb` 已推送 |
 | H `v1.55.1` 发布源码 | `feishu-grok-bridge@02e3ab4` 已推送，生产备份 `20260809-230616-goal6-v1550` |
 | H 发布证据 | `feishu-grok-bridge@6260061` 已推送 |
-| H 生产浏览器验收 | `59/59`，证据 `goal6-whitebox-20260809-230734.{json,png}` |
-| 共享记忆 | 已更新当前生产真值；最终提交号待 Goal 收口补齐 |
-| Codex 私有 memory note | 待 Goal 完成后写入最终状态 |
-| 飞书《公司 AI Ontology 基座架构方案》 | 已追加第 20 章并读回验证；回滚演练完成后更新最终门禁状态 |
+| H 生产浏览器验收 | 恢复后 `59/59`，证据 `goal6-whitebox-20260810-093353.{json,png}` |
+| 共享记忆 | 最终回滚恢复证据已更新；提交号见本轮 Git 记录 |
+| Codex 私有 memory note | 最终状态已新增到 ad-hoc note |
+| 飞书《公司 AI Ontology 基座架构方案》 | 第 20 章已原位更新并读回验证，回滚恢复改为绿色 |
 
-## 剩余严格顺序
+## 审计结论
 
-1. 单独申请 Domain Connector 回滚/恢复演练窗口并执行。
-2. 回滚恢复完成后更新飞书第 20 章最终门禁状态和 Codex memory note。
-3. 复跑完成审计；所有项目均有权威证据后才标记 Goal complete。
+Goal 6-A 所有阶段均为“已证明”。10 名真实员工 Canary、20/50/300 人扩容、产品研究部整库导入、ERP/社媒真实写回、ERP M4、MediaCrawler 风控恢复和真 3D 仍是独立门禁，不因本 Goal 完成而自动开放。

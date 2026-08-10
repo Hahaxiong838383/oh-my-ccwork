@@ -1,16 +1,16 @@
 # 公司 AI Ontology 后续 TODO
 
-更新时间：2026-08-09（Asia/Shanghai）
+更新时间：2026-08-10（Asia/Shanghai）
 
 ## 当前结论
 
-P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI 和 Goal 5 P0-DEC 已上线。Goal 6 的 Company Brain Operating Model v1、Schema `3.3.0`、ERP M3/社媒只读领域骨架、跨域演示链和 3D-ready 数据协议已完成当前层级验收；Company Capability Governance v1 已完成 `contract_only` 骨架。H 控制面 `v1.55.1` 已上线，真实 Chrome `59/59` 通过。10 名真实员工 Canary 继续延后。
+P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI、Goal 5 P0-DEC 和 Goal 6-A P1-DOMAIN 均已上线并完成当前授权范围验收。Domain Connector 已完成 `.3 → .2 → .3` 真实回滚恢复；Company Capability Governance v1 保持 `contract_only`。H 控制面 `v1.55.1` 恢复后真实 Chrome `59/59` 通过。10 名真实员工 Canary 继续延后。
 
 ## 2026-08-09 Goal 顺序重排
 
 1. `Goal 4`：✅ P0-EPI + 公司大脑工作逻辑显式建模，Intake 至可解释回答已生产 active。
 2. `Goal 5`：✅ P0-DEC + Decision/P2/Task/Action/Verification/Learning 实践闭环已生产 active。
-3. `Goal 6`：🟡 QNAP P1-DOMAIN、Operating Model、3D-ready 协议和 H `v1.55.1` 白盒浏览器验收已完成；Capability Governance v1 为 `contract_only`。Domain Connector 回滚恢复演练、飞书方案和最终记忆收口仍待完成。
+3. `Goal 6`：✅ QNAP P1-DOMAIN、Operating Model、3D-ready 协议、H `v1.55.1` 白盒和 Domain Connector 回滚恢复均已完成；Capability Governance v1 按范围保持 `contract_only`。
 4. `Goal 3`：10 名真实员工 Canary，继续延后但仍是 20/50 人放量前硬门禁。
 5. 公司专用 CPA 凭据和 P1 `department/openchat` 映射可并行推进，不改变业务验收顺序。
 
@@ -69,13 +69,14 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 6. ✅ 跨域只读演示链已形成 11 节点/9 关系，Decision/Task 保持提案态，ActionIntent 和 Delivery Outbox 均为 0。
 7. ✅ 二维、2.5D、未来真 3D 共用的 Architecture DTO 已完成自动测试；真 3D 保持 `contract_only`。
 8. ✅ H 控制面 `v1.55.1` 已发布，源码锚点 `02e3ab4`，证据提交 `6260061`；自动备份、管理员认证、`NRestarts=0` 和公网健康通过。
-9. ✅ 真实 Chrome 浏览器交互 `59/59` 通过；⏳ Domain Connector 旧版回滚/新版恢复演练未完成。
+9. ✅ Domain Connector `2026-08-09.3 → .2 → .3` 真实回滚恢复完成；数据指纹、ERP 95、Market 369、ActionIntent 0 和 Outbox 0 保持不变。
+10. ✅ 恢复后真实 Chrome 浏览器交互 `59/59` 通过。
 
 ## 需要用户确认或提供
 
 1. 准备公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
 2. P1 主体映射完成后，单独确认产品研究部知识库正式导入窗口和资源范围。
-3. Goal 6 首批只读 ERP M3 与社媒入口已完成；暂不需要选择 10 名真实员工。
+3. Goal 6-A 已完整收口；暂不需要选择 10 名真实员工。
 
 ## P0-A 至 P0-F 状态
 

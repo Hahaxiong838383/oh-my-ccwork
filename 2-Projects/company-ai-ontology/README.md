@@ -13,7 +13,7 @@
 
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
-- 当前里程碑：公司 QNAP 已进入 `Goal 6 / P1-DOMAIN`，Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 为 `active`；ERP M3 和社媒归一化结果已通过只读 Connector、稳定 View、幂等、重放、错误隔离和权限负测。Company Capability Governance v1 已形成 `contract_only` 骨架，不改变当前生产 Schema。H 控制面 `v1.55.1` 已上线 Goal 6 白盒、Skill Fork 安全修复、能力治理显示和连线路由修复，真实 Chrome 验收 `59/59` 通过。
+- 当前里程碑：`Goal 6-A / P1-DOMAIN` 已完整完成当前授权范围。公司 QNAP 为 Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`；ERP M3 和社媒归一化结果已通过只读 Connector、稳定 View、幂等、重放、错误隔离和权限负测。Domain Connector 已完成 `2026-08-09.3 → .2 → .3` 真实回滚恢复，数据指纹与 ERP 95 / Market 369 / ActionIntent 0 / Outbox 0 均保持不变。Company Capability Governance v1 保持 `contract_only`；H 控制面 `v1.55.1` 恢复后真实 Chrome 验收 `59/59` 通过。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
 ## 部署边界
@@ -65,8 +65,8 @@
 
 ## 下一阶段
 
-1. 在独立变更窗口完成 Domain Connector 旧版回滚与新版恢复演练；未获明确授权前不重启 QNAP 生产容器。
-2. 更新飞书《公司 AI Ontology 基座架构方案》、共享记忆和最终 Goal 6 审计。
-3. Goal 3 的 10 名真实员工 Canary 继续延后，但仍是 20/50 人放量前的强制门禁。
-4. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
-5. 补齐空间成员 `department/openchat` 映射和 Retrieval 对群组主体的授权语义；完成后再单独审批产品研究部整库导入窗口。
+1. Goal 3 的 10 名真实员工 Canary 继续延后，但仍是 20/50 人放量前的强制门禁。
+2. 为 H 引擎建立公司专用 CPA Key/账号与同厂冗余，替换当前个人 CPA 依赖。
+3. 补齐空间成员 `department/openchat` 映射和 Retrieval 对群组主体的授权语义；完成后再单独审批产品研究部整库导入窗口。
+4. 建立 24 小时容量观测、H-Lite lease/fencing 和 Worker 分池，再规划 20/50 人扩容。
+5. 真 3D、ERP/社媒写回、ERP M4 和 MediaCrawler 风控恢复继续作为独立 Goal，必须重新授权。

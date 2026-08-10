@@ -1,6 +1,6 @@
 # 公司 AI Ontology 技术架构开发进展
 
-更新时间：2026-08-09（Asia/Shanghai）
+更新时间：2026-08-10（Asia/Shanghai）
 
 - 绿色：该节点标注的当前层级已经完成真实验收。
 - 灰色：只完成代码/协议，或仍在生产授权、浏览器验收及业务门禁之后。
@@ -38,14 +38,14 @@ flowchart TB
   BACKUP["Base Backup + WAL + PITR<br/>真实恢复演练"]:::done
 
   ACTION["Mandatory Action Gateway<br/>Dry-run / 人审 / 执行 / 读回 / 回滚"]:::done
-  DOMAIN_CONNECTOR["Domain Connector<br/>只读同步 / 重放 / Dead Letter"]:::done
+  DOMAIN_CONNECTOR["Domain Connector<br/>只读同步 / 重放 / Dead Letter<br/>.3 → .2 → .3 回滚恢复已通过"]:::done
   OPERATING_MODEL["Company Brain Operating Model v1<br/>角色 / 生命周期 / 人工门禁"]:::done
   PRODUCT_DOMAIN["Product Domain<br/>Product / Version / SKU / Feature"]:::done
   DEVICE_DOMAIN["Device Domain<br/>Model / Instance / Firmware / Event"]:::done
   OPERATIONS_DOMAIN["Operations Domain<br/>Order / Quality / Shipment / Activation"]:::done
   MARKET_DOMAIN["Market Domain<br/>Signal / Topic / Trend / Opportunity"]:::done
   ARCH_CONTRACT["3D-ready Architecture Contract<br/>2D / 2.5D / topology-3d contract_only"]:::done
-  H_V1551["H 控制面 v1.55.1<br/>生产上线 / Chrome 59/59"]:::done
+  H_V1551["H 控制面 v1.55.1<br/>生产上线 / 恢复后 Chrome 59/59"]:::done
   ERP["爱视可 ERP M3 Read Model<br/>38 Operations + 57 Device"]:::done
   SOCIAL["Market Signal Read Model<br/>369 条归一化结果"]:::done
   CANARY["演示负载与恢复验收<br/>5/10/20 并发 / ACK / 重启恢复"]:::done
