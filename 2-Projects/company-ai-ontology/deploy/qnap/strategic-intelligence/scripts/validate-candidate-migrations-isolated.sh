@@ -8,7 +8,7 @@ run_id=${VALIDATION_RUN_ID:-$$}
 container=ontology-si-validation-$run_id
 runtime_root=${TMPDIR:-/tmp}/ontology-si-validation-$run_id
 tenant_id=00000000-0000-4000-8000-000000000001
-image=docker.1ms.run/pgvector/pgvector:pg17-bookworm
+image=${VALIDATION_POSTGRES_IMAGE:-docker.1ms.run/pgvector/pgvector:pg17-bookworm}
 
 cleanup() {
   "$docker_path" rm -f "$container" >/dev/null 2>&1 || true

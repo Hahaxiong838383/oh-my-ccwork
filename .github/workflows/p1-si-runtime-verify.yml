@@ -1,0 +1,111 @@
+name: P1-SI Runtime Verify
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p1-si-runtime-verify
+  cancel-in-progress: false
+
+jobs:
+  verify-linux-amd64:
+    name: Collector image and PostgreSQL runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Verify contracts and packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          project=2-Projects/company-ai-ontology
+          npm test --prefix "$project/packages/ontology-contracts"
+          npm run compile:pestim --prefix "$project/packages/ontology-contracts"
+          npm run compile:source-registry --prefix "$project/packages/ontology-contracts"
+          npm run compile:data-foundation --prefix "$project/packages/ontology-contracts"
+          npm run compile:reporting --prefix "$project/packages/ontology-contracts"
+          npm run compile:p003-review --prefix "$project/packages/ontology-contracts"
+          npm test --prefix "$project/services/intelligence-collector"
+          npm test --prefix "$project/deploy/qnap/strategic-intelligence"
+          npm run validate --prefix "$project/deploy/qnap/strategic-intelligence"
+
+      - name: Build immutable Collector image
+        id: image
+        shell: bash
+        env:
+          IMAGE_TAG: company-intelligence-collector:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          project=2-Projects/company-ai-ontology
+          SOURCE_COMMIT="$GITHUB_SHA" IMAGE_TAG="$IMAGE_TAG" \
+            "$project/services/intelligence-collector/scripts/build-image.sh"
+          image_id=$(docker image inspect --format '{{.Id}}' "$IMAGE_TAG")
+          platform=$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$IMAGE_TAG")
+          case "$image_id" in sha256:*) ;; *) echo 'image id is not immutable' >&2; exit 1 ;; esac
+          test "$platform" = linux/amd64
+          mkdir -p runtime-evidence
+          docker save "$IMAGE_TAG" | gzip -n > runtime-evidence/collector-image.tar.gz
+          archive_sha=$(sha256sum runtime-evidence/collector-image.tar.gz | awk '{print $1}')
+          printf 'image_id=%s\nplatform=%s\narchive_sha=%s\n' "$image_id" "$platform" "$archive_sha" > runtime-evidence/image.env
+          {
+            echo "image_id=$image_id"
+            echo "platform=$platform"
+            echo "archive_sha=$archive_sha"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Validate candidate PostgreSQL migrations
+        shell: bash
+        env:
+          VALIDATION_POSTGRES_IMAGE: pgvector/pgvector:pg17-bookworm@sha256:7ae6051efd0e60444282c27c7e141af07f322ce033300e727a49c3dd11075e38
+        run: |
+          set -euo pipefail
+          project=2-Projects/company-ai-ontology
+          PROJECT_ROOT="$project" VALIDATION_RUN_ID="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            "$project/deploy/qnap/strategic-intelligence/scripts/validate-candidate-migrations-isolated.sh" \
+            | tee runtime-evidence/postgres-validation.txt
+
+      - name: Write verification manifest
+        shell: bash
+        env:
+          IMAGE_ID: ${{ steps.image.outputs.image_id }}
+          IMAGE_PLATFORM: ${{ steps.image.outputs.platform }}
+          IMAGE_ARCHIVE_SHA: ${{ steps.image.outputs.archive_sha }}
+          POSTGRES_IMAGE: pgvector/pgvector:pg17-bookworm@sha256:7ae6051efd0e60444282c27c7e141af07f322ce033300e727a49c3dd11075e38
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs')
+          const manifest = {
+            evidenceVersion: '1.0.0',
+            verificationType: 'P1-SI-F-linux-amd64-runtime',
+            sourceCommit: process.env.GITHUB_SHA,
+            workflowRunId: process.env.GITHUB_RUN_ID,
+            workflowRunAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            runner: 'ubuntu-24.04',
+            collectorImageId: process.env.IMAGE_ID,
+            collectorPlatform: process.env.IMAGE_PLATFORM,
+            collectorImageArchiveSha256: process.env.IMAGE_ARCHIVE_SHA,
+            postgresImage: process.env.POSTGRES_IMAGE,
+            imageBuildVerified: true,
+            sqlRuntimeVerified: true,
+            companyQnapDeployed: false,
+            publish: false,
+          }
+          fs.writeFileSync('runtime-evidence/runtime-verification.json', `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 })
+          NODE
+          sha256sum runtime-evidence/runtime-verification.json runtime-evidence/postgres-validation.txt \
+            > runtime-evidence/SHA256SUMS
+
+      - name: Upload runtime evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p1-si-runtime-${{ github.sha }}
+          path: runtime-evidence/
+          if-no-files-found: error
+          retention-days: 14

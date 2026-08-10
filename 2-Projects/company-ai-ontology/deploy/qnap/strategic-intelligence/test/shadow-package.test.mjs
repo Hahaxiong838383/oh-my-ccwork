@@ -100,6 +100,7 @@ test('candidate migrations remain outside production migrations and isolated val
   }
   const validator = await fs.readFile(path.join(ROOT, 'scripts/validate-candidate-migrations-isolated.sh'), 'utf8')
   assert.match(validator, /--network none/)
+  assert.match(validator, /VALIDATION_POSTGRES_IMAGE/)
   assert.match(validator, /baseline\.dump/)
   assert.match(validator, /ontology_restore/)
 })
