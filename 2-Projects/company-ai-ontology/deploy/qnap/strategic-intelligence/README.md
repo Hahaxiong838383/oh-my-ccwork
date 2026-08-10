@@ -56,11 +56,14 @@ scripts/prepare-shadow-release.sh
 - `SHADOW_DEPLOY_APPROVED=YES`；
 - `SHADOW_DATABASE_MIGRATION_APPROVED=YES`；
 - `GOAL7_STATUS=complete`；
+- `SI_GOAL7_ACCEPTANCE_FILE` 指向 Goal 7 工程证据和川哥人工验收文件；
 - 已审批 Source Registry 和 Collector Config；
 - P003 36 条候选均有实名 DRI 最终决定，且所有关系继续保持 `inactive`；
 - 完整且 Hash 一致的不可变发布包。
 
 部署时必须通过 `SI_APPROVED_P003_REVIEW_FILE` 指向公司受控目录中的最终审核工作簿。部署入口会执行 `validate-approved-p003-review.mjs`：任何 `pending`、候选 Hash 漂移、缺少实名参与者、审核字段不完整或 `activationStatus` 被改为 `active` 都会在数据库迁移和服务启动前失败关闭。该审核文件包含个人信息，不进入 Git、共享记忆或公开验收报告。
+
+`GOAL7_STATUS=complete` 只作为显式操作者确认，不能单独证明 Goal 7 已完成。`SI_GOAL7_ACCEPTANCE_FILE` 还必须通过 `validate-goal7-acceptance.mjs`，证明 `engineeringVerified=true / ownerAccepted=true`，Principal、请求发送者隔离、用途收窄、撤权 fail-closed、正文读取前 ACL、Runtime 熔断/重试/成本预算和真实模型读回均已验证；Route B、整库导入、真实员工 Canary、私人 Bot 迁移和 ERP/社媒写回继续关闭。模板 `config/goal7-acceptance.template.json` 默认不可通过，禁止把复制模板当验收证据。
 
 部署脚本只应用 010/011 战略情报候选迁移并启动 `intelligence-orchestrator`，不会执行任何既有核心服务的 `up`、`restart` 或 `stop`。
 Dispatcher 使用 QNAP 既有 crontab 每分钟检查队列，安装过程不会重启 cron daemon。
@@ -85,5 +88,7 @@ Artifact：`p1-si-runtime-2974c19eaab1282a0f2dd168ed7056e5a79e6f68`，保留 90 
 - 公司 QNAP Compose config、备份和部署前快照；
 - 公司 QNAP Shadow 部署；
 - 七个真实自然日 Shadow。
+
+该 Artifact 生成于 P003 最终审核门禁和 Goal 7 文件化验收门禁加入之前，现在只保留为 Linux/amd64 镜像、SQL Runtime 和可复现打包的历史工程证据，`deploymentEligible=false`。Release Manifest 已升级到 `1.1.0 / P1-SI-F-shadow-candidate-gated`，并强制声明 `p003ReviewGateRequired=true / goal7AcceptanceGateRequired=true`；旧 `1.0.0` Artifact 会被新验证器拒绝。必须在实名审核和 Goal 7 完成后，从当时已推送的最终 Commit 重新生成不可变发布包。
 
 以上未完成项不得用 CI、静态测试、模板或模拟数据冒充完成。

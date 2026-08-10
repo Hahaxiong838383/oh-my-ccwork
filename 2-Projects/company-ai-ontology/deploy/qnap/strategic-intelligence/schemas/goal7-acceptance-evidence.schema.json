@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/goal7-acceptance-evidence.schema.json",
+  "title": "Goal 7 P1-PROD-READINESS Acceptance Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidenceVersion",
+    "goalKey",
+    "status",
+    "engineeringVerified",
+    "ownerAccepted",
+    "acceptedAt",
+    "sourceCommit",
+    "ownerAcceptanceRef",
+    "evidenceRefs",
+    "authorityEvidence",
+    "runtimeEvidence",
+    "routeState",
+    "closedCapabilities"
+  ],
+  "properties": {
+    "evidenceVersion": { "const": "1.0.0" },
+    "goalKey": { "const": "P1-PROD-READINESS" },
+    "status": { "const": "complete" },
+    "engineeringVerified": { "const": true },
+    "ownerAccepted": { "const": true },
+    "acceptedAt": { "type": "string", "format": "date-time" },
+    "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "ownerAcceptanceRef": { "type": "string", "pattern": "^(feishu:|git:|ontology:|qnap:|https://)\\S+$" },
+    "evidenceRefs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^(feishu:|git:|ontology:|qnap:|https://)\\S+$" }
+    },
+    "authorityEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "principalModelVerified",
+        "senderPrincipalIsolationVerified",
+        "purposeNarrowingVerified",
+        "revocationFailClosedVerified",
+        "readBeforeBodyAclVerified"
+      ],
+      "properties": {
+        "principalModelVerified": { "const": true },
+        "senderPrincipalIsolationVerified": { "const": true },
+        "purposeNarrowingVerified": { "const": true },
+        "revocationFailClosedVerified": { "const": true },
+        "readBeforeBodyAclVerified": { "const": true }
+      }
+    },
+    "runtimeEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "circuitBreakerVerified",
+        "retryBudgetVerified",
+        "costBudgetVerified",
+        "realModelReadbackVerified"
+      ],
+      "properties": {
+        "circuitBreakerVerified": { "const": true },
+        "retryBudgetVerified": { "const": true },
+        "costBudgetVerified": { "const": true },
+        "realModelReadbackVerified": { "const": true }
+      }
+    },
+    "routeState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["routeAOperational", "routeBEnabled"],
+      "properties": {
+        "routeAOperational": { "const": true },
+        "routeBEnabled": { "const": false }
+      }
+    },
+    "closedCapabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "productResearchBulkImport",
+        "realEmployeeCanary",
+        "employeePrivateBotMigration",
+        "erpWriteback",
+        "socialWriteback"
+      ],
+      "properties": {
+        "productResearchBulkImport": { "const": false },
+        "realEmployeeCanary": { "const": false },
+        "employeePrivateBotMigration": { "const": false },
+        "erpWriteback": { "const": false },
+        "socialWriteback": { "const": false }
+      }
+    }
+  }
+}

@@ -13,7 +13,7 @@
 
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
-- 当前里程碑：`Goal 6-A / P1-DOMAIN` 已完成工程验收和川哥人工体验验收。公司 QNAP 为 Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`；Domain Connector `2026-08-10.1`、Agent Core `2026-08-10.2`，ERP 95 / Operations 38 / Device 57 / Market 369，数据指纹 `ae0a73d126cb9d2dc1417e0eae7c0e94`。ActionIntent 3、Delivery Outbox 12 均为既有已验证/已回滚/已确认记录，无 pending/leased 写回。H 控制面 `v1.58.2`、50 个运行文件 `in_sync`、真实 Chrome `99/99`。Company Capability Governance v1 继续保持 `contract_only`。PESTIM B～G 工程候选、Linux/amd64 镜像、SQL Runtime、不可变发布候选和飞书 CSV 人工审核闭环已完成工程验证；真实来源审批、实名 P003 DRI 审核、QNAP 五元组复核、部署和七日 Shadow 均未完成。
+- 当前里程碑：`Goal 6-A / P1-DOMAIN` 已完成工程验收和川哥人工体验验收。公司 QNAP 为 Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`；Domain Connector `2026-08-10.1`、Agent Core `2026-08-10.2`，ERP 95 / Operations 38 / Device 57 / Market 369，数据指纹 `ae0a73d126cb9d2dc1417e0eae7c0e94`。ActionIntent 3、Delivery Outbox 12 均为既有已验证/已回滚/已确认记录，无 pending/leased 写回。H 控制面 `v1.58.2`、50 个运行文件 `in_sync`、真实 Chrome `99/99`。Company Capability Governance v1 继续保持 `contract_only`。PESTIM B～G 工程候选、Linux/amd64 镜像、SQL Runtime 和飞书 CSV 人工审核闭环已完成工程验证；旧 90 天 Artifact 仅保留为历史 Runtime 证据，新版 P003/Goal 7 强门禁发布包尚未重建。真实来源审批、实名 P003 DRI 审核、QNAP 五元组复核、部署和七日 Shadow 均未完成。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
 ## 部署边界
@@ -81,7 +81,7 @@
 
 1. `Task 6-R / Release Provenance Guard` 已完成；未来所有 H 发布继续执行 Source Commit、完整运行时 Manifest、文件哈希和真实浏览器门禁。
 2. Goal 7 `P1-PROD-READINESS`：建立公司专用 H 引擎 CPA 账号/Key 与同厂冗余，并补齐 `department/openchat`、`chat/group` Principal、用途和撤权语义；本 Goal 不执行整库导入。
-3. PESTIM P1-SI-B～G 的 Source Registry、Collector、数据底座、多周期报告、Shadow 准备和飞书 CSV 人工审核闭环已完成工程验证；Linux/amd64 镜像、010/011、19/19 强制 RLS 和 baseline restore 已通过 CI。实名候选已在 `work-private` 收敛为 7 类各 4 人，合规/法务仍需川哥指定；部署入口已新增 P003 36 条最终审核 fail-closed 门禁。下一步由川哥拍板实名 DRI，再完成真实审核和最终发布包，不提前执行生产切换。
+3. PESTIM P1-SI-B～G 的 Source Registry、Collector、数据底座、多周期报告、Shadow 准备和飞书 CSV 人工审核闭环已完成工程验证；Linux/amd64 镜像、010/011、19/19 强制 RLS 和 baseline restore 已通过 CI。实名候选已在 `work-private` 收敛为 7 类各 4 人，合规/法务仍需川哥指定；部署入口已新增 P003 36 条最终审核和 Goal 7 文件化 owner acceptance 双重 fail-closed 门禁，Release Manifest 升级为 `1.1.0`。旧 Artifact 不再具有部署资格；下一步由川哥拍板实名 DRI，再完成真实审核并从最终 Commit 重建发布包。
 4. Goal 3 的 10 名真实员工 Canary 在 Goal 7 后执行，仍是 20/50 人放量前的强制门禁。
 5. Goal 8 建立 24 小时容量观测、H-Lite lease/fencing 和 Worker 分池，再规划 20/50 人扩容。
 6. 产品研究部整库导入、Capability Governance 激活、A2A、真 3D、PESTIM 自动 P2、ERP/社媒写回、ERP M4 和 MediaCrawler 风控恢复继续拆为独立 Goal，必须重新授权。

@@ -95,6 +95,7 @@ Dispatcher 会从 Collector 产物和 Docker Stats 自动提取来源数、成�
 - `SHADOW_DEPLOY_APPROVED=YES`；
 - `SHADOW_DATABASE_MIGRATION_APPROVED=YES`；
 - `GOAL7_STATUS=complete`；
+- `SI_GOAL7_ACCEPTANCE_FILE` 通过机器校验，且同时证明 `engineeringVerified=true / ownerAccepted=true`；
 - 公司合规批准的 Source Registry；
 - 与 Source Registry 对应的 Collector Config；
 - 公司 QNAP 五元组在线一致。
@@ -164,6 +165,8 @@ Collector 测试由 `6/6` 增至 `7/7`，覆盖 metadata-only 不留正文、str
 前序 Workflow 分别暴露并修复了相对路径被 Docker 当作卷名、PostgreSQL 容器 UID 导致宿主测试目录无法清理，以及 Artifact 解压后 `SHA256SUMS` 路径前缀不可直接校验三个真实问题。最终运行完整通过，不能用前序运行中的局部成功替代最终证据。
 
 ## 10. 当前未完成
+
+> 后续完成性审计补充：本文件记录的 Run `31421625978` / Commit `2974c19ea` Artifact 生成于 P003 最终审核门禁和 Goal 7 文件化验收门禁加入之前。它继续证明镜像、SQL Runtime、RLS、baseline restore 和 Artifact 便携校验，但 `deploymentEligible=false`。新 Release Manifest 为 `1.1.0 / P1-SI-F-shadow-candidate-gated`，旧 `1.0.0` 包会被拒绝；生产前必须从最终已推送 Commit 重新构建。
 
 - 未取得公司来源合规审批；
 - Goal 7 尚未在本 Goal 中证明完成；

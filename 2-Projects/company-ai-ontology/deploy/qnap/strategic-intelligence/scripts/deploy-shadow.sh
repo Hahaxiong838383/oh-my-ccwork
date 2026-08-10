@@ -11,10 +11,11 @@ release_root=${SI_RELEASE_ROOT:?SI_RELEASE_ROOT is required}
 approved_registry=${SI_APPROVED_SOURCE_REGISTRY_FILE:?SI_APPROVED_SOURCE_REGISTRY_FILE is required}
 approved_config=${SI_APPROVED_COLLECTOR_CONFIG_FILE:?SI_APPROVED_COLLECTOR_CONFIG_FILE is required}
 approved_p003_review=${SI_APPROVED_P003_REVIEW_FILE:?SI_APPROVED_P003_REVIEW_FILE is required}
+goal7_acceptance=${SI_GOAL7_ACCEPTANCE_FILE:?SI_GOAL7_ACCEPTANCE_FILE is required}
 manifest=$release_root/release-manifest.json
 source_archive=$release_root/source.tar.gz
 image_archive=$release_root/collector-image.tar.gz
-for file in "$manifest" "$source_archive" "$image_archive" "$approved_registry" "$approved_config" "$approved_p003_review"; do
+for file in "$manifest" "$source_archive" "$image_archive" "$approved_registry" "$approved_config" "$approved_p003_review" "$goal7_acceptance"; do
   [ -f "$file" ] || { echo 'required release or approval file missing' >&2; exit 1; }
 done
 case "$release_root" in /share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence/release/*) ;; *) echo 'refusing unexpected release root' >&2; exit 1 ;; esac
@@ -36,6 +37,7 @@ node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-
   "$manifest" "$source_archive" "$image_archive" >/dev/null
 node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-approved-registry.mjs" "$approved_registry" "$approved_config" >/dev/null
 node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-approved-p003-review.mjs" "$approved_p003_review" >/dev/null
+goal7_evidence_hash=$(node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-goal7-acceptance.mjs" "$goal7_acceptance" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>process.stdout.write(JSON.parse(s).evidenceHash))")
 
 if [ -f "$shadow_root/.env.shadow" ] && [ -d "$shadow_root/package" ]; then
   SI_PACKAGE_ROOT="$shadow_root/package" SI_BACKUP_RUN_ID=pre-shadow-$source_commit "$script_root/backup-shadow.sh" >/dev/null
@@ -65,7 +67,7 @@ SI_ROLLBACK_BACKUP_ROOT=
 EOF
 chmod 600 "$shadow_root/.env.shadow"
 
-SI_RELEASE_PROJECT_ROOT="$release_project_root" "$script_root/apply-shadow-migrations.sh"
+SI_RELEASE_PROJECT_ROOT="$release_project_root" "$release_project_root/deploy/qnap/strategic-intelligence/scripts/apply-shadow-migrations.sh"
 package_root=$shadow_root/package.next
 cd "$package_root"
 "$docker_path" compose --env-file "$shadow_root/.env.shadow" -f docker-compose.shadow.yml config >/dev/null
@@ -81,4 +83,4 @@ container_id=$($docker_path compose --env-file "$shadow_root/.env.shadow" -f "$p
 [ "$($docker_path inspect --format '{{.RestartCount}}' "$container_id")" = 0 ] || { echo 'orchestrator restarted unexpectedly' >&2; exit 1; }
 published_ports=$($docker_path inspect --format '{{json .NetworkSettings.Ports}}' "$container_id")
 [ "$published_ports" = null ] || [ "$published_ports" = '{}' ] || { echo 'orchestrator unexpectedly publishes ports' >&2; exit 1; }
-printf 'strategic_intelligence_shadow=deployed\nsource_commit=%s\ncollector_image=%s\nrestart_count=0\nnew_host_ports=0\n' "$source_commit" "$image_id"
+printf 'strategic_intelligence_shadow=deployed\nsource_commit=%s\ncollector_image=%s\ngoal7_evidence_hash=%s\nrestart_count=0\nnew_host_ports=0\n' "$source_commit" "$image_id" "$goal7_evidence_hash"

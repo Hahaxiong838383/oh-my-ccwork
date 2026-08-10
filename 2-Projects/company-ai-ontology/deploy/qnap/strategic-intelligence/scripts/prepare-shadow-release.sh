@@ -29,8 +29,8 @@ source_sha=$(shasum -a 256 "$output_root/source.tar.gz" | awk '{print $1}')
 image_sha=$(shasum -a 256 "$output_root/collector-image.tar.gz" | awk '{print $1}')
 cat > "$output_root/release-manifest.json" <<EOF
 {
-  "manifestVersion": "1.0.0",
-  "releaseType": "P1-SI-F-shadow-candidate",
+  "manifestVersion": "1.1.0",
+  "releaseType": "P1-SI-F-shadow-candidate-gated",
   "createdAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "sourceCommit": "$source_commit",
   "collectorImageId": "$image_id",
@@ -41,7 +41,9 @@ cat > "$output_root/release-manifest.json" <<EOF
   "sourceRegistryCandidateHash": "0ce4022adcfc177ced670a8d7fd2e4b4e119c2fc1bc5c19cabefb3223c010eae",
   "publish": false,
   "productionDeploymentAuthorized": false,
-  "requiredGate": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH"
+  "requiredGate": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH",
+  "p003ReviewGateRequired": true,
+  "goal7AcceptanceGateRequired": true
 }
 EOF
 chmod 600 "$output_root/source.tar.gz" "$output_root/collector-image.tar.gz" "$output_root/release-manifest.json"

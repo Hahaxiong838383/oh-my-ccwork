@@ -120,11 +120,17 @@ test('deployment scripts only target strategic intelligence services and keep ex
   const deploy = await fs.readFile(path.join(ROOT, 'scripts/deploy-shadow.sh'), 'utf8')
   assert.match(deploy, /SHADOW_DEPLOY_APPROVED/)
   assert.match(deploy, /GOAL7_STATUS/)
+  assert.match(deploy, /SI_GOAL7_ACCEPTANCE_FILE/)
+  assert.match(deploy, /validate-goal7-acceptance\.mjs/)
   assert.match(deploy, /validate-release-manifest\.mjs/)
   assert.match(deploy, /SI_APPROVED_P003_REVIEW_FILE/)
   assert.match(deploy, /validate-approved-p003-review\.mjs/)
+  assert.match(deploy, /release_project_root\/deploy\/qnap\/strategic-intelligence\/scripts\/apply-shadow-migrations\.sh/)
   assert.match(deploy, /up -d --no-deps intelligence-orchestrator/)
   assert.doesNotMatch(deploy, /up -d[^\n]*(?:agent-core|h-lite|connector|gateway|postgres|redis|qdrant)/)
+  const migration = await fs.readFile(path.join(ROOT, 'scripts/apply-shadow-migrations.sh'), 'utf8')
+  assert.match(migration, /SI_GOAL7_ACCEPTANCE_FILE/)
+  assert.match(migration, /validate-goal7-acceptance\.mjs/)
 })
 
 test('release manifest validator binds immutable archives and keeps deployment disabled', async () => {
@@ -137,8 +143,8 @@ test('release manifest validator binds immutable archives and keeps deployment d
   await fs.writeFile(sourceArchive, sourceBytes)
   await fs.writeFile(imageArchive, imageBytes)
   const manifest = {
-    manifestVersion: '1.0.0',
-    releaseType: 'P1-SI-F-shadow-candidate',
+    manifestVersion: '1.1.0',
+    releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-10T09:00:00Z',
     sourceCommit: 'a'.repeat(40),
     collectorImageId: `sha256:${'b'.repeat(64)}`,
@@ -150,6 +156,8 @@ test('release manifest validator binds immutable archives and keeps deployment d
     publish: false,
     productionDeploymentAuthorized: false,
     requiredGate: 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH',
+    p003ReviewGateRequired: true,
+    goal7AcceptanceGateRequired: true,
   }
   await fs.writeFile(manifestFile, JSON.stringify(manifest))
   const { spawnSync } = await import('node:child_process')
@@ -168,6 +176,17 @@ test('release manifest validator binds immutable archives and keeps deployment d
   const tampered = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, imageArchive], { encoding: 'utf8' })
   assert.notEqual(tampered.status, 0)
   assert.match(tampered.stderr, /source archive hash mismatch/)
+
+  await fs.writeFile(sourceArchive, sourceBytes)
+  await fs.writeFile(manifestFile, JSON.stringify({
+    ...manifest,
+    manifestVersion: '1.0.0',
+    releaseType: 'P1-SI-F-shadow-candidate',
+  }))
+  const legacy = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, imageArchive], { encoding: 'utf8' })
+  assert.notEqual(legacy.status, 0)
+  assert.match(legacy.stderr, /manifestVersion mismatch/)
+  assert.match(legacy.stderr, /releaseType mismatch/)
 })
 
 test('approved registry validator accepts only enabled sources from a shadow-reviewed registry', async () => {
@@ -235,6 +254,74 @@ test('P003 deployment gate requires all real-review decisions and keeps every re
   const activated = spawnSync(process.execPath, [validator, reviewFile], { encoding: 'utf8' })
   assert.notEqual(activated.status, 0)
   assert.match(activated.stderr, /activationStatus must remain inactive/)
+})
+
+test('Goal 7 deployment gate requires engineering evidence and explicit owner acceptance', async () => {
+  const outputRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'company-si-goal7-gate-'))
+  const evidenceFile = path.join(outputRoot, 'goal7-acceptance.json')
+  const validator = path.join(ROOT, 'scripts/validate-goal7-acceptance.mjs')
+  const { spawnSync } = await import('node:child_process')
+  const acceptedEvidence = {
+    evidenceVersion: '1.0.0',
+    goalKey: 'P1-PROD-READINESS',
+    status: 'complete',
+    engineeringVerified: true,
+    ownerAccepted: true,
+    acceptedAt: '2026-08-10T09:00:00Z',
+    sourceCommit: 'a'.repeat(40),
+    ownerAcceptanceRef: 'feishu:doc/goal7-owner-acceptance',
+    evidenceRefs: ['git:commit/goal7-accepted', 'qnap:acceptance/goal7'],
+    authorityEvidence: {
+      principalModelVerified: true,
+      senderPrincipalIsolationVerified: true,
+      purposeNarrowingVerified: true,
+      revocationFailClosedVerified: true,
+      readBeforeBodyAclVerified: true,
+    },
+    runtimeEvidence: {
+      circuitBreakerVerified: true,
+      retryBudgetVerified: true,
+      costBudgetVerified: true,
+      realModelReadbackVerified: true,
+    },
+    routeState: {
+      routeAOperational: true,
+      routeBEnabled: false,
+    },
+    closedCapabilities: {
+      productResearchBulkImport: false,
+      realEmployeeCanary: false,
+      employeePrivateBotMigration: false,
+      erpWriteback: false,
+      socialWriteback: false,
+    },
+  }
+
+  await fs.writeFile(evidenceFile, JSON.stringify(acceptedEvidence))
+  const accepted = spawnSync(process.execPath, [validator, evidenceFile], { encoding: 'utf8' })
+  assert.equal(accepted.status, 0, accepted.stderr)
+  const result = JSON.parse(accepted.stdout)
+  assert.equal(result.ownerAccepted, true)
+  assert.equal(result.routeBEnabled, false)
+  assert.match(result.evidenceHash, /^[a-f0-9]{64}$/)
+
+  await fs.writeFile(evidenceFile, JSON.stringify({ ...acceptedEvidence, ownerAccepted: false }))
+  const ownerMissing = spawnSync(process.execPath, [validator, evidenceFile], { encoding: 'utf8' })
+  assert.notEqual(ownerMissing.status, 0)
+  assert.match(ownerMissing.stderr, /ownerAccepted must be true/)
+
+  await fs.writeFile(evidenceFile, JSON.stringify({
+    ...acceptedEvidence,
+    routeState: { ...acceptedEvidence.routeState, routeBEnabled: true },
+  }))
+  const unsafeRoute = spawnSync(process.execPath, [validator, evidenceFile], { encoding: 'utf8' })
+  assert.notEqual(unsafeRoute.status, 0)
+  assert.match(unsafeRoute.stderr, /routeBEnabled must remain false/)
+
+  const template = path.join(ROOT, 'config/goal7-acceptance.template.json')
+  const pendingTemplate = spawnSync(process.execPath, [validator, template], { encoding: 'utf8' })
+  assert.notEqual(pendingTemplate.status, 0)
+  assert.match(pendingTemplate.stderr, /Goal 7 status must be complete/)
 })
 
 test('candidate migrations remain outside production migrations and isolated validation restores baseline', async () => {

@@ -70,6 +70,31 @@ P1-SI-B 来源许可/合规和 P1-SI-G P003 联合审核的实名候选已完成
 - Shadow package validate：通过；
 - 新增负测覆盖：pending 审核拒绝、提前激活拒绝、部署脚本必须接入 P003 审核验证器。
 
+## 5.1 Goal 7 证据门禁补强
+
+继续完成性审计后发现，原部署入口只检查 `GOAL7_STATUS=complete` 环境变量。该值可由操作者直接设置，不能证明 Goal 7 已完成工程验证，更不能证明川哥已人工验收。
+
+现新增：
+
+- `schemas/goal7-acceptance-evidence.schema.json`；
+- `config/goal7-acceptance.template.json`，默认状态不可通过；
+- `scripts/validate-goal7-acceptance.mjs`；
+- 部署和独立数据库迁移入口均强制要求 `SI_GOAL7_ACCEPTANCE_FILE`；
+- 部署只调用不可变发布包内的迁移脚本，不再调用外部旧脚本。
+
+Goal 7 验收文件必须证明：
+
+- `engineeringVerified=true`；
+- `ownerAccepted=true`；
+- Principal、实际发送者隔离、用途收窄、撤权 fail-closed 和正文读取前 ACL 已验证；
+- Runtime 熔断、重试预算、成本预算和真实模型读回已验证；
+- Route B 仍关闭；
+- 产品研究部整库导入、真实员工 Canary、私人 Bot 迁移及 ERP/社媒写回仍关闭。
+
+因此，单独设置 `GOAL7_STATUS=complete` 已无法进入数据库迁移或 Shadow 部署。
+
+旧 Artifact `p1-si-runtime-2974c19eaab1282a0f2dd168ed7056e5a79e6f68` 不包含上述两项新门禁，现仅作为历史 Runtime 证据保留，不再具有部署资格。Release Manifest 已升级为 `1.1.0 / P1-SI-F-shadow-candidate-gated`；旧 `1.0.0` Manifest 会失败关闭。最终包必须在实名审核和 Goal 7 完成后，从当时的已推送目标 Commit 重新生成。
+
 ## 6. 当前门禁
 
 P1-SI Goal 继续保持 active：

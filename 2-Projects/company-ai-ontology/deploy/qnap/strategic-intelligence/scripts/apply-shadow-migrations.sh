@@ -7,6 +7,9 @@ exec </dev/null
 [ "${GOAL7_STATUS:-}" = complete ] || { echo 'Goal 7 P1-PROD-READINESS is not complete' >&2; exit 1; }
 script_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$script_root/preflight-company-qnap.sh"
+goal7_acceptance=${SI_GOAL7_ACCEPTANCE_FILE:?SI_GOAL7_ACCEPTANCE_FILE is required}
+[ -f "$goal7_acceptance" ] || { echo 'Goal 7 acceptance evidence missing' >&2; exit 1; }
+node "$script_root/validate-goal7-acceptance.mjs" "$goal7_acceptance" >/dev/null
 release_project_root=${SI_RELEASE_PROJECT_ROOT:?SI_RELEASE_PROJECT_ROOT is required}
 case "$release_project_root" in "$shadow_root"/release/*/company-ai-ontology) ;; *) echo 'refusing unexpected release project root' >&2; exit 1 ;; esac
 for migration in 010-pestim-strategic-intelligence.sql 011-pestim-reporting.sql; do

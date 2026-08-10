@@ -1,0 +1,35 @@
+{
+  "evidenceVersion": "1.0.0",
+  "goalKey": "P1-PROD-READINESS",
+  "status": "pending",
+  "engineeringVerified": false,
+  "ownerAccepted": false,
+  "acceptedAt": null,
+  "sourceCommit": "REPLACE_WITH_GOAL7_ACCEPTED_COMMIT",
+  "ownerAcceptanceRef": "REPLACE_WITH_OWNER_ACCEPTANCE_REFERENCE",
+  "evidenceRefs": [],
+  "authorityEvidence": {
+    "principalModelVerified": false,
+    "senderPrincipalIsolationVerified": false,
+    "purposeNarrowingVerified": false,
+    "revocationFailClosedVerified": false,
+    "readBeforeBodyAclVerified": false
+  },
+  "runtimeEvidence": {
+    "circuitBreakerVerified": false,
+    "retryBudgetVerified": false,
+    "costBudgetVerified": false,
+    "realModelReadbackVerified": false
+  },
+  "routeState": {
+    "routeAOperational": false,
+    "routeBEnabled": false
+  },
+  "closedCapabilities": {
+    "productResearchBulkImport": false,
+    "realEmployeeCanary": false,
+    "employeePrivateBotMigration": false,
+    "erpWriteback": false,
+    "socialWriteback": false
+  }
+}

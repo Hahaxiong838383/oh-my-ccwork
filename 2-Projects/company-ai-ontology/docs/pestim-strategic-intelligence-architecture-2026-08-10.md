@@ -324,6 +324,6 @@ status / error_code
 3. 🟡 `P1-SI-C`：公司独立 Collector Contract、JSON Schema、oneshot Worker、Source Registry 前置准入、去重、last-good 和固定镜像配方已完成；手动 CI 已真实构建 Linux/amd64 镜像并生成不可变镜像归档，但未启动 QNAP 服务。
 4. 🟡 `P1-SI-D`：Postgres 真源、Raw/Observation/Signal、Evidence/Impact/Report 物理模型、双时间、Replay、热冷保留和 ACL 候选已完成；CI 隔离 PostgreSQL 已通过 010/011、19/19 强制 RLS 与 baseline restore，仍未进入生产 migrations。
 5. 🟡 `P1-SI-E`：日/周/月/季/半年/年、Alert、公司和 P003 报告机器契约及三类只读投影已完成；未运行真实报告。
-6. 🟡 `P1-SI-F`：资源受限 Shadow Compose、轻量 Orchestrator、oneshot Worker、授权门禁、备份、Freeze、回滚和七日证据包已通过 `10/10`；手动 CI Run `31421625978` 已对 Source Commit `2974c19eaab1282a0f2dd168ed7056e5a79e6f68` 构建 Linux/amd64 Collector 镜像、验证 010/011 PostgreSQL Runtime，并生成可直接自校验、保留 90 天的不可变源码包、镜像包和 Release Manifest。公司 QNAP 五元组在线复核、部署和七日 Shadow 仍未执行。
+6. 🟡 `P1-SI-F`：资源受限 Shadow Compose、轻量 Orchestrator、oneshot Worker、授权门禁、备份、Freeze、回滚和七日证据包已通过 `12/12`。手动 CI Run `31421625978` / Commit `2974c19ea` 继续证明 Linux/amd64 Collector、010/011 PostgreSQL、19/19 强制 RLS、baseline restore 和 Artifact 便携校验，但该包生成于 P003 最终审核和 Goal 7 文件化 owner acceptance 门禁加入之前，现为 `deploymentEligible=false` 的历史证据。Release Manifest 已升级为 `1.1.0 / P1-SI-F-shadow-candidate-gated`，最终包必须从实名审核与 Goal 7 完成后的已推送 Commit 重建。公司 QNAP 五元组在线复核、部署和七日 Shadow 仍未执行。
 7. 🟡 `P1-SI-G`：已从真实 4644 条矩阵中筛选 P003 36 条候选，六类各 6 条，候选包 Hash `ba6a77fd52d1558c946bdaf5bad290f9898d3ce0d4c8af399a7ebba98df866ff`；全部保持 inactive，等待实名 DRI 逐条重写和补证，不能直接激活。
 8. `P1-SI-H`：Goal 7 完成并获得当次授权后，将公司版雷达部署到公司 QNAP 并运行 7 天 `PUBLISH=false` Shadow。
