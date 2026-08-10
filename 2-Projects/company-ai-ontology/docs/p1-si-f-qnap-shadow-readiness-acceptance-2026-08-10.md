@@ -11,6 +11,7 @@
 - `deployment_gate_verified=true`；
 - `image_build_verified=true`；
 - `sql_runtime_verified=true`；
+- `immutable_release_candidate_verified=true`；
 - `company_qnap_deployed=false`；
 - `publish=false`。
 
@@ -18,16 +19,19 @@
 
 Runtime 证据：
 
-- Source Commit：`c9909a8bad72b9db7761e7d2437c8788f604da12`；
-- Workflow Run：`31416612677`；
-- Collector Image ID：`sha256:f157370e5e57521eb24afdfc0a9b11ab64fa51cbce9073ce392c25fac38cc389`；
+- Source Commit：`12e68910fd8bc19cb78a139ed5651a18c23be903`；
+- Workflow Run：`31421018728`；
+- Artifact：`p1-si-runtime-12e68910fd8bc19cb78a139ed5651a18c23be903`，Artifact ID `9075350766`；
+- Collector Image ID：`sha256:fbe343ed995e3e658100d3c160f38d5e8c89b28b70902ff3ce9439a969e5fb1d`；
 - Platform：`linux/amd64`；
-- Image Archive SHA-256：`78337583cd35f40802ec9316da5942dc7d39c7d646019ac327e19ecd8b73726d`；
+- Image Archive SHA-256：`50610a4c75f3c02cd0c9f28266962fb6281a18f03eedf1088b73a9c280ed5881`；
+- Source Archive SHA-256：`b762c872123b6e621ee2ee70960838adb1a065ba9bb9424048fbaaa8f3b781ab`；
+- Release Manifest SHA-256：`b26b860aa5129161f0191cdbcfbbdb589ab3840232fad52423f98984510c55d9`；
 - PostgreSQL Image：`pgvector/pgvector:pg17-bookworm@sha256:7ae6051efd0e60444282c27c7e141af07f322ce033300e727a49c3dd11075e38`；
 - Candidate tables：`19`；
 - Forced RLS tables：`19`；
 - Baseline restore：`verified`；
-- Artifact manifest SHA-256：`511643bb94c7e8b757997b7b7ca262c942ba86b837c011e2b098b7a2b711f1af`。
+- Artifact 解压后直接执行 `sha256sum -c SHA256SUMS`：全部通过。
 
 ## 2. 部署形态
 
@@ -132,7 +136,7 @@ Collector 测试由 `6/6` 增至 `7/7`，覆盖 metadata-only 不留正文、str
 
 ## 8. 本地证据
 
-- Shadow 包测试：`9/9`；
+- Shadow 包测试：`10/10`；
 - Shadow 静态验证：通过；
 - Collector 测试：`7/7`；
 - Ontology Contract 测试：`52/52`；
@@ -143,24 +147,26 @@ Collector 测试由 `6/6` 增至 `7/7`，覆盖 metadata-only 不留正文、str
 
 手动 Workflow：`.github/workflows/p1-si-runtime-verify.yml`。
 
-运行 `31416612677` 对已推送 Source Commit `c9909a8bad72b9db7761e7d2437c8788f604da12` 执行：
+运行 `31421018728` 对已推送 Source Commit `12e68910fd8bc19cb78a139ed5651a18c23be903` 执行：
 
-1. Ontology `52/52`、Collector `7/7`、Shadow `9/9` 和全部候选编译；
+1. Ontology `52/52`、Collector `7/7`、Shadow `10/10` 和全部候选编译；
 2. 构建 Collector Linux/amd64 镜像并取得不可变 Image ID；
 3. 输出可复核镜像归档及 SHA-256；
 4. 在固定 Digest 的 PostgreSQL/pgvector 镜像中执行生产 baseline migrations；
 5. 应用候选 010/011；
 6. 验证 19 张候选表全部启用并强制 RLS；
 7. 从 candidate 前的 baseline dump 恢复新数据库，确认不存在 `strategic_intelligence` Schema 且 Foundation 仍完整；
-8. 使用临时 Docker Volume，成功后删除容器和卷，不留下 root-owned 测试目录。
+8. 生成绑定 Source Commit、源码包、镜像包、Ontology Hash、Registry Hash 和授权门禁的 Release Manifest；
+9. 在 CI 内和 Artifact 下载解压后分别直接执行 `sha256sum -c SHA256SUMS`，全部通过；
+10. 使用临时 Docker Volume，成功后删除容器和卷，不留下 root-owned 测试目录。
 
-前两次 Workflow 分别暴露并修复了相对路径被 Docker 当作卷名、PostgreSQL 容器 UID 导致宿主测试目录无法清理两个真实问题。最终运行完整通过，不能用前两次失败中的局部成功替代最终证据。
+前序 Workflow 分别暴露并修复了相对路径被 Docker 当作卷名、PostgreSQL 容器 UID 导致宿主测试目录无法清理，以及 Artifact 解压后 `SHA256SUMS` 路径前缀不可直接校验三个真实问题。最终运行完整通过，不能用前序运行中的局部成功替代最终证据。
 
 ## 10. 当前未完成
 
 - 未取得公司来源合规审批；
 - Goal 7 尚未在本 Goal 中证明完成；
-- 尚未从目标部署 Commit 运行 `prepare-shadow-release.sh` 生成公司 QNAP 最终源码包、镜像包和 Release Manifest；
+- 不可变公司 QNAP 发布候选 Artifact 已形成，但尚未在公司 QNAP 执行五元组复核、备份、Compose preflight 或部署物化；
 - 未连接公司 QNAP；
 - 未部署 Orchestrator 或 Collector；
 - 未开始七日 Shadow；

@@ -321,9 +321,9 @@ status / error_code
 
 1. ✅ `P1-SI-A`：已完成 PESTIM Ontology Definition 和兼容性方案；候选 `3.4.0` 为纯增量兼容，生产 active Schema 保持 `3.3.0`。
 2. 🟡 `P1-SI-B`：Source Registry 工程候选 `3.5.0`、首批 8 个来源和 fail-closed 判定已完成；来源启用仍等待公司合规 DRI 审批。
-3. 🟡 `P1-SI-C`：公司独立 Collector Contract、JSON Schema、oneshot Worker、Source Registry 前置准入、去重、last-good 和固定镜像配方已完成；当前环境未实际构建镜像，也未启动 QNAP 服务。
+3. 🟡 `P1-SI-C`：公司独立 Collector Contract、JSON Schema、oneshot Worker、Source Registry 前置准入、去重、last-good 和固定镜像配方已完成；手动 CI 已真实构建 Linux/amd64 镜像并生成不可变镜像归档，但未启动 QNAP 服务。
 4. 🟡 `P1-SI-D`：Postgres 真源、Raw/Observation/Signal、Evidence/Impact/Report 物理模型、双时间、Replay、热冷保留和 ACL 候选已完成；CI 隔离 PostgreSQL 已通过 010/011、19/19 强制 RLS 与 baseline restore，仍未进入生产 migrations。
 5. 🟡 `P1-SI-E`：日/周/月/季/半年/年、Alert、公司和 P003 报告机器契约及三类只读投影已完成；未运行真实报告。
-6. 🟡 `P1-SI-F`：资源受限 Shadow Compose、轻量 Orchestrator、oneshot Worker、授权门禁、备份、Freeze、回滚和七日证据包已通过 `8/8`；手动 CI Run `31416612677` 已构建 Linux/amd64 Collector 镜像并验证 010/011 PostgreSQL Runtime。公司 QNAP 最终发布包、部署和七日 Shadow 仍未执行。
+6. 🟡 `P1-SI-F`：资源受限 Shadow Compose、轻量 Orchestrator、oneshot Worker、授权门禁、备份、Freeze、回滚和七日证据包已通过 `10/10`；手动 CI Run `31421018728` 已对 Source Commit `12e68910fd8bc19cb78a139ed5651a18c23be903` 构建 Linux/amd64 Collector 镜像、验证 010/011 PostgreSQL Runtime，并生成可直接自校验的不可变源码包、镜像包和 Release Manifest。公司 QNAP 五元组在线复核、部署和七日 Shadow 仍未执行。
 7. 🟡 `P1-SI-G`：已从真实 4644 条矩阵中筛选 P003 36 条候选，六类各 6 条，候选包 Hash `ba6a77fd52d1558c946bdaf5bad290f9898d3ce0d4c8af399a7ebba98df866ff`；全部保持 inactive，等待实名 DRI 逐条重写和补证，不能直接激活。
 8. `P1-SI-H`：Goal 7 完成并获得当次授权后，将公司版雷达部署到公司 QNAP 并运行 7 天 `PUBLISH=false` Shadow。

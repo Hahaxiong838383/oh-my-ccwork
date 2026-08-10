@@ -13,7 +13,7 @@
 
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
-- 当前里程碑：`Goal 6-A / P1-DOMAIN` 已完成工程验收和川哥人工体验验收。公司 QNAP 为 Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`；Domain Connector `2026-08-10.1`、Agent Core `2026-08-10.2`，ERP 95 / Operations 38 / Device 57 / Market 369，数据指纹 `ae0a73d126cb9d2dc1417e0eae7c0e94`。ActionIntent 3、Delivery Outbox 12 均为既有已验证/已回滚/已确认记录，无 pending/leased 写回。H 控制面 `v1.58.2`、50 个运行文件 `in_sync`、真实 Chrome `99/99`。Company Capability Governance v1 继续保持 `contract_only`。PESTIM B～G 工程候选、Linux/amd64 镜像、SQL Runtime 和飞书 CSV 人工审核闭环已完成工程验证；真实来源审批、实名 P003 DRI 审核、QNAP 最终发布包、部署和七日 Shadow 均未完成。
+- 当前里程碑：`Goal 6-A / P1-DOMAIN` 已完成工程验收和川哥人工体验验收。公司 QNAP 为 Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`；Domain Connector `2026-08-10.1`、Agent Core `2026-08-10.2`，ERP 95 / Operations 38 / Device 57 / Market 369，数据指纹 `ae0a73d126cb9d2dc1417e0eae7c0e94`。ActionIntent 3、Delivery Outbox 12 均为既有已验证/已回滚/已确认记录，无 pending/leased 写回。H 控制面 `v1.58.2`、50 个运行文件 `in_sync`、真实 Chrome `99/99`。Company Capability Governance v1 继续保持 `contract_only`。PESTIM B～G 工程候选、Linux/amd64 镜像、SQL Runtime、不可变发布候选和飞书 CSV 人工审核闭环已完成工程验证；真实来源审批、实名 P003 DRI 审核、QNAP 五元组复核、部署和七日 Shadow 均未完成。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
 ## 部署边界

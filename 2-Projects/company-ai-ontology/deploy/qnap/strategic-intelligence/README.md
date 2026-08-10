@@ -62,15 +62,25 @@ scripts/prepare-shadow-release.sh
 部署脚本只应用 010/011 战略情报候选迁移并启动 `intelligence-orchestrator`，不会执行任何既有核心服务的 `up`、`restart` 或 `stop`。
 Dispatcher 使用 QNAP 既有 crontab 每分钟检查队列，安装过程不会重启 cron daemon。
 
-## 当前明确待验
+## 当前 Runtime 与发布候选证据
 
-当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此以下内容尚未执行：
+当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此没有在开发机伪造 Runtime 结果。手动 GitHub Actions Run `31421018728` 已对已推送 Source Commit `12e68910fd8bc19cb78a139ed5651a18c23be903` 完成：
 
-- Collector 镜像真实构建；
-- 010/011 候选 SQL 的真实 PostgreSQL Runtime 验证；
+- Collector Linux/amd64 镜像真实构建，Image ID `sha256:fbe343ed995e3e658100d3c160f38d5e8c89b28b70902ff3ce9439a969e5fb1d`；
+- 010/011 候选 SQL 的隔离 PostgreSQL Runtime 验证；
+- 19/19 候选表强制 RLS；
 - baseline dump/restore；
-- 公司 QNAP Compose config；
+- 不可变 `source.tar.gz`、`collector-image.tar.gz` 和 `release-manifest.json`；
+- Artifact 解压目录内直接执行 `sha256sum -c SHA256SUMS` 全部通过；
+- `immutableReleaseCandidateVerified=true`、`publish=false`、`productionDeploymentAuthorized=false`。
+
+Artifact：`p1-si-runtime-12e68910fd8bc19cb78a139ed5651a18c23be903`。当前仍未完成：
+
+- 公司来源许可和合规审批；
+- Goal 7 完成证据；
+- 公司 QNAP 五元组在线复核；
+- 公司 QNAP Compose config、备份和部署前快照；
 - 公司 QNAP Shadow 部署；
 - 七个真实自然日 Shadow。
 
-这些项目不得用静态测试冒充完成。
+以上未完成项不得用 CI、静态测试、模板或模拟数据冒充完成。
