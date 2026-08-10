@@ -146,13 +146,17 @@ jobs:
           }
           fs.writeFileSync('runtime-evidence/runtime-verification.json', `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 })
           NODE
-          sha256sum \
-            runtime-evidence/runtime-verification.json \
-            runtime-evidence/postgres-validation.txt \
-            runtime-evidence/release-manifest.json \
-            runtime-evidence/source.tar.gz \
-            runtime-evidence/collector-image.tar.gz \
-            > runtime-evidence/SHA256SUMS
+          (
+            cd runtime-evidence
+            sha256sum \
+              runtime-verification.json \
+              postgres-validation.txt \
+              release-manifest.json \
+              source.tar.gz \
+              collector-image.tar.gz \
+              > SHA256SUMS
+            sha256sum -c SHA256SUMS
+          )
 
       - name: Upload runtime evidence
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
