@@ -313,6 +313,7 @@ node ops/sync-company-directory.mjs
 - 公司 QNAP 建议采用轻量常驻 Intelligence Orchestrator + 受资源约束的临时 Collector Worker；任何 Shadow/正式部署都需要重新核对公司 QNAP 五元组、做 7 天资源/来源/成本验收并取得当次部署授权。第一条产品线推荐 HUD，仅激活经 DRI 审查的 20–50 条高价值传导关系。
 - PESTIM Strategic Intelligence 详细方案见 `2-Projects/company-ai-ontology/docs/pestim-strategic-intelligence-architecture-2026-08-10.md`。
 - P1-SI-A 已完成 contract-only 候选 Schema `3.4.0`：新增 `domain.intelligence`、ExternalFactor、GoalFacet、ImpactHypothesis、ImpactAssessment、StrategicIntelligenceReport 和 ReportRun，离线编译兼容且没有新增 Action Type；生产 active Schema 仍为 `3.3.0`。任何激活必须经过 Goal 7、Source Registry、HUD DRI、QNAP Shadow、Ontology Change Proposal 和 Registry reconciliation 门禁。
+- P1-SI-A 已通过提交 `8444fb10f` 发布候选编译能力到公司 QNAP Registry 镜像，但没有激活 `3.4.0`。专项发布先离线编译，再仅重建 Registry，切换 2 秒、`restart_count=0`、Registry `in_sync`；回滚备份位于 `/share/CACHEDEV2_DATA/ai-ontology-backup/p1-si-a/20260810-p1-si-a-8444fb10f`。用户授权“部署 contract-only 能力”不能外推为“激活候选 Schema”或“授权真实回滚演练”。
 - P1-SI-A 验收见 `2-Projects/company-ai-ontology/docs/p1-si-a-pestim-ontology-definition-acceptance-2026-08-10.md`。
 - 详细实施计划见 `2-Projects/company-ai-ontology/docs/company-brain-work-logic-modeling-plan-2026-08-09.md`。
 

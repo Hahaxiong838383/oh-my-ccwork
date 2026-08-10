@@ -52,7 +52,7 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 1. ✅ 已读取 PESTIM 关系文档、27 个目标、108 个 GoalFacet、43 个外部维度和 4644 条完整传导矩阵。
 2. ✅ 已确认 4644 条应作为 `generated_draft / unverified` Impact Hypothesis，不得直接成为事实或触发正式 P2。
 3. ✅ 已完成个人站前沿资讯雷达评估：可复用 Horizon/Theory Radar 的采集、去重、评分、富化、影子运行和 last-good 门禁；不得原样迁移个人站、公开 Webhook、个人账号和报告目录。
-4. ✅ `P1-SI-A`：已定义 ExternalFactor、GoalFacet、ImpactHypothesis、ImpactAssessment、StrategicIntelligenceReport 和 ReportRun；候选 Schema `3.4.0` 编译兼容，生产 `3.3.0` 未变更，测试 `18/18` 通过。
+4. ✅ `P1-SI-A`：已定义 ExternalFactor、GoalFacet、ImpactHypothesis、ImpactAssessment、StrategicIntelligenceReport 和 ReportRun；候选 Schema `3.4.0` 编译兼容并已以 contract-only 能力发布到公司 QNAP，生产 active `3.3.0` 未变更，测试 `18/18`、Registry `in_sync`、切换 2 秒、restart count 0。
 5. ⏳ `P1-SI-B`：建立 Source Registry、许可/频率/保留期和第一批 PESTIM 白名单信源。
 6. ⏳ `P1-SI-C`：抽取公司版 Horizon Collector Contract、固定上游 Commit、镜像和 QNAP oneshot Worker 方案。
 7. ⏳ `P1-SI-D`：设计 Raw Snapshot、双时间、内容哈希、去重、数据质量和热冷保留策略。

@@ -136,3 +136,31 @@ P1-SI-A 只解决“语义骨架和兼容性”，不提前完成后续任务：
 - P1-SI-E：报告机器契约、飞书模板和 H 控制面投影；
 - P1-SI-F：公司 QNAP 七天 Shadow 验收包；
 - P1-SI-G：HUD 20–50 条真实传导关系 DRI 评审。
+
+## 9. 公司 QNAP contract-only 发布
+
+川哥明确授权后，P1-SI-A 以提交 `8444fb10f` 的干净 Git 快照发布到公司 QNAP：
+
+| 项目 | 结果 |
+|---|---|
+| 公司资产 | `prnas/prnas-pub`、`TS-X65`、`192.168.61.18` |
+| 发布目录 | `/share/CACHEDEV1_DATA/ai-ontology/releases/p1-si-a-8444fb10f/release` |
+| 发布对象 | Ontology Registry 镜像内的候选契约与离线编译能力 |
+| active Schema | 继续为 `3.3.0` |
+| candidate Schema | `3.4.0 / contract_only / deploymentAllowed=false` |
+| active Hash | `41689393289d9514d1ed9cd22455a164f1bc59286f0db16deb9235e703e6ae77` |
+| candidate Hash | `e254ee1f82d985828e50b6148b9ffd22f6f0e0ce920ebe75ff6bc6e55d9a5410` |
+| Registry 状态 | `in_sync` |
+| Registry 切换窗口 | 2 秒 |
+| Registry restart count | 0 |
+| 公网 H 控制面 | HTTP 正常 |
+
+本次只重建并重启 Ontology Registry；Agent Core、H-Lite、Domain Connector、Knowledge Connector、Action Gateway、Postgres、Qdrant 和 Redis 均未重启。Agent Core 仍为 `productionReady=true`、Schema `3.3.0`；Domain Connector、Knowledge Connector 和 Action Gateway 的 `/readyz` 均为 200。
+
+回滚抓手：
+
+- 备份：`/share/CACHEDEV2_DATA/ai-ontology-backup/p1-si-a/20260810-p1-si-a-8444fb10f`
+- 旧镜像：`company-ai-foundation-ontology-registry:p1-si-a-pre-20260810-p1-si-a-8444fb10f`
+- 回滚脚本：`deploy/qnap/scripts/rollback-ontology-contracts-release.sh`
+
+本轮没有执行真实回滚演练，因为用户授权范围是发布而非额外生产切换；已只读验证旧镜像存在、备份环境与 Manifest 完整、回滚脚本可执行。后续如需真实回滚恢复演练，必须再次取得当次生产切换授权。

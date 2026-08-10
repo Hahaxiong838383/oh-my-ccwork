@@ -270,3 +270,21 @@ Agent Core `2026-08-10.1` 首次三问验收触发 PostgreSQL `23514`；修复�
 ### 50. 生产重启授权必须精确到服务和当前窗口
 
 本轮 QNAP 发布授权不包含 H 控制面重启。发现 H 生产漂移后先只读取证，明确说明只会重启 `h-control`、正常中断预计 2–5 秒、异常自动回滚最坏窗口，再获得单独授权。实际 systemd 停止与启动发生在同一秒，完整发布与验证耗时 29 秒，`NRestarts=0`。任何跨组件 Goal 都不得继承另一组件的重启授权。
+
+## P1-SI-A contract-only 发布经验（2026-08-10）
+
+### 51. “部署候选契约”不等于“激活候选 Schema”
+
+P1-SI-A 的 `3.4.0` 仍是 `contract_only / deploymentAllowed=false`。用户授权部署后，正确动作是把候选编译能力放进生产 Registry 镜像，同时保持 active Definition、Registry Source Commit 和数据库 Schema 为 `3.3.0`；不能把“部署”误解成绕过 Goal 7、Source Registry、DRI 和 Shadow 门禁直接激活。
+
+### 52. 单组件发布必须在构建阶段零中断，在切换阶段最小中断
+
+Ontology Registry 新镜像先在旧容器继续服务时构建，并通过独立容器离线编译候选 `3.4.0`；验证通过后才 `--no-deps --force-recreate` 单独切换 Registry。本轮切换窗口为 2 秒，其他服务未重启。未来契约、Connector 或 Agent 单组件更新继续禁止使用全栈 `compose up`。
+
+### 53. contract-only 发布要同时证明“新能力存在”和“旧生产真值未变”
+
+只看到候选编译成功不够。本轮同时验证：候选 Hash 正确、兼容性为 compatible、Action Type 增量为 0、active Schema/Hash 仍为 `3.3.0` 原值、Registry `in_sync`、Agent Core productionReady、各 Connector/Gateway ready、restart count 为 0。两侧证据缺一，都不能宣称安全发布。
+
+### 54. 授权发布不自动包含真实回滚演练授权
+
+发布脚本必须先创建旧镜像标签、环境备份、Release Manifest 和自动失败恢复；但成功发布后再主动切回旧镜像属于新的生产切换。本轮只验证回滚抓手可用，没有擅自执行真实回滚。今后“有回滚能力”和“已做真实回滚演练”必须分开陈述。
