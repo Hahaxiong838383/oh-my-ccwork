@@ -3,7 +3,8 @@ set -eu
 exec </dev/null
 
 docker_path=${DOCKER_PATH:-docker}
-project_root=${PROJECT_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")/../../../.." && pwd)}
+project_root_input=${PROJECT_ROOT:-$(dirname -- "$0")/../../../..}
+project_root=$(CDPATH= cd -- "$project_root_input" && pwd)
 run_id=${VALIDATION_RUN_ID:-$$}
 container=ontology-si-validation-$run_id
 runtime_root=${TMPDIR:-/tmp}/ontology-si-validation-$run_id
