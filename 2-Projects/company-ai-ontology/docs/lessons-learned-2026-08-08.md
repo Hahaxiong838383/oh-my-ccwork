@@ -310,3 +310,7 @@ Shadow 生成器只能提前创建 `pending_real_run / simulated=false` 的证�
 ### 59. 战略情报部署必须只操作自己的服务边界
 
 P1-SI-H 发布脚本只能启动、冻结或回滚 Intelligence Orchestrator 和临时 Collector，不能借雷达部署重启 Agent Core、H-Lite、Connector、Gateway 或数据库。部署授权、数据库迁移授权、服务重启授权和真实回滚授权互不继承；即便最终共用 Postgres、Redis、Qdrant 和 Outbox，也不得绕过既有权限、安全网关和发布来源证明。
+
+### 60. Runtime 验证必须连清理路径一起通过
+
+第一次 CI 把相对项目目录交给 Docker，挂载路径被误判为卷名；第二次迁移、19/19 强制 RLS 和 baseline restore 虽然都通过，但容器 UID 创建的宿主目录无法由 Runner 清理，最终任务仍应判失败。修复方式是先把项目路径规范化为绝对路径，并用临时 Docker Volume 承载 PostgreSQL 数据，退出时先删容器再删卷。Runtime 验收不仅要证明主流程成功，还要证明临时容器、卷、目录和凭据全部可回收。
