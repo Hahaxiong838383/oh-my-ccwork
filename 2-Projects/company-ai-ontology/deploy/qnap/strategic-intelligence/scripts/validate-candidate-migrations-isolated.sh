@@ -7,18 +7,18 @@ project_root_input=${PROJECT_ROOT:-$(dirname -- "$0")/../../../..}
 project_root=$(CDPATH= cd -- "$project_root_input" && pwd)
 run_id=${VALIDATION_RUN_ID:-$$}
 container=ontology-si-validation-$run_id
-runtime_root=${TMPDIR:-/tmp}/ontology-si-validation-$run_id
+volume=ontology-si-validation-$run_id-data
 tenant_id=00000000-0000-4000-8000-000000000001
 image=${VALIDATION_POSTGRES_IMAGE:-docker.1ms.run/pgvector/pgvector:pg17-bookworm}
 
 cleanup() {
   "$docker_path" rm -f "$container" >/dev/null 2>&1 || true
-  rm -rf "$runtime_root"
+  "$docker_path" volume rm -f "$volume" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT INT TERM
 
 command -v "$docker_path" >/dev/null 2>&1 || [ -x "$docker_path" ] || { echo 'container runtime unavailable' >&2; exit 2; }
-mkdir -p "$runtime_root/postgres"
+"$docker_path" volume create "$volume" >/dev/null
 "$docker_path" run -d \
   --name "$container" \
   --network none \
@@ -33,7 +33,7 @@ mkdir -p "$runtime_root/postgres"
   -e ONTOLOGY_REGISTRY_PASSWORD=validation-registry-password \
   -e DOMAIN_CONNECTOR_PASSWORD=validation-domain-password \
   -e FUTURUS_TENANT_ID="$tenant_id" \
-  -v "$runtime_root/postgres:/var/lib/postgresql/data" \
+  -v "$volume:/var/lib/postgresql/data" \
   -v "$project_root/deploy/qnap/initdb:/docker-entrypoint-initdb.d:ro" \
   "$image" >/dev/null
 

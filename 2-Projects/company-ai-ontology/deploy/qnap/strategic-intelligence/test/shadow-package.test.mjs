@@ -103,6 +103,8 @@ test('candidate migrations remain outside production migrations and isolated val
   assert.match(validator, /project_root_input/)
   assert.match(validator, /cd -- "\$project_root_input"/)
   assert.match(validator, /VALIDATION_POSTGRES_IMAGE/)
+  assert.match(validator, /volume create/)
+  assert.match(validator, /volume rm -f/)
   assert.match(validator, /baseline\.dump/)
   assert.match(validator, /ontology_restore/)
 })
