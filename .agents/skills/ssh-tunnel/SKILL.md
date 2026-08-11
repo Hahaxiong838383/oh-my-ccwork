@@ -183,3 +183,62 @@ printf 'pwd\nquit\n' | sftp -q -b - company-vm
 - 公网不通时按顺序检查：`ssh company-vm-lan` → `sshd-public-tunnel` → `frpc` → `aliyun-hk frps` → 香港 `22043` 监听 → 阿里云安全组。
 - 不要因公网入口异常修改原 SSH 22；先保住 `company-vm-lan` 回滚链。
 - 进程清理禁止模糊 `pkill -f`；使用 `pgrep` 获取精确 PID 后处理。
+
+## Codex App 连接 Studio：本地端口隧道
+
+当 Codex App 的“添加 SSH 连接”表单只有主机、端口和身份文件字段时，不要假设它会完整读取 `~/.ssh/config` 的 `ProxyJump`。如果 `ssh studio-dev` 在终端成功、但 App 填 `studio-dev` 显示“SSH 连接失败”，优先使用本地端口隧道把跳板链路折叠成普通 SSH 入口。
+
+已验证可用配置：
+
+```text
+Codex App
+  -> 127.0.0.1:22277
+  -> Air LaunchAgent: com.mycc.studio-ssh-tunnel
+  -> mini-pub / cli4.hahaxiong.cc:22022
+  -> Studio 192.168.61.177:22
+```
+
+Codex App 表单填写：
+
+```text
+显示名称：Studio Dev
+主机名：fu-121@127.0.0.1
+SSH 端口：22277
+身份验证：身份文件
+身份文件路径：/Users/rayman.chen/.ssh/id_ed25519
+```
+
+Air 上的持久隧道文件：
+
+```text
+/Users/rayman.chen/Library/LaunchAgents/com.mycc.studio-ssh-tunnel.plist
+```
+
+核心转发命令等价于：
+
+```bash
+ssh -N \
+  -L 127.0.0.1:22277:192.168.61.177:22 \
+  -o ExitOnForwardFailure=yes \
+  -o ServerAliveInterval=30 \
+  -o ServerAliveCountMax=3 \
+  -o IdentitiesOnly=yes \
+  -i /Users/rayman.chen/.ssh/id_ed25519 \
+  mini-pub
+```
+
+验收必须跑真实 SSH，而不是只看端口监听：
+
+```bash
+launchctl print gui/$(id -u)/com.mycc.studio-ssh-tunnel
+lsof -nP -iTCP:22277 -sTCP:LISTEN
+ssh -p 22277 -i /Users/rayman.chen/.ssh/id_ed25519 -o IdentitiesOnly=yes fu-121@127.0.0.1 'hostname; whoami; pwd'
+```
+
+公网可用前提：Air 能访问 `cli4.hahaxiong.cc:22022`，Mini 在线且 `mini-pub` 正常，Studio 在线且 Mini 可达 `192.168.61.177:22`，Air 本地 LaunchAgent 隧道正在运行。不要把私钥内容复制进 App、Skill、Git 或记忆；只引用路径。
+
+相关说明文件：`/Users/rayman.chen/mycc/4-Assets/SOP/codex-studio-ssh-connection.md`。
+
+### Codex App-to-App 远控失败的边界
+
+如果官方 App-to-App 远控卡在“正在初始化安全连接”并报 `Opening handshake has timed out`，不要直接归因到 Studio 未启动或手机配对丢失。2026-08-11 已验证：Studio App server 在线、手机曾可见/可连，Air 侧 Electron `--proxy-server`、hosts 可信 DNS 接管、Xray 将 `chatgpt.com` / `ws.chatgpt.com` / `ab.chatgpt.com` 临时切到 `DMIT-Gemini-vps-chenchuan` 均未修复，且实验均需自动回退。该问题应与 SSH 本地隧道方案分开处理。
