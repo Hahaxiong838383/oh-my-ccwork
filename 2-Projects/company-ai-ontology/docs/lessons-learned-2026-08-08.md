@@ -338,3 +338,23 @@ Git 只保存脱敏契约、候选锚点和空白模板；包含真实姓名、�
 ### 66. 门禁看板和部署入口必须执行同一套验证
 
 仅靠文档或人工汇报“还缺哪些审批”容易出现状态漂移，也无法证明部署脚本真的会拒绝无效文件。正确做法是提供统一只读 readiness 检查器，同时验证部署授权、Goal 7、不可变发布包、来源审批、P003 审核和 Owner Acceptance，并让 `deploy-shadow.sh` 强制调用同一检查器。检查器只输出稳定状态与原因码，不暴露路径、实名信息或审批正文；缺失输入和内容校验失败都必须非零退出。这样人类看到的门禁状态与机器实际执行边界才是同一真源。
+
+### 67. 不可变 Artifact 通过不等于 QNAP Runtime 已更新
+
+源码 Commit、Runtime Workflow、Artifact Hash、QNAP 已安装 Runtime 和 Collector 实际运行必须分别记录。新 Artifact 已完成 Linux/amd64、010/011、RLS 和回滚门禁验证，只能证明“可更新”；只要 QNAP 仍绑定旧 Commit，就必须保持 `runtime_update_pending=true`。不得用 CI 证据覆盖目标主机的实际 package、config、env 和运行状态。
+
+### 68. Runtime 更新前必须先证明旧版本真的可恢复
+
+首次安装产生的备份目录或指针可能存在，但不包含旧 package/config/env。替换当前 Runtime 前必须先从当前真实目录生成非空归档，验证 tar 可读、必需目录齐全并复核 SHA-256；任何一步失败都要发生在移动当前目录之前。回滚脚本同样应先验证证据，再创建 retired 目录或改动现状。
+
+### 69. Collector 失败也是必须保存的运行证据
+
+如果失败路径只返回退出码而不生成 Evidence，就无法区分“网络失败”“解析失败”“门禁拒绝”和“运行过程未发生”。内部首次运行和正式 Shadow 都应在成功、失败两条路径生成受 Schema 约束的证据，记录来源尝试、资源、临时资源清理、Foundation 指纹和业务副作用，同时确保内部证据永远不计入生产七日 Shadow。
+
+### 70. Foundation 健康和战略情报资源泄漏使用不同统计口径
+
+Foundation 只统计长期运行服务；正常完成的 `foundation-init exited(0)` 不能误报为服务异常。战略情报项目则必须检查全量容器，因为退出后未删除的临时 Collector 仍是资源泄漏。一个全局容器计数不能同时证明这两件事，验收脚本必须显式区分作用域。
+
+### 71. 工程完成、人审完成、Runtime 更新和生产完成必须四态分离
+
+P1-SI-B～G 的契约和测试通过可以标记 `engineering_verified`；来源/P003 最终决定、四角色 UAT 和 Goal 7 尚未完成时仍是 `human_review_pending`；新 Artifact 未进入 QNAP 时是 `runtime_update_pending`；七个真实自然日 Shadow 和 Owner Acceptance 未完成时必须保持 `production_blocked`。任何单一绿色状态都不能覆盖另外三个状态。
