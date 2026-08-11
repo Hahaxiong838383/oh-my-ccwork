@@ -10,6 +10,7 @@
 - 每次运行强制验证 3 个选定来源全部成功、每来源最多 20 条；
 - 遍历全部 Raw Snapshot，要求 `payloadRetention=hash_only`、`bodyBase64=null` 且内容 Hash 合法；
 - 运行前后记录 Foundation 13 个容器的镜像、状态、健康、restart、端口指纹；
+- Foundation 指纹明确排除正常完成并退出的 Compose 一次性 `foundation-init`，只统计 13 个长期运行服务；战略情报临时容器仍按全量容器检查；
 - 运行后要求战略情报临时容器、项目网络和发布端口全部归零；
 - 数据库审计要求正式 P2、员工投递、ERP 写回、社媒写回和因果激活全部为 0；
 - Collector 非零退出、证据缺失、Foundation 漂移、临时资源泄漏或业务副作用都会生成结构化失败 Evidence；

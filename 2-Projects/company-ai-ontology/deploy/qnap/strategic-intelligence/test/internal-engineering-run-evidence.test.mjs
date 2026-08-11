@@ -309,9 +309,13 @@ set -eu
 case "$1" in
   ps)
     case "$*" in
-      *company-ai-foundation*)
+      *"ps -q --filter label=com.docker.compose.project=company-ai-foundation"*)
         index=1
         while [ "$index" -le 13 ]; do printf 'foundation-%s\\n' "$index"; index=$((index + 1)); done
+        ;;
+      *"ps -aq --filter label=com.docker.compose.project=company-ai-foundation"*)
+        index=1
+        while [ "$index" -le 14 ]; do printf 'foundation-%s\\n' "$index"; index=$((index + 1)); done
         ;;
     esac
     ;;

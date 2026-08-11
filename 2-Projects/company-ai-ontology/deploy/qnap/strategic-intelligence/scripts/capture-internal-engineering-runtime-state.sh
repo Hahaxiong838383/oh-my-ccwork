@@ -19,7 +19,7 @@ network_rows=$temporary_root/networks.tsv
 : > "$strategic_rows"
 : > "$network_rows"
 
-for container_id in $($docker_path ps -aq --filter label=com.docker.compose.project=company-ai-foundation); do
+for container_id in $($docker_path ps -q --filter label=com.docker.compose.project=company-ai-foundation); do
   "$docker_path" inspect --format '{{.Name}}\t{{.Config.Image}}\t{{.State.Status}}\t{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}\t{{.RestartCount}}\t{{json .NetworkSettings.Ports}}' "$container_id" >> "$foundation_rows"
 done
 for container_id in $($docker_path ps -aq --filter label=com.docker.compose.project=company-strategic-intelligence-shadow); do

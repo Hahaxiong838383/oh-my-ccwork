@@ -28,6 +28,7 @@
 - Collector 只连接专用 egress 网络和既有 Foundation data 网络。
 - 所有发布、正式 P2、员工投递、ERP/社媒写回和因果关系激活开关固定为 false。
 - Collector 镜像必须使用不可变 Image ID 或 Registry Digest。
+- Foundation 运行态指纹只统计当前运行中的 13 个长期服务；Compose 的一次性 `foundation-init` 正常退出不计为故障。战略情报项目仍使用全量容器检查，任何退出后残留的临时 Collector 都视为资源泄漏。
 - QNAP 宿主没有原生 Node；正式部署、数据库迁移、Dispatcher、Postgres 持久化、撤权审计和副作用审计统一通过 `NODE_BIN` / `node-runtime.sh` 使用固定 Image ID 或 Digest 的隔离 Node Runtime，禁止回退到宿主 `node` 假设。
 - 最终 Source Registry、Collector Config、P003、四角色 UAT 和 Goal 7 审批原件必须先以 `0600` 权限放入 `/share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence/approvals/<release-id>/`，再由无网络 Node Runtime 校验；部署入口拒绝战略情报受控根目录以外的审批路径。
 - 默认配置引用 P1-SI-B candidate Source Registry，所选来源保持 `paused`，因此在合规审批完成前会在网络请求前失败关闭。
