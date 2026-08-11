@@ -18,14 +18,14 @@
 
 ## 工程证据
 
-- Source Commit：`47d90ae1b93c0da50991bda10d4fa654d55aeb8c`；
+- Source Commit：`6cb49ad4859a740c20737f311b0a10acc129ae68`；
 - Contracts：`61/61`；
 - Collector：`9/9`；
 - Strategic Intelligence：`76/76`；
-- Runtime Workflow：`31478053382`；
-- Artifact：`p1-si-runtime-47d90ae1b93c0da50991bda10d4fa654d55aeb8c`；
-- Artifact ID：`9096085078`；
-- Collector Image ID：`sha256:2c8ab1693e4f50b2e961aca5ed9df001bef4944b330c943379acf78f4afb5d2c`；
+- Runtime Workflow：`31479040859`；
+- Artifact：`p1-si-runtime-6cb49ad4859a740c20737f311b0a10acc129ae68`；
+- Artifact ID：`9096465098`；
+- Collector Image ID：`sha256:145872639b42e8bd0cb07f8d9b77c42efa13fe95439a53d617a4a91b1d4edf73`；
 - 010/011、19/19 强制 RLS、Domain 二次幂等、ACL fail-closed、baseline restore 通过；
 - Artifact `SHA256SUMS` 下载后全量通过。
 
@@ -39,7 +39,7 @@
 
 ## 下一门禁
 
-1. 单独授权将 Artifact `9096085078` 更新到公司 QNAP 内部 Runtime；
+1. 单独授权将 Artifact `9096465098` 更新到公司 QNAP 内部 Runtime；
 2. 更新后重新核对公司 QNAP 五元组、Foundation 指纹、Compose config 和内部 Readiness；
 3. 再单独授权执行首次内部一次性采集；
 4. 根据机器 Evidence 决定是否进入 1～3 天管理员内部排错。
