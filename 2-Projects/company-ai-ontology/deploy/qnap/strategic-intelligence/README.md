@@ -39,6 +39,7 @@
 - Freeze 只停止战略情报 Orchestrator，不停止或重启 Agent Core、H-Lite、Connector、Gateway、Postgres、Redis 或 Qdrant。
 - 自动回滚只有在部署时预先设置 `SHADOW_AUTO_ROLLBACK_APPROVED=YES` 后才允许执行；默认只 Freeze，符合“部署、重启、真实回滚分别授权”的边界。
 - 回滚只恢复战略情报包、配置和镜像引用，保留 append-only 证据；数据库恢复必须使用独立备份和独立授权。
+- 内部 Runtime 更新只有在旧 package/config/env 已生成可读 `previous-runtime.tar.gz`、独立 SHA-256 校验通过且归档包含三类必需条目后才允许继续。内部回滚在移动当前 Runtime 前必须验证归档、校验和与目录完整性；首次安装留下的空备份指针不能执行回滚。
 - Dispatcher 会从 Collector 运行产物和 Docker Stats 自动提取来源成功数、重复数、P95 时效、Raw Snapshot 字节数、CPU、内存和网络流量；采集不到资源证据时该自然日不能通过验收。
 - Dispatcher 会真实执行 Source 撤销、敏感输出、业务副作用、Domain 编译和 Postgres 持久化审计；任一环节失败仍会写入失败 Evidence 并释放 running 队列。
 - 七日 Shadow 每日必须同时证明 `domainCompilationCompleted=true`、`domainPersistenceCompleted=true` 和 `persistenceState=postgres_committed`；只生成 JSON Domain Batch 不计入生产 Shadow。
@@ -206,9 +207,9 @@ Dispatcher 使用 QNAP 既有 crontab 每分钟检查队列，安装过程不会
 
 ## 当前 Runtime 与发布候选证据
 
-当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此没有在开发机伪造 Runtime 结果。手动 GitHub Actions Run `31479040859` 已对已推送 Source Commit `6cb49ad4859a740c20737f311b0a10acc129ae68` 完成：
+当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此没有在开发机伪造 Runtime 结果。手动 GitHub Actions Run `31480010967` 已对已推送 Source Commit `c0d9ce92fb94d09b2c46ae1e019c166da8b32468` 完成：
 
-- Collector Linux/amd64 镜像真实构建，Image ID `sha256:145872639b42e8bd0cb07f8d9b77c42efa13fe95439a53d617a4a91b1d4edf73`；
+- Collector Linux/amd64 镜像真实构建，Image ID `sha256:9f7d03ba5eca8e1ca1654e17272099cc0bfdebdd07bc303ed04faec7d8b1776a`；
 - 010/011 候选 SQL 的隔离 PostgreSQL Runtime 验证；
 - 19/19 候选表强制 RLS；
 - Domain Batch 两次幂等持久化与无 ACL 读取 fail-closed；
@@ -217,7 +218,7 @@ Dispatcher 使用 QNAP 既有 crontab 每分钟检查队列，安装过程不会
 - Artifact 解压目录内直接执行 `sha256sum -c SHA256SUMS` 全部通过；
 - `immutableReleaseCandidateVerified=true`、`publish=false`、`productionDeploymentAuthorized=false`。
 
-Artifact：`p1-si-runtime-6cb49ad4859a740c20737f311b0a10acc129ae68`，Artifact ID `9096465098`，保留至 `2026-11-09T09:44:13Z`。下载后 `SHA256SUMS` 全量通过，并直接确认源码包使用 `docker ps -q` 统计运行中的 Foundation 服务、使用 `docker ps -aq` 检查战略情报残留容器；当前仍未完成：
+Artifact：`p1-si-runtime-c0d9ce92fb94d09b2c46ae1e019c166da8b32468`，Artifact ID `9096846710`，保留至 `2026-11-09T09:57:08Z`。下载后 `SHA256SUMS` 全量通过，并直接确认源码包使用 `docker ps -q` 统计运行中的 Foundation 服务、使用 `docker ps -aq` 检查战略情报残留容器；部署脚本生成旧 Runtime 归档及 SHA-256，回滚脚本在 `retired=` 之前验证归档存在、校验和和三类必需条目；当前仍未完成：
 
 - 公司来源许可和合规审批；
 - Goal 7 完成证据；
@@ -227,6 +228,6 @@ Artifact：`p1-si-runtime-6cb49ad4859a740c20737f311b0a10acc129ae68`，Artifact I
 
 该 Artifact 已覆盖当前工程代码、统一 QNAP Node Runtime 和首次内部运行 Evidence 链，但生成时来源最终审核、P003 最终审核、成员权限 UAT 与 Goal 7 尚未完成，因此仍是 `productionDeploymentAuthorized=false / deploymentEligible=false` 的工程发布候选。公司 QNAP 内部 Runtime 仍绑定旧 Commit `a7aeae25e`，不得把 Artifact 已构建误写成 QNAP 已升级或首次采集已执行。正式生产部署前仍必须从全部人审门禁完成后的最终 Commit 再运行 Runtime Workflow，不能直接把本 Artifact 当作生产批准。
 
-历史 Run `31421625978` / Commit `2974c19ea`、Run `31473316988` / Commit `a7aeae25e`、Run `31475369650` / Commit `6e15417cf`、Run `31476183330` / Commit `80f3fc6dd` 和 Run `31478053382` / Commit `47d90ae1b` 仅保留为演进证据，均不得替代当前或未来的正式发布身份。
+历史 Run `31421625978` / Commit `2974c19ea`、Run `31473316988` / Commit `a7aeae25e`、Run `31475369650` / Commit `6e15417cf`、Run `31476183330` / Commit `80f3fc6dd`、Run `31478053382` / Commit `47d90ae1b` 和 Run `31479040859` / Commit `6cb49ad48` 仅保留为演进证据，均不得替代当前或未来的正式发布身份。
 
 以上未完成项不得用 CI、静态测试、模板或模拟数据冒充完成。

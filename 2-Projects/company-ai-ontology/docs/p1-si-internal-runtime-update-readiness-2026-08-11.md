@@ -22,14 +22,15 @@
 - 当前内部 Runtime：Commit `a7aeae25e414b570cab8ff1fdfbdc12d5d027dc5`；
 - 当前内部 `.env.internal` 权限：`0600`，尚未固化 `SI_NODE_RUNTIME_IMAGE`；
 - 当前内部包不包含首次运行 Evidence 编译器、验证器和 Schema。
+- 当前 `.previous-backup` 来自首次安装，目标目录存在但没有 `previous-runtime.tar.gz`；它不能作为回滚归档。更新脚本必须先为现有 `a7aeae25e` Runtime 生成新归档和 SHA-256，再允许替换。
 
 ## 3. 目标发布身份
 
-- Source Commit：`6cb49ad4859a740c20737f311b0a10acc129ae68`；
-- Runtime Workflow：`31479040859`；
-- Artifact ID：`9096465098`；
-- Artifact：`p1-si-runtime-6cb49ad4859a740c20737f311b0a10acc129ae68`；
-- Collector Image ID：`sha256:145872639b42e8bd0cb07f8d9b77c42efa13fe95439a53d617a4a91b1d4edf73`；
+- Source Commit：`c0d9ce92fb94d09b2c46ae1e019c166da8b32468`；
+- Runtime Workflow：`31480010967`；
+- Artifact ID：`9096846710`；
+- Artifact：`p1-si-runtime-c0d9ce92fb94d09b2c46ae1e019c166da8b32468`；
+- Collector Image ID：`sha256:9f7d03ba5eca8e1ca1654e17272099cc0bfdebdd07bc303ed04faec7d8b1776a`；
 - QNAP Node Runtime Image ID：`sha256:75228afe839b63f6bef21d2ea8f4b6aa9e4c56a20ad70cec5450ca84a72f9801`；
 - Node Runtime：`linux/amd64`，部署时使用 `--entrypoint node`、QNAP 非 root UID/GID、`network=none`、只读根文件系统、无端口和无 Docker Socket；
 - Artifact `SHA256SUMS`：下载后全量通过；
@@ -47,6 +48,8 @@
 5. 原子替换内部 package/config，并写入 `0600 .env.internal`；
 6. 执行 `docker compose config`；
 7. 重新读取并验证安装后的 Evidence Schema、编译器和验证器。
+
+旧 Runtime 备份必须同时满足：归档非空、`tar -tzf` 可读、包含 `package/`、`config/`、`.env.internal`，并通过同目录 SHA-256 校验。任一条件失败都必须在镜像加载和目录替换前停止。
 
 不允许：
 
@@ -72,7 +75,7 @@
 
 ## 6. 更新后验收
 
-1. `SI_SOURCE_COMMIT=6cb49ad4859a740c20737f311b0a10acc129ae68`；
+1. `SI_SOURCE_COMMIT=c0d9ce92fb94d09b2c46ae1e019c166da8b32468`；
 2. `.env.internal` 为 `0600` 且固化 QNAP Node Runtime Image ID；
 3. Evidence Schema、编译器、验证器和运行态采集脚本存在；
 4. Runtime Validator：3 来源、6 条 P003 样例、8 个来源继续 paused；
@@ -81,7 +84,8 @@
 7. 战略情报容器、网络、发布端口、Collector 运行、报告和 Evidence 仍为 0；
 8. active Schema、Hash 和 Registry 状态不变；
 9. 生成新的内部 Runtime 部署证据，但不生成采集 Evidence。
+10. 新 `.previous-backup` 指向的目录必须包含可验证的 `previous-runtime.tar.gz` 和 SHA-256 文件；回滚脚本在移动当前 Runtime 前能够重新验证它们。
 
 ## 7. 授权语句
 
-`授权将 Artifact 9096465098 更新到公司 QNAP 内部 Runtime，但不运行 Collector、不迁移数据库、不重启 Foundation。`
+`授权将 Artifact 9096846710 更新到公司 QNAP 内部 Runtime，但不运行 Collector、不迁移数据库、不重启 Foundation。`

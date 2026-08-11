@@ -333,6 +333,7 @@ node ops/sync-company-directory.mjs
 - 内部来源必须在 Plan 中提供确定 `endpointRef`。端点只能匹配 Registry 已登记的官方 origin/path；GitHub 模板必须展开为 `repositoryAllowlist` 内的具体仓库且 `per_page<=20`，禁止把 `{owner}/{repo}` 等模板直接交给 Worker。
 - QNAP 内部部署包不能只复制 `deploy/qnap/strategic-intelligence`。任何部署后仍导入 Ontology Contracts 或 Collector 代码的 Validator 都要求保留完整 `company-ai-ontology` 项目树，并用真实部署目录布局执行回归测试；部署入口还必须在临时 QNAP 目录中配合真实源码包、虚拟镜像包和假 Docker 跑完整脚本，证明只发生镜像加载/检查和 Compose config，容器启动、数据库迁移、Dispatcher 安装及既有服务重启均为 0。
 - QNAP bind mount 写权限不能假设镜像固定 UID `10001/10003` 与宿主目录所有者一致。Compose 必须使用在线验证过的非 root 部署账号 UID/GID；部署入口必须在镜像加载、备份、迁移和目录替换之前拒绝 `uid=0`，避免失败关闭后仍留下副作用。
+- 内部 Runtime 更新不能把“备份目录或指针存在”当作可回滚证据。替换前必须生成非空 `previous-runtime.tar.gz`，验证 tar 可读、包含 `package/`、`config/`、`.env.internal`，并生成/复核同目录 SHA-256；回滚脚本必须在创建 retired 目录或移动当前 Runtime 之前验证这些证据。首次安装留下的空备份指针必须拒绝回滚，不能把当前包移走后恢复为空。
 - 公司 QNAP 宿主机不保证提供 `node` 命令。需要在宿主侧运行 JavaScript 编译器的隔离验收脚本必须支持显式 `NODE_BIN`；可复用已批准 H-Lite 镜像的固定 Image ID 启动临时 Node 容器，但必须 `network=none`、无端口、无 Docker Socket、只读根文件系统、受限 CPU/内存，并只挂载验证源码与一次性输出目录。缺少 Node Runtime 时必须在创建 Docker Volume 或容器前失败关闭。
 - P1-SI 的正式 `deploy-shadow.sh`、迁移、Dispatcher、Domain 持久化、Source 撤权审计和业务副作用审计都属于 QNAP 宿主脚本，必须统一使用 `NODE_BIN` / `node-runtime.sh`，不得只修内部模式后仍在正式路径直调 `node`。固定 Node Image ID/Digest 必须写入 0600 的 `.env.shadow`，使 crontab Dispatcher 在首次 Node 调用前加载；最终审批原件必须先放入战略情报受控根目录的 `approvals/<release-id>/`，避免隔离 Runtime 扩大挂载范围。
 - QNAP 临时 Node Runtime 使用 `docker run -i` 时会消费调用进程的标准输入。不得在仍有后续命令的 SSH heredoc 中直接连续调用；应上传一次性远端验收脚本并以 `</dev/null` 执行，或给每次 Node 调用显式断开 stdin，否则后半段验收可能被吞掉并形成假绿。
