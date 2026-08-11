@@ -5,6 +5,8 @@ exec </dev/null
 [ "${INTERNAL_ENGINEERING_SHADOW_DEPLOY_APPROVED:-NO}" = YES ] || { echo 'explicit internal engineering deployment approval missing' >&2; exit 1; }
 script_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$script_root/preflight-company-qnap.sh"
+node_runtime_image=${SI_NODE_RUNTIME_IMAGE:?SI_NODE_RUNTIME_IMAGE is required}
+case "$node_runtime_image" in sha256:*|*@sha256:*) ;; *) echo 'QNAP Node runtime image must be immutable' >&2; exit 1 ;; esac
 node_bin=${NODE_BIN:-$script_root/node-runtime.sh}
 [ -x "$node_bin" ] || { echo 'internal engineering Node runtime unavailable' >&2; exit 2; }
 runtime_uid=$(id -u)
@@ -72,6 +74,7 @@ SI_SOURCE_REGISTRY_FILE=$internal_root/config/source-registry.json
 SI_INTERNAL_ENGINEERING_PLAN_FILE=$internal_root/config/internal-engineering-plan.json
 SI_COLLECTOR_IMAGE=$image_id
 SI_SOURCE_COMMIT=$source_commit
+SI_NODE_RUNTIME_IMAGE=$node_runtime_image
 SI_ORCHESTRATOR_UID=$runtime_uid
 SI_ORCHESTRATOR_GID=$runtime_gid
 SI_COLLECTOR_UID=$runtime_uid

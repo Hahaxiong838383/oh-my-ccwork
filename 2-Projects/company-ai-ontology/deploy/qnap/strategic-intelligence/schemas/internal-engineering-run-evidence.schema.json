@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/p1-si-internal-engineering-run-evidence-v1.json",
+  "title": "P1 Strategic Intelligence Internal Engineering Run Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidenceVersion",
+    "evidenceType",
+    "goalKey",
+    "operationMode",
+    "status",
+    "generatedAt",
+    "runId",
+    "startedAt",
+    "completedAt",
+    "publish",
+    "countsTowardProductionShadow",
+    "collector",
+    "sourceVerification",
+    "retentionVerification",
+    "runtimeVerification",
+    "sideEffects",
+    "artifactHashes",
+    "acceptance",
+    "failureCodes"
+  ],
+  "properties": {
+    "evidenceVersion": { "const": "1.0.0" },
+    "evidenceType": { "const": "internal_engineering_run" },
+    "goalKey": { "const": "P1-STRATEGIC-INTELLIGENCE" },
+    "operationMode": { "const": "internal_engineering_shadow" },
+    "status": { "enum": ["succeeded", "failed"] },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "runId": { "type": ["string", "null"] },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "publish": { "const": false },
+    "countsTowardProductionShadow": { "const": false },
+    "collector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exitCode", "summaryPresent", "status", "sourceCount", "rawSnapshotCount", "itemCount", "duplicateCount", "errorCode", "candidateReportVerified"],
+      "properties": {
+        "exitCode": { "type": "integer", "minimum": 0 },
+        "summaryPresent": { "type": "boolean" },
+        "status": { "enum": ["succeeded", "failed", "unknown"] },
+        "sourceCount": { "type": "integer", "minimum": 0 },
+        "rawSnapshotCount": { "type": "integer", "minimum": 0 },
+        "itemCount": { "type": "integer", "minimum": 0 },
+        "duplicateCount": { "type": "integer", "minimum": 0 },
+        "errorCode": { "type": ["string", "null"] },
+        "candidateReportVerified": { "type": "boolean" }
+      }
+    },
+    "sourceVerification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expectedSourceCount", "successfulSourceCount", "allDecisionsAllowed", "allSelectedSourcesCovered", "maxItemsPerSource", "maximumObservedItemsPerSource", "itemLimitSatisfied", "sources"],
+      "properties": {
+        "expectedSourceCount": { "const": 3 },
+        "successfulSourceCount": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "allDecisionsAllowed": { "type": "boolean" },
+        "allSelectedSourcesCovered": { "type": "boolean" },
+        "maxItemsPerSource": { "const": 20 },
+        "maximumObservedItemsPerSource": { "type": "integer", "minimum": 0 },
+        "itemLimitSatisfied": { "type": "boolean" },
+        "sources": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["sourceKey", "decisionAllowed", "snapshotPresent", "itemCount", "succeeded"],
+            "properties": {
+              "sourceKey": { "type": "string", "minLength": 1 },
+              "decisionAllowed": { "type": "boolean" },
+              "snapshotPresent": { "type": "boolean" },
+              "itemCount": { "type": "integer", "minimum": 0 },
+              "succeeded": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "retentionVerification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["snapshotCount", "allPayloadHashOnly", "retainedBodyCount", "invalidSnapshotCount"],
+      "properties": {
+        "snapshotCount": { "type": "integer", "minimum": 0 },
+        "allPayloadHashOnly": { "type": "boolean" },
+        "retainedBodyCount": { "type": "integer", "minimum": 0 },
+        "invalidSnapshotCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "runtimeVerification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expectedFoundationContainerCount", "foundationBefore", "foundationAfter", "foundationStable", "strategicIntelligenceBefore", "strategicIntelligenceAfter", "temporaryResourcesClean", "newNetworkCount", "newPublishedPortCount"],
+      "properties": {
+        "expectedFoundationContainerCount": { "const": 13 },
+        "foundationBefore": { "$ref": "#/$defs/foundationState" },
+        "foundationAfter": { "$ref": "#/$defs/foundationState" },
+        "foundationStable": { "type": "boolean" },
+        "strategicIntelligenceBefore": { "$ref": "#/$defs/strategicState" },
+        "strategicIntelligenceAfter": { "$ref": "#/$defs/strategicState" },
+        "temporaryResourcesClean": { "type": "boolean" },
+        "newNetworkCount": { "type": "integer", "minimum": 0 },
+        "newPublishedPortCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "sideEffects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["auditCompleted", "formalP2Count", "employeeDeliveryCount", "erpWritebackCount", "socialWritebackCount", "causalActivationCount", "allZero"],
+      "properties": {
+        "auditCompleted": { "type": "boolean" },
+        "formalP2Count": { "type": "integer", "minimum": 0 },
+        "employeeDeliveryCount": { "type": "integer", "minimum": 0 },
+        "erpWritebackCount": { "type": "integer", "minimum": 0 },
+        "socialWritebackCount": { "type": "integer", "minimum": 0 },
+        "causalActivationCount": { "type": "integer", "minimum": 0 },
+        "allZero": { "type": "boolean" }
+      }
+    },
+    "artifactHashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["collectorStdout", "collectorStderr", "runSummary", "sourceDecisions", "items", "rawSnapshots", "candidateReport", "runtimeBefore", "runtimeAfter", "sideEffectAudit"],
+      "properties": {
+        "collectorStdout": { "$ref": "#/$defs/nullableHash" },
+        "collectorStderr": { "$ref": "#/$defs/nullableHash" },
+        "runSummary": { "$ref": "#/$defs/nullableHash" },
+        "sourceDecisions": { "$ref": "#/$defs/nullableHash" },
+        "items": { "$ref": "#/$defs/nullableHash" },
+        "rawSnapshots": { "$ref": "#/$defs/nullableHash" },
+        "candidateReport": { "$ref": "#/$defs/nullableHash" },
+        "runtimeBefore": { "$ref": "#/$defs/nullableHash" },
+        "runtimeAfter": { "$ref": "#/$defs/nullableHash" },
+        "sideEffectAudit": { "$ref": "#/$defs/nullableHash" }
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidenceComplete", "collectorSucceeded", "sourceCoverageVerified", "itemLimitVerified", "retentionVerified", "foundationStable", "temporaryResourcesClean", "businessSideEffectsZero", "acceptedForInternalEngineering", "eligibleForProductionShadow"],
+      "properties": {
+        "evidenceComplete": { "type": "boolean" },
+        "collectorSucceeded": { "type": "boolean" },
+        "sourceCoverageVerified": { "type": "boolean" },
+        "itemLimitVerified": { "type": "boolean" },
+        "retentionVerified": { "type": "boolean" },
+        "foundationStable": { "type": "boolean" },
+        "temporaryResourcesClean": { "type": "boolean" },
+        "businessSideEffectsZero": { "type": "boolean" },
+        "acceptedForInternalEngineering": { "type": "boolean" },
+        "eligibleForProductionShadow": { "const": false }
+      }
+    },
+    "failureCodes": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[A-Z0-9_]+$" },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "nullableHash": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "foundationState": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["containerCount", "runningContainerCount", "unhealthyContainerCount", "restartCountTotal", "fingerprint"],
+      "properties": {
+        "containerCount": { "type": "integer", "minimum": 0 },
+        "runningContainerCount": { "type": "integer", "minimum": 0 },
+        "unhealthyContainerCount": { "type": "integer", "minimum": 0 },
+        "restartCountTotal": { "type": "integer", "minimum": 0 },
+        "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "strategicState": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["containerCount", "runningContainerCount", "networkCount", "publishedPortCount", "fingerprint"],
+      "properties": {
+        "containerCount": { "type": "integer", "minimum": 0 },
+        "runningContainerCount": { "type": "integer", "minimum": 0 },
+        "networkCount": { "type": "integer", "minimum": 0 },
+        "publishedPortCount": { "type": "integer", "minimum": 0 },
+        "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

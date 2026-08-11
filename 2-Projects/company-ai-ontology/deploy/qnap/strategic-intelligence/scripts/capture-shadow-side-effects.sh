@@ -15,6 +15,7 @@ set -a
 . ./.env
 set +a
 temporary=$output_file.partial
+trap 'rm -f "$temporary"' EXIT INT TERM
 "$docker_path" compose exec -T postgres psql \
   --set=ON_ERROR_STOP=1 \
   --username ontology_admin \
@@ -22,7 +23,19 @@ temporary=$output_file.partial
   --set=tenant_id="$FUTURUS_TENANT_ID" \
   --set=started_at="$started_at" \
   --set=completed_at="$completed_at" \
-  -At <<'SQL' > "$temporary"
+  -qAt <<'SQL' > "$temporary"
+CREATE TEMP TABLE si_causal_activation_count(value integer NOT NULL);
+INSERT INTO si_causal_activation_count(value) VALUES (0);
+SELECT (to_regclass('strategic_intelligence.impact_hypotheses') IS NOT NULL)::text AS causal_table_exists \gset
+\if :causal_table_exists
+UPDATE si_causal_activation_count
+SET value = (
+  SELECT count(*)::integer FROM strategic_intelligence.impact_hypotheses
+  WHERE tenant_id = :'tenant_id'::uuid
+    AND recorded_at BETWEEN :'started_at'::timestamptz AND :'completed_at'::timestamptz
+    AND activation_status = 'active'
+);
+\endif
 SELECT json_build_object(
   'auditVersion', '1.0.0',
   'completed', true,
@@ -55,12 +68,7 @@ SELECT json_build_object(
       AND (target_system ILIKE '%social%' OR target_system ILIKE '%media%')
       AND (idempotency_key LIKE 'p1-si-%' OR payload->>'source' = 'strategic-intelligence')
   ),
-  'causalActivationCount', (
-    SELECT count(*)::integer FROM strategic_intelligence.impact_hypotheses
-    WHERE tenant_id = :'tenant_id'::uuid
-      AND recorded_at BETWEEN :'started_at'::timestamptz AND :'completed_at'::timestamptz
-      AND activation_status = 'active'
-  )
+  'causalActivationCount', (SELECT value FROM si_causal_activation_count)
 );
 SQL
 "$node_bin" -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$temporary"

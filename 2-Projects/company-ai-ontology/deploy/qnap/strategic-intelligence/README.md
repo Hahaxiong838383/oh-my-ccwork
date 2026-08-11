@@ -50,7 +50,7 @@ npm test
 npm run validate
 ```
 
-当前 Shadow / Readiness / Goal Completion 测试为 `68/68`，其中七日验收负测覆盖：缺日、日期断档、模拟证据、零来源、审计覆盖缺失、Postgres 未持久化、业务副作用、Source Commit 漂移、Collector 镜像漂移、Policy 漂移和容器重启；Domain 链覆盖 Collector 失败、来源无 Snapshot、P003 激活/缺类、模型执行冒领、单事务 SQL、幂等冲突策略和持久化未授权拒绝。新增负测保证全部正式 QNAP 宿主脚本使用统一 Node Runtime、Dispatcher 在第一次 Node 调用前读取 0600 环境文件，并拒绝受控根目录以外的审批原件。生产 readiness、内部模式、部署演练、最终完成判定和回滚授权继续保持 fail-closed。
+当前 Shadow / Readiness / Goal Completion 测试为 `76/76`，其中七日验收负测覆盖：缺日、日期断档、模拟证据、零来源、审计覆盖缺失、Postgres 未持久化、业务副作用、Source Commit 漂移、Collector 镜像漂移、Policy 漂移和容器重启；Domain 链覆盖 Collector 失败、来源无 Snapshot、P003 激活/缺类、模型执行冒领、单事务 SQL、幂等冲突策略和持久化未授权拒绝。首次内部运行新增独立 Evidence Schema、编译器和验证器，强制验证 3 个来源全部成功、每来源不超过 20 条、Raw Snapshot 仅保留 Hash、Foundation 13 服务前后指纹一致、临时容器/网络/发布端口归零、正式 P2/员工投递/ERP/社媒写回/因果激活归零；Collector 非零退出仍会生成失败 Evidence，且内部 Evidence 永远不能升级为生产 Shadow 证据。新增负测保证全部正式 QNAP 宿主脚本使用统一 Node Runtime、Dispatcher 在第一次 Node 调用前读取 0600 环境文件，并拒绝受控根目录以外的审批原件。生产 readiness、内部模式、部署演练、最终完成判定和回滚授权继续保持 fail-closed。
 
 ## 内部工程验证模式
 

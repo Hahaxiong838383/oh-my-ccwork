@@ -17,6 +17,7 @@ const goalCompletionTemplate = JSON.parse(await fs.readFile(path.join(root, 'con
 const goalRuntimeSnapshotSchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/goal-runtime-snapshot.schema.json'), 'utf8'))
 const goalRuntimeSnapshotTemplate = JSON.parse(await fs.readFile(path.join(root, 'config/goal-runtime-snapshot.template.json'), 'utf8'))
 const domainBatchSchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/shadow-domain-batch.schema.json'), 'utf8'))
+const internalRunEvidenceSchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/internal-engineering-run-evidence.schema.json'), 'utf8'))
 const packageJson = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'))
 const envExample = await fs.readFile(path.join(root, 'config/env.shadow.example'), 'utf8')
 const runtimeWorkflow = await fs.readFile(path.resolve(root, '../../../../..', '.github/workflows/p1-si-runtime-verify.yml'), 'utf8')
@@ -73,10 +74,16 @@ if (goalRuntimeSnapshotTemplate.phase !== 'pending' || goalRuntimeSnapshotTempla
 if (domainBatchSchema.properties?.publish?.const !== false) errors.push('domain batch schema must require publish=false')
 if (domainBatchSchema.properties?.persistenceState?.const !== 'json_candidate_pending_postgres') errors.push('domain batch must disclose pending Postgres persistence')
 if (!domainBatchSchema.required?.includes('ingestionRun')) errors.push('domain batch must require ingestion run provenance')
+if (internalRunEvidenceSchema.properties?.operationMode?.const !== 'internal_engineering_shadow') errors.push('internal run evidence operation mode mismatch')
+if (internalRunEvidenceSchema.properties?.countsTowardProductionShadow?.const !== false) errors.push('internal run evidence must not count toward production Shadow')
+if (internalRunEvidenceSchema.properties?.acceptance?.properties?.eligibleForProductionShadow?.const !== false) errors.push('internal run evidence must never be production eligible')
 for (const name of ['shadow:compile-seven-day', 'shadow:record-owner-acceptance', 'shadow:validate-seven-day']) {
   if (!packageJson.scripts?.[name]) errors.push(`missing package script ${name}`)
 }
 for (const name of ['goal:validate-deployment-evidence', 'goal:validate-runtime-snapshot', 'goal:compile-completion-evidence', 'goal:completion']) {
+  if (!packageJson.scripts?.[name]) errors.push(`missing package script ${name}`)
+}
+for (const name of ['internal:compile-run-evidence', 'internal:validate-run-evidence']) {
   if (!packageJson.scripts?.[name]) errors.push(`missing package script ${name}`)
 }
 for (const name of [
@@ -90,6 +97,9 @@ for (const name of [
   'compile-shadow-domain-sql.mjs',
   'persist-shadow-domain-batch.sh',
   'node-runtime.sh',
+  'capture-internal-engineering-runtime-state.sh',
+  'compile-internal-engineering-run-evidence.mjs',
+  'validate-internal-engineering-run-evidence.mjs',
 ]) {
   await fs.access(path.join(root, 'scripts', name)).catch(() => errors.push(`missing runtime audit script ${name}`))
 }
@@ -108,6 +118,9 @@ const qnapHostNodeScripts = [
   'persist-shadow-domain-batch.sh',
   'run-source-revocation-audit.sh',
   'capture-shadow-side-effects.sh',
+  'deploy-internal-engineering-shadow.sh',
+  'run-internal-engineering-once.sh',
+  'capture-internal-engineering-runtime-state.sh',
 ]
 for (const name of qnapHostNodeScripts) {
   const script = await fs.readFile(path.join(root, 'scripts', name), 'utf8')
@@ -119,6 +132,14 @@ if (!envExample.includes('SI_NODE_RUNTIME_IMAGE=sha256:')) errors.push('shadow e
 const productionDeploy = await fs.readFile(path.join(root, 'scripts/deploy-shadow.sh'), 'utf8')
 for (const marker of ['SI_NODE_RUNTIME_IMAGE is required', 'approval files must be staged inside the strategic intelligence controlled root', 'SI_NODE_RUNTIME_IMAGE=$node_runtime_image']) {
   if (!productionDeploy.includes(marker)) errors.push(`production deploy missing Node runtime gate ${marker}`)
+}
+const internalDeploy = await fs.readFile(path.join(root, 'scripts/deploy-internal-engineering-shadow.sh'), 'utf8')
+for (const marker of ['SI_NODE_RUNTIME_IMAGE is required', 'SI_NODE_RUNTIME_IMAGE=$node_runtime_image']) {
+  if (!internalDeploy.includes(marker)) errors.push(`internal deploy missing Node runtime gate ${marker}`)
+}
+const internalRun = await fs.readFile(path.join(root, 'scripts/run-internal-engineering-once.sh'), 'utf8')
+for (const marker of ['capture-internal-engineering-runtime-state.sh', 'capture-shadow-side-effects.sh', 'compile-internal-engineering-run-evidence.mjs', 'validate-internal-engineering-run-evidence.mjs', 'evidence_created=1', 'counts_toward_production_shadow=0']) {
+  if (!internalRun.includes(marker)) errors.push(`internal run missing evidence marker ${marker}`)
 }
 const isolatedMigrationValidation = await fs.readFile(path.join(root, 'scripts/validate-candidate-migrations-isolated.sh'), 'utf8')
 for (const marker of ['write-shadow-domain-runtime-fixture.mjs', 'compile-shadow-domain-sql.mjs', 'domain_persistence_idempotent=verified', 'acl_fail_closed=verified']) {
