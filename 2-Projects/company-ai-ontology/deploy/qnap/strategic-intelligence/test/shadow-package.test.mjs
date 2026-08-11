@@ -182,6 +182,8 @@ test('deployment scripts only target strategic intelligence services and keep ex
   assert.match(deploy, /node-runtime[.]sh/)
   assert.match(deploy, /SI_NODE_RUNTIME_IMAGE is required/)
   assert.match(deploy, /approval files must be staged inside the strategic intelligence controlled root/)
+  assert.match(deploy, /"\$shadow_root"\/approvals\/\*/)
+  assert.doesNotMatch(deploy, /"\$shadow_root"\/config\/\*/)
   assert.match(deploy, /SI_NODE_RUNTIME_IMAGE=\$node_runtime_image/)
   assert.match(deploy, /SI_PERSIST_DOMAIN_TO_POSTGRES=YES/)
   assert.match(deploy, /up -d --no-deps intelligence-orchestrator/)

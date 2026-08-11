@@ -28,7 +28,7 @@ for file in "$manifest" "$source_archive" "$image_archive" "$approved_registry" 
 done
 case "$release_root" in /share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence/release/*) ;; *) echo 'refusing unexpected release root' >&2; exit 1 ;; esac
 for file in "$approved_registry" "$approved_config" "$approved_p003_review" "$reviewer_role_access_acceptance" "$goal7_acceptance"; do
-  case "$file" in "$shadow_root"/approvals/*|"$shadow_root"/config/*) ;; *) echo 'approval files must be staged inside the strategic intelligence controlled root' >&2; exit 1 ;; esac
+  case "$file" in "$shadow_root"/approvals/*) ;; *) echo 'approval files must be staged inside the strategic intelligence controlled root' >&2; exit 1 ;; esac
 done
 "$node_bin" "$script_root/inspect-deployment-readiness.mjs" >/dev/null
 
