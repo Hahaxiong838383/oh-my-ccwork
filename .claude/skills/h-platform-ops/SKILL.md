@@ -2465,14 +2465,47 @@ syncCredentials gate 在 `sandbox &&` 上），grok 钉死本机 device OAuth，
   文件不入账本），分享报「skill 不存在」先查 `skills.json` 的 `user:<uid>/` 键。
   wiring 白盒锚在 `test/share-invite-wiring.test.mjs`（bridge 侧三件套/深链/开关）。
 
+### H-0087 权限导入 JSON 投递三通道 + 一键复制助手页（v1.60.0 · 2026-08-11）
+
+缺口引导 JSON 的投递按体积三分——**门槛必须盯 sendText 的 3500 切块线，不是
+sendCard 的 9000**（曾设 8000：7174 字节判「装得下」走 sendText 被切 3 条，租户粘进
+飞书后台报「格式错误」；owner/租户同一代码，「格式差异」纯由 JSON 尺寸触发切块）：
+
+- **≤3400**：单条纯文本（长按整条复制）；**>3400**：文件投递（`buildGuidance
+  maxJsonChars=3400`，改这两个值必须一起重估）；文件失败才落分批卡片。
+- ⚠️ **SDK 双形态**：`im.file.create` 返回**已解包 data**（`{file_key}` 在顶层），
+  `im.message.create` 返回完整响应（`{code,msg,data}`）。sendJsonFile 两种都认
+  （`uploaded?.data?.file_key || uploaded?.file_key`）——只取 `.data` 时上传成功
+  恒判失败，`file fail keys=[file_key]` 就是这个（文件腿曾因此从上线坏到 8/10）。
+- **助手页（复制可靠性 100% 的兜底通道）**：bridge 发引导卡前
+  `createScopeImportHelper` POST `/internal/scope-import`（Bearer SERVICE_TOKEN）
+  把 importJson 暂存到控制面（`data/scope-imports/`，128-bit hex capability id，
+  600 权限，TTL 7 天，sanitize 拒脏 scope/超 2000 项/非官方 consoleUrl），换回
+  `https://ai.kidshub.cn/import-helper/<id>` 放进卡片按钮「打开导入助手」（primary）；
+  **拿不到 URL 降级纯卡不吞引导**。页面免登录（不可猜 id 即 capability，内容只有
+  scope 名清单）；`/import-helper/:id` 是参数路由，**与 /go /au 同例不进
+  architecture registry**（drift 对账只认 `p === '...'` 精确形态，登记了反而恒 critical）。
+- **日志锚**：`lark console guidance sent ... helper=1`（按钮卡）/`guidance json sent`
+  （单条文本）/`guidance file sent`（文件）/`scope import helper fail`（暂存失败已降级）。
+  验收对照组（修复前形态）：`asFile=0 json=7174` 后跟多条 sendText=被切；
+  `file fail ... keys=[file_key]`=双形态坑。
+- **灰度注入姿势**：`workspace/.state/proactive-acceptance-request.v1.json` 信箱
+  （`H_PROACTIVE_ACCEPTANCE=1` 已开，≥2 probes，appId+openId+prompt，
+  `receiveIdType='open_id'` 不需要 chat_id——DM 会话 bridge 按 open_id 组织，
+  chat_id 不落盘别去找）。真实 Runner 跑任务撞墙触发全链，result 文件带 messageId。
+- 白盒锚：`test/scope-import-helper-wiring.test.mjs`（门槛 3400/双形态/按钮/降级）+
+  `control-plane/test/scope-import.test.mjs`（store/端点/页面/registry 反断言）。
+
 ## Task 6-R：Runtime Release Provenance（v1.58.2 · 2026-08-10）
 
-- **当前生产锚点（2026-08-10 晚更新）**：`v1.59.0`、Source Commit
-  `01da296dd09cbe4e8ee9f39c4778996d34bfdb5c`、Release ID
-  `20260810-225534-h-control-1.59.0`、50 个运行文件、`state=in_sync`、`mismatchCount=0`、
-  `NRestarts=0`。cc 手工四步部署 + 手工按 attest 逻辑生成 manifest（git archive 01da296 →
-  buildRuntimeReleaseProvenanceManifest → 全 50 文件对照线上 → 落盘重启），溯源完整保持。
-  （v1.58.2 codex 锚点：Source `8f63fb9`、Release `20260810-175955-h-control-1.58.2`）
+- **当前生产锚点（2026-08-11 午更新）**：`v1.60.0`、Source Commit
+  `256d6f500bee3606a282fcbdb6cf29ee3c77edcc`、Release ID
+  `20260811-120048-h-control-1.60.0`、**51 个运行文件**（+scope-import-store.mjs）、
+  `state=in_sync`、`mismatchCount=0`。同款手工流程（git archive 256d6f5 → build manifest →
+  51 文件对照 → 落盘重启）。⚠️ **manifest 属主必须 `h-control:h-control`**——服务以
+  h-control 用户跑，`chown root:root` 后 600 它读不了，healthz 恒 `unverified`（600 权限
+  本身没错，错在属主；且 inspector 有 10s 缓存，修完等 11s 再查）。
+  （历史锚：v1.59.0 `01da296`/`20260810-225534`；v1.58.2 codex `8f63fb9`/`20260810-175955`）
 - **发布前重新取真值**：多 Agent 并发时，准备完成后 CC 可能已更新生产。正式发布前必须
   再次 `git fetch`、读取公网 `/healthz`、远端版本、启动时间和文件哈希；旧检查结果不继承。
 - **同版本不重启**：运行文件已经与 Source Commit 一致但 Manifest 缺失时，用
@@ -5124,11 +5157,11 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | 线上 **`v1.59.0`**（H-0086 分享提醒清单端点；Source `01da296`、50 文件 `in_sync`、`mismatchCount=0`；公网 `/healthz` 取真值） |
+| 控制面 aliyun-hk | 线上 **`v1.60.0`**（H-0087 scope-import 端点+助手页；Source `256d6f5`、51 文件 `in_sync`、`mismatchCount=0`；公网 `/healthz` 取真值） |
 | Mini 活动 VM 运行态 | **`f076e7642fab`**、`dirty=false`、581 文件、1 App（2026-08-10 三段割接零停服；真实长任务验证器 10/10 全绿，Base H-0085） |
-| dev198 | **bridge.mjs/control-client 已到 `46fe78e`**（H-0086 分享提醒腿+深链，2026-08-10 晚两次热更；git HEAD 仍 `f076e76` 属正常——按文件 sha 对撞判断，契约 2026-08-09.1 全 12 App 唯一） |
+| dev198 | **bridge.mjs/control-client/feishu-send/lark-scope-guidance 已到 `256d6f5`**（H-0087 投递修复+助手按钮，2026-08-11 双服务重启热更；git HEAD 仍 `f076e76` 属正常——按文件 sha 对撞判断，契约 2026-08-09.1 全 12 App 唯一） |
 
-> 仓库 main 已到 `46fe78e`（`f076e76` 之上包含控制面/Ontology/发布治理/H-0086 提交）；dev198 运行文件按需热更（bridge.mjs 当前=46fe78e 内容），不要把控制面 Source Commit 当成 Bridge Runtime Commit，也不要拿 dev198 的 git HEAD 当运行态真值——认文件 sha 对撞。
+> 仓库 main 已到 `256d6f5`（H-0087 P0+P1 一体提交）；dev198 运行文件按需热更（四文件当前=256d6f5 内容），不要把控制面 Source Commit 当成 Bridge Runtime Commit，也不要拿 dev198 的 git HEAD 当运行态真值——认文件 sha 对撞。dev198 备份 `~/local/h160-bak-120500/`、控制面备份 `/srv/h-control/filebak-v1590-120100/`。
 
 ⚠️ **跨 bridge+控制面的字段/行为修复，部署顺序=先控制面后 bridge**（2026-08-10 实测）：
 bridge 一重启 bootPush 立即推镜像，若控制面新代码还没起，数据被旧代码处理一次，
