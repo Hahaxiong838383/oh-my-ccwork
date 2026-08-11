@@ -85,6 +85,12 @@ if has 'curl[^|]*127\.0\.0\.1:[0-9]'; then
   notes+=("healthz 端口按站点不同，别跨站复制：真值在 ops/deploy-sites.sh 的 DEV_HEALTH / MINI_HEALTH，以及 h-platform-ops SKILL.md 的双站对照表。curl 打错端口的「无响应」和服务真的没起来无法区分。")
 fi
 
+# 管道后紧跟 $?：这个退出码是管道末尾那个 tail/grep 的，不是被测程序的。
+# 2026-08-11~12 一天三犯（npm test、deploy-sites、attest check 全被 tail 的 0 骗过）
+if has '\|[^;]*\b(tail|head|grep|sed|awk|tee|cut)\b[^;]*;[^;]*\$\?'; then
+  notes+=("这个 \$? 是管道最后一个命令（tail/head/grep…）的退出码，不是你关心的那个程序的。zsh 没有大写 PIPESTATUS（bash 才有；zsh 是小写 pipestatus）。要拿真退出码：先 'cmd > log 2>&1; echo RC=\$?' 落文件，再单独看 log。（2026-08-11~12 同一坑一天踩了三次）")
+fi
+
 if [ ${#notes[@]} -gt 0 ]; then
   ctx="$(printf '%s\n' "${notes[@]}")"
   jq -nc --arg c "$ctx" '{

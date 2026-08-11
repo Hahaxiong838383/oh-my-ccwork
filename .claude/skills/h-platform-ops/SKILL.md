@@ -5267,15 +5267,13 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-11 16:20：dev198 运行文件到 **`6e3cea1`**、契约 **`2026-08-11.3`**；控制面 **`v1.60.2`**；Mini VM 仍 `f076e7642fab` **刻意落差且行为等价**——仅 1 租户，动态并发公式 1×3=3 与旧默认相同，权限链路修复对 Mini 单租户场景影响极小，下次割接窗口一并跟车）
+#### ✅ 版本态（2026-08-12 01:40：**两站全对齐 `61394ff`、契约 `2026-08-12.1` 全站唯一、Mini 落差清零**）
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | 线上 **`v1.60.2`**（H-0089 导入 JSON 与参考文件逐字节同构+下载兜底；Source `82ae617`、releaseId `20260811-145425`、51 文件 `in_sync`、`mismatchCount=0`；公网 `/healthz` 的 `release` 键取真值） |
-| Mini 活动 VM 运行态 | **`f076e7642fab`**、`dirty=false`、581 文件、1 App（2026-08-10 三段割接零停服）。**未含**：动态并发、consoleOnly 分流、续跑信箱、绩效白名单 |
-| dev198 | **运行文件到 `6e3cea1`**（动态并发 `d4f7fb2` + 绩效身份白名单/基线清洗 `503bf0b`/`722c946` + 续跑信箱 `6e3cea1`，2026-08-11 四轮空窗重启热更；共享 wrapper `/srv/h-platform/shared/bin/lark-cli-audit` 已同步替换；git HEAD 仍 `f076e76` 属正常——按文件 sha 对撞判断，契约 **`2026-08-11.3`** 全 12 App 唯一） |
-
-> 仓库 main 已到 `256d6f5`（H-0087 P0+P1 一体提交）；dev198 运行文件按需热更（四文件当前=256d6f5 内容），不要把控制面 Source Commit 当成 Bridge Runtime Commit，也不要拿 dev198 的 git HEAD 当运行态真值——认文件 sha 对撞。dev198 备份 `~/local/h160-bak-120500/`、控制面备份 `/srv/h-control/filebak-v1590-120100/`。
+| 控制面 aliyun-hk | 线上 **`v1.61.0`**（H-0094 daily 创建面；Source `61394ff`、51 文件 attest `in_sync`、`mismatchCount=0`；旧版备份 `/srv/h-control/backups/20260812-h-control-pre-1610/`） |
+| dev198 | **git HEAD = 运行文件 = `61394ff`**（2026-08-12 起 deploy-sites.sh 标准化部署，git checkout 已与运行态归一，「HEAD 落后属正常」的旧口径**作废**）；契约 `2026-08-12.1` 全 12 App 唯一；`H_ONCE_REMINDERS=0` 已注释开闸，11 租户调度网关 socket 全就位 |
+| Mini 活动 VM | **`61394ff`**（2026-08-12 两段式升级：rollback→shadow(npm ci)→verify shadow=ready→cutover，全程 ~15 分钟；含此前全部落差：动态并发/consoleOnly/续跑信箱/话术活人感/H-0094）；契约同 `2026-08-12.1`、maxParallel=3（1 租户×3）；回滚锚 `~/local/h-mini-b2-rollback-20260812-013000-pre-cutover-61394ff` |
 
 ⚠️ **跨 bridge+控制面的字段/行为修复，部署顺序=先控制面后 bridge**（2026-08-10 实测）：
 bridge 一重启 bootPush 立即推镜像，若控制面新代码还没起，数据被旧代码处理一次，
@@ -5369,7 +5367,9 @@ Mini Host。`render-mini-b2-env.mjs` 现强制把 LLM 与 embedding 地址渲染
 **终态**：Mini VM `615ce62`（AI 专家）/ dev198 `e2263af`（12 App），契约 `2026-08-05.3` 全站唯一。
 灰度五变量 `H_SKILL_{PROPOSALS,PROPOSAL_UIDS,REPEAT_DAYS,REPEAT_MIN,SUGGEST_COOLDOWN_DAYS}`，
 熔断=`H_SKILL_PROPOSALS=0`。**2026-08-06 川哥拍板 dev198 全量放开 11 租户**（`=1` 且不设名单）；
-`H_ONCE_REMINDERS=0` 两站保持关闭（按字面不扩展）。
+~~`H_ONCE_REMINDERS=0` 两站保持关闭（按字面不扩展）~~ **勘误（2026-08-12）**：这句只对 dev198
+成立过；Mini 两侧 env 从未设过该键＝默认开、网关一直在跑——「两站关闭」是没验证过的推断进了文档
+（unverified_lore 变体）。dev198 已于 H-0094 开闸（.env 注释该行），现两站全开。
 
 ### 🔴 这两个开关是「空名单＝全量放开」语义（配错方向的经典陷阱）
 
@@ -5867,3 +5867,62 @@ node ops/sync-company-directory.mjs
 - **重启授权不跨组件继承**：QNAP Domain/Agent 发布授权不包含 H 控制面。必须单独说明只重启 `h-control`、正常中断和异常回滚窗口，并取得当前明确授权后执行。
 - **发布验收真值**：本次 systemd 停止与启动发生在同一秒，完整发布流程 29 秒，`NRestarts=0`；真实 Chrome `92/92`，34 条光晕位于彩线下层，运行真值、卡片点击、平移缩放、焦点、错误请求和横向溢出全部通过。
 - **发布脚本门禁**：提交必须已推送且发布工作树与 Source Commit 一致；暂存子树测试、生产环境文件属主/权限、管理员登录、公网健康、服务稳定期和失败自动回滚缺一不可。
+
+## 话术活人感（H-0093 · 2026-08-11 夜，南鸽反馈「太像机器/模板」）
+
+语气分两层，改哪层先分清：**LLM 正文**（用户读的主体）与**平台固定卡片**（入队/开工/心跳/完成四张）。
+
+- **缺省 SOUL 第四代**：「说话风格」节=「像靠谱同事在飞书里回消息」正面示范+客服模板句禁令
+  （「收到，我将为您…」「如有问题请随时告知」等）。**迁移是节级增量**（川哥拍板「不能覆盖已自定义
+  的用户」）：`migrateSoulSpeechSection`（profile-files.mjs）只在「说话风格」节仍是旧模板原文时原位
+  换新；用户改过/删过该节一字不碰；幂等。生产落地 10/12（1 个删了该节=by design 保留，1 个是 Mini
+  租户已随 61394ff 跟上）。
+- **平台语气底线四投放面**（兜住已自定义 SOUL 的用户）：grok core 铁律第 13 条、omp systemAppend
+  说话风格段、h-method 块（omp-harness + memory-routing）、L0 `agent-method` 尾节「汇报口吻」
+  ——均声明用户 SOUL 优先。
+- **固定卡片**：任务预览提前、cwd/session 等技术元数据降尾注；「心跳 #N · 仍在跑 grok」类行话删除。
+- 🔴 **L0 skill 修改必须走控制面 store 写路径**（`upsertContent`，脚本 import
+  `/srv/h-control/app/lib/skills-store.mjs` 实例化）：直改 `data/skills.json` 会丢 revision capture 和
+  `refreshPristineForks`（fork 跟随挂在 intake 内，2026-08-11 真机实锤 bypass_app_write_path）。
+  补救=回滚备份→store 路径重放（`followedForks=1` 为证）。改完 restart h-control（store 是启动态内存）。
+- 契约 `2026-08-11.4`；验收=proactive 信箱双探针 + SOUL 迁移计数 + L0/L2 双层 sync sha 对撞。
+
+## 🔴 H-0094 定时任务链路（2026-08-12 · 「定时任务又丢了」死循环，全租户）
+
+### 排查判据（下次「bot 说挂了定时任务但没生效」先跑这三条）
+
+1. **任务 id 全机 grep**：id 只命中租户的 `.grok/memory/`、`sessions/`（记忆与对话）而任何调度体系
+   数据零命中 → **任务从没落到真调度器**，是引擎自带 scheduled task（进程退出即灭）。
+2. **控制面真值**：任务定义内嵌 `data/users.json` 的 `u.schedules[]`（**没有**独立 schedules 文件，
+   `ls data | grep sched` 零命中是正常的）；执行面拉取口 `GET /internal/schedules`。
+3. **bot 侧入口三件套**：`shared/bin/h-schedule`（CLI）+ 租户 userRoot `.h-s`（网关 socket）+
+   runner env `H_SCHEDULE_CLI/H_SCHEDULE_SOCKET`。三者由 `H_ONCE_REMINDERS` 总闸控制
+   （**未设=默认开**，显式 `=0` 才关——「空名单=全量放开」语义同 H_SKILL_PROPOSALS）。
+
+### 两套创建面 × 两种任务
+
+| | once（一次性提醒） | daily（晨报/日报） |
+|---|---|---|
+| bot 侧 | `h-schedule create --run-at <ISO+tz>`（回执 `once-…`，到点平台直接发卡） | `--daily-at HH:MM`（2026-08-12 起，回执 `daily-…`，到点唤起 bot 执行 content 再送结果=actionType `proactive_task`） |
+| 网页侧 | — | 用户后台「定时任务」pane（`/api/schedule-save`，**一直可用**——张雨琦 08-11 夜就是从这里自救挂上晨报的） |
+| 语义 | id 唯一、终态 delivered/failed/missed、可 cancel | **upsert-by-name 同名覆盖**（改时间=同名重建）、无终态、cancel 后同名重建即复活 |
+
+共用：每人 5 个启用中上限（daily 同名覆盖不占新名额）；daily 暂只支持本人。教学：L0 skill
+`h-reminder` v1.1.0（once+daily+「为什么引擎自带的必丢」）+ 方法块两投放面 + self-background-guard
+纠偏（此前指向的 h-reminder **控制面里根本不存在**——空指针教学，发布后才闭环）。
+
+### 根因三层（为什么拖了 6 天才爆）
+
+①总闸 `=0`（08-06「按字面不扩展」保持关闭，**但从没进待办池**——字面排除项不登记就衰变成永久关闭）；
+②bot 无入口只能用引擎自带 task→必丢→死循环；③教学空指针+方法块零教学。修复=开闸+daily 创建面
+（契约 `normalizeDailyScheduleInput`+server kind=daily 分支+CLI）+教学三面。契约 `2026-08-12.1`、
+控制面 `v1.61.0`。E2E：once 从 bot 创建到 F3 送达 13 秒（delivered+message_id）。
+
+### Mini 两段式 VM 升级（第二次实测，~15 分钟全程）
+
+`deploy-sites.sh mini` 只能体检。升级四步（preflight 硬拒 VM-active，无捷径）：
+①旧源包 rollback `--confirm-rollback`（VM→原生，状态回迁）→ ②Air `git archive` 打新包 scp 至
+`~/local/h-mini-b2-source-<commit>`，`H_DEPLOY_COMMIT/BRANCH/SOURCE_HOST` 显式传，
+`install-mini-b2-shadow.sh`（npm ci 最慢）→ ③`install-mini-b2-host.sh`+`sync-mini-b2-state.sh shadow`
++`verify-mini-b2-shadow.sh`（`shadow=ready` 才继续）→ ④新回滚目录（预建 `evidence/`）
+`cutover-mini-b2.sh --confirm-cutover`。验收=VM meta/healthz/契约三通道对撞。
