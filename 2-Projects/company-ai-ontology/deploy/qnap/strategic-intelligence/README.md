@@ -205,9 +205,9 @@ Dispatcher 使用 QNAP 既有 crontab 每分钟检查队列，安装过程不会
 
 ## 当前 Runtime 与发布候选证据
 
-当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此没有在开发机伪造 Runtime 结果。手动 GitHub Actions Run `31476183330` 已对已推送 Source Commit `80f3fc6dd1556981ee4dad64513e7f8040e55647` 完成：
+当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此没有在开发机伪造 Runtime 结果。手动 GitHub Actions Run `31478053382` 已对已推送 Source Commit `47d90ae1b93c0da50991bda10d4fa654d55aeb8c` 完成：
 
-- Collector Linux/amd64 镜像真实构建，Image ID `sha256:a2806bf4e10ee738d00a4c5bd2d444fa7726e0acb30f4376c3d808c403905411`；
+- Collector Linux/amd64 镜像真实构建，Image ID `sha256:2c8ab1693e4f50b2e961aca5ed9df001bef4944b330c943379acf78f4afb5d2c`；
 - 010/011 候选 SQL 的隔离 PostgreSQL Runtime 验证；
 - 19/19 候选表强制 RLS；
 - Domain Batch 两次幂等持久化与无 ACL 读取 fail-closed；
@@ -216,7 +216,7 @@ Dispatcher 使用 QNAP 既有 crontab 每分钟检查队列，安装过程不会
 - Artifact 解压目录内直接执行 `sha256sum -c SHA256SUMS` 全部通过；
 - `immutableReleaseCandidateVerified=true`、`publish=false`、`productionDeploymentAuthorized=false`。
 
-Artifact：`p1-si-runtime-80f3fc6dd1556981ee4dad64513e7f8040e55647`，Artifact ID `9095350329`，保留至 `2026-11-09T09:06:10Z`。下载后 `SHA256SUMS` 全量通过；当前仍未完成：
+Artifact：`p1-si-runtime-47d90ae1b93c0da50991bda10d4fa654d55aeb8c`，Artifact ID `9096085078`，保留至 `2026-11-09T09:31:05Z`。下载后 `SHA256SUMS` 全量通过；当前仍未完成：
 
 - 公司来源许可和合规审批；
 - Goal 7 完成证据；
@@ -224,8 +224,8 @@ Artifact：`p1-si-runtime-80f3fc6dd1556981ee4dad64513e7f8040e55647`，Artifact I
 - 公司 QNAP Shadow 部署；
 - 七个真实自然日 Shadow及川哥最终体验验收。
 
-该 Artifact 已覆盖当前工程代码和统一 QNAP Node Runtime，但生成时来源最终审核、P003 最终审核、成员权限 UAT 与 Goal 7 尚未完成，因此仍是 `productionDeploymentAuthorized=false / deploymentEligible=false` 的工程发布候选。正式部署前必须从全部人审门禁完成后的最终 Commit 再运行 Runtime Workflow，不能直接把本 Artifact 当作生产批准。
+该 Artifact 已覆盖当前工程代码、统一 QNAP Node Runtime 和首次内部运行 Evidence 链，但生成时来源最终审核、P003 最终审核、成员权限 UAT 与 Goal 7 尚未完成，因此仍是 `productionDeploymentAuthorized=false / deploymentEligible=false` 的工程发布候选。公司 QNAP 内部 Runtime 仍绑定旧 Commit `a7aeae25e`，不得把 Artifact 已构建误写成 QNAP 已升级或首次采集已执行。正式生产部署前仍必须从全部人审门禁完成后的最终 Commit 再运行 Runtime Workflow，不能直接把本 Artifact 当作生产批准。
 
-历史 Run `31421625978` / Commit `2974c19ea`、Run `31473316988` / Commit `a7aeae25e` 和 Run `31475369650` / Commit `6e15417cf` 仅保留为演进证据，均不得替代当前或未来的正式发布身份。
+历史 Run `31421625978` / Commit `2974c19ea`、Run `31473316988` / Commit `a7aeae25e`、Run `31475369650` / Commit `6e15417cf` 和 Run `31476183330` / Commit `80f3fc6dd` 仅保留为演进证据，均不得替代当前或未来的正式发布身份。
 
 以上未完成项不得用 CI、静态测试、模板或模拟数据冒充完成。
