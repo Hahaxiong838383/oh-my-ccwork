@@ -132,6 +132,35 @@ awk -v s="$START" '$0 >= s && /app\/dns: failed/ {print}' ~/xray/xray.log
 | 大陆域名 | direct | 直连 |
 | 其他 | 默认 | HK-HKT-A |
 
+### Mini Wi-Fi 热点给手机/电脑访问 Grok（2026-08-11 实测）
+
+**目标**：连接 Mini 热点的 iPhone/Mac/电脑，通过 Mini Xray 访问 Grok 网页和 Grok App。
+
+**当前配置**：
+- 热点 SSID：`kidshub-ai`
+- 热点网关：`192.168.2.1`
+- 代理入口：`192.168.2.1:10808`，认证关闭
+- Xray 源网段规则：`192.168.2.0/24 -> H-xAI-DMIT`
+- Mini 本机代理：`127.0.0.1:10808` 保持原有路由，不被热点规则影响
+
+**设备侧必须手动填代理**：这不是透明 VPN。iPhone 进入 Wi-Fi 详情 → `配置代理` → `手动`，服务器 `192.168.2.1`、端口 `10808`、认证关闭；Mac/电脑同理填写 HTTP/HTTPS/SOCKS 代理。
+
+**Mini 安全边界**：Mini 主出网必须保持有线 `en0 -> 192.168.61.254`；不要为了热点改默认路由、不要改有线静态 IP。`cc.brain.tunnel` 已按用户确认归档，后续需要时再恢复，不能擅自重启。
+
+**验收命令**：
+```bash
+~/xray/xray run -test -c ~/xray/config.json
+launchctl kickstart -k gui/$(id -u)/com.xray.proxy
+
+curl --interface 192.168.2.1 -x http://192.168.2.1:10808 \
+  -sS -L -o /dev/null --max-time 25 \
+  -w "hotspot grok.com %{http_code} %{time_total}\n" https://grok.com
+
+tail -50 ~/xray/access.log | grep -E '192\.168\.2\.|grok\.com|openai\.com'
+```
+
+验收标准：`grok.com` 返回 `200`，热点来源日志显示 `[socks -> H-xAI-DMIT]`；同时本机 `127.0.0.1:10808` 访问 Grok/OpenAI 仍显示原有节点标签，证明只影响热点设备。
+
 ### Google Cloud Code Assist 路由（antigravity / gemini-cli，2026-06-19 实测加固）
 
 team 的 gemini lane（omp `google-antigravity/*`）和 antigravity 调用走 **`cloudcode-pa.googleapis.com`** 系列（不是 `generativelanguage`）。这条通道对出口 IP 风控极严：
