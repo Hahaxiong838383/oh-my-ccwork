@@ -14,10 +14,11 @@ P1-SI-B～G 的机器契约、候选数据模型、Collector、报告、P003 审
 - 内部部署包必须保留完整项目树，否则 Runtime Validator 在部署后无法解析 Ontology Contracts 与 Collector 依赖；新增真实打包布局回归。
 - QNAP bind mount 目录不能假设固定 UID `10001/10003` 可写；Compose 改为使用部署账号的非 root UID/GID，并在部署入口拒绝 root Runtime。
 - QNAP 宿主机不保证提供 `node`；隔离迁移验证器新增 `NODE_BIN`，并增加 Node 缺失时在创建 Docker 状态前失败关闭的负测。
+- 正式部署、数据库迁移、Dispatcher、Domain 持久化、撤权审计和副作用审计已全部移除宿主 `node` 假设，统一通过固定镜像的 `node-runtime.sh`；审批原件必须位于 QNAP 战略情报受控根目录内。
 - 公司 QNAP 已用固定 PostgreSQL 17 digest、`network=none` 临时容器和一次性 Volume 真实验证 010/011、19/19 强制 RLS、Domain 持久化、二次幂等、ACL fail-closed 和 baseline restore；Foundation 前后指纹一致、restart 0，临时资源已清零。
 - 最终完成证据改为由部署前/七日后运行快照、不可变发布包、审批原件和七日原始证据自动编译，拒绝人工填写 Hash、active Ontology 漂移和缺失 010/011。
 
-当前改为双轨：`internal_engineering_shadow` 已完成工程实现，可在独立部署授权后进行 1～3 天内部排错；`production_shadow` 仍不能关闭 Goal，8 个来源最终审批、36 条 P003 最终审核、四名成员真实权限 UAT、Goal 7 Owner Acceptance、最终不可变发布包、公司 QNAP 正式 Shadow 部署和连续七个上海自然日运行均未完成。
+当前改为双轨：`internal_engineering_shadow` Runtime 已部署准备但尚未获首次运行授权；`production_shadow` 仍不能关闭 Goal，8 个来源最终审批、36 条 P003 最终审核、四名成员真实权限 UAT、Goal 7 Owner Acceptance、正式生产发布包、公司 QNAP 正式 Shadow 部署和连续七个上海自然日运行均未完成。
 
 内部模式不会把任何 `pending` 改写为正式批准：候选 Registry 的 8 个来源继续 `paused / license pending / compliance pending`，Collector 只通过独立的 `INTERNAL_ENGINEERING_PROVISIONAL_ALLOW` 决策读取 3 个安全样例来源，并明确记录 `productionApprovalSatisfied=false / countsTowardProductionShadow=false`。
 
@@ -26,10 +27,10 @@ P1-SI-B～G 的机器契约、候选数据模型、Collector、报告、P003 审
 | 阶段 | 已有权威证据 | 当前判断 | 未关闭事项 |
 |---|---|---|---|
 | P1-SI-B Source Registry | 3.5.0 contract-only；8 个来源；未登记、暂停、撤销、许可过期和未批准均在网络前失败关闭；CSV 强类型人工审核闭环 | 工程完成，人审未完成 | 8/8 仍为 `pending`，来源继续 `paused` |
-| P1-SI-C 公司雷达 | 独立 namespace、oneshot Worker、去重、retention、last-good、失败不覆盖、固定复用锁；Collector `9/9`；新增内部 provisional policy | 内部模式工程完成，最终包待重建 | 无最终批准来源；最终 Commit 的 Linux/amd64 镜像尚未重建 |
-| P1-SI-D 数据底座 | 3.6.0、Postgres 真源、双时间、append-only Raw、幂等/重放、RLS/ACL、010 候选迁移；公司 QNAP 隔离 PostgreSQL 17 已验证 19/19 RLS、Domain 持久化、幂等、ACL 和 baseline restore | 工程 Runtime 已验证，生产未迁移 | 未提交工作树证据不具发布资格；最终 Commit 仍需重跑 Runtime Workflow |
+| P1-SI-C 公司雷达 | 独立 namespace、oneshot Worker、去重、retention、last-good、失败不覆盖、固定复用锁；Collector `9/9`；新增内部 provisional policy | 工程发布候选已重建 | 无最终批准来源；正式部署前仍需从全部人审完成后的最终 Commit 重建 |
+| P1-SI-D 数据底座 | 3.6.0、Postgres 真源、双时间、append-only Raw、幂等/重放、RLS/ACL、010 候选迁移；Run `31475369650` 已验证 19/19 RLS、Domain 持久化、幂等、ACL 和 baseline restore | 工程 Runtime 已验证，生产未迁移 | 正式数据库迁移仍等待 Goal 7、人审和独立迁移授权 |
 | P1-SI-E 多周期报告 | 9 类报告、非递归输入、ReportRun 完整谱系、飞书/H 只读投影；模型失败机器与 SQL 负测 | 工程完成，真实报告未运行 | Shadow 前不调用真实模型、不发布报告 |
-| P1-SI-F Shadow 准备 | 资源限制、无宿主端口、无 Docker Socket、备份/Freeze/回滚、七日证据链、生产七项 readiness、内部独立 readiness、完整部署脚本演练、两阶段运行快照和最终 Goal Completion 八项门禁；`67/67` | 双模式工程完成，发布包失效待重建 | 旧 Artifact 与未提交 QNAP Runtime 证据都不能部署 |
+| P1-SI-F Shadow 准备 | 资源限制、无宿主端口、无 Docker Socket、备份/Freeze/回滚、七日证据链、生产七项 readiness、内部独立 readiness、完整部署脚本演练、统一 QNAP Node Runtime、两阶段运行快照和最终 Goal Completion 八项门禁；`68/68` | 双模式工程完成，当前工程 Artifact 已验证 | 当前 Artifact 未包含最终人审批准，不能作为生产批准 |
 | P1-SI-G P003 审核 | 从 4644 条中筛选 36 条，六类各 6 条；工作台、结构化 Principal、四职能角色和脱敏进度检查器 | 工程完成，人审未完成 | 36/36 `pending / inactive`；供应链及若干专业角色仍缺口 |
 | P1-SI-H QNAP Shadow | 部署、迁移、回滚、七日验收和最终 Goal Completion 机器门禁均存在；最终门禁重新校验四类审批原件、部署快照和不可变身份 | 未开始 | 未部署、未启动七日 Shadow、未获最终体验验收 |
 
@@ -50,7 +51,8 @@ P1-SI-B～G 的机器契约、候选数据模型、Collector、报告、P003 审
 
 - Ontology Contracts：`61/61`；
 - Intelligence Collector：`9/9`；
-- Shadow / Readiness / Goal Completion：`67/67`；
+- Shadow / Readiness / Goal Completion：`68/68`；
+- 当前工程不可变发布：Commit `6e15417cf`、Workflow Run `31475369650`、Artifact `9095030707`，下载后 `SHA256SUMS` 全部通过；
 - 公司 QNAP 隔离 Runtime：010/011、表 `19`、强制 RLS `19/19`、Domain Persistence、二次幂等、ACL fail-closed、baseline restore 全部 verified；
 - Foundation 前后指纹 `85379298d6b62590cbc539578618c143f7d496f1e9e51886b24fc9d4acbcab8e` 一致，13 个服务 restart 总数为 0，临时容器/Volume/验证目录清理为 0/0/absent；
 - 临时 QNAP 目录完整部署演练证明安装后的项目依赖、Runtime Validator、非 root UID/GID 和 0600 配置权限有效，且 Docker 调用仅为 `load / image inspect / compose config`；
@@ -62,12 +64,11 @@ P1-SI-B～G 的机器契约、候选数据模型、Collector、报告、P003 审
 
 ## 5. 当前内部验证顺序
 
-1. 选择性提交并推送本 Goal 最终代码；
-2. 从最终已推送 Commit 重建 Linux/amd64 Collector 镜像和不可变发布包；
-3. 重新在线核对公司 QNAP 五元组并输出部署影响、预计时间和回滚方案；
-4. 获得本次 `internal_engineering_shadow` 部署明确授权；
-5. 仅部署战略情报内部验证组件，运行 1～3 天；
-6. 由川哥完成管理员 Smoke Test；内部结果不得计入正式七日 Shadow。
+1. 获得首次 `internal_engineering_shadow` 一次性采集授权；
+2. 使用当前已准备 Runtime 运行 3 个公开来源的一次性 Worker；
+3. 验证每来源最多 20 条、正文保存 0、`PUBLISH=false` 和全部业务副作用为 0；
+4. 连续运行 1～3 天内部排错；
+5. 由川哥完成管理员 Smoke Test；内部结果不得计入正式七日 Shadow。
 
 ## 6. 正式生产前必须关闭的门禁
 

@@ -4,10 +4,12 @@
 
 - `engineering_candidate=true`；
 - `production_deployed=false`；
+- `internal_engineering_runtime_prepared=true`；
+- `internal_engineering_first_run=false`；
 - `publish=false`；
 - `required_gate=WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH`。
 
-未经川哥明确授权，不得把本目录复制到公司 QNAP、启动 Orchestrator、运行 Collector、执行候选 SQL、重启服务或执行真实回滚。
+内部工程 Runtime 已按独立授权准备完成，但未经新的明确授权，不得运行首次 Collector、部署正式 Orchestrator、执行生产候选 SQL、重启服务或执行真实回滚。
 
 ## 运行形态
 
@@ -26,6 +28,8 @@
 - Collector 只连接专用 egress 网络和既有 Foundation data 网络。
 - 所有发布、正式 P2、员工投递、ERP/社媒写回和因果关系激活开关固定为 false。
 - Collector 镜像必须使用不可变 Image ID 或 Registry Digest。
+- QNAP 宿主没有原生 Node；正式部署、数据库迁移、Dispatcher、Postgres 持久化、撤权审计和副作用审计统一通过 `NODE_BIN` / `node-runtime.sh` 使用固定 Image ID 或 Digest 的隔离 Node Runtime，禁止回退到宿主 `node` 假设。
+- 最终 Source Registry、Collector Config、P003、四角色 UAT 和 Goal 7 审批原件必须先以 `0600` 权限放入 `/share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence/approvals/<release-id>/`，再由无网络 Node Runtime 校验；部署入口拒绝战略情报受控根目录以外的审批路径。
 - 默认配置引用 P1-SI-B candidate Source Registry，所选来源保持 `paused`，因此在合规审批完成前会在网络请求前失败关闭。
 
 ## 自动保护
@@ -46,7 +50,7 @@ npm test
 npm run validate
 ```
 
-当前 Shadow / Readiness / Goal Completion 测试为 `64/64`，其中七日验收负测覆盖：缺日、日期断档、模拟证据、零来源、审计覆盖缺失、Postgres 未持久化、业务副作用、Source Commit 漂移、Collector 镜像漂移、Policy 漂移和容器重启；Domain 链覆盖 Collector 失败、来源无 Snapshot、P003 激活/缺类、模型执行冒领、单事务 SQL、幂等冲突策略和持久化未授权拒绝。生产 readiness、内部模式、部署演练、最终完成判定和回滚授权负测继续保持 fail-closed。
+当前 Shadow / Readiness / Goal Completion 测试为 `68/68`，其中七日验收负测覆盖：缺日、日期断档、模拟证据、零来源、审计覆盖缺失、Postgres 未持久化、业务副作用、Source Commit 漂移、Collector 镜像漂移、Policy 漂移和容器重启；Domain 链覆盖 Collector 失败、来源无 Snapshot、P003 激活/缺类、模型执行冒领、单事务 SQL、幂等冲突策略和持久化未授权拒绝。新增负测保证全部正式 QNAP 宿主脚本使用统一 Node Runtime、Dispatcher 在第一次 Node 调用前读取 0600 环境文件，并拒绝受控根目录以外的审批原件。生产 readiness、内部模式、部署演练、最终完成判定和回滚授权继续保持 fail-closed。
 
 ## 内部工程验证模式
 
@@ -201,26 +205,27 @@ Dispatcher 使用 QNAP 既有 crontab 每分钟检查队列，安装过程不会
 
 ## 当前 Runtime 与发布候选证据
 
-当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此没有在开发机伪造 Runtime 结果。手动 GitHub Actions Run `31421625978` 已对已推送 Source Commit `2974c19eaab1282a0f2dd168ed7056e5a79e6f68` 完成：
+当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此没有在开发机伪造 Runtime 结果。手动 GitHub Actions Run `31475369650` 已对已推送 Source Commit `6e15417cf4201e5e725382d86ce7884c24e52e6f` 完成：
 
-- Collector Linux/amd64 镜像真实构建，Image ID `sha256:e642103af70444f67c27fa4f1804541ae9a87f7bd6a0502531decbe7f23a8e7e`；
+- Collector Linux/amd64 镜像真实构建，Image ID `sha256:81a3015e58a55d875c863b266854c16efa96b5cd904f53bb7a22c31fcd5080a8`；
 - 010/011 候选 SQL 的隔离 PostgreSQL Runtime 验证；
 - 19/19 候选表强制 RLS；
+- Domain Batch 两次幂等持久化与无 ACL 读取 fail-closed；
 - baseline dump/restore；
 - 不可变 `source.tar.gz`、`collector-image.tar.gz` 和 `release-manifest.json`；
 - Artifact 解压目录内直接执行 `sha256sum -c SHA256SUMS` 全部通过；
 - `immutableReleaseCandidateVerified=true`、`publish=false`、`productionDeploymentAuthorized=false`。
 
-Artifact：`p1-si-runtime-2974c19eaab1282a0f2dd168ed7056e5a79e6f68`，保留 90 天，到期时间 `2026-11-08T18:56:45Z`。当前仍未完成：
+Artifact：`p1-si-runtime-6e15417cf4201e5e725382d86ce7884c24e52e6f`，Artifact ID `9095030707`，保留至 `2026-11-09T08:55:24Z`。下载后 `SHA256SUMS` 全量通过；当前仍未完成：
 
 - 公司来源许可和合规审批；
 - Goal 7 完成证据；
-- 公司 QNAP 五元组在线复核；
-- 公司 QNAP Compose config、备份和部署前快照；
+- 正式生产部署前的公司 QNAP 五元组、Compose config、备份和运行快照复核；
 - 公司 QNAP Shadow 部署；
 - 七个真实自然日 Shadow及川哥最终体验验收。
-- 新 Domain Batch → Postgres 持久化链的两次幂等写入与无 ACL 读取负测 Runtime 证据。
 
-该 Artifact 生成于 P003 最终审核、成员真实权限验收、Goal 7 文件化验收门禁和 Domain Postgres 持久化链加入之前，现在只保留为历史工程证据，`deploymentEligible=false`。Release Manifest 已升级到 `1.2.0 / P1-SI-F-shadow-candidate-gated`；必须在实名审核、成员权限体验和 Goal 7 完成后，从当时已推送的最终 Commit 重新运行 Runtime Workflow 并生成不可变发布包。
+该 Artifact 已覆盖当前工程代码和统一 QNAP Node Runtime，但生成时来源最终审核、P003 最终审核、成员权限 UAT 与 Goal 7 尚未完成，因此仍是 `productionDeploymentAuthorized=false / deploymentEligible=false` 的工程发布候选。正式部署前必须从全部人审门禁完成后的最终 Commit 再运行 Runtime Workflow，不能直接把本 Artifact 当作生产批准。
+
+历史 Run `31421625978` / Commit `2974c19ea` 和 Run `31473316988` / Commit `a7aeae25e` 仅保留为演进证据，均不得替代当前或未来的正式发布身份。
 
 以上未完成项不得用 CI、静态测试、模板或模拟数据冒充完成。
