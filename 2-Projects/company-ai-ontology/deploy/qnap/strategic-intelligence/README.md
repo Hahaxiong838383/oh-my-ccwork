@@ -205,9 +205,9 @@ Dispatcher 使用 QNAP 既有 crontab 每分钟检查队列，安装过程不会
 
 ## 当前 Runtime 与发布候选证据
 
-当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此没有在开发机伪造 Runtime 结果。手动 GitHub Actions Run `31475369650` 已对已推送 Source Commit `6e15417cf4201e5e725382d86ce7884c24e52e6f` 完成：
+当前开发机没有 Docker、Podman、Nerdctl、Buildah 或本地 Postgres，因此没有在开发机伪造 Runtime 结果。手动 GitHub Actions Run `31476183330` 已对已推送 Source Commit `80f3fc6dd1556981ee4dad64513e7f8040e55647` 完成：
 
-- Collector Linux/amd64 镜像真实构建，Image ID `sha256:81a3015e58a55d875c863b266854c16efa96b5cd904f53bb7a22c31fcd5080a8`；
+- Collector Linux/amd64 镜像真实构建，Image ID `sha256:a2806bf4e10ee738d00a4c5bd2d444fa7726e0acb30f4376c3d808c403905411`；
 - 010/011 候选 SQL 的隔离 PostgreSQL Runtime 验证；
 - 19/19 候选表强制 RLS；
 - Domain Batch 两次幂等持久化与无 ACL 读取 fail-closed；
@@ -216,7 +216,7 @@ Dispatcher 使用 QNAP 既有 crontab 每分钟检查队列，安装过程不会
 - Artifact 解压目录内直接执行 `sha256sum -c SHA256SUMS` 全部通过；
 - `immutableReleaseCandidateVerified=true`、`publish=false`、`productionDeploymentAuthorized=false`。
 
-Artifact：`p1-si-runtime-6e15417cf4201e5e725382d86ce7884c24e52e6f`，Artifact ID `9095030707`，保留至 `2026-11-09T08:55:24Z`。下载后 `SHA256SUMS` 全量通过；当前仍未完成：
+Artifact：`p1-si-runtime-80f3fc6dd1556981ee4dad64513e7f8040e55647`，Artifact ID `9095350329`，保留至 `2026-11-09T09:06:10Z`。下载后 `SHA256SUMS` 全量通过；当前仍未完成：
 
 - 公司来源许可和合规审批；
 - Goal 7 完成证据；
@@ -226,6 +226,6 @@ Artifact：`p1-si-runtime-6e15417cf4201e5e725382d86ce7884c24e52e6f`，Artifact I
 
 该 Artifact 已覆盖当前工程代码和统一 QNAP Node Runtime，但生成时来源最终审核、P003 最终审核、成员权限 UAT 与 Goal 7 尚未完成，因此仍是 `productionDeploymentAuthorized=false / deploymentEligible=false` 的工程发布候选。正式部署前必须从全部人审门禁完成后的最终 Commit 再运行 Runtime Workflow，不能直接把本 Artifact 当作生产批准。
 
-历史 Run `31421625978` / Commit `2974c19ea` 和 Run `31473316988` / Commit `a7aeae25e` 仅保留为演进证据，均不得替代当前或未来的正式发布身份。
+历史 Run `31421625978` / Commit `2974c19ea`、Run `31473316988` / Commit `a7aeae25e` 和 Run `31475369650` / Commit `6e15417cf` 仅保留为演进证据，均不得替代当前或未来的正式发布身份。
 
 以上未完成项不得用 CI、静态测试、模板或模拟数据冒充完成。
