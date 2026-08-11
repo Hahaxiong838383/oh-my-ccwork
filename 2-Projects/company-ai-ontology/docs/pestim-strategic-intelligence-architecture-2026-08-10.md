@@ -1,6 +1,6 @@
 # PESTIM 战略情报与经营建议系统方案
 
-更新时间：2026-08-10（Asia/Shanghai）
+更新时间：2026-08-11（Asia/Shanghai）
 
 ## 1. 结论
 
@@ -335,7 +335,7 @@ status / error_code
 3. 🟡 `P1-SI-C`：公司独立 Collector Contract、JSON Schema、oneshot Worker、Source Registry 前置准入、去重、last-good 和固定镜像配方已完成；手动 CI 已真实构建 Linux/amd64 镜像并生成不可变镜像归档，但未启动 QNAP 服务。
 4. 🟡 `P1-SI-D`：Postgres 真源、Raw/Observation/Signal、Evidence/Impact/Report 物理模型、双时间、Replay、热冷保留和 ACL 候选已完成；CI 隔离 PostgreSQL 已通过 010/011、19/19 强制 RLS 与 baseline restore，仍未进入生产 migrations。
 5. 🟡 `P1-SI-E`：日/周/月/季/半年/年、Alert、公司和 P003 报告机器契约及三类只读投影已完成；未运行真实报告。
-6. 🟡 `P1-SI-F`：资源受限 Shadow Compose、轻量 Orchestrator、oneshot Worker、授权门禁、备份、Freeze、回滚，以及生产七日证据链、内部独立 readiness 和 Goal Completion 汇总门禁已通过 `68/68`。正式 QNAP 宿主脚本统一使用固定镜像、无网络的 Node Runtime，审批原件只接受 `approvals/<release-id>/`；Commit `80f3fc6dd`、Runtime Run `31476183330` 和 Artifact `9095350329` 已验证 010/011、19/19 RLS、Domain 幂等、ACL fail-closed、baseline restore 与全量 Hash。正式 readiness 继续验证部署授权、Goal 7、不可变发布包、来源 Registry、P003 审核、四名职能角色真实登录权限体验和 Goal 7 Owner Acceptance；当前 Artifact 未包含最终人审批准，仍不能用于生产部署。最终完成判定继续重新校验审批原件、生产部署前后快照和七日 Owner Acceptance，并绑定 Release/Deployment/Summary 的不可变身份。
+6. 🟡 `P1-SI-F`：资源受限 Shadow Compose、轻量 Orchestrator、oneshot Worker、授权门禁、真实备份/回滚、首次运行 Evidence、生产七日证据链、内部独立 readiness 和 Goal Completion 汇总门禁已通过 `76/76`。正式 QNAP 宿主脚本统一使用固定镜像、无网络的 Node Runtime，审批原件只接受 `approvals/<release-id>/`；Commit `c0d9ce92f`、Runtime Run `31480010967` 和 Artifact `9096846710` 已验证 010/011、19/19 RLS、Domain 幂等、ACL fail-closed、baseline restore、失败留证、Foundation 作用域和内部更新/回滚门禁。正式 readiness 继续验证当次部署授权、Goal 7、不可变生产发布包、来源 Registry、P003 审核、四名职能角色真实登录权限体验和 Goal 7 Owner Acceptance；当前 Artifact 未包含最终人审批准，仍不能用于生产部署。最终完成判定继续重新校验审批原件、生产部署前后快照和七日 Owner Acceptance，并绑定 Release/Deployment/Summary 的不可变身份。
 7. 🟡 `P1-SI-G`：已从真实 4644 条矩阵中筛选 P003 36 条候选，六类各 6 条，候选包 Hash `ba6a77fd52d1558c946bdaf5bad290f9898d3ce0d4c8af399a7ebba98df866ff`；全部保持 inactive，等待实名 DRI 逐条重写和补证，不能直接激活。
-8. `internal_engineering_shadow`：Commit `a7aeae25e` 的内部 Runtime 已在公司 QNAP 准备完成但尚未运行；下一步等待首次一次性采集的独立授权，再运行 1～3 天内部排错和管理员 Smoke Test，不计入正式七日 Shadow。
-9. `P1-SI-H production_shadow`：Goal 7、正式人审和成员 UAT 完成并获得当次授权后，将公司版雷达部署到公司 QNAP并运行 7 天 `PUBLISH=false` Shadow。
+8. `internal_engineering_shadow`：公司 QNAP 当前仍是 Commit `a7aeae25e` 的旧内部 Runtime，尚未运行；新 Artifact `9096846710` 处于 `runtime_update_pending`。下一步必须先获得“仅更新内部 Runtime，不运行 Collector、不迁移数据库、不重启 Foundation”的独立授权，更新验收通过后再单独授权首次一次性采集；1～3 天内部排错和管理员 Smoke Test 永远不计入正式七日 Shadow。
+9. `P1-SI-H production_shadow`：当前为 `engineering_verified / human_review_pending / runtime_update_pending / production_blocked`。来源最终决定仍为 `0/8`、P003 最终决定为 `0/36`，四角色 UAT 与 Goal 7 Owner Acceptance 缺失；Deployment Readiness `0/7`、Goal Completion `0/8`。全部人审和 Goal 7 完成、从最终 Commit 重建生产发布包并获得当次部署/迁移/运行授权后，才可将公司版雷达部署到公司 QNAP并运行 7 天 `PUBLISH=false` Shadow。
