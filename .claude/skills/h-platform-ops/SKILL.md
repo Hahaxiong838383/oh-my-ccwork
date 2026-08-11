@@ -637,6 +637,89 @@ lark-cli 有工具 → 必然猜到那上面去。真机翻车过：跑 `lark-cl
   退出。杀它记得用 `ps | grep '[l]ark-cli'` 括号法拿 PID，**禁 `pkill -f`**
   （pattern 会匹配到自己那条 ssh 命令行）。
 
+## 🔴 权限申请链路 2026-08-11 大修（「反复要权限」死循环三连修，排障先读）
+
+一天内连修四件（H-0089/0090/0091/0092，bridge `503bf0b→6e3cea1`，契约
+`2026-08-11.3`）。排「用户反复被要权限/授权没用/任务不续跑」先读本节。
+
+### 0. 双授权体系——先分清在说哪一个（最易混）
+
+| 体系 | 数据源 | 卡片/日志锚 | 缺口含义 |
+|---|---|---|---|
+| **控制面 addons** | `/internal/auth-status`（`st.addons.upToDate`） | AUTH 状态卡「机器人权限：已是最新」+引擎绑定列表 | 平台预置权限/事件的用户确认 |
+| **lark scope** | broker `probe`（missingInApp/grantableByReauth/tokenStatus） | `lark auth needs console missing=N` / 权限卡 / 导入助手页 | 飞书开放平台 App 权限 |
+
+AUTH 状态卡说「已是最新」**只指 addons**，不代表 lark scope 没缺口——2026-08-11
+测试 bot 卡上「已是最新」而 lark 缺口 272。拿错体系的读数下结论必错。
+
+### 1. lark 缺口两档语义（决定发什么卡）
+
+- `missingInApp`（**console 档**）：App 后台没开通。唯一解=开发者后台导入+管理员
+  审批。**device flow 授权改变不了它**——测试 bot 一下午三轮 `flow completed`、
+  missing=272 纹丝不动，就是把 console 档当 reauth 档治。
+- `grantableByReauth`（**reauth 档**）：App 已开通、user token 没带。device flow
+  重新授权立刻生效（P2b 分批链，200/批）。
+- **consoleOnly 分流**（broker.start，2026-08-11）：probe 成功 + token valid +
+  reauth 空 + missing 非空 + recommend 模式 → **不起 device flow**、返回
+  `{url:'', consoleOnly:true, guidance}`；权限卡对空 URL 自动不渲染授权按钮，
+  只发 console 引导。探测失败仍 fail-open 发卡（保留 2026-07-31 决策）；
+  reauth 链传显式 scopes（exact 模式）不受影响。日志锚 `lark auth console-only`。
+
+### 2. 授权后续跑信箱（console 路径的续跑通路）
+
+console 路径没有 flow 也就没有 onComplete 回调——用户后台导入+审批完成后说
+「已授权，你继续」，原任务无人接。机制（bridge.mjs `pendingAuthRetry`）：
+
+- 缺权发权限卡时把 `retryAfterAuth` 闭包压信箱（chatId 为键）；
+- AUTH 网关代答命中**完成式**（已授权/授权好了/授权完成/继续，正则在
+  handleAuthCommand 头部）→ 发「▶️ 正在续跑」卡 + 异步重试；
+- flow 正常路径 onComplete 成功续跑时**清信箱**（防「继续」双跑）；24h TTL
+  过期只清不跑；重试再缺权会收到新权限卡，无害收敛。
+- 内存态：bridge 重启即丢，退化为用户重发（可接受，别当故障修）。
+- ⚠️ AUTH 代答第二档（≤20 字含「授权」）会把完成式消息也劫持成状态查询——
+  续跑钩就挂在代答里（先续跑判定、后状态卡），改 handleAuthCommand 别把
+  text 参数断掉（调用点必须穿 `cleaned`，契约测试锁着）。
+
+### 3. 缺口清单源头 = `ops/data/lark-scope-baseline.json`
+
+- 引导卡/导入助手的清单从这个基线派生（bridge 侧读）。**飞书报「该权限不存在，
+  请检查(N)」→ 直接来这个文件里删坏名**，known-bad 测试
+  （test/lark-auth-broker.test.mjs 尾部）锁死已知无效名单。
+- 已实锤坏名：`im:message.group_bot_msg:readonly`（已剔除）。川哥的参考全量文件
+  （飞书全量权限-lark-import-full-safe.json）历史导入时飞书不校验，**里面也可能
+  存着坏名**——它是「能导入成功的格式样本」，不是「scope 名权威源」；权威校验器
+  是飞书导入框本身。
+- 导入 JSON 的**格式**必须与参考文件逐字节同构：2 空格缩进美化+尾换行
+  （`JSON.stringify(x,null,2)+'\n'`），渲染契约测试锁死。⚠️ 判断格式认
+  **原始字节**（`head -c`），别 json.load 后心算——2026-08-11 用「字节数÷项数」
+  推断出「紧凑单行」错改一轮（35 vs 36 字节/项根本分不开两个假设），详见
+  canonical [[feedback_judge_at_the_layer_you_read]]。
+
+### 4. 绩效族 tenant-only + 身份白名单（杨平案 H-0090）
+
+- 飞书 performance 族接口**仅支持 tenant_access_token**；而租户沙箱 P2a 身份
+  门禁把 `--as bot` 全拦并教模型改用 user 身份 → user 调 tenant-only 必败 →
+  被授权自愈误判为用户缺权 → 弹卡死循环（第二形态）。
+- 修复：wrapper（ops/lark-cli-audit，部署在 `/srv/h-platform/shared/bin/`）
+  identity-bot 白名单三重条件——`api` 子命令 + `/open-apis/performance/` 前缀 +
+  末段查询动词（query/search/list/get/batch_query/batch_get）→ 放行 `--as bot`；
+  路径含 write/create/update/delete/import/upload 一票否决；非 api 子命令、
+  非 performance 域照拦。裸资源 GET（如 v1 semesters）**刻意保守拦**，撞到再扩。
+- scope 开通仍需管理员后台审批——白名单不绕人工门。owner 对照组：三 performance
+  scope 已开通，tenant 身份实测 review_templates/query 通（公司有绩效席位）。
+- wrapper 每次调用现读，**替换共享 bin 即生效不用重启**；契约版本变更才需重启
+  bridge。
+
+### 5. 「反复要权限」排查 SOP
+
+1. 先分体系（§0）：卡说「已是最新」≠ lark scope 无缺口；
+2. 数**动作与指标是否同源**：`flow completed` 次数在涨而 `missing=N` 纹丝不动
+   = 要求用户做的动作（授权）与缺口（console 档）不同源，别再让用户点卡；
+3. 看缺口档位（§1）：journalctl 锚 `needs console missing=` / claim reconciled
+   的 `reauth=`；
+4. 「该权限不存在」→ §3 基线删坏名；
+5. tenant-only 接口（绩效等）→ §4 白名单 + 确认 scope 已审批。
+
 ## 沙箱凭据注入：token 不上命令行（v1.12.0 安全修复）
 
 `--setenv XAI_API_KEY <token>` 会让令牌明文躺在 `/proc/<pid>/cmdline`，**本机任何
@@ -5184,13 +5267,13 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-11 14:00：dev198 已上**动态并发 `d4f7fb2`**；Mini VM 仍 `f076e7642fab` **刻意落差且行为等价**——Mini 仅 1 租户，动态公式 1×3=3 与旧默认相同，下次割接窗口跟车）
+#### ✅ 版本态（2026-08-11 16:20：dev198 运行文件到 **`6e3cea1`**、契约 **`2026-08-11.3`**；控制面 **`v1.60.2`**；Mini VM 仍 `f076e7642fab` **刻意落差且行为等价**——仅 1 租户，动态并发公式 1×3=3 与旧默认相同，权限链路修复对 Mini 单租户场景影响极小，下次割接窗口一并跟车）
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | 线上 **`v1.60.0`**（H-0087 scope-import 端点+助手页；Source `256d6f5`、51 文件 `in_sync`、`mismatchCount=0`；公网 `/healthz` 取真值） |
-| Mini 活动 VM 运行态 | **`f076e7642fab`**、`dirty=false`、581 文件、1 App（2026-08-10 三段割接零停服；真实长任务验证器 10/10 全绿，Base H-0085）。**未含动态并发**：1 租户时公式=3=旧默认，行为零差 |
-| dev198 | **bridge.mjs+lib/parallel-policy.mjs 已到 `d4f7fb2`**（动态并发=租户数×3 上限 30，2026-08-11 两轮空窗重启热更，healthz `parallelPolicy={3,30,12,30}` 实证；此前 H-0087 四文件=`256d6f5` 内容；git HEAD 仍 `f076e76` 属正常——按文件 sha 对撞判断，契约 2026-08-09.1 全 12 App 唯一） |
+| 控制面 aliyun-hk | 线上 **`v1.60.2`**（H-0089 导入 JSON 与参考文件逐字节同构+下载兜底；Source `82ae617`、releaseId `20260811-145425`、51 文件 `in_sync`、`mismatchCount=0`；公网 `/healthz` 的 `release` 键取真值） |
+| Mini 活动 VM 运行态 | **`f076e7642fab`**、`dirty=false`、581 文件、1 App（2026-08-10 三段割接零停服）。**未含**：动态并发、consoleOnly 分流、续跑信箱、绩效白名单 |
+| dev198 | **运行文件到 `6e3cea1`**（动态并发 `d4f7fb2` + 绩效身份白名单/基线清洗 `503bf0b`/`722c946` + 续跑信箱 `6e3cea1`，2026-08-11 四轮空窗重启热更；共享 wrapper `/srv/h-platform/shared/bin/lark-cli-audit` 已同步替换；git HEAD 仍 `f076e76` 属正常——按文件 sha 对撞判断，契约 **`2026-08-11.3`** 全 12 App 唯一） |
 
 > 仓库 main 已到 `256d6f5`（H-0087 P0+P1 一体提交）；dev198 运行文件按需热更（四文件当前=256d6f5 内容），不要把控制面 Source Commit 当成 Bridge Runtime Commit，也不要拿 dev198 的 git HEAD 当运行态真值——认文件 sha 对撞。dev198 备份 `~/local/h160-bak-120500/`、控制面备份 `/srv/h-control/filebak-v1590-120100/`。
 
