@@ -35,7 +35,7 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 18. **授权流复用不能丢任务**：同一用户同一权限集合的并发任务可复用一个短效 flow，但每个等待任务的 callback 都要挂上；一个 callback 失败不能影响其他任务。约 600 秒过期或未完成后必须释放授权流与 30 分钟通知去重键，下一次检测可立即补新卡。
 19. **短效授权要在用户活跃时现开**：device-flow 实测约 600 秒，无人时提前生成只会留下过期卡。延迟补发的真实语义是“到达 notBefore **并且** 用户下一次单聊入站”，不是“到点立即执行”；现有 F3 调度器只有时间条件，不能冒充事件门。一次性运维可用持久 timer 在 notBefore 后挂只读入站监听，命中目标用户后再创建新授权流；用户标识只留生产机，不入 Git、共享记忆或通用 Skill。
 20. **共享机制禁止用户补丁**：机制修复只能落在 Bridge、共享 Runner 接口或共享 `lib/`；禁止按 `uid`、`appId`、姓名、测试账号或 Bot 名称写分支。每次共享行为变更必须提升 `BOT_BEHAVIOR_CONTRACT_VERSION`，跑全引擎契约与全量测试，并从 `/healthz` 匿名确认所有 App 的版本唯一值数量为 1。
-21. **同会话任务有限并发**：私聊新任务到达时，若实际未完成任务数小于 `GROK_MAX_PARALLEL`，立即把当前前台任务转后台并释放同会话链，新任务直接开始；实际 Runner 完成前仍占并发名额。达到上限或群聊场景才排队，禁止用“per-session 串行”让独立任务无条件互相等待，也禁止释放链后无限启动后台任务。
+21. **同会话任务有限并发**：私聊新任务到达时，若实际未完成任务数小于全局动态容量（2026-08-11 起 = 租户数×3、上限 30，见「全局并发容量动态化」节；`GROK_MAX_PARALLEL` 语义已从总量改为上限），立即把当前前台任务转后台并释放同会话链，新任务直接开始；实际 Runner 完成前仍占并发名额。达到上限或群聊场景才排队，禁止用“per-session 串行”让独立任务无条件互相等待，也禁止释放链后无限启动后台任务。
 22. **任务完成必须晚于送达确认**：Runner 成功只代表计算结束，不代表用户收到结果；持久交付链必须遵守 `Runner success -> durable enqueue -> send -> delivery ack -> task_completed`。`delivery_started`、TaskSessionLog 或一次发送调用均不能替代 ACK；Outbox/送达失败时禁止提前写完成。
 23. **生产 Base 一律先读后改**：编辑《H 产品需求与缺陷闭环》前，必须使用飞书 CLI/API 以 user 身份串行回读当前 Base、数据表、字段、视图、表单问题和记录数量；涉及视图时还要读取其筛选、排序、分组和可见字段。人工编辑后旧快照立即作废，必须重新读取，禁止按历史记忆或上一次返回直接写。既有视图只允许原位更新，不得删除、重建或改名，除非川哥明确点名要求。表单问题与底层字段共用 ID，`+form-questions-delete` 可能连带删除字段和数据；生产主表默认禁用该命令，简化人类入口优先新建独立 intake 表/表单。
 24. **字段结构恢复不等于数据恢复**：同名重建字段会生成新 field ID，旧单元格值不会自动回来。任何删字段/删表单问题前都要把实时字段、视图配置和全量记录快照放在 `0600` 的 `/tmp` 临时文件；恢复值时必须同时校验 `record_id` 与主描述文本一一对应，再按原值分组，仅 patch 目标字段。回读验收要检查目标值全匹配、其他业务单元格零变化、视图 ID/名称/类型不变；记录写入会自动刷新只读“更新时间”，必须如实说明。`field-list` 返回顺序不稳定，结构对比按 field ID 映射，禁止直接比较数组顺序。
@@ -1789,8 +1789,39 @@ pattern 会匹配到你自己那条 ssh 命令行，把连接杀掉（exit 255�
    静默窗口，则先做不送达真实 Runner 探针，窗口满足后再按 `notBefore AND nextInbound`
    主动送达，禁止为了验收提前打扰。
 7. **同会话有限并发**：私聊新任务到达且全局容量未满时，当前任务立即转后台，新任务
-   直接执行；并发计数跟随真实 work 生命周期，不能在转后台时提前释放。达到
-   `GROK_MAX_PARALLEL` 后才显示“已入队”。
+   直接执行；并发计数跟随真实 work 生命周期，不能在转后台时提前释放。达到全局
+   动态容量后才显示“已入队”。
+
+### 全局并发容量动态化（2026-08-11 上线，bridge `0e66d95`+`d4f7fb2`）
+
+背景：旧全局闸门固定 3（`GROK_MAX_PARALLEL` 默认），2026-08-11 上午 11:31–11:45
+实测撞顶——3 名额全占 + 3 任务排队，`capacity granted wait=303572ms`（等 5 分钟），
+张雨琦收到「已入队 #2」。现改为动态容量：
+
+- **公式**：总名额 = 租户数 × `GROK_PARALLEL_PER_TENANT`(默认 3)，夹在
+  [perTenant, `GROK_MAX_PARALLEL`(默认 30)]。实现 `lib/parallel-policy.mjs`；
+  **`GROK_MAX_PARALLEL` 语义已从「总量」改为「上限」**，生产 .env 两个变量都不配（代码默认即规格）。
+- **租户口径**：bridge `handles` 的 unique `uid`（owner ctx 无 uid 按 appId 计一户）。
+  实测 12 App → `tenants=12`（≠控制面 person 数 10，多 Bot 用户 uid 不同）；
+  12×3=36 → cap 封 30。新用户热加载后下一次求值自动跟涨，无需重启；countTenants
+  抛错收缩到 perTenant（fail-safe 方向是少开）。
+- **「平均 3」不是 per-tenant 硬配额**：分配靠 fair-capacity-scheduler 加权公平
+  （App→引擎→会话三维），闲时一人可多占。
+- **观测口**：healthz 顶层 `maxParallel` = 当前 effectiveMax；`parallelPolicy` =
+  `{perTenant,cap,tenants,effectiveMax}` 快照；`workConcurrency.max` = scheduler
+  真实容量（每次租约 acquire 时用 effectiveMax 现值更新）。
+- **排队排障先分层**（两层长得都像「已入队」）：
+  - 全局容量层：journalctl 搜 `fair scheduler queued`（进等待队列）与
+    `capacity granted wait=NNNms`（等了多久）；
+  - 同会话层：`foreground yield requested`（让位成功）缺失 + qDepth>0 → 是串行链/
+    让位窗口问题，调大容量无效（见下节 2026-07-28 实录）。
+  - ⚠️ **healthz 的 workConcurrency 计数器（grants/maxWaitMs/averageWaitMs）随 bridge
+    重启清零**——判断「容量是否满过」必须翻 journalctl 历史，不能只看当前进程快照
+    （2026-08-11 就差点被重启后的 `maxWaitMs=0` 骗成「从没撞顶」）。
+- **改容量**：动 .env 两变量之一 + 空窗重启 bridge（`workConcurrency.active=0 &&
+  runnerWorker.active=0` 再动手）；runner-worker 不 import 该模块无需重启。
+- 顺带：入队卡「预览：?」不是渲染 bug——用户真发了「?」，追问/催促类短消息目前
+  会被当新任务入队（已知体验问题，未立项）。
 
 ### 同会话并发排障与验收（2026-07-28 owner 实录）
 
@@ -5153,13 +5184,13 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-10 15:45：dev198 与 Mini VM **同版 `f076e7642fab`**，双站契约 `2026-08-09.1` 唯一；Mini 完整验证器 `ok=true, status=complete`）
+#### ✅ 版本态（2026-08-11 14:00：dev198 已上**动态并发 `d4f7fb2`**；Mini VM 仍 `f076e7642fab` **刻意落差且行为等价**——Mini 仅 1 租户，动态公式 1×3=3 与旧默认相同，下次割接窗口跟车）
 
 | 位置 | 版本 |
 |---|---|
 | 控制面 aliyun-hk | 线上 **`v1.60.0`**（H-0087 scope-import 端点+助手页；Source `256d6f5`、51 文件 `in_sync`、`mismatchCount=0`；公网 `/healthz` 取真值） |
-| Mini 活动 VM 运行态 | **`f076e7642fab`**、`dirty=false`、581 文件、1 App（2026-08-10 三段割接零停服；真实长任务验证器 10/10 全绿，Base H-0085） |
-| dev198 | **bridge.mjs/control-client/feishu-send/lark-scope-guidance 已到 `256d6f5`**（H-0087 投递修复+助手按钮，2026-08-11 双服务重启热更；git HEAD 仍 `f076e76` 属正常——按文件 sha 对撞判断，契约 2026-08-09.1 全 12 App 唯一） |
+| Mini 活动 VM 运行态 | **`f076e7642fab`**、`dirty=false`、581 文件、1 App（2026-08-10 三段割接零停服；真实长任务验证器 10/10 全绿，Base H-0085）。**未含动态并发**：1 租户时公式=3=旧默认，行为零差 |
+| dev198 | **bridge.mjs+lib/parallel-policy.mjs 已到 `d4f7fb2`**（动态并发=租户数×3 上限 30，2026-08-11 两轮空窗重启热更，healthz `parallelPolicy={3,30,12,30}` 实证；此前 H-0087 四文件=`256d6f5` 内容；git HEAD 仍 `f076e76` 属正常——按文件 sha 对撞判断，契约 2026-08-09.1 全 12 App 唯一） |
 
 > 仓库 main 已到 `256d6f5`（H-0087 P0+P1 一体提交）；dev198 运行文件按需热更（四文件当前=256d6f5 内容），不要把控制面 Source Commit 当成 Bridge Runtime Commit，也不要拿 dev198 的 git HEAD 当运行态真值——认文件 sha 对撞。dev198 备份 `~/local/h160-bak-120500/`、控制面备份 `/srv/h-control/filebak-v1590-120100/`。
 
