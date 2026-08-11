@@ -121,6 +121,7 @@ test('deployment scripts only target strategic intelligence services and keep ex
   assert.match(deploy, /SHADOW_DEPLOY_APPROVED/)
   assert.match(deploy, /GOAL7_STATUS/)
   assert.match(deploy, /SI_GOAL7_ACCEPTANCE_FILE/)
+  assert.match(deploy, /inspect-deployment-readiness\.mjs/)
   assert.match(deploy, /validate-goal7-acceptance\.mjs/)
   assert.match(deploy, /validate-release-manifest\.mjs/)
   assert.match(deploy, /SI_APPROVED_P003_REVIEW_FILE/)

@@ -19,6 +19,7 @@ for file in "$manifest" "$source_archive" "$image_archive" "$approved_registry" 
   [ -f "$file" ] || { echo 'required release or approval file missing' >&2; exit 1; }
 done
 case "$release_root" in /share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence/release/*) ;; *) echo 'refusing unexpected release root' >&2; exit 1 ;; esac
+node "$script_root/inspect-deployment-readiness.mjs" >/dev/null
 
 source_commit=$(node -e "const x=require(process.argv[1]); process.stdout.write(x.sourceCommit)" "$manifest")
 image_id=$(node -e "const x=require(process.argv[1]); process.stdout.write(x.collectorImageId)" "$manifest")

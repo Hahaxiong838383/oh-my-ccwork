@@ -43,7 +43,24 @@ npm test
 npm run validate
 ```
 
-当前 Shadow 包测试为 `26/26`，其中七日验收负测覆盖：缺日、日期断档、模拟证据、零来源、审计覆盖缺失、业务副作用、Source Commit 漂移、Collector 镜像漂移、Policy 漂移和容器重启。
+当前 Shadow 包测试为 `29/29`，其中七日验收负测覆盖：缺日、日期断档、模拟证据、零来源、审计覆盖缺失、业务副作用、Source Commit 漂移、Collector 镜像漂移、Policy 漂移和容器重启；部署 readiness 另覆盖输入缺失、完整通过和无效验收文件三条路径。
+
+## 部署门禁只读检查
+
+部署前先运行统一只读检查器。它只返回稳定的门禁状态和原因码，不输出审批正文、实名人员、文件路径或 Secret；任何输入缺失或验证失败都会以退出码 `2` 失败关闭。
+
+```bash
+SHADOW_DEPLOY_APPROVED=YES \
+GOAL7_STATUS=complete \
+SI_RELEASE_ROOT=/share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence/release/<release-id> \
+SI_APPROVED_SOURCE_REGISTRY_FILE=/path/to/approved-source-registry.json \
+SI_APPROVED_COLLECTOR_CONFIG_FILE=/path/to/approved-collector-config.json \
+SI_APPROVED_P003_REVIEW_FILE=/path/to/approved-p003-review.json \
+SI_GOAL7_ACCEPTANCE_FILE=/path/to/goal7-acceptance.json \
+npm run readiness
+```
+
+只有输出 `deploymentEligible=true / requiredGate=READY_FOR_EXPLICIT_DEPLOYMENT` 时，才允许进入 `deploy-shadow.sh`；检查器本身不复制文件、不执行迁移、不启动容器，也不重启任何既有服务。
 
 ## 七日 Shadow 验收闭环
 

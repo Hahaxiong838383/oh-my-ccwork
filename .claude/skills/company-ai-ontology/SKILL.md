@@ -327,6 +327,7 @@ node ops/sync-company-directory.mjs
 - P1-SI-H 才是公司 QNAP 雷达实际部署阶段；必须同时满足 Goal 7、来源合规批准、P003 真实 DRI 审核、镜像与 SQL Runtime 验证、已推送不可变发布包、公司 QNAP 五元组在线核对和当次部署授权。部署、服务重启和真实回滚演练分别授权；七个真实自然日 `PUBLISH=false` Shadow 完成前不得关闭 P1-SI Goal。
 - P1-SI-H 的 `deploy-shadow.sh` 必须同时校验 `SI_APPROVED_SOURCE_REGISTRY_FILE`、`SI_APPROVED_COLLECTOR_CONFIG_FILE` 和 `SI_APPROVED_P003_REVIEW_FILE`。P003 工作簿必须 `requireFinal=true`、36 条全部最终决定、所有关系保持 `inactive`；任何 pending、候选 Hash 漂移、缺实名参与者或提前激活都在数据库迁移和服务启动前 fail-closed。实名候选清单只能留在 `~/work-private/company-ai-ontology/reviews/`，Git、共享记忆和公开报告只记录脱敏数量与门禁状态。
 - `GOAL7_STATUS=complete` 不能单独作为 P1-SI-H 证据。部署与独立数据库迁移都必须要求 `SI_GOAL7_ACCEPTANCE_FILE`，并验证 `engineeringVerified=true / ownerAccepted=true`、Authority 与 Runtime 关键证据完整、Route B 关闭、整库导入/真实员工 Canary/私人 Bot 迁移/ERP 与社媒写回继续关闭；模板默认不可通过。
+- P1-SI-H 部署前统一执行 `npm run readiness`。检查器必须同时验证当次部署授权、Goal 7 状态、不可变发布包、已审批 Source Registry/Collector Config、P003 最终审核和 Goal 7 Owner Acceptance；缺失输入与无效输入分别返回稳定原因码并以退出码 `2` 失败关闭。输出只允许脱敏门禁状态，不得包含路径、审批正文、实名人员或 Secret；`deploy-shadow.sh` 必须强制调用同一检查器，避免“人工看板显示阻断但执行入口仍可绕过”的双真源。
 - P1-SI-A 已通过提交 `8444fb10f` 发布候选编译能力到公司 QNAP Registry 镜像，但没有激活 `3.4.0`。专项发布先离线编译，再仅重建 Registry，切换 2 秒、`restart_count=0`、Registry `in_sync`；回滚备份位于 `/share/CACHEDEV2_DATA/ai-ontology-backup/p1-si-a/20260810-p1-si-a-8444fb10f`。用户授权“部署 contract-only 能力”不能外推为“激活候选 Schema”或“授权真实回滚演练”。
 - P1-SI-A 验收见 `2-Projects/company-ai-ontology/docs/p1-si-a-pestim-ontology-definition-acceptance-2026-08-10.md`。
 - P1-SI-B 验收见 `2-Projects/company-ai-ontology/docs/p1-si-b-source-registry-acceptance-2026-08-10.md`。
