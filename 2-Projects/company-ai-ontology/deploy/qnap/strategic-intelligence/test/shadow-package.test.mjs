@@ -178,6 +178,11 @@ test('deployment scripts only target strategic intelligence services and keep ex
   assert.ok(deploy.indexOf('shadow runtime must use a non-root deployment account') < deploy.indexOf('docker_path" load'))
   assert.match(deploy, /SI_COLLECTOR_UID=\$runtime_uid/)
   assert.match(deploy, /SI_ORCHESTRATOR_UID=\$runtime_uid/)
+  assert.match(deploy, /NODE_BIN/)
+  assert.match(deploy, /node-runtime[.]sh/)
+  assert.match(deploy, /SI_NODE_RUNTIME_IMAGE is required/)
+  assert.match(deploy, /approval files must be staged inside the strategic intelligence controlled root/)
+  assert.match(deploy, /SI_NODE_RUNTIME_IMAGE=\$node_runtime_image/)
   assert.match(deploy, /SI_PERSIST_DOMAIN_TO_POSTGRES=YES/)
   assert.match(deploy, /up -d --no-deps intelligence-orchestrator/)
   assert.doesNotMatch(deploy, /up -d[^\n]*(?:agent-core|h-lite|connector|gateway|postgres|redis|qdrant)/)
@@ -186,6 +191,28 @@ test('deployment scripts only target strategic intelligence services and keep ex
   assert.match(migration, /validate-goal7-acceptance\.mjs/)
   assert.match(migration, /SI_REVIEWER_ROLE_ACCESS_ACCEPTANCE_FILE/)
   assert.match(migration, /validate-reviewer-role-access-acceptance\.mjs/)
+  assert.match(migration, /NODE_BIN/)
+})
+
+test('QNAP production runtime scripts never depend on a host Node binary', async () => {
+  const names = [
+    'deploy-shadow.sh',
+    'apply-shadow-migrations.sh',
+    'dispatch-next.sh',
+    'persist-shadow-domain-batch.sh',
+    'run-source-revocation-audit.sh',
+    'capture-shadow-side-effects.sh',
+  ]
+  for (const name of names) {
+    const script = await fs.readFile(path.join(ROOT, 'scripts', name), 'utf8')
+    assert.match(script, /NODE_BIN/)
+    assert.match(script, /node-runtime[.]sh/)
+    assert.doesNotMatch(script, /(^|[;&|][ \t]*|\$\()[ \t]*node(?:[ \t]|$)/m)
+  }
+  const dispatcher = await fs.readFile(path.join(ROOT, 'scripts/dispatch-next.sh'), 'utf8')
+  assert.ok(dispatcher.indexOf('. "$env_file"') < dispatcher.indexOf('validate-request.mjs'))
+  const envExample = await fs.readFile(path.join(ROOT, 'config/env.shadow.example'), 'utf8')
+  assert.match(envExample, /SI_NODE_RUNTIME_IMAGE=sha256:/)
 })
 
 test('internal engineering deployment is separately authorized, migration-free, and starts no container', async () => {

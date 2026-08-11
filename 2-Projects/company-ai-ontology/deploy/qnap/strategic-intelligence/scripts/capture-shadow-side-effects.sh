@@ -7,6 +7,8 @@ completed_at=${2:?completed at is required}
 output_file=${3:?output file is required}
 script_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$script_root/preflight-company-qnap.sh"
+node_bin=${NODE_BIN:-$script_root/node-runtime.sh}
+[ -x "$node_bin" ] || { echo 'shadow side-effect audit Node runtime unavailable' >&2; exit 2; }
 
 cd "$foundation_root"
 set -a
@@ -61,6 +63,6 @@ SELECT json_build_object(
   )
 );
 SQL
-node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$temporary"
+"$node_bin" -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$temporary"
 chmod 600 "$temporary"
 mv "$temporary" "$output_file"

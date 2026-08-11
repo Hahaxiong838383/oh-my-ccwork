@@ -9,10 +9,12 @@ metrics_file=${2:?domain metrics file is required}
 [ -f "$metrics_file" ] || { echo 'domain metrics file missing' >&2; exit 1; }
 script_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$script_root/preflight-company-qnap.sh" >/dev/null
+node_bin=${NODE_BIN:-$script_root/node-runtime.sh}
+[ -x "$node_bin" ] || { echo 'shadow persistence Node runtime unavailable' >&2; exit 2; }
 sql_file=$shadow_root/state/$(basename "$batch_file").persist.sql
 result_file=$shadow_root/state/$(basename "$batch_file").persist.result
 trap 'rm -f "$sql_file" "$result_file"' EXIT INT TERM
-node "$script_root/compile-shadow-domain-sql.mjs" "$batch_file" "$sql_file" >/dev/null
+"$node_bin" "$script_root/compile-shadow-domain-sql.mjs" "$batch_file" "$sql_file" >/dev/null
 
 cd "$foundation_root"
 set -a
@@ -25,7 +27,7 @@ set +a
   < "$sql_file" > "$result_file"
 
 result=$(tail -n 1 "$result_file")
-node - "$metrics_file" "$result" <<'NODE'
+"$node_bin" - "$metrics_file" "$result" <<'NODE'
 const fs = require('node:fs')
 const file = process.argv[2]
 const result = JSON.parse(process.argv[3])

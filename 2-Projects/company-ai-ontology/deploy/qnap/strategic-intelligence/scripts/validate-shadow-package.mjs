@@ -18,6 +18,7 @@ const goalRuntimeSnapshotSchema = JSON.parse(await fs.readFile(path.join(root, '
 const goalRuntimeSnapshotTemplate = JSON.parse(await fs.readFile(path.join(root, 'config/goal-runtime-snapshot.template.json'), 'utf8'))
 const domainBatchSchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/shadow-domain-batch.schema.json'), 'utf8'))
 const packageJson = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'))
+const envExample = await fs.readFile(path.join(root, 'config/env.shadow.example'), 'utf8')
 const runtimeWorkflow = await fs.readFile(path.resolve(root, '../../../../..', '.github/workflows/p1-si-runtime-verify.yml'), 'utf8')
 const errors = []
 const internalPlanValidation = spawnSync(process.execPath, [path.join(root, 'scripts/validate-internal-engineering-shadow-plan.mjs')], { encoding: 'utf8' })
@@ -99,6 +100,25 @@ for (const marker of ['run-source-revocation-audit.sh', 'capture-shadow-side-eff
 }
 for (const name of ['shadow:validate-domain', 'shadow:compile-domain-sql']) {
   if (!packageJson.scripts?.[name]) errors.push(`missing package script ${name}`)
+}
+const qnapHostNodeScripts = [
+  'deploy-shadow.sh',
+  'apply-shadow-migrations.sh',
+  'dispatch-next.sh',
+  'persist-shadow-domain-batch.sh',
+  'run-source-revocation-audit.sh',
+  'capture-shadow-side-effects.sh',
+]
+for (const name of qnapHostNodeScripts) {
+  const script = await fs.readFile(path.join(root, 'scripts', name), 'utf8')
+  if (!script.includes('NODE_BIN') || !script.includes('node-runtime.sh')) errors.push(`${name} must use the QNAP Node runtime adapter`)
+  if (/(^|[;&|][ \t]*|\$\()[ \t]*node(?:[ \t]|$)/m.test(script)) errors.push(`${name} still invokes host node directly`)
+}
+if (dispatcher.indexOf('. "$env_file"') > dispatcher.indexOf('validate-request.mjs')) errors.push('dispatcher must load the protected env before the first Node invocation')
+if (!envExample.includes('SI_NODE_RUNTIME_IMAGE=sha256:')) errors.push('shadow env example must require an immutable Node runtime image')
+const productionDeploy = await fs.readFile(path.join(root, 'scripts/deploy-shadow.sh'), 'utf8')
+for (const marker of ['SI_NODE_RUNTIME_IMAGE is required', 'approval files must be staged inside the strategic intelligence controlled root', 'SI_NODE_RUNTIME_IMAGE=$node_runtime_image']) {
+  if (!productionDeploy.includes(marker)) errors.push(`production deploy missing Node runtime gate ${marker}`)
 }
 const isolatedMigrationValidation = await fs.readFile(path.join(root, 'scripts/validate-candidate-migrations-isolated.sh'), 'utf8')
 for (const marker of ['write-shadow-domain-runtime-fixture.mjs', 'compile-shadow-domain-sql.mjs', 'domain_persistence_idempotent=verified', 'acl_fail_closed=verified']) {

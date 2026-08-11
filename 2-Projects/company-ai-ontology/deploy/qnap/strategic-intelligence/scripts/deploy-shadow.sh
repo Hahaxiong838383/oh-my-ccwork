@@ -6,6 +6,10 @@ exec </dev/null
 [ "${GOAL7_STATUS:-}" = complete ] || { echo 'Goal 7 P1-PROD-READINESS is not complete' >&2; exit 1; }
 script_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$script_root/preflight-company-qnap.sh"
+node_bin=${NODE_BIN:-$script_root/node-runtime.sh}
+[ -x "$node_bin" ] || { echo 'shadow Node runtime unavailable' >&2; exit 2; }
+node_runtime_image=${SI_NODE_RUNTIME_IMAGE:?SI_NODE_RUNTIME_IMAGE is required}
+case "$node_runtime_image" in sha256:*|*@sha256:*) ;; *) echo 'immutable shadow Node runtime image required' >&2; exit 2 ;; esac
 runtime_uid=$(id -u)
 runtime_gid=$(id -g)
 [ "$runtime_uid" -ne 0 ] || { echo 'shadow runtime must use a non-root deployment account' >&2; exit 1; }
@@ -23,27 +27,30 @@ for file in "$manifest" "$source_archive" "$image_archive" "$approved_registry" 
   [ -f "$file" ] || { echo 'required release or approval file missing' >&2; exit 1; }
 done
 case "$release_root" in /share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence/release/*) ;; *) echo 'refusing unexpected release root' >&2; exit 1 ;; esac
-node "$script_root/inspect-deployment-readiness.mjs" >/dev/null
+for file in "$approved_registry" "$approved_config" "$approved_p003_review" "$reviewer_role_access_acceptance" "$goal7_acceptance"; do
+  case "$file" in "$shadow_root"/approvals/*|"$shadow_root"/config/*) ;; *) echo 'approval files must be staged inside the strategic intelligence controlled root' >&2; exit 1 ;; esac
+done
+"$node_bin" "$script_root/inspect-deployment-readiness.mjs" >/dev/null
 
-source_commit=$(node -e "const x=require(process.argv[1]); process.stdout.write(x.sourceCommit)" "$manifest")
-image_id=$(node -e "const x=require(process.argv[1]); process.stdout.write(x.collectorImageId)" "$manifest")
-source_sha=$(node -e "const x=require(process.argv[1]); process.stdout.write(x.sourceArchiveSha256)" "$manifest")
-image_sha=$(node -e "const x=require(process.argv[1]); process.stdout.write(x.collectorImageArchiveSha256)" "$manifest")
+source_commit=$("$node_bin" -e "const x=require(process.argv[1]); process.stdout.write(x.sourceCommit)" "$manifest")
+image_id=$("$node_bin" -e "const x=require(process.argv[1]); process.stdout.write(x.collectorImageId)" "$manifest")
+source_sha=$("$node_bin" -e "const x=require(process.argv[1]); process.stdout.write(x.sourceArchiveSha256)" "$manifest")
+image_sha=$("$node_bin" -e "const x=require(process.argv[1]); process.stdout.write(x.collectorImageArchiveSha256)" "$manifest")
 [ "$(sha256sum "$source_archive" | awk '{print $1}')" = "$source_sha" ] || { echo 'source archive hash mismatch' >&2; exit 1; }
 [ "$(sha256sum "$image_archive" | awk '{print $1}')" = "$image_sha" ] || { echo 'collector image archive hash mismatch' >&2; exit 1; }
-node "$script_root/validate-release-manifest.mjs" "$manifest" "$source_archive" "$image_archive" >/dev/null
+"$node_bin" "$script_root/validate-release-manifest.mjs" "$manifest" "$source_archive" "$image_archive" >/dev/null
 
 staging=$release_root/staging-$source_commit
 rm -rf "$staging"
 mkdir -p "$staging"
 tar -C "$staging" -xzf "$source_archive"
 release_project_root=$staging/company-ai-ontology
-node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-release-manifest.mjs" \
+"$node_bin" "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-release-manifest.mjs" \
   "$manifest" "$source_archive" "$image_archive" >/dev/null
-node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-approved-registry.mjs" "$approved_registry" "$approved_config" >/dev/null
-node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-approved-p003-review.mjs" "$approved_p003_review" >/dev/null
-reviewer_role_access_evidence_hash=$(node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-reviewer-role-access-acceptance.mjs" "$reviewer_role_access_acceptance" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>process.stdout.write(JSON.parse(s).evidenceHash))")
-goal7_evidence_hash=$(node "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-goal7-acceptance.mjs" "$goal7_acceptance" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>process.stdout.write(JSON.parse(s).evidenceHash))")
+"$node_bin" "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-approved-registry.mjs" "$approved_registry" "$approved_config" >/dev/null
+"$node_bin" "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-approved-p003-review.mjs" "$approved_p003_review" >/dev/null
+reviewer_role_access_evidence_hash=$("$node_bin" "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-reviewer-role-access-acceptance.mjs" "$reviewer_role_access_acceptance" | "$node_bin" -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>process.stdout.write(JSON.parse(s).evidenceHash))")
+goal7_evidence_hash=$("$node_bin" "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-goal7-acceptance.mjs" "$goal7_acceptance" | "$node_bin" -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>process.stdout.write(JSON.parse(s).evidenceHash))")
 
 if [ -f "$shadow_root/.env.shadow" ] && [ -d "$shadow_root/package" ]; then
   SI_PACKAGE_ROOT="$shadow_root/package" SI_BACKUP_RUN_ID=pre-shadow-$source_commit "$script_root/backup-shadow.sh" >/dev/null
@@ -68,6 +75,7 @@ SI_SOURCE_REGISTRY_FILE=$shadow_root/config/source-registry.json
 SI_P003_REVIEW_FILE=$shadow_root/config/p003-review.json
 SI_COLLECTOR_IMAGE=$image_id
 SI_SOURCE_COMMIT=$source_commit
+SI_NODE_RUNTIME_IMAGE=$node_runtime_image
 SI_PERSIST_DOMAIN_TO_POSTGRES=YES
 SI_ORCHESTRATOR_UID=$runtime_uid
 SI_ORCHESTRATOR_GID=$runtime_gid

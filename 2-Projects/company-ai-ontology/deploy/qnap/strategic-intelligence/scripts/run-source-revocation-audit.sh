@@ -6,6 +6,8 @@ request_key=${1:?request key is required}
 output_file=${2:?output file is required}
 script_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$script_root/preflight-company-qnap.sh"
+node_bin=${NODE_BIN:-$script_root/node-runtime.sh}
+[ -x "$node_bin" ] || { echo 'source revocation audit Node runtime unavailable' >&2; exit 2; }
 
 runtime_uid=$(id -u)
 runtime_gid=$(id -g)
@@ -23,7 +25,7 @@ trap 'rm -rf "$audit_root"' EXIT INT TERM
 audit_config=$audit_root/config.json
 audit_registry=$audit_root/registry.json
 audit_stderr=$audit_root/stderr.jsonl
-node "$script_root/prepare-revocation-audit-fixture.mjs" \
+"$node_bin" "$script_root/prepare-revocation-audit-fixture.mjs" \
   "$SI_COLLECTOR_CONFIG_FILE" "$SI_SOURCE_REGISTRY_FILE" "$audit_config" "$audit_registry" >/dev/null
 
 started_epoch=$(date +%s)
@@ -43,10 +45,10 @@ audit_exit=$?
 set -e
 completed_epoch=$(date +%s)
 [ "$audit_exit" -ne 0 ] || { echo 'revoked source audit unexpectedly succeeded' >&2; exit 1; }
-node -e "const fs=require('fs');const lines=fs.readFileSync(process.argv[1],'utf8').trim().split(/\\n/).filter(Boolean);const result=JSON.parse(lines.at(-1));if(result.errorCode!=='SOURCE_POLICY_DENIED')process.exit(1)" "$audit_stderr" \
+"$node_bin" -e "const fs=require('fs');const lines=fs.readFileSync(process.argv[1],'utf8').trim().split(/\\n/).filter(Boolean);const result=JSON.parse(lines.at(-1));if(result.errorCode!=='SOURCE_POLICY_DENIED')process.exit(1)" "$audit_stderr" \
   || { echo 'revoked source was not denied by policy' >&2; exit 1; }
 
 duration=$((completed_epoch - started_epoch))
 mkdir -p "$(dirname -- "$output_file")"
 umask 077
-node -e "const fs=require('fs');const value={auditVersion:'1.0.0',completed:true,reasonCode:'SOURCE_POLICY_DENIED',networkMode:'none',effectiveSeconds:Number(process.argv[2]),postRevocationNetworkRequestCount:0};fs.writeFileSync(process.argv[1],JSON.stringify(value,null,2)+'\\n',{mode:0o600})" "$output_file" "$duration"
+"$node_bin" -e "const fs=require('fs');const value={auditVersion:'1.0.0',completed:true,reasonCode:'SOURCE_POLICY_DENIED',networkMode:'none',effectiveSeconds:Number(process.argv[2]),postRevocationNetworkRequestCount:0};fs.writeFileSync(process.argv[1],JSON.stringify(value,null,2)+'\\n',{mode:0o600})" "$output_file" "$duration"
