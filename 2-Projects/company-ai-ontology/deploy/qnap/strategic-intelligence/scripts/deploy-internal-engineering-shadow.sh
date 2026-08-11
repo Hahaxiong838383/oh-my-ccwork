@@ -60,19 +60,20 @@ if [ -d "$internal_root/package" ] || [ -d "$internal_root/config" ] || [ -f "$i
   (cd "$backup_root" && sha256sum previous-runtime.tar.gz > previous-runtime.tar.gz.sha256 && sha256sum -c previous-runtime.tar.gz.sha256 >/dev/null)
 fi
 
-gzip -dc "$image_archive" | "$docker_path" load >/dev/null
-"$docker_path" image inspect "$image_id" >/dev/null
-
-mkdir -p "$internal_root/config" "$internal_root/state/collector" "$internal_root/reports" "$internal_root/release"
-chmod 750 "$internal_root" "$internal_root/config" "$internal_root/state" "$internal_root/state/collector" "$internal_root/reports" "$internal_root/release"
+mkdir -p "$internal_root/state/collector" "$internal_root/reports" "$internal_root/release"
+chmod 750 "$internal_root" "$internal_root/state" "$internal_root/state/collector" "$internal_root/reports" "$internal_root/release"
 rm -rf "$internal_root/package.next"
+rm -rf "$internal_root/config.next"
+rm -f "$internal_root/.env.internal.next"
 cp -R "$release_project_root" "$internal_root/package.next"
-cp "$runtime_root/internal-engineering-plan.json" "$internal_root/config/internal-engineering-plan.json"
-cp "$runtime_root/source-registry.json" "$internal_root/config/source-registry.json"
-cp "$runtime_root/collector.json" "$internal_root/config/collector.json"
-cp "$runtime_root/runtime-manifest.json" "$internal_root/config/runtime-manifest.json"
-chmod 600 "$internal_root/config/"*.json
-cat > "$internal_root/.env.internal" <<EOF
+mkdir -p "$internal_root/config.next"
+cp "$runtime_root/internal-engineering-plan.json" "$internal_root/config.next/internal-engineering-plan.json"
+cp "$runtime_root/source-registry.json" "$internal_root/config.next/source-registry.json"
+cp "$runtime_root/collector.json" "$internal_root/config.next/collector.json"
+cp "$runtime_root/runtime-manifest.json" "$internal_root/config.next/runtime-manifest.json"
+chmod 700 "$internal_root/package.next" "$internal_root/config.next"
+chmod 600 "$internal_root/config.next/"*.json
+cat > "$internal_root/.env.internal.next" <<EOF
 SI_STATE_ROOT=$internal_root/state
 SI_REPORT_ROOT=$internal_root/reports
 SI_COLLECTOR_CONFIG_FILE=$internal_root/config/collector.json
@@ -90,14 +91,54 @@ PUBLISH=false
 SHADOW_AUTO_ROLLBACK_APPROVED=NO
 SI_ROLLBACK_BACKUP_ROOT=
 EOF
-chmod 600 "$internal_root/.env.internal"
+chmod 600 "$internal_root/.env.internal.next"
 
 package_root=$internal_root/package.next/deploy/qnap/strategic-intelligence
+"$node_bin" "$package_root/scripts/validate-internal-engineering-runtime.mjs" "$internal_root/config.next" >/dev/null
 cd "$package_root"
-"$docker_path" compose --env-file "$internal_root/.env.internal" -f docker-compose.shadow.yml config >/dev/null
-rm -rf "$internal_root/package.previous"
-[ ! -d "$internal_root/package" ] || mv "$internal_root/package" "$internal_root/package.previous"
+"$docker_path" compose --env-file "$internal_root/.env.internal.next" -f docker-compose.shadow.yml config >/dev/null
+
+gzip -dc "$image_archive" | "$docker_path" load >/dev/null
+"$docker_path" image inspect "$image_id" >/dev/null
+
+switch_id=$(date -u +%Y%m%dT%H%M%SZ)
+switch_root=$internal_root/.switch-$switch_id
+mkdir -p "$switch_root/previous" "$switch_root/failed"
+switch_pending=1
+restore_partial_switch() {
+  status=$?
+  trap - EXIT INT TERM
+  if [ "${switch_pending:-0}" = 1 ]; then
+    for entry in package config .env.internal; do
+      if [ -f "$switch_root/installed-$entry" ] && [ -e "$internal_root/$entry" ]; then
+        mv "$internal_root/$entry" "$switch_root/failed/$entry"
+      fi
+    done
+    for entry in package config .env.internal; do
+      if [ -e "$switch_root/previous/$entry" ]; then
+        [ ! -e "$internal_root/$entry" ] || { echo 'internal engineering partial switch restore collision' >&2; exit 1; }
+        mv "$switch_root/previous/$entry" "$internal_root/$entry"
+      fi
+    done
+  fi
+  exit "$status"
+}
+trap restore_partial_switch EXIT INT TERM
+
+for entry in package config .env.internal; do
+  [ ! -e "$internal_root/$entry" ] || mv "$internal_root/$entry" "$switch_root/previous/$entry"
+done
 mv "$internal_root/package.next" "$internal_root/package"
+touch "$switch_root/installed-package"
+mv "$internal_root/config.next" "$internal_root/config"
+touch "$switch_root/installed-config"
+mv "$internal_root/.env.internal.next" "$internal_root/.env.internal"
+touch "$switch_root/installed-.env.internal"
+"$node_bin" "$internal_root/package/deploy/qnap/strategic-intelligence/scripts/validate-internal-engineering-runtime.mjs" "$internal_root/config" >/dev/null
+switch_pending=0
+trap - EXIT INT TERM
+retired=$internal_root/retired-$switch_id
+mv "$switch_root" "$retired"
 printf '%s\n' "$backup_root" > "$internal_root/.previous-backup"
 chmod 600 "$internal_root/.previous-backup"
 

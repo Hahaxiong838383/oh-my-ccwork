@@ -273,7 +273,9 @@ case "$1" in
     ;;
   compose)
     case "$*" in
-      *" config") ;;
+      *" config")
+        [ "\${FAKE_DOCKER_FAIL_COMPOSE:-NO}" != YES ] || exit 88
+        ;;
       *) exit 87 ;;
     esac
     ;;
@@ -348,12 +350,75 @@ printf 'company_qnap_identity=verified\\nfoundation_root=%s\\nshadow_root=%s\\n'
 
   const dockerCalls = (await fs.readFile(dockerLog, 'utf8')).trim().split('\n')
   assert.deepEqual(dockerCalls, [
+    `compose --env-file ${envFile}.next -f docker-compose.shadow.yml config`,
     'load',
     `image inspect ${collectorImageId}`,
-    `compose --env-file ${envFile} -f docker-compose.shadow.yml config`,
   ])
   assert.ok(dockerCalls.every((call) => !/compose .*\b(up|run|restart|down)\b/.test(call)))
   assert.ok(dockerCalls.every((call) => !/migrat|dispatcher|cron/i.test(call)))
+
+  const installedManifestFile = path.join(internalRoot, 'config', 'runtime-manifest.json')
+  const installedEnvBeforeFailedUpdate = await fs.readFile(envFile, 'utf8')
+  const installedManifestBeforeFailedUpdate = await fs.readFile(installedManifestFile, 'utf8')
+  const releaseManifestFile = path.join(releaseRoot, 'release-manifest.json')
+  const releaseManifest = JSON.parse(await fs.readFile(releaseManifestFile, 'utf8'))
+  releaseManifest.sourceCommit = 'c'.repeat(40)
+  await fs.writeFile(releaseManifestFile, JSON.stringify(releaseManifest))
+  const runtimeManifestFile = path.join(runtimeRoot, 'runtime-manifest.json')
+  const runtimeManifest = JSON.parse(await fs.readFile(runtimeManifestFile, 'utf8'))
+  runtimeManifest.generatedAt = '2026-08-11T00:05:00Z'
+  await fs.writeFile(runtimeManifestFile, JSON.stringify(runtimeManifest))
+  const failedUpdate = spawnSync('sh', [deployScript], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PATH: `${process.env.PATH}:/sbin`,
+      INTERNAL_ENGINEERING_SHADOW_DEPLOY_APPROVED: 'YES',
+      SI_NODE_RUNTIME_IMAGE: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      SI_RELEASE_ROOT: releaseRoot,
+      SI_INTERNAL_RUNTIME_ROOT: runtimeRoot,
+      SI_INTERNAL_ENGINEERING_PLAN_FILE: path.join(runtimeRoot, 'internal-engineering-plan.json'),
+      FAKE_DOCKER_LOG: dockerLog,
+      FAKE_DOCKER_FAIL_COMPOSE: 'YES',
+    },
+  })
+  assert.notEqual(failedUpdate.status, 0)
+  assert.equal(await fs.readFile(envFile, 'utf8'), installedEnvBeforeFailedUpdate)
+  assert.equal(await fs.readFile(installedManifestFile, 'utf8'), installedManifestBeforeFailedUpdate)
+  assert.equal((await fs.stat(installedProject)).isDirectory(), true)
+  const validationAfterFailedUpdate = spawnSync(process.execPath, [installedValidator, path.join(internalRoot, 'config')], { encoding: 'utf8' })
+  assert.equal(validationAfterFailedUpdate.status, 0, validationAfterFailedUpdate.stderr)
+
+  const fakeBin = path.join(outputRoot, 'fake-bin')
+  const fakeMv = path.join(fakeBin, 'mv')
+  const realMv = spawnSync('sh', ['-c', 'command -v mv'], { encoding: 'utf8' }).stdout.trim()
+  await fs.mkdir(fakeBin, { recursive: true })
+  await fs.writeFile(fakeMv, `#!/bin/sh
+set -eu
+if [ "\${FAKE_MV_FAIL_ENV_SWITCH:-NO}" = YES ] && [ "\${1:-}" = "\${FAKE_MV_FAIL_SOURCE:-}" ]; then exit 89; fi
+exec ${JSON.stringify(realMv)} "$@"
+`)
+  await fs.chmod(fakeMv, 0o700)
+  const failedSwitch = spawnSync('sh', [deployScript], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PATH: `${fakeBin}:${process.env.PATH}:/sbin`,
+      INTERNAL_ENGINEERING_SHADOW_DEPLOY_APPROVED: 'YES',
+      SI_NODE_RUNTIME_IMAGE: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      SI_RELEASE_ROOT: releaseRoot,
+      SI_INTERNAL_RUNTIME_ROOT: runtimeRoot,
+      SI_INTERNAL_ENGINEERING_PLAN_FILE: path.join(runtimeRoot, 'internal-engineering-plan.json'),
+      FAKE_DOCKER_LOG: dockerLog,
+      FAKE_MV_FAIL_ENV_SWITCH: 'YES',
+      FAKE_MV_FAIL_SOURCE: `${internalRoot}/.env.internal.next`,
+    },
+  })
+  assert.notEqual(failedSwitch.status, 0)
+  assert.equal(await fs.readFile(envFile, 'utf8'), installedEnvBeforeFailedUpdate)
+  assert.equal(await fs.readFile(installedManifestFile, 'utf8'), installedManifestBeforeFailedUpdate)
+  const validationAfterFailedSwitch = spawnSync(process.execPath, [installedValidator, path.join(internalRoot, 'config')], { encoding: 'utf8' })
+  assert.equal(validationAfterFailedSwitch.status, 0, validationAfterFailedSwitch.stderr)
 
   const rollbackScript = path.join(controlDeployRoot, 'scripts/rollback-internal-engineering-shadow.sh')
   const originalRollback = await fs.readFile(rollbackScript, 'utf8')
