@@ -52,6 +52,12 @@ mkdir -p "$backup_root"
 if [ -d "$internal_root/package" ] || [ -d "$internal_root/config" ] || [ -f "$internal_root/.env.internal" ]; then
   tar -C "$internal_root" -czf "$backup_root/previous-runtime.tar.gz" \
     $(for entry in package config .env.internal; do [ ! -e "$internal_root/$entry" ] || printf '%s ' "$entry"; done)
+  [ -s "$backup_root/previous-runtime.tar.gz" ] || { echo 'internal engineering backup archive is empty' >&2; exit 1; }
+  tar -tzf "$backup_root/previous-runtime.tar.gz" >/dev/null
+  tar -tzf "$backup_root/previous-runtime.tar.gz" | grep -q '^package/' || { echo 'internal engineering backup missing package' >&2; exit 1; }
+  tar -tzf "$backup_root/previous-runtime.tar.gz" | grep -q '^config/' || { echo 'internal engineering backup missing config' >&2; exit 1; }
+  tar -tzf "$backup_root/previous-runtime.tar.gz" | grep -q '^\.env\.internal$' || { echo 'internal engineering backup missing env' >&2; exit 1; }
+  (cd "$backup_root" && sha256sum previous-runtime.tar.gz > previous-runtime.tar.gz.sha256 && sha256sum -c previous-runtime.tar.gz.sha256 >/dev/null)
 fi
 
 gzip -dc "$image_archive" | "$docker_path" load >/dev/null

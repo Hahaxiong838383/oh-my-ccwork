@@ -354,4 +354,52 @@ printf 'company_qnap_identity=verified\\nfoundation_root=%s\\nshadow_root=%s\\n'
   ])
   assert.ok(dockerCalls.every((call) => !/compose .*\b(up|run|restart|down)\b/.test(call)))
   assert.ok(dockerCalls.every((call) => !/migrat|dispatcher|cron/i.test(call)))
+
+  const rollbackScript = path.join(controlDeployRoot, 'scripts/rollback-internal-engineering-shadow.sh')
+  const originalRollback = await fs.readFile(rollbackScript, 'utf8')
+  const testRollback = originalRollback.replace('/share/CACHEDEV2_DATA/ai-ontology-backup/strategic-intelligence/internal-engineering/*', `${backupBase}/*`)
+  assert.notEqual(testRollback, originalRollback)
+  await fs.writeFile(rollbackScript, testRollback)
+  const refusedRollback = spawnSync('sh', [rollbackScript], {
+    encoding: 'utf8',
+    env: { ...process.env, INTERNAL_ENGINEERING_ROLLBACK_APPROVED: 'YES' },
+  })
+  assert.notEqual(refusedRollback.status, 0)
+  assert.match(refusedRollback.stderr, /backup archive missing/)
+  assert.equal((await fs.stat(installedProject)).isDirectory(), true)
+
+  const redeployed = spawnSync('sh', [deployScript], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PATH: `${process.env.PATH}:/sbin`,
+      INTERNAL_ENGINEERING_SHADOW_DEPLOY_APPROVED: 'YES',
+      SI_NODE_RUNTIME_IMAGE: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      SI_RELEASE_ROOT: releaseRoot,
+      SI_INTERNAL_RUNTIME_ROOT: runtimeRoot,
+      SI_INTERNAL_ENGINEERING_PLAN_FILE: path.join(runtimeRoot, 'internal-engineering-plan.json'),
+      FAKE_DOCKER_LOG: dockerLog,
+    },
+  })
+  assert.equal(redeployed.status, 0, redeployed.stderr)
+  const secondBackupRoot = (await fs.readFile(path.join(internalRoot, '.previous-backup'), 'utf8')).trim()
+  const backupArchive = path.join(secondBackupRoot, 'previous-runtime.tar.gz')
+  const backupChecksum = path.join(secondBackupRoot, 'previous-runtime.tar.gz.sha256')
+  assert.equal((await fs.stat(backupArchive)).isFile(), true)
+  assert.equal((await fs.stat(backupChecksum)).isFile(), true)
+  const archiveListing = spawnSync('tar', ['-tzf', backupArchive], { encoding: 'utf8' })
+  assert.equal(archiveListing.status, 0, archiveListing.stderr)
+  assert.match(archiveListing.stdout, /^package\//m)
+  assert.match(archiveListing.stdout, /^config\//m)
+  assert.match(archiveListing.stdout, /^\.env\.internal$/m)
+
+  const restored = spawnSync('sh', [rollbackScript], {
+    encoding: 'utf8',
+    env: { ...process.env, INTERNAL_ENGINEERING_ROLLBACK_APPROVED: 'YES' },
+  })
+  assert.equal(restored.status, 0, restored.stderr)
+  assert.match(restored.stdout, /internal_engineering_rollback=completed/)
+  assert.equal((await fs.stat(path.join(internalRoot, 'package'))).isDirectory(), true)
+  assert.equal((await fs.stat(path.join(internalRoot, 'config'))).isDirectory(), true)
+  assert.equal((await fs.stat(path.join(internalRoot, '.env.internal'))).isFile(), true)
 })
