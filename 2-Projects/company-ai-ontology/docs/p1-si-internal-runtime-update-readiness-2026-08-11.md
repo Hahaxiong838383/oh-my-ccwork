@@ -8,6 +8,8 @@
 
 原授权指向 Artifact `9096846710`。真实 QNAP 暂存预演发现该 Artifact 的运行态采集脚本把 Docker Go Template 中的 `\t` 当作真实制表符，导致 13 个健康 Foundation 服务被误判为异常且 restart 统计为 `null`。部署在任何旧 Runtime 替换前失败关闭；Artifact `9096846710` 已拒绝，不得继续部署，也不能把原授权继承给新 Artifact。
 
+第一次修复 Artifact `9107441466` 已解决 QNAP 状态采集兼容问题，但后续对抗审计发现部署脚本会在 package 原子切换前直接覆盖 config/env，Compose 校验失败时可能留下“旧包 + 新配置”的半更新状态。该 Artifact 同样未部署并已被最终 Artifact 取代。最终实现将 package/config/env 全部写入 `.next`，在所有校验通过后统一切换，并对 Compose 失败和切换中途失败执行自动恢复。
+
 ## 2. 公司 QNAP 当前真值
 
 只读复核时间：`2026-08-11T15:28:05Z`。
@@ -28,17 +30,18 @@
 
 ## 3. 目标发布身份
 
-- Source Commit：`70bd73544fb29ca1b7ed1e2469353ce6ada1bb1f`；
-- Runtime Workflow：`31506896848`；
-- Artifact ID：`9107441466`；
-- Artifact：`p1-si-runtime-70bd73544fb29ca1b7ed1e2469353ce6ada1bb1f`；
-- Collector Image ID：`sha256:500d2201a2ebc0c68af5ce941f7410057233c94fe6886dfd33cdd4a0c76100dc`；
+- Source Commit：`0342fcd3991fc88e32f1f68750b837112717db67`；
+- Runtime Workflow：`31508346323`；
+- Artifact ID：`9108034290`；
+- Artifact：`p1-si-runtime-0342fcd3991fc88e32f1f68750b837112717db67`；
+- Collector Image ID：`sha256:26db1ddd56c21cf7e50586efb5953da158b98437f36d5701c6f21e8dfb8c9ab9`；
 - QNAP Node Runtime Image ID：`sha256:75228afe839b63f6bef21d2ea8f4b6aa9e4c56a20ad70cec5450ca84a72f9801`；
 - Node Runtime：`linux/amd64`，部署时使用 `--entrypoint node`、QNAP 非 root UID/GID、`network=none`、只读根文件系统、无端口和无 Docker Socket；
 - Artifact `SHA256SUMS`：下载后全量通过；
 - 010/011、19/19 强制 RLS、Domain 二次幂等、ACL fail-closed、baseline restore：通过；
 - 从 Artifact 源码包独立编译 Runtime：3 来源、6 条 P003 样例、每来源 20 条上限、8 个 Registry 来源保持 paused、全部业务副作用关闭。
 - 公司 QNAP 真实暂存预演：Foundation `13/13 running`、异常 `0`、restart `0`，战略情报容器/网络/端口 `0/0/0`；修复后的分隔符在 QNAP Docker 实际输出上验证通过。
+- 部署原子性：package/config/env 全部 staged；Compose 校验失败不改变当前 Runtime；切换在 package/config 已移动但 env 移动失败时自动恢复旧三件套；QNAP BusyBox Shell 语法验证通过。
 
 ## 4. 本次授权动作范围
 
@@ -78,7 +81,7 @@
 
 ## 6. 更新后验收
 
-1. `SI_SOURCE_COMMIT=70bd73544fb29ca1b7ed1e2469353ce6ada1bb1f`；
+1. `SI_SOURCE_COMMIT=0342fcd3991fc88e32f1f68750b837112717db67`；
 2. `.env.internal` 为 `0600` 且固化 QNAP Node Runtime Image ID；
 3. Evidence Schema、编译器、验证器和运行态采集脚本存在；
 4. Runtime Validator：3 来源、6 条 P003 样例、8 个来源继续 paused；
@@ -91,4 +94,4 @@
 
 ## 7. 授权语句
 
-`授权将 Artifact 9107441466 更新到公司 QNAP 内部 Runtime，但不运行 Collector、不迁移数据库、不重启 Foundation。`
+`授权将 Artifact 9108034290 更新到公司 QNAP 内部 Runtime，但不运行 Collector、不迁移数据库、不重启 Foundation。`

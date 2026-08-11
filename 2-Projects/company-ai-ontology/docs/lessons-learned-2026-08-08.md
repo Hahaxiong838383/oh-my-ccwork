@@ -362,3 +362,7 @@ P1-SI-B～G 的契约和测试通过可以标记 `engineering_verified`；来源
 ### 72. Docker Go Template 转义不能靠本地替身猜测
 
 本地 fake Docker 直接输出真实制表符，掩盖了 QNAP Container Station 会把模板字符串中的 `\t` 原样输出这一差异，导致真实暂存预演把 13 个健康 Foundation 服务全部解析成异常且 restart 变为 `null`。修复方式是改用稳定分隔符，并让测试替身读取和记录调用方传入的 `--format` 参数；不可变 Artifact 在进入现有 Runtime 前必须至少跑一次目标 QNAP 的真实格式输出预演。
+
+### 73. 原子更新必须覆盖 package、config 和 env 三件套
+
+只把 package 写到 `.next` 不是真正的原子更新；如果 config 和 `.env` 已直接覆盖，后续 Compose 校验失败就会留下“旧包 + 新配置”的混合状态。正确做法是三件套全部 staged，所有验证通过后统一切换，并为每个已移动的旧条目和已安装的新条目记录 marker；无论失败发生在 package、config 还是 env 步骤，都要自动撤走新条目并恢复旧条目。备份 tar 用于后续人工回滚，切换内自动恢复用于当前部署事务，两者都必须存在。
