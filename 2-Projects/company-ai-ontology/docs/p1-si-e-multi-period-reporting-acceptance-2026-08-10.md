@@ -123,7 +123,7 @@ npm run compile:reporting
 
 结果：
 
-- 总测试 `36/36` 通过；
+- 初始验收时总测试 `36/36` 通过；`2026-08-11` 补齐模型失败终态谱系后，Ontology Contracts 全量回归为 `60/60`；
 - P1-SI-E 新增测试 `6/6` 通过；
 - P1-SI-D candidate Hash 保持 `2088f360866285a9f860107a91c3da32faefae6dc7c573ed9580603f9a4fea5d`；
 - Candidate Schema：`3.7.0`；
@@ -135,6 +135,7 @@ npm run compile:reporting
 - 输入顺序变化不改变 input hash；
 - report text 递归输入负测通过；
 - 缺失模型、成本、状态和弱 Hash 负测通过；
+- 模型失败必须保留 `failed` 状态、稳定错误码、重试次数、开始/结束时间、耗时、token 与成本；缺错误码或结束时间失败关闭，成功状态夹带错误码同样拒绝；
 - 三类投影模板的只读及敏感字段门禁通过。
 
 ## 9. 未执行事项

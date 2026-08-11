@@ -57,6 +57,40 @@ function validTimestamp(value) {
   return typeof value === 'string' && Number.isFinite(Date.parse(value))
 }
 
+function safeHttpsEndpoint(value) {
+  try {
+    const endpoint = new URL(String(value || ''))
+    if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password || endpoint.hash) return null
+    return endpoint
+  } catch {
+    return null
+  }
+}
+
+export function validateInternalEngineeringEndpoint(entry, endpointRef) {
+  const selected = safeHttpsEndpoint(endpointRef)
+  if (!selected) return { ok: false, reasonCode: 'INTERNAL_ENDPOINT_INVALID' }
+  for (const catalogRef of entry?.endpointRefs || []) {
+    if (catalogRef.includes('{owner}') || catalogRef.includes('{repo}')) {
+      for (const repository of entry?.repositoryAllowlist || []) {
+        const allowed = safeHttpsEndpoint(catalogRef.replace('{owner}/{repo}', repository))
+        if (!allowed || selected.origin !== allowed.origin || selected.pathname !== allowed.pathname) continue
+        const queryKeys = [...selected.searchParams.keys()]
+        if (queryKeys.some((key) => key !== 'per_page')) continue
+        const perPage = selected.searchParams.get('per_page')
+        if (perPage !== null && (!/^\d+$/.test(perPage) || Number(perPage) < 1 || Number(perPage) > 20)) continue
+        return { ok: true, endpointRef: selected.toString() }
+      }
+      continue
+    }
+    const allowed = safeHttpsEndpoint(catalogRef)
+    if (allowed && selected.origin === allowed.origin && selected.pathname === allowed.pathname) {
+      return { ok: true, endpointRef: selected.toString() }
+    }
+  }
+  return { ok: false, reasonCode: 'INTERNAL_ENDPOINT_NOT_ALLOWLISTED' }
+}
+
 function safePackageRelativeFile(value) {
   const text = String(value || '')
   if (!text || path.isAbsolute(text) || text.includes('..') || !/^[A-Za-z0-9._/-]+\.json$/.test(text)) {
@@ -236,6 +270,80 @@ export function evaluateSourceCollectionPolicy(catalog, contract, sourceKey, eva
       credentialMode: entry.collection.credentialMode,
     },
     retention: structuredClone(entry.retention),
+    internalUseScopes: [...entry.internalUseScopes],
+  }
+}
+
+export function evaluateInternalEngineeringSourcePolicy(catalog, contract, plan, sourceKey, evaluatedAt = new Date()) {
+  const validation = validateSourceRegistryCatalog(catalog, contract, { allowedStatuses: ['candidate', 'shadow_reviewed'] })
+  const timestamp = evaluatedAt instanceof Date ? evaluatedAt : new Date(evaluatedAt)
+  const deny = (reasonCode, entry = null) => ({
+    allowed: false,
+    decision: 'deny',
+    reasonCode,
+    sourceKey: String(sourceKey || ''),
+    evaluatedAt: Number.isFinite(timestamp.getTime()) ? timestamp.toISOString() : null,
+    registryVersion: catalog?.registryVersion || null,
+    policyVersion: `${contract?.contractVersion || 'unknown'}+internal-engineering.1`,
+    lifecycleStatus: entry?.lifecycleStatus || null,
+    operationMode: 'internal_engineering_shadow',
+    provisional: true,
+    productionApprovalSatisfied: false,
+  })
+  if (!validation.ok || !Number.isFinite(timestamp.getTime())) return deny('REGISTRY_INVALID')
+  if (
+    plan?.mode !== 'internal_engineering_shadow'
+    || plan?.status !== 'provisional_internal_test'
+    || plan?.publish !== false
+    || plan?.countsTowardProductionShadow !== false
+    || plan?.deploymentAuthorized !== false
+  ) return deny('INTERNAL_ENGINEERING_PLAN_INVALID')
+  const selectedSources = Array.isArray(plan?.selectedSources) ? plan.selectedSources : []
+  if (selectedSources.length < 2 || selectedSources.length > 3) return deny('INTERNAL_SOURCE_LIMIT_INVALID')
+  if (new Set(selectedSources.map((source) => source.sourceKey)).size !== selectedSources.length) return deny('INTERNAL_SOURCE_SELECTION_INVALID')
+  const selection = selectedSources.find((source) => source.sourceKey === sourceKey)
+  if (!selection) return deny('SOURCE_NOT_SELECTED_FOR_INTERNAL_ENGINEERING')
+  const entry = catalog.entries.find((candidate) => candidate.sourceKey === sourceKey)
+  if (!entry) return deny('SOURCE_NOT_REGISTERED')
+  if (entry.lifecycleStatus === 'revoked') return deny('SOURCE_REVOKED', entry)
+  if (entry.license.status === 'expired' || entry.license.status === 'rejected') return deny(`LICENSE_${entry.license.status.toUpperCase()}`, entry)
+  if (entry.governance.approvalStatus === 'rejected') return deny('COMPLIANCE_REJECTED', entry)
+  if (entry.collection.requiresLogin) return deny('LOGIN_REQUIRED_FORBIDDEN', entry)
+  if (entry.collection.antiAutomationBypass) return deny('ANTI_AUTOMATION_BYPASS_FORBIDDEN', entry)
+  if (entry.collection.credentialMode !== 'none') return deny('CREDENTIAL_REQUIRED_FORBIDDEN', entry)
+  if (!['reference_only', 'metadata_only'].includes(selection.storageLevel)) return deny('INTERNAL_RETENTION_LEVEL_FORBIDDEN', entry)
+  if (!Number.isInteger(selection.retentionDays) || selection.retentionDays < 1 || selection.retentionDays > 3) return deny('INTERNAL_RETENTION_WINDOW_INVALID', entry)
+  if (selection.approvalState !== 'provisional_internal_test') return deny('INTERNAL_APPROVAL_STATE_INVALID', entry)
+  if (selection.licenseDecision !== 'deferred_before_production' || selection.complianceDecision !== 'deferred_before_production') {
+    return deny('PRODUCTION_REVIEW_STATE_INVALID', entry)
+  }
+  const endpointValidation = validateInternalEngineeringEndpoint(entry, selection.endpointRef)
+  if (!endpointValidation.ok) return deny(endpointValidation.reasonCode, entry)
+  return {
+    allowed: true,
+    decision: 'allow',
+    reasonCode: 'INTERNAL_ENGINEERING_PROVISIONAL_ALLOW',
+    sourceKey: entry.sourceKey,
+    evaluatedAt: timestamp.toISOString(),
+    registryVersion: catalog.registryVersion,
+    policyVersion: `${contract.contractVersion}+internal-engineering.1`,
+    lifecycleStatus: entry.lifecycleStatus,
+    operationMode: 'internal_engineering_shadow',
+    provisional: true,
+    productionApprovalSatisfied: false,
+    collection: {
+      mode: entry.collection.mode,
+      endpointRef: endpointValidation.endpointRef,
+      fetchIntervalMinutes: entry.collection.fetchIntervalMinutes,
+      rateLimitPerHour: entry.collection.rateLimitPerHour,
+      timeoutSeconds: entry.collection.timeoutSeconds,
+      credentialMode: entry.collection.credentialMode,
+    },
+    retention: {
+      ...structuredClone(entry.retention),
+      storageLevel: selection.storageLevel,
+      retentionDays: selection.retentionDays,
+    },
     internalUseScopes: [...entry.internalUseScopes],
   }
 }

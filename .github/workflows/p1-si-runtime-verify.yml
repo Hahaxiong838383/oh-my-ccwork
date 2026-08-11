@@ -60,6 +60,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Validate candidate PostgreSQL migrations
+        id: postgres
         shell: bash
         env:
           VALIDATION_POSTGRES_IMAGE: pgvector/pgvector:pg17-bookworm@sha256:7ae6051efd0e60444282c27c7e141af07f322ce033300e727a49c3dd11075e38
@@ -69,6 +70,14 @@ jobs:
           PROJECT_ROOT="$project" VALIDATION_RUN_ID="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
             "$project/deploy/qnap/strategic-intelligence/scripts/validate-candidate-migrations-isolated.sh" \
             | tee runtime-evidence/postgres-validation.txt
+          grep -qx 'domain_persistence=verified' runtime-evidence/postgres-validation.txt
+          grep -qx 'domain_persistence_idempotent=verified' runtime-evidence/postgres-validation.txt
+          grep -qx 'acl_fail_closed=verified' runtime-evidence/postgres-validation.txt
+          {
+            echo 'domain_persistence=verified'
+            echo 'domain_persistence_idempotent=verified'
+            echo 'acl_fail_closed=verified'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build immutable release candidate
         id: release
@@ -86,8 +95,8 @@ jobs:
           node <<'NODE'
           const fs = require('node:fs')
           const manifest = {
-            manifestVersion: '1.0.0',
-            releaseType: 'P1-SI-F-shadow-candidate',
+            manifestVersion: '1.2.0',
+            releaseType: 'P1-SI-F-shadow-candidate-gated',
             createdAt: new Date().toISOString(),
             sourceCommit: process.env.GITHUB_SHA,
             collectorImageId: process.env.IMAGE_ID,
@@ -99,6 +108,9 @@ jobs:
             publish: false,
             productionDeploymentAuthorized: false,
             requiredGate: 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH',
+            p003ReviewGateRequired: true,
+            reviewerRoleAccessGateRequired: true,
+            goal7AcceptanceGateRequired: true,
           }
           fs.writeFileSync('runtime-evidence/release-manifest.json', `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 })
           NODE
@@ -121,6 +133,9 @@ jobs:
           SOURCE_ARCHIVE_SHA: ${{ steps.release.outputs.source_sha }}
           RELEASE_MANIFEST_SHA: ${{ steps.release.outputs.manifest_sha }}
           POSTGRES_IMAGE: pgvector/pgvector:pg17-bookworm@sha256:7ae6051efd0e60444282c27c7e141af07f322ce033300e727a49c3dd11075e38
+          DOMAIN_PERSISTENCE: ${{ steps.postgres.outputs.domain_persistence }}
+          DOMAIN_PERSISTENCE_IDEMPOTENT: ${{ steps.postgres.outputs.domain_persistence_idempotent }}
+          ACL_FAIL_CLOSED: ${{ steps.postgres.outputs.acl_fail_closed }}
         run: |
           set -euo pipefail
           node <<'NODE'
@@ -140,6 +155,9 @@ jobs:
             postgresImage: process.env.POSTGRES_IMAGE,
             imageBuildVerified: true,
             sqlRuntimeVerified: true,
+            domainPersistence: process.env.DOMAIN_PERSISTENCE,
+            domainPersistenceIdempotent: process.env.DOMAIN_PERSISTENCE_IDEMPOTENT,
+            aclFailClosed: process.env.ACL_FAIL_CLOSED,
             immutableReleaseCandidateVerified: true,
             companyQnapDeployed: false,
             publish: false,

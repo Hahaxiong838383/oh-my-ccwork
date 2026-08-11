@@ -149,6 +149,8 @@ test('candidate SQL keeps Postgres authoritative, raw immutable and retrieval AC
   assert.match(sql, /current_purpose\(\) IS NOT NULL/)
   assert.match(sql, /raw snapshots are append-only outside an approved retention job/)
   assert.match(sql, /REVOKE ALL ON ALL TABLES IN SCHEMA strategic_intelligence FROM PUBLIC/)
+  assert.match(sql, /status = 'failed'.*NULLIF\(BTRIM\(error_code\), ''\) IS NOT NULL/s)
+  assert.match(sql, /status = 'succeeded'.*error_code IS NULL/s)
   assert.doesNotMatch(sql, /GRANT SELECT ON strategic_intelligence\.raw_snapshots TO intelligence_retrieval/)
   assert.doesNotMatch(sql, /qdrant/i)
 })

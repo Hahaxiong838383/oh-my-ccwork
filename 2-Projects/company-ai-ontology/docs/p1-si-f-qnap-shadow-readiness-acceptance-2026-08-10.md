@@ -184,7 +184,7 @@ Collector 测试由 `6/6` 增至 `7/7`，覆盖 metadata-only 不留正文、str
 
 ## 10. 当前未完成
 
-> 后续完成性审计补充：本文件记录的 Run `31421625978` / Commit `2974c19ea` Artifact 生成于 P003 最终审核门禁和 Goal 7 文件化验收门禁加入之前。它继续证明镜像、SQL Runtime、RLS、baseline restore 和 Artifact 便携校验，但 `deploymentEligible=false`。新 Release Manifest 为 `1.1.0 / P1-SI-F-shadow-candidate-gated`，旧 `1.0.0` 包会被拒绝；生产前必须从最终已推送 Commit 重新构建。
+> 后续完成性审计补充：本文件记录的 Run `31421625978` / Commit `2974c19ea` Artifact 生成于 P003 最终审核、四名职能角色真实权限体验和 Goal 7 文件化验收门禁加入之前。它继续证明镜像、SQL Runtime、RLS、baseline restore 和 Artifact 便携校验，但 `deploymentEligible=false`。当前 Release Manifest 为 `1.2.0 / P1-SI-F-shadow-candidate-gated`，要求 `reviewerRoleAccessGateRequired=true`；旧 `1.1.0` 及更早包会被拒绝，生产前必须从最终已推送 Commit 重新构建。
 
 - 未取得公司来源合规审批；
 - Goal 7 尚未在本 Goal 中证明完成；

@@ -3,6 +3,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import {
+  evaluateInternalEngineeringSourcePolicy,
   evaluateSourceCollectionPolicy,
   validateSourceRegistryCatalog,
 } from '../../../packages/ontology-contracts/src/index.mjs'
@@ -25,8 +26,8 @@ async function atomicJson(file, value) {
   await fs.rename(temporary, file)
 }
 
-function sourceEndpoint(entry) {
-  const endpoint = entry?.endpointRefs?.[0]
+function sourceEndpoint(entry, endpointOverride = null) {
+  const endpoint = endpointOverride || entry?.endpointRefs?.[0]
   try {
     const url = new URL(endpoint)
     if (url.protocol !== 'https:') throw new Error('not https')
@@ -53,8 +54,8 @@ function payloadRetention(entry, retention, contentType) {
   return 'hash_only'
 }
 
-async function fetchSource(entry, retention, config, fetchImpl, fetchedAt) {
-  const endpoint = sourceEndpoint(entry)
+async function fetchSource(entry, retention, config, fetchImpl, fetchedAt, endpointOverride = null) {
+  const endpoint = sourceEndpoint(entry, endpointOverride)
   const timeoutSeconds = Math.min(entry.collection.timeoutSeconds, 60)
   let response
   try {
@@ -106,6 +107,8 @@ function runSummary(input) {
     startedAt: input.startedAt,
     completedAt: input.completedAt,
     publish: false,
+    operationMode: input.operationMode,
+    countsTowardProductionShadow: input.operationMode !== 'internal_engineering_shadow',
     status: input.status,
     sourceRegistryVersion: input.sourceRegistryVersion,
     sourceRegistryHash: input.sourceRegistryHash,
@@ -124,6 +127,7 @@ export async function runCollector(options) {
     collectorContract,
     sourceRegistryContract,
     registry,
+    internalEngineeringPlan = null,
     fetchImpl = globalThis.fetch,
     now = () => new Date(),
     idFactory = () => crypto.randomUUID(),
@@ -141,7 +145,11 @@ export async function runCollector(options) {
   const startedAt = now().toISOString()
   const runDir = path.join(config.stateDir, 'runs', runId)
   const rawDir = path.join(runDir, 'raw')
-  const decisions = config.sourceKeys.map((sourceKey) => evaluateSourceCollectionPolicy(registry, sourceRegistryContract, sourceKey, startedAt))
+  const decisions = config.sourceKeys.map((sourceKey) => (
+    config.operationMode === 'internal_engineering_shadow'
+      ? evaluateInternalEngineeringSourcePolicy(registry, sourceRegistryContract, internalEngineeringPlan, sourceKey, startedAt)
+      : evaluateSourceCollectionPolicy(registry, sourceRegistryContract, sourceKey, startedAt)
+  ))
   await atomicJson(path.join(runDir, 'source-decisions.json'), decisions)
 
   try {
@@ -152,7 +160,8 @@ export async function runCollector(options) {
     const fetchedAt = now().toISOString()
     const collected = []
     for (const entry of entries) {
-      const result = await fetchSource(entry, decisionBySource.get(entry.sourceKey).retention, config, fetchImpl, fetchedAt)
+      const decision = decisionBySource.get(entry.sourceKey)
+      const result = await fetchSource(entry, decision.retention, config, fetchImpl, fetchedAt, decision.collection.endpointRef)
       await atomicJson(path.join(rawDir, `${entry.sourceKey}.snapshot.json`), result.snapshot)
       collected.push(...result.items)
     }
@@ -165,6 +174,7 @@ export async function runCollector(options) {
       startedAt,
       completedAt,
       status: 'succeeded',
+      operationMode: config.operationMode,
       sourceRegistryVersion: registry.registryVersion,
       sourceRegistryHash: registryValidation.contentHash,
       sourceDecisionCount: decisions.length,
@@ -187,6 +197,7 @@ export async function runCollector(options) {
       startedAt,
       completedAt,
       status: 'failed',
+      operationMode: config.operationMode,
       sourceRegistryVersion: registry.registryVersion,
       sourceRegistryHash: registryValidation.contentHash,
       sourceDecisionCount: decisions.length,

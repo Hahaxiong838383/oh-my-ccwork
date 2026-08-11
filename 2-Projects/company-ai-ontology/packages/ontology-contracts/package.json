@@ -16,8 +16,12 @@
     "compile:p003-review": "node bin/p003-review-compile.mjs",
     "review:source:generate": "node bin/source-approval-workbook.mjs generate",
     "review:source:import-csv": "node bin/source-approval-workbook.mjs import-csv",
+    "review:source:inspect": "node bin/source-approval-workbook.mjs inspect-assignments",
+    "review:source:progress": "node bin/source-approval-workbook.mjs inspect-progress",
     "review:p003:generate": "node bin/p003-review-workbook.mjs generate",
     "review:p003:import-csv": "node bin/p003-review-workbook.mjs import-csv",
+    "review:p003:inspect": "node bin/p003-review-workbook.mjs inspect-assignments",
+    "review:p003:progress": "node bin/p003-review-workbook.mjs inspect-progress",
     "test": "node --test test/*.test.mjs"
   }
 }

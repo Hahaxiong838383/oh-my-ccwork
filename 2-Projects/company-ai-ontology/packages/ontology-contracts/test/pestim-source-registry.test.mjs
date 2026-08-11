@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   applyPestimSourceRegistryContract,
   compilePestimSourceRegistryProposal,
+  evaluateInternalEngineeringSourcePolicy,
   evaluateSourceCollectionPolicy,
   loadPestimSourceRegistryCatalog,
   loadPestimSourceRegistryContract,
@@ -126,6 +127,71 @@ test('source policy denies personal accounts, login, bypass and unlicensed full 
     assert.equal(decision.allowed, false)
     assert.equal(decision.reasonCode, expected)
   }
+})
+
+test('internal engineering policy allows only bounded provisional sources without satisfying production approval', async () => {
+  const contract = await loadPestimSourceRegistryContract()
+  const { catalog } = await loadPestimSourceRegistryCatalog({ contract })
+  const plan = {
+    mode: 'internal_engineering_shadow',
+    status: 'provisional_internal_test',
+    publish: false,
+    countsTowardProductionShadow: false,
+    deploymentAuthorized: false,
+    selectedSources: catalog.entries.slice(0, 2).map((entry) => ({
+      sourceKey: entry.sourceKey,
+      endpointRef: entry.endpointRefs[0],
+      storageLevel: 'reference_only',
+      retentionDays: 3,
+      approvalState: 'provisional_internal_test',
+      licenseDecision: 'deferred_before_production',
+      complianceDecision: 'deferred_before_production',
+    })),
+  }
+  const allowed = evaluateInternalEngineeringSourcePolicy(catalog, contract, plan, plan.selectedSources[0].sourceKey, EVALUATED_AT)
+  assert.equal(allowed.allowed, true)
+  assert.equal(allowed.reasonCode, 'INTERNAL_ENGINEERING_PROVISIONAL_ALLOW')
+  assert.equal(allowed.provisional, true)
+  assert.equal(allowed.productionApprovalSatisfied, false)
+  assert.equal(allowed.collection.endpointRef, new URL(plan.selectedSources[0].endpointRef).toString())
+  assert.equal(allowed.retention.storageLevel, 'reference_only')
+  assert.equal(allowed.retention.retentionDays, 3)
+
+  const notSelected = evaluateInternalEngineeringSourcePolicy(catalog, contract, plan, catalog.entries[2].sourceKey, EVALUATED_AT)
+  assert.equal(notSelected.allowed, false)
+  assert.equal(notSelected.reasonCode, 'SOURCE_NOT_SELECTED_FOR_INTERNAL_ENGINEERING')
+
+  const productionCredit = structuredClone(plan)
+  productionCredit.countsTowardProductionShadow = true
+  assert.equal(
+    evaluateInternalEngineeringSourcePolicy(catalog, contract, productionCredit, plan.selectedSources[0].sourceKey, EVALUATED_AT).reasonCode,
+    'INTERNAL_ENGINEERING_PLAN_INVALID',
+  )
+
+  const credentialedPlan = structuredClone(plan)
+  credentialedPlan.selectedSources[1].sourceKey = 'openalex-official-api'
+  credentialedPlan.selectedSources[1].endpointRef = catalog.entries.find((entry) => entry.sourceKey === 'openalex-official-api').endpointRefs[0]
+  assert.equal(
+    evaluateInternalEngineeringSourcePolicy(catalog, contract, credentialedPlan, 'openalex-official-api', EVALUATED_AT).reasonCode,
+    'CREDENTIAL_REQUIRED_FORBIDDEN',
+  )
+
+  const github = catalog.entries.find((entry) => entry.sourceKey === 'github-approved-repository-releases')
+  const githubPlan = structuredClone(plan)
+  githubPlan.selectedSources[1] = {
+    ...githubPlan.selectedSources[1],
+    sourceKey: github.sourceKey,
+    endpointRef: 'https://api.github.com/repos/vllm-project/vllm/releases?per_page=20',
+  }
+  assert.equal(
+    evaluateInternalEngineeringSourcePolicy(catalog, contract, githubPlan, github.sourceKey, EVALUATED_AT).reasonCode,
+    'INTERNAL_ENGINEERING_PROVISIONAL_ALLOW',
+  )
+  githubPlan.selectedSources[1].endpointRef = 'https://api.github.com/repos/unapproved/example/releases?per_page=20'
+  assert.equal(
+    evaluateInternalEngineeringSourcePolicy(catalog, contract, githubPlan, github.sourceKey, EVALUATED_AT).reasonCode,
+    'INTERNAL_ENDPOINT_NOT_ALLOWLISTED',
+  )
 })
 
 test('invalid registry snapshots fail closed and duplicate proposal elements are rejected', async () => {

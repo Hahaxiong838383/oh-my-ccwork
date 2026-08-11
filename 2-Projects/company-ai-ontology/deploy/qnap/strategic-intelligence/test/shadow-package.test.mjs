@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs/promises'
 import os from 'node:os'
@@ -28,6 +29,49 @@ function principal(role) {
     displayName: `${role}-reviewer`,
     principalRef: `company-directory:${role}-reviewer`,
     decision: 'approve',
+  }
+}
+
+function reviewerRoleAcceptance() {
+  const roleTests = [
+    ['product_user', ['product_definition', 'children_user_scenario', 'channel_sales_competition', 'ai_technology', 'privacy_safety_compliance'], 30, 6],
+    ['ai_rd', ['product_definition', 'children_user_scenario', 'ai_technology'], 18, 18],
+    ['brand', ['channel_sales_competition'], 6, 30],
+    ['toc_offline_channel', ['channel_sales_competition'], 6, 30],
+  ].map(([roleKey, expectedEditableCategories, expectedEditableRecordCount, expectedDeniedRecordCount]) => ({
+    roleKey,
+    expectedEditableCategories,
+    expectedEditableRecordCount,
+    expectedDeniedRecordCount,
+    memberPrincipal: principal(roleKey),
+    testedAt: '2026-08-11T00:00:00Z',
+    evidenceRefs: [`feishu:base/p1-si-role-access/${roleKey}`],
+    authenticatedAsAssignedMember: true,
+    assignedCategoryEditSucceeded: true,
+    unassignedCategoryEditDenied: true,
+    sourceTableAccessDenied: true,
+    recordCreateDenied: true,
+    recordDeleteDenied: true,
+    copyDenied: true,
+    downloadDenied: true,
+    viewMutationDenied: true,
+    temporaryEditReverted: true,
+  }))
+  return {
+    evidenceVersion: '1.0.0',
+    workbenchKey: 'P1-SI-HUMAN-REVIEW',
+    status: 'complete',
+    memberExperienceVerified: true,
+    securityOwnerAccepted: true,
+    acceptedAt: '2026-08-11T00:00:00Z',
+    securityOwner: principal('security_owner'),
+    ownerAcceptanceRef: 'feishu:doc/p1-si-role-access-owner-acceptance',
+    evidenceRefs: ['feishu:doc/p1-si-role-access-evidence'],
+    categoryFieldType: 'SingleSelect',
+    allFiltersValid: true,
+    legacyBroadRoleMemberCount: 0,
+    publicOutputContainsSensitiveData: false,
+    roleTests,
   }
 }
 
@@ -102,7 +146,7 @@ test('threshold policy freezes all business side effects at zero', async () => {
 })
 
 test('deployment scripts only target strategic intelligence services and keep explicit gates', async () => {
-  const names = ['dispatch-next.sh', 'freeze-shadow.sh', 'backup-shadow.sh', 'rollback-shadow.sh', 'prepare-shadow-release.sh', 'apply-shadow-migrations.sh', 'deploy-shadow.sh', 'install-dispatcher-cron.sh']
+  const names = ['dispatch-next.sh', 'persist-shadow-domain-batch.sh', 'freeze-shadow.sh', 'backup-shadow.sh', 'rollback-shadow.sh', 'prepare-shadow-release.sh', 'apply-shadow-migrations.sh', 'deploy-shadow.sh', 'install-dispatcher-cron.sh']
   const forbiddenServiceCommands = /compose\s+(?:--[^\s]+\s+)*(?:up|restart|stop)\b[^\n]*(?:agent-core|h-lite|domain-connector|knowledge-connector|gateway|postgres|redis|qdrant)/
   for (const name of names) {
     const script = await fs.readFile(path.join(ROOT, 'scripts', name), 'utf8')
@@ -126,12 +170,91 @@ test('deployment scripts only target strategic intelligence services and keep ex
   assert.match(deploy, /validate-release-manifest\.mjs/)
   assert.match(deploy, /SI_APPROVED_P003_REVIEW_FILE/)
   assert.match(deploy, /validate-approved-p003-review\.mjs/)
+  assert.match(deploy, /SI_REVIEWER_ROLE_ACCESS_ACCEPTANCE_FILE/)
+  assert.match(deploy, /validate-reviewer-role-access-acceptance\.mjs/)
   assert.match(deploy, /release_project_root\/deploy\/qnap\/strategic-intelligence\/scripts\/apply-shadow-migrations\.sh/)
+  assert.match(deploy, /runtime_uid=\$\(id -u\)/)
+  assert.match(deploy, /shadow runtime must use a non-root deployment account/)
+  assert.ok(deploy.indexOf('shadow runtime must use a non-root deployment account') < deploy.indexOf('docker_path" load'))
+  assert.match(deploy, /SI_COLLECTOR_UID=\$runtime_uid/)
+  assert.match(deploy, /SI_ORCHESTRATOR_UID=\$runtime_uid/)
+  assert.match(deploy, /SI_PERSIST_DOMAIN_TO_POSTGRES=YES/)
   assert.match(deploy, /up -d --no-deps intelligence-orchestrator/)
   assert.doesNotMatch(deploy, /up -d[^\n]*(?:agent-core|h-lite|connector|gateway|postgres|redis|qdrant)/)
   const migration = await fs.readFile(path.join(ROOT, 'scripts/apply-shadow-migrations.sh'), 'utf8')
   assert.match(migration, /SI_GOAL7_ACCEPTANCE_FILE/)
   assert.match(migration, /validate-goal7-acceptance\.mjs/)
+  assert.match(migration, /SI_REVIEWER_ROLE_ACCESS_ACCEPTANCE_FILE/)
+  assert.match(migration, /validate-reviewer-role-access-acceptance\.mjs/)
+})
+
+test('internal engineering deployment is separately authorized, migration-free, and starts no container', async () => {
+  const deploy = await fs.readFile(path.join(ROOT, 'scripts/deploy-internal-engineering-shadow.sh'), 'utf8')
+  const run = await fs.readFile(path.join(ROOT, 'scripts/run-internal-engineering-once.sh'), 'utf8')
+  const rollback = await fs.readFile(path.join(ROOT, 'scripts/rollback-internal-engineering-shadow.sh'), 'utf8')
+  assert.ok(deploy.indexOf('INTERNAL_ENGINEERING_SHADOW_DEPLOY_APPROVED') < deploy.indexOf('preflight-company-qnap.sh'))
+  assert.doesNotMatch(deploy, /apply-shadow-migrations|compose .* up|compose .* restart|docker .* restart/)
+  assert.match(deploy, /container_started=0/)
+  assert.match(deploy, /database_migration_count=0/)
+  assert.match(deploy, /cp -R "\$release_project_root" "\$internal_root\/package\.next"/)
+  assert.match(deploy, /package_root=\$internal_root\/package\.next\/deploy\/qnap\/strategic-intelligence/)
+  assert.match(deploy, /internal engineering runtime must use a non-root deployment account/)
+  assert.ok(deploy.indexOf('internal engineering runtime must use a non-root deployment account') < deploy.indexOf('docker_path" load'))
+  assert.match(deploy, /SI_COLLECTOR_UID=\$runtime_uid/)
+  assert.match(deploy, /NODE_BIN/)
+  assert.match(deploy, /node-runtime[.]sh/)
+  assert.ok(run.indexOf('INTERNAL_ENGINEERING_RUN_APPROVED') < run.indexOf('preflight-company-qnap.sh'))
+  assert.match(run, /project_root=\$internal_root\/package/)
+  assert.match(run, /project package missing contracts/)
+  assert.match(run, /--profile worker run/)
+  assert.match(run, /counts_toward_production_shadow=0/)
+  assert.match(run, /NODE_BIN/)
+  assert.ok(rollback.indexOf('INTERNAL_ENGINEERING_ROLLBACK_APPROVED') < rollback.indexOf('preflight-company-qnap.sh'))
+  assert.doesNotMatch(rollback, /compose .* stop|compose .* down|apply-shadow-migrations|psql|migrate\.sh/)
+})
+
+test('QNAP Node runtime uses native Node locally and fails closed without an immutable fallback image', () => {
+  const runtime = path.join(ROOT, 'scripts/node-runtime.sh')
+  const native = spawnSync('sh', [runtime, '-e', "process.stdout.write('native-node-ok')"], { encoding: 'utf8' })
+  assert.equal(native.status, 0, native.stderr)
+  assert.equal(native.stdout, 'native-node-ok')
+
+  const fallback = spawnSync('sh', [runtime, '--version'], {
+    encoding: 'utf8',
+    env: {
+      PATH: '/usr/bin:/bin',
+      DOCKER_PATH: '/usr/bin/true',
+      SI_NODE_RUNTIME_MOUNT_ROOT: '/share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence',
+    },
+  })
+  assert.equal(fallback.status, 2)
+  assert.match(fallback.stderr, /QNAP Node runtime mount root missing|immutable QNAP Node runtime image required/)
+})
+
+test('internal engineering deployment, run, and rollback refuse before QNAP preflight without explicit approval', async () => {
+  for (const script of [
+    'deploy-internal-engineering-shadow.sh',
+    'run-internal-engineering-once.sh',
+    'rollback-internal-engineering-shadow.sh',
+  ]) {
+    const result = spawnSync('sh', [path.join(ROOT, 'scripts', script)], { encoding: 'utf8' })
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /explicit internal engineering/)
+    assert.doesNotMatch(result.stderr, /QNAP|Container Station|company ontology root/)
+  }
+})
+
+test('rollback refuses execution before QNAP preflight when explicit approval is absent', () => {
+  const result = spawnSync('sh', [path.join(ROOT, 'scripts/rollback-shadow.sh')], {
+    encoding: 'utf8',
+    env: {
+      PATH: process.env.PATH,
+      SHADOW_ROLLBACK_APPROVED: 'NO',
+    },
+  })
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /explicit shadow rollback approval missing/)
+  assert.doesNotMatch(result.stderr, /QNAP|backup|docker|manifest/i)
 })
 
 test('release manifest validator binds immutable archives and keeps deployment disabled', async () => {
@@ -144,7 +267,7 @@ test('release manifest validator binds immutable archives and keeps deployment d
   await fs.writeFile(sourceArchive, sourceBytes)
   await fs.writeFile(imageArchive, imageBytes)
   const manifest = {
-    manifestVersion: '1.1.0',
+    manifestVersion: '1.2.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-10T09:00:00Z',
     sourceCommit: 'a'.repeat(40),
@@ -158,6 +281,7 @@ test('release manifest validator binds immutable archives and keeps deployment d
     productionDeploymentAuthorized: false,
     requiredGate: 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH',
     p003ReviewGateRequired: true,
+    reviewerRoleAccessGateRequired: true,
     goal7AcceptanceGateRequired: true,
   }
   await fs.writeFile(manifestFile, JSON.stringify(manifest))
@@ -181,13 +305,11 @@ test('release manifest validator binds immutable archives and keeps deployment d
   await fs.writeFile(sourceArchive, sourceBytes)
   await fs.writeFile(manifestFile, JSON.stringify({
     ...manifest,
-    manifestVersion: '1.0.0',
-    releaseType: 'P1-SI-F-shadow-candidate',
+    manifestVersion: '1.1.0',
   }))
   const legacy = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, imageArchive], { encoding: 'utf8' })
   assert.notEqual(legacy.status, 0)
   assert.match(legacy.stderr, /manifestVersion mismatch/)
-  assert.match(legacy.stderr, /releaseType mismatch/)
 })
 
 test('approved registry validator accepts only enabled sources from a shadow-reviewed registry', async () => {
@@ -255,6 +377,39 @@ test('P003 deployment gate requires all real-review decisions and keeps every re
   const activated = spawnSync(process.execPath, [validator, reviewFile], { encoding: 'utf8' })
   assert.notEqual(activated.status, 0)
   assert.match(activated.stderr, /activationStatus must remain inactive/)
+})
+
+test('reviewer role access gate requires four real member sessions and explicit security owner acceptance', async () => {
+  const outputRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'company-si-role-access-gate-'))
+  const acceptanceFile = path.join(outputRoot, 'reviewer-role-access-acceptance.json')
+  const validator = path.join(ROOT, 'scripts/validate-reviewer-role-access-acceptance.mjs')
+  const { spawnSync } = await import('node:child_process')
+  const acceptedEvidence = reviewerRoleAcceptance()
+
+  await fs.writeFile(acceptanceFile, JSON.stringify(acceptedEvidence))
+  const accepted = spawnSync(process.execPath, [validator, acceptanceFile], { encoding: 'utf8' })
+  assert.equal(accepted.status, 0, accepted.stderr)
+  const result = JSON.parse(accepted.stdout)
+  assert.equal(result.scopedRoleCount, 4)
+  assert.equal(result.memberExperienceVerified, true)
+  assert.equal(result.legacyBroadRoleMemberCount, 0)
+  assert.doesNotMatch(accepted.stdout, /company-directory:/)
+  assert.doesNotMatch(accepted.stdout, /displayName/)
+
+  await fs.writeFile(acceptanceFile, JSON.stringify({
+    ...acceptedEvidence,
+    roleTests: acceptedEvidence.roleTests.map((entry, index) => (
+      index === 0 ? { ...entry, unassignedCategoryEditDenied: false } : entry
+    )),
+  }))
+  const unsafeEdit = spawnSync(process.execPath, [validator, acceptanceFile], { encoding: 'utf8' })
+  assert.notEqual(unsafeEdit.status, 0)
+  assert.match(unsafeEdit.stderr, /unassignedCategoryEditDenied must be true/)
+
+  const template = path.join(ROOT, 'config/reviewer-role-access-acceptance.template.json')
+  const pendingTemplate = spawnSync(process.execPath, [validator, template], { encoding: 'utf8' })
+  assert.notEqual(pendingTemplate.status, 0)
+  assert.match(pendingTemplate.stderr, /status must be complete/)
 })
 
 test('Goal 7 deployment gate requires engineering evidence and explicit owner acceptance', async () => {
@@ -336,10 +491,41 @@ test('candidate migrations remain outside production migrations and isolated val
   assert.match(validator, /project_root_input/)
   assert.match(validator, /cd -- "\$project_root_input"/)
   assert.match(validator, /VALIDATION_POSTGRES_IMAGE/)
+  assert.match(validator, /NODE_BIN/)
   assert.match(validator, /volume create/)
   assert.match(validator, /volume rm -f/)
   assert.match(validator, /baseline\.dump/)
   assert.match(validator, /ontology_restore/)
+  assert.match(validator, /write-shadow-domain-runtime-fixture[.]mjs/)
+  assert.match(validator, /compile-shadow-domain-sql[.]mjs/)
+  assert.match(validator, /domain_persistence_idempotent=verified/)
+  assert.match(validator, /acl_fail_closed=verified/)
+})
+
+test('isolated migration validation rejects a missing Node runtime before creating Docker state', () => {
+  const validator = path.join(ROOT, 'scripts/validate-candidate-migrations-isolated.sh')
+  const result = spawnSync('sh', [validator], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PROJECT_ROOT,
+      DOCKER_PATH: '/usr/bin/true',
+      NODE_BIN: path.join(os.tmpdir(), 'p1-si-node-runtime-does-not-exist'),
+      VALIDATION_RUN_ID: 'node-runtime-negative-test',
+    },
+  })
+  assert.equal(result.status, 2)
+  assert.match(result.stderr, /node runtime unavailable/)
+})
+
+test('runtime workflow stays aligned with the gated release and domain persistence proof', async () => {
+  const workflow = await fs.readFile(path.resolve(PROJECT_ROOT, '../../.github/workflows/p1-si-runtime-verify.yml'), 'utf8')
+  assert.match(workflow, /manifestVersion: '1[.]2[.]0'/)
+  assert.match(workflow, /releaseType: 'P1-SI-F-shadow-candidate-gated'/)
+  assert.match(workflow, /grep -qx 'domain_persistence=verified'/)
+  assert.match(workflow, /grep -qx 'domain_persistence_idempotent=verified'/)
+  assert.match(workflow, /grep -qx 'acl_fail_closed=verified'/)
+  assert.match(workflow, /reviewerRoleAccessGateRequired: true/)
 })
 
 test('seven-day pack generator creates exactly seven pending real-run evidence files', async () => {
@@ -371,4 +557,186 @@ test('runtime metrics parser records CPU, memory and network without exposing pa
   assert.equal(metrics.peakCpuPermille, 483)
   assert.equal(metrics.peakMemoryBytes, 300 * 1024 * 1024)
   assert.equal(metrics.networkBytes, 4_000_000)
+})
+
+test('runtime audit compiler derives real coverage without trusting manual flags', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'company-si-run-audit-'))
+  const stateRoot = path.join(root, 'state')
+  const reportRoot = path.join(root, 'reports')
+  const runId = '2026-08-11T01-00-00-000Z-audit-run'
+  const runDir = path.join(stateRoot, 'runs', runId)
+  await fs.mkdir(path.join(runDir, 'raw'), { recursive: true })
+  await fs.mkdir(reportRoot, { recursive: true })
+  const summary = { runId, status: 'succeeded' }
+  await fs.writeFile(path.join(root, 'stdout.json'), JSON.stringify({ ok: true, ...summary }))
+  await fs.writeFile(path.join(root, 'stderr.log'), '')
+  await fs.writeFile(path.join(root, 'domain-stderr.log'), '')
+  await fs.writeFile(path.join(runDir, 'run.json'), JSON.stringify(summary))
+  await fs.writeFile(path.join(runDir, 'items.json'), JSON.stringify([{ title: 'Public item', summary: 'No secret', contentHash: 'a'.repeat(64) }]))
+  await fs.writeFile(path.join(runDir, 'source-decisions.json'), JSON.stringify([{ allowed: true }]))
+  await fs.writeFile(path.join(runDir, 'raw', 'source.snapshot.json'), JSON.stringify({ bodyBase64: null, contentHash: 'b'.repeat(64) }))
+  await fs.writeFile(path.join(reportRoot, `candidate-${runId}.json`), JSON.stringify({ ...summary, items: [] }))
+  await fs.writeFile(path.join(stateRoot, 'last-good.json'), JSON.stringify({ ...summary, items: [] }))
+  await fs.writeFile(path.join(root, 'pre-last-good.json'), JSON.stringify({ snapshotVersion: '1.0.0', present: false, sha256: null, runId: null }))
+  await fs.writeFile(path.join(root, 'revocation.json'), JSON.stringify({ auditVersion: '1.0.0', completed: true, reasonCode: 'SOURCE_POLICY_DENIED', networkMode: 'none', effectiveSeconds: 1, postRevocationNetworkRequestCount: 0 }))
+  await fs.writeFile(path.join(root, 'side-effects.json'), JSON.stringify({ auditVersion: '1.0.0', completed: true, formalP2Count: 0, employeeDeliveryCount: 0, erpWritebackCount: 0, socialWritebackCount: 0, causalActivationCount: 0 }))
+  await fs.writeFile(path.join(root, 'domain-batch.json'), JSON.stringify({ batchVersion: '1.0.0', publish: false, persistenceState: 'json_candidate_pending_postgres' }))
+  const output = path.join(root, 'audit.json')
+  const result = spawnSync(process.execPath, [
+    path.join(ROOT, 'scripts/compile-shadow-run-audit.mjs'),
+    '--collector-stdout', path.join(root, 'stdout.json'),
+    '--collector-stderr', path.join(root, 'stderr.log'),
+    '--state-root', stateRoot,
+    '--report-root', reportRoot,
+    '--pre-last-good', path.join(root, 'pre-last-good.json'),
+    '--revocation-evidence', path.join(root, 'revocation.json'),
+    '--side-effect-evidence', path.join(root, 'side-effects.json'),
+    '--domain-batch', path.join(root, 'domain-batch.json'),
+    '--domain-stderr', path.join(root, 'domain-stderr.log'),
+    '--output', output,
+  ], { encoding: 'utf8' })
+  assert.equal(result.status, 0, result.stderr)
+  const audit = JSON.parse(await fs.readFile(output, 'utf8'))
+  assert.equal(audit.auditCompleted, true)
+  assert.equal(audit.unredactedSensitiveOutputCount, 0)
+  assert.equal(audit.sensitiveOutputAuditCompleted, true)
+  assert.equal(audit.sourceRevocationAuditCompleted, true)
+  assert.equal(audit.businessSideEffectAuditCompleted, true)
+  assert.equal(audit.lastGoodPreserved, true)
+  assert.deepEqual(audit.sideEffects, { formalP2Count: 0, employeeDeliveryCount: 0, erpWritebackCount: 0, socialWritebackCount: 0, causalActivationCount: 0 })
+})
+
+test('runtime audit exposes sensitive output and business side effects instead of hiding them', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'company-si-run-audit-negative-'))
+  const stateRoot = path.join(root, 'state')
+  const reportRoot = path.join(root, 'reports')
+  const runId = '2026-08-11T02-00-00-000Z-audit-run'
+  const runDir = path.join(stateRoot, 'runs', runId)
+  await fs.mkdir(path.join(runDir, 'raw'), { recursive: true })
+  await fs.mkdir(reportRoot, { recursive: true })
+  await fs.writeFile(path.join(root, 'stdout.json'), JSON.stringify({ ok: true, runId }))
+  await fs.writeFile(path.join(root, 'stderr.log'), '')
+  await fs.writeFile(path.join(root, 'domain-stderr.log'), '')
+  await fs.writeFile(path.join(runDir, 'run.json'), JSON.stringify({ runId, status: 'succeeded' }))
+  await fs.writeFile(path.join(runDir, 'items.json'), JSON.stringify([{ title: 'unsafe', access_token: 'not-redacted-token-value' }]))
+  await fs.writeFile(path.join(runDir, 'source-decisions.json'), '[]')
+  await fs.writeFile(path.join(runDir, 'raw', 'source.snapshot.json'), JSON.stringify({ bodyBase64: null }))
+  await fs.writeFile(path.join(reportRoot, `candidate-${runId}.json`), JSON.stringify({ runId, items: [] }))
+  await fs.writeFile(path.join(stateRoot, 'last-good.json'), JSON.stringify({ runId, items: [] }))
+  await fs.writeFile(path.join(root, 'pre-last-good.json'), JSON.stringify({ snapshotVersion: '1.0.0', present: false, sha256: null, runId: null }))
+  await fs.writeFile(path.join(root, 'revocation.json'), JSON.stringify({ auditVersion: '1.0.0', completed: true, reasonCode: 'SOURCE_POLICY_DENIED', networkMode: 'none', effectiveSeconds: 1, postRevocationNetworkRequestCount: 0 }))
+  await fs.writeFile(path.join(root, 'side-effects.json'), JSON.stringify({ auditVersion: '1.0.0', completed: true, formalP2Count: 1, employeeDeliveryCount: 0, erpWritebackCount: 0, socialWritebackCount: 0, causalActivationCount: 0 }))
+  await fs.writeFile(path.join(root, 'domain-batch.json'), JSON.stringify({ batchVersion: '1.0.0', publish: false, persistenceState: 'json_candidate_pending_postgres' }))
+  const output = path.join(root, 'audit.json')
+  const result = spawnSync(process.execPath, [
+    path.join(ROOT, 'scripts/compile-shadow-run-audit.mjs'),
+    '--collector-stdout', path.join(root, 'stdout.json'), '--collector-stderr', path.join(root, 'stderr.log'),
+    '--state-root', stateRoot, '--report-root', reportRoot,
+    '--pre-last-good', path.join(root, 'pre-last-good.json'),
+    '--revocation-evidence', path.join(root, 'revocation.json'),
+    '--side-effect-evidence', path.join(root, 'side-effects.json'),
+    '--domain-batch', path.join(root, 'domain-batch.json'),
+    '--domain-stderr', path.join(root, 'domain-stderr.log'), '--output', output,
+  ], { encoding: 'utf8' })
+  assert.equal(result.status, 0, result.stderr)
+  const audit = JSON.parse(await fs.readFile(output, 'utf8'))
+  assert.equal(audit.unredactedSensitiveOutputCount, 1)
+  assert.equal(audit.sideEffects.formalP2Count, 1)
+})
+
+test('dispatcher performs fail-closed revocation, sensitive-output and side-effect audits', async () => {
+  const dispatcher = await fs.readFile(path.join(ROOT, 'scripts/dispatch-next.sh'), 'utf8')
+  const revocationAudit = await fs.readFile(path.join(ROOT, 'scripts/run-source-revocation-audit.sh'), 'utf8')
+  assert.match(dispatcher, /snapshot-last-good[.]mjs/)
+  assert.match(dispatcher, /run-source-revocation-audit[.]sh/)
+  assert.match(dispatcher, /capture-shadow-side-effects[.]sh/)
+  assert.match(dispatcher, /compile-shadow-run-audit[.]mjs/)
+  assert.match(dispatcher, /persist-shadow-domain-batch[.]sh/)
+  assert.match(dispatcher, /domain_exit/)
+  assert.match(dispatcher, /domain-stderr/)
+  assert.match(dispatcher, /--audit-metrics-file/)
+  assert.match(revocationAudit, /--network none/)
+  assert.match(revocationAudit, /SOURCE_POLICY_DENIED/)
+})
+
+test('Postgres persistence refuses execution unless deployment explicitly enables it', async () => {
+  const script = path.join(ROOT, 'scripts/persist-shadow-domain-batch.sh')
+  const result = spawnSync('sh', [script, '/nonexistent/domain.json', '/nonexistent/metrics.json'], {
+    encoding: 'utf8',
+    env: { ...process.env, SI_PERSIST_DOMAIN_TO_POSTGRES: 'NO' },
+  })
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /Postgres domain persistence is not enabled/)
+  assert.doesNotMatch(result.stderr, /192[.]168[.]61[.]18/)
+})
+
+test('daily evidence is populated from compiled runtime audits rather than manual coverage flags', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'company-si-record-audit-'))
+  const requestFile = path.join(root, 'request.json')
+  const collectorMetricsFile = path.join(root, 'collector.json')
+  const runtimeMetricsFile = path.join(root, 'runtime.json')
+  const auditMetricsFile = path.join(root, 'audit.json')
+  const domainMetricsFile = path.join(root, 'domain.json')
+  const outputFile = path.join(root, 'evidence.json')
+  await fs.writeFile(requestFile, JSON.stringify({
+    requestKey: 'daily-collection-shadow-2026-08-11',
+    localDate: '2026-08-11',
+    timezone: 'Asia/Shanghai',
+    requestedAt: '2026-08-10T22:30:00Z',
+    policyVersion: '1.0.0-candidate.1',
+    policyHash: 'a'.repeat(64),
+  }))
+  await fs.writeFile(collectorMetricsFile, JSON.stringify({ collected: true, sourceAttemptCount: 3, sourceSuccessCount: 3, rawSnapshotCount: 3, normalizedItemCount: 30, duplicateCount: 2, freshnessP95Seconds: 300, rawSnapshotBytes: 2048 }))
+  await fs.writeFile(runtimeMetricsFile, JSON.stringify({ collected: true, networkBytes: 4096, peakCpuPermille: 200, peakMemoryBytes: 64 * 1024 * 1024 }))
+  await fs.writeFile(auditMetricsFile, JSON.stringify({
+    unredactedSensitiveOutputCount: 0,
+    sourceRevocationEffectiveSeconds: 1,
+    postRevocationNetworkRequestCount: 0,
+    lastGoodPreserved: true,
+    sensitiveOutputAuditCompleted: true,
+    sourceRevocationAuditCompleted: true,
+    businessSideEffectAuditCompleted: true,
+    sideEffects: { formalP2Count: 0, employeeDeliveryCount: 0, erpWritebackCount: 0, socialWritebackCount: 0, causalActivationCount: 0 },
+  }))
+  await fs.writeFile(domainMetricsFile, JSON.stringify({
+    compiled: true,
+    persisted: true,
+    persistenceState: 'postgres_committed',
+    rawSnapshotCount: 3,
+    observationCount: 30,
+    signalCount: 30,
+    evidenceCount: 30,
+    impactAssessmentCount: 6,
+    reportRunCount: 3,
+    reportDraftCount: 3,
+  }))
+  const result = spawnSync(process.execPath, [
+    path.join(ROOT, 'scripts/record-shadow-run.mjs'),
+    '--request', requestFile, '--output', outputFile, '--status', 'succeeded',
+    '--started-at', '2026-08-10T22:30:00Z', '--completed-at', '2026-08-10T22:31:00Z',
+    '--duration-seconds', '60', '--exit-code', '0',
+    '--collector-image', `sha256:${'b'.repeat(64)}`, '--source-commit', 'c'.repeat(40),
+    '--collector-metrics-file', collectorMetricsFile, '--runtime-metrics-file', runtimeMetricsFile,
+    '--audit-metrics-file', auditMetricsFile, '--domain-metrics-file', domainMetricsFile,
+    '--container-restart-count', '0', '--new-host-port-count', '0',
+  ], { encoding: 'utf8' })
+  assert.equal(result.status, 0, result.stderr)
+  const evidence = JSON.parse(await fs.readFile(outputFile, 'utf8'))
+  assert.equal(evidence.coverage.sensitiveOutputAuditCompleted, true)
+  assert.equal(evidence.coverage.sourceRevocationAuditCompleted, true)
+  assert.equal(evidence.coverage.businessSideEffectAuditCompleted, true)
+  assert.equal(evidence.coverage.domainCompilationCompleted, true)
+  assert.equal(evidence.coverage.domainPersistenceCompleted, true)
+  assert.deepEqual(evidence.domainArtifacts, {
+    persistenceState: 'postgres_committed',
+    rawSnapshotCount: 3,
+    observationCount: 30,
+    signalCount: 30,
+    evidenceCount: 30,
+    impactAssessmentCount: 6,
+    reportRunCount: 3,
+    reportDraftCount: 3,
+  })
+  assert.equal(evidence.security.lastGoodPreserved, true)
+  assert.deepEqual(evidence.sideEffects, { formalP2Count: 0, employeeDeliveryCount: 0, erpWritebackCount: 0, socialWritebackCount: 0, causalActivationCount: 0 })
 })

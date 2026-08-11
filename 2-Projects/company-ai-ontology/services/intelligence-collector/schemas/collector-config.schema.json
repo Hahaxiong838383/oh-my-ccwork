@@ -18,7 +18,9 @@
   ],
   "properties": {
     "configVersion": { "const": "1.0.0" },
+    "operationMode": { "enum": ["governed_shadow", "internal_engineering_shadow"] },
     "publish": { "const": false },
+    "internalEngineeringPlanFile": { "type": "string", "minLength": 1 },
     "sourceRegistryFile": { "type": "string", "minLength": 1 },
     "stateDir": { "type": "string", "minLength": 1 },
     "reportDir": { "type": "string", "minLength": 1 },

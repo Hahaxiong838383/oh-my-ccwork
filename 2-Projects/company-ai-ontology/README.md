@@ -13,7 +13,9 @@
 
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
-- 当前里程碑：`Goal 6-A / P1-DOMAIN` 已完成工程验收和川哥人工体验验收。公司 QNAP 为 Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`；Domain Connector `2026-08-10.1`、Agent Core `2026-08-10.2`，ERP 95 / Operations 38 / Device 57 / Market 369，数据指纹 `ae0a73d126cb9d2dc1417e0eae7c0e94`。ActionIntent 3、Delivery Outbox 12 均为既有已验证/已回滚/已确认记录，无 pending/leased 写回。H 控制面 `v1.58.2`、50 个运行文件 `in_sync`、真实 Chrome `99/99`。Company Capability Governance v1 继续保持 `contract_only`。PESTIM B～G 工程候选、Linux/amd64 镜像、SQL Runtime、飞书 CSV 人工审核闭环和七日 Shadow 机器验收链已完成工程验证；旧 90 天 Artifact 仅保留为历史 Runtime 证据，新版 P003/Goal 7 强门禁发布包尚未重建。`2026-08-11` 已在线复核公司 QNAP 五元组、Foundation 健康、核心容器 `restart_count=0`，战略情报生产目录仍不存在。川哥已授权连接和部署，但来源工作台仍为 `8 pending`、P003 工作台仍为 `36 pending / 36 inactive`，且 Goal 7 文件化 Owner Acceptance 不存在，因此部署入口继续 fail-closed；真实来源审批、实名 P003 DRI 审核、Goal 7、最终发布包、部署、七日真实 Shadow 和最终体验验收均未完成。
+- 当前里程碑：`Goal 6-A / P1-DOMAIN` 已完成工程验收和川哥人工体验验收。公司 QNAP 为 Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`；Domain Connector `2026-08-10.1`、Agent Core `2026-08-10.2`，ERP 95 / Operations 38 / Device 57 / Market 369，数据指纹 `ae0a73d126cb9d2dc1417e0eae7c0e94`。ActionIntent 3、Delivery Outbox 12 均为既有已验证/已回滚/已确认记录，无 pending/leased 写回。H 控制面 `v1.58.2`、50 个运行文件 `in_sync`、真实 Chrome `99/99`。Company Capability Governance v1 继续保持 `contract_only`。PESTIM B～G 工程候选、Linux/amd64 镜像、SQL Runtime、飞书 CSV 人工审核闭环和七日 Shadow 机器验收链已完成工程验证；旧 90 天 Artifact 仅保留为历史 Runtime 证据，Manifest `1.2.0` 的 P003 最终审核、成员真实权限体验和 Goal 7 强门禁发布包尚未重建。`2026-08-11` 已再次在线复核公司 QNAP 五元组、active Schema `3.3.0`、Foundation 13 个容器健康且 `restart_count=0`，战略情报目录和数据库 Schema 仍不存在。飞书来源 8/8 已预填结构化实名审核 Principal，P003 30/36 已预填结构化 DRI 和参与者；线下渠道责任人已进入 To C 线下渠道职能角色和渠道类待审核分配。P003 已拆为产品与用户、AI 研发、品牌、To C 线下渠道四个记录级职能角色，旧宽泛角色成员为 0；`categoryKey` SingleSelect 转换后 36 条逐字段零漂移，正式导入器已兼容单元素数组并失败关闭异常形态。脱敏检查器确认来源分配 8/8 完整，P003 个人 DRI 30/36、必要角色位 90/150、全角色覆盖 12/36；最终决定仍为来源 0/8、P003 0/36，全部关系继续 `pending / inactive`。成员真实权限体验和 Goal 7 文件化 Owner Acceptance 均不存在，因此部署入口继续 fail-closed。
+- `2026-08-11` 已确认采用双模式：当前使用 `internal_engineering_shadow` 做 1～3 天、3 个公开来源和 6 条 P003 样例的内部验证；许可/合规、正式 P003 审核、成员 UAT、Goal 7 和七日 `production_shadow` 标记为 `deferred_before_production`。内部证据不能满足生产门禁；当前代码已通过 Contracts `61/61`、Collector `9/9`、Shadow/Readiness/Goal Completion `66/66`。本机真实公网 Smoke 已采集 arXiv、Federal Register 和 GitHub 白名单仓库各 20 条、共 60 条，三个 Snapshot 均只保留 Hash 而不保留正文；GitHub 模板地址已改为确定 URL并受 Registry 仓库白名单约束。内部部署包已改为保留完整项目依赖树，容器使用 QNAP 非 root 部署账号 UID/GID，避免 Validator 缺依赖和 bind mount 不可写；新增临时 QNAP 目录、真实源码包、虚拟镜像包和假 Docker 的完整部署脚本演练，证明仅发生镜像加载、镜像检查和 Compose config，容器启动、数据库迁移、Dispatcher 安装及既有服务重启均为 0。公司 QNAP 隔离 PostgreSQL 17 Runtime 已进一步真实验证 010/011、19/19 强制 RLS、Domain 持久化、二次幂等、无 ACL 读取为 0 和 baseline restore，Foundation 13 个服务前后指纹一致且 restart 仍为 0；该证据绑定未提交工作树，只是 `engineering_verified`，不能替代最终已推送 Commit 的 Runtime Workflow。最终 Goal 完成证据不再依赖人工填写 Hash：部署前与七日验收后分别保存受 Schema 约束的运行快照，编译器重新验证发布包、来源审批、P003 审核、成员权限 UAT、Goal 7、七日原始证据和 Owner Acceptance，再自动派生完成证据，并要求 Release、Deployment、Summary 共享同一 Source Commit、Collector Image、Policy 和 active Ontology 身份。公司 QNAP 五元组、部署账号 `uid=1000 / gid=100`、13 个 Foundation 容器运行状态已再次核对；战略情报目录和相关容器仍不存在，内部工程 Shadow 的独立部署授权仍未满足。
+- `2026-08-11` 最新增量：Strategic Intelligence 回归提升为 `67/67`；新增统一 QNAP Node Runtime 适配器，本机/CI 使用原生 Node，公司 QNAP 无宿主 Node 时只允许固定镜像、`network=none`、无端口、无 Docker Socket、只读根和非 root 临时容器。川哥已授权 codex 选择性提交、推送和内部工程 Runtime 部署；首次真实采集、生产迁移和服务重启仍未授权。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
 ## 部署边界
@@ -46,7 +48,12 @@
 - `docs/goal6-completion-audit-2026-08-09.md`：按 Goal 原始要求逐项核对“已证明/部分证明/待证明”，防止把代码、测试或容器健康误报为完整完成。
 - `docs/task6-r-release-provenance-guard-2026-08-10.md`：H 控制面 Source Commit、目标文件哈希、运行时对账和发布回滚门禁。
 - `docs/p1-si-f-qnap-shadow-readiness-acceptance-2026-08-10.md`：战略情报 Shadow 部署准备、资源限制、授权门禁、Linux/amd64 镜像与 PostgreSQL Runtime 证据。
-- `docs/p1-si-f-deployment-readiness-inspector-acceptance-2026-08-11.md`：统一只读部署门禁检查器、29/29 工程验证、当前阻断原因与生产零副作用证据。
+- `docs/p1-si-f-deployment-readiness-inspector-acceptance-2026-08-11.md`：统一只读七项部署门禁检查器、32/32 工程验证、当前阻断原因与生产零副作用证据。
+- `docs/p1-si-bh-completion-audit-2026-08-11.md`：P1-SI-B～H 逐项完成证据、负向测试覆盖和仍未关闭的人审/部署门禁。
+- `docs/p1-si-internal-engineering-shadow-2026-08-11.md`：内部工程验证与正式生产 Shadow 双模式、审核降负担、后补门禁和独立 readiness。
+- `docs/p1-si-internal-engineering-deployment-handoff-2026-08-11.md`：内部模式部署影响、预计时长、回滚边界和独立授权交接单。
+- `docs/p1-si-reviewer-role-access-uat-2026-08-11.md`：四名职能角色真实登录权限验收步骤、受控证据模板和 Manifest 1.2 门禁。
+- `docs/p1-si-reviewer-assignment-readiness-2026-08-11.md`：飞书实名审核分配、结构化 Principal 修复、真实 CSV 往返和当前人工门禁。
 - `docs/p1-si-g-p003-review-candidate-acceptance-2026-08-10.md`：真实 4644 条矩阵到 P003 36 条审核候选的来源、Hash、负向门禁和 DRI 待办。
 - `docs/p1-si-human-review-workflow-acceptance-2026-08-10.md`：来源合规与 P003 DRI 的飞书 CSV 回填、强类型 JSON、final 校验、编译和实名数据边界。
 - `docs/p1-si-feishu-review-workbench-acceptance-2026-08-10.md`：P1-SI-B/G 真实飞书人工审核工作台、筛选视图和 CSV 往返验收。
@@ -82,7 +89,7 @@
 
 1. `Task 6-R / Release Provenance Guard` 已完成；未来所有 H 发布继续执行 Source Commit、完整运行时 Manifest、文件哈希和真实浏览器门禁。
 2. Goal 7 `P1-PROD-READINESS`：建立公司专用 H 引擎 CPA 账号/Key 与同厂冗余，并补齐 `department/openchat`、`chat/group` Principal、用途和撤权语义；本 Goal 不执行整库导入。
-3. PESTIM P1-SI-B～G 的 Source Registry、Collector、数据底座、多周期报告、Shadow 准备和飞书 CSV 人工审核闭环已完成工程验证；Linux/amd64 镜像、010/011、19/19 强制 RLS 和 baseline restore 已通过 CI。实名候选已在 `work-private` 收敛为 7 类各 4 人，合规/法务仍需川哥指定；部署入口已新增 P003 36 条最终审核和 Goal 7 文件化 owner acceptance 双重 fail-closed 门禁，Release Manifest 升级为 `1.1.0`。旧 Artifact 不再具有部署资格；下一步由川哥拍板实名 DRI，再完成真实审核并从最终 Commit 重建发布包。
+3. PESTIM 当前先走 `internal_engineering_shadow`：3 个无需凭据的公开来源、reference-only、最多 3 天、6 条 inactive P003 样例，正式 P2/员工投递/ERP/社媒写回/因果激活保持为 0。下一步先从最终已推送 Commit 重建不可变包并准备公司 QNAP 内部验证部署；部署仍需当次明确授权。正式 `production_shadow` 的 8 来源审批、36 条 P003 最终审核、四角色 UAT、Goal 7 和七日验收继续保留为上线前门禁。
 4. Goal 3 的 10 名真实员工 Canary 在 Goal 7 后执行，仍是 20/50 人放量前的强制门禁。
 5. Goal 8 建立 24 小时容量观测、H-Lite lease/fencing 和 Worker 分池，再规划 20/50 人扩容。
 6. 产品研究部整库导入、Capability Governance 激活、A2A、真 3D、PESTIM 自动 P2、ERP/社媒写回、ERP M4 和 MediaCrawler 风控恢复继续拆为独立 Goal，必须重新授权。

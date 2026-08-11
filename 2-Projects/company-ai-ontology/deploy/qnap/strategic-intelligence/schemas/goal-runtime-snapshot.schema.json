@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/p1-si-goal-runtime-snapshot-v1.json",
+  "title": "P1 Strategic Intelligence Goal Runtime Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "snapshotVersion",
+    "phase",
+    "capturedAt",
+    "companyQnap",
+    "activeOntology",
+    "foundation",
+    "strategicIntelligence",
+    "database",
+    "sideEffects",
+    "backup"
+  ],
+  "properties": {
+    "snapshotVersion": { "const": "1.0.0" },
+    "phase": { "enum": ["pre_deployment", "post_seven_day"] },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "companyQnap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["purpose", "host", "model", "ip", "foundationRoot", "shadowRoot"],
+      "properties": {
+        "purpose": { "const": "company_ai_ontology_production" },
+        "host": { "const": "PRNas" },
+        "model": { "const": "TS-X65" },
+        "ip": { "const": "192.168.61.18" },
+        "foundationRoot": { "const": "/share/CACHEDEV1_DATA/ai-ontology/foundation" },
+        "shadowRoot": { "const": "/share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence" }
+      }
+    },
+    "activeOntology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "contentHash", "registryStatus"],
+      "properties": {
+        "schemaVersion": { "const": "3.3.0" },
+        "contentHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "registryStatus": { "const": "in_sync" }
+      }
+    },
+    "foundation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criticalContainerCount", "unhealthyContainerCount", "restartCountTotal"],
+      "properties": {
+        "criticalContainerCount": { "type": "integer", "minimum": 1 },
+        "unhealthyContainerCount": { "const": 0 },
+        "restartCountTotal": { "const": 0 }
+      }
+    },
+    "strategicIntelligence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["containerCount", "orchestratorHealth", "orchestratorRestartCount", "activeCollectorContainerCount", "newHostPortCount", "publicPortCount"],
+      "properties": {
+        "containerCount": { "type": "integer", "minimum": 0 },
+        "orchestratorHealth": { "enum": ["absent", "healthy"] },
+        "orchestratorRestartCount": { "const": 0 },
+        "activeCollectorContainerCount": { "const": 0 },
+        "newHostPortCount": { "const": 0 },
+        "publicPortCount": { "const": 0 }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appliedCandidateMigrations", "foundationRestartCount"],
+      "properties": {
+        "appliedCandidateMigrations": {
+          "type": "array",
+          "items": { "enum": ["010", "011"] },
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "foundationRestartCount": { "const": 0 }
+      }
+    },
+    "sideEffects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formalP2Count", "employeeDeliveryCount", "erpWritebackCount", "socialWritebackCount", "causalActivationCount"],
+      "properties": {
+        "formalP2Count": { "const": 0 },
+        "employeeDeliveryCount": { "const": 0 },
+        "erpWritebackCount": { "const": 0 },
+        "socialWritebackCount": { "const": 0 },
+        "causalActivationCount": { "const": 0 }
+      }
+    },
+    "backup": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["configurationBackupVerified", "rollbackPackageVerified", "backupRef"],
+          "properties": {
+            "configurationBackupVerified": { "const": true },
+            "rollbackPackageVerified": { "const": true },
+            "backupRef": { "type": "string", "pattern": "^qnap:\\S+$" }
+          }
+        }
+      ]
+    }
+  }
+}

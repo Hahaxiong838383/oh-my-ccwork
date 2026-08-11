@@ -196,6 +196,17 @@ P1-SI-D 再叠加数据底座候选 `3.6.0`，固定 Postgres 为唯一结构化
 
 P1-SI-E 叠加报告候选 `3.7.0`，固化上海时区多周期窗口、结构化非递归 Input Set、完整模型/Prompt/成本/重试谱系，以及飞书文档、飞书卡片和 H 控制面三类只读投影。验收证据见 `docs/p1-si-e-multi-period-reporting-acceptance-2026-08-10.md`。
 
+### 8.1 双模式运行与渐进式治理
+
+为避免内部搭建阶段被生产级人审拖住，同时避免用测试结果冒充正式授权，运行面拆成两条严格隔离的轨道：
+
+| 模式 | 目标 | 来源与保存 | P003 | 人审 | 是否计入正式验收 |
+|---|---|---|---|---|---|
+| `internal_engineering_shadow` | 尽早发现采集、保留、报告和资源问题 | 2～3 个公开免凭据来源；reference/metadata；1～3 天 | 六类各 1 条，全部 inactive | 管理员 Smoke Test | 否 |
+| `production_shadow` | 上线前正式证明 | 经最终审批的 Source Registry | 20～50 条高价值关系按风险分级审核 | 实名 DRI、成员 UAT、Goal 7、Owner Acceptance | 是，必须连续七个上海自然日 |
+
+内部模式通过独立 Policy 生成 `INTERNAL_ENGINEERING_PROVISIONAL_ALLOW`，但不改变 Source Registry 的 `paused / pending` 状态；每个决策同时记录 `productionApprovalSatisfied=false`。正式生产 readiness 不读取内部模式证据，因此权限与流程可以后补，但不能被绕过或伪造完成。
+
 ## 9. 个人站雷达复用评估
 
 ### 9.1 个人站实际组成
@@ -324,6 +335,7 @@ status / error_code
 3. 🟡 `P1-SI-C`：公司独立 Collector Contract、JSON Schema、oneshot Worker、Source Registry 前置准入、去重、last-good 和固定镜像配方已完成；手动 CI 已真实构建 Linux/amd64 镜像并生成不可变镜像归档，但未启动 QNAP 服务。
 4. 🟡 `P1-SI-D`：Postgres 真源、Raw/Observation/Signal、Evidence/Impact/Report 物理模型、双时间、Replay、热冷保留和 ACL 候选已完成；CI 隔离 PostgreSQL 已通过 010/011、19/19 强制 RLS 与 baseline restore，仍未进入生产 migrations。
 5. 🟡 `P1-SI-E`：日/周/月/季/半年/年、Alert、公司和 P003 报告机器契约及三类只读投影已完成；未运行真实报告。
-6. 🟡 `P1-SI-F`：资源受限 Shadow Compose、轻量 Orchestrator、oneshot Worker、授权门禁、备份、Freeze、回滚，以及七日连续自然日、Evidence/Evaluation Hash、Commit/镜像/Policy 一致性和显式 Owner Acceptance 证据链已通过 `29/29`。统一只读 readiness 检查器验证部署授权、Goal 7、不可变发布包、来源 Registry、P003 审核和 Owner Acceptance 六项门禁，并由部署脚本强制调用；缺失或无效输入均 fail-closed，输出不包含审批正文、实名人员、路径或 Secret。零来源、缺审计/指标、模拟或日期断档、业务副作用、运行身份漂移和容器重启同样 fail-closed。手动 CI Run `31421625978` / Commit `2974c19ea` 继续证明 Linux/amd64 Collector、010/011 PostgreSQL、19/19 强制 RLS、baseline restore 和 Artifact 便携校验，但该包生成于 P003 最终审核和 Goal 7 文件化 owner acceptance 门禁加入之前，现为 `deploymentEligible=false` 的历史证据。Release Manifest 已升级为 `1.1.0 / P1-SI-F-shadow-candidate-gated`，最终包必须从实名审核与 Goal 7 完成后的已推送 Commit 重建。公司 QNAP 五元组已于 `2026-08-11` 在线复核，部署、七日真实 Shadow 和最终体验验收仍未执行。
+6. 🟡 `P1-SI-F`：资源受限 Shadow Compose、轻量 Orchestrator、oneshot Worker、授权门禁、备份、Freeze、回滚，以及生产七日证据链、内部独立 readiness 和 Goal Completion 汇总门禁已通过 `48/48`。正式 readiness 继续验证部署授权、Goal 7、不可变发布包、来源 Registry、P003 审核、四名职能角色真实登录权限体验和 Goal 7 Owner Acceptance；内部 readiness 只允许 3 个免凭据公开来源、reference-only/3 天保留和 6 条 inactive 样例，并要求独立部署授权与公司 QNAP 五元组预检。部署包保留完整项目依赖树，容器使用 QNAP 非 root 部署账号 UID/GID，避免 Validator 缺依赖和 bind mount 不可写；完整临时目录演练已证明安装后 Validator 可运行、配置权限为 0600，且仅执行镜像加载/检查和 Compose config，不迁移、不启动容器、不安装正式 Dispatcher、不重启既有服务。最终完成判定还会重新校验四类审批原件、生产部署前后快照和七日 Owner Acceptance，并绑定 Release/Deployment/Summary 的不可变身份。运行和回滚仍分别授权。旧 CI Artifact 只保留历史 Linux/amd64 与 SQL Runtime 证据，最终包必须从最新已推送 Commit 重建。
 7. 🟡 `P1-SI-G`：已从真实 4644 条矩阵中筛选 P003 36 条候选，六类各 6 条，候选包 Hash `ba6a77fd52d1558c946bdaf5bad290f9898d3ce0d4c8af399a7ebba98df866ff`；全部保持 inactive，等待实名 DRI 逐条重写和补证，不能直接激活。
-8. `P1-SI-H`：Goal 7 完成并获得当次授权后，将公司版雷达部署到公司 QNAP 并运行 7 天 `PUBLISH=false` Shadow。
+8. `internal_engineering_shadow`：从最终已推送 Commit 重建不可变包后，在线复核公司 QNAP并等待单独部署授权；运行 1～3 天内部排错和管理员 Smoke Test，不计入正式七日 Shadow。
+9. `P1-SI-H production_shadow`：Goal 7、正式人审和成员 UAT 完成并获得当次授权后，将公司版雷达部署到公司 QNAP并运行 7 天 `PUBLISH=false` Shadow。

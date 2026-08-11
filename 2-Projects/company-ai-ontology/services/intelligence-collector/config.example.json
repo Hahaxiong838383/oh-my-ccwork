@@ -1,5 +1,6 @@
 {
   "configVersion": "1.0.0",
+  "operationMode": "governed_shadow",
   "publish": false,
   "sourceRegistryFile": "/etc/company-intelligence/source-registry.json",
   "stateDir": "/var/lib/company-intelligence/state",

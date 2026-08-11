@@ -49,6 +49,10 @@ validateFiles('approved_p003_review', path.join(root, 'scripts/validate-approved
   process.env.SI_APPROVED_P003_REVIEW_FILE,
 ])
 
+validateFiles('reviewer_role_access_acceptance', path.join(root, 'scripts/validate-reviewer-role-access-acceptance.mjs'), [
+  process.env.SI_REVIEWER_ROLE_ACCESS_ACCEPTANCE_FILE,
+])
+
 validateFiles('goal7_owner_acceptance', path.join(root, 'scripts/validate-goal7-acceptance.mjs'), [
   process.env.SI_GOAL7_ACCEPTANCE_FILE,
 ])

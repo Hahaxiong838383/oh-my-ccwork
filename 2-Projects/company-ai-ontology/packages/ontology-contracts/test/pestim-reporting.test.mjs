@@ -102,6 +102,9 @@ test('report run validation requires complete period, model, cost and retry line
     durationMs: 1500,
     retryCount: 0,
     status: 'succeeded',
+    errorCode: null,
+    startedAt: '2026-08-08T01:00:01Z',
+    completedAt: '2026-08-08T01:00:02.500Z',
   }, contract)
   assert.deepEqual(valid, { ok: true, errors: [] })
 
@@ -110,6 +113,46 @@ test('report run validation requires complete period, model, cost and retry line
   assert.ok(invalid.errors.includes('inputHash must be SHA-256'))
   assert.ok(invalid.errors.includes('status is unsupported'))
   assert.ok(invalid.errors.includes('modelId is required'))
+})
+
+test('failed model runs preserve terminal error and retry lineage', async () => {
+  const contract = await loadPestimReportingContract()
+  const failedRun = {
+    reportType: 'daily',
+    periodStart: '2026-08-09T16:00:00Z',
+    periodEnd: '2026-08-10T16:00:00Z',
+    evidenceCutoffAt: '2026-08-10T16:05:00Z',
+    inputHash: 'f'.repeat(64),
+    sourceSnapshotIds: ['snapshot-1'],
+    sourceRegistryVersion: '1.0.0',
+    ontologyVersion: '3.7.0',
+    causalGraphVersion: 'p003-candidate-1',
+    modelProvider: 'h-engine',
+    modelId: 'company-approved-model',
+    promptVersion: 'daily-report-1.0.0',
+    inputTokens: 1200,
+    outputTokens: 0,
+    costMicrounits: 800,
+    durationMs: 9000,
+    retryCount: 2,
+    status: 'failed',
+    errorCode: 'MODEL_PROVIDER_UNAVAILABLE',
+    startedAt: '2026-08-10T16:05:01Z',
+    completedAt: '2026-08-10T16:05:10Z',
+  }
+  assert.deepEqual(validateReportRun(failedRun, contract), { ok: true, errors: [] })
+
+  const missingError = validateReportRun({ ...failedRun, errorCode: null }, contract)
+  assert.equal(missingError.ok, false)
+  assert.ok(missingError.errors.includes('errorCode is required for failed status'))
+
+  const falseSuccess = validateReportRun({ ...failedRun, status: 'succeeded' }, contract)
+  assert.equal(falseSuccess.ok, false)
+  assert.ok(falseSuccess.errors.includes('errorCode must be empty before or after successful execution'))
+
+  const unfinishedFailure = validateReportRun({ ...failedRun, completedAt: null }, contract)
+  assert.equal(unfinishedFailure.ok, false)
+  assert.ok(unfinishedFailure.errors.includes('completedAt is required for terminal status'))
 })
 
 test('projection templates and candidate SQL remain read-only and ACL-gated', async () => {

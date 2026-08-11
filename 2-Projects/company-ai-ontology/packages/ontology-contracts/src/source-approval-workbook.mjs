@@ -67,6 +67,13 @@ function namedPrincipal(value) {
   )
 }
 
+function assignedPrincipal(value) {
+  return namedPrincipal(value)
+    && typeof value.role === 'string'
+    && value.role.trim().length > 0
+    && ['pending', 'approve', 'reject'].includes(value.decision)
+}
+
 function validEvidenceRefs(values) {
   return Array.isArray(values)
     && values.length > 0
@@ -228,6 +235,86 @@ export function validateSourceApprovalWorkbook(workbook, catalog, approvalContra
     reviewCount: reviews.length,
     finalDecisionCount: reviews.filter((review) => approvalContract.finalDecisions.includes(review.decision)).length,
     workbookHash: contentHash(workbook),
+  }
+}
+
+export function inspectSourceReviewAssignments(workbook) {
+  const reviews = Array.isArray(workbook?.reviews) ? workbook.reviews : []
+  const licenseReviewerAssignedCount = reviews.filter((review) => assignedPrincipal(review.namedLicenseReviewer)).length
+  const complianceDriAssignedCount = reviews.filter((review) => assignedPrincipal(review.namedComplianceDri)).length
+  const fullyAssignedReviewCount = reviews.filter((review) => (
+    assignedPrincipal(review.namedLicenseReviewer)
+    && assignedPrincipal(review.namedComplianceDri)
+  )).length
+  const invalidLicenseReviewerCount = reviews.filter((review) => (
+    review.namedLicenseReviewer !== null
+    && review.namedLicenseReviewer !== undefined
+    && !assignedPrincipal(review.namedLicenseReviewer)
+  )).length
+  const invalidComplianceDriCount = reviews.filter((review) => (
+    review.namedComplianceDri !== null
+    && review.namedComplianceDri !== undefined
+    && !assignedPrincipal(review.namedComplianceDri)
+  )).length
+
+  return {
+    assignmentReady: reviews.length > 0 && fullyAssignedReviewCount === reviews.length,
+    reviewCount: reviews.length,
+    fullyAssignedReviewCount,
+    licenseReviewerAssignedCount,
+    complianceDriAssignedCount,
+    missingLicenseReviewerCount: reviews.length - licenseReviewerAssignedCount - invalidLicenseReviewerCount,
+    missingComplianceDriCount: reviews.length - complianceDriAssignedCount - invalidComplianceDriCount,
+    invalidLicenseReviewerCount,
+    invalidComplianceDriCount,
+  }
+}
+
+export function inspectSourceReviewProgress(workbook, catalog, approvalContract) {
+  const reviews = Array.isArray(workbook?.reviews) ? workbook.reviews : []
+  const finalValidation = validateSourceApprovalWorkbook(workbook, catalog, approvalContract, { requireFinal: true })
+  const decisionCounts = Object.fromEntries(approvalContract.allowedDecisions.map((decision) => [decision, 0]))
+  const categoryMap = new Map()
+  for (const review of reviews) {
+    if (Object.hasOwn(decisionCounts, review.decision)) decisionCounts[review.decision] += 1
+    const categoryKey = typeof review.sourceCategory === 'string' && review.sourceCategory.length > 0
+      ? review.sourceCategory
+      : 'unknown'
+    if (!categoryMap.has(categoryKey)) {
+      categoryMap.set(categoryKey, {
+        sourceCategory: categoryKey,
+        reviewCount: 0,
+        finalDecisionCount: 0,
+        approveForShadowCount: 0,
+        keepPausedCount: 0,
+        revokeCount: 0,
+      })
+    }
+    const category = categoryMap.get(categoryKey)
+    category.reviewCount += 1
+    if (approvalContract.finalDecisions.includes(review.decision)) category.finalDecisionCount += 1
+    if (review.decision === 'approve_for_shadow') category.approveForShadowCount += 1
+    if (review.decision === 'keep_paused') category.keepPausedCount += 1
+    if (review.decision === 'revoke') category.revokeCount += 1
+  }
+  const finalDecisionCount = reviews.filter((review) => approvalContract.finalDecisions.includes(review.decision)).length
+  return {
+    reviewReady: reviews.length > 0 && finalDecisionCount === reviews.length && finalValidation.ok,
+    reviewCount: reviews.length,
+    pendingCount: decisionCounts.pending || 0,
+    finalDecisionCount,
+    decisionCounts,
+    licenseDecisionRecordedCount: reviews.filter((review) => review.licenseDecision !== 'pending').length,
+    complianceDecisionRecordedCount: reviews.filter((review) => review.complianceDecision !== 'pending').length,
+    approvedStorageLevelRecordedCount: reviews.filter((review) => String(review.approvedStorageLevel || '').length > 0).length,
+    approvedRetentionRecordedCount: reviews.filter((review) => Number.isInteger(review.approvedRetentionDays) && review.approvedRetentionDays > 0).length,
+    licenseEvidenceRecordedCount: reviews.filter((review) => Array.isArray(review.licenseEvidenceRefs) && review.licenseEvidenceRefs.length > 0).length,
+    complianceEvidenceRecordedCount: reviews.filter((review) => Array.isArray(review.complianceEvidenceRefs) && review.complianceEvidenceRefs.length > 0).length,
+    approvedAtRecordedCount: reviews.filter((review) => validTimestamp(review.approvedAt)).length,
+    decisionReasonRecordedCount: reviews.filter((review) => String(review.decisionReason || '').trim().length > 0).length,
+    finalValidationOk: finalValidation.ok,
+    finalValidationErrorCount: finalValidation.errors.length,
+    categoryProgress: [...categoryMap.values()].sort((left, right) => left.sourceCategory.localeCompare(right.sourceCategory)),
   }
 }
 

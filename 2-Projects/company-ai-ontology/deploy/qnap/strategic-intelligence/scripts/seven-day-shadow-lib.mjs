@@ -11,6 +11,8 @@ const COVERAGE_KEYS = [
   'sensitiveOutputAuditCompleted',
   'sourceRevocationAuditCompleted',
   'businessSideEffectAuditCompleted',
+  'domainCompilationCompleted',
+  'domainPersistenceCompleted',
 ]
 
 const SIDE_EFFECT_KEYS = [
@@ -153,6 +155,17 @@ function validateDayEvidence(evidence, expectedDate) {
   }
   requireFiniteNumber(evidence.reportCostsUsd?.daily, `${requestKey} reportCostsUsd.daily`)
   requireFiniteNumber(evidence.reportCostsUsd?.weekly, `${requestKey} reportCostsUsd.weekly`)
+  requireValue(evidence.domainArtifacts?.persistenceState === 'postgres_committed', `${requestKey} domain persistence incomplete`)
+  for (const key of ['rawSnapshotCount', 'observationCount', 'signalCount', 'evidenceCount', 'impactAssessmentCount', 'reportRunCount', 'reportDraftCount']) {
+    requireNonNegativeInteger(evidence.domainArtifacts?.[key], `${requestKey} domainArtifacts.${key}`)
+  }
+  requireValue(evidence.domainArtifacts.rawSnapshotCount >= evidence.rawSnapshotCount, `${requestKey} domain raw snapshot coverage incomplete`)
+  requireValue(evidence.domainArtifacts.observationCount >= evidence.normalizedItemCount, `${requestKey} domain observation coverage incomplete`)
+  requireValue(evidence.domainArtifacts.signalCount >= evidence.normalizedItemCount, `${requestKey} domain signal coverage incomplete`)
+  requireValue(evidence.domainArtifacts.evidenceCount >= evidence.normalizedItemCount, `${requestKey} domain evidence coverage incomplete`)
+  requireValue(evidence.domainArtifacts.impactAssessmentCount >= 6, `${requestKey} P003 assessment coverage incomplete`)
+  requireValue(evidence.domainArtifacts.reportRunCount >= 3, `${requestKey} report run coverage incomplete`)
+  requireValue(evidence.domainArtifacts.reportDraftCount >= 3, `${requestKey} report draft coverage incomplete`)
   for (const key of ['unredactedSensitiveOutputCount', 'sourceRevocationEffectiveSeconds', 'postRevocationNetworkRequestCount']) {
     requireNonNegativeInteger(evidence.security?.[key], `${requestKey} security.${key}`)
   }

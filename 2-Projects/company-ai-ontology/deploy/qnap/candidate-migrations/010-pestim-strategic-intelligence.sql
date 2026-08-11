@@ -298,6 +298,13 @@ CREATE TABLE IF NOT EXISTS strategic_intelligence.report_runs (
   CHECK (period_start < period_end),
   CHECK (evidence_cutoff_at >= period_end),
   CHECK (completed_at IS NULL OR started_at IS NULL OR completed_at >= started_at),
+  CHECK (
+    (status = 'pending' AND started_at IS NULL AND completed_at IS NULL AND error_code IS NULL)
+    OR (status = 'running' AND started_at IS NOT NULL AND completed_at IS NULL AND error_code IS NULL)
+    OR (status = 'succeeded' AND started_at IS NOT NULL AND completed_at IS NOT NULL AND duration_ms IS NOT NULL AND error_code IS NULL)
+    OR (status = 'failed' AND started_at IS NOT NULL AND completed_at IS NOT NULL AND duration_ms IS NOT NULL AND NULLIF(BTRIM(error_code), '') IS NOT NULL)
+    OR (status = 'cancelled' AND completed_at IS NOT NULL)
+  ),
   UNIQUE (tenant_id, report_run_key)
 );
 

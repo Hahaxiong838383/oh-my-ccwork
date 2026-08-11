@@ -1,0 +1,27 @@
+{
+  "evidenceVersion": "1.0.0",
+  "goalKey": "P1-STRATEGIC-INTELLIGENCE",
+  "status": "pending",
+  "deploymentMode": "production_shadow",
+  "companyQnap": {
+    "purpose": "company_ai_ontology_production",
+    "host": "PRNas",
+    "model": "TS-X65",
+    "ip": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "shadowRoot": "/share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence"
+  },
+  "deployedAt": null,
+  "verifiedAt": null,
+  "publish": false,
+  "releaseIdentity": null,
+  "policyIdentity": null,
+  "preDeployment": null,
+  "postDeployment": null,
+  "database": null,
+  "approvalEvidenceHashes": null,
+  "sideEffects": null,
+  "backup": null,
+  "sevenDay": null,
+  "verifiedByPrincipalRef": null
+}

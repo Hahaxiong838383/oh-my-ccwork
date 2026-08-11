@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/p1-si-goal-completion-evidence-v1.json",
+  "title": "P1 Strategic Intelligence Goal Completion Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidenceVersion",
+    "goalKey",
+    "status",
+    "deploymentMode",
+    "companyQnap",
+    "deployedAt",
+    "verifiedAt",
+    "publish",
+    "releaseIdentity",
+    "policyIdentity",
+    "preDeployment",
+    "postDeployment",
+    "database",
+    "approvalEvidenceHashes",
+    "sideEffects",
+    "backup",
+    "sevenDay",
+    "verifiedByPrincipalRef"
+  ],
+  "properties": {
+    "evidenceVersion": { "const": "1.0.0" },
+    "goalKey": { "const": "P1-STRATEGIC-INTELLIGENCE" },
+    "status": { "const": "complete" },
+    "deploymentMode": { "const": "production_shadow" },
+    "companyQnap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["purpose", "host", "model", "ip", "foundationRoot", "shadowRoot"],
+      "properties": {
+        "purpose": { "const": "company_ai_ontology_production" },
+        "host": { "const": "PRNas" },
+        "model": { "const": "TS-X65" },
+        "ip": { "const": "192.168.61.18" },
+        "foundationRoot": { "const": "/share/CACHEDEV1_DATA/ai-ontology/foundation" },
+        "shadowRoot": { "const": "/share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence" }
+      }
+    },
+    "deployedAt": { "type": "string", "format": "date-time" },
+    "verifiedAt": { "type": "string", "format": "date-time" },
+    "publish": { "const": false },
+    "releaseIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceCommit", "collectorImage", "candidateOntologySchema", "candidateOntologyHash", "releaseManifestHash"],
+      "properties": {
+        "sourceCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "collectorImage": { "type": "string", "pattern": "(^sha256:[0-9a-f]{64}$)|(@sha256:[0-9a-f]{64}$)" },
+        "candidateOntologySchema": { "const": "3.7.0" },
+        "candidateOntologyHash": { "const": "c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860" },
+        "releaseManifestHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "policyIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policyVersion", "policyHash"],
+      "properties": {
+        "policyVersion": { "type": "string", "minLength": 1 },
+        "policyHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "preDeployment": {
+      "allOf": [{ "$ref": "#/$defs/deploymentSnapshot" }],
+      "unevaluatedProperties": false
+    },
+    "postDeployment": {
+      "allOf": [
+        { "$ref": "#/$defs/deploymentSnapshot" },
+        {
+          "type": "object",
+          "required": ["strategicIntelligenceOrchestratorHealth", "strategicIntelligenceOrchestratorRestartCount", "activeCollectorContainerCount", "newHostPortCount", "publicPortCount"],
+          "properties": {
+            "strategicIntelligenceOrchestratorHealth": { "const": "healthy" },
+            "strategicIntelligenceOrchestratorRestartCount": { "const": 0 },
+            "activeCollectorContainerCount": { "const": 0 },
+            "newHostPortCount": { "const": 0 },
+            "publicPortCount": { "const": 0 }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appliedCandidateMigrations", "foundationRestartCount"],
+      "properties": {
+        "appliedCandidateMigrations": {
+          "type": "array",
+          "prefixItems": [{ "const": "010" }, { "const": "011" }],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "foundationRestartCount": { "const": 0 }
+      }
+    },
+    "approvalEvidenceHashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceRegistry", "p003Review", "reviewerRoleAccess", "goal7"],
+      "properties": {
+        "sourceRegistry": { "$ref": "#/$defs/hash" },
+        "p003Review": { "$ref": "#/$defs/hash" },
+        "reviewerRoleAccess": { "$ref": "#/$defs/hash" },
+        "goal7": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "sideEffects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formalP2Count", "employeeDeliveryCount", "erpWritebackCount", "socialWritebackCount", "causalActivationCount"],
+      "properties": {
+        "formalP2Count": { "const": 0 },
+        "employeeDeliveryCount": { "const": 0 },
+        "erpWritebackCount": { "const": 0 },
+        "socialWritebackCount": { "const": 0 },
+        "causalActivationCount": { "const": 0 }
+      }
+    },
+    "backup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["configurationBackupVerified", "rollbackPackageVerified", "backupRef"],
+      "properties": {
+        "configurationBackupVerified": { "const": true },
+        "rollbackPackageVerified": { "const": true },
+        "backupRef": { "type": "string", "pattern": "^qnap:\\S+$" }
+      }
+    },
+    "sevenDay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completedNaturalDays", "summaryHash", "ownerAccepted", "ownerAcceptanceRef"],
+      "properties": {
+        "completedNaturalDays": { "const": 7 },
+        "summaryHash": { "$ref": "#/$defs/hash" },
+        "ownerAccepted": { "const": true },
+        "ownerAcceptanceRef": { "type": "string", "minLength": 8 }
+      }
+    },
+    "verifiedByPrincipalRef": { "type": "string", "pattern": "^company-directory:[A-Za-z0-9._-]+$" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "deploymentSnapshot": {
+      "type": "object",
+      "required": ["activeOntologySchema", "activeOntologyHash", "registryStatus", "foundationCriticalContainerCount", "foundationUnhealthyContainerCount", "foundationRestartCountTotal", "strategicIntelligenceContainerCount"],
+      "properties": {
+        "activeOntologySchema": { "const": "3.3.0" },
+        "activeOntologyHash": { "$ref": "#/$defs/hash" },
+        "registryStatus": { "const": "in_sync" },
+        "foundationCriticalContainerCount": { "type": "integer", "minimum": 1 },
+        "foundationUnhealthyContainerCount": { "const": 0 },
+        "foundationRestartCountTotal": { "const": 0 },
+        "strategicIntelligenceContainerCount": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

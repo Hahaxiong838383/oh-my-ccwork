@@ -32,6 +32,7 @@
     "peakCpuPermille",
     "peakMemoryBytes",
     "reportCostsUsd",
+    "domainArtifacts",
     "security",
     "sideEffects",
     "runtime",
@@ -71,6 +72,21 @@
       "properties": {
         "daily": { "type": "number", "minimum": 0 },
         "weekly": { "type": "number", "minimum": 0 }
+      }
+    },
+    "domainArtifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["persistenceState", "rawSnapshotCount", "observationCount", "signalCount", "evidenceCount", "impactAssessmentCount", "reportRunCount", "reportDraftCount"],
+      "properties": {
+        "persistenceState": { "enum": ["postgres_committed", "not_persisted"] },
+        "rawSnapshotCount": { "type": "integer", "minimum": 0 },
+        "observationCount": { "type": "integer", "minimum": 0 },
+        "signalCount": { "type": "integer", "minimum": 0 },
+        "evidenceCount": { "type": "integer", "minimum": 0 },
+        "impactAssessmentCount": { "type": "integer", "minimum": 0 },
+        "reportRunCount": { "type": "integer", "minimum": 0 },
+        "reportDraftCount": { "type": "integer", "minimum": 0 }
       }
     },
     "security": {
@@ -114,14 +130,18 @@
         "resourceMetricsCollected",
         "sensitiveOutputAuditCompleted",
         "sourceRevocationAuditCompleted",
-        "businessSideEffectAuditCompleted"
+        "businessSideEffectAuditCompleted",
+        "domainCompilationCompleted",
+        "domainPersistenceCompleted"
       ],
       "properties": {
         "collectorMetricsCollected": { "type": "boolean" },
         "resourceMetricsCollected": { "type": "boolean" },
         "sensitiveOutputAuditCompleted": { "type": "boolean" },
         "sourceRevocationAuditCompleted": { "type": "boolean" },
-        "businessSideEffectAuditCompleted": { "type": "boolean" }
+        "businessSideEffectAuditCompleted": { "type": "boolean" },
+        "domainCompilationCompleted": { "type": "boolean" },
+        "domainPersistenceCompleted": { "type": "boolean" }
       },
       "additionalProperties": false
     }

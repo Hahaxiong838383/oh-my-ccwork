@@ -193,6 +193,20 @@ export function validateReportRun(reportRun, contract) {
   }
   if (reportRun?.durationMs !== null && reportRun?.durationMs !== undefined && (!Number.isInteger(reportRun.durationMs) || reportRun.durationMs < 0)) errors.push('durationMs must be null or an integer >= 0')
   if (!['pending', 'running', 'succeeded', 'failed', 'cancelled'].includes(reportRun?.status)) errors.push('status is unsupported')
+  for (const field of ['startedAt', 'completedAt']) {
+    if (reportRun?.[field] !== null && reportRun?.[field] !== undefined && !validTimestamp(reportRun[field])) errors.push(`${field} must be null or a timestamp`)
+  }
+  if (validTimestamp(reportRun?.startedAt) && validTimestamp(reportRun?.completedAt) && Date.parse(reportRun.completedAt) < Date.parse(reportRun.startedAt)) {
+    errors.push('completedAt must not precede startedAt')
+  }
+  if (['running', 'succeeded', 'failed'].includes(reportRun?.status) && !validTimestamp(reportRun?.startedAt)) errors.push('startedAt is required after execution starts')
+  if (['succeeded', 'failed', 'cancelled'].includes(reportRun?.status) && !validTimestamp(reportRun?.completedAt)) errors.push('completedAt is required for terminal status')
+  if (['pending', 'running'].includes(reportRun?.status) && reportRun?.completedAt !== null && reportRun?.completedAt !== undefined) errors.push('completedAt must be empty before terminal status')
+  if (reportRun?.status === 'pending' && reportRun?.startedAt !== null && reportRun?.startedAt !== undefined) errors.push('startedAt must be empty for pending status')
+  if (['succeeded', 'failed'].includes(reportRun?.status) && (!Number.isInteger(reportRun?.durationMs) || reportRun.durationMs < 0)) errors.push('durationMs is required for completed execution')
+  const errorCode = typeof reportRun?.errorCode === 'string' ? reportRun.errorCode.trim() : ''
+  if (reportRun?.status === 'failed' && !errorCode) errors.push('errorCode is required for failed status')
+  if (['pending', 'running', 'succeeded'].includes(reportRun?.status) && errorCode) errors.push('errorCode must be empty before or after successful execution')
   return { ok: errors.length === 0, errors }
 }
 

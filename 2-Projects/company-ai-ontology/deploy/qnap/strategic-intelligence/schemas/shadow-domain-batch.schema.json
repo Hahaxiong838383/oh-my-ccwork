@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/strategic-intelligence-shadow-domain-batch-v1.json",
+  "title": "Strategic Intelligence Shadow Domain Batch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "batchVersion", "runId", "requestKey", "compiledAt", "publish", "persistenceState",
+    "sourceRegistryVersion", "sourceRegistryHash", "ontologyVersion", "causalGraphVersion", "ingestionRun",
+    "sourceEntries", "sourceDecisions", "rawSnapshots", "observations", "signals", "evidence",
+    "impactHypotheses", "impactAssessments", "reportRuns", "reportDrafts", "sideEffects", "counts"
+  ],
+  "properties": {
+    "batchVersion": { "const": "1.0.0" },
+    "runId": { "type": "string", "minLength": 8 },
+    "requestKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{4,120}$" },
+    "compiledAt": { "type": "string", "format": "date-time" },
+    "publish": { "const": false },
+    "persistenceState": { "const": "json_candidate_pending_postgres" },
+    "sourceRegistryVersion": { "type": "string", "minLength": 1 },
+    "sourceRegistryHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "ontologyVersion": { "const": "3.7.0" },
+    "causalGraphVersion": { "type": "string", "minLength": 1 },
+    "ingestionRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runKey", "collectorVersion", "sourceRegistryVersion", "sourceRegistryHash", "configHash", "status", "stats", "errorCode", "startedAt", "completedAt"],
+      "properties": {
+        "runKey": { "type": "string", "minLength": 8 },
+        "collectorVersion": { "type": "string", "minLength": 1 },
+        "sourceRegistryVersion": { "type": "string", "minLength": 1 },
+        "sourceRegistryHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "configHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "status": { "const": "succeeded" },
+        "stats": { "type": "object" },
+        "errorCode": { "type": ["string", "null"] },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "sourceEntries": { "type": "array", "minItems": 1 },
+    "sourceDecisions": { "type": "array", "minItems": 1 },
+    "rawSnapshots": { "type": "array", "minItems": 1 },
+    "observations": { "type": "array", "minItems": 1 },
+    "signals": { "type": "array", "minItems": 1 },
+    "evidence": { "type": "array", "minItems": 1 },
+    "impactHypotheses": { "type": "array", "minItems": 6 },
+    "impactAssessments": { "type": "array", "minItems": 6 },
+    "reportRuns": { "type": "array", "minItems": 3 },
+    "reportDrafts": { "type": "array", "minItems": 3 },
+    "sideEffects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formalP2Count", "employeeDeliveryCount", "erpWritebackCount", "socialWritebackCount", "causalActivationCount"],
+      "properties": {
+        "formalP2Count": { "const": 0 },
+        "employeeDeliveryCount": { "const": 0 },
+        "erpWritebackCount": { "const": 0 },
+        "socialWritebackCount": { "const": 0 },
+        "causalActivationCount": { "const": 0 }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceEntryCount", "sourceDecisionCount", "rawSnapshotCount", "observationCount", "signalCount", "evidenceCount", "impactHypothesisCount", "impactAssessmentCount", "reportRunCount", "reportDraftCount"],
+      "properties": {
+        "sourceEntryCount": { "type": "integer", "minimum": 1 },
+        "sourceDecisionCount": { "type": "integer", "minimum": 1 },
+        "rawSnapshotCount": { "type": "integer", "minimum": 1 },
+        "observationCount": { "type": "integer", "minimum": 1 },
+        "signalCount": { "type": "integer", "minimum": 1 },
+        "evidenceCount": { "type": "integer", "minimum": 1 },
+        "impactHypothesisCount": { "type": "integer", "minimum": 6 },
+        "impactAssessmentCount": { "type": "integer", "minimum": 6 },
+        "reportRunCount": { "type": "integer", "minimum": 3 },
+        "reportDraftCount": { "type": "integer", "minimum": 3 }
+      }
+    }
+  }
+}

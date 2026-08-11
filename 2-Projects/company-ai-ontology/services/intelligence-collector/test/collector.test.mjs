@@ -16,6 +16,7 @@ import { CollectorError, runCollector } from '../src/worker.mjs'
 
 const SERVICE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const PROJECT_ROOT = path.resolve(SERVICE_ROOT, '../..')
+const INTERNAL_PLAN_FILE = path.join(PROJECT_ROOT, 'deploy/qnap/strategic-intelligence/config/internal-engineering-shadow-plan.json')
 const FIXED_TIME = new Date('2026-08-10T12:00:00Z')
 
 function sha256(bytes) {
@@ -201,6 +202,84 @@ test('paused or revoked sources fail closed before any network request', async (
   const summary = JSON.parse(await fs.readFile(path.join(runDir, 'run.json'), 'utf8'))
   assert.equal(summary.status, 'failed')
   assert.equal(summary.errorCode, 'SOURCE_POLICY_DENIED')
+})
+
+test('internal engineering mode collects only provisional samples and cannot count as production Shadow', async () => {
+  const context = await testContext()
+  const internalEngineeringPlan = await loadJsonFile(INTERNAL_PLAN_FILE)
+  context.config.operationMode = 'internal_engineering_shadow'
+  context.config.internalEngineeringPlanFile = INTERNAL_PLAN_FILE
+  context.config.sourceKeys = internalEngineeringPlan.selectedSources.map((source) => source.sourceKey)
+  const registry = structuredClone(context.registry)
+  const selected = new Set(context.config.sourceKeys)
+  for (const entry of registry.entries) {
+    if (!selected.has(entry.sourceKey)) continue
+    const endpointRef = `https://fixture.company.invalid/${entry.sourceKey}`
+    entry.endpointRefs = [endpointRef]
+    const selection = internalEngineeringPlan.selectedSources.find((source) => source.sourceKey === entry.sourceKey)
+    selection.endpointRef = endpointRef
+  }
+  let fetchCount = 0
+  const result = await runCollector({
+    ...context,
+    registry,
+    internalEngineeringPlan,
+    now: () => FIXED_TIME,
+    idFactory: () => 'internal-engineering-run',
+    fetchImpl: async (url) => {
+      fetchCount += 1
+      if (url.includes('arxiv-official-rss-api')) return rssResponse()
+      return new Response(JSON.stringify({ data: [{
+        id: url,
+        title: 'Internal engineering sample',
+        url: 'https://evidence.example/internal-sample',
+        description: 'Must not be retained in reference-only mode',
+        date: FIXED_TIME.toISOString(),
+      }] }), { status: 200, headers: { 'content-type': 'application/json' } })
+    },
+  })
+  assert.equal(fetchCount, 3)
+  assert.equal(result.summary.status, 'succeeded')
+  assert.equal(result.summary.operationMode, 'internal_engineering_shadow')
+  assert.equal(result.summary.countsTowardProductionShadow, false)
+  assert.ok(result.decisions.every((decision) => decision.reasonCode === 'INTERNAL_ENGINEERING_PROVISIONAL_ALLOW'))
+  assert.ok(result.decisions.every((decision) => decision.productionApprovalSatisfied === false))
+  assert.deepEqual(
+    result.decisions.map((decision) => decision.collection.endpointRef),
+    internalEngineeringPlan.selectedSources.map((source) => new URL(source.endpointRef).toString()),
+  )
+  for (const sourceKey of context.config.sourceKeys) {
+    const snapshot = JSON.parse(await fs.readFile(path.join(result.runDir, 'raw', `${sourceKey}.snapshot.json`), 'utf8'))
+    assert.equal(snapshot.retentionStorageLevel, 'reference_only')
+    assert.equal(snapshot.payloadRetention, 'hash_only')
+    assert.equal(snapshot.bodyBase64, null)
+  }
+})
+
+test('internal engineering mode denies a source not selected by the bounded plan before network', async () => {
+  const context = await testContext()
+  const internalEngineeringPlan = await loadJsonFile(INTERNAL_PLAN_FILE)
+  context.config.operationMode = 'internal_engineering_shadow'
+  context.config.internalEngineeringPlanFile = INTERNAL_PLAN_FILE
+  context.config.sourceKeys = ['world-bank-indicators-api']
+  let fetchCount = 0
+  await assert.rejects(
+    runCollector({
+      ...context,
+      internalEngineeringPlan,
+      now: () => FIXED_TIME,
+      idFactory: () => 'internal-denied-run',
+      fetchImpl: async () => {
+        fetchCount += 1
+        return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })
+      },
+    }),
+    (error) => error instanceof CollectorError && error.code === 'SOURCE_POLICY_DENIED',
+  )
+  assert.equal(fetchCount, 0)
+  const runDir = path.join(context.config.stateDir, 'runs', '2026-08-10T12-00-00-000Z-internal-denied-run')
+  const decisions = JSON.parse(await fs.readFile(path.join(runDir, 'source-decisions.json'), 'utf8'))
+  assert.equal(decisions[0].reasonCode, 'SOURCE_NOT_SELECTED_FOR_INTERNAL_ENGINEERING')
 })
 
 test('failed collection preserves the previous last-good artifact', async () => {

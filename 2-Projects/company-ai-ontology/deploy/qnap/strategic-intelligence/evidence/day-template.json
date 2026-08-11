@@ -22,6 +22,16 @@
   "peakMemoryBytes": null,
   "rawSnapshotBytes": null,
   "networkBytes": null,
+  "domainArtifacts": {
+    "persistenceState": "not_persisted",
+    "rawSnapshotCount": 0,
+    "observationCount": 0,
+    "signalCount": 0,
+    "evidenceCount": 0,
+    "impactAssessmentCount": 0,
+    "reportRunCount": 0,
+    "reportDraftCount": 0
+  },
   "formalP2Count": 0,
   "employeeDeliveryCount": 0,
   "erpWritebackCount": 0,
@@ -32,7 +42,9 @@
     "resourceMetricsCollected": false,
     "sensitiveOutputAuditCompleted": false,
     "sourceRevocationAuditCompleted": false,
-    "businessSideEffectAuditCompleted": false
+    "businessSideEffectAuditCompleted": false,
+    "domainCompilationCompleted": false,
+    "domainPersistenceCompleted": false
   },
   "ownerAcceptance": false
 }

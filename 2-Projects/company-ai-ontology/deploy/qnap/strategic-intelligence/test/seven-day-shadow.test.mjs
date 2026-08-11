@@ -50,6 +50,16 @@ function validEvidence(localDate) {
     peakCpuPermille: 400,
     peakMemoryBytes: 256 * 1024 * 1024,
     reportCostsUsd: { daily: 0.25, weekly: 0 },
+    domainArtifacts: {
+      persistenceState: 'postgres_committed',
+      rawSnapshotCount: 8,
+      observationCount: 7,
+      signalCount: 7,
+      evidenceCount: 7,
+      impactAssessmentCount: 6,
+      reportRunCount: 3,
+      reportDraftCount: 3,
+    },
     security: {
       unredactedSensitiveOutputCount: 0,
       sourceRevocationEffectiveSeconds: 60,
@@ -75,6 +85,8 @@ function validEvidence(localDate) {
       sensitiveOutputAuditCompleted: true,
       sourceRevocationAuditCompleted: true,
       businessSideEffectAuditCompleted: true,
+      domainCompilationCompleted: true,
+      domainPersistenceCompleted: true,
     },
   }
 }
@@ -159,6 +171,7 @@ test('seven real days compile, require explicit owner acceptance and validate ag
   const firstEvidenceFile = path.join(evidenceRoot, 'daily-collection-shadow-2026-08-01.json')
   const tampered = JSON.parse(await fs.readFile(firstEvidenceFile, 'utf8'))
   tampered.rawSnapshotCount += 1
+  tampered.domainArtifacts.rawSnapshotCount += 1
   await fs.writeFile(firstEvidenceFile, `${JSON.stringify(tampered, null, 2)}\n`)
   const staleAcceptance = spawnSync(process.execPath, [SUMMARY_VALIDATOR, acceptedFile, evidenceRoot], { encoding: 'utf8' })
   assert.notEqual(staleAcceptance.status, 0)
@@ -215,6 +228,17 @@ test('seven-day compiler fails closed on missing, discontinuous, simulated or un
         return evidence
       },
       expected: /coverage businessSideEffectAuditCompleted missing/,
+    },
+    {
+      name: 'Postgres persistence missing',
+      mutate: (evidence, index) => {
+        if (index === 3) {
+          evidence.domainArtifacts.persistenceState = 'not_persisted'
+          evidence.coverage.domainPersistenceCompleted = false
+        }
+        return evidence
+      },
+      expected: /domain persistence incomplete/,
     },
     {
       name: 'business side effect',

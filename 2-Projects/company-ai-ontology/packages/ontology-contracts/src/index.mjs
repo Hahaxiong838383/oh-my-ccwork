@@ -13,9 +13,11 @@ export {
 export {
   applyPestimSourceRegistryContract,
   compilePestimSourceRegistryProposal,
+  evaluateInternalEngineeringSourcePolicy,
   evaluateSourceCollectionPolicy,
   loadPestimSourceRegistryCatalog,
   loadPestimSourceRegistryContract,
+  validateInternalEngineeringEndpoint,
   validateSourceRegistryCatalog,
 } from './pestim-source-registry.mjs'
 export {
@@ -45,6 +47,8 @@ export {
 export {
   compileShadowSourceRegistry,
   createSourceApprovalWorkbook,
+  inspectSourceReviewAssignments,
+  inspectSourceReviewProgress,
   loadPestimSourceApprovalContract,
   loadSourceApprovalContext,
   loadSourceApprovalWorkbook,
@@ -55,6 +59,8 @@ export {
 export {
   compileP003HumanReviewResults,
   createP003ReviewWorkbook,
+  inspectP003ReviewAssignments,
+  inspectP003ReviewProgress,
   loadP003ReviewContext,
   loadP003ReviewSubmissionContract,
   loadP003ReviewWorkbook,

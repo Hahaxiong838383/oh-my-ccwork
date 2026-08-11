@@ -6,6 +6,10 @@ import {
   compileShadowSourceRegistry,
   createP003ReviewWorkbook,
   createSourceApprovalWorkbook,
+  inspectP003ReviewAssignments,
+  inspectP003ReviewProgress,
+  inspectSourceReviewAssignments,
+  inspectSourceReviewProgress,
   loadP003ReviewContext,
   loadSourceApprovalContext,
   p003ReviewWorkbookFromCsv,
@@ -15,7 +19,7 @@ import {
   validateP003ReviewWorkbook,
   validateSourceApprovalWorkbook,
 } from '../src/index.mjs'
-import { parseCsv } from '../src/review-csv.mjs'
+import { parseCsv, rowsToCsv } from '../src/review-csv.mjs'
 
 const REVIEWED_AT = '2026-08-10T09:00:00Z'
 
@@ -100,6 +104,54 @@ test('source approval template covers all sources and remains fail-closed', asyn
   assert.equal(validateSourceApprovalWorkbook(workbook, catalog, approvalContract, { requireFinal: true }).ok, false)
 })
 
+test('source assignment inspection accepts structured pending principals and leaks no identity', async () => {
+  const { catalog } = await loadSourceApprovalContext()
+  const workbook = createSourceApprovalWorkbook(catalog)
+  for (const review of workbook.reviews) {
+    review.namedLicenseReviewer = { ...principal('license'), decision: 'pending' }
+    review.namedComplianceDri = { ...principal('compliance'), decision: 'pending' }
+  }
+  const inspection = inspectSourceReviewAssignments(workbook)
+  assert.equal(inspection.assignmentReady, true)
+  assert.equal(inspection.fullyAssignedReviewCount, 8)
+  assert.equal(inspection.missingLicenseReviewerCount, 0)
+  const output = JSON.stringify(inspection)
+  assert.doesNotMatch(output, /company-directory:/)
+  assert.doesNotMatch(output, /reviewer-/)
+})
+
+test('source assignment inspection rejects name strings without exposing them', async () => {
+  const { catalog } = await loadSourceApprovalContext()
+  const workbook = createSourceApprovalWorkbook(catalog)
+  workbook.reviews[0].namedLicenseReviewer = 'named reviewer'
+  const inspection = inspectSourceReviewAssignments(workbook)
+  assert.equal(inspection.assignmentReady, false)
+  assert.equal(inspection.invalidLicenseReviewerCount, 1)
+  assert.doesNotMatch(JSON.stringify(inspection), /named reviewer/)
+})
+
+test('source progress inspection reports final readiness without identity or evidence leakage', async () => {
+  const { catalog, approvalContract } = await loadSourceApprovalContext()
+  const pending = createSourceApprovalWorkbook(catalog)
+  pending.reviews[0].namedLicenseReviewer = { ...principal('license'), decision: 'pending' }
+  pending.reviews[0].namedComplianceDri = { ...principal('compliance'), decision: 'pending' }
+  const pendingProgress = inspectSourceReviewProgress(pending, catalog, approvalContract)
+  assert.equal(pendingProgress.reviewReady, false)
+  assert.equal(pendingProgress.pendingCount, 8)
+  assert.equal(pendingProgress.finalDecisionCount, 0)
+  assert.equal(pendingProgress.finalValidationOk, false)
+  assert.doesNotMatch(JSON.stringify(pendingProgress), /company-directory:/)
+  assert.doesNotMatch(JSON.stringify(pendingProgress), /reviewer-/)
+
+  const completed = finalizeSourceWorkbook(createSourceApprovalWorkbook(catalog))
+  const completedProgress = inspectSourceReviewProgress(completed, catalog, approvalContract)
+  assert.equal(completedProgress.reviewReady, true)
+  assert.equal(completedProgress.pendingCount, 0)
+  assert.equal(completedProgress.finalDecisionCount, 8)
+  assert.equal(completedProgress.decisionCounts.keep_paused, 8)
+  assert.equal(completedProgress.finalValidationErrorCount, 0)
+})
+
 test('CSV parser preserves quoted content and ignores trailing blank records', () => {
   const parsed = parseCsv('\uFEFF"key","value"\r\n"a","line 1\nline 2, with ""quote"""\r\n\r\n')
   assert.deepEqual(parsed.headers, ['key', 'value'])
@@ -167,6 +219,66 @@ test('P003 review template covers all candidates without activation', async () =
   assert.equal(validateP003ReviewWorkbook(workbook, catalog, reviewContract, { requireFinal: true }).ok, false)
 })
 
+test('P003 assignment inspection counts pending principals and role gaps without identity data', async () => {
+  const { catalog } = await loadP003ReviewContext()
+  const workbook = createP003ReviewWorkbook(catalog)
+  for (const review of workbook.reviews) {
+    review.namedIndividualDri = { ...principal(review.proposedDriRoles[0]), decision: 'pending' }
+    review.reviewParticipants = review.proposedDriRoles.map((role, index) => ({
+      ...principal(role, index + 1),
+      decision: 'pending',
+    }))
+  }
+  workbook.reviews[0].reviewParticipants = workbook.reviews[0].reviewParticipants.filter((participant) => participant.role !== workbook.reviews[0].proposedDriRoles.at(-1))
+  const inspection = inspectP003ReviewAssignments(workbook)
+  assert.equal(inspection.assignmentReady, false)
+  assert.equal(inspection.individualDriAssignedCount, 36)
+  assert.equal(inspection.missingRoleAssignmentCount, 1)
+  assert.equal(inspection.reviewsMissingRequiredRoles, 1)
+  assert.ok(inspection.categoryCoverage.some((category) => category.missingRoles.length === 1))
+  const output = JSON.stringify(inspection)
+  assert.doesNotMatch(output, /company-directory:/)
+  assert.doesNotMatch(output, /reviewer-/)
+})
+
+test('P003 assignment inspection rejects string principals and reports category gaps', async () => {
+  const { catalog } = await loadP003ReviewContext()
+  const workbook = createP003ReviewWorkbook(catalog)
+  workbook.reviews[0].namedIndividualDri = 'named reviewer'
+  workbook.reviews[0].reviewParticipants = ['named reviewer']
+  const inspection = inspectP003ReviewAssignments(workbook)
+  assert.equal(inspection.assignmentReady, false)
+  assert.equal(inspection.invalidIndividualDriCount, 1)
+  assert.equal(inspection.invalidParticipantCount, 1)
+  assert.ok(inspection.categoryCoverage.some((category) => category.reviewsMissingRequiredRoles > 0))
+  assert.doesNotMatch(JSON.stringify(inspection), /named reviewer/)
+})
+
+test('P003 progress inspection reports category completion without identity or review text leakage', async () => {
+  const { catalog, reviewContract } = await loadP003ReviewContext()
+  const pending = createP003ReviewWorkbook(catalog)
+  pending.reviews[0].namedIndividualDri = { ...principal('product'), decision: 'pending' }
+  pending.reviews[0].reviewParticipants = [{ ...principal('product'), decision: 'pending' }]
+  pending.reviews[0].semanticRewrite = 'private review text that must not appear in progress output'
+  const pendingProgress = inspectP003ReviewProgress(pending, catalog, reviewContract)
+  assert.equal(pendingProgress.reviewReady, false)
+  assert.equal(pendingProgress.pendingCount, 36)
+  assert.equal(pendingProgress.semanticRewriteRecordedCount, 1)
+  assert.equal(pendingProgress.finalValidationOk, false)
+  const pendingOutput = JSON.stringify(pendingProgress)
+  assert.doesNotMatch(pendingOutput, /company-directory:/)
+  assert.doesNotMatch(pendingOutput, /reviewer-/)
+  assert.doesNotMatch(pendingOutput, /private review text/)
+
+  const completed = finalizeP003Workbook(createP003ReviewWorkbook(catalog))
+  const completedProgress = inspectP003ReviewProgress(completed, catalog, reviewContract)
+  assert.equal(completedProgress.reviewReady, true)
+  assert.equal(completedProgress.pendingCount, 0)
+  assert.equal(completedProgress.finalDecisionCount, 36)
+  assert.equal(completedProgress.decisionCounts.keep_inactive, 36)
+  assert.equal(completedProgress.finalValidationErrorCount, 0)
+})
+
 test('P003 review CSV round trip preserves typed reviews without activation', async () => {
   const { catalog, reviewContract } = await loadP003ReviewContext()
   const original = finalizeP003Workbook(createP003ReviewWorkbook(catalog))
@@ -179,6 +291,22 @@ test('P003 review CSV round trip preserves typed reviews without activation', as
   assert.equal(compiled.validation.ok, true)
   assert.equal(compiled.validation.approvalProposalCount, 1)
   assert.ok(compiled.results.results.every((result) => result.activationStatus === 'inactive'))
+})
+
+test('P003 review CSV import normalizes Feishu SingleSelect cells', async () => {
+  const { catalog, reviewContract } = await loadP003ReviewContext()
+  const workbook = createP003ReviewWorkbook(catalog)
+  const { headers, rows } = parseCsv(p003ReviewWorkbookCsv(workbook))
+  rows[0].categoryKey = JSON.stringify([rows[0].categoryKey])
+  const imported = p003ReviewWorkbookFromCsv(rowsToCsv(headers, rows), catalog)
+  assert.equal(imported.reviews[0].categoryKey, workbook.reviews[0].categoryKey)
+  assert.equal(validateP003ReviewWorkbook(imported, catalog, reviewContract).ok, true)
+
+  rows[0].categoryKey = JSON.stringify([workbook.reviews[0].categoryKey, workbook.reviews[1].categoryKey])
+  assert.throws(
+    () => p003ReviewWorkbookFromCsv(rowsToCsv(headers, rows), catalog),
+    /categoryKey must contain exactly one selected option/,
+  )
 })
 
 test('P003 review CSV import rejects immutable candidate tampering and malformed JSON', async () => {

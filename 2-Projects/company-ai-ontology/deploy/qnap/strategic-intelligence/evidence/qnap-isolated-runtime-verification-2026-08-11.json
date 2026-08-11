@@ -1,0 +1,62 @@
+{
+  "evidenceVersion": "1.0.0",
+  "validationType": "p1_si_qnap_isolated_postgres_runtime",
+  "validationStatus": "engineering_verified",
+  "observedAt": "2026-08-11T14:16:12+08:00",
+  "source": {
+    "headCommit": "388cfdcaba03702016c69e2badf732d935e35122",
+    "workingTreeDirty": true,
+    "snapshotFileCount": 622,
+    "snapshotManifestSha256": "aacd4a07db9bfd0f00438e3e19486dd274c4c9e455b220a2302b39301217c790",
+    "immutableReleaseVerified": false,
+    "note": "The transferred macOS archive contained 311 source files and 311 ignored AppleDouble metadata companions. This evidence is bound to an engineering working-tree snapshot, not a pushed immutable release."
+  },
+  "companyQnap": {
+    "hostname": "PRNas",
+    "model": "TS-X65",
+    "address": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "foundationServiceCount": 13,
+    "foundationRestartCountBefore": 0,
+    "foundationRestartCountAfter": 0,
+    "foundationBadServiceCountAfter": 0,
+    "foundationFingerprintBefore": "85379298d6b62590cbc539578618c143f7d496f1e9e51886b24fc9d4acbcab8e",
+    "foundationFingerprintAfter": "85379298d6b62590cbc539578618c143f7d496f1e9e51886b24fc9d4acbcab8e",
+    "strategicIntelligenceRootBefore": "absent",
+    "strategicIntelligenceRootAfter": "absent",
+    "internalEngineeringRootBefore": "absent",
+    "internalEngineeringRootAfter": "absent"
+  },
+  "isolation": {
+    "postgresImage": "docker.1ms.run/pgvector/pgvector@sha256:7ae6051efd0e60444282c27c7e141af07f322ce033300e727a49c3dd11075e38",
+    "nodeImageId": "sha256:75228afe839b63f6bef21d2ea8f4b6aa9e4c56a20ad70cec5450ca84a72f9801",
+    "networkMode": "none",
+    "temporaryPostgresVolume": true,
+    "productionDatabaseMounted": false,
+    "productionServiceRestarted": false,
+    "temporaryContainersRemaining": 0,
+    "temporaryVolumesRemaining": 0,
+    "validationRootAfterCleanup": "absent"
+  },
+  "results": {
+    "candidateMigrations": "verified",
+    "strategicIntelligenceTableCount": 19,
+    "forcedRlsTableCount": 19,
+    "domainPersistence": "verified",
+    "domainPersistenceIdempotent": "verified",
+    "aclFailClosed": "verified",
+    "baselineRestore": "verified",
+    "validationExitCode": 0
+  },
+  "rawEvidence": {
+    "validationOutputSha256": "a159283ed847b931b764869c101f3f3c20108c8d536ad327de308fa84a0f3df1",
+    "cleanupOutputSha256": "8a3afca289175700f9993b22996dcd5c0f422d679695302325662a0f1c715078"
+  },
+  "gateClassification": {
+    "companyQnapDeployed": false,
+    "productionDatabaseMigrated": false,
+    "countsTowardProductionShadow": false,
+    "productionRuntimeVerifiedFromPushedCommit": false,
+    "requiredNextGate": "PUSHED_COMMIT_RUNTIME_WORKFLOW"
+  }
+}

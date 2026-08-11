@@ -43,6 +43,8 @@ for (const [key, name] of [
   ['sensitiveOutputAuditCompleted', 'sensitive_output_audit_missing'],
   ['sourceRevocationAuditCompleted', 'source_revocation_audit_missing'],
   ['businessSideEffectAuditCompleted', 'business_side_effect_audit_missing'],
+  ['domainCompilationCompleted', 'domain_compilation_missing'],
+  ['domainPersistenceCompleted', 'domain_persistence_missing'],
 ]) {
   if (!evidence.coverage?.[key]) violations.push({ name, actual: false, limit: true, critical: false })
 }
@@ -54,6 +56,16 @@ maximum('raw_snapshot_bytes', evidence.rawSnapshotBytes, policy.resourceLimits.r
 maximum('network_bytes', evidence.networkBytes, policy.resourceLimits.networkBytesPerDayMax)
 maximum('daily_report_cost_usd', evidence.reportCostsUsd?.daily, threshold.dailyReportCostUsdMax)
 maximum('weekly_report_cost_usd', evidence.reportCostsUsd?.weekly, threshold.weeklyReportCostUsdMax)
+minimum('domain_raw_snapshot_count', evidence.domainArtifacts?.rawSnapshotCount, evidence.rawSnapshotCount)
+minimum('domain_observation_count', evidence.domainArtifacts?.observationCount, evidence.normalizedItemCount)
+minimum('domain_signal_count', evidence.domainArtifacts?.signalCount, evidence.normalizedItemCount)
+minimum('domain_evidence_count', evidence.domainArtifacts?.evidenceCount, evidence.normalizedItemCount)
+minimum('domain_impact_assessment_count', evidence.domainArtifacts?.impactAssessmentCount, 6)
+minimum('domain_report_run_count', evidence.domainArtifacts?.reportRunCount, 3)
+minimum('domain_report_draft_count', evidence.domainArtifacts?.reportDraftCount, 3)
+if (evidence.domainArtifacts?.persistenceState !== 'postgres_committed') {
+  violations.push({ name: 'domain_persistence_state_invalid', actual: evidence.domainArtifacts?.persistenceState, limit: 'postgres_committed', critical: true })
+}
 maximum('unredacted_sensitive_output', evidence.security?.unredactedSensitiveOutputCount, threshold.unredactedSensitiveOutputCountMax, true)
 maximum('source_revocation_effective_seconds', evidence.security?.sourceRevocationEffectiveSeconds, threshold.sourceRevocationEffectiveSecondsMax, true)
 maximum('post_revocation_network_request', evidence.security?.postRevocationNetworkRequestCount, threshold.postRevocationNetworkRequestCountMax, true)

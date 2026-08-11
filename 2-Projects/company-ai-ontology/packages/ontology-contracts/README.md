@@ -28,11 +28,21 @@ npm run compile:reporting
 npm run compile:p003-review
 npm run review:source:generate
 npm run review:source:import-csv -- --input /受控目录/source-reviewed.csv --output /受控目录/source-reviewed.json
+npm run review:source:inspect -- --input /受控目录/source-assignment.json
+npm run review:source:progress -- --input /受控目录/source-reviewed.json
 npm run review:p003:generate
 npm run review:p003:import-csv -- --input /受控目录/p003-reviewed.csv --output /受控目录/p003-reviewed.json
+npm run review:p003:inspect -- --input /受控目录/p003-assignment.json
+npm run review:p003:progress -- --input /受控目录/p003-reviewed.json
 node bin/source-approval-workbook.mjs validate --input /受控目录/source-reviewed.json --final
 node bin/p003-review-workbook.mjs validate --input /受控目录/p003-reviewed.json --final
 ```
+
+`inspect-assignments` 只检查审核责任是否已经分配，不检查人工决定是否完成。它只输出计数、类别和缺失角色，不输出姓名、Principal、受控文件路径或审批正文；缺少 DRI、结构化 Principal 或必要角色时返回非零退出码。来源分配完整仍不代表来源获批，P003 分配完整仍不代表关系可激活。
+
+`inspect-progress` 检查人工审核进展和最终机器校验状态，只输出决定数量、必填项完成数量、类别进度和错误数量；不会输出实名人员、Principal、证据链接、审核文本、文件路径或具体错误正文。全部记录完成最终决定且 `validate --final` 通过时才返回成功退出码。
+
+飞书 P003 工作台的 `categoryKey` 使用 SingleSelect 承载记录级权限。飞书 CSV/读取投影可能把单选值表示为 JSON 单元素数组；`import-csv` 会归一化为机器契约要求的字符串，并对空数组、多选数组、非字符串值或非法 JSON 失败关闭。
 
 PESTIM 候选定义通过 `compilePestimStrategicIntelligenceProposal()` 单独编译和兼容性比较；Source Registry 再通过 `compilePestimSourceRegistryProposal()` 叠加到 `3.4.0`，不得改写 P1-SI-A Hash。只有 Ontology Change Proposal、Goal 7、Source Registry 审批、P003 DRI 审核、QNAP Shadow 和 Registry 对账全部通过后，才允许另行提出生产激活。
 

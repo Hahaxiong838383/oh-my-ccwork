@@ -25,6 +25,8 @@ async function optionalMetrics(name) {
 }
 const collectorMetrics = await optionalMetrics('--collector-metrics-file')
 const runtimeMetrics = await optionalMetrics('--runtime-metrics-file')
+const auditMetrics = await optionalMetrics('--audit-metrics-file')
+const domainMetrics = await optionalMetrics('--domain-metrics-file')
 const status = argument('--status')
 if (!['succeeded', 'failed', 'timed_out'].includes(status)) throw new Error('invalid status')
 const evidence = {
@@ -58,18 +60,28 @@ const evidence = {
     daily: Number(argument('--daily-report-cost-usd', '0')),
     weekly: Number(argument('--weekly-report-cost-usd', '0')),
   },
+  domainArtifacts: {
+    persistenceState: domainMetrics.persistenceState || 'not_persisted',
+    rawSnapshotCount: Number(domainMetrics.rawSnapshotCount || 0),
+    observationCount: Number(domainMetrics.observationCount || 0),
+    signalCount: Number(domainMetrics.signalCount || 0),
+    evidenceCount: Number(domainMetrics.evidenceCount || 0),
+    impactAssessmentCount: Number(domainMetrics.impactAssessmentCount || 0),
+    reportRunCount: Number(domainMetrics.reportRunCount || 0),
+    reportDraftCount: Number(domainMetrics.reportDraftCount || 0),
+  },
   security: {
-    unredactedSensitiveOutputCount: integer('--unredacted-sensitive-output-count'),
-    sourceRevocationEffectiveSeconds: integer('--source-revocation-effective-seconds'),
-    postRevocationNetworkRequestCount: integer('--post-revocation-network-request-count'),
-    lastGoodPreserved: argument('--last-good-preserved', 'true') === 'true',
+    unredactedSensitiveOutputCount: Number(auditMetrics.unredactedSensitiveOutputCount ?? integer('--unredacted-sensitive-output-count')),
+    sourceRevocationEffectiveSeconds: Number(auditMetrics.sourceRevocationEffectiveSeconds ?? integer('--source-revocation-effective-seconds')),
+    postRevocationNetworkRequestCount: Number(auditMetrics.postRevocationNetworkRequestCount ?? integer('--post-revocation-network-request-count')),
+    lastGoodPreserved: auditMetrics.lastGoodPreserved ?? (argument('--last-good-preserved', 'true') === 'true'),
   },
   sideEffects: {
-    formalP2Count: integer('--formal-p2-count'),
-    employeeDeliveryCount: integer('--employee-delivery-count'),
-    erpWritebackCount: integer('--erp-writeback-count'),
-    socialWritebackCount: integer('--social-writeback-count'),
-    causalActivationCount: integer('--causal-activation-count'),
+    formalP2Count: Number(auditMetrics.sideEffects?.formalP2Count ?? integer('--formal-p2-count')),
+    employeeDeliveryCount: Number(auditMetrics.sideEffects?.employeeDeliveryCount ?? integer('--employee-delivery-count')),
+    erpWritebackCount: Number(auditMetrics.sideEffects?.erpWritebackCount ?? integer('--erp-writeback-count')),
+    socialWritebackCount: Number(auditMetrics.sideEffects?.socialWritebackCount ?? integer('--social-writeback-count')),
+    causalActivationCount: Number(auditMetrics.sideEffects?.causalActivationCount ?? integer('--causal-activation-count')),
   },
   runtime: {
     collectorImage: argument('--collector-image'),
@@ -80,9 +92,11 @@ const evidence = {
   coverage: {
     collectorMetricsCollected: collectorMetrics.collected === true,
     resourceMetricsCollected: runtimeMetrics.collected === true,
-    sensitiveOutputAuditCompleted: argument('--sensitive-output-audit-completed', 'false') === 'true',
-    sourceRevocationAuditCompleted: argument('--source-revocation-audit-completed', 'false') === 'true',
-    businessSideEffectAuditCompleted: argument('--business-side-effect-audit-completed', 'false') === 'true',
+    sensitiveOutputAuditCompleted: auditMetrics.sensitiveOutputAuditCompleted ?? (argument('--sensitive-output-audit-completed', 'false') === 'true'),
+    sourceRevocationAuditCompleted: auditMetrics.sourceRevocationAuditCompleted ?? (argument('--source-revocation-audit-completed', 'false') === 'true'),
+    businessSideEffectAuditCompleted: auditMetrics.businessSideEffectAuditCompleted ?? (argument('--business-side-effect-audit-completed', 'false') === 'true'),
+    domainCompilationCompleted: domainMetrics.compiled === true,
+    domainPersistenceCompleted: domainMetrics.persisted === true && domainMetrics.persistenceState === 'postgres_committed',
   },
 }
 if (!Number.isFinite(evidence.reportCostsUsd.daily) || !Number.isFinite(evidence.reportCostsUsd.weekly)) throw new Error('invalid report cost')

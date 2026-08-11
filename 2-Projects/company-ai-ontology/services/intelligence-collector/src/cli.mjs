@@ -31,11 +31,14 @@ async function context() {
   const configValidation = validateCollectorConfig(configInput, collectorContract, { sourceRegistryFileOverride: registryOverride })
   if (!configValidation.ok) throw new Error(`invalid collector config: ${configValidation.errors.join('; ')}`)
   const config = configValidation.config
+  const internalEngineeringPlan = config.operationMode === 'internal_engineering_shadow'
+    ? await loadJsonFile(config.internalEngineeringPlanFile)
+    : null
   const { catalog: registry, validation: registryValidation } = await loadPestimSourceRegistryCatalog({
     contract: sourceRegistryContract,
     catalogFile: config.sourceRegistryFile,
   })
-  return { collectorContract, sourceRegistryContract, config, registry, registryValidation }
+  return { collectorContract, sourceRegistryContract, config, registry, registryValidation, internalEngineeringPlan }
 }
 
 async function main() {
@@ -53,6 +56,8 @@ async function main() {
       registryEntryCount: loaded.registryValidation.entryCount,
       registryContentHash: loaded.registryValidation.contentHash,
       configuredSources: loaded.config.sourceKeys,
+      operationMode: loaded.config.operationMode,
+      countsTowardProductionShadow: loaded.config.operationMode !== 'internal_engineering_shadow',
     }, null, 2)}\n`)
     return
   }

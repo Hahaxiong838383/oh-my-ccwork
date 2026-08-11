@@ -29,7 +29,7 @@ source_sha=$(shasum -a 256 "$output_root/source.tar.gz" | awk '{print $1}')
 image_sha=$(shasum -a 256 "$output_root/collector-image.tar.gz" | awk '{print $1}')
 cat > "$output_root/release-manifest.json" <<EOF
 {
-  "manifestVersion": "1.1.0",
+  "manifestVersion": "1.2.0",
   "releaseType": "P1-SI-F-shadow-candidate-gated",
   "createdAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "sourceCommit": "$source_commit",
@@ -43,6 +43,7 @@ cat > "$output_root/release-manifest.json" <<EOF
   "productionDeploymentAuthorized": false,
   "requiredGate": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH",
   "p003ReviewGateRequired": true,
+  "reviewerRoleAccessGateRequired": true,
   "goal7AcceptanceGateRequired": true
 }
 EOF

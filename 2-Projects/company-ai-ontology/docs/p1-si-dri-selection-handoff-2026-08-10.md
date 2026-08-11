@@ -93,7 +93,7 @@ Goal 7 验收文件必须证明：
 
 因此，单独设置 `GOAL7_STATUS=complete` 已无法进入数据库迁移或 Shadow 部署。
 
-旧 Artifact `p1-si-runtime-2974c19eaab1282a0f2dd168ed7056e5a79e6f68` 不包含上述两项新门禁，现仅作为历史 Runtime 证据保留，不再具有部署资格。Release Manifest 已升级为 `1.1.0 / P1-SI-F-shadow-candidate-gated`；旧 `1.0.0` Manifest 会失败关闭。最终包必须在实名审核和 Goal 7 完成后，从当时的已推送目标 Commit 重新生成。
+旧 Artifact `p1-si-runtime-2974c19eaab1282a0f2dd168ed7056e5a79e6f68` 不包含 P003 最终审核、成员真实权限体验和 Goal 7 文件化验收三项门禁，现仅作为历史 Runtime 证据保留，不再具有部署资格。Release Manifest 已升级为 `1.2.0 / P1-SI-F-shadow-candidate-gated`，并要求 `reviewerRoleAccessGateRequired=true`；旧 `1.1.0` 及更早 Manifest 会失败关闭。最终包必须在实名审核、成员权限体验和 Goal 7 完成后，从当时的已推送目标 Commit 重新生成。
 
 ## 6. 当前门禁
 

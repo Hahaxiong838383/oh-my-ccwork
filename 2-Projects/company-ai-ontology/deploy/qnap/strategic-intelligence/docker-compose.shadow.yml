@@ -3,7 +3,7 @@
   "services": {
     "intelligence-orchestrator": {
       "image": "docker.1ms.run/library/node:22.14.0-alpine3.21@sha256:9bef0ef1e268f60627da9ba7d7605e8831d5b56ad07487d24d1aa386336d1944",
-      "user": "10003:10003",
+      "user": "${SI_ORCHESTRATOR_UID:-10003}:${SI_ORCHESTRATOR_GID:-10003}",
       "working_dir": "/opt/company-intelligence/orchestrator",
       "command": [
         "node",
@@ -57,7 +57,7 @@
         "worker"
       ],
       "image": "${SI_COLLECTOR_IMAGE:?SI_COLLECTOR_IMAGE must be sha256:... or repository@sha256:...}",
-      "user": "10001:10001",
+      "user": "${SI_COLLECTOR_UID:-10001}:${SI_COLLECTOR_GID:-10001}",
       "working_dir": "/opt/company-ai-ontology/services/intelligence-collector",
       "command": [
         "run",
@@ -79,6 +79,7 @@
       "volumes": [
         "${SI_COLLECTOR_CONFIG_FILE:?SI_COLLECTOR_CONFIG_FILE is required}:/etc/company-intelligence/config.json:ro",
         "${SI_SOURCE_REGISTRY_FILE:?SI_SOURCE_REGISTRY_FILE is required}:/etc/company-intelligence/source-registry.json:ro",
+        "${SI_INTERNAL_ENGINEERING_PLAN_FILE:-/dev/null}:/etc/company-intelligence/internal-engineering-plan.json:ro",
         "${SI_STATE_ROOT:?SI_STATE_ROOT is required}/collector:/var/lib/company-intelligence/state",
         "${SI_REPORT_ROOT:?SI_REPORT_ROOT is required}:/var/lib/company-intelligence/reports"
       ],

@@ -65,6 +65,13 @@ function namedPrincipal(value) {
   )
 }
 
+function assignedPrincipal(value) {
+  return namedPrincipal(value)
+    && typeof value.role === 'string'
+    && value.role.trim().length > 0
+    && ['pending', 'approve', 'reject'].includes(value.decision)
+}
+
 function evidenceRefs(values) {
   return Array.isArray(values)
     && values.length > 0
@@ -157,6 +164,22 @@ function jsonObjectOrNull(value, fieldName) {
   return parsed
 }
 
+function singleSelectString(value, fieldName) {
+  if (typeof value !== 'string') throw new Error(`${fieldName} must contain one selected option`)
+  const trimmed = value.trim()
+  if (!trimmed.startsWith('[')) return trimmed
+  let parsed
+  try {
+    parsed = JSON.parse(trimmed)
+  } catch {
+    throw new Error(`${fieldName} must contain one selected option`)
+  }
+  if (!Array.isArray(parsed) || parsed.length !== 1 || typeof parsed[0] !== 'string' || parsed[0].trim().length === 0) {
+    throw new Error(`${fieldName} must contain exactly one selected option`)
+  }
+  return parsed[0].trim()
+}
+
 export function p003ReviewWorkbookFromCsv(input, catalog, options = {}) {
   const { headers, rows } = parseCsv(input)
   assertCsvHeaders(headers, P003_REVIEW_CSV_HEADERS)
@@ -167,7 +190,7 @@ export function p003ReviewWorkbookFromCsv(input, catalog, options = {}) {
     return {
       candidateKey: row.candidateKey,
       sourceRowHash: row.sourceRowHash,
-      categoryKey: row.categoryKey,
+      categoryKey: singleSelectString(row.categoryKey, `${prefix}.categoryKey`),
       categoryName: row.categoryName,
       primaryDimension: row.primaryDimension,
       secondaryDimension: row.secondaryDimension,
@@ -276,6 +299,165 @@ export function validateP003ReviewWorkbook(workbook, catalog, reviewContract, op
     approvalProposalCount: reviews.filter((review) => review.decision === 'approve_for_activation_proposal').length,
     finalDecisionCount: reviews.filter((review) => reviewContract.finalDecisions.includes(review.decision)).length,
     workbookHash: contentHash(workbook),
+  }
+}
+
+export function inspectP003ReviewAssignments(workbook) {
+  const reviews = Array.isArray(workbook?.reviews) ? workbook.reviews : []
+  const categoryMap = new Map()
+  let individualDriAssignedCount = 0
+  let invalidIndividualDriCount = 0
+  let participantAssignedReviewCount = 0
+  let invalidParticipantCount = 0
+  let requiredRoleAssignmentCount = 0
+  let assignedRoleAssignmentCount = 0
+  let reviewsWithAllRequiredRolesAssigned = 0
+
+  for (const review of reviews) {
+    const categoryKey = typeof review.categoryKey === 'string' && review.categoryKey.length > 0
+      ? review.categoryKey
+      : 'unknown'
+    if (!categoryMap.has(categoryKey)) {
+      categoryMap.set(categoryKey, {
+        categoryKey,
+        reviewCount: 0,
+        individualDriAssignedCount: 0,
+        participantAssignedReviewCount: 0,
+        requiredRoleAssignmentCount: 0,
+        assignedRoleAssignmentCount: 0,
+        reviewsWithAllRequiredRolesAssigned: 0,
+        missingRoles: new Set(),
+      })
+    }
+    const category = categoryMap.get(categoryKey)
+    category.reviewCount += 1
+
+    if (assignedPrincipal(review.namedIndividualDri)) {
+      individualDriAssignedCount += 1
+      category.individualDriAssignedCount += 1
+    } else if (review.namedIndividualDri !== null && review.namedIndividualDri !== undefined) {
+      invalidIndividualDriCount += 1
+    }
+
+    const participants = Array.isArray(review.reviewParticipants) ? review.reviewParticipants : []
+    const validParticipants = participants.filter(assignedPrincipal)
+    invalidParticipantCount += participants.length - validParticipants.length
+    if (validParticipants.length > 0) {
+      participantAssignedReviewCount += 1
+      category.participantAssignedReviewCount += 1
+    }
+
+    const requiredRoles = [...new Set(
+      (Array.isArray(review.proposedDriRoles) ? review.proposedDriRoles : [])
+        .filter((role) => typeof role === 'string' && role.length > 0),
+    )]
+    const assignedRoles = new Set(validParticipants.map((participant) => participant.role))
+    const missingRoles = requiredRoles.filter((role) => !assignedRoles.has(role))
+    const assignedRequiredRoleCount = requiredRoles.length - missingRoles.length
+    requiredRoleAssignmentCount += requiredRoles.length
+    assignedRoleAssignmentCount += assignedRequiredRoleCount
+    category.requiredRoleAssignmentCount += requiredRoles.length
+    category.assignedRoleAssignmentCount += assignedRequiredRoleCount
+    for (const role of missingRoles) category.missingRoles.add(role)
+    if (missingRoles.length === 0) {
+      reviewsWithAllRequiredRolesAssigned += 1
+      category.reviewsWithAllRequiredRolesAssigned += 1
+    }
+  }
+
+  const categoryCoverage = [...categoryMap.values()]
+    .sort((left, right) => left.categoryKey.localeCompare(right.categoryKey))
+    .map((category) => ({
+      categoryKey: category.categoryKey,
+      reviewCount: category.reviewCount,
+      individualDriAssignedCount: category.individualDriAssignedCount,
+      missingIndividualDriCount: category.reviewCount - category.individualDriAssignedCount,
+      participantAssignedReviewCount: category.participantAssignedReviewCount,
+      requiredRoleAssignmentCount: category.requiredRoleAssignmentCount,
+      assignedRoleAssignmentCount: category.assignedRoleAssignmentCount,
+      missingRoleAssignmentCount: category.requiredRoleAssignmentCount - category.assignedRoleAssignmentCount,
+      reviewsWithAllRequiredRolesAssigned: category.reviewsWithAllRequiredRolesAssigned,
+      reviewsMissingRequiredRoles: category.reviewCount - category.reviewsWithAllRequiredRolesAssigned,
+      missingRoles: [...category.missingRoles].sort(),
+    }))
+
+  return {
+    assignmentReady: reviews.length > 0
+      && individualDriAssignedCount === reviews.length
+      && reviewsWithAllRequiredRolesAssigned === reviews.length
+      && invalidIndividualDriCount === 0
+      && invalidParticipantCount === 0,
+    reviewCount: reviews.length,
+    individualDriAssignedCount,
+    missingIndividualDriCount: reviews.length - individualDriAssignedCount - invalidIndividualDriCount,
+    invalidIndividualDriCount,
+    participantAssignedReviewCount,
+    missingParticipantReviewCount: reviews.length - participantAssignedReviewCount,
+    invalidParticipantCount,
+    requiredRoleAssignmentCount,
+    assignedRoleAssignmentCount,
+    missingRoleAssignmentCount: requiredRoleAssignmentCount - assignedRoleAssignmentCount,
+    reviewsWithAllRequiredRolesAssigned,
+    reviewsMissingRequiredRoles: reviews.length - reviewsWithAllRequiredRolesAssigned,
+    categoryCoverage,
+  }
+}
+
+export function inspectP003ReviewProgress(workbook, catalog, reviewContract) {
+  const reviews = Array.isArray(workbook?.reviews) ? workbook.reviews : []
+  const finalValidation = validateP003ReviewWorkbook(workbook, catalog, reviewContract, { requireFinal: true })
+  const decisionCounts = Object.fromEntries(reviewContract.allowedDecisions.map((decision) => [decision, 0]))
+  const categoryMap = new Map()
+  for (const review of reviews) {
+    if (Object.hasOwn(decisionCounts, review.decision)) decisionCounts[review.decision] += 1
+    const categoryKey = typeof review.categoryKey === 'string' && review.categoryKey.length > 0
+      ? review.categoryKey
+      : 'unknown'
+    if (!categoryMap.has(categoryKey)) {
+      categoryMap.set(categoryKey, {
+        categoryKey,
+        reviewCount: 0,
+        finalDecisionCount: 0,
+        approvalProposalCount: 0,
+        keepInactiveCount: 0,
+        rejectCount: 0,
+      })
+    }
+    const category = categoryMap.get(categoryKey)
+    category.reviewCount += 1
+    if (reviewContract.finalDecisions.includes(review.decision)) category.finalDecisionCount += 1
+    if (review.decision === 'approve_for_activation_proposal') category.approvalProposalCount += 1
+    if (review.decision === 'keep_inactive') category.keepInactiveCount += 1
+    if (review.decision === 'reject') category.rejectCount += 1
+  }
+  const finalDecisionCount = reviews.filter((review) => reviewContract.finalDecisions.includes(review.decision)).length
+  return {
+    reviewReady: reviews.length > 0 && finalDecisionCount === reviews.length && finalValidation.ok,
+    reviewCount: reviews.length,
+    pendingCount: decisionCounts.pending || 0,
+    finalDecisionCount,
+    decisionCounts,
+    semanticRewriteRecordedCount: reviews.filter((review) => String(review.semanticRewrite || '').trim().length > 0).length,
+    directionRecordedCount: reviews.filter((review) => String(review.direction || '').trim().length > 0).length,
+    strengthRecordedCount: reviews.filter((review) => String(review.strength || '').trim().length > 0).length,
+    lagRecordedCount: reviews.filter((review) => Number.isFinite(review.expectedLagValue) && review.expectedLagValue > 0 && String(review.expectedLagUnit || '').length > 0).length,
+    applicabilityConditionsRecordedCount: reviews.filter((review) => Array.isArray(review.applicabilityConditions) && review.applicabilityConditions.length > 0).length,
+    activationConditionsRecordedCount: reviews.filter((review) => Array.isArray(review.activationConditions) && review.activationConditions.length > 0).length,
+    pauseConditionsRecordedCount: reviews.filter((review) => Array.isArray(review.pauseConditions) && review.pauseConditions.length > 0).length,
+    invalidationConditionsRecordedCount: reviews.filter((review) => Array.isArray(review.invalidationConditions) && review.invalidationConditions.length > 0).length,
+    supportEvidenceRecordedCount: reviews.filter((review) => Array.isArray(review.supportEvidence) && review.supportEvidence.length > 0).length,
+    challengeEvidenceRecordedCount: reviews.filter((review) => Array.isArray(review.challengeEvidence) && review.challengeEvidence.length > 0).length,
+    validationMetricsRecordedCount: reviews.filter((review) => Array.isArray(review.validationMetrics) && review.validationMetrics.length > 0).length,
+    reviewedAtRecordedCount: reviews.filter((review) => validTimestamp(review.reviewedAt)).length,
+    decisionReasonRecordedCount: reviews.filter((review) => String(review.decisionReason || '').trim().length > 0).length,
+    checklistCompleteCount: reviews.filter((review) => (
+      review.reviewChecklist
+      && Object.values(review.reviewChecklist).length > 0
+      && Object.values(review.reviewChecklist).every((value) => value === true)
+    )).length,
+    finalValidationOk: finalValidation.ok,
+    finalValidationErrorCount: finalValidation.errors.length,
+    categoryProgress: [...categoryMap.values()].sort((left, right) => left.categoryKey.localeCompare(right.categoryKey)),
   }
 }
 

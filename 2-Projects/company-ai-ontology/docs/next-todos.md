@@ -1,6 +1,6 @@
 # 公司 AI Ontology 后续 TODO
 
-更新时间：2026-08-10（Asia/Shanghai）
+更新时间：2026-08-11（Asia/Shanghai）
 
 ## 当前结论
 
@@ -53,15 +53,18 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 2. ✅ 已确认 4644 条应作为 `generated_draft / unverified` Impact Hypothesis，不得直接成为事实或触发正式 P2。
 3. ✅ 已完成个人站前沿资讯雷达评估：可复用 Horizon/Theory Radar 的采集、去重、评分、富化、影子运行和 last-good 门禁；不得原样迁移个人站、公开 Webhook、个人账号和报告目录。
 4. ✅ `P1-SI-A`：已定义 ExternalFactor、GoalFacet、ImpactHypothesis、ImpactAssessment、StrategicIntelligenceReport 和 ReportRun；候选 Schema `3.4.0` 编译兼容并已以 contract-only 能力发布到公司 QNAP，生产 active `3.3.0` 未变更，测试 `18/18`、Registry `in_sync`、切换 2 秒、restart count 0。
-5. 🟡 `P1-SI-B`：Source Registry contract-only 候选 `3.5.0`、首批 8 个来源、fail-closed 判定，以及“飞书 CSV → 强类型 JSON → final 校验 → Shadow Registry compile”人工审核闭环已完成工程验证；真实飞书审核工作台已建立并导入 8 条，往返校验逐条一致。全部来源仍为 `paused`，等待实名许可审核人与公司合规 DRI 逐项批准许可、保存级别、保留期和负责人。
-6. 🟡 `P1-SI-C`：公司独立 Collector Contract、3 份 JSON Schema、oneshot Worker、Source Registry 前置准入、去重、last-good、固定 Base Digest 和构建脚本已通过 `7/7` 测试；metadata/reference/summary 来源不保存完整响应体，只有获批 full-text/structured-data 才保留 payload。手动 CI 已构建 Linux/amd64 镜像，并形成绑定源码与镜像 Hash 的公司 QNAP 不可变发布候选包；尚未在 QNAP 部署。
-7. 🟡 `P1-SI-D`：contract-only 候选 `3.6.0`、Postgres 唯一真源、Raw/Observation/Signal、双时间、幂等/Replay、热冷保留和 ACL fail-closed 候选迁移已通过 `30/30` 测试；CI 隔离 PostgreSQL 已验证 010/011、19/19 强制 RLS 与 baseline restore，`sql_static_verified=true / sql_runtime_verified=true`，仍未进入生产 migrations。
+5. 🟡 `P1-SI-B`：Source Registry contract-only 候选 `3.5.0`、首批 8 个来源、fail-closed 判定，以及“飞书 CSV → 强类型 JSON → final 校验 → Shadow Registry compile”人工审核闭环已完成工程验证；脱敏分配检查确认 8/8 已配置结构化许可审核 Principal 与合规 DRI，缺失和非法 Principal 均为 0，但最终决定仍为 0/8，全部来源继续 `paused`。
+6. 🟡 `P1-SI-C`：公司独立 Collector Contract、3 份 JSON Schema、oneshot Worker、Source Registry 前置准入、去重、last-good、固定 Base Digest 和构建脚本已通过 `9/9` 测试；新增内部 provisional policy，3 个安全样例来源可在保持 Registry `paused / pending` 的前提下运行，且只保存 reference/hash。手动 CI 的旧 Linux/amd64 镜像只保留历史证据，最终包尚未重建或部署。
+7. 🟡 `P1-SI-D`：contract-only 候选 `3.6.0`、Postgres 唯一真源、Raw/Observation/Signal、双时间、幂等/Replay、热冷保留和 ACL fail-closed 候选迁移已完成；新增 Domain Batch → 010/011 单事务持久化、失败证据续写、逐日 `postgres_committed` 门禁和 CI 两次幂等/RLS 无 ACL 负测。旧 CI 只证明 010/011 与 19/19 强制 RLS；新增持久化链必须在最终已推送 Commit 上重新跑 Runtime Workflow 后才能标记 `runtime_verified`。
 8. 🟡 `P1-SI-E`：候选 `3.7.0`、上海时区日/周/月/季/半年/年窗口、Alert/公司/P003 报告、非递归 Input Set、完整 ReportRun 谱系和飞书文档/卡片/H 控制面只读模板已通过 `36/36` 测试；未调用模型、未创建飞书产物、未执行候选 SQL。
-9. 🟡 `P1-SI-F`：Shadow Compose、0.1 CPU/96 MiB Orchestrator、0.5 CPU/512 MiB oneshot Worker、无端口/无 Docker Socket、授权门禁、备份/Freeze/回滚、七日连续性/版本一致性校验、显式 Owner Acceptance、发布 Manifest 和已审批 Registry 准入已通过 `29/29`；新增统一只读 readiness 检查器，缺文件、无效文件或任一审批未通过均退出码 `2`，且部署脚本强制调用。单日零来源、缺审计、缺指标和七日断档/模拟/副作用/Commit/镜像/Policy 漂移均 fail-closed。CI Run `31421625978` 仍只证明旧 Source Commit `2974c19eaab1282a0f2dd168ed7056e5a79e6f68` 的历史 Linux/amd64 镜像与 SQL Runtime，不能用于部署。`2026-08-11` 已在线复核公司 QNAP 五元组、Foundation 健康与核心容器 `restart_count=0`；川哥已授权连接和部署。最终发布包、实名审核、Goal 7 文件化 Owner Acceptance、七日真实 Shadow 和最终体验验收仍未完成。
-10. 🟡 `P1-SI-G`：已只读核对真实 4644 条矩阵并筛选 P003 36 条候选，六类各 6 条；真实飞书审核工作台、六类筛选视图、CSV 回填、强类型 JSON、final 校验、只读锚点防篡改和提案候选 compile 均已完成工程验证。active/verified/evidence/named DRI 仍均为 0，下一步由实名产品、AI、研发、销售、采购、财务及必要合规 DRI 逐条重写和补证。
-11. ⏳ `P1-SI-H`：当次连接和部署授权已于 `2026-08-11` 记录，但授权不能替代来源实名合规审核、P003 实名联合 DRI 审核和 Goal 7 文件化 Owner Acceptance。三项证据全部通过且从最终已推送 Commit 重建不可变发布包后，才将公司版雷达部署到公司 QNAP并连续运行 7 天 Shadow；只写入 Raw Snapshot、Signal、Impact Assessment 和报告草稿，不向全员 Bot 发布、不创建正式 P2、不写回 ERP/社媒。
-12. ⛔ 自动创建正式 P2、向员工下发任务或写回 ERP/社媒继续关闭；只允许生成 Impact Assessment、报告和 Decision Proposal。
-13. P1-SI-A～G 工程证据见对应 `docs/p1-si-*-2026-08-10.md`；人工审核闭环见 `docs/p1-si-human-review-workflow-acceptance-2026-08-10.md`；真实飞书工作台验收见 `docs/p1-si-feishu-review-workbench-acceptance-2026-08-10.md`；P003 DRI 审核清单见 `docs/p1-si-g-p003-dri-review-pack-2026-08-10.md`；总体方案见 `docs/pestim-strategic-intelligence-architecture-2026-08-10.md`。
+9. 🟡 `P1-SI-F`：Shadow Compose、资源上限、无端口/无 Docker Socket、授权门禁、备份/Freeze/回滚、真实运行审计、Domain/Postgres 持久化证据、七日连续性/版本一致性、显式 Owner Acceptance、生产与内部独立 readiness、两阶段运行快照和 Goal Completion 门禁已通过 `66/66`。公司 QNAP 隔离 PostgreSQL 17 已真实验证 19/19 强制 RLS、Domain 持久化、二次幂等、ACL fail-closed 和 baseline restore，Foundation 指纹、restart、目录和端口均未变化；该证据绑定未提交工作树，仅为 `engineering_verified`。Runtime Workflow 已对齐 Release Manifest `1.2.0`；正式生产门禁继续不变，旧 Artifact 和未提交 Runtime 证据均不能部署。下一步先由 cc 选择性提交推送并从该 Commit 重跑 Linux/amd64 Runtime Workflow。
+10. 🟡 `P1-SI-G`：已只读核对真实 4644 条矩阵并筛选 P003 36 条候选，六类各 6 条；真实飞书审核工作台、CSV 回填、强类型 JSON、final 校验、只读锚点防篡改和提案候选 compile 均已完成工程验证。P003 已拆为产品与用户、AI 研发、品牌、To C 线下渠道四个记录级职能角色，各 1 名实名成员，旧宽泛角色成员为 0；`categoryKey` SingleSelect 转换后 36 条逐字段零漂移，正式导入器已兼容单元素数组。脱敏责任与进度检查器已接入：个人 DRI 30/36、必要角色位 90/150、全角色覆盖 12/36；实时审核进度仍为 36 pending、语义重写/支持证据/反证均为 0。当前仍缺供应链的采购/制造/质量/财务、渠道财务、AI 技术知识产权，以及隐私合规的法务/AI Safety/质量/采购；线上销售姓名仍未唯一确认；最终决定仍为 0/36，36 条全部保持 `pending / inactive`。成员本人逐一登录的记录级权限体验验收尚未完成。
+11. ⏳ `P1-SI-H`：当次连接和部署授权已于 `2026-08-11` 记录，但授权不能替代来源实名合规审核、P003 实名联合 DRI 审核、四角色 UAT、Goal 7 文件化 Owner Acceptance 和新增 Postgres 持久化 Runtime 证据。全部证据通过且从最终已推送 Commit 重建不可变发布包后，才将公司版雷达部署到公司 QNAP并连续运行 7 天 Shadow；每日必须形成 `postgres_committed` 证据，只写 Raw/Observation/Signal/Evidence/Impact/Report 草稿，不向全员 Bot 发布、不创建正式 P2、不写回 ERP/社媒。
+12. 🟢 `internal_engineering_shadow`：已完成独立模式、3 个公开来源、reference-only/3 天保留、六类各 1 条 inactive 样例、独立 policy/readiness/runtime compiler、零迁移部署/单次运行/独立回滚脚本和正式门禁隔离；确定 URL + 官方路径/仓库白名单约束、完整项目打包布局、QNAP 非 root Runtime 写权限和完整部署脚本演练均已补齐。测试 Contracts `61/61`、Collector `9/9`、Shadow/Readiness/Goal Completion `66/66`；本机真实公网 Smoke 共采集 60 条，三个 Snapshot 均只保存 Hash；公司 QNAP 五元组、部署账号 `uid=1000 / gid=100`、13 个 Foundation 容器和 `restart_count=0` 已复核，隔离 Runtime 结束后临时容器、卷和目录均清零。下一步由 cc 选择性提交并推送本 Goal 文件，从最终 Commit 重建不可变包，再申请本次内部工程 Shadow 部署授权；部署后单独申请一次运行授权，运行 1～3 天内部排错并由川哥完成管理员 Smoke Test；不计入正式七日 Shadow。
+13. ⛔ 自动创建正式 P2、向员工下发任务或写回 ERP/社媒继续关闭；只允许生成 Impact Assessment、报告和 Decision Proposal。
+14. P1-SI-A～G 工程证据见对应 `docs/p1-si-*-2026-08-10.md`；内部模式见 `docs/p1-si-internal-engineering-shadow-2026-08-11.md`；人工审核闭环见 `docs/p1-si-human-review-workflow-acceptance-2026-08-10.md`；真实飞书工作台验收见 `docs/p1-si-feishu-review-workbench-acceptance-2026-08-10.md`；当前实名分配与机器校验见 `docs/p1-si-reviewer-assignment-readiness-2026-08-11.md`；P003 DRI 审核清单见 `docs/p1-si-g-p003-dri-review-pack-2026-08-10.md`；总体方案见 `docs/pestim-strategic-intelligence-architecture-2026-08-10.md`。
+15. 四职能角色真实权限体验按 `docs/p1-si-reviewer-role-access-uat-2026-08-11.md` 保留为 `deferred_before_production`；当前不要求成员操作。正式上线前采用风险分级审核，每位负责人只处理自己的筛选视图和少量高价值关系。
+16. `2026-08-11` 最新状态：Strategic Intelligence `67/67`；统一 QNAP Node Runtime 适配器已覆盖内部部署与首次运行。川哥已授权 codex 选择性 commit、push 和内部工程 Runtime 部署，下一步从新 Commit 运行 Runtime Workflow 并准备不可变包；本授权不包含首次真实采集、生产数据库迁移、Foundation 重启或真实回滚。
 
 ## P0-KB-ACL：正式导入前硬阻断
 

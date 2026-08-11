@@ -1,0 +1,107 @@
+{
+  "planVersion": "1.0.0",
+  "mode": "internal_engineering_shadow",
+  "status": "provisional_internal_test",
+  "ownerDecisionDate": "2026-08-11",
+  "ownerDecisionRecorded": true,
+  "deploymentAuthorized": false,
+  "countsTowardProductionShadow": false,
+  "runWindowNaturalDays": {
+    "minimum": 1,
+    "maximum": 3
+  },
+  "publish": false,
+  "allowedStorageLevels": [
+    "reference_only",
+    "metadata_only"
+  ],
+  "selectedSources": [
+    {
+      "sourceKey": "arxiv-official-rss-api",
+      "endpointRef": "https://export.arxiv.org/api/query?search_query=cat%3Acs.AI&start=0&max_results=20&sortBy=submittedDate&sortOrder=descending",
+      "storageLevel": "reference_only",
+      "retentionDays": 3,
+      "approvalState": "provisional_internal_test",
+      "licenseDecision": "deferred_before_production",
+      "complianceDecision": "deferred_before_production"
+    },
+    {
+      "sourceKey": "federal-register-api",
+      "endpointRef": "https://www.federalregister.gov/api/v1/documents.json?per_page=20&order=newest",
+      "storageLevel": "reference_only",
+      "retentionDays": 3,
+      "approvalState": "provisional_internal_test",
+      "licenseDecision": "deferred_before_production",
+      "complianceDecision": "deferred_before_production"
+    },
+    {
+      "sourceKey": "github-approved-repository-releases",
+      "endpointRef": "https://api.github.com/repos/vllm-project/vllm/releases?per_page=20",
+      "storageLevel": "reference_only",
+      "retentionDays": 3,
+      "approvalState": "provisional_internal_test",
+      "licenseDecision": "deferred_before_production",
+      "complianceDecision": "deferred_before_production"
+    }
+  ],
+  "p003Samples": [
+    {
+      "categoryKey": "product_definition",
+      "candidateKey": "p003-impact-001",
+      "decision": "sample_reviewed_keep_inactive",
+      "activationStatus": "inactive",
+      "formalReviewState": "deferred_before_production"
+    },
+    {
+      "categoryKey": "children_user_scenario",
+      "candidateKey": "p003-impact-007",
+      "decision": "sample_reviewed_keep_inactive",
+      "activationStatus": "inactive",
+      "formalReviewState": "deferred_before_production"
+    },
+    {
+      "categoryKey": "supply_chain_cost_quality",
+      "candidateKey": "p003-impact-013",
+      "decision": "sample_reviewed_keep_inactive",
+      "activationStatus": "inactive",
+      "formalReviewState": "deferred_before_production"
+    },
+    {
+      "categoryKey": "channel_sales_competition",
+      "candidateKey": "p003-impact-019",
+      "decision": "sample_reviewed_keep_inactive",
+      "activationStatus": "inactive",
+      "formalReviewState": "deferred_before_production"
+    },
+    {
+      "categoryKey": "ai_technology",
+      "candidateKey": "p003-impact-025",
+      "decision": "sample_reviewed_keep_inactive",
+      "activationStatus": "inactive",
+      "formalReviewState": "deferred_before_production"
+    },
+    {
+      "categoryKey": "privacy_safety_compliance",
+      "candidateKey": "p003-impact-031",
+      "decision": "sample_reviewed_keep_inactive",
+      "activationStatus": "inactive",
+      "formalReviewState": "deferred_before_production"
+    }
+  ],
+  "deferredProductionGates": [
+    "all_source_license_and_compliance_approvals",
+    "all_p003_final_reviews",
+    "reviewer_role_member_uat",
+    "goal7_owner_acceptance",
+    "final_immutable_release",
+    "production_seven_day_shadow",
+    "production_owner_acceptance"
+  ],
+  "forbiddenSideEffects": {
+    "formalP2": false,
+    "employeeDelivery": false,
+    "erpWriteback": false,
+    "socialWriteback": false,
+    "causalActivation": false
+  }
+}

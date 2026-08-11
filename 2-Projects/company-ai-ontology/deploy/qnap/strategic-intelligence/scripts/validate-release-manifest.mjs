@@ -5,13 +5,14 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 
 const EXPECTED = {
-  manifestVersion: '1.1.0',
+  manifestVersion: '1.2.0',
   releaseType: 'P1-SI-F-shadow-candidate-gated',
   candidateOntologySchema: '3.7.0',
   candidateOntologyHash: 'c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860',
   sourceRegistryCandidateHash: '0ce4022adcfc177ced670a8d7fd2e4b4e119c2fc1bc5c19cabefb3223c010eae',
   requiredGate: 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH',
   p003ReviewGateRequired: true,
+  reviewerRoleAccessGateRequired: true,
   goal7AcceptanceGateRequired: true,
 }
 
@@ -59,5 +60,6 @@ process.stdout.write(`${JSON.stringify({
   productionDeploymentAuthorized: false,
   requiredGate: manifest.requiredGate,
   p003ReviewGateRequired: true,
+  reviewerRoleAccessGateRequired: true,
   goal7AcceptanceGateRequired: true,
 }, null, 2)}\n`)

@@ -1,0 +1,19 @@
+{
+  "snapshotVersion": "1.0.0",
+  "phase": "pending",
+  "capturedAt": null,
+  "companyQnap": {
+    "purpose": "company_ai_ontology_production",
+    "host": "PRNas",
+    "model": "TS-X65",
+    "ip": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "shadowRoot": "/share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence"
+  },
+  "activeOntology": null,
+  "foundation": null,
+  "strategicIntelligence": null,
+  "database": null,
+  "sideEffects": null,
+  "backup": null
+}

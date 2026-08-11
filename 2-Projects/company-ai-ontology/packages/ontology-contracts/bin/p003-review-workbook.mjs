@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url'
 import {
   compileP003HumanReviewResults,
   createP003ReviewWorkbook,
+  inspectP003ReviewAssignments,
+  inspectP003ReviewProgress,
   loadP003ReviewContext,
   p003ReviewWorkbookFromCsv,
   p003ReviewWorkbookCsv,
@@ -58,6 +60,21 @@ if (command === 'generate') {
   const validation = validateP003ReviewWorkbook(workbook, catalog, reviewContract, { requireFinal: process.argv.includes('--final') })
   process.stdout.write(`${JSON.stringify(validation, null, 2)}\n`)
   if (!validation.ok) process.exitCode = 1
+} else if (command === 'inspect-assignments') {
+  const input = argument('--input')
+  if (!input) throw new Error('--input is required')
+  const workbook = JSON.parse(await fs.readFile(path.resolve(input), 'utf8'))
+  const inspection = inspectP003ReviewAssignments(workbook)
+  process.stdout.write(`${JSON.stringify(inspection, null, 2)}\n`)
+  if (!inspection.assignmentReady) process.exitCode = 1
+} else if (command === 'inspect-progress') {
+  const input = argument('--input')
+  if (!input) throw new Error('--input is required')
+  const { catalog, reviewContract } = await loadP003ReviewContext()
+  const workbook = JSON.parse(await fs.readFile(path.resolve(input), 'utf8'))
+  const inspection = inspectP003ReviewProgress(workbook, catalog, reviewContract)
+  process.stdout.write(`${JSON.stringify(inspection, null, 2)}\n`)
+  if (!inspection.reviewReady) process.exitCode = 1
 } else if (command === 'compile') {
   const input = argument('--input')
   const output = argument('--output')
@@ -75,6 +92,6 @@ if (command === 'generate') {
     employeeDeliveryAllowed: false,
   }, null, 2)}\n`)
 } else {
-  process.stderr.write('usage: p003-review-workbook.mjs generate|import-csv|validate|compile\n')
+  process.stderr.write('usage: p003-review-workbook.mjs generate|import-csv|inspect-assignments|inspect-progress|validate|compile\n')
   process.exitCode = 2
 }
