@@ -299,6 +299,7 @@ test('runtime state capture records thirteen healthy foundation containers witho
   const scriptsRoot = path.join(outputRoot, 'scripts')
   const shadowRoot = path.join(outputRoot, 'shadow')
   const fakeDocker = path.join(outputRoot, 'docker')
+  const formatLog = path.join(outputRoot, 'docker-formats.log')
   const outputFile = path.join(shadowRoot, 'runtime.json')
   await fs.mkdir(scriptsRoot, { recursive: true })
   await fs.mkdir(shadowRoot, { recursive: true })
@@ -320,9 +321,19 @@ case "$1" in
     esac
     ;;
   inspect)
+    format=
+    previous=
+    for value in "$@"; do
+      if [ "$previous" = --format ]; then format=$value; fi
+      previous=$value
+    done
+    printf '%s\n' "$format" >> ${JSON.stringify(formatLog)}
     last=
     for value in "$@"; do last=$value; done
-    printf '/%s\\timage:%s\\trunning\\thealthy\\t0\\t{}\\n' "$last" "$last"
+    case "$format" in
+      *'|'*) printf '/%s|image:%s|running|healthy|0|{}\\n' "$last" "$last" ;;
+      *) printf '/%s\\\\timage:%s\\\\trunning\\\\thealthy\\\\t0\\\\t{}\\n' "$last" "$last" ;;
+    esac
     ;;
   network)
     case "\${2:-}" in
@@ -350,4 +361,7 @@ esac
   assert.equal(snapshot.strategicIntelligence.networkCount, 0)
   assert.equal(snapshot.strategicIntelligence.publishedPortCount, 0)
   assert.equal((await fs.stat(outputFile)).mode & 0o777, 0o600)
+  const formats = await fs.readFile(formatLog, 'utf8')
+  assert.match(formats, /\|/)
+  assert.doesNotMatch(formats, /\\t/)
 })

@@ -20,13 +20,13 @@ network_rows=$temporary_root/networks.tsv
 : > "$network_rows"
 
 for container_id in $($docker_path ps -q --filter label=com.docker.compose.project=company-ai-foundation); do
-  "$docker_path" inspect --format '{{.Name}}\t{{.Config.Image}}\t{{.State.Status}}\t{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}\t{{.RestartCount}}\t{{json .NetworkSettings.Ports}}' "$container_id" >> "$foundation_rows"
+  "$docker_path" inspect --format '{{.Name}}|{{.Config.Image}}|{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|{{.RestartCount}}|{{json .NetworkSettings.Ports}}' "$container_id" >> "$foundation_rows"
 done
 for container_id in $($docker_path ps -aq --filter label=com.docker.compose.project=company-strategic-intelligence-shadow); do
-  "$docker_path" inspect --format '{{.Name}}\t{{.Config.Image}}\t{{.State.Status}}\t{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}\t{{.RestartCount}}\t{{json .NetworkSettings.Ports}}' "$container_id" >> "$strategic_rows"
+  "$docker_path" inspect --format '{{.Name}}|{{.Config.Image}}|{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|{{.RestartCount}}|{{json .NetworkSettings.Ports}}' "$container_id" >> "$strategic_rows"
 done
 for network_id in $($docker_path network ls -q --filter label=com.docker.compose.project=company-strategic-intelligence-shadow); do
-  "$docker_path" network inspect --format '{{.Name}}\t{{.ID}}' "$network_id" >> "$network_rows"
+  "$docker_path" network inspect --format '{{.Name}}|{{.ID}}' "$network_id" >> "$network_rows"
 done
 LC_ALL=C sort -o "$foundation_rows" "$foundation_rows"
 LC_ALL=C sort -o "$strategic_rows" "$strategic_rows"
@@ -36,7 +36,7 @@ LC_ALL=C sort -o "$network_rows" "$network_rows"
 const fs=require("fs"),crypto=require("crypto");
 const [phase,foundationFile,strategicFile,networkFile,output]=process.argv.slice(1);
 const bytes=(file)=>fs.readFileSync(file);
-const lines=(file)=>fs.readFileSync(file,"utf8").split("\n").filter(Boolean).map((line)=>line.split("\t"));
+const lines=(file)=>fs.readFileSync(file,"utf8").split("\n").filter(Boolean).map((line)=>line.split("|"));
 const hash=(...values)=>crypto.createHash("sha256").update(Buffer.concat(values)).digest("hex");
 const containers=(file)=>lines(file).map(([name,image,status,health,restart,ports])=>({name,image,status,health,restart:Number(restart),ports:JSON.parse(ports||"{}")}));
 const portCount=(rows)=>rows.reduce((total,row)=>total+Object.values(row.ports||{}).reduce((count,bindings)=>count+(Array.isArray(bindings)?bindings.length:0),0),0);
