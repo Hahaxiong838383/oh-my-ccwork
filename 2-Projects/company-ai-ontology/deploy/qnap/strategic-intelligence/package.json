@@ -8,6 +8,9 @@
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "validate": "node scripts/validate-shadow-package.mjs"
+    "validate": "node scripts/validate-shadow-package.mjs",
+    "shadow:compile-seven-day": "node scripts/compile-seven-day-shadow-summary.mjs",
+    "shadow:record-owner-acceptance": "node scripts/record-shadow-owner-acceptance.mjs",
+    "shadow:validate-seven-day": "node scripts/validate-seven-day-shadow-summary.mjs"
   }
 }

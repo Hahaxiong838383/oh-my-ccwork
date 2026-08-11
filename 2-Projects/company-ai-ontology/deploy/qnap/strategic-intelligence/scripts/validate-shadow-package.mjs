@@ -7,6 +7,9 @@ import { fileURLToPath } from 'node:url'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const compose = JSON.parse(await fs.readFile(path.join(root, 'docker-compose.shadow.yml'), 'utf8'))
 const policy = JSON.parse(await fs.readFile(path.join(root, 'config/shadow-policy.json'), 'utf8'))
+const daySchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/shadow-day-evidence.schema.json'), 'utf8'))
+const sevenDaySchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/seven-day-shadow-summary.schema.json'), 'utf8'))
+const packageJson = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'))
 const errors = []
 const allowedServices = new Set(['intelligence-orchestrator', 'intelligence-collector'])
 for (const name of Object.keys(compose.services || {})) {
@@ -33,6 +36,13 @@ if (!collector.profiles?.includes('worker')) errors.push('collector must be an o
 if (!String(collector.image).includes('sha256')) errors.push('collector image variable must require an immutable digest')
 if (policy.publish !== false || policy.deploymentMode !== 'shadow') errors.push('policy must remain shadow publish=false')
 if (policy.requiredConsecutiveNaturalDays !== 7) errors.push('shadow evidence must require seven natural days')
+if (!daySchema.required?.includes('simulated') || daySchema.properties?.simulated?.const !== false) errors.push('day evidence must require simulated=false')
+if (!daySchema.required?.includes('publish') || daySchema.properties?.publish?.const !== false) errors.push('day evidence must require publish=false')
+if (sevenDaySchema.properties?.completedNaturalDays?.const !== 7) errors.push('seven-day summary must require seven completed natural days')
+if (sevenDaySchema.properties?.engineeringVerified?.const !== true) errors.push('seven-day summary must require engineering verification')
+for (const name of ['shadow:compile-seven-day', 'shadow:record-owner-acceptance', 'shadow:validate-seven-day']) {
+  if (!packageJson.scripts?.[name]) errors.push(`missing package script ${name}`)
+}
 for (const key of ['formalP2CountMax', 'employeeDeliveryCountMax', 'erpWritebackCountMax', 'socialWritebackCountMax', 'causalActivationCountMax']) {
   if (policy.acceptanceThresholds[key] !== 0) errors.push(`${key} must remain zero`)
 }

@@ -43,6 +43,38 @@ npm test
 npm run validate
 ```
 
+当前 Shadow 包测试为 `26/26`，其中七日验收负测覆盖：缺日、日期断档、模拟证据、零来源、审计覆盖缺失、业务副作用、Source Commit 漂移、Collector 镜像漂移、Policy 漂移和容器重启。
+
+## 七日 Shadow 验收闭环
+
+每日 Dispatcher 生成的正式证据必须同时包含 `simulated=false / publish=false`，并由 `evaluate-shadow.mjs` 绑定原始 Evidence SHA-256。零来源采集、运行失败、超时、缺少五类审计覆盖、资源指标缺失、业务副作用、新端口或容器重启都会失败关闭。
+
+七个真实自然日结束后，在公司 QNAP 的受控证据目录执行：
+
+```bash
+npm run shadow:compile-seven-day -- "$SI_SHADOW_ROOT/evidence" "$SI_SHADOW_ROOT/evidence/seven-day-shadow-summary.json"
+```
+
+编译器只接受恰好七个连续的上海自然日，并要求七日 Source Commit、Collector 镜像、Policy Version 和 Policy Hash 完全一致。输出只代表 `engineeringVerified=true / ownerAccepted=false`。
+
+川哥完成真实体验验收后，才能使用独立显式确认记录 Owner Acceptance：
+
+```bash
+SHADOW_OWNER_ACCEPTANCE_APPROVED=YES \
+SHADOW_OWNER_PRINCIPAL_REF='company-directory:<owner-principal>' \
+SHADOW_OWNER_ACCEPTANCE_REF='feishu:doc/<acceptance-document>' \
+npm run shadow:record-owner-acceptance -- \
+  "$SI_SHADOW_ROOT/evidence/seven-day-shadow-summary.json" \
+  "$SI_SHADOW_ROOT/evidence" \
+  "$SI_SHADOW_ROOT/evidence/seven-day-shadow-summary.accepted.json"
+
+npm run shadow:validate-seven-day -- \
+  "$SI_SHADOW_ROOT/evidence/seven-day-shadow-summary.accepted.json" \
+  "$SI_SHADOW_ROOT/evidence"
+```
+
+没有 `SHADOW_OWNER_ACCEPTANCE_APPROVED=YES`、验收时间早于第七日完成时间、Evidence/Evaluation 被修改、Hash 漂移或缺少 Owner Acceptance 时，最终验证器必须拒绝。模板、补录文件和测试 fixture 不能作为真实七日证据。
+
 具备容器运行时且 Git 已干净推送后，才能执行：
 
 ```bash
@@ -87,7 +119,7 @@ Artifact：`p1-si-runtime-2974c19eaab1282a0f2dd168ed7056e5a79e6f68`，保留 90 
 - 公司 QNAP 五元组在线复核；
 - 公司 QNAP Compose config、备份和部署前快照；
 - 公司 QNAP Shadow 部署；
-- 七个真实自然日 Shadow。
+- 七个真实自然日 Shadow及川哥最终体验验收。
 
 该 Artifact 生成于 P003 最终审核门禁和 Goal 7 文件化验收门禁加入之前，现在只保留为 Linux/amd64 镜像、SQL Runtime 和可复现打包的历史工程证据，`deploymentEligible=false`。Release Manifest 已升级到 `1.1.0 / P1-SI-F-shadow-candidate-gated`，并强制声明 `p003ReviewGateRequired=true / goal7AcceptanceGateRequired=true`；旧 `1.0.0` Artifact 会被新验证器拒绝。必须在实名审核和 Goal 7 完成后，从当时已推送的最终 Commit 重新生成不可变发布包。
 

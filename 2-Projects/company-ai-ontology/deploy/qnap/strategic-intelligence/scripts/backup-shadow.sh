@@ -13,13 +13,17 @@ case "$backup_root" in /share/CACHEDEV2_DATA/ai-ontology-backup/strategic-intell
 case "$package_root" in "$shadow_root"/package|*/deploy/qnap/strategic-intelligence) ;; *) echo 'refusing unexpected strategic intelligence package root' >&2; exit 1 ;; esac
 [ -f "$env_file" ] || { echo 'shadow env file missing' >&2; exit 1; }
 umask 077
-mkdir -p "$backup_root/config" "$backup_root/state-metadata"
+mkdir -p "$backup_root/config" "$backup_root/state-metadata" "$backup_root/evidence"
 cp "$env_file" "$backup_root/config/.env.shadow"
 tar -C "$package_root" -czf "$backup_root/config/package.tar.gz" \
   docker-compose.shadow.yml config orchestrator scripts schemas evidence package.json README.md
 if [ -d "$shadow_root/state" ]; then
   find "$shadow_root/state" -maxdepth 2 -type f \( -name 'heartbeat.json' -o -name '*.evaluation.json' -o -name 'FROZEN' \) \
     -exec cp {} "$backup_root/state-metadata/" \; 2>/dev/null || true
+fi
+if [ -d "$shadow_root/evidence" ]; then
+  find "$shadow_root/evidence" -maxdepth 1 -type f \( -name 'daily-collection-shadow-*.json' -o -name 'seven-day-shadow-summary*.json' \) \
+    -exec cp {} "$backup_root/evidence/" \; 2>/dev/null || true
 fi
 set -a
 . "$env_file"

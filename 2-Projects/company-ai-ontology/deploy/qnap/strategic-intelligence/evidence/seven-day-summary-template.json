@@ -5,16 +5,28 @@
   "timezone": "Asia/Shanghai",
   "requiredNaturalDays": 7,
   "completedNaturalDays": 0,
+  "simulated": false,
   "publish": false,
-  "dayEvidenceFiles": [],
-  "allThresholdsPassed": false,
-  "formalP2Count": 0,
-  "employeeDeliveryCount": 0,
-  "erpWritebackCount": 0,
-  "socialWritebackCount": 0,
-  "causalActivationCount": 0,
-  "newHostPortCount": 0,
-  "finalContainerRestartCount": null,
+  "runtimeIdentity": null,
+  "dayEvidence": [],
+  "totals": null,
+  "invariants": {
+    "consecutiveNaturalDays": false,
+    "allRunsSucceeded": false,
+    "allEvaluationsPassed": false,
+    "coverageComplete": false,
+    "runtimeIdentityStable": false,
+    "forbiddenSideEffectsZero": false,
+    "noNewHostPorts": false,
+    "containerRestartsZero": false
+  },
   "engineeringVerified": false,
-  "ownerAccepted": false
+  "engineeringEvidenceHash": null,
+  "ownerAcceptance": {
+    "ownerAccepted": false,
+    "acceptedAt": null,
+    "acceptedByPrincipalRef": null,
+    "acceptanceRef": null,
+    "ownerAcceptanceHash": null
+  }
 }

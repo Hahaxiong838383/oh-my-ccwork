@@ -9,13 +9,29 @@
     "requestKey",
     "localDate",
     "timezone",
+    "requestedAt",
+    "recordedAt",
     "policyVersion",
     "policyHash",
+    "simulated",
+    "publish",
     "status",
     "startedAt",
     "completedAt",
     "durationSeconds",
     "exitCode",
+    "timeoutCount",
+    "sourceAttemptCount",
+    "sourceSuccessCount",
+    "rawSnapshotCount",
+    "normalizedItemCount",
+    "duplicateCount",
+    "freshnessP95Seconds",
+    "rawSnapshotBytes",
+    "networkBytes",
+    "peakCpuPermille",
+    "peakMemoryBytes",
+    "reportCostsUsd",
     "security",
     "sideEffects",
     "runtime",
@@ -26,8 +42,12 @@
     "requestKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{4,120}$" },
     "localDate": { "type": "string", "format": "date" },
     "timezone": { "const": "Asia/Shanghai" },
+    "requestedAt": { "type": "string", "format": "date-time" },
+    "recordedAt": { "type": "string", "format": "date-time" },
     "policyVersion": { "type": "string", "minLength": 1 },
     "policyHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "simulated": { "const": false },
+    "publish": { "const": false },
     "status": { "enum": ["succeeded", "failed", "timed_out"] },
     "startedAt": { "type": "string", "format": "date-time" },
     "completedAt": { "type": "string", "format": "date-time" },
@@ -44,10 +64,49 @@
     "networkBytes": { "type": "integer", "minimum": 0 },
     "peakCpuPermille": { "type": "integer", "minimum": 0 },
     "peakMemoryBytes": { "type": "integer", "minimum": 0 },
-    "reportCostsUsd": { "type": "object" },
-    "security": { "type": "object" },
-    "sideEffects": { "type": "object" },
-    "runtime": { "type": "object" },
+    "reportCostsUsd": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["daily", "weekly"],
+      "properties": {
+        "daily": { "type": "number", "minimum": 0 },
+        "weekly": { "type": "number", "minimum": 0 }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unredactedSensitiveOutputCount", "sourceRevocationEffectiveSeconds", "postRevocationNetworkRequestCount", "lastGoodPreserved"],
+      "properties": {
+        "unredactedSensitiveOutputCount": { "type": "integer", "minimum": 0 },
+        "sourceRevocationEffectiveSeconds": { "type": "integer", "minimum": 0 },
+        "postRevocationNetworkRequestCount": { "type": "integer", "minimum": 0 },
+        "lastGoodPreserved": { "const": true }
+      }
+    },
+    "sideEffects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formalP2Count", "employeeDeliveryCount", "erpWritebackCount", "socialWritebackCount", "causalActivationCount"],
+      "properties": {
+        "formalP2Count": { "const": 0 },
+        "employeeDeliveryCount": { "const": 0 },
+        "erpWritebackCount": { "const": 0 },
+        "socialWritebackCount": { "const": 0 },
+        "causalActivationCount": { "const": 0 }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["collectorImage", "sourceCommit", "containerRestartCount", "newHostPortCount"],
+      "properties": {
+        "collectorImage": { "type": "string", "pattern": "(^sha256:[0-9a-f]{64}$)|(@sha256:[0-9a-f]{64}$)" },
+        "sourceCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "containerRestartCount": { "const": 0 },
+        "newHostPortCount": { "const": 0 }
+      }
+    },
     "coverage": {
       "type": "object",
       "required": [
@@ -63,7 +122,8 @@
         "sensitiveOutputAuditCompleted": { "type": "boolean" },
         "sourceRevocationAuditCompleted": { "type": "boolean" },
         "businessSideEffectAuditCompleted": { "type": "boolean" }
-      }
+      },
+      "additionalProperties": false
     }
   }
 }

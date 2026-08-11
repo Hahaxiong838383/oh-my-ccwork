@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/strategic-intelligence-seven-day-shadow-summary-v1.json",
+  "title": "Strategic Intelligence Seven Day Shadow Summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "summaryVersion",
+    "shadowStartDate",
+    "shadowEndDate",
+    "timezone",
+    "requiredNaturalDays",
+    "completedNaturalDays",
+    "simulated",
+    "publish",
+    "runtimeIdentity",
+    "dayEvidence",
+    "totals",
+    "invariants",
+    "engineeringVerified",
+    "engineeringEvidenceHash",
+    "ownerAcceptance"
+  ],
+  "properties": {
+    "summaryVersion": { "const": "1.0.0" },
+    "shadowStartDate": { "type": "string", "format": "date" },
+    "shadowEndDate": { "type": "string", "format": "date" },
+    "timezone": { "const": "Asia/Shanghai" },
+    "requiredNaturalDays": { "const": 7 },
+    "completedNaturalDays": { "const": 7 },
+    "simulated": { "const": false },
+    "publish": { "const": false },
+    "runtimeIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceCommit", "collectorImage", "policyVersion", "policyHash"],
+      "properties": {
+        "sourceCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "collectorImage": { "type": "string", "pattern": "(^sha256:[0-9a-f]{64}$)|(@sha256:[0-9a-f]{64}$)" },
+        "policyVersion": { "type": "string", "minLength": 1 },
+        "policyHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "dayEvidence": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dayNumber", "localDate", "requestKey", "recordedAt", "evidenceFile", "evidenceHash", "evaluationFile", "evaluationHash"],
+        "properties": {
+          "dayNumber": { "type": "integer", "minimum": 1, "maximum": 7 },
+          "localDate": { "type": "string", "format": "date" },
+          "requestKey": { "type": "string", "pattern": "^daily-collection-shadow-\\d{4}-\\d{2}-\\d{2}$" },
+          "recordedAt": { "type": "string", "format": "date-time" },
+          "evidenceFile": { "type": "string", "pattern": "^daily-collection-shadow-\\d{4}-\\d{2}-\\d{2}\\.json$" },
+          "evidenceHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "evaluationFile": { "type": "string", "pattern": "^daily-collection-shadow-\\d{4}-\\d{2}-\\d{2}\\.json\\.evaluation\\.json$" },
+          "evaluationHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "totals": { "type": "object" },
+    "invariants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "consecutiveNaturalDays",
+        "allRunsSucceeded",
+        "allEvaluationsPassed",
+        "coverageComplete",
+        "runtimeIdentityStable",
+        "forbiddenSideEffectsZero",
+        "noNewHostPorts",
+        "containerRestartsZero"
+      ],
+      "properties": {
+        "consecutiveNaturalDays": { "const": true },
+        "allRunsSucceeded": { "const": true },
+        "allEvaluationsPassed": { "const": true },
+        "coverageComplete": { "const": true },
+        "runtimeIdentityStable": { "const": true },
+        "forbiddenSideEffectsZero": { "const": true },
+        "noNewHostPorts": { "const": true },
+        "containerRestartsZero": { "const": true }
+      }
+    },
+    "engineeringVerified": { "const": true },
+    "engineeringEvidenceHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "ownerAcceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ownerAccepted", "acceptedAt", "acceptedByPrincipalRef", "acceptanceRef", "ownerAcceptanceHash"],
+      "properties": {
+        "ownerAccepted": { "type": "boolean" },
+        "acceptedAt": { "type": ["string", "null"], "format": "date-time" },
+        "acceptedByPrincipalRef": { "type": ["string", "null"] },
+        "acceptanceRef": { "type": ["string", "null"] },
+        "ownerAcceptanceHash": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

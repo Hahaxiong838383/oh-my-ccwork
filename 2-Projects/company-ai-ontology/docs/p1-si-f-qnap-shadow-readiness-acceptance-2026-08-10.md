@@ -118,10 +118,28 @@ Dispatcher 会从 Collector 产物和 Docker Stats 自动提取来源数、成�
 - 单日模板；
 - 七日汇总模板；
 - 七个真实自然日证据文件生成器；
-- 阈值评估器；
+- 单日阈值评估器，并将 Evaluation 绑定到原始 Evidence SHA-256；
+- 七日工程汇总编译器；
+- 七日最终验收 JSON Schema；
+- 显式 Owner Acceptance 记录器；
+- 七日最终验收验证器；
 - Critical Freeze 和预授权回滚入口。
 
-生成器只创建 `pending_real_run / simulated=false` 模板，不能把模板或补录数据当成七日运行证据。
+单日评估现在要求 `sourceAttemptCount > 0`；零来源、运行失败、超时、五类审计覆盖不完整、资源指标缺失、敏感输出、撤权失败、业务副作用、新端口和容器重启均不能通过。
+
+七日编译器要求：
+
+1. 恰好七个真实 Evidence 文件；
+2. 上海时区自然日连续且无断档；
+3. 每日 `simulated=false / publish=false / status=succeeded`；
+4. 每日 Evaluation 为 `ok=true / violations=[]` 且 Evidence Hash 一致；
+5. 七日 Source Commit、Collector 镜像、Policy Version 和 Policy Hash 不漂移；
+6. 正式 P2、员工投递、ERP/社媒写回、因果激活、新端口和容器重启总数全部为 0；
+7. 输出先固定为 `engineeringVerified=true / ownerAccepted=false`。
+
+Owner Acceptance 必须在第七日完成以后，由 `SHADOW_OWNER_ACCEPTANCE_APPROVED=YES` 配合 Owner Principal 和验收引用显式记录。最终验证器会重新读取七日 Evidence 和 Evaluation，重新计算工程证据 Hash，再校验 Owner Acceptance Hash；修改任一日证据都会让既有验收失效。
+
+生成器只创建 `pending_real_run / simulated=false` 模板，不能把模板、测试 fixture 或补录数据当成七日运行证据。
 
 ## 7. Collector 许可留存修复
 
@@ -138,7 +156,7 @@ Collector 测试由 `6/6` 增至 `7/7`，覆盖 metadata-only 不留正文、str
 
 ## 8. 本地证据
 
-- Shadow 包测试：`10/10`；
+- Shadow 包测试：`26/26`；
 - Shadow 静态验证：通过；
 - Collector 测试：`7/7`；
 - Ontology Contract 测试：`52/52`；
@@ -174,6 +192,8 @@ Collector 测试由 `6/6` 增至 `7/7`，覆盖 metadata-only 不留正文、str
 - 未连接公司 QNAP；
 - 未部署 Orchestrator 或 Collector；
 - 未开始七日 Shadow；
+- 未形成七日 `engineeringVerified=true` 证据；
+- 未取得七日 Shadow 的川哥 `ownerAccepted=true` 体验验收；
 - 未执行真实 Freeze 或回滚。
 
 因此 P1-SI-F 当前是“部署准备工程候选与 Linux/amd64 Runtime 预验证已完成，公司 QNAP 发布和真实 Shadow 尚未开始”，不能标记为生产完成。
