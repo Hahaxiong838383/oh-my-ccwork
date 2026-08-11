@@ -253,3 +253,13 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 
 **「只说一句/内容缺失」诊断遥测**(常驻,2026-08-03):三行日志一次定层——
 `journalctl grep "llm stream done"`(上游给了多少字)+`grep "xfyun tts synthesize"`(每句进合成的文本,数行数=句数)+录音有效时长。三层对齐=己方无罪(实战:上游只给 15 字,全部念完,责任面一次切清);llm chars 大而 tts 一段=切句层;tts 多段而听到一句=播放/打断层(配 interrupt telemetry interim 判)。
+
+**「TTS 彻底无声/合成不产出」排障(2026-08-11 实案:讯飞 11200 授权额度)**:
+- 症状全家福:`/v1/tts` 缓存句正常、新句 **HTTP 200 + 0 字节**;prewarm accepted 但永不入缓存;healthz 恒绿;worker 侧欢迎语/回复全不出声。→ 第一站看**上游原始错误**:`journalctl -u voice-console | grep -iE "error|讯飞"` / worker 同理——本案 `code=11200 LiccCheck failed, err: licc limit` = **讯飞账号授权额度耗尽/到期**(总量型:全天仅 5 次请求也被拒,排除按天限额),不是服务坏。修复=处理讯飞账号(充值/换 key),不是修服务器。
+- 判读纪律:①`xfyun tts synthesize` 行是**发起**不是成功,发起后 0.3s 内跟 RuntimeError=每次都被上游拒;②裸 grep "11200" 会假阳性命中 metrics 行里的数字,用 `code=11200`;③console+租户 worker **共用租户凭据**,双路径同爆=凭据/账号层实锤;④主 worker `TTS_PROVIDER=volc` 无讯飞流量,不能当讯飞对照组(阴性二义)。
+- **已知欠账(待川哥拍板)**:`/v1/tts` StreamingResponse 先发 200 头,首 chunk 前失败=200 空体,把上游拒绝伪装成成功(修法:首 chunk 到手再开流,或转 502);healthz 不覆盖合成能力,11200 连爆 5 天无告警。见 [[feedback_hollow_200_needs_payload_check]] 生产者侧变体。
+- 对外接报障结论时:对方黑盒探针的**观察**(200 空体/时序)照单收下当复现入口,**越界归因**("你们引擎坏了")一律重验——黑盒上限=定位到边界。见 [[feedback_cross_boundary_attribution_split]]。
+
+**火山大模型 TTS v1 HTTP 接口(2026-08-11 已验参数,给外部接入直接抄)**:
+`POST https://openspeech.bytedance.com/api/v1/tts`,鉴权 `Authorization: Bearer;{token}`(**分号**),body 四段 `app{appid,token,cluster:"volcano_tts"}/user{uid}/audio{voice_type,encoding:"mp3",speed_ratio}/request{reqid:每次新uuid,text,operation:"query"}`;响应 JSON,**成功=HTTP200 且 code==3000 且 data(base64 音频)非空**。已实测音色(APP 7699738941,凭据指针=64.90 `.env` VOLC_ACCESS_TOKEN):`zh_male_lengkugege_emo_v2_mars_bigtts`(主worker生产男声)/`zh_female_tianmeixiaoyuan_moon_bigtts`(MyJavis 甜美小媛女声,47.239 `/opt/myjavis/.env` VOLC_TTS_VOICE 生效值)。首包 ~334ms。
+- **子贤侧已切火山(2026-08-11)**:讯飞额度死后,川哥把自己火山凭据+甜美小媛音色整理成接入文档给子贤直连火山(文档=川哥桌面`火山TTS接入文档-子贤.md`,含明文 token 勿入仓);租户线 worker 的 `TTS_PROVIDER=xfyun` 未动——同事讯飞账号恢复前,**租户 worker 对话链路仍是坏的**,只有子贤 demo 的 TTS-only 路径切走了。
