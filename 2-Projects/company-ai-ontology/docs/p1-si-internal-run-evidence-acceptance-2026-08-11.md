@@ -1,5 +1,9 @@
 # P1-SI 首次内部运行 Evidence 工程验收
 
+状态：`SUPERSEDED_FOR_QNAP_UPDATE`
+
+本文记录 Artifact `9096846710` 的历史工程证据。真实公司 QNAP 暂存预演随后发现运行态采集分隔符兼容问题，该 Artifact 已在替换旧 Runtime 前失败关闭并拒绝部署。当前更新候选为 Commit `70bd73544`、Workflow `31506896848`、Artifact `9107441466`；新的更新授权不得从旧 Artifact 继承。
+
 ## 结论
 
 首次内部一次性采集的机器验收链已完成工程实现并形成不可变 Runtime Artifact，但尚未部署到公司 QNAP，也未执行真实首次采集。
@@ -39,7 +43,7 @@
 
 ## 下一门禁
 
-1. 单独授权将 Artifact `9096846710` 更新到公司 QNAP 内部 Runtime；
+1. 禁止继续部署 Artifact `9096846710`；单独授权将当前 Artifact `9107441466` 更新到公司 QNAP 内部 Runtime；
 2. 更新后重新核对公司 QNAP 五元组、Foundation 指纹、Compose config 和内部 Readiness；
 3. 再单独授权执行首次内部一次性采集；
 4. 根据机器 Evidence 决定是否进入 1～3 天管理员内部排错。

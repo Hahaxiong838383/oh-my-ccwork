@@ -358,3 +358,7 @@ Foundation 只统计长期运行服务；正常完成的 `foundation-init exited
 ### 71. 工程完成、人审完成、Runtime 更新和生产完成必须四态分离
 
 P1-SI-B～G 的契约和测试通过可以标记 `engineering_verified`；来源/P003 最终决定、四角色 UAT 和 Goal 7 尚未完成时仍是 `human_review_pending`；新 Artifact 未进入 QNAP 时是 `runtime_update_pending`；七个真实自然日 Shadow 和 Owner Acceptance 未完成时必须保持 `production_blocked`。任何单一绿色状态都不能覆盖另外三个状态。
+
+### 72. Docker Go Template 转义不能靠本地替身猜测
+
+本地 fake Docker 直接输出真实制表符，掩盖了 QNAP Container Station 会把模板字符串中的 `\t` 原样输出这一差异，导致真实暂存预演把 13 个健康 Foundation 服务全部解析成异常且 restart 变为 `null`。修复方式是改用稳定分隔符，并让测试替身读取和记录调用方传入的 `--format` 参数；不可变 Artifact 在进入现有 Runtime 前必须至少跑一次目标 QNAP 的真实格式输出预演。

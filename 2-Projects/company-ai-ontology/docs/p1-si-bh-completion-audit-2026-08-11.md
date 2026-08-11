@@ -18,7 +18,7 @@ P1-SI-B～G 的机器契约、候选数据模型、Collector、报告、P003 审
 - 公司 QNAP 已用固定 PostgreSQL 17 digest、`network=none` 临时容器和一次性 Volume 真实验证 010/011、19/19 强制 RLS、Domain 持久化、二次幂等、ACL fail-closed 和 baseline restore；Foundation 前后指纹一致、restart 0，临时资源已清零。
 - 最终完成证据改为由部署前/七日后运行快照、不可变发布包、审批原件和七日原始证据自动编译，拒绝人工填写 Hash、active Ontology 漂移和缺失 010/011。
 
-当前采用双轨：公司 QNAP 上仍是 Commit `a7aeae25e` 的旧 `internal_engineering_shadow` Runtime；Commit `c0d9ce92f` 的新 Runtime 已形成不可变 Artifact，但尚未获得内部 Runtime 更新授权，也未运行 Collector。`production_shadow` 仍不能关闭 Goal，8 个来源最终审批、36 条 P003 最终审核、四名成员真实权限 UAT、Goal 7 Owner Acceptance、正式生产发布包、公司 QNAP 正式 Shadow 部署和连续七个上海自然日运行均未完成。
+当前采用双轨：公司 QNAP 上仍是 Commit `a7aeae25e` 的旧 `internal_engineering_shadow` Runtime；Artifact `9096846710` 在真实 QNAP 暂存预演中因 Docker 输出分隔符不兼容被拒绝，未替换旧 Runtime。修复后的 Commit `70bd73544` 已形成新不可变 Artifact `9107441466` 并通过真实 QNAP 暂存验证，但尚未获得新 Artifact 的内部 Runtime 更新授权，也未运行 Collector。`production_shadow` 仍不能关闭 Goal，8 个来源最终审批、36 条 P003 最终审核、四名成员真实权限 UAT、Goal 7 Owner Acceptance、正式生产发布包、公司 QNAP 正式 Shadow 部署和连续七个上海自然日运行均未完成。
 
 内部模式不会把任何 `pending` 改写为正式批准：候选 Registry 的 8 个来源继续 `paused / license pending / compliance pending`，Collector 只通过独立的 `INTERNAL_ENGINEERING_PROVISIONAL_ALLOW` 决策读取 3 个安全样例来源，并明确记录 `productionApprovalSatisfied=false / countsTowardProductionShadow=false`。
 
@@ -28,7 +28,7 @@ P1-SI-B～G 的机器契约、候选数据模型、Collector、报告、P003 审
 |---|---|---|---|
 | P1-SI-B Source Registry | 3.5.0 contract-only；8 个来源；未登记、暂停、撤销、许可过期和未批准均在网络前失败关闭；CSV 强类型人工审核闭环 | 工程完成，人审未完成 | 8/8 仍为 `pending`，来源继续 `paused` |
 | P1-SI-C 公司雷达 | 独立 namespace、oneshot Worker、去重、retention、last-good、失败不覆盖、固定复用锁；Collector `9/9`；新增内部 provisional policy | 工程发布候选已重建 | 无最终批准来源；正式部署前仍需从全部人审完成后的最终 Commit 重建 |
-| P1-SI-D 数据底座 | 3.6.0、Postgres 真源、双时间、append-only Raw、幂等/重放、RLS/ACL、010/011 候选迁移；Run `31480010967` 已验证 19/19 RLS、Domain 持久化、幂等、ACL 和 baseline restore | 工程 Runtime 已验证，生产未迁移 | 正式数据库迁移仍等待 Goal 7、人审和独立迁移授权 |
+| P1-SI-D 数据底座 | 3.6.0、Postgres 真源、双时间、append-only Raw、幂等/重放、RLS/ACL、010/011 候选迁移；Run `31506896848` 已验证 19/19 RLS、Domain 持久化、幂等、ACL 和 baseline restore | 工程 Runtime 已验证，生产未迁移 | 正式数据库迁移仍等待 Goal 7、人审和独立迁移授权 |
 | P1-SI-E 多周期报告 | 9 类报告、非递归输入、ReportRun 完整谱系、飞书/H 只读投影；模型失败机器与 SQL 负测 | 工程完成，真实报告未运行 | Shadow 前不调用真实模型、不发布报告 |
 | P1-SI-F Shadow 准备 | 资源限制、无宿主端口、无 Docker Socket、备份/Freeze/回滚、首次运行 Evidence、七日证据链、生产七项 readiness、内部独立 readiness、完整部署脚本演练、统一 QNAP Node Runtime、两阶段运行快照和最终 Goal Completion 八项门禁；`76/76` | 双模式工程完成，新 Artifact 已验证但未更新到 QNAP | 当前 Artifact 未包含最终人审批准，不能作为生产批准 |
 | P1-SI-G P003 审核 | 从 4644 条中筛选 36 条，六类各 6 条；工作台、结构化 Principal、四职能角色和脱敏进度检查器 | 工程完成，人审未完成 | 36/36 `pending / inactive`；供应链及若干专业角色仍缺口 |
@@ -40,7 +40,7 @@ P1-SI-B～G 的机器契约、候选数据模型、Collector、报告、P003 审
 |---|---|---|
 | `engineering_verified` | `true` | Contracts `61/61`、Collector `9/9`、Strategic Intelligence `76/76`、发布包 Hash 与隔离 SQL Runtime 全部通过 |
 | `human_review_pending` | `true` | 飞书实时回拉：来源最终决定 `0/8`；P003 最终决定 `0/36`，全部保持 `pending / inactive` |
-| `runtime_update_pending` | `true` | QNAP 当前内部 Runtime 仍为 `a7aeae25e`；目标 Artifact `9096846710` 尚未更新，且当前配置缺少新 Node Runtime Image 绑定 |
+| `runtime_update_pending` | `true` | QNAP 当前内部 Runtime 仍为 `a7aeae25e`；旧 Artifact `9096846710` 已拒绝，目标 Artifact `9107441466` 尚未获得新授权，且当前配置缺少新 Node Runtime Image 绑定 |
 | `production_blocked` | `true` | Deployment Readiness `0/7`，要求继续等待 Goal 7、审批原件和当次明确部署授权 |
 | `owner_accepted` | `false` | 四角色 UAT、Goal 7 Owner Acceptance 和七日 Shadow Owner Acceptance 均不存在 |
 | `goal_complete` | `false` | Goal Completion `0/8`，要求继续等待生产 Shadow 与 Owner Acceptance |
@@ -63,7 +63,7 @@ P1-SI-B～G 的机器契约、候选数据模型、Collector、报告、P003 审
 - Ontology Contracts：`61/61`；
 - Intelligence Collector：`9/9`；
 - Shadow / Readiness / Goal Completion：`76/76`；
-- 当前工程不可变发布：Commit `c0d9ce92fb94d09b2c46ae1e019c166da8b32468`、Workflow Run `31480010967`、Artifact `9096846710`、Collector Image `sha256:9f7d03ba5eca8e1ca1654e17272099cc0bfdebdd07bc303ed04faec7d8b1776a`，下载后 `SHA256SUMS` 全部通过；
+- 当前工程不可变发布：Commit `70bd73544fb29ca1b7ed1e2469353ce6ada1bb1f`、Workflow Run `31506896848`、Artifact `9107441466`、Collector Image `sha256:500d2201a2ebc0c68af5ce941f7410057233c94fe6886dfd33cdd4a0c76100dc`，下载后 `SHA256SUMS` 全部通过；
 - 公司 QNAP 隔离 Runtime：010/011、表 `19`、强制 RLS `19/19`、Domain Persistence、二次幂等、ACL fail-closed、baseline restore 全部 verified；
 - 公司 QNAP 在线复核：active Schema `3.3.0`、active Hash `41689393289d9514d1ed9cd22455a164f1bc59286f0db16deb9235e703e6ae77`、Registry `in_sync`；13 个长期运行 Foundation 服务异常 0、restart 0，运行服务指纹 `29a2dfb752d66dbd7c721815cb78d6c02d3fa0e26cddaf98b9fe77a5e9b153`；`foundation-init exited(0)` 是正常一次性任务；
 - 临时 QNAP 目录完整部署演练证明安装后的项目依赖、Runtime Validator、非 root UID/GID 和 0600 配置权限有效，且 Docker 调用仅为 `load / image inspect / compose config`；
@@ -84,7 +84,7 @@ P1-SI-B～G 的机器契约、候选数据模型、Collector、报告、P003 审
 
 ## 7. 当前内部验证顺序
 
-1. 获得“更新 Artifact `9096846710` 到公司 QNAP 内部 Runtime”的独立授权；更新动作不得运行 Collector、迁移数据库或重启 Foundation；
+1. 获得“更新 Artifact `9107441466` 到公司 QNAP 内部 Runtime”的独立授权；Artifact `9096846710` 的旧授权不继承，更新动作不得运行 Collector、迁移数据库或重启 Foundation；
 2. 更新完成并核对新 Runtime、0600 配置、备份归档、SHA-256、Foundation 指纹和零战略情报运行资源；
 3. 再单独获得首次 `internal_engineering_shadow` 一次性采集授权；
 4. 运行 3 个公开来源的一次性 Worker，验证每来源最多 20 条、正文保存 0、`PUBLISH=false` 和全部业务副作用为 0；
