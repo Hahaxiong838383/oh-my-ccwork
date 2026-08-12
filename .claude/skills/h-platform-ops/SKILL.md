@@ -5958,6 +5958,33 @@ H-0094 开闸次日晨检发现的**存量第二 bug**：每条 daily 只有第�
   （时间戳/序号）被切掉后，「不同请求」在键空间里合并成同一个，重放层把它显形为
   「第一天正常之后永远冻结」。
 
+### 🔴 三连：租户 403 额度耗尽→死会话→自愈失效（2026-08-12 下午 · 诊断已实锤，修复候选 task #64 待批）
+
+用户可见现象：连发消息全收「会话仍在收尾，平台自动切换新会话时未能完成」失败卡
+（`lib/task-failure.mjs:25` session_conflict 文案）。根因**两层**，都不是文案说的那回事：
+
+- **源头（用户侧）**：租户 BYOS grok 订阅额度耗尽——runner-worker journal
+  `grok exit 1: API error (status 403 Forbidden): personal-team-blocked:spending-limit`。
+  处置=转达用户去订阅方充值/升级，平台配置勿动、不用重绑。平台当前对额度耗尽**零兜底**
+  （潜在需求已登记 H-0097：接入 CPA 做额度分配）。
+- **放大器（平台真 bug，截断族第三例）**：403 崩溃的 grok 进程不清理
+  `<userRoot>/.grok/active_sessions.json` 登记 → 会话 id 变死锁；平台本有冲突自愈
+  （`lib/grok-runner.mjs:674` mintNewSession），但 once() 构造错误只取
+  `stderr.slice(-1000)`——grok 长 JSON 报错（`Internal error: {…usage 字段…}`）把
+  `"message"` 里的 `already in use`/403 关键词**挤出窗口** → `isSessionConflictError`
+  恒 false → 永不 mint；第二跳 `-s` 同 id 报**短文本**错误 throw 给 bridge，文案层反而
+  匹配到 conflict——**用户看到的文案来自最后一跳，根因藏在第一跳**。
+
+排查口诀：
+1. 「会话仍在收尾」连发 → 先数 runner-worker journal `session mint`（无截断 `grep -c`）：
+   **=0 是自愈没触发**（分类漏），≠0 才是自愈失败——两者修法完全不同。
+2. 同一 sid 反复出现在 `grok start`+`resume fail` = sticky 指针没轮换，配合零 mint 实锤。
+3. `resume fail` 行开头是 `Internal error: {` = 长 JSON 错误，分类必漏（尾部只剩
+   costUsdTicks/durationMs 碎片）；13:54 三条 handle error 各显示不同 JSON 片段就是这形态。
+4. 死锁自解：占锁进程全退光后 active_sessions.json 自清为 `[]`；确认后无需人工清理。
+5. 隐私纪律（HR/绩效类用户）：只读机制层（错误码/耗时/sid/计数），不读正文；journal 出现
+   `privacy gate blocked`/`quarantine hit=绩效` 是隐私门在正常工作，非故障。
+
 ### Mini 两段式 VM 升级（第二次实测，~15 分钟全程）
 
 `deploy-sites.sh mini` 只能体检。升级四步（preflight 硬拒 VM-active，无捷径）：
