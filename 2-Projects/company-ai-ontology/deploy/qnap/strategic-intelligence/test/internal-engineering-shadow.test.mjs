@@ -258,7 +258,7 @@ test('internal deployment prepares a complete runtime without starting container
     fs.readFile(imageArchive),
   ])
   await fs.writeFile(path.join(releaseRoot, 'release-manifest.json'), JSON.stringify({
-    manifestVersion: '1.3.0',
+    manifestVersion: '1.4.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-11T00:00:00Z',
     sourceCommit,
@@ -280,6 +280,8 @@ test('internal deployment prepares a complete runtime without starting container
     p003ReviewGateRequired: true,
     reviewerRoleAccessGateRequired: true,
     goal7AcceptanceGateRequired: true,
+    goal7Migration012Mode: 'pre_existing_reconciliation_only',
+    goal7Migration012SqlReplayAllowed: false,
   }))
 
   await fs.writeFile(fakeDocker, `#!/bin/sh

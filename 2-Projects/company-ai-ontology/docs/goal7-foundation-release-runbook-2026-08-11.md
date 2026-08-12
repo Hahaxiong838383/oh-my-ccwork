@@ -6,9 +6,9 @@
 
 ## 1. 结论
 
-Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动恢复和验收清单已经完成工程准备，但当前没有生产执行资格。本运行手册不构成部署、迁移、服务切换或回滚授权。
+Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动恢复和验收清单已经完成工程准备，但当前没有可部署 Artifact，也没有生产执行资格。本运行手册不构成部署、数据库 SQL、服务切换或回滚授权。
 
-Artifact `9142197870` 没有把发布准备、012 迁移与三组件服务切换完全拆成独立授权阶段，现仅保留历史工程证据，禁止部署。当前唯一可申请授权的候选为 Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628`，精确绑定：
+Artifact `9142197870` 没有把发布准备、012 与三组件服务切换完全拆成独立授权阶段，现仅保留历史工程证据，禁止部署。Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628` 虽曾通过 Manifest `1.3.0` 工程验证，但 B 阶段仍允许再次执行已落库的 012 SQL，现同样降级为历史工程证据，禁止部署。当前没有可申请授权的候选；必须从新 Commit 生成 Manifest `1.4.0` Artifact。
 
 - Ontology Commit `b504f1295bf98b018479556c06e1072516966562`；
 - H-Lite Commit `fab8be3f1467289400d0d63ffe378b63ad1a6957`；
@@ -17,16 +17,16 @@ Artifact `9142197870` 没有把发布准备、012 迁移与三组件服务切换
 - H-Lite `2026-08-12.1`；
 - Collector Image `sha256:59eadd7a3b95caa2a7a09604abb981b18f4ce8ec730408efd5f7d0f4efdfe39d`、Manifest `1.3.0` 和完整 8 项 `SHA256SUMS`。
 
-8 项校验和、Release Validator、Goal 7 Foundation 与 PostgreSQL Runtime Evidence 已通过。任何字段变化都需要重新生成预检与授权卡；当前候选仍明确 `companyQnapDeployed=false / productionDeploymentAuthorized=false / publish=false`，本运行手册不自动授予执行资格。
+上述 8 项校验和、Release Validator、Goal 7 Foundation 与 PostgreSQL Runtime Evidence 只保留为历史工程证据，不再构成发布资格。新 Manifest 必须固定 `goal7Migration012Mode=pre_existing_reconciliation_only / goal7Migration012SqlReplayAllowed=false`。任何字段变化都需要重新生成预检与授权卡。
 
-`2026-08-12 22:48 CST` 已经公网 Mini 跳板完成公司 QNAP 纯只读生产预检：五元组一致、Foundation `13/13 running / unhealthy=0 / restart=0`、active Schema `3.3.0 / in_sync`、唯一宿主绑定仍为 `192.168.61.18:19080`；战略情报 Schema、表、容器和网络均为 `0`，五类业务副作用均为 `0`，Artifact `9145915628` 尚未进入 QNAP。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-readonly-preflight-2026-08-12.json`。本次未写入 QNAP、未迁移、未运行 Collector、未重启服务、未执行回滚。
+`2026-08-12 22:48 CST` 已经公网 Mini 跳板完成公司 QNAP 纯只读生产预检：五元组一致、Foundation `13/13 running / unhealthy=0 / restart=0`、active Schema `3.3.0 / in_sync`、唯一宿主绑定仍为 `192.168.61.18:19080`；`strategic_intelligence` Schema、表、容器和网络均为 `0`，五类业务副作用均为 `0`，Artifact `9145915628` 尚未进入 QNAP。后续溯源确认 Goal 7 四张 Authority/Runtime 表已由历史 Workflow `31555822727` 在约 `10:13 CST` 落库；原始 B 阶段 Evidence 缺失。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/goal7-migration-012-provenance-2026-08-12.json`。本轮未写入 QNAP、未执行 SQL、未运行 Collector、未重启服务、未执行回滚。
 
 同轮容量与回滚输入预检确认：QNAP/Docker 为 `x86_64`，与 Artifact `linux/amd64` 兼容；可用内存约 `11.1 GiB`，热卷可用约 `604.7 GiB`，备份卷可用约 `7.1 TiB`；三组件当前镜像均可读，合计约 `882 MiB`，Foundation Compose 校验通过。候选 Runtime 三个部署归档合计约 `56.5 MiB`，尚未传入 QNAP，避免在授权前产生写入。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-capacity-rollback-preflight-2026-08-12.json`。
 
-正式执行与验收前必须分别取得五项明确授权：
+新 Artifact 生成并重新签发授权卡后，正式执行与验收前必须分别取得五项明确授权：
 
 1. Foundation 发布准备授权：`GOAL7_DEPLOY_APPROVED=YES`，只允许 Artifact 入场、备份和候选镜像构建；
-2. 012 候选迁移授权：`GOAL7_MIGRATION_012_APPROVED=YES`；
+2. 既有 012 对账授权：`GOAL7_MIGRATION_012_RECONCILIATION_APPROVED=YES`，只允许只读验证和写入脱敏 Evidence，必须输出 `database_sql_executed=0`；
 3. Agent Core、Knowledge Connector、H-Lite 服务重建授权：`GOAL7_SERVICE_RECREATION_APPROVED=YES`；
 4. 真实回滚演练授权：`GOAL7_ROLLBACK_APPROVED=YES`，不得从前三项继承。
 5. 真实 H Worker 双源读回授权：`GOAL7_WORKER_READBACK_APPROVED=YES`，只允许一次固定合成请求和同 request 的 usage ledger 读取，不得从发布授权继承。
@@ -62,7 +62,7 @@ Artifact `9142197870` 没有把发布准备、012 迁移与三组件服务切换
 1. `agent-core`；
 2. `knowledge-connector`；
 3. `h-lite`；
-4. additive migration `012-goal7-authority-runtime.sql`。
+4. 已存在的 012 四表只读证据对账；不得再次执行 SQL。
 
 必须保持不重启、不重建：
 
@@ -82,7 +82,7 @@ Artifact `9142197870` 没有把发布准备、012 迁移与三组件服务切换
 2. 验证 Runtime Artifact 全量 `SHA256SUMS`、六项内部 Hash、Release Manifest 和获批双仓 Commit；
 3. 捕获部署前 active Schema、Registry、三个服务版本/Commit、13 个 Foundation 服务、端口、restart count 和指纹；
 4. 备份 `.env`、Compose 和三个当前镜像；
-5. 应用 additive 012；
+5. 对历史 Source Archive、固定 SQL Hash、现有四表、RLS、Tenant Policy 和 `ontology_app` 权限做只读对账并生成 Evidence；
 6. 构建三个候选镜像，旧服务继续运行；
 7. 等待旧 H-Lite 至少 30 秒无飞书入站/出站且 Agent Core admission 空闲；
 8. 先切换具备 SQLite 恢复能力的 H-Lite，验证飞书订阅、版本和双仓 Commit；
@@ -138,7 +138,7 @@ Artifact `9142197870` 没有把发布准备、012 迁移与三组件服务切换
 
 本流程覆盖优雅发布、正常容器停止和飞书发送失败。宿主断电、`SIGKILL` 或 WorkCase 半程强杀后的阶段恢复未在 Goal 7 解决，继续留给 Goal 8 lease/fencing；禁止简单按幂等 TTL 从头重跑。
 
-012 是 additive migration。自动恢复和显式服务回滚均保留 012，不自动执行 `DROP TABLE` 或 `DROP SCHEMA`；如未来需要数据库逆向恢复，必须使用独立备份、独立方案和独立授权。
+012 是已落库的 additive migration。新流程禁止 SQL replay；自动恢复和显式服务回滚均保留 012，不执行 `DROP TABLE` 或 `DROP SCHEMA`。如未来需要数据库逆向恢复，必须使用独立备份、独立方案和独立授权。
 
 ## 7. 当前关闭门禁
 
@@ -148,11 +148,11 @@ Artifact `9142197870` 没有把发布准备、012 迁移与三组件服务切换
 | P003 最终决定 | `0/36` |
 | 四角色真实 UAT | `0/4` |
 | Goal 7 Owner Acceptance | `未完成` |
-| Production Readiness | `1/7`，仅不可变 Release 通过 |
+| Production Readiness | `0/7`，旧不可变 Release 已失效 |
 | 七日 Production Shadow | `0/7` |
-| Goal Completion | `1/8`，仅不可变 Release 通过 |
+| Goal Completion | `0/8`，旧不可变 Release 已失效 |
 
-因此当前工程准备、不可变 Runtime、容量和公司 QNAP 只读预检已经完成；没有对应单项授权时，不允许上传 Artifact、执行发布准备、Worker 读回、迁移、服务重建或真实回滚动作。A、B、C 三阶段必须按顺序逐项验证前序 Evidence Hash，不能用一次授权贯穿全部动作。
+因此当前工程准备、容量和公司 QNAP 只读预检已经完成，但没有可部署 Artifact。新 Artifact 生成前不允许申请 A～E；生成后仍必须按阶段逐项验证前序 Evidence Hash，不能用一次授权贯穿全部动作。
 
 机器契约：`deploy/qnap/strategic-intelligence/config/goal7-foundation-release-plan.json`。
 

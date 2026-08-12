@@ -2,28 +2,28 @@
 
 日期：2026-08-12（Asia/Shanghai）
 
-状态：`engineering_verified / immutable_runtime_ready / human_review_pending / production_blocked`
+状态：`engineering_verified / prior_runtime_superseded / human_review_pending / production_blocked`
 
 ## 1. 结论
 
-P1-SI-B～G 的工程骨架已通过当前全量验收，最新双仓不可变 Runtime 也已重建并完成本地 SHA-256 复核；P1-SI-H 仍不能开始正式七日 Shadow，因为来源、P003、四角色 UAT 和 Goal 7 Owner Acceptance 均未完成，也没有取得本次战略情报生产部署、数据库迁移或运行授权。
+P1-SI-B～G 的工程骨架已通过当前全量验收。生产溯源确认 012 已由历史流程落库、原始 B 阶段 Evidence 缺失；Manifest `1.3.0` Runtime 仍允许 SQL replay，现已失效。P1-SI-H 仍不能开始正式七日 Shadow，因为当前没有 Manifest `1.4.0` 可部署 Artifact，且来源、P003、四角色 UAT 和 Goal 7 Owner Acceptance 均未完成。
 
 本轮没有部署战略情报 Orchestrator、没有执行 010/011、没有启动 Collector、没有新增端口、没有发布报告，也没有产生正式 P2、员工投递或 ERP/社媒写回。
 
-## 2. 最新工程证据
+## 2. 已失效的旧 Runtime 与当前工程证据
 
 - Ontology Contracts：`61/61`；
 - Intelligence Collector：`9/9`；
 - Strategic Intelligence Shadow / Readiness / Goal Completion：`119/119`；
-- Runtime Workflow：`31607792883` Attempt `1`，状态 `success`；
-- Runtime Artifact：`9145915628`；
-- Runtime Manifest：`1.3.0`，新增三个运行组件的版本身份闭环；
+- 旧 Runtime Workflow：`31607792883` Attempt `1`，状态 `success`，但已失效；
+- 旧 Runtime Artifact：`9145915628`，禁止部署；
+- 旧 Runtime Manifest：`1.3.0`；新候选必须为 `1.4.0`；
 - Ontology Source Commit：`b504f1295bf98b018479556c06e1072516966562`；
 - H-Lite Source Commit：`fab8be3f1467289400d0d63ffe378b63ad1a6957`；
 - Collector Image：`sha256:59eadd7a3b95caa2a7a09604abb981b18f4ce8ec730408efd5f7d0f4efdfe39d`，平台 `linux/amd64`；
 - Runtime Components：Agent Core `2026-08-12.3`、Knowledge Connector `2026-08-11.1`、H-Lite `2026-08-12.1`；
 - Candidate Ontology：Schema `3.7.0`，Hash `c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860`；
-- Artifact 内 `runtime-component-versions.json`、双仓源码归档、Collector 镜像、Runtime Verification、Release Manifest 与 8 项完整 `SHA256SUMS` 已全部通过，正式 Goal 7 Runtime 验证确认双仓 Commit、三个组件版本与 8 个校验项一致；发布准备、012 迁移和三组件服务切换已形成独立授权与 Evidence Hash 依赖。前一 Workflow `31598703363` / Artifact `9142197870`、Workflow `31590397762` / Artifact `9138991942` 及更早候选仅保留历史工程证据。
+- 旧 Artifact 内 `runtime-component-versions.json`、双仓源码归档、Collector 镜像、Runtime Verification、Release Manifest 与 8 项完整 `SHA256SUMS` 曾全部通过；但发布准备后的 B 阶段仍可再次执行已落库 SQL，故不能部署。新候选必须把 B 阶段替换为 `pre_existing_reconciliation_only`，强制 `database_sql_executed=0`。所有 `9145915628` 及更早候选仅保留历史工程证据。
 
 Runtime Workflow 已验证：
 
@@ -83,31 +83,29 @@ Agent Core `2026-08-12.2` 是已授权的独立回复修复，不是 Goal 7 三�
 
 - 四个真实成员 Session：`0/4`；
 - 安全负责人接受：未完成；
-- Goal 7 Runtime Evidence：最新 CI 已具备；
+- Goal 7 Runtime Evidence：旧 CI 已失效，新 Manifest `1.4.0` CI 待生成；
 - Goal 7 Authority Canary、Worker 双源读回、完整三组件 Deployment Evidence：未完成；
 - Goal 7 Owner Acceptance：未完成。
 
 ## 5. 当前机器门禁
 
-Deployment Readiness：`1 pass / 6 blocked`。
+Deployment Readiness：`0 pass / 7 blocked`。
 
-- 已通过：最新不可变 Release；
-- 阻断：本次部署授权、Goal 7 完成、来源批准、P003 最终审核、四角色 UAT、Goal 7 Acceptance。
+- 阻断：新不可变 Release、本次部署授权、Goal 7 完成、来源批准、P003 最终审核、四角色 UAT、Goal 7 Acceptance。
 
-Goal Completion：`1 pass / 7 blocked`。
+Goal Completion：`0 pass / 8 blocked`。
 
-- 已通过：最新不可变 Release；
-- 阻断：来源批准、P003 最终审核、四角色 UAT、Goal 7、部署完成证据、七日 Owner Acceptance、Release/Deployment/Shadow 身份一致性。
+- 阻断：新不可变 Release、来源批准、P003 最终审核、四角色 UAT、Goal 7、部署完成证据、七日 Owner Acceptance、Release/Deployment/Shadow 身份一致性。
 
-上述计数由 `inspect-deployment-readiness.mjs` 与 `inspect-goal-completion.mjs` 对最新 Artifact 和当前受控审核快照重算得出，不是手工填写。唯一通过项仍是不可变 Release。
+旧证据文件仍保留 `22:50 CST` 当时的 `1 pass` 历史快照，不改写其内容或 Hash；本节是 `23:10 CST` 溯源后的当前判定。新 Artifact 生成后必须重新运行机器检查器，不能沿用旧计数。
 
 ## 6. 下一执行顺序
 
 1. 许可/合规负责人完成来源 `8/8` 最终决定；
 2. P003 DRI 完成 `36/36` 最终决定，全部保持 inactive；
 3. 四名真实成员完成权限 UAT，由安全负责人接受；
-4. 以最新双仓 Runtime 为基础完成 Goal 7 剩余工程证据，并由川哥执行 Owner Acceptance；
-5. 人审或代码发生变化后，从最终推送 Commit 再生成正式生产 Artifact；
+4. 从最新 Ontology/H 双仓推送 Commit 生成 Manifest `1.4.0` Artifact，验证旧 `1.3.0` 失败关闭；
+5. 重新签发 A～E 授权卡，再完成 Goal 7 剩余工程证据并由川哥执行 Owner Acceptance；
 6. 分别申请战略情报部署、010/011 迁移、必要服务动作和真实回滚演练授权；
 7. 只部署战略情报 Orchestrator/Collector，运行连续七个真实上海自然日 `PUBLISH=false` Shadow；
 8. 第七日后完成 Shadow Owner Acceptance 和 Goal Completion 编译。

@@ -2,9 +2,11 @@
 
 日期：2026-08-12（Asia/Shanghai）
 
-状态：`READY_FOR_SEPARATE_OWNER_AUTHORIZATION / NOT_AUTHORIZED`
+状态：`SUPERSEDED / NO_DEPLOYABLE_ARTIFACT / NOT_AUTHORIZED`
 
-## 1. 本次固定发布身份
+> `2026-08-12 23:10 CST` 生产只读溯源确认：Goal 7 迁移 012 已由历史一体化流程落库，但原始 B 阶段证据缺失。旧 Artifact `9145915628` 的 B 阶段仍允许再次执行 SQL，因此本授权卡与该 Artifact 一并失效，禁止上传、部署或据此申请授权。待 Manifest `1.4.0` 新 Artifact 生成并验签后，必须重新生成授权卡。
+
+## 1. 已失效的历史发布身份
 
 - 公司 QNAP：`PRNas / TS-X65 / 192.168.61.18`；
 - Foundation Root：`/share/CACHEDEV1_DATA/ai-ontology/foundation`；
@@ -20,7 +22,7 @@
 - 发布开关：`publish=false`；
 - 当前生产 active Schema：`3.3.0`，本次不得切换 active Schema。
 
-任一发布身份变化，本授权卡自动失效，必须重新生成。
+以上身份只用于历史追溯，不再是可执行发布身份。
 
 ## 2. 当前只读基线
 
@@ -31,9 +33,9 @@
 - restart total `0`；
 - 唯一宿主绑定 `192.168.61.18:19080`；
 - Registry `in_sync`；
-- 战略情报 Schema、表、容器、网络、发布端口均为 `0`；
+- `strategic_intelligence` Schema、表、容器、网络、发布端口均为 `0`；Goal 7 四张 Authority/Runtime 表已存在；
 - 正式 P2、员工投递、ERP 写回、社媒写回、因果激活均为 `0`；
-- 候选 Artifact 尚未上传公司 QNAP。
+- 旧 Artifact 未上传公司 QNAP，且现已禁止上传。
 
 ## 3. 影响与时间
 
@@ -45,25 +47,25 @@
 - 不重启 Postgres、Redis、Qdrant、Ontology Registry、Action Gateway、Domain Connector、Gateway；
 - 不运行 Collector，不启动七日 Shadow，不产生正式 P2、员工投递或业务写回。
 
-## 4. 五项独立授权
+## 4. 新 Artifact 生成后的五项独立授权
 
-以下五项互不继承。只授权其中一项，不代表授权其他项。
+以下五项互不继承。当前没有可授权 Artifact，所有精确授权文本均暂停使用；新 Artifact 与新授权卡生成后才可逐项申请。
 
 ### A. Foundation 发布准备与 Artifact 入场
 
-动作：把 Artifact `9145915628` 上传到公司 QNAP 受控 staging 目录，验证完整 Hash，备份现有 Compose、环境配置和三个旧镜像，构建三个候选镜像；不迁移数据库、不切换服务、不运行模型。
+动作：把新 Manifest `1.4.0` Artifact 上传到公司 QNAP 受控 staging 目录，验证完整 Hash，备份现有 Compose、环境配置和三个旧镜像，构建三个候选镜像；不执行 SQL、不切换服务、不运行模型。
 
 精确授权回复：
 
-> 授权 Artifact 9145915628 进入公司 QNAP Goal 7 发布 staging，允许执行 Hash 校验、配置与旧镜像备份、三个候选镜像构建；不授权数据库迁移、服务重建、Worker 读回、Collector、Shadow 或真实回滚演练。
+> 待新 Artifact 生成后重新签发，当前不可使用。
 
-### B. 候选迁移 012
+### B. 既有迁移 012 只读证据对账
 
-动作：执行 additive migration `012-goal7-authority-runtime.sql`，建立四张 Goal 7 表并验证 4/4 强制 RLS、真实 `ontology_app` 读写和无 DELETE；不切换 active Schema，不重建服务。
+动作：验证历史 Source Archive、SQL Hash、现有四表、4/4 强制 RLS、Tenant Policy、真实 `ontology_app` 权限、无 DELETE 和无敏感正文列，生成新的对账 Evidence；必须输出 `database_sql_executed=0`，不得再次执行 `012-goal7-authority-runtime.sql`。
 
 精确授权回复：
 
-> 授权在公司 QNAP 执行 Goal 7 候选迁移 012，并完成 4/4 RLS 与 ontology_app 验证；不授权服务重建、Worker 读回、Collector、Shadow 或数据库逆向回滚。
+> 待新 Artifact 生成后重新签发，当前不可使用。
 
 ### C. 三组件服务重建
 
@@ -71,7 +73,7 @@
 
 精确授权回复：
 
-> 授权部署 Artifact 9145915628 对应的 Agent Core 2026-08-12.3、Knowledge Connector 2026-08-11.1、H-Lite 2026-08-12.1，仅重建这三个服务；允许发布失败时自动恢复旧服务，不授权真实回滚演练、Worker 读回、Collector 或 Shadow。
+> 待新 Artifact 生成后重新签发，当前不可使用。
 
 ### D. 真实 H Worker 双源读回与 Authority Canary
 
@@ -87,7 +89,7 @@
 
 精确授权回复：
 
-> 授权执行 Goal 7 三组件真实回滚恢复演练：旧版本验证后恢复到 Artifact 9145915628 新版本；保留迁移 012，不执行数据库 DROP，不运行 Collector 或 Shadow。
+> 待新 Artifact 生成并完成三组件发布后重新签发，当前不可使用。
 
 ## 5. 自动停止条件
 

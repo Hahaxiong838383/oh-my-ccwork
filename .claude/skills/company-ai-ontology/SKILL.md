@@ -350,6 +350,7 @@ node ops/sync-company-directory.mjs
 - QNAP RestartCount 必须按目标 Compose 作用域核对，不能用全机容器总和替代 Foundation 结论。Foundation 指纹只统计当前运行中的 13 个长期服务；Compose 一次性 `foundation-init` 正常 `exited(0)` 不算故障，也不能把 `docker ps -aq` 的 14 个总容器误写成 14 个在线服务。战略情报项目反而必须用全量容器检查，任何退出后残留的临时 Collector 都视为资源泄漏。当前 Foundation 13 个长期服务前后均为 `restart_count=0`；隔离验证还必须比较容器/镜像/端口指纹并确认临时容器、网络、卷和目录清零。
 - Docker `--format` 的转义语义必须在目标 QNAP 实机验证。QNAP Container Station 的 Go Template 会原样输出模板中的 `\t`，不能假设它变成真实制表符；运行态采集应使用不可能出现在字段中的稳定分隔符，并让测试替身记录实际 `--format` 参数。否则本地假 Docker 可能输出真实 Tab 而形成假绿，生产会把健康服务误报为异常并把 restart 解析为 `null`。
 - 内部 Runtime 更新不能先覆盖 active config/env 再验证 package。package、config 和 `.env.internal` 必须分别写入 `.next`，在 Runtime Validator 与 Compose config 全部通过后才进入统一切换；切换过程要记录 previous 与已安装 marker，任何中途失败都自动移走新条目并恢复旧三件套。备份归档和自动恢复是两层保护，不能互相替代。
+- 生产发现 additive migration 已存在、但原始阶段 Evidence 缺失时，禁止为了“补证据”再次执行 SQL。必须先做历史 Artifact/Source Archive/SQL Hash 与现有表、RLS、Policy、应用权限的只读溯源，再以独立授权生成 reconciliation Evidence，并明确 `database_sql_executed=0`；任何仍保留 SQL replay 入口的旧 Artifact 必须立即失效，不能因其过去 CI 通过而继续部署。
 - P1-SI-A 已通过提交 `8444fb10f` 发布候选编译能力到公司 QNAP Registry 镜像，但没有激活 `3.4.0`。专项发布先离线编译，再仅重建 Registry，切换 2 秒、`restart_count=0`、Registry `in_sync`；回滚备份位于 `/share/CACHEDEV2_DATA/ai-ontology-backup/p1-si-a/20260810-p1-si-a-8444fb10f`。用户授权“部署 contract-only 能力”不能外推为“激活候选 Schema”或“授权真实回滚演练”。
 - P1-SI-A 验收见 `2-Projects/company-ai-ontology/docs/p1-si-a-pestim-ontology-definition-acceptance-2026-08-10.md`。
 - P1-SI-B 验收见 `2-Projects/company-ai-ontology/docs/p1-si-b-source-registry-acceptance-2026-08-10.md`。

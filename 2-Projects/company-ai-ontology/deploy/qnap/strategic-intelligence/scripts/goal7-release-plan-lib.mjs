@@ -3,7 +3,7 @@ import { isDeepStrictEqual } from 'node:util'
 
 const REQUIRED_AUTHORIZATIONS = Object.freeze([
   'foundation_deployment',
-  'candidate_migration_012',
+  'migration_012_reconciliation',
   'service_recreation',
   'rollback_drill',
 ])
@@ -21,7 +21,7 @@ const ACCEPTANCE_STEPS = Object.freeze([
   'verify_runtime_release',
   'capture_pre_deployment_state',
   'backup_config_and_images',
-  'apply_candidate_migration_012',
+  'reconcile_pre_existing_migration_012',
     'build_and_bind_three_candidate_images',
     'validate_preparation_evidence',
     'validate_migration_evidence',
@@ -80,15 +80,15 @@ function range(value, expected, label) {
 export function validateGoal7ReleasePlan(plan, scripts = {}) {
   exactKeys(plan, [
     'planVersion', 'goalKey', 'status', 'companyQnapIdentity', 'deploymentAuthorized',
-    'migration012Authorized', 'serviceRecreationAuthorized', 'rollbackDrillAuthorized',
+    'migration012ReconciliationAuthorized', 'serviceRecreationAuthorized', 'rollbackDrillAuthorized',
     'requiredExplicitAuthorizations', 'targetServices', 'unaffectedServices', 'timing',
     'expectedImpacts', 'acceptanceSteps', 'rollbackTriggers', 'closedCapabilities',
   ], 'releasePlan')
-  requireValue(plan.planVersion === '1.3.0', 'release plan version mismatch')
+  requireValue(plan.planVersion === '1.4.0', 'release plan version mismatch')
   requireValue(plan.goalKey === 'P1-PROD-READINESS', 'release plan goal mismatch')
   requireValue(plan.status === 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH', 'release plan status must remain waiting')
   requireValue(plan.companyQnapIdentity === 'qnap:company/prnas/TS-X65', 'release plan QNAP identity mismatch')
-  for (const key of ['deploymentAuthorized', 'migration012Authorized', 'serviceRecreationAuthorized', 'rollbackDrillAuthorized']) {
+  for (const key of ['deploymentAuthorized', 'migration012ReconciliationAuthorized', 'serviceRecreationAuthorized', 'rollbackDrillAuthorized']) {
     requireValue(plan[key] === false, `${key} must remain false in Git`)
   }
   exactArray(plan.requiredExplicitAuthorizations, REQUIRED_AUTHORIZATIONS, 'requiredExplicitAuthorizations')
@@ -120,7 +120,7 @@ export function validateGoal7ReleasePlan(plan, scripts = {}) {
     const prepare = scripts.prepare
     requireValue(prepare.includes('GOAL7_DEPLOY_APPROVED'), 'preparation script missing authorization GOAL7_DEPLOY_APPROVED')
     requireValue(prepare.indexOf('GOAL7_DEPLOY_APPROVED') < prepare.indexOf('preflight-company-qnap.sh'), 'preparation authorization must precede QNAP preflight')
-    requireValue(!prepare.includes('GOAL7_MIGRATION_012_APPROVED') && !prepare.includes('GOAL7_SERVICE_RECREATION_APPROVED'), 'preparation script must not require later phase authorization')
+    requireValue(!prepare.includes('GOAL7_MIGRATION_012_RECONCILIATION_APPROVED') && !prepare.includes('GOAL7_SERVICE_RECREATION_APPROVED'), 'preparation script must not require later phase authorization')
     requireValue(prepare.includes('preparation-evidence.json'), 'preparation script missing bound evidence')
     requireValue(prepare.includes('goal7-candidate-$run_id'), 'preparation script missing candidate image tags')
     requireValue(prepare.includes('goal7-pre-$run_id'), 'preparation script missing previous image tags')
@@ -129,12 +129,15 @@ export function validateGoal7ReleasePlan(plan, scripts = {}) {
   }
   if (scripts.migrate !== undefined) {
     const migrate = scripts.migrate
-    requireValue(migrate.includes('GOAL7_MIGRATION_012_APPROVED'), 'migration script missing authorization GOAL7_MIGRATION_012_APPROVED')
-    requireValue(migrate.indexOf('GOAL7_MIGRATION_012_APPROVED') < migrate.indexOf('preflight-company-qnap.sh'), 'migration authorization must precede QNAP preflight')
+    requireValue(migrate.includes('GOAL7_MIGRATION_012_RECONCILIATION_APPROVED'), 'migration reconciliation script missing authorization GOAL7_MIGRATION_012_RECONCILIATION_APPROVED')
+    requireValue(migrate.indexOf('GOAL7_MIGRATION_012_RECONCILIATION_APPROVED') < migrate.indexOf('preflight-company-qnap.sh'), 'migration reconciliation authorization must precede QNAP preflight')
     requireValue(!migrate.includes('GOAL7_DEPLOY_APPROVED') && !migrate.includes('GOAL7_SERVICE_RECREATION_APPROVED'), 'migration script must not require another phase authorization')
     requireValue(migrate.includes('validate-goal7-preparation.mjs'), 'migration script missing preparation evidence gate')
     requireValue(migrate.includes('migration-012-evidence.json'), 'migration script missing migration evidence')
     requireValue(migrate.includes('verify-goal7-migration-012-live.sh'), 'migration script missing live database verification')
+    requireValue(migrate.includes('originalEvidenceStatus') && migrate.includes('missing_at_source'), 'migration reconciliation must disclose missing original evidence')
+    requireValue(migrate.includes('database_sql_executed=0'), 'migration reconciliation must prove SQL was not replayed')
+    requireValue(!migrate.includes('compose exec -T postgres psql --set=ON_ERROR_STOP=1'), 'migration reconciliation must not execute migration SQL')
     requireValue(!/compose up|compose build|compose (restart|down|stop)/.test(migrate), 'migration script contains service recreation')
   }
   if (scripts.verifyMigration !== undefined) {
@@ -149,7 +152,7 @@ export function validateGoal7ReleasePlan(plan, scripts = {}) {
     const mainPathStart = deploy.indexOf("wait_legacy_h_lite_quiet ||")
     const mainPath = mainPathStart >= 0 ? deploy.slice(mainPathStart) : ''
     requireValue(deploy.includes('GOAL7_SERVICE_RECREATION_APPROVED'), 'deployment script missing authorization GOAL7_SERVICE_RECREATION_APPROVED')
-    requireValue(!deploy.includes('GOAL7_DEPLOY_APPROVED') && !deploy.includes('GOAL7_MIGRATION_012_APPROVED'), 'service recreation script must not require earlier phase authorization')
+    requireValue(!deploy.includes('GOAL7_DEPLOY_APPROVED') && !deploy.includes('GOAL7_MIGRATION_012_RECONCILIATION_APPROVED'), 'service recreation script must not require earlier phase authorization')
     requireValue(deploy.indexOf('GOAL7_SERVICE_RECREATION_APPROVED') < deploy.indexOf('preflight-company-qnap.sh'), 'service authorization must precede QNAP preflight')
     requireValue(deploy.includes('validate-goal7-migration.mjs'), 'deployment missing migration evidence gate')
     requireValue(deploy.includes('preparation_evidence_sha256=') && deploy.includes('migration_evidence_sha256='), 'deployment manifest missing phase evidence hashes')

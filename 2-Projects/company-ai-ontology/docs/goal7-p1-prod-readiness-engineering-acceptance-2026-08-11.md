@@ -2,13 +2,13 @@
 
 日期：2026-08-11（Asia/Shanghai）
 
-状态：`engineering_verified / immutable_runtime_verified / production_not_deployed / owner_acceptance_pending`
+状态：`engineering_verified / prior_runtime_superseded / production_not_deployed / owner_acceptance_pending`
 
 ## 1. 结论
 
 Goal 7 的 P1-AUTHORITY 与 P1-RUNTIME 已从规划进入本地工程候选：飞书部门/群聊 Principal 映射、发送者隔离、用途收窄、当前群成员证据、会话授权快照、Route A 独立熔断、有限重试、Token/费用预算、真实 provider/model/usage 读回和 Route B 默认关闭已经进入 Agent Core、Knowledge Connector、候选迁移和不可变 Runtime Workflow。Goal 7 最终验收也已由可手填布尔值升级为五份原始 Evidence 绑定的编译产物。
 
-双仓候选已提交推送，并由 Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628` 取得 Linux/amd64 与 PostgreSQL Runtime Evidence：012 四表、4/4 强制 RLS、真实 `ontology_app` 读写、Route B disabled、双仓 Commit 和三个组件版本均通过不可变校验。发布准备、012 迁移和三组件服务切换已拆成独立授权脚本与 Evidence Hash 链。当前仍不能把 Goal 7 标记为完成：候选尚未上传或部署公司 QNAP，未执行真实 H Worker 双源读回、合成飞书 Authority Canary、完整三组件 Deployment Evidence、撤权演练或川哥 Owner Acceptance。
+双仓候选曾由 Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628` 取得 Linux/amd64 与 PostgreSQL Runtime Evidence。`2026-08-12 23:10 CST` 生产溯源进一步确认：012 四表已由更早的历史 Workflow `31555822727` 落库，原始 B 阶段 Evidence 缺失；旧 Artifact 仍包含可再次执行 SQL 的入口，因此已失效并禁止部署。新 Runtime 必须使用 Manifest `1.4.0`，把 B 阶段改为只读对账并强制 `database_sql_executed=0`。当前仍不能把 Goal 7 标记为完成：没有可部署 Artifact，且未执行真实 H Worker 双源读回、合成飞书 Authority Canary、完整三组件 Deployment Evidence、撤权演练或川哥 Owner Acceptance。
 
 ## 2. P1-AUTHORITY 工程能力
 
@@ -90,7 +90,7 @@ Goal 7 Acceptance Evidence 升级为 `2.0.0`，必须由同目录五份原始证
 
 ## 6. 当前门禁
 
-- `engineeringVerified=true`：不可变 Runtime 与 PostgreSQL 工程证据已完成；这不等于部署、Canary 或 Owner Acceptance；
+- `engineeringVerified=true`：代码与 PostgreSQL 工程证据已完成；旧不可变 Runtime 已失效，必须重建 Manifest `1.4.0`；
 - `ownerAccepted=false`：不得由测试自动填写；
 - 公司专用 CPA Key 与同厂冗余仍缺失，Route B 继续关闭；
 - 产品研究部整库导入、10 人真实 Canary、员工私人 Bot 迁移、ERP/社媒写回继续关闭；
@@ -99,8 +99,9 @@ Goal 7 Acceptance Evidence 升级为 `2.0.0`，必须由同目录五份原始证
 
 ## 7. 下一步
 
-1. 以 Artifact `9145915628` 和绑定的 Ontology/H-Lite 双仓 Commit 为授权对象，分别申请 A 发布准备、B 012 候选迁移与 C Agent Core/Knowledge Connector/H-Lite 服务重建；
-2. 发布后验证真实 H Worker 返回 provider/model/usage，不满足新契约时停止验收并恢复安全状态；
-3. 执行合成部门、群聊、私聊、多人艾特、撤权和 API 失败 Authority Canary；
-4. 编译并验证三组件 Deployment Evidence，确认 active Schema 未漂移、无新增端口、Foundation restart=0 和五类业务副作用为 0；
-5. 川哥体验验收后写入独立 `owner-acceptance.json`，再由编译器生成 `goal7-acceptance.json`；禁止人工设置最终布尔值或 Hash。
+1. 从本修复的新推送 Commit 生成并验签 Manifest `1.4.0` Artifact，确认旧 `1.3.0` 包失败关闭；
+2. 重新签发授权卡，再分别申请 A 发布准备、B 既有 012 只读对账与 C Agent Core/Knowledge Connector/H-Lite 服务重建；
+3. 发布后验证真实 H Worker 返回 provider/model/usage，不满足新契约时停止验收并恢复安全状态；
+4. 执行合成部门、群聊、私聊、多人艾特、撤权和 API 失败 Authority Canary；
+5. 编译并验证三组件 Deployment Evidence，确认 active Schema 未漂移、无新增端口、Foundation restart=0 和五类业务副作用为 0；
+6. 川哥体验验收后写入独立 `owner-acceptance.json`，再由编译器生成 `goal7-acceptance.json`；禁止人工设置最终布尔值或 Hash。

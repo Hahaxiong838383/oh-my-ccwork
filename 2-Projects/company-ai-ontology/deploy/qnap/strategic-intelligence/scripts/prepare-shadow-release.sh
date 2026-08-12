@@ -43,7 +43,7 @@ knowledge_connector_version=$(node -e "const x=require(process.argv[1]);process.
 h_lite_version=$(node -e "const x=require(process.argv[1]);process.stdout.write(x.hLiteVersion)" "$output_root/runtime-component-versions.json")
 cat > "$output_root/release-manifest.json" <<EOF
 {
-  "manifestVersion": "1.3.0",
+  "manifestVersion": "1.4.0",
   "releaseType": "P1-SI-F-shadow-candidate-gated",
   "createdAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "sourceCommit": "$source_commit",
@@ -64,7 +64,9 @@ cat > "$output_root/release-manifest.json" <<EOF
   "requiredGate": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH",
   "p003ReviewGateRequired": true,
   "reviewerRoleAccessGateRequired": true,
-  "goal7AcceptanceGateRequired": true
+  "goal7AcceptanceGateRequired": true,
+  "goal7Migration012Mode": "pre_existing_reconciliation_only",
+  "goal7Migration012SqlReplayAllowed": false
 }
 EOF
 chmod 600 "$output_root/source.tar.gz" "$output_root/h-lite-source.tar.gz" "$output_root/collector-image.tar.gz" "$output_root/runtime-component-versions.json" "$output_root/release-manifest.json"

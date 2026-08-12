@@ -176,15 +176,15 @@ export async function writeGoal7PreparationEvidence(outputFile, input) {
 
 export function validateGoal7MigrationEvidence(evidence, expected = {}) {
   exactKeys(evidence, [
-    'evidenceVersion', 'evidenceType', 'companyQnapIdentity', 'runId', 'appliedAt',
+    'evidenceVersion', 'evidenceType', 'companyQnapIdentity', 'runId', 'reconciledAt',
     'sourceCommit', 'hLiteSourceCommit', 'preparationEvidence', 'migrationFileSha256',
-    'checks', 'closedCapabilities',
+    'historicalApplication', 'checks', 'closedCapabilities',
   ], 'migrationEvidence')
-  requireValue(evidence.evidenceVersion === '1.0.0', 'migration evidence version mismatch')
-  requireValue(evidence.evidenceType === 'goal7-migration-012', 'migration evidence type mismatch')
+  requireValue(evidence.evidenceVersion === '2.0.0', 'migration evidence version mismatch')
+  requireValue(evidence.evidenceType === 'goal7-migration-012-reconciliation', 'migration evidence type mismatch')
   requireValue(evidence.companyQnapIdentity === 'qnap:company/prnas/TS-X65', 'migration QNAP identity mismatch')
   requireValue(RUN_ID.test(evidence.runId), 'migration runId invalid')
-  timestamp(evidence.appliedAt, 'migration appliedAt')
+  timestamp(evidence.reconciledAt, 'migration reconciledAt')
   requireValue(COMMIT.test(evidence.sourceCommit), 'migration sourceCommit invalid')
   requireValue(COMMIT.test(evidence.hLiteSourceCommit), 'migration H-Lite sourceCommit invalid')
   if (expected.sourceCommit) requireValue(evidence.sourceCommit === expected.sourceCommit, 'migration sourceCommit drift')
@@ -194,9 +194,30 @@ export function validateGoal7MigrationEvidence(evidence, expected = {}) {
   requireValue(HASH.test(evidence.preparationEvidence.sha256), 'migration preparation hash invalid')
   if (expected.preparationEvidenceSha256) requireValue(evidence.preparationEvidence.sha256 === expected.preparationEvidenceSha256, 'migration preparation evidence drift')
   requireValue(HASH.test(evidence.migrationFileSha256), 'migration file hash invalid')
+  exactKeys(evidence.historicalApplication, [
+    'status', 'originalEvidenceStatus', 'workflowRunId', 'artifactId', 'sourceCommit',
+    'hLiteSourceCommit', 'preDeploymentStateSha256', 'migrationFileSha256',
+    'applicationWindowStart', 'applicationWindowEnd', 'basis',
+  ], 'migration historicalApplication')
+  requireValue(evidence.historicalApplication.status === 'pre_existing_verified', 'historical migration status mismatch')
+  requireValue(evidence.historicalApplication.originalEvidenceStatus === 'missing_at_source', 'historical migration evidence status mismatch')
+  requireValue(evidence.historicalApplication.workflowRunId === '31555822727', 'historical migration workflow mismatch')
+  requireValue(evidence.historicalApplication.artifactId === '9125968266', 'historical migration artifact mismatch')
+  requireValue(evidence.historicalApplication.sourceCommit === '988472dabb4282e594375bea9062a013a23977d7', 'historical migration sourceCommit mismatch')
+  requireValue(evidence.historicalApplication.hLiteSourceCommit === '0bf8aa39d49851b8574d88b6bfa0e1c6e18666e6', 'historical migration H-Lite sourceCommit mismatch')
+  requireValue(evidence.historicalApplication.preDeploymentStateSha256 === '5c6c10e8aeb9ebd8db0e87ad30b5f8ce8ed5a5ac94be53068baca75a04b0b723', 'historical pre-deployment state hash mismatch')
+  requireValue(evidence.historicalApplication.migrationFileSha256 === '8ea8648effbd7ab6d3ef81283678afc2fb16250f526e73c6a421abcb4d723a74', 'historical migration SQL hash mismatch')
+  timestamp(evidence.historicalApplication.applicationWindowStart, 'historical migration applicationWindowStart')
+  timestamp(evidence.historicalApplication.applicationWindowEnd, 'historical migration applicationWindowEnd')
+  requireValue(Date.parse(evidence.historicalApplication.applicationWindowEnd) >= Date.parse(evidence.historicalApplication.applicationWindowStart), 'historical migration application window invalid')
+  requireValue(isDeepStrictEqual(evidence.historicalApplication.basis, [
+    'qnap_relation_mtime', 'codex_execution_trace', 'immutable_release_sql_hash',
+  ]), 'historical migration provenance basis mismatch')
   exactKeys(evidence.checks, [
     'tableCount', 'forcedRlsCount', 'tenantPolicyCount', 'appPrivilegeCount',
     'deletePrivilegeCount', 'bannedColumnCount', 'appRoleReadVerified',
+    'historicalSqlHashMatches', 'currentSqlHashMatches', 'principalMembershipRowCount',
+    'authoritySnapshotRowCount', 'routeStateRowCount', 'usageEventRowCount',
   ], 'migration checks')
   requireValue(evidence.checks.tableCount === 4, 'migration table count mismatch')
   requireValue(evidence.checks.forcedRlsCount === 4, 'migration forced RLS count mismatch')
@@ -205,6 +226,11 @@ export function validateGoal7MigrationEvidence(evidence, expected = {}) {
   requireValue(evidence.checks.deletePrivilegeCount === 0, 'migration DELETE privilege must remain zero')
   requireValue(evidence.checks.bannedColumnCount === 0, 'migration banned columns detected')
   requireValue(evidence.checks.appRoleReadVerified === true, 'migration ontology_app read verification missing')
+  requireValue(evidence.checks.historicalSqlHashMatches === true, 'historical migration SQL hash mismatch')
+  requireValue(evidence.checks.currentSqlHashMatches === true, 'current migration SQL hash mismatch')
+  for (const key of ['principalMembershipRowCount', 'authoritySnapshotRowCount', 'routeStateRowCount', 'usageEventRowCount']) {
+    requireValue(Number.isInteger(evidence.checks[key]) && evidence.checks[key] >= 0, `migration ${key} invalid`)
+  }
   validateClosedCapabilities(evidence.closedCapabilities)
   return evidence
 }
@@ -224,15 +250,16 @@ export async function validateGoal7MigrationBundle(root, expected = {}) {
 
 export async function writeGoal7MigrationEvidence(outputFile, input) {
   const evidence = validateGoal7MigrationEvidence({
-    evidenceVersion: '1.0.0',
-    evidenceType: 'goal7-migration-012',
+    evidenceVersion: '2.0.0',
+    evidenceType: 'goal7-migration-012-reconciliation',
     companyQnapIdentity: 'qnap:company/prnas/TS-X65',
     runId: input.runId,
-    appliedAt: input.appliedAt || new Date().toISOString(),
+    reconciledAt: input.reconciledAt || new Date().toISOString(),
     sourceCommit: input.sourceCommit,
     hLiteSourceCommit: input.hLiteSourceCommit,
     preparationEvidence: { file: 'preparation-evidence.json', sha256: input.preparationEvidenceSha256 },
     migrationFileSha256: input.migrationFileSha256,
+    historicalApplication: input.historicalApplication,
     checks: input.checks,
     closedCapabilities: Object.fromEntries(CLOSED_CAPABILITIES.map((key) => [key, false])),
   }, {

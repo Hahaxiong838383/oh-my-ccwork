@@ -106,7 +106,7 @@ export async function validateGoal7RuntimeRelease(root, expected = {}) {
   }
 
   const releaseManifest = parseJson(files.get('release-manifest.json'), 'release manifest')
-  requireValue(releaseManifest.manifestVersion === '1.3.0', 'release manifest version mismatch')
+  requireValue(releaseManifest.manifestVersion === '1.4.0', 'release manifest version mismatch')
   requireValue(releaseManifest.releaseType === 'P1-SI-F-shadow-candidate-gated', 'release manifest type mismatch')
   requireValue(releaseManifest.sourceCommit === verification.sourceCommit, 'release manifest sourceCommit drift')
   requireValue(releaseManifest.hLiteSourceCommit === verification.hLiteSourceCommit, 'release manifest hLiteSourceCommit drift')
@@ -120,6 +120,8 @@ export async function validateGoal7RuntimeRelease(root, expected = {}) {
   requireValue(releaseManifest.publish === false, 'release manifest publish must remain false')
   requireValue(releaseManifest.productionDeploymentAuthorized === false, 'release manifest must not self-authorize production')
   requireValue(releaseManifest.requiredGate === 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH', 'release manifest deployment gate mismatch')
+  requireValue(releaseManifest.goal7Migration012Mode === 'pre_existing_reconciliation_only', 'release manifest migration 012 mode mismatch')
+  requireValue(releaseManifest.goal7Migration012SqlReplayAllowed === false, 'release manifest must forbid migration 012 SQL replay')
 
   const versions = parseJson(files.get('runtime-component-versions.json'), 'runtime component versions')
   requireValue(versions.evidenceVersion === '1.0.0', 'runtime component versions evidenceVersion mismatch')

@@ -1,15 +1,15 @@
 {
-  "planVersion": "1.3.0",
+  "planVersion": "1.4.0",
   "goalKey": "P1-PROD-READINESS",
   "status": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH",
   "companyQnapIdentity": "qnap:company/prnas/TS-X65",
   "deploymentAuthorized": false,
-  "migration012Authorized": false,
+  "migration012ReconciliationAuthorized": false,
   "serviceRecreationAuthorized": false,
   "rollbackDrillAuthorized": false,
   "requiredExplicitAuthorizations": [
     "foundation_deployment",
-    "candidate_migration_012",
+    "migration_012_reconciliation",
     "service_recreation",
     "rollback_drill"
   ],
@@ -43,7 +43,7 @@
     "verify_runtime_release",
     "capture_pre_deployment_state",
     "backup_config_and_images",
-    "apply_candidate_migration_012",
+    "reconcile_pre_existing_migration_012",
     "build_and_bind_three_candidate_images",
     "validate_preparation_evidence",
     "validate_migration_evidence",

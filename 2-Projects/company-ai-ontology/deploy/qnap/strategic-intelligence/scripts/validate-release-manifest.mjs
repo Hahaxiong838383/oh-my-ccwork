@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 
 const EXPECTED = {
-  manifestVersion: '1.3.0',
+  manifestVersion: '1.4.0',
   releaseType: 'P1-SI-F-shadow-candidate-gated',
   candidateOntologySchema: '3.7.0',
   candidateOntologyHash: 'c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860',
@@ -14,6 +14,8 @@ const EXPECTED = {
   p003ReviewGateRequired: true,
   reviewerRoleAccessGateRequired: true,
   goal7AcceptanceGateRequired: true,
+  goal7Migration012Mode: 'pre_existing_reconciliation_only',
+  goal7Migration012SqlReplayAllowed: false,
 }
 
 const VERSION = /^\d{4}-\d{2}-\d{2}\.\d+$/

@@ -12,7 +12,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const PLAN_FILE = path.join(ROOT, 'config/goal7-foundation-release-plan.json')
 const VALIDATOR = path.join(ROOT, 'scripts/validate-goal7-release-plan.mjs')
 const PREPARE = path.join(ROOT, 'scripts/prepare-goal7-foundation.sh')
-const MIGRATE = path.join(ROOT, 'scripts/apply-goal7-migration-012.sh')
+const MIGRATE = path.join(ROOT, 'scripts/reconcile-goal7-migration-012.sh')
 const DEPLOY = path.join(ROOT, 'scripts/deploy-goal7-foundation.sh')
 
 async function inputs() {
@@ -42,7 +42,7 @@ test('Goal 7 发布计划明确中断、影响、回滚时间和独立授权', a
 test('Goal 7 发布计划拒绝扩大服务范围、预授权和静默延长中断', async () => {
   const { plan, scripts } = await inputs()
   assert.throws(() => validateGoal7ReleasePlan({ ...plan, targetServices: [...plan.targetServices, 'postgres'] }, scripts), /targetServices mismatch/)
-  assert.throws(() => validateGoal7ReleasePlan({ ...plan, migration012Authorized: true }, scripts), /must remain false in Git/)
+  assert.throws(() => validateGoal7ReleasePlan({ ...plan, migration012ReconciliationAuthorized: true }, scripts), /must remain false in Git/)
   assert.throws(() => validateGoal7ReleasePlan({
     ...plan,
     timing: { ...plan.timing, expectedUserVisibleInterruptionSeconds: { min: 15, max: 300 } },
@@ -57,8 +57,8 @@ test('Goal 7 发布计划拒绝缺少任一阶段独立授权的脚本', async (
   }), /missing authorization GOAL7_DEPLOY_APPROVED/)
   assert.throws(() => validateGoal7ReleasePlan(plan, {
     ...scripts,
-    migrate: scripts.migrate.replaceAll('GOAL7_MIGRATION_012_APPROVED', 'REMOVED_MIGRATION_GATE'),
-  }), /missing authorization GOAL7_MIGRATION_012_APPROVED/)
+    migrate: scripts.migrate.replaceAll('GOAL7_MIGRATION_012_RECONCILIATION_APPROVED', 'REMOVED_MIGRATION_GATE'),
+  }), /missing authorization GOAL7_MIGRATION_012_RECONCILIATION_APPROVED/)
   assert.throws(() => validateGoal7ReleasePlan(plan, {
     ...scripts,
     deploy: scripts.deploy.replaceAll('GOAL7_SERVICE_RECREATION_APPROVED', 'REMOVED_SERVICE_GATE'),
@@ -73,7 +73,7 @@ test('Goal 7 三阶段脚本各自在 QNAP 预检前拒绝缺失授权', () => {
 
   const second = spawnSync('sh', [MIGRATE], { encoding: 'utf8' })
   assert.equal(second.status, 2)
-  assert.match(second.stderr, /GOAL7_MIGRATION_012_APPROVED=YES/)
+  assert.match(second.stderr, /GOAL7_MIGRATION_012_RECONCILIATION_APPROVED=YES/)
   assert.doesNotMatch(second.stderr, /QNAP|docker/i)
 
   const third = spawnSync('sh', [DEPLOY], { encoding: 'utf8' })
@@ -87,6 +87,8 @@ test('Goal 7 分阶段脚本不越权执行后续动作', async () => {
   assert.doesNotMatch(scripts.prepare, /compose up|compose (restart|down|stop)/)
   assert.ok(!scripts.prepare.includes('compose exec -T postgres psql'))
   assert.doesNotMatch(scripts.migrate, /compose up|compose build|compose (restart|down|stop)/)
+  assert.doesNotMatch(scripts.migrate, /compose exec -T postgres psql --set=ON_ERROR_STOP=1/)
+  assert.match(scripts.migrate, /database_sql_executed=0/)
   assert.doesNotMatch(scripts.deploy, /compose build/)
   assert.ok(!scripts.deploy.includes('compose exec -T postgres psql'))
   assert.match(scripts.prepare, /preparation-evidence\.json/)

@@ -12,7 +12,7 @@ Goal 7 P1-AUTHORITY/P1-RUNTIME 未部署工程候选也已进入同一待提交�
 
 正式 Foundation 部署候选也已补齐但未执行：`validate-goal7-runtime-release.mjs` 在任何迁移或服务切换前重算完整 `SHA256SUMS`、六项内部 Evidence/Archive Hash 与 Release Manifest；`GOAL7_APPROVED_SOURCE_COMMIT`、`GOAL7_APPROVED_H_LITE_SOURCE_COMMIT` 将当次授权精确绑定双仓 Commit。部署只逐个切换 Agent Core、Knowledge Connector、H-Lite，强制 `KNOWLEDGE_SYNC_ON_START=0`；失败自动恢复旧配置和旧镜像，012 作为 additive migration 明确保留。部署、显式回滚仍分别需要独立授权。
 
-进一步复核后，原部署脚本把 012 和三个服务重建包含在同一个发布授权中，不满足当前治理边界，现已拆为 `GOAL7_DEPLOY_APPROVED`、`GOAL7_MIGRATION_012_APPROVED`、`GOAL7_SERVICE_RECREATION_APPROVED` 三个前置门禁；真实回滚继续由第四个独立授权控制。新增机器发布计划和运行手册，固定维护窗口预计 8～20 分钟、员工可感知间歇中断 15～120 秒、回滚 2～6 分钟，并验证影响范围不能扩大到 Postgres、Redis、Qdrant、Registry、Gateway 等服务。
+进一步复核后，原部署脚本把 012 和三个服务重建包含在同一个发布授权中，不满足当前治理边界；后续又确认 012 已由历史流程落库，原始 B 阶段 Evidence 缺失。现行门禁为 `GOAL7_DEPLOY_APPROVED`、`GOAL7_MIGRATION_012_RECONCILIATION_APPROVED`、`GOAL7_SERVICE_RECREATION_APPROVED`，B 阶段只能只读对账并证明 `database_sql_executed=0`；真实回滚继续由第四个独立授权控制。新增机器发布计划和运行手册，固定维护窗口预计 8～20 分钟、员工可感知间歇中断 15～120 秒、回滚 2～6 分钟，并验证影响范围不能扩大到 Postgres、Redis、Qdrant、Registry、Gateway 等服务。
 
 四角色 UAT 原验收文件也存在同类问题：可以直接把十项布尔值手填为 `true`。现已升级为 `2.0.0` 编译产物，必须由四个不同真实成员的 Session 文件和一份安全负责人接受记录生成；安全负责人接受记录绑定四份 Session SHA-256，任何 Session 篡改、同一成员代测、提前接受或手改最终 JSON 都失败关闭。
 

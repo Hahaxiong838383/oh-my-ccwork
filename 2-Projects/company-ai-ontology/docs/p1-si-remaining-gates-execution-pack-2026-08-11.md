@@ -6,7 +6,7 @@
 
 ## 1. 结论
 
-P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `119/119`。当前唯一合格不可变候选为 Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628`，Manifest `1.3.0`、8 项完整 `SHA256SUMS`、Ontology Commit `b504f1295bf98b018479556c06e1072516966562`、H-Lite Commit `fab8be3f1467289400d0d63ffe378b63ad1a6957` 和三个组件版本身份均通过正式验证；Artifact `9142197870` 及更早候选仅保留历史工程证据。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；工程阶段继续完成系统审批中心和 Goal 7 准备，真人审核在整体测试阶段关闭，正式七日 Shadow 仍须等待全部真实门禁。
+P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `119/119`。生产溯源确认 012 已由历史流程落库且原始 B 阶段 Evidence 缺失；Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628` 的 Manifest `1.3.0` 仍允许 SQL replay，现已失效并禁止部署。当前没有可部署候选，必须从新推送 Commit 生成 Manifest `1.4.0` Artifact，固定既有 012 只读对账和 `SQL replay=false`。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；工程阶段继续完成系统审批中心和 Goal 7 准备，真人审核在整体测试阶段关闭，正式七日 Shadow 仍须等待全部真实门禁。
 
 当前实测状态：
 

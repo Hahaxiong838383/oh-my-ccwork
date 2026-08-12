@@ -292,7 +292,7 @@ test('release manifest validator binds immutable archives and keeps deployment d
   await fs.writeFile(imageArchive, imageBytes)
   await fs.writeFile(componentVersionsFile, componentVersionsBytes)
   const manifest = {
-    manifestVersion: '1.3.0',
+    manifestVersion: '1.4.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-10T09:00:00Z',
     sourceCommit: 'a'.repeat(40),
@@ -314,6 +314,8 @@ test('release manifest validator binds immutable archives and keeps deployment d
     p003ReviewGateRequired: true,
     reviewerRoleAccessGateRequired: true,
     goal7AcceptanceGateRequired: true,
+    goal7Migration012Mode: 'pre_existing_reconciliation_only',
+    goal7Migration012SqlReplayAllowed: false,
   }
   await fs.writeFile(manifestFile, JSON.stringify(manifest))
   const { spawnSync } = await import('node:child_process')
@@ -336,7 +338,7 @@ test('release manifest validator binds immutable archives and keeps deployment d
   await fs.writeFile(sourceArchive, sourceBytes)
   await fs.writeFile(manifestFile, JSON.stringify({
     ...manifest,
-    manifestVersion: '1.2.0',
+    manifestVersion: '1.3.0',
   }))
   const legacy = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, hLiteSourceArchive, imageArchive, componentVersionsFile], { encoding: 'utf8' })
   assert.notEqual(legacy.status, 0)
@@ -513,9 +515,11 @@ test('isolated migration validation rejects a missing Node runtime before creati
 
 test('runtime workflow stays aligned with the gated release and domain persistence proof', async () => {
   const workflow = await fs.readFile(path.resolve(PROJECT_ROOT, '../../.github/workflows/p1-si-runtime-verify.yml'), 'utf8')
-  assert.match(workflow, /manifestVersion: '1[.]3[.]0'/)
+  assert.match(workflow, /manifestVersion: '1[.]4[.]0'/)
   assert.match(workflow, /runtime-component-versions\.json/)
   assert.match(workflow, /releaseType: 'P1-SI-F-shadow-candidate-gated'/)
+  assert.match(workflow, /goal7Migration012Mode: 'pre_existing_reconciliation_only'/)
+  assert.match(workflow, /goal7Migration012SqlReplayAllowed: false/)
   assert.match(workflow, /grep -qx 'domain_persistence=verified'/)
   assert.match(workflow, /grep -qx 'domain_persistence_idempotent=verified'/)
   assert.match(workflow, /grep -qx 'acl_fail_closed=verified'/)

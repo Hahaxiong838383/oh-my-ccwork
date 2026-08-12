@@ -218,16 +218,22 @@ export async function createGoal7AcceptanceBundle(outputRoot, sourceCommit = 'c'
   const preparationBytes = Buffer.from(JSON.stringify(preparation))
   await fs.writeFile(path.join(bundleRoot, 'preparation-evidence.json'), preparationBytes)
   await fs.writeFile(path.join(bundleRoot, 'migration-012-evidence.json'), JSON.stringify({
-    evidenceVersion: '1.0.0',
-    evidenceType: 'goal7-migration-012',
+    evidenceVersion: '2.0.0',
+    evidenceType: 'goal7-migration-012-reconciliation',
     companyQnapIdentity: 'qnap:company/prnas/TS-X65',
     runId: 'goal7-fixture',
-    appliedAt: '2026-08-11T09:14:00Z',
+    reconciledAt: '2026-08-12T15:20:00Z',
     sourceCommit,
     hLiteSourceCommit,
     preparationEvidence: { file: 'preparation-evidence.json', sha256: sha256(preparationBytes) },
     migrationFileSha256: 'd'.repeat(64),
-    checks: { tableCount: 4, forcedRlsCount: 4, tenantPolicyCount: 4, appPrivilegeCount: 10, deletePrivilegeCount: 0, bannedColumnCount: 0, appRoleReadVerified: true },
+    historicalApplication: {
+      status: 'pre_existing_verified', originalEvidenceStatus: 'missing_at_source', workflowRunId: '31555822727', artifactId: '9125968266',
+      sourceCommit: '988472dabb4282e594375bea9062a013a23977d7', hLiteSourceCommit: '0bf8aa39d49851b8574d88b6bfa0e1c6e18666e6',
+      preDeploymentStateSha256: '5c6c10e8aeb9ebd8db0e87ad30b5f8ce8ed5a5ac94be53068baca75a04b0b723', migrationFileSha256: '8ea8648effbd7ab6d3ef81283678afc2fb16250f526e73c6a421abcb4d723a74',
+      applicationWindowStart: '2026-08-12T02:13:55Z', applicationWindowEnd: '2026-08-12T02:13:56Z', basis: ['qnap_relation_mtime', 'codex_execution_trace', 'immutable_release_sql_hash'],
+    },
+    checks: { tableCount: 4, forcedRlsCount: 4, tenantPolicyCount: 4, appPrivilegeCount: 10, deletePrivilegeCount: 0, bannedColumnCount: 0, appRoleReadVerified: true, historicalSqlHashMatches: true, currentSqlHashMatches: true, principalMembershipRowCount: 0, authoritySnapshotRowCount: 7, routeStateRowCount: 0, usageEventRowCount: 2 },
     closedCapabilities: { collectorStarted: false, productionShadowStarted: false, formalP2Creation: false, employeeDelivery: false, erpWriteback: false, socialWriteback: false, causalActivation: false },
   }))
   await fs.writeFile(path.join(bundleRoot, 'pre-deployment-state.json'), JSON.stringify(deploymentState({ phase: 'before', capturedAt: '2026-08-11T09:15:00Z', migrationApplied: false, candidate: false })))
@@ -275,7 +281,7 @@ export async function createReadyInputs() {
   await fs.writeFile(path.join(releaseRoot, 'collector-image.tar.gz'), imageBytes)
   await fs.writeFile(path.join(releaseRoot, 'runtime-component-versions.json'), componentVersionsBytes)
   await fs.writeFile(path.join(releaseRoot, 'release-manifest.json'), JSON.stringify({
-    manifestVersion: '1.3.0',
+    manifestVersion: '1.4.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-11T00:00:00Z',
     sourceCommit: 'a'.repeat(40),
@@ -297,6 +303,8 @@ export async function createReadyInputs() {
     p003ReviewGateRequired: true,
     reviewerRoleAccessGateRequired: true,
     goal7AcceptanceGateRequired: true,
+    goal7Migration012Mode: 'pre_existing_reconciliation_only',
+    goal7Migration012SqlReplayAllowed: false,
   }))
 
   const { sourceContract, catalog, approvalContract } = await loadSourceApprovalContext()

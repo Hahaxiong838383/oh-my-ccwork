@@ -12,7 +12,7 @@ import { validateGoal7RuntimeRelease } from '../scripts/goal7-runtime-release-li
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DEPLOY = path.join(ROOT, 'scripts/deploy-goal7-foundation.sh')
 const PREPARE = path.join(ROOT, 'scripts/prepare-goal7-foundation.sh')
-const MIGRATE = path.join(ROOT, 'scripts/apply-goal7-migration-012.sh')
+const MIGRATE = path.join(ROOT, 'scripts/reconcile-goal7-migration-012.sh')
 const ROLLBACK = path.join(ROOT, 'scripts/rollback-goal7-foundation.sh')
 
 function sha256(bytes) {
@@ -40,7 +40,7 @@ async function writeRuntimeRelease(root) {
     'runtime-component-versions.json': Buffer.from(`${JSON.stringify(componentVersions)}\n`),
   }
   const releaseManifest = {
-    manifestVersion: '1.3.0',
+    manifestVersion: '1.4.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     sourceCommit,
     hLiteSourceCommit,
@@ -54,6 +54,8 @@ async function writeRuntimeRelease(root) {
     publish: false,
     productionDeploymentAuthorized: false,
     requiredGate: 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH',
+    goal7Migration012Mode: 'pre_existing_reconciliation_only',
+    goal7Migration012SqlReplayAllowed: false,
   }
   bytes['release-manifest.json'] = Buffer.from(`${JSON.stringify(releaseManifest)}\n`)
   const verification = {
@@ -174,6 +176,9 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
   assert.match(prepare, /verify_image_readable company-ai-foundation-h-lite:goal7-candidate-\$run_id \/app\/company-qnap-lite\.mjs/)
   assert.match(migrate, /012-goal7-authority-runtime\.sql/)
   assert.match(migrate, /migration-012-evidence\.json/)
+  assert.match(migrate, /originalEvidenceStatus/)
+  assert.match(migrate, /database_sql_executed=0/)
+  assert.doesNotMatch(migrate, /compose exec -T postgres psql --set=ON_ERROR_STOP=1/)
   assert.doesNotMatch(migrate, /compose up|compose build/)
   assert.doesNotMatch(deploy, /compose build|psql[\s\S]*012-goal7-authority-runtime\.sql/)
   assert.match(deploy, /wait_foundation_stable/)
