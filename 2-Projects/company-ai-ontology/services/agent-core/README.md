@@ -8,6 +8,8 @@ QNAP 上的公司级 Agent 最小服务。当前版本提供内部签名协议�
 - `GET /readyz`：Postgres 与公司 H 引擎 Runtime 同时可用才返回 200；演示模式返回 `demo_ready` 和 `productionReady=false`。
 - `POST /v1/turns`：仅接受 H-Lite 内部 HMAC 签名请求。
 - `POST /v1/retrieve`：使用签名发送者、当前会话成员 Evidence 和用途执行权限化检索。
+- `POST /v1/admin/drain`：使用 `AGENT_CORE_HMAC_SECRET` 作为内部 drain token，停止接收新写请求并等待当前请求归零。
+- `POST /v1/admin/resume`：恢复接收新请求；`/readyz` 在 draining 期间固定返回 503。
 
 ## 当前边界
 
@@ -22,6 +24,8 @@ QNAP 上的公司级 Agent 最小服务。当前版本提供内部签名协议�
 - Runtime 对 Route A 独立熔断并限制重试、Token 和费用；Route B 默认关闭。远程 Worker 缺少 provider/model/usage 真实读回时失败关闭。
 - 当前候选把凭据模式标记为 `temporary_personal_credential`；公司专用 CPA 与同厂冗余仍未完成。
 - 正式凭据切换流程见 `../../docs/h-engine-credential-cutover.md`。
+- 候选契约版本 `2026-08-12.3` 增加 active-request drain 与 `90s` 优雅停止门禁；QNAP Compose 为 Agent Core 和 H-Lite 设置 `120s stop_grace_period`，保证正常服务重建先排空请求再关闭数据库连接。
+- drain 解决正常发布、正常容器停止时的在途请求丢失问题；宿主断电、`SIGKILL` 或进程在 WorkCase 状态推进中被强杀后留下的 `runtime.idempotency_keys.status='started'` 不在本候选内。该场景必须在 Goal 8 以 lease/fencing 和 WorkCase 阶段恢复解决，禁止简单按 TTL 从头重跑。
 
 ## 本地验证
 

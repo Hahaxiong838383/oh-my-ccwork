@@ -247,9 +247,9 @@ test('internal deployment prepares a complete runtime without starting container
     evidenceType: 'goal7-runtime-component-versions',
     sourceCommit,
     hLiteSourceCommit,
-    agentCoreVersion: '2026-08-12.2',
+    agentCoreVersion: '2026-08-12.3',
     knowledgeConnectorVersion: '2026-08-11.1',
-    hLiteVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-12.1',
   })}\n`)
   await fs.writeFile(componentVersionsFile, componentVersionsBytes)
   const [sourceBytes, hLiteSourceBytes, imageBytes] = await Promise.all([
@@ -268,9 +268,9 @@ test('internal deployment prepares a complete runtime without starting container
     hLiteSourceArchiveSha256: sha256(hLiteSourceBytes),
     collectorImageArchiveSha256: sha256(imageBytes),
     runtimeComponentVersionsSha256: sha256(componentVersionsBytes),
-    agentCoreVersion: '2026-08-12.2',
+    agentCoreVersion: '2026-08-12.3',
     knowledgeConnectorVersion: '2026-08-11.1',
-    hLiteVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-12.1',
     candidateOntologySchema: '3.7.0',
     candidateOntologyHash: 'c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860',
     sourceRegistryCandidateHash: '0ce4022adcfc177ced670a8d7fd2e4b4e119c2fc1bc5c19cabefb3223c010eae',

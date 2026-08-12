@@ -23,9 +23,12 @@ const ACCEPTANCE_STEPS = Object.freeze([
   'backup_config_and_images',
   'apply_candidate_migration_012',
   'build_three_target_images',
+  'wait_legacy_h_lite_quiet_window',
+  'switch_h_lite_recovery_layer_and_verify',
+  'drain_h_lite_and_agent_core',
   'switch_agent_core_and_verify',
   'switch_knowledge_connector_and_verify',
-  'switch_h_lite_and_verify',
+  'resume_h_lite_and_verify_zero_pending',
   'capture_post_deployment_state',
   'audit_zero_business_side_effects',
   'compile_deployment_evidence',
@@ -40,6 +43,7 @@ const ROLLBACK_TRIGGERS = Object.freeze([
   'foundation_restart_or_unhealthy_detected',
   'new_host_port_detected',
   'business_side_effect_detected',
+  'drain_timeout_or_pending_delivery',
 ])
 const CLOSED_CAPABILITIES = Object.freeze([
   'collectorStarted',
@@ -78,7 +82,7 @@ export function validateGoal7ReleasePlan(plan, scripts = {}) {
     'requiredExplicitAuthorizations', 'targetServices', 'unaffectedServices', 'timing',
     'expectedImpacts', 'acceptanceSteps', 'rollbackTriggers', 'closedCapabilities',
   ], 'releasePlan')
-  requireValue(plan.planVersion === '1.0.0', 'release plan version mismatch')
+  requireValue(plan.planVersion === '1.2.0', 'release plan version mismatch')
   requireValue(plan.goalKey === 'P1-PROD-READINESS', 'release plan goal mismatch')
   requireValue(plan.status === 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH', 'release plan status must remain waiting')
   requireValue(plan.companyQnapIdentity === 'qnap:company/prnas/TS-X65', 'release plan QNAP identity mismatch')
@@ -117,13 +121,24 @@ export function validateGoal7ReleasePlan(plan, scripts = {}) {
     }
     requireValue(deploy.indexOf('GOAL7_SERVICE_RECREATION_APPROVED') < deploy.indexOf('preflight-company-qnap.sh'), 'service authorization must precede QNAP preflight')
     requireValue(deploy.includes('attempt=$((attempt+1)); [ "$attempt" -lt 90 ] || return 1; sleep 2'), 'deployment health timeout changed')
-    requireValue((deploy.match(/compose up -d (agent-core|knowledge-connector|h-lite)/g) || []).length === 3, 'deployment must switch exactly three services')
+    requireValue((deploy.match(/compose up -d --no-deps (agent-core|knowledge-connector|h-lite)/g) || []).length === 3, 'deployment must switch exactly three services without dependencies')
+    requireValue(deploy.indexOf('compose up -d --no-deps h-lite') < deploy.indexOf('compose up -d --no-deps agent-core'), 'recovery-capable H-Lite must switch before Agent Core')
+    requireValue(deploy.includes('wait_legacy_h_lite_quiet'), 'deployment missing legacy H-Lite quiet gate')
+    requireValue(deploy.includes('h_lite_admin drain 0'), 'deployment missing H-Lite drain gate')
+    requireValue(deploy.includes('drain_agent_core'), 'deployment missing Agent Core drain gate')
+    requireValue(deploy.includes('h_lite_admin resume 0'), 'deployment missing H-Lite resume gate')
+    requireValue(deploy.includes('pendingDeliveries===0'), 'deployment missing pending delivery gate')
+    requireValue(!/compose up -d (?!.*--no-deps)/.test(deploy), 'deployment service recreation must use --no-deps')
     requireValue(!/compose (restart|down|stop)/.test(deploy), 'deployment contains a broad service action')
   }
   if (scripts.rollback !== undefined) {
     const rollback = scripts.rollback
     requireValue(rollback.includes('GOAL7_ROLLBACK_APPROVED'), 'rollback script missing explicit authorization')
     requireValue(rollback.includes('[ "$attempt" -lt 90 ]'), 'rollback health timeout changed')
+    requireValue(rollback.includes('h_lite_admin drain 1'), 'rollback missing H-Lite subscription drain gate')
+    requireValue(rollback.includes('pendingDeliveries===0'), 'rollback missing pending delivery gate')
+    requireValue(rollback.includes('127.0.0.1:8080/v1/admin/drain'), 'rollback missing Agent Core drain gate')
+    requireValue(rollback.includes('compose up -d --no-deps --no-build "$service"'), 'rollback service recreation must use --no-deps')
     requireValue(!/DROP TABLE|DROP SCHEMA|012-goal7-authority-runtime\.sql/.test(rollback), 'rollback must retain additive migration 012')
   }
 

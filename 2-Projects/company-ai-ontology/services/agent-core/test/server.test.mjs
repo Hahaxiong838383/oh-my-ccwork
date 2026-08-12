@@ -678,3 +678,88 @@ test('Goal 6-UAT 个人权限操作确定性转交私人 Bot 且不调用 H 引�
   assert.match(result.payload.reply, /不会尝试读取、索取或代用你的 user_access_token/)
   assert.doesNotMatch(result.payload.reply, /当前可用证据不足|insufficient/)
 })
+
+test('Agent Core drain 等待在途请求、拒绝新写请求并可恢复接单', async (t) => {
+  const store = createMemoryStore()
+  let releaseRuntime
+  let runtimeStarted
+  const runtimeStartedPromise = new Promise((resolve) => { runtimeStarted = resolve })
+  const runtime = {
+    ready: async () => ({ ready: true, productionReady: true, provider: 'test-runtime' }),
+    run: async () => {
+      runtimeStarted()
+      await new Promise((resolve) => { releaseRuntime = resolve })
+      return { reply: '已完成', runtime: { provider: 'test-runtime', productionReady: true } }
+    },
+  }
+  const server = createAgentCoreServer({ config: config(), store, runtime, now: () => now })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const port = await listen(server)
+  const body = JSON.stringify({ conversationId: 'conversation-drain-001', message: '长任务', intent: 'query', channel: 'h-lite' })
+  const active = request(port, {
+    body,
+    headers: signed(body, { requestId: 'request-drain-001', idempotencyKey: 'idem-drain-001' }),
+  })
+  await runtimeStartedPromise
+  const timedOut = await server.beginDrain({ timeoutMs: 10 })
+  assert.equal(timedOut.drained, false)
+  assert.equal(timedOut.activeRequests, 1)
+
+  const ready = await request(port, { method: 'GET', path: '/readyz' })
+  assert.equal(ready.status, 503)
+  assert.equal(ready.payload.status, 'draining')
+  assert.equal(ready.payload.activeRequests, 1)
+
+  const rejectedBody = JSON.stringify({ conversationId: 'conversation-drain-002', message: '新请求', intent: 'query', channel: 'h-lite' })
+  const rejected = await request(port, {
+    body: rejectedBody,
+    headers: signed(rejectedBody, { requestId: 'request-drain-002', idempotencyKey: 'idem-drain-002' }),
+  })
+  assert.equal(rejected.status, 503)
+  assert.equal(rejected.payload.status, 'draining')
+  assert.equal(server.drainSnapshot().activeRequests, 1)
+
+  releaseRuntime()
+  const completed = await active
+  assert.equal(completed.status, 200)
+  const drained = await server.beginDrain({ timeoutMs: 100 })
+  assert.equal(drained.drained, true)
+  assert.equal(drained.activeRequests, 0)
+  assert.deepEqual(server.resumeIntake(), { resumed: true, draining: false, activeRequests: 0 })
+
+  const resumedBody = JSON.stringify({ conversationId: 'conversation-drain-003', message: '恢复请求', intent: 'query', channel: 'h-lite' })
+  runtime.run = async () => ({ reply: '恢复完成', runtime: { provider: 'test-runtime', productionReady: true } })
+  const resumed = await request(port, {
+    body: resumedBody,
+    headers: signed(resumedBody, { requestId: 'request-drain-003', idempotencyKey: 'idem-drain-003' }),
+  })
+  assert.equal(resumed.status, 200)
+  assert.equal(resumed.payload.reply, '恢复完成')
+})
+
+test('Agent Core drain 管理接口要求内部 secret 且超时失败关闭', async (t) => {
+  const server = createAgentCoreServer({
+    config: config(),
+    store: createMemoryStore(),
+    runtime: { ready: async () => ({ ready: true, productionReady: true }) },
+    now: () => now,
+  })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const port = await listen(server)
+  const unauthorized = await request(port, { method: 'POST', path: '/v1/admin/drain' })
+  assert.equal(unauthorized.status, 401)
+  const drained = await request(port, {
+    method: 'POST',
+    path: '/v1/admin/drain',
+    headers: { 'x-agent-core-drain-token': secret, 'x-agent-core-drain-timeout-ms': '10' },
+  })
+  assert.equal(drained.status, 200)
+  assert.equal(drained.payload.status, 'drained')
+  const resumed = await request(port, {
+    method: 'POST',
+    path: '/v1/admin/resume',
+    headers: { 'x-agent-core-drain-token': secret },
+  })
+  assert.equal(resumed.status, 200)
+  assert.equal(resumed.payload.status, 'resumed')
+})

@@ -25,9 +25,9 @@ async function writeRuntimeRelease(root) {
     evidenceType: 'goal7-runtime-component-versions',
     sourceCommit,
     hLiteSourceCommit,
-    agentCoreVersion: '2026-08-12.2',
+    agentCoreVersion: '2026-08-12.3',
     knowledgeConnectorVersion: '2026-08-11.1',
-    hLiteVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-12.1',
   }
   const bytes = {
     'postgres-validation.txt': Buffer.from('postgres verified\n'),
@@ -107,7 +107,7 @@ test('Goal 7 Runtime 包绑定全部 Hash 与获批双 Commit', async () => {
   const verified = await validateGoal7RuntimeRelease(root, fixture)
   assert.equal(verified.sourceCommit, fixture.sourceCommit)
   assert.equal(verified.hLiteSourceCommit, fixture.hLiteSourceCommit)
-  assert.equal(verified.agentCoreVersion, '2026-08-12.2')
+  assert.equal(verified.agentCoreVersion, '2026-08-12.3')
   assert.equal(verified.checksumEntryCount, 8)
 
   await assert.rejects(
@@ -170,11 +170,45 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
   assert.match(deploy, /wait_foundation_stable/)
   assert.match(deploy, /stable_samples.*-ge 2/)
   assert.match(deploy, /count.*-eq 13/)
-  assert.equal((deploy.match(/compose up -d (agent-core|knowledge-connector|h-lite)/g) || []).length, 3)
+  assert.equal((deploy.match(/compose up -d --no-deps (agent-core|knowledge-connector|h-lite)/g) || []).length, 3)
+  assert.match(deploy, /wait_legacy_h_lite_quiet/)
+  assert.match(deploy, /h_lite_admin drain 0/)
+  assert.match(deploy, /drain_agent_core/)
+  assert.match(deploy, /h_lite_admin resume 0/)
+  assert.match(deploy, /pendingDeliveries===0/)
+  assert.match(deploy, /agent_core_switched=0/)
+  assert.match(deploy, /knowledge_connector_switched=0/)
+  assert.match(deploy, /agent_core_draining=0/)
+  assert.match(deploy, /agent_core_admin_available\(\)/)
+  assert.match(deploy, /typeof p\.activeRequests==='number'&&typeof p\.draining==='boolean'/)
+  assert.match(deploy, /if agent_core_admin_available; then\s+agent_core_draining=1\s+else\s+agent_core_draining=0/s)
+  assert.match(deploy, /service_uses_image\(\)/)
+  assert.match(deploy, /previous_h_lite=company-ai-foundation-h-lite:goal7-pre-\$run_id/)
+  assert.match(deploy, /preserve_agent_core=1\s+preserve_recovery_h_lite=1/s)
+  assert.match(deploy, /p\.serviceVersion===process\.argv\[1\]&&p\.sourceCommit===process\.argv\[2\]/)
+  assert.match(deploy, /service_uses_image h-lite "\$previous_h_lite"/)
+  assert.match(deploy, /service_uses_image agent-core "\$previous_agent_core"/)
+  assert.match(deploy, /if \[ "\$agent_core_draining" -eq 1 \]; then\s+if resume_agent_core/s)
+  assert.match(deploy, /elif ! drain_agent_core; then\s+preserve_agent_core=1\s+preserve_recovery_h_lite=1/s)
+  assert.match(deploy, /service_uses_image knowledge-connector "\$previous_knowledge_connector"/)
+  assert.match(deploy, /agent_core_resume_failed=1\s+preserve_recovery_h_lite=1/s)
+  assert.match(deploy, /agent_core_intake_ready=1/)
+  assert.match(deploy, /if \[ "\$agent_core_intake_ready" -eq 1 \]; then\s+h_lite_admin resume 0/s)
+  assert.match(deploy, /recovery H-Lite remains drained and no new Feishu work is admitted/)
+  assert.ok(deploy.indexOf('h_lite_switched=1') < deploy.indexOf('compose up -d --no-deps h-lite'))
+  assert.ok(deploy.indexOf('agent_core_switched=1') < deploy.indexOf('compose up -d --no-deps agent-core'))
+  assert.ok(deploy.indexOf('knowledge_connector_switched=1') < deploy.indexOf('compose up -d --no-deps knowledge-connector'))
+  assert.match(deploy, /\[ "\$agent_core_switched" -eq 1 \].*restore_services/s)
+  assert.match(deploy, /\[ "\$knowledge_connector_switched" -eq 1 \].*restore_services/s)
+  assert.match(deploy, /preserve_recovery_h_lite.*h_lite_admin resume 0/s)
   assert.doesNotMatch(deploy, /compose (restart|down|stop)|Collector|FORMAL_P2_ENABLED=1|ERP_WRITEBACK_ENABLED=1|SOCIAL_WRITEBACK_ENABLED=1/)
   assert.match(deploy, /KNOWLEDGE_SYNC_ON_START 0/)
 
   assert.match(rollback, /agent-core knowledge-connector h-lite/)
+  assert.match(rollback, /h_lite_admin drain 1/)
+  assert.match(rollback, /pendingDeliveries===0/)
+  assert.match(rollback, /agent-core\/v1\/admin\/drain|127\.0\.0\.1:8080\/v1\/admin\/drain/)
+  assert.match(rollback, /compose up -d --no-deps --no-build "\$service"/)
   assert.match(rollback, /migration012_retained=true/)
   assert.doesNotMatch(rollback, /DROP TABLE|DROP SCHEMA|012-goal7-authority-runtime\.sql|compose (restart|down|stop)/)
 })

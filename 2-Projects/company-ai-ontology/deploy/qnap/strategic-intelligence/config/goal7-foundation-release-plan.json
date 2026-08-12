@@ -1,5 +1,5 @@
 {
-  "planVersion": "1.0.0",
+  "planVersion": "1.2.0",
   "goalKey": "P1-PROD-READINESS",
   "status": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH",
   "companyQnapIdentity": "qnap:company/prnas/TS-X65",
@@ -45,9 +45,12 @@
     "backup_config_and_images",
     "apply_candidate_migration_012",
     "build_three_target_images",
+    "wait_legacy_h_lite_quiet_window",
+    "switch_h_lite_recovery_layer_and_verify",
+    "drain_h_lite_and_agent_core",
     "switch_agent_core_and_verify",
     "switch_knowledge_connector_and_verify",
-    "switch_h_lite_and_verify",
+    "resume_h_lite_and_verify_zero_pending",
     "capture_post_deployment_state",
     "audit_zero_business_side_effects",
     "compile_deployment_evidence",
@@ -61,7 +64,8 @@
     "registry_not_in_sync",
     "foundation_restart_or_unhealthy_detected",
     "new_host_port_detected",
-    "business_side_effect_detected"
+    "business_side_effect_detected",
+    "drain_timeout_or_pending_delivery"
   ],
   "closedCapabilities": {
     "collectorStarted": false,

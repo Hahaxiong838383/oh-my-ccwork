@@ -1,4 +1,5 @@
 import http from 'node:http'
+import crypto from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 
 import { loadConfig } from './config.mjs'
@@ -11,7 +12,7 @@ import { createCompanySystemStatusProvider } from './system-status.mjs'
 import { ACTIVE_STAGES, CONTRACT_ONLY_STAGES, ONTOLOGY_SCHEMA_VERSION, WORK_PROTOCOL_VERSION, createWorkCaseDraft } from './work-protocol.mjs'
 import { compileConversationAuthority } from './authority.mjs'
 
-export const AGENT_CORE_CONTRACT_VERSION = '2026-08-12.2'
+export const AGENT_CORE_CONTRACT_VERSION = '2026-08-12.3'
 
 function json(response, statusCode, payload, headers = {}) {
   const body = JSON.stringify(payload)
@@ -23,6 +24,12 @@ function json(response, statusCode, payload, headers = {}) {
     ...headers,
   })
   response.end(body)
+}
+
+function safeEqual(actual, expected) {
+  const got = Buffer.from(String(actual || ''))
+  const want = Buffer.from(String(expected || ''))
+  return got.length === want.length && crypto.timingSafeEqual(got, want)
 }
 
 async function readBody(request, limit) {
@@ -141,8 +148,75 @@ export function createAgentCoreServer({ config, store, runtime, systemStatusProv
     now: () => new Date(now()),
   })
   const companyBrain = createCompanyBrain({ store, runtime, admission, config, systemStatusProvider, now: () => new Date(now()) })
-  return http.createServer(async (request, response) => {
+  let draining = false
+  let drainStartedAt = null
+  let activeRequests = 0
+  const idleWaiters = new Set()
+
+  function notifyIdle() {
+    if (activeRequests > 0) return
+    for (const resolve of idleWaiters) resolve(true)
+    idleWaiters.clear()
+  }
+
+  async function waitForIdle(timeoutMs) {
+    if (activeRequests === 0) return true
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        idleWaiters.delete(done)
+        resolve(false)
+      }, Math.max(1, timeoutMs))
+      timer.unref?.()
+      const done = (idle) => {
+        clearTimeout(timer)
+        resolve(idle)
+      }
+      idleWaiters.add(done)
+    })
+  }
+
+  async function beginDrain({ timeoutMs = 90_000 } = {}) {
+    if (!draining) {
+      draining = true
+      drainStartedAt = new Date(now()).toISOString()
+    }
+    const drained = await waitForIdle(timeoutMs)
+    if (!drained) logger('company Agent Core drain timed out', `activeRequests=${activeRequests}`)
+    return { drained, draining, activeRequests, drainStartedAt }
+  }
+
+  function resume() {
+    draining = false
+    drainStartedAt = null
+    return { resumed: true, draining, activeRequests }
+  }
+
+  const server = http.createServer(async (request, response) => {
+    const adminRequest = request.method === 'POST' && ['/v1/admin/drain', '/v1/admin/resume'].includes(request.url)
+    const trackedRequest = request.method !== 'GET' && !adminRequest
+    let countedRequest = false
     try {
+      if (adminRequest) {
+        if (!safeEqual(request.headers['x-agent-core-drain-token'], config.hmacSecret)) {
+          json(response, 401, { ok: false, status: 'unauthorized' })
+          return
+        }
+        if (request.url === '/v1/admin/resume') {
+          json(response, 200, { ok: true, status: 'resumed', ...resume() })
+          return
+        }
+        const result = await beginDrain({ timeoutMs: Math.max(1, Number(request.headers['x-agent-core-drain-timeout-ms'] || 90_000)) })
+        json(response, result.drained ? 200 : 503, { ok: result.drained, status: result.drained ? 'drained' : 'drain_timeout', ...result })
+        return
+      }
+      if (draining && trackedRequest) {
+        json(response, 503, { ok: false, status: 'draining', message: 'Company Agent Core is draining' })
+        return
+      }
+      if (trackedRequest) {
+        activeRequests += 1
+        countedRequest = true
+      }
       if (request.method === 'GET' && request.url === '/healthz') {
         json(response, 200, {
           ok: true,
@@ -151,10 +225,26 @@ export function createAgentCoreServer({ config, store, runtime, systemStatusProv
           contractVersion: AGENT_CORE_CONTRACT_VERSION,
           sourceCommit: config.sourceCommit || null,
           admission: admission.snapshot(),
+          draining,
+          activeRequests,
+          drainStartedAt,
         })
         return
       }
       if (request.method === 'GET' && request.url === '/readyz') {
+        if (draining) {
+          json(response, 503, {
+            ok: false,
+            status: 'draining',
+            productionReady: false,
+            contractVersion: AGENT_CORE_CONTRACT_VERSION,
+            sourceCommit: config.sourceCommit || null,
+            draining,
+            activeRequests,
+            drainStartedAt,
+          })
+          return
+        }
         const [database, engine] = await Promise.all([store.ready(), runtime.ready()])
         const ready = Boolean(database.ready && engine.ready)
         json(response, ready ? 200 : 503, {
@@ -627,8 +717,17 @@ export function createAgentCoreServer({ config, store, runtime, systemStatusProv
         status: String(error?.code || 'internal_error'),
         message: statusCode >= 500 ? 'internal server error' : String(error?.message || error),
       })
+    } finally {
+      if (countedRequest) {
+        activeRequests -= 1
+        notifyIdle()
+      }
     }
   })
+  server.beginDrain = beginDrain
+  server.resumeIntake = resume
+  server.drainSnapshot = () => ({ draining, activeRequests, drainStartedAt })
+  return server
 }
 
 export async function startAgentCore(env = process.env) {
@@ -654,8 +753,14 @@ export async function startAgentCore(env = process.env) {
     server.listen(config.port, config.host, resolve)
   })
   logger('company-agent-core listening', `${config.host}:${config.port}`, AGENT_CORE_CONTRACT_VERSION)
-  const shutdown = () => {
-    server.close(() => store.close().finally(() => process.exit(0)))
+  let shuttingDown = false
+  const shutdown = async () => {
+    if (shuttingDown) return
+    shuttingDown = true
+    const result = await server.beginDrain({ timeoutMs: Math.max(1, Number(env.AGENT_CORE_DRAIN_TIMEOUT_MS || 90_000)) })
+    await new Promise((resolve) => server.close(resolve))
+    await store.close()
+    process.exit(result.drained ? 0 : 1)
   }
   process.once('SIGINT', shutdown)
   process.once('SIGTERM', shutdown)

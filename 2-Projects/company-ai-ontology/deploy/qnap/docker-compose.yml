@@ -251,6 +251,7 @@ services:
       ONTOLOGY_SCHEMA_VERSION: ${ONTOLOGY_SCHEMA_VERSION:-3.3.0}
       EVIDENCE_MAX_AGE_DAYS: ${EVIDENCE_MAX_AGE_DAYS:-180}
       WORK_PROTOCOL_RECENT_CASE_LIMIT: ${WORK_PROTOCOL_RECENT_CASE_LIMIT:-8}
+      AGENT_CORE_DRAIN_TIMEOUT_MS: ${AGENT_CORE_DRAIN_TIMEOUT_MS:-90000}
       XAI_API_KEY: ${XAI_API_KEY:-}
       H_ENGINE_REMOTE_URL: ${H_ENGINE_REMOTE_URL:-}
       H_ENGINE_REMOTE_SECRET: ${H_ENGINE_REMOTE_SECRET:-}
@@ -277,6 +278,7 @@ services:
     cpus: 0.75
     pids_limit: 128
     read_only: true
+    stop_grace_period: 120s
     tmpfs:
       - /tmp:size=32m,noexec,nosuid
 
@@ -291,6 +293,7 @@ services:
       ONTOLOGY_REGISTRY_CONTROL_TOKEN: ${ONTOLOGY_REGISTRY_CONTROL_TOKEN}
       ONTOLOGY_DEFINITIONS_DIR: /app/packages/ontology-contracts/definitions
       FUTURUS_TENANT_ID: ${FUTURUS_TENANT_ID}
+      H_LITE_DRAIN_TIMEOUT_MS: ${H_LITE_DRAIN_TIMEOUT_MS:-90000}
       PGHOST: postgres
       PGPORT: "5432"
       PGDATABASE: ontology
@@ -314,6 +317,7 @@ services:
     cpus: 0.40
     pids_limit: 96
     read_only: true
+    stop_grace_period: 120s
     tmpfs:
       - /tmp:size=16m,noexec,nosuid
 
