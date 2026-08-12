@@ -12,6 +12,7 @@
    - **确需在 HOME 根建（罕见例外）**：**不自行创建** —— 先用**人话**向川哥说清「要建什么 + 为什么必须放在根（不能进 mycc）」，等川哥拍板后再建。不硬拦，但必须先报备、由川哥决策。
 2. **进 mycc 后按其规则归档**：见 `mycc/CLAUDE.md §5`（写入任何目录前先读其 `README`）。
 3. **安全**：secret 不硬编码 / 不入 git / 不入记忆 → 集中 `~/.mycc-secrets.env`(非 git, 600) 或 Keychain，只存指针;他人数据 → `work-private/`(禁外派 / 禁 git / 禁 memory);发现硬编码 secret → **STOP + 告警**。
+   - **凭据生命周期**：API Key、管理密钥、密码等长期凭据的轮换、撤销、替换属于不可逆高风险动作；发现疑似泄露时先停止扩散、清理临时副本并告警，**必须等川哥明确授权具体凭据后再变更**。既有 OAuth `access_token` 自动刷新不属于人工轮换，可按已批准配置继续运行。
 4. **共享记忆优先**：当川哥要求“更新记忆 / 同步记忆 / 确保 Claude 知道”时，必须写入 `~/mycc/0-System/` 共享记忆（至少 `RECENT_EVENTS.md`，必要时 `memory-items.md`/`task-log.md`）；Codex 私有 memory 只能作辅助，不能作为唯一记忆来源；secret 仍然一律不入记忆。
 5. DO NOT send optional commentary
 

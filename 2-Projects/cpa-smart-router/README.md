@@ -25,6 +25,7 @@ go run ./cmd/router -config config/router.example.json
 
 - 公网入口必须校验 `Authorization: Bearer <CPA_SMART_ROUTER_KEY>`。
 - 后端 CPA key 只在服务端注入，不透传客户端 key。
+- 长期 API Key、Management Key 或密码的轮换/撤销必须由用户明确授权；疑似泄露只触发停止扩散与告警，不得自动替换凭据。OAuth access token 的既有自动刷新不受此限制。
 - `blocked_models` 用于拦截测试/玩具模型；正式流量不要调用 `fable-5`。
 - `gpt-5.3-codex` 是 Codex app 可能发出的模型名，router 将其别名映射到已验证的 `gpt-5.5` 上游候选，避免 CPA mixed 返回 unknown provider。
 - xAI 文本路由以 `grok-4.5` 为当前主模型；`grok-3-mini*`、`grok-4.3` 和 `grok-4.20-*` 旧别名统一重写到 `grok-4.5`，图像、视频、Build 与 Composer 专用模型保持原样。
@@ -59,17 +60,14 @@ ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
 - `sqlite_path` 为空时禁用 SQLite 聚合；生产建议写到 `/opt/cpa-smart-router/router.sqlite`。
 - JSONL 指标仍保留，SQLite 写入走后台 channel，不阻塞流式转发路径。
 
-## K12 账号池（2026-07-14）
+## 主机资源保护（2026-08-12）
 
-CLIProxyAPI 侧可混入 k12 codex auth 文件作为补充算力。完整运维见 [`docs/k12-auth-pool-ops.md`](./docs/k12-auth-pool-ops.md)；踩坑见 [`docs/k12-lessons-learned-2026-07-14.md`](./docs/k12-lessons-learned-2026-07-14.md)。
+`aliyun-jp` 是 1 GB 内存的轻量实例。`scripts/cpa-resource-guard.sh` 每 30 秒限制 Aegis 安全扫描 cgroup 的 CPU、内存与磁盘调度优先级，并在 IO 压力或低内存时记录进程级证据。
 
-要点：
-
-- 源包 **无 refresh_token**，保活 = 验活剔除 + 备用池补号。
-- 脚本：`scripts/k12-health-rotate.py`（生产：`aliyun-jp:/opt/cliproxy/scripts/`）。
-- 定时：`deploy/cpa-k12-health.timer` 每 30 分钟。
-- k12 实际好用模型：`gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini`。
-- **禁止**把账号 token 提交进 git。
+- 部署单元：`deploy/cpa-resource-guard.service`、`deploy/cpa-resource-guard.timer`。
+- 压力日志：`/var/log/cpa-resource-guard.log`，由 `deploy/cpa-resource-guard.logrotate` 控制大小。
+- Cloud Assistant 与 CloudMonitor 不受限制，保证主机失联时仍可走控制面恢复和查看指标。
+- K12 账号池已于 2026-08-12 退役；生产与代码仓不再保留账号源、历史账号、轮换脚本或定时器。
 
 ## Codex OAuth 自动刷新（2026-07-27）
 
@@ -77,7 +75,7 @@ CLIProxyAPI 侧可混入 k12 codex auth 文件作为补充算力。完整运维�
 
 要点：
 
-- 只有 auth 文件内存在 `refresh_token` 的 Codex OAuth 授权才可自动续期；无 `refresh_token` 的 K12 源包不能靠此机制续期。
+- 只有 auth 文件内存在 `refresh_token` 的 Codex OAuth 授权才可自动续期。
 - 刷新线程日志应出现 `core auth auto-refresh started (interval=15m0s)`。
 - 配置修改后需重启 `cliproxy.service`，并用低成本 `gpt-5.4-mini` / `gpt-5.5` 请求确认仍返回 200。
 - 不要把 `access_token`、`refresh_token`、`id_token`、API key 或响应正文写入 git、记忆、通知或 Grok payload。

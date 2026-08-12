@@ -176,7 +176,8 @@ script=html.split('<script>',1)[1].split('</script>',1)[0]
 assert 'runDailyBtn' in script
 assert 'productionAction-restart-cliproxy' in html
 assert 'productionAction-restart-router' in html
-assert 'productionAction-k12-status' in html
+assert 'productionAction-k12-status' not in html
+assert 'productionAction-k12-rotate' not in html
 assert 'Boolean(config.confirmation)' in script
 print(script)
 PY
@@ -184,18 +185,7 @@ node --check /tmp/aiops-vibe-cpa-project-script.js >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project.json?id=cpa-smart-router" | jq -e '.project.allowlistCount>=5 and .context.ok==true and (.context.files|length)>=5 and .context.truncated==false and .project.production.processManager=="systemd" and (.workflowMatrix|length)>=4' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/live.json?id=cpa-smart-router" | jq -e '.ok==true and .passed==2 and .total==2 and (.checks|length)==2 and (.checks|all(.status==401))' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/daily.json?id=cpa-smart-router" | jq -e '.ok==true and .project=="cpa-smart-router" and has("active") and has("latest")' >/dev/null
-curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production.json?id=cpa-smart-router" | jq -e '.ok==true and .project=="cpa-smart-router" and .configured==true and (.allowedActions|index("restart-cliproxy"))!=null and (.allowedActions|index("restart-router"))!=null and (.allowedActions|index("k12-status"))!=null and (.allowedActions|index("k12-rotate"))!=null' >/dev/null
-CPA_K12_JOB=$(curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"project":"cpa-smart-router","action":"k12-status"}' "$BASE/vibe/project/production/action" | jq -er 'select(.ok==true) | .jobId')
-test -n "$CPA_K12_JOB"
-CPA_K12_STATUS="queued"
-for _ in $(seq 1 45); do
-  curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production/job?id=$CPA_K12_JOB" -o /tmp/aiops-cpa-k12-job.json
-  CPA_K12_STATUS=$(jq -r '.status' /tmp/aiops-cpa-k12-job.json)
-  test "$CPA_K12_STATUS" = "queued" -o "$CPA_K12_STATUS" = "running" || break
-  sleep 1
-done
-test "$CPA_K12_STATUS" = "done"
-jq -e '.ok==true and .result.ok==true and (.result.k12.count>=0)' /tmp/aiops-cpa-k12-job.json >/dev/null
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production.json?id=cpa-smart-router" | jq -e '.ok==true and .project=="cpa-smart-router" and .configured==true and (.allowedActions|index("restart-cliproxy"))!=null and (.allowedActions|index("restart-router"))!=null and (.allowedActions|index("k12-status"))==null and (.allowedActions|index("k12-rotate"))==null' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project?id=iptv-api" -o "$IPTV_PROJECT"
 grep -q '私人 IPTV M3U 项目工作区' "$IPTV_PROJECT"
 grep -q 'productionAction-refresh' "$IPTV_PROJECT"
@@ -324,6 +314,6 @@ curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.haha
 jq -e 'has("publishedAt") and has("releaseAgeSeconds") and .cooldownSeconds==172800 and (.registryIntegrity|startswith("sha512-")) and .tarballHost=="registry.npmjs.org"' terminal/runtime/update-state.json >/dev/null
 docker exec ops-inspector sh -lc 'for directory in chenchuan-maintenance cpa-jp-maintenance iptv-maintenance qihang-hk-maintenance; do test -r "/run/secrets/$directory/id_ed25519" && test -r "/run/secrets/$directory/known_hosts"; done'
 docker inspect ops-inspector | jq -e '.[0].Mounts as $mounts | ["chenchuan-maintenance","cpa-jp-maintenance","iptv-maintenance","qihang-hk-maintenance"] | all(. as $name | any($mounts[]; .Destination==("/run/secrets/"+$name) and .Type=="bind" and .RW==false))' >/dev/null
-docker exec ops-inspector python -c 'import server; data=server.parse_maintenance_response("{\n  \"ok\": true,\n  \"k12\": {\"count\": 2}\n}\n"); assert data["ok"] is True and data["k12"]["count"]==2'
+docker exec ops-inspector python -c 'import server; data=server.parse_maintenance_response("{\n  \"ok\": true,\n  \"services\": {}\n}\n"); assert data["ok"] is True and data["services"]=={}'
 docker exec ops-tool-runner sh -lc 'test -f /workspace/readonly/MyJavis/README.md && test -f /workspace/readonly/chenchuan-site/README.md && test -f /workspace/readonly/chenchuan-site/src/app/page.tsx && test -f /workspace/readonly/chenchuan-site/src/lib/radar/index.ts && test -f /workspace/readonly/chenchuan-site/docs/theory-radar-aiops-handoff.md && test -f /workspace/readonly/chenchuan-site/services/theory-radar/theory_radar.py && test -f /workspace/readonly/cpa-smart-router/README.md && test -f /workspace/readonly/cpa-smart-router/cmd/router/main.go && test -f /workspace/readonly/iptv-api/compose.yaml && test -f /workspace/readonly/iptv-api/config/config.ini && test -f /workspace/readonly/iptv-api/scripts/validate-and-publish.sh && test -f /workspace/readonly/iptv-api/scripts/install-validate-publish-timer.sh && test -f /workspace/readonly/iptv-api/systemd/iptv-validate-publish.timer && test -f /workspace/readonly/realtime-voice-agent/README.md && test -f /workspace/readonly/realtime-voice-agent/pyproject.toml && test -f /workspace/readonly/realtime-voice-agent/src/voice_agent/kernel/memory_kernel.py && test -f /workspace/readonly/realtime-voice-agent/tests/test_contract.py && ! test -e /workspace/readonly/MyJavis/.env && ! test -e /workspace/readonly/chenchuan-site/.env.local && ! test -e /workspace/readonly/chenchuan-site/services/theory-radar/.env && ! test -e /workspace/readonly/cpa-smart-router/.env && ! test -e /workspace/readonly/cpa-smart-router/router.json && ! test -e /workspace/readonly/iptv-api/.env && ! test -e /workspace/readonly/iptv-api/output && ! test -e /workspace/readonly/realtime-voice-agent/.env && ! test -e /workspace/readonly/realtime-voice-agent/data && ! test -e /workspace/readonly/realtime-voice-agent/assets/models && ! test -e /workspace/readonly/realtime-voice-agent/assets/speakers && ! test -e /workspace/readonly/chenchuan-site/src/app/api && ! test -e /workspace/readonly/chenchuan-site/src/lib/analytics && ! test -e /workspace/readonly/chenchuan-site/src/lib/chat && ! test -e /workspace/readonly/chenchuan-site/data'
 printf 'OK vibe regression\n'

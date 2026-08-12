@@ -104,7 +104,7 @@ def models_probe(base_url, api_key):
 
 
 def chat_probe(base_url, api_key, models):
-    preferred = ["grok-3-mini-fast", "grok-3-mini", "gpt-5.2-codex", "gpt-5.1-codex"]
+    preferred = ["gpt-5.6-sol", "grok-4.5"]
     model = next((item for item in preferred if item in models), None) or (models[0] if models else None)
     if not model:
         return {"ok": False, "status": 0, "latencyMs": 0}
@@ -165,17 +165,6 @@ print(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
 PY
 }
 
-k12_status() {
-  /usr/bin/python3 /opt/cliproxy/scripts/k12-health-rotate.py --status-only
-}
-
-k12_rotate() {
-  # 验活剔死号 + 从小池/大源随机补到目标；报告无 token 正文
-  /usr/bin/python3 /opt/cliproxy/scripts/k12-health-rotate.py \
-    --target "${K12_TARGET_HEALTHY:-25}" \
-    --source "${K12_SOURCE_PATH:-/opt/cliproxy/k12-source/accounts.json}"
-}
-
 case "$ACTION" in
   inspect)
     inspect
@@ -190,12 +179,6 @@ case "$ACTION" in
     sleep 5
     inspect
     ;;
-  k12-status)
-    k12_status
-    ;;
-  k12-rotate)
-    k12_rotate
-    ;;
   *)
     printf '{"ok":false,"error":"action_not_allowed"}\n'
     exit 64
@@ -209,7 +192,7 @@ cat > /usr/local/bin/aiops-cpa-jp-dispatch <<'DISPATCH'
 #!/usr/bin/env bash
 set -euo pipefail
 case "${SSH_ORIGINAL_COMMAND:-}" in
-  inspect|restart-cliproxy|restart-router|k12-status|k12-rotate)
+  inspect|restart-cliproxy|restart-router)
     exec sudo -n /usr/local/sbin/aiops-cpa-jp-control "$SSH_ORIGINAL_COMMAND"
     ;;
   *)
@@ -223,7 +206,7 @@ chown root:root /usr/local/bin/aiops-cpa-jp-dispatch
 
 cat > /etc/sudoers.d/aiops-cpa-jp <<'SUDOERS'
 Defaults:aiops !requiretty
-aiops ALL=(root) NOPASSWD: /usr/local/sbin/aiops-cpa-jp-control inspect, /usr/local/sbin/aiops-cpa-jp-control restart-cliproxy, /usr/local/sbin/aiops-cpa-jp-control restart-router, /usr/local/sbin/aiops-cpa-jp-control k12-status, /usr/local/sbin/aiops-cpa-jp-control k12-rotate
+aiops ALL=(root) NOPASSWD: /usr/local/sbin/aiops-cpa-jp-control inspect, /usr/local/sbin/aiops-cpa-jp-control restart-cliproxy, /usr/local/sbin/aiops-cpa-jp-control restart-router
 SUDOERS
 chmod 0440 /etc/sudoers.d/aiops-cpa-jp
 visudo -cf /etc/sudoers.d/aiops-cpa-jp >/dev/null
@@ -240,7 +223,7 @@ SSH_COMMAND=(
   -p "$PRODUCTION_PORT" "aiops@$PRODUCTION_HOST"
 )
 
-ssh "$RACKNERD_ALIAS" "${SSH_COMMAND[*]} inspect" | python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["ok"] is True; assert data["services"]["cliproxy"]["active"]=="active"; assert data["services"]["cpa-smart-router"]["active"]=="active"; print("cpa maintenance inspect ok")'
+ssh "$RACKNERD_ALIAS" "${SSH_COMMAND[*]} inspect" | python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["services"]["cliproxy"]["active"]=="active"; assert data["services"]["cpa-smart-router"]["active"]=="active"; assert all(data["ports"].values()); assert data["probes"]["directModels"]["ok"] is True; assert data["probes"]["smartModels"]["ok"] is True; print("cpa maintenance channel ok; business probes recorded separately")'
 if ssh "$RACKNERD_ALIAS" "${SSH_COMMAND[*]} id" >/dev/null 2>&1; then
   printf 'restricted key unexpectedly accepted arbitrary command\n' >&2
   exit 1

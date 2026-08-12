@@ -1,0 +1,11 @@
+[Unit]
+Description=CPA resource guard and pressure evidence collector
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cpa-resource-guard.sh
+Nice=19
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle
+MemoryMax=64M

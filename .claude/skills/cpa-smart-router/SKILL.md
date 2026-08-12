@@ -26,7 +26,7 @@ description: CPA Smart Router 运维与迭代指南。用于检查、部署、�
 - 远端 JSONL：`/opt/cpa-smart-router/router-metrics.jsonl`
 - Codex lane：`/Users/rayman.chen/mycc/4-Assets/Prompt/omp-team-templates/_codex_lane.sh`
 - CLIProxyAPI：`aliyun-jp:/opt/cliproxy`，auth-dir `/root/.cli-proxy-api`
-- K12 池运维文档：`2-Projects/cpa-smart-router/docs/k12-auth-pool-ops.md`
+- 主机资源 Guard：`/usr/local/sbin/cpa-resource-guard.sh`，timer `cpa-resource-guard.timer`
 - CPA 菜单栏：`/Users/rayman.chen/mycc/2-Projects/cpa-menubar`
 - 桌面 Bridge：`cpa-desktop-bridge.service`，本地监听 `127.0.0.1:8330`
 
@@ -51,18 +51,13 @@ description: CPA Smart Router 运维与迭代指南。用于检查、部署、�
 - `fill-first` 会优先使用一个 xAI OAuth 账号；第二张卡显示“今日暂无请求记录”不代表坏账号。只有调度实际切换或显式安全测试后，第二个账号才会产生自己的用量。
 - 生产切换使用独立 systemd oneshot：备份二进制/配置/usage state，原子替换，重启后验证 health、鉴权模型目录、真实推理、Bridge 内外网与近期错误；失败或超时立即回滚。
 
-## K12 账号池（2026-07-14+）
+## K12 账号池退役（2026-08-12）
 
-- 大源：`aliyun-jp:/opt/cliproxy/k12-source/accounts.json`（80500，root 600）；备份在 racknerd secrets，**不进 Grok 只读**。
-- 源包 **无 refresh_token**；保活 = 验活剔除 + 小池/大源随机补号。
-- 脚本：`k12-health-rotate.py`（`--status-only` / 默认 rotate；大源优先前 2000）。
-- 定时：`cpa-k12-health.timer` 每 30 分钟。
-- AI Ops 限权动作：`k12-status`、`k12-rotate`（确认词 `ROTATE_CPA_K12`）；Grok harness：`docs/aiops-k12-grok-harness.md`。
-- k12 可用模型：`gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini`；Team 仍负责 `gpt-5.6-*`。
-- **gpt-5.5 优先 k12**：k12 auth `priority=100`，Team `priority=10`，`routing.strategy=fill-first`；Team 不 exclude 5.5（作兜底）。川哥 2026-07-14 测试 OK。
-- 图生冲突：`disable-image-generation: "chat"`（Codex `image_gen.imagegen` vs hosted tool）。
-- 禁止输出/提交 token 与账号文件。
-- 教训全文：`docs/k12-lessons-learned-2026-07-14.md`（OOM/源质量/模型/限权）。
+- K12 已完全退出生产：活跃 auth、源包、历史 removed 账号、pool/state、轮换脚本、systemd service/timer 和 AI Ops 入口均应为 0/不存在。
+- 代码仓同步删除 K12 脚本、部署单元和运维文档，禁止后续自动部署从 Git 恢复已退役资源。
+- 验收不能只看 auth-dir：必须递归检查 `/root/.cli-proxy-api`、`/opt/cliproxy`、`/etc/systemd/system` 是否仍含 `k12` 路径，并确认 `systemctl is-enabled cpa-k12-health.timer` 返回 `not-found`。
+- 账号界面可继续兼容历史 K12 类型用于读取旧数据，但不得把 K12 描述为当前生产能力。
+- 若未来重新启用，必须作为新的容量项目重新评估账号来源、合规性、资源预算与故障隔离，不能直接恢复旧资产。
 
 ## 安全边界
 
@@ -71,6 +66,9 @@ description: CPA Smart Router 运维与迭代指南。用于检查、部署、�
 - 提交前避开无关运行态文件，例如 `.claude/skills/mycc/current.json`。
 - 公网接口必须带鉴权；dashboard 支持 Bearer，也支持 Basic Auth，密码填同一个 key。
 - 正式客户端可继续使用个人 `CPA_API_KEY`；smart-router 通过 `client_api_key_envs` 兼容该 key，同时可保留 `CPA_SMART_ROUTER_KEY` 作为管理备用 key。
+- API Key、Management Key、登录密码的创建、轮换、撤销或替换必须获得川哥针对目标凭据的明确授权；“检查、修复、重新输出文档、发现疑似泄露”都不自动包含轮换授权。
+- 疑似泄露时先停止继续回显、清空剪贴板、删除不必要临时副本并告警，保持当前 Key 不变等待决策。只有川哥明确说“轮换/撤销/替换”后才执行，并在变更后同步 Keychain、服务器和指定交付文档。
+- CLIProxyAPI 已配置的 OAuth `access_token` 自动刷新是维持登录会话，不等于人工 API Key 轮换；不得因本规则关闭已批准的自动刷新。
 
 ## 常用验证
 
@@ -124,7 +122,7 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - 覆盖安装新版 macOS App 前必须先结束旧 `CPAMenuBar` 进程，再复制 Bundle、启动并核对新进程启动时间；否则旧进程可能继续运行被替换前的代码。
 - `MenuBarExtra(.window)` 的内容不能随账号数量无限增高：窗口使用固定尺寸（当前 `400×560`），标题/Tab/底部操作栏固定，只有中间内容区域进入 `ScrollView`；账号列表使用 `LazyVStack`。
 - 菜单栏浮窗优先使用紧凑的分段 `Picker` 做“总览 / 账号 / xAI”切换，不使用会引入额外页签装饰和尺寸波动的默认 `TabView`。设置继续由齿轮入口独立承载。
-- 账号页按“停用 → 用量读取失败 → 周额度不高于 10% → 其余账号”排序，并提供“全部 / Plus / K12 / 异常”筛选；xAI 账号不混入 Codex 账号列表。
+- 账号页按“停用 → 用量读取失败 → 周额度不高于 10% → 其余账号”排序，并提供“全部 / Plus / K12 / 异常”筛选；K12 仅为历史兼容筛选，xAI 账号不混入 Codex 账号列表。
 - 账号卡默认折叠，只保留邮箱、套餐、自动刷新标记和周额度；充值余额、重置卡等低频或危险操作只在展开区显示，重置卡仍必须走 App 二次确认与 Bridge 实时校验。
 - CPA Menu `0.3.1+` 的 API Key 美元额度必须读取 `cpa-key-policy` 原生接口：Key 配置来自 `GET /v0/management/plugins/cpa-key-policy/keys`，消费来自 `GET /v0/management/plugins/cpa-key-policy/keys/usage?id=...`；只解码白名单字段，禁止返回 `plain_key`、`key_hash`、`key_preview` 或 Management Key。
 - API Key 的可用余额口径固定为 `min(max(0, daily_limit_usd-daily_spend_usd), max(0, weekly_limit_usd-weekly_spend_usd))`；浮窗主值显示这个“更先触发限制”的剩余金额，日剩余和周剩余作为明细，不能用 OAuth 百分比或 Router Token 预算代替。
@@ -201,6 +199,11 @@ ssh aliyun-jp 'ss -lnt | grep -E "[:](8317|8327|8330)[[:space:]]"'
 - `GET /v0/management/usage-queue` 是 **destructive pop**。返回恰好 500 条时继续拉取是正确排空队列，不是重复读取；同一 CPA 实例只能保留一个消费者。
 - 怀疑采集器热循环前，必须同时验证官方 handler 语义、服务端 `usage-queue` 请求时序、连续两次实机读取结果和 Bridge 进程 CPU/I/O。只看一段 `for` 循环不能定根因。
 - 强制重启会丢失 `/proc` 活现场。若 SSH 尚可用，优先用 `pidstat -d`、`iotop -oPa`、`systemd-cgtop` 记录具体 reader；没有进程证据时只写“系统级 I/O 卡死，具体来源未知”。
+- 2026-08-12 事故时间线：K12 oneshot 在 16:28:51 一秒内成功退出，磁盘读取从 16:32 起升至约 1800–1900 IOPS；CPA 请求量维持每分钟约 13–20 次，没有 Kathy Key 流量突增。因此 K12 与 Kathy 均被排除为直接触发源。
+- Aegis 安全代理是高概率嫌疑而非已证实根因：它具备漏洞/基线扫描能力，时间线和 IO 模式吻合，但强制重启前未获得进程级读 IO 证据。对外结论必须区分“已证实系统级读取风暴”和“高概率来源”。
+- 生产已部署 `cpa-resource-guard.timer`：每 30 秒重申 Aegis 主扫描 cgroup 的 CPU、内存上限与最低磁盘调度优先级，并在 IO pressure 或低内存时把 `pressure`、`vmstat`、`pidstat` 写入 `/var/log/cpa-resource-guard.log`。Cloud Assistant 与 CloudMonitor 不限流，保留带外恢复与监控能力。
+- Aegis 有自保护，常规 `disable/mask` 或改 unit 可能被拒绝；不要硬拆。优先 cgroup 限流、压力取证和阿里云控制台策略调整。
+- 1 GB 级 SWAS 必须配置低 swappiness 的 swap 兜底；当前生产 swap 总量 2 GB、`vm.swappiness=10`。Swap 只防瞬时内存尖峰，不能替代 IO 根因治理。
 - 最终恢复必须同时满足：四服务 active、端口监听、Desktop `summary`/`accounts` 带 Keychain Token 返回 200、敏感字段零泄漏、App 重启后感叹号消失、账号数据可见，以及至少 60 秒 CPU/内存/磁盘稳定观察。
 
 ## 构建部署

@@ -107,7 +107,8 @@ AI_OPS_CAPACITY_SSH_TARGET=racknerd \
 - CPA/Codex 用量：Codex 当前不展示 5 小时额度；`primary_window`/`secondary_window` 只按 `limit_window_seconds` 判定真实周期，菜单栏与告警只使用周额度，禁止按字段槽位硬编码周期名称。
 - CPA/xAI 用量：官方费用与预付余额只读 xAI Management API，并隐藏 Management Key；Smart Router `/debug/summary?hours=24` 仅作 provider 级路由观测，`daily_token_limit - tokens_today` 只能叫“路由日预算剩余”，不得冒充官方账单。
 - CPA/Codex 充值与重置：巡检只允许读取 `credits`、`rate_limit_reset_credits` 并展示余额/卡数；重置卡属于不可逆消费，AI Ops、Grok、定时任务一律禁止自动调用消费接口。
-- CPA/K12：若 `k12-status` 显示激活数为 0，不要误判为调度故障；先查 `last-report.after_total_k12`、`k12-pool`、源包 JWT 过期情况。无 `refresh_token` 的 K12 源包无法 OAuth 续期。
+- CPA/K12：K12 已于 2026-08-12 完全退役；AI Ops 不再暴露 `k12-status` 或 `k12-rotate`，只读快照也不得包含历史 K12 脚本、部署单元或运维文档。若再次发现相关入口，按退役资源残留处理，不能自动恢复。
+- CPA 维护通道：安装/权限验收只断言限权命令可达、核心 service/port 正常和模型目录可读；真实推理属于独立业务探针，必须记录状态但不能因上游瞬时 408/5xx 把维护通道安装误判为失败。
 - 资产页：确认页面文案为“就绪度”，JSON 字段为 `readinessScore`，没有 `healthScore`。
 - 只读快照：确认非 `mycc` 真实项目是占位；如要接入，必须先列文件级 allowlist。
 - 待办闭环：确认 `/vibe/tasks` 的“转待办”能写入 `/vibe/todos`，只保存脱敏摘要和任务 ID。
