@@ -5267,13 +5267,13 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-12 01:40：**两站全对齐 `61394ff`、契约 `2026-08-12.1` 全站唯一、Mini 落差清零**）
+#### ✅ 版本态（2026-08-12 10:20：**dev198 `b7061c8`（daily 重放冻结修复）、契约 `2026-08-12.2`；Mini 落后一版待下批窗口**）
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | 线上 **`v1.61.0`**（H-0094 daily 创建面；Source `61394ff`、51 文件 attest `in_sync`、`mismatchCount=0`；旧版备份 `/srv/h-control/backups/20260812-h-control-pre-1610/`） |
-| dev198 | **git HEAD = 运行文件 = `61394ff`**（2026-08-12 起 deploy-sites.sh 标准化部署，git checkout 已与运行态归一，「HEAD 落后属正常」的旧口径**作废**）；契约 `2026-08-12.1` 全 12 App 唯一；`H_ONCE_REMINDERS=0` 已注释开闸，11 租户调度网关 socket 全就位 |
-| Mini 活动 VM | **`61394ff`**（2026-08-12 两段式升级：rollback→shadow(npm ci)→verify shadow=ready→cutover，全程 ~15 分钟；含此前全部落差：动态并发/consoleOnly/续跑信箱/话术活人感/H-0094）；契约同 `2026-08-12.1`、maxParallel=3（1 租户×3）；回滚锚 `~/local/h-mini-b2-rollback-20260812-013000-pre-cutover-61394ff` |
+| 控制面 aliyun-hk | 线上 **`v1.61.0`**（H-0094 daily 创建面；Source `61394ff`、51 文件 attest `in_sync`、`mismatchCount=0`；旧版备份 `/srv/h-control/backups/20260812-h-control-pre-1610/`；b7061c8 未动控制面文件，attest 仍有效） |
+| dev198 | **git HEAD = 运行文件 = `b7061c8`**（daily requestUuid 截断碰撞修复，契约 `2026-08-12.2` 全 12 App 唯一；E2E：临时 daily 真跑 5s+journal 新键 `sched-u-0-<40hex>`）；`H_ONCE_REMINDERS=0` 已注释开闸，11 租户调度网关 socket 全就位 |
+| Mini 活动 VM | **`61394ff`**（2026-08-12 两段式升级：rollback→shadow(npm ci)→verify shadow=ready→cutover，全程 ~15 分钟）；契约 `2026-08-12.1`、maxParallel=3；**含 daily 重放 bug 但当前零条 daily=零风险，b7061c8 随下批割接窗口带上（任务 #60）**；回滚锚 `~/local/h-mini-b2-rollback-20260812-013000-pre-cutover-61394ff` |
 
 ⚠️ **跨 bridge+控制面的字段/行为修复，部署顺序=先控制面后 bridge**（2026-08-10 实测）：
 bridge 一重启 bootPush 立即推镜像，若控制面新代码还没起，数据被旧代码处理一次，
@@ -5917,6 +5917,26 @@ node ops/sync-company-directory.mjs
 ②bot 无入口只能用引擎自带 task→必丢→死循环；③教学空指针+方法块零教学。修复=开闸+daily 创建面
 （契约 `normalizeDailyScheduleInput`+server kind=daily 分支+CLI）+教学三面。契约 `2026-08-12.1`、
 控制面 `v1.61.0`。E2E：once 从 bot 创建到 F3 送达 13 秒（delivered+message_id）。
+
+### 🔴 续集：daily 重放冻结（2026-08-12 上午 · 契约 `2026-08-12.2` / `b7061c8`）
+
+H-0094 开闸次日晨检发现的**存量第二 bug**：每条 daily 只有第一天真跑，之后每天 1 秒内
+重放首日缓存（杨平晨报 8-07 首跑后连播 6 天，送达/健康态/message_id 全绿无一层报警）。
+
+- **根因**：fireDaily 的 taskId 前缀 `sched-<uid≤32>-<defHash≤32>` 恰好 ≥50，bridge
+  runProactiveTask 对 requestUuid `slice(0,50)` 把时间戳整段切掉 → 跨天同键 →
+  `runner-rpc` 容灾层（同 requestId 已完成→直接返回缓存，本意防重启重跑）天天命中。
+- **重放的指纹（假执行 vs 真跑）**：`schedule fire` 后 **~16ms** 出 `lark-audit (proactive)
+  calls=0` 且 runner-worker **无 `grok start`** 行，随后照常 `schedule delivered`。真跑是
+  分钟级+有 `grok start`。**同一任务执行耗时突变（6 分钟→16ms）就是重放**，健康态查不出。
+- **修复**：`lib/runner-rpc.mjs` `boundedRequestId`——超限键改「前缀+全串 sha256 前 40 位」
+  （同串同键保容灾语义，异串必异键）；验收探针 `accept-<reqId>-<probe.id>` 同型截断一并修。
+  once（`sched-once-<id36>`≤47）与 base_intake（快照哈希 40=有意幂等）不受影响。
+- **验证**：负向注入旧 slice 恰红 4 条守护测试；E2E 临时 daily 真跑 5s，journal 新键形状
+  `sched-u-0-<40hex>`。旧截断键记录无需清理——新键天然不命中。
+- **排查口诀**：凡「以标识符为幂等/重放键」的链路，限长必须哈希不准截断——尾部差异
+  （时间戳/序号）被切掉后，「不同请求」在键空间里合并成同一个，重放层把它显形为
+  「第一天正常之后永远冻结」。
 
 ### Mini 两段式 VM 升级（第二次实测，~15 分钟全程）
 
