@@ -2,13 +2,13 @@
 
 日期：2026-08-11（Asia/Shanghai）
 
-状态：`engineering_verified / immutable_release_rebuild_required / production_not_deployed / owner_acceptance_pending`
+状态：`engineering_verified / immutable_release_verified / stage_a_not_authorized / production_not_deployed / owner_acceptance_pending`
 
 ## 1. 结论
 
 Goal 7 的 P1-AUTHORITY 与 P1-RUNTIME 已从规划进入本地工程候选：飞书部门/群聊 Principal 映射、发送者隔离、用途收窄、当前群成员证据、会话授权快照、Route A 独立熔断、有限重试、Token/费用预算、真实 provider/model/usage 读回和 Route B 默认关闭已经进入 Agent Core、Knowledge Connector、候选迁移和不可变 Runtime Workflow。机器 Release Plan 已升级为五阶段授权，D 阶段在任何合成写入前要求显式授权与公司 QNAP 五元组预检，E 阶段必须证明旧版本已验证且获批候选版本已恢复。Goal 7 Owner Acceptance 现绑定五份工程 Evidence，最终 Acceptance 共绑定六份文件。
 
-工程契约现已升级为 Manifest `1.6.0`：Runtime 包必须包含 `image.env` 在内的 9 项 `SHA256SUMS`，并通过隔离上传、严格根目录白名单和原子晋级。历史 Workflow `31621532736` Attempt `1` / Artifact `9151468565` 的 `image.env` 未进入其 8 项 Hash 清单，因此已降级为历史证据并禁止部署。Goal 7 仍未生成新不可变 Artifact，也未执行真实 H Worker 双源读回、合成 Authority Canary、完整三组件 Deployment Evidence、Rollback Drill Evidence 或川哥 Owner Acceptance。
+工程契约现已升级为 Manifest `1.6.0`：Runtime 包必须包含 `image.env` 在内的 9 项 `SHA256SUMS`，并通过隔离上传、严格根目录白名单和原子晋级。Workflow `31626697529` Attempt `2` / Artifact `9153663685` 已绑定 Ontology Commit `b63db1164`、H-Lite Commit `fab8be3f` 与 Collector Image `sha256:4e1669f...`，离线 9/9 Hash、Release Validator、Goal 7 Runtime、PostgreSQL Runtime 和 Foundation 验证全部通过。历史 Artifact `9151468565` 及更早包继续禁止部署。Goal 7 尚未取得 A 阶段授权，也未执行真实 H Worker 双源读回、合成 Authority Canary、完整三组件 Deployment Evidence、Rollback Drill Evidence 或川哥 Owner Acceptance。
 
 ## 2. P1-AUTHORITY 工程能力
 
@@ -91,7 +91,7 @@ Foundation 发布准备、既有 012 只读对账、三个服务重建、H Worke
 ## 6. 当前门禁
 
 - `engineeringVerified=true`：五阶段授权和回滚证据链代码已完成本地工程验证；
-- `immutableReleaseVerified=false`：旧 Artifact `9151468565` 缺少 `image.env` Hash，新 Manifest `1.6.0` Artifact 待生成；
+- `immutableReleaseVerified=true`：Artifact `9153663685` 的 Manifest `1.6.0` 与 9 项 Hash 已完整复验；
 - `ownerAccepted=false`：不得由测试自动填写；
 - 公司专用 CPA Key 与同厂冗余仍缺失，Route B 继续关闭；
 - 产品研究部整库导入、10 人真实 Canary、员工私人 Bot 迁移、ERP/社媒写回继续关闭；

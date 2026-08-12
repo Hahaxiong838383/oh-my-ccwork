@@ -1,0 +1,49 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-readonly-production-preflight",
+  "capturedAt": "2026-08-12T18:33:10Z",
+  "readOnly": true,
+  "containsSecrets": false,
+  "companyQnap": {
+    "identity": "qnap:company/prnas/TS-X65",
+    "host": "PRNas",
+    "model": "TS-X65",
+    "address": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "identityVerified": true
+  },
+  "foundation": {
+    "rootExists": true,
+    "runningContainerCount": 13,
+    "unhealthyContainerCount": 0,
+    "restartCountTotal": 0,
+    "healthEndpointStatus": "ok",
+    "healthEndpointHttpStatus": 200,
+    "healthEndpointPath": "/ontology/status/agent-core",
+    "healthEndpointExposure": "lan-only"
+  },
+  "strategicIntelligence": {
+    "containerCount": 0,
+    "networkCount": 0
+  },
+  "candidateArtifact": {
+    "id": "9153663685",
+    "manifestVersion": "1.6.0",
+    "checksumEntryCount": 9,
+    "uploadedToCompanyQnap": false,
+    "matchingFileCount": 0
+  },
+  "actionsPerformed": {
+    "artifactTransferCount": 0,
+    "imageBuildCount": 0,
+    "databaseSqlExecuted": 0,
+    "serviceRestartCount": 0,
+    "workerReadbackCount": 0,
+    "authorityCanaryCount": 0,
+    "rollbackDrillCount": 0,
+    "collectorRunCount": 0,
+    "shadowRunCount": 0
+  },
+  "result": "ready_for_separately_authorized_stage_a",
+  "productionDeploymentAuthorized": false
+}
