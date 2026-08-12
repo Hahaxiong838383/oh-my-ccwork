@@ -6,7 +6,7 @@
 
 ## 1. 结论
 
-P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `118/118`。当前唯一合格不可变候选为 Runtime Workflow `31567522831` / Artifact `9130040972`，Manifest `1.3.0`、完整 `SHA256SUMS` 和三个组件版本身份均通过验证；旧 Artifact `9128767614` 仅保留历史工程证据。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；工程阶段继续完成系统审批中心和 Goal 7 准备，真人审核在整体测试阶段关闭，正式七日 Shadow 仍须等待全部真实门禁。
+P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `118/118`。当前唯一合格不可变候选为 Runtime Workflow `31590397762` Attempt `2` / Artifact `9138991942`，Manifest `1.3.0`、8 项完整 `SHA256SUMS`、双仓 Commit 和三个组件版本身份均通过正式验证；前一 Artifact `9130040972` 及更早 Artifact `9128767614` 仅保留历史工程证据。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；工程阶段继续完成系统审批中心和 Goal 7 准备，真人审核在整体测试阶段关闭，正式七日 Shadow 仍须等待全部真实门禁。
 
 当前实测状态：
 
@@ -20,7 +20,7 @@ P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `118/118`。�
 | 生产 Readiness | 1/7 | 当前仅不可变 Release 通过；其余六项全部关闭 |
 | Goal Completion | 1/8 | 当前仅不可变 Release 通过；七个真实自然日及最终 Owner Acceptance 完成 |
 
-`2026-08-12 13:54 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。新 Artifact `9130040972` 通过不可变 Release 门禁；正式检查器重算仍为 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`。
+`2026-08-12 13:54 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。`2026-08-12 19:18 CST` 新 Artifact `9138991942` 通过不可变 Release 与 Goal 7 Runtime 门禁；正式检查器重算仍为 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`。
 
 ## 2. 最小来源审核方案
 

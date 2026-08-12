@@ -15,15 +15,15 @@ P1-SI-B～G 的工程骨架已通过当前全量验收，最新双仓不可变 R
 - Ontology Contracts：`61/61`；
 - Intelligence Collector：`9/9`；
 - Strategic Intelligence Shadow / Readiness / Goal Completion：`118/118`；
-- Runtime Workflow：`31567522831`，状态 `success`；
-- Runtime Artifact：`9130040972`，保留期至 `2026-11-10`；
+- Runtime Workflow：`31590397762` Attempt `2`，状态 `success`；
+- Runtime Artifact：`9138991942`，保留期至 `2026-11-10`；
 - Runtime Manifest：`1.3.0`，新增三个运行组件的版本身份闭环；
-- Ontology Source Commit：`350cc3b349295f9d4d2e8e13f74c876861434cb0`；
-- H-Lite Source Commit：`89fec7e23dcd665ea9513feb04fe20f125b8d12b`；
-- Collector Image：`sha256:48aa930bf168359b9bd6045de523056615dc07f82f2f0b60c4acc146331728c6`，平台 `linux/amd64`；
+- Ontology Source Commit：`b8ef69fb2130aa5e41a1809729a5d1dff8a99b35`；
+- H-Lite Source Commit：`82cbfbfe0c4628ab71270386fb9815f678ed7cb4`；
+- Collector Image：`sha256:6d24a0a92871a7b65e17609d95e987eb27f9ddcc760d69f1c6c78e384995d956`，平台 `linux/amd64`；
 - Runtime Components：Agent Core `2026-08-12.2`、Knowledge Connector `2026-08-11.1`、H-Lite `2026-08-11.1`；
 - Candidate Ontology：Schema `3.7.0`，Hash `c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860`；
-- Artifact 内 `runtime-component-versions.json`、双仓源码归档、Collector 镜像、Runtime Verification、Release Manifest 与完整 `SHA256SUMS` 已全部通过；旧 Workflow `31563935583` / Artifact `9128767614` 仅保留历史工程证据。
+- Artifact 内 `runtime-component-versions.json`、双仓源码归档、Collector 镜像、Runtime Verification、Release Manifest 与 8 项完整 `SHA256SUMS` 已全部通过，正式 Goal 7 Runtime 验证确认双仓 Commit、三个组件版本与 8 个校验项一致；前一 Workflow `31567522831` / Artifact `9130040972` 及更早 Workflow `31563935583` / Artifact `9128767614` 仅保留历史工程证据。
 
 Runtime Workflow 已验证：
 
@@ -53,7 +53,7 @@ Agent Core `2026-08-12.2` 是已授权的独立回复修复，不是 Goal 7 三�
 
 ## 4. 未关闭的人审门禁
 
-`2026-08-12 13:54 CST` 已再次通过飞书用户身份只读回拉两张审核表，并用新 Artifact `9130040972` 运行正式 Readiness / Goal Completion 检查器重算门禁。脱敏原始汇总见 `deploy/qnap/strategic-intelligence/evidence/p1-si-live-gate-status-2026-08-12.json`；文件不包含姓名、Principal、审批正文或受控路径。
+`2026-08-12 13:54 CST` 已再次通过飞书用户身份只读回拉两张审核表；`2026-08-12 19:18 CST` 使用新 Artifact `9138991942` 运行正式 Release、Goal 7 Runtime、Readiness 与 Goal Completion 检查器重算门禁。脱敏原始汇总见 `deploy/qnap/strategic-intelligence/evidence/p1-si-live-gate-status-2026-08-12.json`；文件不包含姓名、Principal、审批正文或受控路径。
 
 ### 来源审核
 
