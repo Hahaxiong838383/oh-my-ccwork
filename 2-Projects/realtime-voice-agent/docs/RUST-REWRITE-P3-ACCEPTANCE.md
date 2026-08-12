@@ -23,6 +23,7 @@
 | LLM prewarm | on | ✅ | E2E | 244ms 预建连 |
 | 声纹旁路+粘滞+ctx 注入 | on | ✅ | E2E | 跨 opus/RTC 信道 0.606~0.871 命中；首句识别第二句注入 |
 | 契约日志九事件 | on | ✅ | E2E 逐行对齐 | 微差：AgentTranscriptFinal 我=播完/截断落账时，Python=conversation_item_added |
+| **字幕发布（LiveKit transcription）** | on（页面气泡依赖） | ✅（2026-08-12 补） | E2E | **P3 验收盲区，川哥实测发现**：Rust 原先完全未实现；已按 legacy Transcription 包对齐（SG_ 段/interim 全文/final 轮换/打断发截断文本）；微差=agent 句内不逐词爬行，整句随播出出现 |
 | metrics/state publish | on | ✅ | 代码对齐+发布无错 | 客户端消费端未抓包，P4 用 web 延迟面板肉眼验 |
 | 删房 delete_room_on_close | on | ✅ | E2E | `room deleted`（twirp+roomCreate token） |
 | canonical 转写 | on | ✅ | E2E+单测 | 无标点保小数点，S1 命中前提 |
@@ -30,7 +31,9 @@
 | greeting say 入历史 | on | ✅ | E2E | |
 | RSS 监控 | on | ✅ | Linux E2E | `job rss` 同格式，口径=整 worker 进程 |
 | 恢复渐起 fade | off（0） | ✅ 已实现默认关 | 实现级 | |
-| B5 interim 提交 / LLM 赛马 / 哨兵挂断 / MyJavis 共脑 / tenant-brain / barge_gate(B9) | off/主线外 | 未实现（接口留） | — | 生产关闭项，需要时对齐 |
+| **B5 interim 提交** | **on（poc-eou.env POC_INTERIM_COMMIT=1，原矩阵写"off"是错的**，2026-08-12 读生产 env 修正） | 未实现 | — | **同台对比已知差异**：S1 命中轮 Python 以伪 final 破 MIN 地板、判停更快；Rust 走真 definite+MIN |
+| B9 声纹打断门控 | on 但 observe-only（act=False，仅观测日志） | 未实现 | — | 行为无差（Python 也不动作），仅缺观测日志 |
+| LLM 赛马 / 哨兵挂断 / MyJavis 共脑 / tenant-brain | off/主线外（.env 零 RACE 配置，2026-08-12 复核） | 未实现（接口留） | — | 生产关闭项，需要时对齐 |
 | 音乐工具 | 配置 on 但后端 8100 无监听 | **搁置（川哥拍板）** | — | 现网该功能本身已坏，仅测试用途 |
 
 ## 二、Linux（dev198, Ubuntu 26.04 / 16C / 31G）基线
