@@ -66,10 +66,11 @@
 
 agent_name 分流：Rust worker 以独立名注册 → dispatch 按名派单 → 逐房灰度；回滚=切回 Python worker 派单（分钟级，Python 全套保留未动）。切换前后 64.90 三 unit 不中断。
 
-### 试跑入口（2026-08-12 下午上线，P4-pre）
+### 试跑入口（2026-08-12 傍晚起：64.90 同机灰度，P4 第一步已落地）
 
-- **A/B 双页**：https://voice-hk.hahaxiong.cc/voice-test-rust.html（Rust，token→`rust-worker-dev198`，exp 2026-09-11）↔ /voice-test.html（Python，token exp **2026-08-16**）。页面 UI/JS 完全同款，仅标题与 token 不同。
-- **Rust worker 位置**：dev198 release @ d65a1647d，自拉起 loop，生产镜像 env（含生产声纹库副本 thr 0.50、fillers、MALLOC_ARENA_MAX=2）。dev198 产物 glibc 2.43 不兼容 64.90 的 Ubuntu 24.04——P4 真部署需在 24.04 环境构建。
-- **47.239 改动**：新静态页 + nginx 精确 location 一行（备份 `/root/voice-hk.nginx.bak-cc-20260812`）；旧页 md5 与反代路径状态码前后不变。
-- **对比公平性注**：dev198（家宽）→LiveKit HK ≈60ms RTT vs 64.90 同城 1.86ms，体感端到端约多百 ms 级一跳；面板「判停/LLM/TTS」分段数字不含该跳，可直接对比。真同台对比待 P4 部署 64.90。
-- **探针基线（页面同款房间）**：eou 680ms / llm ttft 508ms / tts ttfb 400-480ms / 端到端首声 2.0s（含 filler）；声纹 probe 0.835 命中、川哥 0.185 未误认；release 通话中 RSS 70MB。
+- **A/B 双页**：https://voice-hk.hahaxiong.cc/voice-test-rust.html（Rust，token→`rust-worker`@64.90，exp 2026-09-11）↔ /voice-test.html（Python，token exp **2026-08-16**）。页面 UI/JS 完全同款，同机同 env 同资产，真同台对比。
+- **部署形态**：64.90 新 unit `voice-worker-rust`（老三 unit 零接触）；二进制经 **GH Actions ubuntu-24.04 构建**（workflow `rust-worker-build.yml`，含 glibc≤2.39 门；dev198 26.04 产物不兼容是实证）；env 叠层 `.env`+`poc-eou.env`+`rust-worker.env`（最后加载，差异配置全在此）；sidecar 直用生产 `/root/voice-venv`；声纹/fillers 直用生产 assets。MemoryHigh/Max=900/1300M，实测 unit 含 sidecar 407MB。
+- **字幕补齐**（川哥实测发现的 P3 盲区）：transcript_pub.rs 走 legacy Transcription 包（页面 bundle 唯一消费路径），双端 E2E 验证含打断截断文本。
+- **同机探针基线（生产 env 实测）**：判停 415-484ms（EOT 阈值 0.18/MIN 0.40 生效）/ tts ttfb 433-656ms / 字幕全链路（greeting/用户逐字/打断截断）。声纹库=生产 registry（含川哥 profile）。
+- **回滚**：`systemctl disable --now voice-worker-rust`；页面层回滚=47.239 删 location 行+页面文件（nginx 备份 `/root/voice-hk.nginx.bak-cc-20260812`）。
+- **dev198 试跑段（当日下午,已下线）**：曾以 rust-worker-dev198 从家宽服务同页，探针 eou 680ms/首声 2.0s/RSS 70MB；发现字幕缺失后按川哥指示改同机部署。
