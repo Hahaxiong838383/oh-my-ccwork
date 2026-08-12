@@ -42,7 +42,10 @@ command -v "$node_bin" >/dev/null 2>&1 || [ -x "$node_bin" ] || { echo 'node run
   "$image" >/dev/null
 
 attempt=0
-until "$docker_path" exec "$container" psql -U ontology_admin -d ontology -Atc 'SELECT 1' >/dev/null 2>&1; do
+until "$docker_path" logs "$container" 2>&1 \
+    | grep -F 'PostgreSQL init process complete; ready for start up.' >/dev/null \
+  && [ "$("$docker_path" exec "$container" psql -U ontology_admin -d ontology -Atc \
+    "SELECT CASE WHEN to_regclass('workflow.tasks') IS NOT NULL THEN 'ready' ELSE 'waiting' END;" 2>/dev/null || true)" = ready ]; do
   attempt=$((attempt + 1))
   [ "$attempt" -lt 90 ] || { "$docker_path" logs --tail 120 "$container" >&2; exit 1; }
   sleep 1
