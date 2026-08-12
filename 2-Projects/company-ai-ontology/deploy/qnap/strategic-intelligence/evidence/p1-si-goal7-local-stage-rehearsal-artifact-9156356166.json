@@ -1,0 +1,62 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-local-artifact-stage-rehearsal",
+  "capturedAt": "2026-08-12T19:49:58Z",
+  "containsSecrets": false,
+  "environment": "local_temporary_directory",
+  "engineeringRehearsal": true,
+  "countsTowardStageA": false,
+  "companyQnapTouched": false,
+  "artifact": {
+    "id": "9156356166",
+    "workflowRunId": "31634250761",
+    "workflowRunAttempt": 1,
+    "sourceCommit": "63bead3665e7e7d616744b9484d4e49192b13541",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "manifestVersion": "1.6.0",
+    "checksumEntryCount": 9,
+    "checksumManifestSha256": "5fb8bcbf52cb997966954cff5228a146f1d4d6ecc1d96cac477577231c18c78b"
+  },
+  "successfulPromotion": {
+    "result": "completed",
+    "releaseFileCount": 10,
+    "nonMode0600FileCount": 0,
+    "runtimeTreeSha256": "9c5358f888cee0dbbe0957410ddec54ad7e558dfc2d7b9d933920bdf043cc088",
+    "incomingRemoved": true,
+    "lockRemoved": true,
+    "partialDirectoryCount": 0
+  },
+  "idempotentReplay": {
+    "result": "replay_accepted",
+    "existingReleaseRevalidated": true,
+    "incomingRemoved": true,
+    "lockRemoved": true,
+    "partialDirectoryCount": 0
+  },
+  "negativeTests": {
+    "checksumMutationRejected": true,
+    "concurrentPreparationRejected": true,
+    "dangerousRunIdsRejected": true,
+    "failedReplayPreservedExistingEvidence": true,
+    "failedRunRemovedOnlyCreatedImageTags": true,
+    "preparationSqlFreeVerified": true,
+    "laterPhaseMigrationReadbackVerified": true,
+    "invalidReleaseCreated": false,
+    "lockRemoved": true,
+    "partialDirectoryCount": 0
+  },
+  "productionState": {
+    "artifactTransferredToCompanyQnap": false,
+    "companyQnapReleaseCreated": false,
+    "configurationBackupCreated": false,
+    "imageBackupCreated": false,
+    "candidateImageBuildCount": 0,
+    "databaseSqlExecuted": false,
+    "servicesRecreated": false,
+    "workerReadbackStarted": false,
+    "collectorStarted": false,
+    "shadowStarted": false,
+    "rollbackDrillStarted": false
+  },
+  "result": "engineering_rehearsal_passed_waiting_explicit_stage_a_authorization"
+}

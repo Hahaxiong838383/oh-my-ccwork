@@ -1,0 +1,79 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "p1-si-runtime-artifact-verification",
+  "capturedAt": "2026-08-12T19:52:09Z",
+  "containsSecrets": false,
+  "workflow": {
+    "runId": "31634250761",
+    "runAttempt": 1,
+    "conclusion": "success",
+    "sourceCommit": "63bead3665e7e7d616744b9484d4e49192b13541",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13"
+  },
+  "artifact": {
+    "id": "9156356166",
+    "name": "p1-si-runtime-63bead3665e7e7d616744b9484d4e49192b13541",
+    "retentionExpiresAt": "2026-11-10T19:45:53Z",
+    "sizeBytes": 59001840,
+    "archiveDigest": "sha256:19ead095fbfdfcd6c90d06d11be8a186f1fdb1ed8efabc64cf43975a2832cfeb",
+    "checksumEntryCount": 9,
+    "allChecksumsVerified": true,
+    "checksumManifestSha256": "5fb8bcbf52cb997966954cff5228a146f1d4d6ecc1d96cac477577231c18c78b"
+  },
+  "manifest": {
+    "version": "1.6.0",
+    "sha256": "c3aef28cd5f112901194c59c9d19e43a4ae9882f767b1882d6baeda9b649ac3c",
+    "releaseType": "P1-SI-F-shadow-candidate-gated",
+    "publish": false,
+    "productionDeploymentAuthorized": false,
+    "goal7Migration012Mode": "pre_existing_reconciliation_only",
+    "goal7Migration012SqlReplayAllowed": false
+  },
+  "runtime": {
+    "agentCoreVersion": "2026-08-12.3",
+    "knowledgeConnectorVersion": "2026-08-11.1",
+    "hLiteVersion": "2026-08-12.1",
+    "collectorImageId": "sha256:7486070a3b91377ba87e0eaad08135549d612dcc6fe95cdefadd807f5e74ebc3",
+    "collectorPlatform": "linux/amd64",
+    "candidateOntologySchema": "3.7.0",
+    "candidateOntologyHash": "c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860",
+    "routeBState": "disabled"
+  },
+  "validation": {
+    "releaseManifestValidator": true,
+    "goal7RuntimeValidator": true,
+    "strictRootAllowlistVerified": true,
+    "symbolicLinksRejected": true,
+    "imageEnvCrossBindingVerified": true,
+    "atomicIncomingPromotionVerified": true,
+    "preparationConcurrencyLockVerified": true,
+    "preparationReplayPreservesEvidence": true,
+    "preparationSqlFreeVerified": true,
+    "laterPhaseMigrationReadbackVerified": true,
+    "dangerousRunIdRejected": true,
+    "foundationBaseImagesDigestPinned": true,
+    "postgresRuntimeVerified": true,
+    "goal7AuthorityRuntimeFoundationVerified": true,
+    "domainPersistenceVerified": true,
+    "domainPersistenceIdempotent": true,
+    "aclFailClosed": true,
+    "releasePlanExplicitAuthorizationCount": 5
+  },
+  "gateSnapshot": {
+    "deploymentReadinessPass": 1,
+    "deploymentReadinessBlocked": 6,
+    "goalCompletionPass": 1,
+    "goalCompletionBlocked": 7
+  },
+  "productionState": {
+    "uploadedToCompanyQnap": false,
+    "companyQnapDeployed": false,
+    "databaseSqlExecuted": false,
+    "servicesRecreated": false,
+    "workerReadbackStarted": false,
+    "authorityCanaryStarted": false,
+    "rollbackDrillStarted": false,
+    "collectorStarted": false,
+    "shadowStarted": false
+  }
+}

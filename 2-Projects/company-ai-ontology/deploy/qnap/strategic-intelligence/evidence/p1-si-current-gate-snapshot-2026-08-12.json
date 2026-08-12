@@ -1,5 +1,5 @@
 {
-  "snapshotVersion": "1.1.0",
+  "snapshotVersion": "1.2.0",
   "goalKey": "P1-STRATEGIC-INTELLIGENCE",
   "snapshotDate": "2026-08-12",
   "state": {
@@ -13,21 +13,24 @@
   "engineering": {
     "ontologyContractTestCount": 61,
     "collectorTestCount": 9,
-    "strategicIntelligenceTestCount": 134,
+    "strategicIntelligenceTestCount": 135,
+    "agentCoreTestCount": 66,
+    "knowledgeConnectorTestCount": 18,
     "runtimeManifestVersion": "1.6.0",
-    "runtimeWorkflowRunId": "31631413656",
+    "runtimeWorkflowRunId": "31634250761",
     "runtimeWorkflowRunAttempt": 1,
-    "runtimeArtifactId": "9155268396",
+    "runtimeArtifactId": "9156356166",
     "runtimeArtifactSha256Verified": true,
-    "sourceCommit": "36dc34610a4ad190955c7b89cadc0ff8e2e0509d",
+    "sourceCommit": "63bead3665e7e7d616744b9484d4e49192b13541",
     "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
-    "collectorImageId": "sha256:62d5ef1c05755e596ada40076d4466562355b053bce7142b36b2547ded9313a8",
+    "collectorImageId": "sha256:7486070a3b91377ba87e0eaad08135549d612dcc6fe95cdefadd807f5e74ebc3",
     "collectorPlatform": "linux/amd64",
     "agentCoreVersion": "2026-08-12.3",
     "knowledgeConnectorVersion": "2026-08-11.1",
     "hLiteVersion": "2026-08-12.1",
-    "runtimeComponentVersionsSha256": "0c25d2cc47d04ca2de7393dcc31677caf529454d28fd914e4afc15c3d29b3e42",
+    "runtimeComponentVersionsSha256": "87322c941ab575c627b73c3d81828b00e222545b608d89901b407c8960612541",
     "runtimeChecksumEntryCount": 9,
+    "preparationSqlFreeVerified": true,
     "candidateOntologySchema": "3.7.0",
     "candidateOntologyHash": "c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860",
     "routeBState": "disabled",
@@ -66,7 +69,10 @@
     "strategicIntelligenceTableCount": 0,
     "strategicIntelligenceContainerCount": 0,
     "strategicIntelligenceNetworkCount": 0,
-    "strategicIntelligencePublishedPortCount": 0
+    "strategicIntelligencePublishedPortCount": 0,
+    "currentArtifactMatchingFileCount": 0,
+    "artifactLockCount": 0,
+    "preparationLockCount": 0
   },
   "humanGates": {
     "sourceReviewCount": 8,
@@ -99,5 +105,10 @@
     "p1SiSocialWritebackCount": 0,
     "p1SiCausalActivationCount": 0
   },
-  "nextRequiredGate": "WAIT_HUMAN_REVIEW_GOAL7_AND_EXPLICIT_RUNTIME_ACTIONS"
+  "supersededArtifacts": [
+    "9155268396",
+    "9153663685",
+    "9151468565"
+  ],
+  "nextRequiredGate": "WAIT_EXPLICIT_STAGE_A_AUTHORIZATION"
 }
