@@ -7,6 +7,7 @@ umask 077
 
 project_root=${PROJECT_ROOT:-/share/CACHEDEV1_DATA/ai-ontology/foundation}
 docker_path=${DOCKER_PATH:-/share/CACHEDEV1_DATA/.qpkg/container-station/bin/docker}
+control_root=${GOAL7_CONTROL_ROOT:-$project_root}
 report_root=${GOAL7_WORKER_REPORT_ROOT:-/share/CACHEDEV1_DATA/ai-ontology/goal7-acceptance}
 source_commit=${GOAL7_SOURCE_COMMIT:-}
 h_lite_source_commit=${GOAL7_H_LITE_SOURCE_COMMIT:-}
@@ -26,7 +27,7 @@ esac
 [ "${#h_lite_source_commit}" -eq 40 ] || { echo 'GOAL7_H_LITE_SOURCE_COMMIT must be an explicit pushed 40-character commit' >&2; exit 1; }
 
 DOCKER_PATH="$docker_path" FOUNDATION_ROOT="$project_root" \
-  "$project_root/deploy/qnap/strategic-intelligence/scripts/preflight-company-qnap.sh" >/dev/null
+  "$control_root/deploy/qnap/strategic-intelligence/scripts/preflight-company-qnap.sh" >/dev/null
 
 cd "$project_root"
 set -a
@@ -39,7 +40,7 @@ cleanup() {
   "$docker_path" compose exec -T postgres psql \
     --set=ON_ERROR_STOP=1 --username ontology_admin --dbname ontology \
     --set=tenant_id="$FUTURUS_TENANT_ID" --set=run_key="$run_key" \
-    --file=- < canary/goal7-worker-readback-cleanup.sql >/dev/null 2>&1 || true
+    --file=- < "$control_root/deploy/qnap/canary/goal7-worker-readback-cleanup.sql" >/dev/null 2>&1 || true
   rm -f "$http_file.tmp" "$ledger_file.tmp" "$compiled_file.tmp"
 }
 trap cleanup EXIT INT TERM
@@ -59,7 +60,7 @@ done
 "$docker_path" compose exec -T postgres psql \
   --set=ON_ERROR_STOP=1 --username ontology_admin --dbname ontology \
   --set=tenant_id="$FUTURUS_TENANT_ID" --set=run_key="$run_key" \
-  --file=- < canary/goal7-worker-readback-seed.sql >/dev/null
+  --file=- < "$control_root/deploy/qnap/canary/goal7-worker-readback-seed.sql" >/dev/null
 
 "$docker_path" compose exec -T \
   -e GOAL7_REQUEST_ID="$request_id" \
@@ -140,12 +141,12 @@ captured_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   --set=source_commit="$source_commit" \
   --set=h_lite_source_commit="$h_lite_source_commit" \
   --set=captured_at="$captured_at" \
-  --file=- < canary/goal7-worker-readback-ledger.sql > "$ledger_file.tmp"
+  --file=- < "$control_root/deploy/qnap/canary/goal7-worker-readback-ledger.sql" > "$ledger_file.tmp"
 chmod 600 "$ledger_file.tmp"
 mv "$ledger_file.tmp" "$ledger_file"
 
-node_bin=${NODE_BIN:-$project_root/deploy/qnap/strategic-intelligence/scripts/node-runtime.sh}
-"$node_bin" "$project_root/deploy/qnap/strategic-intelligence/scripts/compile-goal7-worker-readback.mjs" \
+node_bin=${NODE_BIN:-$control_root/deploy/qnap/strategic-intelligence/scripts/node-runtime.sh}
+"$node_bin" "$control_root/deploy/qnap/strategic-intelligence/scripts/compile-goal7-worker-readback.mjs" \
   "$evidence_root" "$compiled_file.tmp" >/dev/null
 chmod 600 "$compiled_file.tmp"
 mv "$compiled_file.tmp" "$compiled_file"
@@ -153,6 +154,6 @@ mv "$compiled_file.tmp" "$compiled_file"
 "$docker_path" compose exec -T postgres psql \
   --set=ON_ERROR_STOP=1 --username ontology_admin --dbname ontology \
   --set=tenant_id="$FUTURUS_TENANT_ID" --set=run_key="$run_key" \
-  --file=- < canary/goal7-worker-readback-cleanup.sql >/dev/null
+  --file=- < "$control_root/deploy/qnap/canary/goal7-worker-readback-cleanup.sql" >/dev/null
 trap - EXIT INT TERM
 printf 'worker_readback=%s\nrequest_id_hash=%s\n' "$compiled_file" "$request_id_hash"

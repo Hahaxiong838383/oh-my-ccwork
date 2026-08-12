@@ -131,7 +131,7 @@ export async function buildGoal7WorkerReadbackEvidence(bundleRoot) {
   requireValue(isDeepStrictEqual(http.usage, ledger.usage), 'worker readback usage drift')
   const httpAt = timestamp(http.capturedAt, 'workerHttp.capturedAt')
   const ledgerAt = timestamp(ledger.capturedAt, 'workerLedger.capturedAt')
-  requireValue(ledgerAt >= httpAt && ledgerAt - httpAt <= 120_000, 'worker ledger capture is outside the allowed readback window')
+  requireValue(Math.abs(ledgerAt - httpAt) <= 120_000, 'worker ledger capture is outside the allowed readback window')
 
   return {
     evidenceVersion: '2.0.0',

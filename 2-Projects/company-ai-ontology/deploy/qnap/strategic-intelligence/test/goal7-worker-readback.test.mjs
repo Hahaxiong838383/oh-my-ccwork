@@ -42,6 +42,19 @@ test('Goal 7 worker readback compiles only from matching HTTP and Postgres ledge
   assert.doesNotMatch(JSON.stringify(evidence), /"requestId"|"prompt"|"reply"|"employeeMessage"/)
 })
 
+test('Goal 7 worker readback accepts ledger capture immediately before HTTP response capture', async () => {
+  const { bundleRoot } = await bundle()
+  const httpFile = path.join(bundleRoot, 'worker-http-response.json')
+  const ledgerFile = path.join(bundleRoot, 'worker-ledger-row.json')
+  const http = JSON.parse(await fs.readFile(httpFile, 'utf8'))
+  await rewrite(ledgerFile, (value) => ({
+    ...value,
+    capturedAt: new Date(Date.parse(http.capturedAt) - 999).toISOString(),
+  }))
+  const compiled = spawnSync(process.execPath, [COMPILER, bundleRoot], { encoding: 'utf8' })
+  assert.equal(compiled.status, 0, compiled.stderr)
+})
+
 test('Goal 7 worker readback fails closed on missing or duplicate ledger evidence', async () => {
   const missing = await bundle()
   await fs.rm(path.join(missing.bundleRoot, 'worker-ledger-row.json'))
@@ -98,6 +111,8 @@ test('Goal 7 worker readback runner is separately authorized and preserves only 
   assert.ok(runner.indexOf('GOAL7_WORKER_READBACK_APPROVED') < runner.indexOf('preflight-company-qnap.sh'))
   assert.match(runner, /h-lite node --input-type=module/)
   assert.match(runner, /createCompanyAgentCoreAdapter/)
+  assert.match(runner, /control_root=\$\{GOAL7_CONTROL_ROOT:-\$project_root\}/)
+  assert.match(runner, /\$control_root\/deploy\/qnap\/canary\/goal7-worker-readback-seed[.]sql/)
   assert.match(runner, /goal7-worker-readback-ledger[.]sql/)
   assert.match(runner, /request_id_hash/)
   assert.match(runner, /sensitivePayloadPersisted: false/)
