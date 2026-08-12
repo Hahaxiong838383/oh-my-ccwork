@@ -43,7 +43,7 @@ knowledge_connector_version=$(node -e "const x=require(process.argv[1]);process.
 h_lite_version=$(node -e "const x=require(process.argv[1]);process.stdout.write(x.hLiteVersion)" "$output_root/runtime-component-versions.json")
 cat > "$output_root/release-manifest.json" <<EOF
 {
-  "manifestVersion": "1.5.0",
+  "manifestVersion": "1.6.0",
   "releaseType": "P1-SI-F-shadow-candidate-gated",
   "createdAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "sourceCommit": "$source_commit",

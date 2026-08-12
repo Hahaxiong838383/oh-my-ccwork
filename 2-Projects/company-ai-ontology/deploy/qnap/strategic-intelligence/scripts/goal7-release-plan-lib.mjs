@@ -19,6 +19,8 @@ const UNAFFECTED_SERVICES = Object.freeze([
   'gateway',
 ])
 const ACCEPTANCE_STEPS = Object.freeze([
+  'upload_runtime_artifact_to_isolated_incoming',
+  'atomically_promote_verified_runtime_artifact',
   'verify_runtime_release',
   'capture_pre_deployment_state',
   'backup_config_and_images',
@@ -89,7 +91,7 @@ export function validateGoal7ReleasePlan(plan, scripts = {}) {
     'requiredExplicitAuthorizations', 'targetServices', 'unaffectedServices', 'timing',
     'expectedImpacts', 'acceptanceSteps', 'rollbackTriggers', 'closedCapabilities',
   ], 'releasePlan')
-  requireValue(plan.planVersion === '1.5.0', 'release plan version mismatch')
+  requireValue(plan.planVersion === '1.6.0', 'release plan version mismatch')
   requireValue(plan.goalKey === 'P1-PROD-READINESS', 'release plan goal mismatch')
   requireValue(plan.status === 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH', 'release plan status must remain waiting')
   requireValue(plan.companyQnapIdentity === 'qnap:company/prnas/TS-X65', 'release plan QNAP identity mismatch')
@@ -123,6 +125,18 @@ export function validateGoal7ReleasePlan(plan, scripts = {}) {
   exactArray(plan.rollbackTriggers, ROLLBACK_TRIGGERS, 'rollbackTriggers')
   exactKeys(plan.closedCapabilities, CLOSED_CAPABILITIES, 'closedCapabilities')
   for (const key of CLOSED_CAPABILITIES) requireValue(plan.closedCapabilities[key] === false, `${key} must remain closed`)
+
+  if (scripts.stage !== undefined) {
+    const stage = scripts.stage
+    requireValue(stage.includes('GOAL7_DEPLOY_APPROVED'), 'artifact staging script missing authorization GOAL7_DEPLOY_APPROVED')
+    requireValue(stage.indexOf('GOAL7_DEPLOY_APPROVED') < stage.indexOf('preflight-company-qnap.sh'), 'artifact staging authorization must precede QNAP preflight')
+    requireValue(stage.includes('GOAL7_APPROVED_ARTIFACT_ID'), 'artifact staging script missing approved Artifact binding')
+    requireValue(stage.includes('goal7-$artifact_id.uploading'), 'artifact staging script missing isolated uploading path')
+    requireValue(stage.includes('checksum_entry_count=9'), 'artifact staging script missing nine-entry checksum gate')
+    requireValue(stage.includes('mv "$temporary_target" "$target"'), 'artifact staging script missing atomic promotion')
+    requireValue(stage.includes('.goal7-$artifact_id.lock'), 'artifact staging script missing concurrency lock')
+    requireValue(!/compose\s+(up|build|down|restart|stop)|psql|Collector|Shadow/.test(stage), 'artifact staging script contains later-phase actions')
+  }
 
   if (scripts.prepare !== undefined) {
     const prepare = scripts.prepare

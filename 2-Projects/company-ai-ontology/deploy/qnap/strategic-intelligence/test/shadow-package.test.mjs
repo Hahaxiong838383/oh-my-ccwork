@@ -297,7 +297,7 @@ test('release manifest validator binds immutable archives and keeps deployment d
   await fs.writeFile(imageArchive, imageBytes)
   await fs.writeFile(componentVersionsFile, componentVersionsBytes)
   const manifest = {
-    manifestVersion: '1.5.0',
+    manifestVersion: '1.6.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-10T09:00:00Z',
     sourceCommit: 'a'.repeat(40),
@@ -520,7 +520,7 @@ test('isolated migration validation rejects a missing Node runtime before creati
 
 test('runtime workflow stays aligned with the gated release and domain persistence proof', async () => {
   const workflow = await fs.readFile(path.resolve(PROJECT_ROOT, '../../.github/workflows/p1-si-runtime-verify.yml'), 'utf8')
-  assert.match(workflow, /manifestVersion: '1[.]5[.]0'/)
+  assert.match(workflow, /manifestVersion: '1[.]6[.]0'/)
   assert.match(workflow, /runtime-component-versions\.json/)
   assert.match(workflow, /releaseType: 'P1-SI-F-shadow-candidate-gated'/)
   assert.match(workflow, /goal7Migration012Mode: 'pre_existing_reconciliation_only'/)

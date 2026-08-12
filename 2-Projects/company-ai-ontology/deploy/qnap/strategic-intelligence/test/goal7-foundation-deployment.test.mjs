@@ -12,6 +12,7 @@ import { validateGoal7RuntimeRelease } from '../scripts/goal7-runtime-release-li
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DEPLOY = path.join(ROOT, 'scripts/deploy-goal7-foundation.sh')
 const PREPARE = path.join(ROOT, 'scripts/prepare-goal7-foundation.sh')
+const STAGE = path.join(ROOT, 'scripts/stage-goal7-runtime-release.sh')
 const MIGRATE = path.join(ROOT, 'scripts/reconcile-goal7-migration-012.sh')
 const ROLLBACK = path.join(ROOT, 'scripts/rollback-goal7-foundation.sh')
 
@@ -39,14 +40,17 @@ async function writeRuntimeRelease(root) {
     'collector-image.tar.gz': Buffer.from('collector image'),
     'runtime-component-versions.json': Buffer.from(`${JSON.stringify(componentVersions)}\n`),
   }
+  bytes['image.env'] = Buffer.from(`image_id=sha256:${'a'.repeat(64)}\nplatform=linux/amd64\narchive_sha=${sha256(bytes['collector-image.tar.gz'])}\n`)
   const releaseManifest = {
-    manifestVersion: '1.5.0',
+    manifestVersion: '1.6.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     sourceCommit,
     hLiteSourceCommit,
     sourceArchiveSha256: sha256(bytes['source.tar.gz']),
     hLiteSourceArchiveSha256: sha256(bytes['h-lite-source.tar.gz']),
     collectorImageArchiveSha256: sha256(bytes['collector-image.tar.gz']),
+    collectorImageId: `sha256:${'a'.repeat(64)}`,
+    collectorPlatform: 'linux/amd64',
     runtimeComponentVersionsSha256: sha256(bytes['runtime-component-versions.json']),
     agentCoreVersion: componentVersions.agentCoreVersion,
     knowledgeConnectorVersion: componentVersions.knowledgeConnectorVersion,
@@ -66,6 +70,8 @@ async function writeRuntimeRelease(root) {
     agentCoreVersion: componentVersions.agentCoreVersion,
     knowledgeConnectorVersion: componentVersions.knowledgeConnectorVersion,
     hLiteVersion: componentVersions.hLiteVersion,
+    collectorImageId: `sha256:${'a'.repeat(64)}`,
+    collectorPlatform: 'linux/amd64',
     sourceArchiveSha256: sha256(bytes['source.tar.gz']),
     hLiteSourceArchiveSha256: sha256(bytes['h-lite-source.tar.gz']),
     collectorImageArchiveSha256: sha256(bytes['collector-image.tar.gz']),
@@ -112,7 +118,7 @@ test('Goal 7 Runtime 包绑定全部 Hash 与获批双 Commit', async () => {
   assert.equal(verified.sourceCommit, fixture.sourceCommit)
   assert.equal(verified.hLiteSourceCommit, fixture.hLiteSourceCommit)
   assert.equal(verified.agentCoreVersion, '2026-08-12.3')
-  assert.equal(verified.checksumEntryCount, 8)
+  assert.equal(verified.checksumEntryCount, 9)
 
   await assert.rejects(
     validateGoal7RuntimeRelease(root, { ...fixture, sourceCommit: 'a'.repeat(40) }),
@@ -122,6 +128,107 @@ test('Goal 7 Runtime 包绑定全部 Hash 与获批双 Commit', async () => {
     validateGoal7RuntimeRelease(root, { ...fixture, hLiteSourceCommit: 'b'.repeat(40) }),
     /approved H-Lite sourceCommit drift/,
   )
+})
+
+test('Goal 7 Runtime Release 拒绝未校验和文件、image.env 漂移和额外根条目', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'goal7-runtime-release-strict-'))
+  const expected = await writeRuntimeRelease(root)
+  await fs.writeFile(path.join(root, 'unexpected.txt'), 'not checksummed')
+  await assert.rejects(() => validateGoal7RuntimeRelease(root, expected), /unexpected root entries/)
+  await fs.rm(path.join(root, 'unexpected.txt'))
+
+  await fs.writeFile(path.join(root, 'image.env'), `image_id=sha256:${'b'.repeat(64)}\nplatform=linux/amd64\narchive_sha=${expected.verification.collectorImageArchiveSha256}\n`)
+  await rewriteChecksums(root)
+  await assert.rejects(() => validateGoal7RuntimeRelease(root, expected), /image_id drift/)
+})
+
+test('Goal 7 Artifact staging 在 QNAP 预检前要求 A 阶段显式授权', () => {
+  const result = spawnSync('sh', [STAGE], { encoding: 'utf8' })
+  assert.equal(result.status, 2)
+  assert.match(result.stderr, /explicit GOAL7_DEPLOY_APPROVED=YES/)
+  assert.doesNotMatch(result.stderr, /QNAP|docker|artifact id/i)
+})
+
+test('Goal 7 Artifact staging 只接受 uploading 到 release 的原子晋级', async () => {
+  const stage = await fs.readFile(STAGE, 'utf8')
+  assert.match(stage, /incoming=\$incoming_root\/goal7-\$artifact_id\.uploading/)
+  assert.match(stage, /target=\$release_root\/goal7-\$artifact_id/)
+  assert.match(stage, /validate-goal7-runtime-release\.mjs/)
+  assert.match(stage, /checksum_count.*= 9/)
+  assert.match(stage, /mv "\$temporary_target" "\$target"/)
+  assert.match(stage, /\.goal7-\$artifact_id\.lock/)
+  assert.ok(stage.indexOf('trap cleanup_stage EXIT') < stage.indexOf('validation=$('))
+  assert.match(stage, /rmdir "\$lock" 2>\/dev\/null \|\| true/)
+  assert.match(stage, /rm -rf "\$incoming"/)
+  assert.doesNotMatch(stage, /compose up|compose build|psql|Collector|Shadow/)
+})
+
+test('Goal 7 Artifact staging 校验失败后清理锁和临时目录', async () => {
+  const sandbox = await fs.mkdtemp(path.join(os.tmpdir(), 'goal7-stage-cleanup-'))
+  const scripts = path.join(sandbox, 'scripts')
+  const shadowRoot = path.join(sandbox, 'shadow')
+  const artifactId = '1234567890'
+  const incoming = path.join(shadowRoot, 'incoming', `goal7-${artifactId}.uploading`)
+  const releaseRoot = path.join(shadowRoot, 'release')
+  await fs.mkdir(scripts, { recursive: true })
+  await fs.mkdir(incoming, { recursive: true })
+  await fs.copyFile(STAGE, path.join(scripts, 'stage-goal7-runtime-release.sh'))
+  await fs.copyFile(path.join(ROOT, 'scripts/validate-goal7-runtime-release.mjs'), path.join(scripts, 'validate-goal7-runtime-release.mjs'))
+  await fs.copyFile(path.join(ROOT, 'scripts/goal7-runtime-release-lib.mjs'), path.join(scripts, 'goal7-runtime-release-lib.mjs'))
+  await fs.writeFile(path.join(scripts, 'preflight-company-qnap.sh'), `shadow_root=${JSON.stringify(shadowRoot)}\n`)
+  await fs.writeFile(path.join(scripts, 'node-runtime.sh'), `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} "$@"\n`)
+  await fs.chmod(path.join(scripts, 'node-runtime.sh'), 0o700)
+  await fs.writeFile(path.join(incoming, 'SHA256SUMS'), 'invalid\n')
+
+  const result = spawnSync('sh', [path.join(scripts, 'stage-goal7-runtime-release.sh')], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      GOAL7_DEPLOY_APPROVED: 'YES',
+      GOAL7_APPROVED_ARTIFACT_ID: artifactId,
+      GOAL7_APPROVED_SOURCE_COMMIT: 'c'.repeat(40),
+      GOAL7_APPROVED_H_LITE_SOURCE_COMMIT: 'f'.repeat(40),
+    },
+  })
+  assert.notEqual(result.status, 0)
+  await assert.rejects(fs.lstat(path.join(releaseRoot, `.goal7-${artifactId}.lock`)), { code: 'ENOENT' })
+  assert.deepEqual((await fs.readdir(releaseRoot)).filter((name) => name.includes('.partial-')), [])
+})
+
+test('Goal 7 Artifact staging 晋级后复验失败不留下目标目录', async () => {
+  const sandbox = await fs.mkdtemp(path.join(os.tmpdir(), 'goal7-stage-promote-cleanup-'))
+  const scripts = path.join(sandbox, 'scripts')
+  const shadowRoot = path.join(sandbox, 'shadow')
+  const artifactId = '1234567891'
+  const incoming = path.join(shadowRoot, 'incoming', `goal7-${artifactId}.uploading`)
+  const releaseRoot = path.join(shadowRoot, 'release')
+  const sourceCommit = 'c'.repeat(40)
+  const hLiteSourceCommit = 'f'.repeat(40)
+  await fs.mkdir(scripts, { recursive: true })
+  await fs.mkdir(incoming, { recursive: true })
+  await writeRuntimeRelease(incoming)
+  await fs.copyFile(STAGE, path.join(scripts, 'stage-goal7-runtime-release.sh'))
+  await fs.copyFile(path.join(ROOT, 'scripts/validate-goal7-runtime-release.mjs'), path.join(scripts, 'validate-goal7-runtime-release.mjs'))
+  await fs.copyFile(path.join(ROOT, 'scripts/goal7-runtime-release-lib.mjs'), path.join(scripts, 'goal7-runtime-release-lib.mjs'))
+  await fs.writeFile(path.join(scripts, 'preflight-company-qnap.sh'), `shadow_root=${JSON.stringify(shadowRoot)}\n`)
+  await fs.writeFile(path.join(scripts, 'node-runtime.sh'), `#!/bin/sh\ncount_file=${JSON.stringify(path.join(sandbox, 'validator-count'))}\ncount=0\n[ ! -f "$count_file" ] || count=$(cat "$count_file")\ncount=$((count + 1))\nprintf '%s' "$count" > "$count_file"\n[ "$count" -lt 3 ] || exit 9\nexec ${JSON.stringify(process.execPath)} "$@"\n`)
+  await fs.chmod(path.join(scripts, 'node-runtime.sh'), 0o700)
+
+  const result = spawnSync('sh', [path.join(scripts, 'stage-goal7-runtime-release.sh')], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      GOAL7_DEPLOY_APPROVED: 'YES',
+      GOAL7_APPROVED_ARTIFACT_ID: artifactId,
+      GOAL7_APPROVED_SOURCE_COMMIT: sourceCommit,
+      GOAL7_APPROVED_H_LITE_SOURCE_COMMIT: hLiteSourceCommit,
+    },
+  })
+  assert.equal(result.status, 9)
+  await assert.rejects(fs.lstat(path.join(releaseRoot, `goal7-${artifactId}`)), { code: 'ENOENT' })
+  await assert.rejects(fs.lstat(path.join(releaseRoot, `.goal7-${artifactId}.lock`)), { code: 'ENOENT' })
+  assert.deepEqual((await fs.readdir(releaseRoot)).filter((name) => name.includes('.partial-')), [])
+  assert.equal((await fs.lstat(incoming)).isDirectory(), true)
 })
 
 test('Goal 7 Runtime 包拒绝 SHA 清单篡改和重新签名后的内部 Hash 漂移', async () => {

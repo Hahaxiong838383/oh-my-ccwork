@@ -12,6 +12,7 @@ const REQUIRED_FILES = Object.freeze([
   'goal7-foundation-validation.txt',
   'release-manifest.json',
   'runtime-component-versions.json',
+  'image.env',
   'source.tar.gz',
   'h-lite-source.tar.gz',
   'collector-image.tar.gz',
@@ -55,11 +56,35 @@ function parseJson(bytes, label) {
   }
 }
 
+function parseImageEnv(bytes) {
+  const values = new Map()
+  for (const line of bytes.toString('utf8').trim().split('\n').filter(Boolean)) {
+    const match = line.match(/^([a-z_]+)=([^\r\n]+)$/)
+    requireValue(match, 'runtime release image.env contains an invalid entry')
+    requireValue(!values.has(match[1]), `runtime release image.env duplicates ${match[1]}`)
+    values.set(match[1], match[2])
+  }
+  requireValue(values.size === 3, 'runtime release image.env entry count mismatch')
+  for (const key of ['image_id', 'platform', 'archive_sha']) {
+    requireValue(values.has(key), `runtime release image.env missing ${key}`)
+  }
+  return Object.fromEntries(values)
+}
+
 export async function validateGoal7RuntimeRelease(root, expected = {}) {
   const resolvedRoot = path.resolve(root)
   const checksumBytes = await readRegularFile(resolvedRoot, 'SHA256SUMS', MAX_JSON_BYTES)
   const checksums = parseChecksums(checksumBytes)
   for (const name of REQUIRED_FILES) requireValue(checksums.has(name), `runtime release checksum missing: ${name}`)
+  requireValue(checksums.size === REQUIRED_FILES.length, 'runtime release checksum entry count mismatch')
+
+  const rootEntries = await fs.readdir(resolvedRoot, { withFileTypes: true })
+  const expectedRootEntries = new Set(['SHA256SUMS', ...REQUIRED_FILES])
+  requireValue(rootEntries.length === expectedRootEntries.size, 'runtime release contains unexpected root entries')
+  for (const entry of rootEntries) {
+    requireValue(entry.isFile() && !entry.isSymbolicLink(), `runtime release root entry is unsafe: ${entry.name}`)
+    requireValue(expectedRootEntries.has(entry.name), `runtime release contains unexpected root entry: ${entry.name}`)
+  }
 
   const files = new Map()
   for (const [name, expectedHash] of checksums) {
@@ -69,6 +94,7 @@ export async function validateGoal7RuntimeRelease(root, expected = {}) {
   }
 
   const verification = parseJson(files.get('runtime-verification.json'), 'runtime verification')
+  const imageEnv = parseImageEnv(files.get('image.env'))
   requireValue(verification.evidenceVersion === '1.0.0', 'runtime verification evidenceVersion mismatch')
   requireValue(verification.verificationType === 'P1-SI-F-linux-amd64-runtime', 'runtime verification type mismatch')
   requireValue(COMMIT.test(String(verification.sourceCommit || '')), 'runtime verification sourceCommit invalid')
@@ -81,6 +107,10 @@ export async function validateGoal7RuntimeRelease(root, expected = {}) {
   requireValue(verification.publish === false, 'runtime release publish must remain false')
   requireValue(verification.routeBState === 'disabled', 'runtime release Route B must remain disabled')
   requireValue(verification.goal7AuthorityRuntimeFoundation === 'verified', 'runtime release Goal 7 foundation is not verified')
+  requireValue(imageEnv.image_id === verification.collectorImageId, 'runtime release image.env image_id drift')
+  requireValue(imageEnv.platform === verification.collectorPlatform, 'runtime release image.env platform drift')
+  requireValue(HASH.test(imageEnv.archive_sha), 'runtime release image.env archive_sha invalid')
+  requireValue(imageEnv.archive_sha === verification.collectorImageArchiveSha256, 'runtime release image.env archive_sha drift')
 
   if (expected.sourceCommit !== undefined) {
     requireValue(COMMIT.test(expected.sourceCommit), 'approved Ontology sourceCommit invalid')
@@ -106,7 +136,7 @@ export async function validateGoal7RuntimeRelease(root, expected = {}) {
   }
 
   const releaseManifest = parseJson(files.get('release-manifest.json'), 'release manifest')
-  requireValue(releaseManifest.manifestVersion === '1.5.0', 'release manifest version mismatch')
+  requireValue(releaseManifest.manifestVersion === '1.6.0', 'release manifest version mismatch')
   requireValue(releaseManifest.releaseType === 'P1-SI-F-shadow-candidate-gated', 'release manifest type mismatch')
   requireValue(releaseManifest.sourceCommit === verification.sourceCommit, 'release manifest sourceCommit drift')
   requireValue(releaseManifest.hLiteSourceCommit === verification.hLiteSourceCommit, 'release manifest hLiteSourceCommit drift')

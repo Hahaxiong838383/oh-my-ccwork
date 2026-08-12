@@ -24,6 +24,7 @@
     "goal7:validate-rollback-drill": "node scripts/validate-goal7-rollback-drill.mjs",
     "goal7:record-owner-acceptance": "node scripts/record-goal7-owner-acceptance.mjs",
     "goal7:validate-runtime-release": "node scripts/validate-goal7-runtime-release.mjs",
+    "goal7:stage-runtime-release": "sh scripts/stage-goal7-runtime-release.sh",
     "goal7:validate-release-plan": "node scripts/validate-goal7-release-plan.mjs",
     "reviewer-role:compile-acceptance": "node scripts/compile-reviewer-role-access-acceptance.mjs",
     "goal:validate-deployment-evidence": "node scripts/validate-goal-completion-evidence.mjs",

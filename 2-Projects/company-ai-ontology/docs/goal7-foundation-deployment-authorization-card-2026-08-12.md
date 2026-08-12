@@ -2,30 +2,30 @@
 
 日期：2026-08-12（Asia/Shanghai）
 
-状态：`READY_FOR_SEPARATE_OWNER_AUTHORIZATION / NOT_AUTHORIZED`
+状态：`INVALIDATED_WAIT_NEW_ARTIFACT / NOT_AUTHORIZED`
 
-> Workflow `31621532736` / Artifact `9151468565` 已从已推送 Commit 生成 Manifest `1.5.0`，完整 `SHA256SUMS`、Release Validator、Goal 7 Runtime Validator、PostgreSQL Runtime 与 Goal 7 Foundation 验证均通过。旧 Artifact `9148675772` / Manifest `1.4.0` 继续只保留历史证据，禁止部署。以下授权仅适用于本卡固定身份，A～E 互不继承。
+> **本卡当前整体作废，不得引用其中 A～E 文案授权任何生产动作。** Artifact `9151468565` 的 `image.env` 未进入其 8 项 `SHA256SUMS`，不满足 Manifest `1.6.0` 的 9 项完整性契约。必须等待新 Artifact 生成、复验和重新签卡；A～E 仍互不继承。
 
 ## 1. 固定发布身份
 
 - 公司 QNAP：`PRNas / TS-X65 / 192.168.61.18`；
 - Foundation Root：`/share/CACHEDEV1_DATA/ai-ontology/foundation`；
-- Runtime Workflow：`31621532736` Attempt `1`；
-- Runtime Artifact：`9151468565`；
-- Runtime Manifest：`1.5.0`；
-- Ontology Commit：`a0ad7f4a13bf1d48822461d707a42c553b1dcf94`；
+- Runtime Workflow：`待生成`；
+- Runtime Artifact：`待生成`；
+- Runtime Manifest：`1.6.0`；
+- Ontology Commit：`待新 Workflow 绑定`；
 - H-Lite Commit：`fab8be3f1467289400d0d63ffe378b63ad1a6957`；
 - Agent Core：`2026-08-12.3`；
 - Knowledge Connector：`2026-08-11.1`；
 - H-Lite：`2026-08-12.1`；
-- Collector Image：`sha256:8ba30212a54870dedd20262a634a920137a9a596fa96dad7a850efee9dc79b4a`；
+- Collector Image：`待新 Workflow 绑定`；
 - Candidate Ontology：Schema `3.7.0` / Hash `c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860`；
 - 发布开关：`publish=false`；
 - 当前生产 active Schema：`3.3.0`，本次不得切换 active Schema；
 - 012 模式：`pre_existing_reconciliation_only`；
 - SQL replay：`false`。
 
-Artifact 保留至 `2026-11-10T17:13:24Z`；8 项 `SHA256SUMS`、Release Validator 与 Goal 7 Runtime Validator 已通过。任一发布身份变化，本卡自动失效。
+新 Artifact 必须具备 9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 交叉绑定、Release Validator 与 Goal 7 Runtime Validator。新 Workflow、Artifact、Commit、镜像或 Hash 任一项未写入本卡前，本卡保持失效。
 
 ## 2. 最新只读基线
 
@@ -52,13 +52,13 @@ Artifact 保留至 `2026-11-10T17:13:24Z`；8 项 `SHA256SUMS`、Release Validat
 
 ## 4. 五项独立授权
 
-以下五项互不继承。授权必须逐项引用 Artifact `9151468565`；未授权项继续关闭。
+以下五项互不继承。当前仅保留流程模板，不是可使用的授权文案；新 Artifact 复验并重签前，全部继续关闭。
 
 ### A. Foundation 发布准备与 Artifact 入场
 
-动作：把 Artifact `9151468565` 上传到公司 QNAP 受控 staging 目录，验证完整 Hash，备份现有 Compose、环境配置和三个旧镜像，构建三个候选镜像；不执行 SQL、不切换服务、不运行模型。
+动作：把未来重签的新 Artifact 上传到公司 QNAP 隔离 `incoming/*.uploading` 目录，验证完整 Hash并原子晋级，备份现有 Compose、环境配置和三个旧镜像，构建三个候选镜像；不执行 SQL、不切换服务、不运行模型。
 
-> 授权 Artifact `9151468565` 进入公司 QNAP Goal 7 发布 staging，允许执行 Hash 校验、配置与旧镜像备份、三个候选镜像构建；不授权数据库 SQL、服务重建、Worker 读回、Collector、Shadow 或真实回滚演练。
+> 旧文案已作废；等待新 Artifact 复验后重新生成。
 
 ### B. 既有迁移 012 只读证据对账
 
@@ -72,7 +72,7 @@ Artifact 保留至 `2026-11-10T17:13:24Z`；8 项 `SHA256SUMS`、Release Validat
 
 动作：按恢复型 H-Lite → Agent Core → Knowledge Connector → H-Lite 恢复接单的顺序，重建 `h-lite`、`agent-core`、`knowledge-connector`；使用 drain/resume、健康检查和自动失败恢复，不重启其他 Foundation 服务。
 
-> 授权部署 Artifact `9151468565` 对应的 Agent Core、Knowledge Connector、H-Lite，仅重建这三个服务；允许发布失败时自动恢复旧服务，不授权真实回滚演练、Worker 读回、Collector 或 Shadow。
+> 旧文案已作废；等待新 Artifact 复验后重新生成。
 
 ### D. 真实 H Worker 双源读回与 Authority Canary
 
@@ -80,13 +80,13 @@ Artifact 保留至 `2026-11-10T17:13:24Z`；8 项 `SHA256SUMS`、Release Validat
 
 精确授权回复：
 
-> 授权执行一次 Goal 7 真实 H Worker 双源读回和合成 Authority Canary，仅使用固定测试请求，不读取真实员工正文，不运行 Collector，不创建 P2，不投递员工任务，不写回业务系统。
+> 旧文案已作废；等待新 Artifact 复验后重新生成。
 
 ### E. 真实回滚恢复演练
 
 动作：在三组件发布及验收后，按“当前候选版本快照 → 切换发布前旧镜像并验证 → 再恢复到获批候选版本并验证”的顺序执行，生成 `rollback-drill-evidence.json`；012 additive migration 保留，不执行 DROP。该动作会产生第二次短暂中断。
 
-> 授权执行 Goal 7 三组件真实回滚恢复演练：旧版本验证后恢复到 Artifact `9151468565` 候选版本；保留既有迁移 012，不执行数据库 DROP，不运行 Collector 或 Shadow。
+> 旧文案已作废；等待新 Artifact 复验后重新生成。
 
 ## 5. 自动停止条件
 
@@ -106,4 +106,4 @@ Artifact 保留至 `2026-11-10T17:13:24Z`；8 项 `SHA256SUMS`、Release Validat
 
 ## 6. 当前建议
 
-当前只申请 `A`。A 留证后，B、C、D、E 继续逐项拍板。正式七日 `PUBLISH=false` Shadow 不属于本授权卡，仍需来源/P003/四角色 UAT、Goal 7 Owner Acceptance 和新的独立授权。
+当前不得申请 A～E。先生成并复验 Manifest `1.6.0`、9 项 Hash 的新 Artifact，再重签本卡；正式七日 `PUBLISH=false` Shadow 不属于本授权卡，仍需来源/P003/四角色 UAT、Goal 7 Owner Acceptance 和新的独立授权。

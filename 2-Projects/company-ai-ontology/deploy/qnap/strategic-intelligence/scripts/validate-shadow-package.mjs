@@ -162,7 +162,7 @@ for (const marker of ['run-source-revocation-audit.sh', 'capture-shadow-side-eff
 for (const name of ['shadow:validate-domain', 'shadow:compile-domain-sql']) {
   if (!packageJson.scripts?.[name]) errors.push(`missing package script ${name}`)
 }
-for (const name of ['goal7:compile-acceptance', 'goal7:validate-acceptance', 'goal7:validate-runtime-release', 'goal7:validate-release-plan']) {
+for (const name of ['goal7:compile-acceptance', 'goal7:validate-acceptance', 'goal7:validate-runtime-release', 'goal7:stage-runtime-release', 'goal7:validate-release-plan']) {
   if (!packageJson.scripts?.[name]) errors.push(`missing package script ${name}`)
 }
 if (!packageJson.scripts?.['reviewer-role:compile-acceptance']) errors.push('missing reviewer role acceptance compiler script')
@@ -182,6 +182,7 @@ const qnapHostNodeScripts = [
   'run-internal-engineering-once.sh',
   'capture-internal-engineering-runtime-state.sh',
   'capture-goal7-deployment-state.sh',
+  'stage-goal7-runtime-release.sh',
   'prepare-goal7-foundation.sh',
   'reconcile-goal7-migration-012.sh',
   'deploy-goal7-foundation.sh',
@@ -214,7 +215,7 @@ for (const marker of ['--network none', '--read-only', '--cap-drop ALL', 'no-new
   if (!qnapNodeRuntime.includes(marker)) errors.push(`QNAP Node runtime missing ${marker}`)
 }
 for (const marker of [
-  "manifestVersion: '1.5.0'",
+  "manifestVersion: '1.6.0'",
   "goal7Migration012Mode: 'pre_existing_reconciliation_only'",
   'goal7Migration012SqlReplayAllowed: false',
   'runtime-component-versions.json',

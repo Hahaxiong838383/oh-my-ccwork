@@ -2,21 +2,21 @@
 
 日期：2026-08-11（Asia/Shanghai）
 
-状态：`READY_FOR_SEPARATE_OWNER_AUTHORIZATION / NOT_AUTHORIZED`
+状态：`WAIT_NEW_IMMUTABLE_ARTIFACT / NOT_AUTHORIZED`
 
 ## 1. 结论
 
-Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动恢复和验收清单已经完成工程准备。机器 Release Plan `1.5.0` 的五项独立授权、D 阶段写入前授权/公司 QNAP 五元组预检和 E 阶段候选→旧版→候选恢复证据链均已进入 Artifact `9151468565`。不可变 Release 工程门禁已通过，但尚未取得 A～E 任一生产授权。本运行手册不构成部署、数据库 SQL、服务切换或回滚授权。
+Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动恢复和验收清单已经完成工程准备。机器 Release Plan 已升级为 `1.6.0`，新增 9 项 Hash、隔离上传和原子晋级门禁。新不可变 Artifact 尚未生成，A～E 任一生产授权当前均不得申请。本运行手册不构成部署、数据库 SQL、服务切换或回滚授权。
 
-Artifact `9142197870`、`9145915628`、`9148389214`、`9148675772` 及更早包只保留历史工程证据并禁止部署。当前唯一候选为 Runtime Workflow `31621532736` Attempt `1` / Artifact `9151468565`。
+Artifact `9142197870`、`9145915628`、`9148389214`、`9148675772`、`9151468565` 及更早包只保留历史工程证据并禁止部署。`9151468565` 虽含 `image.env`，但该文件未进入其 8 项 `SHA256SUMS`，不满足 Release Plan `1.6.0` 的完整性契约。当前没有可部署候选。
 
-- Ontology Commit：`a0ad7f4a13bf1d48822461d707a42c553b1dcf94`；
+- Ontology Commit：`待新 Workflow 绑定`；
 - H-Lite Commit `fab8be3f1467289400d0d63ffe378b63ad1a6957`；
 - Agent Core `2026-08-12.3`、Knowledge Connector `2026-08-11.1`、H-Lite `2026-08-12.1`；
-- Collector Image：`sha256:8ba30212a54870dedd20262a634a920137a9a596fa96dad7a850efee9dc79b4a`；
-- Manifest：`1.5.0`。
+- Collector Image：`待新 Workflow 绑定`；
+- Manifest：`1.6.0`。
 
-Artifact `9151468565` 的全部校验和、Release Validator、Goal 7 Foundation 与 PostgreSQL Runtime Evidence 均已通过，并固定 `goal7Migration012Mode=pre_existing_reconciliation_only / goal7Migration012SqlReplayAllowed=false`。该工程门禁不构成生产授权；任何字段变化都需要重新生成 Artifact、预检与授权卡。
+新 Artifact 必须通过 9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 与 Runtime Verification 交叉校验、Release Validator、Goal 7 Foundation 与 PostgreSQL Runtime Evidence，并固定 `goal7Migration012Mode=pre_existing_reconciliation_only / goal7Migration012SqlReplayAllowed=false`。该工程门禁不构成生产授权；任何字段变化都需要重新生成 Artifact、预检与授权卡。
 
 历史只读预检与迁移溯源确认 active Schema `3.3.0 / in_sync`，Goal 7 四张 Authority/Runtime 表来自历史 Workflow `31555822727`，原始 B 阶段 Evidence 缺失。新 Artifact 生成后又于 `2026-08-12T17:25:03Z` 经公网 Mini 跳板完成纯只读复核：五元组一致、Foundation `13/13 running / unhealthy=0 / restart=0`、LAN-only 健康端点正常，战略情报容器/网络 `0/0`，Artifact `9151468565` 匹配文件为 `0`。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/goal7-migration-012-provenance-2026-08-12.json`、`deploy/qnap/strategic-intelligence/evidence/p1-si-runtime-artifact-9151468565.json` 和 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-readonly-preflight-artifact-9151468565.json`。本轮未写入 QNAP、未执行 SQL、未运行 Collector、未重启服务、未执行回滚。
 
@@ -77,27 +77,29 @@ Artifact `9151468565` 的全部校验和、Release Validator、Goal 7 Foundation
 
 ## 4. 执行顺序
 
-1. 验证新 Runtime Artifact、全量 `SHA256SUMS`、内部 Hash、Release Manifest 和获批双仓 Commit；
-2. 捕获部署前 active Schema、Registry、三个服务版本/Commit、13 个 Foundation 服务、端口、restart count 和指纹；
-3. 备份 `.env`、Compose 和三个当前镜像；
-4. 构建并绑定三个候选镜像，旧服务继续运行；
-5. 验证 A 阶段 Preparation Evidence；
-6. 对历史 Source Archive、固定 SQL Hash、现有四表、RLS、Tenant Policy 和 `ontology_app` 权限做只读对账；
-7. 验证 B 阶段 Migration Evidence，必须证明 `database_sql_executed=0`；
-8. 等待旧 H-Lite 至少 30 秒无飞书入站/出站且 Agent Core admission 空闲；
-9. 先切换具备 SQLite 恢复能力的 H-Lite，验证飞书订阅、版本和双仓 Commit；
-10. H-Lite 与 Agent Core 进入 drain，新消息只持久化，Agent Core active request 降到 0；
-11. 仅切换 Agent Core，健康后继续；
-12. 仅切换 Knowledge Connector，健康后继续；
-13. H-Lite resume，恢复处理持久化消息，要求 `inFlight=0 / pendingDeliveries=0`；
-14. 捕获部署后状态；
-15. 审计正式 P2、员工投递、ERP/社媒写回和因果激活均为 0；
-16. 编译并验证 `deployment-evidence.json`；
-17. D 阶段运行 H Worker 双源读回并编译验证 `worker-readback.json`；
-18. 同一 D 授权下运行合成 Authority Canary，验证私聊、群聊、多人艾特、Purpose、撤权和正文前 ACL；
-19. E 阶段执行候选版本快照 → 旧版本切换验证 → 获批候选版本恢复；
-20. 从六份原始文件编译并验证 `rollback-drill-evidence.json`；
-21. 五份工程证据完成后，由川哥独立确认 Owner Acceptance，再通过受控记录器生成 `owner-acceptance.json` 并编译最终 `goal7-acceptance.json`。
+1. 将 Artifact 上传到 `incoming/goal7-<artifact-id>.uploading`；上传中断只能留下隔离半包，不能成为 Runtime 输入；
+2. 使用 `stage-goal7-runtime-release.sh` 校验九项 `SHA256SUMS`、拒绝任何额外根文件，并在同一卷内原子晋级为 `release/goal7-<artifact-id>`；
+3. 验证 Runtime Artifact 内部 Hash、Release Manifest 和获批双仓 Commit；
+4. 捕获部署前 active Schema、Registry、三个服务版本/Commit、13 个 Foundation 服务、端口、restart count 和指纹；
+5. 备份 `.env`、Compose 和三个当前镜像；
+6. 构建并绑定三个候选镜像，旧服务继续运行；
+7. 验证 A 阶段 Preparation Evidence；
+8. 对历史 Source Archive、固定 SQL Hash、现有四表、RLS、Tenant Policy 和 `ontology_app` 权限做只读对账；
+9. 验证 B 阶段 Migration Evidence，必须证明 `database_sql_executed=0`；
+10. 等待旧 H-Lite 至少 30 秒无飞书入站/出站且 Agent Core admission 空闲；
+11. 先切换具备 SQLite 恢复能力的 H-Lite，验证飞书订阅、版本和双仓 Commit；
+12. H-Lite 与 Agent Core 进入 drain，新消息只持久化，Agent Core active request 降到 0；
+13. 仅切换 Agent Core，健康后继续；
+14. 仅切换 Knowledge Connector，健康后继续；
+15. H-Lite resume，恢复处理持久化消息，要求 `inFlight=0 / pendingDeliveries=0`；
+16. 捕获部署后状态；
+17. 审计正式 P2、员工投递、ERP/社媒写回和因果激活均为 0；
+18. 编译并验证 `deployment-evidence.json`；
+19. D 阶段运行 H Worker 双源读回并编译验证 `worker-readback.json`；
+20. 同一 D 授权下运行合成 Authority Canary，验证私聊、群聊、多人艾特、Purpose、撤权和正文前 ACL；
+21. E 阶段执行候选版本快照 → 旧版本切换验证 → 获批候选版本恢复；
+22. 从六份原始文件编译并验证 `rollback-drill-evidence.json`；
+23. 五份工程证据完成后，由川哥独立确认 Owner Acceptance，再通过受控记录器生成 `owner-acceptance.json` 并编译最终 `goal7-acceptance.json`。
 
 ## 5. 验收标准
 
@@ -150,11 +152,11 @@ Artifact `9151468565` 的全部校验和、Release Validator、Goal 7 Foundation
 | P003 最终决定 | `0/36` |
 | 四角色真实 UAT | `0/4` |
 | Goal 7 Owner Acceptance | `未完成` |
-| Production Readiness | `1/7`，仅不可变 Release 通过 |
+| Production Readiness | `0/7`，新不可变 Release 待生成 |
 | 七日 Production Shadow | `0/7` |
-| Goal Completion | `1/8`，仅不可变 Release 通过 |
+| Goal Completion | `0/8`，新不可变 Release 待生成 |
 
-因此当前工程准备、新 Artifact 验签、容量和公司 QNAP 公网只读预检均已完成。下一步只申请 Artifact `9151468565` 的 A 阶段授权；后续仍必须按阶段逐项验证前序 Evidence Hash，不能用一次授权贯穿全部动作。
+因此当前工程准备、容量和公司 QNAP 公网只读预检已完成，但新 Artifact 验签尚未完成。下一步是从当前推送 Commit 生成 Manifest `1.6.0` 的 9 项 Hash Artifact；复验并重签授权卡前不得申请 A，后续仍必须按阶段逐项验证前序 Evidence Hash，不能用一次授权贯穿全部动作。
 
 机器契约：`deploy/qnap/strategic-intelligence/config/goal7-foundation-release-plan.json`。
 

@@ -1,5 +1,5 @@
 {
-  "planVersion": "1.5.0",
+  "planVersion": "1.6.0",
   "goalKey": "P1-PROD-READINESS",
   "status": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH",
   "companyQnapIdentity": "qnap:company/prnas/TS-X65",
@@ -42,6 +42,8 @@
     { "capability": "company_feishu_bot_front_door", "service": "h-lite", "impact": "brief_reconnect" }
   ],
   "acceptanceSteps": [
+    "upload_runtime_artifact_to_isolated_incoming",
+    "atomically_promote_verified_runtime_artifact",
     "verify_runtime_release",
     "capture_pre_deployment_state",
     "backup_config_and_images",

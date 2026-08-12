@@ -6,7 +6,7 @@
 
 ## 1. 结论
 
-P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `119/119`。生产溯源确认 012 已由历史流程落库且原始 B 阶段 Evidence 缺失；最终 Runtime Workflow `31614522984` Attempt `1` / Artifact `9148675772` 已使用 Manifest `1.4.0` 重建验签，固定既有 012 只读对账和 `SQL replay=false`。这是当前唯一可申请 A～E 独立授权的候选，但 `productionDeploymentAuthorized=false` 且尚未进入公司 QNAP；`9145915628`、`9148389214` 及更早包禁止部署。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；工程阶段继续完成系统审批中心和 Goal 7 准备，真人审核在整体测试阶段关闭，正式七日 Shadow 仍须等待全部真实门禁。
+P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `130/130`。生产溯源确认 012 已由历史流程落库且原始 B 阶段 Evidence 缺失；历史 Artifact `9148675772`、`9151468565` 及更早包均已失效并禁止部署。当前没有可申请 A～E 的候选，必须先从新推送 Commit 生成 Manifest `1.6.0`、9 项 Hash 的新 Artifact并重签授权卡。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；工程阶段继续完成系统审批中心和 Goal 7 准备，真人审核在整体测试阶段关闭，正式七日 Shadow 仍须等待全部真实门禁。
 
 当前实测状态：
 
@@ -17,10 +17,10 @@ P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `119/119`。�
 | 系统审批模拟 | ready for release | H 控制面 8/36 模拟交互、持久化、推荐和重置通过；不计入 final |
 | 四角色成员 UAT | 0/4 | 四个真实账号完成允许与拒绝场景 |
 | Goal 7 | incomplete | 工程证据和川哥 Owner Acceptance 完成 |
-| 生产 Readiness | 1/7 | 当前仅不可变 Release 通过；其余六项全部关闭 |
-| Goal Completion | 1/8 | 当前仅不可变 Release 通过；七个真实自然日及最终 Owner Acceptance 完成 |
+| 生产 Readiness | 0/7 | 新不可变 Release 待生成；其余六项全部关闭 |
+| Goal Completion | 0/8 | 新不可变 Release、七个真实自然日及最终 Owner Acceptance 均未完成 |
 
-`2026-08-12 13:54 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。`2026-08-12 23:53 CST` 最终 Artifact `9148675772` 通过不可变 Release 门禁；重新运行机器检查器后，现有门禁仍为 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`。
+`2026-08-12 13:54 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。随后发布契约升级为 Manifest `1.6.0`、9 项 Hash；历史包不再计入不可变 Release，机器检查器现为 Deployment Readiness `0 pass / 7 blocked`、Goal Completion `0 pass / 8 blocked`。
 
 ## 2. 最小来源审核方案
 

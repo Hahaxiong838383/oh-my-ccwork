@@ -303,7 +303,7 @@ export async function createReadyInputs() {
   await fs.writeFile(path.join(releaseRoot, 'collector-image.tar.gz'), imageBytes)
   await fs.writeFile(path.join(releaseRoot, 'runtime-component-versions.json'), componentVersionsBytes)
   await fs.writeFile(path.join(releaseRoot, 'release-manifest.json'), JSON.stringify({
-    manifestVersion: '1.5.0',
+    manifestVersion: '1.6.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-11T00:00:00Z',
     sourceCommit: 'a'.repeat(40),

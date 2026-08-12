@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": ["planVersion", "goalKey", "status", "companyQnapIdentity", "deploymentAuthorized", "migration012ReconciliationAuthorized", "serviceRecreationAuthorized", "workerReadbackAuthorityCanaryAuthorized", "rollbackDrillAuthorized", "requiredExplicitAuthorizations", "targetServices", "unaffectedServices", "timing", "expectedImpacts", "acceptanceSteps", "rollbackTriggers", "closedCapabilities"],
   "properties": {
-    "planVersion": { "const": "1.5.0" },
+    "planVersion": { "const": "1.6.0" },
     "goalKey": { "const": "P1-PROD-READINESS" },
     "status": { "const": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH" },
     "companyQnapIdentity": { "const": "qnap:company/prnas/TS-X65" },
@@ -31,7 +31,7 @@
       }
     },
     "expectedImpacts": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "object" } },
-    "acceptanceSteps": { "type": "array", "minItems": 21, "maxItems": 21, "uniqueItems": true, "items": { "type": "string" } },
+    "acceptanceSteps": { "type": "array", "minItems": 23, "maxItems": 23, "uniqueItems": true, "items": { "type": "string" } },
     "rollbackTriggers": { "type": "array", "minItems": 8, "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } },
     "closedCapabilities": { "type": "object", "additionalProperties": { "const": false } }
   },

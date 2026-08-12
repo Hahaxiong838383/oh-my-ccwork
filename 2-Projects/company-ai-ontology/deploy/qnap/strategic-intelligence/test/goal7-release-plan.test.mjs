@@ -12,6 +12,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const PLAN_FILE = path.join(ROOT, 'config/goal7-foundation-release-plan.json')
 const VALIDATOR = path.join(ROOT, 'scripts/validate-goal7-release-plan.mjs')
 const PREPARE = path.join(ROOT, 'scripts/prepare-goal7-foundation.sh')
+const STAGE = path.join(ROOT, 'scripts/stage-goal7-runtime-release.sh')
 const MIGRATE = path.join(ROOT, 'scripts/reconcile-goal7-migration-012.sh')
 const DEPLOY = path.join(ROOT, 'scripts/deploy-goal7-foundation.sh')
 const WORKER_READBACK = path.resolve(ROOT, '..', 'scripts/run-goal7-worker-readback.sh')
@@ -21,6 +22,7 @@ async function inputs() {
   return {
     plan: JSON.parse(await fs.readFile(PLAN_FILE, 'utf8')),
     scripts: {
+      stage: await fs.readFile(STAGE, 'utf8'),
       prepare: await fs.readFile(PREPARE, 'utf8'),
       migrate: await fs.readFile(MIGRATE, 'utf8'),
       verifyMigration: await fs.readFile(path.join(ROOT, 'scripts/verify-goal7-migration-012-live.sh'), 'utf8'),
@@ -58,6 +60,10 @@ test('Goal 7 发布计划拒绝缺少任一阶段独立授权的脚本', async (
   const { plan, scripts } = await inputs()
   assert.throws(() => validateGoal7ReleasePlan(plan, {
     ...scripts,
+    stage: scripts.stage.replaceAll('GOAL7_DEPLOY_APPROVED', 'REMOVED_STAGING_GATE'),
+  }), /artifact staging script missing authorization GOAL7_DEPLOY_APPROVED/)
+  assert.throws(() => validateGoal7ReleasePlan(plan, {
+    ...scripts,
     prepare: scripts.prepare.replaceAll('GOAL7_DEPLOY_APPROVED', 'REMOVED_PREPARATION_GATE'),
   }), /missing authorization GOAL7_DEPLOY_APPROVED/)
   assert.throws(() => validateGoal7ReleasePlan(plan, {
@@ -79,6 +85,11 @@ test('Goal 7 发布计划拒绝缺少任一阶段独立授权的脚本', async (
 })
 
 test('Goal 7 A-D 阶段脚本各自在 QNAP 预检前拒绝缺失授权', () => {
+  const staging = spawnSync('sh', [STAGE], { encoding: 'utf8' })
+  assert.equal(staging.status, 2)
+  assert.match(staging.stderr, /GOAL7_DEPLOY_APPROVED=YES/)
+  assert.doesNotMatch(staging.stderr, /QNAP|docker/i)
+
   const first = spawnSync('sh', [PREPARE], { encoding: 'utf8' })
   assert.equal(first.status, 2)
   assert.match(first.stderr, /GOAL7_DEPLOY_APPROVED=YES/)
