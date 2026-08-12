@@ -53,7 +53,7 @@ Agent Core `2026-08-12.2` 是已授权的独立回复修复，不是 Goal 7 三�
 
 ## 4. 未关闭的人审门禁
 
-`2026-08-12 13:12 CST` 已再次通过飞书用户身份只读回拉两张审核表，并用正式 Readiness / Goal Completion 检查器重算门禁。脱敏原始汇总见 `deploy/qnap/strategic-intelligence/evidence/p1-si-live-gate-status-2026-08-12.json`；文件不包含姓名、Principal、审批正文或受控路径。
+`2026-08-12 13:54 CST` 已再次通过飞书用户身份只读回拉两张审核表，并用新 Artifact `9130040972` 运行正式 Readiness / Goal Completion 检查器重算门禁。脱敏原始汇总见 `deploy/qnap/strategic-intelligence/evidence/p1-si-live-gate-status-2026-08-12.json`；文件不包含姓名、Principal、审批正文或受控路径。
 
 ### 来源审核
 

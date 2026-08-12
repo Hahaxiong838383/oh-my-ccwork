@@ -17,7 +17,7 @@ P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `118/118`。�
 | 生产 Readiness | 1/7 | 当前仅不可变 Release 通过；其余六项全部关闭 |
 | Goal Completion | 1/8 | 当前仅不可变 Release 通过；七个真实自然日及最终 Owner Acceptance 完成 |
 
-`2026-08-12 13:12 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。正式门禁检查器重算为 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`。
+`2026-08-12 13:54 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。新 Artifact `9130040972` 通过不可变 Release 门禁；正式检查器重算仍为 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`。
 
 ## 2. 最小来源审核方案
 
@@ -88,7 +88,19 @@ Goal 7 验收文件只引用既有工程证据，不复制敏感内容。
 8. 连续运行七个真实上海自然日 `PUBLISH=false` Shadow；
 9. 第七日后完成 Owner Acceptance 和 Goal Completion 编译。
 
-## 7. 仍不可合并的授权
+## 7. 当前需要真人完成的最小动作
+
+| 责任角色 | 最小动作 | 完成证据 | Agent 可否代办 |
+|---|---|---|---|
+| 来源许可/合规审核人 | 在来源表逐条完成 8 个 final decision；推荐 3 条 `approve_for_shadow`、5 条 `keep_paused` | revision 提升、8/8 final、许可/合规证据和保存期限完整 | 不可代签 |
+| P003 各类实名 DRI | 六类各完成 1 条深审，其余 30 条完成快速决定；全部继续 `inactive` | 36/36 final，正反证据、语义重写、审核时间和参与者完整 | 不可代签或伪造证据 |
+| 四名真实角色成员 | 各完成一次本人权限允许与拒绝 UAT | 4 份不同真实成员 Session Evidence | 不可模拟真实账号 |
+| 安全负责人 | 核验四份 Session 后完成统一接受 | `securityOwnerAccepted=true` 且绑定四份 Session Hash | 不可提前接受 |
+| 川哥 | 在 Authority Canary、Worker 双源读回和三组件 Deployment Evidence 完成后执行 Goal 7 Owner Acceptance | Evidence-bound Owner Acceptance | 必须本人拍板 |
+
+在上述真人动作完成前，Agent 只允许继续准备、只读检查和编译验证；不得把 pending 批量改成 final，不得运行生产 Collector、010/011、七日 Shadow，也不得申请把当前 Goal 标记完成。
+
+## 8. 仍不可合并的授权
 
 - 内部一次性 Collector；
 - 生产部署；
