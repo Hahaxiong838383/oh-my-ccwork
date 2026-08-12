@@ -1,0 +1,35 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-company-qnap-deployment",
+  "sourceCommit": "REPLACE_WITH_PUSHED_SOURCE_COMMIT",
+  "hLiteSourceCommit": "REPLACE_WITH_PUSHED_H_LITE_SOURCE_COMMIT",
+  "capturedAt": "REPLACE_WITH_CAPTURE_TIMESTAMP",
+  "evidenceRef": "qnap:acceptance/goal7-deployment",
+  "companyQnapIdentity": "qnap:company/prnas/TS-X65",
+  "activeOntologySchema": "3.3.0",
+  "registryStatus": "pending",
+  "candidateMigration012Applied": false,
+  "agentCoreVersion": "2026-08-11.1",
+  "knowledgeConnectorVersion": "2026-08-11.1",
+  "hLiteVersion": "2026-08-11.1",
+  "foundationCriticalContainerCount": 0,
+  "foundationUnhealthyContainerCount": 0,
+  "foundationRestartCountTotal": 0,
+  "newHostPortCount": 0,
+  "routeAOperational": false,
+  "routeBEnabled": false,
+  "sideEffects": {
+    "formalP2Count": 0,
+    "employeeDeliveryCount": 0,
+    "erpWritebackCount": 0,
+    "socialWritebackCount": 0
+  },
+  "closedCapabilities": {
+    "productResearchBulkImport": false,
+    "realEmployeeCanary": false,
+    "employeePrivateBotMigration": false,
+    "erpWriteback": false,
+    "socialWriteback": false
+  },
+  "rawEvidenceFiles": {}
+}

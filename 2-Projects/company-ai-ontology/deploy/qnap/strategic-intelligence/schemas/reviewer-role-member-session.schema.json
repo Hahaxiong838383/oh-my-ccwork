@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.local/schemas/reviewer-role-member-session.schema.json",
+  "title": "P1-SI Reviewer Role Real Member Session",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["evidenceVersion", "evidenceType", "workbenchKey", "roleKey", "testedAt", "memberPrincipal", "evidenceRef", "expectedEditableCategories", "expectedEditableRecordCount", "expectedDeniedRecordCount", "results", "publicOutputContainsSensitiveData"],
+  "properties": {
+    "evidenceVersion": { "const": "1.0.0" },
+    "evidenceType": { "const": "reviewer-role-member-session" },
+    "workbenchKey": { "const": "P1-SI-HUMAN-REVIEW" },
+    "roleKey": { "enum": ["product_user", "ai_rd", "brand", "toc_offline_channel"] },
+    "testedAt": { "type": "string", "format": "date-time" },
+    "memberPrincipal": { "type": "object" },
+    "evidenceRef": { "type": "string" },
+    "expectedEditableCategories": { "type": "array", "items": { "type": "string" } },
+    "expectedEditableRecordCount": { "type": "integer", "minimum": 0 },
+    "expectedDeniedRecordCount": { "type": "integer", "minimum": 0 },
+    "results": { "type": "object" },
+    "publicOutputContainsSensitiveData": { "const": false }
+  }
+}

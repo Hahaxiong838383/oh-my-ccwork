@@ -56,6 +56,8 @@ set_env AGENT_CORE_BUILD_CONTEXT "$release_root/services/agent-core"
 set_env ACTION_GATEWAY_BUILD_CONTEXT "$release_root/services/action-gateway"
 set_env ONTOLOGY_REGISTRY_BUILD_CONTEXT "$release_root"
 set_env H_LITE_BUILD_CONTEXT "$h_release_root"
+set_env ONTOLOGY_SOURCE_COMMIT "$source_commit"
+set_env H_LITE_SOURCE_COMMIT "$h_source_commit"
 set_env WORK_PROTOCOL_MODE active
 set_env PRACTICE_PROTOCOL_MODE shadow
 set_env ONTOLOGY_SCHEMA_VERSION 3.2.0

@@ -94,10 +94,10 @@
       "properties": {
         "appliedCandidateMigrations": {
           "type": "array",
-          "prefixItems": [{ "const": "010" }, { "const": "011" }],
+          "prefixItems": [{ "const": "010" }, { "const": "011" }, { "const": "012" }],
           "items": false,
-          "minItems": 2,
-          "maxItems": 2
+          "minItems": 3,
+          "maxItems": 3
         },
         "foundationRestartCount": { "const": 0 }
       }

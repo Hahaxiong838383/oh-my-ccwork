@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/goal7-worker-readback.schema.json",
+  "title": "Goal 7 Compiler-derived H Worker Readback Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidenceVersion", "evidenceType", "sourceCommit", "hLiteSourceCommit",
+    "capturedAt", "evidenceRef", "requestIdHash", "provider", "model",
+    "credentialModeTag", "productionReady", "usage", "governance",
+    "rawEvidenceFiles", "publicOutputContainsSensitiveData"
+  ],
+  "properties": {
+    "evidenceVersion": { "const": "2.0.0" },
+    "evidenceType": { "const": "goal7-h-worker-readback" },
+    "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "hLiteSourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "evidenceRef": { "const": "qnap:acceptance/goal7-worker-readback" },
+    "requestIdHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "provider": { "type": "string", "minLength": 2 },
+    "model": { "type": "string", "minLength": 2 },
+    "credentialModeTag": { "type": "string", "minLength": 2 },
+    "productionReady": { "const": true },
+    "usage": { "$ref": "#/$defs/usage" },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["routeKey", "retryCount", "ledgerRecorded", "routeBEnabled"],
+      "properties": {
+        "routeKey": { "const": "route-a" },
+        "retryCount": { "type": "integer", "minimum": 0 },
+        "ledgerRecorded": { "const": true },
+        "routeBEnabled": { "const": false }
+      }
+    },
+    "rawEvidenceFiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["http", "ledger"],
+      "properties": {
+        "http": { "$ref": "#/$defs/fileHash" },
+        "ledger": { "$ref": "#/$defs/fileHash" }
+      }
+    },
+    "publicOutputContainsSensitiveData": { "const": false }
+  },
+  "$defs": {
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["promptTokens", "completionTokens", "totalTokens", "estimatedCostMicros"],
+      "properties": {
+        "promptTokens": { "type": "integer", "minimum": 0 },
+        "completionTokens": { "type": "integer", "minimum": 0 },
+        "totalTokens": { "type": "integer", "minimum": 0 },
+        "estimatedCostMicros": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "fileHash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": { "type": "string", "pattern": "^worker-[a-z0-9-]+\\.json$" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

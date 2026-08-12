@@ -1,5 +1,6 @@
 import { sha256 } from './protocol.mjs'
 import { classifyGovernedIntent } from './governed-intent.mjs'
+import { purposeForTurn } from './authority.mjs'
 
 export const WORK_PROTOCOL_VERSION = '1.1.0'
 export const ONTOLOGY_SCHEMA_VERSION = '3.3.0'
@@ -77,14 +78,14 @@ export function riskLevelFor(workMode) {
   return 'low'
 }
 
-export function createWorkCaseDraft({ requestId, personId, turn, processingMode = 'shadow', now = () => new Date() } = {}) {
+export function createWorkCaseDraft({ requestId, personId, turn, authoritySnapshot = null, processingMode = 'shadow', now = () => new Date() } = {}) {
   const workMode = inferWorkMode(turn)
   const requestSummary = redactRequest(turn?.message)
   const conversationReference = String(turn?.conversationId || '')
   return {
     externalCaseId: `workcase:${requestId}`,
     principalExternalKey: personId,
-    purpose: 'company-information-assistance',
+    purpose: purposeForTurn(turn),
     workMode,
     requestSummary: requestSummary || '未提供可用请求摘要',
     requestFingerprint: sha256(String(turn?.message || '')),
@@ -95,6 +96,9 @@ export function createWorkCaseDraft({ requestId, personId, turn, processingMode 
     policySnapshot: {
       principalBound: true,
       purposeBound: true,
+      authorityRuleVersion: authoritySnapshot?.ruleVersion || null,
+      conversationAuthorityDecision: authoritySnapshot?.decision || null,
+      conversationAuthorityReasonCode: authoritySnapshot?.reasonCode || null,
       permissionedRetrievalRequired: true,
       directBusinessWriteAllowed: false,
       hiddenChainOfThoughtStorageAllowed: false,

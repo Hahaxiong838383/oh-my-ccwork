@@ -188,8 +188,8 @@ Collector 测试由 `6/6` 增至 `7/7`，覆盖 metadata-only 不留正文、str
 
 - 未取得公司来源合规审批；
 - Goal 7 尚未在本 Goal 中证明完成；
-- 不可变公司 QNAP 发布候选 Artifact 已形成，但尚未在公司 QNAP 执行五元组复核、备份、Compose preflight 或部署物化；
-- 未连接公司 QNAP；
+- 历史生产发布候选 Artifact 已形成；后续 Artifact `9108034290` 已完成公司 QNAP 五元组复核、备份、Compose preflight 和内部 Runtime 物化，但这不等于生产 Shadow 部署；
+- 公司 QNAP 已完成内部 Runtime 更新验收，生产部署授权仍不存在；
 - 未部署 Orchestrator 或 Collector；
 - 未开始七日 Shadow；
 - 未形成七日 `engineeringVerified=true` 证据；

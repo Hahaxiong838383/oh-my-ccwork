@@ -1,0 +1,81 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "internal_engineering_first_run_acceptance",
+  "artifactId": "9108034290",
+  "sourceCommit": "0342fcd3991fc88e32f1f68750b837112717db67",
+  "status": "accepted_for_internal_engineering",
+  "countsTowardProductionShadow": false,
+  "attempts": [
+    {
+      "attemptId": "20260811T170942Z-3641",
+      "status": "failed_before_collector_start",
+      "startedAt": "2026-08-11T17:09:43Z",
+      "completedAt": "2026-08-11T17:09:44Z",
+      "collectorExitCode": 1,
+      "sourceRequestCount": 0,
+      "rawSnapshotCount": 0,
+      "rootCauseCode": "FOUNDATION_NETWORK_NAME_MISMATCH",
+      "configuredNetwork": "company-ai-foundation_data",
+      "actualNetwork": "company_ai_data",
+      "temporaryResourcesClean": true,
+      "foundationStable": true,
+      "businessSideEffectsZero": true,
+      "evidenceSha256": "7e7e1ec59aedbb19ec15a8f45a8f2497d0951003ec6c8d6b6f05886e26a2a6d1"
+    },
+    {
+      "attemptId": "20260811T171339Z-32512",
+      "status": "succeeded",
+      "runId": "2026-08-11T17-13-44-866Z-06afdd89-54f8-40b6-8e8b-5d828196e6ad",
+      "startedAt": "2026-08-11T17:13:40Z",
+      "completedAt": "2026-08-11T17:13:48Z",
+      "collectorExitCode": 0,
+      "sourceCount": 3,
+      "successfulSourceCount": 3,
+      "itemCount": 60,
+      "maximumItemsPerSource": 20,
+      "duplicateCount": 0,
+      "rawSnapshotCount": 3,
+      "allPayloadHashOnly": true,
+      "retainedBodyCount": 0,
+      "candidateReportVerified": true,
+      "temporaryResourcesClean": true,
+      "foundationStable": true,
+      "businessSideEffectsZero": true,
+      "acceptedForInternalEngineering": true,
+      "eligibleForProductionShadow": false,
+      "evidenceMode": "0600",
+      "evidenceSha256": "397dc10387663504f539df6ceed38b46902ba6bf37a972c95cd4ef0a068d74f9",
+      "validatedEvidenceHash": "168066fcdff104441a8e2e31828aca38664eb8a1a4e2aee314e8c93765940e21"
+    }
+  ],
+  "networkFix": {
+    "foundationNetwork": "company_ai_data",
+    "environmentMode": "0600",
+    "environmentBeforeSha256": "e66475ad37eeda7539277a6f1c4189bf4a7f12c772254a63a254a10c063c3da5",
+    "environmentAfterSha256": "1852cb2171b103c6565d40bb254d52ce8a07b0489728f9cfb382f3976783d021",
+    "composeConfigVerified": true,
+    "containerStartedDuringFix": 0,
+    "foundationRestartCountDuringFix": 0
+  },
+  "runtimeVerification": {
+    "foundationContainerCountBefore": 13,
+    "foundationContainerCountAfter": 13,
+    "foundationUnhealthyCountBefore": 0,
+    "foundationUnhealthyCountAfter": 0,
+    "foundationRestartCountBefore": 0,
+    "foundationRestartCountAfter": 0,
+    "foundationFingerprintBefore": "b11e7789fea4d8b6f62e1e0aad0ac70fb5f0ae2bd134ff8cbf799da0d6f75887",
+    "foundationFingerprintAfter": "b11e7789fea4d8b6f62e1e0aad0ac70fb5f0ae2bd134ff8cbf799da0d6f75887",
+    "strategicContainerCountAfter": 0,
+    "strategicNetworkCountAfter": 0,
+    "publishedPortCountAfter": 0
+  },
+  "sideEffects": {
+    "formalP2Count": 0,
+    "employeeDeliveryCount": 0,
+    "erpWritebackCount": 0,
+    "socialWritebackCount": 0,
+    "causalActivationCount": 0
+  },
+  "nextGate": "WAIT_HUMAN_REVIEW_AND_GOAL7"
+}

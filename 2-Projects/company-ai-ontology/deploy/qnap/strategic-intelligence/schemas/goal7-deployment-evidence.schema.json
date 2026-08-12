@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/goal7-deployment-evidence.schema.json",
+  "title": "Goal 7 Company QNAP Deployment Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["evidenceVersion", "evidenceType", "sourceCommit", "hLiteSourceCommit", "capturedAt", "evidenceRef", "companyQnapIdentity", "activeOntologySchema", "registryStatus", "candidateMigration012Applied", "agentCoreVersion", "knowledgeConnectorVersion", "hLiteVersion", "foundationCriticalContainerCount", "foundationUnhealthyContainerCount", "foundationRestartCountTotal", "newHostPortCount", "routeAOperational", "routeBEnabled", "sideEffects", "closedCapabilities", "rawEvidenceFiles"],
+  "properties": {
+    "evidenceVersion": { "const": "1.0.0" },
+    "evidenceType": { "const": "goal7-company-qnap-deployment" },
+    "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "hLiteSourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "evidenceRef": { "type": "string", "pattern": "^qnap:\\S+$" },
+    "companyQnapIdentity": { "const": "qnap:company/prnas/TS-X65" },
+    "activeOntologySchema": { "const": "3.3.0" },
+    "registryStatus": { "const": "in_sync" },
+    "candidateMigration012Applied": { "const": true },
+    "agentCoreVersion": { "const": "2026-08-11.1" },
+    "knowledgeConnectorVersion": { "const": "2026-08-11.1" },
+    "hLiteVersion": { "const": "2026-08-11.1" },
+    "foundationCriticalContainerCount": { "const": 13 },
+    "foundationUnhealthyContainerCount": { "const": 0 },
+    "foundationRestartCountTotal": { "const": 0 },
+    "newHostPortCount": { "const": 0 },
+    "routeAOperational": { "const": true },
+    "routeBEnabled": { "const": false },
+    "sideEffects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formalP2Count", "employeeDeliveryCount", "erpWritebackCount", "socialWritebackCount"],
+      "properties": {
+        "formalP2Count": { "const": 0 },
+        "employeeDeliveryCount": { "const": 0 },
+        "erpWritebackCount": { "const": 0 },
+        "socialWritebackCount": { "const": 0 }
+      }
+    },
+    "closedCapabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["productResearchBulkImport", "realEmployeeCanary", "employeePrivateBotMigration", "erpWriteback", "socialWriteback"],
+      "properties": {
+        "productResearchBulkImport": { "const": false },
+        "realEmployeeCanary": { "const": false },
+        "employeePrivateBotMigration": { "const": false },
+        "erpWriteback": { "const": false },
+        "socialWriteback": { "const": false }
+      }
+    },
+    "rawEvidenceFiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["before", "after", "sideEffects"],
+      "properties": {
+        "before": { "$ref": "#/$defs/fileHash" },
+        "after": { "$ref": "#/$defs/fileHash" },
+        "sideEffects": { "$ref": "#/$defs/fileHash" }
+      }
+    }
+  },
+  "$defs": {
+    "fileHash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": { "type": "string", "pattern": "^[a-z0-9-]+\\.json$" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

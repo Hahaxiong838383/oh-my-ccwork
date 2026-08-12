@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/goal7-worker-http-response.schema.json",
+  "title": "Goal 7 Sanitized H-Lite to Agent Core HTTP Metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidenceVersion", "evidenceType", "sourceCommit", "hLiteSourceCommit",
+    "capturedAt", "httpStatus", "responseStatus", "requestIdHash", "provider",
+    "model", "credentialModeTag", "productionReady", "usage", "governance",
+    "sensitivePayloadPersisted"
+  ],
+  "properties": {
+    "evidenceVersion": { "const": "1.0.0" },
+    "evidenceType": { "const": "goal7-h-worker-http-response" },
+    "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "hLiteSourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "httpStatus": { "const": 200 },
+    "responseStatus": { "const": "completed" },
+    "requestIdHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "provider": { "type": "string", "minLength": 2 },
+    "model": { "type": "string", "minLength": 2 },
+    "credentialModeTag": { "type": "string", "minLength": 2 },
+    "productionReady": { "const": true },
+    "usage": { "$ref": "goal7-worker-readback.schema.json#/$defs/usage" },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["routeKey", "retryCount", "ledgerRecorded", "routeBEnabled"],
+      "properties": {
+        "routeKey": { "const": "route-a" },
+        "retryCount": { "type": "integer", "minimum": 0 },
+        "ledgerRecorded": { "const": true },
+        "routeBEnabled": { "const": false }
+      }
+    },
+    "sensitivePayloadPersisted": { "const": false }
+  }
+}

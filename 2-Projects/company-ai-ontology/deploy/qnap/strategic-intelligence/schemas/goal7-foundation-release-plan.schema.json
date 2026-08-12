@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/goal7-foundation-release-plan.schema.json",
+  "title": "Goal 7 Foundation Release Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["planVersion", "goalKey", "status", "companyQnapIdentity", "deploymentAuthorized", "migration012Authorized", "serviceRecreationAuthorized", "rollbackDrillAuthorized", "requiredExplicitAuthorizations", "targetServices", "unaffectedServices", "timing", "expectedImpacts", "acceptanceSteps", "rollbackTriggers", "closedCapabilities"],
+  "properties": {
+    "planVersion": { "const": "1.0.0" },
+    "goalKey": { "const": "P1-PROD-READINESS" },
+    "status": { "const": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH" },
+    "companyQnapIdentity": { "const": "qnap:company/prnas/TS-X65" },
+    "deploymentAuthorized": { "const": false },
+    "migration012Authorized": { "const": false },
+    "serviceRecreationAuthorized": { "const": false },
+    "rollbackDrillAuthorized": { "const": false },
+    "requiredExplicitAuthorizations": { "type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true, "items": { "type": "string" } },
+    "targetServices": { "type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true, "items": { "enum": ["agent-core", "knowledge-connector", "h-lite"] } },
+    "unaffectedServices": { "type": "array", "minItems": 7, "maxItems": 7, "uniqueItems": true, "items": { "type": "string" } },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preparationWindowMinutes", "expectedUserVisibleInterruptionSeconds", "hardServiceHealthTimeoutSeconds", "expectedRollbackMinutes", "hardRollbackHealthTimeoutSeconds"],
+      "properties": {
+        "preparationWindowMinutes": { "$ref": "#/$defs/range" },
+        "expectedUserVisibleInterruptionSeconds": { "$ref": "#/$defs/range" },
+        "hardServiceHealthTimeoutSeconds": { "const": 180 },
+        "expectedRollbackMinutes": { "$ref": "#/$defs/range" },
+        "hardRollbackHealthTimeoutSeconds": { "const": 180 }
+      }
+    },
+    "expectedImpacts": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "object" } },
+    "acceptanceSteps": { "type": "array", "minItems": 13, "maxItems": 13, "uniqueItems": true, "items": { "type": "string" } },
+    "rollbackTriggers": { "type": "array", "minItems": 7, "maxItems": 7, "uniqueItems": true, "items": { "type": "string" } },
+    "closedCapabilities": { "type": "object", "additionalProperties": { "const": false } }
+  },
+  "$defs": {
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max"],
+      "properties": {
+        "min": { "type": "integer", "minimum": 0 },
+        "max": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

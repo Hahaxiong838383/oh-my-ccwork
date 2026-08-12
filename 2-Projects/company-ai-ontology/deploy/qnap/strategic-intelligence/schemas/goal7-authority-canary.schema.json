@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/goal7-authority-canary.schema.json",
+  "title": "Goal 7 Feishu Authority Synthetic Canary Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["evidenceVersion", "evidenceType", "sourceCommit", "hLiteSourceCommit", "capturedAt", "evidenceRef", "runIdHash", "syntheticResourcesOnly", "scenarios", "counts", "publicOutputContainsSensitiveData"],
+  "properties": {
+    "evidenceVersion": { "const": "1.0.0" },
+    "evidenceType": { "const": "goal7-feishu-authority-canary" },
+    "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "hLiteSourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "evidenceRef": { "type": "string", "pattern": "^(qnap:|git:|feishu:|ontology:|https://)\\S+$" },
+    "runIdHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "syntheticResourcesOnly": { "const": true },
+    "scenarios": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["privateSenderOnly", "activeChatMembershipAllowed", "staleChatMembershipFailClosed", "revokedChatMembershipFailClosed", "multiMentionNoExpansion", "purposeNarrowing", "aclFailureBeforeBody", "revocationConvergenceSeconds"],
+      "properties": {
+        "privateSenderOnly": { "const": true },
+        "activeChatMembershipAllowed": { "const": true },
+        "staleChatMembershipFailClosed": { "const": true },
+        "revokedChatMembershipFailClosed": { "const": true },
+        "multiMentionNoExpansion": { "const": true },
+        "purposeNarrowing": { "const": true },
+        "aclFailureBeforeBody": { "const": true },
+        "revocationConvergenceSeconds": { "type": "number", "minimum": 0, "maximum": 60 }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenarioCount", "passedCount", "bodyReadOnDeniedCount", "unauthorizedEvidenceCount"],
+      "properties": {
+        "scenarioCount": { "const": 7 },
+        "passedCount": { "const": 7 },
+        "bodyReadOnDeniedCount": { "const": 0 },
+        "unauthorizedEvidenceCount": { "const": 0 }
+      }
+    },
+    "publicOutputContainsSensitiveData": { "const": false }
+  }
+}

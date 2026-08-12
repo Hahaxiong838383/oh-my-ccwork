@@ -5,10 +5,7 @@ import path from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 
-import {
-  createReadyInputs,
-  reviewerRoleAcceptance,
-} from './fixtures/readiness-fixtures.mjs'
+import { createReadyInputs } from './fixtures/readiness-fixtures.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const INSPECTOR = path.join(ROOT, 'scripts/inspect-deployment-readiness.mjs')
@@ -80,8 +77,9 @@ test('readiness inspector fails closed when a present approval file is invalid',
 
 test('readiness inspector blocks API-only role configuration without member experience acceptance', async () => {
   const inputs = await createReadyInputs()
+  const acceptance = JSON.parse(await fs.readFile(inputs.reviewerRoleAccessFile, 'utf8'))
   await fs.writeFile(inputs.reviewerRoleAccessFile, JSON.stringify({
-    ...reviewerRoleAcceptance(),
+    ...acceptance,
     memberExperienceVerified: false,
   }))
   const result = spawnSync(process.execPath, [INSPECTOR], {

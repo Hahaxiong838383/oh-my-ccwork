@@ -9,27 +9,38 @@ function uniqueAcl(entries) {
   return [...output.values()]
 }
 
-function aclEntry(member, source) {
-  const memberType = String(member?.member_type || '').toLowerCase()
-  const memberId = String(member?.member_id || '').trim()
-  if (!memberId) return null
-  if (memberType === 'openid') return { subjectType: 'person', subjectKey: `feishu:${memberId}`, source }
-  if (memberType === 'opendepartmentid') return { subjectType: 'department', subjectKey: memberId, source }
-  if (memberType === 'openchat') return { subjectType: 'chat', subjectKey: memberId, source }
-  if (memberType === 'groupid') return { subjectType: 'group', subjectKey: memberId, source }
-  if (memberType === 'wikispaceid') return { subjectType: 'wiki_space', subjectKey: memberId, source }
-  return null
+function memberTypeOf(member) {
+  return String(member?.member_type || member?.type || '').trim().toLowerCase()
 }
 
-function spaceAclEntry(member) {
-  const type = String(member?.type || '').toLowerCase()
-  const memberType = String(member?.member_type || '').toLowerCase()
-  const memberId = String(member?.member_id || '').trim()
-  if (!memberId) return null
-  if (type === 'user' || memberType === 'openid') return { subjectType: 'person', subjectKey: `feishu:${memberId}`, source: 'feishu_space_member' }
-  if (type === 'department') return { subjectType: 'department', subjectKey: memberId, source: 'feishu_space_member' }
-  if (type === 'chat') return { subjectType: 'chat', subjectKey: memberId, source: 'feishu_space_member' }
-  return null
+function memberIdOf(member) {
+  return String(member?.member_id || member?.open_id || member?.department_id || member?.chat_id || '').trim()
+}
+
+const UNSUPPORTED_MEMBER_TYPES = new Set(['email', 'unionid', 'userid'])
+
+export function mapFeishuAclMember(member, source = 'feishu_acl') {
+  const memberType = memberTypeOf(member)
+  const memberId = memberIdOf(member)
+  if (!memberId) return { entry: null, status: 'unknown', rawType: memberType || 'missing' }
+  if (['openid', 'user'].includes(memberType)) return { entry: { subjectType: 'person', subjectKey: `feishu:${memberId}`, source }, status: 'mapped', rawType: memberType }
+  if (['opendepartmentid', 'department'].includes(memberType)) return { entry: { subjectType: 'department', subjectKey: memberId, source }, status: 'mapped', rawType: memberType }
+  if (['openchat', 'chat', 'group', 'groupid'].includes(memberType)) return { entry: { subjectType: 'chat', subjectKey: memberId, source }, status: 'mapped', rawType: memberType }
+  if (memberType === 'wikispaceid') return { entry: { subjectType: 'wiki_space', subjectKey: memberId, source }, status: 'mapped', rawType: memberType }
+  if (UNSUPPORTED_MEMBER_TYPES.has(memberType)) return { entry: null, status: 'unsupported', rawType: memberType }
+  return { entry: null, status: 'unknown', rawType: memberType || 'missing' }
+}
+
+function mapAclMembers(members, source) {
+  const mapped = members.map((member) => mapFeishuAclMember(member, source))
+  const unknownTypes = [...new Set(mapped.filter((item) => item.status === 'unknown').map((item) => item.rawType))]
+  if (unknownTypes.length > 0) {
+    throw Object.assign(new Error('Feishu ACL contains unknown member types'), {
+      code: 'feishu_acl_member_type_unknown',
+      unknownTypeCount: unknownTypes.length,
+    })
+  }
+  return uniqueAcl(mapped.map((item) => item.entry).filter(Boolean))
 }
 
 function columnName(number) {
@@ -112,7 +123,7 @@ export function createFeishuKnowledgeClient({
 
   async function listSpaceMembers(spaceId) {
     const members = await paginate(`/open-apis/wiki/v2/spaces/${encodeURIComponent(spaceId)}/members`, 'members')
-    return uniqueAcl(members.map(spaceAclEntry).filter(Boolean))
+    return mapAclMembers(members, 'feishu_space_member')
   }
 
   async function listNodes(spaceId) {
@@ -133,7 +144,7 @@ export function createFeishuKnowledgeClient({
   async function listPermissionMembers(resourceToken, resourceType) {
     const params = new URLSearchParams({ type: resourceType, fields: 'type' })
     const data = await request(`/open-apis/drive/v1/permissions/${encodeURIComponent(resourceToken)}/members?${params}`)
-    return uniqueAcl((Array.isArray(data.items) ? data.items : []).map((member) => aclEntry(member, 'feishu_document_acl')).filter(Boolean))
+    return mapAclMembers(Array.isArray(data.items) ? data.items : [], 'feishu_document_acl')
   }
 
   async function fetchDocx(tokenValue) {

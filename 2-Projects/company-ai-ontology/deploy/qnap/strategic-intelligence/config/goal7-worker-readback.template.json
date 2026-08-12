@@ -1,0 +1,17 @@
+{
+  "evidenceVersion": "2.0.0",
+  "evidenceType": "goal7-h-worker-readback",
+  "sourceCommit": "COMPILER_DERIVED_FROM_RAW_HTTP_AND_LEDGER",
+  "hLiteSourceCommit": "COMPILER_DERIVED_FROM_RAW_HTTP_AND_LEDGER",
+  "capturedAt": "COMPILER_DERIVED_FROM_LEDGER_CAPTURE",
+  "evidenceRef": "qnap:acceptance/goal7-worker-readback",
+  "requestIdHash": "COMPILER_DERIVED_SHA256_ONLY",
+  "provider": "COMPILER_DERIVED_FROM_BOTH_SOURCES",
+  "model": "COMPILER_DERIVED_FROM_BOTH_SOURCES",
+  "credentialModeTag": "COMPILER_DERIVED_FROM_BOTH_SOURCES",
+  "productionReady": false,
+  "usage": {},
+  "governance": {},
+  "rawEvidenceFiles": {},
+  "publicOutputContainsSensitiveData": false
+}

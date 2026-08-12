@@ -29,7 +29,7 @@ test('H 引擎 CLI 超时后中止并返回 runtime_timeout', async () => {
     config: {
       provider: 'h-engine', mode: 'cli', bin, home: root, grokHome: path.join(root, '.grok'),
       workspace: root, proxyUrl: '', apiKey: 'demo-key', promptFile, timeoutMs: 20,
-      maxOutputBytes: 4096, demoDelayMs: 0,
+      maxOutputBytes: 4096, demoDelayMs: 0, governance: { maxRetries: 0 },
     },
   })
   await assert.rejects(
@@ -69,6 +69,7 @@ test('H 引擎 remote 模式签名调用临时 H Worker', async (t) => {
         provider: 'cpa-openai-compatible',
         model: 'grok-4.5',
         workerVersion: 'test',
+        usage: { promptTokens: 120, completionTokens: 30, totalTokens: 150, estimatedCostMicros: 80 },
       },
     }))
   })
@@ -89,9 +90,13 @@ test('H 引擎 remote 模式签名调用临时 H Worker', async (t) => {
   assert.equal(readiness.productionReady, true)
   assert.equal(readiness.engineProvider, 'cpa-openai-compatible')
   assert.equal(readiness.model, 'grok-4.5')
+  assert.equal(readiness.governance.routeB.enabled, false)
   const result = await runtime.run({ intent: 'query', conversationId: 'remote-test', evidence: [{ title: '制度' }], message: '请回答' })
   assert.equal(result.reply, '远程 H 已回答')
   assert.equal(result.runtime.mode, 'remote')
   assert.equal(result.runtime.engineProvider, 'cpa-openai-compatible')
   assert.equal(result.runtime.model, 'grok-4.5')
+  assert.equal(result.runtime.usage.totalTokens, 150)
+  assert.equal(result.runtime.governance.credentialModeTag, 'temporary_personal_credential')
+  assert.equal(result.runtime.governance.routeBEnabled, false)
 })

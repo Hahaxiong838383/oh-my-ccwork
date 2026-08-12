@@ -33,29 +33,49 @@
 
 任一测试失败时立即停止后续审核，保留失败证据并修复权限；不得把其他角色的成功结果外推到该角色。
 
-## 4. 受控验收文件
+## 4. 原始会话证据
 
-从以下模板复制到 `~/work-private/company-ai-ontology/reviews/` 或批准的公司受控目录：
+每个角色必须生成一份独立原始会话文件，不能由管理员用一份汇总布尔值代替：
 
-`deploy/qnap/strategic-intelligence/config/reviewer-role-access-acceptance.template.json`
+- `reviewer-role-session-product-user.json`；
+- `reviewer-role-session-ai-rd.json`；
+- `reviewer-role-session-brand.json`；
+- `reviewer-role-session-toc-offline-channel.json`。
 
-真实文件必须：
+从 `deploy/qnap/strategic-intelligence/config/reviewer-role-member-session.template.json` 复制到 `~/work-private/company-ai-ontology/reviews/` 或批准的公司受控目录。每份文件必须绑定：
 
-- 四个角色测试全部完成；
-- 每个角色绑定真实 `memberPrincipal`、测试时间和受控证据引用；
-- 所有允许/拒绝项为 `true`；
-- `legacyBroadRoleMemberCount=0`；
-- `memberExperienceVerified=true`；
-- 由安全负责人设置 `securityOwnerAccepted=true` 并提供接受引用。
+- 唯一角色键和对应预期记录范围；
+- 本人真实 `memberPrincipal`；
+- 真实测试时间和受控 Evidence 引用；
+- 十项允许/拒绝/回滚结果；
+- `publicOutputContainsSensitiveData=false`。
 
-## 5. 机器验证
+四份会话必须来自四个不同的真实成员。复用同一账号、管理员代测或共享账号会被编译器拒绝。
+
+## 5. 安全负责人接受
+
+四份会话完成后，由 agent 计算四份原始文件 SHA-256，并生成：
+
+`reviewer-role-security-owner-acceptance.json`
+
+安全负责人只能在核对四份 Session Hash 后填写真实 Principal、接受时间和受控接受引用。接受时间必须晚于全部四份成员会话；任一 Session 后续被修改，原接受记录立即失效。
+
+## 6. 编译与机器验证
+
+最终 `reviewer-role-access-acceptance.json` 不允许手填，只能由五份原始证据编译：
+
+```bash
+node deploy/qnap/strategic-intelligence/scripts/compile-reviewer-role-access-acceptance.mjs \
+  /受控目录 \
+  /受控目录/reviewer-role-access-acceptance.json
+```
 
 ```bash
 node deploy/qnap/strategic-intelligence/scripts/validate-reviewer-role-access-acceptance.mjs \
   /受控目录/reviewer-role-access-acceptance.json
 ```
 
-验证器只输出角色数量、验收时间和 Evidence Hash，不输出成员身份或证据正文。模板、缺任一角色、未回滚临时编辑、未分配类别可编辑、来源表可访问或安全负责人未接受时必须失败关闭。
+验证器会重新读取四份 Session 和安全负责人接受记录，重算五份 Hash 和完整最终文件。手改最终 JSON、修改已接受 Session、四角色复用同一成员、接受时间早于测试、未回滚临时编辑、未分配类别可编辑、来源表可访问或安全负责人未接受时必须失败关闭。标准输出只包含角色数量、验收时间、原始文件数量和 Evidence Hash，不输出成员身份或证据正文。
 
 部署 readiness 还必须提供：
 
@@ -64,4 +84,4 @@ SI_REVIEWER_ROLE_ACCESS_ACCEPTANCE_FILE=/受控目录/reviewer-role-access-accep
 npm run readiness --prefix deploy/qnap/strategic-intelligence
 ```
 
-该文件只是七项门禁之一；来源最终审批、P003 最终审核、Goal 7、不可变发布包和当次部署授权仍需独立通过。
+该编译文件只是七项门禁之一；来源最终审批、P003 最终审核、Goal 7、不可变发布包和当次部署授权仍需独立通过。模板 `reviewer-role-access-acceptance.template.json` 只是 pending 结构说明，不能复制后手改为 complete。

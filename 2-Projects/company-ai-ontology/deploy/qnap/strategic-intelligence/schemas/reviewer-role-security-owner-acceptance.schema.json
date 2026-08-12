@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.local/schemas/reviewer-role-security-owner-acceptance.schema.json",
+  "title": "P1-SI Reviewer Role Security Owner Acceptance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["evidenceVersion", "evidenceType", "workbenchKey", "accepted", "acceptedAt", "securityOwner", "acceptanceRef", "roleSessionHashes", "publicOutputContainsSensitiveData"],
+  "properties": {
+    "evidenceVersion": { "const": "1.0.0" },
+    "evidenceType": { "const": "reviewer-role-security-owner-acceptance" },
+    "workbenchKey": { "const": "P1-SI-HUMAN-REVIEW" },
+    "accepted": { "const": true },
+    "acceptedAt": { "type": "string", "format": "date-time" },
+    "securityOwner": { "type": "object" },
+    "acceptanceRef": { "type": "string" },
+    "roleSessionHashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_user", "ai_rd", "brand", "toc_offline_channel"],
+      "properties": {
+        "product_user": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "ai_rd": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "brand": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "toc_offline_channel": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "publicOutputContainsSensitiveData": { "const": false }
+  }
+}

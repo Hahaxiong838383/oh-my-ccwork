@@ -1,6 +1,9 @@
 FROM docker.1ms.run/library/node:22.19.0-bookworm-slim
 
-ENV NODE_ENV=production
+ARG ONTOLOGY_SOURCE_COMMIT=unknown
+ENV NODE_ENV=production \
+    ONTOLOGY_SOURCE_COMMIT=${ONTOLOGY_SOURCE_COMMIT}
+LABEL org.opencontainers.image.revision=${ONTOLOGY_SOURCE_COMMIT}
 WORKDIR /app
 
 COPY package.json package-lock.json ./

@@ -89,7 +89,7 @@ requireValue(evidence.postDeployment?.newHostPortCount === 0, 'new host port cou
 requireValue(evidence.postDeployment?.publicPortCount === 0, 'public port count must be zero')
 
 exactKeys(evidence.database, ['appliedCandidateMigrations', 'foundationRestartCount'], 'database')
-requireValue(JSON.stringify(evidence.database?.appliedCandidateMigrations) === JSON.stringify(['010', '011']), 'candidate migrations must be exactly 010 and 011')
+requireValue(JSON.stringify(evidence.database?.appliedCandidateMigrations) === JSON.stringify(['010', '011', '012']), 'candidate migrations must be exactly 010, 011 and 012')
 requireValue(evidence.database?.foundationRestartCount === 0, 'database foundation restart count must be zero')
 
 exactKeys(evidence.approvalEvidenceHashes, ['sourceRegistry', 'p003Review', 'reviewerRoleAccess', 'goal7'], 'approvalEvidenceHashes')

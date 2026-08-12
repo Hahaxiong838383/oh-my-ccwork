@@ -73,8 +73,8 @@
       "properties": {
         "appliedCandidateMigrations": {
           "type": "array",
-          "items": { "enum": ["010", "011"] },
-          "maxItems": 2,
+          "items": { "enum": ["010", "011", "012"] },
+          "maxItems": 3,
           "uniqueItems": true
         },
         "foundationRestartCount": { "const": 0 }

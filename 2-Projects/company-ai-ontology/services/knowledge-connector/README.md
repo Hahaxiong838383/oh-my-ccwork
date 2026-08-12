@@ -6,7 +6,7 @@
 
 - 自动发现公开团队知识空间；私有空间必须显式配置。
 - 支持飞书新版文档、表格和妙记。
-- 将文档协作者、知识空间成员、人员和部门映射为最小读取 ACL。
+- 将文档协作者、知识空间成员、人员、部门和群聊映射为最小读取 ACL；兼容飞书 `type` 与 `member_type` 返回形态。
 - 写入 `knowledge.resources`、`knowledge.acl_entries`、`knowledge.chunks` 和 `knowledge.sync_runs`。
 - 显式资源通过 `FEISHU_KNOWLEDGE_RESOURCES_B64` 传递 Base64 JSON，避免 Compose 转义破坏配置。
 - 同步结果只暴露数量、跳过原因和白名单错误码，不输出文档 Token、人员 ID、原始错误正文或知识正文。
@@ -19,12 +19,13 @@
 - 只有文档 ACL 明确包含 `wikispaceid` 才展开空间成员；节点位于知识空间不是权限继承证据。
 - 撤权后的下一次同步会替换 ACL 和知识块；未完成同步前不得把缓存提升为权限真源。
 - Connector 只读飞书，不持有 ERP、Git、报表或社媒写权限。
+- 未识别 ACL 成员类型时返回稳定错误并在正文读取前失败关闭，不静默丢弃或降级为人员/全员权限。
 
 ## 当前版本边界
 
 - 公司 QNAP 当前运行 `2026-08-08.3`；两个 ACL P0 已通过 Connector 14/14、Agent Core 14/14 和生产真实 Canary。
 - Canary 覆盖直接授权、空间继承、无继承、ACL 失败、正文可读但 ACL 失败、真实员工撤权、跨部门和链接直猜；临时数据已清理。
-- 产品研究部整库导入仍未批准；`department/openchat` P1 映射和受控 `chat/group` 会话授权完成前不得批量同步知识空间。
+- `2026-08-11.1` 是未部署的 Goal 7 候选：`department/openchat/group` 映射已完成并通过 16/16；受控 `chat/group` 会话授权已进入 Agent Core 工程候选，但尚未部署和执行飞书合成 Canary。产品研究部整库导入继续禁止。
 
 ## 飞书门禁
 

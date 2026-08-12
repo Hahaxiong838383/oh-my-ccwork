@@ -9,8 +9,9 @@ import { createAdmissionController } from './admission.mjs'
 import { createCompanyBrain } from './company-brain.mjs'
 import { createCompanySystemStatusProvider } from './system-status.mjs'
 import { ACTIVE_STAGES, CONTRACT_ONLY_STAGES, ONTOLOGY_SCHEMA_VERSION, WORK_PROTOCOL_VERSION, createWorkCaseDraft } from './work-protocol.mjs'
+import { compileConversationAuthority } from './authority.mjs'
 
-export const AGENT_CORE_CONTRACT_VERSION = '2026-08-10.2'
+export const AGENT_CORE_CONTRACT_VERSION = '2026-08-11.1'
 
 function json(response, statusCode, payload, headers = {}) {
   const body = JSON.stringify(payload)
@@ -148,6 +149,7 @@ export function createAgentCoreServer({ config, store, runtime, systemStatusProv
           status: 'live',
           component: 'company-agent-core',
           contractVersion: AGENT_CORE_CONTRACT_VERSION,
+          sourceCommit: config.sourceCommit || null,
           admission: admission.snapshot(),
         })
         return
@@ -162,6 +164,7 @@ export function createAgentCoreServer({ config, store, runtime, systemStatusProv
           database,
           runtime: engine,
           contractVersion: AGENT_CORE_CONTRACT_VERSION,
+          sourceCommit: config.sourceCommit || null,
           workProtocol: {
             mode: config.workProtocol?.mode || 'off',
             protocolVersion: WORK_PROTOCOL_VERSION,
@@ -251,12 +254,30 @@ export function createAgentCoreServer({ config, store, runtime, systemStatusProv
           return
         }
         if (request.url === '/v1/retrieve') {
+          const authority = compileConversationAuthority({
+            personId: scope.personId,
+            context: input.context,
+            purpose: String(input.purpose || 'company_knowledge_query'),
+            now: () => new Date(now()),
+            maxMembershipAgeMs: config?.authority?.membershipMaxAgeMs,
+          })
+          if (store.recordConversationAuthoritySnapshot) {
+            await store.recordConversationAuthoritySnapshot({
+              tenantId: scope.tenantId,
+              personId: scope.personId,
+              snapshot: authority.snapshot,
+            })
+          }
           const evidence = await store.permissionedSearch({
             tenantId: scope.tenantId,
             personId: scope.personId,
             query: input.query,
             limit: input.limit,
+            authority,
           })
+          const excludedReasonCounts = authority.snapshot.decision === 'unknown'
+            ? { conversation_membership_unknown: 1 }
+            : authority.snapshot.decision === 'deny' ? { conversation_membership_denied: 1 } : {}
           await store.audit({
             tenantId: scope.tenantId,
             requestId: scope.requestId,
@@ -269,6 +290,8 @@ export function createAgentCoreServer({ config, store, runtime, systemStatusProv
             status: 'completed',
             requestId: scope.requestId,
             permissionFiltered: true,
+            authoritySnapshot: authority.snapshot,
+            excludedReasonCounts,
             evidence,
           })
           return
@@ -612,7 +635,19 @@ export async function startAgentCore(env = process.env) {
   const config = loadConfig(env)
   const logger = (...args) => console.error(new Date().toISOString(), ...args)
   const store = createPostgresStore({ database: config.database, logger })
-  const runtime = createHEngineRuntime({ config: config.runtime })
+  const usageLedger = {
+    readDaily: ({ date, routeKey }) => store.runtimeUsageDaily({ tenantId: config.tenantId, date, routeKey }),
+    record: ({ context, runtime, outcome }) => store.recordRuntimeUsage({
+      tenantId: config.tenantId,
+      requestId: context.requestId,
+      caseId: context.caseId,
+      personId: context.personId,
+      workType: context.workType,
+      runtime,
+      outcome,
+    }),
+  }
+  const runtime = createHEngineRuntime({ config: config.runtime, usageLedger })
   const server = createAgentCoreServer({ config, store, runtime, logger })
   await new Promise((resolve, reject) => {
     server.once('error', reject)

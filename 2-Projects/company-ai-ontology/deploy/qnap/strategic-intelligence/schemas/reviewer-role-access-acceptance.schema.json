@@ -1,44 +1,48 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://futurus.local/schemas/reviewer-role-access-acceptance.schema.json",
-  "title": "P1-SI Reviewer Role Access Acceptance",
+  "title": "P1-SI Compiler-Derived Reviewer Role Access Acceptance",
   "type": "object",
-  "required": [
-    "evidenceVersion",
-    "workbenchKey",
-    "status",
-    "memberExperienceVerified",
-    "securityOwnerAccepted",
-    "acceptedAt",
-    "securityOwner",
-    "ownerAcceptanceRef",
-    "evidenceRefs",
-    "categoryFieldType",
-    "allFiltersValid",
-    "legacyBroadRoleMemberCount",
-    "publicOutputContainsSensitiveData",
-    "roleTests"
-  ],
+  "additionalProperties": false,
+  "required": ["evidenceVersion", "evidenceType", "workbenchKey", "status", "memberExperienceVerified", "securityOwnerAccepted", "acceptedAt", "securityOwner", "ownerAcceptanceRef", "evidenceRefs", "categoryFieldType", "allFiltersValid", "legacyBroadRoleMemberCount", "publicOutputContainsSensitiveData", "roleTests", "rawEvidenceFiles"],
   "properties": {
-    "evidenceVersion": { "const": "1.0.0" },
+    "evidenceVersion": { "const": "2.0.0" },
+    "evidenceType": { "const": "reviewer-role-access-acceptance" },
     "workbenchKey": { "const": "P1-SI-HUMAN-REVIEW" },
-    "status": { "enum": ["pending", "complete"] },
-    "memberExperienceVerified": { "type": "boolean" },
-    "securityOwnerAccepted": { "type": "boolean" },
-    "acceptedAt": { "type": ["string", "null"], "format": "date-time" },
-    "securityOwner": { "type": ["object", "null"] },
+    "status": { "const": "complete" },
+    "memberExperienceVerified": { "const": true },
+    "securityOwnerAccepted": { "const": true },
+    "acceptedAt": { "type": "string", "format": "date-time" },
+    "securityOwner": { "type": "object" },
     "ownerAcceptanceRef": { "type": "string" },
-    "evidenceRefs": { "type": "array", "items": { "type": "string" } },
+    "evidenceRefs": { "type": "array", "minItems": 5, "maxItems": 5, "uniqueItems": true, "items": { "type": "string" } },
     "categoryFieldType": { "const": "SingleSelect" },
-    "allFiltersValid": { "type": "boolean" },
-    "legacyBroadRoleMemberCount": { "type": "integer", "minimum": 0 },
-    "publicOutputContainsSensitiveData": { "type": "boolean" },
-    "roleTests": {
-      "type": "array",
-      "minItems": 4,
-      "maxItems": 4,
-      "items": { "type": "object" }
+    "allFiltersValid": { "const": true },
+    "legacyBroadRoleMemberCount": { "const": 0 },
+    "publicOutputContainsSensitiveData": { "const": false },
+    "roleTests": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "type": "object" } },
+    "rawEvidenceFiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_user", "ai_rd", "brand", "toc_offline_channel", "owner"],
+      "properties": {
+        "product_user": { "$ref": "#/$defs/fileHash" },
+        "ai_rd": { "$ref": "#/$defs/fileHash" },
+        "brand": { "$ref": "#/$defs/fileHash" },
+        "toc_offline_channel": { "$ref": "#/$defs/fileHash" },
+        "owner": { "$ref": "#/$defs/fileHash" }
+      }
     }
   },
-  "additionalProperties": false
+  "$defs": {
+    "fileHash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": { "type": "string", "pattern": "^reviewer-role-[a-z0-9-]+\\.json$" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
 }

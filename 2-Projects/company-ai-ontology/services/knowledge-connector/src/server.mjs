@@ -6,7 +6,7 @@ import { createFeishuKnowledgeClient } from './feishu-client.mjs'
 import { createKnowledgeStore } from './store.mjs'
 import { createKnowledgeSync } from './sync.mjs'
 
-export const KNOWLEDGE_CONNECTOR_VERSION = '2026-08-08.3'
+export const KNOWLEDGE_CONNECTOR_VERSION = '2026-08-11.1'
 
 function json(response, statusCode, payload) {
   const body = JSON.stringify(payload)
@@ -23,12 +23,12 @@ export function createKnowledgeConnectorServer({ config, store, sync, state, log
   return http.createServer(async (request, response) => {
     try {
       if (request.method === 'GET' && request.url === '/healthz') {
-        json(response, 200, { ok: true, status: 'live', component: 'company-knowledge-connector', version: KNOWLEDGE_CONNECTOR_VERSION, running: sync.isRunning(), lastRun: state.lastRun })
+        json(response, 200, { ok: true, status: 'live', component: 'company-knowledge-connector', version: KNOWLEDGE_CONNECTOR_VERSION, sourceCommit: config.sourceCommit || null, running: sync.isRunning(), lastRun: state.lastRun })
         return
       }
       if (request.method === 'GET' && request.url === '/readyz') {
         const database = await store.ready()
-        json(response, database.ready ? 200 : 503, { ok: database.ready, status: database.ready ? 'ready' : 'not_ready', version: KNOWLEDGE_CONNECTOR_VERSION, database, lastRun: state.lastRun })
+        json(response, database.ready ? 200 : 503, { ok: database.ready, status: database.ready ? 'ready' : 'not_ready', version: KNOWLEDGE_CONNECTOR_VERSION, sourceCommit: config.sourceCommit || null, database, lastRun: state.lastRun })
         return
       }
       if (request.method === 'POST' && request.url === '/v1/sync') {

@@ -153,7 +153,88 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
     }
   }
 
-  async function permissionedSearch({ tenantId, personId, query, limit = 8 }) {
+  async function recordConversationAuthoritySnapshot({ tenantId, caseId = null, personId, snapshot }) {
+    return withTenant(tenantId, (client) => client.query(
+      `INSERT INTO work.conversation_authority_snapshots (
+         tenant_id, case_id, request_principal_id, request_principal_external_key,
+         conversation_type, conversation_reference_hash, purpose, membership_observed_at,
+         decision, reason_code, rule_version, expires_at
+       ) VALUES (
+         $1, $2,
+         (SELECT id FROM iam.principals WHERE tenant_id=$1 AND external_key=$3 AND status='active' LIMIT 1),
+         $3, $4, $5, $6, $7, $8, $9, $10, $11
+       )`,
+      [
+        tenantId,
+        caseId,
+        personId,
+        snapshot.conversationType,
+        snapshot.conversationPrincipal?.replace(/^chat-sha256:/, '') || null,
+        snapshot.purpose,
+        snapshot.membershipObservedAt,
+        snapshot.decision,
+        snapshot.reasonCode,
+        snapshot.ruleVersion,
+        snapshot.expiresAt,
+      ],
+    ))
+  }
+
+  async function runtimeUsageDaily({ tenantId, date, routeKey }) {
+    return withTenant(tenantId, async (client) => {
+      const result = await client.query(
+        `SELECT count(*)::bigint AS requests,
+                COALESCE(sum(retry_count), 0)::bigint AS retries,
+                COALESCE(sum(prompt_tokens + completion_tokens), 0)::bigint AS tokens,
+                COALESCE(sum(estimated_cost_micros), 0)::bigint AS cost_micros
+           FROM runtime.h_engine_usage_events
+          WHERE tenant_id=$1 AND route_key=$2
+            AND (created_at AT TIME ZONE 'Asia/Shanghai')::date=$3::date`,
+        [tenantId, routeKey, date],
+      )
+      return {
+        requests: Number(result.rows[0]?.requests || 0),
+        retries: Number(result.rows[0]?.retries || 0),
+        tokens: Number(result.rows[0]?.tokens || 0),
+        costMicros: Number(result.rows[0]?.cost_micros || 0),
+      }
+    })
+  }
+
+  async function recordRuntimeUsage({ tenantId, requestId, caseId = null, personId, workType, runtime, outcome = 'succeeded' }) {
+    const usage = runtime?.usage || {}
+    const governance = runtime?.governance || {}
+    return withTenant(tenantId, (client) => client.query(
+      `INSERT INTO runtime.h_engine_usage_events (
+         tenant_id, request_id, case_id, route_key, work_type, department_key,
+         prompt_tokens, completion_tokens, estimated_cost_micros, retry_count,
+         outcome, provider, model, credential_mode
+       ) VALUES (
+         $1, $2, $3, $4, $5,
+         (SELECT department_key FROM iam.principals WHERE tenant_id=$1 AND external_key=$6 AND status='active' LIMIT 1),
+         $7, $8, $9, $10, $11, $12, $13, $14
+       )
+       ON CONFLICT (tenant_id, request_id, route_key) DO NOTHING`,
+      [
+        tenantId,
+        requestId,
+        caseId,
+        governance.routeKey || 'route-a',
+        workType || null,
+        personId,
+        Math.max(0, Math.trunc(Number(usage.promptTokens) || 0)),
+        Math.max(0, Math.trunc(Number(usage.completionTokens) || 0)),
+        Math.max(0, Math.trunc(Number(usage.estimatedCostMicros) || 0)),
+        Math.max(0, Math.trunc(Number(governance.retryCount) || 0)),
+        outcome,
+        runtime.engineProvider || runtime.provider || null,
+        runtime.model || null,
+        governance.credentialModeTag || runtime.credentialMode || 'unknown',
+      ],
+    ))
+  }
+
+  async function permissionedSearch({ tenantId, personId, query, limit = 8, authority = null }) {
     return withTenant(tenantId, async (client) => {
       const principal = await client.query(
         `SELECT id, external_key, display_name, department_key, attributes
@@ -166,6 +247,9 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
       const normalizedQuery = String(query || '').trim().slice(0, 200)
       const normalizedLimit = Math.max(1, Math.min(20, Number(limit) || 8))
       const searchTerms = buildSearchTerms(normalizedQuery)
+      const purpose = String(authority?.searchScope?.purpose || 'company_knowledge_query')
+      const chatKey = String(authority?.searchScope?.chatKey || '')
+      const chatMembershipActive = authority?.searchScope?.chatMembershipActive === true
       const knowledge = await client.query(
         `SELECT c.id, c.content, c.chunk_index,
                 r.id AS resource_id, r.provider, r.resource_type, r.external_key, r.title,
@@ -185,6 +269,13 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
           WHERE r.tenant_id = $1
             AND r.status = 'active'
             AND r.acl_status = 'known'
+            AND (
+              NOT (r.metadata ? 'allowedPurposes')
+              OR (
+                jsonb_typeof(r.metadata->'allowedPurposes') = 'array'
+                AND r.metadata->'allowedPurposes' ? $8
+              )
+            )
             AND (
               $4 = ''
               OR c.search_vector @@ plainto_tsquery('simple', $4)
@@ -213,11 +304,17 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
                        OR COALESCE($5::jsonb->'departmentIds', '[]'::jsonb) ? a.subject_key
                      )
                    )
+                   OR (
+                     a.subject_type IN ('chat', 'group')
+                     AND $9 <> ''
+                     AND $10 = true
+                     AND a.subject_key = $9
+                   )
                  )
           )
           ORDER BY rank DESC, r.source_updated_at DESC NULLS LAST, r.synced_at DESC, c.chunk_index
           LIMIT $7`,
-        [tenantId, personId, principal.rows[0].department_key, normalizedQuery, JSON.stringify(principal.rows[0].attributes || {}), searchTerms, normalizedLimit],
+        [tenantId, personId, principal.rows[0].department_key, normalizedQuery, JSON.stringify(principal.rows[0].attributes || {}), searchTerms, normalizedLimit, purpose, chatKey, chatMembershipActive],
       )
       const knowledgeEvidence = knowledge.rows.map(mapKnowledgeEvidence)
       if (knowledgeEvidence.length >= normalizedLimit) return knowledgeEvidence
@@ -266,7 +363,7 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
     })
   }
 
-  async function permissionedRetrieve({ tenantId, personId, query, limit = 8 }) {
+  async function permissionedRetrieve({ tenantId, personId, query, limit = 8, authority = null }) {
     const principal = await withTenant(tenantId, (client) => client.query(
       `SELECT id FROM iam.principals
         WHERE tenant_id = $1 AND external_key = $2 AND status = 'active' LIMIT 1`,
@@ -282,12 +379,16 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
         truncated: false,
       }
     }
-    const evidence = await permissionedSearch({ tenantId, personId, query, limit })
+    const evidence = await permissionedSearch({ tenantId, personId, query, limit, authority })
+    const authorityDecision = authority?.snapshot?.decision || 'allow'
+    const excludedReasonCounts = authorityDecision === 'unknown'
+      ? { conversation_membership_unknown: 1 }
+      : authorityDecision === 'deny' ? { conversation_membership_denied: 1 } : {}
     return {
       evidence,
       principalFound: true,
-      policyDecisionReference: 'permissioned-retrieval-gateway',
-      excludedReasonCounts: {},
+      policyDecisionReference: `permissioned-retrieval-gateway:${authority?.snapshot?.ruleVersion || 'legacy'}`,
+      excludedReasonCounts,
       limit: Math.max(1, Math.min(20, Number(limit) || 8)),
       truncated: false,
     }
@@ -1251,6 +1352,9 @@ export function createPostgresStore({ database, logger = () => {} } = {}) {
     audit,
     permissionedSearch,
     permissionedRetrieve,
+    recordConversationAuthoritySnapshot,
+    runtimeUsageDaily,
+    recordRuntimeUsage,
     createWorkCase,
     recordWorkStage,
     advanceWorkCase,
@@ -1305,13 +1409,26 @@ export function createMemoryStore({ retrieval = null } = {}) {
     async ready() {
       return { ready: true }
     },
+    async recordConversationAuthoritySnapshot(input) {
+      events.push({ eventType: 'conversation_authority_snapshot_recorded', ...input })
+    },
+    async recordRuntimeUsage(input) {
+      events.push({ eventType: 'runtime_usage_recorded', ...input })
+    },
+    async runtimeUsageDaily() {
+      return { requests: 0, retries: 0, tokens: 0, costMicros: 0 }
+    },
     async permissionedSearch() {
       return Array.isArray(retrieval) ? retrieval : retrieval?.evidence || []
     },
-    async permissionedRetrieve() {
+    async permissionedRetrieve(input = {}) {
+      const authorityDecision = input?.authority?.snapshot?.decision || 'allow'
+      const excludedReasonCounts = authorityDecision === 'unknown'
+        ? { conversation_membership_unknown: 1 }
+        : authorityDecision === 'deny' ? { conversation_membership_denied: 1 } : {}
       return Array.isArray(retrieval)
-        ? { evidence: retrieval, principalFound: true, excludedReasonCounts: {}, policyDecisionReference: 'memory', limit: 8, truncated: false }
-        : retrieval || { evidence: [], principalFound: true, excludedReasonCounts: {}, policyDecisionReference: 'memory', limit: 8, truncated: false }
+        ? { evidence: retrieval, principalFound: true, excludedReasonCounts, policyDecisionReference: 'memory', limit: 8, truncated: false }
+        : retrieval ? { ...retrieval, excludedReasonCounts: { ...excludedReasonCounts, ...(retrieval.excludedReasonCounts || {}) } } : { evidence: [], principalFound: true, excludedReasonCounts, policyDecisionReference: 'memory', limit: 8, truncated: false }
     },
     async createWorkCase({ draft }) {
       const caseId = randomUUID()

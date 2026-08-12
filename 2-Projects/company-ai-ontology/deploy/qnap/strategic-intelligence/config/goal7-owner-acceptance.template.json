@@ -1,0 +1,13 @@
+{
+  "evidenceVersion": "2.0.0",
+  "evidenceType": "goal7-owner-acceptance",
+  "goalKey": "P1-PROD-READINESS",
+  "accepted": false,
+  "acceptedAt": null,
+  "sourceCommit": "RECORDER_DERIVED_FROM_ENGINEERING_EVIDENCE",
+  "hLiteSourceCommit": "RECORDER_DERIVED_FROM_ENGINEERING_EVIDENCE",
+  "ownerPrincipalHash": "RECORDER_DERIVED_SHA256_ONLY",
+  "acceptanceRef": "REPLACE_WITH_OWNER_ACCEPTANCE_REFERENCE",
+  "engineeringEvidenceFiles": {},
+  "publicOutputContainsSensitiveData": false
+}

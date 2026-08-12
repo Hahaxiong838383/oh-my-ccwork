@@ -342,6 +342,7 @@ printf 'company_qnap_identity=verified\\nfoundation_root=%s\\nshadow_root=%s\\n'
   assert.match(envContents, new RegExp(`SI_COLLECTOR_UID=${process.getuid()}`))
   assert.match(envContents, new RegExp(`SI_COLLECTOR_GID=${process.getgid()}`))
   assert.match(envContents, /PUBLISH=false/)
+  assert.match(envContents, /^FOUNDATION_DATA_NETWORK=company_ai_data$/m)
   assert.match(envContents, /SI_NODE_RUNTIME_IMAGE=sha256:a{64}/)
   assert.equal((await fs.stat(envFile)).mode & 0o777, 0o600)
   for (const name of ['internal-engineering-plan.json', 'source-registry.json', 'collector.json', 'runtime-manifest.json']) {

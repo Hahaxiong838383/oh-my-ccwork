@@ -65,12 +65,12 @@ for (const key of ['formalP2Count', 'employeeDeliveryCount', 'erpWritebackCount'
 if (expectedPhase === 'pre_deployment') {
   requireValue(snapshot.strategicIntelligence?.containerCount === 0, 'pre-deployment strategic intelligence container count must be zero')
   requireValue(snapshot.strategicIntelligence?.orchestratorHealth === 'absent', 'pre-deployment orchestrator must be absent')
-  requireValue(JSON.stringify(snapshot.database?.appliedCandidateMigrations) === '[]', 'pre-deployment candidate migrations must be absent')
+  requireValue(JSON.stringify(snapshot.database?.appliedCandidateMigrations) === JSON.stringify(['012']), 'pre-deployment must contain only Goal 7 migration 012')
   requireValue(snapshot.backup === null, 'pre-deployment backup must be null')
 } else {
   requireValue(snapshot.strategicIntelligence?.containerCount === 1, 'post-seven-day strategic intelligence container count must equal one')
   requireValue(snapshot.strategicIntelligence?.orchestratorHealth === 'healthy', 'post-seven-day orchestrator must be healthy')
-  requireValue(JSON.stringify(snapshot.database?.appliedCandidateMigrations) === JSON.stringify(['010', '011']), 'post-seven-day candidate migrations must be exactly 010 and 011')
+  requireValue(JSON.stringify(snapshot.database?.appliedCandidateMigrations) === JSON.stringify(['010', '011', '012']), 'post-seven-day candidate migrations must be exactly 010, 011 and 012')
   exactKeys(snapshot.backup, ['configurationBackupVerified', 'rollbackPackageVerified', 'backupRef'], 'backup')
   requireValue(snapshot.backup?.configurationBackupVerified === true, 'configuration backup must be verified')
   requireValue(snapshot.backup?.rollbackPackageVerified === true, 'rollback package must be verified')

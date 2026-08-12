@@ -1,16 +1,16 @@
 # P1-SI 内部 Runtime 更新验收包
 
-状态：`READY_FOR_EXPLICIT_INTERNAL_RUNTIME_UPDATE_AUTH`
+状态：`COMPLETED_INTERNAL_RUNTIME_UPDATED_NOT_RUN`
 
 ## 1. 结论
 
-目标 Artifact 已完成源码、镜像、SQL Runtime、Hash、独立内部 Runtime 编译验证和公司 QNAP 真实 Docker 输出预演；公司 QNAP 当前状态健康且仍运行旧内部包。现在只缺川哥对新 Artifact 的“更新内部 Runtime、但不运行 Collector”独立授权。
+目标 Artifact 已完成源码、镜像、SQL Runtime、Hash、独立内部 Runtime 编译验证和公司 QNAP 真实 Docker 输出预演，并已在独立授权下更新到公司 QNAP 内部 Runtime。更新未运行 Collector、未迁移数据库、未重启 Foundation；详细实机结果见 `p1-si-internal-runtime-update-acceptance-2026-08-11.md`。
 
 原授权指向 Artifact `9096846710`。真实 QNAP 暂存预演发现该 Artifact 的运行态采集脚本把 Docker Go Template 中的 `\t` 当作真实制表符，导致 13 个健康 Foundation 服务被误判为异常且 restart 统计为 `null`。部署在任何旧 Runtime 替换前失败关闭；Artifact `9096846710` 已拒绝，不得继续部署，也不能把原授权继承给新 Artifact。
 
 第一次修复 Artifact `9107441466` 已解决 QNAP 状态采集兼容问题，但后续对抗审计发现部署脚本会在 package 原子切换前直接覆盖 config/env，Compose 校验失败时可能留下“旧包 + 新配置”的半更新状态。该 Artifact 同样未部署并已被最终 Artifact 取代。最终实现将 package/config/env 全部写入 `.next`，在所有校验通过后统一切换，并对 Compose 失败和切换中途失败执行自动恢复。
 
-## 2. 公司 QNAP 当前真值
+## 2. 公司 QNAP 更新前基线
 
 只读复核时间：`2026-08-11T15:28:05Z`。
 
@@ -23,10 +23,10 @@
 - 13 个长期运行服务指纹：`b11e7789fea4d8b6f62e1e0aad0ac70fb5f0ae2bd134ff8cbf799da0d6f75887`；
 - 战略情报项目容器、网络、发布端口：0；
 - Collector 运行目录、报告文件、Evidence 文件：0；
-- 当前内部 Runtime：Commit `a7aeae25e414b570cab8ff1fdfbdc12d5d027dc5`；
-- 当前内部 `.env.internal` 权限：`0600`，尚未固化 `SI_NODE_RUNTIME_IMAGE`；
-- 当前内部包不包含首次运行 Evidence 编译器、验证器和 Schema。
-- 当前 `.previous-backup` 来自首次安装，目标目录存在但没有 `previous-runtime.tar.gz`；它不能作为回滚归档。更新脚本必须先为现有 `a7aeae25e` Runtime 生成新归档和 SHA-256，再允许替换。
+- 更新前内部 Runtime：Commit `a7aeae25e414b570cab8ff1fdfbdc12d5d027dc5`；
+- 更新前内部 `.env.internal` 权限：`0600`，尚未固化 `SI_NODE_RUNTIME_IMAGE`；
+- 更新前内部包不包含首次运行 Evidence 编译器、验证器和 Schema。
+- 更新前 `.previous-backup` 来自首次安装，目标目录存在但没有 `previous-runtime.tar.gz`；更新执行时已先为 `a7aeae25e` 生成新归档和 SHA-256，再允许替换。
 
 ## 3. 目标发布身份
 

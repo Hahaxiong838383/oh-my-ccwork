@@ -1,5 +1,7 @@
 # Goal 7：P1-PROD-READINESS 实施计划
 
+> 2026-08-11 更新：Phase 1、Phase 2 和 Phase 4 已形成未部署的本地工程候选，详见 `goal7-p1-prod-readiness-engineering-acceptance-2026-08-11.md`。Goal 7 Acceptance 已升级为五份原始 Evidence 绑定的 `2.0.0` 编译产物。当前仍为 `ci_postgres_pending / production_not_deployed / owner_acceptance_pending`，公司专用 CPA 凭据、合成 Canary、QNAP 部署和 Owner Acceptance 均未完成。
+
 ## 结论
 
 Goal 7 建议拆成两条互不越权的工作流：
@@ -7,7 +9,7 @@ Goal 7 建议拆成两条互不越权的工作流：
 1. **P1-AUTHORITY：飞书部门 / 群聊 Principal 与撤权闭环**；
 2. **P1-RUNTIME：H 引擎同厂冗余、熔断、预算和真实模型读回**。
 
-本文件只做实施规划，尚未授权开发、部署、飞书写回、整库导入或真实员工 Canary。公司专用 CPA 账号 / Key 延后，当前继续临时使用川哥个人 CPA；任何凭据明文都不进入 Git、文档、记忆、日志或 QNAP。
+本文件保留 Goal 7 的实施基线。当前已完成本地代码、候选迁移、负向测试和 CI 验证接线，但尚未部署、迁移、飞书写回、整库导入或执行真实员工 Canary。公司专用 CPA 账号 / Key 延后，当前候选继续显式标记 `temporary_personal_credential`；任何凭据明文都不进入 Git、文档、记忆、日志或 QNAP。
 
 ## Goal 7 完成定义
 

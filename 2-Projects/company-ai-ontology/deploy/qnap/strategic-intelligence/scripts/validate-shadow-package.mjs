@@ -12,6 +12,12 @@ const daySchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/shadow-d
 const sevenDaySchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/seven-day-shadow-summary.schema.json'), 'utf8'))
 const reviewerRoleAccessSchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/reviewer-role-access-acceptance.schema.json'), 'utf8'))
 const reviewerRoleAccessTemplate = JSON.parse(await fs.readFile(path.join(root, 'config/reviewer-role-access-acceptance.template.json'), 'utf8'))
+const goal7WorkerReadbackSchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/goal7-worker-readback.schema.json'), 'utf8'))
+const goal7WorkerReadbackTemplate = JSON.parse(await fs.readFile(path.join(root, 'config/goal7-worker-readback.template.json'), 'utf8'))
+const goal7OwnerAcceptanceSchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/goal7-owner-acceptance.schema.json'), 'utf8'))
+const goal7OwnerAcceptanceTemplate = JSON.parse(await fs.readFile(path.join(root, 'config/goal7-owner-acceptance.template.json'), 'utf8'))
+const goal7AcceptanceSchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/goal7-acceptance-evidence.schema.json'), 'utf8'))
+const goal7AcceptanceTemplate = JSON.parse(await fs.readFile(path.join(root, 'config/goal7-acceptance.template.json'), 'utf8'))
 const goalCompletionSchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/goal-completion-evidence.schema.json'), 'utf8'))
 const goalCompletionTemplate = JSON.parse(await fs.readFile(path.join(root, 'config/goal-completion-evidence.template.json'), 'utf8'))
 const goalRuntimeSnapshotSchema = JSON.parse(await fs.readFile(path.join(root, 'schemas/goal-runtime-snapshot.schema.json'), 'utf8'))
@@ -22,6 +28,47 @@ const packageJson = JSON.parse(await fs.readFile(path.join(root, 'package.json')
 const envExample = await fs.readFile(path.join(root, 'config/env.shadow.example'), 'utf8')
 const runtimeWorkflow = await fs.readFile(path.resolve(root, '../../../../..', '.github/workflows/p1-si-runtime-verify.yml'), 'utf8')
 const errors = []
+if (goal7AcceptanceSchema.properties?.evidenceVersion?.const !== '2.0.0') errors.push('Goal 7 acceptance schema must be compiler-derived v2')
+if (goal7AcceptanceTemplate.status !== 'pending' || goal7AcceptanceTemplate.ownerAccepted !== false) errors.push('Goal 7 acceptance template must remain pending')
+if (goal7WorkerReadbackSchema.properties?.evidenceVersion?.const !== '2.0.0') errors.push('Goal 7 worker readback schema must be compiler-derived v2')
+if (goal7WorkerReadbackTemplate.productionReady !== false || Object.keys(goal7WorkerReadbackTemplate.rawEvidenceFiles || {}).length !== 0) errors.push('Goal 7 worker readback template must remain non-acceptable')
+if (goal7OwnerAcceptanceSchema.properties?.evidenceVersion?.const !== '2.0.0') errors.push('Goal 7 owner acceptance schema must bind engineering evidence')
+if (goal7OwnerAcceptanceTemplate.accepted !== false || Object.keys(goal7OwnerAcceptanceTemplate.engineeringEvidenceFiles || {}).length !== 0) errors.push('Goal 7 owner acceptance template must remain non-acceptable')
+if (reviewerRoleAccessSchema.properties?.evidenceVersion?.const !== '2.0.0') errors.push('reviewer role access schema must be compiler-derived v2')
+for (const name of [
+  'goal7-worker-http-response.schema.json',
+  'goal7-worker-ledger-row.schema.json',
+  'goal7-worker-readback.schema.json',
+  'goal7-authority-canary.schema.json',
+  'goal7-deployment-evidence.schema.json',
+  'goal7-deployment-state.schema.json',
+  'goal7-foundation-release-plan.schema.json',
+  'goal7-owner-acceptance.schema.json',
+]) await fs.access(path.join(root, 'schemas', name)).catch(() => errors.push(`missing Goal 7 schema ${name}`))
+for (const name of ['reviewer-role-member-session.schema.json', 'reviewer-role-security-owner-acceptance.schema.json']) {
+  await fs.access(path.join(root, 'schemas', name)).catch(() => errors.push(`missing reviewer role evidence schema ${name}`))
+}
+for (const name of [
+  'goal7-worker-readback.template.json',
+  'goal7-authority-canary.template.json',
+  'goal7-deployment-evidence.template.json',
+  'goal7-deployment-state.template.json',
+  'goal7-owner-acceptance.template.json',
+]) await fs.access(path.join(root, 'config', name)).catch(() => errors.push(`missing Goal 7 template ${name}`))
+await fs.access(path.join(root, 'config/goal7-foundation-release-plan.json')).catch(() => errors.push('missing Goal 7 foundation release plan'))
+for (const name of ['reviewer-role-member-session.template.json', 'reviewer-role-security-owner-acceptance.template.json']) {
+  await fs.access(path.join(root, 'config', name)).catch(() => errors.push(`missing reviewer role evidence template ${name}`))
+}
+for (const name of ['goal7-evidence-lib.mjs', 'goal7-worker-readback-lib.mjs', 'goal7-deployment-lib.mjs', 'goal7-runtime-release-lib.mjs', 'goal7-release-plan-lib.mjs', 'validate-goal7-runtime-release.mjs', 'validate-goal7-release-plan.mjs', 'compile-goal7-worker-readback.mjs', 'validate-goal7-worker-readback.mjs', 'record-goal7-owner-acceptance.mjs', 'compile-goal7-deployment-evidence.mjs', 'compile-goal7-acceptance.mjs', 'validate-goal7-acceptance.mjs', 'capture-goal7-deployment-state.sh', 'deploy-goal7-foundation.sh', 'rollback-goal7-foundation.sh']) {
+  await fs.access(path.join(root, 'scripts', name)).catch(() => errors.push(`missing Goal 7 evidence compiler file ${name}`))
+}
+for (const name of ['goal7-worker-readback-seed.sql', 'goal7-worker-readback-ledger.sql', 'goal7-worker-readback-cleanup.sql']) {
+  await fs.access(path.resolve(root, '..', 'canary', name)).catch(() => errors.push(`missing Goal 7 worker readback SQL ${name}`))
+}
+const workerReadbackRunner = await fs.readFile(path.resolve(root, '..', 'scripts/run-goal7-worker-readback.sh'), 'utf8').catch(() => '')
+for (const marker of ['GOAL7_WORKER_READBACK_APPROVED', 'preflight-company-qnap.sh', 'worker-http-response.json', 'worker-ledger-row.json', 'compile-goal7-worker-readback.mjs', 'h-lite node --input-type=module', 'createCompanyAgentCoreAdapter', 'goal7-worker-readback-ledger.sql']) {
+  if (!workerReadbackRunner.includes(marker)) errors.push(`Goal 7 worker readback runner missing ${marker}`)
+}
 const internalPlanValidation = spawnSync(process.execPath, [path.join(root, 'scripts/validate-internal-engineering-shadow-plan.mjs')], { encoding: 'utf8' })
 if (internalPlanValidation.status !== 0) errors.push('internal engineering plan must validate')
 const allowedServices = new Set(['intelligence-orchestrator', 'intelligence-collector'])
@@ -62,7 +109,7 @@ if (sevenDaySchema.properties?.completedNaturalDays?.const !== 7) errors.push('s
 if (sevenDaySchema.properties?.engineeringVerified?.const !== true) errors.push('seven-day summary must require engineering verification')
 if (reviewerRoleAccessSchema.properties?.workbenchKey?.const !== 'P1-SI-HUMAN-REVIEW') errors.push('reviewer role access schema workbench mismatch')
 if (reviewerRoleAccessTemplate.status !== 'pending' || reviewerRoleAccessTemplate.memberExperienceVerified !== false) errors.push('reviewer role access template must fail closed')
-if (reviewerRoleAccessTemplate.roleTests?.length !== 4) errors.push('reviewer role access template must cover four scoped roles')
+if (reviewerRoleAccessTemplate.roleTests?.length !== 0) errors.push('reviewer role access template must not contain fabricated member sessions')
 if (goalCompletionSchema.properties?.status?.const !== 'complete') errors.push('goal completion schema must require complete status')
 if (goalCompletionSchema.properties?.deploymentMode?.const !== 'production_shadow') errors.push('goal completion schema must require production shadow')
 if (goalCompletionSchema.properties?.companyQnap?.properties?.host?.const !== 'PRNas') errors.push('goal completion schema company QNAP host mismatch')
@@ -84,6 +131,9 @@ for (const name of ['goal:validate-deployment-evidence', 'goal:validate-runtime-
   if (!packageJson.scripts?.[name]) errors.push(`missing package script ${name}`)
 }
 for (const name of ['internal:compile-run-evidence', 'internal:validate-run-evidence']) {
+  if (!packageJson.scripts?.[name]) errors.push(`missing package script ${name}`)
+}
+for (const name of ['goal7:compile-worker-readback', 'goal7:validate-worker-readback', 'goal7:record-owner-acceptance', 'goal7:compile-acceptance', 'goal7:validate-acceptance']) {
   if (!packageJson.scripts?.[name]) errors.push(`missing package script ${name}`)
 }
 for (const name of [
@@ -111,6 +161,15 @@ for (const marker of ['run-source-revocation-audit.sh', 'capture-shadow-side-eff
 for (const name of ['shadow:validate-domain', 'shadow:compile-domain-sql']) {
   if (!packageJson.scripts?.[name]) errors.push(`missing package script ${name}`)
 }
+for (const name of ['goal7:compile-acceptance', 'goal7:validate-acceptance', 'goal7:validate-runtime-release', 'goal7:validate-release-plan']) {
+  if (!packageJson.scripts?.[name]) errors.push(`missing package script ${name}`)
+}
+if (!packageJson.scripts?.['reviewer-role:compile-acceptance']) errors.push('missing reviewer role acceptance compiler script')
+for (const name of ['reviewer-role-access-lib.mjs', 'compile-reviewer-role-access-acceptance.mjs', 'validate-reviewer-role-access-acceptance.mjs']) {
+  await fs.access(path.join(root, 'scripts', name)).catch(() => errors.push(`missing reviewer role evidence compiler file ${name}`))
+}
+const goal7ReleasePlanValidation = spawnSync(process.execPath, [path.join(root, 'scripts/validate-goal7-release-plan.mjs')], { encoding: 'utf8' })
+if (goal7ReleasePlanValidation.status !== 0) errors.push('Goal 7 foundation release plan must validate')
 const qnapHostNodeScripts = [
   'deploy-shadow.sh',
   'apply-shadow-migrations.sh',
@@ -121,6 +180,8 @@ const qnapHostNodeScripts = [
   'deploy-internal-engineering-shadow.sh',
   'run-internal-engineering-once.sh',
   'capture-internal-engineering-runtime-state.sh',
+  'capture-goal7-deployment-state.sh',
+  'deploy-goal7-foundation.sh',
 ]
 for (const name of qnapHostNodeScripts) {
   const script = await fs.readFile(path.join(root, 'scripts', name), 'utf8')
@@ -155,6 +216,8 @@ for (const marker of [
   'domain_persistence=verified',
   'domain_persistence_idempotent=verified',
   'acl_fail_closed=verified',
+  'goal7_app_role_rw=verified',
+  'goal7FoundationEvidenceSha256',
   'reviewerRoleAccessGateRequired: true',
 ]) {
   if (!runtimeWorkflow.includes(marker)) errors.push(`runtime workflow is stale: ${marker}`)

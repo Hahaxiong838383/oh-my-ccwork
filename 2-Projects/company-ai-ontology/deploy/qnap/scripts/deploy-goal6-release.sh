@@ -101,6 +101,7 @@ fi
 set_env_plain AGENT_CORE_BUILD_CONTEXT "$release_root/services/agent-core"
 set_env_plain ONTOLOGY_REGISTRY_BUILD_CONTEXT "$release_root"
 set_env_plain DOMAIN_CONNECTOR_BUILD_CONTEXT "$release_root/services/domain-connector"
+set_env_plain ONTOLOGY_SOURCE_COMMIT "$source_commit"
 set_env_plain ONTOLOGY_SCHEMA_VERSION 3.3.0
 set_env_plain WORK_PROTOCOL_MODE active
 set_env_plain PRACTICE_PROTOCOL_MODE active

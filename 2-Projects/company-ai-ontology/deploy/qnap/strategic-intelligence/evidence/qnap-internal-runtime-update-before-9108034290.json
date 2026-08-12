@@ -1,0 +1,19 @@
+{
+  "snapshotVersion": "1.0.0",
+  "phase": "before",
+  "capturedAt": "2026-08-11T16:44:25.818Z",
+  "foundation": {
+    "containerCount": 13,
+    "runningContainerCount": 13,
+    "unhealthyContainerCount": 0,
+    "restartCountTotal": 0,
+    "fingerprint": "b11e7789fea4d8b6f62e1e0aad0ac70fb5f0ae2bd134ff8cbf799da0d6f75887"
+  },
+  "strategicIntelligence": {
+    "containerCount": 0,
+    "runningContainerCount": 0,
+    "networkCount": 0,
+    "publishedPortCount": 0,
+    "fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

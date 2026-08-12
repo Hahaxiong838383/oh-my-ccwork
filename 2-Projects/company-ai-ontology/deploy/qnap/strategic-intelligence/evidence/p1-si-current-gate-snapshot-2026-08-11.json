@@ -1,0 +1,50 @@
+{
+  "snapshotVersion": "1.0.0",
+  "goalKey": "P1-STRATEGIC-INTELLIGENCE",
+  "snapshotDate": "2026-08-11",
+  "state": {
+    "engineeringVerified": true,
+    "humanReviewPending": true,
+    "runtimeUpdated": true,
+    "productionBlocked": true,
+    "ownerAccepted": false,
+    "goalComplete": false
+  },
+  "internalRuntime": {
+    "artifactId": "9108034290",
+    "sourceCommit": "0342fcd3991fc88e32f1f68750b837112717db67",
+    "collectorAttemptCount": 2,
+    "collectorStartedCount": 1,
+    "acceptedInternalRunCount": 1,
+    "lastAcceptedRunId": "2026-08-11T17-13-44-866Z-06afdd89-54f8-40b6-8e8b-5d828196e6ad",
+    "lastAcceptedItemCount": 60,
+    "countsTowardProductionShadow": false
+  },
+  "humanGates": {
+    "sourceReviewCount": 8,
+    "sourceFinalDecisionCount": 0,
+    "p003ReviewCount": 36,
+    "p003FinalDecisionCount": 0,
+    "reviewerRoleUatRequiredCount": 4,
+    "reviewerRoleUatCompletedCount": 0,
+    "goal7Complete": false
+  },
+  "productionGates": {
+    "readinessPassedCount": 0,
+    "readinessBlockedCount": 7,
+    "readinessRequiredGate": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH",
+    "completionPassedCount": 0,
+    "completionBlockedCount": 8,
+    "completionRequiredGate": "WAIT_PRODUCTION_SHADOW_AND_OWNER_ACCEPTANCE",
+    "productionShadowCompletedNaturalDays": 0,
+    "productionShadowRequiredNaturalDays": 7
+  },
+  "businessSideEffects": {
+    "p1SiFormalP2Count": 0,
+    "p1SiEmployeeDeliveryCount": 0,
+    "p1SiErpWritebackCount": 0,
+    "p1SiSocialWritebackCount": 0,
+    "p1SiCausalActivationCount": 0
+  },
+  "nextRequiredGate": "WAIT_HUMAN_REVIEW_AND_GOAL7"
+}

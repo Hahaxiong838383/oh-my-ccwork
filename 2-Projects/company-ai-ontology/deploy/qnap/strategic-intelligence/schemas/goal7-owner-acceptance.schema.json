@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/goal7-owner-acceptance.schema.json",
+  "title": "Goal 7 Evidence-bound Explicit Owner Acceptance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidenceVersion", "evidenceType", "goalKey", "accepted", "acceptedAt",
+    "sourceCommit", "hLiteSourceCommit", "ownerPrincipalHash", "acceptanceRef",
+    "engineeringEvidenceFiles", "publicOutputContainsSensitiveData"
+  ],
+  "properties": {
+    "evidenceVersion": { "const": "2.0.0" },
+    "evidenceType": { "const": "goal7-owner-acceptance" },
+    "goalKey": { "const": "P1-PROD-READINESS" },
+    "accepted": { "const": true },
+    "acceptedAt": { "type": "string", "format": "date-time" },
+    "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "hLiteSourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "ownerPrincipalHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "acceptanceRef": { "type": "string", "pattern": "^(feishu:|git:|ontology:|qnap:|https://)\\S+$" },
+    "engineeringEvidenceFiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtimeVerification", "workerReadback", "authorityCanary", "deployment"],
+      "properties": {
+        "runtimeVerification": { "$ref": "#/$defs/fileHash" },
+        "workerReadback": { "$ref": "#/$defs/fileHash" },
+        "authorityCanary": { "$ref": "#/$defs/fileHash" },
+        "deployment": { "$ref": "#/$defs/fileHash" }
+      }
+    },
+    "publicOutputContainsSensitiveData": { "const": false }
+  },
+  "$defs": {
+    "fileHash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": { "type": "string", "pattern": "^[a-z0-9-]+\\.json$" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

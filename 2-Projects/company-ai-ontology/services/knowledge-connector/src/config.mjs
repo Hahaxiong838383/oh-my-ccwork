@@ -31,10 +31,14 @@ function base64JsonArray(value, name) {
 
 export function loadConfig(env = process.env) {
   const controlToken = required(env.KNOWLEDGE_CONNECTOR_CONTROL_TOKEN, 'KNOWLEDGE_CONNECTOR_CONTROL_TOKEN', 32)
+  const sourceCommit = /^[a-f0-9]{40}$/.test(String(env.ONTOLOGY_SOURCE_COMMIT || '').trim())
+    ? String(env.ONTOLOGY_SOURCE_COMMIT).trim()
+    : null
   return {
     host: String(env.KNOWLEDGE_CONNECTOR_HOST || '0.0.0.0'),
     port: Math.max(1, Number(env.KNOWLEDGE_CONNECTOR_PORT || 8083)),
     tenantId: required(env.FUTURUS_TENANT_ID, 'FUTURUS_TENANT_ID'),
+    sourceCommit,
     controlToken,
     database: {
       host: String(env.PGHOST || 'postgres'),

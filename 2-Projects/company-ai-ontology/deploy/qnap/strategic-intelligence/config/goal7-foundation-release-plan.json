@@ -1,0 +1,76 @@
+{
+  "planVersion": "1.0.0",
+  "goalKey": "P1-PROD-READINESS",
+  "status": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH",
+  "companyQnapIdentity": "qnap:company/prnas/TS-X65",
+  "deploymentAuthorized": false,
+  "migration012Authorized": false,
+  "serviceRecreationAuthorized": false,
+  "rollbackDrillAuthorized": false,
+  "requiredExplicitAuthorizations": [
+    "foundation_deployment",
+    "candidate_migration_012",
+    "service_recreation",
+    "rollback_drill"
+  ],
+  "targetServices": [
+    "agent-core",
+    "knowledge-connector",
+    "h-lite"
+  ],
+  "unaffectedServices": [
+    "postgres",
+    "redis",
+    "qdrant",
+    "ontology-registry",
+    "action-gateway",
+    "domain-connector",
+    "gateway"
+  ],
+  "timing": {
+    "preparationWindowMinutes": { "min": 8, "max": 20 },
+    "expectedUserVisibleInterruptionSeconds": { "min": 15, "max": 120 },
+    "hardServiceHealthTimeoutSeconds": 180,
+    "expectedRollbackMinutes": { "min": 2, "max": 6 },
+    "hardRollbackHealthTimeoutSeconds": 180
+  },
+  "expectedImpacts": [
+    { "capability": "company_bot_reasoning", "service": "agent-core", "impact": "intermittent" },
+    { "capability": "company_knowledge_retrieval", "service": "knowledge-connector", "impact": "intermittent" },
+    { "capability": "company_feishu_bot_front_door", "service": "h-lite", "impact": "brief_reconnect" }
+  ],
+  "acceptanceSteps": [
+    "verify_runtime_release",
+    "capture_pre_deployment_state",
+    "backup_config_and_images",
+    "apply_candidate_migration_012",
+    "build_three_target_images",
+    "switch_agent_core_and_verify",
+    "switch_knowledge_connector_and_verify",
+    "switch_h_lite_and_verify",
+    "capture_post_deployment_state",
+    "audit_zero_business_side_effects",
+    "compile_deployment_evidence",
+    "run_synthetic_authority_canary",
+    "record_independent_owner_acceptance"
+  ],
+  "rollbackTriggers": [
+    "target_service_health_timeout",
+    "runtime_source_commit_mismatch",
+    "active_schema_changed",
+    "registry_not_in_sync",
+    "foundation_restart_or_unhealthy_detected",
+    "new_host_port_detected",
+    "business_side_effect_detected"
+  ],
+  "closedCapabilities": {
+    "collectorStarted": false,
+    "productionShadowStarted": false,
+    "productResearchBulkImport": false,
+    "formalP2Creation": false,
+    "employeeDelivery": false,
+    "erpWriteback": false,
+    "socialWriteback": false,
+    "causalActivation": false
+  }
+}

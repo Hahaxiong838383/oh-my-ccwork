@@ -15,6 +15,7 @@ import {
   loadSourceApprovalContext,
 } from '../../../../packages/ontology-contracts/src/index.mjs'
 import { tick } from '../orchestrator/orchestrator.mjs'
+import { createGoal7AcceptanceBundle, createReviewerRoleAccessBundle } from './fixtures/readiness-fixtures.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const PROJECT_ROOT = path.resolve(ROOT, '../../..')
@@ -29,49 +30,6 @@ function principal(role) {
     displayName: `${role}-reviewer`,
     principalRef: `company-directory:${role}-reviewer`,
     decision: 'approve',
-  }
-}
-
-function reviewerRoleAcceptance() {
-  const roleTests = [
-    ['product_user', ['product_definition', 'children_user_scenario', 'channel_sales_competition', 'ai_technology', 'privacy_safety_compliance'], 30, 6],
-    ['ai_rd', ['product_definition', 'children_user_scenario', 'ai_technology'], 18, 18],
-    ['brand', ['channel_sales_competition'], 6, 30],
-    ['toc_offline_channel', ['channel_sales_competition'], 6, 30],
-  ].map(([roleKey, expectedEditableCategories, expectedEditableRecordCount, expectedDeniedRecordCount]) => ({
-    roleKey,
-    expectedEditableCategories,
-    expectedEditableRecordCount,
-    expectedDeniedRecordCount,
-    memberPrincipal: principal(roleKey),
-    testedAt: '2026-08-11T00:00:00Z',
-    evidenceRefs: [`feishu:base/p1-si-role-access/${roleKey}`],
-    authenticatedAsAssignedMember: true,
-    assignedCategoryEditSucceeded: true,
-    unassignedCategoryEditDenied: true,
-    sourceTableAccessDenied: true,
-    recordCreateDenied: true,
-    recordDeleteDenied: true,
-    copyDenied: true,
-    downloadDenied: true,
-    viewMutationDenied: true,
-    temporaryEditReverted: true,
-  }))
-  return {
-    evidenceVersion: '1.0.0',
-    workbenchKey: 'P1-SI-HUMAN-REVIEW',
-    status: 'complete',
-    memberExperienceVerified: true,
-    securityOwnerAccepted: true,
-    acceptedAt: '2026-08-11T00:00:00Z',
-    securityOwner: principal('security_owner'),
-    ownerAcceptanceRef: 'feishu:doc/p1-si-role-access-owner-acceptance',
-    evidenceRefs: ['feishu:doc/p1-si-role-access-evidence'],
-    categoryFieldType: 'SingleSelect',
-    allFiltersValid: true,
-    legacyBroadRoleMemberCount: 0,
-    publicOutputContainsSensitiveData: false,
-    roleTests,
   }
 }
 
@@ -215,6 +173,23 @@ test('QNAP production runtime scripts never depend on a host Node binary', async
   assert.ok(dispatcher.indexOf('. "$env_file"') < dispatcher.indexOf('validate-request.mjs'))
   const envExample = await fs.readFile(path.join(ROOT, 'config/env.shadow.example'), 'utf8')
   assert.match(envExample, /SI_NODE_RUNTIME_IMAGE=sha256:/)
+})
+
+test('strategic intelligence attaches to the Foundation fixed data network', async () => {
+  const foundationCompose = await fs.readFile(path.resolve(ROOT, '..', 'docker-compose.yml'), 'utf8')
+  const shadowCompose = await fs.readFile(path.join(ROOT, 'docker-compose.shadow.yml'), 'utf8')
+  const envExample = await fs.readFile(path.join(ROOT, 'config/env.shadow.example'), 'utf8')
+  const internalDeploy = await fs.readFile(path.join(ROOT, 'scripts/deploy-internal-engineering-shadow.sh'), 'utf8')
+  const productionDeploy = await fs.readFile(path.join(ROOT, 'scripts/deploy-shadow.sh'), 'utf8')
+
+  assert.match(foundationCompose, /data:\n    name: company_ai_data/)
+  assert.match(shadowCompose, /FOUNDATION_DATA_NETWORK:-company_ai_data/)
+  assert.match(envExample, /^FOUNDATION_DATA_NETWORK=company_ai_data$/m)
+  assert.match(internalDeploy, /^FOUNDATION_DATA_NETWORK=company_ai_data$/m)
+  assert.match(productionDeploy, /^FOUNDATION_DATA_NETWORK=company_ai_data$/m)
+  for (const source of [shadowCompose, envExample, internalDeploy, productionDeploy]) {
+    assert.doesNotMatch(source, /company-ai-foundation_data/)
+  }
 })
 
 test('internal engineering deployment is separately authorized, migration-free, and starts no container', async () => {
@@ -417,27 +392,24 @@ test('P003 deployment gate requires all real-review decisions and keeps every re
 
 test('reviewer role access gate requires four real member sessions and explicit security owner acceptance', async () => {
   const outputRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'company-si-role-access-gate-'))
-  const acceptanceFile = path.join(outputRoot, 'reviewer-role-access-acceptance.json')
   const validator = path.join(ROOT, 'scripts/validate-reviewer-role-access-acceptance.mjs')
   const { spawnSync } = await import('node:child_process')
-  const acceptedEvidence = reviewerRoleAcceptance()
+  const { acceptanceFile } = await createReviewerRoleAccessBundle(outputRoot)
 
-  await fs.writeFile(acceptanceFile, JSON.stringify(acceptedEvidence))
   const accepted = spawnSync(process.execPath, [validator, acceptanceFile], { encoding: 'utf8' })
   assert.equal(accepted.status, 0, accepted.stderr)
   const result = JSON.parse(accepted.stdout)
   assert.equal(result.scopedRoleCount, 4)
   assert.equal(result.memberExperienceVerified, true)
   assert.equal(result.legacyBroadRoleMemberCount, 0)
+  assert.equal(result.rawEvidenceFileCount, 5)
   assert.doesNotMatch(accepted.stdout, /company-directory:/)
   assert.doesNotMatch(accepted.stdout, /displayName/)
 
-  await fs.writeFile(acceptanceFile, JSON.stringify({
-    ...acceptedEvidence,
-    roleTests: acceptedEvidence.roleTests.map((entry, index) => (
-      index === 0 ? { ...entry, unassignedCategoryEditDenied: false } : entry
-    )),
-  }))
+  const productSessionFile = path.join(outputRoot, 'reviewer-role-session-product-user.json')
+  const productSession = JSON.parse(await fs.readFile(productSessionFile, 'utf8'))
+  productSession.results.unassignedCategoryEditDenied = false
+  await fs.writeFile(productSessionFile, JSON.stringify(productSession))
   const unsafeEdit = spawnSync(process.execPath, [validator, acceptanceFile], { encoding: 'utf8' })
   assert.notEqual(unsafeEdit.status, 0)
   assert.match(unsafeEdit.stderr, /unassignedCategoryEditDenied must be true/)
@@ -445,70 +417,35 @@ test('reviewer role access gate requires four real member sessions and explicit 
   const template = path.join(ROOT, 'config/reviewer-role-access-acceptance.template.json')
   const pendingTemplate = spawnSync(process.execPath, [validator, template], { encoding: 'utf8' })
   assert.notEqual(pendingTemplate.status, 0)
-  assert.match(pendingTemplate.stderr, /status must be complete/)
+  assert.match(pendingTemplate.stderr, /raw evidence missing|compiler-derived/)
 })
 
 test('Goal 7 deployment gate requires engineering evidence and explicit owner acceptance', async () => {
   const outputRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'company-si-goal7-gate-'))
-  const evidenceFile = path.join(outputRoot, 'goal7-acceptance.json')
+  const { bundleRoot, goal7File: evidenceFile } = await createGoal7AcceptanceBundle(outputRoot)
   const validator = path.join(ROOT, 'scripts/validate-goal7-acceptance.mjs')
   const { spawnSync } = await import('node:child_process')
-  const acceptedEvidence = {
-    evidenceVersion: '1.0.0',
-    goalKey: 'P1-PROD-READINESS',
-    status: 'complete',
-    engineeringVerified: true,
-    ownerAccepted: true,
-    acceptedAt: '2026-08-10T09:00:00Z',
-    sourceCommit: 'a'.repeat(40),
-    ownerAcceptanceRef: 'feishu:doc/goal7-owner-acceptance',
-    evidenceRefs: ['git:commit/goal7-accepted', 'qnap:acceptance/goal7'],
-    authorityEvidence: {
-      principalModelVerified: true,
-      senderPrincipalIsolationVerified: true,
-      purposeNarrowingVerified: true,
-      revocationFailClosedVerified: true,
-      readBeforeBodyAclVerified: true,
-    },
-    runtimeEvidence: {
-      circuitBreakerVerified: true,
-      retryBudgetVerified: true,
-      costBudgetVerified: true,
-      realModelReadbackVerified: true,
-    },
-    routeState: {
-      routeAOperational: true,
-      routeBEnabled: false,
-    },
-    closedCapabilities: {
-      productResearchBulkImport: false,
-      realEmployeeCanary: false,
-      employeePrivateBotMigration: false,
-      erpWriteback: false,
-      socialWriteback: false,
-    },
-  }
-
-  await fs.writeFile(evidenceFile, JSON.stringify(acceptedEvidence))
   const accepted = spawnSync(process.execPath, [validator, evidenceFile], { encoding: 'utf8' })
   assert.equal(accepted.status, 0, accepted.stderr)
   const result = JSON.parse(accepted.stdout)
   assert.equal(result.ownerAccepted, true)
   assert.equal(result.routeBEnabled, false)
+  assert.equal(result.evidenceFileCount, 5)
   assert.match(result.evidenceHash, /^[a-f0-9]{64}$/)
 
+  const acceptedEvidence = JSON.parse(await fs.readFile(evidenceFile, 'utf8'))
   await fs.writeFile(evidenceFile, JSON.stringify({ ...acceptedEvidence, ownerAccepted: false }))
   const ownerMissing = spawnSync(process.execPath, [validator, evidenceFile], { encoding: 'utf8' })
   assert.notEqual(ownerMissing.status, 0)
   assert.match(ownerMissing.stderr, /ownerAccepted must be true/)
 
-  await fs.writeFile(evidenceFile, JSON.stringify({
-    ...acceptedEvidence,
-    routeState: { ...acceptedEvidence.routeState, routeBEnabled: true },
-  }))
+  await fs.writeFile(evidenceFile, JSON.stringify(acceptedEvidence))
+  const deploymentFile = path.join(bundleRoot, 'deployment-evidence.json')
+  const deploymentEvidence = JSON.parse(await fs.readFile(deploymentFile, 'utf8'))
+  await fs.writeFile(deploymentFile, JSON.stringify({ ...deploymentEvidence, routeBEnabled: true }))
   const unsafeRoute = spawnSync(process.execPath, [validator, evidenceFile], { encoding: 'utf8' })
   assert.notEqual(unsafeRoute.status, 0)
-  assert.match(unsafeRoute.stderr, /routeBEnabled must remain false/)
+  assert.match(unsafeRoute.stderr, /Route B must remain disabled/)
 
   const template = path.join(ROOT, 'config/goal7-acceptance.template.json')
   const pendingTemplate = spawnSync(process.execPath, [validator, template], { encoding: 'utf8' })

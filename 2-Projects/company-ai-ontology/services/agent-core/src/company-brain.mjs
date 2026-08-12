@@ -2,6 +2,7 @@ import { assessEvidencePackage, buildEvidencePackageV2 } from './evidence-packag
 import { formatEmployeeAnswer, validateStructuredResponse } from './response-validator.mjs'
 import { resolveGovernedResponse } from './governed-response.mjs'
 import { createWorkCaseDraft } from './work-protocol.mjs'
+import { compileConversationAuthority, purposeForTurn } from './authority.mjs'
 
 function stripHiddenReasoning(value) {
   return String(value || '')
@@ -15,19 +16,28 @@ export function createCompanyBrain({ store, runtime, admission, config, systemSt
   const protocol = config?.workProtocol || { mode: 'off', ontologyVersion: '3.3.0', evidenceMaxAgeDays: 180 }
 
   async function legacyRun({ scope, turn }) {
+    const authority = compileConversationAuthority({
+      personId: scope.personId,
+      context: turn.context,
+      purpose: purposeForTurn(turn),
+      now,
+      maxMembershipAgeMs: config?.authority?.membershipMaxAgeMs,
+    })
     const evidence = await store.permissionedSearch({
       tenantId: scope.tenantId,
       personId: scope.personId,
       query: turn.message,
       limit: 8,
+      authority,
     })
     const release = await admission.acquire()
     try {
-      const result = await runtime.run({ ...turn, requestId: scope.requestId, evidence })
+      const result = await runtime.run({ ...turn, requestId: scope.requestId, personId: scope.personId, workType: 'legacy_query', evidence })
       return {
         reply: stripHiddenReasoning(result.reply),
         evidence,
         runtime: result.runtime,
+        authoritySnapshot: authority.snapshot,
         permissionFiltered: true,
         workCase: null,
         answer: null,
@@ -39,14 +49,30 @@ export function createCompanyBrain({ store, runtime, admission, config, systemSt
 
   async function execute({ scope, turn }) {
     if (protocol.mode === 'off') return legacyRun({ scope, turn })
+    const authority = compileConversationAuthority({
+      personId: scope.personId,
+      context: turn.context,
+      purpose: purposeForTurn(turn),
+      now,
+      maxMembershipAgeMs: config?.authority?.membershipMaxAgeMs,
+    })
     const draft = createWorkCaseDraft({
       requestId: scope.requestId,
       personId: scope.personId,
       turn,
+      authoritySnapshot: authority.snapshot,
       processingMode: protocol.mode,
       now,
     })
     const workCase = await store.createWorkCase({ tenantId: scope.tenantId, draft })
+    if (store.recordConversationAuthoritySnapshot) {
+      await store.recordConversationAuthoritySnapshot({
+        tenantId: scope.tenantId,
+        caseId: workCase.caseId,
+        personId: scope.personId,
+        snapshot: authority.snapshot,
+      })
+    }
     let currentStatus = workCase.status
     const advance = async (toStatus, stageType, options = {}) => {
       const result = await store.advanceWorkCase({
@@ -189,8 +215,8 @@ export function createCompanyBrain({ store, runtime, admission, config, systemSt
       }
       await advance('evidence_collecting', 'evidence', { stageStatus: 'active' })
       const retrieval = store.permissionedRetrieve
-        ? await store.permissionedRetrieve({ tenantId: scope.tenantId, personId: scope.personId, query: turn.message, limit: 8 })
-        : { evidence: await store.permissionedSearch({ tenantId: scope.tenantId, personId: scope.personId, query: turn.message, limit: 8 }), principalFound: true, excludedReasonCounts: {}, limit: 8, truncated: false }
+        ? await store.permissionedRetrieve({ tenantId: scope.tenantId, personId: scope.personId, query: turn.message, limit: 8, authority })
+        : { evidence: await store.permissionedSearch({ tenantId: scope.tenantId, personId: scope.personId, query: turn.message, limit: 8, authority }), principalFound: true, excludedReasonCounts: {}, limit: 8, truncated: false }
       const evidencePackage = buildEvidencePackageV2({
         caseId: workCase.caseId,
         principalId: scope.personId,
@@ -226,6 +252,7 @@ export function createCompanyBrain({ store, runtime, admission, config, systemSt
           answer: validation.response,
           permissionFiltered: true,
           runtime: { provider: 'policy-engine', mode: protocol.mode, productionReady: true },
+          authoritySnapshot: authority.snapshot,
           workCase: { caseId: workCase.caseId, status: 'insufficient_evidence', workMode: draft.workMode, processingMode: protocol.mode },
         }
       }
@@ -240,6 +267,8 @@ export function createCompanyBrain({ store, runtime, admission, config, systemSt
         result = await runtime.run({
           ...turn,
           requestId: scope.requestId,
+          personId: scope.personId,
+          workType: draft.workMode,
           evidence: retrieval.evidence,
           workContext: {
             processingMode: protocol.mode,
@@ -249,6 +278,16 @@ export function createCompanyBrain({ store, runtime, admission, config, systemSt
             assessment,
           },
         })
+        if (store.recordRuntimeUsage && result.runtime?.governance?.ledgerRecorded !== true) {
+          await store.recordRuntimeUsage({
+            tenantId: scope.tenantId,
+            requestId: scope.requestId,
+            caseId: workCase.caseId,
+            personId: scope.personId,
+            workType: draft.workMode,
+            runtime: result.runtime,
+          })
+        }
       } finally {
         release()
       }
@@ -290,6 +329,7 @@ export function createCompanyBrain({ store, runtime, admission, config, systemSt
         answer,
         permissionFiltered: true,
         runtime: result.runtime,
+        authoritySnapshot: authority.snapshot,
         workCase: { caseId: workCase.caseId, status: currentStatus, workMode: draft.workMode, processingMode: protocol.mode },
       }
     } catch (error) {

@@ -1,0 +1,27 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-feishu-authority-canary",
+  "sourceCommit": "REPLACE_WITH_PUSHED_SOURCE_COMMIT",
+  "hLiteSourceCommit": "REPLACE_WITH_PUSHED_H_LITE_SOURCE_COMMIT",
+  "capturedAt": "REPLACE_WITH_CAPTURE_TIMESTAMP",
+  "evidenceRef": "qnap:acceptance/goal7-authority-canary",
+  "runIdHash": "REPLACE_WITH_SHA256_OF_CANARY_RUN_ID",
+  "syntheticResourcesOnly": true,
+  "scenarios": {
+    "privateSenderOnly": false,
+    "activeChatMembershipAllowed": false,
+    "staleChatMembershipFailClosed": false,
+    "revokedChatMembershipFailClosed": false,
+    "multiMentionNoExpansion": false,
+    "purposeNarrowing": false,
+    "aclFailureBeforeBody": false,
+    "revocationConvergenceSeconds": null
+  },
+  "counts": {
+    "scenarioCount": 7,
+    "passedCount": 0,
+    "bodyReadOnDeniedCount": 0,
+    "unauthorizedEvidenceCount": 0
+  },
+  "publicOutputContainsSensitiveData": false
+}

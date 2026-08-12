@@ -366,3 +366,19 @@ P1-SI-B～G 的契约和测试通过可以标记 `engineering_verified`；来源
 ### 73. 原子更新必须覆盖 package、config 和 env 三件套
 
 只把 package 写到 `.next` 不是真正的原子更新；如果 config 和 `.env` 已直接覆盖，后续 Compose 校验失败就会留下“旧包 + 新配置”的混合状态。正确做法是三件套全部 staged，所有验证通过后统一切换，并为每个已移动的旧条目和已安装的新条目记录 marker；无论失败发生在 package、config 还是 env 步骤，都要自动撤走新条目并恢复旧条目。备份 tar 用于后续人工回滚，切换内自动恢复用于当前部署事务，两者都必须存在。
+
+### 74. Runtime 更新完成也不能自动继承首次运行授权
+
+Artifact 已落入 QNAP、镜像已加载、Compose config 已通过，只能证明内部 Runtime 地基更新完成。首次 Collector 会产生真实公网请求和 Raw Snapshot，即使 `PUBLISH=false`、只保存 Hash、业务副作用为 0，也必须使用新的独立授权。状态应从 `runtime_update_pending` 变为 `runtime_updated`，同时继续保持 `first_collection_run_authorized=false / production_blocked=true`，禁止把“更新成功”写成“雷达已运行”。
+
+### 75. Compose 外部网络必须绑定固定 name，不能猜项目生成名
+
+Foundation Compose 为 data 网络显式设置了 `name: company_ai_data`，因此消费者必须连接这个固定网络。使用 `company-ai-foundation_data` 这种按 Compose 项目名推测的网络会让 Worker 在启动前失败，即使本地 fake Docker 和 `compose config` 都通过。发布前必须同时读取 Foundation Compose 的网络 `name`、在目标 QNAP 执行 `docker network inspect`，并用测试断言 env、内部部署脚本、生产部署脚本和 Shadow Compose 四处一致。失败尝试仍应生成机器 Evidence，并证明没有来源请求和业务副作用。
+
+## Goal 7 权限与 Runtime 地基经验（2026-08-11）
+
+- 飞书 `type/member_type` 映射只解决 ACL 入库，不等于群聊授权完成。检索层必须同时绑定 HMAC 实际发送者、当前会话 chat、60 秒内成员 Evidence 和用途；多人艾特不得做权限并集，私聊不得继承群聊权限。
+- 群聊 ID 不应直接进入长期审计。`ConversationAuthoritySnapshot` 只保存 chat Hash、成员观测时间、用途、规则版本、决定和有效期；过期、缺失、未知类型或 API 不可用都在正文读取前失败关闭。
+- Runtime 的“配置模型名”不能证明真实模型调用。远程 Worker 必须读回 provider、model 和 usage；缺任一项失败关闭。Token/费用预算、有限重试和独立熔断必须位于 Route 层，权限拒绝与证据不足不能触发切路。
+- Route B 没有独立公司凭据时必须保持 disabled；复用 Route A 的同一 Key 只会制造伪冗余。当前个人 CPA 必须显式标记 `temporary_personal_credential`。
+- 本机没有 Docker 时，静态 SQL 和单测不能冒充 PostgreSQL Runtime Evidence。应把固定镜像、二次迁移、强制 RLS、无 Tenant 读取为 0、敏感正文列扫描和 Route B 状态检查接入已推送 Commit 的不可变 CI。

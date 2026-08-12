@@ -1,12 +1,13 @@
 # Company Agent Core
 
-QNAP 上的公司级 Agent 最小服务。当前版本提供内部签名协议、租户/人员 scope、Postgres 幂等与审计、H 引擎独立 HOME/Workspace 门禁。
+QNAP 上的公司级 Agent 最小服务。当前版本提供内部签名协议、租户/人员 scope、Postgres 幂等与审计、会话授权快照、用途收窄和 H 引擎独立 Runtime 门禁。
 
 ## 接口
 
 - `GET /healthz`：进程存活。
 - `GET /readyz`：Postgres 与公司 H 引擎 Runtime 同时可用才返回 200；演示模式返回 `demo_ready` 和 `productionReady=false`。
 - `POST /v1/turns`：仅接受 H-Lite 内部 HMAC 签名请求。
+- `POST /v1/retrieve`：使用签名发送者、当前会话成员 Evidence 和用途执行权限化检索。
 
 ## 当前边界
 
@@ -17,6 +18,9 @@ QNAP 上的公司级 Agent 最小服务。当前版本提供内部签名协议�
 - 正式模式使用独立公司 HOME/Grok HOME，并报告 `credentialMode=company-dedicated-oauth`。
 - 具体模型 CLI 与 Provider 属于部署实现细节，不进入上层 Agent Core API 和业务架构。
 - `H_ENGINE_MODE=remote` 通过签名请求调用受控 H Worker；`demo` 只用于离线演示，`cli` 保留为 QNAP 本机执行候选。
+- Goal 7 工程候选只认实际发送者；多人艾特不做权限并集，私聊不继承群聊权限，chat ACL 必须同时满足当前群成员 Evidence。
+- Runtime 对 Route A 独立熔断并限制重试、Token 和费用；Route B 默认关闭。远程 Worker 缺少 provider/model/usage 真实读回时失败关闭。
+- 当前候选把凭据模式标记为 `temporary_personal_credential`；公司专用 CPA 与同厂冗余仍未完成。
 - 正式凭据切换流程见 `../../docs/h-engine-credential-cutover.md`。
 
 ## 本地验证

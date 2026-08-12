@@ -1,0 +1,25 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "reviewer-role-member-session",
+  "workbenchKey": "P1-SI-HUMAN-REVIEW",
+  "roleKey": "REPLACE_WITH_ROLE_KEY",
+  "testedAt": "REPLACE_WITH_REAL_SESSION_TIME",
+  "memberPrincipal": null,
+  "evidenceRef": "REPLACE_WITH_CONTROLLED_EVIDENCE_REFERENCE",
+  "expectedEditableCategories": [],
+  "expectedEditableRecordCount": 0,
+  "expectedDeniedRecordCount": 0,
+  "results": {
+    "authenticatedAsAssignedMember": false,
+    "assignedCategoryEditSucceeded": false,
+    "unassignedCategoryEditDenied": false,
+    "sourceTableAccessDenied": false,
+    "recordCreateDenied": false,
+    "recordDeleteDenied": false,
+    "copyDenied": false,
+    "downloadDenied": false,
+    "viewMutationDenied": false,
+    "temporaryEditReverted": false
+  },
+  "publicOutputContainsSensitiveData": false
+}

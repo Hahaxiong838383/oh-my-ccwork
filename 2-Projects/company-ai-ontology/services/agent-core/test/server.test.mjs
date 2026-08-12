@@ -13,6 +13,7 @@ const now = 1_800_000_000_000
 function config() {
   return {
     tenantId,
+    sourceCommit: 'a'.repeat(40),
     hmacSecret: secret,
     maxBodyBytes: 262_144,
     maxClockSkewMs: 300_000,
@@ -87,6 +88,7 @@ test('readyz 在演示模式返回 demo_ready 且不冒充生产就绪', async (
   assert.equal(result.status, 200)
   assert.equal(result.payload.status, 'demo_ready')
   assert.equal(result.payload.productionReady, false)
+  assert.equal(result.payload.sourceCommit, 'a'.repeat(40))
 })
 
 test('turn 在 Runtime 未就绪时写幂等与审计但不伪装成功', async (t) => {
@@ -232,6 +234,58 @@ test('权限检索与 P2 路由只使用签名身份并返回标准结果', asyn
   assert.equal(proposed.status, 200)
   assert.equal(proposed.payload.status, 'proposed')
   assert.equal(calls.find(([name]) => name === 'propose')[1].actorPersonId, 'demo-dri-01')
+})
+
+test('群聊检索只接收实际发送者的新鲜成员证据且多人艾特不扩权', async (t) => {
+  const store = createMemoryStore()
+  const scopes = []
+  store.permissionedSearch = async (input) => {
+    scopes.push(input.authority)
+    return []
+  }
+  const server = createAgentCoreServer({
+    config: config(),
+    store,
+    runtime: { ready: async () => ({ ready: true, productionReady: false, mode: 'demo' }) },
+    now: () => now,
+  })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const port = await listen(server)
+  const observedAt = new Date(now - 20_000).toISOString()
+  const activeBody = JSON.stringify({
+    query: '产品资料',
+    purpose: 'company_knowledge_query',
+    context: {
+      conversation: { type: 'chat', chatId: 'oc_current' },
+      membership: { status: 'active', observedAt },
+      mentions: ['feishu:ou_privileged'],
+    },
+  })
+  const active = await request(port, {
+    path: '/v1/retrieve',
+    body: activeBody,
+    headers: signed(activeBody, { personId: 'demo-person-01', requestId: 'authority-active', idempotencyKey: 'authority-active' }),
+  })
+  assert.equal(active.status, 200)
+  assert.equal(active.payload.authoritySnapshot.decision, 'allow')
+  assert.equal(active.payload.authoritySnapshot.mentionsAffectAuthority, false)
+  assert.equal(scopes[0].searchScope.chatKey, 'oc_current')
+
+  const staleBody = JSON.stringify({
+    query: '产品资料',
+    context: {
+      conversation: { type: 'chat', chatId: 'oc_current' },
+      membership: { status: 'active', observedAt: new Date(now - 120_000).toISOString() },
+    },
+  })
+  const stale = await request(port, {
+    path: '/v1/retrieve',
+    body: staleBody,
+    headers: signed(staleBody, { personId: 'demo-person-01', requestId: 'authority-stale', idempotencyKey: 'authority-stale' }),
+  })
+  assert.equal(stale.payload.authoritySnapshot.decision, 'unknown')
+  assert.equal(stale.payload.excludedReasonCounts.conversation_membership_unknown, 1)
+  assert.equal(scopes[1].searchScope.chatKey, '')
 })
 
 test('Decision 审批重放读回同一结果且不重复推进 WorkCase', async (t) => {

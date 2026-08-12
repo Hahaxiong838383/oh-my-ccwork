@@ -2,6 +2,11 @@ name: P1-SI Runtime Verify
 
 on:
   workflow_dispatch:
+    inputs:
+      h_lite_source_commit:
+        description: Full pushed release commit of Hahaxiong838383/feishu-grok-bridge
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -20,6 +25,34 @@ jobs:
       - name: Checkout immutable source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
+      - name: Bind immutable H-Lite source
+        id: hlite
+        shell: bash
+        env:
+          H_LITE_SOURCE_COMMIT: ${{ inputs.h_lite_source_commit }}
+        run: |
+          set -euo pipefail
+          case "$H_LITE_SOURCE_COMMIT" in
+            *[!0-9a-f]*|'') echo 'h_lite_source_commit must be lowercase hex' >&2; exit 1 ;;
+          esac
+          test "${#H_LITE_SOURCE_COMMIT}" -eq 40
+          mkdir -p runtime-evidence
+          curl --fail --location --silent --show-error --retry 3 --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            "https://github.com/Hahaxiong838383/feishu-grok-bridge/archive/${H_LITE_SOURCE_COMMIT}.tar.gz" \
+            | gzip -dc | gzip -n > runtime-evidence/h-lite-source.tar.gz
+          mkdir -p /tmp/feishu-grok-bridge
+          tar -xzf runtime-evidence/h-lite-source.tar.gz --strip-components=1 -C /tmp/feishu-grok-bridge
+          npm ci --prefix /tmp/feishu-grok-bridge
+          node --test \
+            /tmp/feishu-grok-bridge/test/company-agent-core-client.test.mjs \
+            /tmp/feishu-grok-bridge/test/company-qnap-lite-profile.test.mjs \
+            /tmp/feishu-grok-bridge/test/company-qnap-lite-service.test.mjs
+          archive_sha=$(sha256sum runtime-evidence/h-lite-source.tar.gz | awk '{print $1}')
+          {
+            echo "source_commit=$H_LITE_SOURCE_COMMIT"
+            echo "archive_sha=$archive_sha"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Verify contracts and packages
         shell: bash
         run: |
@@ -31,6 +64,8 @@ jobs:
           npm run compile:data-foundation --prefix "$project/packages/ontology-contracts"
           npm run compile:reporting --prefix "$project/packages/ontology-contracts"
           npm run compile:p003-review --prefix "$project/packages/ontology-contracts"
+          npm test --prefix "$project/services/agent-core"
+          npm test --prefix "$project/services/knowledge-connector"
           npm test --prefix "$project/services/intelligence-collector"
           npm test --prefix "$project/deploy/qnap/strategic-intelligence"
           npm run validate --prefix "$project/deploy/qnap/strategic-intelligence"
@@ -57,6 +92,29 @@ jobs:
             echo "image_id=$image_id"
             echo "platform=$platform"
             echo "archive_sha=$archive_sha"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Validate Goal 7 authority and runtime foundation
+        id: goal7
+        shell: bash
+        env:
+          VALIDATION_POSTGRES_IMAGE: pgvector/pgvector:pg17-bookworm@sha256:7ae6051efd0e60444282c27c7e141af07f322ce033300e727a49c3dd11075e38
+        run: |
+          set -euo pipefail
+          project=2-Projects/company-ai-ontology
+          PROJECT_ROOT="$project" VALIDATION_RUN_ID="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            "$project/deploy/qnap/scripts/validate-goal7-foundation-isolated.sh" \
+            | tee runtime-evidence/goal7-foundation-validation.txt
+          grep -qx 'goal7_candidate_migration=verified' runtime-evidence/goal7-foundation-validation.txt
+          grep -qx 'goal7_candidate_idempotent=verified' runtime-evidence/goal7-foundation-validation.txt
+          grep -qx 'goal7_forced_rls=4' runtime-evidence/goal7-foundation-validation.txt
+          grep -qx 'goal7_acl_fail_closed=verified' runtime-evidence/goal7-foundation-validation.txt
+          grep -qx 'goal7_app_role_rw=verified' runtime-evidence/goal7-foundation-validation.txt
+          grep -qx 'goal7_route_state=route-a:true,route-b:false' runtime-evidence/goal7-foundation-validation.txt
+          grep -qx 'goal7_sensitive_body_columns=0' runtime-evidence/goal7-foundation-validation.txt
+          {
+            echo 'authority_runtime_foundation=verified'
+            echo 'route_b=disabled'
           } >> "$GITHUB_OUTPUT"
 
       - name: Validate candidate PostgreSQL migrations
@@ -132,18 +190,25 @@ jobs:
           IMAGE_ARCHIVE_SHA: ${{ steps.image.outputs.archive_sha }}
           SOURCE_ARCHIVE_SHA: ${{ steps.release.outputs.source_sha }}
           RELEASE_MANIFEST_SHA: ${{ steps.release.outputs.manifest_sha }}
+          H_LITE_SOURCE_COMMIT: ${{ steps.hlite.outputs.source_commit }}
+          H_LITE_SOURCE_ARCHIVE_SHA: ${{ steps.hlite.outputs.archive_sha }}
           POSTGRES_IMAGE: pgvector/pgvector:pg17-bookworm@sha256:7ae6051efd0e60444282c27c7e141af07f322ce033300e727a49c3dd11075e38
           DOMAIN_PERSISTENCE: ${{ steps.postgres.outputs.domain_persistence }}
           DOMAIN_PERSISTENCE_IDEMPOTENT: ${{ steps.postgres.outputs.domain_persistence_idempotent }}
           ACL_FAIL_CLOSED: ${{ steps.postgres.outputs.acl_fail_closed }}
+          GOAL7_FOUNDATION: ${{ steps.goal7.outputs.authority_runtime_foundation }}
+          ROUTE_B_STATE: ${{ steps.goal7.outputs.route_b }}
         run: |
           set -euo pipefail
           node <<'NODE'
           const fs = require('node:fs')
+          const crypto = require('node:crypto')
+          const sha256File = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')
           const manifest = {
             evidenceVersion: '1.0.0',
             verificationType: 'P1-SI-F-linux-amd64-runtime',
             sourceCommit: process.env.GITHUB_SHA,
+            hLiteSourceCommit: process.env.H_LITE_SOURCE_COMMIT,
             workflowRunId: process.env.GITHUB_RUN_ID,
             workflowRunAttempt: process.env.GITHUB_RUN_ATTEMPT,
             runner: 'ubuntu-24.04',
@@ -151,6 +216,7 @@ jobs:
             collectorPlatform: process.env.IMAGE_PLATFORM,
             collectorImageArchiveSha256: process.env.IMAGE_ARCHIVE_SHA,
             sourceArchiveSha256: process.env.SOURCE_ARCHIVE_SHA,
+            hLiteSourceArchiveSha256: process.env.H_LITE_SOURCE_ARCHIVE_SHA,
             releaseManifestSha256: process.env.RELEASE_MANIFEST_SHA,
             postgresImage: process.env.POSTGRES_IMAGE,
             imageBuildVerified: true,
@@ -158,6 +224,10 @@ jobs:
             domainPersistence: process.env.DOMAIN_PERSISTENCE,
             domainPersistenceIdempotent: process.env.DOMAIN_PERSISTENCE_IDEMPOTENT,
             aclFailClosed: process.env.ACL_FAIL_CLOSED,
+            goal7AuthorityRuntimeFoundation: process.env.GOAL7_FOUNDATION,
+            goal7FoundationEvidenceSha256: sha256File('runtime-evidence/goal7-foundation-validation.txt'),
+            postgresEvidenceSha256: sha256File('runtime-evidence/postgres-validation.txt'),
+            routeBState: process.env.ROUTE_B_STATE,
             immutableReleaseCandidateVerified: true,
             companyQnapDeployed: false,
             publish: false,
@@ -169,8 +239,10 @@ jobs:
             sha256sum \
               runtime-verification.json \
               postgres-validation.txt \
+              goal7-foundation-validation.txt \
               release-manifest.json \
               source.tar.gz \
+              h-lite-source.tar.gz \
               collector-image.tar.gz \
               > SHA256SUMS
             sha256sum -c SHA256SUMS

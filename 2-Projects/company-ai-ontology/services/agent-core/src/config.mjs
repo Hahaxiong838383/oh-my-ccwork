@@ -9,10 +9,14 @@ function required(value, name) {
 export function loadConfig(env = process.env) {
   const secret = required(env.AGENT_CORE_HMAC_SECRET, 'AGENT_CORE_HMAC_SECRET')
   if (secret.length < 32) throw new Error('AGENT_CORE_HMAC_SECRET must contain at least 32 characters')
+  const sourceCommit = /^[a-f0-9]{40}$/.test(String(env.ONTOLOGY_SOURCE_COMMIT || '').trim())
+    ? String(env.ONTOLOGY_SOURCE_COMMIT).trim()
+    : null
   return {
     host: String(env.AGENT_CORE_HOST || '0.0.0.0'),
     port: Math.max(1, Number(env.AGENT_CORE_PORT || 8080)),
     tenantId: required(env.FUTURUS_TENANT_ID, 'FUTURUS_TENANT_ID'),
+    sourceCommit,
     hmacSecret: secret,
     maxBodyBytes: Math.max(1024, Number(env.AGENT_CORE_MAX_BODY_BYTES || 262_144)),
     maxClockSkewMs: Math.max(10_000, Number(env.AGENT_CORE_MAX_CLOCK_SKEW_MS || 300_000)),
@@ -40,6 +44,9 @@ export function loadConfig(env = process.env) {
       maxQueue: Math.max(0, Number(env.H_ENGINE_QUEUE_LIMIT || 32)),
       queueTimeoutMs: Math.max(10, Number(env.H_ENGINE_QUEUE_TIMEOUT_MS || 10_000)),
     },
+    authority: {
+      membershipMaxAgeMs: Math.max(1_000, Number(env.AUTHORITY_MEMBERSHIP_MAX_AGE_MS || 60_000)),
+    },
     database: {
       host: String(env.PGHOST || 'postgres'),
       port: Math.max(1, Number(env.PGPORT || 5432)),
@@ -64,6 +71,23 @@ export function loadConfig(env = process.env) {
       timeoutMs: Math.max(10_000, Number(env.H_ENGINE_TIMEOUT_MS || 120_000)),
       maxOutputBytes: Math.max(4096, Number(env.H_ENGINE_MAX_OUTPUT_BYTES || 2_097_152)),
       demoDelayMs: Math.max(0, Number(env.H_ENGINE_DEMO_DELAY_MS || 0)),
+      governance: {
+        routeBEnabled: false,
+        credentialModeTag: String(env.H_ENGINE_CREDENTIAL_MODE_TAG || 'temporary_personal_credential'),
+        maxRetries: Math.max(0, Number(env.H_ENGINE_MAX_RETRIES || 2)),
+        maxRetriesPerDay: Math.max(0, Number(env.H_ENGINE_MAX_RETRIES_PER_DAY || 200)),
+        retryBaseMs: Math.max(1, Number(env.H_ENGINE_RETRY_BASE_MS || 250)),
+        failureThreshold: Math.max(1, Number(env.H_ENGINE_CIRCUIT_FAILURE_THRESHOLD || 3)),
+        resetAfterMs: Math.max(1_000, Number(env.H_ENGINE_CIRCUIT_RESET_MS || 60_000)),
+        maxRequestsPerDay: Math.max(1, Number(env.H_ENGINE_MAX_REQUESTS_PER_DAY || 5_000)),
+        maxPromptTokensPerRequest: Math.max(1, Number(env.H_ENGINE_MAX_PROMPT_TOKENS_PER_REQUEST || 120_000)),
+        maxTotalTokensPerRequest: Math.max(1, Number(env.H_ENGINE_MAX_TOTAL_TOKENS_PER_REQUEST || 160_000)),
+        maxTokensPerDay: Math.max(1, Number(env.H_ENGINE_MAX_TOKENS_PER_DAY || 20_000_000)),
+        maxCostMicrosPerRequest: Math.max(0, Number(env.H_ENGINE_MAX_COST_MICROS_PER_REQUEST || 0)),
+        maxCostMicrosPerDay: Math.max(0, Number(env.H_ENGINE_MAX_COST_MICROS_PER_DAY || 0)),
+        requireModelReadback: String(env.H_ENGINE_MODE || 'demo').trim().toLowerCase() === 'remote',
+        requireUsageReadback: String(env.H_ENGINE_MODE || 'demo').trim().toLowerCase() === 'remote',
+      },
     },
   }
 }

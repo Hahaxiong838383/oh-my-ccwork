@@ -1,0 +1,13 @@
+{
+  "snapshotVersion": "1.0.0",
+  "evidenceType": "goal7-deployment-state",
+  "phase": "before",
+  "capturedAt": "REPLACE_WITH_CAPTURE_TIMESTAMP",
+  "companyQnapIdentity": "qnap:company/prnas/TS-X65",
+  "activeOntologySchema": "3.3.0",
+  "registryStatus": "pending",
+  "candidateMigration012Applied": false,
+  "components": {},
+  "foundation": {},
+  "routeState": {}
+}

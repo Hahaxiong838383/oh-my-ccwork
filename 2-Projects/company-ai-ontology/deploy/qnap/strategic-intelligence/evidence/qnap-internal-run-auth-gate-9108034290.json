@@ -1,0 +1,25 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "internal_engineering_run_authorization_gate",
+  "artifactId": "9108034290",
+  "sourceCommit": "0342fcd3991fc88e32f1f68750b837112717db67",
+  "gateStatus": "blocked_without_explicit_authorization",
+  "exitCode": 1,
+  "reasonCode": "EXPLICIT_INTERNAL_ENGINEERING_RUN_APPROVAL_MISSING",
+  "message": "explicit internal engineering run approval missing",
+  "before": {
+    "stateFileCount": 0,
+    "evidenceFileCount": 0,
+    "strategicContainerCount": 0
+  },
+  "after": {
+    "stateFileCount": 0,
+    "evidenceFileCount": 0,
+    "strategicContainerCount": 0
+  },
+  "networkRequestAttempted": false,
+  "collectorStarted": false,
+  "databaseMigrationExecuted": false,
+  "foundationRestarted": false,
+  "businessSideEffectsCreated": false
+}

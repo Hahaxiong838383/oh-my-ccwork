@@ -188,7 +188,7 @@ async function createReadyInputs() {
       publicPortCount: 0,
     },
     database: {
-      appliedCandidateMigrations: ['010', '011'],
+      appliedCandidateMigrations: ['010', '011', '012'],
       foundationRestartCount: 0,
     },
     approvalEvidenceHashes: approvalHashes,
@@ -262,7 +262,7 @@ async function writeRuntimeSnapshots(inputs) {
       publicPortCount: 0,
     },
     database: {
-      appliedCandidateMigrations: [],
+      appliedCandidateMigrations: ['012'],
       foundationRestartCount: 0,
     },
     backup: null,
@@ -401,7 +401,7 @@ test('goal completion evidence compiler rejects runtime drift and incomplete pos
   assert.match(drift.stderr, /active ontology hash changed/)
 
   const incompletePost = structuredClone(snapshots.post)
-  incompletePost.database.appliedCandidateMigrations = ['010']
+  incompletePost.database.appliedCandidateMigrations = ['010', '011']
   await fs.writeFile(snapshots.postSnapshotFile, JSON.stringify(incompletePost))
   const incomplete = spawnSync(process.execPath, [COMPLETION_COMPILER], {
     encoding: 'utf8',

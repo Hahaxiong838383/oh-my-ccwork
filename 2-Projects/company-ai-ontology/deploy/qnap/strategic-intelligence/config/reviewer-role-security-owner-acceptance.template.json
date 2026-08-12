@@ -1,0 +1,16 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "reviewer-role-security-owner-acceptance",
+  "workbenchKey": "P1-SI-HUMAN-REVIEW",
+  "accepted": false,
+  "acceptedAt": "REPLACE_AFTER_ALL_FOUR_REAL_MEMBER_SESSIONS",
+  "securityOwner": null,
+  "acceptanceRef": "REPLACE_WITH_CONTROLLED_OWNER_ACCEPTANCE_REFERENCE",
+  "roleSessionHashes": {
+    "product_user": "REPLACE_WITH_SHA256",
+    "ai_rd": "REPLACE_WITH_SHA256",
+    "brand": "REPLACE_WITH_SHA256",
+    "toc_offline_channel": "REPLACE_WITH_SHA256"
+  },
+  "publicOutputContainsSensitiveData": false
+}

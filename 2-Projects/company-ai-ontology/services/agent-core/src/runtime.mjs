@@ -3,6 +3,8 @@ import { createHmac } from 'node:crypto'
 import { constants as fsConstants } from 'node:fs'
 import fs from 'node:fs/promises'
 
+import { createRuntimeGovernor, estimatePromptTokens } from './runtime-governance.mjs'
+
 async function exists(path, mode = fsConstants.F_OK) {
   try {
     await fs.access(path, mode)
@@ -12,12 +14,13 @@ async function exists(path, mode = fsConstants.F_OK) {
   }
 }
 
-export function createHEngineRuntime({ config } = {}) {
+export function createHEngineRuntime({ config, usageLedger = null, now = () => Date.now(), sleep } = {}) {
   let promptCache = null
+  const governor = createRuntimeGovernor({ policy: config.governance || {}, ledger: usageLedger, now, sleep })
 
   async function ready() {
     if (config.mode === 'demo') {
-      return { ready: true, productionReady: false, provider: config.provider, mode: 'demo' }
+      return { ready: true, productionReady: false, provider: config.provider, mode: 'demo', governance: governor.snapshot() }
     }
     if (config.mode === 'remote') {
       if (!config.remoteUrl || config.remoteSecret?.length < 32) {
@@ -37,6 +40,7 @@ export function createHEngineRuntime({ config } = {}) {
           credentialMode: payload.credentialMode || 'remote-managed',
           engineProvider: payload.provider || 'remote-managed',
           model: payload.model || null,
+          governance: governor.snapshot(),
         }
       } catch {
         return { ready: false, productionReady: false, reason: 'h_engine_remote_unreachable' }
@@ -56,6 +60,7 @@ export function createHEngineRuntime({ config } = {}) {
       provider: config.provider,
       mode: 'cli',
       proxyConfigured: Boolean(config.proxyUrl),
+      governance: governor.snapshot(),
     }
   }
 
@@ -97,13 +102,13 @@ export function createHEngineRuntime({ config } = {}) {
     ].filter(Boolean).join('\n\n')
   }
 
-  async function runRemote(turn) {
+  async function runRemote(turn, compiled) {
     const body = JSON.stringify({
-      prompt: await compiledPrompt(turn),
+      prompt: compiled,
       conversationId: turn.conversationId,
       requestId: turn.requestId || '',
     })
-    const timestamp = String(Date.now())
+    const timestamp = String(now())
     const signature = createHmac('sha256', config.remoteSecret).update(`${timestamp}.${body}`).digest('hex')
     let response
     try {
@@ -119,7 +124,7 @@ export function createHEngineRuntime({ config } = {}) {
       })
     } catch (error) {
       const wrapped = new Error('H Engine remote request failed')
-      wrapped.code = error?.name === 'TimeoutError' ? 'runtime_timeout' : 'runtime_failed'
+      wrapped.code = error?.name === 'TimeoutError' ? 'runtime_timeout' : 'runtime_network_error'
       throw wrapped
     }
     const text = await response.text()
@@ -138,7 +143,9 @@ export function createHEngineRuntime({ config } = {}) {
     }
     if (!response.ok || !payload.ok || typeof payload.reply !== 'string') {
       const error = new Error('H Engine remote runtime failed')
-      error.code = String(payload.status || 'runtime_failed')
+      error.code = response.status === 429
+        ? 'rate_limited'
+        : response.status >= 500 ? 'upstream_5xx' : String(payload.status || 'runtime_failed')
       throw error
     }
     return {
@@ -152,12 +159,12 @@ export function createHEngineRuntime({ config } = {}) {
         engineProvider: payload.runtime?.provider || 'remote-managed',
         model: payload.runtime?.model || null,
         workerVersion: payload.runtime?.workerVersion || null,
+        usage: payload.runtime?.usage || payload.usage || {},
       },
     }
   }
 
-  async function runCli(turn) {
-    const compiled = await compiledPrompt(turn)
+  async function runCli(turn, compiled) {
     return new Promise((resolve, reject) => {
       const child = spawn(config.bin, ['-p', compiled], {
         cwd: config.workspace,
@@ -263,9 +270,19 @@ export function createHEngineRuntime({ config } = {}) {
         runtime: { provider: config.provider, mode: 'demo', simulation: true, productionReady: false },
       }
     }
-    if (config.mode === 'remote') return runRemote(turn)
-    return runCli(turn)
+    const compiled = await compiledPrompt(turn)
+    return governor.execute({
+      routeKey: 'route-a',
+      estimatedPromptTokens: estimatePromptTokens(compiled),
+      context: {
+        requestId: turn.requestId || '',
+        caseId: turn.workContext?.caseId || null,
+        personId: turn.personId || '',
+        workType: turn.workType || turn.workContext?.workMode || turn.intent || 'query',
+      },
+      operation: () => config.mode === 'remote' ? runRemote(turn, compiled) : runCli(turn, compiled),
+    })
   }
 
-  return { ready, run }
+  return { ready, run, governance: governor.snapshot }
 }

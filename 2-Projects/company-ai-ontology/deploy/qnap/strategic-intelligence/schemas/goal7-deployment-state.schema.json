@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/goal7-deployment-state.schema.json",
+  "title": "Goal 7 Company QNAP Deployment State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["snapshotVersion", "evidenceType", "phase", "capturedAt", "companyQnapIdentity", "activeOntologySchema", "registryStatus", "candidateMigration012Applied", "components", "foundation", "routeState"],
+  "properties": {
+    "snapshotVersion": { "const": "1.0.0" },
+    "evidenceType": { "const": "goal7-deployment-state" },
+    "phase": { "enum": ["before", "after"] },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "companyQnapIdentity": { "const": "qnap:company/prnas/TS-X65" },
+    "activeOntologySchema": { "const": "3.3.0" },
+    "registryStatus": { "const": "in_sync" },
+    "candidateMigration012Applied": { "type": "boolean" },
+    "components": { "type": "object" },
+    "foundation": { "type": "object" },
+    "routeState": { "type": "object" }
+  }
+}

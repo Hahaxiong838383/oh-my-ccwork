@@ -119,7 +119,7 @@
     },
     "foundation-data": {
       "external": true,
-      "name": "${FOUNDATION_DATA_NETWORK:-company-ai-foundation_data}"
+      "name": "${FOUNDATION_DATA_NETWORK:-company_ai_data}"
     }
   }
 }
