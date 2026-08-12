@@ -4,6 +4,7 @@ exec </dev/null
 
 docker_path=${DOCKER_PATH:-docker}
 project_root=${PROJECT_ROOT:-$(CDPATH= cd -- "$(dirname "$0")/../../.." && pwd)}
+project_root=$(CDPATH= cd -- "$project_root" && pwd)
 run_id=${VALIDATION_RUN_ID:-$$}
 postgres_image=${VALIDATION_POSTGRES_IMAGE:-pgvector/pgvector:pg17-bookworm@sha256:7ae6051efd0e60444282c27c7e141af07f322ce033300e727a49c3dd11075e38}
 container=ontology-goal7-validation-$run_id
