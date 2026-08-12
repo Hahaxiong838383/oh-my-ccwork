@@ -4,7 +4,7 @@
 
 ## 1. 结论
 
-P1-SI-B～G 工程能力和 Artifact `9108034290` 内部 Runtime 已完成。当前无需扩大本体、来源或 P003 范围；应按“少量深审、其余明确保持关闭”的方式关闭人审门禁，再进入 Goal 7 和正式七日 Shadow。
+P1-SI-B～G 工程能力已完成，最新不可变候选为 Runtime Workflow `31563935583` / Artifact `9128767614`；公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；应按“少量深审、其余明确保持关闭”的方式关闭人审门禁，再进入 Goal 7 和正式七日 Shadow。
 
 当前实测状态：
 
@@ -14,8 +14,10 @@ P1-SI-B～G 工程能力和 Artifact `9108034290` 内部 Runtime 已完成。当
 | P003 最终决定 | 0/36 | 36/36 都有 final decision，关系继续 inactive |
 | 四角色成员 UAT | 0/4 | 四个真实账号完成允许与拒绝场景 |
 | Goal 7 | incomplete | 工程证据和川哥 Owner Acceptance 完成 |
-| 生产 Readiness | 0/7 | 七项门禁全部通过且取得当次授权 |
-| Goal Completion | 0/8 | 七个真实自然日及最终 Owner Acceptance 完成 |
+| 生产 Readiness | 1/7 | 当前仅不可变 Release 通过；其余六项全部关闭 |
+| Goal Completion | 1/8 | 当前仅不可变 Release 通过；七个真实自然日及最终 Owner Acceptance 完成 |
+
+`2026-08-12 13:12 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。正式门禁检查器重算为 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`。
 
 ## 2. 最小来源审核方案
 
@@ -70,6 +72,8 @@ Goal 7 不重复做 P1-SI 工程测试，只验收公司级生产地基：
 - 产品研究部整库导入、真实员工 Canary、员工私人 Bot 迁移、ERP/社媒写回继续关闭；
 - 川哥对以上证据执行 Owner Acceptance。
 
+Agent Core `2026-08-12.2` 已作为独立回复修复上线并通过真实主体正测、未知主体权限负测，但该单服务发布不能替代 Goal 7 的三组件 Deployment Evidence、Authority Canary、Worker 双源读回或 Owner Acceptance。
+
 Goal 7 验收文件只引用既有工程证据，不复制敏感内容。
 
 ## 6. 最短执行顺序
@@ -78,8 +82,8 @@ Goal 7 验收文件只引用既有工程证据，不复制敏感内容。
 2. 许可/合规负责人完成 3 批准 + 5 暂停；
 3. 六类 DRI 并行完成 6 条深审，其他 30 条快速保持 inactive；
 4. 四名角色成员并行完成 UAT；
-5. 汇总 Goal 7 工程证据并由川哥验收；
-6. 从最终已推送 Commit 重建不可变生产 Artifact；
+5. 完成 Goal 7 Authority Canary、Worker 双源读回和完整三组件 Deployment Evidence，再由川哥验收；
+6. 人审或代码变化后，从最终已推送 Commit 重建不可变生产 Artifact；
 7. 分别取得生产部署、数据库迁移、必要服务动作授权；
 8. 连续运行七个真实上海自然日 `PUBLISH=false` Shadow；
 9. 第七日后完成 Owner Acceptance 和 Goal Completion 编译。
