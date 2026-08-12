@@ -13,7 +13,8 @@ export function classifyGovernedIntent(turn = {}) {
   const systemState = /(运行状态|当前状态|健康状态|Schema|Registry|AgentCore|DomainConnector|ReadModel|读模型)/iu.test(compact)
   if (systemSubject && systemState) return { kind: 'system_status', evidencePolicy: 'sanitized-system-status' }
 
-  const systemRole = /(核心作用|主要作用|主要功能|核心能力|能做什么|是做什么的|是什么|介绍一下|说明.{0,6}(作用|功能|能力))/u.test(compact)
+  const systemRole = /(核心作用|主要作用|主要功能|核心能力|能做什么|是做什么的|有何作用|有什么作用|说明.{0,6}(作用|功能|能力))/u.test(compact)
+    || /^(?:请)?(?:简单|简要)?介绍一下?(?:公司AI(?:Ontology|本体)|AI(?:Ontology|本体)|公司智慧中枢|智慧中枢|公司大脑)[。！!?？]*$/iu.test(compact)
   if (systemSubject && systemRole) return { kind: 'system_role_explanation', evidencePolicy: 'versioned-system-role' }
 
   const operatingSubject = /(ERPM3|ERP|市场信号|社媒|经营决策|公司大脑|智慧中枢)/iu.test(compact)

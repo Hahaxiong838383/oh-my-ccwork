@@ -13,4 +13,5 @@ test('受治理意图识别智慧中枢简称与个人飞书操作', () => {
 test('普通公司资料查询不被误判为治理旁路', () => {
   assert.equal(classifyGovernedIntent({ message: '请查询产品知识库里的护眼方案。' }), null)
   assert.equal(classifyGovernedIntent({ message: '分析本月市场趋势和风险。' }), null)
+  assert.equal(classifyGovernedIntent({ message: '公司智慧中枢里的 P003 产品定义是什么？' }), null)
 })
