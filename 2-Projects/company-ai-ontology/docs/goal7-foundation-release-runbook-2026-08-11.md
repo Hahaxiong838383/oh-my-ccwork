@@ -8,20 +8,20 @@
 
 Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动恢复和验收清单已经完成工程准备，但当前没有生产执行资格。本运行手册不构成部署、迁移、服务切换或回滚授权。
 
-旧 Runtime Workflow `31590397762` Attempt `2` / Artifact `9138991942` 不包含本轮连续性修复，现仅保留历史工程证据，禁止部署。下一份可申请授权的候选必须在双仓提交推送后重新生成，并精确绑定：
+旧 Runtime Workflow `31590397762` Attempt `2` / Artifact `9138991942` 不包含本轮连续性修复，现仅保留历史工程证据，禁止部署。当前唯一可申请授权的候选为 Runtime Workflow `31598703363` Attempt `1` / Artifact `9142197870`，精确绑定：
 
-- 新 Ontology Commit；
+- Ontology Commit `c5fb0f8f43877488ca8a2260664e1c3edcfa3406`；
 - H-Lite Commit `fab8be3f1467289400d0d63ffe378b63ad1a6957`；
 - Agent Core `2026-08-12.3`；
 - Knowledge Connector `2026-08-11.1`；
 - H-Lite `2026-08-12.1`；
-- 新 Workflow、Artifact、Collector Image、Manifest 和完整 `SHA256SUMS`。
+- Collector Image `sha256:552d20c2b2a969727765334c33b33b87e86716cd9cfa8af345d56e0dbc0999f1`、Manifest `1.3.0` 和完整 8 项 `SHA256SUMS`。
 
-任何字段变化都需要重新生成预检与授权卡。在新 Artifact 完成前，当前不存在可部署 Goal 7 Runtime。
+8 项校验和、Release Validator、Goal 7 Foundation 与 PostgreSQL Runtime Evidence 已通过。任何字段变化都需要重新生成预检与授权卡；当前候选仍明确 `companyQnapDeployed=false / productionDeploymentAuthorized=false / publish=false`，本运行手册不自动授予执行资格。
 
-`2026-08-12 19:29 CST` 已完成公司 QNAP 纯只读生产预检：五元组一致、Foundation `13/13 running / unhealthy=0 / restart=0`、active Schema `3.3.0 / in_sync`、唯一宿主绑定仍为 `192.168.61.18:19080`；战略情报 Schema、表、容器和网络均为 `0`，五类业务副作用均为 `0`。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-readonly-preflight-2026-08-12.json`。本次未写入 QNAP、未迁移、未运行 Collector、未重启服务、未执行回滚。
+`2026-08-12 21:38 CST` 已经公网 Mini 跳板完成公司 QNAP 纯只读生产预检：五元组一致、Foundation `13/13 running / unhealthy=0 / restart=0`、active Schema `3.3.0 / in_sync`、唯一宿主绑定仍为 `192.168.61.18:19080`；战略情报 Schema、表、容器和网络均为 `0`，五类业务副作用均为 `0`。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-readonly-preflight-2026-08-12.json`。本次未写入 QNAP、未迁移、未运行 Collector、未重启服务、未执行回滚。
 
-同轮容量与回滚输入预检确认：QNAP/Docker 为 `x86_64 / amd64`，与 Artifact `linux/amd64` 匹配；可用内存约 `11.1 GiB`，热卷可用约 `604.7 GiB`，备份卷可用约 `7.1 TiB`；三组件当前镜像均可读，合计约 `882 MiB`，Foundation Compose 校验通过。候选 Runtime 尚未传入 QNAP，避免在授权前产生写入。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-capacity-rollback-preflight-2026-08-12.json`。
+同轮容量与回滚输入预检确认：QNAP/Docker 为 `x86_64`，与 Artifact `linux/amd64` 兼容；可用内存约 `11.1 GiB`，热卷可用约 `604.7 GiB`，备份卷可用约 `7.1 TiB`；三组件当前镜像均可读，合计约 `882 MiB`，Foundation Compose 校验通过。候选 Runtime 三个部署归档合计约 `56.5 MiB`，尚未传入 QNAP，避免在授权前产生写入。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-capacity-rollback-preflight-2026-08-12.json`。
 
 正式执行与验收前必须分别取得五项明确授权：
 
@@ -152,7 +152,7 @@ Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动�
 | 七日 Production Shadow | `0/7` |
 | Goal Completion | `1/8`，仅不可变 Release 通过 |
 
-因此当前只允许继续完成双仓提交、CI Runtime Artifact、人审准备和公司 QNAP 只读预检；没有对应单项授权时，不允许执行发布、读回、迁移、重建或回滚动作。
+因此当前工程准备、不可变 Runtime、容量和公司 QNAP 只读预检已经完成；没有对应单项授权时，不允许上传 Artifact、执行发布、Worker 读回、迁移、服务重建或真实回滚动作。
 
 机器契约：`deploy/qnap/strategic-intelligence/config/goal7-foundation-release-plan.json`。
 

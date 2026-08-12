@@ -1,24 +1,24 @@
 {
   "evidenceVersion": "1.0.0",
   "evidenceType": "goal7-capacity-rollback-preflight",
-  "capturedAt": "2026-08-12T19:32:00+08:00",
+  "capturedAt": "2026-08-12T21:40:45+08:00",
   "readOnly": true,
   "containsSecrets": false,
   "companyQnapIdentity": "qnap:company/prnas/TS-X65",
   "platform": {
     "hostArchitecture": "x86_64",
-    "dockerArchitecture": "amd64",
+    "dockerArchitecture": "x86_64",
     "dockerVersion": "27.1.2-qnap7",
     "runtimeArtifactPlatform": "linux/amd64",
     "platformCompatible": true
   },
   "capacity": {
     "memoryTotalKiB": 15607916,
-    "memoryAvailableKiB": 11644604,
-    "hotVolumeAvailableKiB": 634099636,
-    "backupVolumeAvailableKiB": 7655127988,
+    "memoryAvailableKiB": 11643632,
+    "hotVolumeAvailableKiB": 634100100,
+    "backupVolumeAvailableKiB": 7654996912,
     "backupRootExists": true,
-    "runtimeArtifactSizeBytes": 58960398,
+    "runtimeArtifactSizeBytes": 59283869,
     "capacityGatePassed": true
   },
   "rollbackImages": [

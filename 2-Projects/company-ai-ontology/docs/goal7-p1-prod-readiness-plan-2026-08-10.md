@@ -1,6 +1,6 @@
 # Goal 7：P1-PROD-READINESS 实施计划
 
-> 2026-08-11 更新：Phase 1、Phase 2 和 Phase 4 已形成未部署的本地工程候选，详见 `goal7-p1-prod-readiness-engineering-acceptance-2026-08-11.md`。Goal 7 Acceptance 已升级为五份原始 Evidence 绑定的 `2.0.0` 编译产物。当前仍为 `ci_postgres_pending / production_not_deployed / owner_acceptance_pending`，公司专用 CPA 凭据、合成 Canary、QNAP 部署和 Owner Acceptance 均未完成。
+> 2026-08-12 更新：Phase 1、Phase 2 和 Phase 4 已形成并推送工程候选，Runtime Workflow `31598703363` / Artifact `9142197870` 已通过不可变 Linux/PostgreSQL 验证。Goal 7 Acceptance 已升级为五份原始 Evidence 绑定的 `2.0.0` 编译产物。当前仍为 `immutable_runtime_verified / production_not_deployed / owner_acceptance_pending`，公司专用 CPA 凭据、真实 H Worker 双源读回、合成 Canary、QNAP 三组件发布和 Owner Acceptance 均未完成。
 
 ## 结论
 

@@ -2,13 +2,13 @@
 
 日期：2026-08-11（Asia/Shanghai）
 
-状态：`local_engineering_verified / ci_postgres_pending / production_not_deployed / owner_acceptance_pending`
+状态：`engineering_verified / immutable_runtime_verified / production_not_deployed / owner_acceptance_pending`
 
 ## 1. 结论
 
 Goal 7 的 P1-AUTHORITY 与 P1-RUNTIME 已从规划进入本地工程候选：飞书部门/群聊 Principal 映射、发送者隔离、用途收窄、当前群成员证据、会话授权快照、Route A 独立熔断、有限重试、Token/费用预算、真实 provider/model/usage 读回和 Route B 默认关闭已经进入 Agent Core、Knowledge Connector、候选迁移和不可变 Runtime Workflow。Goal 7 最终验收也已由可手填布尔值升级为五份原始 Evidence 绑定的编译产物。
 
-当前仍不能把 Goal 7 标记为完成：本机没有 Docker，候选迁移尚未取得 Linux/PostgreSQL Runtime Evidence；代码未提交推送，Knowledge Connector `2026-08-11.1` 和 Agent Core `2026-08-11.1` 均未部署公司 QNAP，未执行合成飞书 Canary、真实 H Worker 用量读回、撤权演练或川哥 Owner Acceptance。
+双仓候选已提交推送，并由 Runtime Workflow `31598703363` Attempt `1` / Artifact `9142197870` 取得 Linux/amd64 与 PostgreSQL Runtime Evidence：012 四表、4/4 强制 RLS、真实 `ontology_app` 读写、Route B disabled、双仓 Commit 和三个组件版本均通过不可变校验。当前仍不能把 Goal 7 标记为完成：候选尚未上传或部署公司 QNAP，未执行真实 H Worker 双源读回、合成飞书 Authority Canary、完整三组件 Deployment Evidence、撤权演练或川哥 Owner Acceptance。
 
 ## 2. P1-AUTHORITY 工程能力
 
@@ -77,20 +77,20 @@ Goal 7 Acceptance Evidence 升级为 `2.0.0`，必须由同目录五份原始证
 
 | 检查 | 结果 |
 |---|---|
-| Agent Core | `63/63` |
+| Agent Core | `66/66` |
 | Knowledge Connector | `18/18` |
-| Strategic Intelligence | `98/98` |
+| Strategic Intelligence | `118/118` |
 | Node 语法 | 通过 |
 | Shell 语法 | 通过 |
 | Compose / Workflow YAML | 通过 |
 | `git diff --check` | 通过 |
-| PostgreSQL 隔离 Runtime | `pending_ci`，本机无 Docker |
+| PostgreSQL 隔离 Runtime | 通过，Artifact `9142197870` |
 
 覆盖的负向场景包括：多人艾特不扩权、私聊不继承群权限、群成员过期/撤权、未知飞书成员类型、非法用途、Route B 调用、非重试错误、Token/费用超预算、熔断、provider/model/usage 读回缺失、部署/回滚未独立授权、Artifact SHA 篡改、内部 Hash 重新签名漂移和获批双 Commit 漂移。
 
 ## 6. 当前门禁
 
-- `engineeringVerified=false`：必须等待已推送 Commit 的 Runtime Workflow 和真实 H Worker/飞书合成 Canary；
+- `engineeringVerified=true`：不可变 Runtime 与 PostgreSQL 工程证据已完成；这不等于部署、Canary 或 Owner Acceptance；
 - `ownerAccepted=false`：不得由测试自动填写；
 - 公司专用 CPA Key 与同厂冗余仍缺失，Route B 继续关闭；
 - 产品研究部整库导入、10 人真实 Canary、员工私人 Bot 迁移、ERP/社媒写回继续关闭；
@@ -99,9 +99,8 @@ Goal 7 Acceptance Evidence 升级为 `2.0.0`，必须由同目录五份原始证
 
 ## 7. 下一步
 
-1. 由 cc 选择性提交并推送本轮 Goal 7 工程候选；
-2. 运行更新后的 Runtime Workflow，取得 012 迁移、4/4 RLS、真实 `ontology_app` 读写、Route B disabled 和完整回归 Evidence；
-3. 验证真实 H Worker 返回 provider/model/usage，不满足新契约时先升级 Worker，不部署 Agent Core；
-4. 以新 Artifact 的 Ontology/H-Lite 双仓 Commit 为授权对象，单独申请公司 QNAP 012 候选迁移与 Agent Core/Knowledge Connector/H-Lite 部署窗口；
-5. 部署前后执行合成部门、群聊、私聊、多人艾特、撤权和 API 失败 Canary；
-6. 川哥体验验收后写入独立 `owner-acceptance.json`，再由编译器生成 `goal7-acceptance.json`；禁止人工设置最终布尔值或 Hash。
+1. 以 Artifact `9142197870` 和绑定的 Ontology/H-Lite 双仓 Commit 为授权对象，分别申请 Foundation 发布、012 候选迁移与 Agent Core/Knowledge Connector/H-Lite 服务重建；
+2. 发布后验证真实 H Worker 返回 provider/model/usage，不满足新契约时停止验收并恢复安全状态；
+3. 执行合成部门、群聊、私聊、多人艾特、撤权和 API 失败 Authority Canary；
+4. 编译并验证三组件 Deployment Evidence，确认 active Schema 未漂移、无新增端口、Foundation restart=0 和五类业务副作用为 0；
+5. 川哥体验验收后写入独立 `owner-acceptance.json`，再由编译器生成 `goal7-acceptance.json`；禁止人工设置最终布尔值或 Hash。
