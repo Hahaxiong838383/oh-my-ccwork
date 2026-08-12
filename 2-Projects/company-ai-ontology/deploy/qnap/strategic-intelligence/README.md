@@ -254,6 +254,8 @@ Artifact：`p1-si-runtime-c0d9ce92fb94d09b2c46ae1e019c166da8b32468`，Artifact I
 
 当前生产与门禁真值见 `evidence/p1-si-current-gate-snapshot-2026-08-12.json`，解释见 `docs/p1-si-bh-gate-audit-2026-08-12.md`。
 
+最新公司 QNAP 无落盘只读预检见 `evidence/p1-si-goal7-readonly-preflight-2026-08-12.json`：`2026-08-12 19:29 CST` 五元组正确，Foundation `13/13 running / unhealthy=0 / restart=0`，唯一宿主绑定仍为 `192.168.61.18:19080`；战略情报 Schema、表、容器和网络均为 `0`，五类业务副作用均为 `0`。该证据只证明部署前基线，没有授予任何 Runtime 动作。
+
 飞书审核工作台与机器门禁的最新脱敏状态见 `evidence/p1-si-live-gate-status-2026-08-12.json`：飞书审核数据于 `2026-08-12 13:54 CST` 回拉，来源 `8 pending / 0 final`，P003 `36 pending / 36 inactive / 0 final`；Artifact `9138991942` 于 `2026-08-12 19:18 CST` 完成不可变 Release 复核，Deployment Readiness 仍为 `1 pass / 6 blocked`，Goal Completion 为 `1 pass / 7 blocked`。该证据不包含姓名、Principal 或审批正文。
 
 首次内部运行证据见 `evidence/qnap-first-internal-run-9108034290.json`。第一次尝试在 Collector 启动前发现外部网络默认值与 Foundation 固定网络不一致，来源请求为 0 并失败留证；修正为 `company_ai_data` 后，第二次尝试完成 3 来源、60 条、Hash-only、正文 0、重复 0，Foundation 指纹一致，临时容器/网络/端口和五类业务副作用均为 0。Evidence 只接受为内部工程验证，不具生产 Shadow 资格。

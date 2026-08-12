@@ -20,6 +20,8 @@ Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动�
 
 Artifact 的 8 项 `SHA256SUMS`、Release Manifest 验证器、Goal 7 Runtime 验证器、Deployment Readiness 和 Goal Completion 检查器已于 `2026-08-12 19:18 CST` 重新执行；当前仍为 `1 pass / 6 blocked` 和 `1 pass / 7 blocked`。
 
+`2026-08-12 19:29 CST` 已完成公司 QNAP 纯只读生产预检：五元组一致、Foundation `13/13 running / unhealthy=0 / restart=0`、active Schema `3.3.0 / in_sync`、唯一宿主绑定仍为 `192.168.61.18:19080`；战略情报 Schema、表、容器和网络均为 `0`，五类业务副作用均为 `0`。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-readonly-preflight-2026-08-12.json`。本次未写入 QNAP、未迁移、未运行 Collector、未重启服务、未执行回滚。
+
 正式执行与验收前必须分别取得五项明确授权：
 
 1. Foundation 发布授权：`GOAL7_DEPLOY_APPROVED=YES`；

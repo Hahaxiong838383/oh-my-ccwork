@@ -1,0 +1,57 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-readonly-production-preflight",
+  "capturedAt": "2026-08-12T19:29:16+08:00",
+  "readOnly": true,
+  "containsSecrets": false,
+  "companyQnap": {
+    "identity": "qnap:company/prnas/TS-X65",
+    "host": "PRNas",
+    "model": "TS-X65",
+    "address": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "identityVerified": true
+  },
+  "foundation": {
+    "runningContainerCount": 13,
+    "unhealthyContainerCount": 0,
+    "restartCountTotal": 0,
+    "onlyPublishedHostBinding": "192.168.61.18:19080->8080/tcp"
+  },
+  "activeRuntime": {
+    "ontologySchema": "3.3.0",
+    "ontologyHash": "41689393289d9514d1ed9cd22455a164f1bc59286f0db16deb9235e703e6ae77",
+    "registryStatus": "in_sync",
+    "agentCoreVersion": "2026-08-12.2",
+    "agentCoreSourceCommit": "3edbc7a73863fa5f334c06d603067427183f58ed",
+    "knowledgeConnectorVersion": "2026-08-11.1",
+    "knowledgeConnectorSourceCommit": "dc15ef976e258da28f0ed1f5134a48c4b466e6c0",
+    "hLiteVersion": "2026-08-11.1",
+    "hLiteSourceCommit": "e38857ca589e3270d9cbe02ae311aa41cb898552",
+    "hLiteMode": "active",
+    "hLiteSubscriptionEnabled": true,
+    "goal7CandidateTableCount": 4
+  },
+  "strategicIntelligence": {
+    "schemaExists": false,
+    "tableCount": 0,
+    "containerCount": 0,
+    "networkCount": 0
+  },
+  "businessSideEffects": {
+    "formalP2Count": 0,
+    "employeeDeliveryCount": 0,
+    "erpWritebackCount": 0,
+    "socialWritebackCount": 0,
+    "causalActivationCount": 0
+  },
+  "actionsPerformed": {
+    "deploymentCount": 0,
+    "migrationCount": 0,
+    "collectorRunCount": 0,
+    "serviceRestartCount": 0,
+    "rollbackDrillCount": 0
+  },
+  "result": "ready_for_separately_authorized_goal7_runtime_actions",
+  "productionDeploymentAuthorized": false
+}

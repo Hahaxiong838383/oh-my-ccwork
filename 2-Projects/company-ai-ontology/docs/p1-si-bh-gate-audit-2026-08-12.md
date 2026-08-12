@@ -51,6 +51,8 @@ Runtime Workflow 已验证：
 
 Agent Core `2026-08-12.2` 是已授权的独立回复修复，不是 Goal 7 三组件正式发布，也不能替代 Authority Canary、Worker 双源读回、完整 Deployment Evidence 或 Owner Acceptance。
 
+`2026-08-12 19:29 CST` 又完成一次无落盘纯只读预检：公司 QNAP 五元组一致，Foundation `13/13 running / unhealthy=0 / restart=0`，唯一宿主端口仍为 `192.168.61.18:19080`；active Schema `3.3.0 / in_sync`，Goal 7 候选四表存在；战略情报 Schema、表、容器和网络均为 `0`，正式 P2、员工投递、ERP 写回、社媒写回和因果激活均为 `0`。证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-readonly-preflight-2026-08-12.json`。该预检不构成部署、迁移、服务重建、Worker 读回或回滚授权。
+
 ## 4. 未关闭的人审门禁
 
 `2026-08-12 13:54 CST` 已再次通过飞书用户身份只读回拉两张审核表；`2026-08-12 19:18 CST` 使用新 Artifact `9138991942` 运行正式 Release、Goal 7 Runtime、Readiness 与 Goal Completion 检查器重算门禁。脱敏原始汇总见 `deploy/qnap/strategic-intelligence/evidence/p1-si-live-gate-status-2026-08-12.json`；文件不包含姓名、Principal、审批正文或受控路径。
