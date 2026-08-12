@@ -5294,7 +5294,11 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-12 17:55：**控制面 `v1.63.0`（线路切换+approval center）、dev198 `1eb9084`、契约 `2026-08-12.4`；Mini 落后待下批窗口**）
+#### ✅ 版本态（2026-08-12 19:00：**控制面 `v1.63.0`、dev198 `1eb9084`、契约 `2026-08-12.4`；仓库 HEAD 已到 `82cbfbf`；Mini 落后待下批窗口**）
+
+⚠️ **仓库 HEAD ≠ 线上**：`82cbfbf` 只是 `.gitignore`（运行态产物挡库），
+与运行时无关、未部署也不需要部署。**判线上版本一律认 healthz / 运行文件 md5，
+不认 `git log`**（[[feedback_deployed_code_is_the_source_of_truth]]）。
 
 | 位置 | 版本 |
 |---|---|
@@ -6049,6 +6053,36 @@ lark-auth-broker 的错误文本统一走 `lib/error-tail.mjs` 的 `boundedError
 
 配套的平台侧改进（未做，待拍板）：creds 下发前对端点做一次轻量验活，401 直接标
 `needRebind` 并主动发卡，把「上游换 key」从静默失效变成用户可见提醒。
+
+### 🔴 收口「别的 agent 在主 checkout 留下的在途改动」SOP（2026-08-12 晚实战）
+
+bridge 主 checkout 是 cc / codex 共用的。接到「把当前在途改动收口提交」这类任务时，
+**先别建分支写 commit message，先做归属与新旧判定**——那轮 7 个 `M` 里，
+5 个是本地指针落后造成的假象，2 个是**过期副本**，提交下去会回退一个已上线的
+生产修复（删掉 Dockerfile 的 `chmod -R a+rX /app` → H-Lite 容器非 root 用户
+读不到 `/app`）。**整个工作区没有一个字节是远端没有的。**
+
+1. `git fetch origin`，然后**逐文件**三方对撞（别把多路径塞进 shell 变量，
+   zsh 不做单词分割、pathspec 静默失效，会得到假的「零差异」）：
+   `git show origin/main:$f | md5` / `git show HEAD:$f | md5` / `md5 -q $f`。
+   工作区=远端≠HEAD → 假 `M`；三值互异 → 重点查。
+2. **改动是「加」还是「减」？减法最可疑**：`git log -S '<被删的那行>'` 找到引入
+   它的提交，`git show <commit>^:$f | diff - $f`，diff=0 就是铁证——你手上是
+   那个修复之前的旧版。
+3. 判定为过期副本 → **先备份到 scratchpad 再 `git checkout --` 丢弃**，然后
+   `git pull --rebase --autostash` 追平。未跟踪文件挡住 checkout 时（远端有同名
+   文件），先 md5 比对再删，rebase 会从远端恢复。
+4. 追平后回读四件：指针 `0 0`、工作区干净、被丢弃文件已被远端更新版本取代、
+   **原修复仍在**（如 `grep -c 'chmod -R a+rX /app'`）。
+5. ⚠️ **在 worktree 里跑 bridge 测试必须先解决 `node_modules`**（worktree 不自带）：
+   `ln -s <主checkout>/node_modules <worktree>/node_modules`。否则 company 系测试
+   会因 `@larksuiteoapi/node-sdk` 解析失败而红，**那是环境问题不是代码问题**
+   ——我据此误报过一次归因。判据：`ERR_MODULE_NOT_FOUND` = 环境，断言失败 = 代码。
+6. 基线参考（2026-08-12 `82cbfbf`）：company 专项 12/12、完整 `npm test` RC=0 /
+   1256 用例 / 零 `not ok`。跑测试时钉个锚确认目标用例真跑了
+   （`grep -c 'H-Lite 镜像允许非 root'`），别把空跑当全绿。
+
+详见记忆 [[feedback_concurrent_sessions_shared_checkout]] §4。
 
 ### Mini 两段式 VM 升级（第二次实测，~15 分钟全程）
 
