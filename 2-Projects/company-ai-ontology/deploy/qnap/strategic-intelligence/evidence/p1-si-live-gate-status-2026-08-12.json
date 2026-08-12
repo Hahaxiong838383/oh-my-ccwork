@@ -1,0 +1,127 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "p1-si-live-gate-status",
+  "capturedAt": "2026-08-12T13:12:33+08:00",
+  "containsPersonalIdentity": false,
+  "feishuReviewWorkbench": {
+    "source": {
+      "approvedAtCount": 0,
+      "approvedRetentionCount": 0,
+      "approvedStorageCount": 0,
+      "compliancePendingCount": 8,
+      "finalDecisionCount": 0,
+      "licensePendingCount": 8,
+      "pendingDecisionCount": 8,
+      "recordCount": 8,
+      "revision": 38
+    },
+    "p003": {
+      "challengeEvidenceCount": 0,
+      "finalDecisionCount": 0,
+      "inactiveCount": 36,
+      "pendingDecisionCount": 36,
+      "recordCount": 36,
+      "reviewedAtCount": 0,
+      "revision": 91,
+      "semanticRewriteCount": 0,
+      "supportEvidenceCount": 0
+    }
+  },
+  "machineGates": {
+    "deploymentReadiness": {
+      "ok": false,
+      "deploymentEligible": false,
+      "requiredGate": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH",
+      "passedGateCount": 1,
+      "blockedGateCount": 6,
+      "gates": [
+        {
+          "key": "deployment_authorization",
+          "status": "blocked",
+          "reasonCode": "explicit_authorization_missing"
+        },
+        {
+          "key": "goal7_status",
+          "status": "blocked",
+          "reasonCode": "goal7_not_complete"
+        },
+        {
+          "key": "immutable_release",
+          "status": "pass",
+          "reasonCode": "ok"
+        },
+        {
+          "key": "approved_source_registry",
+          "status": "blocked",
+          "reasonCode": "validation_failed"
+        },
+        {
+          "key": "approved_p003_review",
+          "status": "blocked",
+          "reasonCode": "validation_failed"
+        },
+        {
+          "key": "reviewer_role_access_acceptance",
+          "status": "blocked",
+          "reasonCode": "validation_failed"
+        },
+        {
+          "key": "goal7_owner_acceptance",
+          "status": "blocked",
+          "reasonCode": "validation_failed"
+        }
+      ]
+    },
+    "goalCompletion": {
+      "ok": false,
+      "goalCompletionEligible": false,
+      "requiredGate": "WAIT_PRODUCTION_SHADOW_AND_OWNER_ACCEPTANCE",
+      "passedGateCount": 1,
+      "blockedGateCount": 7,
+      "productionShadowCompleted": false,
+      "businessSideEffectsZero": false,
+      "gates": [
+        {
+          "key": "immutable_release",
+          "status": "pass",
+          "reasonCode": "ok"
+        },
+        {
+          "key": "approved_source_registry",
+          "status": "blocked",
+          "reasonCode": "validation_failed"
+        },
+        {
+          "key": "approved_p003_review",
+          "status": "blocked",
+          "reasonCode": "validation_failed"
+        },
+        {
+          "key": "reviewer_role_access_acceptance",
+          "status": "blocked",
+          "reasonCode": "validation_failed"
+        },
+        {
+          "key": "goal7_owner_acceptance",
+          "status": "blocked",
+          "reasonCode": "validation_failed"
+        },
+        {
+          "key": "deployment_completion_evidence",
+          "status": "blocked",
+          "reasonCode": "missing_input"
+        },
+        {
+          "key": "seven_day_owner_acceptance",
+          "status": "blocked",
+          "reasonCode": "missing_input"
+        },
+        {
+          "key": "release_deployment_shadow_identity",
+          "status": "blocked",
+          "reasonCode": "identity_mismatch"
+        }
+      ]
+    }
+  }
+}

@@ -51,10 +51,13 @@ Agent Core `2026-08-12.2` 是已授权的独立回复修复，不是 Goal 7 三�
 
 ## 4. 未关闭的人审门禁
 
+`2026-08-12 13:12 CST` 已再次通过飞书用户身份只读回拉两张审核表，并用正式 Readiness / Goal Completion 检查器重算门禁。脱敏原始汇总见 `deploy/qnap/strategic-intelligence/evidence/p1-si-live-gate-status-2026-08-12.json`；文件不包含姓名、Principal、审批正文或受控路径。
+
 ### 来源审核
 
 - 分配完整：`8/8`；
 - 最终决定：`0/8`；
+- 飞书表 revision：`38`，decision/license/compliance 均为 `8 pending`，批准时间、存储级别和保留期完成数均为 `0`；
 - 推荐最小批次仍为 `3 approve_for_shadow + 5 keep_paused`；
 - 任何 `pending`、许可证据缺失、保留期缺失或合规决定缺失都会失败关闭。
 
@@ -65,6 +68,7 @@ Agent Core `2026-08-12.2` 是已授权的独立回复修复，不是 Goal 7 三�
 - 必要角色位：`90/150`；
 - 全角色覆盖：`12/36`；
 - 最终决定：`0/36`；
+- 飞书表 revision：`91`，`36 pending / 36 inactive`，语义重写、支持证据、反证和审核时间完成数均为 `0`；
 - 所有关系仍为 `generated_draft / unverified / inactive`。
 
 当前主要缺口是供应链六条个人 DRI，以及 AI 技术、渠道、隐私安全等类别的知识产权、财务、AI 安全、法务、采购和质量角色。不能由 Agent 代签、推断或批量伪造真人审核。
@@ -88,6 +92,8 @@ Goal Completion：`1 pass / 7 blocked`。
 
 - 已通过：最新不可变 Release；
 - 阻断：来源批准、P003 最终审核、四角色 UAT、Goal 7、部署完成证据、七日 Owner Acceptance、Release/Deployment/Shadow 身份一致性。
+
+上述计数由 `inspect-deployment-readiness.mjs` 与 `inspect-goal-completion.mjs` 对最新 Artifact 和当前受控审核快照重算得出，不是手工填写。唯一通过项仍是不可变 Release。
 
 ## 6. 下一执行顺序
 
