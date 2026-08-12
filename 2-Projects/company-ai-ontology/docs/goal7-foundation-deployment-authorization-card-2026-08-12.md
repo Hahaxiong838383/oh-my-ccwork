@@ -8,14 +8,14 @@
 
 - 公司 QNAP：`PRNas / TS-X65 / 192.168.61.18`；
 - Foundation Root：`/share/CACHEDEV1_DATA/ai-ontology/foundation`；
-- Runtime Workflow：`31598703363` Attempt `1`；
-- Runtime Artifact：`9142197870`；
-- Ontology Commit：`c5fb0f8f43877488ca8a2260664e1c3edcfa3406`；
+- Runtime Workflow：`31607792883` Attempt `1`；
+- Runtime Artifact：`9145915628`；
+- Ontology Commit：`b504f1295bf98b018479556c06e1072516966562`；
 - H-Lite Commit：`fab8be3f1467289400d0d63ffe378b63ad1a6957`；
 - Agent Core：`2026-08-12.3`；
 - Knowledge Connector：`2026-08-11.1`；
 - H-Lite：`2026-08-12.1`；
-- Collector Image：`sha256:552d20c2b2a969727765334c33b33b87e86716cd9cfa8af345d56e0dbc0999f1`；
+- Collector Image：`sha256:59eadd7a3b95caa2a7a09604abb981b18f4ce8ec730408efd5f7d0f4efdfe39d`；
 - Candidate Ontology：Schema `3.7.0` / Hash `c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860`；
 - 发布开关：`publish=false`；
 - 当前生产 active Schema：`3.3.0`，本次不得切换 active Schema。
@@ -24,7 +24,7 @@
 
 ## 2. 当前只读基线
 
-`2026-08-12 21:38 CST` 公网只读复核：
+`2026-08-12 22:48 CST` 公网只读复核：
 
 - Foundation `13/13 running`；
 - unhealthy `0`；
@@ -51,11 +51,11 @@
 
 ### A. Foundation 发布准备与 Artifact 入场
 
-动作：把 Artifact `9142197870` 上传到公司 QNAP 受控 staging 目录，验证完整 Hash，备份现有 Compose、环境配置和三个旧镜像，构建三个候选镜像；不迁移数据库、不切换服务、不运行模型。
+动作：把 Artifact `9145915628` 上传到公司 QNAP 受控 staging 目录，验证完整 Hash，备份现有 Compose、环境配置和三个旧镜像，构建三个候选镜像；不迁移数据库、不切换服务、不运行模型。
 
 精确授权回复：
 
-> 授权 Artifact 9142197870 进入公司 QNAP Goal 7 发布 staging，允许执行 Hash 校验、配置与旧镜像备份、三个候选镜像构建；不授权数据库迁移、服务重建、Worker 读回、Collector、Shadow 或真实回滚演练。
+> 授权 Artifact 9145915628 进入公司 QNAP Goal 7 发布 staging，允许执行 Hash 校验、配置与旧镜像备份、三个候选镜像构建；不授权数据库迁移、服务重建、Worker 读回、Collector、Shadow 或真实回滚演练。
 
 ### B. 候选迁移 012
 
@@ -71,7 +71,7 @@
 
 精确授权回复：
 
-> 授权部署 Artifact 9142197870 对应的 Agent Core 2026-08-12.3、Knowledge Connector 2026-08-11.1、H-Lite 2026-08-12.1，仅重建这三个服务；允许发布失败时自动恢复旧服务，不授权真实回滚演练、Worker 读回、Collector 或 Shadow。
+> 授权部署 Artifact 9145915628 对应的 Agent Core 2026-08-12.3、Knowledge Connector 2026-08-11.1、H-Lite 2026-08-12.1，仅重建这三个服务；允许发布失败时自动恢复旧服务，不授权真实回滚演练、Worker 读回、Collector 或 Shadow。
 
 ### D. 真实 H Worker 双源读回与 Authority Canary
 
@@ -87,7 +87,7 @@
 
 精确授权回复：
 
-> 授权执行 Goal 7 三组件真实回滚恢复演练：旧版本验证后恢复到 Artifact 9142197870 新版本；保留迁移 012，不执行数据库 DROP，不运行 Collector 或 Shadow。
+> 授权执行 Goal 7 三组件真实回滚恢复演练：旧版本验证后恢复到 Artifact 9145915628 新版本；保留迁移 012，不执行数据库 DROP，不运行 Collector 或 Shadow。
 
 ## 5. 自动停止条件
 

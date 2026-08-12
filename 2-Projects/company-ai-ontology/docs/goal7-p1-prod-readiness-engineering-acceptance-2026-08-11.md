@@ -8,7 +8,7 @@
 
 Goal 7 的 P1-AUTHORITY 与 P1-RUNTIME 已从规划进入本地工程候选：飞书部门/群聊 Principal 映射、发送者隔离、用途收窄、当前群成员证据、会话授权快照、Route A 独立熔断、有限重试、Token/费用预算、真实 provider/model/usage 读回和 Route B 默认关闭已经进入 Agent Core、Knowledge Connector、候选迁移和不可变 Runtime Workflow。Goal 7 最终验收也已由可手填布尔值升级为五份原始 Evidence 绑定的编译产物。
 
-双仓候选已提交推送，并由 Runtime Workflow `31598703363` Attempt `1` / Artifact `9142197870` 取得 Linux/amd64 与 PostgreSQL Runtime Evidence：012 四表、4/4 强制 RLS、真实 `ontology_app` 读写、Route B disabled、双仓 Commit 和三个组件版本均通过不可变校验。当前仍不能把 Goal 7 标记为完成：候选尚未上传或部署公司 QNAP，未执行真实 H Worker 双源读回、合成飞书 Authority Canary、完整三组件 Deployment Evidence、撤权演练或川哥 Owner Acceptance。
+双仓候选已提交推送，并由 Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628` 取得 Linux/amd64 与 PostgreSQL Runtime Evidence：012 四表、4/4 强制 RLS、真实 `ontology_app` 读写、Route B disabled、双仓 Commit 和三个组件版本均通过不可变校验。发布准备、012 迁移和三组件服务切换已拆成独立授权脚本与 Evidence Hash 链。当前仍不能把 Goal 7 标记为完成：候选尚未上传或部署公司 QNAP，未执行真实 H Worker 双源读回、合成飞书 Authority Canary、完整三组件 Deployment Evidence、撤权演练或川哥 Owner Acceptance。
 
 ## 2. P1-AUTHORITY 工程能力
 
@@ -79,12 +79,12 @@ Goal 7 Acceptance Evidence 升级为 `2.0.0`，必须由同目录五份原始证
 |---|---|
 | Agent Core | `66/66` |
 | Knowledge Connector | `18/18` |
-| Strategic Intelligence | `118/118` |
+| Strategic Intelligence | `119/119` |
 | Node 语法 | 通过 |
 | Shell 语法 | 通过 |
 | Compose / Workflow YAML | 通过 |
 | `git diff --check` | 通过 |
-| PostgreSQL 隔离 Runtime | 通过，Artifact `9142197870` |
+| PostgreSQL 隔离 Runtime | 通过，Artifact `9145915628` |
 
 覆盖的负向场景包括：多人艾特不扩权、私聊不继承群权限、群成员过期/撤权、未知飞书成员类型、非法用途、Route B 调用、非重试错误、Token/费用超预算、熔断、provider/model/usage 读回缺失、部署/回滚未独立授权、Artifact SHA 篡改、内部 Hash 重新签名漂移和获批双 Commit 漂移。
 
@@ -99,7 +99,7 @@ Goal 7 Acceptance Evidence 升级为 `2.0.0`，必须由同目录五份原始证
 
 ## 7. 下一步
 
-1. 以 Artifact `9142197870` 和绑定的 Ontology/H-Lite 双仓 Commit 为授权对象，分别申请 Foundation 发布、012 候选迁移与 Agent Core/Knowledge Connector/H-Lite 服务重建；
+1. 以 Artifact `9145915628` 和绑定的 Ontology/H-Lite 双仓 Commit 为授权对象，分别申请 A 发布准备、B 012 候选迁移与 C Agent Core/Knowledge Connector/H-Lite 服务重建；
 2. 发布后验证真实 H Worker 返回 provider/model/usage，不满足新契约时停止验收并恢复安全状态；
 3. 执行合成部门、群聊、私聊、多人艾特、撤权和 API 失败 Authority Canary；
 4. 编译并验证三组件 Deployment Evidence，确认 active Schema 未漂移、无新增端口、Foundation restart=0 和五类业务副作用为 0；

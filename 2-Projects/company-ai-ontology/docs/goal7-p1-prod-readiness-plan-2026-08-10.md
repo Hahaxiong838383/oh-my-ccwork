@@ -1,6 +1,6 @@
 # Goal 7：P1-PROD-READINESS 实施计划
 
-> 2026-08-12 更新：Phase 1、Phase 2 和 Phase 4 已形成并推送工程候选，Runtime Workflow `31598703363` / Artifact `9142197870` 已通过不可变 Linux/PostgreSQL 验证。Goal 7 Acceptance 已升级为五份原始 Evidence 绑定的 `2.0.0` 编译产物。当前仍为 `immutable_runtime_verified / production_not_deployed / owner_acceptance_pending`，公司专用 CPA 凭据、真实 H Worker 双源读回、合成 Canary、QNAP 三组件发布和 Owner Acceptance 均未完成。
+> 2026-08-12 更新：Phase 1、Phase 2 和 Phase 4 已形成并推送工程候选，Runtime Workflow `31607792883` / Artifact `9145915628` 已通过不可变 Linux/PostgreSQL 验证；发布准备、012 迁移与三组件服务切换已拆成三个独立授权阶段。Goal 7 Acceptance 已升级为五份原始 Evidence 绑定的 `2.0.0` 编译产物。当前仍为 `immutable_runtime_verified / production_not_deployed / owner_acceptance_pending`，公司专用 CPA 凭据、真实 H Worker 双源读回、合成 Canary、QNAP 三组件发布和 Owner Acceptance 均未完成。
 
 ## 结论
 

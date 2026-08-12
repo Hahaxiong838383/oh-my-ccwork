@@ -1,7 +1,7 @@
 {
   "evidenceVersion": "1.0.0",
   "evidenceType": "goal7-readonly-production-preflight",
-  "capturedAt": "2026-08-12T21:38:37+08:00",
+  "capturedAt": "2026-08-12T22:48:09+08:00",
   "readOnly": true,
   "containsSecrets": false,
   "companyQnap": {

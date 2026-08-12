@@ -6,7 +6,7 @@
 
 ## 1. 结论
 
-P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `118/118`。当前唯一合格不可变候选为 Runtime Workflow `31598703363` Attempt `1` / Artifact `9142197870`，Manifest `1.3.0`、8 项完整 `SHA256SUMS`、Ontology Commit `c5fb0f8f43877488ca8a2260664e1c3edcfa3406`、H-Lite Commit `fab8be3f1467289400d0d63ffe378b63ad1a6957` 和三个组件版本身份均通过正式验证；Artifact `9138991942` 及更早候选仅保留历史工程证据。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；工程阶段继续完成系统审批中心和 Goal 7 准备，真人审核在整体测试阶段关闭，正式七日 Shadow 仍须等待全部真实门禁。
+P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `119/119`。当前唯一合格不可变候选为 Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628`，Manifest `1.3.0`、8 项完整 `SHA256SUMS`、Ontology Commit `b504f1295bf98b018479556c06e1072516966562`、H-Lite Commit `fab8be3f1467289400d0d63ffe378b63ad1a6957` 和三个组件版本身份均通过正式验证；Artifact `9142197870` 及更早候选仅保留历史工程证据。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；工程阶段继续完成系统审批中心和 Goal 7 准备，真人审核在整体测试阶段关闭，正式七日 Shadow 仍须等待全部真实门禁。
 
 当前实测状态：
 
@@ -20,7 +20,7 @@ P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `118/118`。�
 | 生产 Readiness | 1/7 | 当前仅不可变 Release 通过；其余六项全部关闭 |
 | Goal Completion | 1/8 | 当前仅不可变 Release 通过；七个真实自然日及最终 Owner Acceptance 完成 |
 
-`2026-08-12 13:54 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。`2026-08-12 21:49 CST` 新 Artifact `9142197870` 通过不可变 Release 门禁；正式检查器重算仍为 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`。
+`2026-08-12 13:54 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。`2026-08-12 22:50 CST` 新 Artifact `9145915628` 通过不可变 Release 门禁；现有门禁仍为 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`。
 
 ## 2. 最小来源审核方案
 
@@ -88,7 +88,7 @@ Goal 7 验收文件只引用既有工程证据，不复制敏感内容。
 5. 六类 DRI 并行完成 6 条深审，其他 30 条快速保持 inactive；
 6. 四名角色成员在系统审批中心完成实名权限 UAT；
 7. 由川哥完成 Evidence-bound Goal 7 Owner Acceptance；
-8. 若人审或代码改变发布输入，从最终已推送 Commit 重建不可变生产 Artifact；否则沿用并再次校验 Artifact `9142197870`；
+8. 若人审或代码改变发布输入，从最终已推送 Commit 重建不可变生产 Artifact；否则沿用并再次校验 Artifact `9145915628`；
 9. 分别取得 Foundation 发布、012 候选迁移、三组件服务重建授权；
 10. 连续运行七个真实上海自然日 `PUBLISH=false` Shadow；
 11. 第七日后完成 Owner Acceptance 和 Goal Completion 编译。

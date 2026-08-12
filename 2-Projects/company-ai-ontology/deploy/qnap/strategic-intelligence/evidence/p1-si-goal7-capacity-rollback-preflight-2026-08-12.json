@@ -1,7 +1,7 @@
 {
   "evidenceVersion": "1.0.0",
   "evidenceType": "goal7-capacity-rollback-preflight",
-  "capturedAt": "2026-08-12T21:40:45+08:00",
+  "capturedAt": "2026-08-12T22:49:08+08:00",
   "readOnly": true,
   "containsSecrets": false,
   "companyQnapIdentity": "qnap:company/prnas/TS-X65",
@@ -14,11 +14,11 @@
   },
   "capacity": {
     "memoryTotalKiB": 15607916,
-    "memoryAvailableKiB": 11643632,
-    "hotVolumeAvailableKiB": 634100100,
-    "backupVolumeAvailableKiB": 7654996912,
+    "memoryAvailableKiB": 11641736,
+    "hotVolumeAvailableKiB": 634096948,
+    "backupVolumeAvailableKiB": 7654914992,
     "backupRootExists": true,
-    "runtimeArtifactSizeBytes": 59283869,
+    "runtimeArtifactSizeBytes": 59300960,
     "capacityGatePassed": true
   },
   "rollbackImages": [
