@@ -5267,13 +5267,13 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-12 10:20：**dev198 `b7061c8`（daily 重放冻结修复）、契约 `2026-08-12.2`；Mini 落后一版待下批窗口**）
+#### ✅ 版本态（2026-08-12 10:45：**dev198 `3c72a47`（daily 重放修复+feishu-send 幂等键加固）、契约 `2026-08-12.3`；Mini 落后待下批窗口**）
 
 | 位置 | 版本 |
 |---|---|
-| 控制面 aliyun-hk | 线上 **`v1.61.0`**（H-0094 daily 创建面；Source `61394ff`、51 文件 attest `in_sync`、`mismatchCount=0`；旧版备份 `/srv/h-control/backups/20260812-h-control-pre-1610/`；b7061c8 未动控制面文件，attest 仍有效） |
-| dev198 | **git HEAD = 运行文件 = `b7061c8`**（daily requestUuid 截断碰撞修复，契约 `2026-08-12.2` 全 12 App 唯一；E2E：临时 daily 真跑 5s+journal 新键 `sched-u-0-<40hex>`）；`H_ONCE_REMINDERS=0` 已注释开闸，11 租户调度网关 socket 全就位 |
-| Mini 活动 VM | **`61394ff`**（2026-08-12 两段式升级：rollback→shadow(npm ci)→verify shadow=ready→cutover，全程 ~15 分钟）；契约 `2026-08-12.1`、maxParallel=3；**含 daily 重放 bug 但当前零条 daily=零风险，b7061c8 随下批割接窗口带上（任务 #60）**；回滚锚 `~/local/h-mini-b2-rollback-20260812-013000-pre-cutover-61394ff` |
+| 控制面 aliyun-hk | 线上 **`v1.61.0`**（H-0094 daily 创建面；Source `61394ff`、51 文件 attest `in_sync`、`mismatchCount=0`；旧版备份 `/srv/h-control/backups/20260812-h-control-pre-1610/`；b7061c8/3c72a47 未动控制面文件，attest 仍有效） |
+| dev198 | **git HEAD = 运行文件 = `3c72a47`**（b7061c8=daily requestUuid 截断碰撞修复+3c72a47=feishu-send 出站幂等键同型加固，契约 `2026-08-12.3` 全 12 App 唯一；E2E：临时 daily 真跑+journal 新键 `sched-u-0-<40hex>`、探针双异键 `accept-re-<40hex>`、部署后双卡冒烟 expectedMatched=true）；`H_ONCE_REMINDERS=0` 已注释开闸，11 租户调度网关 socket 全就位 |
+| Mini 活动 VM | **`61394ff`**（2026-08-12 两段式升级：rollback→shadow(npm ci)→verify shadow=ready→cutover，全程 ~15 分钟）；契约 `2026-08-12.1`、maxParallel=3；**含 daily 重放 bug 但当前零条 daily=零风险，`3c72a47` 随下批割接窗口带上（任务 #60）**；回滚锚 `~/local/h-mini-b2-rollback-20260812-013000-pre-cutover-61394ff` |
 
 ⚠️ **跨 bridge+控制面的字段/行为修复，部署顺序=先控制面后 bridge**（2026-08-10 实测）：
 bridge 一重启 bootPush 立即推镜像，若控制面新代码还没起，数据被旧代码处理一次，
