@@ -62,3 +62,11 @@
 ## 四、灰度方案（P1 拍板既定）
 
 agent_name 分流：Rust worker 以独立名注册 → dispatch 按名派单 → 逐房灰度；回滚=切回 Python worker 派单（分钟级，Python 全套保留未动）。切换前后 64.90 三 unit 不中断。
+
+### 试跑入口（2026-08-12 下午上线，P4-pre）
+
+- **A/B 双页**：https://voice-hk.hahaxiong.cc/voice-test-rust.html（Rust，token→`rust-worker-dev198`，exp 2026-09-11）↔ /voice-test.html（Python，token exp **2026-08-16**）。页面 UI/JS 完全同款，仅标题与 token 不同。
+- **Rust worker 位置**：dev198 release @ d65a1647d，自拉起 loop，生产镜像 env（含生产声纹库副本 thr 0.50、fillers、MALLOC_ARENA_MAX=2）。dev198 产物 glibc 2.43 不兼容 64.90 的 Ubuntu 24.04——P4 真部署需在 24.04 环境构建。
+- **47.239 改动**：新静态页 + nginx 精确 location 一行（备份 `/root/voice-hk.nginx.bak-cc-20260812`）；旧页 md5 与反代路径状态码前后不变。
+- **对比公平性注**：dev198（家宽）→LiveKit HK ≈60ms RTT vs 64.90 同城 1.86ms，体感端到端约多百 ms 级一跳；面板「判停/LLM/TTS」分段数字不含该跳，可直接对比。真同台对比待 P4 部署 64.90。
+- **探针基线（页面同款房间）**：eou 680ms / llm ttft 508ms / tts ttfb 400-480ms / 端到端首声 2.0s（含 filler）；声纹 probe 0.835 命中、川哥 0.185 未误认；release 通话中 RSS 70MB。
