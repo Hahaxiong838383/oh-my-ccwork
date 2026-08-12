@@ -12,7 +12,8 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY src ./src
 
 RUN groupadd --system --gid 10004 knowledgeconnector \
-  && useradd --system --uid 10004 --gid knowledgeconnector --home-dir /var/lib/knowledge-connector knowledgeconnector
+  && useradd --system --uid 10004 --gid knowledgeconnector --home-dir /var/lib/knowledge-connector knowledgeconnector \
+  && chmod -R a+rX /app
 
 USER 10004:10004
 EXPOSE 8083

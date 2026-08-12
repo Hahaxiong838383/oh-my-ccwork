@@ -109,6 +109,17 @@ cd "$foundation_root"
   < "$runtime_root/company-ai-ontology/deploy/qnap/candidate-migrations/012-goal7-authority-runtime.sql" >/dev/null
 "$docker_path" compose build agent-core knowledge-connector h-lite >/dev/null
 
+verify_image_readable() {
+  image=$1
+  path=$2
+  "$docker_path" run --rm --network none --read-only --cap-drop ALL \
+    --security-opt no-new-privileges:true --entrypoint node "$image" \
+    -e "require('fs').accessSync(process.argv[1], require('fs').constants.R_OK)" "$path" >/dev/null
+}
+verify_image_readable company-ai-foundation-agent-core:latest /app/src/server.mjs
+verify_image_readable company-ai-foundation-knowledge-connector:latest /app/src/server.mjs
+verify_image_readable company-ai-foundation-h-lite:latest /app/company-qnap-lite.mjs
+
 wait_agent_core() {
   attempt=0
   until "$docker_path" compose exec -T agent-core node -e \

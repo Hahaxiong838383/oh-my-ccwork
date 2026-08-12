@@ -132,6 +132,9 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
   ]) assert.ok(deploy.includes(marker), `deployment marker missing: ${marker}`)
 
   assert.match(deploy, /compose build agent-core knowledge-connector h-lite/)
+  assert.match(deploy, /verify_image_readable company-ai-foundation-agent-core:latest \/app\/src\/server\.mjs/)
+  assert.match(deploy, /verify_image_readable company-ai-foundation-knowledge-connector:latest \/app\/src\/server\.mjs/)
+  assert.match(deploy, /verify_image_readable company-ai-foundation-h-lite:latest \/app\/company-qnap-lite\.mjs/)
   assert.equal((deploy.match(/compose up -d (agent-core|knowledge-connector|h-lite)/g) || []).length, 3)
   assert.doesNotMatch(deploy, /compose (restart|down|stop)|Collector|FORMAL_P2_ENABLED=1|ERP_WRITEBACK_ENABLED=1|SOCIAL_WRITEBACK_ENABLED=1/)
   assert.match(deploy, /KNOWLEDGE_SYNC_ON_START 0/)

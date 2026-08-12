@@ -69,4 +69,6 @@ test('Goal 7 三个运行组件通过镜像标签与健康读回绑定双仓 Com
   assert.match(compose, /H_LITE_SOURCE_COMMIT: \$\{H_LITE_SOURCE_COMMIT:-unknown\}/)
   assert.match(agentDockerfile, /org\.opencontainers\.image\.revision=\$\{ONTOLOGY_SOURCE_COMMIT\}/)
   assert.match(connectorDockerfile, /org\.opencontainers\.image\.revision=\$\{ONTOLOGY_SOURCE_COMMIT\}/)
+  assert.match(agentDockerfile, /chmod -R a\+rX \/app/)
+  assert.match(connectorDockerfile, /chmod -R a\+rX \/app/)
 })
