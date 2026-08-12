@@ -8,7 +8,7 @@
 
 Goal 7 的 P1-AUTHORITY 与 P1-RUNTIME 已从规划进入本地工程候选：飞书部门/群聊 Principal 映射、发送者隔离、用途收窄、当前群成员证据、会话授权快照、Route A 独立熔断、有限重试、Token/费用预算、真实 provider/model/usage 读回和 Route B 默认关闭已经进入 Agent Core、Knowledge Connector、候选迁移和不可变 Runtime Workflow。机器 Release Plan 已升级为五阶段授权，D 阶段在任何合成写入前要求显式授权与公司 QNAP 五元组预检，E 阶段必须证明旧版本已验证且获批候选版本已恢复。Goal 7 Owner Acceptance 现绑定五份工程 Evidence，最终 Acceptance 共绑定六份文件。
 
-工程契约现已升级为 Manifest `1.6.0`：Runtime 包必须包含 `image.env` 在内的 9 项 `SHA256SUMS`，并通过隔离上传、严格根目录白名单和原子晋级。Workflow `31626697529` Attempt `2` / Artifact `9153663685` 已绑定 Ontology Commit `b63db1164`、H-Lite Commit `fab8be3f` 与 Collector Image `sha256:4e1669f...`，离线 9/9 Hash、Release Validator、Goal 7 Runtime、PostgreSQL Runtime 和 Foundation 验证全部通过。历史 Artifact `9151468565` 及更早包继续禁止部署。Goal 7 尚未取得 A 阶段授权，也未执行真实 H Worker 双源读回、合成 Authority Canary、完整三组件 Deployment Evidence、Rollback Drill Evidence 或川哥 Owner Acceptance。
+工程契约现已升级为 Manifest `1.6.0`：Runtime 包必须包含 `image.env` 在内的 9 项 `SHA256SUMS`，并通过隔离上传、严格根目录白名单和原子晋级。Workflow `31631413656` Attempt `1` / Artifact `9155268396` 已绑定 Ontology Commit `36dc34610`、H-Lite Commit `baa00bf` 与 Collector Image `sha256:62d5ef1c...`，离线 9/9 Hash、Release Validator、Goal 7 Runtime、PostgreSQL Runtime 和 Foundation 验证全部通过。A 阶段准备链新增全局互斥锁、危险或超长 `runId` 拒绝、失败回放保留既有 Evidence、仅删除本次创建的镜像标签，以及三个候选 Runtime 基础镜像 digest 固定。Artifact `9153663685` 及更早包继续禁止部署。Goal 7 尚未取得 A 阶段授权，也未执行真实 H Worker 双源读回、合成 Authority Canary、完整三组件 Deployment Evidence、Rollback Drill Evidence 或川哥 Owner Acceptance。
 
 同一真实 Artifact 的本机 staging 演练也已通过首次原子晋级、幂等重放、损坏包拒绝和失败清理；发布目录 10 个文件均为 `0600`。该结果只证明执行脚本与真实包兼容，明确 `countsTowardStageA=false / companyQnapTouched=false`，不把本地工程演练冒充生产 A 阶段完成。
 
@@ -81,7 +81,7 @@ Foundation 发布准备、既有 012 只读对账、三个服务重建、H Worke
 |---|---|
 | Agent Core | `66/66` |
 | Knowledge Connector | `18/18` |
-| Strategic Intelligence | `130/130` |
+| Strategic Intelligence | `134/134` |
 | Node 语法 | 通过 |
 | Shell 语法 | 通过 |
 | Compose / Workflow YAML | 通过 |
@@ -93,7 +93,7 @@ Foundation 发布准备、既有 012 只读对账、三个服务重建、H Worke
 ## 6. 当前门禁
 
 - `engineeringVerified=true`：五阶段授权和回滚证据链代码已完成本地工程验证；
-- `immutableReleaseVerified=true`：Artifact `9153663685` 的 Manifest `1.6.0` 与 9 项 Hash 已完整复验；
+- `immutableReleaseVerified=true`：Artifact `9155268396` 的 Manifest `1.6.0` 与 9 项 Hash 已完整复验；
 - `ownerAccepted=false`：不得由测试自动填写；
 - 公司专用 CPA Key 与同厂冗余仍缺失，Route B 继续关闭；
 - 产品研究部整库导入、10 人真实 Canary、员工私人 Bot 迁移、ERP/社媒写回继续关闭；

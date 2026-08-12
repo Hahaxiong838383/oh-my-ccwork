@@ -4,39 +4,39 @@
 
 状态：`READY_FOR_STAGE_A_OWNER_AUTHORIZATION / NOT_AUTHORIZED`
 
-> Workflow `31626697529` Attempt `2` / Artifact `9153663685` 已通过 Manifest `1.6.0`、9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 交叉绑定、Release Validator 与 Goal 7 Runtime Validator。当前仅 A 阶段可申请但尚未授权；B～E 必须在前序 Evidence 完成后分别授权，任何授权不得继承。
+> Workflow `31631413656` Attempt `1` / Artifact `9155268396` 已通过 Manifest `1.6.0`、9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 交叉绑定、Release Validator 与 Goal 7 Runtime Validator。A 阶段准备链同时通过全局锁、危险 `runId` 拒绝、回放证据保护、精确镜像清理和三个基础镜像 digest 固定验证。当前仅 A 阶段可申请但尚未授权；B～E 必须在前序 Evidence 完成后分别授权，任何授权不得继承。
 
 ## 1. 固定发布身份
 
 - 公司 QNAP：`PRNas / TS-X65 / 192.168.61.18`；
 - Foundation Root：`/share/CACHEDEV1_DATA/ai-ontology/foundation`；
-- Runtime Workflow：`31626697529` Attempt `2`；
-- Runtime Artifact：`9153663685`；
+- Runtime Workflow：`31631413656` Attempt `1`；
+- Runtime Artifact：`9155268396`；
 - Runtime Manifest：`1.6.0`；
-- Ontology Commit：`b63db116464e42b2db70b46f50ddd0bd2be9f2dc`；
-- H-Lite Commit：`fab8be3f1467289400d0d63ffe378b63ad1a6957`；
+- Ontology Commit：`36dc34610a4ad190955c7b89cadc0ff8e2e0509d`；
+- H-Lite Commit：`baa00bf07089a3caf5fe6318aac28cb73bd5ae13`；
 - Agent Core：`2026-08-12.3`；
 - Knowledge Connector：`2026-08-11.1`；
 - H-Lite：`2026-08-12.1`；
-- Collector Image：`sha256:4e1669faccf0b9b1249b863e3db90a11937fdcd14bf6d9eaf537b780efbab654`；
+- Collector Image：`sha256:62d5ef1c05755e596ada40076d4466562355b053bce7142b36b2547ded9313a8`；
 - Candidate Ontology：Schema `3.7.0` / Hash `c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860`；
 - 发布开关：`publish=false`；
 - 当前生产 active Schema：`3.3.0`，本次不得切换 active Schema；
 - 012 模式：`pre_existing_reconciliation_only`；
 - SQL replay：`false`。
 
-Artifact 保留至 `2026-11-10T18:22:22Z`；9 项 `SHA256SUMS` 及完整验证已通过。Workflow、Artifact、Commit、镜像或 Hash 任一项变化，本卡自动失效并必须重新复验。
+Artifact 保留至 `2026-11-10T19:11:22Z`；9 项 `SHA256SUMS` 及完整验证已通过。Workflow、Artifact、Commit、镜像或 Hash 任一项变化，本卡自动失效并必须重新复验。
 
 ## 2. 最新只读基线
 
-`2026-08-12T18:33:10Z` 公网 Mini 跳板只读复核：
+`2026-08-12T19:16:56Z` 公网 Mini 跳板只读复核：
 
 - Foundation `13/13 running`；
 - unhealthy `0`；
 - restart total `0`；
 - LAN-only `/ontology/status/agent-core` 返回 HTTP `200`；
 - `strategic_intelligence` 容器、网络均为 `0`；
-- Artifact `9153663685` 未上传公司 QNAP。
+- Artifact `9155268396` 未上传公司 QNAP。
 
 该基线不替代 A 阶段内对容量、Compose、服务、端口、镜像、业务副作用和完整 Hash 的再次核验。
 
@@ -56,9 +56,9 @@ Artifact 保留至 `2026-11-10T18:22:22Z`；9 项 `SHA256SUMS` 及完整验证�
 
 ### A. Foundation 发布准备与 Artifact 入场
 
-动作：把 Artifact `9153663685` 上传到公司 QNAP 隔离 `incoming/goal7-9153663685.uploading`，验证 9 项 Hash并同卷原子晋级，备份现有 Compose、环境配置和三个旧镜像，构建三个候选镜像；不执行 SQL、不切换服务、不运行模型。
+动作：把 Artifact `9155268396` 上传到公司 QNAP 隔离 `incoming/goal7-9155268396.uploading`，验证 9 项 Hash并同卷原子晋级，备份现有 Compose、环境配置和三个旧镜像，构建三个候选镜像；不执行 SQL、不切换服务、不运行模型。
 
-> 授权 Artifact `9153663685` 进入公司 QNAP Goal 7 隔离 incoming staging，允许执行 9 项 Hash 校验、同卷原子晋级、配置与旧镜像备份、三个候选镜像构建；不授权数据库 SQL、服务重建、Worker 读回、Collector、Shadow 或真实回滚演练。
+> 授权 Artifact `9155268396` 进入公司 QNAP Goal 7 隔离 incoming staging，允许执行 9 项 Hash 校验、同卷原子晋级、配置与旧镜像备份、三个候选镜像构建；不授权数据库 SQL、服务重建、Worker 读回、Collector、Shadow 或真实回滚演练。
 
 ### B. 既有迁移 012 只读证据对账
 

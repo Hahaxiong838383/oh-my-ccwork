@@ -1,0 +1,60 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-local-artifact-stage-rehearsal",
+  "capturedAt": "2026-08-12T19:15:20Z",
+  "containsSecrets": false,
+  "environment": "local_temporary_directory",
+  "engineeringRehearsal": true,
+  "countsTowardStageA": false,
+  "companyQnapTouched": false,
+  "artifact": {
+    "id": "9155268396",
+    "workflowRunId": "31631413656",
+    "workflowRunAttempt": 1,
+    "sourceCommit": "36dc34610a4ad190955c7b89cadc0ff8e2e0509d",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "manifestVersion": "1.6.0",
+    "checksumEntryCount": 9,
+    "checksumManifestSha256": "cd0591c873d4302b1cb7956569fd40ed7d5bbba09a8439c9ab0509366b33f3b4"
+  },
+  "successfulPromotion": {
+    "result": "completed",
+    "releaseFileCount": 10,
+    "nonMode0600FileCount": 0,
+    "runtimeTreeSha256": "f1765b8e991220226f560167071f3218ccdc77e7b043f0a33d88571908487d11",
+    "incomingRemoved": true,
+    "lockRemoved": true,
+    "partialDirectoryCount": 0
+  },
+  "idempotentReplay": {
+    "result": "replay_accepted",
+    "existingReleaseRevalidated": true,
+    "incomingRemoved": true,
+    "lockRemoved": true,
+    "partialDirectoryCount": 0
+  },
+  "negativeTests": {
+    "checksumMutationRejected": true,
+    "concurrentPreparationRejected": true,
+    "dangerousRunIdsRejected": true,
+    "failedReplayPreservedExistingEvidence": true,
+    "failedRunRemovedOnlyCreatedImageTags": true,
+    "invalidReleaseCreated": false,
+    "lockRemoved": true,
+    "partialDirectoryCount": 0
+  },
+  "productionState": {
+    "artifactTransferredToCompanyQnap": false,
+    "companyQnapReleaseCreated": false,
+    "configurationBackupCreated": false,
+    "imageBackupCreated": false,
+    "candidateImageBuildCount": 0,
+    "databaseSqlExecuted": false,
+    "servicesRecreated": false,
+    "workerReadbackStarted": false,
+    "collectorStarted": false,
+    "shadowStarted": false,
+    "rollbackDrillStarted": false
+  },
+  "result": "engineering_rehearsal_passed_waiting_explicit_stage_a_authorization"
+}
