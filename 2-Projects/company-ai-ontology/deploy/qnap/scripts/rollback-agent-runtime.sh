@@ -23,7 +23,7 @@ chmod 600 "$project_root/.env"
 "$docker_path" image tag "$previous_image" company-ai-foundation-agent-core:latest
 cd "$project_root"
 "$docker_path" compose config >/dev/null
-"$docker_path" compose up -d --no-build agent-core
+"$docker_path" compose up -d --no-deps --force-recreate --no-build agent-core
 
 target_version=${expected_version:-$previous_version}
 attempt=0

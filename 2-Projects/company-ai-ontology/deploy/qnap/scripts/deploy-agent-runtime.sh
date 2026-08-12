@@ -7,7 +7,7 @@ docker_path=${DOCKER_PATH:-/share/CACHEDEV1_DATA/.qpkg/container-station/bin/doc
 project_root=${PROJECT_ROOT:-/share/CACHEDEV1_DATA/ai-ontology/foundation}
 release_root=${AGENT_RUNTIME_RELEASE_ROOT:?AGENT_RUNTIME_RELEASE_ROOT is required}
 runtime_commit=${AGENT_RUNTIME_COMMIT:?AGENT_RUNTIME_COMMIT is required}
-expected_version=${AGENT_RUNTIME_EXPECTED_VERSION:-2026-08-10.2}
+expected_version=${AGENT_RUNTIME_EXPECTED_VERSION:-2026-08-12.2}
 run_id=${AGENT_RUNTIME_RUN_ID:-$(date +%Y%m%d%H%M%S)}
 backup_root=/share/CACHEDEV2_DATA/ai-ontology-backup/agent-runtime/$run_id
 previous_image=company-ai-foundation-agent-core:pre-$run_id
@@ -40,7 +40,7 @@ rollback_on_error() {
   if "$docker_path" image inspect "$previous_image" >/dev/null 2>&1; then
     "$docker_path" image tag "$previous_image" company-ai-foundation-agent-core:latest
     cd "$project_root"
-    "$docker_path" compose up -d --no-build agent-core
+    "$docker_path" compose up -d --no-deps --force-recreate --no-build agent-core
     attempt=0
     until "$docker_path" compose exec -T agent-core node -e \
       "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();process.exit(r.ok&&p.status==='ready'&&p.productionReady===true&&p.contractVersion===process.argv[1]?0:1)}).catch(()=>process.exit(1))" \
@@ -69,7 +69,7 @@ mv "$temp" "$project_root/.env"
 cd "$project_root"
 "$docker_path" compose config >/dev/null
 "$docker_path" compose build agent-core
-"$docker_path" compose up -d agent-core
+"$docker_path" compose up -d --no-deps --force-recreate agent-core
 
 attempt=0
 until "$docker_path" compose exec -T agent-core node -e \
