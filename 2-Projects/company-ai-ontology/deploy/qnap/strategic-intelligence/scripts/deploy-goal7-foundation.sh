@@ -153,7 +153,7 @@ wait_connector || { "$docker_path" compose logs --tail 160 knowledge-connector >
 wait_h_lite || { "$docker_path" compose logs --tail 160 h-lite >&2; exit 1; }
 
 "$script_root/capture-goal7-deployment-state.sh" after "$after_file" >/dev/null
-completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+completed_at=$($node_bin -e "const x=require(process.argv[1]);process.stdout.write(x.capturedAt)" "$after_file")
 "$script_root/capture-shadow-side-effects.sh" "$started_at" "$completed_at" "$side_effect_file"
 "$node_bin" "$script_root/compile-goal7-deployment-evidence.mjs" "$evidence_root" "$deployment_file" >/dev/null
 

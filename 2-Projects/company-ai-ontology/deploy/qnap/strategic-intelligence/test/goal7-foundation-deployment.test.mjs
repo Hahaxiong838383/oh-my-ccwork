@@ -125,6 +125,7 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
     'capture-goal7-deployment-state.sh" before',
     'capture-goal7-deployment-state.sh" after',
     'capture-shadow-side-effects.sh',
+    'process.stdout.write(x.capturedAt)',
     'compile-goal7-deployment-evidence.mjs',
     'goal7-pre-$run_id',
     'rollback_on_error',
