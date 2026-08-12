@@ -8,6 +8,18 @@
 
 Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动恢复和验收清单已经完成工程准备，但当前没有生产执行资格。本运行手册不构成部署、迁移、服务切换或回滚授权。
 
+本轮待授权候选必须精确绑定以下不可变身份，任何字段变化都需要重新出具授权：
+
+- Runtime Workflow：`31590397762` Attempt `2`；
+- Runtime Artifact：`9138991942`；
+- Ontology Commit：`b8ef69fb2130aa5e41a1809729a5d1dff8a99b35`；
+- H-Lite Commit：`82cbfbfe0c4628ab71270386fb9815f678ed7cb4`；
+- Collector Image：`sha256:6d24a0a92871a7b65e17609d95e987eb27f9ddcc760d69f1c6c78e384995d956`；
+- Manifest：`1.3.0`，`publish=false / productionDeploymentAuthorized=false`；
+- Runtime Components：Agent Core `2026-08-12.2`、Knowledge Connector `2026-08-11.1`、H-Lite `2026-08-11.1`。
+
+Artifact 的 8 项 `SHA256SUMS`、Release Manifest 验证器、Goal 7 Runtime 验证器、Deployment Readiness 和 Goal Completion 检查器已于 `2026-08-12 19:18 CST` 重新执行；当前仍为 `1 pass / 6 blocked` 和 `1 pass / 7 blocked`。
+
 正式执行与验收前必须分别取得五项明确授权：
 
 1. Foundation 发布授权：`GOAL7_DEPLOY_APPROVED=YES`；
@@ -82,7 +94,7 @@ Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动�
 - active Ontology Schema 仍为 `3.3.0`；
 - Registry 为 `in_sync`；
 - 012 四张表存在并保持强制 RLS；
-- Agent Core、Knowledge Connector、H-Lite 版本均为 `2026-08-11.1`；
+- Agent Core 版本为 `2026-08-12.2`，Knowledge Connector 与 H-Lite 版本均为 `2026-08-11.1`；
 - Agent Core、Knowledge Connector 读回 Ontology Commit，H-Lite 读回独立 H-Lite Commit；
 - Foundation 关键服务数 `13`、unhealthy `0`、restart total `0`；
 - 新增宿主端口 `0`；
@@ -121,11 +133,11 @@ Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动�
 | P003 最终决定 | `0/36` |
 | 四角色真实 UAT | `0/4` |
 | Goal 7 Owner Acceptance | `未完成` |
-| Production Readiness | `0/7` |
+| Production Readiness | `1/7`，仅不可变 Release 通过 |
 | 七日 Production Shadow | `0/7` |
-| Goal Completion | `0/8` |
+| Goal Completion | `1/8`，仅不可变 Release 通过 |
 
-因此当前只允许继续完成双仓提交、CI Runtime Artifact 和人审准备；没有对应单项授权时，不允许连接公司 QNAP 执行发布、读回、迁移、重建或回滚动作。
+因此当前只允许继续完成双仓提交、CI Runtime Artifact、人审准备和公司 QNAP 只读预检；没有对应单项授权时，不允许执行发布、读回、迁移、重建或回滚动作。
 
 机器契约：`deploy/qnap/strategic-intelligence/config/goal7-foundation-release-plan.json`。
 
