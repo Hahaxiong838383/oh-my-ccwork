@@ -25,34 +25,36 @@ jobs:
       - name: Checkout immutable source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
+      - name: Checkout immutable H-Lite source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: Hahaxiong838383/feishu-grok-bridge
+          ref: ${{ inputs.h_lite_source_commit }}
+          path: runtime-h-lite
+          ssh-key: ${{ secrets.P1_SI_HLITE_DEPLOY_KEY }}
+          persist-credentials: false
+
       - name: Bind immutable H-Lite source
         id: hlite
         shell: bash
         env:
           H_LITE_SOURCE_COMMIT: ${{ inputs.h_lite_source_commit }}
-          H_LITE_READ_TOKEN: ${{ secrets.P1_SI_HLITE_READ_TOKEN }}
         run: |
           set -euo pipefail
           case "$H_LITE_SOURCE_COMMIT" in
             *[!0-9a-f]*|'') echo 'h_lite_source_commit must be lowercase hex' >&2; exit 1 ;;
           esac
           test "${#H_LITE_SOURCE_COMMIT}" -eq 40
-          test -n "$H_LITE_READ_TOKEN"
           mkdir -p runtime-evidence
-          curl --fail --location --silent --show-error --retry 3 --proto '=https' --proto-redir '=https' --tlsv1.2 \
-            --header "Authorization: Bearer $H_LITE_READ_TOKEN" \
-            --header 'Accept: application/vnd.github+json' \
-            --header 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/Hahaxiong838383/feishu-grok-bridge/tarball/${H_LITE_SOURCE_COMMIT}" \
-            | gzip -dc | gzip -n > runtime-evidence/h-lite-source.tar.gz
-          mkdir -p /tmp/feishu-grok-bridge
-          tar -xzf runtime-evidence/h-lite-source.tar.gz --strip-components=1 -C /tmp/feishu-grok-bridge
-          npm ci --prefix /tmp/feishu-grok-bridge
-          ln -s /tmp/feishu-grok-bridge 2-Projects/feishu-grok-bridge
+          git -C runtime-h-lite rev-parse HEAD | grep -qx "$H_LITE_SOURCE_COMMIT"
+          git -C runtime-h-lite archive --format=tar --prefix=feishu-grok-bridge/ "$H_LITE_SOURCE_COMMIT" \
+            | gzip -n > runtime-evidence/h-lite-source.tar.gz
+          npm ci --prefix runtime-h-lite
+          ln -s "$GITHUB_WORKSPACE/runtime-h-lite" 2-Projects/feishu-grok-bridge
           node --test \
-            /tmp/feishu-grok-bridge/test/company-agent-core-client.test.mjs \
-            /tmp/feishu-grok-bridge/test/company-qnap-lite-profile.test.mjs \
-            /tmp/feishu-grok-bridge/test/company-qnap-lite-service.test.mjs
+            runtime-h-lite/test/company-agent-core-client.test.mjs \
+            runtime-h-lite/test/company-qnap-lite-profile.test.mjs \
+            runtime-h-lite/test/company-qnap-lite-service.test.mjs
           archive_sha=$(sha256sum runtime-evidence/h-lite-source.tar.gz | awk '{print $1}')
           {
             echo "source_commit=$H_LITE_SOURCE_COMMIT"
