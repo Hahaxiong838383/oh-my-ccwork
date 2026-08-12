@@ -52,15 +52,15 @@ npm test
 npm run validate
 ```
 
-当前 Shadow / Readiness / Goal Completion 测试为 `119/119`，其中七日验收负测覆盖：缺日、日期断档、模拟证据、零来源、审计覆盖缺失、Postgres 未持久化、业务副作用、Source Commit 漂移、Collector 镜像漂移、Policy 漂移和容器重启；Domain 链覆盖 Collector 失败、来源无 Snapshot、P003 激活/缺类、模型执行冒领、单事务 SQL、幂等冲突策略和持久化未授权拒绝。首次内部运行新增独立 Evidence Schema、编译器和验证器，强制验证 3 个来源全部成功、每来源不超过 20 条、Raw Snapshot 仅保留 Hash、Foundation 13 服务前后指纹一致、临时容器/网络/发布端口归零、正式 P2/员工投递/ERP/社媒写回/因果激活归零。四角色 UAT 已升级为编译证据：最终验收只能由四份不同真实成员 Session 与一份绑定 Session Hash 的安全负责人接受记录生成，手改最终 JSON、篡改 Session、复用同一成员或提前接受均失败关闭。Goal 7 Foundation 后续要求发布准备、既有 012 只读对账、三个服务重建和真实回滚演练分别显式授权，并把授权精确绑定到 Ontology/H-Lite 双仓 Commit；后续阶段必须验证前序 Evidence Hash，不能用一次授权贯穿全部生产动作。Runtime Manifest `1.4.0` 额外生成 `runtime-component-versions.json`，固定 `goal7Migration012Mode=pre_existing_reconciliation_only / goal7Migration012SqlReplayAllowed=false`；旧 Manifest `1.3.0` 必须失败关闭。部署只逐个切换 Agent Core、Knowledge Connector、H-Lite，强制关闭知识整库同步并自动采集前后状态及零副作用证据。真实 H Worker 读回和 Goal 7 Owner Acceptance 均禁止手填，生产 readiness、内部模式、部署演练、最终完成判定和回滚授权继续保持 fail-closed。
+当前完整 Shadow / Readiness / Goal Completion 基线为 `125/125`；本轮新增五阶段授权、Authority Canary 写入前授权/公司 QNAP 五元组预检、Rollback Drill Evidence Schema/编译器/验证器和发布包完整性守护。七日验收负测继续覆盖缺日、日期断档、模拟证据、零来源、审计覆盖缺失、Postgres 未持久化、业务副作用、Source Commit 漂移、Collector 镜像漂移、Policy 漂移和容器重启；Domain 链继续覆盖 Collector 失败、来源无 Snapshot、P003 激活/缺类、模型执行冒领、单事务 SQL、幂等冲突策略和持久化未授权拒绝。Goal 7 Foundation 的发布准备、既有 012 只读对账、三个服务重建、Worker Readback/Authority Canary 和真实回滚恢复演练为五项独立授权；后续阶段必须验证前序 Evidence Hash，不能用一次授权贯穿全部生产动作。Runtime Manifest `1.5.0` 固定 `goal7Migration012Mode=pre_existing_reconciliation_only / goal7Migration012SqlReplayAllowed=false`；旧 Manifest `1.4.0` 及更早版本不满足当前发布契约，必须失败关闭。
 
-Goal 7 正式 Foundation 发布计划由 `config/goal7-foundation-release-plan.json` 和 `scripts/validate-goal7-release-plan.mjs` 共同约束：总维护窗口预计 8～20 分钟，员工可感知间歇中断预计累计 15～120 秒，回滚预计 2～6 分钟；发布准备、既有 012 对账、三个服务重建和真实回滚演练为四项独立授权。发布顺序固定为 A 解包/备份/构建候选镜像 → B 只读对账既有 012 并证明 `database_sql_executed=0` → C 旧 H-Lite 安静窗口 → 恢复型 H-Lite 先切换 → H-Lite/Agent Core drain → Agent Core → Knowledge Connector → H-Lite resume；自动恢复只重建实际切换过的服务。详细运行手册见 `docs/goal7-foundation-release-runbook-2026-08-11.md`。
+Goal 7 正式 Foundation 发布计划由 `config/goal7-foundation-release-plan.json` 和 `scripts/validate-goal7-release-plan.mjs` 共同约束：总维护窗口预计 8～20 分钟，员工可感知间歇中断预计累计 15～120 秒，回滚预计 2～6 分钟；A 发布准备、B 既有 012 对账、C 三组件重建、D Worker Readback/Authority Canary、E 回滚恢复演练为五项独立授权。发布顺序固定为 A 解包/备份/构建候选镜像 → B 只读对账既有 012并证明 `database_sql_executed=0` → C 恢复型 H-Lite 先切换、drain、Agent Core、Knowledge Connector、resume → D 双源读回与合成权限 Canary → E 候选版本快照、旧版本验证、候选版本恢复与机器证据。详细运行手册见 `docs/goal7-foundation-release-runbook-2026-08-11.md`。
 
-Artifact `9142197870` 没有把发布准备、012 和服务切换完全拆成独立授权阶段，已降级为历史证据。Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628` 虽通过 Manifest `1.3.0` 工程验证，但仍包含可重复执行 012 的旧 B 阶段；中间候选 `9148389214` 又绑定了缺少连续性补丁的旧 H-Lite 源码，二者均禁止部署。最终 Workflow `31614522984` Attempt `1` / Artifact `9148675772` 已通过 Manifest `1.4.0`、完整 8 项 `SHA256SUMS`、Release Validator 与 Goal 7 Runtime Validator，固定 `pre_existing_reconciliation_only / SQL replay=false`，是当前唯一可申请 A～E 独立授权的工程候选。优雅 drain 不等于强杀恢复；宿主断电、`SIGKILL` 和半程 WorkCase 恢复继续由 Goal 8 lease/fencing 处理。
+Artifact `9142197870`、`9145915628`、`9148389214` 及更早包均只保留历史证据。Workflow `31614522984` Attempt `1` / Artifact `9148675772` 虽通过 Manifest `1.4.0`、完整 `SHA256SUMS`、Release Validator 与 Goal 7 Runtime Validator，并固定 `pre_existing_reconciliation_only / SQL replay=false`，但不包含当前五阶段 Release Plan、D 阶段前置授权和 E 阶段回滚恢复证据链，因此也已降级为历史证据并禁止申请 A 或部署。当前没有可授权 Artifact，必须等待本次已推送 Commit 生成 Manifest `1.5.0` 新包。优雅 drain 不等于强杀恢复；宿主断电、`SIGKILL` 和半程 WorkCase 恢复继续由 Goal 8 lease/fencing 处理。
 
-Foundation 部署完成后，真实 Worker 读回使用第五项独立授权 `GOAL7_WORKER_READBACK_APPROVED=YES`。该脚本不迁移数据库、不重启服务、不运行 Collector，只创建一份临时合成知识证据，经 H-Lite 正式 Agent Core Adapter 调用一次 Route A，并读取同一 request 的 `runtime.h_engine_usage_events`；最终只保留请求 Hash 和运行元数据，合成知识资源会删除、合成 Principal 会禁用。编译与验证命令为 `npm run goal7:compile-worker-readback` 和 `npm run goal7:validate-worker-readback`。
+Foundation 部署完成后，D 阶段真实 Worker 读回与 Authority Canary 共用一次独立授权 `GOAL7_WORKER_READBACK_APPROVED=YES`，两条路径都必须在任何写入前通过公司 QNAP 五元组预检。该阶段不迁移数据库、不重启服务、不运行 Collector，只创建临时合成证据，经 H-Lite 正式 Agent Core Adapter 调用一次 Route A，并读取同一 request 的 `runtime.h_engine_usage_events`；最终只保留请求 Hash和运行元数据，合成资源会删除、合成 Principal 会禁用。
 
-Goal 7 Owner Acceptance 必须在四份工程证据全部生成后，以独立显式确认执行：
+Goal 7 Owner Acceptance 必须在五份工程证据全部生成后，以独立显式确认执行：`runtime-verification.json`、`worker-readback.json`、`authority-canary.json`、`deployment-evidence.json`、`rollback-drill-evidence.json`。
 
 ```bash
 GOAL7_OWNER_ACCEPTANCE_APPROVED=YES \
@@ -250,17 +250,17 @@ Artifact：`p1-si-runtime-c0d9ce92fb94d09b2c46ae1e019c166da8b32468`，Artifact I
 
 该 Artifact 已覆盖当前工程代码、统一 QNAP Node Runtime 和首次内部运行 Evidence 链，但生成时来源最终审核、P003 最终审核、成员权限 UAT 与 Goal 7 尚未完成，因此仍是 `productionDeploymentAuthorized=false / deploymentEligible=false` 的工程发布候选。Artifact `9108034290` 已更新为公司 QNAP 当前内部 Runtime，并已完成一次 accepted 内部采集；正式生产部署前仍必须从全部人审门禁完成后的最终 Commit 再运行 Runtime Workflow，不能直接把本 Artifact 当作生产批准。
 
-`2026-08-12` 生产溯源确认四张 Goal 7 表来自历史 Workflow `31555822727` / Artifact `9125968266`，SQL Hash 与当前候选一致；历史发布目录缺失原始 `migration-012-evidence.json`。因此 Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628`、中间候选 `9148389214`、`9142197870`、`9138991942`、`9130040972` 及更早版本一并只保留历史证据，禁止部署。当前唯一授权候选是 Workflow `31614522984` / Artifact `9148675772`；其脱敏验签证据见 `evidence/p1-si-runtime-artifact-9148675772.json`。
+`2026-08-12` 生产溯源确认四张 Goal 7 表来自历史 Workflow `31555822727` / Artifact `9125968266`，SQL Hash 与当前候选一致；历史发布目录缺失原始 `migration-012-evidence.json`。Workflow `31614522984` / Artifact `9148675772` 及更早版本现均只保留历史证据，禁止部署；其脱敏验签证据仍保留在 `evidence/p1-si-runtime-artifact-9148675772.json`，但不能替代 Manifest `1.5.0` 新 Artifact。
 
 内部 Runtime 更新实机证据见 `evidence/qnap-internal-runtime-update-9108034290.json`：旧 `a7aeae25e` 已完成可验证备份，更新前后 Foundation 13/13、异常 0、restart 0、指纹一致；战略情报容器、网络、端口、数据库 Schema、Collector 状态和报告均为 0。继续第 2～3 天内部 Collector 仍要求新的独立授权。
 
-`evidence/p1-si-current-gate-snapshot-2026-08-12.json` 与 `evidence/p1-si-live-gate-status-2026-08-12.json` 保留最终 Artifact 生成前的历史门禁快照，不改写其原始 Hash；最终候选身份见 `evidence/p1-si-runtime-artifact-9148675772.json`，当前解释见 `docs/p1-si-bh-gate-audit-2026-08-12.md`。
+`evidence/p1-si-current-gate-snapshot-2026-08-12.json`、`evidence/p1-si-live-gate-status-2026-08-12.json` 与 `evidence/p1-si-runtime-artifact-9148675772.json` 均保留历史门禁/发布快照，不改写其原始 Hash；当前解释见 `docs/p1-si-bh-gate-audit-2026-08-12.md`。
 
-最新公司 QNAP 无落盘只读预检见 `evidence/p1-si-goal7-readonly-preflight-2026-08-12.json`：`2026-08-12 22:48 CST` 经公网 Mini 跳板复核，五元组正确，Foundation `13/13 running / unhealthy=0 / restart=0`，唯一宿主绑定仍为 `192.168.61.18:19080`；active Schema `3.3.0 / in_sync`，`strategic_intelligence` Schema、表、容器和网络均为 `0`，五类业务副作用均为 `0`。该预检发生在最终 Artifact 生成前；最终验签 Evidence 继续证明 Artifact `9148675772` 尚未上传公司 QNAP。Goal 7 四表的后续溯源见 `evidence/goal7-migration-012-provenance-2026-08-12.json`。这些证据均不授予 Runtime 动作。
+最新公司 QNAP 无落盘只读预检见 `evidence/p1-si-goal7-readonly-preflight-2026-08-12.json`：`2026-08-12 22:48 CST` 经公网 Mini 跳板复核，五元组正确，Foundation `13/13 running / unhealthy=0 / restart=0`，唯一宿主绑定仍为 `192.168.61.18:19080`；active Schema `3.3.0 / in_sync`，`strategic_intelligence` Schema、表、容器和网络均为 `0`，五类业务副作用均为 `0`。该历史预检证明 Artifact `9148675772` 未上传公司 QNAP；新 Artifact 进入 A 阶段前仍必须重新在线核验。Goal 7 四表的后续溯源见 `evidence/goal7-migration-012-provenance-2026-08-12.json`。这些证据均不授予 Runtime 动作。
 
 容量与回滚输入见 `evidence/p1-si-goal7-capacity-rollback-preflight-2026-08-12.json`：主机/Docker 架构与 `linux/amd64` 平台一致，内存、热卷和备份卷容量充足，三个当前服务镜像均可读，Foundation Compose 有效；最终候选 Runtime 未提前传入 QNAP，所有写入和服务动作继续为 `0`。
 
-飞书审核工作台的最新脱敏回拉仍见 `evidence/p1-si-live-gate-status-2026-08-12.json`：来源 `8 pending / 0 final`，P003 `36 pending / 36 inactive / 0 final`。该文件中的 Artifact `9145915628` 身份是历史快照；使用最终 Artifact `9148675772` 重新运行机器检查器后，当前结果仍为 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`，其中唯一通过项为不可变 Release。该证据不包含姓名、Principal 或审批正文。
+飞书审核工作台的最新脱敏回拉仍见 `evidence/p1-si-live-gate-status-2026-08-12.json`：来源 `8 pending / 0 final`，P003 `36 pending / 36 inactive / 0 final`。该文件中的 Artifact 身份是历史快照；由于当前尚无 Manifest `1.5.0` 新 Artifact，不可变 Release 门禁重新关闭，Deployment Readiness 为 `0 pass / 7 blocked`、Goal Completion 为 `0 pass / 8 blocked`。该证据不包含姓名、Principal 或审批正文。
 
 首次内部运行证据见 `evidence/qnap-first-internal-run-9108034290.json`。第一次尝试在 Collector 启动前发现外部网络默认值与 Foundation 固定网络不一致，来源请求为 0 并失败留证；修正为 `company_ai_data` 后，第二次尝试完成 3 来源、60 条、Hash-only、正文 0、重复 0，Foundation 指纹一致，临时容器/网络/端口和五类业务副作用均为 0。Evidence 只接受为内部工程验证，不具生产 Shadow 资格。
 

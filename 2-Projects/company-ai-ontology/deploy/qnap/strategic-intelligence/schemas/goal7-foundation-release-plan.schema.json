@@ -4,17 +4,18 @@
   "title": "Goal 7 Foundation Release Plan",
   "type": "object",
   "additionalProperties": false,
-  "required": ["planVersion", "goalKey", "status", "companyQnapIdentity", "deploymentAuthorized", "migration012ReconciliationAuthorized", "serviceRecreationAuthorized", "rollbackDrillAuthorized", "requiredExplicitAuthorizations", "targetServices", "unaffectedServices", "timing", "expectedImpacts", "acceptanceSteps", "rollbackTriggers", "closedCapabilities"],
+  "required": ["planVersion", "goalKey", "status", "companyQnapIdentity", "deploymentAuthorized", "migration012ReconciliationAuthorized", "serviceRecreationAuthorized", "workerReadbackAuthorityCanaryAuthorized", "rollbackDrillAuthorized", "requiredExplicitAuthorizations", "targetServices", "unaffectedServices", "timing", "expectedImpacts", "acceptanceSteps", "rollbackTriggers", "closedCapabilities"],
   "properties": {
-    "planVersion": { "const": "1.4.0" },
+    "planVersion": { "const": "1.5.0" },
     "goalKey": { "const": "P1-PROD-READINESS" },
     "status": { "const": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH" },
     "companyQnapIdentity": { "const": "qnap:company/prnas/TS-X65" },
     "deploymentAuthorized": { "const": false },
     "migration012ReconciliationAuthorized": { "const": false },
     "serviceRecreationAuthorized": { "const": false },
+    "workerReadbackAuthorityCanaryAuthorized": { "const": false },
     "rollbackDrillAuthorized": { "const": false },
-    "requiredExplicitAuthorizations": { "type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true, "items": { "type": "string" } },
+    "requiredExplicitAuthorizations": { "type": "array", "minItems": 5, "maxItems": 5, "uniqueItems": true, "items": { "type": "string" } },
     "targetServices": { "type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true, "items": { "enum": ["agent-core", "knowledge-connector", "h-lite"] } },
     "unaffectedServices": { "type": "array", "minItems": 7, "maxItems": 7, "uniqueItems": true, "items": { "type": "string" } },
     "timing": {
@@ -30,7 +31,7 @@
       }
     },
     "expectedImpacts": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "object" } },
-    "acceptanceSteps": { "type": "array", "minItems": 18, "maxItems": 18, "uniqueItems": true, "items": { "type": "string" } },
+    "acceptanceSteps": { "type": "array", "minItems": 21, "maxItems": 21, "uniqueItems": true, "items": { "type": "string" } },
     "rollbackTriggers": { "type": "array", "minItems": 8, "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } },
     "closedCapabilities": { "type": "object", "additionalProperties": { "const": false } }
   },

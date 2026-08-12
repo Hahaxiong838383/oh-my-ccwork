@@ -28,11 +28,11 @@ const packageJson = JSON.parse(await fs.readFile(path.join(root, 'package.json')
 const envExample = await fs.readFile(path.join(root, 'config/env.shadow.example'), 'utf8')
 const runtimeWorkflow = await fs.readFile(path.resolve(root, '../../../../..', '.github/workflows/p1-si-runtime-verify.yml'), 'utf8')
 const errors = []
-if (goal7AcceptanceSchema.properties?.evidenceVersion?.const !== '2.0.0') errors.push('Goal 7 acceptance schema must be compiler-derived v2')
+if (goal7AcceptanceSchema.properties?.evidenceVersion?.const !== '3.0.0') errors.push('Goal 7 acceptance schema must bind rollback drill evidence')
 if (goal7AcceptanceTemplate.status !== 'pending' || goal7AcceptanceTemplate.ownerAccepted !== false) errors.push('Goal 7 acceptance template must remain pending')
 if (goal7WorkerReadbackSchema.properties?.evidenceVersion?.const !== '2.0.0') errors.push('Goal 7 worker readback schema must be compiler-derived v2')
 if (goal7WorkerReadbackTemplate.productionReady !== false || Object.keys(goal7WorkerReadbackTemplate.rawEvidenceFiles || {}).length !== 0) errors.push('Goal 7 worker readback template must remain non-acceptable')
-if (goal7OwnerAcceptanceSchema.properties?.evidenceVersion?.const !== '2.0.0') errors.push('Goal 7 owner acceptance schema must bind engineering evidence')
+if (goal7OwnerAcceptanceSchema.properties?.evidenceVersion?.const !== '3.0.0') errors.push('Goal 7 owner acceptance schema must bind rollback drill evidence')
 if (goal7OwnerAcceptanceTemplate.accepted !== false || Object.keys(goal7OwnerAcceptanceTemplate.engineeringEvidenceFiles || {}).length !== 0) errors.push('Goal 7 owner acceptance template must remain non-acceptable')
 if (reviewerRoleAccessSchema.properties?.evidenceVersion?.const !== '2.0.0') errors.push('reviewer role access schema must be compiler-derived v2')
 for (const name of [
@@ -42,6 +42,7 @@ for (const name of [
   'goal7-authority-canary.schema.json',
   'goal7-deployment-evidence.schema.json',
   'goal7-deployment-state.schema.json',
+  'goal7-rollback-drill-evidence.schema.json',
   'goal7-foundation-release-plan.schema.json',
   'goal7-owner-acceptance.schema.json',
 ]) await fs.access(path.join(root, 'schemas', name)).catch(() => errors.push(`missing Goal 7 schema ${name}`))
@@ -59,7 +60,7 @@ await fs.access(path.join(root, 'config/goal7-foundation-release-plan.json')).ca
 for (const name of ['reviewer-role-member-session.template.json', 'reviewer-role-security-owner-acceptance.template.json']) {
   await fs.access(path.join(root, 'config', name)).catch(() => errors.push(`missing reviewer role evidence template ${name}`))
 }
-for (const name of ['goal7-evidence-lib.mjs', 'goal7-worker-readback-lib.mjs', 'goal7-deployment-lib.mjs', 'goal7-runtime-release-lib.mjs', 'goal7-release-plan-lib.mjs', 'goal7-phase-evidence-lib.mjs', 'validate-goal7-runtime-release.mjs', 'validate-goal7-release-plan.mjs', 'validate-goal7-preparation.mjs', 'validate-goal7-migration.mjs', 'write-goal7-preparation-evidence.mjs', 'write-goal7-migration-evidence.mjs', 'hash-goal7-runtime-tree.mjs', 'compile-goal7-worker-readback.mjs', 'validate-goal7-worker-readback.mjs', 'record-goal7-owner-acceptance.mjs', 'compile-goal7-deployment-evidence.mjs', 'compile-goal7-acceptance.mjs', 'validate-goal7-acceptance.mjs', 'capture-goal7-deployment-state.sh', 'prepare-goal7-foundation.sh', 'reconcile-goal7-migration-012.sh', 'verify-goal7-migration-012-live.sh', 'deploy-goal7-foundation.sh', 'rollback-goal7-foundation.sh']) {
+for (const name of ['goal7-evidence-lib.mjs', 'goal7-worker-readback-lib.mjs', 'goal7-deployment-lib.mjs', 'goal7-rollback-drill-lib.mjs', 'goal7-runtime-release-lib.mjs', 'goal7-release-plan-lib.mjs', 'goal7-phase-evidence-lib.mjs', 'validate-goal7-runtime-release.mjs', 'validate-goal7-release-plan.mjs', 'validate-goal7-preparation.mjs', 'validate-goal7-migration.mjs', 'write-goal7-preparation-evidence.mjs', 'write-goal7-migration-evidence.mjs', 'hash-goal7-runtime-tree.mjs', 'compile-goal7-worker-readback.mjs', 'validate-goal7-worker-readback.mjs', 'record-goal7-owner-acceptance.mjs', 'compile-goal7-deployment-evidence.mjs', 'validate-goal7-deployment-evidence.mjs', 'compile-goal7-rollback-drill.mjs', 'validate-goal7-rollback-drill.mjs', 'compile-goal7-acceptance.mjs', 'validate-goal7-acceptance.mjs', 'capture-goal7-deployment-state.sh', 'prepare-goal7-foundation.sh', 'reconcile-goal7-migration-012.sh', 'verify-goal7-migration-012-live.sh', 'deploy-goal7-foundation.sh', 'rollback-goal7-foundation.sh']) {
   await fs.access(path.join(root, 'scripts', name)).catch(() => errors.push(`missing Goal 7 evidence compiler file ${name}`))
 }
 for (const name of ['goal7-worker-readback-seed.sql', 'goal7-worker-readback-ledger.sql', 'goal7-worker-readback-cleanup.sql']) {
@@ -213,7 +214,7 @@ for (const marker of ['--network none', '--read-only', '--cap-drop ALL', 'no-new
   if (!qnapNodeRuntime.includes(marker)) errors.push(`QNAP Node runtime missing ${marker}`)
 }
 for (const marker of [
-  "manifestVersion: '1.4.0'",
+  "manifestVersion: '1.5.0'",
   "goal7Migration012Mode: 'pre_existing_reconciliation_only'",
   'goal7Migration012SqlReplayAllowed: false',
   'runtime-component-versions.json',

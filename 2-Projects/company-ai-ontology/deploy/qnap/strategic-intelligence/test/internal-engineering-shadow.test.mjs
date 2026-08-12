@@ -258,7 +258,7 @@ test('internal deployment prepares a complete runtime without starting container
     fs.readFile(imageArchive),
   ])
   await fs.writeFile(path.join(releaseRoot, 'release-manifest.json'), JSON.stringify({
-    manifestVersion: '1.4.0',
+    manifestVersion: '1.5.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-11T00:00:00Z',
     sourceCommit,

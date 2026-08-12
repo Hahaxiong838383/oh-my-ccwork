@@ -3,8 +3,11 @@ set -eu
 exec </dev/null
 umask 077
 
+[ "${GOAL7_WORKER_READBACK_APPROVED:-}" = YES ] || { echo 'Goal 7 authority canary requires shared D-stage GOAL7_WORKER_READBACK_APPROVED=YES' >&2; exit 1; }
+
 project_root=${PROJECT_ROOT:-/share/CACHEDEV1_DATA/ai-ontology/foundation}
 docker_path=${DOCKER_PATH:-/share/CACHEDEV1_DATA/.qpkg/container-station/bin/docker}
+control_root=${GOAL7_CONTROL_ROOT:-$project_root}
 report_root=${GOAL7_CANARY_REPORT_ROOT:-/share/CACHEDEV1_DATA/ai-ontology/goal7-acceptance}
 source_commit=${GOAL7_SOURCE_COMMIT:-}
 run_id=${GOAL7_RUN_ID:-goal7-authority-$(date +%Y%m%d-%H%M%S)-$$}
@@ -17,6 +20,9 @@ case "$source_commit" in
   [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
   *) echo 'GOAL7_SOURCE_COMMIT must be an explicit pushed 40-character commit' >&2; exit 1 ;;
 esac
+
+DOCKER_PATH="$docker_path" FOUNDATION_ROOT="$project_root" \
+  "$control_root/deploy/qnap/strategic-intelligence/scripts/preflight-company-qnap.sh" >/dev/null
 
 cd "$project_root"
 set -a
@@ -32,7 +38,7 @@ cleanup() {
     --dbname ontology \
     --set=tenant_id="$FUTURUS_TENANT_ID" \
     --set=run_key="$run_key" \
-    --file=- < canary/goal7-authority-canary-cleanup.sql >/dev/null 2>&1 || true
+    --file=- < "$control_root/deploy/qnap/canary/goal7-authority-canary-cleanup.sql" >/dev/null 2>&1 || true
   rm -f "$temporary_file"
 }
 trap cleanup EXIT INT TERM
@@ -48,7 +54,7 @@ done
   --dbname ontology \
   --set=tenant_id="$FUTURUS_TENANT_ID" \
   --set=run_key="$run_key" \
-  --file=- < canary/goal7-authority-canary.sql >/dev/null
+  --file=- < "$control_root/deploy/qnap/canary/goal7-authority-canary.sql" >/dev/null
 
 "$docker_path" compose exec -T \
   -e GOAL7_SOURCE_COMMIT="$source_commit" \
@@ -62,7 +68,7 @@ done
   --dbname ontology \
   --set=tenant_id="$FUTURUS_TENANT_ID" \
   --set=run_key="$run_key" \
-  --file=- < canary/goal7-authority-canary-cleanup.sql >/dev/null
+  --file=- < "$control_root/deploy/qnap/canary/goal7-authority-canary-cleanup.sql" >/dev/null
 trap - EXIT INT TERM
 chmod 600 "$temporary_file"
 mv "$temporary_file" "$evidence_file"

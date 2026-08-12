@@ -173,7 +173,7 @@ jobs:
           node <<'NODE'
           const fs = require('node:fs')
           const manifest = {
-            manifestVersion: '1.4.0',
+            manifestVersion: '1.5.0',
             releaseType: 'P1-SI-F-shadow-candidate-gated',
             createdAt: new Date().toISOString(),
             sourceCommit: process.env.GITHUB_SHA,

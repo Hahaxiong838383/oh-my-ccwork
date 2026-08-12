@@ -1,16 +1,18 @@
 {
-  "planVersion": "1.4.0",
+  "planVersion": "1.5.0",
   "goalKey": "P1-PROD-READINESS",
   "status": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH",
   "companyQnapIdentity": "qnap:company/prnas/TS-X65",
   "deploymentAuthorized": false,
   "migration012ReconciliationAuthorized": false,
   "serviceRecreationAuthorized": false,
+  "workerReadbackAuthorityCanaryAuthorized": false,
   "rollbackDrillAuthorized": false,
   "requiredExplicitAuthorizations": [
     "foundation_deployment",
     "migration_012_reconciliation",
     "service_recreation",
+    "worker_readback_authority_canary",
     "rollback_drill"
   ],
   "targetServices": [
@@ -43,9 +45,9 @@
     "verify_runtime_release",
     "capture_pre_deployment_state",
     "backup_config_and_images",
-    "reconcile_pre_existing_migration_012",
     "build_and_bind_three_candidate_images",
     "validate_preparation_evidence",
+    "reconcile_pre_existing_migration_012",
     "validate_migration_evidence",
     "wait_legacy_h_lite_quiet_window",
     "switch_h_lite_recovery_layer_and_verify",
@@ -56,7 +58,10 @@
     "capture_post_deployment_state",
     "audit_zero_business_side_effects",
     "compile_deployment_evidence",
+    "run_h_worker_readback",
     "run_synthetic_authority_canary",
+    "execute_rollback_restore_drill",
+    "validate_rollback_drill_evidence",
     "record_independent_owner_acceptance"
   ],
   "rollbackTriggers": [

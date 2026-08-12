@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futurus.internal/schemas/goal7-rollback-drill-evidence.schema.json",
+  "title": "Goal 7 Foundation Rollback Restore Drill Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["evidenceVersion", "evidenceType", "sourceCommit", "hLiteSourceCommit", "capturedAt", "evidenceRef", "companyQnapIdentity", "activeOntologySchema", "registryStatus", "migration012Retained", "previousReleaseVerified", "candidateReleaseRestored", "candidateVersions", "previousVersions", "foundationCriticalContainerCount", "foundationUnhealthyContainerCount", "foundationRestartCountTotal", "newHostPortCount", "sideEffects", "rawEvidenceFiles", "publicOutputContainsSensitiveData"],
+  "properties": {
+    "evidenceVersion": { "const": "1.0.0" },
+    "evidenceType": { "const": "goal7-foundation-rollback-restore-drill" },
+    "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "hLiteSourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "evidenceRef": { "const": "qnap:acceptance/goal7-rollback-drill" },
+    "companyQnapIdentity": { "const": "qnap:company/prnas/TS-X65" },
+    "activeOntologySchema": { "const": "3.3.0" },
+    "registryStatus": { "const": "in_sync" },
+    "migration012Retained": { "const": true },
+    "previousReleaseVerified": { "const": true },
+    "candidateReleaseRestored": { "const": true },
+    "candidateVersions": { "$ref": "#/$defs/versions" },
+    "previousVersions": { "$ref": "#/$defs/versions" },
+    "foundationCriticalContainerCount": { "const": 13 },
+    "foundationUnhealthyContainerCount": { "const": 0 },
+    "foundationRestartCountTotal": { "const": 0 },
+    "newHostPortCount": { "const": 0 },
+    "sideEffects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formalP2Count", "employeeDeliveryCount", "erpWritebackCount", "socialWritebackCount", "causalActivationCount"],
+      "properties": {
+        "formalP2Count": { "const": 0 },
+        "employeeDeliveryCount": { "const": 0 },
+        "erpWritebackCount": { "const": 0 },
+        "socialWritebackCount": { "const": 0 },
+        "causalActivationCount": { "const": 0 }
+      }
+    },
+    "rawEvidenceFiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtimeIdentity", "deployment", "before", "previous", "restored", "sideEffects"],
+      "properties": {
+        "runtimeIdentity": { "$ref": "#/$defs/fileHash" },
+        "deployment": { "$ref": "#/$defs/fileHash" },
+        "before": { "$ref": "#/$defs/fileHash" },
+        "previous": { "$ref": "#/$defs/fileHash" },
+        "restored": { "$ref": "#/$defs/fileHash" },
+        "sideEffects": { "$ref": "#/$defs/fileHash" }
+      }
+    },
+    "publicOutputContainsSensitiveData": { "const": false }
+  },
+  "$defs": {
+    "versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agentCore", "knowledgeConnector", "hLite"],
+      "properties": {
+        "agentCore": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}\\.\\d+$" },
+        "knowledgeConnector": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}\\.\\d+$" },
+        "hLite": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}\\.\\d+$" }
+      }
+    },
+    "fileHash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": { "type": "string", "pattern": "^[a-z0-9-]+\\.json$" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

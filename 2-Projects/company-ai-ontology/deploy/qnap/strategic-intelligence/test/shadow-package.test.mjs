@@ -103,6 +103,11 @@ test('threshold policy freezes all business side effects at zero', async () => {
   assert.equal(policy.automaticResponse.rollbackRequiresPreapprovalEnvironment, 'SHADOW_AUTO_ROLLBACK_APPROVED=YES')
 })
 
+test('shadow package validator requires Goal 7 rollback drill schema', async () => {
+  const validator = await fs.readFile(path.join(ROOT, 'scripts/validate-shadow-package.mjs'), 'utf8')
+  assert.match(validator, /goal7-rollback-drill-evidence[.]schema[.]json/)
+})
+
 test('deployment scripts only target strategic intelligence services and keep explicit gates', async () => {
   const names = ['dispatch-next.sh', 'persist-shadow-domain-batch.sh', 'freeze-shadow.sh', 'backup-shadow.sh', 'rollback-shadow.sh', 'prepare-shadow-release.sh', 'apply-shadow-migrations.sh', 'deploy-shadow.sh', 'install-dispatcher-cron.sh']
   const forbiddenServiceCommands = /compose\s+(?:--[^\s]+\s+)*(?:up|restart|stop)\b[^\n]*(?:agent-core|h-lite|domain-connector|knowledge-connector|gateway|postgres|redis|qdrant)/
@@ -292,7 +297,7 @@ test('release manifest validator binds immutable archives and keeps deployment d
   await fs.writeFile(imageArchive, imageBytes)
   await fs.writeFile(componentVersionsFile, componentVersionsBytes)
   const manifest = {
-    manifestVersion: '1.4.0',
+    manifestVersion: '1.5.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-10T09:00:00Z',
     sourceCommit: 'a'.repeat(40),
@@ -452,7 +457,7 @@ test('Goal 7 deployment gate requires engineering evidence and explicit owner ac
   const result = JSON.parse(accepted.stdout)
   assert.equal(result.ownerAccepted, true)
   assert.equal(result.routeBEnabled, false)
-  assert.equal(result.evidenceFileCount, 5)
+  assert.equal(result.evidenceFileCount, 6)
   assert.match(result.evidenceHash, /^[a-f0-9]{64}$/)
 
   const acceptedEvidence = JSON.parse(await fs.readFile(evidenceFile, 'utf8'))
@@ -515,7 +520,7 @@ test('isolated migration validation rejects a missing Node runtime before creati
 
 test('runtime workflow stays aligned with the gated release and domain persistence proof', async () => {
   const workflow = await fs.readFile(path.resolve(PROJECT_ROOT, '../../.github/workflows/p1-si-runtime-verify.yml'), 'utf8')
-  assert.match(workflow, /manifestVersion: '1[.]4[.]0'/)
+  assert.match(workflow, /manifestVersion: '1[.]5[.]0'/)
   assert.match(workflow, /runtime-component-versions\.json/)
   assert.match(workflow, /releaseType: 'P1-SI-F-shadow-candidate-gated'/)
   assert.match(workflow, /goal7Migration012Mode: 'pre_existing_reconciliation_only'/)

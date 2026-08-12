@@ -106,7 +106,7 @@ export async function validateGoal7RuntimeRelease(root, expected = {}) {
   }
 
   const releaseManifest = parseJson(files.get('release-manifest.json'), 'release manifest')
-  requireValue(releaseManifest.manifestVersion === '1.4.0', 'release manifest version mismatch')
+  requireValue(releaseManifest.manifestVersion === '1.5.0', 'release manifest version mismatch')
   requireValue(releaseManifest.releaseType === 'P1-SI-F-shadow-candidate-gated', 'release manifest type mismatch')
   requireValue(releaseManifest.sourceCommit === verification.sourceCommit, 'release manifest sourceCommit drift')
   requireValue(releaseManifest.hLiteSourceCommit === verification.hLiteSourceCommit, 'release manifest hLiteSourceCommit drift')

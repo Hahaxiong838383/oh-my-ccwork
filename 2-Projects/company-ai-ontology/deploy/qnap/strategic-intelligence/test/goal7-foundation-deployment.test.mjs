@@ -40,7 +40,7 @@ async function writeRuntimeRelease(root) {
     'runtime-component-versions.json': Buffer.from(`${JSON.stringify(componentVersions)}\n`),
   }
   const releaseManifest = {
-    manifestVersion: '1.4.0',
+    manifestVersion: '1.5.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     sourceCommit,
     hLiteSourceCommit,
@@ -226,7 +226,14 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
   assert.match(rollback, /h_lite_admin drain 1/)
   assert.match(rollback, /pendingDeliveries===0/)
   assert.match(rollback, /agent-core\/v1\/admin\/drain|127\.0\.0\.1:8080\/v1\/admin\/drain/)
-  assert.match(rollback, /compose up -d --no-deps --no-build "\$service"/)
+  for (const service of ['agent-core', 'knowledge-connector', 'h-lite']) {
+    assert.match(rollback, new RegExp(`compose up -d --no-deps --no-build ${service}`))
+  }
+  assert.match(rollback, /goal7-candidate-\$run_id/)
+  assert.match(rollback, /rollback_previous/)
+  assert.match(rollback, /rollback_restored/)
+  assert.match(rollback, /compile-goal7-rollback-drill\.mjs/)
+  assert.match(rollback, /validate-goal7-rollback-drill\.mjs/)
   assert.match(rollback, /migration012_retained=true/)
   assert.doesNotMatch(rollback, /DROP TABLE|DROP SCHEMA|012-goal7-authority-runtime\.sql|compose (restart|down|stop)/)
 })

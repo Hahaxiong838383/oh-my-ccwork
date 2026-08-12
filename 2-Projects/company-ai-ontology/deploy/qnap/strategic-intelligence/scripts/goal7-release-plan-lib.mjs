@@ -5,6 +5,7 @@ const REQUIRED_AUTHORIZATIONS = Object.freeze([
   'foundation_deployment',
   'migration_012_reconciliation',
   'service_recreation',
+  'worker_readback_authority_canary',
   'rollback_drill',
 ])
 const TARGET_SERVICES = Object.freeze(['agent-core', 'knowledge-connector', 'h-lite'])
@@ -21,10 +22,10 @@ const ACCEPTANCE_STEPS = Object.freeze([
   'verify_runtime_release',
   'capture_pre_deployment_state',
   'backup_config_and_images',
+  'build_and_bind_three_candidate_images',
+  'validate_preparation_evidence',
   'reconcile_pre_existing_migration_012',
-    'build_and_bind_three_candidate_images',
-    'validate_preparation_evidence',
-    'validate_migration_evidence',
+  'validate_migration_evidence',
   'wait_legacy_h_lite_quiet_window',
   'switch_h_lite_recovery_layer_and_verify',
   'drain_h_lite_and_agent_core',
@@ -34,8 +35,11 @@ const ACCEPTANCE_STEPS = Object.freeze([
   'capture_post_deployment_state',
   'audit_zero_business_side_effects',
   'compile_deployment_evidence',
+  'run_h_worker_readback',
   'run_synthetic_authority_canary',
-    'record_independent_owner_acceptance',
+  'execute_rollback_restore_drill',
+  'validate_rollback_drill_evidence',
+  'record_independent_owner_acceptance',
 ])
 const ROLLBACK_TRIGGERS = Object.freeze([
   'target_service_health_timeout',
@@ -80,15 +84,19 @@ function range(value, expected, label) {
 export function validateGoal7ReleasePlan(plan, scripts = {}) {
   exactKeys(plan, [
     'planVersion', 'goalKey', 'status', 'companyQnapIdentity', 'deploymentAuthorized',
-    'migration012ReconciliationAuthorized', 'serviceRecreationAuthorized', 'rollbackDrillAuthorized',
+    'migration012ReconciliationAuthorized', 'serviceRecreationAuthorized',
+    'workerReadbackAuthorityCanaryAuthorized', 'rollbackDrillAuthorized',
     'requiredExplicitAuthorizations', 'targetServices', 'unaffectedServices', 'timing',
     'expectedImpacts', 'acceptanceSteps', 'rollbackTriggers', 'closedCapabilities',
   ], 'releasePlan')
-  requireValue(plan.planVersion === '1.4.0', 'release plan version mismatch')
+  requireValue(plan.planVersion === '1.5.0', 'release plan version mismatch')
   requireValue(plan.goalKey === 'P1-PROD-READINESS', 'release plan goal mismatch')
   requireValue(plan.status === 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH', 'release plan status must remain waiting')
   requireValue(plan.companyQnapIdentity === 'qnap:company/prnas/TS-X65', 'release plan QNAP identity mismatch')
-  for (const key of ['deploymentAuthorized', 'migration012ReconciliationAuthorized', 'serviceRecreationAuthorized', 'rollbackDrillAuthorized']) {
+  for (const key of [
+    'deploymentAuthorized', 'migration012ReconciliationAuthorized', 'serviceRecreationAuthorized',
+    'workerReadbackAuthorityCanaryAuthorized', 'rollbackDrillAuthorized',
+  ]) {
     requireValue(plan[key] === false, `${key} must remain false in Git`)
   }
   exactArray(plan.requiredExplicitAuthorizations, REQUIRED_AUTHORIZATIONS, 'requiredExplicitAuthorizations')
@@ -172,6 +180,18 @@ export function validateGoal7ReleasePlan(plan, scripts = {}) {
     requireValue(!deploy.includes('compose exec -T postgres psql'), 'deployment script must not apply migration 012')
     requireValue(!/compose build/.test(deploy), 'deployment script must not rebuild candidate images')
   }
+  if (scripts.workerReadback !== undefined) {
+    const workerReadback = scripts.workerReadback
+    requireValue(workerReadback.includes('GOAL7_WORKER_READBACK_APPROVED'), 'worker readback script missing authorization GOAL7_WORKER_READBACK_APPROVED')
+    requireValue(workerReadback.indexOf('GOAL7_WORKER_READBACK_APPROVED') < workerReadback.indexOf('preflight-company-qnap.sh'), 'worker readback authorization must precede QNAP preflight')
+    requireValue(!/compose\s+(up|down|restart|stop)|migrate\.sh|Collector/.test(workerReadback), 'worker readback script contains unrelated runtime action')
+  }
+  if (scripts.authorityCanary !== undefined) {
+    const authorityCanary = scripts.authorityCanary
+    requireValue(authorityCanary.includes('GOAL7_WORKER_READBACK_APPROVED'), 'authority canary script missing shared D-stage authorization')
+    requireValue(authorityCanary.indexOf('GOAL7_WORKER_READBACK_APPROVED') < authorityCanary.indexOf('preflight-company-qnap.sh'), 'authority canary authorization must precede QNAP preflight')
+    requireValue(!/compose\s+(up|down|restart|stop)|migrate\.sh|Collector/.test(authorityCanary), 'authority canary script contains unrelated runtime action')
+  }
   if (scripts.rollback !== undefined) {
     const rollback = scripts.rollback
     requireValue(rollback.includes('GOAL7_ROLLBACK_APPROVED'), 'rollback script missing explicit authorization')
@@ -179,7 +199,12 @@ export function validateGoal7ReleasePlan(plan, scripts = {}) {
     requireValue(rollback.includes('h_lite_admin drain 1'), 'rollback missing H-Lite subscription drain gate')
     requireValue(rollback.includes('pendingDeliveries===0'), 'rollback missing pending delivery gate')
     requireValue(rollback.includes('127.0.0.1:8080/v1/admin/drain'), 'rollback missing Agent Core drain gate')
-    requireValue(rollback.includes('compose up -d --no-deps --no-build "$service"'), 'rollback service recreation must use --no-deps')
+    requireValue(rollback.includes('compose up -d --no-deps --no-build agent-core'), 'rollback Agent Core recreation must use --no-deps --no-build')
+    requireValue(rollback.includes('compose up -d --no-deps --no-build knowledge-connector'), 'rollback Knowledge Connector recreation must use --no-deps --no-build')
+    requireValue(rollback.includes('compose up -d --no-deps --no-build h-lite'), 'rollback H-Lite recreation must use --no-deps --no-build')
+    requireValue(rollback.includes('compile-goal7-rollback-drill.mjs'), 'rollback script missing compiler-derived drill evidence')
+    requireValue(rollback.includes('validate-goal7-rollback-drill.mjs'), 'rollback script missing drill evidence validation')
+    requireValue(rollback.includes('candidate_release_restored=true'), 'rollback script must restore the approved candidate release')
     requireValue(!/DROP TABLE|DROP SCHEMA|012-goal7-authority-runtime\.sql/.test(rollback), 'rollback must retain additive migration 012')
   }
 

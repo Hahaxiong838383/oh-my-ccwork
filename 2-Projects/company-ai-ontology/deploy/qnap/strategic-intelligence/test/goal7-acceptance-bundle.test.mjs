@@ -12,13 +12,13 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const COMPILER = path.join(ROOT, 'scripts/compile-goal7-acceptance.mjs')
 const VALIDATOR = path.join(ROOT, 'scripts/validate-goal7-acceptance.mjs')
 
-test('Goal 7 acceptance is compiler-derived from five bound evidence files', async () => {
+test('Goal 7 acceptance is compiler-derived from six bound evidence files', async () => {
   const outputRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'goal7-acceptance-bundle-'))
   const { bundleRoot, goal7File } = await createGoal7AcceptanceBundle(outputRoot)
   await fs.rm(goal7File)
   const compiled = spawnSync(process.execPath, [COMPILER, bundleRoot, goal7File], { encoding: 'utf8' })
   assert.equal(compiled.status, 0, compiled.stderr)
-  assert.equal(JSON.parse(compiled.stdout).evidenceFileCount, 5)
+  assert.equal(JSON.parse(compiled.stdout).evidenceFileCount, 6)
 
   const validated = spawnSync(process.execPath, [VALIDATOR, goal7File], { encoding: 'utf8' })
   assert.equal(validated.status, 0, validated.stderr)
@@ -26,7 +26,7 @@ test('Goal 7 acceptance is compiler-derived from five bound evidence files', asy
   assert.equal(output.ownerAccepted, true)
   assert.equal(output.hLiteSourceCommit, 'f'.repeat(40))
   assert.equal(output.routeBEnabled, false)
-  assert.equal(output.evidenceFileCount, 5)
+  assert.equal(output.evidenceFileCount, 6)
   assert.doesNotMatch(validated.stdout, /prompt|reply|displayName|principalRef/)
 })
 

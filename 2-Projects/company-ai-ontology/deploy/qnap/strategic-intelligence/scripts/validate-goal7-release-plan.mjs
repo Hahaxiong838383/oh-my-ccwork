@@ -13,6 +13,8 @@ const result = await loadAndValidateGoal7ReleasePlan(planFile, {
   migrate: await fs.readFile(path.join(root, 'scripts/reconcile-goal7-migration-012.sh'), 'utf8'),
   verifyMigration: await fs.readFile(path.join(root, 'scripts/verify-goal7-migration-012-live.sh'), 'utf8'),
   deploy: await fs.readFile(path.join(root, 'scripts/deploy-goal7-foundation.sh'), 'utf8'),
+  workerReadback: await fs.readFile(path.resolve(root, '..', 'scripts/run-goal7-worker-readback.sh'), 'utf8'),
+  authorityCanary: await fs.readFile(path.resolve(root, '..', 'scripts/run-goal7-authority-canary.sh'), 'utf8'),
   rollback: await fs.readFile(path.join(root, 'scripts/rollback-goal7-foundation.sh'), 'utf8'),
 })
 process.stdout.write(`${JSON.stringify({ ok: true, ...result }, null, 2)}\n`)

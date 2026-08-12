@@ -12,6 +12,7 @@ import {
 } from '../../../../../packages/ontology-contracts/src/index.mjs'
 import { writeGoal7AcceptanceEvidence, writeGoal7OwnerAcceptanceEvidence } from '../../scripts/goal7-evidence-lib.mjs'
 import { writeGoal7DeploymentEvidence } from '../../scripts/goal7-deployment-lib.mjs'
+import { writeGoal7RollbackDrillEvidence } from '../../scripts/goal7-rollback-drill-lib.mjs'
 import { writeGoal7WorkerReadbackEvidence } from '../../scripts/goal7-worker-readback-lib.mjs'
 import { writeReviewerRoleAccessAcceptance } from '../../scripts/reviewer-role-access-lib.mjs'
 
@@ -250,6 +251,27 @@ export async function createGoal7AcceptanceBundle(outputRoot, sourceCommit = 'c'
     causalActivationCount: 0,
   }))
   await writeGoal7DeploymentEvidence(bundleRoot)
+  await fs.writeFile(path.join(bundleRoot, 'rollback-before-state.json'), JSON.stringify(deploymentState({
+    phase: 'rollback_before', capturedAt: '2026-08-11T09:26:00Z', migrationApplied: true, candidate: true,
+  })))
+  await fs.writeFile(path.join(bundleRoot, 'rollback-previous-state.json'), JSON.stringify(deploymentState({
+    phase: 'rollback_previous', capturedAt: '2026-08-11T09:30:00Z', migrationApplied: true, candidate: false,
+  })))
+  await fs.writeFile(path.join(bundleRoot, 'rollback-restored-state.json'), JSON.stringify(deploymentState({
+    phase: 'rollback_restored', capturedAt: '2026-08-11T09:35:00Z', migrationApplied: true, candidate: true,
+  })))
+  await fs.writeFile(path.join(bundleRoot, 'rollback-side-effects.json'), JSON.stringify({
+    auditVersion: '1.0.0',
+    completed: true,
+    windowStart: '2026-08-11T09:25:00Z',
+    windowEnd: '2026-08-11T09:40:00Z',
+    formalP2Count: 0,
+    employeeDeliveryCount: 0,
+    erpWritebackCount: 0,
+    socialWritebackCount: 0,
+    causalActivationCount: 0,
+  }))
+  await writeGoal7RollbackDrillEvidence(bundleRoot)
   await writeGoal7OwnerAcceptanceEvidence(bundleRoot, {
     ownerPrincipalRef: 'company-directory:goal7-owner',
     acceptanceRef: 'feishu:doc/goal7-owner-acceptance',
@@ -281,7 +303,7 @@ export async function createReadyInputs() {
   await fs.writeFile(path.join(releaseRoot, 'collector-image.tar.gz'), imageBytes)
   await fs.writeFile(path.join(releaseRoot, 'runtime-component-versions.json'), componentVersionsBytes)
   await fs.writeFile(path.join(releaseRoot, 'release-manifest.json'), JSON.stringify({
-    manifestVersion: '1.4.0',
+    manifestVersion: '1.5.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-11T00:00:00Z',
     sourceCommit: 'a'.repeat(40),

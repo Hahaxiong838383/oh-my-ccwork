@@ -1,5 +1,5 @@
 {
-  "evidenceVersion": "2.0.0",
+  "evidenceVersion": "3.0.0",
   "evidenceType": "goal7-owner-acceptance",
   "goalKey": "P1-PROD-READINESS",
   "accepted": false,

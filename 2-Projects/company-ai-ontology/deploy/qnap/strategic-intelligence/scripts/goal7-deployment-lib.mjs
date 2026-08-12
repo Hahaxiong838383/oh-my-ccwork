@@ -49,7 +49,7 @@ function component(value, label, { hLite = false } = {}) {
   }
 }
 
-function state(value, phase) {
+export function validateGoal7DeploymentState(value, phase) {
   exactKeys(value, [
     'snapshotVersion', 'evidenceType', 'phase', 'capturedAt', 'companyQnapIdentity',
     'activeOntologySchema', 'registryStatus', 'candidateMigration012Applied',
@@ -80,7 +80,7 @@ function state(value, phase) {
   requireValue(typeof value.routeState.routeBEnabled === 'boolean', `${phase}State route B invalid`)
 }
 
-function sideEffects(value) {
+export function validateGoal7DeploymentSideEffects(value) {
   exactKeys(value, [
     'auditVersion', 'completed', 'windowStart', 'windowEnd', 'formalP2Count',
     'employeeDeliveryCount', 'erpWritebackCount', 'socialWritebackCount', 'causalActivationCount',
@@ -124,9 +124,9 @@ async function readRaw(root, file) {
 export async function buildGoal7DeploymentEvidence(bundleRoot) {
   const root = path.resolve(bundleRoot)
   const entries = Object.fromEntries(await Promise.all(Object.entries(GOAL7_DEPLOYMENT_RAW_FILES).map(async ([key, file]) => [key, await readRaw(root, file)])))
-  state(entries.before.value, 'before')
-  state(entries.after.value, 'after')
-  sideEffects(entries.sideEffects.value)
+  validateGoal7DeploymentState(entries.before.value, 'before')
+  validateGoal7DeploymentState(entries.after.value, 'after')
+  validateGoal7DeploymentSideEffects(entries.sideEffects.value)
   runtimeIdentity(entries.runtimeIdentity.value)
   validateGoal7PreparationEvidence(entries.preparation.value)
   validateGoal7MigrationEvidence(entries.migration.value, {

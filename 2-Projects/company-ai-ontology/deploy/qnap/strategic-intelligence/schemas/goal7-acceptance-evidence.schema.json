@@ -18,11 +18,12 @@
     "evidenceFiles",
     "authorityEvidence",
     "runtimeEvidence",
+    "rollbackEvidence",
     "routeState",
     "closedCapabilities"
   ],
   "properties": {
-    "evidenceVersion": { "const": "2.0.0" },
+    "evidenceVersion": { "const": "3.0.0" },
     "goalKey": { "const": "P1-PROD-READINESS" },
     "status": { "const": "complete" },
     "engineeringVerified": { "const": true },
@@ -33,19 +34,20 @@
     "ownerAcceptanceRef": { "$ref": "#/$defs/reference" },
     "evidenceRefs": {
       "type": "array",
-      "minItems": 5,
+      "minItems": 6,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/reference" }
     },
     "evidenceFiles": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["runtimeVerification", "workerReadback", "authorityCanary", "deployment", "ownerAcceptance"],
+      "required": ["runtimeVerification", "workerReadback", "authorityCanary", "deployment", "rollbackDrill", "ownerAcceptance"],
       "properties": {
         "runtimeVerification": { "$ref": "#/$defs/fileHash" },
         "workerReadback": { "$ref": "#/$defs/fileHash" },
         "authorityCanary": { "$ref": "#/$defs/fileHash" },
         "deployment": { "$ref": "#/$defs/fileHash" },
+        "rollbackDrill": { "$ref": "#/$defs/fileHash" },
         "ownerAcceptance": { "$ref": "#/$defs/fileHash" }
       }
     },
@@ -70,6 +72,16 @@
         "retryBudgetVerified": { "const": true },
         "costBudgetVerified": { "const": true },
         "realModelReadbackVerified": { "const": true }
+      }
+    },
+    "rollbackEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["previousReleaseVerified", "candidateReleaseRestored", "migration012Retained"],
+      "properties": {
+        "previousReleaseVerified": { "const": true },
+        "candidateReleaseRestored": { "const": true },
+        "migration012Retained": { "const": true }
       }
     },
     "routeState": {

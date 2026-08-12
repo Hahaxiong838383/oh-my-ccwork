@@ -20,6 +20,8 @@
     "goal7:validate-acceptance": "node scripts/validate-goal7-acceptance.mjs",
     "goal7:compile-worker-readback": "node scripts/compile-goal7-worker-readback.mjs",
     "goal7:validate-worker-readback": "node scripts/validate-goal7-worker-readback.mjs",
+    "goal7:compile-rollback-drill": "node scripts/compile-goal7-rollback-drill.mjs",
+    "goal7:validate-rollback-drill": "node scripts/validate-goal7-rollback-drill.mjs",
     "goal7:record-owner-acceptance": "node scripts/record-goal7-owner-acceptance.mjs",
     "goal7:validate-runtime-release": "node scripts/validate-goal7-runtime-release.mjs",
     "goal7:validate-release-plan": "node scripts/validate-goal7-release-plan.mjs",

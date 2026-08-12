@@ -14,6 +14,8 @@ const VALIDATOR = path.join(ROOT, 'scripts/validate-goal7-release-plan.mjs')
 const PREPARE = path.join(ROOT, 'scripts/prepare-goal7-foundation.sh')
 const MIGRATE = path.join(ROOT, 'scripts/reconcile-goal7-migration-012.sh')
 const DEPLOY = path.join(ROOT, 'scripts/deploy-goal7-foundation.sh')
+const WORKER_READBACK = path.resolve(ROOT, '..', 'scripts/run-goal7-worker-readback.sh')
+const AUTHORITY_CANARY = path.resolve(ROOT, '..', 'scripts/run-goal7-authority-canary.sh')
 
 async function inputs() {
   return {
@@ -23,6 +25,8 @@ async function inputs() {
       migrate: await fs.readFile(MIGRATE, 'utf8'),
       verifyMigration: await fs.readFile(path.join(ROOT, 'scripts/verify-goal7-migration-012-live.sh'), 'utf8'),
       deploy: await fs.readFile(DEPLOY, 'utf8'),
+      workerReadback: await fs.readFile(WORKER_READBACK, 'utf8'),
+      authorityCanary: await fs.readFile(AUTHORITY_CANARY, 'utf8'),
       rollback: await fs.readFile(path.join(ROOT, 'scripts/rollback-goal7-foundation.sh'), 'utf8'),
     },
   }
@@ -34,7 +38,7 @@ test('Goal 7 发布计划明确中断、影响、回滚时间和独立授权', a
   const output = JSON.parse(result.stdout)
   assert.equal(output.status, 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH')
   assert.equal(output.targetServiceCount, 3)
-  assert.equal(output.explicitAuthorizationCount, 4)
+  assert.equal(output.explicitAuthorizationCount, 5)
   assert.deepEqual(output.expectedUserVisibleInterruptionSeconds, { min: 15, max: 120 })
   assert.deepEqual(output.expectedRollbackMinutes, { min: 2, max: 6 })
 })
@@ -43,6 +47,7 @@ test('Goal 7 发布计划拒绝扩大服务范围、预授权和静默延长中�
   const { plan, scripts } = await inputs()
   assert.throws(() => validateGoal7ReleasePlan({ ...plan, targetServices: [...plan.targetServices, 'postgres'] }, scripts), /targetServices mismatch/)
   assert.throws(() => validateGoal7ReleasePlan({ ...plan, migration012ReconciliationAuthorized: true }, scripts), /must remain false in Git/)
+  assert.throws(() => validateGoal7ReleasePlan({ ...plan, workerReadbackAuthorityCanaryAuthorized: true }, scripts), /must remain false in Git/)
   assert.throws(() => validateGoal7ReleasePlan({
     ...plan,
     timing: { ...plan.timing, expectedUserVisibleInterruptionSeconds: { min: 15, max: 300 } },
@@ -63,9 +68,17 @@ test('Goal 7 发布计划拒绝缺少任一阶段独立授权的脚本', async (
     ...scripts,
     deploy: scripts.deploy.replaceAll('GOAL7_SERVICE_RECREATION_APPROVED', 'REMOVED_SERVICE_GATE'),
   }), /missing authorization GOAL7_SERVICE_RECREATION_APPROVED/)
+  assert.throws(() => validateGoal7ReleasePlan(plan, {
+    ...scripts,
+    workerReadback: scripts.workerReadback.replaceAll('GOAL7_WORKER_READBACK_APPROVED', 'REMOVED_WORKER_GATE'),
+  }), /missing authorization GOAL7_WORKER_READBACK_APPROVED/)
+  assert.throws(() => validateGoal7ReleasePlan(plan, {
+    ...scripts,
+    authorityCanary: scripts.authorityCanary.replaceAll('GOAL7_WORKER_READBACK_APPROVED', 'REMOVED_CANARY_GATE'),
+  }), /missing shared D-stage authorization/)
 })
 
-test('Goal 7 三阶段脚本各自在 QNAP 预检前拒绝缺失授权', () => {
+test('Goal 7 A-D 阶段脚本各自在 QNAP 预检前拒绝缺失授权', () => {
   const first = spawnSync('sh', [PREPARE], { encoding: 'utf8' })
   assert.equal(first.status, 2)
   assert.match(first.stderr, /GOAL7_DEPLOY_APPROVED=YES/)
@@ -80,6 +93,16 @@ test('Goal 7 三阶段脚本各自在 QNAP 预检前拒绝缺失授权', () => {
   assert.equal(third.status, 2)
   assert.match(third.stderr, /GOAL7_SERVICE_RECREATION_APPROVED=YES/)
   assert.doesNotMatch(third.stderr, /QNAP|docker/i)
+
+  const fourth = spawnSync('sh', [WORKER_READBACK], { encoding: 'utf8' })
+  assert.notEqual(fourth.status, 0)
+  assert.match(fourth.stderr, /GOAL7_WORKER_READBACK_APPROVED=YES/)
+  assert.doesNotMatch(fourth.stderr, /QNAP|docker/i)
+
+  const fifth = spawnSync('sh', [AUTHORITY_CANARY], { encoding: 'utf8' })
+  assert.notEqual(fifth.status, 0)
+  assert.match(fifth.stderr, /GOAL7_WORKER_READBACK_APPROVED=YES/)
+  assert.doesNotMatch(fifth.stderr, /QNAP|docker/i)
 })
 
 test('Goal 7 分阶段脚本不越权执行后续动作', async () => {

@@ -31,7 +31,7 @@ test('Goal 7 owner acceptance refuses before reading engineering evidence withou
   assert.doesNotMatch(result.stderr, /ENOENT|must not be read/)
 })
 
-test('Goal 7 owner acceptance binds four validated engineering files and stores only principal hash', async () => {
+test('Goal 7 owner acceptance binds five validated engineering files and stores only principal hash', async () => {
   const { bundleRoot, goal7File } = await engineeringBundle()
   const ownerFile = path.join(bundleRoot, 'owner-acceptance.json')
   const principalRef = 'company-directory:goal7-owner'
@@ -45,15 +45,15 @@ test('Goal 7 owner acceptance binds four validated engineering files and stores 
     },
   })
   assert.equal(recorded.status, 0, recorded.stderr)
-  assert.equal(JSON.parse(recorded.stdout).engineeringEvidenceFileCount, 4)
+  assert.equal(JSON.parse(recorded.stdout).engineeringEvidenceFileCount, 5)
   assert.doesNotMatch(recorded.stdout, /company-directory|goal7-owner/)
 
   const owner = JSON.parse(await fs.readFile(ownerFile, 'utf8'))
-  assert.equal(owner.evidenceVersion, '2.0.0')
+  assert.equal(owner.evidenceVersion, '3.0.0')
   assert.equal(owner.accepted, true)
   assert.match(owner.ownerPrincipalHash, /^[a-f0-9]{64}$/)
   assert.doesNotMatch(JSON.stringify(owner), new RegExp(principalRef))
-  assert.deepEqual(Object.keys(owner.engineeringEvidenceFiles).sort(), ['authorityCanary', 'deployment', 'runtimeVerification', 'workerReadback'])
+  assert.deepEqual(Object.keys(owner.engineeringEvidenceFiles).sort(), ['authorityCanary', 'deployment', 'rollbackDrill', 'runtimeVerification', 'workerReadback'])
 
   const compiled = spawnSync(process.execPath, [ACCEPTANCE_COMPILER, bundleRoot, goal7File], { encoding: 'utf8' })
   assert.equal(compiled.status, 0, compiled.stderr)

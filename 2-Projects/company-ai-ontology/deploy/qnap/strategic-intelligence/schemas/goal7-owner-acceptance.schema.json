@@ -10,7 +10,7 @@
     "engineeringEvidenceFiles", "publicOutputContainsSensitiveData"
   ],
   "properties": {
-    "evidenceVersion": { "const": "2.0.0" },
+    "evidenceVersion": { "const": "3.0.0" },
     "evidenceType": { "const": "goal7-owner-acceptance" },
     "goalKey": { "const": "P1-PROD-READINESS" },
     "accepted": { "const": true },
@@ -22,12 +22,13 @@
     "engineeringEvidenceFiles": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["runtimeVerification", "workerReadback", "authorityCanary", "deployment"],
+      "required": ["runtimeVerification", "workerReadback", "authorityCanary", "deployment", "rollbackDrill"],
       "properties": {
         "runtimeVerification": { "$ref": "#/$defs/fileHash" },
         "workerReadback": { "$ref": "#/$defs/fileHash" },
         "authorityCanary": { "$ref": "#/$defs/fileHash" },
-        "deployment": { "$ref": "#/$defs/fileHash" }
+        "deployment": { "$ref": "#/$defs/fileHash" },
+        "rollbackDrill": { "$ref": "#/$defs/fileHash" }
       }
     },
     "publicOutputContainsSensitiveData": { "const": false }

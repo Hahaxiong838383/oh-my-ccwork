@@ -4,6 +4,7 @@ import path from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 
 import { validateGoal7DeploymentEvidence } from './goal7-deployment-lib.mjs'
+import { validateGoal7RollbackDrillEvidence } from './goal7-rollback-drill-lib.mjs'
 import { validateGoal7WorkerReadbackEvidence } from './goal7-worker-readback-lib.mjs'
 
 const COMMIT = /^[a-f0-9]{40}$/
@@ -18,6 +19,7 @@ export const GOAL7_ENGINEERING_EVIDENCE_FILES = Object.freeze({
   workerReadback: 'worker-readback.json',
   authorityCanary: 'authority-canary.json',
   deployment: 'deployment-evidence.json',
+  rollbackDrill: 'rollback-drill-evidence.json',
 })
 
 export const GOAL7_EVIDENCE_FILES = Object.freeze({
@@ -181,13 +183,52 @@ function validateDeployment(value) {
   }
 }
 
+function validateRollbackDrill(value) {
+  exactKeys(value, [
+    'evidenceVersion', 'evidenceType', 'sourceCommit', 'hLiteSourceCommit', 'capturedAt', 'evidenceRef',
+    'companyQnapIdentity', 'activeOntologySchema', 'registryStatus', 'migration012Retained',
+    'previousReleaseVerified', 'candidateReleaseRestored', 'candidateVersions', 'previousVersions',
+    'foundationCriticalContainerCount', 'foundationUnhealthyContainerCount', 'foundationRestartCountTotal',
+    'newHostPortCount', 'sideEffects', 'rawEvidenceFiles', 'publicOutputContainsSensitiveData',
+  ], 'rollbackDrill')
+  requireValue(value.evidenceVersion === '1.0.0', 'rollbackDrill evidenceVersion mismatch')
+  requireValue(value.evidenceType === 'goal7-foundation-rollback-restore-drill', 'rollbackDrill evidenceType mismatch')
+  requireValue(COMMIT.test(value.sourceCommit), 'rollbackDrill sourceCommit invalid')
+  requireValue(COMMIT.test(value.hLiteSourceCommit), 'rollbackDrill H-Lite sourceCommit invalid')
+  validTimestamp(value.capturedAt, 'rollbackDrill.capturedAt')
+  validReference(value.evidenceRef, 'rollbackDrill.evidenceRef')
+  requireValue(value.companyQnapIdentity === 'qnap:company/prnas/TS-X65', 'rollbackDrill QNAP identity mismatch')
+  requireValue(value.activeOntologySchema === '3.3.0', 'rollbackDrill active schema changed')
+  requireValue(value.registryStatus === 'in_sync', 'rollbackDrill Registry must remain in_sync')
+  requireValue(value.migration012Retained === true, 'rollbackDrill migration 012 was not retained')
+  requireValue(value.previousReleaseVerified === true, 'rollbackDrill previous release was not verified')
+  requireValue(value.candidateReleaseRestored === true, 'rollbackDrill candidate release was not restored')
+  for (const label of ['candidateVersions', 'previousVersions']) {
+    exactKeys(value[label], ['agentCore', 'knowledgeConnector', 'hLite'], `rollbackDrill.${label}`)
+    for (const version of Object.values(value[label])) requireValue(VERSION.test(version), `rollbackDrill.${label} version invalid`)
+  }
+  requireValue(value.foundationCriticalContainerCount === 13, 'rollbackDrill Foundation count mismatch')
+  requireValue(value.foundationUnhealthyContainerCount === 0, 'rollbackDrill unhealthy Foundation container detected')
+  requireValue(value.foundationRestartCountTotal === 0, 'rollbackDrill restart count must remain zero')
+  requireValue(value.newHostPortCount === 0, 'rollbackDrill opened new host ports')
+  exactKeys(value.sideEffects, ['formalP2Count', 'employeeDeliveryCount', 'erpWritebackCount', 'socialWritebackCount', 'causalActivationCount'], 'rollbackDrill.sideEffects')
+  for (const count of Object.values(value.sideEffects)) requireValue(count === 0, 'rollbackDrill business side effect must remain zero')
+  exactKeys(value.rawEvidenceFiles, ['runtimeIdentity', 'deployment', 'before', 'previous', 'restored', 'sideEffects'], 'rollbackDrill.rawEvidenceFiles')
+  for (const [key, file] of Object.entries(value.rawEvidenceFiles)) {
+    exactKeys(file, ['file', 'sha256'], `rollbackDrill.rawEvidenceFiles.${key}`)
+    requireValue(/^[a-z0-9-]+\.json$/.test(file.file), `rollbackDrill.rawEvidenceFiles.${key}.file invalid`)
+    requireValue(HASH.test(file.sha256), `rollbackDrill.rawEvidenceFiles.${key}.sha256 invalid`)
+  }
+  requireValue(value.publicOutputContainsSensitiveData === false, 'rollbackDrill exposes sensitive data')
+}
+
 function validateOwnerAcceptance(value, engineering) {
   exactKeys(value, [
     'evidenceVersion', 'evidenceType', 'goalKey', 'accepted', 'acceptedAt',
     'sourceCommit', 'hLiteSourceCommit', 'ownerPrincipalHash', 'acceptanceRef',
     'engineeringEvidenceFiles', 'publicOutputContainsSensitiveData',
   ], 'ownerAcceptance')
-  requireValue(value.evidenceVersion === '2.0.0', 'ownerAcceptance evidenceVersion mismatch')
+  requireValue(value.evidenceVersion === '3.0.0', 'ownerAcceptance evidenceVersion mismatch')
   requireValue(value.evidenceType === 'goal7-owner-acceptance', 'ownerAcceptance evidenceType mismatch')
   requireValue(value.goalKey === 'P1-PROD-READINESS', 'ownerAcceptance goalKey mismatch')
   requireValue(value.accepted === true, 'Goal 7 owner acceptance missing')
@@ -226,20 +267,22 @@ export async function buildGoal7EngineeringEvidenceContext(bundleRoot) {
   validateAuthorityCanary(entries.authorityCanary.value)
   validateDeployment(entries.deployment.value)
   await validateGoal7DeploymentEvidence(root, entries.deployment.value)
+  validateRollbackDrill(entries.rollbackDrill.value)
+  await validateGoal7RollbackDrillEvidence(root, entries.rollbackDrill.value)
 
   const sourceCommit = entries.runtimeVerification.value.sourceCommit
-  for (const key of ['workerReadback', 'authorityCanary', 'deployment']) {
+  for (const key of ['workerReadback', 'authorityCanary', 'deployment', 'rollbackDrill']) {
     requireValue(entries[key].value.sourceCommit === sourceCommit, `Goal 7 sourceCommit drift in ${key}`)
   }
   const hLiteSourceCommit = entries.runtimeVerification.value.hLiteSourceCommit
-  for (const key of ['workerReadback', 'authorityCanary', 'deployment']) {
+  for (const key of ['workerReadback', 'authorityCanary', 'deployment', 'rollbackDrill']) {
     requireValue(entries[key].value.hLiteSourceCommit === hLiteSourceCommit, `Goal 7 H-Lite sourceCommit drift in ${key}`)
   }
   const deployment = entries.deployment.value
   for (const key of ['agentCoreVersion', 'knowledgeConnectorVersion', 'hLiteVersion']) {
     requireValue(deployment[key] === entries.runtimeVerification.value[key], `Goal 7 ${key} drift in deployment`)
   }
-  const latestEngineeringAt = Math.max(...['workerReadback', 'authorityCanary', 'deployment'].map((key) => Date.parse(entries[key].value.capturedAt)))
+  const latestEngineeringAt = Math.max(...['workerReadback', 'authorityCanary', 'deployment', 'rollbackDrill'].map((key) => Date.parse(entries[key].value.capturedAt)))
   return { root, entries, sourceCommit, hLiteSourceCommit, latestEngineeringAt }
 }
 
@@ -256,7 +299,7 @@ export async function writeGoal7OwnerAcceptanceEvidence(bundleRoot, {
   requireValue(Number.isFinite(acceptedAtMs), 'ownerAcceptance.acceptedAt invalid')
   requireValue(acceptedAtMs >= engineering.latestEngineeringAt, 'Goal 7 owner acceptance predates engineering evidence')
   const evidence = {
-    evidenceVersion: '2.0.0',
+    evidenceVersion: '3.0.0',
     evidenceType: 'goal7-owner-acceptance',
     goalKey: 'P1-PROD-READINESS',
     accepted: true,
@@ -282,17 +325,19 @@ export async function buildGoal7AcceptanceEvidence(bundleRoot) {
   const authority = entries.authorityCanary.value
   const worker = entries.workerReadback.value
   const deployment = entries.deployment.value
+  const rollbackDrill = entries.rollbackDrill.value
   const evidenceRefs = [
     worker.evidenceRef,
     authority.evidenceRef,
     deployment.evidenceRef,
+    rollbackDrill.evidenceRef,
     entries.ownerAcceptance.value.acceptanceRef,
     `git:workflow/${entries.runtimeVerification.value.workflowRunId}`,
     `git:feishu-grok-bridge/${hLiteSourceCommit}`,
   ]
   requireValue(new Set(evidenceRefs).size === evidenceRefs.length, 'Goal 7 evidence references must be unique')
   return {
-    evidenceVersion: '2.0.0',
+    evidenceVersion: '3.0.0',
     goalKey: 'P1-PROD-READINESS',
     status: 'complete',
     engineeringVerified: true,
@@ -320,6 +365,11 @@ export async function buildGoal7AcceptanceEvidence(bundleRoot) {
         && worker.governance.routeBEnabled === false
         && worker.usage.totalTokens === worker.usage.promptTokens + worker.usage.completionTokens,
     },
+    rollbackEvidence: {
+      previousReleaseVerified: rollbackDrill.previousReleaseVerified,
+      candidateReleaseRestored: rollbackDrill.candidateReleaseRestored,
+      migration012Retained: rollbackDrill.migration012Retained,
+    },
     routeState: {
       routeAOperational: deployment.routeAOperational,
       routeBEnabled: deployment.routeBEnabled,
@@ -339,7 +389,7 @@ export async function validateGoal7AcceptanceEvidence(evidenceFile) {
   const bytes = await fs.readFile(resolved)
   requireValue(bytes.length > 0 && bytes.length <= MAX_EVIDENCE_BYTES, 'Goal 7 acceptance file size invalid')
   const evidence = JSON.parse(bytes.toString('utf8'))
-  requireValue(evidence?.evidenceVersion === '2.0.0', 'Goal 7 acceptance evidenceVersion mismatch')
+  requireValue(evidence?.evidenceVersion === '3.0.0', 'Goal 7 acceptance evidenceVersion mismatch')
   requireValue(evidence?.goalKey === 'P1-PROD-READINESS', 'Goal 7 acceptance goalKey mismatch')
   requireValue(evidence?.status === 'complete', 'Goal 7 status must be complete')
   requireValue(evidence?.engineeringVerified === true, 'Goal 7 engineeringVerified must be true')

@@ -1,5 +1,5 @@
 {
-  "evidenceVersion": "2.0.0",
+  "evidenceVersion": "3.0.0",
   "goalKey": "P1-PROD-READINESS",
   "status": "pending",
   "engineeringVerified": false,
@@ -12,6 +12,7 @@
   "evidenceFiles": {},
   "authorityEvidence": {},
   "runtimeEvidence": {},
+  "rollbackEvidence": {},
   "routeState": {
     "routeAOperational": false,
     "routeBEnabled": false
