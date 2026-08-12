@@ -39,10 +39,14 @@ migration_file=$temporary_root/migration.txt
   "fetch('http://127.0.0.1:8084/readyz').then(async r=>{const p=await r.json();if(!r.ok)process.exit(1);process.stdout.write(JSON.stringify(p))}).catch(()=>process.exit(1))" \
   > "$registry_file"
 
-"$docker_path" compose exec -T postgres psql \
-  --set=ON_ERROR_STOP=1 --username ontology_admin --dbname ontology -qAtc \
-  "SELECT (to_regclass('iam.principal_memberships') IS NOT NULL AND to_regclass('work.conversation_authority_snapshots') IS NOT NULL AND to_regclass('runtime.h_engine_route_state') IS NOT NULL AND to_regclass('runtime.h_engine_usage_events') IS NOT NULL)::text" \
-  > "$migration_file"
+if [ "$phase" = preparation ]; then
+  printf 'false\n' > "$migration_file"
+else
+  "$docker_path" compose exec -T postgres psql \
+    --set=ON_ERROR_STOP=1 --username ontology_admin --dbname ontology -qAtc \
+    "SELECT (to_regclass('iam.principal_memberships') IS NOT NULL AND to_regclass('work.conversation_authority_snapshots') IS NOT NULL AND to_regclass('runtime.h_engine_route_state') IS NOT NULL AND to_regclass('runtime.h_engine_usage_events') IS NOT NULL)::text" \
+    > "$migration_file"
+fi
 
 : > "$foundation_file"
 for container_id in $($docker_path ps -q --filter label=com.docker.compose.project=company-ai-foundation); do

@@ -362,6 +362,7 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
   assert.match(prepare, /release_lock/)
   assert.match(prepare, /baseline_created=0/)
   assert.match(prepare, /preparation_created=0/)
+  assert.match(prepare, /capture-goal7-deployment-state\.sh" preparation/)
   assert.match(prepare, /\[ "\$baseline_created" -eq 0 \] \|\| rm -f "\$baseline_file"/)
   assert.match(prepare, /\[ "\$preparation_created" -eq 0 \] \|\| rm -f "\$preparation_file"/)
   assert.ok(prepare.indexOf('created_image_tags="$created_image_tags $candidate"') < prepare.indexOf('"$docker_path" build --build-arg ONTOLOGY_SOURCE_COMMIT'))
