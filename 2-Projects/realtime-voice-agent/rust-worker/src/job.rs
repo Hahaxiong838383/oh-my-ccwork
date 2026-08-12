@@ -14,7 +14,7 @@ use livekit::webrtc::prelude::*;
 use livekit_protocol as proto;
 use std::time::Instant;
 use tokio::task::JoinHandle;
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::config::Config;
 use crate::pipeline;
@@ -90,6 +90,24 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                     Some((participant.identity().to_string(), publication.sid().to_string()));
                 // 16k 拉流:pipeline 的 VAD/STT 全按 16k 契约
                 mic_stream = Some(NativeAudioStream::new(audio.rtc_track(), 16_000, 1));
+            }
+            // 输入侧观测(2026-08-12 聋窗排查加装):移动端息屏/切后台会 mute 上行轨,
+            // 表现=worker 全聋且零报错;这两行是那类故障的第一现场证据。
+            RoomEvent::TrackMuted { participant, publication } => {
+                warn!(
+                    room = %room_name,
+                    identity = %participant.identity(),
+                    track = %publication.sid(),
+                    "user track MUTED(疑似息屏/切后台,上行音频停)"
+                );
+            }
+            RoomEvent::TrackUnmuted { participant, publication } => {
+                info!(
+                    room = %room_name,
+                    identity = %participant.identity(),
+                    track = %publication.sid(),
+                    "user track unmuted(上行音频恢复)"
+                );
             }
             RoomEvent::ParticipantDisconnected(p) => {
                 info!(

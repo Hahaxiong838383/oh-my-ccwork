@@ -294,11 +294,22 @@ pub async fn run_pipeline(
     let greeting = orch.cfg.greeting_text.clone();
     orch.start_turn(TurnKind::Say(greeting));
 
+    // 输入水位观测(2026-08-12 聋窗排查加装):每 10s 一行 frames+均幅。聋时一眼分层——
+    // frames=0=源侧断流(mute/息屏);frames 正常 amp≈0=送的是静音;都正常=下游(火山)问题。
+    let mut in_frames: u64 = 0;
+    let mut in_amp_acc: u64 = 0;
+    let mut in_report = Instant::now();
+
     loop {
         tokio::select! {
             frame = mic.next() => {
                 let Some(frame) = frame else { break };
                 let samples: Vec<i16> = frame.data.to_vec();
+                in_frames += 1;
+                if !samples.is_empty() {
+                    in_amp_acc += samples.iter().map(|s| u64::from(s.unsigned_abs())).sum::<u64>()
+                        / samples.len() as u64;
+                }
                 stt_buf.extend_from_slice(&samples);
                 if stt_buf.len() >= STT_SEGMENT_SAMPLES {
                     // 满则丢段不阻塞热路径(channel 128 段 ≈ 25s 缓冲,正常永远不满)
@@ -337,7 +348,16 @@ pub async fn run_pipeline(
                 }
             }
             Some(te) = turn_ev_rx.recv() => orch.on_turn_event(te),
-            _ = commit_tick.tick() => orch.on_tick().await,
+            _ = commit_tick.tick() => {
+                if in_report.elapsed() >= Duration::from_secs(10) {
+                    let mean_amp = if in_frames > 0 { in_amp_acc / in_frames } else { 0 };
+                    info!(room = %room_name, frames = in_frames, mean_amp, "audio in (10s)");
+                    in_frames = 0;
+                    in_amp_acc = 0;
+                    in_report = Instant::now();
+                }
+                orch.on_tick().await;
+            }
         }
     }
 

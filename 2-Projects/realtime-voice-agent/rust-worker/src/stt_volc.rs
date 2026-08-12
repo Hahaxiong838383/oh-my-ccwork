@@ -3,6 +3,8 @@
 //! 响应按 utterances[].definite 逐句发 Final(证据日志 `stt final: <text>`),
 //! 尾句非 definite 发 Interim。S1 投机/B5 interim 提交 = P3b。
 
+use std::time::Duration;
+
 use anyhow::{bail, Context, Result};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
@@ -115,9 +117,17 @@ pub async fn run_asr_stream(
     // 已发 Final 的句子游标:utterances 是全量数组,靠计数防重发
     let mut finals_emitted = 0usize;
     let mut input_done = false;
+    // WS 应用层心跳(对齐 Python websockets ping_interval=20):跨境长连的死链检测——
+    // 无心跳时黑洞连接表现为永久静默(2026-08-12 聋窗排查加装);死链 → send Err → 外层重连。
+    let mut ping_tick = tokio::time::interval(Duration::from_secs(20));
+    ping_tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    ping_tick.reset(); // 首跳从 20s 后开始,不在连接建立瞬间发
 
     loop {
         tokio::select! {
+            _ = ping_tick.tick() => {
+                tx.send(WsMessage::Ping(Vec::new().into())).await.context("asr keepalive ping")?;
+            }
             pcm = pcm_rx.recv(), if !input_done => match pcm {
                 Some(samples) => {
                     seq += 1;
@@ -162,7 +172,8 @@ pub async fn run_asr_stream(
                     }
                     let ended = frame.flag == Flags::LastNoSeq;
                     if let Some(payload) = frame.json_payload() {
-                        handle_result(&payload, &mut finals_emitted, &event_tx, cfg.canon).await;
+                        handle_result(&payload, &mut finals_emitted, &event_tx, cfg.canon, ended)
+                            .await;
                     }
                     if ended {
                         return Ok(AsrEnd::InputDone);
@@ -184,11 +195,9 @@ async fn handle_result(
     finals_emitted: &mut usize,
     event_tx: &mpsc::Sender<SttEvent>,
     canon: bool,
+    ended: bool,
 ) {
     let Some(result) = payload.get("result") else { return };
-    let utterances = result.get("utterances").and_then(|u| u.as_array());
-    let Some(utts) = utterances else { return };
-
     let norm = |raw: &str| -> String {
         if canon {
             crate::textproc::canon_transcript(raw)
@@ -196,6 +205,16 @@ async fn handle_result(
             raw.trim().to_string()
         }
     };
+    let utterances = result.get("utterances").and_then(|u| u.as_array());
+    let Some(utts) = utterances else {
+        // 无 utterances 的响应:顶层 text 兜底发 Interim(对齐 volc_stt.py `elif not utts`)
+        let top = norm(result.get("text").and_then(|t| t.as_str()).unwrap_or(""));
+        if !top.is_empty() {
+            let _ = event_tx.send(SttEvent::Interim(top)).await;
+        }
+        return;
+    };
+
     // definite=true 的按序补发 Final;最后一个未定句发 Interim
     let mut definite_count = 0usize;
     let mut tail_interim: Option<String> = None;
@@ -214,6 +233,13 @@ async fn handle_result(
                     let _ = event_tx.send(SttEvent::Final(text)).await;
                 }
                 *finals_emitted = definite_count;
+            }
+        } else if ended {
+            // 整流结束(LastNoSeq):剩余尾句提升为 Final(对齐 volc_stt.py is_final 路径),
+            // 否则尾句只停留在 interim,永不提交
+            if !text.is_empty() {
+                info!("stt final(流尾提升): {text}");
+                let _ = event_tx.send(SttEvent::Final(text)).await;
             }
         } else {
             tail_interim = if text.is_empty() { None } else { Some(text) };
