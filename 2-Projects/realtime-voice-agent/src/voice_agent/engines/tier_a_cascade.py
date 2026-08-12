@@ -752,6 +752,7 @@ def _build_stt(settings: Settings, *, speaker_ring: Any | None = None) -> Any:
         import os
 
         from .volc_stt import VolcSTT
+        from .volc_stt import parse_hotwords_env as _parse_hotwords_env
 
         # VOLC_ASR_API_KEY 设了走新版单 key 鉴权(seedasr 2.0 必须);否则旧版 app_id+token
         # (bigasr 1.0)。TTS 仍用 VOLC_APP_ID/VOLC_ACCESS_TOKEN(旧版),与 ASR 凭据解耦。
@@ -782,6 +783,9 @@ def _build_stt(settings: Settings, *, speaker_ring: Any | None = None) -> Any:
             # 顺滑会删语气词/停顿词/重复词("嗯/哦/咳咳"),陪伴场景利大于弊(字幕干净+
             # AI 不回应咳嗽),但需配 volc_stt._emit 里的空 final 告警兜底(见该文件注释)。
             enable_ddc=os.environ.get("VOLC_ASR_ENABLE_DDC", "1") == "1",
+            # 热词(2026-08-12 矩阵实验,与 Rust 线同名同格式):捞回被火山丢弃的孤立
+            # 短指令(急停词/好/对);增减改 poc-eou.env 一行+重启,勿写死代码。
+            hotwords=_parse_hotwords_env(os.environ.get("VOLC_ASR_HOTWORDS")),
         )
     if provider == "xfyun":
         # 讯飞大模型实时转写(租户 provider,2026-07-27):凭据优先租户加密存储

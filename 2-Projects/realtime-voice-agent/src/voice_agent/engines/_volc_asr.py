@@ -72,6 +72,7 @@ async def asr_stream(
     end_window_size: int | None = None,
     force_to_speech_time: int | None = None,
     vad_segment_duration: int | None = None,
+    hotwords: list[str] | None = None,
     app_id: str | None = None,
     access_token: str | None = None,
     api_key: str | None = None,
@@ -118,6 +119,13 @@ async def asr_stream(
         request["force_to_speech_time"] = force_to_speech_time
     if vad_segment_duration is not None:
         request["vad_segment_duration"] = vad_segment_duration
+    if hotwords:
+        # 热词(2026-08-12 矩阵实验):火山话语检测对孤立短指令(停/好/对)经常整段丢弃
+        # (ddc/force_to_speech_time/增益全无效,唯热词能捞回);语气词不配=环境音免疫保留。
+        # 形状单源在 volc_stt.build_hotwords_corpus(懒加载防循环,该模块无重依赖可单测)。
+        from .volc_stt import build_hotwords_corpus
+
+        request["corpus"] = build_hotwords_corpus(hotwords)
 
     init_payload = {
         "user": {"uid": headers["X-Api-Request-Id"]},
@@ -132,10 +140,11 @@ async def asr_stream(
     }
 
     logger.info(
-        "asr: connecting (model=%s, rate=%d, end_window_size=%s)",
+        "asr: connecting (model=%s, rate=%d, end_window_size=%s, hotwords=%d)",
         model_name,
         sample_rate,
         end_window_size,
+        len(hotwords or []),
     )
     try:
         ws = await asyncio.wait_for(

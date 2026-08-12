@@ -181,7 +181,19 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 | worker | WORKER_LOAD_THRESHOLD(0.95)、WORKER_NUM_IDLE(1) | 2 核机默认 0.7 拒接;idle 默认 2 撑爆 2G→thrash,单用户压 1 |
 | 内存 | HK 已配 2G swap(fstab 持久化) | 兜底瞬时尖峰,正常不动用 |
 
-## 铁律与边界
+## 热词增减 SOP(2026-08-12 起,川哥要求定期维护)
+
+**是什么**:火山 ASR 话语检测会整段丢弃孤立短指令(停/好/对——连 interim 都没有),热词表让服务端对指定词降低检出门槛。矩阵实验定案:ddc/force_to_speech_time/增益全无效,唯热词有效;**语气词(嗯/啊)绝不入表**=环境音免疫天然保留。
+
+**单一真源**:`64.90:/root/realtime-voice-agent/poc-eou.env` 的 `VOLC_ASR_HOTWORDS`(逗号分隔),Python 主线 + Rust 灰度线两个 unit 共享同一行。当前 18 词=急停白名单全量+常用短指令。
+
+**增减操作**(改一行,分钟级):
+```bash
+ssh root@64.90.13.117 "sed -i 's/^VOLC_ASR_HOTWORDS=.*/VOLC_ASR_HOTWORDS=<新词表>/' /root/realtime-voice-agent/poc-eou.env && systemctl restart voice-worker voice-worker-rust"
+```
+**验证**:下一通会话 journal 里 `asr: connecting (... hotwords=N)`(Python)/`asr: connected (... hotwords=N)`(Rust) 的 N 对上;真机说表内词看 `stt final`。
+
+**入表原则**:高频短指令才进(急停词/确认词/切换词);≥2 音节存活率天然高不一定需要;发现误识别拉偏(近音词被吸成热词)→ 删词即回。**语气词/单字姓名禁入**(前者破免疫,后者拉偏风险高)。代码位:`volc_stt.build_hotwords_corpus`(两线形状单源,Rust 侧 `stt_volc.rs` 同名 env)。
 
 - 火山 RTC 只是 benchmark,**绝不切回**(项目目的=摆脱它);火山 ASR/TTS/方舟是独立组件可用。
 - agent 生命周期**宁可简单重建,不要状态复用**(close_on_disconnect 留守方案已被实战推翻)。

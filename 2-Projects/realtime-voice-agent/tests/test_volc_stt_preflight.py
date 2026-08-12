@@ -219,3 +219,30 @@ class TestEngineModulesForEnv:
         for table in _PROVIDER_MODULES.values():
             for mod in set(table.values()):
                 assert importlib.util.find_spec(mod) is not None, f"{mod} 不存在"
+
+
+class TestHotwords:
+    """热词(2026-08-12 矩阵实验定案):载荷形状与 env 解析,与 Rust 线同格式。"""
+
+    def test_corpus_context_is_json_string(self) -> None:
+        import json
+
+        from voice_agent.engines.volc_stt import build_hotwords_corpus
+
+        corpus = build_hotwords_corpus(["停", "好的"])
+        assert isinstance(corpus["context"], str)  # 火山要求字符串,嵌套对象无效
+        parsed = json.loads(corpus["context"])
+        assert parsed["hotwords"] == [{"word": "停"}, {"word": "好的"}]
+
+    def test_env_parsing_trims_and_drops_empty(self) -> None:
+        from voice_agent.engines.volc_stt import parse_hotwords_env
+
+        assert parse_hotwords_env("停, 好的 ,,对") == ["停", "好的", "对"]
+        assert parse_hotwords_env("") == []
+        assert parse_hotwords_env(None) == []
+
+    def test_empty_hotwords_do_not_touch_request(self) -> None:
+        # 空表=不传 corpus(火山默认行为),asr_stream 里 if hotwords 守护
+        from voice_agent.engines.volc_stt import parse_hotwords_env
+
+        assert not parse_hotwords_env(None)  # falsy → request 不含 corpus 键

@@ -67,6 +67,23 @@ VOLC_ASR_SR = 16000
 _AUDIO_Q_MAX = 64  # 有界队列:asr_stream 先退出时 pump 背压停,不无限泄漏(grok review)
 
 
+def build_hotwords_corpus(hotwords: list[str]) -> dict:
+    """热词 corpus 载荷(2026-08-12 矩阵实验定案,纯函数可单测):
+    context 必须是 JSON **字符串**而非嵌套对象(直连实证);消费方 _volc_asr.asr_stream。"""
+    import json
+
+    return {
+        "context": json.dumps({"hotwords": [{"word": w} for w in hotwords]}, ensure_ascii=False)
+    }
+
+
+def parse_hotwords_env(raw: str | None) -> list[str]:
+    """VOLC_ASR_HOTWORDS 解析(与 Rust 侧同名同格式):逗号分隔,trim,滤空。"""
+    if not raw:
+        return []
+    return [w.strip() for w in raw.split(",") if w.strip()]
+
+
 def _canon_transcript(s: str) -> str:
     """S1 投机命中关键(2026-06-29 team codex):PREFLIGHT 和 FINAL 都过此函数 → 去标点/
     空白后字符串全等,绕开"火山 definite 补句末标点、interim 没补"的 miss。保留数字小数点。"""
@@ -151,6 +168,7 @@ class VolcSTT(STT[Never]):
         speaker_ring: object | None = None,
         enable_ddc: bool = True,
         interim_commit: bool = False,
+        hotwords: list[str] | None = None,
     ) -> None:
         super().__init__(capabilities=STTCapabilities(streaming=True, interim_results=True))
         self._app_id = app_id
@@ -180,6 +198,9 @@ class VolcSTT(STT[Never]):
         # FINAL 提交 turn(不等火山 definite ~350-550ms)——判停地板从"definite 到达"
         # 打到"interim 静止"(~330ms)。真 definite 到达后按 _ic_definite_action 三分。
         self._interim_commit = interim_commit
+        # 热词(2026-08-12):捞回火山话语检测丢弃的孤立短指令(停/好/对);语气词不配
+        # =环境音免疫保留。空列表=不传 corpus(火山默认行为)。
+        self._hotwords = hotwords or []
 
     async def _recognize_impl(
         self,
@@ -319,6 +340,7 @@ class VolcRecognizeStream(RecognizeStream):
             resource_id=self._volc._resource_id,
             end_window_size=self._volc._end_window_size,
             enable_ddc=self._volc._enable_ddc,
+            hotwords=self._volc._hotwords,
         )
         final_n = 0  # 已 emit FINAL 的 definite 句数(utterances 累积前缀)
         try:
