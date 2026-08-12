@@ -614,6 +614,39 @@ test('Goal 6-UAT 经营决策说明返回八阶段并明确不下发不写回', 
   assert.doesNotMatch(result.payload.reply, /当前可用证据不足|insufficient/)
 })
 
+test('Goal 7-UAT 核心作用说明不依赖业务证据并保留验收标记', async (t) => {
+  let runtimeCalls = 0
+  const server = createAgentCoreServer({
+    config: {
+      ...config(),
+      workProtocol: { mode: 'active', ontologyVersion: '3.3.0', evidenceMaxAgeDays: 180, recentCaseLimit: 8 },
+    },
+    store: createMemoryStore(),
+    runtime: {
+      ready: async () => ({ ready: true, productionReady: true, provider: 'test-h-engine' }),
+      run: async () => { runtimeCalls += 1; throw new Error('must not run') },
+    },
+    now: () => now,
+  })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const port = await listen(server)
+  const body = JSON.stringify({
+    conversationId: 'goal7-uat-role',
+    message: '这是一次 Goal 7 基础链路验收。请用三点说明公司 AI Ontology 中枢的核心作用，最后单独输出：GOAL7-UAT-20260812',
+    intent: 'query',
+    channel: 'h-lite',
+  })
+  const result = await request(port, { body, headers: signed(body, { requestId: 'goal7-uat-role', idempotencyKey: 'goal7-uat-role' }) })
+  assert.equal(result.status, 200)
+  assert.equal(runtimeCalls, 0)
+  assert.equal(result.payload.runtime.governedIntent, 'system_role_explanation')
+  assert.match(result.payload.reply, /权限化知识入口/)
+  assert.match(result.payload.reply, /经营决策辅助/)
+  assert.match(result.payload.reply, /任务实践闭环/)
+  assert.match(result.payload.reply, /GOAL7-UAT-20260812/)
+  assert.doesNotMatch(result.payload.reply, /当前可用证据不足|insufficient/)
+})
+
 test('Goal 6-UAT 个人权限操作确定性转交私人 Bot 且不调用 H 引擎', async (t) => {
   let runtimeCalls = 0
   const server = createAgentCoreServer({

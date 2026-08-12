@@ -202,8 +202,9 @@ export function createCompanyBrain({ store, runtime, admission, config, systemSt
           responseValidationStatus: validation.status,
         })
         currentStatus = 'completed'
+        const formattedReply = formatEmployeeAnswer(validation.response)
         return {
-          reply: formatEmployeeAnswer(validation.response),
+          reply: governed.presentationSuffix ? `${formattedReply}\n\n${governed.presentationSuffix}` : formattedReply,
           evidence: governed.evidence,
           evidencePackage,
           assessment,

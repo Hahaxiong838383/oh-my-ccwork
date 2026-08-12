@@ -11,7 +11,7 @@ import { createCompanySystemStatusProvider } from './system-status.mjs'
 import { ACTIVE_STAGES, CONTRACT_ONLY_STAGES, ONTOLOGY_SCHEMA_VERSION, WORK_PROTOCOL_VERSION, createWorkCaseDraft } from './work-protocol.mjs'
 import { compileConversationAuthority } from './authority.mjs'
 
-export const AGENT_CORE_CONTRACT_VERSION = '2026-08-11.1'
+export const AGENT_CORE_CONTRACT_VERSION = '2026-08-12.2'
 
 function json(response, statusCode, payload, headers = {}) {
   const body = JSON.stringify(payload)

@@ -83,6 +83,31 @@ export async function resolveGovernedResponse({ turn, systemStatusProvider, now 
     }
   }
 
+  if (intent.kind === 'system_role_explanation') {
+    const facts = [
+      evidence('contract:system-role:knowledge', '权限化公司知识入口', '公司智慧中枢根据员工身份、会话成员关系和使用目的检索有权访问的公司资料；无权限或证据不足时失败关闭。', generatedAt, 'company-agent-core-contract'),
+      evidence('contract:system-role:decision', '经营决策辅助', '公司智慧中枢把公司事实、外部信号和经营目标编译成带证据、假设、未知、风险和置信度的决策提案。', generatedAt, 'company-agent-core-contract'),
+      evidence('contract:system-role:practice', '任务与实践闭环', '经批准的经营决策可进一步编译为 P2、任务、行动、验证和学习，但任务下发与业务写回必须经过独立授权和 Action Gateway。', generatedAt, 'company-agent-core-contract'),
+    ]
+    const acceptanceMarker = String(turn?.message || '').match(/GOAL\s*\d+(?:[-_][A-Z0-9]+)+/iu)?.[0]?.replace(/\s+/g, '').toUpperCase() || ''
+    return {
+      intent,
+      evidence: facts,
+      presentationSuffix: acceptanceMarker,
+      answer: baseAnswer({
+        conclusion: '公司 AI Ontology 中枢是公司级的权限化知识入口、经营决策辅助系统和任务实践闭环中枢。',
+        factBasis: [
+          '第一，连接飞书知识、ERP 和市场信号，并按员工权限与使用目的提供可追溯的信息回答。',
+          '第二，把事实、证据、假设、未知和风险组织成经营决策提案，避免把模型推测直接当成公司事实。',
+          '第三，把已批准的目标和决策连接到 P2、个人任务、执行验证与组织学习；任何任务下发或业务写回仍需独立授权。',
+        ],
+        derivedSummary: '这是系统自身的版本化能力说明，不依赖业务知识库正文，也不会绕过公司资料权限。',
+        recommendedNextAction: '你可以继续询问某项公司资料、经营问题或任务，但系统只会在权限和证据充分时形成确定性结论。',
+        evidenceReferences: facts.map((item) => item.evidenceId),
+      }),
+    }
+  }
+
   const status = typeof systemStatusProvider === 'function'
     ? await systemStatusProvider()
     : {

@@ -61,7 +61,7 @@ function redactRequest(value) {
 
 export function inferWorkMode(turn = {}) {
   const governed = classifyGovernedIntent(turn)
-  if (governed?.kind === 'operating_model_explanation') return 'situation_analysis'
+  if (['operating_model_explanation', 'system_role_explanation'].includes(governed?.kind)) return 'situation_analysis'
   if (governed) return 'answer_query'
   const intent = String(turn.intent || '').toLowerCase()
   const message = String(turn.message || '')
