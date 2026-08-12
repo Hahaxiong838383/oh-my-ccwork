@@ -144,6 +144,28 @@ wait_h_lite() {
     attempt=$((attempt+1)); [ "$attempt" -lt 90 ] || return 1; sleep 2
   done
 }
+wait_foundation_stable() {
+  attempt=0
+  stable_samples=0
+  while [ "$attempt" -lt 90 ]; do
+    count=0
+    stable=1
+    for container_id in $($docker_path ps -q --filter label=com.docker.compose.project=company-ai-foundation); do
+      count=$((count+1))
+      row=$($docker_path inspect --format '{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id")
+      case "$row" in running\|healthy|running\|none) ;; *) stable=0 ;; esac
+    done
+    if [ "$count" -eq 13 ] && [ "$stable" -eq 1 ]; then
+      stable_samples=$((stable_samples+1))
+      [ "$stable_samples" -ge 2 ] && return 0
+    else
+      stable_samples=0
+    fi
+    attempt=$((attempt+1))
+    sleep 2
+  done
+  return 1
+}
 
 "$docker_path" compose up -d agent-core >/dev/null
 wait_agent_core || { "$docker_path" compose logs --tail 160 agent-core >&2; exit 1; }
@@ -151,6 +173,7 @@ wait_agent_core || { "$docker_path" compose logs --tail 160 agent-core >&2; exit
 wait_connector || { "$docker_path" compose logs --tail 160 knowledge-connector >&2; exit 1; }
 "$docker_path" compose up -d h-lite >/dev/null
 wait_h_lite || { "$docker_path" compose logs --tail 160 h-lite >&2; exit 1; }
+wait_foundation_stable || { "$docker_path" compose ps >&2; exit 1; }
 
 "$script_root/capture-goal7-deployment-state.sh" after "$after_file" >/dev/null
 completed_at=$($node_bin -e "const x=require(process.argv[1]);process.stdout.write(x.capturedAt)" "$after_file")
