@@ -99,6 +99,83 @@ async function rewriteChecksums(root) {
   await fs.writeFile(path.join(root, 'SHA256SUMS'), `${lines.join('\n')}\n`)
 }
 
+async function writeExecutable(file, body) {
+  await fs.writeFile(file, body)
+  await fs.chmod(file, 0o700)
+}
+
+async function createPrepareSandbox({ existingEvidence = false, precreateLock = false } = {}) {
+  const sandbox = await fs.mkdtemp(path.join(os.tmpdir(), 'goal7-prepare-'))
+  const scripts = path.join(sandbox, 'scripts')
+  const shadowRoot = path.join(sandbox, 'shadow')
+  const foundationRoot = path.join(sandbox, 'foundation')
+  const runtimeEvidenceRoot = path.join(shadowRoot, 'release', 'goal7-123')
+  const evidenceRoot = path.join(shadowRoot, 'approvals', 'run-123')
+  const backupBase = path.join(sandbox, 'backup', 'goal7')
+  const dockerLog = path.join(sandbox, 'docker.log')
+  const sourceCommit = 'c'.repeat(40)
+  const hLiteSourceCommit = 'f'.repeat(40)
+  const runId = 'run-123'
+  await fs.mkdir(scripts, { recursive: true })
+  await fs.mkdir(runtimeEvidenceRoot, { recursive: true })
+  await fs.mkdir(evidenceRoot, { recursive: true })
+  await fs.mkdir(foundationRoot, { recursive: true })
+  const prepare = (await fs.readFile(PREPARE, 'utf8'))
+    .replace('/share/CACHEDEV2_DATA/ai-ontology-backup/goal7', backupBase)
+  await fs.writeFile(path.join(scripts, 'prepare-goal7-foundation.sh'), prepare)
+  await fs.writeFile(path.join(scripts, 'preflight-company-qnap.sh'), [
+    `shadow_root=${JSON.stringify(shadowRoot)}`,
+    `foundation_root=${JSON.stringify(foundationRoot)}`,
+    `docker_path=${JSON.stringify(path.join(scripts, 'docker'))}`,
+    '',
+  ].join('\n'))
+  await writeExecutable(path.join(scripts, 'node-runtime.sh'), `#!/bin/sh
+case "$1" in
+  */validate-goal7-runtime-release.mjs)
+    printf '%s\n' 'source_commit=${sourceCommit}' 'h_lite_source_commit=${hLiteSourceCommit}' 'agent_core_version=2026-08-12.3' 'knowledge_connector_version=2026-08-11.1' 'h_lite_version=2026-08-12.1'
+    ;;
+  */validate-goal7-preparation.mjs)
+    exit 7
+    ;;
+  *) exit 8 ;;
+esac
+`)
+  await writeExecutable(path.join(scripts, 'docker'), `#!/bin/sh
+printf '%s\n' "$*" >> ${JSON.stringify(dockerLog)}
+exit 99
+`)
+  if (existingEvidence) {
+    await fs.writeFile(path.join(evidenceRoot, 'preparation-evidence.json'), '{"existing":true}\n')
+    await fs.writeFile(path.join(evidenceRoot, 'preparation-baseline-state.json'), '{"existing":true}\n')
+  }
+  if (precreateLock) await fs.mkdir(path.join(shadowRoot, '.goal7-foundation-preparation.lock'))
+  return {
+    sandbox,
+    scripts,
+    shadowRoot,
+    foundationRoot,
+    runtimeEvidenceRoot,
+    evidenceRoot,
+    backupBase,
+    dockerLog,
+    sourceCommit,
+    hLiteSourceCommit,
+    runId,
+  }
+}
+
+function prepareEnv(fixture) {
+  return {
+    ...process.env,
+    GOAL7_DEPLOY_APPROVED: 'YES',
+    GOAL7_RUNTIME_EVIDENCE_ROOT: fixture.runtimeEvidenceRoot,
+    GOAL7_DEPLOYMENT_EVIDENCE_ROOT: fixture.evidenceRoot,
+    GOAL7_APPROVED_SOURCE_COMMIT: fixture.sourceCommit,
+    GOAL7_APPROVED_H_LITE_SOURCE_COMMIT: fixture.hLiteSourceCommit,
+    GOAL7_DEPLOY_RUN_ID: fixture.runId,
+  }
+}
+
 test('Goal 7 部署和回滚在公司 QNAP 预检前要求独立显式授权', () => {
   const deploy = spawnSync('sh', [DEPLOY], { encoding: 'utf8' })
   assert.equal(deploy.status, 2)
@@ -277,6 +354,17 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
   ]) assert.ok(deploy.includes(marker), `deployment marker missing: ${marker}`)
 
   assert.match(prepare, /validate-goal7-runtime-release\.mjs/)
+  assert.match(prepare, /\.goal7-foundation-preparation\.lock/)
+  assert.match(prepare, /Goal 7 foundation preparation is already in progress/)
+  assert.match(prepare, /Goal 7 preparation previous image tag already exists/)
+  assert.match(prepare, /Goal 7 preparation candidate image tag already exists/)
+  assert.match(prepare, /trap 'exit 130' HUP INT TERM/)
+  assert.match(prepare, /release_lock/)
+  assert.match(prepare, /baseline_created=0/)
+  assert.match(prepare, /preparation_created=0/)
+  assert.match(prepare, /\[ "\$baseline_created" -eq 0 \] \|\| rm -f "\$baseline_file"/)
+  assert.match(prepare, /\[ "\$preparation_created" -eq 0 \] \|\| rm -f "\$preparation_file"/)
+  assert.ok(prepare.indexOf('created_image_tags="$created_image_tags $candidate"') < prepare.indexOf('"$docker_path" build --build-arg ONTOLOGY_SOURCE_COMMIT'))
   assert.match(prepare, /goal7-candidate-\$run_id/)
   assert.match(prepare, /verify_image_readable company-ai-foundation-agent-core:goal7-candidate-\$run_id \/app\/src\/server\.mjs/)
   assert.match(prepare, /verify_image_readable company-ai-foundation-knowledge-connector:goal7-candidate-\$run_id \/app\/src\/server\.mjs/)
@@ -343,4 +431,61 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
   assert.match(rollback, /validate-goal7-rollback-drill\.mjs/)
   assert.match(rollback, /migration012_retained=true/)
   assert.doesNotMatch(rollback, /DROP TABLE|DROP SCHEMA|012-goal7-authority-runtime\.sql|compose (restart|down|stop)/)
+})
+
+test('Goal 7 Foundation 准备拒绝危险 run id 且不触碰 QNAP', () => {
+  for (const runId of ['.', '..', '-unsafe', '_unsafe', 'a'.repeat(65)]) {
+    const result = spawnSync('sh', [PREPARE], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        GOAL7_DEPLOY_APPROVED: 'YES',
+        GOAL7_RUNTIME_EVIDENCE_ROOT: '/not-used',
+        GOAL7_DEPLOYMENT_EVIDENCE_ROOT: '/not-used',
+        GOAL7_APPROVED_SOURCE_COMMIT: 'c'.repeat(40),
+        GOAL7_APPROVED_H_LITE_SOURCE_COMMIT: 'f'.repeat(40),
+        GOAL7_DEPLOY_RUN_ID: runId,
+      },
+    })
+    assert.equal(result.status, 2, runId)
+    assert.match(result.stderr, /run id is (unsafe|too long)/, runId)
+    assert.doesNotMatch(result.stderr, /QNAP|docker|runtime evidence/i, runId)
+  }
+})
+
+test('Goal 7 Foundation 准备锁拒绝并发且不调用 Docker', async () => {
+  const fixture = await createPrepareSandbox({ precreateLock: true })
+  const result = spawnSync('sh', [path.join(fixture.scripts, 'prepare-goal7-foundation.sh')], {
+    encoding: 'utf8',
+    env: prepareEnv(fixture),
+  })
+  assert.equal(result.status, 2)
+  assert.match(result.stderr, /preparation is already in progress/)
+  await assert.rejects(fs.lstat(fixture.dockerLog), { code: 'ENOENT' })
+})
+
+test('Goal 7 Foundation 回放校验失败保留既有证据并释放锁', async () => {
+  const fixture = await createPrepareSandbox({ existingEvidence: true })
+  const evidenceFile = path.join(fixture.evidenceRoot, 'preparation-evidence.json')
+  const baselineFile = path.join(fixture.evidenceRoot, 'preparation-baseline-state.json')
+  const evidenceBefore = await fs.readFile(evidenceFile)
+  const baselineBefore = await fs.readFile(baselineFile)
+  const result = spawnSync('sh', [path.join(fixture.scripts, 'prepare-goal7-foundation.sh')], {
+    encoding: 'utf8',
+    env: prepareEnv(fixture),
+  })
+  assert.equal(result.status, 7)
+  assert.deepEqual(await fs.readFile(evidenceFile), evidenceBefore)
+  assert.deepEqual(await fs.readFile(baselineFile), baselineBefore)
+  await assert.rejects(fs.lstat(path.join(fixture.shadowRoot, '.goal7-foundation-preparation.lock')), { code: 'ENOENT' })
+  await assert.rejects(fs.lstat(fixture.dockerLog), { code: 'ENOENT' })
+})
+
+test('Goal 7 Ontology 候选 Foundation 镜像固定 Node 基础镜像 digest', async () => {
+  const digest = /node:22\.19\.0-bookworm-slim@sha256:[a-f0-9]{64}/
+  const ontologyDockerfiles = [
+    path.resolve(ROOT, '../../../services/agent-core/Dockerfile'),
+    path.resolve(ROOT, '../../../services/knowledge-connector/Dockerfile'),
+  ]
+  for (const dockerfile of ontologyDockerfiles) assert.match(await fs.readFile(dockerfile, 'utf8'), digest)
 })

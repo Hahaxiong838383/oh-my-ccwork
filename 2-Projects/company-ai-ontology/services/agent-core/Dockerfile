@@ -1,4 +1,4 @@
-FROM docker.1ms.run/library/node:22.19.0-bookworm-slim
+FROM docker.1ms.run/library/node:22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90
 
 ARG ONTOLOGY_SOURCE_COMMIT=unknown
 ENV NODE_ENV=production \

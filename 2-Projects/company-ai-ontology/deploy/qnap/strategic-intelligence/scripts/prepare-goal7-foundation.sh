@@ -10,7 +10,12 @@ approved_source_commit=${GOAL7_APPROVED_SOURCE_COMMIT:?GOAL7_APPROVED_SOURCE_COM
 approved_h_lite_source_commit=${GOAL7_APPROVED_H_LITE_SOURCE_COMMIT:?GOAL7_APPROVED_H_LITE_SOURCE_COMMIT is required}
 requested_run_id=${GOAL7_DEPLOY_RUN_ID:-}
 run_id=${requested_run_id:-$(date +%Y%m%d%H%M%S)}
-case "$run_id" in *[!A-Za-z0-9._-]*|'') echo 'Goal 7 preparation run id is unsafe' >&2; exit 2 ;; esac
+case "$run_id" in
+  [A-Za-z0-9]*) ;;
+  *) echo 'Goal 7 preparation run id is unsafe' >&2; exit 2 ;;
+esac
+case "$run_id" in *[!A-Za-z0-9._-]*) echo 'Goal 7 preparation run id is unsafe' >&2; exit 2 ;; esac
+[ "${#run_id}" -le 64 ] || { echo 'Goal 7 preparation run id is too long' >&2; exit 2; }
 script_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$script_root/preflight-company-qnap.sh"
 node_bin=${NODE_BIN:-$script_root/node-runtime.sh}
@@ -36,9 +41,40 @@ backup_root=/share/CACHEDEV2_DATA/ai-ontology-backup/goal7/$run_id
 baseline_file=$evidence_root/preparation-baseline-state.json
 preparation_file=$evidence_root/preparation-evidence.json
 input_file=$evidence_root/.preparation-input-$run_id.json
+preparation_lock=$shadow_root/.goal7-foundation-preparation.lock
 
 mkdir -p "$evidence_root"
 chmod 700 "$evidence_root"
+mkdir "$preparation_lock" 2>/dev/null || { echo 'Goal 7 foundation preparation is already in progress' >&2; exit 2; }
+lock_acquired=1
+runtime_created=0
+backup_created=0
+baseline_created=0
+preparation_created=0
+created_image_tags=
+release_lock() {
+  [ "$lock_acquired" -eq 0 ] || rmdir "$preparation_lock" 2>/dev/null || true
+  lock_acquired=0
+}
+cleanup_prepare() {
+  status=$?
+  trap - EXIT HUP INT TERM
+  rm -f "$input_file"
+  if [ "$status" -ne 0 ]; then
+    for image_tag in $created_image_tags; do
+      "$docker_path" image rm "$image_tag" >/dev/null 2>&1 || true
+    done
+    [ "$runtime_created" -eq 1 ] && rm -rf "$runtime_root"
+    rm -rf "$temporary_runtime"
+    [ "$backup_created" -eq 1 ] && rm -rf "$backup_root"
+    [ "$baseline_created" -eq 0 ] || rm -f "$baseline_file"
+    [ "$preparation_created" -eq 0 ] || rm -f "$preparation_file"
+  fi
+  release_lock
+  exit "$status"
+}
+trap cleanup_prepare EXIT
+trap 'exit 130' HUP INT TERM
 if [ -f "$preparation_file" ] && [ ! -L "$preparation_file" ]; then
   existing=$($node_bin "$script_root/validate-goal7-preparation.mjs" "$evidence_root" "$approved_source_commit" "$approved_h_lite_source_commit")
   existing_run_id=$(printf '%s\n' "$existing" | awk -F= '/^run_id=/{print $2;exit}')
@@ -59,6 +95,7 @@ if [ -f "$preparation_file" ] && [ ! -L "$preparation_file" ]; then
     [ "$("$docker_path" image inspect --format '{{.Id}}' company-ai-foundation-$service:goal7-pre-$existing_run_id)" = "$previous_id" ] || { echo "Goal 7 preparation replay previous image drift: $service" >&2; exit 2; }
     [ "$("$docker_path" image inspect --format '{{.Id}}' company-ai-foundation-$service:goal7-candidate-$existing_run_id)" = "$candidate_id" ] || { echo "Goal 7 preparation replay candidate image drift: $service" >&2; exit 2; }
   done
+  release_lock
   printf '%s\npreparation_replay=accepted\n' "$existing"
   exit 0
 fi
@@ -66,26 +103,12 @@ fi
 [ ! -e "$baseline_file" ] || { echo 'Goal 7 preparation baseline exists without valid completion evidence' >&2; exit 2; }
 [ ! -e "$backup_root" ] || { echo 'Goal 7 preparation backup root already exists without valid completion evidence' >&2; exit 2; }
 [ ! -e "$temporary_runtime" ] || { echo 'Goal 7 partial runtime already exists' >&2; exit 2; }
-
-runtime_created=0
-backup_created=0
-cleanup_prepare() {
-  status=$?
-  trap - EXIT HUP INT TERM
-  rm -f "$input_file"
-  if [ "$status" -ne 0 ]; then
-    for service in agent-core knowledge-connector h-lite; do
-      "$docker_path" image rm company-ai-foundation-$service:goal7-candidate-$run_id >/dev/null 2>&1 || true
-      "$docker_path" image rm company-ai-foundation-$service:goal7-pre-$run_id >/dev/null 2>&1 || true
-    done
-    [ "$runtime_created" -eq 1 ] && rm -rf "$runtime_root"
-    rm -rf "$temporary_runtime"
-    [ "$backup_created" -eq 1 ] && rm -rf "$backup_root"
-    rm -f "$baseline_file" "$preparation_file"
-  fi
-  exit "$status"
-}
-trap cleanup_prepare EXIT HUP INT TERM
+for service in agent-core knowledge-connector h-lite; do
+  "$docker_path" image inspect company-ai-foundation-$service:goal7-pre-$run_id >/dev/null 2>&1 \
+    && { echo "Goal 7 preparation previous image tag already exists: $service" >&2; exit 2; }
+  "$docker_path" image inspect company-ai-foundation-$service:goal7-candidate-$run_id >/dev/null 2>&1 \
+    && { echo "Goal 7 preparation candidate image tag already exists: $service" >&2; exit 2; }
+done
 
 mkdir -p "$temporary_runtime/company-ai-ontology" "$temporary_runtime/feishu-grok-bridge"
 chmod 700 "$temporary_runtime"
@@ -106,6 +129,7 @@ else
 fi
 
 "$script_root/capture-goal7-deployment-state.sh" preparation "$baseline_file" >/dev/null
+baseline_created=1
 mkdir -p "$backup_root/images"
 backup_created=1
 chmod 700 "$backup_root" "$backup_root/images"
@@ -122,16 +146,20 @@ for service in agent-core knowledge-connector h-lite; do
   previous=company-ai-foundation-$service:goal7-pre-$run_id
   candidate=company-ai-foundation-$service:goal7-candidate-$run_id
   "$docker_path" image inspect "$current_image_id" >/dev/null
+  created_image_tags="$created_image_tags $previous"
   "$docker_path" image tag "$current_image_id" "$previous"
   printf '%s=%s\n' "$service" "$previous" >> "$backup_root/images/tags.txt"
   case "$service" in
     agent-core)
+      created_image_tags="$created_image_tags $candidate"
       "$docker_path" build --build-arg ONTOLOGY_SOURCE_COMMIT="$source_commit" -t "$candidate" "$runtime_root/company-ai-ontology/services/agent-core" >/dev/null
       ;;
     knowledge-connector)
+      created_image_tags="$created_image_tags $candidate"
       "$docker_path" build --build-arg ONTOLOGY_SOURCE_COMMIT="$source_commit" -t "$candidate" "$runtime_root/company-ai-ontology/services/knowledge-connector" >/dev/null
       ;;
     h-lite)
+      created_image_tags="$created_image_tags $candidate"
       "$docker_path" build --build-arg H_LITE_SOURCE_COMMIT="$h_lite_source_commit" \
         -f "$runtime_root/feishu-grok-bridge/deploy/company-qnap-lite/Dockerfile" \
         -t "$candidate" "$runtime_root/feishu-grok-bridge" >/dev/null
@@ -199,6 +227,7 @@ cat > "$input_file" <<EOF_JSON
 EOF_JSON
 chmod 600 "$input_file"
 "$node_bin" "$script_root/write-goal7-preparation-evidence.mjs" "$input_file" "$preparation_file" >/dev/null
+preparation_created=1
 rm -f "$input_file"
 "$node_bin" "$script_root/validate-goal7-preparation.mjs" "$evidence_root" "$approved_source_commit" "$approved_h_lite_source_commit"
 trap - EXIT HUP INT TERM
