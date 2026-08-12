@@ -19,6 +19,7 @@ use tracing::info;
 use crate::config::Config;
 use crate::pipeline;
 use crate::token::server_api_jwt;
+use crate::transcript_pub;
 use crate::tts_volc::TTS_SAMPLE_RATE;
 
 pub async fn run_job(config: Config, job: proto::Job, url: String, token: String) -> Result<()> {
@@ -48,7 +49,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         "agent-voice",
         RtcAudioSource::Native(source.clone()),
     );
-    room.local_participant()
+    let agent_pub = room
+        .local_participant()
         .publish_track(
             LocalTrack::Audio(track),
             TrackPublishOptions { source: TrackSource::Microphone, ..Default::default() },
@@ -56,9 +58,13 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         .await
         .context("publish audio track")?;
     info!(room = %room_name, "agent audio track published");
+    let agent_identity = room.local_participant().identity().to_string();
+    let agent_track_sid = agent_pub.sid().to_string();
 
     let mut local_subscribed = false;
     let mut mic_stream: Option<NativeAudioStream> = None;
+    // 字幕路由:用户侧 (identity, 麦克风轨 sid),订阅到轨时采集
+    let mut user_info: Option<(String, String)> = None;
     let mut pipeline_task: Option<JoinHandle<()>> = None;
 
     while let Some(ev) = events.recv().await {
@@ -70,12 +76,18 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 info!(room = %room_name, "local track subscribed by remote");
                 local_subscribed = true;
             }
-            RoomEvent::TrackSubscribed { track: RemoteTrack::Audio(audio), participant, .. } => {
+            RoomEvent::TrackSubscribed {
+                track: RemoteTrack::Audio(audio),
+                publication,
+                participant,
+            } => {
                 info!(
                     room = %room_name,
                     identity = %participant.identity(),
                     "user audio track subscribed"
                 );
+                user_info =
+                    Some((participant.identity().to_string(), publication.sid().to_string()));
                 // 16k 拉流:pipeline 的 VAD/STT 全按 16k 契约
                 mic_stream = Some(NativeAudioStream::new(audio.rtc_track(), 16_000, 1));
             }
@@ -102,8 +114,15 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             let src = source.clone();
             let rn = room_name.clone();
             let lp = room.local_participant();
+            let (user_identity, user_track_sid) = user_info.clone().unwrap_or_default();
+            let route = transcript_pub::Route {
+                agent_identity: agent_identity.clone(),
+                agent_track_sid: agent_track_sid.clone(),
+                user_identity,
+                user_track_sid,
+            };
             pipeline_task = Some(tokio::spawn(async move {
-                if let Err(e) = pipeline::run_pipeline(mic, src, lp, rn.clone()).await {
+                if let Err(e) = pipeline::run_pipeline(mic, src, lp, rn.clone(), route).await {
                     tracing::warn!(room = %rn, error = %e, "pipeline exited with error");
                 }
             }));

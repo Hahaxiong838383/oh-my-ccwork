@@ -38,6 +38,7 @@ use crate::preflight::{PreflightConfig, PreflightGate};
 use crate::segmenter::Segmenter;
 use crate::speaker_id::SpeakerSidecar;
 use crate::stt_volc::{self, AsrEnd, SttConfig, SttEvent};
+use crate::transcript_pub::{self, sentence_spans, TranscriptPub};
 use crate::textproc::{normalize_utterance, parse_hotwords};
 use crate::tts_volc::{self, TtsConfig};
 use crate::turn::TurnGate;
@@ -163,6 +164,11 @@ struct Orchestrator {
     pf: PreflightGate,
     spec: Option<Speculation>,
     speaker: Option<SpeakerSidecar>,
+    /// 字幕发布(legacy Transcription 包,页面气泡消费)。
+    tr: TranscriptPub,
+    /// 当前 turn 已发 interim(句进入播出)/final(句播完)的句数游标。
+    tr_started: usize,
+    tr_finaled: usize,
     t0: Instant,
 }
 
@@ -171,6 +177,7 @@ pub async fn run_pipeline(
     source: NativeAudioSource,
     participant: LocalParticipant,
     room_name: String,
+    route: transcript_pub::Route,
 ) -> Result<()> {
     let cfg = PipelineConfig::from_env();
     let stt_cfg = SttConfig::from_env();
@@ -235,6 +242,7 @@ pub async fn run_pipeline(
     let (turn_ev_tx, mut turn_ev_rx) = mpsc::channel::<TurnEvent>(16);
     let (eot_tx, mut eot_rx) = mpsc::channel::<(u64, f32)>(8);
 
+    let participant2 = participant.clone();
     let mut orch = Orchestrator {
         turn_gate: TurnGate::new(
             cfg.min_endpointing_delay,
@@ -268,6 +276,9 @@ pub async fn run_pipeline(
         pf: PreflightGate::new(PreflightConfig::from_env()),
         spec: None,
         speaker,
+        tr: TranscriptPub::new(participant2, route),
+        tr_started: 0,
+        tr_finaled: 0,
         t0: Instant::now(),
     };
 
@@ -492,6 +503,7 @@ impl Orchestrator {
 
     fn on_interim(&mut self, t: String) {
         self.contract.user_transcript_interim();
+        self.tr.user_interim(&t);
         self.tele_text = t.clone();
         let now_ms = self.now_ms();
         self.pf.on_interim(&t, now_ms);
@@ -501,6 +513,7 @@ impl Orchestrator {
 
     fn on_final(&mut self, t: String) {
         self.contract.user_transcript_final();
+        self.tr.user_final(&t);
         self.tele_text = t.clone();
         self.pf.reset(); // definite 提交后,下个句段重新允许投机
         self.check_hotword(&t);
@@ -566,6 +579,8 @@ impl Orchestrator {
         let synth = turn.synth_text.lock().map(|s| s.clone()).unwrap_or_default();
         let progress = turn.progress.lock().map(|p| p.clone()).unwrap_or_default();
         let spoken = truncate_spoken(&synth, &progress, played);
+        // 字幕:在播句按截断文本收尾 final(Python flush 已推送部分同义)
+        self.tr_flush_on_abort(turn.id, &synth, &progress, &spoken, played);
         info!(
             room = %self.room_name,
             played_samples = played,
@@ -577,6 +592,72 @@ impl Orchestrator {
         self.paused = None;
         self.false_deadline = None;
         self.set_state(AgentState::Listening);
+    }
+
+    /// 字幕逐句推进:句进入播出 → interim(整句);句播完 → final。50ms tick 驱动。
+    fn publish_agent_progress(&mut self) {
+        let Some(turn) = &self.agent_turn else { return };
+        if !turn.ctl.audio_started() {
+            return;
+        }
+        let played = turn.ctl.played_samples();
+        let turn_id = turn.id;
+        let synth = turn.synth_text.lock().map(|s| s.clone()).unwrap_or_default();
+        let progress = turn.progress.lock().map(|p| p.clone()).unwrap_or_default();
+        for (i, span) in sentence_spans(&synth, &progress).iter().enumerate() {
+            if i >= self.tr_started && played >= span.start_samples {
+                self.tr.agent_segment(turn_id, i, &span.text, false);
+                self.tr_started = i + 1;
+            }
+            if i >= self.tr_finaled && played >= span.end_samples {
+                self.tr.agent_segment(turn_id, i, &span.text, true);
+                self.tr_finaled = i + 1;
+            }
+        }
+    }
+
+    /// 打断收尾:已播完句补 final,在播句发截断部分 final,未开播句不发。
+    fn tr_flush_on_abort(
+        &mut self,
+        turn_id: u64,
+        synth: &str,
+        progress: &[(usize, u64)],
+        spoken: &str,
+        played: u64,
+    ) {
+        let spoken_chars = spoken.chars().count();
+        for (i, span) in sentence_spans(synth, progress).iter().enumerate() {
+            if i < self.tr_finaled {
+                continue;
+            }
+            if played >= span.end_samples {
+                self.tr.agent_segment(turn_id, i, &span.text, true);
+                self.tr_finaled = i + 1;
+            } else if played > span.start_samples && spoken_chars > span.char_start {
+                let partial: String = spoken.chars().skip(span.char_start).collect();
+                self.tr.agent_segment(turn_id, i, &partial, true);
+                self.tr_finaled = i + 1;
+                break;
+            } else {
+                break;
+            }
+        }
+    }
+
+    /// 自然播完收尾:剩余未 final 的句(含 tick 竞态漏发的)全文补 final。
+    fn tr_finish_turn(&mut self) {
+        let Some(turn) = &self.agent_turn else { return };
+        let turn_id = turn.id;
+        let synth = turn.synth_text.lock().map(|s| s.clone()).unwrap_or_default();
+        let progress = turn.progress.lock().map(|p| p.clone()).unwrap_or_default();
+        let spans = sentence_spans(&synth, &progress);
+        for (i, span) in spans.iter().enumerate() {
+            if i >= self.tr_finaled {
+                self.tr.agent_segment(turn_id, i, &span.text, true);
+            }
+        }
+        self.tr_started = spans.len();
+        self.tr_finaled = spans.len();
     }
 
     fn on_turn_event(&mut self, te: TurnEvent) {
@@ -598,6 +679,7 @@ impl Orchestrator {
                 if self.agent_turn.as_ref().map(|t| t.id) != Some(id) {
                     return;
                 }
+                self.tr_finish_turn(); // 字幕:剩余句补 final(先于清 turn)
                 self.agent_turn = None; // 任务已自然结束
                 self.paused = None;
                 self.false_deadline = None;
@@ -609,6 +691,8 @@ impl Orchestrator {
 
     async fn on_tick(&mut self) {
         let now = Instant::now();
+        // 字幕逐句推进(按播出位置;pause 时 played 冻结自然停发)
+        self.publish_agent_progress();
         // 假打断定时:超时无 turn → resume 续播(渐起由 playout 配置)+ 契约 FalseInterruption
         if let Some(dl) = self.false_deadline
             && now >= dl
@@ -691,6 +775,8 @@ impl Orchestrator {
     fn start_turn(&mut self, kind: TurnKind) {
         self.next_turn_id += 1;
         let id = self.next_turn_id;
+        self.tr_started = 0;
+        self.tr_finaled = 0;
         let (pcm_tx, pcm_rx) = mpsc::channel::<Vec<u8>>(32);
         let (playout_task, ctl) = playout::spawn_playout(self.source.clone(), pcm_rx);
         let synth_text = Arc::new(StdMutex::new(String::new()));

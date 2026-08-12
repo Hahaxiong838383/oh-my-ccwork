@@ -17,6 +17,7 @@ mod speaker_id;
 mod stt_volc;
 mod textproc;
 mod token;
+mod transcript_pub;
 mod tts_volc;
 mod turn;
 mod vad;
