@@ -22,6 +22,8 @@ Artifact 的 8 项 `SHA256SUMS`、Release Manifest 验证器、Goal 7 Runtime �
 
 `2026-08-12 19:29 CST` 已完成公司 QNAP 纯只读生产预检：五元组一致、Foundation `13/13 running / unhealthy=0 / restart=0`、active Schema `3.3.0 / in_sync`、唯一宿主绑定仍为 `192.168.61.18:19080`；战略情报 Schema、表、容器和网络均为 `0`，五类业务副作用均为 `0`。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-readonly-preflight-2026-08-12.json`。本次未写入 QNAP、未迁移、未运行 Collector、未重启服务、未执行回滚。
 
+同轮容量与回滚输入预检确认：QNAP/Docker 为 `x86_64 / amd64`，与 Artifact `linux/amd64` 匹配；可用内存约 `11.1 GiB`，热卷可用约 `604.7 GiB`，备份卷可用约 `7.1 TiB`；三组件当前镜像均可读，合计约 `882 MiB`，Foundation Compose 校验通过。候选 Runtime 尚未传入 QNAP，避免在授权前产生写入。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-capacity-rollback-preflight-2026-08-12.json`。
+
 正式执行与验收前必须分别取得五项明确授权：
 
 1. Foundation 发布授权：`GOAL7_DEPLOY_APPROVED=YES`；

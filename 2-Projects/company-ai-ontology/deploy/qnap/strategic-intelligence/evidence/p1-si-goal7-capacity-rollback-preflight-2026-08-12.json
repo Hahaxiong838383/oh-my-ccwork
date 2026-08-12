@@ -1,0 +1,60 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-capacity-rollback-preflight",
+  "capturedAt": "2026-08-12T19:32:00+08:00",
+  "readOnly": true,
+  "containsSecrets": false,
+  "companyQnapIdentity": "qnap:company/prnas/TS-X65",
+  "platform": {
+    "hostArchitecture": "x86_64",
+    "dockerArchitecture": "amd64",
+    "dockerVersion": "27.1.2-qnap7",
+    "runtimeArtifactPlatform": "linux/amd64",
+    "platformCompatible": true
+  },
+  "capacity": {
+    "memoryTotalKiB": 15607916,
+    "memoryAvailableKiB": 11644604,
+    "hotVolumeAvailableKiB": 634099636,
+    "backupVolumeAvailableKiB": 7655127988,
+    "backupRootExists": true,
+    "runtimeArtifactSizeBytes": 58960398,
+    "capacityGatePassed": true
+  },
+  "rollbackImages": [
+    {
+      "service": "agent-core",
+      "imageRef": "company-ai-foundation-agent-core",
+      "imageId": "sha256:e5b113134f364a6ed1077606d01ff7bca691876450a5632f10fe77c7e081fa1e",
+      "imageSizeBytes": 435967810,
+      "available": true
+    },
+    {
+      "service": "knowledge-connector",
+      "imageRef": "company-ai-foundation-knowledge-connector",
+      "imageId": "sha256:43a9a464a088555caa881937dfa8f19d70b583abfb8327c643f5e3d2f5f2168d",
+      "imageSizeBytes": 226251198,
+      "available": true
+    },
+    {
+      "service": "h-lite",
+      "imageRef": "company-ai-foundation-h-lite",
+      "imageId": "sha256:9c55cbfc0862928c15ff7bd53dcd7ffa9f7c85db18f012a79be23003cabf82b4",
+      "imageSizeBytes": 263157951,
+      "available": true
+    }
+  ],
+  "foundationComposeValid": true,
+  "candidateRuntimeAlreadyInstalled": false,
+  "actionsPerformed": {
+    "artifactTransferCount": 0,
+    "imageBuildCount": 0,
+    "imageTagCount": 0,
+    "deploymentCount": 0,
+    "migrationCount": 0,
+    "serviceRestartCount": 0,
+    "rollbackDrillCount": 0
+  },
+  "result": "capacity_and_rollback_inputs_ready",
+  "productionDeploymentAuthorized": false
+}
