@@ -9,8 +9,6 @@ pub struct Config {
     pub api_secret: String,
     pub agent_name: String,
     pub max_jobs: usize,
-    /// P2 骨架:participant 进房后播的 greeting wav(16k mono);未配则不播。
-    pub greeting_wav: Option<String>,
 }
 
 impl Config {
@@ -30,7 +28,6 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(1),
-            greeting_wav: std::env::var("GREETING_WAV").ok().filter(|s| !s.is_empty()),
         })
     }
 }
@@ -48,7 +45,6 @@ mod tests {
             api_secret: "s".into(),
             agent_name: "a".into(),
             max_jobs: 1,
-            greeting_wav: None,
         };
         assert!(cfg.ws_url.is_empty());
     }

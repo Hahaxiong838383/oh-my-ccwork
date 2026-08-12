@@ -5,7 +5,14 @@
 
 mod config;
 mod job;
+mod llm;
+mod pipeline;
+mod segmenter;
+mod stt_volc;
 mod token;
+mod tts_volc;
+mod vad;
+mod volc;
 mod worker;
 
 use tracing_subscriber::EnvFilter;
