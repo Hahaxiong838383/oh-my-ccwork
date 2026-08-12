@@ -33,6 +33,10 @@ pub struct SttConfig {
     /// preflight 开(生产默认)→ 转写全走 canonical(去标点,S1 投机命中的前提);
     /// 关 → 原样 trim(火山原始带标点行为)。对齐 volc_stt._canon。
     pub canon: bool,
+    /// 热词表(request.corpus.context.hotwords):火山话语检测对孤立短指令(停/好/对)
+    /// 经常整段丢弃(2026-08-12 矩阵实验:ddc/force_to_speech_time/增益全无效,唯热词
+    /// 能捞回);语气词(嗯/啊)不配热词=保留环境音免疫。空=不传(火山默认行为)。
+    pub hotwords: Vec<String>,
 }
 
 impl SttConfig {
@@ -49,8 +53,42 @@ impl SttConfig {
                 .unwrap_or(800),
             enable_ddc: std::env::var("VOLC_ASR_ENABLE_DDC").map(|v| v == "1").unwrap_or(true),
             canon: std::env::var("VOLC_PREFLIGHT_ENABLED").map(|v| v == "1").unwrap_or(true),
+            hotwords: std::env::var("VOLC_ASR_HOTWORDS")
+                .map(|v| {
+                    v.split(',')
+                        .map(|w| w.trim().to_string())
+                        .filter(|w| !w.is_empty())
+                        .collect()
+                })
+                .unwrap_or_default(),
         }
     }
+}
+
+/// init 请求载荷(独立函数供单测:热词注入形状与直连实验一致)。
+fn build_init_payload(cfg: &SttConfig, request_id: &str) -> serde_json::Value {
+    let mut request = json!({
+        "model_name": "bigmodel",
+        "enable_itn": true,
+        "enable_punc": true,
+        "enable_ddc": cfg.enable_ddc,
+        "show_utterances": true,
+        "enable_nonstream": false,
+        "end_window_size": cfg.end_window_ms,
+    });
+    if !cfg.hotwords.is_empty() {
+        // corpus.context 是 JSON 字符串(非嵌套对象),形状经 2026-08-12 直连实验验证
+        let words: Vec<serde_json::Value> =
+            cfg.hotwords.iter().map(|w| json!({"word": w})).collect();
+        request["corpus"] = json!({
+            "context": serde_json::to_string(&json!({"hotwords": words})).unwrap_or_default(),
+        });
+    }
+    json!({
+        "user": {"uid": request_id},
+        "audio": {"format": "pcm", "codec": "raw", "rate": 16000, "bits": 16, "channel": 1},
+        "request": request,
+    })
 }
 
 /// 一条 ASR 连接的结束方式(重连决策依据,Closed 事件由外层重连循环统一发)。
@@ -87,21 +125,13 @@ pub async fn run_asr_stream(
     }
     let (ws, _) = tokio_tungstenite::connect_async(req).await.context("asr connect")?;
     let (mut tx, mut rx) = ws.split();
-    info!(end_window_ms = cfg.end_window_ms, "asr: connected (seedasr bigmodel)");
+    info!(
+        end_window_ms = cfg.end_window_ms,
+        hotwords = cfg.hotwords.len(),
+        "asr: connected (seedasr bigmodel)"
+    );
 
-    let init_payload = json!({
-        "user": {"uid": request_id},
-        "audio": {"format": "pcm", "codec": "raw", "rate": 16000, "bits": 16, "channel": 1},
-        "request": {
-            "model_name": "bigmodel",
-            "enable_itn": true,
-            "enable_punc": true,
-            "enable_ddc": cfg.enable_ddc,
-            "show_utterances": true,
-            "enable_nonstream": false,
-            "end_window_size": cfg.end_window_ms,
-        },
-    });
+    let init_payload = build_init_payload(&cfg, &request_id);
     let mut seq: i32 = 1;
     let init = Frame {
         msg_type: MsgType::FullClientRequest,
@@ -247,5 +277,49 @@ async fn handle_result(
     }
     if let Some(t) = tail_interim {
         let _ = event_tx.send(SttEvent::Interim(t)).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cfg(hotwords: Vec<String>) -> SttConfig {
+        SttConfig {
+            app_id: "a".into(),
+            access_token: "t".into(),
+            api_key: None,
+            resource_id: "r".into(),
+            end_window_ms: 150,
+            enable_ddc: true,
+            canon: true,
+            hotwords,
+        }
+    }
+
+    #[test]
+    fn init_payload_without_hotwords_has_no_corpus() {
+        let p = build_init_payload(&cfg(vec![]), "rid");
+        assert!(p["request"].get("corpus").is_none());
+        assert_eq!(p["request"]["end_window_size"], 150);
+    }
+
+    #[test]
+    fn init_payload_hotwords_shape_matches_experiment() {
+        // 形状=直连实验验证过的:corpus.context 是 JSON 字符串,内含 {"hotwords":[{"word":..}]}
+        let p = build_init_payload(&cfg(vec!["停".into(), "好".into()]), "rid");
+        let ctx = p["request"]["corpus"]["context"].as_str().expect("context 必须是字符串");
+        let parsed: serde_json::Value = serde_json::from_str(ctx).expect("context 内容是合法 JSON");
+        assert_eq!(parsed["hotwords"][0]["word"], "停");
+        assert_eq!(parsed["hotwords"][1]["word"], "好");
+    }
+
+    #[test]
+    fn hotwords_env_parsing_trims_and_drops_empty() {
+        // from_env 的解析逻辑等价复现(不动真实 env):split/trim/滤空
+        let v = "停, 好的 ,,对";
+        let words: Vec<String> =
+            v.split(',').map(|w| w.trim().to_string()).filter(|w| !w.is_empty()).collect();
+        assert_eq!(words, vec!["停", "好的", "对"]);
     }
 }
