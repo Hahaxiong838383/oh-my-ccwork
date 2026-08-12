@@ -265,6 +265,8 @@ pub struct Llm {
     client: reqwest::Client,
     history: Vec<Value>, // {role, content}
     version: u64,        // 历史变更计数(投机有效性校验)
+    /// 声纹粘滞身份槽(每请求读,注入末尾 system=近因位;None=旁路关闭零变化)。
+    speaker_slot: Option<crate::speaker_id::StickySlot>,
 }
 
 impl Llm {
@@ -274,7 +276,11 @@ impl Llm {
             .timeout(std::time::Duration::from_secs(30))
             .build()
             .expect("reqwest client");
-        Self { cfg, client, history: Vec::new(), version: 0 }
+        Self { cfg, client, history: Vec::new(), version: 0, speaker_slot: None }
+    }
+
+    pub fn set_speaker_slot(&mut self, slot: crate::speaker_id::StickySlot) {
+        self.speaker_slot = Some(slot);
     }
 
     pub fn history_version(&self) -> u64 {
@@ -298,6 +304,15 @@ impl Llm {
         let mut messages = vec![json!({"role": "system", "content": self.cfg.instructions})];
         messages.extend(self.history.iter().cloned());
         messages.push(json!({"role": "user", "content": user_text}));
+        // 声纹身份注入末尾 system=近因位(放前面会被 LLM 无视);每轮身份不变时
+        // 投机与正式请求注入内容一致,不破坏投机复用(fast_llm 同款设计)。
+        if let Some(slot) = &self.speaker_slot {
+            let sticky = slot.lock().unwrap_or_else(|e| e.into_inner()).clone();
+            if let Some(note) = crate::speaker_id::context_note(&sticky) {
+                info!("llm ctx note 注入: {}…", note.chars().take(24).collect::<String>());
+                messages.push(json!({"role": "system", "content": note}));
+            }
+        }
         messages
     }
 

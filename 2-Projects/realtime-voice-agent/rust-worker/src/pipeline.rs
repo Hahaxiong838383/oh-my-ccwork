@@ -36,6 +36,7 @@ use crate::llm::{self, ChatOutcome, Llm, LlmConfig};
 use crate::playout::{self, PlayoutControl};
 use crate::preflight::{PreflightConfig, PreflightGate};
 use crate::segmenter::Segmenter;
+use crate::speaker_id::SpeakerSidecar;
 use crate::stt_volc::{self, AsrEnd, SttConfig, SttEvent};
 use crate::textproc::{normalize_utterance, parse_hotwords};
 use crate::tts_volc::{self, TtsConfig};
@@ -161,6 +162,7 @@ struct Orchestrator {
     bank: Option<FillerBank>,
     pf: PreflightGate,
     spec: Option<Speculation>,
+    speaker: Option<SpeakerSidecar>,
     t0: Instant,
 }
 
@@ -174,13 +176,18 @@ pub async fn run_pipeline(
     let stt_cfg = SttConfig::from_env();
     let tts_cfg = TtsConfig::from_env();
     let llm_cfg = LlmConfig::from_env().ok_or_else(|| anyhow::anyhow!("LLM_BASE_URL 未配置"))?;
-    let llm_inner = Llm::new(llm_cfg);
+    let mut llm_inner = Llm::new(llm_cfg);
     // 预热(藏进「用户说首句+判停」窗口):LLM TLS 建连 + TTS 池首连
     {
         let (client, pcfg) = llm_inner.prewarm_parts();
         tokio::spawn(llm::prewarm(pcfg, client));
         let tc = tts_cfg.clone();
         tokio::spawn(async move { tts_volc::prewarm_pool(&tc).await });
+    }
+    // 声纹旁路(SPEAKER_ID_ENABLED=1 且注册库在):粘滞身份槽接入 LLM 近因位
+    let speaker = SpeakerSidecar::load_from_env();
+    if let Some(s) = &speaker {
+        llm_inner.set_speaker_slot(s.sticky_slot());
     }
     let llm = Arc::new(Mutex::new(llm_inner));
 
@@ -260,6 +267,7 @@ pub async fn run_pipeline(
         bank: FillerBank::load_from_env(),
         pf: PreflightGate::new(PreflightConfig::from_env()),
         spec: None,
+        speaker,
         t0: Instant::now(),
     };
 
@@ -288,6 +296,9 @@ pub async fn run_pipeline(
                 eot_ring.extend(samples.iter().copied());
                 while eot_ring.len() > EOT_MAX_SAMPLES {
                     eot_ring.pop_front();
+                }
+                if let Some(sp) = orch.speaker.as_mut() {
+                    sp.ring.append(&samples); // 声纹 ring:写入即幅度过滤
                 }
                 orch.on_pf_frame(&samples).await;
                 vad_buf.extend_from_slice(&samples);
@@ -639,6 +650,10 @@ impl Orchestrator {
             );
             self.latest_interim.clear();
             self.set_state(AgentState::Thinking);
+            // 声纹旁路:消费本轮音频异步比对(fire-and-forget,首句识别第二句起生效)
+            if let Some(sp) = self.speaker.as_mut() {
+                sp.on_turn();
+            }
             let amend = self.pending_amend.take();
             // S1v3 投机核销:提交文本全等 + 历史版本未变 → 复用;否则作废
             let spec = match self.spec.take() {

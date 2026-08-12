@@ -13,6 +13,7 @@ mod pipeline;
 mod playout;
 mod preflight;
 mod segmenter;
+mod speaker_id;
 mod stt_volc;
 mod textproc;
 mod token;
