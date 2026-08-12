@@ -70,7 +70,7 @@ const state={
   companyQnapIdentity:"qnap:company/prnas/TS-X65",
   activeOntologySchema:String(registry.active?.schemaVersion||registry.active?.version||""),
   registryStatus:String(registry.status||""),
-  candidateMigration012Applied:fs.readFileSync(migrationPath,"utf8").trim()==="t",
+  candidateMigration012Applied:fs.readFileSync(migrationPath,"utf8").trim()==="true",
   components:{
     agentCore:{version:String(agent.contractVersion||""),sourceCommit:agent.sourceCommit||null,ready:agent.ok===true,productionReady:agent.productionReady===true},
     knowledgeConnector:{version:String(connector.version||""),sourceCommit:connector.sourceCommit||null,ready:connector.ok===true,productionReady:connector.database?.ready===true},

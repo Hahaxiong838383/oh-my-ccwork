@@ -46,5 +46,6 @@ test('Goal 7 部署状态采集只读且强制公司 QNAP 与隔离 Node Runtime
   assert.match(source, /knowledge-connector.*readyz/s)
   assert.match(source, /h-lite.*healthz/s)
   assert.match(source, /ontology-registry.*readyz/s)
+  assert.match(source, /candidateMigration012Applied:.*trim\(\)===\"true\"/)
   assert.doesNotMatch(source, /compose\s+(up|down|restart|stop)|migrate\.sh|Collector/)
 })
