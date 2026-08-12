@@ -129,6 +129,10 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - CPA Menu `0.3.1+` 的 API Key 美元额度必须读取 `cpa-key-policy` 原生接口：Key 配置来自 `GET /v0/management/plugins/cpa-key-policy/keys`，消费来自 `GET /v0/management/plugins/cpa-key-policy/keys/usage?id=...`；只解码白名单字段，禁止返回 `plain_key`、`key_hash`、`key_preview` 或 Management Key。
 - API Key 的可用余额口径固定为 `min(max(0, daily_limit_usd-daily_spend_usd), max(0, weekly_limit_usd-weekly_spend_usd))`；浮窗主值显示这个“更先触发限制”的剩余金额，日剩余和周剩余作为明细，不能用 OAuth 百分比或 Router Token 预算代替。
 - 当用户要求给已消费 Key “再增加 N 美元额度”时，先实时读取窗口累计消费，再把目标限制设置为 `current_spend + N`；若直接执行 `old_limit + N`，历史超额会吞掉部分新增余额。更新后复核插件 usage、Bridge `/desktop/v1/summary`、浮窗、模型/RPM 与撤销 timer，原 Key 明文不得重新输出。
+- “正式长期原生 Key”和 `cpa-key-policy` 限额 Key 是两套机制：前者是 CLIProxyAPI 顶层 `api-keys`，通过 `GET/PUT /v0/management/api-keys` 管理，天然继承当前及后续全局模型且没有插件额度、RPM 或到期字段；后者用于按用户限制模型、RPM、日/周美元额度和统计。用户明确要求“参考自用 Key、长期、全部模型”时必须选原生 Key，不能用 `models=[]` 的插件 Key 冒充全模型推理权限。
+- 原生 Key 创建流程：先备份 `/opt/cliproxy/config.yaml`，读取当前 Key 数组，生成独立高熵值后用管理接口原子回写完整数组，禁止直接覆盖 YAML 或替换既有自用 Key。明文只保存到指定 Keychain 项和 Git 工作区外的临时 `0600` 交付文件；用户取得后应删除交付文件。
+- 原生 Key 验收不能停在 `/v1/models` 200：模型目录可能可见但推理仍无权。必须用新 Key 分别完成目录、目标模型真实推理和另一模型真实推理，并验证 Key 数量、无同名到期 timer、服务 active；长期原生 Key 不进入 CPA Menu 的插件美元余额卡是正常语义，不应伪造余额展示。
+- 禁止把 `/v0/management/config` 或 `/v0/management/api-keys` 的完整响应输出到终端后再尝试正则脱敏；配置中可能同时包含顶层下游 Key 和多个上游供应商 Key，字段结构变化会造成漏脱敏。只在 VPS 内用 Python/YAML 解析并输出数量、布尔值、模型名等白名单字段，明文通过受限管道直接进入 Keychain 或目标 `0600` 文件。
 - Codex 请求级统计优先读取 CLIProxyAPI 本地 `GET /v0/management/usage-queue?count=500`，Bridge 默认每 5 秒拉取并按小时持久化到 `/var/lib/cpa-desktop-bridge/usage.json`；该文件必须为 root-only `0600`，只保留最近 8 天。
 - `usage-queue` 请求数可能包含重试、账号重选等上游尝试，不等同于用户对话轮数。总请求与 `usage_samples` 要分开统计；部分上游未返回 usage 时，浮窗必须显示 Token 覆盖率，不能把缺失 usage 解释成 0 消耗。
 - 原始队列记录在进入持久化前必须丢弃 API Key、Token 指纹、IP/X-Forwarded-For、User-Agent、响应 Header 和错误正文；稳定 auth index 只用于 root-only 聚合与账号关联，Desktop API 只返回既有脱敏账号 ID。
