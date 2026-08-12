@@ -51,13 +51,22 @@ impl SttConfig {
     }
 }
 
+/// 一条 ASR 连接的结束方式(重连决策依据,Closed 事件由外层重连循环统一发)。
+#[derive(Debug, PartialEq, Eq)]
+pub enum AsrEnd {
+    /// 输入结束且服务端 LastNoSeq 收尾——正常终局,不重连。
+    InputDone,
+    /// 服务端中途断开——外层重连(改进项:Python 版此处直接死流)。
+    ServerClosed,
+}
+
 /// 起一条 ASR 长连:`pcm_rx` 收 16k i16 PCM 段,事件从 `event_tx` 发出。
-/// pcm_rx 关闭 → 发尾段(NegativeSeq)收流。
+/// pcm_rx 关闭 → 发尾段(NegativeSeq)收流。借用 receiver 以支持外层断线重连复用。
 pub async fn run_asr_stream(
     cfg: SttConfig,
-    mut pcm_rx: mpsc::Receiver<Vec<i16>>,
+    pcm_rx: &mut mpsc::Receiver<Vec<i16>>,
     event_tx: mpsc::Sender<SttEvent>,
-) -> Result<()> {
+) -> Result<AsrEnd> {
     let request_id = uuid::Uuid::new_v4().to_string();
     let mut req = ASR_URL.into_client_request()?;
     {
@@ -105,10 +114,11 @@ pub async fn run_asr_stream(
 
     // 已发 Final 的句子游标:utterances 是全量数组,靠计数防重发
     let mut finals_emitted = 0usize;
+    let mut input_done = false;
 
     loop {
         tokio::select! {
-            pcm = pcm_rx.recv() => match pcm {
+            pcm = pcm_rx.recv(), if !input_done => match pcm {
                 Some(samples) => {
                     seq += 1;
                     let bytes: Vec<u8> = samples.iter().flat_map(|s| s.to_le_bytes()).collect();
@@ -124,7 +134,8 @@ pub async fn run_asr_stream(
                     tx.send(WsMessage::Binary(frame.marshal().into())).await?;
                 }
                 None => {
-                    // 输入结束:空尾段 NegativeSeq 收流
+                    // 输入结束:空尾段 NegativeSeq 收流,之后只等服务端 LastNoSeq
+                    input_done = true;
                     seq += 1;
                     let last = Frame {
                         msg_type: MsgType::AudioOnlyClient,
@@ -136,7 +147,6 @@ pub async fn run_asr_stream(
                         ..Default::default()
                     };
                     tx.send(WsMessage::Binary(last.marshal().into())).await?;
-                    pcm_rx.close();
                 }
             },
             msg = rx.next() => match msg {
@@ -155,14 +165,12 @@ pub async fn run_asr_stream(
                         handle_result(&payload, &mut finals_emitted, &event_tx, cfg.canon).await;
                     }
                     if ended {
-                        let _ = event_tx.send(SttEvent::Closed).await;
-                        return Ok(());
+                        return Ok(AsrEnd::InputDone);
                     }
                 }
                 Some(Ok(WsMessage::Close(_))) | None => {
                     warn!("asr ws closed by server");
-                    let _ = event_tx.send(SttEvent::Closed).await;
-                    return Ok(());
+                    return Ok(if input_done { AsrEnd::InputDone } else { AsrEnd::ServerClosed });
                 }
                 Some(Ok(_)) => {}
                 Some(Err(e)) => return Err(e.into()),

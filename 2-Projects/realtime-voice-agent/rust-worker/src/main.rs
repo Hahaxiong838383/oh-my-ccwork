@@ -6,10 +6,12 @@
 mod config;
 mod contract;
 mod eot;
+mod filler;
 mod job;
 mod llm;
 mod pipeline;
 mod playout;
+mod preflight;
 mod segmenter;
 mod stt_volc;
 mod textproc;
@@ -42,5 +44,24 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(async {
         let _ = eot::EotClient::global().await;
     });
+    // RSS 采样(对齐 tier_a _rss_monitor_loop,内存曲线=本次重写的核心验收指标):
+    // Linux 读 /proc 零依赖;macOS 无 /proc 静默退出。注意口径:Python 是 per-job
+    // 进程,Rust 是整 worker 进程(多路共享),数值=全机 worker 占用,更利容量核算。
+    tokio::spawn(rss_monitor());
     worker::run(cfg).await
+}
+
+async fn rss_monitor() {
+    let t0 = std::time::Instant::now();
+    loop {
+        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        let Ok(status) = tokio::fs::read_to_string("/proc/self/status").await else {
+            return; // 非 Linux,停采样
+        };
+        if let Some(line) = status.lines().find(|l| l.starts_with("VmRSS:"))
+            && let Some(kb) = line.split_whitespace().nth(1).and_then(|v| v.parse::<u64>().ok())
+        {
+            tracing::info!("job rss: {}MB (uptime {}s)", kb / 1024, t0.elapsed().as_secs());
+        }
+    }
 }

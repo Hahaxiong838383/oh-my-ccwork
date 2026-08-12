@@ -21,18 +21,22 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use futures_util::StreamExt;
+use livekit::prelude::*;
 use livekit::webrtc::audio_source::native::NativeAudioSource;
 use livekit::webrtc::audio_stream::native::NativeAudioStream;
+use serde_json::{json, Value};
 use tokio::sync::{mpsc, Mutex};
 use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
 use crate::contract::Contract;
 use crate::eot::{EotClient, EOT_MAX_SAMPLES, UNLIKELY_THRESHOLD_ZH};
-use crate::llm::{Llm, LlmConfig};
+use crate::filler::FillerBank;
+use crate::llm::{self, ChatOutcome, Llm, LlmConfig};
 use crate::playout::{self, PlayoutControl};
+use crate::preflight::{PreflightConfig, PreflightGate};
 use crate::segmenter::Segmenter;
-use crate::stt_volc::{self, SttConfig, SttEvent};
+use crate::stt_volc::{self, AsrEnd, SttConfig, SttEvent};
 use crate::textproc::{normalize_utterance, parse_hotwords};
 use crate::tts_volc::{self, TtsConfig};
 use crate::turn::TurnGate;
@@ -98,7 +102,23 @@ enum TurnEvent {
 
 enum TurnKind {
     Say(String),
-    Reply { user_text: String, pending_amend: Option<String> },
+    Reply {
+        user_text: String,
+        pending_amend: Option<String>,
+        /// 承接音(文案, 24k pcm):先于回复音频入轨,同轨串行(C1 v2 语义)。
+        filler: Option<(String, Vec<u8>)>,
+        /// S1v3 投机命中:直接消费投机流,不再发正式 LLM 请求。
+        spec: Option<Speculation>,
+    },
+}
+
+/// 投机生成(preflight 触发的提前 LLM 流;命中=提交文本全等+历史版本未变)。
+struct Speculation {
+    text: String,
+    version: u64,
+    started: Instant,
+    task: JoinHandle<Result<ChatOutcome>>,
+    rx: mpsc::Receiver<String>,
 }
 
 struct AgentTurn {
@@ -115,6 +135,7 @@ struct Orchestrator {
     tts_cfg: TtsConfig,
     llm: Arc<Mutex<Llm>>,
     source: NativeAudioSource,
+    participant: LocalParticipant,
     room_name: String,
     contract: Contract,
     turn_gate: TurnGate,
@@ -130,24 +151,38 @@ struct Orchestrator {
     latest_interim: String,
     /// 打断遥测快照(对齐 _tele_interim:最近一次转写文本,telemetry 行后清空)。
     tele_text: String,
+    /// 真插话时刻(interim 非空的 speaking→listening),5s 窗内的 turn=打断轮 filler 必播。
+    last_interrupt_at: Option<Instant>,
     turn_ev_tx: mpsc::Sender<TurnEvent>,
     eot_tx: mpsc::Sender<(u64, f32)>,
     eot_gap_gen: u64,
     eot_requested: bool,
     pending_amend: Option<String>,
+    bank: Option<FillerBank>,
+    pf: PreflightGate,
+    spec: Option<Speculation>,
+    t0: Instant,
 }
 
 pub async fn run_pipeline(
     mut mic: NativeAudioStream,
     source: NativeAudioSource,
+    participant: LocalParticipant,
     room_name: String,
 ) -> Result<()> {
     let cfg = PipelineConfig::from_env();
     let stt_cfg = SttConfig::from_env();
     let tts_cfg = TtsConfig::from_env();
-    let llm = Arc::new(Mutex::new(Llm::new(
-        LlmConfig::from_env().ok_or_else(|| anyhow::anyhow!("LLM_BASE_URL 未配置"))?,
-    )));
+    let llm_cfg = LlmConfig::from_env().ok_or_else(|| anyhow::anyhow!("LLM_BASE_URL 未配置"))?;
+    let llm_inner = Llm::new(llm_cfg);
+    // 预热(藏进「用户说首句+判停」窗口):LLM TLS 建连 + TTS 池首连
+    {
+        let (client, pcfg) = llm_inner.prewarm_parts();
+        tokio::spawn(llm::prewarm(pcfg, client));
+        let tc = tts_cfg.clone();
+        tokio::spawn(async move { tts_volc::prewarm_pool(&tc).await });
+    }
+    let llm = Arc::new(Mutex::new(llm_inner));
 
     let mut vad = SileroVad::load(&cfg.vad_model_path)?;
     let mut gate = VadGate::new(
@@ -156,16 +191,37 @@ pub async fn run_pipeline(
         0.3,
     );
 
-    // STT 长连
+    // STT 长连(断线重连:改进项,Python 版死流;连续 5 败放弃)
     let (stt_pcm_tx, stt_pcm_rx) = mpsc::channel::<Vec<i16>>(128);
     let (stt_ev_tx, mut stt_ev_rx) = mpsc::channel::<SttEvent>(64);
     let stt_task = tokio::spawn({
         let stt_cfg = stt_cfg.clone();
         let rn = room_name.clone();
+        let mut pcm_rx = stt_pcm_rx;
         async move {
-            if let Err(e) = stt_volc::run_asr_stream(stt_cfg, stt_pcm_rx, stt_ev_tx).await {
-                warn!(room = %rn, error = %e, "火山 ASR 流异常");
+            let mut fails = 0u32;
+            loop {
+                let started = Instant::now();
+                match stt_volc::run_asr_stream(stt_cfg.clone(), &mut pcm_rx, stt_ev_tx.clone())
+                    .await
+                {
+                    Ok(AsrEnd::InputDone) => break,
+                    Ok(AsrEnd::ServerClosed) => {}
+                    Err(e) => warn!(room = %rn, error = %e, "火山 ASR 流异常"),
+                }
+                if started.elapsed() > Duration::from_secs(10) {
+                    fails = 0; // 长稳连接后的断开不算连败
+                }
+                fails += 1;
+                if fails > 5 {
+                    warn!(room = %rn, "asr 连续 {fails} 次失败,放弃重连");
+                    break;
+                }
+                let backoff = Duration::from_millis(500 * 2u64.pow((fails - 1).min(3)));
+                warn!(room = %rn, attempt = fails, backoff_ms = backoff.as_millis() as u64, "asr 断线重连");
+                tokio::time::sleep(backoff).await;
             }
+            let _ = stt_ev_tx.send(SttEvent::Closed).await;
         }
     });
 
@@ -182,6 +238,7 @@ pub async fn run_pipeline(
         tts_cfg,
         llm,
         source,
+        participant,
         room_name: room_name.clone(),
         contract: Contract::new(),
         state: AgentState::Listening,
@@ -194,11 +251,16 @@ pub async fn run_pipeline(
         resume_grace: None,
         latest_interim: String::new(),
         tele_text: String::new(),
+        last_interrupt_at: None,
         turn_ev_tx,
         eot_tx,
         eot_gap_gen: 0,
         eot_requested: false,
         pending_amend: None,
+        bank: FillerBank::load_from_env(),
+        pf: PreflightGate::new(PreflightConfig::from_env()),
+        spec: None,
+        t0: Instant::now(),
     };
 
     // EOT 环形缓冲(最近 1.2s 用户音频)
@@ -227,6 +289,7 @@ pub async fn run_pipeline(
                 while eot_ring.len() > EOT_MAX_SAMPLES {
                     eot_ring.pop_front();
                 }
+                orch.on_pf_frame(&samples).await;
                 vad_buf.extend_from_slice(&samples);
                 while vad_buf.len() >= WINDOW {
                     let chunk: Vec<i16> = vad_buf.drain(..WINDOW).collect();
@@ -260,6 +323,9 @@ pub async fn run_pipeline(
         t.ctl.abort();
         t.task.abort();
     }
+    if let Some(sp) = orch.spec.take() {
+        sp.task.abort();
+    }
     drop(stt_pcm_tx);
     let _ = tokio::time::timeout(Duration::from_secs(3), stt_task).await;
     info!(room = %room_name, "pipeline closed");
@@ -268,7 +334,8 @@ pub async fn run_pipeline(
 
 impl Orchestrator {
     /// agent 状态迁移:telemetry 行(speaking→listening)+ 契约事件(bridge 同款,
-    /// 进 listening 一律发 AgentSpeechStopped——含 thinking→listening 的 quirk)。
+    /// 进 listening 一律发 AgentSpeechStopped——含 thinking→listening 的 quirk)
+    /// + speaking 状态 publish(topic=state,租户图标 UI 状态机依赖)。
     fn set_state(&mut self, new: AgentState) {
         if self.state == new {
             return;
@@ -276,14 +343,74 @@ impl Orchestrator {
         if self.state == AgentState::Speaking && new == AgentState::Listening {
             let snap: String = self.tele_text.chars().take(40).collect();
             info!(room = %self.room_name, "interrupt telemetry: speaking→listening interim='{snap}'");
+            if !self.tele_text.is_empty() {
+                // interim 非空的 speaking→listening=真插话,记时刻供打断轮 filler 必播
+                self.last_interrupt_at = Some(Instant::now());
+            }
             self.tele_text.clear();
         }
         match new {
-            AgentState::Speaking => self.contract.agent_speech_started(),
-            AgentState::Listening => self.contract.agent_speech_stopped(),
-            AgentState::Thinking => {}
+            AgentState::Speaking => {
+                self.contract.agent_speech_started();
+                self.publish_json("state", json!({"k": "speaking", "speaking": true}));
+            }
+            AgentState::Listening => {
+                self.contract.agent_speech_stopped();
+                if self.state == AgentState::Speaking {
+                    self.publish_json("state", json!({"k": "speaking", "speaking": false}));
+                }
+            }
+            AgentState::Thinking => {
+                if self.state == AgentState::Speaking {
+                    self.publish_json("state", json!({"k": "speaking", "speaking": false}));
+                }
+            }
         }
         self.state = new;
+    }
+
+    /// publish_data 到 room(web 延迟面板/租户状态机消费;失败只记不抛)。
+    fn publish_json(&self, topic: &'static str, v: Value) {
+        let p = self.participant.clone();
+        tokio::spawn(async move {
+            let packet = DataPacket {
+                payload: v.to_string().into_bytes(),
+                topic: Some(topic.to_string()),
+                reliable: true,
+                ..Default::default()
+            };
+            if let Err(e) = p.publish_data(packet).await {
+                tracing::debug!(error = %e, "publish_data failed");
+            }
+        });
+    }
+
+    fn now_ms(&self) -> f64 {
+        self.t0.elapsed().as_secs_f64() * 1000.0
+    }
+
+    /// S1v3 触发器逐帧喂音频;fire → 起投机。
+    async fn on_pf_frame(&mut self, samples: &[i16]) {
+        let now_ms = self.now_ms();
+        if let Some((text, sil, quiet)) = self.pf.on_frame(samples, now_ms) {
+            let tail_snip: String = text.chars().rev().take(16).collect::<Vec<_>>().into_iter().rev().collect();
+            info!(
+                room = %self.room_name,
+                "S1v3 preflight emitted (silence={sil:.0}ms quiet={quiet:.0}ms tail='{tail_snip}')"
+            );
+            self.start_speculation(text).await;
+        }
+    }
+
+    /// 起投机 LLM(不含 TTS;历史快照版本随身,提交时校验)。旧投机作废。
+    async fn start_speculation(&mut self, text: String) {
+        if let Some(old) = self.spec.take() {
+            old.task.abort();
+        }
+        let (client, cfg, messages, version) = self.llm.lock().await.speculation_request(&text);
+        let (tx, rx) = mpsc::channel::<String>(1024);
+        let task = tokio::spawn(async move { llm::stream_chat(&client, &cfg, messages, tx).await });
+        self.spec = Some(Speculation { text, version, started: Instant::now(), task, rx });
     }
 
     fn aec_active(&self, now: Instant) -> bool {
@@ -355,6 +482,8 @@ impl Orchestrator {
     fn on_interim(&mut self, t: String) {
         self.contract.user_transcript_interim();
         self.tele_text = t.clone();
+        let now_ms = self.now_ms();
+        self.pf.on_interim(&t, now_ms);
         self.check_hotword(&t);
         self.latest_interim = t;
     }
@@ -362,6 +491,7 @@ impl Orchestrator {
     fn on_final(&mut self, t: String) {
         self.contract.user_transcript_final();
         self.tele_text = t.clone();
+        self.pf.reset(); // definite 提交后,下个句段重新允许投机
         self.check_hotword(&t);
         self.turn_gate.on_final(&t, Instant::now());
         self.latest_interim.clear();
@@ -486,7 +616,8 @@ impl Orchestrator {
             }
         }
         // 判停提交
-        if let Some((user_text, eou_delay)) = self.turn_gate.poll_commit(now) {
+        if let Some(commit) = self.turn_gate.poll_commit(now) {
+            let user_text = commit.text;
             // 有在途回答(播放中/已 pause/生成中)→ 提交即接管:硬打断再开新轮
             if self.agent_turn.is_some() {
                 self.hard_abort_current();
@@ -494,13 +625,51 @@ impl Orchestrator {
             self.contract.user_turn_committed();
             info!(
                 room = %self.room_name,
-                eou_ms = eou_delay.as_millis() as u64,
+                eou_ms = commit.eou_delay.as_millis() as u64,
+                stt_ms = commit.stt_delay.as_millis() as u64,
                 "turn committed: {user_text}"
+            );
+            self.publish_json(
+                "metrics",
+                json!({
+                    "k": "eou",
+                    "eou_ms": commit.eou_delay.as_millis() as u64,
+                    "stt_ms": commit.stt_delay.as_millis() as u64,
+                }),
             );
             self.latest_interim.clear();
             self.set_state(AgentState::Thinking);
             let amend = self.pending_amend.take();
-            self.start_turn(TurnKind::Reply { user_text, pending_amend: amend });
+            // S1v3 投机核销:提交文本全等 + 历史版本未变 → 复用;否则作废
+            let spec = match self.spec.take() {
+                Some(sp) => {
+                    let ver_now = self.llm.lock().await.history_version();
+                    if sp.text == user_text && sp.version == ver_now {
+                        info!(
+                            room = %self.room_name,
+                            lead_ms = sp.started.elapsed().as_millis() as u64,
+                            "using preemptive generation"
+                        );
+                        Some(sp)
+                    } else {
+                        info!(
+                            room = %self.room_name,
+                            spec_text = %sp.text.chars().take(24).collect::<String>(),
+                            "preemptive miss (text/ctx changed), discarding"
+                        );
+                        sp.task.abort();
+                        None
+                    }
+                }
+                None => None,
+            };
+            // 承接音:打断轮(5s 窗)必播,其余按桶概率
+            let boost = self
+                .last_interrupt_at
+                .map(|t| t.elapsed() < Duration::from_secs(5))
+                .unwrap_or(false);
+            let filler = self.bank.as_mut().and_then(|b| b.pick(&user_text, boost));
+            self.start_turn(TurnKind::Reply { user_text, pending_amend: amend, filler, spec });
         }
     }
 
@@ -532,8 +701,22 @@ impl Orchestrator {
         let min_len = self.cfg.tts_min_sentence_len;
         let synth2 = synth_text.clone();
         let prog2 = progress.clone();
+        let lp = self.participant.clone();
 
         let task = tokio::spawn(async move {
+            let publish = |v: Value| {
+                let p = lp.clone();
+                tokio::spawn(async move {
+                    let _ = p
+                        .publish_data(DataPacket {
+                            payload: v.to_string().into_bytes(),
+                            topic: Some("metrics".into()),
+                            reliable: true,
+                            ..Default::default()
+                        })
+                        .await;
+                });
+            };
             let mut samples_cum: u64 = 0;
             let mut chars_cum: usize = 0;
             let mut track = |sentence: &str, bytes: usize| {
@@ -551,6 +734,7 @@ impl Orchestrator {
                     match tts_volc::synthesize(&tts_cfg, &text, &pcm_tx).await {
                         Ok((ttfb, bytes)) => {
                             info!(room = %room_name, ttfb_ms = ttfb, bytes, "say synthesized");
+                            publish(json!({"k": "tts", "ttfb_ms": ttfb}));
                             track(&text, bytes);
                         }
                         Err(e) => warn!(room = %room_name, error = %e, "say tts failed"),
@@ -562,24 +746,48 @@ impl Orchestrator {
                     llm.lock().await.push_assistant(&text);
                     let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
                 }
-                TurnKind::Reply { user_text, pending_amend } => {
-                    let (delta_tx, mut delta_rx) = mpsc::channel::<String>(64);
-                    let llm2 = llm.clone();
-                    let llm_task = tokio::spawn(async move {
-                        let mut g = llm2.lock().await;
-                        // 上一轮被打断的历史修正在同一把锁内先落账,保证消息顺序
-                        if let Some(spoken) = pending_amend {
-                            g.set_last_assistant(&spoken);
+                TurnKind::Reply { user_text, pending_amend, filler, spec } => {
+                    // 承接音先入轨(同轨串行,盖住 LLM+TTS 首音;不进历史/不计截断字符
+                    // ——track 空句=只登记样本偏移,截断映射因此对齐)
+                    if let Some((_ftext, fpcm)) = filler {
+                        track("", fpcm.len());
+                        let _ = pcm_tx.send(fpcm).await;
+                    }
+                    // LLM 流:投机命中→消费投机流(需手动落账);未命中→常规 chat(自落账)
+                    let (mut delta_rx, llm_join, spec_mode) = match spec {
+                        Some(sp) => {
+                            {
+                                let mut g = llm.lock().await;
+                                if let Some(spoken) = pending_amend {
+                                    g.set_last_assistant(&spoken);
+                                }
+                                g.push_user(&user_text);
+                            }
+                            (sp.rx, sp.task, true)
                         }
-                        if let Err(e) = g.chat(&user_text, delta_tx).await {
-                            warn!(error = %e, "llm chat failed");
+                        None => {
+                            let (delta_tx, delta_rx) = mpsc::channel::<String>(64);
+                            let llm2 = llm.clone();
+                            let ut = user_text.clone();
+                            let h = tokio::spawn(async move {
+                                let mut g = llm2.lock().await;
+                                // 上一轮被打断的历史修正在同一把锁内先落账,保证消息顺序
+                                if let Some(spoken) = pending_amend {
+                                    g.set_last_assistant(&spoken);
+                                }
+                                g.chat(&ut, delta_tx).await
+                            });
+                            (delta_rx, h, false)
                         }
-                    });
+                    };
                     let mut seg = Segmenter::new(min_len);
                     while let Some(delta) = delta_rx.recv().await {
                         for sentence in seg.feed(&delta) {
                             match tts_volc::synthesize(&tts_cfg, &sentence, &pcm_tx).await {
-                                Ok((_ttfb, bytes)) => track(&sentence, bytes),
+                                Ok((ttfb, bytes)) => {
+                                    publish(json!({"k": "tts", "ttfb_ms": ttfb}));
+                                    track(&sentence, bytes);
+                                }
                                 Err(e) => {
                                     warn!(room = %room_name, error = %e, "tts synthesize failed");
                                 }
@@ -588,11 +796,28 @@ impl Orchestrator {
                     }
                     if let Some(tail) = seg.flush() {
                         match tts_volc::synthesize(&tts_cfg, &tail, &pcm_tx).await {
-                            Ok((_ttfb, bytes)) => track(&tail, bytes),
+                            Ok((ttfb, bytes)) => {
+                                publish(json!({"k": "tts", "ttfb_ms": ttfb}));
+                                track(&tail, bytes);
+                            }
                             Err(e) => warn!(room = %room_name, error = %e, "tts synthesize failed (tail)"),
                         }
                     }
-                    let _ = llm_task.await;
+                    match llm_join.await {
+                        Ok(Ok(outcome)) => {
+                            if spec_mode {
+                                llm.lock().await.settle(&outcome);
+                            }
+                            // tps=字符/秒近似(SSE chunk≠token,诚实口径;web 面板显示用)
+                            publish(json!({
+                                "k": "llm",
+                                "ttft_ms": outcome.ttft_ms,
+                                "tps": outcome.tps(),
+                            }));
+                        }
+                        Ok(Err(e)) => warn!(room = %room_name, error = %e, "llm chat failed"),
+                        Err(e) => warn!(room = %room_name, error = %e, "llm task join failed"),
+                    }
                     drop(pcm_tx);
                     let _ = playout_task.await;
                     watcher.abort();

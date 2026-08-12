@@ -8,9 +8,14 @@ use anyhow::Result;
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::Serialize;
 
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 struct VideoGrants {
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
     agent: bool,
+    #[serde(rename = "roomCreate", skip_serializing_if = "std::ops::Not::not")]
+    room_create: bool,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    room: String,
 }
 
 #[derive(Serialize)]
@@ -24,17 +29,23 @@ struct Claims<'a> {
 }
 
 pub fn agent_join_jwt(api_key: &str, api_secret: &str) -> Result<String> {
+    sign(api_key, api_secret, VideoGrants { agent: true, ..Default::default() })
+}
+
+/// 服务端 API 令牌(DeleteRoom 等 RoomService 调用需 roomCreate 授权)。
+pub fn server_api_jwt(api_key: &str, api_secret: &str, room: &str) -> Result<String> {
+    sign(
+        api_key,
+        api_secret,
+        VideoGrants { room_create: true, room: room.to_string(), ..Default::default() },
+    )
+}
+
+fn sign(api_key: &str, api_secret: &str, video: VideoGrants) -> Result<String> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?
         .as_secs();
-    let claims = Claims {
-        iss: api_key,
-        sub: "",
-        iat: now,
-        nbf: now,
-        exp: now + 3600,
-        video: VideoGrants { agent: true },
-    };
+    let claims = Claims { iss: api_key, sub: "", iat: now, nbf: now, exp: now + 3600, video };
     Ok(encode(
         &Header::new(Algorithm::HS256),
         &claims,

@@ -18,9 +18,10 @@ use tracing::info;
 
 use crate::config::Config;
 use crate::pipeline;
+use crate::token::server_api_jwt;
 use crate::tts_volc::TTS_SAMPLE_RATE;
 
-pub async fn run_job(_config: Config, job: proto::Job, url: String, token: String) -> Result<()> {
+pub async fn run_job(config: Config, job: proto::Job, url: String, token: String) -> Result<()> {
     let room_name = job.room.as_ref().map(|r| r.name.clone()).unwrap_or_default();
     let t0 = Instant::now();
     info!(job_id = %job.id, room = %room_name, "connecting to room");
@@ -100,8 +101,9 @@ pub async fn run_job(_config: Config, job: proto::Job, url: String, token: Strin
             info!(room = %room_name, "both directions ready, starting cascade pipeline");
             let src = source.clone();
             let rn = room_name.clone();
+            let lp = room.local_participant();
             pipeline_task = Some(tokio::spawn(async move {
-                if let Err(e) = pipeline::run_pipeline(mic, src, rn.clone()).await {
+                if let Err(e) = pipeline::run_pipeline(mic, src, lp, rn.clone()).await {
                     tracing::warn!(room = %rn, error = %e, "pipeline exited with error");
                 }
             }));
@@ -112,6 +114,41 @@ pub async fn run_job(_config: Config, job: proto::Job, url: String, token: Strin
         t.abort();
     }
     room.close().await.ok();
+    // 删房(对齐 Python delete_room_on_close=True):房间不删,空房存活 300s,
+    // 用户重连会进"无 agent 的旧房"(dispatch 只在建房时发生)。删房=再连必新房必新 agent。
+    delete_room(&config, &url, &room_name).await;
     info!(room = %room_name, uptime_s = t0.elapsed().as_secs(), "job closed");
     Ok(())
+}
+
+async fn delete_room(config: &Config, ws_url: &str, room_name: &str) {
+    if room_name.is_empty() {
+        return;
+    }
+    let http_url = ws_url.replacen("wss://", "https://", 1).replacen("ws://", "http://", 1);
+    let jwt = match server_api_jwt(&config.api_key, &config.api_secret, room_name) {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::warn!(error = %e, "delete room: 签发 server token 失败");
+            return;
+        }
+    };
+    let url = format!("{}/twirp/livekit.RoomService/DeleteRoom", http_url.trim_end_matches('/'));
+    let client = reqwest::Client::new();
+    match client
+        .post(&url)
+        .bearer_auth(jwt)
+        .json(&serde_json::json!({"room": room_name}))
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+    {
+        Ok(resp) if resp.status().is_success() => {
+            info!(room = %room_name, "room deleted (delete_room_on_close)");
+        }
+        Ok(resp) => {
+            tracing::warn!(room = %room_name, status = %resp.status(), "delete room 非 2xx");
+        }
+        Err(e) => tracing::warn!(room = %room_name, error = %e, "delete room 请求失败"),
+    }
 }

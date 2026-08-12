@@ -81,8 +81,9 @@ impl TurnGate {
         }
     }
 
-    /// 提交检查(commit_tick 轮询):Ready 时返回 (user_text, 停说→提交延迟)。
-    pub fn poll_commit(&mut self, now: Instant) -> Option<(String, Duration)> {
+    /// 提交检查(commit_tick 轮询)。`eou_delay`=停说→提交,`stt_delay`=停说→末 final
+    /// (对齐框架 EOUMetrics.transcription_delay 口径,web 延迟面板消费)。
+    pub fn poll_commit(&mut self, now: Instant) -> Option<CommitInfo> {
         if self.pending.is_empty() || self.user_speaking {
             return None;
         }
@@ -97,12 +98,22 @@ impl TurnGate {
             return None;
         }
         let text = std::mem::take(&mut self.pending);
-        let eou_delay = now.duration_since(anchor);
+        let stt_delay = self
+            .last_final_at
+            .map(|f| f.saturating_duration_since(anchor))
+            .unwrap_or_default();
+        let info = CommitInfo { text, eou_delay: now.duration_since(anchor), stt_delay };
         self.last_final_at = None;
         self.speech_end_at = None;
         self.eot_prob = None;
-        Some((text, eou_delay))
+        Some(info)
     }
+}
+
+pub struct CommitInfo {
+    pub text: String,
+    pub eou_delay: Duration,
+    pub stt_delay: Duration,
 }
 
 #[cfg(test)]
@@ -123,8 +134,10 @@ mod tests {
         g.on_speech_end(t0, Duration::from_millis(300));
         // 锚点=t0-300ms,MIN=650ms → t0+350ms 可提交
         assert!(g.poll_commit(t0 + Duration::from_millis(200)).is_none());
-        let (text, _) = g.poll_commit(t0 + Duration::from_millis(400)).expect("commit");
-        assert_eq!(text, "你好");
+        let info = g.poll_commit(t0 + Duration::from_millis(400)).expect("commit");
+        assert_eq!(info.text, "你好");
+        // stt_delay=final(t0) - 锚点(t0-300ms) = 300ms
+        assert_eq!(info.stt_delay, Duration::from_millis(300));
     }
 
     #[test]
@@ -153,8 +166,8 @@ mod tests {
         assert!(g.poll_commit(t0 + Duration::from_secs(2)).is_none());
         g.on_final("第二句", t0 + Duration::from_secs(2));
         g.on_speech_end(t0 + Duration::from_secs(2), Duration::from_millis(300));
-        let (text, _) = g.poll_commit(t0 + Duration::from_secs(3)).expect("commit");
-        assert_eq!(text, "第一句 第二句");
+        let info = g.poll_commit(t0 + Duration::from_secs(3)).expect("commit");
+        assert_eq!(info.text, "第一句 第二句");
     }
 
     #[test]
