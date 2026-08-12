@@ -1,6 +1,6 @@
 ---
 name: voice-agent-ops
-description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + 排障 SOP。触发词:"/voice-ops"、"voice 部署"、"voice-agent 排障"、"voice-hk 连不上/无声/没反应"、"语音 agent 无声"、"部署 voice worker"。涵盖:HK ECS 部署链(rsync editable+systemd)、排障决策树(通话中无声/重连无反应/局部无声/5G 直连不通)、rtc_probe 验收姿势、延迟分解四锚点、TURN relay、承接音与 bench 工具。
+description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + 排障 SOP。触发词:"/voice-ops"、"voice 部署"、"voice-agent 排障"、"voice-hk 连不上/无声/没反应"、"语音 agent 无声"、"部署 voice worker"、"热词增减/改热词"、"说单个字没反应"、"没有字幕"、"rust 灰度线/voice-worker-rust"。涵盖:HK ECS 部署链(rsync editable+systemd)、排障决策树(通话中无声/重连无反应/局部无声/5G 直连不通/单字被上游丢弃)、rtc_probe 验收姿势(三通道:音频/字幕/metrics)、延迟分解四锚点、TURN relay、承接音与 bench 工具、热词增减 SOP、Rust 灰度线运维。
 ---
 
 # voice-agent-ops — 部署与排障 SOP
@@ -40,7 +40,13 @@ worker 内:silero VAD(setup_fnc 预载)+ v1-mini 判停 + 火山 seedasr2.0 STT
 ```bash
 # 1. 本地三门(必过再部署)
 cd ~/mycc/2-Projects/realtime-voice-agent
-.venv/bin/ruff check src tests && .venv/bin/mypy src && .venv/bin/pytest -q
+# ⚠️ 必须剥代理再跑:交互 shell 的 ALL_PROXY=socks5://... 会漏进 httpx,
+#    9 条 mock HTTP 测试报 ImportError(socksio 未装)——纯环境污染,不是回归(2026-08-12 追过一次)
+env -u ALL_PROXY -u all_proxy -u HTTP_PROXY -u http_proxy -u HTTPS_PROXY -u https_proxy \
+  .venv/bin/ruff check src tests && .venv/bin/mypy src && \
+  env -u ALL_PROXY -u all_proxy -u HTTP_PROXY -u http_proxy -u HTTPS_PROXY -u https_proxy \
+  .venv/bin/pytest -q
+# 注:ruff 的 lint 范围只有 src tests,scripts/ 不在门内(rtc_probe 有 3 处历史 E501,非新增)
 
 # 2. rsync(HK 是 editable 装,src 落地即生效;venv 在 /root/voice-venv 非项目内)
 rsync -a --exclude '__pycache__' src scripts root@47.239.204.68:/root/realtime-voice-agent/
@@ -52,11 +58,17 @@ ssh root@47.239.204.68 'systemctl restart voice-worker && sleep 6 && systemctl i
 ssh root@47.239.204.68 'cd /root/realtime-voice-agent && timeout 50 \
   /root/voice-venv/bin/python scripts/rtc_probe.py --wav probe.wav --room t$(date +%s) --listen 7'
 # 期望:eou ~550-700 / "★ 端到端首声"(probe 口径含 ~1s 伪影,真实≈值-1s)/ llm / tts metric 全有
+#      + 字幕行 `[probe] 字幕[<identity>][final]:` 用户侧与 agent 侧各至少一条
 ```
 
 - 改承接音文案:改 `scripts/gen_fillers.py` FILLERS → ECS 上跑 `gen_fillers.py` → restart;**换 TTS 音色必须重跑**。
 - 改测试页:`/var/www/voice/voice-test.html`(nginx 静态,改完让用户硬刷新);仓内 `web/voice-test.html` 是 dev198 版,逻辑同步、URL/token 不同。
 - ⚠️ macOS 本机没有 `timeout` 命令,长命令别加(静默 command not found 会被管道吞掉误判"无输出")。
+- ⚠️ **验收是数「用户实际消费的输出通道」,不是数矩阵格子**(2026-08-12 教训):Rust 重写把字幕发布
+  **整个漏了**,P3 验收 12 项照样全绿,川哥打开页面第一句就是"没有字幕"——因为老 probe 只订阅音频轨+
+  metrics,**从没订阅 transcription 通道**,没订阅的东西不会变红、只会不存在。本项目对外通道共三条:
+  **音频轨 / 字幕(legacy Transcription 包) / metrics**,交付前三条都要有探针见证(probe 已常驻监听
+  `transcription_received`)。详见 [[feedback_probe_subscribes_only_known_channels]]。
 
 ## 排障决策树(按症状)
 
@@ -159,6 +171,18 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 - **用户侧(ASR)**:`stt final` 完整而字幕缺 → 前端/转发问题;`stt final` 就缺 → 上行音频或火山识别。已修根因=**LiveKit AEC warmup**(agent_activity.push_audio 源码实证):首次 agent 说话起 one-shot 3s 内,agent 说话期间喂 STT 的用户音频被替换成**纯静音**(VAD 收真帧所以能打断,但说的字 ASR 收不到)——greeting 没播完就抢话必中招,抢话点越早丢得越多。修=AEC_WARMUP_DURATION 3.0→0.5(浏览器 AEC 收敛 <300ms,0.5 够保护回声误识别)。若复发:重开 SPEAKER_ID_DUMP_DIR 听 pump 侧音频分层(有声无字=火山层;无声=上行/浏览器 NS/AGC 层)。
 - **AI 侧(TTS)**:`tts synth` 与字幕对照——synth 里没那个字=上游剥除(by design),有=合成/播放层。已修根因=旧 R2 在 volc_tts **句级**剥句首承接词("嗯,/好的,"),只改音频不改字幕,字幕比音频多字,川哥对照字幕以为 TTS 丢字。修=剥除挪到 fast_llm.LeadingFillerStripper(LLM 输出流,只剥回复最开头,首字快筛零延迟),TTS/字幕/对话历史三者一致;volc_tts 不再句级剥。开关 LLM_STRIP_LEADING_FILLER 跟随 FILLER_ENABLED(承接音关则正文语气词保留)。
 
+### 症状:说单个短词(停/好/对)AI 完全没反应(2026-08-12 定性:上游丢弃,不是本地 bug)
+**先别查自己**:火山话语检测层对孤立超短音段**整段丢弃**——零 interim 零 definite,
+本地 VAD/门控/判停全正常(它们确实正常),日志里与"用户压根没说话"完全同形,在自己这侧穷举到不了根因。
+- **定性方法**:写直连 sauc WS 的脚本**绕过项目全部代码**跑对照矩阵,一次一个变量 + 一条已知能过的
+  长句当锚样本同批跑(锚不过=装置坏了,不是结论)。旧脚本思路留在 64.90 `/tmp/volcmx`。
+- **已试无效,别再试一遍**:`enable_ddc=0`(只影响标点)/`force_to_speech_time=10`(无效)/
+  增益 ×2.5(不但没捞回还误识别成别的词)。
+- **唯一有效杠杆=热词表**(见下面「热词增减 SOP」)。**但有声学硬底**:opus 往返模拟 RTC 损耗后,
+  合成弱音"停"即使 `scale=2.0` 仍丢——热词只救得回信道良好+发音清晰的。
+- **兜底方向(未做)**:话术层引导双音节("停一下/好的"存活率远高于单音节);仍不够则上本地 KWS 急停
+  (sherpa,重活另立项)。详见 [[feedback_upstream_silent_drop_vs_no_input]]。
+
 ### 症状:响应变慢
 拉 worker 日志四锚点分解(**别信单一 metric,probe 端到端数字含 ~1s 伪影**):
 `S1v3 preflight emitted`(silence=X 反推停说时刻)→ `UserTurnCommitted` → `tts: connecting`(首句 flush 完成)→ `AgentSpeechStarted`。
@@ -200,6 +224,25 @@ ssh root@64.90.13.117 "sed -i 's/^VOLC_ASR_HOTWORDS=.*/VOLC_ASR_HOTWORDS=<新词
 - cc 改安全组/开公网端口会被 harness 拦 → 给现成命令川哥自己跑。
 - 部署自验必须 rtc_probe 真跑(editable 装才 rsync 即生效;曾栽过 site-packages 旧副本)。
 - **git 归属(2026-07-04 川哥拍板定稿)**:随 mycc 仓隐私剥离曾短暂出仓,当日川哥拍板**回归 oh-my-ccwork 仓 `2-Projects/` 正常管理**(1c2c14462 快照入仓;旧历史已被 filter-repo 洗净,从快照重新开始)。"部署过的代码立即 commit"落 mycc 仓即可;`.gitignore`/`.git/info/exclude` 的剥离清单里**不再有本项目**(其余 4 个剥离项目不受影响)。
+
+## Rust 灰度线(2026-08-12 起,64.90 同机并行)
+
+- **为什么同机**:A/B 对照只能差被测变量本身。最初部署在 dev198(另一台机/另一地理)被川哥当场驳回——
+  跨机测出的差异不可归因。**同机、同配置源、同网络路径,只差实现语言**。
+- **unit**:`voice-worker-rust`。与 `voice-worker`(Python 主线)/`voice-worker-colleague`/`voice-console`
+  并存,**老三个 unit 零触碰**是这条线的红线。二进制 `/root/rust-worker/rust-worker`,上一版留 `.prev` 可秒回滚。
+- **env 层叠**(systemd EnvironmentFile 后覆盖前):`.env` → `poc-eou.env`(**与 Python 主线共享**,含热词)
+  → `rust-worker.env`(只放两线差异项)。⚠️ **共享配置一律只写 poc-eou.env,别在 rust-worker.env 复制同值**
+  ——两处同值 = 必然漂移(热词就是先踩后收敛的)。
+- **构建**:本机/dev198 的 glibc 比 64.90(24.04/2.39)新,产物拷过去直接跑不起来。走 GitHub Actions
+  `.github/workflows/rust-worker-build.yml`(ubuntu-24.04 + glibc 符号天花板门禁),下载 artifact 再 scp。
+  ⚠️ `gh workflow run` 要求 workflow 文件在**默认分支上**才认。
+- **测试页**:Python 线 `voice-test.html` / Rust 线 `voice-test-rust.html`(同一 nginx docroot
+  `/var/www/voice`,各自 token 与 agent_name)。
+- **日志**:`journalctl -u voice-worker-rust`。关键行与 Python 线同名不同措辞
+  (`asr: connected (... hotwords=N)`);输入观测每 10s 一行 `audio in (10s) frames=N mean_amp=X`
+  (frames=0 → 上行断流/息屏;amp≈0 → 送的是静音;正常 → 问题在下游)。
+- **代码**:worktree `~/mycc/.claude/worktrees/rust-worker`,分支 `feat/rust-worker`(已 push origin)。
 
 ## 租户 worker(BYOK 服务化,2026-07-28 起)
 

@@ -126,6 +126,18 @@ async def main(a: argparse.Namespace) -> None:
         except Exception:
             pass
 
+    @room.on("transcription_received")
+    def _on_transcription(
+        segments: list[rtc.TranscriptionSegment],
+        participant: rtc.Participant | None,
+        *_: object,
+    ) -> None:
+        # 字幕验证:legacy Transcription 包(测试页气泡消费同款事件)
+        ident = participant.identity if participant else "?"
+        for s in segments:
+            fin = "final" if s.final else "interim"
+            print(f"[probe] 字幕[{ident}][{s.id}][{fin}]: {s.text}", flush=True)
+
     async def _pull(track: rtc.Track) -> None:
         nonlocal rec_sr
         async for ev in rtc.AudioStream(track):  # type: ignore[arg-type]
