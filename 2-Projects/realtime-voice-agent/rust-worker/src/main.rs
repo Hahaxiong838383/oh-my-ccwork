@@ -27,6 +27,10 @@ use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // rustls 进程级 crypto provider(ring):运行时 TLS 全链 rustls——libwebrtc 静态库
+    // 自带 BoringSSL 符号,链 openssl 会在 Linux 撞 duplicate symbol(dev198 实证);
+    // reqwest rustls-no-provider 要求建 Client 前显式安装默认 provider。
+    let _ = rustls::crypto::ring::default_provider().install_default();
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),

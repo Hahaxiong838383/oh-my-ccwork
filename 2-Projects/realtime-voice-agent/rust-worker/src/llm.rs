@@ -449,6 +449,8 @@ mod tests {
 
     #[test]
     fn history_settle_paths() {
+        // Llm::new 建 reqwest Client,rustls-no-provider 下须先装 provider(main 同款)
+        let _ = rustls::crypto::ring::default_provider().install_default();
         let cfg = LlmConfig {
             base_url: "http://x".into(),
             api_key: "k".into(),
