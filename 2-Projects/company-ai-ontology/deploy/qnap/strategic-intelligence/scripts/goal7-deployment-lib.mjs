@@ -3,8 +3,12 @@ import fs from 'node:fs/promises'
 import { isDeepStrictEqual } from 'node:util'
 import path from 'node:path'
 
+import { validateGoal7MigrationEvidence, validateGoal7PreparationEvidence } from './goal7-phase-evidence-lib.mjs'
+
 export const GOAL7_DEPLOYMENT_RAW_FILES = Object.freeze({
   runtimeIdentity: 'runtime-component-versions.json',
+  preparation: 'preparation-evidence.json',
+  migration: 'migration-012-evidence.json',
   before: 'pre-deployment-state.json',
   after: 'post-deployment-state.json',
   sideEffects: 'deployment-side-effects.json',
@@ -124,7 +128,15 @@ export async function buildGoal7DeploymentEvidence(bundleRoot) {
   state(entries.after.value, 'after')
   sideEffects(entries.sideEffects.value)
   runtimeIdentity(entries.runtimeIdentity.value)
+  validateGoal7PreparationEvidence(entries.preparation.value)
+  validateGoal7MigrationEvidence(entries.migration.value, {
+    sourceCommit: entries.preparation.value.sourceCommit,
+    hLiteSourceCommit: entries.preparation.value.hLiteSourceCommit,
+    preparationEvidenceSha256: entries.preparation.sha256,
+  })
   const identity = entries.runtimeIdentity.value
+  const preparation = entries.preparation.value
+  const migration = entries.migration.value
   const before = entries.before.value
   const after = entries.after.value
   const audit = entries.sideEffects.value
@@ -132,6 +144,11 @@ export async function buildGoal7DeploymentEvidence(bundleRoot) {
   requireValue(timestamp(audit.windowStart, 'audit.windowStart') <= timestamp(before.capturedAt, 'before.capturedAt'), 'side-effect window starts after deployment')
   requireValue(timestamp(audit.windowEnd, 'audit.windowEnd') >= timestamp(after.capturedAt, 'after.capturedAt'), 'side-effect window ends before deployment verification')
   requireValue(after.candidateMigration012Applied === true, 'candidate migration 012 missing after deployment')
+  requireValue(preparation.sourceCommit === identity.sourceCommit && migration.sourceCommit === identity.sourceCommit, 'Goal 7 phase Ontology sourceCommit drift')
+  requireValue(preparation.hLiteSourceCommit === identity.hLiteSourceCommit && migration.hLiteSourceCommit === identity.hLiteSourceCommit, 'Goal 7 phase H-Lite sourceCommit drift')
+  requireValue(preparation.agentCoreVersion === identity.agentCoreVersion, 'Goal 7 preparation Agent Core version drift')
+  requireValue(preparation.knowledgeConnectorVersion === identity.knowledgeConnectorVersion, 'Goal 7 preparation Knowledge Connector version drift')
+  requireValue(preparation.hLiteVersion === identity.hLiteVersion, 'Goal 7 preparation H-Lite version drift')
   requireValue(after.foundation.criticalContainerCount === 13, 'Foundation critical container count mismatch')
   requireValue(before.foundation.criticalContainerCount === after.foundation.criticalContainerCount, 'Foundation critical container count changed')
   requireValue(after.foundation.unhealthyContainerCount === 0, 'Foundation unhealthy containers detected')

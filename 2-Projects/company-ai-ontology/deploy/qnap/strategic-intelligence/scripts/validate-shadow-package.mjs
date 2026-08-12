@@ -59,7 +59,7 @@ await fs.access(path.join(root, 'config/goal7-foundation-release-plan.json')).ca
 for (const name of ['reviewer-role-member-session.template.json', 'reviewer-role-security-owner-acceptance.template.json']) {
   await fs.access(path.join(root, 'config', name)).catch(() => errors.push(`missing reviewer role evidence template ${name}`))
 }
-for (const name of ['goal7-evidence-lib.mjs', 'goal7-worker-readback-lib.mjs', 'goal7-deployment-lib.mjs', 'goal7-runtime-release-lib.mjs', 'goal7-release-plan-lib.mjs', 'validate-goal7-runtime-release.mjs', 'validate-goal7-release-plan.mjs', 'compile-goal7-worker-readback.mjs', 'validate-goal7-worker-readback.mjs', 'record-goal7-owner-acceptance.mjs', 'compile-goal7-deployment-evidence.mjs', 'compile-goal7-acceptance.mjs', 'validate-goal7-acceptance.mjs', 'capture-goal7-deployment-state.sh', 'deploy-goal7-foundation.sh', 'rollback-goal7-foundation.sh']) {
+for (const name of ['goal7-evidence-lib.mjs', 'goal7-worker-readback-lib.mjs', 'goal7-deployment-lib.mjs', 'goal7-runtime-release-lib.mjs', 'goal7-release-plan-lib.mjs', 'goal7-phase-evidence-lib.mjs', 'validate-goal7-runtime-release.mjs', 'validate-goal7-release-plan.mjs', 'validate-goal7-preparation.mjs', 'validate-goal7-migration.mjs', 'write-goal7-preparation-evidence.mjs', 'write-goal7-migration-evidence.mjs', 'hash-goal7-runtime-tree.mjs', 'compile-goal7-worker-readback.mjs', 'validate-goal7-worker-readback.mjs', 'record-goal7-owner-acceptance.mjs', 'compile-goal7-deployment-evidence.mjs', 'compile-goal7-acceptance.mjs', 'validate-goal7-acceptance.mjs', 'capture-goal7-deployment-state.sh', 'prepare-goal7-foundation.sh', 'apply-goal7-migration-012.sh', 'verify-goal7-migration-012-live.sh', 'deploy-goal7-foundation.sh', 'rollback-goal7-foundation.sh']) {
   await fs.access(path.join(root, 'scripts', name)).catch(() => errors.push(`missing Goal 7 evidence compiler file ${name}`))
 }
 for (const name of ['goal7-worker-readback-seed.sql', 'goal7-worker-readback-ledger.sql', 'goal7-worker-readback-cleanup.sql']) {
@@ -181,6 +181,8 @@ const qnapHostNodeScripts = [
   'run-internal-engineering-once.sh',
   'capture-internal-engineering-runtime-state.sh',
   'capture-goal7-deployment-state.sh',
+  'prepare-goal7-foundation.sh',
+  'apply-goal7-migration-012.sh',
   'deploy-goal7-foundation.sh',
 ]
 for (const name of qnapHostNodeScripts) {

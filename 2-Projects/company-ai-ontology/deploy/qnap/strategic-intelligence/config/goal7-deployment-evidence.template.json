@@ -33,6 +33,8 @@
   },
   "rawEvidenceFiles": {
     "runtimeIdentity": {},
+    "preparation": {},
+    "migration": {},
     "before": {},
     "after": {},
     "sideEffects": {}

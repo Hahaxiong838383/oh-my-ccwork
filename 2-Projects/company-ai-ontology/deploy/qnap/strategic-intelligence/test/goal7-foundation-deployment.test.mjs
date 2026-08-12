@@ -11,6 +11,8 @@ import { validateGoal7RuntimeRelease } from '../scripts/goal7-runtime-release-li
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DEPLOY = path.join(ROOT, 'scripts/deploy-goal7-foundation.sh')
+const PREPARE = path.join(ROOT, 'scripts/prepare-goal7-foundation.sh')
+const MIGRATE = path.join(ROOT, 'scripts/apply-goal7-migration-012.sh')
 const ROLLBACK = path.join(ROOT, 'scripts/rollback-goal7-foundation.sh')
 
 function sha256(bytes) {
@@ -92,7 +94,7 @@ async function rewriteChecksums(root) {
 test('Goal 7 部署和回滚在公司 QNAP 预检前要求独立显式授权', () => {
   const deploy = spawnSync('sh', [DEPLOY], { encoding: 'utf8' })
   assert.equal(deploy.status, 2)
-  assert.match(deploy.stderr, /explicit GOAL7_DEPLOY_APPROVED=YES/)
+  assert.match(deploy.stderr, /explicit GOAL7_SERVICE_RECREATION_APPROVED=YES/)
   assert.doesNotMatch(deploy.stderr, /QNAP|docker|runtime evidence/i)
 
   const rollback = spawnSync('sh', [ROLLBACK], { encoding: 'utf8' })
@@ -144,6 +146,8 @@ test('Goal 7 Runtime 包拒绝 SHA 清单篡改和重新签名后的内部 Hash 
 })
 
 test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async () => {
+  const prepare = await fs.readFile(PREPARE, 'utf8')
+  const migrate = await fs.readFile(MIGRATE, 'utf8')
   const deploy = await fs.readFile(DEPLOY, 'utf8')
   const rollback = await fs.readFile(ROLLBACK, 'utf8')
   for (const marker of [
@@ -152,7 +156,7 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
     'agent_core_version=',
     'knowledge_connector_version=',
     'h_lite_version=',
-    'validate-goal7-runtime-release.mjs',
+    'validate-goal7-migration.mjs',
     'capture-goal7-deployment-state.sh" before',
     'capture-goal7-deployment-state.sh" after',
     'capture-shadow-side-effects.sh',
@@ -163,14 +167,23 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
     'migration012_retained_on_rollback=true',
   ]) assert.ok(deploy.includes(marker), `deployment marker missing: ${marker}`)
 
-  assert.match(deploy, /compose build agent-core knowledge-connector h-lite/)
-  assert.match(deploy, /verify_image_readable company-ai-foundation-agent-core:latest \/app\/src\/server\.mjs/)
-  assert.match(deploy, /verify_image_readable company-ai-foundation-knowledge-connector:latest \/app\/src\/server\.mjs/)
-  assert.match(deploy, /verify_image_readable company-ai-foundation-h-lite:latest \/app\/company-qnap-lite\.mjs/)
+  assert.match(prepare, /validate-goal7-runtime-release\.mjs/)
+  assert.match(prepare, /goal7-candidate-\$run_id/)
+  assert.match(prepare, /verify_image_readable company-ai-foundation-agent-core:goal7-candidate-\$run_id \/app\/src\/server\.mjs/)
+  assert.match(prepare, /verify_image_readable company-ai-foundation-knowledge-connector:goal7-candidate-\$run_id \/app\/src\/server\.mjs/)
+  assert.match(prepare, /verify_image_readable company-ai-foundation-h-lite:goal7-candidate-\$run_id \/app\/company-qnap-lite\.mjs/)
+  assert.match(migrate, /012-goal7-authority-runtime\.sql/)
+  assert.match(migrate, /migration-012-evidence\.json/)
+  assert.doesNotMatch(migrate, /compose up|compose build/)
+  assert.doesNotMatch(deploy, /compose build|psql[\s\S]*012-goal7-authority-runtime\.sql/)
   assert.match(deploy, /wait_foundation_stable/)
   assert.match(deploy, /stable_samples.*-ge 2/)
   assert.match(deploy, /count.*-eq 13/)
-  assert.equal((deploy.match(/compose up -d --no-deps (agent-core|knowledge-connector|h-lite)/g) || []).length, 3)
+  const mainPath = deploy.slice(deploy.indexOf('wait_legacy_h_lite_quiet ||'))
+  for (const service of ['agent-core', 'knowledge-connector', 'h-lite']) {
+    assert.equal((mainPath.match(new RegExp(`compose up -d --no-deps --no-build ${service}`, 'g')) || []).length, 1)
+  }
+  assert.match(deploy, /compose up -d --no-deps --no-build "\$service"/)
   assert.match(deploy, /wait_legacy_h_lite_quiet/)
   assert.match(deploy, /h_lite_admin drain 0/)
   assert.match(deploy, /drain_agent_core/)
@@ -195,9 +208,9 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
   assert.match(deploy, /agent_core_intake_ready=1/)
   assert.match(deploy, /if \[ "\$agent_core_intake_ready" -eq 1 \]; then\s+h_lite_admin resume 0/s)
   assert.match(deploy, /recovery H-Lite remains drained and no new Feishu work is admitted/)
-  assert.ok(deploy.indexOf('h_lite_switched=1') < deploy.indexOf('compose up -d --no-deps h-lite'))
-  assert.ok(deploy.indexOf('agent_core_switched=1') < deploy.indexOf('compose up -d --no-deps agent-core'))
-  assert.ok(deploy.indexOf('knowledge_connector_switched=1') < deploy.indexOf('compose up -d --no-deps knowledge-connector'))
+  assert.ok(mainPath.indexOf('h_lite_switched=1') < mainPath.indexOf('compose up -d --no-deps --no-build h-lite'))
+  assert.ok(mainPath.indexOf('agent_core_switched=1') < mainPath.indexOf('compose up -d --no-deps --no-build agent-core'))
+  assert.ok(mainPath.indexOf('knowledge_connector_switched=1') < mainPath.indexOf('compose up -d --no-deps --no-build knowledge-connector'))
   assert.match(deploy, /\[ "\$agent_core_switched" -eq 1 \].*restore_services/s)
   assert.match(deploy, /\[ "\$knowledge_connector_switched" -eq 1 \].*restore_services/s)
   assert.match(deploy, /preserve_recovery_h_lite.*h_lite_admin resume 0/s)

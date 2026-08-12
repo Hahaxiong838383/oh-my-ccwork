@@ -22,7 +22,9 @@ const ACCEPTANCE_STEPS = Object.freeze([
   'capture_pre_deployment_state',
   'backup_config_and_images',
   'apply_candidate_migration_012',
-  'build_three_target_images',
+    'build_and_bind_three_candidate_images',
+    'validate_preparation_evidence',
+    'validate_migration_evidence',
   'wait_legacy_h_lite_quiet_window',
   'switch_h_lite_recovery_layer_and_verify',
   'drain_h_lite_and_agent_core',
@@ -33,7 +35,7 @@ const ACCEPTANCE_STEPS = Object.freeze([
   'audit_zero_business_side_effects',
   'compile_deployment_evidence',
   'run_synthetic_authority_canary',
-  'record_independent_owner_acceptance',
+    'record_independent_owner_acceptance',
 ])
 const ROLLBACK_TRIGGERS = Object.freeze([
   'target_service_health_timeout',
@@ -82,7 +84,7 @@ export function validateGoal7ReleasePlan(plan, scripts = {}) {
     'requiredExplicitAuthorizations', 'targetServices', 'unaffectedServices', 'timing',
     'expectedImpacts', 'acceptanceSteps', 'rollbackTriggers', 'closedCapabilities',
   ], 'releasePlan')
-  requireValue(plan.planVersion === '1.2.0', 'release plan version mismatch')
+  requireValue(plan.planVersion === '1.3.0', 'release plan version mismatch')
   requireValue(plan.goalKey === 'P1-PROD-READINESS', 'release plan goal mismatch')
   requireValue(plan.status === 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH', 'release plan status must remain waiting')
   requireValue(plan.companyQnapIdentity === 'qnap:company/prnas/TS-X65', 'release plan QNAP identity mismatch')
@@ -114,22 +116,58 @@ export function validateGoal7ReleasePlan(plan, scripts = {}) {
   exactKeys(plan.closedCapabilities, CLOSED_CAPABILITIES, 'closedCapabilities')
   for (const key of CLOSED_CAPABILITIES) requireValue(plan.closedCapabilities[key] === false, `${key} must remain closed`)
 
+  if (scripts.prepare !== undefined) {
+    const prepare = scripts.prepare
+    requireValue(prepare.includes('GOAL7_DEPLOY_APPROVED'), 'preparation script missing authorization GOAL7_DEPLOY_APPROVED')
+    requireValue(prepare.indexOf('GOAL7_DEPLOY_APPROVED') < prepare.indexOf('preflight-company-qnap.sh'), 'preparation authorization must precede QNAP preflight')
+    requireValue(!prepare.includes('GOAL7_MIGRATION_012_APPROVED') && !prepare.includes('GOAL7_SERVICE_RECREATION_APPROVED'), 'preparation script must not require later phase authorization')
+    requireValue(prepare.includes('preparation-evidence.json'), 'preparation script missing bound evidence')
+    requireValue(prepare.includes('goal7-candidate-$run_id'), 'preparation script missing candidate image tags')
+    requireValue(prepare.includes('goal7-pre-$run_id'), 'preparation script missing previous image tags')
+    requireValue(!/compose up|compose (restart|down|stop)/.test(prepare), 'preparation script contains service recreation')
+    requireValue(!prepare.includes('compose exec -T postgres psql'), 'preparation script contains database migration')
+  }
+  if (scripts.migrate !== undefined) {
+    const migrate = scripts.migrate
+    requireValue(migrate.includes('GOAL7_MIGRATION_012_APPROVED'), 'migration script missing authorization GOAL7_MIGRATION_012_APPROVED')
+    requireValue(migrate.indexOf('GOAL7_MIGRATION_012_APPROVED') < migrate.indexOf('preflight-company-qnap.sh'), 'migration authorization must precede QNAP preflight')
+    requireValue(!migrate.includes('GOAL7_DEPLOY_APPROVED') && !migrate.includes('GOAL7_SERVICE_RECREATION_APPROVED'), 'migration script must not require another phase authorization')
+    requireValue(migrate.includes('validate-goal7-preparation.mjs'), 'migration script missing preparation evidence gate')
+    requireValue(migrate.includes('migration-012-evidence.json'), 'migration script missing migration evidence')
+    requireValue(migrate.includes('verify-goal7-migration-012-live.sh'), 'migration script missing live database verification')
+    requireValue(!/compose up|compose build|compose (restart|down|stop)/.test(migrate), 'migration script contains service recreation')
+  }
+  if (scripts.verifyMigration !== undefined) {
+    const verifyMigration = scripts.verifyMigration
+    requireValue(verifyMigration.includes('ontology_app'), 'migration verifier missing real application role verification')
+    requireValue(verifyMigration.includes('forced_rls_count') && verifyMigration.includes('tenant_policy_count'), 'migration verifier missing RLS verification')
+    requireValue(verifyMigration.includes('delete_privilege_count') && verifyMigration.includes('banned_column_count'), 'migration verifier missing privilege or data-minimization checks')
+    requireValue(!/compose up|compose build|compose (restart|down|stop)/.test(verifyMigration), 'migration verifier contains service recreation')
+  }
   if (scripts.deploy !== undefined) {
     const deploy = scripts.deploy
-    for (const marker of ['GOAL7_DEPLOY_APPROVED', 'GOAL7_MIGRATION_012_APPROVED', 'GOAL7_SERVICE_RECREATION_APPROVED']) {
-      requireValue(deploy.includes(marker), `deployment script missing authorization ${marker}`)
-    }
+    const mainPathStart = deploy.indexOf("wait_legacy_h_lite_quiet ||")
+    const mainPath = mainPathStart >= 0 ? deploy.slice(mainPathStart) : ''
+    requireValue(deploy.includes('GOAL7_SERVICE_RECREATION_APPROVED'), 'deployment script missing authorization GOAL7_SERVICE_RECREATION_APPROVED')
+    requireValue(!deploy.includes('GOAL7_DEPLOY_APPROVED') && !deploy.includes('GOAL7_MIGRATION_012_APPROVED'), 'service recreation script must not require earlier phase authorization')
     requireValue(deploy.indexOf('GOAL7_SERVICE_RECREATION_APPROVED') < deploy.indexOf('preflight-company-qnap.sh'), 'service authorization must precede QNAP preflight')
+    requireValue(deploy.includes('validate-goal7-migration.mjs'), 'deployment missing migration evidence gate')
+    requireValue(deploy.includes('preparation_evidence_sha256=') && deploy.includes('migration_evidence_sha256='), 'deployment manifest missing phase evidence hashes')
     requireValue(deploy.includes('attempt=$((attempt+1)); [ "$attempt" -lt 90 ] || return 1; sleep 2'), 'deployment health timeout changed')
-    requireValue((deploy.match(/compose up -d --no-deps (agent-core|knowledge-connector|h-lite)/g) || []).length === 3, 'deployment must switch exactly three services without dependencies')
-    requireValue(deploy.indexOf('compose up -d --no-deps h-lite') < deploy.indexOf('compose up -d --no-deps agent-core'), 'recovery-capable H-Lite must switch before Agent Core')
+    for (const service of ['agent-core', 'knowledge-connector', 'h-lite']) {
+      requireValue((mainPath.match(new RegExp(`compose up -d --no-deps --no-build ${service}`, 'g')) || []).length === 1, `deployment must switch prebuilt ${service} exactly once on the main path`)
+    }
+    requireValue(mainPath.indexOf('compose up -d --no-deps --no-build h-lite') < mainPath.indexOf('compose up -d --no-deps --no-build agent-core'), 'recovery-capable H-Lite must switch before Agent Core')
     requireValue(deploy.includes('wait_legacy_h_lite_quiet'), 'deployment missing legacy H-Lite quiet gate')
     requireValue(deploy.includes('h_lite_admin drain 0'), 'deployment missing H-Lite drain gate')
     requireValue(deploy.includes('drain_agent_core'), 'deployment missing Agent Core drain gate')
     requireValue(deploy.includes('h_lite_admin resume 0'), 'deployment missing H-Lite resume gate')
     requireValue(deploy.includes('pendingDeliveries===0'), 'deployment missing pending delivery gate')
-    requireValue(!/compose up -d (?!.*--no-deps)/.test(deploy), 'deployment service recreation must use --no-deps')
+    requireValue(!/compose up -d (?!.*--no-deps --no-build)/.test(deploy), 'deployment service recreation must use --no-deps --no-build')
+    requireValue(deploy.includes('compose up -d --no-deps --no-build "$service"'), 'deployment recovery path must reuse only prebuilt images without dependencies')
     requireValue(!/compose (restart|down|stop)/.test(deploy), 'deployment contains a broad service action')
+    requireValue(!deploy.includes('compose exec -T postgres psql'), 'deployment script must not apply migration 012')
+    requireValue(!/compose build/.test(deploy), 'deployment script must not rebuild candidate images')
   }
   if (scripts.rollback !== undefined) {
     const rollback = scripts.rollback

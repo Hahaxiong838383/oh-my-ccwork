@@ -173,7 +173,7 @@ function validateDeployment(value) {
     'erpWriteback', 'socialWriteback',
   ], 'deployment.closedCapabilities')
   for (const key of Object.keys(value.closedCapabilities)) requireValue(value.closedCapabilities[key] === false, `deployment.closedCapabilities.${key} must remain false`)
-  exactKeys(value.rawEvidenceFiles, ['runtimeIdentity', 'before', 'after', 'sideEffects'], 'deployment.rawEvidenceFiles')
+  exactKeys(value.rawEvidenceFiles, ['runtimeIdentity', 'preparation', 'migration', 'before', 'after', 'sideEffects'], 'deployment.rawEvidenceFiles')
   for (const [key, file] of Object.entries(value.rawEvidenceFiles)) {
     exactKeys(file, ['file', 'sha256'], `deployment.rawEvidenceFiles.${key}`)
     requireValue(/^[a-z0-9-]+\.json$/.test(file.file), `deployment.rawEvidenceFiles.${key}.file invalid`)

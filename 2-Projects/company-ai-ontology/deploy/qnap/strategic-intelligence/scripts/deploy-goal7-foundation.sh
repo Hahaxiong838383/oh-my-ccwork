@@ -3,35 +3,35 @@ set -eu
 exec </dev/null
 umask 077
 
-[ "${GOAL7_DEPLOY_APPROVED:-}" = YES ] || { echo 'Goal 7 deployment requires explicit GOAL7_DEPLOY_APPROVED=YES' >&2; exit 2; }
-[ "${GOAL7_MIGRATION_012_APPROVED:-}" = YES ] || { echo 'Goal 7 migration 012 requires explicit GOAL7_MIGRATION_012_APPROVED=YES' >&2; exit 2; }
 [ "${GOAL7_SERVICE_RECREATION_APPROVED:-}" = YES ] || { echo 'Goal 7 service recreation requires explicit GOAL7_SERVICE_RECREATION_APPROVED=YES' >&2; exit 2; }
-runtime_evidence_root=${GOAL7_RUNTIME_EVIDENCE_ROOT:?GOAL7_RUNTIME_EVIDENCE_ROOT is required}
 evidence_root=${GOAL7_DEPLOYMENT_EVIDENCE_ROOT:?GOAL7_DEPLOYMENT_EVIDENCE_ROOT is required}
 approved_source_commit=${GOAL7_APPROVED_SOURCE_COMMIT:?GOAL7_APPROVED_SOURCE_COMMIT is required}
 approved_h_lite_source_commit=${GOAL7_APPROVED_H_LITE_SOURCE_COMMIT:?GOAL7_APPROVED_H_LITE_SOURCE_COMMIT is required}
-run_id=${GOAL7_DEPLOY_RUN_ID:-$(date +%Y%m%d%H%M%S)}
 script_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$script_root/preflight-company-qnap.sh"
 node_bin=${NODE_BIN:-$script_root/node-runtime.sh}
 [ -x "$node_bin" ] || { echo 'Goal 7 deployment Node runtime unavailable' >&2; exit 2; }
-case "$runtime_evidence_root" in "$shadow_root"/release/*) ;; *) echo 'runtime evidence must remain under strategic intelligence release root' >&2; exit 2 ;; esac
 case "$evidence_root" in "$shadow_root"/approvals/*) ;; *) echo 'deployment evidence must remain under strategic intelligence approvals root' >&2; exit 2 ;; esac
+case "$evidence_root" in *'/../'*|*/..|*'//'*) echo 'Goal 7 deployment evidence path is not normalized' >&2; exit 2 ;; esac
 
-runtime_validation=$($node_bin "$script_root/validate-goal7-runtime-release.mjs" \
-  "$runtime_evidence_root" "$approved_source_commit" "$approved_h_lite_source_commit")
-source_commit=$(printf '%s\n' "$runtime_validation" | awk -F= '/^source_commit=/{print $2;exit}')
-h_lite_source_commit=$(printf '%s\n' "$runtime_validation" | awk -F= '/^h_lite_source_commit=/{print $2;exit}')
-agent_core_version=$(printf '%s\n' "$runtime_validation" | awk -F= '/^agent_core_version=/{print $2;exit}')
-knowledge_connector_version=$(printf '%s\n' "$runtime_validation" | awk -F= '/^knowledge_connector_version=/{print $2;exit}')
-h_lite_version=$(printf '%s\n' "$runtime_validation" | awk -F= '/^h_lite_version=/{print $2;exit}')
-[ "$source_commit" = "$approved_source_commit" ] || { echo 'approved Ontology sourceCommit drift' >&2; exit 2; }
-[ "$h_lite_source_commit" = "$approved_h_lite_source_commit" ] || { echo 'approved H-Lite sourceCommit drift' >&2; exit 2; }
-[ -n "$agent_core_version" ] && [ -n "$knowledge_connector_version" ] && [ -n "$h_lite_version" ] || { echo 'runtime component versions missing' >&2; exit 2; }
+migration_validation=$($node_bin "$script_root/validate-goal7-migration.mjs" \
+  "$evidence_root" "$approved_source_commit" "$approved_h_lite_source_commit")
+run_id=$(printf '%s\n' "$migration_validation" | awk -F= '/^run_id=/{print $2;exit}')
+source_commit=$(printf '%s\n' "$migration_validation" | awk -F= '/^source_commit=/{print $2;exit}')
+h_lite_source_commit=$(printf '%s\n' "$migration_validation" | awk -F= '/^h_lite_source_commit=/{print $2;exit}')
+agent_core_version=$(printf '%s\n' "$migration_validation" | awk -F= '/^agent_core_version=/{print $2;exit}')
+knowledge_connector_version=$(printf '%s\n' "$migration_validation" | awk -F= '/^knowledge_connector_version=/{print $2;exit}')
+h_lite_version=$(printf '%s\n' "$migration_validation" | awk -F= '/^h_lite_version=/{print $2;exit}')
+runtime_root=$(printf '%s\n' "$migration_validation" | awk -F= '/^runtime_root=/{print $2;exit}')
+runtime_evidence_root=$(printf '%s\n' "$migration_validation" | awk -F= '/^runtime_evidence_root=/{print $2;exit}')
+backup_root=$(printf '%s\n' "$migration_validation" | awk -F= '/^backup_root=/{print $2;exit}')
+backup_env_sha=$(printf '%s\n' "$migration_validation" | awk -F= '/^backup_env_sha256=/{print $2;exit}')
+backup_compose_sha=$(printf '%s\n' "$migration_validation" | awk -F= '/^backup_compose_sha256=/{print $2;exit}')
+preparation_evidence_sha=$(printf '%s\n' "$migration_validation" | awk -F= '/^preparation_evidence_sha256=/{print $2;exit}')
+migration_evidence_sha=$(printf '%s\n' "$migration_validation" | awk -F= '/^migration_evidence_sha256=/{print $2;exit}')
+[ -n "$run_id" ] && [ -n "$runtime_root" ] && [ -n "$backup_root" ] || { echo 'Goal 7 migration evidence is incomplete' >&2; exit 2; }
+[ "${GOAL7_DEPLOY_RUN_ID:-$run_id}" = "$run_id" ] || { echo 'Goal 7 service recreation run id drift' >&2; exit 2; }
 
-runtime_root=$shadow_root/foundation-releases/$source_commit-$h_lite_source_commit
-temporary_runtime=$runtime_root.partial-$run_id
-backup_root=/share/CACHEDEV2_DATA/ai-ontology-backup/goal7/$run_id
 before_file=$evidence_root/pre-deployment-state.json
 after_file=$evidence_root/post-deployment-state.json
 side_effect_file=$evidence_root/deployment-side-effects.json
@@ -43,30 +43,32 @@ agent_core_switched=0
 knowledge_connector_switched=0
 agent_core_draining=0
 
-[ ! -e "$runtime_root" ] || { echo 'Goal 7 immutable runtime root already exists' >&2; exit 2; }
-mkdir -p "$temporary_runtime/company-ai-ontology" "$temporary_runtime/feishu-grok-bridge" "$evidence_root" "$backup_root/images"
-chmod 700 "$temporary_runtime" "$evidence_root" "$backup_root" "$backup_root/images"
+sha256_file() { sha256sum "$1" | awk '{print $1}'; }
+[ "$(sha256_file "$foundation_root/.env")" = "$backup_env_sha" ] || { echo 'Foundation .env drifted after Goal 7 preparation' >&2; exit 2; }
+[ "$(sha256_file "$foundation_root/docker-compose.yml")" = "$backup_compose_sha" ] || { echo 'Foundation compose drifted after Goal 7 preparation' >&2; exit 2; }
+for service in agent-core knowledge-connector h-lite; do
+  previous=company-ai-foundation-$service:goal7-pre-$run_id
+  candidate=company-ai-foundation-$service:goal7-candidate-$run_id
+  case "$service" in
+    agent-core) evidence_service=agent_core ;;
+    knowledge-connector) evidence_service=knowledge_connector ;;
+    h-lite) evidence_service=h_lite ;;
+  esac
+  expected_previous=$(printf '%s\n' "$migration_validation" | awk -F= -v key="previous_${evidence_service}_image_id" '$1==key{print $2;exit}')
+  expected_candidate=$(printf '%s\n' "$migration_validation" | awk -F= -v key="candidate_${evidence_service}_image_id" '$1==key{print $2;exit}')
+  [ "$("$docker_path" image inspect --format '{{.Id}}' "$previous")" = "$expected_previous" ] || { echo "Goal 7 previous image drift: $service" >&2; exit 2; }
+  [ "$("$docker_path" image inspect --format '{{.Id}}' "$candidate")" = "$expected_candidate" ] || { echo "Goal 7 candidate image drift: $service" >&2; exit 2; }
+  container_id=$(cd "$foundation_root" && "$docker_path" compose ps -q "$service")
+  [ -n "$container_id" ] || { echo "Foundation active service missing after Goal 7 preparation: $service" >&2; exit 2; }
+  current_id=$("$docker_path" inspect --format '{{.Image}}' "$container_id")
+  [ "$current_id" = "$expected_previous" ] || { echo "Foundation active image drifted after Goal 7 preparation: $service" >&2; exit 2; }
+done
+[ "$(sha256_file "$backup_root/.env")" = "$backup_env_sha" ] || { echo 'Goal 7 preparation .env backup drift' >&2; exit 2; }
+[ "$(sha256_file "$backup_root/docker-compose.yml")" = "$backup_compose_sha" ] || { echo 'Goal 7 preparation compose backup drift' >&2; exit 2; }
+"$script_root/verify-goal7-migration-012-live.sh" >/dev/null
 cp "$runtime_evidence_root/runtime-component-versions.json" "$evidence_root/runtime-component-versions.json"
 chmod 600 "$evidence_root/runtime-component-versions.json"
-tar -xzf "$runtime_evidence_root/source.tar.gz" -C "$temporary_runtime"
-tar -xzf "$runtime_evidence_root/h-lite-source.tar.gz" --strip-components=1 -C "$temporary_runtime/feishu-grok-bridge"
-[ -f "$temporary_runtime/company-ai-ontology/deploy/qnap/docker-compose.yml" ] || { echo 'Ontology release archive incomplete' >&2; exit 2; }
-[ -f "$temporary_runtime/company-ai-ontology/deploy/qnap/candidate-migrations/012-goal7-authority-runtime.sql" ] || { echo 'Goal 7 migration missing' >&2; exit 2; }
-[ -f "$temporary_runtime/feishu-grok-bridge/deploy/company-qnap-lite/Dockerfile" ] || { echo 'H-Lite release archive incomplete' >&2; exit 2; }
-mv "$temporary_runtime" "$runtime_root"
-
 "$script_root/capture-goal7-deployment-state.sh" before "$before_file" >/dev/null
-cp "$foundation_root/.env" "$backup_root/.env"
-cp "$foundation_root/docker-compose.yml" "$backup_root/docker-compose.yml"
-chmod 600 "$backup_root/.env" "$backup_root/docker-compose.yml"
-
-for service in agent-core knowledge-connector h-lite; do
-  current=company-ai-foundation-$service:latest
-  previous=company-ai-foundation-$service:goal7-pre-$run_id
-  "$docker_path" image inspect "$current" >/dev/null
-  "$docker_path" image tag "$current" "$previous"
-  printf '%s=%s\n' "$service" "$previous" >> "$backup_root/images/tags.txt"
-done
 
 set_env() {
   key=$1
@@ -267,20 +269,9 @@ set_env H_COMPANY_RUNTIME_MODE active
 
 cd "$foundation_root"
 "$docker_path" compose config >/dev/null
-"$docker_path" compose exec -T postgres psql --set=ON_ERROR_STOP=1 --username ontology_admin --dbname ontology \
-  < "$runtime_root/company-ai-ontology/deploy/qnap/candidate-migrations/012-goal7-authority-runtime.sql" >/dev/null
-"$docker_path" compose build agent-core knowledge-connector h-lite >/dev/null
-
-verify_image_readable() {
-  image=$1
-  path=$2
-  "$docker_path" run --rm --network none --read-only --cap-drop ALL \
-    --security-opt no-new-privileges:true --entrypoint node "$image" \
-    -e "require('fs').accessSync(process.argv[1], require('fs').constants.R_OK)" "$path" >/dev/null
-}
-verify_image_readable company-ai-foundation-agent-core:latest /app/src/server.mjs
-verify_image_readable company-ai-foundation-knowledge-connector:latest /app/src/server.mjs
-verify_image_readable company-ai-foundation-h-lite:latest /app/company-qnap-lite.mjs
+for service in agent-core knowledge-connector h-lite; do
+  "$docker_path" image tag company-ai-foundation-$service:goal7-candidate-$run_id company-ai-foundation-$service:latest
+done
 
 wait_legacy_h_lite_quiet() {
   attempt=0
@@ -347,7 +338,7 @@ wait_foundation_stable() {
 
 wait_legacy_h_lite_quiet || { echo 'legacy H-Lite never reached a 30-second quiet window with Agent Core admission idle' >&2; exit 1; }
 h_lite_switched=1
-"$docker_path" compose up -d --no-deps h-lite >/dev/null
+"$docker_path" compose up -d --no-deps --no-build h-lite >/dev/null
 wait_h_lite || { "$docker_path" compose logs --tail 160 h-lite >&2; exit 1; }
 h_lite_admin drain 0 || { echo 'H-Lite drain gate failed; no Foundation service was recreated after H-Lite' >&2; exit 1; }
 h_lite_draining=1
@@ -358,11 +349,11 @@ else
 fi
 drain_agent_core || { echo 'Agent Core active request drain gate failed' >&2; exit 1; }
 agent_core_switched=1
-"$docker_path" compose up -d --no-deps agent-core >/dev/null
+"$docker_path" compose up -d --no-deps --no-build agent-core >/dev/null
 wait_agent_core || { "$docker_path" compose logs --tail 160 agent-core >&2; exit 1; }
 agent_core_draining=0
 knowledge_connector_switched=1
-"$docker_path" compose up -d --no-deps knowledge-connector >/dev/null
+"$docker_path" compose up -d --no-deps --no-build knowledge-connector >/dev/null
 wait_connector || { "$docker_path" compose logs --tail 160 knowledge-connector >&2; exit 1; }
 h_lite_admin resume 0 || { echo 'H-Lite resume gate failed' >&2; exit 1; }
 h_lite_draining=0
@@ -385,6 +376,8 @@ runtime_root=$runtime_root
 runtime_evidence_root=$runtime_evidence_root
 evidence_root=$evidence_root
 migration012_retained_on_rollback=true
+preparation_evidence_sha256=$preparation_evidence_sha
+migration_evidence_sha256=$migration_evidence_sha
 EOF
 chmod 600 "$backup_root/release-manifest.txt"
 trap - EXIT HUP INT TERM

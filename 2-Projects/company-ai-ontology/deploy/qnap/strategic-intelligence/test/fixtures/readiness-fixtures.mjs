@@ -189,6 +189,47 @@ export async function createGoal7AcceptanceBundle(outputRoot, sourceCommit = 'c'
     knowledgeConnectorVersion: '2026-08-11.1',
     hLiteVersion: '2026-08-12.1',
   }))
+  const preparation = {
+    evidenceVersion: '1.0.0',
+    evidenceType: 'goal7-foundation-preparation',
+    companyQnapIdentity: 'qnap:company/prnas/TS-X65',
+    runId: 'goal7-fixture',
+    preparedAt: '2026-08-11T09:12:00Z',
+    sourceCommit,
+    hLiteSourceCommit,
+    agentCoreVersion: '2026-08-12.3',
+    knowledgeConnectorVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-12.1',
+    runtimeRoot: `/share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence/foundation-releases/${sourceCommit}-${hLiteSourceCommit}`,
+    runtimeEvidenceRoot: '/share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence/release/goal7-fixture',
+    backupRoot: '/share/CACHEDEV2_DATA/ai-ontology-backup/goal7/goal7-fixture',
+    runtimeReleaseSha256: '1'.repeat(64),
+    runtimeComponentVersionsSha256: '2'.repeat(64),
+    runtimeTreeSha256: '3'.repeat(64),
+    baselineState: { file: 'preparation-baseline-state.json', sha256: '4'.repeat(64) },
+    backup: { envSha256: '5'.repeat(64), composeSha256: '6'.repeat(64) },
+    images: {
+      agentCore: { previousTag: 'company-ai-foundation-agent-core:goal7-pre-goal7-fixture', previousImageId: `sha256:${'7'.repeat(64)}`, candidateTag: 'company-ai-foundation-agent-core:goal7-candidate-goal7-fixture', candidateImageId: `sha256:${'8'.repeat(64)}` },
+      knowledgeConnector: { previousTag: 'company-ai-foundation-knowledge-connector:goal7-pre-goal7-fixture', previousImageId: `sha256:${'9'.repeat(64)}`, candidateTag: 'company-ai-foundation-knowledge-connector:goal7-candidate-goal7-fixture', candidateImageId: `sha256:${'a'.repeat(64)}` },
+      hLite: { previousTag: 'company-ai-foundation-h-lite:goal7-pre-goal7-fixture', previousImageId: `sha256:${'b'.repeat(64)}`, candidateTag: 'company-ai-foundation-h-lite:goal7-candidate-goal7-fixture', candidateImageId: `sha256:${'c'.repeat(64)}` },
+    },
+    closedCapabilities: { collectorStarted: false, productionShadowStarted: false, formalP2Creation: false, employeeDelivery: false, erpWriteback: false, socialWriteback: false, causalActivation: false },
+  }
+  const preparationBytes = Buffer.from(JSON.stringify(preparation))
+  await fs.writeFile(path.join(bundleRoot, 'preparation-evidence.json'), preparationBytes)
+  await fs.writeFile(path.join(bundleRoot, 'migration-012-evidence.json'), JSON.stringify({
+    evidenceVersion: '1.0.0',
+    evidenceType: 'goal7-migration-012',
+    companyQnapIdentity: 'qnap:company/prnas/TS-X65',
+    runId: 'goal7-fixture',
+    appliedAt: '2026-08-11T09:14:00Z',
+    sourceCommit,
+    hLiteSourceCommit,
+    preparationEvidence: { file: 'preparation-evidence.json', sha256: sha256(preparationBytes) },
+    migrationFileSha256: 'd'.repeat(64),
+    checks: { tableCount: 4, forcedRlsCount: 4, tenantPolicyCount: 4, appPrivilegeCount: 10, deletePrivilegeCount: 0, bannedColumnCount: 0, appRoleReadVerified: true },
+    closedCapabilities: { collectorStarted: false, productionShadowStarted: false, formalP2Creation: false, employeeDelivery: false, erpWriteback: false, socialWriteback: false, causalActivation: false },
+  }))
   await fs.writeFile(path.join(bundleRoot, 'pre-deployment-state.json'), JSON.stringify(deploymentState({ phase: 'before', capturedAt: '2026-08-11T09:15:00Z', migrationApplied: false, candidate: false })))
   await fs.writeFile(path.join(bundleRoot, 'post-deployment-state.json'), JSON.stringify(deploymentState({ phase: 'after', capturedAt: '2026-08-11T09:20:00Z', migrationApplied: true, candidate: true })))
   await fs.writeFile(path.join(bundleRoot, 'deployment-side-effects.json'), JSON.stringify({

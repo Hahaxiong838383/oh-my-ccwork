@@ -5,7 +5,7 @@ umask 077
 
 phase=${1:?phase is required}
 output_file=${2:?output file is required}
-case "$phase" in before|after) ;; *) echo 'Goal 7 deployment state phase invalid' >&2; exit 1 ;; esac
+case "$phase" in preparation|before|after) ;; *) echo 'Goal 7 deployment state phase invalid' >&2; exit 1 ;; esac
 script_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$script_root/preflight-company-qnap.sh"
 node_bin=${NODE_BIN:-$script_root/node-runtime.sh}

@@ -1,5 +1,5 @@
 {
-  "planVersion": "1.2.0",
+  "planVersion": "1.3.0",
   "goalKey": "P1-PROD-READINESS",
   "status": "WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH",
   "companyQnapIdentity": "qnap:company/prnas/TS-X65",
@@ -44,7 +44,9 @@
     "capture_pre_deployment_state",
     "backup_config_and_images",
     "apply_candidate_migration_012",
-    "build_three_target_images",
+    "build_and_bind_three_candidate_images",
+    "validate_preparation_evidence",
+    "validate_migration_evidence",
     "wait_legacy_h_lite_quiet_window",
     "switch_h_lite_recovery_layer_and_verify",
     "drain_h_lite_and_agent_core",

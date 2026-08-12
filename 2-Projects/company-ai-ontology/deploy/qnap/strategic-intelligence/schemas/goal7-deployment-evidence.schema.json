@@ -51,9 +51,11 @@
     "rawEvidenceFiles": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["runtimeIdentity", "before", "after", "sideEffects"],
+      "required": ["runtimeIdentity", "preparation", "migration", "before", "after", "sideEffects"],
       "properties": {
         "runtimeIdentity": { "$ref": "#/$defs/fileHash" },
+        "preparation": { "$ref": "#/$defs/fileHash" },
+        "migration": { "$ref": "#/$defs/fileHash" },
         "before": { "$ref": "#/$defs/fileHash" },
         "after": { "$ref": "#/$defs/fileHash" },
         "sideEffects": { "$ref": "#/$defs/fileHash" }

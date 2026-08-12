@@ -20,10 +20,10 @@ test('Goal 7 部署证据由前后机器状态与零副作用窗口编译', asyn
   assert.equal(deployment.sourceCommit, 'c'.repeat(40))
   assert.equal(deployment.hLiteSourceCommit, 'f'.repeat(40))
   assert.equal(deployment.newHostPortCount, 0)
-  assert.deepEqual(Object.keys(deployment.rawEvidenceFiles).sort(), ['after', 'before', 'runtimeIdentity', 'sideEffects'])
+  assert.deepEqual(Object.keys(deployment.rawEvidenceFiles).sort(), ['after', 'before', 'migration', 'preparation', 'runtimeIdentity', 'sideEffects'])
   const compiled = spawnSync(process.execPath, [COMPILER, bundleRoot, path.join(bundleRoot, 'deployment-evidence-recompiled.json')], { encoding: 'utf8' })
   assert.equal(compiled.status, 0, compiled.stderr)
-  assert.equal(JSON.parse(compiled.stdout).rawEvidenceFileCount, 4)
+  assert.equal(JSON.parse(compiled.stdout).rawEvidenceFileCount, 6)
 })
 
 test('Goal 7 部署原始状态被替换或新增端口时 Acceptance 失败关闭', async () => {
@@ -46,7 +46,7 @@ test('Goal 7 部署证据拒绝 Runtime 组件版本漂移', async () => {
   await fs.writeFile(identityFile, JSON.stringify({ ...identity, agentCoreVersion: '2026-08-11.1' }))
   const result = spawnSync(process.execPath, [ACCEPTANCE_VALIDATOR, goal7File], { encoding: 'utf8' })
   assert.notEqual(result.status, 0)
-  assert.match(result.stderr, /Agent Core deployment state invalid|compiler-derived/)
+  assert.match(result.stderr, /Goal 7 preparation Agent Core version drift|Agent Core deployment state invalid|compiler-derived/)
 })
 
 test('Goal 7 部署状态采集只读且强制公司 QNAP 与隔离 Node Runtime', async () => {
