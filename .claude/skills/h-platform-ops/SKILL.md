@@ -5294,12 +5294,12 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 ——跳过和通过在输出里必须长得不一样。不带该开关且窗口内没有长任务时，会以
 `没有找到符合条件的飞书入站任务` 失败，那是预期不是故障。
 
-#### ✅ 版本态（2026-08-12 15:55：**控制面 `v1.63.0`（线路切换+approval center）、dev198 `3c72a47`、契约 `2026-08-12.3`；Mini 落后待下批窗口**）
+#### ✅ 版本态（2026-08-12 17:55：**控制面 `v1.63.0`（线路切换+approval center）、dev198 `1eb9084`、契约 `2026-08-12.4`；Mini 落后待下批窗口**）
 
 | 位置 | 版本 |
 |---|---|
 | 控制面 aliyun-hk | 线上 **`v1.63.0`** = git `d47b6b2`（我的订阅⇄自定义接口线路切换 **+ ontology 会话的 approval center `5dc4ee5`(v1.62.0) 一并首次上线**，合并态 310 测全绿；四关键文件 md5 双端对撞全同、healthz version 对齐；回滚锚 `/srv/h-control/app.bak-20260812-154902-pre-v1.63.0`。⚠️ 版本号 v1.62.0 被 ontology 会话占用，本轮避让 +1） |
-| dev198 | **git HEAD = 运行文件 = `3c72a47`**（b7061c8=daily requestUuid 截断碰撞修复+3c72a47=feishu-send 出站幂等键同型加固，契约 `2026-08-12.3` 全 12 App 唯一；E2E：临时 daily 真跑+journal 新键 `sched-u-0-<40hex>`、探针双异键 `accept-re-<40hex>`、部署后双卡冒烟 expectedMatched=true）；`H_ONCE_REMINDERS=0` 已注释开闸，11 租户调度网关 socket 全就位 |
+| dev198 | **运行文件 = `1eb9084`**（错误文本保头限长 `boundedErrorText` + 失败卡按引擎线路分流，契约 **`2026-08-12.4` 全 13 App 唯一值 1 个**；前序 b7061c8/3c72a47=daily 与 feishu-send 幂等键截断加固。E2E：真机探针驱动**已部署** runner 喂真实长报错 → `session mint … resume_conflict` 触发 PASS，**同探针跑备份的旧 runner = FAIL（零 mint）**，新旧可区分；八文件 md5 双端对撞全同；回滚锚 `~/local/bak-20260812-175237`）；`H_ONCE_REMINDERS=0` 已注释开闸，11 租户调度网关 socket 全就位 |
 | Mini 活动 VM | **`61394ff`**（2026-08-12 两段式升级：rollback→shadow(npm ci)→verify shadow=ready→cutover，全程 ~15 分钟）；契约 `2026-08-12.1`、maxParallel=3；**含 daily 重放 bug 但当前零条 daily=零风险，`3c72a47` 随下批割接窗口带上（任务 #60）**；回滚锚 `~/local/h-mini-b2-rollback-20260812-013000-pre-cutover-61394ff` |
 
 ⚠️ **跨 bridge+控制面的字段/行为修复，部署顺序=先控制面后 bridge**（2026-08-10 实测）：
@@ -5965,7 +5965,7 @@ H-0094 开闸次日晨检发现的**存量第二 bug**：每条 daily 只有第�
   （时间戳/序号）被切掉后，「不同请求」在键空间里合并成同一个，重放层把它显形为
   「第一天正常之后永远冻结」。
 
-### 🔴 三连：租户 403 额度耗尽→死会话→自愈失效（2026-08-12 下午 · 诊断已实锤，修复候选 task #64 待批）
+### 🔴 三连：租户 403 额度耗尽→死会话→自愈失效（2026-08-12 下午 · **平台侧已于同日傍晚修复上线 `1eb9084`/契约 `2026-08-12.4`**）
 
 用户可见现象：连发消息全收「会话仍在收尾，平台自动切换新会话时未能完成」失败卡
 （`lib/task-failure.mjs:25` session_conflict 文案）。根因**两层**，都不是文案说的那回事：
@@ -5992,6 +5992,15 @@ H-0094 开闸次日晨检发现的**存量第二 bug**：每条 daily 只有第�
 5. 隐私纪律（HR/绩效类用户）：只读机制层（错误码/耗时/sid/计数），不读正文；journal 出现
    `privacy gate blocked`/`quarantine hit=绩效` 是隐私门在正常工作，非故障。
 
+**修复态（`1eb9084`，2026-08-12 17:53 上线）**：三个 runner（grok/kimi/omp）+
+lark-auth-broker 的错误文本统一走 `lib/error-tail.mjs` 的 `boundedErrorText`
+**保头限长 700**（下游 worker-ipc 1200 / rpc 800 都是保头截断，700 才能整段穿过最窄
+那跳；贪心留 1500 反被切尾），且**脱敏提到截断之前**（先截后脱会留下没有 `Bearer`
+前缀的半截 token）。分类层 `presentTaskFailure` 认引擎前缀分流：grok 线路 401 不再
+冒充 Kimi 让人去重绑 Kimi Code，认不出引擎用中性文案；新增 `provider_quota` 分类给
+403 额度耗尽专属提示并引导切自定义接口线路。**上面口诀 1~3 仍是有效排查法**（判据
+没变，只是分类输入不再被切头）；口诀 1 的 `session mint` 计数现在应当 >0。
+
 ### 线路切换：订阅 ⇄ 自定义接口（v1.63.0，2026-08-12 川哥验收 OK）
 
 灰度事故的直接产物：额度耗尽的用户可绑自定义接口续命，充值后一键切回。机制四句话：
@@ -6011,6 +6020,30 @@ H-0094 开闸次日晨检发现的**存量第二 bug**：每条 daily 只有第�
   改名单=改 aliyun-hk `/srv/h-control/.env` 该变量+重启（gate 启动时解析一次），验收认
   日志行 `grok endpoint binding 灰度=list(allowlist) 名单 N 人`。
 - ⚠️ 验控制面版本别 grep landing/admin 页（都不渲染版本号），**healthz 的 `version` 字段才是出口**。
+
+### 🔴 自定义接口线路的两个上游坑（2026-08-12 傍晚，Kathy 实例连环踩）
+
+绑定成功 ≠ 一直能用。端点模式把**上游的运维动作**变成了平台的静默故障源：
+
+1. **上游换 key，平台完全无感知**。Kathy 16:01 绑定并验活成功（当时 CPA 登记的就是那把
+   key），CPA 侧 **16:13:38 一条 `PUT /v0/management/api-keys` 把值换了**
+   （cliproxy 日志原文 `api-keys: values updated (count unchanged, redacted)` +
+   `config.yaml` mtime 吻合），此后她每个任务 401。平台侧没有任何主动信号——
+   vault 里的旧 key 静静躺着，UI 显示「已绑定」。
+   排查姿势：控制面 `/internal/creds/<uid>` 取 `xai.access`（**endpoint 模式的 key 在
+   `xai.access` 不在 `xaiEndpoint`**，那是 vault 内部键名）→ 在 dev198 上拿它直打
+   `<base_url>/models`；**必须配 owner 的 key 当正例锚**（owner 200 + 租户 401 =
+   key 的问题；两边都超时 = 网关的问题）。key 走 curlrc 文件不进 argv。
+2. **网关机整机夯死时，五个通道读数完全一致地「不通」**。同日 16:31 aliyun-jp
+   （CPA 宿主）OS 内部夯死：SSH/HTTPS/CPA API/管理浮窗/**云 Cloud Assistant 带外命令**
+   全部 TCP 通、应用层零响应，而 SWAS 控制台照报 `Running` / `BusinessStatus: Normal`
+   / DDoS normal。**云侧状态不能证伪 OS 夯死**。带外诊断也打不进去时只剩重启一途
+   （`aliyun swas-open reboot-instance --profile intl-jp`，profile 必须用 intl-jp，
+   default/hk profile 查 ap-northeast-1 返回 `TotalCount: 0`——空列表不是「机器没了」）。
+   恢复后查 `journalctl --list-boots` 对时间线，OOM 要查 `-b -1`（重启后当前 boot 是空的）。
+
+配套的平台侧改进（未做，待拍板）：creds 下发前对端点做一次轻量验活，401 直接标
+`needRebind` 并主动发卡，把「上游换 key」从静默失效变成用户可见提醒。
 
 ### Mini 两段式 VM 升级（第二次实测，~15 分钟全程）
 
