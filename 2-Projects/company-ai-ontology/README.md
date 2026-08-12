@@ -14,7 +14,7 @@
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
 - 当前生产基线：`Goal 6-A / P1-DOMAIN` 已完成工程与川哥体验验收；公司 QNAP active Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`，Domain Connector `2026-08-10.1`。Agent Core 已独立发布 `2026-08-12.2`，绑定 Source Commit `3edbc7a73863fa5f334c06d603067427183f58ed`；`2026-08-12 13:00 CST` 只读复核为 `ready / productionReady=true`，Foundation `13/13 running`、11 个健康探针通过、2 个无探针基础服务正常运行、restart total `0`。该独立修复不等于 Goal 7 三组件发布或 Owner Acceptance。
-- P1-SI-B～G 工程骨架通过 Contracts `61/61`、Collector `9/9`、Strategic Intelligence `119/119`。生产只读溯源确认 Goal 7 四张 Authority/Runtime 表已由历史 Workflow `31555822727` 在约 `2026-08-12 10:13 CST` 落库，SQL Hash 与当前候选一致，但原始 B 阶段 Evidence 缺失。旧 Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628` 的 Manifest `1.3.0` 仍允许再次执行 012 SQL，已降级为历史工程证据并禁止部署；当前没有可部署候选。新候选必须使用 Manifest/Release Plan `1.4.0`，固定 `pre_existing_reconciliation_only / SQL replay=false`，并从新推送 Commit 重建验签。
+- P1-SI-B～G 工程骨架通过 Contracts `61/61`、Collector `9/9`、Strategic Intelligence `119/119`。生产只读溯源确认 Goal 7 四张 Authority/Runtime 表已由历史 Workflow `31555822727` 在约 `2026-08-12 10:13 CST` 落库，SQL Hash 与当前候选一致，但原始 B 阶段 Evidence 缺失。最终 Runtime Workflow `31614522984` Attempt `1` / Artifact `9148675772` 已使用 Manifest/Release Plan `1.4.0` 重新生成并验签，固定 `pre_existing_reconciliation_only / SQL replay=false / database_sql_executed=0`；这是当前唯一可申请 A～E 独立授权的工程候选，但尚未进入公司 QNAP，也不构成生产授权。Artifact `9145915628`、中间候选 `9148389214` 及更早包全部禁止部署。
 - 公司 QNAP 当前只安装内部工程 Runtime Artifact `9108034290` / Commit `0342fcd39`，并完成一次 accepted Collector：3 个公开来源共 60 条、Hash-only、正文 0、重复 0、五类业务副作用 0，且 `countsTowardProductionShadow=false`。生产 `strategic_intelligence` Schema、表、容器、网络和发布端口仍为 0。
 - 当前硬门禁：来源分配 `8/8`、最终决定 `0/8`；P003 个人 DRI `30/36`、必要角色位 `90/150`、全角色覆盖 `12/36`、最终决定 `0/36`；四角色真实成员 UAT `0/4`；Goal 7 Authority Canary、Worker 双源读回、完整三组件 Deployment Evidence 和 Owner Acceptance 未完成。Deployment Readiness 为 `1 pass / 6 blocked`，Goal Completion 为 `1 pass / 7 blocked`；未取得战略情报生产部署、010/011 迁移、Collector、七日 Shadow、Foundation 其他组件重启或真实回滚演练授权。
 - 审批操作面已调整为 H 控制面的公司 Ontology「审批中心」；飞书多维表格降级为原型、历史导入和应急导出。当前 `v1.62.0` 候选提供 8 个来源与 36 条 P003 关系的 `engineering_simulation` 草稿、推荐填充和重置，模拟完成不改变上述 `0/8`、`0/36` 真实门禁，也不能放行 Collector、010/011、七日 Shadow、P003 激活或写回。
@@ -63,7 +63,7 @@
 - `docs/p1-si-dri-selection-handoff-2026-08-10.md`：实名 DRI 候选的隐私隔离交接、待拍板角色和 P003 部署门禁补强。
 - `docs/goal7-p1-prod-readiness-plan-2026-08-10.md`：Goal 7 部门 / 群聊 Principal、用途与撤权语义，以及 H 引擎冗余、熔断、预算和真实模型读回实施计划。
 - `docs/goal7-foundation-release-runbook-2026-08-11.md`：Goal 7 三组件连续性发布、迁移、验收和安全恢复运行手册。
-- `docs/goal7-foundation-deployment-authorization-card-2026-08-12.md`：已失效的历史授权卡；新 Manifest `1.4.0` Artifact 生成后必须重新签发五项独立授权卡。
+- `docs/goal7-foundation-deployment-authorization-card-2026-08-12.md`：绑定 Artifact `9148675772` 的五项独立授权卡；当前建议只先申请 A，其他阶段不得继承授权。
 - `docs/pestim-strategic-intelligence-architecture-2026-08-10.md`：PESTIM 持续情报、多周期经营报告、Horizon/个人站雷达复用边界和公司 QNAP Shadow 方案。
 - `docs/p1-si-a-pestim-ontology-definition-acceptance-2026-08-10.md`：PESTIM 候选 Schema `3.4.0`、纯增量兼容性、禁止自动 P2/写回和生产不变验收证据。
 - `docs/p1-si-b-source-registry-acceptance-2026-08-10.md`：Source Registry `3.5.0` 候选、首批来源目录、fail-closed 判定和本地工程验收证据。

@@ -1,0 +1,54 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "p1-si-runtime-artifact-verification",
+  "capturedAt": "2026-08-12T23:53:51+08:00",
+  "containsSecrets": false,
+  "workflow": {
+    "runId": "31614522984",
+    "runAttempt": 1,
+    "conclusion": "success",
+    "sourceCommit": "76b5ce688b1e3cad1eb88e961bd0545c952cf5ce",
+    "hLiteSourceCommit": "fab8be3f1467289400d0d63ffe378b63ad1a6957"
+  },
+  "artifact": {
+    "id": "9148675772",
+    "name": "p1-si-runtime-76b5ce688b1e3cad1eb88e961bd0545c952cf5ce",
+    "retentionExpiresAt": "2026-11-10T15:50:58Z",
+    "checksumEntryCount": 8,
+    "allChecksumsVerified": true
+  },
+  "manifest": {
+    "version": "1.4.0",
+    "sha256": "8b7aee5b5c7ef8c929d1fbb256e3c55e5bb4d1d756dd6269e3548b236396fb02",
+    "releaseType": "P1-SI-F-shadow-candidate-gated",
+    "publish": false,
+    "productionDeploymentAuthorized": false,
+    "goal7Migration012Mode": "pre_existing_reconciliation_only",
+    "goal7Migration012SqlReplayAllowed": false
+  },
+  "runtime": {
+    "agentCoreVersion": "2026-08-12.3",
+    "knowledgeConnectorVersion": "2026-08-11.1",
+    "hLiteVersion": "2026-08-12.1",
+    "collectorImageId": "sha256:bee3063294f22900cba5fd55e90b191f215972062cad2ad484c8cc084e773916",
+    "collectorPlatform": "linux/amd64",
+    "routeBState": "disabled"
+  },
+  "validation": {
+    "releaseManifestValidator": true,
+    "goal7RuntimeValidator": true,
+    "postgresRuntimeVerified": true,
+    "goal7AuthorityRuntimeFoundationVerified": true,
+    "domainPersistenceVerified": true,
+    "domainPersistenceIdempotent": true,
+    "aclFailClosed": true
+  },
+  "productionState": {
+    "uploadedToCompanyQnap": false,
+    "companyQnapDeployed": false,
+    "databaseSqlExecuted": false,
+    "servicesRecreated": false,
+    "collectorStarted": false,
+    "shadowStarted": false
+  }
+}

@@ -2,13 +2,13 @@
 
 日期：2026-08-11（Asia/Shanghai）
 
-状态：`engineering_verified / prior_runtime_superseded / production_not_deployed / owner_acceptance_pending`
+状态：`engineering_verified / runtime_1_4_verified / production_not_deployed / owner_acceptance_pending`
 
 ## 1. 结论
 
 Goal 7 的 P1-AUTHORITY 与 P1-RUNTIME 已从规划进入本地工程候选：飞书部门/群聊 Principal 映射、发送者隔离、用途收窄、当前群成员证据、会话授权快照、Route A 独立熔断、有限重试、Token/费用预算、真实 provider/model/usage 读回和 Route B 默认关闭已经进入 Agent Core、Knowledge Connector、候选迁移和不可变 Runtime Workflow。Goal 7 最终验收也已由可手填布尔值升级为五份原始 Evidence 绑定的编译产物。
 
-双仓候选曾由 Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628` 取得 Linux/amd64 与 PostgreSQL Runtime Evidence。`2026-08-12 23:10 CST` 生产溯源进一步确认：012 四表已由更早的历史 Workflow `31555822727` 落库，原始 B 阶段 Evidence 缺失；旧 Artifact 仍包含可再次执行 SQL 的入口，因此已失效并禁止部署。新 Runtime 必须使用 Manifest `1.4.0`，把 B 阶段改为只读对账并强制 `database_sql_executed=0`。当前仍不能把 Goal 7 标记为完成：没有可部署 Artifact，且未执行真实 H Worker 双源读回、合成飞书 Authority Canary、完整三组件 Deployment Evidence、撤权演练或川哥 Owner Acceptance。
+双仓候选曾由 Runtime Workflow `31607792883` Attempt `1` / Artifact `9145915628` 取得 Linux/amd64 与 PostgreSQL Runtime Evidence。`2026-08-12 23:10 CST` 生产溯源进一步确认：012 四表已由更早的历史 Workflow `31555822727` 落库，原始 B 阶段 Evidence 缺失；旧 Artifact 仍包含可再次执行 SQL 的入口，因此已失效并禁止部署。最终 Runtime Workflow `31614522984` Attempt `1` / Artifact `9148675772` 已使用 Manifest `1.4.0` 把 B 阶段改为只读对账，强制 `database_sql_executed=0`，并通过完整验签；中间候选 `9148389214` 与更早包也禁止部署。当前仍不能把 Goal 7 标记为完成：最终 Artifact 尚未进入公司 QNAP，且未执行真实 H Worker 双源读回、合成飞书 Authority Canary、完整三组件 Deployment Evidence、撤权演练或川哥 Owner Acceptance。
 
 ## 2. P1-AUTHORITY 工程能力
 
@@ -84,13 +84,13 @@ Goal 7 Acceptance Evidence 升级为 `2.0.0`，必须由同目录五份原始证
 | Shell 语法 | 通过 |
 | Compose / Workflow YAML | 通过 |
 | `git diff --check` | 通过 |
-| PostgreSQL 隔离 Runtime | 通过，Artifact `9145915628` |
+| PostgreSQL 隔离 Runtime | 通过，最终 Artifact `9148675772` |
 
 覆盖的负向场景包括：多人艾特不扩权、私聊不继承群权限、群成员过期/撤权、未知飞书成员类型、非法用途、Route B 调用、非重试错误、Token/费用超预算、熔断、provider/model/usage 读回缺失、部署/回滚未独立授权、Artifact SHA 篡改、内部 Hash 重新签名漂移和获批双 Commit 漂移。
 
 ## 6. 当前门禁
 
-- `engineeringVerified=true`：代码与 PostgreSQL 工程证据已完成；旧不可变 Runtime 已失效，必须重建 Manifest `1.4.0`；
+- `engineeringVerified=true`：代码与 PostgreSQL 工程证据已完成；Manifest `1.4.0` 最终 Artifact `9148675772` 已验签；
 - `ownerAccepted=false`：不得由测试自动填写；
 - 公司专用 CPA Key 与同厂冗余仍缺失，Route B 继续关闭；
 - 产品研究部整库导入、10 人真实 Canary、员工私人 Bot 迁移、ERP/社媒写回继续关闭；
@@ -99,8 +99,8 @@ Goal 7 Acceptance Evidence 升级为 `2.0.0`，必须由同目录五份原始证
 
 ## 7. 下一步
 
-1. 从本修复的新推送 Commit 生成并验签 Manifest `1.4.0` Artifact，确认旧 `1.3.0` 包失败关闭；
-2. 重新签发授权卡，再分别申请 A 发布准备、B 既有 012 只读对账与 C Agent Core/Knowledge Connector/H-Lite 服务重建；
+1. 申请 A，把 Artifact `9148675772` 放入公司 QNAP 受控 staging，完成 Hash、配置/旧镜像备份和三个候选镜像构建；
+2. A 完成并留证后，再分别申请 B 既有 012 只读对账与 C Agent Core/Knowledge Connector/H-Lite 服务重建；
 3. 发布后验证真实 H Worker 返回 provider/model/usage，不满足新契约时停止验收并恢复安全状态；
 4. 执行合成部门、群聊、私聊、多人艾特、撤权和 API 失败 Authority Canary；
 5. 编译并验证三组件 Deployment Evidence，确认 active Schema 未漂移、无新增端口、Foundation restart=0 和五类业务副作用为 0；

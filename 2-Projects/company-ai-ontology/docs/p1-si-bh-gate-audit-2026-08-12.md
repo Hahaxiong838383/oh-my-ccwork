@@ -15,15 +15,15 @@ P1-SI-B～G 的工程骨架已通过当前全量验收。生产溯源确认 012 
 - Ontology Contracts：`61/61`；
 - Intelligence Collector：`9/9`；
 - Strategic Intelligence Shadow / Readiness / Goal Completion：`119/119`；
-- 旧 Runtime Workflow：`31607792883` Attempt `1`，状态 `success`，但已失效；
-- 旧 Runtime Artifact：`9145915628`，禁止部署；
-- 旧 Runtime Manifest：`1.3.0`；新候选必须为 `1.4.0`；
-- Ontology Source Commit：`b504f1295bf98b018479556c06e1072516966562`；
+- 最终 Runtime Workflow：`31614522984` Attempt `1`，状态 `success`；
+- 最终 Runtime Artifact：`9148675772`，当前唯一可申请 A～E 独立授权的候选；
+- Runtime Manifest：`1.4.0`；
+- Ontology Source Commit：`76b5ce688b1e3cad1eb88e961bd0545c952cf5ce`；
 - H-Lite Source Commit：`fab8be3f1467289400d0d63ffe378b63ad1a6957`；
 - Collector Image：`sha256:59eadd7a3b95caa2a7a09604abb981b18f4ce8ec730408efd5f7d0f4efdfe39d`，平台 `linux/amd64`；
 - Runtime Components：Agent Core `2026-08-12.3`、Knowledge Connector `2026-08-11.1`、H-Lite `2026-08-12.1`；
 - Candidate Ontology：Schema `3.7.0`，Hash `c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860`；
-- 旧 Artifact 内 `runtime-component-versions.json`、双仓源码归档、Collector 镜像、Runtime Verification、Release Manifest 与 8 项完整 `SHA256SUMS` 曾全部通过；但发布准备后的 B 阶段仍可再次执行已落库 SQL，故不能部署。新候选必须把 B 阶段替换为 `pre_existing_reconciliation_only`，强制 `database_sql_executed=0`。所有 `9145915628` 及更早候选仅保留历史工程证据。
+- 最终 Artifact 内 `runtime-component-versions.json`、双仓源码归档、Collector 镜像、Runtime Verification、Release Manifest 与 8 项完整 `SHA256SUMS` 全部通过；B 阶段固定为 `pre_existing_reconciliation_only`，强制 `database_sql_executed=0 / SQL replay=false`。Artifact `9145915628`、中间候选 `9148389214` 及更早包仅保留历史工程证据并禁止部署。
 
 Runtime Workflow 已验证：
 
@@ -57,7 +57,7 @@ Agent Core `2026-08-12.2` 是已授权的独立回复修复，不是 Goal 7 三�
 
 ## 4. 未关闭的人审门禁
 
-`2026-08-12 13:54 CST` 已再次通过飞书用户身份只读回拉两张审核表；`2026-08-12 22:50 CST` 使用新 Artifact `9145915628` 复核不可变 Release 与现有门禁身份。脱敏原始汇总见 `deploy/qnap/strategic-intelligence/evidence/p1-si-live-gate-status-2026-08-12.json`；文件不包含姓名、Principal、审批正文或受控路径。
+`2026-08-12 13:54 CST` 已再次通过飞书用户身份只读回拉两张审核表；`2026-08-12 23:53 CST` 使用最终 Artifact `9148675772` 复核不可变 Release 与现有门禁身份。飞书脱敏原始汇总仍见 `deploy/qnap/strategic-intelligence/evidence/p1-si-live-gate-status-2026-08-12.json`，最终 Artifact 验签见 `deploy/qnap/strategic-intelligence/evidence/p1-si-runtime-artifact-9148675772.json`；文件不包含姓名、Principal、审批正文或受控路径。
 
 ### 来源审核
 
@@ -83,29 +83,29 @@ Agent Core `2026-08-12.2` 是已授权的独立回复修复，不是 Goal 7 三�
 
 - 四个真实成员 Session：`0/4`；
 - 安全负责人接受：未完成；
-- Goal 7 Runtime Evidence：旧 CI 已失效，新 Manifest `1.4.0` CI 待生成；
+- Goal 7 Runtime Evidence：Manifest `1.4.0` 最终 Artifact `9148675772` 已生成并验签；
 - Goal 7 Authority Canary、Worker 双源读回、完整三组件 Deployment Evidence：未完成；
 - Goal 7 Owner Acceptance：未完成。
 
 ## 5. 当前机器门禁
 
-Deployment Readiness：`0 pass / 7 blocked`。
+Deployment Readiness：`1 pass / 6 blocked`。
 
-- 阻断：新不可变 Release、本次部署授权、Goal 7 完成、来源批准、P003 最终审核、四角色 UAT、Goal 7 Acceptance。
+- 通过：不可变 Release；阻断：本次部署授权、Goal 7 完成、来源批准、P003 最终审核、四角色 UAT、Goal 7 Acceptance。
 
-Goal Completion：`0 pass / 8 blocked`。
+Goal Completion：`1 pass / 7 blocked`。
 
-- 阻断：新不可变 Release、来源批准、P003 最终审核、四角色 UAT、Goal 7、部署完成证据、七日 Owner Acceptance、Release/Deployment/Shadow 身份一致性。
+- 通过：不可变 Release；阻断：来源批准、P003 最终审核、四角色 UAT、Goal 7、部署完成证据、七日 Owner Acceptance、Release/Deployment/Shadow 身份一致性。
 
-旧证据文件仍保留 `22:50 CST` 当时的 `1 pass` 历史快照，不改写其内容或 Hash；本节是 `23:10 CST` 溯源后的当前判定。新 Artifact 生成后必须重新运行机器检查器，不能沿用旧计数。
+旧证据文件仍保留 `22:50 CST` 的历史 Artifact 身份，不改写其内容或 Hash；本节是使用 Artifact `9148675772` 重新运行机器检查器后的当前判定。
 
 ## 6. 下一执行顺序
 
-1. 许可/合规负责人完成来源 `8/8` 最终决定；
-2. P003 DRI 完成 `36/36` 最终决定，全部保持 inactive；
-3. 四名真实成员完成权限 UAT，由安全负责人接受；
-4. 从最新 Ontology/H 双仓推送 Commit 生成 Manifest `1.4.0` Artifact，验证旧 `1.3.0` 失败关闭；
-5. 重新签发 A～E 授权卡，再完成 Goal 7 剩余工程证据并由川哥执行 Owner Acceptance；
+1. 先申请 A，让 Artifact `9148675772` 进入受控 staging，完成 Hash、备份和候选镜像构建；
+2. A 留证后依次申请 B～E，完成 Goal 7 剩余工程证据并由川哥执行 Owner Acceptance；
+3. 系统整体测试阶段，许可/合规负责人完成来源 `8/8` 最终决定；
+4. P003 DRI 完成 `36/36` 最终决定，全部保持 inactive；
+5. 四名真实成员完成权限 UAT，由安全负责人接受；
 6. 分别申请战略情报部署、010/011 迁移、必要服务动作和真实回滚演练授权；
 7. 只部署战略情报 Orchestrator/Collector，运行连续七个真实上海自然日 `PUBLISH=false` Shadow；
 8. 第七日后完成 Shadow Owner Acceptance 和 Goal Completion 编译。

@@ -2,27 +2,31 @@
 
 日期：2026-08-12（Asia/Shanghai）
 
-状态：`SUPERSEDED / NO_DEPLOYABLE_ARTIFACT / NOT_AUTHORIZED`
+状态：`READY_FOR_SEPARATE_OWNER_AUTHORIZATION / NOT_AUTHORIZED`
 
-> `2026-08-12 23:10 CST` 生产只读溯源确认：Goal 7 迁移 012 已由历史一体化流程落库，但原始 B 阶段证据缺失。旧 Artifact `9145915628` 的 B 阶段仍允许再次执行 SQL，因此本授权卡与该 Artifact 一并失效，禁止上传、部署或据此申请授权。待 Manifest `1.4.0` 新 Artifact 生成并验签后，必须重新生成授权卡。
+> `2026-08-12 23:53 CST` 最终 Manifest `1.4.0` Artifact 已生成并独立验签。旧 Artifact `9145915628` 与中间候选 `9148389214` 均禁止部署；以下授权只适用于 Artifact `9148675772`，五项授权互不继承。
 
-## 1. 已失效的历史发布身份
+## 1. 本次固定发布身份
 
 - 公司 QNAP：`PRNas / TS-X65 / 192.168.61.18`；
 - Foundation Root：`/share/CACHEDEV1_DATA/ai-ontology/foundation`；
-- Runtime Workflow：`31607792883` Attempt `1`；
-- Runtime Artifact：`9145915628`；
-- Ontology Commit：`b504f1295bf98b018479556c06e1072516966562`；
+- Runtime Workflow：`31614522984` Attempt `1`；
+- Runtime Artifact：`9148675772`；
+- Runtime Manifest：`1.4.0`；
+- Ontology Commit：`76b5ce688b1e3cad1eb88e961bd0545c952cf5ce`；
 - H-Lite Commit：`fab8be3f1467289400d0d63ffe378b63ad1a6957`；
 - Agent Core：`2026-08-12.3`；
 - Knowledge Connector：`2026-08-11.1`；
 - H-Lite：`2026-08-12.1`；
-- Collector Image：`sha256:59eadd7a3b95caa2a7a09604abb981b18f4ce8ec730408efd5f7d0f4efdfe39d`；
+- Collector Image：`sha256:bee3063294f22900cba5fd55e90b191f215972062cad2ad484c8cc084e773916`；
 - Candidate Ontology：Schema `3.7.0` / Hash `c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860`；
 - 发布开关：`publish=false`；
 - 当前生产 active Schema：`3.3.0`，本次不得切换 active Schema。
 
-以上身份只用于历史追溯，不再是可执行发布身份。
+- 012 模式：`pre_existing_reconciliation_only`；
+- SQL replay：`false`。
+
+任一发布身份变化，本授权卡自动失效，必须重新生成。
 
 ## 2. 当前只读基线
 
@@ -35,7 +39,7 @@
 - Registry `in_sync`；
 - `strategic_intelligence` Schema、表、容器、网络、发布端口均为 `0`；Goal 7 四张 Authority/Runtime 表已存在；
 - 正式 P2、员工投递、ERP 写回、社媒写回、因果激活均为 `0`；
-- 旧 Artifact 未上传公司 QNAP，且现已禁止上传。
+- 新 Artifact 尚未上传公司 QNAP。
 
 ## 3. 影响与时间
 
@@ -47,17 +51,17 @@
 - 不重启 Postgres、Redis、Qdrant、Ontology Registry、Action Gateway、Domain Connector、Gateway；
 - 不运行 Collector，不启动七日 Shadow，不产生正式 P2、员工投递或业务写回。
 
-## 4. 新 Artifact 生成后的五项独立授权
+## 4. 五项独立授权
 
-以下五项互不继承。当前没有可授权 Artifact，所有精确授权文本均暂停使用；新 Artifact 与新授权卡生成后才可逐项申请。
+以下五项互不继承。只授权其中一项，不代表授权其他项。
 
 ### A. Foundation 发布准备与 Artifact 入场
 
-动作：把新 Manifest `1.4.0` Artifact 上传到公司 QNAP 受控 staging 目录，验证完整 Hash，备份现有 Compose、环境配置和三个旧镜像，构建三个候选镜像；不执行 SQL、不切换服务、不运行模型。
+动作：把 Artifact `9148675772` 上传到公司 QNAP 受控 staging 目录，验证完整 Hash，备份现有 Compose、环境配置和三个旧镜像，构建三个候选镜像；不执行 SQL、不切换服务、不运行模型。
 
 精确授权回复：
 
-> 待新 Artifact 生成后重新签发，当前不可使用。
+> 授权 Artifact 9148675772 进入公司 QNAP Goal 7 发布 staging，允许执行 Hash 校验、配置与旧镜像备份、三个候选镜像构建；不授权数据库 SQL、服务重建、Worker 读回、Collector、Shadow 或真实回滚演练。
 
 ### B. 既有迁移 012 只读证据对账
 
@@ -65,7 +69,7 @@
 
 精确授权回复：
 
-> 待新 Artifact 生成后重新签发，当前不可使用。
+> 授权在公司 QNAP 对既有 Goal 7 迁移 012 执行只读证据对账，允许写入脱敏 reconciliation Evidence，必须证明 database_sql_executed=0；不授权数据库 SQL、服务重建、Worker 读回、Collector、Shadow 或数据库逆向回滚。
 
 ### C. 三组件服务重建
 
@@ -73,7 +77,7 @@
 
 精确授权回复：
 
-> 待新 Artifact 生成后重新签发，当前不可使用。
+> 授权部署 Artifact 9148675772 对应的 Agent Core 2026-08-12.3、Knowledge Connector 2026-08-11.1、H-Lite 2026-08-12.1，仅重建这三个服务；允许发布失败时自动恢复旧服务，不授权真实回滚演练、Worker 读回、Collector 或 Shadow。
 
 ### D. 真实 H Worker 双源读回与 Authority Canary
 
@@ -89,7 +93,7 @@
 
 精确授权回复：
 
-> 待新 Artifact 生成并完成三组件发布后重新签发，当前不可使用。
+> 授权执行 Goal 7 三组件真实回滚恢复演练：旧版本验证后恢复到 Artifact 9148675772 新版本；保留既有迁移 012，不执行数据库 DROP，不运行 Collector 或 Shadow。
 
 ## 5. 自动停止条件
 
@@ -107,4 +111,4 @@
 
 ## 6. 当前建议
 
-建议先在同一条回复中分别明确授权 `A`、`B`、`C`，三项仍按独立门禁逐项校验和执行；发布健康后再单独授权 `D`。`E` 作为真实演练继续单独拍板。正式七日 `PUBLISH=false` Shadow 不属于本授权卡，仍需来源/P003/四角色 UAT、Goal 7 Owner Acceptance 和新的独立授权。
+建议当前只先授权 `A`。完成 Artifact 入场、Hash 校验、备份和候选镜像构建并固化 Evidence 后，再单独申请 `B`；`C`、`D`、`E` 继续按前序证据逐项拍板。正式七日 `PUBLISH=false` Shadow 不属于本授权卡，仍需来源/P003/四角色 UAT、Goal 7 Owner Acceptance 和新的独立授权。
