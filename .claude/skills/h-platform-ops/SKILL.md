@@ -1025,6 +1025,26 @@ device-flow 注册（`lib/feishu-register.mjs`）→ Bot 凭据 AES 存控制面
 
 备份 `accounts`+`users.json` → `systemctl stop` 生产 → 合 park 账号+激活 → `setsid` 起 worktree 双 App（owner+test，`echo $$>pid;exec node`）→ 轮询 `WS started×2` → 人工卡点飞书操作 → **PID 停法关窗** → 恢复备份 → 起生产 → 清控制面测试凭据。owner 靠 worktree 版全程在线。
 
+## 验收信箱（proactive-acceptance）投递卡口（2026-08-12 单探针被拒实测）
+
+真机验收的标准驱动通道：驱动任意 Bot 真实执行任务并送结果卡，不需要用户发消息。
+开关 `H_PROACTIVE_ACCEPTANCE=1`；投递=原子写 `workspace/.state/proactive-acceptance-request.v1.json`
+（先写临时文件再 `os.replace`），2s 轮询消费；结果落同目录 `…-result.v1.json`。
+
+- 🔴 **probes 至少 2 个**——单探针=**整单拒收**（公平调度验收的设计前提）。川哥真机反馈
+  「bot 没发起」就是这么来的。
+- 🔴 **拒收是静默的**：request 文件照样被消费掉，result 文件**不更新**（还躺着上一单），
+  唯一信号是 journal 一行 `proactive acceptance fail <原因>`。所以**投完先验受理再挂长等**：
+  30s 内 `journalctl --user -u feishu-grok-bridge | grep "acceptance fail"` 零命中，或 result
+  出现本单 requestId，才算被受理。「投出去了」≠「被受理了」。
+- **执行中用户侧零可见**（proactive 不发入队/开工卡，完成才发结果卡）——用户说「没动静」
+  时先分清「执行中」还是「被拒收」，查 journal 不猜。
+- request 形状：`{version:1, requestId(4-64, [A-Za-z0-9_.-]), probes:[{id, botLabel, appId,
+  openId, prompt, model?, expectText?}]}`；result 的 `probes[].expectedMatched`：expectText
+  命中=true / 未命中=false / 没给 expectText=null。`messageId` 是结果卡的真实飞书回执。
+- 探针的 RPC 键 `accept-<requestId>-<probe.id>` 经 `boundedRequestId` 限长（长 requestId
+  下两探针必须异键，2026-08-12 真机取证 `accept-re-<40hex>` ×2）。
+
 ## 排障速查
 
 | 现象 | 根因 | 处理 |
