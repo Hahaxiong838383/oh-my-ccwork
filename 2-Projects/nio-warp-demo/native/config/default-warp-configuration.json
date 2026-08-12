@@ -1,0 +1,40 @@
+{
+  "aaRect" : {
+    "height" : 0.48,
+    "width" : 0.88,
+    "x" : 0.06,
+    "y" : 0.26
+  },
+  "canvas" : {
+    "height" : 936,
+    "width" : 7680
+  },
+  "contentMode" : "stretch",
+  "displayPixelHeight" : 2880,
+  "displayPixelWidth" : 5120,
+  "manual" : {
+    "arch" : 0.105,
+    "asymmetry" : 0.08,
+    "enabled" : true,
+    "horizontalBend" : 0.018,
+    "strength" : 1,
+    "tilt" : 0.025,
+    "verticalScale" : 0.83
+  },
+  "mirror" : {
+    "horizontal" : false,
+    "vertical" : false
+  },
+  "polynomial" : {
+    "coefficientsX" : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "coefficientsY" : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "enabled" : false,
+    "order" : 3
+  },
+  "render" : {
+    "antiAliasing" : "performance",
+    "automaticPerformanceFallback" : true,
+    "testPattern" : "off"
+  },
+  "schemaVersion" : 3
+}

@@ -12,6 +12,11 @@ let package = Package(
             name: "NIOWarpApp",
             path: "Sources/NIOWarpApp"
         ),
+        .testTarget(
+            name: "NIOWarpAppTests",
+            dependencies: ["NIOWarpApp"],
+            path: "Tests/NIOWarpAppTests"
+        ),
     ],
     swiftLanguageModes: [.v5]
 )

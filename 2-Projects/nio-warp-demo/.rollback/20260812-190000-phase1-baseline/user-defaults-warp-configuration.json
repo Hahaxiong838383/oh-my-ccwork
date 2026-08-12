@@ -1,0 +1,57 @@
+{
+  "aaRect" : {
+    "height" : 0.47999999999999998,
+    "width" : 0.88,
+    "x" : 0.059999999999999998,
+    "y" : 0.26000000000000001
+  },
+  "canvas" : {
+    "height" : 936,
+    "width" : 7680
+  },
+  "contentMode" : "stretch",
+  "displayPixelHeight" : 2880,
+  "displayPixelWidth" : 5120,
+  "manual" : {
+    "arch" : 0.17499831989247314,
+    "asymmetry" : 0.032352150537634475,
+    "enabled" : true,
+    "horizontalBend" : 0.010192204301075272,
+    "strength" : 0.60709425403225803,
+    "tilt" : 0.080704301075268811,
+    "verticalScale" : 0.86291246639784946
+  },
+  "mirror" : {
+    "horizontal" : false,
+    "vertical" : false
+  },
+  "polynomial" : {
+    "coefficientsX" : [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "coefficientsY" : [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "enabled" : false,
+    "order" : 3
+  },
+  "schemaVersion" : 2
+}

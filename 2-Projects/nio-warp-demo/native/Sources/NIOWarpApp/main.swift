@@ -1,45 +1,21 @@
 import AppKit
+import Carbon
 import CoreGraphics
 import CoreMedia
 import CoreVideo
+import Foundation
 import Metal
 import MetalKit
 import ScreenCaptureKit
 
-private struct WarpParameters {
-    var enabled = true
-    var strength: Float = 1.0
-    var arch: Float = 0.105
-    var verticalScale: Float = 0.83
-    var asymmetry: Float = 0.08
-    var tilt: Float = 0.025
-    var horizontalBend: Float = 0.018
-}
-
-private enum ContentMode: Int32, CaseIterable {
-    case fit = 0
-    case fill = 1
-    case stretch = 2
-
-    var title: String {
-        switch self {
-        case .fit: return "完整显示"
-        case .fill: return "铺满裁切"
-        case .stretch: return "拉伸铺满"
-        }
-    }
-}
-
-private struct MeshVertex {
-    var position: SIMD2<Float>
-    var uv: SIMD2<Float>
-}
-
 private struct ShaderUniforms {
     var sourceAspect: Float
-    var outputAspect: Float
+    var canvasAspect: Float
     var contentMode: Int32
-    var padding: Int32 = 0
+    var mirrorFlags: UInt32
+    var sourceTexelSize: SIMD2<Float>
+    var antiAliasingMode: UInt32
+    var testPatternMode: UInt32
 }
 
 private final class LatestFrameStore {
@@ -63,7 +39,6 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
     let frameStore = LatestFrameStore()
     private let queue = DispatchQueue(label: "com.mycc.nio-warp.capture", qos: .userInteractive)
     private var stream: SCStream?
-    private(set) var sourceName = ""
     var onError: ((String) -> Void)?
 
     func start(displayID: CGDirectDisplayID) async throws {
@@ -87,14 +62,13 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
         configuration.minimumFrameInterval = CMTime(value: 1, timescale: 60)
         configuration.queueDepth = 3
-        configuration.showsCursor = true
+        configuration.showsCursor = false
         configuration.capturesAudio = false
         configuration.scalesToFit = false
 
         let stream = SCStream(filter: filter, configuration: configuration, delegate: self)
         try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: queue)
         self.stream = stream
-        sourceName = "\(display.width)×\(display.height)"
         try await stream.startCapture()
     }
 
@@ -127,17 +101,18 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
     private var vertexBuffer: MTLBuffer?
     private var indexBuffer: MTLBuffer?
     private var indexCount = 0
-    private let meshColumns = 96
-    private let meshRows = 40
-    private var parameters = WarpParameters()
-    private var contentMode = ContentMode.fit
+    private var configuration: WarpConfiguration
+    private let performanceMonitor = RollingPerformanceMonitor()
+    private var runtimeAntiAliasingOverride: AntiAliasingMode?
+    private(set) var meshValidation = MeshValidation(foldedCellCount: 0, outOfAASampleCount: 0, totalSampleCount: 0)
 
-    init?(view: MTKView, frameStore: LatestFrameStore) {
+    init?(view: MTKView, frameStore: LatestFrameStore, configuration: WarpConfiguration) {
         guard let device = MTLCreateSystemDefaultDevice(),
               let commandQueue = device.makeCommandQueue() else { return nil }
         self.device = device
         self.commandQueue = commandQueue
         self.frameStore = frameStore
+        self.configuration = configuration
 
         let shaderSource = """
         #include <metal_stdlib>
@@ -155,9 +130,12 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
 
         struct Uniforms {
             float sourceAspect;
-            float outputAspect;
+            float canvasAspect;
             int contentMode;
-            int padding;
+            uint mirrorFlags;
+            float2 sourceTexelSize;
+            uint antiAliasingMode;
+            uint testPatternMode;
         };
 
         vertex VertexOut vertexMain(VertexIn input [[stage_in]]) {
@@ -167,6 +145,80 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
             return output;
         }
 
+        float gridLine(float coordinate, float spacing, float thickness) {
+            float repeated = abs(fract(coordinate / spacing + 0.5) - 0.5) * spacing;
+            float width = max(fwidth(coordinate) * thickness, 0.00005);
+            return 1.0 - smoothstep(width, width * 1.8, repeated);
+        }
+
+        float2 applyMirror(float2 uv, uint mirrorFlags) {
+            if ((mirrorFlags & 1u) != 0u) { uv.x = 1.0 - uv.x; }
+            if ((mirrorFlags & 2u) != 0u) { uv.y = 1.0 - uv.y; }
+            return uv;
+        }
+
+        float rectangleMask(float2 uv, float2 minimum, float2 maximum) {
+            float2 edgeWidth = max(fwidth(uv) * 1.5, float2(0.00005));
+            float2 insideMinimum = smoothstep(minimum, minimum + edgeWidth, uv);
+            float2 insideMaximum = 1.0 - smoothstep(maximum - edgeWidth, maximum, uv);
+            return insideMinimum.x * insideMinimum.y * insideMaximum.x * insideMaximum.y;
+        }
+
+        float4 calibrationPattern(float2 uv) {
+            float minorGrid = max(gridLine(uv.x, 0.02, 0.7), gridLine(uv.y, 0.02, 0.7));
+            float majorGrid = max(gridLine(uv.x, 0.10, 1.0), gridLine(uv.y, 0.10, 1.0));
+            float centerX = 1.0 - smoothstep(fwidth(uv.x), fwidth(uv.x) * 2.5, abs(uv.x - 0.5));
+            float centerY = 1.0 - smoothstep(fwidth(uv.y), fwidth(uv.y) * 2.5, abs(uv.y - 0.5));
+            float borderDistance = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+            float border = 1.0 - smoothstep(fwidth(borderDistance), fwidth(borderDistance) * 3.0, borderDistance);
+            float3 color = mix(float3(0.035), float3(0.20), minorGrid);
+            color = mix(color, float3(0.85), majorGrid);
+            color = mix(color, float3(1.0), border);
+            color = mix(color, float3(1.0, 0.16, 0.10), centerX);
+            color = mix(color, float3(0.15, 1.0, 0.28), centerY);
+
+            float topLeft = rectangleMask(uv, float2(0.015, 0.015), float2(0.075, 0.075));
+            float topRight = rectangleMask(uv, float2(0.925, 0.015), float2(0.985, 0.075));
+            float bottomLeft = rectangleMask(uv, float2(0.015, 0.925), float2(0.075, 0.985));
+            float bottomRight = rectangleMask(uv, float2(0.925, 0.925), float2(0.985, 0.985));
+            color = mix(color, float3(1.0, 0.10, 0.85), topLeft);
+            color = mix(color, float3(0.05, 0.85, 1.0), topRight);
+            color = mix(color, float3(1.0, 0.85, 0.05), bottomLeft);
+            color = mix(color, float3(1.0, 0.35, 0.05), bottomRight);
+            return float4(color, 1.0);
+        }
+
+        float4 sampleWarpedTexture(
+            texture2d<float> source,
+            sampler textureSampler,
+            float2 uv,
+            constant Uniforms& uniforms) {
+            if (uniforms.antiAliasingMode == 0u) {
+                return source.sample(textureSampler, uv);
+            }
+
+            float2 derivativeX = dfdx(uv);
+            float2 derivativeY = dfdy(uv);
+            float2 footprint = max(abs(derivativeX), abs(derivativeY));
+            float2 offset = max(footprint * 0.32, uniforms.sourceTexelSize * 0.35);
+            float4 result = source.sample(textureSampler, uv + float2(-offset.x, -offset.y));
+            result += source.sample(textureSampler, uv + float2(offset.x, -offset.y));
+            result += source.sample(textureSampler, uv + float2(-offset.x, offset.y));
+            result += source.sample(textureSampler, uv + float2(offset.x, offset.y));
+
+            if (uniforms.antiAliasingMode == 1u) {
+                return result * 0.25;
+            }
+
+            float4 center = source.sample(textureSampler, uv) * 2.0;
+            float2 axisOffset = max(footprint * 0.48, uniforms.sourceTexelSize * 0.55);
+            result += source.sample(textureSampler, uv + float2(axisOffset.x, 0.0));
+            result += source.sample(textureSampler, uv - float2(axisOffset.x, 0.0));
+            result += source.sample(textureSampler, uv + float2(0.0, axisOffset.y));
+            result += source.sample(textureSampler, uv - float2(0.0, axisOffset.y));
+            return (result + center) * 0.10;
+        }
+
         fragment float4 fragmentMain(
             VertexOut input [[stage_in]],
             texture2d<float> source [[texture(0)]],
@@ -174,28 +226,40 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
             constexpr sampler textureSampler(filter::linear, address::clamp_to_zero);
             float2 uv = input.uv;
 
+            float edgeDistance = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+            float edgeWidth = max(fwidth(edgeDistance) * 1.25, 0.00001);
+            float edgeAlpha = smoothstep(0.0, edgeWidth, edgeDistance);
+
+            if (uniforms.testPatternMode == 1u) {
+                float2 patternUV = applyMirror(uv, uniforms.mirrorFlags);
+                float4 pattern = calibrationPattern(patternUV);
+                return float4(pattern.rgb * edgeAlpha, 1.0);
+            }
+
             if (uniforms.contentMode == 0) {
-                if (uniforms.sourceAspect < uniforms.outputAspect) {
-                    float visibleWidth = uniforms.sourceAspect / uniforms.outputAspect;
+                if (uniforms.sourceAspect < uniforms.canvasAspect) {
+                    float visibleWidth = uniforms.sourceAspect / uniforms.canvasAspect;
                     uv.x = (uv.x - (1.0 - visibleWidth) * 0.5) / visibleWidth;
                 } else {
-                    float visibleHeight = uniforms.outputAspect / uniforms.sourceAspect;
+                    float visibleHeight = uniforms.canvasAspect / uniforms.sourceAspect;
                     uv.y = (uv.y - (1.0 - visibleHeight) * 0.5) / visibleHeight;
                 }
             } else if (uniforms.contentMode == 1) {
-                if (uniforms.sourceAspect < uniforms.outputAspect) {
-                    float sampledHeight = uniforms.sourceAspect / uniforms.outputAspect;
+                if (uniforms.sourceAspect < uniforms.canvasAspect) {
+                    float sampledHeight = uniforms.sourceAspect / uniforms.canvasAspect;
                     uv.y = uv.y * sampledHeight + (1.0 - sampledHeight) * 0.5;
                 } else {
-                    float sampledWidth = uniforms.outputAspect / uniforms.sourceAspect;
+                    float sampledWidth = uniforms.canvasAspect / uniforms.sourceAspect;
                     uv.x = uv.x * sampledWidth + (1.0 - sampledWidth) * 0.5;
                 }
             }
 
+            uv = applyMirror(uv, uniforms.mirrorFlags);
             if (any(uv < 0.0) || any(uv > 1.0)) {
                 return float4(0.0, 0.0, 0.0, 1.0);
             }
-            return source.sample(textureSampler, uv);
+            float4 sampled = sampleWarpedTexture(source, textureSampler, uv, uniforms);
+            return float4(sampled.rgb * edgeAlpha, 1.0);
         }
         """
 
@@ -223,6 +287,7 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
         super.init()
         view.device = device
         view.colorPixelFormat = .bgra8Unorm
+        view.clearColor = MTLClearColorMake(0, 0, 0, 1)
         view.preferredFramesPerSecond = 60
         view.enableSetNeedsDisplay = false
         view.isPaused = false
@@ -231,88 +296,58 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
         rebuildMesh()
     }
 
-    func updateParameters(_ parameters: WarpParameters) {
-        self.parameters = parameters
+    @discardableResult
+    func updateConfiguration(_ configuration: WarpConfiguration) -> MeshValidation {
+        self.configuration = configuration
+        runtimeAntiAliasingOverride = nil
         rebuildMesh()
+        return meshValidation
     }
 
-    func updateContentMode(_ contentMode: ContentMode) {
-        self.contentMode = contentMode
+    var effectiveAntiAliasingMode: AntiAliasingMode {
+        runtimeAntiAliasingOverride ?? configuration.render.antiAliasing
     }
 
-    private func rawWarp(x: Float, y: Float) -> SIMD2<Float> {
-        guard parameters.enabled else { return SIMD2<Float>(x, y) }
-        let strength = parameters.strength
-        let centeredX = x * 2 - 1
-        let centeredY = y * 2 - 1
-        let horizontalScale = 1 + (0.97 - 1) * strength - 0.07 * strength * centeredY + 0.025 * strength * centeredX
-        let warpedX = 0.5
-            + 0.5 * centeredX * horizontalScale
-            + parameters.horizontalBend * strength * centeredY * (1 - centeredX * centeredX)
-        let verticalScale = 1 + (parameters.verticalScale - 1) * strength
-        let warpedY = 0.5
-            + 0.5 * centeredY * (verticalScale + parameters.asymmetry * strength * centeredX)
-            - parameters.arch * strength * (1 - centeredX * centeredX)
-            + parameters.tilt * strength * centeredX
-            + 0.018 * strength * centeredX * centeredY
-        return SIMD2<Float>(warpedX, warpedY)
+    func performanceSnapshot() -> PerformanceSnapshot {
+        performanceMonitor.snapshot(now: ProcessInfo.processInfo.systemUptime)
     }
 
-    private func warpBounds() -> (minimum: SIMD2<Float>, maximum: SIMD2<Float>) {
-        var minimum = SIMD2<Float>(repeating: .greatestFiniteMagnitude)
-        var maximum = SIMD2<Float>(repeating: -.greatestFiniteMagnitude)
-        for row in 0...30 {
-            for column in 0...60 {
-                let warped = rawWarp(x: Float(column) / 60, y: Float(row) / 30)
-                minimum = SIMD2<Float>(Swift.min(minimum.x, warped.x), Swift.min(minimum.y, warped.y))
-                maximum = SIMD2<Float>(Swift.max(maximum.x, warped.x), Swift.max(maximum.y, warped.y))
-            }
-        }
-        let margin = (maximum - minimum) * 0.006
-        return (minimum - margin, maximum + margin)
+    @discardableResult
+    func evaluateAutomaticPerformanceFallback() -> Bool {
+        guard configuration.render.automaticPerformanceFallback,
+              runtimeAntiAliasingOverride == nil else { return false }
+        let snapshot = performanceSnapshot()
+        guard PerformancePolicy.shouldFallback(snapshot: snapshot, currentMode: configuration.render.antiAliasing) else { return false }
+        runtimeAntiAliasingOverride = .performance
+        rebuildMesh()
+        return true
     }
 
     private func rebuildMesh() {
-        let bounds = warpBounds()
-        let range = bounds.maximum - bounds.minimum
-        var vertices = [MeshVertex]()
-        vertices.reserveCapacity((meshColumns + 1) * (meshRows + 1))
-        for row in 0...meshRows {
-            let y = Float(row) / Float(meshRows)
-            for column in 0...meshColumns {
-                let x = Float(column) / Float(meshColumns)
-                let warped = rawWarp(x: x, y: y)
-                let uv = (warped - bounds.minimum) / range
-                vertices.append(
-                    MeshVertex(
-                        position: SIMD2<Float>(x * 2 - 1, 1 - y * 2),
-                        uv: uv
-                    )
-                )
-            }
+        let dimensions: (Int, Int)
+        switch effectiveAntiAliasingMode {
+        case .off: dimensions = (96, 40)
+        case .performance: dimensions = (128, 48)
+        case .quality: dimensions = (192, 72)
         }
-
-        var indices = [UInt32]()
-        indices.reserveCapacity(meshColumns * meshRows * 6)
-        let stride = meshColumns + 1
-        for row in 0..<meshRows {
-            for column in 0..<meshColumns {
-                let topLeft = UInt32(row * stride + column)
-                let topRight = topLeft + 1
-                let bottomLeft = UInt32((row + 1) * stride + column)
-                let bottomRight = bottomLeft + 1
-                indices.append(contentsOf: [topLeft, topRight, bottomRight, topLeft, bottomRight, bottomLeft])
-            }
-        }
-
-        vertexBuffer = device.makeBuffer(bytes: vertices, length: vertices.count * MemoryLayout<MeshVertex>.stride)
-        indexBuffer = device.makeBuffer(bytes: indices, length: indices.count * MemoryLayout<UInt32>.stride)
-        indexCount = indices.count
+        let mesh = WarpMath.makeMesh(configuration: configuration, columns: dimensions.0, rows: dimensions.1)
+        vertexBuffer = device.makeBuffer(
+            bytes: mesh.vertices,
+            length: mesh.vertices.count * MemoryLayout<MeshVertex>.stride
+        )
+        indexBuffer = device.makeBuffer(
+            bytes: mesh.indices,
+            length: mesh.indices.count * MemoryLayout<UInt32>.stride
+        )
+        indexCount = mesh.indices.count
+        meshValidation = mesh.validation
     }
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
     func draw(in view: MTKView) {
+        let frameTimestamp = ProcessInfo.processInfo.systemUptime
+        performanceMonitor.recordFrame(at: frameTimestamp)
         guard let pixelBuffer = frameStore.latest(),
               let descriptor = view.currentRenderPassDescriptor,
               let drawable = view.currentDrawable,
@@ -340,13 +375,29 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
               let cvTexture,
               let texture = CVMetalTextureGetTexture(cvTexture) else { return }
 
+        var mirrorFlags: UInt32 = 0
+        if configuration.mirror.horizontal { mirrorFlags |= 1 }
+        if configuration.mirror.vertical { mirrorFlags |= 2 }
         var uniforms = ShaderUniforms(
             sourceAspect: Float(width) / Float(height),
-            outputAspect: Float(view.drawableSize.width / max(view.drawableSize.height, 1)),
-            contentMode: contentMode.rawValue
+            canvasAspect: configuration.canvas.aspect,
+            contentMode: configuration.contentMode.shaderValue,
+            mirrorFlags: mirrorFlags,
+            sourceTexelSize: SIMD2<Float>(1 / Float(max(width, 1)), 1 / Float(max(height, 1))),
+            antiAliasingMode: effectiveAntiAliasingMode.shaderValue,
+            testPatternMode: configuration.render.testPattern.shaderValue
         )
 
+        let aa = configuration.aaRect.sanitized()
+        let drawableWidth = max(Int(view.drawableSize.width), 1)
+        let drawableHeight = max(Int(view.drawableSize.height), 1)
+        let scissorX = min(max(Int((aa.x * Double(drawableWidth)).rounded()), 0), drawableWidth - 1)
+        let scissorY = min(max(Int((aa.y * Double(drawableHeight)).rounded()), 0), drawableHeight - 1)
+        let scissorWidth = min(max(Int((aa.width * Double(drawableWidth)).rounded()), 1), drawableWidth - scissorX)
+        let scissorHeight = min(max(Int((aa.height * Double(drawableHeight)).rounded()), 1), drawableHeight - scissorY)
+
         encoder.setRenderPipelineState(pipeline)
+        encoder.setScissorRect(MTLScissorRect(x: scissorX, y: scissorY, width: scissorWidth, height: scissorHeight))
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setFragmentTexture(texture, index: 0)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.stride, index: 1)
@@ -359,8 +410,13 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
         )
         encoder.endEncoding()
         commandBuffer.present(drawable)
-        commandBuffer.addCompletedHandler { _ in
+        commandBuffer.addCompletedHandler { [performanceMonitor] completedBuffer in
             _ = cvTexture
+            let gpuDuration = completedBuffer.gpuEndTime - completedBuffer.gpuStartTime
+            performanceMonitor.recordGPUTime(
+                seconds: gpuDuration,
+                at: ProcessInfo.processInfo.systemUptime
+            )
         }
         commandBuffer.commit()
     }
@@ -371,11 +427,26 @@ private final class OutputWindow: NSWindow {
     override var canBecomeMain: Bool { false }
 }
 
+private final class FlippedView: NSView {
+    override var isFlipped: Bool { true }
+}
+
+private enum NumericFieldTarget: Int {
+    case aaX
+    case aaY
+    case aaWidth
+    case aaHeight
+    case canvasWidth
+    case canvasHeight
+    case coefficientX
+    case coefficientY
+}
+
 private final class OutputController {
     let window: NSWindow
     let renderer: WarpRenderer
 
-    init?(screen: NSScreen, frameStore: LatestFrameStore) {
+    init?(screen: NSScreen, frameStore: LatestFrameStore, configuration: WarpConfiguration) {
         let window = OutputWindow(
             contentRect: screen.frame,
             styleMask: [.borderless],
@@ -391,9 +462,9 @@ private final class OutputController {
         window.ignoresMouseEvents = true
         window.hidesOnDeactivate = false
 
-        let metalView = MTKView(frame: screen.frame)
+        let metalView = MTKView(frame: NSRect(origin: .zero, size: screen.frame.size))
         metalView.autoresizingMask = [.width, .height]
-        guard let renderer = WarpRenderer(view: metalView, frameStore: frameStore) else { return nil }
+        guard let renderer = WarpRenderer(view: metalView, frameStore: frameStore, configuration: configuration) else { return nil }
         metalView.delegate = renderer
         window.contentView = metalView
         window.setFrame(screen.frame, display: true)
@@ -402,108 +473,441 @@ private final class OutputController {
         self.window = window
         self.renderer = renderer
     }
+
+    var isWarpVisible: Bool { window.isVisible }
+
+    func setWarpVisible(_ visible: Bool) {
+        if visible {
+            window.orderFrontRegardless()
+        } else {
+            window.orderOut(nil)
+        }
+    }
 }
 
-private final class ControlPanelController: NSWindowController {
+private final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     private let renderer: WarpRenderer
-    private var parameters = WarpParameters()
-    private let statusLabel = NSTextField(labelWithString: "等待屏幕捕获权限…")
-    private let warpButton = NSButton(checkboxWithTitle: "启用 Warp", target: nil, action: nil)
+    private let store: ConfigurationStore
+    private let presetStore = PresetStore()
+    private let historyStore = ConfigurationHistoryStore()
+    private let displayWidth: Int
+    private let displayHeight: Int
+    private let setWarpVisible: (Bool) -> Void
+    private let isWarpVisible: () -> Bool
+    private var configuration: WarpConfiguration
+    private var lastAppliedConfiguration: WarpConfiguration
+    private var performanceTimer: Timer?
+    private var presets = [WarpPreset]()
 
-    init(renderer: WarpRenderer, sourceScreen: NSScreen, outputScreen: NSScreen) {
+    private let statusLabel = NSTextField(wrappingLabelWithString: "等待屏幕捕获权限…")
+    private let aaXField = NSTextField()
+    private let aaYField = NSTextField()
+    private let aaWidthField = NSTextField()
+    private let aaHeightField = NSTextField()
+    private let canvasWidthField = NSTextField()
+    private let canvasHeightField = NSTextField()
+    private let horizontalMirrorButton = NSButton(checkboxWithTitle: "水平翻转", target: nil, action: nil)
+    private let verticalMirrorButton = NSButton(checkboxWithTitle: "垂直翻转", target: nil, action: nil)
+    private let warpButton = NSButton(checkboxWithTitle: "启用基础 Warp", target: nil, action: nil)
+    private let polynomialButton = NSButton(checkboxWithTitle: "启用多项式增量", target: nil, action: nil)
+    private let orderPicker = NSPopUpButton()
+    private let termPicker = NSPopUpButton()
+    private let coefficientXField = NSTextField()
+    private let coefficientYField = NSTextField()
+    private let contentModePicker = NSPopUpButton()
+    private let strengthSlider = NSSlider()
+    private let archSlider = NSSlider()
+    private let verticalScaleSlider = NSSlider()
+    private let asymmetrySlider = NSSlider()
+    private let tiltSlider = NSSlider()
+    private let horizontalBendSlider = NSSlider()
+    private let antiAliasingPicker = NSPopUpButton()
+    private let automaticPerformanceButton = NSButton(checkboxWithTitle: "性能不足时自动降级", target: nil, action: nil)
+    private let testPatternButton = NSButton(checkboxWithTitle: "显示标定网格、中心线和边界", target: nil, action: nil)
+    private let performanceLabel = NSTextField(wrappingLabelWithString: "性能采样中…")
+    private let pauseWarpButton = NSButton(title: "暂停 Warp", target: nil, action: nil)
+    private let presetNameField = NSTextField()
+    private let presetPicker = NSPopUpButton()
+    private let historyButton = NSButton(title: "回退上一个版本", target: nil, action: nil)
+
+    init(
+        renderer: WarpRenderer,
+        store: ConfigurationStore,
+        configuration: WarpConfiguration,
+        sourceScreen: NSScreen,
+        outputScreen: NSScreen,
+        setWarpVisible: @escaping (Bool) -> Void,
+        isWarpVisible: @escaping () -> Bool
+    ) {
         self.renderer = renderer
+        self.store = store
+        self.configuration = configuration
+        lastAppliedConfiguration = configuration
+        self.setWarpVisible = setWarpVisible
+        self.isWarpVisible = isWarpVisible
+        displayWidth = configuration.displayPixelWidth
+        displayHeight = configuration.displayPixelHeight
         let panel = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 390, height: 540),
-            styleMask: [.titled, .closable, .miniaturizable],
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 790),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
-        panel.title = "NIO 全屏 Warp 控制台"
+        panel.title = "NIO 全屏 Warp 标定控制台"
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         super.init(window: panel)
         buildInterface(sourceScreen: sourceScreen, outputScreen: outputScreen)
-        panel.center()
+        refreshControls()
+        refreshPresets()
+        startPerformanceMonitoring()
+        let visibleFrame = sourceScreen.visibleFrame
+        let origin = NSPoint(
+            x: visibleFrame.midX - panel.frame.width * 0.5,
+            y: visibleFrame.midY - panel.frame.height * 0.5
+        )
+        panel.setFrameOrigin(origin)
         bringToFront()
     }
 
     required init?(coder: NSCoder) { nil }
 
+    deinit { performanceTimer?.invalidate() }
+
     private func buildInterface(sourceScreen: NSScreen, outputScreen: NSScreen) {
         guard let contentView = window?.contentView else { return }
+        let scrollView = NSScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.hasVerticalScroller = true
+        scrollView.drawsBackground = false
+        contentView.addSubview(scrollView)
+        NSLayoutConstraint.activate([
+            scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            scrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+        ])
+
+        let documentView = FlippedView()
+        documentView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.documentView = documentView
+        documentView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor).isActive = true
+
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
+        stack.edgeInsets = NSEdgeInsets(top: 20, left: 22, bottom: 22, right: 22)
         stack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(stack)
+        documentView.addSubview(stack)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
-            stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 22),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -22),
+            stack.leadingAnchor.constraint(equalTo: documentView.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: documentView.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: documentView.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: documentView.bottomAnchor),
         ])
 
-        let title = NSTextField(labelWithString: "三星外屏桌面 → 实时 Warp → 同一块三星外屏")
+        let title = NSTextField(labelWithString: "外屏桌面 → 逻辑画布 → 预畸变 → 矩形 AA 区")
         title.font = .systemFont(ofSize: 18, weight: .bold)
         stack.addArrangedSubview(title)
-        let topology = NSTextField(wrappingLabelWithString: "源：\(screenName(sourceScreen))\n输出：\(screenName(outputScreen))\n程序覆盖层从 ScreenCaptureKit 中排除，因此不会产生递归回采。")
+        let topology = NSTextField(wrappingLabelWithString: "源：\(screenName(sourceScreen))\n输出：\(screenName(outputScreen)) · \(displayWidth)×\(displayHeight) px\nAA 区外始终纯黑；多项式定义为逻辑画布到物理 AA 区的增量映射。")
         topology.textColor = .secondaryLabelColor
         stack.addArrangedSubview(topology)
 
-        warpButton.state = .on
+        stack.addArrangedSubview(sectionTitle("1. 矩形 AA 区（物理屏像素）"))
+        stack.addArrangedSubview(fieldGrid([
+            ("X", numericField(aaXField, target: .aaX, decimal: false)),
+            ("Y", numericField(aaYField, target: .aaY, decimal: false)),
+            ("宽", numericField(aaWidthField, target: .aaWidth, decimal: false)),
+            ("高", numericField(aaHeightField, target: .aaHeight, decimal: false)),
+        ]))
+        stack.addArrangedSubview(buttonRow([
+            makeButton("保存并应用 AA 区", action: #selector(applyAAFields)),
+            makeButton("居中 88%×48%", action: #selector(centerAA)),
+            makeButton("全屏 AA", action: #selector(fullAA)),
+        ]))
+
+        stack.addArrangedSubview(sectionTitle("2. 逻辑画布"))
+        stack.addArrangedSubview(fieldGrid([
+            ("宽", numericField(canvasWidthField, target: .canvasWidth, decimal: false)),
+            ("高", numericField(canvasHeightField, target: .canvasHeight, decimal: false)),
+        ]))
+        ContentMode.allCases.forEach { contentModePicker.addItem(withTitle: $0.title) }
+        contentModePicker.target = self
+        contentModePicker.action = #selector(updateContentMode)
+        stack.addArrangedSubview(labeledRow("内容适配", contentModePicker))
+        stack.addArrangedSubview(makeButton("保存并应用画布尺寸", action: #selector(applyCanvasFields)))
+
+        stack.addArrangedSubview(sectionTitle("3. 镜像"))
+        horizontalMirrorButton.target = self
+        horizontalMirrorButton.action = #selector(updateMirror)
+        verticalMirrorButton.target = self
+        verticalMirrorButton.action = #selector(updateMirror)
+        stack.addArrangedSubview(buttonRow([horizontalMirrorButton, verticalMirrorButton]))
+
+        stack.addArrangedSubview(sectionTitle("4. 基础校畸变"))
         warpButton.target = self
-        warpButton.action = #selector(toggleWarp(_:))
+        warpButton.action = #selector(toggleWarp)
         stack.addArrangedSubview(warpButton)
+        stack.addArrangedSubview(makeSlider(title: "Warp 强度", slider: strengthSlider, minimum: 0, maximum: 1.5, action: #selector(updateStrength)))
+        stack.addArrangedSubview(makeSlider(title: "上下弧度", slider: archSlider, minimum: 0, maximum: 0.2, action: #selector(updateArch)))
+        stack.addArrangedSubview(makeSlider(title: "垂直压缩", slider: verticalScaleSlider, minimum: 0.6, maximum: 1.1, action: #selector(updateVerticalScale)))
+        stack.addArrangedSubview(makeSlider(title: "左右不对称", slider: asymmetrySlider, minimum: -0.2, maximum: 0.2, action: #selector(updateAsymmetry)))
+        stack.addArrangedSubview(makeSlider(title: "整体倾斜", slider: tiltSlider, minimum: -0.12, maximum: 0.12, action: #selector(updateTilt)))
+        stack.addArrangedSubview(makeSlider(title: "水平弯曲", slider: horizontalBendSlider, minimum: -0.08, maximum: 0.08, action: #selector(updateHorizontalBend)))
 
-        stack.addArrangedSubview(makeSlider(title: "Warp 强度", minimum: 0, maximum: 1.5, value: 1.0, action: #selector(updateStrength(_:))))
-        stack.addArrangedSubview(makeSlider(title: "上下弧度", minimum: 0, maximum: 0.18, value: 0.105, action: #selector(updateArch(_:))))
-        stack.addArrangedSubview(makeSlider(title: "垂直压缩", minimum: 0.68, maximum: 1.0, value: 0.83, action: #selector(updateVerticalScale(_:))))
-        stack.addArrangedSubview(makeSlider(title: "左右不对称", minimum: -0.15, maximum: 0.15, value: 0.08, action: #selector(updateAsymmetry(_:))))
-        stack.addArrangedSubview(makeSlider(title: "整体倾斜", minimum: -0.1, maximum: 0.1, value: 0.025, action: #selector(updateTilt(_:))))
+        stack.addArrangedSubview(sectionTitle("5. 多项式增量"))
+        polynomialButton.target = self
+        polynomialButton.action = #selector(togglePolynomial)
+        stack.addArrangedSubview(polynomialButton)
+        for order in 2...5 { orderPicker.addItem(withTitle: "\(order) 阶") }
+        orderPicker.target = self
+        orderPicker.action = #selector(updatePolynomialOrder)
+        stack.addArrangedSubview(labeledRow("阶数", orderPicker))
+        termPicker.target = self
+        termPicker.action = #selector(selectPolynomialTerm)
+        stack.addArrangedSubview(labeledRow("当前项", termPicker))
+        stack.addArrangedSubview(fieldGrid([
+            ("X 系数", numericField(coefficientXField, target: .coefficientX, decimal: true)),
+            ("Y 系数", numericField(coefficientYField, target: .coefficientY, decimal: true)),
+        ]))
+        stack.addArrangedSubview(buttonRow([
+            makeButton("应用当前系数", action: #selector(applyPolynomialCoefficients)),
+            makeButton("全部系数清零", action: #selector(clearPolynomial)),
+        ]))
 
-        let modeLabel = NSTextField(labelWithString: "内容适配")
-        modeLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        stack.addArrangedSubview(modeLabel)
-        let modePicker = NSPopUpButton()
-        ContentMode.allCases.forEach { modePicker.addItem(withTitle: $0.title) }
-        modePicker.target = self
-        modePicker.action = #selector(updateContentMode(_:))
-        stack.addArrangedSubview(modePicker)
+        stack.addArrangedSubview(sectionTitle("6. 画质与标定"))
+        AntiAliasingMode.allCases.forEach { antiAliasingPicker.addItem(withTitle: $0.title) }
+        antiAliasingPicker.target = self
+        antiAliasingPicker.action = #selector(updateAntiAliasing)
+        stack.addArrangedSubview(labeledRow("抗锯齿", antiAliasingPicker))
+        automaticPerformanceButton.target = self
+        automaticPerformanceButton.action = #selector(updateAutomaticPerformance)
+        testPatternButton.target = self
+        testPatternButton.action = #selector(updateTestPattern)
+        stack.addArrangedSubview(automaticPerformanceButton)
+        stack.addArrangedSubview(testPatternButton)
+        performanceLabel.textColor = .secondaryLabelColor
+        performanceLabel.preferredMaxLayoutWidth = 500
+        stack.addArrangedSubview(performanceLabel)
+
+        stack.addArrangedSubview(sectionTitle("7. 预设与版本回退"))
+        presetNameField.placeholderString = "例如：玻璃 A / 驾驶位"
+        presetNameField.widthAnchor.constraint(equalToConstant: 220).isActive = true
+        stack.addArrangedSubview(labeledRow("预设名称", presetNameField))
+        presetPicker.widthAnchor.constraint(equalToConstant: 220).isActive = true
+        stack.addArrangedSubview(labeledRow("已有预设", presetPicker))
+        stack.addArrangedSubview(buttonRow([
+            makeButton("保存预设", action: #selector(savePreset)),
+            makeButton("应用预设", action: #selector(applyPreset)),
+            makeButton("删除预设", action: #selector(deletePreset)),
+        ]))
+        historyButton.target = self
+        historyButton.action = #selector(rollbackConfiguration)
+        stack.addArrangedSubview(historyButton)
+
+        stack.addArrangedSubview(sectionTitle("8. 安全控制与配置文件"))
+        pauseWarpButton.target = self
+        pauseWarpButton.action = #selector(toggleWarpVisibility)
+        stack.addArrangedSubview(buttonRow([
+            pauseWarpButton,
+            makeButton("导入 JSON", action: #selector(importConfiguration)),
+            makeButton("导出 JSON", action: #selector(exportConfiguration)),
+            makeButton("恢复默认", action: #selector(resetConfiguration)),
+        ]))
 
         statusLabel.textColor = .systemOrange
-        statusLabel.maximumNumberOfLines = 3
+        statusLabel.maximumNumberOfLines = 5
+        statusLabel.preferredMaxLayoutWidth = 500
         stack.addArrangedSubview(statusLabel)
 
-        let hint = NSTextField(wrappingLabelWithString: "现在外屏原有桌面和所有窗口都会被整体 Warp。覆盖层不接收鼠标，点击会穿透到下方原窗口；但 Warp 后的视觉坐标与实际点击坐标暂未反向校正，当前建议用于展示而非精确交互。")
+        let hint = NSTextField(wrappingLabelWithString: "紧急恢复：按 ⌃⌥⌘Esc 可立即隐藏外屏覆盖层。当前是视觉接管，Warp 后的视觉坐标尚未做输入逆映射。")
         hint.textColor = .secondaryLabelColor
         stack.addArrangedSubview(hint)
-
-        let quitButton = NSButton(title: "退出 Warp", target: NSApp, action: #selector(NSApplication.terminate(_:)))
-        stack.addArrangedSubview(quitButton)
+        stack.addArrangedSubview(makeButton("退出 Warp", action: #selector(NSApplication.terminate(_:)), target: NSApp))
     }
 
     private func screenName(_ screen: NSScreen) -> String {
-        let name = screen.localizedName
-        let size = screen.frame.size
-        return "\(name) · \(Int(size.width))×\(Int(size.height)) pt"
+        "\(screen.localizedName) · \(Int(screen.frame.width))×\(Int(screen.frame.height)) pt"
     }
 
-    private func makeSlider(title: String, minimum: Double, maximum: Double, value: Double, action: Selector) -> NSView {
+    private func sectionTitle(_ title: String) -> NSTextField {
+        let label = NSTextField(labelWithString: title)
+        label.font = .systemFont(ofSize: 14, weight: .bold)
+        return label
+    }
+
+    private func makeButton(_ title: String, action: Selector, target: AnyObject? = nil) -> NSButton {
+        NSButton(title: title, target: target ?? self, action: action)
+    }
+
+    private func buttonRow(_ views: [NSView]) -> NSStackView {
+        let row = NSStackView(views: views)
+        row.orientation = .horizontal
+        row.spacing = 8
+        return row
+    }
+
+    private func labeledRow(_ title: String, _ view: NSView) -> NSStackView {
+        let label = NSTextField(labelWithString: title)
+        label.widthAnchor.constraint(equalToConstant: 92).isActive = true
+        let row = NSStackView(views: [label, view])
+        row.orientation = .horizontal
+        row.spacing = 8
+        return row
+    }
+
+    private func fieldGrid(_ fields: [(String, NSView)]) -> NSGridView {
+        let rows = fields.chunked(into: 2).map { group -> [NSView] in
+            var views = [NSView]()
+            for item in group {
+                let label = NSTextField(labelWithString: item.0)
+                views.append(label)
+                views.append(item.1)
+            }
+            while views.count < 4 { views.append(NSView()) }
+            return views
+        }
+        let grid = NSGridView(views: rows)
+        grid.rowSpacing = 8
+        grid.columnSpacing = 8
+        return grid
+    }
+
+    private func numericField(_ field: NSTextField, target: NumericFieldTarget, decimal: Bool) -> NSView {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = false
+        formatter.allowsFloats = decimal
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = decimal ? 8 : 0
+        field.formatter = formatter
+        field.alignment = .right
+        field.widthAnchor.constraint(equalToConstant: 92).isActive = true
+
+        let minus = makeButton("−", action: #selector(adjustNumericField(_:)))
+        minus.tag = target.rawValue * 2
+        minus.widthAnchor.constraint(equalToConstant: 28).isActive = true
+        let plus = makeButton("+", action: #selector(adjustNumericField(_:)))
+        plus.tag = target.rawValue * 2 + 1
+        plus.widthAnchor.constraint(equalToConstant: 28).isActive = true
+
+        let row = NSStackView(views: [minus, field, plus])
+        row.orientation = .horizontal
+        row.spacing = 4
+        return row
+    }
+
+    private func makeSlider(title: String, slider: NSSlider, minimum: Double, maximum: Double, action: Selector) -> NSView {
         let container = NSStackView()
         container.orientation = .vertical
         container.alignment = .leading
         container.spacing = 4
         let label = NSTextField(labelWithString: title)
-        label.font = .systemFont(ofSize: 13, weight: .semibold)
-        let slider = NSSlider(value: value, minValue: minimum, maxValue: maximum, target: self, action: action)
+        label.font = .systemFont(ofSize: 12, weight: .semibold)
+        slider.minValue = minimum
+        slider.maxValue = maximum
+        slider.target = self
+        slider.action = action
         slider.isContinuous = true
-        slider.widthAnchor.constraint(equalToConstant: 340).isActive = true
+        slider.widthAnchor.constraint(equalToConstant: 490).isActive = true
         container.addArrangedSubview(label)
         container.addArrangedSubview(slider)
         return container
+    }
+
+    private func refreshControls() {
+        let aa = configuration.aaRect.sanitized()
+        aaXField.stringValue = String(Int((aa.x * Double(displayWidth)).rounded()))
+        aaYField.stringValue = String(Int((aa.y * Double(displayHeight)).rounded()))
+        aaWidthField.stringValue = String(Int((aa.width * Double(displayWidth)).rounded()))
+        aaHeightField.stringValue = String(Int((aa.height * Double(displayHeight)).rounded()))
+        canvasWidthField.stringValue = String(configuration.canvas.width)
+        canvasHeightField.stringValue = String(configuration.canvas.height)
+        horizontalMirrorButton.state = configuration.mirror.horizontal ? .on : .off
+        verticalMirrorButton.state = configuration.mirror.vertical ? .on : .off
+        warpButton.state = configuration.manual.enabled ? .on : .off
+        polynomialButton.state = configuration.polynomial.enabled ? .on : .off
+        strengthSlider.doubleValue = configuration.manual.strength
+        archSlider.doubleValue = configuration.manual.arch
+        verticalScaleSlider.doubleValue = configuration.manual.verticalScale
+        asymmetrySlider.doubleValue = configuration.manual.asymmetry
+        tiltSlider.doubleValue = configuration.manual.tilt
+        horizontalBendSlider.doubleValue = configuration.manual.horizontalBend
+        contentModePicker.selectItem(at: ContentMode.allCases.firstIndex(of: configuration.contentMode) ?? 0)
+        antiAliasingPicker.selectItem(at: AntiAliasingMode.allCases.firstIndex(of: configuration.render.antiAliasing) ?? 1)
+        automaticPerformanceButton.state = configuration.render.automaticPerformanceFallback ? .on : .off
+        testPatternButton.state = configuration.render.testPattern == .calibrationGrid ? .on : .off
+        pauseWarpButton.title = isWarpVisible() ? "暂停 Warp" : "恢复 Warp"
+        historyButton.title = "回退上一个版本（\(historyStore.count)）"
+        historyButton.isEnabled = historyStore.count > 0
+        orderPicker.selectItem(at: configuration.polynomial.order - 2)
+        rebuildTermPicker()
+    }
+
+    private func rebuildTermPicker() {
+        let previous = max(termPicker.indexOfSelectedItem, 0)
+        termPicker.removeAllItems()
+        PolynomialWarpConfiguration.terms(order: configuration.polynomial.order).forEach { term in
+            termPicker.addItem(withTitle: term.label)
+        }
+        termPicker.selectItem(at: min(previous, max(termPicker.numberOfItems - 1, 0)))
+        refreshCoefficientFields()
+    }
+
+    private func refreshCoefficientFields() {
+        let index = max(termPicker.indexOfSelectedItem, 0)
+        let polynomial = configuration.polynomial.normalized()
+        coefficientXField.stringValue = NumericInput.formattedDouble(polynomial.coefficientsX[index])
+        coefficientYField.stringValue = NumericInput.formattedDouble(polynomial.coefficientsY[index])
+    }
+
+    private func applyConfiguration(_ message: String, recordHistory: Bool = true) {
+        configuration = configuration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
+        if recordHistory, configuration != lastAppliedConfiguration {
+            historyStore.record(lastAppliedConfiguration, reason: message)
+        }
+        store.save(configuration)
+        let validation = renderer.updateConfiguration(configuration)
+        lastAppliedConfiguration = configuration
+        historyButton.title = "回退上一个版本（\(historyStore.count)）"
+        historyButton.isEnabled = historyStore.count > 0
+        let color: NSColor = validation.isValid ? .systemGreen : .systemRed
+        setStatus("\(message)；\(validation.summary)", color: color)
+    }
+
+    private func startPerformanceMonitoring() {
+        performanceTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            self?.refreshPerformanceStatus()
+        }
+    }
+
+    private func refreshPerformanceStatus() {
+        let didFallback = renderer.evaluateAutomaticPerformanceFallback()
+        let snapshot = renderer.performanceSnapshot()
+        let effective = renderer.effectiveAntiAliasingMode.title
+        performanceLabel.stringValue = String(
+            format: "FPS %.1f · GPU 平均 %.2f ms · P95 %.2f ms · 当前有效画质：%@",
+            snapshot.framesPerSecond,
+            snapshot.averageGPUTimeMilliseconds,
+            snapshot.p95GPUTimeMilliseconds,
+            effective
+        )
+        performanceLabel.textColor = snapshot.sampleCount >= 60 && snapshot.framesPerSecond < 55 ? .systemOrange : .secondaryLabelColor
+        if didFallback {
+            setStatus("质量模式未达到 55 FPS / 14 ms 门槛，已自动降至性能模式；保存配置未改变。", color: .systemOrange)
+        }
+    }
+
+    private func refreshPresets(selecting id: UUID? = nil) {
+        presets = presetStore.all()
+        presetPicker.removeAllItems()
+        presets.forEach { presetPicker.addItem(withTitle: $0.name) }
+        if let id, let index = presets.firstIndex(where: { $0.id == id }) {
+            presetPicker.selectItem(at: index)
+        }
     }
 
     func setStatus(_ text: String, color: NSColor = .systemGreen) {
@@ -517,68 +921,341 @@ private final class ControlPanelController: NSWindowController {
         window.makeKey()
     }
 
-    @objc private func toggleWarp(_ sender: NSButton) {
-        parameters.enabled = sender.state == .on
-        renderer.updateParameters(parameters)
+    @objc private func applyAAFields() {
+        let aa = configuration.aaRect.sanitized()
+        let currentX = Int((aa.x * Double(displayWidth)).rounded())
+        let currentY = Int((aa.y * Double(displayHeight)).rounded())
+        let currentWidth = Int((aa.width * Double(displayWidth)).rounded())
+        let currentHeight = Int((aa.height * Double(displayHeight)).rounded())
+        configuration.aaRect = NormalizedRect(
+            x: Double(NumericInput.integer(from: aaXField.stringValue) ?? currentX) / Double(displayWidth),
+            y: Double(NumericInput.integer(from: aaYField.stringValue) ?? currentY) / Double(displayHeight),
+            width: Double(NumericInput.integer(from: aaWidthField.stringValue) ?? currentWidth) / Double(displayWidth),
+            height: Double(NumericInput.integer(from: aaHeightField.stringValue) ?? currentHeight) / Double(displayHeight)
+        )
+        applyConfiguration("AA 区已应用")
+        refreshControls()
     }
 
-    @objc private func updateStrength(_ sender: NSSlider) {
-        parameters.strength = Float(sender.doubleValue)
-        renderer.updateParameters(parameters)
+    @objc private func centerAA() {
+        configuration.aaRect = NormalizedRect(x: 0.06, y: 0.26, width: 0.88, height: 0.48)
+        applyConfiguration("AA 区已居中")
+        refreshControls()
     }
 
-    @objc private func updateArch(_ sender: NSSlider) {
-        parameters.arch = Float(sender.doubleValue)
-        renderer.updateParameters(parameters)
+    @objc private func fullAA() {
+        configuration.aaRect = .full
+        applyConfiguration("AA 区已设为全屏")
+        refreshControls()
     }
 
-    @objc private func updateVerticalScale(_ sender: NSSlider) {
-        parameters.verticalScale = Float(sender.doubleValue)
-        renderer.updateParameters(parameters)
+    @objc private func applyCanvasFields() {
+        configuration.canvas.width = NumericInput.integer(from: canvasWidthField.stringValue) ?? configuration.canvas.width
+        configuration.canvas.height = NumericInput.integer(from: canvasHeightField.stringValue) ?? configuration.canvas.height
+        applyConfiguration("画布尺寸已应用")
+        refreshControls()
     }
 
-    @objc private func updateAsymmetry(_ sender: NSSlider) {
-        parameters.asymmetry = Float(sender.doubleValue)
-        renderer.updateParameters(parameters)
+    @objc private func updateContentMode() {
+        configuration.contentMode = ContentMode.allCases[contentModePicker.indexOfSelectedItem]
+        applyConfiguration("内容适配已更新")
     }
 
-    @objc private func updateTilt(_ sender: NSSlider) {
-        parameters.tilt = Float(sender.doubleValue)
-        renderer.updateParameters(parameters)
+    @objc private func updateMirror() {
+        configuration.mirror.horizontal = horizontalMirrorButton.state == .on
+        configuration.mirror.vertical = verticalMirrorButton.state == .on
+        applyConfiguration("镜像已更新")
     }
 
-    @objc private func updateContentMode(_ sender: NSPopUpButton) {
-        guard let mode = ContentMode(rawValue: Int32(sender.indexOfSelectedItem)) else { return }
-        renderer.updateContentMode(mode)
+    @objc private func updateAntiAliasing() {
+        configuration.render.antiAliasing = AntiAliasingMode.allCases[antiAliasingPicker.indexOfSelectedItem]
+        applyConfiguration("抗锯齿档位已更新")
+    }
+
+    @objc private func updateAutomaticPerformance() {
+        configuration.render.automaticPerformanceFallback = automaticPerformanceButton.state == .on
+        applyConfiguration("自动性能保护已更新")
+    }
+
+    @objc private func updateTestPattern() {
+        configuration.render.testPattern = testPatternButton.state == .on ? .calibrationGrid : .off
+        applyConfiguration("标定测试图已更新")
+    }
+
+    @objc private func toggleWarpVisibility() {
+        let nextVisible = !isWarpVisible()
+        setWarpVisible(nextVisible)
+        updateWarpVisibilityState(nextVisible)
+        setStatus(nextVisible ? "Warp 覆盖层已恢复。" : "Warp 覆盖层已暂停，外屏恢复原始桌面。", color: nextVisible ? .systemGreen : .systemOrange)
+    }
+
+    func updateWarpVisibilityState(_ visible: Bool) {
+        pauseWarpButton.title = visible ? "暂停 Warp" : "恢复 Warp"
+    }
+
+    @objc private func toggleWarp() {
+        configuration.manual.enabled = warpButton.state == .on
+        applyConfiguration("基础 Warp 已更新")
+    }
+
+    @objc private func updateStrength(_ sender: NSSlider) { configuration.manual.strength = sender.doubleValue; applyConfiguration("Warp 强度已更新") }
+    @objc private func updateArch(_ sender: NSSlider) { configuration.manual.arch = sender.doubleValue; applyConfiguration("上下弧度已更新") }
+    @objc private func updateVerticalScale(_ sender: NSSlider) { configuration.manual.verticalScale = sender.doubleValue; applyConfiguration("垂直压缩已更新") }
+    @objc private func updateAsymmetry(_ sender: NSSlider) { configuration.manual.asymmetry = sender.doubleValue; applyConfiguration("左右不对称已更新") }
+    @objc private func updateTilt(_ sender: NSSlider) { configuration.manual.tilt = sender.doubleValue; applyConfiguration("整体倾斜已更新") }
+    @objc private func updateHorizontalBend(_ sender: NSSlider) { configuration.manual.horizontalBend = sender.doubleValue; applyConfiguration("水平弯曲已更新") }
+
+    @objc private func togglePolynomial() {
+        configuration.polynomial.enabled = polynomialButton.state == .on
+        applyConfiguration("多项式增量已更新")
+    }
+
+    @objc private func updatePolynomialOrder() {
+        configuration.polynomial.order = orderPicker.indexOfSelectedItem + 2
+        configuration.polynomial = configuration.polynomial.normalized()
+        rebuildTermPicker()
+        applyConfiguration("多项式阶数已更新")
+    }
+
+    @objc private func selectPolynomialTerm() { refreshCoefficientFields() }
+
+    @objc private func applyPolynomialCoefficients() {
+        let index = max(termPicker.indexOfSelectedItem, 0)
+        configuration.polynomial = configuration.polynomial.normalized()
+        configuration.polynomial.coefficientsX[index] = NumericInput.double(from: coefficientXField.stringValue)
+            ?? configuration.polynomial.coefficientsX[index]
+        configuration.polynomial.coefficientsY[index] = NumericInput.double(from: coefficientYField.stringValue)
+            ?? configuration.polynomial.coefficientsY[index]
+        applyConfiguration("多项式系数已应用")
+        refreshCoefficientFields()
+    }
+
+    @objc private func adjustNumericField(_ sender: NSButton) {
+        guard let target = NumericFieldTarget(rawValue: sender.tag / 2) else { return }
+        let direction = sender.tag.isMultiple(of: 2) ? -1.0 : 1.0
+
+        switch target {
+        case .aaX:
+            adjustIntegerField(aaXField, delta: Int(direction), minimum: 0, maximum: displayWidth - 1)
+            applyAAFields()
+        case .aaY:
+            adjustIntegerField(aaYField, delta: Int(direction), minimum: 0, maximum: displayHeight - 1)
+            applyAAFields()
+        case .aaWidth:
+            adjustIntegerField(aaWidthField, delta: Int(direction), minimum: 1, maximum: displayWidth)
+            applyAAFields()
+        case .aaHeight:
+            adjustIntegerField(aaHeightField, delta: Int(direction), minimum: 1, maximum: displayHeight)
+            applyAAFields()
+        case .canvasWidth:
+            adjustIntegerField(canvasWidthField, delta: Int(direction), minimum: 64, maximum: 32768)
+            applyCanvasFields()
+        case .canvasHeight:
+            adjustIntegerField(canvasHeightField, delta: Int(direction), minimum: 64, maximum: 32768)
+            applyCanvasFields()
+        case .coefficientX:
+            adjustDoubleField(coefficientXField, delta: direction * 0.001)
+            applyPolynomialCoefficients()
+        case .coefficientY:
+            adjustDoubleField(coefficientYField, delta: direction * 0.001)
+            applyPolynomialCoefficients()
+        }
+    }
+
+    private func adjustIntegerField(_ field: NSTextField, delta: Int, minimum: Int, maximum: Int) {
+        let value = NumericInput.integer(from: field.stringValue) ?? minimum
+        field.stringValue = String(min(max(value + delta, minimum), maximum))
+    }
+
+    private func adjustDoubleField(_ field: NSTextField, delta: Double) {
+        let value = NumericInput.double(from: field.stringValue) ?? 0
+        field.stringValue = NumericInput.formattedDouble(value + delta)
+    }
+
+    @objc private func clearPolynomial() {
+        let count = PolynomialWarpConfiguration.coefficientCount(order: configuration.polynomial.order)
+        configuration.polynomial.coefficientsX = Array(repeating: 0, count: count)
+        configuration.polynomial.coefficientsY = Array(repeating: 0, count: count)
+        refreshCoefficientFields()
+        applyConfiguration("多项式系数已清零")
+    }
+
+    @objc private func savePreset() {
+        do {
+            let preset = try presetStore.save(name: presetNameField.stringValue, configuration: configuration)
+            refreshPresets(selecting: preset.id)
+            presetNameField.stringValue = preset.name
+            setStatus("预设已保存：\(preset.name)")
+        } catch {
+            setStatus("保存预设失败：\(error.localizedDescription)", color: .systemRed)
+        }
+    }
+
+    @objc private func applyPreset() {
+        let index = presetPicker.indexOfSelectedItem
+        guard presets.indices.contains(index) else {
+            setStatus("没有可应用的预设。", color: .systemOrange)
+            return
+        }
+        let preset = presets[index]
+        guard preset.configuration.displayPixelWidth == displayWidth,
+              preset.configuration.displayPixelHeight == displayHeight else {
+            setStatus(
+                "预设 \(preset.name) 面向 \(preset.configuration.displayPixelWidth)×\(preset.configuration.displayPixelHeight)，当前外屏为 \(displayWidth)×\(displayHeight)，已拒绝应用。",
+                color: .systemRed
+            )
+            return
+        }
+        configuration = preset.configuration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
+        refreshControls()
+        applyConfiguration("已应用预设：\(preset.name)")
+    }
+
+    @objc private func deletePreset() {
+        let index = presetPicker.indexOfSelectedItem
+        guard presets.indices.contains(index) else { return }
+        let preset = presets[index]
+        do {
+            try presetStore.delete(id: preset.id)
+            refreshPresets()
+            setStatus("预设已删除：\(preset.name)")
+        } catch {
+            setStatus("删除预设失败：\(error.localizedDescription)", color: .systemRed)
+        }
+    }
+
+    @objc private func rollbackConfiguration() {
+        guard let revision = historyStore.popLatest() else {
+            setStatus("没有可回退的历史版本。", color: .systemOrange)
+            return
+        }
+        configuration = revision.configuration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
+        refreshControls()
+        applyConfiguration("已回退：\(revision.reason)", recordHistory: false)
+    }
+
+    @objc private func importConfiguration() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let data = try Data(contentsOf: url)
+            configuration = try store.importData(
+                data,
+                baseConfiguration: configuration,
+                displayWidth: displayWidth,
+                displayHeight: displayHeight
+            )
+            refreshControls()
+            applyConfiguration("配置已导入：\(url.lastPathComponent)")
+        } catch {
+            setStatus("导入失败：\(error.localizedDescription)", color: .systemRed)
+        }
+    }
+
+    @objc private func exportConfiguration() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "nio-warp-configuration.json"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try store.exportData(configuration).write(to: url, options: .atomic)
+            setStatus("配置已导出：\(url.path)")
+        } catch {
+            setStatus("导出失败：\(error.localizedDescription)", color: .systemRed)
+        }
+    }
+
+    @objc private func resetConfiguration() {
+        configuration = .defaultConfiguration(displayWidth: displayWidth, displayHeight: displayHeight)
+        refreshControls()
+        applyConfiguration("已恢复默认配置")
+    }
+}
+
+private extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        stride(from: 0, to: count, by: size).map { Array(self[$0..<Swift.min($0 + size, count)]) }
     }
 }
 
 private final class AppDelegate: NSObject, NSApplicationDelegate {
     private let captureEngine = CaptureEngine()
+    private let configurationStore = ConfigurationStore()
     private var outputController: OutputController?
     private var controlPanel: ControlPanelController?
+    private var emergencyHotKey: GlobalHotKey?
+    private var isReconfiguring = false
+    private var screenChangeWorkItem: DispatchWorkItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
-        guard let topology = chooseScreens() else {
-            showFatal("需要同时连接 MacBook 内置屏和一台外接显示器。")
+        emergencyHotKey = GlobalHotKey(keyCode: UInt32(kVK_Escape), modifiers: UInt32(controlKey | cmdKey | optionKey)) { [weak self] in
+            self?.emergencyHideWarp(reason: "已通过 ⌃⌥⌘Esc 紧急隐藏 Warp 覆盖层。")
+        }
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(screenParametersChanged),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(screensDidSleep),
+            name: NSWorkspace.screensDidSleepNotification,
+            object: nil
+        )
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(screensDidWake),
+            name: NSWorkspace.screensDidWakeNotification,
+            object: nil
+        )
+        startSession(showFatalOnFailure: true)
+        if emergencyHotKey == nil {
+            controlPanel?.setStatus("警告：全局紧急快捷键注册失败，请使用控制台的“暂停 Warp”。", color: .systemRed)
+        }
+    }
+
+    private func startSession(showFatalOnFailure: Bool) {
+        guard let topology = chooseScreens(),
+              let outputID = displayID(for: topology.output) else {
+            if showFatalOnFailure {
+                showFatal("需要同时连接 MacBook 内置屏和一台外接显示器。")
+            } else {
+                emergencyHideWarp(reason: "未检测到外接屏，Warp 已安全隐藏；重新连接后会自动恢复。")
+            }
             return
         }
-        guard let outputController = OutputController(screen: topology.output, frameStore: captureEngine.frameStore) else {
+        let displayMode = CGDisplayCopyDisplayMode(outputID)
+        let pixelWidth = displayMode?.pixelWidth ?? CGDisplayPixelsWide(outputID)
+        let pixelHeight = displayMode?.pixelHeight ?? CGDisplayPixelsHigh(outputID)
+        let configuration = configurationStore.load(displayWidth: pixelWidth, displayHeight: pixelHeight)
+        guard let outputController = OutputController(
+            screen: topology.output,
+            frameStore: captureEngine.frameStore,
+            configuration: configuration
+        ) else {
             showFatal("无法初始化 Metal 输出。")
             return
         }
         self.outputController = outputController
+        controlPanel?.close()
         let controlPanel = ControlPanelController(
             renderer: outputController.renderer,
+            store: configurationStore,
+            configuration: configuration,
             sourceScreen: topology.source,
-            outputScreen: topology.output
+            outputScreen: topology.output,
+            setWarpVisible: { [weak outputController] visible in outputController?.setWarpVisible(visible) },
+            isWarpVisible: { [weak outputController] in outputController?.isWarpVisible ?? false }
         )
         self.controlPanel = controlPanel
         NSApp.activate(ignoringOtherApps: true)
         controlPanel.bringToFront()
-        captureEngine.onError = { [weak controlPanel] message in
-            controlPanel?.setStatus("捕获中断：\(message)", color: .systemRed)
+        captureEngine.onError = { [weak self] message in
+            self?.emergencyHideWarp(reason: "捕获中断：\(message)。Warp 覆盖层已安全隐藏。")
         }
 
         guard CGPreflightScreenCaptureAccess() else {
@@ -593,27 +1270,65 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        guard let sourceID = displayID(for: topology.source) else {
-            showFatal("无法取得源显示器 ID。")
-            return
-        }
         Task {
             do {
-                try await captureEngine.start(displayID: sourceID)
+                try await captureEngine.start(displayID: outputID)
                 await MainActor.run {
-                    controlPanel.setStatus("正在以 60 FPS 捕获三星外屏完整桌面，并排除自身覆盖层后回显到同一外屏。")
+                    controlPanel.setStatus("正在捕获外屏完整桌面；AA 区外纯黑，配置会自动保存。")
                     NSApp.activate(ignoringOtherApps: true)
                     controlPanel.bringToFront()
                 }
             } catch {
                 await MainActor.run {
-                    controlPanel.setStatus("启动失败：\(error.localizedDescription)", color: .systemRed)
+                    self.emergencyHideWarp(reason: "启动失败：\(error.localizedDescription)。Warp 覆盖层已安全隐藏。")
                 }
             }
         }
     }
 
+    private func restartSession(reason: String) {
+        guard !isReconfiguring else { return }
+        isReconfiguring = true
+        emergencyHideWarp(reason: reason)
+        Task {
+            await captureEngine.stop()
+            await MainActor.run {
+                outputController = nil
+                startSession(showFatalOnFailure: false)
+                isReconfiguring = false
+            }
+        }
+    }
+
+    private func emergencyHideWarp(reason: String) {
+        outputController?.setWarpVisible(false)
+        controlPanel?.updateWarpVisibilityState(false)
+        controlPanel?.setStatus(reason, color: .systemOrange)
+        NSApp.activate(ignoringOtherApps: true)
+        controlPanel?.bringToFront()
+    }
+
+    @objc private func screenParametersChanged() {
+        screenChangeWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.restartSession(reason: "检测到外屏连接或分辨率变化，已隐藏覆盖层并重建输出。")
+        }
+        screenChangeWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: workItem)
+    }
+
+    @objc private func screensDidSleep() {
+        emergencyHideWarp(reason: "显示器已休眠，Warp 覆盖层已安全隐藏。")
+        Task { await captureEngine.stop() }
+    }
+
+    @objc private func screensDidWake() {
+        restartSession(reason: "显示器已唤醒，正在重建 Warp 输出。")
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
+        NotificationCenter.default.removeObserver(self)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
         Task { await captureEngine.stop() }
     }
 
@@ -628,11 +1343,9 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
         }) ?? NSScreen.main ?? screens[0]
         let output = screens
             .filter { $0 !== builtIn }
-            .max { lhs, rhs in
-                lhs.frame.width * lhs.frame.height < rhs.frame.width * rhs.frame.height
-            }
+            .max { lhs, rhs in lhs.frame.width * lhs.frame.height < rhs.frame.width * rhs.frame.height }
         guard let output else { return nil }
-        return (output, output)
+        return (builtIn, output)
     }
 
     private func displayID(for screen: NSScreen) -> CGDirectDisplayID? {

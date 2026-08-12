@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.playwright-cli/
 native/.build/
 native/dist/
 artifacts/*

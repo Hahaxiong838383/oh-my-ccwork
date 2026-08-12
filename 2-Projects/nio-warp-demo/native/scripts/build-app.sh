@@ -32,9 +32,9 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.1.0</string>
+  <string>0.2.0</string>
   <key>CFBundleVersion</key>
-  <string>1</string>
+  <string>2</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>NSHighResolutionCapable</key>
@@ -43,7 +43,18 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-codesign --force --deep --sign - \
-  --requirements '=designated => identifier "com.mycc.nio-warp-demo"' \
-  "$APP_DIR"
+SIGNING_IDENTITY="${NIO_WARP_CODESIGN_IDENTITY:-}"
+if [[ -z "$SIGNING_IDENTITY" ]]; then
+  SIGNING_IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null | awk -F'"' '/Apple Development:/{print $2; exit}')"
+fi
+
+if [[ -n "$SIGNING_IDENTITY" ]]; then
+  codesign --force --deep --sign "$SIGNING_IDENTITY" "$APP_DIR"
+  echo "Signed with stable identity: $SIGNING_IDENTITY"
+else
+  codesign --force --deep --sign - \
+    --requirements '=designated => identifier "com.mycc.nio-warp-demo"' \
+    "$APP_DIR"
+  echo "Warning: no Apple Development identity found; Screen Recording permission may need renewal after rebuild." >&2
+fi
 echo "$APP_DIR"

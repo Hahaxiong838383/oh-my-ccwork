@@ -1,0 +1,16 @@
+NIO Warp 阶段 1 基线回滚点
+
+恢复源码（会覆盖当前项目对应文件，执行前先退出 NIOWarpApp）：
+  cd /Users/rayman.chen/mycc/2-Projects/nio-warp-demo
+  tar -xzf .rollback/20260812-190000-phase1-baseline/source-and-config.tar.gz -C .
+  native/scripts/build-app.sh
+
+安全演练配置恢复（不会修改当前配置）：
+  .rollback/20260812-190000-phase1-baseline/scripts/restore-user-configuration.sh --dry-run
+
+恢复当时配置（先退出 NIOWarpApp；执行时会自动备份当前 defaults）：
+  .rollback/20260812-190000-phase1-baseline/scripts/restore-user-configuration.sh --apply
+
+校验：
+  cd .rollback/20260812-190000-phase1-baseline
+  shasum -a 256 -c SHA256SUMS
