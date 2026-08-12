@@ -27,6 +27,10 @@ pub struct SttConfig {
     pub api_key: Option<String>,
     pub resource_id: String,
     pub end_window_ms: u32,
+    pub enable_ddc: bool,
+    /// preflight 开(生产默认)→ 转写全走 canonical(去标点,S1 投机命中的前提);
+    /// 关 → 原样 trim(火山原始带标点行为)。对齐 volc_stt._canon。
+    pub canon: bool,
 }
 
 impl SttConfig {
@@ -41,6 +45,8 @@ impl SttConfig {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(800),
+            enable_ddc: std::env::var("VOLC_ASR_ENABLE_DDC").map(|v| v == "1").unwrap_or(true),
+            canon: std::env::var("VOLC_PREFLIGHT_ENABLED").map(|v| v == "1").unwrap_or(true),
         }
     }
 }
@@ -79,7 +85,7 @@ pub async fn run_asr_stream(
             "model_name": "bigmodel",
             "enable_itn": true,
             "enable_punc": true,
-            "enable_ddc": true,
+            "enable_ddc": cfg.enable_ddc,
             "show_utterances": true,
             "enable_nonstream": false,
             "end_window_size": cfg.end_window_ms,
@@ -146,7 +152,7 @@ pub async fn run_asr_stream(
                     }
                     let ended = frame.flag == Flags::LastNoSeq;
                     if let Some(payload) = frame.json_payload() {
-                        handle_result(&payload, &mut finals_emitted, &event_tx).await;
+                        handle_result(&payload, &mut finals_emitted, &event_tx, cfg.canon).await;
                     }
                     if ended {
                         let _ = event_tx.send(SttEvent::Closed).await;
@@ -169,22 +175,36 @@ async fn handle_result(
     payload: &serde_json::Value,
     finals_emitted: &mut usize,
     event_tx: &mpsc::Sender<SttEvent>,
+    canon: bool,
 ) {
     let Some(result) = payload.get("result") else { return };
     let utterances = result.get("utterances").and_then(|u| u.as_array());
     let Some(utts) = utterances else { return };
 
+    let norm = |raw: &str| -> String {
+        if canon {
+            crate::textproc::canon_transcript(raw)
+        } else {
+            raw.trim().to_string()
+        }
+    };
     // definite=true 的按序补发 Final;最后一个未定句发 Interim
     let mut definite_count = 0usize;
     let mut tail_interim: Option<String> = None;
     for u in utts {
-        let text = u.get("text").and_then(|t| t.as_str()).unwrap_or("").trim().to_string();
+        let raw = u.get("text").and_then(|t| t.as_str()).unwrap_or("");
+        let text = norm(raw);
         let definite = u.get("definite").and_then(|d| d.as_bool()).unwrap_or(false);
         if definite {
             definite_count += 1;
-            if definite_count > *finals_emitted && !text.is_empty() {
-                info!("stt final: {text}"); // 证据日志,格式对齐 Python 版
-                let _ = event_tx.send(SttEvent::Final(text)).await;
+            if definite_count > *finals_emitted {
+                if text.is_empty() {
+                    // 顺滑风险观测(对齐 volc_stt.py):definite 句被 ddc 清空,唯一证据日志
+                    warn!("stt: definite 句段顺滑后为空(疑似 enable_ddc 清空纯语气词), raw_utterance={u}");
+                } else {
+                    info!("stt final: {text}"); // 证据日志,格式对齐 Python 版
+                    let _ = event_tx.send(SttEvent::Final(text)).await;
+                }
                 *finals_emitted = definite_count;
             }
         } else {

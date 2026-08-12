@@ -79,6 +79,7 @@ pub struct VadGate {
     speaking: bool,
     speech_run: u32,
     silence_run: u32,
+    segment_speech_frames: u32, // 本说话段累计语音帧(打断时长门 min_interruption_duration)
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -98,6 +99,7 @@ impl VadGate {
             speaking: false,
             speech_run: 0,
             silence_run: 0,
+            segment_speech_frames: 0,
         }
     }
 
@@ -105,13 +107,34 @@ impl VadGate {
         self.speaking
     }
 
+    const FRAME_S: f32 = WINDOW as f32 / SAMPLE_RATE as f32; // 0.032
+
+    /// 本说话段累计语音时长(对齐 VADEvent.speech_duration,打断时长门用)。
+    pub fn speech_dur_s(&self) -> f32 {
+        self.segment_speech_frames as f32 * Self::FRAME_S
+    }
+
+    /// 当前连续静音时长(说话中累积 ≥200ms 触发 EOT 预测)。
+    pub fn silence_dur_s(&self) -> f32 {
+        self.silence_run as f32 * Self::FRAME_S
+    }
+
+    /// END_OF_SPEECH 触发时已含的静音窗(锚点回溯量,对齐框架 last_speaking_time 回算)。
+    pub fn min_silence_s(&self) -> f32 {
+        self.min_silence_frames as f32 * Self::FRAME_S
+    }
+
     pub fn feed(&mut self, prob: f32) -> VadEvent {
         let active = prob >= self.activation_threshold;
         if active {
             self.speech_run += 1;
             self.silence_run = 0;
+            if self.speaking {
+                self.segment_speech_frames += 1;
+            }
             if !self.speaking && self.speech_run >= self.min_speech_frames {
                 self.speaking = true;
+                self.segment_speech_frames = self.speech_run; // 起说前的 run-up 计入段时长
                 return VadEvent::SpeechStart;
             }
         } else {
@@ -119,6 +142,7 @@ impl VadGate {
             self.speech_run = 0;
             if self.speaking && self.silence_run >= self.min_silence_frames {
                 self.speaking = false;
+                self.segment_speech_frames = 0;
                 return VadEvent::SpeechEnd;
             }
         }

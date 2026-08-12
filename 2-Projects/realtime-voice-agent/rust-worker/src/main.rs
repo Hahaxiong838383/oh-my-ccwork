@@ -4,13 +4,18 @@
 //! 生产 Python worker 不受影响:本进程用独立 AGENT_NAME 注册,dispatch 按名派单。
 
 mod config;
+mod contract;
+mod eot;
 mod job;
 mod llm;
 mod pipeline;
+mod playout;
 mod segmenter;
 mod stt_volc;
+mod textproc;
 mod token;
 mod tts_volc;
+mod turn;
 mod vad;
 mod volc;
 mod worker;
@@ -33,5 +38,9 @@ async fn main() -> anyhow::Result<()> {
         max_jobs = cfg.max_jobs,
         "voice-rust-worker starting"
     );
+    // EOT sidecar 预热:启动即拉起(spawn+模型加载 ~2-4s),避免首轮判停预测赶上冷启动
+    tokio::spawn(async {
+        let _ = eot::EotClient::global().await;
+    });
     worker::run(cfg).await
 }

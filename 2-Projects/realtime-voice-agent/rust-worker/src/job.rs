@@ -34,12 +34,14 @@ pub async fn run_job(_config: Config, job: proto::Job, url: String, token: Strin
         "job connected to room"
     );
 
-    // agent 出声轨:24k mono(TTS 原生采样率直喂,RTC 内部重采样)
+    // agent 出声轨:24k mono(TTS 原生采样率直喂,RTC 内部重采样)。
+    // 队列 200ms 对齐 Python room_io(queue_size_ms=200):pause 时排队尾音 ≤200ms
+    // 自然放完(框架不 clear),硬打断才 clear_buffer。
     let source = NativeAudioSource::new(
         AudioSourceOptions::default(),
         TTS_SAMPLE_RATE,
         1,
-        1_000,
+        200,
     );
     let track = LocalAudioTrack::create_audio_track(
         "agent-voice",

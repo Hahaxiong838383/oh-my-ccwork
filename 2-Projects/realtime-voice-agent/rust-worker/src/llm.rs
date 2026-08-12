@@ -132,14 +132,31 @@ impl Llm {
         Ok(full)
     }
 
-    /// 被打断:真实播出的部分入历史(对齐 Python synchronized_transcript 语义的简化版)。
-    /// P3b 打断精确同步时接线。
-    #[allow(dead_code)]
-    pub fn amend_last_assistant(&mut self, actually_spoken: &str) {
-        if let Some(last) = self.history.last_mut()
-            && last["role"] == "assistant"
-        {
-            last["content"] = json!(actually_spoken);
+    /// 固定句(greeting/say)入历史(对齐 session.say add_to_chat_ctx=True)。
+    pub fn push_assistant(&mut self, text: &str) {
+        if !text.is_empty() {
+            self.history.push(json!({"role": "assistant", "content": text}));
+        }
+    }
+
+    /// 被打断:历史修正为真实播出的部分(对齐框架 transcript sync 截断语义,句级近似)。
+    /// 末条是 assistant → 替换(LLM 流已完整落账);不是 → 追加(流被中断未落账)。
+    /// 播出为空 → 移除末条 assistant(什么都没说出口,不留假话)。
+    pub fn set_last_assistant(&mut self, actually_spoken: &str) {
+        let last_is_assistant =
+            self.history.last().map(|m| m["role"] == "assistant").unwrap_or(false);
+        if actually_spoken.is_empty() {
+            if last_is_assistant {
+                self.history.pop();
+            }
+            return;
+        }
+        if last_is_assistant {
+            if let Some(last) = self.history.last_mut() {
+                last["content"] = json!(actually_spoken);
+            }
+        } else {
+            self.history.push(json!({"role": "assistant", "content": actually_spoken}));
         }
     }
 }
