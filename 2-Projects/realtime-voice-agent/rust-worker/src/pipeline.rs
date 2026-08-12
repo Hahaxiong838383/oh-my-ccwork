@@ -696,11 +696,16 @@ impl Orchestrator {
         let synth_text = Arc::new(StdMutex::new(String::new()));
         let progress = Arc::new(StdMutex::new(Vec::new()));
 
-        // 开播观察者:首帧 capture → AudioStarted(agent_state=speaking 的时刻语义)
+        // 开播观察者:首帧 capture → AudioStarted(agent_state=speaking 的时刻语义)。
+        // 退出条件必须含 abort:hard_abort 只杀外层 turn task,detached 的观察者
+        // 若 turn 未开播就被打断会永转(dev198 内存排查时发现的隐性泄漏)。
         let watch_ctl = ctl.clone();
         let watch_tx = self.turn_ev_tx.clone();
         let watcher = tokio::spawn(async move {
             loop {
+                if watch_ctl.aborted() {
+                    return;
+                }
                 if watch_ctl.audio_started() {
                     let _ = watch_tx.send(TurnEvent::AudioStarted(id)).await;
                     return;

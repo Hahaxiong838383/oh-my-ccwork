@@ -45,6 +45,11 @@ impl PlayoutControl {
         let _ = self.pause_tx.send(false); // 唤醒可能阻塞在暂停门上的循环
     }
 
+    /// turn 的开播观察者依赖此退出条件:硬打断后未开播的 turn,观察者不得永转。
+    pub fn aborted(&self) -> bool {
+        *self.abort_tx.borrow()
+    }
+
     /// 是否已真正开始出声(首帧已 capture)。
     pub fn audio_started(&self) -> bool {
         self.first_frame_us.load(Ordering::SeqCst) != 0
