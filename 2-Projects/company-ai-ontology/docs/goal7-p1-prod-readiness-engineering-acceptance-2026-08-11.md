@@ -2,13 +2,13 @@
 
 日期：2026-08-11（Asia/Shanghai）
 
-状态：`engineering_verified / runtime_1_4_superseded / runtime_1_5_pending / production_not_deployed / owner_acceptance_pending`
+状态：`engineering_verified / immutable_release_verified / production_not_deployed / owner_acceptance_pending`
 
 ## 1. 结论
 
 Goal 7 的 P1-AUTHORITY 与 P1-RUNTIME 已从规划进入本地工程候选：飞书部门/群聊 Principal 映射、发送者隔离、用途收窄、当前群成员证据、会话授权快照、Route A 独立熔断、有限重试、Token/费用预算、真实 provider/model/usage 读回和 Route B 默认关闭已经进入 Agent Core、Knowledge Connector、候选迁移和不可变 Runtime Workflow。机器 Release Plan 已升级为五阶段授权，D 阶段在任何合成写入前要求显式授权与公司 QNAP 五元组预检，E 阶段必须证明旧版本已验证且获批候选版本已恢复。Goal 7 Owner Acceptance 现绑定五份工程 Evidence，最终 Acceptance 共绑定六份文件。
 
-双仓候选曾由 Runtime Workflow `31614522984` Attempt `1` / Artifact `9148675772` 使用 Manifest `1.4.0` 把 B 阶段改为只读对账，强制 `database_sql_executed=0`，并通过完整验签。但本轮完成度审计确认该包未包含五阶段 Release Plan、D 阶段前置授权和 E 阶段回滚恢复机器证据，现已失效并禁止申请 A 或部署。当前必须从本次已推送 Commit 生成并验签 Manifest `1.5.0` 新 Artifact；在此之前不可变 Release 门禁关闭。Goal 7 仍未执行真实 H Worker 双源读回、合成 Authority Canary、完整三组件 Deployment Evidence、Rollback Drill Evidence 或川哥 Owner Acceptance。
+Workflow `31621532736` Attempt `1` / Artifact `9151468565` 已从 Ontology Commit `a0ad7f4a13bf1d48822461d707a42c553b1dcf94` 和 H-Lite Commit `fab8be3f1467289400d0d63ffe378b63ad1a6957` 生成 Manifest `1.5.0`，完整 8 项 `SHA256SUMS`、Release Validator、Goal 7 Runtime Validator、PostgreSQL Runtime 与 Goal 7 Foundation 验证均通过。旧 Artifact `9148675772` / Manifest `1.4.0` 继续失效。Goal 7 仍未执行真实 H Worker 双源读回、合成 Authority Canary、完整三组件 Deployment Evidence、Rollback Drill Evidence 或川哥 Owner Acceptance。
 
 ## 2. P1-AUTHORITY 工程能力
 
@@ -84,14 +84,14 @@ Foundation 发布准备、既有 012 只读对账、三个服务重建、H Worke
 | Shell 语法 | 通过 |
 | Compose / Workflow YAML | 通过 |
 | `git diff --check` | 通过 |
-| PostgreSQL 隔离 Runtime | 历史 Artifact `9148675772` 通过；Manifest `1.5.0` 新 Artifact 待生成 |
+| PostgreSQL 隔离 Runtime | Artifact `9151468565` / Manifest `1.5.0` 通过 |
 
 覆盖的负向场景包括：多人艾特不扩权、私聊不继承群权限、群成员过期/撤权、未知飞书成员类型、非法用途、Route B 调用、非重试错误、Token/费用超预算、熔断、provider/model/usage 读回缺失、D 阶段未授权写入、部署/回滚未独立授权、旧版本未验证、候选版本未恢复、迁移丢失、restart/业务副作用、Artifact SHA 篡改、内部 Hash 重新签名漂移和获批双 Commit 漂移。
 
 ## 6. 当前门禁
 
 - `engineeringVerified=true`：五阶段授权和回滚证据链代码已完成本地工程验证；
-- `immutableReleaseVerified=false`：Manifest `1.4.0` Artifact `9148675772` 已降级为历史证据，Manifest `1.5.0` 新 Artifact 尚未生成；
+- `immutableReleaseVerified=true`：Artifact `9151468565` 已通过 Manifest `1.5.0`、完整 Hash 与双验证器；
 - `ownerAccepted=false`：不得由测试自动填写；
 - 公司专用 CPA Key 与同厂冗余仍缺失，Route B 继续关闭；
 - 产品研究部整库导入、10 人真实 Canary、员工私人 Bot 迁移、ERP/社媒写回继续关闭；
@@ -100,9 +100,7 @@ Foundation 发布准备、既有 012 只读对账、三个服务重建、H Worke
 
 ## 7. 下一步
 
-1. 提交并推送本次 Manifest/Release Plan `1.5.0` 与回滚证据链；
-2. 运行 Runtime Workflow，下载新 Artifact，验证全部 Hash、Release Validator 和 Goal 7 Runtime Validator；
-3. 用新 Workflow/Artifact/双仓 Commit/组件版本重签 A～E 授权卡，再只申请 A；
-4. A 留证后依次申请 B、C、D、E；D 同时完成真实 H Worker 双源读回和 Authority Canary；
-5. E 完成旧版本验证与候选版本恢复后，编译 `rollback-drill-evidence.json`；
-6. 五份工程证据全部通过后，由川哥独立生成 `owner-acceptance.json`，再编译 `goal7-acceptance.json`。
+1. 只申请 Artifact `9151468565` 的 A 阶段授权；
+2. A 留证后依次申请 B、C、D、E；D 同时完成真实 H Worker 双源读回和 Authority Canary；
+3. E 完成旧版本验证与候选版本恢复后，编译 `rollback-drill-evidence.json`；
+4. 五份工程证据全部通过后，由川哥独立生成 `owner-acceptance.json`，再编译 `goal7-acceptance.json`。

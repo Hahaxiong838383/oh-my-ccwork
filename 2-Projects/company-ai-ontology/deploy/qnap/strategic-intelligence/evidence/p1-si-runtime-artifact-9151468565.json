@@ -1,0 +1,68 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "p1-si-runtime-artifact-verification",
+  "capturedAt": "2026-08-12T17:16:00Z",
+  "containsSecrets": false,
+  "workflow": {
+    "runId": "31621532736",
+    "runAttempt": 1,
+    "conclusion": "success",
+    "sourceCommit": "a0ad7f4a13bf1d48822461d707a42c553b1dcf94",
+    "hLiteSourceCommit": "fab8be3f1467289400d0d63ffe378b63ad1a6957"
+  },
+  "artifact": {
+    "id": "9151468565",
+    "name": "p1-si-runtime-a0ad7f4a13bf1d48822461d707a42c553b1dcf94",
+    "retentionExpiresAt": "2026-11-10T17:13:24Z",
+    "sizeBytes": 58996724,
+    "checksumEntryCount": 8,
+    "allChecksumsVerified": true,
+    "checksumManifestSha256": "1a6e39f613c977e6731422598a7d7118516b469868ac0d4dbfbfead7515e84e4"
+  },
+  "manifest": {
+    "version": "1.5.0",
+    "sha256": "7a13334229ee13dc6e5e38566f8c355468efe6153be45cd4eb64964cfdc496ff",
+    "releaseType": "P1-SI-F-shadow-candidate-gated",
+    "publish": false,
+    "productionDeploymentAuthorized": false,
+    "goal7Migration012Mode": "pre_existing_reconciliation_only",
+    "goal7Migration012SqlReplayAllowed": false
+  },
+  "runtime": {
+    "agentCoreVersion": "2026-08-12.3",
+    "knowledgeConnectorVersion": "2026-08-11.1",
+    "hLiteVersion": "2026-08-12.1",
+    "collectorImageId": "sha256:8ba30212a54870dedd20262a634a920137a9a596fa96dad7a850efee9dc79b4a",
+    "collectorPlatform": "linux/amd64",
+    "candidateOntologySchema": "3.7.0",
+    "candidateOntologyHash": "c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860",
+    "routeBState": "disabled"
+  },
+  "validation": {
+    "releaseManifestValidator": true,
+    "goal7RuntimeValidator": true,
+    "postgresRuntimeVerified": true,
+    "goal7AuthorityRuntimeFoundationVerified": true,
+    "domainPersistenceVerified": true,
+    "domainPersistenceIdempotent": true,
+    "aclFailClosed": true,
+    "releasePlanExplicitAuthorizationCount": 5
+  },
+  "gateSnapshot": {
+    "deploymentReadinessPass": 1,
+    "deploymentReadinessBlocked": 6,
+    "goalCompletionPass": 1,
+    "goalCompletionBlocked": 7
+  },
+  "productionState": {
+    "uploadedToCompanyQnap": false,
+    "companyQnapDeployed": false,
+    "databaseSqlExecuted": false,
+    "servicesRecreated": false,
+    "workerReadbackStarted": false,
+    "authorityCanaryStarted": false,
+    "rollbackDrillStarted": false,
+    "collectorStarted": false,
+    "shadowStarted": false
+  }
+}

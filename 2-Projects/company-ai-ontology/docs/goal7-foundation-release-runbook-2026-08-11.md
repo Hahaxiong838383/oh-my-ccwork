@@ -2,26 +2,27 @@
 
 日期：2026-08-11（Asia/Shanghai）
 
-状态：`WAIT_MANIFEST_1_5_ARTIFACT / NOT_AUTHORIZED`
+状态：`READY_FOR_SEPARATE_OWNER_AUTHORIZATION / NOT_AUTHORIZED`
 
 ## 1. 结论
 
-Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动恢复和验收清单已经完成工程准备。机器 Release Plan 已升级为 `1.5.0`，五项独立授权、D 阶段写入前授权/公司 QNAP 五元组预检和 E 阶段候选→旧版→候选恢复证据链均已进入代码；当前尚无与该契约匹配的不可变 Artifact，因此不能申请 A～E，也没有生产执行资格。本运行手册不构成部署、数据库 SQL、服务切换或回滚授权。
+Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动恢复和验收清单已经完成工程准备。机器 Release Plan `1.5.0` 的五项独立授权、D 阶段写入前授权/公司 QNAP 五元组预检和 E 阶段候选→旧版→候选恢复证据链均已进入 Artifact `9151468565`。不可变 Release 工程门禁已通过，但尚未取得 A～E 任一生产授权。本运行手册不构成部署、数据库 SQL、服务切换或回滚授权。
 
-Artifact `9142197870`、`9145915628`、`9148389214` 及更早包只保留历史工程证据并禁止部署。Runtime Workflow `31614522984` Attempt `1` / Artifact `9148675772` 虽已完成 Manifest `1.4.0` 验签并固定 012 只读对账，但不包含当前五阶段 Release Plan、D 阶段前置授权和 E 阶段回滚恢复证据链，现同样禁止申请 A 或部署。
+Artifact `9142197870`、`9145915628`、`9148389214`、`9148675772` 及更早包只保留历史工程证据并禁止部署。当前唯一候选为 Runtime Workflow `31621532736` Attempt `1` / Artifact `9151468565`。
 
-- Ontology Commit：等待本次工程变更提交并推送后的完整 Commit；
+- Ontology Commit：`a0ad7f4a13bf1d48822461d707a42c553b1dcf94`；
 - H-Lite Commit `fab8be3f1467289400d0d63ffe378b63ad1a6957`；
-- Agent Core、Knowledge Connector、H-Lite 与 Collector Image：等待新 Artifact 的 `runtime-component-versions.json`、Release Manifest 和 `SHA256SUMS` 读回；
-- 目标 Manifest：`1.5.0`。
+- Agent Core `2026-08-12.3`、Knowledge Connector `2026-08-11.1`、H-Lite `2026-08-12.1`；
+- Collector Image：`sha256:8ba30212a54870dedd20262a634a920137a9a596fa96dad7a850efee9dc79b4a`；
+- Manifest：`1.5.0`。
 
-只有新 Artifact 的全部校验和、Release Validator、Goal 7 Foundation 与 PostgreSQL Runtime Evidence 均通过，并固定 `goal7Migration012Mode=pre_existing_reconciliation_only / goal7Migration012SqlReplayAllowed=false` 后，才恢复不可变 Release 工程门禁。该工程门禁仍不构成生产授权；任何字段变化都需要重新生成 Artifact、预检与授权卡。
+Artifact `9151468565` 的全部校验和、Release Validator、Goal 7 Foundation 与 PostgreSQL Runtime Evidence 均已通过，并固定 `goal7Migration012Mode=pre_existing_reconciliation_only / goal7Migration012SqlReplayAllowed=false`。该工程门禁不构成生产授权；任何字段变化都需要重新生成 Artifact、预检与授权卡。
 
-`2026-08-12 22:48 CST` 已经公网 Mini 跳板完成公司 QNAP 纯只读生产预检：五元组一致、Foundation `13/13 running / unhealthy=0 / restart=0`、active Schema `3.3.0 / in_sync`、唯一宿主绑定仍为 `192.168.61.18:19080`；`strategic_intelligence` Schema、表、容器和网络均为 `0`，五类业务副作用均为 `0`。后续溯源确认 Goal 7 四张 Authority/Runtime 表已由历史 Workflow `31555822727` 在约 `10:13 CST` 落库；原始 B 阶段 Evidence 缺失。最终 Artifact Evidence 继续证明 `9148675772` 尚未进入 QNAP。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/goal7-migration-012-provenance-2026-08-12.json` 和 `deploy/qnap/strategic-intelligence/evidence/p1-si-runtime-artifact-9148675772.json`。本轮未写入 QNAP、未执行 SQL、未运行 Collector、未重启服务、未执行回滚。
+历史只读预检与迁移溯源确认 active Schema `3.3.0 / in_sync`，Goal 7 四张 Authority/Runtime 表来自历史 Workflow `31555822727`，原始 B 阶段 Evidence 缺失。新 Artifact 生成后又于 `2026-08-12T17:25:03Z` 经公网 Mini 跳板完成纯只读复核：五元组一致、Foundation `13/13 running / unhealthy=0 / restart=0`、LAN-only 健康端点正常，战略情报容器/网络 `0/0`，Artifact `9151468565` 匹配文件为 `0`。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/goal7-migration-012-provenance-2026-08-12.json`、`deploy/qnap/strategic-intelligence/evidence/p1-si-runtime-artifact-9151468565.json` 和 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-readonly-preflight-artifact-9151468565.json`。本轮未写入 QNAP、未执行 SQL、未运行 Collector、未重启服务、未执行回滚。
 
 同轮容量与回滚输入预检确认：QNAP/Docker 为 `x86_64`，与 Artifact `linux/amd64` 兼容；可用内存约 `11.1 GiB`，热卷可用约 `604.7 GiB`，备份卷可用约 `7.1 TiB`；三组件当前镜像均可读，合计约 `882 MiB`，Foundation Compose 校验通过。候选 Runtime 三个部署归档合计约 `56.5 MiB`，尚未传入 QNAP，避免在授权前产生写入。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-capacity-rollback-preflight-2026-08-12.json`。
 
-新 Artifact 完整验签并重签授权卡后，正式执行与验收仍必须分别取得五项明确授权：
+正式执行与验收仍必须分别取得五项明确授权：
 
 1. Foundation 发布准备授权：`GOAL7_DEPLOY_APPROVED=YES`，只允许 Artifact 入场、备份和候选镜像构建；
 2. 既有 012 对账授权：`GOAL7_MIGRATION_012_RECONCILIATION_APPROVED=YES`，只允许只读验证和写入脱敏 Evidence，必须输出 `database_sql_executed=0`；
@@ -149,11 +150,11 @@ Artifact `9142197870`、`9145915628`、`9148389214` 及更早包只保留历史�
 | P003 最终决定 | `0/36` |
 | 四角色真实 UAT | `0/4` |
 | Goal 7 Owner Acceptance | `未完成` |
-| Production Readiness | `0/7`，新不可变 Release 待生成 |
+| Production Readiness | `1/7`，仅不可变 Release 通过 |
 | 七日 Production Shadow | `0/7` |
-| Goal Completion | `0/8`，新不可变 Release 待生成 |
+| Goal Completion | `1/8`，仅不可变 Release 通过 |
 
-因此当前工程准备、容量和历史公司 QNAP 只读预检已经完成，但新 Artifact 尚未生成和验签。下一步是提交并推送本次 `1.5.0` 契约，等待 Runtime Workflow 生成新 Artifact；完整验签并重签授权卡后才可申请 A。后续仍必须按阶段逐项验证前序 Evidence Hash，不能用一次授权贯穿全部动作。
+因此当前工程准备、新 Artifact 验签、容量和公司 QNAP 公网只读预检均已完成。下一步只申请 Artifact `9151468565` 的 A 阶段授权；后续仍必须按阶段逐项验证前序 Evidence Hash，不能用一次授权贯穿全部动作。
 
 机器契约：`deploy/qnap/strategic-intelligence/config/goal7-foundation-release-plan.json`。
 
