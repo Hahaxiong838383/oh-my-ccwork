@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NIO Warp · 控制台</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="control">
+  <main class="control-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">NIO NT4.0 / OPTICAL WARP POC</p>
+        <h1>全反射面畸变校正控制台</h1>
+      </div>
+      <div class="top-actions">
+        <button class="button" id="reset-state">恢复默认参数</button>
+        <button class="button primary" id="open-output">打开外接屏窗口</button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside class="controls">
+        <section class="section">
+          <div class="section-title"><h2>外接屏模式</h2><span>实时同步</span></div>
+          <div class="mode-grid">
+            <button class="button" data-mode="source">1 扩展画布</button>
+            <button class="button" data-mode="uncorrected">2 未校正反射</button>
+            <button class="button" data-mode="physical">3 物理预畸变</button>
+            <button class="button" data-mode="corrected">4 校正结果</button>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>虚拟画布</h2><span>短边扩展</span></div>
+          <div class="control-row">
+            <label for="canvas-height">画布高度</label>
+            <span class="value" data-value-for="canvasHeight"></span>
+            <input id="canvas-height" data-state="canvasHeight" type="range" min="360" max="760" step="10">
+          </div>
+          <label class="check-row"><input data-state="showLabels" type="checkbox">显示区域标签和安全区</label>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>模拟玻璃参数</h2><span>可实时调节</span></div>
+          <div class="control-row"><label>上下弧度</label><span class="value" data-value-for="arch"></span><input data-state="arch" type="range" min="0" max="0.18" step="0.005"></div>
+          <div class="control-row"><label>垂直压缩</label><span class="value" data-value-for="verticalScale"></span><input data-state="verticalScale" type="range" min="0.68" max="0.98" step="0.01"></div>
+          <div class="control-row"><label>左右不对称</label><span class="value" data-value-for="asymmetry"></span><input data-state="asymmetry" type="range" min="-0.15" max="0.15" step="0.005"></div>
+          <div class="control-row"><label>整体倾斜</label><span class="value" data-value-for="tilt"></span><input data-state="tilt" type="range" min="-0.1" max="0.1" step="0.005"></div>
+          <div class="control-row"><label>横向弯折</label><span class="value" data-value-for="horizontalBend"></span><input data-state="horizontalBend" type="range" min="-0.08" max="0.08" step="0.004"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>自定义内容</h2><span>可选</span></div>
+          <input class="file-input" id="image-input" type="file" accept="image/*">
+        </section>
+      </aside>
+
+      <section class="preview-zone">
+        <div class="preview-grid">
+          <article class="preview-card">
+            <div class="preview-head"><span>物理屏实际输出</span><span class="status-dot">● PRE-WARP</span></div>
+            <canvas id="physical-preview"></canvas>
+          </article>
+          <article class="preview-card">
+            <div class="preview-head"><span>模拟玻璃反射后</span><span class="status-dot">● CORRECTED</span></div>
+            <canvas id="corrected-preview"></canvas>
+          </article>
+        </div>
+        <div class="instructions">
+          <div class="instruction"><strong>01</strong><span>点击“打开外接屏窗口”，把新窗口拖到 32 寸显示器。</span></div>
+          <div class="instruction"><strong>02</strong><span>在外接屏按 F 全屏；按 1–4 快速切换四种视图。</span></div>
+          <div class="instruction"><strong>03</strong><span>在笔记本调整画布高度和弧度，外接屏实时响应。</span></div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script src="warp.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

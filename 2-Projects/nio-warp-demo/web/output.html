@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NIO Warp · 外接屏输出</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="output" class="output-page">
+  <canvas id="output-canvas"></canvas>
+  <div class="output-hud">
+    <div><strong id="output-mode">物理屏预畸变输出</strong> · 虚拟画布 <span id="output-canvas-height">520px</span></div>
+    <div class="keys">1 画布 · 2 未校正 · 3 预畸变 · 4 校正结果 · H 隐藏提示 · F 全屏</div>
+    <button class="button" id="fullscreen-output">进入全屏</button>
+  </div>
+  <script src="warp.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
