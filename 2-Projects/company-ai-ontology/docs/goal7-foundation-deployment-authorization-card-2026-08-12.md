@@ -40,15 +40,22 @@ Artifact 保留至 `2026-11-10T19:45:53Z`；9 项 `SHA256SUMS` 及完整验证�
 
 该基线不替代 A 阶段内对容量、Compose、服务、端口、镜像、业务副作用和完整 Hash 的再次核验。
 
-## 3. 影响与时间
+## 3. 分阶段影响与时间
 
-- 总维护窗口预计：`8～20 分钟`；
-- 员工可感知间歇中断累计：`15～120 秒`；
-- 飞书长连接会短暂重连，新消息由恢复型 H-Lite 先持久化；
-- 公司 Bot 推理与知识检索会短暂暂停；
-- 自动失败恢复预计：`2～6 分钟`；
-- 不重启 Postgres、Redis、Qdrant、Ontology Registry、Action Gateway、Domain Connector、Gateway；
-- 不运行 Collector，不启动七日 Shadow，不产生正式 P2、员工投递或业务写回。
+当前只申请 A 阶段，因此本次授权对应的影响是：
+
+- A 阶段准备窗口预计：`8～20 分钟`；
+- 预期员工可感知中断：`0 秒`；
+- 不切换、不重建、不重启任何 Foundation 服务，现有 H-Lite、Agent Core 和 Knowledge Connector 继续运行；
+- 不执行数据库 SQL，不运行模型、Worker、Collector 或七日 Shadow；
+- 不产生正式 P2、员工投递、ERP/社媒写回或因果激活。
+
+以下仅用于后续独立授权的影响告知，不属于本次 A 阶段授权：
+
+- C 阶段三组件重建时，员工可感知间歇中断预计累计 `15～120 秒`；飞书长连接可能短暂重连，公司 Bot 推理与知识检索会短暂暂停；
+- C 阶段自动失败恢复预计 `2～6 分钟`；
+- E 阶段真实回滚恢复演练预计 `2～6 分钟`，并会产生第二次短暂中断；
+- C、E 阶段均不重启 Postgres、Redis、Qdrant、Ontology Registry、Action Gateway、Domain Connector 或 Gateway。
 
 ## 4. 五项独立授权
 
