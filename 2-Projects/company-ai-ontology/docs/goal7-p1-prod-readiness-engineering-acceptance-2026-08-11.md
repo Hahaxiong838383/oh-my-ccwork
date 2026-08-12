@@ -10,6 +10,8 @@ Goal 7 的 P1-AUTHORITY 与 P1-RUNTIME 已从规划进入本地工程候选：�
 
 工程契约现已升级为 Manifest `1.6.0`：Runtime 包必须包含 `image.env` 在内的 9 项 `SHA256SUMS`，并通过隔离上传、严格根目录白名单和原子晋级。Workflow `31626697529` Attempt `2` / Artifact `9153663685` 已绑定 Ontology Commit `b63db1164`、H-Lite Commit `fab8be3f` 与 Collector Image `sha256:4e1669f...`，离线 9/9 Hash、Release Validator、Goal 7 Runtime、PostgreSQL Runtime 和 Foundation 验证全部通过。历史 Artifact `9151468565` 及更早包继续禁止部署。Goal 7 尚未取得 A 阶段授权，也未执行真实 H Worker 双源读回、合成 Authority Canary、完整三组件 Deployment Evidence、Rollback Drill Evidence 或川哥 Owner Acceptance。
 
+同一真实 Artifact 的本机 staging 演练也已通过首次原子晋级、幂等重放、损坏包拒绝和失败清理；发布目录 10 个文件均为 `0600`。该结果只证明执行脚本与真实包兼容，明确 `countsTowardStageA=false / companyQnapTouched=false`，不把本地工程演练冒充生产 A 阶段完成。
+
 ## 2. P1-AUTHORITY 工程能力
 
 - 飞书成员同时兼容 `type` 与 `member_type`；`user/openid`、`department/opendepartmentid`、`chat/openchat/group/groupid` 分别归一化为人员、部门和 chat Principal；

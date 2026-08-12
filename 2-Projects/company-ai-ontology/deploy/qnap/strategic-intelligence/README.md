@@ -58,6 +58,8 @@ Goal 7 正式 Foundation 发布计划由 `config/goal7-foundation-release-plan.j
 
 Artifact `9153663685` 是当前唯一候选，已通过 Manifest `1.6.0`、9 项 Hash、严格根目录白名单、`image.env` 交叉绑定、隔离上传和原子晋级复验；当前仅可申请 A。Artifact `9142197870`、`9145915628`、`9148389214`、`9148675772`、`9151468565` 及更早包均只保留历史证据并禁止部署。优雅 drain 不等于强杀恢复；宿主断电、`SIGKILL` 和半程 WorkCase 恢复继续由 Goal 8 lease/fencing 处理。
 
+同一真实 Artifact 已在本机临时目录完成 staging 脚本演练：首次原子晋级、同字节幂等重放、`image.env` 损坏拒绝、锁与 partial 清理、10 个发布文件权限 `0600` 均通过。脱敏证据见 `evidence/p1-si-goal7-local-stage-rehearsal-artifact-9153663685.json`。该文件固定 `engineeringRehearsal=true / countsTowardStageA=false / companyQnapTouched=false`，不能替代公司 QNAP A 阶段 Preparation Evidence。
+
 Foundation 部署完成后，D 阶段真实 Worker 读回与 Authority Canary 共用一次独立授权 `GOAL7_WORKER_READBACK_APPROVED=YES`，两条路径都必须在任何写入前通过公司 QNAP 五元组预检。该阶段不迁移数据库、不重启服务、不运行 Collector，只创建临时合成证据，经 H-Lite 正式 Agent Core Adapter 调用一次 Route A，并读取同一 request 的 `runtime.h_engine_usage_events`；最终只保留请求 Hash和运行元数据，合成资源会删除、合成 Principal 会禁用。
 
 Goal 7 Owner Acceptance 必须在五份工程证据全部生成后，以独立显式确认执行：`runtime-verification.json`、`worker-readback.json`、`authority-canary.json`、`deployment-evidence.json`、`rollback-drill-evidence.json`。
