@@ -27,6 +27,10 @@ previous_version=$("$docker_path" compose -f "$project_root/docker-compose.yml" 
   "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();process.stdout.write(String(p.contractVersion||''))}).catch(()=>process.exit(1))" \
   </dev/null 2>/dev/null || true)
 [ -n "$previous_version" ] || { echo 'current agent runtime version is unavailable' >&2; exit 1; }
+previous_source_commit=$("$docker_path" compose -f "$project_root/docker-compose.yml" exec -T agent-core node -e \
+  "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();process.stdout.write(String(p.sourceCommit||''))}).catch(()=>process.exit(1))" \
+  </dev/null 2>/dev/null || true)
+[ -n "$previous_source_commit" ] || { echo 'current agent runtime source commit is unavailable' >&2; exit 1; }
 "$docker_path" image inspect company-ai-foundation-agent-core:latest >/dev/null
 "$docker_path" image tag company-ai-foundation-agent-core:latest "$previous_image"
 
@@ -43,8 +47,8 @@ rollback_on_error() {
     "$docker_path" compose up -d --no-deps --force-recreate --no-build agent-core
     attempt=0
     until "$docker_path" compose exec -T agent-core node -e \
-      "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();process.exit(r.ok&&p.status==='ready'&&p.productionReady===true&&p.contractVersion===process.argv[1]?0:1)}).catch(()=>process.exit(1))" \
-      "$previous_version" \
+      "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();process.exit(r.ok&&p.status==='ready'&&p.productionReady===true&&p.contractVersion===process.argv[1]&&p.sourceCommit===process.argv[2]?0:1)}).catch(()=>process.exit(1))" \
+      "$previous_version" "$previous_source_commit" \
       </dev/null 2>/dev/null; do
       attempt=$((attempt + 1))
       [ "$attempt" -lt 60 ] || break
@@ -57,11 +61,15 @@ rollback_on_error() {
 trap rollback_on_error EXIT HUP INT TERM
 
 temp=$project_root/.env.agent-runtime-$run_id
-awk -v value="$release_root/services/agent-core" '
-  BEGIN { found=0 }
-  /^AGENT_CORE_BUILD_CONTEXT=/ { print "AGENT_CORE_BUILD_CONTEXT=" value; found=1; next }
+awk -v context="$release_root/services/agent-core" -v commit="$runtime_commit" '
+  BEGIN { context_found=0; commit_found=0 }
+  /^AGENT_CORE_BUILD_CONTEXT=/ { print "AGENT_CORE_BUILD_CONTEXT=" context; context_found=1; next }
+  /^ONTOLOGY_SOURCE_COMMIT=/ { print "ONTOLOGY_SOURCE_COMMIT=" commit; commit_found=1; next }
   { print }
-  END { if (!found) print "AGENT_CORE_BUILD_CONTEXT=" value }
+  END {
+    if (!context_found) print "AGENT_CORE_BUILD_CONTEXT=" context
+    if (!commit_found) print "ONTOLOGY_SOURCE_COMMIT=" commit
+  }
 ' "$project_root/.env" > "$temp"
 chmod 600 "$temp"
 mv "$temp" "$project_root/.env"
@@ -73,8 +81,8 @@ cd "$project_root"
 
 attempt=0
 until "$docker_path" compose exec -T agent-core node -e \
-  "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();console.log(JSON.stringify(p));process.exit(r.ok&&p.status==='ready'&&p.productionReady===true&&p.contractVersion===process.argv[1]?0:1)}).catch(()=>process.exit(1))" \
-  "$expected_version" \
+  "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();console.log(JSON.stringify(p));process.exit(r.ok&&p.status==='ready'&&p.productionReady===true&&p.contractVersion===process.argv[1]&&p.sourceCommit===process.argv[2]?0:1)}).catch(()=>process.exit(1))" \
+  "$expected_version" "$runtime_commit" \
   </dev/null; do
   attempt=$((attempt + 1))
   [ "$attempt" -lt 60 ] || { "$docker_path" compose logs --tail 160 agent-core; exit 1; }
@@ -90,6 +98,7 @@ runtime_commit=$runtime_commit
 release_root=$release_root
 previous_context=$previous_context
 previous_version=$previous_version
+previous_source_commit=$previous_source_commit
 previous_image=$previous_image
 expected_version=$expected_version
 EOF

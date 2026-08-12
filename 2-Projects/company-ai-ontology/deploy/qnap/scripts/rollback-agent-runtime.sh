@@ -15,7 +15,9 @@ manifest=$backup_root/release-manifest.txt
 
 previous_image=$(awk -F= '/^previous_image=/{print $2; exit}' "$manifest")
 previous_version=$(awk -F= '/^previous_version=/{print $2; exit}' "$manifest")
+previous_source_commit=$(awk -F= '/^previous_source_commit=/{print $2; exit}' "$manifest")
 [ -n "$previous_image" ] || { echo 'previous image missing from manifest' >&2; exit 1; }
+[ -n "$previous_source_commit" ] || { echo 'previous source commit missing from manifest' >&2; exit 1; }
 "$docker_path" image inspect "$previous_image" >/dev/null
 
 cp "$backup_root/.env" "$project_root/.env"
@@ -28,8 +30,8 @@ cd "$project_root"
 target_version=${expected_version:-$previous_version}
 attempt=0
 until "$docker_path" compose exec -T agent-core node -e \
-  "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();console.log(JSON.stringify(p));process.exit(r.ok&&p.status==='ready'&&p.productionReady===true&&(!process.argv[1]||p.contractVersion===process.argv[1])?0:1)}).catch(()=>process.exit(1))" \
-  "$target_version" \
+  "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();console.log(JSON.stringify(p));process.exit(r.ok&&p.status==='ready'&&p.productionReady===true&&(!process.argv[1]||p.contractVersion===process.argv[1])&&p.sourceCommit===process.argv[2]?0:1)}).catch(()=>process.exit(1))" \
+  "$target_version" "$previous_source_commit" \
   </dev/null; do
   attempt=$((attempt + 1))
   [ "$attempt" -lt 60 ] || { "$docker_path" compose logs --tail 160 agent-core; exit 1; }
