@@ -4,12 +4,14 @@ import path from 'node:path'
 
 const COMMIT = /^[a-f0-9]{40}$/
 const HASH = /^[a-f0-9]{64}$/
+const VERSION = /^\d{4}-\d{2}-\d{2}\.\d+$/
 const MAX_JSON_BYTES = 1024 * 1024
 const REQUIRED_FILES = Object.freeze([
   'runtime-verification.json',
   'postgres-validation.txt',
   'goal7-foundation-validation.txt',
   'release-manifest.json',
+  'runtime-component-versions.json',
   'source.tar.gz',
   'h-lite-source.tar.gz',
   'collector-image.tar.gz',
@@ -71,6 +73,9 @@ export async function validateGoal7RuntimeRelease(root, expected = {}) {
   requireValue(verification.verificationType === 'P1-SI-F-linux-amd64-runtime', 'runtime verification type mismatch')
   requireValue(COMMIT.test(String(verification.sourceCommit || '')), 'runtime verification sourceCommit invalid')
   requireValue(COMMIT.test(String(verification.hLiteSourceCommit || '')), 'runtime verification hLiteSourceCommit invalid')
+  requireValue(VERSION.test(String(verification.agentCoreVersion || '')), 'runtime verification agentCoreVersion invalid')
+  requireValue(VERSION.test(String(verification.knowledgeConnectorVersion || '')), 'runtime verification knowledgeConnectorVersion invalid')
+  requireValue(VERSION.test(String(verification.hLiteVersion || '')), 'runtime verification hLiteVersion invalid')
   requireValue(verification.immutableReleaseCandidateVerified === true, 'runtime release is not immutable-verified')
   requireValue(verification.companyQnapDeployed === false, 'runtime release incorrectly claims company QNAP deployment')
   requireValue(verification.publish === false, 'runtime release publish must remain false')
@@ -91,6 +96,7 @@ export async function validateGoal7RuntimeRelease(root, expected = {}) {
     ['h-lite-source.tar.gz', 'hLiteSourceArchiveSha256'],
     ['collector-image.tar.gz', 'collectorImageArchiveSha256'],
     ['release-manifest.json', 'releaseManifestSha256'],
+    ['runtime-component-versions.json', 'runtimeComponentVersionsSha256'],
     ['postgres-validation.txt', 'postgresEvidenceSha256'],
     ['goal7-foundation-validation.txt', 'goal7FoundationEvidenceSha256'],
   ]
@@ -100,18 +106,37 @@ export async function validateGoal7RuntimeRelease(root, expected = {}) {
   }
 
   const releaseManifest = parseJson(files.get('release-manifest.json'), 'release manifest')
-  requireValue(releaseManifest.manifestVersion === '1.2.0', 'release manifest version mismatch')
+  requireValue(releaseManifest.manifestVersion === '1.3.0', 'release manifest version mismatch')
   requireValue(releaseManifest.releaseType === 'P1-SI-F-shadow-candidate-gated', 'release manifest type mismatch')
   requireValue(releaseManifest.sourceCommit === verification.sourceCommit, 'release manifest sourceCommit drift')
+  requireValue(releaseManifest.hLiteSourceCommit === verification.hLiteSourceCommit, 'release manifest hLiteSourceCommit drift')
   requireValue(releaseManifest.sourceArchiveSha256 === verification.sourceArchiveSha256, 'release manifest source archive drift')
+  requireValue(releaseManifest.hLiteSourceArchiveSha256 === verification.hLiteSourceArchiveSha256, 'release manifest H-Lite source archive drift')
   requireValue(releaseManifest.collectorImageArchiveSha256 === verification.collectorImageArchiveSha256, 'release manifest collector archive drift')
+  requireValue(releaseManifest.runtimeComponentVersionsSha256 === verification.runtimeComponentVersionsSha256, 'release manifest runtime component versions drift')
+  for (const key of ['agentCoreVersion', 'knowledgeConnectorVersion', 'hLiteVersion']) {
+    requireValue(releaseManifest[key] === verification[key], `release manifest ${key} drift`)
+  }
   requireValue(releaseManifest.publish === false, 'release manifest publish must remain false')
   requireValue(releaseManifest.productionDeploymentAuthorized === false, 'release manifest must not self-authorize production')
   requireValue(releaseManifest.requiredGate === 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH', 'release manifest deployment gate mismatch')
 
+  const versions = parseJson(files.get('runtime-component-versions.json'), 'runtime component versions')
+  requireValue(versions.evidenceVersion === '1.0.0', 'runtime component versions evidenceVersion mismatch')
+  requireValue(versions.evidenceType === 'goal7-runtime-component-versions', 'runtime component versions type mismatch')
+  requireValue(versions.sourceCommit === verification.sourceCommit, 'runtime component versions sourceCommit drift')
+  requireValue(versions.hLiteSourceCommit === verification.hLiteSourceCommit, 'runtime component versions hLiteSourceCommit drift')
+  for (const key of ['agentCoreVersion', 'knowledgeConnectorVersion', 'hLiteVersion']) {
+    requireValue(VERSION.test(String(versions[key] || '')), `runtime component versions ${key} invalid`)
+    requireValue(versions[key] === verification[key], `runtime component versions ${key} drift`)
+  }
+
   return {
     sourceCommit: verification.sourceCommit,
     hLiteSourceCommit: verification.hLiteSourceCommit,
+    agentCoreVersion: verification.agentCoreVersion,
+    knowledgeConnectorVersion: verification.knowledgeConnectorVersion,
+    hLiteVersion: verification.hLiteVersion,
     hLiteSourceArchiveSha256: verification.hLiteSourceArchiveSha256,
     checksumEntryCount: checksums.size,
   }

@@ -227,29 +227,50 @@ test('internal deployment prepares a complete runtime without starting container
   assert.equal(compiled.status, 0, compiled.stderr)
 
   const sourceArchive = path.join(releaseRoot, 'source.tar.gz')
+  const hLiteSourceArchive = path.join(releaseRoot, 'h-lite-source.tar.gz')
   const imageArchive = path.join(releaseRoot, 'collector-image.tar.gz')
+  const componentVersionsFile = path.join(releaseRoot, 'runtime-component-versions.json')
   const archiveResult = spawnSync('tar', [
     '-C', path.dirname(releaseSourceRoot),
     '-czf', sourceArchive,
     path.basename(releaseSourceRoot),
   ], { encoding: 'utf8' })
   assert.equal(archiveResult.status, 0, archiveResult.stderr)
+  await fs.writeFile(hLiteSourceArchive, gzipSync(Buffer.from('bounded fake h-lite source archive')))
   await fs.writeFile(imageArchive, gzipSync(Buffer.from('bounded fake collector image archive')))
 
   const sourceCommit = 'a'.repeat(40)
+  const hLiteSourceCommit = 'f'.repeat(40)
   const collectorImageId = `sha256:${'b'.repeat(64)}`
-  const [sourceBytes, imageBytes] = await Promise.all([
+  const componentVersionsBytes = Buffer.from(`${JSON.stringify({
+    evidenceVersion: '1.0.0',
+    evidenceType: 'goal7-runtime-component-versions',
+    sourceCommit,
+    hLiteSourceCommit,
+    agentCoreVersion: '2026-08-12.2',
+    knowledgeConnectorVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-11.1',
+  })}\n`)
+  await fs.writeFile(componentVersionsFile, componentVersionsBytes)
+  const [sourceBytes, hLiteSourceBytes, imageBytes] = await Promise.all([
     fs.readFile(sourceArchive),
+    fs.readFile(hLiteSourceArchive),
     fs.readFile(imageArchive),
   ])
   await fs.writeFile(path.join(releaseRoot, 'release-manifest.json'), JSON.stringify({
-    manifestVersion: '1.2.0',
+    manifestVersion: '1.3.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-11T00:00:00Z',
     sourceCommit,
+    hLiteSourceCommit,
     collectorImageId,
     sourceArchiveSha256: sha256(sourceBytes),
+    hLiteSourceArchiveSha256: sha256(hLiteSourceBytes),
     collectorImageArchiveSha256: sha256(imageBytes),
+    runtimeComponentVersionsSha256: sha256(componentVersionsBytes),
+    agentCoreVersion: '2026-08-12.2',
+    knowledgeConnectorVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-11.1',
     candidateOntologySchema: '3.7.0',
     candidateOntologyHash: 'c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860',
     sourceRegistryCandidateHash: '0ce4022adcfc177ced670a8d7fd2e4b4e119c2fc1bc5c19cabefb3223c010eae',
@@ -364,6 +385,11 @@ printf 'company_qnap_identity=verified\\nfoundation_root=%s\\nshadow_root=%s\\n'
   const releaseManifestFile = path.join(releaseRoot, 'release-manifest.json')
   const releaseManifest = JSON.parse(await fs.readFile(releaseManifestFile, 'utf8'))
   releaseManifest.sourceCommit = 'c'.repeat(40)
+  const componentVersions = JSON.parse(await fs.readFile(componentVersionsFile, 'utf8'))
+  componentVersions.sourceCommit = releaseManifest.sourceCommit
+  const updatedComponentVersionsBytes = Buffer.from(`${JSON.stringify(componentVersions)}\n`)
+  await fs.writeFile(componentVersionsFile, updatedComponentVersionsBytes)
+  releaseManifest.runtimeComponentVersionsSha256 = sha256(updatedComponentVersionsBytes)
   await fs.writeFile(releaseManifestFile, JSON.stringify(releaseManifest))
   const runtimeManifestFile = path.join(runtimeRoot, 'runtime-manifest.json')
   const runtimeManifest = JSON.parse(await fs.readFile(runtimeManifestFile, 'utf8'))

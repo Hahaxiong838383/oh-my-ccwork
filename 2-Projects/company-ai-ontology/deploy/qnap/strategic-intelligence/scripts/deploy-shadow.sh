@@ -22,8 +22,10 @@ reviewer_role_access_acceptance=${SI_REVIEWER_ROLE_ACCESS_ACCEPTANCE_FILE:?SI_RE
 goal7_acceptance=${SI_GOAL7_ACCEPTANCE_FILE:?SI_GOAL7_ACCEPTANCE_FILE is required}
 manifest=$release_root/release-manifest.json
 source_archive=$release_root/source.tar.gz
+h_lite_source_archive=$release_root/h-lite-source.tar.gz
 image_archive=$release_root/collector-image.tar.gz
-for file in "$manifest" "$source_archive" "$image_archive" "$approved_registry" "$approved_config" "$approved_p003_review" "$reviewer_role_access_acceptance" "$goal7_acceptance"; do
+component_versions=$release_root/runtime-component-versions.json
+for file in "$manifest" "$source_archive" "$h_lite_source_archive" "$image_archive" "$component_versions" "$approved_registry" "$approved_config" "$approved_p003_review" "$reviewer_role_access_acceptance" "$goal7_acceptance"; do
   [ -f "$file" ] || { echo 'required release or approval file missing' >&2; exit 1; }
 done
 case "$release_root" in /share/CACHEDEV1_DATA/ai-ontology/strategic-intelligence/release/*) ;; *) echo 'refusing unexpected release root' >&2; exit 1 ;; esac
@@ -38,7 +40,7 @@ source_sha=$("$node_bin" -e "const x=require(process.argv[1]); process.stdout.wr
 image_sha=$("$node_bin" -e "const x=require(process.argv[1]); process.stdout.write(x.collectorImageArchiveSha256)" "$manifest")
 [ "$(sha256sum "$source_archive" | awk '{print $1}')" = "$source_sha" ] || { echo 'source archive hash mismatch' >&2; exit 1; }
 [ "$(sha256sum "$image_archive" | awk '{print $1}')" = "$image_sha" ] || { echo 'collector image archive hash mismatch' >&2; exit 1; }
-"$node_bin" "$script_root/validate-release-manifest.mjs" "$manifest" "$source_archive" "$image_archive" >/dev/null
+"$node_bin" "$script_root/validate-release-manifest.mjs" "$manifest" "$source_archive" "$h_lite_source_archive" "$image_archive" "$component_versions" >/dev/null
 
 staging=$release_root/staging-$source_commit
 rm -rf "$staging"
@@ -46,7 +48,7 @@ mkdir -p "$staging"
 tar -C "$staging" -xzf "$source_archive"
 release_project_root=$staging/company-ai-ontology
 "$node_bin" "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-release-manifest.mjs" \
-  "$manifest" "$source_archive" "$image_archive" >/dev/null
+  "$manifest" "$source_archive" "$h_lite_source_archive" "$image_archive" "$component_versions" >/dev/null
 "$node_bin" "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-approved-registry.mjs" "$approved_registry" "$approved_config" >/dev/null
 "$node_bin" "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-approved-p003-review.mjs" "$approved_p003_review" >/dev/null
 reviewer_role_access_evidence_hash=$("$node_bin" "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-reviewer-role-access-acceptance.mjs" "$reviewer_role_access_acceptance" | "$node_bin" -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>process.stdout.write(JSON.parse(s).evidenceHash))")

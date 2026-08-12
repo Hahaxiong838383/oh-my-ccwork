@@ -4,7 +4,7 @@
 
 ## 1. 结论
 
-P1-SI-B～G 工程能力已完成，最新不可变候选为 Runtime Workflow `31563935583` / Artifact `9128767614`；公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；应按“少量深审、其余明确保持关闭”的方式关闭人审门禁，再进入 Goal 7 和正式七日 Shadow。
+P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `118/118`。Runtime Manifest 已升级到 `1.3.0`，旧 Workflow `31563935583` / Artifact `9128767614` 仅保留为历史工程证据；新的不可变候选需从最终推送 Commit 重新生成并核验。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；应按“少量深审、其余明确保持关闭”的方式关闭人审门禁，再进入 Goal 7 和正式七日 Shadow。
 
 当前实测状态：
 

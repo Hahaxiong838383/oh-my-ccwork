@@ -47,7 +47,9 @@ function sha256(bytes) {
 const releaseFiles = [
   path.join(releaseRoot, 'release-manifest.json'),
   path.join(releaseRoot, 'source.tar.gz'),
+  path.join(releaseRoot, 'h-lite-source.tar.gz'),
   path.join(releaseRoot, 'collector-image.tar.gz'),
+  path.join(releaseRoot, 'runtime-component-versions.json'),
 ]
 const preValidation = runValidator('validate-goal-runtime-snapshot.mjs', [preSnapshotFile, 'pre_deployment'])
 const postValidation = runValidator('validate-goal-runtime-snapshot.mjs', [postSnapshotFile, 'post_seven_day'])

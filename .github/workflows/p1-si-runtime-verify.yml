@@ -153,23 +153,39 @@ jobs:
         env:
           IMAGE_ID: ${{ steps.image.outputs.image_id }}
           IMAGE_ARCHIVE_SHA: ${{ steps.image.outputs.archive_sha }}
+          H_LITE_SOURCE_COMMIT: ${{ steps.hlite.outputs.source_commit }}
+          H_LITE_SOURCE_ARCHIVE_SHA: ${{ steps.hlite.outputs.archive_sha }}
         run: |
           set -euo pipefail
           project=2-Projects/company-ai-ontology
           git archive --format=tar.gz --prefix=company-ai-ontology/ "${GITHUB_SHA}:${project}" \
             > runtime-evidence/source.tar.gz
           source_sha=$(sha256sum runtime-evidence/source.tar.gz | awk '{print $1}')
+          node "$project/deploy/qnap/strategic-intelligence/scripts/extract-runtime-component-versions.mjs" \
+            "$project" runtime-h-lite "$GITHUB_SHA" "$H_LITE_SOURCE_COMMIT" \
+            runtime-evidence/runtime-component-versions.json >/dev/null
+          component_versions_sha=$(sha256sum runtime-evidence/runtime-component-versions.json | awk '{print $1}')
           export SOURCE_ARCHIVE_SHA="$source_sha"
+          export RUNTIME_COMPONENT_VERSIONS_SHA="$component_versions_sha"
+          export AGENT_CORE_VERSION="$(jq -r '.agentCoreVersion' runtime-evidence/runtime-component-versions.json)"
+          export KNOWLEDGE_CONNECTOR_VERSION="$(jq -r '.knowledgeConnectorVersion' runtime-evidence/runtime-component-versions.json)"
+          export H_LITE_VERSION="$(jq -r '.hLiteVersion' runtime-evidence/runtime-component-versions.json)"
           node <<'NODE'
           const fs = require('node:fs')
           const manifest = {
-            manifestVersion: '1.2.0',
+            manifestVersion: '1.3.0',
             releaseType: 'P1-SI-F-shadow-candidate-gated',
             createdAt: new Date().toISOString(),
             sourceCommit: process.env.GITHUB_SHA,
+            hLiteSourceCommit: process.env.H_LITE_SOURCE_COMMIT,
             collectorImageId: process.env.IMAGE_ID,
             sourceArchiveSha256: process.env.SOURCE_ARCHIVE_SHA,
+            hLiteSourceArchiveSha256: process.env.H_LITE_SOURCE_ARCHIVE_SHA,
             collectorImageArchiveSha256: process.env.IMAGE_ARCHIVE_SHA,
+            runtimeComponentVersionsSha256: process.env.RUNTIME_COMPONENT_VERSIONS_SHA,
+            agentCoreVersion: process.env.AGENT_CORE_VERSION,
+            knowledgeConnectorVersion: process.env.KNOWLEDGE_CONNECTOR_VERSION,
+            hLiteVersion: process.env.H_LITE_VERSION,
             candidateOntologySchema: '3.7.0',
             candidateOntologyHash: 'c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860',
             sourceRegistryCandidateHash: '0ce4022adcfc177ced670a8d7fd2e4b4e119c2fc1bc5c19cabefb3223c010eae',
@@ -185,11 +201,17 @@ jobs:
           node "$project/deploy/qnap/strategic-intelligence/scripts/validate-release-manifest.mjs" \
             runtime-evidence/release-manifest.json \
             runtime-evidence/source.tar.gz \
-            runtime-evidence/collector-image.tar.gz
+            runtime-evidence/h-lite-source.tar.gz \
+            runtime-evidence/collector-image.tar.gz \
+            runtime-evidence/runtime-component-versions.json
           manifest_sha=$(sha256sum runtime-evidence/release-manifest.json | awk '{print $1}')
           {
             echo "source_sha=$source_sha"
             echo "manifest_sha=$manifest_sha"
+            echo "component_versions_sha=$component_versions_sha"
+            echo "agent_core_version=$AGENT_CORE_VERSION"
+            echo "knowledge_connector_version=$KNOWLEDGE_CONNECTOR_VERSION"
+            echo "h_lite_version=$H_LITE_VERSION"
           } >> "$GITHUB_OUTPUT"
 
       - name: Write verification manifest
@@ -202,6 +224,10 @@ jobs:
           RELEASE_MANIFEST_SHA: ${{ steps.release.outputs.manifest_sha }}
           H_LITE_SOURCE_COMMIT: ${{ steps.hlite.outputs.source_commit }}
           H_LITE_SOURCE_ARCHIVE_SHA: ${{ steps.hlite.outputs.archive_sha }}
+          RUNTIME_COMPONENT_VERSIONS_SHA: ${{ steps.release.outputs.component_versions_sha }}
+          AGENT_CORE_VERSION: ${{ steps.release.outputs.agent_core_version }}
+          KNOWLEDGE_CONNECTOR_VERSION: ${{ steps.release.outputs.knowledge_connector_version }}
+          H_LITE_VERSION: ${{ steps.release.outputs.h_lite_version }}
           POSTGRES_IMAGE: pgvector/pgvector:pg17-bookworm@sha256:7ae6051efd0e60444282c27c7e141af07f322ce033300e727a49c3dd11075e38
           DOMAIN_PERSISTENCE: ${{ steps.postgres.outputs.domain_persistence }}
           DOMAIN_PERSISTENCE_IDEMPOTENT: ${{ steps.postgres.outputs.domain_persistence_idempotent }}
@@ -227,6 +253,10 @@ jobs:
             collectorImageArchiveSha256: process.env.IMAGE_ARCHIVE_SHA,
             sourceArchiveSha256: process.env.SOURCE_ARCHIVE_SHA,
             hLiteSourceArchiveSha256: process.env.H_LITE_SOURCE_ARCHIVE_SHA,
+            runtimeComponentVersionsSha256: process.env.RUNTIME_COMPONENT_VERSIONS_SHA,
+            agentCoreVersion: process.env.AGENT_CORE_VERSION,
+            knowledgeConnectorVersion: process.env.KNOWLEDGE_CONNECTOR_VERSION,
+            hLiteVersion: process.env.H_LITE_VERSION,
             releaseManifestSha256: process.env.RELEASE_MANIFEST_SHA,
             postgresImage: process.env.POSTGRES_IMAGE,
             imageBuildVerified: true,
@@ -251,6 +281,7 @@ jobs:
               postgres-validation.txt \
               goal7-foundation-validation.txt \
               release-manifest.json \
+              runtime-component-versions.json \
               source.tar.gz \
               h-lite-source.tar.gz \
               collector-image.tar.gz \

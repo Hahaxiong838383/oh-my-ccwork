@@ -4,6 +4,7 @@ import { isDeepStrictEqual } from 'node:util'
 import path from 'node:path'
 
 export const GOAL7_DEPLOYMENT_RAW_FILES = Object.freeze({
+  runtimeIdentity: 'runtime-component-versions.json',
   before: 'pre-deployment-state.json',
   after: 'post-deployment-state.json',
   sideEffects: 'deployment-side-effects.json',
@@ -89,6 +90,20 @@ function sideEffects(value) {
   }
 }
 
+function runtimeIdentity(value) {
+  exactKeys(value, [
+    'evidenceVersion', 'evidenceType', 'sourceCommit', 'hLiteSourceCommit',
+    'agentCoreVersion', 'knowledgeConnectorVersion', 'hLiteVersion',
+  ], 'runtimeIdentity')
+  requireValue(value.evidenceVersion === '1.0.0', 'runtimeIdentity evidenceVersion mismatch')
+  requireValue(value.evidenceType === 'goal7-runtime-component-versions', 'runtimeIdentity evidenceType mismatch')
+  requireValue(COMMIT.test(value.sourceCommit), 'runtimeIdentity sourceCommit invalid')
+  requireValue(COMMIT.test(value.hLiteSourceCommit), 'runtimeIdentity H-Lite sourceCommit invalid')
+  for (const key of ['agentCoreVersion', 'knowledgeConnectorVersion', 'hLiteVersion']) {
+    requireValue(/^\d{4}-\d{2}-\d{2}\.\d+$/.test(value[key]), `runtimeIdentity ${key} invalid`)
+  }
+}
+
 function sha256(bytes) {
   return crypto.createHash('sha256').update(bytes).digest('hex')
 }
@@ -108,6 +123,8 @@ export async function buildGoal7DeploymentEvidence(bundleRoot) {
   state(entries.before.value, 'before')
   state(entries.after.value, 'after')
   sideEffects(entries.sideEffects.value)
+  runtimeIdentity(entries.runtimeIdentity.value)
+  const identity = entries.runtimeIdentity.value
   const before = entries.before.value
   const after = entries.after.value
   const audit = entries.sideEffects.value
@@ -126,11 +143,11 @@ export async function buildGoal7DeploymentEvidence(bundleRoot) {
   const agent = after.components.agentCore
   const connector = after.components.knowledgeConnector
   const hLite = after.components.hLite
-  requireValue(agent.ready && agent.productionReady && agent.version === '2026-08-11.1', 'Agent Core deployment state invalid')
-  requireValue(connector.ready && connector.productionReady && connector.version === '2026-08-11.1', 'Knowledge Connector deployment state invalid')
-  requireValue(hLite.ready && hLite.mode === 'active' && hLite.subscriptionEnabled && hLite.version === '2026-08-11.1', 'H-Lite deployment state invalid')
-  requireValue(COMMIT.test(agent.sourceCommit) && connector.sourceCommit === agent.sourceCommit, 'Ontology component sourceCommit drift')
-  requireValue(COMMIT.test(hLite.sourceCommit), 'H-Lite sourceCommit missing')
+  requireValue(agent.ready && agent.productionReady && agent.version === identity.agentCoreVersion, 'Agent Core deployment state invalid')
+  requireValue(connector.ready && connector.productionReady && connector.version === identity.knowledgeConnectorVersion, 'Knowledge Connector deployment state invalid')
+  requireValue(hLite.ready && hLite.mode === 'active' && hLite.subscriptionEnabled && hLite.version === identity.hLiteVersion, 'H-Lite deployment state invalid')
+  requireValue(agent.sourceCommit === identity.sourceCommit && connector.sourceCommit === identity.sourceCommit, 'Ontology component sourceCommit drift')
+  requireValue(hLite.sourceCommit === identity.hLiteSourceCommit, 'H-Lite sourceCommit drift')
   return {
     evidenceVersion: '1.0.0',
     evidenceType: 'goal7-company-qnap-deployment',

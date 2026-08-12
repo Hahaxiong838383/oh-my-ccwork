@@ -9,4 +9,4 @@ if (!root) throw new Error('Goal 7 runtime evidence root is required')
 if (!sourceCommit || !hLiteSourceCommit) throw new Error('Goal 7 approved Ontology and H-Lite commits are required')
 
 const result = await validateGoal7RuntimeRelease(root, { sourceCommit, hLiteSourceCommit })
-process.stdout.write(`source_commit=${result.sourceCommit}\nh_lite_source_commit=${result.hLiteSourceCommit}\nh_lite_archive_sha256=${result.hLiteSourceArchiveSha256}\nchecksum_entry_count=${result.checksumEntryCount}\n`)
+process.stdout.write(`source_commit=${result.sourceCommit}\nh_lite_source_commit=${result.hLiteSourceCommit}\nagent_core_version=${result.agentCoreVersion}\nknowledge_connector_version=${result.knowledgeConnectorVersion}\nh_lite_version=${result.hLiteVersion}\nh_lite_archive_sha256=${result.hLiteSourceArchiveSha256}\nchecksum_entry_count=${result.checksumEntryCount}\n`)

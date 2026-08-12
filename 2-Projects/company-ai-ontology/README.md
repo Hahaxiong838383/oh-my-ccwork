@@ -14,7 +14,7 @@
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
 - 当前生产基线：`Goal 6-A / P1-DOMAIN` 已完成工程与川哥体验验收；公司 QNAP active Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`，Domain Connector `2026-08-10.1`。Agent Core 已独立发布 `2026-08-12.2`，绑定 Source Commit `3edbc7a73863fa5f334c06d603067427183f58ed`；`2026-08-12 13:00 CST` 只读复核为 `ready / productionReady=true`，Foundation `13/13 running`、11 个健康探针通过、2 个无探针基础服务正常运行、restart total `0`。该独立修复不等于 Goal 7 三组件发布或 Owner Acceptance。
-- P1-SI-B～G 工程骨架当前通过 Contracts `61/61`、Collector `9/9`、Strategic Intelligence `115/115`。最新不可变候选为 Runtime Workflow `31563935583` / Artifact `9128767614`，绑定 Ontology Commit `59d461d68286069f4021aee4148df9ec073efa21`、H-Lite Commit `89fec7e23dcd665ea9513feb04fe20f125b8d12b`、Collector Image `sha256:d87a0d3a2856be12d28e5069f64d221d9996818192101bd1dfcfbc07c029bef7` 和 Candidate Schema `3.7.0`；Artifact `SHA256SUMS`、010/011、012、真实 `ontology_app`、RLS、幂等、ACL fail-closed 与 baseline restore 均通过，但 `productionDeploymentAuthorized=false`。
+- P1-SI-B～G 工程骨架当前通过 Contracts `61/61`、Collector `9/9`、Strategic Intelligence `118/118`。Runtime Manifest 已升级到 `1.3.0`，新增 `runtime-component-versions.json`，把 Agent Core、Knowledge Connector、H-Lite 的真实版本、Ontology/H-Lite 双仓 Commit 与版本证据 SHA-256 绑定到 Runtime Verification、Release Manifest、部署等待和最终 Goal Completion。旧 Workflow `31563935583` / Artifact `9128767614` 使用 Manifest `1.2.0`，仅保留为历史工程证据，不再具备新 Goal 7 发布资格；新不可变 Artifact 必须从本次最终推送 Commit 重新生成并核验。
 - 公司 QNAP 当前只安装内部工程 Runtime Artifact `9108034290` / Commit `0342fcd39`，并完成一次 accepted Collector：3 个公开来源共 60 条、Hash-only、正文 0、重复 0、五类业务副作用 0，且 `countsTowardProductionShadow=false`。生产 `strategic_intelligence` Schema、表、容器、网络和发布端口仍为 0。
 - 当前硬门禁：来源分配 `8/8`、最终决定 `0/8`；P003 个人 DRI `30/36`、必要角色位 `90/150`、全角色覆盖 `12/36`、最终决定 `0/36`；四角色真实成员 UAT `0/4`；Goal 7 Authority Canary、Worker 双源读回、完整三组件 Deployment Evidence 和 Owner Acceptance 未完成。Deployment Readiness 为 `1 pass / 6 blocked`，Goal Completion 为 `1 pass / 7 blocked`；未取得战略情报生产部署、010/011 迁移、Collector、七日 Shadow、Foundation 其他组件重启或真实回滚演练授权。
 - 当前门禁快照见 `deploy/qnap/strategic-intelligence/evidence/p1-si-current-gate-snapshot-2026-08-12.json`，解释与历史发布链见 `docs/p1-si-bh-gate-audit-2026-08-12.md` 和 `deploy/qnap/strategic-intelligence/README.md`。
@@ -54,7 +54,7 @@
 - `docs/p1-si-bh-completion-audit-2026-08-11.md`：P1-SI-B～H 逐项完成证据、负向测试覆盖和仍未关闭的人审/部署门禁。
 - `docs/p1-si-internal-engineering-shadow-2026-08-11.md`：内部工程验证与正式生产 Shadow 双模式、审核降负担、后补门禁和独立 readiness。
 - `docs/p1-si-internal-engineering-deployment-handoff-2026-08-11.md`：内部模式部署影响、预计时长、回滚边界和独立授权交接单。
-- `docs/p1-si-reviewer-role-access-uat-2026-08-11.md`：四名职能角色真实登录权限验收步骤、五份原始 Evidence、编译验收和 Manifest 1.2 门禁。
+- `docs/p1-si-reviewer-role-access-uat-2026-08-11.md`：四名职能角色真实登录权限验收步骤、五份原始 Evidence、编译验收和 Runtime Manifest 门禁。
 - `docs/p1-si-reviewer-assignment-readiness-2026-08-11.md`：飞书实名审核分配、结构化 Principal 修复、真实 CSV 往返和当前人工门禁。
 - `docs/p1-si-g-p003-review-candidate-acceptance-2026-08-10.md`：真实 4644 条矩阵到 P003 36 条审核候选的来源、Hash、负向门禁和 DRI 待办。
 - `docs/p1-si-human-review-workflow-acceptance-2026-08-10.md`：来源合规与 P003 DRI 的飞书 CSV 回填、强类型 JSON、final 校验、编译和实名数据边界。

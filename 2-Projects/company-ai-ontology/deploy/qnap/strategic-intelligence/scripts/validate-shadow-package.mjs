@@ -211,7 +211,8 @@ for (const marker of ['--network none', '--read-only', '--cap-drop ALL', 'no-new
   if (!qnapNodeRuntime.includes(marker)) errors.push(`QNAP Node runtime missing ${marker}`)
 }
 for (const marker of [
-  "manifestVersion: '1.2.0'",
+  "manifestVersion: '1.3.0'",
+  'runtime-component-versions.json',
   "releaseType: 'P1-SI-F-shadow-candidate-gated'",
   'domain_persistence=verified',
   'domain_persistence_idempotent=verified',

@@ -92,6 +92,9 @@ export async function createGoal7AcceptanceBundle(outputRoot, sourceCommit = 'c'
     verificationType: 'P1-SI-F-linux-amd64-runtime',
     sourceCommit,
     hLiteSourceCommit,
+    agentCoreVersion: '2026-08-12.2',
+    knowledgeConnectorVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-11.1',
     hLiteSourceArchiveSha256: '9'.repeat(64),
     workflowRunId: '31510000000',
     sqlRuntimeVerified: true,
@@ -170,13 +173,22 @@ export async function createGoal7AcceptanceBundle(outputRoot, sourceCommit = 'c'
     registryStatus: 'in_sync',
     candidateMigration012Applied: migrationApplied,
     components: {
-      agentCore: { version: candidate ? '2026-08-11.1' : '2026-08-08.4', sourceCommit: candidate ? sourceCommit : null, ready: true, productionReady: true },
+      agentCore: { version: candidate ? '2026-08-12.2' : '2026-08-08.4', sourceCommit: candidate ? sourceCommit : null, ready: true, productionReady: true },
       knowledgeConnector: { version: candidate ? '2026-08-11.1' : '2026-08-08.3', sourceCommit: candidate ? sourceCommit : null, ready: true, productionReady: true },
       hLite: { version: candidate ? '2026-08-11.1' : '2026-08-08.2', sourceCommit: candidate ? hLiteSourceCommit : null, ready: true, mode: 'active', subscriptionEnabled: true },
     },
     foundation: { criticalContainerCount: 13, unhealthyContainerCount: 0, restartCountTotal: 0, publishedPortCount: 1, fingerprint: (candidate ? '7' : '6').repeat(64) },
     routeState: { routeAOperational: true, routeBEnabled: false },
   })
+  await fs.writeFile(path.join(bundleRoot, 'runtime-component-versions.json'), JSON.stringify({
+    evidenceVersion: '1.0.0',
+    evidenceType: 'goal7-runtime-component-versions',
+    sourceCommit,
+    hLiteSourceCommit,
+    agentCoreVersion: '2026-08-12.2',
+    knowledgeConnectorVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-11.1',
+  }))
   await fs.writeFile(path.join(bundleRoot, 'pre-deployment-state.json'), JSON.stringify(deploymentState({ phase: 'before', capturedAt: '2026-08-11T09:15:00Z', migrationApplied: false, candidate: false })))
   await fs.writeFile(path.join(bundleRoot, 'post-deployment-state.json'), JSON.stringify(deploymentState({ phase: 'after', capturedAt: '2026-08-11T09:20:00Z', migrationApplied: true, candidate: true })))
   await fs.writeFile(path.join(bundleRoot, 'deployment-side-effects.json'), JSON.stringify({
@@ -206,17 +218,35 @@ export async function createReadyInputs() {
   const releaseRoot = path.join(outputRoot, 'release')
   await fs.mkdir(releaseRoot)
   const sourceBytes = Buffer.from('source archive')
+  const hLiteSourceBytes = Buffer.from('h-lite source archive')
   const imageBytes = Buffer.from('collector image archive')
+  const componentVersionsBytes = Buffer.from(`${JSON.stringify({
+    evidenceVersion: '1.0.0',
+    evidenceType: 'goal7-runtime-component-versions',
+    sourceCommit: 'a'.repeat(40),
+    hLiteSourceCommit: 'f'.repeat(40),
+    agentCoreVersion: '2026-08-12.2',
+    knowledgeConnectorVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-11.1',
+  })}\n`)
   await fs.writeFile(path.join(releaseRoot, 'source.tar.gz'), sourceBytes)
+  await fs.writeFile(path.join(releaseRoot, 'h-lite-source.tar.gz'), hLiteSourceBytes)
   await fs.writeFile(path.join(releaseRoot, 'collector-image.tar.gz'), imageBytes)
+  await fs.writeFile(path.join(releaseRoot, 'runtime-component-versions.json'), componentVersionsBytes)
   await fs.writeFile(path.join(releaseRoot, 'release-manifest.json'), JSON.stringify({
-    manifestVersion: '1.2.0',
+    manifestVersion: '1.3.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-11T00:00:00Z',
     sourceCommit: 'a'.repeat(40),
+    hLiteSourceCommit: 'f'.repeat(40),
     collectorImageId: `sha256:${'b'.repeat(64)}`,
     sourceArchiveSha256: sha256(sourceBytes),
+    hLiteSourceArchiveSha256: sha256(hLiteSourceBytes),
     collectorImageArchiveSha256: sha256(imageBytes),
+    runtimeComponentVersionsSha256: sha256(componentVersionsBytes),
+    agentCoreVersion: '2026-08-12.2',
+    knowledgeConnectorVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-11.1',
     candidateOntologySchema: '3.7.0',
     candidateOntologyHash: 'c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860',
     sourceRegistryCandidateHash: '0ce4022adcfc177ced670a8d7fd2e4b4e119c2fc1bc5c19cabefb3223c010eae',

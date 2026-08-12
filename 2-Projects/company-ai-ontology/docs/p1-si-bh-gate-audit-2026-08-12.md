@@ -14,14 +14,14 @@ P1-SI-B～G 的工程骨架已通过当前全量验收，最新双仓不可变 R
 
 - Ontology Contracts：`61/61`；
 - Intelligence Collector：`9/9`；
-- Strategic Intelligence Shadow / Readiness / Goal Completion：`115/115`；
-- Runtime Workflow：`31563935583`，状态 `success`；
-- Runtime Artifact：`9128767614`，保留期 90 天；
+- Strategic Intelligence Shadow / Readiness / Goal Completion：`118/118`；
+- Runtime Manifest：`1.3.0` 源码候选已通过本地全量验证，新增三个运行组件的版本身份闭环；
+- 历史 Runtime Workflow `31563935583` / Artifact `9128767614` 使用 Manifest `1.2.0`，仅保留历史工程证据，不再具备新 Goal 7 发布资格；
 - Ontology Source Commit：`59d461d68286069f4021aee4148df9ec073efa21`；
 - H-Lite Source Commit：`89fec7e23dcd665ea9513feb04fe20f125b8d12b`；
 - Collector Image：`sha256:d87a0d3a2856be12d28e5069f64d221d9996818192101bd1dfcfbc07c029bef7`，平台 `linux/amd64`；
 - Candidate Ontology：Schema `3.7.0`，Hash `c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860`；
-- Artifact 内 `runtime-verification.json`、PostgreSQL Evidence、Goal 7 Foundation Evidence、Manifest、双仓源码归档和 Collector 镜像归档全部通过 `SHA256SUMS`。
+- 新 Artifact 必须从最终推送 Commit 生成，并包含 `runtime-component-versions.json`、双仓源码归档、Collector 镜像、Runtime Verification、Release Manifest 与完整 `SHA256SUMS`；生成后才能重新恢复不可变 Release 门禁。
 
 Runtime Workflow 已验证：
 

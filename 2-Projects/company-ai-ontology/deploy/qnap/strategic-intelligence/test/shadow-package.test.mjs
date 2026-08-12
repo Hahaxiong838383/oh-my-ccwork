@@ -271,20 +271,40 @@ test('rollback refuses execution before QNAP preflight when explicit approval is
 test('release manifest validator binds immutable archives and keeps deployment disabled', async () => {
   const outputRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'company-si-release-manifest-'))
   const sourceArchive = path.join(outputRoot, 'source.tar.gz')
+  const hLiteSourceArchive = path.join(outputRoot, 'h-lite-source.tar.gz')
   const imageArchive = path.join(outputRoot, 'collector-image.tar.gz')
+  const componentVersionsFile = path.join(outputRoot, 'runtime-component-versions.json')
   const manifestFile = path.join(outputRoot, 'release-manifest.json')
   const sourceBytes = Buffer.from('immutable source archive')
+  const hLiteSourceBytes = Buffer.from('immutable h-lite source archive')
   const imageBytes = Buffer.from('immutable collector image archive')
+  const componentVersionsBytes = Buffer.from(`${JSON.stringify({
+    evidenceVersion: '1.0.0',
+    evidenceType: 'goal7-runtime-component-versions',
+    sourceCommit: 'a'.repeat(40),
+    hLiteSourceCommit: 'f'.repeat(40),
+    agentCoreVersion: '2026-08-12.2',
+    knowledgeConnectorVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-11.1',
+  })}\n`)
   await fs.writeFile(sourceArchive, sourceBytes)
+  await fs.writeFile(hLiteSourceArchive, hLiteSourceBytes)
   await fs.writeFile(imageArchive, imageBytes)
+  await fs.writeFile(componentVersionsFile, componentVersionsBytes)
   const manifest = {
-    manifestVersion: '1.2.0',
+    manifestVersion: '1.3.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     createdAt: '2026-08-10T09:00:00Z',
     sourceCommit: 'a'.repeat(40),
+    hLiteSourceCommit: 'f'.repeat(40),
     collectorImageId: `sha256:${'b'.repeat(64)}`,
     sourceArchiveSha256: sha256(sourceBytes),
+    hLiteSourceArchiveSha256: sha256(hLiteSourceBytes),
     collectorImageArchiveSha256: sha256(imageBytes),
+    runtimeComponentVersionsSha256: sha256(componentVersionsBytes),
+    agentCoreVersion: '2026-08-12.2',
+    knowledgeConnectorVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-11.1',
     candidateOntologySchema: '3.7.0',
     candidateOntologyHash: 'c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860',
     sourceRegistryCandidateHash: '0ce4022adcfc177ced670a8d7fd2e4b4e119c2fc1bc5c19cabefb3223c010eae',
@@ -298,27 +318,27 @@ test('release manifest validator binds immutable archives and keeps deployment d
   await fs.writeFile(manifestFile, JSON.stringify(manifest))
   const { spawnSync } = await import('node:child_process')
   const validator = path.join(ROOT, 'scripts/validate-release-manifest.mjs')
-  const accepted = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, imageArchive], { encoding: 'utf8' })
+  const accepted = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, hLiteSourceArchive, imageArchive, componentVersionsFile], { encoding: 'utf8' })
   assert.equal(accepted.status, 0, accepted.stderr)
   assert.equal(JSON.parse(accepted.stdout).productionDeploymentAuthorized, false)
 
   await fs.writeFile(manifestFile, JSON.stringify({ ...manifest, publish: true }))
-  const unsafe = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, imageArchive], { encoding: 'utf8' })
+  const unsafe = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, hLiteSourceArchive, imageArchive, componentVersionsFile], { encoding: 'utf8' })
   assert.notEqual(unsafe.status, 0)
   assert.match(unsafe.stderr, /publish must remain false/)
 
   await fs.writeFile(manifestFile, JSON.stringify(manifest))
   await fs.writeFile(sourceArchive, 'tampered source archive')
-  const tampered = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, imageArchive], { encoding: 'utf8' })
+  const tampered = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, hLiteSourceArchive, imageArchive, componentVersionsFile], { encoding: 'utf8' })
   assert.notEqual(tampered.status, 0)
   assert.match(tampered.stderr, /source archive hash mismatch/)
 
   await fs.writeFile(sourceArchive, sourceBytes)
   await fs.writeFile(manifestFile, JSON.stringify({
     ...manifest,
-    manifestVersion: '1.1.0',
+    manifestVersion: '1.2.0',
   }))
-  const legacy = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, imageArchive], { encoding: 'utf8' })
+  const legacy = spawnSync(process.execPath, [validator, manifestFile, sourceArchive, hLiteSourceArchive, imageArchive, componentVersionsFile], { encoding: 'utf8' })
   assert.notEqual(legacy.status, 0)
   assert.match(legacy.stderr, /manifestVersion mismatch/)
 })
@@ -493,7 +513,8 @@ test('isolated migration validation rejects a missing Node runtime before creati
 
 test('runtime workflow stays aligned with the gated release and domain persistence proof', async () => {
   const workflow = await fs.readFile(path.resolve(PROJECT_ROOT, '../../.github/workflows/p1-si-runtime-verify.yml'), 'utf8')
-  assert.match(workflow, /manifestVersion: '1[.]2[.]0'/)
+  assert.match(workflow, /manifestVersion: '1[.]3[.]0'/)
+  assert.match(workflow, /runtime-component-versions\.json/)
   assert.match(workflow, /releaseType: 'P1-SI-F-shadow-candidate-gated'/)
   assert.match(workflow, /grep -qx 'domain_persistence=verified'/)
   assert.match(workflow, /grep -qx 'domain_persistence_idempotent=verified'/)

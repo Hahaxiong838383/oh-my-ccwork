@@ -26,9 +26,11 @@ const releaseRoot = process.env.SI_RELEASE_ROOT
 const releaseFiles = releaseRoot ? [
   path.join(releaseRoot, 'release-manifest.json'),
   path.join(releaseRoot, 'source.tar.gz'),
+  path.join(releaseRoot, 'h-lite-source.tar.gz'),
   path.join(releaseRoot, 'collector-image.tar.gz'),
+  path.join(releaseRoot, 'runtime-component-versions.json'),
 ] : []
-const releaseFilesExist = releaseFiles.length === 3 && releaseFiles.every((file) => fs.existsSync(file) && fs.statSync(file).isFile())
+const releaseFilesExist = releaseFiles.length === 5 && releaseFiles.every((file) => fs.existsSync(file) && fs.statSync(file).isFile())
 if (!releaseFilesExist) {
   addGate('immutable_release', false, 'missing_input')
 } else {

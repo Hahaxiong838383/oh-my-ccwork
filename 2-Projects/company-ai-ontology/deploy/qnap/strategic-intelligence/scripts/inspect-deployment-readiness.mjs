@@ -36,7 +36,9 @@ const releaseRoot = process.env.SI_RELEASE_ROOT
 const releaseFiles = releaseRoot ? [
   path.join(releaseRoot, 'release-manifest.json'),
   path.join(releaseRoot, 'source.tar.gz'),
+  path.join(releaseRoot, 'h-lite-source.tar.gz'),
   path.join(releaseRoot, 'collector-image.tar.gz'),
+  path.join(releaseRoot, 'runtime-component-versions.json'),
 ] : []
 validateFiles('immutable_release', path.join(root, 'scripts/validate-release-manifest.mjs'), releaseFiles)
 

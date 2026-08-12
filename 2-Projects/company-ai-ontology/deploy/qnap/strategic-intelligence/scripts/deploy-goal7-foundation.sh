@@ -22,8 +22,12 @@ runtime_validation=$($node_bin "$script_root/validate-goal7-runtime-release.mjs"
   "$runtime_evidence_root" "$approved_source_commit" "$approved_h_lite_source_commit")
 source_commit=$(printf '%s\n' "$runtime_validation" | awk -F= '/^source_commit=/{print $2;exit}')
 h_lite_source_commit=$(printf '%s\n' "$runtime_validation" | awk -F= '/^h_lite_source_commit=/{print $2;exit}')
+agent_core_version=$(printf '%s\n' "$runtime_validation" | awk -F= '/^agent_core_version=/{print $2;exit}')
+knowledge_connector_version=$(printf '%s\n' "$runtime_validation" | awk -F= '/^knowledge_connector_version=/{print $2;exit}')
+h_lite_version=$(printf '%s\n' "$runtime_validation" | awk -F= '/^h_lite_version=/{print $2;exit}')
 [ "$source_commit" = "$approved_source_commit" ] || { echo 'approved Ontology sourceCommit drift' >&2; exit 2; }
 [ "$h_lite_source_commit" = "$approved_h_lite_source_commit" ] || { echo 'approved H-Lite sourceCommit drift' >&2; exit 2; }
+[ -n "$agent_core_version" ] && [ -n "$knowledge_connector_version" ] && [ -n "$h_lite_version" ] || { echo 'runtime component versions missing' >&2; exit 2; }
 
 runtime_root=$shadow_root/foundation-releases/$source_commit-$h_lite_source_commit
 temporary_runtime=$runtime_root.partial-$run_id
@@ -37,6 +41,8 @@ started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 [ ! -e "$runtime_root" ] || { echo 'Goal 7 immutable runtime root already exists' >&2; exit 2; }
 mkdir -p "$temporary_runtime/company-ai-ontology" "$temporary_runtime/feishu-grok-bridge" "$evidence_root" "$backup_root/images"
 chmod 700 "$temporary_runtime" "$evidence_root" "$backup_root" "$backup_root/images"
+cp "$runtime_evidence_root/runtime-component-versions.json" "$evidence_root/runtime-component-versions.json"
+chmod 600 "$evidence_root/runtime-component-versions.json"
 tar -xzf "$runtime_evidence_root/source.tar.gz" -C "$temporary_runtime"
 tar -xzf "$runtime_evidence_root/h-lite-source.tar.gz" --strip-components=1 -C "$temporary_runtime/feishu-grok-bridge"
 [ -f "$temporary_runtime/company-ai-ontology/deploy/qnap/docker-compose.yml" ] || { echo 'Ontology release archive incomplete' >&2; exit 2; }
@@ -123,24 +129,24 @@ verify_image_readable company-ai-foundation-h-lite:latest /app/company-qnap-lite
 wait_agent_core() {
   attempt=0
   until "$docker_path" compose exec -T agent-core node -e \
-    "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();process.exit(r.ok&&p.status==='ready'&&p.productionReady===true&&p.contractVersion==='2026-08-11.1'&&p.sourceCommit===process.argv[1]?0:1)}).catch(()=>process.exit(1))" \
-    "$source_commit" </dev/null >/dev/null 2>&1; do
+    "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();process.exit(r.ok&&p.status==='ready'&&p.productionReady===true&&p.contractVersion===process.argv[1]&&p.sourceCommit===process.argv[2]?0:1)}).catch(()=>process.exit(1))" \
+    "$agent_core_version" "$source_commit" </dev/null >/dev/null 2>&1; do
     attempt=$((attempt+1)); [ "$attempt" -lt 90 ] || return 1; sleep 2
   done
 }
 wait_connector() {
   attempt=0
   until "$docker_path" compose exec -T knowledge-connector node -e \
-    "fetch('http://127.0.0.1:8083/readyz').then(async r=>{const p=await r.json();process.exit(r.ok&&p.status==='ready'&&p.version==='2026-08-11.1'&&p.sourceCommit===process.argv[1]?0:1)}).catch(()=>process.exit(1))" \
-    "$source_commit" </dev/null >/dev/null 2>&1; do
+    "fetch('http://127.0.0.1:8083/readyz').then(async r=>{const p=await r.json();process.exit(r.ok&&p.status==='ready'&&p.version===process.argv[1]&&p.sourceCommit===process.argv[2]?0:1)}).catch(()=>process.exit(1))" \
+    "$knowledge_connector_version" "$source_commit" </dev/null >/dev/null 2>&1; do
     attempt=$((attempt+1)); [ "$attempt" -lt 90 ] || return 1; sleep 2
   done
 }
 wait_h_lite() {
   attempt=0
   until "$docker_path" compose exec -T h-lite node -e \
-    "Promise.all([fetch('http://127.0.0.1:8081/healthz'),fetch('http://127.0.0.1:8081/readyz')]).then(async rs=>{const p=await Promise.all(rs.map(r=>r.json()));process.exit(rs.every(r=>r.ok)&&p[0].serviceVersion==='2026-08-11.1'&&p[0].sourceCommit===process.argv[1]&&p[0].mode==='active'&&p[0].subscriptionEnabled===true&&p[1].status==='active_ready'?0:1)}).catch(()=>process.exit(1))" \
-    "$h_lite_source_commit" </dev/null >/dev/null 2>&1; do
+    "Promise.all([fetch('http://127.0.0.1:8081/healthz'),fetch('http://127.0.0.1:8081/readyz')]).then(async rs=>{const p=await Promise.all(rs.map(r=>r.json()));process.exit(rs.every(r=>r.ok)&&p[0].serviceVersion===process.argv[1]&&p[0].sourceCommit===process.argv[2]&&p[0].mode==='active'&&p[0].subscriptionEnabled===true&&p[1].status==='active_ready'?0:1)}).catch(()=>process.exit(1))" \
+    "$h_lite_version" "$h_lite_source_commit" </dev/null >/dev/null 2>&1; do
     attempt=$((attempt+1)); [ "$attempt" -lt 90 ] || return 1; sleep 2
   done
 }
@@ -184,6 +190,9 @@ cat > "$backup_root/release-manifest.txt" <<EOF
 run_id=$run_id
 source_commit=$source_commit
 h_lite_source_commit=$h_lite_source_commit
+agent_core_version=$agent_core_version
+knowledge_connector_version=$knowledge_connector_version
+h_lite_version=$h_lite_version
 runtime_root=$runtime_root
 runtime_evidence_root=$runtime_evidence_root
 evidence_root=$evidence_root

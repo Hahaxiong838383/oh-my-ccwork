@@ -9,7 +9,7 @@
   "activeOntologySchema": "3.3.0",
   "registryStatus": "pending",
   "candidateMigration012Applied": false,
-  "agentCoreVersion": "2026-08-11.1",
+  "agentCoreVersion": "2026-08-12.2",
   "knowledgeConnectorVersion": "2026-08-11.1",
   "hLiteVersion": "2026-08-11.1",
   "foundationCriticalContainerCount": 0,
@@ -31,5 +31,10 @@
     "erpWriteback": false,
     "socialWriteback": false
   },
-  "rawEvidenceFiles": {}
+  "rawEvidenceFiles": {
+    "runtimeIdentity": {},
+    "before": {},
+    "after": {},
+    "sideEffects": {}
+  }
 }

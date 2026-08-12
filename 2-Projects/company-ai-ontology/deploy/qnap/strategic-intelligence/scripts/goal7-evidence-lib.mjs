@@ -8,6 +8,7 @@ import { validateGoal7WorkerReadbackEvidence } from './goal7-worker-readback-lib
 
 const COMMIT = /^[a-f0-9]{40}$/
 const HASH = /^[a-f0-9]{64}$/
+const VERSION = /^\d{4}-\d{2}-\d{2}\.\d+$/
 const REFERENCE = /^(feishu:|git:|ontology:|qnap:|https:\/\/)\S+$/
 const MAX_EVIDENCE_BYTES = 512 * 1024
 const SENSITIVE_KEYS = new Set(['prompt', 'promptText', 'requestBody', 'responseBody', 'reply', 'employeeMessage', 'employeeQuestion', 'displayName', 'principalRef'])
@@ -60,6 +61,9 @@ function validateRuntimeVerification(value) {
   requireValue(value?.verificationType === 'P1-SI-F-linux-amd64-runtime', 'runtime verification type mismatch')
   requireValue(COMMIT.test(String(value?.sourceCommit || '')), 'runtime verification sourceCommit invalid')
   requireValue(COMMIT.test(String(value?.hLiteSourceCommit || '')), 'runtime verification hLiteSourceCommit invalid')
+  requireValue(VERSION.test(String(value?.agentCoreVersion || '')), 'runtime verification agentCoreVersion invalid')
+  requireValue(VERSION.test(String(value?.knowledgeConnectorVersion || '')), 'runtime verification knowledgeConnectorVersion invalid')
+  requireValue(VERSION.test(String(value?.hLiteVersion || '')), 'runtime verification hLiteVersion invalid')
   requireValue(HASH.test(String(value?.hLiteSourceArchiveSha256 || '')), 'H-Lite source archive hash missing')
   requireValue(String(value?.workflowRunId || '').length > 0, 'runtime verification workflowRunId missing')
   requireValue(value?.sqlRuntimeVerified === true, 'runtime verification SQL runtime missing')
@@ -153,9 +157,9 @@ function validateDeployment(value) {
   requireValue(value.activeOntologySchema === '3.3.0', 'active Ontology Schema changed')
   requireValue(value.registryStatus === 'in_sync', 'Registry must remain in_sync')
   requireValue(value.candidateMigration012Applied === true, 'candidate migration 012 missing')
-  requireValue(value.agentCoreVersion === '2026-08-11.1', 'Agent Core candidate version mismatch')
-  requireValue(value.knowledgeConnectorVersion === '2026-08-11.1', 'Knowledge Connector candidate version mismatch')
-  requireValue(value.hLiteVersion === '2026-08-11.1', 'H-Lite candidate version mismatch')
+  requireValue(VERSION.test(value.agentCoreVersion), 'Agent Core candidate version invalid')
+  requireValue(VERSION.test(value.knowledgeConnectorVersion), 'Knowledge Connector candidate version invalid')
+  requireValue(VERSION.test(value.hLiteVersion), 'H-Lite candidate version invalid')
   requireValue(value.foundationCriticalContainerCount === 13, 'Foundation critical container count mismatch')
   requireValue(value.foundationUnhealthyContainerCount === 0, 'Foundation unhealthy containers detected')
   requireValue(value.foundationRestartCountTotal === 0, 'Foundation restart count must remain zero')
@@ -169,7 +173,7 @@ function validateDeployment(value) {
     'erpWriteback', 'socialWriteback',
   ], 'deployment.closedCapabilities')
   for (const key of Object.keys(value.closedCapabilities)) requireValue(value.closedCapabilities[key] === false, `deployment.closedCapabilities.${key} must remain false`)
-  exactKeys(value.rawEvidenceFiles, ['before', 'after', 'sideEffects'], 'deployment.rawEvidenceFiles')
+  exactKeys(value.rawEvidenceFiles, ['runtimeIdentity', 'before', 'after', 'sideEffects'], 'deployment.rawEvidenceFiles')
   for (const [key, file] of Object.entries(value.rawEvidenceFiles)) {
     exactKeys(file, ['file', 'sha256'], `deployment.rawEvidenceFiles.${key}`)
     requireValue(/^[a-z0-9-]+\.json$/.test(file.file), `deployment.rawEvidenceFiles.${key}.file invalid`)
@@ -230,6 +234,10 @@ export async function buildGoal7EngineeringEvidenceContext(bundleRoot) {
   const hLiteSourceCommit = entries.runtimeVerification.value.hLiteSourceCommit
   for (const key of ['workerReadback', 'authorityCanary', 'deployment']) {
     requireValue(entries[key].value.hLiteSourceCommit === hLiteSourceCommit, `Goal 7 H-Lite sourceCommit drift in ${key}`)
+  }
+  const deployment = entries.deployment.value
+  for (const key of ['agentCoreVersion', 'knowledgeConnectorVersion', 'hLiteVersion']) {
+    requireValue(deployment[key] === entries.runtimeVerification.value[key], `Goal 7 ${key} drift in deployment`)
   }
   const latestEngineeringAt = Math.max(...['workerReadback', 'authorityCanary', 'deployment'].map((key) => Date.parse(entries[key].value.capturedAt)))
   return { root, entries, sourceCommit, hLiteSourceCommit, latestEngineeringAt }

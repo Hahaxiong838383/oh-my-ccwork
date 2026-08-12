@@ -20,19 +20,35 @@ function sha256(bytes) {
 async function writeRuntimeRelease(root) {
   const sourceCommit = 'c'.repeat(40)
   const hLiteSourceCommit = 'f'.repeat(40)
+  const componentVersions = {
+    evidenceVersion: '1.0.0',
+    evidenceType: 'goal7-runtime-component-versions',
+    sourceCommit,
+    hLiteSourceCommit,
+    agentCoreVersion: '2026-08-12.2',
+    knowledgeConnectorVersion: '2026-08-11.1',
+    hLiteVersion: '2026-08-11.1',
+  }
   const bytes = {
     'postgres-validation.txt': Buffer.from('postgres verified\n'),
     'goal7-foundation-validation.txt': Buffer.from('foundation verified\n'),
     'source.tar.gz': Buffer.from('ontology source'),
     'h-lite-source.tar.gz': Buffer.from('h-lite source'),
     'collector-image.tar.gz': Buffer.from('collector image'),
+    'runtime-component-versions.json': Buffer.from(`${JSON.stringify(componentVersions)}\n`),
   }
   const releaseManifest = {
-    manifestVersion: '1.2.0',
+    manifestVersion: '1.3.0',
     releaseType: 'P1-SI-F-shadow-candidate-gated',
     sourceCommit,
+    hLiteSourceCommit,
     sourceArchiveSha256: sha256(bytes['source.tar.gz']),
+    hLiteSourceArchiveSha256: sha256(bytes['h-lite-source.tar.gz']),
     collectorImageArchiveSha256: sha256(bytes['collector-image.tar.gz']),
+    runtimeComponentVersionsSha256: sha256(bytes['runtime-component-versions.json']),
+    agentCoreVersion: componentVersions.agentCoreVersion,
+    knowledgeConnectorVersion: componentVersions.knowledgeConnectorVersion,
+    hLiteVersion: componentVersions.hLiteVersion,
     publish: false,
     productionDeploymentAuthorized: false,
     requiredGate: 'WAIT_GOAL7_AND_EXPLICIT_DEPLOY_AUTH',
@@ -43,10 +59,14 @@ async function writeRuntimeRelease(root) {
     verificationType: 'P1-SI-F-linux-amd64-runtime',
     sourceCommit,
     hLiteSourceCommit,
+    agentCoreVersion: componentVersions.agentCoreVersion,
+    knowledgeConnectorVersion: componentVersions.knowledgeConnectorVersion,
+    hLiteVersion: componentVersions.hLiteVersion,
     sourceArchiveSha256: sha256(bytes['source.tar.gz']),
     hLiteSourceArchiveSha256: sha256(bytes['h-lite-source.tar.gz']),
     collectorImageArchiveSha256: sha256(bytes['collector-image.tar.gz']),
     releaseManifestSha256: sha256(bytes['release-manifest.json']),
+    runtimeComponentVersionsSha256: sha256(bytes['runtime-component-versions.json']),
     postgresEvidenceSha256: sha256(bytes['postgres-validation.txt']),
     goal7FoundationEvidenceSha256: sha256(bytes['goal7-foundation-validation.txt']),
     immutableReleaseCandidateVerified: true,
@@ -59,7 +79,7 @@ async function writeRuntimeRelease(root) {
   for (const [name, value] of Object.entries(bytes)) await fs.writeFile(path.join(root, name), value)
   const sums = Object.entries(bytes).map(([name, value]) => `${sha256(value)}  ${name}`).join('\n')
   await fs.writeFile(path.join(root, 'SHA256SUMS'), `${sums}\n`)
-  return { sourceCommit, hLiteSourceCommit, verification }
+  return { sourceCommit, hLiteSourceCommit, ...componentVersions, verification }
 }
 
 async function rewriteChecksums(root) {
@@ -87,7 +107,8 @@ test('Goal 7 Runtime 包绑定全部 Hash 与获批双 Commit', async () => {
   const verified = await validateGoal7RuntimeRelease(root, fixture)
   assert.equal(verified.sourceCommit, fixture.sourceCommit)
   assert.equal(verified.hLiteSourceCommit, fixture.hLiteSourceCommit)
-  assert.equal(verified.checksumEntryCount, 7)
+  assert.equal(verified.agentCoreVersion, '2026-08-12.2')
+  assert.equal(verified.checksumEntryCount, 8)
 
   await assert.rejects(
     validateGoal7RuntimeRelease(root, { ...fixture, sourceCommit: 'a'.repeat(40) }),
@@ -109,6 +130,13 @@ test('Goal 7 Runtime 包拒绝 SHA 清单篡改和重新签名后的内部 Hash 
   await assert.rejects(validateGoal7RuntimeRelease(root, fixture), /hLiteSourceArchiveSha256 drift/)
 
   await writeRuntimeRelease(root)
+  const versionsFile = path.join(root, 'runtime-component-versions.json')
+  const versions = JSON.parse(await fs.readFile(versionsFile, 'utf8'))
+  await fs.writeFile(versionsFile, JSON.stringify({ ...versions, agentCoreVersion: '2026-08-11.1' }))
+  await rewriteChecksums(root)
+  await assert.rejects(validateGoal7RuntimeRelease(root, fixture), /runtimeComponentVersionsSha256 drift/)
+
+  await writeRuntimeRelease(root)
   const verificationFile = path.join(root, 'runtime-verification.json')
   await fs.writeFile(verificationFile, JSON.stringify({ ...fixture.verification, sourceCommit: 'invalid' }))
   await rewriteChecksums(root)
@@ -121,6 +149,9 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
   for (const marker of [
     'GOAL7_APPROVED_SOURCE_COMMIT',
     'GOAL7_APPROVED_H_LITE_SOURCE_COMMIT',
+    'agent_core_version=',
+    'knowledge_connector_version=',
+    'h_lite_version=',
     'validate-goal7-runtime-release.mjs',
     'capture-goal7-deployment-state.sh" before',
     'capture-goal7-deployment-state.sh" after',

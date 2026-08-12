@@ -18,8 +18,10 @@ runtime_root=${SI_INTERNAL_RUNTIME_ROOT:?SI_INTERNAL_RUNTIME_ROOT is required}
 internal_root=$shadow_root/internal-engineering
 manifest=$release_root/release-manifest.json
 source_archive=$release_root/source.tar.gz
+h_lite_source_archive=$release_root/h-lite-source.tar.gz
 image_archive=$release_root/collector-image.tar.gz
-for file in "$manifest" "$source_archive" "$image_archive" \
+component_versions=$release_root/runtime-component-versions.json
+for file in "$manifest" "$source_archive" "$h_lite_source_archive" "$image_archive" "$component_versions" \
   "$runtime_root/internal-engineering-plan.json" "$runtime_root/source-registry.json" \
   "$runtime_root/collector.json" "$runtime_root/runtime-manifest.json"; do
   [ -f "$file" ] || { echo 'required internal engineering release file missing' >&2; exit 1; }
@@ -36,7 +38,7 @@ source_sha=$("$node_bin" -e "const x=require(process.argv[1]); process.stdout.wr
 image_sha=$("$node_bin" -e "const x=require(process.argv[1]); process.stdout.write(x.collectorImageArchiveSha256)" "$manifest")
 [ "$(sha256sum "$source_archive" | awk '{print $1}')" = "$source_sha" ] || { echo 'source archive hash mismatch' >&2; exit 1; }
 [ "$(sha256sum "$image_archive" | awk '{print $1}')" = "$image_sha" ] || { echo 'collector image archive hash mismatch' >&2; exit 1; }
-"$node_bin" "$script_root/validate-release-manifest.mjs" "$manifest" "$source_archive" "$image_archive" >/dev/null
+"$node_bin" "$script_root/validate-release-manifest.mjs" "$manifest" "$source_archive" "$h_lite_source_archive" "$image_archive" "$component_versions" >/dev/null
 
 staging=$release_root/internal-staging-$source_commit
 rm -rf "$staging"
