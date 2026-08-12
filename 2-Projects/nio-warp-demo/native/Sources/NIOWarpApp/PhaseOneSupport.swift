@@ -167,8 +167,12 @@ final class RollingPerformanceMonitor {
 }
 
 enum PerformancePolicy {
-    static func shouldFallback(snapshot: PerformanceSnapshot, currentMode: AntiAliasingMode) -> Bool {
-        guard currentMode == .quality, snapshot.sampleCount >= 60 else { return false }
+    static func shouldFallback(
+        snapshot: PerformanceSnapshot,
+        antiAliasingEnabled: Bool = true,
+        currentMode: AntiAliasingMode
+    ) -> Bool {
+        guard antiAliasingEnabled, currentMode == .quality, snapshot.sampleCount >= 60 else { return false }
         return snapshot.framesPerSecond < 55 || snapshot.p95GPUTimeMilliseconds > 14
     }
 }

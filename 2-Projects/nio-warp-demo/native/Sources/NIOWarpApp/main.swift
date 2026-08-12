@@ -13,12 +13,13 @@ private struct ShaderUniforms {
     var canvasAspect: Float
     var contentMode: Int32
     var mirrorFlags: UInt32
+    var cropAnchor: SIMD2<Float>
     var sourceTexelSize: SIMD2<Float>
     var antiAliasingMode: UInt32
     var testPatternMode: UInt32
 }
 
-private final class LatestFrameStore {
+final class LatestFrameStore {
     private let lock = NSLock()
     private var pixelBuffer: CVPixelBuffer?
 
@@ -41,7 +42,7 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
     private var stream: SCStream?
     var onError: ((String) -> Void)?
 
-    func start(displayID: CGDirectDisplayID) async throws {
+    func start(displayID: CGDirectDisplayID, pixelWidth: Int, pixelHeight: Int) async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
         guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
             throw NSError(domain: "NIOWarp", code: 1, userInfo: [NSLocalizedDescriptionKey: "无法找到源显示器"])
@@ -57,14 +58,14 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
             exceptingWindows: []
         )
         let configuration = SCStreamConfiguration()
-        configuration.width = display.width
-        configuration.height = display.height
+        configuration.width = pixelWidth
+        configuration.height = pixelHeight
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
         configuration.minimumFrameInterval = CMTime(value: 1, timescale: 60)
         configuration.queueDepth = 3
         configuration.showsCursor = false
         configuration.capturesAudio = false
-        configuration.scalesToFit = false
+        configuration.scalesToFit = true
 
         let stream = SCStream(filter: filter, configuration: configuration, delegate: self)
         try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: queue)
@@ -92,7 +93,7 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 }
 
-private final class WarpRenderer: NSObject, MTKViewDelegate {
+final class WarpRenderer: NSObject, MTKViewDelegate {
     private let device: MTLDevice
     private let commandQueue: MTLCommandQueue
     private let pipeline: MTLRenderPipelineState
@@ -133,6 +134,7 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
             float canvasAspect;
             int contentMode;
             uint mirrorFlags;
+            float2 cropAnchor;
             float2 sourceTexelSize;
             uint antiAliasingMode;
             uint testPatternMode;
@@ -145,9 +147,10 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
             return output;
         }
 
-        float gridLine(float coordinate, float spacing, float thickness) {
+        float gridLine(float coordinate, float spacing, float thickness, bool smoothEdges) {
             float repeated = abs(fract(coordinate / spacing + 0.5) - 0.5) * spacing;
             float width = max(fwidth(coordinate) * thickness, 0.00005);
+            if (!smoothEdges) { return repeated <= width ? 1.0 : 0.0; }
             return 1.0 - smoothstep(width, width * 1.8, repeated);
         }
 
@@ -157,30 +160,43 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
             return uv;
         }
 
-        float rectangleMask(float2 uv, float2 minimum, float2 maximum) {
+        float rectangleMask(float2 uv, float2 minimum, float2 maximum, bool smoothEdges) {
             float2 edgeWidth = max(fwidth(uv) * 1.5, float2(0.00005));
+            if (!smoothEdges) {
+                float2 insideMinimum = step(minimum, uv);
+                float2 insideMaximum = step(uv, maximum);
+                return insideMinimum.x * insideMinimum.y * insideMaximum.x * insideMaximum.y;
+            }
             float2 insideMinimum = smoothstep(minimum, minimum + edgeWidth, uv);
             float2 insideMaximum = 1.0 - smoothstep(maximum - edgeWidth, maximum, uv);
             return insideMinimum.x * insideMinimum.y * insideMaximum.x * insideMaximum.y;
         }
 
-        float4 calibrationPattern(float2 uv) {
-            float minorGrid = max(gridLine(uv.x, 0.02, 0.7), gridLine(uv.y, 0.02, 0.7));
-            float majorGrid = max(gridLine(uv.x, 0.10, 1.0), gridLine(uv.y, 0.10, 1.0));
-            float centerX = 1.0 - smoothstep(fwidth(uv.x), fwidth(uv.x) * 2.5, abs(uv.x - 0.5));
-            float centerY = 1.0 - smoothstep(fwidth(uv.y), fwidth(uv.y) * 2.5, abs(uv.y - 0.5));
+        float lineMask(float distance, float width, bool smoothEdges) {
+            if (!smoothEdges) { return distance <= width ? 1.0 : 0.0; }
+            return 1.0 - smoothstep(width, width * 2.5, distance);
+        }
+
+        float4 calibrationPattern(float2 uv, bool smoothEdges) {
+            float minorGrid = max(gridLine(uv.x, 0.02, 0.7, smoothEdges), gridLine(uv.y, 0.02, 0.7, smoothEdges));
+            float majorGrid = max(gridLine(uv.x, 0.10, 1.0, smoothEdges), gridLine(uv.y, 0.10, 1.0, smoothEdges));
+            float centerXWidth = max(fwidth(uv.x), 0.00005);
+            float centerYWidth = max(fwidth(uv.y), 0.00005);
+            float centerX = lineMask(abs(uv.x - 0.5), centerXWidth, smoothEdges);
+            float centerY = lineMask(abs(uv.y - 0.5), centerYWidth, smoothEdges);
             float borderDistance = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
-            float border = 1.0 - smoothstep(fwidth(borderDistance), fwidth(borderDistance) * 3.0, borderDistance);
+            float borderWidth = max(fwidth(borderDistance), 0.00005);
+            float border = lineMask(borderDistance, borderWidth, smoothEdges);
             float3 color = mix(float3(0.035), float3(0.20), minorGrid);
             color = mix(color, float3(0.85), majorGrid);
             color = mix(color, float3(1.0), border);
             color = mix(color, float3(1.0, 0.16, 0.10), centerX);
             color = mix(color, float3(0.15, 1.0, 0.28), centerY);
 
-            float topLeft = rectangleMask(uv, float2(0.015, 0.015), float2(0.075, 0.075));
-            float topRight = rectangleMask(uv, float2(0.925, 0.015), float2(0.985, 0.075));
-            float bottomLeft = rectangleMask(uv, float2(0.015, 0.925), float2(0.075, 0.985));
-            float bottomRight = rectangleMask(uv, float2(0.925, 0.925), float2(0.985, 0.985));
+            float topLeft = rectangleMask(uv, float2(0.015, 0.015), float2(0.075, 0.075), smoothEdges);
+            float topRight = rectangleMask(uv, float2(0.925, 0.015), float2(0.985, 0.075), smoothEdges);
+            float bottomLeft = rectangleMask(uv, float2(0.015, 0.925), float2(0.075, 0.985), smoothEdges);
+            float bottomRight = rectangleMask(uv, float2(0.925, 0.925), float2(0.985, 0.985), smoothEdges);
             color = mix(color, float3(1.0, 0.10, 0.85), topLeft);
             color = mix(color, float3(0.05, 0.85, 1.0), topRight);
             color = mix(color, float3(1.0, 0.85, 0.05), bottomLeft);
@@ -188,34 +204,55 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
             return float4(color, 1.0);
         }
 
+        float diagnosticLine(float distance, float width, bool smoothEdges) {
+            if (!smoothEdges) { return distance <= width ? 1.0 : 0.0; }
+            float transition = max(fwidth(distance) * 1.5, 0.00008);
+            return 1.0 - smoothstep(width - transition, width + transition, distance);
+        }
+
+        float4 antiAliasingDiagnosticPattern(float2 uv, bool smoothEdges) {
+            float2 centered = uv * 2.0 - 1.0;
+            float diagonalA = diagnosticLine(abs(centered.y - centered.x * 0.62), 0.0022, smoothEdges);
+            float diagonalB = diagnosticLine(abs(centered.y + centered.x * 0.37 - 0.18), 0.0012, smoothEdges);
+            float radius = length(centered - float2(0.28, -0.06));
+            float circle = diagnosticLine(abs(radius - 0.28), 0.0018, smoothEdges);
+            float spokeAngle = atan2(centered.y + 0.12, centered.x + 0.35);
+            float spokes = diagnosticLine(abs(sin(spokeAngle * 18.0)) * max(length(centered + float2(0.35, 0.12)), 0.05), 0.012, smoothEdges);
+            float checker = fmod(floor(uv.x * 80.0) + floor(uv.y * 48.0), 2.0);
+            float3 background = mix(float3(0.025), float3(0.12), checker * 0.45);
+            float3 color = mix(background, float3(1.0), max(max(diagonalA, diagonalB), max(circle, spokes)));
+            return float4(color, 1.0);
+        }
+
         float4 sampleWarpedTexture(
             texture2d<float> source,
-            sampler textureSampler,
+            sampler linearSampler,
+            sampler pointSampler,
             float2 uv,
             constant Uniforms& uniforms) {
             if (uniforms.antiAliasingMode == 0u) {
-                return source.sample(textureSampler, uv);
+                return source.sample(pointSampler, uv);
             }
 
             float2 derivativeX = dfdx(uv);
             float2 derivativeY = dfdy(uv);
             float2 footprint = max(abs(derivativeX), abs(derivativeY));
             float2 offset = max(footprint * 0.32, uniforms.sourceTexelSize * 0.35);
-            float4 result = source.sample(textureSampler, uv + float2(-offset.x, -offset.y));
-            result += source.sample(textureSampler, uv + float2(offset.x, -offset.y));
-            result += source.sample(textureSampler, uv + float2(-offset.x, offset.y));
-            result += source.sample(textureSampler, uv + float2(offset.x, offset.y));
+            float4 result = source.sample(linearSampler, clamp(uv + float2(-offset.x, -offset.y), 0.0, 1.0));
+            result += source.sample(linearSampler, clamp(uv + float2(offset.x, -offset.y), 0.0, 1.0));
+            result += source.sample(linearSampler, clamp(uv + float2(-offset.x, offset.y), 0.0, 1.0));
+            result += source.sample(linearSampler, clamp(uv + float2(offset.x, offset.y), 0.0, 1.0));
 
             if (uniforms.antiAliasingMode == 1u) {
                 return result * 0.25;
             }
 
-            float4 center = source.sample(textureSampler, uv) * 2.0;
+            float4 center = source.sample(linearSampler, uv) * 2.0;
             float2 axisOffset = max(footprint * 0.48, uniforms.sourceTexelSize * 0.55);
-            result += source.sample(textureSampler, uv + float2(axisOffset.x, 0.0));
-            result += source.sample(textureSampler, uv - float2(axisOffset.x, 0.0));
-            result += source.sample(textureSampler, uv + float2(0.0, axisOffset.y));
-            result += source.sample(textureSampler, uv - float2(0.0, axisOffset.y));
+            result += source.sample(linearSampler, clamp(uv + float2(axisOffset.x, 0.0), 0.0, 1.0));
+            result += source.sample(linearSampler, clamp(uv - float2(axisOffset.x, 0.0), 0.0, 1.0));
+            result += source.sample(linearSampler, clamp(uv + float2(0.0, axisOffset.y), 0.0, 1.0));
+            result += source.sample(linearSampler, clamp(uv - float2(0.0, axisOffset.y), 0.0, 1.0));
             return (result + center) * 0.10;
         }
 
@@ -223,7 +260,8 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
             VertexOut input [[stage_in]],
             texture2d<float> source [[texture(0)]],
             constant Uniforms& uniforms [[buffer(1)]]) {
-            constexpr sampler textureSampler(filter::linear, address::clamp_to_zero);
+            constexpr sampler linearSampler(filter::linear, address::clamp_to_zero);
+            constexpr sampler pointSampler(filter::nearest, address::clamp_to_zero);
             float2 uv = input.uv;
 
             float edgeDistance = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
@@ -232,7 +270,19 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
 
             if (uniforms.testPatternMode == 1u) {
                 float2 patternUV = applyMirror(uv, uniforms.mirrorFlags);
-                float4 pattern = calibrationPattern(patternUV);
+                bool smoothEdges = uniforms.antiAliasingMode != 0u;
+                float4 pattern = calibrationPattern(patternUV, smoothEdges);
+                return float4(pattern.rgb * edgeAlpha, 1.0);
+            }
+
+            if (uniforms.testPatternMode == 2u) {
+                bool rightPanel = uv.x >= 0.5;
+                float2 patternUV = float2(fract(uv.x * 2.0), uv.y);
+                patternUV = applyMirror(patternUV, uniforms.mirrorFlags);
+                bool smoothEdges = rightPanel && uniforms.antiAliasingMode != 0u;
+                float4 pattern = antiAliasingDiagnosticPattern(patternUV, smoothEdges);
+                float divider = diagnosticLine(abs(uv.x - 0.5), 0.0015, true);
+                pattern.rgb = mix(pattern.rgb, float3(1.0, 0.18, 0.08), divider);
                 return float4(pattern.rgb * edgeAlpha, 1.0);
             }
 
@@ -247,10 +297,12 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
             } else if (uniforms.contentMode == 1) {
                 if (uniforms.sourceAspect < uniforms.canvasAspect) {
                     float sampledHeight = uniforms.sourceAspect / uniforms.canvasAspect;
-                    uv.y = uv.y * sampledHeight + (1.0 - sampledHeight) * 0.5;
+                    float start = (1.0 - sampledHeight) * (uniforms.cropAnchor.y + 1.0) * 0.5;
+                    uv.y = uv.y * sampledHeight + start;
                 } else {
                     float sampledWidth = uniforms.canvasAspect / uniforms.sourceAspect;
-                    uv.x = uv.x * sampledWidth + (1.0 - sampledWidth) * 0.5;
+                    float start = (1.0 - sampledWidth) * (uniforms.cropAnchor.x + 1.0) * 0.5;
+                    uv.x = uv.x * sampledWidth + start;
                 }
             }
 
@@ -258,7 +310,7 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
             if (any(uv < 0.0) || any(uv > 1.0)) {
                 return float4(0.0, 0.0, 0.0, 1.0);
             }
-            float4 sampled = sampleWarpedTexture(source, textureSampler, uv, uniforms);
+            float4 sampled = sampleWarpedTexture(source, linearSampler, pointSampler, uv, uniforms);
             return float4(sampled.rgb * edgeAlpha, 1.0);
         }
         """
@@ -305,7 +357,8 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
     }
 
     var effectiveAntiAliasingMode: AntiAliasingMode {
-        runtimeAntiAliasingOverride ?? configuration.render.antiAliasing
+        guard configuration.render.antiAliasingEnabled else { return .off }
+        return runtimeAntiAliasingOverride ?? configuration.render.antiAliasing
     }
 
     func performanceSnapshot() -> PerformanceSnapshot {
@@ -314,10 +367,15 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
 
     @discardableResult
     func evaluateAutomaticPerformanceFallback() -> Bool {
-        guard configuration.render.automaticPerformanceFallback,
+        guard configuration.render.antiAliasingEnabled,
+              configuration.render.automaticPerformanceFallback,
               runtimeAntiAliasingOverride == nil else { return false }
         let snapshot = performanceSnapshot()
-        guard PerformancePolicy.shouldFallback(snapshot: snapshot, currentMode: configuration.render.antiAliasing) else { return false }
+        guard PerformancePolicy.shouldFallback(
+            snapshot: snapshot,
+            antiAliasingEnabled: configuration.render.antiAliasingEnabled,
+            currentMode: configuration.render.antiAliasing
+        ) else { return false }
         runtimeAntiAliasingOverride = .performance
         rebuildMesh()
         return true
@@ -383,20 +441,32 @@ private final class WarpRenderer: NSObject, MTKViewDelegate {
             canvasAspect: configuration.canvas.aspect,
             contentMode: configuration.contentMode.shaderValue,
             mirrorFlags: mirrorFlags,
+            cropAnchor: SIMD2<Float>(
+                Float(configuration.cropAnchor.horizontal),
+                Float(configuration.cropAnchor.vertical)
+            ),
             sourceTexelSize: SIMD2<Float>(1 / Float(max(width, 1)), 1 / Float(max(height, 1))),
             antiAliasingMode: effectiveAntiAliasingMode.shaderValue,
             testPatternMode: configuration.render.testPattern.shaderValue
         )
 
         let aa = configuration.aaRect.sanitized()
-        let drawableWidth = max(Int(view.drawableSize.width), 1)
-        let drawableHeight = max(Int(view.drawableSize.height), 1)
+        let drawableWidth = max(drawable.texture.width, 1)
+        let drawableHeight = max(drawable.texture.height, 1)
         let scissorX = min(max(Int((aa.x * Double(drawableWidth)).rounded()), 0), drawableWidth - 1)
         let scissorY = min(max(Int((aa.y * Double(drawableHeight)).rounded()), 0), drawableHeight - 1)
         let scissorWidth = min(max(Int((aa.width * Double(drawableWidth)).rounded()), 1), drawableWidth - scissorX)
         let scissorHeight = min(max(Int((aa.height * Double(drawableHeight)).rounded()), 1), drawableHeight - scissorY)
 
         encoder.setRenderPipelineState(pipeline)
+        encoder.setViewport(MTLViewport(
+            originX: 0,
+            originY: 0,
+            width: Double(drawableWidth),
+            height: Double(drawableHeight),
+            znear: 0,
+            zfar: 1
+        ))
         encoder.setScissorRect(MTLScissorRect(x: scissorX, y: scissorY, width: scissorWidth, height: scissorHeight))
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setFragmentTexture(texture, index: 0)
@@ -442,13 +512,25 @@ private enum NumericFieldTarget: Int {
     case coefficientY
 }
 
+private enum RuntimePreviewMode {
+    case normal
+    case rawReflectionCalibration
+    case antiAliasingComparison
+}
+
 private final class OutputController {
     let window: NSWindow
     let renderer: WarpRenderer
 
-    init?(screen: NSScreen, frameStore: LatestFrameStore, configuration: WarpConfiguration) {
+    init?(
+        screen: NSScreen,
+        pixelWidth: Int,
+        pixelHeight: Int,
+        frameStore: LatestFrameStore,
+        configuration: WarpConfiguration
+    ) {
         let window = OutputWindow(
-            contentRect: screen.frame,
+            contentRect: NSRect(origin: .zero, size: screen.frame.size),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false,
@@ -464,6 +546,8 @@ private final class OutputController {
 
         let metalView = MTKView(frame: NSRect(origin: .zero, size: screen.frame.size))
         metalView.autoresizingMask = [.width, .height]
+        metalView.autoResizeDrawable = false
+        metalView.drawableSize = CGSize(width: pixelWidth, height: pixelHeight)
         guard let renderer = WarpRenderer(view: metalView, frameStore: frameStore, configuration: configuration) else { return nil }
         metalView.delegate = renderer
         window.contentView = metalView
@@ -498,6 +582,8 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     private var lastAppliedConfiguration: WarpConfiguration
     private var performanceTimer: Timer?
     private var presets = [WarpPreset]()
+    private var runtimePreviewMode = RuntimePreviewMode.normal
+    private var runtimePreviewReturnMode = RuntimePreviewMode.normal
 
     private let statusLabel = NSTextField(wrappingLabelWithString: "等待屏幕捕获权限…")
     private let aaXField = NSTextField()
@@ -506,9 +592,13 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     private let aaHeightField = NSTextField()
     private let canvasWidthField = NSTextField()
     private let canvasHeightField = NSTextField()
+    private let cropHorizontalSlider = NSSlider()
+    private let cropVerticalSlider = NSSlider()
+    private let contentMappingLabel = NSTextField(wrappingLabelWithString: "内容映射计算中…")
     private let horizontalMirrorButton = NSButton(checkboxWithTitle: "水平翻转", target: nil, action: nil)
     private let verticalMirrorButton = NSButton(checkboxWithTitle: "垂直翻转", target: nil, action: nil)
     private let warpButton = NSButton(checkboxWithTitle: "启用基础 Warp", target: nil, action: nil)
+    private let inverseWarpTrendButton = NSButton(checkboxWithTitle: "反向预畸变趋势（屏幕中凹两侧翘）", target: nil, action: nil)
     private let polynomialButton = NSButton(checkboxWithTitle: "启用多项式增量", target: nil, action: nil)
     private let orderPicker = NSPopUpButton()
     private let termPicker = NSPopUpButton()
@@ -522,8 +612,11 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     private let tiltSlider = NSSlider()
     private let horizontalBendSlider = NSSlider()
     private let antiAliasingPicker = NSPopUpButton()
+    private let antiAliasingEnabledButton = NSButton(checkboxWithTitle: "启用抗锯齿", target: nil, action: nil)
     private let automaticPerformanceButton = NSButton(checkboxWithTitle: "性能不足时自动降级", target: nil, action: nil)
     private let testPatternButton = NSButton(checkboxWithTitle: "显示标定网格、中心线和边界", target: nil, action: nil)
+    private let rawCalibrationButton = NSButton(title: "一键无畸变标定", target: nil, action: nil)
+    private let antiAliasingComparisonButton = NSButton(title: "抗锯齿 A/B 对比", target: nil, action: nil)
     private let performanceLabel = NSTextField(wrappingLabelWithString: "性能采样中…")
     private let pauseWarpButton = NSButton(title: "暂停 Warp", target: nil, action: nil)
     private let presetNameField = NSTextField()
@@ -638,6 +731,11 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         contentModePicker.target = self
         contentModePicker.action = #selector(updateContentMode)
         stack.addArrangedSubview(labeledRow("内容适配", contentModePicker))
+        stack.addArrangedSubview(makeSlider(title: "水平裁切位置", slider: cropHorizontalSlider, minimum: -1, maximum: 1, action: #selector(updateCropAnchor)))
+        stack.addArrangedSubview(makeSlider(title: "垂直裁切位置", slider: cropVerticalSlider, minimum: -1, maximum: 1, action: #selector(updateCropAnchor)))
+        contentMappingLabel.textColor = .secondaryLabelColor
+        contentMappingLabel.preferredMaxLayoutWidth = 500
+        stack.addArrangedSubview(contentMappingLabel)
         stack.addArrangedSubview(makeButton("保存并应用画布尺寸", action: #selector(applyCanvasFields)))
 
         stack.addArrangedSubview(sectionTitle("3. 镜像"))
@@ -651,6 +749,9 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         warpButton.target = self
         warpButton.action = #selector(toggleWarp)
         stack.addArrangedSubview(warpButton)
+        inverseWarpTrendButton.target = self
+        inverseWarpTrendButton.action = #selector(toggleWarpTrend)
+        stack.addArrangedSubview(inverseWarpTrendButton)
         stack.addArrangedSubview(makeSlider(title: "Warp 强度", slider: strengthSlider, minimum: 0, maximum: 1.5, action: #selector(updateStrength)))
         stack.addArrangedSubview(makeSlider(title: "上下弧度", slider: archSlider, minimum: 0, maximum: 0.2, action: #selector(updateArch)))
         stack.addArrangedSubview(makeSlider(title: "垂直压缩", slider: verticalScaleSlider, minimum: 0.6, maximum: 1.1, action: #selector(updateVerticalScale)))
@@ -679,16 +780,24 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         ]))
 
         stack.addArrangedSubview(sectionTitle("6. 画质与标定"))
-        AntiAliasingMode.allCases.forEach { antiAliasingPicker.addItem(withTitle: $0.title) }
+        AntiAliasingMode.enabledCases.forEach { antiAliasingPicker.addItem(withTitle: $0.title) }
         antiAliasingPicker.target = self
         antiAliasingPicker.action = #selector(updateAntiAliasing)
-        stack.addArrangedSubview(labeledRow("抗锯齿", antiAliasingPicker))
+        antiAliasingEnabledButton.target = self
+        antiAliasingEnabledButton.action = #selector(toggleAntiAliasing)
+        stack.addArrangedSubview(antiAliasingEnabledButton)
+        stack.addArrangedSubview(labeledRow("开启档位", antiAliasingPicker))
         automaticPerformanceButton.target = self
         automaticPerformanceButton.action = #selector(updateAutomaticPerformance)
         testPatternButton.target = self
         testPatternButton.action = #selector(updateTestPattern)
+        rawCalibrationButton.target = self
+        rawCalibrationButton.action = #selector(toggleRawCalibration)
+        antiAliasingComparisonButton.target = self
+        antiAliasingComparisonButton.action = #selector(toggleAntiAliasingComparison)
         stack.addArrangedSubview(automaticPerformanceButton)
         stack.addArrangedSubview(testPatternButton)
+        stack.addArrangedSubview(buttonRow([rawCalibrationButton, antiAliasingComparisonButton]))
         performanceLabel.textColor = .secondaryLabelColor
         performanceLabel.preferredMaxLayoutWidth = 500
         stack.addArrangedSubview(performanceLabel)
@@ -826,9 +935,12 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         aaHeightField.stringValue = String(Int((aa.height * Double(displayHeight)).rounded()))
         canvasWidthField.stringValue = String(configuration.canvas.width)
         canvasHeightField.stringValue = String(configuration.canvas.height)
+        cropHorizontalSlider.doubleValue = configuration.cropAnchor.horizontal
+        cropVerticalSlider.doubleValue = configuration.cropAnchor.vertical
         horizontalMirrorButton.state = configuration.mirror.horizontal ? .on : .off
         verticalMirrorButton.state = configuration.mirror.vertical ? .on : .off
         warpButton.state = configuration.manual.enabled ? .on : .off
+        inverseWarpTrendButton.state = configuration.warpTrend == .inverse ? .on : .off
         polynomialButton.state = configuration.polynomial.enabled ? .on : .off
         strengthSlider.doubleValue = configuration.manual.strength
         archSlider.doubleValue = configuration.manual.arch
@@ -837,7 +949,10 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         tiltSlider.doubleValue = configuration.manual.tilt
         horizontalBendSlider.doubleValue = configuration.manual.horizontalBend
         contentModePicker.selectItem(at: ContentMode.allCases.firstIndex(of: configuration.contentMode) ?? 0)
-        antiAliasingPicker.selectItem(at: AntiAliasingMode.allCases.firstIndex(of: configuration.render.antiAliasing) ?? 1)
+        antiAliasingEnabledButton.state = configuration.render.antiAliasingEnabled ? .on : .off
+        antiAliasingPicker.selectItem(at: AntiAliasingMode.enabledCases.firstIndex(of: configuration.render.antiAliasing) ?? 0)
+        antiAliasingPicker.isEnabled = configuration.render.antiAliasingEnabled
+        automaticPerformanceButton.isEnabled = configuration.render.antiAliasingEnabled
         automaticPerformanceButton.state = configuration.render.automaticPerformanceFallback ? .on : .off
         testPatternButton.state = configuration.render.testPattern == .calibrationGrid ? .on : .off
         pauseWarpButton.title = isWarpVisible() ? "暂停 Warp" : "恢复 Warp"
@@ -845,6 +960,8 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         historyButton.isEnabled = historyStore.count > 0
         orderPicker.selectItem(at: configuration.polynomial.order - 2)
         rebuildTermPicker()
+        refreshContentMappingStatus()
+        refreshRuntimePreviewControls()
     }
 
     private func rebuildTermPicker() {
@@ -865,6 +982,8 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     private func applyConfiguration(_ message: String, recordHistory: Bool = true) {
+        runtimePreviewMode = .normal
+        runtimePreviewReturnMode = .normal
         configuration = configuration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
         if recordHistory, configuration != lastAppliedConfiguration {
             historyStore.record(lastAppliedConfiguration, reason: message)
@@ -876,6 +995,69 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         historyButton.isEnabled = historyStore.count > 0
         let color: NSColor = validation.isValid ? .systemGreen : .systemRed
         setStatus("\(message)；\(validation.summary)", color: color)
+        refreshRuntimePreviewControls()
+        refreshContentMappingStatus()
+    }
+
+    private func refreshContentMappingStatus() {
+        let mapping = ContentMappingMath.mapping(
+            sourceWidth: Float(displayWidth),
+            sourceHeight: Float(displayHeight),
+            targetWidth: Float(configuration.canvas.width),
+            targetHeight: Float(configuration.canvas.height),
+            mode: configuration.contentMode,
+            anchor: configuration.cropAnchor
+        )
+        let cropX = Int((mapping.cropFraction.x * Float(displayWidth)).rounded())
+        let cropY = Int((mapping.cropFraction.y * Float(displayHeight)).rounded())
+        let warning = configuration.contentMode == .stretch ? " ⚠️ 拉伸会改变画面比例" : ""
+        contentMappingLabel.stringValue = String(
+            format: "源 %.4f · 目标 %.4f · 等比缩放 %.4fx · 裁切 X %d px / Y %d px%@",
+            Float(displayWidth) / Float(max(displayHeight, 1)),
+            configuration.canvas.aspect,
+            mapping.uniformScale,
+            cropX,
+            cropY,
+            warning
+        )
+        contentMappingLabel.textColor = configuration.contentMode == .stretch ? .systemOrange : .secondaryLabelColor
+    }
+
+    private func refreshRuntimePreviewControls() {
+        rawCalibrationButton.title = runtimePreviewMode == .rawReflectionCalibration ? "返回校正状态" : "一键无畸变标定"
+        antiAliasingComparisonButton.title = runtimePreviewMode == .antiAliasingComparison ? "退出抗锯齿 A/B" : "抗锯齿 A/B 对比"
+    }
+
+    private func applyRuntimePreview(_ previewConfiguration: WarpConfiguration, message: String) {
+        let validation = renderer.updateConfiguration(
+            previewConfiguration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
+        )
+        refreshRuntimePreviewControls()
+        let color: NSColor = validation.isValid ? .systemOrange : .systemRed
+        setStatus("\(message)；临时预览不会保存配置或增加历史。\n\(validation.summary)", color: color)
+    }
+
+    private func leaveRuntimePreview(message: String = "已返回校正状态") {
+        runtimePreviewMode = .normal
+        runtimePreviewReturnMode = .normal
+        let validation = renderer.updateConfiguration(configuration)
+        refreshRuntimePreviewControls()
+        let color: NSColor = validation.isValid ? .systemGreen : .systemRed
+        setStatus("\(message)；\(validation.summary)", color: color)
+    }
+
+    private func restoreRuntimePreview(_ mode: RuntimePreviewMode) {
+        switch mode {
+        case .rawReflectionCalibration:
+            runtimePreviewMode = .rawReflectionCalibration
+            runtimePreviewReturnMode = .normal
+            applyRuntimePreview(
+                configuration.rawReflectionCalibrationConfiguration(),
+                message: "已返回无畸变标定：基础/多项式 Warp 保持临时关闭"
+            )
+        case .normal, .antiAliasingComparison:
+            leaveRuntimePreview()
+        }
     }
 
     private func startPerformanceMonitoring() {
@@ -888,11 +1070,13 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         let didFallback = renderer.evaluateAutomaticPerformanceFallback()
         let snapshot = renderer.performanceSnapshot()
         let effective = renderer.effectiveAntiAliasingMode.title
+        let saved = configuration.render.antiAliasingEnabled ? configuration.render.antiAliasing.title : "关闭"
         performanceLabel.stringValue = String(
-            format: "FPS %.1f · GPU 平均 %.2f ms · P95 %.2f ms · 当前有效画质：%@",
+            format: "FPS %.1f · GPU 平均 %.2f ms · P95 %.2f ms · 保存：%@ · 当前：%@",
             snapshot.framesPerSecond,
             snapshot.averageGPUTimeMilliseconds,
             snapshot.p95GPUTimeMilliseconds,
+            saved,
             effective
         )
         performanceLabel.textColor = snapshot.sampleCount >= 60 && snapshot.framesPerSecond < 55 ? .systemOrange : .secondaryLabelColor
@@ -961,6 +1145,14 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         applyConfiguration("内容适配已更新")
     }
 
+    @objc private func updateCropAnchor() {
+        configuration.cropAnchor = CropAnchorConfiguration(
+            horizontal: cropHorizontalSlider.doubleValue,
+            vertical: cropVerticalSlider.doubleValue
+        )
+        applyConfiguration("裁切位置已更新")
+    }
+
     @objc private func updateMirror() {
         configuration.mirror.horizontal = horizontalMirrorButton.state == .on
         configuration.mirror.vertical = verticalMirrorButton.state == .on
@@ -968,8 +1160,14 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     @objc private func updateAntiAliasing() {
-        configuration.render.antiAliasing = AntiAliasingMode.allCases[antiAliasingPicker.indexOfSelectedItem]
+        configuration.render.antiAliasing = AntiAliasingMode.enabledCases[antiAliasingPicker.indexOfSelectedItem]
         applyConfiguration("抗锯齿档位已更新")
+    }
+
+    @objc private func toggleAntiAliasing() {
+        configuration.render.antiAliasingEnabled = antiAliasingEnabledButton.state == .on
+        applyConfiguration(configuration.render.antiAliasingEnabled ? "抗锯齿已开启" : "抗锯齿已关闭")
+        refreshControls()
     }
 
     @objc private func updateAutomaticPerformance() {
@@ -980,6 +1178,31 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     @objc private func updateTestPattern() {
         configuration.render.testPattern = testPatternButton.state == .on ? .calibrationGrid : .off
         applyConfiguration("标定测试图已更新")
+    }
+
+    @objc private func toggleRawCalibration() {
+        if runtimePreviewMode == .rawReflectionCalibration {
+            leaveRuntimePreview()
+            return
+        }
+        runtimePreviewMode = .rawReflectionCalibration
+        applyRuntimePreview(
+            configuration.rawReflectionCalibrationConfiguration(),
+            message: "原始反射标定中：基础/多项式 Warp 已临时关闭，AA 区与镜像保持不变"
+        )
+    }
+
+    @objc private func toggleAntiAliasingComparison() {
+        if runtimePreviewMode == .antiAliasingComparison {
+            restoreRuntimePreview(runtimePreviewReturnMode)
+            return
+        }
+        runtimePreviewReturnMode = runtimePreviewMode
+        runtimePreviewMode = .antiAliasingComparison
+        applyRuntimePreview(
+            configuration.antiAliasingComparisonConfiguration(),
+            message: "抗锯齿 A/B：固定使用无畸变几何，左侧关闭，右侧使用当前档位"
+        )
     }
 
     @objc private func toggleWarpVisibility() {
@@ -996,6 +1219,11 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     @objc private func toggleWarp() {
         configuration.manual.enabled = warpButton.state == .on
         applyConfiguration("基础 Warp 已更新")
+    }
+
+    @objc private func toggleWarpTrend() {
+        configuration.warpTrend = inverseWarpTrendButton.state == .on ? .inverse : .forward
+        applyConfiguration("畸变趋势已切换为：\(configuration.warpTrend.title)")
     }
 
     @objc private func updateStrength(_ sender: NSSlider) { configuration.manual.strength = sender.doubleValue; applyConfiguration("Warp 强度已更新") }
@@ -1188,6 +1416,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     private var emergencyHotKey: GlobalHotKey?
     private var isReconfiguring = false
     private var screenChangeWorkItem: DispatchWorkItem?
+    private var startupRetryWorkItem: DispatchWorkItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -1212,32 +1441,46 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             name: NSWorkspace.screensDidWakeNotification,
             object: nil
         )
-        startSession(showFatalOnFailure: true)
+        startSession(showFatalOnFailure: false)
         if emergencyHotKey == nil {
             controlPanel?.setStatus("警告：全局紧急快捷键注册失败，请使用控制台的“暂停 Warp”。", color: .systemRed)
         }
     }
 
     private func startSession(showFatalOnFailure: Bool) {
+        startupRetryWorkItem?.cancel()
         guard let topology = chooseScreens(),
               let outputID = displayID(for: topology.output) else {
             if showFatalOnFailure {
                 showFatal("需要同时连接 MacBook 内置屏和一台外接显示器。")
             } else {
                 emergencyHideWarp(reason: "未检测到外接屏，Warp 已安全隐藏；重新连接后会自动恢复。")
+                scheduleStartupRetry()
             }
             return
         }
         let displayMode = CGDisplayCopyDisplayMode(outputID)
         let pixelWidth = displayMode?.pixelWidth ?? CGDisplayPixelsWide(outputID)
         let pixelHeight = displayMode?.pixelHeight ?? CGDisplayPixelsHigh(outputID)
-        let configuration = configurationStore.load(displayWidth: pixelWidth, displayHeight: pixelHeight)
+        let displayIdentifier = displayProfileIdentifier(for: outputID)
+        let configuration = configurationStore.load(
+            displayIdentifier: displayIdentifier,
+            displayWidth: pixelWidth,
+            displayHeight: pixelHeight
+        )
         guard let outputController = OutputController(
             screen: topology.output,
+            pixelWidth: pixelWidth,
+            pixelHeight: pixelHeight,
             frameStore: captureEngine.frameStore,
             configuration: configuration
         ) else {
-            showFatal("无法初始化 Metal 输出。")
+            if showFatalOnFailure {
+                showFatal("无法初始化 Metal 输出。")
+            } else {
+                emergencyHideWarp(reason: "外屏尚未就绪，Warp 已安全隐藏；程序会自动重试。")
+                scheduleStartupRetry()
+            }
             return
         }
         self.outputController = outputController
@@ -1272,7 +1515,11 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task {
             do {
-                try await captureEngine.start(displayID: outputID)
+                try await captureEngine.start(
+                    displayID: outputID,
+                    pixelWidth: pixelWidth,
+                    pixelHeight: pixelHeight
+                )
                 await MainActor.run {
                     controlPanel.setStatus("正在捕获外屏完整桌面；AA 区外纯黑，配置会自动保存。")
                     NSApp.activate(ignoringOtherApps: true)
@@ -1298,6 +1545,16 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
                 isReconfiguring = false
             }
         }
+    }
+
+    private func scheduleStartupRetry() {
+        startupRetryWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self, self.outputController == nil, !self.isReconfiguring else { return }
+            self.startSession(showFatalOnFailure: false)
+        }
+        startupRetryWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: workItem)
     }
 
     private func emergencyHideWarp(reason: String) {
@@ -1327,6 +1584,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        startupRetryWorkItem?.cancel()
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         Task { await captureEngine.stop() }
@@ -1350,6 +1608,13 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func displayID(for screen: NSScreen) -> CGDirectDisplayID? {
         screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
+    }
+
+    private func displayProfileIdentifier(for displayID: CGDirectDisplayID) -> String {
+        let vendor = CGDisplayVendorNumber(displayID)
+        let model = CGDisplayModelNumber(displayID)
+        let serial = CGDisplaySerialNumber(displayID)
+        return "vendor-\(vendor)-model-\(model)-serial-\(serial)"
     }
 
     private func showFatal(_ message: String) {

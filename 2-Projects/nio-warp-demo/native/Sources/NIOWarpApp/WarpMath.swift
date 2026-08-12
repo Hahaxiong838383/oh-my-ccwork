@@ -30,6 +30,67 @@ struct GeneratedMesh {
     var validation: MeshValidation
 }
 
+struct ContentMappingResult: Equatable {
+    var sourceMinimum: SIMD2<Float>
+    var sourceMaximum: SIMD2<Float>
+    var uniformScale: Float
+    var cropFraction: SIMD2<Float>
+}
+
+enum ContentMappingMath {
+    static func mapping(
+        sourceWidth: Float,
+        sourceHeight: Float,
+        targetWidth: Float,
+        targetHeight: Float,
+        mode: ContentMode,
+        anchor: CropAnchorConfiguration
+    ) -> ContentMappingResult {
+        let safeSourceWidth = max(sourceWidth, 1)
+        let safeSourceHeight = max(sourceHeight, 1)
+        let safeTargetWidth = max(targetWidth, 1)
+        let safeTargetHeight = max(targetHeight, 1)
+        let safeSourceAspect = safeSourceWidth / safeSourceHeight
+        let safeTargetAspect = safeTargetWidth / safeTargetHeight
+        let safeAnchor = anchor.sanitized()
+        var minimum = SIMD2<Float>(repeating: 0)
+        var maximum = SIMD2<Float>(repeating: 1)
+        var scale: Float = 1
+        var crop = SIMD2<Float>(repeating: 0)
+
+        switch mode {
+        case .stretch:
+            break
+        case .fit:
+            scale = min(safeTargetWidth / safeSourceWidth, safeTargetHeight / safeSourceHeight)
+        case .fill:
+            scale = max(safeTargetWidth / safeSourceWidth, safeTargetHeight / safeSourceHeight)
+            if safeSourceAspect < safeTargetAspect {
+                let sampledHeight = safeSourceAspect / safeTargetAspect
+                let availableCrop = 1 - sampledHeight
+                let start = availableCrop * Float((safeAnchor.vertical + 1) * 0.5)
+                minimum.y = start
+                maximum.y = start + sampledHeight
+                crop.y = availableCrop
+            } else {
+                let sampledWidth = safeTargetAspect / safeSourceAspect
+                let availableCrop = 1 - sampledWidth
+                let start = availableCrop * Float((safeAnchor.horizontal + 1) * 0.5)
+                minimum.x = start
+                maximum.x = start + sampledWidth
+                crop.x = availableCrop
+            }
+        }
+
+        return ContentMappingResult(
+            sourceMinimum: minimum,
+            sourceMaximum: maximum,
+            uniformScale: scale,
+            cropFraction: crop
+        )
+    }
+}
+
 enum WarpMath {
     private static func manualRaw(_ point: SIMD2<Float>, parameters: ManualWarpParameters) -> SIMD2<Float> {
         guard parameters.enabled else { return point }
@@ -49,15 +110,28 @@ enum WarpMath {
         return SIMD2<Float>(warpedX, warpedY)
     }
 
-    private static func manualBounds(parameters: ManualWarpParameters) -> (SIMD2<Float>, SIMD2<Float>) {
+    private static func trendedManualRaw(
+        _ point: SIMD2<Float>,
+        parameters: ManualWarpParameters,
+        trend: WarpTrend
+    ) -> SIMD2<Float> {
+        let forward = manualRaw(point, parameters: parameters)
+        return point + (forward - point) * trend.displacementMultiplier
+    }
+
+    private static func manualBounds(
+        parameters: ManualWarpParameters,
+        trend: WarpTrend
+    ) -> (SIMD2<Float>, SIMD2<Float>) {
         guard parameters.enabled else { return (.zero, SIMD2<Float>(repeating: 1)) }
         var minimum = SIMD2<Float>(repeating: .greatestFiniteMagnitude)
         var maximum = SIMD2<Float>(repeating: -.greatestFiniteMagnitude)
         for row in 0...32 {
             for column in 0...64 {
-                let warped = manualRaw(
+                let warped = trendedManualRaw(
                     SIMD2<Float>(Float(column) / 64, Float(row) / 32),
-                    parameters: parameters
+                    parameters: parameters,
+                    trend: trend
                 )
                 minimum = simd_min(minimum, warped)
                 maximum = simd_max(maximum, warped)
@@ -71,16 +145,25 @@ enum WarpMath {
         configuration: WarpConfiguration,
         manualBounds: (SIMD2<Float>, SIMD2<Float>)? = nil
     ) -> SIMD2<Float> {
-        let bounds = manualBounds ?? self.manualBounds(parameters: configuration.manual)
-        let raw = manualRaw(canvasPoint, parameters: configuration.manual)
+        let bounds = manualBounds ?? self.manualBounds(
+            parameters: configuration.manual,
+            trend: configuration.warpTrend
+        )
+        let raw = trendedManualRaw(
+            canvasPoint,
+            parameters: configuration.manual,
+            trend: configuration.warpTrend
+        )
         let range = simd_max(bounds.1 - bounds.0, SIMD2<Float>(repeating: 0.0001))
         var mapped = (raw - bounds.0) / range
+        mapped = simd_clamp(mapped, SIMD2<Float>(repeating: 0), SIMD2<Float>(repeating: 1))
+        let trendMultiplier = configuration.warpTrend.displacementMultiplier
         if configuration.polynomial.enabled {
             let polynomial = configuration.polynomial.normalized()
             let centeredX = Double(canvasPoint.x * 2 - 1)
             let centeredY = Double(canvasPoint.y * 2 - 1)
-            mapped.x += Float(polynomial.evaluate(x: centeredX, y: centeredY, coefficients: polynomial.coefficientsX))
-            mapped.y += Float(polynomial.evaluate(x: centeredX, y: centeredY, coefficients: polynomial.coefficientsY))
+            mapped.x += trendMultiplier * Float(polynomial.evaluate(x: centeredX, y: centeredY, coefficients: polynomial.coefficientsX))
+            mapped.y += trendMultiplier * Float(polynomial.evaluate(x: centeredX, y: centeredY, coefficients: polynomial.coefficientsY))
         }
         return mapped
     }
@@ -89,7 +172,7 @@ enum WarpMath {
         let columns = max(columns, 2)
         let rows = max(rows, 2)
         let aa = configuration.aaRect.sanitized()
-        let bounds = manualBounds(parameters: configuration.manual)
+        let bounds = manualBounds(parameters: configuration.manual, trend: configuration.warpTrend)
         var vertices = [MeshVertex]()
         var localPoints = [SIMD2<Float>]()
         vertices.reserveCapacity((columns + 1) * (rows + 1))

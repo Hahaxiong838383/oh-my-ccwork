@@ -9,7 +9,12 @@
     "height" : 936,
     "width" : 7680
   },
-  "contentMode" : "stretch",
+  "contentMode" : "fill",
+  "warpTrend" : "forward",
+  "cropAnchor" : {
+    "horizontal" : 0,
+    "vertical" : 0
+  },
   "displayPixelHeight" : 2880,
   "displayPixelWidth" : 5120,
   "manual" : {
@@ -32,9 +37,10 @@
     "order" : 3
   },
   "render" : {
+    "antiAliasingEnabled" : true,
     "antiAliasing" : "performance",
     "automaticPerformanceFallback" : true,
     "testPattern" : "off"
   },
-  "schemaVersion" : 3
+  "schemaVersion" : 5
 }

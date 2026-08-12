@@ -37,9 +37,9 @@ enum ContentMode: String, Codable, CaseIterable {
 
     var title: String {
         switch self {
-        case .fit: return "完整显示"
-        case .fill: return "铺满裁切"
-        case .stretch: return "拉伸铺满"
+        case .fit: return "保持比例·完整显示"
+        case .fill: return "保持比例·铺满裁切（推荐）"
+        case .stretch: return "拉伸铺满（调试，不推荐）"
         }
     }
 
@@ -72,16 +72,20 @@ enum AntiAliasingMode: String, Codable, CaseIterable {
         case .quality: return 2
         }
     }
+
+    static let enabledCases: [AntiAliasingMode] = [.performance, .quality]
 }
 
 enum TestPatternMode: String, Codable, CaseIterable {
     case off
     case calibrationGrid
+    case antiAliasingComparison
 
     var title: String {
         switch self {
         case .off: return "关闭测试图"
         case .calibrationGrid: return "标定网格"
+        case .antiAliasingComparison: return "抗锯齿 A/B"
         }
     }
 
@@ -89,7 +93,24 @@ enum TestPatternMode: String, Codable, CaseIterable {
         switch self {
         case .off: return 0
         case .calibrationGrid: return 1
+        case .antiAliasingComparison: return 2
         }
+    }
+}
+
+enum WarpTrend: String, Codable, CaseIterable {
+    case forward
+    case inverse
+
+    var title: String {
+        switch self {
+        case .forward: return "同向模拟（反射凸起）"
+        case .inverse: return "反向预畸变（屏幕中凹两侧翘）"
+        }
+    }
+
+    var displacementMultiplier: Float {
+        self == .inverse ? -1 : 1
     }
 }
 
@@ -120,15 +141,56 @@ struct CanvasConfiguration: Codable, Equatable {
     var aspect: Float { Float(width) / Float(max(height, 1)) }
 }
 
+struct CropAnchorConfiguration: Codable, Equatable {
+    var horizontal = 0.0
+    var vertical = 0.0
+
+    func sanitized() -> CropAnchorConfiguration {
+        CropAnchorConfiguration(
+            horizontal: min(max(horizontal, -1), 1),
+            vertical: min(max(vertical, -1), 1)
+        )
+    }
+}
+
 struct MirrorConfiguration: Codable, Equatable {
     var horizontal = false
     var vertical = false
 }
 
 struct RenderConfiguration: Codable, Equatable {
+    var antiAliasingEnabled = true
     var antiAliasing = AntiAliasingMode.performance
     var automaticPerformanceFallback = true
     var testPattern = TestPatternMode.off
+
+    private enum CodingKeys: String, CodingKey {
+        case antiAliasingEnabled
+        case antiAliasing
+        case automaticPerformanceFallback
+        case testPattern
+    }
+
+    init(
+        antiAliasingEnabled: Bool = true,
+        antiAliasing: AntiAliasingMode = .performance,
+        automaticPerformanceFallback: Bool = true,
+        testPattern: TestPatternMode = .off
+    ) {
+        self.antiAliasingEnabled = antiAliasingEnabled
+        self.antiAliasing = antiAliasing == .off ? .performance : antiAliasing
+        self.automaticPerformanceFallback = automaticPerformanceFallback
+        self.testPattern = testPattern
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let legacyMode = try container.decodeIfPresent(AntiAliasingMode.self, forKey: .antiAliasing) ?? .performance
+        antiAliasingEnabled = try container.decodeIfPresent(Bool.self, forKey: .antiAliasingEnabled) ?? (legacyMode != .off)
+        antiAliasing = legacyMode == .off ? .performance : legacyMode
+        automaticPerformanceFallback = try container.decodeIfPresent(Bool.self, forKey: .automaticPerformanceFallback) ?? true
+        testPattern = try container.decodeIfPresent(TestPatternMode.self, forKey: .testPattern) ?? .off
+    }
 }
 
 struct ManualWarpParameters: Codable, Equatable {
@@ -192,15 +254,17 @@ struct PolynomialWarpConfiguration: Codable, Equatable {
 }
 
 struct WarpConfiguration: Codable, Equatable {
-    static let currentSchemaVersion = 3
+    static let currentSchemaVersion = 5
 
     var schemaVersion = currentSchemaVersion
     var displayPixelWidth: Int
     var displayPixelHeight: Int
     var aaRect: NormalizedRect
     var canvas: CanvasConfiguration
+    var cropAnchor = CropAnchorConfiguration()
     var mirror = MirrorConfiguration()
-    var contentMode = ContentMode.stretch
+    var contentMode = ContentMode.fill
+    var warpTrend = WarpTrend.forward
     var manual = ManualWarpParameters()
     var polynomial = PolynomialWarpConfiguration()
     var render = RenderConfiguration()
@@ -211,8 +275,10 @@ struct WarpConfiguration: Codable, Equatable {
         case displayPixelHeight
         case aaRect
         case canvas
+        case cropAnchor
         case mirror
         case contentMode
+        case warpTrend
         case manual
         case polynomial
         case render
@@ -224,8 +290,10 @@ struct WarpConfiguration: Codable, Equatable {
         displayPixelHeight: Int,
         aaRect: NormalizedRect,
         canvas: CanvasConfiguration,
+        cropAnchor: CropAnchorConfiguration = CropAnchorConfiguration(),
         mirror: MirrorConfiguration = MirrorConfiguration(),
-        contentMode: ContentMode = .stretch,
+        contentMode: ContentMode = .fill,
+        warpTrend: WarpTrend = .forward,
         manual: ManualWarpParameters = ManualWarpParameters(),
         polynomial: PolynomialWarpConfiguration = PolynomialWarpConfiguration(),
         render: RenderConfiguration = RenderConfiguration()
@@ -235,8 +303,10 @@ struct WarpConfiguration: Codable, Equatable {
         self.displayPixelHeight = displayPixelHeight
         self.aaRect = aaRect
         self.canvas = canvas
+        self.cropAnchor = cropAnchor
         self.mirror = mirror
         self.contentMode = contentMode
+        self.warpTrend = warpTrend
         self.manual = manual
         self.polynomial = polynomial
         self.render = render
@@ -249,8 +319,10 @@ struct WarpConfiguration: Codable, Equatable {
         displayPixelHeight = try container.decode(Int.self, forKey: .displayPixelHeight)
         aaRect = try container.decode(NormalizedRect.self, forKey: .aaRect)
         canvas = try container.decode(CanvasConfiguration.self, forKey: .canvas)
+        cropAnchor = try container.decodeIfPresent(CropAnchorConfiguration.self, forKey: .cropAnchor) ?? CropAnchorConfiguration()
         mirror = try container.decodeIfPresent(MirrorConfiguration.self, forKey: .mirror) ?? MirrorConfiguration()
         contentMode = try container.decodeIfPresent(ContentMode.self, forKey: .contentMode) ?? .stretch
+        warpTrend = try container.decodeIfPresent(WarpTrend.self, forKey: .warpTrend) ?? .forward
         manual = try container.decodeIfPresent(ManualWarpParameters.self, forKey: .manual) ?? ManualWarpParameters()
         polynomial = try container.decodeIfPresent(PolynomialWarpConfiguration.self, forKey: .polynomial) ?? PolynomialWarpConfiguration()
         render = try container.decodeIfPresent(RenderConfiguration.self, forKey: .render) ?? RenderConfiguration()
@@ -277,12 +349,16 @@ struct WarpConfiguration: Codable, Equatable {
                 if copy.contentMode == .fit { copy.contentMode = .stretch }
             }
         }
+        if copy.schemaVersion < 4, copy.contentMode == .stretch {
+            copy.contentMode = .fill
+        }
         copy.schemaVersion = Self.currentSchemaVersion
         copy.displayPixelWidth = width
         copy.displayPixelHeight = height
         copy.aaRect = copy.aaRect.sanitized()
         copy.canvas.width = min(max(copy.canvas.width, 64), 32768)
         copy.canvas.height = min(max(copy.canvas.height, 64), 32768)
+        copy.cropAnchor = copy.cropAnchor.sanitized()
         copy.manual.strength = min(max(copy.manual.strength, 0), 2)
         copy.manual.verticalScale = min(max(copy.manual.verticalScale, 0.2), 2)
         copy.polynomial = copy.polynomial.normalized()
@@ -296,6 +372,7 @@ struct WarpConfiguration: Codable, Equatable {
         }
         if displayPixelWidth <= 0 || displayPixelHeight <= 0 { errors.append("显示器像素尺寸必须大于 0") }
         if canvas.width <= 0 || canvas.height <= 0 { errors.append("画布尺寸必须大于 0") }
+        if cropAnchor != cropAnchor.sanitized() { errors.append("裁切位置必须位于 -1...1") }
         if aaRect != aaRect.sanitized() { errors.append("AA 区必须完全位于屏幕归一化范围内") }
         let normalizedPolynomial = polynomial.normalized()
         if polynomial.order != normalizedPolynomial.order { errors.append("多项式阶数仅支持 2–5 阶") }
@@ -310,33 +387,85 @@ struct WarpConfiguration: Codable, Equatable {
     }
 }
 
+extension WarpConfiguration {
+    func rawReflectionCalibrationConfiguration() -> WarpConfiguration {
+        var copy = self
+        copy.contentMode = .fill
+        copy.manual.enabled = false
+        copy.polynomial.enabled = false
+        copy.render.testPattern = .calibrationGrid
+        return copy
+    }
+
+    func antiAliasingComparisonConfiguration() -> WarpConfiguration {
+        var copy = rawReflectionCalibrationConfiguration()
+        copy.render.antiAliasingEnabled = true
+        copy.render.testPattern = .antiAliasingComparison
+        return copy
+    }
+}
+
 final class ConfigurationStore {
-    private let key = "nioWarpConfiguration.v1"
+    private let legacyKey = "nioWarpConfiguration.v1"
+    private let profileKeyPrefix = "nioWarpConfiguration.v2"
     private let defaults: UserDefaults
     private let encoder: JSONEncoder
     private let decoder = JSONDecoder()
+    private var activeKey: String
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        activeKey = legacyKey
         encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     }
 
-    func load(displayWidth: Int, displayHeight: Int) -> WarpConfiguration {
-        guard let data = defaults.data(forKey: key),
-              let configuration = try? decoder.decode(WarpConfiguration.self, from: data) else {
-            let configuration = WarpConfiguration.defaultConfiguration(displayWidth: displayWidth, displayHeight: displayHeight)
-            save(configuration)
-            return configuration
+    func load(
+        displayIdentifier: String = "default",
+        displayWidth: Int,
+        displayHeight: Int
+    ) -> WarpConfiguration {
+        activeKey = profileKey(for: displayIdentifier)
+        if let configuration = decodedConfiguration(forKey: activeKey) {
+            return persistSanitized(configuration, displayWidth: displayWidth, displayHeight: displayHeight)
         }
-        let sanitized = configuration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
-        if sanitized != configuration { save(sanitized) }
-        return sanitized
+
+        if let legacy = decodedConfiguration(forKey: legacyKey),
+           legacy.displayPixelWidth == displayWidth,
+           legacy.displayPixelHeight == displayHeight {
+            return persistSanitized(legacy, displayWidth: displayWidth, displayHeight: displayHeight)
+        }
+
+        let configuration = WarpConfiguration.defaultConfiguration(displayWidth: displayWidth, displayHeight: displayHeight)
+        save(configuration)
+        return configuration
     }
 
     func save(_ configuration: WarpConfiguration) {
         guard let data = try? encoder.encode(configuration) else { return }
-        defaults.set(data, forKey: key)
+        defaults.set(data, forKey: activeKey)
+    }
+
+    private func profileKey(for displayIdentifier: String) -> String {
+        let safeIdentifier = displayIdentifier.map { character in
+            character.isLetter || character.isNumber || character == "-" ? character : "-"
+        }
+        return "\(profileKeyPrefix).\(String(safeIdentifier))"
+    }
+
+    private func decodedConfiguration(forKey key: String) -> WarpConfiguration? {
+        guard let data = defaults.data(forKey: key) else { return nil }
+        return try? decoder.decode(WarpConfiguration.self, from: data)
+    }
+
+    private func persistSanitized(
+        _ configuration: WarpConfiguration,
+        displayWidth: Int,
+        displayHeight: Int
+    ) -> WarpConfiguration {
+        let sanitized = configuration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
+        if sanitized != configuration || defaults.data(forKey: activeKey) == nil { save(sanitized) }
+        return sanitized
     }
 
     func exportData(_ configuration: WarpConfiguration) throws -> Data {
