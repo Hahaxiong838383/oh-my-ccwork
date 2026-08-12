@@ -1,10 +1,12 @@
 # P1-SI 剩余门禁最小执行包
 
-状态：`WAIT_HUMAN_REVIEW_GOAL7_AND_EXPLICIT_RUNTIME_ACTIONS`
+状态：`ENGINEERING_CONTINUES_WITH_SYSTEM_APPROVAL_SIMULATION`
+
+> 2026-08-12 决策：飞书多维表格不再作为工程推进卡点。审批最终在 H 控制面的公司 Ontology「审批中心」完成；当前先使用 `engineering_simulation` 验证流程，真人实名审批、角色权限 UAT 和 Evidence 绑定延后到系统整体测试阶段。该调整只解除工程开发阻塞，不解除生产门禁。
 
 ## 1. 结论
 
-P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `118/118`。当前唯一合格不可变候选为 Runtime Workflow `31567522831` / Artifact `9130040972`，Manifest `1.3.0`、完整 `SHA256SUMS` 和三个组件版本身份均通过验证；旧 Artifact `9128767614` 仅保留历史工程证据。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；应按“少量深审、其余明确保持关闭”的方式关闭人审门禁，再进入 Goal 7 和正式七日 Shadow。
+P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `118/118`。当前唯一合格不可变候选为 Runtime Workflow `31567522831` / Artifact `9130040972`，Manifest `1.3.0`、完整 `SHA256SUMS` 和三个组件版本身份均通过验证；旧 Artifact `9128767614` 仅保留历史工程证据。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；工程阶段继续完成系统审批中心和 Goal 7 准备，真人审核在整体测试阶段关闭，正式七日 Shadow 仍须等待全部真实门禁。
 
 当前实测状态：
 
@@ -12,6 +14,7 @@ P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `118/118`。�
 |---|---:|---|
 | 来源最终决定 | 0/8 | 8/8 都有 final decision |
 | P003 最终决定 | 0/36 | 36/36 都有 final decision，关系继续 inactive |
+| 系统审批模拟 | ready for release | H 控制面 8/36 模拟交互、持久化、推荐和重置通过；不计入 final |
 | 四角色成员 UAT | 0/4 | 四个真实账号完成允许与拒绝场景 |
 | Goal 7 | incomplete | 工程证据和川哥 Owner Acceptance 完成 |
 | 生产 Readiness | 1/7 | 当前仅不可变 Release 通过；其余六项全部关闭 |
@@ -76,17 +79,19 @@ Agent Core `2026-08-12.2` 已作为独立回复修复上线并通过真实主体
 
 Goal 7 验收文件只引用既有工程证据，不复制敏感内容。
 
-## 6. 最短执行顺序
+## 6. 调整后的最短执行顺序
 
 1. ✅ 已完成一次内部 Collector：3 来源、60 条、Hash-only、零业务副作用，机器 Evidence accepted；
-2. 许可/合规负责人完成 3 批准 + 5 暂停；
-3. 六类 DRI 并行完成 6 条深审，其他 30 条快速保持 inactive；
-4. 四名角色成员并行完成 UAT；
-5. 完成 Goal 7 Authority Canary、Worker 双源读回和完整三组件 Deployment Evidence，再由川哥验收；
-6. 人审或代码变化后，从最终已推送 Commit 重建不可变生产 Artifact；
-7. 分别取得生产部署、数据库迁移、必要服务动作授权；
-8. 连续运行七个真实上海自然日 `PUBLISH=false` Shadow；
-9. 第七日后完成 Owner Acceptance 和 Goal Completion 编译。
+2. 完成 H 控制面系统审批中心工程版并发布；飞书 Base 只保留历史导入/导出；
+3. 继续完成 Goal 7 Authority Canary、Worker 双源读回和完整三组件 Deployment Evidence 的工程准备；
+4. 系统整体测试阶段，由许可/合规负责人完成 3 批准 + 5 暂停；
+5. 六类 DRI 并行完成 6 条深审，其他 30 条快速保持 inactive；
+6. 四名角色成员在系统审批中心完成实名权限 UAT；
+7. 由川哥完成 Evidence-bound Goal 7 Owner Acceptance；
+8. 人审或代码变化后，从最终已推送 Commit 重建不可变生产 Artifact；
+9. 分别取得生产部署、数据库迁移、必要服务动作授权；
+10. 连续运行七个真实上海自然日 `PUBLISH=false` Shadow；
+11. 第七日后完成 Owner Acceptance 和 Goal Completion 编译。
 
 ## 7. 当前需要真人完成的最小动作
 
@@ -98,7 +103,7 @@ Goal 7 验收文件只引用既有工程证据，不复制敏感内容。
 | 安全负责人 | 核验四份 Session 后完成统一接受 | `securityOwnerAccepted=true` 且绑定四份 Session Hash | 不可提前接受 |
 | 川哥 | 在 Authority Canary、Worker 双源读回和三组件 Deployment Evidence 完成后执行 Goal 7 Owner Acceptance | Evidence-bound Owner Acceptance | 必须本人拍板 |
 
-在上述真人动作完成前，Agent 只允许继续准备、只读检查和编译验证；不得把 pending 批量改成 final，不得运行生产 Collector、010/011、七日 Shadow，也不得申请把当前 Goal 标记完成。
+在上述真人动作完成前，Agent 可以继续系统审批中心、Goal 7 和发布准备等工程开发，也可以使用明确标记的模拟数据自检；不得把模拟或 pending 批量改成真实 final，不得运行生产 Collector、010/011、七日 Shadow，也不得申请把当前 Goal 标记完成。
 
 ## 8. 仍不可合并的授权
 

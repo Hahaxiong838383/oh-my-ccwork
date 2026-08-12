@@ -17,6 +17,7 @@
 - P1-SI-B～G 工程骨架当前通过 Contracts `61/61`、Collector `9/9`、Strategic Intelligence `118/118`。当前唯一合格不可变候选为 Runtime Workflow `31567522831` / Artifact `9130040972`，绑定 Ontology Commit `350cc3b349295f9d4d2e8e13f74c876861434cb0`、H-Lite Commit `89fec7e23dcd665ea9513feb04fe20f125b8d12b`、Collector Image `sha256:48aa930bf168359b9bd6045de523056615dc07f82f2f0b60c4acc146331728c6` 和 Manifest `1.3.0`。Artifact 的完整 `SHA256SUMS` 与正式验证器均通过，`runtime-component-versions.json` 绑定 Agent Core `2026-08-12.2`、Knowledge Connector `2026-08-11.1`、H-Lite `2026-08-11.1`；旧 Artifact `9128767614` 仅保留历史证据。
 - 公司 QNAP 当前只安装内部工程 Runtime Artifact `9108034290` / Commit `0342fcd39`，并完成一次 accepted Collector：3 个公开来源共 60 条、Hash-only、正文 0、重复 0、五类业务副作用 0，且 `countsTowardProductionShadow=false`。生产 `strategic_intelligence` Schema、表、容器、网络和发布端口仍为 0。
 - 当前硬门禁：来源分配 `8/8`、最终决定 `0/8`；P003 个人 DRI `30/36`、必要角色位 `90/150`、全角色覆盖 `12/36`、最终决定 `0/36`；四角色真实成员 UAT `0/4`；Goal 7 Authority Canary、Worker 双源读回、完整三组件 Deployment Evidence 和 Owner Acceptance 未完成。Deployment Readiness 为 `1 pass / 6 blocked`，Goal Completion 为 `1 pass / 7 blocked`；未取得战略情报生产部署、010/011 迁移、Collector、七日 Shadow、Foundation 其他组件重启或真实回滚演练授权。
+- 审批操作面已调整为 H 控制面的公司 Ontology「审批中心」；飞书多维表格降级为原型、历史导入和应急导出。当前 `v1.62.0` 候选提供 8 个来源与 36 条 P003 关系的 `engineering_simulation` 草稿、推荐填充和重置，模拟完成不改变上述 `0/8`、`0/36` 真实门禁，也不能放行 Collector、010/011、七日 Shadow、P003 激活或写回。
 - 当前门禁快照见 `deploy/qnap/strategic-intelligence/evidence/p1-si-current-gate-snapshot-2026-08-12.json`，解释与历史发布链见 `docs/p1-si-bh-gate-audit-2026-08-12.md` 和 `deploy/qnap/strategic-intelligence/README.md`。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
 
@@ -91,7 +92,7 @@
 
 1. `Task 6-R / Release Provenance Guard` 已完成；未来所有 H 发布继续执行 Source Commit、完整运行时 Manifest、文件哈希和真实浏览器门禁。
 2. Goal 7 `P1-PROD-READINESS`：P1-AUTHORITY/P1-RUNTIME 本地工程候选已完成，Agent Core `63/63`、Knowledge Connector `18/18`；012 候选迁移与 Linux CI 已接线，并新增真实 `ontology_app` 读写验证、完整 usage 读回、模型已消耗后预算拒绝仍落账，以及 Ontology/H-Lite 双仓 Commit 与源码归档绑定。Goal 7 验收已升级为五份原始 Evidence 绑定的 `2.0.0` 编译包，防止手填通过。下一门禁为双仓提交推送后的 PostgreSQL Runtime Evidence、真实 H Worker provider/model/usage 读回、飞书合成 Canary、QNAP 部署和 Owner Acceptance；公司专用 CPA 与 Route B 继续后补，本 Goal 不执行整库导入。
-3. PESTIM `internal_engineering_shadow` Runtime 已更新到 Commit `0342fcd39` / Artifact `9108034290`，并完成 1 次真实内部 Collector：3 来源、60 条、Hash-only、正文 0、重复 0、业务副作用 0，Foundation 13/13 且 restart 0。该 Evidence 不计入正式 Shadow；下一步为 8 来源最终决定、36 条 P003 审核、四角色 UAT 和 Goal 7。第 2～3 天内部排错仍需新的运行授权。
+3. PESTIM `internal_engineering_shadow` Runtime 已更新到 Commit `0342fcd39` / Artifact `9108034290`，并完成 1 次真实内部 Collector：3 来源、60 条、Hash-only、正文 0、重复 0、业务副作用 0，Foundation 13/13 且 restart 0。该 Evidence 不计入正式 Shadow；当前先继续系统审批中心与 Goal 7 工程，8 来源最终决定、36 条 P003 审核和四角色实名 UAT 延后到系统整体测试阶段。第 2～3 天内部排错仍需新的运行授权。
 4. Goal 3 的 10 名真实员工 Canary 在 Goal 7 后执行，仍是 20/50 人放量前的强制门禁。
 5. Goal 8 建立 24 小时容量观测、H-Lite lease/fencing 和 Worker 分池，再规划 20/50 人扩容。
 6. 产品研究部整库导入、Capability Governance 激活、A2A、真 3D、PESTIM 自动 P2、ERP/社媒写回、ERP M4 和 MediaCrawler 风控恢复继续拆为独立 Goal，必须重新授权。
