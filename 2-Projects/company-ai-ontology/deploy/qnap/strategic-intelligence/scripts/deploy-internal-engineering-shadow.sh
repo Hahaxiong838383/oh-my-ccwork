@@ -45,7 +45,7 @@ tar -C "$staging" -xzf "$source_archive"
 release_project_root=$staging/company-ai-ontology
 "$node_bin" "$release_project_root/deploy/qnap/strategic-intelligence/scripts/validate-internal-engineering-runtime.mjs" "$runtime_root" >/dev/null
 
-backup_id=$(date -u +%Y%m%dT%H%M%SZ)
+backup_id=$(date -u +%Y%m%dT%H%M%SZ)-$$
 backup_root=/share/CACHEDEV2_DATA/ai-ontology-backup/strategic-intelligence/internal-engineering/$backup_id
 umask 077
 mkdir -p "$backup_root"
@@ -101,7 +101,7 @@ cd "$package_root"
 gzip -dc "$image_archive" | "$docker_path" load >/dev/null
 "$docker_path" image inspect "$image_id" >/dev/null
 
-switch_id=$(date -u +%Y%m%dT%H%M%SZ)
+switch_id=$(date -u +%Y%m%dT%H%M%SZ)-$$
 switch_root=$internal_root/.switch-$switch_id
 mkdir -p "$switch_root/previous" "$switch_root/failed"
 switch_pending=1
