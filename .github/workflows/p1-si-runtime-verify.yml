@@ -48,6 +48,7 @@ jobs:
           mkdir -p /tmp/feishu-grok-bridge
           tar -xzf runtime-evidence/h-lite-source.tar.gz --strip-components=1 -C /tmp/feishu-grok-bridge
           npm ci --prefix /tmp/feishu-grok-bridge
+          ln -s /tmp/feishu-grok-bridge 2-Projects/feishu-grok-bridge
           node --test \
             /tmp/feishu-grok-bridge/test/company-agent-core-client.test.mjs \
             /tmp/feishu-grok-bridge/test/company-qnap-lite-profile.test.mjs \
@@ -63,6 +64,8 @@ jobs:
         run: |
           set -euo pipefail
           project=2-Projects/company-ai-ontology
+          npm ci --ignore-scripts --prefix "$project/services/agent-core"
+          npm ci --ignore-scripts --prefix "$project/services/knowledge-connector"
           npm test --prefix "$project/packages/ontology-contracts"
           npm run compile:pestim --prefix "$project/packages/ontology-contracts"
           npm run compile:source-registry --prefix "$project/packages/ontology-contracts"
