@@ -11,6 +11,8 @@
 
 ## 当前状态
 
+> **接手入口（2026-08-13）**：当前阶段按“架构骨架 + 可体验 Demo”收口，不以实名终审、七日 Shadow 或业务写回作为本阶段完工条件。接手人先阅读 `docs/p1-si-demo-v1-handoff-2026-08-13.md`，完成其中 5～10 分钟体验验收；生产化事项另开 Goal。
+
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
 - 当前生产基线：`Goal 6-A / P1-DOMAIN` 已完成工程与川哥体验验收；公司 QNAP active Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`，Domain Connector `2026-08-10.1`。Goal 7 当前获批候选已完成 A～E：Agent Core `2026-08-12.3`、Knowledge Connector `2026-08-11.1`、H-Lite `2026-08-12.1`；Foundation `13/13 running / unhealthy=0 / restart=0`，Route A 正常、Route B 关闭。该工程发布仍不等于川哥 Owner Acceptance、P1-SI-H 七日 Shadow 或 Goal Completion 完成。

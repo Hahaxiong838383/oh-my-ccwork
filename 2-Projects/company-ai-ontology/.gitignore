@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.log
+.DS_Store
+output/
+.playwright-cli/
+workspace/.acceptance/
+**/__pycache__/

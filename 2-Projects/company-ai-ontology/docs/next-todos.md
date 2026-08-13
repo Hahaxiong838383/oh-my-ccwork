@@ -6,6 +6,8 @@
 
 P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI、Goal 5 P0-DEC、Goal 6-A P1-DOMAIN 和 Task 6-R 均已完成工程验收。Goal 6-A 已获川哥人工体验确认；H `v1.58.2` 发布溯源为 `in_sync`，真实 Chrome `99/99`。10 名真实员工 Canary 继续关闭，不能因为工程 Goal 完成自动启动。
 
+`P1-SI Demo v1` 当前按“骨架完整、端到端样例可演示、H 控制面可体验、公司 Bot 可演示、业务副作用为 0”收口。下一动作仅是完成 `docs/p1-si-demo-v1-handoff-2026-08-13.md` 中的 5～10 分钟人工体验；来源/P003 实名终审、四角色 UAT、七日 Shadow、正式 P2/员工投递和 ERP/社媒写回均转为后续生产化 Goal，不阻塞 Demo 关闭。
+
 ## 2026-08-10 Goal 顺序重排
 
 1. `Goal 4`：✅ P0-EPI + 公司大脑工作逻辑显式建模，Intake 至可解释回答已生产 active。
