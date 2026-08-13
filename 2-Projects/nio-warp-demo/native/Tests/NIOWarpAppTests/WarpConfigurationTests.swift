@@ -41,12 +41,70 @@ final class WarpConfigurationTests: XCTestCase {
     func testDefaultMeshHasNoFoldedCells() {
         let configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
         XCTAssertEqual(configuration.contentMode, .fill)
+        XCTAssertEqual(configuration.capture.sourceMode, .automaticFullscreenWindow)
         XCTAssertEqual(configuration.cropAnchor, CropAnchorConfiguration())
         XCTAssertEqual(configuration.aaRect.y, 0.26)
         let mesh = WarpMath.makeMesh(configuration: configuration, columns: 32, rows: 16)
         XCTAssertEqual(mesh.validation.foldedCellCount, 0)
         XCTAssertEqual(mesh.vertices.count, 33 * 17)
         XCTAssertEqual(mesh.indices.count, 32 * 16 * 6)
+    }
+
+    func testLegacyConfigurationUsesAutomaticFullscreenCaptureDefault() throws {
+        var configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
+        configuration.schemaVersion = 5
+        let encoded = try JSONEncoder().encode(configuration)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        object.removeValue(forKey: "capture")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(WarpConfiguration.self, from: legacyData)
+
+        XCTAssertEqual(decoded.capture.sourceMode, .automaticFullscreenWindow)
+        XCTAssertEqual(decoded.sanitized(forDisplayWidth: 5120, height: 2880).schemaVersion, 6)
+    }
+
+    func testAutomaticWindowSelectorPrefersActiveLargeWindow() {
+        let display = CGRect(x: 1920, y: 0, width: 1920, height: 1080)
+        let inactive = CaptureWindowDescriptor(
+            windowID: 10,
+            frame: display,
+            applicationName: "Preview",
+            title: "image.png",
+            isActive: false
+        )
+        let active = CaptureWindowDescriptor(
+            windowID: 20,
+            frame: CGRect(x: 1940, y: 10, width: 1880, height: 1060),
+            applicationName: "IINA",
+            title: "demo.mp4",
+            isActive: true
+        )
+
+        let result = AutomaticWindowSelector.bestCandidate(
+            from: [inactive, active],
+            displayFrame: display,
+            minimumCoverage: 0.82
+        )
+
+        XCTAssertEqual(result?.descriptor.windowID, 20)
+    }
+
+    func testAutomaticWindowSelectorRejectsSmallWindow() {
+        let display = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+        let window = CaptureWindowDescriptor(
+            windowID: 10,
+            frame: CGRect(x: 100, y: 100, width: 1000, height: 700),
+            applicationName: "QuickTime Player",
+            title: "demo.mov",
+            isActive: true
+        )
+
+        XCTAssertNil(AutomaticWindowSelector.bestCandidate(
+            from: [window],
+            displayFrame: display,
+            minimumCoverage: 0.82
+        ))
     }
 
     func testPolynomialCanMovePhysicalMesh() {
@@ -80,7 +138,7 @@ final class WarpConfigurationTests: XCTestCase {
         configuration.aaRect = NormalizedRect(x: 0.06, y: 0.18, width: 0.88, height: 0.48)
         configuration.contentMode = .fit
         let migrated = configuration.sanitized(forDisplayWidth: 5120, height: 2880)
-        XCTAssertEqual(migrated.schemaVersion, 5)
+        XCTAssertEqual(migrated.schemaVersion, WarpConfiguration.currentSchemaVersion)
         XCTAssertEqual(migrated.aaRect.y, 0.26)
         XCTAssertEqual(migrated.contentMode, .fill)
     }
@@ -200,7 +258,7 @@ final class WarpConfigurationTests: XCTestCase {
         """
         let decoded = try JSONDecoder().decode(WarpConfiguration.self, from: Data(json.utf8))
         let migrated = decoded.sanitized(forDisplayWidth: 5120, height: 2880)
-        XCTAssertEqual(migrated.schemaVersion, 5)
+        XCTAssertEqual(migrated.schemaVersion, WarpConfiguration.currentSchemaVersion)
         XCTAssertEqual(migrated.warpTrend, .forward)
         XCTAssertEqual(migrated.render, RenderConfiguration())
         XCTAssertEqual(migrated.cropAnchor, CropAnchorConfiguration())

@@ -1,0 +1,18 @@
+NIO Warp v0.4.0 自动全屏窗口功能开发前回滚点
+
+Git 基线：
+  commit 1908da885
+  tag nio-warp-auto-fullscreen-baseline-20260813
+
+恢复项目源码到功能开发前状态（不会自动覆盖当前工作区）：
+  cd /Users/rayman.chen/mycc
+  git worktree add /tmp/nio-warp-rollback nio-warp-auto-fullscreen-baseline-20260813
+
+重新安装 v0.3.0 基线：
+  cd /tmp/nio-warp-rollback/2-Projects/nio-warp-demo/native
+  scripts/install-app.sh
+
+说明：
+- 安装脚本会把当前 ~/Applications/NIOWarpApp.app 先备份到 /tmp。
+- 显示器专属 Warp 参数保存在 UserDefaults，本功能升级不会删除原参数。
+- 配置 schema v6 向后兼容 v5；回滚旧 App 前建议先导出当前 JSON 配置。

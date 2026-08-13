@@ -43,7 +43,7 @@ uv run nio-warp-display-demo
 
 ## 原生整屏接管 Demo
 
-当前本机验收版为 **v0.3.0 (3)**，固定安装路径：
+当前本机开发验收版为 **v0.4.0 (4)**，固定安装路径：
 
 ```text
 /Users/rayman.chen/Applications/NIOWarpApp.app
@@ -58,7 +58,7 @@ cd /Users/rayman.chen/mycc/2-Projects/nio-warp-demo/native
 scripts/install-app.sh
 ```
 
-原生版本使用 ScreenCaptureKit 捕获三星外接屏的整个桌面，排除程序自身的覆盖窗口后，再使用 Metal 实时 Warp 回同一块三星外屏。
+原生版本使用 ScreenCaptureKit 捕获目标外接屏的整个桌面，排除程序自身的覆盖窗口后，再使用 Metal 实时 Warp 回同一块外屏。
 
 ```text
 /Users/rayman.chen/mycc/2-Projects/nio-warp-demo/start-native-warp.command
@@ -78,6 +78,7 @@ scripts/install-app.sh
 
 - **矩形 AA 区**：以外屏物理像素设置 `X / Y / 宽 / 高`，AA 区外由 Metal 每帧清为纯黑。
 - **逻辑画布**：独立设置 UI 最大画布宽高；默认保持比例铺满并裁切多余边缘，可调水平/垂直裁切位置。
+- **自动全屏内容跟随**：输入源可选“整个外接屏幕”或“自动跟随全屏窗口”；自动模式识别覆盖外屏 82% 以上且连续稳定的最大窗口，约 1 秒内动态切为单窗口捕获，退出全屏或关闭窗口后自动恢复整屏。
 - **镜像**：支持水平翻转、垂直翻转及两者组合。
 - **基础 Warp**：实时调节弧度、压缩、不对称、倾斜和水平弯曲。
 - **多项式增量**：支持 2–5 阶二维多项式，逐项编辑 X/Y 系数，并实时检查网格折叠和 AA 越界。
@@ -106,7 +107,7 @@ scripts/install-app.sh
 2. 默认使用“性能模式”，确认 5K 60 FPS 稳定后再试“质量模式”。
 3. 每完成一组有效参数就保存命名预设。
 4. 任何异常按 `⌃⌥⌘Esc`，外屏会立即恢复原始桌面。
-5. 回滚点与恢复演练见 `.rollback/20260812-190000-phase1-baseline/RESTORE.txt`。
+5. 阶段 1 回滚点见 `.rollback/20260812-190000-phase1-baseline/RESTORE.txt`；v0.4.0 开发前 Git 回滚点见 `.rollback/20260813-194500-auto-fullscreen-baseline/RESTORE.txt`。
 
 ### 当前 P0 状态
 
@@ -115,6 +116,7 @@ scripts/install-app.sh
 3. **外屏验收通过**：抗锯齿总开关、真实点采样关闭状态，以及左右完全相同图案的 A/B 对比。
 4. **外屏验收通过**：Retina 物理像素适配、显示器配置隔离和反向预畸变趋势。
 5. **后续 P0**：物理点击坐标到原桌面坐标的逆 Warp 输入映射。
+6. **v0.4.0**：支持自动跟随第三方全屏窗口并按画布比例铺满裁切；普通 16:9 内容映射到极端超宽画布时仍会裁掉上下内容，这是保持比例且不留黑边的必然结果。
 
 详细方案见 [`docs/p0-next-implementation-plan.md`](docs/p0-next-implementation-plan.md)，本轮离线结果见 [`docs/p0-offline-acceptance.md`](docs/p0-offline-acceptance.md)。
 

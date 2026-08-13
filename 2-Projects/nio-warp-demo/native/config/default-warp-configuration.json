@@ -9,6 +9,10 @@
     "height" : 936,
     "width" : 7680
   },
+  "capture" : {
+    "fullscreenCoverageThreshold" : 0.82,
+    "sourceMode" : "automaticFullscreenWindow"
+  },
   "contentMode" : "fill",
   "warpTrend" : "forward",
   "cropAnchor" : {
@@ -42,5 +46,5 @@
     "automaticPerformanceFallback" : true,
     "testPattern" : "off"
   },
-  "schemaVersion" : 5
+  "schemaVersion" : 6
 }

@@ -40,43 +40,78 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
     let frameStore = LatestFrameStore()
     private let queue = DispatchQueue(label: "com.mycc.nio-warp.capture", qos: .userInteractive)
     private var stream: SCStream?
+    private var monitorTask: Task<Void, Never>?
+    private var displayID: CGDirectDisplayID?
+    private var displayPixelWidth = 0
+    private var displayPixelHeight = 0
+    private var sourceMode = CaptureSourceMode.entireDisplay
+    private var minimumCoverage = 0.82
+    private var currentWindowID: CGWindowID?
+    private var pendingWindowID: CGWindowID?
+    private var pendingWindowCount = 0
+    private var missingWindowCount = 0
     var onError: ((String) -> Void)?
+    var onNotice: ((String) -> Void)?
+    var onPresentation: ((CapturePresentation) -> Void)?
 
-    func start(displayID: CGDirectDisplayID, pixelWidth: Int, pixelHeight: Int) async throws {
+    func start(
+        displayID: CGDirectDisplayID,
+        pixelWidth: Int,
+        pixelHeight: Int,
+        sourceMode: CaptureSourceMode,
+        minimumCoverage: Double
+    ) async throws {
+        self.displayID = displayID
+        displayPixelWidth = pixelWidth
+        displayPixelHeight = pixelHeight
+        self.sourceMode = sourceMode
+        self.minimumCoverage = minimumCoverage
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
         guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
             throw NSError(domain: "NIOWarp", code: 1, userInfo: [NSLocalizedDescriptionKey: "无法找到源显示器"])
         }
-
-        let currentBundleID = Bundle.main.bundleIdentifier
-        let excludedApplications = content.applications.filter { application in
-            application.bundleIdentifier == currentBundleID
-        }
-        let filter = SCContentFilter(
-            display: display,
-            excludingApplications: excludedApplications,
-            exceptingWindows: []
-        )
-        let configuration = SCStreamConfiguration()
-        configuration.width = pixelWidth
-        configuration.height = pixelHeight
-        configuration.pixelFormat = kCVPixelFormatType_32BGRA
-        configuration.minimumFrameInterval = CMTime(value: 1, timescale: 60)
-        configuration.queueDepth = 3
-        configuration.showsCursor = false
-        configuration.capturesAudio = false
-        configuration.scalesToFit = true
+        let filter = displayFilter(content: content, display: display)
+        let configuration = streamConfiguration(width: pixelWidth, height: pixelHeight, singleWindow: false)
 
         let stream = SCStream(filter: filter, configuration: configuration, delegate: self)
         try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: queue)
         self.stream = stream
         try await stream.startCapture()
+        emitPresentation(
+            sourceMode == .automaticFullscreenWindow
+                ? .waitingForFullscreenWindow
+                : .entireDisplay(width: pixelWidth, height: pixelHeight)
+        )
+        if sourceMode == .automaticFullscreenWindow { startMonitoring() }
     }
 
     func stop() async {
+        monitorTask?.cancel()
+        monitorTask = nil
         guard let stream else { return }
         try? await stream.stopCapture()
         self.stream = nil
+        currentWindowID = nil
+        pendingWindowID = nil
+        pendingWindowCount = 0
+        missingWindowCount = 0
+    }
+
+    func updateSourceMode(_ sourceMode: CaptureSourceMode, minimumCoverage: Double) async throws {
+        self.sourceMode = sourceMode
+        self.minimumCoverage = minimumCoverage
+        pendingWindowID = nil
+        pendingWindowCount = 0
+        missingWindowCount = 0
+        switch sourceMode {
+        case .entireDisplay:
+            monitorTask?.cancel()
+            monitorTask = nil
+            try await switchToDisplay(waitingForWindow: false)
+        case .automaticFullscreenWindow:
+            try await switchToDisplay(waitingForWindow: true)
+            startMonitoring()
+        }
     }
 
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
@@ -90,6 +125,178 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.onError?(error.localizedDescription)
         }
+    }
+
+    private func startMonitoring() {
+        monitorTask?.cancel()
+        monitorTask = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.scanForFullscreenWindow()
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
+        }
+    }
+
+    private func scanForFullscreenWindow() async {
+        guard sourceMode == .automaticFullscreenWindow,
+              let displayID,
+              stream != nil else { return }
+        do {
+            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+            guard sourceMode == .automaticFullscreenWindow, stream != nil else { return }
+            guard let display = content.displays.first(where: { $0.displayID == displayID }) else { return }
+            let currentBundleID = Bundle.main.bundleIdentifier
+            let eligibleWindows = content.windows.filter { window in
+                guard window.windowLayer == 0,
+                      window.owningApplication?.bundleIdentifier != currentBundleID,
+                      window.owningApplication != nil,
+                      window.isOnScreen || window.isActive else { return false }
+                return window.frame.width >= 320 && window.frame.height >= 180
+            }
+            let descriptors = eligibleWindows.map { window in
+                CaptureWindowDescriptor(
+                    windowID: window.windowID,
+                    frame: window.frame,
+                    applicationName: window.owningApplication?.applicationName ?? "未知应用",
+                    title: window.title ?? "",
+                    isActive: window.isActive
+                )
+            }
+            let candidate = AutomaticWindowSelector.bestCandidate(
+                from: descriptors,
+                displayFrame: display.frame,
+                minimumCoverage: minimumCoverage
+            )
+
+            guard let candidate,
+                  let window = eligibleWindows.first(where: { $0.windowID == candidate.descriptor.windowID }) else {
+                pendingWindowID = nil
+                pendingWindowCount = 0
+                missingWindowCount += 1
+                if currentWindowID != nil, missingWindowCount >= 2 {
+                    try await switchToDisplay(content: content, display: display, waitingForWindow: true)
+                }
+                return
+            }
+
+            missingWindowCount = 0
+            if currentWindowID == window.windowID {
+                pendingWindowID = nil
+                pendingWindowCount = 0
+                return
+            }
+            if pendingWindowID == window.windowID {
+                pendingWindowCount += 1
+            } else {
+                pendingWindowID = window.windowID
+                pendingWindowCount = 1
+            }
+            guard pendingWindowCount >= 2 else { return }
+            guard sourceMode == .automaticFullscreenWindow else { return }
+            try await switchToWindow(window)
+        } catch {
+            emitNotice("自动跟随暂时不可用，已保留当前捕获：\(error.localizedDescription)")
+        }
+    }
+
+    private func switchToDisplay(waitingForWindow: Bool) async throws {
+        guard let displayID else { return }
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+        guard let display = content.displays.first(where: { $0.displayID == displayID }) else { return }
+        try await switchToDisplay(content: content, display: display, waitingForWindow: waitingForWindow)
+    }
+
+    private func switchToDisplay(
+        content: SCShareableContent,
+        display: SCDisplay,
+        waitingForWindow: Bool
+    ) async throws {
+        guard let stream else { return }
+        let filter = displayFilter(content: content, display: display)
+        let configuration = streamConfiguration(
+            width: displayPixelWidth,
+            height: displayPixelHeight,
+            singleWindow: false
+        )
+        try await stream.updateConfiguration(configuration)
+        try await stream.updateContentFilter(filter)
+        currentWindowID = nil
+        pendingWindowID = nil
+        pendingWindowCount = 0
+        missingWindowCount = 0
+        emitPresentation(
+            waitingForWindow
+                ? .waitingForFullscreenWindow
+                : .entireDisplay(width: displayPixelWidth, height: displayPixelHeight)
+        )
+    }
+
+    private func switchToWindow(_ window: SCWindow) async throws {
+        guard let stream else { return }
+        let filter = SCContentFilter(desktopIndependentWindow: window)
+        let scale = max(Double(SCShareableContent.info(for: filter).pointPixelScale), 1)
+        let width = max(Int((window.frame.width * scale).rounded()), 1)
+        let height = max(Int((window.frame.height * scale).rounded()), 1)
+        let configuration = streamConfiguration(width: width, height: height, singleWindow: true)
+        try await stream.updateConfiguration(configuration)
+        try await stream.updateContentFilter(filter)
+        currentWindowID = window.windowID
+        pendingWindowID = nil
+        pendingWindowCount = 0
+        missingWindowCount = 0
+        emitPresentation(.fullscreenWindow(
+            applicationName: window.owningApplication?.applicationName ?? "未知应用",
+            title: window.title ?? "",
+            width: width,
+            height: height
+        ))
+    }
+
+    private func displayFilter(content: SCShareableContent, display: SCDisplay) -> SCContentFilter {
+        let currentBundleID = Bundle.main.bundleIdentifier
+        let excludedApplications = content.applications.filter { application in
+            application.bundleIdentifier == currentBundleID
+        }
+        return SCContentFilter(
+            display: display,
+            excludingApplications: excludedApplications,
+            exceptingWindows: []
+        )
+    }
+
+    private func streamConfiguration(width: Int, height: Int, singleWindow: Bool) -> SCStreamConfiguration {
+        let configuration = SCStreamConfiguration()
+        configuration.width = width
+        configuration.height = height
+        configuration.pixelFormat = kCVPixelFormatType_32BGRA
+        configuration.minimumFrameInterval = CMTime(value: 1, timescale: 60)
+        configuration.queueDepth = 3
+        configuration.showsCursor = false
+        configuration.capturesAudio = false
+        configuration.scalesToFit = true
+        configuration.preservesAspectRatio = true
+        configuration.captureResolution = .best
+        configuration.ignoreShadowsSingleWindow = singleWindow
+        configuration.ignoreGlobalClipSingleWindow = singleWindow
+        if #available(macOS 14.2, *) {
+            configuration.includeChildWindows = true
+        }
+        return configuration
+    }
+
+    private func emitPresentation(_ presentation: CapturePresentation) {
+        NSLog("[NIOWarp Capture] %@", presentation.summary)
+        UserDefaults.standard.set(presentation.summary, forKey: "nioWarpRuntimeCaptureSummary")
+        UserDefaults.standard.set(Date(), forKey: "nioWarpRuntimeCaptureUpdatedAt")
+        DispatchQueue.main.async { [weak self] in self?.onPresentation?(presentation) }
+    }
+
+    private func emitError(_ message: String) {
+        DispatchQueue.main.async { [weak self] in self?.onError?(message) }
+    }
+
+    private func emitNotice(_ message: String) {
+        DispatchQueue.main.async { [weak self] in self?.onNotice?(message) }
     }
 }
 
@@ -548,7 +755,7 @@ private final class OutputController {
         window.backgroundColor = .black
         window.isOpaque = true
         window.hasShadow = false
-        window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         window.level = .screenSaver
         window.ignoresMouseEvents = true
         window.hidesOnDeactivate = false
@@ -587,14 +794,19 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     private let displayHeight: Int
     private let setWarpVisible: (Bool) -> Void
     private let isWarpVisible: () -> Bool
+    private let applyCaptureConfiguration: (CaptureConfiguration) -> Void
     private var configuration: WarpConfiguration
     private var lastAppliedConfiguration: WarpConfiguration
     private var performanceTimer: Timer?
     private var presets = [WarpPreset]()
     private var runtimePreviewMode = RuntimePreviewMode.normal
     private var runtimePreviewReturnMode = RuntimePreviewMode.normal
+    private var captureSourceWidth: Int
+    private var captureSourceHeight: Int
 
     private let statusLabel = NSTextField(wrappingLabelWithString: "等待屏幕捕获权限…")
+    private let captureSourcePicker = NSPopUpButton()
+    private let capturePresentationLabel = NSTextField(wrappingLabelWithString: "当前捕获：初始化中…")
     private let aaXField = NSTextField()
     private let aaYField = NSTextField()
     private let aaWidthField = NSTextField()
@@ -639,7 +851,8 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         sourceScreen: NSScreen,
         outputScreen: NSScreen,
         setWarpVisible: @escaping (Bool) -> Void,
-        isWarpVisible: @escaping () -> Bool
+        isWarpVisible: @escaping () -> Bool,
+        applyCaptureConfiguration: @escaping (CaptureConfiguration) -> Void
     ) {
         self.renderer = renderer
         self.store = store
@@ -647,8 +860,11 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         lastAppliedConfiguration = configuration
         self.setWarpVisible = setWarpVisible
         self.isWarpVisible = isWarpVisible
+        self.applyCaptureConfiguration = applyCaptureConfiguration
         displayWidth = configuration.displayPixelWidth
         displayHeight = configuration.displayPixelHeight
+        captureSourceWidth = configuration.displayPixelWidth
+        captureSourceHeight = configuration.displayPixelHeight
         let panel = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 560, height: 790),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -724,9 +940,22 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         titleRow.addArrangedSubview(title)
         titleRow.addArrangedSubview(version)
         stack.addArrangedSubview(titleRow)
-        let topology = NSTextField(wrappingLabelWithString: "源：\(screenName(sourceScreen))\n输出：\(screenName(outputScreen)) · \(displayWidth)×\(displayHeight) px\nAA 区外始终纯黑；多项式定义为逻辑画布到物理 AA 区的增量映射。")
+        let topology = NSTextField(wrappingLabelWithString: "控制台：\(screenName(sourceScreen))\n捕获与输出：\(screenName(outputScreen)) · \(displayWidth)×\(displayHeight) px\nAA 区外始终纯黑；多项式定义为逻辑画布到物理 AA 区的增量映射。")
         topology.textColor = .secondaryLabelColor
         stack.addArrangedSubview(topology)
+
+        stack.addArrangedSubview(sectionTitle("0. 输入源与自动铺满"))
+        CaptureSourceMode.allCases.forEach { captureSourcePicker.addItem(withTitle: $0.title) }
+        captureSourcePicker.target = self
+        captureSourcePicker.action = #selector(updateCaptureSourceMode)
+        stack.addArrangedSubview(labeledRow("输入源", captureSourcePicker))
+        capturePresentationLabel.textColor = .secondaryLabelColor
+        capturePresentationLabel.preferredMaxLayoutWidth = 500
+        stack.addArrangedSubview(capturePresentationLabel)
+        let captureHint = NSTextField(wrappingLabelWithString: "自动模式会识别覆盖外屏 82% 以上并连续稳定的最大窗口；播放器退出全屏或窗口关闭后自动恢复整屏捕获。画面继续按“保持比例·铺满裁切”映射，不会压扁。")
+        captureHint.textColor = .secondaryLabelColor
+        captureHint.preferredMaxLayoutWidth = 500
+        stack.addArrangedSubview(captureHint)
 
         stack.addArrangedSubview(sectionTitle("1. 矩形 AA 区（物理屏像素）"))
         stack.addArrangedSubview(fieldGrid([
@@ -968,6 +1197,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         tiltSlider.doubleValue = configuration.manual.tilt
         horizontalBendSlider.doubleValue = configuration.manual.horizontalBend
         contentModePicker.selectItem(at: ContentMode.allCases.firstIndex(of: configuration.contentMode) ?? 0)
+        captureSourcePicker.selectItem(at: CaptureSourceMode.allCases.firstIndex(of: configuration.capture.sourceMode) ?? 0)
         antiAliasingEnabledButton.state = configuration.render.antiAliasingEnabled ? .on : .off
         antiAliasingPicker.selectItem(at: AntiAliasingMode.enabledCases.firstIndex(of: configuration.render.antiAliasing) ?? 0)
         antiAliasingPicker.isEnabled = configuration.render.antiAliasingEnabled
@@ -1009,6 +1239,9 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         }
         store.save(configuration)
         let validation = renderer.updateConfiguration(configuration)
+        if configuration.capture != lastAppliedConfiguration.capture {
+            applyCaptureConfiguration(configuration.capture)
+        }
         lastAppliedConfiguration = configuration
         historyButton.title = "回退上一个版本（\(historyStore.count)）"
         historyButton.isEnabled = historyStore.count > 0
@@ -1018,21 +1251,25 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         refreshContentMappingStatus()
     }
 
-    private func refreshContentMappingStatus() {
+    private func refreshContentMappingStatus(sourceWidth: Int? = nil, sourceHeight: Int? = nil) {
+        if let sourceWidth { captureSourceWidth = sourceWidth }
+        if let sourceHeight { captureSourceHeight = sourceHeight }
+        let effectiveSourceWidth = captureSourceWidth
+        let effectiveSourceHeight = captureSourceHeight
         let mapping = ContentMappingMath.mapping(
-            sourceWidth: Float(displayWidth),
-            sourceHeight: Float(displayHeight),
+            sourceWidth: Float(effectiveSourceWidth),
+            sourceHeight: Float(effectiveSourceHeight),
             targetWidth: Float(configuration.canvas.width),
             targetHeight: Float(configuration.canvas.height),
             mode: configuration.contentMode,
             anchor: configuration.cropAnchor
         )
-        let cropX = Int((mapping.cropFraction.x * Float(displayWidth)).rounded())
-        let cropY = Int((mapping.cropFraction.y * Float(displayHeight)).rounded())
+        let cropX = Int((mapping.cropFraction.x * Float(effectiveSourceWidth)).rounded())
+        let cropY = Int((mapping.cropFraction.y * Float(effectiveSourceHeight)).rounded())
         let warning = configuration.contentMode == .stretch ? " ⚠️ 拉伸会改变画面比例" : ""
         contentMappingLabel.stringValue = String(
             format: "源 %.4f · 目标 %.4f · 等比缩放 %.4fx · 裁切 X %d px / Y %d px%@",
-            Float(displayWidth) / Float(max(displayHeight, 1)),
+            Float(effectiveSourceWidth) / Float(max(effectiveSourceHeight, 1)),
             configuration.canvas.aspect,
             mapping.uniformScale,
             cropX,
@@ -1118,6 +1355,18 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         statusLabel.textColor = color
     }
 
+    func updateCapturePresentation(_ presentation: CapturePresentation) {
+        capturePresentationLabel.stringValue = presentation.summary
+        switch presentation {
+        case let .entireDisplay(width, height):
+            refreshContentMappingStatus(sourceWidth: width, sourceHeight: height)
+        case .waitingForFullscreenWindow:
+            refreshContentMappingStatus(sourceWidth: displayWidth, sourceHeight: displayHeight)
+        case let .fullscreenWindow(_, _, width, height):
+            refreshContentMappingStatus(sourceWidth: width, sourceHeight: height)
+        }
+    }
+
     func bringToFront() {
         guard let window else { return }
         window.orderFrontRegardless()
@@ -1138,6 +1387,15 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         )
         applyConfiguration("AA 区已应用")
         refreshControls()
+    }
+
+    @objc private func updateCaptureSourceMode() {
+        configuration.capture.sourceMode = CaptureSourceMode.allCases[captureSourcePicker.indexOfSelectedItem]
+        applyConfiguration(
+            configuration.capture.sourceMode == .automaticFullscreenWindow
+                ? "输入源已切换为自动跟随全屏窗口"
+                : "输入源已切换为整个外接屏幕"
+        )
     }
 
     @objc private func centerAA() {
@@ -1511,13 +1769,34 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             sourceScreen: topology.source,
             outputScreen: topology.output,
             setWarpVisible: { [weak outputController] visible in outputController?.setWarpVisible(visible) },
-            isWarpVisible: { [weak outputController] in outputController?.isWarpVisible ?? false }
+            isWarpVisible: { [weak outputController] in outputController?.isWarpVisible ?? false },
+            applyCaptureConfiguration: { [weak self] captureConfiguration in
+                Task { @MainActor [weak self] in
+                    do {
+                        try await self?.captureEngine.updateSourceMode(
+                            captureConfiguration.sourceMode,
+                            minimumCoverage: captureConfiguration.fullscreenCoverageThreshold
+                        )
+                    } catch {
+                        self?.controlPanel?.setStatus(
+                            "切换输入源失败：\(error.localizedDescription)。已保留当前捕获。",
+                            color: .systemOrange
+                        )
+                    }
+                }
+            }
         )
         self.controlPanel = controlPanel
         NSApp.activate(ignoringOtherApps: true)
         controlPanel.bringToFront()
         captureEngine.onError = { [weak self] message in
             self?.emergencyHideWarp(reason: "捕获中断：\(message)。Warp 覆盖层已安全隐藏。")
+        }
+        captureEngine.onNotice = { [weak self] message in
+            self?.controlPanel?.setStatus(message, color: .systemOrange)
+        }
+        captureEngine.onPresentation = { [weak controlPanel] presentation in
+            controlPanel?.updateCapturePresentation(presentation)
         }
 
         guard CGPreflightScreenCaptureAccess() else {
@@ -1537,10 +1816,16 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
                 try await captureEngine.start(
                     displayID: outputID,
                     pixelWidth: pixelWidth,
-                    pixelHeight: pixelHeight
+                    pixelHeight: pixelHeight,
+                    sourceMode: configuration.capture.sourceMode,
+                    minimumCoverage: configuration.capture.fullscreenCoverageThreshold
                 )
                 await MainActor.run {
-                    controlPanel.setStatus("正在捕获外屏完整桌面；AA 区外纯黑，配置会自动保存。")
+                    controlPanel.setStatus(
+                        configuration.capture.sourceMode == .automaticFullscreenWindow
+                            ? "自动跟随已启动：播放器进入全屏后会在约 1 秒内切为单窗口捕获。"
+                            : "正在捕获外屏完整桌面；AA 区外纯黑，配置会自动保存。"
+                    )
                     NSApp.activate(ignoringOtherApps: true)
                     controlPanel.bringToFront()
                 }

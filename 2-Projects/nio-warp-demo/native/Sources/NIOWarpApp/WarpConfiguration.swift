@@ -52,6 +52,30 @@ enum ContentMode: String, Codable, CaseIterable {
     }
 }
 
+enum CaptureSourceMode: String, Codable, CaseIterable {
+    case entireDisplay
+    case automaticFullscreenWindow
+
+    var title: String {
+        switch self {
+        case .entireDisplay: return "整个外接屏幕"
+        case .automaticFullscreenWindow: return "自动跟随全屏窗口（推荐）"
+        }
+    }
+}
+
+struct CaptureConfiguration: Codable, Equatable {
+    var sourceMode = CaptureSourceMode.automaticFullscreenWindow
+    var fullscreenCoverageThreshold = 0.82
+
+    func sanitized() -> CaptureConfiguration {
+        CaptureConfiguration(
+            sourceMode: sourceMode,
+            fullscreenCoverageThreshold: min(max(fullscreenCoverageThreshold, 0.5), 1)
+        )
+    }
+}
+
 enum AntiAliasingMode: String, Codable, CaseIterable {
     case off
     case performance
@@ -254,13 +278,14 @@ struct PolynomialWarpConfiguration: Codable, Equatable {
 }
 
 struct WarpConfiguration: Codable, Equatable {
-    static let currentSchemaVersion = 5
+    static let currentSchemaVersion = 6
 
     var schemaVersion = currentSchemaVersion
     var displayPixelWidth: Int
     var displayPixelHeight: Int
     var aaRect: NormalizedRect
     var canvas: CanvasConfiguration
+    var capture = CaptureConfiguration()
     var cropAnchor = CropAnchorConfiguration()
     var mirror = MirrorConfiguration()
     var contentMode = ContentMode.fill
@@ -275,6 +300,7 @@ struct WarpConfiguration: Codable, Equatable {
         case displayPixelHeight
         case aaRect
         case canvas
+        case capture
         case cropAnchor
         case mirror
         case contentMode
@@ -290,6 +316,7 @@ struct WarpConfiguration: Codable, Equatable {
         displayPixelHeight: Int,
         aaRect: NormalizedRect,
         canvas: CanvasConfiguration,
+        capture: CaptureConfiguration = CaptureConfiguration(),
         cropAnchor: CropAnchorConfiguration = CropAnchorConfiguration(),
         mirror: MirrorConfiguration = MirrorConfiguration(),
         contentMode: ContentMode = .fill,
@@ -303,6 +330,7 @@ struct WarpConfiguration: Codable, Equatable {
         self.displayPixelHeight = displayPixelHeight
         self.aaRect = aaRect
         self.canvas = canvas
+        self.capture = capture
         self.cropAnchor = cropAnchor
         self.mirror = mirror
         self.contentMode = contentMode
@@ -319,6 +347,7 @@ struct WarpConfiguration: Codable, Equatable {
         displayPixelHeight = try container.decode(Int.self, forKey: .displayPixelHeight)
         aaRect = try container.decode(NormalizedRect.self, forKey: .aaRect)
         canvas = try container.decode(CanvasConfiguration.self, forKey: .canvas)
+        capture = try container.decodeIfPresent(CaptureConfiguration.self, forKey: .capture) ?? CaptureConfiguration()
         cropAnchor = try container.decodeIfPresent(CropAnchorConfiguration.self, forKey: .cropAnchor) ?? CropAnchorConfiguration()
         mirror = try container.decodeIfPresent(MirrorConfiguration.self, forKey: .mirror) ?? MirrorConfiguration()
         contentMode = try container.decodeIfPresent(ContentMode.self, forKey: .contentMode) ?? .stretch
@@ -358,6 +387,7 @@ struct WarpConfiguration: Codable, Equatable {
         copy.aaRect = copy.aaRect.sanitized()
         copy.canvas.width = min(max(copy.canvas.width, 64), 32768)
         copy.canvas.height = min(max(copy.canvas.height, 64), 32768)
+        copy.capture = copy.capture.sanitized()
         copy.cropAnchor = copy.cropAnchor.sanitized()
         copy.manual.strength = min(max(copy.manual.strength, 0), 2)
         copy.manual.verticalScale = min(max(copy.manual.verticalScale, 0.2), 2)
