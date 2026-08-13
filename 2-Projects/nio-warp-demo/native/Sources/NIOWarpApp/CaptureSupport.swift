@@ -1,3 +1,4 @@
+import AppKit
 import CoreGraphics
 import Foundation
 
@@ -55,4 +56,17 @@ enum CapturePresentation: Equatable {
             return "当前捕获：\(windowName) · \(width)×\(height)"
         }
     }
+}
+
+enum OutputWindowBehavior {
+    static let crossApplicationFullscreen: NSWindow.CollectionBehavior = [
+        .canJoinAllSpaces,
+        .canJoinAllApplications,
+        .stationary,
+        .ignoresCycle,
+    ]
+}
+
+enum AppPresentationPolicy {
+    static let activationPolicy = NSApplication.ActivationPolicy.accessory
 }

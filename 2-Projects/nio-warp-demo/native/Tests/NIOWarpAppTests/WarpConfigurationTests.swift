@@ -107,6 +107,20 @@ final class WarpConfigurationTests: XCTestCase {
         ))
     }
 
+    func testOutputWindowCanJoinOtherApplicationsFullscreenSpaces() {
+        let behavior = OutputWindowBehavior.crossApplicationFullscreen
+
+        XCTAssertTrue(behavior.contains(.canJoinAllSpaces))
+        XCTAssertTrue(behavior.contains(.canJoinAllApplications))
+        XCTAssertFalse(behavior.contains(.fullScreenAuxiliary))
+        XCTAssertTrue(behavior.contains(.stationary))
+        XCTAssertTrue(behavior.contains(.ignoresCycle))
+    }
+
+    func testAppRunsAsAccessoryForCrossApplicationFullscreenOverlay() {
+        XCTAssertEqual(AppPresentationPolicy.activationPolicy, .accessory)
+    }
+
     func testPolynomialCanMovePhysicalMesh() {
         var configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
         configuration.manual.enabled = false

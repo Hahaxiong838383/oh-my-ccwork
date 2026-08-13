@@ -755,7 +755,7 @@ private final class OutputController {
         window.backgroundColor = .black
         window.isOpaque = true
         window.hasShadow = false
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+        window.collectionBehavior = OutputWindowBehavior.crossApplicationFullscreen
         window.level = .screenSaver
         window.ignoresMouseEvents = true
         window.hidesOnDeactivate = false
@@ -1696,7 +1696,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     private var startupRetryWorkItem: DispatchWorkItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular)
+        NSApp.setActivationPolicy(AppPresentationPolicy.activationPolicy)
         emergencyHotKey = GlobalHotKey(keyCode: UInt32(kVK_Escape), modifiers: UInt32(controlKey | cmdKey | optionKey)) { [weak self] in
             self?.emergencyHideWarp(reason: "已通过 ⌃⌥⌘Esc 紧急隐藏 Warp 覆盖层。")
         }
