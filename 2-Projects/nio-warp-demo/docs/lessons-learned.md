@@ -151,6 +151,20 @@ MacBook 和 5K 外屏都可能启用 Retina 缩放：
 
 AU16O 的 `1920×1200 pt` 对应 `3840×2400 px`。窗口位置和尺寸属于 points，ScreenCaptureKit、Metal drawable、viewport 和 scissor 属于 pixels。两套坐标混用会出现黑屏；外屏变化后还应按硬件标识加载独立配置，并在屏幕未唤醒时自动重试。
 
+### 9. 捕获全屏窗口不等于覆盖全屏 Space
+
+自动跟随 QuickTime 时，`SCContentFilter(desktopIndependentWindow:)` 已经成功输出 `5120×2880` 视频帧，但用户仍看到播放器原始全屏画面。根因不在捕获或 Shader，而在 macOS Space：`.fullScreenAuxiliary` 只能可靠加入本应用自己的全屏集合，不能证明输出窗口已经覆盖其他应用的原生全屏 Space。
+
+可复用修复纪律：
+
+- 输出窗口使用 `.canJoinAllApplications`，而不是把 `.fullScreenAuxiliary` 当成跨应用全屏方案；
+- Warp 应用使用 `.accessory` 辅助激活策略。实测 `.regular` 前台应用即使带 `.canJoinAllApplications`，高层输出窗口仍可能无法加入 QuickTime 的全屏 Space；
+- 内屏控制台仍可使用普通 `NSWindow`、`.floating` 和 `orderFrontRegardless()`，辅助应用模式不等于不能显示控制台；
+- “捕获状态已切到播放器”“窗口列表存在 layer=1000”都只是中间证据，不能替代用户看到 AA/Warp 结果；
+- 验收必须同时检查捕获摘要、输出窗口所在 Space、合成外屏截图或肉眼画面，最终以用户视觉结果收口。
+
+本轮还证明了最小探针的价值：先用独立半透明覆盖层验证 `.canJoinAllApplications`，再用“高层输出窗口 + 内屏控制台”的同结构探针复现 `.regular` 模式失败，最后切为 `.accessory` 证实修复，避免盲改正式渲染链路。
+
 ## 验收方法
 
 ### 算法层
@@ -167,6 +181,7 @@ AU16O 的 `1920×1200 pt` 对应 `3840×2400 px`。窗口位置和尺寸属于 p
 - 内屏控制台可见并能实时调参。
 - 连续截图不出现递归回采或逐帧放大。
 - 输出窗口覆盖目标外屏，控制窗口位于内屏。
+- 第三方播放器进入 macOS 原生全屏后，输出窗口仍覆盖同一全屏 Space，AA 区外保持黑色且 Warp 参数继续生效。
 - 目标刷新率下无持续错误日志，CPU 和内存可接受。
 - 重建后屏幕录制权限保持稳定。
 
