@@ -6156,3 +6156,48 @@ lark-cli），换 tenant token 后 `POST /open-apis/im/v1/messages?receive_id_ty
 
 ⚠️ **通知内容必须与每个号的实际状态一致**：这次 13 个号里只有 11 个真的切到 4.6，
 另两个（自定义接口线路的、kimi 引擎的）发同一条就是假消息，必须单独措辞或不发。
+
+### 🔴 切默认模型前必须「逐租户真实调用」体检——看模型列表不算
+
+2026-08-13 次日教训：4.5 → 4.6 我只在自己的号上验过就发全量，第二天某租户全线报
+`Couldn't set model 'grok-4.6': unknown model id`，看起来是模型被我改坏了。
+**真相是那个账号额度耗尽（`403 personal-team-blocked:spending-limit`），故障在改动之前就在。**
+
+为什么旧值下完全看不出来——CLI 拉不到远端池时退回**内置池，里面只有 `grok-4.5`**：
+
+| 平台默认 | 账号正常 | 账号被停（拉不到池） |
+|---|---|---|
+| `grok-4.5`（**== CLI 内置兜底**） | 正常 | 参数校验照样过 → 真发请求 → 403 → 用户看到「额度已用完」✅ |
+| `grok-4.6`（只在远端池里） | 正常 | 参数校验直接失败 → `unknown model id` → 用户看到「模型不存在」❌ |
+
+**改默认值不是引入 bug，是掀开地毯**：旧故障换成一副指错方向的脸。
+汇报时触发器（我的改动）和根因（账号额度）必须都说，只报一个都是误导——
+只说前者会让人去回滚（回滚后该用户照样不能用）。见 [[feedback_default_equals_fallback_masks_failure]]。
+
+**体检要真发 chat，不能只列模型**（`/v1/models` 会被磁盘缓存和内置兜底掩盖）：
+逐个 uid 从 `/internal/creds/<uid>` 取 access → curl 打
+`api.x.ai/v1/chat/completions`，`{"model":"<目标>","messages":[{"role":"user","content":"hi"}],"max_tokens":1}`。
+判读：`HTTP=200` **且回执 `model` 等于目标模型**才算过；`mode=endpoint` 的号不走
+api.x.ai 要跳过（硬打会得到无意义的 400）。10 个号几秒跑完，成本可忽略。
+⚠️ token 走 `curl -K -` 的 stdin 配置，别进 argv。
+
+### `unknown model id` 的正确读法
+
+**它几乎从不表示模型真的不存在**，而是「CLI 此刻拿不到远端池」，最常见的原因是账号被停：
+
+1. 该号 `models_cache.json` 里有目标模型 → **有也不能信**，那是最后一次成功抓取的快照
+2. 用该号真实凭据打 `/v1/models` → 403/401 即账号问题（**要看 HTTP 码**，
+   只解析 JSON 数组的话「403」和「真的没模型」都表现为 0 项，我据此误判过一次）
+3. `grok models`（带 XAI_API_KEY）只列出 `grok-4.5` = 已退回内置池
+
+平台侧已自动化：`lib/xai-account-probe.mjs` 在 runner 的 unknown-model 分支追探账号，
+403 改判成额度卡片（契约 `2026-08-13.1`）。用户现在直接看到「额度已用完，需要充值或
+升级」，不用人工翻译。探针无结论则保持原样——否则真正的模型配置错误会被误报成额度问题。
+
+### ⚠️ 复刻 runner 的验收脚本**会写生产状态**
+
+样板 `deploy/lima/verify-mini-b2-grok.mjs` 里的 `ensureGrokModelPin` **不是只读的**，
+它按当前默认值改写用户 `config.toml`。我第一次跑 E2E 忘了带 `H_GROK_MODEL_DEFAULT`
+（真值在 drop-in、不在 `.env`），结果把那个租户的钉定模型从 4.6 改回 4.5，
+走了老路径、要验的新分支根本没触发，差点当成「修复没生效」。
+**跑这类脚本一律显式带与生产同源的 env**：`H_GROK_MODEL_DEFAULT=<真值> node <脚本>`。
