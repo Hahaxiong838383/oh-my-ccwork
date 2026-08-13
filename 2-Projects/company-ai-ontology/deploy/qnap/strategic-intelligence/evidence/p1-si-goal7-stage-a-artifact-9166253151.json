@@ -1,0 +1,79 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-stage-a-production-acceptance",
+  "capturedAt": "2026-08-13T02:44:48Z",
+  "containsSecrets": false,
+  "companyQnap": {
+    "identity": "qnap:company/prnas/TS-X65",
+    "host": "PRNas",
+    "model": "TS-X65",
+    "address": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "identityVerified": true
+  },
+  "artifact": {
+    "id": "9166253151",
+    "workflowRunId": "31661153434",
+    "workflowRunAttempt": 1,
+    "manifestVersion": "1.6.0",
+    "sourceCommit": "cee5e995a3d7971f5357be34dac41eaa9002c97c",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "archiveSha256": "a0f261fbcc95892222ff25f097992989758a9c6e01b7f4c45ea07c7f6cfdcfa3",
+    "checksumManifestSha256": "634f34555b4b5fec592dae64e66f9826c19ba4e7211d93494ed5a095abb23abe",
+    "checksumEntryCount": 9,
+    "releaseFileCount": 10,
+    "nonMode0600FileCount": 0,
+    "runtimeTreeSha256": "be2e134eaee86532667fca84822f45195c8470b560539e95b42ee17d0eb4b5e0"
+  },
+  "preparation": {
+    "runId": "9166253151-stage-a",
+    "preparedAt": "2026-08-13T02:42:45.264Z",
+    "baselineStateFile": "preparation-baseline-state.json",
+    "baselineStateSha256": "4f4461e06d199539875539a3e0ff47b0df7d8f4213ec4c24aec6def370e58c41",
+    "preparationEvidenceFile": "preparation-evidence.json",
+    "preparationEvidenceSha256": "da1279d9f59cbbe8d6842425a8afe25c929903623be37fd9bbb169ef64fad413",
+    "backupRoot": "/share/CACHEDEV2_DATA/ai-ontology-backup/goal7/9166253151-stage-a",
+    "backupEnvSha256": "f6d5360504ccd09cc793918d00829cf7b1bda5fadc81907afda3192051337fb5",
+    "backupComposeSha256": "867a115b59b9ee10f8887844620e9df2381f6ada2bedf676cdcb09f3dffca5b8"
+  },
+  "images": {
+    "agentCore": {
+      "previousImageId": "sha256:4954e3d9aa852fd532bed5b4d2b369101838f1ba5d780495f18cb0718c41cae3",
+      "candidateImageId": "sha256:d2dc377e6f247d6af530469da1e7b637bca621c9961cb5c5ee215cba3a8dea0f"
+    },
+    "knowledgeConnector": {
+      "previousImageId": "sha256:8480a5c3d9b2b1cda0d469c77dffb97936cec5f74e0aba0524d3ede4831e7bc3",
+      "candidateImageId": "sha256:1520297b522bf6a2a933a4f23a4067417b1f621d59c85d787e252ea7970d6e36"
+    },
+    "hLite": {
+      "previousImageId": "sha256:ea6da9f9ecea002da2422050e3e7614a536177740e15ce444a18bf2b50fad4cb",
+      "candidateImageId": "sha256:ea6da9f9ecea002da2422050e3e7614a536177740e15ce444a18bf2b50fad4cb"
+    }
+  },
+  "safety": {
+    "foundationRunningContainerCount": 13,
+    "foundationUnhealthyCount": 0,
+    "foundationRestartCount": 0,
+    "activeServiceImagesUnchanged": true,
+    "artifactStagingLockCount": 0,
+    "preparationLockCount": 0,
+    "migrationLockCount": 0,
+    "transferPartialCount": 0,
+    "strategicIntelligenceContainerCount": 0,
+    "strategicIntelligenceNetworkCount": 0,
+    "databaseSqlExecuted": 0,
+    "servicesRecreated": 0,
+    "workerStarted": 0,
+    "collectorStarted": 0,
+    "shadowStarted": 0,
+    "rollbackDrillStarted": 0,
+    "observedEmployeeInterruptionSeconds": 0
+  },
+  "idempotentReplay": {
+    "preparationReplayAccepted": true,
+    "evidenceSha256Unchanged": true,
+    "lockReleased": true
+  },
+  "result": "stage_a_completed_waiting_separate_stage_b_authorization",
+  "nextRequiredGate": "WAIT_SEPARATE_STAGE_B_AUTHORIZATION"
+}

@@ -1,0 +1,36 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-artifact-supersession",
+  "capturedAt": "2026-08-13T02:44:48Z",
+  "containsSecrets": false,
+  "supersededArtifact": {
+    "id": "9164960593",
+    "workflowRunId": "31657526039",
+    "sourceCommit": "d2c8bb128d4f0b34b06e6e9bca33587ab115c577",
+    "stageACompleted": true,
+    "stageBCompleted": true,
+    "stageCCompleted": true,
+    "stageDCompleted": true,
+    "historicalEvidenceValid": true,
+    "reusableForLaterStages": false
+  },
+  "supersessionReason": {
+    "legacyRuntimeRollbackRecoveryFixed": true,
+    "rollbackControlCodeChanged": true,
+    "immutableSourceIdentityChanged": true
+  },
+  "replacementArtifact": {
+    "id": "9166253151",
+    "workflowRunId": "31661153434",
+    "sourceCommit": "cee5e995a3d7971f5357be34dac41eaa9002c97c",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "stageACompleted": true
+  },
+  "productionState": {
+    "databaseSqlExecutedBySupersession": false,
+    "servicesRecreatedBySupersession": false,
+    "collectorStartedBySupersession": false,
+    "shadowStartedBySupersession": false
+  },
+  "requiredAction": "use only Artifact 9166253151 and its newly generated A-E evidence for the formal rollback drill and Owner Acceptance"
+}

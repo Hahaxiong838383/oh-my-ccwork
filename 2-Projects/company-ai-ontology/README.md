@@ -14,9 +14,9 @@
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
 - 当前生产基线：`Goal 6-A / P1-DOMAIN` 已完成工程与川哥体验验收；公司 QNAP active Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`，Domain Connector `2026-08-10.1`。Goal 7 C 阶段已于 `2026-08-13T01:55:53Z` 完成三组件受控重建：Agent Core `2026-08-12.3`、Knowledge Connector `2026-08-11.1`、H-Lite `2026-08-12.1`；Foundation `13/13 running / unhealthy=0 / restart=0`，Route A 正常、Route B 关闭。该发布不等于 Worker/Canary、真实回滚、Owner Acceptance 或 P1-SI-H 七日 Shadow 完成。
-- P1-SI-B～G 工程骨架当前完整基线为 Contracts `61/61`、Collector `9/9`、Strategic Intelligence `142/142`；Release Plan/Manifest `1.6.0`、严格根目录白名单、9 项 `SHA256SUMS`、隔离上传与同卷原子晋级已进入不可变发布链。B 阶段迁移对账新增全局互斥锁、Evidence 保留/清理规则和跨平台归档回归。Workflow `31657526039` Attempt `1` / Artifact `9164960593` 绑定 Ontology Commit `d2c8bb128` 与 H-Lite Commit `baa00bf`，离线验签 9/9 通过，并已完成绑定该 Artifact 的公司 QNAP A 阶段。Artifact `9163957919` 及更早包只保留历史审计，不得继续用于 B～E。
+- P1-SI-B～G 工程骨架当前完整基线为 Contracts `61/61`、Collector `9/9`、Strategic Intelligence `142/142`；修复旧 Runtime 回滚恢复兼容性后，新不可变候选为 Workflow `31661153434` Attempt `1` / Artifact `9166253151`，绑定 Ontology Commit `cee5e995a` 与 H-Lite Commit `baa00bf`，Manifest `1.6.0` 与 9 项 `SHA256SUMS` 已验签，并完成公司 QNAP 新 A 阶段。Artifact `9164960593` 的 A～D 仅保留历史审计，不得复用于正式 E。
 - 公司 QNAP 当前只安装内部工程 Runtime Artifact `9108034290` / Commit `0342fcd39`，并完成一次 accepted Collector：3 个公开来源共 60 条、Hash-only、正文 0、重复 0、五类业务副作用 0，且 `countsTowardProductionShadow=false`。生产 `strategic_intelligence` Schema、表、容器、网络和发布端口仍为 0。
-- 当前硬门禁：来源分配 `8/8`、最终决定 `0/8`；P003 个人 DRI `30/36`、必要角色位 `90/150`、全角色覆盖 `12/36`、最终决定 `0/36`；四角色真实成员 UAT `0/4`；Goal 7 A～D 已完成，E 与 Owner Acceptance 未完成。D 阶段真实 H Worker 双源读回和 Authority Canary `7/7` 已通过；Deployment Readiness 与 Goal Completion 仍由人审、UAT、E 阶段、Owner Acceptance 和七日 Shadow 阻断。当前下一门禁是 E 阶段真实回滚恢复演练；战略情报生产部署、010/011、Collector 和七日 Shadow 仍未授权。
+- 当前硬门禁：来源分配 `8/8`、最终决定 `0/8`；P003 个人 DRI `30/36`、必要角色位 `90/150`、全角色覆盖 `12/36`、最终决定 `0/36`；四角色真实成员 UAT `0/4`；新 Artifact `9166253151` 的 A 已完成，B～E 与 Owner Acceptance 未完成。旧 Artifact `9164960593` 的 Worker/Canary 证据不跨不可变候选继承；当前下一门禁是新候选 B 阶段既有 012 只读对账。
 - 审批操作面已调整为 H 控制面的公司 Ontology「审批中心」；飞书多维表格降级为原型、历史导入和应急导出。当前 `v1.62.0` 候选提供 8 个来源与 36 条 P003 关系的 `engineering_simulation` 草稿、推荐填充和重置，模拟完成不改变上述 `0/8`、`0/36` 真实门禁，也不能放行 Collector、010/011、七日 Shadow、P003 激活或写回。
 - 当前门禁快照见 `deploy/qnap/strategic-intelligence/evidence/p1-si-current-gate-snapshot-2026-08-13.json`，解释与历史发布链见 `docs/p1-si-bh-gate-audit-2026-08-12.md` 和 `deploy/qnap/strategic-intelligence/README.md`。
 - 本目录包含可复用的 QNAP 部署配置；生产密码只在 QNAP 本地生成并保存，不进入 Git。
@@ -93,7 +93,7 @@
 ## 下一阶段
 
 1. `Task 6-R / Release Provenance Guard` 已完成；未来所有 H 发布继续执行 Source Commit、完整运行时 Manifest、文件哈希和真实浏览器门禁。
-2. Goal 7 `P1-PROD-READINESS`：P1-AUTHORITY/P1-RUNTIME 已加入 H-Lite 回复状态机、恢复重投、H-Lite/Agent Core drain、恢复型 H-Lite 先切换和候选→旧版→候选的完整回滚恢复证据。正常发布与正常容器停止可以排空请求并保持员工回复；宿主断电、`SIGKILL` 和半程 WorkCase 的阶段恢复明确留给 Goal 8 lease/fencing。012 已存在，后续 B 阶段只能做只读证据对账，严禁 SQL replay；A 阶段 Preparation 状态采集不会调用 Postgres，成功路径必须显式释放全局锁。Artifact `9164960593` 的 Manifest `1.6.0` 与 9 项 Hash 已完整验签并完成 A 阶段：隔离入场、原子晋级、备份和三个候选镜像构建；Artifact `9163957919` 及更早 A 资产只保留审计，不得复用。下一步只申请 B，完成后再分别申请 C～E。公司专用 CPA 与 Route B 继续后补，本 Goal 不执行整库导入。
+2. Goal 7 `P1-PROD-READINESS`：P1-AUTHORITY/P1-RUNTIME 已加入 H-Lite 回复状态机、恢复重投、H-Lite/Agent Core drain、恢复型 H-Lite 先切换和候选→旧版→候选的完整回滚恢复证据。正常发布与正常容器停止可以排空请求并保持员工回复；宿主断电、`SIGKILL` 和半程 WorkCase 的阶段恢复明确留给 Goal 8 lease/fencing。012 已存在，后续 B 阶段只能做只读证据对账，严禁 SQL replay。Artifact `9166253151` 的 Manifest `1.6.0` 与 9 项 Hash 已完整验签并完成新 A 阶段：隔离入场、原子晋级、备份和三个候选镜像构建；旧候选证据只保留审计。下一步按同一新候选重跑 B～E。公司专用 CPA 与 Route B 继续后补，本 Goal 不执行整库导入。
 3. PESTIM `internal_engineering_shadow` Runtime 已更新到 Commit `0342fcd39` / Artifact `9108034290`，并完成 1 次真实内部 Collector：3 来源、60 条、Hash-only、正文 0、重复 0、业务副作用 0，Foundation 13/13 且 restart 0。该 Evidence 不计入正式 Shadow；当前先继续系统审批中心与 Goal 7 工程，8 来源最终决定、36 条 P003 审核和四角色实名 UAT 延后到系统整体测试阶段。第 2～3 天内部排错仍需新的运行授权。
 4. Goal 3 的 10 名真实员工 Canary 在 Goal 7 后执行，仍是 20/50 人放量前的强制门禁。
 5. Goal 8 建立 24 小时容量观测、H-Lite lease/fencing 和 Worker 分池，再规划 20/50 人扩容。
