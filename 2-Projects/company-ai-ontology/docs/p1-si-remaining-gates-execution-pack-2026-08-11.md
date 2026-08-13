@@ -6,7 +6,7 @@
 
 ## 1. 结论
 
-P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `135/135`。生产溯源确认 012 已由历史流程落库且原始 B 阶段 Evidence 缺失；Artifact `9155268396`、`9153663685`、`9151468565` 及更早包均已失效并禁止部署。Workflow `31634250761` Attempt `1` / Artifact `9156356166` 已通过 Manifest `1.6.0`、9 项 Hash 和严格完整性复验，并补齐 A 阶段全局锁、危险 `runId` 拒绝、回放证据保护、精确镜像清理、基础镜像 digest 固定和 Preparation 零 SQL 可执行负测。当前只申请 A，不申请 B～E。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；工程阶段继续完成系统审批中心和 Goal 7 准备，真人审核在整体测试阶段关闭，正式七日 Shadow 仍须等待全部真实门禁。
+P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `137/137`。生产溯源确认 012 已由历史流程落库且原始 B 阶段 Evidence 缺失；旧 Artifact `9156356166` 的 A 阶段因成功路径残留全局锁而失效，旧 release、Evidence、备份和镜像标签只保留审计。Workflow `31654762489` Attempt `1` / Artifact `9163957919` 已通过 Manifest `1.6.0`、9 项 Hash 和严格完整性复验，并补齐完整新准备成功与成功回放锁释放回归。当前只申请绑定新 Artifact 的 A，不申请 B～E。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；工程阶段继续完成系统审批中心和 Goal 7 准备，真人审核在整体测试阶段关闭，正式七日 Shadow 仍须等待全部真实门禁。
 
 当前实测状态：
 
@@ -20,7 +20,7 @@ P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `135/135`。�
 | 生产 Readiness | 1/7 | 不可变 Release 已通过；其余六项关闭 |
 | Goal Completion | 1/8 | 不可变 Release 已通过；七个真实自然日及其余门禁未完成 |
 
-`2026-08-12 13:54 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。随后 Artifact `9156356166` 恢复不可变 Release 通过项，机器检查器现为 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`。
+`2026-08-12 13:54 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。`2026-08-13` 新 Artifact `9163957919` 恢复不可变 Release 通过项，机器检查器现为 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`。
 
 ## 2. 最小来源审核方案
 

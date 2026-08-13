@@ -1,0 +1,57 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-local-artifact-stage-rehearsal",
+  "capturedAt": "2026-08-13T00:38:39Z",
+  "containsSecrets": false,
+  "environment": "local_temporary_directory",
+  "engineeringRehearsal": true,
+  "countsTowardStageA": false,
+  "companyQnapTouched": false,
+  "artifact": {
+    "id": "9163957919",
+    "workflowRunId": "31654762489",
+    "workflowRunAttempt": 1,
+    "sourceCommit": "8eaef798e3a9831f34bdb598c79dfd29aa735212",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "manifestVersion": "1.6.0",
+    "checksumEntryCount": 9,
+    "checksumManifestSha256": "bd6abe9823e90e2c505cdd818ef27fcf10160e636506f0a9f59042ac1093b2d1"
+  },
+  "successfulPromotion": {
+    "result": "completed",
+    "releaseFileCount": 10,
+    "nonMode0600FileCount": 0,
+    "runtimeTreeSha256": "3d78b001e2ba48cbab97e70f6a24edb16e8a8a2293c7224a834d2bccb7762a70",
+    "incomingRemoved": true,
+    "lockRemoved": true,
+    "partialDirectoryCount": 0
+  },
+  "idempotentReplay": {
+    "result": "replay_accepted",
+    "existingReleaseRevalidated": true,
+    "incomingRemoved": true,
+    "lockRemoved": true,
+    "partialDirectoryCount": 0
+  },
+  "regression": {
+    "freshPreparationSuccessPathExecuted": true,
+    "freshPreparationSuccessLockRemoved": true,
+    "successfulReplayLockRemoved": true,
+    "failedReplayPreservedExistingEvidence": true,
+    "strategicIntelligenceTestCount": 137
+  },
+  "productionState": {
+    "artifactTransferredToCompanyQnap": false,
+    "companyQnapReleaseCreated": false,
+    "configurationBackupCreated": false,
+    "imageBackupCreated": false,
+    "candidateImageBuildCount": 0,
+    "databaseSqlExecuted": false,
+    "servicesRecreated": false,
+    "workerReadbackStarted": false,
+    "collectorStarted": false,
+    "shadowStarted": false,
+    "rollbackDrillStarted": false
+  },
+  "result": "engineering_rehearsal_passed_waiting_artifact_bound_stage_a_authorization"
+}

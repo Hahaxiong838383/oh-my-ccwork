@@ -6,21 +6,21 @@
 
 ## 1. 结论
 
-Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动恢复和验收清单已经完成工程准备。机器 Release Plan `1.6.0` 的 9 项 Hash、隔离上传和原子晋级门禁已由 Workflow `31634250761` Attempt `1` / Artifact `9156356166` 验证通过。当前仅具备申请 A 阶段授权的条件；A 尚未授权，B～E 仍由前序 Evidence 阻断。本运行手册不构成部署、数据库 SQL、服务切换或回滚授权。
+Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动恢复和验收清单已经完成工程准备。机器 Release Plan `1.6.0` 的 9 项 Hash、隔离上传和原子晋级门禁已由 Workflow `31654762489` Attempt `1` / Artifact `9163957919` 验证通过。当前仅具备申请绑定新 Artifact 的 A 阶段授权条件；A 尚未授权，B～E 仍由前序 Evidence 阻断。本运行手册不构成部署、数据库 SQL、服务切换或回滚授权。
 
-Artifact `9156356166` 是当前唯一候选，离线 `SHA256SUMS` 9/9 通过；Artifact `9155268396`、`9153663685`、`9151468565` 及更早包只保留历史工程证据并禁止部署。当前候选尚未进入公司 QNAP，也未获得任何 Runtime 动作授权。
+Artifact `9163957919` 是当前唯一候选，离线 `SHA256SUMS` 9/9 通过；Artifact `9156356166` 及更早包只保留历史工程证据并禁止部署。新候选尚未进入公司 QNAP，也未获得任何 Runtime 动作授权。
 
-- Ontology Commit：`63bead3665e7e7d616744b9484d4e49192b13541`；
+- Ontology Commit：`8eaef798e3a9831f34bdb598c79dfd29aa735212`；
 - H-Lite Commit `baa00bf07089a3caf5fe6318aac28cb73bd5ae13`；
 - Agent Core `2026-08-12.3`、Knowledge Connector `2026-08-11.1`、H-Lite `2026-08-12.1`；
-- Collector Image：`sha256:7486070a3b91377ba87e0eaad08135549d612dcc6fe95cdefadd807f5e74ebc3`；
+- Collector Image：`sha256:9a2606c1db7db2112d6527c34b59187ab6d24d597bbf886e78016a3c1aea36fc`；
 - Manifest：`1.6.0`。
 
-当前 Artifact 已通过 9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 与 Runtime Verification 交叉校验、Release Validator、Goal 7 Foundation 与 PostgreSQL Runtime Evidence，并固定 `goal7Migration012Mode=pre_existing_reconciliation_only / goal7Migration012SqlReplayAllowed=false`。A 阶段准备链已补齐全局互斥锁、危险或超长 `runId` 拒绝、失败回放保留既有 Evidence、仅清理本次创建的镜像标签、Agent Core/Knowledge Connector/H-Lite 基础镜像 digest 固定，以及 Preparation 状态采集不调用 Postgres 的可执行负测；`before/after/rollback` 阶段仍保留迁移只读检查。该工程门禁不构成生产授权；任何字段变化都需要重新生成 Artifact、预检与授权卡。
+当前 Artifact 已通过 9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 与 Runtime Verification 交叉校验、Release Validator、Goal 7 Foundation 与 PostgreSQL Runtime Evidence，并固定 `goal7Migration012Mode=pre_existing_reconciliation_only / goal7Migration012SqlReplayAllowed=false`。A 阶段准备链已补齐全局互斥锁、危险或超长 `runId` 拒绝、失败回放保留既有 Evidence、仅清理本次创建的镜像标签、Agent Core/Knowledge Connector/H-Lite 基础镜像 digest 固定、Preparation 状态采集不调用 Postgres，以及完整新准备成功后显式释放锁的正向回归；`before/after/rollback` 阶段仍保留迁移只读检查。该工程门禁不构成生产授权；任何字段变化都需要重新生成 Artifact、预检与授权卡。
 
-同一真实 Artifact 已在本机临时目录完成 staging 脚本实包演练：首次晋级返回 `completed`，第二次同字节重放返回 `replay_accepted`，篡改 `image.env` 后因 checksum mismatch 失败关闭，未留下无效 release、锁或 partial 目录；晋级后的 10 个文件全部为 `0600`。证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-local-stage-rehearsal-artifact-9156356166.json`。该演练不连接公司 QNAP、`countsTowardStageA=false`，正式 A Evidence 仍必须在明确授权后由公司 QNAP 实机生成。
+同一真实 Artifact 已在本机临时目录完成 staging 脚本实包演练：首次晋级返回 `completed`，第二次同字节重放返回 `replay_accepted`，完整新准备成功与成功回放均证明锁目录消失；晋级后的 10 个文件全部为 `0600`。证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-local-stage-rehearsal-artifact-9163957919.json`。该演练不连接公司 QNAP、`countsTowardStageA=false`，正式 A Evidence 仍必须在明确授权后由公司 QNAP 实机生成。
 
-历史只读预检与迁移溯源确认 active Schema `3.3.0 / in_sync`，Goal 7 四张 Authority/Runtime 表来自历史 Workflow `31555822727`，原始 B 阶段 Evidence 缺失。Artifact `9156356166` 生成后于 `2026-08-12T19:51:30Z` 经公网 Mini 跳板完成纯只读复核：五元组一致、Foundation `13/13 running / unhealthy=0 / restart=0`、战略情报容器/网络 `0/0`，新旧候选 Artifact 匹配文件和两类锁均为 `0`。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/goal7-migration-012-provenance-2026-08-12.json`、`deploy/qnap/strategic-intelligence/evidence/p1-si-runtime-artifact-9156356166.json` 和 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-readonly-preflight-artifact-9156356166.json`。本轮未写入 QNAP、未执行 SQL、未运行 Collector、未重启服务、未执行回滚。
+历史只读预检与迁移溯源确认 active Schema `3.3.0 / in_sync`，Goal 7 四张 Authority/Runtime 表来自历史 Workflow `31555822727`，原始 B 阶段 Evidence 缺失。旧 Artifact `9156356166` 的 A 阶段成功后暴露锁释放缺陷，因此该 Artifact、旧 A 授权和其 A Evidence 均失效；旧 release、备份、Evidence 与镜像标签只保留审计。新 Artifact `9163957919` 于 `2026-08-13T00:40:01Z` 完成公网只读复核：五元组一致、Foundation `13/13 running / unhealthy=0 / restart=0`、战略情报容器/网络 `0/0`，新 Artifact 匹配文件和两类锁均为 `0`。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/goal7-migration-012-provenance-2026-08-12.json`、`deploy/qnap/strategic-intelligence/evidence/p1-si-runtime-artifact-9163957919.json`、`deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-readonly-preflight-artifact-9163957919.json` 和 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-supersession-artifact-9156356166.json`。本轮未写入 QNAP、未执行 SQL、未运行 Collector、未重启服务、未执行回滚。
 
 同轮容量与回滚输入预检确认：QNAP/Docker 为 `x86_64`，与 Artifact `linux/amd64` 兼容；可用内存约 `11.1 GiB`，热卷可用约 `604.7 GiB`，备份卷可用约 `7.1 TiB`；三组件当前镜像均可读，合计约 `882 MiB`，Foundation Compose 校验通过。候选 Runtime 三个部署归档合计约 `56.5 MiB`，尚未传入 QNAP，避免在授权前产生写入。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-capacity-rollback-preflight-2026-08-12.json`。
 

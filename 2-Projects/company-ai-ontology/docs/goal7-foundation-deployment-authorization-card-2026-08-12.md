@@ -1,41 +1,42 @@
 # Goal 7 Foundation 独立授权卡
 
-日期：2026-08-12（Asia/Shanghai）
+日期：2026-08-13（Asia/Shanghai，沿用文件名以保持既有链接）
 
 状态：`READY_FOR_STAGE_A_OWNER_AUTHORIZATION / NOT_AUTHORIZED`
 
-> Workflow `31634250761` Attempt `1` / Artifact `9156356166` 已通过 Manifest `1.6.0`、9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 交叉绑定、Release Validator 与 Goal 7 Runtime Validator。A 阶段准备链同时通过全局锁、危险 `runId` 拒绝、回放证据保护、精确镜像清理、三个基础镜像 digest 固定和 Preparation 零 SQL 可执行负测。当前仅 A 阶段可申请但尚未授权；B～E 必须在前序 Evidence 完成后分别授权，任何授权不得继承。
+> Workflow `31654762489` Attempt `1` / Artifact `9163957919` 已通过 Manifest `1.6.0`、9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 交叉绑定、Release Validator 与 Goal 7 Runtime Validator。A 阶段准备链同时通过全局锁、危险 `runId` 拒绝、回放证据保护、精确镜像清理、三个基础镜像 digest 固定、Preparation 零 SQL，以及完整新准备成功和成功回放后锁目录均消失的可执行回归。当前仅新的 A 阶段可申请但尚未授权；B～E 必须在前序 Evidence 完成后分别授权，任何授权不得继承。
 
 ## 1. 固定发布身份
 
 - 公司 QNAP：`PRNas / TS-X65 / 192.168.61.18`；
 - Foundation Root：`/share/CACHEDEV1_DATA/ai-ontology/foundation`；
-- Runtime Workflow：`31634250761` Attempt `1`；
-- Runtime Artifact：`9156356166`；
+- Runtime Workflow：`31654762489` Attempt `1`；
+- Runtime Artifact：`9163957919`；
 - Runtime Manifest：`1.6.0`；
-- Ontology Commit：`63bead3665e7e7d616744b9484d4e49192b13541`；
+- Ontology Commit：`8eaef798e3a9831f34bdb598c79dfd29aa735212`；
 - H-Lite Commit：`baa00bf07089a3caf5fe6318aac28cb73bd5ae13`；
 - Agent Core：`2026-08-12.3`；
 - Knowledge Connector：`2026-08-11.1`；
 - H-Lite：`2026-08-12.1`；
-- Collector Image：`sha256:7486070a3b91377ba87e0eaad08135549d612dcc6fe95cdefadd807f5e74ebc3`；
+- Collector Image：`sha256:9a2606c1db7db2112d6527c34b59187ab6d24d597bbf886e78016a3c1aea36fc`；
 - Candidate Ontology：Schema `3.7.0` / Hash `c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860`；
 - 发布开关：`publish=false`；
 - 当前生产 active Schema：`3.3.0`，本次不得切换 active Schema；
 - 012 模式：`pre_existing_reconciliation_only`；
 - SQL replay：`false`。
 
-Artifact 保留至 `2026-11-10T19:45:53Z`；9 项 `SHA256SUMS` 及完整验证已通过。Workflow、Artifact、Commit、镜像或 Hash 任一项变化，本卡自动失效并必须重新复验。Artifact `9155268396` 及更早包已失效，禁止使用其旧授权语句。
+Artifact 保留至 `2026-11-11T00:32:31Z`；9 项 `SHA256SUMS` 及完整验证已通过。Workflow、Artifact、Commit、镜像或 Hash 任一项变化，本卡自动失效并必须重新复验。Artifact `9156356166` 及更早包已失效，禁止使用其旧授权语句。
 
 ## 2. 最新只读基线
 
-`2026-08-12T19:51:30Z` 公网 Mini 跳板只读复核：
+`2026-08-13T00:40:01Z` 公网直连只读复核：
 
 - Foundation `13/13 running`；
 - unhealthy `0`；
 - restart total `0`；
 - `strategic_intelligence` 容器、网络均为 `0`；
-- Artifact `9156356166` 与已失效 Artifact `9155268396` 均未上传公司 QNAP；
+- 新 Artifact `9163957919` 未上传公司 QNAP；
+- 旧 Artifact `9156356166` 的 10 个 release 文件、Preparation/Baseline Evidence、备份和 3+3 个镜像标签仍保留审计，但全部 `reusable=false`；
 - Artifact staging lock、Preparation lock 均为 `0`。
 
 该基线不替代 A 阶段内对容量、Compose、服务、端口、镜像、业务副作用和完整 Hash 的再次核验。
@@ -63,9 +64,9 @@ Artifact 保留至 `2026-11-10T19:45:53Z`；9 项 `SHA256SUMS` 及完整验证�
 
 ### A. Foundation 发布准备与 Artifact 入场
 
-动作：把 Artifact `9156356166` 上传到公司 QNAP 隔离 `incoming/goal7-9156356166.uploading`，验证 9 项 Hash并同卷原子晋级，备份现有 Compose、环境配置和三个旧镜像，构建三个候选镜像；Preparation 基线采集明确不执行 SQL，不切换服务、不运行模型。
+动作：把 Artifact `9163957919` 上传到公司 QNAP 隔离 `incoming/goal7-9163957919.uploading`，验证 9 项 Hash并同卷原子晋级，创建与该 Artifact 绑定的新备份、Preparation Evidence 和三个候选镜像；Preparation 基线采集明确不执行 SQL，不切换服务、不运行模型。旧 Artifact `9156356166` 的 A 阶段资产不得复用、覆盖或当作前序 Evidence。
 
-> 授权 Artifact `9156356166` 进入公司 QNAP Goal 7 隔离 incoming staging，允许执行 9 项 Hash 校验、同卷原子晋级、配置与旧镜像备份、三个候选镜像构建；不授权数据库 SQL、服务重建、Worker 读回、Collector、Shadow 或真实回滚演练。
+> 授权 Artifact `9163957919` 进入公司 QNAP Goal 7 隔离 incoming staging，允许执行 9 项 Hash 校验、同卷原子晋级、新的配置与旧镜像备份、三个候选镜像构建，并生成绑定该 Artifact 的新 Preparation Evidence；旧 Artifact `9156356166` 的 A 阶段资产仅保留审计且不得复用；不授权数据库 SQL、服务重建、Worker 读回、Collector、Shadow 或真实回滚演练。
 
 ### B. 既有迁移 012 只读证据对账
 

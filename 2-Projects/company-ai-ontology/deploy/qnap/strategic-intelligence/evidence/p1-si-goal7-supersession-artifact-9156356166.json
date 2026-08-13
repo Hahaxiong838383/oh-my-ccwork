@@ -1,0 +1,34 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-artifact-supersession",
+  "capturedAt": "2026-08-13T00:40:01Z",
+  "containsSecrets": false,
+  "supersededArtifact": {
+    "id": "9156356166",
+    "workflowRunId": "31634250761",
+    "sourceCommit": "63bead3665e7e7d616744b9484d4e49192b13541",
+    "stageAWasExecuted": true,
+    "stageAAssetsRetainedForAudit": true,
+    "stageAReusable": false,
+    "laterStagesAuthorized": false
+  },
+  "defect": {
+    "severity": "P0",
+    "component": "prepare-goal7-foundation.sh",
+    "condition": "fresh successful preparation",
+    "failure": "the success path disabled EXIT traps before release_lock, leaving .goal7-foundation-preparation.lock",
+    "productionImpact": "no service recreation, no SQL, no Worker, no Collector, no Shadow, and no Foundation restart",
+    "staleLockRemovedAfterProcessAbsenceVerified": true
+  },
+  "replacementArtifact": {
+    "id": "9163957919",
+    "workflowRunId": "31654762489",
+    "sourceCommit": "8eaef798e3a9831f34bdb598c79dfd29aa735212",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "freshSuccessLockRegressionVerified": true,
+    "strategicIntelligenceTestCount": 137,
+    "uploadedToCompanyQnap": false,
+    "stageAAuthorized": false
+  },
+  "requiredAction": "obtain a new authorization explicitly bound to Artifact 9163957919 before any new Stage A write"
+}
