@@ -91,6 +91,34 @@ if has '\|[^;]*\b(tail|head|grep|sed|awk|tee|cut)\b[^;]*;[^;]*\$\?'; then
   notes+=("这个 \$? 是管道最后一个命令（tail/head/grep…）的退出码，不是你关心的那个程序的。zsh 没有大写 PIPESTATUS（bash 才有；zsh 是小写 pipestatus）。要拿真退出码：先 'cmd > log 2>&1; echo RC=\$?' 落文件，再单独看 log。（2026-08-11~12 同一坑一天踩了三次）")
 fi
 
+# zsh 不对未加引号的**标量参数**做单词分割（bash 会）。于是 `for f in $FILES` 只跑一轮、
+# `cat $FILES` 把整串当成一个文件名——命令照常退 0，检查器报「零命中」，看着像通过。
+# 2026-08-13 一天踩三次（全是提交前的 secret 自检），三次都只有「正向锚为 0」把它照出来。
+#
+# ⚠️ 实测过的对照，别记反：zsh 里命令替换 `$(cmd)` **是**会分割的，
+# 所以同一天的 `for f in $(git diff --cached --name-only)` 完全正常。
+# 出事的只有裸标量。故本规则只盯标量，不碰 $( )。
+zsh_split_why=''
+
+# ① `for X in $VAR` —— $VAR 必须是独立一个词（后面是空白/分号/结尾）。
+#    天然排除 ${arr[@]}（$ 后是 {）、$(cmd)（$ 后是 (）、$HOME/*.md（后面是 /）。
+if has '(^|[;&|]|[[:space:]])for[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+in[[:space:]]+\$[A-Za-z_][A-Za-z0-9_]*([[:space:]]|;|$)'; then
+  zsh_split_why='for X in $VAR'
+fi
+
+# ② 先把多个词赋进字符串，之后又把它裸着喂给吃多文件的命令（今早 `cat $FILES` 的原形）。
+#    只在「取文件列表」的命令上触发，避免 `echo $MSG` 这类无害用法刷屏。
+while IFS= read -r v; do
+  [ -n "$v" ] || continue
+  if printf '%s' "$cmd" | grep -qE '\b(cat|grep|rg|egrep|wc|head|tail|shasum|md5|md5sum|cp|mv|rm|ls|stat|tar|awk|sed|printf)\b[^;&|]*[^"$A-Za-z0-9_{]\$'"$v"'([^A-Za-z0-9_{]|$)'; then
+    zsh_split_why="${zsh_split_why:+$zsh_split_why、}$v=\"多个词\" 之后裸用 \$$v"
+  fi
+done < <(printf '%s' "$cmd" | grep -oE '(^|[;&|[:space:]])[A-Za-z_][A-Za-z0-9_]*="[^"]+[[:space:]][^"]*"' | sed -E 's/^[^A-Za-z_]*//; s/=.*$//')
+
+if [ -n "$zsh_split_why" ]; then
+  notes+=("命中「$zsh_split_why」：zsh **不**对未加引号的标量参数做单词分割（bash 会）。\`FILES=\"a b c\"; for f in \$FILES\` 只跑一轮、\`cat \$FILES\` 会把整串当一个文件名——而且照常退 0，下游计数全为 0 时看着像「干净通过」。改用真数组 \`FILES=(a b c)\` + \"\${FILES[@]}\"，或 \`while IFS= read -r f\`，或显式 \`\${=FILES}\`。对照：\`\$(cmd)\` 在 zsh 里**是**会分割的，那种写法没问题。（2026-08-13 一天三犯，每次都只有「期望非零的锚」照出来——所以期望零命中的检查务必配锚）")
+fi
+
 if [ ${#notes[@]} -gt 0 ]; then
   ctx="$(printf '%s\n' "${notes[@]}")"
   jq -nc --arg c "$ctx" '{
