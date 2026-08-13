@@ -6092,3 +6092,67 @@ bridge 主 checkout 是 cc / codex 共用的。接到「把当前在途改动收
 `install-mini-b2-shadow.sh`（npm ci 最慢）→ ③`install-mini-b2-host.sh`+`sync-mini-b2-state.sh shadow`
 +`verify-mini-b2-shadow.sh`（`shadow=ready` 才继续）→ ④新回滚目录（预建 `evidence/`）
 `cutover-mini-b2.sh --confirm-cutover`。验收=VM meta/healthz/契约三通道对撞。
+
+## 🔴 平台默认模型切换（2026-08-13 · grok-4.5 → 4.6 全平台）
+
+**结论先行：两站的 env 注入机制不同，同一个改动改法不同。照抄另一站必失败。**
+
+| 站点 | 启动方式 | env 何时进 process.env | 改法 |
+|---|---|---|---|
+| dev198 | systemd user unit → 直接 `node bridge.mjs` | `main()` 里 `loadEnvFile()`，**晚于**静态 import | **必须 systemd drop-in**：`~/.config/systemd/user/<unit>.service.d/*.conf` 写 `[Service] Environment=H_GROK_MODEL_DEFAULT=grok-4.6` |
+| Mini(lima `h-b2`) | systemd user → `scripts/run-entry-with-env.mjs` wrapper | wrapper **先** loadEnvFile **再** `await import()` | 直接改 env 文件即可 |
+
+根因：`lib/sandbox.mjs` 的 `DEFAULT_GROK_MODEL` 是**模块顶层 const**，ESM 静态 import
+使它在 `bridge.mjs` 模块体执行前就求值 —— dev198 上那时 `.env` 还没读，常量定格成
+`grok-4.5`。**改 `.env` 完全无效，且没有任何报错。**详见 [[feedback_pm2_env_snapshot_overrides_envfile]] §第二种机理。
+
+### 🔴 顺序铁律：先证明 env 生效，再清 cache
+
+反过来做会**把旧值永久固化**：清空 cache 后 `ensureGrokModelPin` 走「缓存缺失 →
+不校验直接钉」，把当时仍是 `grok-4.5` 的默认值写进 config；而下一轮 pin 因为
+`choice === DEFAULT_GROK_MODEL` 走的是 **skipped 不回退**分支，config 再也不会变。
+
+验证 env 真生效的两个硬证据（缺一不可）：
+```bash
+tr '\0' '\n' < /proc/$(systemctl --user show -p MainPID --value <unit>)/environ | grep H_GROK_MODEL_DEFAULT
+H_GROK_MODEL_DEFAULT=grok-4.6 node -e "import('<仓根>/lib/sandbox.mjs').then(m=>console.log(m.DEFAULT_GROK_MODEL))"
+```
+⚠️ 探针进程**不继承** systemd 环境——不显式带 env 跑出来的 FAIL 是探针的错，不是生产的错（我踩过，差点误判）。
+
+### 🔴 切换线路（订阅 ⇄ 自定义接口）必须清 `models_cache.json`
+
+`models_cache.json` 带 `origin` 字段（记着从哪条线路抓的）。切回订阅后它仍是旧网关的
+池（26 项、无 4.6），pin 拿平台默认去比对 → 判「不在池内」→ skipped → **config 永远
+停在旧值**，用户看到 bot 一直报旧模型，日志只有一行 `skipped`。当晚咬了两次
+（dev198 产品专家、Mini AI 专家）。修法见 [[feedback_cache_bound_to_source_must_invalidate]]。
+
+**排查「切换不生效」的两条判据：**
+1. **判模式认 `endpointMode`，不认 `grokEndpointModel`** —— 后者是切回订阅后**没被
+   清空的残留值**，我用它判成「还在自定义接口」，精准漏掉了唯一要清缓存的那几个号。
+   执行面真值在 `/srv/h-platform/users.json`（dev198）/ `/srv/h-platform/config/users.json`（Mini）。
+2. **两个方向不对称**：订阅→自定义接口走 creds 下发的 `-m`（`grok-runner.mjs` 里
+   `xaiBaseUrl` 非空时**根本不读** config），不过池校验、**不会卡**；自定义接口→订阅
+   走 config 钉定值、要过池校验、**会卡**。「切过去是好的」推不出「切回来是好的」。
+
+### Mini 站真值（与 dev198 全都不同，别跨站复制）
+
+```
+unit(user 级)  h-mini-b2-bridge.service / h-mini-b2-runner.service
+env 文件        /srv/h-platform/config/mini-b2.env   （由 H_ENV_FILE 指定）
+users.json      /srv/h-platform/config/users.json
+users root      /srv/h-platform/users
+healthz         http://127.0.0.1:18775/healthz
+入口            limactl shell h-b2（宿主 mini-pub，limactl 在 /opt/homebrew/bin）
+```
+⚠️ `systemctl` 查不到服务时先加 `--user`；`/etc/systemd/system/` 下是空的。
+
+### 给全体租户 Bot 主动发通知
+
+照 `ops/push-scope-card.mjs` 的模式：`loadUserRegistry(usersFilePath())` 拿 uid→appId，
+`loadAllCredentials(process.env)` 拿 appSecret+openId（bridge 的 AES 存储，**不是**
+lark-cli），换 tenant token 后 `POST /open-apis/im/v1/messages?receive_id_type=open_id`。
+跑前 `set -a; . <env 文件>; set +a`。**先只发 owner 自己的号做灰度**，确认拿到真实
+`message_id` 再放量。
+
+⚠️ **通知内容必须与每个号的实际状态一致**：这次 13 个号里只有 11 个真的切到 4.6，
+另两个（自定义接口线路的、kimi 引擎的）发同一条就是假消息，必须单独措辞或不发。
