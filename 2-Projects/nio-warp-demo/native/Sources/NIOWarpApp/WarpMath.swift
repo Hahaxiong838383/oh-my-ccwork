@@ -92,6 +92,13 @@ enum ContentMappingMath {
 }
 
 enum WarpMath {
+    private struct MappingContext {
+        var manualMinimum: SIMD2<Float>
+        var manualMaximum: SIMD2<Float>
+        var extendedMinimum: SIMD2<Float>
+        var extendedMaximum: SIMD2<Float>
+    }
+
     static func extendedWarpCoreRect(configuration: WarpConfiguration) -> NormalizedRect {
         let aa = configuration.aaRect.sanitized()
         let aaPixelWidth = max(Double(configuration.displayPixelWidth) * aa.width, 1)
@@ -154,91 +161,159 @@ enum WarpMath {
         return (minimum, maximum)
     }
 
-    static func localPhysicalPoint(
-        canvasPoint: SIMD2<Float>,
-        configuration: WarpConfiguration,
-        manualBounds: (SIMD2<Float>, SIMD2<Float>)? = nil
+    private static func polynomialDisplacement(
+        at point: SIMD2<Float>,
+        configuration: WarpConfiguration
     ) -> SIMD2<Float> {
-        if configuration.extendedWarpEnabled {
-            return extendedLocalPhysicalPoint(
-                canvasPoint: canvasPoint,
-                configuration: configuration,
-                manualBounds: manualBounds
-            )
-        }
-        return warpedUnitPoint(
-            canvasPoint,
-            configuration: configuration,
-            manualBounds: manualBounds
+        guard configuration.polynomial.enabled else { return .zero }
+        let polynomial = configuration.polynomial.normalized()
+        let centeredX = Double(point.x * 2 - 1)
+        let centeredY = Double(point.y * 2 - 1)
+        let multiplier = configuration.warpTrend.displacementMultiplier
+        return SIMD2<Float>(
+            multiplier * Float(polynomial.evaluate(x: centeredX, y: centeredY, coefficients: polynomial.coefficientsX)),
+            multiplier * Float(polynomial.evaluate(x: centeredX, y: centeredY, coefficients: polynomial.coefficientsY))
         )
     }
 
-    private static func warpedUnitPoint(
+    private static func normalizedBaseWarpPoint(
         _ point: SIMD2<Float>,
         configuration: WarpConfiguration,
-        manualBounds: (SIMD2<Float>, SIMD2<Float>)? = nil
+        manualMinimum: SIMD2<Float>,
+        manualMaximum: SIMD2<Float>,
+        clampManualResult: Bool
     ) -> SIMD2<Float> {
-        let bounds = manualBounds ?? self.manualBounds(
-            parameters: configuration.manual,
-            trend: configuration.warpTrend
-        )
         let raw = trendedManualRaw(
             point,
             parameters: configuration.manual,
             trend: configuration.warpTrend
         )
-        let range = simd_max(bounds.1 - bounds.0, SIMD2<Float>(repeating: 0.0001))
-        var mapped = (raw - bounds.0) / range
-        mapped = simd_clamp(mapped, SIMD2<Float>(repeating: 0), SIMD2<Float>(repeating: 1))
-        let trendMultiplier = configuration.warpTrend.displacementMultiplier
-        if configuration.polynomial.enabled {
-            let polynomial = configuration.polynomial.normalized()
-            let centeredX = Double(point.x * 2 - 1)
-            let centeredY = Double(point.y * 2 - 1)
-            mapped.x += trendMultiplier * Float(polynomial.evaluate(x: centeredX, y: centeredY, coefficients: polynomial.coefficientsX))
-            mapped.y += trendMultiplier * Float(polynomial.evaluate(x: centeredX, y: centeredY, coefficients: polynomial.coefficientsY))
+        let range = simd_max(manualMaximum - manualMinimum, SIMD2<Float>(repeating: 0.0001))
+        var mapped = (raw - manualMinimum) / range
+        if clampManualResult {
+            mapped = simd_clamp(mapped, .zero, SIMD2<Float>(repeating: 1))
         }
-        return mapped
+        return mapped + polynomialDisplacement(at: point, configuration: configuration)
     }
 
-    private static func extensionWeight(_ coordinate: Float, minimum: Float, maximum: Float) -> Float {
-        if coordinate < minimum {
-            return minimum > 0 ? max(coordinate / minimum, 0) : 1
-        }
-        if coordinate > maximum {
-            let margin = 1 - maximum
-            return margin > 0 ? max((1 - coordinate) / margin, 0) : 1
-        }
-        return 1
+    private static func extendedDomain(
+        configuration: WarpConfiguration
+    ) -> (minimum: SIMD2<Float>, maximum: SIMD2<Float>) {
+        let core = extendedWarpCoreRect(configuration: configuration)
+        let minimum = SIMD2<Float>(
+            -Float(core.x) / Float(core.width),
+            -Float(core.y) / Float(core.height)
+        )
+        let maximum = SIMD2<Float>(
+            Float(1 - core.x) / Float(core.width),
+            Float(1 - core.y) / Float(core.height)
+        )
+        return (minimum, maximum)
     }
 
-    private static func extendedLocalPhysicalPoint(
+    private static func mappingContext(configuration: WarpConfiguration) -> MappingContext {
+        let manual = manualBounds(
+            parameters: configuration.manual,
+            trend: configuration.warpTrend
+        )
+        guard configuration.extendedWarpEnabled else {
+            return MappingContext(
+                manualMinimum: manual.0,
+                manualMaximum: manual.1,
+                extendedMinimum: .zero,
+                extendedMaximum: SIMD2<Float>(repeating: 1)
+            )
+        }
+        let domain = extendedDomain(configuration: configuration)
+        var minimum = SIMD2<Float>(repeating: .greatestFiniteMagnitude)
+        var maximum = SIMD2<Float>(repeating: -.greatestFiniteMagnitude)
+        for row in 0...96 {
+            let y = mix(domain.minimum.y, domain.maximum.y, t: Float(row) / 96)
+            for column in 0...192 {
+                let x = mix(domain.minimum.x, domain.maximum.x, t: Float(column) / 192)
+                let mapped = normalizedBaseWarpPoint(
+                    SIMD2<Float>(x, y),
+                    configuration: configuration,
+                    manualMinimum: manual.0,
+                    manualMaximum: manual.1,
+                    clampManualResult: false
+                )
+                minimum = simd_min(minimum, mapped)
+                maximum = simd_max(maximum, mapped)
+            }
+        }
+        return MappingContext(
+            manualMinimum: manual.0,
+            manualMaximum: manual.1,
+            extendedMinimum: minimum,
+            extendedMaximum: maximum
+        )
+    }
+
+    private static func mix(_ minimum: Float, _ maximum: Float, t: Float) -> Float {
+        minimum + (maximum - minimum) * t
+    }
+
+    static func localPhysicalPoint(
+        canvasPoint: SIMD2<Float>,
+        configuration: WarpConfiguration
+    ) -> SIMD2<Float> {
+        localPhysicalPoint(
+            canvasPoint: canvasPoint,
+            configuration: configuration,
+            context: mappingContext(configuration: configuration)
+        )
+    }
+
+    static func localPhysicalPoints(
+        canvasPoints: [SIMD2<Float>],
+        configuration: WarpConfiguration
+    ) -> [SIMD2<Float>] {
+        let context = mappingContext(configuration: configuration)
+        return canvasPoints.map {
+            localPhysicalPoint(canvasPoint: $0, configuration: configuration, context: context)
+        }
+    }
+
+    private static func localPhysicalPoint(
         canvasPoint: SIMD2<Float>,
         configuration: WarpConfiguration,
-        manualBounds: (SIMD2<Float>, SIMD2<Float>)? = nil
+        context: MappingContext
     ) -> SIMD2<Float> {
-        let core = extendedWarpCoreRect(configuration: configuration)
-        let minimum = SIMD2<Float>(Float(core.x), Float(core.y))
-        let size = SIMD2<Float>(Float(core.width), Float(core.height))
-        let maximum = minimum + size
-        let safeSize = simd_max(size, SIMD2<Float>(repeating: 0.0001))
-        let corePoint = simd_clamp((canvasPoint - minimum) / safeSize, .zero, SIMD2<Float>(repeating: 1))
-        let warpedCorePoint = warpedUnitPoint(
-            corePoint,
+        guard configuration.extendedWarpEnabled else {
+            return normalizedBaseWarpPoint(
+                canvasPoint,
+                configuration: configuration,
+                manualMinimum: context.manualMinimum,
+                manualMaximum: context.manualMaximum,
+                clampManualResult: true
+            )
+        }
+        let domain = extendedDomain(configuration: configuration)
+        let domainPoint = domain.minimum + canvasPoint * (domain.maximum - domain.minimum)
+        let extended = normalizedBaseWarpPoint(
+            domainPoint,
             configuration: configuration,
-            manualBounds: manualBounds
+            manualMinimum: context.manualMinimum,
+            manualMaximum: context.manualMaximum,
+            clampManualResult: false
         )
-        let displacement = (warpedCorePoint - corePoint) * safeSize
-        let weightX = extensionWeight(canvasPoint.x, minimum: minimum.x, maximum: maximum.x)
-        let weightY = extensionWeight(canvasPoint.y, minimum: minimum.y, maximum: maximum.y)
-        return canvasPoint + displacement * min(weightX, weightY)
+        let range = simd_max(
+            context.extendedMaximum - context.extendedMinimum,
+            SIMD2<Float>(repeating: 0.0001)
+        )
+        return simd_clamp(
+            (extended - context.extendedMinimum) / range,
+            .zero,
+            SIMD2<Float>(repeating: 1)
+        )
     }
 
     static func makeMesh(configuration: WarpConfiguration, columns: Int = 128, rows: Int = 48) -> GeneratedMesh {
         let columns = max(columns, 2)
         let rows = max(rows, 2)
         let aa = configuration.aaRect.sanitized()
-        let bounds = manualBounds(parameters: configuration.manual, trend: configuration.warpTrend)
+        let context = mappingContext(configuration: configuration)
         var vertices = [MeshVertex]()
         var localPoints = [SIMD2<Float>]()
         vertices.reserveCapacity((columns + 1) * (rows + 1))
@@ -252,7 +327,7 @@ enum WarpMath {
                 let local = localPhysicalPoint(
                     canvasPoint: SIMD2<Float>(x, y),
                     configuration: configuration,
-                    manualBounds: bounds
+                    context: context
                 )
                 localPoints.append(local)
                 if local.x < 0 || local.x > 1 || local.y < 0 || local.y > 1 { outOfAA += 1 }

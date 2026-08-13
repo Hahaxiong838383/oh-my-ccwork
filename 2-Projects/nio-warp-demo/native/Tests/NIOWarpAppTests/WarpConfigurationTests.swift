@@ -83,65 +83,52 @@ final class WarpConfigurationTests: XCTestCase {
         XCTAssertEqual(core.height, 1, accuracy: 0.000_001)
     }
 
-    func testExtendedWarpKeepsAAOuterEdgeFixed() {
+    func testExtendedWarpOuterBoundaryRemainsCurvedAndFillsAAExtent() {
         var configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
         configuration.extendedWarpEnabled = true
         configuration.canvas.height = 2000
+        let boundary = WarpBoundaryOverlayGeometry.points(
+            in: CGRect(x: 0, y: 0, width: 1, height: 1),
+            configuration: configuration,
+            samplesPerEdge: 64
+        )
+        let topLeft = WarpMath.localPhysicalPoint(canvasPoint: SIMD2<Float>(0, 0), configuration: configuration)
+        let topCenter = WarpMath.localPhysicalPoint(canvasPoint: SIMD2<Float>(0.5, 0), configuration: configuration)
+        let topRight = WarpMath.localPhysicalPoint(canvasPoint: SIMD2<Float>(1, 0), configuration: configuration)
+        let minimumX = try! XCTUnwrap(boundary.map(\.x).min())
+        let minimumY = try! XCTUnwrap(boundary.map(\.y).min())
+        let maximumX = try! XCTUnwrap(boundary.map(\.x).max())
+        let maximumY = try! XCTUnwrap(boundary.map(\.y).max())
 
-        let edgePoints = [
-            SIMD2<Float>(0, 0), SIMD2<Float>(0.5, 0), SIMD2<Float>(1, 0),
-            SIMD2<Float>(0, 0.5), SIMD2<Float>(1, 0.5),
-            SIMD2<Float>(0, 1), SIMD2<Float>(0.5, 1), SIMD2<Float>(1, 1),
-        ]
-
-        for point in edgePoints {
-            let mapped = WarpMath.localPhysicalPoint(canvasPoint: point, configuration: configuration)
-            XCTAssertEqual(mapped.x, point.x, accuracy: 0.000_001)
-            XCTAssertEqual(mapped.y, point.y, accuracy: 0.000_001)
-        }
+        XCTAssertLessThan(topCenter.y, min(topLeft.y, topRight.y) - 0.05)
+        XCTAssertEqual(minimumX, configuration.aaRect.x, accuracy: 0.001)
+        XCTAssertEqual(minimumY, configuration.aaRect.y, accuracy: 0.01)
+        XCTAssertEqual(maximumX, configuration.aaRect.x + configuration.aaRect.width, accuracy: 0.001)
+        XCTAssertEqual(maximumY, configuration.aaRect.y + configuration.aaRect.height, accuracy: 0.001)
     }
 
-    func testExtendedWarpPreservesCurrentWarpInsideCore() {
-        var legacy = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
-        let core = WarpMath.extendedWarpCoreRect(configuration: legacy)
-        let corePoint = SIMD2<Float>(0.25, 0.75)
-        let legacyMapped = WarpMath.localPhysicalPoint(canvasPoint: corePoint, configuration: legacy)
-        legacy.extendedWarpEnabled = true
-        let outerPoint = SIMD2<Float>(
-            Float(core.x) + corePoint.x * Float(core.width),
-            Float(core.y) + corePoint.y * Float(core.height)
-        )
+    func testExtendedWarpPreservesForwardAndInverseTrendDirection() {
+        var configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
+        configuration.extendedWarpEnabled = true
+        configuration.canvas.height = 2000
+        configuration.warpTrend = .forward
+        let forward = WarpMath.localPhysicalPoint(canvasPoint: SIMD2<Float>(0.5, 0.5), configuration: configuration)
+        configuration.warpTrend = .inverse
+        let inverse = WarpMath.localPhysicalPoint(canvasPoint: SIMD2<Float>(0.5, 0.5), configuration: configuration)
 
-        let extendedMapped = WarpMath.localPhysicalPoint(canvasPoint: outerPoint, configuration: legacy)
-
-        XCTAssertEqual(
-            extendedMapped.x,
-            Float(core.x) + legacyMapped.x * Float(core.width),
-            accuracy: 0.000_001
-        )
-        XCTAssertEqual(
-            extendedMapped.y,
-            Float(core.y) + legacyMapped.y * Float(core.height),
-            accuracy: 0.000_001
-        )
+        XCTAssertLessThan(forward.y, 0.5)
+        XCTAssertGreaterThan(inverse.y, 0.5)
     }
 
-    func testExtendedWarpDisplacementDecaysLinearlyTowardAAEdge() {
+    func testExtendedWarpAppliesNonzeroWarpOutsideOriginalCore() {
         var configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
         configuration.extendedWarpEnabled = true
         configuration.canvas.height = 2000
         let core = WarpMath.extendedWarpCoreRect(configuration: configuration)
-        let coreLeft = Float(core.x)
-        let coreY = Float(core.y + core.height * 0.5)
-        let innerPoint = SIMD2<Float>(coreLeft, coreY)
-        let halfwayPoint = SIMD2<Float>(coreLeft * 0.5, coreY)
-        let innerMapped = WarpMath.localPhysicalPoint(canvasPoint: innerPoint, configuration: configuration)
-        let halfwayMapped = WarpMath.localPhysicalPoint(canvasPoint: halfwayPoint, configuration: configuration)
-        let innerDisplacement = innerMapped - innerPoint
-        let halfwayDisplacement = halfwayMapped - halfwayPoint
+        let outsidePoint = SIMD2<Float>(Float(core.x * 0.5), 0.5)
+        let mapped = WarpMath.localPhysicalPoint(canvasPoint: outsidePoint, configuration: configuration)
 
-        XCTAssertEqual(halfwayDisplacement.x, innerDisplacement.x * 0.5, accuracy: 0.000_001)
-        XCTAssertEqual(halfwayDisplacement.y, innerDisplacement.y * 0.5, accuracy: 0.000_001)
+        XCTAssertGreaterThan(simd_length(mapped - outsidePoint), 0.02)
     }
 
     func testExtendedWarpMeshHasNoFoldedCells() {
@@ -155,7 +142,7 @@ final class WarpConfigurationTests: XCTestCase {
         XCTAssertEqual(mesh.validation.outOfAASampleCount, 0)
     }
 
-    func testWarpBoundaryOverlayUsesWarpedCoreBoundary() {
+    func testWarpBoundaryOverlayUsesFullWarpedFootprintBoundary() {
         var configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
         configuration.extendedWarpEnabled = true
 

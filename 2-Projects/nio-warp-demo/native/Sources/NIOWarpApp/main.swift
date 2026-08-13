@@ -1090,7 +1090,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         warpBoundaryButton.action = #selector(toggleWarpBoundary)
         stack.addArrangedSubview(extendedWarpButton)
         stack.addArrangedSubview(warpBoundaryButton)
-        let extendedWarpHint = NSTextField(wrappingLabelWithString: "开启后，当前 Warp 曲线保留在核心区；画布大于 AA 区的部分向外线性延伸，并在 AA 边缘归零。黄色线为 AA，青色线为 Warp 区域。")
+        let extendedWarpHint = NSTextField(wrappingLabelWithString: "开启后，扩大后的整张画布继续沿用当前基础 Warp、多项式和趋势，再将完整弯曲 Footprint 归一化铺满 AA。黄色线为 AA，青色线为 Warp 区域。")
         extendedWarpHint.textColor = .secondaryLabelColor
         extendedWarpHint.preferredMaxLayoutWidth = 500
         stack.addArrangedSubview(extendedWarpHint)

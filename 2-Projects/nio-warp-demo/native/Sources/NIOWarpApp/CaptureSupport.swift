@@ -96,32 +96,30 @@ enum WarpBoundaryOverlayGeometry {
         samplesPerEdge: Int = 96
     ) -> [CGPoint] {
         let aa = configuration.aaRect.sanitized()
-        let core = configuration.extendedWarpEnabled
-            ? WarpMath.extendedWarpCoreRect(configuration: configuration)
-            : NormalizedRect.full
+        let footprint = NormalizedRect.full
         let samples = max(samplesPerEdge, 2)
         var canvasPoints = [SIMD2<Float>]()
         canvasPoints.reserveCapacity(samples * 4 + 1)
 
         for index in 0...samples {
             let progress = Float(index) / Float(samples)
-            canvasPoints.append(SIMD2<Float>(Float(core.x) + progress * Float(core.width), Float(core.y)))
+            canvasPoints.append(SIMD2<Float>(Float(footprint.x) + progress * Float(footprint.width), Float(footprint.y)))
         }
         for index in 1...samples {
             let progress = Float(index) / Float(samples)
-            canvasPoints.append(SIMD2<Float>(Float(core.x + core.width), Float(core.y) + progress * Float(core.height)))
+            canvasPoints.append(SIMD2<Float>(Float(footprint.x + footprint.width), Float(footprint.y) + progress * Float(footprint.height)))
         }
         for index in 1...samples {
             let progress = Float(index) / Float(samples)
-            canvasPoints.append(SIMD2<Float>(Float(core.x + core.width) - progress * Float(core.width), Float(core.y + core.height)))
+            canvasPoints.append(SIMD2<Float>(Float(footprint.x + footprint.width) - progress * Float(footprint.width), Float(footprint.y + footprint.height)))
         }
         for index in 1...samples {
             let progress = Float(index) / Float(samples)
-            canvasPoints.append(SIMD2<Float>(Float(core.x), Float(core.y + core.height) - progress * Float(core.height)))
+            canvasPoints.append(SIMD2<Float>(Float(footprint.x), Float(footprint.y + footprint.height) - progress * Float(footprint.height)))
         }
 
-        return canvasPoints.map { canvasPoint in
-            let local = WarpMath.localPhysicalPoint(canvasPoint: canvasPoint, configuration: configuration)
+        let physicalPoints = WarpMath.localPhysicalPoints(canvasPoints: canvasPoints, configuration: configuration)
+        return physicalPoints.map { local in
             return CGPoint(
                 x: bounds.minX + bounds.width * (aa.x + Double(local.x) * aa.width),
                 y: bounds.minY + bounds.height * (aa.y + Double(local.y) * aa.height)
