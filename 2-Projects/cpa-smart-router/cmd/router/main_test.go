@@ -5,9 +5,24 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
+
+func TestLoadConfigDefaultsBodyLimitTo64MiB(t *testing.T) {
+	path := t.TempDir() + "/router.json"
+	if err := os.WriteFile(path, []byte(`{"default_backend":{"base_url":"http://127.0.0.1:8317/v1"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := loadConfig(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.BodyLimitBytes != 64<<20 {
+		t.Fatalf("body limit = %d, want %d", cfg.BodyLimitBytes, 64<<20)
+	}
+}
 
 func TestDefaultBackendReturnsRetryableUpstreamError(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

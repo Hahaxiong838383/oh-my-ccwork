@@ -115,6 +115,14 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - 清理历史缩水目录前，先确认当前主目录不少于 12 模型且目标模型具备完整 reasoning/speed 元数据；只删除低于 12 模型的 `.bak-*`，不删除当前主目录、`models_cache.json` 或刷新脚本。
 - 最终验收需同时满足：主目录 JSON 有效、模型数量正常、当前默认模型存在且 reasoning/speed 字段非空、LaunchAgent 仍加载、App 重启后用户确认模型/推理档位/推理速度三个选择器恢复。
 
+## Codex 大请求 413 排障（2026-08-14）
+
+- Nginx HTML `413 Request Entity Too Large` 且 error log 出现 `client intended to send too large body`，说明请求尚未到 Router；必须读取日志中的精确字节数，不要只按“网站项目很大”猜测。
+- Smart API 有两层请求体门槛：Nginx `client_max_body_size` 与 Smart Router `body_limit_bytes`。两层必须统一；2026-08-14 的失败请求约 34.4 MB，同时超过原 32 MiB 上限，生产与仓内默认已统一为 64 MiB。
+- 最小生产变更顺序：备份 Nginx 站点和 `router.json`，原子改配置，先 `nginx -t`，reload Nginx，再重启 Router；CLIProxyAPI 不需要重启。失败自动恢复两份备份。
+- 验收使用大于旧上限、低于新上限的无效模型请求：返回 `unknown provider` 等非 413 错误即可证明完整公网→Nginx→Router→CLIProxyAPI 链路已穿透，同时避免产生有效模型费用。
+- Nginx 备份不能留在 `/etc/nginx/sites-enabled/`，否则 Ubuntu 默认 `include sites-enabled/*` 会把备份也加载成重复站点并产生 `conflicting server name`；备份统一放 `/etc/nginx/backups/`。
+
 ## CPA Menu 桌面监控
 
 - macOS App 只通过 `https://smart-api.hahaxiong.top/desktop/v1/*` 访问 Bridge；Desktop Token 只存远端 `0600` 文件与本机 Keychain。

@@ -34,6 +34,7 @@ go run ./cmd/router -config config/router.example.json
 - `/v1/chat/completions` 流式请求会自动注入 `stream_options.include_usage=true` 并解析 SSE usage，用于 dashboard 和调度用量统计。
 - `/v1/responses` 强制 sticky，避免 `previous_response_id` 断链。
 - `/v1/responses` 当前先启用 state probe 观测，不改变路由；M1 门控看 `previous_response_id` 占比和 response id 捕获率。
+- Codex 网站验收可能携带 32 MiB 以上的图片、截图或上下文；Nginx `client_max_body_size` 与 Router `body_limit_bytes` 必须统一为 64 MiB。只提高一层会在下一层继续返回 413；验证使用大体积无效模型请求，预期应穿透到模型路由错误而不是产生付费推理。
 
 ## 灰度接入
 

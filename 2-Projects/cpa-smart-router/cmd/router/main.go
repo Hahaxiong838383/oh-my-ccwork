@@ -158,7 +158,7 @@ func loadConfig(path string) (Config, error) {
 		return Config{}, err
 	}
 	if cfg.BodyLimitBytes <= 0 {
-		cfg.BodyLimitBytes = 32 << 20
+		cfg.BodyLimitBytes = 64 << 20
 	}
 	if cfg.MaxRetries < 0 {
 		cfg.MaxRetries = 0

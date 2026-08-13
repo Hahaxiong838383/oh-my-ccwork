@@ -4,12 +4,12 @@ import path from 'node:path';
 
 const codexHome = process.env.CODEX_HOME || path.join(process.env.HOME, '.codex');
 const configPath = path.join(codexHome, 'config.toml');
-const catalogPath = path.join(codexHome, 'cc-switch-model-catalog.json');
+const cfg = fs.readFileSync(configPath, 'utf8');
+const configuredCatalog = readTomlString(cfg, 'model_catalog_json') || 'cc-switch-model-catalog.json';
+const catalogPath = path.isAbsolute(configuredCatalog) ? configuredCatalog : path.join(codexHome, configuredCatalog);
 const officialCachePath = path.join(codexHome, 'models_cache.json');
 const cpaOfficialCatalogUrl = process.env.CODEX_CATALOG_CPA_OFFICIAL_URL ||
   'https://raw.githubusercontent.com/router-for-me/CLIProxyAPI/main/internal/registry/models/codex_client_models.json';
-
-const cfg = fs.readFileSync(configPath, 'utf8');
 const baseUrl = readTomlString(cfg, 'base_url');
 const token = readTomlString(cfg, 'experimental_bearer_token');
 if (!baseUrl || !token) fail('missing base_url or experimental_bearer_token in ~/.codex/config.toml');

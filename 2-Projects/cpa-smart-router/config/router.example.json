@@ -4,7 +4,7 @@
   "client_api_key_envs": [
     "CPA_API_KEY"
   ],
-  "body_limit_bytes": 33554432,
+  "body_limit_bytes": 67108864,
   "max_retries": 1,
   "metrics_path": "router-metrics.jsonl",
   "sqlite_path": "router.sqlite",

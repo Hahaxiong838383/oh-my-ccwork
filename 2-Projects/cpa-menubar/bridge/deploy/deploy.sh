@@ -30,15 +30,20 @@ from pathlib import Path
 path = Path('/etc/nginx/sites-enabled/smart-api')
 text = path.read_text()
 include = '    include /etc/nginx/snippets/cpa-desktop-bridge.conf;\n'
+old_limit = '    client_max_body_size 32m;\n'
+new_limit = '    client_max_body_size 64m;\n'
+if old_limit in text:
+    text = text.replace(old_limit, new_limit, 1)
+elif new_limit not in text:
+    raise SystemExit('smart-api client_max_body_size marker not found')
 if include not in text:
-    marker = '    client_max_body_size 32m;\n'
-    if marker not in text:
-        raise SystemExit('smart-api nginx marker not found')
-    backup = path.with_name(path.name + '.before-cpa-desktop-bridge')
+    backup_dir = Path('/etc/nginx/backups')
+    backup_dir.mkdir(mode=0o755, exist_ok=True)
+    backup = backup_dir / 'smart-api.before-cpa-desktop-bridge'
     if not backup.exists():
         backup.write_text(text)
-    text = text.replace(marker, marker + '\n' + include, 1)
-    path.write_text(text)
+    text = text.replace(new_limit, new_limit + '\n' + include, 1)
+path.write_text(text)
 PY
 
 systemctl daemon-reload
