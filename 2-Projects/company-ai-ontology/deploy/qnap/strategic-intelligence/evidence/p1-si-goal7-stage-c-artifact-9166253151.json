@@ -1,0 +1,83 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-stage-c-production-acceptance",
+  "capturedAt": "2026-08-13T02:52:10Z",
+  "containsSecrets": false,
+  "companyQnap": {
+    "identity": "qnap:company/prnas/TS-X65",
+    "host": "PRNas",
+    "model": "TS-X65",
+    "address": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "identityVerified": true
+  },
+  "artifact": {
+    "id": "9166253151",
+    "workflowRunId": "31661153434",
+    "sourceCommit": "cee5e995a3d7971f5357be34dac41eaa9002c97c",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "stageAPreparationEvidenceSha256": "da1279d9f59cbbe8d6842425a8afe25c929903623be37fd9bbb169ef64fad413",
+    "stageBMigrationEvidenceSha256": "9547e228c72f50ff091ad081915da96488f3e24280377c477eee59436cb68d42"
+  },
+  "deployment": {
+    "startedAt": "2026-08-13T02:50:44Z",
+    "completedAt": "2026-08-13T02:51:06.529Z",
+    "observedSwitchWindowSeconds": 22.529,
+    "preDeploymentStateSha256": "50e33fe789be9342d8e75af3fbd6da23fa83d463ec975b9d4343bdcb1ea43984",
+    "postDeploymentStateSha256": "ec4a6efeb6c34cb3b242c94b5a8786b6ac1d27eabc499a0c34d6c4ec5e15b716",
+    "sideEffectsEvidenceSha256": "d142580bd579d897402c1048e47209284b57980c8717bf6f63be9b361807c397",
+    "deploymentEvidenceSha256": "5fa9296b08723dfdda3faec4dcaaf44de1cd87200eedc0cacdba3041391acaf4",
+    "deploymentEvidenceValidated": true
+  },
+  "components": {
+    "agentCore": {
+      "previousVersion": "2026-08-12.3",
+      "previousSourceCommit": "d2c8bb128d4f0b34b06e6e9bca33587ab115c577",
+      "activeVersion": "2026-08-12.3",
+      "activeSourceCommit": "cee5e995a3d7971f5357be34dac41eaa9002c97c",
+      "activeImageId": "sha256:d2dc377e6f247d6af530469da1e7b637bca621c9961cb5c5ee215cba3a8dea0f"
+    },
+    "knowledgeConnector": {
+      "previousVersion": "2026-08-11.1",
+      "previousSourceCommit": "d2c8bb128d4f0b34b06e6e9bca33587ab115c577",
+      "activeVersion": "2026-08-11.1",
+      "activeSourceCommit": "cee5e995a3d7971f5357be34dac41eaa9002c97c",
+      "activeImageId": "sha256:1520297b522bf6a2a933a4f23a4067417b1f621d59c85d787e252ea7970d6e36"
+    },
+    "hLite": {
+      "previousVersion": "2026-08-12.1",
+      "previousSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+      "activeVersion": "2026-08-12.1",
+      "activeSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+      "activeImageId": "sha256:ea6da9f9ecea002da2422050e3e7614a536177740e15ce444a18bf2b50fad4cb"
+    }
+  },
+  "safety": {
+    "activeOntologySchema": "3.3.0",
+    "registryStatus": "in_sync",
+    "foundationRunningContainerCount": 13,
+    "foundationUnhealthyCount": 0,
+    "foundationRestartCount": 0,
+    "newHostPortCount": 0,
+    "routeAOperational": true,
+    "routeBEnabled": false,
+    "artifactStagingLockCount": 0,
+    "preparationLockCount": 0,
+    "migrationLockCount": 0,
+    "partialCount": 0,
+    "strategicIntelligenceContainerCount": 0,
+    "strategicIntelligenceNetworkCount": 0,
+    "databaseSqlExecuted": 0,
+    "workerStarted": 0,
+    "collectorStarted": 0,
+    "shadowStarted": 0,
+    "rollbackDrillStarted": 0,
+    "formalP2Count": 0,
+    "employeeDeliveryCount": 0,
+    "erpWritebackCount": 0,
+    "socialWritebackCount": 0,
+    "causalActivationCount": 0
+  },
+  "result": "stage_c_completed_waiting_separate_stage_d_authorization",
+  "nextRequiredGate": "WAIT_SEPARATE_STAGE_D_AUTHORIZATION"
+}
