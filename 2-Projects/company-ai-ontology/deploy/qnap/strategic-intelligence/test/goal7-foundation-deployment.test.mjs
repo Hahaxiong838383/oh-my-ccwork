@@ -573,9 +573,23 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
   assert.match(rollback, /h_lite_admin drain 1/)
   assert.match(rollback, /pendingDeliveries===0/)
   assert.match(rollback, /agent-core\/v1\/admin\/drain|127\.0\.0\.1:8080\/v1\/admin\/drain/)
+  assert.match(rollback, /wait_legacy_release_quiet/)
+  assert.match(rollback, /switch_candidate_from_legacy/)
+  assert.match(rollback, /wait_candidate_h_lite_recovery/)
+  assert.match(rollback, /wait_agent_core_idle/)
+  assert.match(rollback, /h_lite_admin drain 0/)
   for (const service of ['agent-core', 'knowledge-connector', 'h-lite']) {
     assert.match(rollback, new RegExp(`compose up -d --no-deps --no-build ${service}`))
   }
+  const previousReleasePath = rollback.slice(
+    rollback.indexOf('switch_release "$backup_root/.env"'),
+    rollback.indexOf('"$script_root/capture-goal7-deployment-state.sh" rollback_previous'),
+  )
+  assert.doesNotMatch(previousReleasePath, /h_lite_admin resume/)
+  const legacyRestorePath = rollback.slice(rollback.indexOf('switch_candidate_from_legacy()'))
+  assert.ok(legacyRestorePath.indexOf('compose up -d --no-deps --no-build h-lite') < legacyRestorePath.indexOf('h_lite_admin drain 0'))
+  assert.ok(legacyRestorePath.indexOf('h_lite_admin drain 0') < legacyRestorePath.indexOf('compose up -d --no-deps --no-build agent-core'))
+  assert.ok(legacyRestorePath.indexOf('compose up -d --no-deps --no-build agent-core') < legacyRestorePath.indexOf('compose up -d --no-deps --no-build knowledge-connector'))
   assert.match(rollback, /goal7-candidate-\$run_id/)
   assert.match(rollback, /rollback_previous/)
   assert.match(rollback, /rollback_restored/)

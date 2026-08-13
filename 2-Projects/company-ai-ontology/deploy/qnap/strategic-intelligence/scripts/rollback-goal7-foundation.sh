@@ -74,6 +74,53 @@ wait_generic_release() {
     attempt=$((attempt+1)); [ "$attempt" -lt 90 ] || return 1; sleep 2
   done
 }
+wait_legacy_release_quiet() {
+  attempt=0
+  stable_samples=0
+  until [ "$stable_samples" -ge 2 ]; do
+    if "$docker_path" compose exec -T h-lite node -e \
+      "Promise.all([fetch('http://127.0.0.1:8081/healthz'),fetch('http://agent-core:8080/readyz')]).then(async rs=>{const [h,a]=await Promise.all(rs.map(r=>r.json()));const cutoff=Date.now()-Number(process.argv[1]);const inbound=Date.parse(h.feishu?.lastInboundAt||0);const outbound=Date.parse(h.feishu?.lastOutboundAt||0);const quiet=(!Number.isFinite(inbound)||inbound<=cutoff)&&(!Number.isFinite(outbound)||outbound<=cutoff);process.exit(rs.every(r=>r.ok)&&quiet&&Number(a.admission?.active||0)===0&&Number(a.admission?.queued||0)===0?0:1)}).catch(()=>process.exit(1))" \
+      "${GOAL7_LEGACY_QUIET_MS:-30000}" </dev/null >/dev/null 2>&1; then
+      stable_samples=$((stable_samples+1))
+    else
+      stable_samples=0
+    fi
+    attempt=$((attempt+1)); [ "$attempt" -lt 90 ] || return 1
+    [ "$stable_samples" -ge 2 ] || sleep 2
+  done
+}
+wait_candidate_h_lite_recovery() {
+  attempt=0
+  until "$docker_path" compose exec -T h-lite node -e \
+    "Promise.all([fetch('http://127.0.0.1:8081/healthz'),fetch('http://127.0.0.1:8081/readyz')]).then(async rs=>{const p=await Promise.all(rs.map(r=>r.json()));process.exit(rs.every(r=>r.ok)&&p[0].serviceVersion===process.argv[1]&&p[0].sourceCommit===process.argv[2]&&p[0].mode==='active'&&p[0].subscriptionEnabled===true&&p[0].draining===false&&p[0].inFlight===0&&p[0].pendingDeliveries===0?0:1)}).catch(()=>process.exit(1))" \
+    "$h_lite_version" "$h_lite_source_commit" </dev/null >/dev/null 2>&1; do
+    attempt=$((attempt+1)); [ "$attempt" -lt 90 ] || return 1; sleep 2
+  done
+}
+wait_agent_core_idle() {
+  attempt=0
+  until "$docker_path" compose exec -T agent-core node -e \
+    "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();process.exit(r.ok&&Number(p.admission?.active||0)===0&&Number(p.admission?.queued||0)===0?0:1)}).catch(()=>process.exit(1))" \
+    </dev/null >/dev/null 2>&1; do
+    attempt=$((attempt+1)); [ "$attempt" -lt 90 ] || return 1; sleep 2
+  done
+}
+wait_candidate_agent_core() {
+  attempt=0
+  until "$docker_path" compose exec -T agent-core node -e \
+    "fetch('http://127.0.0.1:8080/readyz').then(async r=>{const p=await r.json();process.exit(r.ok&&p.productionReady===true&&p.contractVersion===process.argv[1]&&p.sourceCommit===process.argv[2]?0:1)}).catch(()=>process.exit(1))" \
+    "$agent_core_version" "$source_commit" </dev/null >/dev/null 2>&1; do
+    attempt=$((attempt+1)); [ "$attempt" -lt 90 ] || return 1; sleep 2
+  done
+}
+wait_candidate_connector() {
+  attempt=0
+  until "$docker_path" compose exec -T knowledge-connector node -e \
+    "fetch('http://127.0.0.1:8083/readyz').then(async r=>{const p=await r.json();process.exit(r.ok&&p.version===process.argv[1]&&p.sourceCommit===process.argv[2]?0:1)}).catch(()=>process.exit(1))" \
+    "$knowledge_connector_version" "$source_commit" </dev/null >/dev/null 2>&1; do
+    attempt=$((attempt+1)); [ "$attempt" -lt 90 ] || return 1; sleep 2
+  done
+}
 wait_candidate_release() {
   attempt=0
   until "$docker_path" compose exec -T agent-core node -e \
@@ -123,6 +170,26 @@ switch_release() {
   "$docker_path" compose up -d --no-deps --no-build knowledge-connector >/dev/null
   "$docker_path" compose up -d --no-deps --no-build h-lite >/dev/null
 }
+switch_candidate_from_legacy() {
+  wait_legacy_release_quiet || { echo 'Goal 7 rollback previous release never reached the required quiet window' >&2; return 1; }
+  cp "$candidate_env" "$foundation_root/.env"
+  cp "$candidate_compose" "$foundation_root/docker-compose.yml"
+  chmod 600 "$foundation_root/.env" "$foundation_root/docker-compose.yml"
+  for service in agent-core knowledge-connector h-lite; do
+    "$docker_path" image tag "company-ai-foundation-$service:goal7-candidate-$run_id" "company-ai-foundation-$service:latest"
+  done
+  "$docker_path" compose config >/dev/null
+  "$docker_path" compose up -d --no-deps --no-build h-lite >/dev/null
+  wait_candidate_h_lite_recovery || { echo 'Goal 7 rollback recovery H-Lite verification timed out' >&2; return 1; }
+  h_lite_admin drain 0 || { echo 'Goal 7 rollback recovery H-Lite drain failed' >&2; return 1; }
+  wait_agent_core_idle || { echo 'Goal 7 rollback previous Agent Core did not become idle behind recovery H-Lite' >&2; return 1; }
+  "$docker_path" compose up -d --no-deps --no-build agent-core >/dev/null
+  wait_candidate_agent_core || { echo 'Goal 7 rollback candidate Agent Core verification timed out' >&2; return 1; }
+  "$docker_path" compose up -d --no-deps --no-build knowledge-connector >/dev/null
+  wait_candidate_connector || { echo 'Goal 7 rollback candidate Knowledge Connector verification timed out' >&2; return 1; }
+  h_lite_admin resume 0 || { echo 'Goal 7 rollback restored H-Lite resume failed' >&2; return 1; }
+  wait_candidate_release || { echo 'Goal 7 rollback candidate restore health verification timed out' >&2; return 1; }
+}
 drain_current_release() {
   h_lite_admin drain 1 || return 1
   "$docker_path" compose exec -T h-lite node -e \
@@ -149,15 +216,10 @@ drain_current_release || { echo 'Goal 7 rollback candidate drain gate failed' >&
 switched_from_candidate=1
 switch_release "$backup_root/.env" "$backup_root/docker-compose.yml" pre
 wait_generic_release || { echo 'Goal 7 rollback previous release health verification timed out' >&2; exit 1; }
-h_lite_admin resume 0 || { echo 'Goal 7 rollback previous H-Lite resume failed' >&2; exit 1; }
-wait_generic_release || { echo 'Goal 7 rollback previous release did not remain healthy after resume' >&2; exit 1; }
 wait_foundation_stable || { echo 'Goal 7 rollback previous Foundation did not stabilize' >&2; exit 1; }
 "$script_root/capture-goal7-deployment-state.sh" rollback_previous "$previous_file" >/dev/null
 
-drain_current_release || { echo 'Goal 7 rollback previous release drain gate failed' >&2; exit 1; }
-switch_release "$candidate_env" "$candidate_compose" candidate
-h_lite_admin resume 0 || { echo 'Goal 7 rollback restored H-Lite resume failed' >&2; exit 1; }
-wait_candidate_release || { echo 'Goal 7 rollback candidate restore health verification timed out' >&2; exit 1; }
+switch_candidate_from_legacy || exit 1
 wait_foundation_stable || { echo 'Goal 7 rollback restored Foundation did not stabilize' >&2; exit 1; }
 "$script_root/capture-goal7-deployment-state.sh" rollback_restored "$restored_file" >/dev/null
 completed_at=$($node_bin -e "const x=require(process.argv[1]);process.stdout.write(x.capturedAt)" "$restored_file")
