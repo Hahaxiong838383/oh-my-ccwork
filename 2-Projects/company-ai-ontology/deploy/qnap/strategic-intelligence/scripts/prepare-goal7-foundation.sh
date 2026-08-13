@@ -230,5 +230,6 @@ chmod 600 "$input_file"
 preparation_created=1
 rm -f "$input_file"
 "$node_bin" "$script_root/validate-goal7-preparation.mjs" "$evidence_root" "$approved_source_commit" "$approved_h_lite_source_commit"
+release_lock
 trap - EXIT HUP INT TERM
 printf 'goal7_preparation=completed\nservices_recreated=0\nmigration012_applied=0\n'

@@ -104,7 +104,7 @@ async function writeExecutable(file, body) {
   await fs.chmod(file, 0o700)
 }
 
-async function createPrepareSandbox({ existingEvidence = false, precreateLock = false } = {}) {
+async function createPrepareSandbox({ existingEvidence = false, existingEvidenceValid = false, freshPreparationSuccess = false, precreateLock = false } = {}) {
   const sandbox = await fs.mkdtemp(path.join(os.tmpdir(), 'goal7-prepare-'))
   const scripts = path.join(sandbox, 'scripts')
   const shadowRoot = path.join(sandbox, 'shadow')
@@ -120,6 +120,39 @@ async function createPrepareSandbox({ existingEvidence = false, precreateLock = 
   await fs.mkdir(runtimeEvidenceRoot, { recursive: true })
   await fs.mkdir(evidenceRoot, { recursive: true })
   await fs.mkdir(foundationRoot, { recursive: true })
+  const backupRoot = path.join(backupBase, runId)
+  const previousImageId = `sha256:${'1'.repeat(64)}`
+  const candidateImageId = `sha256:${'2'.repeat(64)}`
+  let backupEnvSha = ''
+  let backupComposeSha = ''
+  if (existingEvidence) {
+    await fs.writeFile(path.join(evidenceRoot, 'preparation-evidence.json'), '{"existing":true}\n')
+    await fs.writeFile(path.join(evidenceRoot, 'preparation-baseline-state.json'), '{"existing":true}\n')
+  }
+  if (existingEvidenceValid) {
+    await fs.mkdir(backupRoot, { recursive: true })
+    const backupEnv = Buffer.from('FOUNDATION_ENV=preserved\n')
+    const backupCompose = Buffer.from('services: {}\n')
+    await fs.writeFile(path.join(backupRoot, '.env'), backupEnv)
+    await fs.writeFile(path.join(backupRoot, 'docker-compose.yml'), backupCompose)
+    backupEnvSha = sha256(backupEnv)
+    backupComposeSha = sha256(backupCompose)
+  }
+  if (freshPreparationSuccess) {
+    const ontologyArchiveRoot = path.join(sandbox, 'ontology-archive', 'company-ai-ontology')
+    const hLiteArchiveRoot = path.join(sandbox, 'h-lite-archive', 'feishu-grok-bridge')
+    await fs.mkdir(path.join(ontologyArchiveRoot, 'deploy/qnap/candidate-migrations'), { recursive: true })
+    await fs.mkdir(path.join(hLiteArchiveRoot, 'deploy/company-qnap-lite'), { recursive: true })
+    await fs.writeFile(path.join(ontologyArchiveRoot, 'deploy/qnap/docker-compose.yml'), 'services: {}\n')
+    await fs.writeFile(path.join(ontologyArchiveRoot, 'deploy/qnap/candidate-migrations/012-goal7-authority-runtime.sql'), '-- candidate\n')
+    await fs.writeFile(path.join(hLiteArchiveRoot, 'deploy/company-qnap-lite/Dockerfile'), 'FROM scratch\n')
+    assert.equal(spawnSync('tar', ['-czf', path.join(runtimeEvidenceRoot, 'source.tar.gz'), '-C', path.join(sandbox, 'ontology-archive'), '.']).status, 0)
+    assert.equal(spawnSync('tar', ['-czf', path.join(runtimeEvidenceRoot, 'h-lite-source.tar.gz'), '-C', hLiteArchiveRoot, '.']).status, 0)
+    await fs.writeFile(path.join(runtimeEvidenceRoot, 'SHA256SUMS'), 'signed release\n')
+    await fs.writeFile(path.join(runtimeEvidenceRoot, 'runtime-component-versions.json'), '{}\n')
+    await fs.writeFile(path.join(foundationRoot, '.env'), 'FOUNDATION_ENV=active\n')
+    await fs.writeFile(path.join(foundationRoot, 'docker-compose.yml'), 'services: {}\n')
+  }
   const prepare = (await fs.readFile(PREPARE, 'utf8'))
     .replace('/share/CACHEDEV2_DATA/ai-ontology-backup/goal7', backupBase)
   await fs.writeFile(path.join(scripts, 'prepare-goal7-foundation.sh'), prepare)
@@ -135,19 +168,39 @@ case "$1" in
     printf '%s\n' 'source_commit=${sourceCommit}' 'h_lite_source_commit=${hLiteSourceCommit}' 'agent_core_version=2026-08-12.3' 'knowledge_connector_version=2026-08-11.1' 'h_lite_version=2026-08-12.1'
     ;;
   */validate-goal7-preparation.mjs)
-    exit 7
+    ${existingEvidenceValid ? `printf '%s\\n' 'run_id=${runId}' 'backup_root=${backupRoot}' 'backup_env_sha256=${backupEnvSha}' 'backup_compose_sha256=${backupComposeSha}' 'previous_agent_core_image_id=${previousImageId}' 'candidate_agent_core_image_id=${candidateImageId}' 'previous_knowledge_connector_image_id=${previousImageId}' 'candidate_knowledge_connector_image_id=${candidateImageId}' 'previous_h_lite_image_id=${previousImageId}' 'candidate_h_lite_image_id=${candidateImageId}'` : freshPreparationSuccess ? 'exit 0' : 'exit 7'}
+    ;;
+  */hash-goal7-runtime-tree.mjs)
+    printf '%s\n' 'runtime-tree-sha'
+    ;;
+  */write-goal7-preparation-evidence.mjs)
+    cp "$2" "$3"
     ;;
   *) exit 8 ;;
 esac
 `)
+  if (freshPreparationSuccess) {
+    await writeExecutable(path.join(scripts, 'capture-goal7-deployment-state.sh'), `#!/bin/sh
+printf '%s\n' '{"captured":true}' > "$2"
+`)
+  }
   await writeExecutable(path.join(scripts, 'docker'), `#!/bin/sh
 printf '%s\n' "$*" >> ${JSON.stringify(dockerLog)}
-exit 99
+case "$*" in
+  "image inspect --format {{.Id}} "*":goal7-pre-${runId}") printf '%s\n' '${previousImageId}' ;;
+  "image inspect --format {{.Id}} "*":goal7-candidate-${runId}") printf '%s\n' '${candidateImageId}' ;;
+  "image inspect "*":goal7-pre-${runId}"|"image inspect "*":goal7-candidate-${runId}") exit 1 ;;
+  "compose config") exit 0 ;;
+  "compose ps -q agent-core") printf '%s\n' 'cid-agent-core' ;;
+  "compose ps -q knowledge-connector") printf '%s\n' 'cid-knowledge-connector' ;;
+  "compose ps -q h-lite") printf '%s\n' 'cid-h-lite' ;;
+  "inspect --format {{.Image}} cid-agent-core") printf '%s\n' 'sha256:${'a'.repeat(64)}' ;;
+  "inspect --format {{.Image}} cid-knowledge-connector") printf '%s\n' 'sha256:${'b'.repeat(64)}' ;;
+  "inspect --format {{.Image}} cid-h-lite") printf '%s\n' 'sha256:${'c'.repeat(64)}' ;;
+  "image inspect sha256:"*|"image tag "*|"build "*|"run "*) exit 0 ;;
+  *) exit 99 ;;
+esac
 `)
-  if (existingEvidence) {
-    await fs.writeFile(path.join(evidenceRoot, 'preparation-evidence.json'), '{"existing":true}\n')
-    await fs.writeFile(path.join(evidenceRoot, 'preparation-baseline-state.json'), '{"existing":true}\n')
-  }
   if (precreateLock) await fs.mkdir(path.join(shadowRoot, '.goal7-foundation-preparation.lock'))
   return {
     sandbox,
@@ -480,6 +533,33 @@ test('Goal 7 Foundation 回放校验失败保留既有证据并释放锁', async
   assert.deepEqual(await fs.readFile(baselineFile), baselineBefore)
   await assert.rejects(fs.lstat(path.join(fixture.shadowRoot, '.goal7-foundation-preparation.lock')), { code: 'ENOENT' })
   await assert.rejects(fs.lstat(fixture.dockerLog), { code: 'ENOENT' })
+})
+
+test('Goal 7 Foundation 成功回放完成后释放锁', async () => {
+  const fixture = await createPrepareSandbox({ existingEvidence: true, existingEvidenceValid: true })
+  const result = spawnSync('sh', [path.join(fixture.scripts, 'prepare-goal7-foundation.sh')], {
+    encoding: 'utf8',
+    env: prepareEnv(fixture),
+  })
+  assert.equal(result.status, 0, result.stderr)
+  assert.match(result.stdout, /preparation_replay=accepted/)
+  await assert.rejects(fs.lstat(path.join(fixture.shadowRoot, '.goal7-foundation-preparation.lock')), { code: 'ENOENT' })
+  assert.equal((await fs.readFile(fixture.dockerLog, 'utf8')).trim().split('\n').length, 6)
+})
+
+test('Goal 7 Foundation 新准备成功完成后释放锁', async () => {
+  const fixture = await createPrepareSandbox({ freshPreparationSuccess: true })
+  const result = spawnSync('sh', [path.join(fixture.scripts, 'prepare-goal7-foundation.sh')], {
+    encoding: 'utf8',
+    env: prepareEnv(fixture),
+  })
+  assert.equal(result.status, 0, result.stderr)
+  assert.match(result.stdout, /goal7_preparation=completed/)
+  assert.match(result.stdout, /services_recreated=0/)
+  assert.match(result.stdout, /migration012_applied=0/)
+  await assert.rejects(fs.lstat(path.join(fixture.shadowRoot, '.goal7-foundation-preparation.lock')), { code: 'ENOENT' })
+  assert.equal((await fs.lstat(path.join(fixture.evidenceRoot, 'preparation-evidence.json'))).isFile(), true)
+  assert.equal((await fs.lstat(path.join(fixture.backupBase, fixture.runId, 'images/tags.txt'))).isFile(), true)
 })
 
 test('Goal 7 Ontology 候选 Foundation 镜像固定 Node 基础镜像 digest', async () => {
