@@ -2,11 +2,11 @@
 
 日期：2026-08-12（Asia/Shanghai）
 
-状态：`engineering_verified / immutable_release_verified / stage_a_not_authorized / human_review_pending / production_blocked`
+状态：`engineering_verified / immutable_release_verified / stage_a_completed / stage_b_not_authorized / human_review_pending / production_blocked`
 
 ## 1. 结论
 
-P1-SI-B～G 的工程骨架已通过最近一次完整验收。旧 Artifact `9156356166` 的首次 A 阶段新准备成功后暴露成功路径未释放全局锁；该次没有执行 SQL、没有服务重建，残留锁也已在确认无进程后删除，但旧 Artifact 与旧 A 授权均已失效。Workflow `31654762489` Attempt `1` / Artifact `9163957919` 已通过 Manifest `1.6.0` 完整复验，并新增完整新准备成功和成功回放后锁目录消失的可执行回归。当前只具备申请绑定新 Artifact 的 A 阶段授权条件；P1-SI-H 仍不能开始正式七日 Shadow，因为来源、P003、四角色 UAT、Goal 7 新 A～E Evidence 和 Owner Acceptance 均未完成。
+P1-SI-B～G 的工程骨架已通过最近一次完整验收。旧 Artifact `9156356166` 的首次 A 阶段新准备成功后暴露成功路径未释放全局锁；该次没有执行 SQL、没有服务重建，残留锁也已在确认无进程后删除，但旧 Artifact 与旧 A 授权均已失效。Workflow `31654762489` Attempt `1` / Artifact `9163957919` 已通过 Manifest `1.6.0` 完整复验，并新增完整新准备成功和成功回放后锁目录消失的可执行回归。`2026-08-13T00:57:51Z`，新 Artifact 的 A 阶段已在公司 QNAP 完成并留证；当前下一门禁是单独授权 B 阶段既有 012 只读对账。P1-SI-H 仍不能开始正式七日 Shadow，因为来源、P003、四角色 UAT、Goal 7 B～E Evidence 和 Owner Acceptance 均未完成。
 
 本轮没有部署战略情报 Orchestrator、没有执行 010/011、没有启动 Collector、没有新增端口、没有发布报告，也没有产生正式 P2、员工投递或 ERP/社媒写回。
 
@@ -51,9 +51,9 @@ Runtime Workflow 已验证：
 
 Agent Core `2026-08-12.2` 是已授权的独立回复修复，不是 Goal 7 三组件正式发布，也不能替代 Authority Canary、Worker 双源读回、完整 Deployment Evidence 或 Owner Acceptance。
 
-公网只读复核确认公司 QNAP 五元组一致，Foundation `13/13 running / unhealthy=0 / restart=0`；战略情报容器和网络均为 `0`，新 Artifact `9163957919` 匹配文件为 `0`，Artifact/Preparation 锁均为 `0`。旧 Artifact `9156356166` 的 10 个 release 文件、Preparation/Baseline Evidence、备份和 3+3 个镜像标签仍保留审计，但明确 `reusable=false`。证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-readonly-preflight-artifact-9163957919.json`。该预检不构成 Artifact 入场、迁移、服务重建、Worker 读回或回滚授权。
+`2026-08-13T00:40:01Z` 的公网只读复核是 A 阶段前历史基线；随后 A 阶段已完成 Artifact `9163957919` 原子入场、新备份、3 个 previous 标签与 3 个 candidate 标签。Foundation 保持 `13/13 running / unhealthy=0 / restart=0`，release 10 个文件全部 `0600`，Artifact/Preparation 锁和 transfer partial 均为 `0`；SQL、服务重建、Worker、Collector、Shadow 与回滚均为 `0`。当前实机证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-a-artifact-9163957919.json`。旧 Artifact `9156356166` 的资产仍保留审计且明确 `reusable=false`；A 完成不构成 B～E 授权。
 
-容量与回滚输入也已只读确认：QNAP/Docker 架构与 `linux/amd64` Artifact 匹配，可用内存约 `11.1 GiB`，热卷与备份卷容量充足，三组件旧镜像均存在且 Compose 有效；候选 Runtime 尚未传入 QNAP，Artifact 传输、镜像构建、镜像打标和服务动作均为 `0`。证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-capacity-rollback-preflight-2026-08-12.json`。
+容量与回滚输入也已只读确认：QNAP/Docker 架构与 `linux/amd64` Artifact 匹配，可用内存约 `11.1 GiB`，热卷与备份卷容量充足，三组件旧镜像均存在且 Compose 有效。该文件是 A 阶段前历史预检；当前候选 Runtime 已按 A 授权进入 QNAP，但服务切换、SQL、Worker、Collector、Shadow 与回滚仍为 `0`。证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-capacity-rollback-preflight-2026-08-12.json`。
 
 ## 4. 未关闭的人审门禁
 

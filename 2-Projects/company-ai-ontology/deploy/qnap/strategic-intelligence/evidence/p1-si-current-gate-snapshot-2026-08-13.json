@@ -32,6 +32,8 @@
     "runtimeChecksumEntryCount": 9,
     "preparationSqlFreeVerified": true,
     "preparationSuccessReleasesLockVerified": true,
+    "stageACompleted": true,
+    "stageAEvidenceSha256": "1c3b41ef8630d51f59341de4d05262dbc90f5c11f751a2fcf62b52fdfc54fb70",
     "candidateOntologySchema": "3.7.0",
     "candidateOntologyHash": "c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860",
     "routeBState": "disabled",
@@ -58,9 +60,14 @@
     "foundationRestartCount": 0,
     "strategicIntelligenceContainerCount": 0,
     "strategicIntelligenceNetworkCount": 0,
-    "currentArtifactMatchingFileCount": 0,
+    "currentArtifactMatchingFileCount": 10,
     "artifactLockCount": 0,
     "preparationLockCount": 0,
+    "currentStageAArtifactId": "9163957919",
+    "currentStageARunId": "9163957919-stage-a",
+    "currentStageABackupPresent": true,
+    "currentStageACandidateImageTagCount": 3,
+    "currentStageAPreviousImageTagCount": 3,
     "supersededStageAArtifactId": "9156356166",
     "supersededStageAReleaseFileCount": 10,
     "supersededStageACandidateImageTagCount": 3,
@@ -102,5 +109,5 @@
     "9153663685",
     "9151468565"
   ],
-  "nextRequiredGate": "WAIT_NEW_ARTIFACT_BOUND_STAGE_A_AUTHORIZATION"
+  "nextRequiredGate": "WAIT_SEPARATE_STAGE_B_AUTHORIZATION"
 }

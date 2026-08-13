@@ -2,13 +2,13 @@
 
 日期：2026-08-11（Asia/Shanghai）
 
-状态：`engineering_verified / immutable_release_verified / stage_a_not_authorized / production_not_deployed / owner_acceptance_pending`
+状态：`engineering_verified / immutable_release_verified / stage_a_completed / stage_b_not_authorized / production_not_deployed / owner_acceptance_pending`
 
 ## 1. 结论
 
 Goal 7 的 P1-AUTHORITY 与 P1-RUNTIME 已从规划进入本地工程候选：飞书部门/群聊 Principal 映射、发送者隔离、用途收窄、当前群成员证据、会话授权快照、Route A 独立熔断、有限重试、Token/费用预算、真实 provider/model/usage 读回和 Route B 默认关闭已经进入 Agent Core、Knowledge Connector、候选迁移和不可变 Runtime Workflow。机器 Release Plan 已升级为五阶段授权，D 阶段在任何合成写入前要求显式授权与公司 QNAP 五元组预检，E 阶段必须证明旧版本已验证且获批候选版本已恢复。Goal 7 Owner Acceptance 现绑定五份工程 Evidence，最终 Acceptance 共绑定六份文件。
 
-工程契约现已升级为 Manifest `1.6.0`：Runtime 包必须包含 `image.env` 在内的 9 项 `SHA256SUMS`，并通过隔离上传、严格根目录白名单和原子晋级。旧 Artifact `9156356166` 的新准备成功路径曾留下全局锁，因此旧 Artifact 和旧 A 授权均已失效。Workflow `31654762489` Attempt `1` / Artifact `9163957919` 绑定 Ontology Commit `8eaef798e`、H-Lite Commit `baa00bf` 与 Collector Image `sha256:9a2606c1...`，离线 9/9 Hash、Release Validator、Goal 7 Runtime、PostgreSQL Runtime 和 Foundation 验证全部通过。A 阶段准备链新增完整新准备成功与成功回放后锁目录消失的可执行回归。Goal 7 尚未取得绑定新 Artifact 的 A 阶段授权，也未执行真实 H Worker 双源读回、合成 Authority Canary、完整三组件 Deployment Evidence、Rollback Drill Evidence 或川哥 Owner Acceptance。
+工程契约现已升级为 Manifest `1.6.0`：Runtime 包必须包含 `image.env` 在内的 9 项 `SHA256SUMS`，并通过隔离上传、严格根目录白名单和原子晋级。旧 Artifact `9156356166` 的新准备成功路径曾留下全局锁，因此旧 Artifact 和旧 A 授权均已失效。Workflow `31654762489` Attempt `1` / Artifact `9163957919` 绑定 Ontology Commit `8eaef798e`、H-Lite Commit `baa00bf` 与 Collector Image `sha256:9a2606c1...`，离线 9/9 Hash、Release Validator、Goal 7 Runtime、PostgreSQL Runtime 和 Foundation 验证全部通过。`2026-08-13T00:57:51Z`，新 Artifact 的 A 阶段已完成：公司 QNAP release 10 个文件全部 `0600`，新备份与 3 个候选镜像完成，Preparation Evidence 校验通过；Foundation `13/13 running / unhealthy=0 / restart=0`，服务容器身份不变，SQL、服务重建、Worker、Collector、Shadow 与回滚均为 `0`，成功退出后两类锁均为 `0`。Goal 7 尚未取得 B～E 的独立授权，也未执行真实 H Worker 双源读回、合成 Authority Canary、完整三组件 Deployment Evidence、Rollback Drill Evidence 或川哥 Owner Acceptance。
 
 同一真实 Artifact 的本机 staging 演练也已通过首次原子晋级、幂等重放、损坏包拒绝和失败清理；发布目录 10 个文件均为 `0600`。该结果只证明执行脚本与真实包兼容，明确 `countsTowardStageA=false / companyQnapTouched=false`，不把本地工程演练冒充生产 A 阶段完成。
 
