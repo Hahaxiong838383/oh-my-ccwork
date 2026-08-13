@@ -3390,6 +3390,14 @@ curl -s -X POST -H "Authorization: Bearer $H_CONTROL_TOKEN" -H 'Content-Type: ap
 
 ### Mini 站点的部署形态（与 dev198 处处不同，别套用）
 
+🔴 **下面这张表是 B1 时代（2026-08-04 B2 割接前）的形态，只对回滚/考古有效。
+Mini 的当前真值在 §「Mini 站真值（与 dev198 全都不同，别跨站复制）」——
+路径是 VM 内 `/opt/h-platform/app`、unit 是 `h-mini-b2-{bridge,runner}.service`、
+入口 `limactl shell h-b2`。宿主的 `~/local/h-platform-mini-bot` 是 B1 残留源码树，
+`deploy-sites.sh:39` 明写「禁止再写入」，读它的 `.deploy-meta.json` 会拿到 B1 快照
+（本轮实测停在 `1d5ccc5`）。**同一份 skill 里两张表冲突时，认 `ops/deploy-sites.sh`
+的常量**——那是唯一跟着代码走的真值。** 2026-08-13 我按本表读到一半才被脚本注释拦下。
+
 两端的部署路径、守护和日志入口不同，不能照搬命令；但 `/healthz` 已统一使用
 `apps{}` envelope，巡检读取逻辑应共用：
 
@@ -5401,7 +5409,7 @@ TaskSessionLog 同 messageId、`task_completed` 晚于 `delivery_acked`。
 |---|---|
 | 控制面 aliyun-hk | 线上 **`v1.63.0`** = git `d47b6b2`（我的订阅⇄自定义接口线路切换 **+ ontology 会话的 approval center `5dc4ee5`(v1.62.0) 一并首次上线**，合并态 310 测全绿；四关键文件 md5 双端对撞全同、healthz version 对齐；回滚锚 `/srv/h-control/app.bak-20260812-154902-pre-v1.63.0`。⚠️ 版本号 v1.62.0 被 ontology 会话占用，本轮避让 +1） |
 | dev198 | **运行文件 = `1eb9084`**（错误文本保头限长 `boundedErrorText` + 失败卡按引擎线路分流，契约 **`2026-08-12.4` 全 13 App 唯一值 1 个**；前序 b7061c8/3c72a47=daily 与 feishu-send 幂等键截断加固。E2E：真机探针驱动**已部署** runner 喂真实长报错 → `session mint … resume_conflict` 触发 PASS，**同探针跑备份的旧 runner = FAIL（零 mint）**，新旧可区分；八文件 md5 双端对撞全同；回滚锚 `~/local/bak-20260812-175237`）；`H_ONCE_REMINDERS=0` 已注释开闸，11 租户调度网关 socket 全就位 |
-| Mini 活动 VM | **`61394ff`**（2026-08-12 两段式升级：rollback→shadow(npm ci)→verify shadow=ready→cutover，全程 ~15 分钟）；契约 `2026-08-12.1`、maxParallel=3；**含 daily 重放 bug 但当前零条 daily=零风险，`3c72a47` 随下批割接窗口带上（任务 #60）**；回滚锚 `~/local/h-mini-b2-rollback-20260812-013000-pre-cutover-61394ff` |
+| Mini 活动 VM | **`37e6db5`**（2026-08-13 17:27–17:30 两段式升级，`61394ff`→`37e6db5` 跨 16 提交；**daily 重放 bug `b7061c8` 已随本批带上，任务 #60 关闭**）；契约 `2026-08-13.2`；三通道对撞全同（VM meta / healthz / 契约），`verify-mini-b2-active --skip-long-task` = `partial` + healthChecks **16/16**；⚠️ longTask 层**本版本零样本待补**；回滚锚 `~/local/h-mini-b2-rollback-20260813-172952-pre-cutover-37e6db5`（+ 回迁锚 `…-172635-pre-upgrade-61394ff`） |
 
 ⚠️ **跨 bridge+控制面的字段/行为修复，部署顺序=先控制面后 bridge**（2026-08-10 实测）：
 bridge 一重启 bootPush 立即推镜像，若控制面新代码还没起，数据被旧代码处理一次，
