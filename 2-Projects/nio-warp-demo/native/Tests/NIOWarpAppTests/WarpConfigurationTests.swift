@@ -43,12 +43,20 @@ final class WarpConfigurationTests: XCTestCase {
         XCTAssertFalse(WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880).render.showAABoundary)
     }
 
+    func testExtendedWarpAndWarpBoundaryAreDisabledByDefault() {
+        let configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
+
+        XCTAssertFalse(configuration.extendedWarpEnabled)
+        XCTAssertFalse(configuration.render.showWarpBoundary)
+    }
+
     func testLegacyRenderConfigurationDefaultsAABoundaryToDisabled() throws {
         let data = Data(#"{"antiAliasingEnabled":true,"antiAliasing":"performance","automaticPerformanceFallback":true,"testPattern":"off"}"#.utf8)
 
         let decoded = try JSONDecoder().decode(RenderConfiguration.self, from: data)
 
         XCTAssertFalse(decoded.showAABoundary)
+        XCTAssertFalse(decoded.showWarpBoundary)
     }
 
     func testAABoundaryOverlayUsesPhysicalRectWithoutWarping() {
@@ -62,6 +70,103 @@ final class WarpConfigurationTests: XCTestCase {
         XCTAssertEqual(rect.origin.y, 290, accuracy: 0.000_001)
         XCTAssertEqual(rect.width, 2044, accuracy: 0.000_001)
         XCTAssertEqual(rect.height, 716, accuracy: 0.000_001)
+    }
+
+    func testExtendedWarpCoreRectUsesCanvasToAAPixelRatio() {
+        let configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
+
+        let core = WarpMath.extendedWarpCoreRect(configuration: configuration)
+
+        XCTAssertEqual(core.x, 0.206_666_666_7, accuracy: 0.000_001)
+        XCTAssertEqual(core.y, 0, accuracy: 0.000_001)
+        XCTAssertEqual(core.width, 0.586_666_666_7, accuracy: 0.000_001)
+        XCTAssertEqual(core.height, 1, accuracy: 0.000_001)
+    }
+
+    func testExtendedWarpKeepsAAOuterEdgeFixed() {
+        var configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
+        configuration.extendedWarpEnabled = true
+        configuration.canvas.height = 2000
+
+        let edgePoints = [
+            SIMD2<Float>(0, 0), SIMD2<Float>(0.5, 0), SIMD2<Float>(1, 0),
+            SIMD2<Float>(0, 0.5), SIMD2<Float>(1, 0.5),
+            SIMD2<Float>(0, 1), SIMD2<Float>(0.5, 1), SIMD2<Float>(1, 1),
+        ]
+
+        for point in edgePoints {
+            let mapped = WarpMath.localPhysicalPoint(canvasPoint: point, configuration: configuration)
+            XCTAssertEqual(mapped.x, point.x, accuracy: 0.000_001)
+            XCTAssertEqual(mapped.y, point.y, accuracy: 0.000_001)
+        }
+    }
+
+    func testExtendedWarpPreservesCurrentWarpInsideCore() {
+        var legacy = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
+        let core = WarpMath.extendedWarpCoreRect(configuration: legacy)
+        let corePoint = SIMD2<Float>(0.25, 0.75)
+        let legacyMapped = WarpMath.localPhysicalPoint(canvasPoint: corePoint, configuration: legacy)
+        legacy.extendedWarpEnabled = true
+        let outerPoint = SIMD2<Float>(
+            Float(core.x) + corePoint.x * Float(core.width),
+            Float(core.y) + corePoint.y * Float(core.height)
+        )
+
+        let extendedMapped = WarpMath.localPhysicalPoint(canvasPoint: outerPoint, configuration: legacy)
+
+        XCTAssertEqual(
+            extendedMapped.x,
+            Float(core.x) + legacyMapped.x * Float(core.width),
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            extendedMapped.y,
+            Float(core.y) + legacyMapped.y * Float(core.height),
+            accuracy: 0.000_001
+        )
+    }
+
+    func testExtendedWarpDisplacementDecaysLinearlyTowardAAEdge() {
+        var configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
+        configuration.extendedWarpEnabled = true
+        configuration.canvas.height = 2000
+        let core = WarpMath.extendedWarpCoreRect(configuration: configuration)
+        let coreLeft = Float(core.x)
+        let coreY = Float(core.y + core.height * 0.5)
+        let innerPoint = SIMD2<Float>(coreLeft, coreY)
+        let halfwayPoint = SIMD2<Float>(coreLeft * 0.5, coreY)
+        let innerMapped = WarpMath.localPhysicalPoint(canvasPoint: innerPoint, configuration: configuration)
+        let halfwayMapped = WarpMath.localPhysicalPoint(canvasPoint: halfwayPoint, configuration: configuration)
+        let innerDisplacement = innerMapped - innerPoint
+        let halfwayDisplacement = halfwayMapped - halfwayPoint
+
+        XCTAssertEqual(halfwayDisplacement.x, innerDisplacement.x * 0.5, accuracy: 0.000_001)
+        XCTAssertEqual(halfwayDisplacement.y, innerDisplacement.y * 0.5, accuracy: 0.000_001)
+    }
+
+    func testExtendedWarpMeshHasNoFoldedCells() {
+        var configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
+        configuration.extendedWarpEnabled = true
+        configuration.canvas.height = 2000
+
+        let mesh = WarpMath.makeMesh(configuration: configuration, columns: 128, rows: 48)
+
+        XCTAssertEqual(mesh.validation.foldedCellCount, 0)
+        XCTAssertEqual(mesh.validation.outOfAASampleCount, 0)
+    }
+
+    func testWarpBoundaryOverlayUsesWarpedCoreBoundary() {
+        var configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
+        configuration.extendedWarpEnabled = true
+
+        let points = WarpBoundaryOverlayGeometry.points(
+            in: CGRect(x: 0, y: 0, width: 2560, height: 1440),
+            configuration: configuration,
+            samplesPerEdge: 8
+        )
+
+        XCTAssertEqual(points.count, 33)
+        XCTAssertTrue(points.allSatisfy { $0.x >= 0 && $0.x <= 2560 && $0.y >= 0 && $0.y <= 1440 })
     }
 
     func testDefaultMeshHasNoFoldedCells() {
@@ -87,7 +192,7 @@ final class WarpConfigurationTests: XCTestCase {
         let decoded = try JSONDecoder().decode(WarpConfiguration.self, from: legacyData)
 
         XCTAssertEqual(decoded.capture.sourceMode, .automaticFullscreenWindow)
-        XCTAssertEqual(decoded.sanitized(forDisplayWidth: 5120, height: 2880).schemaVersion, 6)
+        XCTAssertEqual(decoded.sanitized(forDisplayWidth: 5120, height: 2880).schemaVersion, 7)
     }
 
     func testAutomaticWindowSelectorPrefersActiveLargeWindow() {

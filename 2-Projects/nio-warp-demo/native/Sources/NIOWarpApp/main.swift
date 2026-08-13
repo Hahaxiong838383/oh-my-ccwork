@@ -733,6 +733,35 @@ private final class AABoundaryOverlayView: NSView {
     }
 }
 
+private final class WarpBoundaryOverlayView: NSView {
+    private var configuration: WarpConfiguration?
+    private var isBoundaryVisible = false
+    private let lineWidth: CGFloat = 3
+
+    override var isFlipped: Bool { true }
+    override var isOpaque: Bool { false }
+
+    func update(configuration: WarpConfiguration, visible: Bool) {
+        self.configuration = configuration
+        isBoundaryVisible = visible
+        needsDisplay = true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard isBoundaryVisible, let configuration else { return }
+        let points = WarpBoundaryOverlayGeometry.points(in: bounds, configuration: configuration)
+        guard let first = points.first else { return }
+        NSColor.systemCyan.setStroke()
+        let path = NSBezierPath()
+        path.move(to: first)
+        points.dropFirst().forEach { path.line(to: $0) }
+        path.close()
+        path.lineWidth = lineWidth
+        path.stroke()
+    }
+}
+
 private final class FlippedView: NSView {
     override var isFlipped: Bool { true }
 }
@@ -767,6 +796,7 @@ private final class OutputController {
     let window: NSWindow
     let renderer: WarpRenderer
     private let aaBoundaryOverlay: AABoundaryOverlayView
+    private let warpBoundaryOverlay: WarpBoundaryOverlayView
 
     init?(
         screen: NSScreen,
@@ -806,6 +836,13 @@ private final class OutputController {
             visible: configuration.render.showAABoundary
         )
         container.addSubview(aaBoundaryOverlay)
+        let warpBoundaryOverlay = WarpBoundaryOverlayView(frame: container.bounds)
+        warpBoundaryOverlay.autoresizingMask = [.width, .height]
+        warpBoundaryOverlay.update(
+            configuration: configuration,
+            visible: configuration.render.showWarpBoundary
+        )
+        container.addSubview(warpBoundaryOverlay)
         window.contentView = container
         window.setFrame(screen.frame, display: true)
         window.orderFrontRegardless()
@@ -813,6 +850,7 @@ private final class OutputController {
         self.window = window
         self.renderer = renderer
         self.aaBoundaryOverlay = aaBoundaryOverlay
+        self.warpBoundaryOverlay = warpBoundaryOverlay
     }
 
     var isWarpVisible: Bool { window.isVisible }
@@ -828,6 +866,10 @@ private final class OutputController {
     func updateAABoundary(aaRect: NormalizedRect, visible: Bool) {
         aaBoundaryOverlay.update(aaRect: aaRect, visible: visible)
     }
+
+    func updateWarpBoundary(configuration: WarpConfiguration, visible: Bool) {
+        warpBoundaryOverlay.update(configuration: configuration, visible: visible)
+    }
 }
 
 private final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
@@ -841,6 +883,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     private let isWarpVisible: () -> Bool
     private let applyCaptureConfiguration: (CaptureConfiguration) -> Void
     private let updateAABoundary: (NormalizedRect, Bool) -> Void
+    private let updateWarpBoundary: (WarpConfiguration, Bool) -> Void
     private var configuration: WarpConfiguration
     private var lastAppliedConfiguration: WarpConfiguration
     private var performanceTimer: Timer?
@@ -858,6 +901,8 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     private let aaWidthField = NSTextField()
     private let aaHeightField = NSTextField()
     private let aaBoundaryButton = NSButton(checkboxWithTitle: "显示 AA 区物理边界线（调试）", target: nil, action: nil)
+    private let extendedWarpButton = NSButton(checkboxWithTitle: "启用外扩校畸变", target: nil, action: nil)
+    private let warpBoundaryButton = NSButton(checkboxWithTitle: "显示 Warp 区域边缘线（调试）", target: nil, action: nil)
     private let canvasWidthField = NSTextField()
     private let canvasHeightField = NSTextField()
     private let cropHorizontalSlider = NSSlider()
@@ -900,7 +945,8 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         setWarpVisible: @escaping (Bool) -> Void,
         isWarpVisible: @escaping () -> Bool,
         applyCaptureConfiguration: @escaping (CaptureConfiguration) -> Void,
-        updateAABoundary: @escaping (NormalizedRect, Bool) -> Void
+        updateAABoundary: @escaping (NormalizedRect, Bool) -> Void,
+        updateWarpBoundary: @escaping (WarpConfiguration, Bool) -> Void
     ) {
         self.renderer = renderer
         self.store = store
@@ -910,6 +956,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         self.isWarpVisible = isWarpVisible
         self.applyCaptureConfiguration = applyCaptureConfiguration
         self.updateAABoundary = updateAABoundary
+        self.updateWarpBoundary = updateWarpBoundary
         displayWidth = configuration.displayPixelWidth
         displayHeight = configuration.displayPixelHeight
         captureSourceWidth = configuration.displayPixelWidth
@@ -1037,6 +1084,16 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         contentMappingLabel.preferredMaxLayoutWidth = 500
         stack.addArrangedSubview(contentMappingLabel)
         stack.addArrangedSubview(makeButton("保存并应用画布尺寸", action: #selector(applyCanvasFields)))
+        extendedWarpButton.target = self
+        extendedWarpButton.action = #selector(toggleExtendedWarp)
+        warpBoundaryButton.target = self
+        warpBoundaryButton.action = #selector(toggleWarpBoundary)
+        stack.addArrangedSubview(extendedWarpButton)
+        stack.addArrangedSubview(warpBoundaryButton)
+        let extendedWarpHint = NSTextField(wrappingLabelWithString: "开启后，当前 Warp 曲线保留在核心区；画布大于 AA 区的部分向外线性延伸，并在 AA 边缘归零。黄色线为 AA，青色线为 Warp 区域。")
+        extendedWarpHint.textColor = .secondaryLabelColor
+        extendedWarpHint.preferredMaxLayoutWidth = 500
+        stack.addArrangedSubview(extendedWarpHint)
 
         stack.addArrangedSubview(sectionTitle("3. 镜像"))
         horizontalMirrorButton.target = self
@@ -1257,6 +1314,8 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         automaticPerformanceButton.state = configuration.render.automaticPerformanceFallback ? .on : .off
         testPatternButton.state = configuration.render.testPattern == .calibrationGrid ? .on : .off
         aaBoundaryButton.state = configuration.render.showAABoundary ? .on : .off
+        extendedWarpButton.state = configuration.extendedWarpEnabled ? .on : .off
+        warpBoundaryButton.state = configuration.render.showWarpBoundary ? .on : .off
         pauseWarpButton.title = isWarpVisible() ? "暂停 Warp" : "恢复 Warp"
         historyButton.title = "回退上一个版本（\(historyStore.count)）"
         historyButton.isEnabled = historyStore.count > 0
@@ -1293,6 +1352,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         store.save(configuration)
         let validation = renderer.updateConfiguration(configuration)
         updateAABoundary(configuration.aaRect, configuration.render.showAABoundary)
+        updateWarpBoundary(configuration, configuration.render.showWarpBoundary)
         if configuration.capture != lastAppliedConfiguration.capture {
             applyCaptureConfiguration(configuration.capture)
         }
@@ -1321,14 +1381,26 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         let cropX = Int((mapping.cropFraction.x * Float(effectiveSourceWidth)).rounded())
         let cropY = Int((mapping.cropFraction.y * Float(effectiveSourceHeight)).rounded())
         let warning = configuration.contentMode == .stretch ? " ⚠️ 拉伸会改变画面比例" : ""
+        let extensionSummary: String
+        if configuration.extendedWarpEnabled {
+            let core = WarpMath.extendedWarpCoreRect(configuration: configuration)
+            extensionSummary = String(
+                format: " · 外扩核心 %.0f×%.0f px",
+                Double(configuration.canvas.width) * core.width,
+                Double(configuration.canvas.height) * core.height
+            )
+        } else {
+            extensionSummary = ""
+        }
         contentMappingLabel.stringValue = String(
-            format: "源 %.4f · 目标 %.4f · 等比缩放 %.4fx · 裁切 X %d px / Y %d px%@",
+            format: "源 %.4f · 目标 %.4f · 等比缩放 %.4fx · 裁切 X %d px / Y %d px%@%@",
             Float(effectiveSourceWidth) / Float(max(effectiveSourceHeight, 1)),
             configuration.canvas.aspect,
             mapping.uniformScale,
             cropX,
             cropY,
-            warning
+            warning,
+            extensionSummary
         )
         contentMappingLabel.textColor = configuration.contentMode == .stretch ? .systemOrange : .secondaryLabelColor
     }
@@ -1339,9 +1411,9 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     private func applyRuntimePreview(_ previewConfiguration: WarpConfiguration, message: String) {
-        let validation = renderer.updateConfiguration(
-            previewConfiguration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
-        )
+        let preview = previewConfiguration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
+        let validation = renderer.updateConfiguration(preview)
+        updateWarpBoundary(preview, preview.render.showWarpBoundary)
         refreshRuntimePreviewControls()
         let color: NSColor = validation.isValid ? .systemOrange : .systemRed
         setStatus("\(message)；临时预览不会保存配置或增加历史。\n\(validation.summary)", color: color)
@@ -1351,6 +1423,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         runtimePreviewMode = .normal
         runtimePreviewReturnMode = .normal
         let validation = renderer.updateConfiguration(configuration)
+        updateWarpBoundary(configuration, configuration.render.showWarpBoundary)
         refreshRuntimePreviewControls()
         let color: NSColor = validation.isValid ? .systemGreen : .systemRed
         setStatus("\(message)；\(validation.summary)", color: color)
@@ -1517,6 +1590,25 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
             configuration.render.showAABoundary
                 ? "AA 区物理边界线已显示"
                 : "AA 区物理边界线已关闭"
+        )
+    }
+
+    @objc private func toggleExtendedWarp() {
+        configuration.extendedWarpEnabled = extendedWarpButton.state == .on
+        applyConfiguration(
+            configuration.extendedWarpEnabled
+                ? "外扩校畸变已开启"
+                : "外扩校畸变已关闭，恢复原 Warp 状态"
+        )
+        refreshControls()
+    }
+
+    @objc private func toggleWarpBoundary() {
+        configuration.render.showWarpBoundary = warpBoundaryButton.state == .on
+        applyConfiguration(
+            configuration.render.showWarpBoundary
+                ? "Warp 区域边缘线已显示"
+                : "Warp 区域边缘线已关闭"
         )
     }
 
@@ -1850,6 +1942,9 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             updateAABoundary: { [weak outputController] aaRect, visible in
                 outputController?.updateAABoundary(aaRect: aaRect, visible: visible)
+            },
+            updateWarpBoundary: { [weak outputController] configuration, visible in
+                outputController?.updateWarpBoundary(configuration: configuration, visible: visible)
             }
         )
         self.controlPanel = controlPanel

@@ -188,6 +188,7 @@ struct RenderConfiguration: Codable, Equatable {
     var automaticPerformanceFallback = true
     var testPattern = TestPatternMode.off
     var showAABoundary = false
+    var showWarpBoundary = false
 
     private enum CodingKeys: String, CodingKey {
         case antiAliasingEnabled
@@ -195,6 +196,7 @@ struct RenderConfiguration: Codable, Equatable {
         case automaticPerformanceFallback
         case testPattern
         case showAABoundary
+        case showWarpBoundary
     }
 
     init(
@@ -202,13 +204,15 @@ struct RenderConfiguration: Codable, Equatable {
         antiAliasing: AntiAliasingMode = .performance,
         automaticPerformanceFallback: Bool = true,
         testPattern: TestPatternMode = .off,
-        showAABoundary: Bool = false
+        showAABoundary: Bool = false,
+        showWarpBoundary: Bool = false
     ) {
         self.antiAliasingEnabled = antiAliasingEnabled
         self.antiAliasing = antiAliasing == .off ? .performance : antiAliasing
         self.automaticPerformanceFallback = automaticPerformanceFallback
         self.testPattern = testPattern
         self.showAABoundary = showAABoundary
+        self.showWarpBoundary = showWarpBoundary
     }
 
     init(from decoder: Decoder) throws {
@@ -219,6 +223,7 @@ struct RenderConfiguration: Codable, Equatable {
         automaticPerformanceFallback = try container.decodeIfPresent(Bool.self, forKey: .automaticPerformanceFallback) ?? true
         testPattern = try container.decodeIfPresent(TestPatternMode.self, forKey: .testPattern) ?? .off
         showAABoundary = try container.decodeIfPresent(Bool.self, forKey: .showAABoundary) ?? false
+        showWarpBoundary = try container.decodeIfPresent(Bool.self, forKey: .showWarpBoundary) ?? false
     }
 }
 
@@ -283,7 +288,7 @@ struct PolynomialWarpConfiguration: Codable, Equatable {
 }
 
 struct WarpConfiguration: Codable, Equatable {
-    static let currentSchemaVersion = 6
+    static let currentSchemaVersion = 7
 
     var schemaVersion = currentSchemaVersion
     var displayPixelWidth: Int
@@ -294,6 +299,7 @@ struct WarpConfiguration: Codable, Equatable {
     var cropAnchor = CropAnchorConfiguration()
     var mirror = MirrorConfiguration()
     var contentMode = ContentMode.fill
+    var extendedWarpEnabled = false
     var warpTrend = WarpTrend.forward
     var manual = ManualWarpParameters()
     var polynomial = PolynomialWarpConfiguration()
@@ -309,6 +315,7 @@ struct WarpConfiguration: Codable, Equatable {
         case cropAnchor
         case mirror
         case contentMode
+        case extendedWarpEnabled
         case warpTrend
         case manual
         case polynomial
@@ -325,6 +332,7 @@ struct WarpConfiguration: Codable, Equatable {
         cropAnchor: CropAnchorConfiguration = CropAnchorConfiguration(),
         mirror: MirrorConfiguration = MirrorConfiguration(),
         contentMode: ContentMode = .fill,
+        extendedWarpEnabled: Bool = false,
         warpTrend: WarpTrend = .forward,
         manual: ManualWarpParameters = ManualWarpParameters(),
         polynomial: PolynomialWarpConfiguration = PolynomialWarpConfiguration(),
@@ -339,6 +347,7 @@ struct WarpConfiguration: Codable, Equatable {
         self.cropAnchor = cropAnchor
         self.mirror = mirror
         self.contentMode = contentMode
+        self.extendedWarpEnabled = extendedWarpEnabled
         self.warpTrend = warpTrend
         self.manual = manual
         self.polynomial = polynomial
@@ -356,6 +365,7 @@ struct WarpConfiguration: Codable, Equatable {
         cropAnchor = try container.decodeIfPresent(CropAnchorConfiguration.self, forKey: .cropAnchor) ?? CropAnchorConfiguration()
         mirror = try container.decodeIfPresent(MirrorConfiguration.self, forKey: .mirror) ?? MirrorConfiguration()
         contentMode = try container.decodeIfPresent(ContentMode.self, forKey: .contentMode) ?? .stretch
+        extendedWarpEnabled = try container.decodeIfPresent(Bool.self, forKey: .extendedWarpEnabled) ?? false
         warpTrend = try container.decodeIfPresent(WarpTrend.self, forKey: .warpTrend) ?? .forward
         manual = try container.decodeIfPresent(ManualWarpParameters.self, forKey: .manual) ?? ManualWarpParameters()
         polynomial = try container.decodeIfPresent(PolynomialWarpConfiguration.self, forKey: .polynomial) ?? PolynomialWarpConfiguration()

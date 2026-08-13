@@ -92,6 +92,20 @@ enum ContentMappingMath {
 }
 
 enum WarpMath {
+    static func extendedWarpCoreRect(configuration: WarpConfiguration) -> NormalizedRect {
+        let aa = configuration.aaRect.sanitized()
+        let aaPixelWidth = max(Double(configuration.displayPixelWidth) * aa.width, 1)
+        let aaPixelHeight = max(Double(configuration.displayPixelHeight) * aa.height, 1)
+        let coreWidth = min(aaPixelWidth / Double(max(configuration.canvas.width, 1)), 1)
+        let coreHeight = min(aaPixelHeight / Double(max(configuration.canvas.height, 1)), 1)
+        return NormalizedRect(
+            x: (1 - coreWidth) * 0.5,
+            y: (1 - coreHeight) * 0.5,
+            width: coreWidth,
+            height: coreHeight
+        )
+    }
+
     private static func manualRaw(_ point: SIMD2<Float>, parameters: ManualWarpParameters) -> SIMD2<Float> {
         guard parameters.enabled else { return point }
         let strength = Float(parameters.strength)
@@ -145,12 +159,31 @@ enum WarpMath {
         configuration: WarpConfiguration,
         manualBounds: (SIMD2<Float>, SIMD2<Float>)? = nil
     ) -> SIMD2<Float> {
+        if configuration.extendedWarpEnabled {
+            return extendedLocalPhysicalPoint(
+                canvasPoint: canvasPoint,
+                configuration: configuration,
+                manualBounds: manualBounds
+            )
+        }
+        return warpedUnitPoint(
+            canvasPoint,
+            configuration: configuration,
+            manualBounds: manualBounds
+        )
+    }
+
+    private static func warpedUnitPoint(
+        _ point: SIMD2<Float>,
+        configuration: WarpConfiguration,
+        manualBounds: (SIMD2<Float>, SIMD2<Float>)? = nil
+    ) -> SIMD2<Float> {
         let bounds = manualBounds ?? self.manualBounds(
             parameters: configuration.manual,
             trend: configuration.warpTrend
         )
         let raw = trendedManualRaw(
-            canvasPoint,
+            point,
             parameters: configuration.manual,
             trend: configuration.warpTrend
         )
@@ -160,12 +193,45 @@ enum WarpMath {
         let trendMultiplier = configuration.warpTrend.displacementMultiplier
         if configuration.polynomial.enabled {
             let polynomial = configuration.polynomial.normalized()
-            let centeredX = Double(canvasPoint.x * 2 - 1)
-            let centeredY = Double(canvasPoint.y * 2 - 1)
+            let centeredX = Double(point.x * 2 - 1)
+            let centeredY = Double(point.y * 2 - 1)
             mapped.x += trendMultiplier * Float(polynomial.evaluate(x: centeredX, y: centeredY, coefficients: polynomial.coefficientsX))
             mapped.y += trendMultiplier * Float(polynomial.evaluate(x: centeredX, y: centeredY, coefficients: polynomial.coefficientsY))
         }
         return mapped
+    }
+
+    private static func extensionWeight(_ coordinate: Float, minimum: Float, maximum: Float) -> Float {
+        if coordinate < minimum {
+            return minimum > 0 ? max(coordinate / minimum, 0) : 1
+        }
+        if coordinate > maximum {
+            let margin = 1 - maximum
+            return margin > 0 ? max((1 - coordinate) / margin, 0) : 1
+        }
+        return 1
+    }
+
+    private static func extendedLocalPhysicalPoint(
+        canvasPoint: SIMD2<Float>,
+        configuration: WarpConfiguration,
+        manualBounds: (SIMD2<Float>, SIMD2<Float>)? = nil
+    ) -> SIMD2<Float> {
+        let core = extendedWarpCoreRect(configuration: configuration)
+        let minimum = SIMD2<Float>(Float(core.x), Float(core.y))
+        let size = SIMD2<Float>(Float(core.width), Float(core.height))
+        let maximum = minimum + size
+        let safeSize = simd_max(size, SIMD2<Float>(repeating: 0.0001))
+        let corePoint = simd_clamp((canvasPoint - minimum) / safeSize, .zero, SIMD2<Float>(repeating: 1))
+        let warpedCorePoint = warpedUnitPoint(
+            corePoint,
+            configuration: configuration,
+            manualBounds: manualBounds
+        )
+        let displacement = (warpedCorePoint - corePoint) * safeSize
+        let weightX = extensionWeight(canvasPoint.x, minimum: minimum.x, maximum: maximum.x)
+        let weightY = extensionWeight(canvasPoint.y, minimum: minimum.y, maximum: maximum.y)
+        return canvasPoint + displacement * min(weightX, weightY)
     }
 
     static func makeMesh(configuration: WarpConfiguration, columns: Int = 128, rows: Int = 48) -> GeneratedMesh {

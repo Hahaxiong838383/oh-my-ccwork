@@ -14,6 +14,7 @@
     "sourceMode" : "automaticFullscreenWindow"
   },
   "contentMode" : "fill",
+  "extendedWarpEnabled" : false,
   "warpTrend" : "forward",
   "cropAnchor" : {
     "horizontal" : 0,
@@ -45,7 +46,8 @@
     "antiAliasing" : "performance",
     "automaticPerformanceFallback" : true,
     "showAABoundary" : false,
+    "showWarpBoundary" : false,
     "testPattern" : "off"
   },
-  "schemaVersion" : 6
+  "schemaVersion" : 7
 }

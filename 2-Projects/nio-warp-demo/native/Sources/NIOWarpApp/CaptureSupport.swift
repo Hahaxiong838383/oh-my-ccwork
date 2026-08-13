@@ -88,3 +88,44 @@ enum AABoundaryOverlayGeometry {
         return physicalRect.insetBy(dx: inset, dy: inset)
     }
 }
+
+enum WarpBoundaryOverlayGeometry {
+    static func points(
+        in bounds: CGRect,
+        configuration: WarpConfiguration,
+        samplesPerEdge: Int = 96
+    ) -> [CGPoint] {
+        let aa = configuration.aaRect.sanitized()
+        let core = configuration.extendedWarpEnabled
+            ? WarpMath.extendedWarpCoreRect(configuration: configuration)
+            : NormalizedRect.full
+        let samples = max(samplesPerEdge, 2)
+        var canvasPoints = [SIMD2<Float>]()
+        canvasPoints.reserveCapacity(samples * 4 + 1)
+
+        for index in 0...samples {
+            let progress = Float(index) / Float(samples)
+            canvasPoints.append(SIMD2<Float>(Float(core.x) + progress * Float(core.width), Float(core.y)))
+        }
+        for index in 1...samples {
+            let progress = Float(index) / Float(samples)
+            canvasPoints.append(SIMD2<Float>(Float(core.x + core.width), Float(core.y) + progress * Float(core.height)))
+        }
+        for index in 1...samples {
+            let progress = Float(index) / Float(samples)
+            canvasPoints.append(SIMD2<Float>(Float(core.x + core.width) - progress * Float(core.width), Float(core.y + core.height)))
+        }
+        for index in 1...samples {
+            let progress = Float(index) / Float(samples)
+            canvasPoints.append(SIMD2<Float>(Float(core.x), Float(core.y + core.height) - progress * Float(core.height)))
+        }
+
+        return canvasPoints.map { canvasPoint in
+            let local = WarpMath.localPhysicalPoint(canvasPoint: canvasPoint, configuration: configuration)
+            return CGPoint(
+                x: bounds.minX + bounds.width * (aa.x + Double(local.x) * aa.width),
+                y: bounds.minY + bounds.height * (aa.y + Double(local.y) * aa.height)
+            )
+        }
+    }
+}
