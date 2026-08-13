@@ -2,6 +2,138 @@
 
 公司级 AI Ontology 基座实施项目。P0-A 至 P0-F、V3 P0-S Foundation Pack、Goal 4 P0-EPI、Goal 5 P0-DEC 和 Goal 6 P1-DOMAIN 只读领域骨架已在公司 QNAP 部署并完成当前层级生产验收；现有 H 平台员工私人 Bot 保持不变，真实 ERP/社媒写回继续关闭。
 
+## 项目宏观架构
+
+这套系统不是单一问答机器人，而是以公司 Ontology 为语义与权限核心、以 Company Agent Core 为统一 AI 中枢、以公司 QNAP 为主硬件底座的经营操作系统。绿色节点表示当前层级已经搭建并有工程或生产证据；灰色虚线节点表示架构已预留，但仍需独立审批、真实 UAT 或生产验收。
+
+```mermaid
+flowchart TB
+  subgraph ACCESS["人员与统一入口"]
+    direction LR
+    EMPLOYEE["公司员工 / 管理者"]:::done
+    COMPANY_BOT["公司级飞书 App / Bot<br/>全员统一入口"]:::done
+    H_CONSOLE["H 控制面<br/>架构白盒 · 运行看板 · 模拟审批中心"]:::done
+    PRIVATE_BOTS["员工私人 Bot + 现有 H 平台<br/>App / 订阅 / 记忆保持独立"]:::boundary
+  end
+
+  subgraph INPUTS["公司知识、经营事实与外部情报"]
+    direction LR
+    FEISHU_KB["飞书知识<br/>文档 · 表格 · 多维表 · 知识库"]:::done
+    ERP["爱视可 ERP<br/>订单 · 质量 · 库存 · 交付"]:::done
+    SOCIAL["社交媒体监控<br/>市场信号 · 话题 · 趋势"]:::done
+    PESTIM["PEST + Industry + Market<br/>公开外部情报来源"]:::done
+  end
+
+  subgraph QNAP["公司 QNAP Foundation｜PRNas / TS-X65"]
+    direction TB
+
+    subgraph BRAIN["Company Brain｜核心 AI 与工作协议"]
+      direction LR
+      HLITE["QNAP H-Lite<br/>飞书订阅 · Bot Bridge · Outbox · ACK"]:::done
+      AGENT_CORE["Company Agent Core<br/>身份 · 路由 · 会话 · Context Compiler · WorkCase"]:::core
+      H_ROUTE["H 引擎路由适配<br/>HMAC · 预算 · 熔断 · 用量读回"]:::done
+      WORK_PROTOCOL["公司大脑工作协议<br/>认识闭环 → 实践闭环 → 演化闭环"]:::done
+    end
+
+    subgraph GOVERNANCE["Ontology、权限与治理"]
+      direction LR
+      IDENTITY["Identity / Principal / Purpose<br/>人员 · 部门 · 群聊 · 会话权限"]:::done
+      RETRIEVAL["Permissioned Retrieval<br/>先鉴权 → 授权集内召回 → Evidence Package"]:::done
+      ONTOLOGY["Company Ontology Kernel<br/>目标 · P2 · Task · Product · Operations · Market"]:::core
+      REGISTRY["Ontology Compiler & Registry<br/>Schema · Version · Hash · Drift · Reconciliation"]:::done
+      ACTION["Mandatory Action Gateway<br/>Intent · Dry-run · 人审 · 执行 · 读回 · 回滚"]:::done
+    end
+
+    subgraph CONNECTORS["连接器与战略情报流水线"]
+      direction LR
+      KNOWLEDGE_CONNECTOR["Knowledge Connector<br/>飞书发现 · ACL · 分块 · 同步审计"]:::done
+      DOMAIN_CONNECTOR["Domain Connector<br/>ERP / Market 只读映射 · 双时间 · 重放"]:::done
+      SOURCE_REGISTRY["Source Registry<br/>许可 · 保存范围 · 频率 · 撤销 · Fail-closed"]:::done
+      COLLECTOR["Intelligence Collector<br/>准入 · 采集 · 消毒 · 去重 · Last-good"]:::done
+      SI_PIPELINE["Strategic Intelligence<br/>Raw → Evidence → Signal → Impact → ReportRun"]:::done
+    end
+
+    subgraph DATA["数据、运行与恢复底座"]
+      direction LR
+      POSTGRES["Postgres 17 + pgvector<br/>结构化事实真源 · RLS · 幂等 · 审计"]:::done
+      QDRANT["Qdrant<br/>可重建向量召回派生层"]:::done
+      REDIS["Redis<br/>队列 · 缓存 · 限流"]:::done
+      OBSERVE["健康 · 指标 · 审计 · 备份<br/>Prometheus · WAL · PITR · 回滚证据"]:::done
+    end
+  end
+
+  subgraph AI_EXECUTION["H 引擎执行面"]
+    direction LR
+    H_WORKER["当前 Route A 远程 H Worker<br/>Grok Build · CPA · grok-4.5"]:::done
+    H_LOCAL_POOL["后续 QNAP / Mini / Studio Worker Pool<br/>Route B · 分池 · 故障接管"]:::gated
+  end
+
+  subgraph OUTPUTS["经营输出与后续闭环"]
+    direction LR
+    ANSWER["权限化公司问答<br/>证据 · 未知项 · 置信等级"]:::done
+    REPORTS["战略情报报告草稿<br/>日 / 周 / 月 / 季 / 半年 / 年"]:::done
+    DECISION_P2["正式 Decision / P2<br/>实名 DRI 审批后生效"]:::gated
+    EMPLOYEE_TASKS["员工任务下发、跟进与成果提交<br/>真实 Canary 后启用"]:::gated
+    WRITEBACK["ERP / 社媒受控写回<br/>独立 Goal 与授权后启用"]:::gated
+  end
+
+  EMPLOYEE --> COMPANY_BOT --> HLITE --> AGENT_CORE
+  EMPLOYEE --> H_CONSOLE
+  PRIVATE_BOTS -. "仅复用 H 平台代码与行为契约" .-> HLITE
+  H_CONSOLE --> AGENT_CORE
+  H_CONSOLE --> REGISTRY
+
+  FEISHU_KB --> KNOWLEDGE_CONNECTOR --> RETRIEVAL
+  ERP --> DOMAIN_CONNECTOR
+  SOCIAL --> DOMAIN_CONNECTOR
+  DOMAIN_CONNECTOR --> RETRIEVAL
+  PESTIM --> SOURCE_REGISTRY --> COLLECTOR --> SI_PIPELINE
+
+  IDENTITY --> RETRIEVAL --> AGENT_CORE
+  ONTOLOGY --> AGENT_CORE
+  REGISTRY --> ONTOLOGY
+  AGENT_CORE --> H_ROUTE --> H_WORKER
+  H_ROUTE -. "后续扩容与冗余" .-> H_LOCAL_POOL
+  AGENT_CORE --> WORK_PROTOCOL
+  SI_PIPELINE --> AGENT_CORE
+
+  KNOWLEDGE_CONNECTOR --> POSTGRES
+  DOMAIN_CONNECTOR --> POSTGRES
+  SI_PIPELINE --> POSTGRES
+  ONTOLOGY --> POSTGRES
+  RETRIEVAL --> QDRANT
+  AGENT_CORE --> REDIS
+  POSTGRES --> OBSERVE
+  QDRANT --> OBSERVE
+  REDIS --> OBSERVE
+
+  AGENT_CORE --> ANSWER
+  SI_PIPELINE --> REPORTS
+  WORK_PROTOCOL -. "Decision Proposal" .-> DECISION_P2
+  DECISION_P2 -. "Task Proposal + DRI 批准" .-> ACTION
+  ACTION -. "Delivery Outbox" .-> EMPLOYEE_TASKS
+  ACTION -. "受控业务动作" .-> WRITEBACK
+  EMPLOYEE_TASKS -. "飞书送达 / ACK / 成果" .-> HLITE
+  WRITEBACK -. "Outcome / Verification / Learning" .-> WORK_PROTOCOL
+
+  classDef done fill:#e8f7ee,stroke:#1f883d,color:#0b3d1d,stroke-width:1.5px;
+  classDef core fill:#dff7e8,stroke:#116329,color:#062d16,stroke-width:2.5px;
+  classDef gated fill:#f6f8fa,stroke:#8c959f,color:#57606a,stroke-width:1.2px,stroke-dasharray:6 4;
+  classDef boundary fill:#ffffff,stroke:#57606a,color:#24292f,stroke-width:1.2px;
+```
+
+宏观运行逻辑：
+
+```text
+外部世界与公司事实 → 权限化 Evidence → Ontology 语义与因果关系 → Company Agent Core 分析
+→ 回答 / 报告 / Decision Proposal → DRI 与 Action Gateway → 执行结果 → Verification / Learning
+```
+
+- **认识闭环**：Observation → Evidence → Claim → Hypothesis → Decision。
+- **实践闭环**：Decision → Action → Outcome → Verification。
+- **演化闭环**：Learning → Ontology Change Proposal → Review → Deploy → Reconciliation。
+- **当前 Demo 边界**：权限化问答、内部情报采集样例、报告草稿和模拟审批可体验；正式 P2、员工任务下发和 ERP/社媒写回仍保持关闭。
+
 ## 资产身份门禁
 
 - 本项目中的 `QNAP` 只指公司局域网生产 NAS：SSH 别名 `prnas` / `prnas-pub`、型号 `TS-X65`、当前地址 `192.168.61.18`。
