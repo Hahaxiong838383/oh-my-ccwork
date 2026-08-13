@@ -1,0 +1,34 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-artifact-supersession",
+  "capturedAt": "2026-08-13T01:34:02Z",
+  "containsSecrets": false,
+  "supersededArtifact": {
+    "id": "9163957919",
+    "workflowRunId": "31654762489",
+    "sourceCommit": "8eaef798e3a9831f34bdb598c79dfd29aa735212",
+    "stageACompleted": true,
+    "historicalEvidenceValid": true,
+    "reusableForLaterStages": false
+  },
+  "supersessionReason": {
+    "migrationReconciliationGlobalLockAdded": true,
+    "migrationEvidenceCleanupRulesHardened": true,
+    "linuxArchiveFixturePortabilityFixed": true,
+    "immutableSourceIdentityChanged": true
+  },
+  "replacementArtifact": {
+    "id": "9164960593",
+    "workflowRunId": "31657526039",
+    "sourceCommit": "d2c8bb128d4f0b34b06e6e9bca33587ab115c577",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "stageACompleted": true
+  },
+  "productionState": {
+    "databaseSqlExecutedBySupersession": false,
+    "servicesRecreatedBySupersession": false,
+    "collectorStartedBySupersession": false,
+    "shadowStartedBySupersession": false
+  },
+  "requiredAction": "use only Artifact 9164960593 and its Stage A evidence for any separately authorized Stage B or later action"
+}

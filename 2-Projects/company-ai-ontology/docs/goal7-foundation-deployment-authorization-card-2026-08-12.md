@@ -4,42 +4,42 @@
 
 状态：`STAGE_A_COMPLETED / STAGE_B_NOT_AUTHORIZED`
 
-> Workflow `31654762489` Attempt `1` / Artifact `9163957919` 已通过 Manifest `1.6.0`、9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 交叉绑定、Release Validator 与 Goal 7 Runtime Validator。`2026-08-13T00:57:51Z`，A 阶段已按当前授权完成 Artifact 原子入场、新备份、三个候选镜像和 Preparation Evidence；Foundation 保持 `13/13 running / unhealthy=0 / restart=0`，SQL、服务重建、Worker、Collector、Shadow 与回滚均为 `0`，两类锁和 transfer partial 均为 `0`。B～E 仍必须在前序 Evidence 完成后分别授权，任何授权不得继承。
+> Workflow `31657526039` Attempt `1` / Artifact `9164960593` 已通过 Manifest `1.6.0`、9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 交叉绑定、迁移对账互斥锁与 Evidence 生命周期回归。`2026-08-13T01:31:13Z`，A 阶段已按当前授权完成 Artifact 原子入场、新备份、三个候选镜像和 Preparation Evidence；Foundation 保持 `13/13 running / unhealthy=0 / restart=0`，SQL、服务重建、Worker、Collector、Shadow 与回滚均为 `0`，三类锁和 transfer partial 均为 `0`。B～E 仍必须在前序 Evidence 完成后分别授权，任何授权不得继承。
 
 ## 1. 固定发布身份
 
 - 公司 QNAP：`PRNas / TS-X65 / 192.168.61.18`；
 - Foundation Root：`/share/CACHEDEV1_DATA/ai-ontology/foundation`；
-- Runtime Workflow：`31654762489` Attempt `1`；
-- Runtime Artifact：`9163957919`；
+- Runtime Workflow：`31657526039` Attempt `1`；
+- Runtime Artifact：`9164960593`；
 - Runtime Manifest：`1.6.0`；
-- Ontology Commit：`8eaef798e3a9831f34bdb598c79dfd29aa735212`；
+- Ontology Commit：`d2c8bb128d4f0b34b06e6e9bca33587ab115c577`；
 - H-Lite Commit：`baa00bf07089a3caf5fe6318aac28cb73bd5ae13`；
 - Agent Core：`2026-08-12.3`；
 - Knowledge Connector：`2026-08-11.1`；
 - H-Lite：`2026-08-12.1`；
-- Collector Image：`sha256:9a2606c1db7db2112d6527c34b59187ab6d24d597bbf886e78016a3c1aea36fc`；
+- Collector Image：`sha256:34f6bd629c8f2c2d4979565299ef6911d26f1848eb7bfcbef07e22f43cad6f0a`；
 - Candidate Ontology：Schema `3.7.0` / Hash `c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860`；
 - 发布开关：`publish=false`；
 - 当前生产 active Schema：`3.3.0`，本次不得切换 active Schema；
 - 012 模式：`pre_existing_reconciliation_only`；
 - SQL replay：`false`。
 
-Artifact 保留至 `2026-11-11T00:32:31Z`；9 项 `SHA256SUMS` 及完整验证已通过。Workflow、Artifact、Commit、镜像或 Hash 任一项变化，本卡自动失效并必须重新复验。Artifact `9156356166` 及更早包已失效，禁止使用其旧授权语句。
+Artifact 保留至 `2026-11-11T01:23:03Z`；9 项 `SHA256SUMS` 及完整验证已通过。Workflow、Artifact、Commit、镜像或 Hash 任一项变化，本卡自动失效并必须重新复验。Artifact `9163957919` 及更早包只保留历史审计，禁止使用其旧授权语句。
 
 ## 2. A 阶段前只读基线
 
-`2026-08-13T00:40:01Z` 公网直连只读复核：
+`2026-08-13T01:27Z` 公网直连只读复核：
 
 - Foundation `13/13 running`；
 - unhealthy `0`；
 - restart total `0`；
 - `strategic_intelligence` 容器、网络均为 `0`；
-- 当时新 Artifact `9163957919` 尚未上传公司 QNAP；
+- 当时新 Artifact `9164960593` 尚未上传公司 QNAP；
 - 旧 Artifact `9156356166` 的 10 个 release 文件、Preparation/Baseline Evidence、备份和 3+3 个镜像标签仍保留审计，但全部 `reusable=false`；
 - Artifact staging lock、Preparation lock 均为 `0`。
 
-该历史基线已由后续 A 阶段实机证据取代，不得再作为当前状态；A 阶段脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-a-artifact-9163957919.json`。
+该历史基线已由后续 A 阶段实机证据取代，不得再作为当前状态；A 阶段脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-a-artifact-9164960593.json`。
 
 ## 3. 分阶段影响与时间
 
@@ -64,9 +64,9 @@ Artifact 保留至 `2026-11-11T00:32:31Z`；9 项 `SHA256SUMS` 及完整验证�
 
 ### A. Foundation 发布准备与 Artifact 入场
 
-状态：`COMPLETED`。Artifact `9163957919` 已完成隔离上传、9 项 Hash 校验、同卷原子晋级、新备份、Preparation Evidence 和三个候选镜像；Preparation 基线采集未执行 SQL，未切换服务、未运行模型。旧 Artifact `9156356166` 的 A 阶段资产未被复用、覆盖或当作前序 Evidence。
+状态：`COMPLETED`。Artifact `9164960593` 已完成隔离上传、9 项 Hash 校验、同卷原子晋级、新备份、Preparation Evidence 和三个候选镜像；Preparation 基线采集未执行 SQL，未切换服务、未运行模型。旧 Artifact `9163957919` 的 A 阶段资产未被复用、覆盖或当作前序 Evidence。
 
-> 授权 Artifact `9163957919` 进入公司 QNAP Goal 7 隔离 incoming staging，允许执行 9 项 Hash 校验、同卷原子晋级、新的配置与旧镜像备份、三个候选镜像构建，并生成绑定该 Artifact 的新 Preparation Evidence；旧 Artifact `9156356166` 的 A 阶段资产仅保留审计且不得复用；不授权数据库 SQL、服务重建、Worker 读回、Collector、Shadow 或真实回滚演练。
+> 历史已执行授权：Artifact `9164960593` 进入公司 QNAP Goal 7 隔离 incoming staging，允许执行 9 项 Hash 校验、同卷原子晋级、新的配置与旧镜像备份、三个候选镜像构建，并生成绑定该 Artifact 的新 Preparation Evidence；旧 Artifact `9163957919` 的 A 阶段资产仅保留审计且不得复用；不授权数据库 SQL、服务重建、Worker 读回、Collector、Shadow 或真实回滚演练。
 
 ### B. 既有迁移 012 只读证据对账
 
@@ -112,4 +112,4 @@ Artifact 保留至 `2026-11-11T00:32:31Z`；9 项 `SHA256SUMS` 及完整验证�
 
 ## 6. 当前建议
 
-当前 A 已完成，下一步只可单独申请 B 阶段既有 012 只读证据对账；C～E 继续锁定。正式七日 `PUBLISH=false` Shadow 不属于本授权卡，仍需来源/P003/四角色 UAT、Goal 7 Owner Acceptance 和新的独立授权。A 阶段脱敏实机证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-a-artifact-9163957919.json`。
+当前 A 已完成，下一步只可单独申请 B 阶段既有 012 只读证据对账；C～E 继续锁定。正式七日 `PUBLISH=false` Shadow 不属于本授权卡，仍需来源/P003/四角色 UAT、Goal 7 Owner Acceptance 和新的独立授权。A 阶段脱敏实机证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-a-artifact-9164960593.json`。
