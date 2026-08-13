@@ -1,0 +1,73 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-stage-d-production-acceptance",
+  "capturedAt": "2026-08-13T03:18:15.978Z",
+  "containsSecrets": false,
+  "companyQnap": {
+    "identity": "qnap:company/prnas/TS-X65",
+    "host": "PRNas",
+    "model": "TS-X65",
+    "address": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "identityVerified": true
+  },
+  "artifact": {
+    "id": "9166921089",
+    "workflowRunId": "31663036837",
+    "sourceCommit": "4a158d1d17141da905e9206dd54013cdac987039",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "stageCDeploymentEvidenceSha256": "33553687c87a727d021b181e8b6f5367fe3b25bed4fe96e896344cf1f6f9cbfb"
+  },
+  "workerReadback": {
+    "capturedAt": "2026-08-13T03:17:59.000Z",
+    "evidenceSha256": "18a226287dc314370ce3098d61bcff0fbe4e6290b81639de5634831ace539b70",
+    "httpEvidenceSha256": "2cbf7779b1ab0eae92389f5803a4c7b527d40932b4bb3e25435ca653ec420fa5",
+    "ledgerEvidenceSha256": "13e921a4c27e5860dbd8634416b88fca7fbcaf6c26c8350c0f3fa1c204aabe55",
+    "requestIdHash": "9bee2395fda7044471711b2699f692392366346ede2332c49cafbf4f21e590f4",
+    "provider": "cpa-openai-compatible",
+    "model": "grok-4.5",
+    "credentialModeTag": "temporary_personal_credential",
+    "routeKey": "route-a",
+    "retryCount": 0,
+    "ledgerRecorded": true,
+    "routeBEnabled": false,
+    "promptTokens": 12430,
+    "completionTokens": 436,
+    "totalTokens": 12866,
+    "publicOutputContainsSensitiveData": false,
+    "compilerValidationPassed": true
+  },
+  "authorityCanary": {
+    "capturedAt": "2026-08-13T03:18:15.978Z",
+    "evidenceSha256": "df6bce0a671cd98a5dedc67403d76a4b604f59f63854bdc7d625ad7ed65c5e4a",
+    "syntheticResourcesOnly": true,
+    "scenarioCount": 7,
+    "passedCount": 7,
+    "bodyReadOnDeniedCount": 0,
+    "unauthorizedEvidenceCount": 0,
+    "revocationConvergenceSeconds": 0.015,
+    "privateSenderOnly": true,
+    "activeChatMembershipAllowed": true,
+    "staleChatMembershipFailClosed": true,
+    "revokedChatMembershipFailClosed": true,
+    "multiMentionNoExpansion": true,
+    "purposeNarrowing": true,
+    "aclFailureBeforeBody": true,
+    "publicOutputContainsSensitiveData": false
+  },
+  "safety": {
+    "foundationRunningContainerCount": 13,
+    "foundationUnhealthyCount": 0,
+    "foundationRestartCount": 0,
+    "collectorStarted": 0,
+    "shadowStarted": 0,
+    "formalP2Count": 0,
+    "employeeDeliveryCount": 0,
+    "erpWritebackCount": 0,
+    "socialWritebackCount": 0,
+    "causalActivationCount": 0,
+    "syntheticCleanupReplayed": true
+  },
+  "result": "stage_d_completed",
+  "nextRequiredGate": "STAGE_E_COMPLETED"
+}

@@ -1,0 +1,63 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-stage-e-production-acceptance",
+  "capturedAt": "2026-08-13T03:20:16.449Z",
+  "containsSecrets": false,
+  "companyQnap": {
+    "identity": "qnap:company/prnas/TS-X65",
+    "host": "PRNas",
+    "model": "TS-X65",
+    "address": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "identityVerified": true
+  },
+  "artifact": {
+    "id": "9166921089",
+    "workflowRunId": "31663036837",
+    "sourceCommit": "4a158d1d17141da905e9206dd54013cdac987039",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "stageDWorkerReadbackEvidenceSha256": "18a226287dc314370ce3098d61bcff0fbe4e6290b81639de5634831ace539b70",
+    "stageDAuthorityCanaryEvidenceSha256": "df6bce0a671cd98a5dedc67403d76a4b604f59f63854bdc7d625ad7ed65c5e4a"
+  },
+  "rollbackDrill": {
+    "startedAt": "2026-08-13T03:19:41.740Z",
+    "completedAt": "2026-08-13T03:20:16.449Z",
+    "observedWindowSeconds": 34.709,
+    "rollbackBeforeStateSha256": "48637953f703ceb0a2cec2244543f4a9cbc590afdf2c4cf6af85bab00543a8c8",
+    "rollbackPreviousStateSha256": "591810486e8e7b47486d5cf2b6520d386d9880ad8123f18f6adf69533930e529",
+    "rollbackRestoredStateSha256": "664358a107c91c8fbe00195dcb0236ffbb087e43cce16352587c167a1b473294",
+    "rollbackSideEffectsSha256": "6e165826d81f56e18d6d89bbfa1152cf750e239ddd726a08b3f7a967043f3bc9",
+    "rollbackDrillEvidenceSha256": "b636568b0d37969f4e1cdf81b4f590ee81933fc010ffb988aef7fce30304ed79",
+    "previousReleaseVerified": true,
+    "candidateReleaseRestored": true,
+    "migration012Retained": true,
+    "compilerValidationPassed": true
+  },
+  "releaseTransition": {
+    "candidateBeforeSourceCommit": "4a158d1d17141da905e9206dd54013cdac987039",
+    "previousSourceCommit": "cee5e995a3d7971f5357be34dac41eaa9002c97c",
+    "candidateRestoredSourceCommit": "4a158d1d17141da905e9206dd54013cdac987039",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13"
+  },
+  "safety": {
+    "activeOntologySchema": "3.3.0",
+    "registryStatus": "in_sync",
+    "foundationRunningContainerCount": 13,
+    "foundationUnhealthyCount": 0,
+    "foundationRestartCount": 0,
+    "newHostPortCount": 0,
+    "routeAOperational": true,
+    "routeBEnabled": false,
+    "formalP2Count": 0,
+    "employeeDeliveryCount": 0,
+    "erpWritebackCount": 0,
+    "socialWritebackCount": 0,
+    "causalActivationCount": 0,
+    "collectorStarted": 0,
+    "shadowStarted": 0,
+    "lockCount": 0,
+    "partialCount": 0
+  },
+  "result": "stage_e_completed_waiting_owner_acceptance",
+  "nextRequiredGate": "WAIT_GOAL7_OWNER_ACCEPTANCE"
+}

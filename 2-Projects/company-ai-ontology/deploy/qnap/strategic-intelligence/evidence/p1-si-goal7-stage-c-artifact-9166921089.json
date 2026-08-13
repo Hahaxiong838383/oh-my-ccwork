@@ -1,0 +1,68 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-stage-c-production-acceptance",
+  "capturedAt": "2026-08-13T03:17:07.136Z",
+  "containsSecrets": false,
+  "companyQnap": {
+    "identity": "qnap:company/prnas/TS-X65",
+    "host": "PRNas",
+    "model": "TS-X65",
+    "address": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "identityVerified": true
+  },
+  "artifact": {
+    "id": "9166921089",
+    "workflowRunId": "31663036837",
+    "sourceCommit": "4a158d1d17141da905e9206dd54013cdac987039",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "stageAPreparationEvidenceSha256": "1c269732be5297c58b7e55b9b4b442c9407af774c9932397cf8f8540ef3a9943",
+    "stageBMigrationEvidenceSha256": "e199a63d919f3a7abbd7911abcbb23499bfa6dd56a022d4b98fd7d3cb8536098"
+  },
+  "deployment": {
+    "startedAt": "2026-08-13T03:16:48.956Z",
+    "completedAt": "2026-08-13T03:17:07.136Z",
+    "observedSwitchWindowSeconds": 18.18,
+    "preDeploymentStateSha256": "5340753dcfda77549b88ac4aa7971dd5a474b7863843471b16e86ed5ae35da25",
+    "postDeploymentStateSha256": "769e71471226fc3a2498b53582cc258d9847efa5bf2154422d11c368ad435356",
+    "sideEffectsEvidenceSha256": "155204417b042fad1a0c1b5868ef43d7be29088403fd946595218e2dbdd11ecc",
+    "deploymentEvidenceSha256": "33553687c87a727d021b181e8b6f5367fe3b25bed4fe96e896344cf1f6f9cbfb",
+    "deploymentEvidenceValidated": true
+  },
+  "components": {
+    "agentCore": {
+      "previousSourceCommit": "cee5e995a3d7971f5357be34dac41eaa9002c97c",
+      "activeVersion": "2026-08-12.3",
+      "activeSourceCommit": "4a158d1d17141da905e9206dd54013cdac987039",
+      "activeImageId": "sha256:c483632fa046938601f9f5fdf60d86a80ef583a083b60de022cb21b5237a5572"
+    },
+    "knowledgeConnector": {
+      "previousSourceCommit": "cee5e995a3d7971f5357be34dac41eaa9002c97c",
+      "activeVersion": "2026-08-11.1",
+      "activeSourceCommit": "4a158d1d17141da905e9206dd54013cdac987039",
+      "activeImageId": "sha256:ac920c4a22e43901982fb60bf352219f0cbb8480e47d94a7662d660970cb41e4"
+    },
+    "hLite": {
+      "activeVersion": "2026-08-12.1",
+      "activeSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+      "activeImageId": "sha256:ea6da9f9ecea002da2422050e3e7614a536177740e15ce444a18bf2b50fad4cb"
+    }
+  },
+  "safety": {
+    "activeOntologySchema": "3.3.0",
+    "registryStatus": "in_sync",
+    "foundationRunningContainerCount": 13,
+    "foundationUnhealthyCount": 0,
+    "foundationRestartCount": 0,
+    "newHostPortCount": 0,
+    "routeAOperational": true,
+    "routeBEnabled": false,
+    "formalP2Count": 0,
+    "employeeDeliveryCount": 0,
+    "erpWritebackCount": 0,
+    "socialWritebackCount": 0,
+    "causalActivationCount": 0
+  },
+  "result": "stage_c_completed",
+  "nextRequiredGate": "STAGE_D_COMPLETED"
+}

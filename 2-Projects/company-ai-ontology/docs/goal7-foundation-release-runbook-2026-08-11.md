@@ -2,27 +2,27 @@
 
 日期：2026-08-11（Asia/Shanghai）
 
-状态：`STAGE_A_COMPLETED / STAGE_B_AUTHORIZATION_PENDING`
+状态：`STAGE_A_B_C_D_E_COMPLETED / OWNER_ACCEPTANCE_PENDING`
 
 ## 1. 结论
 
-Goal 7 Foundation 的正式发布步骤、影响范围、预计中断、自动恢复和验收清单已经完成工程准备。机器 Release Plan `1.6.0` 的 9 项 Hash、隔离上传、原子晋级和迁移对账并发门禁已由 Workflow `31657526039` Attempt `1` / Artifact `9164960593` 验证通过。A 阶段已完成，当前仅具备单独申请 B 阶段只读对账授权的条件；C～E 仍由前序 Evidence 阻断。本运行手册不构成 B～E、数据库 SQL、服务切换或回滚授权。
+Goal 7 Foundation 的正式发布、真实 Worker/Authority Canary 和回滚恢复已经按五阶段独立授权完成。机器 Release Plan `1.6.0` 的 9 项 Hash、隔离上传、原子晋级、迁移对账并发门禁和 H-Lite 强制重建回滚修复已由 Workflow `31663036837` Attempt `1` / Artifact `9166921089` 验证通过。A～E 全部完成，当前只待川哥独立 Owner Acceptance；本运行手册不构成七日 Shadow、Collector、010/011、正式 P2 或业务写回授权。
 
-Artifact `9164960593` 是当前唯一候选，离线 `SHA256SUMS` 9/9 通过并已完成公司 QNAP A 阶段；Artifact `9163957919` 及更早包只保留历史工程证据并禁止用于 B～E。当前未执行 SQL、服务重建、Worker/Canary、Collector、Shadow 或回滚。
+Artifact `9166921089` 是当前唯一候选，离线 `SHA256SUMS` 9/9 通过并已完成公司 QNAP A～E；Artifact `9166253151` 的 A～D 仅保留历史工程证据，其首次 E 失败后已自动恢复候选，因回滚控制代码改变禁止用于 Owner Acceptance。当前 Collector、Shadow、010/011 SQL replay、正式 P2、员工投递和业务写回均未执行。
 
-- Ontology Commit：`d2c8bb128d4f0b34b06e6e9bca33587ab115c577`；
+- Ontology Commit：`4a158d1d17141da905e9206dd54013cdac987039`；
 - H-Lite Commit `baa00bf07089a3caf5fe6318aac28cb73bd5ae13`；
 - Agent Core `2026-08-12.3`、Knowledge Connector `2026-08-11.1`、H-Lite `2026-08-12.1`；
-- Collector Image：`sha256:34f6bd629c8f2c2d4979565299ef6911d26f1848eb7bfcbef07e22f43cad6f0a`；
+- Collector Image：`sha256:469d518c803baf41fa054fea39dec165726435bd4c84d0de6e8b0de8408b2940`；
 - Manifest：`1.6.0`。
 
 当前 Artifact 已通过 9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 与 Runtime Verification 交叉校验、Release Validator、Goal 7 Foundation 与 PostgreSQL Runtime Evidence，并固定 `goal7Migration012Mode=pre_existing_reconciliation_only / goal7Migration012SqlReplayAllowed=false`。A 阶段准备链已补齐全局互斥锁、危险或超长 `runId` 拒绝、失败回放保留既有 Evidence、仅清理本次创建的镜像标签、Agent Core/Knowledge Connector/H-Lite 基础镜像 digest 固定、Preparation 状态采集不调用 Postgres，以及完整新准备成功后显式释放锁的正向回归；`before/after/rollback` 阶段仍保留迁移只读检查。该工程门禁不构成生产授权；任何字段变化都需要重新生成 Artifact、预检与授权卡。
 
-当前 Artifact 的官方 Workflow、离线 9/9 验签和公司 QNAP A 阶段实机验证均已通过；A 阶段还执行了幂等回放，Preparation Evidence Hash 保持不变且全局锁释放。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-runtime-artifact-9164960593.json` 与 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-a-artifact-9164960593.json`。
+当前 Artifact 的官方 Workflow、离线 9/9 验签和公司 QNAP A～E 实机验证均已通过。A 阶段 Preparation Evidence、B 阶段只读迁移对账、C 阶段 Deployment Evidence、D 阶段 Worker/Authority Canary 与 E 阶段 Rollback Drill 均绑定同一双仓身份。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-runtime-artifact-9166921089.json` 与 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-a-artifact-9166921089.json` 至 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-e-artifact-9166921089.json`。
 
-历史只读预检与迁移溯源确认 active Schema `3.3.0 / in_sync`，Goal 7 四张 Authority/Runtime 表来自历史 Workflow `31555822727`，原始 B 阶段 Evidence 缺失。Artifact `9163957919` 完成过 A，但在 B 阶段迁移对账全局互斥锁和 Evidence 生命周期加固后，源码身份发生变化，因此其 A 证据只保留历史审计，不能继续用于 B～E。Artifact `9164960593` 于 `2026-08-13T01:27Z` 完成公网只读复核，随后于 `2026-08-13T01:31:13Z` 完成 A；Foundation `13/13 running / unhealthy=0 / restart=0`，战略情报容器/网络 `0/0`，三类锁与 partial 均为 `0`。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/goal7-migration-012-provenance-2026-08-12.json`、`deploy/qnap/strategic-intelligence/evidence/p1-si-runtime-artifact-9164960593.json`、`deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-a-artifact-9164960593.json` 和 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-supersession-artifact-9163957919.json`。
+历史只读预检与迁移溯源确认 active Schema `3.3.0 / in_sync`，Goal 7 四张 Authority/Runtime 表来自历史 Workflow `31555822727`，原始 B 阶段 Evidence 缺失。当前 B 阶段仅完成只读对账，`database_sql_executed=0`。Artifact `9166253151` 在首次 E 时因相同 H-Lite 镜像未重建、旧内存 drain 状态被保留而失败关闭；系统自动恢复候选成功。修复后新候选 `9166921089` 强制重建 H-Lite，并完整完成 A～E。失效链见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-supersession-artifact-9166253151.json`。
 
-历史容量与回滚输入预检确认：QNAP/Docker 为 `x86_64`，与 Artifact `linux/amd64` 兼容；可用内存、热卷和备份卷容量充足，三组件当前镜像均可读，Foundation Compose 校验通过。当前候选已按 A 授权进入 QNAP，但没有切换运行服务。脱敏证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-capacity-rollback-preflight-2026-08-12.json`。
+历史容量与回滚输入预检确认：QNAP/Docker 为 `x86_64`，与 Artifact `linux/amd64` 兼容；可用内存、热卷和备份卷容量充足，三组件镜像均可读，Foundation Compose 校验通过。当前候选已完成三组件切换和真实回滚恢复，最终 Foundation `13/13 running / unhealthy=0 / restart=0`。
 
 正式执行与验收仍必须分别取得五项明确授权：
 
@@ -160,7 +160,7 @@ Artifact `9164960593` 是当前唯一候选，离线 `SHA256SUMS` 9/9 通过并�
 | 七日 Production Shadow | `0/7` |
 | Goal Completion | `1/8`，仅不可变 Release 通过 |
 
-因此当前工程准备、Artifact 验签、容量和公司 QNAP 公网只读预检已完成。下一步只申请 A 阶段；A Evidence 通过前不得申请 B，后续仍必须按阶段逐项验证前序 Evidence Hash，不能用一次授权贯穿全部动作。
+因此当前工程准备、Artifact 验签和 A～E 工程 Evidence 已完成。下一步只由川哥独立执行 Evidence-bound Owner Acceptance；不得由 Agent 自动确认，也不得把该确认扩展为来源/P003/四角色 UAT、七日 Shadow 或 Goal Completion 通过。
 
 机器契约：`deploy/qnap/strategic-intelligence/config/goal7-foundation-release-plan.json`。
 

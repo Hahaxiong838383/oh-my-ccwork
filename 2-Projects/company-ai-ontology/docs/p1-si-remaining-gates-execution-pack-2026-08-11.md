@@ -6,7 +6,7 @@
 
 ## 1. 结论
 
-P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `142/142`。生产溯源确认 012 已由历史流程落库且原始 B 阶段 Evidence 缺失；B 阶段对账已补全局互斥锁和 Evidence 生命周期保护。Workflow `31657526039` Attempt `1` / Artifact `9164960593` 已通过 Manifest `1.6.0`、9 项 Hash 和严格完整性复验，并于 `2026-08-13T01:31:13Z` 完成公司 QNAP A 阶段。Artifact `9163957919` 及更早 A 资产只保留审计，不得用于 B～E。当前只申请 B 阶段既有 012 只读证据对账，不申请 C～E。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；工程阶段继续完成系统审批中心和 Goal 7，真人审核在整体测试阶段关闭，正式七日 Shadow 仍须等待全部真实门禁。
+P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `142/142`。生产溯源确认 012 已由历史流程落库且原始 B 阶段 Evidence 缺失；当前 B 阶段已完成只读证据对账并证明 `database_sql_executed=0`。Workflow `31663036837` Attempt `1` / Artifact `9166921089` 已通过 Manifest `1.6.0`、9 项 Hash 和严格完整性复验，并在公司 QNAP 完成 A～E。Artifact `9166253151` 的 A～D 只保留历史审计，首次 E 失败后因回滚控制代码改变不得继续使用。当前 Goal 7 仅待川哥独立 Owner Acceptance。公司 QNAP 当前内部 Runtime 仍为 Artifact `9108034290`，且仅完成一次不计入生产 Shadow 的 accepted Collector。当前无需扩大本体、来源或 P003 范围；正式七日 Shadow 仍须等待来源、P003、四角色 UAT、Goal 7 Owner Acceptance 和新的独立授权。
 
 当前实测状态：
 
@@ -16,11 +16,11 @@ P1-SI-B～G 工程能力已完成，Strategic Intelligence 当前 `142/142`。�
 | P003 最终决定 | 0/36 | 36/36 都有 final decision，关系继续 inactive |
 | 系统审批模拟 | ready for release | H 控制面 8/36 模拟交互、持久化、推荐和重置通过；不计入 final |
 | 四角色成员 UAT | 0/4 | 四个真实账号完成允许与拒绝场景 |
-| Goal 7 | incomplete | 工程证据和川哥 Owner Acceptance 完成 |
+| Goal 7 | engineering complete | 仅待川哥 Owner Acceptance |
 | 生产 Readiness | 1/7 | 不可变 Release 已通过；其余六项关闭 |
 | Goal Completion | 1/8 | 不可变 Release 已通过；七个真实自然日及其余门禁未完成 |
 
-`2026-08-12 13:54 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。`2026-08-13` 新 Artifact `9164960593` 恢复不可变 Release 通过项并完成 A 阶段，机器检查器现为 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`。
+`2026-08-12 13:54 CST` 飞书实时只读回拉确认：来源表 revision `38`，`8 pending / 0 final`；P003 表 revision `91`，`36 pending / 36 inactive / 0 final`，语义重写、支持证据、反证和审核时间完成数均为 `0`。`2026-08-13` Artifact `9166921089` 已完成 A～E；机器检查器仍保持 Deployment Readiness `1 pass / 6 blocked`、Goal Completion `1 pass / 7 blocked`，因为 Owner Acceptance 与其余真实门禁不能由工程 Evidence 自动提升。
 
 ## 2. 最小来源审核方案
 
@@ -75,7 +75,7 @@ Goal 7 不重复做 P1-SI 工程测试，只验收公司级生产地基：
 - 产品研究部整库导入、真实员工 Canary、员工私人 Bot 迁移、ERP/社媒写回继续关闭；
 - 川哥对以上证据执行 Owner Acceptance。
 
-Agent Core `2026-08-12.2` 已作为独立回复修复上线并通过真实主体正测、未知主体权限负测，但该单服务发布不能替代 Goal 7 的三组件 Deployment Evidence、Authority Canary、Worker 双源读回或 Owner Acceptance。
+Agent Core `2026-08-12.3`、Knowledge Connector `2026-08-11.1` 和 H-Lite `2026-08-12.1` 已完成三组件 Deployment Evidence、Authority Canary、Worker 双源读回和真实回滚恢复；仅 Owner Acceptance 仍必须由川哥本人拍板。
 
 Goal 7 验收文件只引用既有工程证据，不复制敏感内容。
 
@@ -83,7 +83,7 @@ Goal 7 验收文件只引用既有工程证据，不复制敏感内容。
 
 1. ✅ 已完成一次内部 Collector：3 来源、60 条、Hash-only、零业务副作用，机器 Evidence accepted；
 2. ✅ H 控制面系统审批中心工程版已完成并发布；飞书 Base 只保留历史导入/导出；
-3. 先取得 A Foundation 发布准备授权，再分别取得 B 既有 012 只读对账、C 三组件服务重建、D Worker/Authority Canary 和 E 真实回滚演练授权；
+3. ✅ Goal 7 A～E 已按独立授权完成，当前候选为 Artifact `9166921089`；
 4. 由川哥完成 Evidence-bound Goal 7 Owner Acceptance；
 5. 系统整体测试阶段，由许可/合规负责人完成 3 批准 + 5 暂停；
 6. 六类 DRI 并行完成 6 条深审，其他 30 条快速保持 inactive；
@@ -111,7 +111,7 @@ Goal 7 验收文件只引用既有工程证据，不复制敏感内容。
 - 生产部署；
 - 数据库迁移；
 - 必要服务重启；
-- 真实回滚演练；
+- 后续任何再次真实回滚演练；
 - 七日 Shadow Owner Acceptance。
 
 任何一项授权不得自动继承到下一项。

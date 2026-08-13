@@ -1,0 +1,47 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-artifact-supersession",
+  "capturedAt": "2026-08-13T03:21:00Z",
+  "containsSecrets": false,
+  "supersededArtifact": {
+    "id": "9166253151",
+    "workflowRunId": "31661153434",
+    "sourceCommit": "cee5e995a3d7971f5357be34dac41eaa9002c97c",
+    "stageACompleted": true,
+    "stageBCompleted": true,
+    "stageCCompleted": true,
+    "stageDCompleted": true,
+    "stageECompleted": false,
+    "historicalEvidenceValid": true,
+    "reusableForLaterStages": false
+  },
+  "supersessionReason": {
+    "firstStageEAttemptFailedClosed": true,
+    "candidateAutomaticallyRestored": true,
+    "identicalHLiteImageRetainedInMemoryDrainState": true,
+    "rollbackNowForceRecreatesHLite": true,
+    "rollbackControlCodeChanged": true,
+    "immutableSourceIdentityChanged": true
+  },
+  "replacementArtifact": {
+    "id": "9166921089",
+    "workflowRunId": "31663036837",
+    "sourceCommit": "4a158d1d17141da905e9206dd54013cdac987039",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "stageACompleted": true,
+    "stageBCompleted": true,
+    "stageCCompleted": true,
+    "stageDCompleted": true,
+    "stageECompleted": true
+  },
+  "productionState": {
+    "candidateRestoredAfterFailedAttempt": true,
+    "foundationRunningContainerCount": 13,
+    "foundationUnhealthyCount": 0,
+    "foundationRestartCount": 0,
+    "databaseSqlExecutedBySupersession": false,
+    "collectorStartedBySupersession": false,
+    "shadowStartedBySupersession": false
+  },
+  "requiredAction": "use only Artifact 9166921089 and its A-E evidence for Goal 7 Owner Acceptance"
+}

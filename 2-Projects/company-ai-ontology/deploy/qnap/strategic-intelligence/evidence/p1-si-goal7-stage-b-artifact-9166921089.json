@@ -1,0 +1,48 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-stage-b-production-acceptance",
+  "capturedAt": "2026-08-13T03:16:24.168Z",
+  "containsSecrets": false,
+  "companyQnap": {
+    "identity": "qnap:company/prnas/TS-X65",
+    "host": "PRNas",
+    "model": "TS-X65",
+    "address": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "identityVerified": true
+  },
+  "artifact": {
+    "id": "9166921089",
+    "workflowRunId": "31663036837",
+    "sourceCommit": "4a158d1d17141da905e9206dd54013cdac987039",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "stageAPreparationEvidenceSha256": "1c269732be5297c58b7e55b9b4b442c9407af774c9932397cf8f8540ef3a9943"
+  },
+  "migrationReconciliation": {
+    "runId": "9166921089-stage-a",
+    "evidenceSha256": "e199a63d919f3a7abbd7911abcbb23499bfa6dd56a022d4b98fd7d3cb8536098",
+    "historicalWorkflowRunId": "31555822727",
+    "historicalArtifactId": "9125968266",
+    "historicalSqlSha256": "8ea8648effbd7ab6d3ef81283678afc2fb16250f526e73c6a421abcb4d723a74",
+    "currentSqlSha256": "8ea8648effbd7ab6d3ef81283678afc2fb16250f526e73c6a421abcb4d723a74",
+    "originalEvidenceStatus": "missing_at_source",
+    "mode": "pre_existing_reconciliation_only"
+  },
+  "checks": {
+    "tableCount": 4,
+    "forcedRlsCount": 4,
+    "tenantPolicyCount": 4,
+    "appPrivilegeCount": 10,
+    "deletePrivilegeCount": 0,
+    "bannedColumnCount": 0,
+    "appRoleReadVerified": true
+  },
+  "safety": {
+    "databaseSqlExecuted": 0,
+    "servicesRecreated": 0,
+    "collectorStarted": 0,
+    "shadowStarted": 0
+  },
+  "result": "stage_b_completed",
+  "nextRequiredGate": "STAGE_C_COMPLETED"
+}

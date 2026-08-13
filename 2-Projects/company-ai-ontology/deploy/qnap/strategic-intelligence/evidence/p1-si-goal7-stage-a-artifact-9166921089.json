@@ -1,0 +1,62 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-stage-a-production-acceptance",
+  "capturedAt": "2026-08-13T03:15:30.305Z",
+  "containsSecrets": false,
+  "companyQnap": {
+    "identity": "qnap:company/prnas/TS-X65",
+    "host": "PRNas",
+    "model": "TS-X65",
+    "address": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "identityVerified": true
+  },
+  "artifact": {
+    "id": "9166921089",
+    "workflowRunId": "31663036837",
+    "workflowRunAttempt": 1,
+    "manifestVersion": "1.6.0",
+    "sourceCommit": "4a158d1d17141da905e9206dd54013cdac987039",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "archiveDigest": "sha256:fad0accbf36321e8b7eace38986d314f74cb16e22ed8d543c4a29acc5825d644",
+    "checksumManifestSha256": "be6f3f1023c9ae852ec34b7feb1c6abbc5ef08800603e2ff7bc286b8edbbf06e",
+    "checksumEntryCount": 9,
+    "releaseFileCount": 10,
+    "nonMode0600FileCount": 0,
+    "runtimeTreeSha256": "fdbdb95dd88f70697dcc20641e6b5a23d75dbfcf7f9dfe21103fdc4d704e724f"
+  },
+  "preparation": {
+    "runId": "9166921089-stage-a",
+    "preparationEvidenceSha256": "1c269732be5297c58b7e55b9b4b442c9407af774c9932397cf8f8540ef3a9943",
+    "backupRoot": "/share/CACHEDEV2_DATA/ai-ontology-backup/goal7/9166921089-stage-a",
+    "backupEnvSha256": "80ae7d61751976af0a2d5b028abc4fc0ca6312ef524040553eabf623ddd24918",
+    "backupComposeSha256": "867a115b59b9ee10f8887844620e9df2381f6ada2bedf676cdcb09f3dffca5b8"
+  },
+  "images": {
+    "agentCore": {
+      "previousImageId": "sha256:d2dc377e6f247d6af530469da1e7b637bca621c9961cb5c5ee215cba3a8dea0f",
+      "candidateImageId": "sha256:c483632fa046938601f9f5fdf60d86a80ef583a083b60de022cb21b5237a5572"
+    },
+    "knowledgeConnector": {
+      "previousImageId": "sha256:1520297b522bf6a2a933a4f23a4067417b1f621d59c85d787e252ea7970d6e36",
+      "candidateImageId": "sha256:ac920c4a22e43901982fb60bf352219f0cbb8480e47d94a7662d660970cb41e4"
+    },
+    "hLite": {
+      "previousImageId": "sha256:ea6da9f9ecea002da2422050e3e7614a536177740e15ce444a18bf2b50fad4cb",
+      "candidateImageId": "sha256:ea6da9f9ecea002da2422050e3e7614a536177740e15ce444a18bf2b50fad4cb"
+    }
+  },
+  "safety": {
+    "foundationRunningContainerCount": 13,
+    "foundationUnhealthyCount": 0,
+    "foundationRestartCount": 0,
+    "databaseSqlExecuted": 0,
+    "servicesRecreated": 0,
+    "workerStarted": 0,
+    "collectorStarted": 0,
+    "shadowStarted": 0,
+    "rollbackDrillStarted": 0
+  },
+  "result": "stage_a_completed",
+  "nextRequiredGate": "STAGE_B_COMPLETED"
+}

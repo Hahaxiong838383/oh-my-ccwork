@@ -13,20 +13,20 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 3. `Goal 6`：✅ QNAP P1-DOMAIN、Operating Model、3D-ready 协议、H `v1.58.2` 白盒和 Domain Connector 回滚恢复均已完成；Capability Governance v1 按范围保持 `contract_only`。
 4. `Goal 6-UAT`：✅ 川哥人工体验验收通过。
 5. `Task 6-R`：✅ 发布溯源、零重启补签、完整运行时 Manifest、单次重启发布与 Chrome `99/99` 已完成。
-6. `Goal 7`：推荐下一工程 Goal，完成生产归属与权限主体就绪。
+6. `Goal 7`：A～E 工程链已完成，当前仅待川哥独立 Owner Acceptance。
 7. `Goal 3`：10 名真实员工 Canary，在 Goal 7 完成并单独授权后启动，仍是 20/50 人放量前硬门禁。
 
 ## 推荐后续 Goal 路线
 
 ### Goal 7：P1-PROD-READINESS 生产归属与权限主体就绪（推荐下一 Goal）
 
-1. 🟡 P1-AUTHORITY 工程候选已完成：兼容 `type/member_type`、人员/部门/chat Principal、实际发送者隔离、多人艾特不扩权、私聊隔离、60 秒群成员 Evidence、用途收窄和会话授权快照。Agent Core `2026-08-12.2` 已独立上线修复系统角色解释与权限化知识查询，但这不是 Goal 7 三组件发布；飞书 Authority Canary 和完整 Deployment Evidence 尚未完成。
+1. 🟢 P1-AUTHORITY 工程与生产 Canary 已完成：兼容 `type/member_type`、人员/部门/chat Principal、实际发送者隔离、多人艾特不扩权、私聊隔离、60 秒群成员 Evidence、用途收窄和会话授权快照；飞书 Authority Canary `7/7`，撤权收敛 `0.015 秒`，拒绝路径正文读取与越权 Evidence 均为 `0`。
 2. 🟡 P1-RUNTIME 本地候选已完成：Route A 独立熔断、有限重试、Token/费用预算、完整 provider/model/usage 强制读回和无正文用量审计；模型实际消耗后触发预算拒绝仍落账，Route B 固定关闭，当前凭据显式标记 `temporary_personal_credential`。
 3. 🟢 012 Goal 7 候选迁移已由 Runtime Workflow `31563935583` 完成 Linux/PostgreSQL 17 验证：4 张表、RLS `4/4`、二次幂等、真实 `ontology_app` 读写、敏感正文列为 0 和 Route B disabled 全部通过；生产四张表虽已存在，但仍不能据此宣称 Goal 7 完成。
-4. 🟡 Goal 7 Acceptance `3.0.0` 工程链已完成：最终文件只能由 Runtime Workflow、真实 Worker 双源读回、飞书合成 Canary、QNAP 部署、Rollback Drill 和 Evidence-bound Owner Acceptance 六份 Evidence 编译，并绑定 Ontology/H-Lite 双仓 Commit、H-Lite 源码归档 Hash 与三个 Runtime 组件版本。Owner Acceptance 记录器会重验前五份工程 Evidence，并保存其 SHA-256 与脱敏 Owner Principal Hash。替换原始文件、任一 Commit 或组件版本漂移、跳过回滚恢复、提前验收、复制模板或手改最终 JSON 均失败关闭。Strategic Intelligence 当前 `142/142`；Artifact `9164960593` 已完成离线验签和 A 阶段，B～E、真实 Canary、Worker 读回、三组件 Deployment Evidence、Rollback Drill Evidence 和 Owner Acceptance 尚未完成。
+4. 🟡 Goal 7 Acceptance `3.0.0` 的五份工程 Evidence 已全部完成：当前唯一候选是 Workflow `31663036837` / Artifact `9166921089` / Ontology Commit `4a158d1d1` / H-Lite Commit `baa00bf`。A～E 已完成，真实 Worker 双源读回、飞书合成 Canary、三组件 Deployment Evidence 与 Rollback Drill Evidence 均已验证；最终文件仍只能在川哥独立确认后，由受控记录器生成 Owner Acceptance 并编译。替换原始文件、任一 Commit 或组件版本漂移、提前验收、复制模板或手改最终 JSON 均失败关闭。
 5. ⏳ 用公司专用 H 引擎账号/CPA Key 替换个人凭据依赖，并建立同厂第二路由；在此之前 Route B 不启用。
-6. ⏳ 对少量合成知识资源执行部门、群聊、私聊、多人艾特、撤权、跨部门和 API 失败负测；不执行产品研究部整库导入。
-7. ⏳ 以最新双仓不可变 Runtime 重新完成 QNAP 备份、Knowledge Connector/H-Lite 候选发布、真实 H Worker 双源读回、Authority Canary、看板和 Bot 只读验收；Agent Core `2026-08-12.2` 的独立修复不能复用为完整 Goal 7 发布证据。真实回滚演练和 Owner Acceptance 仍需分别授权。
+6. 🟢 少量合成知识资源的私聊、活跃群成员、过期成员、撤权、多人艾特、用途收窄和正文前 ACL 七项负正测已完成；未执行产品研究部整库导入。
+7. ⏳ 川哥独立完成 Evidence-bound Goal 7 Owner Acceptance；记录器只重验既有 Runtime、Deployment、Worker、Authority Canary 与 Rollback Drill Evidence，不部署、不迁移、不重启、不调用模型。
 
 ### Goal 3：10 名真实员工 Canary
 
@@ -59,15 +59,15 @@ P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-0
 6. 🟡 `P1-SI-C`：公司独立 Collector Contract、3 份 JSON Schema、oneshot Worker、Source Registry 前置准入、去重、last-good、固定 Base Digest 和构建脚本已通过 `9/9` 测试；Artifact `9096846710` 因 QNAP 格式兼容问题拒绝，`9107441466` 因非原子切换风险被取代；最终 Commit `0342fcd39` 与 Artifact `9108034290` 已通过全量 Hash、QNAP 暂存和原子切换负测，并已更新到公司 QNAP 内部 Runtime。首次内部 Collector 已 accepted，正式生产采集仍为 0。
 7. 🟡 `P1-SI-D`：contract-only 候选 `3.6.0`、Postgres 唯一真源、Raw/Observation/Signal、双时间、幂等/Replay、热冷保留和 ACL fail-closed 候选迁移已完成；Domain Batch → 010/011 单事务持久化、失败证据续写、逐日 `postgres_committed` 门禁和两次幂等/RLS 无 ACL 负测已在 Runtime Workflow `31563935583` 通过。当前只能标记 `engineering_runtime_verified`，生产数据库仍未迁移。
 8. 🟡 `P1-SI-E`：候选 `3.7.0`、上海时区日/周/月/季/半年/年窗口、Alert/公司/P003 报告、非递归 Input Set、完整 ReportRun 谱系和飞书文档/卡片/H 控制面只读模板已通过 `36/36` 测试；未调用模型、未创建飞书产物、未执行候选 SQL。
-9. 🟡 `P1-SI-F`：Shadow Compose、资源上限、无端口/无 Docker Socket、授权门禁、备份/Freeze/回滚、真实运行审计、Domain/Postgres 持久化证据、七日连续性/版本一致性、受控 Owner Acceptance、生产与内部独立 readiness、统一 QNAP Node Runtime、两阶段运行快照、首次内部运行 Evidence、四角色 UAT 编译验收、Goal 7 编译验收、H Worker 双源读回和 Goal Completion 门禁当前通过 `142/142`。生产溯源确认 012 已落库且原始 B 阶段 Evidence 缺失；Workflow `31657526039` Attempt `1` / Artifact `9164960593` 已通过 Manifest `1.6.0`、9 项 Hash和完整性复验，并完成 A 阶段。当前仅可单独申请 B 阶段既有 012 只读证据对账；生产 Shadow 仍须另行关闭来源、P003、四角色 UAT 和 Owner Acceptance 门禁。
+9. 🟡 `P1-SI-F`：Shadow Compose、资源上限、无端口/无 Docker Socket、授权门禁、备份/Freeze/回滚、真实运行审计、Domain/Postgres 持久化证据、七日连续性/版本一致性、受控 Owner Acceptance、生产与内部独立 readiness、统一 QNAP Node Runtime、两阶段运行快照、首次内部运行 Evidence、四角色 UAT 编译验收、Goal 7 编译验收、H Worker 双源读回和 Goal Completion 门禁当前通过 `142/142`。生产溯源确认 012 已落库且原始 B 阶段 Evidence 缺失；Workflow `31663036837` Attempt `1` / Artifact `9166921089` 已通过 Manifest `1.6.0`、9 项 Hash 和 A～E 实机验证。当前仅待川哥 Goal 7 Owner Acceptance；生产 Shadow 仍须另行关闭来源、P003、四角色 UAT 和新的部署运行授权。
 10. 🟡 `P1-SI-G`：已只读核对真实 4644 条矩阵并筛选 P003 36 条候选，六类各 6 条；真实飞书审核工作台、CSV 回填、强类型 JSON、final 校验、只读锚点防篡改和提案候选 compile 均已完成工程验证。P003 已拆为产品与用户、AI 研发、品牌、To C 线下渠道四个记录级职能角色，各 1 名实名成员，旧宽泛角色成员为 0；`categoryKey` SingleSelect 转换后 36 条逐字段零漂移，正式导入器已兼容单元素数组。脱敏责任与进度检查器已接入：个人 DRI 30/36、必要角色位 90/150、全角色覆盖 12/36；实时审核进度仍为 36 pending、语义重写/支持证据/反证均为 0。当前仍缺供应链的采购/制造/质量/财务、渠道财务、AI 技术知识产权，以及隐私合规的法务/AI Safety/质量/采购；线上销售姓名仍未唯一确认；最终决定仍为 0/36，36 条全部保持 `pending / inactive`。成员本人逐一登录的记录级权限体验验收尚未完成。
 11. ⏳ `P1-SI-H`：当前没有可继承的生产部署授权。来源实名合规审核、P003 实名联合 DRI 审核、四角色 UAT、Goal 7 文件化 Owner Acceptance 和正式 Postgres Runtime 证据均是独立硬门禁；全部通过并从最终已推送 Commit 重建不可变生产发布包后，仍需重新获得当次部署、迁移和运行授权，才可在公司 QNAP 连续运行 7 天 Shadow。每日必须形成 `postgres_committed` 证据，只写 Raw/Observation/Signal/Evidence/Impact/Report 草稿，不向全员 Bot 发布、不创建正式 P2、不写回 ERP/社媒。
 12. 🟢 `internal_engineering_shadow` 工程地基与首次运行：最终 Commit `0342fcd39` / Artifact `9108034290` 已更新到公司 QNAP；旧 `a7aeae25e` 备份完整。Foundation 网络接线修复后，真实 Collector 对 3 来源各采集 20 条、总计 60 条、Hash-only、正文 0、重复 0，Evidence accepted；Foundation 13/13、异常 0、restart 0、临时容器/网络/端口归零，五类业务副作用为 0。内部 Evidence 不计入生产七日 Shadow。
 13. ⛔ 自动创建正式 P2、向员工下发任务或写回 ERP/社媒继续关闭；只允许生成 Impact Assessment、报告和 Decision Proposal。
 14. P1-SI-A～G 工程证据见对应 `docs/p1-si-*-2026-08-10.md`；内部模式见 `docs/p1-si-internal-engineering-shadow-2026-08-11.md`；人工审核闭环见 `docs/p1-si-human-review-workflow-acceptance-2026-08-10.md`；真实飞书工作台验收见 `docs/p1-si-feishu-review-workbench-acceptance-2026-08-10.md`；当前实名分配与机器校验见 `docs/p1-si-reviewer-assignment-readiness-2026-08-11.md`；来源审核建议见 `docs/p1-si-source-review-recommendations-2026-08-11.md`；P003 审核建议见 `docs/p1-si-p003-review-recommendations-2026-08-11.md`；总体方案见 `docs/pestim-strategic-intelligence-architecture-2026-08-10.md`。
 15. 四职能角色真实权限体验按 `docs/p1-si-reviewer-role-access-uat-2026-08-11.md` 保留为 `deferred_before_production`；当前不要求成员操作。正式上线前采用风险分级审核，每位负责人只处理自己的筛选视图和少量高价值关系。
-16. 最新状态：Strategic Intelligence 工程 `142/142`；修复旧 Runtime 回滚恢复兼容性后，Workflow `31661153434` Attempt `1` / Artifact `9166253151` 已通过 Manifest `1.6.0` 与 9 项 Hash，并于 `2026-08-13T02:42:45Z` 完成公司 QNAP 新 A 阶段。Foundation `13/13 running / unhealthy=0 / restart=0`，release 文件 `10`、非 `0600` 文件 `0`，三类锁与 transfer partial 均为 `0`；SQL、服务重建、Worker、Collector、Shadow 和回滚均为 `0`。公司 QNAP 内部工程 Runtime 仍是 Artifact `9108034290` / Commit `0342fcd39`。
-17. 🟡 Goal 7 最近下一步：Artifact `9166253151` 的 A～D 已完成并留证。D 阶段真实 H Worker 双源读回为 `cpa-openai-compatible / grok-4.5 / route-a`，HTTP 与 ledger 的请求 Hash、模型和 usage 一致；Authority Canary `7/7`，撤权收敛 `0.015 秒`，拒绝路径正文读取和越权 Evidence 均为 `0`，合成资源已清理。下一步按当前任务授权执行新候选 E 阶段真实回滚恢复演练。
+16. 最新状态：Strategic Intelligence 工程 `142/142`；修复旧 Runtime 回滚恢复兼容性后，Workflow `31663036837` Attempt `1` / Artifact `9166921089` 已通过 Manifest `1.6.0` 与 9 项 Hash，并在公司 QNAP 完成 A～E。Foundation `13/13 running / unhealthy=0 / restart=0`，三类锁与 transfer partial 均为 `0`；Collector、Shadow、正式 P2、员工投递和业务写回仍为 `0`。公司 QNAP 内部工程 Runtime 仍是 Artifact `9108034290` / Commit `0342fcd39`。
+17. 🟡 Goal 7 最近下一步：仅待川哥独立 Owner Acceptance。E 阶段已在 `34.709 秒` 内完成候选→旧版→候选真实回滚恢复，旧版 Commit `cee5e995a` 与恢复候选 Commit `4a158d1d1` 均验证通过；012 保留、Schema `3.3.0`、Registry `in_sync`、五类业务副作用均为 `0`。不得由 Agent 自动记录 Owner Acceptance。
 18. 🟡 剩余门禁按最小批次执行：首次内部 Collector 已通过；来源建议 `3 approve_for_shadow + 5 keep_paused`；P003 六类各 1 条完整深审，但不强求六类都批准，当前建议汇总为 `4 approve_for_activation_proposal + 11 reject + 21 keep_inactive`；四角色 UAT 并行，随后完成 Goal 7。所有建议仍需实名人审，当前门禁保持来源 `0/8`、P003 `0/36`。详见 `docs/p1-si-remaining-gates-execution-pack-2026-08-11.md`。
 
 ## P0-KB-ACL：正式导入前硬阻断
