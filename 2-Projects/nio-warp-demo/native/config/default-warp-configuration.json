@@ -44,6 +44,7 @@
     "antiAliasingEnabled" : true,
     "antiAliasing" : "performance",
     "automaticPerformanceFallback" : true,
+    "showAABoundary" : false,
     "testPattern" : "off"
   },
   "schemaVersion" : 6

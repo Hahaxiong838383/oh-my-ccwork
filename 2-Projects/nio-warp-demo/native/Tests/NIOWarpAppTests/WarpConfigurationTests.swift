@@ -38,6 +38,32 @@ final class WarpConfigurationTests: XCTestCase {
         XCTAssertEqual(rect.height, 0.1, accuracy: 0.000_001)
     }
 
+    func testAABoundaryIsDisabledByDefault() {
+        XCTAssertFalse(RenderConfiguration().showAABoundary)
+        XCTAssertFalse(WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880).render.showAABoundary)
+    }
+
+    func testLegacyRenderConfigurationDefaultsAABoundaryToDisabled() throws {
+        let data = Data(#"{"antiAliasingEnabled":true,"antiAliasing":"performance","automaticPerformanceFallback":true,"testPattern":"off"}"#.utf8)
+
+        let decoded = try JSONDecoder().decode(RenderConfiguration.self, from: data)
+
+        XCTAssertFalse(decoded.showAABoundary)
+    }
+
+    func testAABoundaryOverlayUsesPhysicalRectWithoutWarping() {
+        let rect = AABoundaryOverlayGeometry.borderRect(
+            in: CGRect(x: 0, y: 0, width: 2560, height: 1440),
+            aaRect: NormalizedRect(x: 0.10, y: 0.20, width: 0.80, height: 0.50),
+            lineWidth: 4
+        )
+
+        XCTAssertEqual(rect.origin.x, 258, accuracy: 0.000_001)
+        XCTAssertEqual(rect.origin.y, 290, accuracy: 0.000_001)
+        XCTAssertEqual(rect.width, 2044, accuracy: 0.000_001)
+        XCTAssertEqual(rect.height, 716, accuracy: 0.000_001)
+    }
+
     func testDefaultMeshHasNoFoldedCells() {
         let configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
         XCTAssertEqual(configuration.contentMode, .fill)

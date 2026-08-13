@@ -187,24 +187,28 @@ struct RenderConfiguration: Codable, Equatable {
     var antiAliasing = AntiAliasingMode.performance
     var automaticPerformanceFallback = true
     var testPattern = TestPatternMode.off
+    var showAABoundary = false
 
     private enum CodingKeys: String, CodingKey {
         case antiAliasingEnabled
         case antiAliasing
         case automaticPerformanceFallback
         case testPattern
+        case showAABoundary
     }
 
     init(
         antiAliasingEnabled: Bool = true,
         antiAliasing: AntiAliasingMode = .performance,
         automaticPerformanceFallback: Bool = true,
-        testPattern: TestPatternMode = .off
+        testPattern: TestPatternMode = .off,
+        showAABoundary: Bool = false
     ) {
         self.antiAliasingEnabled = antiAliasingEnabled
         self.antiAliasing = antiAliasing == .off ? .performance : antiAliasing
         self.automaticPerformanceFallback = automaticPerformanceFallback
         self.testPattern = testPattern
+        self.showAABoundary = showAABoundary
     }
 
     init(from decoder: Decoder) throws {
@@ -214,6 +218,7 @@ struct RenderConfiguration: Codable, Equatable {
         antiAliasing = legacyMode == .off ? .performance : legacyMode
         automaticPerformanceFallback = try container.decodeIfPresent(Bool.self, forKey: .automaticPerformanceFallback) ?? true
         testPattern = try container.decodeIfPresent(TestPatternMode.self, forKey: .testPattern) ?? .off
+        showAABoundary = try container.decodeIfPresent(Bool.self, forKey: .showAABoundary) ?? false
     }
 }
 

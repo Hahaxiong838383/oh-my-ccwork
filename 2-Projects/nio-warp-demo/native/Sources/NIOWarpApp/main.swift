@@ -704,6 +704,35 @@ private final class OutputWindow: NSWindow {
     override var canBecomeMain: Bool { false }
 }
 
+private final class AABoundaryOverlayView: NSView {
+    private var aaRect = NormalizedRect.full
+    private var isBoundaryVisible = false
+    private let lineWidth: CGFloat = 3
+
+    override var isFlipped: Bool { true }
+    override var isOpaque: Bool { false }
+
+    func update(aaRect: NormalizedRect, visible: Bool) {
+        self.aaRect = aaRect.sanitized()
+        isBoundaryVisible = visible
+        needsDisplay = true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard isBoundaryVisible else { return }
+        let rect = AABoundaryOverlayGeometry.borderRect(
+            in: bounds,
+            aaRect: aaRect,
+            lineWidth: lineWidth
+        )
+        NSColor.systemYellow.setStroke()
+        let path = NSBezierPath(rect: rect)
+        path.lineWidth = lineWidth
+        path.stroke()
+    }
+}
+
 private final class FlippedView: NSView {
     override var isFlipped: Bool { true }
 }
@@ -737,6 +766,7 @@ private enum AppVersion {
 private final class OutputController {
     let window: NSWindow
     let renderer: WarpRenderer
+    private let aaBoundaryOverlay: AABoundaryOverlayView
 
     init?(
         screen: NSScreen,
@@ -766,12 +796,23 @@ private final class OutputController {
         metalView.drawableSize = CGSize(width: pixelWidth, height: pixelHeight)
         guard let renderer = WarpRenderer(view: metalView, frameStore: frameStore, configuration: configuration) else { return nil }
         metalView.delegate = renderer
-        window.contentView = metalView
+        let container = NSView(frame: NSRect(origin: .zero, size: screen.frame.size))
+        container.autoresizingMask = [.width, .height]
+        container.addSubview(metalView)
+        let aaBoundaryOverlay = AABoundaryOverlayView(frame: container.bounds)
+        aaBoundaryOverlay.autoresizingMask = [.width, .height]
+        aaBoundaryOverlay.update(
+            aaRect: configuration.aaRect,
+            visible: configuration.render.showAABoundary
+        )
+        container.addSubview(aaBoundaryOverlay)
+        window.contentView = container
         window.setFrame(screen.frame, display: true)
         window.orderFrontRegardless()
 
         self.window = window
         self.renderer = renderer
+        self.aaBoundaryOverlay = aaBoundaryOverlay
     }
 
     var isWarpVisible: Bool { window.isVisible }
@@ -782,6 +823,10 @@ private final class OutputController {
         } else {
             window.orderOut(nil)
         }
+    }
+
+    func updateAABoundary(aaRect: NormalizedRect, visible: Bool) {
+        aaBoundaryOverlay.update(aaRect: aaRect, visible: visible)
     }
 }
 
@@ -795,6 +840,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     private let setWarpVisible: (Bool) -> Void
     private let isWarpVisible: () -> Bool
     private let applyCaptureConfiguration: (CaptureConfiguration) -> Void
+    private let updateAABoundary: (NormalizedRect, Bool) -> Void
     private var configuration: WarpConfiguration
     private var lastAppliedConfiguration: WarpConfiguration
     private var performanceTimer: Timer?
@@ -811,6 +857,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     private let aaYField = NSTextField()
     private let aaWidthField = NSTextField()
     private let aaHeightField = NSTextField()
+    private let aaBoundaryButton = NSButton(checkboxWithTitle: "显示 AA 区物理边界线（调试）", target: nil, action: nil)
     private let canvasWidthField = NSTextField()
     private let canvasHeightField = NSTextField()
     private let cropHorizontalSlider = NSSlider()
@@ -852,7 +899,8 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         outputScreen: NSScreen,
         setWarpVisible: @escaping (Bool) -> Void,
         isWarpVisible: @escaping () -> Bool,
-        applyCaptureConfiguration: @escaping (CaptureConfiguration) -> Void
+        applyCaptureConfiguration: @escaping (CaptureConfiguration) -> Void,
+        updateAABoundary: @escaping (NormalizedRect, Bool) -> Void
     ) {
         self.renderer = renderer
         self.store = store
@@ -861,6 +909,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         self.setWarpVisible = setWarpVisible
         self.isWarpVisible = isWarpVisible
         self.applyCaptureConfiguration = applyCaptureConfiguration
+        self.updateAABoundary = updateAABoundary
         displayWidth = configuration.displayPixelWidth
         displayHeight = configuration.displayPixelHeight
         captureSourceWidth = configuration.displayPixelWidth
@@ -969,6 +1018,9 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
             makeButton("居中 88%×48%", action: #selector(centerAA)),
             makeButton("全屏 AA", action: #selector(fullAA)),
         ]))
+        aaBoundaryButton.target = self
+        aaBoundaryButton.action = #selector(toggleAABoundary)
+        stack.addArrangedSubview(aaBoundaryButton)
 
         stack.addArrangedSubview(sectionTitle("2. 逻辑画布"))
         stack.addArrangedSubview(fieldGrid([
@@ -1204,6 +1256,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         automaticPerformanceButton.isEnabled = configuration.render.antiAliasingEnabled
         automaticPerformanceButton.state = configuration.render.automaticPerformanceFallback ? .on : .off
         testPatternButton.state = configuration.render.testPattern == .calibrationGrid ? .on : .off
+        aaBoundaryButton.state = configuration.render.showAABoundary ? .on : .off
         pauseWarpButton.title = isWarpVisible() ? "暂停 Warp" : "恢复 Warp"
         historyButton.title = "回退上一个版本（\(historyStore.count)）"
         historyButton.isEnabled = historyStore.count > 0
@@ -1239,6 +1292,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         }
         store.save(configuration)
         let validation = renderer.updateConfiguration(configuration)
+        updateAABoundary(configuration.aaRect, configuration.render.showAABoundary)
         if configuration.capture != lastAppliedConfiguration.capture {
             applyCaptureConfiguration(configuration.capture)
         }
@@ -1455,6 +1509,15 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     @objc private func updateTestPattern() {
         configuration.render.testPattern = testPatternButton.state == .on ? .calibrationGrid : .off
         applyConfiguration("标定测试图已更新")
+    }
+
+    @objc private func toggleAABoundary() {
+        configuration.render.showAABoundary = aaBoundaryButton.state == .on
+        applyConfiguration(
+            configuration.render.showAABoundary
+                ? "AA 区物理边界线已显示"
+                : "AA 区物理边界线已关闭"
+        )
     }
 
     @objc private func toggleRawCalibration() {
@@ -1784,6 +1847,9 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
                         )
                     }
                 }
+            },
+            updateAABoundary: { [weak outputController] aaRect, visible in
+                outputController?.updateAABoundary(aaRect: aaRect, visible: visible)
             }
         )
         self.controlPanel = controlPanel

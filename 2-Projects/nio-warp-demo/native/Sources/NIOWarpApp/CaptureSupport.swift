@@ -70,3 +70,21 @@ enum OutputWindowBehavior {
 enum AppPresentationPolicy {
     static let activationPolicy = NSApplication.ActivationPolicy.accessory
 }
+
+enum AABoundaryOverlayGeometry {
+    static func borderRect(
+        in bounds: CGRect,
+        aaRect: NormalizedRect,
+        lineWidth: CGFloat
+    ) -> CGRect {
+        let aa = aaRect.sanitized()
+        let physicalRect = CGRect(
+            x: bounds.minX + bounds.width * aa.x,
+            y: bounds.minY + bounds.height * aa.y,
+            width: bounds.width * aa.width,
+            height: bounds.height * aa.height
+        )
+        let inset = max(lineWidth, 0) * 0.5
+        return physicalRect.insetBy(dx: inset, dy: inset)
+    }
+}
