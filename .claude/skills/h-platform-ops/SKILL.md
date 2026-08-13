@@ -2558,6 +2558,58 @@ syncCredentials gate 在 `sandbox &&` 上），grok 钉死本机 device OAuth，
 - dev198 git 漂移（tar 直传致工作区超前 HEAD）已于 2026-08-09 追平：md5 对撞确认
   = 6671e57 后 `git stash push` 入库，之后一律走 `ops/deploy-sites.sh`，别再 tar 直传。
 
+## H-0101 自定义接口模型列表一键刷新（v1.64.0 · 2026-08-13 · 待川哥点按钮验收）
+
+**背景**：端点绑定模式的模型列表只在「绑定那一刻」抓一次快照，之后永不刷新。
+CPA 上了 grok-4.6 后所有已绑定用户的下拉里都不出现，而唯一拿法是「重新绑定」——
+key 加密进 vault 不回显 = 逼每个人回去翻原始凭据。
+
+- 纯函数 `diffModelIds(before, after, picked)`（`control-plane/lib/grok-endpoint.mjs`）：
+  **刷新 ≠ 重新绑定**。绑定是换网关（旧选择作废清空），刷新是同一网关拿新目录
+  （已选原地保留）；空 picked 不算 dropped。
+- 端点：租户 `POST /api/endpoint-models-refresh`（过 ENDPOINT_GATE 灰度）、owner
+  `POST /admin/api/owner-endpoint-refresh`（admin cookie，不过 gate）。
+- 🔴 **拉取失败必须保留旧列表**：清空会让 `resolveChannelSwitch` 因 models 为空
+  拒绝切回自定义接口，网关抖一下就把用户锁死在订阅线路上。
+- 已选模型被网关下架（dropped）才清 `grokEndpointModel`，不留「界面看着还选着、
+  下一条消息直接报错」的残值。
+- UI 两处加「刷新列表」+「列表读取于 YYYY-MM-DD」（dashboard 的 endpointBinding
+  新增 `modelsAt` 字段）——列表是快照不是实时，把时间摆出来用户才知道该点刷新。
+
+### 🔴 刷新单元 = person，不是用户数
+
+订阅真源在 `persons[personId].subs.xai`（v1.18.0 起 Person 级），而已选模型
+`grokEndpointModel` 在 **user 级**。2026-08-13 实测 5 处受影响，底层其实是
+**3 个刷新单元**：owner（`owner-endpoint.json` 独立）+ 2 个 person
+（`rayman.chen`/`u-aca292be3f`/`u-001422f6e5` 共享 `p-b1d55450cc05`）。
+判别证据很干净：逐个刷新时 `added` 只在每个 person 的**首次**返回 `['grok-4.6']`，
+同 person 的后续调用返回 `[]`，且三人 `modelsAt` 时间戳一字不差。
+**别按 uid 数报「刷新了 N 处」**，也别因为「刷了 A 之后 B 也有了」就以为 B 验过了。
+
+### 🔴 grok-4.6 上下文窗口真值 = 500K（与 4.5 相同），别从这两个地方拿
+
+| 来源 | 结果 |
+|---|---|
+| CPA `/v1/models` | 只返回 `id/created/object/owned_by`，**不含窗口字段** |
+| `~/.grok/models_cache.json` | 有 `context_window: 256000`，但**27 个模型全是同一个数** |
+| xAI 官方 docs.x.ai | **grok-4.6 = 500k、grok-4.5 = 500k** ✅ |
+
+models_cache 那个 256000 是 grok CLI 的 `DEFAULT_CONTEXT_WINDOW` 兜底常量（上游没给
+就统一填默认值），**直接采信会把窗口砍掉一半还不自知**。这也正好解释了为什么
+owner 那里必须显式填 500000——不填就掉到 256000。判别方法：看**取值分布**，
+全体同值即兜底（[[feedback_placeholder_that_looks_like_real_data]]）。
+⚠️ 附带成本信息：xAI 对 4.5/4.6 分档计费，**200K prompt token 是门槛**，达到后
+该请求**全部** token 按高档计价。CPA 中转是否透传完整 500K 未验证。
+
+### 部署与验收（本轮实走）
+
+手工 tar 两段式（4 改动文件 + 2 测试文件）→ **用站外备份起隔离实例先验**（独立
+PORT/DATA_DIR，语法门带负向锚、healthz 报新版本、两个新路由 401 而非 404、带 admin
+会话打 owner 刷新真的执行到业务分支）→ 落位 + chown + 逐文件 `node --check` → 重启。
+E2E 用 proactive 双探针驱动 owner Bot，**刻意不传 `model` 参数**——要验的正是
+「后台设什么就用什么」这条链，传了就绕过后台设置。判据认 `unified.jsonl` 的
+`model changed` 事件（引擎侧真值），本轮投递后 4 条全为 grok-4.6（基线 grok-4.5）。
+
 ## H-0028 定向分享通道（v1.58.0/.1/.2 · 2026-08-10，川哥真机验收通过）
 
 个人 L2 skill → 指定同事的受控分发。**分享=受控 fork 到目标 L2（origin.type='share'），
@@ -2639,10 +2691,55 @@ sendCard 的 9000**（曾设 8000：7174 字节判「装得下」走 sendText �
 
 ## Task 6-R：Runtime Release Provenance（v1.58.2 · 2026-08-10）
 
-- **当前生产锚点（2026-08-11 午更新）**：`v1.60.0`、Source Commit
-  `256d6f500bee3606a282fcbdb6cf29ee3c77edcc`、Release ID
-  `20260811-120048-h-control-1.60.0`、**51 个运行文件**（+scope-import-store.mjs）、
-  `state=in_sync`、`mismatchCount=0`。同款手工流程（git archive 256d6f5 → build manifest →
+- **当前生产锚点（2026-08-13 更新）**：`v1.64.0`、Source Commit
+  `cd82f89565456b5d467ddfed5129ebd9e8565900`、Release ID
+  `20260813-131932-adopt-v1581`、**52 个运行文件**、`state=in_sync`、`mismatchCount=0`。
+  （历史锚：v1.60.0 `256d6f5`/`20260811-120048`/51 文件）
+
+### 🔴 attest 在 drifted 状态下自锁：正解是先让它变 unverified（2026-08-13）
+
+`run_attest()` 第一步就调 `run_check`，而 `check_public_health` 里
+`if (state==="drifted") process.exit(2)` ——**manifest 一旦落后，补签脚本就永远跑不了**。
+它设计支持的是「manifest 缺失」而不是「manifest 对应旧版本」。
+
+`state` 只有三态（`control-plane/lib/runtime-release-provenance.mjs`）：
+`unverified`（manifest 读不到/缺失）/ `in_sync`（mismatchCount===0）/ `drifted`。
+check 只拦 drifted 与「in_sync 但 sourceCommit 对不上」，**unverified 直接放行**。
+
+所以正解**不是硬绕闸门**，是让它进入本来支持的分支：
+
+```bash
+# 陈旧 manifest 先备份到站外，再移走 → 等 11s（inspector 有 10s 缓存）→ state 变 unverified
+sudo cp -a /srv/h-control/app/runtime-release-provenance.json /srv/h-control-backups/manifest-stale-<ver>-<ts>.json
+sudo mv    /srv/h-control/app/runtime-release-provenance.json /srv/h-control-backups/manifest-moved-<ts>.json
+# 然后 attest 能跑完；它自带 rollback，失败会停在「无 manifest」——比「错 manifest」诚实
+H_CONTROL_SOURCE_COMMIT=<sha> H_CONTROL_EXPECTED_VERSION=v1.64.0 \
+H_CONTROL_ATTEST_APPROVED=YES H_CONTROL_APPROVAL_REFERENCE="<当次授权引用>" \
+  bash ops/attest-current-h-control-release.sh attest
+```
+
+attest **不重启服务**（8 处 systemctl 全是 `is-active`/`show`，其中三处正是重启前后
+对比 MainPID/ActiveEnterTimestamp/NRestarts 的零重启断言）。验收认公网 healthz 的
+`state=in_sync` + `mismatchCount=0` + manifest 属主 `h-control:h-control`。
+
+🔴 **两行输出写着 validated/matched，退出码却可以是 2**——check 分三层，前两层过了
+第三层照样拦。**别看见 matched 就宣布通过，取真退出码**（[[feedback_exit_code_ownership]]）。
+
+### 🔴 manifest 落后是常态且完全静默
+
+2026-08-13 查到线上 manifest 停在 **v1.61.0 / `61394ff`**，而线上先后跑过 v1.62.0、
+v1.63.0、v1.64.0 —— **三个版本没重签，没有任何告警**。手工 tar 部署（本 skill
+「控制面部署手法」那节）不生成 manifest，只有 `deploy-company-ontology-control-plane.sh`
+和 attest 会写。**手工部署后必须补签**，否则 provenance 链断了没人知道。
+
+### 🔴 `release_id` 曾硬编码 `-adopt-v1581`（2026-08-13 已修）
+
+`release_id=$(date ...)-adopt-v1581` 与 `EXPECTED_VERSION` 默认值 `v1.58.1` 都是
+v1.58.1 时代的字面量：签的是 v1.64.0，ID 却写着 v1581。已改成从 `EXPECTED_VERSION`
+派生 / 从仓库 `version.mjs` 现取（commit `1d75081`）。新格式
+`<时间戳>-h-control-v1.64.0`，已对 `RELEASE_ID_RE` 验证（配含空格/首字符横线/超长
+三个负向锚）。⚠️ 改这个脚本后**必须先推 origin/main 再跑**——`LOCAL_TOOL_FILES`
+有自校验（`git diff --quiet "$TOOL_COMMIT"`），工作树与已 review 的 commit 不一致即 die。同款手工流程（git archive 256d6f5 → build manifest →
   51 文件对照 → 落盘重启）。⚠️ **manifest 属主必须 `h-control:h-control`**——服务以
   h-control 用户跑，`chown root:root` 后 600 它读不了，healthz 恒 `unverified`（600 权限
   本身没错，错在属主；且 inspector 有 10s 缓存，修完等 11s 再查）。
@@ -5485,6 +5582,45 @@ LC_ALL=C diff -rq workspace "$HOME/ws-copy-$TS"     # 6. 对撞:差异只允许�
 - **owner 攒的通用规则（不含隐私）应经授权收编进仓**，否则每次部署都要重做这套手术
   （本轮把 `prompts/pm/PROMPT.md` 的 R32 收编为 `e2263af`，死结永久消除）。
 - 拉平纯文档提交用 `SKIP_RESTART=1 ops/deploy-sites.sh dev198`（healthz 版本滞后是声明预期）。
+
+### 🔴 手术/快进之后必须重写 `.deploy-meta.json`（2026-08-13 漏过一次）
+
+skill 里 Mini 那节早写着「`git merge --ff-only` **不会更新它**，快进后会出现
+代码已是新 commit、元数据仍写旧 commit 的脱节」——2026-08-13 在 **dev198** 上照样漏了。
+后果：`healthz.version` 报 `3c72a470cdeb`（手术前的 HEAD），磁盘却是 `cd82f89`。
+**服务完全正常，说谎的只有版本上报**，任何人查「dev198 在跑哪个版本」都会拿到错答案。
+
+```bash
+COMMIT=$(git rev-parse HEAD)          # 必须取真值，别手写
+node scripts/write-deploy-meta.mjs --root . --commit "$COMMIT" --branch main --source-host "$(hostname)"
+node scripts/write-deploy-meta.mjs --root . --check     # 立刻回读对撞
+systemctl --user restart feishu-grok-bridge             # 只重启 bridge：Runner 不读元数据
+```
+
+⚠️ **`dirty` 是纯人工声明的 flag**（默认 false，脚本自己不检测）。dev198 的
+`workspace/` 是 owner 活文件、永远在变，按它判就永远 dirty=没有区分度。判据取
+**非 workspace 的 tracked 改动数**——因为 `manifestSha256`/`fileCount` 本就排除
+workspace，两者语义要对齐。代码面为 0 才配声明 false。
+
+### 🔴 清理未跟踪产物：判据是「谁引用它」
+
+2026-08-13 dev198 追平后仍有 47 项未跟踪，逐项查过归属：补 `.gitignore` 挡掉 32 项
+（一次性 `.ops-*`/`.ops-backups` 24MB、仓根误落的 MEMORY.md、evolve proposals/applied、
+飞书附件缓存 lark-im-resources 10MB），剩 15 项里**只有 4 项能动**：
+
+- ❌ `.deploy-meta.json`：24 处代码引用，删了 healthz 版本上报直接失效。
+- ❌ `skills/lark-whiteboard/references/*.md` 等 7 项：**已入库的 SKILL.md 引用它们
+  7/6/5/4/3/2 次**，移走即断链——Bot 读不到 references 不报错、只凭猜。
+- ❌ 3 个 owner 私有 skill 目录：「已发布 L0」**不等于**本地可删——对撞发现 L0 与本地
+  不同源（164 vs 160 行、255 vs 288 行、17 vs 16 文件），L0 是脱敏发布版。
+- ✅ 可动的只有：仓根 `app-registry.mjs`（md5 命中历史提交 `f305c88`、全仓零 import）、
+  `leader/scripts/`（零引用）、`architecture-dashed-spine.png`（SKILL.md 引用 0 次）、
+  一个 0 字节误建文件。
+
+**「归档」不是「删除」的安全版本**：对运行时会读的资产，移走的破坏性与删除相同。
+另：误放副本**不要顺手 gitignore**（挡掉一次性事故会让将来同位置的真问题静默消失），
+把「刻意不挡」的理由写进 .gitignore 注释。详见 [[feedback_cleanup_needs_reference_evidence]]。
+⚠️ 归档仓根文件会改变 `fileCount` → 记得再重写一次 deploy-meta。
 
 ### 🔴 跨机文本判据必须钉 locale
 
