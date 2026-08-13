@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NATIVE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-APP_DIR="$NATIVE_DIR/dist/NIOWarpApp.app"
+APP_DIR="$NATIVE_DIR/.build/app/NIOWarpApp.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 APP_VERSION="${NIO_WARP_APP_VERSION:-0.5.1}"

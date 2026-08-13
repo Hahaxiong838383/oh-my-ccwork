@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NATIVE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-SOURCE_APP="$NATIVE_DIR/dist/NIOWarpApp.app"
+SOURCE_APP="$NATIVE_DIR/.build/app/NIOWarpApp.app"
 INSTALL_DIR="$HOME/Applications"
 INSTALL_APP="$INSTALL_DIR/NIOWarpApp.app"
 

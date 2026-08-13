@@ -49,7 +49,7 @@ uv run nio-warp-display-demo
 /Users/rayman.chen/Applications/NIOWarpApp.app
 ```
 
-控制台窗口标题和界面顶部都会显示当前 Bundle 版本。日常启动应使用固定安装版；`native/dist/NIOWarpApp.app` 仅是构建产物，不作为用户侧版本真值。
+控制台窗口标题和界面顶部都会显示当前 Bundle 版本。日常启动只使用固定安装版；临时构建产物放在隐藏的 `native/.build/app/` 中，避免被 Spotlight 和 LaunchServices 识别成第二个 NIO Warp 应用。
 
 重新构建并安装最新版：
 
