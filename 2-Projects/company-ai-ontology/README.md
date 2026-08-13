@@ -4,7 +4,7 @@
 
 ## 项目宏观架构
 
-这套系统不是单一问答机器人，而是以公司 Ontology 为语义与权限核心、以 Company Agent Core 为统一 AI 中枢、以公司 QNAP 为主硬件底座的经营操作系统。绿色节点表示当前层级已经搭建并有工程或生产证据；灰色虚线节点表示架构已预留，但仍需独立审批、真实 UAT 或生产验收。
+这套系统不是单一问答机器人，而是以公司 Ontology 为语义与权限核心、以 Company Agent Core 为统一 AI 中枢、以公司 QNAP 为主硬件底座的经营操作系统。绿色节点表示当前层级已经搭建并有工程或生产证据；黄色节点表示组件本体已具备能力、但尚未完成公司集成部署；灰色虚线节点表示架构已预留，但仍需独立审批、真实 UAT 或生产验收。
 
 ```mermaid
 flowchart TB
@@ -68,6 +68,17 @@ flowchart TB
     H_LOCAL_POOL["后续 QNAP / Mini / Studio Worker Pool<br/>Route B · 分池 · 故障接管"]:::gated
   end
 
+  subgraph GEO_DISTRIBUTION["Geo 外部 AI 认知传播层｜公司 Linux + 公网发布面"]
+    direction LR
+    PUBLIC_SCOPE["Public Scope Compiler<br/>只选择允许公开的事实 · 证据 · 版本 · 有效期"]:::gated
+    PUBLIC_CLAIM["Public Claim Package<br/>批准陈述 · 禁止字段 · 目标问题 · 发布渠道"]:::gated
+    GEO_ENGINE["Geo Engine v0.3.1<br/>意图映射 · 内容 · Schema · Meta · llms · Sitemap"]:::candidate
+    PUBLICATION_GATE["Publication Action Gateway<br/>产品 / 品牌 / 法务人审 · 幂等 · 发布 · 回滚"]:::gated
+    PUBLIC_SURFACE["企业公网事实面<br/>官网 · 产品页 · 知识中心 · FAQ · 新闻 · 合作伙伴"]:::gated
+    EXTERNAL_AI["外部搜索与 AI 世界<br/>抓取 · 索引 · 检索 · 回答 · 引用"]:::boundary
+    GEO_OBSERVER["GEO Observer<br/>爬虫日志 · 索引状态 · 品牌 / 域名 / Claim / 竞品监测"]:::gated
+  end
+
   subgraph OUTPUTS["经营输出与后续闭环"]
     direction LR
     ANSWER["权限化公司问答<br/>证据 · 未知项 · 置信等级"]:::done
@@ -97,6 +108,19 @@ flowchart TB
   AGENT_CORE --> WORK_PROTOCOL
   SI_PIPELINE --> AGENT_CORE
 
+  ONTOLOGY -. "公开候选事实 + Evidence" .-> PUBLIC_SCOPE
+  WORK_PROTOCOL -. "传播目标 + 受众 + 目标问题" .-> PUBLIC_SCOPE
+  PUBLIC_SCOPE -. "字段最小化 + 敏感检查" .-> PUBLIC_CLAIM
+  PUBLIC_CLAIM -. "仅批准内容进入生成" .-> GEO_ENGINE
+  GEO_ENGINE -. "待发布内容与机器结构" .-> PUBLICATION_GATE
+  ACTION -. "统一动作授权与审计" .-> PUBLICATION_GATE
+  PUBLICATION_GATE -. "公开发布 + 回读验收" .-> PUBLIC_SURFACE
+  PUBLIC_SURFACE -. "搜索 / 用户触发 / 训练采集策略" .-> EXTERNAL_AI
+  PUBLIC_SURFACE -. "HTTP / Bot 日志" .-> GEO_OBSERVER
+  EXTERNAL_AI -. "品牌 · URL · Claim · 竞品表现" .-> GEO_OBSERVER
+  GEO_OBSERVER -. "Observation / Evidence" .-> SI_PIPELINE
+  GEO_OBSERVER -. "传播效果与事实偏差" .-> WORK_PROTOCOL
+
   KNOWLEDGE_CONNECTOR --> POSTGRES
   DOMAIN_CONNECTOR --> POSTGRES
   SI_PIPELINE --> POSTGRES
@@ -118,6 +142,7 @@ flowchart TB
 
   classDef done fill:#e8f7ee,stroke:#1f883d,color:#0b3d1d,stroke-width:1.5px;
   classDef core fill:#dff7e8,stroke:#116329,color:#062d16,stroke-width:2.5px;
+  classDef candidate fill:#fff8c5,stroke:#9a6700,color:#633c01,stroke-width:1.5px;
   classDef gated fill:#f6f8fa,stroke:#8c959f,color:#57606a,stroke-width:1.2px,stroke-dasharray:6 4;
   classDef boundary fill:#ffffff,stroke:#57606a,color:#24292f,stroke-width:1.2px;
 ```
@@ -127,12 +152,19 @@ flowchart TB
 ```text
 外部世界与公司事实 → 权限化 Evidence → Ontology 语义与因果关系 → Company Agent Core 分析
 → 回答 / 报告 / Decision Proposal → DRI 与 Action Gateway → 执行结果 → Verification / Learning
+
+批准的内部事实 → Public Claim Package → Geo 内容与机器结构 → 公网事实面
+→ 外部 AI 抓取 / 检索 / 引用 → GEO Observer → Observation / Evidence 回流 Ontology
 ```
 
 - **认识闭环**：Observation → Evidence → Claim → Hypothesis → Decision。
 - **实践闭环**：Decision → Action → Outcome → Verification。
 - **演化闭环**：Learning → Ontology Change Proposal → Review → Deploy → Reconciliation。
-- **当前 Demo 边界**：权限化问答、内部情报采集样例、报告草稿和模拟审批可体验；正式 P2、员工任务下发和 ERP/社媒写回仍保持关闭。
+- **传播闭环**：Approved Fact → Public Claim → GEO Compile → Publish → Crawl / Index / Cite → Observe → Evidence。
+- **Geo 安全边界**：Geo Engine 只能读取经过 Public Scope Compiler 和产品/品牌/法务审批的最小公开 Claim；不得直接读取全部 Ontology 后自动发布，也不能保证外部 AI 一定收录、引用或排名靠前。
+- **当前 Demo 边界**：权限化问答、内部情报采集样例、报告草稿和模拟审批可体验；Geo Engine v0.3.1 已有审计、内容生成、静态/WordPress 发布和 AI 可见性检测能力，但公司 Linux 部署、Public Scope Compiler、统一发布网关、索引回读、爬虫日志和 Claim 级验证仍为灰色设计态；正式 P2、员工任务下发和 ERP/社媒写回继续关闭。
+
+Geo 融合依据：Studio 只读设计文档 `/Users/fu-121/mycc/2-Projects/geo-engine/docs/company-linux-ontology-geo-distribution-design.md`，文件更新时间 `2026-08-12 12:15:41 CST`，SHA-256 `65f2e5ec476690476dc36e9b5f2e036881bbd2d552dba996ac4e365eead3156b`。该文档明确声明目标架构尚未实施生产部署，因此本图将 Geo 集成节点保持为灰色门禁态。
 
 ## 资产身份门禁
 
