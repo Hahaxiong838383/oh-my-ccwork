@@ -229,6 +229,95 @@ function prepareEnv(fixture) {
   }
 }
 
+async function createMigrationSandbox({ existingEvidence = false, precreateLock = false, failFinalValidation = false } = {}) {
+  const sandbox = await fs.mkdtemp(path.join(os.tmpdir(), 'goal7-migration-'))
+  const scripts = path.join(sandbox, 'scripts')
+  const shadowRoot = path.join(sandbox, 'shadow')
+  const foundationRoot = path.join(sandbox, 'foundation')
+  const evidenceRoot = path.join(shadowRoot, 'approvals', 'goal7-current')
+  const runtimeRoot = path.join(shadowRoot, 'foundation-releases', 'current')
+  const historicalReleaseRoot = path.join(shadowRoot, 'release', 'goal7-31555822727')
+  const historicalEvidenceRoot = path.join(shadowRoot, 'approvals', 'goal7-31555822727')
+  const sourceCommit = 'c'.repeat(40)
+  const hLiteSourceCommit = 'f'.repeat(40)
+  const migrationBytes = Buffer.from('-- goal7 migration fixture\n')
+  const historicalPreState = Buffer.from('{"phase":"before"}\n')
+  const migrationSha = sha256(migrationBytes)
+  const historicalPreStateSha = sha256(historicalPreState)
+  const nodeLog = path.join(sandbox, 'node.log')
+  const liveLog = path.join(sandbox, 'live.log')
+  await fs.mkdir(scripts, { recursive: true })
+  await fs.mkdir(evidenceRoot, { recursive: true })
+  await fs.mkdir(path.join(runtimeRoot, 'company-ai-ontology/deploy/qnap/candidate-migrations'), { recursive: true })
+  await fs.mkdir(historicalReleaseRoot, { recursive: true })
+  await fs.mkdir(historicalEvidenceRoot, { recursive: true })
+  await fs.mkdir(foundationRoot, { recursive: true })
+  await fs.writeFile(path.join(runtimeRoot, 'company-ai-ontology/deploy/qnap/candidate-migrations/012-goal7-authority-runtime.sql'), migrationBytes)
+  await fs.writeFile(path.join(historicalEvidenceRoot, 'pre-deployment-state.json'), historicalPreState)
+  const archiveRoot = path.join(sandbox, 'historical-archive')
+  await fs.mkdir(path.join(archiveRoot, 'company-ai-ontology/deploy/qnap/candidate-migrations'), { recursive: true })
+  await fs.writeFile(path.join(archiveRoot, 'company-ai-ontology/deploy/qnap/candidate-migrations/012-goal7-authority-runtime.sql'), migrationBytes)
+  assert.equal(spawnSync('tar', ['-czf', path.join(historicalReleaseRoot, 'source.tar.gz'), '-C', archiveRoot, '.']).status, 0)
+  await fs.writeFile(path.join(evidenceRoot, 'preparation-evidence.json'), '{"prepared":true}\n')
+  if (existingEvidence) await fs.writeFile(path.join(evidenceRoot, 'migration-012-evidence.json'), '{"existing":true}\n')
+  const migrate = (await fs.readFile(MIGRATE, 'utf8'))
+    .replaceAll('8ea8648effbd7ab6d3ef81283678afc2fb16250f526e73c6a421abcb4d723a74', migrationSha)
+    .replaceAll('5c6c10e8aeb9ebd8db0e87ad30b5f8ce8ed5a5ac94be53068baca75a04b0b723', historicalPreStateSha)
+  await writeExecutable(path.join(scripts, 'reconcile-goal7-migration-012.sh'), migrate)
+  await fs.writeFile(path.join(scripts, 'preflight-company-qnap.sh'), [
+    `shadow_root=${JSON.stringify(shadowRoot)}`,
+    `foundation_root=${JSON.stringify(foundationRoot)}`,
+    `docker_path=${JSON.stringify(path.join(scripts, 'docker'))}`,
+    '',
+  ].join('\n'))
+  await writeExecutable(path.join(scripts, 'node-runtime.sh'), `#!/bin/sh
+printf '%s\n' "$*" >> ${JSON.stringify(nodeLog)}
+case "$1" in
+  */validate-goal7-preparation.mjs)
+    printf '%s\n' 'run_id=goal7-current' 'runtime_root=${runtimeRoot}' 'preparation_evidence_sha256=${'a'.repeat(64)}'
+    ;;
+  */write-goal7-migration-evidence.mjs)
+    cp "$2" "$3"
+    ;;
+  */validate-goal7-migration.mjs)
+    ${failFinalValidation ? 'exit 7' : `printf '%s\n' 'migration_status=verified' 'migration_evidence_sha256=${'b'.repeat(64)}'`}
+    ;;
+  *) exit 8 ;;
+esac
+`)
+  await writeExecutable(path.join(scripts, 'verify-goal7-migration-012-live.sh'), `#!/bin/sh
+printf '%s\n' verified >> ${JSON.stringify(liveLog)}
+cat <<'EOF'
+table_count=4
+forced_rls_count=4
+tenant_policy_count=4
+app_privilege_count=10
+delete_privilege_count=0
+banned_column_count=0
+app_role_read_verified=true
+principal_membership_row_count=0
+authority_snapshot_row_count=0
+route_state_row_count=1
+usage_event_row_count=0
+EOF
+`)
+  await fs.writeFile(path.join(scripts, 'write-goal7-migration-evidence.mjs'), '')
+  await fs.writeFile(path.join(scripts, 'validate-goal7-migration.mjs'), '')
+  await fs.writeFile(path.join(scripts, 'validate-goal7-preparation.mjs'), '')
+  if (precreateLock) await fs.mkdir(path.join(shadowRoot, '.goal7-migration-012-reconciliation.lock'))
+  return { scripts, shadowRoot, evidenceRoot, sourceCommit, hLiteSourceCommit, nodeLog, liveLog }
+}
+
+function migrationEnv(fixture) {
+  return {
+    ...process.env,
+    GOAL7_MIGRATION_012_RECONCILIATION_APPROVED: 'YES',
+    GOAL7_DEPLOYMENT_EVIDENCE_ROOT: fixture.evidenceRoot,
+    GOAL7_APPROVED_SOURCE_COMMIT: fixture.sourceCommit,
+    GOAL7_APPROVED_H_LITE_SOURCE_COMMIT: fixture.hLiteSourceCommit,
+  }
+}
+
 test('Goal 7 部署和回滚在公司 QNAP 预检前要求独立显式授权', () => {
   const deploy = spawnSync('sh', [DEPLOY], { encoding: 'utf8' })
   assert.equal(deploy.status, 2)
@@ -424,6 +513,9 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
   assert.match(prepare, /verify_image_readable company-ai-foundation-knowledge-connector:goal7-candidate-\$run_id \/app\/src\/server\.mjs/)
   assert.match(prepare, /verify_image_readable company-ai-foundation-h-lite:goal7-candidate-\$run_id \/app\/company-qnap-lite\.mjs/)
   assert.match(migrate, /012-goal7-authority-runtime\.sql/)
+  assert.match(migrate, /\.goal7-migration-012-reconciliation\.lock/)
+  assert.match(migrate, /Goal 7 migration 012 reconciliation is already in progress/)
+  assert.match(migrate, /release_lock/)
   assert.match(migrate, /migration-012-evidence\.json/)
   assert.match(migrate, /originalEvidenceStatus/)
   assert.match(migrate, /database_sql_executed=0/)
@@ -560,6 +652,67 @@ test('Goal 7 Foundation 新准备成功完成后释放锁', async () => {
   await assert.rejects(fs.lstat(path.join(fixture.shadowRoot, '.goal7-foundation-preparation.lock')), { code: 'ENOENT' })
   assert.equal((await fs.lstat(path.join(fixture.evidenceRoot, 'preparation-evidence.json'))).isFile(), true)
   assert.equal((await fs.lstat(path.join(fixture.backupBase, fixture.runId, 'images/tags.txt'))).isFile(), true)
+})
+
+test('Goal 7 迁移对账锁拒绝并发且不运行验证器', async () => {
+  const fixture = await createMigrationSandbox({ precreateLock: true })
+  const result = spawnSync('sh', [path.join(fixture.scripts, 'reconcile-goal7-migration-012.sh')], {
+    encoding: 'utf8',
+    env: migrationEnv(fixture),
+  })
+  assert.equal(result.status, 2)
+  assert.match(result.stderr, /reconciliation is already in progress/)
+  await assert.rejects(fs.lstat(fixture.nodeLog), { code: 'ENOENT' })
+  await assert.rejects(fs.lstat(fixture.liveLog), { code: 'ENOENT' })
+})
+
+test('Goal 7 迁移对账成功回放后释放锁', async () => {
+  const fixture = await createMigrationSandbox({ existingEvidence: true })
+  const result = spawnSync('sh', [path.join(fixture.scripts, 'reconcile-goal7-migration-012.sh')], {
+    encoding: 'utf8',
+    env: migrationEnv(fixture),
+  })
+  assert.equal(result.status, 0, result.stderr)
+  assert.match(result.stdout, /migration_reconciliation_replay=accepted/)
+  assert.match(result.stdout, /database_sql_executed=0/)
+  await assert.rejects(fs.lstat(path.join(fixture.shadowRoot, '.goal7-migration-012-reconciliation.lock')), { code: 'ENOENT' })
+})
+
+test('Goal 7 迁移对账失败回放保留既有证据并释放锁', async () => {
+  const fixture = await createMigrationSandbox({ existingEvidence: true, failFinalValidation: true })
+  const evidenceFile = path.join(fixture.evidenceRoot, 'migration-012-evidence.json')
+  const evidenceBefore = await fs.readFile(evidenceFile)
+  const result = spawnSync('sh', [path.join(fixture.scripts, 'reconcile-goal7-migration-012.sh')], {
+    encoding: 'utf8',
+    env: migrationEnv(fixture),
+  })
+  assert.equal(result.status, 7)
+  assert.deepEqual(await fs.readFile(evidenceFile), evidenceBefore)
+  await assert.rejects(fs.lstat(path.join(fixture.shadowRoot, '.goal7-migration-012-reconciliation.lock')), { code: 'ENOENT' })
+})
+
+test('Goal 7 迁移新对账成功后释放锁并保持 SQL 为零', async () => {
+  const fixture = await createMigrationSandbox()
+  const result = spawnSync('sh', [path.join(fixture.scripts, 'reconcile-goal7-migration-012.sh')], {
+    encoding: 'utf8',
+    env: migrationEnv(fixture),
+  })
+  assert.equal(result.status, 0, result.stderr)
+  assert.match(result.stdout, /goal7_migration012=pre_existing_reconciled/)
+  assert.match(result.stdout, /database_sql_executed=0/)
+  assert.equal((await fs.lstat(path.join(fixture.evidenceRoot, 'migration-012-evidence.json'))).isFile(), true)
+  await assert.rejects(fs.lstat(path.join(fixture.shadowRoot, '.goal7-migration-012-reconciliation.lock')), { code: 'ENOENT' })
+})
+
+test('Goal 7 迁移新对账最终验证失败时清理新证据并释放锁', async () => {
+  const fixture = await createMigrationSandbox({ failFinalValidation: true })
+  const result = spawnSync('sh', [path.join(fixture.scripts, 'reconcile-goal7-migration-012.sh')], {
+    encoding: 'utf8',
+    env: migrationEnv(fixture),
+  })
+  assert.equal(result.status, 7)
+  await assert.rejects(fs.lstat(path.join(fixture.evidenceRoot, 'migration-012-evidence.json')), { code: 'ENOENT' })
+  await assert.rejects(fs.lstat(path.join(fixture.shadowRoot, '.goal7-migration-012-reconciliation.lock')), { code: 'ENOENT' })
 })
 
 test('Goal 7 Ontology 候选 Foundation 镜像固定 Node 基础镜像 digest', async () => {

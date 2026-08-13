@@ -14,6 +14,26 @@ node_bin=${NODE_BIN:-$script_root/node-runtime.sh}
 case "$evidence_root" in "$shadow_root"/approvals/*) ;; *) echo 'migration reconciliation evidence must remain under strategic intelligence approvals root' >&2; exit 2 ;; esac
 case "$evidence_root" in *'/../'*|*/..|*'//'*) echo 'Goal 7 migration reconciliation evidence path is not normalized' >&2; exit 2 ;; esac
 
+reconciliation_lock=$shadow_root/.goal7-migration-012-reconciliation.lock
+mkdir "$reconciliation_lock" 2>/dev/null || { echo 'Goal 7 migration 012 reconciliation is already in progress' >&2; exit 2; }
+lock_held=1
+temporary_root=
+migration_evidence_created=0
+release_lock() {
+  if [ "$lock_held" -eq 1 ]; then
+    rmdir "$reconciliation_lock" 2>/dev/null || true
+    lock_held=0
+  fi
+}
+cleanup() {
+  rm -f "${input_file:-}"
+  [ -z "$temporary_root" ] || rm -rf "$temporary_root"
+  [ "$migration_evidence_created" -eq 0 ] || rm -f "${migration_evidence:-}"
+  release_lock
+}
+trap cleanup EXIT
+trap 'exit 130' HUP INT TERM
+
 preparation=$($node_bin "$script_root/validate-goal7-preparation.mjs" "$evidence_root" "$approved_source_commit" "$approved_h_lite_source_commit")
 run_id=$(printf '%s\n' "$preparation" | awk -F= '/^run_id=/{print $2;exit}')
 runtime_root=$(printf '%s\n' "$preparation" | awk -F= '/^runtime_root=/{print $2;exit}')
@@ -31,6 +51,8 @@ historical_pre_state_sha=5c6c10e8aeb9ebd8db0e87ad30b5f8ce8ed5a5ac94be53068baca75
 if [ -f "$migration_evidence" ] && [ ! -L "$migration_evidence" ]; then
   existing=$($node_bin "$script_root/validate-goal7-migration.mjs" "$evidence_root" "$approved_source_commit" "$approved_h_lite_source_commit")
   live_checks=$("$script_root/verify-goal7-migration-012-live.sh")
+  release_lock
+  trap - EXIT HUP INT TERM
   printf '%s\n%s\nmigration_reconciliation_replay=accepted\ndatabase_sql_executed=0\n' "$existing" "$live_checks"
   exit 0
 fi
@@ -41,11 +63,6 @@ fi
 [ "$(sha256sum "$historical_pre_state" | awk '{print $1}')" = "$historical_pre_state_sha" ] || { echo 'historical Goal 7 pre-deployment state drift' >&2; exit 2; }
 
 temporary_root=$(mktemp -d "$shadow_root/goal7-migration-reconciliation.XXXXXX")
-cleanup() {
-  rm -f "$input_file"
-  rm -rf "$temporary_root"
-}
-trap cleanup EXIT HUP INT TERM
 tar -xzf "$historical_source_archive" -C "$temporary_root" company-ai-ontology/deploy/qnap/candidate-migrations/012-goal7-authority-runtime.sql
 historical_migration_file=$temporary_root/company-ai-ontology/deploy/qnap/candidate-migrations/012-goal7-authority-runtime.sql
 [ "$(sha256sum "$historical_migration_file" | awk '{print $1}')" = "$historical_sql_sha" ] || { echo 'historical Goal 7 migration SQL drift' >&2; exit 2; }
@@ -103,7 +120,10 @@ cat > "$input_file" <<EOF_JSON
 EOF_JSON
 chmod 600 "$input_file"
 "$node_bin" "$script_root/write-goal7-migration-evidence.mjs" "$input_file" "$migration_evidence" >/dev/null
-trap - EXIT HUP INT TERM
+migration_evidence_created=1
+validation=$($node_bin "$script_root/validate-goal7-migration.mjs" "$evidence_root" "$approved_source_commit" "$approved_h_lite_source_commit")
+migration_evidence_created=0
 cleanup
-"$node_bin" "$script_root/validate-goal7-migration.mjs" "$evidence_root" "$approved_source_commit" "$approved_h_lite_source_commit"
+trap - EXIT HUP INT TERM
+printf '%s\n' "$validation"
 printf 'goal7_migration012=pre_existing_reconciled\ndatabase_sql_executed=0\nservices_recreated=0\n'
