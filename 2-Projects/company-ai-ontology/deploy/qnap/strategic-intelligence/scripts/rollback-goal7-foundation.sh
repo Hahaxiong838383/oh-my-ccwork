@@ -168,7 +168,7 @@ switch_release() {
   "$docker_path" compose config >/dev/null
   "$docker_path" compose up -d --no-deps --no-build agent-core >/dev/null
   "$docker_path" compose up -d --no-deps --no-build knowledge-connector >/dev/null
-  "$docker_path" compose up -d --no-deps --no-build h-lite >/dev/null
+  "$docker_path" compose up -d --no-deps --force-recreate --no-build h-lite >/dev/null
 }
 switch_candidate_from_legacy() {
   wait_legacy_release_quiet || { echo 'Goal 7 rollback previous release never reached the required quiet window' >&2; return 1; }
@@ -179,7 +179,7 @@ switch_candidate_from_legacy() {
     "$docker_path" image tag "company-ai-foundation-$service:goal7-candidate-$run_id" "company-ai-foundation-$service:latest"
   done
   "$docker_path" compose config >/dev/null
-  "$docker_path" compose up -d --no-deps --no-build h-lite >/dev/null
+  "$docker_path" compose up -d --no-deps --force-recreate --no-build h-lite >/dev/null
   wait_candidate_h_lite_recovery || { echo 'Goal 7 rollback recovery H-Lite verification timed out' >&2; return 1; }
   h_lite_admin drain 0 || { echo 'Goal 7 rollback recovery H-Lite drain failed' >&2; return 1; }
   wait_agent_core_idle || { echo 'Goal 7 rollback previous Agent Core did not become idle behind recovery H-Lite' >&2; return 1; }

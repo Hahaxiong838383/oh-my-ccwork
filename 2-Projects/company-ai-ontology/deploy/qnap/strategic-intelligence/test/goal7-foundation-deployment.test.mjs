@@ -578,13 +578,19 @@ test('Goal 7 Foundation 脚本只切换三个服务并保留可回滚链', async
   assert.match(rollback, /wait_candidate_h_lite_recovery/)
   assert.match(rollback, /wait_agent_core_idle/)
   assert.match(rollback, /h_lite_admin drain 0/)
-  for (const service of ['agent-core', 'knowledge-connector', 'h-lite']) {
+  for (const service of ['agent-core', 'knowledge-connector']) {
     assert.match(rollback, new RegExp(`compose up -d --no-deps --no-build ${service}`))
   }
+  assert.equal((rollback.match(/compose up -d --no-deps --force-recreate --no-build h-lite/g) || []).length, 2)
   const previousReleasePath = rollback.slice(
     rollback.indexOf('switch_release "$backup_root/.env"'),
     rollback.indexOf('"$script_root/capture-goal7-deployment-state.sh" rollback_previous'),
   )
+  const switchReleaseBody = rollback.slice(
+    rollback.indexOf('switch_release()'),
+    rollback.indexOf('switch_candidate_from_legacy()'),
+  )
+  assert.match(switchReleaseBody, /compose up -d --no-deps --force-recreate --no-build h-lite/)
   assert.doesNotMatch(previousReleasePath, /h_lite_admin resume/)
   const legacyRestorePath = rollback.slice(rollback.indexOf('switch_candidate_from_legacy()'))
   assert.ok(legacyRestorePath.indexOf('compose up -d --no-deps --no-build h-lite') < legacyRestorePath.indexOf('h_lite_admin drain 0'))

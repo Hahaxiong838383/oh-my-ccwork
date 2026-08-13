@@ -218,7 +218,7 @@ export function validateGoal7ReleasePlan(plan, scripts = {}) {
     requireValue(rollback.includes('127.0.0.1:8080/v1/admin/drain'), 'rollback missing Agent Core drain gate')
     requireValue(rollback.includes('compose up -d --no-deps --no-build agent-core'), 'rollback Agent Core recreation must use --no-deps --no-build')
     requireValue(rollback.includes('compose up -d --no-deps --no-build knowledge-connector'), 'rollback Knowledge Connector recreation must use --no-deps --no-build')
-    requireValue(rollback.includes('compose up -d --no-deps --no-build h-lite'), 'rollback H-Lite recreation must use --no-deps --no-build')
+    requireValue(rollback.includes('compose up -d --no-deps --force-recreate --no-build h-lite'), 'rollback release switch must force-recreate H-Lite so in-memory drain state cannot survive an identical image')
     requireValue(rollback.includes('compile-goal7-rollback-drill.mjs'), 'rollback script missing compiler-derived drill evidence')
     requireValue(rollback.includes('validate-goal7-rollback-drill.mjs'), 'rollback script missing drill evidence validation')
     requireValue(rollback.includes('candidate_release_restored=true'), 'rollback script must restore the approved candidate release')
