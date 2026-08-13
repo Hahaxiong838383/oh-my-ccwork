@@ -43,6 +43,21 @@ uv run nio-warp-display-demo
 
 ## 原生整屏接管 Demo
 
+当前本机验收版为 **v0.3.0 (3)**，固定安装路径：
+
+```text
+/Users/rayman.chen/Applications/NIOWarpApp.app
+```
+
+控制台窗口标题和界面顶部都会显示当前 Bundle 版本。日常启动应使用固定安装版；`native/dist/NIOWarpApp.app` 仅是构建产物，不作为用户侧版本真值。
+
+重新构建并安装最新版：
+
+```bash
+cd /Users/rayman.chen/mycc/2-Projects/nio-warp-demo/native
+scripts/install-app.sh
+```
+
 原生版本使用 ScreenCaptureKit 捕获三星外接屏的整个桌面，排除程序自身的覆盖窗口后，再使用 Metal 实时 Warp 回同一块三星外屏。
 
 ```text

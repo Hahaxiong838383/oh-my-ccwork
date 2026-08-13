@@ -6,6 +6,8 @@ NATIVE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 APP_DIR="$NATIVE_DIR/dist/NIOWarpApp.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
+APP_VERSION="${NIO_WARP_APP_VERSION:-0.3.0}"
+APP_BUILD="${NIO_WARP_APP_BUILD:-3}"
 
 cd "$NATIVE_DIR"
 swift build -c release
@@ -14,7 +16,7 @@ rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR"
 cp "$NATIVE_DIR/.build/release/NIOWarpApp" "$MACOS_DIR/NIOWarpApp"
 
-cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
+cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -32,9 +34,9 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.2.0</string>
+  <string>${APP_VERSION}</string>
   <key>CFBundleVersion</key>
-  <string>2</string>
+  <string>${APP_BUILD}</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>NSHighResolutionCapable</key>

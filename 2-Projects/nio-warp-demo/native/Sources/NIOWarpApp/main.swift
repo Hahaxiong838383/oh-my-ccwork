@@ -518,6 +518,15 @@ private enum RuntimePreviewMode {
     case antiAliasingComparison
 }
 
+private enum AppVersion {
+    static var display: String {
+        let dictionary = Bundle.main.infoDictionary
+        let version = dictionary?["CFBundleShortVersionString"] as? String ?? "开发版"
+        let build = dictionary?["CFBundleVersion"] as? String ?? "-"
+        return "v\(version) (\(build))"
+    }
+}
+
 private final class OutputController {
     let window: NSWindow
     let renderer: WarpRenderer
@@ -646,7 +655,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
             backing: .buffered,
             defer: false
         )
-        panel.title = "NIO 全屏 Warp 标定控制台"
+        panel.title = "NIO 全屏 Warp 标定控制台 · \(AppVersion.display)"
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
@@ -702,9 +711,19 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
             stack.bottomAnchor.constraint(equalTo: documentView.bottomAnchor),
         ])
 
+        let titleRow = NSStackView()
+        titleRow.orientation = .horizontal
+        titleRow.alignment = .centerY
+        titleRow.spacing = 10
         let title = NSTextField(labelWithString: "外屏桌面 → 逻辑画布 → 预畸变 → 矩形 AA 区")
         title.font = .systemFont(ofSize: 18, weight: .bold)
-        stack.addArrangedSubview(title)
+        let version = NSTextField(labelWithString: AppVersion.display)
+        version.font = .monospacedSystemFont(ofSize: 12, weight: .semibold)
+        version.textColor = .secondaryLabelColor
+        version.toolTip = "当前运行版本"
+        titleRow.addArrangedSubview(title)
+        titleRow.addArrangedSubview(version)
+        stack.addArrangedSubview(titleRow)
         let topology = NSTextField(wrappingLabelWithString: "源：\(screenName(sourceScreen))\n输出：\(screenName(outputScreen)) · \(displayWidth)×\(displayHeight) px\nAA 区外始终纯黑；多项式定义为逻辑画布到物理 AA 区的增量映射。")
         topology.textColor = .secondaryLabelColor
         stack.addArrangedSubview(topology)
