@@ -257,7 +257,13 @@ async function createMigrationSandbox({ existingEvidence = false, precreateLock 
   const archiveRoot = path.join(sandbox, 'historical-archive')
   await fs.mkdir(path.join(archiveRoot, 'company-ai-ontology/deploy/qnap/candidate-migrations'), { recursive: true })
   await fs.writeFile(path.join(archiveRoot, 'company-ai-ontology/deploy/qnap/candidate-migrations/012-goal7-authority-runtime.sql'), migrationBytes)
-  assert.equal(spawnSync('tar', ['-czf', path.join(historicalReleaseRoot, 'source.tar.gz'), '-C', archiveRoot, '.']).status, 0)
+  assert.equal(spawnSync('tar', [
+    '-czf',
+    path.join(historicalReleaseRoot, 'source.tar.gz'),
+    '-C',
+    archiveRoot,
+    'company-ai-ontology/deploy/qnap/candidate-migrations/012-goal7-authority-runtime.sql',
+  ]).status, 0)
   await fs.writeFile(path.join(evidenceRoot, 'preparation-evidence.json'), '{"prepared":true}\n')
   if (existingEvidence) await fs.writeFile(path.join(evidenceRoot, 'migration-012-evidence.json'), '{"existing":true}\n')
   const migrate = (await fs.readFile(MIGRATE, 'utf8'))
