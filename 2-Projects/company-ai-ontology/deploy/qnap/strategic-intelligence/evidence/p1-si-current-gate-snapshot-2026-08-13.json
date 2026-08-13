@@ -1,5 +1,5 @@
 {
-  "snapshotVersion": "1.4.0",
+  "snapshotVersion": "1.5.0",
   "goalKey": "P1-STRATEGIC-INTELLIGENCE",
   "snapshotDate": "2026-08-13",
   "state": {
@@ -35,6 +35,9 @@
     "stageACompleted": true,
     "stageAPreparationEvidenceSha256": "831e8b4e96882247704cfe6ce2757c5a72e385c7f53f769db283d30e1165d866",
     "stageARecordSha256": "705f9b350f38f64fb586399eff74356383d85f9b52e06053f7c13bcb26c8afef",
+    "stageBCompleted": true,
+    "stageBMigrationEvidenceSha256": "55531dbb754626dbce90f14917f46101a6711ea2c865481d0dbc5ca813afe898",
+    "stageBRecordSha256": "9e7161e07fa81f1408f91e3dc63d90c342e3c998608c95948517b4d2f134a798",
     "candidateOntologySchema": "3.7.0",
     "candidateOntologyHash": "c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860",
     "routeBState": "disabled",
@@ -111,5 +114,5 @@
     "9153663685",
     "9151468565"
   ],
-  "nextRequiredGate": "WAIT_SEPARATE_STAGE_B_AUTHORIZATION"
+  "nextRequiredGate": "WAIT_SEPARATE_STAGE_C_AUTHORIZATION"
 }

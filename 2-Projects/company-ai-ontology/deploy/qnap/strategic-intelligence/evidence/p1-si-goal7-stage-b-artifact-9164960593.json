@@ -1,0 +1,68 @@
+{
+  "evidenceVersion": "1.0.0",
+  "evidenceType": "goal7-stage-b-production-acceptance",
+  "capturedAt": "2026-08-13T01:46:30Z",
+  "containsSecrets": false,
+  "companyQnap": {
+    "identity": "qnap:company/prnas/TS-X65",
+    "host": "PRNas",
+    "model": "TS-X65",
+    "address": "192.168.61.18",
+    "foundationRoot": "/share/CACHEDEV1_DATA/ai-ontology/foundation",
+    "identityVerified": true
+  },
+  "artifact": {
+    "id": "9164960593",
+    "workflowRunId": "31657526039",
+    "sourceCommit": "d2c8bb128d4f0b34b06e6e9bca33587ab115c577",
+    "hLiteSourceCommit": "baa00bf07089a3caf5fe6318aac28cb73bd5ae13",
+    "stageAPreparationEvidenceSha256": "831e8b4e96882247704cfe6ce2757c5a72e385c7f53f769db283d30e1165d866"
+  },
+  "migrationReconciliation": {
+    "runId": "9164960593-stage-a",
+    "reconciledAt": "2026-08-13T01:45:34.145Z",
+    "evidenceFile": "migration-012-evidence.json",
+    "evidenceSha256": "55531dbb754626dbce90f14917f46101a6711ea2c865481d0dbc5ca813afe898",
+    "historicalWorkflowRunId": "31555822727",
+    "historicalArtifactId": "9125968266",
+    "historicalSqlSha256": "8ea8648effbd7ab6d3ef81283678afc2fb16250f526e73c6a421abcb4d723a74",
+    "currentSqlSha256": "8ea8648effbd7ab6d3ef81283678afc2fb16250f526e73c6a421abcb4d723a74",
+    "originalEvidenceStatus": "missing_at_source",
+    "mode": "pre_existing_reconciliation_only",
+    "replayAccepted": true
+  },
+  "checks": {
+    "tableCount": 4,
+    "forcedRlsCount": 4,
+    "tenantPolicyCount": 4,
+    "appPrivilegeCount": 10,
+    "deletePrivilegeCount": 0,
+    "bannedColumnCount": 0,
+    "appRoleReadVerified": true,
+    "principalMembershipRowCount": 0,
+    "authoritySnapshotRowCount": 7,
+    "routeStateRowCount": 0,
+    "usageEventRowCount": 2
+  },
+  "safety": {
+    "migrationEvidenceMode": "0600",
+    "artifactStagingLockCount": 0,
+    "preparationLockCount": 0,
+    "migrationLockCount": 0,
+    "partialCount": 0,
+    "foundationRunningContainerCount": 13,
+    "foundationUnhealthyCount": 0,
+    "foundationRestartCount": 0,
+    "strategicIntelligenceContainerCount": 0,
+    "strategicIntelligenceNetworkCount": 0,
+    "databaseSqlExecuted": 0,
+    "servicesRecreated": 0,
+    "workerStarted": 0,
+    "collectorStarted": 0,
+    "shadowStarted": 0,
+    "rollbackDrillStarted": 0,
+    "observedEmployeeInterruptionSeconds": 0
+  },
+  "result": "stage_b_completed_waiting_separate_stage_c_authorization",
+  "nextRequiredGate": "WAIT_SEPARATE_STAGE_C_AUTHORIZATION"
+}

@@ -2,9 +2,9 @@
 
 日期：2026-08-13（Asia/Shanghai，沿用文件名以保持既有链接）
 
-状态：`STAGE_A_COMPLETED / STAGE_B_NOT_AUTHORIZED`
+状态：`STAGE_A_B_COMPLETED / STAGE_C_AUTHORIZED_PENDING_EXECUTION`
 
-> Workflow `31657526039` Attempt `1` / Artifact `9164960593` 已通过 Manifest `1.6.0`、9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 交叉绑定、迁移对账互斥锁与 Evidence 生命周期回归。`2026-08-13T01:31:13Z`，A 阶段已按当前授权完成 Artifact 原子入场、新备份、三个候选镜像和 Preparation Evidence；Foundation 保持 `13/13 running / unhealthy=0 / restart=0`，SQL、服务重建、Worker、Collector、Shadow 与回滚均为 `0`，三类锁和 transfer partial 均为 `0`。B～E 仍必须在前序 Evidence 完成后分别授权，任何授权不得继承。
+> Workflow `31657526039` Attempt `1` / Artifact `9164960593` 已通过 Manifest `1.6.0`、9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 交叉绑定、迁移对账互斥锁与 Evidence 生命周期回归。A 阶段于 `2026-08-13T01:31:13Z` 完成；B 阶段于 `2026-08-13T01:45:34Z` 完成既有 012 只读对账并幂等回放，四表、RLS、Tenant Policy、`ontology_app` 权限和 SQL Hash 全部通过，`database_sql_executed=0`。Foundation 保持 `13/13 running / unhealthy=0 / restart=0`。C～E 仍必须分别生成并验证 Evidence，任何授权不得继承。
 
 ## 1. 固定发布身份
 
@@ -60,7 +60,7 @@ Artifact 保留至 `2026-11-11T01:23:03Z`；9 项 `SHA256SUMS` 及完整验证�
 
 ## 4. 五项独立授权
 
-以下五项互不继承。A 已完成；B 当前可单独申请但尚未授权，C～E 继续关闭，必须等待各自前序 Evidence 后才可申请。
+以下五项互不继承。A、B 已完成；川哥已在当前任务中明确授权继续执行后续阶段，C 当前待执行，D、E 仍必须等待各自前序 Evidence 成功后才可执行。
 
 ### A. Foundation 发布准备与 Artifact 入场
 
@@ -70,15 +70,15 @@ Artifact 保留至 `2026-11-11T01:23:03Z`；9 项 `SHA256SUMS` 及完整验证�
 
 ### B. 既有迁移 012 只读证据对账
 
-动作：验证历史 Source Archive、SQL Hash、现有四表、4/4 强制 RLS、Tenant Policy、真实 `ontology_app` 权限、无 DELETE 和无敏感正文列，生成新的对账 Evidence；必须输出 `database_sql_executed=0`，不得再次执行 `012-goal7-authority-runtime.sql`。
+状态：`COMPLETED`。已验证历史 Source Archive、SQL Hash、现有四表、4/4 强制 RLS、Tenant Policy、真实 `ontology_app` 权限、无 DELETE 和无敏感正文列，并生成新的对账 Evidence；首次执行与幂等回放均输出 `database_sql_executed=0`，未再次执行 `012-goal7-authority-runtime.sql`。
 
-> 当前可单独申请；尚未授权。只允许只读验证和写入脱敏 Evidence，必须输出 `database_sql_executed=0`，不得再次执行迁移 SQL。
+> 历史已执行授权：只允许只读验证和写入脱敏 Evidence，必须输出 `database_sql_executed=0`，不得再次执行迁移 SQL。
 
 ### C. 三组件服务重建
 
 动作：按恢复型 H-Lite → Agent Core → Knowledge Connector → H-Lite 恢复接单的顺序，重建 `h-lite`、`agent-core`、`knowledge-connector`；使用 drain/resume、健康检查和自动失败恢复，不重启其他 Foundation 服务。
 
-> 当前锁定；B 阶段 Evidence 完成前不得授权。
+> B 阶段 Evidence 已完成；当前任务授权允许执行 C，但必须在任何切换前再次核对五元组、候选镜像和自动恢复条件。
 
 ### D. 真实 H Worker 双源读回与 Authority Canary
 
@@ -112,4 +112,4 @@ Artifact 保留至 `2026-11-11T01:23:03Z`；9 项 `SHA256SUMS` 及完整验证�
 
 ## 6. 当前建议
 
-当前 A 已完成，下一步只可单独申请 B 阶段既有 012 只读证据对账；C～E 继续锁定。正式七日 `PUBLISH=false` Shadow 不属于本授权卡，仍需来源/P003/四角色 UAT、Goal 7 Owner Acceptance 和新的独立授权。A 阶段脱敏实机证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-a-artifact-9164960593.json`。
+当前 A、B 已完成，下一步按当前任务授权执行 C 阶段三组件受控重建；C 成功并留证后才可执行 D，D 成功后才可执行 E。正式七日 `PUBLISH=false` Shadow 不属于本授权卡，仍需来源/P003/四角色 UAT、Goal 7 Owner Acceptance 和新的独立授权。A、B 脱敏实机证据分别见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-a-artifact-9164960593.json` 与 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-b-artifact-9164960593.json`。

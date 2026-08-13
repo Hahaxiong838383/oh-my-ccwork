@@ -6,7 +6,7 @@
 
 ## 1. 结论
 
-P1-SI-B～G 的工程骨架已通过最近一次完整验收。B 阶段迁移对账已补全局互斥锁、成功/失败回放释放锁、新 Evidence 最终验证失败清理和既有 Evidence 验证失败保留，并修复 macOS/Linux `tar` 路径语义差异。Workflow `31657526039` Attempt `1` / Artifact `9164960593` 已通过 Manifest `1.6.0` 完整复验。`2026-08-13T01:31:13Z`，该 Artifact 的 A 阶段已在公司 QNAP 完成并留证；Artifact `9163957919` 的 A 历史证据仍有效但不可继续用于 B～E。当前下一门禁是单独授权 B 阶段既有 012 只读对账。P1-SI-H 仍不能开始正式七日 Shadow，因为来源、P003、四角色 UAT、Goal 7 B～E Evidence 和 Owner Acceptance 均未完成。
+P1-SI-B～G 的工程骨架已通过最近一次完整验收。B 阶段迁移对账已补全局互斥锁、成功/失败回放释放锁、新 Evidence 最终验证失败清理和既有 Evidence 验证失败保留，并修复 macOS/Linux `tar` 路径语义差异。Workflow `31657526039` Attempt `1` / Artifact `9164960593` 已通过 Manifest `1.6.0` 完整复验。A 阶段于 `2026-08-13T01:31:13Z` 完成；B 阶段于 `2026-08-13T01:45:34Z` 完成既有 012 只读对账并幂等回放，`database_sql_executed=0`。Artifact `9163957919` 的 A 历史证据仍有效但不可继续用于 B～E。当前下一门禁是 C 阶段三组件受控重建。P1-SI-H 仍不能开始正式七日 Shadow，因为来源、P003、四角色 UAT、Goal 7 C～E Evidence 和 Owner Acceptance 均未完成。
 
 本轮没有部署战略情报 Orchestrator、没有执行 010/011、没有启动 Collector、没有新增端口、没有发布报告，也没有产生正式 P2、员工投递或 ERP/社媒写回。
 
