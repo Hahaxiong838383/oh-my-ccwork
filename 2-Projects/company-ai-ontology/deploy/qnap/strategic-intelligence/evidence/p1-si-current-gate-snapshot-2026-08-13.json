@@ -1,5 +1,5 @@
 {
-  "snapshotVersion": "1.6.0",
+  "snapshotVersion": "1.7.0",
   "goalKey": "P1-STRATEGIC-INTELLIGENCE",
   "snapshotDate": "2026-08-13",
   "state": {
@@ -41,6 +41,10 @@
     "stageCCompleted": true,
     "stageCDeploymentEvidenceSha256": "1cbfd8a60c195a7bf5642f5511ba20a0edfa6e6e3d5d095a6fe1d3277ad9b9d6",
     "stageCRecordSha256": "ce6f13ef7d6c041d99b5b95e04314521b36a5cc4cb67d8e24be97bf50889ae91",
+    "stageDCompleted": true,
+    "stageDWorkerReadbackEvidenceSha256": "a9a53113df59e3cdde49c2c99c8ff75661bfea824234e133b78901e9871e6fad",
+    "stageDAuthorityCanaryEvidenceSha256": "9cdcdeea3cf99520e7cac7056a1d361518f2cd147f71e69fdc144fe57ef2a816",
+    "stageDRecordSha256": "2647d7d60bb4e9bd035eddf92a5560b839e330d1a7ef7f6701c69a91e66b4eed",
     "candidateOntologySchema": "3.7.0",
     "candidateOntologyHash": "c7378774a4e0ca406952e1f1b6515e4ec026347f46533e6662b535407cae1860",
     "routeBState": "disabled",
@@ -122,5 +126,5 @@
     "9153663685",
     "9151468565"
   ],
-  "nextRequiredGate": "WAIT_SEPARATE_STAGE_D_AUTHORIZATION"
+  "nextRequiredGate": "WAIT_SEPARATE_STAGE_E_AUTHORIZATION"
 }

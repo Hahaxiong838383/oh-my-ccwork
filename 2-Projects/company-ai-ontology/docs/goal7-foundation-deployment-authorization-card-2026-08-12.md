@@ -2,9 +2,9 @@
 
 日期：2026-08-13（Asia/Shanghai，沿用文件名以保持既有链接）
 
-状态：`STAGE_A_B_C_COMPLETED / STAGE_D_AUTHORIZED_PENDING_EXECUTION`
+状态：`STAGE_A_B_C_D_COMPLETED / STAGE_E_AUTHORIZED_PENDING_EXECUTION`
 
-> Workflow `31657526039` Attempt `1` / Artifact `9164960593` 已通过 Manifest `1.6.0`、9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 交叉绑定、迁移对账互斥锁与 Evidence 生命周期回归。A 阶段于 `2026-08-13T01:31:13Z` 完成；B 阶段于 `2026-08-13T01:45:34Z` 完成既有 012 只读对账并幂等回放；C 阶段于 `2026-08-13T01:55:53Z` 完成三组件受控重建。Agent Core `2026-08-12.3`、Knowledge Connector `2026-08-11.1`、H-Lite `2026-08-12.1` 已生效，Foundation `13/13 running / unhealthy=0 / restart=0`，Route A 正常、Route B 关闭、业务副作用为 `0`。D、E 仍必须分别生成并验证 Evidence。
+> Workflow `31657526039` Attempt `1` / Artifact `9164960593` 已通过 Manifest `1.6.0`、9 项 `SHA256SUMS`、严格根目录白名单、`image.env` 交叉绑定、迁移对账互斥锁与 Evidence 生命周期回归。A、B、C 已完成；D 阶段于 `2026-08-13T02:21:18Z` 完成真实 H Worker 双源读回与合成 Authority Canary。真实模型读回为 `cpa-openai-compatible / grok-4.5 / route-a`，usage ledger 一致；权限 Canary `7/7`，撤权收敛 `0.014 秒`，无越权正文、无真实员工正文。Foundation `13/13 running / unhealthy=0 / restart=0`，业务副作用为 `0`。当前只剩 E 阶段真实回滚恢复演练。
 
 ## 1. 固定发布身份
 
@@ -60,7 +60,7 @@ Artifact 保留至 `2026-11-11T01:23:03Z`；9 项 `SHA256SUMS` 及完整验证�
 
 ## 4. 五项独立授权
 
-以下五项互不继承。A、B、C 已完成；川哥已在当前任务中明确授权继续执行后续阶段，D 当前待执行，E 仍必须等待 D Evidence 成功后才可执行。
+以下五项互不继承。A、B、C、D 已完成；川哥已在当前任务中明确授权继续执行后续阶段，E 当前待执行。
 
 ### A. Foundation 发布准备与 Artifact 入场
 
@@ -82,15 +82,15 @@ Artifact 保留至 `2026-11-11T01:23:03Z`；9 项 `SHA256SUMS` 及完整验证�
 
 ### D. 真实 H Worker 双源读回与 Authority Canary
 
-动作：发布健康后以同一项明确授权执行一次固定合成请求和 Authority Canary。所有写入前必须通过 `GOAL7_WORKER_READBACK_APPROVED=YES` 与公司 QNAP 五元组预检；读取同一 request 的 Worker 响应和 usage ledger，验证 provider/model/token usage，并验证私聊、群聊、多人艾特、Purpose、撤权和正文前 ACL。不得读取或输出真实员工正文。
+状态：`COMPLETED`。已执行一次固定合成请求，Worker HTTP 与 usage ledger 双源一致，模型为 `grok-4.5`、Route A、重试 `0`；Authority Canary 七项场景全部通过，拒绝路径正文读取 `0`、越权 Evidence `0`，合成数据已清理。
 
-> C 阶段 Evidence 已完成；当前任务授权允许执行 D，但必须继续只使用合成 Principal、合成知识资源和请求 Hash，不得输出真实员工正文。
+> 历史已执行授权：仅允许合成 Principal、合成知识资源和请求 Hash；不允许读取或输出真实员工正文，不运行 Collector、不迁移数据库、不重启服务。
 
 ### E. 真实回滚恢复演练
 
 动作：在三组件发布及验收后，按“当前候选版本快照 → 切换发布前旧镜像并验证 → 再恢复到获批候选版本并验证”的顺序执行，生成 `rollback-drill-evidence.json`；012 additive migration 保留，不执行 DROP。该动作会产生第二次短暂中断。
 
-> 当前锁定；D 阶段及候选版本验收完成前不得授权。
+> D 阶段 Evidence 已完成；当前任务授权允许执行 E，但必须先确认旧镜像和候选镜像均可读、当前三组件空闲，并保留 012，不执行 DROP。
 
 ## 5. 自动停止条件
 
@@ -110,4 +110,4 @@ Artifact 保留至 `2026-11-11T01:23:03Z`；9 项 `SHA256SUMS` 及完整验证�
 
 ## 6. 当前建议
 
-当前 A、B、C 已完成，下一步按当前任务授权执行 D 阶段 Worker 双源读回与 Authority Canary；D 成功并留证后才可执行 E。正式七日 `PUBLISH=false` Shadow 不属于本授权卡，仍需来源/P003/四角色 UAT、Goal 7 Owner Acceptance 和新的独立授权。A、B、C 脱敏实机证据分别见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-a-artifact-9164960593.json`、`deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-b-artifact-9164960593.json` 与 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-c-artifact-9164960593.json`。
+当前 A、B、C、D 已完成，下一步按当前任务授权执行 E 阶段真实回滚恢复演练。正式七日 `PUBLISH=false` Shadow 不属于本授权卡，仍需来源/P003/四角色 UAT、Goal 7 Owner Acceptance 和新的独立授权。A～D 脱敏实机证据见 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-a-artifact-9164960593.json`、`deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-b-artifact-9164960593.json`、`deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-c-artifact-9164960593.json` 与 `deploy/qnap/strategic-intelligence/evidence/p1-si-goal7-stage-d-artifact-9164960593.json`。
