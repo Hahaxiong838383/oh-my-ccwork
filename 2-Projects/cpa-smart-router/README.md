@@ -28,7 +28,8 @@ go run ./cmd/router -config config/router.example.json
 - 长期 API Key、Management Key 或密码的轮换/撤销必须由用户明确授权；疑似泄露只触发停止扩散与告警，不得自动替换凭据。OAuth access token 的既有自动刷新不受此限制。
 - `blocked_models` 用于拦截测试/玩具模型；正式流量不要调用 `fable-5`。
 - `gpt-5.3-codex` 是 Codex app 可能发出的模型名，router 将其别名映射到已验证的 `gpt-5.5` 上游候选，避免 CPA mixed 返回 unknown provider。
-- xAI 文本路由以 `grok-4.5` 为当前主模型；`grok-3-mini*`、`grok-4.3` 和 `grok-4.20-*` 旧别名统一重写到 `grok-4.5`，图像、视频、Build 与 Composer 专用模型保持原样。
+- xAI 文本默认路由仍以 `grok-4.5` 为稳定主模型；显式请求 `grok-4.6` 或 `grok-4.6-latest` 会路由到 `grok-4.6`。`grok-3-mini*`、`grok-4.3` 和 `grok-4.20-*` 旧别名暂继续重写到 `grok-4.5`，待 4.6 Canary 观察完成后再决定是否切换默认路由。图像、视频、Build 与 Composer 专用模型保持原样。
+- 生产 CLIProxyAPI 可通过远程模型目录发现 `grok-4.6`；当前显式 4.6 Canary 已验证 Chat Completions、Responses、流式响应、`high`/`xhigh` 和 usage，真实响应模型为 `grok-4.6-build`。内置离线目录尚未完整覆盖时，不要把远程目录可见性当成永久离线兜底。
 - 流式响应开始输出后不做 failover。
 - `/v1/chat/completions` 流式请求会自动注入 `stream_options.include_usage=true` 并解析 SSE usage，用于 dashboard 和调度用量统计。
 - `/v1/responses` 强制 sticky，避免 `previous_response_id` 断链。
@@ -86,5 +87,6 @@ ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
 - CLIProxyAPI 的 Codex 专用模型目录接口是 `GET /v1/models?client_version=<version>`；响应中的 `service_tiers` 与 `additional_speed_tiers` 是客户端是否发送 Fast 意图的能力真源。
 - smart-router 转发模型目录和推理请求时必须保留 `r.URL.RawQuery`；丢失 `client_version` 会让 CPA 降级返回普通四字段模型列表，导致本地 catalog 看不到 Fast。
 - 受 Git 管理的刷新器维护源是 `scripts/refresh-cc-switch-model-catalog.mjs`；本机 `~/.codex/refresh-cc-switch-model-catalog.mjs` 应指向该文件，由 LaunchAgent 每小时刷新。
+- Codex App 只读取 `~/.codex/cc-switch-model-catalog.json`，不会主动选择 `.bak-*`。若主文件曾被缩水目录覆盖，App 会在启动时缓存缺少模型、推理档位和速度元数据的状态；恢复完整文件后还必须重启 App。刷新器必须先做模型数量防缩水校验，再通过临时文件原子 rename，异常时保留上一份完整目录；少于 12 个模型的旧备份不得保留。
 - 验收必须分开记录：客户端请求是否携带 `priority`、CPA 是否返回 HTTP 200、上游响应回报的 service tier。当前真实请求已携带 `priority`，但上游流式响应仍回 `auto/default`，不得把“请求已发出”写成“后台加速已确认”。
 - 现网 CLIProxyAPI 继续使用 `7.2.58`；Fast 链路不需要为了本次修复直接跨版本升级，升级应另做回归和时间窗。

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -83,6 +84,62 @@ func TestModelsForwardsClientVersionQuery(t *testing.T) {
 	}
 	if got := <-queryCh; got != "client_version=0.145.0&include_hidden=true" {
 		t.Fatalf("query = %q, want client version query", got)
+	}
+}
+
+func TestGrok46LatestRouteRewritesToCanonicalModel(t *testing.T) {
+	modelCh := make(chan string, 1)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read upstream body: %v", err)
+		}
+		var payload map[string]any
+		if err = json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode upstream body: %v", err)
+		}
+		modelCh <- payload["model"].(string)
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"id":"chatcmpl-test","model":"grok-4.6-build","choices":[{"message":{"role":"assistant","content":"OK"}}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}`)
+	}))
+	defer upstream.Close()
+
+	server := &Server{
+		cfg: Config{
+			BodyLimitBytes: 1 << 20,
+			Routes: map[string]Route{
+				"grok-4.6-latest": {
+					Candidates: []Candidate{{
+						ID:      "cpa-grok46",
+						BaseURL: upstream.URL + "/v1",
+						APIKey:  "upstream-key",
+						Model:   "grok-4.6",
+					}},
+				},
+			},
+		},
+		clientKeys: map[string]struct{}{"client-key": {}},
+		states:     map[string]*ProviderState{"cpa-grok46": {}},
+		bindings:   map[string]SessionBinding{},
+		httpClient: upstream.Client(),
+		metricCh:   make(chan MetricEvent, 1),
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(`{"model":"grok-4.6-latest","messages":[{"role":"user","content":"ping"}]}`))
+	req.Header.Set("Authorization", "Bearer client-key")
+	recorder := httptest.NewRecorder()
+
+	server.handleLLM(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", recorder.Code, http.StatusOK, recorder.Body.String())
+	}
+	if got := <-modelCh; got != "grok-4.6" {
+		t.Fatalf("upstream model = %q, want grok-4.6", got)
+	}
+	metric := <-server.metricCh
+	if metric.RouteModel != "grok-4.6-latest" || metric.ProviderID != "cpa-grok46" || metric.UpstreamModel != "grok-4.6-build" {
+		t.Fatalf("metric = %#v", metric)
 	}
 }
 

@@ -46,8 +46,11 @@ description: CPA Smart Router 运维与迭代指南。用于检查、部署、�
 - auth index 只在 Bridge 内用于匹配 auth 文件，Desktop API 只返回脱敏账号与聚合结果，不返回原始 index、文件名、Token、Key、Header、IP 或上游正文。
 - xAI OAuth 当前没有稳定的账号级官方订阅剩余额度接口。账号卡只展示真实请求、Token、成功率、最近使用、主要模型和刷新状态，并明确写“官方未提供”；不得用 Management API 团队账单、Smart Router 日预算或自定义预算冒充。
 - 用量解析必须同时支持 Chat Completions 的 `prompt_tokens/completion_tokens`、Responses 的 `input_tokens/output_tokens`，以及 SSE 完成事件中的 `response.usage`。若总 Token 更新但输入/输出为 0，先查 schema 覆盖，不要误判 App 没刷新。
-- xAI 文本主路由当前使用 `grok-4.5`。`grok-3-mini*`、`grok-4.3`、`grok-4.20-*` 旧文本别名重写到 `grok-4.5`；图像、视频、Build 与 Composer 是专用模型，不做文本模型强制替换。
+- xAI 文本默认路由当前仍使用 `grok-4.5`。生产已新增显式 `grok-4.6` 与 `grok-4.6-latest` Canary，两者都重写到上游 `grok-4.6`；`grok-3-mini*`、`grok-4.3`、`grok-4.20-*` 旧文本别名暂继续重写到 `grok-4.5`。图像、视频、Build 与 Composer 是专用模型，不做文本模型强制替换。
 - 模型升级验收必须覆盖五层：带鉴权 `/v1/models` 可见、Router 候选明确重写、旧别名与新名 Canary 均 200、真实响应 `model` 命中目标系列、Bridge 与 macOS Accessibility 文本显示新主模型。配置文件写了新名字不算完成。
+- 2026-08-13 的 Grok 4.6 验收已覆盖 Chat Completions `high`/`xhigh`、流式响应、Responses API 和 usage；真实响应模型为 `grok-4.6-build`，Smart Router Canary 近期错误为 0。
+- 当前 4.6 能力来自 CLIProxyAPI 的远程模型目录刷新。远程目录声明 `low/medium/high/xhigh`，而同期内置离线目录候选仅声明 `low/medium/high`；在上游正式版完整内置前，必须保留目录刷新失败时的降级风险说明，不能把 `/v1/models` 可见冒充离线兜底已完成。
+- CPA Menu 的“主模型”是当日请求数最高的历史聚合，不是最近一次模型。切入 4.6 初期仍显示 `grok-4.5` 属正常；验收应同时检查 Bridge 持久化模型计数中已有 `grok-4.6`、最近请求时间已更新，以及 Router 的 4.6 成功数。
 - `fill-first` 会优先使用一个 xAI OAuth 账号；第二张卡显示“今日暂无请求记录”不代表坏账号。只有调度实际切换或显式安全测试后，第二个账号才会产生自己的用量。
 - 生产切换使用独立 systemd oneshot：备份二进制/配置/usage state，原子替换，重启后验证 health、鉴权模型目录、真实推理、Bridge 内外网与近期错误；失败或超时立即回滚。
 
@@ -102,6 +105,15 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - 本机目录刷新器维护源：`2-Projects/cpa-smart-router/scripts/refresh-cc-switch-model-catalog.mjs`；运行态路径 `~/.codex/refresh-cc-switch-model-catalog.mjs` 由 LaunchAgent 每小时执行。
 - 真实验收优先使用透明转发或安全日志，只记录 `model`、`service_tier`、状态码和脱敏 client metadata key，禁止记录 Authorization 或请求正文。
 - 当前已验证 Codex 0.145.0 经 `smart-api` 对 `gpt-5.6-sol` 发送 `service_tier: "priority"` 并返回 200；但响应元数据仍显示 `auto/default`。结论只能是“Fast 意图已成功发送和透传”，不能声称上游调度档位已确认。
+
+## Codex App 模型目录防缩水（2026-08-13）
+
+- 三个选择器同时消失时，先检查 `~/.codex/config.toml` 的 `model_catalog_json`，再检查生效文件 `~/.codex/cc-switch-model-catalog.json`；`.bak-*` 只是刷新器备份，Codex App 不会主动从备份中选一个读取。
+- 模型名称来自 `slug/display_name`，推理档位依赖 `supported_reasoning_levels`，推理速度依赖 `additional_speed_tiers/service_tiers/default_service_tier`。只有模型 ID、或只有 `none/high` 两档的缩水目录，会让前端能力选择器消失或退化。
+- 证据链必须按时间排序：App 进程启动时间、主目录修改时间、刷新器备份时间。若 App 在缩水主目录生效期间启动，后续恢复 JSON 不会触发可靠热加载，必须退出并重新启动 App。
+- 刷新器必须 fail-closed：新目录为空，或相对现有完整目录低于 `max(12, floor(current×0.7))` 时拒绝替换；先校验，再只备份至少 12 模型的完整目录，最后写临时文件并原子 rename。端点超时或 DNS 失败不得破坏当前目录。
+- 清理历史缩水目录前，先确认当前主目录不少于 12 模型且目标模型具备完整 reasoning/speed 元数据；只删除低于 12 模型的 `.bak-*`，不删除当前主目录、`models_cache.json` 或刷新脚本。
+- 最终验收需同时满足：主目录 JSON 有效、模型数量正常、当前默认模型存在且 reasoning/speed 字段非空、LaunchAgent 仍加载、App 重启后用户确认模型/推理档位/推理速度三个选择器恢复。
 
 ## CPA Menu 桌面监控
 
@@ -229,6 +241,7 @@ sha256sum /tmp/cpa-smart-router
 - 已支持鉴权、请求体上限、sticky、最多 2 次重试、被动 EWMA、熔断 cooldown。
 - 已支持 JSONL 指标、SQLite 持久聚合、`/debug/summary`、`/dashboard` 和 provider 调度解释。
 - 已支持 `/v1/responses` state probe 观测：`previous_response_id`、`store`、`stream`、response id 捕获率、parent/provider mismatch 和错误采样；当前只观测，不启用 strict response-chain sticky。
+- 已支持显式 `grok-4.6` 与 `grok-4.6-latest` Canary 路由；默认 `grok-4.5` 与旧模型别名暂不切换。
 - 正式使用默认优先走 `gpt-5.5`；`fable-5` 只是测试玩具模型，生产配置应放入 `blocked_models`，不要调用。
 - `/v1/chat/completions` 流式响应会注入 `stream_options.include_usage=true` 并解析 SSE usage；若上游不返回 usage，token 仍会是 0。
 

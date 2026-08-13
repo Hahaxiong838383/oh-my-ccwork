@@ -67,8 +67,9 @@ const models = endpointModels.map(({ id, endpointItem }) => {
 }).sort((a, b) => b.priority - a.priority || a.slug.localeCompare(b.slug));
 
 const catalog = { models };
+assertCatalogIsSafe(catalogPath, catalog);
 backupIfExists(catalogPath);
-fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2) + '\n');
+writeJSONAtomic(catalogPath, catalog);
 console.log(`updated ${catalogPath}`);
 console.log(`models=${models.length}`);
 for (const model of models) {
@@ -240,7 +241,8 @@ function inferContextWindow(slug) {
 
 function priorityForModel(slug) {
   if (slug === defaultModel) return 2000;
-  if (slug === 'grok-4.3') return 1990;
+  if (slug === 'grok-4.6') return 1990;
+  if (slug === 'grok-4.3') return 1985;
   if (/gpt-5\.5/i.test(slug)) return 1980;
   if (/gpt/i.test(slug)) return 1500;
   if (/grok/i.test(slug)) return 1400;
@@ -252,6 +254,34 @@ function backupIfExists(file) {
   if (!fs.existsSync(file)) return;
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
   fs.copyFileSync(file, `${file}.bak-${stamp}`);
+}
+
+function assertCatalogIsSafe(file, nextCatalog) {
+  if (!Array.isArray(nextCatalog.models) || nextCatalog.models.length === 0) {
+    fail('refusing to replace catalog with no models');
+  }
+  if (!fs.existsSync(file)) return;
+  try {
+    const current = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const currentCount = Array.isArray(current.models) ? current.models.length : 0;
+    const minimumCount = currentCount >= 12 ? Math.max(12, Math.floor(currentCount * 0.7)) : 1;
+    if (nextCatalog.models.length < minimumCount) {
+      fail(`refusing suspicious catalog shrink: current=${currentCount} next=${nextCatalog.models.length} minimum=${minimumCount}`);
+    }
+  } catch (error) {
+    if (error?.message?.startsWith('refusing suspicious catalog shrink:')) throw error;
+    console.warn(`refresh-cc-switch-model-catalog: existing catalog unreadable, replacing atomically (${error.message})`);
+  }
+}
+
+function writeJSONAtomic(file, value) {
+  const temp = `${file}.tmp-${process.pid}`;
+  try {
+    fs.writeFileSync(temp, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
+    fs.renameSync(temp, file);
+  } finally {
+    if (fs.existsSync(temp)) fs.unlinkSync(temp);
+  }
 }
 
 function fail(message) {
