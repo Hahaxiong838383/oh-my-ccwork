@@ -234,8 +234,16 @@ ssh root@64.90.13.117 "sed -i 's/^VOLC_ASR_HOTWORDS=.*/VOLC_ASR_HOTWORDS=<新词
   它自己死掉时当前 worker 只握着一条断连接,只打 WARN 不报错。
   后果:判停降级为 min_delay(≈框架 turn detector 预测失败的行为)、声纹旁路整个关闭,
   **对话仍能进行**,所以从体感只是"变钝",不会有任何红灯。
-- **修**:`systemctl restart voice-worker-rust`(重启即 `(spawned)` 重新拉起)。残留 socket 不阻碍——
-  sidecar bind 前会 unlink,已验。
+- **已修(2026-08-14 部署,commit 8f6ece7a0)**:改为 OnceCell 只存**客户端外壳**,连接可为空;请求失败即
+  丢弃连接并触发**后台**重连/重拉(热路径不等待——spawn 要等模型加载十几秒,不能占判停 500ms 预算),
+  下一轮自动恢复;spawn 带 10s 冷却防风暴,新 child 替换旧值即 kill_on_drop 不留孤儿。
+  实证:杀掉 sidecar 后 `eot prediction` 计数 1→**0**→1,日志 `EOT sidecar 连接已自愈`+
+  `speaker embed 连接已自愈`,sidecar 进程数恒 1。
+- ⚠️ **别用 `systemctl restart` 当修复手段**:它自己就是这个故障的制造者(老 sidecar 没死透→新 worker
+  连上它走 `(existing)` 分支→不 spawn 自己的子进程→老的随后死掉)。要重启用
+  **`stop` → 确认无残留 sidecar → `start`**。旧版本上这条尤其重要;新版本能自愈,但仍会白丢一轮判停。
+- ⚠️ **验收判据别数 `eou` 指标**:判停降级走 min_delay 时**照样发 eou**,三次探测全是 1、区分不了。
+  要数 `eot prediction`(只有 predict 真跑通才有)。
 - ⚠️ **查 sidecar 进程别用 `ps -eo ...,cgroup,cmd`**:cgroup 列极长会把 cmd 挤没,
   空结果与"进程不存在"同形。用 `ps -eo pid,ppid,rss,args ww | grep -F eot_sidecar` 或 `ss -xlp`。
   同理 `grep -i oom` 会被 **`room=`** 命中(2026-08-14 误报 285 条),数 OOM 要 `grep -i oom | grep -iv room`。
