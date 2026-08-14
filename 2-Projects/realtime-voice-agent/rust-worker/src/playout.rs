@@ -27,6 +27,25 @@ pub struct PlayoutControl {
     fade_req: Arc<AtomicU64>, // resume 渐起请求(置 1=下帧起从 0 爬回)
 }
 
+/// 单测专用:只造控制句柄,不起播放循环(那需要真的 NativeAudioSource)。
+/// 返回 `(守住 watch 接收端的 guard, ctl)`——guard 必须活着,
+/// 否则 `watch::Sender` 会因无接收端而让 `send` 失败,`abort()` 就成了空操作。
+#[cfg(test)]
+pub fn test_control() -> ((watch::Receiver<bool>, watch::Receiver<bool>), PlayoutControl) {
+    let (pause_tx, pause_rx) = watch::channel(false);
+    let (abort_tx, abort_rx) = watch::channel(false);
+    let ctl = PlayoutControl {
+        pause_tx,
+        abort_tx,
+        captured: Arc::new(AtomicU64::new(0)),
+        first_frame_us: Arc::new(AtomicU64::new(0)),
+        anchor: Instant::now(),
+        fade_ms: 0,
+        fade_req: Arc::new(AtomicU64::new(0)),
+    };
+    ((pause_rx, abort_rx), ctl)
+}
+
 impl PlayoutControl {
     pub fn pause(&self) {
         let _ = self.pause_tx.send(true);

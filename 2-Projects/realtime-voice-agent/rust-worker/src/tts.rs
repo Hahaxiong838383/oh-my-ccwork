@@ -15,6 +15,7 @@
 use anyhow::{bail, Result};
 use tokio::sync::mpsc;
 
+use crate::playout::PlayoutControl;
 use crate::{tts_volc, tts_xfyun};
 
 /// ⚠️ **刻意不 derive `Debug`**:内含 `api_secret`/`access_token`,
@@ -74,14 +75,20 @@ impl TtsCfg {
     }
 
     /// 合成一句,PCM(24k i16le)分块经 `audio_tx` 发出。返回 (ttfb_ms, total_bytes)。
+    ///
+    /// `ctl` 用于在**打断期间**及时收摊:打断走 `pause()` 而非 drop receiver,
+    /// 裸 `send().await` 会一直阻塞。详见 `tts_xfyun::send_or_abort` 的说明。
+    /// ⚠️ **volc 侧本次不接**——它有同款隐患但被高吐流速度掩盖着,
+    /// 改它属于行为变更,留到单独一轮(届时要列变更清单)。
     pub async fn synthesize(
         &self,
         text: &str,
         audio_tx: &mpsc::Sender<Vec<u8>>,
+        ctl: &PlayoutControl,
     ) -> Result<(u64, usize)> {
         match self {
             Self::Volc(c) => tts_volc::synthesize(c, text, audio_tx).await,
-            Self::Xfyun(c) => tts_xfyun::synthesize(c, text, audio_tx).await,
+            Self::Xfyun(c) => tts_xfyun::synthesize(c, text, audio_tx, ctl).await,
         }
     }
 }

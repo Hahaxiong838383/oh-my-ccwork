@@ -8,19 +8,24 @@
 //! - 响应 `payload.audio.audio` 为 base64 PCM(encoding=raw);`payload.audio.status==2` 为末帧;
 //!   `header.code != 0` 为错误帧。
 //!
-//! ⚠️ **与 `tts_volc` 的核心结构差异:严格一句一会话,连接不可复用,因此本模块没有连接池、
-//! 也没有 prewarm。** 2026-08-14 四场景实测:
-//! | 场景 | 结果 |
-//! |---|---|
-//! | 句1 收尾后**无空闲**立刻发句2 | `code=26016 intput channel is closed` |
-//! | 空闲 5s 后发句2 | `code=25002 task is not found in cache` |
-//! | 空闲 15s 后发句2 | 服务端主动 CLOSE |
-//! | 空闲 35s 后发句2 | 连接已关闭中,send 直接失败 |
+//! ## 会话模型(2026-08-14 实测 + 官方文档双向确认,措辞几经修正,别再凭一次实验改写)
 //!
-//! 关键是第一行——**连空闲都没有就已被拒**,所以这不是空闲超时问题,是协议设计如此;
-//! 请求体里也没有任何超时字段,不存在"调高"的余地。别再尝试给它加池(那是 volc 的形状)。
+//! **一条 WS = 一次合成任务;但一次任务内可以流式喂入多段文本。**
 //!
-//! 裸协议首包实测 **260–266ms**(已含每句建连成本),对照火山 Rust 线生产 400–550ms。
+//! - 任务结束(收到 `audio.status==2`)后,同连接再开新任务 → `26016 intput channel is
+//!   closed`。故**本模块当前不做连接池、也没有 prewarm**(每句一条 WS,建连约 267ms)。
+//! - ⚠️ **但这不等于"协议不支持复用"**。`payload.text.status` 支持 0/1/2,
+//!   实测 `0→2` 与 `0→1→2` 分段流式喂文本**均成功**。我最初只试了 `status=2`
+//!   (=告诉服务端"文本到此为止",输入通道随即关闭——错误消息字面就在说这件事),
+//!   却把结论写成了"协议不支持复用",判据作用域过宽。
+//! - 硬约束是 **14 秒无上行数据**(实测:间隔 3/8/11s 均成功,15s 报
+//!   `26005 No active up data within 14000 ms`)。文档写的 10s 与"前 20 字需 25 字/秒"
+//!   均**非硬约束**——实测 2 字/秒照样跑通。
+//! - **无取消/中止指令**(官方文档确认)。整句一次性发出后服务端一定吐完,
+//!   打断时 worker 只能丢弃,停不了上游 → 见 `send_or_abort`。
+//!
+//! 首包:**含建连 527ms**(Rust 线生产实测) / **不含建连 248–275ms**。
+//! 对照火山 Rust 线生产 400–550ms(带池)。
 
 use std::time::Duration;
 
@@ -32,6 +37,9 @@ use hmac::{Hmac, Mac};
 use serde_json::{json, Value};
 use sha2::Sha256;
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::error::SendTimeoutError;
+
+use crate::playout::PlayoutControl;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tracing::info;
@@ -188,12 +196,44 @@ fn parse_frame(raw: &str) -> Downlink {
 /// 保留空实现是为了让 provider 分发层形状一致,调用方无需分支。
 pub async fn prewarm_pool(_cfg: &XfyunTtsConfig) {}
 
+/// 打断时把音频交给下游:**不能裸 `send().await`**。
+///
+/// 打断走 `PlayoutControl::pause()`,receiver 并没有被 drop,所以 channel 满了之后
+/// `send().await` 会一直阻塞(不是返回 Err),而讯飞服务端**不知道被打断、会一路吐到
+/// `status=2`**(协议无取消指令)。结果是整个 turn 的收尾被拖住——用户现象是
+/// 「打断后声音停了,但字幕过好一会儿才出来」(2026-08-14 川哥实测,长回复必现)。
+///
+/// 火山侧同样是裸 send,但它吐流 6.5 倍实时、且能 `FinishSession` 中途停服务端,
+/// 32 格 channel 填满前整句早吐完,所以窗口小到观察不到。**这是继承的缺陷被慢速放大。**
+///
+/// 这里用 `send_timeout` 的超时值**只作轮询间隔,不作判定阈值**——超时了就回去
+/// 重查一次 `ctl.aborted()`,没打断就继续等。正常长句本来就会短暂阻塞(生产端
+/// 1.9 倍实时快于消费端),那种情况下循环几圈自然通过,不会误判成打断。
+async fn send_or_abort(
+    audio_tx: &mpsc::Sender<Vec<u8>>,
+    mut pcm: Vec<u8>,
+    ctl: &PlayoutControl,
+) -> std::result::Result<(), &'static str> {
+    const POLL: Duration = Duration::from_millis(200);
+    loop {
+        if ctl.aborted() {
+            return Err("aborted");
+        }
+        match audio_tx.send_timeout(pcm, POLL).await {
+            Ok(()) => return Ok(()),
+            Err(SendTimeoutError::Timeout(back)) => pcm = back, // 拿回所有权,回去重查 abort
+            Err(SendTimeoutError::Closed(_)) => return Err("consumer gone"),
+        }
+    }
+}
+
 /// 合成一句:PCM(24k i16le bytes)分块经 `audio_tx` 发出。返回 (ttfb_ms, total_bytes)。
 /// 每句独立 WS 会话——见模块头,不要给它加池。
 pub async fn synthesize(
     cfg: &XfyunTtsConfig,
     text: &str,
     audio_tx: &mpsc::Sender<Vec<u8>>,
+    ctl: &PlayoutControl,
 ) -> Result<(u64, usize)> {
     info!("tts synth: {text}"); // 证据日志,与 volc 线同措辞(运维按同一关键词捞两条线)
     let missing = cfg.missing_keys();
@@ -233,8 +273,9 @@ pub async fn synthesize(
                     ttfb_ms = Some(t0.elapsed().as_millis() as u64);
                 }
                 total += pcm.len();
-                if audio_tx.send(pcm).await.is_err() {
-                    // 下游关闭=被打断。讯飞无连接池,直接收摊即可,无残留污染问题。
+                if let Err(why) = send_or_abort(audio_tx, pcm, ctl).await {
+                    // 打断/下游消失:主动收摊,不陪服务端把剩下的吐完(它停不了)
+                    info!(reason = why, sent_bytes = total, "xfyun tts 中止本句,丢弃剩余音频");
                     let _ = ws.close(None).await;
                     return Ok((ttfb_ms.unwrap_or(0), total));
                 }
@@ -356,6 +397,40 @@ mod tests {
         // 末帧可以不带音频载荷,last 仍要被识别出来
         let tail = json!({"header": {"code": 0}, "payload": {"audio": {"status": 2}}}).to_string();
         assert_eq!(parse_frame(&tail), Downlink::Ignore { last: true });
+    }
+
+    /// 打断分支必须被真正执行过一次——编译通过证明不了它会退出。
+    /// 构造:channel 塞满 + 下游不消费(= pause 期间的真实形态),然后置 abort。
+    #[tokio::test]
+    async fn send_or_abort_bails_when_aborted_instead_of_blocking_forever() {
+        let (tx, _rx) = mpsc::channel::<Vec<u8>>(1);
+        let (_guard, ctl) = crate::playout::test_control();
+        tx.send(vec![0u8; 8]).await.unwrap(); // 占满容量 1
+        ctl.abort();
+        let r = tokio::time::timeout(
+            Duration::from_secs(2),
+            send_or_abort(&tx, vec![1u8; 8], &ctl),
+        )
+        .await;
+        assert!(r.is_ok(), "abort 后必须返回,不能一直阻塞");
+        assert_eq!(r.unwrap(), Err("aborted"));
+    }
+
+    /// 反向锚:没打断时不能误判成打断,否则上面那条恒绿也看不出来。
+    /// ⚠️ `rx` 必须活到断言之后——若在 send 完成前被 drop,撞到的是 `Closed`
+    /// 而不是正常送达,测出来的就是另一条分支(第一版就栽在这)。
+    #[tokio::test]
+    async fn send_or_abort_delivers_normally_when_not_aborted() {
+        let (tx, mut rx) = mpsc::channel::<Vec<u8>>(1);
+        let (_guard, ctl) = crate::playout::test_control();
+        tx.send(vec![0u8; 8]).await.unwrap(); // 占满容量 1,逼 send_or_abort 进等待循环
+        let drain = async {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            rx.recv().await // 腾出一格,模拟下游恢复消费
+        };
+        let (sent, got) = tokio::join!(send_or_abort(&tx, vec![7u8; 8], &ctl), drain);
+        assert_eq!(sent, Ok(()), "未打断时必须正常送达");
+        assert!(got.is_some());
     }
 
     #[test]
