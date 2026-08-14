@@ -255,7 +255,7 @@ geo.kidshub.cn:443
 
 - aliyun-hk 使用独立 `geo-tunnel` 用户，`authorized_keys` 必须包含 `restrict,port-forwarding,permitlisten="127.0.0.1:13808"`；不得复用 root 运维 Key 或 H/ERP 隧道 Key。
 - company-vm 私钥和固定 host key 位于 `/home/futurus/.geo-engine/tunnel/`，权限分别为目录 `0700`、私钥/known_hosts `0600`；不得进入 Git、Skill 或记忆。
-- company-vm 由 `/etc/systemd/system/geo-dashboard-tunnel.service` 托管，`ExecStartPre` 先检查 GEO `/health`，SSH 必须启用 `BatchMode`、`IdentitiesOnly`、`StrictHostKeyChecking`、`ExitOnForwardFailure` 和 keepalive。
-- 隧道验收必须同时证明：company-vm service active、aliyun-hk 仅 `127.0.0.1:13808` 监听、回环 `/health` 与 `/dashboard` 可读、公网 `13808` 不可达、服务重启后页面连续多轮恢复。
+- company-vm 由 `/etc/systemd/system/geo-dashboard-tunnel.service` 托管，并 `Requires/After=geo-engine.service`；`ExecStartPre` 必须有限重试 GEO `/health`，不能把 `After` 误当成应用已完成监听。SSH 必须启用 `BatchMode`、`IdentitiesOnly`、`StrictHostKeyChecking`、`ExitOnForwardFailure` 和 keepalive。
+- 隧道验收必须同时证明：GEO 与隧道 system service enabled/active、旧 user GEO service disabled/inactive、company-vm 仅 `127.0.0.1:8080` 监听、aliyun-hk 仅 `127.0.0.1:13808` 监听、回环 `/health` 与 `/dashboard` 可读、公网 `13808` 不可达、两项服务同时重启后页面连续多轮恢复。
 - Nginx 只能代理精确只读页面；反向 SSH 安全不等于上游 API 安全，禁止把整个 GEO `8080` 暴露给公网。
 - 回滚顺序：先下 Nginx 入口，再 stop/disable company-vm 隧道服务，确认 `13808` 消失，最后再移除 `geo-tunnel` 公钥或账号；禁止先删密钥导致残留监听和难以定位的半状态。

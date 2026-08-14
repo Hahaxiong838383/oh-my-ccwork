@@ -261,8 +261,10 @@ node ops/sync-company-directory.mjs
 - GEO 原始服务把 Dashboard 与知识库、文章详情、生成、发布、可见性写接口放在同一端口；公网禁止整端口反代。标准白名单只允许 `/`、`/dashboard`、`/health`，其余路径 `404`，非 GET/HEAD `405`。
 - 隧道必须同时满足独立用户/独立密钥、`restrict + port-forwarding + permitlisten="127.0.0.1:13808"`、阿里云仅回环监听、安全组不开放端口和公网探针不可达。任何单一证据不能替代其余四项。
 - 独立访问凭据不得复用 H 管理员、Ontology 密码、模型 Key 或隧道私钥；远端只存 Hash，秘密不得进入 Git、Skill、记忆、日志或协作消息。
-- 上线验收至少包含：DNS、独立 TLS SAN、未认证 `401`、认证页面 `200`、写方法 `405`、原始 API `404`、Dashboard JS 语法、连续公网请求、Nginx error log、隧道真实重启和 Certbot renew dry-run。
-- 当前 GEO 主进程仍待迁入 systemd，并将监听从 `0.0.0.0:8080` 收紧到 `127.0.0.1:8080`。公网前端上线不得被写成后端运行托管已经完成。
+- 上线验收至少包含：DNS、独立 TLS SAN、未认证 `401`、认证页面 `200`、写方法 `405`、原始 API `404`、前端与后端统计一致、真实浏览器桌面/移动布局、控制台、连续公网请求、Nginx error log、GEO 与隧道依赖重启和 Certbot renew dry-run。
+- GEO 主进程使用系统级 `/etc/systemd/system/geo-engine.service`，固定监听 `127.0.0.1:8080`；代码必须来自固定 Git Commit 的不可变 Release，依赖使用独立 venv，模型 Key 只从 `0600` EnvironmentFile 注入，旧 user service 保持 disabled/inactive。
+- `geo-dashboard-tunnel.service` 必须 `Requires/After=geo-engine.service`，但不能只依赖 systemd 的启动顺序；`ExecStartPre` 需有限重试 `/health`，防止后端尚未监听时隧道抢跑。
+- 私有仓机器身份不可通过复制个人 Token 或私钥解决。若 GitHub 组织禁用 Deploy Key，使用已授权工作站 `fetch`、完整历史 Git Bundle、固定 Commit 与 SHA-256 校验部署；Release 工作树必须 clean，禁止 editable install 污染提交目录。
 - 完整证据与回滚见项目文档 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
 
 ### 架构白盒画板与 3D 演进

@@ -11,8 +11,8 @@ GEO Engine `0.3.1` 只读运营监控台已于 `2026-08-14` 上线 `geo.kidshub.
 ## GEO 公网前端后续门禁
 
 1. ✅ DNS、独立 TLS、认证、只读路径白名单、隧道 systemd、续期 dry-run 和重启恢复已通过。
-2. 🟡 将 GEO 主进程从手工/nohup + crontab 迁入正式 systemd，并绑定 `127.0.0.1:8080`。
-3. 🟡 后续 UI 改版补真实浏览器控制台、桌面/移动布局和敏感字段扫描；当前未为验收临时安装 Playwright 依赖。
+2. ✅ GEO 主进程已迁入系统级 `geo-engine.service`，旧 user service 已 disabled/inactive，监听固定为 `127.0.0.1:8080`，模型 Key 已迁入 `0600` EnvironmentFile。
+3. ✅ 新版 Control Room 已完成真实 Chromium 桌面 `1440px` 与 iPhone `393px` 验收：无横向溢出、控制台 `0` 错误/警告，前端嵌入统计与后端 `/stats` 完全一致。
 4. 🟡 多人使用前将 Basic Auth 升级为 H 管理员认证或公司统一身份；当前独立凭据不得进入 Git、Skill、记忆或协作消息。
 5. ⛔ 不开放 `/stats`、`/kb`、`/articles`、`/gen`、`/publish`、`/visibility` 等原始 API；发布必须继续经过 Public Claim Package、人审和 Action Gateway。
 6. 详细部署、验收和回滚见 `docs/geo-public-dashboard-deployment-2026-08-14.md`。

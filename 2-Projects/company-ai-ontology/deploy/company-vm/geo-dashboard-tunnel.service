@@ -1,0 +1,22 @@
+[Unit]
+Description=GEO dashboard reverse SSH tunnel to aliyun-hk
+Requires=geo-engine.service
+Wants=network-online.target
+After=network-online.target geo-engine.service
+
+[Service]
+Type=simple
+User=futurus
+Group=futurus
+Environment=HOME=/home/futurus
+ExecStartPre=/bin/sh -c 'for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do /usr/bin/curl -fsS --max-time 5 http://127.0.0.1:8080/health && exit 0; /usr/bin/sleep 1; done; exit 1'
+ExecStart=/usr/bin/ssh -N -T -p 22 -i /home/futurus/.geo-engine/tunnel/geo_dashboard_ed25519 -o BatchMode=yes -o IdentitiesOnly=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/home/futurus/.geo-engine/tunnel/aliyun_hk_known_hosts -o UpdateHostKeys=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes -R 127.0.0.1:13808:127.0.0.1:8080 geo-tunnel@cli4.hahaxiong.cc
+Restart=always
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
