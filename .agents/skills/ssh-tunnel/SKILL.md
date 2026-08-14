@@ -1,6 +1,6 @@
 ---
 name: ssh-tunnel
-description: 公网 SSH 与反向转发维护指南，覆盖临时 cloudflared Quick Tunnel、受限反向 SSH 与持久 FRP 密钥入口。适用于远程连接、固定公网域名、公司虚拟机、远程开发、FRP、SSH 安全入口。
+description: 公网 SSH 与反向转发维护指南，覆盖临时 cloudflared Quick Tunnel、受限反向 SSH、持久 FRP 密钥入口，以及 geo.kidshub.cn 的 GEO 回环隧道与 Nginx 精确 API 白名单。适用于远程连接、固定公网域名、公司虚拟机、GEO Engine、远程开发、FRP、SSH 安全入口。
 ---
 
 # ssh-tunnel
@@ -9,7 +9,7 @@ description: 公网 SSH 与反向转发维护指南，覆盖临时 cloudflared Q
 
 ## 触发词
 
-`/ssh-tunnel`、"远程连接"、"SSH 隧道"、"远程调试"、"开 SSH"、"公网 SSH"
+`/ssh-tunnel`、"远程连接"、"SSH 隧道"、"远程调试"、"开 SSH"、"公网 SSH"、"GEO 隧道"、"geo.kidshub.cn"、"GEO Nginx 白名单"
 
 ## 使用方法
 

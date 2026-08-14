@@ -1,9 +1,10 @@
 ---
 name: company-ai-ontology
-description: 公司 AI Ontology 基座架构与实施入口。用于经营目标/P2 任务拆解、全员飞书 Bot、H 平台复用、爱视可 ERP 接管、社交媒体监控接管、QNAP NAS 部署、权限化检索、Action Gateway、人审与审计闭环。触发词："AI Ontology"、"公司 AI 基座"、"经营任务中枢"、"全员 Bot"、"H 平台打通"、"爱视可 ERP 接管"、"社媒监控接管"。
-layer: 项目层
-authorization: B区（设计与文档可自主；生产部署、ERP/飞书写回、社媒采集恢复需用户明确授权）
-output_levels: L2
+description: 公司 AI Ontology 基座与 GEO Engine 架构实施入口。用于经营目标/P2 任务拆解、全员飞书 Bot、H 平台复用、爱视可 ERP 接管、社交媒体监控接管、QNAP NAS 部署、geo.kidshub.cn、GEO 前后端、Nginx API 白名单、权限化检索、Action Gateway、人审与审计闭环。触发词："AI Ontology"、"公司 AI 基座"、"经营任务中枢"、"全员 Bot"、"H 平台打通"、"爱视可 ERP 接管"、"社媒监控接管"、"GEO Engine"、"geo.kidshub.cn"、"GEO 白名单"。
+metadata:
+  layer: 项目层
+  authorization: B区（设计与文档可自主；生产部署、ERP/飞书写回、社媒采集恢复需用户明确授权）
+  output_levels: L2
 ---
 
 # 公司 AI Ontology 基座 Skill
@@ -16,6 +17,7 @@ output_levels: L2
 - 接管爱视可 ERP 作为内部履约事实真源。
 - 接管社交媒体监控系统作为外部市场信号真源。
 - 规划 QNAP NAS 局域网部署、权限化检索、Action Gateway、审计和管理驾驶舱。
+- 部署和维护 GEO Engine、`geo.kidshub.cn`、受限反向 SSH、Nginx 精确 API 白名单及前后端生产验收。
 
 ## 核心结论
 
