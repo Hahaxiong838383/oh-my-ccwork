@@ -12,7 +12,7 @@ GEO Engine `0.4.1` 动态 API Control Room 已于 `2026-08-14` 上线 `geo.kidsh
 
 1. ✅ DNS、独立 TLS、认证、只读路径白名单、隧道 systemd、续期 dry-run 和重启恢复已通过。
 2. ✅ GEO 主进程已迁入系统级 `geo-engine.service`，旧 user service 已 disabled/inactive，监听固定为 `127.0.0.1:8080`，模型 Key 已迁入 `0600` EnvironmentFile。
-3. ✅ 新版 Control Room 已改为 `/health`、`/stats`、`/kb`、`/articles`、`/articles/<numeric-id>`、`/visibility/history`、`/meta`、`/experiments` 真实 API 动态加载；内容资产“查看 / 修正”弹层可加载全文，Tab active 在六个页面逐项通过。
+3. ✅ 新版 Control Room 已改为 `/health`、`/stats`、`/kb`、`/articles`、数字详情 `/(articles|kb)/<numeric-id>`、`/visibility/history`、`/meta`、`/experiments` 真实 API 动态加载；内容资产“查看 / 修正”弹层可加载全文，知识库数字详情公网通道已预留但后端尚未实现，Tab active 在六个页面逐项通过。
 4. ✅ 生成链路已锁定 `deepseek-v4-flash` + `reasoning_effort=max`，真实生产 Key 最小调用确认模型、最高推理和 reasoning usage 生效。
 5. ✅ 已新增“AI 可见性检测”操作页，真实运行爱视可/`eyescare.cn` 获得 `0/100`，结果进入历史与实验账本。
 6. ✅ 已新增“网站审计”操作页，公网目标校验、重定向逐跳校验、5MB 上限和 SSRF 内网阻断已测试；`ai.kidshub.cn` 登录页 smoke 为 `19/100`，不代表营销官网审计结论。

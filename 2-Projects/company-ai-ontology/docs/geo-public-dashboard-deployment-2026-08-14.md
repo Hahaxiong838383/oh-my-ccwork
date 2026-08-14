@@ -27,7 +27,7 @@ GEO 主进程由系统级 systemd 托管，使用固定 Git Release 和独立 ve
 - 隧道使用独立 `geo-tunnel` 账号和独立 ED25519 密钥；`authorized_keys` 只允许端口转发和 `permitlisten="127.0.0.1:13808"`。
 - 公司虚拟机使用 `geo-dashboard-tunnel.service` 托管隧道，启动前先验证 GEO `/health`，异常退出自动恢复。
 - GEO 主服务由 `/etc/systemd/system/geo-engine.service` 托管；隧道 unit 使用 `Requires/After=geo-engine.service`，并在 `ExecStartPre` 内等待健康端点，避免系统启动或同时重启时抢跑。
-- Nginx 公开只读 `/health`；认证后允许 GET `/`、`/dashboard`、`/stats`、`/kb`、`/articles`、数字 ID 详情 `/articles/<numeric-id>`、`/visibility/history`、`/meta`、`/experiments`，以及 POST `/visibility`、`/audit`、`/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi`。其余路径返回 `404`，非允许方法返回 `405`。
+- Nginx 公开只读 `/health`；认证后允许 GET `/`、`/dashboard`、`/stats`、`/kb`、`/articles`、数字 ID 详情 `/(articles|kb)/<numeric-id>`、`/visibility/history`、`/meta`、`/experiments`，以及 POST `/visibility`、`/audit`、`/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi`。其余路径返回 `404`，非允许方法返回 `405`；当前后端只实现文章详情，知识库详情为预留通道。
 - 七个新增写接口共用 `geo_operations` 限流区：`rate=6r/m`、`burst=2`。连续批量验收可能暂时返回 `503`，应串行探测或等待令牌恢复，不能误判为后端故障。
 - `/articles/update` 限制 `2m/60s`，`/publish` 为 `120s`，`/gen` 为 `16k/600s`，`/kb/create` 为 `16k/60s`，`/kb/add` 为 `5m/120s`，`/fix` 为 `16k/90s`，`/visibility/multi` 为 `16k/900s`。
 - `/publish` 与 `/fix` 后端允许调用方指定输出目录，Basic Auth 凭据因此属于高权限运维凭据；不得分享给普通访客、写入前端、Git、日志或协作消息。
@@ -48,7 +48,8 @@ GEO 主进程由系统级 systemd 托管，使用固定 Git Release 和独立 ve
 - `0.4.x` API 白名单切换备份：`/root/geo-kidshub-before-v040-20260814-122001.conf`
 - 七个 POST 白名单切换备份：`/root/geo-kidshub-before-post-whitelist-20260814-142332.conf`
 - 文章详情 GET 白名单切换备份：`/root/geo-kidshub-before-article-detail-20260814-152610.conf`
-- 当前 Nginx 配置 SHA-256：`352612cd18daf990ed5e7052fff99556d6bbdc5a3729b4af278e6f4f3b1a40bc`
+- 文章/知识库数字详情组合规则备份：`/root/geo-kidshub-before-kb-article-detail-20260814-154615.conf`
+- 当前 Nginx 配置 SHA-256：`709e655a6951c1f3d56acc7a3c0a75651017d5e6fd13072ebd6a12e8d0cb820e`
 
 ### company-vm
 
@@ -90,6 +91,10 @@ GitHub 组织策略禁止该仓库使用 Deploy Key，因此没有把个人 Toke
 | 认证 GET `/articles/5` | `200`，文章正文 4,259 字符 |
 | 认证 POST `/articles/5` | `405` |
 | 认证 GET `/articles/foo`、未知文章 ID | `404` |
+| 未认证 GET `/kb/1` | `401` |
+| 认证 GET `/kb/1` | Nginx 已放行，后端 JSON `404 未知端点`；待实现知识库详情 |
+| 认证 POST `/kb/1`、GET `/kb/create` | `405` |
+| 认证 GET `/kb/foo` | `404`，未匹配数字详情规则 |
 | 未知 `/admin/delete-all` | `404` |
 | TLS SAN | `geo.kidshub.cn` |
 | Certbot renew dry-run | 成功 |
