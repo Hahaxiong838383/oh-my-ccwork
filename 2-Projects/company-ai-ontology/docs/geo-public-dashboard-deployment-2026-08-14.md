@@ -27,7 +27,7 @@ GEO 主进程由系统级 systemd 托管，使用固定 Git Release 和独立 ve
 - 隧道使用独立 `geo-tunnel` 账号和独立 ED25519 密钥；`authorized_keys` 只允许端口转发和 `permitlisten="127.0.0.1:13808"`。
 - 公司虚拟机使用 `geo-dashboard-tunnel.service` 托管隧道，启动前先验证 GEO `/health`，异常退出自动恢复。
 - GEO 主服务由 `/etc/systemd/system/geo-engine.service` 托管；隧道 unit 使用 `Requires/After=geo-engine.service`，并在 `ExecStartPre` 内等待健康端点，避免系统启动或同时重启时抢跑。
-- Nginx 公开只读 `/health`；认证后允许 GET `/`、`/dashboard`、`/stats`、`/kb`、`/articles`、`/visibility/history`、`/meta`、`/experiments`，以及 POST `/visibility`、`/audit`、`/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi`。其余路径返回 `404`，非允许方法返回 `405`。
+- Nginx 公开只读 `/health`；认证后允许 GET `/`、`/dashboard`、`/stats`、`/kb`、`/articles`、数字 ID 详情 `/articles/<numeric-id>`、`/visibility/history`、`/meta`、`/experiments`，以及 POST `/visibility`、`/audit`、`/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi`。其余路径返回 `404`，非允许方法返回 `405`。
 - 七个新增写接口共用 `geo_operations` 限流区：`rate=6r/m`、`burst=2`。连续批量验收可能暂时返回 `503`，应串行探测或等待令牌恢复，不能误判为后端故障。
 - `/articles/update` 限制 `2m/60s`，`/publish` 为 `120s`，`/gen` 为 `16k/600s`，`/kb/create` 为 `16k/60s`，`/kb/add` 为 `5m/120s`，`/fix` 为 `16k/90s`，`/visibility/multi` 为 `16k/900s`。
 - `/publish` 与 `/fix` 后端允许调用方指定输出目录，Basic Auth 凭据因此属于高权限运维凭据；不得分享给普通访客、写入前端、Git、日志或协作消息。
@@ -47,7 +47,8 @@ GEO 主进程由系统级 systemd 托管，使用固定 Git Release 和独立 ve
 - Nginx 发布前快照：`/root/nginx-before-geo-20260814-100133.conf`
 - `0.4.x` API 白名单切换备份：`/root/geo-kidshub-before-v040-20260814-122001.conf`
 - 七个 POST 白名单切换备份：`/root/geo-kidshub-before-post-whitelist-20260814-142332.conf`
-- 当前 Nginx 配置 SHA-256：`edbf186c7cab5f5d7510b3a8ba52ec4e30b381275939c13a49019dee3c63ae50`
+- 文章详情 GET 白名单切换备份：`/root/geo-kidshub-before-article-detail-20260814-152610.conf`
+- 当前 Nginx 配置 SHA-256：`352612cd18daf990ed5e7052fff99556d6bbdc5a3729b4af278e6f4f3b1a40bc`
 
 ### company-vm
 
@@ -84,8 +85,11 @@ GitHub 组织策略禁止该仓库使用 Deploy Key，因此没有把个人 Toke
 | 未认证 `/stats` | `401` |
 | 认证 `/stats`、`/kb`、`/articles`、`/meta`、`/experiments` | 全部 `200` |
 | GET `/audit`、`/visibility` | `405` |
-| GET 七个新增写接口 | 全部 `405` |
+| GET 七个 POST-only 新增写接口 | 全部 `405` |
 | POST 七个新增写接口空 JSON | 全部到达后端并返回对应缺参 `400` |
+| 认证 GET `/articles/5` | `200`，文章正文 4,259 字符 |
+| 认证 POST `/articles/5` | `405` |
+| 认证 GET `/articles/foo`、未知文章 ID | `404` |
 | 未知 `/admin/delete-all` | `404` |
 | TLS SAN | `geo.kidshub.cn` |
 | Certbot renew dry-run | 成功 |
@@ -102,6 +106,7 @@ GitHub 组织策略禁止该仓库使用 Deploy Key，因此没有把个人 Toke
 | 桌面浏览器 | `1440px`，无横向溢出，动态 API、操作结果和上海时间正确 |
 | 移动浏览器 | iPhone `393px`，无横向溢出，Tab 与操作表单完整 |
 | 浏览器控制台 | `0` 错误、`0` 警告 |
+| “查看 / 修正”弹层 | WebKit 加载文章 #7，正文 6,407 字符，详情响应 `200`，弹层错误 0 |
 | systemd 依赖重启 | GEO 与隧道同时重启通过，双方 `NRestarts=0` |
 | company-vm LAN `8080` | 不可达，仅回环监听 |
 | Nginx GEO error log | 空 |
