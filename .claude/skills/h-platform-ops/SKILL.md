@@ -6384,3 +6384,102 @@ api.x.ai 要跳过（硬打会得到无意义的 400）。10 个号几秒跑完�
 第二跳也是同一个错误——**结果碰巧正确、而要验的分支从未执行，判据还全绿**。
 换成 `.grok/sessions/<cwd>/` 下有历史内容的真实 session 才复刻出生产时序，
 日志里出现「同 sid 重试撞占用，按根因上报」才算真的验到。
+---
+
+## 🔴 孤儿任务：根因、判真假、怎么收口（2026-08-14 定位，动那个面板前必读）
+
+### 它不是"待清理的记账残留"，是事故台
+
+控制面「恢复」页列出的每一条，都是**系统承认自己无法自动判断死活**的任务。
+`lib/runner-rpc.mjs` 的 `recover()` 只重放 `status='requested'`（worker 还没接单的），
+对 `running` 一律跳过——因为 worker 可能真跑完了，自动重跑会给用户发两遍。
+**健康态是"每条都被人看过并做了决定"，不是"列表清空"。**
+
+### 根因：重启时有在途任务
+
+`inflight` 是内存态 Map，`request.status='running'` 持久化在 SQLite。
+`bridge.mjs` 的 `shutdown()` 收到 SIGTERM 后直接 force-close WS 与
+`runnerWorkerClient`，**不等在途任务**。两者一分离，记录永远停在 running。
+
+实证（dev198）：9 条孤儿中 8 条在任务开始后 **0.1~6.9 分钟**内撞上重启，其中
+08-07 的三条精确指向同一次重启。反向锚：295 次重启 / 28.3 天，随机时刻后 40 分钟
+内撞上重启的先验概率仅 **29%**，实测 8/9 = 89%。
+
+⚠️ 不要把它归因成"超时"。rpc 超时是另一条路径（`uncertainOutcome` 时故意不写终态），
+但那条的触发阈值是 `estimateRunnerRpcTimeoutMs`＝`perRound×(continueRounds+1)+grace`，
+grok 至少 40 分钟——本次 9 条里一条都不是。
+
+### 判"真丢失"还是"记账残留"：只认 durable_events
+
+**报告里的 `status` 字段不可信**：`orphan-recovery-coordinator.mjs` 里
+`mergeCandidate(..., { kind:'rpc', status:'acked' })` 是**硬编码字面量**，对所有 rpc
+孤儿恒为 `acked`，不反映送达。probe 返回的 `state:'orphaned'` 同样写死。
+
+真判据是查事件流（dev198，只读）：
+
+```bash
+ssh dev198 'export PATH=$HOME/.local/node/bin:$PATH; cd ~/feishu-grok-bridge && node -e "…"'
+# 对账：rpc_requested − rpc_result − rpc_error − rpc_cancelled = 无终态数
+# 再拿这些 taskId 去 namespace in (task-session, delivery-outbox) 查有无终态事件
+# 无任何终态 = 用户真的什么都没收到（发了消息机器人再没反应）
+```
+
+2026-08-14 实测：8 条无任何终态（真丢失），1 条有 `delivery_acked,task_failed`（已收口）。
+
+### 四个动作的真实语义（`bridge.mjs` 内 syncApp 注入的 handler）
+
+| 动作 | 实际行为 | 会不会打扰用户 |
+|---|---|---|
+| `probe` | 重查一次是否仍是孤儿 | 否 |
+| `complete`/`cancel` | 只改内部状态 + 写审计 | **否** |
+| `rerun` | **真的重跑任务，并发「✅ 恢复任务已完成」卡片** | **会** |
+
+`rerun` 需 `confirm:'RERUN'`，后台按钮叫「确认重跑」。**对几天前的任务点它 = 给用户
+推送一个他早忘了的问题的答案。** `cancel` 写 `task_cancelled`、`complete` 写
+`task_completed`——任务真没跑完就该用 `cancel`，否则污染终态统计。
+
+### ⚠️ 列表里混着"正在跑的活任务"
+
+活任务会被快照捕捉成孤儿，跑完自行消失（2026-08-14 一天内见 3 次：11→9、
+新增 `7e7608412a98` 后又自行消失）。**活任务和陈年僵尸在 UI 上长得一模一样，
+批量点会误伤。** 区分：`detectedAt` 等于 bridge 启动时刻的是重启翻出来的陈年记录；
+刚出现且 `ageMs` 很小的先放着观察。
+
+### 重启纪律（这是唯一真正的预防）
+
+```bash
+# dev198
+ssh dev198 '~/feishu-grok-bridge/ops/safe-restart.sh'
+# mini（三个 env 必带，路径与端口都不同）
+ssh mini '/opt/homebrew/bin/limactl shell h-b2 -- bash -lc "export H_UNIT=h-mini-b2-bridge H_HEALTH_URL=http://127.0.0.1:18775/healthz H_DRAIN_PROBE=/srv/h-platform/ops/inflight-count.py; /srv/h-platform/ops/safe-restart.sh"'
+```
+
+`safe-restart.sh` 在途非零直接拒绝（`--force` 才放行）；`drain-before-stop.sh` 挂
+`ExecStop` 兜底。两者共用 `ops/inflight-count.py` 一个探针，避免两套判据漂移。
+实测：装上后两站重启均**零新增孤儿**。
+
+**局限**：ExecStop 期间 bridge 仍在接新任务（无"停止接单"接口），高峰期只能等到
+上限后放行。彻底修法是在 `shutdown()` 里先停止接单再 drain，**未做**。
+
+### 双站差异（照抄 dev198 会静默失效）
+
+| | dev198 | mini（Lima VM h-b2） |
+|---|---|---|
+| healthz | 18765 | **18775** |
+| 脚本位置 | `~/feishu-grok-bridge/ops/`（git 管理） | **`/srv/h-platform/ops/`** |
+| 原 TimeoutStopSec | 无（默认 90s） | **15s → 必须抬到 360s** |
+| unit | `feishu-grok-bridge` | `h-mini-b2-bridge` / runner 是 `h-mini-b2-runner` |
+
+⚠️ mini 那个 `TimeoutStopSec=15` 是最阴的：它覆盖整个停止过程含 ExecStop，不一起改
+的话 300 秒的 drain 最多跑 15 秒就被 SIGKILL，**装了等于没装且日志看着正常**。
+
+脚本不能放 mini 的 `app/ops/`——`/opt/h-platform/app` 是 git archive 解出的，
+`.deploy-meta.json` 带 `fileCount`/`manifestSha256`，塞文件会被 `assert/verify-mini-b2-*`
+判脏。放 `/srv/h-platform/ops/` 的代价是**不在任何部署流程内**，靠
+`ops/deploy-sites.sh mini --check` 的漂移检查（比对 sha256 **且**校验可执行位）暴露。
+
+### 手工往 dev198 的 ops/ 放文件 = 弄脏工作区
+
+`ops/deploy-sites.sh` 走 `git merge --ff-only`，脚本开头就写着「那天我 scp 过 ops
+文件把工作区弄脏，ff-only 直接失败」。改 ops/ 脚本的正道：提交推送 → 
+`SKIP_RESTART=1 ops/deploy-sites.sh dev198`（mini 另走 `deploy/lima/` 影子割接）。
