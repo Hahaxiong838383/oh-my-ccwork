@@ -1,10 +1,21 @@
 # 公司 AI Ontology 后续 TODO
 
-更新时间：2026-08-11（Asia/Shanghai）
+更新时间：2026-08-14（Asia/Shanghai）
 
 ## 当前结论
 
 P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI、Goal 5 P0-DEC、Goal 6-A P1-DOMAIN 和 Task 6-R 均已完成工程验收。Goal 6-A 已获川哥人工体验确认；H `v1.58.2` 发布溯源为 `in_sync`，真实 Chrome `99/99`。10 名真实员工 Canary 继续关闭，不能因为工程 Goal 完成自动启动。
+
+GEO Engine `0.3.1` 只读运营监控台已于 `2026-08-14` 上线 `geo.kidshub.cn`，采用独立认证、精确只读路径、阿里云回环端口和 company-vm 受限反向 SSH。该页面是 GEO 运行观察面，不是 Public Claim 发布网关，不获得内容发布、Ontology 读取或业务写回权限。
+
+## GEO 公网前端后续门禁
+
+1. ✅ DNS、独立 TLS、认证、只读路径白名单、隧道 systemd、续期 dry-run 和重启恢复已通过。
+2. 🟡 将 GEO 主进程从手工/nohup + crontab 迁入正式 systemd，并绑定 `127.0.0.1:8080`。
+3. 🟡 后续 UI 改版补真实浏览器控制台、桌面/移动布局和敏感字段扫描；当前未为验收临时安装 Playwright 依赖。
+4. 🟡 多人使用前将 Basic Auth 升级为 H 管理员认证或公司统一身份；当前独立凭据不得进入 Git、Skill、记忆或协作消息。
+5. ⛔ 不开放 `/stats`、`/kb`、`/articles`、`/gen`、`/publish`、`/visibility` 等原始 API；发布必须继续经过 Public Claim Package、人审和 Action Gateway。
+6. 详细部署、验收和回滚见 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
 
 ## 2026-08-10 Goal 顺序重排
 

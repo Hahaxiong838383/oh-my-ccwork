@@ -382,3 +382,29 @@ Foundation Compose 为 data 网络显式设置了 `name: company_ai_data`，因�
 - Runtime 的“配置模型名”不能证明真实模型调用。远程 Worker 必须读回 provider、model 和 usage；缺任一项失败关闭。Token/费用预算、有限重试和独立熔断必须位于 Route 层，权限拒绝与证据不足不能触发切路。
 - Route B 没有独立公司凭据时必须保持 disabled；复用 Route A 的同一 Key 只会制造伪冗余。当前个人 CPA 必须显式标记 `temporary_personal_credential`。
 - 本机没有 Docker 时，静态 SQL 和单测不能冒充 PostgreSQL Runtime Evidence。应把固定镜像、二次迁移、强制 RLS、无 Tenant 读取为 0、敏感正文列扫描和 Route B 状态检查接入已推送 Commit 的不可变 CI。
+
+## GEO 公网只读 Dashboard 经验（2026-08-14）
+
+### 76. DNS 正确不等于域名已经拥有正确 TLS 身份
+
+`geo.kidshub.cn` 已解析到 aliyun-hk 时，HTTPS 仍命中 ERP 默认证书。新域名验收必须同时证明 DNS、独立 Nginx `server_name`、证书 SAN、HTTP 跳转和续期 dry-run；只看到 A 记录正确不能写“域名已上线”。
+
+### 77. 只想发布前端时也不能整端口反代
+
+GEO Dashboard 与知识库、文章详情、内容生成、发布和可见性写接口共用 `8080`。公网应精确代理 `/dashboard`，健康检查单独放行，其余路径 `404`、非 GET/HEAD `405`；“页面有密码”不能替代路由级最小暴露。
+
+### 78. 反向隧道安全要由四层证据共同证明
+
+`permitlisten` 限制、阿里云 `127.0.0.1` 监听、安全组不开放端口和公网实际探针不可达缺一不可。只看 SSH 进程或 systemd active，不能证明端口没有意外暴露。
+
+### 79. 公网页面验收必须包含真实恢复路径
+
+一次 `curl 200` 只能证明瞬时可用。正式验收还要重启隧道服务，确认启动前健康门、远端端口恢复、连续多轮公网请求、Nginx error log 和自动续期；恢复路径没跑过就没有持续可用证据。
+
+### 80. 独立访问凭据不能与业务或模型凭据复用
+
+GEO Dashboard 的访问认证与 H 管理员、Ontology 独立密码、模型 API Key 和隧道私钥属于不同安全域。远端只保存认证 Hash，明文只保存在批准的离线位置；任何协作消息、Skill、记忆和 Git 文档只能记录边界与指针，不能记录秘密本身。
+
+### 81. 前端部署完成不等于底层运行托管完成
+
+本次公网链路、认证、TLS 和隧道已生产化，但 GEO 主进程仍是手工/nohup + crontab，且监听 `0.0.0.0:8080`。交付必须把“公网前端已上线”和“后端进程仍待 systemd/loopback 硬化”分开写，不能用前端绿色掩盖底层遗留。

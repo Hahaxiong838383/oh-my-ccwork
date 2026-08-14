@@ -13,6 +13,7 @@
 
 - 生产架构基线：V2.2，QNAP 承载 H-Lite、Company Agent Core、Ontology 控制面和数据面。
 - 目标架构：V3 认知—实践骨架，采用“三个闭环、两个世界、一个编译器”和“骨架完整、血肉渐进”；P0-S 稳定骨架已生产上线，认识论、决策与领域血肉仍按阶段增量建设。
+- `2026-08-14` GEO Engine `0.3.1` 只读运营监控台已上线 `https://geo.kidshub.cn/`：浏览器经 aliyun-hk Nginx 独立认证进入，阿里云只监听回环 `127.0.0.1:13808`，再通过 company-vm 的受限反向 SSH 访问 `127.0.0.1:8080/dashboard`。公网只允许 `/`、`/dashboard` 和 `/health`，原始 `/stats`、知识库、文章、生成、发布和可见性 API 全部封锁；详细证据和回滚见 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
 - 当前里程碑：`Goal 6-A / P1-DOMAIN` 已完成工程验收和川哥人工体验验收。公司 QNAP 为 Schema `3.3.0`、Registry `in_sync`、Company Brain Operating Model v1 `active`；Domain Connector `2026-08-10.1`、Agent Core `2026-08-10.2`，ERP 95 / Operations 38 / Device 57 / Market 369，数据指纹 `ae0a73d126cb9d2dc1417e0eae7c0e94`。ActionIntent 3、Delivery Outbox 12 均为既有已验证/已回滚/已确认记录，无 pending/leased 写回。H 控制面 `v1.58.2`、50 个运行文件 `in_sync`、真实 Chrome `99/99`。Company Capability Governance v1 继续保持 `contract_only`。PESTIM B～G 工程候选、Linux/amd64 镜像、SQL Runtime、飞书 CSV 人工审核闭环和七日 Shadow 机器验收链已完成工程验证；旧 90 天 Artifact 仅保留为历史 Runtime 证据，Manifest `1.2.0` 的 P003 最终审核、成员真实权限体验和 Goal 7 强门禁发布包尚未重建。`2026-08-11` 已再次在线复核公司 QNAP 五元组、active Schema `3.3.0`、Foundation 13 个容器健康且 `restart_count=0`，战略情报目录和数据库 Schema 仍不存在。飞书来源 8/8 已预填结构化实名审核 Principal，P003 30/36 已预填结构化 DRI 和参与者；线下渠道责任人已进入 To C 线下渠道职能角色和渠道类待审核分配。P003 已拆为产品与用户、AI 研发、品牌、To C 线下渠道四个记录级职能角色，旧宽泛角色成员为 0；`categoryKey` SingleSelect 转换后 36 条逐字段零漂移，正式导入器已兼容单元素数组并失败关闭异常形态。脱敏检查器确认来源分配 8/8 完整，P003 个人 DRI 30/36、必要角色位 90/150、全角色覆盖 12/36；最终决定仍为来源 0/8、P003 0/36，全部关系继续 `pending / inactive`。成员真实权限体验和 Goal 7 文件化 Owner Acceptance 均不存在，因此部署入口继续 fail-closed。
 - `2026-08-11` 已确认采用双模式：当前使用 `internal_engineering_shadow` 做 1～3 天、3 个公开来源和 6 条 P003 样例的内部验证；许可/合规、正式 P003 审核、成员 UAT、Goal 7 和七日 `production_shadow` 标记为 `deferred_before_production`。内部证据不能满足生产门禁；当前代码已通过 Contracts `61/61`、Collector `9/9`、Strategic Intelligence `98/98`。本机 Smoke 与公司 QNAP首次真实运行均对 arXiv、Federal Register 和 GitHub 白名单仓库各采集 20 条、共 60 条，Snapshot 只保留 Hash；首次内部运行机器 Evidence 强制验证来源覆盖、单来源 20 条上限、正文 0、Foundation 指纹、临时资源归零和五类业务副作用归零，且固定 `countsTowardProductionShadow=false`。四角色 UAT 最终验收已改为由四份不同成员 Session 和安全负责人接受记录编译，不能手填通过布尔值。内部部署包保留完整项目依赖树，容器使用 QNAP 非 root 部署账号 UID/GID；Goal 7 与最终 Goal 完成证据均由原始运行、权限、部署和 Owner Acceptance 证据自动编译，不能手填布尔值或 Hash。正式 Foundation 部署候选只允许逐个切换 Agent Core、Knowledge Connector、H-Lite，并要求发布、012 迁移、服务重建和真实回滚演练分别授权；包 Hash、内部 Evidence Hash、Release Manifest 或双 Commit 漂移均在任何迁移和服务切换前失败关闭。
 - `2026-08-11` 最新增量：Commit `a7aeae25e`、Runtime Workflow `31473316988` 和 Artifact `9094240704` 已形成同源不可变发布证据，内部工程 Runtime 已在公司 QNAP 准备完成。部署仅加载镜像、复制完整项目包、写入 0600 配置并执行 Compose config；Foundation 13 服务指纹不变、restart 0，战略情报容器、网络、端口、迁移和首次采集均为 0。首次真实采集、生产迁移、Foundation 重启和真实回滚仍未授权。
@@ -52,6 +53,7 @@
 - `docs/decision-practice-loop-acceptance-2026-08-09.md`：Goal 5 决策、P2、任务、行动、三层结果、Learning、失败尝试退役和 H 控制面验收证据。
 - `docs/goal6-operating-domain-acceptance-2026-08-09.md`：Goal 6 Operating Model、P1-DOMAIN、只读演示链、负向验证和生产验收。
 - `docs/goal6-completion-audit-2026-08-09.md`：按 Goal 原始要求逐项核对“已证明/部分证明/待证明”，防止把代码、测试或容器健康误报为完整完成。
+- `docs/geo-public-dashboard-deployment-2026-08-14.md`：`geo.kidshub.cn` 独立认证、只读路由、受限反向 SSH、TLS、续期、重启恢复、风险和回滚证据。
 - `docs/task6-r-release-provenance-guard-2026-08-10.md`：H 控制面 Source Commit、目标文件哈希、运行时对账和发布回滚门禁。
 - `docs/p1-si-f-qnap-shadow-readiness-acceptance-2026-08-10.md`：战略情报 Shadow 部署准备、资源限制、授权门禁、Linux/amd64 镜像与 PostgreSQL Runtime 证据。
 - `docs/p1-si-f-deployment-readiness-inspector-acceptance-2026-08-11.md`：统一只读七项部署门禁检查器、32/32 工程验证、当前阻断原因与生产零副作用证据。
@@ -99,3 +101,4 @@
 4. Goal 3 的 10 名真实员工 Canary 在 Goal 7 后执行，仍是 20/50 人放量前的强制门禁。
 5. Goal 8 建立 24 小时容量观测、H-Lite lease/fencing 和 Worker 分池，再规划 20/50 人扩容。
 6. 产品研究部整库导入、Capability Governance 激活、A2A、真 3D、PESTIM 自动 P2、ERP/社媒写回、ERP M4 和 MediaCrawler 风控恢复继续拆为独立 Goal，必须重新授权。
+7. GEO 公网下一步只做运行硬化：将 GEO 主进程迁入 systemd、监听收紧到 `127.0.0.1`、补真实浏览器验收；不得因此开放原始写 API或跳过 Public Claim / Action Gateway。

@@ -6035,6 +6035,16 @@ node ops/sync-company-directory.mjs
 - 当前页面生产验收基线为 9/9 组件就绪、P0-DEC 标绿、Practice active、Goal Verified 至少 1、失败 Lineage 显式 `retired`、浏览器控制台错误 0、失败请求 0、`scrollWidth == clientWidth`；任何一项失败都不能只凭 API 200 判定上线完成。
 - 控制面不得把失败 Canary 长期显示为 `plan_pending` / `execution_pending`。失败 WorkCase 保留审计，但 Decision 已 superseded 时必须显示 `retired`，且不能计入业务待办或正式 P2 成功数。
 
+## GEO 独立监控域名运维（2026-08-14）
+
+- `geo.kidshub.cn` 与 H 控制面同机使用 aliyun-hk Nginx，但不是 `h-control` 路由；修改 GEO 站点不得重启 H 控制面或覆盖 `/srv/h-control/app`。
+- 生产站点文件为 `/etc/nginx/sites-available/geo-kidshub`，认证 Hash 为 `/etc/nginx/.htpasswd-geo`；明文凭据只保存在批准的离线位置，禁止 `grep` 后输出到终端、日志或协作消息。
+- 标准上游为 aliyun-hk `127.0.0.1:13808`，由 company-vm `geo-dashboard-tunnel.service` 维护到 GEO `127.0.0.1:8080`。阿里云不得监听 `0.0.0.0:13808`，Nginx 也不得直接代理 company-vm 或开放新的安全组端口。
+- Nginx 只允许 `/`、`/dashboard` 和 `/health`；`/stats`、`/kb`、`/articles`、`/gen`、`/publish`、`/visibility` 等原始 API 必须保持 `404`，写方法保持 `405`。
+- 发布顺序：确认 DNS → 验 aliyun-hk 回环端口空闲 → 建受限隧道 → 上 HTTP ACME 站点 → 签发证书 → 上认证只读 HTTPS → `nginx -t`/reload → 重启隧道恢复验收 → Certbot renew dry-run。
+- 发布前备份 Nginx 真值，不得整文件盲恢复覆盖其他站点。本次锚点为 `/root/nginx-before-geo-20260814-100133.conf`，恢复时只参考 GEO 相关差异。
+- 当前已验证：未认证 `401`、认证 `200/18500 bytes`、API `404`、写方法 `405`、公网 `13808` 不可达、连续请求 `3/3`、隧道重启恢复、证书续期 dry-run、GEO error log 为空。
+
 ### H v1.56.2 生产源码漂移修复（2026-08-10）
 
 - **版本标识不是源码证明**：生产 `/healthz` 曾报告 `v1.56.1`，但 `company-ontology-dashboard.mjs` 与 `company-ontology-whitebox.mjs` 仍是 UAT 修复前文件。以后必须从已推送 Source Commit 打包，并在重启后对账版本、目标文件 SHA-256、API DTO 和真实 DOM。

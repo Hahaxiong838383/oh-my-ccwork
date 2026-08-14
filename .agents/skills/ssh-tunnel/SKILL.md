@@ -242,3 +242,20 @@ ssh -p 22277 -i /Users/rayman.chen/.ssh/id_ed25519 -o IdentitiesOnly=yes fu-121@
 ### Codex App-to-App 远控失败的边界
 
 如果官方 App-to-App 远控卡在“正在初始化安全连接”并报 `Opening handshake has timed out`，不要直接归因到 Studio 未启动或手机配对丢失。2026-08-11 已验证：Studio App server 在线、手机曾可见/可连，Air 侧 Electron `--proxy-server`、hosts 可信 DNS 接管、Xray 将 `chatgpt.com` / `ws.chatgpt.com` / `ab.chatgpt.com` 临时切到 `DMIT-Gemini-vps-chenchuan` 均未修复，且实验均需自动回退。该问题应与 SSH 本地隧道方案分开处理。
+
+## GEO Dashboard 受限反向 SSH（2026-08-14 已验证）
+
+```text
+geo.kidshub.cn:443
+  -> aliyun-hk Nginx + 独立认证
+  -> aliyun-hk 127.0.0.1:13808
+  -> geo-tunnel 受限反向 SSH
+  -> company-vm 127.0.0.1:8080/dashboard
+```
+
+- aliyun-hk 使用独立 `geo-tunnel` 用户，`authorized_keys` 必须包含 `restrict,port-forwarding,permitlisten="127.0.0.1:13808"`；不得复用 root 运维 Key 或 H/ERP 隧道 Key。
+- company-vm 私钥和固定 host key 位于 `/home/futurus/.geo-engine/tunnel/`，权限分别为目录 `0700`、私钥/known_hosts `0600`；不得进入 Git、Skill 或记忆。
+- company-vm 由 `/etc/systemd/system/geo-dashboard-tunnel.service` 托管，`ExecStartPre` 先检查 GEO `/health`，SSH 必须启用 `BatchMode`、`IdentitiesOnly`、`StrictHostKeyChecking`、`ExitOnForwardFailure` 和 keepalive。
+- 隧道验收必须同时证明：company-vm service active、aliyun-hk 仅 `127.0.0.1:13808` 监听、回环 `/health` 与 `/dashboard` 可读、公网 `13808` 不可达、服务重启后页面连续多轮恢复。
+- Nginx 只能代理精确只读页面；反向 SSH 安全不等于上游 API 安全，禁止把整个 GEO `8080` 暴露给公网。
+- 回滚顺序：先下 Nginx 入口，再 stop/disable company-vm 隧道服务，确认 `13808` 消失，最后再移除 `geo-tunnel` 公钥或账号；禁止先删密钥导致残留监听和难以定位的半状态。

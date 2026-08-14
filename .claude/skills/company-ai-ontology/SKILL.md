@@ -254,6 +254,17 @@ node ops/sync-company-directory.mjs
 - 绿色表示“已通过当前生产验收”，灰色表示“仍有业务门禁”。服务容器健康可以标绿，但知识权限正负验收、真实 Canary、真实 P2、ERP/社媒接管在业务闭环前必须保持灰色。
 - 公网验收至少包含：未认证跳转登录、认证后页面 200、状态 API 200、H 引擎模型与版本真值、敏感字段扫描、真实浏览器无控制台错误、无横向溢出、绿色/灰色数量和隧道重启后恢复。
 
+### GEO 公网只读监控台（2026-08-14）
+
+- GEO Engine 独立运行观察面为 `https://geo.kidshub.cn/`，当前链路固定为：浏览器 → aliyun-hk Nginx 独立认证 → `127.0.0.1:13808` → `geo-tunnel` 受限反向 SSH → company-vm `127.0.0.1:8080/dashboard`。
+- GEO Dashboard 不是事实真源、Public Claim 发布网关或 Action Gateway。它只展示认证后的运行派生状态，不获得 Ontology、ERP、员工数据或内容发布权限。
+- GEO 原始服务把 Dashboard 与知识库、文章详情、生成、发布、可见性写接口放在同一端口；公网禁止整端口反代。标准白名单只允许 `/`、`/dashboard`、`/health`，其余路径 `404`，非 GET/HEAD `405`。
+- 隧道必须同时满足独立用户/独立密钥、`restrict + port-forwarding + permitlisten="127.0.0.1:13808"`、阿里云仅回环监听、安全组不开放端口和公网探针不可达。任何单一证据不能替代其余四项。
+- 独立访问凭据不得复用 H 管理员、Ontology 密码、模型 Key 或隧道私钥；远端只存 Hash，秘密不得进入 Git、Skill、记忆、日志或协作消息。
+- 上线验收至少包含：DNS、独立 TLS SAN、未认证 `401`、认证页面 `200`、写方法 `405`、原始 API `404`、Dashboard JS 语法、连续公网请求、Nginx error log、隧道真实重启和 Certbot renew dry-run。
+- 当前 GEO 主进程仍待迁入 systemd，并将监听从 `0.0.0.0:8080` 收紧到 `127.0.0.1:8080`。公网前端上线不得被写成后端运行托管已经完成。
+- 完整证据与回滚见项目文档 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
+
 ### 架构白盒画板与 3D 演进
 
 - 默认交互必须“卡片优先”：鼠标左键只选择节点或操作按钮，不承担画布拖动；Mac 触摸板双指平移、鼠标右键按住拖动画布，捏合或 `Ctrl/Command + wheel` 缩放。
