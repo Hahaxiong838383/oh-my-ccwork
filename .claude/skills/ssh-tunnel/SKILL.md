@@ -153,6 +153,21 @@ printf 'pwd\nquit\n' | sftp -q -b - company-vm
 - 安装或恢复 standalone CLI 后，验收顺序固定为：真实 SSH 登录、`codex --version`、daemon running、socket 存在、Air App 日志出现 `nextState=connected`，最后确认项目 UI 绿点。
 - Studio GUI 代理环境应由受控 LaunchAgent 注入，本机代理地址与 CPA 域名 `NO_PROXY` 同时保留；不得把代理凭据写入 Skill、Git 或共享记忆。
 
+## Codex-managed SSH 上传与慢响应分层（2026-08-14）
+
+远程窗口“上传中”“点击发送一直转圈”“已经收到内容但明显很慢”必须分开诊断，禁止只凭 UI 转圈重启 App Server、SSH 或代理：
+
+1. 测 `thread/read`、`thread/turns/list` 与 `fs/createDirectory`/上传 RPC；控制面几十秒才返回时先查共享队列和历史会话体积。
+2. 查 Studio `~/.codex/logs_2.sqlite` 中该 Turn 的 `/v1/responses status=200`、首条流事件和错误；没有 `200` 才查 Studio 出站、Xray、CPA/Nginx。
+3. 通过 App Server 协议确认 Turn 是 `inProgress` 还是 `completed`；收到 reasoning/assistant 流不等于任务已完成。
+4. 统计模型轮次、上下文 token、工具次数和工具耗时；控制面毫秒级且 Provider 已 `200` 时，慢点通常在任务本身。
+
+2026-08-14 Studio 实例：约 `16.9 MB`、530 条可见消息的旧 rollout 让 `thread/turns/list` 延迟约 `50–55s`、`fs/createDirectory` 约 `47.5s`，8 KB 文件实际落盘但完成回调超时。先完整备份，再只移除工具输出、推理明细和重复 metadata，保留全部用户/助手/开发者消息与 context compacted 摘要；压缩到约 `2.04 MB` 后，`thread/read` 恢复到 `126–179ms`、`thread/turns/list` 恢复到 `241–453ms`。
+
+后续复杂任务中，Studio → Smart API TLS 探针仅 `0.20–0.25s`、Air → Studio SSH 建连约 `1.1–1.6s`、模型请求约 `8s` 返回 SSE `HTTP 200`，但 `gpt-5.6-sol + high` 因多轮模型与最长约 `30s` 的工具调用，超过 `278s` 仍为 `inProgress`。这属于执行慢，不需要重启；要提速应新建任务、重新附文件并降到 `medium`。
+
+验收必须分别报告：上传是否落盘、控制面延迟、Provider 是否到站、Turn 是否完成。
+
 ## GEO Dashboard 受限反向 SSH（2026-08-14 已验证）
 
 ```text

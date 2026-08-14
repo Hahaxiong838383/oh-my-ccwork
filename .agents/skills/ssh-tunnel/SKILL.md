@@ -251,6 +251,21 @@ ssh -p 22277 -i /Users/rayman.chen/.ssh/id_ed25519 -o IdentitiesOnly=yes fu-121@
 
 如果官方 App-to-App 远控卡在“正在初始化安全连接”并报 `Opening handshake has timed out`，不要直接归因到 Studio 未启动或手机配对丢失。2026-08-11 已验证：Studio App server 在线、手机曾可见/可连，Air 侧 Electron `--proxy-server`、hosts 可信 DNS 接管、Xray 将 `chatgpt.com` / `ws.chatgpt.com` / `ab.chatgpt.com` 临时切到 `DMIT-Gemini-vps-chenchuan` 均未修复，且实验均需自动回退。该问题应与 SSH 本地隧道方案分开处理。
 
+### Codex-managed SSH 上传与慢响应分层（2026-08-14）
+
+远程窗口“上传中”“点击发送一直转圈”“已经收到内容但明显很慢”不是同一个故障。禁止只凭转圈重启 App Server、SSH 或代理，先按四层取证：
+
+1. **控制面**：测 `thread/read`、`thread/turns/list` 和 `fs/createDirectory`/上传 RPC。控制面几十秒才返回，优先查共享队列与历史会话体积。
+2. **模型到站**：查 Studio `~/.codex/logs_2.sqlite` 中该 Turn 的 `/v1/responses status=200`、首条 reasoning/assistant event 和错误；未到 `200` 才继续查 Studio 出站、Xray、CPA/Nginx。
+3. **Turn 生命周期**：用 App Server 协议读最新 Turn，明确区分 `inProgress` 与 `completed`。看到 reasoning 流不代表任务已经结束；转圈可能只是高推理或工具执行仍在继续。
+4. **执行负载**：统计模型轮次、上下文 token、工具调用次数和单次工具耗时。控制面毫秒级、Provider 已 `200` 且无流错误时，慢点通常在任务本身，不在 SSH。
+
+2026-08-14 Studio 实例：旧任务 rollout 约 `16.9 MB`、含 530 条用户/助手/开发者消息，导致同一远端队列中的 `thread/turns/list` 约 `50–55s`、`fs/createDirectory` 约 `47.5s`，8 KB 文件实际已写入但完成回调超时。处理时必须先完整备份，再只删除工具输出、推理明细和重复 metadata 等内部冗余，保留全部可见消息与 context compacted 摘要；压缩到约 `2.04 MB` 后，`thread/read` 恢复到 `126–179ms`、`thread/turns/list` 恢复到 `241–453ms`，上传完成提示恢复。
+
+同一窗口后续发送复杂分析时，Studio → Smart API TLS/401 探针仅 `0.20–0.25s`，Air → Studio SSH 建连约 `1.1–1.6s`，模型请求约 `8s` 返回 SSE `HTTP 200`，但 `gpt-5.6-sol + high` 因多轮模型和最长约 `30s` 的工具调用，超过 `278s` 仍为 `inProgress`。这属于任务执行慢，不需要重启；要提速应新建任务、重新附文件并降到 `medium`，不要继续在超长历史线程中追加。
+
+验收结论必须分别写清：上传是否落盘、控制面延迟、Provider 是否到站、Turn 是否完成。四项不能互相替代。
+
 ## GEO Dashboard 受限反向 SSH（2026-08-14 已验证）
 
 ```text
