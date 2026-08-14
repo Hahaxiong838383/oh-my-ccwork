@@ -4,9 +4,9 @@
 
 ## 结论
 
-`https://geo.kidshub.cn/` 已上线 GEO Engine `0.3.2` 新版 Control Room。前后端均来自上游 Commit `23fe8bb130e29dea31bf0f98b99bb975dd525d15`；公网入口采用独立认证、精确只读路由和受限反向 SSH，GEO 原始无鉴权写 API、公司虚拟机 `8080` 和阿里云回环端口均未直接暴露公网。
+`https://geo.kidshub.cn/` 已上线 GEO Engine `0.4.1` 动态 API Control Room。前后端均来自上游 Commit `4cade6c6a459ed3c4c6d6ed615cd7999f7b6b585`；公网入口采用独立认证、精确路由白名单和受限反向 SSH，公司虚拟机 `8080` 和阿里云回环端口均未直接暴露公网。
 
-GEO 主进程由系统级 systemd 托管，代码使用不可变 Git Release 和独立 venv，监听固定为 `127.0.0.1:8080`，模型 Key 仅由 `0600` EnvironmentFile 注入。新文章生成由代码与生产环境双重锁定为 `deepseek-v4-flash` + `reasoning_effort=max`；SQLite 已原地新增推理等级与交付字段，迁移前后业务数据计数一致且 `integrity_check=ok`。
+GEO 主进程由系统级 systemd 托管，代码使用不可变 Git Release 和独立 venv，监听固定为 `127.0.0.1:8080`，模型 Key 仅由 `0600` EnvironmentFile 注入。前端不再嵌入服务端快照，而是从正式域名动态读取 API；AI 可见性检测与网站审计是仅有的公网写操作，生成、发布、修复和知识写入继续封锁。SQLite 已新增实验账本，迁移前后文章与知识数据不变且 `integrity_check=ok`。
 
 ## 生产拓扑
 
@@ -27,7 +27,8 @@ GEO 主进程由系统级 systemd 托管，代码使用不可变 Git Release 和
 - 隧道使用独立 `geo-tunnel` 账号和独立 ED25519 密钥；`authorized_keys` 只允许端口转发和 `permitlisten="127.0.0.1:13808"`。
 - 公司虚拟机使用 `geo-dashboard-tunnel.service` 托管隧道，启动前先验证 GEO `/health`，异常退出自动恢复。
 - GEO 主服务由 `/etc/systemd/system/geo-engine.service` 托管；隧道 unit 使用 `Requires/After=geo-engine.service`，并在 `ExecStartPre` 内等待健康端点，避免系统启动或同时重启时抢跑。
-- Nginx 只代理 `/`、`/dashboard` 和公开只读 `/health`；其余 API 路径返回 `404`，非 GET/HEAD 方法返回 `405`。
+- Nginx 公开只读 `/health`；认证后允许 GET `/`、`/dashboard`、`/stats`、`/kb`、`/articles`、`/visibility/history`、`/meta`、`/experiments`，以及 POST `/visibility`、`/audit`。其余路径返回 `404`，非允许方法返回 `405`。
+- `/audit` 只允许公网 HTTP(S) 目标，拒绝内网、本机、保留地址和私有重定向；响应体限制 5MB。`/visibility` 与 `/audit` 分别单并发，Nginx 另加操作限流。
 - 公网页面要求独立认证，凭据仅保存在批准的离线位置和远端 Hash 文件，不进入 Git、Skill、记忆或日志。
 
 ## 部署资产
@@ -41,13 +42,14 @@ GEO 主进程由系统级 systemd 托管，代码使用不可变 Git Release 和
 - 隧道回环端口：`127.0.0.1:13808`
 - TLS：Let's Encrypt ECDSA，证书到期日 `2026-11-12`
 - Nginx 发布前快照：`/root/nginx-before-geo-20260814-100133.conf`
+- `0.4.x` API 白名单切换备份：`/root/geo-kidshub-before-v040-20260814-122001.conf`
 
 ### company-vm
 
-- 上游 Commit：`23fe8bb130e29dea31bf0f98b99bb975dd525d15`
-- 当前 Release：`/home/futurus/.geo-engine/releases/company-ai-ontology-23fe8bb130e29dea31bf0f98b99bb975dd525d15`
+- 上游 Commit：`4cade6c6a459ed3c4c6d6ed615cd7999f7b6b585`
+- 当前 Release：`/home/futurus/.geo-engine/releases/company-ai-ontology-4cade6c6a459ed3c4c6d6ed615cd7999f7b6b585`
 - 当前代码指针：`/home/futurus/.geo-engine/current`
-- 独立 venv：`/home/futurus/.geo-engine/venvs/geo-engine-23fe8bb130e29dea31bf0f98b99bb975dd525d15`
+- 独立 venv：`/home/futurus/.geo-engine/venvs/geo-engine-4cade6c6a459ed3c4c6d6ed615cd7999f7b6b585`
 - GEO 系统服务：`/etc/systemd/system/geo-engine.service`
 - GEO EnvironmentFile：`/home/futurus/.config/geo-engine/geo-engine.env`，权限 `0600`
 - GEO 数据：`/home/futurus/.geo-engine/geo_engine.db`
@@ -55,12 +57,15 @@ GEO 主进程由系统级 systemd 托管，代码使用不可变 Git Release 和
 - 隧道密钥目录：`/home/futurus/.geo-engine/tunnel/`
 - 首次 systemd 切换备份：`/home/futurus/.geo-engine/backups/systemd-cutover-20260814-105641`
 - `0.3.2` 模型/发布状态切换备份：`/home/futurus/.geo-engine/backups/model-publish-v032-20260814-113147`
-- GEO 运行读数：4 个知识库、906 个切片、7 篇文章、2 篇草稿、5 篇已审核待发布、0 篇仅导出、0 篇公开发布、9 条可见性记录。
+- `0.4.0` API/实验账本切换备份：`/home/futurus/.geo-engine/backups/api-console-v040-20260814-121834`
+- `0.4.1` 上海时区修复备份：`/home/futurus/.geo-engine/backups/timezone-v041-20260814-122512`
+- GEO 运行读数：4 个知识库、906 个切片、7 篇文章、2 篇草稿、5 篇已审核待发布、0 篇仅导出、0 篇公开发布、10 条可见性记录、2 条实验记录。
+- 当前资料包版本：`kbp-6adb88da8625`，148,793 tokens。
 - 生成配置：`GEO_GENERATION_MODEL=deepseek-v4-flash`、`GEO_REASONING_EFFORT=max`。
 
 GitHub 组织策略禁止该仓库使用 Deploy Key，因此没有把个人 Token 或私钥复制到服务器。部署流程由本机已授权 GitHub 会话 `fetch` 最新主线，生成含完整历史的 Git Bundle，校验 SHA-256 后传入 company-vm 并创建可审计 Git Release；服务器 Release 的 `HEAD` 与 GitHub `main` 完全一致。后续更新继续使用同一 Bundle 流程，除非组织另行批准机器身份凭据。
 
-可重复运维资产位于 `deploy/company-vm/`：`geo-engine.service`、`geo-dashboard-tunnel.service`、`activate-geo-engine-release.sh` 和 `cutover-geo-engine-release.sh`。首次激活脚本负责备份和安装系统单元；后续切换脚本接收新旧 Commit，原子更新 Release/venv 指针，轮询 `/health`，校验 `0.3.2`、`deepseek-v4-flash` 和 `max`，失败自动恢复旧 Release；脚本不读取或打印 Secret。
+可重复运维资产位于 `deploy/company-vm/`：`geo-engine.service`、`geo-dashboard-tunnel.service`、`activate-geo-engine-release.sh` 和 `cutover-geo-engine-release.sh`。首次激活脚本负责备份和安装系统单元；后续切换脚本接收新旧 Commit、目标版本、模型和推理等级，原子更新 Release/venv 指针，轮询 `/health` 并校验 `/stats`，失败自动恢复旧 Release；脚本不读取或打印 Secret。
 
 ## 验收证据
 
@@ -68,27 +73,33 @@ GitHub 组织策略禁止该仓库使用 Deploy Key，因此没有把个人 Toke
 |---|---|
 | DNS A 记录 | `8.218.26.17` |
 | 未认证首页 | `401` |
-| 认证后 Dashboard | `200`，HTML `35506` bytes |
+| 认证后 Dashboard | `200`，HTML `36039` bytes |
 | Dashboard 标题 | `GEO Control Room · 爱视可` |
 | `/health` | `200` |
-| `/stats`、`/kb`、`/articles`、`/publish` | `404` |
-| POST/PUT/DELETE/PATCH | `405` |
+| 未认证 `/stats` | `401` |
+| 认证 `/stats`、`/kb`、`/articles`、`/meta`、`/experiments` | 全部 `200` |
+| GET `/audit`、`/visibility` | `405` |
+| `/gen`、`/publish`、其他非白名单路径 | `404` |
 | TLS SAN | `geo.kidshub.cn` |
 | Certbot renew dry-run | 成功 |
 | 外部访问 `13808` | filtered/timeout |
 | 隧道重启恢复 | active，`NRestarts=0` |
 | 连续公网请求 | 3/3 返回 `200` |
-| 前端/后端数据一致性 | 4 个知识库、906 个切片、7 篇文章、9 条可见性记录完全一致 |
+| 前端/后端数据一致性 | 4 个知识库、906 个切片、7 篇文章、10 条可见性记录、2 条实验记录完全一致 |
 | 生成模型 | `deepseek-v4-flash`，最高推理 `max` |
 | 发布状态 | 2 篇草稿、5 篇已审核待发布、0 篇仅导出、0 篇公开发布 |
-| 桌面浏览器 | `1440px`，无横向溢出，模型、发布状态和效果提示正确 |
-| 移动浏览器 | iPhone `393px`，无横向溢出，文章状态列和关键卡片完整 |
+| 资料包版本 | `kbp-6adb88da8625`，4 个知识库、906 个切片、148,793 tokens |
+| AI 可见性操作 | 爱视可/`eyescare.cn`：`0/100`、品牌提及 `0/6`、域名引用 `0/6`，实验 #2 |
+| 网站审计操作 | `ai.kidshub.cn` 登录页 smoke：`19/100`、D、21 项问题，实验 #1 |
+| Tab active | 总览、AI 可见性、网站审计、内容资产、知识库、实验记录六项逐项一致 |
+| 桌面浏览器 | `1440px`，无横向溢出，动态 API、操作结果和上海时间正确 |
+| 移动浏览器 | iPhone `393px`，无横向溢出，Tab 与操作表单完整 |
 | 浏览器控制台 | `0` 错误、`0` 警告 |
 | systemd 依赖重启 | GEO 与隧道同时重启通过，双方 `NRestarts=0` |
 | company-vm LAN `8080` | 不可达，仅回环监听 |
 | Nginx GEO error log | 空 |
 
-真实浏览器验收使用项目本地 Playwright Chromium/WebKit，完成桌面与移动布局、数据渲染、模型标识、发布状态、效果提示和控制台检查；验收后二进制、截图与临时认证配置不进入 Git。
+真实浏览器验收使用项目本地 Playwright WebKit，完成桌面与移动布局、六个 Tab active、动态 API、真实网站审计、真实 AI 可见性检测、实验账本、上海时间和控制台检查；验收后二进制、截图与临时认证配置不进入 Git。
 
 ## 如何判断文章是否发布、是否有效
 
@@ -115,6 +126,9 @@ Dashboard 的文章状态采用以下口径：
 10. **审核、导出和公开发布必须分开**：本地文件生成成功不能写成 `published`；只有外部平台返回公开 URL 才记录为公开发布。
 11. **模型名称不等于推理等级生效**：必须同时校验请求体中的 `model`、`reasoning_effort` 和返回 usage；生产环境再用 EnvironmentFile 覆盖，避免调用方误传低档参数。
 12. **单篇内容不能直接归因品牌整体效果**：发布效果依赖后续同口径可见性检测；没有公开 URL 或没有发布后观测时，Dashboard 必须明确显示“不能判断”。
+13. **长操作不能阻塞健康面**：`HTTPServer` 执行 6 次 AI 查询时会阻塞所有请求；操作页上线后改为 `ThreadingHTTPServer`，并用单并发信号量防止同类任务重复提交。
+14. **网站审计必须防 SSRF**：仅靠 Basic Auth 不足以允许服务端抓任意 URL；必须拒绝非公网 IP、逐跳检查重定向并限制响应体。
+15. **SQLite 时间默认是 UTC**：实验记录首次显示比上海时间少 8 小时；前端必须把无时区的 SQLite 时间按 UTC 解析，再显式转换到 `Asia/Shanghai`。
 
 ## 当前遗留门禁
 
@@ -122,6 +136,7 @@ Dashboard 的文章状态采用以下口径：
 - GEO Dashboard 会在认证后的 HTML 内嵌当前文章、任务、知识库和可见性数据；不得改成公开无认证站点。
 - 当前 5 篇审核文章尚未公开发布；未经业务确认不得自动向外部平台发布。
 - 首篇公开发布后需按同一问题集补跑可见性检测，形成发布前后基线，才能开始判断效果。
+- 当前真实可见性实验为 `0/100`，说明品牌和域名尚未进入本轮 AI 回答；这不是服务故障，而是当前观测结果。
 - 阿里云 ECS 仍无自动续费、无云盘快照、无删除保护，属于独立基础设施风险。
 - Nginx 全局存在 `multica` 的重复 MIME warning，与 GEO 无关但应另开运维任务处理。
 
@@ -129,7 +144,7 @@ Dashboard 的文章状态采用以下口径：
 
 1. 在 aliyun-hk 移除 `/etc/nginx/sites-enabled/geo-kidshub`，执行 `nginx -t` 后 reload。
 2. 在 company-vm 停止并 disable `geo-dashboard-tunnel.service` 与系统级 `geo-engine.service`。
-3. 若仅回滚 `0.3.2`，使用 `cutover-geo-engine-release.sh <old-sha> <new-sha>` 恢复旧 Release/venv，并核对 `/home/futurus/.geo-engine/backups/model-publish-v032-20260814-113147`；禁止只回滚代码不核对数据库完整性。
+3. 若仅回滚 GEO Release，使用 `cutover-geo-engine-release.sh <old-sha> <new-sha> <old-version>` 恢复旧 Release/venv，并核对对应 SQLite 备份；禁止只回滚代码不核对数据库完整性。
 4. 确认 aliyun-hk `127.0.0.1:13808` 消失后，再移除 `geo-tunnel` 的公钥或账号。
-5. 如需恢复 Nginx 发布前真值，参考 `/root/nginx-before-geo-20260814-100133.conf`，但禁止整文件盲覆盖其他站点的后续变更。
+5. 如需撤销 API 白名单，恢复 `/root/geo-kidshub-before-v040-20260814-122001.conf` 后执行 `nginx -t` 与 reload；不得覆盖其他站点。
 6. TLS 证书可保留至自然到期；删除证书不是回滚站点的必要步骤。

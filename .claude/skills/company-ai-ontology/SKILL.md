@@ -258,18 +258,21 @@ node ops/sync-company-directory.mjs
 
 - GEO Engine 独立运行观察面为 `https://geo.kidshub.cn/`，当前链路固定为：浏览器 → aliyun-hk Nginx 独立认证 → `127.0.0.1:13808` → `geo-tunnel` 受限反向 SSH → company-vm `127.0.0.1:8080/dashboard`。
 - GEO Dashboard 不是事实真源、Public Claim 发布网关或 Action Gateway。它只展示认证后的运行派生状态，不获得 Ontology、ERP、员工数据或内容发布权限。
-- GEO 原始服务把 Dashboard 与知识库、文章详情、生成、发布、可见性写接口放在同一端口；公网禁止整端口反代。标准白名单只允许 `/`、`/dashboard`、`/health`，其余路径 `404`，非 GET/HEAD `405`。
+- GEO 原始服务把 Dashboard、读 API 与高风险写接口放在同一端口；公网禁止整端口反代。`0.4.x` 标准白名单为：公开 GET `/health`；认证 GET `/`、`/dashboard`、`/stats`、`/kb`、`/articles`、`/visibility/history`、`/meta`、`/experiments`；认证 POST `/visibility`、`/audit`。`/gen`、`/publish`、`/fix`、知识写入和多模型批量检测继续 `404/405`。
 - 隧道必须同时满足独立用户/独立密钥、`restrict + port-forwarding + permitlisten="127.0.0.1:13808"`、阿里云仅回环监听、安全组不开放端口和公网探针不可达。任何单一证据不能替代其余四项。
 - 独立访问凭据不得复用 H 管理员、Ontology 密码、模型 Key 或隧道私钥；远端只存 Hash，秘密不得进入 Git、Skill、记忆、日志或协作消息。
-- 上线验收至少包含：DNS、独立 TLS SAN、未认证 `401`、认证页面 `200`、写方法 `405`、原始 API `404`、前端与后端统计一致、真实浏览器桌面/移动布局、控制台、连续公网请求、Nginx error log、GEO 与隧道依赖重启和 Certbot renew dry-run。
+- 上线验收至少包含：DNS、独立 TLS SAN、未认证 API `401`、白名单 API `200`、非允许方法 `405`、高风险 API `404`、前端动态数据与 API 一致、六个 Tab active、真实浏览器桌面/移动布局、控制台、Nginx error log、GEO 与隧道服务状态和 Certbot renew dry-run。
 - GEO 主进程使用系统级 `/etc/systemd/system/geo-engine.service`，固定监听 `127.0.0.1:8080`；代码必须来自固定 Git Commit 的不可变 Release，依赖使用独立 venv，模型 Key 只从 `0600` EnvironmentFile 注入，旧 user service 保持 disabled/inactive。
 - `geo-dashboard-tunnel.service` 必须 `Requires/After=geo-engine.service`，但不能只依赖 systemd 的启动顺序；`ExecStartPre` 需有限重试 `/health`，防止后端尚未监听时隧道抢跑。
 - 私有仓机器身份不可通过复制个人 Token 或私钥解决。若 GitHub 组织禁用 Deploy Key，使用已授权工作站 `fetch`、完整历史 Git Bundle、固定 Commit 与 SHA-256 校验部署；Release 工作树必须 clean，禁止 editable install 污染提交目录。
-- GEO `0.3.2` 生产锚点为 Commit `23fe8bb130e29dea31bf0f98b99bb975dd525d15`；新文章生成必须由代码默认值和生产 EnvironmentFile 双重锁定为 `deepseek-v4-flash` + `reasoning_effort=max`。验收不能只看配置字符串，必须用最小真实调用确认返回模型与 reasoning usage。
+- GEO `0.4.1` 生产锚点为 Commit `4cade6c6a459ed3c4c6d6ed615cd7999f7b6b585`；新文章生成必须由代码默认值和生产 EnvironmentFile 双重锁定为 `deepseek-v4-flash` + `reasoning_effort=max`。验收不能只看配置字符串，必须用最小真实调用确认返回模型与 reasoning usage。
 - GEO 内容状态必须区分 `draft`、`reviewed`、`exported`、`published`。审核通过不等于已发布，静态 HTML/Markdown 导出不等于公网可访问；只有外部平台成功返回公开 URL 才能写为 `published`，并记录时间、平台与链接。
 - 发布效果只在存在公开 URL 且完成发布后同口径可见性检测后判断；至少比较可见性分数、品牌提及、品牌域名引用与竞品信号。单篇文章不能直接归因品牌整体变化，没有发布后观测时必须明确显示“不能判断”。
-- 当前生产数据为 7 篇历史文章：2 篇草稿、5 篇已审核待发布、0 篇仅导出、0 篇公开发布；历史文章仍如实记录原 `deepseek-chat`，禁止回填成新模型。
-- 后续 Release 切换复用 `deploy/company-vm/cutover-geo-engine-release.sh`，传入新旧 Commit；脚本必须原子切换 Release/venv、轮询健康、校验版本/模型/推理等级，失败自动回滚。当前 `0.3.2` 切换备份为 `/home/futurus/.geo-engine/backups/model-publish-v032-20260814-113147`。
+- Dashboard 必须是 API 动态加载而不是服务端嵌入快照；Tab active 同时核对导航类名与当前页面。长耗时 `/visibility`、`/audit` 使用 `ThreadingHTTPServer` 保持健康接口可用，并按操作类型使用单并发信号量防止重复提交。
+- 网站审计公开后必须防 SSRF：仅允许公网 HTTP(S)，拒绝用户名密码 URL、非全局 IP、内网/本机/链路本地地址，逐跳校验重定向并限制响应体。Nginx 同时实施认证、方法白名单、请求体上限、操作限流和长请求超时。
+- 资料包版本使用知识库与切片元数据 Hash 生成确定性 `kbp-<hash>`；实验记录只保存脱敏请求、资料包版本、引擎版本、耗时和结果摘要，不保存 API Key 或完整模型回答。SQLite `datetime('now')` 是 UTC，前端必须显式按 `Asia/Shanghai` 显示。
+- 当前生产数据为 7 篇历史文章：2 篇草稿、5 篇已审核待发布、0 篇仅导出、0 篇公开发布；10 条可见性记录、2 条实验记录，资料包 `kbp-6adb88da8625`。最新爱视可可见性为 `0/100`、提及 `0/6`、域名引用 `0/6`；历史文章仍如实记录原 `deepseek-chat`。
+- 后续 Release 切换复用 `deploy/company-vm/cutover-geo-engine-release.sh <new-sha> <old-sha> <expected-version> [model] [reasoning]`；脚本原子切换 Release/venv、轮询健康、校验版本/模型/推理等级，失败自动回滚。当前数据库备份为 `/home/futurus/.geo-engine/backups/api-console-v040-20260814-121834` 与 `/home/futurus/.geo-engine/backups/timezone-v041-20260814-122512`。
 - 完整证据与回滚见项目文档 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
 
 ### 架构白盒画板与 3D 演进

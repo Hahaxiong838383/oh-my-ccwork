@@ -3,6 +3,9 @@ set -euo pipefail
 
 new_release_sha="${1:?new release SHA is required}"
 old_release_sha="${2:?old release SHA is required}"
+expected_version="${3:?expected GEO version is required}"
+expected_model="${4:-deepseek-v4-flash}"
+expected_reasoning_effort="${5:-max}"
 geo_root="/home/futurus/.geo-engine"
 new_release="${geo_root}/releases/company-ai-ontology-${new_release_sha}"
 new_venv="${geo_root}/venvs/geo-engine-${new_release_sha}"
@@ -51,7 +54,7 @@ if [[ "${ready}" -ne 1 ]]; then
 fi
 
 stats="$(curl -fsS http://127.0.0.1:8080/stats)"
-if ! python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["version"] == "0.3.2"; assert data["generation_model"] == "deepseek-v4-flash"; assert data["reasoning_effort"] == "max"' <<<"${stats}"; then
+if ! EXPECTED_VERSION="${expected_version}" EXPECTED_MODEL="${expected_model}" EXPECTED_REASONING_EFFORT="${expected_reasoning_effort}" python3 -c 'import json,os,sys; data=json.load(sys.stdin); assert data["version"] == os.environ["EXPECTED_VERSION"]; assert data["generation_model"] == os.environ["EXPECTED_MODEL"]; assert data["reasoning_effort"] == os.environ["EXPECTED_REASONING_EFFORT"]' <<<"${stats}"; then
     rollback
     exit 1
 fi
