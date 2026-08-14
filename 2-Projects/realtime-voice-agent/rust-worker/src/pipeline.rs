@@ -40,7 +40,7 @@ use crate::speaker_id::SpeakerSidecar;
 use crate::stt_volc::{self, AsrEnd, SttConfig, SttEvent};
 use crate::transcript_pub::{self, sentence_spans, TranscriptPub};
 use crate::textproc::{normalize_utterance, parse_hotwords};
-use crate::tts_volc::{self, TtsConfig};
+use crate::tts::TtsCfg;
 use crate::turn::TurnGate;
 use crate::vad::{SileroVad, VadEvent, VadGate, WINDOW};
 
@@ -134,7 +134,7 @@ struct AgentTurn {
 
 struct Orchestrator {
     cfg: PipelineConfig,
-    tts_cfg: TtsConfig,
+    tts_cfg: TtsCfg,
     llm: Arc<Mutex<Llm>>,
     source: NativeAudioSource,
     participant: LocalParticipant,
@@ -181,7 +181,13 @@ pub async fn run_pipeline(
 ) -> Result<()> {
     let cfg = PipelineConfig::from_env();
     let stt_cfg = SttConfig::from_env();
-    let tts_cfg = TtsConfig::from_env();
+    let tts_cfg = TtsCfg::from_env()?;
+    info!(
+        room = %room_name,
+        tts_provider = tts_cfg.provider_name(),
+        tts_voice = %tts_cfg.voice(),
+        "tts provider 生效值"   // 音色对不上时一眼对账,别靠猜 env 生效没生效
+    );
     let llm_cfg = LlmConfig::from_env().ok_or_else(|| anyhow::anyhow!("LLM_BASE_URL 未配置"))?;
     let mut llm_inner = Llm::new(llm_cfg);
     // 预热(藏进「用户说首句+判停」窗口):LLM TLS 建连 + TTS 池首连
@@ -189,7 +195,7 @@ pub async fn run_pipeline(
         let (client, pcfg) = llm_inner.prewarm_parts();
         tokio::spawn(llm::prewarm(pcfg, client));
         let tc = tts_cfg.clone();
-        tokio::spawn(async move { tts_volc::prewarm_pool(&tc).await });
+        tokio::spawn(async move { tc.prewarm().await });
     }
     // 声纹旁路(SPEAKER_ID_ENABLED=1 且注册库在):粘滞身份槽接入 LLM 近因位
     let speaker = SpeakerSidecar::load_from_env();
@@ -857,7 +863,7 @@ impl Orchestrator {
             };
             match kind {
                 TurnKind::Say(text) => {
-                    match tts_volc::synthesize(&tts_cfg, &text, &pcm_tx).await {
+                    match tts_cfg.synthesize(&text, &pcm_tx).await {
                         Ok((ttfb, bytes)) => {
                             info!(room = %room_name, ttfb_ms = ttfb, bytes, "say synthesized");
                             publish(json!({"k": "tts", "ttfb_ms": ttfb}));
@@ -909,7 +915,7 @@ impl Orchestrator {
                     let mut seg = Segmenter::new(min_len);
                     while let Some(delta) = delta_rx.recv().await {
                         for sentence in seg.feed(&delta) {
-                            match tts_volc::synthesize(&tts_cfg, &sentence, &pcm_tx).await {
+                            match tts_cfg.synthesize(&sentence, &pcm_tx).await {
                                 Ok((ttfb, bytes)) => {
                                     publish(json!({"k": "tts", "ttfb_ms": ttfb}));
                                     track(&sentence, bytes);
@@ -921,7 +927,7 @@ impl Orchestrator {
                         }
                     }
                     if let Some(tail) = seg.flush() {
-                        match tts_volc::synthesize(&tts_cfg, &tail, &pcm_tx).await {
+                        match tts_cfg.synthesize(&tail, &pcm_tx).await {
                             Ok((ttfb, bytes)) => {
                                 publish(json!({"k": "tts", "ttfb_ms": ttfb}));
                                 track(&tail, bytes);
