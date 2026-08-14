@@ -260,10 +260,11 @@ node ops/sync-company-directory.mjs
 
 - GEO Engine 独立运行观察面为 `https://geo.kidshub.cn/`，当前链路固定为：浏览器 → aliyun-hk Nginx 独立认证 → `127.0.0.1:13808` → `geo-tunnel` 受限反向 SSH → company-vm `127.0.0.1:8080/dashboard`。
 - GEO Dashboard 不是事实真源或 Ontology/ERP Action Gateway。它展示认证后的运行派生状态，并提供受控 GEO 内容与检测操作；接口可达不等于内容已经获得业务发布授权。
-- GEO 原始服务把 Dashboard、读 API 与高风险写接口放在同一端口；公网禁止整端口反代。`0.4.x` 当前白名单为：公开 GET `/health`；认证 GET `/`、`/dashboard`、`/stats`、`/kb`、`/articles`、数字 ID 详情 `/(articles|kb)/<numeric-id>`、`/visibility/history`、`/meta`、`/experiments`；认证 POST `/visibility`、`/audit`、`/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi`。未列出的路径继续 `404`，非允许方法继续 `405`。当前后端已实现文章详情，知识库详情通道已预留但后端仍返回 `未知端点`。
+- GEO 原始服务把 Dashboard、读 API 与高风险写接口放在同一端口。当前策略为公开 GET `/health`，其余路径统一经过 Basic Auth 后由 `location /` fallback 代理到回环上游；后端新增顶层接口会自动对已认证用户可达。已知高风险 POST `/visibility`、`/audit`、`/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi` 继续保留 exact location，实施独立方法、请求体、限流和超时。
+- 动态路径 `/(articles|kb)/<numeric-id>` 使用锚定数字 regex；随后使用 `^/(articles|kb)/` guard 拒绝非数字和多余路径段。exact location 优先于 regex，因此 `/articles/update`、`/kb/create`、`/kb/add` 不受 guard 影响。
 - 隧道必须同时满足独立用户/独立密钥、`restrict + port-forwarding + permitlisten="127.0.0.1:13808"`、阿里云仅回环监听、安全组不开放端口和公网探针不可达。任何单一证据不能替代其余四项。
 - 独立访问凭据不得复用 H 管理员、Ontology 密码、模型 Key 或隧道私钥；远端只存 Hash，秘密不得进入 Git、Skill、记忆、日志或协作消息。
-- 上线验收至少包含：DNS、独立 TLS SAN、未认证 API `401`、读白名单 API `200`、写白名单使用无副作用缺参请求确认到达后端 `400`、非允许方法 `405`、未知路径 `404`、前端动态数据与 API 一致、六个 Tab active、真实浏览器桌面/移动布局、控制台、Nginx error log、GEO 与隧道服务状态和 Certbot renew dry-run。
+- 上线验收至少包含：DNS、独立 TLS SAN、未认证 fallback `401`、认证新增接口 `200/400`、exact 错误方法 `405`、认证未知路径后端 JSON `404`、动态命名空间畸形路径 Nginx `404`、前端动态数据与 API 一致、七个 Tab 可达、真实浏览器桌面/移动布局、控制台、Nginx error log、GEO 与隧道服务状态和 Certbot renew dry-run。
 - GEO 主进程使用系统级 `/etc/systemd/system/geo-engine.service`，固定监听 `127.0.0.1:8080`；代码必须来自固定 Git Commit 的不可变 Release，依赖使用独立 venv，模型 Key 只从 `0600` EnvironmentFile 注入，旧 user service 保持 disabled/inactive。
 - `geo-dashboard-tunnel.service` 必须 `Requires/After=geo-engine.service`，但不能只依赖 systemd 的启动顺序；`ExecStartPre` 需有限重试 `/health`，防止后端尚未监听时隧道抢跑。
 - 私有仓机器身份不可通过复制个人 Token 或私钥解决。若 GitHub 组织禁用 Deploy Key，使用已授权工作站 `fetch`、完整历史 Git Bundle、固定 Commit 与 SHA-256 校验部署；Release 工作树必须 clean，禁止 editable install 污染提交目录。
@@ -274,7 +275,8 @@ node ops/sync-company-directory.mjs
 - Dashboard 从静态快照切为 `fetch` 同源 API 时，Nginx CSP 必须把 `connect-src` 从 `'none'` 改为 `'self'`；否则 API 本身 `200` 但浏览器仍会被 CSP 阻断。上线验收必须检查响应头、控制台和真实数据渲染，不能只用 `curl` 判断前端已打通。
 - 网站审计公开后必须防 SSRF：仅允许公网 HTTP(S)，拒绝用户名密码 URL、非全局 IP、内网/本机/链路本地地址，逐跳校验重定向并限制响应体。Nginx 同时实施认证、方法白名单、请求体上限、操作限流和长请求超时。
 - `/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi` 必须逐路径配置方法、请求体上限与超时，并共用低速操作限流。`geo_operations rate=6r/m burst=2` 下批量探针可能返回临时 `503`，验收应串行或冷却后复测，不能把限流当成后端故障。
-- 动态详情路由不能只列集合端点，也不能退化成全量 `location /`。文章与知识库使用 `location ~ ^/(articles|kb)/[0-9]+$`，只允许认证 GET/HEAD；这样 `/articles/update`、`/kb/create`、`/kb/add` 仍由 exact POST location 接管，非数字详情和未来未知接口继续默认 `404`。Nginx 通道就绪不等于后端端点已实现，验收必须区分 Nginx HTML `404` 与后端 JSON `404`。
+- 全量 fallback 上线后，必须补测所有已有前缀解析路由。GEO 后端的 `path.startswith('/articles/')` 曾导致 `/articles/foo` 抛 `ValueError` 返回 `502`，并把 `/articles/5/delete` 错当文章 5 返回 `200`；因此 fallback 必须与数字详情 regex、命名空间 guard 和 exact 写接口组合使用。Nginx HTML `404` 表示 guard 拒绝，后端 JSON `404` 表示 fallback 已到达应用但端点不存在。
+- fallback 只解决“新增接口不用再改 Nginx”，不能替代应用层鉴权、参数校验和审计。Basic Auth 现在覆盖整个 GEO API，凭据风险高于只读看板阶段；多人使用前必须升级统一身份或细粒度权限。
 - `/publish` 与 `/fix` 允许调用方指定输出目录，GEO Basic Auth 因此是高权限运维凭据，不得给普通访客使用。公网放行只解决网络可达，业务发布仍需保留人审、公开 URL 和发布后同口径效果证据。
 - 资料包版本使用知识库与切片元数据 Hash 生成确定性 `kbp-<hash>`；实验记录只保存脱敏请求、资料包版本、引擎版本、耗时和结果摘要，不保存 API Key 或完整模型回答。SQLite `datetime('now')` 是 UTC，前端必须显式按 `Asia/Shanghai` 显示。
 - 真实网站审计或可见性验收会修改实验数与可见性记录数；运行后必须重新读取 `/stats`、`/meta`、`/experiments` 和 SQLite `integrity_check`，再更新文档。禁止沿用操作前的旧计数形成“功能成功但记录过期”的假绿。

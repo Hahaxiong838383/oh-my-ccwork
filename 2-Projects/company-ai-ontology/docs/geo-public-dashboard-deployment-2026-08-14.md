@@ -4,9 +4,9 @@
 
 ## 结论
 
-`https://geo.kidshub.cn/` 已上线 GEO Engine `0.4.1` 动态 API Control Room。当前生产 Release 锚定 Commit `4cade6c6a459ed3c4c6d6ed615cd7999f7b6b585`；公网入口采用独立认证、精确路由白名单和受限反向 SSH，公司虚拟机 `8080` 和阿里云回环端口均未直接暴露公网。
+`https://geo.kidshub.cn/` 已上线 GEO Engine `0.4.1` 动态 API Control Room。当前生产 Release 锚定 Commit `4cade6c6a459ed3c4c6d6ed615cd7999f7b6b585`；公网入口采用独立认证、认证全量 fallback、已知高风险 exact 规则、动态命名空间护栏和受限反向 SSH，公司虚拟机 `8080` 和阿里云回环端口均未直接暴露公网。
 
-GEO 主进程由系统级 systemd 托管，使用固定 Git Release 和独立 venv，监听固定为 `127.0.0.1:8080`，模型 Key 仅由 `0600` EnvironmentFile 注入。前端不再嵌入服务端快照，而是从正式域名动态读取 API；公网写操作继续使用 Basic Auth、精确路由、方法限制、请求体上限、限流和分接口超时，不开放整个上游端口。SQLite 当前为 4 个知识库、906 个切片、7 篇文章、12 条可见性记录、5 条实验且 `integrity_check=ok`。
+GEO 主进程由系统级 systemd 托管，使用固定 Git Release 和独立 venv，监听固定为 `127.0.0.1:8080`，模型 Key 仅由 `0600` EnvironmentFile 注入。前端从正式域名动态读取 API；认证后整个上游 API 路径空间可通过 fallback 访问，已知高风险写接口仍由 exact location 实施更严格的方法、请求体、限流和超时。SQLite 当前为 4 个知识库、906 个切片、7 篇文章、12 条可见性记录、5 条实验且 `integrity_check=ok`。
 
 ## 生产拓扑
 
@@ -27,7 +27,8 @@ GEO 主进程由系统级 systemd 托管，使用固定 Git Release 和独立 ve
 - 隧道使用独立 `geo-tunnel` 账号和独立 ED25519 密钥；`authorized_keys` 只允许端口转发和 `permitlisten="127.0.0.1:13808"`。
 - 公司虚拟机使用 `geo-dashboard-tunnel.service` 托管隧道，启动前先验证 GEO `/health`，异常退出自动恢复。
 - GEO 主服务由 `/etc/systemd/system/geo-engine.service` 托管；隧道 unit 使用 `Requires/After=geo-engine.service`，并在 `ExecStartPre` 内等待健康端点，避免系统启动或同时重启时抢跑。
-- Nginx 公开只读 `/health`；认证后允许 GET `/`、`/dashboard`、`/stats`、`/kb`、`/articles`、数字 ID 详情 `/(articles|kb)/<numeric-id>`、`/visibility/history`、`/meta`、`/experiments`，以及 POST `/visibility`、`/audit`、`/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi`。其余路径返回 `404`，非允许方法返回 `405`；当前后端只实现文章详情，知识库详情为预留通道。
+- Nginx 公开只读 `/health`；其余路径与方法先经过 Basic Auth，再由 `location /` fallback 代理到回环上游。已知 POST 写接口保留 exact location，因此错误方法仍优先返回 `405`，并继续使用独立请求体、限流和超时。`/(articles|kb)/<numeric-id>` 使用锚定数字规则；其余 `/articles/`、`/kb/` 子路径由命名空间 guard 返回 `404`，防止后端宽松前缀解析。
+- fallback 使用 `geo_dashboard burst=30`、`client_max_body_size 5m`、读超时 `900s`、写超时 `120s`。这意味着后端新增顶层接口会自动对已认证用户可达，后端参数校验、权限和审计必须承担最终安全边界。
 - 七个新增写接口共用 `geo_operations` 限流区：`rate=6r/m`、`burst=2`。连续批量验收可能暂时返回 `503`，应串行探测或等待令牌恢复，不能误判为后端故障。
 - `/articles/update` 限制 `2m/60s`，`/publish` 为 `120s`，`/gen` 为 `16k/600s`，`/kb/create` 为 `16k/60s`，`/kb/add` 为 `5m/120s`，`/fix` 为 `16k/90s`，`/visibility/multi` 为 `16k/900s`。
 - `/publish` 与 `/fix` 后端允许调用方指定输出目录，Basic Auth 凭据因此属于高权限运维凭据；不得分享给普通访客、写入前端、Git、日志或协作消息。
@@ -49,7 +50,9 @@ GEO 主进程由系统级 systemd 托管，使用固定 Git Release 和独立 ve
 - 七个 POST 白名单切换备份：`/root/geo-kidshub-before-post-whitelist-20260814-142332.conf`
 - 文章详情 GET 白名单切换备份：`/root/geo-kidshub-before-article-detail-20260814-152610.conf`
 - 文章/知识库数字详情组合规则备份：`/root/geo-kidshub-before-kb-article-detail-20260814-154615.conf`
-- 当前 Nginx 配置 SHA-256：`709e655a6951c1f3d56acc7a3c0a75651017d5e6fd13072ebd6a12e8d0cb820e`
+- 认证全量 fallback 前备份：`/root/geo-kidshub-before-auth-fallback-20260814-170035.conf`
+- fallback 命名空间护栏前备份：`/root/geo-kidshub-before-fallback-guards-20260814-170354.conf`
+- 当前 Nginx 配置 SHA-256：`fc7dafc99b0882032f8361f0aad97bae07dd3799ab2b73ce107e27d048ae474c`
 
 ### company-vm
 
@@ -90,12 +93,15 @@ GitHub 组织策略禁止该仓库使用 Deploy Key，因此没有把个人 Toke
 | POST 七个新增写接口空 JSON | 全部到达后端并返回对应缺参 `400` |
 | 认证 GET `/articles/5` | `200`，文章正文 4,259 字符 |
 | 认证 POST `/articles/5` | `405` |
-| 认证 GET `/articles/foo`、未知文章 ID | `404` |
+| 认证 GET `/articles/foo`、`/articles/5/delete` | Nginx guard `404`，未到后端 |
 | 未认证 GET `/kb/1` | `401` |
 | 认证 GET `/kb/1` | Nginx 已放行，后端 JSON `404 未知端点`；待实现知识库详情 |
 | 认证 POST `/kb/1`、GET `/kb/create` | `405` |
-| 认证 GET `/kb/foo` | `404`，未匹配数字详情规则 |
-| 未知 `/admin/delete-all` | `404` |
+| 认证 GET `/kb/foo`、`/kb/1/delete` | Nginx guard `404`，未到后端 |
+| 未认证 fallback 路径 | `401` |
+| 认证未知 GET/POST 路径 | 后端 JSON `404 未知端点` |
+| 认证 `/keywords` | `200`，关键词数 0 |
+| `/keywords/add`、`/keywords/delete` 空 JSON | 后端缺参 `400`，无数据副作用 |
 | TLS SAN | `geo.kidshub.cn` |
 | Certbot renew dry-run | 成功 |
 | 外部访问 `13808` | filtered/timeout |
@@ -107,7 +113,8 @@ GitHub 组织策略禁止该仓库使用 Deploy Key，因此没有把个人 Toke
 | 资料包版本 | `kbp-6adb88da8625`，4 个知识库、906 个切片、148,793 tokens |
 | AI 可见性操作 | 爱视可/`eyescare.cn`：`0/100`、品牌提及 `0/6`、域名引用 `0/6`，实验 #2 |
 | 网站审计操作 | `ai.kidshub.cn` 登录页 smoke：`19/100`、D、21 项问题，实验 #1 |
-| Tab active | 总览、AI 可见性、网站审计、内容资产、知识库、实验记录六项逐项一致 |
+| Tab active | 总览、AI 可见性、网站审计、内容资产、知识库、关键词库、实验记录七项可达 |
+| 关键词与生成 UI | 关键词库空状态、内容生成表单和关键词空状态正常，`/keywords` 响应 `200` |
 | 桌面浏览器 | `1440px`，无横向溢出，动态 API、操作结果和上海时间正确 |
 | 移动浏览器 | iPhone `393px`，无横向溢出，Tab 与操作表单完整 |
 | 浏览器控制台 | `0` 错误、`0` 警告 |
@@ -116,7 +123,7 @@ GitHub 组织策略禁止该仓库使用 Deploy Key，因此没有把个人 Toke
 | company-vm LAN `8080` | 不可达，仅回环监听 |
 | Nginx GEO error log | 空 |
 
-真实浏览器验收使用项目本地 Playwright WebKit，完成桌面与移动布局、六个 Tab active、动态 API、真实网站审计、真实 AI 可见性检测、实验账本、上海时间和控制台检查；验收后二进制、截图与临时认证配置不进入 Git。
+真实浏览器验收使用项目本地 Playwright WebKit，完成桌面与移动布局、七个 Tab 可达、动态 API、关键词库、内容生成表单、真实网站审计、真实 AI 可见性检测、实验账本、上海时间和控制台检查；验收后二进制、截图与临时认证配置不进入 Git。
 
 ## 如何判断文章是否发布、是否有效
 
@@ -132,7 +139,7 @@ Dashboard 的文章状态采用以下口径：
 ## 经验教训
 
 1. **DNS 生效不等于 HTTPS 可用**：部署前 `geo.kidshub.cn` 已指向正确 IP，但因为没有独立 Nginx `server_name` 和证书，TLS 命中了 ERP 默认证书。
-2. **无鉴权 Dashboard 不能直接反代**：GEO 原始服务同时包含文章详情、知识库、生成、发布和可见性写接口；公网必须使用精确路径白名单，不能把整个 `8080` 透传。
+2. **不能做无认证裸反代**：GEO 原始服务同时包含读写接口。当前允许 Basic Auth 后的全量 fallback，但必须保留高风险 exact 门禁、动态 namespace guard，并明确 Basic Auth 用户获得整个 API 权限；公司虚拟机 `8080` 和阿里云回环端口仍不得直接暴露公网。
 3. **反向端口必须绑定回环**：阿里云回环监听、受限 `permitlisten`、安全组无对应端口和公网探针四项要同时成立。
 4. **隧道 active 不等于页面可用**：验收必须覆盖公司机 `/health`、阿里云回环 Dashboard、公网认证页面和隧道真实重启恢复。
 5. **凭据应与业务系统隔离**：GEO 独立访问凭据不复用 H 管理员密码、Ontology 密码或模型 API Key，Hash 与明文分开保存。

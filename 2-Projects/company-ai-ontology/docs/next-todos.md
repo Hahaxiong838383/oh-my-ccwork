@@ -10,14 +10,14 @@ GEO Engine `0.4.1` 动态 API Control Room 已于 `2026-08-14` 上线 `geo.kidsh
 
 ## GEO 公网前端后续门禁
 
-1. ✅ DNS、独立 TLS、认证、只读路径白名单、隧道 systemd、续期 dry-run 和重启恢复已通过。
+1. ✅ DNS、独立 TLS、Basic Auth、认证全量 fallback、exact 高风险规则、动态命名空间护栏、隧道 systemd、续期 dry-run 和重启恢复已通过。
 2. ✅ GEO 主进程已迁入系统级 `geo-engine.service`，旧 user service 已 disabled/inactive，监听固定为 `127.0.0.1:8080`，模型 Key 已迁入 `0600` EnvironmentFile。
-3. ✅ 新版 Control Room 已改为 `/health`、`/stats`、`/kb`、`/articles`、数字详情 `/(articles|kb)/<numeric-id>`、`/visibility/history`、`/meta`、`/experiments` 真实 API 动态加载；内容资产“查看 / 修正”弹层可加载全文，知识库数字详情公网通道已预留但后端尚未实现，Tab active 在六个页面逐项通过。
+3. ✅ 新版 Control Room 已使用真实 API 动态加载；内容资产“查看 / 修正”可加载全文，关键词库与内容生成表单已通过 fallback 打通，七个 Tab 可达；知识库数字详情公网通道已预留但后端尚未实现。
 4. ✅ 生成链路已锁定 `deepseek-v4-flash` + `reasoning_effort=max`，真实生产 Key 最小调用确认模型、最高推理和 reasoning usage 生效。
 5. ✅ 已新增“AI 可见性检测”操作页，真实运行爱视可/`eyescare.cn` 获得 `0/100`，结果进入历史与实验账本。
 6. ✅ 已新增“网站审计”操作页，公网目标校验、重定向逐跳校验、5MB 上限和 SSRF 内网阻断已测试；`ai.kidshub.cn` 登录页 smoke 为 `19/100`，不代表营销官网审计结论。
 7. ✅ 资料包版本 `kbp-6adb88da8625` 与实验记录已上线；每次操作绑定资料包版本、引擎版本、耗时和结果摘要，实验时间按上海时区显示。
-8. ✅ 已精确放行 POST `/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi`；全部保留 Basic Auth、方法白名单、限流、请求体上限和分接口超时，未开放整个 `8080`。接口可达不等于内容已获发布授权，Public Claim Package、人审和发布效果证据仍需在业务层落实。
+8. ✅ 认证 `location /` fallback 已上线，后端新增顶层接口无需再改 Nginx；已知 POST `/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi` 继续保留 exact 方法、限流、请求体和超时。`/articles/`、`/kb/` 有命名空间护栏。接口可达不等于内容已获发布授权，Public Claim Package、人审和发布效果证据仍需在业务层落实。
 9. ⏳ 选择首批已审核文章和外部发布平台，取得单独发布确认后记录公开 URL，再用同一问题集复测效果。
 10. 🟡 多人使用前将 Basic Auth 升级为 H 管理员认证或公司统一身份；当前独立凭据不得进入 Git、Skill、记忆或协作消息。
 11. 详细部署、验收和回滚见 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
