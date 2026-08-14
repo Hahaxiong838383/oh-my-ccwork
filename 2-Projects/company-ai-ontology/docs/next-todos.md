@@ -17,7 +17,7 @@ GEO Engine `0.4.1` 动态 API Control Room 已于 `2026-08-14` 上线 `geo.kidsh
 5. ✅ 已新增“AI 可见性检测”操作页，真实运行爱视可/`eyescare.cn` 获得 `0/100`，结果进入历史与实验账本。
 6. ✅ 已新增“网站审计”操作页，公网目标校验、重定向逐跳校验、5MB 上限和 SSRF 内网阻断已测试；`ai.kidshub.cn` 登录页 smoke 为 `19/100`，不代表营销官网审计结论。
 7. ✅ 资料包版本 `kbp-6adb88da8625` 与实验记录已上线；每次操作绑定资料包版本、引擎版本、耗时和结果摘要，实验时间按上海时区显示。
-8. ⛔ 继续封锁 `/gen`、`/publish`、`/fix`、`/kb/create`、`/kb/add` 和 `/visibility/multi`；发布仍需 Public Claim Package、人审和 Action Gateway。
+8. ✅ 已精确放行 POST `/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi`；全部保留 Basic Auth、方法白名单、限流、请求体上限和分接口超时，未开放整个 `8080`。接口可达不等于内容已获发布授权，Public Claim Package、人审和发布效果证据仍需在业务层落实。
 9. ⏳ 选择首批已审核文章和外部发布平台，取得单独发布确认后记录公开 URL，再用同一问题集复测效果。
 10. 🟡 多人使用前将 Basic Auth 升级为 H 管理员认证或公司统一身份；当前独立凭据不得进入 Git、Skill、记忆或协作消息。
 11. 详细部署、验收和回滚见 `docs/geo-public-dashboard-deployment-2026-08-14.md`。

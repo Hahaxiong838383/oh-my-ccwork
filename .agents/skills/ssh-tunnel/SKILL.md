@@ -265,9 +265,10 @@ geo.kidshub.cn:443
 - company-vm 私钥和固定 host key 位于 `/home/futurus/.geo-engine/tunnel/`，权限分别为目录 `0700`、私钥/known_hosts `0600`；不得进入 Git、Skill 或记忆。
 - company-vm 由 `/etc/systemd/system/geo-dashboard-tunnel.service` 托管，并 `Requires/After=geo-engine.service`；`ExecStartPre` 必须有限重试 GEO `/health`，不能把 `After` 误当成应用已完成监听。SSH 必须启用 `BatchMode`、`IdentitiesOnly`、`StrictHostKeyChecking`、`ExitOnForwardFailure` 和 keepalive。
 - 隧道验收必须同时证明：GEO 与隧道 system service enabled/active、旧 user GEO service disabled/inactive、company-vm 仅 `127.0.0.1:8080` 监听、aliyun-hk 仅 `127.0.0.1:13808` 监听、回环 `/health` 与 `/dashboard` 可读、公网 `13808` 不可达、两项服务同时重启后页面连续多轮恢复。
-- Nginx 只能代理精确只读页面；反向 SSH 安全不等于上游 API 安全，禁止把整个 GEO `8080` 暴露给公网。
+- Nginx 只能代理精确路径白名单；反向 SSH 安全不等于上游 API 安全，禁止把整个 GEO `8080` 暴露给公网。当前允许认证 GET 运行数据，以及认证 POST `/visibility`、`/audit`、`/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi`；每个写接口必须单独限制方法、请求体、限流和超时。
 - GEO 后续不可变 Release 切换使用项目脚本 `deploy/company-vm/cutover-geo-engine-release.sh <new-sha> <old-sha> <expected-version> [model] [reasoning]`；脚本在 company-vm 以 root 执行，原子切换 `/home/futurus/.geo-engine/current` 与 `current-venv`，轮询 `/health`，校验目标版本/模型/推理等级，失败恢复旧 Release 后再重建隧道。
 - 切换成功不能只看 systemd `active`：还要核对 `/stats`、`/meta`、`/experiments`，再从公网真实浏览器验证 API 动态加载、六个 Tab active、操作页、上海时间、无横向溢出和控制台零错误。当前 `0.4.1` 锚点为 Commit `4cade6c6a459ed3c4c6d6ed615cd7999f7b6b585`。
 - zsh 中小写 `path` 是与环境变量 `PATH` 绑定的特殊数组；验收循环不得写 `for path in ...`，否则第一次迭代后可能出现 `curl: command not found`。统一使用 `endpoint`、`route` 或 `target_path`，复杂脚本同时避免只读特殊变量 `status`。
 - Nginx 从静态页面升级为动态 API 时，除路由白名单外必须同步修改 CSP 为 `connect-src 'self'`；公网验收同时检查认证 API `200`、浏览器控制台零 CSP 错误和页面真实数据已渲染。
+- GEO 写接口共用低速 `geo_operations` 限流时，快速批量探针可能返回 `503`；应串行或冷却后复测。`/publish` 与 `/fix` 可指定输出目录，Basic Auth 必须按高权限运维凭据管理，不能因为隧道受限就降低应用层授权要求。
 - 回滚顺序：先下 Nginx 入口，再 stop/disable company-vm 隧道服务，确认 `13808` 消失，最后再移除 `geo-tunnel` 公钥或账号；禁止先删密钥导致残留监听和难以定位的半状态。
