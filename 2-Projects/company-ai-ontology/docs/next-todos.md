@@ -6,16 +6,19 @@
 
 P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI、Goal 5 P0-DEC、Goal 6-A P1-DOMAIN 和 Task 6-R 均已完成工程验收。Goal 6-A 已获川哥人工体验确认；H `v1.58.2` 发布溯源为 `in_sync`，真实 Chrome `99/99`。10 名真实员工 Canary 继续关闭，不能因为工程 Goal 完成自动启动。
 
-GEO Engine `0.3.1` 只读运营监控台已于 `2026-08-14` 上线 `geo.kidshub.cn`，采用独立认证、精确只读路径、阿里云回环端口和 company-vm 受限反向 SSH。该页面是 GEO 运行观察面，不是 Public Claim 发布网关，不获得内容发布、Ontology 读取或业务写回权限。
+GEO Engine `0.3.2` 只读运营监控台已于 `2026-08-14` 上线 `geo.kidshub.cn`，Commit `23fe8bb`。新文章固定使用 `deepseek-v4-flash` + 最高推理 `max`；当前 2 篇草稿、5 篇已审核待发布、0 篇仅导出、0 篇公开发布，因此尚不能判断发布效果。该页面是 GEO 运行观察面，不是 Public Claim 发布网关，不获得 Ontology 读取或业务写回权限。
 
 ## GEO 公网前端后续门禁
 
 1. ✅ DNS、独立 TLS、认证、只读路径白名单、隧道 systemd、续期 dry-run 和重启恢复已通过。
 2. ✅ GEO 主进程已迁入系统级 `geo-engine.service`，旧 user service 已 disabled/inactive，监听固定为 `127.0.0.1:8080`，模型 Key 已迁入 `0600` EnvironmentFile。
-3. ✅ 新版 Control Room 已完成真实 Chromium 桌面 `1440px` 与 iPhone `393px` 验收：无横向溢出、控制台 `0` 错误/警告，前端嵌入统计与后端 `/stats` 完全一致。
-4. 🟡 多人使用前将 Basic Auth 升级为 H 管理员认证或公司统一身份；当前独立凭据不得进入 Git、Skill、记忆或协作消息。
-5. ⛔ 不开放 `/stats`、`/kb`、`/articles`、`/gen`、`/publish`、`/visibility` 等原始 API；发布必须继续经过 Public Claim Package、人审和 Action Gateway。
-6. 详细部署、验收和回滚见 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
+3. ✅ 新版 Control Room 已完成真实浏览器桌面 `1440px` 与 iPhone `393px` 验收：无横向溢出、控制台 `0` 错误/警告，前端嵌入统计与后端 `/stats` 完全一致。
+4. ✅ 生成链路已锁定 `deepseek-v4-flash` + `reasoning_effort=max`，真实生产 Key 最小调用确认模型、最高推理和 reasoning usage 生效。
+5. ⏳ 选择首批已审核文章和外部发布平台，取得单独发布确认后记录公开 URL；当前不得把 `reviewed` 或静态 `exported` 当成 `published`。
+6. ⏳ 首次公开发布后使用同一问题集补跑可见性检测，对比品牌可见性、提及和域名引用；单篇文章不得直接归因品牌整体变化。
+7. 🟡 多人使用前将 Basic Auth 升级为 H 管理员认证或公司统一身份；当前独立凭据不得进入 Git、Skill、记忆或协作消息。
+8. ⛔ 不开放 `/stats`、`/kb`、`/articles`、`/gen`、`/publish`、`/visibility` 等原始 API；发布必须继续经过 Public Claim Package、人审和 Action Gateway。
+9. 详细部署、验收和回滚见 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
 
 ## 2026-08-10 Goal 顺序重排
 

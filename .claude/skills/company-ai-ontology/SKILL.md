@@ -265,6 +265,11 @@ node ops/sync-company-directory.mjs
 - GEO 主进程使用系统级 `/etc/systemd/system/geo-engine.service`，固定监听 `127.0.0.1:8080`；代码必须来自固定 Git Commit 的不可变 Release，依赖使用独立 venv，模型 Key 只从 `0600` EnvironmentFile 注入，旧 user service 保持 disabled/inactive。
 - `geo-dashboard-tunnel.service` 必须 `Requires/After=geo-engine.service`，但不能只依赖 systemd 的启动顺序；`ExecStartPre` 需有限重试 `/health`，防止后端尚未监听时隧道抢跑。
 - 私有仓机器身份不可通过复制个人 Token 或私钥解决。若 GitHub 组织禁用 Deploy Key，使用已授权工作站 `fetch`、完整历史 Git Bundle、固定 Commit 与 SHA-256 校验部署；Release 工作树必须 clean，禁止 editable install 污染提交目录。
+- GEO `0.3.2` 生产锚点为 Commit `23fe8bb130e29dea31bf0f98b99bb975dd525d15`；新文章生成必须由代码默认值和生产 EnvironmentFile 双重锁定为 `deepseek-v4-flash` + `reasoning_effort=max`。验收不能只看配置字符串，必须用最小真实调用确认返回模型与 reasoning usage。
+- GEO 内容状态必须区分 `draft`、`reviewed`、`exported`、`published`。审核通过不等于已发布，静态 HTML/Markdown 导出不等于公网可访问；只有外部平台成功返回公开 URL 才能写为 `published`，并记录时间、平台与链接。
+- 发布效果只在存在公开 URL 且完成发布后同口径可见性检测后判断；至少比较可见性分数、品牌提及、品牌域名引用与竞品信号。单篇文章不能直接归因品牌整体变化，没有发布后观测时必须明确显示“不能判断”。
+- 当前生产数据为 7 篇历史文章：2 篇草稿、5 篇已审核待发布、0 篇仅导出、0 篇公开发布；历史文章仍如实记录原 `deepseek-chat`，禁止回填成新模型。
+- 后续 Release 切换复用 `deploy/company-vm/cutover-geo-engine-release.sh`，传入新旧 Commit；脚本必须原子切换 Release/venv、轮询健康、校验版本/模型/推理等级，失败自动回滚。当前 `0.3.2` 切换备份为 `/home/futurus/.geo-engine/backups/model-publish-v032-20260814-113147`。
 - 完整证据与回滚见项目文档 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
 
 ### 架构白盒画板与 3D 演进
