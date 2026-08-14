@@ -5,7 +5,7 @@ CPA Smart Router 是部署在 `aliyun-jp` 的 CLIProxyAPI 旁路调度层：客�
 ## 当前状态
 
 - M-1：已验证 CPA `openai-compatibility.prefix` 可固定命中候选上游。
-- M0/M1：Go 单二进制 MVP，支持 `/v1/chat/completions`、`/v1/responses`、`/v1/models` 转发、鉴权、sticky、熔断、异步 JSONL 指标。
+- M0/M1：Go 单二进制 MVP，支持 `/v1/chat/completions`、`/v1/responses`、`/v1/models`、`/v1/images/generations`、`/v1/images/edits` 转发、鉴权、sticky、熔断、异步 JSONL 指标。
 - M2：支持 CST 日用量重置与鉴权状态查看 `/debug/state`。
 - M3：支持 SQLite 持久聚合、`/debug/summary` 与简易 `/dashboard`。
 
@@ -34,6 +34,7 @@ go run ./cmd/router -config config/router.example.json
 - `/v1/chat/completions` 流式请求会自动注入 `stream_options.include_usage=true` 并解析 SSE usage，用于 dashboard 和调度用量统计。
 - `/v1/responses` 强制 sticky，避免 `previous_response_id` 断链。
 - `/v1/responses` 当前先启用 state probe 观测，不改变路由；M1 门控看 `previous_response_id` 占比和 response id 捕获率。
+- 图片生成与编辑端点透明转发到默认 CPA 后端，保留 JSON 或 multipart 请求体、查询参数与响应类型；图片模型不进入文本模型调度、sticky 或 token 用量统计。
 - Codex 网站验收可能携带 32 MiB 以上的图片、截图或上下文；Nginx `client_max_body_size` 与 Router `body_limit_bytes` 必须统一为 64 MiB。只提高一层会在下一层继续返回 413；验证使用大体积无效模型请求，预期应穿透到模型路由错误而不是产生付费推理。
 
 ## 灰度接入

@@ -239,6 +239,14 @@ ssh -p 22277 -i /Users/rayman.chen/.ssh/id_ed25519 -o IdentitiesOnly=yes fu-121@
 
 相关说明文件：`/Users/rayman.chen/mycc/4-Assets/SOP/codex-studio-ssh-connection.md`。
 
+### Codex-managed SSH 的 CLI 与 socket 前置条件（2026-08-14）
+
+- 删除、重命名或升级 `/Applications/Codex.app`、`/Applications/ChatGPT.app` 前，先检查 LaunchAgent、SSH remote 配置与 `app-server-control.sock` 是否引用 App bundle 内置 CLI；App 能启动 GUI 不代表远端 shell 能发现 `codex`。
+- Studio 远程开发必须同时满足 `command -v codex` 可用，以及 `~/.codex/app-server-control/app-server-control.sock` 存在。缺 standalone CLI 会报 `remote-codex-not-found`；只有 SSH 连通或端口监听不能证明 Codex remote 可用。
+- 推荐分工：桌面 App 负责官方 remote-control relay；standalone `codex app-server` daemon 只负责 SSH 所需本地 socket，并关闭 remote control。两者同时争抢官方 relay 会出现 `409 Remote app server already online`。
+- 安装或恢复 standalone CLI 后，验收顺序固定为：真实 SSH 登录、`codex --version`、daemon running、socket 存在、Air App 日志出现 `nextState=connected`，最后确认项目 UI 绿点。服务 active、socket 单独存在或 App 能打开都不是完整验收。
+- Studio GUI 代理环境应由受控 LaunchAgent 注入，本机代理地址与 CPA 域名 `NO_PROXY` 同时保留；不得把代理凭据写入 Skill、Git 或共享记忆。
+
 ### Codex App-to-App 远控失败的边界
 
 如果官方 App-to-App 远控卡在“正在初始化安全连接”并报 `Opening handshake has timed out`，不要直接归因到 Studio 未启动或手机配对丢失。2026-08-11 已验证：Studio App server 在线、手机曾可见/可连，Air 侧 Electron `--proxy-server`、hosts 可信 DNS 接管、Xray 将 `chatgpt.com` / `ws.chatgpt.com` / `ab.chatgpt.com` 临时切到 `DMIT-Gemini-vps-chenchuan` 均未修复，且实验均需自动回退。该问题应与 SSH 本地隧道方案分开处理。

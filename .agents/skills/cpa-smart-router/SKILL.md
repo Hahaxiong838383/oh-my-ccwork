@@ -123,6 +123,14 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - 验收使用大于旧上限、低于新上限的无效模型请求：返回 `unknown provider` 等非 413 错误即可证明完整公网→Nginx→Router→CLIProxyAPI 链路已穿透，同时避免产生有效模型费用。
 - Nginx 备份不能留在 `/etc/nginx/sites-enabled/`，否则 Ubuntu 默认 `include sites-enabled/*` 会把备份也加载成重复站点并产生 `conflicting server name`；备份统一放 `/etc/nginx/backups/`。
 
+## CPA 图片生成与 Studio 断流排障（2026-08-14）
+
+- Smart Router 必须显式开放 `POST /v1/images/generations` 与 `POST /v1/images/edits`，透明转发到默认 CPA 后端；保留查询参数、JSON 或 multipart 请求体、`Content-Type` 与上游响应类型，并把客户端 Authorization 替换为后端凭据。
+- 图片端点继续受统一 `body_limit_bytes` 限制，但不进入文本模型路由、sticky、熔断或 token 用量统计。`gpt-image-2` 等生图模型不应加入 Codex 文本模型选择器，由独立 Skill 调用 `/v1/images/*`。
+- Studio 私密调用配置只允许存用户目录下的 `0600` 环境文件或系统 Keychain；Skill、Git、共享记忆、测试日志和最终回复只能记录变量名或路径，不能记录 URL 中的凭据、API Key、OAuth Token 或请求正文。
+- 生图验收必须走真实 `smart-api` 路径并拿到 HTTP 200 与可解码图片；只看 `/v1/models`、Router 路由注册或单元测试，不能证明生产生图可用。
+- `stream disconnected before completion` 要先按请求是否到达 Nginx 分层：Nginx 无对应访问记录说明客户端出口、代理或网络抖动；Nginx `499/502` 才继续查客户端提前断开、Router 或上游；Router 已返回 `200` 但缺 completion/usage 时再查上游流提前结束。禁止只凭客户端报错重启 CPA。
+
 ## CPA Menu 桌面监控
 
 - macOS App 只通过 `https://smart-api.hahaxiong.top/desktop/v1/*` 访问 Bridge；Desktop Token 只存远端 `0600` 文件与本机 Keychain。

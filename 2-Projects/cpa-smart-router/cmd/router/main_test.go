@@ -102,6 +102,136 @@ func TestModelsForwardsClientVersionQuery(t *testing.T) {
 	}
 }
 
+func TestImagesForwardsBodyAndReplacesAuthorization(t *testing.T) {
+	type upstreamRequest struct {
+		Path          string
+		Query         string
+		Authorization string
+		ContentType   string
+		Body          string
+	}
+	requestCh := make(chan upstreamRequest, 1)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read upstream body: %v", err)
+		}
+		requestCh <- upstreamRequest{
+			Path:          r.URL.Path,
+			Query:         r.URL.RawQuery,
+			Authorization: r.Header.Get("Authorization"),
+			ContentType:   r.Header.Get("Content-Type"),
+			Body:          string(body),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Upstream", "image")
+		w.WriteHeader(http.StatusCreated)
+		io.WriteString(w, `{"data":[{"b64_json":"test"}]}`)
+	}))
+	defer upstream.Close()
+
+	server := &Server{
+		cfg: Config{
+			BodyLimitBytes: 1 << 20,
+			DefaultBackend: Candidate{
+				ID:      "cpa-mixed",
+				BaseURL: upstream.URL + "/v1",
+				APIKey:  "upstream-key",
+			},
+		},
+		clientKeys: map[string]struct{}{"client-key": {}},
+		httpClient: upstream.Client(),
+	}
+
+	payload := `{"model":"gpt-image-2","prompt":"draw a blue square"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations?response_format=b64_json", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer client-key")
+	req.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	server.handleImages(recorder, req)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusCreated)
+	}
+	if recorder.Header().Get("X-Upstream") != "image" {
+		t.Fatalf("missing upstream response header: %#v", recorder.Header())
+	}
+	got := <-requestCh
+	if got.Path != "/v1/images/generations" || got.Query != "response_format=b64_json" {
+		t.Fatalf("upstream target = %s?%s", got.Path, got.Query)
+	}
+	if got.Authorization != "Bearer upstream-key" {
+		t.Fatalf("authorization = %q, want backend key", got.Authorization)
+	}
+	if got.ContentType != "application/json" || got.Body != payload {
+		t.Fatalf("content type/body = %q / %q", got.ContentType, got.Body)
+	}
+}
+
+func TestImageEditsPreservesMultipartContentType(t *testing.T) {
+	contentTypeCh := make(chan string, 1)
+	bodyCh := make(chan string, 1)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read upstream body: %v", err)
+		}
+		contentTypeCh <- r.Header.Get("Content-Type")
+		bodyCh <- string(body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	server := &Server{
+		cfg: Config{
+			BodyLimitBytes: 1 << 20,
+			DefaultBackend: Candidate{BaseURL: upstream.URL + "/v1", APIKey: "upstream-key"},
+		},
+		clientKeys: map[string]struct{}{"client-key": {}},
+		httpClient: upstream.Client(),
+	}
+
+	payload := "--boundary\r\nContent-Disposition: form-data; name=\"model\"\r\n\r\ngpt-image-2\r\n--boundary--\r\n"
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/edits", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer client-key")
+	req.Header.Set("Content-Type", "multipart/form-data; boundary=boundary")
+	recorder := httptest.NewRecorder()
+
+	server.handleImages(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
+	}
+	if got := <-contentTypeCh; got != "multipart/form-data; boundary=boundary" {
+		t.Fatalf("content type = %q", got)
+	}
+	if got := <-bodyCh; got != payload {
+		t.Fatalf("body = %q", got)
+	}
+}
+
+func TestImagesRejectsUnauthorizedAndOversizedRequests(t *testing.T) {
+	server := &Server{
+		cfg:        Config{BodyLimitBytes: 4},
+		clientKeys: map[string]struct{}{"client-key": {}},
+	}
+
+	unauthorized := httptest.NewRecorder()
+	server.handleImages(unauthorized, httptest.NewRequest(http.MethodPost, "/v1/images/generations", strings.NewReader("{}")))
+	if unauthorized.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthorized status = %d", unauthorized.Code)
+	}
+
+	oversizedReq := httptest.NewRequest(http.MethodPost, "/v1/images/generations", strings.NewReader("12345"))
+	oversizedReq.Header.Set("Authorization", "Bearer client-key")
+	oversized := httptest.NewRecorder()
+	server.handleImages(oversized, oversizedReq)
+	if oversized.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("oversized status = %d", oversized.Code)
+	}
+}
+
 func TestGrok46LatestRouteRewritesToCanonicalModel(t *testing.T) {
 	modelCh := make(chan string, 1)
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

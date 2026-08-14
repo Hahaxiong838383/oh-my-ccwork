@@ -145,6 +145,14 @@ printf 'pwd\nquit\n' | sftp -q -b - company-vm
 - 排查顺序：`company-vm-lan` → 独立 sshd → frpc → aliyun-hk frps → 22043 监听 → 阿里云安全组。
 - 公网异常时不得先改原 SSH 22；禁止模糊 `pkill -f`。
 
+## Codex App 连接 Studio 的前置条件（2026-08-14）
+
+- 删除、重命名或升级 `/Applications/Codex.app`、`/Applications/ChatGPT.app` 前，先检查 LaunchAgent、SSH remote 配置与 `app-server-control.sock` 是否引用 App bundle 内置 CLI；App 能启动 GUI 不代表远端 shell 能发现 `codex`。
+- Studio 远程开发必须同时满足 `command -v codex` 可用，以及 `~/.codex/app-server-control/app-server-control.sock` 存在。缺 standalone CLI 会报 `remote-codex-not-found`；只有 SSH 连通或端口监听不能证明 Codex remote 可用。
+- 推荐分工：桌面 App 负责官方 remote-control relay；standalone `codex app-server` daemon 只负责 SSH 所需本地 socket，并关闭 remote control。两者同时争抢官方 relay 会出现 `409 Remote app server already online`。
+- 安装或恢复 standalone CLI 后，验收顺序固定为：真实 SSH 登录、`codex --version`、daemon running、socket 存在、Air App 日志出现 `nextState=connected`，最后确认项目 UI 绿点。
+- Studio GUI 代理环境应由受控 LaunchAgent 注入，本机代理地址与 CPA 域名 `NO_PROXY` 同时保留；不得把代理凭据写入 Skill、Git 或共享记忆。
+
 ## GEO Dashboard 受限反向 SSH（2026-08-14 已验证）
 
 ```text

@@ -139,6 +139,8 @@ func main() {
 	mux.HandleFunc("/v1/models", server.handleModels)
 	mux.HandleFunc("/v1/chat/completions", server.handleLLM)
 	mux.HandleFunc("/v1/responses", server.handleLLM)
+	mux.HandleFunc("/v1/images/generations", server.handleImages)
+	mux.HandleFunc("/v1/images/edits", server.handleImages)
 
 	addr := cfg.Listen
 	if addr == "" {
@@ -373,6 +375,23 @@ func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.proxyRaw(w, r, s.cfg.DefaultBackend)
+}
+
+func (s *Server) handleImages(w http.ResponseWriter, r *http.Request) {
+	if !s.authorized(r) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	body, err := readLimited(r.Body, s.cfg.BodyLimitBytes)
+	if err != nil {
+		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+	s.proxyBody(w, r, s.cfg.DefaultBackend, body)
 }
 
 func (s *Server) handleLLM(w http.ResponseWriter, r *http.Request) {
@@ -1090,8 +1109,16 @@ func (s *Server) record(event MetricEvent) {
 }
 
 func (s *Server) proxyRaw(w http.ResponseWriter, r *http.Request, candidate Candidate) {
+	s.proxyBody(w, r, candidate, nil)
+}
+
+func (s *Server) proxyBody(w http.ResponseWriter, r *http.Request, candidate Candidate, body []byte) {
 	upstream := upstreamURL(candidate.BaseURL, r.URL.Path, r.URL.RawQuery)
-	req, err := http.NewRequestWithContext(r.Context(), r.Method, upstream, nil)
+	var reader io.Reader
+	if body != nil {
+		reader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(r.Context(), r.Method, upstream, reader)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
