@@ -260,7 +260,7 @@ node ops/sync-company-directory.mjs
 
 - GEO Engine 独立运行观察面为 `https://geo.kidshub.cn/`，当前链路固定为：浏览器 → aliyun-hk Nginx 独立认证 → `127.0.0.1:13808` → `geo-tunnel` 受限反向 SSH → company-vm `127.0.0.1:8080/dashboard`。
 - GEO Dashboard 不是事实真源或 Ontology/ERP Action Gateway。它展示认证后的运行派生状态，并提供受控 GEO 内容与检测操作；接口可达不等于内容已经获得业务发布授权。
-- GEO 原始服务把 Dashboard、读 API 与高风险写接口放在同一端口。当前策略为公开 GET `/health`，其余路径统一经过 Basic Auth 后由 `location /` fallback 代理到回环上游；后端新增顶层接口会自动对已认证用户可达。已知 POST 继续保留 exact location 实施方法、请求体和超时；其中六个工作流接口 `/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/visibility/multi` 使用 `geo_dashboard 120r/m burst=30`，慢操作 `/visibility`、`/audit`、`/fix` 使用 `geo_operations 6r/m burst=2`。
+- GEO 原始服务把 Dashboard、读 API 与高风险写接口放在同一端口。当前策略为公开 GET `/health` 和受控 `/published/<file>` 内容层，Dashboard/API 统一经过 Basic Auth 后由 `location /` fallback 代理到回环上游；后端新增顶层接口会自动对已认证用户可达。已知 POST 继续保留 exact location 实施方法、请求体和超时；其中六个工作流接口 `/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/visibility/multi` 使用 `geo_dashboard 120r/m burst=30`，慢操作 `/visibility`、`/audit`、`/fix` 使用 `geo_operations 6r/m burst=2`。
 - 动态路径 `/(articles|kb)/<numeric-id>` 使用锚定数字 regex；随后使用 `^/(articles|kb)/` guard 拒绝非数字和多余路径段。exact location 优先于 regex，因此 `/articles/update`、`/kb/create`、`/kb/add` 不受 guard 影响。
 - 隧道必须同时满足独立用户/独立密钥、`restrict + port-forwarding + permitlisten="127.0.0.1:13808"`、阿里云仅回环监听、安全组不开放端口和公网探针不可达。任何单一证据不能替代其余四项。
 - 独立访问凭据不得复用 H 管理员、Ontology 密码、模型 Key 或隧道私钥；远端只存 Hash，秘密不得进入 Git、Skill、记忆、日志或协作消息。
@@ -268,8 +268,8 @@ node ops/sync-company-directory.mjs
 - GEO 主进程使用系统级 `/etc/systemd/system/geo-engine.service`，固定监听 `127.0.0.1:8080`；代码必须来自固定 Git Commit 的不可变 Release，依赖使用独立 venv，模型 Key 只从 `0600` EnvironmentFile 注入，旧 user service 保持 disabled/inactive。
 - `geo-dashboard-tunnel.service` 必须 `Requires/After=geo-engine.service`，但不能只依赖 systemd 的启动顺序；`ExecStartPre` 需有限重试 `/health`，防止后端尚未监听时隧道抢跑。
 - 私有仓机器身份不可通过复制个人 Token 或私钥解决。若 GitHub 组织禁用 Deploy Key，使用已授权工作站 `fetch`、完整历史 Git Bundle、固定 Commit 与 SHA-256 校验部署；Release 工作树必须 clean，禁止 editable install 污染提交目录。
-- GEO `0.4.1` 生产锚点为 Commit `4cade6c6a459ed3c4c6d6ed615cd7999f7b6b585`；新文章生成必须由代码默认值和生产 EnvironmentFile 双重锁定为 `deepseek-v4-flash` + `reasoning_effort=max`。验收不能只看配置字符串，必须用最小真实调用确认返回模型与 reasoning usage。
-- GEO 内容状态必须区分 `draft`、`reviewed`、`exported`、`published`。审核通过不等于已发布，静态 HTML/Markdown 导出不等于公网可访问；只有外部平台成功返回公开 URL 才能写为 `published`，并记录时间、平台与链接。
+- GEO `0.4.2` 生产锚点为 Commit `ec249ed0c7d7a45b8b8b8ea7e3b9fabf42036bf1`；新文章生成必须由代码默认值和生产 EnvironmentFile 双重锁定为 `deepseek-v4-flash` + `reasoning_effort=max`。验收不能只看配置字符串，必须用最小真实调用确认返回模型与 reasoning usage。
+- GEO 内容状态必须区分 `draft`、`reviewed`、`exported`、`published`。审核通过不等于已发布，静态 HTML/Markdown 导出不等于公网可访问；只有发布目录真实受公网路由提供、canonical/OG/JSON-LD/数据库交付 URL 一致并逐条返回 `200`，才能写为 `published`。
 - 发布效果只在存在公开 URL 且完成发布后同口径可见性检测后判断；至少比较可见性分数、品牌提及、品牌域名引用与竞品信号。单篇文章不能直接归因品牌整体变化，没有发布后观测时必须明确显示“不能判断”。
 - Dashboard 必须是 API 动态加载而不是服务端嵌入快照；Tab active 同时核对导航类名与当前页面。长耗时 `/visibility`、`/audit` 使用 `ThreadingHTTPServer` 保持健康接口可用，并按操作类型使用单并发信号量防止重复提交。
 - Dashboard 从静态快照切为 `fetch` 同源 API 时，Nginx CSP 必须把 `connect-src` 从 `'none'` 改为 `'self'`；否则 API 本身 `200` 但浏览器仍会被 CSP 阻断。上线验收必须检查响应头、控制台和真实数据渲染，不能只用 `curl` 判断前端已打通。
@@ -277,11 +277,12 @@ node ops/sync-company-directory.mjs
 - Nginx location 匹配是确定性的：exact location 永远优先于 `location /`，不存在“随机命中”。如果 exact 与 fallback 使用不同限流区，同一路径会始终使用 exact 的限流。六个工作流 POST 曾共用 `geo_operations 6r/m burst=2`，造成跨接口令牌竞争和间歇 `503`；修复为 `geo_dashboard 120r/m burst=30` 后，连续三轮 18 次无副作用探针全部后端 `400`、`503=0`。慢操作 `/visibility`、`/audit`、`/fix` 才保留低速桶。
 - 全量 fallback 上线后，必须补测所有已有前缀解析路由。GEO 后端的 `path.startswith('/articles/')` 曾导致 `/articles/foo` 抛 `ValueError` 返回 `502`，并把 `/articles/5/delete` 错当文章 5 返回 `200`；因此 fallback 必须与数字详情 regex、命名空间 guard 和 exact 写接口组合使用。Nginx HTML `404` 表示 guard 拒绝，后端 JSON `404` 表示 fallback 已到达应用但端点不存在。
 - fallback 只解决“新增接口不用再改 Nginx”，不能替代应用层鉴权、参数校验和审计。Basic Auth 现在覆盖整个 GEO API，凭据风险高于只读看板阶段；多人使用前必须升级统一身份或细粒度权限。
-- `/publish` 与 `/fix` 允许调用方指定输出目录，GEO Basic Auth 因此是高权限运维凭据，不得给普通访客使用。公网放行只解决网络可达，业务发布仍需保留人审、公开 URL 和发布后同口径效果证据。
+- 生产 `/publish` 由 `GEO_PUBLISH_DIR` 与 `GEO_SITE_URL` 固定输出目录和公开根 URL，EnvironmentFile 优先于请求体；`/fix` 仍允许调用方指定输出目录。GEO Basic Auth 是高权限运维凭据，不得给普通访客使用。公网放行只解决网络可达，业务发布仍需保留人审、公开 URL 和发布后同口径效果证据。
 - 资料包版本使用知识库与切片元数据 Hash 生成确定性 `kbp-<hash>`；实验记录只保存脱敏请求、资料包版本、引擎版本、耗时和结果摘要，不保存 API Key 或完整模型回答。SQLite `datetime('now')` 是 UTC，前端必须显式按 `Asia/Shanghai` 显示。
 - 真实网站审计或可见性验收会修改实验数与可见性记录数；运行后必须重新读取 `/stats`、`/meta`、`/experiments` 和 SQLite `integrity_check`，再更新文档。禁止沿用操作前的旧计数形成“功能成功但记录过期”的假绿。
-- 当前生产数据为 7 篇历史文章：2 篇草稿、5 篇已审核待发布、0 篇仅导出、0 篇公开发布；12 条可见性记录、5 条实验记录，资料包 `kbp-6adb88da8625`。最新爱视可可见性为 `0/100`、提及 `0/6`、域名引用 `0/6`；历史文章仍如实记录原 `deepseek-chat`。
-- 当前生产 Release `HEAD` 仍为 `4cade6c`，但工作树已有协作者热更新和构建产物，已不满足不可变 Release 的 clean 门禁。下一次切换前先识别并提交有效差异，再从最终 Commit 重建 Release；禁止直接 `git reset --hard`、覆盖或删除现场。
+- 当前生产数据为 7 篇历史文章：2 篇草稿、0 篇仅导出、5 篇公开发布；5 个交付 URL 均位于 `geo.kidshub.cn/published/` 并返回 `200`。12 条可见性记录、5 条实验记录，资料包 `kbp-6adb88da8625`；最新 `0/100` 是公开链路完成前基线，需等待抓取窗口后同口径复测。
+- 当前生产 Release `HEAD=ec249ed`、版本 `0.4.2`、工作树 clean，Nginx Hash `c60604c37aa4836f611936f4491119baa789d6a02d93a1e22ce71f4b9641268e`。远端并发推进或生产热补丁时先逐文件比 Hash；push 被拒绝禁止强推，必须 fetch/rebase，再以最终 Commit 重建 clean Release。
+- `/published/<file>` 仅允许 GET/HEAD、根层安全扩展和无目录遍历；`/robots.txt`、`/llms.txt`、`/schema.jsonld`、`/sitemap.xml` 映射到同一发布目录。机器结构首页必须服务端转义并静态生成，禁止把文章标题或摘要直接拼入 `innerHTML`；公开目录只保留有数据库交付账本和索引证据的文章。
 - 后续 Release 切换复用 `deploy/company-vm/cutover-geo-engine-release.sh <new-sha> <old-sha> <expected-version> [model] [reasoning]`；脚本原子切换 Release/venv、轮询健康、校验版本/模型/推理等级，失败自动回滚。当前数据库备份为 `/home/futurus/.geo-engine/backups/api-console-v040-20260814-121834` 与 `/home/futurus/.geo-engine/backups/timezone-v041-20260814-122512`。
 - 完整证据与回滚见项目文档 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
 

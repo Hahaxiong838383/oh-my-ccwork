@@ -6,7 +6,7 @@
 
 P0-A 至 P0-F、公司 Bot、通讯录、CPA H 引擎、知识 Connector `2026-08-08.3`、V3 P0-S、Goal 4 P0-EPI、Goal 5 P0-DEC、Goal 6-A P1-DOMAIN 和 Task 6-R 均已完成工程验收。Goal 6-A 已获川哥人工体验确认；H `v1.58.2` 发布溯源为 `in_sync`，真实 Chrome `99/99`。10 名真实员工 Canary 继续关闭，不能因为工程 Goal 完成自动启动。
 
-GEO Engine `0.4.1` 动态 API Control Room 已于 `2026-08-14` 上线 `geo.kidshub.cn`，Commit `4cade6c`。新文章固定使用 `deepseek-v4-flash` + 最高推理 `max`；当前 2 篇草稿、5 篇已审核待发布、0 篇仅导出、0 篇公开发布。最新同口径可见性实验为爱视可/`eyescare.cn` `0/100`、提及 `0/6`、域名引用 `0/6`，说明当前没有可观测效果。
+GEO Engine `0.4.2` 动态 API Control Room 与公开内容层已于 `2026-08-14` 上线 `geo.kidshub.cn`，Commit `ec249ed`。新文章固定使用 `deepseek-v4-flash` + 最高推理 `max`；当前 2 篇草稿、0 篇仅导出、5 篇公开发布，交付 URL 均为 `geo.kidshub.cn/published/` 且逐条 `200`。最新同口径可见性实验仍为公开前基线 `0/100`、提及 `0/6`、域名引用 `0/6`，需要等待抓取后复测。
 
 ## GEO 公网前端后续门禁
 
@@ -18,9 +18,10 @@ GEO Engine `0.4.1` 动态 API Control Room 已于 `2026-08-14` 上线 `geo.kidsh
 6. ✅ 已新增“网站审计”操作页，公网目标校验、重定向逐跳校验、5MB 上限和 SSRF 内网阻断已测试；`ai.kidshub.cn` 登录页 smoke 为 `19/100`，不代表营销官网审计结论。
 7. ✅ 资料包版本 `kbp-6adb88da8625` 与实验记录已上线；每次操作绑定资料包版本、引擎版本、耗时和结果摘要，实验时间按上海时区显示。
 8. ✅ 认证 `location /` fallback 已上线，后端新增顶层接口无需再改 Nginx；六个工作流 POST `/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/visibility/multi` 保留 exact 方法/请求体/超时，但使用 `geo_dashboard 120r/m burst=30`，连续 18 次探针无 `503`。`/visibility`、`/audit`、`/fix` 继续使用慢操作 `6r/m`；`/articles/`、`/kb/` 有命名空间护栏。接口可达不等于内容已获发布授权，Public Claim Package、人审和发布效果证据仍需在业务层落实。
-9. ⏳ 选择首批已审核文章和外部发布平台，取得单独发布确认后记录公开 URL，再用同一问题集复测效果。
-10. 🟡 多人使用前将 Basic Auth 升级为 H 管理员认证或公司统一身份；当前独立凭据不得进入 Git、Skill、记忆或协作消息。
-11. 详细部署、验收和回滚见 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
+9. ✅ 5 篇账本文章、静态首页、`robots.txt`、`llms.txt`、`llms-full.txt`、`sitemap.xml` 与 `schema.jsonld` 已上线；canonical、机器结构和交付 URL 已统一到 GEO 公网路径，孤儿文章已从公网撤下并保留备份。
+10. ⏳ 等待抓取窗口后使用同一问题集复测可见性分数、品牌提及和域名引用；不得把服务上线直接写成 GEO 效果提升。
+11. 🟡 多人使用前将 Basic Auth 升级为 H 管理员认证或公司统一身份；当前独立凭据不得进入 Git、Skill、记忆或协作消息。
+12. 详细部署、验收和回滚见 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
 
 ## 2026-08-10 Goal 顺序重排
 
