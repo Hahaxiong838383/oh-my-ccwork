@@ -225,20 +225,50 @@ ssh root@64.90.13.117 "sed -i 's/^VOLC_ASR_HOTWORDS=.*/VOLC_ASR_HOTWORDS=<新词
 - 部署自验必须 rtc_probe 真跑(editable 装才 rsync 即生效;曾栽过 site-packages 旧副本)。
 - **git 归属(2026-07-04 川哥拍板定稿)**:随 mycc 仓隐私剥离曾短暂出仓,当日川哥拍板**回归 oh-my-ccwork 仓 `2-Projects/` 正常管理**(1c2c14462 快照入仓;旧历史已被 filter-repo 洗净,从快照重新开始)。"部署过的代码立即 commit"落 mycc 仓即可;`.gitignore`/`.git/info/exclude` 的剥离清单里**不再有本项目**(其余 4 个剥离项目不受影响)。
 
+### 症状:Rust 线判停变钝 + 声纹全失效(EOT sidecar 死了且**永不重连**,2026-08-14 实证)
+
+- **判据**:`journalctl -u voice-worker-rust | grep -E "speaker embed 通道不可用|EOT sidecar 不可用"`;
+  `ss -xlp | grep rust-worker-eot.sock` **无监听者**即已死(socket 文件还在,是残留,不代表活着)。
+- **机理**:`eot.rs` 的 `GLOBAL.get_or_init` 是**进程级单例**——sidecar 一旦不可用就固化为 `None`,
+  **整个 worker 生命周期不再重试**。且 sidecar 常由**上一代 worker** 拉起(日志 `connected (existing)`),
+  它自己死掉时当前 worker 只握着一条断连接,只打 WARN 不报错。
+  后果:判停降级为 min_delay(≈框架 turn detector 预测失败的行为)、声纹旁路整个关闭,
+  **对话仍能进行**,所以从体感只是"变钝",不会有任何红灯。
+- **修**:`systemctl restart voice-worker-rust`(重启即 `(spawned)` 重新拉起)。残留 socket 不阻碍——
+  sidecar bind 前会 unlink,已验。
+- ⚠️ **查 sidecar 进程别用 `ps -eo ...,cgroup,cmd`**:cgroup 列极长会把 cmd 挤没,
+  空结果与"进程不存在"同形。用 `ps -eo pid,ppid,rss,args ww | grep -F eot_sidecar` 或 `ss -xlp`。
+  同理 `grep -i oom` 会被 **`room=`** 命中(2026-08-14 误报 285 条),数 OOM 要 `grep -i oom | grep -iv room`。
+
+### Rust 线容量真值(2026-08-14 实测,4 核 Xeon/3915MB)
+
+固定 ≈430MB(worker+sidecar+两个模型,**进程级单例不随 job 涨**;sidecar 单进程 302MB)/
+每路 job 边际 **12–18MB**、**0.3 核**(1路7.5%→2路15%,线性)。job 关闭后内存不回落=allocator 保留,
+下一个 job 复用(实证:2 路只在 405MB 基础上 +24MB)。
+**→ 瓶颈是 CPU 不是内存**;MemoryMax=1.2G 可容 ~40 路,远不是限制。`WORKER_MAX_JOBS` 现为 2,
+按留 2 核给三条 Python 线算,可提到 6。⚠️ 该数来自**单轮短 probe**,长会话多轮的 CPU 会更高,上规模前补压测。
+
 ## Rust 灰度线(2026-08-12 起,64.90 同机并行)
 
 - **为什么同机**:A/B 对照只能差被测变量本身。最初部署在 dev198(另一台机/另一地理)被川哥当场驳回——
   跨机测出的差异不可归因。**同机、同配置源、同网络路径,只差实现语言**。
 - **unit**:`voice-worker-rust`。与 `voice-worker`(Python 主线)/`voice-worker-colleague`/`voice-console`
-  并存,**老三个 unit 零触碰**是这条线的红线。二进制 `/root/rust-worker/rust-worker`,上一版留 `.prev` 可秒回滚。
-- **env 层叠**(systemd EnvironmentFile 后覆盖前):`.env` → `poc-eou.env`(**与 Python 主线共享**,含热词)
+  并存,**老三个 unit 零触碰**是这条线的红线。二进制 `/root/rust-worker/voice-rust-worker`
+  (WorkingDirectory 同目录),上一版留 `.prev` 可秒回滚。
+- **env 层叠**(systemd EnvironmentFile 后覆盖前):`/root/realtime-voice-agent/.env` →
+  `/root/realtime-voice-agent/poc-eou.env`(**与 Python 主线共享**,含热词)
   → `rust-worker.env`(只放两线差异项)。⚠️ **共享配置一律只写 poc-eou.env,别在 rust-worker.env 复制同值**
   ——两处同值 = 必然漂移(热词就是先踩后收敛的)。
 - **构建**:本机/dev198 的 glibc 比 64.90(24.04/2.39)新,产物拷过去直接跑不起来。走 GitHub Actions
   `.github/workflows/rust-worker-build.yml`(ubuntu-24.04 + glibc 符号天花板门禁),下载 artifact 再 scp。
   ⚠️ `gh workflow run` 要求 workflow 文件在**默认分支上**才认。
 - **测试页**:Python 线 `voice-test.html` / Rust 线 `voice-test-rust.html`(同一 nginx docroot
-  `/var/www/voice`,各自 token 与 agent_name)。
+  `/var/www/voice`,各自 token 与 agent_name)。⚠️ docroot 在 **47.239**(LiveKit 那台),不是 64.90。
+- **设备/第三方接入**(自研通道):完整 SOP 见 `docs/RUST-LINE-DEVICE-ONBOARDING.md`。要点:派单
+  **内嵌在 token 的 `roomConfig.agents[].agentName="rust-worker"`**,签 token 漏这段 = 设备能进房
+  但永远等不到 AI 且零报错;Python 主线无 AGENT_NAME(自动派单),显式 dispatch 会抑制它不串台
+  (30 天日志实证 0 次误接,8078 条它接别的房间作对照锚);并发上限 `WORKER_MAX_JOBS=2`;
+  **设备侧必须自带 AEC**——服务端只有 0.5s 打断抑制窗不是回声消除,外放设备会每句自我打断。
 - **日志**:`journalctl -u voice-worker-rust`。关键行与 Python 线同名不同措辞
   (`asr: connected (... hotwords=N)`);输入观测每 10s 一行 `audio in (10s) frames=N mean_amp=X`
   (frames=0 → 上行断流/息屏;amp≈0 → 送的是静音;正常 → 问题在下游)。
