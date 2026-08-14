@@ -260,4 +260,6 @@ geo.kidshub.cn:443
 - Nginx 只能代理精确只读页面；反向 SSH 安全不等于上游 API 安全，禁止把整个 GEO `8080` 暴露给公网。
 - GEO 后续不可变 Release 切换使用项目脚本 `deploy/company-vm/cutover-geo-engine-release.sh <new-sha> <old-sha> <expected-version> [model] [reasoning]`；脚本在 company-vm 以 root 执行，原子切换 `/home/futurus/.geo-engine/current` 与 `current-venv`，轮询 `/health`，校验目标版本/模型/推理等级，失败恢复旧 Release 后再重建隧道。
 - 切换成功不能只看 systemd `active`：还要核对 `/stats`、`/meta`、`/experiments`，再从公网真实浏览器验证 API 动态加载、六个 Tab active、操作页、上海时间、无横向溢出和控制台零错误。当前 `0.4.1` 锚点为 Commit `4cade6c6a459ed3c4c6d6ed615cd7999f7b6b585`。
+- zsh 中小写 `path` 是与环境变量 `PATH` 绑定的特殊数组；验收循环不得写 `for path in ...`，否则第一次迭代后可能出现 `curl: command not found`。统一使用 `endpoint`、`route` 或 `target_path`，复杂脚本同时避免只读特殊变量 `status`。
+- Nginx 从静态页面升级为动态 API 时，除路由白名单外必须同步修改 CSP 为 `connect-src 'self'`；公网验收同时检查认证 API `200`、浏览器控制台零 CSP 错误和页面真实数据已渲染。
 - 回滚顺序：先下 Nginx 入口，再 stop/disable company-vm 隧道服务，确认 `13808` 消失，最后再移除 `geo-tunnel` 公钥或账号；禁止先删密钥导致残留监听和难以定位的半状态。

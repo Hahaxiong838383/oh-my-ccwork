@@ -269,8 +269,10 @@ node ops/sync-company-directory.mjs
 - GEO 内容状态必须区分 `draft`、`reviewed`、`exported`、`published`。审核通过不等于已发布，静态 HTML/Markdown 导出不等于公网可访问；只有外部平台成功返回公开 URL 才能写为 `published`，并记录时间、平台与链接。
 - 发布效果只在存在公开 URL 且完成发布后同口径可见性检测后判断；至少比较可见性分数、品牌提及、品牌域名引用与竞品信号。单篇文章不能直接归因品牌整体变化，没有发布后观测时必须明确显示“不能判断”。
 - Dashboard 必须是 API 动态加载而不是服务端嵌入快照；Tab active 同时核对导航类名与当前页面。长耗时 `/visibility`、`/audit` 使用 `ThreadingHTTPServer` 保持健康接口可用，并按操作类型使用单并发信号量防止重复提交。
+- Dashboard 从静态快照切为 `fetch` 同源 API 时，Nginx CSP 必须把 `connect-src` 从 `'none'` 改为 `'self'`；否则 API 本身 `200` 但浏览器仍会被 CSP 阻断。上线验收必须检查响应头、控制台和真实数据渲染，不能只用 `curl` 判断前端已打通。
 - 网站审计公开后必须防 SSRF：仅允许公网 HTTP(S)，拒绝用户名密码 URL、非全局 IP、内网/本机/链路本地地址，逐跳校验重定向并限制响应体。Nginx 同时实施认证、方法白名单、请求体上限、操作限流和长请求超时。
 - 资料包版本使用知识库与切片元数据 Hash 生成确定性 `kbp-<hash>`；实验记录只保存脱敏请求、资料包版本、引擎版本、耗时和结果摘要，不保存 API Key 或完整模型回答。SQLite `datetime('now')` 是 UTC，前端必须显式按 `Asia/Shanghai` 显示。
+- 真实网站审计或可见性验收会修改实验数与可见性记录数；运行后必须重新读取 `/stats`、`/meta`、`/experiments` 和 SQLite `integrity_check`，再更新文档。禁止沿用操作前的旧计数形成“功能成功但记录过期”的假绿。
 - 当前生产数据为 7 篇历史文章：2 篇草稿、5 篇已审核待发布、0 篇仅导出、0 篇公开发布；10 条可见性记录、2 条实验记录，资料包 `kbp-6adb88da8625`。最新爱视可可见性为 `0/100`、提及 `0/6`、域名引用 `0/6`；历史文章仍如实记录原 `deepseek-chat`。
 - 后续 Release 切换复用 `deploy/company-vm/cutover-geo-engine-release.sh <new-sha> <old-sha> <expected-version> [model] [reasoning]`；脚本原子切换 Release/venv、轮询健康、校验版本/模型/推理等级，失败自动回滚。当前数据库备份为 `/home/futurus/.geo-engine/backups/api-console-v040-20260814-121834` 与 `/home/futurus/.geo-engine/backups/timezone-v041-20260814-122512`。
 - 完整证据与回滚见项目文档 `docs/geo-public-dashboard-deployment-2026-08-14.md`。
