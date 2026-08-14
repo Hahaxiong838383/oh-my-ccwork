@@ -270,5 +270,5 @@ geo.kidshub.cn:443
 - 切换成功不能只看 systemd `active`：还要核对 `/stats`、`/meta`、`/experiments`，再从公网真实浏览器验证 API 动态加载、七个 Tab、关键词库、内容生成表单、操作页、上海时间、无横向溢出和控制台零错误。当前 `0.4.1` 锚点为 Commit `4cade6c6a459ed3c4c6d6ed615cd7999f7b6b585`。
 - zsh 中小写 `path` 是与环境变量 `PATH` 绑定的特殊数组；验收循环不得写 `for path in ...`，否则第一次迭代后可能出现 `curl: command not found`。统一使用 `endpoint`、`route` 或 `target_path`，复杂脚本同时避免只读特殊变量 `status`。
 - Nginx 从静态页面升级为动态 API 时，除路由白名单外必须同步修改 CSP 为 `connect-src 'self'`；公网验收同时检查认证 API `200`、浏览器控制台零 CSP 错误和页面真实数据已渲染。
-- GEO 写接口共用低速 `geo_operations` 限流时，快速批量探针可能返回 `503`；应串行或冷却后复测。`/publish` 与 `/fix` 可指定输出目录，Basic Auth 必须按高权限运维凭据管理，不能因为隧道受限就降低应用层授权要求。
+- exact location 优先级高于 fallback，不会随机命中。六个工作流 POST 使用 `geo_dashboard 120r/m burst=30`，避免跨接口共享 `geo_operations` 低速令牌导致间歇 `503`；只有 `/visibility`、`/audit`、`/fix` 保留 `6r/m burst=2`。`/publish` 与 `/fix` 可指定输出目录，Basic Auth 必须按高权限运维凭据管理。
 - 回滚顺序：先下 Nginx 入口，再 stop/disable company-vm 隧道服务，确认 `13808` 消失，最后再移除 `geo-tunnel` 公钥或账号；禁止先删密钥导致残留监听和难以定位的半状态。

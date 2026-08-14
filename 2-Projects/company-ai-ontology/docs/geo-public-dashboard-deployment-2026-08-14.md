@@ -29,7 +29,8 @@ GEO 主进程由系统级 systemd 托管，使用固定 Git Release 和独立 ve
 - GEO 主服务由 `/etc/systemd/system/geo-engine.service` 托管；隧道 unit 使用 `Requires/After=geo-engine.service`，并在 `ExecStartPre` 内等待健康端点，避免系统启动或同时重启时抢跑。
 - Nginx 公开只读 `/health`；其余路径与方法先经过 Basic Auth，再由 `location /` fallback 代理到回环上游。已知 POST 写接口保留 exact location，因此错误方法仍优先返回 `405`，并继续使用独立请求体、限流和超时。`/(articles|kb)/<numeric-id>` 使用锚定数字规则；其余 `/articles/`、`/kb/` 子路径由命名空间 guard 返回 `404`，防止后端宽松前缀解析。
 - fallback 使用 `geo_dashboard burst=30`、`client_max_body_size 5m`、读超时 `900s`、写超时 `120s`。这意味着后端新增顶层接口会自动对已认证用户可达，后端参数校验、权限和审计必须承担最终安全边界。
-- 七个新增写接口共用 `geo_operations` 限流区：`rate=6r/m`、`burst=2`。连续批量验收可能暂时返回 `503`，应串行探测或等待令牌恢复，不能误判为后端故障。
+- `/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/visibility/multi` 虽保留 exact 方法/请求体/超时规则，但限流已切换为与 fallback 相同的 `geo_dashboard rate=120r/m burst=30`，避免六个工作流接口共享低速桶互相触发 `503`。
+- `/visibility`、`/audit`、`/fix` 继续使用慢操作 `geo_operations rate=6r/m burst=2`；它们本身耗时长或风险高，快速重复提交仍可能被 `503` 限流。
 - `/articles/update` 限制 `2m/60s`，`/publish` 为 `120s`，`/gen` 为 `16k/600s`，`/kb/create` 为 `16k/60s`，`/kb/add` 为 `5m/120s`，`/fix` 为 `16k/90s`，`/visibility/multi` 为 `16k/900s`。
 - `/publish` 与 `/fix` 后端允许调用方指定输出目录，Basic Auth 凭据因此属于高权限运维凭据；不得分享给普通访客、写入前端、Git、日志或协作消息。
 - `/audit` 只允许公网 HTTP(S) 目标，拒绝内网、本机、保留地址和私有重定向；响应体限制 5MB。`/visibility` 与 `/audit` 分别单并发，Nginx 另加操作限流。
@@ -52,7 +53,8 @@ GEO 主进程由系统级 systemd 托管，使用固定 Git Release 和独立 ve
 - 文章/知识库数字详情组合规则备份：`/root/geo-kidshub-before-kb-article-detail-20260814-154615.conf`
 - 认证全量 fallback 前备份：`/root/geo-kidshub-before-auth-fallback-20260814-170035.conf`
 - fallback 命名空间护栏前备份：`/root/geo-kidshub-before-fallback-guards-20260814-170354.conf`
-- 当前 Nginx 配置 SHA-256：`fc7dafc99b0882032f8361f0aad97bae07dd3799ab2b73ce107e27d048ae474c`
+- 六接口限流修复前备份：`/root/geo-kidshub-before-post-rate-fix-20260814-171326.conf`
+- 当前 Nginx 配置 SHA-256：`55bb9203dc386cb6ac8ec0b6ec50c1d9ebe18c402034a89d2692e0a849c2fa4b`
 
 ### company-vm
 
@@ -90,7 +92,8 @@ GitHub 组织策略禁止该仓库使用 Deploy Key，因此没有把个人 Toke
 | 认证 `/stats`、`/kb`、`/articles`、`/meta`、`/experiments` | 全部 `200` |
 | GET `/audit`、`/visibility` | `405` |
 | GET 七个 POST-only 新增写接口 | 全部 `405` |
-| POST 七个新增写接口空 JSON | 全部到达后端并返回对应缺参 `400` |
+| 六个工作流 POST 连续三轮、共 18 次空 JSON | 全部后端缺参 `400`，`503=0` |
+| `/visibility`、`/audit`、`/fix` | 继续使用慢操作限流区 |
 | 认证 GET `/articles/5` | `200`，文章正文 4,259 字符 |
 | 认证 POST `/articles/5` | `405` |
 | 认证 GET `/articles/foo`、`/articles/5/delete` | Nginx guard `404`，未到后端 |

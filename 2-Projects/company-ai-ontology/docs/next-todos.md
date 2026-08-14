@@ -17,7 +17,7 @@ GEO Engine `0.4.1` 动态 API Control Room 已于 `2026-08-14` 上线 `geo.kidsh
 5. ✅ 已新增“AI 可见性检测”操作页，真实运行爱视可/`eyescare.cn` 获得 `0/100`，结果进入历史与实验账本。
 6. ✅ 已新增“网站审计”操作页，公网目标校验、重定向逐跳校验、5MB 上限和 SSRF 内网阻断已测试；`ai.kidshub.cn` 登录页 smoke 为 `19/100`，不代表营销官网审计结论。
 7. ✅ 资料包版本 `kbp-6adb88da8625` 与实验记录已上线；每次操作绑定资料包版本、引擎版本、耗时和结果摘要，实验时间按上海时区显示。
-8. ✅ 认证 `location /` fallback 已上线，后端新增顶层接口无需再改 Nginx；已知 POST `/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi` 继续保留 exact 方法、限流、请求体和超时。`/articles/`、`/kb/` 有命名空间护栏。接口可达不等于内容已获发布授权，Public Claim Package、人审和发布效果证据仍需在业务层落实。
+8. ✅ 认证 `location /` fallback 已上线，后端新增顶层接口无需再改 Nginx；六个工作流 POST `/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/visibility/multi` 保留 exact 方法/请求体/超时，但使用 `geo_dashboard 120r/m burst=30`，连续 18 次探针无 `503`。`/visibility`、`/audit`、`/fix` 继续使用慢操作 `6r/m`；`/articles/`、`/kb/` 有命名空间护栏。接口可达不等于内容已获发布授权，Public Claim Package、人审和发布效果证据仍需在业务层落实。
 9. ⏳ 选择首批已审核文章和外部发布平台，取得单独发布确认后记录公开 URL，再用同一问题集复测效果。
 10. 🟡 多人使用前将 Basic Auth 升级为 H 管理员认证或公司统一身份；当前独立凭据不得进入 Git、Skill、记忆或协作消息。
 11. 详细部署、验收和回滚见 `docs/geo-public-dashboard-deployment-2026-08-14.md`。

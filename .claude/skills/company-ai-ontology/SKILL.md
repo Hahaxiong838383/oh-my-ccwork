@@ -260,7 +260,7 @@ node ops/sync-company-directory.mjs
 
 - GEO Engine 独立运行观察面为 `https://geo.kidshub.cn/`，当前链路固定为：浏览器 → aliyun-hk Nginx 独立认证 → `127.0.0.1:13808` → `geo-tunnel` 受限反向 SSH → company-vm `127.0.0.1:8080/dashboard`。
 - GEO Dashboard 不是事实真源或 Ontology/ERP Action Gateway。它展示认证后的运行派生状态，并提供受控 GEO 内容与检测操作；接口可达不等于内容已经获得业务发布授权。
-- GEO 原始服务把 Dashboard、读 API 与高风险写接口放在同一端口。当前策略为公开 GET `/health`，其余路径统一经过 Basic Auth 后由 `location /` fallback 代理到回环上游；后端新增顶层接口会自动对已认证用户可达。已知高风险 POST `/visibility`、`/audit`、`/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi` 继续保留 exact location，实施独立方法、请求体、限流和超时。
+- GEO 原始服务把 Dashboard、读 API 与高风险写接口放在同一端口。当前策略为公开 GET `/health`，其余路径统一经过 Basic Auth 后由 `location /` fallback 代理到回环上游；后端新增顶层接口会自动对已认证用户可达。已知 POST 继续保留 exact location 实施方法、请求体和超时；其中六个工作流接口 `/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/visibility/multi` 使用 `geo_dashboard 120r/m burst=30`，慢操作 `/visibility`、`/audit`、`/fix` 使用 `geo_operations 6r/m burst=2`。
 - 动态路径 `/(articles|kb)/<numeric-id>` 使用锚定数字 regex；随后使用 `^/(articles|kb)/` guard 拒绝非数字和多余路径段。exact location 优先于 regex，因此 `/articles/update`、`/kb/create`、`/kb/add` 不受 guard 影响。
 - 隧道必须同时满足独立用户/独立密钥、`restrict + port-forwarding + permitlisten="127.0.0.1:13808"`、阿里云仅回环监听、安全组不开放端口和公网探针不可达。任何单一证据不能替代其余四项。
 - 独立访问凭据不得复用 H 管理员、Ontology 密码、模型 Key 或隧道私钥；远端只存 Hash，秘密不得进入 Git、Skill、记忆、日志或协作消息。
@@ -274,7 +274,7 @@ node ops/sync-company-directory.mjs
 - Dashboard 必须是 API 动态加载而不是服务端嵌入快照；Tab active 同时核对导航类名与当前页面。长耗时 `/visibility`、`/audit` 使用 `ThreadingHTTPServer` 保持健康接口可用，并按操作类型使用单并发信号量防止重复提交。
 - Dashboard 从静态快照切为 `fetch` 同源 API 时，Nginx CSP 必须把 `connect-src` 从 `'none'` 改为 `'self'`；否则 API 本身 `200` 但浏览器仍会被 CSP 阻断。上线验收必须检查响应头、控制台和真实数据渲染，不能只用 `curl` 判断前端已打通。
 - 网站审计公开后必须防 SSRF：仅允许公网 HTTP(S)，拒绝用户名密码 URL、非全局 IP、内网/本机/链路本地地址，逐跳校验重定向并限制响应体。Nginx 同时实施认证、方法白名单、请求体上限、操作限流和长请求超时。
-- `/articles/update`、`/publish`、`/gen`、`/kb/create`、`/kb/add`、`/fix`、`/visibility/multi` 必须逐路径配置方法、请求体上限与超时，并共用低速操作限流。`geo_operations rate=6r/m burst=2` 下批量探针可能返回临时 `503`，验收应串行或冷却后复测，不能把限流当成后端故障。
+- Nginx location 匹配是确定性的：exact location 永远优先于 `location /`，不存在“随机命中”。如果 exact 与 fallback 使用不同限流区，同一路径会始终使用 exact 的限流。六个工作流 POST 曾共用 `geo_operations 6r/m burst=2`，造成跨接口令牌竞争和间歇 `503`；修复为 `geo_dashboard 120r/m burst=30` 后，连续三轮 18 次无副作用探针全部后端 `400`、`503=0`。慢操作 `/visibility`、`/audit`、`/fix` 才保留低速桶。
 - 全量 fallback 上线后，必须补测所有已有前缀解析路由。GEO 后端的 `path.startswith('/articles/')` 曾导致 `/articles/foo` 抛 `ValueError` 返回 `502`，并把 `/articles/5/delete` 错当文章 5 返回 `200`；因此 fallback 必须与数字详情 regex、命名空间 guard 和 exact 写接口组合使用。Nginx HTML `404` 表示 guard 拒绝，后端 JSON `404` 表示 fallback 已到达应用但端点不存在。
 - fallback 只解决“新增接口不用再改 Nginx”，不能替代应用层鉴权、参数校验和审计。Basic Auth 现在覆盖整个 GEO API，凭据风险高于只读看板阶段；多人使用前必须升级统一身份或细粒度权限。
 - `/publish` 与 `/fix` 允许调用方指定输出目录，GEO Basic Auth 因此是高权限运维凭据，不得给普通访客使用。公网放行只解决网络可达，业务发布仍需保留人审、公开 URL 和发布后同口径效果证据。
