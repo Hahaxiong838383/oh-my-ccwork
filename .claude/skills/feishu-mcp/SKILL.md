@@ -1,9 +1,13 @@
 ---
 name: feishu-mcp
-description: 飞书 MCP 工具使用指南。当用户提到飞书相关操作时，使用已连接的飞书 MCP 工具执行。
+description: 飞书 MCP、lark-cli 与远程开发机飞书能力维护指南。当用户提到飞书操作、Studio/新机同步飞书能力、OAuth、Skills、ChatGPT 自主调用或远程机飞书验收时使用。
 ---
 
 # 飞书智能助手
+
+## 远程开发机能力同步
+
+当用户要求让 Studio、新 Mac 或远程开发机拥有与 Air 相同的飞书读写能力时，先读取 [`references/studio-remote-bootstrap.md`](references/studio-remote-bootstrap.md)。该流程覆盖真实接线盘点、加密迁移、User OAuth、飞书直连、ChatGPT/app-server 重载、自动续期和三层真实验收。
 
 ## 你是谁
 
