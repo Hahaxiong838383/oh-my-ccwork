@@ -13,10 +13,13 @@
 （chirp3 TTS 合成 / FLEURS 朗读）都不是自家用户分布——分布一换阈值剧烈漂移已实证
 （官方集 bestF1@0.18 vs FLEURS 形态 @0.97）。**无真实数据不上线**（报告 §六）。
 
-- [ ] D1：数据管道——64.90 生产不存录音（已实查），二选一拍板：
-      a) worker 加「判停快照」采集口（停顿 200ms 触发点的 1.2s/8s 双窗 wav + 旧模型概率落盘，
-      需脱敏与开关，只采音频不采身份）；b) rtc_probe 场景库半仿真（真人录制常用指令/思考停顿脚本）。
-      推荐 a（分布最真）+ b 补难例。
+- [x] D1：✅ 2026-08-16 川哥拍板 a 方案，**采集口已上线灰度线**（分支 `feat/eot-snapshot`
+      commit `c0cc0fc8c`，双轮 E2E 过：开关关行为回归 + 开关开真通话采到 8s wav+全事件链）。
+      运维真值：env 在 `rust-worker.env`（`EOT_SNAPSHOT_DIR=/root/eot-snapshots`，
+      删行+stop/start=关闭）；护栏 单 job 50 个/全局 2048MB；回滚二进制
+      `voice-rust-worker.prev` 或 `.bak-20260816-pre-snapshot`。
+      弱标签：`rust-worker/scripts/label_snapshots.py`（E2E 实测 1 触发点→weak=1 正确）。
+      b) rtc_probe 半仿真补难例——待 D2 自然积累不足时启用。
 - [ ] D2：采集量目标 ≥300 触发点样本（含思考停顿/换气/说完三类，人工标注 turn 完成与否）
 - [ ] D3：eotbench eval 跑 v3.2 → 标定阈值 + MIN/MAX delay 联动（复用 `bench/analyze_eval.py`）
 - [ ] D4：401ms 判停链回归 + 打断行为验证（任务书 §八 口径）
@@ -48,3 +51,7 @@
 ## 进度记录
 
 - 2026-08-16：立项（原型三绿收口，条件 go；本文件由 brief 头部回填块引用）
+- 2026-08-16：D1 完成——采集口上线 64.90 灰度线（`feat/eot-snapshot`）。E2E 证据：
+  events.jsonl 八事件链自洽（speech→224ms 静音触发→prob 0.517→437ms commit），
+  wav 128000 样本尾 1.2s RMS 3593，弱标签脚本真数据跑通。**D2 数据积累已启动**：
+  真实通话打 rust 线即自动攒（当前 1 个触发点），目标 ≥300 后进 D3。
