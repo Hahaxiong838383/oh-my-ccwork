@@ -52,6 +52,83 @@ async def _rss_monitor_loop(interval_s: float = 30.0) -> None:
             return  # 非 Linux(无 /proc)或进程收尾,停采样
 
 
+async def _idle_hangup_loop(
+    ctx: Any,
+    activity: dict[str, float],
+    *,
+    timeout_s: float,
+    poll_s: float = 30.0,
+) -> None:
+    """用户长时间无任何语音输入 → 主动关房,给"永不退出的会话"加上限。
+
+    背景(2026-08-15 实测 64.90 租户线):安卓板以 ``#hold`` 身份进房后从不退出,
+    单会话挂 22.7h(pid 623645)占死 1/2 job slot + 610MB。``close_on_disconnect``
+    只认"参与者断开"这一个信号,参与者不断开则整条终止链一步都不会走;LiveKit 的
+    ``empty_timeout``/``departure_timeout`` 只对**空房**生效,房不空同样兜不住。
+
+    判据取"距上次用户语音",不取墙钟总时长——7 天 1143 个会话实测:有真实对话的
+    79 个中位仅 210s、p90 1530s、最长 13501s,而全程无用户语音的 1064 个里
+    21 个 >30min、4 个 >4h。按轮间静默判,真实对话每次开口都重置计时器,不误伤。
+
+    ⚠️ 不能改用"用户无已发布音轨"判:该板子**常态**就是 ``tracks=0``
+    (进房即取消发布麦克风轨),那个判据会在它每一个会话上立刻触发。
+
+    ⚠️ 关房后客户端若自动重连会新建房间(实测约 41s 后)。这是预期行为——目的是给
+    单会话时长设上限,不是阻止重连;它已有约 23 次/天的重连基数,本兜底按实测只多
+    约 3 次/天,换回约 57h/7d 的 slot 占用。
+
+    ⚠️ 音乐播放长时间无人说话也会被判空闲(音乐走 ``music_playback`` 独立路径,
+    不产生 ``user_input_transcribed``)。故默认关闭,只对已关音乐的租户线启用。
+    """
+    import time
+
+    while True:
+        await asyncio.sleep(poll_s)
+        idle = time.monotonic() - activity["ts"]
+        if idle < timeout_s:
+            continue
+        room = getattr(getattr(ctx, "room", None), "name", "?")
+        logger.warning(
+            "idle hangup: 用户 %.0fs 无语音输入(上限 %.0fs),关房 %s 回收 job slot",
+            idle,
+            timeout_s,
+            room,
+        )
+        try:
+            ctx.delete_room()
+        except Exception:
+            # 关房失败不重试:下一轮 poll 会再来一次;吞掉也不能静默——记账靠这行
+            logger.exception("idle hangup: delete_room 失败,下一轮重试")
+            continue
+        return
+
+
+def _register_idle_hangup(
+    session: Any, ctx: Any, timeout_s: float, *, poll_s: float = 30.0
+) -> asyncio.Task[None]:
+    """挂空闲关房:``user_input_transcribed`` 重置计时器,超限走 ctx.delete_room()。
+
+    关房机制沿用 ``_register_sentinel_hangup``:删房→参与者被踢→SDK 收到既有
+    ``disconnected`` 事件→job 走既有退出路径,前端零改动。
+
+    ``poll_s`` 可注入只为单测能在百毫秒内驱动循环——首版漏了它,单测拿默认 30s
+    轮询跑 0.2s 窗口,循环第一次 sleep 都没醒,"handler 重置计时器"那条断言恒绿
+    (注入真 bug 照样全过)。生产按默认值。
+    """
+    import time
+
+    activity = {"ts": time.monotonic()}
+
+    def _on_user_input(_ev: Any) -> None:
+        activity["ts"] = time.monotonic()
+
+    session.on("user_input_transcribed", _on_user_input)
+    logger.info("idle hangup armed: timeout=%.0fs", timeout_s)
+    return asyncio.create_task(
+        _idle_hangup_loop(ctx, activity, timeout_s=timeout_s, poll_s=poll_s)
+    )
+
+
 def _parse_myjavis_brain(raw: str) -> dict[str, str] | None:
     """解析 dispatch metadata 里的 MyJavis 共脑指引(A 方案,2026-07-16)。
 
@@ -85,6 +162,7 @@ class TierACascadeEngine(ExperienceEngine):
         self._session: object | None = None
         self._livekit_started = False
         self._rss_task: asyncio.Task[None] | None = None
+        self._idle_task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
         if not self._livekit_started:
@@ -109,6 +187,11 @@ class TierACascadeEngine(ExperienceEngine):
         if rss_task is not None:
             rss_task.cancel()
             self._rss_task = None
+        # 空闲关房任务同样回收(它自己关房那条路径 return 后已结束,此处覆盖正常断开分支)
+        idle_task = getattr(self, "_idle_task", None)
+        if idle_task is not None:
+            idle_task.cancel()
+            self._idle_task = None
         # 先取消音乐播放任务——否则播放任务(流一首 4 分钟的歌)不退出,同样导致
         # "entrypoint did not exit in time" → 房间删不干净 → 用户第二次进不去
         # (2026-07-04 川哥实测:播放音乐后断开,第二次连不上)。
@@ -487,6 +570,13 @@ class TierACascadeEngine(ExperienceEngine):
         _register_speaking(session, ctx)  # 说话状态 → SDK speaking 事件(9.2)
         if _sentinel:
             _register_sentinel_hangup(session, ctx, _sentinel_state)
+
+        # 空闲关房兜底(2026-08-15):给"参与者永不断开"的会话设时长上限,回收 job slot。
+        # IDLE_HANGUP_TIMEOUT_S=0(默认)不挂载,主链路与主 worker/Rust 线零影响;
+        # 只在 tenant-colleague.env 按租户开启(该线已关音乐,无长播放误判风险)。
+        _idle_timeout = float(os.environ.get("IDLE_HANGUP_TIMEOUT_S", "0") or 0)
+        if _idle_timeout > 0:
+            self._idle_task = _register_idle_hangup(session, ctx, _idle_timeout)
 
         # 假打断恢复渐起(POC 2026-07-29):resume 后音量 0→1 爬坡,消"声音突然冒回来"
         # 的断差感(0 字门两阶段打断的配套件)。⚠️ 必须在 session.start 之后挂——
