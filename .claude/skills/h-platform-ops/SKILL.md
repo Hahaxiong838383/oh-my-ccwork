@@ -6483,3 +6483,125 @@ ssh mini '/opt/homebrew/bin/limactl shell h-b2 -- bash -lc "export H_UNIT=h-mini
 `ops/deploy-sites.sh` 走 `git merge --ff-only`，脚本开头就写着「那天我 scp 过 ops
 文件把工作区弄脏，ff-only 直接失败」。改 ops/ 脚本的正道：提交推送 → 
 `SKIP_RESTART=1 ops/deploy-sites.sh dev198`（mini 另走 `deploy/lima/` 影子割接）。
+
+## 🔴 grok `config.toml` 重复表 = 整个 grok home 报废（2026-08-15 owner 事故）
+
+### 症状与严重性
+
+Bot 每条消息都回：
+
+```
+grok exit 1: Error: Failed to load config: TOML parse error at line NN, column N: duplicate key
+```
+
+**不是某个功能坏了**——grok 在这个 home 下**每次启动**都 exit 1，什么都干不了。
+owner 那次从 14:17 到 14:34 全线停摆。
+
+### 一条命令定位（全站普查，正则 + tomllib 双信号）
+
+TOML 不允许同一个 table 声明两次。`[[x]]`（array-of-table）重复是**合法**的，
+判据必须排除，否则会误杀 `[[marketplace.sources]]`：
+
+```bash
+ssh dev198 'python3 - "/home/chuan/.grok/config.toml" "/srv/h-platform/users/*/.grok/config.toml"' <<'PY'
+import glob, re, sys, tomllib
+HEAD = re.compile(r'^\s*\[([^\[\]].*?)\]\s*(?:#.*)?$')
+paths = [p for pat in sys.argv[1:] for p in sorted(glob.glob(pat))]
+if not paths: sys.exit("NO-FILES-MATCHED ← 通配没命中,本次不构成阴性结论")
+for p in paths:
+    text = open(p, encoding='utf8', errors='replace').read()
+    seen, dups = {}, []
+    for n, line in enumerate(text.splitlines(), 1):
+        m = HEAD.match(line)
+        if m:
+            name = m.group(1).strip()
+            dups.append((name, seen[name], n)) if name in seen else seen.setdefault(name, n)
+    try:
+        tomllib.loads(text); err = None
+    except Exception as e:
+        err = str(e)
+    print(('❌' if (dups or err) else '✅'), p)
+    for name, a, b in dups: print(f'     重复 [{name}] L{a} 又见 L{b}')
+    if err: print('     tomllib:', err)
+PY
+```
+
+两个信号**必须一致**；不一致说明判据有洞（正则报重复但 tomllib 能解析＝判据过宽，
+反之＝判据漏了某种形态），此时以 tomllib 为准，别据此改文件。
+
+### 根因：两个写入方对同一个 key 各写一份
+
+`lib/sandbox.mjs` 的 `ensureGrokEndpointModelConfig` 把上下文窗口写成
+`[model."<id>"]` 覆盖块，用哨兵注释框住：
+
+```
+# >>> h-platform managed: endpoint context window
+# <<< h-platform managed
+```
+
+它每次先按哨兵剜旧块再追加——**对它自己写的块完全幂等，但对哨兵外的同名段完全看不见**。
+
+2026-08-09 10:22 排查 `env_key` 鉴权序时手工往 owner `~/.grok/config.toml` 加了两段
+**无哨兵**的 `[model."grok-4.5"]` / `[model."grok-4.6"]`，10:32 把同一修复固化进代码
+（`e46f3cc`），**手工那份忘了撤**。
+
+**为什么潜伏 6 天**：调用点 `lib/grok-runner.mjs` 有门控 `if (xaiBaseUrl)`——owner 走官方
+订阅（device 模式）时压根不进这个函数。给 owner 绑上自定义端点后，第一个任务写下托管块
+就撞上了。**「一直没问题」不是证据，那段代码一次都没执行过。**
+
+修复已在 `38fada2`：追加托管块前剜掉哨兵外的同名段（托管块是平台对该模型的唯一真源），
+只删同名那个，用户为别的模型手写的段不碰。
+
+### 处置：别只剜今天撞上的那一段
+
+owner 那份 `[model."grok-4.5"]` 今天没炸**纯粹因为当时跑的是 4.6**，切回去是同一颗雷。
+清理时按「哨兵外的 model 段」整类剜，不按「今天报错那个」剜。
+
+改之前先备份、改之后必须能解析——`scratchpad` 里那版修复脚本的判据就是
+「tomllib 改完能解析才落盘」，否则不是修复，是换一种坏法。
+
+### ⚠️ `grok inspect` 不是合格 oracle
+
+`grok inspect`（"Show the configuration Grok discovers"）**对解析失败是宽容的**：
+坏配置照样 RC=0、照样不报错，只是静静少显示几行。拿它验「修好了」会得到假绿。
+
+矩阵实测（同一份坏样本）：
+
+| 命令 | 能否复现 `TOML parse error` |
+|---|---|
+| `grok models` | ✅ RC=1，报错与线上逐字相同 |
+| `grok mcp list` | ✅ 有报错（RC=0） |
+| `grok inspect` / `doctor` / `version` / `agent --help` | ❌ 全部静默通过 |
+
+**选 oracle 的判据是「它能不能复现你要修的那个报错」，不是「功能描述像不像」。**
+
+负向对照要指对配置目录：官方文档（`~/.grok/README.md` 环境变量表）写的是 **`GROK_HOME`**，
+不是 `HOME`——用错了负向对照不变红，而这有二义性（判据没区分力 / 注入没生效），
+先看报错里的 `file=` 字段自证注入打进去了，再谈区分力。
+
+### 配置文件位置（双站真值，别跨站复制）
+
+| 站点 | owner / 宿主 | 租户 |
+|---|---|---|
+| dev198 | `/home/chuan/.grok/config.toml` | `/srv/h-platform/users/<uid>/.grok/config.toml` |
+| Mini B2（Lima `h-b2`） | `/home/lima.guest/.grok/config.toml` | `/srv/h-platform/users/<uid>/.grok/config.toml` |
+
+另有 `/srv/h-platform/company-agent-home/.grok/config.toml`（公司 agent）。
+**owner 不在 `/srv/h-platform/users.json` 里**，普查通配别漏了它。
+
+### 写入器的日志在 runner-worker，不在 bridge.log
+
+`ensureGrokEndpointModelConfig` 由 `lib/grok-runner.mjs` 调用，跑在
+**`feishu-grok-runner-worker.service`**：
+
+```bash
+ssh dev198 'journalctl --user -u feishu-grok-runner-worker --since "7 days ago" --no-pager | grep "grok endpoint"'
+```
+
+在 `logs/bridge.log` 和 `feishu-grok-bridge` 的 journal 里**一条都搜不到**——
+2026-08-15 我先搜那两处得到零命中，差点判成「写入器根本没跑过」。
+查任何写入行为前先确认它属于哪个 unit。
+
+**归属靠时间戳对撞，不靠推测**：配置 mtime `14:17:58.121367588` 与写入日志同秒，
+最近的租户配置在 14 秒之后——据此排除了「跨租户串写」这个严重得多的假设。
+日志里 uid 一律显示 `[redacted]`，**认不出是谁**，所以别指望从日志判归属。
