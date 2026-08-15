@@ -58,9 +58,19 @@ jobs:
             "-Wl,-rpath,\$ORIGIN"
       - name: verify products (link inventory + exported symbols + glibc ceiling)
         run: |
-          echo "== c-api so links (must reference libonnxruntime.so.1.28.x):"
+          echo "== c-api so links (MS ORT SONAME is major-only 'libonnxruntime.so.1'):"
           ldd build/lib/libsherpa-onnx-c-api.so | grep -i onnx
-          ldd build/lib/libsherpa-onnx-c-api.so | grep -q "libonnxruntime.so.1.28"
+          # 判据按真实 SONAME 形态:DT_NEEDED=.so.1 且解析到我们下载的 ort128 目录
+          ldd build/lib/libsherpa-onnx-c-api.so | grep "libonnxruntime.so.1" | grep -q "ort128/lib"
+          echo "== runtime version proof (GetVersionString must say 1.28):"
+          cat > /tmp/ortver.c <<'EOF'
+          #include <stdio.h>
+          #include "onnxruntime_c_api.h"
+          int main(void) { printf("%s\n", OrtGetApiBase()->GetVersionString()); return 0; }
+          EOF
+          gcc -O0 -o /tmp/ortver /tmp/ortver.c -Iort128/include -Lort128/lib -lonnxruntime "-Wl,-rpath,$PWD/ort128/lib"
+          /tmp/ortver
+          /tmp/ortver | grep -q "^1\.28\."
           echo "== speaker embedding symbols exported (must be >0):"
           nm -D build/lib/libsherpa-onnx-c-api.so | grep -c SpeakerEmbeddingExtractor
           echo "== probe links:"
@@ -75,7 +85,9 @@ jobs:
         run: |
           mkdir -p out
           cp build/lib/libsherpa-onnx-c-api.so out/
-          cp ort128/lib/libonnxruntime.so.1.28.0 out/
+          # DT_NEEDED=libonnxruntime.so.1(major-only SONAME),zip 不保 symlink →
+          # 直接以运行时要找的名字放真身,落机免建链
+          cp -L ort128/lib/libonnxruntime.so.1 out/libonnxruntime.so.1
           cp spk_embed out/
           sha256sum out/* | tee out/SHA256SUMS
       - uses: actions/upload-artifact@v4
