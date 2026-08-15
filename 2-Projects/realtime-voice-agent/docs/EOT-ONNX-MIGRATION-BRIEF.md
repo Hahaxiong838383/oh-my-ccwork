@@ -73,8 +73,12 @@ if !active_frame && !self.eot_requested && gate.silence_dur_s() >= 0.2 {
 
 - **Pipecat 的用法**：VAD 判定说话结束后跑**一次** Smart Turn，决定是否真的 end-of-turn。
 - **我们的用法**：每个 200ms 停顿都跑一次，用概率决定走 MIN 还是 MAX endpointing delay。
-  （语义：概率 < `unlikely_threshold`（zh **0.3550**，env `POC_EOU_UNLIKELY_THRESHOLD`）
-  → 走 MAX；否则 MIN。概率含义是 P(complete)，**与 Smart Turn 输出方向一致**，这点是有利的。）
+  （语义：概率 < `unlikely_threshold` → 走 MAX；否则 MIN。
+  概率含义是 P(complete)，**与 Smart Turn 输出方向一致**，这点是有利的。）
+
+  🔴 **阈值真值是 `0.18`，不是代码默认的 `0.3550`。** 代码常量 `UNLIKELY_THRESHOLD_ZH=0.3550`
+  被 `/root/realtime-voice-agent/poc-eou.env` 里的 `POC_EOU_UNLIKELY_THRESHOLD=0.18` 覆盖了。
+  **别拿源码里的常量当运行时真值**——这个错我犯过一次，见下方基线数据。
 
 现在每次只喂 1.2s、模型极小，所以高频调用无所谓。换成 Smart Turn v3 后每次要做
 **800 帧 mel STFT + Whisper Tiny encoder，且在重叠音频上从头重算**。
@@ -151,7 +155,19 @@ if !active_frame && !self.eot_requested && gate.silence_dur_s() >= 0.2 {
 ## 八、成本与风险排序（已按 §四 重排）
 
 1. **最高**：在真实中文对话数据上重新标定阈值 + 重新验证 401ms 级判停与打断行为。
-   现有 0.3550 是旧模型专属常量，直接作废。
+   **现有生产阈值是 `0.18`**（不是源码常量 0.3550），是旧模型专属的标定值，换模型直接作废。
+
+   **旧模型的概率分布基线**（77 个样本，2026-08-15 08:59 起，`RUST_LOG` 含 `voice_rust_worker=debug`
+   才能看到这些 `eot prediction` 行）：
+
+   | 统计量 | 值 |
+   |---|---|
+   | min / p25 / 中位 / max | 0.085 / 0.400 / 0.613 / 0.813 |
+   | **低于 0.18（触发「再等等」）** | **6/77 = 7.8%** |
+   | 若用 0.3550 | 14/77 = 18.2% |
+
+   ⚠️ **拿 0.3550 当基线会把「再等等」的触发率高估 10.4 个百分点（两倍多）**，
+   新旧模型对照会整体错位。基线用 **0.18 / 7.8%**。
 2. **次高（原先低估了）**：控制策略抉择——保留「每停顿一次」还是改成「说话结束后一次」；
    以及音频缓冲从 1.2s 窗口改成全 turn ≤8s（内存增量小：128000×2B ≈ 256KB/job，
    6 路约 1.5MB，可忽略；**贵的是重复计算，不是存储**）。
