@@ -29,12 +29,18 @@
 **为什么必须**：ort rc.13 版本门只收 ORT ≥1.28（原型实测 `BadVersion` 拒载 venv 的 1.24.4），
 单 ORT 方案改「统一 1.28」形态；声纹侧 sherpa 必须换链 1.28 的构建。
 
-- [ ] S1：sherpa-onnx 源码构建链 ORT 1.28（master `cmake/onnxruntime.cmake` 已有 1.26+ 适配），
-      产出 `libsherpa-onnx-c-api.so` + 复用 MS 官方 `libonnxruntime.so.1.28.0`
-- [ ] S2：声纹回归——新 so 算 embedding 与 `registry.json` 旧向量（1.24.4 产）相似度对撞，
-      漂移超阈则全量重注册（注册人数少，成本低）
-- [ ] S3：失败回退线验证：静态 bundled 1.28 + sherpa 私有 1.24.4 并存（符号冲突实测）
-- [ ] S4：落地资产「一个目录」成型：rust 二进制 + libonnxruntime.so.1.28 + so×2 + onnx×3
+- [x] S1：✅ 2026-08-16 CI 源码构建过（workflow `sherpa-ort128`，sherpa v1.13.5 ×
+      MS ORT 1.28.0；官方预编译全部 ≤1.27.1 被版本门拒，SONAME 实证）。产物三证：
+      ldd 链 `.so.1` 解析 ort128、GetVersionString 运行时报 1.28.0、glibc ≤2.39。
+      ⚠️ MS ORT SONAME 是 major-only `libonnxruntime.so.1`（部署文件名照此）。
+- [x] S2：✅ 真实采集语音对撞（新构建 spk_embed vs venv 现役路径同 wav）：
+      **cos=1.000000，max_abs_diff=3.9e-6，norm 两侧同 12.7370** →
+      **registry.json 旧向量直接复用，无需重注册**（注：sherpa 1.13.3→1.13.5 与
+      ORT 1.24.4→1.28.0 双变量同验，结论对落地组合有效）。
+- [x] S3：跳过——主线通过回退线无需启用；验证方法在原型报告 §一 留案，需要时再验。
+- [x] S4：资产可用性已证（产物 sha256 见 CI run 31900716526 的 SHA256SUMS；
+      64.90 测试目录已删防分叉，重拉凭 artifact/重跑 workflow）。
+      真·「一个目录」组装归生产化移植阶段（原型报告 §六 工作量 4）。
 
 ## 排期建议（待川哥拍板后启动）
 
@@ -55,3 +61,6 @@
   events.jsonl 八事件链自洽（speech→224ms 静音触发→prob 0.517→437ms commit），
   wav 128000 样本尾 1.2s RMS 3593，弱标签脚本真数据跑通。**D2 数据积累已启动**：
   真实通话打 rust 线即自动攒（当前 1 个触发点），目标 ≥300 后进 D3。
+- 2026-08-16：前置② 完成——S1 CI 构建（判据曾套错 SONAME 形态红过一轮，MS ORT 是
+  major-only `.so.1`，已修）+ S2 对撞 cos=1.000000（registry 免重注册）+ S3 跳过 +
+  S4 资产已证。**两个上线前置只剩 D2 数据积累与 D3 标定**。
