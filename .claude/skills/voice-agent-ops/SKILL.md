@@ -284,7 +284,7 @@ ssh root@64.90.13.117 "sed -i 's/^VOLC_ASR_HOTWORDS=.*/VOLC_ASR_HOTWORDS=<新词
 
 ### TTS 切讯飞聆小璇(2026-08-14 上线,P003 读写台音色统一)
 
-**线上态**:二进制 md5 `9459301fb2bf0a31987a527bdda32328`(commit `e67912053`)、
+**线上态**:二进制 md5 `5e0e8a2cd1e87afe03f6286bdf87f1ae`(commit `d2339f969`,2026-08-15 预建连版)、
 `TTS_PROVIDER=xfyun`、`XFYUN_TTS_VCN=x6_lingxiaoxuan_pro`、
 `FILLER_DIR=/opt/voice-agent/fillers-colleague`。**STT 仍是火山**——判停 401ms 靠火山 ASR
 的 B5 伪 final,讯飞无此机制,**别顺手把 STT 一起换了**。
@@ -324,10 +324,24 @@ cancel 走**硬 abort**(`hard_abort_current`:abort turn + clear RTC buffer + 字
 ⚠️ 最后那个 `had_turn=false` 才是关键证据——它证明第一次 abort **真把 turn 干掉了**;
 只看 `cancelled=true` 证明不了副作用发生过。
 
-**TTS 脱敏指标**:日志行 `tts metrics`,含 `tts_connect_ms`/`tts_ttft_ms`/`audio_frames`/
-`audio_duration_ms`/`cancelled`。⚠️ **`buffered_audio_ms` 与 `underrun_count` 没有**——
-属播放侧(`playout.rs` 喂帧循环),TTS 模块看不到播放进度。**「长句无 underrun」当前无服务端判据**,
-别去 grep 那两个字段(全零命中)。字段名是 `tts_ttft_ms` 不是 ttfb(老行 `say synthesized ttfb_ms=` 同源仍在)。
+**指标两行,别在一行里找**(2026-08-15 补齐,此前「缺 2 项」的说法已失效):
+- 每**句** `tts metrics`:`tts_connect_ms`/`warm`/`warm_connect_ms`/`tts_ttft_ms`/
+  `audio_frames`/`audio_duration_ms`/`cancelled`。字段名是 `tts_ttft_ms` 不是 ttfb
+  (老行 `say synthesized ttfb_ms=` 同源仍在)。
+- 每**轮** `playout metrics`:`room`/`turn_id`/`underrun_count`/`underrun_ms`/
+  `buffered_audio_ms`/`played_frames`(turn 结束时出,**含被打断的轮**——挂在 Drop 上,
+  覆盖全部退出路径)。
+
+判读:
+- `underrun_count` 判的是**可听静音缺口**,不是「channel 空了」(讯飞 1.9 倍实时,正常长句本就会空)。
+  **暂停/打断造成的静音不计**。
+- `buffered_audio_ms` 是本轮**低水位**。正常 ≈200(RTC 队列背压上限)。
+  🔴 **`-1` = 没采到,不是 0**——缓冲没灌到 150ms 就不采(turn 开播时缓冲天然接近 0,
+  不设门则每轮都报 ~0)。承接音是**一整块 PCM**,只有一次 recv,所以只播了承接音就被打断的轮必是 `-1`。
+- `played_frames × 10ms` 应 ≈ 本轮各句 `audio_duration_ms` 之和,可交叉对账(实测 308 帧 vs 3080ms 精确吻合)。
+- 实测:8 句长回复 64 秒音频 → `underrun_count=0 buffered_audio_ms=199`,合约用例 10 服务端侧通过。
+- ⚠️ 计数分支**在生产上没被观测触发过**(因为没发生欠载)。同一次调用算出的
+  `buffered_audio_ms` 非 -1 就是它的非零锚——那段没跑的话该字段会是 -1。
 
 **打断修复现状(2026-08-14,⚠️ 已部署未验证)**:`tts_xfyun::send_or_abort` 每轮先查
 `ctl.aborted()` 再 `send_timeout`(200ms 只作**轮询间隔不作判定阈值**),撞打断即丢弃
@@ -335,7 +349,8 @@ cancel 走**硬 abort**(`hard_abort_current`:abort turn + clear RTC buffer + 字
 截至部署后首轮实测该行 **0 次**,即分支未被触发过。
 触发条件是**在合成进行中打断**(刚说完上一句、下一句正在合成的窗口),
 落在句子**播放**期间的打断走不到这里。**别拿"用户说顺畅了"当验收**,两者同形。
-遗留:字幕输出不流畅(句粒度,第二步的范围)。
+遗留:字幕输出不流畅(句粒度)。⚠️ 这条**不会被预建连改善**——字幕粒度由每句 TTS 返回的
+bytes 决定,预建连没动那个结构。要改得动字幕发布策略,是另一件事。
 
 **讯飞协议真值(2026-08-14 实测,勿凭文档臆断)**:
 - 端点 `wss://cbm01.cn-huabei-1.xf-yun.com/v1/private/mcd9m97e6`,
@@ -349,6 +364,37 @@ cancel 走**硬 abort**(`hard_abort_current`:abort turn + clear RTC buffer + 字
   worker 只能丢弃,停不了上游
 - 吐流速度 **1.9 倍实时**(火山 6.5 倍),长句裕度小,联调盯播放缓冲 underrun
 - ttfb:**含建连 527ms**(Rust 线实测) / **不含建连 248–275ms**。差值 ~267ms 是每句建连成本
+- **14 秒无上行即断**(`26005`),且**计时器从建连起算**(2026-08-15 实测:连上后干等 10s
+  再发首帧成功、15s 被关)。这是预建连可行的依据
+- **下行不带文本段标识**:`payload.audio.seq` 是**帧序号**(1..N 连续)、`id` 恒为 `"0"`。
+  故一条 WS 喂多段时**音频无法归属回句子**
+
+### 预建连流水线(2026-08-15 上线,替代「一条 WS 流式喂多段」的设想)
+
+**为什么不做流式喂多段**:它省的是句间建连,但代价是上面那条——音频归属不回句子。
+而 pipeline 靠 `synthesize` 每句返回的 bytes 建 `progress[(累计字,累计样本)]`,
+**字幕逐句推进**(`sentence_spans`)与**打断后历史截断**(`truncate_spoken`)全依赖它。
+那是拿两个行为资产换延迟。**改用预建连:每句仍独立会话,归属关系一字节没动。**
+
+**做法**:turn 一开始就起后台握手(与 LLM 请求并行);每句在合成的同时为下一句握好手。
+`WARM_MAX_AGE=12s < 协议 14s`,超龄丢弃重连(赌它还活着,输了是整句合成失败)。
+预建连失败降级为现连,**绝不能让预热失败变成合成失败**。
+
+**回滚**:`XFYUN_TTS_PRECONNECT=0` 写进 `rust-worker.env` + 重启,不用换二进制。
+
+**实测收益**(同一二进制翻开关的 A/B,开场白无承接音遮挡):
+开 **292ms**(296/295/286) vs 关 **544ms**(515/549/567) → **净省 ~250ms**。
+⚠️ **带承接音的轮里看不到**——端到端首声只从 782→765ms,因为首声是预生成 wav 挡着。
+验收看 `tts_ttft_ms`(272–338 vs 499–588),别只看首声。
+
+### ⚠️ 已知:连续快速提交后末轮无音频(2026-08-15,与预建连无关,已单独立项)
+
+相邻 `turn committed` 间隔 ~0.5s 时,**最后那轮 `played_frames=0`**,其 TTS 句子全
+`cancelled=true`,用户只听到承接音。7/7 复现。
+- **合成语音探针必现**(合成音停顿太干净,超 0.6s 判停阈值被切成多轮);
+  **真人未触发**——测试房间 24h 内 43 次提交,相邻 <1.5s 的为 0
+- 已排除预建连(同二进制翻开关 A/B 两模式一致);根因未查明,`hard_abort_current` 没打日志说明不是它
+- ⚠️ **拿合成音做自动化回归时会踩**,别误判成新引入的回归
 
 ## 租户 worker(BYOK 服务化,2026-07-28 起)
 
