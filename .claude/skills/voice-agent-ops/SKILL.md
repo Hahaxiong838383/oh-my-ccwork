@@ -313,6 +313,22 @@ systemctl stop voice-worker-rust && sleep 3 && systemctl start voice-worker-rust
 `grep -ac x6_lingxiaoxuan_pro <binary>` → 新版 1 / 老版 0;
 对照锚 `grep -ac openspeech.bytedance.com` 两版都是 3(火山 STT 两边都在)。
 
+**入站控制通道 cancel/ack(2026-08-15 上线,✅ 真机验过)**:topic `control`,reliable+ordered。
+设备发 `{trace_id,ts_ms,src:"android",type:"cancel",lane,seq,payload}`,worker 回 `cancel.ack`
+(`src:"worker"`,同 topic)。**只认 `src=android`——worker 自己的 ack 也走这个 topic,
+不挡掉会自己取消自己**(有单测钉住)。`(trace_id,seq)` 幂等,重复回 `already_done=true` 不报错。
+cancel 走**硬 abort**(`hard_abort_current`:abort turn + clear RTC buffer + 字幕按已播样本截断),
+不进 pause+假打断窗口。`wake`/`vad`/`command_word` 走**旁路只记日志,绝不改 turn 判定**。
+验收判据(探针 `/tmp/cancel_probe.py`):`control cancel ... cancelled=true already_done=false had_turn=true`
+→ 第二次同 trace+seq → `cancelled=false already_done=true **had_turn=false**`。
+⚠️ 最后那个 `had_turn=false` 才是关键证据——它证明第一次 abort **真把 turn 干掉了**;
+只看 `cancelled=true` 证明不了副作用发生过。
+
+**TTS 脱敏指标**:日志行 `tts metrics`,含 `tts_connect_ms`/`tts_ttft_ms`/`audio_frames`/
+`audio_duration_ms`/`cancelled`。⚠️ **`buffered_audio_ms` 与 `underrun_count` 没有**——
+属播放侧(`playout.rs` 喂帧循环),TTS 模块看不到播放进度。**「长句无 underrun」当前无服务端判据**,
+别去 grep 那两个字段(全零命中)。字段名是 `tts_ttft_ms` 不是 ttfb(老行 `say synthesized ttfb_ms=` 同源仍在)。
+
 **打断修复现状(2026-08-14,⚠️ 已部署未验证)**:`tts_xfyun::send_or_abort` 每轮先查
 `ctl.aborted()` 再 `send_timeout`(200ms 只作**轮询间隔不作判定阈值**),撞打断即丢弃
 剩余音频 + 关 WS。**判据是日志 `xfyun tts 中止本句,丢弃剩余音频` 出现过**——
