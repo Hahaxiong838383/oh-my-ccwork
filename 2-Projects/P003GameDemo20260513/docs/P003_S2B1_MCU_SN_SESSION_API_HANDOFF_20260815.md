@@ -26,7 +26,7 @@
 | 部署位置 | aliyun-hk `/opt/p003/server`（pm2 `p003-voice`，hono 路由 `/v1/device`） |
 | 代码仓 | `Hahaxiong838383/oh-my-ccwork` @ `main`，子目录 `2-Projects/P003GameDemo20260513` |
 | 新增/改动文件 | `apps/server/src/device-sn.ts`（新）· `apps/server/src/routes/device-session.ts`（新）· `apps/server/src/index.ts`（+2 行挂载）· `apps/server/scripts/device-session.test.ts`（新）· `apps/server/scripts/sign-device-credential.ts`（新） |
-| commit | 见本文件所在 commit（与代码同一提交） |
+| commit | `ecd0d7b5f`（代码）+ 本文档回填于其后一提交 |
 | 健康状态 | 公网 E2E 全过（2026-08-15）：401 探针 ✓ / 200+claims 十项 ✓ / prefetch ✓ / 老功能回归 `/admin/` `/api/*` `/v1/chat/completions` 均未受影响 |
 
 ## 2. 凭据文件（P0-A）——交付通道说明，先读
