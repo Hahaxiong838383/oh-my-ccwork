@@ -37,6 +37,16 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 3. **parent 改**:`cd apps/parent && npm run build`(base=/parent/ 已固化进 vite.config)→ `rsync -az --delete dist/ aliyun-hk:/opt/p003/parent/dist/`(--delete 清旧 hash chunk)。
 4. **web 改**(体验台/分流/admin 随 build):`cd apps/web && npm run build` → `rsync -az --delete dist/ aliyun-hk:/opt/p003/web/dist/`(--delete 清旧 chunk+SW;含 admin/,**注意会覆盖 admin/index.html=用工作区版本**,若工作区被污染先恢复)。
 
+## S2B1 设备 Session API（2026-08-15 上线,安卓/MCU 设备换 LiveKit token）
+
+- **端点**:`POST /v1/device/session` + `/session/prefetch`(Base=kidshub-ai.hahaxiong.cc;nginx `/v1/` 反代本就存在零改动)。
+- **文件**:`src/device-sn.ts`(SN 纯函数)/`src/routes/device-session.ts`/`scripts/device-session.test.ts`(16 项,`npx tsx` 直跑)/`scripts/sign-device-credential.ts`。
+- **env 键**(.env.local 尾部):`LIVEKIT_API_KEY=voicekey`/`LIVEKIT_API_SECRET`(源=47.239 /etc/livekit/config.yaml,管道直传别落盘)/`LIVEKIT_URL`/`DEVICE_SN_ALLOW`(白名单 fail-closed,逗号分隔)/`DEVICE_SESSION_TTL_S=3600`/`DEVICE_SESSION_RPM=10`。
+- **加新设备**:SN 追加进 `DEVICE_SN_ALLOW` → `pm2 restart p003-voice` → 服务器上签凭据:`set -a; . ./.env.local; set +a; npx tsx scripts/sign-device-credential.ts <SN> 30`(输出即凭据,管道接走禁回显/进 git)。
+- **pm2 env 事实**:p003-voice 启动参数是 `tsx --env-file=.env.local` → **restart 即重读 env 文件**,老「pm2 env 快照」坑不适用此形态(快照坑只咬 `pm2 start` 时从 shell 继承 env 的进程)。
+- **改动后必跑**:`npx tsx scripts/device-session.test.ts`(16/16)+ 灰度先行(`PORT=3005` 同 env 起 staging 打 E2E 再动生产——川哥 2026-08-15 门禁铁律)+ 公网 claims 校验(解 token 对 sub/room/agents/exp)。
+- **回滚**:`/root/p003-server-src-bak-20260815-pre-device-session.tgz` + 删 .env.local 尾部 S2B1 段 7 行 → restart → `/v1/device/session` 应回 404。
+
 ## 邀请码运营（三端身份锚点）
 
 - **邀请码 `KH-XXXX` = accountId 锚点**,家长端/体验台/admin 三端登录同一码进同一账号。
