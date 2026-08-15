@@ -55,8 +55,30 @@ pub struct PipelineConfig {
     pub aec_warmup_duration: Duration,
     pub tts_min_sentence_len: usize,
     pub greeting_text: String,
+    /// 连接后是否自动播固定开场白。P003 安卓 demo 要求关掉(2026-08-15 联调)。
+    /// 默认 true —— 其余环境行为不变。
+    pub greeting_enabled: bool,
     pub vad_model_path: String,
     pub hotwords: HashSet<String>,
+}
+
+/// 是否播开场白。抽成函数是为了让**生产用的那条判据**能被单测直接调用——
+/// 在测试里重写一遍条件等于没测它。
+fn should_greet(enabled: bool, text: &str) -> bool {
+    enabled && !text.trim().is_empty()
+}
+
+/// 布尔型 env 解析。**非法值回退默认值而不是 panic**:开场白开关误配
+/// 不该让整个 worker 起不来——它是体验开关,不是安全开关。
+fn parse_flag(raw: Option<&str>, default: bool) -> bool {
+    match raw.map(|v| v.trim().to_ascii_lowercase()) {
+        Some(v) => match v.as_str() {
+            "1" | "true" | "yes" | "on" => true,
+            "0" | "false" | "no" | "off" => false,
+            _ => default, // 含空字符串
+        },
+        None => default,
+    }
 }
 
 impl PipelineConfig {
@@ -82,6 +104,10 @@ impl PipelineConfig {
                 .unwrap_or(6),
             greeting_text: std::env::var("AGENT_GREETING")
                 .unwrap_or_else(|_| "你好，我在。你可以直接打断我。".into()),
+            greeting_enabled: parse_flag(
+                std::env::var("AGENT_GREETING_ENABLED").ok().as_deref(),
+                true,
+            ),
             vad_model_path: std::env::var("VAD_MODEL_PATH").unwrap_or_else(|_| {
                 format!("{}/assets/silero_vad.onnx", env!("CARGO_MANIFEST_DIR"))
             }),
@@ -302,8 +328,21 @@ pub async fn run_pipeline(
     let mut commit_tick = tokio::time::interval(Duration::from_millis(50));
 
     // greeting(session.say 语义:入历史、可被打断、走同一播放机)
+    // 门禁(P003 安卓联调 2026-08-15):AGENT_GREETING_ENABLED=0 关闭;文本为空同样不播,
+    // 对齐 Python 侧「AGENT_GREETING 为空即静默」的既有约定(tier_a_cascade 的 elif 落空)。
+    // 关闭路径**不建 Say turn** —— 不碰 TTS、不产 PCM、不写历史、不发字幕,停在 Listening。
+    // 日志只记两个布尔,不带开场白文本(联调日志会外发)。
     let greeting = orch.cfg.greeting_text.clone();
-    orch.start_turn(TurnKind::Say(greeting));
+    if should_greet(orch.cfg.greeting_enabled, &greeting) {
+        orch.start_turn(TurnKind::Say(greeting));
+    } else {
+        info!(
+            room = %room_name,
+            enabled = orch.cfg.greeting_enabled,
+            text_empty = greeting.trim().is_empty(),
+            "开场白已关闭,保持 Listening"
+        );
+    }
 
     // 输入水位观测(2026-08-12 聋窗排查加装):每 10s 一行 frames+均幅。聋时一眼分层——
     // frames=0=源侧断流(mute/息屏);frames 正常 amp≈0=送的是静音;都正常=下游(火山)问题。
@@ -1037,6 +1076,73 @@ fn truncate_spoken(synth: &str, progress: &[(usize, u64)], played_samples: u64) 
         break;
     }
     chars.into_iter().take(prev_chars).collect()
+}
+
+#[cfg(test)]
+mod greeting_gate_tests {
+    use super::{parse_flag, should_greet};
+
+    // --- 开关解析(codex 联调规格 §4.1 逐行对应) -------------------------------
+
+    #[test]
+    fn unset_defaults_to_enabled() {
+        // 未设置 → true。这条守的是「不影响其他既有环境」的兼容承诺。
+        assert!(parse_flag(None, true));
+    }
+
+    #[test]
+    fn truthy_values_enable() {
+        for v in ["1", "true", "yes", "on", "TRUE", "On", " yes "] {
+            assert!(parse_flag(Some(v), false), "{v:?} 应解析为开启");
+        }
+    }
+
+    #[test]
+    fn falsy_values_disable() {
+        for v in ["0", "false", "no", "off", "FALSE", "Off", " 0 "] {
+            assert!(!parse_flag(Some(v), true), "{v:?} 应解析为关闭");
+        }
+    }
+
+    #[test]
+    fn invalid_value_falls_back_to_default_without_panic() {
+        // 非法值不 panic,回退默认——且要证明「回退」是真的跟随 default,
+        // 不是碰巧返回了固定值:同一个非法输入,两个 default 必须给出两个结果。
+        assert!(parse_flag(Some("maybe"), true));
+        assert!(!parse_flag(Some("maybe"), false));
+        assert!(parse_flag(Some(""), true));
+        assert!(!parse_flag(Some(""), false));
+    }
+
+    // --- 门禁判据(测的是生产那条 should_greet,不是测试里重写的条件) -----------
+
+    #[test]
+    fn enabled_with_text_greets() {
+        // 正例锚:没有它,下面三条「不播」全绿也可能只是函数恒假。
+        assert!(should_greet(true, "你好，我在。"));
+    }
+
+    #[test]
+    fn disabled_with_nonempty_text_does_not_greet() {
+        assert!(!should_greet(false, "你好，我在。"));
+    }
+
+    #[test]
+    fn enabled_with_empty_text_does_not_greet() {
+        // 对齐 Python 侧「AGENT_GREETING 为空即静默」的既有约定。
+        assert!(!should_greet(true, ""));
+    }
+
+    #[test]
+    fn enabled_with_whitespace_only_text_does_not_greet() {
+        // 全空白等价于空:否则会拿空白串去合成,产出一段无声 PCM。
+        assert!(!should_greet(true, "  \n\t "));
+    }
+
+    #[test]
+    fn disabled_and_empty_does_not_greet() {
+        assert!(!should_greet(false, ""));
+    }
 }
 
 #[cfg(test)]
