@@ -12,6 +12,7 @@ import { memoryRoute } from './routes/memory.js';
 import { adminDataRoute } from './routes/admin-data.js';
 import { customLlmRoute } from './routes/custom-llm.js';
 import { rtcRoute } from './routes/rtc.js';
+import { deviceSessionRoute } from './routes/device-session.js';
 import { devItemsRoute } from './routes/dev-items.js';
 import { themesRoute } from './routes/themes.js';
 import { checkAndCount, getClientIp } from './guard.js';
@@ -32,6 +33,8 @@ app.route('/api/admin', adminDataRoute);
 app.route('/api/rtc', rtcRoute);
 app.route('/api/dev-items', devItemsRoute);
 app.route('/api/feedback-themes', themesRoute);
+// P003 S2-B1 设备 Session API（安卓/MCU 设备换 LiveKit token；docs/CC_S2B1_MCU_SN_TOKEN_SESSION_API_PROMPT_20260815）。
+app.route('/v1/device', deviceSessionRoute);
 // 火山 RTC 实时对话 CustomLLM 回调端点（docs/34 D 方案）：OpenAI 兼容 /v1/chat/completions（SSE）。
 app.route('/v1', customLlmRoute);
 
