@@ -7,6 +7,7 @@ mod config;
 mod contract;
 mod control;
 mod eot;
+mod eot_snapshot;
 mod filler;
 mod job;
 mod llm;
