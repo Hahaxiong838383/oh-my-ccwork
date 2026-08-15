@@ -284,7 +284,7 @@ ssh root@64.90.13.117 "sed -i 's/^VOLC_ASR_HOTWORDS=.*/VOLC_ASR_HOTWORDS=<新词
 
 ### TTS 切讯飞聆小璇(2026-08-14 上线,P003 读写台音色统一)
 
-**线上态**:二进制 md5 `55eb8a5d77314d630a3eee214bd83699`(commit `a6976cfe6`,2026-08-15 capture 重试版)、
+**线上态**:二进制 md5 `78b07bf5d245bb4a155c0469d90911cc`(commit `b7331da8b`,2026-08-15 含 first_underrun_ms)、
 `TTS_PROVIDER=xfyun`、`XFYUN_TTS_VCN=x6_lingxiaoxuan_pro`、
 `FILLER_DIR=/opt/voice-agent/fillers-colleague`。**STT 仍是火山**——判停 401ms 靠火山 ASR
 的 B5 伪 final,讯飞无此机制,**别顺手把 STT 一起换了**。
@@ -346,6 +346,17 @@ cancel 走**硬 abort**(`hard_abort_current`:abort turn + clear RTC buffer + 字
   **讯飞 1.9 倍实时的吐流裕度是真实风险,不是纸面推算**——长句 + 网络抖动会咬到。
   该欠载**不是 capture 重试造成的**:同一轮里另两个 turn 同样触发了重试而欠载为 0(内部对照)。
 - 计数分支已在生产真实触发过一次,**判据不是恒绿**。
+- 新增 `first_underrun_ms`(首次欠载距**开播**多少 ms,`-1`=本轮没欠载):
+  靠近 0 = 起播缓冲薄(该预缓冲/让 TTS 更早起跑);明显靠后 = 上游中途掉链子(该并行合成下一句)。
+  **没这个数,选哪个优化方案都是猜。**
+- 🔴 **只信 `job closed` 之前出的那些行**:turn 的播放任务可能在 job 关闭后还活着(见下条未结),
+  它之后出的指标测的是「没人在听」那段。实测 9 行里 8 行通话中全 0 欠载、低水位 197–209,
+  唯一一行 `underrun_count=2 underrun_ms=39890` 正是 job 关闭 **45 秒后**才出的。
+  不加这条过滤会去追一个不存在的缓冲问题。
+- ❌ **别去调厚 32 槽 channel**:实测每槽 181ms(129 样本)、32 槽 ≈ **5.8 秒**容量,
+  而 underrun 的定义就是「播放循环在 recv 上等住了」= **channel 当时是空的**,
+  容量只在满时起作用。往空 channel 加槽位零收益。真要动只有三条路:
+  加大 RTC 队列(打断变钝)/ 预缓冲再起播(首声加延迟,与刚省的 250ms 反向)/ 并行合成下一句(动 progress 记账=行为资产)。
 
 **打断修复现状(2026-08-14,⚠️ 已部署未验证)**:`tts_xfyun::send_or_abort` 每轮先查
 `ctl.aborted()` 再 `send_timeout`(200ms 只作**轮询间隔不作判定阈值**),撞打断即丢弃
