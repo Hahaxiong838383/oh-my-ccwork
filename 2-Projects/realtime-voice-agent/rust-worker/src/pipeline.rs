@@ -846,7 +846,8 @@ impl Orchestrator {
         self.tr_started = 0;
         self.tr_finaled = 0;
         let (pcm_tx, pcm_rx) = mpsc::channel::<Vec<u8>>(32);
-        let (playout_task, ctl) = playout::spawn_playout(self.source.clone(), pcm_rx);
+        let (playout_task, ctl) =
+            playout::spawn_playout(self.source.clone(), pcm_rx, self.room_name.clone(), id);
         let synth_text = Arc::new(StdMutex::new(String::new()));
         let progress = Arc::new(StdMutex::new(Vec::new()));
 
