@@ -13,18 +13,30 @@
 //! **一条 WS = 一次合成任务;但一次任务内可以流式喂入多段文本。**
 //!
 //! - 任务结束(收到 `audio.status==2`)后,同连接再开新任务 → `26016 intput channel is
-//!   closed`。故**本模块当前不做连接池、也没有 prewarm**(每句一条 WS,建连约 267ms)。
+//!   closed`。故**用过的连接不可复用,没有进程级池**。
 //! - ⚠️ **但这不等于"协议不支持复用"**。`payload.text.status` 支持 0/1/2,
 //!   实测 `0→2` 与 `0→1→2` 分段流式喂文本**均成功**。我最初只试了 `status=2`
 //!   (=告诉服务端"文本到此为止",输入通道随即关闭——错误消息字面就在说这件事),
 //!   却把结论写成了"协议不支持复用",判据作用域过宽。
 //! - 硬约束是 **14 秒无上行数据**(实测:间隔 3/8/11s 均成功,15s 报
 //!   `26005 No active up data within 14000 ms`)。文档写的 10s 与"前 20 字需 25 字/秒"
-//!   均**非硬约束**——实测 2 字/秒照样跑通。
+//!   均**非硬约束**——实测 2 字/秒照样跑通。**计时器从建连起算**(2026-08-15 实测),
+//!   这正是预建连(`Warm`)可行的依据。
 //! - **无取消/中止指令**(官方文档确认)。整句一次性发出后服务端一定吐完,
 //!   打断时 worker 只能丢弃,停不了上游 → 见 `send_or_abort`。
 //!
-//! 首包:**含建连 527ms**(Rust 线生产实测) / **不含建连 248–275ms**。
+//! ## 为什么最终没做「一条 WS 流式喂多段」(2026-08-15 实测否掉)
+//!
+//! 该设想的目的是省掉句间建连。但实测下行 `payload.audio.seq` 是**帧序号**
+//! (1..52 连续递增)、`id` 恒为 `"0"`,**不带任何文本段标识**——一条 WS 喂多段时,
+//! 音频无法归属回是哪一句。而 `pipeline` 靠 `synthesize` 每句返回的 bytes 建
+//! `progress[(累计字, 累计样本)]`,**字幕逐句推进**与**打断后历史截断**全依赖它。
+//! 换言之那个设想会拿两个行为资产去换延迟。
+//!
+//! 改用 `Warm` 预建连:每句仍是独立会话(归属关系一字节未动),
+//! 建连挪到上一句合成期间的后台完成,省下的时间一样。
+//!
+//! 首包:**含建连 515–562ms**(Rust 线生产实测) / **不含建连 248–275ms**。
 //! 对照火山 Rust 线生产 400–550ms(带池)。
 
 use std::time::Duration;
@@ -192,9 +204,71 @@ fn parse_frame(raw: &str) -> Downlink {
     }
 }
 
-/// 与 `tts_volc::prewarm_pool` 同名占位:讯飞不可复用连接,预热无意义。
-/// 保留空实现是为了让 provider 分发层形状一致,调用方无需分支。
+/// 与 `tts_volc::prewarm_pool` 同名占位:讯飞连接不可跨任务复用,进程级池无意义。
+/// (**turn 内的预建连是另一回事**,见 `Warm`——那是提前握手,不是复用已用过的连接。)
 pub async fn prewarm_pool(_cfg: &XfyunTtsConfig) {}
+
+type Ws = tokio_tungstenite::WebSocketStream<
+    tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+>;
+
+/// 预建连的安全窗。14s 是硬上限,留 2s 余量。
+/// 超龄直接丢弃重连,不赌它还活着——赌输的表现是**整句合成失败**,
+/// 代价远大于一次 267ms 建连。
+const WARM_MAX_AGE: Duration = Duration::from_secs(12);
+
+/// 已完成握手、**一个字都还没发**的连接。
+///
+/// 为什么可以这么做:2026-08-15 实测(同轮跑了正反双锚)——
+/// 建连后干等 **10s** 再发首帧成功,干等 **15s** 被服务端关闭。
+/// 即 `26005 No active up data within 14000 ms` 的计时器**从建连起算**,
+/// 不是从首帧起算。故取用前必须查龄期,见 `WARM_MAX_AGE`。
+///
+/// 为什么不是「一个 turn 一条 WS 流式喂多段」(原第二步设想):
+/// 实测下行 `payload.audio.seq` 是**帧序号**(1..52 连续)、`id` 恒为 "0",
+/// **不带文本段标识**。而 pipeline 靠 `synthesize` 每句返回的 bytes 建
+/// `progress[(累计字, 累计样本)]`,字幕逐句推进与打断后历史截断都依赖它。
+/// 一条 WS 喂多段 = 这两个行为资产失去依据。预建连拿到同样的省时,
+/// 且**每句仍是独立会话**,归属关系一个字节都没动。
+pub struct Warm {
+    ws: Ws,
+    opened: std::time::Instant,
+    connect_ms: u64,
+}
+
+impl Warm {
+    fn fresh(&self) -> bool {
+        warm_is_fresh(self.opened.elapsed())
+    }
+}
+
+/// 龄期判定抽成纯函数,好让「安全窗必须真的小于协议上限」这条能被单测钉住。
+fn warm_is_fresh(age: Duration) -> bool {
+    age < WARM_MAX_AGE
+}
+
+/// 服务端实测的硬上限:建连后 14 秒无上行数据即被关闭(`26005`)。
+/// 仅供单测对账 `WARM_MAX_AGE`,运行期不读。
+#[cfg(test)]
+const PROTOCOL_IDLE_LIMIT: Duration = Duration::from_secs(14);
+
+/// 只握手,不发文本。给 turn 开始时/上一句合成期间的后台预建连用。
+pub async fn connect_warm(cfg: &XfyunTtsConfig) -> Result<Warm> {
+    let missing = cfg.missing_keys();
+    if !missing.is_empty() {
+        bail!("xfyun TTS 凭据缺失 {missing:?}");
+    }
+    let t0 = std::time::Instant::now();
+    let url = build_auth_url(&cfg.api_key, &cfg.api_secret, TTS_URL, &rfc1123_now())?;
+    let (ws, _) = tokio::time::timeout(
+        CONNECT_TIMEOUT,
+        tokio_tungstenite::connect_async(url.into_client_request()?),
+    )
+    .await
+    .context("xfyun tts 预建连超时")?
+    .context("xfyun tts 预建连(检查 api_key/api_secret)")?;
+    Ok(Warm { ws, opened: t0, connect_ms: t0.elapsed().as_millis() as u64 })
+}
 
 /// 打断时把音频交给下游:**不能裸 `send().await`**。
 ///
@@ -228,12 +302,17 @@ async fn send_or_abort(
 }
 
 /// 合成一句:PCM(24k i16le bytes)分块经 `audio_tx` 发出。返回 (ttfb_ms, total_bytes)。
-/// 每句独立 WS 会话——见模块头,不要给它加池。
+/// 每句独立 WS 会话——见 `Warm` 的说明,预建连不改变这一点。
+///
+/// `warm` = 上一句合成期间后台建好的连接。给了就直接用(建连不在关键路径上),
+/// 没给或已超龄就现连。**首包口径随之改变**:用了预建连时 `tts_ttft_ms`
+/// 从发文本起算、`tts_connect_ms=0`,日志里 `warm=true` 标明,别把两种口径混着比。
 pub async fn synthesize(
     cfg: &XfyunTtsConfig,
     text: &str,
     audio_tx: &mpsc::Sender<Vec<u8>>,
     ctl: &PlayoutControl,
+    warm: Option<Warm>,
 ) -> Result<(u64, usize)> {
     info!("tts synth: {text}"); // 证据日志,与 volc 线同措辞(运维按同一关键词捞两条线)
     let missing = cfg.missing_keys();
@@ -241,16 +320,27 @@ pub async fn synthesize(
         bail!("xfyun TTS 凭据缺失 {missing:?}");
     }
 
+    // 超龄的预建连直接丢:14s 窗口从建连起算,过期后发文本会撞 26005 整句失败
+    let usable = warm.filter(Warm::fresh);
+    // 预建连自己花掉的握手时间:不在关键路径上,但要能对账「预热是不是真生效了」
+    let warm_connect_ms = usable.as_ref().map(|w| w.connect_ms).unwrap_or(0);
+    let used_warm = usable.is_some();
     let t0 = std::time::Instant::now();
-    let url = build_auth_url(&cfg.api_key, &cfg.api_secret, TTS_URL, &rfc1123_now())?;
-    let (mut ws, _) = tokio::time::timeout(
-        CONNECT_TIMEOUT,
-        tokio_tungstenite::connect_async(url.into_client_request()?),
-    )
-    .await
-    .context("xfyun tts connect timeout")?
-    .context("xfyun tts connect(检查 api_key/api_secret)")?;
-    let connect_ms = t0.elapsed().as_millis() as u64;
+    let (mut ws, connect_ms) = match usable {
+        Some(w) => (w.ws, 0),
+        None => {
+            let url = build_auth_url(&cfg.api_key, &cfg.api_secret, TTS_URL, &rfc1123_now())?;
+            let (ws, _) = tokio::time::timeout(
+                CONNECT_TIMEOUT,
+                tokio_tungstenite::connect_async(url.into_client_request()?),
+            )
+            .await
+            .context("xfyun tts connect timeout")?
+            .context("xfyun tts connect(检查 api_key/api_secret)")?;
+            let ms = t0.elapsed().as_millis() as u64;
+            (ws, ms)
+        }
+    };
 
     ws.send(WsMessage::Text(build_request(cfg, text).to_string().into())).await?;
 
@@ -282,7 +372,8 @@ pub async fn synthesize(
                     info!(reason = why, sent_bytes = total, "xfyun tts 中止本句,丢弃剩余音频");
                     cancelled = true;
                     let _ = ws.close(None).await;
-                    emit_metrics(connect_ms, ttfb_ms, frames, total, cancelled);
+                    emit_metrics(M { connect_ms, warm_connect_ms, used_warm, ttfb: ttfb_ms,
+                                     frames, bytes: total, cancelled });
                     return Ok((ttfb_ms.unwrap_or(0), total));
                 }
                 if last {
@@ -297,23 +388,39 @@ pub async fn synthesize(
         }
     }
     let _ = ws.close(None).await;
-    emit_metrics(connect_ms, ttfb_ms, frames, total, cancelled);
+    emit_metrics(M { connect_ms, warm_connect_ms, used_warm, ttfb: ttfb_ms,
+                     frames, bytes: total, cancelled });
     Ok((ttfb_ms.unwrap_or(0), total))
 }
 
 /// 脱敏遥测(Android 联调按此对账)。**绝不记**签名 URL / Authorization /
 /// APPID / APIKey / APISecret / 音频正文 / 用户原文。
 ///
-/// ⚠️ 七项指标里这里只出五项:`buffered_audio_ms` 与 `underrun_count` 属**播放侧**
-/// (`playout.rs` 的 RTC 喂帧循环),TTS 模块看不到播放进度,不能在这里编。
-fn emit_metrics(connect_ms: u64, ttfb: Option<u64>, frames: usize, bytes: usize, cancelled: bool) {
+/// ⚠️ `buffered_audio_ms` 与 `underrun_count` **不在这里**——它们属播放侧,
+/// 由 `playout.rs` 的 `BufferWatch` 每 turn 出一行 `playout metrics`。
+/// TTS 模块看不到播放进度,不在这儿编一个假的。
+struct M {
+    connect_ms: u64,
+    warm_connect_ms: u64,
+    used_warm: bool,
+    ttfb: Option<u64>,
+    frames: usize,
+    bytes: usize,
+    cancelled: bool,
+}
+
+fn emit_metrics(m: M) {
     info!(
-        tts_connect_ms = connect_ms,
-        tts_ttft_ms = ttfb.unwrap_or(0),
-        audio_frames = frames,
+        tts_connect_ms = m.connect_ms,
+        // warm=true 时 tts_connect_ms=0 且 tts_ttft_ms 从发文本起算,
+        // 与 warm=false 的口径不同,对账时别混着比
+        warm = m.used_warm,
+        warm_connect_ms = m.warm_connect_ms,
+        tts_ttft_ms = m.ttfb.unwrap_or(0),
+        audio_frames = m.frames,
         // 24kHz PCM16 单声道:1ms = 48 bytes
-        audio_duration_ms = (bytes / 48) as u64,
-        cancelled,
+        audio_duration_ms = (m.bytes / 48) as u64,
+        cancelled = m.cancelled,
         "tts metrics"
     );
 }
@@ -455,6 +562,28 @@ mod tests {
         let (sent, got) = tokio::join!(send_or_abort(&tx, vec![7u8; 8], &ctl), drain);
         assert_eq!(sent, Ok(()), "未打断时必须正常送达");
         assert!(got.is_some());
+    }
+
+    #[test]
+    fn warm_max_age_must_stay_under_protocol_idle_limit() {
+        // 这条是防腐:14s 是服务端实测的硬上限(建连后无上行即 26005)。
+        // 谁要是把 WARM_MAX_AGE 调到 >=14s,预建连就会在取用时刚好撞上关闭,
+        // 表现是**整句合成失败**而不是慢一点——必须在这里先红。
+        assert!(
+            WARM_MAX_AGE < PROTOCOL_IDLE_LIMIT,
+            "预建连安全窗 {WARM_MAX_AGE:?} 必须小于协议上限 {PROTOCOL_IDLE_LIMIT:?}"
+        );
+        // 也别留太少余量,否则预建连基本每次都被判超龄=白建
+        assert!(WARM_MAX_AGE >= Duration::from_secs(8), "余量留太多就等于没预热");
+    }
+
+    #[test]
+    fn stale_warm_is_rejected_fresh_one_kept() {
+        assert!(warm_is_fresh(Duration::from_secs(0)), "刚建的必须可用");
+        assert!(warm_is_fresh(WARM_MAX_AGE - Duration::from_millis(1)));
+        // 反向锚:到点必须判死,否则上面几条恒绿
+        assert!(!warm_is_fresh(WARM_MAX_AGE), "到龄必须丢弃");
+        assert!(!warm_is_fresh(PROTOCOL_IDLE_LIMIT), "超协议上限更要丢弃");
     }
 
     #[test]

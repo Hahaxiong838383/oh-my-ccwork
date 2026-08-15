@@ -880,6 +880,10 @@ impl Orchestrator {
         // 合成侧要能看见打断信号(讯飞在 pause 期间不能裸 send,见 tts_xfyun::send_or_abort);
         // ctl 本体后面还要交给 AgentTurn,这里克隆一份进 task。
         let ctl_tts = ctl.clone();
+        // turn 一开始就起预建连流水线:它与下面的 LLM 请求并行跑,
+        // 等第一句文本出来时握手早已完成 → 首句省掉 ~220ms 建连。
+        // (火山线返回关闭态,行为不变)
+        let mut warm = tts_cfg.start_prewarm();
 
         let task = tokio::spawn(async move {
             let publish = |v: Value| {
@@ -909,7 +913,7 @@ impl Orchestrator {
             };
             match kind {
                 TurnKind::Say(text) => {
-                    match tts_cfg.synthesize(&text, &pcm_tx, &ctl_tts).await {
+                    match tts_cfg.synthesize(&text, &pcm_tx, &ctl_tts, &mut warm).await {
                         Ok((ttfb, bytes)) => {
                             info!(room = %room_name, ttfb_ms = ttfb, bytes, "say synthesized");
                             publish(json!({"k": "tts", "ttfb_ms": ttfb}));
@@ -961,7 +965,7 @@ impl Orchestrator {
                     let mut seg = Segmenter::new(min_len);
                     while let Some(delta) = delta_rx.recv().await {
                         for sentence in seg.feed(&delta) {
-                            match tts_cfg.synthesize(&sentence, &pcm_tx, &ctl_tts).await {
+                            match tts_cfg.synthesize(&sentence, &pcm_tx, &ctl_tts, &mut warm).await {
                                 Ok((ttfb, bytes)) => {
                                     publish(json!({"k": "tts", "ttfb_ms": ttfb}));
                                     track(&sentence, bytes);
@@ -973,7 +977,7 @@ impl Orchestrator {
                         }
                     }
                     if let Some(tail) = seg.flush() {
-                        match tts_cfg.synthesize(&tail, &pcm_tx, &ctl_tts).await {
+                        match tts_cfg.synthesize(&tail, &pcm_tx, &ctl_tts, &mut warm).await {
                             Ok((ttfb, bytes)) => {
                                 publish(json!({"k": "tts", "ttfb_ms": ttfb}));
                                 track(&tail, bytes);
