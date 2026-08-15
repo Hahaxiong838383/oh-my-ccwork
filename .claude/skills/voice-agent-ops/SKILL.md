@@ -284,7 +284,7 @@ ssh root@64.90.13.117 "sed -i 's/^VOLC_ASR_HOTWORDS=.*/VOLC_ASR_HOTWORDS=<新词
 
 ### TTS 切讯飞聆小璇(2026-08-14 上线,P003 读写台音色统一)
 
-**线上态**:二进制 md5 `5e0e8a2cd1e87afe03f6286bdf87f1ae`(commit `d2339f969`,2026-08-15 预建连版)、
+**线上态**:二进制 md5 `55eb8a5d77314d630a3eee214bd83699`(commit `a6976cfe6`,2026-08-15 capture 重试版)、
 `TTS_PROVIDER=xfyun`、`XFYUN_TTS_VCN=x6_lingxiaoxuan_pro`、
 `FILLER_DIR=/opt/voice-agent/fillers-colleague`。**STT 仍是火山**——判停 401ms 靠火山 ASR
 的 B5 伪 final,讯飞无此机制,**别顺手把 STT 一起换了**。
@@ -387,14 +387,41 @@ bytes 决定,预建连没动那个结构。要改得动字幕发布策略,是另
 ⚠️ **带承接音的轮里看不到**——端到端首声只从 782→765ms,因为首声是预生成 wav 挡着。
 验收看 `tts_ttft_ms`(272–338 vs 499–588),别只看首声。
 
-### ⚠️ 已知:连续快速提交后末轮无音频(2026-08-15,与预建连无关,已单独立项)
+### 🔴 打断后 AI 彻底不出声(2026-08-15 定位并修复,md5 `55eb8a5d…`)
 
-相邻 `turn committed` 间隔 ~0.5s 时,**最后那轮 `played_frames=0`**,其 TTS 句子全
-`cancelled=true`,用户只听到承接音。7/7 复现。
-- **合成语音探针必现**(合成音停顿太干净,超 0.6s 判停阈值被切成多轮);
-  **真人未触发**——测试房间 24h 内 43 次提交,相邻 <1.5s 的为 0
-- 已排除预建连(同二进制翻开关 A/B 两模式一致);根因未查明,`hard_abort_current` 没打日志说明不是它
-- ⚠️ **拿合成音做自动化回归时会踩**,别误判成新引入的回归
+**症状**:打断后新一轮 `played_frames=0`,该轮 TTS 全 `cancelled=true`,用户只听到承接音就没下文,
+不重连恢复不了。**真人会触发**(川哥 12:42 实测,turn 6/8/10/12 全 0 帧)。
+
+**根因**:`playout` 的 `source.capture_frame()` 返回 `RtcError InvalidState - failed to capture frame`,
+老代码 `if ....is_err() { return; }` **静默退出整轮**;下游 TTS 随即全撞
+`丢弃剩余音频 reason="consumer gone"`。触发窗口=打断瞬间**新旧两个 playout 短暂共存于同一个
+`NativeAudioSource`**(旧的收到 abort 要等一次调度才退,新轮承接音已经开始喂),
+`hard_abort_current` 里的 `source.clear_buffer()` 正好夹在中间。**纯瞬时**——实测 6/6 一次
+20ms 重试即恢复(`tries=1`)。
+
+**修复**:①每条退出路径标 `ExitWhy` 进 `playout metrics`(`Aborted`/`SourceDrained`/
+`ControlGone`/`CaptureFailed`,没标的显示 `unmarked`)②capture 失败在 300ms 窗口内每 20ms 重试。
+
+**排障姿势**:
+```
+grep -c "consumer gone"                # 期望 0;非 0 = 播放侧先死了,别去查 TTS
+grep "capture_frame"                   # 失败 / 重试成功 / 放弃 三条
+grep "playout metrics" | grep exit=    # CaptureFailed 或 unmarked 都是异常
+```
+
+⚠️ **归因教训**:这条我一度判成「只有合成音探针会触发、真人不会」,依据是「43 次提交里相邻
+<1.5s 为 0」——**判据搭错了对象**:它根本不需要相邻提交,普通打断就够,真人当天就在踩。
+排除法算对了一半(A/B 确实排除了预建连),但「谁会触发」那半是我拿一个不相干的统计量推的。
+
+⚠️ **不是当天两次部署引入的**:同一探针三版全复现(预建连版 6/6、预建连关 6/6、
+pre-underrun 版 12 次 consumer gone)。以前看不见是因为①更早的症状是 TTS 永久阻塞,
+更重的故障盖住了它 ②`playout metrics` 当天才有。**回退不解决,只能修。**
+
+### ⚠️ 未结:job 关闭时 playout 任务疑似泄漏
+6 轮里 1 轮,job 关闭时仍在播的 turn **没有输出 `playout metrics`**(该行挂 Drop,
+缺行=任务既没返回也没被 drop)。疑似 `capture_frame` 缓冲路径的 `rx.await` 永不返回
+(完成回调的 sender 是 `Box::into_raw` 泄出去的)。已立项,判据=打断 20 轮后
+`playout metrics` 行数必须等于建立过的 turn 数。
 
 ## 租户 worker(BYOK 服务化,2026-07-28 起)
 

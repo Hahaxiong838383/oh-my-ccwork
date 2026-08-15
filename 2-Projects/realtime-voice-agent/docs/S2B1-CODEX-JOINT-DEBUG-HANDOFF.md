@@ -179,15 +179,26 @@ playout metrics turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=199 p
 
 ---
 
-## 4b. 一个与你无关但你可能撞到的已知行为
+## 4b. 🔴 打断后 AI 不出声 —— 已定位并修复（2026-08-15 当天，务必用修复后的版本联调）
 
-**连续快速提交（相邻 `turn committed` 间隔 ~0.5s）时，最后那个 turn 播 0 帧音频**——
-它的 TTS 句子全部 `cancelled=true`，用户只听到承接音然后没有下文。7 次实验 7 次复现。
+**如果你在此之前连过我的 worker，遇到「打断之后 AI 彻底不说话、只剩承接音」——那是这个 bug，不是你的问题。**
 
-- **触发条件**：一句话被判停切成两三轮。我用**合成语音**做探针时必现（合成音的停顿过于干净，
-  超过 0.6s 判停阈值）；**真人语音未触发过**——测试房间 24 小时内 43 次提交，相邻间隔 <1.5s 的为 0。
-- 与预建连**无关**（同一二进制翻开关做过 A/B，两种模式表现一致），根因未查明，已单独立项。
-- 对你的影响：设备侧如果用**合成音回放**做自动化测试，可能撞上。用真人录音则基本不会。
+- **症状**：打断后新一轮 `played_frames=0`，该轮 TTS 全 `cancelled=true`，不重连恢复不了。
+- **根因**：打断瞬间新旧两个 playout 短暂共存于同一个 `NativeAudioSource`，
+  `capture_frame` 返回 `RtcError InvalidState`，老代码在那里**静默 return 整轮**，
+  下游 TTS 随即全撞 `consumer gone`。
+- **修复**：capture 失败在 300ms 窗口内重试（实测 6/6 一次 20ms 重试即恢复），
+  并给播放循环每条退出路径加了 `exit=` 标注。
+- **线上版本**：`voice-rust-worker` md5 `55eb8a5d77314d630a3eee214bd83699`。
+  联调前用 `grep -c "consumer gone"` 自查，**期望 0**；非 0 说明你连的不是修复版。
+
+⚠️ 我一度把它判成「只有合成音探针触发、真人不会」并写进本文档上一版 —— **那个判断是错的**，
+真人正常打断就会触发。此处更正。
+
+### 顺带：`playout metrics` 多了 `exit=` 字段
+
+`Aborted`（正常打断）/ `SourceDrained`（本轮播完）/ `ControlGone`、`CaptureFailed`（异常）。
+出现 `CaptureFailed` 或 `unmarked` 都要报我。
 
 ---
 
