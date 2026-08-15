@@ -8,7 +8,10 @@
 
 判断能否把 `voice-worker-rust` 依赖的 Python 推理 sidecar **整个删除**，方式是：
 ① 用 Pipecat Smart Turn v3（公开 ONNX）在 Rust 进程内做 EOT 判停；
-② 声纹改走 Rust 直接推理（路线见 §六，有个分叉要先定）。
+② 声纹走 sherpa C API（路线分叉已解，见 §六——单 ORT 方案，Route B 已关闭）。
+
+> 2026-08-15 可行性核验结论：**Go 原型**。生态承重引用已逐一实测（见 §五-b），
+> 双 ORT 分叉已有干净解（§六），验收线是「原型三绿」（§十 step 0/5）。
 
 **这是一个「两半都成才有意义」的任务。** 只搬一半，Python 解释器 + numpy + 33.4MB 闭源 `.so`
 还得留着，收益只剩约 11%，还多一份 FFI 代码要维护。
@@ -107,18 +110,42 @@ if !active_frame && !self.eot_requested && gate.silence_dur_s() >= 0.2 {
 **许可证**：川哥 2026-08-15 拍板**不查**，理由是个人 demo。
 📌 记准口径：这是**「决定不查」，不是「查过没问题」**。若将来这套进同事线或对外分发，需回补。
 
-## 六、🔴 一个必须动手前定的分叉：进程里会有两个 onnxruntime
+## 五-b、生态承重引用核验（2026-08-15 实测，探针配正向锚 `ort`=200 已过）
 
-`ort` crate 自带一份 onnxruntime；`libsherpa-onnx-c-api.so` 链的是**它自己那份**
-`libonnxruntime.so`（sidecar 里映射 18.5MB）。两个进同一个进程，可能撞符号，
-至少是重复运行时 + 重复线程池。
-
-| 路线 | 好处 | 代价 |
+| 引用 | 核验结果 | 用法判定 |
 |---|---|---|
-| A：FFI 进 sherpa C API | **fbank 逐位一致自动保住** | 进程内两份 onnxruntime |
-| B：直接用 `ort` 跑 CAM++ | 只有一份运行时 | **必须自己复刻 fbank**——正是最初的拦路石 |
+| `pipecat-ai/smart-turn-v3` @ HF | ✅ 存在，5 个 onnx 齐（含 `v3.2-cpu`） | 主模型 |
+| 中文 fine-tune | ✅ 在 **HF** `wavekat/smart-turn-ONNX` 的 `zh/smart-turn-cpu.onnx`（**GitHub 同名地址是 404**，家在 HF）；F1=0.840 **仍是转述未验** | 与官方版**并测**，评测集见 §十 |
+| `mel-spec` crate | ✅ v0.4.0，**147 万下载** | **真横梁**：Whisper 兼容 log-mel 直接用它，mel 移植从「自己写」降为「配置对」 |
+| `sherpa-rs` crate | ✅ v0.6.8，8 万下载 | Route A 不用手写 bindgen；也解决 so 的来源问题（见 §六） |
+| `wavekat-turn` crate | ⚠️ 存在但 **总下载 462 / 近 90 天 140 / 仓库 9 stars / 主语言 TypeScript** | **「生产级」不成立。只抄读，不进 Cargo.toml**——判停热路径不押在无人使用的库上；它做的事抄读后自己写就一两百行 |
+| `smart-turn-rs` crate | ⚠️ v0.1.0，**93 下载** | 同上，只当参考 |
 
-**边写边发现这件事的代价很高，先定路线。**
+## 六、双 onnxruntime 分叉：已解——单 ORT 方案（2026-08-15 定案）
+
+原始问题：`ort` crate 自带一份 onnxruntime，`libsherpa-onnx-c-api.so` 链**它自己那份**
+`libonnxruntime.so`。两份进同一个进程 = 符号冲突风险 + 重复运行时/线程池。
+
+**解法（实测支撑）**：sherpa 自带的 ORT **SONAME 实测为 `libonnxruntime.so.1.24.4`**。
+`ort` crate 有 `load-dynamic` feature（运行时经 `ORT_DYLIB_PATH` 指定 so）——
+**让 ort 直接加载 sherpa 那份 1.24.4** → 全进程一份 ORT，无冲突、无重复，
+且 sherpa 的 fbank 逐位一致原样保住。
+
+⚠️ 一个待验证前提（= §十 step 0）：`ort 2.0.0-rc.13` 的 API 绑定与 ORT **1.24.4** 兼容。
+验法便宜：load-dynamic 模式跑现有 silero VAD，输出与 bundled 模式**逐样本一致**即过。
+
+**Route B（ort 直跑 CAM++）关闭**，两个理由：
+- CAM++ 要的是 **Kaldi fbank**（dither / preemphasis / povey window），不是 Whisper mel——
+  `mel-spec` 帮不上它，复刻 Kaldi fbank 正是当初的拦路石；
+- 「注册只有 2 人、重注册便宜」曾是 B 的理由，但**重注册便宜 ≠ fbank 好写**；
+  单 ORT 方案已把 B 的唯一优势（单运行时）拿走，B 只剩成本没剩收益。
+
+**部署细节（调研漏掉的）**：那些 `.so` 现在**住在 Python venv 里**
+（`/root/voice-venv/.../sherpa_onnx/lib/`），删 venv 就删了它们。落地时把 sherpa 的 lib
+拷到 `/root/rust-worker/lib/` 带 rpath，或用 `sherpa-rs` 从源码构建。
+所以「自包含」的现实定义是**「一个目录」不是「一个文件」**：
+二进制 + 2 个 so + 3 个 onnx。Python 解释器 / numpy / 33.4MB 闭源 `.so` 全消失——
+静默降级故障类与部署负担已解决；真·单文件（sherpa 静态链接）以后做，不挡路。
 
 ## 七、🔴 资源收益已被证伪——不要以「省内存」立项
 
@@ -171,8 +198,19 @@ if !active_frame && !self.eot_requested && gate.silence_dur_s() >= 0.2 {
 2. **次高（原先低估了）**：控制策略抉择——保留「每停顿一次」还是改成「说话结束后一次」；
    以及音频缓冲从 1.2s 窗口改成全 turn ≤8s（内存增量小：128000×2B ≈ 256KB/job，
    6 路约 1.5MB，可忽略；**贵的是重复计算，不是存储**）。
-3. **中等**：Whisper log-mel 移植到 Rust 并与官方实现数值对拍（Slaney/HTK 陷阱见 §五）。
+3. **中等（已降险）**：Whisper log-mel——用 `mel-spec`（147 万下载）而非自己写，
+   风险从「实现错」降为「配置错」；与 Pipecat 官方 numpy 实现的数值对拍照做（Slaney/HTK 陷阱见 §五）。
 4. **较低**：加载 8.3MB ONNX + ort 推理（已有 silero 经验）。
+
+### 时序预算——比「12ms 快不快」更硬的验收线
+
+真正的约束链：静音累积 200ms 触发 → 推理耗时 **T** → 概率必须在 MIN endpointing
+delay（~401ms）生效前到达，否则这次推理白跑。**T 的预算 ≈ 200ms。**
+转述的 65ms（普通云实例）有 3 倍余量；本机 CPU 实测为
+**Xeon Gold 6248（Cascade Lake，AVX-512 全套）**，int8 条件很好——
+但 T 必须**在本机、生产三 unit 共存的条件下**实测，不在开发机上测。
+高频策略总成本 = 每 turn 3–8 次 × T，当前并发峰值 2 的量级下可忽略；
+**保留高频先行 + 留单次开关做 A/B**。
 
 ## 九、约束红线
 
@@ -184,22 +222,28 @@ if !active_frame && !self.eot_requested && gate.silence_dur_s() >= 0.2 {
   **绝不要往 `/root/realtime-voice-agent/.env` 写任何东西**（与 Python 生产线共享）。
 - 判停行为若有变更，列变更清单交川哥拍板，不要自行决定「差不多就行」。
 
-## 十、执行顺序（按证伪成本从低到高）
+## 十、执行顺序（按证伪成本从低到高；路线已定 = 原 step 3 删除）
 
+0. **单 ORT 兼容验证（§六 的待验前提）**：`ort` 开 `load-dynamic`，`ORT_DYLIB_PATH`
+   指向 sherpa 的 `libonnxruntime.so.1.24.4`，跑现有 silero VAD——
+   输出与 bundled 模式**逐样本一致**即过。不过则回退「两份 ORT 并存」再评估。
 1. **对着实际下载的 `smart-turn-v3.2-cpu.onnx` 读元数据**，确认输入名、形状、输出形状。
    与 §五 表格不符就先停下报告。（10 分钟）
 2. **造中文对照评测集** ——**这是真正的第一个工程任务，也是最容易被跳过的一步。**
    跳过它，整件事无法验收：你将无法区分「新判停更好」和「新判停不同」。
    至少要能算出：同一批真实音频上新旧模型的判停时刻差、误触发率（用户思考/换气被打断）、
    漏判率（说完了不接话）。**没有这个对照集就别往下走。**
-3. **定 §六 的路线 A / B**（声纹走 sherpa FFI 还是 ort 直跑）。
-4. **决定 §四 的控制策略**（每停顿一次 vs 说话结束后一次）。
-5. **最小原型**：Rust 里用 `ort` 加载模型 + 移植 mel + 与官方实现数值对拍，
-   喂真实音频打印概率。**不接生产链路**，只证明「能在我们的 ort 版本里跑起来且特征算对」。
+   评测集**同时测官方 v3.2 与 zh fine-tune**（后者 F1=0.840 是转述，正好用它验）。
+3. **决定 §四 的控制策略**（每停顿一次 vs 说话结束后一次；默认保留高频 + 开关）。
+4. **最小原型**：`ort`(load-dynamic) + `mel-spec` + 官方 onnx，喂真实音频打印概率。
+   **不接生产链路。** 验收「原型三绿」：
+   - ① 单 ORT 下 silero 回归逐样本一致 + smart-turn 出概率
+   - ② mel 数值对拍：与 Pipecat 官方 numpy 实现逐元素一致（Slaney 陷阱在此关掉）
+   - ③ 本机延迟实测 **T < 200ms**（官方版与 zh 版各测，见 §八 时序预算）
 
 ## 十一、期望产出
 
-- 上述 1–5 每步的结论与证据（可核验，不要转述）
+- 上述 0–4 每步的结论与证据（可核验，不要转述）
 - 工作量与风险评估，**必须包含重新标定 401ms 这一项**
 - 「万一新模型不如旧的」的退出条件
 - 明确的 go / no-go 建议，附理由
