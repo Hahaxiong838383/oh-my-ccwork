@@ -463,6 +463,24 @@ pre-underrun 版 12 次 consumer gone)。以前看不见是因为①更早的症
 经 **stdin** 送给服务器的 `curl -K -`(签名 URL 不进 argv/history/日志)。
 服务器**没装 unzip**,用 `python3 -c "import zipfile;…"` 解。
 
+### 本地交叉编译:2026-08-15 试过,卡在环境层,**未证伪也未证实**
+
+结论:**维持 GitHub Actions + 服务器直拉**。想再试之前先读这段,别重走。
+
+真正的技术问题(`livekit 0.8.3`→webrtc-sys 的 C++ ABI、`ort` 的 ONNX 预编译库
+能否交叉编译)**至今没有答案**——我卡在它前面两层:
+
+1. 本机 rust 是 **homebrew 装的、没有 rustup**,`rustup target add` 无从执行;
+2. 装 rustup 后撞冲突:它把 homebrew 的 rustc **当成已存在的 linked toolchain 接管**,
+   这类 toolchain 没有 manifest,`rustup target add` 报 `Missing manifest` 直接失败;
+3. 强装 rustup 自带 toolchain → 下载两次超时(9 分钟未完)。
+
+→ 真要试,**前置是先 `brew uninstall rust` 再装 rustup**,否则第 2 条会一直挡路。
+这会换掉整机所有 Rust 项目的工具链,属于要川哥拍板的改动。
+→ zig 0.16.0 已 `brew install`(独立编译器,与 rust 无耦合,留着无副作用)。
+→ **收益提醒**:本地构建原本要解的两个痛点,「取产物费劲」已被上面的服务器直拉解决,
+   只剩「等 9 分钟」,而那段时间可以并行。动手前先重算一次还值不值。
+
 ### 🔴 读服务端日志:`room=` 不是每行都有
 
 **带 room 的**:`job connected` / `turn committed` / `audio in` / `job closed` / `开场白已关闭`。
