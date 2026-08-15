@@ -5,3 +5,8 @@ bench/refs/
 assets/smart-turn-v3.2-cpu.onnx
 assets/smart-turn-zh-cpu.onnx
 assets/wavekat-zh-results.json
+bench/evalset/
+bench/evalset_official/
+bench/evalset_tails/
+bench/evalset_official_tails/
+bench/manifest_*.tsv
