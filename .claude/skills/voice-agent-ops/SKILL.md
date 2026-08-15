@@ -282,6 +282,58 @@ ssh root@64.90.13.117 "sed -i 's/^VOLC_ASR_HOTWORDS=.*/VOLC_ASR_HOTWORDS=<新词
   (frames=0 → 上行断流/息屏;amp≈0 → 送的是静音;正常 → 问题在下游)。
 - **代码**:worktree `~/mycc/.claude/worktrees/rust-worker`,分支 `feat/rust-worker`(已 push origin)。
 
+### TTS 切讯飞聆小璇(2026-08-14 上线,P003 读写台音色统一)
+
+**线上态**:二进制 md5 `9459301fb2bf0a31987a527bdda32328`(commit `e67912053`)、
+`TTS_PROVIDER=xfyun`、`XFYUN_TTS_VCN=x6_lingxiaoxuan_pro`、
+`FILLER_DIR=/opt/voice-agent/fillers-colleague`。**STT 仍是火山**——判停 401ms 靠火山 ASR
+的 B5 伪 final,讯飞无此机制,**别顺手把 STT 一起换了**。
+
+**凭据**:env 直配(`XFYUN_TTS_APP_ID/_API_KEY/_API_SECRET/_VCN` 写在 `rust-worker.env`,600)。
+值从租户加密存储解出、全程不出服务器。⚠️ **绝不写共享 `.env`**——会穿透 Python 生产 worker。
+
+**🔴 换 TTS 引擎的执行期 checklist(同一坑踩过两次,别再靠记性)**:
+1. `TTS_PROVIDER` 写 `rust-worker.env`(unit 最后一个 EnvironmentFile),不碰 `.env`
+2. **`FILLER_DIR` 必须一起换** —— filler 承接音是**预生成 wav 直接播帧、不经 TTS 引擎**,
+   只切 provider 会出现「正文是新音色、衔接短句还是旧音色」,用户听成两个人在回复。
+   聆小璇资产在 `/opt/voice-agent/fillers-colleague`(62 wav + manifest,24k/mono/s16)。
+   ⚠️ filler.rs 是**按 manifest.json 条目**加载不是扫目录,两个目录各有各的 manifest。
+3. greeting 走 TTS 合成(跟着 provider 变),无需单独处理
+4. 验收:job 日志 `tts provider 生效值 tts_provider=... tts_voice=...` +
+   **人耳确认正文与衔接词同一音色**(前面全绿也可能 vcn 传错发出别的声音)
+
+**回滚(已验资产有效,2026-08-14)**:
+```
+# 回火山:换二进制 + 删 provider 行 + stop/start(别用 restart)
+cp /root/rust-worker/voice-rust-worker.bak-20260814-1846-pre-xfyun /root/rust-worker/voice-rust-worker
+sed -i '/^TTS_PROVIDER=xfyun$/d;s#^FILLER_DIR=.*#FILLER_DIR=/root/realtime-voice-agent/assets/fillers#' /root/rust-worker/rust-worker.env
+systemctl stop voice-worker-rust && sleep 3 && systemctl start voice-worker-rust
+```
+回滚点校验方法(64.90 **没装 binutils**,`strings`/`objdump`/`readelf` 全缺,别用它们):
+`grep -ac x6_lingxiaoxuan_pro <binary>` → 新版 1 / 老版 0;
+对照锚 `grep -ac openspeech.bytedance.com` 两版都是 3(火山 STT 两边都在)。
+
+**打断修复现状(2026-08-14,⚠️ 已部署未验证)**:`tts_xfyun::send_or_abort` 每轮先查
+`ctl.aborted()` 再 `send_timeout`(200ms 只作**轮询间隔不作判定阈值**),撞打断即丢弃
+剩余音频 + 关 WS。**判据是日志 `xfyun tts 中止本句,丢弃剩余音频` 出现过**——
+截至部署后首轮实测该行 **0 次**,即分支未被触发过。
+触发条件是**在合成进行中打断**(刚说完上一句、下一句正在合成的窗口),
+落在句子**播放**期间的打断走不到这里。**别拿"用户说顺畅了"当验收**,两者同形。
+遗留:字幕输出不流畅(句粒度,第二步的范围)。
+
+**讯飞协议真值(2026-08-14 实测,勿凭文档臆断)**:
+- 端点 `wss://cbm01.cn-huabei-1.xf-yun.com/v1/private/mcd9m97e6`,
+  鉴权 host/date/request-line HmacSHA256 → base64 → authorization 整体再 base64
+- **`payload.text.text` 必须 base64**,发明文报 10009
+- **一条 WS = 一次合成任务**;任务结束(收到 `audio.status==2`)后同连接再发 → `26016
+  intput channel is closed`。**但这不等于"不支持流式"**:`status` 支持 0/1/2,
+  一次任务内可分段流式喂文本(实测 0→2 与 0→1→2 均成功)。
+  ⚠️ 我曾把「用 status=2 之后不能复用」误报成「协议不支持复用」,判据作用域过宽。
+- **无取消/中止指令**(官方文档确认)。整句一次性发出后服务端一定吐完 → 打断时
+  worker 只能丢弃,停不了上游
+- 吐流速度 **1.9 倍实时**(火山 6.5 倍),长句裕度小,联调盯播放缓冲 underrun
+- ttfb:**含建连 527ms**(Rust 线实测) / **不含建连 248–275ms**。差值 ~267ms 是每句建连成本
+
 ## 租户 worker(BYOK 服务化,2026-07-28 起)
 
 **64.90 三服务**:`voice-console`(FastAPI 127.0.0.1:8930,对外 https://voice-api.hahaxiong.cc 经 caddy)/`caddy`(自动证书)/`voice-worker-colleague`(租户实例)。主 worker 与它们互不依赖,全撤=`systemctl disable --now` 三件。

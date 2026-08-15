@@ -23,8 +23,9 @@
 | 派单机制 | token 的 `roomConfig.agents[].agentName` | 线上测试页 token claims 解出 |
 | 房间名 | 任意，设备自定；**约定 `sn-<SN>-<时间戳>`** | probe 用时间戳房名实测 |
 | 设备身份 | participant identity = **`dev-<SN>`**（埋点归因唯一数据源） | 见 `RUST-LINE-TELEMETRY-PLAN.md` |
-| **并发上限** | **同时 2 个房间**（`WORKER_MAX_JOBS=2`） | worker 进程 env 实读 |
+| **并发上限** | **同时 6 个房间**（`WORKER_MAX_JOBS=6`） | worker 进程 env 实读（2026-08-14 复核） |
 | 上行音频 | 任意常规采样率，SDK 自动重采样；worker 按 **16kHz 单声道**取流 | `job.rs` 取流参数 |
+| ⚠️ 并发的真实约束 | 瓶颈是 **CPU 不是内存**（0.3 核/路通话中）；**挂着不说话也吃 0.125 核并占满一个槽位** → 别让设备常驻连接，用完就断、唤醒再连 | 2026-08-14 静默参与者实测 |
 | 下行音频 | 24kHz 单声道（服务端已编码为 opus） | TTS 采样率常量 |
 | 字幕通道 | **legacy Transcription 数据包**（非 text stream） | `transcript_pub.rs` 实现 |
 
