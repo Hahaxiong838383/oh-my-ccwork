@@ -13,10 +13,12 @@ use livekit::webrtc::audio_stream::native::NativeAudioStream;
 use livekit::webrtc::prelude::*;
 use livekit_protocol as proto;
 use std::time::Instant;
+use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
 use crate::config::Config;
+use crate::control;
 use crate::pipeline;
 use crate::token::server_api_jwt;
 use crate::transcript_pub;
@@ -66,9 +68,26 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // 字幕路由:用户侧 (identity, 麦克风轨 sid),订阅到轨时采集
     let mut user_info: Option<(String, String)> = None;
     let mut pipeline_task: Option<JoinHandle<()>> = None;
+    // 入站控制通道(S2-B1):设备 → worker 的 cancel/旁路事件。容量给足,
+    // 满了宁可丢新包也不能阻塞 room 事件循环(那会连带卡住音频轨事件)。
+    let (ctrl_tx, ctrl_rx) = mpsc::channel::<(control::Envelope, control::Inbound)>(64);
+    let mut ctrl_rx = Some(ctrl_rx);
 
     while let Some(ev) = events.recv().await {
         match ev {
+            // 设备控制包。⚠️ worker 自己的 ack 也走 control topic,
+            // 过滤在 control::parse 里(只认 src=android),不然会自己取消自己。
+            RoomEvent::DataReceived { payload, topic, .. } => {
+                if topic.as_deref() == Some(control::TOPIC)
+                    && let Some(parsed) = control::parse(&payload)
+                {
+                    if ctrl_tx.try_send(parsed).is_err() {
+                        warn!(room = %room_name, "control 队列满,丢弃一个控制包");
+                    }
+                } else {
+                    tracing::debug!(room = %room_name, ?topic, "丢弃无法解析的 data packet");
+                }
+            }
             RoomEvent::ParticipantConnected(p) => {
                 info!(room = %room_name, identity = %p.identity(), "participant connected");
             }
@@ -139,8 +158,9 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 user_identity,
                 user_track_sid,
             };
+            let crx = ctrl_rx.take().expect("pipeline 只启动一次");
             pipeline_task = Some(tokio::spawn(async move {
-                if let Err(e) = pipeline::run_pipeline(mic, src, lp, rn.clone(), route).await {
+                if let Err(e) = pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx).await {
                     tracing::warn!(room = %rn, error = %e, "pipeline exited with error");
                 }
             }));

@@ -30,6 +30,7 @@ use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
 use crate::contract::Contract;
+use crate::control;
 use crate::eot::{EotClient, EOT_MAX_SAMPLES, UNLIKELY_THRESHOLD_ZH};
 use crate::filler::FillerBank;
 use crate::llm::{self, ChatOutcome, Llm, LlmConfig};
@@ -169,6 +170,8 @@ struct Orchestrator {
     /// 当前 turn 已发 interim(句进入播出)/final(句播完)的句数游标。
     tr_started: usize,
     tr_finaled: usize,
+    /// 入站 cancel 的 (trace_id, seq) 幂等表
+    ctrl_dedup: control::Dedup,
     t0: Instant,
 }
 
@@ -178,6 +181,7 @@ pub async fn run_pipeline(
     participant: LocalParticipant,
     room_name: String,
     route: transcript_pub::Route,
+    mut ctrl_rx: mpsc::Receiver<(control::Envelope, control::Inbound)>,
 ) -> Result<()> {
     let cfg = PipelineConfig::from_env();
     let stt_cfg = SttConfig::from_env();
@@ -285,6 +289,7 @@ pub async fn run_pipeline(
         tr: TranscriptPub::new(participant2, route),
         tr_started: 0,
         tr_finaled: 0,
+        ctrl_dedup: control::Dedup::default(),
         t0: Instant::now(),
     };
 
@@ -308,6 +313,13 @@ pub async fn run_pipeline(
 
     loop {
         tokio::select! {
+            // 入站控制包(设备 → worker)。放在最前面:cancel 的时效性高于音频帧处理。
+            ctrl = ctrl_rx.recv() => {
+                // channel 关闭不退主循环——控制通道是可选能力,断了不该拖垮通话
+                if let Some((ev, kind)) = ctrl {
+                    orch.on_control(&ev, kind).await;
+                }
+            }
             frame = mic.next() => {
                 let Some(frame) = frame else { break };
                 let samples: Vec<i16> = frame.data.to_vec();
@@ -596,6 +608,36 @@ impl Orchestrator {
     }
 
     /// 硬打断:杀任务+清播放队列+历史截断为真实播出部分(暂存,下轮 LLM 请求前落账)。
+    /// 处理设备下发的控制包。cancel 走**硬 abort**(川哥 2026-08-15 拍板):
+    /// 用户明确按了停,不进 pause+假打断窗口,不等 1.5s 定时器判断是不是说错话。
+    async fn on_control(&mut self, ev: &control::Envelope, kind: control::Inbound) {
+        match kind {
+            control::Inbound::Bypass => {
+                // 芯片唤醒/VAD/命令词:只记录,**绝不改变 worker 的 turn 判定**。
+                // worker 持有完整音频流,判停与打断以它为权威(合同 §5.3)。
+                info!(room = %self.room_name, trace_id = %ev.trace_id, kind = %ev.kind,
+                      "control 旁路事件(不影响主链路)");
+            }
+            control::Inbound::Cancel => {
+                let first = self.ctrl_dedup.first_time(&ev.trace_id, ev.seq);
+                // 有在说的 turn 才谈得上"取消";没有则 cancelled=false 但不报错
+                let had_turn = self.agent_turn.is_some();
+                let cancelled = first && had_turn;
+                if cancelled {
+                    self.hard_abort_current();
+                    self.set_state(AgentState::Listening);
+                }
+                info!(room = %self.room_name, trace_id = %ev.trace_id, seq = ev.seq,
+                      cancelled, already_done = !first, had_turn,
+                      "control cancel");
+                self.publish_json(
+                    control::TOPIC,
+                    control::cancel_ack(&ev.trace_id, ev.seq, self.now_ms() as i64, cancelled, !first),
+                );
+            }
+        }
+    }
+
     fn hard_abort_current(&mut self) {
         let Some(turn) = self.agent_turn.take() else { return };
         let played = turn.ctl.played_samples();

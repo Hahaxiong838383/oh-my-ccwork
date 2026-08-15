@@ -250,11 +250,14 @@ pub async fn synthesize(
     .await
     .context("xfyun tts connect timeout")?
     .context("xfyun tts connect(检查 api_key/api_secret)")?;
+    let connect_ms = t0.elapsed().as_millis() as u64;
 
     ws.send(WsMessage::Text(build_request(cfg, text).to_string().into())).await?;
 
     let mut ttfb_ms: Option<u64> = None;
     let mut total = 0usize;
+    let mut frames = 0usize;
+    let mut cancelled = false;
     loop {
         let msg = tokio::time::timeout(RECV_TIMEOUT, ws.next())
             .await
@@ -273,10 +276,13 @@ pub async fn synthesize(
                     ttfb_ms = Some(t0.elapsed().as_millis() as u64);
                 }
                 total += pcm.len();
+                frames += 1;
                 if let Err(why) = send_or_abort(audio_tx, pcm, ctl).await {
                     // 打断/下游消失:主动收摊,不陪服务端把剩下的吐完(它停不了)
                     info!(reason = why, sent_bytes = total, "xfyun tts 中止本句,丢弃剩余音频");
+                    cancelled = true;
                     let _ = ws.close(None).await;
+                    emit_metrics(connect_ms, ttfb_ms, frames, total, cancelled);
                     return Ok((ttfb_ms.unwrap_or(0), total));
                 }
                 if last {
@@ -291,7 +297,25 @@ pub async fn synthesize(
         }
     }
     let _ = ws.close(None).await;
+    emit_metrics(connect_ms, ttfb_ms, frames, total, cancelled);
     Ok((ttfb_ms.unwrap_or(0), total))
+}
+
+/// 脱敏遥测(Android 联调按此对账)。**绝不记**签名 URL / Authorization /
+/// APPID / APIKey / APISecret / 音频正文 / 用户原文。
+///
+/// ⚠️ 七项指标里这里只出五项:`buffered_audio_ms` 与 `underrun_count` 属**播放侧**
+/// (`playout.rs` 的 RTC 喂帧循环),TTS 模块看不到播放进度,不能在这里编。
+fn emit_metrics(connect_ms: u64, ttfb: Option<u64>, frames: usize, bytes: usize, cancelled: bool) {
+    info!(
+        tts_connect_ms = connect_ms,
+        tts_ttft_ms = ttfb.unwrap_or(0),
+        audio_frames = frames,
+        // 24kHz PCM16 单声道:1ms = 48 bytes
+        audio_duration_ms = (bytes / 48) as u64,
+        cancelled,
+        "tts metrics"
+    );
 }
 
 #[cfg(test)]

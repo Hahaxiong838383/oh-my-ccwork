@@ -5,6 +5,7 @@
 
 mod config;
 mod contract;
+mod control;
 mod eot;
 mod filler;
 mod job;
