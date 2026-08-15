@@ -1,1 +1,7 @@
 target/
+bench/target/
+# 原型资产不 commit(是否入库等验收后拍板);URL+sha256 见 docs/EOT-ONNX-PROTOTYPE-REPORT.md
+bench/refs/
+assets/smart-turn-v3.2-cpu.onnx
+assets/smart-turn-zh-cpu.onnx
+assets/wavekat-zh-results.json

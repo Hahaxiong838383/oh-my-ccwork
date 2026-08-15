@@ -1,0 +1,23 @@
+# EOT ONNX 迁移原型 bench(独立 crate,不进主 package 依赖树):
+# 只为验证 ort 运行时行为与 smart-turn 预处理数值,不接生产链路。
+# ort 版本与主 crate(../Cargo.toml)锁同一精确版 2.0.0-rc.13——
+# step 0 验证的对象是「rc.13 绑定 × ORT 1.24.4 运行时」,与 package 归属无关。
+[package]
+name = "eotbench"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+# 开启后 ort 全部走 dlopen(ORT_DYLIB_PATH;未设则 fallback 系统 libonnxruntime.so)。
+# rc.13 源码实证无「回退 bundled」语义,故对拍需要两个构建产物。
+ort-load-dynamic = ["ort/load-dynamic"]
+
+[dependencies]
+anyhow = "1.0.104"
+hound = "3.5.1"
+ort = { version = "2.0.0-rc.13", features = ["tls-native-vendored"] }
+realfft = "3"
+serde_json = "1.0.151"
+
+[profile.release]
+debug = false

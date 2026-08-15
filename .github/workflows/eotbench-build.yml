@@ -1,0 +1,50 @@
+# EOT ONNX 原型 bench 构建(feat/eot-onnx-prototype 专用,任务书 §十 step 0/4 的产物线)
+# 触发:workflow_dispatch --ref feat/eot-onnx-prototype;产物:两个 variant 的 eotbench。
+# ubuntu-24.04 = 64.90 生产机 glibc 2.39 对齐(同 rust-worker-build.yml 的理由)。
+# bench 是独立小 crate(无 webrtc/livekit),构建约几分钟。
+name: eotbench-2404
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: 2-Projects/realtime-voice-agent/rust-worker/bench
+    steps:
+      - uses: actions/checkout@v4
+      - name: toolchain
+        run: rustc -V && cargo -V
+      - name: build bundled variant
+        run: |
+          cargo build --release
+          cp target/release/eotbench eotbench-bundled
+      - name: build load-dynamic variant
+        run: |
+          cargo build --release --features ort-load-dynamic
+          cp target/release/eotbench eotbench-dynamic
+      - name: link inventory (bundled must not need external onnxruntime so)
+        run: |
+          ldd eotbench-bundled || true
+          ldd eotbench-dynamic || true
+          if ldd eotbench-bundled | grep -q onnxruntime; then
+            echo "bundled variant dynamically links onnxruntime — packaging assumption broken"
+            exit 1
+          fi
+      - name: glibc symbol ceiling (must be <= 2.39)
+        run: |
+          for bin in eotbench-bundled eotbench-dynamic; do
+            syms=$(objdump -T "$bin" | grep -o 'GLIBC_2\.[0-9]*' | sort -t. -k2 -n -u)
+            echo "== $bin"; echo "$syms"
+            echo "$syms" | awk -F. '$2 > 39 { print "TOO NEW: " $0; bad = 1 } END { exit bad }'
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eotbench-ubuntu2404
+          path: |
+            2-Projects/realtime-voice-agent/rust-worker/bench/eotbench-bundled
+            2-Projects/realtime-voice-agent/rust-worker/bench/eotbench-dynamic
+          if-no-files-found: error
