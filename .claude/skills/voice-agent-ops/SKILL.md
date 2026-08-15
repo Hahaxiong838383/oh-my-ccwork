@@ -340,8 +340,12 @@ cancel 走**硬 abort**(`hard_abort_current`:abort turn + clear RTC buffer + 字
   不设门则每轮都报 ~0)。承接音是**一整块 PCM**,只有一次 recv,所以只播了承接音就被打断的轮必是 `-1`。
 - `played_frames × 10ms` 应 ≈ 本轮各句 `audio_duration_ms` 之和,可交叉对账(实测 308 帧 vs 3080ms 精确吻合)。
 - 实测:8 句长回复 64 秒音频 → `underrun_count=0 buffered_audio_ms=199`,合约用例 10 服务端侧通过。
-- ⚠️ 计数分支**在生产上没被观测触发过**(因为没发生欠载)。同一次调用算出的
-  `buffered_audio_ms` 非 -1 就是它的非零锚——那段没跑的话该字段会是 -1。
+- 🔴 **但那是运气好的样本**。2026-08-15 川哥真机一轮 8 个 turn 里:
+  一轮 `underrun_count=1 underrun_ms=282 低水位=0`(真出现过 282ms 可听缺口,
+  他体感"不明显"),另一轮**低水位只剩 25ms**(正常应在 200 上下=背压天花板)。
+  **讯飞 1.9 倍实时的吐流裕度是真实风险,不是纸面推算**——长句 + 网络抖动会咬到。
+  该欠载**不是 capture 重试造成的**:同一轮里另两个 turn 同样触发了重试而欠载为 0(内部对照)。
+- 计数分支已在生产真实触发过一次,**判据不是恒绿**。
 
 **打断修复现状(2026-08-14,⚠️ 已部署未验证)**:`tts_xfyun::send_or_abort` 每轮先查
 `ctl.aborted()` 再 `send_timeout`(200ms 只作**轮询间隔不作判定阈值**),撞打断即丢弃
@@ -401,6 +405,11 @@ bytes 决定,预建连没动那个结构。要改得动字幕发布策略,是另
 
 **修复**:①每条退出路径标 `ExitWhy` 进 `playout metrics`(`Aborted`/`SourceDrained`/
 `ControlGone`/`CaptureFailed`,没标的显示 `unmarked`)②capture 失败在 300ms 窗口内每 20ms 重试。
+
+**生产验证(2026-08-15 川哥真机一轮,非探针)**:8 个 turn 全部播出音频、无 0 帧轮;
+capture 失败**触发 9 次、救回 9 次**,`consumer gone`/放弃/`CaptureFailed`/`unmarked` 全 0。
+即**故障条件仍然天天发生**(它是 abort 竞态的固有产物),只是每次都被重试吃掉了——
+所以别看到 `进入重试窗口` 就当异常,**要看的是它后面有没有跟着 `重试成功`**。
 
 **排障姿势**:
 ```
