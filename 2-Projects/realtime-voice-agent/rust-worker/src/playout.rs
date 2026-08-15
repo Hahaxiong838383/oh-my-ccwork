@@ -13,7 +13,7 @@ use livekit::webrtc::audio_frame::AudioFrame;
 use livekit::webrtc::audio_source::native::NativeAudioSource;
 use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::tts_volc::TTS_SAMPLE_RATE;
 
@@ -116,6 +116,7 @@ struct BufferWatch {
     underrun_ms: u64,
     buf_min_ms: Option<u64>,
     frames: u64,
+    why: Option<ExitWhy>,
 }
 
 impl BufferWatch {
@@ -129,7 +130,14 @@ impl BufferWatch {
             underrun_ms: 0,
             buf_min_ms: None,
             frames: 0,
+            why: None,
         }
+    }
+
+    /// 标记退出原因。`None`(没人标)会以 `unmarked` 出现在日志里——
+    /// 那本身就是信号:说明又多了一条没被标注的退出路径。
+    fn exit(&mut self, why: ExitWhy) {
+        self.why = Some(why);
     }
 
     /// 喂出一帧:预计播完时刻后推一帧。若 deadline 已过期(说明中间断过流),
@@ -207,9 +215,63 @@ impl Drop for BufferWatch {
             underrun_ms = s.underrun_ms,
             buffered_audio_ms = s.buffered_audio_ms,
             played_frames = s.played_frames,
+            exit = match self.why {
+                Some(w) => format!("{w:?}"),
+                None => "unmarked".into(),
+            },
             "playout metrics"
         );
     }
+}
+
+/// 播放循环的退出原因。**每条退出路径都必须带一个**——
+/// 2026-08-15 川哥「打断后 AI 不出声」的根因就是 `capture_frame` 失败时静默 `return`:
+/// turn 当场死掉、一行日志都没有,下游 TTS 随后全撞 `consumer gone`,
+/// 从症状完全看不出是播放侧先没的。**静默退出是这次排查最大的成本。**
+#[derive(Debug, Clone, Copy)]
+enum ExitWhy {
+    /// 硬打断(正常)
+    Aborted,
+    /// 本轮音频吐完(正常)
+    SourceDrained,
+    /// 控制通道全部发送端消失(异常,理论上不该发生)
+    ControlGone,
+    /// RTC source 持续拒收(异常,见 `capture_with_retry`)
+    CaptureFailed,
+}
+
+/// `capture_frame` 失败的重试窗口。
+///
+/// 打断瞬间**新旧两个 playout 会短暂共存于同一个 `NativeAudioSource`**
+/// (旧的收到 abort 后要等一次调度才退出,新 turn 的承接音已经开始喂),
+/// 这类冲突是瞬时的。为一次瞬时冲突把整轮判死代价太大——用户表现为
+/// 「打断之后 AI 彻底不说话」,而且不重连就恢复不了。
+const CAPTURE_RETRY_WINDOW: Duration = Duration::from_millis(300);
+const CAPTURE_RETRY_GAP: Duration = Duration::from_millis(20);
+
+async fn capture_with_retry(
+    source: &NativeAudioSource,
+    frame: &AudioFrame<'_>,
+    room: &str,
+    turn_id: u64,
+) -> bool {
+    let first = match source.capture_frame(frame).await {
+        Ok(()) => return true,
+        Err(e) => e,
+    };
+    warn!(room, turn_id, error = %first, "capture_frame 失败,进入重试窗口");
+    let deadline = Instant::now() + CAPTURE_RETRY_WINDOW;
+    let mut tries = 0u32;
+    while Instant::now() < deadline {
+        tokio::time::sleep(CAPTURE_RETRY_GAP).await;
+        tries += 1;
+        if source.capture_frame(frame).await.is_ok() {
+            info!(room, turn_id, tries, "capture_frame 重试成功,本轮保住");
+            return true;
+        }
+    }
+    warn!(room, turn_id, tries, error = %first, "capture_frame 持续失败,放弃本轮播放");
+    false
 }
 
 /// PCM(24k i16le bytes)→ 10ms 帧逐帧 capture;暂停门 + 渐起 + 进度计数。
@@ -248,12 +310,14 @@ pub fn spawn_playout(
         };
         loop {
             if *abort_rx.borrow() {
+                watch.exit(ExitWhy::Aborted);
                 return;
             }
             // 暂停门:置 true 时停喂(source 内 ≤200ms 排队自然播完)
             if *pause_rx.borrow() {
                 while *pause_rx.borrow() {
                     if pause_rx.changed().await.is_err() {
+                        watch.exit(ExitWhy::ControlGone);
                         return;
                     }
                 }
@@ -262,8 +326,11 @@ pub fn spawn_playout(
             let wait_start = Instant::now();
             let chunk = tokio::select! {
                 // 注意 break 在 on_wait 之前:channel 关闭=本轮 TTS 吐完,那次等待是收尾不是欠载
-                c = pcm_rx.recv() => match c { Some(c) => c, None => break },
-                _ = abort_rx.changed() => return,
+                c = pcm_rx.recv() => match c {
+                    Some(c) => c,
+                    None => { watch.exit(ExitWhy::SourceDrained); break }
+                },
+                _ = abort_rx.changed() => { watch.exit(ExitWhy::Aborted); return }
             };
             watch.on_wait(wait_start, Instant::now());
             let mut samples: Vec<i16> =
@@ -271,11 +338,13 @@ pub fn spawn_playout(
             residual.append(&mut samples);
             while residual.len() >= FRAME_SAMPLES {
                 if *abort_rx.borrow() {
+                    watch.exit(ExitWhy::Aborted);
                     return;
                 }
                 if *pause_rx.borrow() {
                     while *pause_rx.borrow() {
                         if pause_rx.changed().await.is_err() {
+                            watch.exit(ExitWhy::ControlGone);
                             return;
                         }
                     }
@@ -297,7 +366,8 @@ pub fn spawn_playout(
                     num_channels: 1,
                     samples_per_channel: FRAME_SAMPLES as u32,
                 };
-                if source.capture_frame(&frame).await.is_err() {
+                if !capture_with_retry(&source, &frame, &watch.room, watch.turn_id).await {
+                    watch.exit(ExitWhy::CaptureFailed);
                     return;
                 }
                 watch.on_frame(Instant::now());
@@ -320,7 +390,7 @@ pub fn spawn_playout(
                 num_channels: 1,
                 samples_per_channel: n as u32,
             };
-            if source.capture_frame(&frame).await.is_ok() {
+            if capture_with_retry(&source, &frame, &watch.room, watch.turn_id).await {
                 watch.on_frame(Instant::now()); // 末帧可能不足 10ms,但其后不再有等待,不影响欠载判定
                 ctl2.captured.fetch_add(n as u64, Ordering::SeqCst);
             }
