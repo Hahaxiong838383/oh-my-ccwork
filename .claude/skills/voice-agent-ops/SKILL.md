@@ -443,6 +443,38 @@ pre-underrun 版 12 次 consumer gone)。以前看不见是因为①更早的症
 (完成回调的 sender 是 `Box::into_raw` 泄出去的)。已立项,判据=打断 20 轮后
 `playout metrics` 行数必须等于建立过的 turn 数。
 
+### 开场白开关 `AGENT_GREETING_ENABLED`(2026-08-15 上线,P003 安卓要求)
+
+写在 **`/root/rust-worker/rust-worker.env`**——它是 `voice-worker-rust` 独有的最后一个
+`EnvironmentFile`,另外两个 worker 不加载。**共享的 `.env` 里那行 `AGENT_GREETING=…` 别动**,
+改它会穿透到 Python 两条线。
+
+- `=0`(现行) → 不建 Say turn:不调 TTS、不产 PCM、不写历史、不发字幕,停在 Listening。
+- 未设置 → 默认开,其余环境行为不变。非法值回退默认不 panic。
+- `AGENT_GREETING` 为空同样不播(与 Python 侧 `tier_a_cascade` 的 `elif` 落空同语义)。
+- 回滚:改 `=1` → stop/start(**别用 restart**)。二进制回滚点 `voice-rust-worker.bak-78b07bf5`。
+
+### 🔴 部署取产物:让服务器直拉,别经过本机
+
+产物最终落在 64.90,经 Mac 中转 = 68MB 跨境往返两趟。**实测:本机 `gh run download`
+连续两次卡死(7min/6min 零进展或半途断);同一 artifact 让 64.90 自己 curl → 18.2 秒、1.35MB/s。**
+
+做法:Mac 用 `gh auth token` + `curl -w '%{redirect_url}'`(**不加 `-L`**)取签名 URL,
+经 **stdin** 送给服务器的 `curl -K -`(签名 URL 不进 argv/history/日志)。
+服务器**没装 unzip**,用 `python3 -c "import zipfile;…"` 解。
+
+### 🔴 读服务端日志:`room=` 不是每行都有
+
+**带 room 的**:`job connected` / `turn committed` / `audio in` / `job closed` / `开场白已关闭`。
+**不带的**:`tts metrics` / `tts synth` / `AgentSpeechStarted` / `契约 *`。
+
+2026-08-15 实证:按房间名 grep 统计,得出「TTS 请求 0、用户没被识别」并据此判定链路断在 LLM——
+**全是过滤器造的零**,那一轮 ASR/LLM/TTS 全程正常。且当时**配了锚也没救**:锚用的 `job room`
+恰好带 room,被统计的行不带,锚只证明了同构那条通道。
+
+→ 统计这类行一律**用时间窗**,并先确认窗口内只有目标 job(`received job request` 计数=1)。
+→ 下阴性结论前,拿一条**已知发生过的正例**用同一过滤条件捞一次,捞不回来就是过滤器的问题。
+
 ## 租户 worker(BYOK 服务化,2026-07-28 起)
 
 **64.90 三服务**:`voice-console`(FastAPI 127.0.0.1:8930,对外 https://voice-api.hahaxiong.cc 经 caddy)/`caddy`(自动证书)/`voice-worker-colleague`(租户实例)。主 worker 与它们互不依赖,全撤=`systemctl disable --now` 三件。
