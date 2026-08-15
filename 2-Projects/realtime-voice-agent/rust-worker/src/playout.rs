@@ -116,6 +116,12 @@ struct BufferWatch {
     underrun_ms: u64,
     buf_min_ms: Option<u64>,
     frames: u64,
+    /// 本轮音频真正开始喂出的时刻(跨暂停不重置)。首次欠载的相对位置以它为原点。
+    audio_start: Option<Instant>,
+    /// 首次欠载距开播多少 ms。**这是选优化方案的判据**:
+    /// 靠近 0 = 起播阶段缓冲太薄(该预缓冲/让 TTS 更早起跑);
+    /// 明显靠后 = 上游中途掉链子(该并行合成下一句)。两种方案对症完全不同。
+    first_underrun_ms: Option<u64>,
     why: Option<ExitWhy>,
 }
 
@@ -130,6 +136,8 @@ impl BufferWatch {
             underrun_ms: 0,
             buf_min_ms: None,
             frames: 0,
+            audio_start: None,
+            first_underrun_ms: None,
             why: None,
         }
     }
@@ -149,6 +157,7 @@ impl BufferWatch {
         };
         let deadline = base + Duration::from_millis(FRAME_MS);
         self.play_deadline = Some(deadline);
+        self.audio_start.get_or_insert(now); // 只记第一次,暂停恢复不重置
         self.frames += 1;
         if !self.primed
             && deadline.saturating_duration_since(now) >= Duration::from_millis(PRIME_MS)
@@ -168,6 +177,14 @@ impl BufferWatch {
             if gap >= UNDERRUN_FLOOR_MS {
                 self.underruns += 1;
                 self.underrun_ms += gap;
+                if self.first_underrun_ms.is_none() {
+                    // 以「开始等」为时刻:缺口是从这里开始张开的
+                    let at = self
+                        .audio_start
+                        .map(|t| wait_start.saturating_duration_since(t).as_millis() as u64)
+                        .unwrap_or(0);
+                    self.first_underrun_ms = Some(at);
+                }
             }
         }
         if self.primed {
@@ -189,6 +206,7 @@ impl BufferWatch {
             underrun_ms: self.underrun_ms,
             // -1 = 缓冲从未灌到 PRIME_MS,**没采到**低水位;不是「低水位是 0」
             buffered_audio_ms: self.buf_min_ms.map_or(-1, |m| m as i64),
+            first_underrun_ms: self.first_underrun_ms.map_or(-1, |m| m as i64),
             played_frames: self.frames,
         }
     }
@@ -199,6 +217,8 @@ struct PlayoutStats {
     underrun_count: u64,
     underrun_ms: u64,
     buffered_audio_ms: i64,
+    /// -1 = 本轮没发生欠载(不是「第 0 毫秒欠载」)
+    first_underrun_ms: i64,
     played_frames: u64,
 }
 
@@ -214,6 +234,7 @@ impl Drop for BufferWatch {
             underrun_count = s.underrun_count,
             underrun_ms = s.underrun_ms,
             buffered_audio_ms = s.buffered_audio_ms,
+            first_underrun_ms = s.first_underrun_ms,
             played_frames = s.played_frames,
             exit = match self.why {
                 Some(w) => format!("{w:?}"),
@@ -428,6 +449,7 @@ mod tests {
                 underrun_count: 0,
                 underrun_ms: 0,
                 buffered_audio_ms: -1,
+                first_underrun_ms: -1,
                 played_frames: 0
             }
         );
@@ -464,6 +486,54 @@ mod tests {
         let mut w2 = primed_watch(t0, 20);
         w2.on_wait(t0, t0 + ms(225));
         assert_eq!(w2.stats().underrun_count, 1, "25ms 缺口必须计,否则判据没有区分力");
+    }
+
+    #[test]
+    fn first_underrun_position_is_measured_from_audio_start() {
+        // 这个数决定选哪个优化方案:靠近 0 = 起播缓冲薄,靠后 = 上游中途掉链子。
+        // 位置算错会把人引到错误的方案上,所以单独钉住。
+        let t0 = Instant::now();
+        let mut w = BufferWatch::new("r".into(), 1);
+        for _ in 0..20 {
+            w.on_frame(t0); // 开播于 t0,deadline = t0+200ms
+        }
+        // 2 秒处开始等,等到 2.5 秒 → 缓冲早已见底,缺口发生在开播后 2000ms
+        w.on_wait(t0 + ms(2000), t0 + ms(2500));
+        let s = w.stats();
+        assert_eq!(s.underrun_count, 1);
+        assert_eq!(s.first_underrun_ms, 2000, "位置以开播时刻为原点,不是以 turn 创建时刻");
+        // 第二次欠载不能覆盖第一次的位置
+        w.on_wait(t0 + ms(5000), t0 + ms(5400));
+        assert_eq!(w.stats().underrun_count, 2);
+        assert_eq!(w.stats().first_underrun_ms, 2000, "记的是**首次**,后续不得覆盖");
+    }
+
+    #[test]
+    fn no_underrun_reports_minus_one_not_zero_position() {
+        // 报 0 会被读成「开播瞬间就欠载」——那是最需要立刻处理的情况,不能和「没欠载」同形
+        let t0 = Instant::now();
+        let mut w = primed_watch(t0, 20);
+        w.on_wait(t0, t0 + ms(100)); // 缓冲够,不欠载
+        let s = w.stats();
+        assert_eq!(s.underrun_count, 0);
+        assert_eq!(s.first_underrun_ms, -1);
+    }
+
+    #[test]
+    fn pause_does_not_reset_the_audio_start_anchor() {
+        // audio_start 跨暂停保留:否则打断后恢复的轮,欠载位置会被算回 0 附近,
+        // 看起来像「起播就卡」,把人引向错误的方案。
+        let t0 = Instant::now();
+        let mut w = BufferWatch::new("r".into(), 1);
+        for _ in 0..20 {
+            w.on_frame(t0);
+        }
+        w.on_resume(); // 暂停恢复
+        for _ in 0..20 {
+            w.on_frame(t0 + ms(3000)); // 3 秒后继续播
+        }
+        w.on_wait(t0 + ms(3200), t0 + ms(3900));
+        assert_eq!(w.stats().first_underrun_ms, 3200, "原点必须还是最初开播的 t0");
     }
 
     #[test]
