@@ -13,6 +13,18 @@
 > 2026-08-15 可行性核验结论：**Go 原型**。生态承重引用已逐一实测（见 §五-b），
 > 双 ORT 分叉已有干净解（§六），验收线是「原型三绿」（§十 step 0/5）。
 
+> ✅ **2026-08-15 原型已完成，三绿全过，结论：条件 go。**
+> 报告（step 0–4 全部实测数+原始 tsv）：分支 `feat/eot-onnx-prototype` 的
+> `docs/EOT-ONNX-PROTOTYPE-REPORT.md`（commit `9fc1fbef4`，未合并未部署）。要点：
+> - **判停质量是真理由**：官方口径中文集（929 条，官方数字 ±1pp 复现锚定）上，
+>   现役 v1-mini AUC **0.671**（生产阈值 0.18 下负类 97.4% 放行，与线上 7.8% 触发率互证
+>   ——现役 EOT 几乎不贡献信息）；官方 v3.2 AUC **0.952**，思考停顿误打断 98%→20%。
+> - **wavekat zh 出局**（两集 AUC 0.636/0.729 均低于官方原版，不采用）。
+> - **§六 单 ORT 定案已修正**：ort rc.13 版本门拒绝 1.24.4，改「统一 1.28」形态（见 §六 修正块）。
+> - **延迟**：64.90 实测 p50=127ms / p95=153ms（<200ms 过线；转述 65ms 不成立，
+>   余量 1.3–1.6 倍；旧模型同口径 67ms）。
+> - **两个上线前置已立项**：`tasks/voice-eot-上线前置.md`（真实对话重标定 + sherpa×1.28 统一）。
+
 **这是一个「两半都成才有意义」的任务。** 只搬一半，Python 解释器 + numpy + 33.4MB 闭源 `.so`
 还得留着，收益只剩约 11%，还多一份 FFI 代码要维护。
 
@@ -115,13 +127,21 @@ if !active_frame && !self.eot_requested && gate.silence_dur_s() >= 0.2 {
 | 引用 | 核验结果 | 用法判定 |
 |---|---|---|
 | `pipecat-ai/smart-turn-v3` @ HF | ✅ 存在，5 个 onnx 齐（含 `v3.2-cpu`） | 主模型 |
-| 中文 fine-tune | ✅ 在 **HF** `wavekat/smart-turn-ONNX` 的 `zh/smart-turn-cpu.onnx`（**GitHub 同名地址是 404**，家在 HF）；F1=0.840 **仍是转述未验** | 与官方版**并测**，评测集见 §十 |
+| 中文 fine-tune | ✅ 在 **HF** `wavekat/smart-turn-ONNX` 的 `zh/smart-turn-cpu.onnx`（**GitHub 同名地址是 404**，家在 HF）；F1=0.840 出处已坐实（仓内 `zh/results.json`：自家测试集 n=256、工作阈值 **0.67** 非 0.5） | ❌ **2026-08-15 并测完成，出局**：官方口径集 AUC 0.729 / FLEURS 0.636，两集均低于官方原版（2154 条小样本 fine-tune 不泛化） |
 | `mel-spec` crate | ✅ v0.4.0，**147 万下载** | **真横梁**：Whisper 兼容 log-mel 直接用它，mel 移植从「自己写」降为「配置对」 |
 | `sherpa-rs` crate | ✅ v0.6.8，8 万下载 | Route A 不用手写 bindgen；也解决 so 的来源问题（见 §六） |
 | `wavekat-turn` crate | ⚠️ 存在但 **总下载 462 / 近 90 天 140 / 仓库 9 stars / 主语言 TypeScript** | **「生产级」不成立。只抄读，不进 Cargo.toml**——判停热路径不押在无人使用的库上；它做的事抄读后自己写就一两百行 |
 | `smart-turn-rs` crate | ⚠️ v0.1.0，**93 下载** | 同上，只当参考 |
 
 ## 六、双 onnxruntime 分叉：已解——单 ORT 方案（2026-08-15 定案）
+
+> ⚠️ **2026-08-15 原型实测修正：本节「让 ort 加载 sherpa 那份 1.24.4」的形态已被证伪。**
+> `ort 2.0.0-rc.13` 有显式版本门（`MINOR_VERSION=ORT_API_VERSION=28`，minor <28 直接
+> `BadVersion` 拒载，源码 `lib.rs:150-162` 实读）——**rc.13 只接受 ORT ≥1.28，无兼容模式**。
+> 单 ORT 方案本身仍成立，但方向反过来：**统一到 1.28**（sherpa 侧换 so，不是 ort 侧迁就）。
+> 已实测：dynamic 加载 MS 官方 1.28.0 → silero 对拍 max Δ 8.9e-7、门控 0/581 翻转（行为级一致；
+> 位一致跨 build 不成立，回归判据一律行为级）。sherpa 链 1.28 的构建+声纹向量回归见
+> `tasks/voice-eot-上线前置.md` 前置②；失败则回退「静态 bundled 1.28 + sherpa 私有 1.24.4 并存」。
 
 原始问题：`ort` crate 自带一份 onnxruntime，`libsherpa-onnx-c-api.so` 链**它自己那份**
 `libonnxruntime.so`。两份进同一个进程 = 符号冲突风险 + 重复运行时/线程池。
