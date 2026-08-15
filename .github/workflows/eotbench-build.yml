@@ -1,9 +1,15 @@
 # EOT ONNX 原型 bench 构建(feat/eot-onnx-prototype 专用,任务书 §十 step 0/4 的产物线)
-# 触发:workflow_dispatch --ref feat/eot-onnx-prototype;产物:两个 variant 的 eotbench。
+# 触发:push 本分支(workflow_dispatch 对不在默认分支注册的 workflow 不可用——实测
+# `gh workflow run` 报 not found;push 触发读被推分支的定义,不污染 main)。
 # ubuntu-24.04 = 64.90 生产机 glibc 2.39 对齐(同 rust-worker-build.yml 的理由)。
 # bench 是独立小 crate(无 webrtc/livekit),构建约几分钟。
 name: eotbench-2404
 on:
+  push:
+    branches: [feat/eot-onnx-prototype]
+    paths:
+      - '2-Projects/realtime-voice-agent/rust-worker/bench/**'
+      - '.github/workflows/eotbench-build.yml'
   workflow_dispatch: {}
 permissions:
   contents: read
