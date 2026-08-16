@@ -90,6 +90,49 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && AI_OPS_REGRESSION_SLEEP=22 scripts/valid
 - cron：确认包含 `flock -n /tmp/aiops-readonly-refresh.lock`，避免重叠刷新。
 - Git：只 stage AI Ops 相关文件；不要吞 `.claude/skills/evomap-assets/*.json`、`.claude/skills/scheduler/history.md` 等无关脏改。
 
+## EasyTier 组网监控（2026-08-17 接入）
+
+野草云 HK 中继（`207.57.124.191` / 组网 `10.10.10.1`）已交给本驾驶舱值守。
+**形式是 aiops 当告警总线，不当探针**——探测留在组网内部，**VPS 上零改动、
+本项目代码/Caddy/容器零改动**，只在 Kuma 库里加了两个监控项（数据）。
+
+| Kuma id | 名称 | 类型 |
+|---|---|---|
+| 17 | EasyTier 中继端口 野草云HK | port `207.57.124.191:443`，interval 60s / retries 2 |
+| 18 | EasyTier 组网探针 家侧linux-lan | push，interval 600s / retries 2 |
+
+两条都绑 `notification_id=1`（飞书运维告警）。喂 18 的是 linux-lan 上的
+`~/easytier-watch.sh`（cron `*/10`）。**判读必须两条一起看**：
+`17🟢 18🔴` = 中继活着但组网坏 **或探针那台机自己坏了**；
+`17🔴 18🟢` = 供应商封了 443 但已建立的 p2p 还通。
+
+- ⚠️ **push 路径不带 `/kuma` 前缀**：Caddyfile 的豁免是 `not path /api/push/*`，匹配**原始路径**；
+  而 `handle_path /kuma*` 会剥前缀 ⇒ `/kuma/api/push/<token>` 反被网关 401。正确路径会拿到
+  Kuma 自己的 `{"ok":false,"msg":"Monitor not found or not active."}`。
+  现有其他 push 监控都是 racknerd 本机内部推的，没走过公网，所以这个坑之前没暴露。
+- ⚠️ **Kuma 不记录通知发送成败**：全量容器日志里 `Feishu` 出现 **0 次**，
+  `notification_sent_history` 只用于证书到期去重。所以「飞书是否送达」服务端**无直接证据**。
+  只能：看 heartbeat 的 `important=1`（Kuma 判定状态变更＝触发通知的条件）+ 直接对同一 webhook
+  发测试消息验证通道活着。**别把 `important=1` 当"已送达"汇报。**
+- Kuma v1 无 monitor CRUD API。用 SQLite 直插时：先 `.backup`，照现有同类型行取字段，
+  插完 `docker restart ops-uptime-kuma`，再用 heartbeat 表确认真的产生了心跳（"库里有行"≠"在跑"）。
+
+## ⚠️ 既存故障：IPTV 健康端点空壳 200 + Kuma 假绿（未修）
+
+2026-08-17 接 EasyTier 监控时顺带发现，**与该次改动无关，已存在 12 天**：
+
+- `https://kidshub-ai.hahaxiong.cc/ops-health/iptv` 返回 `200` 但 `Content-Type: text/html`
+  ——吐的是 SPA 外壳不是健康 JSON，`jq` 解析不了。
+- ⇒ `scripts/validate-vibe-regression.sh` **第 204 行必然失败**（`live.json?id=iptv-api` 的 jq 断言），
+  全量回归拿不到 `OK vibe regression`。**在修好前，该脚本对任何改动都会红**，
+  别把它当成新改动引入的回归。失败点之前（1–203 行）覆盖的 `/vibe/`、`tasks`、`todos`、
+  `assets`、terminal 主流程仍会正常通过，可据此判断主流程是否被碰坏。
+- ⇒ **Kuma monitor 12「私人 IPTV M3U 就绪度」却一直 `status=1 "200 - OK"`**——HTTP 型监控
+  只看状态码不看载荷，**是个假绿**。真实信号在 monitor 13「私人 IPTV 每日 AI 巡检」，
+  最后一次 UP 是 `2026-08-04 19:02`，之后 21 条 DOWN。
+- 修的时候**要连 monitor 12 的判据一起改**（加 keyword 或换成 json 断言），
+  否则修好了仍然靠假绿判断。
+
 ## 线上部署模板
 
 ```bash
