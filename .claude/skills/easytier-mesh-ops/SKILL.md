@@ -187,7 +187,14 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 `~/mycc/.claude/skills/cross-site-file-transfer/SKILL.md`。本 Skill 只保留组网侧结论：
 
 - Air→公司的端到端 EasyTier 路径曾观测到 `2–6%` 丢包；Air Wi-Fi 是风险因素，但不是已证明的唯一根因。
-- 默认先在家庭 LAN 落到 `linux-lan`，再由有线 Linux 发送；飞牛必须通过实时 SSH 身份、host key、磁盘、路由和拥塞控制检查后才能选。
+- ⚠️ **「先落有线 Linux 再发送」2026-08-16 实测未成立，不要默认这么做**。同一时刻单流到 dev198：
+  Air(WiFi) `0.28 MB/s` / linux-lan(有线+BBR) `0.19` / 飞牛(有线+BBR，i5-8500 六核 load 0.28，非 CPU 瓶颈) `0.15`
+  —— 两台有线机**都比 Air 慢**；中转总耗时 `131.6s` vs 直传 `70.4s`，慢 1.9 倍。
+  当时丢包 Air `15%` / linux-lan `30%`：丢包高到这个量级时，有线相对 Wi-Fi 的优势被跨网拥塞完全淹没。
+  中转是否有利**必须当场实测两段**再决定，不能当默认策略。
+- **丢包有强时段性**：同日 `3.3%`(下午) → `15~30%`(晚高峰)，两侧分属移动/联通，指向跨网互联点拥塞而非链路误码。
+  ⇒ ①吞吐数字必须带同时刻丢包否则跨时间不可比 ②A/B 必须交替(A-B-A-B) ③**避开晚高峰的收益可能大于任何调参**
+  ④拥塞型丢包下 KCP/Hysteria-Brutal 这类「无视丢包硬推」的方案未必有效，且对同一互联点上的其他人不友好。
 - 批量文件并发从 4 路测起，再试 8 路；`rclone --transfers` 不会把单个大文件自动拆成多路。
 - BBR 只影响 Linux 发送端的 TCP。2026-08-16 实测 `linux-lan` 使用 BBR、默认 qdisc 为 fq，但有线和 EasyTier 接口实际为 fq_codel，禁止笼统汇报“当前 bbr+fq”。
 - SSH / RPC / Codex 等交互小流量不受大文件中转规则限制。
