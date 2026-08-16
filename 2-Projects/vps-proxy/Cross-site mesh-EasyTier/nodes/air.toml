@@ -39,4 +39,4 @@ latency_first = true
 multi_thread = true
 bind_device = true           # Air 上 Clash/Xray 常驻且有 4 个 utun，这条最关键
 accept_dns = false           # 绝对不要在 Air 上开 Magic DNS，会和 Clash 的 DNS 抢
-enable_kcp_proxy = false
+enable_kcp_proxy = true
