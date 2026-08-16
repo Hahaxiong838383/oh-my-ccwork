@@ -617,7 +617,18 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 - **参数**(64.90 rust-worker.env):`FILLER_PROBABILITY=0.6`(普通轮);`FILLER_BARGE_MAX_MS=1500`(超长保险丝,代码默认 1200)。**打断轮(boost)只从专用 `barge` 桶选条**(6 条收住+转向腔,pick_bucket 永不返回 barge→普通轮碰不到;桶缺失才回退语义桶短条)。资产 87 wav @ /opt/voice-agent/fillers-colleague(旧 81 备份 .bak-v6-20260816)。
 - **改文案 SOP**:改 scripts/gen_fillers.py FILLERS 表 → scp 到 64.90:/root/realtime-voice-agent/scripts/gen_fillers_v7.py(PROJ 结构依赖:必须在该项目 scripts/ 下) → `set -a; . /root/rust-worker/rust-worker.env; set +a`(讯飞凭据;探针另需共享 .env 的 LIVEKIT_*) → `cd /root/realtime-voice-agent && /root/voice-venv/bin/python scripts/gen_fillers_v7.py --engine xfyun --out /opt/voice-agent/fillers-colleague.new` → 独立复核(条数/无>3s/barge 全≤1500/老文案零漂移) → stop → mv 原子切 → start → 探针。**⚠️ 文案纪律:task 桶禁执行承诺腔(v5 川哥定);跨桶完整短语禁重;讯飞短句 padding 非线性——要 ≤1500ms 文案就得 ≤3 字**(4-5 字实测 1560-2080ms 全超,「嘞/的」拖腔字再+200ms;线性外推模型不可信,合成后逐条实测是硬门)。
 - **验收探针**:filler_v6_probe.py(64.90:/root/rust-worker/);判据=`filler picked bucket= dur_ms= boost=` 行:**boost 轮全部 bucket=barge 且 ≤1500**/普通轮零 barge/相邻不重复/bank loaded: 87 buckets 含 barge。**探针写法铁律:播问句前先停静音 feeder**(交错=音频打碎,ASR 零识别而 mean_amp 正常——2026-08-16 踩过)。
-- barge 6 条实测:嗯嗯来1360/打住1080/听你的1240/得嘞1480/啊哦1240/先你的1360。v6 已知边界(打断轮恒「稍等。」)已解除。
+- **barge 桶现行 12 条(v7.1,川哥《日常打断短促回复短语》文档拍板,标点照字面)**:嗯！1360/好！960/行！1080/哦！920/收到！1280/得嘞！1200/好嘞！1120/嗯嗯1080/好呀1000/行呀960/你说1120/你说吧1120。好/行开头在打断桶解禁(v5 禁令只管 task 承接腔)。资产 93 wav;备份链 .bak-v5(62)/.bak-v6(81)/.bak-v7(87)。
+
+## 主循环死锁防护(2026-08-16 四环死锁事故后加装)
+
+- **红线**:pipeline 主循环内**禁止阻塞等锁**——两处 llm 锁均 try_lock,拿不到弃投机(日志
+  `speculation skipped: llm busy` / `preemptive miss (llm busy)`,出现=防护在工作,非故障)。
+- **watchdog**:pipeline 50ms 心跳,job 层 5s 无跳 → `pipeline 主循环卡死(watchdog 5s 无心跳)` error
+  +自动关房删房(用户重连即新房)。**看到这行=出现了新的主循环卡死诱因**,拉卡死前最后一条日志定位。
+- **死锁探针**:`deadlock_probe.py`(64.90:/root/rust-worker/,跑法同 filler 探针需共享 .env 的 LIVEKIT_*)
+  ——重放真人打断死亡时序(插话→断续拖尾)。判据:插话后 audio in (10s) 持续=活,停发+overflow 每秒刷=死。
+  ⚠️ **打断有两条代码分支**:cancel 包=硬 abort,真人语音=pause+假打断窗——filler/canary 探针只走前者,
+  改打断相关代码必须跑 deadlock_probe 覆盖 pause 分支。
 
 ## canary.say 联调通道运维(2026-08-16 上线)
 
