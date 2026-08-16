@@ -1,7 +1,7 @@
 //! 语义分桶承接音库(逐行为对齐 engines/fillers.py C1 v2):
 //! turn 提交后按用户文本选桶,预解码 wav(24k mono s16,与播放通道同率直喂)零合成
 //! 延迟先出声,盖住 LLM+TTS 首音窗口。greet/thanks 桶级概率 0.5,其余走全局(默认
-//! 0.9);打断轮(5s 窗)boost 必播;滑窗 3 防重复;资产缺失静默降级 None。
+//! 0.9);打断轮(5s 窗)boost 必播且优先专用 barge 桶;滑窗 3 防重复;资产缺失静默降级 None。
 
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -81,8 +81,9 @@ pub struct FillerClip {
 pub struct FillerBank {
     clips: std::collections::HashMap<String, Vec<FillerClip>>,
     probability: f64,
-    /// 打断轮短条上限(ms):boost 时只从桶内 ≤此时长 的条里选,没有才回退全桶。
-    /// 打断后用户要的是"快点接上",慢悠悠的长承接火上浇油(2026-08-16 川哥定)。
+    /// 打断轮短条上限(ms):boost 时只从池内 ≤此时长 的条里选(专用 barge 桶同样过滤,
+    /// 当合成超长的保险丝),没有才回退全池。打断后用户要的是"快点接上",慢悠悠的
+    /// 长承接火上浇油(2026-08-16 川哥定;生产 env 1500)。
     barge_max_ms: u64,
     recent: VecDeque<String>, // 最近 3 条文案滑窗防重复
 }
@@ -185,11 +186,19 @@ impl FillerBank {
         if rand::rng().random::<f64>() >= prob {
             return None;
         }
-        let pool = self.clips.get(bucket).or_else(|| self.clips.get("gen"))?;
+        // 打断轮优先专用 barge 桶(2026-08-16 川哥定):打断衔接的合适性是语义不是时长,
+        // 桶内是人工圈定的"收住+转向"腔(pick_bucket 永不返回 barge,普通轮碰不到);
+        // 桶缺失/为空(资产事故)才回退语义桶短条——保住静默降级链。
+        let barge_pool =
+            if boost { self.clips.get("barge").filter(|p| !p.is_empty()) } else { None };
+        let (pool_name, pool) = match barge_pool {
+            Some(p) => ("barge", p),
+            None => (bucket, self.clips.get(bucket).or_else(|| self.clips.get("gen"))?),
+        };
         if pool.is_empty() {
             return None;
         }
-        // 打断轮只从桶内短条选(桶仍按用户新话语义选,保住贴合度);桶内没有短条才回退全桶。
+        // 打断轮只选 ≤barge_max_ms 的条(barge 桶同样过滤,当合成超长的保险丝);滤空回退全池。
         let base: Vec<&FillerClip> = if boost {
             let short: Vec<&FillerClip> =
                 pool.iter().filter(|c| c.duration_ms <= self.barge_max_ms).collect();
@@ -206,7 +215,7 @@ impl FillerBank {
         }
         self.recent.push_back(clip.text.clone());
         info!(
-            "filler picked bucket={bucket} dur_ms={} boost={boost} text='{}'",
+            "filler picked bucket={pool_name} dur_ms={} boost={boost} text='{}'",
             clip.duration_ms, clip.text
         );
         Some((clip.text.clone(), clip.pcm.clone()))
@@ -256,6 +265,51 @@ mod tests {
             b.recent.clear();
         }
         assert_eq!(seen.len(), 2, "普通轮长短条都该被选到(无短条偏好)");
+    }
+
+    fn bank_with_barge(sem: Vec<FillerClip>, barge: Vec<FillerClip>) -> FillerBank {
+        let mut m = std::collections::HashMap::new();
+        m.insert("gen".to_string(), sem);
+        m.insert("barge".to_string(), barge);
+        FillerBank { clips: m, probability: 1.0, barge_max_ms: 1500, recent: VecDeque::new() }
+    }
+
+    #[test]
+    fn boost_uses_barge_bucket_when_present() {
+        let mut b = bank_with_barge(
+            vec![clip("语义桶短条", 900)],
+            vec![clip("哦，我打住。", 1300), clip("嗯嗯，来。", 1200)],
+        );
+        for _ in 0..20 {
+            let (text, _) = b.pick("随便聊聊", true).expect("boost 必播");
+            assert_ne!(text, "语义桶短条", "打断轮有 barge 桶时不得选语义桶");
+            b.recent.clear();
+        }
+    }
+
+    #[test]
+    fn boost_barge_bucket_still_filters_overlong() {
+        let mut b = bank_with_barge(
+            vec![clip("语义条", 900)],
+            vec![clip("超长条", 2000), clip("合规条", 1400)],
+        );
+        for _ in 0..20 {
+            let (text, _) = b.pick("随便聊聊", true).expect("boost 必播");
+            assert_eq!(text, "合规条", "barge 桶内也要过 ≤barge_max_ms 保险丝");
+            b.recent.clear();
+        }
+    }
+
+    #[test]
+    fn normal_turn_never_picks_barge() {
+        let mut b =
+            bank_with_barge(vec![clip("语义条", 900)], vec![clip("哦，我打住。", 1300)]);
+        for _ in 0..40 {
+            if let Some((text, _)) = b.pick("随便聊聊", false) {
+                assert_eq!(text, "语义条", "普通轮永不选 barge 桶");
+            }
+            b.recent.clear();
+        }
     }
 
     #[test]
