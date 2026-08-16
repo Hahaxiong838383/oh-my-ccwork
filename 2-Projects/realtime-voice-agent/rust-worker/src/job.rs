@@ -73,8 +73,40 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     let (ctrl_tx, ctrl_rx) =
         mpsc::channel::<(control::Envelope, control::Inbound, Option<String>)>(64);
     let mut ctrl_rx = Some(ctrl_rx);
+    // pipeline 主循环心跳(watchdog):0=未启动;主循环每 50ms tick 写 epoch ms。
+    // 卡死实证(2026-08-16 voice-test-rust):主循环等 llm 锁僵死,job 层事件循环仍活
+    // ——所以看门狗放这里,5s 无心跳即 break 走统一收尾(abort+关房删房),用户重连即新房。
+    let beat = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let mut watchdog = tokio::time::interval(std::time::Duration::from_secs(1));
+    watchdog.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
-    while let Some(ev) = events.recv().await {
+    loop {
+        let ev = tokio::select! {
+            ev = events.recv() => match ev {
+                Some(ev) => ev,
+                None => break,
+            },
+            _ = watchdog.tick() => {
+                if let Some(t) = &pipeline_task
+                    && !t.is_finished()
+                {
+                    let last = beat.load(std::sync::atomic::Ordering::Relaxed);
+                    let now_ms = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis() as u64;
+                    if last > 0 && now_ms.saturating_sub(last) > 5_000 {
+                        tracing::error!(
+                            room = %room_name,
+                            stalled_ms = now_ms - last,
+                            "pipeline 主循环卡死(watchdog 5s 无心跳)→ abort+关房自愈;已知诱因=主循环等 llm 锁(查 speculation/preemptive 与 pause 悬置)"
+                        );
+                        break;
+                    }
+                }
+                continue;
+            }
+        };
         match ev {
             // 设备控制包。⚠️ worker 自己的 ack 也走 control topic,
             // 过滤在 control::parse 里(只认 src=android),不然会自己取消自己。
@@ -175,8 +207,11 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 user_track_sid,
             };
             let crx = ctrl_rx.take().expect("pipeline 只启动一次");
+            let beat2 = beat.clone();
             pipeline_task = Some(tokio::spawn(async move {
-                if let Err(e) = pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx).await {
+                if let Err(e) =
+                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, beat2).await
+                {
                     tracing::warn!(room = %rn, error = %e, "pipeline exited with error");
                 }
             }));

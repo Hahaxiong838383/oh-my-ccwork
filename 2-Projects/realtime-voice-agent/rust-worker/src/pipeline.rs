@@ -239,6 +239,7 @@ pub async fn run_pipeline(
     room_name: String,
     route: transcript_pub::Route,
     mut ctrl_rx: mpsc::Receiver<(control::Envelope, control::Inbound, Option<String>)>,
+    beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
 ) -> Result<()> {
     let cfg = PipelineConfig::from_env();
     let stt_cfg = SttConfig::from_env();
@@ -445,6 +446,14 @@ pub async fn run_pipeline(
             }
             Some(te) = turn_ev_rx.recv() => orch.on_turn_event(te),
             _ = commit_tick.tick() => {
+                // watchdog 心跳(epoch ms):主循环卡死(如等锁)时停跳,job 层 5s 无跳即惊闸关房
+                beat.store(
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis() as u64,
+                    std::sync::atomic::Ordering::Relaxed,
+                );
                 if in_report.elapsed() >= Duration::from_secs(10) {
                     let mean_amp = if in_frames > 0 { in_amp_acc / in_frames } else { 0 };
                     info!(room = %room_name, frames = in_frames, mean_amp, "audio in (10s)");
@@ -548,11 +557,22 @@ impl Orchestrator {
     }
 
     /// 起投机 LLM(不含 TTS;历史快照版本随身,提交时校验)。旧投机作废。
+    ///
+    /// ⚠️ 死锁红线(2026-08-16 voice-test-rust 卡死实证):主循环内**禁止阻塞等 llm 锁**。
+    /// 回复孙任务持锁跨整个 LLM 流;真打断 pause 悬置时 playout 不消费 → pcm 满 →
+    /// 回复任务停收 delta → delta 满 → 孙任务挂在 send 上锁永不释放;而 pause 的
+    /// 解除路径(假打断定时/下轮提交)全在主循环——主循环一等锁即四环死锁。
+    /// 投机是可丢的优化:拿不到锁=放弃本次,零损失。
     async fn start_speculation(&mut self, text: String) {
         if let Some(old) = self.spec.take() {
             old.task.abort();
         }
-        let (client, cfg, messages, version) = self.llm.lock().await.speculation_request(&text);
+        let Ok(llm_guard) = self.llm.try_lock() else {
+            info!(room = %self.room_name, "speculation skipped: llm busy(回复流持锁中)");
+            return;
+        };
+        let (client, cfg, messages, version) = llm_guard.speculation_request(&text);
+        drop(llm_guard);
         let (tx, rx) = mpsc::channel::<String>(1024);
         let task = tokio::spawn(async move { llm::stream_chat(&client, &cfg, messages, tx).await });
         self.spec = Some(Speculation {
@@ -970,6 +990,10 @@ impl Orchestrator {
                 self.paused = None;
                 self.false_deadline = None;
                 self.contract.agent_transcript_final();
+                // 自然播完≠被插话:清残留 interim,否则 set_state 的 speaking→listening
+                // 会把它当"真插话"记 last_interrupt_at → 播完后 5s 内的下一轮全被误判
+                // boost,barge 桶文案落在非打断语境(2026-08-16「先你的。」实证)
+                self.tele_text.clear();
                 self.set_state(AgentState::Listening);
             }
         }
@@ -1027,27 +1051,37 @@ impl Orchestrator {
                 sp.on_turn();
             }
             let amend = self.pending_amend.take();
-            // S1v3 投机核销:提交文本全等 + 历史版本未变 → 复用;否则作废
+            // S1v3 投机核销:提交文本全等 + 历史版本未变 → 复用;否则作废。
+            // try_lock 同 start_speculation 的死锁红线:锁被回复流持着(上一轮孙任务
+            // 尚未退出)时当 miss 丢投机,绝不阻塞主循环。
             let spec = match self.spec.take() {
-                Some(sp) => {
-                    let ver_now = self.llm.lock().await.history_version();
-                    if sp.text == user_text && sp.version == ver_now {
-                        info!(
-                            room = %self.room_name,
-                            lead_ms = sp.started.elapsed().as_millis() as u64,
-                            "using preemptive generation"
-                        );
-                        Some(sp)
-                    } else {
-                        info!(
-                            room = %self.room_name,
-                            spec_text = %sp.text.chars().take(24).collect::<String>(),
-                            "preemptive miss (text/ctx changed), discarding"
-                        );
+                Some(sp) => match self.llm.try_lock() {
+                    Ok(llm_guard) => {
+                        let ver_now = llm_guard.history_version();
+                        drop(llm_guard);
+                        if sp.text == user_text && sp.version == ver_now {
+                            info!(
+                                room = %self.room_name,
+                                lead_ms = sp.started.elapsed().as_millis() as u64,
+                                "using preemptive generation"
+                            );
+                            Some(sp)
+                        } else {
+                            info!(
+                                room = %self.room_name,
+                                spec_text = %sp.text.chars().take(24).collect::<String>(),
+                                "preemptive miss (text/ctx changed), discarding"
+                            );
+                            sp.task.abort();
+                            None
+                        }
+                    }
+                    Err(_) => {
+                        info!(room = %self.room_name, "preemptive miss (llm busy), discarding");
                         sp.task.abort();
                         None
                     }
-                }
+                },
                 None => None,
             };
             // 承接音:打断轮(5s 窗)必播,其余按桶概率
