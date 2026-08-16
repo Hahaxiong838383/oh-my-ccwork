@@ -25,7 +25,11 @@ use crate::transcript_pub;
 use crate::tts_volc::TTS_SAMPLE_RATE;
 
 pub async fn run_job(config: Config, job: proto::Job, url: String, token: String) -> Result<()> {
-    let room_name = job.room.as_ref().map(|r| r.name.clone()).unwrap_or_default();
+    let room_name = job
+        .room
+        .as_ref()
+        .map(|r| r.name.clone())
+        .unwrap_or_default();
     let t0 = Instant::now();
     info!(job_id = %job.id, room = %room_name, "connecting to room");
 
@@ -41,21 +45,17 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // agent 出声轨:24k mono(TTS 原生采样率直喂,RTC 内部重采样)。
     // 队列 200ms 对齐 Python room_io(queue_size_ms=200):pause 时排队尾音 ≤200ms
     // 自然放完(框架不 clear),硬打断才 clear_buffer。
-    let source = NativeAudioSource::new(
-        AudioSourceOptions::default(),
-        TTS_SAMPLE_RATE,
-        1,
-        200,
-    );
-    let track = LocalAudioTrack::create_audio_track(
-        "agent-voice",
-        RtcAudioSource::Native(source.clone()),
-    );
+    let source = NativeAudioSource::new(AudioSourceOptions::default(), TTS_SAMPLE_RATE, 1, 200);
+    let track =
+        LocalAudioTrack::create_audio_track("agent-voice", RtcAudioSource::Native(source.clone()));
     let agent_pub = room
         .local_participant()
         .publish_track(
             LocalTrack::Audio(track),
-            TrackPublishOptions { source: TrackSource::Microphone, ..Default::default() },
+            TrackPublishOptions {
+                source: TrackSource::Microphone,
+                ..Default::default()
+            },
         )
         .await
         .context("publish audio track")?;
@@ -70,18 +70,26 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     let mut pipeline_task: Option<JoinHandle<()>> = None;
     // 入站控制通道(S2-B1):设备 → worker 的 cancel/旁路事件。容量给足,
     // 满了宁可丢新包也不能阻塞 room 事件循环(那会连带卡住音频轨事件)。
-    let (ctrl_tx, ctrl_rx) = mpsc::channel::<(control::Envelope, control::Inbound)>(64);
+    let (ctrl_tx, ctrl_rx) =
+        mpsc::channel::<(control::Envelope, control::Inbound, Option<String>)>(64);
     let mut ctrl_rx = Some(ctrl_rx);
 
     while let Some(ev) = events.recv().await {
         match ev {
             // 设备控制包。⚠️ worker 自己的 ack 也走 control topic,
             // 过滤在 control::parse 里(只认 src=android),不然会自己取消自己。
-            RoomEvent::DataReceived { payload, topic, .. } => {
+            RoomEvent::DataReceived {
+                payload,
+                topic,
+                participant,
+                ..
+            } => {
                 if topic.as_deref() == Some(control::TOPIC)
-                    && let Some(parsed) = control::parse(&payload)
+                    && let Some((ev, kind)) = control::parse(&payload)
                 {
-                    if ctrl_tx.try_send(parsed).is_err() {
+                    // participant identity 随包透传:canary.say 的白名单认它,不认 payload 自述
+                    let identity = participant.as_ref().map(|p| p.identity().to_string());
+                    if ctrl_tx.try_send((ev, kind, identity)).is_err() {
                         warn!(room = %room_name, "control 队列满,丢弃一个控制包");
                     }
                 } else {
@@ -105,14 +113,19 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                     identity = %participant.identity(),
                     "user audio track subscribed"
                 );
-                user_info =
-                    Some((participant.identity().to_string(), publication.sid().to_string()));
+                user_info = Some((
+                    participant.identity().to_string(),
+                    publication.sid().to_string(),
+                ));
                 // 16k 拉流:pipeline 的 VAD/STT 全按 16k 契约
                 mic_stream = Some(NativeAudioStream::new(audio.rtc_track(), 16_000, 1));
             }
             // 输入侧观测(2026-08-12 聋窗排查加装):移动端息屏/切后台会 mute 上行轨,
             // 表现=worker 全聋且零报错;这两行是那类故障的第一现场证据。
-            RoomEvent::TrackMuted { participant, publication } => {
+            RoomEvent::TrackMuted {
+                participant,
+                publication,
+            } => {
                 warn!(
                     room = %room_name,
                     identity = %participant.identity(),
@@ -120,7 +133,10 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                     "user track MUTED(疑似息屏/切后台,上行音频停)"
                 );
             }
-            RoomEvent::TrackUnmuted { participant, publication } => {
+            RoomEvent::TrackUnmuted {
+                participant,
+                publication,
+            } => {
                 info!(
                     room = %room_name,
                     identity = %participant.identity(),
@@ -182,7 +198,9 @@ async fn delete_room(config: &Config, ws_url: &str, room_name: &str) {
     if room_name.is_empty() {
         return;
     }
-    let http_url = ws_url.replacen("wss://", "https://", 1).replacen("ws://", "http://", 1);
+    let http_url = ws_url
+        .replacen("wss://", "https://", 1)
+        .replacen("ws://", "http://", 1);
     let jwt = match server_api_jwt(&config.api_key, &config.api_secret, room_name) {
         Ok(t) => t,
         Err(e) => {
@@ -190,7 +208,10 @@ async fn delete_room(config: &Config, ws_url: &str, room_name: &str) {
             return;
         }
     };
-    let url = format!("{}/twirp/livekit.RoomService/DeleteRoom", http_url.trim_end_matches('/'));
+    let url = format!(
+        "{}/twirp/livekit.RoomService/DeleteRoom",
+        http_url.trim_end_matches('/')
+    );
     let client = reqwest::Client::new();
     match client
         .post(&url)

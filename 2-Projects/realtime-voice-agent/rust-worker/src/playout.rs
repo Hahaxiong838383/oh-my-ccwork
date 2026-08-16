@@ -6,7 +6,7 @@
 //!   (capture 被 200ms 队列背压限速,近似实时,用于打断后历史截断)。
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use livekit::webrtc::audio_frame::AudioFrame;
@@ -26,13 +26,18 @@ pub struct PlayoutControl {
     anchor: Instant,
     fade_ms: u32,
     fade_req: Arc<AtomicU64>, // resume 渐起请求(置 1=下帧起从 0 爬回)
+    /// 本轮播放终态(BufferWatch Drop 时写入;None=还没结束)
+    final_stats: Arc<Mutex<Option<FinalStats>>>,
 }
 
 /// 单测专用:只造控制句柄,不起播放循环(那需要真的 NativeAudioSource)。
 /// 返回 `(守住 watch 接收端的 guard, ctl)`——guard 必须活着,
 /// 否则 `watch::Sender` 会因无接收端而让 `send` 失败,`abort()` 就成了空操作。
 #[cfg(test)]
-pub fn test_control() -> ((watch::Receiver<bool>, watch::Receiver<bool>), PlayoutControl) {
+pub fn test_control() -> (
+    (watch::Receiver<bool>, watch::Receiver<bool>),
+    PlayoutControl,
+) {
     let (pause_tx, pause_rx) = watch::channel(false);
     let (abort_tx, abort_rx) = watch::channel(false);
     let ctl = PlayoutControl {
@@ -43,11 +48,17 @@ pub fn test_control() -> ((watch::Receiver<bool>, watch::Receiver<bool>), Playou
         anchor: Instant::now(),
         fade_ms: 0,
         fade_req: Arc::new(AtomicU64::new(0)),
+        final_stats: Arc::new(Mutex::new(None)),
     };
     ((pause_rx, abort_rx), ctl)
 }
 
 impl PlayoutControl {
+    /// 终态槽的共享句柄(pipeline 存进 CanaryPending,播完/取消后读)。
+    pub fn final_stats_handle(&self) -> Arc<Mutex<Option<FinalStats>>> {
+        self.final_stats.clone()
+    }
+
     pub fn pause(&self) {
         let _ = self.pause_tx.send(true);
     }
@@ -106,6 +117,9 @@ const PRIME_MS: u64 = 150;
 /// `capture_frame().await` 的 200ms 背压自动校准(队列满时喂帧与真实播放同速),
 /// 所以误差不会随 turn 变长而无界累积。
 struct BufferWatch {
+    /// 终态回传槽:Drop 时把 FinalStats 写进去(pipeline 经 PlayoutControl 读)。
+    /// 挂 Drop 与日志同一时机——全退出路径覆盖,不多一条也不少一条。
+    sink: Arc<Mutex<Option<FinalStats>>>,
     room: String,
     turn_id: u64,
     /// 已喂出的音频预计播完的时刻。None = 尚未开播,或刚从暂停恢复(缓冲已排空,重新起算)
@@ -126,8 +140,9 @@ struct BufferWatch {
 }
 
 impl BufferWatch {
-    fn new(room: String, turn_id: u64) -> Self {
+    fn new(room: String, turn_id: u64, sink: Arc<Mutex<Option<FinalStats>>>) -> Self {
         Self {
+            sink,
             room,
             turn_id,
             play_deadline: None,
@@ -169,7 +184,9 @@ impl BufferWatch {
     /// 一次「等 PCM」结束。`wait_start`=开始等的时刻,`now`=拿到数据的时刻。
     /// **只在真的拿到数据时调用**:channel 关闭(TTS 吐完)那次等待是本轮收尾,不是欠载。
     fn on_wait(&mut self, wait_start: Instant, now: Instant) {
-        let Some(deadline) = self.play_deadline else { return }; // 未开播,无缓冲可欠
+        let Some(deadline) = self.play_deadline else {
+            return;
+        }; // 未开播,无缓冲可欠
         let buf_before = deadline.saturating_duration_since(wait_start).as_millis() as u64;
         let waited = now.saturating_duration_since(wait_start).as_millis() as u64;
         if waited > buf_before {
@@ -212,6 +229,19 @@ impl BufferWatch {
     }
 }
 
+/// 一轮播放的最终统计(BufferWatch Drop 时定格),经 PlayoutControl 回传给 pipeline
+/// ——canary.say.metrics 的数据源(S2B1 合同:指标必须来自正式 playout 统计)。
+/// completed=true 仅当自然播完(SourceDrained);cancel/异常一律 false。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FinalStats {
+    pub underrun_count: u64,
+    pub underrun_ms: u64,
+    pub buffered_audio_ms: i64,
+    pub first_underrun_ms: i64,
+    pub played_frames: u64,
+    pub completed: bool,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 struct PlayoutStats {
     underrun_count: u64,
@@ -228,6 +258,17 @@ impl Drop for BufferWatch {
     /// 只有 Drop 能覆盖全部退出路径——少一条就是「这轮没有指标」而不是「这轮没问题」。
     fn drop(&mut self) {
         let s = self.stats();
+        // 终态回传:completed 仅认自然播完;写槽失败(锁中毒)不影响日志路径
+        if let Ok(mut g) = self.sink.lock() {
+            *g = Some(FinalStats {
+                underrun_count: s.underrun_count,
+                underrun_ms: s.underrun_ms,
+                buffered_audio_ms: s.buffered_audio_ms,
+                first_underrun_ms: s.first_underrun_ms,
+                played_frames: s.played_frames,
+                completed: matches!(self.why, Some(ExitWhy::SourceDrained)),
+            });
+        }
         info!(
             room = %self.room,
             turn_id = self.turn_id,
@@ -316,11 +357,12 @@ pub fn spawn_playout(
             .and_then(|v| v.parse().ok())
             .unwrap_or(0),
         fade_req: Arc::new(AtomicU64::new(0)),
+        final_stats: Arc::new(Mutex::new(None)),
     };
     let ctl2 = ctl.clone();
     let task = tokio::spawn(async move {
         const FRAME_SAMPLES: usize = (TTS_SAMPLE_RATE as usize) / 100; // 10ms
-        let mut watch = BufferWatch::new(room, turn_id);
+        let mut watch = BufferWatch::new(room, turn_id, ctl2.final_stats.clone());
         let mut residual: Vec<i16> = Vec::with_capacity(FRAME_SAMPLES * 2);
         // 渐起状态:>0 时逐样本乘增益爬坡(fade_output.py fade_gains 同款线性)
         let mut fade_gain: f32 = 1.0;
@@ -354,8 +396,10 @@ pub fn spawn_playout(
                 _ = abort_rx.changed() => { watch.exit(ExitWhy::Aborted); return }
             };
             watch.on_wait(wait_start, Instant::now());
-            let mut samples: Vec<i16> =
-                chunk.chunks_exact(2).map(|b| i16::from_le_bytes([b[0], b[1]])).collect();
+            let mut samples: Vec<i16> = chunk
+                .chunks_exact(2)
+                .map(|b| i16::from_le_bytes([b[0], b[1]]))
+                .collect();
             residual.append(&mut samples);
             while residual.len() >= FRAME_SAMPLES {
                 if *abort_rx.borrow() {
@@ -400,7 +444,8 @@ pub fn spawn_playout(
                         Ordering::SeqCst,
                     )
                     .ok();
-                ctl2.captured.fetch_add(FRAME_SAMPLES as u64, Ordering::SeqCst);
+                ctl2.captured
+                    .fetch_add(FRAME_SAMPLES as u64, Ordering::SeqCst);
             }
         }
         if !residual.is_empty() {
@@ -431,8 +476,36 @@ mod tests {
     }
 
     /// 灌到 `PRIME_MS` 以上:同一时刻连喂 n 帧,deadline 即 t0 + n*10ms。
+    #[test]
+    fn final_stats_written_on_drop_and_completed_only_when_drained() {
+        let sink: Arc<Mutex<Option<FinalStats>>> = Arc::new(Mutex::new(None));
+        {
+            let mut w = BufferWatch::new("r".into(), 7, sink.clone());
+            w.exit(ExitWhy::SourceDrained);
+        }
+        let fs = sink.lock().unwrap().clone().expect("drop 后必须有终态");
+        assert!(fs.completed, "自然播完 completed=true");
+
+        let sink2: Arc<Mutex<Option<FinalStats>>> = Arc::new(Mutex::new(None));
+        {
+            let mut w = BufferWatch::new("r".into(), 8, sink2.clone());
+            w.exit(ExitWhy::Aborted);
+        }
+        assert!(
+            !sink2.lock().unwrap().clone().unwrap().completed,
+            "cancel 后 completed=false"
+        );
+
+        let sink3: Arc<Mutex<Option<FinalStats>>> = Arc::new(Mutex::new(None));
+        {
+            let _w = BufferWatch::new("r".into(), 9, sink3.clone());
+            // 无 exit 标记(unmarked)——completed 也必须是 false,不能把异常算成播完
+        }
+        assert!(!sink3.lock().unwrap().clone().unwrap().completed);
+    }
+
     fn primed_watch(t0: Instant, frames: u64) -> BufferWatch {
-        let mut w = BufferWatch::new("r".into(), 1);
+        let mut w = BufferWatch::new("r".into(), 1, Arc::new(Mutex::new(None)));
         for _ in 0..frames {
             w.on_frame(t0);
         }
@@ -442,7 +515,7 @@ mod tests {
     #[test]
     fn never_started_reports_minus_one_not_zero() {
         // 占位值必须能和真实测量区分开:报 0 会被读成「缓冲曾经见底」
-        let w = BufferWatch::new("r".into(), 1);
+        let w = BufferWatch::new("r".into(), 1, Arc::new(Mutex::new(None)));
         assert_eq!(
             w.stats(),
             PlayoutStats {
@@ -485,7 +558,11 @@ mod tests {
         // 反向锚:再多 10ms 就必须被抓到,否则上面那条是恒绿的
         let mut w2 = primed_watch(t0, 20);
         w2.on_wait(t0, t0 + ms(225));
-        assert_eq!(w2.stats().underrun_count, 1, "25ms 缺口必须计,否则判据没有区分力");
+        assert_eq!(
+            w2.stats().underrun_count,
+            1,
+            "25ms 缺口必须计,否则判据没有区分力"
+        );
     }
 
     #[test]
@@ -493,7 +570,7 @@ mod tests {
         // 这个数决定选哪个优化方案:靠近 0 = 起播缓冲薄,靠后 = 上游中途掉链子。
         // 位置算错会把人引到错误的方案上,所以单独钉住。
         let t0 = Instant::now();
-        let mut w = BufferWatch::new("r".into(), 1);
+        let mut w = BufferWatch::new("r".into(), 1, Arc::new(Mutex::new(None)));
         for _ in 0..20 {
             w.on_frame(t0); // 开播于 t0,deadline = t0+200ms
         }
@@ -501,11 +578,18 @@ mod tests {
         w.on_wait(t0 + ms(2000), t0 + ms(2500));
         let s = w.stats();
         assert_eq!(s.underrun_count, 1);
-        assert_eq!(s.first_underrun_ms, 2000, "位置以开播时刻为原点,不是以 turn 创建时刻");
+        assert_eq!(
+            s.first_underrun_ms, 2000,
+            "位置以开播时刻为原点,不是以 turn 创建时刻"
+        );
         // 第二次欠载不能覆盖第一次的位置
         w.on_wait(t0 + ms(5000), t0 + ms(5400));
         assert_eq!(w.stats().underrun_count, 2);
-        assert_eq!(w.stats().first_underrun_ms, 2000, "记的是**首次**,后续不得覆盖");
+        assert_eq!(
+            w.stats().first_underrun_ms,
+            2000,
+            "记的是**首次**,后续不得覆盖"
+        );
     }
 
     #[test]
@@ -524,7 +608,7 @@ mod tests {
         // audio_start 跨暂停保留:否则打断后恢复的轮,欠载位置会被算回 0 附近,
         // 看起来像「起播就卡」,把人引向错误的方案。
         let t0 = Instant::now();
-        let mut w = BufferWatch::new("r".into(), 1);
+        let mut w = BufferWatch::new("r".into(), 1, Arc::new(Mutex::new(None)));
         for _ in 0..20 {
             w.on_frame(t0);
         }
@@ -533,7 +617,11 @@ mod tests {
             w.on_frame(t0 + ms(3000)); // 3 秒后继续播
         }
         w.on_wait(t0 + ms(3200), t0 + ms(3900));
-        assert_eq!(w.stats().first_underrun_ms, 3200, "原点必须还是最初开播的 t0");
+        assert_eq!(
+            w.stats().first_underrun_ms,
+            3200,
+            "原点必须还是最初开播的 t0"
+        );
     }
 
     #[test]
@@ -542,7 +630,11 @@ mod tests {
         let mut w = primed_watch(t0, 20);
         w.on_resume(); // 用户打断 → pause → resume,队列本就该是空的
         w.on_wait(t0, t0 + ms(5_000));
-        assert_eq!(w.stats().underrun_count, 0, "暂停造成的静音不是生产端跟不上");
+        assert_eq!(
+            w.stats().underrun_count,
+            0,
+            "暂停造成的静音不是生产端跟不上"
+        );
     }
 
     #[test]
@@ -553,13 +645,17 @@ mod tests {
         w.on_frame(t0 + ms(500));
         w.on_wait(t0 + ms(500), t0 + ms(520));
         // 若错误地从 t0+210 累加,buf_before 会算成 0 而不是 10 → 会多记一次欠载
-        assert_eq!(w.stats().underrun_count, 0, "缺口只能记一次,不能在后续等待里重复计");
+        assert_eq!(
+            w.stats().underrun_count,
+            0,
+            "缺口只能记一次,不能在后续等待里重复计"
+        );
     }
 
     #[test]
     fn unprimed_skips_watermark_but_still_counts_underrun() {
         let t0 = Instant::now();
-        let mut w = BufferWatch::new("r".into(), 1);
+        let mut w = BufferWatch::new("r".into(), 1, Arc::new(Mutex::new(None)));
         w.on_frame(t0); // 只有 10ms 缓冲,远未 primed
         w.on_wait(t0, t0 + ms(200)); // 静音 190ms,开播就卡是真欠载
         let s = w.stats();

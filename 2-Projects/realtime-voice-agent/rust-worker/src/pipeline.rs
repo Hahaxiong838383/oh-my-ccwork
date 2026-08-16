@@ -15,8 +15,8 @@
 //! 声纹、音乐工具。
 
 use std::collections::{HashSet, VecDeque};
-use std::sync::Mutex as StdMutex;
 use std::sync::Arc;
+use std::sync::Mutex as StdMutex;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
@@ -24,14 +24,14 @@ use futures_util::StreamExt;
 use livekit::prelude::*;
 use livekit::webrtc::audio_source::native::NativeAudioSource;
 use livekit::webrtc::audio_stream::native::NativeAudioStream;
-use serde_json::{json, Value};
-use tokio::sync::{mpsc, Mutex};
+use serde_json::{Value, json};
+use tokio::sync::{Mutex, mpsc};
 use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
 use crate::contract::Contract;
 use crate::control;
-use crate::eot::{EotClient, EOT_MAX_SAMPLES, UNLIKELY_THRESHOLD_ZH};
+use crate::eot::{EOT_MAX_SAMPLES, EotClient, UNLIKELY_THRESHOLD_ZH};
 use crate::filler::FillerBank;
 use crate::llm::{self, ChatOutcome, Llm, LlmConfig};
 use crate::playout::{self, PlayoutControl};
@@ -39,8 +39,8 @@ use crate::preflight::{PreflightConfig, PreflightGate};
 use crate::segmenter::Segmenter;
 use crate::speaker_id::SpeakerSidecar;
 use crate::stt_volc::{self, AsrEnd, SttConfig, SttEvent};
-use crate::transcript_pub::{self, sentence_spans, TranscriptPub};
 use crate::textproc::{normalize_utterance, parse_hotwords};
+use crate::transcript_pub::{self, TranscriptPub, sentence_spans};
 use crate::tts::TtsCfg;
 use crate::turn::TurnGate;
 use crate::vad::{SileroVad, VadEvent, VadGate, WINDOW};
@@ -58,6 +58,9 @@ pub struct PipelineConfig {
     /// 连接后是否自动播固定开场白。P003 安卓 demo 要求关掉(2026-08-15 联调)。
     /// 默认 true —— 其余环境行为不变。
     pub greeting_enabled: bool,
+    /// S2B1 canary.say 联调通道。默认关;identity 白名单空=全部拒绝(fail-closed)。
+    pub canary_say_enabled: bool,
+    pub canary_identity_allow: Vec<String>,
     pub vad_model_path: String,
     pub hotwords: HashSet<String>,
 }
@@ -83,7 +86,12 @@ fn parse_flag(raw: Option<&str>, default: bool) -> bool {
 
 impl PipelineConfig {
     pub fn from_env() -> Self {
-        let f = |k: &str, d: f32| std::env::var(k).ok().and_then(|v| v.parse().ok()).unwrap_or(d);
+        let f = |k: &str, d: f32| {
+            std::env::var(k)
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(d)
+        };
         Self {
             min_endpointing_delay: Duration::from_secs_f32(f("MIN_ENDPOINTING_DELAY", 0.55)),
             max_endpointing_delay: Duration::from_secs_f32(f("MAX_ENDPOINTING_DELAY", 0.6)),
@@ -108,6 +116,16 @@ impl PipelineConfig {
                 std::env::var("AGENT_GREETING_ENABLED").ok().as_deref(),
                 true,
             ),
+            canary_say_enabled: parse_flag(
+                std::env::var("CANARY_SAY_ENABLED").ok().as_deref(),
+                false,
+            ),
+            canary_identity_allow: std::env::var("CANARY_SAY_IDENTITY_ALLOW")
+                .unwrap_or_default()
+                .split(',')
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty())
+                .collect(),
             vad_model_path: std::env::var("VAD_MODEL_PATH").unwrap_or_else(|_| {
                 format!("{}/assets/silero_vad.onnx", env!("CARGO_MANIFEST_DIR"))
             }),
@@ -159,6 +177,15 @@ struct AgentTurn {
     progress: Arc<StdMutex<Vec<(usize, u64)>>>,
 }
 
+/// 在途 canary.say:turn 结束(播完或取消)后从 stats 槽取终态发 metrics。
+struct CanaryPending {
+    test_id: String,
+    trace_id: String,
+    seq: i64,
+    turn_id: u64,
+    stats: std::sync::Arc<std::sync::Mutex<Option<crate::playout::FinalStats>>>,
+}
+
 struct Orchestrator {
     cfg: PipelineConfig,
     tts_cfg: TtsCfg,
@@ -198,6 +225,10 @@ struct Orchestrator {
     tr_finaled: usize,
     /// 入站 cancel 的 (trace_id, seq) 幂等表
     ctrl_dedup: control::Dedup,
+    /// canary.say 独立幂等表(与 cancel 分表:两类消息的 seq 空间互不干扰)
+    canary_dedup: control::Dedup,
+    /// 在途 canary:等 playout 终态就绪后发 final metrics(单发)
+    canary_pending: Option<CanaryPending>,
     t0: Instant,
 }
 
@@ -207,7 +238,7 @@ pub async fn run_pipeline(
     participant: LocalParticipant,
     room_name: String,
     route: transcript_pub::Route,
-    mut ctrl_rx: mpsc::Receiver<(control::Envelope, control::Inbound)>,
+    mut ctrl_rx: mpsc::Receiver<(control::Envelope, control::Inbound, Option<String>)>,
 ) -> Result<()> {
     let cfg = PipelineConfig::from_env();
     let stt_cfg = SttConfig::from_env();
@@ -236,8 +267,14 @@ pub async fn run_pipeline(
 
     let mut vad = SileroVad::load(&cfg.vad_model_path)?;
     let mut gate = VadGate::new(
-        std::env::var("VAD_ACTIVATION_THRESHOLD").ok().and_then(|v| v.parse().ok()).unwrap_or(0.6),
-        std::env::var("VAD_MIN_SPEECH_DURATION").ok().and_then(|v| v.parse().ok()).unwrap_or(0.15),
+        std::env::var("VAD_ACTIVATION_THRESHOLD")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0.6),
+        std::env::var("VAD_MIN_SPEECH_DURATION")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0.15),
         0.3,
     );
 
@@ -316,6 +353,8 @@ pub async fn run_pipeline(
         tr_started: 0,
         tr_finaled: 0,
         ctrl_dedup: control::Dedup::default(),
+        canary_dedup: control::Dedup::default(),
+        canary_pending: None,
         t0: Instant::now(),
     };
 
@@ -355,8 +394,8 @@ pub async fn run_pipeline(
             // 入站控制包(设备 → worker)。放在最前面:cancel 的时效性高于音频帧处理。
             ctrl = ctrl_rx.recv() => {
                 // channel 关闭不退主循环——控制通道是可选能力,断了不该拖垮通话
-                if let Some((ev, kind)) = ctrl {
-                    orch.on_control(&ev, kind).await;
+                if let Some((ev, kind, identity)) = ctrl {
+                    orch.on_control(&ev, kind, identity.as_deref()).await;
                 }
             }
             frame = mic.next() => {
@@ -492,7 +531,14 @@ impl Orchestrator {
     async fn on_pf_frame(&mut self, samples: &[i16]) {
         let now_ms = self.now_ms();
         if let Some((text, sil, quiet)) = self.pf.on_frame(samples, now_ms) {
-            let tail_snip: String = text.chars().rev().take(16).collect::<Vec<_>>().into_iter().rev().collect();
+            let tail_snip: String = text
+                .chars()
+                .rev()
+                .take(16)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect();
             info!(
                 room = %self.room_name,
                 "S1v3 preflight emitted (silence={sil:.0}ms quiet={quiet:.0}ms tail='{tail_snip}')"
@@ -509,7 +555,13 @@ impl Orchestrator {
         let (client, cfg, messages, version) = self.llm.lock().await.speculation_request(&text);
         let (tx, rx) = mpsc::channel::<String>(1024);
         let task = tokio::spawn(async move { llm::stream_chat(&client, &cfg, messages, tx).await });
-        self.spec = Some(Speculation { text, version, started: Instant::now(), task, rx });
+        self.spec = Some(Speculation {
+            text,
+            version,
+            started: Instant::now(),
+            task,
+            rx,
+        });
     }
 
     fn aec_active(&self, now: Instant) -> bool {
@@ -649,8 +701,14 @@ impl Orchestrator {
     /// 硬打断:杀任务+清播放队列+历史截断为真实播出部分(暂存,下轮 LLM 请求前落账)。
     /// 处理设备下发的控制包。cancel 走**硬 abort**(川哥 2026-08-15 拍板):
     /// 用户明确按了停,不进 pause+假打断窗口,不等 1.5s 定时器判断是不是说错话。
-    async fn on_control(&mut self, ev: &control::Envelope, kind: control::Inbound) {
+    async fn on_control(
+        &mut self,
+        ev: &control::Envelope,
+        kind: control::Inbound,
+        identity: Option<&str>,
+    ) {
         match kind {
+            control::Inbound::CanarySay => self.on_canary_say(ev, identity),
             control::Inbound::Bypass => {
                 // 芯片唤醒/VAD/命令词:只记录,**绝不改变 worker 的 turn 判定**。
                 // worker 持有完整音频流,判停与打断以它为权威(合同 §5.3)。
@@ -671,19 +729,121 @@ impl Orchestrator {
                       "control cancel");
                 self.publish_json(
                     control::TOPIC,
-                    control::cancel_ack(&ev.trace_id, ev.seq, self.now_ms() as i64, cancelled, !first),
+                    control::cancel_ack(
+                        &ev.trace_id,
+                        ev.seq,
+                        self.now_ms() as i64,
+                        cancelled,
+                        !first,
+                    ),
                 );
             }
         }
     }
 
+    /// canary.say(S2B1 联调):校验链顺序=开关/白名单 → 文本 → 时钟偏差 → 幂等 → 忙。
+    /// 只有真正启动 turn 才落幂等表——被拒的 seq 必须可重试。
+    /// 完整文本绝不进日志(只打 test_id 与字符数)。
+    fn on_canary_say(&mut self, ev: &control::Envelope, identity: Option<&str>) {
+        let ts = self.now_ms() as i64;
+        let allowed = self.cfg.canary_say_enabled
+            && identity
+                .map(|i| self.cfg.canary_identity_allow.iter().any(|a| a == i))
+                .unwrap_or(false);
+        let test_id = ev
+            .payload
+            .get("test_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let text = ev
+            .payload
+            .get("text")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let chars = text.chars().count();
+
+        let reject = |o: &Self, accepted: bool, already: bool, reason: &str| {
+            info!(room = %o.room_name, trace_id = %ev.trace_id, seq = ev.seq,
+                  test_id = %test_id, identity = identity.unwrap_or("-"),
+                  text_chars = chars, accepted, reason, "canary.say rejected/acked");
+            o.publish_json(
+                control::TOPIC,
+                control::canary_say_ack(&ev.trace_id, ev.seq, ts, accepted, already, reason),
+            );
+        };
+        if !allowed {
+            return reject(self, false, false, "disabled");
+        }
+        if test_id.is_empty() || chars == 0 || chars > control::CANARY_TEXT_MAX {
+            return reject(self, false, false, "invalid_text");
+        }
+        if ev.ts_ms > 0 && (ts - ev.ts_ms).abs() > control::CANARY_STALE_SKEW_MS {
+            return reject(self, false, false, "stale_trace");
+        }
+        if self.canary_dedup.seen(&ev.trace_id, ev.seq) {
+            return reject(self, true, true, "already_done");
+        }
+        if self.agent_turn.is_some() || self.canary_pending.is_some() {
+            return reject(self, false, false, "already_running");
+        }
+
+        self.canary_dedup.first_time(&ev.trace_id, ev.seq);
+        self.start_turn(TurnKind::Say(text.to_string()));
+        let Some(turn) = self.agent_turn.as_ref() else {
+            // start_turn 失败不该发生;发生了宁可不留 pending,也不能让 metrics 悬空
+            warn!(room = %self.room_name, "canary.say start_turn 后 turn 缺失");
+            return;
+        };
+        self.canary_pending = Some(CanaryPending {
+            test_id: test_id.clone(),
+            trace_id: ev.trace_id.clone(),
+            seq: ev.seq,
+            turn_id: turn.id,
+            stats: turn.ctl.final_stats_handle(),
+        });
+        info!(room = %self.room_name, trace_id = %ev.trace_id, seq = ev.seq,
+              test_id = %test_id, text_chars = chars, turn_id = turn.id,
+              "canary.say accepted, formal say turn started");
+        self.publish_json(
+            control::TOPIC,
+            control::canary_say_ack(&ev.trace_id, ev.seq, ts, true, false, "ok"),
+        );
+    }
+
+    /// 终态就绪(播完或取消,BufferWatch Drop 已写槽)→ 发一次 final metrics。
+    /// PlayedOut 时立即调;on_tick 兜底(cancel 场景的 Drop 是异步的,晚到几十 ms)。
+    fn try_flush_canary_metrics(&mut self) {
+        let Some(p) = &self.canary_pending else {
+            return;
+        };
+        let Some(fs) = p.stats.lock().ok().and_then(|g| g.clone()) else {
+            return;
+        };
+        let msg =
+            control::canary_metrics(&p.trace_id, p.seq, self.now_ms() as i64, &p.test_id, &fs);
+        info!(room = %self.room_name, test_id = %p.test_id, turn_id = p.turn_id,
+              audio_duration_ms = fs.played_frames * 10,
+              underrun_count = fs.underrun_count, underrun_ms = fs.underrun_ms,
+              buffered_audio_ms = fs.buffered_audio_ms, played_frames = fs.played_frames,
+              completed = fs.completed, "canary.say final metrics sent");
+        self.publish_json(control::TOPIC, msg);
+        self.canary_pending = None;
+    }
+
     fn hard_abort_current(&mut self) {
-        let Some(turn) = self.agent_turn.take() else { return };
+        let Some(turn) = self.agent_turn.take() else {
+            return;
+        };
         let played = turn.ctl.played_samples();
         turn.ctl.abort();
         turn.task.abort();
         self.source.clear_buffer();
-        let synth = turn.synth_text.lock().map(|s| s.clone()).unwrap_or_default();
+        let synth = turn
+            .synth_text
+            .lock()
+            .map(|s| s.clone())
+            .unwrap_or_default();
         let progress = turn.progress.lock().map(|p| p.clone()).unwrap_or_default();
         let spoken = truncate_spoken(&synth, &progress, played);
         // 字幕:在播句按截断文本收尾 final(Python flush 已推送部分同义)
@@ -709,7 +869,11 @@ impl Orchestrator {
         }
         let played = turn.ctl.played_samples();
         let turn_id = turn.id;
-        let synth = turn.synth_text.lock().map(|s| s.clone()).unwrap_or_default();
+        let synth = turn
+            .synth_text
+            .lock()
+            .map(|s| s.clone())
+            .unwrap_or_default();
         let progress = turn.progress.lock().map(|p| p.clone()).unwrap_or_default();
         for (i, span) in sentence_spans(&synth, &progress).iter().enumerate() {
             if i >= self.tr_started && played >= span.start_samples {
@@ -755,7 +919,11 @@ impl Orchestrator {
     fn tr_finish_turn(&mut self) {
         let Some(turn) = &self.agent_turn else { return };
         let turn_id = turn.id;
-        let synth = turn.synth_text.lock().map(|s| s.clone()).unwrap_or_default();
+        let synth = turn
+            .synth_text
+            .lock()
+            .map(|s| s.clone())
+            .unwrap_or_default();
         let progress = turn.progress.lock().map(|p| p.clone()).unwrap_or_default();
         let spans = sentence_spans(&synth, &progress);
         for (i, span) in spans.iter().enumerate() {
@@ -788,6 +956,8 @@ impl Orchestrator {
                 }
                 self.tr_finish_turn(); // 字幕:剩余句补 final(先于清 turn)
                 self.agent_turn = None; // 任务已自然结束
+                // canary turn:Say 块里 playout_task.await 先于 PlayedOut,终态必已定格
+                self.try_flush_canary_metrics();
                 self.paused = None;
                 self.false_deadline = None;
                 self.contract.agent_transcript_final();
@@ -797,6 +967,8 @@ impl Orchestrator {
     }
 
     async fn on_tick(&mut self) {
+        // cancel 掉的 canary:turn.task.abort() 后 BufferWatch Drop 异步落槽,tick 兜底补发
+        self.try_flush_canary_metrics();
         let now = Instant::now();
         // 字幕逐句推进(按播出位置;pause 时 played 冻结自然停发)
         self.publish_agent_progress();
@@ -875,7 +1047,12 @@ impl Orchestrator {
                 .map(|t| t.elapsed() < Duration::from_secs(5))
                 .unwrap_or(false);
             let filler = self.bank.as_mut().and_then(|b| b.pick(&user_text, boost));
-            self.start_turn(TurnKind::Reply { user_text, pending_amend: amend, filler, spec });
+            self.start_turn(TurnKind::Reply {
+                user_text,
+                pending_amend: amend,
+                filler,
+                spec,
+            });
         }
     }
 
@@ -952,7 +1129,10 @@ impl Orchestrator {
             };
             match kind {
                 TurnKind::Say(text) => {
-                    match tts_cfg.synthesize(&text, &pcm_tx, &ctl_tts, &mut warm).await {
+                    match tts_cfg
+                        .synthesize(&text, &pcm_tx, &ctl_tts, &mut warm)
+                        .await
+                    {
                         Ok((ttfb, bytes)) => {
                             info!(room = %room_name, ttfb_ms = ttfb, bytes, "say synthesized");
                             publish(json!({"k": "tts", "ttfb_ms": ttfb}));
@@ -967,7 +1147,12 @@ impl Orchestrator {
                     llm.lock().await.push_assistant(&text);
                     let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
                 }
-                TurnKind::Reply { user_text, pending_amend, filler, spec } => {
+                TurnKind::Reply {
+                    user_text,
+                    pending_amend,
+                    filler,
+                    spec,
+                } => {
                     // 承接音先入轨(同轨串行,盖住 LLM+TTS 首音;不进历史/不计截断字符
                     // ——track 空句=只登记样本偏移,截断映射因此对齐)
                     if let Some((_ftext, fpcm)) = filler {
@@ -1004,7 +1189,10 @@ impl Orchestrator {
                     let mut seg = Segmenter::new(min_len);
                     while let Some(delta) = delta_rx.recv().await {
                         for sentence in seg.feed(&delta) {
-                            match tts_cfg.synthesize(&sentence, &pcm_tx, &ctl_tts, &mut warm).await {
+                            match tts_cfg
+                                .synthesize(&sentence, &pcm_tx, &ctl_tts, &mut warm)
+                                .await
+                            {
                                 Ok((ttfb, bytes)) => {
                                     publish(json!({"k": "tts", "ttfb_ms": ttfb}));
                                     track(&sentence, bytes);
@@ -1016,12 +1204,17 @@ impl Orchestrator {
                         }
                     }
                     if let Some(tail) = seg.flush() {
-                        match tts_cfg.synthesize(&tail, &pcm_tx, &ctl_tts, &mut warm).await {
+                        match tts_cfg
+                            .synthesize(&tail, &pcm_tx, &ctl_tts, &mut warm)
+                            .await
+                        {
                             Ok((ttfb, bytes)) => {
                                 publish(json!({"k": "tts", "ttfb_ms": ttfb}));
                                 track(&tail, bytes);
                             }
-                            Err(e) => warn!(room = %room_name, error = %e, "tts synthesize failed (tail)"),
+                            Err(e) => {
+                                warn!(room = %room_name, error = %e, "tts synthesize failed (tail)")
+                            }
                         }
                     }
                     match llm_join.await {
@@ -1046,7 +1239,13 @@ impl Orchestrator {
                 }
             }
         });
-        self.agent_turn = Some(AgentTurn { id, task, ctl, synth_text, progress });
+        self.agent_turn = Some(AgentTurn {
+            id,
+            task,
+            ctl,
+            synth_text,
+            progress,
+        });
     }
 }
 
@@ -1158,7 +1357,10 @@ mod tests {
         assert_eq!(truncate_spoken(synth, &progress, 2400), "你好呀");
         // 第二句播一半(2400/4800)→ 3 + 3 字
         assert_eq!(truncate_spoken(synth, &progress, 4800), "你好呀今天天");
-        assert_eq!(truncate_spoken(synth, &progress, 99999), "你好呀今天天气不错");
+        assert_eq!(
+            truncate_spoken(synth, &progress, 99999),
+            "你好呀今天天气不错"
+        );
     }
 
     #[test]

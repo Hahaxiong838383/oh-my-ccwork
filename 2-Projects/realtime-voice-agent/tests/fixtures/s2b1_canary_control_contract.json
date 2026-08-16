@@ -1,0 +1,115 @@
+{
+  "_comment": "S2B1 canary.say 机器合同真值(cc×codex 2026-08-16)。rust 侧 control.rs include_str! 本文件断言一致;python 侧 test_s2b1_canary_control_contract.py 验完备。改字段先双方冻结再动。",
+  "topic": "control",
+  "inbound": {
+    "type": "canary.say",
+    "src": "android",
+    "idempotency_key": [
+      "trace_id",
+      "type",
+      "seq"
+    ],
+    "payload_required": [
+      "test_id",
+      "text"
+    ],
+    "text_min_chars": 1,
+    "text_max_chars": 300,
+    "stale_ts_skew_ms": 120000
+  },
+  "ack": {
+    "type": "canary.say.ack",
+    "src": "worker",
+    "payload_fields": [
+      "accepted",
+      "already_done",
+      "reason"
+    ],
+    "reasons": [
+      "ok",
+      "already_done",
+      "disabled",
+      "stale_trace",
+      "invalid_text",
+      "already_running"
+    ]
+  },
+  "metrics": {
+    "type": "canary.say.metrics",
+    "src": "worker",
+    "payload_fields": [
+      "test_id",
+      "audio_duration_ms",
+      "underrun_count",
+      "underrun_ms",
+      "buffered_audio_ms",
+      "first_underrun_ms",
+      "played_frames",
+      "final",
+      "completed"
+    ],
+    "completed_semantics": "completed=true 仅当自然播完(SourceDrained);cancel 或异常退出为 false。字段名 2026-08-16 冻结。",
+    "sentinel_negative_one": [
+      "buffered_audio_ms",
+      "first_underrun_ms"
+    ],
+    "frame_ms": 10
+  },
+  "env": {
+    "CANARY_SAY_ENABLED": "1=开;默认关",
+    "CANARY_SAY_IDENTITY_ALLOW": "逗号分隔 participant identity 白名单;空=全部拒绝(fail-closed)"
+  },
+  "examples": {
+    "say": {
+      "trace_id": "t-1",
+      "ts_ms": 0,
+      "src": "android",
+      "type": "canary.say",
+      "lane": "L2",
+      "seq": 201,
+      "payload": {
+        "test_id": "aec-01",
+        "text": "示例文本(1..300 字符)"
+      }
+    },
+    "ack_first": {
+      "trace_id": "t-1",
+      "src": "worker",
+      "type": "canary.say.ack",
+      "seq": 201,
+      "payload": {
+        "accepted": true,
+        "already_done": false,
+        "reason": "ok"
+      }
+    },
+    "ack_repeat": {
+      "trace_id": "t-1",
+      "src": "worker",
+      "type": "canary.say.ack",
+      "seq": 201,
+      "payload": {
+        "accepted": true,
+        "already_done": true,
+        "reason": "already_done"
+      }
+    },
+    "metrics_final": {
+      "trace_id": "t-1",
+      "src": "worker",
+      "type": "canary.say.metrics",
+      "seq": 201,
+      "payload": {
+        "test_id": "aec-01",
+        "audio_duration_ms": 6210,
+        "underrun_count": 0,
+        "underrun_ms": 0,
+        "buffered_audio_ms": 460,
+        "first_underrun_ms": -1,
+        "played_frames": 621,
+        "final": true,
+        "completed": true
+      }
+    }
+  }
+}
