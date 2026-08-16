@@ -1,0 +1,47 @@
+# ═══ linux-lan · 家用 Ubuntu 桌面 · 家有线 192.168.1.119 ═══
+# 角色：家侧子网网关（唯一）—— 合盖不休眠、有线静态，是家里唯一适合常驻的节点。
+# 家宽实测：中国移动，公网 v4 出口 120.244.92.131，有原生 IPv6 2409:8a00:8470:f480::/64
+
+hostname = "linux-lan"
+instance_name = "main"
+ipv4 = "10.10.10.21"
+
+listeners = [
+    "tcp://0.0.0.0:11010",
+    "udp://0.0.0.0:11010",
+]
+
+# ── 网络身份（决定谁和谁是同一张网）──
+# 必须与所有其他节点完全一致；不一致的症状是「connector 显示 Connected 但 peer 表空」，
+# 因为 TCP/UDP 通道建得起来，只是握手鉴权不过 —— 极容易误判成打洞失败。
+[network_identity]
+network_name = "__NETWORK_NAME__"
+network_secret = "__NETWORK_SECRET__"
+
+[[peer]]
+uri = "tcp://207.57.124.191:443"
+[[peer]]
+uri = "udp://207.57.124.191:22"
+# 第三条通道：2026-08-16 面板加了 udp 11010 规则后补上。
+# 实测它与 udp:22 在丢包/吞吐上**没有差别**（21.5% vs 18.5%，均 ~86Mbps），
+# 加它不是为了性能，是为了多一条独立路径：中间网络掐掉任一条还有另两条。
+[[peer]]
+uri = "udp://207.57.124.191:11010"
+
+# ── 子网代理：把家里网段导出给公司 ──
+# 映射到 10.10.1.0/24 是**必须的**，不是洁癖：
+# Air 在家时物理上就在 192.168.1.0/24。若直接导出该段不做映射，Air 会收到一条
+# 指向隧道的 192.168.1.0/24 路由，覆盖掉自己的本地网络 —— 家里的网当场断。
+# 原方案完全没有这一节。
+[[proxy_network]]
+cidr = "192.168.1.0/24"
+mapped_cidr = "10.10.1.0/24"
+
+[flags]
+dev_name = "easytier0"
+private_mode = true
+latency_first = true
+multi_thread = true
+bind_device = true           # 本机装了 Xray（127.0.0.1:10808），绑物理网卡防路由劫持
+accept_dns = false
+enable_kcp_proxy = false

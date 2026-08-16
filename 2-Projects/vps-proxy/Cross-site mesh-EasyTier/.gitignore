@@ -1,0 +1,13 @@
+# 凭据类：绝不入 git
+野草云登录信息.rtf
+*.rtf
+.env
+*.secret
+rendered/          # deploy-node.sh 渲染出的含密钥实配置
+
+# 运行产物
+*.log
+.DS_Store
+
+# 二进制缓存（本机下载一次分发，不进 git）
+.cache/

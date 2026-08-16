@@ -1,0 +1,56 @@
+# ═══ mini · Mac Mini M4 · 公司有线 192.168.61.66 · 编排中枢 ═══
+# 角色：公司侧子网网关（主）—— 常年开机，最适合承担 192.168.61.0/24 的导出
+
+hostname = "mini"
+instance_name = "main"
+ipv4 = "10.10.10.11"
+
+# 本机也开 listener：同局域网的 studio/dev198 可直连本节点，不必绕香港
+listeners = [
+    "tcp://0.0.0.0:11010",
+    "udp://0.0.0.0:11010",
+]
+
+# ── 网络身份（决定谁和谁是同一张网）──
+# 必须与所有其他节点完全一致；不一致的症状是「connector 显示 Connected 但 peer 表空」，
+# 因为 TCP/UDP 通道建得起来，只是握手鉴权不过 —— 极容易误判成打洞失败。
+[network_identity]
+network_name = "__NETWORK_NAME__"
+network_secret = "__NETWORK_SECRET__"
+
+# ── 上游 peer ──
+# 443 走 TCP（穿透性最好），udp 22 走 UDP（延迟更低、且是 P2P 打洞的信令通道）
+# 两条都配 = 任一被中间网络掐掉仍能建链
+[[peer]]
+uri = "tcp://207.57.124.191:443"
+[[peer]]
+uri = "udp://207.57.124.191:22"
+# 第三条通道：2026-08-16 面板加了 udp 11010 规则后补上。
+# 实测它与 udp:22 在丢包/吞吐上**没有差别**（21.5% vs 18.5%，均 ~86Mbps），
+# 加它不是为了性能，是为了多一条独立路径：中间网络掐掉任一条还有另两条。
+[[peer]]
+uri = "udp://207.57.124.191:11010"
+
+# ── 公司局域网内直连（静态 IP，已确认长期不变）──
+[[peer]]
+uri = "tcp://192.168.61.233:11010"   # dev198
+[[peer]]
+uri = "tcp://192.168.61.177:11010"   # studio
+
+# ── 子网代理：把公司有线段导出给家里 ──
+# 必须做 CIDR 映射，不能直接导出 192.168.61.0/24：
+# 若不映射，任何**物理上就在** 192.168.61.0/24 的节点（studio/dev198）会收到一条
+# 与自己本地网段重叠的隧道路由，本地网络当场瘫痪。原方案承诺了「NAS/打印机可访问」
+# 却没配这一节，属于空头支票 + 潜在的自伤路由。
+[[proxy_network]]
+cidr = "192.168.61.0/24"
+mapped_cidr = "10.10.61.0/24"        # 家里用 10.10.61.18 访问 QNAP(192.168.61.18)
+
+[flags]
+private_mode = true
+latency_first = true
+multi_thread = true
+bind_device = true           # 把出站 socket 绑物理网卡，绕开 Clash/Xray 的 TUN 路由劫持
+                             # 实测 v2.6.4 默认已是 true，显式写防默认漂移
+accept_dns = false           # Magic DNS 会改系统 DNS，与 Clash 打架，默认关
+enable_kcp_proxy = false     # ← A/B 待定，见 docs/03-验收与调优.md，勿凭直觉打开

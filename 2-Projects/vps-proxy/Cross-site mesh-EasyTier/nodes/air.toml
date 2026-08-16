@@ -1,0 +1,42 @@
+# ═══ air · MacBook Air M5 · 移动节点（家/公司/外网之间漂移）═══
+# 只有 WiFi、IP 浮动，是全网唯一位置不固定的节点。
+# 不导出任何子网（移动节点导出局域网 = 走到哪把哪的网段推给全网，必然冲突）。
+
+hostname = "air"
+instance_name = "main"
+ipv4 = "10.10.10.31"
+
+# 移动节点仍开 listener：在家/在公司时可被同网段节点直连，省掉一次打洞
+listeners = [
+    "tcp://0.0.0.0:11010",
+    "udp://0.0.0.0:11010",
+]
+
+# ── 网络身份（决定谁和谁是同一张网）──
+# 必须与所有其他节点完全一致；不一致的症状是「connector 显示 Connected 但 peer 表空」，
+# 因为 TCP/UDP 通道建得起来，只是握手鉴权不过 —— 极容易误判成打洞失败。
+[network_identity]
+network_name = "__NETWORK_NAME__"
+network_secret = "__NETWORK_SECRET__"
+
+[[peer]]
+uri = "tcp://207.57.124.191:443"
+[[peer]]
+uri = "udp://207.57.124.191:22"
+# 第三条通道：2026-08-16 面板加了 udp 11010 规则后补上。
+# 实测它与 udp:22 在丢包/吞吐上**没有差别**（21.5% vs 18.5%，均 ~86Mbps），
+# 加它不是为了性能，是为了多一条独立路径：中间网络掐掉任一条还有另两条。
+[[peer]]
+uri = "udp://207.57.124.191:11010"
+
+# 在家时可直连 linux-lan；不在家时这条连接失败是**预期行为**，不是故障
+[[peer]]
+uri = "tcp://192.168.1.119:11010"
+
+[flags]
+private_mode = true
+latency_first = true
+multi_thread = true
+bind_device = true           # Air 上 Clash/Xray 常驻且有 4 个 utun，这条最关键
+accept_dns = false           # 绝对不要在 Air 上开 Magic DNS，会和 Clash 的 DNS 抢
+enable_kcp_proxy = false

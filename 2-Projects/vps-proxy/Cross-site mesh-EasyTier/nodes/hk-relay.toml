@@ -1,0 +1,39 @@
+# ═══ hk-relay · 香港中继/发现节点 (野草云 207.57.124.191) ═══
+#
+# 【端口为什么是 443/80/udp-22，而不是文档里常见的 11010】
+# 野草云面板侧有供应商防火墙，面板明确写「当前产品不允许客户启用或关闭防火墙」。
+# 入站白名单实测仅：tcp 22 / udp 22 / tcp 80 / tcp 443 / tcp 8888 / icmp / ipv6-icmp。
+# 打到 11010 的包被上游**静默丢弃**（timeout 而非 RST），症状与「NAT 打洞失败」完全同形，
+# 是这套方案里最容易误诊的一个坑。改用已放行端口后额外收获：443/80 在公司网、酒店 WiFi、
+# 蜂窝网几乎不会被中间设备拦截，直接抬高 P2P 建链成功率。
+# udp 22 与 sshd 的 tcp 22 不冲突（已实测 ss 确认）。
+#
+# 【判读提醒】easytier 启动日志会回显它实际加载的 TOML，但**只显示与默认值不同的项**。
+# 所以 [flags] 段看起来比这里短是正常的，不代表配置没生效。
+#
+# 【已知坑】rpc_portal / rpc_portal_whitelist 写在 TOML 里**不被识别**（未知键静默丢弃，
+# 且 --check-config 只验语法不验键名，照样 PASS）。必须用 CLI 参数 --rpc-portal 覆盖，
+# 见 systemd unit 的 ExecStart。否则管理口会裸奔在 0.0.0.0:15888。
+
+hostname = "hk-relay"
+instance_name = "main"
+ipv4 = "10.10.10.1"
+
+listeners = [
+    "tcp://0.0.0.0:443",
+    "udp://0.0.0.0:22",
+    "ws://0.0.0.0:80",
+]
+
+[network_identity]
+network_name = "__NETWORK_NAME__"
+network_secret = "__NETWORK_SECRET__"
+
+[flags]
+dev_name = "easytier0"
+private_mode = true          # 只有持同一 network_name+secret 的节点能握手/中继
+latency_first = true         # 按最低延迟选路，而非最少跳数
+relay_all_peer_rpc = true    # 帮助尚未建立 P2P 的节点互相发现
+multi_thread = true          # 实测 v2.6.4 默认已是 true（--help 文档过时），显式写防默认漂移
+multi_thread_count = 2       # 与 vCPU 数对齐
+enable_exit_node = true      # 允许被选作出口节点（默认无人使用，需客户端显式 exit_nodes）

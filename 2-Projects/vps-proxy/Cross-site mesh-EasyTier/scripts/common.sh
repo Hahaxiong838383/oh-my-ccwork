@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# 公共函数库 —— 被 deploy-node.sh / mesh-status.sh / bench.sh source
+# 不要直接执行。
+
+set -euo pipefail
+
+ET_VERSION="${ET_VERSION:-v2.6.4}"
+PROJ_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SECRETS_FILE="${SECRETS_FILE:-$HOME/.mycc-secrets.env}"
+
+# Web 控制台的配置服务器。节点加上它才会出现在控制台的设备列表里
+# （控制台没有 devices 表，设备状态是 web 服务的内存态，靠这条活连接维持）。
+# 地址用虚拟网 IP：22020 在供应商防火墙白名单之外，公网打不进来。
+ET_CONFIG_SERVER_USER="${ET_CONFIG_SERVER_USER:-hahaxiong83}"
+ET_CONFIG_SERVER="udp://10.10.10.1:22020/${ET_CONFIG_SERVER_USER}"
+
+# ── 节点真值表 ────────────────────────────────────────────────────────────
+# name | ssh别名 | 虚拟IP | 平台 | sudo方式
+# sudo方式: nopasswd | secret:<VAR名> | literal:<值> | ask
+ET_NODES=(
+  "hk-relay|__VPS_DIRECT__|10.10.10.1|linux-x86_64|root"
+  "mini|mini-pub|10.10.10.11|macos-aarch64|nopasswd"
+  "studio|studio-pub|10.10.10.12|macos-aarch64|secret:STUDIO_SUDO_PASS"
+  "dev198|dev198|10.10.10.13|linux-x86_64|literal:1234"
+  "linux-lan|linux-lan|10.10.10.21|linux-x86_64|ask"
+  "air|__LOCAL__|10.10.10.31|macos-aarch64|ask"
+)
+
+node_field() {  # node_field <name> <1..5>
+  local n="$1" i="$2" row
+  for row in "${ET_NODES[@]}"; do
+    [[ "${row%%|*}" == "$n" ]] && { echo "$row" | cut -d'|' -f"$i"; return 0; }
+  done
+  echo "未知节点: $n" >&2; return 1
+}
+
+load_secrets() {
+  [[ -f "$SECRETS_FILE" ]] || { echo "缺少 $SECRETS_FILE" >&2; return 1; }
+  # shellcheck disable=SC1090
+  set -a; source "$SECRETS_FILE"; set +a
+  : "${EASYTIER_NETWORK_NAME:?secrets 里缺 EASYTIER_NETWORK_NAME}"
+  : "${EASYTIER_NETWORK_SECRET:?secrets 里缺 EASYTIER_NETWORK_SECRET}"
+}
+
+# ── 香港中继的 SSH 通道 ────────────────────────────────────────────────────
+# 2026-08-16 起该机已开公钥登录（此前 sshd 是 PubkeyAuthentication no，只能走密码）。
+# 优先密钥；密钥不可用时回落密码，避免哪天 sshd 配置被重置就全线瘫痪。
+VPS_HOST="${VPS_HOST:-207.57.124.191}"
+
+vps_ssh() {
+  if ssh -o IdentitiesOnly=yes -i "$HOME/.ssh/id_ed25519" \
+         -o PreferredAuthentications=publickey -o PasswordAuthentication=no \
+         -o BatchMode=yes -o ConnectTimeout=10 -n "root@$VPS_HOST" true 2>/dev/null; then
+    ssh -o IdentitiesOnly=yes -i "$HOME/.ssh/id_ed25519" \
+        -o PreferredAuthentications=publickey -o BatchMode=yes \
+        -o StrictHostKeyChecking=no -o ConnectTimeout=30 "root@$VPS_HOST" "$@"
+  else
+    [[ -n "${VPS_ROOT_PASS:-}" ]] || { echo "密钥登录不可用且无 VPS_ROOT_PASS" >&2; return 1; }
+    SSHPASS="$VPS_ROOT_PASS" sshpass -e ssh -o PreferredAuthentications=password \
+        -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+        "root@$VPS_HOST" "$@"
+  fi
+}
+
+vps_scp() {  # vps_scp <本地> <远端路径>
+  if ssh -o IdentitiesOnly=yes -i "$HOME/.ssh/id_ed25519" \
+         -o PreferredAuthentications=publickey -o PasswordAuthentication=no \
+         -o BatchMode=yes -o ConnectTimeout=10 -n "root@$VPS_HOST" true 2>/dev/null; then
+    scp -o IdentitiesOnly=yes -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes \
+        -o StrictHostKeyChecking=no -o ConnectTimeout=30 "$1" "root@$VPS_HOST:$2" >/dev/null
+  else
+    SSHPASS="$VPS_ROOT_PASS" sshpass -e scp -o PreferredAuthentications=password \
+        -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+        "$1" "root@$VPS_HOST:$2" >/dev/null
+  fi
+}
+
+log()  { printf '\033[36m▸ %s\033[0m\n' "$*"; }
+ok()   { printf '\033[32m✓ %s\033[0m\n' "$*"; }
+warn() { printf '\033[33m! %s\033[0m\n' "$*"; }
+die()  { printf '\033[31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
