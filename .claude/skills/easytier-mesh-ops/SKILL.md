@@ -181,26 +181,15 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 
 ---
 
-## 八、传大文件的正确姿势（三引擎共享规则，已进 `0-System/memory-items.md`）
+## 八、跨站大文件传输
 
-**家→公司上行单流只有 ~5 Mbps，不是家宽不够，是丢包。**
+强制边界见 `~/mycc/docs/rules/MULTI-DEVICE.md`，完整操作步骤见
+`~/mycc/.claude/skills/cross-site-file-transfer/SKILL.md`。本 Skill 只保留组网侧结论：
 
-单流 TCP 吞吐被 Mathis 上限锁死：`1.22 × MSS / (RTT × √丢包率)`
-代入 MSS=1320 / RTT=18ms / p=3.3% → **0.49 MB/s**，实测 **0.55 MB/s**（误差 10% 内）。
+- Air→公司的端到端 EasyTier 路径曾观测到 `2–6%` 丢包；Air Wi-Fi 是风险因素，但不是已证明的唯一根因。
+- 默认先在家庭 LAN 落到 `linux-lan`，再由有线 Linux 发送；飞牛必须通过实时 SSH 身份、host key、磁盘、路由和拥塞控制检查后才能选。
+- 批量文件并发从 4 路测起，再试 8 路；`rclone --transfers` 不会把单个大文件自动拆成多路。
+- BBR 只影响 Linux 发送端的 TCP。2026-08-16 实测 `linux-lan` 使用 BBR、默认 qdisc 为 fq，但有线和 EasyTier 接口实际为 fq_codel，禁止笼统汇报“当前 bbr+fq”。
+- SSH / RPC / Codex 等交互小流量不受大文件中转规则限制。
 
-| 做法 | 效果 |
-|---|---|
-| ❌ 从 Air 直传 | Air 只有 WiFi，实测丢包 **6%**；macOS **无 BBR** 可换 |
-| ✅ 先 rsync 到 `linux-lan` / `fnos2` 再传 | 有线、丢包低、已开 `bbr+fq` |
-| ✅ 批量开并发 `rclone --transfers 8` | 实测 6 并发：5 Mbps → **25 Mbps** |
-
-**判决性证据**：并发能近似线性叠加。带宽受限的话并发只会互相抢，不会叠加。
-
-**已排除的解释**：隧道开销（走局域网 IP 2.85 vs 走 mesh 2.79 MB/s，差异≈0）、
-MTU 1360（影响几个百分点，与 40 倍差距不在一个量级）、
-VPS 上开 BBR（该链路是 Air↔公司**直接 UDP P2P**，流量不经过 VPS）。
-
-**交互场景不受此限**：SSH / RPC / codex 都是小包，不受丢包上限约束
-（实测 SSH P50 348ms、RPC P50 32ms、零失败）。
-
-> `enable_kcp_proxy` 已 A/B **判否**，保持关闭。理由与实验设计缺陷见 `docs/02 §五`。
+> `enable_kcp_proxy` 已 A/B 判否，保持关闭。理由与实验设计缺陷见项目 `docs/02 §五`。

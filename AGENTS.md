@@ -52,7 +52,7 @@ CLAUDE.md 自 2026-04-28 起 P2/P3 规则下沉到 `docs/rules/<RULE-ID>.md`。*
 | 长任务 / 大量文件读写 / >30K token | CONTEXT-BUDGET |
 | 飞书消息 / 通知 / 429 | FEISHU-FALLBACK |
 | 桌面操作 / ghost / desktop | TOOL-PRIO |
-| 跨设备 / 新机初始化 / .env | MULTI-DEVICE |
+| 跨设备 / 新机初始化 / .env / 跨站大文件传输 | MULTI-DEVICE |
 | 引擎对照 / App ID | CC-IDENTITY |
 
 多命中按 P0>P1>P2>P3 排序。grep 找不到 → 停下报告 cc，不脑补。详细规则书写规范见 [`docs/rules/SCHEMA.md`](./docs/rules/SCHEMA.md)。

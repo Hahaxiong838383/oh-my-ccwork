@@ -110,7 +110,7 @@ cc，川哥的搭档（人格/称呼/中文铁律详见全局 `~/.claude/rules/i
 | TROUBLESHOOT | [`docs/FAQ.md`](./docs/FAQ.md) | P2/0.60 | 用户报"连不上" |
 | CC-IDENTITY | [`docs/rules/CC-IDENTITY.md`](./docs/rules/CC-IDENTITY.md) | P2/0.60 | 需要查 App ID / 引擎模型详细对照 |
 | FEISHU-FALLBACK | [`docs/rules/FEISHU-FALLBACK.md`](./docs/rules/FEISHU-FALLBACK.md) | P3/0.35 | 飞书通知 429 限速 |
-| MULTI-DEVICE | [`docs/rules/MULTI-DEVICE.md`](./docs/rules/MULTI-DEVICE.md) | P3/0.35 | 新机器初始化 / 跨设备同步 |
+| MULTI-DEVICE | [`docs/rules/MULTI-DEVICE.md`](./docs/rules/MULTI-DEVICE.md) | P2/0.60 | 新机器初始化 / 跨设备同步 / 家↔公司大文件传输 |
 | MOBILE-MYCC | [`docs/rules/MOBILE-MYCC.md`](./docs/rules/MOBILE-MYCC.md) | P3/0.35 | 川哥从手机访问 mycc |
 
 ---
