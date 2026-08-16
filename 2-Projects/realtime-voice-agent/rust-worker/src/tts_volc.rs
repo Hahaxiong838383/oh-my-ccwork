@@ -253,7 +253,10 @@ pub async fn synthesize(
     text: &str,
     audio_tx: &mpsc::Sender<Vec<u8>>,
 ) -> Result<(u64, usize)> {
-    info!("tts synth: {text}"); // 证据日志,对齐 Python 版
+    // 证据日志:只落前 24 字+字数,不落全文(S2B1 canary 合同:完整文本不得进 journal;
+    // 生产回复同策——排障按开头辨认句子,运维仍按 "tts synth" 关键词捞两条线)
+    let head: String = text.chars().take(24).collect();
+    info!("tts synth: {head}…({}字)", text.chars().count());
     if cfg.pool_enabled {
         match pool_acquire(cfg).await {
             Ok(mut conn) => match conn.run_session(cfg, text, audio_tx).await {
