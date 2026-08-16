@@ -54,9 +54,69 @@ pub fn parse_hotwords(raw: Option<&str>) -> HashSet<String> {
         .collect()
 }
 
+/// 剥离 LLM 输出里的舞台指示——括号/星号包裹的动作、表情、神态描述:
+/// 「（笑）」「(假装认真)」「*叹气*」「【小声】」。TTS 会把它们整句念出
+/// (2026-08-16 川哥实测),segmenter 出句后统一剥,TTS/字幕/历史三处同净文本
+/// (track 的字符↔样本截断映射因此保持对齐)。
+///
+/// 只剥**闭合**的短包裹段(内容 ≤16 字符):未闭合(描述被 segmenter 从逗号切开)
+/// 不动——宁可漏念一段也不误砍正文;prompt 层已同步禁,这里是兜底。
+pub fn strip_stage_directions(text: &str) -> String {
+    const MAX_INNER: usize = 16;
+    let pairs: &[(char, char)] = &[('（', '）'), ('(', ')'), ('【', '】'), ('[', ']'), ('*', '*')];
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = String::with_capacity(text.len());
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        if let Some((_, close)) = pairs.iter().find(|(open, _)| *open == c) {
+            // 找同段内最近的闭符;星号对要求内容非空(孤立 * 保留)
+            if let Some(off) = chars[i + 1..]
+                .iter()
+                .take(MAX_INNER + 1)
+                .position(|&x| x == *close)
+                && (c != '*' || off > 0)
+            {
+                i += off + 2; // 跳过整段(含双侧包裹符)
+                continue;
+            }
+        }
+        out.push(c);
+        i += 1;
+    }
+    // 剥除后清理句首残留的空白(「（笑） 腿?」→「腿?」)
+    out.trim_start().to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stage_directions_stripped() {
+        // 实测形态:全角括号句首(2026-08-16 线上日志)
+        assert_eq!(strip_stage_directions("（笑）腿？我连腿都没有"), "腿？我连腿都没有");
+        assert_eq!(strip_stage_directions("（假装认真）行，等我学会用螺丝刀"), "行，等我学会用螺丝刀");
+        // 句中/半角/星号/方括号变体
+        assert_eq!(strip_stage_directions("你好(笑)呀"), "你好呀");
+        assert_eq!(strip_stage_directions("*叹气*好吧"), "好吧");
+        assert_eq!(strip_stage_directions("【小声】其实我也不知道"), "其实我也不知道");
+        // 整句只有描述 → 空串(调用侧跳过该句)
+        assert_eq!(strip_stage_directions("（摊手）"), "");
+    }
+
+    #[test]
+    fn stage_directions_conservative() {
+        // 未闭合(被 segmenter 从逗号切开)不剥——宁漏勿误砍
+        assert_eq!(strip_stage_directions("（笑着摇摇头，"), "（笑着摇摇头，");
+        // 超长括号段(>16 字)当正文保留
+        let long = "（这是一个远超十六个字符上限的很长很长的括号内容）好";
+        assert_eq!(strip_stage_directions(long), long);
+        // 孤立星号不吞正文
+        assert_eq!(strip_stage_directions("3*5等于15"), "3*5等于15");
+        // 无包裹正常句无损
+        assert_eq!(strip_stage_directions("哈哈，那倒是。"), "哈哈，那倒是。");
+    }
 
     #[test]
     fn canon_strips_punct_keeps_decimal() {

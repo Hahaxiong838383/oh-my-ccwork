@@ -29,7 +29,10 @@ impl LlmConfig {
             api_key: std::env::var("LLM_API_KEY").unwrap_or_else(|_| "sk-noauth".into()),
             model: std::env::var("LLM_MODEL").unwrap_or_else(|_| "deepseek-chat".into()),
             instructions: std::env::var("AGENT_INSTRUCTIONS").unwrap_or_else(|_| {
-                "你是一个简洁、自然、可被打断的中文实时语音助手。".into()
+                // 「不输出舞台指示」是 TTS 语域约束(2026-08-16 川哥实测:「（笑）」「（假装
+                // 认真）」被整句念出)。代码层 strip_stage_directions 仍兜底——prompt 只降频。
+                "你是一个简洁、自然、可被打断的中文实时语音助手。你的话会被直接转成语音播出，只输出要说的口语本身，绝不要输出括号或星号包裹的动作、表情、神态描述。"
+                    .into()
             }),
             thinking: std::env::var("LLM_THINKING").unwrap_or_else(|_| "disabled".into()),
             strip_leading_filler: std::env::var("LLM_STRIP_LEADING_FILLER")

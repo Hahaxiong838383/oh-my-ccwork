@@ -1271,6 +1271,12 @@ impl Orchestrator {
                     let mut seg = Segmenter::new(min_len);
                     while let Some(delta) = delta_rx.recv().await {
                         for sentence in seg.feed(&delta) {
+                            // 舞台指示剥离(「（笑）」被 TTS 整句念出,2026-08-16 实测):
+                            // TTS/track(字幕+历史+截断映射)统一用净文本;整句是描述则跳过
+                            let sentence = crate::textproc::strip_stage_directions(&sentence);
+                            if sentence.trim().is_empty() {
+                                continue;
+                            }
                             match tts_cfg
                                 .synthesize(&sentence, &pcm_tx, &ctl_tts, &mut warm)
                                 .await
@@ -1286,16 +1292,19 @@ impl Orchestrator {
                         }
                     }
                     if let Some(tail) = seg.flush() {
-                        match tts_cfg
-                            .synthesize(&tail, &pcm_tx, &ctl_tts, &mut warm)
-                            .await
-                        {
-                            Ok((ttfb, bytes)) => {
-                                publish(json!({"k": "tts", "ttfb_ms": ttfb}));
-                                track(&tail, bytes);
-                            }
-                            Err(e) => {
-                                warn!(room = %room_name, error = %e, "tts synthesize failed (tail)")
+                        let tail = crate::textproc::strip_stage_directions(&tail);
+                        if !tail.trim().is_empty() {
+                            match tts_cfg
+                                .synthesize(&tail, &pcm_tx, &ctl_tts, &mut warm)
+                                .await
+                            {
+                                Ok((ttfb, bytes)) => {
+                                    publish(json!({"k": "tts", "ttfb_ms": ttfb}));
+                                    track(&tail, bytes);
+                                }
+                                Err(e) => {
+                                    warn!(room = %room_name, error = %e, "tts synthesize failed (tail)")
+                                }
                             }
                         }
                     }
