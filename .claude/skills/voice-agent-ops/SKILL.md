@@ -612,6 +612,13 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 - **子贤侧已切火山(2026-08-11)**:讯飞额度死后,川哥把自己火山凭据+甜美小媛音色整理成接入文档给子贤直连火山(文档=川哥桌面`火山TTS接入文档-子贤.md`,含明文 token 勿入仓);租户线 worker 的 `TTS_PROVIDER=xfyun` 未动——同事讯飞账号恢复前,**租户 worker 对话链路仍是坏的**,只有子贤 demo 的 TTS-only 路径切走了。
 
 
+## 承接音 v6(2026-08-16):81 条+打断短条偏好+概率 0.6
+
+- **参数**(64.90 rust-worker.env):`FILLER_PROBABILITY=0.6`(普通轮);`FILLER_BARGE_MAX_MS` 默认 1200(打断轮只选桶内 ≤此值短条,无则回退全桶)。资产 81 wav @ /opt/voice-agent/fillers-colleague(旧 62 条备份 .bak-v5-20260816)。
+- **改文案 SOP**:改 scripts/gen_fillers.py FILLERS 表 → scp 到 64.90:/root/rust-worker/gen_fillers_v6.py → `set -a; . /root/realtime-voice-agent/.env; . /root/rust-worker/rust-worker.env; set +a` → `PYTHONPATH=/root/realtime-voice-agent/src /root/voice-venv/bin/python gen_fillers_v6.py --engine xfyun --out <staging目录>` → 校验(条数/无>3s/每桶有≤1200ms 短条) → 备份线上目录 → cp 顶上 → stop/start → 探针。**⚠️ 文案纪律:task 桶禁执行承诺腔(v5 川哥定,"这就来/马上安排"在 LLM 超时轮更伤);跨桶完整短语禁重;短文案实测时长会被讯飞 padding 拉长(「唔，稍等。」1680ms→「稍等。」1200ms),合成后必须实测复核**。
+- **验收探针**:filler_v6_probe.py(64.90:/root/rust-worker/);判据=服务端 `filler picked bucket= dur_ms= boost=` 行:boost 轮全 ≤1200/相邻不重复/bank loaded: 81。**探针写法铁律:播问句前先停静音 feeder**(交错=音频打碎,ASR 零识别而 mean_amp 正常——2026-08-16 踩过)。
+- 已知边界:task 短条仅 1 条(「稍等。」)→打断轮恒同一句;要多样性=补短条重合成 或 BARGE_MAX 放 1400 纳入「我弄弄哈」(1360ms)。
+
 ## canary.say 联调通道运维(2026-08-16 上线)
 
 - **是什么**:codex 安卓联调用的确定性长句通道——control topic 发 `canary.say` → worker 走**正式 TTS 链路**播 1..300 字,回幂等 ack + final metrics(`completed` 字段区分播完/取消)。合同真值 `tests/fixtures/s2b1_canary_control_contract.json`(rust/python 双侧 include 同一份,改字段先双方冻结)。
