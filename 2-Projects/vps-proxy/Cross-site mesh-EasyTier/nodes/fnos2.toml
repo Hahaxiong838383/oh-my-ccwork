@@ -1,0 +1,58 @@
+# ═══ fnos2 · 飞牛 NAS 2 号 · 家 192.168.1.115 ═══
+#
+# ⚠️ 命名真值（2026-08-16 川哥更正）：
+#    192.168.1.115 = **飞牛 2 号**（主机名 FNOS-2，与本节点名一致）
+#    192.168.1.43  = **飞牛 1 号**（尚未接入组网；将来接入时占用 fnos1 / 10.10.10.23）
+#    我最初按「1 号」命名过一版，是错的，已更正。别再把 115 当 1 号。
+#
+# 【为什么用 Docker 而不是装原生二进制】
+# fnOS 是成品 NAS 系统，底层虽是 Debian 12，但**官方升级会重置底层系统改动**（川哥实际踩过）。
+# 装在 /usr/local/bin + systemd 的东西会在某次升级后消失，而且是**静默消失**——
+# 组网里少一个节点没人会当场发现。容器 + 具名卷能扛过升级。
+# 部署用 nodes/fnos-docker-compose.yml。
+#
+# 角色：家侧子网网关（备）—— 与 linux-lan 同时导出 192.168.1.0/24 是**故意的**冗余。
+# linux-lan 是台桌面机，NAS 常年开机更可靠；两台都导出，任一台关机不影响公司访问家里内网。
+
+hostname = "fnos2"
+instance_name = "main"
+ipv4 = "10.10.10.22"
+
+listeners = [
+    "tcp://0.0.0.0:11010",
+    "udp://0.0.0.0:11010",
+]
+
+# ── 网络身份（决定谁和谁是同一张网）──
+# 必须与所有其他节点完全一致；不一致的症状是「connector 显示 Connected 但 peer 表空」，
+# 因为 TCP/UDP 通道建得起来，只是握手鉴权不过 —— 极容易误判成打洞失败。
+[network_identity]
+network_name = "__NETWORK_NAME__"
+network_secret = "__NETWORK_SECRET__"
+
+[[peer]]
+uri = "tcp://207.57.124.191:443"
+[[peer]]
+uri = "udp://207.57.124.191:22"
+[[peer]]
+uri = "udp://207.57.124.191:11010"
+
+# 家里同网段直连 linux-lan，不必绕香港
+[[peer]]
+uri = "tcp://192.168.1.119:11010"
+
+# ── 子网代理：家庭段导出（与 linux-lan 双份冗余）──
+# 映射到 10.10.1.0/24 是必须的：Air 在家时物理上就在 192.168.1.0/24，
+# 不映射会让它收到一条覆盖本地网络的隧道路由，家里的网当场断。
+[[proxy_network]]
+cidr = "192.168.1.0/24"
+mapped_cidr = "10.10.1.0/24"
+
+[flags]
+# 注意：容器里不要设 dev_name —— host 网络模式下由宿主内核分配，写死可能与宿主已有接口冲突
+private_mode = true
+latency_first = true
+multi_thread = true
+bind_device = true
+accept_dns = false           # NAS 上尤其不能开：会改宿主 DNS，影响它自己跑的智能家居服务
+enable_kcp_proxy = false

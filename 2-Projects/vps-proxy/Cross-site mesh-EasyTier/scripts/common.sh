@@ -24,6 +24,9 @@ ET_NODES=(
   "dev198|dev198|10.10.10.13|linux-x86_64|literal:1234"
   "linux-lan|linux-lan|10.10.10.21|linux-x86_64|ask"
   "air|__LOCAL__|10.10.10.31|macos-aarch64|ask"
+  # 飞牛走 Docker 部署（fnOS 官方升级会重置底层，装原生二进制会静默失效）
+  # 命名真值：115=飞牛2号(FNOS-2) / 43=飞牛1号(未接入，将来用 fnos1 + 10.10.10.23)
+  "fnos2|hahaxiong83@192.168.1.115|10.10.10.22|docker-x86_64|ask"
 )
 
 node_field() {  # node_field <name> <1..5>

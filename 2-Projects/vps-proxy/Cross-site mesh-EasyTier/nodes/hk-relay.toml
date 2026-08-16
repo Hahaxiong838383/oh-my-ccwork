@@ -29,6 +29,18 @@ listeners = [
 network_name = "__NETWORK_NAME__"
 network_secret = "__NETWORK_SECRET__"
 
+# ── WireGuard 门户（给手机用）──
+# 手机端不装 EasyTier：安卓同一时刻只允许一个 VPN Service，装了会和 v2rayNG 互斥。
+# 改成让 v2rayNG(Xray 内核) 加一个 WireGuard outbound 指向这里，只占它自己那一个槽，
+# 翻墙和组网同时可用。iOS 也走这条（EasyTier 无 iOS 客户端）。
+#
+# 端口 51820 需要野草云面板放行 udp（2026-08-16 川哥已加）——原有的 udp 22 / udp 11010
+# 都被 EasyTier listener 占了，不能复用。
+# 客户端网段 10.10.20.0/24 与 10.10.10 / 10.10.61 / 10.10.1 均不冲突（已逐条核对）。
+[vpn_portal_config]
+client_cidr = "10.10.20.0/24"
+wireguard_listen = "0.0.0.0:51820"
+
 [flags]
 dev_name = "easytier0"
 private_mode = true          # 只有持同一 network_name+secret 的节点能握手/中继

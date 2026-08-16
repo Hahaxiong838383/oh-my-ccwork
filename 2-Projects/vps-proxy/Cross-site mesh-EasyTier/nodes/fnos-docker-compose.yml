@@ -1,0 +1,54 @@
+# fnOS NAS 上的 EasyTier —— 用 Docker 而不是装原生二进制
+#
+# 【为什么不装原生二进制】
+# 飞牛 fnOS 是成品 NAS 系统，底层虽然是 Debian 12，但**官方升级会重置/覆盖底层系统改动**
+# （川哥实际踩过）。装在 /usr/local/bin + systemd 的东西会在某次系统升级后消失，
+# 而且是静默消失——组网里少一个节点，不会有人当场发现。
+# 容器 + 具名卷能扛过 fnOS 升级，且 Docker 是 fnOS 官方支持的能力。
+#
+# 【部署】
+#   1. 把本文件和渲染好的 node.toml 放到 NAS 上，例如 /vol1/1000/docker/easytier/
+#   2. docker compose up -d
+#   3. 验收：docker exec easytier easytier-cli peer  —— 必须看到远端节点，不能只看容器 running
+#
+# 【必要的三项特权，缺一不可】
+#   network_mode: host   → EasyTier 要直接用宿主网络做 P2P 打洞，bridge 模式打不了洞
+#   NET_ADMIN/NET_RAW    → 创建 TUN 设备、改路由
+#   /dev/net/tun         → TUN 设备本体
+#
+# 【/etc/machine-id 挂载不是可选的】
+#   EasyTier 用 machine-id 做设备身份持久化（配置恢复、控制台设备识别都依赖它）。
+#   容器每次重建 machine-id 都会变 → 控制台里会不断冒出"新设备"，且断线后配置恢复失效。
+#   同一个坑在 macOS 上是另一副面孔：launchd 不设 HOME 导致 machine-id 状态目录解析失败，
+#   服务直接起不来（见 skill easytier-mesh-ops §五）。
+
+services:
+  easytier:
+    image: easytier/easytier:v2.6.4      # 固定版本，不用 latest：避免某次自动拉取把全网版本拉散
+    container_name: easytier
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./node.toml:/etc/easytier/node.toml:ro
+      - /etc/machine-id:/etc/machine-id:ro     # 设备身份持久化，见上
+      - easytier-state:/var/lib/easytier
+    command: >
+      -c /etc/easytier/node.toml
+      --rpc-portal 127.0.0.1:15888
+      --config-server udp://10.10.10.1:22020/hahaxiong83
+    healthcheck:
+      # 只判进程活着是假绿灯：空配置照样能启动、TUN 照样能建。
+      # 判据必须是「真的看得见远端节点」。
+      test: ["CMD-SHELL", "easytier-cli peer 2>/dev/null | grep -qE '^\\| 10\\.10\\.10\\.[0-9]+' || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  easytier-state:
