@@ -153,6 +153,14 @@ printf 'pwd\nquit\n' | sftp -q -b - company-vm
 - 安装或恢复 standalone CLI 后，验收顺序固定为：真实 SSH 登录、`codex --version`、daemon running、socket 存在、Air App 日志出现 `nextState=connected`，最后确认项目 UI 绿点。
 - Studio GUI 代理环境应由受控 LaunchAgent 注入，本机代理地址与 CPA 域名 `NO_PROXY` 同时保留；不得把代理凭据写入 Skill、Git 或共享记忆。
 
+### 切到 studio-mesh 时保留项目与聊天（2026-08-16）
+
+- EasyTier 正常时，App 现有 `studio 开发机` 连接原地改为 `fu-121@10.10.10.12:22`，身份文件保持 `/Users/rayman.chen/.ssh/id_ed25519`；HK `cli4.hahaxiong.cc:22044` 只作回滚。
+- 必须原地编辑，只改 hostname/port，保留 displayName、hostId、remote project id 和项目路径；禁止先删旧连接再新建。
+- 会话本体在 Studio `~/.codex/sessions`。新建连接若产生不同 hostId，旧聊天通常未删除，但可能不出现在新连接侧栏。
+- App 没有编辑按钮时，先备份 Air `~/.codex/.codex-global-state.json`，再定向修改目标 connection；禁止输出或提交完整状态文件。
+- 验收同时检查真实 `ssh studio-mesh`、`codex app-server daemon version`、control socket、selected hostId、remote projects 与 thread→project assignments。2026-08-16 原地切换实测保留三个现用项目、四条项目聊天绑定和 Studio 12 个 rollout。
+
 ## Codex-managed SSH 上传与慢响应分层（2026-08-14）
 
 远程窗口“上传中”“点击发送一直转圈”“已经收到内容但明显很慢”必须分开诊断，禁止只凭 UI 转圈重启 App Server、SSH 或代理：

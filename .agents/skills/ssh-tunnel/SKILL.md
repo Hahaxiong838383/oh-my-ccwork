@@ -239,6 +239,35 @@ ssh -p 22277 -i /Users/rayman.chen/.ssh/id_ed25519 -o IdentitiesOnly=yes fu-121@
 
 相关说明文件：`/Users/rayman.chen/mycc/4-Assets/SOP/codex-studio-ssh-connection.md`。
 
+### Codex App 优先走 studio-mesh，并保留项目聊天（2026-08-16）
+
+EasyTier 正常时，ChatGPT/Codex App 的 Studio managed SSH 优先使用：
+
+```text
+显示名称：studio 开发机（保持不变）
+主机名：fu-121@10.10.10.12
+SSH 端口：22
+身份验证：身份文件
+身份文件路径：/Users/rayman.chen/.ssh/id_ed25519
+```
+
+`~/.ssh/config` 的等价别名为 `studio-mesh`。切换线路时必须遵守：
+
+1. **原地编辑现有 managed connection**，只改 hostname/port；保留 displayName、hostId、remote project id 和项目路径。
+2. 不先删除旧连接再新建。SSH 地址不是聊天本体；会话保存在 Studio `~/.codex/sessions`，但新连接若产生不同 hostId，旧项目聊天可能只是在新侧栏不可见。
+3. 如果 App 没有编辑按钮，先备份 Air `~/.codex/.codex-global-state.json`，再用定向 JSON 修改仅替换目标 connection 的 `hostname`/`sshPort`；禁止打印、提交或整体复制该状态文件，因为其中可能包含设备状态或敏感运行字段。
+4. HK 回滚入口保留为 `fu-121@cli4.hahaxiong.cc:22044`，Mesh 验收完成前不删除。
+
+切换后验收：
+
+```bash
+ssh studio-mesh 'hostname; whoami; codex --version; codex app-server daemon version; \
+  test -S "$HOME/.codex/app-server-control/app-server-control.sock" && echo SOCKET_OK; \
+  test -d /Users/fu-121/mycc && echo MYCC_OK'
+```
+
+还必须在 Air 侧确认：selected hostId 未变、原 remote projects 仍指向同一 hostId、原 thread→project assignments 数量未缩水。2026-08-16 实测原地切换后，三个现用项目与四条项目聊天绑定保留，Studio 12 个 rollout 均在。
+
 ### Codex-managed SSH 的 CLI 与 socket 前置条件（2026-08-14）
 
 - 删除、重命名或升级 `/Applications/Codex.app`、`/Applications/ChatGPT.app` 前，先检查 LaunchAgent、SSH remote 配置与 `app-server-control.sock` 是否引用 App bundle 内置 CLI；App 能启动 GUI 不代表远端 shell 能发现 `codex`。
