@@ -18,8 +18,8 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/common.sh"
 
 PEER_NODE="dev198"          # 对端（公司侧，我有免密 sudo）
 PEER_IP="10.10.10.13"
-SIZE_MB="${SIZE_MB:-40}"
-PARALLEL="${PARALLEL:-6}"
+SIZE_MB="${SIZE_MB:-24}"   # 单流 24MB：上次 40MB 在 0.5MB/s 下要 80s，太久
+PARALLEL="${PARALLEL:-10}"
 
 [[ -n "${SUDO_PASS:-}" ]] || die "需要 Air 的 sudo 密码：SUDO_PASS='xxx' $0"
 load_secrets
@@ -88,18 +88,27 @@ measure() {  # measure <标签>
 printf '\n\033[1m KCP A/B — Air → %s（%s）\033[0m\n' "$PEER_NODE" "$PEER_IP"
 printf '%s\n' "──────────────────────────────────────────"
 
-log "① 基线：KCP 关（当前生产配置）"
-measure "off"
+# ── 交替 A-B-A-B ──
+# 上一版是「测一次 off，改配置，测一次 on」。那次 off 组丢包 4.0%、on 组 0.0% ——
+# 链路在两次测量之间自己变好了，单流吞吐本就由丢包主导，结果无法归因。
+# 这条链路的丢包一天内实测见过 2% / 3.3% / 4% / 6%，单次顺序测量对这种漂移毫无抵抗力。
+# 交替能把漂移均摊到两组，而不是全砸在其中一组。
+set_kcp() {  # set_kcp true|false
+  air "cp -n $CONF $BAK 2>/dev/null; sed -i '' 's/^enable_kcp_proxy = .*/enable_kcp_proxy = $1/' $CONF"
+  air "launchctl kickstart -k system/cn.easytier.mesh" >/dev/null 2>&1
+  for i in $(seq 1 25); do ping -c1 -W2 -q "$PEER_IP" >/dev/null 2>&1 && break; sleep 2; done
+  sleep 6
+}
 
-log "② 打开 enable_kcp_proxy 并重启"
-air "cp $CONF $BAK && sed -i '' 's/^enable_kcp_proxy = false/enable_kcp_proxy = true/' $CONF && grep '^enable_kcp_proxy' $CONF"
-air "launchctl kickstart -k system/cn.easytier.mesh" >/dev/null 2>&1
-for i in $(seq 1 20); do ping -c1 -W2 -q "$PEER_IP" >/dev/null 2>&1 && break; sleep 3; done
-sleep 8
+for round in 1 2; do
+  printf '\n\033[1m── 第 %s 轮 ──\033[0m\n' "$round"
+  log "KCP 关"; set_kcp false; measure "off-r$round"
+  log "KCP 开"; set_kcp true;  measure "on-r$round"
+done
 
-log "③ KCP 开"
-measure "on"
-
-printf '\n\033[33m判读：并发流的数值更能反映真实上限；单流若从 ~0.55 提升到 >1 MB/s，说明 KCP 有效。\033[0m\n'
-printf '\033[33m若两组差异 <15%%，视为无显著收益 —— 保持关闭，不为说不清的收益引入冗余流量。\033[0m\n'
+printf '\n\033[33m判读：\033[0m\n'
+printf '\033[33m  · 比较同轮内 off vs on（同轮共享链路状态），再看两轮是否给出一致方向\033[0m\n'
+printf '\033[33m  · 两轮方向不一致 = 噪声大于效应，判无收益\033[0m\n'
+printf '\033[33m  · 差异 <15%% 视为无显著收益 —— 保持关闭，不为说不清的收益引入冗余流量\033[0m\n'
+printf '\033[33m  · 同时看每组自己的丢包：若某组丢包接近 0，该组对 KCP 的检验力很弱（KCP 治的就是丢包）\033[0m\n'
 # restore 由 trap 执行

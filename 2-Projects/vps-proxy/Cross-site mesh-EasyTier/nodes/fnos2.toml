@@ -26,6 +26,22 @@ listeners = [
 # ── 网络身份（决定谁和谁是同一张网）──
 # 必须与所有其他节点完全一致；不一致的症状是「connector 显示 Connected 但 peer 表空」，
 # 因为 TCP/UDP 通道建得起来，只是握手鉴权不过 —— 极容易误判成打洞失败。
+
+# ── 为什么这里【没有】 mapped_listeners（2026-08-16 决策，别再加回来）──
+# 曾短暂考虑过：家里路由器映射 udp/tcp 11010 到本机 + 配 mapped_listeners，
+# 让 Air 在外面用 5G(对称 NAT)时能直连家里，把绕香港的 ~96ms 降到 ~30ms。
+#
+# **川哥否决，理由成立**：用 EasyTier 的初衷就是不开公网入站口。
+# 实测确认家里公网 IP 原本 22/80/443/8080/5000/5666 全 closed，暴露面是 0；
+# 加映射后变成 1 —— 这是性质变化不是程度变化。
+# private_mode 保护的是「握手要正确 secret」，但**鉴权之前处理数据包的代码是暴露的**，
+# secret 管不到那一段；而这个口开在家里数据最多的 NAS 上。
+#
+# 换来的只是「一个本来就能用的场景快一点」（96ms 跑 SSH/codex 毫无问题，
+# 对比原公网 FRP 的 P50 1183ms 已快一个数量级）。不划算。
+#
+# 手机在外面的需求由 hk-relay 的 WireGuard 门户覆盖，不需要家里开口。
+
 [network_identity]
 network_name = "__NETWORK_NAME__"
 network_secret = "__NETWORK_SECRET__"
