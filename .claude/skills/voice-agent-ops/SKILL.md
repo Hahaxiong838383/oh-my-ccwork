@@ -610,3 +610,12 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 **火山大模型 TTS v1 HTTP 接口(2026-08-11 已验参数,给外部接入直接抄)**:
 `POST https://openspeech.bytedance.com/api/v1/tts`,鉴权 `Authorization: Bearer;{token}`(**分号**),body 四段 `app{appid,token,cluster:"volcano_tts"}/user{uid}/audio{voice_type,encoding:"mp3",speed_ratio}/request{reqid:每次新uuid,text,operation:"query"}`;响应 JSON,**成功=HTTP200 且 code==3000 且 data(base64 音频)非空**。已实测音色(APP 7699738941,凭据指针=64.90 `.env` VOLC_ACCESS_TOKEN):`zh_male_lengkugege_emo_v2_mars_bigtts`(主worker生产男声)/`zh_female_tianmeixiaoyuan_moon_bigtts`(MyJavis 甜美小媛女声,47.239 `/opt/myjavis/.env` VOLC_TTS_VOICE 生效值)。首包 ~334ms。
 - **子贤侧已切火山(2026-08-11)**:讯飞额度死后,川哥把自己火山凭据+甜美小媛音色整理成接入文档给子贤直连火山(文档=川哥桌面`火山TTS接入文档-子贤.md`,含明文 token 勿入仓);租户线 worker 的 `TTS_PROVIDER=xfyun` 未动——同事讯飞账号恢复前,**租户 worker 对话链路仍是坏的**,只有子贤 demo 的 TTS-only 路径切走了。
+
+
+## canary.say 联调通道运维(2026-08-16 上线)
+
+- **是什么**:codex 安卓联调用的确定性长句通道——control topic 发 `canary.say` → worker 走**正式 TTS 链路**播 1..300 字,回幂等 ack + final metrics(`completed` 字段区分播完/取消)。合同真值 `tests/fixtures/s2b1_canary_control_contract.json`(rust/python 双侧 include 同一份,改字段先双方冻结)。
+- **开关**(64.90 rust-worker.env):`CANARY_SAY_ENABLED=1` + `CANARY_SAY_IDENTITY_ALLOW`(逗号分隔,fail-closed 空=全拒)。**加设备=identity 追加进白名单 + stop/start**(禁 restart)。生产开场白开关独立不受影响。
+- **E2E 验收**:`/root/rust-worker/canary_say_e2e_probe.py`(八判据:幂等 ack/振幅≥5s/metrics 零欠载/disabled/cancel 中止/伪造丢弃)。跑法:`set -a; . /root/realtime-voice-agent/.env; . /root/rust-worker/rust-worker.env; set +a; /root/voice-venv/bin/python canary_say_e2e_probe.py canary-e2e-$(date +%s)`。
+- **三个坑**:①control 消费在 **both directions ready 之后**才启动——设备只 connect 不发麦克风轨,canary.say 无人消费无 ack;②**一人一房**:任何 participant 断开=关整个 job(探针第二连接要用独立房间);③stale_trace 判定用 epoch 时钟(别拿 now_ms 单调毫秒比设备 ts,踩过恒 stale)。
+- **tts synth 日志已全局截 24 字**:验"没落全文"时 grep 短语必须取第 25 字以后的内容(保留区命中≠泄露),正锚=`(N字)` 截断标记。
