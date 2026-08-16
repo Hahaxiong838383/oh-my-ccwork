@@ -1,8 +1,8 @@
 # 部署进度真值表
 
 > 最后更新：2026-08-16 16:05（实测时钟）· 每一行都是实跑验证过的，不是「应该」
-> 密钥已于 15:32 轮换，全部 6 节点在新密钥上（旧值留档 `EASYTIER_NETWORK_SECRET_PREV` 可回滚）
-> **6 节点全部上线，且全部已向 Web 控制台上报**（抓包双通道核对过，非只看控制台数字）
+> 密钥已于 15:32 轮换，全部 7 节点在新密钥上（旧值留档 `EASYTIER_NETWORK_SECRET_PREV` 可回滚）
+> **7 节点全部上线，且全部已向 Web 控制台上报**（抓包双通道核对过，非只看控制台数字）
 
 ## 节点
 
@@ -13,6 +13,7 @@
 | `studio` | 10.10.10.12 | ✅ 运行中 | Symmetric | 同上；全程未干扰其上运行的任务 |
 | `dev198` | 10.10.10.13 | ✅ 运行中 | Symmetric | systemd `easytier-mesh`；公司侧子网网关（备） |
 | `linux-lan` | 10.10.10.21 | ✅ 运行中 | **PortRestricted** | 家侧子网网关 |
+| `fnos2` | 10.10.10.22 | ✅ 运行中 | PortRestricted | **Docker** 部署（fnOS 升级会重置底层，原生二进制会静默失效）；家侧子网网关（备） |
 | `air` | 10.10.10.31 | ✅ 运行中 | PortRestricted | launchd；**已验证未被 Clash/Xray 劫持**（连接本地地址落在 en0 物理网卡，非 utun） |
 
 上游通道（每节点 3 条，任一被中间网络掐掉仍能建链）：
@@ -70,6 +71,27 @@ systemd `easytier-web.service`（`Requires=easytier-mesh.service`，否则早启
 
 **核对方式（不要只看 Device Count）**：VPS 上 `tcpdump -ni easytier0 "udp port 22020"`
 数不同源 IP，再另抓 `-ni lo`（中继自己的会话走回环，只抓 easytier0 会少数一台）。
+
+## 家侧网关冗余：实测（2026-08-16）
+
+停掉 linux-lan 的 EasyTier 28 秒，从公司侧 dev198 访问家里路由器 `10.10.1.1`：
+
+| 阶段 | 丢包 | RTT | 提供该路由的节点 |
+|---|---|---|---|
+| 基线 | 0% | 10.8 ms | linux-lan(9.75) + fnos2(8.84) |
+| linux-lan 停机 | **0%** | **9.9 ms** | 只剩 fnos2(8.92) |
+| 恢复后 | — | — | 已重新入网（断言通过） |
+
+⚠️ **这个测试证明的比看起来的少，别当成「双向冗余已验证」**：
+基线里 fnos2 的延迟本来就更低（8.84 < 9.75），而全网开着 `latency_first`，
+所以停机前流量**很可能已经走 fnos2**。我停掉的是备用路径，不是在承载流量的那条。
+停机后 RTT 反而从 10.8ms 降到 9.9ms 也印证了这点。
+
+- ✅ 已验证：linux-lan 挂掉 → 家庭段仍可达
+- ⬜ **未验证**：fnos2 挂掉 → linux-lan 是否接管（需 NAS sudo，
+  跑 `DOWN_NODE=fnos2 ./scripts/test-gateway-failover.sh`）
+
+公司侧（mini + dev198 双导出 `10.10.61.0/24`）**两个方向都未做过故障切换测试**。
 
 ## 还没做到 / 还没验证的
 
