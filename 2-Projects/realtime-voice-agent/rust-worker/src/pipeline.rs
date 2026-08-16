@@ -230,6 +230,8 @@ struct Orchestrator {
     /// 在途 canary:等 playout 终态就绪后发 final metrics(单发)
     canary_pending: Option<CanaryPending>,
     t0: Instant,
+    /// EOT 判停快照采集(上线前置① D1;EOT_SNAPSHOT_DIR 未设=None,零行为变化)
+    snap: Option<crate::eot_snapshot::SnapshotSink>,
 }
 
 pub async fn run_pipeline(
@@ -357,10 +359,13 @@ pub async fn run_pipeline(
         canary_dedup: control::Dedup::default(),
         canary_pending: None,
         t0: Instant::now(),
+        snap: crate::eot_snapshot::SnapshotSink::from_env(&room_name),
     };
 
-    // EOT 环形缓冲(最近 1.2s 用户音频)
-    let mut eot_ring: VecDeque<i16> = VecDeque::with_capacity(EOT_MAX_SAMPLES + WINDOW);
+    // EOT 环形缓冲:采集关=最近 1.2s(原状);采集开=8s(smart-turn 窗,快照落盘用,
+    // predict 仍只取尾 1.2s,判停行为不变)
+    let ring_keep = crate::eot_snapshot::SnapshotSink::ring_keep(orch.snap.is_some(), EOT_MAX_SAMPLES);
+    let mut eot_ring: VecDeque<i16> = VecDeque::with_capacity(ring_keep + WINDOW);
     let mut vad_buf: Vec<i16> = Vec::with_capacity(WINDOW * 2);
     // 火山按段消化音频:攒 200ms(3200 样本)一发,对齐 Python segment_duration_ms=200。
     const STT_SEGMENT_SAMPLES: usize = 3200;
@@ -413,7 +418,7 @@ pub async fn run_pipeline(
                     let _ = stt_pcm_tx.try_send(std::mem::take(&mut stt_buf));
                 }
                 eot_ring.extend(samples.iter().copied());
-                while eot_ring.len() > EOT_MAX_SAMPLES {
+                while eot_ring.len() > ring_keep {
                     eot_ring.pop_front();
                 }
                 if let Some(sp) = orch.speaker.as_mut() {
@@ -439,9 +444,17 @@ pub async fn run_pipeline(
                 }
             },
             Some((gap_gen, prob)) = eot_rx.recv() => {
-                if gap_gen == orch.eot_gap_gen {
+                let accepted = gap_gen == orch.eot_gap_gen;
+                if accepted {
                     orch.turn_gate.on_eot_prob(prob);
                     tracing::debug!(probability = prob, threshold = orch.cfg.unlikely_threshold, "eot prediction");
+                }
+                if let Some(s) = &mut orch.snap {
+                    s.event("eot_prob", &[
+                        ("gap_gen", &gap_gen.to_string()),
+                        ("prob", &format!("{prob:.6}")),
+                        ("accepted", if accepted { "1" } else { "0" }),
+                    ]);
                 }
             }
             Some(te) = turn_ev_rx.recv() => orch.on_turn_event(te),
@@ -602,6 +615,9 @@ impl Orchestrator {
                 self.contract.user_speech_started();
                 self.eot_gap_gen += 1;
                 self.eot_requested = false;
+                if let Some(s) = &mut self.snap {
+                    s.event("speech_start", &[]);
+                }
                 // 用户开口:取消假打断定时(保留 paused);agent 未出声(thinking)则先按住
                 self.false_deadline = None;
                 if self.state != AgentState::Speaking
@@ -620,6 +636,9 @@ impl Orchestrator {
                 if let Some(timeout) = self.paused {
                     self.false_deadline = Some(now + timeout);
                 }
+                if let Some(s) = &mut self.snap {
+                    s.event("speech_end", &[]);
+                }
             }
             VadEvent::None => {}
         }
@@ -631,10 +650,21 @@ impl Orchestrator {
                 self.turn_gate.on_speech_start();
             }
             if !active_frame && !self.eot_requested && gate.silence_dur_s() >= 0.2 {
-                // 静音累积 ≥200ms:拿最近 1.2s 跑 EOT(每静音窗一次)
+                // 静音累积 ≥200ms:跑 EOT(每静音窗一次)。ring 采集关=1.2s/开=8s,
+                // predict 内部恒取尾 1.2s(EOT_MAX_SAMPLES),判停行为与 ring 容量无关。
                 self.eot_requested = true;
                 let gap_gen = self.eot_gap_gen;
                 let snapshot: Vec<i16> = eot_ring.iter().copied().collect();
+                // 采集旁路:8s 窗落 wav + 触发点事件(seq↔gap_gen 对齐概率回包)
+                if let Some(s) = &mut self.snap {
+                    let seq = s.snapshot(&snapshot);
+                    s.event("eot_request", &[
+                        ("seq", &seq.map_or("capped".into(), |v| v.to_string())),
+                        ("gap_gen", &gap_gen.to_string()),
+                        ("silence_ms", &format!("{:.0}", f64::from(gate.silence_dur_s()) * 1000.0)),
+                        ("speech_s", &format!("{:.2}", gate.speech_dur_s())),
+                    ]);
+                }
                 let tx = self.eot_tx.clone();
                 tokio::spawn(async move {
                     if let Some(c) = EotClient::global().await
@@ -668,6 +698,9 @@ impl Orchestrator {
         self.check_hotword(&t);
         self.turn_gate.on_final(&t, Instant::now());
         self.latest_interim.clear();
+        if let Some(s) = &mut self.snap {
+            s.event("user_final", &[("text", &self.tele_text)]);
+        }
     }
 
     /// 急停白名单(P0):仅 agent 出声中触发;标准化精确命中 → 绕字数门硬打断。
@@ -1030,6 +1063,12 @@ impl Orchestrator {
                 self.hard_abort_current();
             }
             self.contract.user_turn_committed();
+            if let Some(s) = &mut self.snap {
+                s.event("turn_commit", &[
+                    ("text", &user_text),
+                    ("eou_ms", &commit.eou_delay.as_millis().to_string()),
+                ]);
+            }
             info!(
                 room = %self.room_name,
                 eou_ms = commit.eou_delay.as_millis() as u64,
