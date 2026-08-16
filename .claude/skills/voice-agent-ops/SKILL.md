@@ -633,6 +633,12 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   ——重放真人打断死亡时序(插话→断续拖尾)。判据:插话后 audio in (10s) 持续=活,停发+overflow 每秒刷=死。
   ⚠️ **打断有两条代码分支**:cancel 包=硬 abort,真人语音=pause+假打断窗——filler/canary 探针只走前者,
   改打断相关代码必须跑 deadlock_probe 覆盖 pause 分支。
+- **cancel 时序探针**:`cancel_timing_probe.py`(64.90:/root/rust-worker/,亦入库 rust-worker/scripts/)
+  ——一房三连「真声打断+说完立即发 cancel」,模拟 Android 最紧形态。判读:journal `control cancel`(=ack
+  发出)→其后最近 `filler picked bucket=barge` 差值。**2026-08-16 基线:454/571/670ms**(结构保证=barge
+  必须等打断句自身 EOT commit,ack 先发;DataChannel 往返 10-12ms)。安卓「barge 截音/AUDIO_RESUMED 乱序」
+  类报障先复跑它对基线——**cancel/ack 不关房**(hard_abort 无 close,同房 3 连 cancel 实证),关房只有
+  明确退出意图或 30s 空闲;两条打断分支都触发 barge(cancel 到达时 interim 必非空→boost 闭环)。
 
 ## canary.say 联调通道运维(2026-08-16 上线)
 
