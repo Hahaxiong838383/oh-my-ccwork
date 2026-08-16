@@ -745,7 +745,12 @@ impl Orchestrator {
     /// 只有真正启动 turn 才落幂等表——被拒的 seq 必须可重试。
     /// 完整文本绝不进日志(只打 test_id 与字符数)。
     fn on_canary_say(&mut self, ev: &control::Envelope, identity: Option<&str>) {
-        let ts = self.now_ms() as i64;
+        // ⚠️ 必须用 epoch 毫秒:包内 ts_ms 是设备的 epoch 时间,而 self.now_ms()
+        // 是 pipeline 启动起算的单调毫秒——拿它比对会恒判 stale(2026-08-16 E2E 实证)。
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as i64)
+            .unwrap_or(0);
         let allowed = self.cfg.canary_say_enabled
             && identity
                 .map(|i| self.cfg.canary_identity_allow.iter().any(|a| a == i))
@@ -820,8 +825,12 @@ impl Orchestrator {
         let Some(fs) = p.stats.lock().ok().and_then(|g| g.clone()) else {
             return;
         };
+        let epoch_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as i64)
+            .unwrap_or(0);
         let msg =
-            control::canary_metrics(&p.trace_id, p.seq, self.now_ms() as i64, &p.test_id, &fs);
+            control::canary_metrics(&p.trace_id, p.seq, epoch_ms, &p.test_id, &fs);
         info!(room = %self.room_name, test_id = %p.test_id, turn_id = p.turn_id,
               audio_duration_ms = fs.played_frames * 10,
               underrun_count = fs.underrun_count, underrun_ms = fs.underrun_ms,
