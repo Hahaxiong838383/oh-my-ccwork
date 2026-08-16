@@ -612,12 +612,12 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 - **子贤侧已切火山(2026-08-11)**:讯飞额度死后,川哥把自己火山凭据+甜美小媛音色整理成接入文档给子贤直连火山(文档=川哥桌面`火山TTS接入文档-子贤.md`,含明文 token 勿入仓);租户线 worker 的 `TTS_PROVIDER=xfyun` 未动——同事讯飞账号恢复前,**租户 worker 对话链路仍是坏的**,只有子贤 demo 的 TTS-only 路径切走了。
 
 
-## 承接音 v6(2026-08-16):81 条+打断短条偏好+概率 0.6
+## 承接音 v7(2026-08-16):87 条+打断轮专用 barge 桶+概率 0.6
 
-- **参数**(64.90 rust-worker.env):`FILLER_PROBABILITY=0.6`(普通轮);`FILLER_BARGE_MAX_MS` 默认 1200(打断轮只选桶内 ≤此值短条,无则回退全桶)。资产 81 wav @ /opt/voice-agent/fillers-colleague(旧 62 条备份 .bak-v5-20260816)。
-- **改文案 SOP**:改 scripts/gen_fillers.py FILLERS 表 → scp 到 64.90:/root/rust-worker/gen_fillers_v6.py → `set -a; . /root/realtime-voice-agent/.env; . /root/rust-worker/rust-worker.env; set +a` → `PYTHONPATH=/root/realtime-voice-agent/src /root/voice-venv/bin/python gen_fillers_v6.py --engine xfyun --out <staging目录>` → 校验(条数/无>3s/每桶有≤1200ms 短条) → 备份线上目录 → cp 顶上 → stop/start → 探针。**⚠️ 文案纪律:task 桶禁执行承诺腔(v5 川哥定,"这就来/马上安排"在 LLM 超时轮更伤);跨桶完整短语禁重;短文案实测时长会被讯飞 padding 拉长(「唔，稍等。」1680ms→「稍等。」1200ms),合成后必须实测复核**。
-- **验收探针**:filler_v6_probe.py(64.90:/root/rust-worker/);判据=服务端 `filler picked bucket= dur_ms= boost=` 行:boost 轮全 ≤1200/相邻不重复/bank loaded: 81。**探针写法铁律:播问句前先停静音 feeder**(交错=音频打碎,ASR 零识别而 mean_amp 正常——2026-08-16 踩过)。
-- 已知边界:task 短条仅 1 条(「稍等。」)→打断轮恒同一句;要多样性=补短条重合成 或 BARGE_MAX 放 1400 纳入「我弄弄哈」(1360ms)。
+- **参数**(64.90 rust-worker.env):`FILLER_PROBABILITY=0.6`(普通轮);`FILLER_BARGE_MAX_MS=1500`(超长保险丝,代码默认 1200)。**打断轮(boost)只从专用 `barge` 桶选条**(6 条收住+转向腔,pick_bucket 永不返回 barge→普通轮碰不到;桶缺失才回退语义桶短条)。资产 87 wav @ /opt/voice-agent/fillers-colleague(旧 81 备份 .bak-v6-20260816)。
+- **改文案 SOP**:改 scripts/gen_fillers.py FILLERS 表 → scp 到 64.90:/root/realtime-voice-agent/scripts/gen_fillers_v7.py(PROJ 结构依赖:必须在该项目 scripts/ 下) → `set -a; . /root/rust-worker/rust-worker.env; set +a`(讯飞凭据;探针另需共享 .env 的 LIVEKIT_*) → `cd /root/realtime-voice-agent && /root/voice-venv/bin/python scripts/gen_fillers_v7.py --engine xfyun --out /opt/voice-agent/fillers-colleague.new` → 独立复核(条数/无>3s/barge 全≤1500/老文案零漂移) → stop → mv 原子切 → start → 探针。**⚠️ 文案纪律:task 桶禁执行承诺腔(v5 川哥定);跨桶完整短语禁重;讯飞短句 padding 非线性——要 ≤1500ms 文案就得 ≤3 字**(4-5 字实测 1560-2080ms 全超,「嘞/的」拖腔字再+200ms;线性外推模型不可信,合成后逐条实测是硬门)。
+- **验收探针**:filler_v6_probe.py(64.90:/root/rust-worker/);判据=`filler picked bucket= dur_ms= boost=` 行:**boost 轮全部 bucket=barge 且 ≤1500**/普通轮零 barge/相邻不重复/bank loaded: 87 buckets 含 barge。**探针写法铁律:播问句前先停静音 feeder**(交错=音频打碎,ASR 零识别而 mean_amp 正常——2026-08-16 踩过)。
+- barge 6 条实测:嗯嗯来1360/打住1080/听你的1240/得嘞1480/啊哦1240/先你的1360。v6 已知边界(打断轮恒「稍等。」)已解除。
 
 ## canary.say 联调通道运维(2026-08-16 上线)
 
