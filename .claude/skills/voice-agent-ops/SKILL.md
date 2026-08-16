@@ -282,9 +282,28 @@ ssh root@64.90.13.117 "sed -i 's/^VOLC_ASR_HOTWORDS=.*/VOLC_ASR_HOTWORDS=<新词
   (frames=0 → 上行断流/息屏;amp≈0 → 送的是静音;正常 → 问题在下游)。
 - **代码**:worktree `~/mycc/.claude/worktrees/rust-worker`,分支 `feat/rust-worker`(已 push origin)。
 
+### EOT 判停快照采集口(2026-08-16 上线,smart-turn 迁移前置 D1;任务 tasks/voice-eot-上线前置.md)
+
+**是什么**:每个 EOT 触发点(静音 200ms、旧模型被调那刻)把 8s 窗 wav + 行为事件流落盘,
+为阈值重标定攒自家真实对话分布。构建自 `feat/eot-snapshot`(基于 feat/rust-worker,**未合并**)。
+
+- **开关**:`rust-worker.env` 的 `EOT_SNAPSHOT_DIR=/root/eot-snapshots`。**删这行+stop/start=完全关闭
+  (零行为变化,E2E 锚 2/快照行 0 验过)**。护栏:单 job 50 个(`EOT_SNAPSHOT_MAX_PER_JOB`)/
+  全局 2048MB(`EOT_SNAPSHOT_MAX_TOTAL_MB`),超限停采 WARN 一次不报错。
+- **产物**:`/root/eot-snapshots/events.jsonl`(全局事件流:job_start/speech_*/eot_request/
+  eot_prob/user_final/turn_commit/job_end;room 名 sha256 脱敏)+ `<UTCts>-<rand6>/t{seq:04}.wav`
+  (16k mono s16 整 8s;**尾 19200 样本=旧模型 1.2s 输入窗**,离线切尾即得,不必单存)。
+- **进度一眼**:`ssh root@64.90.13.117 'find /root/eot-snapshots -name "*.wav" | wc -l; du -sh /root/eot-snapshots'`
+  (目标 ≥300 触发点进 D3 标定)。弱标签:`rust-worker/scripts/label_snapshots.py <目录>`
+  (触发点后 ≤800ms 恢复说话=0/2s 内 commit 无恢复=1/其余人工;旧模型概率按 gap_gen 对齐)。
+- 🔴 **隐私**:快照与文本=用户语音数据,只存本机、只在私有环境标注,**禁外派任何外部引擎**。
+- **打 rust 线攒数据**:voice-test-rust.html(47.239 docroot)或 P003 安卓端;
+  rtc_probe 打 rust 线要临时副本改 `AGENT = "rust-worker"`(脚本无 --agent-name 参数,常量在 ~50 行),用完删。
+
 ### TTS 切讯飞聆小璇(2026-08-14 上线,P003 读写台音色统一)
 
-**线上态**:二进制 md5 `78b07bf5d245bb4a155c0469d90911cc`(commit `b7331da8b`,2026-08-15 含 first_underrun_ms)、
+**线上态**(2026-08-16 起):二进制 md5 `b91c95fb8302d631b899e6732f454ce6`(feat/eot-snapshot `c0cc0fc8c`,
+含快照采集口;回滚=`.prev` 或 `.bak-20260816-pre-snapshot`,校验锚 `grep -ac EOT_SNAPSHOT_DIR` 新1/旧0)、
 `TTS_PROVIDER=xfyun`、`XFYUN_TTS_VCN=x6_lingxiaoxuan_pro`、
 `FILLER_DIR=/opt/voice-agent/fillers-colleague`。**STT 仍是火山**——判停 401ms 靠火山 ASR
 的 B5 伪 final,讯飞无此机制,**别顺手把 STT 一起换了**。
@@ -462,6 +481,30 @@ pre-underrun 版 12 次 consumer gone)。以前看不见是因为①更早的症
 做法:Mac 用 `gh auth token` + `curl -w '%{redirect_url}'`(**不加 `-L`**)取签名 URL,
 经 **stdin** 送给服务器的 `curl -K -`(签名 URL 不进 argv/history/日志)。
 服务器**没装 unzip**,用 `python3 -c "import zipfile;…"` 解。
+
+### CI 构建三坑(2026-08-16 EOT 迁移工程实证)
+
+1. **`gh run watch --exit-status` 的退出码不可信**——构建 FAIL 它照样 exit 0
+   (实证 run 31900433772:输出里有 "X Process completed with exit code 1" 但命令退出 0)。
+   判终态一律 `gh run view <id> --json status,conclusion`,认 `conclusion==success`。
+2. **workflow_dispatch 不认只在 feature 分支的 workflow**(`gh workflow run` 报 not found,
+   GitHub 只注册默认分支定义)→ 新 workflow 用 `on: push: branches:[分支]` 触发,零污染 main。
+3. **MS 官方 ORT 的 SONAME 是 major-only `libonnxruntime.so.1`**(不是 .so.1.28.0)——
+   ldd/DT_NEEDED/部署文件名全按这个形态;zip artifact 不保 symlink,打包时 `cp -L` 以
+   DT_NEEDED 名放真身。验证判据跟对象形态走,别想当然写 `.so.1.28` 去 grep。
+
+### sherpa-onnx × onnxruntime 版本矩阵(smart-turn 迁移用,2026-08-16 实证)
+
+- `ort` crate 2.0.0-rc.13 版本门:**只收 ORT minor ≥28**(MINOR_VERSION=ORT_API_VERSION,
+  低版本 dlopen 直接 `BadVersion` panic,高版本仅警告;lib.rs:150 实读)。
+- sherpa 官方**全部预编译产物 ≤1.27.1**:venv wheel 1.13.3=1.24.4、release tar 1.13.5=1.27.1、
+  PyPI 1.13.5 wheel 干脆不带 C API so(形态变了)→ 单 ORT 统一 1.28 **只能源码构建**。
+- 源码构建接口(v1.13.5):cmake `-DSHERPA_ONNX_USE_PRE_INSTALLED_ONNXRUNTIME_IF_AVAILABLE=ON`
+  + env `SHERPA_ONNXRUNTIME_INCLUDE_DIR/LIB_DIR` 指 MS 官方 tgz 解压目录;
+  speaker-embedding 源文件在核心列表**不受** TTS/DIARIZATION 开关门控,可放心关省时。
+  现成 workflow:`.github/workflows/sherpa-ort128-build.yml`(feat/eot-snapshot 分支)。
+- **S2 结论(2026-08-16)**:sherpa 1.13.5×ORT1.28 vs 1.13.3×1.24.4 同音频 embedding
+  **cos=1.000000**(max_abs 3.9e-6)→ registry.json 向量跨版本可复用,声纹免重注册。
 
 ### 本地交叉编译:2026-08-15 试过,卡在环境层,**未证伪也未证实**
 
