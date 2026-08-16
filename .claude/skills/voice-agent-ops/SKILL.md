@@ -285,7 +285,11 @@ ssh root@64.90.13.117 "sed -i 's/^VOLC_ASR_HOTWORDS=.*/VOLC_ASR_HOTWORDS=<新词
 ### EOT 判停快照采集口(2026-08-16 上线,smart-turn 迁移前置 D1;任务 tasks/voice-eot-上线前置.md)
 
 **是什么**:每个 EOT 触发点(静音 200ms、旧模型被调那刻)把 8s 窗 wav + 行为事件流落盘,
-为阈值重标定攒自家真实对话分布。构建自 `feat/eot-snapshot`(基于 feat/rust-worker,**未合并**)。
+为阈值重标定攒自家真实对话分布。**2026-08-16 起已 merge 进 feat/rust-worker(部署真源唯一,
+eot-snapshot 分支废弃勿再单独部署——当天曾被三次 rust-worker 部署静默覆盖断采,env 开关还在但
+代码没了=死开关;分支合并后此坑关闭)**。另:LLM 舞台指示剥离同日上线(textproc::strip_stage_directions,
+「（笑）」类闭合括号/星号段 TTS 前剥除+prompt 语域约束,判据看 tts synth 正文——**先剥行尾 `…(N字)`
+后缀再查括号,半角括号判据会被后缀喂饱恒真**)。
 
 - **开关**:`rust-worker.env` 的 `EOT_SNAPSHOT_DIR=/root/eot-snapshots`。**删这行+stop/start=完全关闭
   (零行为变化,E2E 锚 2/快照行 0 验过)**。护栏:单 job 50 个(`EOT_SNAPSHOT_MAX_PER_JOB`)/
