@@ -74,11 +74,16 @@ pub struct FillerClip {
     pub text: String,
     /// 24k mono s16le 原始字节(播放通道同率直喂)
     pub pcm: Vec<u8>,
+    /// 时长毫秒(从 pcm 长度算:24k s16 = 48 字节/ms)。打断轮短条偏好用。
+    pub duration_ms: u64,
 }
 
 pub struct FillerBank {
     clips: std::collections::HashMap<String, Vec<FillerClip>>,
     probability: f64,
+    /// 打断轮短条上限(ms):boost 时只从桶内 ≤此时长 的条里选,没有才回退全桶。
+    /// 打断后用户要的是"快点接上",慢悠悠的长承接火上浇油(2026-08-16 川哥定)。
+    barge_max_ms: u64,
     recent: VecDeque<String>, // 最近 3 条文案滑窗防重复
 }
 
@@ -97,7 +102,11 @@ impl FillerBank {
             .and_then(|v| v.parse::<f64>().ok())
             .unwrap_or(0.9)
             .min(1.0);
-        match Self::load(&dir, probability) {
+        let barge_max_ms = std::env::var("FILLER_BARGE_MAX_MS")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(1200);
+        match Self::load(&dir, probability, barge_max_ms) {
             Ok(Some(bank)) => Some(bank),
             Ok(None) => {
                 info!(dir = %dir.display(), "filler bank 资产缺失,承接音关闭");
@@ -110,7 +119,7 @@ impl FillerBank {
         }
     }
 
-    fn load(dir: &Path, probability: f64) -> anyhow::Result<Option<Self>> {
+    fn load(dir: &Path, probability: f64, barge_max_ms: u64) -> anyhow::Result<Option<Self>> {
         let manifest_path = dir.join("manifest.json");
         if !manifest_path.exists() {
             return Ok(None);
@@ -145,9 +154,10 @@ impl FillerBank {
                 continue;
             }
             let pcm: Vec<u8> = samples.iter().flat_map(|s| s.to_le_bytes()).collect();
+            let duration_ms = (pcm.len() / 48) as u64; // 24k s16 = 48 B/ms
             let bucket = meta.get("bucket").and_then(|b| b.as_str()).unwrap_or("gen").to_string();
             let text = meta.get("text").and_then(|t| t.as_str()).unwrap_or("").to_string();
-            clips.entry(bucket).or_default().push(FillerClip { text, pcm });
+            clips.entry(bucket).or_default().push(FillerClip { text, pcm, duration_ms });
         }
         if clips.is_empty() {
             return Ok(None);
@@ -156,7 +166,7 @@ impl FillerBank {
         let mut buckets: Vec<&String> = clips.keys().collect();
         buckets.sort();
         info!("filler bank loaded: {total} clips buckets={buckets:?}");
-        Ok(Some(Self { clips, probability, recent: VecDeque::with_capacity(3) }))
+        Ok(Some(Self { clips, probability, barge_max_ms, recent: VecDeque::with_capacity(3) }))
     }
 
     /// 桶级概率覆盖(greet/thanks 0.5,结构性重复场景降频;其余全局)。
@@ -179,15 +189,26 @@ impl FillerBank {
         if pool.is_empty() {
             return None;
         }
+        // 打断轮只从桶内短条选(桶仍按用户新话语义选,保住贴合度);桶内没有短条才回退全桶。
+        let base: Vec<&FillerClip> = if boost {
+            let short: Vec<&FillerClip> =
+                pool.iter().filter(|c| c.duration_ms <= self.barge_max_ms).collect();
+            if short.is_empty() { pool.iter().collect() } else { short }
+        } else {
+            pool.iter().collect()
+        };
         let cands: Vec<&FillerClip> =
-            pool.iter().filter(|c| !self.recent.contains(&c.text)).collect();
-        let cands = if cands.is_empty() { pool.iter().collect() } else { cands };
+            base.iter().copied().filter(|c| !self.recent.contains(&c.text)).collect();
+        let cands = if cands.is_empty() { base } else { cands };
         let clip = cands[rand::rng().random_range(0..cands.len())];
         if self.recent.len() == 3 {
             self.recent.pop_front();
         }
         self.recent.push_back(clip.text.clone());
-        info!("filler picked bucket={bucket} text='{}'", clip.text);
+        info!(
+            "filler picked bucket={bucket} dur_ms={} boost={boost} text='{}'",
+            clip.duration_ms, clip.text
+        );
         Some((clip.text.clone(), clip.pcm.clone()))
     }
 }
@@ -195,6 +216,47 @@ impl FillerBank {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn clip(text: &str, ms: u64) -> FillerClip {
+        // pcm 长度按 48B/ms 反推,与加载路径的换算共用同一常数
+        FillerClip { text: text.into(), pcm: vec![0u8; (ms * 48) as usize], duration_ms: ms }
+    }
+
+    fn bank_with(clips: Vec<FillerClip>) -> FillerBank {
+        let mut m = std::collections::HashMap::new();
+        m.insert("gen".to_string(), clips);
+        FillerBank { clips: m, probability: 1.0, barge_max_ms: 1200, recent: VecDeque::new() }
+    }
+
+    #[test]
+    fn boost_prefers_short_clips_only() {
+        let mut b = bank_with(vec![clip("长条一", 2000), clip("短条", 900), clip("长条二", 1800)]);
+        for _ in 0..20 {
+            let (text, _) = b.pick("随便聊聊", true).expect("boost 必播");
+            assert_eq!(text, "短条", "打断轮必须只从 ≤barge_max_ms 的条里选");
+            b.recent.clear(); // 隔离滑窗影响,单验候选集
+        }
+    }
+
+    #[test]
+    fn boost_falls_back_when_no_short_clip() {
+        let mut b = bank_with(vec![clip("长条一", 2000), clip("长条二", 1800)]);
+        let got = b.pick("随便聊聊", true);
+        assert!(got.is_some(), "桶内无短条必须回退全桶,不能不播");
+    }
+
+    #[test]
+    fn normal_turn_uses_full_pool() {
+        let mut b = bank_with(vec![clip("长条", 2000), clip("短条", 900)]);
+        let mut seen = std::collections::HashSet::new();
+        for _ in 0..60 {
+            if let Some((t, _)) = b.pick("随便聊聊", false) {
+                seen.insert(t);
+            }
+            b.recent.clear();
+        }
+        assert_eq!(seen.len(), 2, "普通轮长短条都该被选到(无短条偏好)");
+    }
 
     #[test]
     fn bucket_priority_matches_python() {
