@@ -301,6 +301,14 @@ pub async fn stream_chat_race(
     let Some((fb_client, fb_cfg)) = fallback else {
         return stream_chat(main.0, main.1, messages, tx).await;
     };
+    // 主路让步窗(2026-08-17 P1 接大脑):兜底先出首 delta 时再等主路至多 grace_ms,
+    // 主路窗内出 token 则主路胜。默认 0=公平赛马(裸模互备场景);主路=大脑(带人设
+    // 记忆)、兜底=裸模时必须配(否则裸 doubao ~550ms 常胜大脑 ~830ms,人设丢失
+    // ——「字节跳动的人工智能」就是这么来的),生产 800ms。
+    let grace_ms: u64 = std::env::var("LLM_RACE_MAIN_GRACE_MS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
     let t0 = std::time::Instant::now();
     let (m_tx, mut m_rx) = mpsc::channel::<String>(1024);
     let (f_tx, mut f_rx) = mpsc::channel::<String>(1024);
@@ -326,7 +334,26 @@ pub async fn stream_chat_race(
             },
         },
         f = f_rx.recv() => match f {
-            Some(d) => ("fallback", f_rx, f_task, m_task, d),
+            Some(d) => {
+                if grace_ms > 0 {
+                    // 兜底先出:给主路一个让步窗;窗内主路出 delta → 主路胜(兜底首 delta
+                    // 丢弃,兜底 task 随 lose_task.abort 终止);超时/主路流关闭 → 兜底胜
+                    match tokio::time::timeout(
+                        std::time::Duration::from_millis(grace_ms),
+                        m_rx.recv(),
+                    )
+                    .await
+                    {
+                        Ok(Some(md)) => {
+                            info!(grace_ms, "llm race: main within grace window(兜底让位)");
+                            ("main", m_rx, m_task, f_task, md)
+                        }
+                        _ => ("fallback", f_rx, f_task, m_task, d),
+                    }
+                } else {
+                    ("fallback", f_rx, f_task, m_task, d)
+                }
+            }
             None => match m_rx.recv().await {
                 Some(d) => ("main", m_rx, m_task, f_task, d),
                 None => {
