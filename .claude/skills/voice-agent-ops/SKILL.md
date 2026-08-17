@@ -633,6 +633,14 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   ——重放真人打断死亡时序(插话→断续拖尾)。判据:插话后 audio in (10s) 持续=活,停发+overflow 每秒刷=死。
   ⚠️ **打断有两条代码分支**:cancel 包=硬 abort,真人语音=pause+假打断窗——filler/canary 探针只走前者,
   改打断相关代码必须跑 deadlock_probe 覆盖 pause 分支。
+- **LLM 双路赛马(2026-08-17,提交 999086e77/二进制 8c676d2a,_run_race 移植)**:主 DeepSeek+兜底火山
+  doubao-seed-2.0-lite(coding/v3 网关);env LLM_FALLBACK_{BASE_URL,API_KEY,MODEL,THINKING}=四件套在
+  rust-worker.env(三件套缺任一=单路)。⚠️ **THINKING=disabled 必配**(doubao 默认开思考,首块全
+  reasoning_content,speakable 被拖:实测开 2112ms/关 418-540ms)。日志锚:`llm race 兜底路已配置`(启动)/
+  `llm race won won_by= race_ttft_ms=`(每轮)。🔴 **won_by=fallback 不是故障**——健康时 doubao 更快也赢;
+  故障判据=连续全 fallback+投机路 WARN(llm chat failed)成串。故障注入验收法:rust-worker.env 追加
+  LLM_BASE_URL=http://127.0.0.1:9/v1(覆盖 .env)重启→fallback 接管→删行恢复。投机=主路单发(设计内,
+  主路坏时投机 WARN 而常规轮由 race 兜住)。
 - 🔴 **rust 日志判读铁律:契约行/filler bank/tts synth/llm stream 行不带 room= 字段**——
   按 room grep 数这些行**必得 0**,已两次造成「零 filler/零契约」误判(8-16 job#1、8-17 trace 对撞)。
   ⚠️ 版本界线:**601ef841e(2026-08-17)起 filler picked/skip 行带 room+turn_id**,此前的历史日志仍不带。
