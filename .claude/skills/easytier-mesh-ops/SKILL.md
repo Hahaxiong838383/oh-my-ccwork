@@ -269,5 +269,9 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 ET_EXPECT_PEERS="hk-relay mini studio dev198 fnos2 ZZ_ALERT_DRILL_ZZ" ~/easytier-watch.sh
 ```
 
-⚠️ **Kuma 不记录通知发送成败**（日志里 `Feishu` 出现 0 次），所以「飞书是否送达」
-服务端查不到直接证据，`important=1` 只代表 Kuma 判定了状态变更。别把它当"已送达"汇报。
+⚠️ **Kuma 不记录通知发送成败**（日志里 `Feishu` 出现 0 次），所以**逐次**「飞书是否送达」
+服务端查不到，`important=1` 只代表 Kuma 判定了状态变更。别把单次 `important=1` 当"已送达"汇报。
+
+✅ **但这条链路已整体实证**：2026-08-17 首次接入时跑完整演练，川哥人工确认手机收到 **3 条飞书**
+（cc 直发的演练标记 + Kuma 的 DOWN + Kuma 的 recovery）。⇒ `push → Kuma → 飞书` 是活的，
+**别因为"日志里查不到"就判它不可信、更别另起炉灶重造**。收口方式只有一个：重跑演练 + 人工确认。

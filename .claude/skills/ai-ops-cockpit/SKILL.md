@@ -111,9 +111,13 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && AI_OPS_REGRESSION_SLEEP=22 scripts/valid
   Kuma 自己的 `{"ok":false,"msg":"Monitor not found or not active."}`。
   现有其他 push 监控都是 racknerd 本机内部推的，没走过公网，所以这个坑之前没暴露。
 - ⚠️ **Kuma 不记录通知发送成败**：全量容器日志里 `Feishu` 出现 **0 次**，
-  `notification_sent_history` 只用于证书到期去重。所以「飞书是否送达」服务端**无直接证据**。
+  `notification_sent_history` 只用于证书到期去重。所以**逐次**「飞书是否送达」服务端**查不到**。
   只能：看 heartbeat 的 `important=1`（Kuma 判定状态变更＝触发通知的条件）+ 直接对同一 webhook
-  发测试消息验证通道活着。**别把 `important=1` 当"已送达"汇报。**
+  发测试消息验证通道活着。**别把单次 `important=1` 当"已送达"汇报。**
+  - ✅ **但机制本身已实证通了**（2026-08-17，川哥人工确认收到 3 条飞书：cc 直发的演练标记 1 条
+    + Kuma 的 DOWN 1 条 + Kuma 的 recovery 1 条）。⇒ **这套 `push → Kuma → 飞书` 的告警链路是活的，
+    不要因为"日志里查不到"就判它不可信、更不要另起炉灶重造**。缺的只是逐次投递回执，
+    不是机制。要再验就重跑一次演练+人工确认，这是目前唯一的收口方式。
 - Kuma v1 无 monitor CRUD API。用 SQLite 直插时：先 `.backup`，照现有同类型行取字段，
   插完 `docker restart ops-uptime-kuma`，再用 heartbeat 表确认真的产生了心跳（"库里有行"≠"在跑"）。
 
