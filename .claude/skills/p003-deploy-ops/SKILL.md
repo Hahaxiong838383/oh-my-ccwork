@@ -66,7 +66,7 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 
 ## 坑清单（都踩过,改前必看）
 
-1. **admin DOM 内 Vue 自闭合**:`<el-table-column .../>`/`<el-input .../>` 自闭合→浏览器解析成嵌套**吞掉后续列**布局错乱,**必须成对** `<el-table-column ...></el-table-column>`。`el-tag` 在该 admin CSS 环境**不可见**→用 `<span :style="{color:...}">` inline color。
+1. **admin DOM 内 Vue 自闭合**:`<el-table-column .../>`/`<el-input .../>` 自闭合→浏览器解析成嵌套**吞掉后续列**布局错乱,**必须成对** `<el-table-column ...></el-table-column>`。`el-tag` 在该 admin CSS 环境**不可见**→用 `<span :style="{color:...}">` inline color。**第二变体(2026-08-18)**:in-DOM 模板属性名被 HTML 解析器小写化——`:viewBox` 动态绑定变 `:viewbox`,SVG 不认(图谱空白);camelCase SVG 属性**静态写**(浏览器 foreign-content 自动修正 case),值是常量就别用 v-bind。模板表达式里也不准写 `function(){}` 与多语句 `if`(用 $event/方法调用)。
 2. **parent base 子路径**:base 必须 `base:'/parent/'` 写进 `vite.config.ts`(别靠命令行 `--base`,换 `npm run build` 就丢)。丢了→HTML 引用 `/assets/*` 被 nginx 根 location SPA fallback 返 index.html(HTML 非 JS)**白屏**。验:`curl <子路径>/assets/<bundle>.js | head -c 40` 看是 JS 还是 `<!doctype`(只看 HTTP 200 会被 fallback 骗)。
 3. **web PWA SW 子路径劫持**:web SW(VitePWA scope `/`)的 `navigateFallbackDenylist`+`globIgnores` 必须含每个同域新子路径(`/admin` `/parent`),否则子路径导航被 SW fallback 到 web 自己的 index.html(浏览器显错页,但 curl 是对的=纯客户端 SW 劫持)。改后 full build 重部署 SW,旧 SW 需无痕窗口/Unregister 才见新效果。
 4. **并行 session 污染**(★ 川哥多 OMC session):工作区文件随时被并行 session 改,**commit 之后也不例外**(替换 gemini API 时误操作碰到 admin 的真实事故)。team/部署关键改动 **commit 后到 build/部署前再 `grep`+`wc -l` 验文件没被改回**;部署关键文件用 `git show HEAD` 导出快照部署绕污染工作区;可疑并行 session(`ps aux|grep claude`)报川哥别擅自 kill。
