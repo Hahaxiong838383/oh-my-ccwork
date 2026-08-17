@@ -121,6 +121,25 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && AI_OPS_REGRESSION_SLEEP=22 scripts/valid
 - Kuma v1 无 monitor CRUD API。用 SQLite 直插时：先 `.backup`，照现有同类型行取字段，
   插完 `docker restart ops-uptime-kuma`，再用 heartbeat 表确认真的产生了心跳（"库里有行"≠"在跑"）。
 
+## 接新监控时顺手普查旧监控（这次因此捞出 13 天的洞）
+
+**加监控项要读 `monitor` 表，读的时候把全表状态一起看完**——2026-08-17 就是因为要建
+EasyTier 的两条才去读表，才发现**三条「每日 AI 巡检」长期 DOWN**（最久 13 天没人发现）。
+只管自己那两条的话，那个洞会继续躺着。一行就能普查：
+
+```bash
+docker exec ops-uptime-kuma sqlite3 /app/data/kuma.db \
+ "select case h.status when 1 then '🟢' when 0 then '🔴' else '🟡' end||' '||m.name
+  from monitor m join heartbeat h on h.id=(select id from heartbeat where monitor_id=m.id
+  order by time desc limit 1) where m.active=1 order by h.status, m.id;"
+```
+
+⚠️ **红的要查「最后一次 UP 是什么时候」再定性**，否则分不清「我刚搞坏的」和「早就坏的」：
+
+```bash
+... "select m.id, m.name, (select max(time) from heartbeat where monitor_id=m.id and status=1) from monitor m;"
+```
+
 ## ⚠️ 既存故障：IPTV 健康端点空壳 200 + Kuma 假绿（未修）
 
 2026-08-17 接 EasyTier 监控时顺带发现，**与该次改动无关，已存在 12 天**：
