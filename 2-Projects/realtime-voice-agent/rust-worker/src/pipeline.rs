@@ -265,6 +265,10 @@ pub async fn run_pipeline(
     {
         let (client, pcfg) = llm_inner.prewarm_parts();
         tokio::spawn(llm::prewarm(pcfg, client));
+        // 赛马兜底路同 prewarm(Python 同款:兜底冷连接会吃掉它的竞速价值)
+        if let Some((fc, fcfg)) = llm_inner.fallback_prewarm_parts() {
+            tokio::spawn(llm::prewarm(fcfg, fc));
+        }
         let tc = tts_cfg.clone();
         tokio::spawn(async move { tc.prewarm().await });
     }

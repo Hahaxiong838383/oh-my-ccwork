@@ -40,6 +40,31 @@ impl LlmConfig {
                 .unwrap_or(filler_on),
         })
     }
+
+    /// 兜底路配置(_run_race 移植,2026-08-17 川哥拍板):LLM_FALLBACK_* 三件套配齐即开、
+    /// 缺任一=None 零变化(Python FastLLM 同款开关语义)。instructions/剥承接词继承主路;
+    /// thinking 独立(默认 disabled——火山 doubao-seed-2.0-lite 默认开思考,不关则
+    /// speakable 首声被 reasoning 拖长,2026-08-17 实测)。
+    pub fn fallback_from(
+        get: impl Fn(&str) -> Option<String>,
+        main: &LlmConfig,
+    ) -> Option<LlmConfig> {
+        let base_url = get("LLM_FALLBACK_BASE_URL")?;
+        let api_key = get("LLM_FALLBACK_API_KEY")?;
+        let model = get("LLM_FALLBACK_MODEL")?;
+        Some(LlmConfig {
+            base_url,
+            api_key,
+            model,
+            instructions: main.instructions.clone(),
+            thinking: get("LLM_FALLBACK_THINKING").unwrap_or_else(|| "disabled".into()),
+            strip_leading_filler: main.strip_leading_filler,
+        })
+    }
+
+    pub fn fallback_from_env(main: &LlmConfig) -> Option<LlmConfig> {
+        Self::fallback_from(|k| std::env::var(k).ok(), main)
+    }
 }
 
 // --- 句首承接词流式剥除(对齐 fast_llm.LeadingFillerStripper R2 v2) --------------
@@ -261,25 +286,109 @@ pub async fn stream_chat(
     })
 }
 
+// --- LLM 双路赛马(_run_race 移植,2026-08-17) -----------------------------------
+
+/// 主+兜底并发,**首个产出可见 delta 的流 claim 胜**(败者 abort),全败才抛;
+/// 未配兜底=单路零变化。胜者 delta(含首个)转发外层 tx;外层断(下游打断)→
+/// drop 胜者 rx → 其 inner send 失败 → stream_chat 按 interrupted 收尾,级联干净。
+/// 解 DeepSeek 晚高峰 ttft 抖动(Python 线 1.3-40s 实测),filler 只能盖 ~2s。
+pub async fn stream_chat_race(
+    main: (&reqwest::Client, &LlmConfig),
+    fallback: Option<(&reqwest::Client, &LlmConfig)>,
+    messages: Vec<Value>,
+    tx: mpsc::Sender<String>,
+) -> Result<ChatOutcome> {
+    let Some((fb_client, fb_cfg)) = fallback else {
+        return stream_chat(main.0, main.1, messages, tx).await;
+    };
+    let t0 = std::time::Instant::now();
+    let (m_tx, mut m_rx) = mpsc::channel::<String>(1024);
+    let (f_tx, mut f_rx) = mpsc::channel::<String>(1024);
+    let m_task = {
+        let (c, cfg, msgs) = (main.0.clone(), main.1.clone(), messages.clone());
+        tokio::spawn(async move { stream_chat(&c, &cfg, msgs, m_tx).await })
+    };
+    let f_task = {
+        let (c, cfg) = (fb_client.clone(), fb_cfg.clone());
+        tokio::spawn(async move { stream_chat(&c, &cfg, messages, f_tx).await })
+    };
+    // 首个可见 delta 定胜负;一路 rx 关闭(失败/空回复)→ 串行等另一路;双败合并抛
+    let (won_by, mut win_rx, win_task, lose_task, first) = tokio::select! {
+        m = m_rx.recv() => match m {
+            Some(d) => ("main", m_rx, m_task, f_task, d),
+            None => match f_rx.recv().await {
+                Some(d) => ("fallback", f_rx, f_task, m_task, d),
+                None => {
+                    let me = m_task.await.map_err(anyhow::Error::from).and_then(|r| r.map(|_| ()));
+                    let fe = f_task.await.map_err(anyhow::Error::from).and_then(|r| r.map(|_| ()));
+                    anyhow::bail!("llm race 双路全败: main={me:?} fallback={fe:?}");
+                }
+            },
+        },
+        f = f_rx.recv() => match f {
+            Some(d) => ("fallback", f_rx, f_task, m_task, d),
+            None => match m_rx.recv().await {
+                Some(d) => ("main", m_rx, m_task, f_task, d),
+                None => {
+                    let me = m_task.await.map_err(anyhow::Error::from).and_then(|r| r.map(|_| ()));
+                    let fe = f_task.await.map_err(anyhow::Error::from).and_then(|r| r.map(|_| ()));
+                    anyhow::bail!("llm race 双路全败: main={me:?} fallback={fe:?}");
+                }
+            },
+        },
+    };
+    info!(won_by, race_ttft_ms = t0.elapsed().as_millis() as u64, "llm race won");
+    lose_task.abort();
+    let mut fwd_broken = false;
+    if tx.send(first).await.is_err() {
+        fwd_broken = true;
+    }
+    if !fwd_broken {
+        while let Some(d) = win_rx.recv().await {
+            if tx.send(d).await.is_err() {
+                fwd_broken = true;
+                break;
+            }
+        }
+    }
+    if fwd_broken {
+        drop(win_rx); // 级联:胜者流 inner send 失败 → interrupted 收尾
+    }
+    match win_task.await {
+        Ok(r) => r,
+        Err(e) => Err(anyhow::anyhow!("race winner join: {e}")),
+    }
+}
+
 // --- 带历史的会话客户端 ---------------------------------------------------------
 
 pub struct Llm {
     cfg: LlmConfig,
     client: reqwest::Client,
+    /// 赛马兜底路(client+cfg;None=未配,单路零变化)。独立 Client=独立连接池,
+    /// 与主路互不抢连接。
+    fb: Option<(reqwest::Client, LlmConfig)>,
     history: Vec<Value>, // {role, content}
     version: u64,        // 历史变更计数(投机有效性校验)
     /// 声纹粘滞身份槽(每请求读,注入末尾 system=近因位;None=旁路关闭零变化)。
     speaker_slot: Option<crate::speaker_id::StickySlot>,
 }
 
+fn build_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .expect("reqwest client")
+}
+
 impl Llm {
     pub fn new(cfg: LlmConfig) -> Self {
-        let client = reqwest::Client::builder()
-            .connect_timeout(std::time::Duration::from_secs(10))
-            .timeout(std::time::Duration::from_secs(30))
-            .build()
-            .expect("reqwest client");
-        Self { cfg, client, history: Vec::new(), version: 0, speaker_slot: None }
+        let fb = LlmConfig::fallback_from_env(&cfg).map(|f| {
+            info!(model = %f.model, "llm race 兜底路已配置");
+            (build_client(), f)
+        });
+        Self { cfg, client: build_client(), fb, history: Vec::new(), version: 0, speaker_slot: None }
     }
 
     pub fn set_speaker_slot(&mut self, slot: crate::speaker_id::StickySlot) {
@@ -293,6 +402,11 @@ impl Llm {
     /// prewarm 用:job 自己这个 client(连接池随之被预热)+ 配置克隆。
     pub fn prewarm_parts(&self) -> (reqwest::Client, LlmConfig) {
         (self.client.clone(), self.cfg.clone())
+    }
+
+    /// 兜底路 prewarm 用(对齐 Python「兜底路同 prewarm」;未配=None)。
+    pub fn fallback_prewarm_parts(&self) -> Option<(reqwest::Client, LlmConfig)> {
+        self.fb.as_ref().map(|(c, f)| (c.clone(), f.clone()))
     }
 
     /// 投机用:当前历史 + user 文本的请求快照(client/cfg 克隆,请求不经本对象)。
@@ -319,11 +433,19 @@ impl Llm {
         messages
     }
 
-    /// 追加 user turn 并流式取回复(常规路)。被打断时历史留给 set_last_assistant。
+    /// 追加 user turn 并流式取回复(常规路,走赛马;兜底未配=单路)。
+    /// 被打断时历史留给 set_last_assistant。投机(speculation_request)保持主路单发:
+    /// 投机 miss 时常规轮的 race 自然兜底,不为预生成双倍烧钱。
     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {
         let messages = self.build_messages(user_text);
         self.push_user(user_text);
-        let outcome = stream_chat(&self.client, &self.cfg, messages, tx).await?;
+        let outcome = stream_chat_race(
+            (&self.client, &self.cfg),
+            self.fb.as_ref().map(|(c, f)| (c, f)),
+            messages,
+            tx,
+        )
+        .await?;
         self.settle(&outcome);
         Ok(outcome)
     }
@@ -412,6 +534,49 @@ mod tests {
         }
         out.push_str(&s.flush());
         out
+    }
+
+    fn main_cfg() -> LlmConfig {
+        LlmConfig {
+            base_url: "https://main.example/v1".into(),
+            api_key: "k1".into(),
+            model: "deepseek-v4-flash".into(),
+            instructions: "指令A".into(),
+            thinking: "disabled".into(),
+            strip_leading_filler: true,
+        }
+    }
+
+    #[test]
+    fn fallback_cfg_requires_all_three_and_inherits() {
+        let m = main_cfg();
+        let full = |k: &str| match k {
+            "LLM_FALLBACK_BASE_URL" => Some("https://ark.example/api/coding/v3".to_string()),
+            "LLM_FALLBACK_API_KEY" => Some("k2".to_string()),
+            "LLM_FALLBACK_MODEL" => Some("doubao-seed-2.0-lite".to_string()),
+            _ => None,
+        };
+        let f = LlmConfig::fallback_from(full, &m).expect("三件套齐=开");
+        assert_eq!(f.model, "doubao-seed-2.0-lite");
+        assert_eq!(f.instructions, "指令A"); // 继承主路
+        assert!(f.strip_leading_filler);
+        assert_eq!(f.thinking, "disabled"); // 默认关思考(doubao 默认开,不关拖 speakable)
+        // 缺任一件=None(不开赛马,零变化)
+        let missing = |k: &str| match k {
+            "LLM_FALLBACK_BASE_URL" => Some("x".to_string()),
+            "LLM_FALLBACK_API_KEY" => Some("y".to_string()),
+            _ => None, // 缺 MODEL
+        };
+        assert!(LlmConfig::fallback_from(missing, &m).is_none());
+        // THINKING 可覆盖
+        let with_think = |k: &str| match k {
+            "LLM_FALLBACK_BASE_URL" => Some("x".to_string()),
+            "LLM_FALLBACK_API_KEY" => Some("y".to_string()),
+            "LLM_FALLBACK_MODEL" => Some("z".to_string()),
+            "LLM_FALLBACK_THINKING" => Some("off".to_string()),
+            _ => None,
+        };
+        assert_eq!(LlmConfig::fallback_from(with_think, &m).unwrap().thinking, "off");
     }
 
     #[test]
