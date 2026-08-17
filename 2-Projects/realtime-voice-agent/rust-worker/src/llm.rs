@@ -18,6 +18,9 @@ pub struct LlmConfig {
     pub thinking: String,
     /// 剥回复开头承接词(承接音启用时开——承接音已"嗯"过,正文再"嗯"是结巴)。
     pub strip_leading_filler: bool,
+    /// 附加到 /chat/completions 后的 query(如 `token=<brain JWT>`,大脑侧据此注入
+    /// 该设备的记忆/per-device prompt 配置;空=不附加)。仅主路;灾备裸模不带身份。
+    pub url_query: String,
 }
 
 impl LlmConfig {
@@ -38,6 +41,7 @@ impl LlmConfig {
             strip_leading_filler: std::env::var("LLM_STRIP_LEADING_FILLER")
                 .map(|v| v == "1")
                 .unwrap_or(filler_on),
+            url_query: std::env::var("LLM_URL_QUERY").unwrap_or_default(),
         })
     }
 
@@ -59,11 +63,23 @@ impl LlmConfig {
             instructions: main.instructions.clone(),
             thinking: get("LLM_FALLBACK_THINKING").unwrap_or_else(|| "disabled".into()),
             strip_leading_filler: main.strip_leading_filler,
+            // 灾备裸模不带身份 query:兜底只保证「有回应」,不做记忆注入(also 少一处 secret 面)。
+            url_query: String::new(),
         })
     }
 
     pub fn fallback_from_env(main: &LlmConfig) -> Option<LlmConfig> {
         Self::fallback_from(|k| std::env::var(k).ok(), main)
+    }
+
+    /// /chat/completions 完整 URL(url_query 非空时附加 ?query——brain 身份走这里)。
+    pub fn chat_url(&self) -> String {
+        let base = format!("{}/chat/completions", self.base_url.trim_end_matches('/'));
+        if self.url_query.trim().is_empty() {
+            base
+        } else {
+            format!("{}?{}", base, self.url_query.trim())
+        }
     }
 }
 
@@ -203,7 +219,7 @@ pub async fn stream_chat(
     if matches!(cfg.thinking.as_str(), "disabled" | "enabled" | "adaptive") {
         body["thinking"] = json!({"type": cfg.thinking});
     }
-    let url = format!("{}/chat/completions", cfg.base_url.trim_end_matches('/'));
+    let url = cfg.chat_url();
     let t0 = std::time::Instant::now();
     let resp = client
         .post(&url)
@@ -529,7 +545,7 @@ impl Llm {
 /// job 开头预热:最小 dummy 请求建 TLS 连接(对齐 fast_llm.prewarm_openai,
 /// 藏进「用户说首句+判停」窗口,首句请求复用暖连接)。静默失败。
 pub async fn prewarm(cfg: LlmConfig, client: reqwest::Client) {
-    let url = format!("{}/chat/completions", cfg.base_url.trim_end_matches('/'));
+    let url = cfg.chat_url();
     let mut body = json!({
         "model": cfg.model,
         "messages": [{"role": "user", "content": "hi"}],
@@ -571,7 +587,37 @@ mod tests {
             instructions: "指令A".into(),
             thinking: "disabled".into(),
             strip_leading_filler: true,
+            url_query: String::new(),
         }
+    }
+
+    #[test]
+    fn chat_url_appends_query_only_when_set() {
+        let mut c = main_cfg();
+        assert_eq!(c.chat_url(), "https://main.example/v1/chat/completions");
+        c.url_query = "token=abc.def.ghi".into();
+        assert_eq!(c.chat_url(), "https://main.example/v1/chat/completions?token=abc.def.ghi");
+        // 尾斜杠/空白 query 归一
+        c.base_url = "https://main.example/v1/".into();
+        c.url_query = "  ".into();
+        assert_eq!(c.chat_url(), "https://main.example/v1/chat/completions");
+    }
+
+    #[test]
+    fn fallback_never_inherits_url_query() {
+        let mut m = main_cfg();
+        m.url_query = "token=secret".into();
+        let f = LlmConfig::fallback_from(
+            |k| match k {
+                "LLM_FALLBACK_BASE_URL" => Some("https://fb.example/v1".into()),
+                "LLM_FALLBACK_API_KEY" => Some("k2".into()),
+                "LLM_FALLBACK_MODEL" => Some("doubao".into()),
+                _ => None,
+            },
+            &m,
+        )
+        .unwrap();
+        assert!(f.url_query.is_empty(), "灾备不得继承身份 query");
     }
 
     #[test]
@@ -653,6 +699,7 @@ mod tests {
             instructions: "i".into(),
             thinking: "off".into(),
             strip_leading_filler: false,
+            url_query: String::new(),
         };
         let mut llm = Llm::new(cfg);
         llm.push_user("你好");
