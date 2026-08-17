@@ -633,6 +633,13 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   ——重放真人打断死亡时序(插话→断续拖尾)。判据:插话后 audio in (10s) 持续=活,停发+overflow 每秒刷=死。
   ⚠️ **打断有两条代码分支**:cancel 包=硬 abort,真人语音=pause+假打断窗——filler/canary 探针只走前者,
   改打断相关代码必须跑 deadlock_probe 覆盖 pause 分支。
+- **stop_only 吞句(2026-08-17 生命周期 v2,提交 6af77311b/二进制 4490304a)**:整句 normalize==急停词
+  →commit 门吞掉(无 Committed 契约/无 filler/无回答),日志 `stop_only utterance swallowed`。急停表=
+  INTERRUPT_HOTWORDS(rust-worker.env 12 词,含停止/不说了)。**火山流式会把「停，换个话题」切成独立段**
+  ——停段吞、内容段正常,混合句零损失。验收 `swallow_probe.py`(64.90:/root/rust-worker/);**验新增 env
+  词要用只在新表的词当锚**(「停」默认表也有,证不了 env 生效)。⚠️ unit 三层 EnvironmentFile
+  (.env→poc-eou.env→rust-worker.env),打断参数在 poc-eou.env(字数门=0/假打断窗 0.7s)——查配置必须
+  `systemctl cat` 拿全三层再逐个 grep,单文件断「未配置」会误判。
 - **cancel 时序探针**:`cancel_timing_probe.py`(64.90:/root/rust-worker/,亦入库 rust-worker/scripts/)
   ——一房三连「真声打断+说完立即发 cancel」,模拟 Android 最紧形态。判读:journal `control cancel`(=ack
   发出)→其后最近 `filler picked bucket=barge` 差值。**2026-08-16 基线:454/571/670ms**(结构保证=barge
