@@ -638,7 +638,7 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   rust-worker.env(三件套缺任一=单路)。⚠️ **THINKING=disabled 必配**(doubao 默认开思考,首块全
   reasoning_content,speakable 被拖:实测开 2112ms/关 418-540ms)。日志锚:`llm race 兜底路已配置`(启动)/
   `llm race won won_by= race_ttft_ms=`(每轮)。🔴 **won_by=fallback 不是故障**——健康时 doubao 更快也赢;
-  故障判据=连续全 fallback+投机路 WARN(llm chat failed)成串。故障注入验收法:rust-worker.env 追加
+  故障判据=连续全 fallback+投机路 WARN(llm chat failed)成串。双路基线 bench:scripts/bench_race_pair.py(64.90 上 source .env+rust-worker.env 后跑,2026-08-17 基线 553/573ms)。故障注入验收法:rust-worker.env 追加
   LLM_BASE_URL=http://127.0.0.1:9/v1(覆盖 .env)重启→fallback 接管→删行恢复。投机=主路单发(设计内,
   主路坏时投机 WARN 而常规轮由 race 兜住)。
 - 🔴 **rust 日志判读铁律:契约行/filler bank/tts synth/llm stream 行不带 room= 字段**——
