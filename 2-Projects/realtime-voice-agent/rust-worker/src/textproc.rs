@@ -45,13 +45,24 @@ pub fn normalize_utterance(text: &str) -> String {
         .collect()
 }
 
-/// INTERRUPT_HOTWORDS 逗号分隔 → 标准化词集;显式设空串=禁用白名单;未设=默认词表。
-pub fn parse_hotwords(raw: Option<&str>) -> HashSet<String> {
-    let src = raw.unwrap_or(DEFAULT_INTERRUPT_HOTWORDS);
+/// 退出词吞句集默认表(2026-08-17 川哥拍板,与 Android SESSION_EXIT 合同词表一致——
+/// 联调 v2 §一.4/5:codex 现有 5 词+扩充 4 词+睡觉类 3 词)。Worker 只吞轮次防幽灵回答,
+/// 回复/关房 100% 归 Android(退出权威不变)。
+pub const DEFAULT_EXIT_HOTWORDS: &str =
+    "不聊了,我不想聊了,再见,拜拜,退出对话,不用了,退出,结束,结束聊天,我要睡觉了,我去睡觉了,我要休息了";
+
+/// 逗号分隔 → 标准化词集;显式设空串=禁用;未设=用 default_src。
+pub fn parse_hotwords_with(raw: Option<&str>, default_src: &str) -> HashSet<String> {
+    let src = raw.unwrap_or(default_src);
     src.split(',')
         .map(normalize_utterance)
         .filter(|w| !w.is_empty())
         .collect()
+}
+
+/// INTERRUPT_HOTWORDS 逗号分隔 → 标准化词集;显式设空串=禁用白名单;未设=默认词表。
+pub fn parse_hotwords(raw: Option<&str>) -> HashSet<String> {
+    parse_hotwords_with(raw, DEFAULT_INTERRUPT_HOTWORDS)
 }
 
 /// stop_only 吞句判定(2026-08-17 生命周期统一):整句标准化后精确等于急停词 → true。
@@ -155,6 +166,24 @@ mod tests {
         let extended = parse_hotwords(Some("停,停止,别说了,不说了,闭嘴,安静"));
         assert!(is_stop_only(&extended, "停止"));
         assert!(is_stop_only(&extended, "不说了。"));
+    }
+
+    #[test]
+    fn exit_words_swallow_pure_and_keep_mixed() {
+        let exits = parse_hotwords_with(None, DEFAULT_EXIT_HOTWORDS);
+        // 纯退出词(含标点/空白变体)→ 吞(防幽灵回答轮;退出动作归 Android)
+        assert!(is_stop_only(&exits, "再见"));
+        assert!(is_stop_only(&exits, "不聊了。"));
+        assert!(is_stop_only(&exits, " 我要睡觉了！"));
+        assert!(is_stop_only(&exits, "退出对话"));
+        assert!(is_stop_only(&exits, "不用了"));
+        // 混合句不吞(正常成轮)
+        assert!(!is_stop_only(&exits, "再见了我的朋友这首歌放一下"));
+        assert!(!is_stop_only(&exits, "退出这个游戏之后干嘛"));
+        // 与急停表互不串:「停」不在退出表
+        assert!(!is_stop_only(&exits, "停"));
+        // env 显式空=禁用
+        assert!(parse_hotwords_with(Some(""), DEFAULT_EXIT_HOTWORDS).is_empty());
     }
 
     #[test]

@@ -63,6 +63,9 @@ pub struct PipelineConfig {
     pub canary_identity_allow: Vec<String>,
     pub vad_model_path: String,
     pub hotwords: HashSet<String>,
+    /// 退出词吞句集(EXIT_SWALLOW_HOTWORDS):整句命中→只吞轮次(防幽灵回答轮),
+    /// 回复/关房归 Android。与急停表分开配置,词表须与 Android SESSION_EXIT 一致。
+    pub exit_hotwords: HashSet<String>,
 }
 
 /// 是否播开场白。抽成函数是为了让**生产用的那条判据**能被单测直接调用——
@@ -130,6 +133,10 @@ impl PipelineConfig {
                 format!("{}/assets/silero_vad.onnx", env!("CARGO_MANIFEST_DIR"))
             }),
             hotwords: parse_hotwords(std::env::var("INTERRUPT_HOTWORDS").ok().as_deref()),
+            exit_hotwords: crate::textproc::parse_hotwords_with(
+                std::env::var("EXIT_SWALLOW_HOTWORDS").ok().as_deref(),
+                crate::textproc::DEFAULT_EXIT_HOTWORDS,
+            ),
         }
     }
 }
@@ -1063,8 +1070,19 @@ impl Orchestrator {
             // 回答轮(02:54 真机实证,当时靠 Android 泛化 vad_no_asr cancel 巧合补刀;
             // 该泛化 cancel 按生命周期合同删除后无人兜底)。契约链上该句只有
             // UserTranscriptFinal 无 UserTurnCommitted——即「这句没发生」。
-            if crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text) {
-                info!(room = %self.room_name, "stop_only utterance swallowed: '{user_text}'");
+            let swallow_kind = if crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text) {
+                Some("stop_only")
+            } else if crate::textproc::is_stop_only(&self.cfg.exit_hotwords, &user_text) {
+                // 退出词吞句(2026-08-17 川哥拍板):trace 88185b1e 实证「退出」被 commit
+                // 起幽灵回答轮(filler 入轨+LLM 回 2 字),79ms 后才被 Android cancel 杀——
+                // 预测式判停必然抢先 cancel,竞态改确定性。Worker 只吞轮次;
+                // 退出回复/关房 100% 归 Android(退出权威不变)。
+                Some("session_exit")
+            } else {
+                None
+            };
+            if let Some(kind) = swallow_kind {
+                info!(room = %self.room_name, "{kind} utterance swallowed: '{user_text}'");
                 // 在途回答若还在(未被急停白名单/cancel 停掉,如用户轻声说「停」
                 // 而 interim 未及命中)→ 此刻补硬停,保证「停=安静」
                 if self.agent_turn.is_some() {
@@ -1076,7 +1094,7 @@ impl Orchestrator {
                 self.latest_interim.clear();
                 self.tele_text.clear();
                 if let Some(s) = &mut self.snap {
-                    s.event("stop_swallowed", &[("text", &user_text)]);
+                    s.event("swallowed", &[("text", &user_text), ("kind", kind)]);
                 }
                 return;
             }
@@ -1150,7 +1168,8 @@ impl Orchestrator {
                 .last_interrupt_at
                 .map(|t| t.elapsed() < Duration::from_secs(5))
                 .unwrap_or(false);
-            let filler = self.bank.as_mut().and_then(|b| b.pick(&user_text, boost));
+            let room = self.room_name.clone();
+            let filler = self.bank.as_mut().and_then(|b| b.pick(&user_text, boost, &room));
             self.start_turn(TurnKind::Reply {
                 user_text,
                 pending_amend: amend,
