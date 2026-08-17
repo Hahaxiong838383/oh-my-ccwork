@@ -633,14 +633,21 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   ——重放真人打断死亡时序(插话→断续拖尾)。判据:插话后 audio in (10s) 持续=活,停发+overflow 每秒刷=死。
   ⚠️ **打断有两条代码分支**:cancel 包=硬 abort,真人语音=pause+假打断窗——filler/canary 探针只走前者,
   改打断相关代码必须跑 deadlock_probe 覆盖 pause 分支。
-- 🔴 **rust 日志判读铁律:契约行/filler picked/filler bank/tts synth/llm stream 行不带 room= 字段**——
+- 🔴 **rust 日志判读铁律:契约行/filler bank/tts synth/llm stream 行不带 room= 字段**——
   按 room grep 数这些行**必得 0**,已两次造成「零 filler/零契约」误判(8-16 job#1、8-17 trace 对撞)。
+  ⚠️ 版本界线:**601ef841e(2026-08-17)起 filler picked/skip 行带 room+turn_id**,此前的历史日志仍不带。
   取证姿势:先按 room 锁时间窗(job accepted→closed),再按时间窗全量抓无 room 过滤;并发房用
   「窗口内非目标房行数=0」确认独占。
 - **EOT 快照能量剖析(丢音定位)**:trace 里某句「ASR 零输出」时,找覆盖该时段的快照 wav
   (mtime=触发时刻,回看 8s),python wave 分 8 段算平均幅度——「设备 VAD 事件到了但对应秒段能量
   0-2/32767=数字静音」→声学能量丢在设备/上行侧,Worker 文本链无责(88185b1e「停」实证;
   快照=用户语音,只在 64.90 本机分析,禁下载禁外派)。
+- **session_exit 吞句(2026-08-17 晚,提交 601ef841e/二进制 586b033f)**:第二张吞句表
+  EXIT_SWALLOW_HOTWORDS(35 词,与 Android sessionExitPhrases 逐字一致,**env 权威**——Android 词表
+  变更只改 env 一行+stop/start,零构建);Worker 只吞轮次,退出动作全归 Android。投机也按两表拦
+  (`speculation skipped: swallow-word tail`)。⚠️ 退出场景 cancel ack 新常态 cancelled=false(无幽灵
+  轮可杀),验收判据锚「ack 收到+无幽灵音频」勿锚 true。验收探针 exit_probe_v2.py(64.90:/root/rust-worker/,
+  五轮矩阵含负锚「退出后告诉我怎么重新进入」)。
 - **stop_only 吞句(2026-08-17 生命周期 v2,提交 6af77311b/二进制 4490304a)**:整句 normalize==急停词
   →commit 门吞掉(无 Committed 契约/无 filler/无回答),日志 `stop_only utterance swallowed`。急停表=
   INTERRUPT_HOTWORDS(rust-worker.env 12 词,含停止/不说了)。**火山流式会把「停，换个话题」切成独立段**
