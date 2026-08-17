@@ -54,6 +54,13 @@ pub fn parse_hotwords(raw: Option<&str>) -> HashSet<String> {
         .collect()
 }
 
+/// stop_only 吞句判定(2026-08-17 生命周期统一):整句标准化后精确等于急停词 → true。
+/// 精确匹配天然保护混合句:「停，换个故事」normalize 后 != 任何纯急停词,不吞。
+/// 白名单被显式禁用(空集)时恒 false。
+pub fn is_stop_only(hotwords: &HashSet<String>, text: &str) -> bool {
+    !hotwords.is_empty() && hotwords.contains(&normalize_utterance(text))
+}
+
 /// 剥离 LLM 输出里的舞台指示——括号/星号包裹的动作、表情、神态描述:
 /// 「（笑）」「(假装认真)」「*叹气*」「【小声】」。TTS 会把它们整句念出
 /// (2026-08-16 川哥实测),segmenter 出句后统一剥,TTS/字幕/历史三处同净文本
@@ -135,5 +142,30 @@ mod tests {
         assert!(!words.contains(&normalize_utterance("停车场怎么走")));
         // 显式空串=禁用
         assert!(parse_hotwords(Some("")).is_empty());
+    }
+
+    #[test]
+    fn stop_only_swallows_pure_hotword() {
+        let words = parse_hotwords(None);
+        // 纯急停词(含标点/空白变体)→ 吞
+        assert!(is_stop_only(&words, "停"));
+        assert!(is_stop_only(&words, "停。"));
+        assert!(is_stop_only(&words, " 别说了！"));
+        // 显式扩充词(生产 env 形态:默认表+停止+不说了)
+        let extended = parse_hotwords(Some("停,停止,别说了,不说了,闭嘴,安静"));
+        assert!(is_stop_only(&extended, "停止"));
+        assert!(is_stop_only(&extended, "不说了。"));
+    }
+
+    #[test]
+    fn stop_only_keeps_mixed_and_normal() {
+        let words = parse_hotwords(None);
+        // 混合句(急停词+新指令)不吞——精确匹配保护
+        assert!(!is_stop_only(&words, "停，换个故事"));
+        assert!(!is_stop_only(&words, "别说了，我们玩个游戏吧"));
+        // 普通句不吞
+        assert!(!is_stop_only(&words, "一加一等于几"));
+        // 白名单禁用(空集)恒不吞
+        assert!(!is_stop_only(&parse_hotwords(Some("")), "停"));
     }
 }

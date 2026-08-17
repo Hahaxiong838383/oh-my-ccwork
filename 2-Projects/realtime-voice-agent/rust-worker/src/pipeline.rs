@@ -1058,6 +1058,28 @@ impl Orchestrator {
         // 判停提交
         if let Some(commit) = self.turn_gate.poll_commit(now) {
             let user_text = commit.text;
+            // stop_only 吞句(2026-08-17 生命周期统一):整句=急停词 → 不成 turn,静默。
+            // 否则「停」硬停旧回答后 ~43ms 又被 commit 给 LLM,起了带 barge filler 的
+            // 回答轮(02:54 真机实证,当时靠 Android 泛化 vad_no_asr cancel 巧合补刀;
+            // 该泛化 cancel 按生命周期合同删除后无人兜底)。契约链上该句只有
+            // UserTranscriptFinal 无 UserTurnCommitted——即「这句没发生」。
+            if crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text) {
+                info!(room = %self.room_name, "stop_only utterance swallowed: '{user_text}'");
+                // 在途回答若还在(未被急停白名单/cancel 停掉,如用户轻声说「停」
+                // 而 interim 未及命中)→ 此刻补硬停,保证「停=安静」
+                if self.agent_turn.is_some() {
+                    self.hard_abort_current();
+                }
+                if let Some(sp) = self.spec.take() {
+                    sp.task.abort(); // 对急停词的投机生成作废
+                }
+                self.latest_interim.clear();
+                self.tele_text.clear();
+                if let Some(s) = &mut self.snap {
+                    s.event("stop_swallowed", &[("text", &user_text)]);
+                }
+                return;
+            }
             // 有在途回答(播放中/已 pause/生成中)→ 提交即接管:硬打断再开新轮
             if self.agent_turn.is_some() {
                 self.hard_abort_current();
