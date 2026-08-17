@@ -6,6 +6,7 @@ import type { AuthContext } from './auth-jwt.js';
 import { createGeminiLlmClient, type GeminiLlmClient, type ChatHistoryTurn } from './providers/gemini-llm.js';
 import { createDeepseekLlmClient } from './providers/deepseek-llm.js';
 import { createMinimaxLlmClient } from './providers/minimax-llm.js';
+import { createRaceLlmClient } from './providers/race-llm.js';
 import { createVolcAsrClient, type VolcAsrClient } from './providers/volc-asr.js';
 import { createVolcTtsClient, type VolcTtsClient } from './providers/volc-tts.js';
 import { createExpressionFilter, stripExpressionTags } from './expression-filter.js';
@@ -109,14 +110,17 @@ export class VoicePipeline {
     this.ws = ws;
     this.ipHash = hashIp(clientIp);
     this.authContext = authContext;
-    // 按 LLM_PROVIDER 工厂切换：'minimax' 走 MiniMax（reasoning 剥离 think），'deepseek' 走 DeepSeek 官方，默认 gemini。
+    // 按 LLM_PROVIDER 工厂切换：'race'=DeepSeek+火山 doubao 双路赛马(2026-08-17 P1)，
+    // 'minimax' 走 MiniMax（reasoning 剥离 think），'deepseek' 走 DeepSeek 官方，默认 gemini。
     const provider = (process.env.LLM_PROVIDER || '').toLowerCase();
     const rawClient =
-      provider === 'minimax'
-        ? createMinimaxLlmClient()
-        : provider === 'deepseek'
-          ? createDeepseekLlmClient()
-          : createGeminiLlmClient();
+      provider === 'race'
+        ? createRaceLlmClient()
+        : provider === 'minimax'
+          ? createMinimaxLlmClient()
+          : provider === 'deepseek'
+            ? createDeepseekLlmClient()
+            : createGeminiLlmClient();
     this.llm = rawClient as GeminiLlmClient & { abort?: () => void };
     // L_curriculum：连接时预热 KG（幂等，读 ~4MB JSON）。避免首个 ASR final 时才同步加载拖 TTFT。
     curriculumKG.load();

@@ -8,6 +8,7 @@ import { companionKG } from '../companion-kg.js';
 import { createGeminiLlmClient, type ChatHistoryTurn } from '../providers/gemini-llm.js';
 import { createDeepseekLlmClient } from '../providers/deepseek-llm.js';
 import { createMinimaxLlmClient } from '../providers/minimax-llm.js';
+import { createRaceLlmClient } from '../providers/race-llm.js';
 import { verifyAuthToken } from '../auth-jwt.js';
 import { profileStore, needsOnboarding } from '../profile-store.js';
 import { extractOnboarding } from '../onboarding-extractor.js';
@@ -143,11 +144,13 @@ customLlmRoute.post('/chat/completions', async (c) => {
 
   const provider = (process.env.LLM_PROVIDER || '').toLowerCase();
   const llm =
-    provider === 'minimax'
-      ? createMinimaxLlmClient()
-      : provider === 'deepseek'
-        ? createDeepseekLlmClient()
-        : createGeminiLlmClient();
+    provider === 'race'
+      ? createRaceLlmClient()
+      : provider === 'minimax'
+        ? createMinimaxLlmClient()
+        : provider === 'deepseek'
+          ? createDeepseekLlmClient()
+          : createGeminiLlmClient();
 
   const id = `chatcmpl-${Math.random().toString(36).slice(2, 12)}`;
   const created = Math.floor(Date.now() / 1000);
