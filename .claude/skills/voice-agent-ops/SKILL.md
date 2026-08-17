@@ -618,7 +618,7 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 
 ## 承接音 v7(2026-08-16):87 条+打断轮专用 barge 桶+概率 0.6
 
-- **参数**(64.90 rust-worker.env):`FILLER_PROBABILITY=0.6`(普通轮);`FILLER_BARGE_MAX_MS=1500`(超长保险丝,代码默认 1200)。**打断轮(boost)只从专用 `barge` 桶选条**(6 条收住+转向腔,pick_bucket 永不返回 barge→普通轮碰不到;桶缺失才回退语义桶短条)。资产 87 wav @ /opt/voice-agent/fillers-colleague(旧 81 备份 .bak-v6-20260816)。
+- **参数**(64.90 rust-worker.env):`FILLER_PROBABILITY=1.0`(2026-08-17 起必触发——0.6 时代 40% skip 轮正文裸延迟 1.85s 实测=「叫了没反应」,川哥+codex+trace 88185b1e 三方拍板;**0.6/1.0 是触发门控概率,桶内短语=等概率随机+滑窗 3,别混**;greet/thanks 桶代码级固定 0.5 不随 env);`FILLER_BARGE_MAX_MS=1500`(超长保险丝,代码默认 1200)。**打断轮(boost)只从专用 `barge` 桶选条**(6 条收住+转向腔,pick_bucket 永不返回 barge→普通轮碰不到;桶缺失才回退语义桶短条)。资产 87 wav @ /opt/voice-agent/fillers-colleague(旧 81 备份 .bak-v6-20260816)。
 - **改文案 SOP**:改 scripts/gen_fillers.py FILLERS 表 → scp 到 64.90:/root/realtime-voice-agent/scripts/gen_fillers_v7.py(PROJ 结构依赖:必须在该项目 scripts/ 下) → `set -a; . /root/rust-worker/rust-worker.env; set +a`(讯飞凭据;探针另需共享 .env 的 LIVEKIT_*) → `cd /root/realtime-voice-agent && /root/voice-venv/bin/python scripts/gen_fillers_v7.py --engine xfyun --out /opt/voice-agent/fillers-colleague.new` → 独立复核(条数/无>3s/barge 全≤1500/老文案零漂移) → stop → mv 原子切 → start → 探针。**⚠️ 文案纪律:task 桶禁执行承诺腔(v5 川哥定);跨桶完整短语禁重;讯飞短句 padding 非线性——要 ≤1500ms 文案就得 ≤3 字**(4-5 字实测 1560-2080ms 全超,「嘞/的」拖腔字再+200ms;线性外推模型不可信,合成后逐条实测是硬门)。
 - **验收探针**:filler_v6_probe.py(64.90:/root/rust-worker/);判据=`filler picked bucket= dur_ms= boost=` 行:**boost 轮全部 bucket=barge 且 ≤1500**/普通轮零 barge/相邻不重复/bank loaded: 87 buckets 含 barge。**探针写法铁律:播问句前先停静音 feeder**(交错=音频打碎,ASR 零识别而 mean_amp 正常——2026-08-16 踩过)。
 - **barge 桶现行 12 条(v7.1,川哥《日常打断短促回复短语》文档拍板,标点照字面)**:嗯！1360/好！960/行！1080/哦！920/收到！1280/得嘞！1200/好嘞！1120/嗯嗯1080/好呀1000/行呀960/你说1120/你说吧1120。好/行开头在打断桶解禁(v5 禁令只管 task 承接腔)。资产 93 wav;备份链 .bak-v5(62)/.bak-v6(81)/.bak-v7(87)。
@@ -633,6 +633,14 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   ——重放真人打断死亡时序(插话→断续拖尾)。判据:插话后 audio in (10s) 持续=活,停发+overflow 每秒刷=死。
   ⚠️ **打断有两条代码分支**:cancel 包=硬 abort,真人语音=pause+假打断窗——filler/canary 探针只走前者,
   改打断相关代码必须跑 deadlock_probe 覆盖 pause 分支。
+- 🔴 **rust 日志判读铁律:契约行/filler picked/filler bank/tts synth/llm stream 行不带 room= 字段**——
+  按 room grep 数这些行**必得 0**,已两次造成「零 filler/零契约」误判(8-16 job#1、8-17 trace 对撞)。
+  取证姿势:先按 room 锁时间窗(job accepted→closed),再按时间窗全量抓无 room 过滤;并发房用
+  「窗口内非目标房行数=0」确认独占。
+- **EOT 快照能量剖析(丢音定位)**:trace 里某句「ASR 零输出」时,找覆盖该时段的快照 wav
+  (mtime=触发时刻,回看 8s),python wave 分 8 段算平均幅度——「设备 VAD 事件到了但对应秒段能量
+  0-2/32767=数字静音」→声学能量丢在设备/上行侧,Worker 文本链无责(88185b1e「停」实证;
+  快照=用户语音,只在 64.90 本机分析,禁下载禁外派)。
 - **stop_only 吞句(2026-08-17 生命周期 v2,提交 6af77311b/二进制 4490304a)**:整句 normalize==急停词
   →commit 门吞掉(无 Committed 契约/无 filler/无回答),日志 `stop_only utterance swallowed`。急停表=
   INTERRUPT_HOTWORDS(rust-worker.env 12 词,含停止/不说了)。**火山流式会把「停，换个话题」切成独立段**
