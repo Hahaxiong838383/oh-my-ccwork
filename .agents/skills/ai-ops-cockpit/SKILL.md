@@ -8,6 +8,11 @@ output_levels: L2
 
 # AI Ops Cockpit 维护 Skill
 
+> ⚠️ 本文件有两份副本：`.claude/skills/`（cc 读）与 `.agents/skills/`（codex + grok 读）。
+> **两份必须逐字节相同**，改完用 `diff` 确认。2026-08-17 发现它们已双向分叉数周——
+> `.agents/` 那份缺 EasyTier 章节且仍写着已被证伪的 `bash -n *.sh`，`.claude/` 那份缺铁律 8–15。
+> 谁都没报错，因为**没有任何机制检查两份是否一致**。
+
 ## 铁律
 
 1. **不破坏既有功能**：新增功能前后都必须回归 `/vibe/` 的“发送给 Grok”主按钮、`/vibe/tasks`、`/vibe/assets`、`/terminal/`。
@@ -25,6 +30,7 @@ output_levels: L2
 13. **KPI 日报先给人读懂**：个人站访客日报标题必须明确包含“真实访客”，统计日期、UV、PV、近 7 日与热门页面置于消息前部；`0 UV / 0 PV` 是有效业务结果，不能因数字为零隐藏或误判成任务未执行。
 14. **未来时间不能作为正式证据**：若远端主机时间晚于本会话权威日期，未来任务 ID、未来统计日期和未来日志只能用于格式/通道测试，不能证明正式自然日日报；先记录时钟偏差，不擅自修改生产系统时间。
 15. **外部发现命令必须有时间边界**：模型发现、网络检索等可能无输出卡住的命令必须设置超时；已有真实模型任务覆盖时，优先使用真实任务结果加确定性配置检查，避免回归脚本无限等待。
+16. **红灯先问「这东西还在编制内吗」**：长期 DOWN 的监控有三种可能，不是两种——监控坏了 / 服务坏了 / **被监控对象已被有意退役**。定位第一步是拿「最后一次 UP 的日期」去对齐变更记录与备份目录（`/root/*-decommission-*`），比逐段查探测链路快一个数量级。详见下面 IPTV 一节。
 
 ## 证书续期专项
 
@@ -39,8 +45,14 @@ output_levels: L2
 ```bash
 cd /Users/rayman.chen/mycc
 python3 -m py_compile 2-Projects/ai-ops-cockpit/ops-inspector/server.py
-bash -n 2-Projects/ai-ops-cockpit/scripts/*.sh
+for f in 2-Projects/ai-ops-cockpit/scripts/*.sh; do bash -n "$f" || echo "SYNTAX ${f}"; done
 ```
+
+⚠️ **别写回 `bash -n .../*.sh`**：`bash -n` 只解析第一个文件，其余全变成位置参数
+`$1 $2 …`。2026-08-05 在这 14 个脚本上实测——把 `update-omp.sh` 换成语法错文件，
+`bash -n scripts/*.sh` 照样 **exit 0**，逐文件循环才抓到。`node --check a.mjs b.mjs`
+同坑（`python3 -m py_compile` 反而会全查）——**是不是真批量，每个工具契约不同，
+从 `cmd f1 f2` 的外形看不出来**。
 
 修改 Python 生成的 HTML/JS 后，必须抽取最终 `<script>`：
 
@@ -66,6 +78,14 @@ ssh racknerd 'cd /opt/ai-ops-cockpit && AI_OPS_REGRESSION_SLEEP=22 scripts/valid
 ```
 
 通过标记：`OK vibe regression`。
+
+- ⚠️ **回归会跟 n8n 的定时巡检抢任务锁**：`chenchuan 09:00 / cpa 09:20 / voice 09:40`（CST）。
+  撞上时症状是 `/vibe/task/run` 那条断言失败，长得像功能坏了。起回归前先确认没有在跑的任务
+  （`vibe-tasks/*.json` 里 `terminal=false` 的条数为 0），或避开整点后 5 分钟。
+- ⚠️ **审计断言的窗口必须先排序再切**：`glob.glob()` 返回**无序**列表（连字典序都不是），
+  `glob.glob(...)[-N:]` 等于从 900 多个文件里随机挑 N 个，本轮记录常常不在里面。
+  必须 `sorted(..., key=os.path.getmtime)[-N:]`。2026-08-17 修掉两处；两处都印出
+  `window=实际/总数 matched=n`，**沉默的窗口就是下一个恒绿点**。
 
 真实浏览器验收使用可复现包装器，并强制前后检查服务器容量：
 
@@ -111,6 +131,7 @@ AI_OPS_CAPACITY_SSH_TARGET=racknerd \
 - CPA 维护通道：安装/权限验收只断言限权命令可达、核心 service/port 正常和模型目录可读；真实推理属于独立业务探针，必须记录状态但不能因上游瞬时 408/5xx 把维护通道安装误判为失败。
 - 资产页：确认页面文案为“就绪度”，JSON 字段为 `readinessScore`，没有 `healthScore`。
 - 只读快照：确认非 `mycc` 真实项目是占位；如要接入，必须先列文件级 allowlist。
+- 只读快照源要对撞内容不只对撞条数：`/opt/ai-ops-workspaces/<项目>` 是手工推上去的，会和仓库悄悄分叉。2026-08-17 实测 CPA 那份 5 个文件里 4 个内容不同（只有 `go.mod` 相同），而条数看着正常。逐文件 md5 对撞，别只数个数。
 - 待办闭环：确认 `/vibe/tasks` 的“转待办”能写入 `/vibe/todos`，只保存脱敏摘要和任务 ID。
 - 状态流转：确认 `/vibe/todos/update` 只允许 `open/doing/done`，且不写入 Grok 原文。
 - 待办通知：确认 `/vibe/todos/notify` 只发待办 ID、状态、模式和入口，不发标题/摘要/question/answer。
@@ -119,6 +140,125 @@ AI_OPS_CAPACITY_SSH_TARGET=racknerd \
 - 告警上下文：确认 `/vibe/kuma-context.json` 和 `/vibe/report.json` 可返回 JSON，且不包含 secret/token。
 - cron：确认包含 `flock -n /tmp/aiops-readonly-refresh.lock`，避免重叠刷新。
 - Git：只 stage AI Ops 相关文件；不要吞 `.claude/skills/evomap-assets/*.json`、`.claude/skills/scheduler/history.md` 等无关脏改。
+
+## EasyTier 组网监控（2026-08-17 接入）
+
+野草云 HK 中继（`207.57.124.191` / 组网 `10.10.10.1`）已交给本驾驶舱值守。
+**形式是 aiops 当告警总线，不当探针**——探测留在组网内部，**VPS 上零改动、
+本项目代码/Caddy/容器零改动**，只在 Kuma 库里加了两个监控项（数据）。
+
+| Kuma id | 名称 | 类型 |
+|---|---|---|
+| 17 | EasyTier 中继端口 野草云HK | port `207.57.124.191:443`，interval 60s / retries 2 |
+| 18 | EasyTier 组网探针 家侧linux-lan | push，interval 600s / retries 2 |
+
+两条都绑 `notification_id=1`（飞书运维告警）。喂 18 的是 linux-lan 上的
+`~/easytier-watch.sh`（cron `*/10`）。**判读必须两条一起看**：
+`17🟢 18🔴` = 中继活着但组网坏 **或探针那台机自己坏了**；
+`17🔴 18🟢` = 供应商封了 443 但已建立的 p2p 还通。
+
+- ⚠️ **push 路径不带 `/kuma` 前缀**：Caddyfile 的豁免是 `not path /api/push/*`，匹配**原始路径**；
+  而 `handle_path /kuma*` 会剥前缀 ⇒ `/kuma/api/push/<token>` 反被网关 401。正确路径会拿到
+  Kuma 自己的 `{"ok":false,"msg":"Monitor not found or not active."}`。
+  现有其他 push 监控都是 racknerd 本机内部推的，没走过公网，所以这个坑之前没暴露。
+- ⚠️ **Kuma 不记录通知发送成败**：全量容器日志里 `Feishu` 出现 **0 次**，
+  `notification_sent_history` 只用于证书到期去重。所以**逐次**「飞书是否送达」服务端**查不到**。
+  只能：看 heartbeat 的 `important=1`（Kuma 判定状态变更＝触发通知的条件）+ 直接对同一 webhook
+  发测试消息验证通道活着。**别把单次 `important=1` 当"已送达"汇报。**
+  - ✅ **但机制本身已实证通了**（2026-08-17，川哥人工确认收到 3 条飞书：cc 直发的演练标记 1 条
+    + Kuma 的 DOWN 1 条 + Kuma 的 recovery 1 条）。⇒ **这套 `push → Kuma → 飞书` 的告警链路是活的，
+    不要因为"日志里查不到"就判它不可信、更不要另起炉灶重造**。缺的只是逐次投递回执，
+    不是机制。要再验就重跑一次演练+人工确认，这是目前唯一的收口方式。
+- Kuma v1 无 monitor CRUD API。用 SQLite 直插时：先 `.backup`，照现有同类型行取字段，
+  插完 `docker restart ops-uptime-kuma`，再用 heartbeat 表确认真的产生了心跳（"库里有行"≠"在跑"）。
+
+## 接新监控时顺手普查旧监控（这次因此捞出 13 天的洞）
+
+**加监控项要读 `monitor` 表，读的时候把全表状态一起看完**——2026-08-17 就是因为要建
+EasyTier 的两条才去读表，才发现**三条「每日 AI 巡检」长期 DOWN**（最久 13 天没人发现）。
+只管自己那两条的话，那个洞会继续躺着。一行就能普查：
+
+```bash
+docker exec ops-uptime-kuma sqlite3 /app/data/kuma.db \
+ "select case h.status when 1 then '🟢' when 0 then '🔴' else '🟡' end||' '||m.name
+  from monitor m join heartbeat h on h.id=(select id from heartbeat where monitor_id=m.id
+  order by time desc limit 1) where m.active=1 order by h.status, m.id;"
+```
+
+⚠️ **红的要查「最后一次 UP 是什么时候」再定性**，否则分不清「我刚搞坏的」和「早就坏的」：
+
+```bash
+... "select m.id, m.name, (select max(time) from heartbeat where monitor_id=m.id and status=1) from monitor m;"
+```
+
+## Kuma 监控判据（2026-08-17 收紧）
+
+`type=http` 只看状态码不看载荷，**天然会造假绿**。当时实测 monitor 1「AI 运维驾驶舱 HTTPS」
+的载荷是 `{"ok":false,"downCount":3}`，Kuma 却显示 `200 - OK`——驾驶舱自己的健康端点
+本该最先报警。已把 1/2/6/14 改成 `type=keyword`：
+
+| id | keyword | 说明 |
+|---|---|---|
+| 1 | `"component":"ai-ops-cockpit"` | **刻意不断言 `ok:true`**——那会让任一监控挂掉就重复报警、形成自指环路。这条只证明「拿到的是真载荷不是网关/SPA 外壳」 |
+| 2 | `<title>陈川 · AI 原生产品负责人` | 同时去掉了原来的 `300-399`（接受 3xx = 跳到任何地方都算 UP） |
+| 6 | `"component":"n8n"` | |
+| 14 | `OK` | 载荷就是 2 字节 `OK` |
+
+9/10 维持 `["401"]` 不动——鉴权边界的 401 本身已是足够紧的断言。
+
+- 🔴 **keyword 要写 Kuma 匹配那一层的形态，不是 HTTP 字节层**：Kuma 对
+  `application/json` 响应会先 `JSON.parse` 再 `JSON.stringify` 回去才做子串匹配，
+  **原始空格在这一步被抹掉**。端点吐的是 `"component": "ai-ops-cockpit"`（有空格），
+  keyword 必须写 `"component":"ai-ops-cockpit"`（无空格），否则恒红。
+  monitor 16 的 `"ok":true` 也是这个缘故。HTML / text 型不经过再序列化，按原样写。
+- 改完必须用**重启时刻之后**的心跳验，且正反两侧都要有信号：那轮我先写错了 keyword，
+  1/6 打出 `keyword is not in [...]` 而 2/14/16 是 `keyword is found`——这个对照恰好证明
+  判据有区分力。全绿而没见过任何一条红，等于没验过。
+
+## IPTV 已退役（2026-08-05 停栈 / 2026-08-17 AI Ops 侧对齐）
+
+IPTV 全栈在 aliyun-hk 上**是被有意停掉的**（腾内存）：`docker` 已 `disabled+inactive`、
+`/opt/stacks` 已移除、nginx snippet 已删、无 systemd unit，备份在
+`/root/iptv-decommission-20260805/`（含 `99-iptv-payload.tar.gz`）。
+
+而 AI Ops 侧的探针、监控、回归断言当时**没有跟着退**，于是：
+
+- monitor 13「私人 IPTV 每日 AI 巡检」最后一次 UP 是 `2026-08-04 19:02`，**正好是停栈前一天**；
+  之后每天 `alert:0/1`。这是真阳性，但指向一个已经不存在的对象。
+- monitor 12 却一直 `status=1 "200 - OK"`——`/ops-health/iptv` 原由 snippet `iptv-private.conf`
+  的 `location = /ops-health/iptv { alias /var/lib/iptv-aiops/health.json; }` 提供，
+  snippet 删掉后请求落到 SPA 兜底，200 + `text/html`。**同一个退役同时制造了一条真红和一条假绿。**
+- `validate-vibe-regression.sh` 因此每天必红，**全量回归连续 11 天拿不到 `OK vibe regression`**，
+  而这又挡住了它后面所有断言（见下）。
+
+2026-08-17 已按 K12 先例做退役对齐：server.py 清空 `iptv-api` 的 live 探针 / 每日巡检 /
+生产通道 / allowlist，n8n `iptv-daily-aiops-0300` 已 unpublish，Kuma 12/13 `active=0`，
+`AI_OPS_READONLY_PROJECTS` 去掉 `iptv-api`（`projectCount` 7→6），只读快照移出到
+`/root/aiops-readonly-iptv-retired-20260817/`。
+
+- **删断言的同时必须补反向断言**：回归里现在断言 `project.json / live.json / daily.json /
+  production.json?id=iptv-api` 全部 404 且 error 文案精确、生产动作端点返 400
+  `production action not allowed`。锚是紧邻上方 cpa-smart-router 那组期望非零的断言。
+  光删不补 = 下次误恢复没人挡。
+- ⚠️ **这些端点对未知项目返回 404，所以不能用 `curl -fsS ... | jq`**（`-f` 会先退出，
+  `jq` 根本执行不到）——必须取 `%{http_code}` 再验 body。
+- **仍保留未清**：`secrets/iptv-maintenance` 挂载（回归 316/317 断言其存在，且
+  `terminal/brain-server.py` 用它做**反向**检查，删了反而变弱）、`/opt/ai-ops-workspaces/iptv-api`
+  源目录、仓库 `managed-projects/iptv-api/`。清它们要连带在 aliyun-hk 吊销 `aiops` 密钥，
+  属独立的凭据生命周期决定。
+
+## 已知的长期红灯（不是 bug，别去修 AI Ops）
+
+- **monitor 8「个人站每日 AI 巡检」会周期性红**：根因在 aliyun-kr 的 `theory-radar.service`
+  ——`RuntimeError: fewer than three arXiv RSS categories were freshly verified`，
+  上游 arXiv RSS 抖动触发的 fail-fast 护栏（护栏本身是对的）。2026-07-27~08-17 的 22 天里红了
+  6 天。判读方法：看 `latest.json` 的 `production.theoryRadar`，其余子项（process/radar/analytics）
+  全绿就说明只是这一项。`theoryRadar.latestPublicReport` 落后当天日期 = 当日报告没发出去。
+- 逐段定位一律先读
+  `/opt/ai-ops-cockpit/ops-inspector/state/project-daily/<项目>/latest.json`
+  和同目录 `jobs/*.json`（保留每日历史，可直接回放哪一段哪天开始断），
+  **不要只看 Kuma**——push 心跳的 `msg` 只带 `live.passed/total`，
+  `snapshot`/`production`/`task` 哪个失败它一个字都不说，`alert:6/6` 就是这么来的。
 
 ## 线上部署模板
 
