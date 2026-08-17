@@ -584,6 +584,14 @@ impl Orchestrator {
     /// 解除路径(假打断定时/下轮提交)全在主循环——主循环一等锁即四环死锁。
     /// 投机是可丢的优化:拿不到锁=放弃本次,零损失。
     async fn start_speculation(&mut self, text: String) {
+        // 吞句词不投机(codex 合同 §3.3「零 LLM」严格判据):急停/退出词的 interim 会先于
+        // commit 触发 preflight→投机 LLM 白跑一次再被吞句分支作废——在源头跳过。
+        if crate::textproc::is_stop_only(&self.cfg.hotwords, &text)
+            || crate::textproc::is_stop_only(&self.cfg.exit_hotwords, &text)
+        {
+            info!(room = %self.room_name, "speculation skipped: swallow-word tail");
+            return;
+        }
         if let Some(old) = self.spec.take() {
             old.task.abort();
         }
@@ -1169,7 +1177,8 @@ impl Orchestrator {
                 .map(|t| t.elapsed() < Duration::from_secs(5))
                 .unwrap_or(false);
             let room = self.room_name.clone();
-            let filler = self.bank.as_mut().and_then(|b| b.pick(&user_text, boost, &room));
+            let next_turn = self.next_turn_id + 1; // picked 的轮紧接 start_turn 用此 id
+            let filler = self.bank.as_mut().and_then(|b| b.pick(&user_text, boost, &room, next_turn));
             self.start_turn(TurnKind::Reply {
                 user_text,
                 pending_amend: amend,

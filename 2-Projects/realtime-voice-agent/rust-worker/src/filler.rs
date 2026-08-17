@@ -182,11 +182,11 @@ impl FillerBank {
     /// 返回 (文案, pcm 24k bytes)。room 只用于日志——picked/skip 行历史上不带 room,
     /// 按房 grep 数它们必得 0,两次误判(2026-08-16/17)后补上;skip 结构化日志为
     /// codex trace 对撞要求(无它则"没看到 picked"区分不了概率跳过/资产缺/功能关)。
-    pub fn pick(&mut self, user_text: &str, boost: bool, room: &str) -> Option<(String, Vec<u8>)> {
+    pub fn pick(&mut self, user_text: &str, boost: bool, room: &str, turn_id: u64) -> Option<(String, Vec<u8>)> {
         let bucket = pick_bucket(user_text);
         let prob = if boost { 1.0 } else { self.bucket_prob(bucket) };
         if rand::rng().random::<f64>() >= prob {
-            info!("filler skip room={room} bucket={bucket} prob={prob} boost={boost} reason=probability");
+            info!("filler skip room={room} turn_id={turn_id} bucket={bucket} prob={prob} boost={boost} reason=probability");
             return None;
         }
         // 打断轮优先专用 barge 桶(2026-08-16 川哥定):打断衔接的合适性是语义不是时长,
@@ -199,13 +199,13 @@ impl FillerBank {
             None => match self.clips.get(bucket).or_else(|| self.clips.get("gen")) {
                 Some(p) => (bucket, p),
                 None => {
-                    info!("filler skip room={room} bucket={bucket} prob={prob} boost={boost} reason=no_pool");
+                    info!("filler skip room={room} turn_id={turn_id} bucket={bucket} prob={prob} boost={boost} reason=no_pool");
                     return None;
                 }
             },
         };
         if pool.is_empty() {
-            info!("filler skip room={room} bucket={pool_name} prob={prob} boost={boost} reason=no_pool");
+            info!("filler skip room={room} turn_id={turn_id} bucket={pool_name} prob={prob} boost={boost} reason=no_pool");
             return None;
         }
         // 打断轮只选 ≤barge_max_ms 的条(barge 桶同样过滤,当合成超长的保险丝);滤空回退全池。
@@ -225,7 +225,7 @@ impl FillerBank {
         }
         self.recent.push_back(clip.text.clone());
         info!(
-            "filler picked room={room} bucket={pool_name} dur_ms={} boost={boost} text='{}'",
+            "filler picked room={room} turn_id={turn_id} bucket={pool_name} dur_ms={} boost={boost} text='{}'",
             clip.duration_ms, clip.text
         );
         Some((clip.text.clone(), clip.pcm.clone()))
@@ -251,7 +251,7 @@ mod tests {
     fn boost_prefers_short_clips_only() {
         let mut b = bank_with(vec![clip("长条一", 2000), clip("短条", 900), clip("长条二", 1800)]);
         for _ in 0..20 {
-            let (text, _) = b.pick("随便聊聊", true, "t").expect("boost 必播");
+            let (text, _) = b.pick("随便聊聊", true, "t", 1).expect("boost 必播");
             assert_eq!(text, "短条", "打断轮必须只从 ≤barge_max_ms 的条里选");
             b.recent.clear(); // 隔离滑窗影响,单验候选集
         }
@@ -260,7 +260,7 @@ mod tests {
     #[test]
     fn boost_falls_back_when_no_short_clip() {
         let mut b = bank_with(vec![clip("长条一", 2000), clip("长条二", 1800)]);
-        let got = b.pick("随便聊聊", true, "t");
+        let got = b.pick("随便聊聊", true, "t", 1);
         assert!(got.is_some(), "桶内无短条必须回退全桶,不能不播");
     }
 
@@ -269,7 +269,7 @@ mod tests {
         let mut b = bank_with(vec![clip("长条", 2000), clip("短条", 900)]);
         let mut seen = std::collections::HashSet::new();
         for _ in 0..60 {
-            if let Some((t, _)) = b.pick("随便聊聊", false, "t") {
+            if let Some((t, _)) = b.pick("随便聊聊", false, "t", 1) {
                 seen.insert(t);
             }
             b.recent.clear();
@@ -291,7 +291,7 @@ mod tests {
             vec![clip("哦，我打住。", 1300), clip("嗯嗯，来。", 1200)],
         );
         for _ in 0..20 {
-            let (text, _) = b.pick("随便聊聊", true, "t").expect("boost 必播");
+            let (text, _) = b.pick("随便聊聊", true, "t", 1).expect("boost 必播");
             assert_ne!(text, "语义桶短条", "打断轮有 barge 桶时不得选语义桶");
             b.recent.clear();
         }
@@ -304,7 +304,7 @@ mod tests {
             vec![clip("超长条", 2000), clip("合规条", 1400)],
         );
         for _ in 0..20 {
-            let (text, _) = b.pick("随便聊聊", true, "t").expect("boost 必播");
+            let (text, _) = b.pick("随便聊聊", true, "t", 1).expect("boost 必播");
             assert_eq!(text, "合规条", "barge 桶内也要过 ≤barge_max_ms 保险丝");
             b.recent.clear();
         }
@@ -315,7 +315,7 @@ mod tests {
         let mut b =
             bank_with_barge(vec![clip("语义条", 900)], vec![clip("哦，我打住。", 1300)]);
         for _ in 0..40 {
-            if let Some((text, _)) = b.pick("随便聊聊", false, "t") {
+            if let Some((text, _)) = b.pick("随便聊聊", false, "t", 1) {
                 assert_eq!(text, "语义条", "普通轮永不选 barge 桶");
             }
             b.recent.clear();
