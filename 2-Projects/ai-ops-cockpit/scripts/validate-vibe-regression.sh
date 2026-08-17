@@ -22,7 +22,6 @@ TODOS=/tmp/aiops-vibe-todos.html
 PILOT=/tmp/aiops-vibe-pilot.html
 PROJECT=/tmp/aiops-vibe-project.html
 CPA_PROJECT=/tmp/aiops-vibe-cpa-project.html
-IPTV_PROJECT=/tmp/aiops-vibe-iptv-project.html
 VOICE_PROJECT=/tmp/aiops-vibe-voice-project.html
 RUNTIME=/tmp/aiops-vibe-runtime.html
 "$CAPACITY_CHECK"
@@ -101,8 +100,9 @@ grep -q '真实项目实战试点' "$PILOT"
 grep -q 'Workflow 权限矩阵' "$PILOT"
 grep -q '/vibe/project?id=chenchuan-site' "$PILOT"
 grep -q '/vibe/project?id=cpa-smart-router' "$PILOT"
-grep -q '/vibe/project?id=iptv-api' "$PILOT"
 grep -q '/vibe/project?id=realtime-voice-agent' "$PILOT"
+# IPTV 全栈 2026-08-05 已退役：试点页不得再出现入口（上面三条 grep 是期望非零的锚）
+! grep -q 'iptv-api' "$PILOT"
 python3 - "$PILOT" > /tmp/aiops-vibe-pilot-script.js <<'PY'
 import sys
 html=open(sys.argv[1]).read()
@@ -142,8 +142,9 @@ curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/assets.json" | j
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="MyJavis" and .status=="enabled" and .fileCount>=8)' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="chenchuan-site" and .status=="enabled" and .fileCount>=60)' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="cpa-smart-router" and .status=="enabled" and .fileCount>=8)' >/dev/null
-curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="iptv-api" and .status=="enabled" and .fileCount>=6)' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '.projects[] | select(.name=="realtime-voice-agent" and .status=="enabled" and .fileCount>=20)' >/dev/null
+# IPTV 已退役：allowlist 里不得再有该项目（上面四条 select 是期望非零的锚）
+curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/allowlist.json" | jq -e '[.projects[] | select(.name=="iptv-api")] | length == 0' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/pilot.json" | jq -e '(.projects|length)>=2 and (.workflowMatrix[] | select(.id=="patch_draft" and .permission=="draft_only"))' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/kuma-context.json" | jq -e 'has("downMonitors") and has("backup")' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project?id=chenchuan-site" -o "$PROJECT"
@@ -186,24 +187,22 @@ curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project.json?id=
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/live.json?id=cpa-smart-router" | jq -e '.ok==true and .passed==2 and .total==2 and (.checks|length)==2 and (.checks|all(.status==401))' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/daily.json?id=cpa-smart-router" | jq -e '.ok==true and .project=="cpa-smart-router" and has("active") and has("latest")' >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production.json?id=cpa-smart-router" | jq -e '.ok==true and .project=="cpa-smart-router" and .configured==true and (.allowedActions|index("restart-cliproxy"))!=null and (.allowedActions|index("restart-router"))!=null and (.allowedActions|index("k12-status"))==null and (.allowedActions|index("k12-rotate"))==null' >/dev/null
-curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project?id=iptv-api" -o "$IPTV_PROJECT"
-grep -q '私人 IPTV M3U 项目工作区' "$IPTV_PROJECT"
-grep -q 'productionAction-refresh' "$IPTV_PROJECT"
-grep -q 'productionAction-restart-iptv' "$IPTV_PROJECT"
-grep -q 'productionAction-rollback-last-good' "$IPTV_PROJECT"
-python3 - "$IPTV_PROJECT" > /tmp/aiops-vibe-iptv-project-script.js <<'PY'
-import sys
-html=open(sys.argv[1]).read()
-script=html.split('<script>',1)[1].split('</script>',1)[0]
-assert 'runDailyBtn' in script
-assert 'data-production-action' in script
-print(script)
-PY
-node --check /tmp/aiops-vibe-iptv-project-script.js >/dev/null
-curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project.json?id=iptv-api" | jq -e '.project.allowlistCount>=6 and .context.ok==true and (.context.files|length)>=6 and .context.truncated==false and .project.production.processManager=="Docker Compose" and (.workflowMatrix|length)>=4' >/dev/null
-curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/live.json?id=iptv-api" | jq -e '.ok==true and .passed==1 and .total==1 and (.checks|length)==1' >/dev/null
-curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/daily.json?id=iptv-api" | jq -e '.ok==true and .project=="iptv-api" and has("active") and has("latest")' >/dev/null
-curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production.json?id=iptv-api" | jq -e '.ok==true and .project=="iptv-api" and .configured==true and (.allowedActions|index("refresh"))!=null and (.allowedActions|index("repair-publish-timer"))!=null and (.allowedActions|index("restart-iptv"))!=null and (.allowedActions|index("rollback-last-good"))!=null' >/dev/null
+# IPTV 全栈 2026-08-05 已退役（aliyun-hk docker disabled / /opt/stacks 已移除 / nginx snippet 已删）。
+# 下面四组断言「项目已下线」：注意这些端点对未知项目返回 404，所以不能用 curl -fsS + jq（会先退出），
+# 必须取 http_code 再验 body。期望非零的锚就是紧邻上方 cpa-smart-router 那组断言——
+# 若 server.py 里的 iptv-api 条目被误恢复，这四组会立刻转红。
+iptv_project_code=$(curl --http1.1 -sS -o /tmp/aiops-iptv-retired-project.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project.json?id=iptv-api")
+test "$iptv_project_code" = "404"
+jq -e '.ok==false and .error=="project not found"' /tmp/aiops-iptv-retired-project.json >/dev/null
+iptv_live_code=$(curl --http1.1 -sS -o /tmp/aiops-iptv-retired-live.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/live.json?id=iptv-api")
+test "$iptv_live_code" = "404"
+jq -e '.ok==false and .total==0 and .error=="project live probes not configured"' /tmp/aiops-iptv-retired-live.json >/dev/null
+iptv_daily_code=$(curl --http1.1 -sS -o /tmp/aiops-iptv-retired-daily.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/daily.json?id=iptv-api")
+test "$iptv_daily_code" = "404"
+jq -e '.ok==false and .error=="project daily inspection not configured"' /tmp/aiops-iptv-retired-daily.json >/dev/null
+iptv_production_code=$(curl --http1.1 -sS -o /tmp/aiops-iptv-retired-production.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project/production.json?id=iptv-api")
+test "$iptv_production_code" = "404"
+jq -e '.ok==false and .error=="project production maintenance not configured"' /tmp/aiops-iptv-retired-production.json >/dev/null
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/project?id=realtime-voice-agent" -o "$VOICE_PROJECT"
 grep -q 'Realtime Voice Agent 项目工作区' "$VOICE_PROJECT"
 grep -q 'productionAction-restart-voice-worker' "$VOICE_PROJECT"
@@ -228,9 +227,11 @@ jq -e '.error=="action token required"' /tmp/aiops-restart-denied.json >/dev/nul
 cpa_restart_code=$(curl --http1.1 -sS -o /tmp/aiops-cpa-restart-denied.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"project":"cpa-smart-router","action":"restart-router","confirmation":"RESTART_CPA_ROUTER"}' "$BASE/vibe/project/production/action")
 test "$cpa_restart_code" = "403"
 jq -e '.error=="action token required"' /tmp/aiops-cpa-restart-denied.json >/dev/null
-iptv_restart_code=$(curl --http1.1 -sS -o /tmp/aiops-iptv-restart-denied.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"project":"iptv-api","action":"restart-iptv","confirmation":"RESTART_IPTV"}' "$BASE/vibe/project/production/action")
-test "$iptv_restart_code" = "403"
-jq -e '.error=="action token required"' /tmp/aiops-iptv-restart-denied.json >/dev/null
+# IPTV 已退役：生产动作端点不该再认识 restart-iptv。这里要的是「项目不存在」而非「缺 token」——
+# 若哪天又变回 403 action token required，说明 iptv-api 被恢复进 PILOT_PROJECTS 了。
+iptv_restart_code=$(curl --http1.1 -sS -o /tmp/aiops-iptv-retired-action.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"project":"iptv-api","action":"restart-iptv","confirmation":"RESTART_IPTV"}' "$BASE/vibe/project/production/action")
+test "$iptv_restart_code" = "400"
+jq -e '.ok==false and .error=="production action not allowed"' /tmp/aiops-iptv-retired-action.json >/dev/null
 voice_restart_code=$(curl --http1.1 -sS -o /tmp/aiops-voice-restart-denied.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data '{"project":"realtime-voice-agent","action":"restart-voice-worker","confirmation":"RESTART_VOICE_WORKER"}' "$BASE/vibe/project/production/action")
 test "$voice_restart_code" = "403"
 jq -e '.error=="action token required"' /tmp/aiops-voice-restart-denied.json >/dev/null
@@ -250,7 +251,10 @@ curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "X-AIOps-Read-Token: $REA
 poll_task_terminal "$TASK_ID" /tmp/aiops-regression-task-final.json
 jq -e '.task.status=="completed" and .task.revision>=3 and .task.toolMode=="readonly_safe" and .task.brainBoundary=="model-only-no-docker-no-ssh" and (.task.answer|contains("AI_OPS_REGRESSION_OK")) and (.task.answer|contains("readonly_safe"))' /tmp/aiops-regression-task-final.json >/dev/null
 "$CAPACITY_CHECK"
-docker exec -e MODEL_TASK_ID="$TASK_ID" ops-tool-runner python -c 'import glob,json,os; records=[json.load(open(path,encoding="utf-8")) for path in glob.glob("/var/lib/aiops-tool-runner/audit/*.json")[-120:]]; assert any(item.get("taskId")==os.environ["MODEL_TASK_ID"] and item.get("tool")=="read" and item.get("decision")=="allowed" for item in records)'
+# 审计断言必须按 mtime 排序后再切窗口：glob.glob() 返回的是无序列表，
+# 直接 [-120:] 等于从 866 个文件里随机挑 120 个，本轮任务的记录经常不在里面（2026-08-17 实测命中率是掷硬币）。
+# 这个洞一直被上面那条 IPTV 断言挡着没暴露——IPTV 退役后才走得到这一行。
+docker exec -e MODEL_TASK_ID="$TASK_ID" ops-tool-runner python -c 'import glob,json,os; paths=sorted(glob.glob("/var/lib/aiops-tool-runner/audit/*.json"), key=os.path.getmtime)[-400:]; records=[json.load(open(path,encoding="utf-8")) for path in paths]; matched=[item for item in records if item.get("taskId")==os.environ["MODEL_TASK_ID"] and item.get("tool")=="read" and item.get("decision")=="allowed"]; print("audit window=%d/%d matched=%d" % (len(records), len(glob.glob("/var/lib/aiops-tool-runner/audit/*.json")), len(matched))); assert matched'
 curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "X-AIOps-Read-Token: $READ_TOKEN" "$BASE/vibe/tasks.json" | jq -e --arg id "$TASK_ID" '.tasks[0].id==$id and (.tasks[0].answer|contains("AI_OPS_REGRESSION_OK"))' >/dev/null
 sleep "${AI_OPS_REGRESSION_SLEEP:-22}"
 ABORT_RESP=$(curl --http1.1 -fsS -u "chuan:${OPS_AUTH_PASSWORD}" -H "origin: https://ops.hahaxiong.top" -H "content-type: application/json" -H "X-AIOps-Read-Token: $READ_TOKEN" --data "{\"clientRequestId\":\"abort-$CLIENT_REQUEST_ID\",\"mode\":\"readonly_inspect\",\"project\":\"chenchuan-site\",\"question\":\"终止回归：依次读取 README.md、package.json、src/app/page.tsx、src/lib/radar/index.ts、docs/theory-radar-aiops-handoff.md，并逐项分析后再回答。\"}" "$BASE/vibe/task/run")
@@ -292,7 +296,8 @@ for payload in \
   '{"taskId":"regression-workflow","project":"chenchuan-site","workflow":"diagnose","tool":"read","params":{"path":"README.md"}}'; do
   docker exec -e POLICY_PAYLOAD="$payload" ops-brain sh -lc 'curl -sS -H "content-type: application/json" -H "x-aiops-internal-token: $AI_OPS_INTERNAL_TOKEN" --data "$POLICY_PAYLOAD" http://ops-tool-runner:8091/tool' | jq -e '.ok==false and (.error=="policy_denied" or .error=="snapshot_not_ready")' >/dev/null
 done
-docker exec ops-tool-runner python -c 'import glob,json; records=[json.load(open(path,encoding="utf-8")) for path in glob.glob("/var/lib/aiops-tool-runner/audit/*.json")[-80:]]; assert any(item.get("taskId")=="regression-safe-read" and item.get("decision")=="allowed" for item in records); assert any(item.get("taskId")=="regression-block-write" and item.get("decision")=="blocked" for item in records); assert all(item.get("secretExposure")==0 for item in records); assert all("path" not in (item.get("paramsSummary") or {}) for item in records); assert all("query" not in (item.get("paramsSummary") or {}) for item in records); assert all("path" not in (item.get("resultSummary") or {}) for item in records)'
+# 与上面同一类 bug：glob.glob() 无序，[-80:] 只是随机挑 80 个而不是最近 80 个。同样改为按 mtime 排序。
+docker exec ops-tool-runner python -c 'import glob,json,os; paths=sorted(glob.glob("/var/lib/aiops-tool-runner/audit/*.json"), key=os.path.getmtime)[-400:]; records=[json.load(open(path,encoding="utf-8")) for path in paths]; safe=[item for item in records if item.get("taskId")=="regression-safe-read" and item.get("decision")=="allowed"]; blocked=[item for item in records if item.get("taskId")=="regression-block-write" and item.get("decision")=="blocked"]; print("policy audit window=%d/%d safe=%d blocked=%d" % (len(records), len(glob.glob("/var/lib/aiops-tool-runner/audit/*.json")), len(safe), len(blocked))); assert safe; assert blocked; assert all(item.get("secretExposure")==0 for item in records); assert all("path" not in (item.get("paramsSummary") or {}) for item in records); assert all("query" not in (item.get("paramsSummary") or {}) for item in records); assert all("path" not in (item.get("resultSummary") or {}) for item in records)'
 docker exec ops-inspector sh -lc 'test -d /var/lib/ai-ops-state && test -r /tool-runner-state/audit'
 docker inspect ops-inspector | jq -e '.[0].Mounts | any(.Destination=="/var/lib/ai-ops-state" and .RW==true) and any(.Destination=="/tool-runner-state" and .Type=="volume" and .RW==false)' >/dev/null
 SELF_MONITOR_CODE=$(curl --http1.1 -sS -o /tmp/aiops-self-monitor-no-token.json -w '%{http_code}' -u "chuan:${OPS_AUTH_PASSWORD}" "$BASE/vibe/self-monitor.json")
@@ -315,5 +320,5 @@ jq -e 'has("publishedAt") and has("releaseAgeSeconds") and .cooldownSeconds==172
 docker exec ops-inspector sh -lc 'for directory in chenchuan-maintenance cpa-jp-maintenance iptv-maintenance qihang-hk-maintenance; do test -r "/run/secrets/$directory/id_ed25519" && test -r "/run/secrets/$directory/known_hosts"; done'
 docker inspect ops-inspector | jq -e '.[0].Mounts as $mounts | ["chenchuan-maintenance","cpa-jp-maintenance","iptv-maintenance","qihang-hk-maintenance"] | all(. as $name | any($mounts[]; .Destination==("/run/secrets/"+$name) and .Type=="bind" and .RW==false))' >/dev/null
 docker exec ops-inspector python -c 'import server; data=server.parse_maintenance_response("{\n  \"ok\": true,\n  \"services\": {}\n}\n"); assert data["ok"] is True and data["services"]=={}'
-docker exec ops-tool-runner sh -lc 'test -f /workspace/readonly/MyJavis/README.md && test -f /workspace/readonly/chenchuan-site/README.md && test -f /workspace/readonly/chenchuan-site/src/app/page.tsx && test -f /workspace/readonly/chenchuan-site/src/lib/radar/index.ts && test -f /workspace/readonly/chenchuan-site/docs/theory-radar-aiops-handoff.md && test -f /workspace/readonly/chenchuan-site/services/theory-radar/theory_radar.py && test -f /workspace/readonly/cpa-smart-router/README.md && test -f /workspace/readonly/cpa-smart-router/cmd/router/main.go && test -f /workspace/readonly/iptv-api/compose.yaml && test -f /workspace/readonly/iptv-api/config/config.ini && test -f /workspace/readonly/iptv-api/scripts/validate-and-publish.sh && test -f /workspace/readonly/iptv-api/scripts/install-validate-publish-timer.sh && test -f /workspace/readonly/iptv-api/systemd/iptv-validate-publish.timer && test -f /workspace/readonly/realtime-voice-agent/README.md && test -f /workspace/readonly/realtime-voice-agent/pyproject.toml && test -f /workspace/readonly/realtime-voice-agent/src/voice_agent/kernel/memory_kernel.py && test -f /workspace/readonly/realtime-voice-agent/tests/test_contract.py && ! test -e /workspace/readonly/MyJavis/.env && ! test -e /workspace/readonly/chenchuan-site/.env.local && ! test -e /workspace/readonly/chenchuan-site/services/theory-radar/.env && ! test -e /workspace/readonly/cpa-smart-router/.env && ! test -e /workspace/readonly/cpa-smart-router/router.json && ! test -e /workspace/readonly/iptv-api/.env && ! test -e /workspace/readonly/iptv-api/output && ! test -e /workspace/readonly/realtime-voice-agent/.env && ! test -e /workspace/readonly/realtime-voice-agent/data && ! test -e /workspace/readonly/realtime-voice-agent/assets/models && ! test -e /workspace/readonly/realtime-voice-agent/assets/speakers && ! test -e /workspace/readonly/chenchuan-site/src/app/api && ! test -e /workspace/readonly/chenchuan-site/src/lib/analytics && ! test -e /workspace/readonly/chenchuan-site/src/lib/chat && ! test -e /workspace/readonly/chenchuan-site/data'
+docker exec ops-tool-runner sh -lc 'test -f /workspace/readonly/MyJavis/README.md && test -f /workspace/readonly/chenchuan-site/README.md && test -f /workspace/readonly/chenchuan-site/src/app/page.tsx && test -f /workspace/readonly/chenchuan-site/src/lib/radar/index.ts && test -f /workspace/readonly/chenchuan-site/docs/theory-radar-aiops-handoff.md && test -f /workspace/readonly/chenchuan-site/services/theory-radar/theory_radar.py && test -f /workspace/readonly/cpa-smart-router/README.md && test -f /workspace/readonly/cpa-smart-router/cmd/router/main.go && ! test -e /workspace/readonly/iptv-api &&test -f /workspace/readonly/realtime-voice-agent/README.md && test -f /workspace/readonly/realtime-voice-agent/pyproject.toml && test -f /workspace/readonly/realtime-voice-agent/src/voice_agent/kernel/memory_kernel.py && test -f /workspace/readonly/realtime-voice-agent/tests/test_contract.py && ! test -e /workspace/readonly/MyJavis/.env && ! test -e /workspace/readonly/chenchuan-site/.env.local && ! test -e /workspace/readonly/chenchuan-site/services/theory-radar/.env && ! test -e /workspace/readonly/cpa-smart-router/.env && ! test -e /workspace/readonly/cpa-smart-router/router.json && ! test -e /workspace/readonly/iptv-api/.env && ! test -e /workspace/readonly/iptv-api/output && ! test -e /workspace/readonly/realtime-voice-agent/.env && ! test -e /workspace/readonly/realtime-voice-agent/data && ! test -e /workspace/readonly/realtime-voice-agent/assets/models && ! test -e /workspace/readonly/realtime-voice-agent/assets/speakers && ! test -e /workspace/readonly/chenchuan-site/src/app/api && ! test -e /workspace/readonly/chenchuan-site/src/lib/analytics && ! test -e /workspace/readonly/chenchuan-site/src/lib/chat && ! test -e /workspace/readonly/chenchuan-site/data'
 printf 'OK vibe regression\n'

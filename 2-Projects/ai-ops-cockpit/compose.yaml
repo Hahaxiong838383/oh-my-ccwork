@@ -95,7 +95,6 @@ services:
       SELF_MONITOR_TERMINAL_MAX_CLIENTS: 1
       CHENCHUAN_DAILY_PUSH_URL: ${CHENCHUAN_DAILY_PUSH_URL:-}
       CPA_DAILY_PUSH_URL: ${CPA_DAILY_PUSH_URL:-}
-      IPTV_DAILY_PUSH_URL: ${IPTV_DAILY_PUSH_URL:-}
       VOICE_DAILY_PUSH_URL: ${VOICE_DAILY_PUSH_URL:-}
       PRODUCTION_SSH_DIR: /run/secrets/chenchuan-maintenance
     volumes:
@@ -130,7 +129,7 @@ services:
     environment:
       TZ: Asia/Shanghai
       AI_OPS_INTERNAL_TOKEN: ${AI_OPS_INTERNAL_TOKEN}
-      AI_OPS_READONLY_PROJECTS: mycc,chenchuan-site,cpa-smart-router,iptv-api,MyJavis,realtime-voice-agent,P003GameDemo20260513
+      AI_OPS_READONLY_PROJECTS: mycc,chenchuan-site,cpa-smart-router,MyJavis,realtime-voice-agent,P003GameDemo20260513
       READONLY_ROOT: /workspace/readonly
       AUDIT_DIR: /var/lib/aiops-tool-runner/audit
     volumes:

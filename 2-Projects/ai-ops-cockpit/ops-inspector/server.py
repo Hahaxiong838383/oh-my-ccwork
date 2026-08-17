@@ -96,9 +96,6 @@ PROJECT_LIVE_PROBES = {
         {"id": "direct-models", "name": "CPA Direct 鉴权边界", "url": "https://api-direct.hahaxiong.top/v1/models", "path": "/v1/models", "kind": "http", "expectedStatuses": [401]},
         {"id": "smart-models", "name": "CPA Smart Router 鉴权边界", "url": "https://smart-api.hahaxiong.top/v1/models", "path": "/v1/models", "kind": "http", "expectedStatuses": [401]},
     ],
-    "iptv-api": [
-        {"id": "iptv-health", "name": "IPTV 私人 M3U 就绪度", "url": "https://kidshub-ai.hahaxiong.cc/ops-health/iptv", "path": "/ops-health/iptv", "kind": "json", "jsonOkField": "ok"},
-    ],
     "realtime-voice-agent": [
         {"id": "voice-worker", "name": "企航云香港 Voice Worker", "url": "http://64.90.13.117:8081/", "path": "/", "kind": "http", "expectedStatuses": [200]},
     ],
@@ -107,7 +104,6 @@ PROJECT_LIVE_PROBES = {
 PROJECT_DAILY_PUSH_URLS = {
     "chenchuan-site": os.environ.get("CHENCHUAN_DAILY_PUSH_URL", ""),
     "cpa-smart-router": os.environ.get("CPA_DAILY_PUSH_URL", ""),
-    "iptv-api": os.environ.get("IPTV_DAILY_PUSH_URL", ""),
     "realtime-voice-agent": os.environ.get("VOICE_DAILY_PUSH_URL", ""),
 }
 
@@ -150,16 +146,6 @@ CPA_SMART_ROUTER_FALLBACK_ALLOWLIST = [
     "deploy/cpa-resource-guard.logrotate",
 ]
 
-IPTV_API_FALLBACK_ALLOWLIST = [
-    "compose.yaml",
-    "config/config.ini",
-    "config/subscribe.txt",
-    "config/demo.txt",
-    "config/local.txt",
-    "scripts/validate-and-publish.sh",
-    "scripts/rollback-last-good.sh",
-]
-
 REALTIME_VOICE_AGENT_FALLBACK_ALLOWLIST = [
     "README.md",
     "Makefile",
@@ -195,7 +181,6 @@ PROJECT_ALLOWLIST = {
     ],
     "chenchuan-site": load_allowlist_file("chenchuan-site", CHENCHUAN_SITE_FALLBACK_ALLOWLIST),
     "cpa-smart-router": load_allowlist_file("cpa-smart-router", CPA_SMART_ROUTER_FALLBACK_ALLOWLIST),
-    "iptv-api": load_allowlist_file("iptv-api", IPTV_API_FALLBACK_ALLOWLIST),
     "MyJavis": [
         "README.md",
         "HANDOFF.md",
@@ -303,40 +288,6 @@ PILOT_PROJECTS = {
             },
             "maintenanceTimeoutSeconds": 300,
             "verifiedAt": "2026-07-14",
-        },
-    },
-    "iptv-api": {
-        "name": "私人 IPTV M3U",
-        "path": "/workspace/readonly/iptv-api",
-        "risk": "中风险：仅允许读取脱敏 Compose、源清单、频道模板、local 固定源与验收脚本；私人 M3U 路径、完整结果、日志、Push URL 和 secrets 保持隔离。",
-        "goal": "持续验证香港 IPTV 聚合任务、私人 M3U 就绪度、频道数量、抽样播放和 last-good 回滚能力。",
-        "firstWorkflow": "readonly_inspect",
-        "production": {
-            "domain": "https://kidshub-ai.hahaxiong.cc",
-            "sshAlias": "chenchuan-site",
-            "address": "8.218.26.17",
-            "maintenanceUser": "aiops",
-            "maintenancePort": 22,
-            "path": "/opt/stacks/iptv-api",
-            "processManager": "Docker Compose",
-            "services": ["iptv-api"],
-            "maintenanceSecretDir": "/run/secrets/iptv-maintenance",
-            "maintenanceActions": ["inspect", "refresh", "repair-publish-timer", "restart-iptv", "rollback-last-good"],
-            "maintenanceConfirmations": {
-                "refresh": "REFRESH_IPTV",
-                "repair-publish-timer": "REPAIR_IPTV_PUBLISH_TIMER",
-                "restart-iptv": "RESTART_IPTV",
-                "rollback-last-good": "ROLLBACK_IPTV",
-            },
-            "maintenanceLabels": {
-                "inspect": "巡检 IPTV 状态",
-                "refresh": "确认后立即更新 M3U",
-                "repair-publish-timer": "确认后修复发布定时器并执行一次校验",
-                "restart-iptv": "确认后重启 IPTV",
-                "rollback-last-good": "确认后回滚上个合格 M3U",
-            },
-            "maintenanceTimeoutSeconds": 720,
-            "verifiedAt": "2026-07-11",
         },
     },
     "MyJavis": {
@@ -1588,7 +1539,7 @@ def sanitize_production_inspection(payload):
     services = payload.get("services") or {}
     if isinstance(services, dict) and services:
         sanitized["services"] = {}
-        for name in ("cliproxy", "cpa-smart-router", "iptv-api", "voice-worker"):
+        for name in ("cliproxy", "cpa-smart-router", "voice-worker"):
             if name not in services:
                 continue
             service = services.get(name) or {}
@@ -2079,8 +2030,6 @@ def project_daily_question(project_id):
     if project_id == "chenchuan-site":
         lines.insert(4, "访问统计必查：读取仅含 human 聚合的昨日 UV/PV、近 7 日 UV/PV 和热门页面；不得输出 IP、UA、referrer 或任何访问明细。")
         lines.insert(4, "Theory Radar 必查：publish 是否启用、日报/周度 timer、运行日期与阶段、Grok 模型、论文数、RSS/OpenAlex 计数、publish_result、公网当日归档和双生产者覆盖风险。")
-    if project_id == "iptv-api":
-        lines.insert(4, "IPTV 必查：validate-and-publish timer 必须 enabled+active、published/health 年龄不超过 36 小时、频道数和真实抽样通过；就绪度 200 不能替代发布新鲜度。")
     if project_id == "realtime-voice-agent":
         lines.insert(4, "Voice Worker 必查：voice-worker.service 必须 active/running、8081 必须监听、本机与公网探测必须 200、NRestarts 不应异常增长，并关注最近 24 小时 warning 数与资源余量。")
     return "\n".join(lines)
@@ -3592,7 +3541,6 @@ def workspace_payload():
         {"name": "mycc", "path": "/workspace/readonly/mycc", "purpose": "本机 AI 协作中枢文件级只读快照", "start": "请使用 aiops_ls(project=mycc, path=.)"},
         {"name": "个人站", "path": "/workspace/readonly/chenchuan-site", "purpose": "个人站文件级只读快照", "start": "请使用 aiops_read(project=chenchuan-site, path=README.md)"},
         {"name": "个人 CPA", "path": "/workspace/readonly/cpa-smart-router", "purpose": "CPA 路由器文件级只读快照", "start": "请使用 aiops_read(project=cpa-smart-router, path=README.md)"},
-        {"name": "私人 IPTV", "path": "/workspace/readonly/iptv-api", "purpose": "IPTV 聚合服务文件级只读快照", "start": "请使用 aiops_read(project=iptv-api, path=compose.yaml)"},
         {"name": "MyJavis", "path": "/workspace/readonly/MyJavis", "purpose": "MyJavis 文件级只读快照", "start": "请使用 aiops_read(project=MyJavis, path=README.md)"},
         {"name": "Voice Agent", "path": "/workspace/readonly/realtime-voice-agent", "purpose": "实时语音 Agent 文件级只读快照", "start": "请使用 aiops_read(project=realtime-voice-agent, path=README.md)"},
         {"name": "P003", "path": "/workspace/readonly/P003GameDemo20260513", "purpose": "P003 实验项目文件级只读快照", "start": "请使用 aiops_ls(project=P003GameDemo20260513, path=.)"},

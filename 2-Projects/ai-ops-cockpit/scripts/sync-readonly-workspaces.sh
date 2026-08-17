@@ -200,8 +200,8 @@ overlay_current_aiops_project
 
 copy_manifest_snapshot chenchuan-site "$SRC_ROOT/chenchuan-site" "$ROOT/config/chenchuan-site-allowlist.txt"
 copy_manifest_snapshot cpa-smart-router "$SRC_ROOT/cpa-smart-router" "$ROOT/config/cpa-smart-router-allowlist.txt"
-copy_manifest_snapshot iptv-api "$SRC_ROOT/iptv-api" "$ROOT/config/iptv-api-allowlist.txt"
 copy_manifest_snapshot realtime-voice-agent "$SRC_ROOT/realtime-voice-agent" "$ROOT/config/realtime-voice-agent-allowlist.txt"
+# iptv-api 全栈 2026-08-05 已退役，不再生成只读快照；旧快照目录由退役变更一次性清除。
 copy_allowlist_snapshot MyJavis "$SRC_ROOT/MyJavis" \
   README.md \
   HANDOFF.md \

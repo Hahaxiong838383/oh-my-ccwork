@@ -2,8 +2,8 @@
   {
     "id": "iptv-daily-aiops-0300",
     "name": "私人 IPTV 每日 AI 巡检",
-    "active": true,
-    "isArchived": false,
+    "active": false,
+    "isArchived": true,
     "nodes": [
       {
         "parameters": {"rule":{"interval":[{"field":"cronExpression","expression":"0 3 * * *"}]}},
