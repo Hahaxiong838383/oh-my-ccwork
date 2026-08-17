@@ -259,7 +259,10 @@ pub async fn run_pipeline(
         tts_voice = %tts_cfg.voice(),
         "tts provider 生效值"   // 音色对不上时一眼对账,别靠猜 env 生效没生效
     );
-    let llm_cfg = LlmConfig::from_env().ok_or_else(|| anyhow::anyhow!("LLM_BASE_URL 未配置"))?;
+    let mut llm_cfg = LlmConfig::from_env().ok_or_else(|| anyhow::anyhow!("LLM_BASE_URL 未配置"))?;
+    // per-device 身份路由:room(sn-<SN>-<ts>)随 query 传大脑,由大脑按 SN 反查该设备 brain 账号
+    // (多设备防串号;非 sn- 房间大脑忽略 room 走 token 兜底语义)。
+    llm_cfg.room = room_name.to_string();
     let mut llm_inner = Llm::new(llm_cfg);
     // 预热(藏进「用户说首句+判停」窗口):LLM TLS 建连 + TTS 池首连
     {

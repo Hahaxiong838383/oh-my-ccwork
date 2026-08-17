@@ -21,6 +21,9 @@ pub struct LlmConfig {
     /// 附加到 /chat/completions 后的 query(如 `token=<brain JWT>`,大脑侧据此注入
     /// 该设备的记忆/per-device prompt 配置;空=不附加)。仅主路;灾备裸模不带身份。
     pub url_query: String,
+    /// 当前 job 的房间名(sn-<SN>-<ts>),随 query 传给大脑做 per-device 身份路由
+    /// (多设备防串号:大脑按 room 里的 SN 反查各自 brain 账号)。job 级赋值,进程级为空。
+    pub room: String,
 }
 
 impl LlmConfig {
@@ -42,6 +45,7 @@ impl LlmConfig {
                 .map(|v| v == "1")
                 .unwrap_or(filler_on),
             url_query: std::env::var("LLM_URL_QUERY").unwrap_or_default(),
+            room: String::new(),
         })
     }
 
@@ -63,8 +67,9 @@ impl LlmConfig {
             instructions: main.instructions.clone(),
             thinking: get("LLM_FALLBACK_THINKING").unwrap_or_else(|| "disabled".into()),
             strip_leading_filler: main.strip_leading_filler,
-            // 灾备裸模不带身份 query:兜底只保证「有回应」,不做记忆注入(also 少一处 secret 面)。
+            // 灾备裸模不带身份 query/room:兜底只保证「有回应」,不做记忆注入(also 少一处 secret 面)。
             url_query: String::new(),
+            room: String::new(),
         })
     }
 
@@ -72,13 +77,26 @@ impl LlmConfig {
         Self::fallback_from(|k| std::env::var(k).ok(), main)
     }
 
-    /// /chat/completions 完整 URL(url_query 非空时附加 ?query——brain 身份走这里)。
+    /// /chat/completions 完整 URL(query = url_query + room 合并;都空则无 ?)。
+    /// room 名 sn-<SN>-<unix> 仅含 [A-Za-z0-9-],无需 URL 编码;防御性过滤非常规字符。
     pub fn chat_url(&self) -> String {
         let base = format!("{}/chat/completions", self.base_url.trim_end_matches('/'));
-        if self.url_query.trim().is_empty() {
+        let mut parts: Vec<String> = Vec::new();
+        if !self.url_query.trim().is_empty() {
+            parts.push(self.url_query.trim().to_string());
+        }
+        let room_safe: String = self
+            .room
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+            .collect();
+        if !room_safe.is_empty() {
+            parts.push(format!("room={}", room_safe));
+        }
+        if parts.is_empty() {
             base
         } else {
-            format!("{}?{}", base, self.url_query.trim())
+            format!("{}?{}", base, parts.join("&"))
         }
     }
 }
@@ -588,6 +606,7 @@ mod tests {
             thinking: "disabled".into(),
             strip_leading_filler: true,
             url_query: String::new(),
+            room: String::new(),
         }
     }
 
@@ -601,6 +620,26 @@ mod tests {
         c.base_url = "https://main.example/v1/".into();
         c.url_query = "  ".into();
         assert_eq!(c.chat_url(), "https://main.example/v1/chat/completions");
+    }
+
+    #[test]
+    fn chat_url_merges_room_and_filters_unsafe_chars() {
+        let mut c = main_cfg();
+        c.url_query = "token=t1".into();
+        c.room = "sn-BJP00326060100200003-1786980000".into();
+        assert_eq!(
+            c.chat_url(),
+            "https://main.example/v1/chat/completions?token=t1&room=sn-BJP00326060100200003-1786980000"
+        );
+        // 仅 room 无 token 也成立
+        c.url_query = String::new();
+        assert_eq!(
+            c.chat_url(),
+            "https://main.example/v1/chat/completions?room=sn-BJP00326060100200003-1786980000"
+        );
+        // 非常规字符被过滤(防 query 注入)
+        c.room = "evil&room=x?y#z".into();
+        assert_eq!(c.chat_url(), "https://main.example/v1/chat/completions?room=evilroomxyz");
     }
 
     #[test]
@@ -700,6 +739,7 @@ mod tests {
             thinking: "off".into(),
             strip_leading_filler: false,
             url_query: String::new(),
+            room: String::new(),
         };
         let mut llm = Llm::new(cfg);
         llm.push_user("你好");
