@@ -633,6 +633,14 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   ——重放真人打断死亡时序(插话→断续拖尾)。判据:插话后 audio in (10s) 持续=活,停发+overflow 每秒刷=死。
   ⚠️ **打断有两条代码分支**:cancel 包=硬 abort,真人语音=pause+假打断窗——filler/canary 探针只走前者,
   改打断相关代码必须跑 deadlock_probe 覆盖 pause 分支。
+- 🔴 **LLM 拓扑 P1 大变更(2026-08-17 深夜,提交 59b13d999/二进制 5c91255c)**:rust 主路=kidshub-ai
+  大脑 /v1(人设+记忆+过滤,aliyun-hk pm2 p003-voice)——**排障 LLM 问题先分层**:rust 日志 won_by=main=
+  大脑赢(其内部另有 [race] won_by 日志=DeepSeek vs doubao,pm2 logs p003-voice 看);rust won_by=
+  fallback=裸 doubao 灾备接管(回答无人设「我是豆包」=大脑挂了,查 aliyun-hk)。让步窗
+  LLM_RACE_MAIN_GRACE_MS=800(兜底先出等主路 800ms;`main within grace window` 行=窗生效)。
+  **换大脑地址/服务器只改 rust-worker.env LLM_BASE_URL 一行**。回滚:env+二进制 .bak-20260817-
+  pre-brain;大脑侧 /root/p003-backup-20260817-pre-race/+.env.local 的 LLM_PROVIDER=race→deepseek。
+  部署赛跑坑:安静检查与部署必须同一远端脚本无间隙衔接(分两条命令=真机随时插进来)。
 - **LLM 双路赛马(2026-08-17,提交 999086e77/二进制 8c676d2a,_run_race 移植)**:主 DeepSeek+兜底火山
   doubao-seed-2.0-lite(coding/v3 网关);env LLM_FALLBACK_{BASE_URL,API_KEY,MODEL,THINKING}=四件套在
   rust-worker.env(三件套缺任一=单路)。⚠️ **THINKING=disabled 必配**(doubao 默认开思考,首块全
