@@ -303,6 +303,18 @@ pub fn commands_enabled_for(room_name: &str) -> bool {
     )
 }
 
+/// ASR 二遍识别(nonstream)灰度门:与设备命令 canary 同语义(sn- 房 + SN 列表),
+/// 独立 env 键独立灰度。命中后 pipeline 将该 job 的 ASR 切 bigmodel_async + 二遍
+/// (老 bigmodel 端点静默忽略 enable_nonstream,两者必须同调,详见 stt_volc::SttConfig)。
+/// 回滚 = env 关 VOLC_ASR_NONSTREAM_ENABLED + 纪律重启,零二进制回滚。
+pub fn asr_nonstream_enabled_for(room_name: &str) -> bool {
+    commands_gate(
+        std::env::var("VOLC_ASR_NONSTREAM_ENABLED").unwrap_or_default() == "1",
+        &std::env::var("VOLC_ASR_NONSTREAM_CANARY_SN").unwrap_or_default(),
+        room_name,
+    )
+}
+
 /// 纯函数门(单测载体;env 读取在上面的薄壳里)。
 fn commands_gate(enabled: bool, canary_csv: &str, room_name: &str) -> bool {
     if !enabled {

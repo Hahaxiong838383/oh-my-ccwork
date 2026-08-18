@@ -374,7 +374,14 @@ pub async fn run_pipeline(
     ready: ReadyCtx,
 ) -> Result<()> {
     let cfg = PipelineConfig::from_env();
-    let stt_cfg = SttConfig::from_env();
+    let mut stt_cfg = SttConfig::from_env();
+    // ASR 二遍识别 per-SN 灰度:命中即该 job 切 bigmodel_async + enable_nonstream
+    // (必须同调:老 bigmodel 静默忽略此参数)。非命中房间零变化。
+    if crate::device_intent::asr_nonstream_enabled_for(&room_name) {
+        stt_cfg.nonstream = true;
+        stt_cfg.url = stt_volc::ASYNC_ASR_URL.to_string();
+        info!(room = %room_name, "ASR 二遍识别灰度命中(bigmodel_async+nonstream)");
+    }
     let tts_cfg = TtsCfg::from_env()?;
     info!(
         room = %room_name,

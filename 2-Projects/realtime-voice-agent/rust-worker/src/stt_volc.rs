@@ -36,13 +36,26 @@ pub struct SttConfig {
     /// 热词表(request.corpus.context.hotwords):火山话语检测对孤立短指令(停/好/对)
     /// 经常整段丢弃(2026-08-12 矩阵实验:ddc/force_to_speech_time/增益全无效,唯热词
     /// 能捞回);语气词(嗯/啊)不配热词=保留环境音免疫。空=不传(火山默认行为)。
-    /// ⚠️ 直传硬上限 200 tokens 超出静默截断——全量底座在 boosting_table(下),
-    /// 直传与词表并存时直传优先,截断变得无害(被截的词由词表兜底)。
+    /// ⚠️ 一遍流式链路热词总预算 100 tokens(官方口径,直传+词表合并从前向后截断),
+    /// 且大模型热词=prompt 注入无权重概念,词多即稀释(2026-08-18 剂量实验:3 词能翻
+    /// 声母、20 词不能)——一遍链路只配核心短词;二遍(nonstream)链路升 5000 词。
     pub hotwords: Vec<String>,
-    /// 火山控制台热词词表 ID(env VOLC_ASR_BOOSTING_TABLE_ID;2026-08-18 川哥建表
-    /// 253 词全量,合同 §7 权重分层 7/6/4)。None=不传,回滚=删 env 行。
+    /// 火山控制台热词词表 ID。⚠️ 2026-08-18 A/B 实证:bigmodel 与 bigmodel_async
+    /// 两端点、一遍与二遍两模式下均零生效(直传阳性对照可翻/词表不可),疑火山侧
+    /// 账号/端点缺陷,待工单。字段保留:None=不传,修复后填 env 即启用。
     pub boosting_table_id: Option<String>,
+    /// 二遍识别(enable_nonstream):VAD 判停后用非流式模型整段重识别,definite 只在
+    /// 二遍结果上(现有 Final=definite 消费逻辑天然兼容)。实测弱音频识别力代差
+    /// (「调光谱」流式 0 命中/二遍 3/3),延迟中位数较生产 +30~76ms(20260818 矩阵)。
+    /// ⚠️ 仅 bigmodel_async 端点真实支持——老 bigmodel 静默忽略本参数,须与 url 同调。
+    pub nonstream: bool,
+    /// ASR websocket 端点。默认老 bigmodel(生产现状);nonstream 灰度命中时由
+    /// pipeline 改写为 ASYNC_ASR_URL(bigmodel_async,官方现行推荐端点)。
+    pub url: String,
 }
+
+/// 双向流式新端点(官方现行文档唯一出现的双向流式地址;老 bigmodel 已从文档消失)。
+pub const ASYNC_ASR_URL: &str = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async";
 
 impl SttConfig {
     pub fn from_env() -> Self {
@@ -81,6 +94,8 @@ impl SttConfig {
                 .ok()
                 .map(|v| v.trim().to_string())
                 .filter(|v| !v.is_empty()),
+            nonstream: false,
+            url: ASR_URL.to_string(),
         }
     }
 }
@@ -93,7 +108,7 @@ fn build_init_payload(cfg: &SttConfig, request_id: &str) -> serde_json::Value {
         "enable_punc": true,
         "enable_ddc": cfg.enable_ddc,
         "show_utterances": true,
-        "enable_nonstream": false,
+        "enable_nonstream": cfg.nonstream,
         "end_window_size": cfg.end_window_ms,
     });
     if !cfg.hotwords.is_empty() || cfg.boosting_table_id.is_some() {
@@ -135,7 +150,7 @@ pub async fn run_asr_stream(
     event_tx: mpsc::Sender<SttEvent>,
 ) -> Result<AsrEnd> {
     let request_id = uuid::Uuid::new_v4().to_string();
-    let mut req = ASR_URL.into_client_request()?;
+    let mut req = cfg.url.as_str().into_client_request()?;
     {
         let h = req.headers_mut();
         if let Some(key) = &cfg.api_key {
@@ -322,7 +337,22 @@ mod tests {
             canon: true,
             hotwords,
             boosting_table_id: None,
+            nonstream: false,
+            url: ASR_URL.to_string(),
         }
+    }
+
+    /// 二遍识别开关进 init payload(灰度命中时 pipeline 置 true+切 async 端点)。
+    #[test]
+    fn init_payload_nonstream_flag() {
+        let c = cfg(vec![]);
+        let p = build_init_payload(&c, "rid");
+        assert_eq!(p["request"]["enable_nonstream"], false, "默认关(生产现状)");
+        let mut c2 = cfg(vec![]);
+        c2.nonstream = true;
+        let p2 = build_init_payload(&c2, "rid");
+        assert_eq!(p2["request"]["enable_nonstream"], true);
+        assert_eq!(p2["request"]["end_window_size"], 150, "二遍模式判停窗保留");
     }
 
     /// 词表 ID(2026-08-18 川哥控制台建表):与直传并存,corpus 同级字段。
