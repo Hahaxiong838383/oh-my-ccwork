@@ -166,6 +166,20 @@ class AccountStore {
     return { code, account_id: accountId, nickname: accountNickname };
   }
 
+  /**
+   * 设备 brain 专属账号（运营台 worker brain tab）：id=device-<SN>，role='device'，无邀请码。
+   * 幂等：已存在则直接返回现有账号（重复开通不重建）。
+   */
+  createDeviceAccount(sn: string, nickname: string): Account {
+    const id = `device-${sn}`;
+    const existing = this.findAccount(id);
+    if (existing) return existing;
+    this.db
+      .prepare(`INSERT INTO account (id, nickname, role, created_at) VALUES (?, ?, 'device', ?)`)
+      .run(id, nickname || `设备${sn.slice(-4)}`, Date.now());
+    return this.findAccount(id)!;
+  }
+
   markUsed(code: string): void {
     this.db.prepare(`UPDATE invite_code SET used_at = ? WHERE code = ? AND used_at IS NULL`).run(Date.now(), code.trim());
   }

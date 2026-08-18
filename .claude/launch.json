@@ -11,6 +11,15 @@
       "port": 5173
     },
     {
+      "name": "p003-server",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/apps/server && STUDIO_USER=e2e-admin STUDIO_PASS=e2e-local-Xq7 DEVICES_DB_PATH=/tmp/e2e-devices.db DEVICE_SN_ALLOW=BJP00326060100200003 AUTH_JWT_SECRET=e2e-local-jwt-secret LIVEKIT_API_KEY=e2ekey LIVEKIT_API_SECRET=0123456789abcdef0123456789abcdef npm run start"
+      ],
+      "port": 3001
+    },
+    {
       "name": "p003web-verify",
       "runtimeExecutable": "/bin/sh",
       "runtimeArgs": [

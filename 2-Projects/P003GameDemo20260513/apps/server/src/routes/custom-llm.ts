@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
-import { ARK_WORLDVIEW_BASE, FEEDBACK_PERSONA_SUFFIX } from '../prompts.js';
-import { AI_SAFETY_BASELINE, buildAiLiteracyGuide } from '../ai-literacy.js';
+import { FEEDBACK_PERSONA_SUFFIX } from '../prompts.js';
+import { buildAiLiteracyGuide } from '../ai-literacy.js';
+import { getDevicePromptConfig, buildDeviceBase, deviceAddendum, resolveDeviceIdentity } from '../device-brain-prompt.js';
 import { assembleSystemPrompt, buildOnboardingGuide } from '../prompt-orchestrator.js';
 import { curriculumKG } from '../curriculum-kg.js';
 import { companionKG } from '../companion-kg.js';
@@ -81,12 +82,19 @@ customLlmRoute.post('/chat/completions', async (c) => {
 
   // 复用与 WS pipeline 同一个大脑：内置世界观 + AI 安全基座 + 课程护栏 + AI 启蒙门控 + 尾部人设锚点。
   curriculumKG.load();
-  const base = `${ARK_WORLDVIEW_BASE}\n\n${AI_SAFETY_BASELINE}`;
   const curriculumGuardrail = curriculumKG.buildGuardrail(userText);
   const aiLiteracyGuide = buildAiLiteracyGuide(userText);
   // 从回调 Url 的 ?token= 拿登录态 → accountId → 注入这个孩子的 profile 记忆（昵称/年龄/兴趣/近况/方舟经历）。
   // 无 token / 无效 token → authContext=null → 降级匿名（仅世界观，无个性化记忆）。
-  const authContext = await verifyAuthToken(c.req.query('token'));
+  // ?room=sn-<SN>-<ts>（rust worker 传）→ per-device 身份路由：按 SN 反查该设备 brain 账号（多设备防串号）。
+  const authContext = resolveDeviceIdentity(
+    await verifyAuthToken(c.req.query('token')),
+    c.req.query('room'),
+  );
+  // per-device prompt 配置（Worker Brain 编辑 tab）：设备账号可 override 世界观 / 追加规则；
+  // 非设备账号（Web 家长）/异常 → null → base 即默认世界观 + 安全基座（buildDeviceBase 与运营台预览同源）。
+  const deviceCfg = authContext ? getDevicePromptConfig(authContext.accountId) : null;
+  const base = buildDeviceBase(deviceCfg);
   const profile = authContext ? profileStore.getProfile(authContext.accountId) : null;
   // 工作台「实时对话」双模式（?session=roomId）：用工作台调好的 composed prompt 作 systemPrompt，看 prompt 真实效果。
   // 它自带变量/世界观/场景，故不叠加记忆/onboarding/召回，也不触发 onboarding 抽取（不污染真实 profile）。
@@ -108,6 +116,9 @@ customLlmRoute.post('/chat/completions', async (c) => {
   let systemPrompt = overridePrompt
     ? overridePrompt
     : assembleSystemPrompt(base, null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide, knowledgeRecall, companionGuardrail);
+  // per-device 附加规则（Worker Brain 编辑 tab）：拼在护栏之后（吐槽后缀仍保持绝对最末）。
+  const addendumText = overridePrompt ? '' : deviceAddendum(deviceCfg);
+  if (addendumText) systemPrompt += `\n\n${addendumText}`;
   // 吐槽人格放 systemPrompt 最末尾（近因效应，docs/36 同源）：否则被世界观 + 用户字面意图(如"想听故事")盖过，LLM 会去满足请求而非收集吐槽。
   if (isFeedback) systemPrompt += `\n\n${FEEDBACK_PERSONA_SUFFIX}`;
   // 吐槽落库（复用 feedbackStore，进 admin/家长端同一反馈看板；try-catch 不阻断回应）。

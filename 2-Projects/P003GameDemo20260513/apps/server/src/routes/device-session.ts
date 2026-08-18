@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { SignJWT, jwtVerify, decodeJwt } from 'jose';
 import { validateDeviceSn } from '../device-sn.js';
+import { deviceRegistryStore, type SessionLogEntry } from '../device-registry-store.js';
 
 /**
  * P003 S2-B1 设备 Session API（codex 联调合同：CC_S2B1_MCU_SN_TOKEN_SESSION_API_PROMPT_20260815）。
@@ -59,6 +60,30 @@ function nextRoomSecond(): number {
 // ── prefetch 占位：10 分钟过期，session 带回时仅做日志关联，不承载任何凭据 ──
 const prefetches = new Map<string, { sn: string; exp: number }>();
 
+/**
+ * 白名单判定（运营台设备接入 tab 的接线点）：
+ *   DB 有台账记录 → 以其 status 为准（active 放行 / disabled 拒绝，可压制 env 存量）；
+ *   DB 无记录或查询异常 → 回落 env DEVICE_SN_ALLOW（存量真机兜底，DB 坏了也不断线）。
+ */
+function isSnAllowed(sn: string, envAllow: string[]): boolean {
+  try {
+    const dbStatus = deviceRegistryStore.statusOf(sn);
+    if (dbStatus !== null) return dbStatus === 'active';
+  } catch (e) {
+    console.error(`[device-session] registry 查询失败，回落 env 白名单: ${(e as Error).message}`);
+  }
+  return envAllow.includes(sn);
+}
+
+/** 流水落库（只记凭据验证通过后的事件；失败不影响主流程但必须留痕，不静默吞）。 */
+function logQuiet(entry: SessionLogEntry): void {
+  try {
+    deviceRegistryStore.logSession(entry);
+  } catch (e) {
+    console.error(`[device-session] 流水落库失败(不影响签发): ${(e as Error).message}`);
+  }
+}
+
 async function verifyDeviceCredential(
   header: string | undefined,
   secret: string,
@@ -113,13 +138,19 @@ deviceSessionRoute.post('/session', async (c) => {
   if (typeof traceId !== 'string' || !traceId.trim())
     return c.json({ status: 'error', code: 400, message: 'trace_id 必填' }, 400);
 
-  if (cred.sn !== sn)
+  if (cred.sn !== sn) {
+    logQuiet({ sn: cred.sn, room: '', session_id: '', trace_id: traceId, status: 'rejected_403', ttl_s: 0, ms: Date.now() - t0 });
     return c.json({ status: 'error', code: 403, message: 'SN 与设备凭据不匹配' }, 403);
-  if (!conf.allow.includes(sn as string))
+  }
+  if (!isSnAllowed(sn as string, conf.allow)) {
+    logQuiet({ sn: sn as string, room: '', session_id: '', trace_id: traceId, status: 'rejected_403', ttl_s: 0, ms: Date.now() - t0 });
     return c.json({ status: 'error', code: 403, message: '设备未授权' }, 403);
+  }
 
-  if (rateLimited(sn as string, conf.rpm))
+  if (rateLimited(sn as string, conf.rpm)) {
+    logQuiet({ sn: sn as string, room: '', session_id: '', trace_id: traceId, status: 'rejected_429', ttl_s: 0, ms: Date.now() - t0 });
     return c.json({ status: 'error', code: 429, message: '请求过频' }, 429);
+  }
 
   if (!conf.lkKey || !conf.lkSecret)
     return c.json({ status: 'error', code: 503, message: '签发服务不可用' }, 503);
@@ -173,6 +204,7 @@ deviceSessionRoute.post('/session', async (c) => {
     `[device-session] ok sn=${sn} room=${roomName} session=${sessionId} trace=${traceId}` +
       `${prefetchId ? ` prefetch=${prefetchId}` : ''} ttl=${conf.ttlS}s ms=${Date.now() - t0}`,
   );
+  logQuiet({ sn: sn as string, room: roomName, session_id: sessionId, trace_id: traceId, status: 'ok', ttl_s: conf.ttlS, ms: Date.now() - t0 });
   return c.json(resp);
 });
 
@@ -180,10 +212,14 @@ deviceSessionRoute.post('/session/prefetch', async (c) => {
   const conf = cfg();
   const cred = await verifyDeviceCredential(c.req.header('authorization'), conf.authSecret);
   if (!cred) return c.json({ status: 'error', code: 401, message: '缺少或无效设备凭据' }, 401);
-  if (!conf.allow.includes(cred.sn))
+  if (!isSnAllowed(cred.sn, conf.allow)) {
+    logQuiet({ sn: cred.sn, room: '', session_id: '', trace_id: '', status: 'rejected_403', ttl_s: 0, ms: 0 });
     return c.json({ status: 'error', code: 403, message: '设备未授权' }, 403);
-  if (rateLimited(cred.sn, conf.rpm))
+  }
+  if (rateLimited(cred.sn, conf.rpm)) {
+    logQuiet({ sn: cred.sn, room: '', session_id: '', trace_id: '', status: 'rejected_429', ttl_s: 0, ms: 0 });
     return c.json({ status: 'error', code: 429, message: '请求过频' }, 429);
+  }
 
   // 只做占位与（将来的）资源预热；绝不提前签 token——token 永远绑当轮 trace_id
   const prefetchId = randomUUID();
@@ -192,6 +228,7 @@ deviceSessionRoute.post('/session/prefetch', async (c) => {
   for (const [k, v] of prefetches) if (v.exp < Date.now()) prefetches.delete(k);
 
   console.log(`[device-session] prefetch sn=${cred.sn} prefetch=${prefetchId}`);
+  logQuiet({ sn: cred.sn, room: '', session_id: prefetchId, trace_id: '', status: 'prefetch', ttl_s: 0, ms: 0 });
   return c.json({ status: 'warming', prefetch_id: prefetchId, expires_at_ms: exp });
 });
 

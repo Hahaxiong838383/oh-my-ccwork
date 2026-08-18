@@ -22,6 +22,7 @@ export function assembleSystemPrompt(
   onboardingGuide?: string | null,
   knowledgeRecall?: string | null,
   companionGuardrail?: string | null,
+  opts?: { skipInjectReceipt?: boolean },
 ): string {
   // 记忆注入是「增益」而非「必需」：profile-store 读取 / 解析任何异常都降级回 basePrompt，
   // 绝不阻断实时语音主链路（team 致命 #2）。
@@ -29,7 +30,9 @@ export function assembleSystemPrompt(
     const built = buildChildMemoryBlock(meta, auth);
     let prompt = built ? `${basePrompt}\n\n${built.text}` : basePrompt;
     // 注入回执(评审 X3):last_injected_at 只走 fire-and-forget 异步路径,读路径(本函数同步部分)零写库。
-    if (built?.injectedIds.length) {
+    // skipInjectReceipt：运营台预览（Worker Brain 拼接可视化）复用本函数但不是真实注入，
+    // 不刷回执——否则「小可现在记着」高亮被管理查看稀释。
+    if (built?.injectedIds.length && !opts?.skipInjectReceipt) {
       const ids = built.injectedIds;
       setImmediate(() => {
         try {
