@@ -36,7 +36,12 @@ pub struct SttConfig {
     /// 热词表(request.corpus.context.hotwords):火山话语检测对孤立短指令(停/好/对)
     /// 经常整段丢弃(2026-08-12 矩阵实验:ddc/force_to_speech_time/增益全无效,唯热词
     /// 能捞回);语气词(嗯/啊)不配热词=保留环境音免疫。空=不传(火山默认行为)。
+    /// ⚠️ 直传硬上限 200 tokens 超出静默截断——全量底座在 boosting_table(下),
+    /// 直传与词表并存时直传优先,截断变得无害(被截的词由词表兜底)。
     pub hotwords: Vec<String>,
+    /// 火山控制台热词词表 ID(env VOLC_ASR_BOOSTING_TABLE_ID;2026-08-18 川哥建表
+    /// 253 词全量,合同 §7 权重分层 7/6/4)。None=不传,回滚=删 env 行。
+    pub boosting_table_id: Option<String>,
 }
 
 impl SttConfig {
@@ -72,6 +77,10 @@ impl SttConfig {
                 }
                 ws
             },
+            boosting_table_id: std::env::var("VOLC_ASR_BOOSTING_TABLE_ID")
+                .ok()
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty()),
         }
     }
 }
@@ -87,13 +96,20 @@ fn build_init_payload(cfg: &SttConfig, request_id: &str) -> serde_json::Value {
         "enable_nonstream": false,
         "end_window_size": cfg.end_window_ms,
     });
-    if !cfg.hotwords.is_empty() {
-        // corpus.context 是 JSON 字符串(非嵌套对象),形状经 2026-08-12 直连实验验证
-        let words: Vec<serde_json::Value> =
-            cfg.hotwords.iter().map(|w| json!({"word": w})).collect();
-        request["corpus"] = json!({
-            "context": serde_json::to_string(&json!({"hotwords": words})).unwrap_or_default(),
-        });
+    if !cfg.hotwords.is_empty() || cfg.boosting_table_id.is_some() {
+        let mut corpus = json!({});
+        if !cfg.hotwords.is_empty() {
+            // corpus.context 是 JSON 字符串(非嵌套对象),形状经 2026-08-12 直连实验验证
+            let words: Vec<serde_json::Value> =
+                cfg.hotwords.iter().map(|w| json!({"word": w})).collect();
+            corpus["context"] =
+                json!(serde_json::to_string(&json!({"hotwords": words})).unwrap_or_default());
+        }
+        // 控制台词表(253 词全量底座):与直传并存,直传优先级更高(火山语义)
+        if let Some(id) = &cfg.boosting_table_id {
+            corpus["boosting_table_id"] = json!(id);
+        }
+        request["corpus"] = corpus;
     }
     json!({
         "user": {"uid": request_id},
@@ -305,7 +321,25 @@ mod tests {
             enable_ddc: true,
             canon: true,
             hotwords,
+            boosting_table_id: None,
         }
+    }
+
+    /// 词表 ID(2026-08-18 川哥控制台建表):与直传并存,corpus 同级字段。
+    #[test]
+    fn init_payload_boosting_table_id_shapes() {
+        // 只有词表无直传:corpus 仅含 id
+        let mut c = cfg(vec![]);
+        c.boosting_table_id = Some("bt-test-id".into());
+        let p = build_init_payload(&c, "req");
+        assert_eq!(p["request"]["corpus"]["boosting_table_id"], "bt-test-id");
+        assert!(p["request"]["corpus"].get("context").is_none(), "无直传不应有 context");
+        // 并存:两字段同现(直传优先级由火山服务端语义保证)
+        let mut c2 = cfg(vec!["停".into()]);
+        c2.boosting_table_id = Some("bt-test-id".into());
+        let p2 = build_init_payload(&c2, "req");
+        assert_eq!(p2["request"]["corpus"]["boosting_table_id"], "bt-test-id");
+        assert!(p2["request"]["corpus"]["context"].as_str().unwrap_or("").contains("停"));
     }
 
     #[test]
