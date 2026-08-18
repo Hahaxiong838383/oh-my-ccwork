@@ -65,7 +65,9 @@ export function validateWords(kind: HotwordKind, words: unknown): { ok: true; wo
     cleaned.push(w);
   }
   if (cleaned.length === 0) return { ok: false, error: '词表不能为空' };
-  if (cleaned.length > 200) return { ok: false, error: '词表过大(>200)' };
+  // 上限 500：原 200 是直传 200 tokens 时代的产物；ASR 二遍链路(20260818 灰度)热词
+  // 预算升至 5000 词，500=当前全量 240 词+增长余量，仍远低于引擎上限（防手滑灌爆）。
+  if (cleaned.length > 500) return { ok: false, error: '词表过大(>500)' };
   return { ok: true, words: cleaned };
 }
 
