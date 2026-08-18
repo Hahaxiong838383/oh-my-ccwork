@@ -531,8 +531,9 @@ mod tests {
     #[test]
     fn asr_mistranscription_aliases() {
         for (text, label) in [
-            ("跳光谱", 11), ("掉光谱", 11), // journal 实证「调光谱」误转
-            ("掉进", 34), ("调进", 34),     // journal 实证「调近」误转
+            ("跳光谱", 11), ("掉光谱", 11), // journal 实证「调光谱」误转(流式)
+            ("掉进", 34), ("调进", 34),     // journal 实证「调近」误转(流式)
+            ("调紧", 34), ("吊井", 34),      // journal 实证「调近」误转(二遍模型形态漂移,say 弱音频)
         ] {
             assert_eq!(cmd(text).semantic_label, label, "「{text}」");
         }
