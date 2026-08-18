@@ -2035,6 +2035,125 @@
                   </div>
                 </div>
 
+                <!-- Worker 热词管理（打断语/ASR 热词/退出词 编辑发布 + 衔接短语只读；仅 admin。发布会重启 worker） -->
+                <div v-if="khNav==='hotwords' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
+                    <div>
+                      <div class="kh-h1">Worker 热词管理</div>
+                      <div class="kh-sub">打断语 · ASR 识别热词 · 退出词 —— DB 草稿真源，发布经受限通道写 64.90 并按纪律重启 worker（自动备份+健康自检+失败回滚）</div>
+                    </div>
+                    <el-button size="small" :loading="hw.loading" @click="loadHotwords()">刷新</el-button>
+                  </div>
+
+                  <div v-if="!hw.channelOk" style="background:#FDE2E2;border:1px solid #F56C6C;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#B03A3A">
+                    64.90 通道异常：{{ hw.channelError }} —— 现值不可读，发布不可用
+                  </div>
+                  <div v-if="hw.warnings.length" style="background:#FDF3E2;border:1px solid #E8B33A;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#8A6116">
+                    <div v-for="(w, wi) in hw.warnings" :key="wi">⚠️ {{ w }}</div>
+                  </div>
+                  <div v-if="hw.pocDrifted" style="background:#FDF3E2;border:1px solid #E8B33A;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#8A6116">
+                    ⚠️ python 线（poc-eou.env）的 ASR 热词与 rust 线已漂移——下次发布 ASR 热词会自动把两处对齐
+                  </div>
+
+                  <div v-for="meta in HW_KIND_META" :key="meta.k" class="kh-card" style="padding:16px;margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+                      <div style="min-width:0">
+                        <div style="font-size:15px;font-weight:700">{{ meta.name }}
+                          <span style="font-size:11px;color:#909399;font-family:monospace;margin-left:6px">{{ hwEnvKey(meta.k) }}</span>
+                          <el-tag v-if="hwPublishedVersion(meta.k)" size="small" type="info" style="margin-left:6px">v{{ hwPublishedVersion(meta.k) }}</el-tag>
+                          <el-tag v-if="hwInSync(meta.k)===false" size="small" type="warning" style="margin-left:6px">env 已改未重启</el-tag>
+                        </div>
+                        <div style="font-size:12px;color:#6B7785;margin-top:2px">{{ meta.desc }}</div>
+                      </div>
+                      <div style="display:flex;gap:8px;flex-shrink:0">
+                        <el-button v-if="!hw.editing[meta.k]" size="small" @click="hwStartEdit(meta.k)">编辑</el-button>
+                        <el-button v-if="hw.editing[meta.k]" size="small" type="primary" :loading="hw.saving[meta.k]" @click="hwSaveDraft(meta.k)">保存草稿</el-button>
+                        <el-button v-if="hw.editing[meta.k]" size="small" @click="hwDiscardDraft(meta.k)">放弃</el-button>
+                        <el-button size="small" text @click="hwToggleHistory(meta.k)">历史</el-button>
+                      </div>
+                    </div>
+                    <div v-if="meta.warn" style="background:#FDE2E2;border:1px solid #F56C6C;border-radius:6px;padding:8px 12px;margin-top:10px;font-size:12px;color:#B03A3A">🔒 {{ meta.warn }}</div>
+
+                    <div v-if="!hw.editing[meta.k]" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">
+                      <el-tag v-for="w in hwLive(meta.k)" :key="w" size="small" type="info">{{ w }}</el-tag>
+                      <span v-if="!hwLive(meta.k).length" style="font-size:12px;color:#909399">（通道异常或词表为空）</span>
+                    </div>
+
+                    <div v-if="hw.editing[meta.k]" style="margin-top:12px">
+                      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+                        <el-tag v-for="(w, wi) in hw.draftWords[meta.k]" :key="w" size="small" closable @close="hwRemoveWord(meta.k, wi)">{{ w }}</el-tag>
+                      </div>
+                      <div style="display:flex;gap:8px;align-items:center">
+                        <el-input v-model="hw.input[meta.k]" size="small" placeholder="输入词条后回车添加（中文/字母数字，逗号分隔可批量）" style="max-width:420px" @keyup.enter="hwAddWord(meta.k)"></el-input>
+                        <el-button size="small" @click="hwAddWord(meta.k)">添加</el-button>
+                        <span style="font-size:12px;color:#909399">{{ (hw.draftWords[meta.k] || []).length }} 词</span>
+                      </div>
+                      <div v-if="hw.saveErr[meta.k]" style="font-size:12px;color:#F56C6C;margin-top:6px">{{ hw.saveErr[meta.k] }}</div>
+                    </div>
+                    <div v-if="!hw.editing[meta.k] && hwDraft(meta.k)" style="margin-top:10px;font-size:12px;color:#E8833A">
+                      有未发布草稿（{{ hwDraft(meta.k).words.length }} 词，{{ hwDiffText(meta.k) }}）
+                      <el-button size="small" text type="primary" @click="hwStartEdit(meta.k)">继续编辑</el-button>
+                    </div>
+
+                    <div v-if="hw.historyOpen[meta.k]" style="margin-top:12px;border-top:1px dashed #E4E7ED;padding-top:10px">
+                      <div v-if="!(hw.history[meta.k] || []).length" style="font-size:12px;color:#909399">暂无发布记录</div>
+                      <div v-for="h in hw.history[meta.k]" :key="h.id" style="display:flex;gap:10px;align-items:baseline;font-size:12px;padding:3px 0">
+                        <span style="font-family:monospace;color:#3B7A99;flex-shrink:0">v{{ h.version }}</span>
+                        <span style="color:#909399;flex-shrink:0">{{ hwFmtTime(h.published_at) }} · {{ h.created_by }}</span>
+                        <span style="color:#6B7785;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">{{ h.words.join('，') }}</span>
+                        <el-button v-if="h.status==='archived'" size="small" text type="primary" style="flex-shrink:0" @click="hwRollback(meta.k, h.version)">回滚为草稿</el-button>
+                        <el-tag v-if="h.status==='published'" size="small" type="success" style="flex-shrink:0">当前</el-tag>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+                    <el-button type="primary" :disabled="!hwDraftKinds().length || !hw.channelOk" @click="hwOpenPublish()">发布草稿（{{ hwDraftKinds().length }} 个词表）</el-button>
+                    <span style="font-size:12px;color:#6B7785">发布 = 写入 64.90 env + 重启 worker（自动避开活跃通话）</span>
+                  </div>
+
+                  <!-- 衔接短语（filler）只读：wav 资产管线属 P1，本期看得见管不着 -->
+                  <div class="kh-card" style="padding:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                      <div>
+                        <div style="font-size:15px;font-weight:700">衔接短语（filler · 只读）</div>
+                        <div style="font-size:12px;color:#6B7785;margin-top:2px">预生成 wav 音频资产，按桶概率承接 LLM+TTS 首音窗口 —— 编辑管线（文本→TTS 重生成）属 P1，且词库为 codex 合同</div>
+                      </div>
+                      <el-button size="small" @click="loadFillers()">{{ hw.fillers ? '刷新' : '加载' }}</el-button>
+                    </div>
+                    <div v-if="hw.fillers" style="margin-top:12px">
+                      <div v-for="(items, bucket) in hw.fillers" :key="bucket" style="margin-bottom:10px">
+                        <div style="font-size:12px;font-weight:700;color:#3B7A99;margin-bottom:4px">{{ bucket }} <span style="color:#909399;font-weight:400">（{{ items.length }} 条）</span></div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px">
+                          <el-tag v-for="f in items" :key="f.file" size="small" type="info" :title="f.file">{{ f.text }}</el-tag>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 发布确认弹窗：diff 预览 + 退出词跨端合同强制勾选 + 409 后强制通道 -->
+                  <el-dialog v-model="hw.publishDlg" title="发布热词到生产 worker" width="560px">
+                    <div v-for="k in hw.publishKinds" :key="k" style="margin-bottom:12px">
+                      <div style="font-size:13px;font-weight:700">{{ hwKindName(k) }} <span style="font-size:11px;color:#909399">{{ hwDiffText(k) }}</span></div>
+                      <div style="font-size:12px;color:#6B7785;margin-top:4px;max-height:60px;overflow-y:auto">{{ hwDraftText(k) }}</div>
+                    </div>
+                    <div v-if="hw.publishKinds.indexOf('exit') >= 0" style="background:#FDE2E2;border:1px solid #F56C6C;border-radius:6px;padding:10px 12px;margin-bottom:12px">
+                      <el-checkbox v-model="hw.exitConfirmed">已通知 codex 同步 Android 端 sessionExitPhrases（逐字合同，单端改动会导致双端吞句行为分叉）</el-checkbox>
+                    </div>
+                    <div v-if="hw.publishErr" style="background:#FDF3E2;border:1px solid #E8B33A;border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#8A6116">
+                      {{ hw.publishErr }}
+                      <el-checkbox v-if="hw.canForce" v-model="hw.force" style="margin-top:6px">我确认要强制发布（会中断进行中的通话）</el-checkbox>
+                    </div>
+                    <div v-if="hw.publishResult" style="background:#E8F7EE;border:1px solid #3DBE78;border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#1F7A4D">
+                      ✅ 已发布并生效：{{ hw.publishResult }}
+                    </div>
+                    <template #footer>
+                      <el-button @click="hw.publishDlg = false">关闭</el-button>
+                      <el-button type="primary" :loading="hw.publishing" :disabled="hw.publishing || !!hw.publishResult" @click="hwDoPublish()">{{ hw.force ? '强制发布' : '发布' }}</el-button>
+                    </template>
+                  </el-dialog>
+                </div>
+
                 <!-- 回告路由 -->
                 <div v-if="khNav==='notify'" style="flex:1;padding:20px">
                   <div class="kh-h1">回告路由台（仅家长端定向 + 全体公开预告）</div>
@@ -3065,7 +3184,144 @@
           return canManageInvites.value ? khNavs : khNavs.filter(function (n) { return n.k !== 'invites'; });
         });
         // Worker 管理页二级导航（设备接入 / Worker Brain 从 KidsHub 运营台迁出；仅 admin 入口）。
-        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }];
+        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }];
+
+        // ── Worker 热词管理（2026-08-18 P0；API 见 admin-data.ts /hotwords*）──
+        // DB 草稿真源；发布经 hotword-channel 写 64.90 + 重启 worker。前端只做交互与
+        // 展示，一切校验（黑名单/字符白名单/合同门/安全窗口）后端为真防线。
+        var HW_KIND_META = [
+          { k: 'interrupt', name: '打断语', desc: 'worker 本地判定：ASR 文本命中即硬打断当前回答（不关房间）', warn: '' },
+          { k: 'asr', name: 'ASR 识别热词', desc: '火山服务端识别增强：对表内词降低检出门槛，救回孤立短指令。语气词（嗯/啊）禁入——会破坏环境音免疫', warn: '' },
+          { k: 'exit', name: '退出词（关闭语）', desc: '命中即源头吞句并退出会话：零 commit、零 filler、零 LLM', warn: '与 Android 端 sessionExitPhrases 逐字合同——改动必须 codex 同步，发布时强制确认' },
+        ];
+        var HW_NAME_BY_KEY = {};
+        HW_KIND_META.forEach(function (m) { HW_NAME_BY_KEY[m.k] = m.name; });
+        var hw = reactive({
+          loading: false, channelOk: true, channelError: '', kinds: {}, warnings: [], pocDrifted: false,
+          editing: {}, draftWords: {}, input: {}, saveErr: {}, saving: {},
+          history: {}, historyOpen: {},
+          fillers: null,
+          publishDlg: false, publishKinds: [], exitConfirmed: false, force: false, canForce: false,
+          publishing: false, publishResult: '', publishErr: '',
+        });
+        function hwEnvKey(k) { var d = hw.kinds[k]; return d ? d.env_key : ''; }
+        function hwLive(k) { var d = hw.kinds[k]; return d ? d.live : []; }
+        function hwDraft(k) { var d = hw.kinds[k]; return d ? d.draft : null; }
+        function hwInSync(k) { var d = hw.kinds[k]; return d ? d.live_in_sync : null; }
+        function hwPublishedVersion(k) { var d = hw.kinds[k]; return d && d.published ? d.published.version : 0; }
+        function hwKindName(k) { return HW_NAME_BY_KEY[k] || k; }
+        function hwDraftText(k) { return (hw.draftWords[k] || []).join('，'); }
+        function hwDraftKinds() {
+          return HW_KIND_META.map(function (m) { return m.k; }).filter(function (k) { return !!hwDraft(k); });
+        }
+        function hwDiffText(k) {
+          var live = hwLive(k); var draft = hw.draftWords[k] || (hwDraft(k) ? hwDraft(k).words : []);
+          var add = draft.filter(function (w) { return live.indexOf(w) < 0; }).length;
+          var del = live.filter(function (w) { return draft.indexOf(w) < 0; }).length;
+          if (!add && !del) return '与生效值相同';
+          return '+' + add + ' / -' + del;
+        }
+        function hwFmtTime(ts) { return ts ? new Date(ts).toLocaleString('zh-CN', { hour12: false }) : ''; }
+        async function loadHotwords() {
+          hw.loading = true;
+          try {
+            var j = await deviceApi('/api/admin/hotwords', { method: 'GET' });
+            hw.channelOk = !!j.channel_ok; hw.channelError = j.channel_error || '';
+            hw.kinds = j.kinds || {}; hw.warnings = j.warnings || []; hw.pocDrifted = !!j.poc_drifted;
+            HW_KIND_META.forEach(function (m) {
+              var d = hwDraft(m.k);
+              if (d && !hw.editing[m.k]) hw.draftWords[m.k] = d.words.slice();
+            });
+          } catch (e) { hw.channelOk = false; hw.channelError = String(e); }
+          hw.loading = false;
+        }
+        function hwStartEdit(k) {
+          var d = hwDraft(k);
+          hw.draftWords[k] = (d ? d.words : hwLive(k)).slice();
+          hw.input[k] = ''; hw.saveErr[k] = ''; hw.editing[k] = true;
+        }
+        function hwAddWord(k) {
+          var raw = (hw.input[k] || '').trim();
+          if (!raw) return;
+          var list = hw.draftWords[k] || [];
+          raw.split(/[,，]/).forEach(function (piece) {
+            var w = piece.trim();
+            if (w && list.indexOf(w) < 0) list.push(w);
+          });
+          hw.draftWords[k] = list; hw.input[k] = '';
+        }
+        function hwRemoveWord(k, i) { hw.draftWords[k].splice(i, 1); }
+        async function hwSaveDraft(k) {
+          hw.saving[k] = true; hw.saveErr[k] = '';
+          try {
+            var j = await deviceApi('/api/admin/hotwords/' + k + '/draft', {
+              method: 'PUT', body: JSON.stringify({ words: hw.draftWords[k] || [] }),
+            });
+            if (!j.ok) { hw.saveErr[k] = j.error || '保存失败'; hw.saving[k] = false; return; }
+            hw.editing[k] = false;
+            await loadHotwords();
+          } catch (e) { hw.saveErr[k] = String(e); }
+          hw.saving[k] = false;
+        }
+        async function hwDiscardDraft(k) {
+          hw.editing[k] = false; hw.saveErr[k] = '';
+          try {
+            await deviceApi('/api/admin/hotwords/' + k + '/draft', { method: 'DELETE' });
+            await loadHotwords();
+          } catch (e) { /* 刷新兜底 */ }
+        }
+        async function hwToggleHistory(k) {
+          hw.historyOpen[k] = !hw.historyOpen[k];
+          if (!hw.historyOpen[k]) return;
+          try {
+            var j = await deviceApi('/api/admin/hotwords/' + k + '/history', { method: 'GET' });
+            hw.history[k] = j.ok ? j.history : [];
+          } catch (e) { hw.history[k] = []; }
+        }
+        async function hwRollback(k, version) {
+          try {
+            var j = await deviceApi('/api/admin/hotwords/rollback-draft', {
+              method: 'POST', body: JSON.stringify({ kind: k, version: version }),
+            });
+            if (j.ok) { ElementPlus.ElMessage.success('已生成 v' + version + ' 回滚草稿，确认后发布'); await loadHotwords(); }
+            else ElementPlus.ElMessage.error(j.error || '回滚失败');
+          } catch (e) { ElementPlus.ElMessage.error(String(e)); }
+        }
+        function hwOpenPublish() {
+          hw.publishKinds = hwDraftKinds();
+          hw.exitConfirmed = false; hw.force = false; hw.canForce = false;
+          hw.publishErr = ''; hw.publishResult = '';
+          hw.publishDlg = true;
+        }
+        async function hwDoPublish() {
+          if (hw.publishKinds.indexOf('exit') >= 0 && !hw.exitConfirmed) {
+            hw.publishErr = '退出词是跨端合同，必须先勾选「已通知 codex」'; return;
+          }
+          hw.publishing = true; hw.publishErr = '';
+          try {
+            var j = await deviceApi('/api/admin/hotwords/publish', {
+              method: 'POST',
+              body: JSON.stringify({ kinds: hw.publishKinds, exit_confirmed: hw.exitConfirmed, force: hw.force }),
+            });
+            if (j.ok) {
+              var vs = Object.keys(j.versions || {}).map(function (k) { return hwKindName(k) + ' v' + j.versions[k]; });
+              hw.publishResult = vs.join('、') + '（worker 已按纪律重启并通过健康自检）';
+              await loadHotwords();
+            } else {
+              hw.publishErr = j.error || '发布失败';
+              // 安全窗口拦截（deviceApi 不透传 status，认响应体语义：文案含「强制」= 可强制重试）
+              hw.canForce = (j.error || '').indexOf('强制') >= 0;
+            }
+          } catch (e) { hw.publishErr = String(e); }
+          hw.publishing = false;
+        }
+        async function loadFillers() {
+          try {
+            var j = await deviceApi('/api/admin/hotwords/fillers', { method: 'GET' });
+            if (j.ok) hw.fillers = j.buckets;
+            else ElementPlus.ElMessage.error(j.error || '加载失败');
+          } catch (e) { ElementPlus.ElMessage.error(String(e)); }
+        }
         var khThemes = [
           { name: '夜航·内容', n: 12, mood: '期待' }, { name: '专注·交互', n: 9, mood: '吐槽' },
           { name: '皮肤·养成', n: 7, mood: '愿望' }, { name: '周报·可读性', n: 4, mood: '困惑' }
@@ -3719,6 +3975,7 @@
         }
         function khSelectNav(k) {
           khNav.value = k;
+          if (k === 'hotwords') nextTick(loadHotwords);
           if (k === 'metrics') nextTick(initKhRetention);
           if (k === 'board') {
             nextTick(function () {
@@ -4870,6 +5127,13 @@
           loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
           deviceData: deviceData, deviceAdd: deviceAdd, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
+          hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
+          hwEnvKey: hwEnvKey, hwLive: hwLive, hwDraft: hwDraft, hwInSync: hwInSync,
+          hwPublishedVersion: hwPublishedVersion, hwKindName: hwKindName, hwDraftText: hwDraftText,
+          hwDraftKinds: hwDraftKinds, hwDiffText: hwDiffText, hwFmtTime: hwFmtTime,
+          hwStartEdit: hwStartEdit, hwAddWord: hwAddWord, hwRemoveWord: hwRemoveWord,
+          hwSaveDraft: hwSaveDraft, hwDiscardDraft: hwDiscardDraft, hwToggleHistory: hwToggleHistory,
+          hwRollback: hwRollback, hwOpenPublish: hwOpenPublish, hwDoPublish: hwDoPublish,
           snInRegistry: snInRegistry, loadDevices: loadDevices, addDevice: addDevice, toggleDeviceStatus: toggleDeviceStatus,
           saveDeviceNote: saveDeviceNote, delDevice: delDevice, openCredDialog: openCredDialog,
           issueCredential: issueCredential, copyCredential: copyCredential, loadDeviceSessions: loadDeviceSessions,

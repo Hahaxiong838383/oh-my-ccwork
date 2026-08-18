@@ -1,4 +1,5 @@
 import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { WebSocketServer, type RawData, type WebSocket } from 'ws';
 import { VoicePipeline, type ClientMessage, type SessionMeta } from './pipeline.js';
@@ -37,6 +38,10 @@ app.route('/api/feedback-themes', themesRoute);
 app.route('/v1/device', deviceSessionRoute);
 // 火山 RTC 实时对话 CustomLLM 回调端点（docs/34 D 方案）：OpenAI 兼容 /v1/chat/completions（SSE）。
 app.route('/v1', customLlmRoute);
+
+// admin 静态兜底（本地 dev 同源 E2E 用；生产 nginx 直接 serve public/admin，不会走到这里）。
+app.use('/admin/*', serveStatic({ root: '../web/public' }));
+app.get('/admin', (c) => c.redirect('/admin/'));
 
 const server = serve(
   {

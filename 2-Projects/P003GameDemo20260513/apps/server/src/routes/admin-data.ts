@@ -11,6 +11,15 @@ import { resetAllQuotas } from '../guard.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { validateDeviceSn } from '../device-sn.js';
 import { buildDeviceLayers } from '../device-brain-prompt.js';
+import {
+  hotwordStore,
+  validateWords,
+  subsetWarnings,
+  KIND_TO_ENV,
+  HOTWORD_KINDS,
+  type HotwordKind,
+} from '../hotword-store.js';
+import { callHotwordChannel } from '../hotword-channel.js';
 
 // hub 看板数据端点：admin 看所有账号的孩子档案 + 设备（admin token 鉴权，区别于 parent 自己的 /api/profile 邀请码 JWT）。
 const adminDataRoute = new Hono();
@@ -26,8 +35,9 @@ adminDataRoute.use('*', async (c, next) => {
   if (/\/invites(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_invites', message: '无邀请码管理权限' }, 403);
   }
-  // 设备接入管理（/devices、/device-sessions、/worker-stats）= admin 专属，敏感度 ≥ 邀请码（凭据签发入口）。
-  if (/\/(devices|device-sessions|worker-stats)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
+  // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
+  if (/\/(devices|device-sessions|worker-stats|hotwords)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -532,6 +542,169 @@ adminDataRoute.post('/reset-quota', (c) => {
   } catch (error) {
     return c.json({ ok: false, error: '重置限额失败，请稍后重试' }, 500);
   }
+});
+
+// ── Worker 热词管理（2026-08-18 P0；admin 专属，门控随 /hotwords 路径正则）──
+// DB=编辑真源，64.90 env=运行时真源；发布链（hotword-channel → apply_hotwords.py）负责对齐，
+// 回执做三方对撞（DB 期望 = env 文件 = 进程 environ）。发布会重启生产 worker：
+// 安全窗口主判据 = LiveKit device rooms=0（server 侧），脚本内近 90s 活动行二道兜底（TOCTOU）。
+
+/** 汇总页：live 现值（经通道）+ 各 kind 草稿/最新版本 + 子集警告 */
+adminDataRoute.get('/hotwords', async (c) => {
+  const live = await callHotwordChannel({ action: 'status' }, 15_000);
+  const kinds: Record<string, unknown> = {};
+  const liveWords: Record<HotwordKind, string[]> = { interrupt: [], asr: [], exit: [] };
+  for (const kind of HOTWORD_KINDS) {
+    const envKey = KIND_TO_ENV[kind];
+    const envVal = live.ok ? String((live.env as Record<string, string>)?.[envKey] ?? '') : '';
+    const procVal = live.ok ? String((live.proc as Record<string, string>)?.[envKey] ?? '') : '';
+    liveWords[kind] = envVal ? envVal.split(',').filter(Boolean) : [];
+    kinds[kind] = {
+      env_key: envKey,
+      live: liveWords[kind],
+      live_in_sync: envVal === procVal, // env 文件 vs 进程 environ（改了没重启会 false）
+      draft: hotwordStore.draftOf(kind),
+      published: hotwordStore.publishedOf(kind),
+    };
+  }
+  const pocVal = live.ok ? String((live.poc_env as Record<string, string>)?.VOLC_ASR_HOTWORDS ?? '') : '';
+  return c.json({
+    ok: true,
+    channel_ok: live.ok,
+    channel_error: live.ok ? undefined : live.error,
+    kinds,
+    warnings: subsetWarnings(liveWords),
+    poc_drifted: live.ok && pocVal !== (live.env as Record<string, string>)?.VOLC_ASR_HOTWORDS,
+    unit_active: live.ok ? live.unit_active : null,
+    recent_activity: live.ok ? live.recent_activity : null,
+  });
+});
+
+/** 存草稿（编辑即覆盖；校验字符白名单/语气词黑名单/去重） */
+adminDataRoute.put('/hotwords/:kind/draft', async (c) => {
+  const kind = c.req.param('kind') as HotwordKind;
+  if (!HOTWORD_KINDS.includes(kind)) return c.json({ ok: false, error: '未知词表类型' }, 400);
+  const body = (await c.req.json().catch(() => ({}))) as { words?: unknown; note?: unknown };
+  const v = validateWords(kind, body.words);
+  if (!v.ok) return c.json({ ok: false, error: v.error }, 400);
+  const header = c.req.header('authorization');
+  const opToken = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
+  const by = (opToken ? getTokenUser(opToken) : null) ?? 'admin';
+  const draft = hotwordStore.saveDraft(kind, v.words, by, typeof body.note === 'string' ? body.note : '');
+  return c.json({ ok: true, draft });
+});
+
+adminDataRoute.delete('/hotwords/:kind/draft', (c) => {
+  const kind = c.req.param('kind') as HotwordKind;
+  if (!HOTWORD_KINDS.includes(kind)) return c.json({ ok: false, error: '未知词表类型' }, 400);
+  hotwordStore.deleteDraft(kind);
+  return c.json({ ok: true });
+});
+
+/**
+ * 发布：把选中 kind 的草稿写到 64.90 并按纪律重启 worker。
+ * - 退出词在列 → 必须 exit_confirmed=true（跨端合同：Android sessionExitPhrases 需 codex 同步）
+ * - 安全窗口：device rooms>0 且未 force → 409
+ * - drill 仅演练链路用（透传给脚本），生产前端永不发送
+ */
+adminDataRoute.post('/hotwords/publish', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as {
+    kinds?: unknown; force?: unknown; exit_confirmed?: unknown; drill?: unknown; note?: unknown;
+  };
+  const kinds = Array.isArray(body.kinds) ? (body.kinds as HotwordKind[]) : [];
+  if (kinds.length === 0 || kinds.some((k) => !HOTWORD_KINDS.includes(k)))
+    return c.json({ ok: false, error: 'kinds 为空或含未知类型' }, 400);
+  if (kinds.includes('exit') && body.exit_confirmed !== true)
+    return c.json({ ok: false, error: '退出词与 Android 逐字合同，发布前必须确认已通知 codex 同步' }, 400);
+
+  const drafts: Partial<Record<HotwordKind, string[]>> = {};
+  for (const kind of kinds) {
+    const d = hotwordStore.draftOf(kind);
+    if (!d) return c.json({ ok: false, error: `「${kind}」无草稿可发布` }, 400);
+    drafts[kind] = d.words;
+  }
+
+  const force = body.force === true;
+  if (!force) {
+    const rooms = await fetchLiveKitRooms();
+    if (rooms === null)
+      return c.json({ ok: false, error: '安全窗口检查失败(LiveKit 不可达)，确认后可强制发布' }, 409);
+    if (rooms.device_rooms > 0)
+      return c.json(
+        { ok: false, error: `当前有 ${rooms.device_rooms} 路设备通话，发布会中断；等待结束或强制发布`, active_rooms: rooms.device_rooms },
+        409,
+      );
+  }
+
+  const words: Record<string, string> = {};
+  for (const kind of kinds) words[KIND_TO_ENV[kind]] = drafts[kind]!.join(',');
+  const payload: Record<string, unknown> = { action: 'apply', words, force };
+  if (typeof body.drill === 'string' && body.drill) payload.drill = body.drill;
+
+  const t0 = Date.now();
+  const result = await callHotwordChannel(payload, 150_000);
+  const header = c.req.header('authorization');
+  const opToken = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
+  const by = (opToken ? getTokenUser(opToken) : null) ?? 'admin';
+
+  if (!result.ok) {
+    console.error(
+      `[admin-hotwords] publish FAILED kinds=${kinds.join('+')} by=${by} ms=${Date.now() - t0} rolled_back=${result.rolled_back === true} recovered=${result.recovered === true}`,
+    );
+    return c.json({ ok: false, error: String(result.error ?? result.reason ?? '发布失败'), detail: result }, 502);
+  }
+
+  // 三方对撞：DB 期望值 vs 进程 environ 生效值（env 文件由脚本自身保证）
+  const proc = (result.proc ?? {}) as Record<string, string>;
+  const mismatch = kinds.filter((k) => proc[KIND_TO_ENV[k]] !== words[KIND_TO_ENV[k]]);
+  if (mismatch.length > 0) {
+    console.error(`[admin-hotwords] publish 对撞失败 kinds=${mismatch.join('+')}(进程生效值≠期望值)`);
+    return c.json({ ok: false, error: `发布对撞失败：${mismatch.join('、')} 的进程生效值与期望不一致`, detail: result }, 502);
+  }
+
+  const versions: Record<string, number> = {};
+  for (const kind of kinds) {
+    const v = hotwordStore.markPublished(kind, drafts[kind]!, by, typeof body.note === 'string' ? body.note : '');
+    versions[kind] = v.version;
+  }
+  console.log(
+    `[admin-hotwords] published kinds=${kinds.join('+')} versions=${JSON.stringify(versions)} by=${by} force=${force} ms=${Date.now() - t0}`,
+  );
+  return c.json({ ok: true, versions, receipt: result });
+});
+
+adminDataRoute.get('/hotwords/:kind/history', (c) => {
+  const kind = c.req.param('kind') as HotwordKind;
+  if (!HOTWORD_KINDS.includes(kind)) return c.json({ ok: false, error: '未知词表类型' }, 400);
+  return c.json({ ok: true, history: hotwordStore.history(kind) });
+});
+
+/** 回滚：取历史版本词表存为草稿（复用同一条发布链，同样有安全网与确认门） */
+adminDataRoute.post('/hotwords/rollback-draft', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { kind?: unknown; version?: unknown };
+  const kind = body.kind as HotwordKind;
+  if (!HOTWORD_KINDS.includes(kind)) return c.json({ ok: false, error: '未知词表类型' }, 400);
+  const ver = Number(body.version);
+  const target = Number.isInteger(ver) ? hotwordStore.versionOf(kind, ver) : null;
+  if (!target) return c.json({ ok: false, error: `找不到 ${kind} v${body.version}` }, 404);
+  const header = c.req.header('authorization');
+  const opToken = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
+  const by = (opToken ? getTokenUser(opToken) : null) ?? 'admin';
+  const draft = hotwordStore.saveDraft(kind, target.words, by, `回滚自 v${target.version}`);
+  return c.json({ ok: true, draft });
+});
+
+/** 衔接短语（filler）只读：manifest 透传（94 wav 的文本/桶，音频资产管线属 P1） */
+adminDataRoute.get('/hotwords/fillers', async (c) => {
+  const r = await callHotwordChannel({ action: 'fillers' }, 15_000);
+  if (!r.ok) return c.json({ ok: false, error: String(r.error ?? '读取失败') }, 502);
+  const buckets: Record<string, Array<{ file: string; text: string }>> = {};
+  for (const [file, meta] of Object.entries(r.manifest as Record<string, { bucket?: string; text?: string }>)) {
+    const b = meta.bucket ?? 'gen';
+    (buckets[b] ??= []).push({ file, text: meta.text ?? '' });
+  }
+  for (const b of Object.keys(buckets)) buckets[b].sort((x, y) => x.file.localeCompare(y.file));
+  return c.json({ ok: true, buckets });
 });
 
 export { adminDataRoute };
