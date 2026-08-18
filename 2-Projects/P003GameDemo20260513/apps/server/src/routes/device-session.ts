@@ -104,14 +104,25 @@ async function verifyDeviceCredential(
  */
 export function assertTokenMatchesResponse(
   token: string,
-  resp: { identity: string; room_name: string; expires_at_ms: number },
+  resp: { identity: string; room_name: string; expires_at_ms: number; trace_id?: string },
 ): void {
   const c = decodeJwt(token) as Record<string, any>;
   if (c.sub !== resp.identity) throw new Error(`自检失败: sub=${c.sub} ≠ identity`);
   if (c.video?.room !== resp.room_name) throw new Error('自检失败: video.room ≠ room_name');
-  const agents: Array<{ agentName?: string }> = c.roomConfig?.agents || [];
-  if (!agents.some((a) => a.agentName === AGENT_NAME))
-    throw new Error(`自检失败: roomConfig.agents 缺 ${AGENT_NAME}`);
+  const agents: Array<{ agentName?: string; metadata?: string }> = c.roomConfig?.agents || [];
+  const agent = agents.find((a) => a.agentName === AGENT_NAME);
+  if (!agent) throw new Error(`自检失败: roomConfig.agents 缺 ${AGENT_NAME}`);
+  // input_ready 合同：metadata 的 trace 必须与响应 trace_id 同值（worker 侧会拿它绑事件）
+  if (resp.trace_id !== undefined) {
+    let metaTrace: unknown;
+    try {
+      metaTrace = JSON.parse(agent.metadata ?? '{}').trace_id;
+    } catch {
+      throw new Error('自检失败: agents[0].metadata 不是合法 JSON');
+    }
+    if (metaTrace !== resp.trace_id)
+      throw new Error('自检失败: agents metadata trace_id ≠ 响应 trace_id');
+  }
   if (c.exp * 1000 !== resp.expires_at_ms) throw new Error('自检失败: exp 与 expires_at_ms 不一致');
   if (c.exp * 1000 - Date.now() < 5_000) throw new Error('自检失败: 剩余 TTL 不足 5 秒');
 }
@@ -170,7 +181,17 @@ deviceSessionRoute.post('/session', async (c) => {
       canSubscribe: true,
       canPublishData: true,
     },
-    roomConfig: { agents: [{ agentName: AGENT_NAME }] },
+    // agents[0].metadata：input_ready 合同（codex 冻结 2026-08-18）——activeTraceId 经
+    // LiveKit 建房派单透传至 job.metadata，worker 进房前即持有会话级 trace 绑定，
+    // 不依赖设备侧 payload 自述（可伪造）。
+    roomConfig: {
+      agents: [
+        {
+          agentName: AGENT_NAME,
+          metadata: JSON.stringify({ trace_id: traceId, session_id: sessionId }),
+        },
+      ],
+    },
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuer(conf.lkKey)

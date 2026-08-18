@@ -166,6 +166,42 @@ await t('自检函数对坏 token 必须 throw', async () => {
   );
 });
 
+// 8c. input_ready 合同（2026-08-18 冻结）：agents[0].metadata 携带 activeTraceId+session_id
+await t('token agents metadata 携带 trace_id 与 session_id', async () => {
+  const r = await callSession({ cred, trace: 'trace-meta-1' });
+  const j = (await r.json()) as Record<string, any>;
+  const c = decodeJwt(j.token) as Record<string, any>;
+  const meta = JSON.parse(c.roomConfig.agents[0].metadata);
+  assert.equal(meta.trace_id, 'trace-meta-1');
+  assert.equal(meta.session_id, j.session_id);
+});
+
+// 8d. 负向锚：metadata trace 与响应不符时自检必须 throw（证明新分支不恒绿）
+await t('自检函数对 metadata trace 不符必须 throw', async () => {
+  const roomName = `sn-${SN}-1`;
+  const badToken = await new SignJWT({
+    video: { room: roomName, roomJoin: true },
+    roomConfig: {
+      agents: [{ agentName: 'rust-worker', metadata: JSON.stringify({ trace_id: 'other' }) }],
+    },
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuer('voicekey')
+    .setSubject(`dev-${SN}`)
+    .setExpirationTime('1h')
+    .sign(new TextEncoder().encode('0123456789abcdef0123456789abcdef'));
+  assert.throws(
+    () =>
+      assertTokenMatchesResponse(badToken, {
+        identity: `dev-${SN}`,
+        room_name: roomName,
+        expires_at_ms: Date.now() + 3600_000,
+        trace_id: 'trace-meta-2',
+      }),
+    /metadata trace_id/,
+  );
+});
+
 // 9. 两次请求 → session_id 与 room 均不同（同秒靠逻辑秒递增）
 await t('两次 session 的 session_id 与 room 均不同', async () => {
   const a = (await (await callSession({ cred, trace: 't-a' })).json()) as Record<string, any>;
