@@ -96,6 +96,14 @@ await t('子集警告:全覆盖时零警告', () => {
   assert.equal(subsetWarnings({ interrupt: ['停'], asr: ['停', '再见'], exit: ['再见'] }).length, 0);
 });
 
+await t('device_asr kind:黑名单同适用+草稿可存(CHECK 迁移生效)', () => {
+  const bad = validateWords('device_asr', ['读写台', '嗯']);
+  assert.equal(bad.ok, false, '语气词进 device_asr 也必须拒');
+  hotwordStore.saveDraft('device_asr', ['读写台', '虚像'], 'cc');
+  assert.deepEqual(hotwordStore.draftOf('device_asr')?.words, ['读写台', '虚像']);
+  hotwordStore.deleteDraft('device_asr');
+});
+
 // ── store 版本模型 ──
 await t('draft upsert 每 kind 唯一', () => {
   hotwordStore.saveDraft('interrupt', ['停'], 'cc');
