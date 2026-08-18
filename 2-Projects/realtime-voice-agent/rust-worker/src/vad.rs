@@ -5,6 +5,8 @@
 //! 门控参数对齐 tier_a_cascade._load_vad:activation_threshold(0.6)/
 //! min_speech_duration(0.15s)/min_silence_duration(0.3s)。
 
+use std::sync::{Arc, Mutex, OnceLock};
+
 use anyhow::Result;
 use ort::session::Session;
 use ort::value::Tensor;
@@ -13,8 +15,45 @@ pub const SAMPLE_RATE: usize = 16_000;
 pub const WINDOW: usize = 512; // 32ms @16k
 const CONTEXT: usize = 64;
 
+/// 进程级共享的模型权重(input_ready 合同 2026-08-18,codex 冻结「权重复用、Job 状态隔离」):
+/// onnx 解析+图优化只付一次,job 级 load 从「加载模型」变成「new 一份推理状态」(µs 级),
+/// 把 VAD 挪出输入链就绪的关键路径。Mutex 粒度=单帧同步推理(~ms,无 await 持锁),
+/// 6 job 并发 ×32ms 帧距无竞争压力。RNN 隐状态(state/context)仍 per-job,绝不共享。
+static SHARED_SESSION: OnceLock<(String, Arc<Mutex<Session>>)> = OnceLock::new();
+
+fn shared_session(model_path: &str) -> Result<Arc<Mutex<Session>>> {
+    let (loaded_path, session) = match SHARED_SESSION.get() {
+        Some(v) => v,
+        None => {
+            // ort 的错误类型带 builder 状态、非 Send+Sync,不能直接 `?` 进 anyhow → 逐步 map 成文本
+            let b = Session::builder().map_err(|e| anyhow::anyhow!("ort builder: {e}"))?;
+            let b = b.with_intra_threads(1).map_err(|e| anyhow::anyhow!("ort intra: {e}"))?;
+            let mut b = b.with_inter_threads(1).map_err(|e| anyhow::anyhow!("ort inter: {e}"))?;
+            let session = b
+                .commit_from_file(model_path)
+                .map_err(|e| anyhow::anyhow!("load silero onnx {model_path}: {e}"))?;
+            // 并发首载竞态:输家丢弃自己的 session,统一用赢家的
+            let _ = SHARED_SESSION.set((model_path.to_string(), Arc::new(Mutex::new(session))));
+            SHARED_SESSION.get().expect("刚 set 过")
+        }
+    };
+    anyhow::ensure!(
+        loaded_path == model_path,
+        "VAD 模型路径中途变更({loaded_path} → {model_path}),共享权重不支持热切换"
+    );
+    Ok(session.clone())
+}
+
+/// 进程启动时预热(main.rs 调):提前付加载成本 + 模型缺失 fail fast,不等首个 job 才炸。
+pub fn preload(model_path: &str) -> Result<()> {
+    let t = std::time::Instant::now();
+    shared_session(model_path)?;
+    tracing::info!(model = %model_path, load_ms = t.elapsed().as_millis() as u64, "vad 权重预加载完成(进程级共享)");
+    Ok(())
+}
+
 pub struct SileroVad {
-    session: Session,
+    session: Arc<Mutex<Session>>,
     context: [f32; CONTEXT],
     state: Vec<f32>, // [2,1,128]
     input_buf: Vec<f32>,
@@ -22,15 +61,8 @@ pub struct SileroVad {
 
 impl SileroVad {
     pub fn load(model_path: &str) -> Result<Self> {
-        // ort 的错误类型带 builder 状态、非 Send+Sync,不能直接 `?` 进 anyhow → 逐步 map 成文本
-        let b = Session::builder().map_err(|e| anyhow::anyhow!("ort builder: {e}"))?;
-        let b = b.with_intra_threads(1).map_err(|e| anyhow::anyhow!("ort intra: {e}"))?;
-        let mut b = b.with_inter_threads(1).map_err(|e| anyhow::anyhow!("ort inter: {e}"))?;
-        let session = b
-            .commit_from_file(model_path)
-            .map_err(|e| anyhow::anyhow!("load silero onnx {model_path}: {e}"))?;
         Ok(Self {
-            session,
+            session: shared_session(model_path)?,
             context: [0.0; CONTEXT],
             state: vec![0.0; 2 * 128],
             input_buf: vec![0.0; CONTEXT + WINDOW],
@@ -57,7 +89,8 @@ impl SileroVad {
         let input = Tensor::from_array(([1usize, CONTEXT + WINDOW], self.input_buf.clone()))?;
         let state = Tensor::from_array(([2usize, 1, 128], self.state.clone()))?;
         let sr = Tensor::from_array((Vec::<usize>::new(), vec![SAMPLE_RATE as i64]))?;
-        let outputs = self.session.run(ort::inputs![
+        let mut session = self.session.lock().map_err(|e| anyhow::anyhow!("vad session 锁中毒: {e}"))?;
+        let outputs = session.run(ort::inputs![
             "input" => input,
             "state" => state,
             "sr" => sr,
@@ -192,5 +225,23 @@ mod tests {
             last = vad.predict(&silence).expect("predict");
         }
         assert!(last < 0.5, "silence prob should be low, got {last}");
+    }
+
+    /// 权重复用 + Job 状态隔离(codex 冻结 2026-08-18):两实例共享同一 Session(Arc 同指针),
+    /// 但一个实例喂过帧后,另一个新实例的隐状态必须仍是零(跨 job 状态不得泄漏)。
+    #[test]
+    fn shared_weights_isolated_state() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/silero_vad.onnx");
+        let mut a = SileroVad::load(path).expect("load a");
+        // 喂非零帧,污染 a 的隐状态
+        let noise: Vec<i16> = (0..WINDOW as i16).map(|i| i.wrapping_mul(97)).collect();
+        for _ in 0..3 {
+            a.predict(&noise).expect("predict a");
+        }
+        assert!(a.state.iter().any(|v| *v != 0.0), "a 的隐状态应已非零(前提锚)");
+        let b = SileroVad::load(path).expect("load b");
+        assert!(Arc::ptr_eq(&a.session, &b.session), "两实例应共享同一权重 Session");
+        assert!(b.state.iter().all(|v| *v == 0.0), "新实例隐状态必须全零,不得继承旧 job");
+        assert_eq!(b.context, [0.0; CONTEXT], "新实例 context 必须全零");
     }
 }

@@ -110,6 +110,56 @@ pub fn cancel_ack(
     })
 }
 
+/// input_ready 各分段时延(合同 2026-08-18:dispatch 时刻 worker 观测不到,故第一段
+/// 以 room 名尾部的签发 unix 秒为锚——秒级精度+跨机 NTP 误差,仅供观测不进门禁)。
+pub struct ReadyTimings {
+    pub issue_to_assignment_ms: Option<i64>,
+    pub job_room_connect_ms: i64,
+    pub track_to_input_loop_ms: i64,
+}
+
+/// 构造 `session.input_ready`(codex 冻结 2026-08-18):绑定 Room 会话级 activeTraceId
+/// (经 token agents[0].metadata → job.metadata 受信通道,非设备 payload 自述)。
+/// 只能在输入消费循环真实收到首帧后调用;每 job 至多一次(幂等由 pipeline 首帧标志保证)。
+pub fn input_ready(
+    trace_id: &str,
+    ts_ms: i64,
+    room: &str,
+    output_ready: bool,
+    t: &ReadyTimings,
+) -> Value {
+    json!({
+        "trace_id": trace_id,
+        "ts_ms": ts_ms,
+        "src": "worker",
+        "type": "session.input_ready",
+        "lane": "L2",
+        "payload": {
+            "room": room,
+            "user_track_subscribed": true,
+            "input_loop_started": true,
+            "output_ready": output_ready,
+            "timings_ms": {
+                "issue_to_assignment": t.issue_to_assignment_ms,
+                "job_room_connect": t.job_room_connect_ms,
+                "track_to_input_loop": t.track_to_input_loop_ms,
+            },
+        },
+    })
+}
+
+/// 构造 `session.output_ready`(合同 §5.4:仅诊断,不作为 Android 任何门)。
+pub fn output_ready(trace_id: &str, ts_ms: i64, room: &str) -> Value {
+    json!({
+        "trace_id": trace_id,
+        "ts_ms": ts_ms,
+        "src": "worker",
+        "type": "session.output_ready",
+        "lane": "L2",
+        "payload": {"room": room, "agent_track_subscribed": true},
+    })
+}
+
 /// ack reason 全集——与合同 fixture 的 ack.reasons 逐项一致(单测锁死)。
 pub const CANARY_REASONS: [&str; 6] = [
     "ok",
@@ -312,5 +362,40 @@ mod tests {
         assert_eq!(a["seq"], 3);
         assert_eq!(a["payload"]["cancelled"], true);
         assert_eq!(a["payload"]["already_done"], false);
+    }
+
+    /// input_ready 合同 JSON(codex 冻结 2026-08-18)逐字段锁死。
+    #[test]
+    fn input_ready_shape_matches_frozen_contract() {
+        let t = ReadyTimings {
+            issue_to_assignment_ms: Some(510),
+            job_room_connect_ms: 120,
+            track_to_input_loop_ms: 42,
+        };
+        let v = input_ready("trace-x", 1234, "sn-BJP00300000000000001-1", false, &t);
+        assert_eq!(v["src"], "worker");
+        assert_eq!(v["type"], "session.input_ready");
+        assert_eq!(v["trace_id"], "trace-x");
+        assert_eq!(v["lane"], "L2");
+        assert_eq!(v["payload"]["user_track_subscribed"], true);
+        assert_eq!(v["payload"]["input_loop_started"], true);
+        assert_eq!(v["payload"]["output_ready"], false);
+        assert_eq!(v["payload"]["timings_ms"]["issue_to_assignment"], 510);
+        assert_eq!(v["payload"]["timings_ms"]["job_room_connect"], 120);
+        assert_eq!(v["payload"]["timings_ms"]["track_to_input_loop"], 42);
+    }
+
+    /// worker 自发的 ready 事件走同一 topic:入站 parse 必须丢弃(src=worker),不得自食。
+    #[test]
+    fn own_ready_events_rejected_by_inbound_parse() {
+        let t = ReadyTimings {
+            issue_to_assignment_ms: None,
+            job_room_connect_ms: 0,
+            track_to_input_loop_ms: 0,
+        };
+        let ready = input_ready("t", 1, "r", true, &t).to_string();
+        assert!(parse(ready.as_bytes()).is_none(), "input_ready 不得被自己消费");
+        let oready = output_ready("t", 1, "r").to_string();
+        assert!(parse(oready.as_bytes()).is_none(), "output_ready 不得被自己消费");
     }
 }

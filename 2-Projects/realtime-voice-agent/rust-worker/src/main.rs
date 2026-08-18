@@ -9,6 +9,7 @@ mod control;
 mod eot;
 mod eot_snapshot;
 mod filler;
+mod gate;
 mod job;
 mod llm;
 mod pipeline;
@@ -54,6 +55,10 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(async {
         let _ = eot::EotClient::global().await;
     });
+    // VAD 权重预加载(input_ready 合同:job 级 load 降为 new 状态,加载挪出输入链关键
+    // 路径)。路径解析与 PipelineConfig::from_env 同源;失败 fail fast——模型缺失的
+    // worker 接了单也是必挂,不如启动就死在带日志的地方。
+    vad::preload(&pipeline::PipelineConfig::vad_model_path_from_env())?;
     // RSS 采样(对齐 tier_a _rss_monitor_loop,内存曲线=本次重写的核心验收指标):
     // Linux 读 /proc 零依赖;macOS 无 /proc 静默退出。注意口径:Python 是 per-job
     // 进程,Rust 是整 worker 进程(多路共享),数值=全机 worker 占用,更利容量核算。

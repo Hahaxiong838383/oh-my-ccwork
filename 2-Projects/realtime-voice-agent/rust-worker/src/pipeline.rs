@@ -88,6 +88,13 @@ fn parse_flag(raw: Option<&str>, default: bool) -> bool {
 }
 
 impl PipelineConfig {
+    /// 单独暴露给 main.rs 的 VAD 预加载(vad::preload)——与 from_env 同源,防两处路径漂移。
+    pub fn vad_model_path_from_env() -> String {
+        std::env::var("VAD_MODEL_PATH").unwrap_or_else(|_| {
+            format!("{}/assets/silero_vad.onnx", env!("CARGO_MANIFEST_DIR"))
+        })
+    }
+
     pub fn from_env() -> Self {
         let f = |k: &str, d: f32| {
             std::env::var(k)
@@ -129,9 +136,7 @@ impl PipelineConfig {
                 .map(|v| v.trim().to_string())
                 .filter(|v| !v.is_empty())
                 .collect(),
-            vad_model_path: std::env::var("VAD_MODEL_PATH").unwrap_or_else(|_| {
-                format!("{}/assets/silero_vad.onnx", env!("CARGO_MANIFEST_DIR"))
-            }),
+            vad_model_path: Self::vad_model_path_from_env(),
             hotwords: parse_hotwords(std::env::var("INTERRUPT_HOTWORDS").ok().as_deref()),
             exit_hotwords: crate::textproc::parse_hotwords_with(
                 std::env::var("EXIT_SWALLOW_HOTWORDS").ok().as_deref(),
@@ -194,6 +199,10 @@ struct CanaryPending {
 }
 
 struct Orchestrator {
+    /// 输出门(gate.rs):Android 未订 agent 轨前扣住可听 PCM,首个待播起 5s fail-closed
+    output_gate: crate::gate::OutputGate,
+    /// 门超时 → 主循环 fail-closed 的传导通道
+    fatal_tx: mpsc::Sender<String>,
     cfg: PipelineConfig,
     tts_cfg: TtsCfg,
     llm: Arc<Mutex<Llm>>,
@@ -241,6 +250,28 @@ struct Orchestrator {
     snap: Option<crate::eot_snapshot::SnapshotSink>,
 }
 
+fn now_unix_ms() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
+}
+
+/// job 层传入的就绪上下文(input_ready 合同 2026-08-18):trace 绑定 + 输出门信号 + 打点基准。
+pub struct ReadyCtx {
+    /// Room 会话级 activeTraceId(token metadata 受信通道);None=老 token/调试房,ready 不发
+    pub trace_id: Option<String>,
+    /// 输出方向就绪信号(job 层 LocalTrackSubscribed 时置 true)
+    pub out_rx: tokio::sync::watch::Receiver<bool>,
+    /// assignment 到达时刻(elapsed_ms 基准)
+    pub t_assign: Instant,
+    /// user 轨订到时刻(track_to_input_loop 基准)
+    pub t_user_track: Instant,
+    pub connect_ms: u64,
+    pub issue_to_assignment_ms: Option<i64>,
+}
+
+#[allow(clippy::too_many_arguments)] // job→pipeline 的装配线,拆 struct 反而断上下文
 pub async fn run_pipeline(
     mut mic: NativeAudioStream,
     source: NativeAudioSource,
@@ -249,6 +280,7 @@ pub async fn run_pipeline(
     route: transcript_pub::Route,
     mut ctrl_rx: mpsc::Receiver<(control::Envelope, control::Inbound, Option<String>)>,
     beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    ready: ReadyCtx,
 ) -> Result<()> {
     let cfg = PipelineConfig::from_env();
     let stt_cfg = SttConfig::from_env();
@@ -333,7 +365,13 @@ pub async fn run_pipeline(
     let (eot_tx, mut eot_rx) = mpsc::channel::<(u64, f32)>(8);
 
     let participant2 = participant.clone();
+    // 输出门 fail-closed 传导:OutputGate 包装层超时 → fatal_rx → 主循环 return Err
+    // → job 收尾(关房删房),设备走既有重连路径。容量 1:一次 fatal 就收摊。
+    let (fatal_tx, mut fatal_rx) = mpsc::channel::<String>(1);
+
     let mut orch = Orchestrator {
+        output_gate: crate::gate::OutputGate::new(ready.out_rx.clone()),
+        fatal_tx,
         turn_gate: TurnGate::new(
             cfg.min_endpointing_delay,
             cfg.max_endpointing_delay,
@@ -411,6 +449,11 @@ pub async fn run_pipeline(
 
     loop {
         tokio::select! {
+            // 输出门 fail-closed(冻结 2026-08-18):首个待播 PCM 起 5s Android 仍未订阅
+            // agent 轨 → 整 job 收摊关房,绝不带着半聋房间继续跑
+            Some(msg) = fatal_rx.recv() => {
+                return Err(anyhow::anyhow!("output gate fail-closed: {msg}"));
+            }
             // 入站控制包(设备 → worker)。放在最前面:cancel 的时效性高于音频帧处理。
             ctrl = ctrl_rx.recv() => {
                 // channel 关闭不退主循环——控制通道是可选能力,断了不该拖垮通话
@@ -422,6 +465,36 @@ pub async fn run_pipeline(
                 let Some(frame) = frame else { break };
                 let samples: Vec<i16> = frame.data.to_vec();
                 in_frames += 1;
+                if in_frames == 1 {
+                    // input_ready 发射点(合同硬性要求 3):输入消费循环真实收到首帧,
+                    // 不是"循环该启动了"——PCM 确实在流动才算就绪
+                    let track_to_loop = ready.t_user_track.elapsed().as_millis() as i64;
+                    info!(
+                        room = %room_name,
+                        elapsed_ms = ready.t_assign.elapsed().as_millis() as u64,
+                        track_to_input_loop_ms = track_to_loop,
+                        "input_loop_started"
+                    );
+                    match ready.trace_id.as_deref() {
+                        Some(trace) => {
+                            let v = control::input_ready(
+                                trace,
+                                now_unix_ms(),
+                                &room_name,
+                                orch.output_gate.is_open(),
+                                &control::ReadyTimings {
+                                    issue_to_assignment_ms: ready.issue_to_assignment_ms,
+                                    job_room_connect_ms: ready.connect_ms as i64,
+                                    track_to_input_loop_ms: track_to_loop,
+                                },
+                            );
+                            orch.publish_json(control::TOPIC, v);
+                            info!(room = %room_name, "session.input_ready published");
+                        }
+                        // 老 token/调试房:无受信 trace 可绑,合同禁 pending → 降级不发
+                        None => warn!(room = %room_name, "input_ready skipped: 无 trace(老 token 或非 Session API 房)"),
+                    }
+                }
                 if !samples.is_empty() {
                     in_amp_acc += samples.iter().map(|s| u64::from(s.unsigned_abs())).sum::<u64>()
                         / samples.len() as u64;
@@ -1201,6 +1274,14 @@ impl Orchestrator {
         self.tr_started = 0;
         self.tr_finaled = 0;
         let (pcm_tx, pcm_rx) = mpsc::channel::<Vec<u8>>(32);
+        // 输出门(冻结 2026-08-18):Android 未订 agent 轨前,PCM 管道过包装层——
+        // 首段到达起 5s 未就绪即 fatal fail-closed。门开过(绝大多数轮次)零包装零开销。
+        // spawn_playout 是全部可听 PCM(TTS+filler)的唯一入口,包在它前面=全覆盖。
+        let pcm_rx = if self.output_gate.is_open() {
+            pcm_rx
+        } else {
+            self.output_gate.wrap(pcm_rx, self.fatal_tx.clone())
+        };
         let (playout_task, ctl) =
             playout::spawn_playout(self.source.clone(), pcm_rx, self.room_name.clone(), id);
         let synth_text = Arc::new(StdMutex::new(String::new()));
