@@ -188,7 +188,9 @@ deviceSessionRoute.post('/session', async (c) => {
       agents: [
         {
           agentName: AGENT_NAME,
-          metadata: JSON.stringify({ trace_id: traceId, session_id: sessionId }),
+          // issue_ts_ms：签发时刻毫秒级（READY_LATENCY 合同 2026-08-18）——旧口径用
+          // room 名尾秒(秒级)算 issue_to_assignment，自带 ±1s 量化噪声；worker 优先取此值。
+          metadata: JSON.stringify({ trace_id: traceId, session_id: sessionId, issue_ts_ms: Date.now() }),
         },
       ],
     },
