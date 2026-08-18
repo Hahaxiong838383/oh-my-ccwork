@@ -446,6 +446,9 @@ pub async fn run_pipeline(
     let mut in_frames: u64 = 0;
     let mut in_amp_acc: u64 = 0;
     let mut in_report = Instant::now();
+    // input_ready 只发一次:独立标志,不复用 in_frames(它被 10s 水位报告清零,
+    // 生产实证 2026-08-18 06:20 同 job 每 10s 重发一次 input_ready——Android 幂等兜住但脏)
+    let mut input_ready_fired = false;
 
     loop {
         tokio::select! {
@@ -465,7 +468,8 @@ pub async fn run_pipeline(
                 let Some(frame) = frame else { break };
                 let samples: Vec<i16> = frame.data.to_vec();
                 in_frames += 1;
-                if in_frames == 1 {
+                if !input_ready_fired {
+                    input_ready_fired = true;
                     // input_ready 发射点(合同硬性要求 3):输入消费循环真实收到首帧,
                     // 不是"循环该启动了"——PCM 确实在流动才算就绪
                     let track_to_loop = ready.t_user_track.elapsed().as_millis() as i64;
