@@ -39,19 +39,28 @@ struct JobMeta {
     trace_id: Option<String>,
     #[allow(dead_code)] // 回交对账用,当前事件只带 trace
     session_id: Option<String>,
+    /// 签发时刻毫秒级(READY_LATENCY 合同 2026-08-18,server 侧 Date.now() 直传)。
+    /// 优先口径;缺省回退房名尾秒——秒级口径自带 ±1s 量化噪声,曾把真实 ~300ms 的
+    /// assignment 观测成 p95=1290ms(50 轮 journal 实证,分布与噪声模型吻合)。
+    issue_ts_ms: Option<i64>,
 }
 
-/// room 名 `sn-<SN>-<unix秒>` 的尾秒 = Session API 签发时刻(合同定死格式)。
-/// issue_to_assignment 观测用(秒级+跨机 NTP 误差,不进任何门禁)。
-fn issue_to_assignment_ms(room_name: &str) -> Option<i64> {
-    let sec: i64 = room_name.rsplit('-').next()?.parse().ok()?;
+/// issue→assignment 观测(不进任何门禁)。毫秒口径优先(残余=两机 NTP 偏差,几十 ms 量级);
+/// 回退 room 名 `sn-<SN>-<unix秒>` 尾秒(合同定死格式,±1s 量化噪声)。
+fn issue_to_assignment_ms(room_name: &str, issue_ts_ms: Option<i64>) -> Option<i64> {
     let now_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .ok()?
         .as_millis() as i64;
-    let delta = now_ms - sec * 1000;
-    // 负值/超 10 分钟 = 非签发秒(web 房间等自定义 room 名),不产出误导数字
-    (0..600_000).contains(&delta).then_some(delta)
+    // 负值/超 10 分钟 = 时钟异常或非签发值,不产出误导数字
+    let valid = |d: i64| (0..600_000).contains(&d).then_some(d);
+    if let Some(t) = issue_ts_ms
+        && let Some(d) = valid(now_ms - t)
+    {
+        return Some(d);
+    }
+    let sec: i64 = room_name.rsplit('-').next()?.parse().ok()?;
+    valid(now_ms - sec * 1000)
 }
 
 pub async fn run_job(config: Config, job: proto::Job, url: String, token: String) -> Result<()> {
@@ -62,12 +71,13 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         .unwrap_or_default();
     let t0 = Instant::now();
     let meta: JobMeta = serde_json::from_str(&job.metadata).unwrap_or_default();
-    let issue_ms = issue_to_assignment_ms(&room_name);
+    let issue_ms = issue_to_assignment_ms(&room_name, meta.issue_ts_ms);
     info!(
         job_id = %job.id,
         room = %room_name,
         elapsed_ms = 0u64,
         issue_to_assignment_ms = issue_ms,
+        issue_clock = if meta.issue_ts_ms.is_some() { "ms" } else { "sec" },
         has_trace = meta.trace_id.is_some(),
         "job_assignment_received"
     );
@@ -378,5 +388,33 @@ async fn delete_room(config: &Config, ws_url: &str, room_name: &str) {
             tracing::warn!(room = %room_name, status = %resp.status(), "delete room 非 2xx");
         }
         Err(e) => tracing::warn!(room = %room_name, error = %e, "delete room 请求失败"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::issue_to_assignment_ms;
+
+    fn now_ms() -> i64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as i64
+    }
+
+    /// READY_LATENCY 口径:毫秒 issue_ts 优先(消 ±1s 量化噪声);缺省回退房名尾秒;异常值不出数。
+    #[test]
+    fn issue_clock_precedence_and_fallback() {
+        let t = now_ms();
+        // 毫秒口径优先:350ms 前签发 → 观测 ≈350(容忍执行耗时)
+        let d = issue_to_assignment_ms("sn-X-0", Some(t - 350)).expect("ms 口径出数");
+        assert!((350..600).contains(&d), "d={d}");
+        // 毫秒值异常(未来时刻)→ 回退房名秒
+        let sec = t / 1000 - 2;
+        let d2 = issue_to_assignment_ms(&format!("sn-X-{sec}"), Some(t + 99_000)).expect("回退秒口径");
+        assert!((2000..3600).contains(&d2), "d2={d2}");
+        // 两口径全无效 → None(web 房自定义名)
+        assert_eq!(issue_to_assignment_ms("web-room", None), None);
+        assert_eq!(issue_to_assignment_ms("web-room", Some(t - 700_000)), None);
     }
 }
