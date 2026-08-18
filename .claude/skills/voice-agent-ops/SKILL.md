@@ -247,6 +247,14 @@ ssh root@64.90.13.117 "sed -i 's/^VOLC_ASR_HOTWORDS=.*/VOLC_ASR_HOTWORDS=<新词
 - ⚠️ **查 sidecar 进程别用 `ps -eo ...,cgroup,cmd`**:cgroup 列极长会把 cmd 挤没,
   空结果与"进程不存在"同形。用 `ps -eo pid,ppid,rss,args ww | grep -F eot_sidecar` 或 `ss -xlp`。
   同理 `grep -i oom` 会被 **`room=`** 命中(2026-08-14 误报 285 条),数 OOM 要 `grep -i oom | grep -iv room`。
+- 🔴 **「等 sidecar 清零」禁止写进 ssh 单行复合命令**(2026-08-18 部署实撞,自匹配第五形态):
+  `ssh host '... until ! pgrep -f eot_sidecar.py; do sleep 1; done; cp ... && systemctl start ...'`
+  ——远端 bash 自己的 cmdline 含该串,pgrep 永真死循环;本地超时杀掉的只是 ssh,**远端 bash 成
+  PPID=1 孤儿继续空转,且后半段 cp/mv/start 还挂在它身上**——条件哪天为真它会替你把部署再跑一遍。
+  复核时连 `pgrep -f "eot_sidecar[.]py"` 都会命中这个孤儿(方括号只防探测命令自己,不防同类残留)。
+  **正确姿势**:部署序列写成脚本文件 scp 过去跑;等清零用
+  `ps -eo pid,ppid,etime,args | grep -F eot_sidecar.py | grep -v grep` 外部判;取消远程复合命令后
+  必须回去清孤儿(找 PPID=1 的匹配进程,PID 直杀),不能只看本地任务已停。
 
 ### Rust 线容量真值(2026-08-14 实测,4 核 Xeon/3915MB)
 
