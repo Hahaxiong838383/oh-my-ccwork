@@ -14,12 +14,14 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 
-export type HotwordKind = 'interrupt' | 'asr' | 'exit';
+export type HotwordKind = 'interrupt' | 'asr' | 'exit' | 'device_asr';
 
 export const KIND_TO_ENV: Record<HotwordKind, string> = {
   interrupt: 'INTERRUPT_HOTWORDS',
   asr: 'VOLC_ASR_HOTWORDS',
   exit: 'EXIT_SWALLOW_HOTWORDS',
+  // S2-B2 设备 ASR boost 词(rust 侧与 asr 合并发火山;boost 与执行判定完全解耦)
+  device_asr: 'P003_DEVICE_ASR_HOTWORDS',
 };
 export const HOTWORD_KINDS = Object.keys(KIND_TO_ENV) as HotwordKind[];
 
@@ -56,7 +58,7 @@ export function validateWords(kind: HotwordKind, words: unknown): { ok: true; wo
     if (!w) continue;
     if (w.length > 20) return { ok: false, error: `词条过长(>20字): ${w.slice(0, 20)}…` };
     if (!WORD_RE.test(w)) return { ok: false, error: `词条含非法字符(只允许中文/字母数字/空格): ${w}` };
-    if (kind === 'asr' && ASR_BLACKLIST.has(w))
+    if ((kind === 'asr' || kind === 'device_asr') && ASR_BLACKLIST.has(w))
       return { ok: false, error: `「${w}」是语气词，禁止进 ASR 热词表（会破坏环境音免疫，咳嗽/嗯啊会被吸成指令）` };
     if (seen.has(w)) continue; // 去重静默
     seen.add(w);
@@ -67,8 +69,9 @@ export function validateWords(kind: HotwordKind, words: unknown): { ok: true; wo
   return { ok: true, words: cleaned };
 }
 
-/** 子集警告（不阻断）：打断语/退出词若不在 ASR 热词表中，孤立短指令可能被话语检测整段丢弃 */
-export function subsetWarnings(byKind: Record<HotwordKind, string[]>): string[] {
+/** 子集警告（不阻断）：打断语/退出词若不在 ASR 热词表中，孤立短指令可能被话语检测整段丢弃。
+ *  device_asr 不参与（rust 侧与 asr 合并后整体生效，设备词天然被 boost）。 */
+export function subsetWarnings(byKind: Partial<Record<HotwordKind, string[]>>): string[] {
   const asr = new Set(byKind.asr ?? []);
   const warnings: string[] = [];
   for (const kind of ['interrupt', 'exit'] as HotwordKind[]) {
@@ -93,7 +96,7 @@ class HotwordStore {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS hotword_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        kind TEXT NOT NULL CHECK(kind IN ('interrupt','asr','exit')),
+        kind TEXT NOT NULL CHECK(kind IN ('interrupt','asr','exit','device_asr')),
         words_json TEXT NOT NULL,
         status TEXT NOT NULL CHECK(status IN ('draft','published','archived')),
         version INTEGER NOT NULL DEFAULT 0,
@@ -104,7 +107,41 @@ class HotwordStore {
       );
       CREATE INDEX IF NOT EXISTS idx_hotword_kind ON hotword_config(kind, status);
     `);
+    this.migrateKindCheck(this.db);
     return this.db;
+  }
+
+  /** 老库迁移：初版 CHECK 无 device_asr（S2-B2 前建的生产表），SQLite 改约束须重建表。
+   *  判据取 sqlite_master 的建表 SQL 文本；数据量个位数，重建零成本。失败记日志不阻断。 */
+  private migrateKindCheck(db: DatabaseSync): void {
+    try {
+      const row = db
+        .prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='hotword_config'`)
+        .get() as { sql: string } | undefined;
+      if (!row || row.sql.includes('device_asr')) return;
+      db.exec(`
+        BEGIN;
+        ALTER TABLE hotword_config RENAME TO hotword_config_old;
+        CREATE TABLE hotword_config (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          kind TEXT NOT NULL CHECK(kind IN ('interrupt','asr','exit','device_asr')),
+          words_json TEXT NOT NULL,
+          status TEXT NOT NULL CHECK(status IN ('draft','published','archived')),
+          version INTEGER NOT NULL DEFAULT 0,
+          note TEXT NOT NULL DEFAULT '',
+          created_by TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL,
+          published_at INTEGER
+        );
+        INSERT INTO hotword_config SELECT * FROM hotword_config_old;
+        DROP TABLE hotword_config_old;
+        CREATE INDEX IF NOT EXISTS idx_hotword_kind ON hotword_config(kind, status);
+        COMMIT;
+      `);
+      console.log('[hotword-store] kind CHECK 迁移完成(+device_asr)');
+    } catch (e) {
+      console.error(`[hotword-store] kind CHECK 迁移失败(device_asr 草稿将不可存): ${(e as Error).message}`);
+    }
   }
 
   private row2v(r: Record<string, unknown>): HotwordVersion {

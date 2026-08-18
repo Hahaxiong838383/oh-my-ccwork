@@ -2112,6 +2112,26 @@
                     <span style="font-size:12px;color:#6B7785">发布 = 写入 64.90 env + 重启 worker（自动避开活跃通话）</span>
                   </div>
 
+                  <!-- S2-B2 设备命令词表只读（可执行 alias=codex 合同；编辑管线 P1） -->
+                  <div class="kh-card" style="padding:16px;margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                      <div>
+                        <div style="font-size:15px;font-weight:700">设备命令词表（S2-B2 · 只读）</div>
+                        <div style="font-size:12px;color:#6B7785;margin-top:2px">确定性执行匹配表（label+action+可执行别名），与 ASR 热词分层——识别归热词，执行只认本表。合同词表，改动走 codex 联调</div>
+                      </div>
+                      <el-button size="small" @click="loadDeviceAliases()">{{ hw.deviceAliases ? '刷新' : '加载' }}</el-button>
+                    </div>
+                    <div v-if="hw.deviceAliases" style="margin-top:12px;max-height:360px;overflow-y:auto">
+                      <table class="kh-table"><thead><tr><th style="width:56px">Label</th><th style="width:200px">Action</th><th>协议原句</th><th>可执行别名</th></tr></thead>
+                      <tbody><tr v-for="row in hw.deviceAliases" :key="row.label">
+                        <td style="font-family:monospace;color:#3B7A99">{{ row.label }}</td>
+                        <td style="font-family:monospace;font-size:11px">{{ row.action }}</td>
+                        <td style="font-weight:600">{{ row.canonical }}</td>
+                        <td style="color:#6B7785;font-size:12px">{{ row.aliases.join('，') }}</td>
+                      </tr></tbody></table>
+                    </div>
+                  </div>
+
                   <!-- 衔接短语（filler）只读：wav 资产管线属 P1，本期看得见管不着 -->
                   <div class="kh-card" style="padding:16px">
                     <div style="display:flex;justify-content:space-between;align-items:center">
@@ -3193,6 +3213,7 @@
           { k: 'interrupt', name: '打断语', desc: 'worker 本地判定：ASR 文本命中即硬打断当前回答（不关房间）', warn: '' },
           { k: 'asr', name: 'ASR 识别热词', desc: '火山服务端识别增强：对表内词降低检出门槛，救回孤立短指令。语气词（嗯/啊）禁入——会破坏环境音免疫', warn: '' },
           { k: 'exit', name: '退出词（关闭语）', desc: '命中即源头吞句并退出会话：零 commit、零 filler、零 LLM', warn: '与 Android 端 sessionExitPhrases 逐字合同——改动必须 codex 同步，发布时强制确认' },
+          { k: 'device_asr', name: '设备 ASR 热词（S2-B2）', desc: '设备名/属性/模式词的识别增强，rust 侧与 ASR 热词合并发火山。只提高识别率，与命令执行判定完全无关', warn: '' },
         ];
         var HW_NAME_BY_KEY = {};
         HW_KIND_META.forEach(function (m) { HW_NAME_BY_KEY[m.k] = m.name; });
@@ -3203,7 +3224,15 @@
           fillers: null,
           publishDlg: false, publishKinds: [], exitConfirmed: false, force: false, canForce: false,
           publishing: false, publishResult: '', publishErr: '',
+          deviceAliases: null,
         });
+        async function loadDeviceAliases() {
+          try {
+            var j = await deviceApi('/api/admin/hotwords/device-aliases', { method: 'GET' });
+            if (j.ok) hw.deviceAliases = j.rows;
+            else ElementPlus.ElMessage.error(j.error || '加载失败（S2-B2 部署后可用）');
+          } catch (e) { ElementPlus.ElMessage.error(String(e)); }
+        }
         function hwEnvKey(k) { var d = hw.kinds[k]; return d ? d.env_key : ''; }
         function hwLive(k) { var d = hw.kinds[k]; return d ? d.live : []; }
         function hwDraft(k) { var d = hw.kinds[k]; return d ? d.draft : null; }
@@ -5128,6 +5157,7 @@
           deviceData: deviceData, deviceAdd: deviceAdd, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
           hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
+          loadDeviceAliases: loadDeviceAliases,
           hwEnvKey: hwEnvKey, hwLive: hwLive, hwDraft: hwDraft, hwInSync: hwInSync,
           hwPublishedVersion: hwPublishedVersion, hwKindName: hwKindName, hwDraftText: hwDraftText,
           hwDraftKinds: hwDraftKinds, hwDiffText: hwDiffText, hwFmtTime: hwFmtTime,

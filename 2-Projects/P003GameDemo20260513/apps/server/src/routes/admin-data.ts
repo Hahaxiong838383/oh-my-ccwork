@@ -553,7 +553,7 @@ adminDataRoute.post('/reset-quota', (c) => {
 adminDataRoute.get('/hotwords', async (c) => {
   const live = await callHotwordChannel({ action: 'status' }, 15_000);
   const kinds: Record<string, unknown> = {};
-  const liveWords: Record<HotwordKind, string[]> = { interrupt: [], asr: [], exit: [] };
+  const liveWords: Record<HotwordKind, string[]> = { interrupt: [], asr: [], exit: [], device_asr: [] };
   for (const kind of HOTWORD_KINDS) {
     const envKey = KIND_TO_ENV[kind];
     const envVal = live.ok ? String((live.env as Record<string, string>)?.[envKey] ?? '') : '';
@@ -692,6 +692,27 @@ adminDataRoute.post('/hotwords/rollback-draft', async (c) => {
   const by = (opToken ? getTokenUser(opToken) : null) ?? 'admin';
   const draft = hotwordStore.saveDraft(kind, target.words, by, `回滚自 v${target.version}`);
   return c.json({ ok: true, draft });
+});
+
+/** S2-B2 设备命令词表只读（64.90 TSV=env 生效真值；编辑管线 P1） */
+adminDataRoute.get('/hotwords/device-aliases', async (c) => {
+  const r = await callHotwordChannel({ action: 'device_aliases' }, 15_000);
+  if (!r.ok) return c.json({ ok: false, error: String(r.error ?? '读取失败') }, 502);
+  const rows: Array<{ label: number; action: string; canonical: string; aliases: string[] }> = [];
+  for (const line of String(r.tsv ?? '').split('\n')) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const cols = t.split('\t');
+    if (cols.length < 3) continue;
+    rows.push({
+      label: Number(cols[0]),
+      action: cols[1] ?? '',
+      canonical: cols[2] ?? '',
+      aliases: (cols[3] ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+    });
+  }
+  rows.sort((a, b) => a.label - b.label);
+  return c.json({ ok: true, rows });
 });
 
 /** 衔接短语（filler）只读：manifest 透传（94 wav 的文本/桶，音频资产管线属 P1） */
