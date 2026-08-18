@@ -205,19 +205,21 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 | worker | WORKER_LOAD_THRESHOLD(0.95)、WORKER_NUM_IDLE(1) | 2 核机默认 0.7 拒接;idle 默认 2 撑爆 2G→thrash,单用户压 1 |
 | 内存 | HK 已配 2G swap(fstab 持久化) | 兜底瞬时尖峰,正常不动用 |
 
-## 热词增减 SOP(2026-08-12 起,川哥要求定期维护)
+## 热词增减 SOP(2026-08-18 大修,取代 08-12 版)
 
-**是什么**:火山 ASR 话语检测会整段丢弃孤立短指令(停/好/对——连 interim 都没有),热词表让服务端对指定词降低检出门槛。矩阵实验定案:ddc/force_to_speech_time/增益全无效,唯热词有效;**语气词(嗯/啊)绝不入表**=环境音免疫天然保留。
+**是什么**:火山 ASR 话语检测会整段丢弃孤立短指令(停/好/对——连 interim 都没有),热词让服务端对指定词降低检出门槛。矩阵实验定案:ddc/force_to_speech_time/增益全无效,唯热词有效;**语气词(嗯/啊)绝不入表**=环境音免疫天然保留。
 
-**单一真源**:`64.90:/root/realtime-voice-agent/poc-eou.env` 的 `VOLC_ASR_HOTWORDS`(逗号分隔),Python 主线 + Rust 灰度线两个 unit 共享同一行。当前 18 词=急停白名单全量+常用短指令。
+**⚠️ 热词通道真相(2026-08-18 全链实证,详见记忆 p003_asr_nonstream)**:
+- **唯一生效通道=直传 context**。控制台词表(boosting_table_id)在 bigmodel/bigmodel_async 两端点、一遍/二遍两模式下**全部零生效**(数据面不消费,待火山工单;64.90 env 里表 ID 已注释)。别再往火山控制台加词。
+- 双向流式一遍链路热词总预算 **100 tokens** 从前向后截断;**二遍(enable_nonstream)链路升 5000 词**——rust 线已 per-SN 灰度二遍(canary 003+098),灰度键 `VOLC_ASR_NONSTREAM_ENABLED/_CANARY_SN`。
+- 大模型热词=prompt 注入,**无权重概念**(`词|7` 无效),boost 随词数**稀释**(3 词能翻声母,20 词不能)——一遍链路只配核心短词,专名排最前。
+- **声母级误转(调→跳/掉)热词救不动**,正解=Matcher 误转别名(device_aliases.tsv);**误转别名绝不进热词**(教 ASR 输出错字)。
 
-**增减操作**(改一行,分钟级):
-```bash
-ssh root@64.90.13.117 "sed -i 's/^VOLC_ASR_HOTWORDS=.*/VOLC_ASR_HOTWORDS=<新词表>/' /root/realtime-voice-agent/poc-eou.env && systemctl restart voice-worker voice-worker-rust"
-```
-**验证**:下一通会话 journal 里 `asr: connecting (... hotwords=N)`(Python)/`asr: connected (... hotwords=N)`(Rust) 的 N 对上;真机说表内词看 `stt final`。
+**Rust 线增减入口(唯一正道)**:kidshub 后台「热词管理」tab 编辑→发布,或 admin API(`PUT /api/admin/hotwords/<kind>/draft` + `POST /api/admin/hotwords/publish`,Bearer admin token,凭据在 aliyun-hk `/opt/p003/server/.env.local`——**dotenv 值带引号,手工读要剥**)。发布链自动:apply_hotwords.py→env 原子写(自动备份)→**纪律重启(stop→EOT 清零→start,禁 restart)**→进程三方对撞→失败自动回滚。四 kinds:interrupt/asr/exit/device_asr;单表上限 500(hotword-store.ts)。**手工 sed env=造 DB↔env 漂移,禁止**。
 
-**入表原则**:高频短指令才进(急停词/确认词/切换词);≥2 音节存活率天然高不一定需要;发现误识别拉偏(近音词被吸成热词)→ 删词即回。**语气词/单字姓名禁入**(前者破免疫,后者拉偏风险高)。代码位:`volc_stt.build_hotwords_corpus`(两线形状单源,Rust 侧 `stt_volc.rs` 同名 env)。
+**验证**:journal `asr: connected (... hotwords=N)` 的 N 对上(当前 267=27 打断+240 设备全量);真机说表内词看 `stt final`。
+
+**入表原则**:高频短指令+专名才进;≥2 音节存活率天然高不一定需要;误识别拉偏→删词即回。**语气词/单字/误转别名禁入**。代码位:rust `stt_volc.rs`(VOLC_ASR_HOTWORDS+P003_DEVICE_ASR_HOTWORDS 汇流)/Python `volc_stt.build_hotwords_corpus`。Python 线仍走 poc-eou.env(发布链 receipt 的 poc_note:python 线不重启,自然重启生效)。
 
 - 火山 RTC 只是 benchmark,**绝不切回**(项目目的=摆脱它);火山 ASR/TTS/方舟是独立组件可用。
 - agent 生命周期**宁可简单重建,不要状态复用**(close_on_disconnect 留守方案已被实战推翻)。
