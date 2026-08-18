@@ -51,8 +51,12 @@ pub enum Inbound {
     /// 停止本轮生成与播放(川哥 2026-08-15 拍板:走硬 abort,不进假打断窗口——
     /// 用户明确按了停,不该再等 1.5s 定时器判断他是不是说错话了)
     Cancel,
-    /// 芯片唤醒 / VAD 起止 / 命令词:旁路记录,**不改变 worker 的 turn 判定**
+    /// 芯片唤醒 / VAD 起止 / 无参数命令词(旧 APK):旁路记录,**不改变 worker 的 turn 判定**
     Bypass,
+    /// 带 label 的命令词(2026-08-18 晚修订,从 Bypass 拆出):VAD 芯片命中→Android 暂存
+    /// →进房转发,worker 按目录生成 proposed——早说空窗(命令早于 input_ready 540ms
+    /// 真机实证)的补链。Android 仍不直接执行,worker 保持设备命令权威。
+    CommandWord { label: u32, before_ready: bool },
     /// S2B1 联调:确定性长句走**正式** TTS→segmenter→playout 链路(合同真值
     /// tests/fixtures/s2b1_canary_control_contract.json,rust 侧用 include_str! 锁死)
     CanarySay,
@@ -66,7 +70,19 @@ pub fn parse(raw: &[u8]) -> Option<(Envelope, Inbound)> {
     }
     let kind = match ev.kind.as_str() {
         "cancel" => Inbound::Cancel,
-        "wake" | "vad" | "command_word" => Inbound::Bypass,
+        "wake" | "vad" => Inbound::Bypass,
+        // command_word 带合法 label → 动作源;无 label(旧 APK 无参数 Hook)→ 旁路兼容
+        "command_word" => match ev.payload.get("label").and_then(|v| v.as_u64()) {
+            Some(l) if l <= u32::MAX as u64 => Inbound::CommandWord {
+                label: l as u32,
+                before_ready: ev
+                    .payload
+                    .get("observed_before_input_ready")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+            },
+            _ => Inbound::Bypass,
+        },
         "canary.say" => Inbound::CanarySay,
         _ => return None,
     };
@@ -425,6 +441,21 @@ mod tests {
         assert_eq!(a["seq"], 3);
         assert_eq!(a["payload"]["cancelled"], true);
         assert_eq!(a["payload"]["already_done"], false);
+    }
+
+    /// command_word 入站(2026-08-18 晚合同):带 label→CommandWord;无 label→Bypass(旧 APK 兼容)。
+    #[test]
+    fn command_word_parse_variants() {
+        let with_label = r#"{"trace_id":"t","ts_ms":1,"src":"android","type":"command_word",
+            "lane":"L1","seq":1,"payload":{"label":42,"source":"vad_chip","observed_before_input_ready":true}}"#;
+        let (_, kind) = parse(with_label.as_bytes()).expect("合法包必须解析");
+        assert_eq!(kind, Inbound::CommandWord { label: 42, before_ready: true });
+        let no_label = r#"{"trace_id":"t","ts_ms":1,"src":"android","type":"command_word",
+            "lane":"L1","seq":1,"payload":{}}"#;
+        let (_, kind2) = parse(no_label.as_bytes()).expect("旧形态仍解析");
+        assert_eq!(kind2, Inbound::Bypass, "无 label 保持旁路兼容");
+        let spoofed = with_label.replace("\"src\":\"android\"", "\"src\":\"worker\"");
+        assert!(parse(spoofed.as_bytes()).is_none(), "src=worker 必须丢");
     }
 
     /// input_ready 合同 JSON(codex 冻结 2026-08-18)逐字段锁死。

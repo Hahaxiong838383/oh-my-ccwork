@@ -2,6 +2,9 @@
 # label	action	canonical(协议原句)	aliases(逗号分隔;协议第二原句放首位)
 # label 46(关闭语音)/label 1(小可小可) 按合同排除,永不出现在本表。
 # 音量绝对值 20 档(label 60-79)由数值句式代码处理,不在本表。
+# 合同修订(2026-08-18 晚,PRE_INPUT_READY_COMMAND_WORD_HANDOFF §4.5,真机口语实证):
+#   「调光谱」系→11/14/15(产品语境光谱=色温);「调远/调近/远一点/近一点」→33/34——
+#   **覆盖原合同 §6.4 裸方向词禁令**(远近维度在产品域内唯一归属虚像:音量用大小/亮度用亮暗/高度用高低)。
 2	led_on	打开灯光	开灯,打开台灯,把灯打开,帮我开灯,灯开一下
 3	led_off	关闭灯光	关灯,关闭台灯,把灯关掉,帮我关灯,灯关一下,不用灯了
 4	brightness_up	调亮一级	灯光调亮,亮一点,再亮一点,灯亮一点,把灯调亮一点,提高一点亮度
@@ -11,11 +14,11 @@
 8	brightness_min	亮度调到一档	亮度一档,灯光一档,调到柔和,柔和亮度
 9	brightness_middle	亮度调到二档	亮度二档,灯光二档,调到标准,标准亮度
 10	brightness_max	亮度调到三档	亮度三档,灯光三档,调到明亮,明亮亮度
-11	color_temperature_cycle_down	调整灯光色温	换个色温,切换色温,灯光换个色温
+11	color_temperature_cycle_down	调整灯光色温	换个色温,切换色温,灯光换个色温,调光谱,调整光谱,切一下光谱,换个光谱
 12	color_temperature_warmer	调暖一级	色温暖一级,调暖一档,往暖色调一级
 13	color_temperature_cooler	调冷一级	色温冷一级,调冷一档,往冷色调一级
-14	color_temperature_warmer	灯光调暖一点	暖一点,再暖一点,灯光暖一点,色温暖一点
-15	color_temperature_cooler	灯光调冷一点	冷一点,再冷一点,灯光冷一点,色温冷一点
+14	color_temperature_warmer	灯光调暖一点	暖一点,再暖一点,灯光暖一点,色温暖一点,光谱暖一点,光谱调暖一点,调暖一点
+15	color_temperature_cooler	灯光调冷一点	冷一点,再冷一点,灯光冷一点,色温冷一点,光谱冷一点,光谱调冷一点,调冷一点
 16	color_temperature_cold	最冷色温	调到最冷,色温最冷,最冷的光
 17	color_temperature_warm	最暖色温	调到最暖,色温最暖,最暖的光
 18	color_temperature_normal	常规色温	调回正常色温,恢复默认色温,正常色温
@@ -33,8 +36,8 @@
 30	motor_min	设备调到最低	设备降到最低,设备高度调到最低
 31	motor_max	读写台调到最高	读写台升到最高,读写台高度最高
 32	motor_min	读写台调到最低	读写台降到最低,读写台高度最低
-33	virtual_image_farther_step	虚像远一点	虚像再远一点,画面远一点,显示远一点,把虚像调远一点
-34	virtual_image_nearer_step	虚像近一点	虚像再近一点,画面近一点,显示近一点,把虚像调近一点
+33	virtual_image_farther_step	虚像远一点	虚像再远一点,画面远一点,显示远一点,把虚像调远一点,调远,调远一点,远一点
+34	virtual_image_nearer_step	虚像近一点	虚像再近一点,画面近一点,显示近一点,把虚像调近一点,调近,调近一点,近一点
 35	virtual_image_farthest	虚像调到最远	虚像最远,画面调到最远,显示距离最远
 36	virtual_image_nearest	虚像调到最近	虚像最近,画面调到最近,显示距离最近
 37	volume_up_5	请大声点	大声一点,声音大一点,音量大一点,音量加一点,提高音量

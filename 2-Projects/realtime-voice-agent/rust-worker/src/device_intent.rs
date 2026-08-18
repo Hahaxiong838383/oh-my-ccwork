@@ -159,7 +159,9 @@ pub fn normalize(text: &str) -> String {
 }
 
 /// 礼貌前后缀(合同 §4.2;长前缀优先——「可以帮我」必须先于「帮我」)。
-const POLITE_PREFIX: &[&str] = &["可以帮我", "麻烦", "帮我", "小可", "请"];
+/// 「把」为 2026-08-18 晚修订新增(服务「请把光谱调暖一点」类句式;
+/// 剥后仍须完整命中,故无子串误执行风险——「把手拿开」剥后照样 None)。
+const POLITE_PREFIX: &[&str] = &["可以帮我", "麻烦", "帮我", "小可", "请", "把"];
 const POLITE_SUFFIX: &[&str] = &["可以吗", "好吗", "一下", "吧"];
 
 /// 音量数值句式(合同 §6.6 六句式,归一后收敛为五模板)。
@@ -241,6 +243,41 @@ pub fn match_command(text: &str) -> Option<DeviceMatch> {
         }
     }
     lookup(&s)
+}
+
+/// label 反查目录(command_word 链路,PRE_INPUT_READY_COMMAND_WORD_HANDOFF §4.2):
+/// VAD 芯片命中的 semantic label → 与 ASR 命中同构的 DeviceCommand。
+/// 允许目录 = 本 Matcher 词表 label 全集 + 音量档 60-79;label 1/46 永拒
+/// (词表数据层本就拒载,这里显式再拦=芯片侧异常 label 的防线)。
+pub fn command_by_label(label: u32) -> Option<DeviceCommand> {
+    if label == 1 || label == 46 {
+        return None;
+    }
+    if (60..=79).contains(&label) {
+        let n = 5 + (label - 60) * 5;
+        let action: &'static str = Box::leak(format!("volume_{n}").into_boxed_str());
+        return Some(DeviceCommand {
+            semantic_label: label,
+            action,
+            canonical_phrase: "音量绝对值",
+            match_type: "command_word",
+            normalized_text: format!("vad_label_{label}"),
+        });
+    }
+    // 词表反查:同 label 多行取 canonical 首见(表内 label 唯一,见 TSV)
+    let t = table();
+    for (label_t, action, canonical) in t.map.values() {
+        if *label_t == label {
+            return Some(DeviceCommand {
+                semantic_label: label,
+                action,
+                canonical_phrase: canonical,
+                match_type: "command_word",
+                normalized_text: format!("vad_label_{label}"),
+            });
+        }
+    }
+    None
 }
 
 /// ASR boost 追加词(env P003_DEVICE_ASR_HOTWORDS,逗号分隔;stt_volc 合并进火山热词表)。
@@ -443,17 +480,54 @@ mod tests {
         none("我觉得声音好像有点小");
         none("退出后告诉我怎么重新进入");
         none("退出后告诉我怎么开灯");
-        // 裸方向词(与亮度/音量/高度歧义,合同 §6.3/6.4 明令禁止)
+        // 裸方向词:高/低 仍禁(与亮度/音量/设备高度三方歧义,合同 §6.3);
+        // 远/近 已由 2026-08-18 晚合同修订启用(§6.4 禁令被覆盖:远近唯一归属虚像)——
+        // 见下方 revised_bare_direction_words 正例测试
         none("高一点");
         none("低一点");
         none("再高点");
-        none("远一点");
-        none("近一点");
         // 语气词/短声
         none("嗯");
         none("啊");
         none("我喜欢画画");
         none("晚上可以读书吗");
+    }
+
+    /// 合同修订(2026-08-18 晚 §4.5):光谱系 + 裸远近方向词。
+    /// 「远一点/近一点」原为 §6.4 负例,真机口语实证后反转为正例(修订留痕)。
+    #[test]
+    fn revised_spectrum_and_bare_direction_words() {
+        for (text, label) in [
+            ("调光谱", 11), ("调整光谱", 11), ("切一下光谱", 11), ("换个光谱", 11),
+            ("光谱暖一点", 14), ("调暖一点", 14),
+            ("光谱冷一点", 15), ("调冷一点", 15),
+            ("调远", 33), ("调远一点", 33), ("远一点", 33),
+            ("调近", 34), ("调近一点", 34), ("近一点", 34),
+            ("帮我调远一点", 33), ("请把光谱调暖一点", 14), // 礼貌剥离仍适用
+        ] {
+            assert_eq!(cmd(text).semantic_label, label, "「{text}」");
+        }
+        // 修订附带负例(§4.5 匹配纪律 2/4):问句与带尾巴的句子零执行
+        none("光谱为什么不一样");
+        none("为什么看起来很远");
+        none("调远之后告诉我为什么");
+    }
+
+    /// command_word 链路:label 反查目录(§4.2)。
+    #[test]
+    fn command_by_label_catalog() {
+        let c = command_by_label(42).expect("42 在目录");
+        assert_eq!(c.action, "volume_100");
+        assert_eq!(c.match_type, "command_word");
+        assert_eq!(command_by_label(27).unwrap().action, "motor_up_step");
+        assert_eq!(command_by_label(2).unwrap().canonical_phrase, "打开灯光");
+        // 音量档 60-79
+        assert_eq!(command_by_label(60).unwrap().action, "volume_5");
+        assert_eq!(command_by_label(79).unwrap().action, "volume_100");
+        // 合同排除与未知
+        assert!(command_by_label(1).is_none(), "label 1 唤醒词永拒");
+        assert!(command_by_label(46).is_none(), "label 46 关闭语音永拒");
+        assert!(command_by_label(999).is_none(), "目录外 label 拒");
     }
 
     /// 合同 §6.6:范围外数值 → 固定提示,零命令零执行。

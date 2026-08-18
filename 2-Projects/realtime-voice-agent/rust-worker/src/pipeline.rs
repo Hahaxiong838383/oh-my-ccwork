@@ -175,6 +175,35 @@ struct PendingCmd {
 /// Android 自身有 timeout status,这里兜的是 Android 整个没回的情况)
 const DEVICE_RESULT_DEADLINE: Duration = Duration::from_secs(8);
 
+/// first-wins 去重窗(PRE_INPUT_READY_COMMAND_WORD §4.3):同一句可能被 VAD 芯片
+/// (command_word)和稍晚的云端 ASR 双捕获——同 label 3s 窗内只允许一次写操作,
+/// 双向对称(hint 先→ASR 记 duplicate;ASR 先→hint 记 duplicate)。纯逻辑可测。
+pub(crate) struct FirstWins {
+    recent: Vec<(u32, Instant)>,
+    window: Duration,
+}
+
+impl FirstWins {
+    fn new() -> Self {
+        Self { recent: Vec::new(), window: Duration::from_secs(3) }
+    }
+
+    #[cfg(test)]
+    fn with_window(window: Duration) -> Self {
+        Self { recent: Vec::new(), window }
+    }
+
+    /// 尝试占坑:该 label 在窗内已有 proposal → false(duplicate);否则记录并放行。
+    fn try_claim(&mut self, label: u32, now: Instant) -> bool {
+        self.recent.retain(|(_, t)| now.duration_since(*t) < self.window);
+        if self.recent.iter().any(|(l, _)| *l == label) {
+            return false;
+        }
+        self.recent.push((label, now));
+        true
+    }
+}
+
 enum TurnKind {
     Say(String),
     Reply {
@@ -223,6 +252,8 @@ struct Orchestrator {
     device_commands_on: bool,
     /// S2-B2 命令轮单槽:同时最多一个 pending 命令(新命令覆盖旧槽,迟到 result 按 key 忽略)
     pending_cmd: Option<PendingCmd>,
+    /// first-wins 去重(command_word ↔ ASR 双捕获,3s 窗)
+    cmd_dedup: FirstWins,
     /// S2-B2:会话级 trace(input_ready 同源,命令事件绑它;None=不发命令)
     device_trace: Option<String>,
     cfg: PipelineConfig,
@@ -438,6 +469,7 @@ pub async fn run_pipeline(
         fatal_tx,
         device_commands_on,
         pending_cmd: None,
+        cmd_dedup: FirstWins::new(),
         device_trace: ready.trace_id.clone(),
         turn_gate: TurnGate::new(
             cfg.min_endpointing_delay,
@@ -1048,6 +1080,45 @@ impl Orchestrator {
     ) {
         match kind {
             control::Inbound::CanarySay => self.on_canary_say(ev, identity),
+            // command_word(2026-08-18 晚合同):VAD 芯片 label 经 Android 转发,
+            // 补早说空窗——事件可先于 input_ready 到达(control 通道在 job 层缓冲,
+            // pipeline 起后消费,天然满足)。决策日志四态:accepted/duplicate/rejected。
+            // (expired=会话已关,包无处投递,由 job 生命周期结构保证)
+            control::Inbound::CommandWord { label, before_ready } => {
+                let decision;
+                let mut reason = "";
+                if !self.device_commands_on {
+                    decision = "rejected";
+                    reason = "commands_disabled_or_not_canary";
+                } else if let Some(cmd) = crate::device_intent::command_by_label(label) {
+                    if self.cmd_dedup.try_claim(label, Instant::now()) {
+                        decision = "accepted";
+                        if self.agent_turn.is_some() {
+                            self.hard_abort_current();
+                        }
+                        if let Some(sp) = self.spec.take() {
+                            sp.task.abort();
+                        }
+                        self.start_device_command(cmd, &format!("[vad_label_{label}]"));
+                    } else {
+                        decision = "duplicate";
+                        reason = "same_label_in_window";
+                    }
+                } else {
+                    decision = "rejected";
+                    reason = "label_not_in_catalog";
+                }
+                info!(
+                    room = %self.room_name,
+                    trace_id = %ev.trace_id,
+                    semantic_label = label,
+                    before_ready,
+                    decision,
+                    reason,
+                    proposal_emitted = (decision == "accepted"),
+                    "command_word 决策"
+                );
+            }
             control::Inbound::Bypass => {
                 // 芯片唤醒/VAD/命令词:只记录,**绝不改变 worker 的 turn 判定**。
                 // worker 持有完整音频流,判停与打断以它为权威(合同 §5.3)。
@@ -1384,6 +1455,21 @@ impl Orchestrator {
             if self.device_commands_on {
                 match crate::device_intent::match_command(&user_text) {
                     Some(crate::device_intent::DeviceMatch::Command(cmd)) => {
+                        // first-wins 对称去重:同 label 3s 窗内已有 command_word proposal
+                        // → 本 ASR 命中吞句不重发(决策日志同构),仍不进 LLM
+                        if !self.cmd_dedup.try_claim(cmd.semantic_label, Instant::now()) {
+                            info!(
+                                room = %self.room_name,
+                                semantic_label = cmd.semantic_label,
+                                decision = "duplicate",
+                                reason = "command_word_already_proposed",
+                                proposal_emitted = false,
+                                "asr 命中与 command_word 撞窗,吞句"
+                            );
+                            self.latest_interim.clear();
+                            self.tele_text.clear();
+                            return;
+                        }
                         if self.agent_turn.is_some() {
                             self.hard_abort_current();
                         }
@@ -1826,6 +1912,18 @@ mod tests {
 #[cfg(test)]
 mod device_turn_tests {
     use super::*;
+
+    /// first-wins 双向去重(PRE_INPUT_READY §4.3/§6 矩阵 2/3):
+    /// 同 label 3s 窗内第二次 claim 必拒;窗外/异 label 放行。
+    #[test]
+    fn first_wins_window() {
+        let mut fw = FirstWins::with_window(Duration::from_millis(100));
+        let t0 = Instant::now();
+        assert!(fw.try_claim(42, t0), "首次 claim 放行(hint 或 ASR 谁先都一样)");
+        assert!(!fw.try_claim(42, t0 + Duration::from_millis(50)), "窗内同 label 必拒");
+        assert!(fw.try_claim(43, t0 + Duration::from_millis(50)), "异 label 不受影响");
+        assert!(fw.try_claim(42, t0 + Duration::from_millis(150)), "窗外重新放行");
+    }
 
     /// 合同 §4.5 固定回复表全分支(含守恒默认:未知状态按失败,不冒充成功)。
     #[test]
