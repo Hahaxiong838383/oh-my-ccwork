@@ -513,6 +513,22 @@ mod tests {
         none("调远之后告诉我为什么");
     }
 
+    /// ASR 误转别名(2026-08-18 深夜):seedasr 双向流式端点热词预算 100 tokens 且
+    /// boost 随词数稀释,声母级误转救不动 → Matcher 层兜实证误转形态。
+    /// 完整命中制是误吸防线:含误转词的自然长句必须零执行。
+    #[test]
+    fn asr_mistranscription_aliases() {
+        for (text, label) in [
+            ("跳光谱", 11), ("掉光谱", 11), // journal 实证「调光谱」误转
+            ("掉进", 34), ("调进", 34),     // journal 实证「调近」误转
+        ] {
+            assert_eq!(cmd(text).semantic_label, label, "「{text}」");
+        }
+        none("东西掉进去了"); // 自然语境句不完整命中,零执行
+        none("掉进坑里了");
+        none("掉"); // 单字误转绝不入表
+    }
+
     /// command_word 链路:label 反查目录(§4.2)。
     #[test]
     fn command_by_label_catalog() {
