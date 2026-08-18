@@ -53,14 +53,25 @@ impl SttConfig {
                 .unwrap_or(800),
             enable_ddc: std::env::var("VOLC_ASR_ENABLE_DDC").map(|v| v == "1").unwrap_or(true),
             canon: std::env::var("VOLC_PREFLIGHT_ENABLED").map(|v| v == "1").unwrap_or(true),
-            hotwords: std::env::var("VOLC_ASR_HOTWORDS")
-                .map(|v| {
-                    v.split(',')
-                        .map(|w| w.trim().to_string())
-                        .filter(|w| !w.is_empty())
-                        .collect()
-                })
-                .unwrap_or_default(),
+            hotwords: {
+                // 会话热词 + S2-B2 设备词(P003_DEVICE_ASR_HOTWORDS)合并去重——
+                // 火山只有一张热词表;管理面两个 env 键分开存(运营台各自编辑),此处汇流。
+                // 铁律:boost 只提高识别概率,与执行判定(device_intent 确定性匹配)无关。
+                let mut ws: Vec<String> = std::env::var("VOLC_ASR_HOTWORDS")
+                    .map(|v| {
+                        v.split(',')
+                            .map(|w| w.trim().to_string())
+                            .filter(|w| !w.is_empty())
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                for w in crate::device_intent::device_asr_hotwords() {
+                    if !ws.contains(&w) {
+                        ws.push(w);
+                    }
+                }
+                ws
+            },
         }
     }
 }

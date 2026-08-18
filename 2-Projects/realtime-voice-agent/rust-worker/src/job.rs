@@ -125,6 +125,9 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     let (ctrl_tx, ctrl_rx) =
         mpsc::channel::<(control::Envelope, control::Inbound, Option<String>)>(64);
     let mut ctrl_rx = Some(ctrl_rx);
+    // S2-B2 设备命令结果通道(android → worker,独立 topic 独立管道)
+    let (devres_tx, devres_rx) = mpsc::channel::<control::DeviceResult>(16);
+    let mut devres_rx = Some(devres_rx);
     // pipeline 主循环心跳(watchdog):0=未启动;主循环每 50ms tick 写 epoch ms。
     // 卡死实证(2026-08-16 voice-test-rust):主循环等 llm 锁僵死,job 层事件循环仍活
     // ——所以看门狗放这里,5s 无心跳即 break 走统一收尾(abort+关房删房),用户重连即新房。
@@ -175,6 +178,21 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                     let identity = participant.as_ref().map(|p| p.identity().to_string());
                     if ctrl_tx.try_send((ev, kind, identity)).is_err() {
                         warn!(room = %room_name, "control 队列满,丢弃一个控制包");
+                    }
+                } else if topic.as_deref() == Some(control::DEVICE_RESULT_TOPIC) {
+                    // S2-B2:result 只认 android 参与者实体(payload src 自述在 parse 里二验)
+                    let from_agent = participant
+                        .as_ref()
+                        .map(|p| p.identity().as_str().starts_with("agent-"))
+                        .unwrap_or(true);
+                    if !from_agent
+                        && let Some(r) = control::parse_device_result(&payload)
+                    {
+                        if devres_tx.try_send(r).is_err() {
+                            warn!(room = %room_name, "device result 队列满,丢弃");
+                        }
+                    } else {
+                        tracing::debug!(room = %room_name, "丢弃非法 device result 包");
                     }
                 } else {
                     tracing::debug!(room = %room_name, ?topic, "丢弃无法解析的 data packet");
@@ -270,6 +288,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 user_track_sid,
             };
             let crx = ctrl_rx.take().expect("pipeline 只启动一次");
+            let drx = devres_rx.take().expect("pipeline 只启动一次");
             let beat2 = beat.clone();
             let ready = pipeline::ReadyCtx {
                 trace_id: meta.trace_id.clone(),
@@ -281,7 +300,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             };
             pipeline_task = Some(tokio::spawn(async move {
                 if let Err(e) =
-                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, beat2, ready).await
+                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, beat2, ready)
+                        .await
                 {
                     tracing::warn!(room = %rn, error = %e, "pipeline exited with error");
                 }

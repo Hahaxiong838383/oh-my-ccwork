@@ -159,6 +159,22 @@ enum TurnEvent {
     PlayedOut(u64),
 }
 
+/// S2-B2 命令轮槽(合同 §4.3/4.4):发布 proposed 后等 result,终态播固定短句。
+/// 单槽语义:新命令覆盖旧槽,旧 result 迟到按 idempotency_key 不匹配丢弃。
+struct PendingCmd {
+    idempotency_key: String,
+    action: &'static str,
+    /// 相对调节动作(成功句「好，调了一点」;其余「好的，已经调好了」)
+    relative: bool,
+    sent_at: Instant,
+    /// accepted 已播「好的，正在调整」(只播一次,终态还会再播终句)
+    accepted_acked: bool,
+}
+
+/// Worker 等 result 的兜底超时(合同缺口,守恒默认 8s——交接文档待 codex 确认;
+/// Android 自身有 timeout status,这里兜的是 Android 整个没回的情况)
+const DEVICE_RESULT_DEADLINE: Duration = Duration::from_secs(8);
+
 enum TurnKind {
     Say(String),
     Reply {
@@ -203,6 +219,12 @@ struct Orchestrator {
     output_gate: crate::gate::OutputGate,
     /// 门超时 → 主循环 fail-closed 的传导通道
     fatal_tx: mpsc::Sender<String>,
+    /// S2-B2:本房是否开设备命令(启动时按 room+env 定一次)
+    device_commands_on: bool,
+    /// S2-B2 命令轮单槽:同时最多一个 pending 命令(新命令覆盖旧槽,迟到 result 按 key 忽略)
+    pending_cmd: Option<PendingCmd>,
+    /// S2-B2:会话级 trace(input_ready 同源,命令事件绑它;None=不发命令)
+    device_trace: Option<String>,
     cfg: PipelineConfig,
     tts_cfg: TtsCfg,
     llm: Arc<Mutex<Llm>>,
@@ -257,6 +279,43 @@ fn now_unix_ms() -> i64 {
         .unwrap_or(0)
 }
 
+fn unix_ms_now() -> i64 {
+    now_unix_ms()
+}
+
+/// 合同 §8:normalized_text_hash(sha256 前 16 hex,日志对撞用非隐私承诺)。
+fn short_hash(s: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut h = Sha256::new();
+    h.update(s.as_bytes());
+    h.finalize().iter().take(8).map(|b| format!("{b:02x}")).collect()
+}
+
+/// S2-B2 固定短回复表(合同 §4.5;不走 LLM)。
+/// 边界句约定(合同缺口,守恒默认——交接文档待 codex 确认):reason 含 "boundary" 时
+/// 按 action 方向播边界句;其余 rejected 统一「现在暂时不能这样调」。
+fn device_reply(status: &str, relative: bool, reason: &str, action: &str) -> String {
+    match status {
+        "succeeded" => {
+            if relative { "好，调了一点".to_string() } else { "好的，已经调好了".to_string() }
+        }
+        "already_applied" => "现在已经是这个状态了".to_string(),
+        "rejected" => {
+            if reason.contains("boundary") {
+                if action.contains("up") || action.contains("max") || action.contains("farther") {
+                    "已经到最高了".to_string()
+                } else {
+                    "已经到最低了".to_string()
+                }
+            } else {
+                "现在暂时不能这样调".to_string()
+            }
+        }
+        // failed/timeout/未知状态统一失败句(守恒:未知不冒充成功)
+        _ => "刚刚没有调成功，再试一次吧".to_string(),
+    }
+}
+
 /// job 层传入的就绪上下文(input_ready 合同 2026-08-18):trace 绑定 + 输出门信号 + 打点基准。
 pub struct ReadyCtx {
     /// Room 会话级 activeTraceId(token metadata 受信通道);None=老 token/调试房,ready 不发
@@ -279,6 +338,7 @@ pub async fn run_pipeline(
     room_name: String,
     route: transcript_pub::Route,
     mut ctrl_rx: mpsc::Receiver<(control::Envelope, control::Inbound, Option<String>)>,
+    mut devres_rx: mpsc::Receiver<control::DeviceResult>,
     beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ready: ReadyCtx,
 ) -> Result<()> {
@@ -369,9 +429,16 @@ pub async fn run_pipeline(
     // → job 收尾(关房删房),设备走既有重连路径。容量 1:一次 fatal 就收摊。
     let (fatal_tx, mut fatal_rx) = mpsc::channel::<String>(1);
 
+    let device_commands_on = crate::device_intent::commands_enabled_for(&room_name);
+    if device_commands_on {
+        info!(room = %room_name, "S2-B2 设备命令已启用(canary 命中)");
+    }
     let mut orch = Orchestrator {
         output_gate: crate::gate::OutputGate::new(ready.out_rx.clone()),
         fatal_tx,
+        device_commands_on,
+        pending_cmd: None,
+        device_trace: ready.trace_id.clone(),
         turn_gate: TurnGate::new(
             cfg.min_endpointing_delay,
             cfg.max_endpointing_delay,
@@ -565,7 +632,15 @@ pub async fn run_pipeline(
                     in_amp_acc = 0;
                     in_report = Instant::now();
                 }
+                orch.poll_device_timeout(Instant::now());
                 orch.on_tick().await;
+            }
+            // S2-B2:Android 设备命令执行结果(独立 topic 独立管道)
+            r = devres_rx.recv() => {
+                if let Some(r) = r {
+                    orch.on_device_result(r);
+                }
+                // channel 关闭不退主循环——命令通道是可选能力
             }
         }
     }
@@ -850,7 +925,119 @@ impl Orchestrator {
         }
     }
 
-    /// 硬打断:杀任务+清播放队列+历史截断为真实播出部分(暂存,下轮 LLM 请求前落账)。
+    // ── S2-B2 设备命令轮(合同 §4.3–4.5) ──
+
+    /// 发布 device.command.proposed 并进入等待槽。合同要求:早于任何 filler/LLM/TTS。
+    fn start_device_command(&mut self, cmd: crate::device_intent::DeviceCommand, user_text: &str) {
+        let Some(trace) = self.device_trace.clone() else {
+            // 无受信 trace(老 token/调试房)不发命令——与 input_ready 同纪律,fail-visible
+            warn!(room = %self.room_name, "device command skipped: 无 trace,落回闲聊");
+            return;
+        };
+        let turn_id = self.next_turn_id + 1;
+        let key = format!("voice:{}:{}:{}", self.room_name, turn_id, cmd.semantic_label);
+        let relative = matches!(
+            cmd.action,
+            "brightness_up" | "brightness_down" | "color_temperature_warmer"
+                | "color_temperature_cooler" | "color_temperature_cycle_down"
+                | "motor_up_step" | "motor_down_step" | "virtual_image_farther_step"
+                | "virtual_image_nearer_step" | "volume_up_5" | "volume_down_5_min_5"
+        );
+        let v = control::device_command_proposed(
+            &trace,
+            unix_ms_now(),
+            &key,
+            cmd.semantic_label,
+            cmd.action,
+            cmd.canonical_phrase,
+            &cmd.normalized_text,
+            cmd.match_type,
+        );
+        self.publish_json(control::DEVICE_CMD_TOPIC, v);
+        // 合同 §8 结构化打点(llm_started/filler_started 恒 false 是命令轮硬约束的自证)
+        info!(
+            room = %self.room_name,
+            trace_id = %trace,
+            turn_id,
+            asr_final_text_length = user_text.chars().count(),
+            normalized_text_hash = %short_hash(&cmd.normalized_text),
+            device_match = true,
+            semantic_label = cmd.semantic_label,
+            action = %cmd.action,
+            match_type = %cmd.match_type,
+            command_publish_ts_ms = unix_ms_now(),
+            llm_started = false,
+            filler_started = false,
+            "device command proposed: '{user_text}'"
+        );
+        if let Some(s) = &mut self.snap {
+            s.event("device_command", &[("text", user_text), ("action", cmd.action)]);
+        }
+        self.pending_cmd = Some(PendingCmd {
+            idempotency_key: key,
+            action: cmd.action,
+            relative,
+            sent_at: Instant::now(),
+            accepted_acked: false,
+        });
+        self.set_state(AgentState::Thinking);
+    }
+
+    /// Android result 到达:key 对撞 → 终态播固定短句清槽;accepted 播「正在调整」延时限。
+    fn on_device_result(&mut self, r: control::DeviceResult) {
+        let Some(p) = &mut self.pending_cmd else {
+            info!(room = %self.room_name, key = %r.idempotency_key, status = %r.status, "迟到/无主 device result,忽略");
+            return;
+        };
+        if p.idempotency_key != r.idempotency_key {
+            info!(room = %self.room_name, key = %r.idempotency_key, "result key 与在途命令不符(旧轮迟到),忽略");
+            return;
+        }
+        info!(
+            room = %self.room_name,
+            semantic_label = r.semantic_label,
+            status = %r.status,
+            reason = %r.reason,
+            result_received_ts_ms = unix_ms_now(),
+            "device command result"
+        );
+        if r.status == "accepted" {
+            // 已提交未回读(电机类):播一次「正在调整」,重置计时窗等终态
+            let first = !p.accepted_acked;
+            p.accepted_acked = true;
+            p.sent_at = Instant::now();
+            if first {
+                self.start_turn(TurnKind::Say("好的，正在调整".to_string()));
+            }
+            return;
+        }
+        let relative = p.relative;
+        let action = p.action;
+        let reply = device_reply(&r.status, relative, &r.reason, action);
+        self.pending_cmd = None;
+        self.start_turn(TurnKind::Say(reply));
+    }
+
+    /// 兜底超时(Android 整个没回;它自身的 timeout status 是另一层)。
+    fn poll_device_timeout(&mut self, _now: Instant) {
+        let Some(p) = &self.pending_cmd else { return };
+        let limit = if p.accepted_acked {
+            DEVICE_RESULT_DEADLINE * 3 // accepted 后放宽(电机行程),守恒默认 24s
+        } else {
+            DEVICE_RESULT_DEADLINE
+        };
+        if p.sent_at.elapsed() > limit {
+            warn!(
+                room = %self.room_name,
+                key = %p.idempotency_key,
+                accepted = p.accepted_acked,
+                "device result 兜底超时,播失败句"
+            );
+            self.pending_cmd = None;
+            self.start_turn(TurnKind::Say("刚刚没有调成功，再试一次吧".to_string()));
+        }
+    }
+
     /// 处理设备下发的控制包。cancel 走**硬 abort**(川哥 2026-08-15 拍板):
     /// 用户明确按了停,不进 pause+假打断窗口,不等 1.5s 定时器判断是不是说错话。
     async fn on_control(
@@ -992,6 +1179,7 @@ impl Orchestrator {
         self.canary_pending = None;
     }
 
+    /// 硬打断:杀任务+清播放队列+历史截断为真实播出部分(暂存,下轮 LLM 请求前落账)。
     fn hard_abort_current(&mut self) {
         let Some(turn) = self.agent_turn.take() else {
             return;
@@ -1189,6 +1377,38 @@ impl Orchestrator {
                     s.event("swallowed", &[("text", &user_text), ("kind", kind)]);
                 }
                 return;
+            }
+            // S2-B2 设备命令轮(合同处理序 EXIT→STOP→DEVICE→LLM,禁止改序):
+            // 确定性匹配命中 → 发 proposed、零 UserTurnCommitted、零 filler、零 LLM,
+            // 等 Android result 播固定短句。范围外音量 → 固定提示,零事件零执行。
+            if self.device_commands_on {
+                match crate::device_intent::match_command(&user_text) {
+                    Some(crate::device_intent::DeviceMatch::Command(cmd)) => {
+                        if self.agent_turn.is_some() {
+                            self.hard_abort_current();
+                        }
+                        if let Some(sp) = self.spec.take() {
+                            sp.task.abort();
+                        }
+                        self.start_device_command(cmd, &user_text);
+                        self.latest_interim.clear();
+                        self.tele_text.clear();
+                        return;
+                    }
+                    Some(crate::device_intent::DeviceMatch::VolumeOutOfRange) => {
+                        if self.agent_turn.is_some() {
+                            self.hard_abort_current();
+                        }
+                        info!(room = %self.room_name, "volume out of range: '{user_text}' → 固定提示");
+                        self.start_turn(TurnKind::Say(
+                            crate::device_intent::VOLUME_RANGE_HINT.to_string(),
+                        ));
+                        self.latest_interim.clear();
+                        self.tele_text.clear();
+                        return;
+                    }
+                    None => {}
+                }
             }
             // 有在途回答(播放中/已 pause/生成中)→ 提交即接管:硬打断再开新轮
             if self.agent_turn.is_some() {
@@ -1600,5 +1820,24 @@ mod tests {
     fn truncate_spoken_empty_progress_is_empty() {
         assert_eq!(truncate_spoken("文本", &[], 1000), "");
         assert_eq!(truncate_spoken("", &[(1, 100)], 1000), "");
+    }
+}
+
+#[cfg(test)]
+mod device_turn_tests {
+    use super::*;
+
+    /// 合同 §4.5 固定回复表全分支(含守恒默认:未知状态按失败,不冒充成功)。
+    #[test]
+    fn device_reply_table() {
+        assert_eq!(device_reply("succeeded", false, "state_confirmed", "led_on"), "好的，已经调好了");
+        assert_eq!(device_reply("succeeded", true, "state_confirmed", "brightness_up"), "好，调了一点");
+        assert_eq!(device_reply("already_applied", false, "", "led_on"), "现在已经是这个状态了");
+        assert_eq!(device_reply("rejected", false, "whitelist", "led_on"), "现在暂时不能这样调");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "motor_up_step"), "已经到最高了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "motor_down_step"), "已经到最低了");
+        assert_eq!(device_reply("failed", false, "", "led_on"), "刚刚没有调成功，再试一次吧");
+        assert_eq!(device_reply("timeout", false, "", "led_on"), "刚刚没有调成功，再试一次吧");
+        assert_eq!(device_reply("weird_status", false, "", "led_on"), "刚刚没有调成功，再试一次吧");
     }
 }

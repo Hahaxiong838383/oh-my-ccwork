@@ -6,6 +6,7 @@
 mod config;
 mod contract;
 mod control;
+mod device_intent;
 mod eot;
 mod eot_snapshot;
 mod filler;

@@ -23,6 +23,10 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 pub const TOPIC: &str = "control";
+/// S2-B2 设备命令出站(worker → android,合同 §4.3)
+pub const DEVICE_CMD_TOPIC: &str = "p003.device.command.v1";
+/// S2-B2 设备结果入站(android → worker,合同 §4.4)
+pub const DEVICE_RESULT_TOPIC: &str = "p003.device.command.result.v1";
 /// 幂等表上限:一个 job 内的控制包不会多到这个量级,超了说明对端在刷,截断即可。
 const SEEN_MAX: usize = 512;
 
@@ -157,6 +161,65 @@ pub fn output_ready(trace_id: &str, ts_ms: i64, room: &str) -> Value {
         "type": "session.output_ready",
         "lane": "L2",
         "payload": {"room": room, "agent_track_subscribed": true},
+    })
+}
+
+// ── S2-B2 设备命令(合同 CC_P003_S2B2_ONLINE_DEVICE_COMMANDS_HANDOFF_20260818 §4.3/§4.4) ──
+
+/// 构造 `device.command.proposed`。差异声明(交接文档同步):合同 schema 的
+/// asr_confidence 字段暂缺——当前火山 final 事件未暴露置信度,Android 校验勿依赖。
+#[allow(clippy::too_many_arguments)]
+pub fn device_command_proposed(
+    trace_id: &str,
+    ts_ms: i64,
+    idempotency_key: &str,
+    semantic_label: u32,
+    action: &str,
+    canonical_phrase: &str,
+    normalized_text: &str,
+    match_type: &str,
+) -> Value {
+    json!({
+        "version": "1.0",
+        "type": "device.command.proposed",
+        "trace_id": trace_id,
+        "ts_ms": ts_ms,
+        "src": "worker",
+        "lane": "L1",
+        "idempotency_key": idempotency_key,
+        "payload": {
+            "semantic_label": semantic_label,
+            "action": action,
+            "canonical_phrase": canonical_phrase,
+            "normalized_text": normalized_text,
+            "match_type": match_type,
+        },
+    })
+}
+
+/// device.command.result 入站解析。None=丢弃(非 android / 类型不符 / 缺关键字段)。
+/// status 合同枚举:accepted/succeeded/already_applied/rejected/failed/timeout。
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeviceResult {
+    pub trace_id: String,
+    pub idempotency_key: String,
+    pub semantic_label: u64,
+    pub status: String,
+    pub reason: String,
+}
+
+pub fn parse_device_result(raw: &[u8]) -> Option<DeviceResult> {
+    let v: Value = serde_json::from_slice(raw).ok()?;
+    if v["src"] != "android" || v["type"] != "device.command.result" {
+        return None;
+    }
+    let p = &v["payload"];
+    Some(DeviceResult {
+        trace_id: v["trace_id"].as_str()?.to_string(),
+        idempotency_key: v["idempotency_key"].as_str()?.to_string(),
+        semantic_label: p["semantic_label"].as_u64().unwrap_or(0),
+        status: p["status"].as_str()?.to_string(),
+        reason: p["reason"].as_str().unwrap_or("").to_string(),
     })
 }
 
@@ -383,6 +446,42 @@ mod tests {
         assert_eq!(v["payload"]["timings_ms"]["issue_to_assignment"], 510);
         assert_eq!(v["payload"]["timings_ms"]["job_room_connect"], 120);
         assert_eq!(v["payload"]["timings_ms"]["track_to_input_loop"], 42);
+    }
+
+    /// S2-B2 proposed 合同 JSON 逐字段锁死(§4.3)。
+    #[test]
+    fn device_command_proposed_shape() {
+        let v = device_command_proposed(
+            "trace-d", 1787040000000, "voice:sn-X-1:3:2", 2, "led_on",
+            "打开灯光", "把灯打开", "exact_alias",
+        );
+        assert_eq!(v["version"], "1.0");
+        assert_eq!(v["type"], "device.command.proposed");
+        assert_eq!(v["src"], "worker");
+        assert_eq!(v["lane"], "L1");
+        assert_eq!(v["idempotency_key"], "voice:sn-X-1:3:2");
+        assert_eq!(v["payload"]["semantic_label"], 2);
+        assert_eq!(v["payload"]["action"], "led_on");
+        assert_eq!(v["payload"]["canonical_phrase"], "打开灯光");
+        assert_eq!(v["payload"]["normalized_text"], "把灯打开");
+        assert_eq!(v["payload"]["match_type"], "exact_alias");
+    }
+
+    /// S2-B2 result 入站(§4.4):android 合法包解析;worker 自述/坏类型丢弃。
+    #[test]
+    fn device_result_parse_and_reject() {
+        let good = r#"{"version":"1.0","type":"device.command.result","trace_id":"t","ts_ms":1,
+            "src":"android","lane":"L1","idempotency_key":"voice:r:3:2",
+            "payload":{"semantic_label":2,"action":"led_on","status":"succeeded","reason":"state_confirmed","observed_state":{"led":1}}}"#;
+        let r = parse_device_result(good.as_bytes()).expect("合法包必须解析");
+        assert_eq!(r.status, "succeeded");
+        assert_eq!(r.idempotency_key, "voice:r:3:2");
+        assert_eq!(r.semantic_label, 2);
+        let spoofed = good.replace("\"src\":\"android\"", "\"src\":\"worker\"");
+        assert!(parse_device_result(spoofed.as_bytes()).is_none(), "src=worker 必须丢");
+        let wrong_type = good.replace("device.command.result", "device.command.proposed");
+        assert!(parse_device_result(wrong_type.as_bytes()).is_none(), "类型不符必须丢");
+        assert!(parse_device_result(b"not json").is_none(), "畸形包必须丢");
     }
 
     /// worker 自发的 ready 事件走同一 topic:入站 parse 必须丢弃(src=worker),不得自食。
