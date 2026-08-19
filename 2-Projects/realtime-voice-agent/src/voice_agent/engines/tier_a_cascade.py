@@ -163,6 +163,7 @@ class TierACascadeEngine(ExperienceEngine):
         self._livekit_started = False
         self._rss_task: asyncio.Task[None] | None = None
         self._idle_task: asyncio.Task[None] | None = None
+        self._media_watchdog: Any | None = None
 
     async def start(self) -> None:
         if not self._livekit_started:
@@ -192,6 +193,12 @@ class TierACascadeEngine(ExperienceEngine):
         if idle_task is not None:
             idle_task.cancel()
             self._idle_task = None
+        # 媒体看门狗任务回收(同上,悬挂即拖收尾)
+        wd = getattr(self, "_media_watchdog", None)
+        if wd is not None:
+            with suppress(Exception):
+                wd.aclose()
+            self._media_watchdog = None
         # 先取消音乐播放任务——否则播放任务(流一首 4 分钟的歌)不退出,同样导致
         # "entrypoint did not exit in time" → 房间删不干净 → 用户第二次进不去
         # (2026-07-04 川哥实测:播放音乐后断开,第二次连不上)。
@@ -577,6 +584,16 @@ class TierACascadeEngine(ExperienceEngine):
         _idle_timeout = float(os.environ.get("IDLE_HANGUP_TIMEOUT_S", "0") or 0)
         if _idle_timeout > 0:
             self._idle_task = _register_idle_hangup(session, ctx, _idle_timeout)
+
+        # 上行媒体看门狗(2026-08-19 端侧常连房间僵尸房):SFU 报设备 LOST 持续即删房,
+        # 把「信令活着媒体死了」的僵尸态压缩成标准 disconnected(端侧复用前查
+        # room.state 从此可信);帧遥测区分传输死/采集死。与空闲关房正交:idle 管
+        # 「活连接挂太久」,本件管「连接名存实亡」。必须在 session.start 后挂
+        # (input.audio 才组装好,fade 同款时序)。MEDIA_WATCHDOG=0 关。
+        if os.environ.get("MEDIA_WATCHDOG", "1") == "1":
+            from .media_watchdog import register_media_watchdog
+
+            self._media_watchdog = register_media_watchdog(session, ctx)
 
         # 假打断恢复渐起(POC 2026-07-29):resume 后音量 0→1 爬坡,消"声音突然冒回来"
         # 的断差感(0 字门两阶段打断的配套件)。⚠️ 必须在 session.start 之后挂——
