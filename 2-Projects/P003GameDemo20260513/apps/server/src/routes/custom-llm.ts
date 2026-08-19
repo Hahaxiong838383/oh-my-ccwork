@@ -196,10 +196,13 @@ customLlmRoute.post('/chat/completions', async (c) => {
         }
       } catch { /* 审计落库失败不阻断 */ }
       if (!finalAssistant || process.env.MEMORY_EXTRACT_ENABLED === '0') return;
-      // 节流:每 3 个 user 轮抽一次(无状态端点按消息数取模;末尾 ≤2 轮漏抽窗口是已知局限,docs/43 §8 G2)。
       const full = [...history, { role: 'user' as const, content: userText }, { role: 'assistant' as const, content: finalAssistant }];
       const userTurns = full.filter((t) => t.role === 'user').length;
-      if (userTurns % 3 === 0) {
+      // 抽取节流分场景（2026-08-19）：设备房(role=device)每轮都抽——唤醒式交互以 1-2 轮短会话为主,
+      // %3 取模下几乎永不触发(当日实证建档后三场会话全漏);UNIQUE(account,type,content) 去重兜滑窗重叠,幂等。
+      // web RTC(/m 手机端)保持每 3 轮(长会话为主,省调用;末尾 ≤2 轮漏抽窗口是已知局限,docs/43 §8 G2)。
+      const everyTurns = authContext.role === 'device' ? 1 : 3;
+      if (userTurns % everyTurns === 0) {
         void extractAndPersist(authContext.accountId, full.slice(-6), 'rtc');
       }
     };

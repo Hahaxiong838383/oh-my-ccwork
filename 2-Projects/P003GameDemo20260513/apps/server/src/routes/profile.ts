@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { profileStore } from '../profile-store.js';
 import { verifyAuthToken } from '../auth-jwt.js';
+import { deviceRegistryStore } from '../device-registry-store.js';
+import { validateDeviceSn } from '../device-sn.js';
 
 // 家长端建档 + 配网绑定 API。鉴权用邀请码登录 JWT（与 WS 鉴权同 verifyAuthToken），按 accountId 隔离。
 const profileRoute = new Hono<{ Variables: { accountId: string } }>();
@@ -71,6 +73,51 @@ profileRoute.post('/device', async (c) => {
 profileRoute.get('/device', (c) => {
   const device = profileStore.getDevice(c.get('accountId'));
   return c.json({ ok: true, device });
+});
+
+// ── 硬件设备（SN）绑定：家长账号 ↔ device_registry 关联（建档下发链，2026-08-19 预留）──
+// 「设备 SN 就是邀请码」：家长在小程序输入/扫码 SN → 关联到自己账号 → 设备 brain 建档时
+// 从家长档同步孩子信息。与 admin 手工绑定（/api/admin/devices/:sn/parent）写同一列。
+
+const BindSnSchema = z.object({ sn: z.string().trim().min(1).max(30) });
+
+profileRoute.post('/bind-sn', async (c) => {
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'bad_request' }, 400);
+  }
+  const parsed = BindSnSchema.safeParse(body);
+  if (!parsed.success) return c.json({ ok: false, error: 'bad_request' }, 400);
+  const sn = parsed.data.sn.toUpperCase();
+  if (!validateDeviceSn(sn).ok) return c.json({ ok: false, error: 'invalid_sn', message: 'SN 格式不正确' }, 400);
+  const device = deviceRegistryStore.get(sn);
+  if (!device || device.status !== 'active') {
+    // 不在台账/已停用统一一种口径（不区分暴露台账内容）
+    return c.json({ ok: false, error: 'sn_not_available', message: '设备不存在或未激活' }, 404);
+  }
+  const accountId = c.get('accountId');
+  if (device.parent_account_id && device.parent_account_id !== accountId) {
+    return c.json({ ok: false, error: 'sn_taken', message: '该设备已被其他账号绑定' }, 409);
+  }
+  deviceRegistryStore.setParentAccountId(sn, accountId);
+  // 建档下发：设备已开通 brain 且设备账号无档 → 从家长档同步（幂等；设备已有档不覆盖）。
+  let syncedProfile = false;
+  if (device.account_id && !profileStore.getProfile(device.account_id)) {
+    syncedProfile = Boolean(profileStore.copyProfile(accountId, device.account_id));
+  }
+  console.log(`[profile] bind-sn account=${accountId} sn=${sn} synced_profile=${syncedProfile}`);
+  return c.json({ ok: true, sn, synced_profile: syncedProfile });
+});
+
+// 当前家长账号绑定的硬件设备列表（小程序「我的设备」）
+profileRoute.get('/bound-devices', (c) => {
+  const rows = deviceRegistryStore.listByParentAccountId(c.get('accountId'));
+  return c.json({
+    ok: true,
+    devices: rows.map((d) => ({ sn: d.sn, note: d.note, status: d.status, brain_opened: Boolean(d.account_id) })),
+  });
 });
 
 export { profileRoute };

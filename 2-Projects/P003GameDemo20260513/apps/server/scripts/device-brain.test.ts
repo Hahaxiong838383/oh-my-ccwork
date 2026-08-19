@@ -8,7 +8,7 @@ import { rmSync } from 'node:fs';
 import { Hono } from 'hono';
 
 const TMP = '/private/tmp/claude-501/-Users-rayman-chen-mycc/410a354a-ee50-4c8b-9b06-02a639743e97/scratchpad';
-for (const f of ['brain-devices.db', 'brain-accounts.db', 'brain-profile.db']) {
+for (const f of ['brain-devices.db', 'brain-accounts.db', 'brain-profile.db', 'brain-conversation.db']) {
   for (const suffix of ['', '-wal', '-shm']) {
     try {
       rmSync(`${TMP}/${f}${suffix}`);
@@ -21,6 +21,7 @@ for (const f of ['brain-devices.db', 'brain-accounts.db', 'brain-profile.db']) {
 process.env.DEVICES_DB_PATH = `${TMP}/brain-devices.db`;
 process.env.ACCOUNTS_DB_PATH = `${TMP}/brain-accounts.db`;
 process.env.PROFILE_DB_PATH = `${TMP}/brain-profile.db`;
+process.env.CONVERSATION_DB_PATH = `${TMP}/brain-conversation.db`;
 process.env.AUTH_JWT_SECRET = 'test-auth-secret';
 process.env.STUDIO_USER = 'test-admin';
 process.env.STUDIO_PASS = 'test-pass';
@@ -31,12 +32,14 @@ const { profileStore } = await import('../src/profile-store.js');
 const { verifyAuthToken } = await import('../src/auth-jwt.js');
 const { adminDataRoute } = await import('../src/routes/admin-data.js');
 const { authRoute } = await import('../src/routes/auth.js');
+const { profileRoute } = await import('../src/routes/profile.js');
 
 const SN = 'BJP00326060100200011';
 
 const app = new Hono();
 app.route('/api/auth', authRoute);
 app.route('/api/admin', adminDataRoute);
+app.route('/api/profile', profileRoute); // J 组（bind-sn 预留接口）用；Hono matcher 构建后不可再挂，须在首个请求前
 
 async function adminReq(token: string, method: string, path: string, body?: unknown): Promise<Response> {
   return app.request(`/api/admin${path}`, {
@@ -263,6 +266,129 @@ await t('I3 非设备房 room / 无 room → 原 token 身份（Web 零影响）
 
 await t('I4 token 无效 → room 冒充无效（防公网伪造）', async () => {
   assert.equal(resolveDeviceIdentity(null, `sn-${SN}-1786980004`), null);
+});
+
+// ── J 组：自动建档 + 孩子档案编辑 + 家长关联（建档下发链）+ 小程序 bind-sn 预留（2026-08-19）──
+const { SignJWT } = await import('jose');
+const { accountStore } = await import('../src/account-store.js');
+
+async function parentJwt(acctId: string): Promise<string> {
+  return new SignJWT({ accountId: acctId, role: 'parent' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setIssuer('p003')
+    .setAudience('kidshub')
+    .setExpirationTime('1h')
+    .sign(new TextEncoder().encode(process.env.AUTH_JWT_SECRET));
+}
+async function parentReq(jwt: string, method: string, path: string, body?: unknown): Promise<Response> {
+  return app.request(`/api/profile${path}`, {
+    method,
+    headers: { authorization: `Bearer ${jwt}`, 'content-type': 'application/json' },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+}
+
+await t('J1 开通即自动建档（空档兜底）——记忆抽取的「没建档不抽」门解除', async () => {
+  const SNJ = 'BJP00326060100200023';
+  deviceRegistryStore.add(SNJ, 'J1 建档机');
+  const res = await adminReq(adminToken, 'POST', `/devices/${SNJ}/brain`, {});
+  assert.equal(res.status, 200);
+  const profile = profileStore.getProfile(`device-${SNJ}`);
+  assert.ok(profile, '开通后应有档案行（空档也算档）');
+  assert.equal(profile!.nickname, '');
+});
+
+await t('J2 child-profile 编辑：PATCH 部分更新 + 校验 + GET 聚合可见', async () => {
+  const SNJ = 'BJP00326060100200023';
+  const bad = await adminReq(adminToken, 'PATCH', `/devices/${SNJ}/child-profile`, { birthday: '2019/06' });
+  assert.equal(bad.status, 400, '错误生日格式应 400');
+  const res = await adminReq(adminToken, 'PATCH', `/devices/${SNJ}/child-profile`, { nickname: '朵朵', gender: '男', birthday: '2013-05' });
+  assert.equal(res.status, 200);
+  const agg = (await (await adminReq(adminToken, 'GET', `/devices/${SNJ}/brain`)).json()) as {
+    profile: { nickname: string; gender: string } | null;
+    parent_account_id: string | null;
+    recent_conversation: unknown[];
+  };
+  assert.equal(agg.profile?.nickname, '朵朵');
+  assert.equal(agg.profile?.gender, '男');
+  assert.ok(Array.isArray(agg.recent_conversation), '聚合应带 recent_conversation 数组');
+  assert.equal(agg.parent_account_id, null);
+});
+
+await t('J3 admin 绑家长 + 建档下发（存量无档设备场景）', async () => {
+  const SNJ = 'BJP00326060100200027';
+  deviceRegistryStore.add(SNJ, 'J3 存量机');
+  await adminReq(adminToken, 'POST', `/devices/${SNJ}/brain`, {});
+  profileStore.deleteByAccountId(`device-${SNJ}`); // 模拟存量：开通过但无档
+  const inv = accountStore.createInvite();
+  profileStore.upsertProfile(inv.account_id, { nickname: '小雨', birthday: '2018-09', gender: '女' });
+  const res = await adminReq(adminToken, 'PATCH', `/devices/${SNJ}/parent`, { parent_account_id: inv.account_id });
+  const data = (await res.json()) as { ok: boolean; synced_profile: boolean };
+  assert.equal(data.synced_profile, true, '无档设备绑家长应同步建档');
+  assert.equal(profileStore.getProfile(`device-${SNJ}`)?.nickname, '小雨');
+  const bad = await adminReq(adminToken, 'PATCH', `/devices/${SNJ}/parent`, { parent_account_id: `device-${SNJ}` });
+  assert.equal(bad.status, 400, '设备账号不可当家长');
+});
+
+await t('J4 先绑家长再开通 → 开通时直接从家长档建档', async () => {
+  const SNJ = 'BJP00326060100200031';
+  deviceRegistryStore.add(SNJ, 'J4 顺序机');
+  const inv = accountStore.createInvite();
+  profileStore.upsertProfile(inv.account_id, { nickname: '天天', birthday: '2017-01', gender: '男' });
+  await adminReq(adminToken, 'PATCH', `/devices/${SNJ}/parent`, { parent_account_id: inv.account_id });
+  await adminReq(adminToken, 'POST', `/devices/${SNJ}/brain`, {});
+  assert.equal(profileStore.getProfile(`device-${SNJ}`)?.nickname, '天天', '开通建档应走家长档同步');
+});
+
+await t('J5 已有档不被家长绑定覆盖（运营台配置优先）', async () => {
+  const SNJ = 'BJP00326060100200023'; // J2 已配「朵朵」
+  const inv = accountStore.createInvite();
+  profileStore.upsertProfile(inv.account_id, { nickname: '别人家孩子', birthday: '', gender: '女' });
+  const res = await adminReq(adminToken, 'PATCH', `/devices/${SNJ}/parent`, { parent_account_id: inv.account_id });
+  const data = (await res.json()) as { synced_profile: boolean };
+  assert.equal(data.synced_profile, false, '已有档不应同步覆盖');
+  assert.equal(profileStore.getProfile('device-BJP00326060100200023')?.nickname, '朵朵');
+});
+
+await t('J6 小程序 bind-sn：绑定/幂等/抢绑 409/bound-devices 列表', async () => {
+  const SNJ = 'BJP00326060100200035';
+  deviceRegistryStore.add(SNJ, 'J6 小程序机');
+  const inv = accountStore.createInvite();
+  const jwt = await parentJwt(inv.account_id);
+  const r1 = await parentReq(jwt, 'POST', '/bind-sn', { sn: SNJ });
+  assert.equal(r1.status, 200);
+  assert.equal(deviceRegistryStore.get(SNJ)?.parent_account_id, inv.account_id);
+  const r2 = await parentReq(jwt, 'POST', '/bind-sn', { sn: SNJ });
+  assert.equal(r2.status, 200, '同账号重复绑定应幂等');
+  const other = accountStore.createInvite();
+  const r3 = await parentReq(await parentJwt(other.account_id), 'POST', '/bind-sn', { sn: SNJ });
+  assert.equal(r3.status, 409, '他人抢绑应 409');
+  const r4 = await parentReq(jwt, 'POST', '/bind-sn', { sn: 'BJP00326060100299999' });
+  assert.equal(r4.status, 404, '台账外 SN 应 404');
+  const list = (await (await parentReq(jwt, 'GET', '/bound-devices')).json()) as { devices: Array<{ sn: string }> };
+  assert.equal(list.devices.length, 1);
+  assert.equal(list.devices[0]!.sn, SNJ);
+});
+
+await t('J7 bind-sn 建档下发（设备已开通无档 → 家长档同步）', async () => {
+  const SNJ = 'BJP00326060100200039';
+  deviceRegistryStore.add(SNJ, 'J7 下发机');
+  await adminReq(adminToken, 'POST', `/devices/${SNJ}/brain`, {});
+  profileStore.deleteByAccountId(`device-${SNJ}`);
+  const inv = accountStore.createInvite();
+  profileStore.upsertProfile(inv.account_id, { nickname: '乐乐', birthday: '2016-12', gender: '男' });
+  const res = await parentReq(await parentJwt(inv.account_id), 'POST', '/bind-sn', { sn: SNJ });
+  const data = (await res.json()) as { synced_profile: boolean };
+  assert.equal(data.synced_profile, true);
+  assert.equal(profileStore.getProfile(`device-${SNJ}`)?.nickname, '乐乐');
+});
+
+await t('J8 门控：guest 改档案/绑家长 403（真防线在 server）', async () => {
+  const res = await adminReq(guestToken, 'PATCH', '/devices/BJP00326060100200023/child-profile', { nickname: 'x' });
+  assert.equal(res.status, 403);
+  const res2 = await adminReq(guestToken, 'PATCH', '/devices/BJP00326060100200023/parent', { parent_account_id: null });
+  assert.equal(res2.status, 403);
 });
 
 console.log(`\n${pass} passed / ${fail} failed`);

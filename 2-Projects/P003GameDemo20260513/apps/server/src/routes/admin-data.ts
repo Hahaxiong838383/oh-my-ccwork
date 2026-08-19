@@ -20,6 +20,8 @@ import {
   type HotwordKind,
 } from '../hotword-store.js';
 import { callHotwordChannel } from '../hotword-channel.js';
+import { extractLlmStore, EXTRACT_PROVIDERS, type ExtractProvider } from '../extract-llm-store.js';
+import { resolveExtractLlm, callExtractionLlm } from '../llm-extract.js';
 
 // hub 看板数据端点：admin 看所有账号的孩子档案 + 设备（admin token 鉴权，区别于 parent 自己的 /api/profile 邀请码 JWT）。
 const adminDataRoute = new Hono();
@@ -37,7 +39,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hotwords)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -267,6 +269,17 @@ adminDataRoute.post('/devices/:sn/brain', async (c) => {
     }
     deviceRegistryStore.setAccountId(sn, accountId);
 
+    // 自动建档（2026-08-19）：无档时记忆抽取会静默跳过（memory-extractor「没建档不抽」门），
+    // 设备链路没有家长端建档步骤 → 开通即建。取数优先级：家长档同步 > 空档兜底（空档已足以
+    // 激活抽取；昵称/性别可后续在运营台档案区或语音 onboarding 补全）。
+    if (!profileStore.getProfile(accountId)) {
+      const synced = device.parent_account_id
+        ? profileStore.copyProfile(device.parent_account_id, accountId)
+        : null;
+      if (!synced) profileStore.upsertProfile(accountId, { nickname: '', birthday: '', gender: '' });
+      console.log(`[admin-brain] 建档 sn=${sn} account=${accountId} source=${synced ? 'parent:' + device.parent_account_id : 'blank'}`);
+    }
+
     const rawSecret = process.env.AUTH_JWT_SECRET;
     if (!rawSecret) return c.json({ ok: false, error: '签发服务未配置（AUTH_JWT_SECRET）' }, 503);
     const token = await new SignJWT({ accountId, role: 'device' })
@@ -309,6 +322,11 @@ adminDataRoute.get('/devices/:sn/brain', (c) => {
     const account = accountStore.findAccount(accountId);
     const profile = profileStore.getProfile(accountId);
     const { items, archived_emotion_count } = memoryItemStore.listByAccount(accountId);
+    const parentAccount = device.parent_account_id ? accountStore.findAccount(device.parent_account_id) : null;
+    // 最近对话（设备维度聊天记录可见性，2026-08-19）：设备账号的 conversation 按时间倒序。
+    const recentConversation = conversationStore
+      .list({ accountId, limit: 50 })
+      .map((r) => ({ id: r.id, session_id: r.session_id, role: r.role, text: r.text, ts: r.ts }));
     // 分层组装（device-brain-prompt，与 custom-llm 热路径同源）：世界观/安全基座/记忆区块/附加规则 + 最终成品。
     // 课程/启蒙/召回护栏是逐轮按孩子发言动态叠加的，不在稳态分层内。
     const { layers, final } = buildDeviceLayers({ accountId, role: 'device' });
@@ -330,6 +348,9 @@ adminDataRoute.get('/devices/:sn/brain', (c) => {
         : null,
       items: items.filter((it) => it.status !== 'retracted'),
       archived_emotion_count,
+      parent_account_id: device.parent_account_id ?? null,
+      parent_nickname: parentAccount?.nickname ?? '',
+      recent_conversation: recentConversation,
       prompt_config: {
         worldview_override: device.worldview_override ?? '',
         prompt_addendum: device.prompt_addendum ?? '',
@@ -367,6 +388,145 @@ adminDataRoute.put('/devices/:sn/prompt-config', async (c) => {
     return c.json({ ok: true });
   } catch (error) {
     return c.json({ ok: false, error: '保存 prompt 配置失败，请稍后重试' }, 500);
+  }
+});
+
+// 孩子档案编辑（Worker Brain tab「孩子档案」区，2026-08-19）：运营台直接给设备配 nickname/birthday/gender
+// ——即体验台「变量注入」面板的真数据版（这三项建档后由 assembleSystemPrompt 画像层自动注入）。
+// 校验对齐家长端 ProfileSchema（profile.ts）；upsertBasics 部分更新（无档自动建）。
+adminDataRoute.patch('/devices/:sn/child-profile', async (c) => {
+  try {
+    const sn = c.req.param('sn').trim();
+    const device = deviceRegistryStore.get(sn);
+    if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+    if (!device.account_id) return c.json({ ok: false, error: '该设备未开通 brain' }, 400);
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    const patch: { nickname?: string; birthday?: string; gender?: string } = {};
+    if (body.nickname !== undefined) {
+      if (typeof body.nickname !== 'string' || body.nickname.trim().length > 20) {
+        return c.json({ ok: false, error: '昵称须为字符串且 ≤20 字' }, 400);
+      }
+      patch.nickname = body.nickname.trim();
+    }
+    if (body.birthday !== undefined) {
+      if (typeof body.birthday !== 'string' || !/^(\d{4}-\d{2})?$/.test(body.birthday.trim())) {
+        return c.json({ ok: false, error: 'birthday 须为 YYYY-MM 或空' }, 400);
+      }
+      patch.birthday = body.birthday.trim();
+    }
+    if (body.gender !== undefined) {
+      if (typeof body.gender !== 'string' || body.gender.trim().length > 10) {
+        return c.json({ ok: false, error: 'gender 须为字符串且 ≤10 字' }, 400);
+      }
+      patch.gender = body.gender.trim();
+    }
+    if (!Object.keys(patch).length) return c.json({ ok: false, error: '无可更新字段' }, 400);
+    const profile = profileStore.upsertBasics(device.account_id, patch);
+    console.log(`[admin-brain] child-profile saved sn=${sn} fields=${Object.keys(patch).join(',')}`);
+    return c.json({ ok: true, profile: { nickname: profile.nickname, birthday: profile.birthday, gender: profile.gender } });
+  } catch (error) {
+    return c.json({ ok: false, error: '保存孩子档案失败，请稍后重试' }, 500);
+  }
+});
+
+// 家长账号关联（建档下发链预留，2026-08-19）：admin 手工绑定家长账号到设备。
+// body {parent_account_id: string|null}。绑定时若设备已开通 brain 且设备账号无档、家长有档 → 同步建档。
+// 小程序自助绑定走 /api/profile/bind-sn（家长 JWT），与本端点写同一列。
+adminDataRoute.patch('/devices/:sn/parent', async (c) => {
+  try {
+    const sn = c.req.param('sn').trim();
+    const device = deviceRegistryStore.get(sn);
+    if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+    const body = (await c.req.json().catch(() => ({}))) as { parent_account_id?: unknown };
+    const raw = body.parent_account_id;
+    if (raw !== null && typeof raw !== 'string') {
+      return c.json({ ok: false, error: 'parent_account_id 须为字符串或 null' }, 400);
+    }
+    const parentId = typeof raw === 'string' ? raw.trim() : null;
+    let syncedProfile = false;
+    if (parentId) {
+      const parent = accountStore.findAccount(parentId);
+      if (!parent) return c.json({ ok: false, error: `账号 ${parentId} 不存在` }, 404);
+      if (parent.role === 'device') return c.json({ ok: false, error: '不能绑定设备账号为家长' }, 400);
+      deviceRegistryStore.setParentAccountId(sn, parentId);
+      // 建档下发：设备已开通 brain 且无档 → 从家长档同步（有档不覆盖，运营台已配的信息优先）。
+      if (device.account_id && !profileStore.getProfile(device.account_id)) {
+        syncedProfile = Boolean(profileStore.copyProfile(parentId, device.account_id));
+      }
+    } else {
+      deviceRegistryStore.setParentAccountId(sn, null);
+    }
+    console.log(`[admin-brain] parent ${parentId ? 'bound=' + parentId : 'unbound'} sn=${sn} synced_profile=${syncedProfile}`);
+    return c.json({ ok: true, parent_account_id: parentId, synced_profile: syncedProfile });
+  } catch (error) {
+    return c.json({ ok: false, error: '家长绑定失败，请稍后重试' }, 500);
+  }
+});
+
+// ── 记忆抽取 LLM 配置（Worker Brain tab「记忆抽取 LLM」卡，2026-08-19）──
+// 全局单行配置，写入即热生效（llm-extract 每次调用经 resolveExtractLlm 取值，零重启）。
+// key 纪律：GET 只回尾 4 位；PUT 不传 api_key = 保留旧值；日志绝不打 key。
+
+function maskKey(key: string): string {
+  if (!key) return '';
+  return key.length >= 8 ? `****${key.slice(-4)}` : '****';
+}
+
+adminDataRoute.get('/extract-llm', (c) => {
+  try {
+    const admin = extractLlmStore.get();
+    const live = resolveExtractLlm();
+    return c.json({
+      ok: true,
+      config: admin
+        ? { provider: admin.provider, base_url: admin.base_url, model: admin.model, api_key_masked: maskKey(admin.api_key), updated_at: admin.updated_at }
+        : null,
+      live: { provider: live.provider, base_url: live.baseUrl ?? '', model: live.model, source: live.source, key_configured: Boolean(live.apiKey), api_key_masked: maskKey(live.apiKey ?? '') },
+      providers: EXTRACT_PROVIDERS,
+    });
+  } catch (error) {
+    return c.json({ ok: false, error: '读取抽取 LLM 配置失败' }, 500);
+  }
+});
+
+adminDataRoute.put('/extract-llm', async (c) => {
+  try {
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    const provider = typeof body.provider === 'string' ? (body.provider as ExtractProvider) : 'inherit';
+    if (!EXTRACT_PROVIDERS.includes(provider)) return c.json({ ok: false, error: `provider 须为 ${EXTRACT_PROVIDERS.join('/')}` }, 400);
+    const baseUrl = typeof body.base_url === 'string' ? body.base_url.trim() : '';
+    if (baseUrl && !/^https?:\/\//.test(baseUrl)) return c.json({ ok: false, error: 'base_url 须以 http(s):// 开头' }, 400);
+    if (baseUrl.length > 300) return c.json({ ok: false, error: 'base_url 过长' }, 400);
+    const model = typeof body.model === 'string' ? body.model.trim() : '';
+    if (model.length > 120) return c.json({ ok: false, error: 'model 过长' }, 400);
+    const apiKey = body.api_key === undefined ? undefined : typeof body.api_key === 'string' ? body.api_key : '';
+    if (apiKey !== undefined && apiKey.length > 300) return c.json({ ok: false, error: 'api_key 过长' }, 400);
+    const row = extractLlmStore.set({ provider, base_url: baseUrl, model, api_key: apiKey });
+    console.log(`[extract-llm] 配置已保存 provider=${row.provider} model=${row.model || '(默认)'} key=${row.api_key ? '已配' : '回落env'}（热生效）`);
+    return c.json({ ok: true, config: { provider: row.provider, base_url: row.base_url, model: row.model, api_key_masked: maskKey(row.api_key), updated_at: row.updated_at } });
+  } catch (error) {
+    return c.json({ ok: false, error: '保存抽取 LLM 配置失败' }, 500);
+  }
+});
+
+// 测试连通：用【当前生效配置】发一次最小真实请求（今日排障探针的产品化）。不落对话内容。
+adminDataRoute.post('/extract-llm/test', async (c) => {
+  try {
+    const cfg = resolveExtractLlm();
+    const t0 = Date.now();
+    const raw = await callExtractionLlm('你是连通性探针，只回 JSON', '输出 {"pong":1}，只回 JSON 本身', { maxTokens: 50, timeoutMs: 15000 });
+    const ms = Date.now() - t0;
+    return c.json({
+      ok: true,
+      reachable: raw !== null,
+      ms,
+      provider: cfg.provider,
+      model: cfg.model,
+      source: cfg.source,
+      sample: raw === null ? '' : raw.slice(0, 80),
+    });
+  } catch (error) {
+    return c.json({ ok: false, error: '测试失败' }, 500);
   }
 });
 

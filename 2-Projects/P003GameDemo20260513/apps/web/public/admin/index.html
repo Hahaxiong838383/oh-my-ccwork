@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>P003 Web 后台（整合版）· 数据看板 + KidsHub 运营台 + 运营操作台</title>
   <!-- 2026-05 KidsHub Issue 看板(board) 联动真实反馈：board 唯一真实数据源(复用 /api/feedback + PATCH + reBucket)；移除 mock khIssueCols + feedback nav 项 + 冗余 mock 逻辑/抽屉；进入 board 自动 loadRealFeedback；tutorial 灰标；详情抽屉支持状态四态+note保存；不破其它 tab -->
-  <link rel="stylesheet" href="./vendor/element-plus-2.9.1.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus@2.9.1/dist/index.css" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: #f0f2f5; }
@@ -1687,6 +1687,42 @@
                     </div>
                     <el-button size="small" :loading="brainState.loading" @click="refreshBrainTab">刷新</el-button>
                   </div>
+                  <!-- 记忆抽取 LLM 配置（全局，2026-08-19）：抽取通道曾钉死 env 静默全灭数周——此卡统一管理，写入即热生效零重启 -->
+                  <div class="kh-card" style="padding:10px 16px;margin-bottom:14px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" @click="extractLlm.open = !extractLlm.open">
+                      <div style="font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <span style="font-weight:700">🔌 记忆抽取 LLM</span>
+                        <template v-if="extractLlm.live">
+                          <el-tag size="small" :type="extractLlm.live.source==='admin' ? 'warning' : 'info'">{{ extractLlm.live.source==='admin' ? '后台配置' : '跟随主对话(env)' }}</el-tag>
+                          <span style="font-family:monospace;font-size:12px;color:#5B6B7B">{{ extractLlm.live.provider }} · {{ extractLlm.live.model }}</span>
+                          <el-tag size="small" :type="extractLlm.live.key_configured ? 'success' : 'danger'" effect="plain">{{ extractLlm.live.key_configured ? 'key 已配 ' + extractLlm.live.api_key_masked : 'key 缺失' }}</el-tag>
+                        </template>
+                      </div>
+                      <el-button size="small" link type="primary">{{ extractLlm.open ? '收起' : '展开配置' }}</el-button>
+                    </div>
+                    <div v-if="extractLlm.open" style="margin-top:12px;padding-top:12px;border-top:1px dashed #E4E9EF">
+                      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+                        <el-select v-model="extractLlm.cfg.provider" size="small" style="width:170px">
+                          <el-option label="跟随主对话（env）" value="inherit"></el-option>
+                          <el-option label="DeepSeek 直连" value="deepseek"></el-option>
+                          <el-option label="MiniMax" value="minimax"></el-option>
+                          <el-option label="Gemini 代理" value="gemini-proxy"></el-option>
+                          <el-option label="火山方舟 doubao" value="volc-ark"></el-option>
+                        </el-select>
+                        <el-input v-model="extractLlm.cfg.model" size="small" placeholder="model（空=该渠道默认）" style="width:220px"></el-input>
+                        <el-input v-model="extractLlm.cfg.base_url" size="small" placeholder="base_url（空=该渠道默认）" style="width:280px"></el-input>
+                        <el-input v-model="extractLlm.cfg.api_key" size="small" type="password" show-password :placeholder="extractLlm.masked ? '已配置 ' + extractLlm.masked + '（留空保持）' : 'API Key（空=用 env 里该渠道的 key）'" style="width:250px"></el-input>
+                      </div>
+                      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <el-button size="small" type="primary" :loading="extractLlm.loading" @click="saveExtractLlm">保存（立即生效）</el-button>
+                        <el-button size="small" :loading="extractLlm.testing" @click="testExtractLlm">测试连通</el-button>
+                        <span v-if="extractLlm.testResult" :style="{fontSize:'12px', fontWeight:600, color: extractLlm.testResult.reachable ? '#10B981' : '#E45649'}">
+                          {{ extractLlm.testResult.reachable ? '✓ 连通' : '✗ 不通' }} · {{ extractLlm.testResult.provider }}/{{ extractLlm.testResult.model }} · {{ extractLlm.testResult.ms }}ms<template v-if="extractLlm.testResult.sample"> · {{ extractLlm.testResult.sample.slice(0, 40) }}</template>
+                        </span>
+                        <span style="font-size:12px;color:#909399;margin-left:auto">影响：情景记忆/画像/昵称引导三条抽取链；不影响主对话。改完点「测试连通」验一下</span>
+                      </div>
+                    </div>
+                  </div>
                   <div style="display:flex;gap:16px;align-items:flex-start">
                     <!-- 左：设备列表 -->
                     <div class="kh-card" style="width:250px;flex-shrink:0;padding:10px">
@@ -1711,13 +1747,31 @@
                           <el-button type="primary" :loading="brainState.loading" @click="openBrain">开通 Brain</el-button>
                         </div>
                         <template v-else>
-                          <div class="kh-card" style="padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-                            <div style="font-size:13px"><span style="color:#6B7785">brain 账号：</span><span style="font-family:monospace;font-weight:700">{{ brainState.view.account_id }}</span></div>
-                            <div style="display:flex;gap:8px">
-                              <el-button size="small" @click="openBrain">重签身份 token</el-button>
-                              <el-popconfirm title="解绑后设备回到匿名（纯人设无记忆）；账号与记忆保留，重新开通即恢复。确认？" @confirm="unbindBrain">
-                                <template #reference><el-button size="small" type="warning" plain>解绑</el-button></template>
-                              </el-popconfirm>
+                          <div class="kh-card" style="padding:12px 16px;margin-bottom:14px">
+                            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                              <div style="font-size:13px"><span style="color:#6B7785">brain 账号：</span><span style="font-family:monospace;font-weight:700">{{ brainState.view.account_id }}</span></div>
+                              <div style="display:flex;gap:8px">
+                                <el-button size="small" @click="openBrain">重签身份 token</el-button>
+                                <el-popconfirm title="解绑后设备回到匿名（纯人设无记忆）；账号与记忆保留，重新开通即恢复。确认？" @confirm="unbindBrain">
+                                  <template #reference><el-button size="small" type="warning" plain>解绑</el-button></template>
+                                </el-popconfirm>
+                              </div>
+                            </div>
+                            <!-- 家长账号关联（建档下发链，2026-08-19）：SN 即邀请码——绑定后设备建档从家长档同步；小程序 bind-sn 与此写同一列 -->
+                            <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed #E4E9EF;flex-wrap:wrap">
+                              <span style="font-size:12px;color:#6B7785">👪 家长关联：</span>
+                              <template v-if="brainState.view.parent_account_id">
+                                <span style="font-family:monospace;font-size:12px;font-weight:700">{{ brainState.view.parent_account_id }}</span>
+                                <span v-if="brainState.view.parent_nickname" style="font-size:12px;color:#6B7785">（{{ brainState.view.parent_nickname }}）</span>
+                                <el-popconfirm title="解除家长关联？（档案与记忆不受影响）" @confirm="unbindParent">
+                                  <template #reference><el-button size="small" link type="warning">解除</el-button></template>
+                                </el-popconfirm>
+                              </template>
+                              <template v-else>
+                                <el-input v-model="parentBind.input" size="small" placeholder="家长账号 id（如 acct-01）" style="width:190px"></el-input>
+                                <el-button size="small" type="primary" plain @click="bindParent">绑定</el-button>
+                                <span style="font-size:12px;color:#909399">绑定后：设备无档时自动同步家长侧孩子档案（小程序绑定同源）</span>
+                              </template>
                             </div>
                           </div>
                           <!-- 三 sub-tab（复刻体验台 PROMPT 工作区）：编辑 / 拼接可视化 / 小可的记忆 -->
@@ -1726,6 +1780,7 @@
                             <el-button size="small" :type="brainState.subTab==='editor' ? 'primary' : ''" @click="brainState.subTab='editor'">📝 编辑</el-button>
                             <el-button size="small" :type="brainState.subTab==='visual' ? 'primary' : ''" @click="brainState.subTab='visual'">🔬 拼接可视化</el-button>
                             <el-button size="small" :type="brainState.subTab==='memory' ? 'primary' : ''" @click="brainState.subTab='memory'">🧠 小可的记忆</el-button>
+                            <el-button size="small" :type="brainState.subTab==='chat' ? 'primary' : ''" @click="brainState.subTab='chat'">💬 聊天记录</el-button>
                           </div>
 
                           <!-- ═══ 编辑 tab ═══ -->
@@ -1807,15 +1862,26 @@
                               </div>
                               <span style="font-size:12px;color:#909399">高亮 = 最近 15 分钟注入过（小可现在记着）</span>
                             </div>
-                            <!-- 孩子画像 -->
+                            <!-- 孩子画像（2026-08-19 起可编辑：昵称/生日/性别是记忆抽取与 onboarding 的地基，即体验台「变量注入」的真数据版） -->
                             <div class="kh-card" style="padding:14px 16px;margin-bottom:14px">
-                              <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:700">👦 孩子画像</span><span style="font-size:12px;color:#909399">语义·稳定保留</span></div>
+                              <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:700">👦 孩子画像</span><span style="font-size:12px;color:#909399">昵称/性别填好后小可不再追问「你叫什么名字」</span></div>
+                              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+                                <el-input v-model="brainProfileDraft.nickname" size="small" placeholder="昵称（必填）" style="width:130px" @input="brainProfileDraft.dirty = true"></el-input>
+                                <el-input v-model="brainProfileDraft.birthday" size="small" placeholder="生日 YYYY-MM" style="width:120px" @input="brainProfileDraft.dirty = true"></el-input>
+                                <el-select v-model="brainProfileDraft.gender" size="small" placeholder="性别" style="width:90px" @change="brainProfileDraft.dirty = true">
+                                  <el-option label="男" value="男"></el-option>
+                                  <el-option label="女" value="女"></el-option>
+                                  <el-option label="未填" value=""></el-option>
+                                </el-select>
+                                <el-button size="small" type="primary" :disabled="!brainProfileDraft.dirty" @click="saveChildProfile">保存档案</el-button>
+                                <span v-if="brainProfileDraft.dirty" style="font-size:12px;color:#E8833A;font-weight:600">● 未保存</span>
+                              </div>
                               <template v-if="brainState.view.profile">
-                                <div style="font-size:14px;margin-bottom:8px">{{ brainState.view.profile.nickname || '未命名' }}<span v-if="brainState.view.profile.birthday" style="color:#6B7785"> · {{ brainState.view.profile.birthday }} 生</span><span v-if="brainState.view.profile.gender" style="color:#6B7785"> · {{ brainState.view.profile.gender }}孩</span><span v-if="brainState.view.profile.preferred_address" style="color:#6B7785"> · 喜欢被叫「{{ brainState.view.profile.preferred_address }}」</span></div>
+                                <div style="font-size:13px;margin-bottom:8px;color:#6B7785"><span v-if="brainState.view.profile.preferred_address">喜欢被叫「{{ brainState.view.profile.preferred_address }}」</span><span v-else>对话中可自然习得称呼偏好</span></div>
                                 <el-tag v-for="i in brainState.view.profile.interests" :key="i.value" size="small" style="margin-right:6px">{{ i.value }}</el-tag>
                                 <span v-if="!brainState.view.profile.interests.length" style="font-size:12px;color:#909399">暂无兴趣标签（语音对话中自动沉淀）</span>
                               </template>
-                              <div v-else style="font-size:12px;color:#909399">暂无画像——设备接通 brain 后由语音对话自动建档，或等待家长端建档</div>
+                              <div v-else style="font-size:12px;color:#909399">暂无档案——填写上方昵称/性别保存即建档（记忆抽取随之激活）</div>
                             </div>
                             <!-- 图谱视图（SVG 星图：实体环形布局 + 类型色点 + 点选聚合） -->
                             <div v-if="brainState.memView==='graph'" class="kh-card" style="padding:14px 16px;margin-bottom:14px">
@@ -1886,6 +1952,24 @@
                               <el-input v-if="brainAdd.type==='promise'" v-model="brainAdd.due_text" size="small" placeholder="时间（如：明天）" style="width:130px"></el-input>
                               <el-input v-if="brainAdd.type==='relation'" v-model="brainAdd.subject" size="small" placeholder="人名（可空）" style="width:130px"></el-input>
                               <el-button size="small" type="primary" @click="addBrainMemory">添加记忆</el-button>
+                            </div>
+                          </template>
+
+                          <!-- ═══ 聊天记录 tab（2026-08-19）：设备账号 conversation 最近 50 条，与体验台同库（审计视角） ═══ -->
+                          <template v-if="brainState.subTab==='chat'">
+                            <div class="kh-card" style="padding:14px 16px">
+                              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                                <span style="font-weight:700">💬 最近对话（{{ (brainState.view.recent_conversation || []).length }} 条）</span>
+                                <span style="font-size:12px;color:#909399">最新在上 · 落库于每轮回复完成后 · 记忆每 3 轮孩子发言抽取一次</span>
+                              </div>
+                              <div v-if="!(brainState.view.recent_conversation || []).length" style="padding:30px;text-align:center;font-size:13px;color:#909399">暂无对话——设备接通并说话后这里会出现记录</div>
+                              <div v-for="m in (brainState.view.recent_conversation || [])" :key="m.id" style="display:flex;gap:10px;padding:8px 4px;border-bottom:1px solid #F2F5F8;align-items:flex-start">
+                                <el-tag size="small" :type="m.role==='user' ? 'primary' : 'success'" style="flex-shrink:0;margin-top:1px">{{ m.role==='user' ? '孩子' : '小可' }}</el-tag>
+                                <div style="flex:1;min-width:0">
+                                  <div style="font-size:13px;line-height:1.6;word-break:break-word">{{ m.text }}</div>
+                                  <div style="font-size:11px;color:#B0B8C1;margin-top:2px">{{ hwFmtTime(m.ts) }}<span v-if="m.session_id && m.session_id!=='rtc'" style="margin-left:8px;font-family:monospace">{{ m.session_id }}</span></div>
+                                </div>
+                              </div>
                             </div>
                           </template>
                         </template>
@@ -2399,9 +2483,9 @@
             </el-drawer>
           </div>
 
-  <script src="./vendor/vue-3.4.21.global.prod.js"></script>
-  <script src="./vendor/element-plus-2.9.1.full.min.js"></script>
-  <script src="./vendor/echarts-5.5.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/element-plus@2.9.1/dist/index.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
   <script>
     const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
 
@@ -2524,7 +2608,7 @@
     var allMockUsers = generateMockUsers(86);
 
     // Load China GeoJSON and register map
-    fetch('./vendor/china-geo-v3.json')
+    fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
       .then(function(r) { return r.json(); })
       .then(function(geoJson) {
         echarts.registerMap('china', geoJson);
@@ -3568,6 +3652,53 @@
         }
         // ── Worker Brain（每设备 prompt/记忆管理；数据挂 brain 账号维度）──
         var brainState = reactive({ selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '' });
+        // 孩子档案草稿（2026-08-19）：昵称/生日/性别——记忆抽取与 onboarding 的地基；dirty 时刷新不覆盖（与 brainCfg 同策略）
+        var brainProfileDraft = reactive({ nickname: '', birthday: '', gender: '', dirty: false });
+        var parentBind = reactive({ input: '' });
+        // 记忆抽取 LLM 配置（全局热生效）：api_key 永不回显——GET 只给尾 4 位掩码，输入框留空=保留旧 key
+        var extractLlm = reactive({ open: false, loading: false, testing: false, live: null, masked: '', testResult: null, cfg: { provider: 'inherit', base_url: '', model: '', api_key: '' } });
+        function loadExtractLlm() {
+          deviceApi('/api/admin/extract-llm', { method: 'GET' })
+            .then(function (data) {
+              if (!data || !data.ok) return;
+              extractLlm.live = data.live;
+              extractLlm.masked = (data.config && data.config.api_key_masked) || '';
+              if (data.config) {
+                extractLlm.cfg.provider = data.config.provider;
+                extractLlm.cfg.base_url = data.config.base_url;
+                extractLlm.cfg.model = data.config.model;
+              }
+              extractLlm.cfg.api_key = '';
+            })
+            .catch(function () { /* 静默：卡片不阻塞 brain tab */ });
+        }
+        function saveExtractLlm() {
+          extractLlm.loading = true;
+          var payload = { provider: extractLlm.cfg.provider, base_url: extractLlm.cfg.base_url, model: extractLlm.cfg.model };
+          if (extractLlm.cfg.api_key.trim()) payload.api_key = extractLlm.cfg.api_key.trim(); // 留空不传=保留旧 key
+          deviceApi('/api/admin/extract-llm', { method: 'PUT', body: JSON.stringify(payload) })
+            .then(function (data) {
+              if (data && data.ok) { ElementPlus.ElMessage.success('已保存并立即生效（可点测试连通验证）'); extractLlm.testResult = null; loadExtractLlm(); }
+              else ElementPlus.ElMessage.error((data && data.error) || '保存失败');
+            })
+            .catch(function (e) {
+              if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('保存失败，请稍后重试');
+            })
+            .finally(function () { extractLlm.loading = false; });
+        }
+        function testExtractLlm() {
+          extractLlm.testing = true;
+          extractLlm.testResult = null;
+          deviceApi('/api/admin/extract-llm/test', { method: 'POST', body: '{}' })
+            .then(function (data) {
+              if (data && data.ok) extractLlm.testResult = data;
+              else ElementPlus.ElMessage.error((data && data.error) || '测试失败');
+            })
+            .catch(function (e) {
+              if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('测试失败，请稍后重试');
+            })
+            .finally(function () { extractLlm.testing = false; });
+        }
         var brainCfg = reactive({ worldview_override: '', prompt_addendum: '' });
         var brainAdd = reactive({ type: 'event', content: '', subject: 'xiaoke', due_text: '' });
         var brainTokenDialog = reactive({ visible: false, token: '', accountId: '' });
@@ -3708,6 +3839,11 @@
                   brainCfg.worldview_override = data.prompt_config.worldview_override || '';
                   brainCfg.prompt_addendum = data.prompt_config.prompt_addendum || '';
                 }
+                if (!brainProfileDraft.dirty) {
+                  brainProfileDraft.nickname = (data.profile && data.profile.nickname) || '';
+                  brainProfileDraft.birthday = (data.profile && data.profile.birthday) || '';
+                  brainProfileDraft.gender = (data.profile && data.profile.gender) || '';
+                }
               } else {
                 ElementPlus.ElMessage.error((data && data.error) || '拉取 brain 数据失败');
               }
@@ -3747,6 +3883,47 @@
             })
             .catch(function (e) {
               if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('无法连接 brain 服务，请稍后重试');
+            });
+        }
+        function saveChildProfile() {
+          var sn = brainState.selectedSn;
+          if (!sn) return;
+          if (!brainProfileDraft.nickname.trim()) { ElementPlus.ElMessage.warning('昵称必填（小可靠它称呼孩子）'); return; }
+          var payload = { nickname: brainProfileDraft.nickname.trim(), birthday: brainProfileDraft.birthday.trim(), gender: brainProfileDraft.gender };
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/child-profile', { method: 'PATCH', body: JSON.stringify(payload) })
+            .then(function (data) {
+              if (data && data.ok) { ElementPlus.ElMessage.success('档案已保存（下一轮对话生效）'); brainProfileDraft.dirty = false; loadBrain(sn); }
+              else ElementPlus.ElMessage.error((data && data.error) || '保存失败');
+            })
+            .catch(function (e) {
+              if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('保存失败，请稍后重试');
+            });
+        }
+        function bindParent() {
+          var sn = brainState.selectedSn;
+          var id = (parentBind.input || '').trim();
+          if (!sn || !id) { ElementPlus.ElMessage.warning('请输入家长账号 id'); return; }
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/parent', { method: 'PATCH', body: JSON.stringify({ parent_account_id: id }) })
+            .then(function (data) {
+              if (data && data.ok) {
+                ElementPlus.ElMessage.success(data.synced_profile ? '已绑定，并从家长档同步了孩子档案' : '已绑定');
+                parentBind.input = '';
+                loadBrain(sn);
+              } else ElementPlus.ElMessage.error((data && data.error) || '绑定失败');
+            })
+            .catch(function (e) {
+              if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('绑定失败，请稍后重试');
+            });
+        }
+        function unbindParent() {
+          var sn = brainState.selectedSn;
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/parent', { method: 'PATCH', body: JSON.stringify({ parent_account_id: null }) })
+            .then(function (data) {
+              if (data && data.ok) { ElementPlus.ElMessage.success('已解除家长关联'); loadBrain(sn); }
+              else ElementPlus.ElMessage.error((data && data.error) || '操作失败');
+            })
+            .catch(function (e) {
+              if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('操作失败，请稍后重试');
             });
         }
         function addBrainMemory() {
@@ -5038,6 +5215,7 @@
           if (nv === 'dev-board') {
             if (!devItems.items || !devItems.items.length) loadDevItems();
           }
+          if (nv === 'brain' && !extractLlm.live) loadExtractLlm(); // 记忆抽取 LLM 卡：进 tab 首次拉取
         });
         watch(realDrawer, function (nv) {
           if (nv && nv.id) loadRealDrawerLinks(nv.id);
@@ -5177,6 +5355,9 @@
           selectBrainDevice: selectBrainDevice, refreshBrainTab: refreshBrainTab, loadBrain: loadBrain,
           openBrain: openBrain, unbindBrain: unbindBrain, addBrainMemory: addBrainMemory,
           delBrainMemory: delBrainMemory, copyBrainToken: copyBrainToken,
+          brainProfileDraft: brainProfileDraft, parentBind: parentBind,
+          saveChildProfile: saveChildProfile, bindParent: bindParent, unbindParent: unbindParent,
+          extractLlm: extractLlm, loadExtractLlm: loadExtractLlm, saveExtractLlm: saveExtractLlm, testExtractLlm: testExtractLlm,
           shortSessionId: shortSessionId, roleLabel: roleLabel, roleTagType: roleTagType,
           getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey, normalizeFeedbackItem: normalizeFeedbackItem,
           // 产品开发看板

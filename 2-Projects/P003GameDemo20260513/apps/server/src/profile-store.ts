@@ -149,6 +149,20 @@ class ProfileStore {
     return { ...row, interests, game_progress };
   }
 
+  /**
+   * 家长档 → 设备账号档同步（建档下发链）：只 copy 基础三字段（nickname/birthday/gender）。
+   * 画像 12 类与情景记忆不 copy——设备侧对话自己积累。from 无档返回 null（调用方决定兜底）。
+   */
+  copyProfile(fromAccountId: string, toAccountId: string): FamilyMember | null {
+    const src = this.getProfile(fromAccountId);
+    if (!src) return null;
+    return this.upsertProfile(toAccountId, {
+      nickname: src.nickname,
+      birthday: src.birthday,
+      gender: src.gender,
+    });
+  }
+
   /** 原型：一个账号一个孩子档案。已存在则更新基础信息，不存在则插入。 */
   upsertProfile(accountId: string, input: ProfileInput): FamilyMember {
     const now = Date.now();

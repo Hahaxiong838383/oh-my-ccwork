@@ -19,6 +19,7 @@ export type DeviceRecord = {
   note: string;
   status: DeviceStatus;
   account_id: string | null; // brain 账号关联（Worker Brain tab）
+  parent_account_id: string | null; // 家长账号关联（小程序绑定/admin 手工；建档下发链的取数源）
   worldview_override: string; // per-device 世界观人设（空 = 默认 ARK_WORLDVIEW_BASE）
   prompt_addendum: string; // per-device 附加规则（空 = 关闭；拼接在 systemPrompt 最末）
   credential_issued_at: number | null;
@@ -67,6 +68,7 @@ class DeviceRegistryStore {
         note TEXT NOT NULL DEFAULT '',
         status TEXT NOT NULL DEFAULT 'active',
         account_id TEXT,
+        parent_account_id TEXT,
         worldview_override TEXT NOT NULL DEFAULT '',
         prompt_addendum TEXT NOT NULL DEFAULT '',
         credential_issued_at INTEGER,
@@ -109,6 +111,9 @@ class DeviceRegistryStore {
       }
       if (!hasReg('prompt_addendum')) {
         this.db.exec(`ALTER TABLE device_registry ADD COLUMN prompt_addendum TEXT NOT NULL DEFAULT ''`);
+      }
+      if (!hasReg('parent_account_id')) {
+        this.db.exec(`ALTER TABLE device_registry ADD COLUMN parent_account_id TEXT`);
       }
     } catch (err) {
       console.error(`[device-registry] 列迁移失败(不阻断): ${(err as Error).message}`);
@@ -196,6 +201,21 @@ class DeviceRegistryStore {
       .prepare(`UPDATE device_registry SET account_id = ?, updated_at = ? WHERE sn = ?`)
       .run(accountId, Date.now(), sn);
     return Number(r.changes) > 0;
+  }
+
+  /** 设备 ↔ 家长账号关联（小程序绑定/admin 手工）。accountId=null 即解绑。 */
+  setParentAccountId(sn: string, accountId: string | null): boolean {
+    const r = this.db
+      .prepare(`UPDATE device_registry SET parent_account_id = ?, updated_at = ? WHERE sn = ?`)
+      .run(accountId, Date.now(), sn);
+    return Number(r.changes) > 0;
+  }
+
+  /** 按家长账号反查其绑定的全部设备（小程序「我的设备」列表）。 */
+  listByParentAccountId(parentAccountId: string): DeviceRecord[] {
+    return this.db
+      .prepare(`SELECT * FROM device_registry WHERE parent_account_id = ? ORDER BY created_at ASC`)
+      .all(parentAccountId) as DeviceRecord[];
   }
 
   /** 记录一次凭据签发（仅时间元数据；token 原文绝不入库）。 */
