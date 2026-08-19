@@ -296,6 +296,24 @@ class MemoryItemStore {
   deleteByAccountId(accountId: string): void {
     this.db.prepare('DELETE FROM memory_item WHERE account_id = ?').run(accountId);
   }
+
+  /** 全库隔离对照（运营台租户隔离白盒）：active 总数 + 涉及账号数——与单账号计数并排展示数据边界。 */
+  globalStats(): { total_active: number; distinct_accounts: number } {
+    const row = this.db.prepare(
+      `SELECT COUNT(*) AS n, COUNT(DISTINCT account_id) AS a FROM memory_item WHERE status = 'active'`,
+    ).get() as { n: number; a: number };
+    return { total_active: Number(row?.n ?? 0), distinct_accounts: Number(row?.a ?? 0) };
+  }
+
+  /** 逐账号统计（全局隔离总览）：total 含 retracted/archived——孤儿检查要看全状态，悬空数据不因下架而豁免。 */
+  perAccountStats(): Array<{ account_id: string; active_n: number; total_n: number }> {
+    return this.db.prepare(`
+      SELECT account_id,
+             SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_n,
+             COUNT(*) AS total_n
+      FROM memory_item GROUP BY account_id
+    `).all() as Array<{ account_id: string; active_n: number; total_n: number }>;
+  }
 }
 
 export const memoryItemStore = new MemoryItemStore();

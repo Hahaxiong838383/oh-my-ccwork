@@ -10,7 +10,8 @@ import { canWrite, getTokenUser, isAdminRole, isValidToken } from './auth.js';
 import { resetAllQuotas } from '../guard.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { validateDeviceSn } from '../device-sn.js';
-import { buildDeviceLayers } from '../device-brain-prompt.js';
+import { buildDeviceLayers, resolveDeviceIdentity } from '../device-brain-prompt.js';
+import { AI_SAFETY_BASELINE } from '../ai-literacy.js';
 import {
   hotwordStore,
   validateWords,
@@ -39,7 +40,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm|isolation-overview)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -361,6 +362,251 @@ adminDataRoute.get('/devices/:sn/brain', (c) => {
     });
   } catch (error) {
     return c.json({ ok: false, error: '拉取 brain 数据失败，请稍后重试' }, 500);
+  }
+});
+
+// 租户隔离白盒（2026-08-19）：五跳隔离链每跳的实时真值 + 统一配置矩阵。
+// 原则：声明与证据并排——每条「隔离保证」旁必须是现场查询/现场跑生产同一函数的结果，
+// 绝不硬编码「已隔离」文案（白盒面板一旦与代码漂移，比黑盒更危险）。机制说明文案在前端展示层。
+adminDataRoute.get('/devices/:sn/isolation', (c) => {
+  try {
+    const sn = c.req.param('sn').trim();
+    const device = deviceRegistryStore.get(sn);
+    if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+    const bound = Boolean(device.account_id);
+    const accountId = device.account_id ?? null;
+
+    // ── 跳1 接入准入：白名单判定路径复现（与 device-session isSnAllowed 同序：DB status 优先 → env 兜底）──
+    const snCheck = validateDeviceSn(sn);
+    const envAllow = (process.env.DEVICE_SN_ALLOW || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const dbStatus = deviceRegistryStore.statusOf(sn);
+    const allowSource = dbStatus !== null
+      ? (dbStatus === 'active' ? 'db_active' : 'db_disabled')
+      : envAllow.includes(sn) ? 'env_allow' : 'denied';
+    const access = {
+      sn_valid: snCheck.ok,
+      allow_source: allowSource,
+      db_status: dbStatus,
+      env_allow_count: envAllow.length,
+      env_allow_hit: envAllow.includes(sn),
+      ttl_s: Number(process.env.DEVICE_SESSION_TTL_S || 3600),
+      rpm: Number(process.env.DEVICE_SESSION_RPM || 10),
+      recent_sessions: deviceRegistryStore.listSessions(sn, 5).map((r) => ({
+        room: r.room, session_id: r.session_id, status: r.status, ttl_s: r.ttl_s, created_at: r.created_at,
+      })),
+    };
+
+    // ── 跳2 身份路由一致性自检：现场跑生产同一 resolveDeviceIdentity——喂「web 家长 token 身份 +
+    //    本设备房名」，验证 token 身份被丢弃、路由到设备自己账号（防串号的关键行为，不是文案是现场证据）──
+    const PROBE_TOKEN_ACCOUNT = '__isolation_probe__';
+    const resolved = resolveDeviceIdentity({ accountId: PROBE_TOKEN_ACCOUNT, role: 'parent' }, `sn-${sn}-0`);
+    const identity = {
+      room_pattern: `sn-${sn}-<unix秒>`,
+      probe_token_account: PROBE_TOKEN_ACCOUNT,
+      resolved_account: resolved?.accountId ?? null,
+      resolved_role: resolved?.role ?? null,
+      registry_account: accountId,
+      // 开通 → 必须路由到 registry 账号且绝不沿用 token 身份；未开通 → 必须匿名（null，绝不串到兜底账号）
+      match: bound
+        ? resolved?.accountId === accountId && resolved?.accountId !== PROBE_TOKEN_ACCOUNT
+        : resolved === null,
+    };
+
+    // ── 跳3 prompt 分层元数据（与热路径同源 buildDeviceLayers；全文预览在「拼接可视化」sub-tab）──
+    const promptLayers = bound
+      ? buildDeviceLayers({ accountId: accountId!, role: 'device' }).layers.map((l) => ({
+          key: l.key, label: l.label, source: l.source, editable: l.editable, chars: l.chars,
+        }))
+      : [];
+
+    // ── 跳4 数据边界：本账号 vs 全库邻居并排（隔离锚——边界可见才可证伪）──
+    const memMineActive = bound
+      ? memoryItemStore.listByAccount(accountId!).items.filter((it) => it.status === 'active').length
+      : 0;
+    const memGlobal = memoryItemStore.globalStats();
+    const convoStats = conversationStore.statsByAccount();
+    const data = {
+      profile_exists: bound ? Boolean(profileStore.getProfile(accountId!)) : false,
+      memory_mine_active: memMineActive,
+      memory_global_active: memGlobal.total_active,
+      memory_accounts: memGlobal.distinct_accounts,
+      conversation_mine: bound ? (convoStats[accountId!]?.count ?? 0) : 0,
+      conversation_global: Object.values(convoStats).reduce((s, v) => s + v.count, 0),
+      conversation_accounts: Object.keys(convoStats).length,
+      total_accounts: accountStore.listAccounts().length,
+    };
+
+    // ── 跳5 LLM 双通道：主对话（env 全局，含 else 默认分支显性化）+ 抽取（admin 配置优先，热生效）──
+    const chatRaw = (process.env.LLM_PROVIDER || '').toLowerCase();
+    const chatProvider = chatRaw === 'race' ? 'race（deepseek 主 + doubao 兜底）'
+      : chatRaw === 'minimax' ? 'minimax'
+        : chatRaw === 'deepseek' ? 'deepseek'
+          : `gemini（else 默认分支：LLM_PROVIDER=${chatRaw || '未配置'}）`;
+    const ex = resolveExtractLlm();
+    const llm = {
+      chat_provider: chatProvider,
+      chat_scope: 'global（所有设备共用，改 .env 需重启）',
+      extract: {
+        provider: ex.provider, model: ex.model, base_url: ex.baseUrl ?? '',
+        source: ex.source, api_key_masked: maskKey(ex.apiKey ?? ''),
+      },
+    };
+
+    // ── 配置矩阵：排查一屏看全「配置项 / 当前值 / 来源 / 作用域 / 生效方式 / 在哪改」──
+    const wv = device.worldview_override?.trim() ?? '';
+    const ad = device.prompt_addendum?.trim() ?? '';
+    const config_matrix = [
+      { layer: '接入', item: '设备状态', value: dbStatus ?? '不在台账（回落 env）', source: 'DB 台账', scope: 'per-SN', effect: '即时', where: '设备接入 tab' },
+      { layer: '接入', item: 'env 白名单', value: `${envAllow.length} 台（DB 无记录时兜底）`, source: 'env DEVICE_SN_ALLOW', scope: 'global', effect: '重启生效', where: '.env' },
+      { layer: '接入', item: 'session TTL', value: `${access.ttl_s}s`, source: 'env DEVICE_SESSION_TTL_S', scope: 'global', effect: '下次签发', where: '.env' },
+      { layer: '接入', item: '签发限频', value: `${access.rpm}/min/SN`, source: 'env DEVICE_SESSION_RPM', scope: 'per-SN', effect: '下次签发', where: '.env' },
+      { layer: '身份', item: '房名模式', value: 'sn-<SN>-<unix秒>', source: 'S2B1 合同（代码常量）', scope: 'global', effect: '不可变', where: '—' },
+      { layer: 'prompt', item: '世界观人设', value: wv ? `本设备 override（${wv.length} 字）` : '默认 ARK_WORLDVIEW_BASE', source: wv ? 'DB per-device' : '代码常量', scope: 'per-device', effect: '下一轮对话', where: 'brain 编辑 tab' },
+      { layer: 'prompt', item: 'AI 安全基座', value: `常驻 ${AI_SAFETY_BASELINE.length} 字`, source: '代码常量', scope: 'global', effect: '不可编辑（儿童安全红线）', where: '—' },
+      { layer: 'prompt', item: '附加规则', value: ad ? `启用（${ad.length} 字）` : '未启用', source: 'DB per-device', scope: 'per-device', effect: '下一轮对话', where: 'brain 编辑 tab' },
+      { layer: '记忆', item: '抽取开关', value: process.env.MEMORY_EXTRACT_ENABLED === '0' ? '关闭' : '开启', source: 'env MEMORY_EXTRACT_ENABLED', scope: 'global', effect: '重启生效', where: '.env' },
+      { layer: '记忆', item: '抽取节流', value: '设备房每轮 / web 每 3 轮', source: '代码（custom-llm persistTurn）', scope: 'per-role', effect: '不可配', where: '—' },
+      { layer: '记忆', item: '危机内容过滤', value: '写入唯一入口 addItems 拦截', source: '代码（memory-safety-filter）', scope: 'global', effect: '不可编辑（儿童安全红线）', where: '—' },
+      { layer: 'LLM', item: '主对话 provider', value: chatProvider, source: 'env LLM_PROVIDER', scope: 'global', effect: '重启生效', where: '.env' },
+      { layer: 'LLM', item: '记忆抽取 LLM', value: `${ex.provider} / ${ex.model}（来源 ${ex.source === 'admin' ? '后台配置' : 'env 回落'}）`, source: ex.source === 'admin' ? 'DB（后台配置卡）' : 'env', scope: 'global', effect: '热生效', where: 'brain tab 配置卡' },
+    ];
+
+    return c.json({
+      ok: true, sn, bound,
+      chain: { access, identity, prompt: promptLayers, data, llm },
+      config_matrix,
+      server_now: Date.now(),
+    });
+  } catch (error) {
+    return c.json({ ok: false, error: '拉取隔离视图失败，请稍后重试' }, 500);
+  }
+});
+
+// 全局隔离总览（2026-08-19 川哥）：所有租户一屏对账——逐台隔离健康行 + 全库不变量自检 + 24h 可靠性。
+// 不变量原则：期望零违例的检查必须带 checked 计数（检查了多少对象）——「0 violations / checked 0」
+// 是没执行不是通过；违例明细必须点名到 SN/账号，能直接开修。
+adminDataRoute.get('/isolation-overview', (c) => {
+  try {
+    const devices = deviceRegistryStore.list();
+    const envAllow = (process.env.DEVICE_SN_ALLOW || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const memStats = memoryItemStore.perAccountStats();
+    const memByAccount = new Map(memStats.map((r) => [r.account_id, r]));
+    const convoStats = conversationStore.statsByAccount();
+    const PROBE = '__isolation_probe__';
+
+    // ── 逐台租户行：每台现场跑一遍生产 resolveDeviceIdentity（防串号自检），并挂上她的数据边界 ──
+    const tenants = devices.map((d) => {
+      const resolved = resolveDeviceIdentity({ accountId: PROBE, role: 'parent' }, `sn-${d.sn}-0`);
+      const routeMatch = d.account_id
+        ? resolved?.accountId === d.account_id && resolved?.accountId !== PROBE
+        : resolved === null;
+      const account = d.account_id ? accountStore.findAccount(d.account_id) : null;
+      return {
+        sn: d.sn,
+        note: d.note ?? '',
+        status: d.status,
+        account_id: d.account_id ?? null,
+        account_nickname: account?.nickname ?? '',
+        route_match: routeMatch,
+        profile_exists: d.account_id ? Boolean(profileStore.getProfile(d.account_id)) : false,
+        memory_active: d.account_id ? (memByAccount.get(d.account_id)?.active_n ?? 0) : 0,
+        conversation_count: d.account_id ? (convoStats[d.account_id]?.count ?? 0) : 0,
+        last_active_at: d.last_active_at ?? null,
+        session_count: d.session_count ?? 0,
+        parent_account_id: d.parent_account_id ?? null,
+      };
+    });
+
+    // ── 全库不变量自检 ──
+    const invariants: Array<{ key: string; label: string; checked: number; violations: number; detail: string }> = [];
+
+    // 1. 一账号一设备：两台设备绑同一 brain 账号 = 串号的最坏形态（记忆/对话直接混线）
+    const bindings = devices.filter((d) => d.account_id);
+    const byAccount = new Map<string, string[]>();
+    for (const d of bindings) {
+      byAccount.set(d.account_id!, [...(byAccount.get(d.account_id!) ?? []), d.sn]);
+    }
+    const dup = [...byAccount.entries()].filter(([, sns]) => sns.length > 1);
+    invariants.push({
+      key: 'unique_binding',
+      label: '一账号一设备（两台共绑同号 = 记忆混线）',
+      checked: bindings.length,
+      violations: dup.length,
+      detail: dup.map(([acc, sns]) => `${acc} 被 ${sns.length} 台绑定: ${sns.join(', ')}`).join('；'),
+    });
+
+    // 2. device- 账号命名与 SN 一致（绑定既有家长账号 acct-NN 的场景不适用，跳过）
+    const named = bindings.filter((d) => d.account_id!.startsWith('device-'));
+    const misnamed = named.filter((d) => d.account_id !== `device-${d.sn}`);
+    invariants.push({
+      key: 'device_account_naming',
+      label: 'device- 账号后缀与所绑 SN 一致',
+      checked: named.length,
+      violations: misnamed.length,
+      detail: misnamed.map((d) => `${d.sn} 绑了 ${d.account_id}`).join('；'),
+    });
+
+    // 3./4. 孤儿数据：记忆/对话里的 account_id 在账号表查无此人 = 悬空数据（含 retracted，不因下架豁免）
+    const orphanMem = memStats.filter((r) => !accountStore.findAccount(r.account_id));
+    invariants.push({
+      key: 'no_orphan_memory',
+      label: '记忆无孤儿账号（每条都能落到真实账号）',
+      checked: memStats.length,
+      violations: orphanMem.length,
+      detail: orphanMem.map((r) => `${r.account_id}（${r.total_n} 条）`).join('；'),
+    });
+    const convoAccounts = Object.keys(convoStats);
+    const orphanConvo = convoAccounts.filter((a) => !accountStore.findAccount(a));
+    invariants.push({
+      key: 'no_orphan_conversation',
+      label: '对话无孤儿账号',
+      checked: convoAccounts.length,
+      violations: orphanConvo.length,
+      detail: orphanConvo.map((a) => `${a}（${convoStats[a]!.count} 条）`).join('；'),
+    });
+
+    // ── 白名单覆盖面：env 与 DB 台账的关系（兜底面多大 / disabled 压制了谁）──
+    const dbSns = new Set(devices.map((d) => d.sn));
+    const envOnly = envAllow.filter((sn) => !dbSns.has(sn));
+    const disabledInEnv = devices.filter((d) => d.status === 'disabled' && envAllow.includes(d.sn)).map((d) => d.sn);
+    const coverage = {
+      db_total: devices.length,
+      db_active: devices.filter((d) => d.status === 'active').length,
+      db_disabled: devices.filter((d) => d.status === 'disabled').length,
+      env_allow_count: envAllow.length,
+      env_only_sns: envOnly, // 只在 env 不在台账：DB 坏时的兜底面，也是台账收编的 TODO
+      db_disabled_suppressing_env: disabledInEnv, // DB disabled 压制 env 存量（by design，展示出来防误判）
+    };
+
+    // ── 24h 可靠性 + LLM 通道 + 全局安全常量 ──
+    const traffic_24h = deviceRegistryStore.statsSince(Date.now() - 24 * 3600_000);
+    const chatRaw = (process.env.LLM_PROVIDER || '').toLowerCase();
+    const chatProvider = chatRaw === 'race' ? 'race（deepseek 主 + doubao 兜底）'
+      : chatRaw === 'minimax' ? 'minimax'
+        : chatRaw === 'deepseek' ? 'deepseek'
+          : `gemini（else 默认分支：LLM_PROVIDER=${chatRaw || '未配置'}）`;
+    const ex = resolveExtractLlm();
+
+    return c.json({
+      ok: true,
+      tenants,
+      invariants,
+      coverage,
+      traffic_24h,
+      llm: {
+        chat_provider: chatProvider,
+        extract: { provider: ex.provider, model: ex.model, source: ex.source, api_key_masked: maskKey(ex.apiKey ?? '') },
+      },
+      safety: {
+        baseline_chars: AI_SAFETY_BASELINE.length,
+        crisis_filter: '写入唯一入口 addItems 拦截（memory-safety-filter）',
+        extract_enabled: process.env.MEMORY_EXTRACT_ENABLED !== '0',
+      },
+      accounts_total: accountStore.listAccounts().length,
+      server_now: Date.now(),
+    });
+  } catch (error) {
+    return c.json({ ok: false, error: '拉取全局隔离总览失败，请稍后重试' }, 500);
   }
 });
 

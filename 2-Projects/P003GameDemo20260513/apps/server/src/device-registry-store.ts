@@ -282,6 +282,23 @@ class DeviceRegistryStore {
     return Number(r.changes) > 0;
   }
 
+  /** 时间窗内按状态分组的签发统计（全局隔离总览可靠性区）。 */
+  statsSince(t0: number): { ok: number; rejected_403: number; rejected_429: number; prefetch: number; total: number } {
+    const rows = this.db
+      .prepare(`SELECT status, COUNT(*) AS n FROM device_session_log WHERE created_at >= ? GROUP BY status`)
+      .all(t0) as Array<{ status: string; n: number }>;
+    const out = { ok: 0, rejected_403: 0, rejected_429: 0, prefetch: 0, total: 0 };
+    for (const r of rows) {
+      const n = Number(r.n);
+      out.total += n;
+      if (r.status === 'ok') out.ok += n;
+      else if (r.status === 'rejected_403') out.rejected_403 += n;
+      else if (r.status === 'rejected_429') out.rejected_429 += n;
+      else if (r.status === 'prefetch') out.prefetch += n;
+    }
+    return out;
+  }
+
   /** 顶部状态卡：今日（本机时区零点起）ok / 拒绝计数。 */
   todayStats(): { today_ok: number; today_rejected: number } {
     const midnight = new Date();
