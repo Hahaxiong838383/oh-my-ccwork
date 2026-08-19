@@ -213,6 +213,12 @@ fn lookup(s: &str) -> Option<DeviceMatch> {
 /// 主入口:ASR final 文本 → 设备命令判定。
 /// None = 非设备命令(落回闲聊/LLM)。整句匹配不中时循环剥离礼貌前后缀
 /// (每轮至多剥一前一后,至多 4 轮),**剥离后仍须完整命中**——子串永不执行。
+/// label 是否在词表合法集内(Phase 2a 观察打点用:LLM 幻觉 label 一眼可辨;
+/// 2b 放开执行时同一函数当白名单闸)。
+pub fn known_label(label: u32) -> bool {
+    table().map.values().any(|(l, _, _)| *l == label)
+}
+
 pub fn match_command(text: &str) -> Option<DeviceMatch> {
     let mut s = normalize(text);
     if s.is_empty() {

@@ -1776,6 +1776,18 @@ impl Orchestrator {
                             if spec_mode {
                                 llm.lock().await.settle(&outcome);
                             }
+                            // Phase 2a 观察打点(2026-08-20):LLM 输出的 [[DEV:N]] 已被
+                            // DevMarkStripper 剥离(不进 TTS/字幕/历史),此处只记日志**不执行**
+                            // ——LLM→DEVICE commit 被 codex 标 BLOCKED_PENDING_VAD_CANDIDATE_ID,
+                            // 关联合同落地前禁止提交。统计:grep 'llm device intent observed'。
+                            for label in &outcome.dev_labels {
+                                info!(
+                                    room = %room_name,
+                                    label,
+                                    known = crate::device_intent::known_label(*label),
+                                    "llm device intent observed (observe-only, not executed)"
+                                );
+                            }
                             // tps=字符/秒近似(SSE chunk≠token,诚实口径;web 面板显示用)
                             publish(json!({
                                 "k": "llm",

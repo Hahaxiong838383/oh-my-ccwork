@@ -200,6 +200,77 @@ impl LeadingFillerStripper {
     }
 }
 
+// --- LLM 设备意图标记剥离(Phase 2a 观察模式,2026-08-20) --------------------------
+
+const DEV_HEAD: &str = "[[DEV:";
+/// "[[DEV: 12345 ]]" 远短于此;超长=非法,整段放行防吞正文
+const DEV_BUF_MAX: usize = 24;
+
+/// 剥 `[[DEV:N]]` 标记(N=semantic label,冒号后容忍空格):标记绝不进 TTS/字幕/历史,
+/// label 收集给 pipeline 观察打点。**剥离无条件**(worker 侧零开关):server 端 prompt
+/// 未注入协议时 LLM 不输出标记、本剥离器零行为;注入后若放行标记=TTS 念给孩子听,
+/// 故安全端必须在剥离侧。观察模式只记日志不执行——LLM→DEVICE commit 被 codex 标记
+/// BLOCKED_PENDING_VAD_CANDIDATE_ID(CODEX_P003_ANDROID_VAD_FALLBACK_REPLY_20260819 §5),
+/// 关联合同落地前禁止提交执行。格式错(未闭合/夹杂非数字)整段放行:宁念错半个标记
+/// 也不误吞正文,格式错误率本身是观察指标(prompt 迭代依据)。
+pub struct DevMarkStripper {
+    buf: String,
+    pub labels: Vec<u32>,
+}
+
+impl DevMarkStripper {
+    pub fn new() -> Self {
+        Self { buf: String::new(), labels: Vec::new() }
+    }
+
+    /// buf 是否仍可能长成合法标记("[[DEV:" 前缀形态,主体仅 空格/数字/']')
+    fn viable(buf: &str) -> bool {
+        if buf.len() < DEV_HEAD.len() {
+            return DEV_HEAD.starts_with(buf);
+        }
+        buf.starts_with(DEV_HEAD)
+            && buf.len() <= DEV_BUF_MAX
+            && buf[DEV_HEAD.len()..].chars().all(|c| c.is_ascii_digit() || c == ' ' || c == ']')
+    }
+
+    /// 完整标记 "[[DEV:<sp*>digits<sp*>]]" → label
+    fn complete(buf: &str) -> Option<u32> {
+        let inner = buf.strip_prefix(DEV_HEAD)?.strip_suffix("]]")?.trim();
+        if inner.is_empty() || !inner.chars().all(|c| c.is_ascii_digit()) {
+            return None;
+        }
+        inner.parse().ok()
+    }
+
+    pub fn feed(&mut self, chunk: &str) -> String {
+        let mut out = String::new();
+        for c in chunk.chars() {
+            if self.buf.is_empty() {
+                if c == '[' {
+                    self.buf.push(c);
+                } else {
+                    out.push(c);
+                }
+                continue;
+            }
+            self.buf.push(c);
+            if let Some(label) = Self::complete(&self.buf) {
+                self.labels.push(label);
+                self.buf.clear();
+            } else if !Self::viable(&self.buf) {
+                out.push_str(&self.buf);
+                self.buf.clear();
+            }
+        }
+        out
+    }
+
+    /// 流结束:未闭合疑似段原样放行(宁念不吞)。
+    pub fn flush(&mut self) -> String {
+        std::mem::take(&mut self.buf)
+    }
+}
+
 // --- 流式调用核心(chat 与投机共用,不碰历史) -----------------------------------
 
 pub struct ChatOutcome {
@@ -208,6 +279,8 @@ pub struct ChatOutcome {
     pub duration_ms: u64,
     /// 下游(切句/TTS)提前关闭=被打断,历史交由 set_last_assistant 收尾。
     pub interrupted: bool,
+    /// Phase 2a 观察:本轮 LLM 输出中剥出的 [[DEV:N]] 标记(已从 full/流中移除)。
+    pub dev_labels: Vec<u32>,
 }
 
 impl ChatOutcome {
@@ -254,6 +327,7 @@ pub async fn stream_chat(
     );
 
     let mut stripper = cfg.strip_leading_filler.then(LeadingFillerStripper::new);
+    let mut dev = DevMarkStripper::new(); // Phase 2a:无条件剥 [[DEV:N]],标记绝不进流/历史
     let mut full = String::new();
     let mut ttft_ms: Option<u64> = None;
     let mut n_chunks: u64 = 0;
@@ -286,6 +360,7 @@ pub async fn stream_chat(
                         Some(s) => s.feed(text),
                         None => text.to_string(),
                     };
+                    let out = dev.feed(&out);
                     if out.is_empty() {
                         continue;
                     }
@@ -299,8 +374,12 @@ pub async fn stream_chat(
             }
         }
     }
-    if !interrupted && let Some(s) = stripper.as_mut() {
-        let tail = s.flush();
+    if !interrupted {
+        let mut tail = match stripper.as_mut() {
+            Some(s) => dev.feed(&s.flush()),
+            None => String::new(),
+        };
+        tail.push_str(&dev.flush()); // dev 自己的未闭合疑似段:宁念不吞
         if !tail.is_empty() {
             full.push_str(&tail);
             let _ = tx.send(tail).await;
@@ -317,6 +396,7 @@ pub async fn stream_chat(
         ttft_ms: ttft_ms.unwrap_or(0),
         duration_ms: t0.elapsed().as_millis() as u64,
         interrupted,
+        dev_labels: dev.labels,
     })
 }
 
@@ -597,6 +677,33 @@ mod tests {
         out
     }
 
+    fn dev_all(chunks: &[&str]) -> (String, Vec<u32>) {
+        let mut d = DevMarkStripper::new();
+        let mut out = String::new();
+        for c in chunks {
+            out.push_str(&d.feed(c));
+        }
+        out.push_str(&d.flush());
+        (out, d.labels)
+    }
+
+    #[test]
+    fn dev_mark_strip_table() {
+        // 整标记单 chunk:剥净+收 label
+        assert_eq!(dev_all(&["[[DEV:22]]好呀，给你换暖光"]), ("好呀，给你换暖光".into(), vec![22]));
+        // 跨 chunk 切分
+        assert_eq!(dev_all(&["你好[[DE", "V: 35 ]]啦"]), ("你好啦".into(), vec![35]));
+        // 多标记
+        assert_eq!(dev_all(&["[[DEV:2]]开灯[[DEV:37]]再大声"]), ("开灯再大声".into(), vec![2, 37]));
+        // 正文方括号不受伤
+        assert_eq!(dev_all(&["列表[[1]]和[[2]]"]), ("列表[[1]]和[[2]]".into(), vec![]));
+        // 格式错(非数字/未闭合):整段放行,宁念不吞
+        assert_eq!(dev_all(&["[[DEV:abc]]文"]), ("[[DEV:abc]]文".into(), vec![]));
+        assert_eq!(dev_all(&["尾部残段[[DEV:9"]), ("尾部残段[[DEV:9".into(), vec![]));
+        // 无标记直通
+        assert_eq!(dev_all(&["今天天气不错。"]), ("今天天气不错。".into(), vec![]));
+    }
+
     fn main_cfg() -> LlmConfig {
         LlmConfig {
             base_url: "https://main.example/v1".into(),
@@ -743,12 +850,12 @@ mod tests {
         };
         let mut llm = Llm::new(cfg);
         llm.push_user("你好");
-        llm.settle(&ChatOutcome { full: "答".into(), ttft_ms: 1, duration_ms: 1, interrupted: false });
+        llm.settle(&ChatOutcome { full: "答".into(), ttft_ms: 1, duration_ms: 1, interrupted: false, dev_labels: vec![] });
         assert_eq!(llm.history.len(), 2);
         // 打断:不动,由 set_last_assistant 修正
         llm.push_user("再问");
         let v = llm.history_version();
-        llm.settle(&ChatOutcome { full: "半截".into(), ttft_ms: 1, duration_ms: 1, interrupted: true });
+        llm.settle(&ChatOutcome { full: "半截".into(), ttft_ms: 1, duration_ms: 1, interrupted: true, dev_labels: vec![] });
         assert_eq!(llm.history.len(), 3);
         assert!(llm.history_version() > v);
         llm.set_last_assistant("半");
@@ -756,7 +863,7 @@ mod tests {
         assert_eq!(llm.history[3]["content"], "半");
         // 空回复回滚 user
         llm.push_user("第三问");
-        llm.settle(&ChatOutcome { full: String::new(), ttft_ms: 0, duration_ms: 0, interrupted: false });
+        llm.settle(&ChatOutcome { full: String::new(), ttft_ms: 0, duration_ms: 0, interrupted: false, dev_labels: vec![] });
         assert_eq!(llm.history.len(), 4);
     }
 }
