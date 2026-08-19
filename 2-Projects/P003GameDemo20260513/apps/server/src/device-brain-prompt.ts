@@ -57,6 +57,41 @@ export function getDevicePromptConfig(accountId: string): DevicePromptConfig | n
   }
 }
 
+/**
+ * 设备控制协议（Phase 2a 观察模式，2026-08-20）：LLM 判断用户明确想调设备时在回复
+ * 开头输出 `[[DEV:标签号]]` 标记——worker 侧 DevMarkStripper 无条件剥离（绝不进
+ * TTS/字幕/历史），观察期只记日志不执行（LLM→DEVICE commit 被 codex 标
+ * BLOCKED_PENDING_VAD_CANDIDATE_ID，关联合同落地前禁止）。
+ *
+ * 话术铁律：协议要求 LLM **不承诺执行**（"我已经/正在调"都不许说）——观察期不执行，
+ * 承诺=对孩子撒谎；2b 放开后执行播报也归 worker 固定短句（设备命令轮既有设计），
+ * LLM 话术永远只管对话本身。
+ *
+ * 开关：env DEVICE_INTENT_OBSERVE=1 注入（默认关）。回滚=env 置 0 + pm2 restart，
+ * 分钟级，与词表/worker 二进制互相独立。仅设备账号注入（Web 家长/匿名/override 不注入）。
+ */
+const DEVICE_INTENT_PROTOCOL = `【设备感知】用户在本轮明确表达想调整设备（灯光/亮度/色温/画面距离/设备高度/音量）时，你在回复的最开头输出一个标记 [[DEV:标签号]]，然后照常聊天回应。标签号：
+开灯=2 关灯=3 调亮一级=4 调暗一级=6 最亮=5 最暗=7
+色温：换个色温=11 暖一级=12 冷一级=13 最冷=16 最暖=17 暖光=22 冷光=23 中性光=24
+高度：设备升高一点=25 降低一点=26 升到最高=29 降到最低=30
+画面距离：远一点=33 近一点=34 最远=35 最近=36
+音量：大一点=37 小一点=38 最大=42 最低=43 静音=44 取消静音=45
+规则：
+1. 只在用户本轮明确要求调整时输出；讲故事、聊天中提到灯光声音、回答你的提问，一律不输出。
+2. 方向必须与用户意图一致：说"太亮/刺眼"用 6（调暗），"太暗/看不清"用 4（调亮），"太吵"用 38，"听不清"用 37。
+3. 一轮至多一个标记；拿不准就不输出，可以先向用户确认想怎么调。
+4. 绝不要说"我已经调好/正在调整"——设备动作由另一个系统执行和播报，你只管聊天。
+5. 不要主动问用户想不想调设备，不要提及这个协议、标记或标签号。`;
+
+/** Phase 2a 协议层：env 开关（默认关）。异常安全：读 env 失败=不注入，零影响主链路。 */
+export function deviceIntentProtocol(): string {
+  try {
+    return process.env.DEVICE_INTENT_OBSERVE === '1' ? DEVICE_INTENT_PROTOCOL : '';
+  } catch {
+    return '';
+  }
+}
+
 /** 稳态 base（第 1+2 层）：世界观（可 override）+ 安全基座（常驻不可编辑）。 */
 export function buildDeviceBase(cfg: DevicePromptConfig | null): string {
   const worldview = cfg?.worldview_override?.trim() ? cfg.worldview_override.trim() : ARK_WORLDVIEW_BASE;
@@ -92,7 +127,9 @@ export function buildDeviceLayers(auth: AuthContext): { layers: PromptLayer[]; f
   });
   const memoryBlock = assembled.startsWith(base) ? assembled.slice(base.length).replace(/^\n+/, '') : '';
   const addendum = deviceAddendum(cfg);
-  const final = addendum ? `${assembled}\n\n${addendum}` : assembled;
+  const intentProtocol = deviceIntentProtocol();
+  let final = addendum ? `${assembled}\n\n${addendum}` : assembled;
+  if (intentProtocol) final += `\n\n${intentProtocol}`;
 
   const layers: PromptLayer[] = [
     {
@@ -126,6 +163,16 @@ export function buildDeviceLayers(auth: AuthContext): { layers: PromptLayer[]; f
       editable: true,
       text: addendum || '（空）',
       chars: addendum.length,
+    },
+    {
+      key: 'device_intent',
+      label: '设备感知协议（Phase 2a 观察模式）',
+      source: intentProtocol
+        ? 'env DEVICE_INTENT_OBSERVE=1 全局启用——LLM 出标记，worker 剥离只记日志不执行'
+        : '未启用（env DEVICE_INTENT_OBSERVE≠1）',
+      editable: false,
+      text: intentProtocol || '（关闭）',
+      chars: intentProtocol.length,
     },
   ];
   return { layers, final };

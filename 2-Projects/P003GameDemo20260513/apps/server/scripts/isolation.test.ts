@@ -119,7 +119,7 @@ await t('I3 未开通：bound=false + 身份路由必须匿名（match=true）+ 
 });
 
 let accountId = '';
-await t('I4 开通后：身份路由自检 resolved==registry 且 ≠ probe token 身份；prompt 四层齐', async () => {
+await t('I4 开通后：身份路由自检 resolved==registry 且 ≠ probe token 身份；prompt 五层齐', async () => {
   const open = await req(adminToken, 'POST', `/devices/${SN}/brain`, {});
   assert.equal(open.status, 200);
   accountId = ((await open.json()) as { account_id: string }).account_id;
@@ -131,7 +131,8 @@ await t('I4 开通后：身份路由自检 resolved==registry 且 ≠ probe toke
   assert.equal(j.chain.identity.resolved_role, 'device');
   assert.equal(j.chain.identity.match, true);
   const keys = j.chain.prompt.map((l) => l.key);
-  assert.deepEqual(keys, ['worldview', 'safety', 'memory', 'addendum']);
+  // Phase 2a(2026-08-20)加第五层 device_intent(设备感知协议,env 开关全局层)
+  assert.deepEqual(keys, ['worldview', 'safety', 'memory', 'addendum', 'device_intent']);
   const safety = j.chain.prompt.find((l) => l.key === 'safety')!;
   assert.equal(safety.editable, false, '安全基座必须不可编辑');
 });

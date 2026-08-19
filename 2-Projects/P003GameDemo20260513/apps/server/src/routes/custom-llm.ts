@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { FEEDBACK_PERSONA_SUFFIX } from '../prompts.js';
 import { buildAiLiteracyGuide } from '../ai-literacy.js';
-import { getDevicePromptConfig, buildDeviceBase, deviceAddendum, resolveDeviceIdentity } from '../device-brain-prompt.js';
+import { getDevicePromptConfig, buildDeviceBase, deviceAddendum, deviceIntentProtocol, resolveDeviceIdentity } from '../device-brain-prompt.js';
 import { assembleSystemPrompt, buildOnboardingGuide } from '../prompt-orchestrator.js';
 import { curriculumKG } from '../curriculum-kg.js';
 import { companionKG } from '../companion-kg.js';
@@ -119,6 +119,10 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // per-device 附加规则（Worker Brain 编辑 tab）：拼在护栏之后（吐槽后缀仍保持绝对最末）。
   const addendumText = overridePrompt ? '' : deviceAddendum(deviceCfg);
   if (addendumText) systemPrompt += `\n\n${addendumText}`;
+  // Phase 2a 设备感知协议（2026-08-20，env DEVICE_INTENT_OBSERVE=1 才注入）：仅设备账号
+  // （role=device）——Web 家长/匿名/override 调试轮不注入；worker 剥标记只记日志不执行。
+  const intentProtocol = (!overridePrompt && authContext?.role === 'device') ? deviceIntentProtocol() : '';
+  if (intentProtocol) systemPrompt += `\n\n${intentProtocol}`;
   // 吐槽人格放 systemPrompt 最末尾（近因效应，docs/36 同源）：否则被世界观 + 用户字面意图(如"想听故事")盖过，LLM 会去满足请求而非收集吐槽。
   if (isFeedback) systemPrompt += `\n\n${FEEDBACK_PERSONA_SUFFIX}`;
   // 吐槽落库（复用 feedbackStore，进 admin/家长端同一反馈看板；try-catch 不阻断回应）。
