@@ -323,12 +323,20 @@ fn short_hash(s: &str) -> String {
 }
 
 /// S2-B2 固定短回复表(合同 §4.5;不走 LLM)。
-/// 边界句约定(合同缺口,守恒默认——交接文档待 codex 确认):reason 含 "boundary" 时
-/// 按 action 方向播边界句;其余 rejected 统一「现在暂时不能这样调」。
+/// 边界句约定(2026-08-19 v58 交接已确认):reason 含 "boundary" 时按 action 方向播边界句;
+/// 其余 rejected 统一「现在暂时不能这样调」。
+/// executed_unconfirmed(v58 新语义:命令已执行但状态快照未刷新,≠失败):播中性完成句,
+/// 不声称精确档位、不触发重试——话术过度自信会在罕见未生效场景误导用户。
 fn device_reply(status: &str, relative: bool, reason: &str, action: &str) -> String {
     match status {
         "succeeded" => {
-            if relative { "好，调了一点".to_string() } else { "好的，已经调好了".to_string() }
+            if reason == "executed_unconfirmed" {
+                "好的，已为你调整".to_string()
+            } else if relative {
+                "好，调了一点".to_string()
+            } else {
+                "好的，已经调好了".to_string()
+            }
         }
         "already_applied" => "现在已经是这个状态了".to_string(),
         "rejected" => {
@@ -1937,6 +1945,20 @@ mod device_turn_tests {
     fn device_reply_table() {
         assert_eq!(device_reply("succeeded", false, "state_confirmed", "led_on"), "好的，已经调好了");
         assert_eq!(device_reply("succeeded", true, "state_confirmed", "brightness_up"), "好，调了一点");
+        // v58 合同:曾超时后实态确认=确定成功,不因底层结果帧超时改播失败
+        assert_eq!(
+            device_reply("succeeded", false, "state_confirmed_after_result_timeout", "motor_min"),
+            "好的，已经调好了"
+        );
+        // v58 合同:executed_unconfirmed=已执行未确认,中性句,相对/绝对档同句(不声称档位)
+        assert_eq!(
+            device_reply("succeeded", false, "executed_unconfirmed", "color_temperature_normal"),
+            "好的，已为你调整"
+        );
+        assert_eq!(
+            device_reply("succeeded", true, "executed_unconfirmed", "brightness_up"),
+            "好的，已为你调整"
+        );
         assert_eq!(device_reply("already_applied", false, "", "led_on"), "现在已经是这个状态了");
         assert_eq!(device_reply("rejected", false, "whitelist", "led_on"), "现在暂时不能这样调");
         assert_eq!(device_reply("rejected", true, "boundary_reached", "motor_up_step"), "已经到最高了");
