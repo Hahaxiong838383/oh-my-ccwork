@@ -83,6 +83,13 @@ ssh root@47.239.204.68 'cd /root/realtime-voice-agent && timeout 50 \
 2. agent 说了但用户听不到 + 指标"-" = **下行断** → 十有八九是网络路径(见 5G 症状)。
 3. 用户说了没转写(无 UserTranscript)→ ASR 流问题,grep `火山 ASR 流异常`。
 
+### 症状:僵尸房——端侧显示"连接中/通话中"但整轮零 ASR 零回应(常连房间模式专属)
+= **信令 WS 活着但媒体死了**。分型看 worker 的 `media watchdog stats` 行(2026-08-19 上线,60s 一行):
+- `lost=True`/frames 停增 = **传输死**(NAT 失效/网络切换/WebView 冻结)→ L1 自动处置:SFU 报 LOST 持续 `MEDIA_LOST_HANGUP_S`(默认 15s)→ worker 删房 → 端侧收标准 disconnected 自行重连。看 `media watchdog 删房` 行确认。
+- frames 正常但 `peak≈0` 而端侧硬件 VAD 报在说话 = **采集死**(系统收走麦克风,WebRTC 只发静音,传输层全绿)→ 服务端无法检测,端侧「无 ASR 看门狗」处置(P003WebDemo 侧,联合修复文档 docs/ZOMBIE-ROOM-JOINT-FIX-20260819.md)。
+- 生效证据=job 日志 `media watchdog armed: ... tap=True`;回滚 `MEDIA_WATCHDOG=0`+restart。代码 engines/media_watchdog.py。
+- 关联机制:IDLE_HANGUP_TIMEOUT_S(空闲超时关房,仅 tenant-colleague.env 启用)管"活连接挂太久",watchdog 管"连接名存实亡",正交并存——**排障时两个删房源都可能是 disconnected 的来源**,按日志行区分(`idle hangup` vs `media watchdog 删房`)。
+
 ### 症状:开代理能通、直连不通(或中途断声)
 = **大陆→境外跨境 UDP 被运营商 QoS 掐**(server 日志 `short ice connection`)。这是网络路径问题,服务端无责。
 - 页面已内置自动降级:直连失败/Reconnecting → 自动切 TURN 中继并 localStorage 记住;`?relay=1` 强制中转,`?relay=0` 恢复直连。
