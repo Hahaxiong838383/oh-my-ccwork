@@ -65,11 +65,34 @@ pub fn parse_hotwords(raw: Option<&str>) -> HashSet<String> {
     parse_hotwords_with(raw, DEFAULT_INTERRUPT_HOTWORDS)
 }
 
+/// 语气词前缀(2026-08-19 Phase 1a):「嗯退出」「那退出」「好关灯」类真实 miss(journal 归因)。
+/// 与 device_intent 的礼貌句式表(POLITE_PREFIX)职责分开:这里只管吞句场景的单字语气词。
+const MODAL_PREFIX: &[char] = &['好', '那', '嗯', '哎'];
+
 /// stop_only 吞句判定(2026-08-17 生命周期统一):整句标准化后精确等于急停词 → true。
 /// 精确匹配天然保护混合句:「停，换个故事」normalize 后 != 任何纯急停词,不吞。
 /// 白名单被显式禁用(空集)时恒 false。
+/// 语气词前缀至多剥 2 字后重查(「嗯退出」「嗯嗯退出」)——剥后仍须完整命中,
+/// 「好的呀」剥「好」后「的呀」不中=不吞,子串纪律不变。
 pub fn is_stop_only(hotwords: &HashSet<String>, text: &str) -> bool {
-    !hotwords.is_empty() && hotwords.contains(&normalize_utterance(text))
+    if hotwords.is_empty() {
+        return false;
+    }
+    let mut s = normalize_utterance(text);
+    if hotwords.contains(&s) {
+        return true;
+    }
+    for _ in 0..2 {
+        let Some(c) = s.chars().next() else { break };
+        if !MODAL_PREFIX.contains(&c) {
+            break;
+        }
+        s = s.chars().skip(1).collect();
+        if hotwords.contains(&s) {
+            return true;
+        }
+    }
+    false
 }
 
 /// 剥离 LLM 输出里的舞台指示——括号/星号包裹的动作、表情、神态描述:
@@ -177,6 +200,14 @@ mod tests {
         assert!(is_stop_only(&exits, " 我要睡觉了！"));
         assert!(is_stop_only(&exits, "退出对话"));
         assert!(is_stop_only(&exits, "不用了"));
+        // Phase 1a 语气词前缀(2026-08-19):剥后完整命中才吞
+        assert!(is_stop_only(&exits, "嗯退出"));
+        assert!(is_stop_only(&exits, "那退出"));
+        assert!(is_stop_only(&exits, "嗯嗯退出"));
+        assert!(is_stop_only(&exits, "好，再见"));
+        // 剥后非完整退出词=不吞(子串纪律)
+        assert!(!is_stop_only(&exits, "嗯你好呀"));
+        assert!(!is_stop_only(&exits, "好的呀"));
         // 混合句不吞(正常成轮)
         assert!(!is_stop_only(&exits, "再见了我的朋友这首歌放一下"));
         assert!(!is_stop_only(&exits, "退出这个游戏之后干嘛"));
