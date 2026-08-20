@@ -43,6 +43,8 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **文件**:`src/device-sn.ts`(SN 纯函数)/`src/routes/device-session.ts`/`scripts/device-session.test.ts`(16 项,`npx tsx` 直跑)/`scripts/sign-device-credential.ts`。
 - **env 键**(.env.local 尾部):`LIVEKIT_API_KEY=voicekey`/`LIVEKIT_API_SECRET`(源=47.239 /etc/livekit/config.yaml,管道直传别落盘)/`LIVEKIT_URL`/`DEVICE_SN_ALLOW`(白名单 fail-closed,逗号分隔)/`DEVICE_SESSION_TTL_S=3600`/`DEVICE_SESSION_RPM=10`。
 - **加新设备**:SN 追加进 `DEVICE_SN_ALLOW` → `pm2 restart p003-voice` → 服务器上签凭据:`set -a; . ./.env.local; set +a; npx tsx scripts/sign-device-credential.ts <SN> 30`(输出即凭据,管道接走禁回显/进 git)。
+- **新设备接 brain(2026-08-20 起零配置)**:admin 台账加 SN → 点「开通 brain」即完成——身份由房名 SN 自动路由,**无 token 要配**(brain_token 分发已取消,commit af8d3cf0d;开通响应只回 account_id)。设备命令 canary 已全量(env 列表空=sn- 房全开),新设备开箱即用;**二遍 ASR 仍名单制**(火山账单口径观察中):`VOLC_ASR_NONSTREAM_CANARY_SN` 追加 SN 小写+64.90 纪律重启,不加=一遍链路(热词只 100 tokens)。
+- **⏰ worker 通行证 2027-08-17 前后过期(定时炸弹)**:过期后 worker 调大脑**静默降级匿名——记忆全失不报错**。提前续:aliyun-hk `cd /opt/p003/server && set -a; . ./.env.local; set +a; npx tsx scripts/sign-worker-token.ts`(唯一签发口)→ 换 64.90 rust-worker.env 的 LLM_URL_QUERY → 纪律重启。role=device token 仅设备房有效(非 sn- 房匿名,probe 污染洞已堵)。
 - **pm2 env 事实**:p003-voice 启动参数是 `tsx --env-file=.env.local` → **restart 即重读 env 文件**,老「pm2 env 快照」坑不适用此形态(快照坑只咬 `pm2 start` 时从 shell 继承 env 的进程)。
 - **改动后必跑**:`npx tsx scripts/device-session.test.ts`(16/16)+ 灰度先行(`PORT=3005` 同 env 起 staging 打 E2E 再动生产——川哥 2026-08-15 门禁铁律)+ 公网 claims 校验(解 token 对 sub/room/agents/exp)。
 - **回滚**:`/root/p003-server-src-bak-20260815-pre-device-session.tgz` + 删 .env.local 尾部 S2B1 段 7 行 → restart → `/v1/device/session` 应回 404。
