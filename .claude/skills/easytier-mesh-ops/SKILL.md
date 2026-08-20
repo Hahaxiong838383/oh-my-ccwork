@@ -170,7 +170,12 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 2. `common.sh` 的 `ET_NODES` 加一行：`名字|ssh别名|虚拟IP|平台|sudo方式`
 3. `./scripts/deploy-node.sh <名字>`，四项断言全过才算成功
 4. `~/.ssh/config` 加 `<名字>-mesh` 别名
-5. 更新 `web/index.html` + `./scripts/deploy-cheatsheet.sh`
+5. 速查页**已自动化，不用手改** —— `deploy-node.sh` 收尾会调 `gen-cheatsheet.sh`
+   从 `ET_NODES` 重新生成节点表；只需再跑 `./scripts/deploy-cheatsheet.sh` 推上线。
+   ⚠️ 这条以前是「手动改 web/index.html」，**结果连漏两次**（fnos2 8-16、home-studio 8-20），
+   页面停在 6 节点还显得完整。**同一步骤漏两次就该自动化，不是加强纪律。**
+   生成器对没登记描述的节点会在页面上印「描述待补」、对没有 `-mesh` 别名的会标注——
+   **宁可页面难看，不可页面撒谎**（它就当场抓出 fnos2 缺别名，补完发现 host key 也没收录）。
 
 虚拟 IP 别撞：`.1` 中继 / `.11-.19` 公司 / `.21-.29` 家 / `.31-.39` 移动。
 
