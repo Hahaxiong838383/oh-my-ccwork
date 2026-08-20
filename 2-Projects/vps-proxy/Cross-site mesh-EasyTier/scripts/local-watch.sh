@@ -51,6 +51,12 @@ RELAY_IP="${ET_RELAY_IP:-10.10.10.1}"
 UNIT="${ET_UNIT:-easytier-mesh.service}"
 
 # 自愈参数：连续 N 次判定「本机失联」才重启，且两次重启至少间隔 COOLDOWN 秒
+# 退化告警：P2P 掉成 relay 是**性能降级不是中断**（流量照走，只是延迟 10ms→50ms+）。
+# 实测 2026-08-16~20 四天触发 26 次、每天 6~7 次、**全部自行恢复**。
+# 拿它发 DOWN 级告警＝每天骚扰 6 次，几天后告警就没人看了 —— 那才是真正的失效。
+# 故：只有**连续** N 次仍退化才升级为告警，否则只记日志。
+DEGRADE_THRESHOLD="${ET_DEGRADE_THRESHOLD:-6}"    # 6 次 × 10 分钟 = 持续 1 小时才叫
+
 SELFHEAL="${ET_SELFHEAL:-1}"
 FAIL_THRESHOLD="${ET_FAIL_THRESHOLD:-3}"
 RESTART_COOLDOWN="${ET_RESTART_COOLDOWN:-3600}"
@@ -70,9 +76,11 @@ push() {  # $1=up|down  $2=msg
 # 连续失败计数：只统计「本机失联」这一类，别的节点掉线不该触发本机重启
 read_fails()  { [[ -r "$STATE" ]] && cut -d' ' -f1 "$STATE" 2>/dev/null || echo 0; }
 read_last()   { [[ -r "$STATE" ]] && cut -d' ' -f2 "$STATE" 2>/dev/null || echo 0; }
-write_state() { printf '%s %s\n' "$1" "$2" > "$STATE"; }
+read_degr()   { local v; v=$([[ -r "$STATE" ]] && cut -d' ' -f3 "$STATE" 2>/dev/null); echo "${v:-0}"; }
+write_state() { printf '%s %s %s\n' "$1" "$2" "${3:-0}" > "$STATE"; }
 
 PROBLEMS=()
+SOFT_PROBLEMS=()   # 性能降级类，连续超阈值才升级成告警
 SELF_LOST=0     # 只有这个为 1 才考虑自愈
 
 # 0. 配置自洽：MUST_P2P 必须是 EXPECT_PEERS 的子集，否则某台掉线会静默
@@ -121,7 +129,7 @@ else
     cost="$(awk -F'|' '{gsub(/ /,"",$4); print $4}' <<<"$line")"
     if [[ "$cost" == relay* ]]; then
       lat="$(awk -F'|' '{gsub(/ /,"",$5); print $5}' <<<"$line")"
-      PROBLEMS+=("$h 退化成 $cost（${lat}ms）—— 直连没打通，可能是 NAT 类型变了")
+      SOFT_PROBLEMS+=("$h 退化成 $cost（${lat}ms）")
     fi
   done
 fi
@@ -158,6 +166,21 @@ if (( SELF_LOST )); then
 else
   write_state 0 "$(read_last)"
 fi
+
+# ── 退化升级判定：连续 DEGRADE_THRESHOLD 次仍退化才进告警 ──
+DEGR=$(read_degr)
+if [[ ${#SOFT_PROBLEMS[@]} -gt 0 ]]; then
+  DEGR=$(( DEGR + 1 ))
+  SOFT_MSG="$(IFS='; '; printf '%s' "${SOFT_PROBLEMS[*]}")"
+  if (( DEGR >= DEGRADE_THRESHOLD )); then
+    PROBLEMS+=("$SOFT_MSG —— 已持续 $DEGR 次（约 $((DEGR*10)) 分钟）未自行恢复")
+  else
+    say "INFO $SOFT_MSG（第 $DEGR 次，未达 $DEGRADE_THRESHOLD 次阈值，暂不告警）"
+  fi
+else
+  DEGR=0
+fi
+write_state "$(read_fails)" "$(read_last)" "$DEGR"
 
 if [[ ${#PROBLEMS[@]} -eq 0 ]]; then
   N="$(grep -cE '^\| 10\.' <<<"$OUT")"
