@@ -293,3 +293,13 @@ if [[ "$TARGET" == "all" ]]; then
 else
   deploy_one "$TARGET"
 fi
+
+# ── 收尾：从 ET_NODES 重新生成速查页 ────────────────────────────────────────
+# 为什么放这里：速查页曾两次漏掉新节点（fnos2 8-16、home-studio 8-20），
+# 因为「加节点」和「更新页面」是两个动作，第二个靠人记。放进部署脚本就漏不掉。
+# 只生成不部署 —— 部署要连 hk-relay，不该让它成为部署单节点的失败点。
+if [[ -x "$PROJ_DIR/scripts/gen-cheatsheet.sh" ]]; then
+  "$PROJ_DIR/scripts/gen-cheatsheet.sh" || echo "⚠ 速查页生成失败（不影响本次节点部署），请手动跑 scripts/gen-cheatsheet.sh"
+  echo "   提示：./scripts/deploy-cheatsheet.sh 可把页面推到 http://10.10.10.1:8080/"
+fi
+

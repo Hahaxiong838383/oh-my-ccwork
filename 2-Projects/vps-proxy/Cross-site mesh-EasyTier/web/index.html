@@ -60,6 +60,10 @@ kbd{font-size:.8rem;color:var(--muted)}
   <table>
     <thead><tr><th>节点</th><th>虚拟 IP</th><th>连接</th></tr></thead>
     <tbody>
+      <!-- NODES:BEGIN 本段由 scripts/gen-cheatsheet.sh 从 common.sh 的 ET_NODES 生成，勿手改 -->
+      <tr><td class="name">hk-relay<span class="role">香港 · 中继 / 发现</span></td>
+          <td><code class="cp">10.10.10.1</code></td>
+          <td><code class="cp">ssh hk-mesh</code></td></tr>
       <tr><td class="name">mini<span class="role">公司 · Mac Mini M4 · 编排中枢</span></td>
           <td><code class="cp">10.10.10.11</code></td>
           <td><code class="cp">ssh mini-mesh</code></td></tr>
@@ -69,15 +73,19 @@ kbd{font-size:.8rem;color:var(--muted)}
       <tr><td class="name">dev198<span class="role">公司 · Ubuntu + RTX A2000</span></td>
           <td><code class="cp">10.10.10.13</code></td>
           <td><code class="cp">ssh dev198-mesh</code></td></tr>
-      <tr><td class="name">linux-lan<span class="role">家 · Ubuntu 桌面 · 家侧网关</span></td>
+      <tr><td class="name">linux-lan<span class="role">家 · Ubuntu 桌面 · 家侧网关（主）· 探针宿主</span></td>
           <td><code class="cp">10.10.10.21</code></td>
           <td><code class="cp">ssh linux-lan-mesh</code></td></tr>
+      <tr><td class="name">home-studio<span class="role">家 · 主力开发机 · 20 线程 / 31G</span></td>
+          <td><code class="cp">10.10.10.23</code></td>
+          <td><code class="cp">ssh home-studio-mesh</code></td></tr>
       <tr><td class="name">air<span class="role">MacBook Air M5 · 随身</span></td>
           <td><code class="cp">10.10.10.31</code></td>
           <td><kbd>本机</kbd></td></tr>
-      <tr><td class="name">hk-relay<span class="role">香港 · 中继 / 发现</span></td>
-          <td><code class="cp">10.10.10.1</code></td>
-          <td><code class="cp">ssh hk-mesh</code></td></tr>
+      <tr><td class="name">fnos2<span class="role">家 · 飞牛 NAS 2 号 · 家侧网关（备）· Docker</span></td>
+          <td><code class="cp">10.10.10.22</code></td>
+          <td><code class="cp">ssh fnos2-mesh</code></td></tr>
+      <!-- NODES:END -->
     </tbody>
   </table>
   </div>
