@@ -121,6 +121,8 @@ otaDeviceRoute.post('/check', async (c) => {
       url: `${conf.publicBase}${rel.url_path}`,
       sha256: rel.sha256,
       size_bytes: rel.size_bytes,
+      // codex 回执 2026-08-20：可选字段，端上缺省仍强制内置证书；带上=显式双对撞
+      cert_sha256: rel.cert_sha256,
       force: rel.force_install === 1,
       install_hint: rel.install_hint,
       notes: rel.notes,

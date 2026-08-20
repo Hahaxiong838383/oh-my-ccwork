@@ -106,12 +106,14 @@ otaStore.insertRelease({
     pkg: r2.json.update.package_name,
     url: r2.json.update.url,
     sha: r2.json.update.sha256.length,
+    cert: r2.json.update.cert_sha256,
     force: r2.json.update.force,
     hint: r2.json.update.install_hint,
   }, {
     pkg: 'com.futurus.p003.launcher',
     url: 'https://kidshub-ai.hahaxiong.cc/ota/p003-launcher-63.apk',
     sha: 64,
+    cert: 'c'.repeat(64),
     force: false,
     hint: 'idle_only',
   });
