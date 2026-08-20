@@ -1546,6 +1546,59 @@
                   </div>
                 </div>
                 <!-- 设备接入（P003 MCU 设备 token / Session API 控制台，仅 admin） -->
+                <div v-if="khNav==='ota' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                    <div style="font-size:17px;font-weight:800">OTA 升级管理</div>
+                    <el-button size="small" :loading="ota.loading" @click="loadOta()">刷新</el-button>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:10px">上传 APK<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">上传后服务端实测校验：包名 / 签名证书 / versionCode 单调（APK 本体为真值）</span></div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                      <input type="file" accept=".apk" @change="otaPickFile" :disabled="ota.uploading" />
+                      <el-button size="small" type="primary" :loading="ota.uploading" :disabled="!ota.file" @click="uploadApk()">{{ ota.uploading ? ('上传中 ' + ota.uploadPct + '%') : '上传并校验' }}</el-button>
+                    </div>
+                    <div v-if="ota.uploadMsg" style="margin-top:8px;font-size:13px" :style="{ color: ota.uploadOk ? '#3A8A3A' : '#B03A3A' }">{{ ota.uploadMsg }}</div>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:10px">版本发布</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:13px">
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">versionCode</th><th style="padding:6px 8px">versionName</th><th style="padding:6px 8px">大小</th><th style="padding:6px 8px">SHA256</th><th style="padding:6px 8px">状态</th><th style="padding:6px 8px">灰度</th><th style="padding:6px 8px">操作</th></tr></thead>
+                      <tbody>
+                        <tr v-for="r in ota.releases" :key="r.version_code" style="border-bottom:1px solid #f5f5f5">
+                          <td style="padding:6px 8px;font-weight:700">{{ r.version_code }}</td>
+                          <td style="padding:6px 8px">{{ r.version_name }}</td>
+                          <td style="padding:6px 8px">{{ (r.size_bytes / 1048576).toFixed(1) }} MB</td>
+                          <td style="padding:6px 8px;font-family:monospace">{{ r.sha256.slice(0, 12) }}…</td>
+                          <td style="padding:6px 8px"><span :style="{ color: r.enabled ? '#3A8A3A' : '#999' }">{{ r.enabled ? ('发布中' + (r.force_install ? '·force' : '')) : '草稿/暂停' }}</span></td>
+                          <td style="padding:6px 8px;max-width:220px;word-break:break-all">{{ r.enabled ? (r.rollout_sns || '全量') : '—' }}</td>
+                          <td style="padding:6px 8px;white-space:nowrap">
+                            <el-button size="small" @click="otaPublish(r, 'sns')">灰度发布</el-button>
+                            <el-button size="small" type="warning" @click="otaPublish(r, 'all')">全量发布</el-button>
+                            <el-button v-if="r.enabled" size="small" type="danger" @click="otaPause(r)">暂停</el-button>
+                            <el-button v-if="!r.enabled" size="small" type="danger" @click="otaDelete(r)">删除</el-button>
+                          </td>
+                        </tr>
+                        <tr v-if="!ota.releases.length"><td colspan="7" style="padding:14px 8px;color:#999">暂无版本，先上传 APK</td></tr>
+                      </tbody>
+                    </table>
+                    <div style="margin-top:8px;font-size:12px;color:#888">force 语义：跳过闲时等待尽快装，但<b>不打断进行中的语音会话</b>（会话结束立即装）。回滚提示：APK 层无真回滚，「暂停」只救未升级设备。</div>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:10px">设备版本分布<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">设备每次 check 自动上报</span></div>
+                    <table style="width:100%;border-collapse:collapse;font-size:13px">
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">SN</th><th style="padding:6px 8px">当前版本</th><th style="padding:6px 8px">最近检查</th><th style="padding:6px 8px">最近升级结果</th></tr></thead>
+                      <tbody>
+                        <tr v-for="d in ota.devices" :key="d.sn" style="border-bottom:1px solid #f5f5f5">
+                          <td style="padding:6px 8px;font-family:monospace">{{ d.sn }}</td>
+                          <td style="padding:6px 8px">{{ d.version_code }}<span style="color:#999"> ({{ d.version_name }})</span></td>
+                          <td style="padding:6px 8px">{{ new Date(d.last_check_at).toLocaleString() }}</td>
+                          <td style="padding:6px 8px"><span v-if="d.last_result" :style="{ color: d.last_result.status === 'success' ? '#3A8A3A' : '#B03A3A' }">{{ d.last_result.from_version_code }}→{{ d.last_result.to_version_code }} {{ d.last_result.status }}</span><span v-else style="color:#999">—</span></td>
+                        </tr>
+                        <tr v-if="!ota.devices.length"><td colspan="4" style="padding:14px 8px;color:#999">暂无设备上报（等设备接入新 OTA 接口后出现）</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
                 <div v-if="khNav==='devices' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
                     <div>
@@ -3714,7 +3767,83 @@
           return canManageInvites.value ? khNavs : khNavs.filter(function (n) { return n.k !== 'invites'; });
         });
         // Worker 管理页二级导航（设备接入 / Worker Brain 从 KidsHub 运营台迁出；仅 admin 入口）。
-        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }];
+        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'ota', l: 'OTA 升级' }];
+
+        // ── OTA 升级管理（2026-08-20 P0；API 见 routes/ota.ts；合同 CC_P003_OTA_*）──
+        // 上传用 XHR（要上传进度，140MB 包体）；实测校验在服务端（APK 本体为真值）。
+        var ota = reactive({ loading: false, uploading: false, uploadPct: 0, uploadMsg: '', uploadOk: false, file: null, releases: [], devices: [] });
+        function otaPickFile(e) {
+          ota.file = (e.target.files && e.target.files[0]) || null;
+          ota.uploadMsg = '';
+        }
+        async function loadOta() {
+          if (!canManageInvites.value) return;
+          ota.loading = true;
+          try {
+            var r1 = await deviceApi('/api/admin/ota/releases', { method: 'GET' });
+            var r2 = await deviceApi('/api/admin/ota/devices', { method: 'GET' });
+            ota.releases = r1.releases || [];
+            ota.devices = r2.devices || [];
+          } catch (e) { ElementPlus.ElMessage.error('OTA 数据加载失败'); }
+          ota.loading = false;
+        }
+        function uploadApk() {
+          if (!ota.file || ota.uploading) return;
+          var token = getToken();
+          if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
+          ota.uploading = true; ota.uploadPct = 0; ota.uploadMsg = ''; ota.uploadOk = false;
+          var xhr = new XMLHttpRequest();
+          xhr.open('PUT', '/api/admin/ota/upload?filename=' + encodeURIComponent(ota.file.name));
+          xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+          xhr.upload.onprogress = function (ev) { if (ev.lengthComputable) ota.uploadPct = Math.round(ev.loaded / ev.total * 100); };
+          xhr.onload = function () {
+            ota.uploading = false;
+            var j = {};
+            try { j = JSON.parse(xhr.responseText); } catch (e) {}
+            if (xhr.status === 200 && j.ok) {
+              ota.uploadOk = true;
+              ota.uploadMsg = '✓ 校验通过并入库（草稿）：v' + j.release.version_code + ' ' + j.release.version_name + ' · ' + (j.release.size_bytes / 1048576).toFixed(1) + 'MB · sha ' + j.release.sha256.slice(0, 12) + '…';
+              ota.file = null;
+              loadOta();
+            } else {
+              ota.uploadOk = false;
+              ota.uploadMsg = '✗ ' + (j.message || j.error || ('HTTP ' + xhr.status));
+            }
+          };
+          xhr.onerror = function () { ota.uploading = false; ota.uploadOk = false; ota.uploadMsg = '✗ 网络错误'; };
+          xhr.send(ota.file);
+        }
+        function otaPublish(rel, mode) {
+          if (mode === 'all') {
+            ElementPlus.ElMessageBox.confirm('全量发布 v' + rel.version_code + '（所有台账设备可见）？发布后无法撤回已升级设备。', '全量发布', { type: 'warning', confirmButtonText: '确认全量' }).then(function () {
+              deviceApi('/api/admin/ota/releases/' + rel.version_code + '/publish', { method: 'POST', body: JSON.stringify({ rollout: 'all' }) }).then(function (j) {
+                if (j.ok) { ElementPlus.ElMessage.success('已全量发布'); loadOta(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+              });
+            }).catch(function () {});
+            return;
+          }
+          ElementPlus.ElMessageBox.prompt('输入灰度 SN 名单（逗号分隔）', '灰度发布 v' + rel.version_code, { inputValue: rel.rollout_sns || '', inputPlaceholder: 'BJP003…,BJP003…' }).then(function (r) {
+            var sns = String(r.value || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+            if (!sns.length) { ElementPlus.ElMessage.warning('名单为空，未发布'); return; }
+            deviceApi('/api/admin/ota/releases/' + rel.version_code + '/publish', { method: 'POST', body: JSON.stringify({ rollout: 'sns', sns: sns }) }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success('已灰度发布 ' + sns.length + ' 台'); loadOta(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+            });
+          }).catch(function () {});
+        }
+        function otaPause(rel) {
+          ElementPlus.ElMessageBox.confirm('暂停 v' + rel.version_code + '？之后设备 check 不再下发该版本（已升级设备不受影响）。', '暂停发布', { type: 'warning' }).then(function () {
+            deviceApi('/api/admin/ota/releases/' + rel.version_code + '/pause', { method: 'POST' }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success('已暂停'); loadOta(); } else ElementPlus.ElMessage.error(j.error || '失败');
+            });
+          }).catch(function () {});
+        }
+        function otaDelete(rel) {
+          ElementPlus.ElMessageBox.confirm('删除草稿 v' + rel.version_code + '（含 APK 文件）？', '删除', { type: 'warning' }).then(function () {
+            deviceApi('/api/admin/ota/releases/' + rel.version_code, { method: 'DELETE' }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success('已删除'); loadOta(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+            });
+          }).catch(function () {});
+        }
 
         // ── Worker 热词管理（2026-08-18 P0；API 见 admin-data.ts /hotwords*）──
         // DB 草稿真源；发布经 hotword-channel 写 64.90 + 重启 worker。前端只做交互与
@@ -4625,6 +4754,7 @@
         function khSelectNav(k) {
           khNav.value = k;
           if (k === 'hotwords') nextTick(loadHotwords);
+          if (k === 'ota') nextTick(loadOta);
           if (k === 'metrics') nextTick(initKhRetention);
           if (k === 'board') {
             nextTick(function () {
@@ -5778,6 +5908,7 @@
           loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
           deviceData: deviceData, deviceAdd: deviceAdd, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
+          ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaPause: otaPause, otaDelete: otaDelete,
           hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
           loadDeviceAliases: loadDeviceAliases,
           hwEnvKey: hwEnvKey, hwLive: hwLive, hwDraft: hwDraft, hwInSync: hwInSync,

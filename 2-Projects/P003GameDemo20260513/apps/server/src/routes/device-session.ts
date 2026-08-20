@@ -84,7 +84,7 @@ function logQuiet(entry: SessionLogEntry): void {
   }
 }
 
-async function verifyDeviceCredential(
+export async function verifyDeviceCredential(
   header: string | undefined,
   secret: string,
 ): Promise<{ sn: string } | null> {

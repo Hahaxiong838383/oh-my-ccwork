@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import { Hono } from 'hono';
 import { SignJWT } from 'jose';
 import { accountStore } from '../account-store.js';
+import { otaAdminRoute } from './ota.js';
 import { conversationStore } from '../conversation-store.js';
 import { profileStore } from '../profile-store.js';
 import { memoryItemStore } from '../memory-item-store.js';
@@ -40,7 +41,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm|isolation-overview)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm|isolation-overview|ota)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -1129,3 +1130,6 @@ adminDataRoute.get('/hotwords/fillers', async (c) => {
 });
 
 export { adminDataRoute };
+
+// OTA 发布管理（admin 专属，正则已含 /ota；实现在 routes/ota.ts）
+adminDataRoute.route('/ota', otaAdminRoute);
