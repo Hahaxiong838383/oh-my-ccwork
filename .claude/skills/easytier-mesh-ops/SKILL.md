@@ -1,6 +1,6 @@
 ---
 name: easytier-mesh-ops
-description: 家↔公司 EasyTier 异地组网（chuan-mesh）的部署、排障与扩容 SOP。触发词："组网"、"异地组网"、"EasyTier"、"easytier"、"野草云"、"mesh-status"、"虚拟内网"、"连不上公司/家里的机器"、"10.10.10."、"10.10.61."、"子网代理"、"NAS 访问不了"、"P2P 打洞"、"加一台机器进组网"。涵盖：6 节点拓扑真值、部署脚本用法、排障决策树（连不上/变中继/丢包/设备列表空）、判读规则（哪些读数不可信）、平台差异坑。
+description: 家↔公司 EasyTier 异地组网（chuan-mesh）的部署、排障与扩容 SOP。触发词："组网"、"异地组网"、"EasyTier"、"easytier"、"野草云"、"mesh-status"、"虚拟内网"、"连不上公司/家里的机器"、"10.10.10."、"10.10.61."、"子网代理"、"NAS 访问不了"、"P2P 打洞"、"加一台机器进组网"。涵盖：8 节点拓扑真值、僵死态识别、自愈与告警分级、部署脚本用法、排障决策树（连不上/变中继/丢包/设备列表空）、判读规则（哪些读数不可信）、平台差异坑。
 layer: 基建层
 authorization: B区（改生产机网络配置需明确 scope；hk-relay 是唯一发现节点，改它会短暂断全网发现）
 output_levels: L1
@@ -21,13 +21,18 @@ output_levels: L1
 | mini | `10.10.10.11` | 公司有线 `.66` | 公司子网网关（主） | **Symmetric** |
 | studio | `10.10.10.12` | 公司有线 `.177` | 算力 | **Symmetric** |
 | dev198 | `10.10.10.13` | 公司有线 `.233` | 公司子网网关（备） | **Symmetric** |
-| linux-lan | `10.10.10.21` | 家有线 `.119` | 家侧子网网关 | **PortRestricted** |
+| linux-lan | `10.10.10.21` | 家有线 `.119` | 家侧子网网关（主）+ **探针宿主** | **PortRestricted** |
+| fnos2 | `10.10.10.22` | 家有线 `.115` | 飞牛2号，家侧子网网关（备），Docker 部署 | PortRestricted |
+| home-studio | `10.10.10.23` | 家有线 `.133` | **家侧主力开发机**（非网关，刻意不配 proxy_network） | PortRestricted |
 | air | `10.10.10.31` | 移动 | 笔记本 | PortRestricted |
 
 **子网映射**（末位不变只换前缀）：公司 `192.168.61.X`→`10.10.61.X`，家 `192.168.1.X`→`10.10.1.X`
-**上游通道**（每节点 3 条冗余）：`tcp://207.57.124.191:443` · `udp://…:22` · `udp://…:11010`
+**上游通道**（每节点 2 条）：`tcp://207.57.124.191:443` · `udp://…:22`
+⚠️ ~~第三条 `udp://…:11010`~~ **2026-08-20 已从所有节点删除**——野草云面板永久封该端口，
+该 connector 永远停在 `Connecting`，四天在 linux-lan 上刷了 4121 行 WARN，
+把真实故障信号淹没、排查僵死事故时带偏一轮。**别再加回来。**
 **两个内网界面**：`10.10.10.1:11211` 控制台 · `10.10.10.1:8080` 速查页（均公网不可达）
-**SSH 别名**：`hk-mesh` `mini-mesh` `studio-mesh` `dev198-mesh` `linux-lan-mesh`
+**SSH 别名**：`hk-mesh` `mini-mesh` `studio-mesh` `dev198-mesh` `linux-lan-mesh` `home-studio-mesh`
 
 > 🔑 **打洞能成的单点**：公司三台全是对称 NAT，家侧是端口受限锥形。
 > 「对称↔端口受限」可通，「对称↔对称」几乎无解。**家里换路由器/运营商可能让 P2P 整体退化成走香港（10ms→96ms）。**
@@ -224,7 +229,7 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 | Kuma id | 名称 | 类型 |
 |---|---|---|
 | 17 | EasyTier 中继端口 野草云HK | port `207.57.124.191:443` |
-| 18 | EasyTier 组网探针 家侧linux-lan | push，interval 600s / retries 2 |
+| 18 | EasyTier 组网探针 家侧linux-lan | push，**interval 900s** / retries 2 |
 
 ### 判读表（单看一条会误判，必须两条一起看）
 
@@ -242,7 +247,7 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
    误报几次之后告警没人看了，那才是真正的失效
 3. **不用「N 个节点全在线」** —— 中继健康 ≠ 全员在线
 
-期望列表只放**常驻开机**设备：`hk-relay mini studio dev198 fnos2`。
+期望列表只放**常驻开机**设备：`hk-relay mini studio dev198 fnos2 home-studio`。
 改动时注意脚本第 0 步会强制 `MUST_P2P ⊆ EXPECT_PEERS`，否则某台掉线会静默。
 
 ### 三类故障如何被覆盖
@@ -255,10 +260,44 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 
 第三行是关键：**「不推」本身就是信号**。所以别把失败写成"推一条 down 就完事"。
 
-### 不做自动重启（这是决定，不是遗漏）
+### 🔴 僵死态：自述全绿但实际离网（2026-08-20 实战，本 skill 最重要的一节）
 
-两个 unit 已是 `Restart=always` + `enabled`，2026-08-16 该 VPS 重启后服务全自动恢复已实证。
-剩下的失败模式里，重启要么无效（VPS 宕机时重启不了），要么危险（配置错 → 重启循环）。
+两台家侧节点同时从全网消失，而**在它们自己看来一切正常**：进程 `active`、网卡带着虚拟 IP、
+connector 报 `Connected`、peer 表**满员且全是 p2p**、自己日志一条不记。
+`Restart=always` **完全无效——进程根本没崩**。重启即恢复。
+
+**识别法：取两次样看数字变不变。** 隔 25 分钟两次 `easytier-cli peer`，
+延迟数字一模一样到小数点后两位 ⇒ 表是冻结的。
+活链路的延迟不可能两次采样完全相同。**「冻结」比「数值难看」是强得多的信号。**
+佐证：`ss -tnp | grep <中继IP>` 会看到 `CLOSE-WAIT` 且 `Recv-Q` 积着几十上百 KB 没人读。
+
+⚠️ **排查时别只读故障方自己的日志**——失联那一刻它可能完全空白。
+去中继、去别的节点、去 socket 层找证据。
+
+### 自动重启：做，但只对「本机离网」做
+
+~~早先写过「不做自动重启，因为 Restart=always 已覆盖」~~ —— **2026-08-20 推翻**：
+那个论证把「进程崩溃」当成了「需要重启的全部故障形态」，而僵死态里进程好好活着。
+**论证「不需要 X」时要穷举 X 能覆盖的形态，别拿其中一种代替全部。**
+
+现行自愈（在 `local-watch.sh` 里）的三个保险，改之前先理解为什么：
+
+| 保险 | 值 | 为什么 |
+|---|---|---|
+| 连续 N 次才动手 | 3 次（30 分钟） | 单次网络抖动不该触发重启 |
+| 冷却 | 1 小时 | 重启修不好的故障（中继真挂了）不能变成重启风暴 |
+| **只对「本机离网」生效** | — | **别的节点掉线，重启本机毫无用处，只会变成无限重启** |
+
+授权：linux-lan `/etc/sudoers.d/easytier-selfheal`，只放行
+`/usr/bin/systemctl restart easytier-mesh.service` 一条。查权威清单用 `sudo -l`，
+**别用不在白名单里的命令去探**（被拒是设计正确，会被误读成"授权没生效"）。
+
+### 告警分级：退化不等于中断
+
+「P2P 退化成 relay」实测 4 天触发 **26 次（每天 6~7 次），全部自行恢复**。
+它是**性能降级不是中断**——流量照走，只是延迟 10ms→50ms+。
+拿它天天发 DOWN 级飞书，几天后告警就没人看了，**那才是真正的失效**。
+现行做法：连续 6 次（≈1 小时）仍未恢复才升级为告警，否则只记 INFO 日志，恢复即清零。
 
 ### 改探针后必须做的负向验证
 
@@ -266,7 +305,7 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 改完注入一个不存在的节点名跑一次，确认 Kuma 翻 `status=0` 且 `important=1`，再恢复确认回 UP：
 
 ```bash
-ET_EXPECT_PEERS="hk-relay mini studio dev198 fnos2 ZZ_ALERT_DRILL_ZZ" ~/easytier-watch.sh
+ET_EXPECT_PEERS="hk-relay mini studio dev198 fnos2 home-studio ZZ_ALERT_DRILL_ZZ" ~/easytier-watch.sh
 ```
 
 ⚠️ **Kuma 不记录通知发送成败**（日志里 `Feishu` 出现 0 次），所以**逐次**「飞书是否送达」
