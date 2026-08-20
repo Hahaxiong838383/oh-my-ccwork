@@ -88,6 +88,14 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **部署后生产 E2E**:`curl` 三端 200 + 关键 API + **`shasum` 本地 dist=生产**(或 vite content-hash 文件名比对)+ `grep` 新功能字符串实锤代码上线。
 - **zsh 坑**:大 JS 存变量报 `character not in range`→`curl` 直接管道 grep/shasum 不经变量;`for x in $VAR` 不分词(zsh)→显式列表或 `${(s: :)VAR}`。
 
+## 阿里云短信认证（用户注册/登录,2026-08-20 开通+E2E PASS）
+
+- 真值全档见记忆 `rg 'sms|短信|dypnsapi' ~/.claude/.../memory/`（project_p003_sms_auth.md）。速查:
+  **账号 cc-remote**(⚠️非 hk-personal)/签名 `恒创联众`(6 赠送之一)/模板 **100001**(登录注册)/
+  TemplateParam `{"code":"##code##","min":"5"}`(托管核验,CheckSmsVerifyCode 直接校验零存码)。
+- CLI 实测: `aliyun dypnsapi send-sms-verify-code -p cc-remote --phone-number <号> --sign-name '恒创联众' --template-code 100001 --template-param '{"code":"##code##","min":"5"}' --code-length 6` → `check-sms-verify-code --phone-number <号> --verify-code <码>`。
+- 红线:**生产禁 `--return-verify-code true`**(仅调试);AK env 注入;发码接口业务限流(号码三窗+IP),阿里云 60s 频控只是兜底。
+
 ## 凭证/链接（指针,secret 绝不入 skill）
 
 - 三端链接见上表。admin 登录 `admin / ⟨STUDIO_PASS 见生产 /opt/p003/server/.env.local⟩`。
