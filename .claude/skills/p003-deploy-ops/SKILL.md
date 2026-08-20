@@ -79,7 +79,9 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 9. **本地起 server 验证踩坑**(2026-06-19):① `.env.local` 的 `GEMINI_API_KEY` 可能空(本地不调 gemini,生产走 Keychain gemini-proxy-token)→起 server 前 `export GEMINI_API_KEY=$(security find-generic-password -s gemini-proxy-token -a gemini-proxy -w)` 覆盖,否则启动日志 `LLM: missing-env` ② WS 路径必须 `/ws/voice`(index.ts upgrade pathname 校验,否则 socket hang up) ③ 不走语音的文字对话 E2E 入口=`chat.trigger`(type+text),收 `debug.prompt_assembled` 验 prompt 真注入。
 10. **kidshub-ai vhost 里的 `/myjavis/` location 是 MyJavis 项目的火山回调中转**(2026-07-02 加,非 P003 业务):反代 → `javis.chenchuan.cc`(47.239.204.68 手机号账号 HK ECS)。存在原因=字节机房出境仅本机(8.218 国际站段)可达,MyJavis 自己的 47.239(中国站段)火山直连零到达。**改 kidshub-ai vhost 时别删它**;它只承载火山→MyJavis 的回调流量,与 P003 的 `/v1/` 互不影响。详见 memory `feedback_volc_customllm_callback_geo_constraint`。
 
-11. **pm2 重启存活是部署验收项非可选**(2026-07-13 实锤):服务器 07-12 重启后 pm2 三服务全灭一天多(无 startup),chenchuan-site/p003-voice/kidshub-voice 全下线无告警。已配 `pm2 startup systemd + pm2 save`(systemctl is-enabled pm2-root=enabled)。**新增/删除 pm2 进程后必须重跑 `pm2 save`**,否则下次重启回到旧 dump。机器内存仅 1.6G/无 swap——上新功能先 `free -h` 侦察,进程内大模型必死,重资产走离线预计算(见 memory low-ram-vps-ai-offline-precompute)。
+11. **跨域名 SPA 兜底假 200**(2026-08-20 sms-auth 部署踩):`kidshub-ai.hahaxiong.cc/parent/` 并无此路径,但 web 根 location `try_files /index.html` 兜底返回 **200+体验台 shell(7月旧 hash)**——rsync 明明成功、hash 却对不上,真因是**域名打错了**(家长端在 `p003.hahaxiong.cc/parent/`,见架构表)。部署验证 hash 不一致时:**先对架构表核对入口域名,再疑缓存**;SPA catch-all 会把 404 伪装成 200,`last-modified` 是旧日期即强信号。
+
+12. **pm2 重启存活是部署验收项非可选**(2026-07-13 实锤):服务器 07-12 重启后 pm2 三服务全灭一天多(无 startup),chenchuan-site/p003-voice/kidshub-voice 全下线无告警。已配 `pm2 startup systemd + pm2 save`(systemctl is-enabled pm2-root=enabled)。**新增/删除 pm2 进程后必须重跑 `pm2 save`**,否则下次重启回到旧 dump。机器内存仅 1.6G/无 swap——上新功能先 `free -h` 侦察,进程内大模型必死,重资产走离线预计算(见 memory low-ram-vps-ai-offline-precompute)。
 
 ## 验证铁律（cc 自己验,绝不甩给川哥）
 
@@ -88,12 +90,18 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **部署后生产 E2E**:`curl` 三端 200 + 关键 API + **`shasum` 本地 dist=生产**(或 vite content-hash 文件名比对)+ `grep` 新功能字符串实锤代码上线。
 - **zsh 坑**:大 JS 存变量报 `character not in range`→`curl` 直接管道 grep/shasum 不经变量;`for x in $VAR` 不分词(zsh)→显式列表或 `${(s: :)VAR}`。
 
-## 阿里云短信认证（用户注册/登录,2026-08-20 开通+E2E PASS）
+## 阿里云短信认证（用户注册/登录,2026-08-20 开通+P0 上线川哥验收 OK）
 
 - 真值全档见记忆 `rg 'sms|短信|dypnsapi' ~/.claude/.../memory/`（project_p003_sms_auth.md）。速查:
   **账号 cc-remote**(⚠️非 hk-personal)/签名 `恒创联众`(6 赠送之一)/模板 **100001**(登录注册)/
   TemplateParam `{"code":"##code##","min":"5"}`(托管核验,CheckSmsVerifyCode 直接校验零存码)。
+- **生产接口**:`/api/auth/sms/send`(三窗限流 data/sms.db 持久化)+`/sms/verify`(PASS→phone upsert
+  acct-NN→JWT,与邀请码同姿势 bind-sn 直通)。**bind-sn 已升级绑定即接入大脑**(自动开 brain+建档)。
+  env 键:`ALIYUN_SMS_ACCESS_KEY_ID/SECRET`(.env.local 尾部)。测试:`npm run test:sms`(36 项)。
 - CLI 实测: `aliyun dypnsapi send-sms-verify-code -p cc-remote --phone-number <号> --sign-name '恒创联众' --template-code 100001 --template-param '{"code":"##code##","min":"5"}' --code-length 6` → `check-sms-verify-code --phone-number <号> --verify-code <码>`。
+- **E2E 顶码桥**(免读短信):server send 后 CLI 同号加 `--interval 1 --return-verify-code true` 重发
+  顶掉旧码拿新码→server verify 即 PASS。⚠️ 只绕 60s 窗;同号一天 6+ 条触发 `biz.FREQUENCY` 小时窗
+  CLI 也取不了——测试省着发。
 - 红线:**生产禁 `--return-verify-code true`**(仅调试);AK env 注入;发码接口业务限流(号码三窗+IP),阿里云 60s 频控只是兜底。
 
 ## 凭证/链接（指针,secret 绝不入 skill）
