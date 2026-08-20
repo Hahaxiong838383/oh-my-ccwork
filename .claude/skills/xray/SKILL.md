@@ -124,13 +124,45 @@ awk -v s="$START" '$0 >= s && /app\/dns: failed/ {print}' ~/xray/xray.log
 
 ## 路由规则速查
 
-| 分组 | 策略 | 节点池 |
-|------|------|--------|
-| Claude/GPT | 固定 | **美宅-Claude-GPT_mychenchuan** (VLESS+Reality, 直连 154.44.3.170:8444) |
-| **Gemini/AI Studio** | 固定 | Gemini专用-US2 (VLESS+Reality) |
-| YouTube/视频娱乐 | leastPing | HK×5, TW×2, SG×2, JP×5 |
-| 大陆域名 | direct | 直连 |
-| 其他 | 默认 | HK-HKT-A |
+> ⚠️ 下表是 **2026-08-21 从 `access.log` 实测**得到的，不是读配置推的。
+> **读配置推不出实际走向**——规则自上而下先匹配先生效，靠后的规则会被前面的抢走。
+> 实例：配置里规则 #18 明写 `x.com → HK-HKT-A`，而实测 `x.com` 走的是 DMIT-Gemini（被前序规则截胡）。
+> ⇒ **判断"某域名走哪个节点"唯一可信的方法**：
+> `grep -F "<域名>:" ~/xray/access.log | tail -1` 看 `[socks -> <出站tag>]`。
+
+| 分组 | 实测出站（2026-08-21） |
+|------|------|
+| `api.anthropic.com` | **新美宅-Claude-GPT**（64.186.235.107:7443 → 落地 lisa 154.44.3.170） |
+| `chatgpt.com` / `github.com` / `youtube.com` / `x.com` | DMIT-Gemini-vps-chenchuan |
+| `registry.npmjs.org` | 新美宅-Claude-GPT |
+| 大陆域名（`geosite:cn`） | direct |
+| **其他（兜底）** | **DMIT-Gemini-vps-chenchuan** ← 见下方"改默认节点" |
+
+### 🔴 改默认节点：开关是**兜底规则**，不是 `outbounds[0]`
+
+配置末尾有一条 `{"network":"tcp,udp"}` 的规则（本机是 #22），它**匹配一切**，
+于是**所有没被前面规则命中的流量都被它抓走，`outbounds[0]` 永远轮不到**。
+
+⇒ 想换默认节点，**改这条规则的 `outboundTag`**；只把节点挪到 `outbounds` 数组第一位
+= **零效果，而且从配置表面完全看不出来**（本 skill 之前就把 `outbounds[0]` 的 HK-HKT-A
+误记成"默认"，实际从来没生效过）。改完仍按上面的方法查 `access.log` 验证。
+
+### Linux 机器上的 xray（home-studio / linux-lan）
+
+与本机（macOS + launchd）形态不同，**别把命令跨平台照抄**：
+
+| | Air (macOS) | home-studio / linux-lan (Ubuntu) |
+|---|---|---|
+| 托管 | launchd `com.xray.proxy` | systemd `xray`（`User=xray`） |
+| 重启 | `launchctl kickstart -k gui/$(id -u)/com.xray.proxy` | `sudo systemctl restart xray` |
+| config | `~/xray/config.json` | `/usr/local/etc/xray/config.json`（home-studio 为 640 root:xray） |
+| geo 资产 | 同目录 | `/usr/local/share/xray/`，靠 unit 里 `Environment=XRAY_LOCATION_ASSET` 指过去 |
+| 日志 | `~/xray/access.log` | `/var/log/xray/access.log`（需 sudo 读） |
+
+⚠️ **少了 `geoip.dat`/`geosite.dat`，`geosite:cn`/`geoip:cn` 规则会静默失效**，国内流量全绕道出国。
+⚠️ 装机时若以 root 跑过 `xray -test`，它会把 `access.log` 建成 **root:root**，
+之后 `User=xray` 的服务启动就 `permission denied`——unit 里的 `ExecStartPre=chown` 只管目录、
+管不到目录内已存在的文件，须用 `chown -R`。
 
 ### Mini Wi-Fi 热点给手机/电脑访问 Grok（2026-08-11 实测）
 
@@ -230,7 +262,9 @@ rule[5] 是「开发者下载」大组（github + githubusercontent + codeload +
 
 ## 重要注意事项
 
-- **Claude 必须走美宅节点**，不要尝试其他节点
+- **Claude 必须走美宅系节点**，不要尝试其他节点。注意有**两个**名字相近的：
+  `新美宅-Claude-GPT`（`64.186.235.107:7443`，DMIT 中转→lisa）**← 实测 `api.anthropic.com` 走的是这个**；
+  `美宅-Claude-GPT_mychenchuan`（`154.44.3.170:8444`，直连 lisa）。两者终点同为 lisa 住宅落地，别搞混
 - **curl 测 claude.ai 返回 403 是正常的**（Cloudflare challenge），用浏览器验证
 - **balancer 必须用 burstObservatory**，不能用 observatory（会导致规则被跳过）
 - **代理重启会中断所有 API 调用** 1-2 秒，修改前检查有无执行中的任务
