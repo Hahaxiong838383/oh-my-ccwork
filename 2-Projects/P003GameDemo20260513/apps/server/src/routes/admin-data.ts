@@ -281,17 +281,11 @@ adminDataRoute.post('/devices/:sn/brain', async (c) => {
       console.log(`[admin-brain] 建档 sn=${sn} account=${accountId} source=${synced ? 'parent:' + device.parent_account_id : 'blank'}`);
     }
 
-    const rawSecret = process.env.AUTH_JWT_SECRET;
-    if (!rawSecret) return c.json({ ok: false, error: '签发服务未配置（AUTH_JWT_SECRET）' }, 503);
-    const token = await new SignJWT({ accountId, role: 'device' })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setIssuer('p003')
-      .setAudience('kidshub')
-      .setExpirationTime('365d')
-      .sign(new TextEncoder().encode(rawSecret));
+    // brain_token 分发已取消（2026-08-20 川哥拍板）：多设备架构下身份由房名 SN 路由，
+    // worker 只需一个进程级通行证（已配置）；per-device token 无消费场景，返回它只会
+    // 误导运营「要找地方填」。通行证续签走 scripts/sign-worker-token.ts（唯一签发口）。
     console.log(`[admin-brain] opened sn=${sn} account=${accountId}`);
-    return c.json({ ok: true, account_id: accountId, brain_token: token });
+    return c.json({ ok: true, account_id: accountId });
   } catch (error) {
     return c.json({ ok: false, error: '开通 brain 失败，请稍后重试' }, 500);
   }

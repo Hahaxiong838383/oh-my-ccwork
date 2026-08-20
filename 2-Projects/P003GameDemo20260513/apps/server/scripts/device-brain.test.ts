@@ -29,7 +29,6 @@ process.env.STUDIO_PASS = 'test-pass';
 const { deviceRegistryStore } = await import('../src/device-registry-store.js');
 const { memoryItemStore } = await import('../src/memory-item-store.js');
 const { profileStore } = await import('../src/profile-store.js');
-const { verifyAuthToken } = await import('../src/auth-jwt.js');
 const { adminDataRoute } = await import('../src/routes/admin-data.js');
 const { authRoute } = await import('../src/routes/auth.js');
 const { profileRoute } = await import('../src/routes/profile.js');
@@ -77,30 +76,34 @@ const guestToken = ((await guestLogin.json()) as { token: string }).token;
 assert.ok(adminToken && guestToken, '登录失败');
 
 deviceRegistryStore.add(SN, '脑测试机');
-let brainToken = '';
 let accountId = '';
 
-await t('G1 开通：自动建 device-<SN> 账号 + token 可验出身份 + registry 落库', async () => {
+await t('G1 开通：自动建 device-<SN> 账号 + registry 落库 + 不再分发 brain_token（2026-08-20 取消）', async () => {
   const r = await adminReq(adminToken, 'POST', `/devices/${SN}/brain`, {});
   assert.equal(r.status, 200);
   const j = (await r.json()) as Record<string, any>;
   assert.equal(j.account_id, `device-${SN}`);
-  assert.ok(j.brain_token);
-  brainToken = j.brain_token;
+  assert.equal(j.brain_token, undefined, 'brain_token 分发已取消，响应不得再携带');
   accountId = j.account_id;
-  const auth = await verifyAuthToken(brainToken);
-  assert.equal(auth?.accountId, accountId);
-  assert.equal(auth?.role, 'device');
   assert.equal(deviceRegistryStore.get(SN)!.account_id, accountId);
 });
 
-await t('G2 幂等：重复开通同账号不重建，重签 token 身份一致', async () => {
+await t('G2 幂等：重复开通同账号不重建', async () => {
   const r = await adminReq(adminToken, 'POST', `/devices/${SN}/brain`, {});
   const j = (await r.json()) as Record<string, any>;
   assert.equal(j.account_id, accountId);
-  // 同秒重签 iat 相同 → JWT 可能逐字节相同（等值 token，无危害）；断言身份而非字节差异。
-  const auth = await verifyAuthToken(j.brain_token);
-  assert.equal(auth?.accountId, accountId);
+});
+
+await t('G2b 设备身份只能来自设备房：role=device 的 token 在非 sn- 房必须匿名（probe 污染堵洞）', async () => {
+  const { resolveDeviceIdentity } = await import('../src/device-brain-prompt.js');
+  const workerPass = { accountId: 'worker-service', role: 'device' };
+  assert.equal(resolveDeviceIdentity(workerPass, 't1787000000'), null, 'probe 房不得落 token 身份');
+  assert.equal(resolveDeviceIdentity(workerPass, undefined), null, '无房名同样匿名');
+  // 对照：parent role 在非 sn- 房保持原身份（Web 体验台/家长端行为不变）
+  const parent = { accountId: 'acct-p1', role: 'parent' };
+  assert.deepEqual(resolveDeviceIdentity(parent, 't1787000000'), parent);
+  // 对照：设备房里 token 身份照旧被 SN 路由覆盖（既有语义不变）
+  assert.equal(resolveDeviceIdentity(workerPass, `sn-${SN}-123`)?.accountId, accountId);
 });
 
 await t('G3 聚合视图：画像 + 记忆 + prompt 预览含记忆内容', async () => {
@@ -258,10 +261,15 @@ await t('I2 未开通 brain 的 SN → 匿名（绝不串到 token 兜底账号�
   assert.equal(resolveDeviceIdentity(WORKER_AUTH, 'sn-BJP00326060100299997-1786980003'), null, '台账外 SN 应匿名');
 });
 
-await t('I3 非设备房 room / 无 room → 原 token 身份（Web 零影响）', async () => {
-  assert.equal(resolveDeviceIdentity(WORKER_AUTH, 'my-web-room')?.accountId, accountId);
-  assert.equal(resolveDeviceIdentity(WORKER_AUTH, undefined)?.accountId, accountId);
-  assert.equal(resolveDeviceIdentity(WORKER_AUTH, '')?.accountId, accountId);
+await t('I3 非设备房语义（2026-08-20 收紧）：role=device 匿名（堵 probe 污染）；parent 原身份（Web 零影响）', async () => {
+  // role=device（worker 通行证）：非 sn- 房一律匿名——旧行为会把 probe/测试页对话写进 token 账号
+  assert.equal(resolveDeviceIdentity(WORKER_AUTH, 'my-web-room'), null);
+  assert.equal(resolveDeviceIdentity(WORKER_AUTH, undefined), null);
+  assert.equal(resolveDeviceIdentity(WORKER_AUTH, ''), null);
+  // parent（体验台/家长端登录 token）：行为不变
+  const parentAuth = { accountId: 'acct-web-1', role: 'parent' };
+  assert.equal(resolveDeviceIdentity(parentAuth, 'my-web-room')?.accountId, 'acct-web-1');
+  assert.equal(resolveDeviceIdentity(parentAuth, undefined)?.accountId, 'acct-web-1');
 });
 
 await t('I4 token 无效 → room 冒充无效（防公网伪造）', async () => {

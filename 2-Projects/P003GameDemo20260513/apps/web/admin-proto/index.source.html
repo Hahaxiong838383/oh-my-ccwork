@@ -2410,16 +2410,8 @@
                       </template>
                     </div>
                   </div>
-                  <!-- 开通/重签 token 弹窗 -->
-                  <el-dialog v-model="brainTokenDialog.visible" title="Brain 身份 Token（一次性显示）" width="600px" :close-on-click-modal="false">
-                    <div style="background:#FFF7E6;border:1px solid #FFD591;border-radius:8px;padding:10px 12px;margin-bottom:12px;color:#B8741A;font-size:13px;font-weight:600">⚠️ 仅此一次显示。用法：配到 Worker 调大脑的 URL 上（/v1/chat/completions?token=…），该设备的对话即注入此账号的画像与记忆。勿发聊天/群/代码库。</div>
-                    <el-input type="textarea" :rows="5" :model-value="brainTokenDialog.token" readonly style="font-family:monospace;font-size:12px"></el-input>
-                    <div style="margin-top:8px;font-size:12px;color:#6B7785">有效期 365 天 · 账号 {{ brainTokenDialog.accountId }}</div>
-                    <div style="margin-top:14px;text-align:right">
-                      <el-button type="primary" @click="copyBrainToken">复制 Token</el-button>
-                      <el-button @click="brainTokenDialog.visible = false; brainTokenDialog.token = ''">已保存，关闭</el-button>
-                    </div>
-                  </el-dialog>
+                  <!-- brain_token 分发已取消（2026-08-20）：多设备架构下身份由房名 SN 自动路由，
+                       开通即接入零配置；worker 通行证续签走 scripts/sign-worker-token.ts -->
                 </div>
                 <!-- 贡献账本 -->
                 <div v-if="khNav==='ledger'" style="flex:1;padding:20px">
@@ -4135,7 +4127,6 @@
         }
         var brainCfg = reactive({ worldview_override: '', prompt_addendum: '' });
         var brainAdd = reactive({ type: 'event', content: '', subject: 'xiaoke', due_text: '' });
-        var brainTokenDialog = reactive({ visible: false, token: '', accountId: '' });
         // 视觉体系与体验台 memory/types.ts 单一真源对齐（emoji/hex/taxonomy/lifecycle）
         var BRAIN_TYPE_META = [
           { type: 'promise', icon: '🤝', label: '约定', capN: 0, policy: '永不遗忘,直到兑现', hex: '#34d399', taxonomy: '情景记忆' },
@@ -4329,10 +4320,8 @@
           brainState.loading = true;
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/brain', { method: 'POST', body: '{}' })
             .then(function (data) {
-              if (data && data.ok && data.brain_token) {
-                brainTokenDialog.token = data.brain_token;
-                brainTokenDialog.accountId = data.account_id;
-                brainTokenDialog.visible = true;
+              if (data && data.ok) {
+                ElementPlus.ElMessage.success('已开通并自动接入（账号 ' + data.account_id + '）——身份由房名 SN 自动路由，无需配置 token');
                 loadDevices();
                 loadBrain(sn);
               } else {
@@ -4427,22 +4416,6 @@
             .catch(function (e) {
               if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('删除失败，请稍后重试');
             });
-        }
-        function copyBrainToken() {
-          var text = brainTokenDialog.token;
-          if (!text) return;
-          var done = function () { ElementPlus.ElMessage.success('已复制到剪贴板'); };
-          var fallback = function () {
-            try {
-              var ta = document.createElement('textarea');
-              ta.value = text; document.body.appendChild(ta); ta.select();
-              document.execCommand('copy'); document.body.removeChild(ta);
-              done();
-            } catch (e) { ElementPlus.ElMessage.error('复制失败，请手动全选复制'); }
-          };
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(done).catch(fallback);
-          } else { fallback(); }
         }
         function loadDeviceSessions(resetPage) {
           if (!canManageInvites.value) return;
@@ -5817,7 +5790,7 @@
           saveDeviceNote: saveDeviceNote, delDevice: delDevice, openCredDialog: openCredDialog,
           issueCredential: issueCredential, copyCredential: copyCredential, loadDeviceSessions: loadDeviceSessions,
           changeSessionPage: changeSessionPage, saveSessionNote: saveSessionNote,
-          brainState: brainState, brainAdd: brainAdd, brainTokenDialog: brainTokenDialog, brainGroups: brainGroups,
+          brainState: brainState, brainAdd: brainAdd, brainGroups: brainGroups,
           brainCfg: brainCfg, BRAIN_TYPE_META: BRAIN_TYPE_META, BRAIN_TYPE_BY_KEY: BRAIN_TYPE_BY_KEY,
           BRAIN_LAYER_COLORS: BRAIN_LAYER_COLORS, BRAIN_LAYER_BORDERS: BRAIN_LAYER_BORDERS,
           brainGraphNodes: brainGraphNodes, brainGraphSelectedEntity: brainGraphSelectedEntity,
@@ -5825,7 +5798,7 @@
           resetPromptConfig: resetPromptConfig, copyFinalPrompt: copyFinalPrompt,
           selectBrainDevice: selectBrainDevice, refreshBrainTab: refreshBrainTab, loadBrain: loadBrain, loadIsolation: loadIsolation, loadOverview: loadOverview,
           openBrain: openBrain, unbindBrain: unbindBrain, addBrainMemory: addBrainMemory,
-          delBrainMemory: delBrainMemory, copyBrainToken: copyBrainToken,
+          delBrainMemory: delBrainMemory,
           brainProfileDraft: brainProfileDraft, parentBind: parentBind,
           saveChildProfile: saveChildProfile, bindParent: bindParent, unbindParent: unbindParent,
           extractLlm: extractLlm, loadExtractLlm: loadExtractLlm, saveExtractLlm: saveExtractLlm, testExtractLlm: testExtractLlm,

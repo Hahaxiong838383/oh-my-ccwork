@@ -33,7 +33,12 @@ export function resolveDeviceIdentity(
 ): AuthContext | null {
   if (!auth) return null;
   const m = /^sn-(BJP003\d{14})-\d+$/.exec((room ?? '').trim());
-  if (!m) return auth;
+  // 🔴 设备身份只能来自设备房（2026-08-20 堵洞）：role=device 的 token（worker 进程级
+  // 通行证）落在非 sn- 房（rtc_probe 的 t<ts> 房 / voice-test 测试页）时，旧行为
+  // 「原样返回 token 身份」= probe/测试对话全部写进该 token 账号的记忆与对话——污染。
+  // 收紧后这类会话为匿名纯人设（测试场景本就不该有记忆）。parent/guest 等 role 不受影响
+  // （Web 体验台/家长端仍按 token 身份，行为不变）。
+  if (!m) return auth.role === 'device' ? null : auth;
   try {
     const device = deviceRegistryStore.get(m[1]!);
     if (device?.account_id) return { accountId: device.account_id, role: 'device' };
