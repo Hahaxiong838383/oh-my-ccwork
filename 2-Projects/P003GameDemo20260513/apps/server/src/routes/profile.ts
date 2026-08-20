@@ -4,6 +4,7 @@ import { profileStore } from '../profile-store.js';
 import { verifyAuthToken } from '../auth-jwt.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { validateDeviceSn } from '../device-sn.js';
+import { accountStore } from '../account-store.js';
 
 // 家长端建档 + 配网绑定 API。鉴权用邀请码登录 JWT（与 WS 鉴权同 verifyAuthToken），按 accountId 隔离。
 const profileRoute = new Hono<{ Variables: { accountId: string } }>();
@@ -102,13 +103,22 @@ profileRoute.post('/bind-sn', async (c) => {
     return c.json({ ok: false, error: 'sn_taken', message: '该设备已被其他账号绑定' }, 409);
   }
   deviceRegistryStore.setParentAccountId(sn, accountId);
-  // 建档下发：设备已开通 brain 且设备账号无档 → 从家长档同步（幂等；设备已有档不覆盖）。
-  let syncedProfile = false;
-  if (device.account_id && !profileStore.getProfile(device.account_id)) {
-    syncedProfile = Boolean(profileStore.copyProfile(accountId, device.account_id));
+  // 绑定即接入大脑（2026-08-20 配网即绑定 P0）：未开通 brain 的设备自动开通
+  // （与 admin POST /devices/:sn/brain 同序列：建 device 账号 + 关联 + 建档），
+  // 家长自助绑定后设备直接可记忆/认人，无需运营手工开通。
+  let brainAccountId = device.account_id;
+  if (!brainAccountId) {
+    brainAccountId = accountStore.createDeviceAccount(sn, device.note).id;
+    deviceRegistryStore.setAccountId(sn, brainAccountId);
   }
-  console.log(`[profile] bind-sn account=${accountId} sn=${sn} synced_profile=${syncedProfile}`);
-  return c.json({ ok: true, sn, synced_profile: syncedProfile });
+  // 建档下发：设备账号无档 → 从家长档同步；家长也无档 → 空档兜底（空档已足以激活记忆抽取）。
+  let syncedProfile = false;
+  if (brainAccountId && !profileStore.getProfile(brainAccountId)) {
+    syncedProfile = Boolean(profileStore.copyProfile(accountId, brainAccountId));
+    if (!syncedProfile) profileStore.upsertProfile(brainAccountId, { nickname: '', birthday: '', gender: '' });
+  }
+  console.log(`[profile] bind-sn account=${accountId} sn=${sn} brain=${brainAccountId} synced_profile=${syncedProfile}`);
+  return c.json({ ok: true, sn, brain_opened: Boolean(brainAccountId), synced_profile: syncedProfile });
 });
 
 // 当前家长账号绑定的硬件设备列表（小程序「我的设备」）

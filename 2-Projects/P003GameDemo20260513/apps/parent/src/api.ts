@@ -46,3 +46,22 @@ export function getProfile(): Promise<{ ok: boolean; profile: Profile | null }> 
 export function getDevice(): Promise<{ ok: boolean; device: DeviceInfo | null }> {
   return authed('/api/profile/device') as Promise<{ ok: boolean; device: DeviceInfo | null }>;
 }
+
+export type BindSnResult = { ok: boolean; message?: string; brain_opened?: boolean };
+
+/** 硬件 SN 绑定（绑定即接入大脑）。失败返回 {ok:false, message}（409 已被绑/404 台账外），不抛错。 */
+export async function bindSn(sn: string): Promise<BindSnResult> {
+  const token = getToken();
+  const res = await fetch('/api/profile/bind-sn', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ sn }),
+  });
+  if (res.status === 401) {
+    sessionStorage.removeItem(TOKEN_KEY);
+    throw new Error('unauthorized');
+  }
+  const data = (await res.json().catch(() => ({}))) as BindSnResult & { error?: string };
+  if (res.ok && data.ok) return data;
+  return { ok: false, message: data.message ?? '绑定失败，请稍后再试' };
+}

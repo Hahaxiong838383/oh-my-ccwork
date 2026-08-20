@@ -12,6 +12,8 @@ export type Account = {
   nickname: string;
   role: string;
   created_at: number;
+  /** 手机号（短信验证码注册的账号才有；邀请码/设备账号为 null）。 */
+  phone?: string | null;
 };
 
 export type InviteCode = {
@@ -88,6 +90,21 @@ class AccountStore {
       CREATE INDEX IF NOT EXISTS idx_invite_code_account
       ON invite_code (account_id);
     `);
+    this.migrate();
+  }
+
+  /** 老库迁移：幂等补列（生产 accounts.db 建于 phone 列之前）。失败记日志不阻断启动。 */
+  private migrate(): void {
+    try {
+      const cols = this.db.prepare('PRAGMA table_info(account)').all() as { name: string }[];
+      if (!cols.some((c) => c.name === 'phone')) {
+        this.db.exec(`ALTER TABLE account ADD COLUMN phone TEXT`);
+      }
+      // 部分唯一索引：phone 非空才参与唯一约束（存量邀请码/设备账号 phone=NULL 互不冲突）
+      this.db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_account_phone ON account (phone) WHERE phone IS NOT NULL`);
+    } catch (err) {
+      console.error(`[account-store] phone 列迁移失败(不阻断): ${(err as Error).message}`);
+    }
   }
 
   /** 幂等 seed：account 与 invite_code 均用 INSERT OR IGNORE，已存在则跳过、不覆盖。可重复跑。 */
@@ -164,6 +181,38 @@ class AccountStore {
     }
 
     return { code, account_id: accountId, nickname: accountNickname };
+  }
+
+  /** 按手机号查账号（短信验证码登录用）。 */
+  findByPhone(phone: string): Account | null {
+    const row = this.db
+      .prepare(`SELECT id, nickname, role, created_at, phone FROM account WHERE phone = ?`)
+      .get(phone.trim()) as Account | undefined;
+    return row ?? null;
+  }
+
+  /**
+   * 手机号账号 upsert（短信验证码注册/登录）：已存在直接返回；不存在则建
+   * acct-NN 家长账号（沿用邀请码账号编号序列），nickname 默认「家长+尾4位」。
+   * 并发双请求由 phone 唯一索引兜底：插入冲突后重查返回。
+   */
+  upsertPhoneAccount(phone: string): Account {
+    const normalized = phone.trim();
+    const existing = this.findByPhone(normalized);
+    if (existing) return existing;
+    const accountNo = nextAccountNumber(this.listAccounts());
+    const accountId = formatAccountId(accountNo);
+    const nickname = `家长${normalized.slice(-4)}`;
+    try {
+      this.db
+        .prepare(`INSERT INTO account (id, nickname, role, created_at, phone) VALUES (?, ?, 'parent', ?, ?)`)
+        .run(accountId, nickname, Date.now(), normalized);
+    } catch {
+      const raced = this.findByPhone(normalized);
+      if (raced) return raced;
+      throw new Error('phone_account_create_failed');
+    }
+    return this.findByPhone(normalized)!;
   }
 
   /**

@@ -6,10 +6,11 @@ import { useEffect, useRef, useState } from 'react';
 import { FlowNav } from '../components/chrome';
 import { pairingDevice } from '../mock/data';
 import ProfileSheet, { type ProfileData } from './ProfileSheet';
-import { bindDevice, saveProfile } from '../api';
+import { bindDevice, bindSn, saveProfile } from '../api';
 
 type Step =
   | 'entry'
+  | 'bindSn'
   | 'searching'
   | 'found'
   | 'connecting'
@@ -19,6 +20,7 @@ type Step =
   | 'netDone';
 
 const titleMap: Partial<Record<Step, string>> = {
+  bindSn: '绑定设备',
   searching: '添加设备',
   found: '添加设备',
   connecting: '添加设备',
@@ -43,6 +45,7 @@ const autoDelay: Partial<Record<Step, number>> = {
 };
 
 const backMap: Partial<Record<Step, Step>> = {
+  bindSn: 'entry',
   searching: 'entry',
   found: 'entry',
   connecting: 'found',
@@ -108,7 +111,8 @@ export default function PairingFlow({ onExit }: { onExit: () => void }) {
     <div className="flex h-full flex-col bg-page-bg">
       <FlowNav title={titleMap[step]} onBack={back} />
       <div className="no-scrollbar flex-1 overflow-y-auto px-4 pb-6 pt-1">
-        {step === 'entry' && <EntryView onAdd={() => setStep('searching')} />}
+        {step === 'entry' && <EntryView onAdd={() => setStep('searching')} onBindSn={() => setStep('bindSn')} />}
+        {step === 'bindSn' && <BindSnView onDone={onExit} />}
         {(step === 'searching' || step === 'found') && (
           <SearchView found={step === 'found'} onAdd={() => setStep('connecting')} />
         )}
@@ -138,7 +142,7 @@ export default function PairingFlow({ onExit }: { onExit: () => void }) {
   );
 }
 
-function EntryView({ onAdd }: { onAdd: () => void }) {
+function EntryView({ onAdd, onBindSn }: { onAdd: () => void; onBindSn: () => void }) {
   return (
     <div className="rounded-[20px] bg-white p-6 pb-8 shadow-card">
       <MonitorIcon className="mx-auto mt-6 h-36 w-44" />
@@ -149,6 +153,85 @@ function EntryView({ onAdd }: { onAdd: () => void }) {
         type="button"
       >
         <span className="text-lg">＋</span> 添加设备
+      </button>
+      <button className="mx-auto mt-4 block text-center text-xs font-semibold text-brand-orange" onClick={onBindSn} type="button">
+        设备已联网？输入设备编号绑定
+      </button>
+    </div>
+  );
+}
+
+// 已在网设备直接绑 SN（真实链路：POST /api/profile/bind-sn，绑定即接入大脑）。
+// mock 配网旅程（BLE→WiFi）保留为 P1 真配网的演示壳，两条入口并存。
+function BindSnView({ onDone }: { onDone: () => void }) {
+  const [sn, setSn] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const normalized = sn.trim().toUpperCase();
+  const snOk = /^BJP003\d{14}$/.test(normalized);
+
+  const submit = async () => {
+    if (!snOk) {
+      setError('设备编号为 BJP003 开头的 20 位编码，见设备底部标签');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await bindSn(normalized);
+      if (r.ok) setDone(true);
+      else setError(r.message ?? '绑定失败，请稍后再试');
+    } catch {
+      setError('网络错误，请检查连接');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <div className="rounded-[20px] bg-white p-6 pb-8 shadow-card">
+        <div className="flex flex-col items-center pt-10 pb-4">
+          <span className="grid h-14 w-14 place-items-center rounded-full bg-green-500 text-2xl font-bold text-white">✓</span>
+          <h2 className="mt-5 text-xl font-bold text-text-main">绑定成功</h2>
+          <p className="mt-2 text-center text-sm leading-6 text-text-muted">
+            设备已接入你的账号，小可会记住孩子的喜好啦
+          </p>
+          <button
+            className="mt-8 h-12 w-[78%] rounded-full bg-brand-orange font-bold text-white shadow-card"
+            onClick={onDone}
+            type="button"
+          >
+            完成
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-[20px] bg-white p-6 pb-8 shadow-card">
+      <h2 className="text-xl font-bold text-text-main">输入设备编号</h2>
+      <p className="mt-2 text-sm leading-6 text-text-muted">设备编号（SN）在读写台底部标签上，BJP003 开头共 20 位。</p>
+      <input
+        autoComplete="off"
+        className="mt-5 h-12 w-full rounded-xl bg-page-bg px-4 font-mono text-sm tracking-wide text-text-main outline-none placeholder:text-text-muted"
+        maxLength={20}
+        onChange={(e) => setSn(e.target.value.replace(/[^0-9a-zA-Z]/g, ''))}
+        onKeyDown={(e) => e.key === 'Enter' && void submit()}
+        placeholder="BJP003 开头 20 位编号"
+        value={sn}
+      />
+      {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
+      <button
+        className="mt-6 h-12 w-full rounded-full bg-brand-orange font-bold text-white shadow-card disabled:opacity-60"
+        disabled={busy}
+        onClick={() => void submit()}
+        type="button"
+      >
+        {busy ? '绑定中…' : '绑定设备'}
       </button>
     </div>
   );

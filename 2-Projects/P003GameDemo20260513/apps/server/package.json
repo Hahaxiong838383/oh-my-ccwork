@@ -12,7 +12,8 @@
     "probe:volc-tts": "NO_PROXY=* HTTPS_PROXY= HTTP_PROXY= node --env-file=.env.local scripts/volc-tts-probe.mjs",
     "test:expr": "tsx scripts/expression-filter.test.ts",
     "test:exit": "tsx scripts/exit-intent.test.ts",
-    "test:onboarding": "tsx scripts/onboarding-extractor.test.ts"
+    "test:onboarding": "tsx scripts/onboarding-extractor.test.ts",
+    "test:sms": "NODE_OPTIONS=--experimental-sqlite tsx scripts/sms-auth.test.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.0.0",
