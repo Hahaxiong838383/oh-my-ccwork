@@ -6,6 +6,7 @@
 #   监控脚本不该为了看一眼就把凭据摊开到每台机器上 —— 本机自检拿到的信息足够告警。
 #
 # 判据（任一不满足即告警）：
+#   0. **到中继的真实连通性**（2026-08-20 加，见下方「僵死态」）
 #   1. easytier 进程活着
 #   2. 期望的 peer 都在（少一个就是有节点掉线）
 #   3. 关键链路是 p2p 而不是 relay（退化成中继 = 延迟从 ~10ms 变 ~96ms）
@@ -16,7 +17,19 @@
 # ⚠ 期望列表只放**常驻开机**的设备。air 是笔记本，合盖即掉线，放进来会变成
 #   定时炸弹式误报源 —— 误报几次之后告警就没人看了，那才是真正的失效。
 #
-# 出口（2026-08-17 加）：结论推送到 AI Ops Cockpit 的 Uptime Kuma（push 型监控），
+# 🔴 僵死态（2026-08-20 实战踩到，是本脚本存在的最大盲区）：
+#   easytier 会进入一个**所有自述信号全绿、但实际已不在网上**的状态 ——
+#   进程 active、网卡带着 IP、connector 报 Connected、peer 表满员，
+#   但表是**冻结的**（隔 25 分钟两次取样，延迟数字一模一样到小数点后两位），
+#   全网其它节点都看不见它，它自己日志里一条都不记。`Restart=always` 完全无效
+#   （进程根本没崩）。⇒ **只读 peer 表判不出来，必须打一次真实流量。**
+#   ⚠ 判据**不能用 ICMP**：中继虚拟 IP 的丢包是已知假象，2026-08-20 实测同一分钟内
+#   五轮分别是 37.5%/62.5%/25%/50%/62.5%，且很可能是突发式（连续几秒黑）而非独立丢包 ——
+#   「连打 N 个包全丢」的独立概率估算在突发丢包下根本不成立，会变成误报制造机。
+#   改用 **TCP connect 到中继的 22 端口**：SYN 自带重传，天生抗丢包。同一时刻五轮 5/5 全通
+#   （61~1122ms，慢的那两次正是重传在起作用）。判据要选**不受已知假象污染**的那个通道。
+#
+# 出口：结论推送到 AI Ops Cockpit 的 Uptime Kuma（push 型监控），
 #   由已有的「飞书运维告警」通道发出。三类故障全覆盖：
 #     成功            -> push status=up
 #     判据失败        -> push status=down + 具体原因（立即告警且带原因）
@@ -27,13 +40,20 @@ set -uo pipefail
 
 CLI=/usr/local/bin/easytier-cli
 LOG="${ET_WATCH_LOG:-$HOME/.easytier-watch.log}"
+STATE="${ET_WATCH_STATE:-$HOME/.easytier-watch.state}"
 
 # shellcheck disable=SC1091
 [[ -r "$HOME/.easytier-watch.env" ]] && . "$HOME/.easytier-watch.env"
 
-# 期望看到的 peer（hostname），以及其中哪些必须是 p2p 直连
 EXPECT_PEERS="${ET_EXPECT_PEERS:-hk-relay mini studio dev198 fnos2}"
 MUST_P2P="${ET_MUST_P2P:-dev198 mini}"     # 家侧关心的是到公司的直连
+RELAY_IP="${ET_RELAY_IP:-10.10.10.1}"
+UNIT="${ET_UNIT:-easytier-mesh.service}"
+
+# 自愈参数：连续 N 次判定「本机失联」才重启，且两次重启至少间隔 COOLDOWN 秒
+SELFHEAL="${ET_SELFHEAL:-1}"
+FAIL_THRESHOLD="${ET_FAIL_THRESHOLD:-3}"
+RESTART_COOLDOWN="${ET_RESTART_COOLDOWN:-3600}"
 
 ts() { date '+%Y-%m-%d %H:%M:%S'; }
 say() { printf '%s  %s\n' "$(ts)" "$*" >> "$LOG"; }
@@ -47,10 +67,15 @@ push() {  # $1=up|down  $2=msg
     || say "WARN 心跳推送失败（Kuma 不可达）—— Kuma 侧会以超时告警兜底"
 }
 
+# 连续失败计数：只统计「本机失联」这一类，别的节点掉线不该触发本机重启
+read_fails()  { [[ -r "$STATE" ]] && cut -d' ' -f1 "$STATE" 2>/dev/null || echo 0; }
+read_last()   { [[ -r "$STATE" ]] && cut -d' ' -f2 "$STATE" 2>/dev/null || echo 0; }
+write_state() { printf '%s %s\n' "$1" "$2" > "$STATE"; }
+
 PROBLEMS=()
+SELF_LOST=0     # 只有这个为 1 才考虑自愈
 
 # 0. 配置自洽：MUST_P2P 必须是 EXPECT_PEERS 的子集，否则某台掉线会静默
-#    （原版对不在 peer 表里的 MUST_P2P 主机直接 continue，是个隐性盲区）
 for h in $MUST_P2P; do
   grep -qw -- "$h" <<<"$EXPECT_PEERS" || {
     say "CRIT 配置错误: MUST_P2P 的 $h 不在 EXPECT_PEERS 里，它掉线不会被发现"
@@ -66,28 +91,73 @@ if ! pgrep -x easytier-core >/dev/null 2>&1; then
   printf 'easytier-core 进程不在\n'; exit 1
 fi
 
-OUT="$("$CLI" peer 2>/dev/null)"
-if [[ -z "$OUT" ]]; then
-  say "CRIT peer 表为空"
-  push down "easytier-cli 取不到 peer 表（RPC 不通？）"
-  printf 'easytier-cli 取不到 peer 表\n'; exit 1
+# 2. 真实连通性（僵死态唯一测得出来的判据，见文件头）
+relay_reachable() {   # TCP connect，两次机会；不用 ICMP（见文件头）
+  local i
+  for i in 1 2; do
+    timeout 6 bash -c "exec 3<>/dev/tcp/$RELAY_IP/22" 2>/dev/null && return 0
+    sleep 2
+  done
+  return 1
+}
+if ! relay_reachable; then
+  PROBLEMS+=("TCP 连不上中继 $RELAY_IP:22（两次重试）—— 本机已离网，peer 表可能仍是满的，别信它")
+  SELF_LOST=1
 fi
 
-# 2. 期望的 peer 是否都在
-for h in $EXPECT_PEERS; do
-  grep -q "[[:space:]]$h[[:space:]]" <<<"$OUT" || PROBLEMS+=("看不到 peer: $h")
-done
+OUT="$("$CLI" peer 2>/dev/null)"
+if [[ -z "$OUT" ]]; then
+  PROBLEMS+=("easytier-cli 取不到 peer 表（RPC 不通？）")
+  SELF_LOST=1
+else
+  # 3. 期望的 peer 是否都在
+  for h in $EXPECT_PEERS; do
+    grep -q "[[:space:]]$h[[:space:]]" <<<"$OUT" || PROBLEMS+=("看不到 peer: $h")
+  done
+  # 4. 关键链路是否退化成中继
+  for h in $MUST_P2P; do
+    line="$(grep "[[:space:]]$h[[:space:]]" <<<"$OUT" | head -1)"
+    [[ -z "$line" ]] && continue          # 缺席已由上一步覆盖（第 0 步保证是子集）
+    cost="$(awk -F'|' '{gsub(/ /,"",$4); print $4}' <<<"$line")"
+    if [[ "$cost" == relay* ]]; then
+      lat="$(awk -F'|' '{gsub(/ /,"",$5); print $5}' <<<"$line")"
+      PROBLEMS+=("$h 退化成 $cost（${lat}ms）—— 直连没打通，可能是 NAT 类型变了")
+    fi
+  done
+fi
 
-# 3. 关键链路是否退化成中继
-for h in $MUST_P2P; do
-  line="$(grep "[[:space:]]$h[[:space:]]" <<<"$OUT" | head -1)"
-  [[ -z "$line" ]] && continue          # 缺席已由第 2 步覆盖（第 0 步保证是子集）
-  cost="$(awk -F'|' '{gsub(/ /,"",$4); print $4}' <<<"$line")"
-  if [[ "$cost" == relay* ]]; then
-    lat="$(awk -F'|' '{gsub(/ /,"",$5); print $5}' <<<"$line")"
-    PROBLEMS+=("$h 退化成 $cost（${lat}ms）—— 直连没打通，可能是 NAT 类型变了")
+# ── 自愈：只对「本机失联」生效 ──────────────────────────────────────
+# 为什么限定：别的节点掉线，重启本机毫无用处，只会变成无限重启。
+# 为什么要 N 次：单次网络抖动不该触发重启。
+# 为什么要冷却：重启修不好的故障（比如中继真挂了）不能变成重启风暴。
+HEALED=""
+NOW=$(date +%s)
+if (( SELF_LOST )); then
+  FAILS=$(( $(read_fails) + 1 ))
+  LAST=$(read_last)
+  write_state "$FAILS" "$LAST"
+  if [[ "$SELFHEAL" == "1" ]] && (( FAILS >= FAIL_THRESHOLD )) && (( NOW - LAST >= RESTART_COOLDOWN )); then
+    say "HEAL 连续 $FAILS 次判定离网，尝试重启 $UNIT"
+    if sudo -n systemctl restart "$UNIT" 2>>"$LOG"; then
+      write_state 0 "$NOW"
+      HEALED="；已自动重启 $UNIT（连续 $FAILS 次离网后触发）"
+      say "HEAL 重启已执行"
+      sleep 25
+      if relay_reachable; then
+        HEALED="$HEALED，重启后已恢复连通"
+        say "HEAL 重启后连通性恢复"
+      else
+        HEALED="$HEALED，但重启后仍不通 —— 需要人工介入"
+        say "HEAL 重启后仍不通"
+      fi
+    else
+      HEALED="；自动重启失败（sudo 无权限？）需人工介入"
+      say "HEAL 重启失败：sudo -n 被拒或 unit 名不对"
+    fi
   fi
-done
+else
+  write_state 0 "$(read_last)"
+fi
 
 if [[ ${#PROBLEMS[@]} -eq 0 ]]; then
   N="$(grep -cE '^\| 10\.' <<<"$OUT")"
@@ -96,7 +166,7 @@ if [[ ${#PROBLEMS[@]} -eq 0 ]]; then
   exit 0
 else
   for p in "${PROBLEMS[@]}"; do say "WARN $p"; done
-  MSG="$(IFS='; '; printf '%s' "${PROBLEMS[*]}")"
+  MSG="$(IFS='; '; printf '%s' "${PROBLEMS[*]}")$HEALED"
   push down "$MSG"
   printf '%s\n' "${PROBLEMS[@]}"
   exit 1
