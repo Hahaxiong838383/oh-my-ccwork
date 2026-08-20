@@ -104,6 +104,17 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   CLI 也取不了——测试省着发。
 - 红线:**生产禁 `--return-verify-code true`**(仅调试);AK env 注入;发码接口业务限流(号码三窗+IP),阿里云 60s 频控只是兜底。
 
+## Android OTA（2026-08-20 server 侧上线,等 codex v63 验收包）
+
+- 全档见记忆 `rg 'ota|OTA' ~/.claude/.../memory/`（project_p003_ota.md,含合同冻结值/验收五步）。
+- **发布 SOP**:admin后台→Worker 管理→OTA 升级 tab:上传 APK(服务端 aapt/apksigner **实测校验**:
+  包名 com.futurus.p003.launcher/冻结证书/versionCode 单调,APK 本体为真值)→灰度发布(输 SN 名单)或
+  全量发布(显式确认)→观察「设备版本分布」表(设备 check 自动上报)。**暂停只救未升级设备**(APK 层无真回滚)。
+- 部署真值:APK 落 `/opt/p003/ota/`;ota.db 在 data/;nginx `/ota/` limit_rate 1m+双 limit_conn 闸
+  (语音带宽优先,下载慢=预期);上传走 `location = /api/admin/ota/upload`(300m+流式);aapt/apksigner 已 apt 装。
+- check 接口:`POST /v1/device/ota/check`(S2B1 设备凭据;测试:服务器 sign-device-credential.ts 签凭据 curl)。
+- 测试:`npm run test:ota`(30 项)。⚠️ 川哥非代码任务:JKS 签名 key 异地加密备份(只在 Studio 构建机)。
+
 ## 凭证/链接（指针,secret 绝不入 skill）
 
 - 三端链接见上表。admin 登录 `admin / ⟨STUDIO_PASS 见生产 /opt/p003/server/.env.local⟩`。
