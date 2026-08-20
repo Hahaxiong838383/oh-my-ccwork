@@ -83,6 +83,18 @@ ssh root@47.239.204.68 'cd /root/realtime-voice-agent && timeout 50 \
 2. agent 说了但用户听不到 + 指标"-" = **下行断** → 十有八九是网络路径(见 5G 症状)。
 3. 用户说了没转写(无 UserTranscript)→ ASR 流问题,grep `火山 ASR 流异常`。
 
+### Phase 2a 设备感知观察模式(2026-08-20 上线,rust 线+device brain)
+LLM 判断用户想调设备时在回复开头输出 `[[DEV:N]]`;worker `DevMarkStripper`(llm.rs)**无条件剥离**
+(绝不进 TTS/字幕/历史),只打日志**不执行**(codex BLOCKED_PENDING_VAD_CANDIDATE_ID,2b 前置=
+vad_candidate_id 关联合同)。
+- **开关在 server 侧**:aliyun-hk `/opt/p003/server/.env.local` 的 `DEVICE_INTENT_OBSERVE=1`
+  (协议层注入 device brain systemPrompt 第五层,仅 role=device);关=置 0+`pm2 restart p003-voice`,
+  分钟级——**对话人设漂移是第一风险项,先关这个**。生效证据=运营台白盒第五层 chars>0。
+- **观察数据**:`journalctl -u voice-worker-rust | grep 'llm device intent observed'`(label+known
+  白名单校验);攒召回/误出手率/方向正确率给 2b 放开做依据。
+- 话术铁律:协议要求 LLM 不承诺执行("我已经调好"禁说)——执行播报永远归 worker 固定短句。
+- 若真机听到"DEV/括号"被念出=剥离器漏(格式变体),关开关+查 `dev_mark_strip_table` 测试补形态。
+
 ### 症状:僵尸房——端侧显示"连接中/通话中"但整轮零 ASR 零回应(常连房间模式专属)
 = **信令 WS 活着但媒体死了**。分型看 worker 的 `media watchdog stats` 行(2026-08-19 上线,60s 一行):
 - `lost=True`/frames 停增 = **传输死**(NAT 失效/网络切换/WebView 冻结)→ L1 自动处置:SFU 报 LOST 持续 `MEDIA_LOST_HANGUP_S`(默认 15s)→ worker 删房 → 端侧收标准 disconnected 自行重连。看 `media watchdog 删房` 行确认。
@@ -285,7 +297,10 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
   → `rust-worker.env`(只放两线差异项)。⚠️ **共享配置一律只写 poc-eou.env,别在 rust-worker.env 复制同值**
   ——两处同值 = 必然漂移(热词就是先踩后收敛的)。
 - **构建**:本机/dev198 的 glibc 比 64.90(24.04/2.39)新,产物拷过去直接跑不起来。走 GitHub Actions
-  `.github/workflows/rust-worker-build.yml`(ubuntu-24.04 + glibc 符号天花板门禁),下载 artifact 再 scp。
+  `.github/workflows/rust-worker-build.yml`(ubuntu-24.04 + glibc 符号天花板门禁)。
+  **产物走 release asset(2026-08-20 起)**:`gh release download rust-worker-build-<run_id> -p voice-rust-worker`
+  ——actions artifact 配额曾被 71 个历史产物打满,**删除后配额重算 6-12h+ 不即时**(四连撞墙实证),
+  release asset 不占该配额。传 64.90:base64 管道或 scp 到 `.new` → `deploy-worker-bin.sh`(自动备份+纪律重启+md5 锚)。
   ⚠️ `gh workflow run` 要求 workflow 文件在**默认分支上**才认。
 - **测试页**:Python 线 `voice-test.html` / Rust 线 `voice-test-rust.html`(同一 nginx docroot
   `/var/www/voice`,各自 token 与 agent_name)。⚠️ docroot 在 **47.239**(LiveKit 那台),不是 64.90。
