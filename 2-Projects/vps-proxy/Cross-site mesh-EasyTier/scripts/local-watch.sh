@@ -45,7 +45,7 @@ STATE="${ET_WATCH_STATE:-$HOME/.easytier-watch.state}"
 # shellcheck disable=SC1091
 [[ -r "$HOME/.easytier-watch.env" ]] && . "$HOME/.easytier-watch.env"
 
-EXPECT_PEERS="${ET_EXPECT_PEERS:-hk-relay mini studio dev198 fnos2}"
+EXPECT_PEERS="${ET_EXPECT_PEERS:-hk-relay mini studio dev198 fnos2 home-studio}"
 MUST_P2P="${ET_MUST_P2P:-dev198 mini}"     # 家侧关心的是到公司的直连
 RELAY_IP="${ET_RELAY_IP:-10.10.10.1}"
 UNIT="${ET_UNIT:-easytier-mesh.service}"

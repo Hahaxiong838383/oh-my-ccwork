@@ -1,0 +1,52 @@
+# ═══ home-studio · 家用主力开发机 · 家有线 192.168.1.133 ═══
+# 主机名 hahaxiong-home-studio / Ubuntu 24.04.4 / 20 线程 / 31G 内存 / 218G 盘
+# 角色：家侧主力开发机（2026-08-20 接入）。**不是网关**，见下方决策记录。
+
+hostname = "home-studio"
+instance_name = "main"
+ipv4 = "10.10.10.23"
+
+listeners = [
+    "tcp://0.0.0.0:11010",
+    "udp://0.0.0.0:11010",
+]
+
+# ── 网络身份（决定谁和谁是同一张网）──
+# 必须与所有其他节点完全一致；不一致的症状是「connector 显示 Connected 但 peer 表空」，
+# 因为 TCP/UDP 通道建得起来，只是握手鉴权不过 —— 极容易误判成打洞失败。
+[network_identity]
+network_name = "__NETWORK_NAME__"
+network_secret = "__NETWORK_SECRET__"
+
+# ── 上游通道 ──
+# ⚠ 这里【没有】 udp://207.57.124.191:11010（2026-08-20 决策，别再加回来）：
+# 野草云面板侧的供应商防火墙永久封着 11010，该 connector 永远停在 Connecting，
+# 四天在 linux-lan 上产生 4121 行 WARN + 数千行 INFO，把真实故障信号淹没，
+# 排查 8-20 那次僵死事故时直接带偏一轮。**能连的只有 443 和 udp/22。**
+[[peer]]
+uri = "tcp://207.57.124.191:443"
+[[peer]]
+uri = "udp://207.57.124.191:22"
+
+# ── 家内直连：同网段的另两台，走局域网不绕香港 ──
+[[peer]]
+uri = "tcp://192.168.1.119:11010"    # linux-lan
+[[peer]]
+uri = "tcp://192.168.1.115:11010"    # fnos2（飞牛2号）
+
+# ── 为什么这里【没有】 proxy_network（2026-08-20 决策）──
+# 家侧 192.168.1.0/24 已由 linux-lan（主）+ fnos2（备）双份导出到 10.10.1.0/24，
+# 两台都是 24 小时在线的常驻设备。本机是**工作站不是基础设施**：
+# 再加第三个导出者只增加路由通告开销，冗余收益接近零。
+# 若哪天 linux-lan 与 fnos2 同时退役，再把下面这段解注释：
+#   [[proxy_network]]
+#   cidr = "192.168.1.0/24"
+#   mapped_cidr = "10.10.1.0/24"
+
+[flags]
+dev_name = "easytier0"
+private_mode = true
+latency_first = true
+multi_thread = true
+accept_dns = false
+enable_kcp_proxy = false
