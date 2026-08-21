@@ -81,6 +81,26 @@ ssh -t home-studio-mesh '~/.local/bin/vw-login'
 
 bw 在 `~/local/node/bin/`，该目录是在 `.bashrc` 的「非交互 return」**之后**才进 PATH 的，而 `ssh host 'cmd'` 读到 return 就停。脚本里必须自己固化：`export PATH="$HOME/local/node/bin:$PATH"`。川哥 `.bashrc` 头部有他自己写的同主题注释，排查前先看那里。
 
+### 前端打开慢 / 打不开
+
+**先换地址，别急着查 Vaultwarden**——2026-08-21 从「登录慢」一路排到 EasyTier udp
+隧道，绕了六七轮，根因根本不在 Vaultwarden：
+
+| 地址 | 何时用 |
+|---|---|
+| `https://10.10.10.23:8443` | 走 EasyTier 隧道，位置无关，但**吞吐会波动**（实测两小时内 34.8 KB/s ↔ 1.83 MB/s） |
+| `https://192.168.1.133:8443` | 在家局域网直连，绕开隧道 |
+
+⚠️ **换地址后浏览器会重新弹自签证书警告**——每个地址要各点一次「高级 → 继续前往」，
+没点就表现为「打不开」，看着像服务挂了。端口通不通用 `nc -zv <ip> 8443` 判，别靠浏览器。
+
+判是不是网络：在客户端跑 `curl -k -sS -o /dev/null -w '%{speed_download}B/s\n' --max-time 60 https://<地址>/app/main.<hash>.js`
+（curl 不吃浏览器缓存，测的是裸链路）。几十 KB/s = 链路问题；MB 级 = 链路没问题。
+
+已知短板：Vaultwarden **静态资源不压缩**（带不带 `Accept-Encoding: gzip,br` 都是原样
+传输，JS+CSS 合计 7.9MB），要压缩得在前面加反代。缓存头本身是对的
+（`immutable, max-age=604800`）。
+
 ### 容器没了 / 要重建
 
 ```bash
