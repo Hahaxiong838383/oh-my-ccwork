@@ -110,7 +110,9 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **发布 SOP**:admin后台→Worker 管理→OTA 升级 tab:上传 APK(服务端 aapt/apksigner **实测校验**:
   包名 com.futurus.p003.launcher/冻结证书/versionCode 单调,APK 本体为真值)→灰度发布(输 SN 名单)或
   全量发布(显式确认)→观察「设备版本分布」表(设备 check 自动上报)。**暂停只救未升级设备**(APK 层无真回滚)。
-- 部署真值:APK 落 `/opt/p003/ota/`;ota.db 在 data/;nginx `/ota/` limit_rate 1m+双 limit_conn 闸
+- 部署真值:APK 落 `/opt/p003/ota/`;**`.env.local` 必配 `OTA_DIR=/opt/p003/ota`**(2026-08-21 踩:漏配则
+  server 默认落 data/ota 与 nginx alias 劈叉,上传全绿但下载 404——check 可见≠可下载,发布后必打一发
+  Range 探针验 206+PK 头);ota.db 在 data/;nginx `/ota/` limit_rate 1m+双 limit_conn 闸
   (语音带宽优先,下载慢=预期);上传走 `location = /api/admin/ota/upload`(300m+流式);aapt/apksigner 已 apt 装。
 - check 接口:`POST /v1/device/ota/check`(S2B1 设备凭据;测试:服务器 sign-device-credential.ts 签凭据 curl)。
 - 测试:`npm run test:ota`(30 项)。⚠️ 川哥非代码任务:JKS 签名 key 异地加密备份(只在 Studio 构建机)。
