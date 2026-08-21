@@ -282,8 +282,8 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 固定 ≈430MB(worker+sidecar+两个模型,**进程级单例不随 job 涨**;sidecar 单进程 302MB)/
 每路 job 边际 **12–18MB**、**0.3 核**(1路7.5%→2路15%,线性)。job 关闭后内存不回落=allocator 保留,
 下一个 job 复用(实证:2 路只在 405MB 基础上 +24MB)。
-**→ 瓶颈是 CPU 不是内存**;MemoryMax=1.2G 可容 ~40 路,远不是限制。`WORKER_MAX_JOBS` 现为 2,
-按留 2 核给三条 Python 线算,可提到 6。⚠️ 该数来自**单轮短 probe**,长会话多轮的 CPU 会更高,上规模前补压测。
+**→ 瓶颈是 CPU 不是内存**;MemoryMax=1.2G 可容 ~40 路,远不是限制。`WORKER_MAX_JOBS` **2026-08-21 起 = 10**
+(6→10:4 核 ÷ 0.3 核/路,留 1 核给三条 Python 线+系统;内存侧 10 路≈624MB 距 High 900MB 仍有余量)。⚠️ 该数来自**单轮短 probe**,长会话多轮的 CPU 会更高,上规模前补压测。
 
 ## Rust 灰度线(2026-08-12 起,64.90 同机并行)
 

@@ -23,7 +23,7 @@
 | 派单机制 | token 的 `roomConfig.agents[].agentName` | 线上测试页 token claims 解出 |
 | 房间名 | 任意，设备自定；**约定 `sn-<SN>-<时间戳>`** | probe 用时间戳房名实测 |
 | 设备身份 | participant identity = **`dev-<SN>`**（埋点归因唯一数据源） | 见 `RUST-LINE-TELEMETRY-PLAN.md` |
-| **并发上限** | **同时 6 个房间**（`WORKER_MAX_JOBS=6`） | worker 进程 env 实读（2026-08-14 复核） |
+| **并发上限** | **同时 10 个房间**（`WORKER_MAX_JOBS=10`） | worker 进程 env 实读（2026-08-21 提额后复核） |
 | 上行音频 | 任意常规采样率，SDK 自动重采样；worker 按 **16kHz 单声道**取流 | `job.rs` 取流参数 |
 | ⚠️ 并发的真实约束 | 瓶颈是 **CPU 不是内存**（0.3 核/路通话中）；**挂着不说话也吃 0.125 核并占满一个槽位** → 别让设备常驻连接，用完就断、唤醒再连 | 2026-08-14 静默参与者实测 |
 | 下行音频 | 24kHz 单声道（服务端已编码为 opus） | TTS 采样率常量 |
@@ -160,7 +160,7 @@ ssh root@64.90.13.117 'journalctl -u voice-worker-rust -f'
 ## 8. 红线
 
 - **不要碰 `voice-worker` / `voice-worker-colleague` / `voice-console` 三个 unit**，那是生产线和子贤 demo 线。Rust 线只有 `voice-worker-rust`。
-- 并发只有 2 路，设备联调时别和别人抢；要压测提前说。
+- 并发 10 路（2026-08-21 由 6 提额；上限按 CPU 算，未做多路长会话压测），要压测提前说。
 - token / API key 不进 git、不进固件明文、不发聊天工具。
 - 设备端改动后重新跑一遍 §6 全部六条——**上一版验过不等于这一版验过**。
 
