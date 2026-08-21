@@ -104,7 +104,7 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   CLI 也取不了——测试省着发。
 - 红线:**生产禁 `--return-verify-code true`**(仅调试);AK env 注入;发码接口业务限流(号码三窗+IP),阿里云 60s 频控只是兜底。
 
-## Android OTA（2026-08-20 server 侧上线,等 codex v63 验收包）
+## Android OTA（2026-08-21 P0 全链验收闭环,正式可用）
 
 - 全档见记忆 `rg 'ota|OTA' ~/.claude/.../memory/`（project_p003_ota.md,含合同冻结值/验收五步）。
 - **发布 SOP**:admin后台→Worker 管理→OTA 升级 tab:上传 APK(服务端 aapt/apksigner **实测校验**:
