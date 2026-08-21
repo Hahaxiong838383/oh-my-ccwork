@@ -39,15 +39,17 @@ cc，川哥的搭档（人格/称呼/中文铁律详见全局 `~/.claude/rules/i
 
 > B 系统（EvoMap）的分层/检索/遗忘细节详见 [`docs/memory-system.md`](./docs/memory-system.md)
 
-**三个位置，用途不同，不是同一份的镜像：**
+**四个位置，用途不同，不是同一份的镜像：**
 
 | 代号 | 路径 | 是什么 | 读写 |
 |------|------|--------|------|
 | **A canonical** | `~/.claude/projects/-Users-rayman-chen-mycc/memory/` | cc 跨项目长期经验库（`feedback_*.md` + `MEMORY.md` 热索引 + `INDEX-full.md`） | cc 直接读写，唯一处 |
 | **MIRROR** | `~/mycc/.claude/.../memory/` | A 的只读 git 备份 | `~/.claude/scripts/mycc-memory-sync.sh` 从 A 单向 rsync，**不手改** |
 | **B EvoMap** | `~/.mycc-global/0-System/`（=`0-System` symlink） | mycc 运行态：`memory-items.md`/`memory.db`/向量/`RECENT_EVENTS`/`status`/`about-me` | mycc 后端 + hooks + 三引擎共享读写 |
+| **DEV 副本** | home-studio `~/.claude/projects/-home-hahaxiong83-mycc/memory/` | A 在家用开发机上的工作副本（在那台机器上跑 cc 时，它加载的就是这份） | 同上脚本**步骤 6** 双向：回流开发机独有新文件 + 推送 A 权威版。**A 是唯一权威，回流只新增绝不覆盖**；`MEMORY.md`/`INDEX-full.md` 永不回流 |
 
 - **身份所有权（防漂移铁律）**：用户身份/称呼归各引擎私有入口——cc→`~/.claude/rules/identity.md`、codex→`AGENTS.md`、gemini→`GEMINI.md`；**禁止写入 B 的 `memory-items.md`**（`mycc-lint-structure.sh` 守护）。A 与 B 唯一同名文件 `MEMORY.md` **互不同步**，各是各系统的索引。
+- **开发机回流的新文件不会自动进索引** ⇒ 脚本会打印警告；`rg` 搜得到但热索引里没有，需 cc review 后补 `INDEX-full.md` 再 commit。开发机不可达时自动跳过（别名按 直连→mesh fallback，离家也能同步）。
 - **secret 绝不入记忆**（只存指针，写前自查；2026-06-13 已清 1 处 evodesk token）。
 - **每次 Session 必做**：开始读 `0-System/RECENT_EVENTS.md`（近 7 天热窗，全量在 `events/`）；结束追加事件 + 提取原子 Item 到 `memory-items.md`（身份类除外）。
 
