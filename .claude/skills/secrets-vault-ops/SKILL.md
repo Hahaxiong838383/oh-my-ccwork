@@ -105,6 +105,42 @@ sg docker -c 'docker ps -a --filter name=vaultwarden'
 
 名字变了我就找不到——找不到时先 `vw list items` 看实际名字，别猜。
 
+## 已验证的取用案例（2026-08-21 实测通过）
+
+### GitHub token — 条目名 `GitHub token`
+
+已验证：列 82 个仓、分页拉取、push 到私有仓（fine-grained token，对 oh-my-ccwork /
+mycc-global-backup 有 push+admin）。push 时凭据走 credential helper，**单引号包住
+`$TOKEN` 让它在 argv 里保持字面量**，git 调 helper 时才展开：
+
+    TOKEN=$(vw get password "GitHub token"); export TOKEN
+    HELPER='!f() { echo username=<用户名>; echo "password=$TOKEN"; }; f'
+    git -c credential.helper="$HELPER" push origin <branch>
+
+### 阿里云 AccessKey — 条目名 `阿里云-海外    Gmail账号登录`
+
+⚠️ **字段约定：AK ID 存在 username 栏，AK Secret 存在 password 栏。**
+（我曾拿 password 去比对 `LTAI` 前缀，误报「不是 AK 格式」，白让川哥改了一次条目。）
+
+    ITEM=$(vw get item <id>)
+    export ALIBABA_CLOUD_ACCESS_KEY_ID=$(printf '%s' "$ITEM" | jq -r .login.username | tr -d '[:space:]')
+    export ALIBABA_CLOUD_ACCESS_KEY_SECRET=$(printf '%s' "$ITEM" | jq -r .login.password | tr -d '[:space:]')
+
+已验证：`sts GetCallerIdentity`、`ecs DescribeInstances`、`swas-open list-instances`、
+`bssopenapi QueryAccountBill`。⚠️ 库里这把是**主账号 root AK**，权限无上限，
+只跑只读接口，日常应换 RAM 子账号最小权限 AK。
+
+### 🔴 取到凭据之后、调第三方 CLI 之前——先 grep 记忆
+
+2026-08-21 同一天栽了三次：bw 找不到（答案在 `.bashrc` 文件头）、SWAS 是什么、
+SWAS 怎么查（后两个答案都在 `reference_cloud_servers` 里，逐字写着装插件和
+`--biz-region-id`）。**猜参数的主观感受跟回忆一模一样**，所以「不确定时去查」
+永远不触发。把它绑在「我要调外部 CLI」这个客观动作上：
+
+    rg <工具名|产品名> ~/.claude/projects/-home-hahaxiong83-mycc/memory/
+
+详见 [[feedback_queried_the_wrong_product_line]]。
+
 ## 安全边界（别说得比这更乐观）
 
 - Bitwarden 端到端加密，**服务端也解不开**。我能自动读，前提是 `.session` 常驻磁盘，**在川哥锁上之前，任何能读该文件的进程都能解开整个库**。这是他知情选择的代价。
