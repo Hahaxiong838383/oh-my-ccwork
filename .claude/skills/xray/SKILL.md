@@ -160,6 +160,31 @@ awk -v s="$START" '$0 >= s && /app\/dns: failed/ {print}' ~/xray/xray.log
 | 日志 | `~/xray/access.log` | `/var/log/xray/access.log`（需 sudo 读） |
 
 ⚠️ **少了 `geoip.dat`/`geosite.dat`，`geosite:cn`/`geoip:cn` 规则会静默失效**，国内流量全绕道出国。
+
+#### 🔴 代理环境变量注入在哪：两处互补，缺一有形态漏网（2026-08-21 实测）
+
+Linux 机器上让程序走代理，**别只做 wrapper**——wrapper 的作用域是
+**「谁的 PATH 命中它」，不是「这个命令」**。只要存在第二条抵达同一程序的路径，包装就形同虚设。
+（实例：`/usr/local/bin/claude` 是 wrapper，但 `.bashrc` 的 PATH 让 `~/local/node/bin/claude`
+排更前，远程 IDE 调的是后者 ⇒ 拿不到代理 ⇒ `403 Request not allowed`，
+**症状像账号/网络问题，完全不像 PATH 问题**。）
+
+| 注入点 | 覆盖的调用形态 |
+|---|---|
+| `~/.bashrc` **最顶部**（必须在 `case $- in *i*) ;; *) return` **之前**） | `ssh host 'cmd'` 非交互非登录 shell |
+| `/etc/profile.d/xray-proxy.sh` | 登录 shell、桌面会话、`su -` |
+
+- 两处都写 `export HTTPS_PROXY/HTTP_PROXY/https_proxy/http_proxy`（大小写都给，工具习惯不一）
+- `NO_PROXY` **必须含组网段与内网段**（本机是 `10.10.10.0/24,10.10.1.0/24,192.168.1.0/24`），
+  否则 mesh/局域网流量绕进代理
+- 两处都用 `${VAR:-默认}` ⇒ **先设的那份赢**，改一处必须同步另一处（否则旧值挡住新值）
+- ⚠️ **systemd 服务不读这两处**，需要出网的 unit 要单独写 `Environment=`
+- ⚠️ **环境变量在进程启动时固化**：改完配置，已在跑的进程不会追溯生效。
+  判据是 **`/proc/<pid>/environ` 与配置文件 `mtime` 对撞**——进程启动早于配置落地就必须重启。
+- ❌ **不建议 TUN/透明代理**：那才是字面全局，但远程操作时配错会接管网络导致失联，
+  且**无法远程回退**。收益不值这个风险。
+
+
 ⚠️ 装机时若以 root 跑过 `xray -test`，它会把 `access.log` 建成 **root:root**，
 之后 `User=xray` 的服务启动就 `permission denied`——unit 里的 `ExecStartPre=chown` 只管目录、
 管不到目录内已存在的文件，须用 `chown -R`。
