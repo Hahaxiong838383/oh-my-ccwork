@@ -1599,6 +1599,44 @@
                     </table>
                   </div>
                 </div>
+                <!-- 设备运行配置（坐姿冷却等；合同 CC_P003_POSTURE_COOLDOWN_REMOTE_CONFIG_HANDOFF_20260821） -->
+                <div v-if="khNav==='devcfg' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                    <div style="font-size:17px;font-weight:800">设备配置</div>
+                    <el-button size="small" :loading="devcfg.loading" @click="loadDevcfg()">刷新</el-button>
+                  </div>
+                  <div style="font-size:12px;color:#888;margin-bottom:14px">设备每 30 分钟同步一次，改动<b>最迟 30 分钟后</b>全量生效；设备重启立即同步。离线设备沿用本地缓存值。</div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:4px">坐姿提醒冷却时间<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">两次坐姿提醒的最短间隔 · 合法范围 10~86400 秒</span></div>
+                    <div style="font-size:12px;color:#888;margin-bottom:10px">全局默认（未设置时设备用 APK 内置 {{ devcfgKey0.builtin_default }}s）· 当前：<b :style="{ color: devcfgKey0.global !== null ? '#3A8A3A' : '#999' }">{{ devcfgKey0.global !== null ? (devcfgKey0.global + 's（后台已配）') : ('内置默认 ' + devcfgKey0.builtin_default + 's') }}</b></div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                      <input type="number" min="10" max="86400" step="1" v-model.number="devcfg.globalInput" :disabled="devcfg.savingGlobal" style="width:120px;padding:6px 10px;border:1px solid #dcdfe6;border-radius:6px;font-size:14px" />
+                      <span style="font-size:13px;color:#666">秒 ≈ {{ devcfgFmtMin(devcfg.globalInput) }}</span>
+                      <el-button size="small" type="primary" :loading="devcfg.savingGlobal" @click="saveDevcfgGlobal()">保存全局默认</el-button>
+                    </div>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                      <div style="font-weight:700">按设备覆盖<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">覆盖优先于全局默认；清除后回落全局</span></div>
+                      <el-button size="small" @click="addDevcfgOverride()">添加覆盖</el-button>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;font-size:13px">
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">SN</th><th style="padding:6px 8px">覆盖值</th><th style="padding:6px 8px">更新时间</th><th style="padding:6px 8px">操作</th></tr></thead>
+                      <tbody>
+                        <tr v-for="o in devcfg.overrides" :key="o.sn + o.key" style="border-bottom:1px solid #f5f5f5">
+                          <td style="padding:6px 8px;font-family:monospace">{{ o.sn }}</td>
+                          <td style="padding:6px 8px;font-weight:700">{{ o.value }}s<span style="font-weight:400;color:#999"> ≈ {{ devcfgFmtMin(o.value) }}</span></td>
+                          <td style="padding:6px 8px">{{ new Date(o.updated_at).toLocaleString() }}</td>
+                          <td style="padding:6px 8px;white-space:nowrap">
+                            <el-button size="small" @click="editDevcfgOverride(o)">修改</el-button>
+                            <el-button size="small" type="danger" @click="clearDevcfgOverride(o)">清除</el-button>
+                          </td>
+                        </tr>
+                        <tr v-if="!devcfg.overrides.length"><td colspan="4" style="padding:14px 8px;color:#999">暂无设备覆盖，全部设备使用全局默认</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
                 <div v-if="khNav==='devices' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
                     <div>
@@ -3767,7 +3805,7 @@
           return canManageInvites.value ? khNavs : khNavs.filter(function (n) { return n.k !== 'invites'; });
         });
         // Worker 管理页二级导航（设备接入 / Worker Brain 从 KidsHub 运营台迁出；仅 admin 入口）。
-        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'ota', l: 'OTA 升级' }];
+        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }];
 
         // ── OTA 升级管理（2026-08-20 P0；API 见 routes/ota.ts；合同 CC_P003_OTA_*）──
         // 上传用 XHR（要上传进度，140MB 包体）；实测校验在服务端（APK 本体为真值）。
@@ -3841,6 +3879,73 @@
           ElementPlus.ElMessageBox.confirm('删除草稿 v' + rel.version_code + '（含 APK 文件）？', '删除', { type: 'warning' }).then(function () {
             deviceApi('/api/admin/ota/releases/' + rel.version_code, { method: 'DELETE' }).then(function (j) {
               if (j.ok) { ElementPlus.ElMessage.success('已删除'); loadOta(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+            });
+          }).catch(function () {});
+        }
+
+        // ── 设备运行配置（2026-08-21；API 见 routes/device-config.ts；合同 CC_P003_POSTURE_* + cc 回执）──
+        // 后端为真防线（范围校验/键注册表/revision 单调）；前端只做交互。生效延迟=设备 30min 轮询。
+        var devcfg = reactive({ loading: false, savingGlobal: false, keys: [], overrides: [], globalInput: 900 });
+        var devcfgKey0 = computed(function () { return devcfg.keys[0] || { key: 'posture.reminder_cooldown_sec', builtin_default: 900, global: null }; });
+        function devcfgFmtMin(sec) {
+          var n = Number(sec);
+          if (!isFinite(n) || n <= 0) return '—';
+          if (n < 60) return n + ' 秒';
+          if (n < 3600) return (Math.round(n / 6) / 10) + ' 分钟';
+          return (Math.round(n / 360) / 10) + ' 小时';
+        }
+        async function loadDevcfg() {
+          if (!canManageInvites.value) return;
+          devcfg.loading = true;
+          try {
+            var j = await deviceApi('/api/admin/device-config', { method: 'GET' });
+            devcfg.keys = j.keys || [];
+            devcfg.overrides = j.overrides || [];
+            var k0 = devcfg.keys[0];
+            if (k0) devcfg.globalInput = k0.global !== null ? k0.global : k0.builtin_default;
+          } catch (e) { ElementPlus.ElMessage.error('设备配置加载失败'); }
+          devcfg.loading = false;
+        }
+        async function saveDevcfgGlobal() {
+          var v = Number(devcfg.globalInput);
+          if (!Number.isInteger(v) || v < 10 || v > 86400) { ElementPlus.ElMessage.warning('取值须为 10~86400 的整数秒'); return; }
+          devcfg.savingGlobal = true;
+          try {
+            var j = await deviceApi('/api/admin/device-config/global', { method: 'PUT', body: JSON.stringify({ key: devcfgKey0.value.key, value: v }) });
+            if (j.ok) { ElementPlus.ElMessage.success('已保存（rev ' + j.rev + '），最迟 30 分钟全量生效'); loadDevcfg(); }
+            else ElementPlus.ElMessage.error(j.message || j.error || '保存失败');
+          } catch (e) { ElementPlus.ElMessage.error('保存失败'); }
+          devcfg.savingGlobal = false;
+        }
+        function devcfgPromptValue(title, initial, cb) {
+          ElementPlus.ElMessageBox.prompt('输入冷却秒数（10~86400 整数）', title, { inputValue: String(initial), inputPattern: /^\d+$/, inputErrorMessage: '须为整数' }).then(function (r) {
+            var v = Number(r.value);
+            if (!Number.isInteger(v) || v < 10 || v > 86400) { ElementPlus.ElMessage.warning('取值须为 10~86400 的整数秒'); return; }
+            cb(v);
+          }).catch(function () {});
+        }
+        function addDevcfgOverride() {
+          ElementPlus.ElMessageBox.prompt('输入设备 SN（BJP003 开头 20 位）', '添加设备覆盖', { inputPlaceholder: 'BJP003…' }).then(function (r) {
+            var sn = String(r.value || '').trim();
+            if (!/^BJP003\d{14}$/.test(sn)) { ElementPlus.ElMessage.warning('SN 格式不符'); return; }
+            devcfgPromptValue('覆盖 ' + sn, devcfgKey0.value.global !== null ? devcfgKey0.value.global : devcfgKey0.value.builtin_default, function (v) {
+              deviceApi('/api/admin/device-config/sn/' + sn, { method: 'PUT', body: JSON.stringify({ key: devcfgKey0.value.key, value: v }) }).then(function (j) {
+                if (j.ok) { ElementPlus.ElMessage.success('已设覆盖'); loadDevcfg(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+              });
+            });
+          }).catch(function () {});
+        }
+        function editDevcfgOverride(o) {
+          devcfgPromptValue('修改 ' + o.sn, o.value, function (v) {
+            deviceApi('/api/admin/device-config/sn/' + o.sn, { method: 'PUT', body: JSON.stringify({ key: o.key, value: v }) }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success('已更新'); loadDevcfg(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+            });
+          });
+        }
+        function clearDevcfgOverride(o) {
+          ElementPlus.ElMessageBox.confirm('清除 ' + o.sn + ' 的覆盖？之后该设备回落全局默认。', '清除覆盖', { type: 'warning' }).then(function () {
+            deviceApi('/api/admin/device-config/sn/' + o.sn + '?key=' + encodeURIComponent(o.key), { method: 'DELETE' }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success('已清除'); loadDevcfg(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
             });
           }).catch(function () {});
         }
@@ -4755,6 +4860,7 @@
           khNav.value = k;
           if (k === 'hotwords') nextTick(loadHotwords);
           if (k === 'ota') nextTick(loadOta);
+          if (k === 'devcfg') nextTick(loadDevcfg);
           if (k === 'metrics') nextTick(initKhRetention);
           if (k === 'board') {
             nextTick(function () {
@@ -5909,6 +6015,7 @@
           deviceData: deviceData, deviceAdd: deviceAdd, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
           ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaPause: otaPause, otaDelete: otaDelete,
+          devcfg: devcfg, devcfgKey0: devcfgKey0, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
           hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
           loadDeviceAliases: loadDeviceAliases,
           hwEnvKey: hwEnvKey, hwLive: hwLive, hwDraft: hwDraft, hwInSync: hwInSync,
