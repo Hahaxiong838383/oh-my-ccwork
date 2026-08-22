@@ -242,8 +242,12 @@ mycc-run doctor               # 检查三家就绪状态
 
 **解法**：`-c model="..."` 优先级最高，压得住项目级。`mycc-run` 已内置
 （`CODEX_MODEL_DEFAULT`，可用 `MYCC_CODEX_MODEL` 环境变量改）。
-⚠️ 直接敲 `codex`（不经 mycc-run）仍会用项目级的 `gpt-5.3-codex`——
-要根治得改那个 git 跟踪的文件，会连带影响 Mac 侧，需川哥拍板。
+**已根治（2026-08-22）**：项目级 `.codex/config.toml` 里的 `model` 行已移除。
+实测两端用户级都是 `gpt-5.6-sol`，删掉后各机器回落到自己的用户级——
+Air 侧同样受益（它此前也被这行静默覆盖：mycc 目录内 rollout 记录是 `gpt-5.3-codex`，
+而目录外是 `gpt-5.6-sol`，正是项目级配置的作用域语义）。
+**模型选择跟机器/账号走，不跟仓库走**——跨机同步的仓库不该钉具体模型。
+`mycc-run` 的 `-c model=` 保留为显式兜底。
 
 ## 让「直接敲 grok / codex」也能用（不经 mycc-run）
 

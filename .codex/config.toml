@@ -1,4 +1,6 @@
-model = "gpt-5.3-codex"
+# model 不在此声明：项目级会覆盖各机器的用户级 ~/.codex/config.toml，
+# 而两端用户级都已是 gpt-5.6-sol。模型选择跟机器/账号走，不跟仓库走。
+# （2026-08-22：此处原为 gpt-5.3-codex，静默覆盖了 Air 与 home-studio 两边的配置）
 model_reasoning_effort = "high"
 personality = "pragmatic"
 sandbox_mode = "danger-full-access"
