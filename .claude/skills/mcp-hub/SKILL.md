@@ -57,8 +57,23 @@ grep -oE 'client=[a-z-]+' ~/.mycc-mcp/probe-calls.log | sort | uniq -c
   在无人值守下必然 `BLOCKED`。可用 `--approve-for-me`。
 - **codex 吃代理必卡死**：网关只能直连，调用前 `env -u HTTPS_PROXY -u HTTP_PROXY -u ALL_PROXY -u https_proxy -u http_proxy -u all_proxy`。
 - **grok 会重写 config.toml 并丢弃全部注释**（`grok mcp add` 之后自己写的注释就没了），别把说明写在里面。
-- **grok 的默认模型不是 config.toml 字段**，是 TUI Settings 项（"Model used for new sessions"）。
-  headless 场景一律显式 `-m <配置名>`。
+- **grok 默认模型 = `[models]` 段下的 `default`**（2026-08-22 实测确认）：
+
+  ```toml
+  [models]
+  default = "cpa-grok"     # 指向 [model.<名>] 定义的配置名
+  ```
+
+  ⚠️ 我一度写成"默认模型只能在 TUI Settings 里点、不是配置字段"——**那是错的**，
+  当时试了顶层 `default_model` 和 `[defaults] model` 两个猜的字段名都不生效就下了结论。
+  顶层 `default_model = "..."` 是 **Kimi CLI** 的格式（H 平台 `writeKimiConfig` 里那套
+  `[providers."x"]` + `[models."y"]` 同理），**对 grok 无效**——照抄会让自定义模型直接从
+  `grok models` 列表里消失。别把两家的 schema 混起来。
+  🔴 **钉死一个不存在的模型名，grok 会静默 fallback 到池子第一个**，不报错、trace 零观测
+  （H 平台真实事故：钉了已下架的 `grok-code-fast-1`，全租户智力降级无人发现）。
+  所以改完必须验实际生效，别只看配置文件。
+  验证判据（本机可复用）：没跑过 `grok login` 时，内置模型必报 `not authenticated`，
+  而走 CPA 的自定义模型有 key 能跑通——**不带 `-m` 直接实跑一次**即可区分是生效还是 fallback。
 - **grok 模型配置名不能与内置模型同名**，否则冲突。
 
 - 🔴 **grok 的 folder-trust：把 server 归档进仓库反而会让 grok 拒绝启动它**。
@@ -205,3 +220,33 @@ mycc-run doctor               # 检查三家就绪状态
 正常时 0 ✗ 退出码 0——确认它不是恒绿的自检。
 
 实测：三家经 wrapper 均返回预期结果；grok 经 wrapper 调 `memory_search` 服务端账本可见。
+
+## 让「直接敲 grok / codex」也能用（不经 mycc-run）
+
+配好 `[models] default` 只解决了"用哪个模型"，还差"钥匙在哪"：`env_key` 读的是**环境变量**，
+干净 shell 里没有 `CPA_API_KEY` 时 grok 会退回要求 `grok login`（codex 同理）。
+
+`~/.bashrc` 加载凭据，⚠️ **必须放在「非交互 return」guard 之前**：
+
+```bash
+# 位置：case $- in *i*) ;; *) return;; esac  之前
+[ -r "$HOME/.cpa.env" ] && { set -a; . "$HOME/.cpa.env"; set +a; }
+```
+
+放 guard 之后只有交互式终端生效，`ssh home-studio 'grok -p ...'` 这类**非交互调用会静默读不到 key**。
+同一个坑这台机器踩过两次——`.bashrc` 里 rustup 那段旁边就留着 2026-08-21 的注释
+（`ssh host 'cargo build'` 读不到 PATH），是同一个成因。
+
+验证要跑**三种形态**，别只验最省事的那个：
+
+| 形态 | 命令 |
+|---|---|
+| 交互式 | `bash -ic 'echo ${#CPA_API_KEY}'` |
+| 非交互 | `bash -c '. ~/.bashrc; echo ${#CPA_API_KEY}'` |
+| 真实 ssh | 从另一台机 `ssh <host> 'echo ${#CPA_API_KEY}'` |
+
+`ssh localhost` 做这个验证会撞 `Host key verification failed`——那是测试环境问题不是功能问题，
+**别把它读成"功能没生效"**，要么修 known_hosts，要么从真的另一台机器发起。
+
+顺带一条实测修正：**grok 带代理能正常跑**（3.7s，xray 对 `hahaxiong.top` 走了直连分流），
+不像 codex 那样吃代理必卡死。mycc-run 里对 grok 的 `env -u` 是多余的保险，留着无害。
