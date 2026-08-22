@@ -278,3 +278,41 @@ Air 侧同样受益（它此前也被这行静默覆盖：mycc 目录内 rollout
 
 顺带一条实测修正：**grok 带代理能正常跑**（3.7s，xray 对 `hahaxiong.top` 走了直连分流），
 不像 codex 那样吃代理必卡死。mycc-run 里对 grok 的 `env -u` 是多余的保险，留着无害。
+
+## codeg —— 自托管多引擎 GUI（2026-08-22 装于 home-studio）
+
+`xintaofei/codeg`（Apache-2.0，★2.9k，Rust+Tauri+Next.js，56.7 万行）的 **server 模式**。
+home-studio 无 GUI，所以跑 headless server，从 Air 浏览器访问——顺带把"远程"这条也验了。
+
+### 部署真值
+
+| 项 | 值 |
+|---|---|
+| 二进制 | `~/.local/bin/codeg-server` + `~/.local/bin/codeg-mcp`（v0.27.0，装在用户目录，无需 sudo） |
+| 数据 | `~/.local/share/codeg/`（`codeg.db` / `logs/` / `web/`） |
+| 端口 | 3080，**自动监听全部接口**（127.0.0.1 / 192.168.1.133 / 10.10.10.23） |
+| 认证 | token，存 `~/.local/share/codeg/token`（0600），首启生成后持久化在 DB |
+| 服务 | `systemctl --user codeg-server`，`EnvironmentFile=%h/.cpa.env` |
+| linger | 已 `loginctl enable-linger`，ssh 断开后继续跑 |
+
+### 装的时候踩到/避开的
+
+- `codeg-server --help` **不是帮助参数，它会直接把服务器跑起来**（还会在当前 cwd 建 `out/`
+  当 fallback static dir）。查配置别用 `--help`，看 `install.sh` 的提示。
+- 装之前审了 `install.sh`（505 行）：下载源只有 3 个官方 URL，`rm -rf` 仅一处 trap 清理临时目录，
+  19 处 sudo 都在"目标目录不可写才提权"分支——所以 `CODEG_INSTALL_DIR=~/.local/bin` 全程不提权。
+  **别直接 `curl | bash`。**
+- **不要用 Docker**：容器会挡住 codeg 调用宿主的 claude/codex/grok CLI 与 `~/.claude/skills`、`~/.mycc-mcp`。
+- systemd **不读 `~/.bashrc`**，CPA 凭据必须走 `EnvironmentFile`，否则 codeg 拉起的 codex/grok
+  会因 `env_key` 找不到而认证失败。
+
+### MCP 自动发现
+
+`POST /api/mcp_scan_local`（Bearer token）会扫 `.claude` / `.claude.json` / `.codex` / `.cursor` / `.gemini`
+的 MCP 配置——**不扫 `.grok`**。实测自动扫到 `mycc-probe` / `mycc-memory` / `mycc-handoff`，
+`apps=codex,grok`，无需在 codeg 里手工注册。
+
+```bash
+systemctl --user status codeg-server        # 状态
+ssh <host> 'cat ~/.local/share/codeg/token' # 取登录 token
+```
