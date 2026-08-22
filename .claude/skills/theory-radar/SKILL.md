@@ -18,6 +18,47 @@ description: AI 前沿理论雷达。生产日报由韩国 RSS/OpenAlex + Grok 4
 5. **授权以实证为准**：sidecar 的 `token_status=valid` 或 `needs_refresh` 都视为可用；只有 `bound=false`、open_id 缺失或真实发送返回授权失效，才要求重新登录。
 6. **旧流程降级**：下方 arXiv Query API、Wiki 和多维表步骤只保留为历史/人工回溯资料，任何定时日报不得直接执行。
 
+
+<!-- 以下自 .agents 入口副本合并（2026-08-22），原属「## 生产模式覆盖规则（2026-07-23 生效）」 -->
+7. **linux-lan 第二大脑只读同步**：家里 Linux `~/second-brain` 只读取正式报告 API，写入本地知识库供梦志理解；不得抓 arXiv、不得重跑 Grok 分析、不得写个人站。
+## linux-lan 第二大脑同步（2026-08-01 生效）
+
+> 目标：每天把正式「AI前沿理论雷达」同步一份到家里 Linux 第二大脑，让夜间 `kb-dream.timer` 的梦志能整合这些顶级论文。
+
+### 运行位置
+
+- 主机：`linux-lan` / `linux-lan-pub`
+- 知识库：`~/second-brain`
+- 脚本：`~/second-brain/90-System/scripts/theory-radar-sync.mjs`
+- 定时器：`theory-radar-sync.timer`，每日 `09:40` 首次同步，`12:20` 幂等补跑。
+- 规则文档：`~/second-brain/90-System/docs/GIT-RULES.md`
+
+### 同步规则
+
+1. 数据源只用正式报告 API：`https://my.chenchuan.cc/api/radar/report?date=YYYY-MM-DD`。
+2. 404 代表当日报告尚未生成；定时器会按 `--retries 5 --retry-delay-sec 300` 等待，不得判定“今日无论文”。
+3. 同步落两份 Markdown：
+   - 原文源报告：`00-Inbox/bridge/YYYYMMDD-theory-radar-YYYY-MM-DD.md`
+   - 梦志可读 Literature：`20-Literature/YYYY-MM-DD-lit-AI前沿理论雷达.md`
+4. `dream-nightly.mjs` 会读取最近 3 天 `20-Literature` 和 `00-Inbox/bridge`，所以上述落点能被夜间梦志纳入聚类和蒸馏。
+5. 只做读正式报告 + 写 second-brain；不触碰韩国生产者、飞书消费、个人站发布。
+
+### Git 规则
+
+- `~/second-brain` 的 GitHub 远端为 `github`，推送必须走 linux-lan 本机 xray：`http://127.0.0.1:10808`。
+- **禁止 push 到 NAS**：`origin` 是 NAS fetch/参考远端，`remote.origin.pushurl=DISABLED-NAS-PUSH-FORBIDDEN`。
+- 标准推送：`HTTPS_PROXY=http://127.0.0.1:10808 HTTP_PROXY=http://127.0.0.1:10808 GIT_TERMINAL_PROMPT=0 git push github main`。
+
+### 验收口径
+
+```bash
+ssh linux-lan-pub
+cd ~/second-brain
+systemctl --user status theory-radar-sync.timer --no-pager
+node 90-System/scripts/theory-radar-sync.mjs --status
+git remote -v   # origin push 应显示 DISABLED-NAS-PUSH-FORBIDDEN
+```
+
 ## 执行流程
 
 ### Step 1: 抓取论文数据
