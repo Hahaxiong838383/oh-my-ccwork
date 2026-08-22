@@ -137,6 +137,25 @@ mycc-global-backup 有 push+admin）。push 时凭据走 credential helper，**�
     HELPER='!f() { echo username=<用户名>; echo "password=$TOKEN"; }; f'
     git -c credential.helper="$HELPER" push origin <branch>
 
+🔴 **`<用户名>` 必须是真实 GitHub 用户名（`Hahaxiong838383`），不能随便填。**
+fine-grained PAT 会校验它。2026-08-22 我图省事写了 `username=x`，得到的报错是
+
+    remote: Invalid username or token. Password authentication is not supported
+
+——它**点名了 token**，于是我一路去查 PAT 权限、查 Keychain、量 443 超时。
+真相是 `push=true admin=true` 权限满格，换成真实用户名一次就过。
+**A-or-B 型报错，先把两支都列出来，别只查自己正在关注的那支。**
+
+⚠️ **判 token 好坏走 API，别靠 git 的报错**（git 的文案把 username 错、权限不足、
+网络不通混在一起）：
+
+    curl -s -H "Authorization: Bearer $TOKEN" https://api.github.com/user | jq -r .login
+    curl -s -H "Authorization: Bearer $TOKEN" https://api.github.com/repos/<owner>/<repo> \
+      | jq -r '.permissions | "push=\(.push) admin=\(.admin)"'
+
+⚠️ **fetch 成功证明不了 token 有效**——先确认仓库是私有的（未认证 API 返回 404）；
+公开仓的 fetch 根本不走凭据，那是个彻头彻尾的假阳性。
+
 ### 阿里云 AccessKey — 条目名 `阿里云-海外    Gmail账号登录`
 
 ⚠️ **字段约定：AK ID 存在 username 栏，AK Secret 存在 password 栏。**
