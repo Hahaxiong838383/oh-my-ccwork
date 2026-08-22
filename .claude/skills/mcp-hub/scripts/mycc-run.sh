@@ -152,4 +152,24 @@ if [ "$DRYRUN" -eq 1 ]; then
   exit 0
 fi
 
+# ── 审计 ───────────────────────────────────────────────────────────────────
+# 这里是三家的统一入口，也是**唯一能同时覆盖三家的记账层**。
+# ⚠️ 能力边界必须写清楚，否则以后会把它当成完整的账：
+#   本行只回答「谁在什么时候、用哪个引擎/模型、SAFE 与否，跑过一次」。
+#   **记不到 CLI 内部做了什么**——那要各自的 hook（cc 有 PreToolUse；grok 有 hooks，
+#   matcher=run_terminal_command；codex 侧未验证）。别拿它当「这次任务改了什么」的证据。
+# prompt 只留前 120 字符 + 总长：够认出是哪个任务，同时把泄露面压住
+#   （隐私墙：泄露面 = 写入点全集，多一个日志文件就多一个泄露点）。
+RUN_AUDIT="${RUN_AUDIT:-$HOME/.mycc-mcp/run-audit.jsonl}"
+{
+  mkdir -p "$(dirname "$RUN_AUDIT")"
+  jq -nc --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg e "$ENGINE" \
+         --arg m "${MODEL:-default}" --arg cwd "$(pwd)" --arg safe "$SAFE" \
+         --arg ph "${PROMPT:0:120}" --argjson pl "${#PROMPT}" \
+     '{ts:$ts,engine:$e,model:$m,cwd:$cwd,safe:($safe=="1"),prompt_len:$pl,prompt_head:$ph}' \
+    >> "$RUN_AUDIT"
+  chmod 600 "$RUN_AUDIT"
+} || printf '⚠️ mycc-run: 审计写入失败，任务照跑但本次无记账（%s）\n' "$RUN_AUDIT" >&2
+# 不静默吞错：审计失败必须说出来（behavior.md 红线），但绝不因此阻断任务。
+
 exec "${cmd[@]}" < /dev/null
