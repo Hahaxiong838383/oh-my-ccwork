@@ -24,6 +24,7 @@ fi
 
 notes=()
 deny_reason=""
+deny_rule=""
 
 # ⚠️ grep -E 按**行**匹配，而 cc 写多行脚本远多于单行——任何跨行 pattern 都会静默失配。
 # 2026-08-15 实测：`cmd | head -5` ⏎ `echo $?` 完全不响（同形单行则响），等于守护器
@@ -35,6 +36,28 @@ cmd_flat="${cmd//$'\\\n'/ }"
 cmd_flat="${cmd_flat//$'\n'/;}"
 has() { printf '%s' "$cmd_flat" | grep -Eq "$1"; }
 
+# 记账：观察期要能数出「非测试场景真实拦到几次」。上一版定了这个判据却没有通道，
+# 判据建在不存在的通道上 = 永远算不出来（feedback_negative_result_needs_signal_capable_channel）。
+# ⚠️ 只记规则名与首个命令词，**绝不记命令原文**：命令可能带 secret，而泄露面 = 写入点全集，
+# 多一个日志文件就多一个泄露点（隐私墙）。
+GUARD_LOG="${GUARD_LOG:-$HOME/.mycc-global/0-System/guard-log.jsonl}"
+log_hit() {   # $1=decision(note|deny)  $2..=rule ids
+  local decision="$1"; shift
+  local verb="${cmd%%[[:space:]]*}"
+  local sid cwdb
+  sid="$(printf '%s' "$payload" | jq -r '(.session_id // "")[0:8]' 2>/dev/null)"
+  cwdb="$(basename "$(printf '%s' "$payload" | jq -r '.cwd // ""' 2>/dev/null)" 2>/dev/null)"
+  {
+    mkdir -p "$(dirname "$GUARD_LOG")" 2>/dev/null
+    jq -nc --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg sid "$sid" --arg cwd "$cwdb" \
+           --arg d "$decision" --arg verb "$verb" --args \
+       '{ts:$ts,sid:$sid,cwd:$cwd,decision:$d,verb:$verb,rules:$ARGS.positional}' "$@" >> "$GUARD_LOG"
+    chmod 600 "$GUARD_LOG" 2>/dev/null
+  } 2>/dev/null || true   # 记账失败绝不能让守门器自己失败（fail-open）
+}
+rule_ids=()
+
+
 # ---------- 硬红线：川哥明令禁止过的 ----------
 #
 # ⚠️ 前缀一律用 `(^|[;&|]\s*)`——只在**命令位置**匹配，不是任意空白后。
@@ -45,28 +68,29 @@ has() { printf '%s' "$cmd_flat" | grep -Eq "$1"; }
 
 # 全量暂存。提交权收口在 cc，必须逐个文件选，否则会夹带别的 agent 的改动
 if has '(^|[;&|]\s*)git[[:space:]]+add[[:space:]]+(-A|--all|\.)([[:space:]]|$)'; then
-  deny_reason="git add 全量暂存被禁：提交必须逐个文件选。
+  deny_rule="git_add_all"; deny_reason="git add 全量暂存被禁：提交必须逐个文件选。
 仓里同时有其他 agent 的改动和运行时状态文件，全量暂存会把它们一起带进 commit。
 用 git add <具体路径>，先 git status --porcelain 看清再选。"
 
 # pkill -f 会匹配到自己的命令行导致自杀
 elif has '(^|[;&|]\s*)pkill[^;&|]*[[:space:]]-f'; then
-  deny_reason="pkill -f 被禁：pattern 会匹配到 pkill 自己的命令行，误杀自身或无关进程。
+  deny_rule="pkill_f"; deny_reason="pkill -f 被禁：pattern 会匹配到 pkill 自己的命令行，误杀自身或无关进程。
 用 pgrep -f <pattern> 拿到 pid、核对确认是目标进程后，再 kill <pid>。"
 
 # 工作区里有 owner 的活文件，hard reset 不可逆
 elif has '(^|[;&|]\s*)git[[:space:]]+reset[^;&|]*--hard'; then
-  deny_reason="git reset --hard 被禁：会丢掉未提交内容且不可逆。
+  deny_rule="git_reset_hard"; deny_reason="git reset --hard 被禁：会丢掉未提交内容且不可逆。
 dev198 的 workspace/** 全是 owner 活文件，丢了找不回来。
 要挪指针用 git reset --mixed（保留工作区），要看差异用 git diff。"
 
 # 署名全局关闭。要求与 git commit 同现——单纯提到这个词（写文档/记忆）不该被拦
 elif has '(^|[;&|]\s*)git[[:space:]]+commit' && has 'Co-Authored-By:'; then
-  deny_reason="commit 署名全局关闭：请去掉署名尾注。
+  deny_rule="commit_signature"; deny_reason="commit 署名全局关闭：请去掉署名尾注。
 （全局 settings 已设 attribution.commit=\"\" 关掉自动添加，这道只防手写。）"
 fi
 
 if [ -n "$deny_reason" ]; then
+  log_hit deny "$deny_rule"
   jq -nc --arg r "$deny_reason" '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
@@ -82,21 +106,25 @@ fi
 # 检索类命令被 head/tail 截断。危险的不是截断本身，是拿截断结果下「不存在」的结论
 if has '\b(grep|rg|egrep|fgrep|find|ls|git\s+(status|log|diff|branch|show|worktree))\b[^|]*\|[^|]*\b(head|tail)\b'; then
   notes+=("检索输出被 head/tail 截断了。如果你要据此判断「有没有 X」——不行，截断过的结果只能证明「有」，永远证不了「没有」。存在性判断改用 grep -c / grep -q，或者去掉截断。（2026-08-01 就是这样把答案截掉后误报了零命中）")
+  rule_ids+=("truncate_head_tail")
 fi
 
 # 服务名 / 端口最容易凭印象写。这两个猜错时，返回信号和「服务真挂了」一模一样
 if has '\b(systemctl|launchctl)\b'; then
   notes+=("systemd/launchd 的 unit 名是待验事实：对不存在的 unit，is-active 照样答 inactive、print 照样报错——和服务真挂了长得一样。先确认名字（list-units / launchctl list 实际列出来），再判断状态。")
+  rule_ids+=("systemd_unit_name")
 fi
 
 if has 'curl[^|]*127\.0\.0\.1:[0-9]'; then
   notes+=("healthz 端口按站点不同，别跨站复制：真值在 ops/deploy-sites.sh 的 DEV_HEALTH / MINI_HEALTH，以及 h-platform-ops SKILL.md 的双站对照表。curl 打错端口的「无响应」和服务真的没起来无法区分。")
+  rule_ids+=("localhost_port")
 fi
 
 # 管道后紧跟 $?：这个退出码是管道末尾那个 tail/grep 的，不是被测程序的。
 # 2026-08-11~12 一天三犯（npm test、deploy-sites、attest check 全被 tail 的 0 骗过）
 if has '\|[^;]*\b(tail|head|grep|sed|awk|tee|cut)\b[^;]*;[^;]*\$\?'; then
   notes+=("这个 \$? 是管道最后一个命令（tail/head/grep…）的退出码，不是你关心的那个程序的。zsh 没有大写 PIPESTATUS（bash 才有；zsh 是小写 pipestatus）。要拿真退出码：先 'cmd > log 2>&1; echo RC=\$?' 落文件，再单独看 log。（2026-08-11~12 同一坑一天踩了三次）")
+  rule_ids+=("pipe_exit_code")
 fi
 
 # 「| … || 兜底」：|| 绑的是**整条管道**的退出码，而管道退出码 = 最后一个命令的。
@@ -107,6 +135,7 @@ fi
 # 若允许跨 ; 就会把两条无关命令粘成假阳性；`&&` 同理（|| 绑的是 && 右边那段，不是管道）。
 if has '\|[^|;&]*\b(head|tail|cat|sed|awk|tee|sort|uniq|wc|cut|tr|jq|column|nl)\b[^|;&]*\|\|'; then
   notes+=("管道尾接 || 兜底：|| 绑的是**整条管道**的退出码，而管道退出码 = 最后一个命令的。head/tail/cat/sed/wc/jq 这些几乎恒返回 0，所以兜底分支永远不会执行——它长得像容错，实际是死代码。更坑的是「真的没结果」和「兜底没跑」输出完全同形，从输出看不出区别。判空要先落变量：out=\$(cmd); [ -z \"\$out\" ] && echo 没找到；要拿管道里某一段的真退出码：bash 用 \${PIPESTATUS[0]}（zsh 是小写 \$pipestatus）。（2026-08-22 实测踩过；同族见上面 \$? 那条）")
+  rule_ids+=("pipe_fallback_dead")
 fi
 
 # zsh 不对未加引号的**标量参数**做单词分割（bash 会）。于是 `for f in $FILES` 只跑一轮、
@@ -135,9 +164,11 @@ done < <(printf '%s' "$cmd" | grep -oE '(^|[;&|[:space:]])[A-Za-z_][A-Za-z0-9_]*
 
 if [ -n "$zsh_split_why" ]; then
   notes+=("命中「$zsh_split_why」：zsh **不**对未加引号的标量参数做单词分割（bash 会）。\`FILES=\"a b c\"; for f in \$FILES\` 只跑一轮、\`cat \$FILES\` 会把整串当一个文件名——而且照常退 0，下游计数全为 0 时看着像「干净通过」。改用真数组 \`FILES=(a b c)\` + \"\${FILES[@]}\"，或 \`while IFS= read -r f\`，或显式 \`\${=FILES}\`。对照：\`\$(cmd)\` 在 zsh 里**是**会分割的，那种写法没问题。（2026-08-13 一天三犯，每次都只有「期望非零的锚」照出来——所以期望零命中的检查务必配锚）")
+  rule_ids+=("zsh_word_split")
 fi
 
 if [ ${#notes[@]} -gt 0 ]; then
+  log_hit note "${rule_ids[@]}"
   ctx="$(printf '%s\n' "${notes[@]}")"
   jq -nc --arg c "$ctx" '{
     hookSpecificOutput: {
