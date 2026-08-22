@@ -174,3 +174,34 @@ codex `gpt-5.6-sol` 调查 → `handoff_capture`（66s）→ grok `grok-4.6` `ha
 - 落盘走 `写 .tmp → rename` 原子替换。
 - `handoff_load` 的 id 走字符白名单，`../../../etc/passwd` 被拒（已实测）。
 - `objective` 为空直接报错——没有目标的交接包不可执行。
+
+## mycc-run —— 三家统一调用入口
+
+`scripts/mycc-run.sh`，symlink 在 `~/.local/bin/mycc-run`（**单一副本，别再复制一份出去**）。
+
+```bash
+mycc-run grok   "总结 README"
+mycc-run codex  -C ~/mycc "看看 mcp-hub 有哪些脚本"
+echo "长 prompt" | mycc-run claude
+mycc-run grok -n "..."        # dry-run，只打印真实命令
+mycc-run doctor               # 检查三家就绪状态
+```
+
+选项：`-m 模型` / `-C 目录` / `-n dry-run` / `--safe`（不自动批准工具）/ `-h`。
+
+### 它收敛掉的四类差异（都是实测踩出来的，靠记是记不住的）
+
+1. **代理方向相反**：codex/grok 走 CPA 必须 `env -u` 剥掉全部代理（吃到代理必卡死）；
+   claude 走境外 API **必须保留**代理。同一台机器上两个相反的要求。
+2. **审批 flag 三家三样**：`--approve-for-me` / `--always-approve` / `--permission-mode bypassPermissions`。
+3. **grok 的 `--trust`**：仓库内的 MCP server 不加它就静默不启动（`--safe` 模式也保留它——
+   trust 不是审批，是 MCP 加载前提，去掉就等于没有工具）。
+4. **grok 必须显式 `-m`**：默认模型是 TUI 设置项不是配置字段，headless 不给就回落内置 grok-4.5。
+
+### doctor
+
+9 项检查（CLI 安装 / 凭据存在与 600 权限 / CPA_API_KEY 非空 / 网关直连 / 两家 MCP 注册）。
+**已做负向验证**：把 `MYCC_CPA_ENV` 指向不存在的文件，凭据三项转 ✗ 且退出码 1；
+正常时 0 ✗ 退出码 0——确认它不是恒绿的自检。
+
+实测：三家经 wrapper 均返回预期结果；grok 经 wrapper 调 `memory_search` 服务端账本可见。
