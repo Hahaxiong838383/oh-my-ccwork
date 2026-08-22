@@ -135,3 +135,42 @@ grok   mcp add mycc-memory    "$NODE" "$MEM"
 
 实测端到端（2026-08-22）：codex `gpt-5.6-sol` 20s、grok `grok-4.6` 8.4s，均返回真实文件名，
 服务端账本可见 `client=codex-mcp-client` / `client=grok-shell-mycc-memory` 的 `memory_search` 调用。
+
+## handoff-server —— 跨运行时交接
+
+`scripts/handoff-server.mjs`。让 A 引擎干到一半的活被 B 引擎接住。
+
+| 工具 | 作用 |
+|---|---|
+| `handoff_capture(objective, ...)` | 存交接包；**仓库事实由 server 自己跑 git 采集** |
+| `handoff_load(id?)` | 取交接包（省略 id = 最新），渲染成可直接消费的文本 |
+| `handoff_list(limit)` | 列出交接包，最新在前 |
+
+### 核心设计：按数据来源劈开字段
+
+原方案把 `changedFiles` / `commandsRun` 也交给 LLM 填，但多数运行时 `supportsStructuredTrace=false`，
+那样会退化成**「LLM 从终端刷屏里猜自己刚才干了啥」**，而交接质量正是整个方案的价值所在。
+
+所以：
+
+- **机器采集区**：branch / HEAD / headSubject / dirty 清单 / diffstat / upstream ahead-behind
+  —— server 直接跑 git，**不接受调用方自述**。
+- **自述区**：objective / decisions / open questions / next steps / risks / do-not-do。
+
+渲染时两区分开，且各自带标题声明证据等级
+（`MACHINE-COLLECTED (trust these over the narrative)` vs `SELF-REPORTED — treat as claims`）。
+接收方据此判断可信度，也能靠对照发现"自述说改了 X 但 git 里没有"这类矛盾。
+
+### 实测（2026-08-22 端到端）
+
+codex `gpt-5.6-sol` 调查 → `handoff_capture`（66s）→ grok `grok-4.6` `handoff_load`（12.3s）接住，
+准确复述目标、报出机器采集的 `main @ ae4ee8b3`、接到 codex 留的 next_step。
+
+### 实现要点（都是自测时踩出来的）
+
+- git 子进程必须 `stdio: ['ignore','pipe','ignore']`——**catch 挡得住返回值，挡不住 stderr 继承**，
+  否则非 git 目录会往终端喷 `fatal: 不是 git 仓库`。
+- id 含毫秒（`YYYYMMDDHHmmssSSS-xxxx`）：同一秒内连开两个包时秒级时间戳会撞。
+- 落盘走 `写 .tmp → rename` 原子替换。
+- `handoff_load` 的 id 走字符白名单，`../../../etc/passwd` 被拒（已实测）。
+- `objective` 为空直接报错——没有目标的交接包不可执行。
