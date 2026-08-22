@@ -312,6 +312,37 @@ home-studio 无 GUI，所以跑 headless server，从 Air 浏览器访问——�
 的 MCP 配置——**不扫 `.grok`**。实测自动扫到 `mycc-probe` / `mycc-memory` / `mycc-handoff`，
 `apps=codex,grok`，无需在 codeg 里手工注册。
 
+### ACP 适配器（首次进 UI 会报"适配器尚未安装"）
+
+codeg 走 ACP，**不直接用本地 CLI**，claude/codex 需各自的 npx 适配器；**grok 原生支持 ACP，不需要**。
+
+| agent_type | registry | 适配器 |
+|---|---|---|
+| `claude_code` | `claude-acp@0.69.0` | 需要 |
+| `codex` | `codex-acp@1.4.0` | 需要（**不是 `codex_cli`**） |
+| `grok` | `grok-build@1.0.5` | 不需要（`is_acp_adapter=false`） |
+
+命令行安装（省得在 UI 点）：
+
+```bash
+T=$(cat ~/.local/share/codeg/token)
+curl -s --noproxy '*' -X POST -H "Authorization: Bearer $T" -H 'Content-Type: application/json' \
+  -d '{"agentType":"claude_code","taskId":"install-1"}' \
+  http://127.0.0.1:3080/api/acp_prepare_npx_agent
+```
+
+⚠️ 入参是 **camelCase**（`agentType` / `taskId`），且 `taskId` 必填——错了它会明确告诉你缺哪个字段，
+**照错误信息改比猜快**。agent_type 真值一律从 `POST /api/acp_list_agents` 取，别按显示名猜。
+
+其他有用端点：`acp_env_diagnostics`（UI 那个"诊断"按钮）、`acp_preflight`、
+`acp_respond_permission` / `acp_answer_plan_approval`（**codeg 的审批体系，正是我们自己缺的那块**）。
+npm registry 本机直连可达（200），装适配器不需要代理。
+
+### token
+
+已入密码库条目 **`codeg server token (home-studio)`**（Login 类型，URI 已填两个访问地址）。
+本机备份 `~/.local/share/codeg/token`(0600)。重启服务不变（持久化在 codeg.db）。
+
 ```bash
 systemctl --user status codeg-server        # 状态
 ssh <host> 'cat ~/.local/share/codeg/token' # 取登录 token
