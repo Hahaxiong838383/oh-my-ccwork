@@ -26,6 +26,9 @@
 # 铁律只约束 agent 主动行为；第三方/系统自动产物由 lint_ignore_globs 排除
 root_files: [AGENTS.md]                  # HOME 根唯一合法的 agent 维护文件（本宪法）
 system:    [Applications, Desktop, Documents, Downloads, Library, Movies, Music, Pictures]
+# ↓ home-studio(Linux, 中文 locale) 的 XDG 标准目录 + 系统包目录。这些在 Air(macOS) 上不存在，
+#   列入白名单对 Air 无副作用；不列则 lint 在 Linux 侧恒报 11 项误报，把真正的乱建淹掉。
+system_linux: ['下载', '公共', '图片', '文档', '桌面', '模板', '视频', '音乐', 'snap']
 core:      [mycc, .mycc-global]          # PKM 中枢 + 外置共享状态
 private:   [work-private]                # 隐私 vault
 runtime:   [bin, local, go, models, nltk_data]
@@ -33,7 +36,7 @@ legacy:    [cc-monitor-oss, lnmem-data, xray, scripts, Archive, iterm2-logs]  # 
 projects:  [MyAgent, task-board]          # 独立项目仓（宪法登记 2026-07-26：MyAgent=开源记忆工作区模板仓，task-board=任务看板）
 agent_cfg: ['.claude', '.codex', '.gemini', '.grok', '.windsurf', '.continue', '.augment', '.agents']
 # 合法点目录基线（系统/语言工具/AI 工具运行时）。新增点目录会被 lint 抓到供审查——防 agent 用 .xxx/ 绕过
-allowed_dot_dirs: ['.Trash', '.aliyun', '.android', '.boss-agent', '.bun', '.bytertc', '.cache', '.cargo', '.cc-airplayer', '.cc-switch', '.cola', '.coli', '.conda', '.config', '.cups', '.deepface', '.gradle', '.hermes', '.kaggle', '.keras', '.lark-cli', '.letta', '.lnmem', '.lnmem-fpga', '.local', '.matplotlib', '.mem0', '.modelscope', '.npm', '.obsidian', '.ollama', '.omlx', '.omp', '.openclaw', '.opencli', '.openpencil', '.pg0', '.promptfoo', '.rhinocode', '.sogouinput', '.ssh', '.streamlit', '.swiftpm', '.tauri', '.tmux', '.zsh', '.zsh_sessions']
+allowed_dot_dirs: ['.Trash', '.aliyun', '.android', '.boss-agent', '.bun', '.bytertc', '.cache', '.cargo', '.cc-airplayer', '.cc-switch', '.claude-mem', '.codeg', '.cola', '.coli', '.conda', '.config', '.cups', '.deepface', '.gnupg', '.gradle', '.hermes', '.kaggle', '.keras', '.lark-cli', '.letta', '.lnmem', '.lnmem-fpga', '.local', '.matplotlib', '.mem0', '.modelscope', '.mycc-mcp', '.npm', '.obsidian', '.ollama', '.omlx', '.omp', '.openclaw', '.opencli', '.openpencil', '.pg0', '.promptfoo', '.rhinocode', '.rustup', '.sogouinput', '.ssh', '.streamlit', '.swiftpm', '.tauri', '.tmux', '.zsh', '.zsh_sessions']
 lint_ignore_globs: ['.*', '*.lock', '.DS_Store']  # 仅作用于「文件」（点文件如 .zshrc/.mycc-secrets.env 不告警）；点目录必须在白名单否则报警
 ```
 
