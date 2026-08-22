@@ -14,6 +14,7 @@ set -uo pipefail
 
 CPA_ENV="${MYCC_CPA_ENV:-$HOME/.cpa.env}"
 GROK_MODEL_DEFAULT="${MYCC_GROK_MODEL:-cpa-grok}"
+CODEX_MODEL_DEFAULT="${MYCC_CODEX_MODEL:-gpt-5.6-sol}"
 PROXY_VARS="HTTPS_PROXY HTTP_PROXY ALL_PROXY https_proxy http_proxy all_proxy"
 
 die() { printf 'mycc-run: %s\n' "$1" >&2; exit 1; }
@@ -131,7 +132,9 @@ case "$ENGINE" in
   codex)
     cmd+=(codex exec)
     [ "$SAFE" -eq 1 ] || cmd+=(--approve-for-me)
-    [ -n "$MODEL" ] && cmd+=(-m "$MODEL")
+    # 项目级 <repo>/.codex/config.toml 的 model 会盖掉用户级 ~/.codex/config.toml，
+    # 且 doctor 只回显用户级 → 看着生效实则没有。-c 优先级最高，压得住。
+    cmd+=(-c "model=\"${MODEL:-$CODEX_MODEL_DEFAULT}\"")
     cmd+=("$PROMPT")
     ;;
   grok)

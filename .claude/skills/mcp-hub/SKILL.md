@@ -221,6 +221,30 @@ mycc-run doctor               # 检查三家就绪状态
 
 实测：三家经 wrapper 均返回预期结果；grok 经 wrapper 调 `memory_search` 服务端账本可见。
 
+## 🔴 codex 模型钉定：项目级 config 会盖掉用户级，而 doctor 只看用户级
+
+`~/.codex/config.toml` 写 `model = "gpt-5.6-sol"`、`codex doctor` 回显 `model gpt-5.6-sol · cpa`
+——**照样没生效**。实跑 `codex exec` 打印的是 `model: gpt-5.3-codex`。
+
+根因：codex 有配置分层，**项目级 `<repo>/.codex/config.toml` 覆盖用户级**
+（官方 config-reference：项目级可覆盖 model，但**不能**覆盖 `model_provider` / `model_providers` / auth）。
+本仓 `.codex/config.toml` 第一行就是 `model = "gpt-5.3-codex"` + `model_reasoning_effort = "high"`，
+且**它是 git 跟踪的**（从 Mac 同步来的，里面 MCP server 全是 `/Users/rayman.chen/` 路径）。
+
+**为什么极难发现**：
+- `provider: cpa` 是对的（项目级盖不了 provider），只有 model 被换 → 看起来"配置生效了大半"；
+- `doctor` 报的是用户级配置 → **诊断工具与运行时看的不是同一层**，全绿而实际没生效；
+- codex 对不存在的模型名不做本地校验（`-m definitely-not-a-real-model-xyz` 原样接受），
+  所以"名字被换掉"不可能是校验拒绝，只可能是被别处覆盖。
+
+**定位手法（可复用）**：`grep -rl '<实际生效的值>' ~/.codex/ <repo>/` ——直接问"谁持有这个值"，
+比逐层读配置快得多；再拿配置里写的值做对照锚，看两者分别落在哪个文件。
+
+**解法**：`-c model="..."` 优先级最高，压得住项目级。`mycc-run` 已内置
+（`CODEX_MODEL_DEFAULT`，可用 `MYCC_CODEX_MODEL` 环境变量改）。
+⚠️ 直接敲 `codex`（不经 mycc-run）仍会用项目级的 `gpt-5.3-codex`——
+要根治得改那个 git 跟踪的文件，会连带影响 Mac 侧，需川哥拍板。
+
 ## 让「直接敲 grok / codex」也能用（不经 mycc-run）
 
 配好 `[models] default` 只解决了"用哪个模型"，还差"钥匙在哪"：`env_key` 读的是**环境变量**，
