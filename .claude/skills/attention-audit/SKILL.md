@@ -1,3 +1,8 @@
+---
+name: attention-audit
+description: 注意力审计与行为漂移监控。理论来源：ASAC（Attention Schema-based Attention Control）+ Behavioral Drift Detection。触发词："/attention-audit"、"检索审计"、"注意力分析"、"检索盲区"、"行为漂移"
+---
+
 # attention-audit — 注意力审计与行为漂移监控
 
 > 理论来源：ASAC（Attention Schema-based Attention Control）+ Behavioral Drift Detection

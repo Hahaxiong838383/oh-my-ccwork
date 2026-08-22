@@ -1,3 +1,8 @@
+---
+name: fnos-nas
+description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验沉淀。触发词："飞牛"、"NAS"、"fnOS"、"储存空间"、"文件管理"、"trim_"
+---
+
 # fnOS NAS 排障指南
 
 > 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验沉淀。
