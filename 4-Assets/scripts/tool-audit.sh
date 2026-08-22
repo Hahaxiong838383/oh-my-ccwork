@@ -1,5 +1,5 @@
 #!/bin/bash
-# PostToolUse 全工具审计 —— 记 cc 在这台机器上真正做了什么。
+# PostToolUse / PostToolUseFailure 全工具审计 —— 记 cc 在这台机器上真正做了什么，成败都记。
 #
 # 由来：no-guessing-guard 只挂 PreToolUse(Bash)，而改文件走的是 Edit/Write，
 # 完全没有记账。mycc-run 的 wrapper 审计也只记「发起了一次调用」，
@@ -20,6 +20,13 @@
 #   所以开销随读取体积涨。没做快速路径——先观察真实 payload 分布再谈优化，
 #   免得又优化一个从未 bound 的约束（feedback_optimizing_a_constraint_that_never_bound）。
 # 日志增长：每条约 150 字节，未做轮转。真实跑起来后按体积再决定。
+#
+# 判读规则（跟数据一起交付，否则日志放半年就没人知道怎么读了）：
+#   真失败    jq 'select(.ok==false and .interrupt!=true)'  ← 要关注的
+#   用户中断  jq 'select(.interrupt==true)'                 ← 不是故障，别当故障看
+#   成功      jq 'select(.ok==true)'
+#   ⚠️ 2026-08-22 之前写的行没有 ok 字段(.ok==null)。用 `.ok==false` 查失败是安全的；
+#     写成 `.ok!=true` 会把全部历史行算成失败。
 #
 # 失败策略：永远 exit 0。审计不得阻断任何工具调用。
 
@@ -58,7 +65,19 @@ line="$(printf '%s' "$payload" | jq -c '
       # MCP 工具参数千变万化无法穷举字段，记键名有信息量，记值可能带 secret。
       args: (if $t == null
              then ($ti | keys)
-             else null end)
+             else null end),
+      # 事件自适应：hook_event_name 在输入里（源码实测），所以同一个脚本同时接
+      # PostToolUse 与 PostToolUseFailure，不用在注册命令里传参。
+      ok: (($in.hook_event_name // "") != "PostToolUseFailure"),
+      ms: ($in.duration_ms // null),
+      # ⚠️ is_interrupt 必须单独记：用户按 ESC 中断与工具真的失败**同走失败事件**，
+      # 不分开的话审计里会混进一堆中断记录冒充故障（有效行无效行同字段同格式）。
+      # ⚠️ 不能写 (.is_interrupt // null)：jq 的 // 对 null 和 **false** 都取右边，
+      # 于是「明确不是中断」会被压成 null，和「字段根本不存在」不可区分。
+      interrupt: (if ($in | has("is_interrupt")) then $in.is_interrupt else null end),
+      # 失败原因截断 200 字符：这是失败审计的核心价值，但错误消息可能带命令回显，
+      # 留全文会把泄露面放大到不可控。
+      err: (if $in.error == null then null else ($in.error | tostring | .[0:200]) end)
     }' 2>/dev/null)"
 
 # jq 解析失败（payload 非法/schema 变化）不能静默：留一条可查的降级记录，
