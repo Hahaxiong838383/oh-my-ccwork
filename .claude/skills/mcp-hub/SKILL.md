@@ -211,7 +211,7 @@ mycc-run doctor               # 检查三家就绪状态
 2. **审批 flag 三家三样**：`--approve-for-me` / `--always-approve` / `--permission-mode bypassPermissions`。
 3. **grok 的 `--trust`**：仓库内的 MCP server 不加它就静默不启动（`--safe` 模式也保留它——
    trust 不是审批，是 MCP 加载前提，去掉就等于没有工具）。
-4. **grok 必须显式 `-m`**：默认模型是 TUI 设置项不是配置字段，headless 不给就回落内置 grok-4.5。
+4. **grok 显式 `-m` 作为兜底**：正常默认模型来自 `[models].default`；wrapper 仍显式传入，避免配置漂移或无效模型静默 fallback。
 
 ### doctor
 
@@ -220,6 +220,37 @@ mycc-run doctor               # 检查三家就绪状态
 正常时 0 ✗ 退出码 0——确认它不是恒绿的自检。
 
 实测：三家经 wrapper 均返回预期结果；grok 经 wrapper 调 `memory_search` 服务端账本可见。
+
+### 2026-08-22 续：同一个项目级文件，又咬了一次
+
+川哥报「home-studio 上 codex 输入框没有 1.5 倍速可选，配置项不全」。查下来两件事：
+
+**① MCP 三个 server 是 Mac 路径，在 Linux 上全废**（`codex doctor --all` 直接点名）：
+
+    ghost-os     stdio command "/Users/rayman.chen/mycc/ghost-os/.build/release/ghost" is not resolvable
+    openspace    stdio command "/Users/rayman.chen/mycc/2-Projects/openspace/start-mcp.sh" is not resolvable
+
+第三个 `open-feishu-mcp` **没被 doctor 点名**——因为它的 command 是 `sh`（可解析），
+Mac 路径藏在 `-lc` 的参数里，而且用了 `security find-generic-password`（**macOS 专有**）。
+⇒ **doctor 只校验 command 本身可不可解析，不看 args**。没被点名 ≠ 没问题。
+
+**② 倍速选项缺失，与配置无关**（两个 config 全文读过，无任何速度相关项）：
+
+    feature flags   40 enabled，其中【包含 fast_mode】
+    auth            auth is provided by the active model provider
+    provider        CPA Smart Router（CPA_API_KEY present）
+    model provider requires OpenAI auth   false
+    ~/.codex/auth.json                    不存在
+
+⇒ **推断（未验证）**：倍速是跟 OpenAI 官方账号订阅绑定的服务端能力，
+走 CPA 第三方中转时 codex 拿不到官方账号态，UI 就不给这个选项——
+本地 flag 开着也没用。次要嫌疑是版本（home-studio 0.148.0，已有 0.149.0）。
+区分办法：在 Air 上跑 `codex --version && codex doctor --all | grep -iE 'provider|auth|fast_mode'`，
+若 Air 是「官方 auth + 有倍速」则是 provider 的锅，若「同样 CPA + 有倍速」则是版本。
+
+**教训**：这个文件顶部就写着上次的事故（model 被静默覆盖两台机器），
+而**同一类问题——跨机共享的项目级配置里塞机器专有绝对路径——又发生了一次**。
+项目级 config 是 git 跟踪、两台机共用的，**任何绝对路径进去都是定时炸弹**。
 
 ## 🔴 codex 模型钉定：项目级 config 会盖掉用户级，而 doctor 只看用户级
 
@@ -335,7 +366,7 @@ curl -s --noproxy '*' -X POST -H "Authorization: Bearer $T" -H 'Content-Type: ap
 **照错误信息改比猜快**。agent_type 真值一律从 `POST /api/acp_list_agents` 取，别按显示名猜。
 
 其他有用端点：`acp_env_diagnostics`（UI 那个"诊断"按钮）、`acp_preflight`、
-`acp_respond_permission` / `acp_answer_plan_approval`（**codeg 的审批体系，正是我们自己缺的那块**）。
+`acp_respond_permission` / `acp_answer_plan_approval`（codeg 的审批体系，已完成真实拒绝验证）。
 npm registry 本机直连可达（200），装适配器不需要代理。
 
 ### token
@@ -348,9 +379,48 @@ systemctl --user status codeg-server        # 状态
 ssh <host> 'cat ~/.local/share/codeg/token' # 取登录 token
 ```
 
+### Grok / codeg 权限门（2026-08-23 已落地）
+
+`~/.grok/config.toml` 明确设置：
+
+```toml
+[ui]
+permission_mode = "default"
+default_selected_permission = "allow_once"
+remember_tool_approvals = false
+
+[permission]
+deny = [
+  "Bash(git add -A)",
+  "Bash(git add --all)",
+  "Bash(git reset --hard)",
+  "Bash(pkill -f)",
+]
+```
+
+两层防线：
+
+1. Grok 原生 `deny` 规则在 `--always-approve` 下仍优先硬拒绝常见红线。
+2. `no-guessing-guard.sh` 同时识别 Claude 的 `tool_input`/`session_id` 与 Grok 的
+   `toolInput`/`sessionId`，输出同时含 Grok `decision/reason` 和 Claude
+   `hookSpecificOutput`；负责多行、命令位置与 commit 署名等精确判断。
+
+codeg 直接启动 Grok ACP，读取同一份配置和全局 hook。真实端到端验收：
+
+- codeg 收到 `touch /tmp/...` 后产生 `pending_permission`，选项含 `allow-once` / `reject-once`；
+- 调 `acp_respond_permission(..., optionId="reject-once")` 后 pending 清空，目标文件未创建；
+- 独立 Grok headless 在 `--always-approve` 下请求 `git reset --hard`，hook 命中 1 次并明确拒绝。
+
+能力边界：codeg 是审批 UI/转发通道，不是独立的安全边界；如果底层 agent 以 yolo/bypass
+启动，就不会产生普通权限弹窗。这里能成立，是因为 Grok mode 明确钉为 `default`，并另有
+native deny + hook 作为不依赖 UI 的硬拒绝。
+
+`mycc-run grok` 作为 headless 自动化入口仍保留 `--always-approve`，但上述 native deny 与 hook
+不会被绕过；codeg 交互会话走逐次审批。
+
 ---
 
-## 三家的审计与守门能力（2026-08-22 实证调研，别再写「未知」）
+## 三家的审计与守门能力（2026-08-23 实证）
 
 ### 一张表
 
@@ -358,7 +428,14 @@ ssh <host> 'cat ~/.local/share/codeg/token' # 取登录 token
 |---|---|---|---|---|
 | **cc** | `PostToolUse` hook 自建（`tool-audit.sh`） | ✅ `PreToolUse` 可 `permissionDecision:deny` | ✅ `PostToolUseFailure` | 已接线，4 条 hook |
 | **codex** | ✅ **rollout 默认全记**（命令原文+输出） | ❌ hooks **不能拦**，守门走 exec policy | ❌ **无该事件** | rollout 默认开，hooks/rules 未启用 |
-| **grok** | 未调研 | hooks 可 `exit 2` 真拦（matcher `run_terminal_command`） | 未调研 | 未接线 |
+| **grok** | session/unified 日志存在，正式取数口径待定 | ✅ native deny + `PreToolUse` 真拦 | ✅ `PostToolUseFailure` | 已接线；codeg 逐次审批已实测 |
+
+### grok：Claude 兼容加载不等于 payload 兼容
+
+`grok inspect --json` 会显示它加载了 `~/.claude/settings.json` 的 `PreToolUse(Bash)`，但 Grok
+原生输入使用 camelCase：`.toolInput.command` / `.sessionId`；Claude 使用 snake_case：
+`.tool_input.command` / `.session_id`。旧 guard 只读 snake_case，所以曾处于“列表显示已加载、
+每次实际静默放行”的假保护状态。当前脚本已双读，并同时输出两家的 deny schema。
 
 ### codex：审计比 cc 更全，而且默认就在记
 
