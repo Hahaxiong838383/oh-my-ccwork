@@ -347,3 +347,69 @@ npm registry 本机直连可达（200），装适配器不需要代理。
 systemctl --user status codeg-server        # 状态
 ssh <host> 'cat ~/.local/share/codeg/token' # 取登录 token
 ```
+
+---
+
+## 三家的审计与守门能力（2026-08-22 实证调研，别再写「未知」）
+
+### 一张表
+
+| | 会话/命令记录 | 守门（能拦） | 失败事件 | 本机状态 |
+|---|---|---|---|---|
+| **cc** | `PostToolUse` hook 自建（`tool-audit.sh`） | ✅ `PreToolUse` 可 `permissionDecision:deny` | ✅ `PostToolUseFailure` | 已接线，4 条 hook |
+| **codex** | ✅ **rollout 默认全记**（命令原文+输出） | ❌ hooks **不能拦**，守门走 exec policy | ❌ **无该事件** | rollout 默认开，hooks/rules 未启用 |
+| **grok** | 未调研 | hooks 可 `exit 2` 真拦（matcher `run_terminal_command`） | 未调研 | 未接线 |
+
+### codex：审计比 cc 更全，而且默认就在记
+
+**别再给 codex 造审计——它自带。** 要做的只是「读」。
+
+- 位置 `~/.codex/sessions/<YYYY>/<MM>/<DD>/rollout-<ISO>-<uuid>.jsonl`，**默认开启**
+  （判据：`grep -cE 'rollout|history|log_dir|hooks' ~/.codex/config.toml` = **0**，而文件照样在长）。
+- 每行 `{ordinal, timestamp, type, payload}`。`type` 分布：
+  `response_item`（`message` / `reasoning` / `custom_tool_call`+`_output` / `function_call`+`_output`
+  / `tool_search_call`+`_output`）、`event_msg`（`item_completed` / `token_count` / `task_started` …）、
+  `session_meta` / `turn_context` / `world_state`。
+- `custom_tool_call` 的 `name` 恒为 `exec`，字段 `call_id,id,input,name,status,type`——
+  **`input` 是命令原文**（实测 75–464 字符），`output` 最长实测 20,610 字符。
+  MCP 调用走 `function_call`，`arguments` 里是完整参数。
+- 另有 `~/.codex/logs_*.sqlite` 的 `logs` 表（Rust tracing 内部诊断，含
+  `codex_core::exec_policy`），**不是审计日志**，别混。
+
+⚠️ 取数用 `sqlite3` 时本机没有该命令，走 `python3 -c` 的 `sqlite3` 模块，
+**URI 必须带 `?mode=ro`** 免得写坏 codex 正在用的库；且别边迭代游标边查询（会重置迭代器）。
+
+### codex 的 hooks 拿不来当守门用
+
+官方文档原话（`learn.chatgpt.com/docs/config-file/config-reference`）：
+
+> Command hooks are currently supported; prompt and agent hook handlers are parsed but skipped.
+> **Hooks receive data but cannot block operations** … run after decisions are made, not as gatekeepers.
+
+事件名（已逐个在 0.148.0 二进制对撞，命中 29–108 次）：`PreToolUse` `PermissionRequest`
+`PostToolUse` `PreCompact` `PostCompact` `SessionStart` `SessionEnd` `SubagentStart`
+`SubagentStop` `UserPromptSubmit` `Stop`。**`PostToolUseFailure` 命中 0 —— codex 没有这个事件**
+（用最宽子串匹配得到的 0 才算可靠阴性）。启用需 `features.hooks`。
+
+### 要给 codex 加拦截 → 写 rules，不是 hooks
+
+`~/.codex/rules/default.rules`（用户层）/ Team Config（管理员）/ `<repo>/.codex/rules/`（需 trusted）。
+`prefix_rule()` 字段：`pattern`（必填）、`decision` = **`allow` | `prompt` | `forbidden`**、
+`justification`、`match`/`not_match`。优先级 **forbidden > prompt > allow**。
+它会把 `&&`/`||`/`;`/`|` 链拆开逐条评估（含变量/重定向的复杂脚本按单条处理）。
+
+`no-guessing-guard.sh` 里 deny 的四条（`git add -A`、`pkill -f`、`git reset --hard`、
+commit 署名）都能翻译成 `prefix_rule`，这是给 codex 补守门的正确方向。
+
+### 企业级：`/etc/codex/requirements.toml`
+
+`allow_managed_hooks_only = true` 可让管理员层 hooks 生效、忽略 user/project/session 的。
+⚠️ **文档自相矛盾**：`learn.chatgpt.com` 的 config-reference **完全没提** `requirements.toml`；
+而 GitHub `openai/codex` 的 `docs/config.md` 与二进制字符串都有它。
+**两个独立源对一个源，按证据判定它存在**，官网那页大概是消费者视角。
+
+### 其它可配的审计项（本机均未启用）
+
+`log_dir`（默认 `$CODEX_HOME/log`，设了还会开 `codex-tui.log` 明文日志）、
+`[history] persistence = "save-all|none"` + `history.max_bytes`（写 `history.jsonl`）、
+`notify`（外部通知命令，收 JSON payload）、`[analytics] enabled`。
