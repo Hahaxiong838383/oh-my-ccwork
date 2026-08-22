@@ -81,5 +81,71 @@ r 1 'note: curl 127.0.0.1:port' anynote 'curl -s http://127.0.0.1:18765/healthz'
 r 0 'note 反例: 纯 echo'         anynote 'echo hello'
 
 echo
+echo "═══ D. 新规则「| … || 兜底」：|| 绑的是管道尾恒成功命令 = 死代码 ═══"
+# ⚠️ 锚必须是**本规则独占**的串。正例（rg|grep|head||echo）会同时触发上面的「截断」规则，
+# 拿交集串当锚 → 本档永远绿，而新规则从没被验过（feedback_channel_exclusive_anchor）。
+# '管道尾接 || 兜底' 只出现在本规则文案里，已手跑对过真实输出。
+PMARK='管道尾接 || 兜底'
+pfire() {
+  out=$(jq -nc --arg c "$1" '{tool_input:{command:$c}}' | bash "$GUARD")
+  printf '%s' "$out" | grep -q "$PMARK"
+}
+if pfire 'cat a.txt | head -5 || echo none'; then
+  echo "  ✅ pfire() 对已知正例返回真（锚在真实输出里存在，且为本规则独占）"
+else
+  echo "  ❌ HARNESS_BROKEN: pfire() 对已知正例返回假。两种根因同症状，都查："
+  echo "     ① 锚 '$PMARK' 不是 $GUARD 输出里真实连续存在的子串"
+  echo "     ② 规则本身失效或被改坏"
+  echo "     D 档下面的结果一律作废——反例档在检测器死掉时会全绿伪装成健康。"
+  exit 2
+fi
+p() { local want=$1 label=$2 cmd=$3
+      if pfire "$cmd"; then got=1; else got=0; fi
+      if [ "$got" = "$want" ]; then printf "  ✅ %-44s\n" "$label"; PASS=$((PASS+1))
+      else printf "  ❌ %-44s 期望fire=%s 实际=%s\n" "$label" "$want" "$got"; FAIL=$((FAIL+1)); fi; }
+p 1 '正: grep|head||echo（2026-08-22 原形）'  'rg foo . | grep bar | head -5 || echo "(没找到)"'
+p 1 '正: |wc -l||echo'                       'cat f | wc -l || echo 0'
+p 1 '正: |jq||echo'                          'curl -s http://x/y | jq .name || echo 无'
+p 1 '正: |sort||true'                        'ps aux | sort || true'
+p 0 '反: grep 收尾（正确写法，会真触发）'      'ls | grep foo || echo 没有'
+p 0 '反: grep -q 无管道（正确写法）'           'grep -q foo file || echo 没有'
+p 0 '反: head 在中间、grep 收尾'              'ls | head -20 | grep foo || echo 没有'
+p 0 '反: 有恒成功管道尾但没有 ||'             'cat a | head -5'
+p 0 '反: 无管道的 || 容错'                    'make build || exit 1'
+p 0 '反: 提示推荐的替代写法不许自报'           'out=$(rg foo . | head -5); [ -z "$out" ] && echo 没找到'
+
+echo
+echo "═══ E. 换行盲区：grep 按行匹配，多行命令曾让所有跨行规则静默 ═══"
+# 2026-08-15 记录为「待办（未做）」：$? 规则要求字面分号，换行写法完全不响，
+# 而多行脚本是更常用的写法 —— 守护器覆盖的是较少用的那一半。2026-08-22 修在 has() 输入侧。
+# ⚠️ 旧规则的锚必须与新规则**互斥**：两条文案都含「退出码」「PIPESTATUS」，
+# 用交集串会让本档恒绿。'没有大写 PIPESTATUS' 只在 $? 那条里。
+QMARK='没有大写 PIPESTATUS'
+qfire() {
+  out=$(printf '%s' "$1" | jq -Rs '{tool_input:{command:.}}' | bash "$GUARD")
+  printf '%s' "$out" | grep -q "$QMARK"
+}
+pfire_ml() {   # 多行版 pfire（走 -Rs 保留换行，不能用 --arg 的单行路径）
+  out=$(printf '%s' "$1" | jq -Rs '{tool_input:{command:.}}' | bash "$GUARD")
+  printf '%s' "$out" | grep -q "$PMARK"
+}
+e() { local want=$1 fn=$2 label=$3 cmd=$4
+      if "$fn" "$cmd"; then got=1; else got=0; fi
+      if [ "$got" = "$want" ]; then printf "  ✅ %-46s\n" "$label"; PASS=$((PASS+1))
+      else printf "  ❌ %-46s 期望fire=%s 实际=%s\n" "$label" "$want" "$got"; FAIL=$((FAIL+1)); fi; }
+
+e 1 qfire     '正: $? 换行形态（2026-08-15 的漏网）' 'rsync -a a b | head -5
+echo $?'
+e 1 qfire     '正: $? 单行形态（不许回归）'          'rsync -a a b | head -5; echo $?'
+e 1 pfire_ml  '正: || 反斜杠续行'                    'cat a | head -5 \
+  || echo none'
+e 1 pfire_ml  '正: || 单行（不许回归）'              'cat a | head -5 || echo none'
+e 0 pfire_ml  '反: 两条无关命令，折叠后不许粘成误报'  'ls | head -5
+echo done || true'
+e 0 pfire_ml  '反: && 右侧的 ||（不绑管道）'          'cat a | head -5 && echo ok || echo ng'
+e 0 qfire     '反: 多行但无 $?'                      'ls | head -5
+echo done'
+
+echo
 echo "═══ 结果：$PASS 通过 / $FAIL 失败（FAIL 必须为 0）═══"
 [ "$FAIL" = 0 ] || exit 1
