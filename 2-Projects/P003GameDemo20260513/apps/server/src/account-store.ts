@@ -132,14 +132,14 @@ class AccountStore {
 
   findAccount(id: string): Account | null {
     const row = this.db
-      .prepare(`SELECT id, nickname, role, created_at FROM account WHERE id = ?`)
+      .prepare(`SELECT id, nickname, role, created_at, phone FROM account WHERE id = ?`)
       .get(id) as Account | undefined;
     return row ?? null;
   }
 
   listAccounts(): Account[] {
     return this.db
-      .prepare(`SELECT id, nickname, role, created_at FROM account ORDER BY id`)
+      .prepare(`SELECT id, nickname, role, created_at, phone FROM account ORDER BY id`)
       .all() as Account[];
   }
 

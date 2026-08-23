@@ -1666,18 +1666,25 @@
                     </div>
                   </div>
                   <div class="kh-card" style="padding:14px;margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                    <el-input v-model="deviceFilter.phone" placeholder="按家长手机号筛选（1对多同号多行）" style="width:220px" size="small" clearable></el-input>
                     <el-input v-model="deviceAdd.sn" placeholder="设备 SN（BJP003 + 14 位数字）" style="width:260px;font-family:monospace" size="small"></el-input>
                     <el-input v-model="deviceAdd.note" placeholder="备注（如：川哥真机 / 测试机2）" style="width:220px" size="small"></el-input>
                     <el-button size="small" type="primary" :loading="deviceData.loading" @click="addDevice">添加设备</el-button>
                     <span style="font-size:12px;color:#909399">添加后默认启用；env 存量设备添加进台账即由台账接管（停用可压制）</span>
                   </div>
                   <div class="kh-card" style="overflow:hidden;margin-bottom:16px">
-                    <el-table :data="deviceData.devices" style="width:100%" :empty-text="deviceData.loading ? '加载中...' : '台账为空（env 兜底设备见下方）'">
+                    <el-table :data="filteredDevices" style="width:100%" :empty-text="deviceData.loading ? '加载中...' : (deviceFilter.phone ? '无匹配该手机号的设备' : '台账为空（env 兜底设备见下方）')">
                       <el-table-column label="设备 SN" width="200">
                         <template #default="{row}"><span style="font-family:monospace;font-weight:700">{{ row.sn }}</span></template>
                       </el-table-column>
                       <el-table-column label="备注" min-width="150">
                         <template #default="{row}"><el-input v-model="row.note" size="small" placeholder="点此备注" @change="saveDeviceNote(row)"></el-input></template>
+                      </el-table-column>
+                      <el-table-column label="绑定家长" width="140">
+                        <template #default="{row}">
+                          <span v-if="row.parent_phone" style="font-family:monospace;font-weight:600">{{ row.parent_phone }}</span>
+                          <span v-else style="color:#C0C4CC">—</span>
+                        </template>
                       </el-table-column>
                       <el-table-column label="状态" width="90">
                         <template #default="{row}"><el-switch :model-value="row.status" active-value="active" inactive-value="disabled" @change="toggleDeviceStatus(row, $event)"></el-switch></template>
@@ -4170,6 +4177,12 @@
         var inviteList = reactive({ items: [], count: 0, loading: false });
         // ── 设备接入（devices tab，仅 admin；API 见 server routes/admin-data.ts /devices*）──
         var deviceData = reactive({ devices: [], envAllow: [], stats: { today_ok: 0, today_rejected: 0 }, loading: false });
+        var deviceFilter = reactive({ phone: '' }); // 绑定家长筛选(1对多:同号多行)
+        var filteredDevices = computed(function(){
+          var q = (deviceFilter.phone || '').trim();
+          if (!q) return deviceData.devices;
+          return deviceData.devices.filter(function(d){ return (d.parent_phone || '').indexOf(q) >= 0; });
+        });
         // worker 运行态（容量 = LiveKit 活跃房 vs WORKER_MAX_JOBS；机器资源 = 64.90 只读 stats）
         var workerStats = reactive({ machine: null, capacity: null, loading: false });
         function loadWorkerStats() {
@@ -6012,7 +6025,7 @@
           inviteList: inviteList,
           loadConversationHistory: loadConversationHistory, loadChildProfiles: loadChildProfiles,
           loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
-          deviceData: deviceData, deviceAdd: deviceAdd, deviceSessions: deviceSessions, credDialog: credDialog,
+          deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
           ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaPause: otaPause, otaDelete: otaDelete,
           devcfg: devcfg, devcfgKey0: devcfgKey0, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,

@@ -141,7 +141,12 @@ adminDataRoute.patch('/invites/:code', async (c) => {
 // 台账列表 + env 兜底设备 + 今日统计
 adminDataRoute.get('/devices', (c) => {
   try {
-    const devices = deviceRegistryStore.list();
+    // 绑定家长可视化（2026-08-23）：join 家长账号手机号（admin 内部台，显示全号便于核对；
+    // 手机号只出现在 admin 鉴权接口，不进 worker 日志/普通用户接口）
+    const devices = deviceRegistryStore.list().map((d) => ({
+      ...d,
+      parent_phone: d.parent_account_id ? (accountStore.findAccount(d.parent_account_id)?.phone ?? null) : null,
+    }));
     const envAllow = (process.env.DEVICE_SN_ALLOW || '')
       .split(',')
       .map((s) => s.trim())
