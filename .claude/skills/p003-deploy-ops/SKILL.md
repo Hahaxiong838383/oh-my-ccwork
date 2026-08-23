@@ -135,6 +135,15 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **测试**:`npm run test:pairing`(49 项);验收期解绑 0010 第一轮只清 parent_account_id
   (数据零丢失,brain id 确定性重挂);测试家长账号点对点给不入文档。
 
+## 小可称呼/人设排查（2026-08-23 沉淀）
+
+- 现象「改了称呼不生效/叫回旧称呼」四步：①**先全量搜历史对话**定位第一次改称呼时刻
+  （`conversation` 表 rg `称呼|叫我|别叫`,全量非截断）——体验窗可能横跨抽取链路上线时刻(8-19)
+  ②查画像终态 `family_member.nickname`(profile.db,称呼全走 nickname,preferred_address 恒空)
+  ③查 `device_registry.worldview_override` 首句有没有写死称呼词(与画像「或」型并存=随机回落)
+  ④生产对撞 `buildDeviceLayers` 的 final:判据=含「一律叫 ta「X」」指令行+无写死称呼残留。
+- DB 文本替换引号形态是待验事实(弯vs直引号),先 JSON.stringify 看真实字节或用正则兜任意引号。
+
 ## 凭证/链接（指针,secret 绝不入 skill）
 
 - 三端链接见上表。admin 登录 `admin / ⟨STUDIO_PASS 见生产 /opt/p003/server/.env.local⟩`。
