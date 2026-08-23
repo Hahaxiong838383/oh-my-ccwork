@@ -4,6 +4,7 @@ import { StatusBar } from './components/chrome';
 import PairingFlow from './pages/PairingFlow';
 import ProfileSetupFlow from './pages/ProfileSetupFlow';
 import InviteLoginPage from './pages/InviteLoginPage';
+import PairBindPage, { parsePairHash, type PairParams } from './pages/PairBindPage';
 import { calcAge } from './pages/ProfileSheet';
 import { getDevice, getProfile, type DeviceInfo, type Profile } from './api';
 
@@ -362,13 +363,18 @@ export default function App() {
   const [loggedIn, setLoggedIn] = useState(() => Boolean(sessionStorage.getItem('parent.token')));
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [flow, setFlow] = useState<FlowKey | null>(null);
+  // 配网绑定深链（设备屏二维码 → #/pair?v=2&sn=…&nonce=…&pk=…）：启动时解析一次；
+  // 未登录先走登录（onLogin 后 pairParams 仍在，自然落入绑定页）。
+  const [pairParams, setPairParams] = useState<PairParams | null>(() => parsePairHash(window.location.hash));
   const activeTitle = useMemo(() => tabs.find((tab) => tab.key === activeTab)?.title ?? '家长端', [activeTab]);
 
   return (
     <div className="flex min-h-[100dvh] justify-center bg-slate-100 md:items-center md:px-3 md:py-6">
       <div className="relative h-[100dvh] w-full max-w-[440px] overflow-hidden bg-page-bg md:h-[844px] md:w-[390px] md:max-w-none md:rounded-[42px] md:border-[10px] md:border-slate-950 md:shadow-phone">
         {!loggedIn ? (
-          <InviteLoginPage onLogin={() => { setLoggedIn(true); setFlow('pairing'); }} />
+          <InviteLoginPage onLogin={() => { setLoggedIn(true); if (!parsePairHash(window.location.hash)) setFlow('pairing'); }} />
+        ) : pairParams ? (
+          <PairBindPage params={pairParams} onDone={() => { window.location.hash = ''; setPairParams(null); setFlow(null); }} />
         ) : flow === 'pairing' ? (
           <PairingFlow onExit={() => setFlow(null)} />
         ) : flow === 'profile' ? (

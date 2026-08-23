@@ -82,6 +82,39 @@ profileRoute.get('/device', (c) => {
 
 const BindSnSchema = z.object({ sn: z.string().trim().min(1).max(30) });
 
+/**
+ * SN 绑定核心序列（bind-sn 路由与配网 claim 共用，联调合同 v3 §2.3）：
+ * 防抢绑 → 家长关联 → brain 自动开通 → 档案同步。调用方负责 SN 格式校验与大写化。
+ * 返回结构化结果，两个入口各自映射 HTTP 错误码（bind-sn: 404/409；claim: 403/409）。
+ */
+export function performSnBinding(
+  parentAccountId: string,
+  sn: string,
+):
+  | { ok: true; brainAccountId: string; syncedProfile: boolean; alreadyBound: boolean }
+  | { ok: false; error: 'sn_not_available' | 'sn_taken' } {
+  const device = deviceRegistryStore.get(sn);
+  if (!device || device.status !== 'active') return { ok: false, error: 'sn_not_available' };
+  if (device.parent_account_id && device.parent_account_id !== parentAccountId) {
+    return { ok: false, error: 'sn_taken' };
+  }
+  const alreadyBound = device.parent_account_id === parentAccountId; // 同家长重绑（幂等语义，v3 矩阵第 4 行）
+  deviceRegistryStore.setParentAccountId(sn, parentAccountId);
+  // 绑定即接入大脑：未开通 brain 的设备自动开通（建 device 账号 + 关联 + 建档）
+  let brainAccountId = device.account_id;
+  if (!brainAccountId) {
+    brainAccountId = accountStore.createDeviceAccount(sn, device.note).id;
+    deviceRegistryStore.setAccountId(sn, brainAccountId);
+  }
+  // 建档下发：设备账号无档 → 从家长档同步；家长也无档 → 空档兜底
+  let syncedProfile = false;
+  if (brainAccountId && !profileStore.getProfile(brainAccountId)) {
+    syncedProfile = Boolean(profileStore.copyProfile(parentAccountId, brainAccountId));
+    if (!syncedProfile) profileStore.upsertProfile(brainAccountId, { nickname: '', birthday: '', gender: '' });
+  }
+  return { ok: true, brainAccountId, syncedProfile, alreadyBound };
+}
+
 profileRoute.post('/bind-sn', async (c) => {
   let body: unknown;
   try {
@@ -93,32 +126,18 @@ profileRoute.post('/bind-sn', async (c) => {
   if (!parsed.success) return c.json({ ok: false, error: 'bad_request' }, 400);
   const sn = parsed.data.sn.toUpperCase();
   if (!validateDeviceSn(sn).ok) return c.json({ ok: false, error: 'invalid_sn', message: 'SN 格式不正确' }, 400);
-  const device = deviceRegistryStore.get(sn);
-  if (!device || device.status !== 'active') {
-    // 不在台账/已停用统一一种口径（不区分暴露台账内容）
-    return c.json({ ok: false, error: 'sn_not_available', message: '设备不存在或未激活' }, 404);
-  }
   const accountId = c.get('accountId');
-  if (device.parent_account_id && device.parent_account_id !== accountId) {
+  // 核心序列抽为 performSnBinding（与配网 claim 共用）；本路由保持原响应口径不变
+  const r = performSnBinding(accountId, sn);
+  if (!r.ok) {
+    if (r.error === 'sn_not_available') {
+      // 不在台账/已停用统一一种口径（不区分暴露台账内容）
+      return c.json({ ok: false, error: 'sn_not_available', message: '设备不存在或未激活' }, 404);
+    }
     return c.json({ ok: false, error: 'sn_taken', message: '该设备已被其他账号绑定' }, 409);
   }
-  deviceRegistryStore.setParentAccountId(sn, accountId);
-  // 绑定即接入大脑（2026-08-20 配网即绑定 P0）：未开通 brain 的设备自动开通
-  // （与 admin POST /devices/:sn/brain 同序列：建 device 账号 + 关联 + 建档），
-  // 家长自助绑定后设备直接可记忆/认人，无需运营手工开通。
-  let brainAccountId = device.account_id;
-  if (!brainAccountId) {
-    brainAccountId = accountStore.createDeviceAccount(sn, device.note).id;
-    deviceRegistryStore.setAccountId(sn, brainAccountId);
-  }
-  // 建档下发：设备账号无档 → 从家长档同步；家长也无档 → 空档兜底（空档已足以激活记忆抽取）。
-  let syncedProfile = false;
-  if (brainAccountId && !profileStore.getProfile(brainAccountId)) {
-    syncedProfile = Boolean(profileStore.copyProfile(accountId, brainAccountId));
-    if (!syncedProfile) profileStore.upsertProfile(brainAccountId, { nickname: '', birthday: '', gender: '' });
-  }
-  console.log(`[profile] bind-sn account=${accountId} sn=${sn} brain=${brainAccountId} synced_profile=${syncedProfile}`);
-  return c.json({ ok: true, sn, brain_opened: Boolean(brainAccountId), synced_profile: syncedProfile });
+  console.log(`[profile] bind-sn account=${accountId} sn=${sn} brain=${r.brainAccountId} synced_profile=${r.syncedProfile}`);
+  return c.json({ ok: true, sn, brain_opened: Boolean(r.brainAccountId), synced_profile: r.syncedProfile });
 });
 
 // 当前家长账号绑定的硬件设备列表（小程序「我的设备」）

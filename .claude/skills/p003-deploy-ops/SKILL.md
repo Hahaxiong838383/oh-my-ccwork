@@ -117,6 +117,22 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - check 接口:`POST /v1/device/ota/check`(S2B1 设备凭据;测试:服务器 sign-device-credential.ts 签凭据 curl)。
 - 测试:`npm run test:ota`(30 项)。⚠️ 川哥非代码任务:JKS 签名 key 异地加密备份(只在 Studio 构建机)。
 
+## 配网即绑定 v2（2026-08-22 server/H5 上线,真机 Canary 待 codex SoftAP POC）
+
+- **架构**:SoftAP 两阶段(热点码填 WiFi→URL 绑定码扫进 H5)+nonce 桥+ECIES 加密交付;全景真值锚
+  `rg p003_pairing` canonical 记忆。**WiFi 密码不经 H5 不经 server**。
+- **接口**:`POST /api/parent/pairing/confirm`(家长JWT,sn+nonce+pk 三元组固定,pk 真实曲线点校验)/
+  `POST /v1/device/pairing/claim`(pairing_protocol=2,状态码 404 pairing_pending·409 nonce_used·
+  410 nonce_expired)/`GET status?session_id=`。v1(bind_token)开关 `PAIRING_PROTOCOL_V1_ENABLED`
+  默认关,回滚=置 1+restart。
+- **部署**:server 照常 rsync+pm2;parent H5=`npm run build`+rsync --delete(深链页 PairBindPage,
+  生产验证=hash 对撞+`grep pairing/confirm` 产物实锤)。库 pairing.db 两表(v1 token/v2 session,additive)。
+- **密码学坑位**:salt=SHA256(nonce **传输形态字符串** UTF-8,不是解码 bytes);
+  `credential_expires_at_ms` 必须===JWT exp*1000(先取整秒再派生,毫秒尾数差=端上双校验拒);
+  跨语言对撞用 `scripts/fixtures/pairing-ecies-vectors.json`(生成器可重跑自检)。
+- **测试**:`npm run test:pairing`(49 项);验收期解绑 0010 第一轮只清 parent_account_id
+  (数据零丢失,brain id 确定性重挂);测试家长账号点对点给不入文档。
+
 ## 凭证/链接（指针,secret 绝不入 skill）
 
 - 三端链接见上表。admin 登录 `admin / ⟨STUDIO_PASS 见生产 /opt/p003/server/.env.local⟩`。

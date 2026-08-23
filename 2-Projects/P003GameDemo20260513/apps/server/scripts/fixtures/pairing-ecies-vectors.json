@@ -1,0 +1,51 @@
+{
+  "_note": "ECIES-P256-HKDF-SHA256-A256GCM 跨语言测试向量。全部为固定测试值，无生产秘密。",
+  "_contract": "CC_P003_PAIRING_CRYPTO_CONTRACT_20260822 + codex 开工 prompt 2026-08-22",
+  "alg": "ECIES-P256-HKDF-SHA256-A256GCM",
+  "sn_canonical": "BJP00326060100000601",
+  "aad_utf8": {
+    "hex": "424a503030333236303630313030303030363031",
+    "b64url": "QkpQMDAzMjYwNjAxMDAwMDA2MDE"
+  },
+  "pairing_nonce_string": "dGVzdC1ub25jZS0xMjgtYml0LXZlY3Rvcg",
+  "salt_sha256_of_nonce_utf8": {
+    "hex": "110d7f860c39b3ab61363a91c2512498ae2042b096cbfc889341da63304822c0",
+    "b64url": "EQ1_hgw5s6thNjqRwlEkmK4gQrCWy_yIk0HaYzBIIsA"
+  },
+  "hkdf_info_ascii": "p003-pairing-v2",
+  "device_private_key": {
+    "hex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "b64url": "ERERERERERERERERERERERERERERERERERERERERERE"
+  },
+  "device_public_key_compressed": {
+    "hex": "020217e617f0b6443928278f96999e69a23a4f2c152bdf6d6cdf66e5b80282d4ed",
+    "b64url": "AgIX5hfwtkQ5KCePlpmeaaI6TywVK99tbN9m5bgCgtTt"
+  },
+  "server_ephemeral_private_key": {
+    "hex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "b64url": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI"
+  },
+  "server_ephemeral_public_key_compressed": {
+    "hex": "03d65a93977caa3d1b081852ff57a79e465f1660577304baead505dd3a48589cf3",
+    "b64url": "A9Zak5d8qj0bCBhS_1ennkZfFmBXcwS66tUF3TpIWJzz"
+  },
+  "ecdh_shared_secret": {
+    "hex": "ccfc261f58193c98ca4ad4a53bbac6f0ee29bc4d48438090446908622ca79af6",
+    "b64url": "zPwmH1gZPJjKStSlO7rG8O4pvE1IQ4CQRGkIYiynmvY"
+  },
+  "hkdf_output_aes_key": {
+    "hex": "a842f706a30b5f6276f71a1a73062ab17d116f5b126f4e93211f20dde342c9d1",
+    "b64url": "qEL3BqMLX2J29xoacwYqsX0Rb1sSb06TIR8g3eNCydE"
+  },
+  "iv": {
+    "hex": "a0a1a2a3a4a5a6a7a8a9aaab",
+    "b64url": "oKGio6Slpqeoqaqr"
+  },
+  "jwt_plaintext_utf8": "eyJhbGciOiJIUzI1NiJ9.eyJraW5kIjoicDAwMy1kZXZpY2UiLCJzdWIiOiJURVNULU9OTFkifQ.TEST-ONLY-NOT-A-REAL-CREDENTIAL",
+  "ciphertext_with_tag": {
+    "hex": "524689fb52c9d4c1e38e03e72080ef2e6c64538137fce575c47fc6b30e2f986eb214d6345f4e984b467ec5a660aa968d2e541c73b7c0d5f328ea85f69452e4436fb54604371d090728734062f580fbe9cd580b2ba58d93e02dac2b81aa570790f1b0bdfd8c737fd6af496f3e8b7fc3318c40940d831b32af89dabe",
+    "b64url": "UkaJ-1LJ1MHjjgPnIIDvLmxkU4E3_OV1xH_Gsw4vmG6yFNY0X06YS0Z-xaZgqpaNLlQcc7fA1fMo6oX2lFLkQ2-1RgQ3HQkHKHNAYvWA--nNWAsrpY2T4C2sK4GqVweQ8bC9_Yxzf9avSW8-i3_DMYxAlA2DGzKvidq-"
+  },
+  "gcm_tag_is_last_16_bytes": true,
+  "self_check": "decrypt(ciphertext) === jwt_plaintext 已在生成时验证"
+}

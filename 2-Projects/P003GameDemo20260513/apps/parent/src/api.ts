@@ -65,3 +65,35 @@ export async function bindSn(sn: string): Promise<BindSnResult> {
   if (res.ok && data.ok) return data;
   return { ok: false, message: data.message ?? '绑定失败，请稍后再试' };
 }
+
+// ── 配网 v2（nonce 桥，联调合同 CC_P003_PAIRING_V4 + codex 开工 prompt 2026-08-22）──
+// confirm：把设备屏二维码里的 SN+nonce+pk 与当前家长账号一次性关联；
+// status：轮询设备 claim 进度。结构化错误不抛（页面按 code 分支文案）。
+
+export type ConfirmResult = { ok: boolean; session_id?: string; error?: string };
+export async function confirmPairing(sn: string, nonce: string, pk: string): Promise<ConfirmResult> {
+  const token = getToken();
+  const res = await fetch('/api/parent/pairing/confirm', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ sn, nonce, pk, pairing_protocol: 2 }),
+  });
+  if (res.status === 401) {
+    sessionStorage.removeItem(TOKEN_KEY);
+    throw new Error('unauthorized');
+  }
+  return (await res.json().catch(() => ({ ok: false, error: 'bad_response' }))) as ConfirmResult;
+}
+
+export type PairingState = 'pending' | 'bound' | 'initializing' | 'expired';
+export async function getPairingStatus(sessionId: string): Promise<{ ok: boolean; state?: PairingState; sn?: string }> {
+  const token = getToken();
+  const res = await fetch(`/api/parent/pairing/status?session_id=${encodeURIComponent(sessionId)}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) {
+    sessionStorage.removeItem(TOKEN_KEY);
+    throw new Error('unauthorized');
+  }
+  return (await res.json().catch(() => ({ ok: false }))) as { ok: boolean; state?: PairingState; sn?: string };
+}
