@@ -6,7 +6,7 @@ import ProfileSetupFlow from './pages/ProfileSetupFlow';
 import InviteLoginPage from './pages/InviteLoginPage';
 import PairBindPage, { parsePairHash, type PairParams } from './pages/PairBindPage';
 import { calcAge } from './pages/ProfileSheet';
-import { getDevice, getProfile, hasValidToken, type DeviceInfo, type Profile } from './api';
+import { clearAuthToken, getDevice, getProfile, hasValidToken, type DeviceInfo, type Profile } from './api';
 
 type TabKey = 'home' | 'report' | 'kidshub' | 'mine';
 type FlowKey = 'pairing' | 'profile';
@@ -313,7 +313,7 @@ function KidsHubPage() {
   );
 }
 
-function MinePage({ onStartFlow }: { onStartFlow: (flow: FlowKey) => void }) {
+function MinePage({ onStartFlow, onLogout }: { onStartFlow: (flow: FlowKey) => void; onLogout: () => void }) {
   return (
     <div className="space-y-4">
       <Card>
@@ -354,7 +354,7 @@ function MinePage({ onStartFlow }: { onStartFlow: (flow: FlowKey) => void }) {
         ))}
       </Card>
 
-      <button className="h-12 w-full rounded-2xl bg-white font-bold text-red-500 shadow-card" type="button">退出登录</button>
+      <button className="h-12 w-full rounded-2xl bg-white font-bold text-red-500 shadow-card" onClick={onLogout} type="button">退出登录</button>
     </div>
   );
 }
@@ -386,7 +386,18 @@ export default function App() {
               {activeTab === 'home' && <HomePage onStartFlow={setFlow} />}
               {activeTab === 'report' && <ReportPage />}
               {activeTab === 'kidshub' && <KidsHubPage />}
-              {activeTab === 'mine' && <MinePage onStartFlow={setFlow} />}
+              {activeTab === 'mine' && (
+                <MinePage
+                  onStartFlow={setFlow}
+                  onLogout={() => {
+                    // 退出登录：清 token（localStorage+sessionStorage 两处）→ 回登录页（重置 tab/flow）
+                    clearAuthToken();
+                    setLoggedIn(false);
+                    setActiveTab('home');
+                    setFlow(null);
+                  }}
+                />
+              )}
             </main>
             <TabBar activeTab={activeTab} onChange={setActiveTab} />
           </>

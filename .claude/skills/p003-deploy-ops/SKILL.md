@@ -89,6 +89,8 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 
 10. **parent dist 多写者覆盖事故**(2026-08-23,详见记忆 feedback_operation_scope_exceeds_verified_scope):codex 当天 11:30 直推过他的联调构建(带 workbox PWA),cc 按旧 SOP `rsync --delete` 部署把它整套删了(服务器零残骸不可恢复,只能 codex 重出)。**同源核对只覆盖自己改的文件,挡不住 --delete 的全目录删除面**;deleting 输出被 `tail`/`-q` 吞=破坏无痕。取证法:**nginx `p003-access.log` 是被删静态资产的尸检报告**——bundle hash 文件名的首次/末次出现+状态码(200→304→消失)钉死第三方构建的上线与死亡时刻(`grep "index-XXX" /var/log/nginx/p003-access.log`)。另:codex 构建若再带 PWA/workbox=SW 劫持事故(坑#3 同 origin 第三次)前兆,发现即挑明。
 
+11. **「部署成功但客户端停旧版」排查树**(2026-08-23,薄壳退出登录无反应轮):三种机制症状同形——①旧 PWA SW 离线回放(坑#3,grep registerSW/workbox) ②**index.html 无 Cache-Control=启发式缓存**(基于 Last-Modified 的 10%,WebView 可长期用旧 html;且 dist 部署禁 --delete 后旧 bundle 仍在,旧 html 完全可用=**零报错地停旧版**) ③客户端内嵌 dist(APK 打包,必须重发版)。已治本②:p003 nginx SPA 缓存策略——`/`、`/index.html`、`/sw.js` 一律 `no-cache`,hashed js/css `30d+immutable`(备份 /root/p003.nginx.bak-cache-headers-20260823);**新站配 nginx 时入口 html 必配 no-cache**,否则每次部署都欠一批存量客户端的强刷。验证:`curl -sI <站点>/ | grep -i cache-control`。
+
 ## 验证铁律（cc 自己验,绝不甩给川哥）
 
 - **后端改**:本地起 server(parent 任务用 8787 / web·admin 任务用 3001)→ `curl` 真实 API E2E(login→操作→验证→**恢复不污染本地 db**)。
