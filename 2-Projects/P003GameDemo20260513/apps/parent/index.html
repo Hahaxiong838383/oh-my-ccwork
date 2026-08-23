@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#F5F5F7" />
     <title>P003 家长端</title>
-  </head>
+    <script>
+    // 保险清扫：曾被体验台 PWA 接管的浏览器，进入家长端即注销全部 SW（家长端不用 SW）
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});
+    }
+  </script>
+</head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
