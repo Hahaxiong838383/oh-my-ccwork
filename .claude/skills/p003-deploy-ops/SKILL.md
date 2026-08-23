@@ -126,7 +126,8 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   410 nonce_expired)/`GET status?session_id=`。v1(bind_token)开关 `PAIRING_PROTOCOL_V1_ENABLED`
   默认关,回滚=置 1+restart。
 - **部署**:server 照常 rsync+pm2;parent H5=`npm run build`+rsync --delete(深链页 PairBindPage,
-  生产验证=hash 对撞+`grep pairing/confirm` 产物实锤)。库 pairing.db 两表(v1 token/v2 session,additive)。
+  生产验证=hash 对撞+`grep pairing/confirm` 产物实锤);**2026-08-23 起家长端在 p003.hahaxiong.cc 根路径**(vite base='/',
+  nginx root 指 parent/dist,旧 /parent/* 301 且 fragment 保留,体验台走 kidshub-ai 域名)。库 pairing.db 两表(v1 token/v2 session,additive)。
 - **密码学坑位**:salt=SHA256(nonce **传输形态字符串** UTF-8,不是解码 bytes);
   `credential_expires_at_ms` 必须===JWT exp*1000(先取整秒再派生,毫秒尾数差=端上双校验拒);
   跨语言对撞用 `scripts/fixtures/pairing-ecies-vectors.json`(生成器可重跑自检)。
