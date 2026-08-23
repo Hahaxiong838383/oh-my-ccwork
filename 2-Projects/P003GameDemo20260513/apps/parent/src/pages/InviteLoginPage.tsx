@@ -1,12 +1,12 @@
 // 家长端登录门（小程序暖橙风）：
 //  - 手机号 + 短信验证码（默认主路径，2026-08-20，阿里云托管核验）→ /api/auth/sms/send + /sms/verify
 //  - 邀请码登录（内测通道保留，两步：输码 → 仿微信授权）→ /api/auth/invite
-// 两种方式发的 JWT 同 secret 同姿势，成功都存 sessionStorage 'parent.token' → 进主界面。
+// 两种方式发的 JWT 同 secret 同姿势，成功都经 api.saveAuthToken 存 localStorage（持久登录）→ 进主界面。
 
 import { useEffect, useRef, useState } from 'react';
 import { StatusBar } from '../components/chrome';
+import { saveAuthToken } from '../api';
 
-const TOKEN_KEY = 'parent.token';
 const CODE_KEY = 'parent.invite_code'; // 记住上次邀请码(localStorage),内测免反复输
 const PHONE_KEY = 'parent.phone'; // 记住上次手机号,回访免重输
 
@@ -72,7 +72,10 @@ function PhoneLogin({ onLogin }: { onLogin: () => void }) {
         startCountdown(60);
       } else if (res.status === 429) {
         setError(data.message ?? '发送太频繁，请稍后再试');
-        startCountdown(Math.min(data.retry_after_s ?? 60, 60));
+        // retry_after_s 是服务端算好的真实解锁秒数（此前 cap 60s → 按钮 60s 后恢复可点、
+        // 再点又 429，形成「一直太频繁」死循环）。小时窗内跟着倒计时；日窗（>1h）只留文案不锁按钮。
+        const retry = data.retry_after_s ?? 60;
+        if (retry <= 3600) startCountdown(retry);
       } else {
         setError(data.message ?? '发送失败，请稍后再试');
       }
@@ -98,7 +101,7 @@ function PhoneLogin({ onLogin }: { onLogin: () => void }) {
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; token?: string; message?: string };
       if (res.ok && data.ok && data.token) {
-        sessionStorage.setItem(TOKEN_KEY, data.token);
+        saveAuthToken(data.token);
         localStorage.setItem(PHONE_KEY, phone.trim());
         onLogin();
       } else {
@@ -145,7 +148,13 @@ function PhoneLogin({ onLogin }: { onLogin: () => void }) {
               onClick={() => void sendCode()}
               type="button"
             >
-              {countdown > 0 ? `${countdown}s 后重发` : sending ? '发送中…' : '获取验证码'}
+              {countdown >= 120
+                ? `${Math.ceil(countdown / 60)} 分钟后重发`
+                : countdown > 0
+                  ? `${countdown}s 后重发`
+                  : sending
+                    ? '发送中…'
+                    : '获取验证码'}
             </button>
           </div>
         </div>
@@ -197,7 +206,7 @@ function InviteLogin({ onLogin }: { onLogin: () => void }) {
       });
       const data = (await res.json().catch(() => ({}))) as { token?: string };
       if (res.ok && data.token) {
-        sessionStorage.setItem(TOKEN_KEY, data.token);
+        saveAuthToken(data.token);
         localStorage.setItem(CODE_KEY, trimmed); // 记住邀请码,下次自动填充
         onLogin();
       } else {

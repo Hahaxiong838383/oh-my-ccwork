@@ -14,6 +14,13 @@ import { DatabaseSync } from 'node:sqlite';
  *  - 同号小时上限 SMS_LIMIT_PER_HOUR（默认 5）
  *  - 同号日上限 SMS_LIMIT_PER_DAY（默认 10）
  *  - 同 IP 日上限 SMS_LIMIT_IP_PER_DAY（默认 20）
+ *
+ * retry_after_s 为真实剩余秒数（窗口内最老一条滚出的时刻），不是窗口全长——
+ * 前端拿它做倒计时，报窗口全长会把等待时间夸大近一个量级（2026-08-23 联调实撞）。
+ *
+ * SMS_TEST_PHONE_ALLOWLIST（逗号分隔全号，生产 .env.local 配置，不进 git）：
+ * 联调测试号跳过额度窗（小时/日/IP）；60s 间隔窗保留（对齐阿里云平台同号
+ * 1条/分钟 频控，本地放行也会被 biz.FREQUENCY 拒）。公网其余号防刷照旧。
  */
 
 export type SmsLimitVerdict =
@@ -67,8 +74,29 @@ class SmsLimitStore {
     return row?.created_at ?? null;
   }
 
+  /** 窗口内最老一条的时间（用于算真实解锁时刻：最老一条滚出窗口即降到上限以下）。 */
+  private oldestSince(col: 'phone' | 'ip', value: string, sinceMs: number): number | null {
+    const row = this.db
+      .prepare(`SELECT MIN(created_at) AS t FROM sms_send_log WHERE ${col} = ? AND created_at >= ?`)
+      .get(value, sinceMs) as { t: number | null } | undefined;
+    return row?.t ?? null;
+  }
+
+  private retryAfterS(oldestMs: number | null, windowMs: number, now: number): number {
+    if (oldestMs === null) return Math.ceil(windowMs / 1000); // 理论不可达（计数≥上限必有最老条），兜底窗口全长
+    return Math.max(1, Math.ceil((oldestMs + windowMs - now) / 1000));
+  }
+
+  private isAllowlisted(phone: string): boolean {
+    const raw = process.env.SMS_TEST_PHONE_ALLOWLIST ?? '';
+    if (!raw.trim()) return false;
+    return raw.split(',').some((s) => s.trim() === phone);
+  }
+
   /** 发送前限流裁决（不写库；通过后实际发送成功才 record）。 */
   check(phone: string, ip: string, now = Date.now()): SmsLimitVerdict {
+    // 60s 间隔对所有号生效（含白名单）：对齐阿里云平台同号 1条/分钟 频控——本地不拦
+    // 请求打过去也被 biz.FREQUENCY 拒（502 干等），本地 429 反而有准确倒计时（川哥 2026-08-23 拍板）
     const intervalS = envInt('SMS_SEND_INTERVAL_S', 60);
     if (intervalS > 0) {
       const last = this.lastSentAt(phone);
@@ -76,17 +104,31 @@ class SmsLimitStore {
         return { ok: false, reason: 'interval', retry_after_s: Math.ceil((intervalS * 1000 - (now - last)) / 1000) };
       }
     }
+    // 联调测试号：跳过额度窗（小时/日/IP），高频测试不受限；发送仍 record 流水，审计不缺账
+    if (this.isAllowlisted(phone)) return { ok: true };
     const perHour = envInt('SMS_LIMIT_PER_HOUR', 5);
-    if (perHour > 0 && this.countSince('phone', phone, now - 3600_000) >= perHour) {
-      return { ok: false, reason: 'phone_hour', retry_after_s: 3600 };
+    if (perHour > 0) {
+      const since = now - 3600_000;
+      if (this.countSince('phone', phone, since) >= perHour) {
+        const retry = this.retryAfterS(this.oldestSince('phone', phone, since), 3600_000, now);
+        return { ok: false, reason: 'phone_hour', retry_after_s: retry };
+      }
     }
     const perDay = envInt('SMS_LIMIT_PER_DAY', 10);
-    if (perDay > 0 && this.countSince('phone', phone, now - 86400_000) >= perDay) {
-      return { ok: false, reason: 'phone_day', retry_after_s: 86400 };
+    if (perDay > 0) {
+      const since = now - 86400_000;
+      if (this.countSince('phone', phone, since) >= perDay) {
+        const retry = this.retryAfterS(this.oldestSince('phone', phone, since), 86400_000, now);
+        return { ok: false, reason: 'phone_day', retry_after_s: retry };
+      }
     }
     const ipPerDay = envInt('SMS_LIMIT_IP_PER_DAY', 20);
-    if (ipPerDay > 0 && ip && this.countSince('ip', ip, now - 86400_000) >= ipPerDay) {
-      return { ok: false, reason: 'ip_day', retry_after_s: 86400 };
+    if (ipPerDay > 0 && ip) {
+      const since = now - 86400_000;
+      if (this.countSince('ip', ip, since) >= ipPerDay) {
+        const retry = this.retryAfterS(this.oldestSince('ip', ip, since), 86400_000, now);
+        return { ok: false, reason: 'ip_day', retry_after_s: retry };
+      }
     }
     return { ok: true };
   }

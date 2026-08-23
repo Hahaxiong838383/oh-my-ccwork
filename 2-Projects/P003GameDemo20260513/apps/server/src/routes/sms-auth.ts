@@ -18,7 +18,7 @@ import { sendSmsVerifyCode, checkSmsVerifyCode } from '../aliyun-sms.js';
 
 const JWT_ISSUER = 'p003';
 const JWT_AUDIENCE = 'kidshub';
-const JWT_TTL = '7d';
+const JWT_TTL = '30d'; // 持久登录(川哥 2026-08-23):家长端 token 存 localStorage,30 天免重登
 const DEFAULT_AUTH_SECRET = 'dev-secret-change-me';
 
 const PHONE_RE = /^1[3-9]\d{9}$/;
@@ -56,8 +56,18 @@ smsAuthRoute.post('/sms/send', async (c) => {
 
   const verdict = smsLimitStore.check(phone, ip);
   if (!verdict.ok) {
+    // 限流拒绝必留痕（此前零日志，排障只能翻 sms.db 反推命中哪窗，2026-08-23）
+    console.warn(
+      `[sms-auth] rate_limited phone=****${phone.slice(-4)} reason=${verdict.reason} retry_after_s=${verdict.retry_after_s}`,
+    );
+    const message =
+      verdict.reason === 'interval'
+        ? `发送太频繁，请 ${verdict.retry_after_s} 秒后再试`
+        : verdict.reason === 'phone_hour'
+          ? `本小时发送次数已达上限，请约 ${Math.ceil(verdict.retry_after_s / 60)} 分钟后再试`
+          : '今日发送次数已达上限，请明天再试';
     return c.json(
-      { ok: false, error: 'rate_limited', message: '发送太频繁，请稍后再试', retry_after_s: verdict.retry_after_s },
+      { ok: false, error: 'rate_limited', reason: verdict.reason, message, retry_after_s: verdict.retry_after_s },
       429,
     );
   }
@@ -65,9 +75,20 @@ smsAuthRoute.post('/sms/send', async (c) => {
   try {
     const result = await sendSmsVerifyCode(phone);
     if (!result.ok) {
-      // 阿里云侧拒绝（频控/黑名单/额度等）：机器码进日志，用户拿统一友好口径
+      // 阿里云侧拒绝：机器码进日志，用户拿友好口径。
+      // biz.FREQUENCY 特化（平台防盗刷频控，本地白名单救不了，控制台白名单可解）——
+      // 高频测试期主要撞这个，含糊文案会被误判成服务故障（2026-08-23）。
       console.warn(`[sms-auth] send rejected phone=****${phone.slice(-4)} code=${result.code}`);
-      return c.json({ ok: false, error: 'send_failed', message: '发送失败，请稍后再试' }, 502);
+      const isFreq = result.code === 'biz.FREQUENCY';
+      return c.json(
+        {
+          ok: false,
+          error: 'send_failed',
+          reason: isFreq ? 'aliyun_frequency' : undefined,
+          message: isFreq ? '触发运营商侧频率限制，请 1 分钟后再试' : '发送失败，请稍后再试',
+        },
+        502,
+      );
     }
     smsLimitStore.record(phone, ip, result.bizId ?? '');
     console.log(`[sms-auth] sent phone=****${phone.slice(-4)} biz=${result.bizId ?? ''}`);

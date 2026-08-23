@@ -1,5 +1,6 @@
 // 家长端 → 后端 API（登录态 + 建档/配网写入 + 读档案/设备）。
-// token 由 InviteLoginPage 登录后存 sessionStorage 'parent.token'；本模块只读取，不再自动登录。
+// token 统一由本模块管理，存 localStorage 'parent.token'（持久登录，关页不丢——
+// 川哥 2026-08-23「自动记住认证信息，避免每次都要发短信/填邀请码」）。
 // 走 vite proxy /api → 后端 server。
 
 const TOKEN_KEY = 'parent.token';
@@ -7,8 +8,44 @@ const TOKEN_KEY = 'parent.token';
 export type Profile = { id: string; nickname: string; birthday: string; gender: string };
 export type DeviceInfo = { id: string; model: string; name: string };
 
+/** 登录成功后保存 token（InviteLoginPage 两条登录链路共用）。 */
+export function saveAuthToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearAuthToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY); // 旧版本存这里，一并清防残留
+}
+
+/** JWT exp 已过或格式坏 → true（payload 是 base64url 无 padding，atob 前须补齐）。 */
+function tokenExpired(t: string): boolean {
+  try {
+    const b64 = (t.split('.')[1] ?? '').replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4))) as { exp?: number };
+    return typeof payload.exp === 'number' && payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
+/** 启动时判断登录态：本地有未过期 token 才算已登录；过期/坏 token 当场清掉。 */
+export function hasValidToken(): boolean {
+  // 旧版本存 sessionStorage：刷新升级的页面顺手迁移，免一次重登
+  const legacy = sessionStorage.getItem(TOKEN_KEY);
+  if (legacy && !localStorage.getItem(TOKEN_KEY)) localStorage.setItem(TOKEN_KEY, legacy);
+  sessionStorage.removeItem(TOKEN_KEY);
+  const t = localStorage.getItem(TOKEN_KEY);
+  if (!t) return false;
+  if (tokenExpired(t)) {
+    clearAuthToken();
+    return false;
+  }
+  return true;
+}
+
 function getToken(): string {
-  const t = sessionStorage.getItem(TOKEN_KEY);
+  const t = localStorage.getItem(TOKEN_KEY);
   if (!t) throw new Error('not logged in');
   return t;
 }
@@ -20,7 +57,7 @@ async function authed(path: string, init?: RequestInit): Promise<unknown> {
     headers: { ...(init?.headers ?? {}), authorization: `Bearer ${token}` },
   });
   if (res.status === 401) {
-    sessionStorage.removeItem(TOKEN_KEY); // token 过期/失效 → 清除，下次启动回登录页
+    clearAuthToken(); // token 过期/失效 → 清除，下次启动回登录页
     throw new Error('unauthorized');
   }
   if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
@@ -58,7 +95,7 @@ export async function bindSn(sn: string): Promise<BindSnResult> {
     body: JSON.stringify({ sn }),
   });
   if (res.status === 401) {
-    sessionStorage.removeItem(TOKEN_KEY);
+    clearAuthToken();
     throw new Error('unauthorized');
   }
   const data = (await res.json().catch(() => ({}))) as BindSnResult & { error?: string };
@@ -79,7 +116,7 @@ export async function confirmPairing(sn: string, nonce: string, pk: string): Pro
     body: JSON.stringify({ sn, nonce, pk, pairing_protocol: 2 }),
   });
   if (res.status === 401) {
-    sessionStorage.removeItem(TOKEN_KEY);
+    clearAuthToken();
     throw new Error('unauthorized');
   }
   return (await res.json().catch(() => ({ ok: false, error: 'bad_response' }))) as ConfirmResult;
@@ -92,7 +129,7 @@ export async function getPairingStatus(sessionId: string): Promise<{ ok: boolean
     headers: { authorization: `Bearer ${token}` },
   });
   if (res.status === 401) {
-    sessionStorage.removeItem(TOKEN_KEY);
+    clearAuthToken();
     throw new Error('unauthorized');
   }
   return (await res.json().catch(() => ({ ok: false }))) as { ok: boolean; state?: PairingState; sn?: string };

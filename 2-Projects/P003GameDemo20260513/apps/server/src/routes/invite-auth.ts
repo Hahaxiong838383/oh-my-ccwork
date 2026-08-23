@@ -4,7 +4,7 @@ import { accountStore } from '../account-store.js';
 
 const JWT_ISSUER = 'p003';
 const JWT_AUDIENCE = 'kidshub';
-const JWT_TTL = '7d';
+const JWT_TTL = '30d'; // 持久登录(川哥 2026-08-23):家长端 token 存 localStorage,30 天免重登
 const DEFAULT_AUTH_SECRET = 'dev-secret-change-me';
 
 let warnedDefaultSecret = false;

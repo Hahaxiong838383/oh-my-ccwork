@@ -6,7 +6,7 @@ import ProfileSetupFlow from './pages/ProfileSetupFlow';
 import InviteLoginPage from './pages/InviteLoginPage';
 import PairBindPage, { parsePairHash, type PairParams } from './pages/PairBindPage';
 import { calcAge } from './pages/ProfileSheet';
-import { getDevice, getProfile, type DeviceInfo, type Profile } from './api';
+import { getDevice, getProfile, hasValidToken, type DeviceInfo, type Profile } from './api';
 
 type TabKey = 'home' | 'report' | 'kidshub' | 'mine';
 type FlowKey = 'pairing' | 'profile';
@@ -360,7 +360,7 @@ function MinePage({ onStartFlow }: { onStartFlow: (flow: FlowKey) => void }) {
 }
 
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(() => Boolean(sessionStorage.getItem('parent.token')));
+  const [loggedIn, setLoggedIn] = useState(() => hasValidToken()); // localStorage 持久登录,启动验 exp
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [flow, setFlow] = useState<FlowKey | null>(null);
   // 配网绑定深链（设备屏二维码 → #/pair?v=2&sn=…&nonce=…&pk=…）：启动时解析一次；

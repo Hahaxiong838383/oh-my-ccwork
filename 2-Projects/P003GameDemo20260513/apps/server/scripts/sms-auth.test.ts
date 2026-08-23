@@ -121,6 +121,27 @@ eq('send-fmt-5 非 json body 不 500', (await app.request('/api/auth/sms/send', 
     body: JSON.stringify({ phone: '13800000004' }),
   });
   eq('limit-5 IP 日窗 429', res.status, 429);
+
+  // retry_after_s 真实化：注入同一 now 做精确断言（seed 最老一条 now-124s，1h 窗 → 剩 3600-124=3476s）
+  // seed 在上面灌了 5 条：now-120_000 - i*1000（i=0..4），最老 = now-124_000
+  const v = smsLimitStore.check('13800000003', '', now);
+  eq('limit-6 小时窗 retry 为真实剩余秒数', v, { ok: false, reason: 'phone_hour', retry_after_s: 3476 });
+
+  // 测试号白名单：跳过额度窗、60s 间隔保留（对齐阿里云平台同号频控）；移除后额度窗恢复（负向锚，防白名单恒 true）
+  smsLimitStore.record('13800000003', '', 'wl-interval-seed', now); // 该号现 6 条流水，额度窗（5/h）已超
+  process.env.SMS_TEST_PHONE_ALLOWLIST = ' 13800000003 ,13800000099';
+  eq(
+    'limit-7a 白名单间隔窗仍拦',
+    smsLimitStore.check('13800000003', '', now + 1000),
+    { ok: false, reason: 'interval', retry_after_s: 59 },
+  );
+  eq('limit-7b 白名单跳过额度窗', smsLimitStore.check('13800000003', '', now + 61_000), { ok: true });
+  delete process.env.SMS_TEST_PHONE_ALLOWLIST;
+  eq(
+    'limit-8 移除白名单额度窗恢复',
+    (smsLimitStore.check('13800000003', '', now + 61_000) as { ok: boolean; reason?: string }).reason,
+    'phone_hour',
+  );
 }
 
 // ---------- send：阿里云拒绝/未配置 ----------
@@ -144,6 +165,9 @@ let tokenA = '';
   tokenA = r.json.token;
   const auth = await verifyAuthToken(tokenA);
   eq('verify-4 verifyAuthToken 闭环', { accountId: auth?.accountId, role: auth?.role }, { accountId: r.json.account.id, role: 'parent' });
+  // 持久登录 TTL=30d（前端 localStorage 记住登录态，2026-08-23）：exp-iat 精确 30 天
+  const payload = JSON.parse(Buffer.from(tokenA.split('.')[1], 'base64url').toString()) as { iat: number; exp: number };
+  eq('verify-5 token TTL 30 天', payload.exp - payload.iat, 30 * 86400);
   // 幂等：同号再 verify → 同账号，is_new=false
   const r2 = await post('/api/auth/sms/verify', { phone: PHONE_A, code: '654321' });
   eq('verify-5 二登同账号', { id: r2.json.account.id, is_new: r2.json.is_new }, { id: r.json.account.id, is_new: false });
