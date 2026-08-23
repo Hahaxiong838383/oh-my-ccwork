@@ -14,7 +14,7 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 
 | 端 | 公网入口 | 生产路径 | 技术 |
 |---|---|---|---|
-| 家长端 parent | `p003.hahaxiong.cc/parent/` | `/opt/p003/parent/dist`(nginx alias) | 独立 vite,**base=/parent/** |
+| 家长端 parent | `p003.hahaxiong.cc/`(**根路径,2026-08-23 起**;旧 /parent/* 301 兼容 fragment 保留) | `/opt/p003/parent/dist`(nginx root) | 独立 vite,**base='/'**;⚠️ **dist 是多写者面(codex 也直推)** |
 | 体验台 web | `kidshub-ai.hahaxiong.cc/`(+CF `kidshub.chenchuan.cc`) | `/opt/p003/web/dist` | vite SPA,main.tsx 按 hostname `kidshub*`/path `/kidshub-ai` 分流 |
 | admin 后台 | `kidshub-ai.hahaxiong.cc/admin/` | `/opt/p003/web/dist/admin/index.html` | **单 HTML + DOM 内 Vue3 CDN + ElementPlus**,静态子站 |
 | 后端 server(公司侧) | (内网 3001) | `/opt/p003/server` | pm2 `p003-voice`,tsx 直跑 src,`NODE_OPTIONS=--experimental-sqlite`,node:sqlite,**gemini**,全量 13 文件 |
@@ -34,7 +34,11 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 1. **server 改**(src/*.ts):`rsync -az apps/server/src/ aliyun-hk:/opt/p003/server/src/`(增量,不 --delete)→ `ssh aliyun-hk 'pm2 restart p003-voice'`(tsx 直跑,重启即加载新代码)。新增依赖先 `ssh ... 'cd /opt/p003/server && npm i <pkg>'`。新增 scripts/ 要一起 rsync(seed 脚本在 scripts 非 src)。验证 LLM ready 看 `pm2 logs p003-voice | grep LLM:`。
 1b. **个人站 server 同步**(功能要两端时,如 AI 启蒙):个人站 `/opt/kidshub-personal` 是早期精简版(5 文件 / DeepSeek / 无 orchestrator·curriculum·account)→**不同源,绝不能盲 rsync 公司侧 13 文件**(会塞它没有的依赖崩)。做法:① `ssh aliyun-hk` diff 比对 src 同源程度(`grep -c` 关键标志) ② 新文件(纯函数无依赖)直接 `scp` ③ 改 pipeline 等共享文件**手动适配个人站简化版**(`scp` 下来本地 Edit 改回,绕生产直改)+ `_backup/` 备份 ④ `pm2 restart kidshub-voice` + 公网 E2E(`wss://my.chenchuan.cc/ws/voice`)。
 2. **admin 改**(public/admin/index.html):**`git show HEAD:<path>/admin/index.html > /tmp/admin.html` 导出正确版 → `scp /tmp/admin.html aliyun-hk:/opt/p003/web/dist/admin/index.html`**。绕工作区污染(见坑#4),不用 full build(admin 是静态 HTML)。
-3. **parent 改**:`cd apps/parent && npm run build`(base=/parent/ 已固化进 vite.config)→ `rsync -az --delete dist/ aliyun-hk:/opt/p003/parent/dist/`(--delete 清旧 hash chunk)。
+3. **parent 改**(⚠️ 规矩 2026-08-23 改,事故见坑#10):`cd apps/parent && npx vite build`(base='/' 已固化)→ 部署三步走:
+   ① **指纹核对**:`ssh aliyun-hk 'ls /opt/p003/parent/dist/assets/'` 看线上 bundle 是不是**我上次部署的**——出现陌生 hash=有别人(codex)写过,**停手先问川哥**;
+   ② **服务器侧备份**:`ssh aliyun-hk 'cp -r /opt/p003/parent/dist /root/p003-dist-bak-$(date +%Y%m%d-%H%M%S)'`;
+   ③ `rsync -az dist/ aliyun-hk:/opt/p003/parent/dist/`——**永久禁 --delete**(它把「本地没有的文件」全删,验证面只覆盖自己改的文件,删除面是全目录;真要清旧 chunk 先 `rsync -azn --delete` dry-run 看 deleting 列表,全部确认是自己的旧产物才加 --delete 跑一次)。
+   自杀式 `public/sw.js` 永久保留(SW 清场,勿删)。
 4. **web 改**(体验台/分流/admin 随 build):`cd apps/web && npm run build` → `rsync -az --delete dist/ aliyun-hk:/opt/p003/web/dist/`(--delete 清旧 chunk+SW;含 admin/,**注意会覆盖 admin/index.html=用工作区版本**,若工作区被污染先恢复)。
 
 ## S2B1 设备 Session API（2026-08-15 上线,安卓/MCU 设备换 LiveKit token）
@@ -69,7 +73,7 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 ## 坑清单（都踩过,改前必看）
 
 1. **admin DOM 内 Vue 自闭合**:`<el-table-column .../>`/`<el-input .../>` 自闭合→浏览器解析成嵌套**吞掉后续列**布局错乱,**必须成对** `<el-table-column ...></el-table-column>`。`el-tag` 在该 admin CSS 环境**不可见**→用 `<span :style="{color:...}">` inline color。**第二变体(2026-08-18)**:in-DOM 模板属性名被 HTML 解析器小写化——`:viewBox` 动态绑定变 `:viewbox`,SVG 不认(图谱空白);camelCase SVG 属性**静态写**(浏览器 foreign-content 自动修正 case),值是常量就别用 v-bind。模板表达式里也不准写 `function(){}` 与多语句 `if`(用 $event/方法调用)。
-2. **parent base 子路径**:base 必须 `base:'/parent/'` 写进 `vite.config.ts`(别靠命令行 `--base`,换 `npm run build` 就丢)。丢了→HTML 引用 `/assets/*` 被 nginx 根 location SPA fallback 返 index.html(HTML 非 JS)**白屏**。验:`curl <子路径>/assets/<bundle>.js | head -c 40` 看是 JS 还是 `<!doctype`(只看 HTTP 200 会被 fallback 骗)。
+2. **parent base**(2026-08-23 已升根路径 base='/'):base 必须写进 `vite.config.ts`(别靠命令行 `--base`,换 `npm run build` 就丢)。通用教训:base 与 nginx location 不匹配→assets 被 SPA fallback 返 index.html(HTML 非 JS)**白屏**。验:`curl <站点>/assets/<bundle>.js | head -c 40` 看是 JS 还是 `<!doctype`(只看 HTTP 200 会被 fallback 骗)。
 3. **web PWA SW 子路径劫持**:web SW(VitePWA scope `/`)的 `navigateFallbackDenylist`+`globIgnores` 必须含每个同域新子路径(`/admin` `/parent`),否则子路径导航被 SW fallback 到 web 自己的 index.html(浏览器显错页,但 curl 是对的=纯客户端 SW 劫持)。改后 full build 重部署 SW,旧 SW 需无痕窗口/Unregister 才见新效果。
 4. **并行 session 污染**(★ 川哥多 OMC session):工作区文件随时被并行 session 改,**commit 之后也不例外**(替换 gemini API 时误操作碰到 admin 的真实事故)。team/部署关键改动 **commit 后到 build/部署前再 `grep`+`wc -l` 验文件没被改回**;部署关键文件用 `git show HEAD` 导出快照部署绕污染工作区;可疑并行 session(`ps aux|grep claude`)报川哥别擅自 kill。
 5. **nginx `$uri` 转义**:python 三引号写 nginx 配置时 `"""\$uri"""` SyntaxWarning 保留字面 `\$uri`→try_files 全 fallback(JS 请求返 HTML)→`.replace("\\$uri","$uri")` 修。
@@ -82,6 +86,8 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 11. **跨域名 SPA 兜底假 200**(2026-08-20 sms-auth 部署踩):`kidshub-ai.hahaxiong.cc/parent/` 并无此路径,但 web 根 location `try_files /index.html` 兜底返回 **200+体验台 shell(7月旧 hash)**——rsync 明明成功、hash 却对不上,真因是**域名打错了**(家长端在 `p003.hahaxiong.cc/parent/`,见架构表)。部署验证 hash 不一致时:**先对架构表核对入口域名,再疑缓存**;SPA catch-all 会把 404 伪装成 200,`last-modified` 是旧日期即强信号。
 
 12. **pm2 重启存活是部署验收项非可选**(2026-07-13 实锤):服务器 07-12 重启后 pm2 三服务全灭一天多(无 startup),chenchuan-site/p003-voice/kidshub-voice 全下线无告警。已配 `pm2 startup systemd + pm2 save`(systemctl is-enabled pm2-root=enabled)。**新增/删除 pm2 进程后必须重跑 `pm2 save`**,否则下次重启回到旧 dump。机器内存仅 1.6G/无 swap——上新功能先 `free -h` 侦察,进程内大模型必死,重资产走离线预计算(见 memory low-ram-vps-ai-offline-precompute)。
+
+10. **parent dist 多写者覆盖事故**(2026-08-23,详见记忆 feedback_operation_scope_exceeds_verified_scope):codex 当天 11:30 直推过他的联调构建(带 workbox PWA),cc 按旧 SOP `rsync --delete` 部署把它整套删了(服务器零残骸不可恢复,只能 codex 重出)。**同源核对只覆盖自己改的文件,挡不住 --delete 的全目录删除面**;deleting 输出被 `tail`/`-q` 吞=破坏无痕。取证法:**nginx `p003-access.log` 是被删静态资产的尸检报告**——bundle hash 文件名的首次/末次出现+状态码(200→304→消失)钉死第三方构建的上线与死亡时刻(`grep "index-XXX" /var/log/nginx/p003-access.log`)。另:codex 构建若再带 PWA/workbox=SW 劫持事故(坑#3 同 origin 第三次)前兆,发现即挑明。
 
 ## 验证铁律（cc 自己验,绝不甩给川哥）
 
