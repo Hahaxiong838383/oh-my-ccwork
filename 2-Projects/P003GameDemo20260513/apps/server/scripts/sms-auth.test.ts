@@ -23,8 +23,10 @@ process.env.SMS_DB_PATH = join(tmp, 'sms.db');
 process.env.DEVICES_DB_PATH = join(tmp, 'devices.db');
 process.env.PROFILE_DB_PATH = join(tmp, 'profile.db');
 process.env.AUTH_JWT_SECRET = 'test-secret';
+process.env.SMS_PROVIDER = 'aliyun'; // 存量段落按阿里云链路跑；文件末尾有 spug 专段（届时切换）
 delete process.env.ALIYUN_SMS_ACCESS_KEY_ID;
 delete process.env.ALIYUN_SMS_ACCESS_KEY_SECRET;
+delete process.env.SPUG_SMS_TEMPLATE_CODE;
 
 const { Hono } = await import('hono');
 const { smsAuthRoute } = await import('../src/routes/sms-auth.js');
@@ -214,6 +216,56 @@ let tokenA = '';
   eq('bind-8 台账外 404', (await post('/api/profile/bind-sn', { sn: 'BJP00326060100000009' }, tokenA)).status, 404);
   // 无 token → 401
   eq('bind-9 未登录 401', (await post('/api/profile/bind-sn', { sn: SN_1 })).status, 401);
+}
+
+// ---------- Spug 主渠道（2026-08-23 自备码模式：server 生成/存储/校验，Spug 只发送）----------
+{
+  const { setSpugTransportForTest } = await import('../src/spug-sms.js');
+  const { verifyCodeStore } = await import('../src/verify-code-store.js');
+  process.env.SMS_PROVIDER = 'spug';
+
+  // 未配模板码 → 503（default=spug 时凭证缺失要显式报错，不静默）
+  eq('spug-0 未配置 503', (await post('/api/auth/sms/send', { phone: '13900010001' })).status, 503);
+
+  process.env.SPUG_SMS_TEMPLATE_CODE = 'TPL_TEST';
+  let spugCalls: Array<{ url: string; body: Record<string, string> }> = [];
+  let spugResponse: unknown = { code: 200, msg: '请求成功', request_id: 'req-1' };
+  setSpugTransportForTest(async (url, body) => {
+    spugCalls.push({ url, body });
+    return spugResponse;
+  });
+
+  // send 成功：URL 带模板码 + body 含 to/code(6位)/number=5 + 落码可 verify
+  const r1 = await post('/api/auth/sms/send', { phone: '13900010001' });
+  eq('spug-1 send 200', { status: r1.status, ok: r1.json.ok }, { status: 200, ok: true });
+  eq('spug-2 URL 模板码', spugCalls[0]?.url.endsWith('/sms/TPL_TEST'), true);
+  const sentCode = spugCalls[0]?.body.code ?? '';
+  eq('spug-3 码 6 位数字+number=5', { c: /^\d{6}$/.test(sentCode), n: spugCalls[0]?.body.number }, { c: true, n: '5' });
+
+  // verify 全链：错码 401 → 正码 200 拿 token → 重放 401（一次性）
+  eq('spug-4 错码 401', (await post('/api/auth/sms/verify', { phone: '13900010001', code: '000000' })).status, 401);
+  const r2 = await post('/api/auth/sms/verify', { phone: '13900010001', code: sentCode });
+  eq('spug-5 正码登录', { status: r2.status, hasToken: typeof r2.json.token === 'string' }, { status: 200, hasToken: true });
+  eq('spug-6 重放 401(一次性)', (await post('/api/auth/sms/verify', { phone: '13900010001', code: sentCode })).status, 401);
+
+  // 过期：注入 now 越过 TTL（store 单元级）
+  verifyCodeStore.issue('13900010002', '123456');
+  eq('spug-7 过期 expired', verifyCodeStore.verify('13900010002', '123456', Date.now() + 5 * 60_000 + 1000), 'expired');
+
+  // 尝试上限：5 次错后即使正码也拒（记录已删 → not_found）
+  verifyCodeStore.issue('13900010003', '654321');
+  for (let i = 0; i < 5; i += 1) verifyCodeStore.verify('13900010003', '999999');
+  eq('spug-8 超限后正码也拒', verifyCodeStore.verify('13900010003', '654321'), 'too_many');
+  eq('spug-9 超限记录已焚', verifyCodeStore.verify('13900010003', '654321'), 'not_found');
+
+  // 发送失败 → 502 且不落码（失败不留可用码）
+  spugResponse = { code: 403, msg: 'IP 不在白名单' };
+  spugCalls = [];
+  const r3 = await post('/api/auth/sms/send', { phone: '13900010004' });
+  eq('spug-10 发送失败 502', { status: r3.status, error: r3.json.error }, { status: 502, error: 'send_failed' });
+  eq('spug-11 失败不落码', verifyCodeStore.verify('13900010004', spugCalls[0]?.body.code ?? '000000'), 'not_found');
+
+  process.env.SMS_PROVIDER = 'aliyun'; // 恢复，防污染后续段落
 }
 
 // ---------- 汇总 ----------

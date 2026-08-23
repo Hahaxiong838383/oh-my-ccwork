@@ -1,20 +1,33 @@
+import { randomInt } from 'node:crypto';
 import { SignJWT } from 'jose';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { accountStore } from '../account-store.js';
 import { smsLimitStore } from '../sms-limit-store.js';
 import { sendSmsVerifyCode, checkSmsVerifyCode } from '../aliyun-sms.js';
+import { sendSpugSmsCode } from '../spug-sms.js';
+import { verifyCodeStore } from '../verify-code-store.js';
 
 /**
- * 手机号短信验证码注册/登录（2026-08-20，阿里云 dypnsapi 托管核验）。
+ * 手机号短信验证码注册/登录（2026-08-20 阿里云托管核验；2026-08-23 Spug 升主渠道）。
  *
- * POST /api/auth/sms/send   {phone}        → 三窗限流 → 阿里云发码（码只走短信，绝不回传）
- * POST /api/auth/sms/verify {phone, code}  → 阿里云核验 PASS → 手机号 upsert 家长账号 → 签 JWT
+ * POST /api/auth/sms/send   {phone}        → 三窗限流 → 发码（码只走短信，绝不回传）
+ * POST /api/auth/sms/verify {phone, code}  → 核验通过 → 手机号 upsert 家长账号 → 签 JWT
+ *
+ * 双渠道（SMS_PROVIDER env 每请求读取，改 env+重启即切，无自动 fallback——两套码体系
+ * 混合回退会出「码校验路由错」的坑，切换窗口内在途旧码作废由用户重新获取兜底）：
+ *  - 'spug'（默认，川哥 2026-08-23「优先使用这个平台」）：自备码模式——server 生成 6 位码
+ *    → verify-code-store 落 hash → Spug 发送；verify 走本地校验（TTL 5min/5 次上限/一次性）。
+ *  - 'aliyun'（回滚锚）：dypnsapi 托管核验，码不落本地，verify 走 CheckSmsVerifyCode。
  *
  * JWT 姿势与 invite-auth.ts 完全一致（同 secret/issuer/audience/TTL），两种登录发的 token
  * 在 verifyAuthToken 眼里无差别 —— 后续 bind-sn / bound-devices / profile 链路零改动直接可用。
- * 核验错误一律 code_invalid 单一口径（不区分过期/错码，防枚举探测）。
+ * 核验错误一律 code_invalid 单一口径（不区分过期/错码/超次，防枚举探测）。
  */
+
+function smsProvider(): 'spug' | 'aliyun' {
+  return process.env.SMS_PROVIDER?.trim() === 'aliyun' ? 'aliyun' : 'spug';
+}
 
 const JWT_ISSUER = 'p003';
 const JWT_AUDIENCE = 'kidshub';
@@ -73,6 +86,19 @@ smsAuthRoute.post('/sms/send', async (c) => {
   }
 
   try {
+    if (smsProvider() === 'spug') {
+      // 自备码：生成 → 发送成功才落 hash（发送失败不留可用码）
+      const code = String(randomInt(100000, 1000000));
+      const result = await sendSpugSmsCode(phone, code);
+      if (!result.ok) {
+        console.warn(`[sms-auth] spug send rejected phone=****${phone.slice(-4)} code=${result.code} msg=${result.msg}`);
+        return c.json({ ok: false, error: 'send_failed', message: '发送失败，请稍后再试' }, 502);
+      }
+      verifyCodeStore.issue(phone, code);
+      smsLimitStore.record(phone, ip, result.requestId);
+      console.log(`[sms-auth] sent provider=spug phone=****${phone.slice(-4)} req=${result.requestId}`);
+      return c.json({ ok: true });
+    }
     const result = await sendSmsVerifyCode(phone);
     if (!result.ok) {
       // 阿里云侧拒绝：机器码进日志，用户拿友好口径。
@@ -91,11 +117,12 @@ smsAuthRoute.post('/sms/send', async (c) => {
       );
     }
     smsLimitStore.record(phone, ip, result.bizId ?? '');
-    console.log(`[sms-auth] sent phone=****${phone.slice(-4)} biz=${result.bizId ?? ''}`);
+    console.log(`[sms-auth] sent provider=aliyun phone=****${phone.slice(-4)} biz=${result.bizId ?? ''}`);
     return c.json({ ok: true });
   } catch (err) {
-    if ((err as Error).message === 'sms_not_configured') {
-      console.error('[sms-auth] ALIYUN_SMS_ACCESS_KEY_ID/SECRET 未配置');
+    const msg = (err as Error).message;
+    if (msg === 'sms_not_configured' || msg === 'spug_not_configured') {
+      console.error(`[sms-auth] 短信凭证未配置 provider=${smsProvider()} err=${msg}`);
       return c.json({ ok: false, error: 'sms_not_configured', message: '短信服务未配置' }, 503);
     }
     console.error('[sms-auth] send error', err);
@@ -109,10 +136,19 @@ smsAuthRoute.post('/sms/verify', async (c) => {
   const { phone, code } = parsed.data;
 
   try {
-    const result = await checkSmsVerifyCode(phone, code);
-    if (!result.ok) {
-      console.log(`[sms-auth] verify fail phone=****${phone.slice(-4)} code=${result.code} result=${result.verifyResult}`);
-      return c.json({ ok: false, error: 'code_invalid', message: '验证码错误或已过期' }, 401);
+    if (smsProvider() === 'spug') {
+      const outcome = verifyCodeStore.verify(phone, code);
+      if (outcome !== 'ok') {
+        // 内部原因进日志，用户拿 code_invalid 单一口径（防枚举）
+        console.log(`[sms-auth] verify fail provider=spug phone=****${phone.slice(-4)} outcome=${outcome}`);
+        return c.json({ ok: false, error: 'code_invalid', message: '验证码错误或已过期' }, 401);
+      }
+    } else {
+      const result = await checkSmsVerifyCode(phone, code);
+      if (!result.ok) {
+        console.log(`[sms-auth] verify fail phone=****${phone.slice(-4)} code=${result.code} result=${result.verifyResult}`);
+        return c.json({ ok: false, error: 'code_invalid', message: '验证码错误或已过期' }, 401);
+      }
     }
   } catch (err) {
     console.error('[sms-auth] verify error', err);
