@@ -1,4 +1,4 @@
-import { profileStore, type MemoryPatch, type FamilyMember, type InterestItem, type GameEvent } from './profile-store.js';
+import { normalizeInterestValue, profileStore, type MemoryPatch, type FamilyMember, type InterestItem, type GameEvent } from './profile-store.js';
 import { memoryItemStore, type NewMemoryItem } from './memory-item-store.js';
 import { callExtractionLlm } from './llm-extract.js';
 
@@ -16,7 +16,7 @@ export const EXTRACT_SYSTEM = // 导出仅供诊断探针/单测复用（2026-08
   '严格输出 JSON（没有任何更新就输出 {}）：\n' +
   '{\n' +
   '  "nickname": "仅当孩子明确表达改名意图（如「以后叫我XX」「请叫我XX」「我想改名叫XX」）时填，否则省略",\n' +
-  '  "interests": ["孩子明确表达喜欢/热爱的（如恐龙、奥特曼），否则省略"],\n' +
+  '  "interests": ["孩子明确表达喜欢/热爱的（如恐龙、奥特曼），否则省略。与已知兴趣同义/仅写法不同的不要输出；孩子表达过不喜欢/讨厌/不想聊的内容绝不能作为兴趣"],\n' +
   '  "personality_notes": "明显的性格观察（谨慎，否则省略）",\n' +
   '  "recent_emotion": "近期情绪锚点（如「考试没考好难过」，否则省略）",\n' +
   '  "game_progress": ["孩子明确表达的【方舟冒险游戏】进展/经历（如「通关了恐龙星域」「打捞到机械恐龙宝箱」「生态缸长出星光草」），只抽孩子自己明确说做到/经历的，不臆测、不把一次性闲聊当进展，否则省略"],\n' +
@@ -150,6 +150,25 @@ function clip(raw: string, max: number): string {
 
 function nowMs(): number {
   return Date.now();
+}
+
+/**
+ * 兴趣 vs dislike 对撞过滤（2026-08-23 兴趣污染治理·纯函数供单测）：
+ * 孩子明确表达不喜欢的内容绝不入兴趣。dislike 是散文形态（「不喜欢不想聊冷光」），
+ * 兴趣是短词——归一后 dislike 包含兴趣词即拦截。
+ */
+export function filterInterestsAgainstDislikes(
+  interests: InterestItem[],
+  dislikeContents: string[],
+): InterestItem[] {
+  return interests.filter(
+    (it) =>
+      !dislikeContents.some((d) => {
+        const nd = normalizeInterestValue(d);
+        const ni = normalizeInterestValue(it.value);
+        return !!nd && !!ni && nd.includes(ni);
+      }),
+  );
 }
 
 // ============ Phase 1 情景记忆抽取（docs/43 §8） ============
@@ -309,6 +328,15 @@ export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], se
       .map((p) => ({ id: p.id, content: p.content }));
     const { patch, episodic } = await extractAll(snapshot, current, { sessionId, activePromises });
     if (patch) {
+      // dislike 对撞（方案 B）：新兴趣写入前与该账号既有「不喜欢」条目归一对撞，命中即拦
+      if (patch.interests?.length) {
+        const dislikes = memoryItemStore.listActiveDislikes(acctId).map((d) => d.content);
+        const kept = filterInterestsAgainstDislikes(patch.interests, dislikes);
+        if (kept.length < patch.interests.length) {
+          console.log(`[memory] account=${acctId} 兴趣被 dislike 拦截 ${patch.interests.length - kept.length} 项`);
+        }
+        patch.interests = kept.length ? kept : undefined;
+      }
       profileStore.updateMemoryFields(acctId, patch);
       console.log(`[memory] account=${acctId} 画像更新: ${Object.keys(patch).join(',')}`);
     }

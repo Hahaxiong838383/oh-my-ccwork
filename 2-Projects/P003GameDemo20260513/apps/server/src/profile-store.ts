@@ -260,7 +260,8 @@ class ProfileStore {
   removeInterest(accountId: string, value: string): boolean {
     const existing = this.getProfile(accountId);
     if (!existing) return false;
-    const next = existing.interests.filter((i) => i.value !== value);
+    // 归一互含匹配（旧为字面全等——retract 词「不想聊冷光」删不掉兴趣「冷光」）
+    const next = existing.interests.filter((i) => !isSameInterest(i.value, value));
     if (next.length === existing.interests.length) return false;
     this.db
       .prepare('UPDATE family_member SET interests = ?, updated_at = ? WHERE id = ?')
@@ -334,14 +335,30 @@ class ProfileStore {
 }
 
 // team#1: 兴趣合并去重（基于最新 existing append 新增项，写时执行保证原子）。
+/**
+ * 兴趣同义归一（2026-08-23 兴趣污染治理，川哥拍板方案 B）：
+ * 去分隔符/标点/空白 + 小写化——「KET/PET考试」与「KETPET」归一后互含即同义。
+ * 供写时判重、retract 匹配、dislike 对撞、存量清洗脚本共用（单一真源）。
+ */
+export function normalizeInterestValue(s: string): string {
+  return s.toLowerCase().replace(/[\s\/\\、，,。.·\-_()（）:：!！?？"'「」『』]/g, '');
+}
+
+/** 同义判定：归一后互含（含全等）。空串永不匹配（归一后为空的垃圾值不参与判重）。 */
+export function isSameInterest(a: string, b: string): boolean {
+  const na = normalizeInterestValue(a);
+  const nb = normalizeInterestValue(b);
+  if (!na || !nb) return false;
+  return na.includes(nb) || nb.includes(na);
+}
+
 function appendInterests(existing: InterestItem[], added: InterestItem[]): InterestItem[] {
-  const seen = new Set(existing.map((i) => i.value));
   const merged = [...existing];
   for (const item of added) {
-    if (item && typeof item.value === 'string' && !seen.has(item.value)) {
-      seen.add(item.value);
-      merged.push(item);
-    }
+    if (!item || typeof item.value !== 'string') continue;
+    // 归一互含判重（旧为字面全等——「KETPET」与「KET/PET考试」当作两项，是污染根因）
+    if (merged.some((i) => isSameInterest(i.value, item.value))) continue;
+    merged.push(item);
   }
   return merged;
 }

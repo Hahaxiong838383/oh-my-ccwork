@@ -266,6 +266,16 @@ class MemoryItemStore {
   }
 
   /** 未兑现约定(给抽取器 known 上下文 + resolve 短 id 映射用)。 */
+  /** 兴趣 dislike 对撞用（2026-08-23）：该账号 active 的「不喜欢」类偏好条目。 */
+  listActiveDislikes(accountId: string): MemoryItem[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM memory_item WHERE account_id = ? AND status = 'active'
+         AND type = 'preference' AND content LIKE '不喜欢%' ORDER BY created_at DESC`,
+      )
+      .all(accountId) as MemoryItem[];
+  }
+
   listActivePromises(accountId: string): MemoryItem[] {
     return this.db.prepare(`
       SELECT * FROM memory_item WHERE account_id = ? AND type = 'promise' AND status = 'active'
