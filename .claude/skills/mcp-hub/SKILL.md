@@ -280,6 +280,67 @@ Air 侧同样受益（它此前也被这行静默覆盖：mycc 目录内 rollout
 **模型选择跟机器/账号走，不跟仓库走**——跨机同步的仓库不该钉具体模型。
 `mycc-run` 的 `-c model=` 保留为显式兜底。
 
+## 🔴 配置分层第三次事故：合并态合法 ≠ 单独态合法（2026-08-23）
+
+给 codex 禁掉三个跑不起来的 MCP server，在**用户级** `~/.codex/config.toml` 写：
+
+```toml
+[mcp_servers.ghost-os]
+enabled = false          # ← 只有这一行，没有 transport
+```
+
+`codex mcp list` 显示 `disabled`、`codex exec` 正常、运行时那三个的
+`omitting MCP server` 日志也确实消失了——**三重绿灯，全在 `~/mycc` 里验的**。
+
+十分钟后川哥的 ChatGPT app 报「无法检查工作树状态」。app-server 日志：
+
+    failed to reload config, using startup config:
+    ~/.codex/config.toml:50:1: invalid transport
+
+**`mcp_servers` 有两条解析路径，两套合法性判据：**
+
+| 路径 | 解析对象 | ghost-os 有没有 transport |
+|---|---|---|
+| 项目内（`codex mcp list` / `exec`） | 项目级 + 用户级**深合并** | 有（项目级提供了 `command`）⇒ 合法 |
+| app-server 的 **reload** | **单独解析用户级** | 没有 ⇒ `invalid transport` |
+
+**复现只要换个目录**（5 秒）：
+
+```bash
+cd /tmp && codex mcp list ; echo "RC=$?"    # 只解析用户级 → RC=1
+cd ~/mycc && codex mcp list ; echo "RC=$?"  # 合并解析     → RC=0
+```
+
+**修法**：给禁用段补齐自洽所需的字段。`enabled=false` 时命令不会执行，占位即可：
+
+```toml
+[mcp_servers.ghost-os]
+enabled = false
+command = "/bin/false"   # 占位：本段必须自带 transport
+```
+
+**两条可推广的规则：**
+
+1. **「禁用/屏蔽/置空」不是纯减法，它新建了一个必须独立自洽的实体。**
+   凡是这类写法，先问「这个写法本身创建了什么？单独拿出来合法吗？」
+2. **改分层配置的某一层，必须在只有那一层的语境里再验一次**（换到不属于该项目的目录）。
+   判据看 **`RC`** 而不是输出内容——合并态下功能全对，恰恰掩盖了单独态解析直接失败。
+
+⚠️ 长驻 app-server 的 **reload 路径与启动路径不同**，且 reload 失败会 **fail-safe 退回启动配置**
+——所以功能看着一切正常，只在日志里报警。
+
+### 查 app-server 日志的姿势
+
+日志在 `~/.codex/logs_2.sqlite`（**本机无 `sqlite3`，用 node 的 `node:sqlite`，readOnly 打开**）。
+表 `logs`：`ts | level | target | feedback_log_body`。
+
+⚠️ **这个表在滚动清理**（实测行数 3766 而自增 id 已到 264791），
+两次查询结果不一致是窗口滑走了，不是读数矛盾——别据此把上一轮结论作废。
+
+⚠️ **查「修复后报错 0 次」必须配正锚**：先确认 app-server 修复后**真的重读过配置**
+（`target LIKE '%layer_io%'` 计数 > 0，且 `rpc.method` 出现过），
+否则那个 0 只说明「没跑过」。本次第一遍查就栽在这：471 行新日志，但 layer_io = 0。
+
 ## 让「直接敲 grok / codex」也能用（不经 mycc-run）
 
 配好 `[models] default` 只解决了"用哪个模型"，还差"钥匙在哪"：`env_key` 读的是**环境变量**，
@@ -490,3 +551,99 @@ commit 署名）都能翻译成 `prefix_rule`，这是给 codex 补守门的正�
 `log_dir`（默认 `$CODEX_HOME/log`，设了还会开 `codex-tui.log` 明文日志）、
 `[history] persistence = "save-all|none"` + `history.max_bytes`（写 `history.jsonl`）、
 `notify`（外部通知命令，收 JSON payload）、`[analytics] enabled`。
+
+---
+
+## codex skills 预算：5440 token，按条目数平分（2026-08-23 实测）
+
+codex 每轮 warn `Skill descriptions were shortened to fit the skills context budget` 时，
+**不要去猜怎么"精简"——先读它自己的观测指标。**
+
+### 真值
+
+- **`budget_limit = 5440`（token），硬编码，无配置项。** 二进制里
+  `disabled_skills` / `skill_filter` / `skills_context_budget` 全部不存在；
+  唯一的 `disabled_skill_names` 是给远程 plugin 用的，管不到文件系统 skill。
+- **预算按条目数平分**，跟 SKILL.md 正文多长**毫无关系**——吃预算的是
+  `条目数 × description`。
+- 三级严重度（由轻到重）：`descriptions were shortened`（全可见，描述变短）→
+  `Exceeded … All skill descriptions were removed` → `Host skills … omitted from the
+  model-visible skills list`。第一级不算故障，但描述被**硬切在句子中间**，
+  中文 skill 的「触发词：…」整段丢失 = codex 看得见名字、不知道何时该用。
+
+### 怎么读到真实数字
+
+```bash
+RUST_LOG=codex_skills_extension=info codex exec --skip-git-repo-check "回复：就绪" < /dev/null 2>&1 \
+  | grep -oE 'budget_limit=[0-9]+ total_skills=[0-9]+ .*truncated_skill_descriptions=[0-9]+'
+```
+
+字段：`budget_limit / total_skills / included_skills / omitted_skills /
+truncated_description_chars_per_skill / truncated_skill_descriptions`。
+
+⚠️ **`codex exec` 的日志不进 `logs_*.sqlite`**（那个库只记 app-server / Desktop 侧），
+所以要用 `RUST_LOG` 抓 stderr。
+
+想看**渲染出去的真实文本**（终审判据），解析 rollout：
+`~/.codex/sessions/**/*.jsonl` 里 `### Available skills` 段，每条形如
+`- <name>: <描述> (file: rN/<dir>/SKILL.md)`。
+
+### 实测：条目数 ↔ 每条额度
+
+| 条目数 | 每条描述额度 | 被截条数 |
+|---|---|---|
+| 120 | 95 字符 | 105 |
+| 112 | 107 | 96 |
+| 99  | 127 | 76 |
+| **80** | **181** | **53** |
+
+渲染总量恒定 ≈ 9,600 字符。**每砍 10 条，每条多拿 15–20 字符。**
+到 181 字符时中文 skill 的触发词基本能完整进去（实测 `easytier-mesh-ops` 进了 11 个）。
+
+⚠️ **光砍条目消不掉 warn**——只有当所有描述原文都短于额度时它才消失。
+但 181 字符已经解决实际问题，不值得为消提示去改几十个文件的 description。
+
+### 三个 skill root（rollout 里的 `### Skill roots` 是真值）
+
+| 别名 | 路径 | 内容 |
+|---|---|---|
+| `r0` | `<repo>/.codex/skills` | OpenAI 自带 |
+| `r1` | `~/.codex/skills/.system` | codex 系统级，随版本更新 |
+| `r2` | `<repo>/.agents/skills` | 川哥自己的（**存根**，见下） |
+
+`grok` **不在此列**：`~/.grok` 下 0 个 SKILL.md，它走 `~/AGENTS.md` 指针。
+所以「三家共用一个 skills 目录」实际只有两家。
+
+### 关键：`.agents/skills` 是存根，不是副本
+
+每个 `.agents/skills/<name>/SKILL.md` 只有 ~500–1000 字节，正文一句
+「真源是 `../../../.claude/skills/<name>/SKILL.md`，不要在本入口复制正文」。
+实测 codex 会跟进去读真源（`mcp-hub` 存根被读 12 次 → 真源 200 次；
+全局 `.claude/skills/*/SKILL.md` 出现 532 次 vs 存根 194 次）。
+
+⇒ **内容零重复、零分叉，这块已是最优。但存根仍占一个目录条目、且 description 是完整复制的。**
+
+**所以「让三家加载同一个目录」不会减少数量，反而会增加**：`.claude/skills` 有 83 个
+而 `.agents/skills` 只镜像了 67 个，真让 codex 直连前者会从 112 涨到 128 条、
+额度从 107 跌到 ~85。**正确方向是「共享存储 + 按运行时裁剪可见集」**，不是统一目录。
+
+### 裁剪原则
+
+**删存根 ≠ 删能力**——正文在 `.claude/skills`，cc 照常用，codex 需要时可直接读路径。
+删掉的只是「自动出现在目录里」这一层发现能力。
+
+删前必查两件事（`cleanup_needs_reference_evidence`）：
+1. **真源在不在** `.claude/skills/<name>/SKILL.md`
+2. **全仓引用**——注意常见英文词的假命中（实测 `linear` 的 43 处全是 CSS `linear-gradient`，
+   `notion` 唯一命中是 "the right notion"，`sentry` 是 xray 分流里的 `domain:sentry.io`）
+
+判「codex 真用过哪些」的通道（**不能数目录清单里的出现次数**，那是每轮注入的，
+`cloudflare-deploy` 因此高达 892 次却从没被打开过）：
+
+```bash
+grep -rhoE '(cat|head|sed|rg|grep|less|wc|open)[^"]{0,120}SKILL\.md' ~/.codex/sessions \
+  | grep -oE '\.agents/skills/[A-Za-z0-9._-]+' | sed 's|.*/||' | sort | uniq -c | sort -rn
+```
+
+⚠️ 样本只覆盖 `~/.codex/sessions` 里现存的 rollout（本机约一天），
+**「没命中」只能读成「这段时间没打开过」，不是「用不上」**。
