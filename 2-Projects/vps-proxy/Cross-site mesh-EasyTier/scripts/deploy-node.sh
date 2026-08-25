@@ -115,6 +115,8 @@ deploy_one() {
   alias="$(node_field "$node" 2)"
   node_arg="$node"
 
+  [[ "$plat" == windows-* ]] && die "$node 是 Windows 节点，当前由 SYSTEM 开机任务 EasyTier Mesh 托管，不走 Unix deploy-node.sh"
+
   log "部署 $node  (虚拟IP $vip, 平台 $plat, 入口 $alias)"
 
   local tmpl="$PROJ_DIR/nodes/$node.toml"
@@ -301,6 +303,7 @@ export SSHPASS="${VPS_ROOT_PASS:-}"
 if [[ "$TARGET" == "all" ]]; then
   for row in "${ET_NODES[@]}"; do
     n="${row%%|*}"
+    [[ "$(node_field "$n" 4)" == windows-* ]] && { warn "跳过 $n（Windows 节点由 SYSTEM 开机任务托管）"; continue; }
     [[ "$(node_field "$n" 5)" == "ask" && -z "${SUDO_PASS:-}" ]] && { warn "跳过 $n（需要 sudo 密码）"; continue; }
     deploy_one "$n"
   done
@@ -308,12 +311,12 @@ else
   deploy_one "$TARGET"
 fi
 
-# ── 收尾：从 ET_NODES 重新生成速查页 ────────────────────────────────────────
-# 为什么放这里：速查页曾两次漏掉新节点（fnos2 8-16、home-studio 8-20），
-# 因为「加节点」和「更新页面」是两个动作，第二个靠人记。放进部署脚本就漏不掉。
-# 只生成不部署 —— 部署要连 hk-relay，不该让它成为部署单节点的失败点。
+# ── 收尾：重新生成并实时发布速查页 ──────────────────────────────────────────
+# 节点入表、生成页面、发布页面必须是同一个闭环；发布失败只告警，不反转节点部署结果。
 if [[ -x "$PROJ_DIR/scripts/gen-cheatsheet.sh" ]]; then
   "$PROJ_DIR/scripts/gen-cheatsheet.sh" || echo "⚠ 速查页生成失败（不影响本次节点部署），请手动跑 scripts/gen-cheatsheet.sh"
-  echo "   提示：./scripts/deploy-cheatsheet.sh 可把页面推到 http://10.10.10.1:8080/"
+  if [[ -x "$PROJ_DIR/scripts/deploy-cheatsheet.sh" ]]; then
+    "$PROJ_DIR/scripts/deploy-cheatsheet.sh" \
+      || echo "⚠ 速查页发布失败（不影响节点部署），请手动跑 scripts/deploy-cheatsheet.sh"
+  fi
 fi
-

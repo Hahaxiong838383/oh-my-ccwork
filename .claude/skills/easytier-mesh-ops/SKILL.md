@@ -1,15 +1,14 @@
 ---
 name: easytier-mesh-ops
-description: 家↔公司 EasyTier 异地组网（chuan-mesh）的部署、排障与扩容 SOP。触发词："组网"、"异地组网"、"EasyTier"、"easytier"、"野草云"、"mesh-status"、"虚拟内网"、"连不上公司/家里的机器"、"10.10.10."、"10.10.61."、"子网代理"、"NAS 访问不了"、"P2P 打洞"、"加一台机器进组网"。涵盖：8 节点拓扑真值、僵死态识别、自愈与告警分级、部署脚本用法、排障决策树（连不上/变中继/丢包/设备列表空）、判读规则（哪些读数不可信）、平台差异坑。
-layer: 基建层
-authorization: B区（改生产机网络配置需明确 scope；hk-relay 是唯一发现节点，改它会短暂断全网发现）
-output_levels: L1
+description: 家↔公司 EasyTier 异地组网（chuan-mesh）的部署、排障与扩容 SOP。触发词："组网"、"异地组网"、"EasyTier"、"easytier"、"野草云"、"mesh-status"、"虚拟内网"、"连不上公司/家里的机器"、"10.10.10."、"10.10.61."、"子网代理"、"NAS 访问不了"、"P2P 打洞"、"加一台机器进组网"、"Windows 加入组网"、"组网速查表"。涵盖：9 节点拓扑真值、Windows 原生节点、速查表实时发布、僵死态识别、自愈与告警分级、部署脚本、排障决策树与判读规则。
 ---
 
 # EasyTier 异地组网运维
 
 项目仓库：`~/mycc/2-Projects/vps-proxy/Cross-site mesh-EasyTier/`
 记忆：`rg easytier ~/.claude/projects/-Users-rayman-chen-mycc/memory/`
+
+边界：改生产机网络配置必须有明确 scope；`hk-relay` 是唯一发现节点，改它会短暂中断全网发现。
 
 ---
 
@@ -24,6 +23,7 @@ output_levels: L1
 | linux-lan | `10.10.10.21` | 家有线 `.119` | 家侧子网网关（主）+ **探针宿主** | **PortRestricted** |
 | fnos2 | `10.10.10.22` | 家有线 `.115` | 飞牛2号，家侧子网网关（备），Docker 部署 | PortRestricted |
 | home-studio | `10.10.10.23` | 家有线 `.133` | **家侧主力开发机**（非网关，刻意不配 proxy_network） | PortRestricted |
+| maxtkf-server | `10.10.10.24` | 家有线 `.77` | Windows 11 普通节点，SYSTEM 开机任务（非网关） | PortRestricted |
 | air | `10.10.10.31` | 移动 | 笔记本 | PortRestricted |
 
 **子网映射**（末位不变只换前缀）：公司 `192.168.61.X`→`10.10.61.X`，家 `192.168.1.X`→`10.10.1.X`
@@ -32,7 +32,7 @@ output_levels: L1
 该 connector 永远停在 `Connecting`，四天在 linux-lan 上刷了 4121 行 WARN，
 把真实故障信号淹没、排查僵死事故时带偏一轮。**别再加回来。**
 **两个内网界面**：`10.10.10.1:11211` 控制台 · `10.10.10.1:8080` 速查页（均公网不可达）
-**SSH 别名**：`hk-mesh` `mini-mesh` `studio-mesh` `dev198-mesh` `linux-lan-mesh` `home-studio-mesh`
+**SSH 入口**：既有 Unix 节点用 `*-mesh` 别名；Windows 节点用 `ssh Administrator@10.10.10.24`
 
 > 🔑 **打洞能成的单点**：公司三台全是对称 NAT，家侧是端口受限锥形。
 > 「对称↔端口受限」可通，「对称↔对称」几乎无解。**家里换路由器/运营商可能让 P2P 整体退化成走香港（10ms→96ms）。**
@@ -46,7 +46,7 @@ cd ~/mycc/2-Projects/vps-proxy/Cross-site\ mesh-EasyTier
 ./scripts/mesh-status.sh                 # 全网巡检（逐节点取视角）
 ./scripts/deploy-node.sh <节点名>          # 部署/更新，幂等
 ./scripts/bench.sh dev198 hk-relay       # 某条链路的延迟/吞吐
-./scripts/deploy-cheatsheet.sh           # 更新速查页
+./scripts/deploy-cheatsheet.sh           # 立即把生成页发布到 10.10.10.1:8080
 ./scripts/uninstall-node.sh <节点名>       # 干净卸载（带三项断言）
 ```
 
@@ -149,7 +149,7 @@ curl -s -o /dev/null --max-time 15 --noproxy '*' \
 
 `cost` 从 `p2p` 变 `relay(2)`，延迟 10ms→96ms。查：
 - 家侧 NAT 类型是否变了（`easytier-cli peer` 的 NAT 列）——**这是最常见根因**，换路由器/运营商会触发
-- 三条上游通道是否还都在（`easytier-cli connector`）
+- 两条上游通道是否还都在（`easytier-cli connector`）
 
 ### 4.3 「端口不通」——先查供应商面板，别只看机内
 
@@ -196,7 +196,7 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 4. 长效：确认 air/home-studio 的 KCP/QUIC 代理还开着（§八，`easytier-cli proxy` 验证）——
    2026-08-25 开启后控制台原地址 1.5s 直开，隧道不再需要
 
-## 五、平台差异坑（macOS vs Linux）
+## 五、平台差异坑（macOS / Linux / Windows）
 
 | 坑 | 表现 | 修法 |
 |---|---|---|
@@ -204,6 +204,10 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 | `launchctl bootout` 是**异步**的 | 紧接着 bootstrap 报 `Bootstrap failed: 5`，失败后**新旧都没有** | 轮询确认消失再 bootstrap（脚本已处理） |
 | macOS 不支持自定义 TUN 名 | 带 `dev_name` 会启动失败 | 部署脚本已自动剥离 |
 | macOS `0.0.0.0` 与 `[::]` 同端口冲突 | 日志刷 `AddrInUse` WARN | 无害，v6 socket 已收双栈 |
+| Windows Update 被策略禁用 | `Add-WindowsCapability OpenSSH.Server` 报拒绝访问，`sshd` 不存在 | 不改受保护服务 ACL；从微软 Win32-OpenSSH Release 下载，校验 SHA256 后独立安装 |
+| Windows 不能访问 GitHub | 安装包下载失败 | 同 LAN Linux 临时开 HTTP，只发布已校验包；目标下载后再验 SHA256，完成即关闭服务器 |
+| Windows 常驻运行 | 把 console 程序硬注册成服务可能报 1053 | 用 `SYSTEM` + `AtStartup` 计划任务，设置失败重启；验收任务、进程、VIP、远端 peer、Mesh SSH |
+| PowerShell stdin 编码 | 中文注释写入后 TOML 表头被吞，`--check-config` 报重复键 | 运行配置剥离注释写 ASCII，或显式设置输入/输出 UTF-8；模板仍保留中文说明 |
 
 > **教训**：`--config-server` 我在 systemd 三台一次通过就推给 macOS，直接把 mini 和 studio 搞挂。
 > **跨平台推广前先问：这个参数依赖的运行时前提，在另一个载体上成立吗。**
@@ -214,10 +218,11 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 
 1. `nodes/<名字>.toml` 照抄同类节点（**必须含 `[network_identity]` 段**，漏了会静默加入名为 `default` 的空密钥网）
 2. `common.sh` 的 `ET_NODES` 加一行：`名字|ssh别名|虚拟IP|平台|sudo方式`
-3. `./scripts/deploy-node.sh <名字>`，四项断言全过才算成功
-4. `~/.ssh/config` 加 `<名字>-mesh` 别名
-5. 速查页**已自动化，不用手改** —— `deploy-node.sh` 收尾会调 `gen-cheatsheet.sh`
-   从 `ET_NODES` 重新生成节点表；只需再跑 `./scripts/deploy-cheatsheet.sh` 推上线。
+3. Linux/macOS 跑 `./scripts/deploy-node.sh <名字>`；Windows 用原生二进制 + SYSTEM 开机任务
+4. 必须断言：进程、VIP、网络身份非空、至少一个远端 peer；Windows 再从其他节点真实 SSH Mesh IP
+5. Unix 节点给 `~/.ssh/config` 加 `<名字>-mesh` 别名
+6. 速查页**生成 + 发布均已自动化，不用手改** —— `deploy-node.sh` 收尾会依次调用
+   `gen-cheatsheet.sh` 与 `deploy-cheatsheet.sh`；发布失败只告警，不反转已成功的节点部署。
    ⚠️ 这条以前是「手动改 web/index.html」，**结果连漏两次**（fnos2 8-16、home-studio 8-20），
    页面停在 6 节点还显得完整。**同一步骤漏两次就该自动化，不是加强纪律。**
    生成器对没登记描述的节点会在页面上印「描述待补」、对没有 `-mesh` 别名的会标注——
@@ -239,6 +244,15 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 
 **`pgrep -f <模式>` 会匹配到自己的命令行**。清理测试进程时踩过：kill 把执行命令的 shell 自己杀了，
 循环没走到 `rm`。修法：用正则让模式本身不字面出现（`http[.]server`），并排除 `$$`/`$PPID`。
+
+**凭据名称不能代替字段语义验证。** Vault 里叫“EasyTier”的条目可能存的是 VPS 登录凭据，不能直接当
+`network_identity`。优先从已联网节点的运行配置中提取，但绝不打印整份 `node info`：其 `config` 字符串
+内嵌 `network_secret`，对 JSON 做 `del(.network_secret)` 也删不掉。诊断启动失败时同样先脱敏，
+因为 TOML parse error 会回显整份配置。只输出存在性、长度、哈希或脱敏后的错误行。
+
+**无 `sshpass` 不等于要装依赖。** 项目内置 `ssh-askpass-env.sh`，密码只经进程环境交给
+`SSH_ASKPASS`，不进文件和 argv。速查页发布验收必须同时满足：服务 active、只绑定
+`10.10.10.1:8080`、未绑定公网、HTTP 载荷包含新节点、本地与线上 SHA256 一致。
 
 ---
 

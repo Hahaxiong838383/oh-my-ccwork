@@ -29,11 +29,14 @@ peer_of() {  # peer_of <node> -> 该节点的 peer 表原文
     nopasswd) ssh -o BatchMode=yes -o ConnectTimeout=12 "$alias" \
             'sudo /usr/local/bin/easytier-cli peer 2>/dev/null' ;;
     secret:*) local v="${sudo_kind#secret:}"
+            [[ -n "${!v:-}" ]] || return 0
             ssh -o BatchMode=yes -o ConnectTimeout=12 "$alias" \
             "echo $(printf '%q' "${!v}") | sudo -S -p '' /usr/local/bin/easytier-cli peer 2>/dev/null" ;;
     literal:*) local pw="${sudo_kind#literal:}"
             ssh -o BatchMode=yes -o ConnectTimeout=12 "$alias" \
             "echo $(printf '%q' "$pw") | sudo -S -p '' /usr/local/bin/easytier-cli peer 2>/dev/null" ;;
+    windows-admin) ssh -o BatchMode=yes -o ConnectTimeout=12 "$alias" \
+            "powershell.exe -NoProfile -NonInteractive -Command \"& 'C:\Program Files\EasyTier\easytier-cli.exe' peer\"" 2>/dev/null ;;
     ask) if [[ "$alias" == "__LOCAL__" ]]; then
             [[ -n "${SUDO_PASS:-}" ]] && echo "$SUDO_PASS" | sudo -S -p '' /usr/local/bin/easytier-cli peer 2>/dev/null
          else
@@ -55,6 +58,7 @@ creds_ready() {
     nopasswd)  return 0 ;;
     secret:*)  local v="${k#secret:}"; [[ -n "${!v:-}" ]] ;;
     literal:*) return 0 ;;
+    windows-admin) return 0 ;;
     ask)       [[ -n "${SUDO_PASS:-}" ]] ;;
     *)         return 1 ;;
   esac
@@ -65,6 +69,7 @@ creds_hint() {
     root)     echo "需在 ~/.mycc-secrets.env 设 VPS_ROOT_PASS" ;;
     secret:*) echo "需在 ~/.mycc-secrets.env 设 ${k#secret:}" ;;
     ask)      echo "需 SUDO_PASS=xxx 运行本脚本" ;;
+    windows-admin) echo "需 Windows 管理员 SSH 公钥" ;;
     *)        echo "凭据方式 $k 未就绪" ;;
   esac
 }

@@ -32,6 +32,7 @@ node_role() {
     linux-lan)   echo "家 · Ubuntu 桌面 · 家侧网关（主）· 探针宿主" ;;
     fnos2)       echo "家 · 飞牛 NAS 2 号 · 家侧网关（备）· Docker" ;;
     home-studio) echo "家 · 主力开发机 · 20 线程 / 31G" ;;
+    maxtkf-server) echo "家 · Windows 11 · SYSTEM 开机任务" ;;
     air)         echo "MacBook Air M5 · 随身" ;;
     *)           echo "" ;;
   esac

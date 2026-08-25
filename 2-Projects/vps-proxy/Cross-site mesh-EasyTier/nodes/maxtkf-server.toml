@@ -1,0 +1,39 @@
+# ═══ maxtkf-server · 家侧 Windows 节点 · 家有线 192.168.1.77 ═══
+# 主机名 MAXTKF-SERVER / Windows 11 Pro x86_64
+# 角色：家侧普通节点，不承担子网代理。
+
+hostname = "maxtkf-server"
+instance_name = "main"
+ipv4 = "10.10.10.24"
+
+listeners = [
+    "tcp://0.0.0.0:11010",
+    "udp://0.0.0.0:11010",
+]
+
+[network_identity]
+network_name = "__NETWORK_NAME__"
+network_secret = "__NETWORK_SECRET__"
+
+# 公网中继：只保留已验证可达的 tcp/443 与 udp/22。
+[[peer]]
+uri = "tcp://207.57.124.191:443"
+[[peer]]
+uri = "udp://207.57.124.191:22"
+
+# 家内节点直连，避免绕香港。
+[[peer]]
+uri = "tcp://192.168.1.119:11010"    # linux-lan
+[[peer]]
+uri = "tcp://192.168.1.115:11010"    # fnos2
+[[peer]]
+uri = "tcp://192.168.1.133:11010"    # home-studio
+
+# 192.168.1.0/24 已由 linux-lan + fnos2 双份导出，本节点不配置 proxy_network。
+[flags]
+dev_name = "easytier0"
+private_mode = true
+latency_first = true
+multi_thread = true
+accept_dns = false
+enable_kcp_proxy = false
