@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { childProfile, homeStats, kidsHub, menuItems, weeklyReport, type SuggestionStatus } from './mock/data';
+import { childProfile, kidsHub, menuItems, type SuggestionStatus } from './mock/data';
 import { StatusBar } from './components/chrome';
 import PairingFlow from './pages/PairingFlow';
 import ProfileSetupFlow from './pages/ProfileSetupFlow';
 import InviteLoginPage from './pages/InviteLoginPage';
 import PairBindPage, { parsePairHash, type PairParams } from './pages/PairBindPage';
 import { calcAge } from './pages/ProfileSheet';
-import { clearAuthToken, getDevice, getProfile, hasValidToken, type DeviceInfo, type Profile } from './api';
+import { clearAuthToken, getBoundDevices, getDashboard, getDevice, getProfile, getWeeklyReport, hasValidToken, type DeviceDashboard, type DeviceInfo, type Profile, type WeeklyReportData } from './api';
 
 type TabKey = 'home' | 'report' | 'kidshub' | 'mine';
 type FlowKey = 'pairing' | 'profile';
@@ -93,11 +93,22 @@ function ChildBadge({ profile }: { profile: Profile | null }) {
   );
 }
 
+// 设备实时态展示映射（合同：亮度业务档 0..2；color_mode 枚举；null 一律显 —）
+const BRIGHTNESS_LABEL: Record<number, string> = { 0: '低', 1: '中', 2: '高' };
+const COLOR_MODE_LABEL: Record<string, string> = {
+  normal: '常规',
+  cool: '冷光',
+  warm: '暖光',
+  cool_eye_screen: '冷光护眼',
+  warm_eye_screen: '暖光护眼',
+};
+
 function HomePage({ onStartFlow }: { onStartFlow: (flow: FlowKey) => void }) {
-  const maxBar = Math.max(...homeStats.weeklyBars);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [device, setDevice] = useState<DeviceInfo | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [dash, setDash] = useState<DeviceDashboard | null>(null);
+  const [boundNote, setBoundNote] = useState<string | null>(null); // 真实 SN 绑定的设备备注（bind-sn 链）
 
   useEffect(() => {
     getProfile()
@@ -107,7 +118,19 @@ function HomePage({ onStartFlow }: { onStartFlow: (flow: FlowKey) => void }) {
     getDevice()
       .then((r) => setDevice(r.device))
       .catch(() => {});
+    // 真实遥测：首台绑定设备的聚合数据（未绑定/无数据 → null 态骨架）
+    getBoundDevices()
+      .then((r) => {
+        const first = r.devices.find((d) => d.public_id);
+        if (!first) return undefined;
+        setBoundNote(first.note || '读写台');
+        return getDashboard(first.public_id!).then((res) => setDash(res.data));
+      })
+      .catch(() => {});
   }, []);
+
+  const bars = dash?.week.daily ?? [];
+  const maxBar = Math.max(1, ...bars.map((b) => b.focus_minutes));
 
   return (
     <div className="space-y-4">
@@ -145,45 +168,63 @@ function HomePage({ onStartFlow }: { onStartFlow: (flow: FlowKey) => void }) {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-bold text-text-main">读写台状态</h3>
-            <p className="text-sm text-text-muted">{device ? `${device.name} · 在线` : '未绑定设备'}</p>
+            <p className="text-sm text-text-muted">
+              {boundNote
+                ? `${boundNote} · ${dash?.device.online ? '在线' : '离线'}`
+                : device
+                  ? `${device.name} · 未接入`
+                  : '未绑定设备'}
+            </p>
           </div>
           <div className="grid h-20 w-24 place-items-center rounded-2xl bg-gradient-to-br from-orange-100 via-white to-slate-100 text-3xl">📚</div>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
-          <DeviceMetric label="亮度" value={homeStats.device.brightness} />
-          <DeviceMetric label="色温" value={homeStats.device.colorTemperature} />
-          <DeviceMetric label="距离" value={homeStats.device.distance} />
+          <DeviceMetric
+            label="亮度"
+            value={dash?.device.brightness_level != null ? (BRIGHTNESS_LABEL[dash.device.brightness_level] ?? String(dash.device.brightness_level)) : '—'}
+          />
+          <DeviceMetric
+            label="色温"
+            value={dash?.device.color_mode != null ? (COLOR_MODE_LABEL[dash.device.color_mode] ?? dash.device.color_mode) : '—'}
+          />
+          <DeviceMetric
+            label="虚像距离"
+            value={dash?.device.image_distance_m != null ? `${dash.device.image_distance_m}m` : '—'}
+          />
         </div>
       </Card>
 
       <div className="grid grid-cols-2 gap-3">
-        <MetricCard label="今日专注" value={homeStats.focusToday} unit="分钟" />
-        <MetricCard label="本周平均" value={homeStats.weeklyAverage} unit="分钟" />
+        <MetricCard label="今日专注" value={dash?.today.focus_minutes ?? 0} unit="分钟" />
+        <MetricCard label="本周平均" value={dash?.week.daily_average_focus_minutes ?? 0} unit="分钟" />
       </div>
 
       <Card>
         <div className="flex items-end justify-between">
           <div>
             <p className="text-sm text-text-muted">本周总时长</p>
-            <p className="mt-1 text-3xl font-black text-brand-orange">{homeStats.weeklyTotal}<span className="ml-1 text-sm font-semibold">分钟</span></p>
+            <p className="mt-1 text-3xl font-black text-brand-orange">{dash?.week.total_focus_minutes ?? 0}<span className="ml-1 text-sm font-semibold">分钟</span></p>
           </div>
           <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-brand-orange">持续进步</span>
         </div>
         <div className="mt-5 flex h-32 items-end justify-between gap-2 rounded-2xl bg-page-bg px-3 pb-3 pt-4">
-          {homeStats.weeklyBars.map((value, index) => (
-            <div key={index} className="flex flex-1 flex-col items-center gap-2">
-              <div className="w-full rounded-t-xl bg-brand-orange/85" style={{ height: `${Math.max(18, (value / maxBar) * 88)}px` }} />
-              <span className="text-[11px] text-text-muted">{'一二三四五六日'[index]}</span>
+          {(bars.length ? bars : Array.from({ length: 7 }, (_, i) => ({ date: String(i), focus_minutes: 0 }))).map((b) => (
+            <div key={b.date} className="flex flex-1 flex-col items-center gap-2">
+              <div className="w-full rounded-t-xl bg-brand-orange/85" style={{ height: `${Math.max(6, (b.focus_minutes / maxBar) * 88)}px` }} />
+              <span className="text-[11px] text-text-muted">{'日一二三四五六'[new Date(`${b.date}T00:00:00+08:00`).getDay()] ?? ''}</span>
             </div>
           ))}
         </div>
       </Card>
 
       <div className="grid grid-cols-1 gap-3">
-        <Card className="bg-gradient-to-br from-orange-50 to-white">
-          <p className="text-sm text-text-muted">夜航收益</p>
-          <p className="mt-2 text-xl font-bold text-text-main">昨晚获得 <span className="text-3xl text-brand-orange">{homeStats.nightReward}</span> 家族币</p>
-        </Card>
+        {/* 夜航收益：Godot 侧目前是视觉基线假数据，availability 打开前隐藏（川哥 2026-08-24 拍板） */}
+        {dash?.availability.night_reward && (
+          <Card className="bg-gradient-to-br from-orange-50 to-white">
+            <p className="text-sm text-text-muted">夜航收益</p>
+            <p className="mt-2 text-xl font-bold text-text-main">昨晚有新收获</p>
+          </Card>
+        )}
         <Card>
           <p className="text-sm text-text-muted">生态缸</p>
           <p className="mt-2 text-lg font-bold text-text-main">孩子的生态缸有了一点小变化</p>
@@ -215,6 +256,20 @@ function MetricCard({ label, value, unit }: { label: string; value: number; unit
 }
 
 function ReportPage() {
+  const [report, setReport] = useState<WeeklyReportData | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    getBoundDevices()
+      .then((r) => {
+        const pub = r.devices.find((d) => d.public_id)?.public_id;
+        if (pub) return getWeeklyReport(pub).then((res) => setReport(res.data));
+        return undefined;
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, []);
+
   return (
     <div className="space-y-4">
       <div className="px-1">
@@ -222,30 +277,38 @@ function ReportPage() {
         <h2 className="mt-1 text-2xl font-black text-text-main">本周价值报告</h2>
       </div>
 
-      <Card>
-        <h3 className="font-bold text-text-main">本周高光</h3>
-        <div className="mt-3 space-y-3">
-          {weeklyReport.highlights.map((item) => (
-            <div key={item} className="flex gap-3 rounded-2xl bg-orange-50 p-3">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-orange text-white">✓</span>
-              <p className="text-sm font-semibold leading-8 text-text-main">{item}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
+      {report && report.highlights.length > 0 && (
+        <Card>
+          <h3 className="font-bold text-text-main">本周高光</h3>
+          <div className="mt-3 space-y-3">
+            {report.highlights.map((item) => (
+              <div key={item} className="flex gap-3 rounded-2xl bg-orange-50 p-3">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-orange text-white">✓</span>
+                <p className="text-sm font-semibold leading-8 text-text-main">{item}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card>
         <h3 className="font-bold text-text-main">用眼健康硬数字</h3>
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <ReportMetric label="护眼达标率" value={`${weeklyReport.eyeHealthRate}%`} />
-          <ReportMetric label="控制风险时长" value={`${weeklyReport.guardedMinutes}分钟`} />
+          <ReportMetric label="护眼达标率" value={report?.eye_health_rate != null ? `${report.eye_health_rate}%` : '—'} />
+          <ReportMetric label="姿态守护时长" value={report ? `${report.guarded_minutes}分钟` : '—'} />
         </div>
+        {loaded && !report && (
+          <p className="mt-3 text-xs text-text-muted">绑定设备并开始使用后，这里会出现真实数据</p>
+        )}
       </Card>
 
-      <Card className="bg-gradient-to-br from-orange-50 to-white">
-        <p className="text-sm text-text-muted">同龄百分位</p>
-        <p className="mt-2 text-xl font-bold text-text-main">超过 <span className="text-4xl text-brand-orange">{weeklyReport.percentile}%</span> 同龄孩子</p>
-      </Card>
+      {/* 同龄百分位：需全量数据（percentile=null 时隐藏，合同 §7.2） */}
+      {report?.percentile != null && (
+        <Card className="bg-gradient-to-br from-orange-50 to-white">
+          <p className="text-sm text-text-muted">同龄百分位</p>
+          <p className="mt-2 text-xl font-bold text-text-main">超过 <span className="text-4xl text-brand-orange">{report.percentile}%</span> 同龄孩子</p>
+        </Card>
+      )}
 
       <Card>
         <div className="flex items-center justify-between">

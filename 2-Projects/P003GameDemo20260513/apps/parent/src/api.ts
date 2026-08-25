@@ -122,6 +122,56 @@ export async function confirmPairing(sn: string, nonce: string, pk: string): Pro
   return (await res.json().catch(() => ({ ok: false, error: 'bad_response' }))) as ConfirmResult;
 }
 
+// ── 设备遥测（真实数据接入，合同 CODEX_P003_DEVICE_TELEMETRY_REPLY_20260824）──
+// H5 只读 server 聚合接口；路由用 opaque public_id，前端零 SN 依赖。
+
+export type BoundDevice = { sn: string; public_id: string | null; note: string; status: string; brain_opened: boolean };
+export function getBoundDevices(): Promise<{ ok: boolean; devices: BoundDevice[] }> {
+  return authed('/api/profile/bound-devices') as Promise<{ ok: boolean; devices: BoundDevice[] }>;
+}
+
+export type DeviceDashboard = {
+  device: {
+    updated_at_ms: number | null;
+    online: boolean;
+    lid_open: boolean | null;
+    present: boolean | null;
+    brightness_level: number | null;
+    color_mode: string | null;
+    image_distance_m: number | null;
+    image_distance_state: string | null;
+  };
+  today: { focus_minutes: number; guarded_minutes: number; posture_alert_count: number };
+  week: {
+    total_focus_minutes: number;
+    daily_average_focus_minutes: number;
+    daily: Array<{ date: string; focus_minutes: number }>;
+  };
+  availability: { night_reward: boolean; percentile: boolean };
+};
+export function getDashboard(publicId: string): Promise<{ ok: boolean; data: DeviceDashboard }> {
+  return authed(`/v1/parent/devices/${encodeURIComponent(publicId)}/dashboard`) as Promise<{
+    ok: boolean;
+    data: DeviceDashboard;
+  }>;
+}
+
+export type WeeklyReportData = {
+  week_start: string;
+  eye_health_rate: number | null;
+  guarded_minutes: number;
+  posture_alert_count: number;
+  percentile: number | null;
+  highlights: string[];
+  data_quality: { valid_posture_rounds: number; missing_hours: number | null };
+};
+export function getWeeklyReport(publicId: string): Promise<{ ok: boolean; data: WeeklyReportData }> {
+  return authed(`/v1/parent/devices/${encodeURIComponent(publicId)}/weekly-report`) as Promise<{
+    ok: boolean;
+    data: WeeklyReportData;
+  }>;
+}
+
 export type PairingState = 'pending' | 'bound' | 'initializing' | 'expired';
 export async function getPairingStatus(sessionId: string): Promise<{ ok: boolean; state?: PairingState; sn?: string }> {
   const token = getToken();

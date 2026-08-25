@@ -91,6 +91,13 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 
 11. **「部署成功但客户端停旧版」排查树**(2026-08-23,薄壳退出登录无反应轮):三种机制症状同形——①旧 PWA SW 离线回放(坑#3,grep registerSW/workbox) ②**index.html 无 Cache-Control=启发式缓存**(基于 Last-Modified 的 10%,WebView 可长期用旧 html;且 dist 部署禁 --delete 后旧 bundle 仍在,旧 html 完全可用=**零报错地停旧版**) ③客户端内嵌 dist(APK 打包,必须重发版)。已治本②:p003 nginx SPA 缓存策略——`/`、`/index.html`、`/sw.js` 一律 `no-cache`,hashed js/css `30d+immutable`(备份 /root/p003.nginx.bak-cache-headers-20260823);**新站配 nginx 时入口 html 必配 no-cache**,否则每次部署都欠一批存量客户端的强刷。验证:`curl -sI <站点>/ | grep -i cache-control`。
 
+## 遥测运维（2026-08-25 上线,合同详情见记忆 p003_telemetry）
+
+- 库:`/opt/p003/server/data/telemetry.db` 三表(snapshot/event/daily);日志锚 `[telemetry] batch`(含 skew)。
+- env 开关(改后 pm2 restart):`TELEMETRY_SN_ALLOWLIST`(未设=放开;Canary=仅0010)/`TELEMETRY_ACCEPTANCE_OVERRIDE`(401|403|409|429|500 注入,**测完必删键+restart**,防 debug 残留)。
+- 验 allowlist 门用**空批探针**(零数据污染):目标 SN 凭据+空批→400 empty_batch=过门;白名单外→403 device_not_allowed。门序=注入→凭据→allowlist→限频→schema,400 即证明过了前面所有门。
+- 测试:`npm run test:telemetry`(29 项);家长查询走 public_id 非 SN(bound-devices 带此字段)。
+
 ## 验证铁律（cc 自己验,绝不甩给川哥）
 
 - **后端改**:本地起 server(parent 任务用 8787 / web·admin 任务用 3001)→ `curl` 真实 API E2E(login→操作→验证→**恢复不污染本地 db**)。
