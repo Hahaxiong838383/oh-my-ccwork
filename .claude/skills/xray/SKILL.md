@@ -185,9 +185,11 @@ Linux 机器上让程序走代理，**别只做 wrapper**——wrapper 的作用
   `10.10.61.0/24`/`192.168.61.0/24`，curl 打公司 mesh 地址被 xray 吃掉回 503，
   地址本身直连 0.07s 通；ssh 不读 http_proxy 所以洞潜伏到 curl 才炸）。
   curl ≥7.86 才认 CIDR，老 curl 只认字面匹配
-- ⚠️ **第二写入方会还原修复**：home-studio `~/.xray-proxy.sh` 的 `proxy_on()` 硬赋值
-  一份**更窄**的 no_proxy（无 `${VAR:-}` 兜底），手敲一次 `proxy_on` 洞就回来——
-  该函数在全局注入后已无存在价值，**待删**（须川哥确认）。同类残留见开发机
+- ⚠️ **第二写入方会还原修复**：home-studio `~/.xray-proxy.sh` 的 `proxy_on()` 曾硬赋值
+  一份**更窄**的 no_proxy（无 `${VAR:-}` 兜底），手敲一次洞就回来——
+  **已删（2026-08-25 川哥批准**，备份 `~/.xray-proxy.sh.bak-20260825`，`proxy_off` 保留）。
+  ⚠️ linux-lan 的同名文件**不是同病不要动**：那台没有全局注入，`proxy_on` 是它唯一的
+  代理开关，且实现是从 `$NO_PROXY` 派生而非硬赋值。同类残留见开发机
   `~/.claude/plans/home-studio-*-tranquil-snail.md` 自查报告 §1.3–1.8
   （theory-radar/github-radar/codex_run/omp-xai-relogin/multica-update-check 等仓内脚本同病，未修）
 - 两处都用 `${VAR:-默认}` ⇒ **先设的那份赢**，改一处必须同步另一处（否则旧值挡住新值）
