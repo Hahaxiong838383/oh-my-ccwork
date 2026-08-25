@@ -194,7 +194,7 @@ delete process.env.TELEMETRY_ACCEPTANCE_OVERRIDE;
 // ---------- 限频（放最后：会吃掉 SN 的窗口额度）----------
 {
   let last = 0;
-  for (let i = 0; i < 70; i += 1) {
+  for (let i = 0; i < 260; i += 1) {
     const r = await postBatch(tk, mkBatch({ snapshot: snap(`rate_${i}`) }));
     last = r.status;
     if (last === 429) break;

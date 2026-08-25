@@ -93,9 +93,11 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 
 ## 遥测运维（2026-08-25 上线,合同详情见记忆 p003_telemetry）
 
-- 库:`/opt/p003/server/data/telemetry.db` 三表(snapshot/event/daily);日志锚 `[telemetry] batch`(含 skew)。
-- env 开关(改后 pm2 restart):`TELEMETRY_SN_ALLOWLIST`(未设=放开;Canary=仅0010)/`TELEMETRY_ACCEPTANCE_OVERRIDE`(401|403|409|429|500 注入,**测完必删键+restart**,防 debug 残留)。
+- 库:`/opt/p003/server/data/telemetry.db` 三表(snapshot/event/daily);日志锚 `[telemetry] batch`(含 skew)。**设备通道走 kidshub-ai 域名的 nginx block(/v1/ 反代),p003 站日志查不到遥测请求是正常的**。
+- env 开关(改后 pm2 restart):`TELEMETRY_SN_ALLOWLIST`(未设=放开;Canary=仅0010)/`TELEMETRY_ACCEPTANCE_OVERRIDE`(401|403|409|429|500 注入,**测完必删键+restart**,防 debug 残留)/`TELEMETRY_INJECT_RETRY_AFTER`(注入 429 头值,默认 60 同真实限流,补验区分用 45)。
+- **限频 240 次/h/SN**(2026-08-25 提额:设备 30s 节奏=120/h,原 60 不到一半——恢复后 30 分钟打满全 429,症状与「注入没恢复」同形,靠头值 60vs45 区分;定容量参数先把消费方节奏求和)。
 - 验 allowlist 门用**空批探针**(零数据污染):目标 SN 凭据+空批→400 empty_batch=过门;白名单外→403 device_not_allowed。门序=注入→凭据→allowlist→限频→schema,400 即证明过了前面所有门。
+- **多轮注入用服务器排程脚本**(sleep_until+switch,参考 /root/telemetry-inject-v105.sh,日志 /root/telemetry-inject-schedule.log)——逐轮人肉传话改一张时间表;ssh 起远端 nohup 会挂住本地(setsid 不救):**本地挂≠远端失败,读任务输出文件确认远端态再 TaskStop**;杀排程用具体 pid 或 `ps aux | grep "[t]el-"` 方括号技法,pkill -f 会自匹配杀掉自己的 ssh。
 - 测试:`npm run test:telemetry`(29 项);家长查询走 public_id 非 SN(bound-devices 带此字段)。
 
 ## 验证铁律（cc 自己验,绝不甩给川哥）

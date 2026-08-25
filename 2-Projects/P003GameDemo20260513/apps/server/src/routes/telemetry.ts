@@ -30,7 +30,7 @@ const EVENT_TYPES = new Set([
   'presence_transition',
 ]);
 const MAX_EVENTS_PER_BATCH = 50;
-const RATE_PER_HOUR = 60;
+const RATE_PER_HOUR = 240; // 2026-08-25 提额:设备默认 30s 上传=120次/h,原 60 不到节奏一半(恢复后30分钟打满全 429);240=2倍余量,防风暴语义仍在
 const ONLINE_WINDOW_MS = 10 * 60_000; // 心跳 5min 的两倍
 
 const SnapshotSchema = z.object({
@@ -95,6 +95,9 @@ deviceTelemetryRoute.post('/', async (c) => {
   const override = process.env.TELEMETRY_ACCEPTANCE_OVERRIDE?.trim();
   if (override && ['401', '403', '409', '429', '500'].includes(override)) {
     console.log(`[telemetry] ⚠️ 验收注入生效 status=${override}`);
+    // 保真度：注入 429 与真实限流 429 同形（2026-08-25 矩阵复盘发现注入版漏 Retry-After 头）。
+    // 头值 env 可配：严格 Retry-After 补验用 45（与设备 fallback 序列 30/60/120 区分），默认 60 同真实限流。
+    if (override === '429') c.header('Retry-After', process.env.TELEMETRY_INJECT_RETRY_AFTER?.trim() || '60');
     return c.json({ ok: false, error: 'acceptance_override', reason: `injected_${override}` }, Number(override) as 401);
   }
 
