@@ -161,6 +161,25 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   ④生产对撞 `buildDeviceLayers` 的 final:判据=含「一律叫 ta「X」」指令行+无写死称呼残留。
 - DB 文本替换引号形态是待验事实(弯vs直引号),先 JSON.stringify 看真实字节或用正则兜任意引号。
 
+## 人格成长运维（2026-08-26 上线,机制详情见记忆 p003_persona_growth）
+
+- **开关全集**(.env.local,共享 allowlist):`PERSONA_STATE_TRACK/INJECT` + `PERSONA_STYLE/INSIGHT/NARRATIVE/TRAIT_ENABLED`
+  + `PERSONA_STATE_ACCOUNT_ALLOWLIST`(设备账号形态 `device-<SN>`,逗号分隔;**004=真孩子永不进名单**)。
+  回滚=关对应键 restart,数据无损;账本只写不读主链,关了零影响。
+- **一站式排障**:`GET /api/admin/devices/<SN>/persona-probe`(开关/关系/注入实况七段=真实 prompt 链抓取/
+  风格池/画像/叙事/特质/账本数);CLI `python3 scripts/persona-probe.py <SN> probe|run`(run=手动跑
+  M3 画像+M6 叙事立即出结果,不等每日沪时 3 点批);时间线 `GET .../growth-events?module=&dimension=&limit=`。
+- **日志锚**:`pm2 logs p003-voice | grep -E "\[persona\]|\[trait\]|\[style\]|\[insight\]|\[narrative\]|\[ledger\]"`;
+  [persona] recordTurn 的 applied/stale(乱序拒)/注入位图,[persona-daily] 定时批。
+- **重置**:`DELETE .../relation-state` 清五样(relation/style/insight/trait/ledger);换绑不同家长自动全清;
+  admin「🌱 人格成长」tab 有确认框按钮。
+- **回填**:`scripts/backfill-relation-state.ts --account <id> [--apply]`(dry-run 默认;
+  **直查 conversation.db SQL**——conversationStore.list 内部 clamp 1000 条,老账号 first_seen 会算晚)。
+- **admin 单文件(in-DOM Vue)改动流程**:dist/admin/index.html 无构建直接改;验证=①标签配平 python 检查
+  **对撞原始备份看差异**(基线自带 4 个 parser 假报,绝对数没意义)②部署后开登录页——**渲染成功=Vue
+  运行时整树一次编译全模板通过**(新 subTab 模板语法错会全页白屏,不用登录即可验);el-input 必须显式闭合。
+- 单测 `npm run test:persona`(115 项);测试选句先对照规则分支(7 字句会触发短句镜像——中性输入要验证过)。
+
 ## 凭证/链接（指针,secret 绝不入 skill）
 
 - 三端链接见上表。admin 登录 `admin / ⟨STUDIO_PASS 见生产 /opt/p003/server/.env.local⟩`。
