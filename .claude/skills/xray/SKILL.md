@@ -180,8 +180,16 @@ Linux 机器上让程序走代理，**别只做 wrapper**——wrapper 的作用
 | `/etc/profile.d/xray-proxy.sh` | 登录 shell、桌面会话、`su -` |
 
 - 两处都写 `export HTTPS_PROXY/HTTP_PROXY/https_proxy/http_proxy`（大小写都给，工具习惯不一）
-- `NO_PROXY` **必须含组网段与内网段**（本机是 `10.10.10.0/24,10.10.1.0/24,192.168.1.0/24`），
-  否则 mesh/局域网流量绕进代理
+- `NO_PROXY` 写**整段私网空间** `10.0.0.0/8,172.16.0.0/12,192.168.0.0/16`，
+  🔴 **禁止逐段枚举——枚举必然漏**（2026-08-25 实证：枚举写法漏掉公司侧
+  `10.10.61.0/24`/`192.168.61.0/24`，curl 打公司 mesh 地址被 xray 吃掉回 503，
+  地址本身直连 0.07s 通；ssh 不读 http_proxy 所以洞潜伏到 curl 才炸）。
+  curl ≥7.86 才认 CIDR，老 curl 只认字面匹配
+- ⚠️ **第二写入方会还原修复**：home-studio `~/.xray-proxy.sh` 的 `proxy_on()` 硬赋值
+  一份**更窄**的 no_proxy（无 `${VAR:-}` 兜底），手敲一次 `proxy_on` 洞就回来——
+  该函数在全局注入后已无存在价值，**待删**（须川哥确认）。同类残留见开发机
+  `~/.claude/plans/home-studio-*-tranquil-snail.md` 自查报告 §1.3–1.8
+  （theory-radar/github-radar/codex_run/omp-xai-relogin/multica-update-check 等仓内脚本同病，未修）
 - 两处都用 `${VAR:-默认}` ⇒ **先设的那份赢**，改一处必须同步另一处（否则旧值挡住新值）
 - ⚠️ **systemd 服务不读这两处**，需要出网的 unit 要单独写 `Environment=`
 - ⚠️ **环境变量在进程启动时固化**：改完配置，已在跑的进程不会追溯生效。

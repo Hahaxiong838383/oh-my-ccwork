@@ -169,6 +169,19 @@ deploy_one() {
     || die "$node 配置语法不过"
 
   # ── 4. 注册服务 ──
+  # QUIC/KCP 代理只开 air 与 home-studio（办公室↔家这条路的两端）：
+  #   · 晚高峰出口 QoS 塌陷时 10–22×（2026-08-25 实测 59–139KB/s → 1302KB/s，QUIC 优先生效）
+  #   · 健康窗口 KCP 曾测亏 ~16%（2026-08-20 家侧交替 A/B），故其余节点保持关
+  #   · 生效判据：传输中 easytier-cli proxy 表出现 transport_type=Quic/Kcp 条目（配置对≠生效）
+  #   改动前读 ~/.claude/skills/easytier-mesh-ops/SKILL.md「KCP/QUIC 代理」节
+  local et_extra_flags="" et_extra_plist=""
+  case "$node" in
+    air|home-studio)
+      et_extra_flags=" --enable-kcp-proxy --enable-quic-proxy"
+      et_extra_plist='    <string>--enable-kcp-proxy</string>
+    <string>--enable-quic-proxy</string>'
+      ;;
+  esac
   if [[ "$plat" == linux-* ]]; then
     remote "$node" "cat > /etc/systemd/system/easytier-mesh.service <<'UNIT'
 [Unit]
@@ -178,7 +191,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/easytier-core -c /etc/easytier/node.toml --rpc-portal 127.0.0.1:15888 --config-server $ET_CONFIG_SERVER
+ExecStart=/usr/local/bin/easytier-core -c /etc/easytier/node.toml --rpc-portal 127.0.0.1:15888 --config-server $ET_CONFIG_SERVER$et_extra_flags
 Restart=always
 RestartSec=5
 LimitNOFILE=1048576
@@ -203,6 +216,7 @@ systemctl restart easytier-mesh"
     <string>-c</string><string>/etc/easytier/node.toml</string>
     <string>--rpc-portal</string><string>127.0.0.1:15888</string>
     <string>--config-server</string><string>$ET_CONFIG_SERVER</string>
+$et_extra_plist
   </array>
   <!-- launchd daemon 默认不带 HOME，而 --config-server 需要它来定位 machine-id
        的持久化目录，缺了会以 \"HOME is not set, cannot resolve machine id state
