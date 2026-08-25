@@ -145,7 +145,13 @@ profileRoute.get('/bound-devices', (c) => {
   const rows = deviceRegistryStore.listByParentAccountId(c.get('accountId'));
   return c.json({
     ok: true,
-    devices: rows.map((d) => ({ sn: d.sn, note: d.note, status: d.status, brain_opened: Boolean(d.account_id) })),
+    devices: rows.map((d) => ({
+      sn: d.sn,
+      public_id: d.public_id, // 遥测家长查询路由用（H5 路由零 SN，合同 §9）
+      note: d.note,
+      status: d.status,
+      brain_opened: Boolean(d.account_id),
+    })),
   });
 });
 

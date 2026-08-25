@@ -17,7 +17,8 @@
     "test:ota": "NODE_OPTIONS=--experimental-sqlite tsx scripts/ota.test.ts",
     "test:device-config": "NODE_OPTIONS=--experimental-sqlite tsx scripts/device-config.test.ts",
     "test:pairing": "NODE_OPTIONS=--experimental-sqlite tsx scripts/pairing.test.ts",
-    "test:interests": "NODE_OPTIONS=--experimental-sqlite tsx scripts/interests.test.ts"
+    "test:interests": "NODE_OPTIONS=--experimental-sqlite tsx scripts/interests.test.ts",
+    "test:telemetry": "NODE_OPTIONS=--experimental-sqlite tsx scripts/telemetry.test.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.0.0",

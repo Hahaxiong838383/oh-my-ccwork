@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -20,6 +21,7 @@ export type DeviceRecord = {
   status: DeviceStatus;
   account_id: string | null; // brain 账号关联（Worker Brain tab）
   parent_account_id: string | null; // 家长账号关联（小程序绑定/admin 手工；建档下发链的取数源）
+  public_id: string | null; // 对外不透 SN 的稳定 id（dev_<16hex>，telemetry 合同 §9：H5 路由/前端日志零 SN）
   worldview_override: string; // per-device 世界观人设（空 = 默认 ARK_WORLDVIEW_BASE）
   prompt_addendum: string; // per-device 附加规则（空 = 关闭；拼接在 systemPrompt 最末）
   credential_issued_at: number | null;
@@ -115,9 +117,28 @@ class DeviceRegistryStore {
       if (!hasReg('parent_account_id')) {
         this.db.exec(`ALTER TABLE device_registry ADD COLUMN parent_account_id TEXT`);
       }
+      if (!hasReg('public_id')) {
+        this.db.exec(`ALTER TABLE device_registry ADD COLUMN public_id TEXT`);
+        this.db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_registry_public_id ON device_registry (public_id) WHERE public_id IS NOT NULL`);
+      }
+      // 存量回填：无 public_id 的行统一生成（新增设备在 add() 时生成）
+      const missing = this.db.prepare(`SELECT sn FROM device_registry WHERE public_id IS NULL`).all() as { sn: string }[];
+      for (const row of missing) {
+        this.db
+          .prepare(`UPDATE device_registry SET public_id = ? WHERE sn = ?`)
+          .run(`dev_${randomBytes(8).toString('hex')}`, row.sn);
+      }
     } catch (err) {
       console.error(`[device-registry] 列迁移失败(不阻断): ${(err as Error).message}`);
     }
+  }
+
+  /** 按对外 public_id 反查（parent telemetry API 用；H5 不见 SN）。 */
+  getByPublicId(publicId: string): DeviceRecord | null {
+    const row = this.db
+      .prepare(`SELECT * FROM device_registry WHERE public_id = ?`)
+      .get(publicId) as DeviceRecord | undefined;
+    return row ?? null;
   }
 
   // ── 台账 ──
@@ -143,10 +164,10 @@ class DeviceRegistryStore {
     const now = Date.now();
     this.db
       .prepare(
-        `INSERT INTO device_registry (sn, note, status, created_at, updated_at)
-         VALUES (?, ?, 'active', ?, ?)`,
+        `INSERT INTO device_registry (sn, note, status, public_id, created_at, updated_at)
+         VALUES (?, ?, 'active', ?, ?, ?)`,
       )
-      .run(sn, note, now, now);
+      .run(sn, note, `dev_${randomBytes(8).toString('hex')}`, now, now);
     return this.get(sn)!;
   }
 
