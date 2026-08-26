@@ -311,7 +311,7 @@ PILOT_PROJECTS = {
             "maintenancePort": 22,
             "path": "/root/realtime-voice-agent",
             "processManager": "systemd",
-            "services": ["voice-worker"],
+            "services": ["voice-worker", "voice-worker-rust"],
             "maintenanceSecretDir": "/run/secrets/qihang-hk-maintenance",
             "maintenanceActions": ["inspect", "restart-voice-worker"],
             "maintenanceConfirmations": {
@@ -1536,10 +1536,22 @@ def sanitize_production_inspection(payload):
             "nextElapse": str(scheduler.get("nextElapse") or "")[:120] or None,
             "lastResult": str(scheduler.get("lastResult") or "")[:40] or None,
         }
+    # okRust / rustMemory：voice rust 主力线（2026-08-26 起）——此前面板只看老 python 线，
+    # rust 完全不在监控名单（711M/900M 一天刷一次还看错对象的根因之一）
+    if "okRust" in payload:
+        sanitized["okRust"] = bool(payload.get("okRust"))
+    rust_memory = payload.get("rustMemory") or {}
+    if isinstance(rust_memory, dict) and rust_memory:
+        sanitized["rustMemory"] = {
+            "currentMB": rust_memory.get("currentMB"),
+            "peakMB": rust_memory.get("peakMB"),
+            "highMB": rust_memory.get("highMB"),
+            "maxMB": rust_memory.get("maxMB"),
+        }
     services = payload.get("services") or {}
     if isinstance(services, dict) and services:
         sanitized["services"] = {}
-        for name in ("cliproxy", "cpa-smart-router", "voice-worker"):
+        for name in ("cliproxy", "cpa-smart-router", "voice-worker", "voice-worker-rust"):
             if name not in services:
                 continue
             service = services.get(name) or {}
@@ -1574,7 +1586,7 @@ def sanitize_production_inspection(payload):
             }
     logs = payload.get("logs") or {}
     if isinstance(logs, dict) and logs:
-        sanitized["logs"] = {"warning24h": logs.get("warning24h")}
+        sanitized["logs"] = {"warning24h": logs.get("warning24h"), "warning24hRust": logs.get("warning24hRust")}
     versions = payload.get("versions") or {}
     if isinstance(versions, dict) and versions:
         sanitized["versions"] = {

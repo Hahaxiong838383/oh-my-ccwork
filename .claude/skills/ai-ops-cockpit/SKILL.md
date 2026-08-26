@@ -267,3 +267,11 @@ rsync -az 2-Projects/ai-ops-cockpit/ops-inspector/server.py racknerd:/opt/ai-ops
 rsync -az 2-Projects/ai-ops-cockpit/scripts/ racknerd:/opt/ai-ops-cockpit/scripts/
 ssh racknerd 'cd /opt/ai-ops-cockpit && chmod +x scripts/*.sh && ./scripts/install-readonly-refresh-cron.sh && DOCKER_BUILDKIT=1 docker compose up -d --build ops-inspector && docker compose ps ops-inspector ops-terminal'
 ```
+
+## Voice 生产资源实时刷新链（2026-08-26/27）
+
+- **痛点根因**：voice 资源快照此前仅每日 09:40 n8n 巡检采一次（晚上看板还显示早上读数）；且监控对象只有老 `voice-worker`（python 线），rust 主力线完全不在名单；`project-production/.../latest.json` 曾停更一个月。
+- **链路**：racknerd cron `*/5`（`/usr/local/bin/aiops-voice-refresh.sh`，flock 防重叠）→ inspector API `POST /vibe/project/production/action`（容器内 token=env `OPS_READ_TOKEN`，头 `x-aiops-read-token`，**Origin 必须带且匹配内部 Host**——教训#11 同款）→ 受限 ssh → 64.90 `/usr/local/sbin/aiops-voice-worker-control inspect` → 落 `state/project-production/realtime-voice-agent/latest.json`（恒 ≤5min 新鲜）。
+- **新字段**：`rustMemory{currentMB,peakMB,highMB,maxMB}`（cgroup 四元组，High=软压线回收不杀/Max=硬杀线；判读：接近 High 先查 64.90 `memory.events` 的 high 计数，0=线从未绑定）+ `services.voice-worker-rust` + `okRust` + `logs.warning24hRust`。
+- **三跳白名单铁律**：改 64.90 采集端后，racknerd `server.py` 的 `sanitize_production_inspection` 是第二跳白名单（services 元组+字段级），漏加=新字段静默丢；**server.py 是 `build: ./ops-inspector` 进镜像的——rsync 后必须 `docker compose build ops-inspector && up -d`，光 restart 不换代码**。
+- 64.90 采集端备份：`aiops-voice-worker-control.bak-20260826-pre-rust`。老 python 线退役时：control 脚本老段一起摘 + **:8081 探针挂在老进程上会一起消失**（live check 会红，先给探针搬家）。

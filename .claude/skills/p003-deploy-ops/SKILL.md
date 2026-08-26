@@ -243,3 +243,4 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 
 - 三端链接见上表。admin 登录 `admin / ⟨STUDIO_PASS 见生产 /opt/p003/server/.env.local⟩`。
 - ⚠️ admin 口令历史散落多处记忆+git 历史,根治待轮换 STUDIO_PASS(见 task-log)。
+- **admin「设备接入」资源卡(2026-08-27)**:数据链=前端 loadWorkerStats → `/api/admin/worker-stats`(server 30s 共享缓存) → 专用 key `worker-stats-key` ssh 64.90 forced-command `stats.sh`(第三把 key,与 hotword-apply/aiops 并列)。前端 60s 自动轮询+「更新于」小字(此前只在进页拉一次,标签页挂夜=显示打开时刻旧快照,川哥实撞 711M)。**stats.sh 采集本身永远实时**——资源卡数字可疑先看「更新于」时刻,再逐跳对撞。admin 改动部署=git show 导出→scp(路径要 mycc 仓根相对)。
