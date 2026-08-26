@@ -201,6 +201,11 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   再遇 slot 空手先看 `llm bad-json` 日志的 raw 样本再归因。
 - 单测 `npm run test:local-audio`(61);E2E `scripts/local-audio-e2e.mjs off|on` + `scripts/la-admin-e2e.py <SN>`
   (**admin 登录要 username+password 双字段**,只发 password 恒 401)。
+- **🔴 探针纪律(D2 起铁律)**:任何 cc 侧探针/curl **禁止带 `applied_revision` 参数**——`last_applied_*`
+  是「Android 真机原子应用」的**独占证据位**,己方写入(含写 0)即污染 A3/J2 触达锚(D1 犯过,codex 抓的,已清零)。
+- **源码审计锚**:server 无 git,每轮变更出只读 tar+SHA 落 `_backup/`(排除 .env——secret 不入档);
+  现锚 `local-audio-d1-src-20260826.tar.gz` SHA256 `e1ed1e1b…4aae131d`。tombstone 语义:关系重置→
+  manifest 回 `revision=0`(设备清动态套回内置音,applied=0=双方单调计数共同重置点,重新生成从 1 计)。
 
 ## 凭证/链接（指针,secret 绝不入 skill）
 
