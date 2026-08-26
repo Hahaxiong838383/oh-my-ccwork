@@ -199,8 +199,15 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **发布语义**:六 slot 各≥2 条才整套原子 commit(凑不齐现套与基准均不动,次日批自愈);新条目 staging(active=0)
   落库 commit 统一翻;同 slot 同文案复用旧音频不重合成。LLM 偶发 `[{"文案"}]` 伪 JSON 已有容错,
   再遇 slot 空手先看 `llm bad-json` 日志的 raw 样本再归因。
-- 单测 `npm run test:local-audio`(61);E2E `scripts/local-audio-e2e.mjs off|on` + `scripts/la-admin-e2e.py <SN>`
-  (**admin 登录要 username+password 双字段**,只发 password 恒 401)。
+- **格式现状(WAV 增量后)**:rev=1=MP3(**冻结回滚锚,永不改写**);rev≥2=WAV PCM16/mono/24k——
+  **讯飞 `encoding='raw'` 直出 PCM+server 拼 44B RIFF 头**(机上无 ffmpeg 也不要装);manifest wav 条目带
+  `codec=pcm_s16le`+`bits_per_sample=16`;容量门 160KiB/文件+5MiB/revision。item 表 format 列驱动
+  Content-Type 与文件后缀。
+- **迁移闸 `LOCAL_AUDIO_GENERATION_PAUSED=1`**:挡每日批自动生成(admin force 不受限);
+  W4 动作=收到 codex `W3 DONE` → 删此键+restart+手动触发双机 → WAV rev=2(全新 id)。
+- 单测 `npm run test:local-audio`(78);E2E `scripts/local-audio-e2e.mjs off|on` + `scripts/la-admin-e2e.py <SN>`
+  (**admin 登录要 username+password 双字段**,只发 password 恒 401);WAV 链离线实证 `scripts/wav-offline-proof.ts`。
+  ⚠️ 探针必须落 .ts 文件用 tsx 跑——`tsx -e` 走 CJS 不支持顶层 await。
 - **🔴 探针纪律(D2 起铁律)**:任何 cc 侧探针/curl **禁止带 `applied_revision` 参数**——`last_applied_*`
   是「Android 真机原子应用」的**独占证据位**,己方写入(含写 0)即污染 A3/J2 触达锚(D1 犯过,codex 抓的,已清零)。
 - **源码审计锚**:server 无 git,每轮变更出只读 tar+SHA 落 `_backup/`(排除 .env——secret 不入档);
