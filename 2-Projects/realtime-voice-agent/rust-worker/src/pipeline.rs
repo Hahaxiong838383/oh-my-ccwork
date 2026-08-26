@@ -56,6 +56,8 @@ pub struct PipelineConfig {
     /// TTS 回声对撞窗(2026-08-26 关灯自嗨实证:确认语「好的…」被端侧回声收回,播完 48ms 后
     /// 从 EOU 正门 commit 成用户轮——打断门只管播放期间,不管回声轮次)。播放中或播完后
     /// 此窗内 commit 的文本若是最近播出文本的子串 → 判回声丢弃。0 = 关闭该门。
+    /// 默认 800ms:回声 commit 机理上限≈0.8s(EOU 0.6+ASR 尾 0.2,实测迟到仅 48ms);真人
+    /// 「选择题复述应答」(答案恰是刚播文本子串)的 commit 下沿≈1.45s——800 落两分布空隙。
     pub echo_suppress_window: Duration,
     pub tts_min_sentence_len: usize,
     pub greeting_text: String,
@@ -124,7 +126,7 @@ impl PipelineConfig {
                 std::env::var("ECHO_SUPPRESS_WINDOW_MS")
                     .ok()
                     .and_then(|v| v.parse().ok())
-                    .unwrap_or(1500),
+                    .unwrap_or(800),
             ),
             tts_min_sentence_len: std::env::var("TTS_MIN_SENTENCE_LEN")
                 .ok()
