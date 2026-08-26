@@ -194,8 +194,10 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   时间线 `growth-events?module=local_audio`;日志锚 `grep "\[local-audio\]"`(gen slot 拒因计数/manifest/file)。
 - **设备端点**:`GET /v1/device/local-audio/manifest?applied_revision=N` + `/file/:id`(设备凭据 sub 取 SN;
   公网入口**只有 kidshub-ai.hahaxiong.cc 反代 /v1/**)。`revision=0+slots 空=尚无内容非错误`。
-- **SHA 投毒负测(J5)**:env `LOCAL_AUDIO_POISON_ID=<16hex>` → manifest 该条 sha 首字符翻转(文件不动);
-  **测完删键+restart**(同 DEVICE_CONFIG_ACCEPTANCE_OVERRIDE 纪律)。
+- **SHA 投毒负测(J5,W5 起已迁 file 端点)**:env `LOCAL_AUDIO_POISON_ID=<16hex>` → **file 端点对命中 id
+  翻转数据区中间一字节返回**(manifest/bytes/ETag 全真值,投毒态跳 304)——codex 合同禁「同 revision
+  manifest 漂移」,老的 manifest sha 翻转法已废。**测完删键+restart**。投毒配好后必跑双锚:正锚=毒 id
+  下载 sha≠manifest,负锚=干净 id sha 相符(`scripts/poison-proof.mjs <id> <真值sha>`)。
 - **发布语义**:六 slot 各≥2 条才整套原子 commit(凑不齐现套与基准均不动,次日批自愈);新条目 staging(active=0)
   落库 commit 统一翻;同 slot 同文案复用旧音频不重合成。LLM 偶发 `[{"文案"}]` 伪 JSON 已有容错,
   再遇 slot 空手先看 `llm bad-json` 日志的 raw 样本再归因。
@@ -209,7 +211,7 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   rev=1 MP3 全套归档 `_backup/local-audio-rev1-mp3-20260826/`(只读,防 14 天 cleanup 清掉回滚锚)。
   **混套检测器**:逐条验 `bytes≈duration_ms×48+44`(WAV 公式;MP3 字节数远小于公式值即混入);
   证据采集脚本 `scripts/w4-evidence.mjs`(公网全链+五字段断言+file 抽检)。
-- 单测 `npm run test:local-audio`(78);E2E `scripts/local-audio-e2e.mjs off|on` + `scripts/la-admin-e2e.py <SN>`
+- 单测 `npm run test:local-audio`(101,W4 后含姿态组);E2E `scripts/local-audio-e2e.mjs off|on` + `scripts/la-admin-e2e.py <SN>`
   (**admin 登录要 username+password 双字段**,只发 password 恒 401);WAV 链离线实证 `scripts/wav-offline-proof.ts`。
   ⚠️ 探针必须落 .ts 文件用 tsx 跑——`tsx -e` 走 CJS 不支持顶层 await。
 - **🔴 探针纪律(D2 起铁律)**:任何 cc 侧探针/curl **禁止带 `applied_revision` 参数**——`last_applied_*`
@@ -217,6 +219,21 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **源码审计锚**:server 无 git,每轮变更出只读 tar+SHA 落 `_backup/`(排除 .env——secret 不入档);
   现锚 `local-audio-d1-src-20260826.tar.gz` SHA256 `e1ed1e1b…4aae131d`。tombstone 语义:关系重置→
   manifest 回 `revision=0`(设备清动态套回内置音,applied=0=双方单调计数共同重置点,重新生成从 1 计)。
+- **W5 场景A 后基线(2026-08-26 晚)**:003=v106 `applied revision=4`(greeting 单条增量已闭环:投毒拒→删毒
+  差量应用,27 旧 id 零重下载);0010=v105 对照 rev=3。**姿态版=revision 5**(v107 合同的 rev4 编号已被
+  场景A消费,codex 预期 applied 数字全部顺延)。**rev5 已 staging 就位**(posture.adjust/no_face 各 4 条+
+  投毒预配 `cd52ce494c0c2cdf`),等 codex `v107 installed + GO` 后跑 `scripts/posture-rev5.ts commit`
+  一步激活即带毒(staging 期配毒零影响=竞态消除法:insertItem active=0 manifest 不可见但 file 可下载,
+  可在设备可见前先验毒)。姿态健康门=SLOT_SPECS `requiredRes[]`(必含动作语义,no_face 双成分)+`forbiddenRe`。
+  optional slot 语义:0 条=键不存在,1 条=弃置回 staging,2..5 才进套;单测 101(`test:local-audio`)。
+- **称呼硬门(2026-08-26「哎子贤」事故后)**:改名走 `nickname_change:{value,evidence}` 五门
+  (evidence 子串+句式+值在证据内+代词黑名单);变更查 `growth-events?module=profile`(含证据原句);
+  单测 `test:memory-extract`(15)+真 LLM 双锚 `scripts/rename-gate-probe.ts`;数据修复记账 rule=cc_data_fix。
+  ⚠️ `test:onboarding` 挂在 package.json 但文件不存在(存量断链)。
+- **filler 人格套(F1)**:双机 27 条已发布 64.90 `/opt/voice-agent/fillers-persona/<SN>/`,
+  **F2 前 worker 不读=听感不变**;发布 `scripts/filler-publish.ts <SN> [--dry-run]`(留档 data/filler-sets/);
+  64.90 通道 `apply_hotwords.py action=apply_fillers`(**barge 桶硬拒**);colleague 全局套=回滚锚零改动。
+  详见记忆 p003_filler_persona。
 
 ## 凭证/链接（指针,secret 绝不入 skill）
 
