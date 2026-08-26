@@ -53,6 +53,10 @@ pub struct PipelineConfig {
     pub min_interruption_duration: f32,
     pub false_interruption_timeout: Duration,
     pub aec_warmup_duration: Duration,
+    /// TTS 回声对撞窗(2026-08-26 关灯自嗨实证:确认语「好的…」被端侧回声收回,播完 48ms 后
+    /// 从 EOU 正门 commit 成用户轮——打断门只管播放期间,不管回声轮次)。播放中或播完后
+    /// 此窗内 commit 的文本若是最近播出文本的子串 → 判回声丢弃。0 = 关闭该门。
+    pub echo_suppress_window: Duration,
     pub tts_min_sentence_len: usize,
     pub greeting_text: String,
     /// 连接后是否自动播固定开场白。P003 安卓 demo 要求关掉(2026-08-15 联调)。
@@ -116,6 +120,12 @@ impl PipelineConfig {
                 1.5,
             )),
             aec_warmup_duration: Duration::from_secs_f32(f("AEC_WARMUP_DURATION", 0.5)),
+            echo_suppress_window: Duration::from_millis(
+                std::env::var("ECHO_SUPPRESS_WINDOW_MS")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(1500),
+            ),
             tts_min_sentence_len: std::env::var("TTS_MIN_SENTENCE_LEN")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -273,6 +283,12 @@ struct Orchestrator {
     aec_deadline: Option<Instant>,
     aec_armed: bool,
     resume_grace: Option<Instant>,
+    /// TTS 回声对撞:最近一次播出的全部文本(filler+正文/say;被打断时=真实播出的 spoken 部分)
+    echo_tts_text: String,
+    /// 最近一次播出结束时刻(PlayedOut 自然播完或 hard_abort),对撞窗从这里起算
+    echo_playout_end: Option<Instant>,
+    /// 当前在途 turn 的 filler 文案(不能混进 synth_text——会错位打断截断,单独暂存)
+    echo_cur_filler: String,
     latest_interim: String,
     /// 打断遥测快照(对齐 _tele_interim:最近一次转写文本,telemetry 行后清空)。
     tele_text: String,
@@ -308,6 +324,15 @@ fn now_unix_ms() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
+}
+
+/// 回声对撞归一:只留字母/数字/汉字(is_alphanumeric 对 CJK 为 true)并小写——
+/// ASR 转写与 TTS 原文的标点/空白差异不参与判定。
+fn normalize_echo(s: &str) -> String {
+    s.chars()
+        .filter(|c| c.is_alphanumeric())
+        .flat_map(|c| c.to_lowercase())
+        .collect()
 }
 
 fn unix_ms_now() -> i64 {
@@ -506,6 +531,9 @@ pub async fn run_pipeline(
         aec_deadline: None,
         aec_armed: false,
         resume_grace: None,
+        echo_tts_text: String::new(),
+        echo_playout_end: None,
+        echo_cur_filler: String::new(),
         latest_interim: String::new(),
         tele_text: String::new(),
         last_interrupt_at: None,
@@ -1290,6 +1318,9 @@ impl Orchestrator {
             spoken_chars = spoken.chars().count(),
             "agent turn aborted, history truncated to spoken part"
         );
+        // 回声对撞:被打断时只有 spoken 部分出了喇叭(截断文本),连同 filler 进对撞缓冲
+        self.echo_tts_text = format!("{}{spoken}", self.echo_cur_filler);
+        self.echo_playout_end = Some(Instant::now());
         self.pending_amend = Some(spoken);
         self.paused = None;
         self.false_deadline = None;
@@ -1390,6 +1421,12 @@ impl Orchestrator {
                     return;
                 }
                 self.tr_finish_turn(); // 字幕:剩余句补 final(先于清 turn)
+                // 回声对撞:自然播完=filler+全文都出了喇叭,整段进对撞缓冲(必须在清 turn 前取)
+                if let Some(turn) = &self.agent_turn {
+                    let synth = turn.synth_text.lock().map(|s| s.clone()).unwrap_or_default();
+                    self.echo_tts_text = format!("{}{synth}", self.echo_cur_filler);
+                    self.echo_playout_end = Some(Instant::now());
+                }
                 self.agent_turn = None; // 任务已自然结束
                 // canary turn:Say 块里 playout_task.await 先于 PlayedOut,终态必已定格
                 self.try_flush_canary_metrics();
@@ -1463,6 +1500,52 @@ impl Orchestrator {
                     s.event("swallowed", &[("text", &user_text), ("kind", kind)]);
                 }
                 return;
+            }
+            // TTS 回声对撞(2026-08-26 关灯自嗨实证:确认语「好的…」回声在播完 48ms 后从
+            // EOU 正门 commit 成用户轮,再触发 filler+LLM=自我对话)。位置=STOP 之后 DEVICE 之前:
+            // 急停/退出安全语义零影响(合同序 EXIT→STOP 不动),且挡住回声文本含命令词
+            // 再触发设备命令的最坏放大形态。判据三与:①播放中或播完后窗内 ②计字≥2(单字
+            // 交给原有打断门,子串误伤面太大) ③normalize 后是最近播出文本(filler+正文)的子串。
+            if !self.cfg.echo_suppress_window.is_zero() {
+                let playing = self.agent_turn.is_some();
+                let in_window = self
+                    .echo_playout_end
+                    .is_some_and(|t| t.elapsed() <= self.cfg.echo_suppress_window);
+                if playing || in_window {
+                    let nu = normalize_echo(&user_text);
+                    let mut recent = String::new();
+                    if in_window {
+                        recent.push_str(&self.echo_tts_text);
+                    }
+                    if playing {
+                        recent.push('\n');
+                        recent.push_str(&self.echo_cur_filler);
+                        if let Some(turn) = &self.agent_turn {
+                            if let Ok(s) = turn.synth_text.lock() {
+                                recent.push_str(&s);
+                            }
+                        }
+                    }
+                    let nt = normalize_echo(&recent);
+                    if nu.chars().count() >= 2 && !nt.is_empty() && nt.contains(&nu) {
+                        let since_ms = self
+                            .echo_playout_end
+                            .map(|t| t.elapsed().as_millis() as i64)
+                            .unwrap_or(-1);
+                        info!(
+                            room = %self.room_name,
+                            playing,
+                            since_playout_ms = since_ms,
+                            "echo suppressed: '{user_text}' ⊂ recent tts"
+                        );
+                        if let Some(s) = &mut self.snap {
+                            s.event("echo_suppressed", &[("text", &user_text)]);
+                        }
+                        self.latest_interim.clear();
+                        self.tele_text.clear();
+                        return;
+                    }
+                }
             }
             // S2-B2 设备命令轮(合同处理序 EXIT→STOP→DEVICE→LLM,禁止改序):
             // 确定性匹配命中 → 发 proposed、零 UserTurnCommitted、零 filler、零 LLM,
@@ -1594,6 +1677,12 @@ impl Orchestrator {
     }
 
     fn start_turn(&mut self, kind: TurnKind) {
+        // 回声对撞:记录本 turn 的 filler 文案(Say/无 filler 轮清空)——synth_text 只有 TTS 正文,
+        // filler 是预合成 pcm 直接入轨,不经它,得单独暂存才能参与对撞
+        self.echo_cur_filler = match &kind {
+            TurnKind::Reply { filler: Some((t, _)), .. } => t.clone(),
+            _ => String::new(),
+        };
         self.next_turn_id += 1;
         let id = self.next_turn_id;
         self.tr_started = 0;
@@ -1978,5 +2067,33 @@ mod device_turn_tests {
         assert_eq!(device_reply("failed", false, "", "led_on"), "刚刚没有调成功，再试一次吧");
         assert_eq!(device_reply("timeout", false, "", "led_on"), "刚刚没有调成功，再试一次吧");
         assert_eq!(device_reply("weird_status", false, "", "led_on"), "刚刚没有调成功，再试一次吧");
+    }
+
+    // ── TTS 回声对撞(2026-08-26 关灯自嗨实证的回归锚) ──
+    #[test]
+    fn echo_normalize_strips_punct_and_lowercases() {
+        assert_eq!(normalize_echo("好的，灯已经关上啦！"), "好的灯已经关上啦");
+        assert_eq!(normalize_echo("OK, Lamp Off."), "oklampoff");
+        assert_eq!(normalize_echo("…！？"), "");
+    }
+
+    #[test]
+    fn echo_substring_hits_real_case() {
+        // 实案:确认语「好的，正在调整」的回声被 ASR 转写成「好的」
+        let tts = normalize_echo("好的，正在调整");
+        assert!(tts.contains(&normalize_echo("好的")));
+        // filler 回声:「哦，这样啊。」→「这样啊」
+        let filler = normalize_echo("哦，这样啊。");
+        assert!(filler.contains(&normalize_echo("这样啊")));
+    }
+
+    #[test]
+    fn echo_no_false_hit_on_unrelated_text() {
+        // 用户正常输入不是播出文本子串 → 不撞
+        let tts = normalize_echo("好的，正在调整");
+        assert!(!tts.contains(&normalize_echo("讲个故事")));
+        // 单字判据在门外(计字≥2 才参与)——这里只锚 contains 语义本身:
+        // 「灯」是子串,靠调用处的 ≥2 字门挡住误杀,见 commit 对撞门注释
+        assert!(tts.contains(&normalize_echo("调整")));
     }
 }
