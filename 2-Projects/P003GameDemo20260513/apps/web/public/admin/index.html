@@ -1661,6 +1661,7 @@
                           内存可用 <b>{{ (workerStats.machine.mem_avail_mb/1024).toFixed(1) }}G</b> / {{ (workerStats.machine.mem_total_mb/1024).toFixed(1) }}G · 负载 <b>{{ workerStats.machine.load1 }}</b>/{{ workerStats.machine.nproc }}核<br/>
                           rust <b>{{ Math.round(workerStats.machine.rust_mem_bytes/1048576) }}M</b>/{{ Math.round(workerStats.machine.rust_mem_high_bytes/1048576) }}M 上限 · <el-tag size="small" :type="workerStats.machine.rust_active==='active' ? 'success' : 'danger'">{{ workerStats.machine.rust_active }}</el-tag>
                         </div>
+                        <div style="font-size:11px;color:#B0B8C4;margin-top:2px">更新于 {{ workerStats.fetchedAt || '—' }} · 每分钟自动刷新</div>
                       </template>
                       <div v-else style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : '暂不可用' }}</div>
                     </div>
@@ -4184,17 +4185,26 @@
           return deviceData.devices.filter(function(d){ return (d.parent_phone || '').indexOf(q) >= 0; });
         });
         // worker 运行态（容量 = LiveKit 活跃房 vs WORKER_MAX_JOBS；机器资源 = 64.90 只读 stats）
-        var workerStats = reactive({ machine: null, capacity: null, loading: false });
+        var workerStats = reactive({ machine: null, capacity: null, loading: false, fetchedAt: '' });
         function loadWorkerStats() {
           if (!canManageInvites.value) return;
           workerStats.loading = true;
           deviceApi('/api/admin/worker-stats', { method: 'GET' })
             .then(function (data) {
-              if (data && data.ok) { workerStats.machine = data.machine; workerStats.capacity = data.capacity; }
+              if (data && data.ok) {
+                workerStats.machine = data.machine; workerStats.capacity = data.capacity;
+                workerStats.fetchedAt = new Date().toTimeString().slice(0, 8);
+              }
             })
             .catch(function () { /* 监控拉不到不打扰管理操作 */ })
             .finally(function () { workerStats.loading = false; });
         }
+        // 资源卡自动轮询(2026-08-27:此前只在进页时拉一次,标签页挂一晚显示的还是打开时刻的
+        // 快照——川哥实撞"711M 过期读数"):每 60s 重拉;后台标签不空转(server 侧另有 30s
+        // 共享缓存,多标签页轮询只产生一次 ssh 采集)。
+        setInterval(function () {
+          if (document.visibilityState === 'visible' && canManageInvites.value) loadWorkerStats();
+        }, 60000);
         var deviceAdd = reactive({ sn: '', note: '' });
         var deviceSessions = reactive({ items: [], loading: false, filterSn: '', page: 1, total: 0 });
         var credDialog = reactive({ visible: false, sn: '', token: '', expiresAt: 0, days: 30, loading: false });
