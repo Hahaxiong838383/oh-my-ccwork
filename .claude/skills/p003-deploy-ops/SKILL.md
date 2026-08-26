@@ -230,6 +230,10 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   (evidence 子串+句式+值在证据内+代词黑名单);变更查 `growth-events?module=profile`(含证据原句);
   单测 `test:memory-extract`(15)+真 LLM 双锚 `scripts/rename-gate-probe.ts`;数据修复记账 rule=cc_data_fix。
   ⚠️ `test:onboarding` 挂在 package.json 但文件不存在(存量断链)。
+- **回声自嗨排障(2026-08-26)**:现象=设备命令确认语播完后小可自问自答→查 64.90 worker 日志
+  `journalctl -u voice-worker-rust | grep "echo suppressed"`(对撞门在产,窗 ECHO_SUPPRESS_WINDOW_MS=800,
+  0=关门回滚);机理/两分布定参依据→记忆 project_realtime_voice_agent「回声对撞门」段;
+  端侧 AEC 根治调研球在 codex(`CC_P003_AEC_ANDROID_ANALYSIS_REQUEST`)。
 - **filler 人格套(F1)**:双机 27 条已发布 64.90 `/opt/voice-agent/fillers-persona/<SN>/`,
   **F2 前 worker 不读=听感不变**;发布 `scripts/filler-publish.ts <SN> [--dry-run]`(留档 data/filler-sets/);
   64.90 通道 `apply_hotwords.py action=apply_fillers`(**barge 桶硬拒**);colleague 全局套=回滚锚零改动。
