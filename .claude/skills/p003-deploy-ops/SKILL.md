@@ -180,6 +180,28 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   运行时整树一次编译全模板通过**(新 subTab 模板语法错会全页白屏,不用登录即可验);el-input 必须显式闭合。
 - 单测 `npm run test:persona`(115 项);测试选句先对照规则分支(7 字句会触发短句镜像——中性输入要验证过)。
 
+## 本地人格音频运维（2026-08-26 D1 全绿,机制/联调详情见记忆 p003_local_audio）
+
+- **是什么**:设备本地招呼语/结束语随人格成长换新。六语义 slot(greeting.normal/cover_open/presence_return +
+  farewell.general/goodbye/night),每 slot 3-5 条;server 生成+讯飞合成→设备半夜(沪时 04-06)抓取轮换播放。
+- **开关**:`PERSONA_LOCAL_AUDIO_ENABLED`(现=1 canary)+共享 persona allowlist(**004 永不进**)。
+  回滚=键置 0 restart→全体 `{enabled:false}` 设备回落出厂音零残留;全回滚锚 `_backup/20260826-local-audio-d1/`。
+- **讯飞凭据(11200 の坑)**:生效=appid 尾 **a69b** 健康套(剩 636 万字符/并发 100/至 2027-08,源=川哥 rtf 文档);
+  **尾 ce7d=GameDemo 遗留、音色未授权→11200 LiccCheck,永远别换回去**;换前备份 `env.local.pre-xfyun-swap`。
+  验活 `npm run probe:xfyun`(通=TTFB ~200ms 落盘 /tmp mp3)。
+- **排障入口**:probe 端点含 `local_audio` 段(revision/各 slot 文案与时长/**last_applied_revision=设备触达证据**);
+  手动生成 `POST /api/admin/devices/<SN>/persona-local-audio-run`(默认 force,~2min 六 slot 串行);
+  时间线 `growth-events?module=local_audio`;日志锚 `grep "\[local-audio\]"`(gen slot 拒因计数/manifest/file)。
+- **设备端点**:`GET /v1/device/local-audio/manifest?applied_revision=N` + `/file/:id`(设备凭据 sub 取 SN;
+  公网入口**只有 kidshub-ai.hahaxiong.cc 反代 /v1/**)。`revision=0+slots 空=尚无内容非错误`。
+- **SHA 投毒负测(J5)**:env `LOCAL_AUDIO_POISON_ID=<16hex>` → manifest 该条 sha 首字符翻转(文件不动);
+  **测完删键+restart**(同 DEVICE_CONFIG_ACCEPTANCE_OVERRIDE 纪律)。
+- **发布语义**:六 slot 各≥2 条才整套原子 commit(凑不齐现套与基准均不动,次日批自愈);新条目 staging(active=0)
+  落库 commit 统一翻;同 slot 同文案复用旧音频不重合成。LLM 偶发 `[{"文案"}]` 伪 JSON 已有容错,
+  再遇 slot 空手先看 `llm bad-json` 日志的 raw 样本再归因。
+- 单测 `npm run test:local-audio`(61);E2E `scripts/local-audio-e2e.mjs off|on` + `scripts/la-admin-e2e.py <SN>`
+  (**admin 登录要 username+password 双字段**,只发 password 恒 401)。
+
 ## 凭证/链接（指针,secret 绝不入 skill）
 
 - 三端链接见上表。admin 登录 `admin / ⟨STUDIO_PASS 见生产 /opt/p003/server/.env.local⟩`。
