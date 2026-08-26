@@ -203,8 +203,12 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   **讯飞 `encoding='raw'` 直出 PCM+server 拼 44B RIFF 头**(机上无 ffmpeg 也不要装);manifest wav 条目带
   `codec=pcm_s16le`+`bits_per_sample=16`;容量门 160KiB/文件+5MiB/revision。item 表 format 列驱动
   Content-Type 与文件后缀。
-- **迁移闸 `LOCAL_AUDIO_GENERATION_PAUSED=1`**:挡每日批自动生成(admin force 不受限);
-  W4 动作=收到 codex `W3 DONE` → 删此键+restart+手动触发双机 → WAV rev=2(全新 id)。
+- **迁移闸 `LOCAL_AUDIO_GENERATION_PAUSED=1`**:挡每日批自动生成(admin force 穿透——手动触发不用删闸)。
+  **现状(W4 后)**:闸保持 1=真机验证期发布物冻结;codex W5/W6 全过后删闸+restart 恢复自然节奏。
+- **W4 已完成,WAV 首发基线=rev 3**(rev=2 混套废弃——复用判定当时没查 format,已修:复用/补足/兜底三链全限定 wav);
+  rev=1 MP3 全套归档 `_backup/local-audio-rev1-mp3-20260826/`(只读,防 14 天 cleanup 清掉回滚锚)。
+  **混套检测器**:逐条验 `bytes≈duration_ms×48+44`(WAV 公式;MP3 字节数远小于公式值即混入);
+  证据采集脚本 `scripts/w4-evidence.mjs`(公网全链+五字段断言+file 抽检)。
 - 单测 `npm run test:local-audio`(78);E2E `scripts/local-audio-e2e.mjs off|on` + `scripts/la-admin-e2e.py <SN>`
   (**admin 登录要 username+password 双字段**,只发 password 恒 401);WAV 链离线实证 `scripts/wav-offline-proof.ts`。
   ⚠️ 探针必须落 .ts 文件用 tsx 跑——`tsx -e` 走 CJS 不支持顶层 await。
