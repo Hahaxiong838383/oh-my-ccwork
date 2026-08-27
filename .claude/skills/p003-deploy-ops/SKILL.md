@@ -230,6 +230,7 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   (evidence 子串+句式+值在证据内+代词黑名单);变更查 `growth-events?module=profile`(含证据原句);
   单测 `test:memory-extract`(15)+真 LLM 双锚 `scripts/rename-gate-probe.ts`;数据修复记账 rule=cc_data_fix。
   ⚠️ `test:onboarding` 挂在 package.json 但文件不存在(存量断链)。
+- **命令词禁入门(2026-08-27)**:本地音频/filler 文案生成禁含设备命令别名(254 词快照 `assets/device-command-words.tsv`,每日批经 hotword 通道 device_aliases 自动刷新)+急停/退出词(farewell 豁免退出词);存量扫描 `scripts/scan-echo-words.ts`(只读,新门上线/词表变更后跑);曾真扫出 staging「开灯啦」1 条雷已删。备份 `_backup/20260827-*-pre-echo-words`。
 - **回声自嗨排障(2026-08-26)**:现象=设备命令确认语播完后小可自问自答→查 64.90 worker 日志
   `journalctl -u voice-worker-rust | grep "echo suppressed"`(对撞门在产,窗 ECHO_SUPPRESS_WINDOW_MS=800,
   0=关门回滚);机理/两分布定参依据→记忆 project_realtime_voice_agent「回声对撞门」段;
