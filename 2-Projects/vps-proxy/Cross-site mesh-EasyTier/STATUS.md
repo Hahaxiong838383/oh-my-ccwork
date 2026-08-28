@@ -1,7 +1,7 @@
 # 部署进度真值表
 
-> 最后更新：2026-08-26 01:15（实测时钟）· 每一行都是实跑验证过的，不是「应该」
-> **9 节点全部上线**；`maxtkf-server` 已带 config-server 参数，Web 页面计数待下次目视核对
+> 最后更新：2026-08-29 02:03（实测时钟）· 每一行都是实跑验证过的，不是「应该」
+> **10 节点全部上线**；组网速查页已发布并核对 10 个节点
 
 ## 节点
 
@@ -15,6 +15,7 @@
 | `fnos2` | 10.10.10.22 | ✅ 运行中 | PortRestricted | **Docker** 部署（fnOS 升级会重置底层，原生二进制会静默失效）；家侧子网网关（备） |
 | `home-studio` | 10.10.10.23 | ✅ 运行中 | PortRestricted | Ubuntu 24.04；家侧主力开发机，不导出子网 |
 | `maxtkf-server` | 10.10.10.24 | ✅ 运行中 | PortRestricted | Windows 11；SYSTEM 开机任务 `EasyTier Mesh`；不导出子网；Mesh SSH 已验收 |
+| `jidinghe-armbian` | 10.10.10.25 | ✅ 运行中 | 待补实测 | MGV3001-ZG；Armbian 24.11 / ARM64；eMMC 独立启动；systemd 开机自启；不导出子网；Mesh SSH 已验收 |
 | `air` | 10.10.10.31 | ✅ 运行中 | PortRestricted | launchd；**已验证未被 Clash/Xray 劫持**（连接本地地址落在 en0 物理网卡，非 utun） |
 
 上游通道（每节点 2 条，任一被中间网络掐掉仍能建链）：
@@ -56,7 +57,7 @@
 
 ---
 
-## Web 控制台（已部署；9 节点均带上报参数）
+## Web 控制台（已部署；10 节点均带上报参数）
 
 `http://10.10.10.1:11211` —— **只在组网内可达**，公网 11211/22020 实测均不通。
 systemd `easytier-web.service`（`Requires=easytier-mesh.service`，否则早启动会因虚拟 IP 未就绪而 bind 失败）。

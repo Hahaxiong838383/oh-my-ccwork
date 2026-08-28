@@ -33,6 +33,7 @@ node_role() {
     fnos2)       echo "家 · 飞牛 NAS 2 号 · 家侧网关（备）· Docker" ;;
     home-studio) echo "家 · 主力开发机 · 20 线程 / 31G" ;;
     maxtkf-server) echo "家 · Windows 11 · SYSTEM 开机任务" ;;
+    jidinghe-armbian) echo "家 · MGV3001-ZG 机顶盒 · Armbian / ARM64" ;;
     air)         echo "MacBook Air M5 · 随身" ;;
     *)           echo "" ;;
   esac
@@ -52,7 +53,7 @@ mesh_alias() {   # 去 ssh config 实查，不假设一定叫 <name>-mesh
 
 rows=""; missing_role=0; missing_alias=0; n=0
 for entry in "${ET_NODES[@]}"; do
-  IFS='|' read -r name _alias vip _plat _sudo <<<"$entry"
+  IFS='|' read -r name ssh_target vip _plat _sudo <<<"$entry"
   n=$((n+1))
   role="$(node_role "$name")"
   if [[ -z "$role" ]]; then role='⚠ 描述待补 —— 请到 gen-cheatsheet.sh 的 ROLE 表登记'; missing_role=$((missing_role+1)); fi
@@ -61,7 +62,15 @@ for entry in "${ET_NODES[@]}"; do
   else
     ma="$(mesh_alias "$name")"
     if [[ -n "$ma" ]]; then conn="<code class=\"cp\">ssh ${ma}</code>"
-    else conn="<code class=\"cp\">ssh ${vip}</code><span class=\"role\">⚠ 无 -mesh 别名</span>"; missing_alias=$((missing_alias+1)); fi
+    else
+      # 没有 -mesh 别名时仍保留 ET_NODES 里的登录用户名；否则 root/Administrator
+      # 节点会错误地沿用打开页面那台机器的本地用户名。
+      case "$ssh_target" in
+        *@*) direct_target="${ssh_target%%@*}@${vip}" ;;
+        *)   direct_target="$vip" ;;
+      esac
+      conn="<code class=\"cp\">ssh ${direct_target}</code><span class=\"role\">⚠ 无 -mesh 别名</span>"; missing_alias=$((missing_alias+1))
+    fi
   fi
   rows+="      <tr><td class=\"name\">${name}<span class=\"role\">${role}</span></td>
           <td><code class=\"cp\">${vip}</code></td>

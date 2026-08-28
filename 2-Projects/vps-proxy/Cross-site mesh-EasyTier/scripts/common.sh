@@ -25,6 +25,7 @@ ET_NODES=(
   "linux-lan|linux-lan|10.10.10.21|linux-x86_64|ask"
   "home-studio|hahaxiong83@192.168.1.133|10.10.10.23|linux-x86_64|ask"
   "maxtkf-server|Administrator@192.168.1.77|10.10.10.24|windows-x86_64|windows-admin"
+  "jidinghe-armbian|root@10.10.10.25|10.10.10.25|linux-aarch64|root"
   "air|__LOCAL__|10.10.10.31|macos-aarch64|ask"
   # 飞牛走 Docker 部署（fnOS 官方升级会重置底层，装原生二进制会静默失效）
   # 命名真值：115=飞牛2号(FNOS-2) / 43=飞牛1号(未接入，将来用 fnos1 + 10.10.10.23)

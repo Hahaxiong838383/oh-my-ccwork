@@ -37,6 +37,7 @@ SUDO_PASS='xxx' ./scripts/deploy-node.sh linux-lan
 | [`docs/00-原方案评估与优化决策.md`](docs/00-原方案评估与优化决策.md) | 对原 HTML 方案的逐条评估：3 项 P0、2 项安全、2 项正确性问题，以及改法与理由 |
 | [`docs/01-架构与网段规划.md`](docs/01-架构与网段规划.md) | 节点表、网段冲突核对、端口规划、代理共存 |
 | [`docs/02-实测基线与判读规则.md`](docs/02-实测基线与判读规则.md) | 部署当天的实测数字 + **判读规则**（不看会误诊） |
+| [`docs/03-jidinghe-armbian-稳定性与性能调研.md`](docs/03-jidinghe-armbian-稳定性与性能调研.md) | 机顶盒防掉线方案、EasyTier 主线修复跟踪及 Armbian 调优边界 |
 | `nodes/*.toml` | 每节点配置模板（密钥用占位符，不含明文） |
 | `scripts/` | 部署、巡检、基准、卸载 |
 | `野草云-EasyTier-异地组网完整方案.html` | 原始方案，保留供对照 |
