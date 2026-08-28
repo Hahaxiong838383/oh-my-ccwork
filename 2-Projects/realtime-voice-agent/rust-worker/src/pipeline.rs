@@ -258,6 +258,14 @@ struct CanaryPending {
     stats: std::sync::Arc<std::sync::Mutex<Option<crate::playout::FinalStats>>>,
 }
 
+/// 在途退出信令(v140 合同 §4:重试同 seq,ACK/cancel/room close 任一终态即停)。
+struct ExitSignalPending {
+    seq: i64,
+    sent_at: Instant,
+    attempts: u8,
+    envelope: Value,
+}
+
 struct Orchestrator {
     /// 输出门(gate.rs):Android 未订 agent 轨前扣住可听 PCM,首个待播起 5s fail-closed
     output_gate: crate::gate::OutputGate,
@@ -271,6 +279,12 @@ struct Orchestrator {
     cmd_dedup: FirstWins,
     /// S2-B2:会话级 trace(input_ready 同源,命令事件绑它;None=不发命令)
     device_trace: Option<String>,
+    /// v140 退出信令灰度(合同 §8.3 先仅 0010;fail-closed:env 未配=不发,吞句照常)
+    exit_signal_on: bool,
+    /// 退出信令 seq(per-job 单调;重试必须同 seq——只在新命中时自增)
+    exit_seq: i64,
+    /// 在途退出信令:等 ACK/cancel/room close 任一终态;800ms 无终态同 seq 重发,至多 3 发
+    exit_pending: Option<ExitSignalPending>,
     cfg: PipelineConfig,
     tts_cfg: TtsCfg,
     llm: Arc<Mutex<Llm>>,
@@ -509,10 +523,17 @@ pub async fn run_pipeline(
     if device_commands_on {
         info!(room = %room_name, "S2-B2 设备命令已启用(canary 命中)");
     }
+    let exit_signal_on = crate::device_intent::exit_signal_enabled_for(&room_name);
+    if exit_signal_on {
+        info!(room = %room_name, "session_exit 信令已启用(v140 canary 命中)");
+    }
     let mut orch = Orchestrator {
         output_gate: crate::gate::OutputGate::new(ready.out_rx.clone()),
         fatal_tx,
         device_commands_on,
+        exit_signal_on,
+        exit_seq: 0,
+        exit_pending: None,
         pending_cmd: None,
         cmd_dedup: FirstWins::new(),
         device_trace: ready.trace_id.clone(),
@@ -1173,7 +1194,23 @@ impl Orchestrator {
                 info!(room = %self.room_name, trace_id = %ev.trace_id, kind = %ev.kind,
                       "control 旁路事件(不影响主链路)");
             }
+            control::Inbound::SessionExitAck => {
+                // v140 §4.3:同 seq ACK=终态,停重试。accepted/already_done 只记日志。
+                let matched = self.exit_pending.as_ref().is_some_and(|p| p.seq == ev.seq);
+                if matched {
+                    self.exit_pending = None;
+                }
+                info!(room = %self.room_name, trace_id = %ev.trace_id, seq = ev.seq, matched,
+                    accepted = ev.payload.get("accepted").and_then(|v| v.as_bool()).unwrap_or(false),
+                    already_done = ev.payload.get("already_done").and_then(|v| v.as_bool()).unwrap_or(false),
+                    "session_exit ack received");
+            }
             control::Inbound::Cancel => {
+                // v140 §4.3:Android 本地 exact 先命中会先发既有 cancel——cancel 亦为退出
+                // 信令终态,停重试(不得形成重试风暴)。
+                if self.exit_pending.take().is_some() {
+                    info!(room = %self.room_name, "session_exit signal terminated by cancel");
+                }
                 let first = self.ctrl_dedup.first_time(&ev.trace_id, ev.seq);
                 // 有在说的 turn 才谈得上"取消";没有则 cancelled=false 但不报错
                 let had_turn = self.agent_turn.is_some();
@@ -1451,6 +1488,24 @@ impl Orchestrator {
         // cancel 掉的 canary:turn.task.abort() 后 BufferWatch Drop 异步落槽,tick 兜底补发
         self.try_flush_canary_metrics();
         let now = Instant::now();
+        // v140 §4.3:退出信令 800ms 无终态同 seq 重发,至多 3 发后放弃(不得重试风暴;
+        // Android 侧 ACK 预算 750ms,800ms 给足单程+处理)。room close 由 job 收尾天然终止。
+        if let Some(pend) = &mut self.exit_pending {
+            if now.duration_since(pend.sent_at) >= Duration::from_millis(800) {
+                if pend.attempts >= 3 {
+                    info!(room = %self.room_name, seq = pend.seq,
+                        "session_exit signal gave up (no terminal after 3 attempts)");
+                    self.exit_pending = None;
+                } else {
+                    pend.attempts += 1;
+                    pend.sent_at = now;
+                    let env = pend.envelope.clone();
+                    let (seq, attempt) = (pend.seq, pend.attempts);
+                    self.publish_json(control::TOPIC, env);
+                    info!(room = %self.room_name, seq, attempt, "session_exit signal retry (same seq)");
+                }
+            }
+        }
         // 字幕逐句推进(按播出位置;pause 时 played 冻结自然停发)
         self.publish_agent_progress();
         // 假打断定时:超时无 turn → resume 续播(渐起由 playout 配置)+ 契约 FalseInterruption
@@ -1486,17 +1541,48 @@ impl Orchestrator {
                 // 预测式判停必然抢先 cancel,竞态改确定性。Worker 只吞轮次;
                 // 退出回复/关房 100% 归 Android(退出权威不变)。
                 Some(("session_exit", "exact"))
-            } else if self.cfg.exit_tail_match
-                && crate::textproc::is_session_exit_tail(&user_text)
-            {
+            } else if self.cfg.exit_tail_match {
                 // A 案(2026-08-28「不想聊了，退出吧」漏网实证):自然复合句对整句精确匹配
                 // 结构性免疫→尾部强意图词匹配,否定/疑问豁免见 textproc。语义与 exact 同=只吞。
-                Some(("session_exit", "tail"))
+                // path 分桶(v140 §2):碎片词(不想聊/不想聊天)=fragment,复合句尾部命中=tail。
+                match crate::textproc::session_exit_tail_hit(&user_text) {
+                    Some(w) if crate::textproc::is_fragment_exit_word(w) => {
+                        Some(("session_exit", "fragment"))
+                    }
+                    Some(_) => Some(("session_exit", "tail")),
+                    None => None,
+                }
             } else {
                 None
             };
             if let Some((kind, path)) = swallow_kind {
                 info!(room = %self.room_name, path, "{kind} utterance swallowed: '{user_text}'");
+                // v140 §4.1:三路命中(exact/tail/fragment)任一 → 发 session_exit_detected。
+                // 纪律:envelope 不带转写正文;trace 缺失=不发(受信通道没建立,fail-closed)。
+                if kind == "session_exit" && self.exit_signal_on {
+                    if let Some(trace) = self.device_trace.clone() {
+                        self.exit_seq += 1;
+                        let rk = crate::textproc::exit_reply_kind(&user_text);
+                        let env = control::session_exit_detected(
+                            &trace,
+                            now_unix_ms(),
+                            self.exit_seq,
+                            rk,
+                            path,
+                        );
+                        self.publish_json(control::TOPIC, env.clone());
+                        self.exit_pending = Some(ExitSignalPending {
+                            seq: self.exit_seq,
+                            sent_at: Instant::now(),
+                            attempts: 1,
+                            envelope: env,
+                        });
+                        info!(room = %self.room_name, seq = self.exit_seq, reply_kind = rk, path,
+                            "session_exit signal sent");
+                    } else {
+                        info!(room = %self.room_name, "session_exit signal skipped: no session trace");
+                    }
+                }
                 // 在途回答若还在(未被急停白名单/cancel 停掉,如用户轻声说「停」
                 // 而 interim 未及命中)→ 此刻补硬停,保证「停=安静」
                 if self.agent_turn.is_some() {

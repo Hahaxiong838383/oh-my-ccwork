@@ -60,6 +60,9 @@ pub enum Inbound {
     /// S2B1 联调:确定性长句走**正式** TTS→segmenter→playout 链路(合同真值
     /// tests/fixtures/s2b1_canary_control_contract.json,rust 侧用 include_str! 锁死)
     CanarySay,
+    /// v140 退出信令 ACK(android → worker,合同 §4.3):同 seq 幂等回执。
+    /// worker 收到即停重试(payload 的 accepted/already_done 只记日志)。
+    SessionExitAck,
 }
 
 /// 解析入站包。返回 None = 丢弃(非 android / 未知类型 / 畸形)。
@@ -84,6 +87,7 @@ pub fn parse(raw: &[u8]) -> Option<(Envelope, Inbound)> {
             _ => Inbound::Bypass,
         },
         "canary.say" => Inbound::CanarySay,
+        "session_exit_detected.ack" => Inbound::SessionExitAck,
         _ => return None,
     };
     Some((ev, kind))
@@ -127,6 +131,27 @@ pub fn cancel_ack(
         "lane": "L2",
         "seq": seq,
         "payload": {"cancelled": cancelled, "already_done": already_done},
+    })
+}
+
+/// 构造 `session_exit_detected`(v140 合同 §4.1:worker → android 退出信令)。
+/// 纪律:**禁带原始转写文本/凭据/完整 SN**——payload 只有冻结枚举两枚。
+/// reply_kind=general|goodbye|night;path=exact|tail|fragment;重试必须同 seq。
+pub fn session_exit_detected(
+    trace_id: &str,
+    ts_ms: i64,
+    seq: i64,
+    reply_kind: &str,
+    path: &str,
+) -> Value {
+    json!({
+        "trace_id": trace_id,
+        "ts_ms": ts_ms,
+        "src": "worker",
+        "type": "session_exit_detected",
+        "lane": "L2",
+        "seq": seq,
+        "payload": {"reply_kind": reply_kind, "path": path},
     })
 }
 
@@ -307,6 +332,33 @@ pub fn canary_metrics(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn session_exit_signal_contract() {
+        // v140 §4.1 出站 envelope 冻结字段
+        let v = session_exit_detected("tr-1", 1787900000000, 77, "general", "tail");
+        assert_eq!(v["src"], "worker");
+        assert_eq!(v["type"], "session_exit_detected");
+        assert_eq!(v["lane"], "L2");
+        assert_eq!(v["seq"], 77);
+        assert_eq!(v["payload"]["reply_kind"], "general");
+        assert_eq!(v["payload"]["path"], "tail");
+        // 纪律:不带转写正文/SN 字段
+        assert!(v["payload"].get("text").is_none());
+        assert!(v["payload"].get("sn").is_none());
+        // 自己发的信令(src=worker)绝不会被自己的入站 parse 吃掉
+        assert!(parse(v.to_string().as_bytes()).is_none());
+    }
+
+    #[test]
+    fn session_exit_ack_parses() {
+        // v140 §4.3 入站 ACK(src=android,同 seq)
+        let raw = br#"{"trace_id":"tr-1","ts_ms":1,"src":"android","type":"session_exit_detected.ack","lane":"control","seq":77,"payload":{"accepted":true,"already_done":false,"reply_kind":"general"}}"#;
+        let (ev, kind) = parse(raw).expect("ack 应可解析");
+        assert_eq!(kind, Inbound::SessionExitAck);
+        assert_eq!(ev.seq, 77);
+        assert_eq!(ev.payload["accepted"], true);
+    }
 
     fn pkt(src: &str, kind: &str) -> Vec<u8> {
         json!({"trace_id":"t1","ts_ms":1,"src":src,"type":kind,"lane":"L2","seq":1,

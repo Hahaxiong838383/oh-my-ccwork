@@ -123,7 +123,10 @@ const QUESTION_MARKERS: &[&str] = &[
     "怎么", "如何", "为什么", "什么", "吗", "能不能", "可不可以", "要不要", "还是",
 ];
 
-/// 否定豁免:命中词紧前方 1-2 字否定窗(「我不想退出」「别退出」「不是不聊了」)。
+/// 否定豁免:命中词前方 3 字窗(「我不想退出」「别退出」「不是不聊了」,以及否定词与
+/// 意图词隔一个动词的「不要**说**再见」——v140 合同 §2 负向向量,紧邻 2 字窗够不到)。
+/// 判据:窗内 contains 双字否定词任一,或窗末字为单字否定。裸「不」不做 contains
+/// (太宽:「不散再见」会误豁免),只认末字紧邻形态。
 /// hit_start 为 normalize 串内的字节偏移(由 ends_with 推得,必为合法边界)。
 fn negated_before(s: &str, hit_start: usize) -> bool {
     let prefix: Vec<char> = s[..hit_start].chars().collect();
@@ -131,36 +134,37 @@ fn negated_before(s: &str, hit_start: usize) -> bool {
     if n >= 1 && matches!(prefix[n - 1], '不' | '别' | '没') {
         return true;
     }
-    if n >= 2 {
-        let two: String = prefix[n - 2..].iter().collect();
-        if matches!(
-            two.as_str(),
-            "不想" | "不要" | "不用" | "不许" | "不准" | "没有" | "不是" | "先不" | "别再"
-        ) {
-            return true;
-        }
-    }
-    false
+    let window: String = prefix[n.saturating_sub(3)..].iter().collect();
+    const NEG2: &[&str] = &["不想", "不要", "不用", "不许", "不准", "没有", "不是", "先不", "别再"];
+    NEG2.iter().any(|neg| window.contains(neg))
 }
 
 /// A 案尾部退出判定(2026-08-28 川哥拍板):normalize 后逐层剥尾部语气词(至多 3 层),
 /// 每层查「以强意图退出词结尾」,命中再过否定豁免;疑问豁免对整句先行。
 /// 只用于 exit 吞句路径(急停词纪律不变);开关 EXIT_TAIL_MATCH(默认开,置 0 回退纯精确)。
 pub fn is_session_exit_tail(text: &str) -> bool {
+    session_exit_tail_hit(text).is_some()
+}
+
+/// 同上但返回命中的强意图词(v140 信令的 path=tail|fragment 分桶需要知道命中了谁)。
+pub fn session_exit_tail_hit(text: &str) -> Option<&'static str> {
     let s = normalize_utterance(text);
     if s.is_empty() {
-        return false;
+        return None;
     }
     for q in QUESTION_MARKERS {
         if s.contains(q) {
-            return false;
+            return None;
         }
     }
     let mut t = s;
     for _ in 0..=3 {
         for w in STRONG_EXIT_TAILS {
             if t.ends_with(w) {
-                return !negated_before(&t, t.len() - w.len());
+                if negated_before(&t, t.len() - w.len()) {
+                    return None;
+                }
+                return Some(w);
             }
         }
         let Some(c) = t.chars().last() else { break };
@@ -169,7 +173,27 @@ pub fn is_session_exit_tail(text: &str) -> bool {
         }
         t.truncate(t.len() - c.len_utf8());
     }
-    false
+    None
+}
+
+/// v140 合同 §2/§3:「不想聊/不想聊天」是 EOU 碎片形态词(整句即意图核心,非句尾附着)
+/// ——信令 path 标 fragment,与 tail(复合句尾部命中)分桶。与 Android exact 新增四词对应
+/// (我方 normalize+剥人称前缀后核心即此二词)。
+pub fn is_fragment_exit_word(w: &str) -> bool {
+    matches!(w, "不想聊" | "不想聊天")
+}
+
+/// v140 信令 reply_kind 三态映射(合同 §4.1 冻结枚举):Android 按此挑本地告别音。
+/// 判据用 normalize 后全文 contains——exact 路径拿不到命中词,全文判对三路统一适用。
+pub fn exit_reply_kind(text: &str) -> &'static str {
+    let s = normalize_utterance(text);
+    if s.contains("睡觉") || s.contains("休息") || s.contains("晚安") {
+        "night"
+    } else if s.contains("再见") || s.contains("拜拜") || s.contains("回见") || s.contains("下次见") {
+        "goodbye"
+    } else {
+        "general"
+    }
 }
 
 /// 剥离 LLM 输出里的舞台指示——括号/星号包裹的动作、表情、神态描述:
@@ -327,6 +351,23 @@ mod tests {
         assert!(!is_session_exit_tail("这个游戏结束"));
         assert!(!is_session_exit_tail("今天不用了"));
         assert!(!is_session_exit_tail(""));
+    }
+
+    #[test]
+    fn exit_signal_path_and_reply_kind() {
+        // tail_hit 返回命中词 → fragment/tail 分桶(v140 §2 行为向量)
+        assert_eq!(session_exit_tail_hit("不想聊了，退出吧"), Some("退出"));
+        assert!(!is_fragment_exit_word("退出")); // 复合句尾部命中 → tail
+        assert_eq!(session_exit_tail_hit("我不想聊"), Some("不想聊"));
+        assert!(is_fragment_exit_word("不想聊")); // EOU 碎片 → fragment
+        assert_eq!(session_exit_tail_hit("我不想聊这个话题"), None); // 合同负向:不得误判
+        assert_eq!(session_exit_tail_hit("不要说再见"), None); // 合同负向:否定豁免
+        // reply_kind 三态(合同 §4.1 冻结枚举)
+        assert_eq!(exit_reply_kind("再见"), "goodbye");
+        assert_eq!(exit_reply_kind("拜拜啦"), "goodbye");
+        assert_eq!(exit_reply_kind("我要睡觉了"), "night");
+        assert_eq!(exit_reply_kind("不想聊了，退出吧"), "general");
+        assert_eq!(exit_reply_kind("我不想聊"), "general");
     }
 
     #[test]

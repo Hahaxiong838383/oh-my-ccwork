@@ -318,6 +318,17 @@ pub fn commands_enabled_for(room_name: &str) -> bool {
     )
 }
 
+/// 退出信令灰度门(v140 合同 CODEX_..._SESSION_EXIT_V140 §8.3:先仅 0010):
+/// SESSION_EXIT_SIGNAL_ENABLED=1 且 SN 命中 SESSION_EXIT_SIGNAL_CANARY_SN(空=设备房全开)。
+/// fail-closed:env 未配=不发信令(吞句行为不受影响,只是不通知 Android)。
+pub fn exit_signal_enabled_for(room_name: &str) -> bool {
+    commands_gate(
+        std::env::var("SESSION_EXIT_SIGNAL_ENABLED").unwrap_or_default() == "1",
+        &std::env::var("SESSION_EXIT_SIGNAL_CANARY_SN").unwrap_or_default(),
+        room_name,
+    )
+}
+
 /// ASR 二遍识别(nonstream)灰度门:与设备命令 canary 同语义(sn- 房 + SN 列表),
 /// 独立 env 键独立灰度。命中后 pipeline 将该 job 的 ASR 切 bigmodel_async + 二遍
 /// (老 bigmodel 端点静默忽略 enable_nonstream,两者必须同调,详见 stt_volc::SttConfig)。
