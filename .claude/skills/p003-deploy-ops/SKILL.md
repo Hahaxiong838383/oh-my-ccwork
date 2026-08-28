@@ -211,7 +211,7 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   rev=1 MP3 全套归档 `_backup/local-audio-rev1-mp3-20260826/`(只读,防 14 天 cleanup 清掉回滚锚)。
   **混套检测器**:逐条验 `bytes≈duration_ms×48+44`(WAV 公式;MP3 字节数远小于公式值即混入);
   证据采集脚本 `scripts/w4-evidence.mjs`(公网全链+五字段断言+file 抽检)。
-- 单测 `npm run test:local-audio`(101,W4 后含姿态组);E2E `scripts/local-audio-e2e.mjs off|on` + `scripts/la-admin-e2e.py <SN>`
+- 单测 `npm run test:local-audio`(127,含姿态组+G1 组);E2E `scripts/local-audio-e2e.mjs off|on` + `scripts/la-admin-e2e.py <SN>`
   (**admin 登录要 username+password 双字段**,只发 password 恒 401);WAV 链离线实证 `scripts/wav-offline-proof.ts`。
   ⚠️ 探针必须落 .ts 文件用 tsx 跑——`tsx -e` 走 CJS 不支持顶层 await。
 - **🔴 探针纪律(D2 起铁律)**:任何 cc 侧探针/curl **禁止带 `applied_revision` 参数**——`last_applied_*`
@@ -222,15 +222,21 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **W5 场景A 后基线(2026-08-26 晚)**:003=v106 `applied revision=4`(greeting 单条增量已闭环:投毒拒→删毒
   差量应用,27 旧 id 零重下载);0010=v105 对照 rev=3。**姿态版=revision 5**(v107 合同的 rev4 编号已被
   场景A消费,codex 预期 applied 数字全部顺延)。**rev5 已 staging 就位**(posture.adjust/no_face 各 4 条+
-  投毒预配 `cd52ce494c0c2cdf`),等 codex `v107 installed + GO` 后跑 `scripts/posture-rev5.ts commit`
-  一步激活即带毒(staging 期配毒零影响=竞态消除法:insertItem active=0 manifest 不可见但 file 可下载,
-  可在设备可见前先验毒)。姿态健康门=SLOT_SPECS `requiredRes[]`(必含动作语义,no_face 双成分)+`forbiddenRe`。
-  optional slot 语义:0 条=键不存在,1 条=弃置回 staging,2..5 才进套;单测 101(`test:local-audio`)。
+  投毒预配曾配 `cd52ce494c0c2cdf`——**2026-08-28 已删键**(v133 G1 合同禁毒,值留档负测后置用);
+  且 **rev=5 已被 0010 G1 版占用,姿态激活 commit 须 `minRevision≥6`**(commitSet 已支持,等 codex 确认重排)。
+  两阶段竞态消除法不变:insertItem active=0 manifest 不可见但 file 可下载,可在设备可见前先验毒。姿态健康门=SLOT_SPECS `requiredRes[]`(必含动作语义,no_face 双成分)+`forbiddenRe`。
+  optional slot 语义:0 条=键不存在,1 条=弃置回 staging,2..5 才进套;单测 127(`test:local-audio`,含 g1-1..15)。
 - **称呼硬门(2026-08-26「哎子贤」事故后)**:改名走 `nickname_change:{value,evidence}` 五门
   (evidence 子串+句式+值在证据内+代词黑名单);变更查 `growth-events?module=profile`(含证据原句);
   单测 `test:memory-extract`(15)+真 LLM 双锚 `scripts/rename-gate-probe.ts`;数据修复记账 rule=cc_data_fix。
   ⚠️ `test:onboarding` 挂在 package.json 但文件不存在(存量断链)。
 - **命令词禁入门(2026-08-27)**:本地音频/filler 文案生成禁含设备命令别名(254 词快照 `assets/device-command-words.tsv`,每日批经 hotword 通道 device_aliases 自动刷新)+急停/退出词(farewell 豁免退出词);存量扫描 `scripts/scan-echo-words.ts`(只读,新门上线/词表变更后跑);曾真扫出 staging「开灯啦」1 条雷已删。备份 `_backup/20260827-*-pre-echo-words`。
+- **G1 奖励线 rev=5(2026-08-28,0010 only)**:六个 `g1.*` optional slot 各 3 条随 revision=5 发布(003=v107 控制组零触碰);
+  发布入口 `scripts/g1-rev5.ts stage|commit`(两阶段;commit 内置禁毒断言+minRevision=5 跳号),
+  证据探针 `scripts/g1-evidence.mjs baseline|full`(35 项:合同 §4 六项+003 逐字节恒等+旧毒 id 活体无毒;全程不带 applied_revision)。
+  **G1 字数口径 6–9 字非合同建议的 8–20**(duration 1..2200ms 硬门实测互斥:8字=2000ms/10字必死;教训→rg 软约束);
+  buildSlot 有 promptSuffix 参(抽取 LLM 确定性,重跑必须换提示不然白烧 TTS)。发布档案 `_backup/20260828-g1-rev5-release.txt`,
+  代码备份 `_backup/20260828-pre-g1/`;J1 回执 `CC_P003_G1_LOCAL_AUDIO_V133_J1_RELEASE_20260828.md`。
 - **回声自嗨排障(2026-08-26)**:现象=设备命令确认语播完后小可自问自答→查 64.90 worker 日志
   `journalctl -u voice-worker-rust | grep "echo suppressed"`(对撞门在产,窗 ECHO_SUPPRESS_WINDOW_MS=800,
   0=关门回滚);机理/两分布定参依据→记忆 project_realtime_voice_agent「回声对撞门」段;
