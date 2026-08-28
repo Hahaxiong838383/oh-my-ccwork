@@ -318,6 +318,12 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 - **日志**:`journalctl -u voice-worker-rust`。关键行与 Python 线同名不同措辞
   (`asr: connected (... hotwords=N)`);输入观测每 10s 一行 `audio in (10s) frames=N mean_amp=X`
   (frames=0 → 上行断流/息屏;amp≈0 → 送的是静音;正常 → 问题在下游)。
+- **v140 退出信令(2026-08-28)**:三路命中(exact/tail/fragment)吞句+发 `session_exit_detected`
+  (topic=control,payload 仅 reply_kind+path 禁带正文/SN);同 seq 重试 800ms×3,终态=ACK/cancel/room close;
+  灰度键 `SESSION_EXIT_SIGNAL_ENABLED=1`+`SESSION_EXIT_SIGNAL_CANARY_SN=<SN逗号分隔>`(rust-worker.env,
+  fail-closed,003 扩面=列表加 SN)。日志锚:`session_exit signal sent|retry|ack received|terminated by cancel|gave up`;
+  吞句锚 `session_exit utterance swallowed path=exact|tail|fragment`。回滚=ENABLED 置 0+restart(零二进制)。
+  ⚠️ refspec 推 home-studio 用 `${SHA}:refs/heads/...` 花括号(zsh 把 `$SHA:r` 当 modifier 展开)。
 - **代码**:worktree `~/mycc/.claude/worktrees/rust-worker`,分支 `feat/rust-worker`(已 push origin)。
 
 ### EOT 判停快照采集口(2026-08-16 上线,smart-turn 迁移前置 D1;任务 tasks/voice-eot-上线前置.md)
