@@ -265,10 +265,14 @@ node ops/sync-company-directory.mjs
 - 隧道必须同时满足独立用户/独立密钥、`restrict + port-forwarding + permitlisten="127.0.0.1:13808"`、阿里云仅回环监听、安全组不开放端口和公网探针不可达。任何单一证据不能替代其余四项。
 - 独立访问凭据不得复用 H 管理员、Ontology 密码、模型 Key 或隧道私钥；远端只存 Hash，秘密不得进入 Git、Skill、记忆、日志或协作消息。
 - 上线验收至少包含：DNS、独立 TLS SAN、未认证 fallback `401`、认证新增接口 `200/400`、exact 错误方法 `405`、认证未知路径后端 JSON `404`、动态命名空间畸形路径 Nginx `404`、前端动态数据与 API 一致、七个 Tab 可达、真实浏览器桌面/移动布局、控制台、Nginx error log、GEO 与隧道服务状态和 Certbot renew dry-run。
-- GEO 主进程使用系统级 `/etc/systemd/system/geo-engine.service`，固定监听 `127.0.0.1:8080`；代码必须来自固定 Git Commit 的不可变 Release，依赖使用独立 venv，模型 Key 只从 `0600` EnvironmentFile 注入，旧 user service 保持 disabled/inactive。
+- GEO 主进程当前由 `futurus` 的 user systemd `~/.config/systemd/user/geo-engine.service` 托管，固定监听 `127.0.0.1:8080`；媒体桥同样由 user systemd 托管，公网隧道仍是 system service。代码必须来自固定 Git Commit 的不可变 Release，依赖使用独立 venv，模型 Key 只从 `0600` EnvironmentFile 注入；部署前必须同时查 system/user 两套 unit，禁止只看一套形成假阴性。
 - `geo-dashboard-tunnel.service` 必须 `Requires/After=geo-engine.service`，但不能只依赖 systemd 的启动顺序；`ExecStartPre` 需有限重试 `/health`，防止后端尚未监听时隧道抢跑。
 - 私有仓机器身份不可通过复制个人 Token 或私钥解决。若 GitHub 组织禁用 Deploy Key，使用已授权工作站 `fetch`、完整历史 Git Bundle、固定 Commit 与 SHA-256 校验部署；Release 工作树必须 clean，禁止 editable install 污染提交目录。
 - GEO `0.4.2` 生产锚点为 Commit `ec249ed0c7d7a45b8b8b8ea7e3b9fabf42036bf1`；新文章生成必须由代码默认值和生产 EnvironmentFile 双重锁定为 `deepseek-v4-flash` + `reasoning_effort=max`。验收不能只看配置字符串，必须用最小真实调用确认返回模型与 reasoning usage。
+- 托管平台账号登录采用“平台原生 QR + Air 本机 Chrome 接力”双入口；company-vm 远程截图只作兼容兜底。Air 推荐链路固定为：在 **Air 本地终端** 建立到 Studio 的回环反向 CDP 隧道 → 启动 Air 独立 Chrome Profile → Studio helper 只导出目标平台域 Cookie/localStorage/sessionStorage → 一次性 `/connect/<token>/handoff` → company-vm 导入持久 Profile 并验证。禁止复制完整 Profile、公开 CDP 或接受跨平台域会话。
+- 命令在哪台机器执行，`open -na "Google Chrome"` 就在哪台机器启动浏览器；若先 `ssh studio` 再粘贴，启动的是 Studio 浏览器，不是 Air。标准命令必须先用 `ssh -fN -M -S ... -R 127.0.0.1:<port>:127.0.0.1:<port>` 建立 ControlMaster，再打开 Air Chrome，最后复用同一 socket 执行 `geo-login-relay`，退出时自动关闭隧道。
+- `/distribution/login/session` 必须留在管理员认证后；公网仅开放随机 token 路径。Token 使用 `secrets.token_urlsafe(32)`，服务端只存 SHA-256 摘要，每账号仅保留最新会话，登录成功立即禁止动作并在 60 秒后清理。Handoff token 必须绑定账号与平台；桥端对 Cookie/Storage 数量、长度、HTTPS origin 和平台域名做白名单校验，非法输入返回 `400`，桥故障才返回 `502`。
+- Nginx `/connect/` 必须 `auth_basic off + access_log off + client_max_body_size 512k`，不注入 `X-Geo-Token`；应用响应必须 `no-store/no-referrer/noindex`、严格 nonce CSP、禁 CORS，并分别限制状态刷新与操作频率。验收至少覆盖合法链接 `200`、无效链接 `404`、完成后动作 `410`、跨域 Cookie `400`、账号自动 `active`、Nginx access log 零 token、应用日志 token 脱敏或不记录。
 - GEO 内容状态必须区分 `draft`、`reviewed`、`exported`、`published`。审核通过不等于已发布，静态 HTML/Markdown 导出不等于公网可访问；只有发布目录真实受公网路由提供、canonical/OG/JSON-LD/数据库交付 URL 一致并逐条返回 `200`，才能写为 `published`。
 - 发布效果只在存在公开 URL 且完成发布后同口径可见性检测后判断；至少比较可见性分数、品牌提及、品牌域名引用与竞品信号。单篇文章不能直接归因品牌整体变化，没有发布后观测时必须明确显示“不能判断”。
 - Dashboard 必须是 API 动态加载而不是服务端嵌入快照；Tab active 同时核对导航类名与当前页面。长耗时 `/visibility`、`/audit` 使用 `ThreadingHTTPServer` 保持健康接口可用，并按操作类型使用单并发信号量防止重复提交。
