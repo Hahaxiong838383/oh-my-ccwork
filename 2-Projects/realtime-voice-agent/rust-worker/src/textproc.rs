@@ -105,6 +105,10 @@ pub fn is_stop_only(hotwords: &HashSet<String>, text: &str) -> bool {
 /// 若先中「不聊了」,前窗「不想」的「想」会被否定豁免误放(护栏用例 tail_hits 首条)。
 const STRONG_EXIT_TAILS: &[&str] = &[
     "退出对话", "结束聊天", "结束对话", "不想聊了", "我要睡觉了", "去睡觉了", "我要休息了",
+    // 「不想聊」(无了)——2026-08-28 14:47 真机第三形态:「不想聊了，退出吧」被 EOU 在逗号
+    // 停顿处切半,前半提交成「我不想聊」(尾表当时只有带「了」形态),后半「退出吧」被
+    // ASR 上游整段丢弃(短段丢弃老病,日志零痕迹)。「××我不想聊」误伤=沉默一轮,可接受。
+    "不想聊天", "不想聊",
     "不聊了", "退出", "再见", "拜拜",
 ];
 
@@ -295,6 +299,8 @@ mod tests {
         // A 案正锚:真机漏网原句(ASR 错转形态)与自然变体
         assert!(is_session_exit_tail("不想聊你退出吧")); // 2026-08-28 room=…1787897185 原句
         assert!(is_session_exit_tail("我不想聊了")); // 长词优先护栏:先中「不想聊了」而非「不聊了」
+        assert!(is_session_exit_tail("我不想聊")); // 14:47 真机第三形态:EOU 切半后的前半段
+        assert!(is_session_exit_tail("不想聊天啦"));
         assert!(is_session_exit_tail("不想聊了，退出吧"));
         assert!(is_session_exit_tail("退出吧"));
         assert!(is_session_exit_tail("我们不聊了吧"));
