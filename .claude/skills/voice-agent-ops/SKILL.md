@@ -296,7 +296,13 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
   `/root/realtime-voice-agent/poc-eou.env`(**与 Python 主线共享**,含热词)
   → `rust-worker.env`(只放两线差异项)。⚠️ **共享配置一律只写 poc-eou.env,别在 rust-worker.env 复制同值**
   ——两处同值 = 必然漂移(热词就是先踩后收敛的)。
-- **构建**:本机/dev198 的 glibc 比 64.90(24.04/2.39)新,产物拷过去直接跑不起来。走 GitHub Actions
+- **构建(2026-08-28 起默认走 home-studio,GHA 降为备用)**:home-studio(家开发机,Ubuntu 24.04/x86_64/20核,
+  与 64.90 完全同构)实测 **1m44s vs GHA 10m26s**。SOP:①本机 `git push ssh://hahaxiong83@10.10.10.23/~/mycc <sha>:refs/heads/tmp-rust-build`
+  (它无 GitHub 凭据)②`ssh home-studio-mesh` worktree /tmp/wt-rust-build 挂该分支③跑 `scripts/build-local.sh`
+  (比 CI 多查 libstdc++,带门禁负向验证;产物 md5 与 GHA 不同=正常,Rust 非重现构建)④产物**本机中转**
+  scp 到 64.90(home-studio 直连 64.90 缺 host key)⑤deploy-worker-bin.sh;完事两侧 worktree+tmp 分支即清。
+  部署档案记 commit+md5 锚。⚠️ 新二进制必须放 `/root/rust-worker/voice-rust-worker.new`(脚本只认此路径)。
+  备用:本机/dev198 的 glibc 比 64.90(24.04/2.39)新,产物拷过去直接跑不起来→走 GitHub Actions
   `.github/workflows/rust-worker-build.yml`(ubuntu-24.04 + glibc 符号天花板门禁)。
   **产物走 release asset(2026-08-20 起)**:`gh release download rust-worker-build-<run_id> -p voice-rust-worker`
   ——actions artifact 配额曾被 71 个历史产物打满,**删除后配额重算 6-12h+ 不即时**(四连撞墙实证),
