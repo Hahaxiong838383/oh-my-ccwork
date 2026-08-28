@@ -72,6 +72,8 @@ pub struct PipelineConfig {
     /// 退出词吞句集(EXIT_SWALLOW_HOTWORDS):整句命中→只吞轮次(防幽灵回答轮),
     /// 回复/关房归 Android。与急停表分开配置,词表须与 Android SESSION_EXIT 一致。
     pub exit_hotwords: HashSet<String>,
+    /// A 案(2026-08-28):exit 尾部匹配开关(EXIT_TAIL_MATCH,默认开;置 0 回退纯精确匹配)。
+    pub exit_tail_match: bool,
 }
 
 /// 是否播开场白。抽成函数是为了让**生产用的那条判据**能被单测直接调用——
@@ -154,6 +156,7 @@ impl PipelineConfig {
                 std::env::var("EXIT_SWALLOW_HOTWORDS").ok().as_deref(),
                 crate::textproc::DEFAULT_EXIT_HOTWORDS,
             ),
+            exit_tail_match: parse_flag(std::env::var("EXIT_TAIL_MATCH").ok().as_deref(), true),
         }
     }
 }
@@ -1476,18 +1479,24 @@ impl Orchestrator {
             // 该泛化 cancel 按生命周期合同删除后无人兜底)。契约链上该句只有
             // UserTranscriptFinal 无 UserTurnCommitted——即「这句没发生」。
             let swallow_kind = if crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text) {
-                Some("stop_only")
+                Some(("stop_only", "exact"))
             } else if crate::textproc::is_stop_only(&self.cfg.exit_hotwords, &user_text) {
                 // 退出词吞句(2026-08-17 川哥拍板):trace 88185b1e 实证「退出」被 commit
                 // 起幽灵回答轮(filler 入轨+LLM 回 2 字),79ms 后才被 Android cancel 杀——
                 // 预测式判停必然抢先 cancel,竞态改确定性。Worker 只吞轮次;
                 // 退出回复/关房 100% 归 Android(退出权威不变)。
-                Some("session_exit")
+                Some(("session_exit", "exact"))
+            } else if self.cfg.exit_tail_match
+                && crate::textproc::is_session_exit_tail(&user_text)
+            {
+                // A 案(2026-08-28「不想聊了，退出吧」漏网实证):自然复合句对整句精确匹配
+                // 结构性免疫→尾部强意图词匹配,否定/疑问豁免见 textproc。语义与 exact 同=只吞。
+                Some(("session_exit", "tail"))
             } else {
                 None
             };
-            if let Some(kind) = swallow_kind {
-                info!(room = %self.room_name, "{kind} utterance swallowed: '{user_text}'");
+            if let Some((kind, path)) = swallow_kind {
+                info!(room = %self.room_name, path, "{kind} utterance swallowed: '{user_text}'");
                 // 在途回答若还在(未被急停白名单/cancel 停掉,如用户轻声说「停」
                 // 而 interim 未及命中)→ 此刻补硬停,保证「停=安静」
                 if self.agent_turn.is_some() {
@@ -1499,7 +1508,7 @@ impl Orchestrator {
                 self.latest_interim.clear();
                 self.tele_text.clear();
                 if let Some(s) = &mut self.snap {
-                    s.event("swallowed", &[("text", &user_text), ("kind", kind)]);
+                    s.event("swallowed", &[("text", &user_text), ("kind", kind), ("path", path)]);
                 }
                 return;
             }
@@ -1872,12 +1881,21 @@ impl Orchestrator {
                             // ——LLM→DEVICE commit 被 codex 标 BLOCKED_PENDING_VAD_CANDIDATE_ID,
                             // 关联合同落地前禁止提交。统计:grep 'llm device intent observed'。
                             for label in &outcome.dev_labels {
-                                info!(
-                                    room = %room_name,
-                                    label,
-                                    known = crate::device_intent::known_label(*label),
-                                    "llm device intent observed (observe-only, not executed)"
-                                );
+                                if *label == crate::device_intent::SESSION_EXIT_LABEL {
+                                    // B 案(2026-08-28):慢路退出意图观察打点——ASR 错转/表达
+                                    // 变体兜底层,统计 grep 'llm session_exit intent observed'。
+                                    info!(
+                                        room = %room_name,
+                                        "llm session_exit intent observed (observe-only, not executed)"
+                                    );
+                                } else {
+                                    info!(
+                                        room = %room_name,
+                                        label,
+                                        known = crate::device_intent::known_label(*label),
+                                        "llm device intent observed (observe-only, not executed)"
+                                    );
+                                }
                             }
                             // tps=字符/秒近似(SSE chunk≠token,诚实口径;web 面板显示用)
                             publish(json!({

@@ -95,6 +95,79 @@ pub fn is_stop_only(hotwords: &HashSet<String>, text: &str) -> bool {
     false
 }
 
+/// 尾部强意图退出词(A 案 2026-08-28,「不想聊了，退出吧」漏网实证 room=…1787897185):
+/// 自然复合句永远不等于词表原子,整句精确匹配对其结构性免疫;且 ASR 错转「聊了→聊你」
+/// 连子串包含都救不了「不想聊了」——能稳定存活的是**句尾的意图核心词**。
+/// 只收误伤面可控的强意图词:「结束」「不用了」这类日常陈述高频词不进尾表
+/// (「这个游戏结束」≠退出)。误伤代价=该句被吞不回答(worker 只吞轮次,退出权威归
+/// Android,不会误退出),故词表宁紧、豁免宁宽。
+/// ⚠️ 长词优先序是正确性约束不是美观:「我不想聊了」必须先中「不想聊了」——
+/// 若先中「不聊了」,前窗「不想」的「想」会被否定豁免误放(护栏用例 tail_hits 首条)。
+const STRONG_EXIT_TAILS: &[&str] = &[
+    "退出对话", "结束聊天", "结束对话", "不想聊了", "我要睡觉了", "去睡觉了", "我要休息了",
+    "不聊了", "退出", "再见", "拜拜",
+];
+
+/// 尾部语气助词(逐层剥离,每层剥 1 字后重查——「退出吧」「再见啦」「睡觉了哈」)。
+/// 「了」必须在表里(「我要退出了」),但查序=先查原句再剥,故「不聊了」原句即中不受剥损。
+const TAIL_MODAL: &[char] = &[
+    '吧', '呀', '啦', '哦', '咯', '喽', '呗', '嘛', '哈', '啊', '哟', '呢', '了',
+];
+
+/// 疑问豁免:句里带疑问语素=在**问**退出而不是**要**退出(「怎么退出」「要不要退出」「退出吗」)。
+const QUESTION_MARKERS: &[&str] = &[
+    "怎么", "如何", "为什么", "什么", "吗", "能不能", "可不可以", "要不要", "还是",
+];
+
+/// 否定豁免:命中词紧前方 1-2 字否定窗(「我不想退出」「别退出」「不是不聊了」)。
+/// hit_start 为 normalize 串内的字节偏移(由 ends_with 推得,必为合法边界)。
+fn negated_before(s: &str, hit_start: usize) -> bool {
+    let prefix: Vec<char> = s[..hit_start].chars().collect();
+    let n = prefix.len();
+    if n >= 1 && matches!(prefix[n - 1], '不' | '别' | '没') {
+        return true;
+    }
+    if n >= 2 {
+        let two: String = prefix[n - 2..].iter().collect();
+        if matches!(
+            two.as_str(),
+            "不想" | "不要" | "不用" | "不许" | "不准" | "没有" | "不是" | "先不" | "别再"
+        ) {
+            return true;
+        }
+    }
+    false
+}
+
+/// A 案尾部退出判定(2026-08-28 川哥拍板):normalize 后逐层剥尾部语气词(至多 3 层),
+/// 每层查「以强意图退出词结尾」,命中再过否定豁免;疑问豁免对整句先行。
+/// 只用于 exit 吞句路径(急停词纪律不变);开关 EXIT_TAIL_MATCH(默认开,置 0 回退纯精确)。
+pub fn is_session_exit_tail(text: &str) -> bool {
+    let s = normalize_utterance(text);
+    if s.is_empty() {
+        return false;
+    }
+    for q in QUESTION_MARKERS {
+        if s.contains(q) {
+            return false;
+        }
+    }
+    let mut t = s;
+    for _ in 0..=3 {
+        for w in STRONG_EXIT_TAILS {
+            if t.ends_with(w) {
+                return !negated_before(&t, t.len() - w.len());
+            }
+        }
+        let Some(c) = t.chars().last() else { break };
+        if !TAIL_MODAL.contains(&c) {
+            break;
+        }
+        t.truncate(t.len() - c.len_utf8());
+    }
+    false
+}
+
 /// 剥离 LLM 输出里的舞台指示——括号/星号包裹的动作、表情、神态描述:
 /// 「（笑）」「(假装认真)」「*叹气*」「【小声】」。TTS 会把它们整句念出
 /// (2026-08-16 川哥实测),segmenter 出句后统一剥,TTS/字幕/历史三处同净文本
@@ -215,6 +288,39 @@ mod tests {
         assert!(!is_stop_only(&exits, "停"));
         // env 显式空=禁用
         assert!(parse_hotwords_with(Some(""), DEFAULT_EXIT_HOTWORDS).is_empty());
+    }
+
+    #[test]
+    fn session_exit_tail_hits_natural_compound() {
+        // A 案正锚:真机漏网原句(ASR 错转形态)与自然变体
+        assert!(is_session_exit_tail("不想聊你退出吧")); // 2026-08-28 room=…1787897185 原句
+        assert!(is_session_exit_tail("我不想聊了")); // 长词优先护栏:先中「不想聊了」而非「不聊了」
+        assert!(is_session_exit_tail("不想聊了，退出吧"));
+        assert!(is_session_exit_tail("退出吧"));
+        assert!(is_session_exit_tail("我们不聊了吧"));
+        assert!(is_session_exit_tail("今天就到这里再见啦"));
+        assert!(is_session_exit_tail("我要退出了"));
+        assert!(is_session_exit_tail("小可我去睡觉了哈"));
+    }
+
+    #[test]
+    fn session_exit_tail_exemptions_hold() {
+        // 否定豁免:误吞它们=把「还想聊」当退出处理
+        assert!(!is_session_exit_tail("我不想退出"));
+        assert!(!is_session_exit_tail("别退出"));
+        assert!(!is_session_exit_tail("先不退出吧"));
+        assert!(!is_session_exit_tail("不是不聊了"));
+        // 疑问豁免:在问退出不是要退出
+        assert!(!is_session_exit_tail("怎么退出"));
+        assert!(!is_session_exit_tail("要不要退出"));
+        assert!(!is_session_exit_tail("退出吗"));
+        // 尾部不是意图词=不吞(核心词在句中不算——只认句尾)
+        assert!(!is_session_exit_tail("退出这个游戏之后干嘛"));
+        assert!(!is_session_exit_tail("再见了我的朋友这首歌放一下"));
+        // 「结束」「不用了」不在尾表(日常陈述高频,误伤面大)
+        assert!(!is_session_exit_tail("这个游戏结束"));
+        assert!(!is_session_exit_tail("今天不用了"));
+        assert!(!is_session_exit_tail(""));
     }
 
     #[test]

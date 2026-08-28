@@ -215,6 +215,12 @@ fn lookup(s: &str) -> Option<DeviceMatch> {
 /// (每轮至多剥一前一后,至多 4 轮),**剥离后仍须完整命中**——子串永不执行。
 /// label 是否在词表合法集内(Phase 2a 观察打点用:LLM 幻觉 label 一眼可辨;
 /// 2b 放开执行时同一函数当白名单闸)。
+/// B 案退出意图专用 label(2026-08-28):不在设备命令表(known_label 恒 false),
+/// 与 server 侧 device-brain-prompt.ts 协议「退出/结束对话=90」一致。
+/// 90 避开设备段(2-45)与音量绝对值段(60-79)。观察期只记日志;执行期(需 codex
+/// 端侧信令合同)由 worker 通知 Android 走既有退出流程,worker 永不自行关房。
+pub const SESSION_EXIT_LABEL: u32 = 90;
+
 pub fn known_label(label: u32) -> bool {
     table().map.values().any(|(l, _, _)| *l == label)
 }
