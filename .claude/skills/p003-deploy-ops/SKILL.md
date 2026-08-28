@@ -237,6 +237,10 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   **G1 字数口径 6–9 字非合同建议的 8–20**(duration 1..2200ms 硬门实测互斥:8字=2000ms/10字必死;教训→rg 软约束);
   buildSlot 有 promptSuffix 参(抽取 LLM 确定性,重跑必须换提示不然白烧 TTS)。发布档案 `_backup/20260828-g1-rev5-release.txt`,
   代码备份 `_backup/20260828-pre-g1/`;J1 回执 `CC_P003_G1_LOCAL_AUDIO_V133_J1_RELEASE_20260828.md`。
+- **file 限频容量(2026-08-28 J2 活锁事故后)**:默认 `LOCAL_AUDIO_FILE_RPM_DEFAULT=120`(route 导出,env 同值双保险 .env.local:149);
+  **合法峰值=冷同步整套全量下载**(rev5=48 文件,客户端原子性:不完整 staging 整套弃),抽查探针验不出限频缺口,
+  **要打到峰值+1**(35 连发全 200 才算验过);单测 cap-1=默认≥slot枚举×5×1.5(枚举扩容先翻红);
+  回滚=env 显式调小,route 源码锚 `_backup/20260828-pre-g1/local-audio-route.ts.pre-rpm120`。
 - **回声自嗨排障(2026-08-26)**:现象=设备命令确认语播完后小可自问自答→查 64.90 worker 日志
   `journalctl -u voice-worker-rust | grep "echo suppressed"`(对撞门在产,窗 ECHO_SUPPRESS_WINDOW_MS=800,
   0=关门回滚);机理/两分布定参依据→记忆 project_realtime_voice_agent「回声对撞门」段;
