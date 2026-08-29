@@ -52,7 +52,7 @@
 
 已有 [`scripts/local-watch.sh`](../scripts/local-watch.sh) 使用 TCP connect `10.10.10.1:22` 作为真实数据探针，不使用中继虚拟 IP 上会假丢包的 ICMP。盒子已部署同一机制：连续 3 次失败再重启 EasyTier，重启后冷却 1 小时；P2P 退化只告警，不误重启健康节点。运行参数见 [`nodes/jidinghe-armbian-watch.env`](../nodes/jidinghe-armbian-watch.env)，调度单元见 [`systemd/`](../systemd/)。
 
-部署位置：脚本 `/usr/local/sbin/easytier-watch`，参数 `/etc/easytier/watch.env`，调度器 `easytier-watch.timer`。本轮未给盒子配置独立的 Kuma push URL，因此已具备本机日志与自动恢复，集中告警仍由既有 `linux-lan` 组网探针承担，避免两个节点复用同一个监控身份。
+部署位置：脚本 `/usr/local/sbin/easytier-watch`，参数 `/etc/easytier/watch.env`，调度器 `easytier-watch.timer`。本轮未给盒子配置独立的 Kuma push URL，因此已具备本机日志与自动恢复；既有 `linux-lan` 探针继续覆盖整体组网健康，但盒子单节点掉线尚无独立 push 告警，避免两个节点复用同一个监控身份。
 
 同时保持：
 
