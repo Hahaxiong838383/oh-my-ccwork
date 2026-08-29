@@ -39,6 +39,7 @@ SUDO_PASS='xxx' ./scripts/deploy-node.sh linux-lan
 | [`docs/02-实测基线与判读规则.md`](docs/02-实测基线与判读规则.md) | 部署当天的实测数字 + **判读规则**（不看会误诊） |
 | [`docs/03-jidinghe-armbian-稳定性与性能调研.md`](docs/03-jidinghe-armbian-稳定性与性能调研.md) | 机顶盒防掉线方案、EasyTier 主线修复跟踪及 Armbian 调优边界 |
 | `nodes/*.toml` | 每节点配置模板（密钥用占位符，不含明文） |
+| `systemd/easytier-watch.*` | Linux 节点 TCP 数据面 watchdog 的 oneshot service + timer |
 | `scripts/` | 部署、巡检、基准、卸载 |
 | `野草云-EasyTier-异地组网完整方案.html` | 原始方案，保留供对照 |
 

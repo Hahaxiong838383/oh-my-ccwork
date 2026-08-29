@@ -1,0 +1,11 @@
+[Unit]
+Description=EasyTier TCP data-plane watchdog
+After=network-online.target easytier-mesh.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=HOME=/root
+EnvironmentFile=-/etc/easytier/watch.env
+ExecStart=/usr/local/sbin/easytier-watch
+Nice=10

@@ -7,7 +7,7 @@
 1. 盒子运行的 EasyTier `v2.6.4` 是当前最新稳定版，继续使用原生 systemd 部署，不迁 Docker、不装第三方 GUI 管理器。
 2. EasyTier 主线已合入“数据流 echo 活性探针”，正面修复“进程和 peer 表看似正常、实际数据面已死亡”的僵死态；该提交尚未进入稳定 release，只跟踪下一稳定版，不在盒子上无人值守追 main。
 3. 当前系统没有 CPU、内存、日志或 eMMC 瓶颈。Armbian 已启用 ZRAM，EasyTier 约占 31 MB，额外安装 `tuned`、`irqbalance`、`earlyoom` 不会带来可证明收益。
-4. 现阶段最有效的防掉线措施不是换项目，而是把现有 `scripts/local-watch.sh` 适配到盒子：用 `10.10.10.1:22` TCP 数据探针识别假在线，连续 3 次失败才重启，并保留 1 小时冷却。
+4. 现阶段最有效的防掉线措施不是换项目，而是把现有 `scripts/local-watch.sh` 适配到盒子：用 `10.10.10.1:22` TCP 数据探针识别假在线，连续 3 次失败才重启，并保留 1 小时冷却。该 watchdog 已于 2026-08-29 通过 systemd timer 部署。
 
 ## 二、设备与运行基线
 
@@ -50,7 +50,9 @@
 - TUN、虚拟 IP 和 peer 表都存在；
 - 实际数据已经无法出入，节点从全网消失。
 
-已有 [`scripts/local-watch.sh`](../scripts/local-watch.sh) 使用 TCP connect `10.10.10.1:22` 作为真实数据探针，不使用中继虚拟 IP 上会假丢包的 ICMP。建议在盒子部署同一机制：连续 3 次失败再重启 EasyTier，重启后冷却 1 小时；P2P 退化只告警，不误重启健康节点。
+已有 [`scripts/local-watch.sh`](../scripts/local-watch.sh) 使用 TCP connect `10.10.10.1:22` 作为真实数据探针，不使用中继虚拟 IP 上会假丢包的 ICMP。盒子已部署同一机制：连续 3 次失败再重启 EasyTier，重启后冷却 1 小时；P2P 退化只告警，不误重启健康节点。运行参数见 [`nodes/jidinghe-armbian-watch.env`](../nodes/jidinghe-armbian-watch.env)，调度单元见 [`systemd/`](../systemd/)。
+
+部署位置：脚本 `/usr/local/sbin/easytier-watch`，参数 `/etc/easytier/watch.env`，调度器 `easytier-watch.timer`。本轮未给盒子配置独立的 Kuma push URL，因此已具备本机日志与自动恢复，集中告警仍由既有 `linux-lan` 组网探针承担，避免两个节点复用同一个监控身份。
 
 同时保持：
 
@@ -75,7 +77,7 @@
 ## 五、执行优先级
 
 1. P0：保留 Android eMMC 恢复镜像和 SHA-256，禁止格式化恢复 U 盘。
-2. P1：适配并部署 TCP 数据面 watchdog；移除 KCP/QUIC 环境覆盖后做断网恢复验收。
+2. P1：TCP 数据面 watchdog 已部署；下一步移除 KCP/QUIC 环境覆盖后做断网恢复验收。
 3. P1：跟踪 EasyTier 下一个稳定版是否包含 `636390e`，不跑未发布 main。
 4. P2：每月记录一次温度、内存、eMMC 错误、EasyTier restart 次数；只有出现瓶颈证据才调优。
 5. P3：内核/DTB 只在可现场接串口或可从恢复介质回滚时人工升级。
