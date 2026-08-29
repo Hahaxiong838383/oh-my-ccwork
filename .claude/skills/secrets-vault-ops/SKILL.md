@@ -169,6 +169,15 @@ fine-grained PAT 会校验它。2026-08-22 我图省事写了 `username=x`，得
 `bssopenapi QueryAccountBill`。⚠️ 库里这把是**主账号 root AK**，权限无上限，
 只跑只读接口，日常应换 RAM 子账号最小权限 AK。
 
+### 阿里云中国主账号 — 条目名 `阿里云-中国（13911184569）`
+
+该条目保存的也是 AccessKey，不是阿里云网页账号密码：username 栏 = AK ID，password 栏 = AK Secret。已验证可调用 STS 与韩国轻量应用服务器 SWAS；库内是 root AK，必须按最小地域和最小动作使用。
+
+- 只处理韩国节点时，只调用 `swas-open` 的 `ap-northeast-2`，先用只读接口确认实例、状态和云助手能力；不得顺手枚举或操作香港地域。
+- Air/Home Studio 无网页界面或 SSH 不通时，可用 SWAS 云助手执行已授权的精确命令。先只读验证身份与 PM2 状态，再进行部署动作。
+- `run-command` 的结果在 `.InvocationResult.Output` 中以 Base64 返回；仅解码已约束的非敏感输出。不要输出完整 PM2 环境、完整实例清单或任何凭据。
+- 不要猜服务内部端口；端口探测失败不等于站点失败。优先经本机 Nginx HTTPS 回环和公网 URL 双重验证。
+
 ### 🔴 取到凭据之后、调第三方 CLI 之前——先 grep 记忆
 
 2026-08-21 同一天栽了三次：bw 找不到（答案在 `.bashrc` 文件头）、SWAS 是什么、

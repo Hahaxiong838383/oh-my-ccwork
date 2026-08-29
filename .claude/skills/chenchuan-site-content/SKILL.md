@@ -11,6 +11,12 @@ description: 陈川个人站内容更新工艺：项目卡/文章的口径铁律
 - 内容真源：项目卡 `src/data/projects.ts`、文章 `src/data/articles.ts`、经典回放 `src/data/classic-demos.ts`、AI 镜像 prompt `src/lib/chat/system-prompt.ts`。视频真源是生产 SQLite（`managed_videos`），不是 `videos.ts`。
 - 不全量 `git add`；生产用精确文件 rsync + SHA-256 对账，改前建 `/var/www/chenchuan-site-backups/<批次>-<日期>/` 备份。
 
+## 韩国生产接入
+
+- 韩国节点是阿里云轻量应用服务器 SWAS，不是标准 ECS。没有可用 SSH/GUI 时，从密码库读取阿里云 AccessKey，通过 `aliyun swas-open` 的 `ap-northeast-2` 地域查询实例并使用云助手；AccessKey 不是网页登录密码，绝不打印或放入 argv。
+- 用户只授权韩国节点时，只查询 `ap-northeast-2` 并对 DNS 当前指向的精确实例执行命令；不得顺手枚举、登录或修改香港实例。
+- 云助手命令返回的 `InvocationResult.Output` 是 Base64；只解码预先限定的非敏感输出。生产状态用 PM2 精确字段和 Nginx 本机 HTTPS 回环验证，不假设 Node 一定监听 3000/3100。
+
 ## 口径铁律（违反会被用户纠正，全部有过实案）
 
 1. 受众 = HR / 投资人 / 非技术高管。白话优先，技术词必带括号解释；数字翻译成感受。
@@ -37,13 +43,14 @@ description: 陈川个人站内容更新工艺：项目卡/文章的口径铁律
 ## 上线流程
 
 1. 本地改数据文件 → `npm run build` 过 → `preview_start`（launch.json `chenchuan-site-dev`，端口 3100）快验渲染。
-2. 全文 grep 自查：`91.5`、`川哥`、`钦定`、裸 `**`（详情页文本内）应全为 0。
+2. 全文 grep 自查：`91.5`、`川哥`、`钦定`、裸 `**`（详情页文本内）及本批次禁词/过时口径应全为 0；当前禁词包括 `Gemini`、`四引擎`、`ERP`、`GEO`，后续只有用户明确改口才移除。
 3. commit（格式 `feat(chenchuan-site): ...`，无 Co-Authored-By）。
-4. `dig` 确认 A 记录 → 生产备份 → 精确文件 rsync → 本地/生产 SHA-256 逐文件对账。
-5. 生产 `npm run build && pm2 restart chenchuan-site` → 确认 online。
-6. **公网 E2E（必须自己验，不甩给用户）**：新页面 200 + 关键词在 HTML 里 + 下架页 404 + 占位文案消失 + 口径词零残留；文章附链接时数链接个数。
-7. push origin + task-log + 重要决策写 `04-决策记录.md` + 记忆更新 `project_chenchuan_site`。
+4. `dig` 确认 A 记录 → 生产备份目标文件、原 `.next`、PM2 状态和 before SHA → 精确上传文件并核对上传包 SHA。打包排除运行数据时必须用根路径锚定（如 `/data/`）；禁止 `--exclude=data`，它会误排除 `src/data/`。
+5. 不在生产目录原地 build。复制到 `/var/tmp/chenchuan-site-build-<commit>` 隔离构建，复用生产 `node_modules` 和运行数据；用独立端口 canary 验证新文案、旧口径清零和资源可用后，再原子切换 `.next` 并重启 PM2。部署脚本设置失败自动恢复目标文件和原 `.next`。
+6. 确认 PM2 `online`、`unstable_restarts=0`；本机链路用 `curl -skf --resolve my.chenchuan.cc:443:127.0.0.1 https://my.chenchuan.cc/<path>` 经过真实 Nginx 验证，不猜内部监听端口。
+7. **公网 E2E（必须自己验，不甩给用户）**：桌面与 390×844 移动端真实点击导航、项目卡、关联项目、菜单和视频；检查控制台 0 error/warning、无横向溢出、关键页/图片 200、视频 Range 206、旧口径零残留。文章附链接时数链接个数。
+8. 本地/生产目标文件 SHA-256 逐一一致后记录 after SHA、部署元数据和回滚路径；push origin + task-log + 重要决策写 `04-决策记录.md` + 记忆更新 `project_chenchuan_site`。
 
 ## 回滚
 
-生产备份目录（步骤 4）+ git revert；只回滚目标文件，不全库恢复。
+生产备份目录（步骤 4）+ git revert；只恢复本批次目标文件和 `next.before`，不全库恢复。回滚后重复 PM2、Nginx 回环和公网关键页验收。
