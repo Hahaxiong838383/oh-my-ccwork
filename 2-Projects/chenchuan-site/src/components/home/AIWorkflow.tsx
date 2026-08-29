@@ -21,14 +21,14 @@ const capabilities: Capability[] = [
   {
     icon: Radar,
     tint: '#5BA7FF',
-    title: 'AI 战略洞察与情报系统',
-    subtitle: '政策 / 资本 / 技术 / 竞品 四维情报自动追踪',
+    title: '公司战略洞察与经营决策系统',
+    subtitle: 'PEST 外部雷达 / Growth Insight / AI Ontology 一体化',
     ability:
-      '影响因子矩阵评估业务传导影响，从公开信息变化推导部门级战略动作。',
+      '持续连接外部信号、产品线经营数据与公司目标，形成有证据、可人审、可验证的经营建议。',
     implementation:
-      'Hermes 多 agent pipeline · 4 个 collector · Cron 每日 06:00 入库 · 每日近百条情报 · 日报 / 周报 / 月报自动归档（累计 1 个月稳态运行）。',
+      'PEST 战略感知 + Growth Insight 产品线投影 + AI Ontology 目标与事实关系图 · 证据治理 · 人审决策 · 结果回流校准。',
     value:
-      'CEO 战略评审与董事会输入从「人工搜集 + 月度复盘」缩到每日清晨到桌，决策始终基于最新公开信息。',
+      '把战略分析从定期写报告升级为「持续感知—形成判断—人审决策—结果验证」的公司经营能力。',
   },
   {
     icon: Network,
@@ -38,7 +38,7 @@ const capabilities: Capability[] = [
     ability:
       '把多智能体能力直接落到飞书 21 个业务节点（IM / 文档 / 知识库 / 多维表格 / 日历 / 会议 / 任务 等）。',
     implementation:
-      'lark-cli + EvoDesk 客户端 · 19 个飞书 skill 接入 Claude / GPT / Gemini / Grok 四引擎 · 能力域路由 + 三层验证。',
+      'lark-cli + EvoDesk 客户端 · 飞书 skill 接入 Claude / GPT-Codex / Grok 三引擎 · 能力域路由 + 分层验证。',
     value:
       '为硬科技公司数字化与 AI 化提供可复制范式——AI 能力零迁移成本落在原有工作流，不打破团队协同。',
   },
@@ -69,14 +69,14 @@ const capabilities: Capability[] = [
 ]
 
 const statBadges: { label: string; sub: string }[] = [
-  { label: '21', sub: '飞书业务节点' },
-  { label: '19', sub: 'Agent skill' },
-  { label: '4', sub: '情报 collector' },
-  { label: '5', sub: '层记忆架构' },
-  { label: '3', sub: '引擎协同' },
-  { label: '~100/日', sub: '情报入库' },
-  { label: '1 月+', sub: 'pipeline 稳态' },
-  { label: '日/周/月', sub: '报告自动归档' },
+  { label: '外部感知', sub: '持续扫描信号' },
+  { label: '产品线洞察', sub: '投影经营影响' },
+  { label: '公司大脑', sub: '连接目标事实' },
+  { label: '证据治理', sub: '判断有据可查' },
+  { label: '人审决策', sub: '责任不交给 AI' },
+  { label: '任务执行', sub: '决策进入行动' },
+  { label: '结果验证', sub: '回收真实结果' },
+  { label: '持续校准', sub: '闭环优化判断' },
 ]
 
 export function AIWorkflow() {
@@ -150,7 +150,7 @@ export function AIWorkflow() {
           <div className="grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-4 lg:grid-cols-8">
             {statBadges.map((s) => (
               <div key={s.sub} className="text-left">
-                <div className="font-mono text-xl font-semibold text-text-primary md:text-2xl">
+                <div className="font-mono text-sm font-semibold text-text-primary md:text-base">
                   {s.label}
                 </div>
                 <div className="mt-0.5 text-[11px] leading-tight text-text-muted">
@@ -170,7 +170,7 @@ export function AIWorkflow() {
               分层 AI 架构 · EvoDesk 自研
             </div>
             <div className="hidden text-[11px] text-text-muted md:block">
-              四引擎动态模型池 · 版本随路由更新
+              三引擎动态模型池 · 版本随路由更新
             </div>
           </div>
 
@@ -179,7 +179,7 @@ export function AIWorkflow() {
             <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-accent">
               引擎层 · Engines
             </div>
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-3">
               {profile.aiToolchain.map((tool) => (
                 <div
                   key={tool.name}
@@ -226,7 +226,7 @@ export function AIWorkflow() {
               label="能力层 · Skills"
               items={[
                 'lark-* 19 个飞书 skill 矩阵',
-                'Hermes pipeline · 4 collector',
+                '战略感知 / Growth Insight / AI Ontology',
                 'codex review / 对抗审查 / rescue',
                 'brain 知识系统 v0.14',
                 'ai-news-radar / theory-radar / github-radar',
@@ -238,7 +238,7 @@ export function AIWorkflow() {
               items={[
                 '五层记忆架构（工作 / 情景 / 语义 / 程序 / 元认知）',
                 '中文 FTS5 + 第五路注入',
-                'Verifier 三层验证（cheap / cache / Gemini Flash）',
+                'Verifier 分层验证（规则 / 缓存 / 模型复核）',
                 '自进化 v2（ROI 排序 / patch 回滚 / 置信度学习）',
                 'Air → Mini → Studio 三机记忆同步',
               ]}

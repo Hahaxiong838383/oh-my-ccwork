@@ -8,13 +8,13 @@ export const profile = {
   nameEn: 'Chen Chuan',
   title: 'AI-Native Product Leader',
   tagline: 'AR HUD · Embodied Intelligence · Vibe Coder',
-  bio: `${careerExperienceLabel}智能硬件与 AI 产品经验。从 SLAM 机器人到协作机械臂，从多模态 AI 系统到 AR HUD 智能座舱，跨越具身智能完整技术栈。以 Claude、GPT、Gemini、Grok 多引擎构建 AI-Native 工作流，擅长复杂硬科技产品定义、交互体验设计与商业闭环构建。`,
+  bio: `${careerExperienceLabel}智能硬件与 AI 产品经验。从 SLAM 机器人到协作机械臂，从多模态 AI 系统到 AR HUD 智能座舱，跨越具身智能完整技术栈。以 Claude、GPT-Codex、Grok 多引擎构建 AI-Native 工作流，擅长复杂硬科技产品定义、交互体验设计与商业闭环构建。`,
   bioExtended: '我相信好的产品不是技术的堆砌，而是对人类需求的深刻理解与技术可能性的精准匹配。拥有从第一性原理解构需求、到供应链量产、再到 GTM 的全链路操盘经验，多次实现跨界技术降维打击，定义具备极高壁垒的"新物种"品类。',
   profileCards: [
     {
       id: '01',
       label: 'AI-NATIVE OPS',
-      text: '以多模型动态路由构建全流程 Vibe Coding 工作方式——Claude 负责规划编排，GPT / Codex 主实现，Gemini 负责长上下文与对照验证，Grok 支撑实时研究与 AI Ops。',
+      text: '以多模型动态路由构建全流程 Vibe Coding 工作方式——Claude 负责规划编排，GPT / Codex 主实现，Grok 支撑第一性原理推演、实时研究与 AI Ops。',
     },
     {
       id: '02',
@@ -41,7 +41,6 @@ export const profile = {
   aiToolchain: [
     { name: 'Claude', role: '主规划', desc: '深度推理 · 任务编排', tint: '#F4A35D' },
     { name: 'GPT / Codex', role: '主实现', desc: '编码交付 · 多模态', tint: '#5BA7FF' },
-    { name: 'Gemini', role: '对照验证', desc: '长上下文 · 研究分析', tint: '#34D399' },
     { name: 'Grok', role: '实时研究', desc: '前沿检索 · AI Ops', tint: '#F472B6' },
   ],
   keyWins: [
@@ -59,7 +58,7 @@ export const profile = {
     { label: 'AI 集成', detail: 'LLM 工程化 · 情感计算 · SLAM · 3D 视觉' },
     { label: '交互设计', detail: 'HMI · DMS · 语音/手势 · 多屏协同' },
     { label: '商业模式', detail: 'SaaS 数据闭环 · B2B2C · GTM · 供应链' },
-    { label: 'Vibe Coding', detail: '四引擎动态路由 · 多模型 API 编排' },
+    { label: 'Vibe Coding', detail: '三引擎动态路由 · 多模型 API 编排' },
   ],
   education: [
     { school: '南京航空航天大学', degree: '硕士 · 项目管理', tag: '211/双一流', year: '2011–2014' },
